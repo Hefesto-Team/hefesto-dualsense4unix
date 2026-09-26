@@ -347,14 +347,17 @@ def test_gravar_e_reler_noutro_boot_da_o_mesmo_nome(tmp_path: Path, disco: Path)
     assert ee.nome_da_porta("1-4", controladores=depois.controladores()) == "Entrada 1"
 
 
-def test_o_adaptador_herda_o_nome_pelo_lugar_e_nao_pelo_hci() -> None:
-    """D3. Os dois adaptadores trocam de ``hciN`` entre boots; o nome segue a porta."""
+def test_o_nome_do_adaptador_vai_pelo_endereco_e_nao_pelo_hci() -> None:
+    """Os dois adaptadores trocam de ``hciN`` e de porta entre boots; o nome vai
+    com o ENDERECO (D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO, que revoga a D3: o
+    nome da porta não é mais o do adaptador)."""
     l1 = f"pci-{PCI_A}-usb-0:3"
     l2 = f"pci-{PCI_B}-usb-0:4.1.4"
     documento = MaquinaConfig.model_validate(
         {
             "mapa": {"faces": [{"nome": ee.FACE_ATRAS, "portas": ["1", "2"]}]},
             "lugares": {l1: {"entrada": "1"}, l2: {"entrada": "2", "nome": "Sofá"}},
+            "adaptadores": {"aabbcc000002": {"nome": "Meio"}},
         }
     )
     antes = [
@@ -362,13 +365,15 @@ def test_o_adaptador_herda_o_nome_pelo_lugar_e_nao_pelo_hci() -> None:
         bd.AdaptadorDoBluez("/org/bluez/hci1", "hci1", "aa:bb:cc:00:00:02", lugar=l2),
     ]
     depois = [
-        bd.AdaptadorDoBluez("/org/bluez/hci0", "hci0", "aa:bb:cc:00:00:02", lugar=l2),
-        bd.AdaptadorDoBluez("/org/bluez/hci1", "hci1", "aa:bb:cc:00:00:01", lugar=l1),
+        bd.AdaptadorDoBluez("/org/bluez/hci0", "hci0", "aa:bb:cc:00:00:02", lugar=l1),
+        bd.AdaptadorDoBluez("/org/bluez/hci1", "hci1", "aa:bb:cc:00:00:01", lugar=l2),
     ]
-    nomes_antes = {a.endereco: ee.nome_do_adaptador(a, maquina=documento) for a in antes}
-    nomes_depois = {a.endereco: ee.nome_do_adaptador(a, maquina=documento) for a in depois}
-    assert nomes_antes == {"aa:bb:cc:00:00:01": "Entrada 1", "aa:bb:cc:00:00:02": "Sofá"}
-    assert nomes_depois == nomes_antes, "o nome foi junto com o hciN para o outro dongle"
+    def nomes(lista: list[bd.AdaptadorDoBluez]) -> dict[str, str]:
+        return {a.endereco: maquina.nome_dado_ao_adaptador(documento, a.endereco) for a in lista}
+
+    nomes_antes, nomes_depois = nomes(antes), nomes(depois)
+    assert nomes_antes == {"aa:bb:cc:00:00:01": "", "aa:bb:cc:00:00:02": "Meio"}
+    assert nomes_depois == nomes_antes, "o nome ficou na porta em vez de ir com o adaptador"
 
 
 # ---------------------------------------------------------------------------
@@ -412,27 +417,22 @@ def test_a_entrada_numerada_na_outra_janela_nao_vira_pergunta(
     assert ee.nome_da_porta("3-4.2", controladores=BOOT_1) == "Entrada 7"
 
 
-def test_o_adaptador_na_entrada_numerada_na_outra_janela_herda_o_numero() -> None:
-    """Sem amarra pelo lugar, o desenho de hoje (pelo caminho DESTE boot) ainda
-    dá nome ao adaptador — e só quando o caminho não é de outro lugar."""
+def test_o_adaptador_na_entrada_numerada_nao_herda_o_numero() -> None:
+    """A entrada 9 que ela numerou não dá nome ao adaptador plugado nela: era a
+    D3, e foi assim que a tela dela mostrou adaptadores «15» e «13»."""
     lugar = f"pci-{PCI_B}-usb-0:4.1.4"
     adaptador = bd.AdaptadorDoBluez("/org/bluez/hci0", "hci0", "aa:bb:cc:00:00:01", lugar=lugar)
-    desenho = {
-        "mapa": {
-            "faces": [{"nome": "Hub da mesa", "portas": ["9"]}],
-            "portas": {"9": {"caminho": "3-4.1.4"}},
+    documento = MaquinaConfig.model_validate(
+        {
+            "mapa": {
+                "faces": [{"nome": "Hub da mesa", "portas": ["9"]}],
+                "portas": {"9": {"caminho": "3-4.1.4"}},
+            },
+            "lugares": {lugar: {"entrada": "9", "nome": "9"}},
         }
-    }
-    documento = MaquinaConfig.model_validate(desenho)
-    assert ee.nome_do_adaptador(adaptador, maquina=documento, controladores=BOOT_1) == "Entrada 9"
-    assert ee.nome_do_adaptador(adaptador, maquina=documento, controladores=BOOT_2) is None, (
-        "noutro boot o caminho 3-4.1.4 é outra porta, e o nome foi junto"
     )
-
-    de_outro = MaquinaConfig.model_validate(
-        {**desenho, "lugares": {f"pci-{PCI_A}-usb-0:4.1.4": {"entrada": "9"}}}
-    )
-    assert ee.nome_do_adaptador(adaptador, maquina=de_outro, controladores=BOOT_1) is None
+    assert ee.nome_da_porta("3-4.1.4", maquina=documento, controladores=BOOT_1) == "9"
+    assert not maquina.nome_dado_ao_adaptador(documento, adaptador.endereco)
 
 
 #: As frases que a ponte root escreve no diário com a porta dentro — LIDAS do
@@ -487,19 +487,17 @@ def test_o_conselho_de_porta_do_vigia_diz_o_nome_dela() -> None:
     )
 
 
-def test_dar_nome_grava_e_apaga_o_nome_do_lugar(disco: Path) -> None:
+def test_dar_nome_ao_adaptador_grava_e_apaga_o_nome(disco: Path) -> None:
     """O nome é NOSSO e mora no ``maquina.json``; o ``Alias`` é do script
-    (ENTRADA-A-ENTRADA-02). Nome vazio apaga o nome do lugar."""
-    lugar = f"pci-{PCI_A}-usb-0:3"
-    feito = ee.dar_nome(lugar, "  Extensor à esquerda ")
+    (ENTRADA-A-ENTRADA-02). Nome vazio apaga o nome do adaptador."""
+    feito = ee.dar_nome_ao_adaptador("AA:BB:CC:00:00:01", "  Extensor à esquerda ")
     assert feito.gravou and feito.nome == "Extensor à esquerda"
-    assert carregar_maquina().lugares[lugar].nome == "Extensor à esquerda"
-    assert ee.nome_do_lugar(lugar, controladores=BOOT_1) == "Extensor à esquerda"
+    assert carregar_maquina().adaptadores["aabbcc000001"].nome == "Extensor à esquerda"
 
-    apagado = ee.dar_nome(lugar, "")
-    assert apagado.gravou and lugar not in carregar_maquina().lugares
+    apagado = ee.dar_nome_ao_adaptador("aa:bb:cc:00:00:01", "")
+    assert apagado.gravou and "aabbcc000001" not in carregar_maquina().adaptadores
     with pytest.raises(ValueError):
-        ee.dar_nome("3-4.1.4", "Sofá")
+        ee.dar_nome_ao_adaptador("3-4.1.4", "Sofá")
 
 
 def test_o_estado_do_laco_e_o_que_o_piloto_pinta(boot_1: SysfsDeMentira, disco: Path) -> None:

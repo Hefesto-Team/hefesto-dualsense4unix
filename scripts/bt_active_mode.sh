@@ -410,22 +410,22 @@ if command -v busctl >/dev/null 2>&1; then
         printf 'bt-active-mode %s\n' "$$" 1>&"${TRAVA_FD}" 2>/dev/null || true
         return 0
     }
-    # --- o NOME DO LUGAR (ENTRADA-A-ENTRADA-02, 23/09/2026) ------------------
-    # D3: o adaptador herda o nome da porta em que está. O nome é dela e mora
-    # no `maquina.json` (`lugares[<lugar>].nome`, gravado pelo «Mapear Entrada
-    # a Entrada» e pelo renomear da aba); o `Alias` é a projeção dele, e tem UM
+    # --- o NOME DO ADAPTADOR (ENTRADA-A-ENTRADA-02, 23/09/2026) --------------
+    # O nome é dela e mora no `maquina.json` (`adaptadores[<endereço>].nome`,
+    # gravado pelo renomear da aba); o `Alias` é a projeção dele, e tem UM
     # escritor: este script, dentro da trava (a `D-COSTURA-BLUEZ` dela — dois
-    # escritores do mesmo alias é a duplicidade que o `e5376a0` desfez). O
-    # dongle que muda de porta leva o nome da porta nova no próximo tique do
-    # watchdog.
+    # escritores do mesmo alias é a duplicidade que o `e5376a0` desfez).
     #
-    # O LUGAR vem do UDEV (`ID_PATH` do aparelho USB do adaptador), a mesma
-    # grafia que o produto grava (`utils/lugar.py`) — este script não a monta.
+    # PELO ENDEREÇO DO ADAPTADOR desde 26/09/2026
+    # (D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO): até ali ele herdava o nome da
+    # PORTA (D3), e as entradas que ela numerou no Mapear viraram adaptadores
+    # «15» e «13». O nome vai com o adaptador de porta em porta.
+    #
     # O NOME vem do `maquina.json` pelo `python3` do sistema, isolado (`-I`):
     # root não roda o Python da casa (o venv é gravável por ela), e o JSON só
-    # se lê com ferramenta de JSON. Sem udev ou sem python3, o alias fica como
-    # está — ausência não apaga nome de ninguém.
-    declare -A NOME_DO_LUGAR=()
+    # se lê com ferramenta de JSON. Sem python3, o alias fica como está —
+    # ausência não apaga nome de ninguém.
+    declare -A NOME_DO_ADAPTADOR=()
     #: `uid:caminho` do `maquina.json` da casa — ou só `:caminho` pelo gancho de
     #: teste. Vazio quando não há UM só: duas casas com Hefesto é "não sei".
     _maquina_json() {
@@ -446,16 +446,16 @@ if command -v busctl >/dev/null 2>&1; then
         [[ "${#achados[@]}" -eq 1 ]] && printf '%s\n' "${achados[0]}"
         return 0
     }
-    _ler_os_nomes_dos_lugares() {
-        local alvo dono arquivo lugar nome
+    _ler_os_nomes_dos_adaptadores() {
+        local alvo dono arquivo chave nome
         alvo="$(_maquina_json)"
         [[ -n "${alvo}" ]] || return 0
         command -v python3 >/dev/null 2>&1 || return 0
         dono="${alvo%%:*}"
         arquivo="${alvo#*:}"
-        while IFS=$'\t' read -r lugar nome; do
-            if [[ -n "${lugar}" && -n "${nome}" ]]; then
-                NOME_DO_LUGAR["${lugar}"]="${nome}"
+        while IFS=$'\t' read -r chave nome; do
+            if [[ -n "${chave}" && -n "${nome}" ]]; then
+                NOME_DO_ADAPTADOR["${chave}"]="${nome}"
             fi
         done < <(python3 -I -c '
 import json, os, stat, sys
@@ -476,26 +476,17 @@ with os.fdopen(fd, "rb") as fh:
         sys.exit(0)
 if not isinstance(doc, dict) or doc.get("version", 1) != 1:
     sys.exit(0)
-lugares = doc.get("lugares")
-for lugar, dele in sorted(lugares.items() if isinstance(lugares, dict) else ()):
+adaptadores = doc.get("adaptadores")
+for chave, dele in sorted(adaptadores.items() if isinstance(adaptadores, dict) else ()):
     nome = dele.get("nome") if isinstance(dele, dict) else None
-    if not isinstance(nome, str) or not isinstance(lugar, str):
+    if not isinstance(nome, str) or not isinstance(chave, str):
         continue
     nome = nome.strip()
-    if nome and len(nome) <= 60 and nome.isprintable() and lugar.isprintable():
-        print(lugar + "\t" + nome)
+    if nome and len(nome) <= 60 and nome.isprintable() and len(chave) == 12 and chave.isalnum():
+        print(chave.lower() + "\t" + nome)
 ' "${arquivo}" "${dono}" 2>/dev/null || true)
     }
-    #: O `ID_PATH` do aparelho USB deste adaptador, pelo udev — vazio quando
-    #: não há (adaptador embutido sem USB, ou udev ausente).
-    _lugar_do_adaptador() {  # $1 = hciN
-        local usb
-        command -v udevadm >/dev/null 2>&1 || return 0
-        usb="$(readlink -f -- "${SYS_BLUETOOTH}/$1/device/.." 2>/dev/null || true)"
-        [[ -n "${usb}" && -d "${usb}" ]] || return 0
-        udevadm info -q property -p "${usb}" 2>/dev/null | sed -n 's/^ID_PATH=//p' | head -1 || true
-    }
-    _ler_os_nomes_dos_lugares
+    _ler_os_nomes_dos_adaptadores
     for HCI in "${ADAPTADORES[@]}"; do
         ADAPTER_OBJ="/org/bluez/${HCI}"
         HOSPEDA=0
@@ -503,16 +494,18 @@ for lugar, dele in sorted(lugares.items() if isinstance(lugares, dict) else ()):
             [[ "${UM}" == "${HCI}" ]] && HOSPEDA=1
         done
         NOME=""
-        if [[ "${#NOME_DO_LUGAR[@]}" -gt 0 ]]; then
-            LUGAR="$(_lugar_do_adaptador "${HCI}")"
-            [[ -n "${LUGAR}" ]] && NOME="${NOME_DO_LUGAR[${LUGAR}]:-}"
+        if [[ "${#NOME_DO_ADAPTADOR[@]}" -gt 0 ]]; then
+            CHAVE="$(_prop_adaptador "${HCI}" Address)"
+            CHAVE="${CHAVE//:/}"
+            CHAVE="${CHAVE,,}"
+            [[ -n "${CHAVE}" ]] && NOME="${NOME_DO_ADAPTADOR[${CHAVE}]:-}"
         fi
         [[ -n "${NOME}" || "${HOSPEDA}" -eq 1 ]] || continue
         # O ALIAS DE AGORA É LIDO EM UTF-8 (conferência da INSTALL-E-UNINSTALL-
         # DO-RADIO-01, 23/09/2026). Sem o `--json`, o `busctl` escapa em C todo
         # byte fora do ASCII — «Sofá» sai «Sof\303\241», medido num barramento
         # privado com o systemd 255 dela —, e o `_prop_adaptador` devolvia o
-        # texto escapado. Com o nome do lugar, a comparação abaixo nunca batia e
+        # texto escapado. Com o nome dela, a comparação abaixo nunca batia e
         # o nome era reescrito a cada tique do watchdog; sem ele, a BASE era o
         # escapado, e a costura gravava «Nintendo Sof\303\241» no adaptador de
         # quem tem acento no nome. Agora o texto vem do `--json=short`; num

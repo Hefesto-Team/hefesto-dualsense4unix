@@ -104,11 +104,10 @@ ESCREVEM = {
     "clear_mask",
     "autoswitch_lock_set",     # grava a trava da troca automática
     "save_autoswitch_locked",  # o escritor por baixo dela
-    # `renomear_o_dongle` SAIU DAQUI em 23/09/2026 (TRANSPLANTE-DA-SECAO-01):
-    # o nome do adaptador passou a ser do LUGAR e tem UM escritor
-    # (`entrada_a_entrada.dar_nome`, no `maquina.json`); a porta antiga ficou
-    # sem chamador na tela, e um nome sem chamador não acusa coisa alguma.
-    "dar_nome",                # grava o nome do lugar no `maquina.json` dela
+    # `renomear_o_dongle` SAIU DAQUI em 23/09/2026 (TRANSPLANTE-DA-SECAO-01),
+    # e o `dar_nome` do lugar em 26/09/2026: o nome do adaptador mora no
+    # endereço dele (D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO), com UM escritor.
+    "dar_nome_ao_adaptador",   # grava o nome do adaptador no `maquina.json` dela
     # O EDITOR DA ENTRADA DO MAPA DAS CONEXÕES — O-MAPA-DAS-CONEXOES-NO-PRODUTO-01,
     # 26/09/2026: o hub, o extensor e a velocidade vão ao `maquina.json` dela.
     "declarar_a_ligacao",
@@ -583,13 +582,14 @@ def test_a_regua_desce_pelo_ajudante_do_mesmo_modulo() -> None:
 
     Aqui a profundidade é medida DIRETAMENTE, no herdeiro do caso que a
     revelou: o gesto `08-conexoes·adaptador-renomear` (era `renomear-adaptador`
-    até 23/09/2026, TRANSPLANTE-DA-SECAO-01) não chama `dar_nome`; ele chama
-    `_gravar_o_nome`, do mesmo arquivo, e é o ajudante que grava no disco dela.
+    até 23/09/2026, TRANSPLANTE-DA-SECAO-01) não chama `dar_nome_ao_adaptador`;
+    ele chama `_gravar_o_nome`, do mesmo arquivo, e é o ajudante que grava no
+    disco dela.
     """
     gestos = _gestos_registrados()
     fn = gestos[("08-conexoes.html", "adaptador-renomear")]
 
-    assert "dar_nome" in _portas(fn), (
+    assert "dar_nome_ao_adaptador" in _portas(fn), (
         "a régua parou de descer pelos ajudantes do módulo: ela voltou a ler "
         "só o corpo do gesto, e é assim que o nome do adaptador ficou "
         "desprotegido até 04/09/2026."
@@ -597,7 +597,7 @@ def test_a_regua_desce_pelo_ajudante_do_mesmo_modulo() -> None:
     # E a superfície do próprio gesto NÃO tem a porta — é isso que torna o
     # caso uma prova de profundidade, e não uma coincidência.
     fonte = inspect.getsource(fn)
-    assert "dar_nome(" not in fonte.split('"""')[-1], (
+    assert "dar_nome_ao_adaptador(" not in fonte.split('"""')[-1], (
         "o gesto passou a chamar a porta DIRETAMENTE; este caso deixou de "
         "provar a descida. Escolha outro gesto que grave por ajudante."
     )

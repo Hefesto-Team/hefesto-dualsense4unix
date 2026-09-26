@@ -38,8 +38,8 @@ só ele:
      `_veredito_do_exame`                          com_uma_linha_grave`
  2   `ordens=todas` no lugar de `ordens=novas`     `..._o_que_ela_calou_nao_
                                                    segura_a_cor`
- 3   um `<i class="vst">` fora de                  `..._tem_um_interruptor_
-     `aba08.veredito_do_checkup`, e regerar        por_estado_do_veredito`
+ 3   (caducou em 26/09/2026 — a linha de           `..._a_linha_de_veredito_
+     veredito saiu da tela, a pedido dela)         saiu_da_tela`
  4   (caducou em 23/09/2026 — a régua de fatias    `..._uma_pista_por_
      saiu com a seção velha)                       adaptador` (e a irmã)
  5   (caducou em 23/09/2026 — a tabela saiu)       `..._a_tabela_dos_
@@ -198,54 +198,23 @@ def test_o_que_ela_calou_nao_segura_a_cor() -> None:
         "grava e a tela não muda, que é a definição de botão morto")
 
 
-def test_o_veredito_chega_ao_pacote() -> None:
-    """A LIGAÇÃO, e não só a peça.
+def test_a_linha_de_veredito_saiu_da_tela() -> None:
+    """A LINHA SAIU — 26/09/2026, pedido dela com a janela maximizada.
 
-    A lição está escrita no `test_a08_o_selo_do_exame_tem_um_endereco_por_estado`:
-    um teste que prova a peça e não a ligação dá verde sobre um fio solto.
-    """
-    p = _pacote()
-    saiu = p.pacote(_ctx())
-    assert "veredito" in saiu, (
-        "o `pacote()` não emite `veredito` — a linha do desenho fica com a "
-        "frase da bancada para sempre")
-    for endereco in p.ENDERECO_DO_VEREDITO.values():
-        assert endereco in saiu, (
-            f"o `pacote()` não emite `{endereco}`: o desenho tem o interruptor "
-            f"e ninguém o acende")
+    *«precisamos ganhar espaço vertical. vamos remover a linha 3 mudanças
+    recomendadas»*. Revoga a D-16: a Sugestão de Conexão ao lado já numera cada
+    mudança, e a contagem repetia a caixa. A frase e a cor continuam contadas
+    por `_veredito_do_exame` (as réguas acima), para quem as pedir.
 
-
-def test_o_desenho_tem_um_interruptor_por_estado_do_veredito() -> None:
-    """A outra metade: sem o endereço no HTML, o pacote escreve no vazio.
-
-    ARRANQUE A CURA: tire um `<i class="vst">` de `aba08.veredito_do_checkup`,
-    regenere, e este teste reprova.
-    """
-    p = _pacote()
-    html = BANCADA.read_text()
-    for endereco in p.ENDERECO_DO_VEREDITO.values():
-        assert f'data-campo="{endereco}"' in html, (
-            f"o desenho não tem `{endereco}` — o pacote emite e a tela não "
-            f"recebe")
-    assert 'data-campo="veredito"' in html, (
-        "a linha de veredito não tem endereço para a frase")
-    assert html.count('class="veredito"') == 1, (
-        "a linha de veredito tem de ser UMA — ela responde pela seção inteira, "
-        "e duas seriam duas respostas para a mesma pergunta")
-
-
-def test_a_linha_de_veredito_mora_acima_das_duas_colunas() -> None:
-    """*"Uma linha de veredito no topo"* — a palavra dela é TOPO.
-
-    Dentro da coluna do exame ela responderia por metade da seção: a ordem de
-    serviço vive na outra.
+    ARRANQUE A CURA: devolva a `<div class="veredito">` ao gerador (ou o
+    `**veredito` ao pacote), e este teste reprova.
     """
     html = BANCADA.read_text()
-    veredito = html.index('class="veredito"')
-    colunas = html.index('class="duas-colunas"', html.index('id="cx8-2"'))
-    assert veredito < colunas, (
-        "a linha de veredito nasceu DENTRO das colunas — ela responde pelas "
-        "duas, e pendurada em uma delas responde por metade da seção")
+    assert 'class="veredito"' not in html, (
+        "a linha de veredito voltou ao desenho — ela saiu a pedido dela")
+    saiu = _pacote().pacote(_ctx())
+    assert "veredito" not in saiu, (
+        "o `pacote()` emite `veredito` para um endereço que a tela não tem")
 
 
 # ---------------------------------------------------------------------------

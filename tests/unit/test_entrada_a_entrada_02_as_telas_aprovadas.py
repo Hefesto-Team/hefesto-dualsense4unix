@@ -1070,18 +1070,29 @@ def test_o_motor_nao_escreve_no_bluez() -> None:
     assert not hasattr(ee, "projetar_o_nome")
 
 
-def test_dar_nome_so_grava_o_nome_no_maquina_json(disco: Path) -> None:
-    """O renomear da entrada (a TRANSPLANTE chama ``dar_nome``) grava o nome e
-    SÓ o nome: a projeção é do script.
+def test_dar_nome_ao_adaptador_so_grava_o_nome_no_maquina_json(disco: Path) -> None:
+    """O renomear do adaptador grava o nome e SÓ o nome: a projeção é do script.
 
-    MORDIDA: ``dar_nome`` voltar a pedir o ``Alias`` — ele ganha um segundo
-    parâmetro de projeção e a assinatura reprova.
+    MORDIDA: ``dar_nome_ao_adaptador`` voltar a pedir o ``Alias`` — ele ganha
+    um segundo parâmetro de projeção e a assinatura reprova.
+    """
+    assert list(ee.dar_nome_ao_adaptador.__kwdefaults__ or {}) == ["gravar"]
+
+
+def test_o_nome_do_adaptador_mora_no_endereco_e_nao_toca_a_entrada(disco: Path) -> None:
+    """D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO: o nome da entrada e o do adaptador
+    moram em chaves diferentes, e gravar um não mexe no outro.
+
+    MORDIDA: faça ``dar_nome_ao_adaptador`` gravar em ``lugares`` — a entrada
+    «15» perde o nome dela.
     """
     lugar = _lugar(PCI_A, "3")
-    feito = ee.dar_nome(lugar, "  Extensor à esquerda ")
-    assert feito == ee.NomeDado(lugar, "Extensor à esquerda", True)
-    assert carregar_maquina().lugares[lugar].nome == "Extensor à esquerda"
-    assert list(ee.dar_nome.__kwdefaults__ or {}) == ["gravar"]
+    maquina.gravar_maquina({"lugares": {lugar: {"nome": "15"}}})
+    feito = ee.dar_nome_ao_adaptador("AA:BB:CC:00:00:01", " Meio ")
+    assert feito == ee.NomeDado("aabbcc000001", "Meio", True)
+    documento = carregar_maquina()
+    assert documento.adaptadores["aabbcc000001"].nome == "Meio"
+    assert documento.lugares[lugar].nome == "15"
 
 
 # -- o script ----------------------------------------------------------------
@@ -1104,10 +1115,19 @@ class Bancada:
     ``busctl``, ``udevadm``, ``hciconfig``, ``hcitool`` e ``id`` são dublês num
     ``PATH`` montado à mão; ``HEFESTO_SYS_BLUETOOTH``, ``HEFESTO_BT_LIB`` e
     ``HEFESTO_MAQUINA_JSON`` desviam as três raízes. Nenhum adaptador vivo é
-    lido, e nenhum é renomeado.
+    lido, e nenhum é renomeado. ``adaptadores`` é ``{hciN: nome}`` e vai ao
+    disco pela chave do endereço; o ``udevadm`` de mentira fica para a régua
+    de que o nome da ENTRADA não chega ao adaptador.
     """
 
-    def __init__(self, tmp: Path, *, alias: Mapping[str, str], lugares: Mapping[str, Any]) -> None:
+    def __init__(
+        self,
+        tmp: Path,
+        *,
+        alias: Mapping[str, str],
+        adaptadores: Mapping[str, str] | None = None,
+        lugares: Mapping[str, Any] | None = None,
+    ) -> None:
         self.tmp = tmp
         self.fakes = tmp / "fakes"
         self.escritas = tmp / "set-property.tsv"
@@ -1116,7 +1136,14 @@ class Bancada:
         self.lib.mkdir(parents=True)
         self.json = tmp / "casa" / "maquina.json"
         self.json.parent.mkdir(parents=True)
-        self.json.write_text(json.dumps({"version": 1, "lugares": lugares}), encoding="utf-8")
+        declarados = {
+            ADAPTADORES[hci].replace(":", "").lower(): {"nome": nome}
+            for hci, nome in (adaptadores or {}).items()
+        }
+        self.json.write_text(
+            json.dumps({"version": 1, "lugares": lugares or {}, "adaptadores": declarados}),
+            encoding="utf-8",
+        )
         for hci in ADAPTADORES:
             interface = self.sys_bt / "usb" / f"{hci}-usb" / f"{hci}-usb:1.0"
             (interface / "bluetooth" / hci).mkdir(parents=True)
@@ -1195,22 +1222,37 @@ exit 0
         }
 
 
-def test_o_nome_do_lugar_chega_ao_alias_pelo_script(tmp_path: Path) -> None:
-    """D3 com UM escritor: o ``bt_active_mode.sh`` lê o nome do lugar no
-    ``maquina.json`` e o escreve no ``Alias`` do adaptador que está nele — o
-    lugar vem do ``ID_PATH`` do udev, a mesma grafia do dono.
+def test_o_nome_do_adaptador_chega_ao_alias_pelo_script(tmp_path: Path) -> None:
+    """UM escritor: o ``bt_active_mode.sh`` lê o nome do adaptador no
+    ``maquina.json``, pelo ENDEREÇO dele, e o escreve no ``Alias``.
 
-    MORDIDA: arranque do script o bloco do nome do lugar — o ``Alias`` do
-    adaptador na porta com nome não muda.
+    MORDIDA: arranque do script o bloco do nome — o ``Alias`` não muda.
     """
     banca = Bancada(
-        tmp_path,
-        alias={"hci0": "Sala", "hci1": "Quarto"},
-        lugares={ID_PATH["hci0"]: {"entrada": "3", "nome": "Sofá"}},
+        tmp_path, alias={"hci0": "Sala", "hci1": "Quarto"}, adaptadores={"hci0": "Sofá"}
     )
     feito = banca.rodar()
     assert feito.returncode == 0, feito.stderr[-800:]
     assert banca.aliases_escritos() == {"hci0": "Sofá"}, banca.aliases_escritos()
+
+
+def test_o_nome_da_entrada_nao_chega_ao_adaptador(tmp_path: Path) -> None:
+    """D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO (26/09/2026), pedido dela: *«temos o
+    nome das entradas e o nome dos dispositivos. Eles estão se confundindo»*.
+    A entrada que ela numerou no Mapear virava o nome do adaptador plugado
+    nela (a D3), e a tela mostrava adaptadores «15» e «13».
+
+    MORDIDA: devolva ao script a leitura de ``lugares[<ID_PATH>].nome`` — o
+    ``udevadm`` de mentira resolve o lugar, e o ``hci0`` vira «15».
+    """
+    banca = Bancada(
+        tmp_path,
+        alias={"hci0": "Sala", "hci1": "Quarto"},
+        lugares={ID_PATH["hci0"]: {"entrada": "15", "nome": "15"}},
+    )
+    feito = banca.rodar()
+    assert feito.returncode == 0, feito.stderr[-800:]
+    assert banca.aliases_escritos() == {}, banca.aliases_escritos()
 
 
 def test_o_nome_do_lugar_leva_o_prefixo_onde_a_linhagem_mora(tmp_path: Path) -> None:
@@ -1224,7 +1266,7 @@ def test_o_nome_do_lugar_leva_o_prefixo_onde_a_linhagem_mora(tmp_path: Path) -> 
     banca = Bancada(
         tmp_path,
         alias={"hci0": "Sala", "hci1": "Quarto"},
-        lugares={ID_PATH["hci1"]: {"entrada": "2", "nome": "Quarto novo"}},
+        adaptadores={"hci1": "Quarto novo"},
     )
     bond = banca.lib / ADAPTADORES["hci1"] / "AA:BB:CC:00:00:53"
     bond.mkdir(parents=True)
@@ -1235,14 +1277,14 @@ def test_o_nome_do_lugar_leva_o_prefixo_onde_a_linhagem_mora(tmp_path: Path) -> 
 
 def test_o_script_nao_reescreve_o_nome_que_ja_esta_la(tmp_path: Path) -> None:
     """O watchdog roda a cada 2 min: nome que já está no ``Alias`` não se
-    reescreve, e lugar sem nome não mexe no ``Alias`` dela.
+    reescreve, e adaptador sem nome não mexe no ``Alias`` dela.
 
     MORDIDA: escrever sem comparar — o ``Alias`` é reescrito a cada tique.
     """
     banca = Bancada(
         tmp_path,
         alias={"hci0": "Sofá", "hci1": "Quarto"},
-        lugares={ID_PATH["hci0"]: {"nome": "Sofá"}, ID_PATH["hci1"]: {"entrada": "2"}},
+        adaptadores={"hci0": "Sofá"},
     )
     assert banca.rodar().returncode == 0
     assert banca.aliases_escritos() == {}
@@ -1297,7 +1339,7 @@ def test_sob_a_suite_o_script_nao_le_o_maquina_json_dela(tmp_path: Path) -> None
     banca = Bancada(
         tmp_path,
         alias={"hci0": "Sala", "hci1": "Quarto"},
-        lugares={ID_PATH["hci0"]: {"nome": "Sofá"}},
+        adaptadores={"hci0": "Sofá"},
     )
     feito = banca.rodar(HEFESTO_MAQUINA_JSON=None)
     assert feito.returncode == 0, feito.stderr[-800:]

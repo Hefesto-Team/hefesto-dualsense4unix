@@ -1248,7 +1248,7 @@
      com a largura do texto dele (até 62%, e o achado de 121 caracteres ainda
      cabe numa linha), a Sugestão com o resto; os dois são caixas, e o
      `stretch` da grade dá a mesma altura às duas. */
-  .duas-colunas:has(.col-exame){grid-template-columns:fit-content(62%) minmax(0,1fr);
+  .duas-colunas:has(.col-exame){grid-template-columns:minmax(0,40%) minmax(0,1fr);
                                 column-gap:10px;align-items:stretch}
   .duas-colunas:has(.col-exame) > .lado-e{padding:10px 12px;border:1px solid var(--border-sutil);
                                 border-radius:7px;background:var(--app-bg)}
@@ -1257,6 +1257,14 @@
      `space-evenly`, porque com a coluna rolando a margem vira zero e o
      `space-evenly` cortaria a primeira linha */
   .duas-colunas:has(.col-exame) .col-exame > .exame{margin:auto 0}
+  /* O WEBKIT DA JANELA MEDE O EXAME CURTO DEMAIS — 26/09/2026, foto dela com a
+     janela maximizada: *«ta dando duas linhas e o sugestões de conexão não tá
+     usando o espaço horizontral por completo»* (noqa-acento: citação literal
+     dela). Medido no WebKitGTK: com `fit-content` a coluna do exame parava em
+     421 px e três das cinco linhas quebravam (34 px contra 20), e a ordem
+     ocupava 289 px de uma caixa de 1029. O exame fica com 40% (o achado mais
+     longo, de 121 caracteres, cabe a 1920 px), e a ordem ocupa a caixa. */
+  .lado-d .sugestao .col-ordem > .ordem{align-items:stretch}
   /* DOIS SELETORES E NÃO UM — 19/09/2026, e o segundo é a cura de um `:empty`
      que NUNCA DISPAROU na máquina dela.
 
@@ -1478,50 +1486,6 @@
   .exame.apagada .ajuda{opacity:.42}
   .exame.apagada .ignora{color:var(--texto-suave);border-color:var(--texto-suave)}
 
-  /* ---- A LINHA DE VEREDITO — decisão D-16 dela, 04/09/2026 ----
-     *"Uma linha de veredito no topo."*, *"Na cor do pior achado."*
-
-     O QUE ELA CURA, e a queixa é dela: o Check-up tinha cinco pílulas e nenhum
-     veredito. Para saber se está tudo certo era preciso ler as cinco e achar a
-     pior — e a segunda ordem de serviço desta bancada, que não cabe nas cinco,
-     não entrava nessa leitura de jeito nenhum. A janela estável responde em uma
-     linha desde sempre, e o carimbo do lado só diz QUANDO.
-
-     ELA MORA NO TOPO DA SEÇÃO e não dentro da coluna do exame: "no topo" é a
-     palavra dela, e a resposta que vale para as duas colunas — o exame à
-     esquerda e a ordem de serviço à direita — não pode ficar pendurada em uma
-     delas. São 11px de altura mais o vão, e é o preço declarado da decisão.
-
-     A COR VEM POR INTERRUPTOR, um por estado, exatamente como as cinco linhas
-     ganharam em 03/09: o alvo `classe` do piloto acende UMA classe por
-     elemento, então um nó só não tem como escolher entre quatro cores. Aqui os
-     QUATRO são interruptores — inclusive o `problema` —, porque não há pílula
-     com classe cravada a reaproveitar: a linha inteira nasce do produto.
-
-     O `~` LEVA A COR DO IRMÃO ao ponto e ao texto sem que nenhum dos dois
-     precise de um segundo `data-campo`, que o vocabulário de endereço não
-     permite. É o mesmo combinador de `.exame .est-ok.on ~ .selo`.
-
-     O ESTADO DE REPOUSO É O CINZA DE "não sei", e não o verde: enquanto o
-     produto não respondeu, a linha não pode afirmar que está tudo bem — é o F7
-     desta casa, o estado em que o produto não sabe se disfarçando do estado em
-     que está tudo certo. */
-  .veredito{display:flex;align-items:center;gap:9px;min-height:19px;font-size:12px;
-            font-weight:600;color:var(--texto-suave);margin-bottom:11px}
-  .veredito .vst{display:none}
-  .veredito .ponto{flex:0 0 8px;width:8px;height:8px;border-radius:50%;
-                   background:var(--comment)}
-  .veredito .vst-ok.on ~ .ponto{background:var(--green)}
-  .veredito .vst-warn.on ~ .ponto{background:var(--orange)}
-  .veredito .vst-info.on ~ .ponto{background:var(--comment)}
-  .veredito .vst-bad.on ~ .ponto{background:var(--red)}
-  .veredito .vst-ok.on ~ .txt{color:var(--green)}
-  .veredito .vst-warn.on ~ .txt{color:var(--orange)}
-  .veredito .vst-info.on ~ .txt{color:var(--texto-suave)}
-  /* O VERMELHO POR ÚLTIMO, e pela mesma razão do `.selo.grave`: um instante com
-     dois interruptores acesos não pode deixar o que está QUEBRADO com a cor do
-     que só podia estar melhor. */
-  .veredito .vst-bad.on ~ .txt{color:var(--red)}
 
   /* ---- a ordem de serviço: imperativo, receita e ganho ---- */
   .ordem{border:1px solid var(--border-forte);border-radius:7px;background:var(--app-bg);
@@ -1690,13 +1654,23 @@
      mostra nada. */
   .gc-cor{position:absolute;left:0;right:0;top:0;height:3px;display:block;
           color:transparent;background:currentColor}
-  .gc-cabeca{display:flex;align-items:center;gap:6px;height:38px;
+  /* UMA LINHA SÓ — 26/09/2026, pedido dela com a janela maximizada: *«colocar
+     numero do player e nome do player na mesma linha do nome do modelo e modo
+     de conexão»*. O desenho à esquerda, e ao lado o «P N», o nome de quem joga e
+     o modelo com o transporte; a linha de 38 px que o número tinha sozinho saiu.
+     (noqa-acento: citação literal dela) No cartão estreito (271 px no tamanho
+     do desenho) o modelo DESCE para uma segunda linha dentro dos mesmos 62 px,
+     em vez de virar reticências: o `flex-wrap` só quebra quando o dono não teria
+     os 70 px dele. */
+  .gc-cabeca{display:flex;align-items:center;gap:10px;height:62px;
              border-bottom:1px solid var(--border-sutil)}
+  .gc-quem{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;
+           column-gap:6px;row-gap:1px}
   .gc-num{flex:0 0 auto;font-size:13.5px;font-weight:700;color:var(--purple);
           cursor:pointer}
   /* O DONO: em repouso ele é texto; só se veste de campo com o mouse ou o
      foco. Vazio, o `placeholder` diz para que serve. */
-  .gc-dono{flex:1;min-width:0;height:26px;padding:0 7px;
+  .gc-dono{flex:1 1 70px;min-width:70px;height:26px;padding:0 7px;
            border:1px solid transparent;border-radius:6px;background:transparent;
            color:var(--fg);font:inherit;font-size:12.5px;font-weight:600;
            text-overflow:ellipsis}
@@ -1706,13 +1680,13 @@
   /* O APARELHO: o desenho e o nome, e é ele o alvo do clique que aponta a fita
      para este controle. O `<label>` ENVOLVE o texto, não o cobre, para a dica
      de dentro continuar sendo a que aparece. */
-  .gc-abre{display:flex;align-items:center;gap:12px;height:62px;
+  .gc-abre{flex:0 0 auto;display:flex;align-items:center;height:62px;
            cursor:pointer;border-radius:7px}
-  .gc-abre:hover .gc-nome{color:var(--fg)}
+  .gc-cabeca:hover .gc-nome{color:var(--fg)}
   /* A PROPORÇÃO É A DO `viewBox` (116,684 × 80,472); só a largura é escolhida:
      76px dão 52 de altura, e o cartão cabe com o quadro do rádio à vista. */
   .gc-abre .ds-mini{flex:0 0 76px;width:76px;height:auto}
-  .gc-nome{min-width:0;font-size:12.5px;font-weight:600;color:var(--texto-suave);
+  .gc-nome{flex:0 1 auto;min-width:0;max-width:100%;font-size:12.5px;font-weight:600;color:var(--texto-suave);
            white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* OS SEIS SELOS, UM POR LINHA. O selo é do produto
      (`a08_conexoes.selo_do_estado`: o rótulo, o valor em `<b>` e o ✓ em
@@ -1739,11 +1713,15 @@
      iguais, «Bateria Longa» e «Personalizado» perdiam 7 a 8 px no tamanho do
      desenho (1212 px) e viravam reticências. Com `flex:1 1 auto` a 11px os
      três cabem a partir de 1181 px, a menor janela com quatro cartões numa
-     fileira (abaixo dela a grade vira duas e o cartão alarga). */
-  .gc-perfil .seg{display:flex;flex-wrap:nowrap;gap:3px}
+     fileira (abaixo dela a grade vira duas e o cartão alarga). Os nomes dela
+     de 26/09 («Perfil Máximo», «Perfil Econômico») pedem 246 px numa linha de
+     245: o vão de 2 px, 1 px de respiro e a letra 0,2 px mais junta devolvem
+     os 15 que faltavam. */
+  .gc-perfil .seg{display:flex;flex-wrap:nowrap;gap:2px}
   /* `min-width:0` porque o `.btn` do esqueleto nasce com 150px, e três de 150
      não cabem num cartão de 350. */
-  .gc-perfil .seg .btn{flex:1 1 auto;width:auto;min-width:0;padding:0 2px;font-size:11px;
+  .gc-perfil .seg .btn{flex:1 1 auto;width:auto;min-width:0;height:26px;padding:0 1px;font-size:11px;
+                       letter-spacing:-.2px;
                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .gc-perfil .seg .btn.on{border-color:var(--purple);background:rgba(189,147,249,.16);
                           color:var(--fg);font-weight:600}
@@ -1756,7 +1734,10 @@
   .gc-corpo .gc-luz{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
   .gc-luz .ressalva{margin-top:0;text-align:center}
   .gc-corpo .gc-luz{align-items:stretch}
-  .gc-luz .btn{width:100%;display:flex;align-items:center;justify-content:center;gap:7px}
+  .gc-luz .btn{width:100%;height:26px;display:flex;align-items:center;justify-content:center;gap:7px}
+  /* OS BOTÕES MAIS BAIXOS — 26/09/2026, com a janela maximizada: *«diminuir a
+     altura dos botões»*. 26 px no perfil e na luz, 28 px nas quatro
+     ferramentas (o esqueleto dá 34). */
   .gc-luz .btn .i{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
                   stroke-linecap:round;stroke-linejoin:round}
   .gc-corpo .ltrava{display:none}
@@ -1777,7 +1758,7 @@
      ganhou nome: um ícone solto era o único botão da faixa sem palavra. */
   .ferramentas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;
                margin:10px 0 12px}
-  .ferramentas .btn{width:100%;display:flex;align-items:center;justify-content:center;
+  .ferramentas .btn{width:100%;height:28px;display:flex;align-items:center;justify-content:center;
                     gap:7px;padding:0 10px;white-space:nowrap}
   .ferramentas .i.ds{width:21px}
   .ferramentas .i{width:14px;height:14px;flex:0 0 auto;fill:none;stroke:currentColor;
@@ -2407,7 +2388,16 @@
   .radio .linha.nao-conectou,.radio .linha.desligado{cursor:default}
   .radio .linha.desligado .ds{opacity:.55}
   .radio .lugar.nao-conectou{border-color:var(--orange)}
-  .radio .selo-fora .palpite{font-family:var(--font-corpo);font-size:10.5px}
+  .radio .selo-fora .palpite{font-family:var(--font-corpo);font-size:10.5px;max-width:110px;
+                             overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* O BALÃO É BOTÃO, E BOTÃO NASCE COM O FUNDO DO SISTEMA — 26/09/2026, foto
+     dela: *«nessa região o svg continua em branco não dá pra entender»*.
+     Medido no WebKitGTK da janela: o `<button>` pintava `rgb(192,192,192)` por
+     baixo do ícone cinza, e o desenho sumia. O fundo é o da faixa, o traço é
+     o do texto, e todo balão diz uma palavra ao lado do ícone.
+     (noqa-acento: citação literal dela) */
+  .radio button.selo-fora{background:transparent;color:var(--texto-suave);line-height:1.3}
+  .radio button.selo-fora:hover{border-color:var(--purple);color:var(--fg)}
 
 </style>
 </head>
@@ -2982,19 +2972,11 @@
         <span class="conta" data-campo="conta-gestao" data-hef-alvo="html">2 controles <span class="pt">•</span> 1 USB <span class="pt">•</span> 1 BT</span>
       </div>
       <div class="quadro-corpo">
-        <!-- A LINHA DE VEREDITO — decisão D-16 dela, 04/09/2026:
-             *"Uma linha de veredito no topo."*, *"Na cor do pior achado."*
-
-             ELA FICA ACIMA DAS DUAS COLUNAS, e não dentro da do exame: a
-             resposta vale para as duas — os achados à esquerda e a ordem de
-             serviço à direita —, e pendurá-la em uma delas faria a pergunta
-             *"está tudo certo?"* ser respondida por metade da seção.
-
-             A FRASE E A COR NÃO SÃO DIGITADAS: saem de
-             `ordens_da_mesa.cabecalho()` e de `exame_da_mesa.veredito()` sobre
-             a cena declarada em `ESTADOS_DO_EXAME`, que são os mesmos dois
-             donos que `a08_conexoes._veredito_do_exame` chama na tela viva. -->
-        <div class="veredito"><i class="vst vst-ok" data-campo="veredito-certo" data-hef-alvo="classe" data-hef-quando="certo"></i><i class="vst vst-warn on" data-campo="veredito-atencao" data-hef-alvo="classe" data-hef-quando="atencao"></i><i class="vst vst-bad" data-campo="veredito-problema" data-hef-alvo="classe" data-hef-quando="problema"></i><i class="vst vst-info" data-campo="veredito-nao-sei" data-hef-alvo="classe" data-hef-quando="nao_sei"></i><span class="ponto"></span><span class="txt" data-campo="veredito">2 mudanças recomendadas</span></div>
+        <!-- A LINHA DE VEREDITO SAIU — 26/09/2026, pedido dela com a janela
+             maximizada: *«precisamos ganhar espaço vertical. vamos remover a
+             linha 3 mudanças recomendadas»*. Revoga a D-16 de 04/09 («Uma
+             linha de veredito no topo»): a Sugestão de Conexão ao lado já
+             numera cada mudança, e a contagem repetia a caixa. -->
         <div class="duas-colunas">
 
           <div class="lado-e">
@@ -3157,13 +3139,8 @@
           <div class="gc-item gc-p1" data-controle="p1">
             <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor" style="color:#ae335a"></i>
             <div class="gc-cabeca">
-              <label class="gc-num" for="gc-p1" data-gesto="alvo" title="Escolhe só este controle: a luz, os gatilhos e a vibração passam a mirar nele. A fita do topo passa a apontar para ele.">P1</label>
-              <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
-                     value="Vitória" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
-                     aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
-            </div>
-            <label class="gc-abre" for="gc-p1" data-gesto="alvo" title="Escolhe só este controle: a luz, os gatilhos e a vibração passam a mirar nele. A fita do topo passa a apontar para ele.">
-              <?xml version="1.0" encoding="utf-8"?>
+              <label class="gc-abre" for="gc-p1" data-gesto="alvo" title="Escolhe só este controle: a luz, os gatilhos e a vibração passam a mirar nele. A fita do topo passa a apontar para ele.">
+                <?xml version="1.0" encoding="utf-8"?>
 <svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="cosmic-red" class="ds-svg ds-mini"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="p1-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
@@ -3451,8 +3428,15 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-              <span class="gc-nome" data-campo="nome" data-hef-alvo="html" title="A borda é a cor lida deste aparelho.">Cosmic Red <span class="pt">•</span> USB</span>
-            </label>
+              </label>
+              <div class="gc-quem">
+                <label class="gc-num" for="gc-p1" data-gesto="alvo" title="Escolhe só este controle: a luz, os gatilhos e a vibração passam a mirar nele. A fita do topo passa a apontar para ele.">P1</label>
+                <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
+                       value="Vitória" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
+                       aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
+                <span class="gc-nome" data-campo="nome" data-hef-alvo="html" title="A borda é a cor lida deste aparelho.">Cosmic Red <span class="pt">•</span> USB</span>
+              </div>
+            </div>
             <div class="gc-resumo">
               <span class="gc-est" data-campo="est-mic" data-hef-alvo="html"><span class="est ok">Mic <i class="certo">✓</i></span></span>
               <span class="gc-est" data-campo="est-som" data-hef-alvo="html"><span class="est ok">Som <i class="certo">✓</i></span></span>
@@ -3463,10 +3447,9 @@
             </div>
             <div class="gc-corpo">
               <div class="gc-perfil">
-                <span class="rot">Perfil de Desempenho</span>
                 <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
-                  <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Tudo Ligado</button>
-                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e Giroscópio continuam como estão.">Bateria Longa</button>
+                  <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Perfil Máximo</button>
+                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e Giroscópio continuam como estão.">Perfil Econômico</button>
                   <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" data-hef-atributo="aria-checked" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
                 </div>
               </div>
@@ -3476,13 +3459,8 @@
           <div class="gc-item gc-p2" data-controle="p2">
             <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"></i>
             <div class="gc-cabeca">
-              <label class="gc-num" for="gc-p2" data-gesto="alvo" title="Escolhe só este controle: a luz, os gatilhos e a vibração passam a mirar nele. A fita do topo passa a apontar para ele.">P2</label>
-              <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
-                     value="" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
-                     aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
-            </div>
-            <label class="gc-abre" for="gc-p2" data-gesto="alvo" title="Escolhe só este controle: a luz, os gatilhos e a vibração passam a mirar nele. A fita do topo passa a apontar para ele.">
-              <?xml version="1.0" encoding="utf-8"?>
+              <label class="gc-abre" for="gc-p2" data-gesto="alvo" title="Escolhe só este controle: a luz, os gatilhos e a vibração passam a mirar nele. A fita do topo passa a apontar para ele.">
+                <?xml version="1.0" encoding="utf-8"?>
 <svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="starlight-blue" class="ds-svg ds-mini"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="p2-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
@@ -3770,8 +3748,15 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Starlight Blue <span class="pt">•</span> BT</span>
-            </label>
+              </label>
+              <div class="gc-quem">
+                <label class="gc-num" for="gc-p2" data-gesto="alvo" title="Escolhe só este controle: a luz, os gatilhos e a vibração passam a mirar nele. A fita do topo passa a apontar para ele.">P2</label>
+                <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
+                       value="" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
+                       aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
+                <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Starlight Blue <span class="pt">•</span> BT</span>
+              </div>
+            </div>
             <div class="gc-resumo">
               <span class="gc-est" data-campo="est-mic" data-hef-alvo="html"><span class="est ok">Mic <i class="certo">✓</i></span></span>
               <span class="gc-est" data-campo="est-som" data-hef-alvo="html"><span class="est ok">Som <i class="certo">✓</i></span></span>
@@ -3782,10 +3767,9 @@
             </div>
             <div class="gc-corpo">
               <div class="gc-perfil">
-                <span class="rot">Perfil de Desempenho</span>
                 <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
-                  <button class="btn" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Tudo Ligado</button>
-                  <button class="btn on" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e Giroscópio continuam como estão.">Bateria Longa</button>
+                  <button class="btn" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Perfil Máximo</button>
+                  <button class="btn on" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e Giroscópio continuam como estão.">Perfil Econômico</button>
                   <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" data-hef-atributo="aria-checked" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
                 </div>
               </div>
@@ -3795,13 +3779,8 @@
           <div class="gc-item gc-p3 off" data-controle="p3" data-conectado="nao">
             <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"></i>
             <div class="gc-cabeca">
-              <label class="gc-num" for="gc-p3" data-gesto="alvo" title="Nenhum controle neste lugar.">P3</label>
-              <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
-                     value="" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
-                     aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
-            </div>
-            <label class="gc-abre" for="gc-p3" data-gesto="alvo" title="Nenhum controle neste lugar.">
-              <?xml version="1.0" encoding="utf-8"?>
+              <label class="gc-abre" for="gc-p3" data-gesto="alvo" title="Nenhum controle neste lugar.">
+                <?xml version="1.0" encoding="utf-8"?>
 <svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="galactic-purple" class="ds-svg ds-mini"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="p3-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
@@ -4089,8 +4068,15 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Desconectado</span>
-            </label>
+              </label>
+              <div class="gc-quem">
+                <label class="gc-num" for="gc-p3" data-gesto="alvo" title="Nenhum controle neste lugar.">P3</label>
+                <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
+                       value="" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
+                       aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
+                <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Desconectado</span>
+              </div>
+            </div>
             <div class="gc-resumo">
               <span class="gc-est" data-campo="est-mic" data-hef-alvo="html">—</span>
               <span class="gc-est" data-campo="est-som" data-hef-alvo="html">—</span>
@@ -4101,10 +4087,9 @@
             </div>
             <div class="gc-corpo">
               <div class="gc-perfil">
-                <span class="rot">Perfil de Desempenho</span>
                 <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
-                  <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Tudo Ligado</button>
-                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e Giroscópio continuam como estão.">Bateria Longa</button>
+                  <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Perfil Máximo</button>
+                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e Giroscópio continuam como estão.">Perfil Econômico</button>
                   <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" data-hef-atributo="aria-checked" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
                 </div>
               </div>
@@ -4114,13 +4099,8 @@
           <div class="gc-item gc-p4 off" data-controle="p4" data-conectado="nao">
             <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"></i>
             <div class="gc-cabeca">
-              <label class="gc-num" for="gc-p4" data-gesto="alvo" title="Nenhum controle neste lugar.">P4</label>
-              <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
-                     value="" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
-                     aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
-            </div>
-            <label class="gc-abre" for="gc-p4" data-gesto="alvo" title="Nenhum controle neste lugar.">
-              <?xml version="1.0" encoding="utf-8"?>
+              <label class="gc-abre" for="gc-p4" data-gesto="alvo" title="Nenhum controle neste lugar.">
+                <?xml version="1.0" encoding="utf-8"?>
 <svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="white" class="ds-svg ds-mini"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
     <filter id="p4-outline-filter-0" bx:preset="outline 1 0.2 #fff6" color-interpolation-filters="sRGB" x="-50%" y="-50%" width="200%" height="200%">
@@ -4408,8 +4388,15 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Desconectado</span>
-            </label>
+              </label>
+              <div class="gc-quem">
+                <label class="gc-num" for="gc-p4" data-gesto="alvo" title="Nenhum controle neste lugar.">P4</label>
+                <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
+                       value="" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
+                       aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
+                <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Desconectado</span>
+              </div>
+            </div>
             <div class="gc-resumo">
               <span class="gc-est" data-campo="est-mic" data-hef-alvo="html">—</span>
               <span class="gc-est" data-campo="est-som" data-hef-alvo="html">—</span>
@@ -4420,10 +4407,9 @@
             </div>
             <div class="gc-corpo">
               <div class="gc-perfil">
-                <span class="rot">Perfil de Desempenho</span>
                 <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
-                  <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Tudo Ligado</button>
-                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e Giroscópio continuam como estão.">Bateria Longa</button>
+                  <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Perfil Máximo</button>
+                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e Giroscópio continuam como estão.">Perfil Econômico</button>
                   <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" data-hef-atributo="aria-checked" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
                 </div>
               </div>
@@ -4482,7 +4468,7 @@
           <div class="espectro-cab">
             Dispositivos Conectados
             <span class="ajuda" role="img" aria-label="Wi-Fi, teclado e mouse sem fio dividem os 2,4 GHz com o Bluetooth. O hachurado são os canais que os adaptadores evitam; os selos são os rádios que o sistema vê perto." title="Wi-Fi, teclado e mouse sem fio dividem os 2,4 GHz com o Bluetooth. O hachurado são os canais que os adaptadores evitam; os selos são os rádios que o sistema vê perto."><svg class="i" aria-hidden="true"><use href="#rd-ajuda"/></svg></span>
-            <span class="fora-da-faixa" data-campo="espectro-fora-da-faixa" data-hef-alvo="html"><button class="selo-fora vizinho" title="Teclado: canal que o sistema não diz. Toque para trocar." aria-label="Teclado: canal que o sistema não diz. Toque para trocar." data-gesto="vizinho-o-que-e" data-alvo="E1"><svg class="i" aria-hidden="true"><use href="#rd-teclado"/></svg></button><button class="selo-fora vizinho" title="Mouse: canal que o sistema não diz. Toque para trocar." aria-label="Mouse: canal que o sistema não diz. Toque para trocar." data-gesto="vizinho-o-que-e" data-alvo="E2"><svg class="i" aria-hidden="true"><use href="#rd-mouse"/></svg></button><button class="selo-fora vizinho" title="Wi-Fi: canal que o sistema não diz. Toque para trocar." aria-label="Wi-Fi: canal que o sistema não diz. Toque para trocar." data-gesto="vizinho-o-que-e" data-alvo="E3"><svg class="i" aria-hidden="true"><use href="#rd-wifi"/></svg></button><button class="selo-fora vizinho sem-nome" title="Teclado? Toque para dizer o que é." aria-label="Teclado? Toque para dizer o que é." data-gesto="vizinho-o-que-e" data-alvo="E4"><svg class="i" aria-hidden="true"><use href="#rd-teclado"/></svg><span class="palpite" aria-hidden="true">Teclado?</span></button><button class="selo-fora vizinho sem-nome" title="Mouse? Toque para dizer o que é." aria-label="Mouse? Toque para dizer o que é." data-gesto="vizinho-o-que-e" data-alvo="E5"><svg class="i" aria-hidden="true"><use href="#rd-mouse"/></svg><span class="palpite" aria-hidden="true">Mouse?</span></button></span>
+            <span class="fora-da-faixa" data-campo="espectro-fora-da-faixa" data-hef-alvo="html"><button class="selo-fora vizinho" title="Teclado: canal que o sistema não diz. Toque para trocar." aria-label="Teclado: canal que o sistema não diz. Toque para trocar." data-gesto="vizinho-o-que-e" data-alvo="E1"><svg class="i" aria-hidden="true"><use href="#rd-teclado"/></svg><span class="palpite" aria-hidden="true">Teclado</span></button><button class="selo-fora vizinho" title="Mouse: canal que o sistema não diz. Toque para trocar." aria-label="Mouse: canal que o sistema não diz. Toque para trocar." data-gesto="vizinho-o-que-e" data-alvo="E2"><svg class="i" aria-hidden="true"><use href="#rd-mouse"/></svg><span class="palpite" aria-hidden="true">Mouse</span></button><button class="selo-fora vizinho" title="Wi-Fi: canal que o sistema não diz. Toque para trocar." aria-label="Wi-Fi: canal que o sistema não diz. Toque para trocar." data-gesto="vizinho-o-que-e" data-alvo="E3"><svg class="i" aria-hidden="true"><use href="#rd-wifi"/></svg><span class="palpite" aria-hidden="true">Wi-Fi</span></button><button class="selo-fora vizinho sem-nome" title="Teclado? Toque para dizer o que é." aria-label="Teclado? Toque para dizer o que é." data-gesto="vizinho-o-que-e" data-alvo="E4"><svg class="i" aria-hidden="true"><use href="#rd-teclado"/></svg><span class="palpite" aria-hidden="true">Teclado?</span></button><button class="selo-fora vizinho sem-nome" title="Mouse? Toque para dizer o que é." aria-label="Mouse? Toque para dizer o que é." data-gesto="vizinho-o-que-e" data-alvo="E5"><svg class="i" aria-hidden="true"><use href="#rd-mouse"/></svg><span class="palpite" aria-hidden="true">Mouse?</span></button></span>
             <span class="no-ar" data-campo="meus-no-ar" data-hef-alvo="html"><span class="no-ar-dentro" role="img" title="Seus 6 aparelhos Bluetooth saltam pelos 67–79 canais livres" aria-label="Seus 6 aparelhos Bluetooth saltam pelos 67–79 canais livres"><svg class="i ds" aria-hidden="true"><use href="#rd-ds"/></svg><svg class="i" aria-hidden="true"><use href="#rd-caixa"/></svg><svg class="i" aria-hidden="true"><use href="#rd-fone"/></svg>&nbsp;6 no ar</span></span>
             <span class="conta" data-campo="espectro-conta" data-hef-alvo="html">12/79 evitados · 2 sem nome</span>
           </div>
@@ -5254,7 +5240,7 @@ document.addEventListener("click", function (ev) {
   <ul>
     <li><b>Uma seção só</b>: o exame e a <b>Sugestão de Conexão</b> (um ajuste por linha, numerado) em cima, quatro ferramentas com ícone no meio (o «Atualizar» entrou no «Examinar Entradas»; o <b>Mapear Entradas</b> abre o fluxo porta a porta) e um cartão por controle embaixo.</li>
     <li><b>O cartão diz o estado de agora</b>, no molde da aba Sistema: Mic, Som, Modo de conexão, Visto como, Conexão e Bateria, com o ✓ de «tudo certo». Nada abre nem fecha.</li>
-    <li><b>O nome ao lado do «P N» é de quem joga</b>: escreva; apagado, o campo volta vazio. Embaixo, o <b>Perfil de Desempenho</b> daquele controle (Tudo Ligado, Bateria Longa ou Personalizado), o mesmo dado da aba Sistema. O lugar sem controle fica, tracejado, com «Desconectado».</li>
+    <li><b>O nome ao lado do «P N» é de quem joga</b>: escreva; apagado, o campo volta vazio. Embaixo, o <b>Perfil de Desempenho</b> daquele controle (Perfil Máximo, Perfil Econômico ou Personalizado), o mesmo dado da aba Sistema. O lugar sem controle fica, tracejado, com «Desconectado».</li>
     <li><b>Mapear Entradas</b> abre uma tela com o que o Hefesto mediu da entrada da vez, o nome e o lugar que você dá, e a lista das que já têm nome.</li>
   </ul>
   <h2>«Rádio e Adaptadores» é o desenho que você aprovou em 23/09 — e o que ficou diferente</h2>
@@ -5321,7 +5307,7 @@ document.addEventListener("click", function (ev) {
 
   <h2>O teto da vibração está nos dois, e a tela diz qual vale</h2>
   <ul>
-    <li><b>O global vale para todos os controles, e ele MUDOU DE ABA.</b> O dropdown dos três perfis saiu daqui e foi para a <b>Sistema</b>, onde se chama <b>Perfil de Bateria</b> — palavra dela, 28/08: <i>“Teto da Vibração, que na verdade é Perfil de Bateria”</i>. O código já lhe dava razão antes do nome: <code>secao_orcamento.py:127</code> chama a chave de <code>PERFIL_BATERIA_LONGA</code>, e a <code>D-PERFIL-DE-DESEMPENHO</code> (24/08) diz que <i>“o perfil decide o que custa BATERIA”</i>. Esta aba continua <b>lendo</b> o global — hoje <b>Tudo Ligado</b>, que é <b>Sem teto</b> —, e o que fica dela é a régua de turnos, que mede o <b>rádio</b>, não a bateria.</li>
+    <li><b>O global vale para todos os controles, e ele MUDOU DE ABA.</b> O dropdown dos três perfis saiu daqui e foi para a <b>Sistema</b>, onde se chama <b>Perfil de Bateria</b> — palavra dela, 28/08: <i>“Teto da Vibração, que na verdade é Perfil de Bateria”</i>. O código já lhe dava razão antes do nome: <code>secao_orcamento.py:127</code> chama a chave de <code>PERFIL_BATERIA_LONGA</code>, e a <code>D-PERFIL-DE-DESEMPENHO</code> (24/08) diz que <i>“o perfil decide o que custa BATERIA”</i>. Esta aba continua <b>lendo</b> o global — hoje <b>Perfil Máximo</b>, que é <b>Sem teto</b> —, e o que fica dela é a régua de turnos, que mede o <b>rádio</b>, não a bateria.</li>
     <li><b>O do controle sobrepõe</b>, e o campo de cada linha mostra qual é o caso: o P3 está com a bateria em 31% e sobrepõe com <b>30% da força</b>; os outros dizem <b>Segue o global</b>. A conta feita — <b>qual dos dois está valendo, de onde ele veio, e em que aba o global se muda</b> — está no <code>?</code> ao lado do campo, e não mais numa coluna de texto ao lado dele.</li>
     <li><b>Isso nasce como sprint sobre o que já existe.</b> A <code>POR-UNIDADE-01</code> (10/08) já grava política de vibração POR CONTROLE (<code>profiles/manager._controllers_to_rumble_scales</code>), relativa à global. <b>Falta uma frase sua:</b> quando o controle sobrepõe, ele vence sempre, ou o produto aplica o <code>min</code> como faz hoje entre o orçamento e a política? O <code>min</code> é o que impede um “teto” de <i>aumentar</i> a força.</li>
   </ul>

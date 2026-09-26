@@ -140,6 +140,7 @@ from hefesto_dualsense4unix.utils.maquina import (
     caminho_do_no,
     caminhos_do_lugar,
     carregar_maquina,
+    chave_do_adaptador,
     entrada_do_lugar,
     entradas_do_mapa,
     lugar_da_entrada,
@@ -428,7 +429,8 @@ class Gravacao:
 
 @dataclass(frozen=True)
 class NomeDado:
-    """O que :func:`dar_nome` fez: o nome do lugar no disco."""
+    """O que :func:`dar_nome` fez (ou :func:`dar_nome_ao_adaptador`, e aí
+    ``lugar`` é a chave do endereço): o nome no disco."""
 
     lugar: str
     nome: str | None
@@ -1187,7 +1189,8 @@ def _gravar_no_mapa(
     """O ÚNICO ponto deste módulo que escreve no disco — A-08-UM-MAPEAR-SO-01.
 
     Toda gravação do mapa das portas passa por aqui: a porta que o controle
-    mostrou, o nome e o lugar da revisita, o «Não alcanço» e o ``dar_nome``.
+    mostrou, o nome e o lugar da revisita, o «Não alcanço» e o
+    ``dar_nome_ao_adaptador``.
     A régua (``tests/unit/test_a_08_um_mapear_so.py``) conta as chamadas ao
     gravador no fonte, e um segundo escritor reprova. O gravador é o
     ``lugar_declarado.declarar_a_maquina`` (sem IPC, a mesma porta de antes),
@@ -1245,13 +1248,13 @@ def nome_do_lugar(
 ) -> str | None:
     """O nome desta porta: o que ela deu, ou «Entrada 3». ``None`` = não sei.
 
-    É o que a seção nova põe no lugar do «Entrada 4.1.4», o que o conselho de
-    porta do vigia diz, e o nome que o adaptador plugado nesta porta herda.
+    É o que a seção nova põe no lugar do «Entrada 4.1.4» e o que o conselho de
+    porta do vigia diz. O adaptador plugado nela NÃO herda este nome desde
+    26/09/2026 (ver ``utils/maquina.AdaptadorDeclarado``).
 
     Sem amarra pelo lugar, vale o número que o desenho de hoje dá a um dos
-    caminhos deste lugar NESTE boot (``utils/lugar.caminhos_do_lugar``): a
-    entrada que ela numerou na outra janela também dá nome ao adaptador que
-    está nela. Dois números para o mesmo lugar é "não sei".
+    caminhos deste lugar NESTE boot (``utils/lugar.caminhos_do_lugar``). Dois
+    números para o mesmo lugar é "não sei".
     """
     documento = maquina if maquina is not None else carregar_maquina()
     nome = _nome_declarado(documento, lugar)
@@ -1409,24 +1412,6 @@ def face_do_lugar(
     return next((f.nome for f in documento.mapa.faces if numero in f.portas), None)
 
 
-def nome_do_adaptador(
-    adaptador: Any,
-    *,
-    maquina: MaquinaConfig | None = None,
-    controladores: Mapping[int, str] | None = None,
-) -> str | None:
-    """D3: o adaptador herda o nome da porta em que está.
-
-    Serve ao ``bluez_dbus.AdaptadorDoBluez`` e ao ``mesa_de_radio.Adaptador``
-    — os dois têm ``lugar``. Pelo lugar e nunca pelo ``hciN``: o índice
-    inverte entre boots, e o nome iria junto para o outro dongle.
-    """
-    lugar = str(getattr(adaptador, "lugar", "") or "")
-    if not lugar:
-        return None
-    return nome_do_lugar(lugar, maquina=maquina, controladores=controladores)
-
-
 def com_o_nome_dela(
     linha: Mapping[str, Any],
     *,
@@ -1459,26 +1444,24 @@ def com_o_nome_dela(
 # ---------------------------------------------------------------------------
 
 
-def dar_nome(
-    lugar: str,
+def dar_nome_ao_adaptador(
+    endereco: str,
     nome: str,
     *,
     gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
 ) -> NomeDado:
-    """Grava o nome do lugar no ``maquina.json``. Nome vazio apaga o nome.
+    """Grava o nome do ADAPTADOR, pelo endereço dele. Nome vazio apaga o nome.
 
-    O nome é NOSSO e mora no ``maquina.json`` (D3). O ``Alias`` do BlueZ é a
-    projeção dele, e tem UM escritor: o ``bt_active_mode.sh`` lê este campo e
-    escreve o ``Alias`` do adaptador que estiver neste lugar, no próximo tique
-    do watchdog (ENTRADA-A-ENTRADA-02). O motor não escreve no BlueZ: dois
-    escritores do mesmo ``Alias`` é a duplicidade que o commit ``e5376a0``
-    desfez em 22/08 (``D-COSTURA-BLUEZ``).
+    O ``Alias`` do BlueZ é a projeção deste campo, escrita pelo
+    ``bt_active_mode.sh`` no próximo tique do watchdog — o escritor é um só,
+    como o nome da entrada, que o Mapear grava.
     """
-    if partes_do_lugar(lugar) is None:
-        raise ValueError(f"{lugar!r} não é um lugar")
+    chave = chave_do_adaptador(endereco)
+    if chave is None:
+        raise ValueError(f"{endereco!r} não é endereço de adaptador")
     limpo = nome.strip() or None
-    recibo = _gravar_no_mapa(gravar, {"lugares": {lugar: {"nome": limpo}}})
-    return NomeDado(lugar, limpo, recibo.gravou, recibo.motivo)
+    recibo = _gravar_no_mapa(gravar, {"adaptadores": {chave: {"nome": limpo}}})
+    return NomeDado(chave, limpo, recibo.gravou, recibo.motivo)
 
 
 # ---------------------------------------------------------------------------
@@ -1841,7 +1824,8 @@ def ler_o_mapa(
         )
 
     # O QUE ELA JÁ IDENTIFICOU SEM NÚMERO também é do mapa: o nome que ela deu
-    # em Rádio e Adaptadores (``dar_nome``) e o «Não alcanço» moram no lugar,
+    # à entrada (o de antes de 26/09/2026 também vinha de Rádio e Adaptadores)
+    # e o «Não alcanço» moram no lugar,
     # e a revisita renomeia «as entradas já mapeadas ou identificadas» — com o
     # dongle fora da porta, ela continua sendo dela.
     listados = {p.lugar for p in portas if p.lugar}
@@ -2265,10 +2249,9 @@ def _gravar_a_porta(
     estiver nela agora (um pendrive no lado 3.x) trocaria.
     """
     if face is None:
-        # SÓ O NOME, numa porta que ainda não tem lugar no gabinete (a que ela
-        # só nomeou em Rádio e Adaptadores, a porta da vez sem o «onde fica»,
-        # ou a que perdeu a face): o nome vai para o lugar — o mesmo gesto do
-        # ``dar_nome`` — e o produto não inventa face nem número por ela.
+        # SÓ O NOME, numa porta que ainda não tem lugar no gabinete (a porta
+        # da vez sem o «onde fica», ou a que perdeu a face): o nome vai para o
+        # lugar, e o produto não inventa face nem número por ela.
         if nome is None:
             raise ValueError("nada a gravar: nem nome nem lugar")
         if not porta.lugar:
@@ -2660,14 +2643,13 @@ __all__ = [
     "PortaDoMapa",
     "PortaVista",
     "com_o_nome_dela",
-    "dar_nome",
+    "dar_nome_ao_adaptador",
     "declarar_a_ligacao",
     "declarar_a_velocidade",
     "face_do_lugar",
     "faces_dos_hubs",
     "ler_o_mapa",
     "nome_da_porta",
-    "nome_do_adaptador",
     "nome_do_lugar",
     "o_laco",
     "o_mapa",

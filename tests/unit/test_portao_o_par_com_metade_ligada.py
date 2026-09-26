@@ -884,13 +884,10 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     # CORRIGIDAS no lugar (`core/rumble.py`, `a02_controles.py` e duas em
     # `a08_conexoes.py`): fora do `nao_toca:`, o número se reescreve.
     "interface/pacotes/a06_navegacao.py::core/acoes_de_botao.py:285",
-    # O-RADIO-CONECTA-ONDE-ELA-MANDA-02 (26/09/2026): o `ControleDeclarado`
-    # ganhou o `nome` (e o validador dele), e o `fundir_declaracao` desceu de
-    # `utils/maquina.py:1089` para `:1128`. O `a09_sistema.py` é da
-    # A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01 na mesma onda, e reescreve o docstring
-    # do «Eu escolho» ao lado: quem costurar reaponta pelo símbolo
-    # (`scripts/reapontar-citacoes.py --escrever`) e apaga esta linha.
-    "interface/pacotes/a09_sistema.py::utils/maquina.py:1089",
+    # A DA O-RADIO-CONECTA-ONDE-ELA-MANDA-02 SAIU DAQUI EM 26/09/2026: o
+    # `AdaptadorDeclarado` deslocou o `utils/maquina.py`, a linha velha deixou
+    # de estar em branco e a pendência passou a "conferir" por acaso. Quem
+    # coordena reapontou `a09_sistema.py` pelo símbolo (`fundir_declaracao`).
     # A DA TRANSPLANTE-DA-SECAO-01 SAIU DAQUI EM 24/09/2026: a
     # AS-FRASES-QUE-A-BANCADA-ACHOU-01 deslocou o `a08_conexoes.py` e a linha
     # velha deixou de estar em branco, então a pendência passou a "conferir" por

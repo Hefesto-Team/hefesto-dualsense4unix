@@ -2,7 +2,8 @@
 
 Decisões dela de 26/09/2026: o Perfil de Desempenho mora em cada cartão da aba
 Conexões (`D-2609-O-PERFIL-DE-DESEMPENHO-E-POR-CONTROLE`), «Eu escolho» virou
-«Personalizado» (`D-2609-EU-ESCOLHO-VIRA-PERSONALIZADO`) e o cartão e a aba
+«Personalizado» (`D-2609-EU-ESCOLHO-VIRA-PERSONALIZADO`), os outros dois viraram
+«Perfil Máximo» e «Perfil Econômico» (pedido dela na mesma noite) e o cartão e a aba
 Sistema falam o MESMO perfil, por um dono e pelo mesmo gesto do daemon
 (`D-2609-A-CONEXOES-E-A-SISTEMA-FALAM-O-MESMO-PERFIL`).
 
@@ -70,7 +71,7 @@ def _a08() -> Any:
 def test_os_rotulos_sao_os_do_desenho_e_personalizado_e_o_terceiro() -> None:
     orc = _orc()
     assert [orc.ROTULOS_DOS_PERFIS[p] for p in orc.PERFIS] == [
-        "Tudo Ligado", "Bateria Longa", "Personalizado"]
+        "Perfil Máximo", "Perfil Econômico", "Personalizado"]
     assert orc.DICAS_DO_CARTAO[orc.PERFIL_EU_ESCOLHO].endswith("neste controle.")
     assert orc.DICAS_DO_CARTAO[orc.PERFIL_BATERIA_LONGA] == orc.DICAS[orc.PERFIL_BATERIA_LONGA]
 
@@ -216,9 +217,9 @@ def test_a_sistema_diz_personalizado_e_a_relacao_com_o_cartao(arquivo: pathlib.P
     html = arquivo.read_text(encoding="utf-8")
     botoes = re.findall(r'data-gesto="perfil-da-mesa" data-v="(\w+)"[^>]*title="([^"]*)">([^<]+)<',
                         html)
+    orc = _orc()
     assert [(v, r) for v, _t, r in botoes] == [
-        ("tudo_ligado", "Tudo Ligado"), ("bateria_longa", "Bateria Longa"),
-        ("eu_escolho", "Personalizado")], botoes
+        (p, orc.ROTULOS_DOS_PERFIS[p]) for p in orc.PERFIS], botoes
     dicas = {v: t for v, t, _r in botoes}
     assert dicas["bateria_longa"].endswith("Vale para todos os controles."), dicas
     for v in ("tudo_ligado", "eu_escolho"):

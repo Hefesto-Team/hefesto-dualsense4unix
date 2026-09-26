@@ -497,14 +497,14 @@ def test_o_lugar_e_universal_e_o_dela_continua_aceito(mesa: Gabinete, disco: Pat
 def test_a_porta_que_ela_so_nomeou_e_do_mapa_e_se_renomeia(
     mesa: Gabinete, disco: Path
 ) -> None:
-    """O nome dado em Rádio e Adaptadores (``dar_nome``) mora no lugar, sem número.
+    """O nome dado a uma porta sem número mora no lugar, e o Mapear o renomeia.
 
     Ela pediu que o mesmo botão renomeie *«as entradas já mapeadas ou
     identificadas»*: o dongle que ela nomeou é identificado, e continua dela
     com o dongle fora da porta. <!-- noqa-acento: citação literal dela -->
     """
     lugar_do_dongle = lugar_de(PCI_B, "4.1")
-    assert ee.dar_nome(lugar_do_dongle, "Dongle azul").gravou
+    utils_maquina.gravar_maquina({"lugares": {lugar_do_dongle: {"nome": "Dongle azul"}}})
     mesa.tirar("3-4.1")
     fluxo = _fluxo(mesa)
     fluxo.comecar()

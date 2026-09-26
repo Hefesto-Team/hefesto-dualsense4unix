@@ -33,16 +33,7 @@ from onde import RAIZ as R  # noqa: E402
 # A CAMADA DE TELA DESTA ABA, que já existe no produto e nunca foi ligada.
 # Daqui sai a lista de respostas do "— O que é? —": ver `VIZINHOS`, abaixo.
 from hefesto_dualsense4unix.gui import aba_conexoes as _aba_conexoes  # noqa: E402
-
-# OS DOIS DONOS DO VEREDITO DO CHECK-UP — decisão D-16 dela, 04/09/2026.
-# `ordens_da_mesa.cabecalho` escreve as QUATRO frases possíveis do topo e
-# `exame_da_mesa.veredito` decide a cor. Os dois são puros e importam sem
-# `structlog`, que é o que separa este par do `secao_exame` (ele puxa
-# `escritor_cru`, que puxa o logger, e o `python3 aba08.py` desta pasta não roda
-# no `.venv`). Ver `VEREDITO_DO_DESENHO`, abaixo.
 from hefesto_dualsense4unix.integrations import entrada_a_entrada as _entrada_a_entrada  # noqa: E402,E501
-from hefesto_dualsense4unix.integrations import exame_da_mesa as _exame_da_mesa  # noqa: E402
-from hefesto_dualsense4unix.integrations import ordens_da_mesa as _ordens_da_mesa  # noqa: E402
 
 # O PACOTE DESTA ABA — e ele é DONO do que os dois lados desenham: o rótulo do
 # controle e, desde 23/09/2026, a seção «Rádio e Adaptadores» inteira (a sala,
@@ -768,7 +759,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      com a largura do texto dele (até 62%, e o achado de 121 caracteres ainda
      cabe numa linha), a Sugestão com o resto; os dois são caixas, e o
      `stretch` da grade dá a mesma altura às duas. */
-  .duas-colunas:has(.col-exame){grid-template-columns:fit-content(62%) minmax(0,1fr);
+  .duas-colunas:has(.col-exame){grid-template-columns:minmax(0,40%) minmax(0,1fr);
                                 column-gap:10px;align-items:stretch}
   .duas-colunas:has(.col-exame) > .lado-e{padding:10px 12px;border:1px solid var(--border-sutil);
                                 border-radius:7px;background:var(--app-bg)}
@@ -777,6 +768,14 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      `space-evenly`, porque com a coluna rolando a margem vira zero e o
      `space-evenly` cortaria a primeira linha */
   .duas-colunas:has(.col-exame) .col-exame > .exame{margin:auto 0}
+  /* O WEBKIT DA JANELA MEDE O EXAME CURTO DEMAIS — 26/09/2026, foto dela com a
+     janela maximizada: *«ta dando duas linhas e o sugestões de conexão não tá
+     usando o espaço horizontral por completo»* (noqa-acento: citação literal
+     dela). Medido no WebKitGTK: com `fit-content` a coluna do exame parava em
+     421 px e três das cinco linhas quebravam (34 px contra 20), e a ordem
+     ocupava 289 px de uma caixa de 1029. O exame fica com 40% (o achado mais
+     longo, de 121 caracteres, cabe a 1920 px), e a ordem ocupa a caixa. */
+  .lado-d .sugestao .col-ordem > .ordem{align-items:stretch}
   /* DOIS SELETORES E NÃO UM — 19/09/2026, e o segundo é a cura de um `:empty`
      que NUNCA DISPAROU na máquina dela.
 
@@ -998,50 +997,6 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .exame.apagada .ajuda{opacity:.42}
   .exame.apagada .ignora{color:var(--texto-suave);border-color:var(--texto-suave)}
 
-  /* ---- A LINHA DE VEREDITO — decisão D-16 dela, 04/09/2026 ----
-     *"Uma linha de veredito no topo."*, *"Na cor do pior achado."*
-
-     O QUE ELA CURA, e a queixa é dela: o Check-up tinha cinco pílulas e nenhum
-     veredito. Para saber se está tudo certo era preciso ler as cinco e achar a
-     pior — e a segunda ordem de serviço desta bancada, que não cabe nas cinco,
-     não entrava nessa leitura de jeito nenhum. A janela estável responde em uma
-     linha desde sempre, e o carimbo do lado só diz QUANDO.
-
-     ELA MORA NO TOPO DA SEÇÃO e não dentro da coluna do exame: "no topo" é a
-     palavra dela, e a resposta que vale para as duas colunas — o exame à
-     esquerda e a ordem de serviço à direita — não pode ficar pendurada em uma
-     delas. São 11px de altura mais o vão, e é o preço declarado da decisão.
-
-     A COR VEM POR INTERRUPTOR, um por estado, exatamente como as cinco linhas
-     ganharam em 03/09: o alvo `classe` do piloto acende UMA classe por
-     elemento, então um nó só não tem como escolher entre quatro cores. Aqui os
-     QUATRO são interruptores — inclusive o `problema` —, porque não há pílula
-     com classe cravada a reaproveitar: a linha inteira nasce do produto.
-
-     O `~` LEVA A COR DO IRMÃO ao ponto e ao texto sem que nenhum dos dois
-     precise de um segundo `data-campo`, que o vocabulário de endereço não
-     permite. É o mesmo combinador de `.exame .est-ok.on ~ .selo`.
-
-     O ESTADO DE REPOUSO É O CINZA DE "não sei", e não o verde: enquanto o
-     produto não respondeu, a linha não pode afirmar que está tudo bem — é o F7
-     desta casa, o estado em que o produto não sabe se disfarçando do estado em
-     que está tudo certo. */
-  .veredito{display:flex;align-items:center;gap:9px;min-height:19px;font-size:12px;
-            font-weight:600;color:var(--texto-suave);margin-bottom:11px}
-  .veredito .vst{display:none}
-  .veredito .ponto{flex:0 0 8px;width:8px;height:8px;border-radius:50%;
-                   background:var(--comment)}
-  .veredito .vst-ok.on ~ .ponto{background:var(--green)}
-  .veredito .vst-warn.on ~ .ponto{background:var(--orange)}
-  .veredito .vst-info.on ~ .ponto{background:var(--comment)}
-  .veredito .vst-bad.on ~ .ponto{background:var(--red)}
-  .veredito .vst-ok.on ~ .txt{color:var(--green)}
-  .veredito .vst-warn.on ~ .txt{color:var(--orange)}
-  .veredito .vst-info.on ~ .txt{color:var(--texto-suave)}
-  /* O VERMELHO POR ÚLTIMO, e pela mesma razão do `.selo.grave`: um instante com
-     dois interruptores acesos não pode deixar o que está QUEBRADO com a cor do
-     que só podia estar melhor. */
-  .veredito .vst-bad.on ~ .txt{color:var(--red)}
 
   /* ---- a ordem de serviço: imperativo, receita e ganho ---- */
   .ordem{border:1px solid var(--border-forte);border-radius:7px;background:var(--app-bg);
@@ -1210,13 +1165,23 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      mostra nada. */
   .gc-cor{position:absolute;left:0;right:0;top:0;height:3px;display:block;
           color:transparent;background:currentColor}
-  .gc-cabeca{display:flex;align-items:center;gap:6px;height:38px;
+  /* UMA LINHA SÓ — 26/09/2026, pedido dela com a janela maximizada: *«colocar
+     numero do player e nome do player na mesma linha do nome do modelo e modo
+     de conexão»*. O desenho à esquerda, e ao lado o «P N», o nome de quem joga e
+     o modelo com o transporte; a linha de 38 px que o número tinha sozinho saiu.
+     (noqa-acento: citação literal dela) No cartão estreito (271 px no tamanho
+     do desenho) o modelo DESCE para uma segunda linha dentro dos mesmos 62 px,
+     em vez de virar reticências: o `flex-wrap` só quebra quando o dono não teria
+     os 70 px dele. */
+  .gc-cabeca{display:flex;align-items:center;gap:10px;height:62px;
              border-bottom:1px solid var(--border-sutil)}
+  .gc-quem{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;
+           column-gap:6px;row-gap:1px}
   .gc-num{flex:0 0 auto;font-size:13.5px;font-weight:700;color:var(--purple);
           cursor:pointer}
   /* O DONO: em repouso ele é texto; só se veste de campo com o mouse ou o
      foco. Vazio, o `placeholder` diz para que serve. */
-  .gc-dono{flex:1;min-width:0;height:26px;padding:0 7px;
+  .gc-dono{flex:1 1 70px;min-width:70px;height:26px;padding:0 7px;
            border:1px solid transparent;border-radius:6px;background:transparent;
            color:var(--fg);font:inherit;font-size:12.5px;font-weight:600;
            text-overflow:ellipsis}
@@ -1226,13 +1191,13 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   /* O APARELHO: o desenho e o nome, e é ele o alvo do clique que aponta a fita
      para este controle. O `<label>` ENVOLVE o texto, não o cobre, para a dica
      de dentro continuar sendo a que aparece. */
-  .gc-abre{display:flex;align-items:center;gap:12px;height:62px;
+  .gc-abre{flex:0 0 auto;display:flex;align-items:center;height:62px;
            cursor:pointer;border-radius:7px}
-  .gc-abre:hover .gc-nome{color:var(--fg)}
+  .gc-cabeca:hover .gc-nome{color:var(--fg)}
   /* A PROPORÇÃO É A DO `viewBox` (116,684 × 80,472); só a largura é escolhida:
      76px dão 52 de altura, e o cartão cabe com o quadro do rádio à vista. */
   .gc-abre .ds-mini{flex:0 0 76px;width:76px;height:auto}
-  .gc-nome{min-width:0;font-size:12.5px;font-weight:600;color:var(--texto-suave);
+  .gc-nome{flex:0 1 auto;min-width:0;max-width:100%;font-size:12.5px;font-weight:600;color:var(--texto-suave);
            white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* OS SEIS SELOS, UM POR LINHA. O selo é do produto
      (`a08_conexoes.selo_do_estado`: o rótulo, o valor em `<b>` e o ✓ em
@@ -1259,11 +1224,15 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      iguais, «Bateria Longa» e «Personalizado» perdiam 7 a 8 px no tamanho do
      desenho (1212 px) e viravam reticências. Com `flex:1 1 auto` a 11px os
      três cabem a partir de 1181 px, a menor janela com quatro cartões numa
-     fileira (abaixo dela a grade vira duas e o cartão alarga). */
-  .gc-perfil .seg{display:flex;flex-wrap:nowrap;gap:3px}
+     fileira (abaixo dela a grade vira duas e o cartão alarga). Os nomes dela
+     de 26/09 («Perfil Máximo», «Perfil Econômico») pedem 246 px numa linha de
+     245: o vão de 2 px, 1 px de respiro e a letra 0,2 px mais junta devolvem
+     os 15 que faltavam. */
+  .gc-perfil .seg{display:flex;flex-wrap:nowrap;gap:2px}
   /* `min-width:0` porque o `.btn` do esqueleto nasce com 150px, e três de 150
      não cabem num cartão de 350. */
-  .gc-perfil .seg .btn{flex:1 1 auto;width:auto;min-width:0;padding:0 2px;font-size:11px;
+  .gc-perfil .seg .btn{flex:1 1 auto;width:auto;min-width:0;height:26px;padding:0 1px;font-size:11px;
+                       letter-spacing:-.2px;
                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .gc-perfil .seg .btn.on{border-color:var(--purple);background:rgba(189,147,249,.16);
                           color:var(--fg);font-weight:600}
@@ -1276,7 +1245,10 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc-corpo .gc-luz{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
   .gc-luz .ressalva{margin-top:0;text-align:center}
   .gc-corpo .gc-luz{align-items:stretch}
-  .gc-luz .btn{width:100%;display:flex;align-items:center;justify-content:center;gap:7px}
+  .gc-luz .btn{width:100%;height:26px;display:flex;align-items:center;justify-content:center;gap:7px}
+  /* OS BOTÕES MAIS BAIXOS — 26/09/2026, com a janela maximizada: *«diminuir a
+     altura dos botões»*. 26 px no perfil e na luz, 28 px nas quatro
+     ferramentas (o esqueleto dá 34). */
   .gc-luz .btn .i{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
                   stroke-linecap:round;stroke-linejoin:round}
   .gc-corpo .ltrava{display:none}
@@ -1297,7 +1269,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      ganhou nome: um ícone solto era o único botão da faixa sem palavra. */
   .ferramentas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;
                margin:10px 0 12px}
-  .ferramentas .btn{width:100%;display:flex;align-items:center;justify-content:center;
+  .ferramentas .btn{width:100%;height:28px;display:flex;align-items:center;justify-content:center;
                     gap:7px;padding:0 10px;white-space:nowrap}
   .ferramentas .i.ds{width:21px}
   .ferramentas .i{width:14px;height:14px;flex:0 0 auto;fill:none;stroke:currentColor;
@@ -1794,48 +1766,6 @@ RENOMEAR_DICA = _pacote08.RENOMEAR_DICA
 #: acento, e o terceiro vem colado num `_`, que é o que a régua de acentuação
 #: já não cobra.
 _ATENCAO = "atencao"  # noqa-acento (chave de máquina do exame, ASCII por contrato)
-
-
-#: A CLASSE DE CADA ESTADO NA LINHA DE VEREDITO. O nome é `vst` e não `est` para
-#: não colidir com os interruptores das cinco linhas do exame — os dois grupos
-#: vivem na mesma seção, e um `~` que atravessasse os dois pintaria a linha de
-#: cima com a cor de uma linha de baixo.
-#:
-#: A ORDEM É A DO PACOTE (`a08_conexoes.ENDERECO_DO_VEREDITO`), e os endereços
-#: saem de lá: digitar os quatro aqui seria a segunda grafia do vocabulário que
-#: o pacote emite, e a primeira coisa que uma segunda grafia perde é o dia em
-#: que a outra muda.
-_CLASSE_DO_VEREDITO = {"certo": "ok", "atencao": "warn",  # noqa-acento (chave de máquina do exame)
-                       "problema": "bad", "nao_sei": "info"}
-
-
-def veredito_do_checkup(estado, frase):
-    """A linha de veredito do topo do Check-up — **D-16 dela**, 04/09/2026.
-
-    *"Uma linha de veredito no topo."* · *"Na cor do pior achado."*
-
-    `estado` é o estado do exame que o DESENHO mostra em repouso, e `frase` é a
-    frase dele. Os dois são de bancada, como as cinco linhas abaixo: o mockup é
-    HTML estático e ninguém o pinta quando ela o abre no navegador, então uma
-    linha que o produto ainda não preencheu tem de continuar parecendo o que
-    parecia.
-
-    NA TELA VIVA OS DOIS VÊM DO PRODUTO: a frase de `ordens_da_mesa.cabecalho()`
-    — que é o dono das quatro — e o estado de `secao_exame.o_mais_grave` sobre
-    ela e sobre `exame_da_mesa.veredito()`. Ver `a08_conexoes._veredito_do_exame`.
-
-    O PONTO É UM ELEMENTO E NÃO UM `::before`, e a razão é o combinador: a cor
-    chega pelo `~` a partir do interruptor irmão, e um pseudo-elemento não é
-    irmão de ninguém.
-    """
-    interruptores = "".join(
-        f'<i class="vst vst-{_CLASSE_DO_VEREDITO[e]}'
-        f'{" on" if e == estado else ""}" data-campo="{endereco}" '
-        f'data-hef-alvo="classe" data-hef-quando="{e}"></i>'
-        for e, endereco in _pacote08.ENDERECO_DO_VEREDITO.items())
-    return (f'        <div class="veredito">{interruptores}'
-            f'<span class="ponto"></span>'
-            f'<span class="txt" data-campo="veredito">{frase}</span></div>')
 
 
 def exame(estado, txt, dica, linha=0):
@@ -2438,21 +2368,22 @@ def linha_do_controle(c):
     return f'''          <div class="gc-item gc-{c["pref"]}{marca}" data-controle="{c["pref"]}"{diz}>
             {barra}
             <div class="gc-cabeca">
-              <label class="gc-num" for="gc-{c["pref"]}" data-gesto="alvo" title="{dica_linha}">P{c["jogador"]}</label>
-              <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
-                     value="{vale(DONO_DA_CENA.get(c["pref"], ""), "")}" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
-                     aria-label="Nome de quem joga com este controle" title="{DONO_DICA}">
+              <label class="gc-abre" for="gc-{c["pref"]}" data-gesto="alvo" title="{dica_linha}">
+                {desenho_do_controle(c, luz)}
+              </label>
+              <div class="gc-quem">
+                <label class="gc-num" for="gc-{c["pref"]}" data-gesto="alvo" title="{dica_linha}">P{c["jogador"]}</label>
+                <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
+                       value="{vale(DONO_DA_CENA.get(c["pref"], ""), "")}" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
+                       aria-label="Nome de quem joga com este controle" title="{DONO_DICA}">
+                <span class="gc-nome" data-campo="nome" data-hef-alvo="html"{dica_da_borda}>{vale(_pacote08.rotulo_curto_do_controle(c), nome_do_lugar_vazio(c))}</span>
+              </div>
             </div>
-            <label class="gc-abre" for="gc-{c["pref"]}" data-gesto="alvo" title="{dica_linha}">
-              {desenho_do_controle(c, luz)}
-              <span class="gc-nome" data-campo="nome" data-hef-alvo="html"{dica_da_borda}>{vale(_pacote08.rotulo_curto_do_controle(c), nome_do_lugar_vazio(c))}</span>
-            </label>
             <div class="gc-resumo">
 {chr(10).join(f'              <span class="gc-est" data-campo="{k}" data-hef-alvo="html">{estado.get(k, TRAVESSAO)}</span>' for k in ESTADOS_DA_LINHA)}
             </div>
             <div class="gc-corpo">
               <div class="gc-perfil">
-                <span class="rot">Perfil de Desempenho</span>
                 <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
 {chr(10).join('                  ' + botao_do_perfil(pid, rotulo, dica, PERFIL_DA_CENA.get(c["pref"], "tudo_ligado") == pid) for pid, rotulo, dica in PERFIS_DO_CARTAO)}
                 </div>
@@ -2470,43 +2401,6 @@ JA_NOMEADOS = [v for v in RADIOS_VIZINHOS if not v[2]]
 #: "o Player 1 e o Player 4" — a lista escrita por extenso, do jeito que se lê.
 JOGADORES_NO_CABO = " e o ".join(f"Player {c['jogador']}" for c in NO_CABO)
 
-# ---------------------------------------------------------------------------
-# O VEREDITO DO DESENHO — decisão D-16 dela, 04/09/2026.
-#
-# A CENA DA BANCADA, declarada uma vez: os estados das CINCO linhas do exame na
-# ordem em que elas saem, e quantas ordens de serviço a coluna da direita mostra
-# aberta. Ela existe para a linha de veredito não ser DIGITADA: com os estados e
-# a contagem, quem escreve a frase é o dono (`ordens_da_mesa.cabecalho`) e quem
-# decide a cor é o dono (`exame_da_mesa.veredito`) — os mesmos dois que o pacote
-# chama na tela viva.
-#
-# ELA TAMBÉM É RÉGUA: mudar o estado de uma linha do exame lá embaixo sem mudar
-# esta lista faz o `_exigir` do fim do arquivo reprovar, porque a cor do topo
-# deixa de bater com a pior das cinco.
-# ---------------------------------------------------------------------------
-ESTADOS_DO_EXAME = ("certo", _ATENCAO, "certo", "nao_sei", _ATENCAO)
-
-#: Quantas ordens de serviço a cena tem abertas — o card da coluna da direita.
-ORDENS_ABERTAS = 2
-
-_CABECALHO = _ordens_da_mesa.cabecalho(
-    # `cabecalho` só conta o comprimento da sequência; o que há dentro dela não
-    # é lido. A cena tem UMA ordem aberta, e é ela que dá a frase.
-    ordens=[None] * ORDENS_ABERTAS,
-    conferidas=sum(1 for e in ESTADOS_DO_EXAME if e != "nao_sei"),
-    sem_resposta=sum(1 for e in ESTADOS_DO_EXAME if e == "nao_sei"),
-    dispensadas=0,
-)
-
-#: A COR DO PIOR ACHADO, e ela sai do MESMO `veredito()` que a janela estável
-#: usa. O estado do cabeçalho entra na lista como mais um item: `veredito()`
-#: devolve o pior de todos, que é o que `secao_exame.o_mais_grave` faz com dois
-#: — e aquele módulo não é importável fora da venv (puxa `structlog` por
-#: `escritor_cru`), enquanto este gerador roda com o `python3` da pasta.
-VEREDITO_DO_DESENHO = _exame_da_mesa.veredito([
-    _exame_da_mesa.Item(chave=f"desenho-{i}", rotulo="", estado=e, porque="")
-    for i, e in enumerate((*ESTADOS_DO_EXAME, _CABECALHO.estado))
-])
 
 
 def _plural(n, um, muitos):
@@ -3324,7 +3218,16 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .linha.nao-conectou,.radio .linha.desligado{cursor:default}
   .radio .linha.desligado .ds{opacity:.55}
   .radio .lugar.nao-conectou{border-color:var(--orange)}
-  .radio .selo-fora .palpite{font-family:var(--font-corpo);font-size:10.5px}
+  .radio .selo-fora .palpite{font-family:var(--font-corpo);font-size:10.5px;max-width:110px;
+                             overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* O BALÃO É BOTÃO, E BOTÃO NASCE COM O FUNDO DO SISTEMA — 26/09/2026, foto
+     dela: *«nessa região o svg continua em branco não dá pra entender»*.
+     Medido no WebKitGTK da janela: o `<button>` pintava `rgb(192,192,192)` por
+     baixo do ícone cinza, e o desenho sumia. O fundo é o da faixa, o traço é
+     o do texto, e todo balão diz uma palavra ao lado do ícone.
+     (noqa-acento: citação literal dela) */
+  .radio button.selo-fora{background:transparent;color:var(--texto-suave);line-height:1.3}
+  .radio button.selo-fora:hover{border-color:var(--purple);color:var(--fg)}
 """
 
 
@@ -4154,19 +4057,11 @@ MIOLO = f'''
         <span class="conta" data-campo="conta-gestao" data-hef-alvo="html">{CONTA_DA_GESTAO}</span>
       </div>
       <div class="quadro-corpo">
-        <!-- A LINHA DE VEREDITO — decisão D-16 dela, 04/09/2026:
-             *"Uma linha de veredito no topo."*, *"Na cor do pior achado."*
-
-             ELA FICA ACIMA DAS DUAS COLUNAS, e não dentro da do exame: a
-             resposta vale para as duas — os achados à esquerda e a ordem de
-             serviço à direita —, e pendurá-la em uma delas faria a pergunta
-             *"está tudo certo?"* ser respondida por metade da seção.
-
-             A FRASE E A COR NÃO SÃO DIGITADAS: saem de
-             `ordens_da_mesa.cabecalho()` e de `exame_da_mesa.veredito()` sobre
-             a cena declarada em `ESTADOS_DO_EXAME`, que são os mesmos dois
-             donos que `a08_conexoes._veredito_do_exame` chama na tela viva. -->
-{veredito_do_checkup(VEREDITO_DO_DESENHO, _CABECALHO.texto)}
+        <!-- A LINHA DE VEREDITO SAIU — 26/09/2026, pedido dela com a janela
+             maximizada: *«precisamos ganhar espaço vertical. vamos remover a
+             linha 3 mudanças recomendadas»*. Revoga a D-16 de 04/09 («Uma
+             linha de veredito no topo»): a Sugestão de Conexão ao lado já
+             numera cada mudança, e a contagem repetia a caixa. -->
         <div class="duas-colunas">
 
           <div class="lado-e">
@@ -4435,7 +4330,7 @@ LEGENDA = f'''<div class="nota">
   <ul>
     <li><b>Uma seção só</b>: o exame e a <b>Sugestão de Conexão</b> (um ajuste por linha, numerado) em cima, quatro ferramentas com ícone no meio (o «Atualizar» entrou no «{EXAMINAR_PORTAS}»; o <b>{MAPEAR_ENTRADAS}</b> abre o fluxo porta a porta) e um cartão por controle embaixo.</li>
     <li><b>O cartão diz o estado de agora</b>, no molde da aba Sistema: Mic, Som, Modo de conexão, Visto como, Conexão e Bateria, com o ✓ de «tudo certo». Nada abre nem fecha.</li>
-    <li><b>O nome ao lado do «P N» é de quem joga</b>: escreva; apagado, o campo volta vazio. Embaixo, o <b>Perfil de Desempenho</b> daquele controle (Tudo Ligado, Bateria Longa ou Personalizado), o mesmo dado da aba Sistema. O lugar sem controle fica, tracejado, com «Desconectado».</li>
+    <li><b>O nome ao lado do «P N» é de quem joga</b>: escreva; apagado, o campo volta vazio. Embaixo, o <b>Perfil de Desempenho</b> daquele controle (Perfil Máximo, Perfil Econômico ou Personalizado), o mesmo dado da aba Sistema. O lugar sem controle fica, tracejado, com «Desconectado».</li>
     <li><b>{MAPEAR_ENTRADAS}</b> abre uma tela com o que o Hefesto mediu da entrada da vez, o nome e o lugar que você dá, e a lista das que já têm nome.</li>
   </ul>
   <h2>«Rádio e Adaptadores» é o desenho que você aprovou em 23/09 — e o que ficou diferente</h2>

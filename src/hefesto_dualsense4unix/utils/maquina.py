@@ -575,10 +575,10 @@ class LugarDeclarado(BaseModel):
     registro é só a AMARRA entre o número dela e o lugar do metal; repetir a
     face aqui seria o segundo dono que a ``ABAS-01`` curou.
 
-    ``nome`` é o nome do lugar («Extensor à esquerda»). O adaptador Bluetooth
-    que estiver nesta porta HERDA este nome (D3); o ``Alias`` do BlueZ é só a
-    projeção dele, e quem a escreve é o ``bt_active_mode.sh``, lendo este
-    campo — o escritor do ``Alias`` é um só (ENTRADA-A-ENTRADA-02).
+    ``nome`` é o nome da ENTRADA («Extensor à esquerda», ou o número que ela
+    escreveu no metal), e só dela. Até 26/09/2026 o adaptador Bluetooth desta
+    porta HERDAVA este nome (D3), e os dois se confundiam na tela dela; o
+    adaptador tem nome próprio agora, em :class:`AdaptadorDeclarado`.
 
     ``caminho`` é a TESTEMUNHA da amarra (ENTRADA-A-ENTRADA-02): o caminho de
     barramento que o ``mapa`` dava a esta entrada quando a amarra nasceu. É
@@ -633,6 +633,23 @@ class LugarDeclarado(BaseModel):
                 f"adaptador (até {_MAXIMO_DO_NOME_DO_LUGAR})"
             )
         return limpo
+
+
+class AdaptadorDeclarado(BaseModel):
+    """Um adaptador Bluetooth pelo ENDEREÇO: o nome que ela deu a ele.
+
+    ``D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO`` (26/09/2026), pedido dela: *«temos
+    o nome das entradas e o nome dos dispositivos. Eles estão se confundindo»*.
+    Revoga a herança da D3: com o adaptador levando o nome da porta, as
+    entradas que ela numerou no Mapear viraram adaptadores «15» e «13». O
+    nome é do APARELHO e vai com ele de porta em porta; o da entrada fica em
+    :class:`LugarDeclarado`. O ``Alias`` do BlueZ é a projeção deste campo, e
+    quem a escreve é o ``bt_active_mode.sh`` — o escritor único do ``Alias``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    nome: str | None = None
 
 
 class ControleDeclarado(BaseModel):
@@ -897,6 +914,10 @@ class MaquinaConfig(BaseModel):
     # de ``PortaDeclarada`` (``extra="forbid"``) faria o código de ontem
     # recusar o ``mapa`` INTEIRO e reescrever o arquivo sem ele.
     lugares: dict[str, LugarDeclarado] = Field(default_factory=dict)
+    # D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO (26/09/2026): o nome de cada adaptador
+    # Bluetooth, pela chave do endereço (doze hex minúsculos, a grafia de
+    # ``controles``). De topo pela mesma razão de ``lugares``.
+    adaptadores: dict[str, AdaptadorDeclarado] = Field(default_factory=dict)
     # NOTA DATADA (T2, CONFIGURAÇÕES-FECHA-01, 24/08/2026): ``ambiente`` saiu
     # do esquema. O campo nasceu na v1 sem escritor NEM leitor — quem grava a
     # correção de ambiente é ``gravar_correcao_de_ambiente``
@@ -994,6 +1015,25 @@ class MaquinaConfig(BaseModel):
                 raise ValueError(
                     f"lugar {chave!r} não está na grafia do ID_PATH do udev "
                     "(o controlador PCI e as portas: utils/lugar.FORMA_DO_LUGAR)"
+                )
+        return vivos
+
+    @field_validator("adaptadores", mode="before")
+    @classmethod
+    def _chave_e_o_endereco_e_none_esquece(cls, valor: Any) -> Any:
+        """A chave é o endereço em doze hex; ``{"adaptadores": {c: None}}`` esquece."""
+        if not isinstance(valor, Mapping):
+            return valor
+        vivos = {k: v for k, v in valor.items() if v is not None}
+        if len(vivos) > _MAXIMO_DE_ENTRADAS:
+            raise ValueError(
+                f"{len(vivos)} adaptadores declarados, e o teto é {_MAXIMO_DE_ENTRADAS}"
+            )
+        for chave in vivos:
+            if not isinstance(chave, str) or not _CHAVE_DE_CONTROLE.match(chave):
+                raise ValueError(
+                    f"chave de adaptador {chave!r} não é endereço "
+                    "(doze hex minúsculos, sem separador)"
                 )
         return vivos
 
@@ -1311,6 +1351,23 @@ def chave_do_controle(endereco: object) -> str | None:
     if not _CHAVE_DE_CONTROLE.match(chave) or chave.startswith(_OCTETO_SINTETIZADO):
         return None
     return chave
+
+
+def chave_do_adaptador(endereco: object) -> str | None:
+    """``AA:BB:…`` → a chave de ``adaptadores`` (doze hex minúsculos), ou ``None``."""
+    if not isinstance(endereco, str):
+        return None
+    chave = endereco.strip().lower().replace(":", "").replace("-", "")
+    return chave if _CHAVE_DE_CONTROLE.match(chave) else None
+
+
+def nome_dado_ao_adaptador(maquina: MaquinaConfig | None, endereco: object) -> str:
+    """O nome que ela deu a este adaptador — ``""`` quando não deu."""
+    chave = chave_do_adaptador(endereco)
+    if maquina is None or chave is None:
+        return ""
+    declarado = (maquina.adaptadores or {}).get(chave)
+    return str(getattr(declarado, "nome", "") or "")
 
 
 def nomes_dos_controles(maquina: MaquinaConfig) -> dict[str, str]:

@@ -182,7 +182,8 @@ def _ler_a_maquina(
         bancada = mapa_das_portas.mesa_do_motor(declarado, censo)
         conectados = censo.conectados()
         ids = identidades(
-            conectados, ler_o_serial or mapa_das_portas.serial_do_no, antes)
+            conectados, ler_o_serial or mapa_das_portas.serial_do_no, antes,
+            lido_em=bancada.mesa.leitura)
         modelos = _modelos(conectados)
     except Exception:
         return None
@@ -192,7 +193,10 @@ def _ler_a_maquina(
         return None
 
     quando = (agora or _dt.datetime.now()).strftime("%d/%m/%Y %Hh%M")
-    caminhos = {ids.get(aparelho.id, aparelho.id): aparelho.id for aparelho in mesa.aparelhos}
+    # O CAMINHO É O DA LEITURA DO MOTOR, e não o nome do kernel: o Wi-Fi que
+    # enumera no lado 3.0 do buraco (`4-1.1.4`) é lido no caminho da entrada
+    # (`3-1.1.4`), que é o que a página compara com o mapa.
+    caminhos = {ids.get(a.id, a.id): mesa.leitura.get(a.id, a.id) for a in mesa.aparelhos}
     faces = _faces(mesa.faces)
     _o_que_ela_declarou_nas_entradas(faces, declarado, faces_dos_hubs(declarado))
     anterior = (
@@ -201,7 +205,8 @@ def _ler_a_maquina(
         else {"rotulo": ROTULO_DA_ANTERIOR,
               "caminho": {i: caminho for i, (caminho, _m) in antes.items()}}
     )
-    lida = {i: (caminho, modelos.get(caminho, "")) for i, caminho in caminhos.items()}
+    lida = {ids.get(a.id, a.id): (mesa.leitura.get(a.id, a.id), modelos.get(a.id, ""))
+            for a in mesa.aparelhos}
     return {
         "quando": QUANDO_DE_AGORA.format(quando=quando),
         "aparelhos": [_aparelho(a, ids.get(a.id, a.id)) for a in mesa.aparelhos],
@@ -281,6 +286,8 @@ def identidades(
     aparelhos: Sequence[Any],
     ler_o_serial: Callable[[str], str],
     antes: Mapping[str, tuple[str, str]] | None = None,
+    *,
+    lido_em: Mapping[str, str] | None = None,
 ) -> dict[str, str]:
     """``caminho -> id`` de cada aparelho, o mesmo enquanto ele for o mesmo.
 
@@ -306,6 +313,10 @@ def identidades(
 
     A semente passa por um resumo com :data:`_SAL`: o ``id`` não refaz o
     serial, e o sal morre com o processo.
+
+    ``lido_em`` é o caminho em que o motor LÊ cada aparelho
+    (``mapa_das_portas.mesa_do_motor``), e é nele que a :data:`Lida` guarda:
+    o parado se confere pelo mesmo caminho em que foi guardado.
     """
     modelos = _modelos(aparelhos)
     sementes: dict[str, str] = {}
@@ -326,7 +337,7 @@ def identidades(
             fora[caminho] = _resumo(semente)
     usados = set(fora.values())
     for caminho in sementes:
-        de_antes = parados.get((caminho, modelos[caminho]))
+        de_antes = parados.get(((lido_em or {}).get(caminho, caminho), modelos[caminho]))
         if caminho not in fora and de_antes is not None and de_antes not in usados:
             fora[caminho] = de_antes
             usados.add(de_antes)
