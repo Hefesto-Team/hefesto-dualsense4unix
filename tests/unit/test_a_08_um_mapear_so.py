@@ -31,7 +31,7 @@ AS MORDIDAS (arranque a cura, veja reprovar, devolva):
   de ``_gravar_a_porta`` (o hub desligado) começar as faces de ``[]`` e as
   outras faces somem do disco;
 * :func:`test_um_gravador_so_no_dono` — ponha um ``self._gravar({...})`` direto
-  em qualquer método e ela reprova;
+  em qualquer método, ou um ``Path(…).write_text`` cru, e ela reprova;
 * :func:`test_o_controle_que_ja_estava_no_cabo_nao_e_a_porta_da_vez` — troque
   o ``nos not in self._antes`` de ``MapearAsPortas.olhar`` por ``agora[:1]`` e a
   porta da vez vira o controle que já estava no cabo;
@@ -67,8 +67,10 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
 from hefesto_dualsense4unix.integrations import mapa_das_portas as junta
+from hefesto_dualsense4unix.integrations import lugar_declarado
 from hefesto_dualsense4unix.integrations.lugar_declarado import declarar_a_maquina
 from hefesto_dualsense4unix.integrations.mesa_de_radio import Adaptador
+from hefesto_dualsense4unix.utils import maquina as utils_maquina
 from hefesto_dualsense4unix.utils.maquina import (
     MaquinaConfig,
     caminho_da_maquina,
@@ -378,6 +380,27 @@ _GRAVADORES = frozenset(
     }
 )
 
+#: As escritas cruas de arquivo — o ``maquina.json`` escrito à mão, sem o lock.
+_ESCRITAS_CRUAS = frozenset({"open", "write_text", "write_bytes", "dump", "replace", "rename"})
+
+
+def _gravadores() -> frozenset[str]:
+    """Os de hoje e TODO escritor público que nascer nos dois donos do disco.
+
+    A lista digitada acima envelheceria calada no dia em que ``utils/maquina``
+    ou ``lugar_declarado`` ganhassem um ``gravar_…`` novo; o que se deriva
+    deles não envelhece.
+    """
+    derivados = {
+        nome
+        for modulo in (utils_maquina, lugar_declarado)
+        for nome in dir(modulo)
+        if nome.startswith(("gravar", "declarar", "salvar", "escrever"))
+        and callable(getattr(modulo, nome))
+    }
+    assert {"declarar_a_maquina", "gravar_maquina_com_descartes"} <= derivados
+    return _GRAVADORES | derivados
+
 
 def test_um_gravador_so_no_dono() -> None:
     arvore = ast.parse(DONO.read_text(encoding="utf-8"))
@@ -397,14 +420,31 @@ def test_um_gravador_so_no_dono() -> None:
                     if isinstance(alvo, ast.Attribute)
                     else ""
                 )
-                if chamado in _GRAVADORES:
+                if chamado in gravadores:
                     achados.append((nome, filho.lineno))
+                cru = chamado in _ESCRITAS_CRUAS and (
+                    isinstance(alvo, ast.Name)
+                    or (
+                        isinstance(alvo, ast.Attribute)
+                        and chamado in {"write_text", "write_bytes"}
+                    )
+                    or (
+                        isinstance(alvo, ast.Attribute)
+                        and isinstance(alvo.value, ast.Name)
+                        and alvo.value.id in {"os", "json", "shutil"}
+                    )
+                )
+                if cru:
+                    crus.append((nome, filho.lineno))
             visitar(filho, nome)
 
+    gravadores = _gravadores()
+    crus: list[tuple[str, int]] = []
     visitar(arvore, "<módulo>")
     fora = [(f, linha) for f, linha in achados if f != "_gravar_no_mapa"]
     assert achados, "a régua não achou nem o gravador único"
     assert not fora, f"um segundo gravador no dono do mapa: {fora}"
+    assert not crus, f"uma escrita crua de arquivo no dono do mapa, fora do lock: {crus}"
 
 
 # ---------------------------------------------------------------------------
