@@ -37,7 +37,7 @@ AS MORDIDAS, uma por teste:
   ``_ler_o_censo_agora()`` no ``pacote()``: a régua que não precisa saber
   quem são os chamadores.
 * :func:`test_a_leitura_de_antes_de_reabrir_nao_e_a_primeira_da_vez_nova` —
-  tire o ``self._sessao != sessao`` do ``olhar`` do dono.
+  tire do ``olhar`` do dono a guarda da sessão.
 * :func:`test_ja_chega_durante_o_comecar_nao_reabre_a_cerimonia` — tire a
   sessão do ``comecar`` do laço.
 * :func:`test_a_resposta_dada_antes_vale_para_a_pergunta_do_clique` — faça o
