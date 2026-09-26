@@ -6824,7 +6824,11 @@ class PyDualSenseController(IController):
                 controles={uniq: sorted(campos) for uniq, campos in adiados.items()},
             )
 
-    def clear_user_output_overrides(self) -> None:
+    def clear_user_output_overrides(
+        self,
+        uniqs: Iterable[str] | None = None,
+        campos: Iterable[str] | None = None,
+    ) -> None:
         """Solta a camada da USUÁRIA no mapa por-uniq (R-20).
 
         Chamado pelo gesto EXPLÍCITO de trocar de perfil (`origin="manual"`):
@@ -6833,11 +6837,33 @@ class PyDualSenseController(IController):
         preso. Ativação AUTOMÁTICA (autoswitch, restore de boot) nunca chama —
         é justamente dela que a camada precisa se defender.
 
+        `uniqs` e `campos` ESTREITAM a soltura (26/09/2026,
+        A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01): a economia que um clique liga
+        num controle solta, só nele, os campos que ela põe no teto
+        (`lifecycle.reaplicar_se_a_economia_mudou`); o ajuste dela nos outros
+        controles, e nos outros campos, fica. `None` é todos, como sempre.
+
         Só muda estado: quem escreve o hardware é a ativação que vem logo em
         seguida (`reset_profile_overrides` + `reassert_resolved_outputs`).
         """
         with self._io_lock:
-            self._clear_layer_locked(_LAYER_USER)
+            if uniqs is None and campos is None:
+                self._clear_layer_locked(_LAYER_USER)
+                return
+            alvos = (None if uniqs is None
+                     else {a for u in uniqs if (a := self._key_to_uniq(u)) is not None})
+            quais = None if campos is None else set(campos)
+            for uniq, donos in list(self._desired_owner_by_uniq.items()):
+                if alvos is not None and uniq not in alvos:
+                    continue
+                override = self._desired_by_uniq.get(uniq)
+                for campo, dono in list(donos.items()):
+                    if dono != _LAYER_USER or (quais is not None and campo not in quais):
+                        continue
+                    del donos[campo]
+                    if override is not None:
+                        setattr(override, campo, None)
+            self._prune_overrides_locked()
 
     def set_led_scales(
         self,
