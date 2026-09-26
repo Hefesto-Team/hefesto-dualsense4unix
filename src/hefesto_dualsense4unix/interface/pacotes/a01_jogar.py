@@ -1548,7 +1548,7 @@ def _html_dos_externos(ctx: Contexto) -> str:
     # tela para sempre — o defeito oposto, e pior.
     #
     # A GÊMEA DA ABA 08 TEM O MESMO DEFEITO (`a08_conexoes._html_dos_externos`
-    # devolve `""` para o mesmo `.ext-vaga`, `aba08.py:1086`). **RELATADO** —
+    # devolve `""` para o mesmo `.ext-vaga`, `aba08.py:4220`). **RELATADO** —
     # aquele arquivo é de outra frente.
     if not ctx.externos:
         return str(_monta().NADA_A_DIZER)

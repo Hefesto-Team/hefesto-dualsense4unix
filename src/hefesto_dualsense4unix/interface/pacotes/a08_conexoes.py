@@ -101,10 +101,6 @@ _EXTRAS: tuple[object, ...] = ()
 #: dizendo menos do que se sabe sobre o valor.
 _ORDENS_NA_TELA: tuple[Any | None, ...] = ()
 
-#: QUANDO O EXAME COMPLETO CORREU, em `time.monotonic()`, ou `None` enquanto o
-#: botão **Examinar Portas** não foi clicado nesta sessão. É o relógio do
-#: carimbo "Examinado …" do topo do Check-up — ver `_carimbo_do_exame`.
-_QUANDO_O_EXAME: float | None = None
 
 #: `{chave da regra: arranjo dispensado}` — o que a decisão dela está segurando.
 #: Sai do disco e é atualizado NA HORA pelo `ignorar`: sem isso a linha voltaria
@@ -1438,30 +1434,16 @@ def _html_da_ordem(vivos: list[Any] | None = None,
     return "".join(linhas)
 
 
-def _carimbo_do_exame() -> str:
-    """O "Examinado …" do topo do Check-up.
+def _leitura_das_ordens_da_maquina(declaracao: Any) -> Any:
+    """O `leitura_das_ordens` do exame: com a declaração, a do exame da janela
+    (`secao_exame.leitura_das_ordens`); sem ela, a do sistema cru."""
+    from hefesto_dualsense4unix.app.actions.config.secao_exame import leitura_das_ordens
+    from hefesto_dualsense4unix.integrations import exame_da_mesa
 
-    A PALAVRA DA IDADE É DO PRODUTO — `secao_exame.frase_de_quando`, que já
-    arredonda grosso de propósito ("Há 3 minutos", e não "Há 187 segundos"). A
-    moldura *"Examinado …"* é deste desenho, e é por isso que ela fica aqui e
-    não lá.
+    if declaracao is None:
+        return exame_da_mesa.leitura_do_sistema
 
-    ANTES DO PRIMEIRO **Examinar Portas** A RESPOSTA É "agora mesmo", e ela é
-    verdadeira: as três conferências que a tira mostra são refeitas a cada
-    tique (`_conferencias`), logo o que está na tela foi medido neste segundo.
-    O que envelhece é o exame COMPLETO — as cinco conferências e as ordens de
-    serviço —, e esse tem hora marcada pelo botão.
-
-    O CARIMBO NÃO SABIA NADA ATÉ HOJE: o `<span class="conta">` do desenho
-    dizia "Examinado há 3 minutos" desde que o mockup nasceu, sem endereço e
-    sem dono. Uma frase de tempo que nunca muda é a forma mais barata de a tela
-    afirmar o que não mediu.
-    """
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.app.actions.config.secao_exame import frase_de_quando
-
-    idade = 0.0 if _QUANDO_O_EXAME is None else max(0.0, time.monotonic() - _QUANDO_O_EXAME)
-    return f"Examinado {frase_de_quando(idade).lower()}"
+    return lambda: leitura_das_ordens(declaracao)
 
 
 def _linha(item: Any) -> dict[str, Any]:
@@ -1920,22 +1902,6 @@ def rotulo_curto_do_controle(c: Any) -> str:
 _PONTO = ' <span class="pt">•</span> '
 
 
-def html_da_conta(frase: str) -> str:
-    """A frase da contagem, com o separador que o desenho dela usa.
-
-    O DONO DA FRASE É `gui.aba_conexoes.texto_da_contagem` — *"2 controles • 1
-    USB • 1 BT"* —, e ele escreve o `•` cru porque nasceu para um rótulo
-    do GTK. Esta função é só a tradução para o HTML dela; nenhuma palavra e
-    nenhum número nascem aqui.
-
-    POR QUE O GERADOR TAMBÉM CHAMA ISTO (`aba08.py`): enquanto o desenho e o
-    produto escreverem a mesma frase duas vezes, elas divergem sem que ninguém
-    veja. É a mesma razão pela qual o gerador já importava
-    :func:`rotulo_do_controle` deste módulo.
-    """
-    return frase.replace(" • ", _PONTO)
-
-
 #: POR ONDE O MICROFONE DESTE CONTROLE CHEGA — as duas metades da frase, e elas
 #: são as do desenho dela. A regra é o ponto final dela de 28/08: *"se tiver em
 #: modo rádio, então o mic é modo rádio"* — não há chavinha, o caminho é
@@ -1956,8 +1922,8 @@ _CAMINHO_DO_MIC = {"bt": ("pelo BT", "Pela ponte"),
 def caminho_do_microfone(via: str) -> str:
     """*"pelo BT • Pela ponte"* ou *"pelo USB • Placa do controle"*.
 
-    **UM DONO SÓ PARA OS DOIS LADOS**, mesmo molde de :func:`rotulo_do_controle`
-    e :func:`html_da_conta`: o gerador chama isto com a mesa da BANCADA, o
+    **UM DONO SÓ PARA OS DOIS LADOS**, mesmo molde de :func:`rotulo_do_controle`:
+    o gerador chama isto com a mesa da BANCADA, o
     pacote chama a cada tique com o transporte VIVO. Enquanto a frase morava só
     no `aba08.caminho_do_mic`, a linha fechada dizia *"pelo cabo · Placa do
     controle"* no P1 e *"pelo rádio · Pela ponte"* no P2 porque foi assim que o
@@ -2353,19 +2319,6 @@ def escopo_do_botao_do_mic(estado: Any) -> str:
     """
     valor = (estado or {}).get("mic_button_toggles_system")
     return "" if valor is None else FALA_DO_BOTAO_DO_MIC[bool(valor)]
-
-
-def _tela_da_aba() -> Any:
-    """`gui.aba_conexoes` — a camada de tela desta aba, do lado do produto.
-
-    Um atalho e não um import de topo: este módulo é importado pelo despachante
-    antes de o `src/` estar no caminho, e `perfil._com_o_src()` é o que o põe lá
-    (mesma razão escrita em `_html_do_mapa` e em `_dica_da_linha`).
-    """
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.gui import aba_conexoes
-
-    return aba_conexoes
 
 
 def _texto_da_bateria(bruto: Any) -> str:
@@ -2967,7 +2920,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # que separam os campos — em `texto` eles apareceriam escritos.
             # O «Player N» SAIU DO RÓTULO em 25/09/2026: ele é o campo do dono
             # (`dono`), logo abaixo — ver :func:`rotulo_curto_do_controle`.
-            "nome": rotulo_curto_do_controle(eu) if eu else "",
+            "nome": (nome_com_a_bateria(rotulo_curto_do_controle(eu), c.get("battery_pct"))
+                     if eu else ""),
             # A COR DA BARRA DA ESQUERDA, no alvo `cor` (ver o CSS do `.gc-cor`).
             # VAZIO APAGA, e é o alvo que garante: `el.style.color = ''` devolve
             # o elemento à folha de estilo, que o pinta `transparent`. Sem cor
@@ -3082,13 +3036,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # PO. `vivos` VAI JUNTO de propósito: é a mesma lista que pintou a tira
         # à esquerda, e as duas metades da seção têm de falar do mesmo exame.
         "ordem": _html_da_ordem(vivos, _CENA_NA_TELA),
-        # A CONTAGEM DA SEÇÃO, pelo dono da frase
-        # (`gui.aba_conexoes.texto_da_contagem`). Ela era `2 na mesa • 1 no cabo
-        # • 1 no rádio` cravado — com um controle só na mesa, a seção continuava
-        # dizendo 2/1/1. É o mesmo defeito que o `topo()` já curou no cabeçalho.
-        "conta-gestao": html_da_conta(
-            _tela_da_aba().texto_da_contagem(
-                _tela_da_aba().controles_do_estado(st))),
+        # O CARIMBO «Examinado …» E A CONTAGEM DA SEÇÃO SAÍRAM em 26/09/2026, a
+        # pedido dela: *«vamos remover essas infos que aparecem no canto
+        # superior de Gestão de controles também. pra limparmos mais a
+        # interface»*. A contagem mora no topo da janela, e o exame é refeito
+        # pelo «Examinar Entradas». (noqa-acento: citação literal dela)
         # AS DUAS RESPOSTAS DELA SOBRE A SALA — ver `_sala_na_tela`. A tela
         # dizia que ela não tinha respondido a visada; o `maquina.json` dela diz
         # que respondeu.
@@ -3182,9 +3134,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # A SEÇÃO RÁDIO E ADAPTADORES — o `mapa-do-radio.html` aprovado,
         # TRANSPLANTE-DA-SECAO-01. Ver :func:`campos_do_radio`.
         **radio,
-        # O CARIMBO do topo do Check-up — publicado no mesmo dia e pela mesma
-        # decisão, e também já pintado.
-        "examinado": _carimbo_do_exame(),
         # A LINHA DE VEREDITO SAIU da tela em 26/09/2026, a pedido dela (a D-16
         # revogada: a Sugestão de Conexão já numera cada mudança). O
         # `_veredito_do_exame` fica para quem conta a cor do pior achado.
@@ -3242,7 +3191,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # que o `alvo-aberto` marca — as ressalvas contam mesmo caladas, porque
         # `monta.NADA_A_DIZER` é uma escrita. O `+ 12` são os campos da seção
         # do rádio (:func:`campos_da_secao`), e a cerimônia entra pelo `sum`.
-        "cobertura": {"pintados": 2 + 1 + 2 + 5 + len(confissao)
+        "cobertura": {"pintados": 1 + 2 + 5 + len(confissao)
                       + len(itens) * 4 + 1 + 12
                       + sum(len(v) for v in colunas.values()),
                       "sem_dono": len(SEM_DONO) + len(sem_dono)},
@@ -3992,7 +3941,7 @@ def _correr_o_exame_completo() -> None:
     não é "está tudo bem", é "não consegui olhar", e a diferença entre os dois
     é o que esta casa chama de *ausência de notícia lida como sucesso*.
     """
-    global _EXTRAS, _QUANDO_O_EXAME
+    global _EXTRAS
     perfil._com_o_src()
     from hefesto_dualsense4unix.integrations import exame_da_mesa
 
@@ -4025,18 +3974,15 @@ def _correr_o_exame_completo() -> None:
         # `exame_da_mesa.exame` explica que o catálogo varre o barramento
         # INTEIRO e que uma bancada de retrato não teria como substituí-lo. Aqui
         # a máquina é a dela, e é dela que a ordem tem de falar.
-        leitura_das_ordens=exame_da_mesa.leitura_do_sistema,
+        # COM O DESENHO DELA (26/09/2026): a leitura crua do sistema não sabe
+        # das entradas mapeadas, e toda ordem saía «para uma entrada do próprio
+        # computador» mais «você ainda não desenhou suas entradas» — com as 15
+        # mapeadas. Quem monta a leitura com o `maquina.json` é o exame da janela.
+        leitura_das_ordens=_leitura_das_ordens_da_maquina(declaracao),
     )
     if not itens:
         raise RuntimeError("não consegui examinar as entradas agora")
     _EXTRAS = tuple(itens)
-    # O RELÓGIO DO CARIMBO, e ele só anda AQUI. As três conferências do tique
-    # são refeitas duas vezes por segundo, então para elas a resposta honesta é
-    # sempre "agora mesmo"; o que envelhece é o exame COMPLETO, que é este
-    # botão. `monotonic` e não `time()`: o carimbo mede um INTERVALO, e um
-    # acerto de relógio do sistema faria "há 3 minutos" virar "há mais de uma
-    # hora" sem nada ter acontecido.
-    _QUANDO_O_EXAME = time.monotonic()
 
 
 @gesto("08-conexoes.html", "ignorar", grava="machine_declare")
@@ -7121,16 +7067,6 @@ def selo_do_estado(rotulo: str, valor: str = "", estado: str = "ok") -> str:
     return f'<span class="{classe}">{miolo}</span>'
 
 
-def _estado_de_carga(c: dict[str, Any]) -> str:
-    """A palavra do estado de carga, pelo dono da aba 02 (`carga_na_tela`)."""
-    try:
-        from .a02_controles import carga_na_tela
-
-        return str(carga_na_tela(c.get("battery_state")) or "")
-    except Exception:
-        return ""
-
-
 def modo_da_fileira(st: dict[str, Any]) -> str:
     """O «Modo de conexão» da linha: o nome do chip aceso na aba Jogar.
 
@@ -7205,27 +7141,24 @@ def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any]
                                    modo if modo is not None else modo_da_fileira(st), "")
     visto = selo_do_estado("Visto como", str(eu.get("mascara") or TRAVESSAO_DA_LINHA), "")
 
-    # A CONEXÃO: no cabo não há o que engasgar; no rádio quem diz é o
-    # movimento medido (o mesmo `_e_pouco` que pinta a linha de Rádio e
-    # Adaptadores). Sem medida, não há juízo.
-    hz = c.get("hz_movimento")
-    if via == "usb":
-        conexao = selo_do_estado("Conexão estável")
-    elif _e_pouco(hz):
-        conexao = selo_do_estado("Conexão", "instável", "warn")
-    elif isinstance(hz, (int, float)) and not isinstance(hz, bool):
-        conexao = selo_do_estado("Conexão estável")
-    else:
-        conexao = selo_do_estado("Conexão", TRAVESSAO_DA_LINHA, "")
+    # «CONEXÃO ESTÁVEL» E «BATERIA» SAÍRAM DO CARTÃO em 26/09/2026, a pedido
+    # dela: *«vamos remover as linhas de conexão estávbel e a bateria vamos
+    # mover ela pra ficar do lado do BT»*. A bateria vai no nome
+    # (:func:`nome_com_a_bateria`); a queda do rádio aparece no exame e em
+    # Rádio e Adaptadores. (noqa-acento: citação literal dela)
+    return {"est-mic": mic, "est-som": som, "est-modo": modo_da_linha, "est-visto": visto}
 
-    carga = _estado_de_carga(c)
-    bateria_txt = _texto_da_bateria(c.get("battery_pct"))
-    if carga:
-        bateria_txt = f"{bateria_txt} · {carga.lower()}"
-    bateria = selo_do_estado("Bateria", bateria_txt, "")
 
-    return {"est-mic": mic, "est-som": som, "est-modo": modo_da_linha, "est-visto": visto,
-            "est-conexao": conexao, "est-bateria": bateria}
+def nome_com_a_bateria(rotulo: str, pct: object) -> str:
+    """«Cosmic Red • BT • 85%» — o rótulo curto e a carga, quando ela é lida.
+
+    Sem leitura, o rótulo fica como está: o travessão de «não sei» não cabe no
+    meio do nome.
+    """
+    bateria = _texto_da_bateria(pct)
+    if not rotulo or not bateria or bateria == TRAVESSAO_DA_LINHA:
+        return rotulo
+    return f"{rotulo}{_PONTO}{html.escape(bateria)}"
 
 
 #: O travessão da linha: *«isto eu não sei»*, o mesmo do `pacotes.__init__`.

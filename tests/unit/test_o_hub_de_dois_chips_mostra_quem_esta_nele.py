@@ -90,3 +90,14 @@ def test_sem_o_mapa_nada_some() -> None:
     mesa = mapa_das_portas.mesa_do_motor(MapaDaMesa(), _CENSO).mesa
     assert len(mesa.aparelhos) == len(_CENSO.conectados())
     assert all(mesa.leitura[a.id] == a.id for a in mesa.aparelhos)
+
+
+def test_a_entrada_do_aparelho_usb3_nao_esta_livre() -> None:
+    """26/09/2026: a Sugestão mandava o adaptador para a entrada do Wi-Fi.
+
+    A MORDIDA: devolva ao ``portas_livres`` o teste só do caminho declarado
+    (``3-1.1.4`` aqui ``9-1.1.4``) — a 9 volta a sair livre, com o Wi-Fi nela.
+    """
+    assert "9" not in mapa_das_portas.portas_livres(_MAPA, _CENSO)
+    assert mapa_das_portas.ocupante_de(_MAPA, "9", _CENSO) == "10-1.1.4"
+    assert mapa_das_portas.ocupante_de(_MAPA, "11", _CENSO) == "9-1.1.2"

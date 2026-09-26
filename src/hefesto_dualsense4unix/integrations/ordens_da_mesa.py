@@ -91,7 +91,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from hefesto_dualsense4unix.integrations.censo_do_barramento import (
     Aparelho,
@@ -106,6 +106,7 @@ from hefesto_dualsense4unix.integrations.entradas_do_gabinete import (
 from hefesto_dualsense4unix.integrations.portas_do_barramento import (
     hubs_do_mesmo_plastico,
 )
+from hefesto_dualsense4unix.utils.lugar import caminho_do_no
 
 # ---------------------------------------------------------------------------
 # Os três selos.
@@ -146,7 +147,7 @@ NAO_MEDI = "Não medi o ganho nesta máquina."
 
 #: "Só você sabe, e você ainda não me disse." Nenhuma medição fecha isto: o
 #: desenho do gabinete não está em lugar nenhum do sistema.
-NAO_DECLARADO = "Você ainda não desenhou suas entradas na seção Conexões."
+NAO_DECLARADO = "Para eu dizer qual, use o «Mapear Entradas»."
 
 #: A frase que fecha uma ordem sem destino — e ela diz por que não há destino,
 #: em vez de calar. Calar é o F7.
@@ -495,21 +496,24 @@ def radio_largo_no_mesmo_hub(leitura: Leitura) -> Ordem | None:
         return None
     alvo, _acusador = pares[0]
     livres = _livres_fora_da_controladora(leitura, alvo.controlador_pci)
-    destino = _destino_declarado(leitura)
+    destino = _destino_declarado(leitura, livres)
     nome = _nome_do_aparelho(leitura, alvo)
     return Ordem(
         chave=R1_RADIO_LARGO_NO_MESMO_HUB,
-        acao=_acao(f"Mova {nome}", len(livres), destino),
+        acao=_acao(f"Mova {nome}", len(livres), destino, bool(leitura.ocupante_da_entrada)),
         o_que_eu_vi=Linha(
             texto=(
                 # «que você ainda não identificou» saiu do nome em 19/09
                 # (`_nome_do_aparelho`), e não daqui: é lá que a frase nasce.
-                f"{_com_maiuscula(nome)} negocia "
-                f"{_velocidade(alvo.velocidade_mbps)} no mesmo hub que "
+                # ENCURTADA em 26/09/2026, pedido dela: *«talvez encurtar
+                # as frases da primeira seção ajude a limpar mais o nosso
+                # layout»*. (noqa-acento: citação literal dela)
+                f"{_com_maiuscula(nome)} ({_velocidade(alvo.velocidade_mbps)}) "
+                "divide o hub com "
                 + _plural(
                     len(pares),
-                    "um adaptador Bluetooth",
-                    f"{len(pares)} adaptadores Bluetooth",
+                    "um adaptador BT",
+                    f"{len(pares)} adaptadores BT",
                 )
                 + "."
             ),
@@ -567,8 +571,8 @@ def dois_radios_colados(leitura: Leitura) -> Ordem | None:
         acao="Mude um dos dois para uma entrada mais longe",
         o_que_eu_vi=Linha(
             texto=(
-                f"As entradas {primeira} e {segunda} estão coladas no seu "
-                "desenho, e as duas têm um aparelho que usa 2,4 GHz."
+                f"As entradas {primeira} e {segunda}, coladas, têm dois "
+                "rádios de 2,4 GHz."
             ),
             selo=MEDIDO_AQUI,
         ),
@@ -584,7 +588,7 @@ def dois_radios_colados(leitura: Leitura) -> Ordem | None:
             leitura, leitura.ocupante_da_entrada.get(primeira, "")
         ),
         arranjo=_assinatura_de_caminhos(caminhos),
-        destino=_destino_declarado(leitura),
+        destino=_destino_declarado(leitura, _furos_livres(leitura)),
     )
 
 
@@ -612,18 +616,19 @@ def dongle_atras_de_hub(leitura: Leitura) -> Ordem | None:
     total = len(_bluetooth_do_censo(leitura.censo))
     alvo = atras[0]
     livres = _livres_fora_da_controladora(leitura, alvo.controlador_pci)
-    destino = _destino_declarado(leitura)
+    destino = _destino_declarado(leitura, livres)
     velocidade = _velocidade_do_hub(leitura.censo, alvo)
     return Ordem(
         chave=R3_DONGLE_ATRAS_DE_HUB,
-        acao=_acao("Leve um dos adaptadores Bluetooth", len(livres), destino),
+        acao=_acao("Leve um dos adaptadores Bluetooth", len(livres), destino,
+                   bool(leitura.ocupante_da_entrada)),
         o_que_eu_vi=Linha(
             texto=(
                 f"{len(atras)} de {total} "
                 + _plural(
                     total,
-                    "adaptador Bluetooth passa",
-                    "adaptadores Bluetooth passam",
+                    "adaptador BT passa",
+                    "adaptadores BT passam",
                 )
                 # RESUMIDO EM 19/09/2026 — ordem dela: *"resume mais pra ter
                 # uma linha só"*. Era *"…chegam ao computador por dentro de um
@@ -644,10 +649,10 @@ def dongle_atras_de_hub(leitura: Leitura) -> Ordem | None:
                 # mexer em gramática**, e a régua do comprimento não
                 # lia a frase MONTADA — ela contava caracteres do fonte. Uma
                 # régua de tamanho não é uma régua de língua.
-                + " por um hub, e sobram "
-                f"{len(livres)} "
-                f"{_plural(len(livres), 'entrada livre', 'entradas livres')}"
-                "."
+                #
+                # E «e sobram N entradas livres» SAIU em 26/09/2026, no corte
+                # seguinte dela: a Sugestão ao lado já diz para qual entrada.
+                + " por um hub."
             ),
             selo=MEDIDO_AQUI,
         ),
@@ -692,10 +697,10 @@ def teclado_so_no_hub(leitura: Leitura) -> Ordem | None:
         return None
     alvo = teclados[0]
     livres = _livres_fora_da_controladora(leitura, alvo.controlador_pci)
-    destino = _destino_declarado(leitura)
+    destino = _destino_declarado(leitura, livres)
     return Ordem(
         chave=R4_TECLADO_SO_NO_HUB,
-        acao=_acao("Leve um teclado", len(livres), destino),
+        acao=_acao("Leve um teclado", len(livres), destino, bool(leitura.ocupante_da_entrada)),
         o_que_eu_vi=Linha(
             texto=(
                 _plural(
@@ -756,8 +761,8 @@ def dongle_dorme(leitura: Leitura) -> Ordem | None:
             texto=(
                 _plural(
                     len(dormindo),
-                    "Um adaptador Bluetooth está",
-                    f"{len(dormindo)} adaptadores Bluetooth estão",
+                    "Um adaptador BT está",
+                    f"{len(dormindo)} adaptadores BT estão",
                 )
                 + " com a economia de energia ligada."
             ),
@@ -795,17 +800,18 @@ def entrada_reclamou_de_corrente(leitura: Leitura) -> Ordem | None:
         return None
     alvo = reclamaram[0]
     livres = _livres_fora_da_controladora(leitura, alvo.controlador_pci)
-    destino = _destino_declarado(leitura)
+    destino = _destino_declarado(leitura, livres)
     return Ordem(
         chave=R6_ENTRADA_RECLAMOU_DE_CORRENTE,
-        acao=_acao("Leve esse adaptador", len(livres), destino),
+        acao=_acao("Leve esse adaptador", len(livres), destino,
+                   bool(leitura.ocupante_da_entrada)),
         o_que_eu_vi=Linha(
             texto=(
                 "A entrada de "
                 + _plural(
                     len(reclamaram),
-                    "um adaptador Bluetooth",
-                    f"{len(reclamaram)} adaptadores Bluetooth",
+                    "um adaptador BT",
+                    f"{len(reclamaram)} adaptadores BT",
                 )
                 + " já acusou excesso de corrente."
             ),
@@ -847,8 +853,19 @@ def catalogo(leitura: Leitura) -> tuple[Ordem, ...]:
     resposta: quer dizer que as seis regras rodaram e nenhuma achou nada — o que
     é diferente de nenhuma regra ter rodado, e é o cabeçalho que separa os dois.
     """
-    achadas = [regra(leitura) for regra in REGRAS]
-    return tuple(ordem for ordem in achadas if ordem is not None)
+    # UM DESTINO POR ORDEM (26/09/2026): com o desenho dela, R1 e R3 mandavam
+    # o Wi-Fi e o adaptador para a MESMA entrada. A entrada que uma ordem já
+    # usou sai da lista das seguintes.
+    achadas: list[Ordem] = []
+    for regra in REGRAS:
+        ordem = regra(leitura)
+        if ordem is None:
+            continue
+        achadas.append(ordem)
+        if ordem.destino:
+            leitura = replace(leitura, entradas_livres_declaradas=tuple(
+                n for n in leitura.entradas_livres_declaradas if n != ordem.destino))
+    return tuple(achadas)
 
 
 # ---------------------------------------------------------------------------
@@ -1193,7 +1210,12 @@ def _livres_fora_da_controladora(
     """
     if not controlador_pci:
         return ()
+    # O HUB RAIZ (`usb3`) é um barramento, e não um aparelho: sem ele, toda
+    # entrada da placa-mãe passava por «outra controladora».
     controlador_por_hub = {
+        barramento.nome_do_kernel: barramento.controlador_pci
+        for barramento in leitura.censo.barramentos
+    } | {
         aparelho.nome_do_kernel: aparelho.controlador_pci
         for aparelho in leitura.censo.aparelhos
     }
@@ -1208,19 +1230,33 @@ def _livres_fora_da_controladora(
     return tuple(achados)
 
 
-def _destino_declarado(leitura: Leitura) -> str:
-    """A primeira entrada livre pelo NÚMERO dela — ``""`` quando não há desenho.
+def _destino_declarado(leitura: Leitura, livres: Sequence[Furo]) -> str:
+    """A primeira entrada livre, pelo NÚMERO dela, que é um dos ``livres``.
 
     Vem de ``mapa_das_portas.portas_livres``, já calculada por quem chama. É a
     ÚNICA fonte possível de um destino: o desenho é declarado, nunca deduzido —
     as duas entradas da frente do gabinete desta bancada são byte a byte iguais
     nos três campos que o kernel decodifica.
+
+    O NÚMERO TEM DE SER UM DOS ``livres`` (26/09/2026): a primeira livre do
+    desenho, sem filtro, mandava o adaptador para outra entrada do MESMO hub —
+    a Sugestão dizia «Entrada 3 → Entrada 9» com as duas no hub. O caminho que
+    ela declarou para a entrada casa com um dos nós do buraco (os dois lados
+    do USB 3). A entrada desenhada sem caminho não tem lugar sabido, e só vale
+    quando nenhuma com lugar serve.
     """
-    declaradas = leitura.entradas_livres_declaradas
-    return declaradas[0] if declaradas else ""
+    caminhos = {caminho_do_no(no) for furo in livres for no in furo.nos} - {""}
+    sem_lugar = ""
+    for numero in leitura.entradas_livres_declaradas:
+        caminho = leitura.ocupante_da_entrada.get(numero, "")
+        if caminho in caminhos:
+            return numero
+        if not caminho and not sem_lugar:
+            sem_lugar = numero
+    return sem_lugar
 
 
-def _acao(verbo: str, quantos_livres: int, destino: str) -> str:
+def _acao(verbo: str, quantos_livres: int, destino: str, desenhou: bool = False) -> str:
     """O imperativo da ordem — e ele diz o que falta para virar um endereço.
 
     Três formas, e a diferença entre a segunda e a terceira é
@@ -1243,9 +1279,13 @@ def _acao(verbo: str, quantos_livres: int, destino: str) -> str:
         return ""
     if destino:
         return f"{verbo} para a entrada {destino}"
+    # ELA JÁ DESENHOU (26/09/2026): o «você ainda não desenhou» saía com as 15
+    # entradas mapeadas. Com desenho e sem número que sirva, a ordem manda para
+    # outra controladora e não cobra o desenho de novo.
+    if desenhou:
+        return f"{verbo} para uma entrada de outra controladora"
     return (
-        f"{verbo} para uma entrada do próprio computador — há "
-        f"{quantos_livres} "
+        f"{verbo} para outra entrada — há {quantos_livres} "
         + _plural(quantos_livres, "livre", "livres")
         + f". {NAO_DECLARADO}"
     )

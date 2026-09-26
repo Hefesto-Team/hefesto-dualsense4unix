@@ -194,36 +194,19 @@ def _cartoes_da_gestao() -> list[tuple[str, str]]:
 
 
 def _palavra_do_cartao(nome: str) -> str | None:
-    """A palavra de transporte que a linha mostra no fim do nome, se mostrar."""
-    ultima = nome.rsplit("•", 1)[-1].strip()
-    return ultima if ultima in {palavra("usb"), palavra("bt")} else None
+    """A palavra de transporte que o nome mostra, se mostrar.
+
+    Desde 26/09/2026 a bateria vem depois dela («Cosmic Red • BT • 85%»)."""
+    pedacos = [pedaco.strip() for pedaco in nome.split("•")]
+    return next((p for p in pedacos if p in {palavra("usb"), palavra("bt")}), None)
 
 
-def test_a_contagem_da_gestao_na_pagina_usa_a_palavra_do_dono() -> None:
-    """O canto da Gestão conta com a palavra que o dono dá, e bate com as linhas.
-
-    MORDIDA: devolva *"{usb} no cabo • {radio} no rádio"* ao
-    `gui.aba_conexoes.texto_da_contagem`, regere a 08 — reprova com as duas
-    frases.
-    """
-    x = _pagina("08-conexoes.html")
-    m = re.search(r'data-campo="conta-gestao"[^>]*>(.*?)</span>\s*</div>', x, flags=re.S)
-    assert m, "a contagem da Gestão perdeu o endereço `conta-gestao`"
-    na_tela = _texto(m.group(1))
-
+def test_o_canto_da_gestao_nao_conta_mais() -> None:
+    """A contagem saiu do canto da Gestão em 26/09/2026, a pedido dela; o dono
+    (`gui.aba_conexoes.texto_da_contagem`) segue medido logo abaixo."""
+    assert 'data-campo="conta-gestao"' not in _pagina("08-conexoes.html")
     palavras = [_palavra_do_cartao(n) for n, _ in _cartoes_da_gestao()]
-    usb = palavras.count(palavra("usb"))
-    bt = palavras.count(palavra("bt"))
-    n = usb + bt
-    assert n, "nenhuma linha da Gestão termina numa palavra de transporte do dono"
-    pedacos = [f"{n} {'controle' if n == 1 else 'controles'}"]
-    if usb:
-        pedacos.append(f"{usb} {palavra('usb')}")
-    if bt:
-        pedacos.append(f"{bt} {palavra('bt')}")
-    assert na_tela == " • ".join(pedacos), (
-        f"a contagem da Gestão diz {na_tela!r}, e as linhas dela pedem "
-        f"{' • '.join(pedacos)!r}")
+    assert any(palavras), "nenhum nome da Gestão traz a palavra de transporte do dono"
 
 
 @pytest.mark.parametrize(("transportes", "esperada"), [

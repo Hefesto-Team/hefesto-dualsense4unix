@@ -88,10 +88,10 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 05-vibracao | 31 | 13 | 11 | 4 | 3 | 0 | 42% |
 | 06-navegacao | 40 | 15 | 16 | 0 | 9 | 0 | 38% |
 | 07-lancadores | 29 | 9 | 12 | 0 | 8 | 0 | 31% |
-| 08-conexoes | 49 | 16 | 27 | 5 | 1 | 0 | 33% |
+| 08-conexoes | 49 | 16 | 26 | 6 | 1 | 0 | 33% |
 | 09-sistema | 38 | 13 | 18 | 4 | 3 | 0 | 34% |
 | 10-perfis | 50 | 14 | 20 | 7 | 9 | 0 | 28% |
-| TODAS | 395 | 131 | 173 | 35 | 53 | 3 | 33% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 395 | 131 | 172 | 36 | 53 | 3 | 33% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -677,3 +677,12 @@ escopo nesta aba, e o sinal é a decisão escrita no pacote
 (`D-O-ESCOPO-DO-MIC-SAIU-DA-08`). A tabela foi recontada do CSV: `08-conexoes`
 vai de `16 IGUAL · 2 SO_HTML · 33%` para `17 · 1 · 35%`, e `TODAS` de
 `131 · 54` para `132 · 53`.
+
+## Nota de verificação — 26/09/2026, a Gestão de Controles enxuga
+
+`D-2609-A-GESTAO-ENXUTA`. A linha **`08-conexoes` · "O carimbo 'Examinado há …'"**
+foi de `DIFERENTE` para **`FALTA_NO_HTML`**: o canto da seção saiu, a pedido
+dela. A bateria foi para o nome do cartão e a contagem ficou no topo da janela;
+as duas seguem `DIFERENTE`, com o endereço novo. A tabela acima foi recontada do
+CSV: `08-conexoes` vai de `27 DIFER · 5 FALTA` para `26 · 6`, e `TODAS` de
+`173 · 35` para `172 · 36`.

@@ -143,7 +143,6 @@ def _a_08_sem_os_fios_da_maquina(monkeypatch: pytest.MonkeyPatch) -> None:
             fio.join(timeout=15)
     monkeypatch.setattr(a08_conexoes, "_EXAME_PEDIDO", True)
     monkeypatch.setattr(a08_conexoes, "_EXTRAS", ())
-    monkeypatch.setattr(a08_conexoes, "_QUANDO_O_EXAME", None)
     monkeypatch.setattr(a08_conexoes, "_em_fundo",
                         lambda chave, ler, validade_s: None)
 

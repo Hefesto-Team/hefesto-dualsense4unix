@@ -94,13 +94,11 @@ def test_os_seis_selos_saem_para_cada_controle(vias: list[str]) -> None:
     assert len(saida["colunas"]) == len(vias)
     for n, u in enumerate(UNIQS[: len(vias)], start=1):
         col = saida["colunas"][u]
-        for campo in ("est-mic", "est-som", "est-modo", "est-visto", "est-conexao",
-                      "est-bateria", "perfil", "dono"):
+        for campo in ("est-mic", "est-som", "est-modo", "est-visto", "perfil", "dono"):
             assert campo in col, f"o controle {n} ({vias[n - 1]}) não recebeu `{campo}`"
         assert "Xbox 360" in col["est-visto"]
-        assert f"{50 + n}%" in col["est-bateria"]
+        assert col["nome"].endswith(f"{50 + n}%"), "a bateria mora no nome desde 26/09"
         assert col["dono"] == f"P{n}", "sem nome, o campo do dono diz «P N»"
-        assert "certo" in col["est-conexao"]
 
 
 def test_o_mic_desligado_por_escolha_tambem_e_certo() -> None:
@@ -122,18 +120,16 @@ def test_o_mic_pelo_radio_sem_ponte_nao_e_certo() -> None:
     assert "certo" in no_cabo["est-mic"]
 
 
-def test_a_bateria_diz_carregando() -> None:
+def test_conexao_e_bateria_sairam_do_cartao() -> None:
+    """26/09/2026, pedido dela: *«vamos remover as linhas de conexão estávbel
+    e a bateria vamos mover ela pra ficar do lado do BT»*. O cartão tem os
+    quatro selos, e a bateria vai no nome. (noqa-acento: citação literal dela)"""
     pac = _pac()
-    c = {"uniq": UNIQS[0], "transport": "usb", "battery_pct": 40,
-         "battery_state": "carregando"}
-    assert "carregando" in pac.estado_do_controle(c, {}, {}, _Declaracao())["est-bateria"]
-
-
-def test_a_conexao_instavel_pelo_radio_e_laranja() -> None:
-    pac = _pac()
-    c = {"uniq": UNIQS[0], "transport": "bt", "hz_movimento": 20}
-    selo = pac.estado_do_controle(c, {}, {}, _Declaracao())["est-conexao"]
-    assert "warn" in selo and "instável" in selo
+    c = {"uniq": UNIQS[0], "transport": "bt", "battery_pct": 40, "hz_movimento": 20}
+    assert set(pac.estado_do_controle(c, {}, {}, _Declaracao())) == {
+        "est-mic", "est-som", "est-modo", "est-visto"}
+    assert pac.nome_com_a_bateria("Cosmic Red", 40) == 'Cosmic Red <span class="pt">•</span> 40%'
+    assert pac.nome_com_a_bateria("Cosmic Red", None) == "Cosmic Red"
 
 
 def test_o_modo_de_conexao_e_o_chip_aceso_da_jogar(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -245,10 +241,11 @@ def test_a_gestao_mora_dentro_do_check_up(arquivo: pathlib.Path) -> None:
     assert ">Check-up<" not in html, "o nome velho da seção voltou"
     checkup = html[html.index('id="cx8-2"'):html.index('id="rd-secao"')]
     assert 'class="gc"' in checkup and 'class="ferramentas"' in checkup
-    for campo in ("est-mic", "est-som", "est-modo", "est-visto", "est-conexao",
-                  "est-bateria", "perfil", "dono",
+    for campo in ("est-mic", "est-som", "est-modo", "est-visto", "perfil", "dono",
                   "mapear-diz", "mapear-porta", "mapear-conta"):
         assert f'data-campo="{campo}"' in html, f"a página não tem onde pintar `{campo}`"
+    for campo in ("est-conexao", "est-bateria"):
+        assert f'data-campo="{campo}"' not in html, f"`{campo}` voltou ao cartão"
     for gesto in ("perfil-do-controle", "dono-renomear",
                   "mapear-comecar", "mapear-gravar", "mapear-parar", "examinar-portas"):
         assert f'data-gesto="{gesto}"' in html, f"o gesto `{gesto}` não tem botão"

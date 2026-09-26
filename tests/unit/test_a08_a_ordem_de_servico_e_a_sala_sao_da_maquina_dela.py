@@ -401,11 +401,13 @@ def test_a_bateria_sem_leitura_vira_o_travessao_do_produto() -> None:
     assert p._texto_da_bateria("nao_e_numero") == TRACO
 
 
-def test_a_contagem_da_gestao_e_do_dono_com_o_separador_do_desenho() -> None:
-    """A frase inteira vem de `gui.aba_conexoes.texto_da_contagem`."""
+def test_a_contagem_e_do_dono() -> None:
+    """A frase inteira vem de `gui.aba_conexoes.texto_da_contagem`.
+
+    Ela SAIU DO CANTO DA GESTÃO em 26/09/2026, a pedido dela; o dono segue
+    escrevendo a frase para quem a mostra."""
     from hefesto_dualsense4unix.gui import aba_conexoes as tela
 
-    p = _pacote()
     estado = {"controllers": [
         {"connected": True, "uniq": "aa:bb:cc:00:00:01", "transport": "usb",
          "player": 1, "battery_pct": 88},
@@ -424,11 +426,6 @@ def test_a_contagem_da_gestao_e_do_dono_com_o_separador_do_desenho() -> None:
     esperada = f"3 controles • 1 {palavra('usb')} • 2 {palavra('bt')}"
     assert frase == esperada, (
         f"o dono mudou a frase da contagem: {frase!r}")
-
-    saiu = p.html_da_conta(frase)
-    assert saiu.count('<span class="pt">•</span>') == 2, (
-        f"o separador do desenho não entrou: {saiu!r}")
-    assert " • " not in saiu, "sobrou um `•` cru, que a folha dela não apaga"
 
 
 def _ctx():  # type: ignore[no-untyped-def]
@@ -470,19 +467,23 @@ def test_o_pacote_liga_os_cinco_enderecos() -> None:
     p = _pacote()
     saiu = p.pacote(_ctx())
 
-    for endereco in ("ordem", "conta-gestao"):
-        assert endereco in saiu, (
-            f"o `pacote()` não emite `{endereco}` — o desenho tem o endereço e "
-            "ninguém escreve nele")
-    assert saiu["conta-gestao"].startswith("2 controles"), (
-        f"a contagem da seção não conta a mesa deste contexto: "
-        f"{saiu['conta-gestao']!r}")
+    assert "ordem" in saiu, (
+        "o `pacote()` não emite `ordem` — o desenho tem o endereço e ninguém "
+        "escreve nele")
+    assert "conta-gestao" not in saiu, "a contagem voltou ao canto da Gestão"
 
     baterias = [c.get("bateria") for c in saiu["colunas"].values()]
     assert baterias == ["100%", TRACO], (
         f"o `pacote()` emitiu {baterias!r}. A bateria é TEXTO — um inteiro num "
         "endereço de texto escreve `100` onde o desenho promete `100%`, e "
         "`null` onde ele promete o travessão")
+
+    # A BATERIA NO NOME — 26/09/2026: «nome do modelo - tipo de conexão -
+    # Percentual de bateria». Sem leitura, o nome fica sem o número (o
+    # travessão de «não sei» não cabe no meio do nome).
+    nomes = [c.get("nome") for c in saiu["colunas"].values()]
+    assert nomes[0].endswith('<span class="pt">•</span> 100%'), nomes
+    assert "%" not in nomes[1] and TRACO not in nomes[1], nomes
 
 
 # ---------------------------------------------------------------------------
@@ -507,11 +508,10 @@ def test_o_desenho_tem_endereco_para_os_cinco() -> None:
     from monta import MESA
 
     html = BANCADA.read_text(encoding="utf-8")
-    esperado = {"ordem": 1, "conta-gestao": 1, "sala-altura": 3,
-                "sala-visada": 3,
-                # A BATERIA VIROU O SELO `est-bateria` em 25/09/2026
-                # (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): mesmo lugar, mesma conta.
-                "est-bateria": len(MESA)}
+    esperado = {"ordem": 1, "sala-altura": 3, "sala-visada": 3,
+                # A BATERIA FOI PARA O NOME em 26/09/2026 («Cosmic Red • BT •
+                # 85%»): um `nome` por lugar da mesa.
+                "nome": len(MESA)}
     for campo, quantos in esperado.items():
         achados = html.count(f'data-campo="{campo}"')
         assert achados == quantos, (
@@ -520,7 +520,7 @@ def test_o_desenho_tem_endereco_para_os_cinco() -> None:
             "`achar()` do piloto escrever ZERO, calado — foi assim que `via`, "
             "`bateria`, `ponte` e `fragil` somaram à cobertura sem chegar à tela")
 
-    for campo in ("ordem", "conta-gestao"):
+    for campo in ("ordem",):
         assert re.search(rf'data-campo="{campo}" data-hef-alvo="html"', html), (
             f"`{campo}` troca um bloco INTEIRO e precisa do alvo `html`; sem "
             "ele o piloto escreveria a marcação como texto na tela")

@@ -237,14 +237,14 @@ def test_r3_diz_uma_frase_de_portugues_inteira() -> None:
     # dela nunca exercita (ela tem três adaptadores), e é justamente onde um
     # plural errado moraria sem ninguém ver.
     for quantos, esperada in (
-        (3, "2 de 3 adaptadores Bluetooth passam por um hub, e sobram "),
-        (1, "1 de 1 adaptador Bluetooth passa por um hub, e sobram "),
+        (3, "2 de 3 adaptadores BT passam por um hub."),
+        (1, "1 de 1 adaptador BT passa por um hub."),
     ):
         frase = (
             f"{quantos - 1 or 1} de {quantos} "
-            + ordens._plural(quantos, "adaptador Bluetooth passa",
-                             "adaptadores Bluetooth passam")
-            + " por um hub, e sobram "
+            + ordens._plural(quantos, "adaptador BT passa",
+                             "adaptadores BT passam")
+            + " por um hub."
         )
         assert frase == esperada, (
             f"a frase do R3 saiu {frase!r} e devia ser {esperada!r}. O verbo "
@@ -475,3 +475,42 @@ def test_a_terceira_linha_existe_sempre() -> None:
     for ordem in ordens.catalogo(leitura()):
         assert ordem.ganho_esperado.texto.strip()
         assert len(ordem.linhas) == 3
+
+
+# ---------------------------------------------------------------------------
+# O destino da Sugestão — 26/09/2026, a foto dela da Gestão de Controles: a
+# Sugestão mandava o adaptador para a entrada 9, no MESMO hub, e o Wi-Fi e o
+# adaptador para a mesma entrada.
+# ---------------------------------------------------------------------------
+
+
+def test_o_destino_e_uma_entrada_livre_de_outra_controladora() -> None:
+    """A MORDIDA: devolva o `_destino_declarado` à primeira declarada, sem o
+    filtro dos `livres` — a ordem volta a apontar a 9, que é do mesmo hub."""
+    ordem = ordens.dongle_atras_de_hub(leitura(
+        entradas_livres_declaradas=("9", "2"),
+        ocupante_da_entrada={"9": "3-1.1.3", "2": "1-2"},
+    ))
+    assert ordem is not None
+    assert ordem.destino == "2"
+    assert ordem.acao.endswith("para a entrada 2")
+
+
+def test_duas_ordens_nao_mandam_para_a_mesma_entrada() -> None:
+    """A MORDIDA: tire o `replace` do `catalogo` — as três ordens apontam a 1."""
+    catalogo = ordens.catalogo(leitura(
+        entradas_livres_declaradas=("1", "2"),
+        ocupante_da_entrada={"1": "1-1", "2": "1-2"},
+    ))
+    assert [ordem.destino for ordem in catalogo if ordem.destino] == ["1", "2"]
+
+
+def test_com_desenho_e_sem_numero_que_sirva_a_acao_nao_cobra_o_desenho() -> None:
+    """Ela já desenhou: o «use o Mapear Entradas» não volta à ordem."""
+    ordem = ordens.dongle_atras_de_hub(leitura(
+        entradas_livres_declaradas=("9",),
+        ocupante_da_entrada={"9": "3-1.1.3"},
+    ))
+    assert ordem is not None
+    assert ordem.destino == ""
+    assert ordem.acao == "Leve um dos adaptadores Bluetooth para uma entrada de outra controladora"
