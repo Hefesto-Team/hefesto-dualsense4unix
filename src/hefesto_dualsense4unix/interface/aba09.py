@@ -645,8 +645,9 @@ STATUS = [
 # na mesma faixa seria dizer duas vezes.
 #
 # A LINHA DO VULKAN É A QUE O PRODUTO PINTA — 26/09/2026. Aqui morava «✓ OK ·
-# Nenhuma sobreposição picotando o jogo»: a tela viva nunca a mostrou (o exame
-# é repintado) e ela prometia o que o A/B de 23/08 derrubou. A frase vem do
+# Nenhuma sobreposição picotando o jogo»: a tela viva só a mostrava antes da
+# primeira pintura (o exame é repintado) e ela prometia o que o A/B de 23/08
+# derrubou. A frase vem do
 # dono, com o selo NOTA do produto, e fica por último, onde o produto a
 # acrescenta. Os números seguem a pílula da cena: apagada é nada tirado e um
 # jogo com o que tirar, que é o estado em que o clique age.
