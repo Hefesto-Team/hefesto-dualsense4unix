@@ -403,7 +403,7 @@ def test_a_09_a_pergunta_do_parar_nao_crava_numero() -> None:
 
     a09._DICAS.clear()
     try:
-        pergunta = a09._pergunta_do_botao("desligar")
+        pergunta = a09._pergunta_do_botao(a09.DESLIGAR)
     finally:
         a09._DICAS.clear()
     assert a09.CLIQUE_DE_NOVO in pergunta, pergunta

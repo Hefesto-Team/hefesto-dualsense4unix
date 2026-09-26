@@ -65,31 +65,38 @@ def _no_chrome(pagina: pathlib.Path, js: str, largura: int = 1600):
             nav.close()
 
 
-def test_os_dois_quadros_da_sistema_fecham_na_mesma_linha():
-    """§1 — a caixa acompanha o irmão, medida no navegador.
+def test_as_colunas_da_sistema_fecham_na_mesma_linha_e_o_registro_cresce():
+    """§1 — medido no navegador, na forma de 25/09/2026 (A-09-SISTEMA-EM-TRES-
+    SECOES-01): as quatro colunas das Configurações Avançadas acabam no mesmo
+    y, as três do Status também, e o registro ocupa a altura que sobra — nunca
+    abaixo do piso de 120px.
 
-    **A MORDIDA:** devolva `height:110px` ao `.log` de `aba09.py`, rode o
-    gerador e publique — esta linha reprova com os dois números em pixel.
+    **A MORDIDA:** tire o `flex:1 1 auto` do `.registro` em `aba09.py`, rode o
+    gerador e publique — a caixa volta ao piso e esta linha reprova.
     """
     import onde
 
     r = _no_chrome(onde.pagina("09-sistema.html", publicado=True), """() => {
-      const q = s => { const e = document.querySelector(s);
-        if (!e) return null;
-        const b = e.getBoundingClientRect();
-        return {h: Math.round(b.height), base: Math.round(b.bottom)}; };
-      return {lista: q('.avancado .lista'), log: q('.avancado .log')};
+      const bases = s => [...document.querySelectorAll(s)].map(
+        e => Math.round(e.getBoundingClientRect().bottom));
+      const log = document.querySelector('.registro .log');
+      const corpo = document.querySelector('.quadro.estica');
+      return {colunas: bases('.avancadas > .coluna'),
+              status: bases('.status3 .col-lista'),
+              log: log ? Math.round(log.getBoundingClientRect().height) : null,
+              fundo_log: log ? Math.round(log.getBoundingClientRect().bottom) : null,
+              fundo_quadro: corpo ? Math.round(corpo.getBoundingClientRect().bottom) : null};
     }""")
 
-    assert r["lista"] and r["log"], (
-        "a faixa «Avançado» perdeu a lista ou a caixa de detalhes técnicos")
-    assert r["lista"]["base"] == r["log"]["base"], (
-        f"os dois quadros da Sistema não fecham na mesma linha: a lista "
-        f"termina em {r['lista']['base']}px e a caixa em {r['log']['base']}px "
-        f"— {abs(r['lista']['base'] - r['log']['base'])}px de diferença")
-    assert r["log"]["h"] >= 110, (
-        f"a caixa encolheu abaixo do piso de 110px (está em {r['log']['h']}px) "
-        f"— quatro linhas de identidade não cabem mais")
+    assert len(r["colunas"]) == 4, r
+    assert len(set(r["colunas"])) == 1, (
+        f"as quatro colunas não fecham na mesma linha: {r['colunas']}")
+    assert len(r["status"]) == 3 and len(set(r["status"])) == 1, (
+        f"as três colunas do Status não fecham na mesma linha: {r['status']}")
+    assert r["log"] and r["log"] >= 120, f"o registro encolheu: {r['log']}px"
+    assert r["fundo_quadro"] - r["fundo_log"] <= 20, (
+        f"sobra {r['fundo_quadro'] - r['fundo_log']}px vazios embaixo do registro — "
+        "ele devia ocupar a altura que sobra")
 
 
 def test_a_via_do_chip_nao_sobe_de_caixa_no_navegador():
