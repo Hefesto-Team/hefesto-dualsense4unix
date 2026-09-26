@@ -579,14 +579,20 @@ def item_cinza(rotulo, diz, gesto, cls=""):
 #: ao Python (o piloto encaminha `v`); `data-hef-quando` é o que a PINTURA
 #: compara — as duas pontas do mesmo botão, e o teste
 #: `test_o_aceso_do_perfil_de_bateria_e_dado` cobra que sejam iguais.
+#:
+#: A RELAÇÃO COM O CARTÃO DE CADA CONTROLE (26/09/2026,
+#: `D-2609-A-CONEXOES-E-A-SISTEMA-FALAM-O-MESMO-PERFIL`) é a regra do esquema:
+#: o perfil que põe teto vale para todos, sem exceção; nos outros, cada
+#: controle pode ter o seu na aba Conexões.
 def _botoes_bateria():
     return "".join(
         f'<button class="{"on" if p == PERFIL_DA_MESA else ""}"'
         f' data-gesto="{_gesto("perfil-da-mesa")}" data-v="{p}"'
         f' data-campo="{_id("bateria-perfil")}" data-hef-alvo="classe"'
         f' data-hef-classe="on" data-hef-quando="{p}"'
-        f' title="{ROT_PERFIL[p]}: {impoe(p).lower()}. Vale para todos os controles —'
-        f' cada um pode ter o seu na aba Conexões.">{ROT_PERFIL[p]}</button>'
+        f' title="{ROT_PERFIL[p]}: {impoe(p).lower()}. Vale para todos os controles'
+        f'{"." if p in _COM_TETO else " — cada um pode ter o seu na aba Conexões."}">'
+        f'{ROT_PERFIL[p]}</button>'
         for p in ORC["PERFIS"])
 
 

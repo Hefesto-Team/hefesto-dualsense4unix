@@ -1728,19 +1728,6 @@
   .gc-est .est > b + .certo{margin-left:0}
   .gc-est .est.warn > b{color:var(--orange)}
   .gc-corpo{display:flex;flex-direction:column;gap:5px;margin-top:auto;padding-top:10px}
-  /* O LIGÁVEL DA ECONOMIA É A PÍLULA DA ABA SISTEMA (`.cadeado` da `aba09.py`):
-     verde e com o ponto aceso quando vale NESTE controle, com o ponto cinza
-     quando quem liga é a «Bateria longa» da mesa. Quem diz é o produto, pelo
-     atributo do ponto (`data-economia`), e o `:has()` estende a cor ao botão
-     sem um segundo endereço. */
-  .gc-corpo .btn.eco{width:100%;display:flex;align-items:center;justify-content:center;
-                     gap:7px;padding:0 10px;white-space:nowrap}
-  .eco-luz{display:inline-block;flex:0 0 auto;width:7px;height:7px;border-radius:50%;
-           background:var(--border-forte)}
-  .gc-corpo .btn.eco:has(.eco-luz[data-economia="ligada"]){border-color:var(--green);
-           background:rgba(80,250,123,.09);color:var(--green)}
-  .eco-luz[data-economia="ligada"]{background:var(--green);box-shadow:0 0 6px var(--green)}
-  .eco-luz[data-economia="mesa"]{background:var(--comment)}
   /* O PERFIL DE DESEMPENHO É DO CONTROLE — 26/09/2026, pedido dela: *«Modo
      Economia de Bateria Deveria Ser o Perfil de Desempenho»* e *«perfil do
      desempenho deveria aparecer por controle»*. Os três botões do mapa das
@@ -3074,24 +3061,7 @@
                  uma sugestão por linha, numerada, com o de→para. -->
             <div class="sugestao">
               <div class="ordem-tit">Sugestão de Conexão</div>
-              <div class="col-ordem" data-campo="ordem" data-hef-alvo="html">
-                <div class="ordem">
-                  <div class="faca"><span class="n">1</span>Mova o adaptador Bluetooth para a Entrada 9</div>
-                  <div class="receita">
-                    <span class="caixa" title="Entrada 3 — traseira do gabinete, USB 3.0. É a que divide o controlador com o receptor do teclado.">Entrada 3 <span class="pt">•</span> USB 3.0</span>
-                    <span class="seta">→</span>
-                    <span class="caixa alvo" title="Entrada 9 — traseira do gabinete, USB 2.0, num controlador que só ela usa.">Entrada 9 <span class="pt">•</span> USB 2.0</span>
-                  </div>
-                </div>
-                <div class="ordem">
-                  <div class="faca"><span class="n">2</span>Pareie o P2 no adaptador Direita</div>
-                  <div class="receita">
-                    <span class="caixa" title="O adaptador em que o P2 está pareado hoje, com três controles.">Meio <span class="pt">•</span> 3 controles</span>
-                    <span class="seta">→</span>
-                    <span class="caixa alvo" title="O adaptador com a folga maior.">Direita <span class="pt">•</span> 1 controle</span>
-                  </div>
-                </div>
-              </div>
+              <div class="col-ordem" data-campo="ordem" data-hef-alvo="html"><div class="ordem"><div class="faca"><span class="n">1</span>Mova o adaptador Bluetooth para a Entrada 9</div><div class="receita"><span class="caixa">Entrada 3</span><span class="seta">→</span><span class="caixa alvo">Entrada 9</span></div></div><div class="ordem"><div class="faca"><span class="n">2</span>Pareie o P2 no adaptador Direita</div><div class="receita"><span class="caixa">Meio <span class="pt">•</span> 3 controles</span><span class="seta">→</span><span class="caixa alvo">Direita <span class="pt">•</span> 1 controle</span></div></div></div>
             </div>
           </div>
 
@@ -3489,9 +3459,9 @@
               <div class="gc-perfil">
                 <span class="rot">Perfil de Desempenho</span>
                 <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
-                  <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Tudo Ligado</button>
-                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar.">Bateria Longa</button>
-                  <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
+                  <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Tudo Ligado</button>
+                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por rádio e Giroscópio continuam como estão.">Bateria Longa</button>
+                  <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" data-hef-atributo="aria-checked" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
                 </div>
               </div>
               <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava on" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Só funciona com o controle no BT. Este está no USB, onde a barra de luz não depende de reconexão."><svg class="i" aria-hidden="true"><use href="#rd-lampada"/></svg><span data-campo="luz-texto">A luz não acende</span></button></span>
@@ -3808,9 +3778,9 @@
               <div class="gc-perfil">
                 <span class="rot">Perfil de Desempenho</span>
                 <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
-                  <button class="btn" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="false" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Tudo Ligado</button>
-                  <button class="btn on" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="true" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar.">Bateria Longa</button>
-                  <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
+                  <button class="btn" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Tudo Ligado</button>
+                  <button class="btn on" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por rádio e Giroscópio continuam como estão.">Bateria Longa</button>
+                  <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" data-hef-atributo="aria-checked" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
                 </div>
               </div>
               <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Desliga este controle do BT. Aperte PS para ele voltar, e a barra de luz volta a obedecer."><svg class="i" aria-hidden="true"><use href="#rd-lampada"/></svg><span data-campo="luz-texto">A luz não acende</span></button></span>
@@ -4127,9 +4097,9 @@
               <div class="gc-perfil">
                 <span class="rot">Perfil de Desempenho</span>
                 <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
-                  <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Tudo Ligado</button>
-                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar.">Bateria Longa</button>
-                  <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
+                  <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Tudo Ligado</button>
+                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por rádio e Giroscópio continuam como estão.">Bateria Longa</button>
+                  <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" data-hef-atributo="aria-checked" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
                 </div>
               </div>
               <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="—"><svg class="i" aria-hidden="true"><use href="#rd-lampada"/></svg><span data-campo="luz-texto">—</span></button></span>
@@ -4446,9 +4416,9 @@
               <div class="gc-perfil">
                 <span class="rot">Perfil de Desempenho</span>
                 <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
-                  <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Tudo Ligado</button>
-                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar.">Bateria Longa</button>
-                  <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
+                  <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Tudo Ligado</button>
+                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por rádio e Giroscópio continuam como estão.">Bateria Longa</button>
+                  <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" data-hef-atributo="aria-checked" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
                 </div>
               </div>
               <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="—"><svg class="i" aria-hidden="true"><use href="#rd-lampada"/></svg><span data-campo="luz-texto">—</span></button></span>
@@ -4996,10 +4966,11 @@
   </script>
 
 <script>
-/* O PERFIL DE DESEMPENHO ACENDE NO CLIQUE — 26/09/2026. No produto quem
-   repinta é o tique; aqui o botão acende na hora, para o desenho responder
-   a quem clica. */
+/* O PERFIL DE DESEMPENHO ACENDE NO CLIQUE — 26/09/2026, SÓ NA BANCADA. No
+   produto (onde o piloto pôs `window.__hef`) quem acende é o tique, pelo que
+   o daemon gravou: um clique recusado não pode ficar aceso. */
 document.addEventListener("click", function (ev) {
+  if (window.__hef) return;
   var b = ev.target.closest(".gc-perfil .seg .btn");
   if (!b) return;
   b.parentElement.querySelectorAll(".btn").forEach(function (x) {
@@ -5344,7 +5315,7 @@ document.addEventListener("click", function (ev) {
 
   <h2>O teto da vibração está nos dois, e a tela diz qual vale</h2>
   <ul>
-    <li><b>O global vale para todos os controles, e ele MUDOU DE ABA.</b> O dropdown dos três perfis saiu daqui e foi para a <b>Sistema</b>, onde se chama <b>Perfil de Bateria</b> — palavra dela, 28/08: <i>“Teto da Vibração, que na verdade é Perfil de Bateria”</i>. O código já lhe dava razão antes do nome: <code>secao_orcamento.py:127</code> chama a chave de <code>PERFIL_BATERIA_LONGA</code>, e a <code>D-PERFIL-DE-DESEMPENHO</code> (24/08) diz que <i>“o perfil decide o que custa BATERIA”</i>. Esta aba continua <b>lendo</b> o global — hoje <b>Tudo ligado</b>, que é <b>Sem teto</b> —, e o que fica dela é a régua de turnos, que mede o <b>rádio</b>, não a bateria.</li>
+    <li><b>O global vale para todos os controles, e ele MUDOU DE ABA.</b> O dropdown dos três perfis saiu daqui e foi para a <b>Sistema</b>, onde se chama <b>Perfil de Bateria</b> — palavra dela, 28/08: <i>“Teto da Vibração, que na verdade é Perfil de Bateria”</i>. O código já lhe dava razão antes do nome: <code>secao_orcamento.py:127</code> chama a chave de <code>PERFIL_BATERIA_LONGA</code>, e a <code>D-PERFIL-DE-DESEMPENHO</code> (24/08) diz que <i>“o perfil decide o que custa BATERIA”</i>. Esta aba continua <b>lendo</b> o global — hoje <b>Tudo Ligado</b>, que é <b>Sem teto</b> —, e o que fica dela é a régua de turnos, que mede o <b>rádio</b>, não a bateria.</li>
     <li><b>O do controle sobrepõe</b>, e o campo de cada linha mostra qual é o caso: o P3 está com a bateria em 31% e sobrepõe com <b>30% da força</b>; os outros dizem <b>Segue o global</b>. A conta feita — <b>qual dos dois está valendo, de onde ele veio, e em que aba o global se muda</b> — está no <code>?</code> ao lado do campo, e não mais numa coluna de texto ao lado dele.</li>
     <li><b>Isso nasce como sprint sobre o que já existe.</b> A <code>POR-UNIDADE-01</code> (10/08) já grava política de vibração POR CONTROLE (<code>profiles/manager._controllers_to_rumble_scales</code>), relativa à global. <b>Falta uma frase sua:</b> quando o controle sobrepõe, ele vence sempre, ou o produto aplica o <code>min</code> como faz hoje entre o orçamento e a política? O <code>min</code> é o que impede um “teto” de <i>aumentar</i> a força.</li>
   </ul>

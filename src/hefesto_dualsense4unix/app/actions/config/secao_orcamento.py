@@ -132,11 +132,17 @@ PERFIS: tuple[str, ...] = (
     PERFIL_EU_ESCOLHO,
 )
 
-#: O rótulo de cada perfil — palavra dela, na `D-PERFIL-DE-DESEMPENHO`.
+#: O rótulo de cada perfil — palavra dela, na `D-PERFIL-DE-DESEMPENHO`. UM
+#: dono para as duas abas: o cartão de cada controle na Conexões e o Perfil
+#: Global de Bateria da Sistema leem daqui.
+#:
+#: 26/09/2026 (`D-2609-EU-ESCOLHO-VIRA-PERSONALIZADO`): «Eu escolho» virou
+#: «Personalizado», com o mesmo sentido (cada aba manda), e as três palavras
+#: ganharam a maiúscula que o desenho aprovado da Conexões já escreve.
 ROTULOS_DOS_PERFIS: dict[str, str] = {
-    PERFIL_TUDO_LIGADO: "Tudo ligado",
-    PERFIL_BATERIA_LONGA: "Bateria longa",
-    PERFIL_EU_ESCOLHO: "Eu escolho",
+    PERFIL_TUDO_LIGADO: "Tudo Ligado",
+    PERFIL_BATERIA_LONGA: "Bateria Longa",
+    PERFIL_EU_ESCOLHO: "Personalizado",
 }
 
 #: Perfil da TELA -> chave do DISCO. `None` é a ausência da declaração, que é o
@@ -304,6 +310,65 @@ DICAS: dict[str, str] = {
         "Nenhum teto geral: os ajustes de cada aba mandam, um por um."
     ),
 }
+
+#: As dicas dos três botões do CARTÃO de cada controle (aba Conexões). Só a do
+#: «Personalizado» muda: no cartão o «cada aba manda» vale para UM controle.
+DICAS_DO_CARTAO: dict[str, str] = {
+    **DICAS,
+    PERFIL_EU_ESCOLHO: "Nenhum teto: os ajustes de cada aba mandam neste controle.",
+}
+
+# ---------------------------------------------------------------------------
+# O PERFIL DE CADA CONTROLE — A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01, 26/09/2026
+# ---------------------------------------------------------------------------
+# Decisões dela: `D-2609-O-PERFIL-DE-DESEMPENHO-E-POR-CONTROLE` (os três
+# perfis em cada cartão) e `D-2609-A-CONEXOES-E-A-SISTEMA-FALAM-O-MESMO-PERFIL`
+# (um dono, o mesmo gesto do daemon). O Perfil Global de Bateria da aba
+# Sistema é o `orcamento.teto` da mesa; o do cartão é
+# `controles[<uniq>].economia` no MESMO `maquina.json`, gravado pelo MESMO
+# `machine.declare`. Quem vence é a regra do `profiles.schema` (o bloco do
+# Modo Economia): a «Bateria Longa» global vale para todos, e fora dela cada
+# controle tem o seu.
+#
+# O DISCO DO CONTROLE TEM TRÊS VALORES, e os três já existiam no esquema
+# (`ControleDeclarado.economia: bool | None`):
+#
+# * ausente (`None`) é «Tudo Ligado»: todo controle nasce com tudo ligado
+#   (ordem dela de 17/09), e é o que o botão velho gravava ao desligar;
+# * `true` é «Bateria Longa»: a economia deste controle;
+# * `false` é «Personalizado»: sem teto próprio, cada aba manda. Na regra do
+#   esquema `false` vale o mesmo que a ausência (o controle não liga a
+#   economia), e é: «Tudo Ligado» e «Personalizado» não põem teto nenhum,
+#   como no global (`balanceado` e `None` devolvem o mesmo teto).
+ECONOMIA_POR_PERFIL: dict[str, bool | None] = {
+    PERFIL_TUDO_LIGADO: None,
+    PERFIL_BATERIA_LONGA: True,
+    PERFIL_EU_ESCOLHO: False,
+}
+
+
+def perfil_do_controle(teto_da_mesa: str | None, escolha: bool | None) -> str:
+    """O botão aceso no cartão de um controle: a mesa, e depois o controle."""
+    from hefesto_dualsense4unix.profiles.schema import economia_vale, mesa_em_economia
+
+    if economia_vale(escolha, mesa_em_economia(teto_da_mesa)):
+        return PERFIL_BATERIA_LONGA
+    return PERFIL_EU_ESCOLHO if escolha is False else PERFIL_TUDO_LIGADO
+
+
+def declaracao_do_perfil(uniq: str, perfil: str) -> dict[str, Any]:
+    """O corpo do `machine.declare` do clique num perfil do cartão.
+
+    A chave do controle e a validação são as do dono da economia
+    (`schema.declaracao_da_economia`); aqui só se troca o valor pelo do perfil.
+    `KeyError` num perfil que não existe, e `ValueError` num `uniq` sem chave.
+    """
+    from hefesto_dualsense4unix.profiles.schema import declaracao_da_economia
+
+    valor = ECONOMIA_POR_PERFIL[perfil]
+    corpo = declaracao_da_economia(uniq, True)
+    return {"controles": {chave: {"economia": valor} for chave in corpo["controles"]}}
+
 
 #: Cabeçalho da tabela de consequências. DERIVADO dos perfis: uma coluna por
 #: opção oferecida, sempre. Antes eram três colunas para cinco botões, e a

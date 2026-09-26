@@ -2,9 +2,11 @@
 
 Pedido dela: a Gestão de Controles entra no Check-up, e cada controle passa a
 dizer o ESTADO dele agora (Mic, Som, Modo de conexão, Visto como, Conexão
-estável, Bateria), com o nome do dono no lugar de «Player N» e o botão do Modo
-Economia de Bateria. Tudo lido do daemon vivo e da declaração — de um a quatro
-controles, USB, BT e misto.
+estável, Bateria), com o nome do dono no lugar de «Player N» e o Perfil de
+Desempenho dele (o botão do Modo Economia virou os três perfis em 26/09/2026,
+A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01; as réguas dele moram em
+`test_o_perfil_de_desempenho_e_de_cada_controle.py`). Tudo lido do daemon vivo e
+da declaração — de um a quatro controles, USB, BT e misto.
 
 A MORDIDA de cada parte está escrita no teste que a cobra.
 """
@@ -93,7 +95,7 @@ def test_os_seis_selos_saem_para_cada_controle(vias: list[str]) -> None:
     for n, u in enumerate(UNIQS[: len(vias)], start=1):
         col = saida["colunas"][u]
         for campo in ("est-mic", "est-som", "est-modo", "est-visto", "est-conexao",
-                      "est-bateria", "economia", "economia-dica", "dono"):
+                      "est-bateria", "perfil", "dono"):
             assert campo in col, f"o controle {n} ({vias[n - 1]}) não recebeu `{campo}`"
         assert "Xbox 360" in col["est-visto"]
         assert f"{50 + n}%" in col["est-bateria"]
@@ -160,58 +162,6 @@ def test_o_modo_de_conexao_e_o_chip_aceso_da_jogar(monkeypatch: pytest.MonkeyPat
     # e o modo lido uma vez para a mesa inteira chega igual a cada controle
     assert "<b>Navegação</b>" in pac.estado_do_controle(
         c, {}, {"native_mode": False}, _Declaracao(), "Navegação")["est-modo"]
-
-
-# ---------------------------------------------------------------------------
-# A ECONOMIA — o botão chama o contrato da O-MODO-ECONOMIA-POR-CONTROLE-01
-# ---------------------------------------------------------------------------
-class _Ponte:
-    def __init__(self) -> None:
-        self.declarado: list[dict[str, Any]] = []
-
-    def machine_declare(self, corpo: dict[str, Any]) -> tuple[bool, str]:
-        self.declarado.append(corpo)
-        return True, ""
-
-
-def _clicar_economia(dec: _Declaracao, uniq: str) -> _Ponte:
-    pac = _pac()
-    ponte = _Ponte()
-    original, reler = pac._declaracao, pac._reler_a_declaracao
-    pac._declaracao = lambda recarregar=False: dec  # type: ignore[assignment]
-    pac._reler_a_declaracao = lambda: dec  # type: ignore[assignment]
-    try:
-        pac.economia_do_controle_gesto(None, {"uniq": uniq}, ponte)
-    finally:
-        pac._declaracao, pac._reler_a_declaracao = original, reler  # type: ignore[assignment]
-    return ponte
-
-
-def test_o_botao_liga_e_desliga_a_economia_deste_controle() -> None:
-    """MORDIDA: troque `escolha is not True` por `True` → o desligar reprova."""
-    from hefesto_dualsense4unix.profiles import schema
-
-    u = UNIQS[2]
-    ligar = _clicar_economia(_Declaracao(), u)
-    assert ligar.declarado == [schema.declaracao_da_economia(u, True)]
-    desligar = _clicar_economia(_Declaracao({_hex(u): _Controle(economia=True)}), u)
-    assert desligar.declarado == [schema.declaracao_da_economia(u, False)]
-
-
-def test_sob_a_bateria_longa_o_clique_recusa_e_nao_grava() -> None:
-    pac = _pac()
-    with pytest.raises(RuntimeError):
-        _clicar_economia(_Declaracao(teto="economia"), UNIQS[0])
-    assert pac.campos_da_economia(_Declaracao(teto="economia"), UNIQS[0])["economia"] == "mesa"
-
-
-def test_o_estado_do_botao_segue_a_declaracao() -> None:
-    """MORDIDA: faça `campos_da_economia` devolver sempre `""` → reprova."""
-    pac = _pac()
-    u = UNIQS[3]
-    assert pac.campos_da_economia(_Declaracao(), u)["economia"] == ""
-    assert pac.campos_da_economia(
-        _Declaracao({_hex(u): _Controle(economia=True)}), u)["economia"] == "ligada"
 
 
 # ---------------------------------------------------------------------------
@@ -283,18 +233,28 @@ def test_salvar_a_porta_chama_o_dono_com_a_face() -> None:
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("arquivo", [BANCADA, PUBLICADA])
 def test_a_gestao_mora_dentro_do_check_up(arquivo: pathlib.Path) -> None:
-    """MORDIDA: devolva o quadro «Gestão de Controles» ao `MIOLO` → reprova."""
+    """MORDIDA: devolva o quadro «Gestão de Controles» ao `MIOLO` → reprova.
+
+    A SEÇÃO QUE ABSORVEU SE CHAMA «Gestão de Controles» desde 26/09/2026
+    (`D-2609-O-CHECKUP-VIRA-GESTAO-DOS-CONTROLES`): o nome é UM título só, o da
+    primeira seção, e não um segundo quadro.
+    """
     html = arquivo.read_text(encoding="utf-8")
-    assert ">Gestão de Controles<" not in html
+    titulos = re.findall(r'<label class="quadro-titulo" for="([\w-]+)">Gestão de Controles<', html)
+    assert titulos == ["cx8-2"], titulos
+    assert ">Check-up<" not in html, "o nome velho da seção voltou"
     checkup = html[html.index('id="cx8-2"'):html.index('id="rd-secao"')]
     assert 'class="gc"' in checkup and 'class="ferramentas"' in checkup
     for campo in ("est-mic", "est-som", "est-modo", "est-visto", "est-conexao",
-                  "est-bateria", "economia", "economia-dica", "dono",
+                  "est-bateria", "perfil", "dono",
                   "mapear-diz", "mapear-porta", "mapear-conta"):
         assert f'data-campo="{campo}"' in html, f"a página não tem onde pintar `{campo}`"
-    for gesto in ("economia-do-controle", "dono-renomear", "checkup-atualizar",
+    for gesto in ("perfil-do-controle", "dono-renomear",
                   "mapear-comecar", "mapear-gravar", "mapear-parar", "examinar-portas"):
         assert f'data-gesto="{gesto}"' in html, f"o gesto `{gesto}` não tem botão"
+    # `D-2609-O-ATUALIZAR-ENTRA-NO-EXAMINAR`: um botão só relê e examina.
+    for saiu in ("economia-do-controle", "checkup-atualizar"):
+        assert f'data-gesto="{saiu}"' not in html, f"o gesto `{saiu}` voltou"
 
 
 @pytest.mark.parametrize("arquivo", [BANCADA, PUBLICADA])
@@ -350,7 +310,12 @@ def test_o_mapear_tem_onde_pintar_a_lista_e_o_passo(arquivo: pathlib.Path) -> No
 
 
 def test_a_ordem_diz_o_que_e_e_o_que_mover() -> None:
-    """MORDIDA: tire o título ou a instrução do `_card_da_ordem` → reprova."""
+    """MORDIDA: tire a instrução do `_card_da_ordem` → reprova.
+
+    O TÍTULO SAIU DA LINHA em 26/09/2026: ele mora fora do campo que o tique
+    repinta (`.sugestao > .ordem-tit`), e cada linha é numerada. A página que
+    o traz é cobrada em `test_a_sugestao_de_conexao_diz_cada_ajuste.py`.
+    """
     pac = _pac()
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import Identidade, Linha, Ordem
 
@@ -360,6 +325,7 @@ def test_a_ordem_diz_o_que_e_e_o_que_mover() -> None:
                   o_que_eu_vi=vazio, por_que_importa=vazio, ganho_esperado=vazio,
                   alvo=Identidade(caminho="3-1"), destino="Entrada 9")
     card = pac._card_da_ordem(ordem)
-    assert f'<div class="ordem-tit">{pac.TITULO_DA_ORDEM}</div>' in card
-    assert '<div class="faca">Mova o adaptador Bluetooth para a Entrada 9</div>' in card
-    assert pac.TITULO_DA_ORDEM == "Sugestão de conexão"
+    assert "ordem-tit" not in card, "o título voltou para dentro da linha que o tique repinta"
+    assert ('<div class="faca"><span class="n">1</span>'
+            'Mova o adaptador Bluetooth para a Entrada 9</div>') in card
+    assert pac.TITULO_DA_ORDEM == "Sugestão de Conexão"
