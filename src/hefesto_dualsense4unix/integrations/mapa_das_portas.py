@@ -135,6 +135,14 @@ def porta_de(mapa: MapaDaMesa, caminho: str) -> str | None:
     for numero, porta in sorted(mapa.portas.items()):
         if porta.caminho == caminho:
             return numero
+    # O LADO USB 3 DO BURACO (26/09/2026): o aparelho 3.0 enumera no nó
+    # SuperSpeed (``4-1.1.4``), e a entrada declara o caminho do lado 2.0
+    # (``3-1.1.4``). Sem isto o Wi-Fi dela saía sem entrada na Sugestão.
+    from hefesto_dualsense4unix.utils.lugar import caminho_do_no
+
+    for numero, porta in sorted(mapa.portas.items()):
+        if any(caminho_do_no(no) == caminho for no in porta.nos):
+            return numero
     return None
 
 

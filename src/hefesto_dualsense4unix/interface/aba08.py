@@ -540,7 +540,7 @@ def _sugestao_da_cena():
     controles). O produto repinta a coluna inteira a cada tique.
     """
     ordem = SimpleNamespace(acao="Mova o adaptador Bluetooth para a Entrada 9",
-                            destino="Entrada 9", alvo=SimpleNamespace(caminho="Entrada 3"),
+                            destino="9", alvo=SimpleNamespace(caminho="Entrada 3"),
                             chave="bancada", arranjo="")
     cena = {"proposta": {"controle": "p2", "destino": "direita"},
             "lugares": [{"id": "meio", "nome": "Meio"}, {"id": "direita", "nome": "Direita"}],
@@ -851,8 +851,14 @@ CSS = CSS_GLIFO + CSS_POPUP + """
             background:var(--app-bg);padding:10px 12px}
   .sugestao > .ordem-tit{margin:0}
   .sugestao .col-ordem{flex:1;display:flex;flex-direction:column;gap:8px}
+  /* O DE→PARA À DIREITA DA LINHA — 26/09/2026, pedido dela: *«pode deixar
+     esses grafos a direita da linha? pra ganharmos espaço vertical»*. A
+     instrução e as duas caixas dividem a linha; sem largura, as caixas descem
+     (`wrap`) em vez de apertar a instrução. */
   .sugestao .col-ordem > .ordem{border:none;padding:0;background:none;display:flex;
-                                flex-direction:column;justify-content:flex-start}
+                                flex-direction:row;flex-wrap:wrap;align-items:center;
+                                justify-content:flex-start;column-gap:12px;row-gap:6px}
+  .sugestao .col-ordem > .ordem > .faca{flex:1 1 auto;min-width:0}
   .sugestao .col-ordem > .ordem + .ordem{margin-top:0;padding-top:8px;
                                 border-top:1px solid var(--border-sutil)}
   .sugestao .col-ordem > .nada:only-child{display:none}
@@ -860,7 +866,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .sugestao .ordem .faca .n{flex:0 0 18px;height:18px;border-radius:50%;display:inline-flex;
                            align-items:center;justify-content:center;font-size:10.5px;
                            background:rgba(255,184,108,.18);color:var(--orange)}
-  .sugestao .ordem .receita{margin-top:6px;padding-left:26px}
+  .sugestao .ordem .receita{flex:0 0 auto;margin:0 0 0 auto;padding-left:0}
   /* 11px, e o número é MEDIDO, não escolhido: com os botões dentro das colunas o
      vão nascia da sobra que os itens de cada coluna repartiam entre si, e não de
      uma margem. 11 é o que devolve o quadro aos mesmos 204px e a fileira ao mesmo
@@ -2677,7 +2683,7 @@ def veredito(n, esticada=False):
 #: As lacunas que ESTA cena produz, na ordem em que o produto as declara.
 #:
 #: MEDIDO no produto, e as duas primeiras não têm como não estar:
-#:   · `posicao`   — `mapa_das_portas.py:520-527` não é condicional: basta
+#:   · `posicao`   — `mapa_das_portas.py:562-569` não é condicional: basta
 #:                   existir uma face.
 #:   · `velocidade`— esta janela nunca escreve `nos`; quem escreve é a outra
 #:                   (`calibrar_entradas.py:743-746`). Logo TODA entrada sai
