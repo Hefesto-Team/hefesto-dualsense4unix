@@ -279,7 +279,7 @@ class TestOMundoMedido:
 @pytest.mark.parametrize(
     "quem",
     [(P1,), (P3,), (P2, P4), (P1, P2, P3), MESA],
-    ids=["p1", "p3", "p2-e-p4", "tres", "os-quatro"],
+    ids=["p1", "p3", "p2-e-p4", "p1-p2-p3", "os-quatro"],
 )
 def test_cada_um_que_mexe_entra_e_so_ele(bancada: Bancada, quem: tuple[str, ...]) -> None:
     """Nenhum índice é privilegiado, e a mesa de quatro entra inteira.
