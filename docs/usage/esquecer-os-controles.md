@@ -97,8 +97,12 @@ boot (só sai com `--remove-usb-quirk`).
 
 O uninstall tira do `config.json` do Heroic e do `override` do Flatpak de cada
 lançador só o ambiente que o Hefesto escreveu — o que você pôs ali fica, e o
-que estava lá antes volta (O-UNINSTALL-NAO-DEIXA-RASTRO-01): quem escreve
-anota em `launch_env/estradas.json`, e o desfazer lê. Com `--purge-config` a
+que estava lá antes volta, no mesmo lugar (O-UNINSTALL-NAO-DEIXA-RASTRO-01):
+quem escreve anota em `launch_env/estradas.json`, e o desfazer lê. Passa também
+pelas cópias por jogo do Heroic (`GamesConfig/<jogo>.json`): o Heroic copia a
+lista global para dentro do jogo em que você muda uma opção, e dali em diante
+é a cópia que vale para ele. O `limpa` ainda não olha essas cópias, e a casa
+inteira ainda não as guarda. Com `--purge-config` a
 pasta de estado sai inteira; um desfazer que ficou para depois (um lançador
 cujo arquivo não abriu, a Steam aberta, sem root) deixa o registro dele lá, e
 o `limpa` acusa a pasta até o desfazer terminar.

@@ -131,6 +131,33 @@ def _opcoes(alvo: Path) -> dict[str, str]:
     return {x["key"]: x["value"] for x in dado["defaultSettings"]["enviromentOptions"]}
 
 
+def _heroic_copia_para_o_jogo(config: Path, jogo: str, *, dela: list[dict[str, str]] | None = None,
+                              ) -> Path:
+    """O que o Heroic faz quando ela muda uma opção de um jogo — pelo fonte dele.
+
+    `GameConfigV0.getSettings` monta `{...globais, ...do jogo}` com
+    `enviromentOptions: [...enviromentOptions]` (a CÓPIA da lista global), e o
+    `setSetting` grava tudo em `GamesConfig/<jogo>.json` com
+    `JSON.stringify(config, null, 2)`. `dela` são as que ela pôs só naquele
+    jogo, depois da cópia.
+    """
+    global_ = json.loads(config.read_text(encoding="utf-8"))["defaultSettings"]
+    lista = [dict(x) for x in global_.get("enviromentOptions", [])] + list(dela or [])
+    alvo = config.parent / "GamesConfig" / f"{jogo}.json"
+    alvo.parent.mkdir(parents=True, exist_ok=True)
+    alvo.write_text(json.dumps(
+        {jogo: {"wineVersion": {"name": "Proton - GE", "type": "proton"},
+                "language": "", "enviromentOptions": lista},
+         "version": "v0", "explicit": False}, indent=2, ensure_ascii=False),
+        encoding="utf-8")
+    return alvo
+
+
+def _lista_do_jogo(alvo: Path) -> list[tuple[str, str]]:
+    dado = json.loads(alvo.read_text(encoding="utf-8"))
+    return [(x["key"], x["value"]) for x in dado[alvo.stem]["enviromentOptions"]]
+
+
 @pytest.fixture
 def mesa(tmp_path: Path) -> dict[str, Path]:
     """Heroic (Flatpak), Lutris com o override dela, mGBA sem override."""
@@ -290,6 +317,81 @@ def test_arquivo_que_nao_abre_nao_e_reescrito_e_o_registro_fica(
     assert mesa["lutris"].read_text(encoding="utf-8") == LUTRIS_DELA, (
         "um arquivo que não abriu não pode segurar o desfazer dos outros")
     assert any("não consegui ler" in cura.frase_do_desfeito(f) for f in feitos)
+
+
+@pytest.mark.parametrize("com_registro", [True, False], ids=["com-registro", "sem-registro"])
+@pytest.mark.parametrize("nativo", [False, True], ids=["heroic-flatpak", "heroic-nativo"])
+def test_a_copia_por_jogo_do_heroic_perde_so_o_que_e_nosso(
+    tmp_path: Path, nativo: bool, com_registro: bool
+) -> None:
+    """O Heroic copia a lista global para dentro do jogo em que ela muda uma
+    opção, e dali em diante a do jogo vale SOZINHA. Medido no disco dela em
+    25/09: um jogo com o `IGNORE` e o `DISABLE_HIDRAW` copiados em 22/09. Sem
+    o desfazer nas cópias, o uninstall deixa AQUELE jogo sem o DualSense.
+
+    Nas duas casas do Heroic, com e sem registro (a instalação de antes dele).
+    O que ela pôs só naquele jogo fica; o `__GL_SHADER_*` da cópia fica (pode
+    ser a escolha dela para o jogo); o jogo cuja lista ela escreveu sem nada
+    nosso sai byte a byte igual.
+
+    A MORDIDA: tire de `desfazer_as_estradas` o laço das cópias e o `IGNORE`
+    fica no jogo.
+    """
+    lar = tmp_path / "lar"
+    lar.mkdir()
+    heroic = _heroic(lar, nativo=nativo)
+    pasta = _ambiente(tmp_path / "estado/launch_env")
+    if com_registro:
+        _curar(lar, pasta)
+    else:
+        cura._escrever_no_heroic(heroic, cura.ambiente_da_ponte(pasta))
+    copia = _heroic_copia_para_o_jogo(heroic, "Jogo1",
+                                      dela=[{"key": "DXVK_HUD", "value": "fps"}])
+    sem_nada_nosso = heroic.parent / "GamesConfig" / "Jogo2.json"
+    sem_nada_nosso.write_text(json.dumps(
+        {"Jogo2": {"enviromentOptions": [{"key": "MANGOHUD", "value": "0"}]},
+         "version": "v0", "explicit": True}, indent=2), encoding="utf-8")
+    intocado = sem_nada_nosso.read_bytes()
+    assert ("SDL_GAMECONTROLLER_IGNORE_DEVICES", "0x054c/0x0ce6,0x28de/0x11ff") in (
+        _lista_do_jogo(copia))
+
+    feitos, completo = cura.desfazer_as_estradas([pasta], lar)
+
+    assert completo
+    lista = _lista_do_jogo(copia)
+    assert not {k for k, _ in lista} & cura._DO_PRODUTO_SEM_REGISTRO, (
+        f"a cópia por jogo ficou com o ambiente do Hefesto: {lista}")
+    assert lista[0] == ("MANGOHUD", "1") and lista[-1] == ("DXVK_HUD", "fps"), lista
+    assert ("__GL_SHADER_DISK_CACHE_SKIP_CLEANUP", "1") in lista, (
+        "a cópia do jogo perdeu uma variável que pode ser a escolha dela para ele")
+    dado = json.loads(copia.read_text(encoding="utf-8"))
+    assert dado["Jogo1"]["wineVersion"]["name"] == "Proton - GE" and dado["explicit"] is False
+    assert not copia.read_text(encoding="utf-8").endswith("\n"), (
+        "a cópia tem de sair no formato do dono (`JSON.stringify(c, null, 2)`)")
+    assert sem_nada_nosso.read_bytes() == intocado
+    assert any(str(copia) in cura.frase_do_desfeito(f) for f in feitos)
+
+
+def test_a_copia_por_jogo_que_nao_abre_segura_o_registro(mesa: dict[str, Path]) -> None:
+    """Uma cópia truncada que CITA uma variável nossa pode estar com ela: o
+    desfazer não reescreve, diz, e o registro da casa fica para depois. Uma
+    que não cita nada nosso não é conosco e não segura nada."""
+    _curar(mesa["lar"], mesa["pasta"])
+    jogos = mesa["heroic"].parent / "GamesConfig"
+    jogos.mkdir()
+    (jogos / "torto.json").write_text(
+        '{"x": {"enviromentOptions": [{"key": "SDL_GAMECONTROLLER_IGNORE_DEVICES", "va',
+        encoding="utf-8")
+    (jogos / "alheio.json").write_text("{nada", encoding="utf-8")
+    torto = (jogos / "torto.json").read_bytes()
+
+    feitos, completo = cura.desfazer_as_estradas([mesa["pasta"]], mesa["lar"])
+
+    assert not completo
+    assert str(mesa["heroic"]) in cura.ler_registro(mesa["pasta"])
+    erros = [f.arquivo.name for f in feitos if f.erro]
+    assert erros == ["torto.json"], erros
+    assert (jogos / "torto.json").read_bytes() == torto
 
 
 #: As variáveis que a `ENV_ALLOWLIST` ganhar DEPOIS de 25/09/2026 nascem com
@@ -467,6 +569,8 @@ def _instalar_pelos_donos(r: m.Raizes, repo: Path, *, heroic_nativo: bool,
     heroic, lutris = _heroic(lar, nativo=heroic_nativo), _lutris(lar)
     pasta = _ambiente(estado / "launch_env")
     assert set(_curar(lar, pasta)) == {"heroic", "lutris", "mgba"}
+    # O jogo em que ela mudou uma opção: o Heroic copia a lista global para ele.
+    jogo = _heroic_copia_para_o_jogo(heroic, "Jogo1")
     # O estado do daemon (pelo XDG) e o que o install grava no lar (sem ele).
     for nome_do_arquivo, corpo in (
         ("conexao-zumbi.json", '{"links": {}}'), ("lugares-dos-adaptadores.json", "{}"),
@@ -501,7 +605,7 @@ def _instalar_pelos_donos(r: m.Raizes, repo: Path, *, heroic_nativo: bool,
         venv_bin.parent.mkdir(parents=True)
         venv_bin.write_text("#!/bin/sh\n", encoding="utf-8")
     (lar / ".local/bin/hefesto-dualsense4unix").symlink_to(venv_bin)
-    return {"heroic": heroic, "lutris": lutris,
+    return {"heroic": heroic, "lutris": lutris, "jogo": jogo,
             "mgba": lar / ".local/share/flatpak/overrides" / MGBA}
 
 
@@ -616,6 +720,9 @@ def test_o_uninstall_de_verdade_nao_deixa_rastro(
     assert limpa.returncode == 0, limpa.stdout + limpa.stderr
     assert json.loads(alvos["heroic"].read_text(encoding="utf-8")) == HEROIC_DELA, (
         "o Heroic dela não voltou a ser o dela")
+    no_jogo = {k for k, _ in _lista_do_jogo(alvos["jogo"])}
+    assert not no_jogo & cura._DO_PRODUTO_SEM_REGISTRO, (
+        f"o jogo com opção própria no Heroic ficou com o ambiente do Hefesto: {no_jogo}")
     assert alvos["lutris"].read_text(encoding="utf-8") == LUTRIS_DELA
     assert not alvos["mgba"].exists()
     for estado in {r.estado / m.SLUG, r.lar / ".local/state" / m.SLUG}:

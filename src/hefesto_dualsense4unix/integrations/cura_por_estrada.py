@@ -92,6 +92,16 @@ seguinte, pela mesma regra — antes ela ficava lá, congelada, e o jogo do
 Heroic no Modo Nativo abria sem o controle que o Modo Nativo existe para
 mostrar.
 
+**O HEROIC COPIA A LISTA GLOBAL PARA DENTRO DE CADA JOGO** (conferência de
+25/09/2026, medido no fonte dele e no disco dela): quando ela muda qualquer
+opção de um jogo, o `GamesConfig/<jogo>.json` ganha uma cópia inteira do
+`enviromentOptions` global, e dali em diante é ELA que vale para aquele jogo.
+O desfazer passa por essas cópias com o registro do `config.json` da mesma
+casa (:func:`copias_por_jogo_do_heroic`), e tira delas só o valor nosso. A
+ESCRITA não entra nas cópias — um jogo com cópia fica com o ambiente do dia em
+que ela foi tirada enquanto o Hefesto está instalado; é dívida aberta, não
+desta leva.
+
 **O NOME DO PRODUTO, quando o registro não sabe.** Uma instalação anterior a
 este registro escreveu sem anotar. Para ela vale a regra do espaço de nomes: as
 variáveis que só o produto usa (:data:`_DO_PRODUTO_SEM_REGISTRO`) são
@@ -667,11 +677,15 @@ def _desfazer_pares(pares: Pares, entrada: Entrada) -> tuple[Pares, _Contas]:
     return pares, contas
 
 
-def _pares_do_heroic(raiz: dict[str, object]) -> Pares:
-    padroes = raiz.get("defaultSettings")
-    lista = padroes.get(CHAVE_DO_HEROIC) if isinstance(padroes, dict) else None
+def _pares_da_lista(lista: object) -> Pares:
+    """Os pares de uma lista `enviromentOptions` do Heroic (a global ou a de um jogo)."""
     return [(str(x.get("key", "")), str(x.get("value", "")))
             for x in (lista if isinstance(lista, list) else []) if isinstance(x, dict)]
+
+
+def _pares_do_heroic(raiz: dict[str, object]) -> Pares:
+    padroes = raiz.get("defaultSettings")
+    return _pares_da_lista(padroes.get(CHAVE_DO_HEROIC) if isinstance(padroes, dict) else None)
 
 
 def _heroic_fundido(alvo: Path, ambiente: dict[str, str],
@@ -967,6 +981,89 @@ def estradas_possiveis(lar: Path) -> list[tuple[Path, str]]:
     return achados
 
 
+#: A PASTA DAS CÓPIAS POR JOGO do Heroic, dentro da casa dele
+#: (`gamesConfigPath` no fonte do Heroic: `<casa>/GamesConfig/<jogo>.json`).
+_PASTA_DOS_JOGOS_DO_HEROIC = "GamesConfig"
+
+
+def copias_por_jogo_do_heroic(lar: Path) -> list[tuple[Path, Path]]:
+    """``[(config.json da casa, cópia de um jogo)]`` nas duas casas do Heroic.
+
+    **O HEROIC COPIA O AMBIENTE GLOBAL PARA DENTRO DO JOGO — conferência de
+    25/09/2026, medido no fonte dele e no disco dela.** O `GameConfigV0` monta
+    as opções de um jogo como `{...globais, ...do jogo}`, com
+    `enviromentOptions: [...enviromentOptions]` — uma CÓPIA da lista global —,
+    e grava tudo em `GamesConfig/<jogo>.json` na primeira vez que ela muda
+    qualquer opção daquele jogo (o `setSetting` chama o `flush`). Dali em
+    diante a lista do jogo vale SOZINHA: a global não entra mais nele. No disco
+    dela, em 25/09, um dos três jogos com configuração própria carregava o
+    `SDL_GAMECONTROLLER_IGNORE_DEVICES` e o `PROTON_DISABLE_HIDRAW` copiados em
+    22/09 — um uninstall que só limpa a lista global deixa AQUELE jogo sem o
+    DualSense físico, que é o defeito que esta sprint existe para fechar.
+    """
+    achados: list[tuple[Path, Path]] = []
+    for rel in _PASTAS_DO_HEROIC:
+        casa = lar / rel
+        pasta = casa / _PASTA_DOS_JOGOS_DO_HEROIC
+        if not pasta.is_dir():
+            continue
+        for arq in sorted(pasta.glob("*.json")):
+            if arq.is_file() and not arq.is_symlink():
+                achados.append((casa / "config.json", arq))
+    return achados
+
+
+def _entrada_da_copia(entrada: Entrada) -> Entrada:
+    """O registro do `config.json` da casa, como vale para a cópia de um jogo.
+
+    **SEM AS QUE PODEM SER DELA**, e é o lado reversível: numa cópia por jogo
+    um `__GL_SHADER_*` pode ser a escolha dela PARA AQUELE JOGO, e devolver ali
+    o «antes» da lista global trocaria o que ela pôs. As do produto saem pelo
+    valor nosso, como na lista global.
+    """
+    return Entrada(HEROIC_CONFIG, chaves={
+        k: copy.deepcopy(m) for k, m in entrada.chaves.items() if k not in PODEM_SER_DELA})
+
+
+def _desfazer_na_copia_do_jogo(alvo: Path, entrada: Entrada, feito: Desfeito) -> str | None:
+    """A cópia de um jogo sem o que é nosso; ``None`` = igual (ou não é para mexer).
+
+    O Heroic nunca apaga a cópia, e o desfazer também não: só a lista
+    `enviromentOptions` de cada jogo muda, e o resto do arquivo passa intacto.
+    O texto sai no formato do dono (`JSON.stringify(config, null, 2)`).
+    """
+    try:
+        texto = alvo.read_text(encoding="utf-8")
+    except OSError:
+        feito.erro = "não consegui ler — não reescrevo por cima"
+        return None
+    try:
+        raiz = cast("object", json.loads(texto))
+    except ValueError:
+        raiz = None
+    if not isinstance(raiz, dict):
+        #: «Não sei» não é zero: um arquivo torto que CITA uma variável nossa
+        #: pode estar com ela, e o desfazer diz; um que não cita não é conosco.
+        suspeitas = (_DO_PRODUTO_SEM_REGISTRO | set(entrada.chaves)) - PODEM_SER_DELA
+        if any(nome in texto for nome in suspeitas):
+            feito.erro = "não consegui ler — não reescrevo por cima"
+        return None
+    mudou = False
+    for jogo in raiz.values():
+        lista = jogo.get(CHAVE_DO_HEROIC) if isinstance(jogo, dict) else None
+        if not isinstance(jogo, dict) or not isinstance(lista, list):
+            continue
+        pares = _pares_da_lista(lista)
+        novos, contas = _desfazer_pares(pares, _entrada_da_copia(entrada))
+        feito.tiradas += contas.tiradas
+        feito.devolvidas += contas.devolvidas
+        feito.ficaram += contas.ficaram
+        if novos != pares:
+            jogo[CHAVE_DO_HEROIC] = [{"key": k, "value": v} for k, v in novos]
+            mudou = True
+    return json.dumps(raiz, indent=2, ensure_ascii=False) if mudou else None
+
+
 def _desfazer_no_heroic(alvo: Path, entrada: Entrada, feito: Desfeito) -> str | None:
     """O texto novo do `config.json` sem o que é nosso; ``""`` = apagar; ``None`` = igual."""
     raiz = _ler_heroic(alvo)
@@ -1016,11 +1113,16 @@ def _desfazer_no_override(alvo: Path, entrada: Entrada, feito: Desfeito) -> str 
     return _render_ini(cfg) if mudou else None
 
 
-def _desfazer_no_arquivo(alvo: Path, entrada: Entrada) -> Desfeito:
+def _desfazer_no_arquivo(alvo: Path, entrada: Entrada, *, copia_do_jogo: bool = False,
+                         ) -> Desfeito:
     feito = Desfeito(alvo)
     if not alvo.is_file():
         return feito
-    desfazer = _desfazer_no_heroic if entrada.tipo == HEROIC_CONFIG else _desfazer_no_override
+    if copia_do_jogo:
+        desfazer = _desfazer_na_copia_do_jogo
+    else:
+        desfazer = (_desfazer_no_heroic if entrada.tipo == HEROIC_CONFIG
+                    else _desfazer_no_override)
     texto = desfazer(alvo, entrada, feito)
     try:
         if texto == "":
@@ -1038,9 +1140,12 @@ def desfazer_as_estradas(pastas_do_ambiente: Iterable[Path],
     """Tira de todo lançador o que o Hefesto escreveu. ``(o que fez, completo)``.
 
     Os arquivos vêm do registro de cada pasta (a do ``XDG_STATE_HOME`` e a do
-    lar, quando são duas) e da rede de :func:`estradas_possiveis`. Completo, o
-    registro sai; com um arquivo que não abriu, o que é dele fica anotado na
-    primeira pasta, para o desfazer de novo — e a resposta é ``False``.
+    lar, quando são duas) e da rede de :func:`estradas_possiveis` — e, depois
+    deles, as cópias por jogo que o Heroic tirou da lista global
+    (:func:`copias_por_jogo_do_heroic`), lidas com o registro do `config.json`
+    da mesma casa. Completo, o registro sai; com um arquivo que não abriu, o
+    que é dele fica anotado na primeira pasta, para o desfazer de novo — e a
+    resposta é ``False``.
     """
     lar = Path.home() if lar is None else lar
     pastas = list(pastas_do_ambiente)
@@ -1058,6 +1163,14 @@ def desfazer_as_estradas(pastas_do_ambiente: Iterable[Path],
         feitos.append(feito)
         if feito.erro and caminho in registro:
             sobrou[caminho] = entrada
+    for casa, copia in copias_por_jogo_do_heroic(lar):
+        entrada = registro.get(str(casa), Entrada(HEROIC_CONFIG))
+        feito = _desfazer_no_arquivo(copia, entrada, copia_do_jogo=True)
+        feitos.append(feito)
+        #: A cópia que não abriu segura o registro da CASA: é ele que diz, no
+        #: desfazer de depois, quais valores são nossos.
+        if feito.erro and str(casa) in registro:
+            sobrou[str(casa)] = registro[str(casa)]
     for i, pasta in enumerate(pastas):
         with contextlib.suppress(OSError):
             gravar_registro(sobrou if i == 0 else {}, pasta)
