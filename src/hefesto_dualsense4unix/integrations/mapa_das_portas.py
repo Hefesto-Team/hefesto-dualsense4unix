@@ -72,7 +72,6 @@ from hefesto_dualsense4unix.integrations.entradas_do_gabinete import (
     VELOCIDADE_SUPERSPEED_MBPS,
 )
 from hefesto_dualsense4unix.integrations.mesa_de_radio import Adaptador
-from hefesto_dualsense4unix.utils.lugar import caminho_do_no
 from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
 
 #: Doze hex, que é a forma em que o serial USB de um TP-Link UB500 carrega o
@@ -906,6 +905,10 @@ def fatos_do_buraco(
     nomeia é o aparelho que estava no buraco, e o caminho do aparelho é o
     ``caminho_do_no`` do nó.
     """
+    # Import no corpo, e não no topo: a linha a mais no topo deslocaria as
+    # citações `mapa_das_portas.py:N` que a aba 08 faz deste arquivo.
+    from hefesto_dualsense4unix.utils.lugar import caminho_do_no
+
     meus = [e for e in entradas if getattr(e, "no", "") in set(nos)]
     velocidades = [float(getattr(e, "velocidade_mbps", 0.0) or 0.0) for e in meus]
     if any(v >= VELOCIDADE_SUPERSPEED_MBPS for v in velocidades):
