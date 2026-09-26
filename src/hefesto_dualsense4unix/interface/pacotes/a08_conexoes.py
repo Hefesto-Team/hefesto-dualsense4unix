@@ -1204,7 +1204,7 @@ def _instrucao_do_item(item: Any) -> str:
     com ou sem destino); a conferência, pela cura; sem as duas, a medição.
     """
     ordem = getattr(item, "ordem", None)
-    for texto in (getattr(ordem, "acao", None), getattr(item, "cura", None),  # (noqa-acento)
+    for texto in (getattr(ordem, "acao", None), getattr(item, "cura", None),  # (noqa-acento: Ordem)
                   getattr(item, "porque", None)):
         if str(texto or "").strip():
             return str(texto).strip()
