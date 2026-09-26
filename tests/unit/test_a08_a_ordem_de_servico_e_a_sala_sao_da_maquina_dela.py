@@ -138,9 +138,9 @@ def test_a_ordem_de_servico_e_da_maquina_dela() -> None:
         f"{ordem.ganho_esperado.texto!r} voltou à coluna visível — ele mora no `?` "
         f"da linha do exame desde 13/09/2026")
     # A INSTRUÇÃO VOLTOU em 26/09/2026, por decisão dela olhando o desenho novo:
-    # *«dá pra aceitar a instrução nisso»*. É a `acao` da ordem VIVA, com o
+    # *«dá pra aceitar a instrução nisso»*. É a instrução da ordem VIVA, com o
     # título que ela nomeou — nunca a frase do mockup.
-    assert ordem.acao in card and p.TITULO_DA_ORDEM in card, card
+    assert ordem.acao in card and p.TITULO_DA_ORDEM in card, card  # (noqa-acento) campo da Ordem
 
 
 def test_o_card_traz_as_duas_frases_da_ordem_no_interrogacao() -> None:

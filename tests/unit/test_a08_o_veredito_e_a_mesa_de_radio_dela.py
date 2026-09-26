@@ -413,7 +413,10 @@ def test_a_dica_da_luz_chega_ao_pacote() -> None:
 # ---------------------------------------------------------------------------
 # O MICROFONE — o escopo virou leitura (D-12) e o custo virou derivado
 # ---------------------------------------------------------------------------
-# `test_o_escopo_do_botao_do_mic_e_leitura_e_nao_escolha` SAIU — o controle «Microfone e botões» saiu da linha do controle em 25/09/2026, por pedido dela (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).
+# `test_o_escopo_do_botao_do_mic_e_leitura_e_nao_escolha` SAIU — o controle «Microfone e
+# botões» saiu da linha do controle em 25/09/2026, por pedido dela
+# (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra
+# só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).
 
 
 def test_o_escopo_le_o_valor_da_maquina() -> None:
@@ -463,4 +466,7 @@ def test_o_mic_pelo_cabo_nao_cobra_turno_de_radio() -> None:
         "a frase do cabo trouxe a conta do rádio junto")
 
 
-# `test_o_titulo_do_resumo_do_mic_tem_endereco` SAIU — o controle «Microfone e botões» saiu da linha do controle em 25/09/2026, por pedido dela (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).
+# `test_o_titulo_do_resumo_do_mic_tem_endereco` SAIU — o controle «Microfone e botões»
+# saiu da linha do controle em 25/09/2026, por pedido dela
+# (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra
+# só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).

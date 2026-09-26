@@ -258,10 +258,16 @@ def test_a_tabela_da_gestao_diz_o_que_o_dono_diz(cru: str) -> None:
 # ---------------------------------------------------------------------------
 # 3. A 08 — a linha do Microfone e as duas dicas dela
 # ---------------------------------------------------------------------------
-# `test_a_linha_do_microfone_na_pagina_fala_o_transporte_da_linha` SAIU — o controle «Microfone e botões» saiu da linha do controle em 25/09/2026, por pedido dela (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).
+# `test_a_linha_do_microfone_na_pagina_fala_o_transporte_da_linha` SAIU — o controle
+# «Microfone e botões» saiu da linha do controle em 25/09/2026, por pedido dela
+# (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra
+# só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).
 
 
-# `test_o_interruptor_do_microfone_nomeia_as_duas_palavras` SAIU — o controle «Microfone e botões» saiu da linha do controle em 25/09/2026, por pedido dela (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).
+# `test_o_interruptor_do_microfone_nomeia_as_duas_palavras` SAIU — o controle «Microfone
+# e botões» saiu da linha do controle em 25/09/2026, por pedido dela
+# (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra
+# só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).
 
 
 @pytest.mark.parametrize("via", ["usb", "bt"])

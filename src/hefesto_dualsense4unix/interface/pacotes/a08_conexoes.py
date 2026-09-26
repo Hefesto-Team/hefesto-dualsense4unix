@@ -1205,9 +1205,9 @@ def _card_da_ordem(ordem: Any) -> str:
     # O TÍTULO E A INSTRUÇÃO VOLTARAM, e é escolha dela — 26/09/2026, olhando o
     # desenho novo: *«o que é a área que marquei em vermelho?»*. Sem os dois o
     # de→para era um par de endereços soltos. O título é o nome que ela deu à
-    # caixa; a instrução é a `acao` da ordem, que já nomeia o aparelho.
-    acao = str(getattr(ordem, "acao", "") or "")  # (noqa-acento) campo da Ordem
-    faca = f'<div class="faca">{_e(acao)}</div>' if acao else ""
+    # caixa; a instrução vem da própria ordem, que já nomeia o aparelho.
+    instrucao = str(getattr(ordem, "acao", "") or "")  # (noqa-acento) campo da Ordem
+    faca = f'<div class="faca">{_e(instrucao)}</div>' if instrucao else ""
     return ('<div class="ordem">'
             f'<div class="ordem-tit">{TITULO_DA_ORDEM}</div>{faca}'
             f'<div class="receita"><span class="caixa">{_e(de)}</span>'
@@ -6596,7 +6596,8 @@ SEM_ECO = ("sala-altura", "sala-visada", "mic-existe", "vizinho-o-que-e",
            "nova-entrada", "nova-extensao", "nova-face",
            "adaptador-renomear", "aparelho-renomear", "entrada-face",
            "entrada-nao-alcanco", "adaptador-reordenar",
-           "dono-renomear", "economia-do-controle", "mapear-gravar", "checkup-atualizar", "mapear-comecar", "mapear-parar")
+           "dono-renomear", "economia-do-controle", "mapear-gravar", "checkup-atualizar",
+           "mapear-comecar", "mapear-parar")
 
 
 # ---------------------------------------------------------------------------
@@ -6631,7 +6632,8 @@ def selo_do_estado(rotulo: str, valor: str = "", estado: str = "ok") -> str:
         miolo += f" <b>{html.escape(valor)}</b>"
     if estado == "ok":
         miolo += f' <i class="certo">{CERTO}</i>'
-    return f'<span class="est {estado}">{miolo}</span>' if estado else f'<span class="est">{miolo}</span>'
+    classe = f"est {estado}" if estado else "est"
+    return f'<span class="{classe}">{miolo}</span>'
 
 
 def _estado_de_carga(c: dict[str, Any]) -> str:
@@ -6672,6 +6674,10 @@ def modo_da_fileira(st: dict[str, Any]) -> str:
     return MODO_PELO_HEFESTO
 
 
+# D-O-ESCOPO-DO-MIC-SAIU-DA-08 — 25/09/2026, pedido dela (A-08-O-CHECKUP-ABSORVE-
+# A-GESTAO-01): o «Microfone e botões» saiu do cartão, e com ele o escopo do botão
+# físico do microfone. O cartão diz só o selo «Mic»; quem escolhe é a aba Jogar/
+# Controles. É o sinal da linha 293 do `docs/data/paridade-gtk-html.csv`.
 def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any],
                        declaracao: Any, modo: str | None = None) -> dict[str, str]:
     """Os seis selos de UM controle, lidos do daemon vivo e da declaração.
@@ -6683,7 +6689,8 @@ def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any]
     """
     uniq = str(c.get("uniq") or "")
     via = str(c.get("transport") or "").lower()
-    audio = c.get("audio") if isinstance(c.get("audio"), dict) else {}
+    audio_lido = c.get("audio")
+    audio: dict[str, Any] = audio_lido if isinstance(audio_lido, dict) else {}
 
     # O MIC: ✓ também desligado, quando foi escolha dela (a declaração diz).
     if not _mic_declarado(declaracao, uniq):
@@ -6843,7 +6850,8 @@ def economia_do_controle_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None
         raise ValueError("economia-do-controle: o clique não disse em qual controle")
     escolha, mesa = economia_do_controle(_declaracao(), uniq)
     if mesa:
-        raise RuntimeError(ECONOMIA_DICA["mesa"])
+        raise RuntimeError("A «Bateria longa» da aba Sistema já liga a economia em todos os "
+                           "controles; para desligar, escolha outro perfil de bateria lá.")
     corpo = schema.declaracao_da_economia(uniq, escolha is not True)
     ok, motivo = _resposta(p.machine_declare(corpo))
     if not ok:
@@ -6966,7 +6974,8 @@ def mapear_gravar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     recusa dele (nada a gravar, ou não há porta da vez).
     """
     global _LOGICA
-    forma = o.get("forma") if isinstance(o.get("forma"), dict) else {}
+    forma_lida = o.get("forma")
+    forma: dict[str, Any] = forma_lida if isinstance(forma_lida, dict) else {}
     nome = str(forma.get("nome") or "").strip() or None
     lugar = str(forma.get("lugar") or "").strip() or None
     _o_mapa().gravar(nome=nome, lugar=lugar)

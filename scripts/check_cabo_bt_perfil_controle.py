@@ -130,10 +130,21 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "tirar-daqui": "tira uma declaração da máquina",
     "ignorar": "ignora um aparelho — é da máquina",
     "alvo": "escolhe o alvo do exame — é da tela",
-    "mic-existe": "declara que o microfone existe — é da máquina",
     "luz-nao-acende": "declara que a luz não acende — é da máquina",
-    "todos": "aplica a todos os aparelhos da aba Conexões — é da máquina",
-    "teto-da-vibracao": "o teto do orçamento do cabo — é do barramento, não do controle",
+    # A LINHA DA GESTÃO VIROU O CARTÃO — A-08-O-CHECKUP-ABSORVE-A-GESTAO-01,
+    # 26/09/2026. Saíram da tela o `mic-existe` e o `teto-da-vibracao` (pedido
+    # dela: repetiam as abas Controles e Vibração) e o `todos` do acordeão;
+    # entraram os seis abaixo.
+    "economia-do-controle": "declara a economia deste controle no `maquina.json` "
+                            "(`controles[uniq].economia`) — é da máquina; o que ela "
+                            "faz no aparelho responde pelas linhas do teto",
+    "dono-renomear": "dá nome a quem joga com o controle, na memória dos controles "
+                     "— é da máquina",
+    "checkup-atualizar": "relê o estado de cada controle e repinta o Check-up — é da tela",
+    "mapear-comecar": "o Mapear Entradas começa a olhar as portas — é da máquina",
+    "mapear-gravar": "grava o nome e o lugar da porta da vez no mapa das portas do "
+                     "`maquina.json` — é da máquina",
+    "mapear-parar": "o Mapear Entradas para de olhar as portas — é da máquina",
     # ---- perfil e modo: decididos por ela como GLOBAIS ----
     "modo": "o efeito do gatilho (03) e o modo de navegação (06) — o gesto tem "
             "dois donos, e os dois caem em linhas do mapa por outro gesto",

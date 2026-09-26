@@ -121,7 +121,7 @@ def test_a_coluna_nao_traz_cura_imperativo_nem_procedencia(pacote, cena) -> None
 
     MORDE: devolva o cartão de cura ou o ganho a `_html_da_ordem`.
 
-    A `acao` SAIU DAS PROIBIDAS em 26/09/2026: a instrução voltou à caixa por
+    A INSTRUÇÃO SAIU DAS PROIBIDAS em 26/09/2026: ela voltou à caixa por
     decisão dela (*«dá pra aceitar a instrução nisso»*), com o título
     «Sugestão de conexão». Ver `a08_conexoes._card_da_ordem`.
     """
