@@ -659,8 +659,9 @@ class CentralDoRadio:
         #: ``Alias`` mudou) e «ela apagou o nome» (o MESMO objeto voltou ao de
         #: fábrica) de «o objeto é novo» (nasceu de fábrica, e o nome volta).
         self._alias_vistos: dict[str, str] = {}
-        #: Sobe a cada movimento que começa: um movimento tira e recria objetos,
-        #: e a volta dos nomes que o atravessou não guarda o que viu.
+        #: Sobe cada vez que a central tira ou recria um objeto
+        #: (:meth:`_lembrar_o_alias`): a volta dos nomes que o atravessou não
+        #: guarda o que viu, e a lembrança da central fica.
         self._geracao_dos_nomes = 0
         self._sysfs = dict(sysfs or {})
         self._relogio = relogio
