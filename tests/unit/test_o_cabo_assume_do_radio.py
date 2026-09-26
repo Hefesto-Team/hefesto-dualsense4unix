@@ -407,7 +407,7 @@ class MesaDoCabo:
         mascara: str = "dualsense",
         diario_legivel: bool = True,
         regra_instalada: bool = True,
-        watch_de_verdade: bool = False,
+        watch_de_verdade: bool = True,
     ) -> None:
         self.relogio = Relogio()
         self.kernel = Kernel(tmp_path / "sys-bus-hid-devices")
@@ -482,11 +482,12 @@ class MesaDoCabo:
     def _o_watch_de_verdade(self, watch: Any) -> bool:
         """O `InputDirWatch.poll` como o real: "mudou" só quando os nós mudaram.
 
-        O `True` de sempre faz o co-op refazer o ciclo cheio a cada tique — um
-        co-op mais atento que o do produto, que só olha a mesa de novo quando
-        `/dev/input` muda (ou quando alguém pede, `_retry_spawn`). Conferência
-        de 25/09: com o `True`, o jogador segurado na troca que não termina
-        era solto no prazo; com o watch de verdade ele ficava para sempre.
+        É o padrão da mesa desde a conferência de 25/09. O `True` de antes
+        fazia o co-op refazer o ciclo cheio a cada tique — um co-op mais atento
+        que o do produto, que só olha a mesa de novo quando `/dev/input` muda
+        (ou quando alguém pede, `_retry_spawn`): com ele, o jogador segurado na
+        troca que não termina era solto no prazo; com o watch de verdade ficava
+        para sempre. `watch_de_verdade=False` sobra para quem quiser comparar.
         """
         foto = frozenset(self.kernel.nodes.values())
         antes = getattr(watch, "_foto_da_bancada", None)
