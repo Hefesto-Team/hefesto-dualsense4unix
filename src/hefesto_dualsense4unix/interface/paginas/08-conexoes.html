@@ -1698,9 +1698,43 @@
      linhas têm todas a mesma largura, as colunas caem no mesmo x sozinhas.
      A última é `justify-self:end` para os percentuais terminarem juntos, colados
      na seta — número que se compara se lê pela direita. */
-  .gc-resumo{flex:1;display:grid;grid-template-columns:126fr 272fr 76fr;
-             gap:10px;align-items:center;font-size:11.5px;color:var(--texto-mudo);
-             white-space:nowrap}
+  /* OS SEIS SELOS DO ESTADO — A-08-O-CHECKUP-ABSORVE-A-GESTAO-01, 25/09/2026.
+     A grade de três colunas (máscara, microfone, bateria) virou uma fila que
+     quebra: são seis selos, e o que não cabe desce em vez de cortar. */
+  .gc-resumo{flex:1;display:flex;flex-wrap:wrap;gap:3px 14px;align-items:center;
+             font-size:11.5px;color:var(--texto-mudo);min-width:0}
+  .gc-est .est{white-space:nowrap}
+  .gc-est .certo{font-style:normal;color:var(--green);margin-left:1px}
+  .gc-est .est.warn,.gc-est .est.warn b{color:var(--orange)}
+  /* O DONO: o campo mostra «P N» ou o nome dela, e só se veste de campo
+     quando o mouse ou o foco chegam — em repouso ele é o nome da linha. */
+  .gc-dono{flex:0 0 92px;width:92px;margin-left:10px;padding:3px 6px;
+           border:1px solid transparent;border-radius:6px;background:transparent;
+           color:var(--fg);font:inherit;font-weight:700;text-overflow:ellipsis}
+  .gc-dono:hover,.gc-dono:focus{border-color:var(--border-forte);background:var(--app-bg);outline:none}
+  /* O BOTÃO DA ECONOMIA: a luz acende quando a declaração diz que vale — verde
+     quando é deste controle, apagada-cinza quando é a «Bateria longa» da mesa. */
+  .gc-corpo .btn.eco{display:inline-flex;align-items:center;gap:6px}
+  .eco-luz{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--border-forte)}
+  .eco-luz[data-economia="ligada"]{background:var(--green)}
+  .eco-luz[data-economia="mesa"]{background:var(--comment)}
+  /* AS FERRAMENTAS DO CHECK-UP — o Mapear num botão só, o exame, o Atualizar
+     e os dois mapas. */
+  .ferramentas{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0}
+  .ferramentas .i{width:14px;height:14px;vertical-align:-2px;fill:none;stroke:currentColor;
+                  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .ferramentas .mapa{display:inline-flex;align-items:center;justify-content:center;width:30px;
+                     height:30px;border-radius:7px;border:1px solid var(--border-forte);
+                     color:var(--texto-suave)}
+  /* O FLUXO DO MAPEAR */
+  .mp{display:flex;flex-direction:column;gap:12px}
+  .mp-diz{margin:0;color:var(--fg);font-weight:600}
+  .mp-porta{min-height:20px;color:var(--texto-suave)}
+  .mp-campos{display:flex;flex-wrap:wrap;gap:12px}
+  .mp-campos label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--rot-campo)}
+  .mp-campos input,.mp-campos select{min-width:200px;padding:5px 8px;border-radius:6px;
+                  border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg);font:inherit}
+  .mp-conta{margin:0;font-size:11.5px;color:var(--texto-mudo)}
   .gc-resumo > :last-child{justify-self:end}
   .gc-resumo b{color:var(--texto-suave);font-weight:500}
   /* 42px E NÃO 16, e a largura é a MESMA nos três estados de propósito: no
@@ -2969,10 +3003,11 @@
       <div class="quadro-topo">
         <label class="quadro-titulo" for="cx8-2">Check-up</label>
         <span class="ajuda">?<span class="dica">
-          Um exame da sala: em que entradas os aparelhos estão, quanta energia elas dão e
-          quem mais está falando no rádio perto do seu adaptador. Ele não muda nada sozinho:
-          quando acha algo, aparece ao lado uma ordem de serviço dizendo o que mover para
-          onde.
+          Um exame da sala e dos controles: em que entradas os aparelhos estão, quanta
+          energia elas dão, quem mais fala no rádio perto do seu adaptador — e, embaixo,
+          uma linha por controle com o estado dele agora. Ele não muda nada sozinho:
+          quando acha algo, aparece ao lado uma ordem de serviço dizendo o que mover
+          para onde.
         </span></span>
         <!-- O CARIMBO GANHOU ENDEREÇO em 02/09/2026. Ele dizia "há 3 minutos"
              desde que o mockup nasceu, e nunca soube nada: nenhum pacote
@@ -2981,6 +3016,7 @@
              (`secao_exame.frase_de_quando`), e a moldura "Examinado …" é a
              deste desenho. -->
         <span class="conta" data-campo="examinado">Examinado há 3 minutos</span>
+        <span class="conta" data-campo="conta-gestao" data-hef-alvo="html">2 controles <span class="pt">•</span> 1 USB <span class="pt">•</span> 1 BT</span>
       </div>
       <div class="quadro-corpo">
         <!-- A LINHA DE VEREDITO — decisão D-16 dela, 04/09/2026:
@@ -3094,23 +3130,21 @@
              onde reabrir uma ordem ignorada**. O desenho precisa dizer para onde
              a linha ignorada vai — apagada na própria lista é o caminho mais
              curto, e é decisão dela. -->
-      </div>
-    </div>
-
-    <!-- ======== 2. GESTÃO DE CONTROLES — acordeão, um por controle ligado ======== -->
-    <div class="quadro">
-      <input class="abre" type="radio" name="cx8-secao" id="cx8-1">
-      <div class="quadro-topo">
-        <label class="quadro-titulo" for="cx8-1">Gestão de Controles</label>
-        <span class="ajuda">?<span class="dica">
-          Uma linha por controle ligado. A linha fechada diz o que o jogo vê como, o microfone
-          e a bateria — as três são leitura aqui; quem as governa é outra aba. A borda e o
-          desenho usam a cor lida do aparelho; sem leitura, ficam neutros. A barra de luz não
-          é essa cor: é a cor do jogador.
-        </span></span>
-        <span class="conta" data-campo="conta-gestao" data-hef-alvo="html">2 controles <span class="pt">•</span> 1 USB <span class="pt">•</span> 1 BT</span>
-      </div>
-      <div class="quadro-corpo">
+        <!-- AS FERRAMENTAS MORAM NO CHECK-UP — 25/09/2026, pedido dela
+             (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01). O «Mapear Entradas» é UM botão
+             só: a âncora abre o fluxo guiado porta a porta (`#mapear-portas`),
+             que chama o dono do mapa (`entrada_a_entrada.o_mapa()`). A âncora
+             não é gesto (a §P4): quem começa o fluxo é o `#mp-comecar`. -->
+        <div class="ferramentas">
+          <a class="btn" href="#mapear-portas" title="Mapear Entradas — ligue o DualSense em cada entrada, uma por vez, e dê nome e lugar a cada uma">
+            <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg> Mapear Entradas</a>
+          <button class="btn" data-gesto="examinar-portas" title="Examinar Entradas — refaz o exame das entradas, energia e rádio, e repinta o Check-up">
+            <svg class="i" aria-hidden="true"><use href="#rd-reexaminar"/></svg> Examinar Entradas</button>
+          <button class="btn" data-gesto="checkup-atualizar" title="Relê agora o estado de cada controle, os nomes e o mapa das entradas">Atualizar</button>
+          <a class="btn" href="mapa-do-controle.html" title="O mapa do controle — abre no navegador">Mapa do controle</a>
+          <a class="mapa so-icone" href="mapa-das-portas.html" title="O mapa das entradas, com o que o Hefesto mediu de cada uma — abre no navegador" aria-label="O mapa das entradas — abre no navegador">
+            <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg></a>
+        </div>
         <!-- O ACORDEÃO PASSOU A SER LIDO DE VOLTA — 06/09/2026,
              `CONEXOES-LIGAR-TUDO-01`. Os 5 rádios são o alvo de
              saída do daemon (`output_target_index`), e até hoje o `checked`
@@ -3160,13 +3194,19 @@
           <div class="gc-item gc-p1" data-controle="p1">
             <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor" style="color:#ae335a"></i>
             <div class="gc-cabeca">
+              <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
+                     value="P1" placeholder="P1" maxlength="24" spellcheck="false"
+                     aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
               <label class="gc-abre" for="gc-p1" data-gesto="alvo"
                      title="Deixa só este controle aberto; os outros fecham. A fita do topo passa a apontar para ele.">
-              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Sony <span class="pt">•</span> Player 1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</span>
+              <span class="gc-nome" data-campo="nome" data-hef-alvo="html" title="A borda é a cor lida deste aparelho.">Cosmic Red <span class="pt">•</span> USB</span>
               <span class="gc-resumo">
-                <span title="A borda é a cor lida deste aparelho.">Vê como <b>DualSense</b></span>
-                <span data-campo="mic-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="O microfone deste controle chega <b>pelo USB</b>, pela placa de áudio do próprio aparelho. Pelo USB ele não custa turno de rádio nenhum.">Microfone <b data-campo="mic-existe">Ligado</b>, <span data-campo="mic-caminho" data-hef-alvo="html">pelo USB <span class="pt">•</span> Placa do controle</span></span>
-                <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">100%</b></span>
+                <span class="gc-est" data-campo="est-mic" data-hef-alvo="html"><span class="est ok">Mic <i class="certo">✓</i></span></span>
+                <span class="gc-est" data-campo="est-som" data-hef-alvo="html"><span class="est ok">Som <i class="certo">✓</i></span></span>
+                <span class="gc-est" data-campo="est-modo" data-hef-alvo="html"><span class="est">Modo de conexão <b>Pelo Hefesto</b></span></span>
+                <span class="gc-est" data-campo="est-visto" data-hef-alvo="html"><span class="est">Visto como <b>DualSense</b></span></span>
+                <span class="gc-est" data-campo="est-conexao" data-hef-alvo="html"><span class="est ok">Conexão estável <i class="certo">✓</i></span></span>
+                <span class="gc-est" data-campo="est-bateria" data-hef-alvo="html"><span class="est">Bateria <b>100%</b></span></span>
               </span>
               </label>
               <label class="gc-seta abre" for="gc-p1" data-gesto="alvo"
@@ -3465,42 +3505,26 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-              <span class="gc-bloco">
-                <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
-
-  <rect x="11" y="4" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <path d="M7,17 Q7,25 16,25 Q25,25 25,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="11" y1="30" x2="21" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg> Microfone e botões
-                  <span class="ajuda">?<span class="dica">Liga o microfone deste controle. Desligado, nenhum programa o ouve — nem o jogo, nem a chamada. Por onde ele chega quem decide é o USB ou o BT; a linha ao lado diz qual.<br><br>O botão físico do microfone faz o mesmo que o desta tela: liga o microfone <b>e</b> o canal dele. O que ele cala vale para o computador todo, não só para este controle.</span></span></span>
-                <select class="pronto" title="Liga o microfone deste controle. Desligado, nenhum programa o ouve." data-gesto="mic-existe" data-campo="mic-existe" data-hef-alvo="valor"><option selected>Ligado</option><option>Desligado</option></select>
-                <span class="leitura" data-campo="mic-escopo" title="O que o botão físico do microfone cala. É um ajuste do computador, um só para todos os controles.">O computador inteiro</span>
-              </span>
-              <span class="gc-bloco barra">
-                <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
-
-  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
-        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg> Limite da vibração
-                  <span class="ajuda">?<span class="dica" data-campo="teto-explica" data-hef-alvo="html">O teto da vibração <b>deste controle</b>. O global manda e o do controle sobrepõe: hoje este controle <b>segue o global</b>, e o motor recebe <b>100% da força</b>. Quem muda o global é o <b>Perfil de Bateria</b>, na aba <b>Sistema</b> — ele decide o que custa bateria, e esta aba mede o rádio. O degrau vem de <code>RUMBLE_POLICY_MULT</code>, que é o dono dele — a vibração é o único recurso com teto real hoje.</span></span></span>
-                <select class="pronto" title="O limite deste controle. Ele vence o limite geral — o ? ao lado diz qual está valendo." data-gesto="teto-da-vibracao" data-campo="teto-da-vibracao" data-hef-alvo="valor"><option selected>Segue o global</option><option>Sem teto</option><option>30% da força</option></select>
-              </span>
+              <button class="btn eco" data-gesto="economia-do-controle" data-campo="economia-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Liga a economia de bateria só neste controle."><i class="eco-luz" data-campo="economia" data-hef-alvo="atributo" data-hef-atributo="data-economia"></i>Modo Economia de Bateria</button>
               <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava on" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Só funciona com o controle no BT. Este está no USB, onde a barra de luz não depende de reconexão."><span data-campo="luz-texto">A luz não acende</span></button></span>
             </div>
           </div>
           <div class="gc-item gc-p2" data-controle="p2">
             <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"></i>
             <div class="gc-cabeca">
+              <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
+                     value="P2" placeholder="P2" maxlength="24" spellcheck="false"
+                     aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
               <label class="gc-abre" for="gc-p2" data-gesto="alvo"
                      title="Deixa só este controle aberto; os outros fecham. A fita do topo passa a apontar para ele.">
-              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Sony <span class="pt">•</span> Player 2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</span>
+              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Starlight Blue <span class="pt">•</span> BT</span>
               <span class="gc-resumo">
-                <span>Vê como <b>Xbox 360</b></span>
-                <span data-campo="mic-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="O microfone deste controle chega <b>pelo BT</b>, pela ponte do Hefesto — o DualSense não tem canal de áudio Bluetooth próprio. Com o microfone ligado, um controle no BT troca 260,4 relatórios de entrada por segundo por 170,5 mais 106,2 quadros de áudio: 276,7 das 1600 fatias daquele adaptador. Quanto já está em uso está na seção "Conexões".">Microfone <b data-campo="mic-existe">Ligado</b>, <span data-campo="mic-caminho" data-hef-alvo="html">pelo BT <span class="pt">•</span> Pela ponte</span></span>
-                <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">64%</b></span>
+                <span class="gc-est" data-campo="est-mic" data-hef-alvo="html"><span class="est ok">Mic <i class="certo">✓</i></span></span>
+                <span class="gc-est" data-campo="est-som" data-hef-alvo="html"><span class="est ok">Som <i class="certo">✓</i></span></span>
+                <span class="gc-est" data-campo="est-modo" data-hef-alvo="html"><span class="est">Modo de conexão <b>Pelo Hefesto</b></span></span>
+                <span class="gc-est" data-campo="est-visto" data-hef-alvo="html"><span class="est">Visto como <b>Xbox 360</b></span></span>
+                <span class="gc-est" data-campo="est-conexao" data-hef-alvo="html"><span class="est ok">Conexão estável <i class="certo">✓</i></span></span>
+                <span class="gc-est" data-campo="est-bateria" data-hef-alvo="html"><span class="est">Bateria <b>64%</b></span></span>
               </span>
               </label>
               <label class="gc-seta abre" for="gc-p2" data-gesto="alvo"
@@ -3799,42 +3823,26 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-              <span class="gc-bloco">
-                <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
-
-  <rect x="11" y="4" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <path d="M7,17 Q7,25 16,25 Q25,25 25,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="11" y1="30" x2="21" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg> Microfone e botões
-                  <span class="ajuda">?<span class="dica">Liga o microfone deste controle. Desligado, nenhum programa o ouve — nem o jogo, nem a chamada. Por onde ele chega quem decide é o USB ou o BT; a linha ao lado diz qual.<br><br>O botão físico do microfone faz o mesmo que o desta tela: liga o microfone <b>e</b> o canal dele. O que ele cala vale para o computador todo, não só para este controle.</span></span></span>
-                <select class="pronto" title="Liga o microfone deste controle. Desligado, nenhum programa o ouve." data-gesto="mic-existe" data-campo="mic-existe" data-hef-alvo="valor"><option selected>Ligado</option><option>Desligado</option></select>
-                <span class="leitura" data-campo="mic-escopo" title="O que o botão físico do microfone cala. É um ajuste do computador, um só para todos os controles.">O computador inteiro</span>
-              </span>
-              <span class="gc-bloco barra">
-                <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
-
-  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
-        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg> Limite da vibração
-                  <span class="ajuda">?<span class="dica" data-campo="teto-explica" data-hef-alvo="html">O teto da vibração <b>deste controle</b>. O global manda e o do controle sobrepõe: hoje este controle <b>segue o global</b>, e o motor recebe <b>100% da força</b>. Quem muda o global é o <b>Perfil de Bateria</b>, na aba <b>Sistema</b> — ele decide o que custa bateria, e esta aba mede o rádio. O degrau vem de <code>RUMBLE_POLICY_MULT</code>, que é o dono dele — a vibração é o único recurso com teto real hoje.</span></span></span>
-                <select class="pronto" title="O limite deste controle. Ele vence o limite geral — o ? ao lado diz qual está valendo." data-gesto="teto-da-vibracao" data-campo="teto-da-vibracao" data-hef-alvo="valor"><option selected>Segue o global</option><option>Sem teto</option><option>30% da força</option></select>
-              </span>
+              <button class="btn eco" data-gesto="economia-do-controle" data-campo="economia-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Liga a economia de bateria só neste controle."><i class="eco-luz" data-campo="economia" data-hef-alvo="atributo" data-hef-atributo="data-economia"></i>Modo Economia de Bateria</button>
               <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Desliga este controle do BT. Aperte PS para ele voltar, e a barra de luz volta a obedecer."><span data-campo="luz-texto">A luz não acende</span></button></span>
             </div>
           </div>
           <div class="gc-item gc-p3 off" data-controle="p3" data-conectado="nao">
             <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"></i>
             <div class="gc-cabeca">
+              <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
+                     value="" placeholder="P3" maxlength="24" spellcheck="false"
+                     aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
               <label class="gc-abre" for="gc-p3" data-gesto="alvo"
                      title="Nenhum controle neste lugar.">
-              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Player 3 <span class="pt">•</span> Desconectado</span>
+              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Desconectado</span>
               <span class="gc-resumo">
-                <span>Vê como <b>—</b></span>
-                <span data-campo="mic-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="—">Microfone <b data-campo="mic-existe">—</b>, <span data-campo="mic-caminho" data-hef-alvo="html">—</span></span>
-                <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">—</b></span>
+                <span class="gc-est" data-campo="est-mic" data-hef-alvo="html">—</span>
+                <span class="gc-est" data-campo="est-som" data-hef-alvo="html">—</span>
+                <span class="gc-est" data-campo="est-modo" data-hef-alvo="html">—</span>
+                <span class="gc-est" data-campo="est-visto" data-hef-alvo="html">—</span>
+                <span class="gc-est" data-campo="est-conexao" data-hef-alvo="html">—</span>
+                <span class="gc-est" data-campo="est-bateria" data-hef-alvo="html">—</span>
               </span>
               </label>
               <label class="gc-seta abre" for="gc-p3" data-gesto="alvo"
@@ -4133,42 +4141,26 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-              <span class="gc-bloco">
-                <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
-
-  <rect x="11" y="4" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <path d="M7,17 Q7,25 16,25 Q25,25 25,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="11" y1="30" x2="21" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg> Microfone e botões
-                  <span class="ajuda">?<span class="dica">Liga o microfone deste controle. Desligado, nenhum programa o ouve — nem o jogo, nem a chamada. Por onde ele chega quem decide é o USB ou o BT; a linha ao lado diz qual.<br><br>O botão físico do microfone faz o mesmo que o desta tela: liga o microfone <b>e</b> o canal dele. O que ele cala vale para o computador todo, não só para este controle.</span></span></span>
-                <select class="pronto" title="Liga o microfone deste controle. Desligado, nenhum programa o ouve." data-gesto="mic-existe" data-campo="mic-existe" data-hef-alvo="valor"><option selected>Ligado</option><option>Desligado</option></select>
-                <span class="leitura" data-campo="mic-escopo" title="O que o botão físico do microfone cala. É um ajuste do computador, um só para todos os controles.">—</span>
-              </span>
-              <span class="gc-bloco barra">
-                <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
-
-  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
-        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg> Limite da vibração
-                  <span class="ajuda">?<span class="dica" data-campo="teto-explica" data-hef-alvo="html">—</span></span></span>
-                <select class="pronto" title="O limite deste controle. Ele vence o limite geral — o ? ao lado diz qual está valendo." data-gesto="teto-da-vibracao" data-campo="teto-da-vibracao" data-hef-alvo="valor"><option selected>Segue o global</option><option>Sem teto</option><option>30% da força</option></select>
-              </span>
+              <button class="btn eco" data-gesto="economia-do-controle" data-campo="economia-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Liga a economia de bateria só neste controle."><i class="eco-luz" data-campo="economia" data-hef-alvo="atributo" data-hef-atributo="data-economia"></i>Modo Economia de Bateria</button>
               <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="—"><span data-campo="luz-texto">—</span></button></span>
             </div>
           </div>
           <div class="gc-item gc-p4 off" data-controle="p4" data-conectado="nao">
             <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"></i>
             <div class="gc-cabeca">
+              <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
+                     value="" placeholder="P4" maxlength="24" spellcheck="false"
+                     aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
               <label class="gc-abre" for="gc-p4" data-gesto="alvo"
                      title="Nenhum controle neste lugar.">
-              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Player 4 <span class="pt">•</span> Desconectado</span>
+              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Desconectado</span>
               <span class="gc-resumo">
-                <span>Vê como <b>—</b></span>
-                <span data-campo="mic-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="—">Microfone <b data-campo="mic-existe">—</b>, <span data-campo="mic-caminho" data-hef-alvo="html">—</span></span>
-                <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">—</b></span>
+                <span class="gc-est" data-campo="est-mic" data-hef-alvo="html">—</span>
+                <span class="gc-est" data-campo="est-som" data-hef-alvo="html">—</span>
+                <span class="gc-est" data-campo="est-modo" data-hef-alvo="html">—</span>
+                <span class="gc-est" data-campo="est-visto" data-hef-alvo="html">—</span>
+                <span class="gc-est" data-campo="est-conexao" data-hef-alvo="html">—</span>
+                <span class="gc-est" data-campo="est-bateria" data-hef-alvo="html">—</span>
               </span>
               </label>
               <label class="gc-seta abre" for="gc-p4" data-gesto="alvo"
@@ -4467,29 +4459,7 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
-              <span class="gc-bloco">
-                <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
-
-  <rect x="11" y="4" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <path d="M7,17 Q7,25 16,25 Q25,25 25,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="11" y1="30" x2="21" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg> Microfone e botões
-                  <span class="ajuda">?<span class="dica">Liga o microfone deste controle. Desligado, nenhum programa o ouve — nem o jogo, nem a chamada. Por onde ele chega quem decide é o USB ou o BT; a linha ao lado diz qual.<br><br>O botão físico do microfone faz o mesmo que o desta tela: liga o microfone <b>e</b> o canal dele. O que ele cala vale para o computador todo, não só para este controle.</span></span></span>
-                <select class="pronto" title="Liga o microfone deste controle. Desligado, nenhum programa o ouve." data-gesto="mic-existe" data-campo="mic-existe" data-hef-alvo="valor"><option selected>Ligado</option><option>Desligado</option></select>
-                <span class="leitura" data-campo="mic-escopo" title="O que o botão físico do microfone cala. É um ajuste do computador, um só para todos os controles.">—</span>
-              </span>
-              <span class="gc-bloco barra">
-                <span class="rot"><svg class="gl" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
-
-  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
-        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg> Limite da vibração
-                  <span class="ajuda">?<span class="dica" data-campo="teto-explica" data-hef-alvo="html">—</span></span></span>
-                <select class="pronto" title="O limite deste controle. Ele vence o limite geral — o ? ao lado diz qual está valendo." data-gesto="teto-da-vibracao" data-campo="teto-da-vibracao" data-hef-alvo="valor"><option selected>Segue o global</option><option>Sem teto</option><option>30% da força</option></select>
-              </span>
+              <button class="btn eco" data-gesto="economia-do-controle" data-campo="economia-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Liga a economia de bateria só neste controle."><i class="eco-luz" data-campo="economia" data-hef-alvo="atributo" data-hef-atributo="data-economia"></i>Modo Economia de Bateria</button>
               <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="—"><span data-campo="luz-texto">—</span></button></span>
             </div>
           </div>
@@ -4557,15 +4527,10 @@
         <button hidden id="rd-reordenar" data-gesto="adaptador-reordenar" value=""></button>
         <div class="moldes" data-campo="radio-moldes" data-hef-alvo="html"><template class="pergunta-molde" data-alvo="P1" data-destino="L1" data-sim="Mover">Mover <b>Vitória ● Cosmic Red</b> para a <b>Entrada 4</b>?<br>Só ele sai daqui. Depois, segure <b>PS + Create</b> até a luz piscar.</template><template class="pergunta-molde" data-alvo="P1" data-destino="L2" data-sim="Mover">Mover <b>Vitória ● Cosmic Red</b> para a <b>Entrada 4.4</b>?<br>Só ele sai daqui. Depois, segure <b>PS + Create</b> até a luz piscar.</template><template class="pergunta-molde" data-alvo="P2" data-destino="L1" data-sim="Mover">Mover <b>Pedro ● Starlight Blue</b> para a <b>Entrada 4</b>?<br>Só ele sai daqui. Depois, segure <b>PS + Create</b> até a luz piscar.</template><template class="pergunta-molde" data-alvo="P2" data-destino="L2" data-sim="Mover">Mover <b>Pedro ● Starlight Blue</b> para a <b>Entrada 4.4</b>?<br>Só ele sai daqui. Depois, segure <b>PS + Create</b> até a luz piscar.</template><template class="pergunta-molde" data-alvo="P3" data-destino="L1" data-sim="Mover">Mover <b>Ana ● Nova Pink</b> para a <b>Entrada 4</b>?<br>Só ele sai daqui. Depois, segure <b>PS + Create</b> até a luz piscar.</template><template class="pergunta-molde" data-alvo="P3" data-destino="L2" data-sim="Mover">Mover <b>Ana ● Nova Pink</b> para a <b>Entrada 4.4</b>?<br>Só ele sai daqui. Depois, segure <b>PS + Create</b> até a luz piscar.</template><template class="pergunta-molde" data-alvo="P4" data-destino="L1" data-sim="Mover">Mover <b>Rafa ● Galactic Purple</b> para a <b>Entrada 4</b>?<br>Só ele sai daqui. Depois, segure <b>PS + Create</b> até a luz piscar.</template><template class="pergunta-molde" data-alvo="P4" data-destino="L2" data-sim="Mover">Mover <b>Rafa ● Galactic Purple</b> para a <b>Entrada 4.4</b>?<br>Só ele sai daqui. Depois, segure <b>PS + Create</b> até a luz piscar.</template><template class="pergunta-molde" data-alvo="S1" data-destino="L1" data-sim="Mover">Mover a <b>Caixa de som</b> para a <b>Entrada 4</b>?<br>Só ela sai daqui. Depois, ponha a caixa de som para parear.</template><template class="pergunta-molde" data-alvo="S1" data-destino="L3" data-sim="Mover">Mover a <b>Caixa de som</b> para a <b>Entrada 4.1.4</b>?<br>Só ela sai daqui. Depois, ponha a caixa de som para parear.</template><template class="pergunta-molde" data-alvo="F1" data-destino="L1" data-sim="Mover">Mover o <b>Fone</b> para a <b>Entrada 4</b>?<br>Só ele sai daqui. Depois, ponha o fone para parear.</template><template class="pergunta-molde" data-alvo="F1" data-destino="L3" data-sim="Mover">Mover o <b>Fone</b> para a <b>Entrada 4.1.4</b>?<br>Só ele sai daqui. Depois, ponha o fone para parear.</template><template class="painel-molde" data-painel="quem-vem" data-alvo="L1" data-titulo="Quem vem para a Entrada 4?"><div class="escolha"><button class="btn" data-aparelho="P1" data-destino="L1"><svg class="i" aria-hidden="true"><use href="#rd-ds"/></svg>Vitória ● Cosmic Red</button><button class="btn" data-aparelho="P2" data-destino="L1"><svg class="i" aria-hidden="true"><use href="#rd-ds"/></svg>Pedro ● Starlight Blue</button><button class="btn" data-aparelho="P3" data-destino="L1"><svg class="i" aria-hidden="true"><use href="#rd-ds"/></svg>Ana ● Nova Pink</button><button class="btn" data-aparelho="P4" data-destino="L1"><svg class="i" aria-hidden="true"><use href="#rd-ds"/></svg>Rafa ● Galactic Purple</button><button class="btn" data-aparelho="S1" data-destino="L1"><svg class="i" aria-hidden="true"><use href="#rd-caixa"/></svg>Caixa de som</button><button class="btn" data-aparelho="F1" data-destino="L1"><svg class="i" aria-hidden="true"><use href="#rd-fone"/></svg>Fone</button></div></template><template class="painel-molde" data-painel="quem-vem" data-alvo="L2" data-titulo="Quem vem para a Entrada 4.4?"><div class="escolha"><button class="btn" data-aparelho="P1" data-destino="L2"><svg class="i" aria-hidden="true"><use href="#rd-ds"/></svg>Vitória ● Cosmic Red</button><button class="btn" data-aparelho="P2" data-destino="L2"><svg class="i" aria-hidden="true"><use href="#rd-ds"/></svg>Pedro ● Starlight Blue</button><button class="btn" data-aparelho="P3" data-destino="L2"><svg class="i" aria-hidden="true"><use href="#rd-ds"/></svg>Ana ● Nova Pink</button><button class="btn" data-aparelho="P4" data-destino="L2"><svg class="i" aria-hidden="true"><use href="#rd-ds"/></svg>Rafa ● Galactic Purple</button></div></template><template class="painel-molde" data-painel="sino" data-alvo="L3" data-titulo="Entrada 4.1.4"><div class="historico"><div class="queda"><svg class="i" aria-hidden="true"><use href="#rd-aviso"/></svg><span>Som além do limite</span><span class="quando">18:47</span></div><div class="queda"><svg class="i" aria-hidden="true"><use href="#rd-aviso"/></svg><span>Som além do limite</span><span class="quando">17:12</span></div><div class="queda"><svg class="i" aria-hidden="true"><use href="#rd-aviso"/></svg><span>Som além do limite</span><span class="quando">16:47</span></div><div class="queda-desde">Quedas contadas desde 23/09</div></div></template><template class="painel-molde" data-painel="quem-vem" data-alvo="L3" data-titulo="Quem vem para a Entrada 4.1.4?"><div class="escolha"><button class="btn" data-aparelho="S1" data-destino="L3"><svg class="i" aria-hidden="true"><use href="#rd-caixa"/></svg>Caixa de som</button><button class="btn" data-aparelho="F1" data-destino="L3"><svg class="i" aria-hidden="true"><use href="#rd-fone"/></svg>Fone</button></div></template><template class="painel-molde" data-painel="para-onde" data-alvo="P1" data-titulo="Para onde vai Vitória ● Cosmic Red?"><div class="escolha"><button class="btn" data-aparelho="P1" data-destino="L1"><svg class="i" aria-hidden="true"><use href="#rd-placa"/></svg>Entrada 4 · com som 0 de 2</button><button class="btn" data-aparelho="P1" data-destino="L2"><svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg>Entrada 4.4 · com som 0 de 2</button></div></template><template class="painel-molde" data-painel="para-onde" data-alvo="P2" data-titulo="Para onde vai Pedro ● Starlight Blue?"><div class="escolha"><button class="btn" data-aparelho="P2" data-destino="L1"><svg class="i" aria-hidden="true"><use href="#rd-placa"/></svg>Entrada 4 · com som 0 de 2</button><button class="btn" data-aparelho="P2" data-destino="L2"><svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg>Entrada 4.4 · com som 0 de 2</button></div></template><template class="painel-molde" data-painel="para-onde" data-alvo="P3" data-titulo="Para onde vai Ana ● Nova Pink?"><div class="escolha"><button class="btn" data-aparelho="P3" data-destino="L1"><svg class="i" aria-hidden="true"><use href="#rd-placa"/></svg>Entrada 4 · com som 0 de 2</button><button class="btn" data-aparelho="P3" data-destino="L2"><svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg>Entrada 4.4 · com som 0 de 2</button></div></template><template class="painel-molde" data-painel="para-onde" data-alvo="P4" data-titulo="Para onde vai Rafa ● Galactic Purple?"><div class="escolha"><button class="btn" data-aparelho="P4" data-destino="L1"><svg class="i" aria-hidden="true"><use href="#rd-placa"/></svg>Entrada 4 · com som 0 de 2</button><button class="btn" data-aparelho="P4" data-destino="L2"><svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg>Entrada 4.4 · com som 0 de 2</button></div></template><template class="painel-molde" data-painel="para-onde" data-alvo="S1" data-titulo="Para onde vai Caixa de som?"><div class="escolha"><button class="btn" data-aparelho="S1" data-destino="L1"><svg class="i" aria-hidden="true"><use href="#rd-placa"/></svg>Entrada 4 · com som 0 de 2</button><button class="btn" data-aparelho="S1" data-destino="L3"><svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg>Entrada 4.1.4 · com som 4 de 2</button></div></template><template class="painel-molde" data-painel="para-onde" data-alvo="F1" data-titulo="Para onde vai Fone?"><div class="escolha"><button class="btn" data-aparelho="F1" data-destino="L1"><svg class="i" aria-hidden="true"><use href="#rd-placa"/></svg>Entrada 4 · com som 0 de 2</button><button class="btn" data-aparelho="F1" data-destino="L3"><svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg>Entrada 4.1.4 · com som 4 de 2</button></div></template><template class="painel-molde" data-painel="o-que-e" data-alvo="E1" data-titulo="O que é este rádio?"><div class="escolha"><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E1" value="Wi-Fi"><svg class="i" aria-hidden="true"><use href="#rd-wifi"/></svg>Wi-Fi</button><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E1" value="Teclado"><svg class="i" aria-hidden="true"><use href="#rd-teclado"/></svg>Teclado</button><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E1" value="Mouse"><svg class="i" aria-hidden="true"><use href="#rd-mouse"/></svg>Mouse</button><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E1" value="Webcam"><svg class="i" aria-hidden="true"><use href="#rd-webcam"/></svg>Webcam</button><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E1" value="Caixa de som"><svg class="i" aria-hidden="true"><use href="#rd-caixa"/></svg>Caixa de som</button><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E1" value="Outro"><svg class="i" aria-hidden="true"><use href="#rd-radio"/></svg>Outro</button><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E1" value="Não sei"><svg class="i" aria-hidden="true"><use href="#rd-radio"/></svg>Não sei</button></div></template><template class="painel-molde" data-painel="o-que-e" data-alvo="E2" data-titulo="O que é este rádio?"><div class="escolha"><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E2" value="Wi-Fi"><svg class="i" aria-hidden="true"><use href="#rd-wifi"/></svg>Wi-Fi</button><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E2" value="Teclado"><svg class="i" aria-hidden="true"><use href="#rd-teclado"/></svg>Teclado</button><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E2" value="Mouse"><svg class="i" aria-hidden="true"><use href="#rd-mouse"/></svg>Mouse</button><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E2" value="Webcam"><svg class="i" aria-hidden="true"><use href="#rd-webcam"/></svg>Webcam</button><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E2" value="Caixa de som"><svg class="i" aria-hidden="true"><use href="#rd-caixa"/></svg>Caixa de som</button><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E2" value="Outro"><svg class="i" aria-hidden="true"><use href="#rd-radio"/></svg>Outro</button><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E2" value="Não sei"><svg class="i" aria-hidden="true"><use href="#rd-radio"/></svg>Não sei</button></div></template><template class="painel-molde" data-painel="o-que-e" data-alvo="E3" data-titulo="O que é este rádio?"><div class="escolha"><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E3" value="Wi-Fi"><svg class="i" aria-hidden="true"><use href="#rd-wifi"/></svg>Wi-Fi</button><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E3" value="Teclado"><svg class="i" aria-hidden="true"><use href="#rd-teclado"/></svg>Teclado</button><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E3" value="Mouse"><svg class="i" aria-hidden="true"><use href="#rd-mouse"/></svg>Mouse</button><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E3" value="Webcam"><svg class="i" aria-hidden="true"><use href="#rd-webcam"/></svg>Webcam</button><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E3" value="Caixa de som"><svg class="i" aria-hidden="true"><use href="#rd-caixa"/></svg>Caixa de som</button><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E3" value="Outro"><svg class="i" aria-hidden="true"><use href="#rd-radio"/></svg>Outro</button><button class="btn" data-gesto="vizinho-o-que-e" data-alvo="E3" value="Não sei"><svg class="i" aria-hidden="true"><use href="#rd-radio"/></svg>Não sei</button></div></template><template class="painel-molde" data-painel="conectar" data-alvo="" data-titulo="Procurando" data-pulso="1"><div class="conectar"><div class="escolha-lugar" role="group" aria-label="Em qual adaptador conectar"><button class="op" aria-pressed="true" title="Com som: 0 de 2" data-gesto="escolher-adaptador" data-alvo="L1">Entrada 4</button><button class="op" aria-pressed="false" title="Com som: 0 de 2" data-gesto="escolher-adaptador" data-alvo="L2">Entrada 4.4</button><button class="op" aria-pressed="false" title="Com som: 4 de 2" data-gesto="escolher-adaptador" data-alvo="L3">Entrada 4.1.4</button></div><div class="achados"><div class="achado"><svg class="i ds cheio" aria-hidden="true"><use href="#rd-ds"/></svg><span class="nome">DualSense</span><span class="forca" title="Sinal: mais perto de zero, mais perto">-52 dBm</span><button class="btn" data-gesto="conectar-aparelho" data-alvo="D1">Conectar</button></div><div class="achado"><svg class="i ico" aria-hidden="true"><use href="#rd-radio"/></svg><span class="nome">Xiaomi Scale S400</span><span class="forca" title="Sinal: mais perto de zero, mais perto">-78 dBm</span><button class="btn" data-gesto="parear-aparelho" data-alvo="D2">Parear</button></div><div class="achado"><svg class="i ico" aria-hidden="true"><use href="#rd-radio"/></svg><span class="nome">Xiaomi Band 9</span><span class="forca" title="Sinal: mais perto de zero, mais perto">-81 dBm</span><button class="btn" data-gesto="parear-aparelho" data-alvo="D3">Parear</button></div></div></div></template><template class="balao-molde" data-controle="P4" data-destino="L1"><div class="balao" data-destino="L1"><svg class="i" aria-hidden="true"><use href="#rd-lampada"/></svg><svg class="i ds" aria-hidden="true" style="color:#74588e"><use href="#rd-ds"/></svg><span><b>Rafa ● Galactic Purple</b> funciona melhor na <b>Entrada 4</b></span><button class="ok" data-gesto="aceitar-sugestao" data-alvo="P4">Mover</button></div></template></div>
 
-        <div class="entradas">
-          <a class="btn" href="#mapear-entradas" title="Mapear Entradas — as entradas do gabinete numeradas por face">
-            <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg> Mapear Entradas</a>
-          <a class="btn" href="#mapear-entrada-a-entrada" title="Mapear Entrada a Entrada — um toque por aparelho: você pluga, ele aprende">
-            <svg class="i" aria-hidden="true"><use href="#rd-uma-a-uma"/></svg> Mapear Entrada a Entrada</a>
-          <button class="btn" data-gesto="examinar-portas" title="Examinar Entradas — refaz o exame das entradas, energia e rádio, e repinta o Check-up">
-            <svg class="i" aria-hidden="true"><use href="#rd-reexaminar"/></svg> Examinar Entradas</button>
-          <a class="mapa so-icone" href="mapa-das-portas.html" title="O mapa das entradas — abre no navegador" aria-label="O mapa das entradas — abre no navegador">
-            <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg></a>
+        <!-- OS BOTÕES DAS ENTRADAS SUBIRAM PARA O CHECK-UP — 25/09/2026. Ficam
+             aqui só as duas peças escondidas da cerimônia antiga, que o roteiro
+             desta seção ainda lê (`#rd-comecar` e `entrada-tela`). -->
+        <div class="entradas" hidden>
           <button hidden id="rd-comecar" data-gesto="entrada-comecar" data-alvo=""></button>
           <i hidden data-campo="entrada-tela" data-hef-alvo="atributo" data-hef-atributo="data-tela"></i>
         </div>
@@ -5230,9 +5195,55 @@
     </div>
   </div>
 </div>
+<div class="tela-nova" id="mapear-portas">
+  <div class="tn-cx">
+    <div class="tn-topo">
+      <span class="tn-tit">Mapear Entradas</span>
+      <span class="ajuda">?<span class="dica">Use o mesmo DualSense em todas: ligue o cabo numa entrada, espere o Hefesto mostrar o que mediu dela, dê um <b>nome</b> e o <b>lugar</b>, e salve. Depois passe o cabo para a próxima. O nome e o lugar aparecem no Check-up e em <b>Rádio e Adaptadores</b>.</span></span>
+      <a class="tn-x" href="#" title="Fechar">×</a>
+    </div>
+    <div class="tn-corpo mp" id="mp-forma">
+      <p class="mp-diz" data-campo="mapear-diz">Ligue o DualSense pelo cabo numa entrada do computador.</p>
+      <div class="mp-porta" data-campo="mapear-porta" data-hef-alvo="html"><i class="nada"></i></div>
+      <div class="mp-campos">
+        <label>Nome da entrada <input type="text" data-linha="nome" maxlength="32" placeholder="Frente, a de cima"></label>
+        <label>Lugar <select data-linha="lugar"><option value="">Escolha o lugar</option><option>Frente do gabinete</option><option>Atrás do gabinete</option><option>Topo do gabinete</option><option>Lateral do gabinete</option><option>Num hub ou extensão</option><option>No monitor</option><option>Outro lugar</option></select></label>
+      </div>
+      <p class="mp-conta" data-campo="mapear-conta">Nenhuma entrada salva ainda.</p>
+    </div>
+    <div class="tn-rod">
+      <button class="btn principal" data-gesto="mapear-gravar" data-hef-forma="mp-forma">Salvar esta entrada</button>
+      <a class="btn" href="#">Terminar</a>
+      <button hidden id="mp-comecar" data-gesto="mapear-comecar"></button>
+      <button hidden id="mp-parar" data-gesto="mapear-parar"></button>
+    </div>
+  </div>
+</div>
+<script>
+  // A ÂNCORA ABRE, E O FLUXO COMEÇA E PARA COM ELA: o dono do mapa só olha as
+  // portas enquanto a tela está aberta.
+  (function(){
+    var aberto = false;
+    function seguir(){
+      var agora = location.hash === '#mapear-portas';
+      if(agora === aberto) return;
+      aberto = agora;
+      var b = document.getElementById(agora ? 'mp-comecar' : 'mp-parar');
+      if(b) b.click();
+    }
+    window.addEventListener('hashchange', seguir);
+    seguir();
+  })();
+</script>
 
 <!-- ================= LEGENDA DO MOCKUP ================= -->
 <div class="nota">
+  <h2>O Check-up absorveu a Gestão de Controles (25/09)</h2>
+  <ul>
+    <li><b>Uma seção só</b>: o exame em cima, as ferramentas no meio (o <b>Mapear Entradas</b> num botão só, que abre o fluxo porta a porta, o exame, o Atualizar e os dois mapas) e uma linha por controle embaixo.</li>
+    <li><b>A linha diz o estado de agora</b>: Mic, Som, Modo de conexão, Visto como, Conexão e Bateria, com o ✓ de «tudo certo». «Microfone e botões» e «Limite da vibração» saíram: são das abas Controles e Vibração.</li>
+    <li><b>«P N» é o nome do dono</b>: escreva o nome de quem joga; apagado, volta a «P N». Aberta, a linha tem o botão <b>Modo Economia de Bateria</b> daquele controle.</li>
+  </ul>
   <h2>«Rádio e Adaptadores» é o desenho que você aprovou em 23/09 — e o que ficou diferente</h2>
   <ul>
     <li><b>A seção inteira é o <code>mapa-do-radio.html</code></b>: a folha, os ícones e esta cena de exemplo são lidos dele. No produto quem pinta é o Hefesto, com os Hz medidos, as pontes «N de 2» e o sino de cada adaptador.</li>
