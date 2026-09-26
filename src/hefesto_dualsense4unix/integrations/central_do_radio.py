@@ -595,6 +595,13 @@ def _o_nome_que_vale(
     Só a mudança num objeto conhecido é gesto dela: o objeto que aparece (uma
     chave nova, o adaptador que volta à porta com o nome de antes) não fala
     por ela, e diante de um nome guardado ele RECEBE — não dá.
+
+    «Ela apagou» só vale no objeto que AINDA TEM A CHAVE (conferência da
+    O-RADIO-CONECTA-ONDE-ELA-MANDA-02, 26/09/2026): o X da TELA tira a chave
+    por fora da central, e o objeto SEM chave que o BlueZ cria no mesmo caminho
+    antes da volta seguinte (o controle que bate na porta de novo, a busca de
+    outro programa, o «Conectar» que não pareou) nasce de fábrica — e era lido
+    como ela apagando, o que tirava o nome dela do disco e de todo adaptador.
     """
     conhecidos = [o for o in objetos if o.caminho in vistos_antes]
     renomeados = [o for o in conhecidos
@@ -603,7 +610,7 @@ def _o_nome_que_vale(
         renomeados.sort(key=lambda o: o.conectado is not True)
         return dados[renomeados[0].caminho], False
     if guardado and any(vistos_antes[o.caminho] == guardado and not dados[o.caminho]
-                        for o in conhecidos):
+                        and o.pareado is True for o in conhecidos):
         return "", True
     if not guardado and not conhecidos:
         com_nome = sorted((o for o in objetos if dados[o.caminho]),
@@ -2055,8 +2062,9 @@ class CentralDoRadio:
           computador): ele é guardado. Entre dois que mudaram juntos, vale o
           conectado;
         * **ela apagou o nome** — o MESMO objeto que tinha o nome guardado
-          voltou ao de fábrica: o guardado sai, o objeto que ainda o tinha volta
-          ao de fábrica também, e a tela volta ao «Player N»;
+          voltou ao de fábrica, com a chave ainda nele: o guardado sai, o
+          objeto que ainda o tinha volta ao de fábrica também, e a tela volta
+          ao «Player N»;
         * **o objeto é novo** (um ``Pair`` feito fora da central, uma chave
           nova, o adaptador que volta à porta com um nome velho) ou perdeu o
           nome: o guardado volta a ele. É o «reaplicado em toda conexão»; o

@@ -486,6 +486,171 @@ def test_o_fio_da_faxina_cuida_do_nome(diario: Path, casa: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# A conferência da O-RADIO-CONECTA-ONDE-ELA-MANDA-02 (26/09/2026)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("adaptador", ADAPTADORES)
+def test_o_objeto_sem_chave_no_mesmo_caminho_nao_e_ela_apagando(
+    diario: Path, casa: Path, adaptador: str,
+) -> None:
+    """O DEFEITO QUE A CONFERÊNCIA ACHOU. O vermelho se chama «André», com
+    chave em dois adaptadores. Ela o esquece com o X da TELA num deles — o X
+    é da tela, e não passa pela central —, e antes da volta seguinte o BlueZ
+    cria um objeto SEM chave no mesmo caminho: uma busca de outro programa o
+    acha enquanto ela segura PS + Create (ou o «Conectar» que não pareou deixa
+    o achado da janela). Ele nasce de fábrica. Isso não é ela apagando o nome:
+    o disco continua dizendo «André», e o outro adaptador também.
+
+    Antes da cura, a volta lia o objeto novo como o de antes «voltando ao de
+    fábrica», apagava o nome do ``maquina.json`` e ainda devolvia o de fábrica
+    ao objeto do outro adaptador — o E3 dela ao contrário.
+
+    MORDIDA: tire o ``o.pareado is True`` do «ela apagou» em
+    ``_o_nome_que_vale`` — as três posições reprovam.
+    """
+    outro = next(a for a in ADAPTADORES if a != adaptador)
+    mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
+    mundo.pareado(adaptador, VERMELHO, nome="André")
+    mundo.pareado(outro, VERMELHO, host=False, nome="André")
+    central, dono = _central_da_casa(mundo, relogio)
+    try:
+        central.cuidar_dos_nomes()
+        central.cuidar_dos_nomes()
+        assert _guardado(casa, VERMELHO) == "André"
+
+        mundo.esquecer_na_ponte(adaptador, VERMELHO)  # o X da tela
+        mundo.desligar(VERMELHO)
+        mundo.mesa[rm.HCIS[adaptador]][bd.ADAPTADOR]["Discovering"] = True
+        mundo.segurar_ps_create(VERMELHO)
+        novo = mundo.objeto(adaptador, VERMELHO)
+        assert novo is not None and novo["Paired"] is False
+        assert novo["Alias"] == FABRICA
+
+        central.cuidar_dos_nomes()
+        assert _guardado(casa, VERMELHO) == "André", "o achado sem chave apagou o nome dela"
+        assert mundo.objeto(outro, VERMELHO)["Alias"] == "André"
+    finally:
+        central.fechar()
+        dono.fechar()
+
+
+class _DiscoQueRecusa:
+    """O ``maquina.json`` de verdade (:class:`cr.NomesNaMaquina`), que recusa
+    as próximas ``recusar`` gravações — o disco cheio, a versão estranha."""
+
+    def __init__(self) -> None:
+        self.real = cr.NomesNaMaquina()
+        self.recusar = 0
+
+    def ler(self) -> Any:
+        return self.real.ler()
+
+    def gravar(self, aparelho: str, nome: str | None) -> bool:
+        if self.recusar:
+            self.recusar -= 1
+            return False
+        return self.real.gravar(aparelho, nome)
+
+
+@pytest.mark.parametrize("adaptador", ADAPTADORES)
+def test_a_gravacao_recusada_nao_desfaz_o_nome_que_ela_deu(
+    diario: Path, casa: Path, adaptador: str,
+) -> None:
+    """O vermelho se chama «André». Ela o renomeia para «Bia» (por fora do
+    produto, que vale igual), e o disco recusa a primeira gravação. A volta
+    não pode ler o «Bia» como um nome velho: na volta seguinte ele é gravado,
+    e o «André» nunca volta ao controle.
+
+    MORDIDA: tire de ``cuidar_dos_nomes`` o ``if not gravou`` que guarda a
+    lembrança de ANTES — a volta seguinte vê «Bia» como sabido, o guardado
+    continua «André», e ela o escreve por cima do nome que ela acabou de dar.
+    """
+    mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
+    mundo.pareado(adaptador, VERMELHO, nome="André")
+    disco = _DiscoQueRecusa()
+    dono = bd.DonoVivo(mundo)
+    assert dono.ligar()
+    central = cr.CentralDoRadio(
+        dono=dono, onde_esta=mundo.onde_esta, movimento=mundo.hz,
+        esquecer_na_ponte=mundo.esquecer_na_ponte, nomes=disco, relogio=relogio,
+        dormir=relogio.dormir, sysfs={"listar": lambda _p: [], "raiz": "/nao/existe"})
+    try:
+        central.cuidar_dos_nomes()
+        central.cuidar_dos_nomes()
+        assert _guardado(casa, VERMELHO) == "André"
+
+        no = rm.no_de(adaptador, VERMELHO)
+        mundo.escrever(no, bd.APARELHO, "Alias", "s", "Bia", espera=1.0)
+        disco.recusar = 1
+        assert central.cuidar_dos_nomes() == ()
+        assert _guardado(casa, VERMELHO) == "André"
+        assert mundo.objeto(adaptador, VERMELHO)["Alias"] == "Bia"
+
+        central.cuidar_dos_nomes()
+        central.cuidar_dos_nomes()
+        assert _guardado(casa, VERMELHO) == "Bia", "o nome dela não chegou ao disco"
+        assert mundo.objeto(adaptador, VERMELHO)["Alias"] == "Bia", "o nome velho voltou"
+    finally:
+        central.fechar()
+        dono.fechar()
+
+
+def test_o_endereco_no_lugar_do_nome_nao_e_nome_dela(diario: Path, casa: Path) -> None:
+    """Sem ``Name`` (o aparelho ainda não disse como se chama), o BlueZ põe o
+    ENDEREÇO no ``Alias`` (``AA-BB-CC-…``). Isso não é um nome que ela deu: não
+    vai ao ``maquina.json``, e não é propagado a outro adaptador.
+
+    MORDIDA: tire de ``_nome_dado`` a comparação com o endereço — o endereço
+    vira «o nome dela» no disco e no outro objeto.
+    """
+    mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
+    mundo.pareado(SALA, VERMELHO)
+    mundo.pareado(QUARTO, VERMELHO, host=False)
+    objeto = mundo.objeto(SALA, VERMELHO)
+    del objeto["Name"]
+    objeto["Alias"] = VERMELHO.upper().replace(":", "-")
+    central, dono = _central_da_casa(mundo, relogio)
+    try:
+        central.cuidar_dos_nomes()
+        central.cuidar_dos_nomes()
+        assert _guardado(casa, VERMELHO) is None
+        assert mundo.objeto(QUARTO, VERMELHO)["Alias"] == FABRICA
+        assert [e for e in mundo.escritas if e[2] == "Alias"] == []
+    finally:
+        central.fechar()
+        dono.fechar()
+
+
+def test_com_o_dono_vivo_a_volta_dos_nomes_nao_espera_a_faxina(diario: Path, casa: Path) -> None:
+    """A faxina anda a cada 30 s; o nome, com o dono lendo da memória, a cada
+    :data:`cr.INTERVALO_DOS_NOMES_S`. É essa a demora entre ela renomear e o
+    nome ir ao disco — e a janela em que esquecer a última chave o perderia.
+
+    MORDIDA: faça o fio da faxina cuidar do nome só no passo dela — o nome
+    não chega ao disco antes dos 30 s.
+    """
+    mundo = rm.RadioDeMentira()
+    mundo.pareado(VARANDA, VERMELHO, nome="André")
+    dono = bd.DonoVivo(mundo)
+    assert dono.ligar()
+    central = cr.CentralDoRadio(
+        dono=dono, onde_esta=mundo.onde_esta, movimento=mundo.hz,
+        esquecer_na_ponte=mundo.esquecer_na_ponte,
+        sysfs={"listar": lambda _p: [], "raiz": "/nao/existe"})
+    try:
+        assert central.ligar()
+        central.comecar_a_faxina()
+        fim = time.monotonic() + cr.INTERVALO_DOS_NOMES_S + 3.0
+        while _guardado(casa, VERMELHO) is None and time.monotonic() < fim:
+            time.sleep(0.05)
+        assert _guardado(casa, VERMELHO) == "André"
+    finally:
+        central.fechar(espera=2.0)
+        dono.fechar()
+
+
+# ---------------------------------------------------------------------------
 # o campo, no dono dele (utils/maquina.py)
 # ---------------------------------------------------------------------------
 
