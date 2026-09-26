@@ -166,23 +166,29 @@ def _rodar_no_webkit(folhas: dict[str, str]) -> dict:
     return dict(json.loads(saiu[0]))
 
 
+#: A TABELA DIGITADA DE ANTES, CONGELADA AQUI — só as duas linhas que a mordida
+#: usa. Até 25/09/2026 ela morava no produto (`cor_do_plastico.TONS`, 21 hexas
+#: aproximados, e `NOMES_DE_FABRICA`, com `Spider-Man 2` sem o `Marvel's`), e a
+#: mordida a pedia de lá. A O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01 fez o
+#: produto LER o mapa dela, e a regra velha deixou de existir para ser pedida:
+#: sem a cópia, a mordida mediria a cura contra ela mesma e passaria calada.
+_TONS_DE_ANTES = {"nova pink": "#ee7ea6"}
+
+
 def _folha_velha(mesa: list[dict[str, str]]) -> str:
-    """A folha pela REGRA ANTIGA — nome de tela → `NOMES_DE_FABRICA` → `TONS`.
+    """A folha pela REGRA ANTIGA — nome de tela → a tabela digitada → hexa.
 
     É a cura ARRANCADA, escrita aqui para que a mordida rode em vez de morar num
     comentário. Ela repete a antiga de propósito: o que se mede é a TELA que
     aquela regra produzia.
     """
-    from hefesto_dualsense4unix.integrations.cor_do_plastico import (
-        cor_do_nome,
-        tom_para_a_borda,
-    )
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import tom_para_a_borda
     from pacotes import a02_controles as a02
 
     regras = [a02.PISO_DA_FOLHA]
     for c in mesa:
-        achada = cor_do_nome(c.get("nome") or "")
-        cor = tom_para_a_borda(achada.tom if achada else "") or a02.BORDA_SEM_COR
+        velho = _TONS_DE_ANTES.get((c.get("nome") or "").strip().casefold(), "")
+        cor = tom_para_a_borda(velho) or a02.BORDA_SEM_COR
         regras.append(f'.ctl[data-controle="{c["pref"]}"],'
                       f'.fita .chip[for="c-{c["pref"]}"]{{--plastico:{cor}}}')
     return "\n".join(regras)

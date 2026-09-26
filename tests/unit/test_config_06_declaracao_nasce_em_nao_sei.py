@@ -229,27 +229,42 @@ class TestAListaDeCor:
 
 
 class TestATabelaDeCores:
-    def test_as_duas_copias_da_tabela_concordam(self) -> None:
-        """A do produto e a do ensaio, confrontadas — não copiadas às cegas.
+    def test_o_ensaio_e_o_produto_leem_o_mesmo_mapa(self) -> None:
+        """Nenhum dos dois guarda cópia digitada — os dois leem o CSV dela.
 
-        O ensaio guarda a tabela por um motivo bom (rodar num checkout sem o
-        pacote instalado), e o preço de uma segunda cópia é este confronto. Esta
-        casa já pagou três vezes por medir contra a régua errada.
+        FATO SUBSTITUÍDO (25/09/2026, O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01):
+        aqui se confrontavam DUAS cópias digitadas de 21 códigos, a do produto e
+        a do ensaio, e as duas concordavam entre si enquanto o mapa dela tinha
+        28. O confronto certo é com o dono: o ensaio não pode ter um dicionário
+        literal de cores, e o produto tem de conhecer os códigos do mapa.
         """
         fonte = (RAIZ / "scripts" / "ensaios" / "cor_do_plastico.py").read_text(
             encoding="utf-8"
         )
         arvore = ast.parse(fonte)
-        do_ensaio = next(
-            ast.literal_eval(no.value)
+        literais = [
+            no
             for no in ast.walk(arvore)
             if isinstance(no, ast.Assign)
             and getattr(no.targets[0], "id", "") == "CORES"
-        )
-        assert do_ensaio == NOMES_DE_FABRICA
+            and isinstance(no.value, ast.Dict)
+        ]
+        assert not literais, "o ensaio voltou a digitar a tabela de cores"
+        assert "cores-do-dualsense.csv" in fonte
+        mapa = {
+            linha.split(",", 1)[0].strip()
+            for linha in (RAIZ / "docs/data/cores-do-dualsense.csv")
+            .read_text(encoding="utf-8")
+            .splitlines()
+            if linha.strip() and not linha.startswith(("#", "codigo_da_cor"))
+        }
+        assert set(NOMES_DE_FABRICA) == mapa
 
-    def test_todo_codigo_tem_tom(self) -> None:
-        assert set(TONS) == set(NOMES_DE_FABRICA)
+    def test_so_tem_tom_quem_tem_casca_amostrada(self) -> None:
+        """Casca ``SEM-HEX`` (camuflado, iridescente, arte) não vira hexa inventado."""
+        assert set(TONS) < set(NOMES_DE_FABRICA)
+        assert "06" not in TONS and "ZC" not in TONS
+        assert TONS["05"] == "#7eb8d4", "o casca_esq do Starlight Blue no mapa dela"
 
     def test_codigo_fora_da_tabela_devolve_nada(self) -> None:
         assert cor_do_codigo("ZZ") is None
@@ -306,7 +321,7 @@ class TestOPretoNaoSome:
         )
 
     def test_toda_cor_da_tabela_se_le_sobre_o_card(self) -> None:
-        """As vinte e uma, contra o fundo do card, com o piso da borda."""
+        """Toda cor com hexa no mapa, contra o fundo do card, com o piso da borda."""
         from hefesto_dualsense4unix.integrations.cor_do_plastico import (
             FUNDO_DO_CARD,
             RAZAO_DA_BORDA,
