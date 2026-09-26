@@ -43,6 +43,7 @@ E AS DA CONFERÊNCIA (26/09/2026), cada uma sem régua que a pegasse:
 
 from __future__ import annotations
 
+import gc
 import json
 import re
 import threading
@@ -502,6 +503,24 @@ def _clicar(seletor: str) -> str:
 
 
 def _na_pagina(passos: list[str]) -> tuple[list[Any], list[dict[str, Any]]]:
+    """A página publicada num WebKit fora da tela (``_na_pagina_sem_recolher``),
+    e o lixo do WebKit recolhido aqui, no fio do GTK.
+
+    Deixado para o coletor, ele era recolhido no fio de outro teste (medido no
+    CI de 26/09: ``Garbage-collecting`` no ``sensor_hub._loop_manutencao``), e o
+    GTK abortava o processo inteiro com ``Fatal Python error: Aborted``.
+    """
+    try:
+        return _na_pagina_sem_recolher(passos)
+    finally:
+        gc.collect()
+        from gi.repository import Gtk
+
+        while Gtk.events_pending():
+            Gtk.main_iteration_do(False)
+
+
+def _na_pagina_sem_recolher(passos: list[str]) -> tuple[list[Any], list[dict[str, Any]]]:
     """A página PUBLICADA num WebKit fora da tela, com o BOOTSTRAP do piloto.
 
     Devolve o que cada passo respondeu (JSON já lido) e as mensagens que a
