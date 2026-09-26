@@ -96,9 +96,15 @@ class JanelaDeMentira:
         return "● unidade ativa"
 
 
+#: O DIÁRIO DE MENTIRA — desde 25/09/2026 o painel termina com o registro do
+#: serviço (`a09_sistema._diario`), e a régua não pode ler o `journalctl` DELA.
+DIARIO_DE_MENTIRA = "set 25 21:00:00 daemon pronto"
+
+
 @pytest.fixture
-def a09():
+def a09(monkeypatch):
     a09_sistema._JANELA_ANTIGA[:] = [JanelaDeMentira()]
+    monkeypatch.setattr(a09_sistema, "_diario", lambda: DIARIO_DE_MENTIRA)
     yield a09_sistema
     a09_sistema._JANELA_ANTIGA.clear()
 
@@ -262,9 +268,12 @@ def test_a_mesa_atravessa_a_faixa_lenta_ate_o_painel(a09) -> None:
     painel = a09._repouso_do_painel(estado, MESA_DELA)
     assert a09.ROTULO_DA_IDENTIDADE in painel
     assert "Galactic Purple" in painel, painel
-    # E ele é o FIM do painel, que é o pedaço que a tela mostra sem rolar
-    # (`data-hef-rolar="fim"`).
-    assert painel.splitlines()[-1].strip().startswith("P2 · Galactic Purple"), painel
+    # ELE DEIXOU DE SER O FIM DO PAINEL em 25/09/2026, por ordem dela: o fim é
+    # o registro vivo do serviço (A-09-SISTEMA-EM-TRES-SECOES-01), e a
+    # identidade fica logo acima dele — no «Copiar» e a uma rolada.
+    linhas = [ln.strip() for ln in painel.splitlines()]
+    assert any(ln.startswith("P2 · Galactic Purple") for ln in linhas), painel
+    assert linhas[-1] == DIARIO_DE_MENTIRA, painel
 
 
 def test_a_faixa_lenta_aceita_a_mesa_e_a_repassa(a09, monkeypatch) -> None:

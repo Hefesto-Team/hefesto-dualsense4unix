@@ -97,51 +97,42 @@ def _enderecos_da_carga(carga: dict) -> list[str]:
 # --------------------------------------------------------------------------
 # 1. o endereço existe na página que o produto renderiza
 # --------------------------------------------------------------------------
-@pytest.mark.parametrize(("gesto", "resposta"), [("ver-detalhes", None)])
-def test_o_endereco_que_o_gesto_devolve_existe_na_pagina(pac, ctx, gesto, resposta):
-    """Devolver endereço que a página não tem é pintar ZERO, calado.
-
-    E o silêncio é o problema inteiro: o gesto roda, o piloto imprime
-    "aplicado", e a tela continua com o texto de exemplo do mockup — que parece
-    um registro técnico de verdade. Ninguém que clicou tem como saber.
-    """
+# O «Ver detalhes» SAIU EM 25/09/2026 (A-09-SISTEMA-EM-TRES-SECOES-01): o
+# registro passou a estar SEMPRE no painel, relido pela faixa lenta. As três
+# réguas abaixo mediam o gesto; agora medem o dono do diário, `_diario()`, e o
+# endereço onde ele pousa — o que elas protegiam continua o mesmo.
+def test_o_endereco_do_registro_existe_na_pagina(pac):
+    """Escrever num endereço que a página não tem é pintar ZERO, calado."""
     from hefesto_dualsense4unix.interface import onde
-
-    fn = pac.gesto_da_pagina("09-sistema.html", gesto)
-    assert fn is not None, f"09-sistema.html:{gesto} não tem dono"
-
-    carga = fn(ctx, {"uniq": UNIQ}, PonteDeMentira(resposta=resposta))
-    assert isinstance(carga, dict) and carga, (
-        f"{gesto} devolveu {carga!r}. Um botão que promete MOSTRAR e devolve "
-        f"nada é o botão que responde calado.")
+    from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
     html = (onde.PUBLICADO / "09-sistema.html").read_text(encoding="utf-8")
-    for endereco in _enderecos_da_carga(carga):
-        assert f'data-campo="{endereco}"' in html, (
-            f"{gesto} devolve o endereço {endereco!r} e a página publicada não "
-            f"o tem. A pintura escreveria ZERO valores sem uma linha de erro — "
-            f"marque-o no gerador `interface/aba09.py` e publique.")
+    assert f'data-campo="{a09.REGISTRO}"' in html, (
+        f"a página publicada não tem `{a09.REGISTRO}` — o registro seria escrito "
+        "em lugar nenhum. Marque-o no gerador `interface/aba09.py` e publique.")
 
 
 # --------------------------------------------------------------------------
 # 2. o conteúdo é o do produto, e não uma frase nossa
 # --------------------------------------------------------------------------
-def test_ver_detalhes_leva_o_journal_para_o_painel(pac, ctx, monkeypatch):
+def test_o_diario_leva_o_journal_para_o_painel(pac, monkeypatch):
     """As linhas do painel são as do `journalctl`, e a unit tem dono.
 
     A UNIT É O PONTO: ela foi digitada uma vez neste pacote, com o nome
     `-dev` que a purga de 01/09 aposentou, e a tela passou a afirmar
-    `not-found` sobre uma unit `enabled`. Aqui a régua cobra que o comando
-    pergunte pela unit que `utils/identidade` diz ser a desta casa.
+    `not-found` sobre uma unit `enabled`. E o endereço de um controle sai com
+    a máscara da casa: o painel existe para ser copiado num relato.
     """
     import subprocess
 
+    from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
     from hefesto_dualsense4unix.utils import identidade
 
     visto: dict[str, list[str]] = {}
 
     class Saida:
-        stdout = "set 01 15:03:23 daemon pronto\nset 01 15:03:24 uinput ok"
+        stdout = ("set 01 15:03:23 daemon pronto\n"
+                  "set 01 15:03:24 controle uniq=aa:bb:cc:12:34:ff ok")
         stderr = ""
 
     def falso_run(argv, **_):
@@ -149,31 +140,28 @@ def test_ver_detalhes_leva_o_journal_para_o_painel(pac, ctx, monkeypatch):
         return Saida()
 
     monkeypatch.setattr(subprocess, "run", falso_run)
-    fn = pac.gesto_da_pagina("09-sistema.html", "ver-detalhes")
-    texto = fn(ctx, {}, PonteDeMentira())["mesa"]["registro-texto"]
+    texto = a09._diario()
 
-    assert "uinput ok" in texto, f"o journal não chegou ao painel: {texto!r}"
+    assert "daemon pronto" in texto, f"o journal não chegou ao painel: {texto!r}"
+    assert "aa:bb:cc:00:00:ff" in texto and "12:34" not in texto, (
+        f"o endereço do controle saiu sem a máscara da casa: {texto!r}")
     assert identidade.atual().unit_daemon in visto["argv"], (
-        f"perguntou por {visto['argv']!r}. A unit tem dono em `utils/identidade` "
-        f"— digitá-la é como a aba passou a mentir sobre o autostart.")
-    assert "80" in visto["argv"], "o botão promete as últimas 80 linhas"
+        f"perguntou por {visto['argv']!r}. A unit tem dono em `utils/identidade`.")
+    assert str(a09.LINHAS_DO_DIARIO) in visto["argv"]
 
 
-def test_ver_detalhes_repassa_o_motivo_do_journalctl(pac, ctx, monkeypatch):
-    """Sem linhas, a tela mostra o que o `journalctl` disse — não uma frase nossa.
-
-    Inventar "sem linhas" aqui apagaria a única pista de quem clicou: unit que
-    não existe, falta de permissão e journal vazio dizem coisas diferentes.
-    """
+def test_o_diario_repassa_o_motivo_do_journalctl(pac, monkeypatch):
+    """Sem linhas, a tela mostra o que o `journalctl` disse — não uma frase nossa."""
     import subprocess
+
+    from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
     class Saida:
         stdout = ""
         stderr = "Failed to add match: Invalid argument"
 
     monkeypatch.setattr(subprocess, "run", lambda *a, **k: Saida())
-    fn = pac.gesto_da_pagina("09-sistema.html", "ver-detalhes")
-    texto = fn(ctx, {}, PonteDeMentira())["mesa"]["registro-texto"]
+    texto = a09._diario()
 
     assert "Failed to add match" in texto, (
         f"a queixa do journalctl foi trocada por uma frase nossa: {texto!r}")
@@ -201,7 +189,7 @@ def test_o_piloto_manda_a_resposta_para_a_pagina():
             self.scripts.append(script)
 
     piloto = PilotoDeMentira()
-    piloto._deu_certo("09-sistema.html", "ver-detalhes",
+    piloto._deu_certo("09-sistema.html", "parar-ou-retomar",
                       {"mesa": {"registro-texto": "duas linhas\ne outra"}})
     assert piloto.scripts, (
         "o gesto devolveu carga e o piloto não mandou nada para a página. É o "
@@ -210,7 +198,7 @@ def test_o_piloto_manda_a_resposta_para_a_pagina():
     assert "registro-texto" in piloto.scripts[0], piloto.scripts[0]
 
     piloto.scripts.clear()
-    piloto._deu_certo("09-sistema.html", "retomar", None)
+    piloto._deu_certo("09-sistema.html", "atualizar", None)
     assert piloto.scripts == [], (
         "um gesto que não devolve nada mandou JS mesmo assim — pintaria zero e "
         "poluiria o console de quem depura.")

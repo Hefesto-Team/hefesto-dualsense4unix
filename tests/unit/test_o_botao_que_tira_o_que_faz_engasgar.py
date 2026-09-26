@@ -40,7 +40,10 @@ RAIZ = Path(__file__).resolve().parents[2]
 #: 05/09/2026 — *"o procurar sobreposição de novo deveria ser Corrigir
 #: Sobreposição do Vulkan, não?"* — com o verbo trocado pelo que a medição
 #: sustenta (ver `test_o_rotulo_nao_promete_cura_de_engasgo`).
-ROTULO = "Tirar a sobreposição Vulkan"
+ROTULO = "Corrigir Vulkan"
+#: 25/09/2026 — A-09-SISTEMA-EM-TRES-SECOES-01: ela renomeou o botão para
+#: «Corrigir Vulkan» e o fez LIGÁVEL (a pílula do Modo Freestyle), no lugar do
+#: «Tirar a sobreposição Vulkan»; o gesto passou a ser `corrigir-vulkan`.
 
 
 def _install_gi_stubs() -> None:
@@ -113,7 +116,7 @@ _SLO_MODNAME = "hefesto_dualsense4unix.integrations.steam_launch_options"
 #: O ENDEREÇO DO BOTÃO, e ele é o mesmo dos dois lados: a página o carrega em
 #: `data-gesto=`, o dono o declara em `@gesto(...)`. Escrito uma vez só.
 PAGINA = "09-sistema.html"
-GESTO = "procurar-camadas"
+GESTO = "corrigir-vulkan"
 
 #: O DONO DE HOJE. Até 06/09/2026 quem atendia o clique era
 #: `app/app.py`, o mapa de handlers da janela GTK — e a `GTK-3`
