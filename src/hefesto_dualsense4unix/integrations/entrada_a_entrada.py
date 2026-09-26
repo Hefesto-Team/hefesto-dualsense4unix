@@ -1831,7 +1831,9 @@ class MapearAsPortas:
         o ``/sys`` lento (o kernel enumerando o controle que ela acabou de
         mudar de porta), a tela pode ainda mostrar a porta de antes quando ela
         salva. O gesto lê de novo e anda o fluxo antes de escolher — o nome vai
-        para onde o DualSense está.
+        para onde o DualSense está. E o «Terminar» que chegar durante essa
+        leitura não apaga o Salvar que ela clicou antes: vale a porta da vez do
+        clique, e nada se perde.
 
         Levanta ``ValueError`` quando o gesto chega errado (nada a gravar, um
         lugar que o produto não conhece) e
@@ -1841,7 +1843,7 @@ class MapearAsPortas:
         if nome is None and lugar is None:
             raise ValueError("nada a gravar: nem nome nem lugar")
         with self._trava:
-            sessao = self._sessao
+            sessao, da_vez = self._sessao, self._da_vez
         censo, lidas, adaptadores = self._ler_o_sys()
         with self._trava:
             maquina = self._carregar()
@@ -1850,20 +1852,20 @@ class MapearAsPortas:
             aberto = self._sessao == sessao and self._fase != PARADO
             if chave is None and aberto:
                 self._andar(censo, lidas)
+            if aberto:
+                da_vez = self._da_vez
             mapa = ler_o_mapa(
                 maquina=maquina,
                 censo=censo,
                 entradas=lidas,
                 adaptadores=(),
                 storm={},
-                incluir=(self._da_vez,) if self._da_vez else (),
+                incluir=(da_vez,) if da_vez else (),
             )
             if chave is None:
-                if not self._da_vez:
+                if not da_vez:
                     raise RuntimeError("não há porta da vez: encaixe o controle numa porta")
-                porta = next(
-                    (p for p in mapa.portas if set(p.nos) & set(self._da_vez)), None
-                )
+                porta = next((p for p in mapa.portas if set(p.nos) & set(da_vez)), None)
             else:
                 porta = mapa.porta(chave)
             if porta is None:
