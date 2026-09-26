@@ -481,3 +481,72 @@ def test_o_edge_fisico_nasce_escondido_do_jogo_pela_topologia() -> None:
     assert any("0005:054C:0DF2.*" in ln and 'TAG-="uaccess"' in ln for ln in linhas)
     assert any("0003:054C:0DF2.*" in ln and 'DEVPATH!="/devices/virtual/*"' in ln
                and 'TAG-="uaccess"' in ln for ln in linhas)
+
+
+# ---------------------------------------------------------------------------
+# 7 · O RESTO NÃO DEPENDE DO MODELO — medido, e o que dependia foi curado
+# ---------------------------------------------------------------------------
+def test_nenhuma_funcao_do_controle_depende_da_cor() -> None:
+    """Número, barra, microfone, som, vibração e giroscópio não leem a cor.
+
+    Medido em 25/09/2026: fora da tela, quem importa ``cor_do_plastico`` é só o
+    daemon que PUBLICA a identidade (``daemon/ipc_handlers.py``). Um controle
+    de código desconhecido joga igual a um conhecido porque nada que faz o
+    controle funcionar pergunta a edição. A régua reprova quem passar a
+    perguntar — o dia em que uma função depender do mapa das cores, o controle
+    que ele não conhece para de funcionar.
+    """
+    raiz = RAIZ / "src" / "hefesto_dualsense4unix"
+
+    def importa_a_cor(arq: pathlib.Path) -> bool:
+        # PELO IMPORT, e não pela palavra: um comentário que cita o módulo não
+        # é dependência, e uma régua que lesse texto reprovaria o aviso.
+        for no in ast.walk(ast.parse(arq.read_text(encoding="utf-8"))):
+            if isinstance(no, ast.ImportFrom) and (
+                (no.module or "").endswith("cor_do_plastico")
+                or any(a.name == "cor_do_plastico" for a in no.names)
+            ):
+                return True
+            if isinstance(no, ast.Import) and any(
+                a.name.endswith("cor_do_plastico") for a in no.names
+            ):
+                return True
+        return False
+
+    quem = sorted(
+        str(arq.relative_to(raiz))
+        for pasta in ("daemon", "core", "broker", "integrations", "profiles", "cli")
+        for arq in (raiz / pasta).rglob("*.py")
+        if importa_a_cor(arq)
+    )
+    assert quem == ["daemon/ipc_handlers.py"], quem
+
+
+#: Um DualSense, um Edge e um receptor qualquer, como o BlueZ os entrega.
+_NO_BLUEZ = {
+    "/org/bluez/hci0/dev_AA_BB_CC_00_00_01": "usb:v054Cp0CE6d0100",
+    "/org/bluez/hci0/dev_AA_BB_CC_00_00_02": "usb:v054Cp0DF2d0100",
+    "/org/bluez/hci0/dev_AA_BB_CC_00_00_09": "usb:v046DpC52Bd0100",
+}
+
+
+class _BlueZ:
+    """O ``busctl`` de mentira: sabe a árvore e as propriedades, e não chama nada."""
+
+    def __call__(self, argumentos: Any) -> str | None:
+        args = list(argumentos)
+        if args[0] == "tree":
+            return "\n".join(_NO_BLUEZ) + "\n"
+        if args[0] == "get-property" and args[-1] == "Connected":
+            return "b true"
+        if args[0] == "get-property" and args[-1] == "Modalias":
+            return f's "{_NO_BLUEZ[args[2]]}"'
+        return None
+
+
+def test_o_reconectar_chama_de_volta_o_edge_pelo_radio() -> None:
+    """O «Reconectar controles» achava só o ``0CE6``: o Edge ficava de fora."""
+    from hefesto_dualsense4unix.integrations import gesto_de_reconexao as radio
+
+    achados = [mac for mac, _ in radio.dualsenses_do_radio(executar=_BlueZ())]
+    assert achados == ["aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"], achados
