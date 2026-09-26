@@ -388,7 +388,6 @@ CSS = """
            margin-bottom:5px;height:17px;display:grid;gap:0 20px;align-items:center}
   .sec-rot > span{display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap}
   .sec-rot .ajuda{text-transform:none;letter-spacing:0}
-  .sec-rot .conta{text-transform:none;letter-spacing:0}
   .sr-status3{grid-template-columns:minmax(0,1fr) 1px minmax(0,2fr)}
   .sr-avancadas{grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px
                 minmax(0,1fr) 1px minmax(0,1fr)}
@@ -399,9 +398,12 @@ CSS = """
      sem isto o navegador espreme os rótulos para dar altura ao registro. Quem
      cresce e encolhe é só o `.registro`. */
   .quadro-corpo > *{flex-shrink:0}
-  /* o título da seção 2 — o nome que ela deu, uma linha acima dos quatro rótulos. */
-  .sec-grupo{font-size:12.5px;font-weight:600;color:var(--texto-suave);
-             margin:14px 0 8px;padding-top:10px;border-top:1px solid var(--border-sutil)}
+  /* o título da seção 2 — o nome que ela deu, uma linha acima dos quatro rótulos.
+     A LETRA É A DO «Sistema», e o pedido é dela (25/09/2026, 22h13):
+     *«Configurações Avançadas — Escreve com a mesma cor e tamanho de Sistema»*.
+     Quem pinta é o `.quadro-titulo` do topo, no `<span>` de dentro; aqui fica
+     só o lugar: o vão e o risco de cima. */
+  .sec-grupo{margin:14px 0 8px;padding-top:10px;border-top:1px solid var(--border-sutil)}
   .sec-alta{margin-top:14px;padding-top:10px;border-top:1px solid var(--border-sutil)}
 
   /* AS LINHAS DO STATUS E DO EXAME SÃO A MESMA PEÇA — pedido dela: *«no MESMO
@@ -422,7 +424,6 @@ CSS = """
   .selo.nt{background:var(--comment);color:var(--app-bg)}
   .saude .txt{flex:1;display:flex;align-items:center;gap:7px;min-width:0}
   .saude .txt span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .saude .ajuda .dica{left:auto;right:22px}
   /* A LINHA QUE LEVA A OUTRO LUGAR (a do Bluetooth, para a seção do rádio da
      aba Conexões) é um `<a>` inteiro: a mão vira e a linha acende no hover. */
   a.saude.vai{cursor:pointer}
@@ -520,7 +521,7 @@ def ligavel(rotulo, gesto, campo, ligado, dica):
             f' data-hef-classe="ligada"><span class="p"></span>{rotulo}</button>')
 
 
-def linha(selo, cls, g, txt, dica="", ident="", href="", title=""):
+def linha(selo, cls, g, txt, ident="", href="", title=""):
     """Uma linha do Status ou do exame — a MESMA peça, na marcação do produto.
 
     O produto monta as mesmas linhas em `pacotes/a09_sistema.linha_do_status`
@@ -532,11 +533,9 @@ def linha(selo, cls, g, txt, dica="", ident="", href="", title=""):
     i = f' data-id="{ident}"' if ident else ""
     h = f' href="{href}"' if href else ""
     t = f' title="{title}"' if title else ""
-    ajuda = (f'<span class="ajuda">?<span class="dica">{dica}</span></span>'
-             if dica else "")
     return (f'            <{tag} class="saude{vai}"{i}{h}>'
             f'<span class="selo {cls}"><span class="sg">{g}</span>{selo}</span>'
-            f'<span class="txt"{t}><span>{txt}</span></span>{ajuda}</{tag}>')
+            f'<span class="txt"{t}><span>{txt}</span></span></{tag}>')
 
 
 def item(rotulo, diz, cls="btn", gesto="", em_voo="", extra=""):
@@ -596,21 +595,25 @@ def _botoes_bateria():
 # ambiente de uma máquina COSMIC e o rádio com os controles da mesa que estão
 # nele. As palavras da pílula e as frases são as da camada do produto
 # (`gui/aba_sistema.status_do_*`) — o teste da forma compara as duas.
+#
+# SEM O `?` NA LINHA — pedido dela, 25/09/2026, 22h13: *«remove a tooltip»*,
+# com o risco em cima da coluna dos quatro `?`. A frase de cada um vai para o
+# `title` da linha, como a frase inteira do exame: sem ícone, no passar do mouse.
 _NO_RADIO = len(BT)
 STATUS = [
-    linha("LIGADO", "ok", "✓", "Serviço",
-          "Roda por trás e volta sozinho se travar.", ident="hefesto-estado"),
+    linha("LIGADO", "ok", "✓", "Serviço", ident="hefesto-estado",
+          title="Roda por trás e volta sozinho se travar."),
     linha("LIGADO", "ok", "✓", "Troca de perfil ao abrir o jogo",
-          "O perfil do jogo entra sozinho quando ele abre.",
-          ident="hefesto-troca-de-perfil"),
+          ident="hefesto-troca-de-perfil",
+          title="O perfil do jogo entra sozinho quando ele abre."),
     linha("NOTA", "nt", "i", "Ambiente gráfico: Wayland · COSMIC",
-          "É por ele que o Hefesto vê qual janela está na frente.",
-          ident="hefesto-ambiente"),
+          ident="hefesto-ambiente",
+          title="É por ele que o Hefesto vê qual janela está na frente."),
     linha("OK", "ok", "✓",
           f"Bluetooth: 1 adaptador · {_NO_RADIO} "
           f"{'controle' if _NO_RADIO == 1 else 'controles'}",
-          "Clique para ver os adaptadores na aba Conexões.",
-          ident="status-bluetooth", href="08-conexoes.html#rd-secao"),
+          ident="status-bluetooth", href="08-conexoes.html#rd-secao",
+          title="Clique para ver os adaptadores na aba Conexões."),
 ]
 
 # --- o exame de hoje ------------------------------------------------------------
@@ -645,10 +648,6 @@ MEIO = len(ACHADOS) // 2 + len(ACHADOS) % 2
 D_STATUS = ('<span class="ajuda">?<span class="dica">'
             'Como o Hefesto está agora neste computador. A pílula diz o estado.'
             '</span></span>')
-D_EXAME = ('<span class="ajuda">?<span class="dica">'
-           'O que costuma brigar com os controles neste computador. Passe o mouse '
-           'numa linha para ler a frase inteira.'
-           '</span></span>')
 D_SERVICO = ('<span class="ajuda">?<span class="dica">'
              'Parar aqui não é o mesmo que desligar o Hefesto na aba Jogar: lá ele '
              'só sai do meio do jogo.'
@@ -691,11 +690,13 @@ MIOLO = f'''
       </div>
       <div class="quadro-corpo">
 
-        <!-- ---------- 1. STATUS + O EXAME DE HOJE ---------- -->
+        <!-- ---------- 1. STATUS + O EXAME ---------- -->
+        <!-- O RÓTULO DO EXAME E A CONTAGEM SAÍRAM, E O LUGAR FICA VAZIO — pedido
+             dela, 25/09/2026, 22h13: «remove o exame de hoje e tooltip dele» e
+             «Remove esse 8 linhas deixa o espaço vazio». O `<span>` vazio segura
+             a terceira faixa: nada sobe, e o exame continua onde estava. -->
         <div class="sec-rot sr-status3">
-          <span>Status {D_STATUS}</span><span></span>
-          <span>O exame de hoje {D_EXAME}
-            <span class="conta" data-id="{_id("exame-contagem")}" data-campo="{_id("exame-contagem")}" data-hef-alvo="html">{len(ACHADOS)} linhas <span class="sep">·</span> nenhum aviso</span></span>
+          <span>Status {D_STATUS}</span><span></span><span></span>
         </div>
         <div class="status3">
           <div class="col-lista" data-id="{_id(CAMPO_DO_STATUS)}" data-campo="{_id(CAMPO_DO_STATUS)}" data-hef-alvo="html">
@@ -714,7 +715,7 @@ MIOLO = f'''
         </div>
 
         <!-- ---------- 2. CONFIGURAÇÕES AVANÇADAS ---------- -->
-        <div class="sec-grupo">Configurações Avançadas</div>
+        <div class="sec-grupo"><span class="quadro-titulo">Configurações Avançadas</span></div>
         <div class="sec-rot sr-avancadas">
           <span>Serviço {D_SERVICO}</span><span></span>
           <span>Perfil Global de Bateria {D_BATERIA}</span><span></span>
@@ -751,7 +752,7 @@ MIOLO = f'''
         </div>
         <div class="registro">
           <div class="log" data-id="{_id("registro-texto")}" data-campo="{_id("registro-texto")}" data-hef-rolar="fim">[23:41:02] daemon pronto · {N} controles · {N} gamepads virtuais · controle virtual ok
-[23:41:02] {" · ".join(f'p{c["jogador"]} {c["via"].lower()}' for c in MESA)} · fw 0x0356 nos {N} · cor de fábrica lida ({", ".join(f'p{c["jogador"]}' for c in CONECTADOS)})
+[23:41:02] {" · ".join(f'p{c["jogador"]} {c["via"].lower()}' for c in CONECTADOS)} · fw 0x0356 nos {N} · cor de fábrica lida ({", ".join(f'p{c["jogador"]}' for c in CONECTADOS)})
 [23:41:07] exame: steam input desligado em 2 jogos · proton 9.0-4 fixado em 3
 [23:41:09] perfil "Mortal Kombat" aplicado aos {N} · gatilho L2 escrito, sem leitura de volta
 [23:41:12] rádio: 1 adaptador · {_NO_RADIO} {'controle' if _NO_RADIO == 1 else 'controles'} · sem fila
@@ -772,7 +773,9 @@ LEGENDA = '''<div class="nota">
       pausa deixou de ter linha própria), <b>Troca de perfil</b>, <b>Ambiente gráfico</b> e
       <b>Bluetooth</b>, que leva à seção do rádio da aba Conexões. O exame fica ao lado, em duas
       colunas, e o Bluetooth saiu dele. As frases do exame saem curtas; a inteira fica no
-      <code>title</code>.</li>
+      <code>title</code>. As linhas do Status não têm <code>?</code>: a frase de cada uma fica no
+      <code>title</code>, e o exame não tem rótulo nem contagem — o lugar fica vazio (os ajustes
+      dela das 22h13).</li>
     <li><b>2. Configurações Avançadas</b> — quatro colunas: <b>Serviço</b> (Parar/Retomar num botão
       só, Atualizar, Reiniciar), <b>Perfil Global de Bateria</b> (as três escolhas na vertical),
       <b>Saúde do App</b> (Reaplicar correções automáticas, Aplicar soluções nos lançadores,
@@ -873,7 +876,7 @@ _ROTULOS = {
     "a coluna": re.search(r'<div class="sec-rot sr-avancadas">\s*<span>([^<]*)<',
                           MIOLO).group(1),
     "a linha do Status": re.search(
-        r'data-id="hefesto-estado"[^>]*>.*?<span class="txt"><span>([^<]*)</span>',
+        r'data-id="hefesto-estado"[^>]*>.*?<span class="txt"[^>]*><span>([^<]*)</span>',
         MIOLO, re.S).group(1),
 }
 for _i, _b in enumerate(re.findall(r">([^<>]*)</button>", _ACOES_DO_SERVICO)):
