@@ -107,6 +107,11 @@ class TestNotify:
     def test_sem_jeepney_retorna_false(self, monkeypatch: pytest.MonkeyPatch) -> None:
         for name in ("jeepney", "jeepney.io", "jeepney.io.blocking"):
             monkeypatch.setitem(sys.modules, name, None)  # type: ignore[arg-type]
+        # A-SUITE-NAO-AVISA-NA-TELA-DELA-01: sem o escape, a trava da suíte
+        # devolve False antes do import, e este caso passaria mesmo sem o
+        # `except ImportError` — mediria a trava, e não o jeepney ausente. Com o
+        # jeepney em `None`, nada chega a barramento nenhum.
+        monkeypatch.setenv(desktop_notifications.AVISO_DE_VERDADE_NA_SUITE, "1")
         assert desktop_notifications.notify("titulo", "corpo") is False
 
     def test_caminho_feliz_retorna_true(self, monkeypatch: pytest.MonkeyPatch) -> None:
