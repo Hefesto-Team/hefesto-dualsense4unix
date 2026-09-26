@@ -33,7 +33,9 @@ fábrica. Agora o nome mora no ``maquina.json`` pelo endereço
 5. esquece o guardado quando ela APAGA o nome (o mesmo objeto volta ao de
    fábrica), e não quando o objeto é novo;
 6. o devolve em todo ``Pair`` (o dela: ``_quem_e``) e em toda conexão, em
-   qualquer adaptador (a volta dos nomes, no fio da faxina);
+   qualquer adaptador (a volta dos nomes, no fio da faxina) — e o objeto que
+   APARECE com um nome velho (o adaptador que volta à porta) recebe o dela,
+   não dá;
 7. só de CONTROLE: o nome de um fone continua morando no pareamento dele.
 
 Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
@@ -372,11 +374,11 @@ def test_o_objeto_recriado_no_mesmo_adaptador_nao_e_ela_apagando(
     """O X e o «Conectar» no MESMO adaptador, sem volta dos nomes no meio, e o
     ``Alias`` do ``Pair`` recusado (o ``_dar_o_nome`` não escreve): o objeto
     novo tem o MESMO caminho do velho e nasce de fábrica. Isso não é ela
-    apagando o nome — o movimento esquece o que a volta tinha visto, e a volta
-    seguinte devolve «André».
+    apagando o nome — a central lembra o que o ``Pair`` deixou no objeto, e a
+    volta seguinte devolve «André».
 
-    MORDIDA: tire o ``_esquecer_os_nomes_vistos`` do começo do movimento — a
-    volta lê o objeto recriado como o mesmo, e apaga o nome dela.
+    MORDIDA: tire o ``_lembrar_o_alias`` do ``_parear_e_conferir`` — a volta lê
+    o objeto recriado como o de antes voltando ao de fábrica, e apaga o nome.
     """
     mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
     mundo.pareado(SALA, VERMELHO)
@@ -397,6 +399,64 @@ def test_o_objeto_recriado_no_mesmo_adaptador_nao_e_ela_apagando(
         assert mundo.objeto(SALA, VERMELHO)["Alias"] == "André"
     finally:
         bancada.fechar()
+
+
+def test_o_adaptador_que_volta_com_o_nome_velho_recebe_o_dela(diario: Path, casa: Path) -> None:
+    """A varanda estava fora da porta quando ela renomeou o vermelho de «André»
+    para «Bia» (a tela só alcança o objeto que existe). Ela volta à porta com a
+    chave e o nome de antes: o objeto que APARECE não fala por ela — ele recebe
+    «Bia», e o disco continua dizendo «Bia».
+
+    MORDIDA: conte como renomeado também o objeto que a volta nunca viu (a
+    lista ``renomeados`` de ``_o_nome_que_vale`` sobre todos os objetos) — o
+    nome velho volta ao disco e aos dois objetos.
+    """
+    mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
+    mundo.pareado(SALA, VERMELHO, nome="André")
+    central, dono = _central_da_casa(mundo, relogio)
+    try:
+        central.cuidar_dos_nomes()
+        assert _guardado(casa, VERMELHO) == "André"
+        mundo.escrever(rm.no_de(SALA, VERMELHO), bd.APARELHO, "Alias", "s", "Bia", espera=1.0)
+        central.cuidar_dos_nomes()
+        assert _guardado(casa, VERMELHO) == "Bia"
+
+        mundo.pareado(VARANDA, VERMELHO, host=False, nome="André")
+        dono._fotografar()
+        central.cuidar_dos_nomes()
+        assert _guardado(casa, VERMELHO) == "Bia", "o adaptador que voltou trouxe o nome velho"
+        assert mundo.objeto(VARANDA, VERMELHO)["Alias"] == "Bia"
+        assert mundo.objeto(SALA, VERMELHO)["Alias"] == "Bia"
+    finally:
+        central.fechar()
+        dono.fechar()
+
+
+def test_o_nome_apagado_sai_tambem_do_objeto_que_ficou_com_ele(diario: Path, casa: Path) -> None:
+    """Ela apaga o nome, e a escrita não alcança um dos objetos (o BlueZ recusou
+    ali): o guardado sai, e o objeto que ainda dizia «André» volta ao de
+    fábrica — senão a linha «Desligado» daquele adaptador mostraria o nome que
+    ela apagou.
+
+    MORDIDA: tire o ``novo = ""`` de quem ainda tinha o nome apagado, em
+    ``cuidar_dos_nomes`` — a varanda fica com «André».
+    """
+    mundo, relogio = rm.RadioDeMentira(), rm.Relogio()
+    mundo.pareado(SALA, VERMELHO, nome="André")
+    mundo.pareado(VARANDA, VERMELHO, host=False, nome="André")
+    central, dono = _central_da_casa(mundo, relogio)
+    try:
+        central.cuidar_dos_nomes()
+        assert _guardado(casa, VERMELHO) == "André"
+        mundo.escrever(rm.no_de(SALA, VERMELHO), bd.APARELHO, "Alias", "s", "", espera=1.0)
+        central.cuidar_dos_nomes()
+        assert _guardado(casa, VERMELHO) is None
+        assert mundo.objeto(VARANDA, VERMELHO)["Alias"] == ""
+        central.cuidar_dos_nomes()
+        assert _guardado(casa, VERMELHO) is None, "o nome apagado voltou"
+    finally:
+        central.fechar()
+        dono.fechar()
 
 
 def test_o_fio_da_faxina_cuida_do_nome(diario: Path, casa: Path) -> None:

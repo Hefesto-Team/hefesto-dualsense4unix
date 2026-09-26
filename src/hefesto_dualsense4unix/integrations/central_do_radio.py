@@ -586,20 +586,35 @@ def _o_nome_que_vale(
     dados: Mapping[str, str],
     vistos_antes: Mapping[str, str],
     guardado: str,
-) -> str:
-    """O nome que vale DEPOIS desta volta — ver :meth:`CentralDoRadio.cuidar_dos_nomes`.
+) -> tuple[str, bool]:
+    """``(o nome que vale depois desta volta, ela apagou?)`` — ver
+    :meth:`CentralDoRadio.cuidar_dos_nomes`.
 
     ``dados`` é o nome dela em cada objeto (``""`` = o de fábrica);
-    ``vistos_antes``, o ``Alias`` de cada objeto na volta anterior.
+    ``vistos_antes``, o ``Alias`` de cada objeto CONHECIDO na volta anterior.
+    Só a mudança num objeto conhecido é gesto dela: o objeto que aparece (uma
+    chave nova, o adaptador que volta à porta com o nome de antes) não fala
+    por ela, e diante de um nome guardado ele RECEBE — não dá.
     """
-    mudaram = [o for o in objetos
-               if dados[o.caminho] and vistos_antes.get(o.caminho) != str(o.nome or "").strip()]
-    if mudaram:
-        mudaram.sort(key=lambda o: o.conectado is not True)
-        return dados[mudaram[0].caminho]
-    apagou = bool(guardado) and any(
-        vistos_antes.get(o.caminho) == guardado and not dados[o.caminho] for o in objetos)
-    return "" if apagou else guardado
+    conhecidos = [o for o in objetos if o.caminho in vistos_antes]
+    renomeados = [o for o in conhecidos
+                  if dados[o.caminho] and vistos_antes[o.caminho] != _alias_de(o)]
+    if renomeados:
+        renomeados.sort(key=lambda o: o.conectado is not True)
+        return dados[renomeados[0].caminho], False
+    if guardado and any(vistos_antes[o.caminho] == guardado and not dados[o.caminho]
+                        for o in conhecidos):
+        return "", True
+    if not guardado and not conhecidos:
+        com_nome = sorted((o for o in objetos if dados[o.caminho]),
+                          key=lambda o: o.conectado is not True)
+        if com_nome:
+            return dados[com_nome[0].caminho], False
+    return guardado, False
+
+
+def _alias_de(objeto: bluez_dbus.AparelhoDoBluez) -> str:
+    return str(objeto.nome or "").strip()
 
 
 # ---------------------------------------------------------------------------
@@ -1074,7 +1089,6 @@ class CentralDoRadio:
                 # o gesto da tela leria o movimento de ontem, já acabado.
                 self._guardar(Movimento(alvo, destino or "", ESPERANDO, PASSO_PREPARANDO,
                                         comecou=self._relogio()))
-                self._esquecer_os_nomes_vistos()
                 if _ao_pegar_a_trava is not None:
                     _ao_pegar_a_trava()
                 try:
@@ -1117,7 +1131,6 @@ class CentralDoRadio:
                     return self._recusa_por_outro(CONECTANDO, destino)
                 self._guardar(Movimento(CONECTANDO, destino or "", ESPERANDO, PASSO_PREPARANDO,
                                         comecou=self._relogio()))
-                self._esquecer_os_nomes_vistos()
                 if _ao_pegar_a_trava is not None:
                     _ao_pegar_a_trava()
                 try:
@@ -1363,6 +1376,7 @@ class CentralDoRadio:
                 return self._acabou(movimento, NAO_CHEGOU, MOTIVO_NAO_PAREOU)
             movimento = self._guardar(replace(movimento, pareou_no_destino=True))
             self._dar_o_nome(dono, movimento)
+            self._lembrar_o_alias(dono, movimento.aparelho, movimento.destino)
             self._conectar(dono, movimento.aparelho, movimento.destino)
         finally:
             janela.fechar()
@@ -1639,6 +1653,7 @@ class CentralDoRadio:
         no = dono.caminho_do_aparelho(aparelho, adaptador=adaptador)
         if no is not None:
             dono.remover_aparelho(no, quem=QUEM)
+            self._lembrar_o_alias(dono, aparelho, adaptador, caminho=no, sumiu=True)
         fez, motivo = self._esquecer_na_ponte(adaptador, aparelho)
         if not fez:
             logger.warning(
@@ -1993,11 +2008,32 @@ class CentralDoRadio:
 
     # -- o nome dela: mora pelo endereço, e não depende da chave ---------------
 
-    def _esquecer_os_nomes_vistos(self) -> None:
-        """Um movimento começou: ele tira e recria objetos, e o que a volta dos
-        nomes viu antes dele não diz mais nada sobre «ela apagou o nome»."""
+    def _lembrar_o_alias(
+        self,
+        dono: bluez_dbus.LeitorDoBluez,
+        aparelho: str,
+        adaptador: str,
+        *,
+        caminho: str | None = None,
+        sumiu: bool = False,
+    ) -> None:
+        """A central tirou ou recriou o objeto: a volta dos nomes fica sabendo.
+
+        Um ``Pair`` recria o objeto no MESMO caminho de um que o X tirou, e com
+        o nome de fábrica se o ``Alias`` do :meth:`_dar_o_nome` foi recusado.
+        Sem isto a volta o leria como o objeto de antes voltando ao de fábrica —
+        «ela apagou o nome» — e apagaria o dela. A volta em curso descarta o que
+        viu (a geração sobe), para não devolver a lembrança velha.
+        """
+        no = caminho or dono.caminho_do_aparelho(aparelho, adaptador=adaptador)
+        if no is None:
+            return
         with self._tranca:
-            self._alias_vistos = {}
+            if sumiu:
+                self._alias_vistos.pop(no, None)
+            else:
+                self._alias_vistos[no] = str(
+                    dono.propriedade(no, bluez_dbus.APARELHO, "Alias") or "").strip()
             self._geracao_dos_nomes += 1
 
     def cuidar_dos_nomes(self) -> tuple[tuple[str, str], ...] | None:
@@ -2012,21 +2048,30 @@ class CentralDoRadio:
         é a projeção dele. Para cada controle que o BlueZ conhece, pela classe:
         <!-- noqa-acento: citação literal dela -->
 
-        * **ela renomeou** — um objeto trouxe um ``Alias`` que não é o de
-          fábrica e que mudou desde a volta anterior (pela tela, pelo
-          ``bluetoothctl``, pelo sistema: o produto é para qualquer
-          computador): ele é guardado. Entre dois objetos que mudaram juntos,
-          vale o conectado;
+        * **ela renomeou** — um objeto CONHECIDO (visto na volta anterior)
+          trouxe um ``Alias`` que não é o de fábrica e que mudou (pela tela,
+          pelo ``bluetoothctl``, pelo sistema: o produto é para qualquer
+          computador): ele é guardado. Entre dois que mudaram juntos, vale o
+          conectado;
         * **ela apagou o nome** — o MESMO objeto que tinha o nome guardado
-          voltou ao de fábrica: o guardado sai, e a tela volta ao «Player N»;
+          voltou ao de fábrica: o guardado sai, o objeto que ainda o tinha volta
+          ao de fábrica também, e a tela volta ao «Player N»;
         * **o objeto é novo** (um ``Pair`` feito fora da central, uma chave
-          nova em qualquer adaptador) ou perdeu o nome: o guardado volta a ele.
-          É o «reaplicado em toda conexão»; o ``Pair`` da central já nasce com
-          ele (:meth:`_quem_e` e :meth:`_dar_o_nome`).
+          nova, o adaptador que volta à porta com um nome velho) ou perdeu o
+          nome: o guardado volta a ele. É o «reaplicado em toda conexão»; o
+          ``Pair`` da central já nasce com ele (:meth:`_quem_e` e
+          :meth:`_dar_o_nome`). Sem nada guardado, o controle que a volta vê
+          pela primeira vez ENSINA o nome que já tem — é assim que os nomes
+          de antes do install passam a morar no disco.
 
         Só controle (``ControleDeclarado``), e só objeto com chave recebe o
         nome. Com um movimento em curso a volta não roda: ele tira e recria os
         objetos, e o que ela visse lá no meio é o movimento, não ela.
+
+        O QUE ELA NÃO ALCANÇA, e é escolha: o nome dado POR FORA do produto com
+        o daemon parado, sobre um controle que já tinha nome guardado — sem
+        ter visto a mudança, a volta não a distingue de um objeto velho, e o
+        guardado vence.
 
         Devolve ``(endereço, nome)`` de cada escrita — no disco ou no
         ``Alias`` —, ou ``None`` quando não rodou. Nunca levanta.
@@ -2047,22 +2092,35 @@ class CentralDoRadio:
             for endereco, objetos in _controles_pelo_endereco(aparelhos).items():
                 dados = {o.caminho: self._nome_dado(dono, o) for o in objetos}
                 guardado = str(guardados.get(endereco) or "")
-                vale = _o_nome_que_vale(objetos, dados, vistos_antes, guardado)
-                if vale != guardado and self._nomes.gravar(endereco, vale or None):
+                vale, apagou = _o_nome_que_vale(objetos, dados, vistos_antes, guardado)
+                gravou = vale == guardado or self._nomes.gravar(endereco, vale or None)
+                if not gravou:
+                    # A gravação não deu: a volta seguinte tem de ver a MESMA
+                    # mudança, então a lembrança deste controle fica a de antes.
+                    vistos.update({o.caminho: vistos_antes[o.caminho]
+                                   for o in objetos if o.caminho in vistos_antes})
+                    continue
+                if vale != guardado:
                     logger.info("central_guardou_o_nome", aparelho=mascarar(endereco),
-                                apagou=not vale)
+                                apagou=apagou)
                     feitos.append((endereco, vale))
-                    guardado = vale
                 for objeto in objetos:
-                    alias = str(objeto.nome or "").strip()
+                    alias = _alias_de(objeto)
                     vistos[objeto.caminho] = alias
-                    if not guardado or objeto.pareado is not True or alias == guardado:
+                    if objeto.pareado is not True:
+                        continue
+                    if vale and alias != vale:
+                        novo = vale
+                    elif apagou and dados[objeto.caminho] == guardado:
+                        novo = ""
+                    else:
                         continue
                     escrita = dono.escrever_propriedade(
-                        objeto.caminho, bluez_dbus.APARELHO, "Alias", "s", guardado, quem=QUEM)
+                        objeto.caminho, bluez_dbus.APARELHO, "Alias", "s", novo, quem=QUEM)
                     if escrita.feita:
-                        logger.info("central_devolveu_o_nome", aparelho=mascarar(endereco))
-                        feitos.append((endereco, guardado))
+                        logger.info("central_devolveu_o_nome", aparelho=mascarar(endereco),
+                                    fabrica=not novo)
+                        feitos.append((endereco, novo))
             with self._tranca:
                 if geracao == self._geracao_dos_nomes:
                     self._alias_vistos = vistos
