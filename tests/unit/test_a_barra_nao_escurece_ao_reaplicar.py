@@ -65,7 +65,7 @@ PALETA = tuple(player_slot_color(n) for n in range(1, 9))
 #: carrega a aba de onde veio, e o Salvar grava a seção dela — a luz é da 04
 #: (O-SALVAR-DA-VIBRACAO-01, 26/09/2026).
 CLIQUE_DA_04 = {"tipo": "button", "evento": "click",
-                "pagina": "04-iluminacao.html"}  # noqa-acento: chave do clique
+                "pagina": "04-iluminacao.html"}  # (noqa-acento: chave do clique)
 
 
 def _na(rgb: tuple[int, int, int], brilho: float) -> tuple[int, int, int]:

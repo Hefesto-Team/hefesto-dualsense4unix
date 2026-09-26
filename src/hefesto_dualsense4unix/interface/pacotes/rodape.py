@@ -585,7 +585,7 @@ def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     nome = perfil_do_rodape(ctx.state)
     # O `ctx` VAI JUNTO: é o que faz o Salvar gravar o que ESTÁ VALENDO, e não
     # o que já estava no disco — nas seções da aba de onde veio o clique.
-    aba = str(o.get("pagina") or "")  # noqa-acento: chave do clique
+    aba = str(o.get("pagina") or "")  # (noqa-acento: chave do clique)
     draft = _draft_do_ativo(nome, ctx, secoes_do_vivo(aba))
     if draft is None:
         raise ValueError("salvar: não há perfil ativo. Escolha um na aba Perfis.")

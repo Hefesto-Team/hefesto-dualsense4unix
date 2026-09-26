@@ -184,7 +184,7 @@ def _perfil_no_disco(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def _clique_do_salvar(aba: str) -> dict[str, str]:
     """O clique do «Salvar» como o piloto o manda: com a aba de onde veio."""
-    return {"gesto": "salvar", "pagina": aba}  # noqa-acento: chave do clique
+    return {"gesto": "salvar", "pagina": aba}  # (noqa-acento: chave do clique)
 
 
 def _ctx(vivo: dict[str, Any], mesa: dict[str, Any]) -> Contexto:
@@ -252,6 +252,32 @@ def test_cada_secao_viva_tem_uma_aba_dona_so() -> None:
     assert not duplas, f"seção viva com duas abas donas: {duplas}"
     assert rodape.secoes_do_vivo("") == frozenset(), (
         "o clique que não diz de que aba veio não é dono de seção nenhuma")
+
+
+def test_todo_chamador_do_produto_diz_as_secoes() -> None:
+    """O padrão de `_draft_do_ativo` é TODAS as seções, e ele é de quem mede.
+
+    Um gesto do produto que passe o `ctx` sem dizer as seções volta a pôr o
+    vivo por cima do perfil inteiro — o defeito das 18:38:37. A régua lê o
+    fonte de `interface/` e cobra as seções em toda chamada com o `ctx`.
+    """
+    import ast
+    import pathlib
+
+    raiz = pathlib.Path(rodape.__file__).resolve().parent.parent
+    sem_secoes: list[str] = []
+    for arq in sorted(raiz.rglob("*.py")):
+        for no in ast.walk(ast.parse(arq.read_text(encoding="utf-8"))):
+            if not isinstance(no, ast.Call):
+                continue
+            alvo = no.func
+            nome = alvo.attr if isinstance(alvo, ast.Attribute) else getattr(alvo, "id", "")
+            if nome != "_draft_do_ativo" or len(no.args) < 2:
+                continue
+            if len(no.args) < 3 and not any(k.arg == "secoes" for k in no.keywords):
+                sem_secoes.append(f"{arq.relative_to(raiz)}:{no.lineno}")
+    assert not sem_secoes, (
+        f"chamada de `_draft_do_ativo` com o ctx e sem as seções: {sem_secoes}")
 
 
 # --------------------------------------------------------------------------

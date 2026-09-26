@@ -66,7 +66,7 @@ from pacotes import a04_iluminacao, rodape
 #: veio, que todo clique carrega: o «Salvar» grava a seção DAQUELA aba, e a
 #: luz é da 04 (O-SALVAR-DA-VIBRACAO-01, 26/09/2026).
 CLIQUE = {"tipo": "button", "evento": "click",
-          "pagina": "04-iluminacao.html"}  # noqa-acento: chave do clique
+          "pagina": "04-iluminacao.html"}  # (noqa-acento: chave do clique)
 
 #: O global do perfil em cada caso: uma palavra DIFERENTE da clicada, senão o
 #: Fraco clicado sobre o Fraco do perfil passaria sem a cura.
