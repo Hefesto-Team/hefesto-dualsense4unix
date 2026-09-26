@@ -1641,6 +1641,10 @@
      do esqueleto e o `topo.html`). */
   .gc-r{display:none}
   .gc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  /* NA JANELA ESTREITA os cartões vão dois a dois: em quatro colunas de 200px o
+     nome do controle e o modo eram cortados (a régua da janela estreita, em
+     940 px, mediu quatro peças engolidas). */
+  @media (max-width:1180px){.gc{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .gc-item{position:relative;display:flex;flex-direction:column;min-width:0;
            padding:3px 12px 8px;border:1px solid var(--border-forte);
            border-radius:9px;background:var(--app-bg);overflow:hidden}
@@ -3096,12 +3100,12 @@
           <div class="gc-item gc-p1" data-controle="p1">
             <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor" style="color:#ae335a"></i>
             <div class="gc-cabeca">
-              <label class="gc-num" for="gc-p1" data-gesto="alvo" title="Deixa só este controle aberto; os outros fecham. A fita do topo passa a apontar para ele.">P1</label>
+              <label class="gc-num" for="gc-p1" data-gesto="alvo" title="Escolhe só este controle: a luz, os gatilhos e a vibração passam a mirar nele. A fita do topo passa a apontar para ele.">P1</label>
               <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
                      value="Vitória" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
                      aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
             </div>
-            <label class="gc-abre" for="gc-p1" data-gesto="alvo" title="Deixa só este controle aberto; os outros fecham. A fita do topo passa a apontar para ele.">
+            <label class="gc-abre" for="gc-p1" data-gesto="alvo" title="Escolhe só este controle: a luz, os gatilhos e a vibração passam a mirar nele. A fita do topo passa a apontar para ele.">
               <?xml version="1.0" encoding="utf-8"?>
 <svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="cosmic-red" class="ds-svg ds-mini"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -3408,12 +3412,12 @@
           <div class="gc-item gc-p2" data-controle="p2">
             <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"></i>
             <div class="gc-cabeca">
-              <label class="gc-num" for="gc-p2" data-gesto="alvo" title="Deixa só este controle aberto; os outros fecham. A fita do topo passa a apontar para ele.">P2</label>
+              <label class="gc-num" for="gc-p2" data-gesto="alvo" title="Escolhe só este controle: a luz, os gatilhos e a vibração passam a mirar nele. A fita do topo passa a apontar para ele.">P2</label>
               <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
                      value="" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
                      aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
             </div>
-            <label class="gc-abre" for="gc-p2" data-gesto="alvo" title="Deixa só este controle aberto; os outros fecham. A fita do topo passa a apontar para ele.">
+            <label class="gc-abre" for="gc-p2" data-gesto="alvo" title="Escolhe só este controle: a luz, os gatilhos e a vibração passam a mirar nele. A fita do topo passa a apontar para ele.">
               <?xml version="1.0" encoding="utf-8"?>
 <svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="starlight-blue" class="ds-svg ds-mini"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>

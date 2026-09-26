@@ -3464,9 +3464,9 @@ def _declarar(p: Any, mesa: dict[str, Any]) -> None:
 def alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Só este": as ações de saída passam a mirar SÓ este controle.
 
-    É o que a própria tela promete no `title` das três etiquetas que abrem a
-    linha do acordeão: *"Deixa só este controle aberto — os outros fecham. A
-    fita do topo passa a apontar para ele."*
+    É o que a própria tela promete no `title` do número e do aparelho de cada
+    cartão: *"Escolhe só este controle: a luz, os gatilhos e a vibração passam
+    a mirar nele. A fita do topo passa a apontar para ele."*
 
     `controller.target.set` é exatamente isso, e o handler diz com todas as
     letras (`daemon/ipc_handlers.py:4500`): *"Com o alvo setado,
