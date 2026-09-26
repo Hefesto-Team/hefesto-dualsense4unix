@@ -164,6 +164,7 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
     #: imprime e com que o trilho escala: o do daemon vivo, e o do disco só
     #: quando ele não diz (A-04-PERGUNTA-AO-DAEMON-VIVO-01).
     cru = perfil.ativo(nome)
+    na_economia = _quem_esta_em_economia()
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
         # A BARRA APAGADA NÃO É UMA COR PRETA, e a diferença custa o trabalho
@@ -225,8 +226,11 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
         # faz o merge POR CAMPO guiado pelo `model_fields_set` — override
         # presente vence, campo não escrito herda o global. É exatamente o que
         # este ponto precisa, e o rodapé simplesmente não o chamava.
+        #
+        # A MESMA COR REGRAVADA GUARDA O NÚMERO para o qual foi escolhida
+        # (`lightbar_para_o_numero`), e quem cuida disso é o próprio
+        # `with_controller_leds` desde a O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01.
         efetivo = draft.effective_leds_for(uniq)
-        do_override = getattr(draft.controller_override(uniq), "leds", None)
         draft = draft.with_controller_leds(uniq, LedsDraft(
             # AS FORMAS SÃO FIXAS NO SCHEMA — três canais de cor e cinco
             # lâmpadas —, e o `LedsDraft` as declara assim. Um `tuple(...)`
@@ -235,8 +239,10 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
             lightbar_rgb=(int(rgb[0]), int(rgb[1]), int(rgb[2])),
             # O BRILHO VAI JUNTO COM A COR QUE ELE INVERTEU: o Salvar grava o
             # que está aceso, e a cor pedida sem o brilho dela acenderia, no
-            # perfil reaplicado, outra luz que a que ela via ao salvar.
-            lightbar_brightness=(efetivo.lightbar_brightness if brilho is None
+            # perfil reaplicado, outra luz que a que ela via ao salvar. SALVO
+            # NA ECONOMIA: ali o aceso é o TETO, e o dela é o do disco.
+            lightbar_brightness=(efetivo.lightbar_brightness
+                                 if brilho is None or na_economia(uniq)
                                  else round(brilho * 100)),
             player_leds=(efetivo.player_leds[0], efetivo.player_leds[1],
                          efetivo.player_leds[2], efetivo.player_leds[3],
@@ -245,44 +251,37 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
             # senão salvar a escolha dela a apagaria no próximo Aplicar.
             auto_player_colors=False,
         ))
-        draft = _a_procedencia_da_mesma_cor(draft, uniq, do_override)
         draft = _o_som_daquela_peca(draft, c, uniq)
         draft = _os_sensores_daquela_peca(draft, c, uniq)
     return _o_que_e_da_mesa_inteira(draft, ctx)
 
 
-def _a_procedencia_da_mesma_cor(draft: Any, uniq: str, antes: Any) -> Any:
-    """A cor que o «Salvar» regrava igual guarda o número para o qual foi escolhida.
+def _quem_esta_em_economia() -> Any:
+    """``uniq -> bool``: a economia vale neste controle AGORA?
 
-    O-BRILHO-DAS-LUZES-SOBREVIVE-AO-APLICAR-01, 26/09/2026, achado pela
-    varredura dos gestos que gravam: o tom, a caixa `#RRGGBB` e o interruptor
-    «Cores automáticas» da aba 04 gravam a cor COM a procedência
-    (`LedsConfig.lightbar_para_o_numero`, a decisão de 08/09), e o
-    `with_controller_leds` troca a seção inteira por uma que só conhece cor,
-    brilho e lâmpadas. Medido na mesa de quatro: o P4
-    escolhia um tom, o «Salvar» o regravava igual — e sem o número. Sem ele a
-    cor vira `LEGADO`, e o resolvedor volta a provar fóssil pela forma: o P4
-    no tom do número 2 acendia, depois da troca manual seguinte, a cor do
-    número dele.
+    O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01, 26/09/2026. Medido na mesa de
+    quatro: com a economia ligada no P2, o «Salvar» lia o brilho aceso dele —
+    os 30% do teto — e o gravava no disco como a escolha dela; desligada a
+    economia, o P2 seguia a 30% para sempre. Na «Bateria longa», o mesmo em
+    todos os controles.
 
-    Só a MESMA cor leva a procedência: a cor viva que difere do disco (a que
-    atravessou a troca automática) não tem, no disco, para qual número foi
-    escolhida, e inventar um seria afirmar o que ninguém sabe.
-
-    **RELATADO:** o dono desta regra é o `DraftConfig.with_controller_leds`,
-    como o `schema.com_o_brilho_das_luzes_de` é o do brilho das luzes; fora da
-    posse desta sprint, e por isso o `_with_override_section` privado aqui.
+    A PERGUNTA VAI AO DONO DA ECONOMIA, e nada dela se reescreve aqui: a
+    declaração da mesa que o gesto `economia-do-controle` grava
+    (`maquina.json`), lida por `schema.economia_da_declaracao`, e a regra entre
+    a mesa e o controle, `schema.economia_vale` — as mesmas que a ativação lê.
+    Declaração ilegível é «ninguém em economia», o comportamento de antes.
     """
-    campo = "lightbar_para_o_numero"
-    if antes is None or not {"lightbar", campo} <= antes.model_fields_set:
-        return draft
-    depois = getattr(draft.controller_override(uniq), "leds", None)
-    if (depois is None or "lightbar" not in depois.model_fields_set
-            or campo in depois.model_fields_set
-            or tuple(depois.lightbar) != tuple(antes.lightbar)):
-        return draft
-    return draft._with_override_section(
-        uniq, "leds", depois.model_copy(update={campo: getattr(antes, campo)}))
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.profiles.schema import economia_da_declaracao, economia_vale
+    from hefesto_dualsense4unix.utils.maquina import carregar_maquina
+
+    from .a04_iluminacao import chave_do_override
+
+    try:
+        mesa, ligados = economia_da_declaracao(carregar_maquina())
+    except Exception:
+        mesa, ligados = False, frozenset()
+    return lambda uniq: economia_vale(chave_do_override(uniq) in ligados, mesa)
 
 
 def _o_som_daquela_peca(draft: Any, c: dict[str, Any], uniq: str) -> Any:
@@ -453,89 +452,29 @@ def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     SEM PERFIL ATIVO, MANDA O «FREESTYLE» — o mesmo que o Salvar grava e o boot
     restaura (:func:`perfil_do_rodape`).
 
-    E AS LUZES DE NÚMERO DE CADA CONTROLE VÃO LOGO DEPOIS
-    (:func:`_as_luzes_de_numero_de_cada_controle`) — o rascunho não as leva.
+    UMA VIAGEM SÓ — O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01, 26/09/2026. O
+    Fraco, o Médio e o Forte de cada controle viajam no rascunho
+    (`DraftConfig._controllers_to_ipc`), e o teto da economia é posto do
+    outro lado (`DraftApplier._com_o_teto_da_economia`). Até hoje uma segunda
+    viagem (`led.player_brightness_set`, controle a controle) devolvia a
+    palavra depois do `apply_draft`, e o cabo recebia o global entre as duas.
+
+    O DAEMON CALADO RECUSA: o `None` do `apply_draft_detalhado` é «não houve
+    resposta», e a frase é a que a pílula já usa
+    (`a04_iluminacao.sem_resposta_do_daemon`). Antes o botão piscava verde.
     """
+    from .a04_iluminacao import sem_resposta_do_daemon
+
     nome = perfil_do_rodape(ctx.state)
     draft = _draft_do_ativo(nome)
     if draft is None:
         raise ValueError(
             "aplicar: não há perfil ativo para mandar aos controles. "
             "Escolha um na aba Perfis.")
-    p.apply_draft_detalhado(draft.to_ipc_dict())
-    _as_luzes_de_numero_de_cada_controle(nome, p)
+    if p.apply_draft_detalhado(draft.to_ipc_dict()) is None:
+        raise RuntimeError(sem_resposta_do_daemon())
     _recado(perfil.com_a_carona())
     return None
-
-
-def _as_luzes_de_numero_de_cada_controle(nome: str, p: Any) -> None:
-    """O Fraco, o Médio ou o Forte que o perfil guarda para CADA controle, ao aparelho.
-
-    O-BRILHO-DAS-LUZES-SOBREVIVE-AO-APLICAR-01, 26/09/2026. A queixa dela:
-    *«o botão aplicar da interface faz o reset dos valores (…) tentei alterar
-    a força dos leds fraco medio e forte <!-- noqa-acento: citação literal dela -->
-    e ao aplicar ele não aplicar»*.
-
-    ONDE O VALOR MORRIA, medido na mesa de quatro (o handler real, o merge
-    real, P1 a P4, cabo e rádio): a pílula grava a palavra no override do
-    controle e a leva ao aparelho; o «Aplicar» manda o rascunho, cuja seção
-    `controllers` não tem o campo (`DraftConfig._controllers_to_ipc` só
-    conhece cor, brilho da barra e as cinco lâmpadas); e o `DraftApplier`
-    TROCA o mapa inteiro de overrides do daemon (`reset_output_overrides`)
-    pelo do rascunho. O Forte do P2 sumia do merge, o aparelho voltava ao
-    Fraco do perfil, e a pílula — que pergunta ao daemon vivo — acendia
-    Fraco. O disco seguia com o Forte: o «Salvar» não perdia nada, mas a tela
-    dizia o contrário, e daí o *«ao salvar ele não salva»*. Os outros cinco
-    gestos da aba que gravam (tom, caixa, trilho, «Desligar» e «Cores
-    automáticas») atravessam o «Aplicar»; no «Salvar», o tom, a caixa e o
-    interruptor perdiam o número da cor (:func:`_a_procedencia_da_mesma_cor`).
-    A régua dos seis é uma só.
-
-    A PORTA É A DA PÍLULA (`led.player_brightness_set` com o `uniq`), e só
-    para quem ESCREVEU o campo — o mesmo «só quando foi escrito» de
-    `manager._controllers_to_specs`, que é o que a ativação do perfil manda.
-    Quem não escreveu herda o global que a ativação deixou. O controle
-    desconectado também vai: o daemon guarda para quando ele chegar, como o
-    rascunho faz com a cor.
-
-    A ECONOMIA DE BATERIA VENCE, como na ativação (`leds_na_economia` põe as
-    luzes no Fraco): o controle em economia não recebe a palavra. Mandá-la
-    ali escreveria o Forte na camada dela, que atravessa a troca automática —
-    a economia desligada depois não o devolveria. Ele fica no global que a
-    ativação deixou: na «Bateria longa», o Fraco; na economia de um controle
-    só, o global do perfil, porque o `apply_draft` solta também o teto que a
-    ativação pôs naquele controle — e isso é de antes desta cura.
-
-    O LUGAR CERTO DESTA ENTREGA É O RASCUNHO, e ela está aqui por posse: o
-    campo viajando em `DraftConfig._controllers_to_ipc` e lido em
-    `DraftApplier._controller_override_spec` poupa esta segunda viagem.
-    Enquanto não viaja, a ordem importa — depois do `apply_draft`, que é quem
-    solta.
-    """
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.profiles.loader import load_profile
-    from hefesto_dualsense4unix.profiles.schema import economia_da_declaracao, economia_vale
-    from hefesto_dualsense4unix.utils.maquina import carregar_maquina
-
-    from .a04_iluminacao import sem_resposta_do_daemon
-
-    try:
-        controles = load_profile(nome).controllers or {}
-    except Exception:
-        return
-    mesa, ligados = economia_da_declaracao(carregar_maquina())
-    calado = False
-    for uniq, dele in controles.items():
-        leds = getattr(dele, "leds", None)
-        if leds is None or "player_led_brightness" not in leds.model_fields_set:
-            continue
-        if economia_vale(uniq in ligados, mesa):
-            continue
-        resposta = p.player_led_brightness_set_detalhado(
-            leds.player_led_brightness, uniq=str(uniq))
-        calado = calado or resposta is None
-    if calado:
-        raise RuntimeError(sem_resposta_do_daemon())
 
 
 @gesto("*", "salvar", grava="save_profile")
@@ -697,6 +636,5 @@ PROVAS: list[dict[str, Any]] = [
     # O "aplicar" e o "salvar" dependem do perfil ATIVO, e a régua roda sem
     # daemon: eles são provados pelo teste de recusa, abaixo, e no aparelho.
 ]
-PONTE = {"apply_draft_detalhado", "player_led_brightness_set_detalhado",
-         "escolher_arquivo", "salvar_arquivo"}
+PONTE = {"apply_draft_detalhado", "escolher_arquivo", "salvar_arquivo"}
 METODOS: set[str] = set()

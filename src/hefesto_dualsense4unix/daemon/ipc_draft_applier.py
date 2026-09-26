@@ -68,6 +68,14 @@ class DraftApplier:
         #: A cor global do rascunho, antes do brilho — o par do brilho acima,
         #: publicado com ele (`set_led_scales(cor_do_perfil=)`).
         self._cor_do_rascunho: Any = None
+        #: Os controles em que a economia vale neste «Aplicar» — a camada deles
+        #: é a do perfil, como na ativação (`_com_o_teto_da_economia`).
+        self._em_economia: frozenset[str] = frozenset()
+        #: O rascunho trouxe o mapa `controllers` (e não `None`): só então o
+        #: mapa de overrides do daemon é trocado (Z4/T8).
+        self._o_rascunho_tem_o_mapa = False
+        #: A seção `controllers` da vista, para o «Todos» das luzes saber se vai cru.
+        self._controles_do_rascunho: Any = None
 
     def apply(self, params: dict[str, Any]) -> list[str]:
         # ONDA-U (Causa A): trava manual INCONDICIONAL, no topo — antes vivia
@@ -91,6 +99,12 @@ class DraftApplier:
         # Cada `apply` conta a história dele: zera o registro de falhas antes
         # de começar (o mesmo applier pode ser reusado).
         self.failed = {}
+        # O TETO DA ECONOMIA ANTES DE TUDO — O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01
+        # (26/09/2026). Daqui para baixo cada seção lê a VISTA com o teto posto,
+        # como a ativação lê a dela; ver `_com_o_teto_da_economia`.
+        self._o_rascunho_tem_o_mapa = isinstance(params.get("controllers"), dict)
+        params = self._com_o_teto_da_economia(params)
+        self._controles_do_rascunho = params.get("controllers")
         # O denominador dos fatores de brilho por controle: o brilho GLOBAL do
         # rascunho, lido da seção `leds` (ver `_publicar_escalas_de_brilho`).
         leds_raw = params.get("leds")
@@ -233,9 +247,10 @@ class DraftApplier:
         self._configure_auto_colors(leds_raw)
         rgb = self._scaled_rgb_from(leds_raw)
         bits = self._player_bits_from(leds_raw)
-        if rgb is not None or bits is not None:
+        luzes = self._o_todos_das_luzes(leds_raw)
+        if rgb is not None or bits is not None or luzes is not None:
             self.controller.apply_output_defaults(
-                OutputSpec(led=rgb, player_leds=bits)
+                OutputSpec(led=rgb, player_leds=bits, player_led_brightness=luzes)
             )
         # COR-03 (fix de integração, 2026-07-17): converge o estado físico ao
         # RESOLVIDO por-controle após o toggle/broadcast — sem isto, religar
@@ -245,6 +260,36 @@ class DraftApplier:
         reassert = getattr(self.controller, "reassert_resolved_outputs", None)
         if callable(reassert):
             reassert()
+
+    def _o_todos_das_luzes(self, leds_raw: dict[str, Any]) -> int | None:
+        """O degrau do «Todos» das luzes de número, quando ele pode ir a todos.
+
+        O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01 (26/09/2026). A palavra
+        viaja na seção `leds` do rascunho; `None` sem ela (rascunho de outra
+        versão), e aí o padrão da ativação fica.
+
+        O `apply_output_defaults` leva o global CRU a todo handle, e não o
+        resolvido de cada um (`backend_pydualsense`, a razão está lá). Com um
+        controle que termina noutro degrau — a palavra dele, ou o Fraco da
+        economia —, o global cru seria nele um QUADRO INTERMEDIÁRIO antes da
+        palavra dele. Então o global só vai cru quando ninguém termina noutro degrau; senão
+        o padrão fica o que a ativação do perfil deixou, que é o mesmo global
+        do disco (o «Todos» só muda pela ativação), e cada controle recebe o
+        seu pela seção `controllers`.
+        """
+        palavra = leds_raw.get("player_led_brightness")
+        if palavra is None:
+            return None
+        from hefesto_dualsense4unix.core.led_control import degrau_do_brilho_das_luzes
+
+        degrau = degrau_do_brilho_das_luzes(str(palavra))
+        controles = self._controles_do_rascunho
+        for entrada in (controles if isinstance(controles, dict) else {}).values():
+            leds = entrada.get("leds") if isinstance(entrada, dict) else None
+            propria = leds.get("player_led_brightness") if isinstance(leds, dict) else None
+            if propria is not None and str(propria) != str(palavra):
+                return None
+        return degrau
 
     @staticmethod
     def _configure_auto_colors(leds_raw: dict[str, Any]) -> None:
@@ -329,14 +374,19 @@ class DraftApplier:
             spec = self._controller_override_spec(entry, str(uniq))
             if spec is not None:
                 specs[str(uniq)] = spec
+        # O CONTROLE EM ECONOMIA VAI NA CAMADA DO PERFIL, como na ativação
+        # (`_publicar_a_economia`); o resto é a camada dela, como sempre.
+        da_economia = {u: s for u, s in specs.items() if u in self._em_economia}
+        da_mao = {u: s for u, s in specs.items() if u not in da_economia}
         # Getattr defensivo: stubs/fakes de teste sem o método seguem (a base
         # ``IController`` e os backends reais o têm — no-op sem estado por-uniq).
         reset = getattr(self.controller, "reset_output_overrides", None)
-        if callable(reset):
-            reset(specs or None)
-        for uniq, spec in specs.items():
+        if callable(reset) and self._o_rascunho_tem_o_mapa:
+            reset(da_mao or None)
+        for uniq, spec in da_mao.items():
             self._aplicar_com_o_brilho_da_cor(uniq, spec, raw.get(uniq))
         self._publicar_escalas_de_brilho(raw)
+        self._publicar_a_economia(da_economia)
         # A LUZ CONVERGE DEPOIS DO MAPA NOVO — conferência da
         # A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01, 25/09/2026. O brilho sozinho de
         # um controle viaja como FATOR, sem cor, e o `apply_output_for` acima
@@ -434,21 +484,12 @@ class DraftApplier:
         (``apply_rumble_policy``). Sem daemon (CLI/testes), o denominador é o
         ``balanceado`` padrão.
         """
-        from hefesto_dualsense4unix.profiles.manager import (
-            _RUMBLE_POLICY_PADRAO,
-            _mult_da_politica,
-        )
+        from hefesto_dualsense4unix.profiles.manager import _mult_da_politica
 
         escalar = getattr(self.controller, "set_rumble_scales", None)
         if not callable(escalar):
             return
-        daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
-        policy_global = (
-            getattr(daemon_cfg, "rumble_policy", None) or _RUMBLE_POLICY_PADRAO
-        )
-        base = _mult_da_politica(
-            policy_global, getattr(daemon_cfg, "rumble_policy_custom_mult", None)
-        )
+        base = _mult_da_politica(*self._politica_viva())
         escalas: dict[str, float] = {}
         for uniq, entry in raw.items():
             rumble_raw = entry.get("rumble") if isinstance(entry, dict) else None
@@ -544,13 +585,20 @@ class DraftApplier:
             right_raw = triggers_raw.get("right")
             if right_raw is not None:
                 trigger_right = self._trigger_effect_from(right_raw, f"{base}.right")
-        if led is None and player is None and trigger_left is None and trigger_right is None:
+        luzes = None
+        if isinstance(leds_raw, dict) and leds_raw.get("player_led_brightness") is not None:
+            from hefesto_dualsense4unix.core.led_control import degrau_do_brilho_das_luzes
+
+            luzes = degrau_do_brilho_das_luzes(str(leds_raw["player_led_brightness"]))
+        if (led is None and player is None and luzes is None
+                and trigger_left is None and trigger_right is None):
             return None
         return OutputSpec(
             trigger_left=trigger_left,
             trigger_right=trigger_right,
             led=led,
             player_leds=player,
+            player_led_brightness=luzes,
         )
 
     def _apply_rumble(self, rumble_raw: Any) -> None:
@@ -781,6 +829,242 @@ class DraftApplier:
         from hefesto_dualsense4unix.profiles.manager import resolve_key_bindings
 
         device.set_bindings(resolve_key_bindings(raw))
+
+    # --- O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01 (26/09/2026) ---
+
+    def _politica_viva(self) -> tuple[str, float | None]:
+        """A política global de vibração do daemon, e o teto dela — o denominador.
+
+        Um lugar só para as duas contas do «Aplicar» que precisam dele: o fator
+        de cada peça (`_publicar_escalas_de_vibracao`) e a vibração da peça na
+        economia (`_com_o_teto_da_economia`). Sem daemon (CLI/testes), o
+        ``balanceado`` padrão.
+        """
+        from hefesto_dualsense4unix.profiles.manager import _RUMBLE_POLICY_PADRAO
+
+        cfg = getattr(self.daemon, "config", None) if self.daemon else None
+        politica = getattr(cfg, "rumble_policy", None) or _RUMBLE_POLICY_PADRAO
+        return str(politica), getattr(cfg, "rumble_policy_custom_mult", None)
+
+    def _com_o_teto_da_economia(self, params: dict[str, Any]) -> dict[str, Any]:
+        """O rascunho com o teto da economia posto — a MESMA vista da ativação.
+
+        A QUEIXA: achada pela O-BRILHO-DAS-LUZES-SOBREVIVE-AO-APLICAR-01 e
+        medida na mesa de quatro (o `IpcServer` real, o merge do
+        `PyDualSenseController`): com a economia ligada só no P2, a ativação o
+        deixava na luz a 30% `(76, 38, 0)`, nas luzes de número no Fraco, nos
+        gatilhos com metade da força e na vibração a 0,3; o «Aplicar» o levava
+        a `(209, 104, 0)`, ao Médio do perfil, à força inteira e à vibração do
+        global. O rascunho não sabe da economia, e o «Aplicar» troca o mapa de
+        overrides inteiro (`reset_output_overrides`).
+
+        O DONO DO TETO É O DA ATIVAÇÃO, e ele não se reescreve aqui: quem está
+        em economia é a declaração da mesa (`schema.economia_da_mesa` e
+        `schema.controles_em_economia`, o que o gesto `economia-do-controle`
+        grava), e o que ela faz em cada peça é `manager._perfil_na_economia` —
+        as mesmas três chamadas de `ProfileManager.apply`. Quem estender a
+        economia (outro teto, outro jeito de escolher quem economiza) estende
+        lá, e o «Aplicar» segue sozinho. Aqui só se traduz o rascunho para o
+        esquema e de volta.
+
+        A TRADUÇÃO NÃO PERDE NADA QUE O TETO USE: o rascunho já chega com o
+        brilho de cada cor resolvido (`DraftConfig._controllers_to_ipc`), e o
+        teto é um `min` — o do brilho próprio e o do global dão o mesmo número.
+
+        Devolve o rascunho intacto (o MESMO objeto) sem economia nenhuma: o
+        «Aplicar» de quem não ligou nada é byte a byte o de antes. Os controles
+        em economia ficam em `self._em_economia`, e vão na camada do PERFIL
+        (`_publicar_a_economia`).
+        """
+        from hefesto_dualsense4unix.profiles.schema import (
+            controles_em_economia,
+            economia_da_mesa,
+        )
+
+        mesa, ligados = economia_da_mesa(), controles_em_economia()
+        self._em_economia = frozenset()
+        if not mesa and not ligados:
+            return params
+        try:
+            return self._a_vista_da_economia(params, mesa, ligados)
+        except Exception as exc:
+            logger.warning("apply_draft_economia_falhou", erro=str(exc))
+            self.failed["economia"] = (str(exc) or type(exc).__name__)[:120]
+            return params
+
+    def _a_vista_da_economia(
+        self, params: dict[str, Any], mesa: bool, ligados: frozenset[str]
+    ) -> dict[str, Any]:
+        """O corpo de `_com_o_teto_da_economia`: rascunho → esquema → teto → rascunho."""
+        from hefesto_dualsense4unix.profiles.manager import _perfil_na_economia
+        from hefesto_dualsense4unix.profiles.schema import (
+            LedsConfig,
+            Profile,
+            RumbleConfig,
+            TriggersConfig,
+            economia_vale,
+        )
+
+        leds_raw = params.get("leds")
+        trig_raw = params.get("triggers")
+        ctrl_raw = params.get("controllers")
+        leds = _leds_do_rascunho(leds_raw) if isinstance(leds_raw, dict) else None
+        gatilhos = _gatilhos_do_rascunho(trig_raw) if isinstance(trig_raw, dict) else None
+        politica, custom = self._politica_viva()
+        mapa = {str(u): _override_do_rascunho(e) for u, e in (
+            ctrl_raw.items() if isinstance(ctrl_raw, dict) else ()) if isinstance(e, dict)}
+        # SEM A SEÇÃO GLOBAL NO RASCUNHO NÃO HÁ O QUE HERDAR: o controle que
+        # liga a sua economia herda do perfil o que não escreveu, e o global que
+        # não viajou não é o do perfil. Com a mesa, o global da vista é pedido
+        # pelo dono e descartado aqui.
+        vista = _perfil_na_economia(
+            Profile.model_construct(
+                leds=leds if leds is not None else (LedsConfig() if mesa else None),
+                triggers=(gatilhos if gatilhos is not None
+                          else (TriggersConfig() if mesa else None)),
+                rumble=RumbleConfig.model_construct(policy=politica, custom_mult=custom),
+                controllers=mapa or None,
+            ),
+            mesa,
+            ligados,
+        )
+        novo = dict(params)
+        if mesa and isinstance(leds_raw, dict):
+            novo["leds"] = {
+                **leds_raw,
+                "lightbar_brightness": float(vista.leds.lightbar_brightness),
+                "player_led_brightness": str(vista.leds.player_led_brightness),
+            }
+        if mesa and isinstance(trig_raw, dict):
+            novo["triggers"] = {
+                **trig_raw,
+                **{lado: _gatilho_para_o_rascunho(getattr(vista.triggers, lado))
+                   for lado in ("left", "right") if isinstance(trig_raw.get(lado), dict)},
+            }
+        em_economia = frozenset(
+            u for u in (vista.controllers or {}) if economia_vale(u in ligados, mesa))
+        controles = dict(ctrl_raw) if isinstance(ctrl_raw, dict) else {}
+        for uniq in sorted(em_economia):
+            controles[uniq] = _entrada_na_economia(
+                controles.get(uniq), vista.controllers[uniq])
+        if controles:
+            novo["controllers"] = controles
+        self._em_economia = em_economia
+        return novo
+
+    def _publicar_a_economia(self, specs: dict[str, OutputSpec]) -> None:
+        """O controle em economia vai na camada do PERFIL, como a ativação o põe.
+
+        Na camada dela (`reset_output_overrides`/`apply_output_for`) o teto
+        ficaria PRESO: desligar a economia reaplica o perfil com a origem
+        ``system`` (`lifecycle.reaplicar_se_a_economia_mudou`), e a camada da
+        usuária atravessa essa ativação — o P2 seguiria a 30% com a economia
+        desligada. Na do perfil, a ativação seguinte o republica sem o teto.
+        Backend sem camadas recebe o mesmo `apply_output_for` de sempre.
+        """
+        if not specs:
+            return
+        publicar = getattr(self.controller, "reset_profile_overrides", None)
+        if callable(publicar):
+            publicar(specs)
+            return
+        for uniq, spec in specs.items():
+            self.controller.apply_output_for(uniq, spec)
+
+
+# ---------------------------------------------------------------------------
+# A tradução do rascunho para o esquema, e de volta — só o que o teto lê
+# ---------------------------------------------------------------------------
+
+
+def _leds_do_rascunho(leds_raw: dict[str, Any]) -> Any:
+    """A luz de uma seção do rascunho como `LedsConfig`, só com o que ela escreveu."""
+    from hefesto_dualsense4unix.profiles.schema import LedsConfig
+
+    campos: dict[str, Any] = {}
+    rgb = leds_raw.get("lightbar_rgb")
+    if isinstance(rgb, list) and len(rgb) == 3:
+        campos["lightbar"] = tuple(int(c) for c in rgb)
+    brilho = _brilho_de(leds_raw.get("lightbar_brightness"))
+    if brilho is not None:
+        campos["lightbar_brightness"] = brilho
+    if isinstance(leds_raw.get("player_leds"), list):
+        campos["player_leds"] = [bool(b) for b in leds_raw["player_leds"]]
+    if leds_raw.get("player_led_brightness") is not None:
+        campos["player_led_brightness"] = str(leds_raw["player_led_brightness"])
+    return LedsConfig.model_validate(campos) if campos else None
+
+
+def _gatilhos_do_rascunho(trig_raw: dict[str, Any]) -> Any:
+    """Os gatilhos de uma seção do rascunho, só os lados que ela escreveu."""
+    from hefesto_dualsense4unix.profiles.schema import TriggerConfig, TriggersConfig
+
+    lados = {
+        lado: TriggerConfig(mode=cru["mode"], params=list(cru.get("params") or []))
+        for lado in ("left", "right")
+        if isinstance(cru := trig_raw.get(lado), dict) and isinstance(cru.get("mode"), str)
+    }
+    return TriggersConfig(**lados) if lados else None
+
+
+def _override_do_rascunho(entrada: dict[str, Any]) -> Any:
+    """A entrada de um controle do rascunho como `ControllerOverrides` (luz, gatilhos, vibração)."""
+    from hefesto_dualsense4unix.profiles.schema import (
+        ControllerOverrides,
+        ControllerRumbleOverride,
+    )
+
+    leds_raw, trig_raw, vib_raw = (
+        entrada.get("leds"), entrada.get("triggers"), entrada.get("rumble"))
+    vibracao = None
+    if isinstance(vib_raw, dict) and vib_raw.get("policy") is not None:
+        vibracao = ControllerRumbleOverride.model_validate(
+            {k: vib_raw[k] for k in ("policy", "custom_mult") if vib_raw.get(k) is not None})
+    return ControllerOverrides(
+        leds=_leds_do_rascunho(leds_raw) if isinstance(leds_raw, dict) else None,
+        triggers=_gatilhos_do_rascunho(trig_raw) if isinstance(trig_raw, dict) else None,
+        rumble=vibracao,
+    )
+
+
+def _gatilho_para_o_rascunho(gatilho: Any) -> dict[str, Any]:
+    return {"mode": gatilho.mode, "params": list(gatilho.params)}
+
+
+def _entrada_na_economia(entrada: Any, dele: Any) -> dict[str, Any]:
+    """A entrada de um controle com a luz, os gatilhos e a vibração da vista da economia.
+
+    O resto da entrada (o alto-falante) segue como veio: a economia não o toca
+    (`schema.A_ECONOMIA_EM_CADA_PECA`).
+    """
+    saida = {k: v for k, v in (entrada or {}).items()
+             if k not in ("leds", "triggers", "rumble")}
+    luz = getattr(dele, "leds", None)
+    if luz is not None:
+        campos = luz.model_fields_set
+        leds: dict[str, Any] = {}
+        if "lightbar" in campos:
+            leds["lightbar_rgb"] = [int(c) for c in luz.lightbar]
+        if "lightbar_brightness" in campos:
+            leds["lightbar_brightness"] = float(luz.lightbar_brightness)
+        if "player_leds" in campos:
+            leds["player_leds"] = [bool(b) for b in luz.player_leds]
+        if "player_led_brightness" in campos:
+            leds["player_led_brightness"] = str(luz.player_led_brightness)
+        if leds:
+            saida["leds"] = leds
+    gatilhos = getattr(dele, "triggers", None)
+    if gatilhos is not None:
+        lados = {lado: _gatilho_para_o_rascunho(getattr(gatilhos, lado))
+                 for lado in ("left", "right") if lado in gatilhos.model_fields_set}
+        if lados:
+            saida["triggers"] = lados
+    vibracao = getattr(dele, "rumble", None)
+    if vibracao is not None and getattr(vibracao, "policy", None) is not None:
+        saida["rumble"] = {"policy": vibracao.policy}
+        if vibracao.custom_mult is not None:
+            saida["rumble"]["custom_mult"] = float(vibracao.custom_mult)
+    return saida
 
 
 __all__ = ["DraftApplier"]
