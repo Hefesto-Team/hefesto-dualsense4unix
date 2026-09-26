@@ -817,7 +817,7 @@ def _endereco_do_chip(pref: str, inerte: bool) -> str:
     05/09/2026: o `paginas/02-controles.html` publicado traz três `<label
     for="c-…">`, e o DOM vivo, passados 1,6 s, trazia três `<span>`.
 
-    O `aba08.py:1615` já tinha escrito o diagnóstico: *"o chip da fita é um
+    O `aba08.py:4489` já tinha escrito o diagnóstico: *"o chip da fita é um
     `<span>` do esqueleto, e um `<span>` não vira alvo de clique sem tocar o
     `monta.py`"* — uma linha aqui, e ela vale para as dez abas.
 

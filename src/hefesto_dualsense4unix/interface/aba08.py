@@ -1254,11 +1254,17 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      conexões desceram para cada cartão; o aceso é o deste controle. */
   .gc-perfil{display:flex;flex-direction:column;gap:5px}
   .gc-perfil .rot{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--texto-mudo)}
-  .gc-perfil .seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+  /* CADA BOTÃO COM A LARGURA DA PALAVRA DELE, E A SOBRA REPARTIDA — medido
+     em 26/09/2026 (A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01): com três colunas
+     iguais, «Bateria Longa» e «Personalizado» perdiam 7 a 8 px no tamanho do
+     desenho (1212 px) e viravam reticências. Com `flex:1 1 auto` a 11px os
+     três cabem a partir de 1181 px, a menor janela com quatro cartões numa
+     fileira (abaixo dela a grade vira duas e o cartão alarga). */
+  .gc-perfil .seg{display:flex;flex-wrap:nowrap;gap:3px}
   /* `min-width:0` porque o `.btn` do esqueleto nasce com 150px, e três de 150
      não cabem num cartão de 350. */
-  .gc-perfil .seg .btn{width:100%;min-width:0;padding:0 4px;font-size:11.5px;white-space:nowrap;
-                       overflow:hidden;text-overflow:ellipsis}
+  .gc-perfil .seg .btn{flex:1 1 auto;width:auto;min-width:0;padding:0 2px;font-size:11px;
+                       white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .gc-perfil .seg .btn.on{border-color:var(--purple);background:rgba(189,147,249,.16);
                           color:var(--fg);font-weight:600}
   /* «A LUZ NÃO ACENDE» VIROU BOTÃO — 26/09/2026, pedido dela: *«A luz não
@@ -2199,8 +2205,12 @@ DONO_DA_CENA = {"p1": "Vitória"}
 #: cena: o P2 com a economia dele ligada.
 PERFIL_DA_CENA = {"p1": "tudo_ligado", "p2": "bateria_longa"}
 #: Os três botões do cartão, ``(id, rótulo, dica)``, lidos do dono
-#: (`secao_orcamento.ROTULOS_DOS_PERFIS` e `DICAS_DO_CARTAO`) pelo pacote.
-PERFIS_DO_CARTAO = tuple(_pacote08.perfis_do_cartao())
+#: (`secao_orcamento.ROTULOS_DOS_PERFIS` e `DICAS_DO_CARTAO`): nenhuma palavra
+#: do Perfil de Desempenho é digitada no desenho.
+from hefesto_dualsense4unix.app.actions.config import secao_orcamento as _orc  # noqa: E402
+
+PERFIS_DO_CARTAO = tuple((p, _orc.ROTULOS_DOS_PERFIS[p], _orc.DICAS_DO_CARTAO[p])
+                         for p in _orc.PERFIS)
 
 
 def botao_do_perfil(pid, rotulo, dica, aceso):
@@ -4260,7 +4270,7 @@ MIOLO = f'''
         <div class="ferramentas">
           <a class="btn" href="#mapear-portas" title="{MAPEAR_ENTRADAS} — ligue o DualSense em cada entrada, uma por vez, e dê nome e lugar a cada uma">
             <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg> {MAPEAR_ENTRADAS}</a>
-          <button class="btn" data-gesto="examinar-portas" title="{EXAMINAR_PORTAS} — refaz o exame das entradas, da energia e do rádio, e relê o estado de cada controle">
+          <button class="btn" data-gesto="examinar-portas" title="{EXAMINAR_PORTAS} — refaz o exame das entradas, da energia e do Bluetooth, e relê o estado de cada controle">
             <svg class="i" aria-hidden="true"><use href="#rd-reexaminar"/></svg> {EXAMINAR_PORTAS}</button>
           <a class="btn" href="mapa-do-controle.html" title="O mapa do controle — abre no navegador">
             <svg class="i ds" aria-hidden="true"><use href="#rd-ds"/></svg> Mapa do Controle</a>

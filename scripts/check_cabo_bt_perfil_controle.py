@@ -135,12 +135,15 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     # 26/09/2026. Saíram da tela o `mic-existe` e o `teto-da-vibracao` (pedido
     # dela: repetiam as abas Controles e Vibração) e o `todos` do acordeão;
     # entraram os seis abaixo.
-    "economia-do-controle": "declara a economia deste controle no `maquina.json` "
-                            "(`controles[uniq].economia`) — é da máquina; o que ela "
-                            "faz no aparelho responde pelas linhas do teto",
+    # A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01, 26/09/2026: o botão da economia
+    # virou os três do Perfil de Desempenho, e o «Atualizar» entrou no
+    # «Examinar Entradas» (`D-2609-O-ATUALIZAR-ENTRA-NO-EXAMINAR`).
+    "perfil-do-controle": "declara o Perfil de Desempenho deste controle no "
+                          "`maquina.json` (`controles[uniq].economia`) — é da "
+                          "máquina; o que ele faz no aparelho responde pelas "
+                          "linhas do teto",
     "dono-renomear": "dá nome a quem joga com o controle, na memória dos controles "
                      "— é da máquina",
-    "checkup-atualizar": "relê o estado de cada controle e repinta o Check-up — é da tela",
     "mapear-comecar": "o Mapear Entradas começa a olhar as portas — é da máquina",
     "mapear-gravar": "grava o nome e o lugar da porta da vez no mapa das portas do "
                      "`maquina.json` — é da máquina",
@@ -199,6 +202,15 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "conectar-aparelho": "abre a janela de pareamento num adaptador (`radio.mover` "
                          "sem alvo) — é o rádio da máquina",
     "parear-aparelho": "pareia um aparelho achado num adaptador — é o rádio da máquina",
+    # Os três da onda 2 do rádio, publicados pela A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01
+    # (26/09/2026): a linha «Não Conectou», o «Tentar de Novo» e o X.
+    "tentar-de-novo": "o mesmo «Conectar», no mesmo adaptador da linha que não "
+                      "chegou (`radio.mover` sem alvo) — é o rádio da máquina",
+    "esquecer-aparelho": "o X abre a pergunta de esquecer, ou tira a linha de uma "
+                         "busca sem aparelho — é da tela",
+    "confirmar-esquecer": "esquece o pareamento deste controle NESTE adaptador "
+                          "(`esquecer_o_pareamento`) — é o rádio da máquina: os "
+                          "outros adaptadores não se tocam",
     "ligar-mesmo-assim": "sobe a ponte de som além do limite do adaptador "
                          "(`radio.ponte.ligar_aqui`) — é do rádio da máquina, e o "
                          "som em si responde pelas linhas do `rota` e do `volume`",

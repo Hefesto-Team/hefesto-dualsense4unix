@@ -257,7 +257,10 @@ def test_os_tres_seletores_oferecem_o_mesmo_botao() -> None:
     assert BOTOES_DO_APARELHO[-1] == (ID_DE_NAO_SEI, "Não sei")
     assert secao_orcamento.PERFIS[-1] == secao_orcamento.PERFIL_EU_ESCOLHO
     assert secao_orcamento.TETO_POR_PERFIL[secao_orcamento.PERFIL_EU_ESCOLHO] is None
+    # «Eu escolho» virou «Personalizado» em 26/09/2026, com o mesmo sentido
+    # (`D-2609-EU-ESCOLHO-VIRA-PERSONALIZADO`): o gesto é o mesmo, e é ele que
+    # esta régua protege.
     assert (
         secao_orcamento.ROTULOS_DOS_PERFIS[secao_orcamento.PERFIL_EU_ESCOLHO]
-        == "Eu escolho"
+        == "Personalizado"
     )
