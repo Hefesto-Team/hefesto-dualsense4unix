@@ -513,7 +513,9 @@ CSS = """
 #: `vulkan-1` do Wine devolve zero camadas, o vkd3d-proton chama o
 #: `winevulkan` direto, e o A/B de 23/08 mediu a camada desligada PIOR
 #: (`integrations/camadas_vulkan.py`). O rótulo é dela e fica; trocá-lo é
-#: pergunta da sessão dos desenhos (`docs/data/decisoes-dela.csv`).
+#: pergunta da sessão dos desenhos (`docs/data/decisoes-dela.csv`). E «que
+#: cada jogo deixa», não «as sobreposições» secas: a da Steam e as ferramentas
+#: instaladas de propósito FICAM (`camadas_vulkan.CAMADAS_PRESERVADAS`).
 LIGAVEIS = (
     ("Iniciar com o sistema", "autostart", "hefesto-autostart", True,
      "Liga o serviço junto com o computador. Clique para trocar."),
@@ -521,8 +523,8 @@ LIGAVEIS = (
      "Mantém os jogos na versão do Proton que faz o controle vibrar e tocar "
      "som. Clique para trocar, com a Steam fechada."),
     ("Corrigir Vulkan", "corrigir-vulkan", "vulkan-corrigido", False,
-     "Tira as sobreposições Vulkan registradas dentro do Proton de cada jogo "
-     "e guarda cópia. Quase nunca muda a imagem, e não cura engasgo. "
+     "Tira as sobreposições Vulkan que cada jogo deixa registradas dentro do "
+     "Proton e guarda cópia. Quase nunca muda a imagem, e não cura engasgo. "
      "Desligar devolve o que foi tirado."),
 )
 
