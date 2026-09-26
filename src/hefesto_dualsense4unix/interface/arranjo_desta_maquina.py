@@ -149,10 +149,7 @@ def arranjo(
         from hefesto_dualsense4unix.integrations.censo_do_barramento import (
             ler_o_barramento as _ler,
         )
-        from hefesto_dualsense4unix.integrations.entrada_a_entrada import (
-            faces_dos_hubs,
-            ponta_do_extensor,
-        )
+        from hefesto_dualsense4unix.integrations.entrada_a_entrada import faces_dos_hubs
         from hefesto_dualsense4unix.utils.maquina import carregar_maquina, entradas_do_mapa
     except Exception:
         return None
@@ -191,8 +188,7 @@ def arranjo(
             "agora": {"rotulo": ROTULO_DE_AGORA, "caminho": caminhos},
             "antes": anterior,
         },
-        "declarado": _declarado(
-            declarado, entradas_do_mapa(declarado), ponta_do_extensor),
+        "declarado": _declarado(declarado, entradas_do_mapa(declarado)),
     }
 
 
@@ -293,26 +289,19 @@ def identidades(
     return fora
 
 
-def _declarado(
-    mapa: Any, numeros: Any, ponta_do_extensor: Callable[[str], str | None]
-) -> dict[str, dict[str, Any]]:
-    """O que ela disse de cada entrada que o editor GRAVA, para o editor da página.
+def _declarado(mapa: Any, numeros: Any) -> dict[str, dict[str, Any]]:
+    """O que ela disse de cada entrada DO MAPA DELA, para o editor da página.
 
     TODA entrada do mapa vem, com ``{}`` quando ela não disse nada: a lista de
     chaves é a lista das entradas que o editor GRAVA. A ponta de um extensor
-    declarado vem também (O-MAPA-DAS-CONEXOES-NO-PRODUTO-02): ela grava como a
-    entrada-filha dele. As do hub desenhado (``5.1``…) não vêm: o número delas
-    não cabe no disco, e ali o editor da página só mostra quem está nelas.
+    declarado grava também desde a O-MAPA-DAS-CONEXOES-NO-PRODUTO-02, e quem
+    diz isso à página é o ``podeGravar`` dela (o extensor vem aqui, na mãe);
+    depois do primeiro gesto a ponta está no disco e vem como as outras. As do
+    hub desenhado (``5.1``…) não vêm: o número delas não cabe no disco, e ali
+    o editor da página só mostra quem está nelas.
     """
     saida: dict[str, dict[str, Any]] = {}
-    pontas = [
-        ponta
-        for numero in sorted(numeros)
-        if (porta := mapa.portas.get(numero)) is not None
-        and porta.liga == "extensor"
-        and (ponta := ponta_do_extensor(numero))
-    ]
-    for numero in sorted({*numeros, *pontas}):
+    for numero in sorted(numeros):
         porta = mapa.portas.get(numero)
         dito: dict[str, Any] = {}
         if porta is not None and porta.liga:
