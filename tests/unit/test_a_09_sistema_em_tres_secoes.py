@@ -407,3 +407,17 @@ def test_o_ambiente_diz_o_nome_de_tela_em_qualquer_computador(a09, variaveis,
     MORDIDA: devolva `ambiente_efetivo()` cru no lugar do nome de tela.
     """
     assert a09._sessao(variaveis) == esperado
+
+
+def test_a_dica_da_bateria_nao_conta_os_controles_da_cena() -> None:
+    """A dica é estática na página publicada: ela não pode contar controles.
+
+    Conferência de 25/09/2026: a dica do Perfil Global de Bateria e o `title`
+    dos três botões diziam «Vale para os 2 controles» — o 2 da cena do
+    desenho, cravado no HTML, dito também a quem tem um controle ou quatro.
+
+    MORDIDA: volte o `{N}` para a dica em `aba09.D_BATERIA`.
+    """
+    pagina = PUBLICADA.read_text(encoding="utf-8")
+    assert not re.search(r"Vale para os \d+ controles", pagina)
+    assert "Vale para todos os controles" in pagina
