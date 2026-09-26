@@ -414,6 +414,25 @@ class TestOPopenDeSempre:
         fds._executar_de_verdade(["systemd-run", "--user", "--", "steam"], {})
         assert esperas["systemd-run"] == fds.ESPERA_DO_SYSTEMD_RUN_S
 
+    def test_o_programa_numa_str_nao_se_parte_em_letras(self) -> None:
+        """O ``Popen`` aceita o programa sozinho numa ``str`` (sem ``shell``),
+        e o ``ps_button_command`` chega assim quando um ``daemon.reload``
+        manda texto: o ``replace`` do ``config_overrides`` não confere tipo
+        (``ipc_handlers.py``). ``list("steam")`` daria cinco argumentos.
+
+        MORDE: tire a normalização do começo do ``abrir`` e as duas
+        comparações reprovam com ``['s', 't', 'e', 'a', 'm']``.
+        """
+        executar = _Executar(0)
+        fds.abrir("steam", env={}, contexto=_DENTRO_DO_SERVICO,
+                  executar=executar, popen=_popen_proibido)
+        assert _depois_do_traco(executar.chamadas[0]) == ["steam"]
+
+        popen = _Popen()
+        fds.abrir("steam", env={}, contexto=fds.Contexto(
+            gerenciador=True, herdaria=None, oom_do_gerenciador=100), popen=popen)
+        assert popen.chamadas[0]["cmd"] == ["steam"]
+
 
 # ---------------------------------------------------------------------------
 # 4 — a suíte nunca chega ao gerenciador de verdade

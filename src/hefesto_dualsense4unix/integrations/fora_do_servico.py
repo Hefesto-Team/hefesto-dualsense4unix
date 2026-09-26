@@ -393,6 +393,10 @@ def abrir(
     Levanta só o que o ``Popen`` de hoje levantaria (``FileNotFoundError`` e
     ``OSError``), e só quando ele é o caminho.
     """
+    # O `Popen` aceita o programa sozinho numa `str` (sem `shell`), e o
+    # `ps_button_command` chega assim de um `daemon.reload` com texto;
+    # `list("steam")` o partiria em letras.
+    argv = [argv] if isinstance(argv, str) else list(argv)
     ctx = contexto if contexto is not None else contexto_atual()
     abrir_direto = popen if popen is not None else subprocess.Popen
 
