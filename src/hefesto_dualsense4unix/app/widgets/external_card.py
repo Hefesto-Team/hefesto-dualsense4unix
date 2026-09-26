@@ -147,7 +147,7 @@ NOME_ACESSIVEL_DA_COR = "Nome da cor deste controle"
 
 #: O placeholder da BUSCA de cor (LEX-5). Ele é o único texto que ensina o
 #: gesto: sem ele, um campo vazio ao lado de "Cor:" leria como o campo livre que
-#: mora três linhas abaixo, e a lista de vinte e uma nunca apareceria.
+#: mora três linhas abaixo, e a lista dos nomes de fábrica nunca apareceria.
 #:
 #: PROVISÓRIO — decisão dela (PROVA-DE-TELA-01). Texto novo de tela.
 PLACEHOLDER_DA_BUSCA = "Escreva a cor"
@@ -174,7 +174,7 @@ _ROTULOS_NOSSOS = frozenset({ID_DE_OUTRA_COR, ID_DE_NAO_SEI})
 #: A dica do campo livre. Ela responde à armadilha do próprio desenho, que
 #: sugeria digitar "Volcanic Red" — um nome que a casa JÁ conhece (é o código
 #: `07` da tabela do firmware). O campo aceita qualquer coisa, e reconhece os
-#: vinte e um nomes de fábrica quando é um deles.
+#: nomes de fábrica do mapa dela quando é um deles.
 DICA_DO_CAMPO_LIVRE = (
     "Vale qualquer nome. Se for um nome de fábrica que o Hefesto conhece, a "
     "borda já usa o tom dele."
@@ -453,7 +453,7 @@ if _GTK_DISPONIVEL:
         def _busca_da_cor(self, dados: DadosDoControle) -> Any:
             """O campo de busca da cor, montado e já com a escolha dentro.
 
-            As VINTE E UMA cores de fábrica, não as seis de antes: com a lista
+            Todas as cores de fábrica do mapa, não as seis de antes: com a lista
             aparecendo só enquanto ela digita, o recorte perdeu a razão de ser.
             Quem tem uma edição especial acha o próprio controle pelo nome que
             está na caixa dele, em vez de digitá-lo no campo livre.

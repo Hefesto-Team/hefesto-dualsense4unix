@@ -77,8 +77,9 @@ from hefesto_dualsense4unix.integrations.cor_do_plastico import (
 #: A cor que ELA declara. Código ``02`` na tabela de fábrica.
 DECLARADA = NOMES_DE_FABRICA["02"]
 
-#: A cor que o APARELHO responde. Código ``05`` — a única das vinte e uma
-#: medida de verdade, e mesmo assim a declaração dela tem de vencê-la.
+#: A cor que o APARELHO responde. Código ``05`` — e a declaração dela tem de
+#: vencê-la. (O ``TONS`` é lido do mapa dela desde 25/09/2026; o ``#B5CED4``
+#: que ela mediu em 21/08 mora em ``docs/data/cores-do-plastico.md``.)
 LIDA = CorDoPlastico(codigo="05", nome=NOMES_DE_FABRICA["05"], tom=TONS["05"])
 
 #: O endereço do DualSense da mesa de teste. Máscara da casa: octetos 4 e 5

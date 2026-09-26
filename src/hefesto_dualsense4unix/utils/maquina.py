@@ -632,12 +632,13 @@ class ControleDeclarado(BaseModel):
     aparelho não informa. ``botoes`` é só o desenho que aparece na tela — nada é
     remapeado no controle. ``cor`` é texto livre porque a tela oferece os nomes
     de fábrica E um campo "Outra", para edição especial fora da lista. **Eram
-    SEIS até 25/08/2026; são VINTE E UM desde a LEX-5**, que trocou a fileira de
+    SEIS até 25/08/2026, e passaram a ser TODOS desde a LEX-5**, que trocou a fileira de
     botões por busca — ver ``app/actions/external_controllers.py``,
     ``cores_para_busca``. O número não volta a aparecer aqui de propósito: o
-    dono da lista é ``integrations/cor_do_plastico.NOMES_DE_FABRICA``, e ele
-    ainda deve sete nomes ao ``docs/data/cores-do-dualsense.csv``
-    (``ONDA-CONEXOES-12``).
+    dono da lista é ``integrations/cor_do_plastico.NOMES_DE_FABRICA``, que desde
+    25/09/2026 LÊ o ``docs/data/cores-do-dualsense.csv`` — os sete nomes que ele
+    devia ao mapa (``ONDA-CONEXOES-12``) chegaram com a
+    O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01.
 
     ``cor`` guarda a DECLARAÇÃO dela, e só ela. A cor LIDA do aparelho nunca
     chega aqui: em 29/08/2026 mediu-se que ela não é persistida em lugar nenhum

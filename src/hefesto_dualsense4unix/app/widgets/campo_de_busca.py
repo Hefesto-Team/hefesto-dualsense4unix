@@ -1,8 +1,9 @@
 """campo_de_busca.py — escolher numa lista LONGA digitando, e sem popup.
 
 POR QUE ELE EXISTE, e o número é a razão inteira: a tabela de cores de fábrica
-do DualSense tem **vinte e uma** entradas (``integrations/cor_do_plastico.py``,
-``NOMES_DE_FABRICA``) e a aba Configurações mostrava **seis**, num
+do DualSense tem **vinte e oito** entradas (``integrations/cor_do_plastico.py``,
+``NOMES_DE_FABRICA``, lida do mapa dela desde 25/09/2026; eram 21 digitadas
+quando este campo nasceu) e a aba Configurações mostrava **seis**, num
 ``SegmentedSelector(wrap=True)`` — grade de três colunas fixas, logo três
 fileiras de botões por card. Ela: *"o user começa a escrever o nome do controle
 dele, se é Cosmic Red ou Galactic Purple, aí a lista sugere"*.
@@ -10,7 +11,7 @@ dele, se é Cosmic Red ou Galactic Purple, aí a lista sugere"*.
 O recorte de seis não era arbitrário (``00``-``05`` são as cores de catálogo),
 mas era um recorte — e quem tem uma edição especial ficava fora da lista, no
 campo livre, digitando um nome que a casa já conhece. Uma busca resolve as duas
-pontas de uma vez: cabem as vinte e uma, e a altura do card deixa de crescer com
+pontas de uma vez: cabem todas, e a altura do card deixa de crescer com
 o tamanho da tabela.
 
 **NADA DE POPUP, E A PROIBIÇÃO É MEDIDA.** ``Gtk.ComboBox`` está proibido nesta
@@ -113,7 +114,7 @@ class _BuscaLogic(_SegmentedLogic):
         """Os itens que casam com o que foi digitado, no teto de linhas.
 
         Campo vazio devolve lista vazia, e não a lista inteira: a lista só
-        existe enquanto há texto. Mostrar as vinte e uma ao focar o campo seria
+        existe enquanto há texto. Mostrar a tabela inteira ao focar o campo seria
         devolver ao card a altura que este widget nasceu para tirar dele.
         """
         agulha = achatar(digitado)
