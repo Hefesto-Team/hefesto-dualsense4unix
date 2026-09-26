@@ -455,6 +455,10 @@ def _instalar_pelos_donos(r: m.Raizes, repo: Path, *, heroic_nativo: bool,
         ("radio-diario.jsonl", "{}\n"), ("kernel.log", "boot\n"),
     ):
         (estado / nome_do_arquivo).write_text(corpo, encoding="utf-8")
+    # Um que nenhum passo do uninstall nomeia (o registro da mesa de medição,
+    # `scripts/mesa_de_medicao.py`): com --purge-config ele vai para o backup.
+    (estado / "mesa-de-medicao").mkdir()
+    (estado / "mesa-de-medicao/registro.json").write_text("{}", encoding="utf-8")
     no_lar = lar / ".local/state" / m.SLUG
     no_lar.mkdir(parents=True, exist_ok=True)
     (no_lar / "gabinete.json").write_text("{}", encoding="utf-8")
@@ -576,6 +580,8 @@ def test_o_uninstall_de_verdade_nao_deixa_rastro(
     assert not alvos["mgba"].exists()
     for estado in {r.estado / m.SLUG, r.lar / ".local/state" / m.SLUG}:
         assert not estado.exists(), f"a pasta de estado ficou: {sorted(os.listdir(estado))}"
+    assert list(r.config.glob(f"{m.SLUG}.backup-*/*/mesa-de-medicao/registro.json")), (
+        "o que nenhum passo nomeia tem de ir para o backup, e não sumir sem rede")
 
 
 def test_a_mordida_sem_o_passo_dos_lancadores_o_limpa_acusa(tmp_path: Path) -> None:
@@ -618,9 +624,13 @@ def test_sem_purge_fica_so_o_historico_e_o_uninstall_diz(tmp_path: Path) -> None
     assert "conexao-zumbi.json" not in ficou, ficou
     assert "kernel.log" in ficou
     assert [n for n in ficou if n.startswith("radio-diario.pre-uninstall-")], ficou
-    assert set(ficou) <= {"kernel.log"} | {n for n in ficou if n.startswith("radio-diario.pre-")}, (
-        f"sem --purge-config, só o histórico fica: {ficou}")
+    historico = {"kernel.log"} | {n for n in ficou if n.startswith("radio-diario.pre-")}
+    # O que nenhum passo nomeia (a mesa de medição) também fica sem
+    # --purge-config — e é DITO, que é o que o `rmdir` calado não fazia.
+    assert set(ficou) <= historico | {"mesa-de-medicao"}, (
+        f"sem --purge-config, só o histórico (e o que ninguém nomeia) fica: {ficou}")
     assert f"a pasta de estado {estado} fica, com:" in rodou.stdout
+    assert "mesa-de-medicao" in rodou.stdout
     # Os lançadores saem com ou sem --purge-config: não são configuração do Hefesto.
     assert json.loads(alvos["heroic"].read_text(encoding="utf-8")) == HEROIC_DELA
     assert not alvos["mgba"].exists()
