@@ -307,7 +307,9 @@ def test_a_contagem_do_exame_saiu_dos_dois_lados(a09, ctx):
     teste reprova pelo pacote; devolva a chave em `aba_sistema.ENDERECOS` e
     ele reprova pelo contrato.
     """
-    from hefesto_dualsense4unix.gui import aba_sistema as tela
+    # o `gui.aba_sistema` pelo apelido que o próprio pacote já traz: um segundo
+    # `import` dele aqui faria a lista do `nada-aponta-para-a-janela` crescer.
+    tela = a09._tela
 
     assert "exame-contagem" not in tela.ENDERECOS
     assert not hasattr(a09, "_html_da_contagem")
