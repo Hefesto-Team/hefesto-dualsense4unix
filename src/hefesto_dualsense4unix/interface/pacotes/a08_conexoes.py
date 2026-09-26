@@ -4406,6 +4406,29 @@ SEM_RADIO = "Sem rádio"
 #: O traço do «não há» e da faixa de canais (o do desenho aprovado).
 TRACO_CURTO = "\u2013"
 
+# -- o pareamento que não chega, e o X que esquece ---------------------------
+# O-RADIO-CONECTA-ONDE-ELA-MANDA-01 (26/09/2026), itens 2 e 3 dela: *«se o
+# controle não conecta, ele fica nesse estado morto aqui e não faz nada. Além
+# disso precisamos de um x pra indicar que vamos desconectar tal controle»*.
+#: A linha de quem não chegou, e o gesto que a refaz no MESMO adaptador.
+NAO_CONECTOU = "Não Conectou"
+TENTAR_DE_NOVO = "Tentar de Novo"
+#: O controle que tem pareamento NESTE adaptador e não está no ar — é nele que o
+#: X alcança o controle desligado (o item 3: «ligado ou desligado»).
+DESLIGADO = "Desligado"
+#: O «sim» da pergunta do X.
+ESQUECER = "Esquecer"
+#: QUANTO A LINHA DIZ «SEGURE PS + CREATE» antes de virar «Não Conectou», e é
+#: também quando «Conectar» e «Equilibrar» voltam. É a sprint (60 s), e cabe o
+#: que o firmware precisa, MEDIDO no diário dela de 26/09: a janela da busca
+#: (`gesto_de_pareamento.SEGUNDOS_DA_JANELA`, 30 s), o `Pair` mais lento da
+#: madrugada (o branco, 11 s) e a conferência da central (10 s) somam 51 s.
+ESPERA_NA_TELA_S = 60.0
+#: Por quanto tempo a tela ainda mostra o «Não Conectou» que ela não fechou. Ele
+#: fala do «Conectar» que ela ACABOU de fazer; o de uma hora atrás é história, e
+#: a central já nem o guarda depois de um reinício do serviço.
+LEMBRA_O_NAO_CONECTOU_S = 600.0
+
 #: Os ícones do desenho aprovado, pelo tipo do aparelho. O prefixo `rd-` é o
 #: sprite desta seção, e não colide com nenhum `id` da aba.
 ICONE_DO_APARELHO = {
@@ -4486,6 +4509,19 @@ def _silhueta(ap: dict[str, Any], classe: str = "ds") -> str:
 
 def _maiuscula(frase: str) -> str:
     return frase[:1].upper() + frase[1:]
+
+
+#: As palavras que ficam minúsculas no meio de um rótulo — «Rádio e
+#: Adaptadores», «Mapear Entrada a Entrada», «Tentar de Novo».
+_MIUDAS = frozenset({"a", "e", "o", "de", "da", "do", "das", "dos", "em", "na", "no"})
+
+
+def _em_titulo(rotulo: str) -> str:
+    """«Caixa de som» → «Caixa de Som»: a palavra da tela com a primeira letra
+    maiúscula, como o desenho já escreve os rótulos."""
+    palavras = rotulo.split()
+    return " ".join(p if i and p.lower() in _MIUDAS else _maiuscula(p)
+                    for i, p in enumerate(palavras))
 
 
 def _cor_de(ap: dict[str, Any]) -> str:
@@ -4603,6 +4639,12 @@ def _moradores(cena: dict[str, Any], lid: str) -> list[dict[str, Any]]:
     return [a for a in cena.get("aparelhos", ()) if a.get("lugar") == lid]
 
 
+def _no_ar(ap: dict[str, Any]) -> bool:
+    """A linha é de quem está no ar (ou chegando) — e não o «Não Conectou» nem o
+    controle desligado, que ficam na caixa só para o X e o «Tentar de Novo»."""
+    return not ap.get("nao_conectou") and not ap.get("desligado")
+
+
 def _pontes(cena: dict[str, Any], lid: str) -> list[dict[str, Any]]:
     """As pontes deste adaptador NA ORDEM DAS VAGAS — a «N de 2» de cada linha.
 
@@ -4706,6 +4748,22 @@ def _vaga_de(ap: dict[str, Any], cena: dict[str, Any]) -> int:
     return pontes.index(ap) + 1 if ap in pontes else 0
 
 
+def _o_x(ap: dict[str, Any]) -> str:
+    """O X do item 3 dela — em todo controle de todo adaptador: no ar, desligado
+    ou que não chegou. Ele não esquece sozinho: a página abre a pergunta, e é o
+    «Esquecer» dela que apaga (`confirmar-esquecer`). No «Não Conectou» sem
+    aparelho (a busca que ninguém respondeu) não há o que esquecer, e o X só
+    tira a linha. Quem espera PS + Create não tem X: a janela está aberta."""
+    if ap.get("tipo") != "controle" or ap.get("esperando"):
+        return ""
+    nome = nome_na_conexoes(ap) or str(ap.get("rotulo") or "")
+    dica = ("Tirar esta linha" if ap.get("nao_conectou") and not ap.get("aparelho")
+            else f"Esquecer {nome} neste adaptador")
+    return (f'<button class="esquecer" title="{_x(dica)}" aria-label="{_x(dica)}" '
+            f'data-gesto="esquecer-aparelho" data-alvo="{_x(ap["id"])}" '
+            f'data-lugar="{_x(ap.get("lugar") or "")}">{_ic("sair")}</button>')
+
+
 def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False) -> str:
     """Uma linha da sala: desenho, nome, o que manda e recebe, qual vaga de ponte."""
     aid = _x(ap["id"])
@@ -4719,7 +4777,9 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
         abre = (f'<div class="linha" data-id="{aid}" data-alvo="{aid}" draggable="true" '
                 f'tabindex="0" role="button" aria-label="{le} — Enter para mudar de adaptador">')
     else:
-        abre = (f'<div class="linha{" esperando" if esperando else ""}" data-id="{aid}" '
+        estado = (" esperando" if esperando else " nao-conectou" if ap.get("nao_conectou")
+                  else " desligado" if ap.get("desligado") else "")
+        abre = (f'<div class="linha{estado}" data-id="{aid}" '
                 f'data-alvo="{aid}" aria-label="{le}">')
     desenho = _desenho_de(ap)
     campo = (f'<input class="nome" value="{_x(nome)}" placeholder="{_x(rotulo)}" '
@@ -4743,6 +4803,21 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
         fala = f'<span class="segure">{_x(gesto)}</span>' if gesto else ""
         return (abre + desenho + campo + f'<div class="features" title="{dica}">{fala}'
                 '</div><span class="conta-da-vaga">' + TRACO_CURTO + '</span></div>')
+    vazia = '<span class="conta-da-vaga">' + TRACO_CURTO + '</span>'
+    if ap.get("nao_conectou"):
+        # O NOME NÃO SE EDITA AQUI: a linha é do «Conectar» que não chegou, e o
+        # aparelho (quando se sabe quem) já não tem pareamento neste adaptador.
+        fixo = (f'<span class="quem"><span class="nome-fixo">{_x(nome_na_conexoes(ap))}'
+                '</span></span>')
+        return (abre + desenho + fixo + '<div class="features">'
+                f'<span class="nao-conectou">{NAO_CONECTOU}</span>'
+                '<button class="btn tentar" title="Conectar de novo neste adaptador" '
+                f'data-gesto="tentar-de-novo" data-alvo="{_x(ap.get("lugar") or "")}">'
+                f'{TENTAR_DE_NOVO}</button></div>' + vazia + _o_x(ap) + '</div>')
+    if ap.get("desligado"):
+        return (abre + desenho + campo + '<div class="features"><span class="desligado" '
+                f'title="Pareado neste adaptador, fora do ar">{DESLIGADO}</span></div>'
+                + vazia + _o_x(ap) + '</div>')
     if ap.get("tipo") == "controle":
         faixa = _linha_do_controle(ap, cena, com_hz)
     elif ap.get("tipo") == "webcam":
@@ -4768,7 +4843,8 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
     fatias = (f'<span class="conta-da-vaga{" alem" if passou else ""}" '
               f'data-alvo="{aid}" title="{titulo}">'
               + (f"{vaga} de {PONTES_POR_ADAPTADOR}" if vaga else TRACO_CURTO) + "</span>")
-    return abre + desenho + campo + f'<div class="features">{faixa}</div>' + fatias + "</div>"
+    return (abre + desenho + campo + f'<div class="features">{faixa}</div>' + fatias
+            + _o_x(ap) + "</div>")
 
 
 # -- o cartão de um adaptador -----------------------------------------------
@@ -4890,6 +4966,8 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = Fals
         classes.append("cheio")
     if lug.get("conectando") or any(a.get("esperando") for a in moradores):
         classes.append("esperando")
+    elif lug.get("nao_conectou"):
+        classes.append("nao-conectou")
     if aberto:
         classes.append("aberto")
     ver = ("Esconder" if aberto else "Ver") + " os aparelhos deste adaptador"
@@ -5004,6 +5082,33 @@ def _moldes_de_pergunta(cena: dict[str, Any]) -> str:
                     f'data-alvo="{_x(ap["id"])}" data-destino="" data-sim="" data-outro="Ligar">'
                     f'Todas as entradas já têm {PONTES_POR_ADAPTADOR} controles com som ou '
                     f'vibração.<br>Ligar {o_que} mesmo assim? Pode engasgar.</template>')
+    return "".join(moldes)
+
+
+def pergunta_de_esquecer(ap: dict[str, Any], lug: dict[str, Any]) -> str:
+    """A pergunta ANTES do X (item 3): quem sai, e de onde — só deste adaptador."""
+    return (f"Esquecer {como_se_chama(ap)} n{como_se_chama_o_lugar(lug)}?<br>"
+            "Só o pareamento deste adaptador sai. Para voltar, use Conectar.")
+
+
+def _moldes_de_esquecer(cena: dict[str, Any]) -> str:
+    """A pergunta de cada X que tem o que esquecer. O «sim» dela é o
+    ``confirmar-esquecer``, e o endereço é ``(linha, adaptador)`` — ``data-esquecer``
+    separa estas das perguntas de mover, que têm a mesma forma."""
+    lugares = {str(lug["id"]): lug for lug in cena.get("lugares", ()) if lug.get("sabido", True)}
+    moldes = []
+    for ap in cena.get("aparelhos", ()):
+        if ap.get("tipo") != "controle" or ap.get("esperando"):
+            continue
+        if ap.get("nao_conectou") and not ap.get("aparelho"):
+            continue
+        lug = lugares.get(str(ap.get("lugar")))
+        if lug is None:
+            continue
+        moldes.append(f'<template class="pergunta-molde" data-esquecer="1" '
+                      f'data-alvo="{_x(ap["id"])}" data-destino="{_x(lug["id"])}" '
+                      f'data-sim="{ESQUECER}" data-gesto="confirmar-esquecer">'
+                      f'{pergunta_de_esquecer(ap, lug)}</template>')
     return "".join(moldes)
 
 
@@ -5130,7 +5235,7 @@ def html_dos_moldes(cena: dict[str, Any]) -> str:
     """
     if not cena.get("lugares"):
         return ""
-    perguntas = "" if _ocupado(cena) else _moldes_de_pergunta(cena)
+    perguntas = "" if _ocupado(cena) else _moldes_de_pergunta(cena) + _moldes_de_esquecer(cena)
     return perguntas + _moldes_de_painel(cena) + _molde_do_balao(cena)
 
 
@@ -5249,9 +5354,16 @@ def html_fora_da_faixa(cena: dict[str, Any]) -> str:
         sugerido = str(viz.get("sugestao_tipo") or "")
         icone = (ICONE_DO_RADIO.get(tipo, "radio") if tipo
                  else ICONE_DO_RADIO.get(sugerido, "ajuda") if sugerido else "ajuda")
+        # O BALÃO DIZ O QUE O KERNEL ACHA QUE ELE É (26/09/2026, item 6 dela:
+        # *«o que diabos deveria ser esse svg ali? como identificar o que é
+        # dessa forma?»*): o ícone sozinho não se lê, e a palavra vai junto,
+        # com a interrogação de quem ainda não foi confirmado. O clique
+        # continua perguntando o que é. <!-- noqa-acento: citação literal dela -->
+        palpite = (f'<span class="palpite">{_x(_em_titulo(sugestao))}?</span>'
+                   if sugestao and not tipo else "")
         partes.append(f'<button class="selo-fora vizinho{"" if tipo else " sem-nome"}" '
                       f'title="{dica}" aria-label="{dica}" data-gesto="vizinho-o-que-e" '
-                      f'data-alvo="{_x(viz["id"])}">{_ic(icone)}</button>')
+                      f'data-alvo="{_x(viz["id"])}">{_ic(icone)}{palpite}</button>')
     return "".join(partes)
 
 
@@ -5277,7 +5389,7 @@ def html_espectro_conta(cena: dict[str, Any]) -> str:
 
 
 def html_meus_no_ar(cena: dict[str, Any]) -> str:
-    no_ar = [a for a in cena.get("aparelhos", ()) if a.get("tipo") != "webcam"]
+    no_ar = [a for a in cena.get("aparelhos", ()) if a.get("tipo") != "webcam" and _no_ar(a)]
     if not no_ar:
         return ""
     tipos: list[str] = []
@@ -5387,7 +5499,8 @@ def html_das_portas(cena: dict[str, Any]) -> str:
 def html_da_conta_do_radio(cena: dict[str, Any]) -> str:
     if not cena.get("lugares") and not cena.get("lido", True):
         return str(_monta().NADA_A_DIZER)  # «0 adaptadores» sem resposta seria inventar
-    controles = sum(1 for a in cena.get("aparelhos", ()) if a.get("tipo") == "controle")
+    controles = sum(1 for a in cena.get("aparelhos", ())
+                    if a.get("tipo") == "controle" and _no_ar(a))
     lugares = len(cena.get("lugares", ()))
     return (f"{controles} {'controle' if controles == 1 else 'controles'} · "
             f"{lugares} {'adaptador' if lugares == 1 else 'adaptadores'}")
@@ -5397,7 +5510,7 @@ def campos_da_secao(cena: dict[str, Any]) -> dict[str, Any]:
     """O que o pacote emite para a seção, NA ORDEM: a sala antes dos Hz, porque
     os Hz pousam nos elementos que a sala acabou de escrever."""
     controles = [a for lug in cena.get("lugares", ()) for a in _moradores(cena, str(lug["id"]))
-                 if a.get("tipo") == "controle" and not a.get("esperando")]
+                 if a.get("tipo") == "controle" and not a.get("esperando") and _no_ar(a)]
     com_mic = [a for a in controles if a.get("mic")]
     return {
         "conta-de-adaptadores": html_da_conta_do_radio(cena),
@@ -5670,10 +5783,8 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     bz_de = {_mac(a.endereco): a for a in adaptadores_bz}
 
     agora = time.time()
-    prazo = _prazo_do_pendente()
     movimentos = [m for m in central.get("movimentos") or () if isinstance(m, dict)]
-    esperando = [m for m in movimentos if m.get("estado") == "esperando"
-                 and agora - float(m.get("quando") or 0.0) <= prazo]
+    esperando = [m for m in movimentos if _ainda_espera(m, agora)]
     ocupado = bool(esperando)
 
     # Quem está COLADO em outro rádio — a mesa já mediu (`Mesa.apertadas`).
@@ -5743,9 +5854,17 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         if lug["quedas"] and desde:
             lug["quedas_desde"] = desde[8:10] + "/" + desde[5:7]
 
+    endereco_do_caminho = {str(getattr(a, "caminho", "")): _mac(a.endereco)
+                           for a in adaptadores_bz}
     aparelhos = _aparelhos_da_cena(ctx, st, governador, esperando, aparelhos_bz,
-                                   {str(getattr(a, "caminho", "")): _mac(a.endereco)
-                                    for a in adaptadores_bz}, enderecos)
+                                   endereco_do_caminho, enderecos)
+    falhas = _os_que_nao_conectaram(ctx, movimentos, agora, enderecos, aparelhos_bz,
+                                    endereco_do_caminho)
+    aparelhos += falhas
+    aparelhos += _os_desligados(aparelhos_bz, endereco_do_caminho, aparelhos)
+    for lug in lugares:
+        lug["nao_conectou"] = any(f["lugar"] == lug["id"] for f in falhas)
+    _esquecer_as_meias_chaves(falhas)
     declarados = _radios_declarados(_declaracao())
     para_id, rotulo_do_tipo = _tipos_de_radio()
     vizinhos = []
@@ -5791,6 +5910,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         "aberto": _o_aberto(lugares, aparelhos, proposta),
         "perto": _perto(aparelhos_bz, adaptadores_bz, aparelhos),
     }
+    cena["destino_da_central"] = _destino_da_central(cena, st)
     cena["destino_do_conectar"] = _destino_do_conectar(cena, st)
     return cena
 
@@ -5827,6 +5947,12 @@ def _o_aberto(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]],
                   None) or next((str(lug["id"]) for lug in lugares if lug.get("conectando")), None)
     if espera:
         return espera
+    # O «NÃO CONECTOU» MORA DENTRO DA CAIXA (26/09/2026), com o «Tentar de Novo»
+    # e o X: sem escolha dela, a caixa de quem não chegou abre. Com escolha, a
+    # dela vence — e a do «Conectar» já é a que ela abriu.
+    falhou = next((str(lug["id"]) for lug in lugares if lug.get("nao_conectou")), None)
+    if falhou and "lugar" not in _ABERTO:
+        return falhou
     if "lugar" in _ABERTO:
         escolhido = _ABERTO["lugar"]
         return str(escolhido) if escolhido else None
@@ -5893,14 +6019,182 @@ def _grupo_da_porta(caminho: str) -> str:
     return pai or "Direto no computador"
 
 
-def _prazo_do_pendente() -> float:
-    try:
-        perfil._com_o_src()
-        from hefesto_dualsense4unix.integrations.central_do_radio import PRAZO_DO_PENDENTE_S
+def _ainda_espera(m: dict[str, Any], agora: float) -> bool:
+    """Este movimento ainda segura a tela: «esperando», e há menos de
+    :data:`ESPERA_NA_TELA_S`. Depois disso a linha diz «Não Conectou» e os
+    botões voltam — a linha «Segure PS + Create» para sempre era o «estado
+    morto» dela (item 2)."""
+    return (m.get("estado") == "esperando"
+            and agora - float(m.get("quando") or 0.0) <= ESPERA_NA_TELA_S)
 
-        return float(PRAZO_DO_PENDENTE_S)
-    except Exception:
-        return 120.0
+
+#: O estado da central de quem acabou sem chegar — a chave de máquina dela.
+_NAO_CHEGOU_NA_CENTRAL = "nao_chegou"  # (noqa-acento): chave de máquina da central
+#: A recusa do um-por-vez: não começou nada, e não é «Não Conectou».
+_RECUSA_DA_CENTRAL = "ocupado"
+#: Os «Não Conectou» que ela fechou no X, ou refez no «Tentar de Novo» — pela
+#: chave do movimento, para o mesmo não voltar no tique seguinte.
+_DISPENSADOS: set[str] = set()
+#: As meias chaves que esta tela já mandou esquecer: uma vez por movimento.
+_MEIAS_CHAVES_PEDIDAS: set[str] = set()
+
+
+def _chave_da_falha(m: dict[str, Any]) -> str:
+    return (f'{_mac(m.get("destino"))}|{_so_hex(str(m.get("aparelho") or ""))}|'
+            f'{float(m.get("quando") or 0.0):.3f}')
+
+
+def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agora: float,
+                           enderecos: list[str], aparelhos_bz: tuple[Any, ...],
+                           endereco_do_caminho: dict[str, str]) -> list[dict[str, Any]]:
+    """A linha «Não Conectou» de cada adaptador cujo ÚLTIMO movimento não chegou.
+
+    Não chegou é a central dizendo «não chegou» (qualquer motivo, menos a
+    recusa do um-por-vez, que não começou nada), ou o «esperando» que passou de
+    :data:`ESPERA_NA_TELA_S`. Um por adaptador, o mais novo: o «Conectar» que
+    ela refez e chegou apaga o de antes.
+
+    A MEIA CHAVE (item 5, MEDIDO no diário dela de 26/09): o ``Pair`` do branco
+    deu, a busca de serviços caiu em ``Host is down``, e ele ficou ``Paired``
+    sem nunca ficar ``Connected`` — um pareamento pela metade no adaptador. A
+    linha sabe disso pelo BlueZ (``meia_chave``), e a tela a esquece
+    (:func:`_esquecer_as_meias_chaves`).
+    """
+    ultimo: dict[str, dict[str, Any]] = {}
+    for m in movimentos:
+        destino = _mac(m.get("destino"))
+        if destino not in enderecos:
+            continue
+        antes = ultimo.get(destino)
+        if antes is None or float(m.get("quando") or 0.0) >= float(antes.get("quando") or 0.0):
+            ultimo[destino] = m
+    da_mesa = {_so_hex(str(e.get("uniq") or "")): e for e in ctx.mesa}
+    linhas: list[dict[str, Any]] = []
+    for destino, m in ultimo.items():
+        idade = agora - float(m.get("quando") or 0.0)
+        estado = str(m.get("estado") or "")
+        falhou = ((estado == _NAO_CHEGOU_NA_CENTRAL and m.get("motivo") != _RECUSA_DA_CENTRAL)
+                  or (estado == "esperando" and idade > ESPERA_NA_TELA_S))
+        chave = _chave_da_falha(m)
+        if not falhou or idade > LEMBRA_O_NAO_CONECTOU_S or chave in _DISPENSADOS:
+            continue
+        aparelho = _mac(m.get("aparelho")) if m.get("aparelho") else ""
+        eu = da_mesa.get(_so_hex(aparelho), {}) if aparelho else {}
+        classe = m.get("classe")
+        tipo = ("controle" if (not aparelho or m.get("e_controle", True))
+                else _tipo_do_aparelho(str(m.get("icone") or ""),
+                                       classe if isinstance(classe, int) else None))
+        cor = _hex_do_plastico(str(eu.get("cor") or ""))
+        meia = any(
+            _mac(a.endereco) == aparelho and endereco_do_caminho.get(str(a.adaptador)) == destino
+            and a.pareado is True and a.conectado is not True
+            for a in aparelhos_bz) if aparelho else False
+        linhas.append({
+            "id": f"nao-conectou-{_so_hex(destino)}", "aparelho": aparelho,
+            "tipo": tipo, "lugar": destino, "nome": str(m.get("nome") or ""),
+            "modalias": str(m.get("modalias") or ""), "jogador": eu.get("jogador"),
+            "rotulo": ("DualSense" if tipo == "controle"
+                       else PALAVRA_DO_TIPO.get(tipo, "aparelho").capitalize()),
+            "cor": cor if cor.startswith("#") else "",
+            "cor_nome": "" if str(eu.get("nome") or "") in ("", _cor_desconhecida())
+            else str(eu["nome"]),
+            "nao_conectou": True, "meia_chave": meia, "chave": chave,
+            "esperando": False, "fixo": True,
+        })
+    return linhas
+
+
+def _e_controle_do_bluez(a: Any) -> bool:
+    """Pergunta à CLASSE (o dono é `gesto_de_pareamento.e_controle`), e sem ela
+    ao ``Icon`` que o BlueZ deriva e ao fabricante do ``Modalias`` — nunca ao nome."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations.gesto_de_pareamento import e_controle
+
+    return (e_controle(getattr(a, "classe", None))
+            or str(getattr(a, "icone", "") or "") == "input-gaming"
+            or "V054C" in str(getattr(a, "modalias", "") or "").upper())
+
+
+def _os_desligados(aparelhos_bz: tuple[Any, ...], endereco_do_caminho: dict[str, str],
+                   ja: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Os controles com pareamento NESTE adaptador e fora do ar — o item 3: o X
+    vale para controle ligado ou desligado, em qualquer adaptador.
+
+    Fica de fora quem está no ar em qualquer adaptador (a linha dele é a viva,
+    e a chave que sobra noutro é da faxina da central) e quem já é um «Não
+    Conectou» naquele adaptador. Um controle desligado com chave em dois
+    adaptadores aparece nos dois: as duas chaves existem, e o X de cada uma é
+    dela.
+    """
+    no_ar = {_so_hex(a.endereco) for a in aparelhos_bz if a.conectado is True}
+    vivos = {_so_hex(str(a["id"])) for a in ja if not a.get("nao_conectou")}
+    falhas = {(_so_hex(str(a.get("aparelho") or "")), a["lugar"])
+              for a in ja if a.get("nao_conectou")}
+    nomes = _nomes_por_endereco(aparelhos_bz)
+    vistos: set[tuple[str, str]] = set()
+    fora: list[dict[str, Any]] = []
+    for a in aparelhos_bz:
+        lugar = endereco_do_caminho.get(str(a.adaptador), "")
+        h = _so_hex(a.endereco)
+        if (a.pareado is not True or a.conectado is True or not lugar or h in no_ar
+                or h in vivos or (h, lugar) in falhas or (h, lugar) in vistos
+                or not _e_controle_do_bluez(a)):
+            continue
+        vistos.add((h, lugar))
+        alias = str(a.nome or "")
+        fora.append({
+            "id": _mac(a.endereco), "aparelho": _mac(a.endereco), "tipo": "controle",
+            "lugar": lugar, "nome": nomes.get(_mac(a.endereco), ""),
+            "rotulo": alias if alias and not _e_nome_de_fabrica(alias) else "DualSense",
+            "modalias": str(a.modalias or ""), "desligado": True,
+            "esperando": False, "fixo": True,
+        })
+    return fora
+
+
+def _com_dois_pontos(valor: object) -> str:
+    """``AABBCC0000A1`` ou ``aa:bb:…`` → ``aa:bb:cc:00:00:a1``; ``""`` sem forma."""
+    h = _so_hex(str(valor or ""))
+    return ":".join(h[i:i + 2] for i in range(0, 12, 2)) if len(h) == 12 else ""
+
+
+def _esquecer_o_pareamento(lugar: str, aparelho: str) -> Any:
+    """O pareamento de ``aparelho`` em ``lugar`` sai — pelo dono do X
+    (`gesto_de_pareamento.esquecer_o_pareamento`: o ``RemoveDevice`` e o verbo
+    ``esquecer`` da ponte privilegiada, que já existia), e em nenhum outro
+    adaptador."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations import gesto_de_pareamento
+
+    return gesto_de_pareamento.esquecer_o_pareamento(
+        _com_dois_pontos(lugar), _com_dois_pontos(aparelho), quem="tela")
+
+
+def _esquecer_as_meias_chaves(falhas: list[dict[str, Any]]) -> None:
+    """VENCIDO O PRAZO, A MEIA CHAVE SAI (item 5): o controle que o ``Pair``
+    registrou e que nunca ficou ``Connected`` não fica com pareamento pela
+    metade no adaptador — e a linha oferece «Tentar de Novo». Uma vez por
+    movimento, num fio: o tique não espera o rádio.
+
+    Só a chave DAQUELE controle, naquele adaptador, e só com o BlueZ dizendo
+    ``Paired`` e não ``Connected`` (`_os_que_nao_conectaram`). Quem está no ar
+    nunca sai por aqui.
+    """
+    for f in falhas:
+        if not f.get("meia_chave") or f["chave"] in _MEIAS_CHAVES_PEDIDAS:
+            continue
+        _MEIAS_CHAVES_PEDIDAS.add(f["chave"])
+
+        def trabalhar(lugar: str = f["lugar"], aparelho: str = f["aparelho"]) -> None:
+            # A limpeza nunca derruba a tela: sem ela, o X segue valendo.
+            with contextlib.suppress(Exception):
+                _esquecer_o_pareamento(lugar, aparelho)
+            _esquecer("bluez")
+
+        if LER_NA_HORA:
+            trabalhar()
+        else:
+            threading.Thread(target=trabalhar, name="radio-meia-chave", daemon=True).start()
 
 
 def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, Any],
@@ -6022,23 +6316,42 @@ def _perto(aparelhos_bz: tuple[Any, ...], adaptadores_bz: tuple[Any, ...],
 
 
 def _destino_do_conectar(cena: dict[str, Any], st: dict[str, Any]) -> str:
-    """O destino que a tela mostra no «Conectar»: o que ela escolheu no chip,
-    ou a D8 (`plano_de_radio.ordem_dos_destinos`). É ESTE que vai no
-    `radio.mover` — a ordem da tela e a da central não divergem no empate."""
+    """O destino do «Conectar»: o adaptador ABERTO na lista, e nenhum outro.
+
+    UM DESTINO, DITO DE UM JEITO SÓ — decisão dela, 26/09/2026, 04h: *«No
+    adaptador aberto (a Esquerda)»*. Até aqui o destino era o do chip do
+    «Procurando», ou a D8; abrir um adaptador na lista não o mudava. E o chip
+    não mandava também: ele mora no painel que o próprio «Conectar» abre, e a
+    busca já tinha começado na D8 quando ela o via — os oito «Conectar» da
+    madrugada dela abriram a busca no ``hci0``, qualquer que fosse o adaptador
+    aberto (o ``radio-diario.jsonl``, 03h30 a 03h45). O chip agora abre o mesmo
+    adaptador (:func:`escolher_adaptador`), e os dois dizem a mesma coisa.
+
+    A ordem: o destino de um movimento que ESPERA (a janela já está aberta
+    nele, e não muda de adaptador no meio); o adaptador aberto; sem nenhum
+    aberto, a escolha da central (a D8, em ``destino_da_central``). O endereço
+    é o do adaptador — nunca a posição na lista, nunca o número do jogador.
+    """
     if not cena["lugares"]:
         return ""
-    # A JANELA ABERTA É A VERDADE DO CHIP (25/09/2026, a prova de tela): o
-    # adaptador em que a janela abriu passa a VARRER, e a D8 manda quem varre
-    # para o fim — o chip do «Procurando» pulava para outro adaptador com a
-    # janela aberta no primeiro. Enquanto um movimento espera, o chip é o dele.
+    ids = {lug["id"] for lug in cena["lugares"]}
+    agora = time.time()
     for m in (_dicionario(st.get("radio_central")).get("movimentos") or ()):
-        if isinstance(m, dict) and m.get("estado") == "esperando" and m.get("destino"):
+        if isinstance(m, dict) and _ainda_espera(m, agora) and m.get("destino"):
             aberto = _mac(str(m.get("destino")))
-            if any(lug["id"] == aberto for lug in cena["lugares"]):
+            if aberto in ids:
                 return aberto
-    escolhido = _ABERTO.get("destino")
-    if escolhido and any(lug["id"] == escolhido for lug in cena["lugares"]):
-        return str(escolhido)
+    if cena.get("aberto") in ids:
+        return str(cena["aberto"])
+    return str(cena.get("destino_da_central") or cena["lugares"][0]["id"])
+
+
+def _destino_da_central(cena: dict[str, Any], st: dict[str, Any]) -> str:
+    """A D8 (`plano_de_radio.ordem_dos_destinos`): o destino quando nenhum
+    adaptador está aberto. A ordem da tela e a da central não divergem no
+    empate, porque é ESTE que vai no `radio.mover`."""
+    if not cena["lugares"]:
+        return ""
     with contextlib.suppress(Exception):
         perfil._com_o_src()
         from hefesto_dualsense4unix.integrations import plano_de_radio
@@ -6057,8 +6370,18 @@ def _destino_do_conectar(cena: dict[str, Any], st: dict[str, Any]) -> str:
 #: O que a tela está mostrando AGORA — o gesto age sobre a cena que ela viu,
 #: como o ⊘ do Check-up age sobre `_ORDENS_NA_TELA`.
 _CENA_NA_TELA: dict[str, Any] = {}
-#: O adaptador aberto no acordeão e o destino escolhido no «Conectar».
+#: O adaptador aberto no acordeão — que é também o destino do «Conectar».
 _ABERTO: dict[str, Any] = {}
+
+
+def _abrir_na_tela(lid: str | None) -> None:
+    """Abre ``lid`` (ou fecha todos, com ``None``) e move o destino junto, na
+    hora: o «Conectar» clicado antes do próximo tique já vai para onde ela vê.
+    Com uma janela aberta, o destino é o dela e não muda (:func:`_destino_do_conectar`)."""
+    _ABERTO["lugar"] = lid
+    _CENA_NA_TELA["aberto"] = lid
+    if not _CENA_NA_TELA.get("ocupado"):
+        _CENA_NA_TELA["destino_do_conectar"] = lid or _CENA_NA_TELA.get("destino_da_central", "")
 
 
 def _laco() -> Any:
@@ -6138,7 +6461,7 @@ def abrir_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     lug = _lugar_na_tela(o)
     if len(_CENA_NA_TELA.get("lugares") or ()) == 1:
         return {"armou": True}
-    _ABERTO["lugar"] = None if _CENA_NA_TELA.get("aberto") == lug["id"] else lug["id"]
+    _abrir_na_tela(None if _CENA_NA_TELA.get("aberto") == lug["id"] else lug["id"])
     return {"armou": True}
 
 
@@ -6292,7 +6615,11 @@ def conectar_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     destino = str(_CENA_NA_TELA.get("destino_do_conectar") or "")
     if not destino:
         raise RuntimeError("não há adaptador Bluetooth para conectar")
-    return _mover(p, str(o.get("alvo") or "") or None, destino)
+    feito = _mover(p, str(o.get("alvo") or "") or None, destino)
+    # A CAIXA DO DESTINO FICA ABERTA DEPOIS: o «Segure PS + Create», o «Não
+    # Conectou» e a piscada da chegada moram nela, e é onde ela olha.
+    _abrir_na_tela(destino)
+    return feito
 
 
 @gesto("08-conexoes.html", "parear-aparelho", grava="radio.mover")
@@ -6306,7 +6633,10 @@ def parear_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
 @gesto("08-conexoes.html", "escolher-adaptador")
 def escolher_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """O chip do «Conectar»: o destino que ela escolheu vale no próximo pedido.
+    """O chip do «Conectar»: ABRE o adaptador escolhido, que é o destino.
+
+    UM DESTINO SÓ (26/09/2026): o chip e o adaptador aberto na lista dizem a
+    mesma coisa, e o chip não guarda uma escolha à parte — ele abre a caixa.
 
     COM A JANELA ABERTA NOUTRO ADAPTADOR, O CHIP RECUSA (25/09/2026): a janela
     não muda de adaptador no meio, e um chip que acende sem mudar onde a busca
@@ -6315,9 +6645,69 @@ def escolher_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
     lug = _lugar_na_tela(o)
     if _CENA_NA_TELA.get("ocupado") and lug["id"] != _CENA_NA_TELA.get("destino_do_conectar"):
         raise RuntimeError("a busca já está aberta noutro adaptador")
-    _ABERTO["destino"] = lug["id"]
-    _CENA_NA_TELA["destino_do_conectar"] = lug["id"]
+    _abrir_na_tela(str(lug["id"]))
     return {"armou": True}
+
+
+def _linha_na_tela(o: dict[str, Any]) -> dict[str, Any]:
+    """A linha do clique pelo par ``(alvo, lugar)``: o mesmo controle desligado
+    aparece em cada adaptador em que tem chave, com o mesmo id."""
+    alvo = str(o.get("alvo") or "")
+    lugar = str(o.get("lugar") or o.get("destino") or "")
+    ap = next((a for a in _CENA_NA_TELA.get("aparelhos", ())
+               if a["id"] == alvo and (not lugar or a.get("lugar") == lugar)), None)
+    if not isinstance(ap, dict):
+        raise ValueError(f"o clique não disse uma linha que está na tela ({alvo!r}, {lugar!r})")
+    return ap
+
+
+@gesto("08-conexoes.html", "tentar-de-novo", grava="radio.mover")
+def tentar_de_novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Tentar de Novo»: o mesmo «Conectar», no MESMO adaptador da linha — e em
+    nenhum outro. A linha «Não Conectou» sai quando a central aceita; recusada,
+    ela fica, e o botão treme."""
+    lug = _lugar_na_tela(o)
+    lid = str(lug["id"])
+    feito = _mover(p, None, lid)
+    for ap in _CENA_NA_TELA.get("aparelhos", ()):
+        if ap.get("nao_conectou") and ap.get("lugar") == lid:
+            _DISPENSADOS.add(str(ap.get("chave") or ""))
+    _abrir_na_tela(lid)
+    return feito
+
+
+@gesto("08-conexoes.html", "esquecer-aparelho")
+def esquecer_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O X: a página abre a pergunta, e nada sai do rádio aqui.
+
+    O «Não Conectou» de uma busca que ninguém respondeu não tem o que esquecer:
+    o X só tira a linha. Com um controle esperando PS + Create, o X treme — é o
+    mesmo um-por-vez do «Mover»."""
+    ap = _linha_na_tela(o)
+    if ap.get("nao_conectou") and not ap.get("aparelho"):
+        _DISPENSADOS.add(str(ap.get("chave") or ""))
+        return {"armou": True}
+    if _CENA_NA_TELA.get("ocupado"):
+        raise RuntimeError("esperando um controle chegar")
+    return _so_abre()
+
+
+@gesto("08-conexoes.html", "confirmar-esquecer", grava="esquecer_o_pareamento")
+def confirmar_esquecer(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Esquecer» da pergunta do X: o pareamento DESTE controle NESTE adaptador
+    sai (a «chave de registro» dela é a chave do pareamento no BlueZ), pelo verbo
+    ``esquecer`` que a ponte privilegiada já tinha. Os outros adaptadores não
+    se tocam. Vale ligado ou desligado; o ligado desconecta."""
+    ap = _linha_na_tela(o)
+    if _CENA_NA_TELA.get("ocupado"):
+        raise RuntimeError("esperando um controle chegar")
+    aparelho = str(ap.get("aparelho") or ap["id"])
+    feito = _esquecer_o_pareamento(str(ap["lugar"]), aparelho)
+    if not getattr(feito, "deu", False):
+        raise RuntimeError(str(getattr(feito, "porque", "") or "o Bluetooth não esqueceu"))
+    if ap.get("nao_conectou"):
+        _DISPENSADOS.add(str(ap.get("chave") or ""))
+    _esquecer("bluez")
 
 
 @gesto("08-conexoes.html", "equilibrar-radio")
@@ -6451,7 +6841,9 @@ METODOS = {"controller.target.set", "radio.mover", "radio.ponte.ligar_aqui"}
 PAGINA = "08-conexoes.html"
 #: 16 → 37 em 23/09/2026: a seção do rádio trouxe os gestos do desenho aprovado
 #: e a cerimônia do «Mapear Entrada a Entrada» (TRANSPLANTE-DA-SECAO-01).
-PISO_DA_ABA = 37
+#: 37 → 40 em 26/09/2026: o «Tentar de Novo», o X e o «Esquecer» da pergunta
+#: dele (O-RADIO-CONECTA-ONDE-ELA-MANDA-01).
+PISO_DA_ABA = 40
 PROVAS = [
     # O `index` da prova é 0 porque o controle de mentira é o único da lista —
     # e o `_indice` cai na posição quando o daemon não publicou `index`.
@@ -6589,6 +6981,11 @@ PROVAS = [
 #: da vez no `maquina.json` pelo dono do mapa; `mapear-comecar` e `mapear-parar`
 #: só ligam e desligam o olhar do dono no processo da interface; e
 #: `checkup-atualizar` só relê. O `state_full` não publica nenhum deles.
+#:
+#: OS DOIS DO X — O-RADIO-CONECTA-ONDE-ELA-MANDA-01, 26/09/2026:
+#: `esquecer-aparelho` só abre a pergunta (ou tira a linha do «Não Conectou»);
+#: `confirmar-esquecer` apaga a chave do pareamento no BlueZ, que o
+#: `state_full` não publica.
 SEM_ECO = ("sala-altura", "sala-visada", "mic-existe", "vizinho-o-que-e",
            "ignorar", "examinar-portas", "teto-da-vibracao",
            "escolher-aparelho", "escolher-entrada", "tirar-daqui",
@@ -6596,7 +6993,7 @@ SEM_ECO = ("sala-altura", "sala-visada", "mic-existe", "vizinho-o-que-e",
            "adaptador-renomear", "aparelho-renomear", "entrada-face",
            "entrada-nao-alcanco", "adaptador-reordenar",
            "dono-renomear", "economia-do-controle", "mapear-gravar", "checkup-atualizar",
-           "mapear-comecar", "mapear-parar")
+           "mapear-comecar", "mapear-parar", "esquecer-aparelho", "confirmar-esquecer")
 
 
 # ---------------------------------------------------------------------------

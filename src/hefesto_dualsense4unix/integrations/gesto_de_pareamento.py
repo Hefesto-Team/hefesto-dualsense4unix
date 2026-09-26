@@ -174,6 +174,15 @@ FRASE_NAO_PAREOU = (
     "Não consegui parear este controle. Ele ainda está em PS + Create, com a "
     "barra piscando?"
 )
+#: O X da tela (O-RADIO-CONECTA-ONDE-ELA-MANDA-01): o pareamento saiu daquele
+#: adaptador, e só dele.
+ESTADO_ESQUECEU = "esqueceu"
+FRASE_ESQUECEU = "O pareamento deste controle saiu deste adaptador."
+FRASE_NAO_ESQUECEU = "O Bluetooth não esqueceu este controle agora. Tente de novo."
+
+#: Quanto o X espera a trava do rádio: um gesto de TELA, como o da central
+#: (`central_do_radio.PRAZO_DA_TRAVA_DO_GESTO_S`) — passou disso, o botão treme.
+PRAZO_DA_TRAVA_DO_ESQUECER_S = 5.0
 
 
 def e_controle(classe: int | None) -> bool:
@@ -620,6 +629,75 @@ class JanelaDeBusca:
         return Resultado(ESTADO_NAO_DEU, FRASE_NAO_PAREOU)
 
 
+def _esquecer_pela_ponte(adaptador: str, aparelho: str) -> tuple[bool, str]:
+    """O verbo ``esquecer`` da ponte root — o mesmo que a central usa no mover.
+
+    Import tardio: a central importa ESTE módulo, e o dono do embrulho do verbo
+    é ela (``central_do_radio.esquecer_pela_ponte``, que recusa sob a suíte).
+    """
+    from hefesto_dualsense4unix.integrations.central_do_radio import esquecer_pela_ponte
+
+    return esquecer_pela_ponte(adaptador, aparelho)
+
+
+def esquecer_o_pareamento(
+    adaptador: str,
+    aparelho: str,
+    *,
+    dono: bluez_dbus.LeitorDoBluez | None = None,
+    esquecer_na_ponte: Callable[[str, str], tuple[bool, str]] | None = None,
+    quem: str = QUEM,
+    prazo_s: float = PRAZO_DA_TRAVA_DO_ESQUECER_S,
+) -> Resultado:
+    """O X da tela: o pareamento DESTE aparelho NESTE adaptador sai — e só ele.
+
+    O-RADIO-CONECTA-ONDE-ELA-MANDA-01 (26/09/2026), item 3 dela: *«precisamos
+    de um x pra indicar que vamos desconectar tal controle (Limpar a chave de
+    registro de tal controle ali)»*. A «chave de registro» é a chave do
+    pareamento no BlueZ, e ela sai pelos dois caminhos que a central já usa no
+    mover (``_esquecer``): o ``RemoveDevice`` do dono, que tira o objeto e a
+    pasta do bond, e o verbo ``esquecer`` da ponte privilegiada — o cache SDP
+    e a LÁPIDE, sem a qual o autorestore ressuscita o bond. Nada daqui escreve
+    em ``/var/lib/bluetooth``: quem escreve lá é o ``bluetoothd`` e a ponte.
+
+    **Nunca em lote, e nunca noutro adaptador**: o endereço do adaptador é
+    parte do pedido, e o objeto é resolvido POR ELE (o ``hciN`` é sorteio de
+    enumeração). Vale com o controle ligado (o ``RemoveDevice`` o derruba) ou
+    desligado, e vale para a meia chave que um ``Pair`` deixou sem o HID chegar.
+
+    Idempotente: sem objeto no BlueZ, só a ponte age (a lápide não duplica o
+    efeito). Deu quando o BlueZ tirou o objeto OU a ponte esqueceu — uma lápide
+    que faltou fica no log, como no mover. Nunca levanta.
+    """
+    from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
+
+    alvo_adaptador = mac_limpo(adaptador)
+    alvo = mac_limpo(aparelho)
+    if alvo_adaptador is None or alvo is None:
+        return Resultado(ESTADO_NAO_DEU, FRASE_NAO_ESQUECEU)
+    leitor = dono if dono is not None else bluez_dbus.dono()
+    ponte = esquecer_na_ponte if esquecer_na_ponte is not None else _esquecer_pela_ponte
+    mascara = mascarar(alvo)
+    try:
+        with bluez_dbus.na_trava(quem, prazo_s=prazo_s):
+            no = leitor.caminho_do_aparelho(alvo, adaptador=alvo_adaptador)
+            tirou = False
+            if no is not None:
+                tirou = bool(leitor.remover_aparelho(no, quem=quem).feita)
+            enterrou, motivo = ponte(alvo_adaptador, alvo)
+    except TravaOcupadaError:
+        logger.info("esquecer_trava_ocupada", aparelho=mascara)
+        return Resultado(ESTADO_NAO_DEU, FRASE_NAO_ESQUECEU)
+    if not enterrou:
+        logger.warning("esquecer_sem_lapide", aparelho=mascara,
+                       adaptador=mascarar(alvo_adaptador), motivo=str(motivo)[:200])
+    if tirou or enterrou:
+        logger.info("esquecer_deu", aparelho=mascara, adaptador=mascarar(alvo_adaptador),
+                    objeto=no is not None, lapide=enterrou)
+        return Resultado(ESTADO_ESQUECEU, FRASE_ESQUECEU)
+    return Resultado(ESTADO_NAO_DEU, FRASE_NAO_ESQUECEU)
+
+
 def impedimentos(caminho: str = PONTE_INSTALADA) -> list[str]:
     """Por que o pareamento pelo Hefesto não pode acontecer agora. Vazio = pode.
 
@@ -689,19 +767,23 @@ __all__ = [
     "CLASSE_MAIOR_PERIFERICO",
     "ESPERA_DO_PAREAR_S",
     "ESTADO_ACHOU",
+    "ESTADO_ESQUECEU",
     "ESTADO_JANELA_FECHADA",
     "ESTADO_JA_PAREADO",
     "ESTADO_NAO_DEU",
     "ESTADO_NINGUEM",
     "ESTADO_PAREOU",
     "ESTADO_SEM_PORTA",
+    "FRASE_ESQUECEU",
     "FRASE_JANELA_FECHADA",
     "FRASE_JA_PAREADO",
     "FRASE_NAO_DEU",
+    "FRASE_NAO_ESQUECEU",
     "FRASE_NAO_PAREOU",
     "FRASE_NINGUEM",
     "FRASE_PAREOU",
     "FRASE_SEM_PORTA",
+    "PRAZO_DA_TRAVA_DO_ESQUECER_S",
     "QUEM",
     "SEGUNDOS_DA_JANELA",
     "SEGUNDOS_MAX",
@@ -709,6 +791,7 @@ __all__ = [
     "JanelaDeBusca",
     "Resultado",
     "e_controle",
+    "esquecer_o_pareamento",
     "impedimentos",
     "ler_candidato",
     "procurar",
