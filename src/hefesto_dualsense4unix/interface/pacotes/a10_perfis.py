@@ -2665,13 +2665,28 @@ def _com_o_que_esta_valendo(nome: str, ctx: Contexto) -> Any:
     é o perfil do disco — que é exatamente o comportamento de ontem. Um gesto
     dela não pode deixar de gravar o campo que ela mexeu porque o daemon
     publicou um estado que o esquema recusa.
+
+    **NOTA DE 26/09/2026 — A PREMISSA DE 06/09 CADUCOU, e esta aba não é dona
+    de seção viva nenhuma** (O-SALVAR-DA-VIBRACAO-01). A cor clicada na 04
+    vai ao disco no clique desde 09/09 (`a04_iluminacao._guardar_a_cor_no_perfil`),
+    o som da 02 desde 05/09 (`a02_controles._lembrar_do_som`), a velocidade da
+    06 também: o que o vivo trazia a mais que o disco deixou de ser escolha
+    dela. Medido em lar de mentira com o PRAGMATA dela (chaves forjadas):
+    mudar a PRIORIDADE ligava o microfone do …:03 (`mic.muted` true → false,
+    a leitura do aparelho) e apagava a `fonte` do alto-falante. O dono da
+    sobreposição continua sendo o `rodape`, e é ele quem diz que seções a aba
+    10 sobrepõe (`rodape.secoes_do_vivo`): hoje, nenhuma — o gesto do editor
+    grava o campo dele sobre o disco.
     """
     from hefesto_dualsense4unix.profiles.loader import load_profile
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 
+    from . import rodape
+
     prof = load_profile(nome)
+    secoes = rodape.secoes_do_vivo(PAGINA)
     valendo = _valendo(ctx)
-    if not valendo or not mesmo_slug(nome, valendo):
+    if not secoes or not valendo or not mesmo_slug(nome, valendo):
         return prof
     # O DONO MORA NO RODAPÉ E É IMPORTADO AQUI DENTRO, não no topo: `rodape` é
     # o pacote do rodapé das dez abas, e o import tardio mantém o custo no
@@ -2679,10 +2694,8 @@ def _com_o_que_esta_valendo(nome: str, ctx: Contexto) -> Any:
     # entrega — o lugar certo para `_draft_do_ativo` é `pacotes/perfil.py`, que
     # é o módulo que as abas JÁ compartilham, e `rodape.py` não é posse desta
     # sprint.
-    from . import rodape
-
     try:
-        draft = rodape._draft_do_ativo(nome, ctx)
+        draft = rodape._draft_do_ativo(nome, ctx, secoes)
         if draft is None:
             return prof
         return draft.to_profile(nome, priority=prof.priority)

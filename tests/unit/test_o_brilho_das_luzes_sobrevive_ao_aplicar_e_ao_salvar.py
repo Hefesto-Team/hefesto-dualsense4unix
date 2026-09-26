@@ -62,8 +62,11 @@ from tests.unit.test_a_marca_da_cor_nao_some import NOME, UNIQS
 import pacotes
 from pacotes import a04_iluminacao, rodape
 
-#: O CLIQUE DOS BOTÕES DO RODAPÉ, como o piloto os manda.
-CLIQUE = {"tipo": "button", "evento": "click"}
+#: O CLIQUE DOS BOTÕES DO RODAPÉ, como o piloto os manda — com a aba de onde
+#: veio, que todo clique carrega: o «Salvar» grava a seção DAQUELA aba, e a
+#: luz é da 04 (O-SALVAR-DA-VIBRACAO-01, 26/09/2026).
+CLIQUE = {"tipo": "button", "evento": "click",
+          "pagina": "04-iluminacao.html"}  # noqa-acento: chave do clique
 
 #: O global do perfil em cada caso: uma palavra DIFERENTE da clicada, senão o
 #: Fraco clicado sobre o Fraco do perfil passaria sem a cura.

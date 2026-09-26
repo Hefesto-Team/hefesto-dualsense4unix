@@ -61,6 +61,12 @@ from tests.unit.test_a_marca_da_cor_nao_some import (
 #: A PALETA AUTOMÁTICA, os oito tons do número.
 PALETA = tuple(player_slot_color(n) for n in range(1, 9))
 
+#: O «Salvar» CLICADO NA ABA ILUMINAÇÃO, como o piloto o manda: todo clique
+#: carrega a aba de onde veio, e o Salvar grava a seção dela — a luz é da 04
+#: (O-SALVAR-DA-VIBRACAO-01, 26/09/2026).
+CLIQUE_DA_04 = {"tipo": "button", "evento": "click",
+                "pagina": "04-iluminacao.html"}  # noqa-acento: chave do clique
+
 
 def _na(rgb: tuple[int, int, int], brilho: float) -> tuple[int, int, int]:
     """`rgb` no `brilho`, pela conta do dono (`LedSettings.apply_brightness`)."""
@@ -162,7 +168,7 @@ def _reaplicar(mesa: Mesa, caminho: str) -> None:
     elif caminho == "salvar":
         from pacotes import rodape
 
-        rodape.salvar(mesa.ctx(), {"tipo": "button", "evento": "click"}, None)
+        rodape.salvar(mesa.ctx(), CLIQUE_DA_04, None)
         mesa.pm.apply(mesa._perfil(), origin="system")
     else:
         raise AssertionError(caminho)
@@ -320,7 +326,7 @@ def test_o_salvar_grava_a_cor_pedida_e_nao_a_acesa(mesa_de):
     mesa = mesa_de()
     mesa.soltar(1, 60)
     mesa.soltar(2, 50)
-    rodape.salvar(mesa.ctx(), {"tipo": "button", "evento": "click"}, None)
+    rodape.salvar(mesa.ctx(), CLIQUE_DA_04, None)
     disco = load_profile(NOME).controllers
     for n, cor in ((1, COR_DELE[1]), (2, COR_DELE[2])):
         leds = disco[a04_iluminacao.chave_do_override(UNIQS[n - 1])].leds
@@ -349,7 +355,7 @@ def test_sem_a_paleta_o_salvar_grava_o_global_e_nao_a_luz(mesa_de):
     acesa = _luz(mesa)[3]
     assert acesa == _na(global_dela, BRILHO_GLOBAL), "a régua precisa do P4 no global"
     for _ in range(3):
-        rodape.salvar(mesa.ctx(), {"tipo": "button", "evento": "click"}, None)
+        rodape.salvar(mesa.ctx(), CLIQUE_DA_04, None)
         mesa.pm.apply(mesa._perfil(), origin="manual")
         assert _luz(mesa)[3] == acesa, "o Salvar e a troca escureceram o P4"
     # A cor do P4 no disco: a dele, ou o global que ele herda — o rascunho só

@@ -50,6 +50,16 @@ A cura é ``a10_perfis._com_o_que_esta_valendo``, que lê do DONO da sobreposiç
 (``rodape._draft_do_ativo``, o mesmo que o «Salvar Perfil» usa desde 01/09) em
 vez de escrever uma segunda cópia dela aqui.
 
+**NOTA DE 26/09/2026 — A PREMISSA CADUCOU, e a §2 mede o contrário**
+(O-SALVAR-DA-VIBRACAO-01). A cor clicada na 04 vai ao disco no clique desde
+09/09 (``a04_iluminacao._guardar_a_cor_no_perfil``); a cor viva que difere do
+disco deixou de ser «a que ela acabou de clicar». E trazer o vivo por cima de
+tudo tinha preço medido: com o PRAGMATA dela em lar de mentira, mudar a
+PRIORIDADE ligava o microfone de um controle e apagava a fonte do
+alto-falante dele. A aba 10 não é dona de seção viva nenhuma
+(``rodape.secoes_do_vivo``): o gesto do editor grava o campo dele, e a cor
+fica a do disco.
+
 **A ARMADILHA QUE ESTA RÉGUA GUARDA, e ela quase virou o conserto que
 reintroduz o defeito que cura:** ``DraftConfig.to_profile`` tem um portão
 ``mesmo_perfil`` por slug e, com um nome NOVO, zera ``match``, ``mode`` e
@@ -85,8 +95,10 @@ PAGINA = "10-perfis.html"
 
 #: A COR QUE ESTÁ NO `.json` — a de ontem.
 NO_DISCO = (0, 255, 128)
-#: A COR QUE O DAEMON PUBLICA — a que ela acabou de clicar na aba 04, e que
-#: ainda não foi ao disco. É esta que todo gesto desta aba apagava.
+#: A COR QUE O DAEMON PUBLICA e que difere do disco. Em 06/09 era «a que ela
+#: acabou de clicar na aba 04, e que ainda não foi ao disco»; desde 09/09 o
+#: clique grava, e o vivo diferente do disco não é escolha dela (nota de
+#: 26/09 no cabeçalho). Nenhum gesto desta aba a leva ao disco.
 VIVA = (255, 0, 255)
 
 #: UM CONTROLE NA MESA, com endereço MASCARADO (octetos 4 e 5 zerados).
@@ -357,34 +369,33 @@ def _ambiente(ctx: Contexto, ponte: Any) -> None:
     (_renomear, "editor.nome"),
     (_prioridade, "editor.prioridade"),
 ])
-def test_o_gesto_que_grava_nao_apaga_a_cor_viva(
+def test_o_gesto_que_grava_nao_leva_o_vivo_ao_disco(
     disco: dict[str, Any], gesto: Any, nome_do_gesto: str
 ) -> None:
-    """O item 13 dela, medido em quatro gestos.
+    """O gesto do editor grava o campo dele, e a cor fica a do disco.
 
-    Cada um lê UM campo, muda UM campo e grava o perfil INTEIRO — e o inteiro
-    vinha do `.json`. A cor que ela clicou na aba 04 e ainda não foi ao disco
-    morria aí, e o `profile.switch` do `_gravar` a desfazia no controle logo em
-    seguida.
+    Em 06/09/2026 esta régua cobrava o CONTRÁRIO — a cor viva no disco —,
+    porque o clique da 04 ainda não gravava. A premissa caducou em 09/09 e o
+    preço de manter o vivo por cima foi medido em 26/09 (nota no cabeçalho):
+    a luz é seção da aba 04, e a aba 10 não é dona de seção viva nenhuma.
 
-    MORDIDA: troque `_com_o_que_esta_valendo(...)` por `load_profile(...)` no
-    gesto e isto reprova com a cor de ontem — foi assim que a medição de
-    06/09/2026 achou o defeito.
+    MORDIDA: faça `_com_o_que_esta_valendo` pedir `TODAS_AS_SECOES_DO_VIVO`
+    ao `rodape` e isto reprova com a cor viva no perfil.
     """
     gesto(_ctx(), PonteDeMentira())
 
     assert disco["salvos"], f"{nome_do_gesto} não gravou nada"
     cor = _cor_gravada(disco["salvos"][-1])
-    assert cor == VIVA, (
-        f"{nome_do_gesto} gravou {cor} e a cor que está VALENDO é {VIVA} — o "
-        f"gesto regrediu o perfil ao disco e apagou o clique dela na aba 04")
+    assert cor == NO_DISCO, (
+        f"{nome_do_gesto} gravou {cor}, a cor viva, e a do perfil é {NO_DISCO} "
+        f"— o gesto do editor mexeu na seção da luz, que é da aba 04")
 
 
 @pytest.mark.parametrize("gesto,nome_do_gesto", [
     (_jogo, "editor.jogo"),
     (_ambiente, "editor.ambiente"),
 ])
-def test_os_dois_gestos_do_ambiente_tambem_nao_apagam_a_cor(
+def test_os_dois_gestos_do_ambiente_tambem_nao_levam_o_vivo(
     disco_de_steam: dict[str, Any], gesto: Any, nome_do_gesto: str
 ) -> None:
     """Os DOIS gestos que a régua acima não alcança, e o motivo é do produto.
@@ -401,8 +412,8 @@ def test_os_dois_gestos_do_ambiente_tambem_nao_apagam_a_cor(
 
     assert disco_de_steam["salvos"], f"{nome_do_gesto} não gravou nada"
     cor = _cor_gravada(disco_de_steam["salvos"][-1])
-    assert cor == VIVA, (
-        f"{nome_do_gesto} gravou {cor} e a cor que está VALENDO é {VIVA}")
+    assert cor == NO_DISCO, (
+        f"{nome_do_gesto} gravou {cor}, a cor viva, e a do perfil é {NO_DISCO}")
 
 
 def test_a_sobreposicao_so_vale_para_o_perfil_que_esta_valendo(
@@ -417,7 +428,10 @@ def test_a_sobreposicao_so_vale_para_o_perfil_que_esta_valendo(
     por slug (R-10) e não por `==`.
 
     MORDIDA: tire a guarda `mesmo_slug` de `_com_o_que_esta_valendo` e isto
-    reprova — a cor viva vaza para um perfil que não está valendo.
+    reprova — a cor viva vaza para um perfil que não está valendo. Desde
+    26/09 a aba 10 não sobrepõe seção nenhuma, e a guarda só volta a ser
+    alcançada no dia em que `rodape.SECOES_DO_VIVO` der uma seção a ela: a
+    mordida passa a pedir as duas coisas juntas.
     """
     _prioridade(_ctx(valendo=None), PonteDeMentira())
 
@@ -485,7 +499,9 @@ def test_renomear_nao_perde_a_regra_nem_o_modo(disco: dict[str, Any]) -> None:
         to_profile("Sackboy")   → perde match, mode e suppress
 
     MORDIDA: faça `_com_o_que_esta_valendo` devolver
-    `draft.to_profile(nome_novo, ...)` e isto reprova em três campos de uma vez.
+    `draft.to_profile(nome_novo, ...)` e isto reprova em três campos de uma vez
+    (desde 26/09 o caminho do rascunho só é alcançado quando a aba 10 tiver
+    seção viva em `rodape.SECOES_DO_VIVO`; hoje ele devolve o disco).
     """
     antes = disco["perfil"]
     _renomear(_ctx(), PonteDeMentira())
@@ -502,5 +518,6 @@ def test_renomear_nao_perde_a_regra_nem_o_modo(disco: dict[str, Any]) -> None:
         "o renomear perdeu a supressão da emulação de desktop")
     assert gravado.priority == antes.priority, (
         f"o renomear trocou a prioridade: {gravado.priority}")
-    # E A COR VIVA ENTROU JUNTO — as duas metades no mesmo gesto.
-    assert _cor_gravada(gravado) == VIVA
+    # E A COR É A DO DISCO — a luz é seção da aba 04 (nota de 26/09 no
+    # cabeçalho); até essa data aqui se cobrava a viva.
+    assert _cor_gravada(gravado) == NO_DISCO

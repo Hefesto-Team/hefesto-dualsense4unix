@@ -50,6 +50,12 @@ NOME_B = "regua-a04-b"
 IDS = ["P1", "P2", "P3", "P4"]
 ROXO = player_slot_color(8)
 
+#: O CLIQUE DO RODAPÉ NA ABA ILUMINAÇÃO, como o piloto o manda: todo clique
+#: carrega a aba de onde veio, e o «Salvar» grava a seção dela — a luz é da 04
+#: (O-SALVAR-DA-VIBRACAO-01, 26/09/2026).
+CLIQUE_DA_04 = {"tipo": "button", "evento": "click",
+                "pagina": "04-iluminacao.html"}  # noqa-acento: chave do clique
+
 
 def _na(rgb: tuple[int, int, int], brilho: float) -> tuple[int, int, int]:
     return LedSettings(lightbar=rgb).apply_brightness(brilho).lightbar
@@ -351,7 +357,7 @@ def _reaplicar(mesa: MesaViva, caminho: str) -> None:
 
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
-    clique = {"tipo": "button", "evento": "click"}
+    clique = CLIQUE_DA_04
     if caminho in ("autoswitch", "manual"):
         mesa.trocar(NOME, caminho)
     elif caminho == "boot":
@@ -441,7 +447,7 @@ def test_o_salvar_depois_do_autoswitch_grava_o_que_esta_aceso(mesa_de):
     mesa = mesa_de()
     mesa.soltar(1, 60)
     mesa.trocar(NOME_B, "autoswitch")
-    rodape.salvar(mesa.ctx(), {"tipo": "button", "evento": "click"}, None)
+    rodape.salvar(mesa.ctx(), CLIQUE_DA_04, None)
     leds = mesa.disco(NOME_B, 1)
     assert (tuple(leds.lightbar), leds.lightbar_brightness) == (COR_DELE[1], 0.60), leds
     mesa.trocar(NOME_B, "manual")
