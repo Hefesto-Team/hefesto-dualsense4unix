@@ -706,6 +706,50 @@ def test_o_hub_de_verdade_na_entrada_nao_apaga_o_hub(disco: Path) -> None:
     assert hub["gesto"] == "entrada-o-que-tem", hub
 
 
+def test_declarar_o_hub_lido_nao_cria_outra_face(disco: Path) -> None:
+    """O hub da 3 já tem face no disco (a 6 e a 7 descem de ``9-3``): a face diz
+    «Hub na Entrada 3», o «Hub» da 3 nasce apertado, e CLICÁ-LO grava sem criar
+    a face de quatro buracos — o painel continua «de 7».
+
+    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-O-HUB-PENDE-DA-ENTRADA). Antes, declarar
+    o hub numa entrada com face ligada fazia nascer uma segunda face e o painel
+    ir para «de 11»: a deduplicação comparava só o nome da face.
+    """
+    from tests.conftest import exigir_gi_real
+
+    exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
+    from hefesto_dualsense4unix.interface import pacotes
+
+    mapa = _mapa()
+    mapa.portas["3"] = PortaDeclarada(caminho="9-3", nos=["usb9-port3"])
+    mapa.faces.append(FaceDeclarada(nome="Hub da mesa", portas=["6", "7"]))
+    mapa.portas["6"] = PortaDeclarada(caminho="9-3.1", nos=["9-3-port1"])
+    mapa.portas["7"] = PortaDeclarada(caminho="9-3.2", nos=["9-3-port2"])
+    assert gravar_maquina({"mapa": mapa.model_dump(mode="json")})
+    lidas, mensagens = _na_pagina([
+        _js(_ler(_teclado("9-1"), _hub("9-3"))),
+        _LER,
+        _clicar('.plug[data-porta="3"]'),
+        _LER,
+        _clicar('#edita [data-liga="hub"]'),
+    ])
+    antes, editor = lidas[1], lidas[3]
+    assert antes["faces"].count("Hub na Entrada 3") == 1, antes["faces"]
+    assert "de 7 entradas" in antes["painel"].lower(), antes["painel"]
+    assert editor["apertados"][:1] == ["hub"], editor
+    pedidos = [m for m in mensagens if m.get("gesto") == "entrada-o-que-tem"]
+    assert [m.get("liga") for m in pedidos] == ["hub"], mensagens
+    dono = pacotes.gesto_da_pagina(pedidos[0]["pagina"], "entrada-o-que-tem")  # noqa-acento: chave
+    assert dono is not None
+    dono(None, pedidos[0], None)
+    assert carregar_maquina().mapa.portas["3"].liga == "hub"
+
+    lidas, _ = _na_pagina([_js(_ler(_teclado("9-1"), _hub("9-3"))), _LER])
+    depois = lidas[1]
+    assert depois["faces"] == antes["faces"], "declarar o hub lido criou outra face"
+    assert "de 7 entradas" in depois["painel"].lower(), depois["painel"]
+
+
 #: O gesto do «Já movi» das Sugestões — o segundo botão com o id `reexaminar`.
 _LER_O_JA_MOVI = (
     "(function(){const b=document.querySelector('#painel #reexaminar');"

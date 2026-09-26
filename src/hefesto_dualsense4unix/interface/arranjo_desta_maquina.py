@@ -185,7 +185,6 @@ def _ler_a_maquina(
             ler_o_barramento as _ler,
         )
         from hefesto_dualsense4unix.integrations.entrada_a_entrada import (
-            faces_dos_hubs,
             nome_da_entrada,
             rotulos_das_entradas,
         )
@@ -218,7 +217,8 @@ def _ler_a_maquina(
     # (`3-1.1.4`), que é o que a página compara com o mapa.
     caminhos = {ids.get(a.id, a.id): mesa.leitura.get(a.id, a.id) for a in mesa.aparelhos}
     faces = _faces(mesa.faces)
-    _o_que_ela_declarou_nas_entradas(faces, declarado, faces_dos_hubs(declarado))
+    hub_lido = _o_que_ela_declarou_nas_entradas(
+        faces, declarado, lambda numero: nome_da_entrada(numero, maquina=documento))
     anterior = (
         {"rotulo": ROTULO_DE_ANTES, "caminho": dict(caminhos)}
         if antes is None
@@ -242,6 +242,7 @@ def _ler_a_maquina(
             lambda numero: nome_da_entrada(numero, maquina=documento),
         ),
         "rotulos": rotulos_das_entradas(documento),
+        "hubLido": hub_lido,
     }, lida
 
 
@@ -440,19 +441,38 @@ def _declarado(
 
 
 def _o_que_ela_declarou_nas_entradas(
-    faces: list[dict[str, Any]], mapa: Any, hubs: dict[str, str]
-) -> None:
-    """O hub declarado vira face, e o extensor declarado vira entrada-filha.
+    faces: list[dict[str, Any]],
+    mapa: Any,
+    nome_de: Callable[[str], str | None] = lambda _n: None,
+) -> dict[str, bool]:
+    """Cada face diz de qual entrada pende; o hub sem face ganha a dele; o
+    extensor declarado vira entrada-filha. Devolve ``hubLido``: as entradas
+    em que o barramento lê um hub.
+
+    D-2609-O-HUB-PENDE-DA-ENTRADA (O-MAPA-QUE-ELA-CORRIGE-01). A ligação é do
+    dono (``entrada_a_entrada.de_quem_pende``): a face ligada ganha
+    ``daEntrada``, o ``titulo`` («Hub na Entrada 3», composto pelo dono da
+    grafia) e, quando a entrada dela e a lida divergem, o ``diverge`` — a
+    frase inteira. A DEDUPLICAÇÃO É PELA LIGAÇÃO, e não pelo nome: o hub que
+    ela declarou numa entrada que já tem face ligada não cria outra (antes
+    nascia uma segunda face, com quatro buracos inventados, e o painel dizia
+    «15 de 19»). A face de quatro buracos (``fantasma``) só nasce para o hub
+    declarado sem face ligada — o desplugado, ou o que o Mapear não viu.
 
     É a MESMA forma que o editor da página monta quando ela declara na tela
-    (a `declarar` do `pagina_do_mapa`): a face «Hub na Entrada N», com
-    ``daEntrada`` para o editor saber de quem ela é, e a ``filho`` que o motor
-    do desenho já sabe desenhar. Reler a página tem de mostrar o que ela viu
-    ao clicar.
-
-    O hub que ela JÁ mapeou pelo Mapear tem face de verdade com esse nome, e
-    ela vence: as entradas dela são as do metal, e as quatro daqui são desenho.
+    (a `declarar` do `pagina_do_mapa`). Reler a página tem de mostrar o que ela
+    viu ao clicar.
     """
+    from hefesto_dualsense4unix.integrations.entrada_a_entrada import (
+        de_quem_pende,
+        faces_dos_hubs,
+    )
+    from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
+        frase_do_hub_lido,
+        titulo_do_hub,
+    )
+
+    pendencias = de_quem_pende(mapa)
     por_numero: dict[str, dict[str, Any]] = {}
     for face in faces:
         for entrada in face["portas"]:
@@ -462,16 +482,31 @@ def _o_que_ela_declarou_nas_entradas(
             # vira face, igual ao de uma entrada da chapa.
             if "filho" in entrada:
                 por_numero.setdefault(entrada["filho"]["n"], entrada["filho"])
-    nomes = {face["nome"] for face in faces}
-    for numero, nome in hubs.items():
+    hub_lido: dict[str, bool] = {}
+    for face in faces:
+        dela = pendencias.get(face["nome"])
+        if dela is None:
+            continue
+        face["daEntrada"] = dela.entrada
+        face["titulo"] = titulo_do_hub(dela.entrada, nome_de(dela.entrada))
+        if dela.lida is not None:
+            face["diverge"] = frase_do_hub_lido(dela.lida, nome_de(dela.lida))
+        # o computador lê o hub na entrada de que a face DESCE, mesmo quando a
+        # ligação que vale é a que ela declarou
+        if dela.barramento is not None:
+            hub_lido[dela.barramento] = True
+    ligadas = {dela.entrada for dela in pendencias.values()}
+    for numero, nome in faces_dos_hubs(mapa).items():
         entrada = por_numero.get(numero)
-        if entrada is None or nome in nomes:
+        if entrada is None or numero in ligadas:
             continue
         faces.append({
             "nome": nome,
+            "titulo": titulo_do_hub(numero, nome_de(numero)),
             "forma": _FILEIRA_DO_HUB,
             "regiao": "hub",
             "daEntrada": numero,
+            "fantasma": True,
             "portas": [
                 {"n": f"{numero}.{i}", "usb": entrada["usb"], "onde": "hub", "pos": i}
                 for i in range(1, ENTRADAS_DO_HUB_DECLARADO + 1)
@@ -488,6 +523,7 @@ def _o_que_ela_declarou_nas_entradas(
             "esticada": True,
             "cabo": CABO_DECLARADO,
         }
+    return hub_lido
 
 
 def _aparelho(aparelho: Any, identidade: str) -> dict[str, Any]:

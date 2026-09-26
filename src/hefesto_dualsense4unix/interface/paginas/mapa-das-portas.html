@@ -148,6 +148,9 @@
   .face-cab { display: flex; align-items: baseline; gap: var(--space-2xs); margin-bottom: var(--space-2xs); }
   .face-cab h3 { margin: 0; font-size: var(--text-sm); font-weight: 600; text-transform: uppercase; letter-spacing: .07em; }
   .face-cab .quantas { font-size: var(--text-xs); color: var(--color-ink-faint); font-family: var(--font-dado); }
+  /* a divergência do hub: uma linha a mais, sem culpa */
+  .diverge { margin: 0 0 var(--space-2xs); font-size: var(--text-xs); color: var(--color-lacuna); }
+  .edita .lido { font-size: var(--text-xs); color: var(--color-ink-quiet); }
 
   .chapa { border: 1px solid var(--color-rule); border-radius: var(--radius-md);
            background: linear-gradient(160deg, var(--color-paper-3), var(--color-paper-2)); padding: var(--space-sm); }
@@ -1235,7 +1238,7 @@
     } else {
       h += '<span class="vazio">vazia</span>';
     }
-    if (DECLARADO[porta.n] && DECLARADO[porta.n].liga === "hub") h += '<span class="decl">hub</span>';
+    if ((DECLARADO[porta.n] && DECLARADO[porta.n].liga === "hub") || HUB_LIDO[porta.n]) h += '<span class="decl">hub</span>';
     h += "</span></div>";
     if (porta.filho) h += '<div class="filho"><div class="cabo">↳ ' + porta.filho.cabo + "</div>" + soqueteHTML(porta.filho, ctx) + "</div>";
     return h;
@@ -1260,6 +1263,7 @@
   /* o nome da face de um hub declarado, no disco: o do dono */
   var FACE_DO_HUB = "Hub na Entrada {numero}";
   var ROTULOS = {};
+  var HUB_LIDO = {};
   function rotuloDe(n) {
     var r = ROTULOS[String(n)];
     if (r) return r.rotulo;
@@ -1335,10 +1339,15 @@
     d[campo] = valor;
     if (campo === "usb") p.usb = valor;
     if (campo !== "liga") return;
-    FACES = FACES.filter(function (f) { return f.daEntrada !== String(n); });
+    /* A DEDUPLICAÇÃO É PELA LIGAÇÃO (D-2609-O-HUB-PENDE-DA-ENTRADA): só a face
+       de quatro buracos que ESTA tela desenhou sai; a face ligada à entrada
+       fica, e o hub dela não ganha uma segunda. */
+    FACES = FACES.filter(function (f) { return !(f.fantasma && f.daEntrada === String(n)); });
     delete p.filho;
-    if (valor === "hub") {
-      FACES.push({ nome: FACE_DO_HUB.replace("{numero}", n), forma: "fileira", regiao: "hub", daEntrada: String(n),
+    var ligada = FACES.some(function (f) { return f.daEntrada === String(n); });
+    if (valor === "hub" && !ligada) {
+      FACES.push({ nome: FACE_DO_HUB.replace("{numero}", n), titulo: "Hub na " + naFraseDe(n),
+        fantasma: true, forma: "fileira", regiao: "hub", daEntrada: String(n),
         portas: [1, 2, 3, 4].map(function (i) { return { n: n + "." + i, usb: p.usb, onde: "hub", pos: i }; }) });
     } else if (valor === "extensor") {
       p.filho = { n: n + "a", usb: p.usb, onde: p.onde, esticada: true, cabo: "Extensor, declarado por você" };
@@ -1353,7 +1362,10 @@
     /* o editor escondido não guarda os botões da entrada de antes: um
        clique neles levaria ao disco o gesto de outra entrada */
     if (!p || !plug || modo === "ideal" || segurando) { ed.hidden = true; ed.innerHTML = ""; return; }
-    var liga = (DECLARADO[editando] || {}).liga || "direto";
+    /* O COMPUTADOR LÊ UM HUB NESTA ENTRADA: «Hub» nasce apertado, e «Direto»
+       fica apagado com a razão na dica (o espelho da D-03). */
+    var lido = !!HUB_LIDO[editando];
+    var liga = (DECLARADO[editando] || {}).liga || (lido ? "hub" : "direto");
     var face = FACES.filter(function (f) {
       return f.portas.some(function (x) { return x === p || x.filho === p; });
     })[0];
@@ -1371,13 +1383,17 @@
       + [["direto", "Direto"], ["hub", "Hub"], ["extensor", "Extensor"]].map(function (o) {
           /* O HUB NÃO CABE ONDE HÁ UM APARELHO DIRETO QUE NÃO É HUB: cinza,
              com a razão na dica (a D-03 dela), e o clique não declara. */
-          if (o[0] === "hub" && quem && quem.classe !== "hub") {
+          if (o[0] === "direto" && lido) {
+            return '<button class="escolha apagado" data-liga="direto" aria-disabled="true" aria-pressed="false"'
+              + ' title="O computador lê um hub nesta entrada">' + o[1] + "</button>";
+          }
+          if (o[0] === "hub" && quem && quem.classe !== "hub" && !lido) {
             return '<button class="escolha apagado" data-liga="hub" aria-disabled="true" aria-pressed="' + (liga === "hub")
               + '" title="' + quem.tipo + ' Está Direto Nesta Entrada">' + o[1] + "</button>";
           }
           return '<button class="escolha" data-liga="' + o[0] + '"' + gravaNaEntrada(editando, "entrada-o-que-tem") + ' aria-pressed="' + (liga === o[0]) + '">' + o[1] + "</button>";
         }).join("")
-      + "</div></div>"
+      + "</div>" + (lido ? '<span class="lido">O computador lê um hub nela.</span>' : "") + "</div>"
       + '<div class="edita-linha"><span>Velocidade</span><div class="seg dois">'
       + [[3, "USB 3.0"], [2, "USB 2.0"]].map(function (o) {
           return '<button class="escolha" data-usb="' + o[0] + '"' + gravaNaEntrada(editando, "entrada-velocidade") + ' aria-pressed="' + (p.usb === o[0]) + '">' + o[1] + "</button>";
@@ -1591,7 +1607,11 @@
           + '<span class="pend-ajuda">Clique o aparelho e depois a entrada onde ele está — as candidatas acendem. Eu aprendo de uma vez.</span>'
           + "</div>";
       }
-      return '<div><div class="face-cab"><h3>' + f.nome + '</h3><span class="quantas">' + cheias + " de " + total + " ocupadas</span></div>"
+      /* A FACE DIZ DE QUAL ENTRADA PENDE (D-2609-O-HUB-PENDE-DA-ENTRADA): o
+         título é do dono («Hub na Entrada 3»), e a divergência é uma linha
+         a mais, sem culpa. */
+      return '<div><div class="face-cab"><h3>' + (f.titulo || f.nome) + '</h3><span class="quantas">' + cheias + " de " + total + " ocupadas</span></div>"
+        + (f.diverge ? '<p class="diverge">' + f.diverge + "</p>" : "")
         + '<div class="rolar"><div class="chapa ' + f.forma + '">' + f.portas.map(function (p) { return soqueteHTML(p, ctx); }).join("") + "</div></div>"
         + faixa + "</div>";
     }).join("");
@@ -1764,6 +1784,9 @@
     /* O NOME DE CADA ENTRADA, composto pelo dono (O-MAPA-QUE-ELA-CORRIGE-01):
        `entrada_a_entrada.rotulos_das_entradas`. */
     ROTULOS = f.rotulos || {};
+    /* AS ENTRADAS EM QUE O COMPUTADOR LÊ UM HUB (D-2609-O-HUB-PENDE-DA-
+       ENTRADA): o editor delas nasce com «Hub», e o plugue ganha a marca. */
+    HUB_LIDO = f.hubLido || {};
     /* A VOLTA DE UMA GRAVAÇÃO NÃO FECHA O EDITOR — 26/09/2026,
        O-MAPA-QUE-ELA-CORRIGE-01: ela clicou numa entrada, e a entrada
        continua aberta com o que o disco diz agora. */

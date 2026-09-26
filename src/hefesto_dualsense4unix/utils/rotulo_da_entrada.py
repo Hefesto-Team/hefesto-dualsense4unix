@@ -123,6 +123,21 @@ def com_artigo(
     return f"{artigo} {frase}" if frase else ""
 
 
+def titulo_do_hub(numero: str, nome: str | None = None) -> str:
+    """O cabeçalho da face de um hub: «Hub na Entrada 3», «Hub na entrada Meio».
+
+    D-2609-O-HUB-PENDE-DA-ENTRADA: a face diz de qual entrada ela pende. A
+    CHAVE da face no disco continua :data:`FACE_DO_HUB_DECLARADO`, pelo
+    número; o título é o que a tela escreve, com o nome dela.
+    """
+    return f"Hub {com_artigo(na_frase(numero, nome), em=True)}"
+
+
+def frase_do_hub_lido(numero: str, nome: str | None = None) -> str:
+    """A divergência, sem culpa: «O computador lê este hub na Entrada 5.»"""
+    return f"O computador lê este hub {com_artigo(na_frase(numero, nome), em=True)}."
+
+
 __all__ = [
     "FACE_DO_HUB_DECLARADO",
     "FRASE_DO_NOME_COMPRIDO",
@@ -130,8 +145,10 @@ __all__ = [
     "PALAVRA_DA_ENTRADA",
     "PALAVRA_NA_FRASE",
     "com_artigo",
+    "frase_do_hub_lido",
     "na_frase",
     "na_frase_do_rotulo",
     "nome_que_vale",
     "rotulo",
+    "titulo_do_hub",
 ]

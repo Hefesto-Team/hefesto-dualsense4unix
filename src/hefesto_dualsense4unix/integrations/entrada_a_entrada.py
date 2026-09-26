@@ -133,10 +133,11 @@ from hefesto_dualsense4unix.integrations.lugar_declarado import (
     declarar_a_maquina,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
-from hefesto_dualsense4unix.utils.lugar import FORMA_DO_CAMINHO
+from hefesto_dualsense4unix.utils.lugar import FORMA_DO_CAMINHO, FORMA_DO_NO
 from hefesto_dualsense4unix.utils.maquina import (
     MapaDaMesa,
     MaquinaConfig,
+    PortaDeclarada,
     caminho_do_no,
     caminhos_do_lugar,
     carregar_maquina,
@@ -1754,7 +1755,7 @@ def trocar_as_entradas(
     return recibo
 
 
-def _o_buraco(porta: Any) -> dict[str, Any]:
+def _o_buraco(porta: PortaDeclarada | None) -> dict[str, Any]:
     """O que é do buraco físico numa entrada — o que a troca leva junto."""
     if porta is None:
         return {"caminho": None, "nos": [], "liga": None, "usb": None}
@@ -1762,18 +1763,18 @@ def _o_buraco(porta: Any) -> dict[str, Any]:
             "usb": porta.usb}
 
 
-def _a_ponta_de(mapa: MapaDaMesa, ponta: str, numero: str) -> Any:
+def _a_ponta_de(mapa: MapaDaMesa, ponta: str, numero: str) -> PortaDeclarada | None:
     """A entrada-filha ``ponta`` do extensor da ``numero``, ou ``None``."""
     dela = mapa.portas.get(ponta)
     return dela if dela is not None and dela.filha_de == numero else None
 
 
-def _a_ponta_inteira(ponta: Any, filha_de: str) -> dict[str, Any]:
+def _a_ponta_inteira(ponta: PortaDeclarada | None, filha_de: str) -> dict[str, Any]:
     """A ponta do extensor inteira, pendurada em ``filha_de`` — ou apagada."""
     if ponta is None:
         return {"caminho": None, "nos": [], "liga": None, "usb": None,
                 "filha_de": None, "nome": None}
-    corpo = ponta.model_dump(mode="json")
+    corpo: dict[str, Any] = ponta.model_dump(mode="json")
     corpo["filha_de"] = filha_de
     corpo.setdefault("nos", [])
     return corpo
@@ -1862,6 +1863,138 @@ def _mae_da_ponta(mapa: MapaDaMesa, numero: str) -> str | None:
         if porta is not None and porta.liga == "extensor" and ponta_do_extensor(mae) == numero:
             return mae
     return None
+
+
+@dataclass(frozen=True)
+class Pendencia:
+    """De qual entrada uma face do gabinete pende — D-2609-O-HUB-PENDE-DA-ENTRADA.
+
+    ``entrada`` é a que vale (a dela, quando ela disse; a do barramento, quando
+    não disse). ``lida`` é a que o barramento lê, só quando diverge da que vale.
+    ``declarada`` diz que a ligação veio dela (a face com o nome do hub, ou o
+    «Hub» que ela declarou na entrada). ``barramento`` é a entrada de que a
+    face desce pelo que o Mapear gravou — ``None`` quando o disco não diz
+    (o hub desplugado antes de mapear): é onde o computador lê um hub.
+    """
+
+    entrada: str
+    lida: str | None = None
+    declarada: bool = False
+    barramento: str | None = None
+
+
+def de_quem_pende(mapa: MapaDaMesa) -> dict[str, Pendencia]:
+    """``nome da face -> Pendencia`` de cada face que pende de uma entrada.
+
+    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-O-HUB-PENDE-DA-ENTRADA). Pedido dela:
+    *«identificar onde fica o hub»*. Uma função pura sobre o ``mapa`` do disco:
+    lê o que o Mapear gravou (os caminhos e os nós), e por isso vale com o hub
+    desplugado e em qualquer máquina. <!-- noqa-acento: citação literal dela -->
+
+    PELO BARRAMENTO, a face F pende da entrada E quando E não está em F, toda
+    entrada de F que tem pontos DESCE de E (um ponto dela é um caminho de E, ou
+    começa por ele e um ponto), pelo menos uma tem pontos, e E é a mais funda
+    das que servem — com empate, de ninguém. Os caminhos de E são o
+    ``caminho`` e o de cada nó; os pontos de X são o ``caminho`` e o hub de
+    cada nó (``3-1.1-port4`` → ``3-1.1``).
+
+    O QUE ELA DECLAROU vence, face a face:
+
+    1. a face com o nome :data:`FACE_DO_HUB_DECLARADO` de D pende de D (e a
+       ``lida`` é a do barramento, se diverge);
+    2. senão, a face que pende de E pelo barramento pende de E — a menos que
+       ela tenha declarado UM hub D livre (sem face pelo nome e sem ser lido
+       por face nenhuma) e só haja UMA face lida sem hub declarado: aí vale a
+       dela, D, com a ``lida`` E;
+    3. o hub declarado sem face ligada fica de fora daqui: é o desenho de
+       quatro buracos (o hub desplugado, ou que o Mapear não viu).
+    """
+    todas = set(entradas_do_mapa(mapa))
+    caminhos = {numero: _caminhos_da_entrada(mapa, numero) for numero in todas}
+    pelo_barramento: dict[str, str] = {}
+    for face in mapa.faces:
+        dona = _a_entrada_de_que_desce(mapa, face.portas, todas, caminhos)
+        if dona is not None:
+            pelo_barramento[face.nome] = dona
+    declarados = [
+        numero for numero in _numeros_do_mapa(mapa)
+        if (porta := mapa.portas.get(numero)) is not None and porta.liga == "hub"
+    ]
+    pelo_nome = {
+        FACE_DO_HUB_DECLARADO.format(numero=numero): numero
+        for numero in _numeros_do_mapa(mapa)
+    }
+    saida: dict[str, Pendencia] = {}
+    for face in mapa.faces:
+        if face.nome in pelo_nome:
+            dela = pelo_nome[face.nome]
+            lida = pelo_barramento.get(face.nome)
+            saida[face.nome] = Pendencia(
+                dela, lida if lida not in (None, dela) else None, True, lida)
+    lidas_sem_hub = [
+        nome for nome, lida in pelo_barramento.items()
+        if nome not in saida and lida not in declarados
+    ]
+    ligados = {p.entrada for p in saida.values()} | set(pelo_barramento.values())
+    livres = [numero for numero in declarados if numero not in ligados]
+    for nome, lida in pelo_barramento.items():
+        if nome in saida:
+            continue
+        if len(livres) == 1 and lidas_sem_hub == [nome]:
+            saida[nome] = Pendencia(livres[0], lida, True, lida)
+        else:
+            saida[nome] = Pendencia(lida, None, lida in declarados, lida)
+    return saida
+
+
+def _caminhos_da_entrada(mapa: MapaDaMesa, numero: str) -> set[str]:
+    porta = mapa.portas.get(numero)
+    if porta is None:
+        return set()
+    achados = {porta.caminho or ""} | {caminho_do_no(no) for no in porta.nos}
+    return achados - {""}
+
+
+def _pontos_da_entrada(mapa: MapaDaMesa, numero: str) -> set[str]:
+    porta = mapa.portas.get(numero)
+    if porta is None:
+        return set()
+    achados = {porta.caminho or ""}
+    for no in porta.nos:
+        casado = FORMA_DO_NO.match(no)
+        if casado is not None and not casado.group("hub").startswith("usb"):
+            achados.add(casado.group("hub"))
+    return achados - {""}
+
+
+def _desce(pontos: set[str], de: set[str]) -> bool:
+    return any(ponto == c or ponto.startswith(c + ".") for ponto in pontos for c in de)
+
+
+def _a_profundidade(caminhos: set[str]) -> int:
+    return max((c.partition("-")[2].count(".") for c in caminhos), default=-1)
+
+
+def _a_entrada_de_que_desce(
+    mapa: MapaDaMesa,
+    portas_da_face: Sequence[str],
+    todas: set[str],
+    caminhos: Mapping[str, set[str]],
+) -> str | None:
+    """A entrada de que TODA a face desce pelo barramento — ou ``None``."""
+    pontos = {n: _pontos_da_entrada(mapa, n) for n in portas_da_face}
+    com_pontos = [n for n in portas_da_face if pontos[n]]
+    if not com_pontos:
+        return None
+    servem = [
+        e for e in sorted(todas - set(portas_da_face))
+        if caminhos.get(e) and all(_desce(pontos[x], caminhos[e]) for x in com_pontos)
+    ]
+    if not servem:
+        return None
+    funda = max(_a_profundidade(caminhos[e]) for e in servem)
+    mais_fundas = [e for e in servem if _a_profundidade(caminhos[e]) == funda]
+    return mais_fundas[0] if len(mais_fundas) == 1 else None
 
 
 def faces_dos_hubs(mapa: MapaDaMesa) -> dict[str, str]:
@@ -2973,12 +3106,14 @@ __all__ = [
     "MapaDasPortas",
     "MapearAsPortas",
     "NomeDado",
+    "Pendencia",
     "Pergunta",
     "PortaDoMapa",
     "PortaVista",
     "com_o_nome_dela",
     "dar_nome_a_entrada",
     "dar_nome_ao_adaptador",
+    "de_quem_pende",
     "declarar_a_ligacao",
     "declarar_a_velocidade",
     "face_do_lugar",

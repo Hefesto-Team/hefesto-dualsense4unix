@@ -298,6 +298,9 @@ ABRE_A_PORTA = """\
     /* O NOME DE CADA ENTRADA, composto pelo dono (O-MAPA-QUE-ELA-CORRIGE-01):
        `entrada_a_entrada.rotulos_das_entradas`. */
     ROTULOS = f.rotulos || {};
+    /* AS ENTRADAS EM QUE O COMPUTADOR LÊ UM HUB (D-2609-O-HUB-PENDE-DA-
+       ENTRADA): o editor delas nasce com «Hub», e o plugue ganha a marca. */
+    HUB_LIDO = f.hubLido || {};
     /* A VOLTA DE UMA GRAVAÇÃO NÃO FECHA O EDITOR — 26/09/2026,
        O-MAPA-QUE-ELA-CORRIGE-01: ela clicou numa entrada, e a entrada
        continua aberta com o que o disco diz agora. */
@@ -2001,6 +2004,7 @@ EDICOES: tuple[Edicao, ...] = (
             "  var FACE_DO_HUB = "
             + json.dumps(FACE_DO_HUB_DECLARADO, ensure_ascii=False) + ";\n"
             "  var ROTULOS = {};\n"
+            "  var HUB_LIDO = {};\n"
             "  function rotuloDe(n) {\n"
             "    var r = ROTULOS[String(n)];\n"
             "    if (r) return r.rotulo;\n"
@@ -2485,6 +2489,146 @@ EDICOES: tuple[Edicao, ...] = (
         porque=(
             '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 4) — as reticências '
             'separam a palavra: «Trocar com…» não vira «Trocar Com…».'
+        ),
+    ),
+    # ══ O-MAPA-QUE-ELA-CORRIGE-01 (passo 5), 26/09/2026: onde fica o hub ══
+    Edicao(
+        antes=(
+            '      return \'<div><div class="face-cab"><h3>\' + f.nome + \'</h3><s'
+            'pan class="quantas">\' + cheias + " de " + total + " ocupadas</span'
+            '></div>"\n'
+        ),
+        depois=(
+            '      /* A FACE DIZ DE QUAL ENTRADA PENDE (D-2609-O-HUB-PENDE-DA-E'
+            'NTRADA): o\n'
+            '         título é do dono («Hub na Entrada 3»), e a divergência é '
+            'uma linha\n'
+            '         a mais, sem culpa. */\n'
+            '      return \'<div><div class="face-cab"><h3>\' + (f.titulo || f.no'
+            'me) + \'</h3><span class="quantas">\' + cheias + " de " + total + " '
+            'ocupadas</span></div>"\n'
+            '        + (f.diverge ? \'<p class="diverge">\' + f.diverge + "</p>" : "")\n'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 5) — a face do hub di'
+            'z de qual entrada pende.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    if (DECLARADO[porta.n] && DECLARADO[porta.n].liga === "hub") h'
+            ' += \'<span class="decl">hub</span>\';\n'
+        ),
+        depois=(
+            '    if ((DECLARADO[porta.n] && DECLARADO[porta.n].liga === "hub") '
+            '|| HUB_LIDO[porta.n]) h += \'<span class="decl">hub</span>\';\n'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 5) — o plugue da entr'
+            'ada em que o computador lê um hub ganha a marca.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    FACES = FACES.filter(function (f) { return f.daEntrada !== Str'
+            'ing(n); });\n'
+            '    delete p.filho;\n'
+            '    if (valor === "hub") {\n'
+            '      FACES.push({ nome: FACE_DO_HUB.replace("{numero}", n), forma'
+            ': "fileira", regiao: "hub", daEntrada: String(n),\n'
+        ),
+        depois=(
+            '    /* A DEDUPLICAÇÃO É PELA LIGAÇÃO (D-2609-O-HUB-PENDE-DA-ENTRAD'
+            'A): só a face\n'
+            '       de quatro buracos que ESTA tela desenhou sai; a face ligada'
+            ' à entrada\n'
+            '       fica, e o hub dela não ganha uma segunda. */\n'
+            '    FACES = FACES.filter(function (f) { return !(f.fantasma && f.d'
+            'aEntrada === String(n)); });\n'
+            '    delete p.filho;\n'
+            '    var ligada = FACES.some(function (f) { return f.daEntrada === '
+            'String(n); });\n'
+            '    if (valor === "hub" && !ligada) {\n'
+            '      FACES.push({ nome: FACE_DO_HUB.replace("{numero}", n), titul'
+            'o: "Hub na " + naFraseDe(n),\n'
+            '        fantasma: true, forma: "fileira", regiao: "hub", daEntrada'
+            ': String(n),\n'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 5) — o hub declarado '
+            'na tela não duplica a face ligada.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    var liga = (DECLARADO[editando] || {}).liga || "direto";\n'
+        ),
+        depois=(
+            '    /* O COMPUTADOR LÊ UM HUB NESTA ENTRADA: «Hub» nasce apertado,'
+            ' e «Direto»\n'
+            '       fica apagado com a razão na dica (o espelho da D-03). */\n'
+            '    var lido = !!HUB_LIDO[editando];\n'
+            '    var liga = (DECLARADO[editando] || {}).liga || (lido ? "hub" :'
+            ' "direto");\n'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 5) — o editor da entr'
+            'ada em que o computador lê um hub.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '          if (o[0] === "hub" && quem && quem.classe !== "hub") {\n'
+        ),
+        depois=(
+            '          if (o[0] === "direto" && lido) {\n'
+            '            return \'<button class="escolha apagado" data-liga="dir'
+            'eto" aria-disabled="true" aria-pressed="false"\'\n'
+            '              + \' title="O computador lê um hub nesta entrada">\' +'
+            ' o[1] + "</button>";\n'
+            '          }\n'
+            '          if (o[0] === "hub" && quem && quem.classe !== "hub" && !'
+            'lido) {\n'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 5) — «Direto» apagado'
+            ' onde o computador lê um hub.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        }).join("")\n'
+            '      + "</div></div>"\n'
+            '      + \'<div class="edita-linha"><span>Velocidade</span>'
+        ),
+        depois=(
+            '        }).join("")\n'
+            '      + "</div>" + (lido ? \'<span class="lido">O computador lê um '
+            'hub nela.</span>\' : "") + "</div>"\n'
+            '      + \'<div class="edita-linha"><span>Velocidade</span>'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 5) — a linha que diz '
+            'por que «Hub» nasce apertado.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '  .face-cab .quantas { font-size: var(--text-xs); color: var(--col'
+            'or-ink-faint); font-family: var(--font-dado); }\n'
+        ),
+        depois=(
+            '  .face-cab .quantas { font-size: var(--text-xs); color: var(--col'
+            'or-ink-faint); font-family: var(--font-dado); }\n'
+            '  /* a divergência do hub: uma linha a mais, sem culpa */\n'
+            '  .diverge { margin: 0 0 var(--space-2xs); font-size: var(--te'
+            'xt-xs); color: var(--color-lacuna); }\n'
+            '  .edita .lido { font-size: var(--text-xs); color: var(--color-ink'
+            '-quiet); }\n'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 5) — a linha da diver'
+            'gência e a do editor.'
         ),
     ),
 )
