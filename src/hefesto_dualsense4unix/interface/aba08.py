@@ -630,7 +630,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      `left:22px`, crescendo para a DIREITA a partir do `?`. Aqui o `?` fica na
      ponta direita da linha, a 30px da borda do quadro: 330px de dica crescendo
      para lá saem da janela. Ancorada pela direita, ela cresce para dentro. */
-  .exame .ajuda .dica{left:auto;right:22px}
+  .exame .ajuda .dica{left:22px;right:auto}
 
   /* O NOME DO ADAPTADOR É EDITÁVEL NO LUGAR — o botão `Renomear` saiu.
      `contenteditable` é o que o mockup faz sem JavaScript; o DUPLO clique que ela
@@ -733,7 +733,15 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      O ESCOPO É `:has(.col-exame)` porque `.duas-colunas` é gramática comum a
      três abas: alargar todas mudaria a Navegação e a Gatilhos, que ninguém
      mediu e ninguém pediu. */
-  .duas-colunas:has(.col-exame){grid-template-columns:1.7fr 1fr}
+  /* A GRADE É A DOS CARTÕES — 26/09/2026, pedido dela: *«aumenta a largura
+     do bloco do canto superior direito»* e *«não existe alinhamento entre os
+     Elementos»*. Quatro colunas com o vão de 10px do `.gc`: o exame ocupa as
+     duas primeiras, a Sugestão de Conexão as duas últimas, e as bordas das
+     duas caem nas mesmas linhas verticais dos quatro botões e dos quatro
+     cartões embaixo. */
+  .duas-colunas:has(.col-exame){grid-template-columns:repeat(4,minmax(0,1fr));column-gap:10px}
+  .duas-colunas:has(.col-exame) > .lado-e{grid-column:1/3;padding-right:0}
+  .duas-colunas:has(.col-exame) > .lado-d{grid-column:3/5;padding-left:0;border-left:none}
   /* DOIS SELETORES E NÃO UM — 19/09/2026, e o segundo é a cura de um `:empty`
      que NUNCA DISPAROU na máquina dela.
 
@@ -748,15 +756,10 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      É o caso NORMAL desta bancada: as ordens dela (`dongle_atras_de_hub`,
      `teclado_so_no_hub`) não têm DESTINO, e sem destino não há de→para a
      desenhar. O `:empty` cobria só a coluna que o produto zera. */
-  .duas-colunas:has(.col-exame):has(.col-ordem:empty){grid-template-columns:1fr}
-  .duas-colunas:has(.col-exame):has(.col-ordem > .nada:only-child){grid-template-columns:1fr}
-  .duas-colunas:has(.col-exame):has(.col-ordem:empty) > .lado-d{display:none}
-  .duas-colunas:has(.col-exame):has(.col-ordem > .nada:only-child) > .lado-d{display:none}
-  /* O vão de 17px existe para separar da coluna da direita. Sem ela, é margem
-     morta que encolhe a linha do achado — que é exatamente o que esta cura
-     veio devolver. */
-  .duas-colunas:has(.col-exame):has(.col-ordem:empty) > .lado-e{padding-right:0}
-  .duas-colunas:has(.col-exame):has(.col-ordem > .nada:only-child) > .lado-e{padding-right:0}
+  /* A CAIXA NÃO SOME MAIS — 26/09/2026, pergunta dela olhando a tela sem
+     controle: *«pq sumiu a parte da caixinha no canto superior direito?»*.
+     As seis regras que a escondiam quando a ordem chegava vazia saíram: a
+     caixa tem título e fica, e quando não há o que mudar ela diz isso. */
 
   /* AS DUAS FILEIRAS DE BOTÕES VIRARAM UMA SÓ, com os quatro, e ela mora FORA
      das colunas — ordem escrita por ela em 28/08: *"Examinar de novo. / Já Movi
@@ -817,6 +820,21 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      também (26/09/2026, *«dá pra aceitar a instrução nisso»*), e ela abre uma
      exceção à ordem de 13/09 só nesta caixa. */
   .ordem-tit{font-size:12px;font-weight:600;color:var(--orange);margin-bottom:4px}
+  .sugestao{flex:1;display:flex;flex-direction:column;gap:8px;min-height:0;
+            border:1px solid rgba(255,184,108,.45);border-radius:7px;
+            background:var(--app-bg);padding:10px 12px}
+  .sugestao > .ordem-tit{margin:0}
+  .sugestao .col-ordem{flex:1;display:flex;flex-direction:column;gap:8px}
+  .sugestao .col-ordem > .ordem{border:none;padding:0;background:none;display:flex;
+                                flex-direction:column;justify-content:flex-start}
+  .sugestao .col-ordem > .ordem + .ordem{margin-top:0;padding-top:8px;
+                                border-top:1px solid var(--border-sutil)}
+  .sugestao .col-ordem > .nada:only-child{display:none}
+  .sugestao .nada-a-mudar{margin:auto 0;font-size:12.5px;font-weight:600;color:var(--green)}
+  .sugestao .ordem .faca .n{flex:0 0 18px;height:18px;border-radius:50%;display:inline-flex;
+                           align-items:center;justify-content:center;font-size:10.5px;
+                           background:rgba(255,184,108,.18);color:var(--orange)}
+  .sugestao .ordem .receita{margin-top:6px;padding-left:26px}
   /* 11px, e o número é MEDIDO, não escolhido: com os botões dentro das colunas o
      vão nascia da sobra que os itens de cada coluna repartiam entre si, e não de
      uma margem. 11 é o que devolve o quadro aos mesmos 204px e a fileira ao mesmo
@@ -917,7 +935,10 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .exame .dito{flex:0 1 auto;min-width:0}
   .exame .txt{min-width:0}
   .exame .dito .ajuda{display:inline-block;vertical-align:middle;margin-left:6px}
-  .exame .ignora{margin-left:auto}
+  /* O ⊘ ENCOSTA NO `?` — 26/09/2026, pedido dela: *«aproxima o botão de
+     ignora pra deixar ele mais a esquerda»*. Na ponta da coluna ele ficava
+     a meia tela da frase que ele cala. */
+  .exame .ignora{margin-left:0}
 
   /* ---- A ORDEM CALADA FICA NA LISTA, EM CINZA — 08-Q5 dela, 06/09/2026 ----
      *"A recomendação calada continua no lugar dela, em cinza, e o mesmo botão
@@ -1205,16 +1226,31 @@ CSS = CSS_GLIFO + CSS_POPUP + """
            background:rgba(80,250,123,.09);color:var(--green)}
   .eco-luz[data-economia="ligada"]{background:var(--green);box-shadow:0 0 6px var(--green)}
   .eco-luz[data-economia="mesa"]{background:var(--comment)}
-  /* «A LUZ NÃO ACENDE» É UM LINK DISCRETO, e não um botão do tamanho da
+  /* O PERFIL DE DESEMPENHO É DO CONTROLE — 26/09/2026, pedido dela: *«Modo
+     Economia de Bateria Deveria Ser o Perfil de Desempenho»* e *«perfil do
+     desempenho deveria aparecer por controle»*. Os três botões do mapa das
+     conexões desceram para cada cartão; o aceso é o deste controle. */
+  .gc-perfil{display:flex;flex-direction:column;gap:5px}
+  .gc-perfil .rot{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--texto-mudo)}
+  .gc-perfil .seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+  /* `min-width:0` porque o `.btn` do esqueleto nasce com 150px, e três de 150
+     não cabem num cartão de 350. */
+  .gc-perfil .seg .btn{width:100%;min-width:0;padding:0 4px;font-size:11.5px;white-space:nowrap;
+                       overflow:hidden;text-overflow:ellipsis}
+  .gc-perfil .seg .btn.on{border-color:var(--purple);background:rgba(189,147,249,.16);
+                          color:var(--fg);font-weight:600}
+  /* «A LUZ NÃO ACENDE» VIROU BOTÃO — 26/09/2026, pedido dela: *«A luz não
+     acende isso deveria ser um botão»*. Era link pontilhado.
+     O TEXTO ABAIXO É DE 25/09. «A LUZ NÃO ACENDE» ERA UM LINK DISCRETO, e não um botão do tamanho da
      economia: é o conserto de um caso raro. A trava continua IRMÃ e colada
      antes do botão (`></i><button`), porque o `~` só alcança irmãos
      posteriores — é ela que o apaga no cabo, onde o gesto não vale. */
   .gc-corpo .gc-luz{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
   .gc-luz .ressalva{margin-top:0;text-align:center}
-  .gc-luz .btn{height:auto;padding:2px 4px;border:none;background:none;
-               font-size:11.5px;color:var(--texto-mudo);
-               text-decoration:underline dotted;text-underline-offset:3px}
-  .gc-luz .btn:hover{color:var(--cyan);background:none}
+  .gc-corpo .gc-luz{align-items:stretch}
+  .gc-luz .btn{width:100%;display:flex;align-items:center;justify-content:center;gap:7px}
+  .gc-luz .btn .i{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+                  stroke-linecap:round;stroke-linejoin:round}
   .gc-corpo .ltrava{display:none}
   .gc-corpo .ltrava.on ~ .btn{opacity:.55;cursor:help}
   .gc-corpo .ltrava.on ~ .btn:hover{color:var(--texto-mudo)}
@@ -1231,10 +1267,11 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   /* AS FERRAMENTAS DO CHECK-UP — cinco botões de largura IGUAL, a régua dela
      para todo grupo (273×4 na Jogar, 173×6 na Perfis). O mapa das entradas
      ganhou nome: um ícone solto era o único botão da faixa sem palavra. */
-  .ferramentas{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;
+  .ferramentas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;
                margin:10px 0 12px}
   .ferramentas .btn{width:100%;display:flex;align-items:center;justify-content:center;
                     gap:7px;padding:0 10px;white-space:nowrap}
+  .ferramentas .i.ds{width:21px}
   .ferramentas .i{width:14px;height:14px;flex:0 0 auto;fill:none;stroke:currentColor;
                   stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   /* O FLUXO DO MAPEAR — a moldura da `.tela-nova` com duas colunas: à
@@ -2134,6 +2171,20 @@ ESTADOS_DA_LINHA = ("est-mic", "est-som", "est-modo", "est-visto", "est-conexao"
 #: para o desenho mostrar os dois estados do campo. O produto escreve o que o
 #: dono do nome (a memória dos controles, pelo endereço) disser.
 DONO_DA_CENA = {"p1": "Vitória"}
+#: O Perfil de Desempenho de cada lugar na cena do desenho — um de cada, para a
+#: foto mostrar o botão aceso nos dois estados.
+PERFIL_DA_CENA = {"p1": "tudo_ligado", "p2": "bateria_longa"}
+#: Os três botões do cartão: o id do produto (`secao_orcamento.PERFIS`), o
+#: rótulo e a dica. A dica é a de `secao_orcamento.DICAS`, que é o dono; no
+#: desenho ela vai escrita, e o produto a lê de lá quando o cartão for ligado.
+PERFIS_DO_CARTAO = (
+    ("tudo_ligado", "Tudo Ligado",
+     "Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad."),
+    ("bateria_longa", "Bateria Longa",
+     "Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar."),
+    ("eu_escolho", "Eu Escolho",
+     "Nenhum teto: os ajustes de cada aba mandam neste controle."),
+)
 DONO_DICA = ("Escreva o nome de quem joga com este controle. O nome fica no controle: "
              "vale em qualquer entrada e adaptador. Apague para voltar a «P N».")
 # o import mora aqui, e não no topo, para não empurrar as citações `aba08.py:N`
@@ -2237,7 +2288,6 @@ def linha_do_controle(c):
     # entra o ESTADO do controle agora, só leitura, pelo mesmo dono que o
     # produto chama a cada tique (`a08_conexoes.estado_do_controle`).
     estado = _estado_da_bancada(c) if conectado else {}
-    economia = _pacote08.campos_da_economia(_DECLARACAO_DA_BANCADA, "")
     # A TRAVA DO BOTÃO VIROU DADO — 03/09/2026. A classe `apagado` continua
     # nascendo do transporte da CENA (é o que ela vê ao abrir o arquivo), e o
     # `data-campo="luz-trava"` é o que deixa o produto reescrevê-la a cada
@@ -2285,6 +2335,7 @@ def linha_do_controle(c):
     # dono da aparência, e ele segue o transporte.
     botao = (f'<button class="btn" data-gesto="luz-nao-acende" {dica_luz} '
              f'title="{vale(LUZ_NO_RADIO if no_radio else LUZ_NO_CABO)}">'
+             f'<svg class="i" aria-hidden="true"><use href="#rd-lampada"/></svg>'
              f'{rotulo_luz}</button>')
     # A LINHA DA ESPERA, E ELA NASCE SEM OCUPAR NADA. `monta.ressalva` já sabe
     # sumir em repouso (`.ressalva:has(.nada)`), e é a mesma peça que o exame, os
@@ -2362,7 +2413,12 @@ def linha_do_controle(c):
 {chr(10).join(f'              <span class="gc-est" data-campo="{k}" data-hef-alvo="html">{estado.get(k, TRAVESSAO)}</span>' for k in ESTADOS_DA_LINHA)}
             </div>
             <div class="gc-corpo">
-              <button class="btn eco" data-gesto="economia-do-controle" data-campo="economia-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="{economia["economia-dica"]}"><i class="eco-luz" data-campo="economia" data-hef-alvo="atributo" data-hef-atributo="data-economia"></i>Modo Economia de Bateria</button>
+              <div class="gc-perfil">
+                <span class="rot">Perfil de Desempenho</span>
+                <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
+{chr(10).join(f'                  <button class="btn{" on" if PERFIL_DA_CENA.get(c["pref"], "tudo_ligado") == pid else ""}" data-gesto="perfil-do-controle" value="{pid}" role="radio" aria-checked="{"true" if PERFIL_DA_CENA.get(c["pref"], "tudo_ligado") == pid else "false"}" title="{dica}">{rotulo}</button>' for pid, rotulo, dica in PERFIS_DO_CARTAO)}
+                </div>
+              </div>
               {bloco_da_luz}
             </div>
           </div>'''
@@ -2390,10 +2446,10 @@ JOGADORES_NO_CABO = " e o ".join(f"Player {c['jogador']}" for c in NO_CABO)
 # esta lista faz o `_exigir` do fim do arquivo reprovar, porque a cor do topo
 # deixa de bater com a pior das cinco.
 # ---------------------------------------------------------------------------
-ESTADOS_DO_EXAME = ("certo", _ATENCAO, "certo", "nao_sei", "certo")
+ESTADOS_DO_EXAME = ("certo", _ATENCAO, "certo", "nao_sei", _ATENCAO)
 
 #: Quantas ordens de serviço a cena tem abertas — o card da coluna da direita.
-ORDENS_ABERTAS = 1
+ORDENS_ABERTAS = 2
 
 _CABECALHO = _ordens_da_mesa.cabecalho(
     # `cabecalho` só conta o comprimento da sequência; o que há dentro dela não
@@ -3989,13 +4045,12 @@ MIOLO = f'''
            que vale igual para caixa e para rádio. -->
       <input class="abre" type="radio" name="cx8-secao" id="cx8-2" checked>
       <div class="quadro-topo">
-        <label class="quadro-titulo" for="cx8-2">Check-up</label>
+        <label class="quadro-titulo" for="cx8-2">Gestão dos Controles</label>
         <span class="ajuda">?<span class="dica">
-          Um exame da sala e dos controles: em que entradas os aparelhos estão, quanta
-          energia elas dão, quem mais usa os 2,4 GHz perto do seu adaptador — e, embaixo,
-          uma linha por controle com o estado dele agora. Ele não muda nada sozinho:
-          quando acha algo, aparece ao lado uma ordem de serviço dizendo o que mover
-          para onde.
+          Os seus controles e as entradas deles: o exame à esquerda, a Sugestão de
+          Conexão à direita, e embaixo um cartão por controle com o estado dele agora e o
+          Perfil de Desempenho dele. Nada muda sozinho: a sugestão diz o que mover para
+          onde.
         </span></span>
         <!-- O CARIMBO GANHOU ENDEREÇO em 02/09/2026. Ele dizia "há 3 minutos"
              desde que o mockup nasceu, e nunca soube nada: nenhum pacote
@@ -4055,9 +4110,10 @@ MIOLO = f'''
        f'<b>Por que importa:</b> {len(NO_RADIO)} dos seus {len(CONECTADOS)} controles falam nessa mesma '
        f'faixa. O Hefesto não consegue nomear o que o sistema não nomeia — mas com o nome ele sabe '
        f'o que dá para desligar e o que não dá.', linha=3)}
-{exame("certo", "Nenhuma outra ordem de serviço pendente",
-       "<b>O que eu vi:</b> só o conselho das entradas vizinhas está aberto. Ordens que você mandou "
-       f"ignorar não contam aqui — cada uma {ORDEM_IGNORADA_VOLTA}.", linha=4)}
+{exame(_ATENCAO, "O adaptador Meio tem 3 controles, e o Direita tem 1",
+       "<b>O que eu vi:</b> três controles dividem o mesmo adaptador, e o do lado atende um só."
+       "<br><br><b>O que fazer:</b> a Sugestão de Conexão ao lado diz qual controle parear de "
+       "novo, e onde.", linha=4)}
           <!-- O `+N` DO EXAME — decisão 08-Q7 dela, 06/09/2026: *"Quando
                sobra, a lista ganha uma última linha curta: '+1 recomendação
                não coube aqui' — e só no dia em que sobra."*
@@ -4079,23 +4135,33 @@ MIOLO = f'''
           </div>
 
           <div class="lado-d">
-            <div class="col-ordem" data-campo="{CAMPO_DA_ORDEM}" data-hef-alvo="html">
-            <!-- A COLUNA ENXUGOU — FRASES-E-DICAS-02, 13/09/2026. O imperativo, o
-                 `?` do cartão e a linha do ganho saíram da vista, e o cartão de
-                 cura (decisão [03] do PO) saiu inteiro: eram instrução e
-                 confissão sobre um estado, sem clique. O `?` de cada linha do
-                 exame à esquerda traz o mesmo conteúdo. Fica o de→para, que é
-                 o que o produto pinta quando a ordem tem destino — ver
-                 `a08_conexoes._html_da_ordem`. -->
-            <div class="ordem">
-              <div class="ordem-tit">{_pacote08.TITULO_DA_ORDEM}</div>
-              <div class="faca">Mova o adaptador Bluetooth para a Entrada 9</div>
-              <div class="receita">
-                <span class="caixa" title="Entrada 3 — traseira do gabinete, USB 3.0. É a que divide o controlador com o receptor do teclado.">Entrada 3 <span class="pt">•</span> USB 3.0</span>
-                <span class="seta">→</span>
-                <span class="caixa alvo" title="Entrada 9 — traseira do gabinete, USB 2.0, num controlador que só ela usa.">Entrada 9 <span class="pt">•</span> USB 2.0</span>
+            <!-- A CAIXA TEM TÍTULO E NÃO SOME — 26/09/2026, pedido dela: *«aumenta a
+                 largura do bloco do canto superior direito. Ainda falta um título
+                 pra essa área.»* O título mora FORA do `.col-ordem`, que o produto
+                 repinta inteiro a cada tique: dentro, ele sumia com a ordem. E o que
+                 o mapa das conexões dizia dos controles no adaptador errado mora
+                 aqui agora (*«deveria ocupar o lugar no canto superior direito»*):
+                 uma sugestão por linha, numerada, com o de→para. -->
+            <div class="sugestao">
+              <div class="ordem-tit">Sugestão de Conexão</div>
+              <div class="col-ordem" data-campo="{CAMPO_DA_ORDEM}" data-hef-alvo="html">
+                <div class="ordem">
+                  <div class="faca"><span class="n">1</span>Mova o adaptador Bluetooth para a Entrada 9</div>
+                  <div class="receita">
+                    <span class="caixa" title="Entrada 3 — traseira do gabinete, USB 3.0. É a que divide o controlador com o receptor do teclado.">Entrada 3 <span class="pt">•</span> USB 3.0</span>
+                    <span class="seta">→</span>
+                    <span class="caixa alvo" title="Entrada 9 — traseira do gabinete, USB 2.0, num controlador que só ela usa.">Entrada 9 <span class="pt">•</span> USB 2.0</span>
+                  </div>
+                </div>
+                <div class="ordem">
+                  <div class="faca"><span class="n">2</span>Pareie o P2 no adaptador Direita</div>
+                  <div class="receita">
+                    <span class="caixa" title="O adaptador em que o P2 está pareado hoje, com três controles.">Meio <span class="pt">•</span> 3 controles</span>
+                    <span class="seta">→</span>
+                    <span class="caixa alvo" title="O adaptador com a folga maior.">Direita <span class="pt">•</span> 1 controle</span>
+                  </div>
+                </div>
               </div>
-            </div>
             </div>
           </div>
 
@@ -4121,14 +4187,20 @@ MIOLO = f'''
              só: a âncora abre o fluxo guiado porta a porta (`#mapear-portas`),
              que chama o dono do mapa (`entrada_a_entrada.o_mapa()`). A âncora
              não é gesto (a §P4): quem começa o fluxo é o `#mp-comecar`. -->
+        <!-- QUATRO FERRAMENTAS, TODAS COM ÍCONE — 26/09/2026, pedido dela: *«não
+             existe diferença entre o examinar entradas e atualizar»* e *«falta os
+             svg ou glifos»*. O «Atualizar» entrou no «Examinar Entradas» (um clique
+             refaz o exame e relê os controles), e as quatro colunas são as dos
+             cartões embaixo: cada botão fica em cima de um cartão. -->
         <div class="ferramentas">
           <a class="btn" href="#mapear-portas" title="{MAPEAR_ENTRADAS} — ligue o DualSense em cada entrada, uma por vez, e dê nome e lugar a cada uma">
             <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg> {MAPEAR_ENTRADAS}</a>
-          <button class="btn" data-gesto="examinar-portas" title="{EXAMINAR_PORTAS} — refaz o exame das entradas, energia e rádio, e repinta o Check-up">
+          <button class="btn" data-gesto="examinar-portas" title="{EXAMINAR_PORTAS} — refaz o exame das entradas, da energia e do rádio, e relê o estado de cada controle">
             <svg class="i" aria-hidden="true"><use href="#rd-reexaminar"/></svg> {EXAMINAR_PORTAS}</button>
-          <button class="btn" data-gesto="checkup-atualizar" title="Relê agora o estado de cada controle, os nomes e o mapa das entradas">Atualizar</button>
-          <a class="btn" href="mapa-do-controle.html" title="O mapa do controle — abre no navegador">Mapa do controle</a>
-          <a class="btn" href="mapa-das-portas.html" title="O mapa das entradas, com o que o Hefesto mediu de cada uma — abre no navegador">Mapa das entradas</a>
+          <a class="btn" href="mapa-do-controle.html" title="O mapa do controle — abre no navegador">
+            <svg class="i ds" aria-hidden="true"><use href="#rd-ds"/></svg> Mapa do Controle</a>
+          <a class="btn" href="mapa-das-portas.html" title="O mapa das conexões: cada entrada do computador, o que está nela e o que mudar">
+            <svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg> Mapa das Conexões</a>
         </div>
         <!-- O ACORDEÃO PASSOU A SER LIDO DE VOLTA — 06/09/2026,
              `CONEXOES-LIGAR-TUDO-01`. Os {len(MESA) + 1} rádios são o alvo de
@@ -4222,7 +4294,7 @@ MIOLO = f'''
       <div class="quadro-corpo">
         <div class="espectro">
           <div class="espectro-cab">
-            Quem está no ar
+            Dispositivos Conectados
             <span class="ajuda" role="img" aria-label="{AJUDA_DO_AR}" title="{AJUDA_DO_AR}"><svg class="i" aria-hidden="true"><use href="#rd-ajuda"/></svg></span>
             <span class="fora-da-faixa" data-campo="espectro-fora-da-faixa" data-hef-alvo="html">{CAMPOS_DO_RADIO["espectro-fora-da-faixa"]}</span>
             <span class="no-ar" data-campo="meus-no-ar" data-hef-alvo="html">{CAMPOS_DO_RADIO["meus-no-ar"]}</span>
@@ -4267,6 +4339,19 @@ MIOLO = f'''
     </div>
 {SPRITE_DO_RADIO}
 {SCRIPT_DA_SECAO_DO_RADIO}
+<script>
+/* O PERFIL DE DESEMPENHO ACENDE NO CLIQUE — 26/09/2026. No produto quem
+   repinta é o tique; aqui o botão acende na hora, para o desenho responder
+   a quem clica. */
+document.addEventListener("click", function (ev) {{
+  var b = ev.target.closest(".gc-perfil .seg .btn");
+  if (!b) return;
+  b.parentElement.querySelectorAll(".btn").forEach(function (x) {{
+    x.classList.toggle("on", x === b);
+    x.setAttribute("aria-checked", x === b ? "true" : "false");
+  }});
+}});
+</script>
 '''
 
 LEGENDA = f'''<div class="nota">
