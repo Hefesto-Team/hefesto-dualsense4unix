@@ -215,6 +215,7 @@ def test_a_dica_nao_promete_cura_de_engasgo() -> None:
     um dia antes da queixa dela. A régua que guardava o rótulo tinha saído com a
     janela GTK; esta guarda a dica, que é onde a promessa voltou.
     """
+    decisao = "D-2609-A-DICA-DO-VULKAN-NAO-PROMETE-CURA"  # docs/data/decisoes-dela.csv
     for pagina in _as_duas_paginas():
         linha = next((ln for ln in pagina.read_text(encoding="utf-8").splitlines()
                       if f'data-gesto="{GESTO}"' in ln), "")
@@ -222,11 +223,13 @@ def test_a_dica_nao_promete_cura_de_engasgo() -> None:
         assert achado, f"{pagina.name}: o ligável `{GESTO}` sumiu ou perdeu a dica"
         dica = html.unescape(achado.group(1))
         assert "não cura engasgo" in dica, (
-            f"{pagina.name}: a dica não diz mais que não cura engasgo: {dica!r}")
+            f"{pagina.name}: a dica não diz mais que não cura engasgo ({decisao}): "
+            f"{dica!r}")
         resto = dica.replace("não cura engasgo", "").lower()
         for promessa in ("engasg", "picot", "resolv"):
             assert promessa not in resto, (
-                f"{pagina.name}: a dica voltou a prometer ({promessa!r}): {dica!r}")
+                f"{pagina.name}: a dica voltou a prometer ({promessa!r}, {decisao}): "
+                f"{dica!r}")
 
 
 #: Uma linha do EXAME na marcação do produto (`a09_sistema._linha_do_exame`): o
