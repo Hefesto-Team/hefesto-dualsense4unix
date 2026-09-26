@@ -533,3 +533,60 @@ def test_a_tabela_do_teto_diz_de_cada_peca_o_que_a_economia_faz() -> None:
         assert longa == pecas[linha.nome].o_que_faz, (linha.nome, longa)
         assert orc.celula_do_perfil(orc.PERFIL_TUDO_LIGADO, linha) == orc.SEM_TETO
         assert orc.celula_do_perfil(orc.PERFIL_EU_ESCOLHO, linha) == orc.CADA_ABA_MANDA
+
+
+@pytest.mark.asyncio
+async def test_o_daemon_registra_a_declaracao_no_boot_e_solta_ao_parar(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O daemon vivo responde pela mesa; parado, deixa de responder.
+
+    A medição é DURANTE o laço (capturada antes do ``stop``) e DEPOIS dele —
+    um teste que só olhasse depois do ``stop`` daria verde sobre tudo.
+
+    MORDIDA: em ``Daemon.run``, apague o ``registrar_declaracao_da_mesa(...)``
+    do boot — o «durante» reprova; apague o ``_soltar_a_mesa(None)`` do
+    ``finally`` — o «depois» reprova.
+    """
+    import asyncio
+
+    from hefesto_dualsense4unix.core.controller import ControllerState
+    from hefesto_dualsense4unix.core.events import EventBus
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+    from hefesto_dualsense4unix.daemon.state_store import StateStore
+    from hefesto_dualsense4unix.testing import FakeController
+    from hefesto_dualsense4unix.utils import maquina as maquina_mod
+
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.utils.session.load_paused_state", lambda: False
+    )
+    maquina_mod.gravar_maquina_com_descartes({
+        "orcamento": {"teto": "economia"},
+        "controles": {UNIQS[1]: {"economia": True}},
+    })
+    estado = ControllerState(
+        battery_pct=80, l2_raw=0, r2_raw=0, connected=True,
+        transport="usb", buttons_pressed=frozenset(),
+    )
+    store = StateStore()
+    daemon = Daemon(
+        controller=FakeController(transport="usb", states=[estado]),
+        bus=EventBus(), store=store,
+        config=DaemonConfig(
+            poll_hz=200, auto_reconnect=False, ipc_enabled=False, udp_enabled=False,
+            autoswitch_enabled=False, mouse_emulation_enabled=False,
+            keyboard_emulation_enabled=False, ps_button_action="none",
+            mic_button_toggles_system=False,
+        ),
+    )
+    tarefa = asyncio.create_task(daemon.run())
+    for _ in range(500):
+        if store.counter("poll.tick") >= 1:
+            break
+        await asyncio.sleep(0.01)
+    durante = (schema.economia_da_mesa(), controles_em_economia())
+    daemon.stop()
+    await tarefa
+    depois = (schema.economia_da_mesa(), controles_em_economia())
+    assert durante == (True, frozenset({UNIQS[1]})), durante
+    assert depois == (False, frozenset()), depois
