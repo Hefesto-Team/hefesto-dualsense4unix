@@ -3836,6 +3836,7 @@ class Piloto:
             return
         nova = _pagina_da_uri(self.view.get_uri())
         if not nova or (nova == self.pagina and self.pronto):
+            self._a_mesma_recarregou(nova)
             return
         self.pagina = nova
         if nova not in self.visitadas:
@@ -3845,6 +3846,31 @@ class Piloto:
         # muda sem uma linha de erro.
         self.pronto = False
         self._antes_de_instalar()
+
+    def _a_mesma_recarregou(self, nova: str) -> None:
+        """O MAPA RECARREGADO VOLTA COM O ARRANJO — O-MAPA-QUE-ELA-CORRIGE-01.
+
+        MEDIDO em 26/09/2026 no lar de mentira: o «Recarregar» do menu do
+        WebKit (o clique direito na página) carrega a MESMA URI, o `_carregou`
+        sai cedo (a guarda da primeira aba, de `150257be2`) e o documento novo
+        fica sem a ponte e sem o arranjo — o cabeçalho diz «Leitura de
+        Exemplo» e o editor não grava. A guarda da saída cedo continua: ela
+        evita instalar duas vezes quando a primeira carga confirma depois da
+        instalação. Aqui só se pergunta ao documento se a ponte está nele, e
+        só no mapa; sem ela, é documento novo, e ele é instalado como a
+        página que chega.
+        """
+        from hefesto_dualsense4unix.interface import arranjo_desta_maquina
+
+        if nova != arranjo_desta_maquina.PAGINA or nova != self.pagina or not self.pronto:
+            return
+
+        def respondeu(valor: Any, erro: Any) -> None:
+            if erro is None and str(valor) == "false" and self.pagina == nova:
+                self.pronto = False
+                self._antes_de_instalar()
+
+        self.ponte.perguntar("String(!!window.__hef)", respondeu)
 
     def _instalar(self) -> None:
         self._antes_de_instalar()
@@ -3923,17 +3949,19 @@ class Piloto:
 
         threading.Thread(target=ler, name="arranjo-desta-maquina", daemon=True).start()
 
-    def _entregar(self, pagina: str, dado: Any, *, reexame: bool) -> bool:
+    def _entregar(self, pagina: str, dado: Any, *, reexame: bool = False,
+                  como: str = "") -> bool:
         """O arranjo lido vai à página — no laço do GTK, e só se ela ainda é a dele.
 
-        UM caminho para as duas entregas, a da abertura e a do «Examinar»: o
-        JavaScript é do dono (`arranjo_desta_maquina.js_da_entrega`).
+        UM caminho para as três entregas, a da abertura, a do «Examinar» e a
+        da volta de uma gravação do editor: o JavaScript é do dono
+        (`arranjo_desta_maquina.js_da_entrega`).
         """
         from hefesto_dualsense4unix.interface import arranjo_desta_maquina
 
         if self.pagina != pagina:
             return False
-        js = arranjo_desta_maquina.js_da_entrega(dado, reexame=reexame)
+        js = arranjo_desta_maquina.js_da_entrega(dado, reexame=reexame, como=como)
         self.ponte.perguntar(js, self._arranjo_entregue)
         return False
 
@@ -3945,20 +3973,29 @@ class Piloto:
         `window.hefestoArranjo(dado, true)`, a porta da abertura, e o resto
         segue para a pintura. SÓ NO MAPA: noutra página a chave é campo dela.
 
+        E A VOLTA DE UMA GRAVAÇÃO (O-MAPA-QUE-ELA-CORRIGE-01): o editor da
+        entrada devolve o arranjo relido do disco na chave
+        `CHAVE_DEPOIS_DE_GRAVAR`, e ele vai pela mesma porta, no modo que não
+        muda o modo da página nem fecha o editor.
+
         RODA NO LAÇO DO GTK, na volta do gesto (`_gesto`), dentro da mesma
         linha que leva a resposta à pintura: lá, uma linha a mais empurraria as
         citações `hefesto_vivo.py:NNN` que outras posses fazem das linhas de
         baixo. A volta entra na fila antes do pouso, então o botão só volta do
         voo com o reexame já na tela.
         """
-        from hefesto_dualsense4unix.interface import arranjo_desta_maquina
+        from hefesto_dualsense4unix.interface import arranjo_desta_maquina as arranjo
 
-        chave, do_mapa = arranjo_desta_maquina.CHAVE_DA_ENTREGA, arranjo_desta_maquina.PAGINA
-        if pagina != do_mapa or not isinstance(resposta, dict) or chave not in resposta:
+        if pagina != arranjo.PAGINA or not isinstance(resposta, dict):
             return resposta
-        resto = {k: v for k, v in resposta.items() if k != chave}
-        self._entregar(pagina, resposta[chave], reexame=True)
-        return resto
+        modos = ((arranjo.CHAVE_DA_ENTREGA, arranjo.COMO_REEXAME),
+                 (arranjo.CHAVE_DEPOIS_DE_GRAVAR, arranjo.COMO_GRAVOU))
+        achadas = [(chave, como) for chave, como in modos if chave in resposta]
+        if not achadas:
+            return resposta
+        for chave, como in achadas:
+            self._entregar(pagina, resposta[chave], como=como)
+        return {k: v for k, v in resposta.items() if k not in dict(achadas)}
 
     def _arranjo_entregue(self, valor: Any, erro: Any) -> None:
         if erro is not None:

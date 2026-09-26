@@ -1514,10 +1514,12 @@
         + '<span class="txt"><b>' + a.tipo + "</b><span>" + a.nome + " · " + (caminhoDe(a.id) || "não está plugado") + "</span></span>"
         + (p ? '<span class="num">' + p + "</span>" : "") + "</button>";
     }).join("");
-    var soltos = APARELHOS.filter(function (a) { return !portaDe(a.id); }).length;
+    /* A DICA DIZ QUE A ENTRADA ABRE UM EDITOR — 26/09/2026: nada na tela
+       dizia, e ela nunca o achou. Quantos estão sem lugar já está no
+       painel («fora do mapa»). */
     document.getElementById("ajuda-bandeja").textContent = segurando
       ? "Na mão: " + acha(segurando).tipo + ". Clique a entrada em que ele vai."
-      : (soltos ? soltos + " ainda sem lugar no mapa." : "O número é a entrada em que cada um está.");
+      : "Clique numa entrada para dar nome, corrigir ou trocar.";
 
     /* legenda */
     document.getElementById("legenda").innerHTML = modo === "ideal"
@@ -1540,12 +1542,20 @@
     if (ev.target.closest(".modo[data-modo]")) editando = null;
     if (ev.target.id === "edita-fecha") { editando = null; pintar(); return; }
     var lg = ev.target.closest("#edita [data-liga]");
+    /* A TELA ESPERA O DISCO — 26/09/2026, D-2609-A-TELA-DO-MAPA-ESPERA-O-DISCO.
+       O botão que leva o gesto ao disco não pinta nada aqui: ele fica
+       «em voo» (o carimbo do piloto), o produto grava e devolve o
+       arranjo relido, e a página repinta pelo que o disco diz. Uma
+       recusa não repinta, e a piscada acha o botão clicado. No
+       exemplo, sem produto, a pintura continua local. */
+    if (lg && lg.hasAttribute("data-gesto")) return;
     if (lg) {
       /* o apagado responde e não declara: a razão está na dica */
       if (lg.getAttribute("aria-disabled") !== "true") declarar(editando, "liga", lg.getAttribute("data-liga"));
       pintar(); return;
     }
     var ub = ev.target.closest("#edita [data-usb]");
+    if (ub && ub.hasAttribute("data-gesto")) return;
     if (ub) { declarar(editando, "usb", parseInt(ub.getAttribute("data-usb"), 10)); pintar(); return; }
     var tb = ev.target.closest("#edita [data-tirar]");
     if (tb) {
@@ -1643,7 +1653,7 @@
     });
   }
 
-  function aplicarArranjo(f) {
+  function aplicarArranjo(f, manterOEditor) {
     fonte = f;
     APARELHOS = f.aparelhos;
     FACES = f.faces;
@@ -1663,7 +1673,10 @@
        exemplo, o editor fica só na tela. */
     DECLARADO = JSON.parse(JSON.stringify(f.declarado || {}));
     GRAVA = Object.keys(DECLARADO);
-    editando = null;
+    /* A VOLTA DE UMA GRAVAÇÃO NÃO FECHA O EDITOR — 26/09/2026,
+       O-MAPA-QUE-ELA-CORRIGE-01: ela clicou numa entrada, e a entrada
+       continua aberta com o que o disco diz agora. */
+    if (!manterOEditor) editando = null;
   }
 
   function dizerDeQuando() {
@@ -1688,7 +1701,13 @@
     if (ex && doProduto()) ex.setAttribute("data-gesto", "reexaminar");
   }
 
-  window.hefestoArranjo = function (dado, comoReexame) {
+  window.hefestoArranjo = function (dado, como) {
+    /* COMO ELE CHEGA — 26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01: `false` é a
+       abertura, `true` (ou "reexame") é o «Examinar», e "gravou" é a volta
+       de uma gravação do editor (`arranjo_desta_maquina.CHAVE_DEPOIS_DE_GRAVAR`):
+       a página repinta pelo disco sem mudar de modo nem fechar o editor. */
+    var comoReexame = como === true || como === "reexame";
+    var gravou = como === "gravou";
     var falta = CAMPOS_DO_ARRANJO.filter(function (c) { return !dado || !dado[c]; });
     if (falta.length) {
       /* RECUSAR É METADE DO TRABALHO: meio arranjo desenharia um gabinete sem
@@ -1699,11 +1718,16 @@
        mapa nesta tela: o mapa da tela fica, como ficava antes de o produto
        reler. */
     var mapaDaTela = comoReexame && doProduto() ? [MAPA, MAPA_ORIGINAL] : null;
-    aplicarArranjo(dado);
+    /* a leitura anterior da tela fica: gravar não é reexaminar */
+    var antesDaTela = gravou && LEITURAS ? LEITURAS.antes : null;
+    aplicarArranjo(dado, gravou);
+    if (antesDaTela) LEITURAS = { agora: dado.leituras.agora, antes: antesDaTela };
     if (comoReexame) {
       if (mapaDaTela) { MAPA = mapaDaTela[0]; MAPA_ORIGINAL = mapaDaTela[1]; }
       modo = "reexame"; segurando = null; naMao = null;
     }
+    /* o aparelho que estava na mão foi ensinado: ele sai da mão */
+    if (gravou && segurando) { segurando = null; naMao = null; modo = "mesa"; }
     dizerDeQuando();
     marcarOExaminar();
     pintar();

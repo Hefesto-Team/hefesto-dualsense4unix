@@ -269,7 +269,7 @@ ABRE_A_PORTA = """\
     });
   }
 
-  function aplicarArranjo(f) {
+  function aplicarArranjo(f, manterOEditor) {
     fonte = f;
     APARELHOS = f.aparelhos;
     FACES = f.faces;
@@ -289,7 +289,10 @@ ABRE_A_PORTA = """\
        exemplo, o editor fica só na tela. */
     DECLARADO = JSON.parse(JSON.stringify(f.declarado || {}));
     GRAVA = Object.keys(DECLARADO);
-    editando = null;
+    /* A VOLTA DE UMA GRAVAÇÃO NÃO FECHA O EDITOR — 26/09/2026,
+       O-MAPA-QUE-ELA-CORRIGE-01: ela clicou numa entrada, e a entrada
+       continua aberta com o que o disco diz agora. */
+    if (!manterOEditor) editando = null;
   }
 
   function dizerDeQuando() {
@@ -314,7 +317,13 @@ ABRE_A_PORTA = """\
     if (ex && doProduto()) ex.setAttribute("data-gesto", "reexaminar");
   }
 
-  window.hefestoArranjo = function (dado, comoReexame) {
+  window.hefestoArranjo = function (dado, como) {
+    /* COMO ELE CHEGA — 26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01: `false` é a
+       abertura, `true` (ou "reexame") é o «Examinar», e "gravou" é a volta
+       de uma gravação do editor (`arranjo_desta_maquina.CHAVE_DEPOIS_DE_GRAVAR`):
+       a página repinta pelo disco sem mudar de modo nem fechar o editor. */
+    var comoReexame = como === true || como === "reexame";
+    var gravou = como === "gravou";
     var falta = CAMPOS_DO_ARRANJO.filter(function (c) { return !dado || !dado[c]; });
     if (falta.length) {
       /* RECUSAR É METADE DO TRABALHO: meio arranjo desenharia um gabinete sem
@@ -325,11 +334,16 @@ ABRE_A_PORTA = """\
        mapa nesta tela: o mapa da tela fica, como ficava antes de o produto
        reler. */
     var mapaDaTela = comoReexame && doProduto() ? [MAPA, MAPA_ORIGINAL] : null;
-    aplicarArranjo(dado);
+    /* a leitura anterior da tela fica: gravar não é reexaminar */
+    var antesDaTela = gravou && LEITURAS ? LEITURAS.antes : null;
+    aplicarArranjo(dado, gravou);
+    if (antesDaTela) LEITURAS = { agora: dado.leituras.agora, antes: antesDaTela };
     if (comoReexame) {
       if (mapaDaTela) { MAPA = mapaDaTela[0]; MAPA_ORIGINAL = mapaDaTela[1]; }
       modo = "reexame"; segurando = null; naMao = null;
     }
+    /* o aparelho que estava na mão foi ensinado: ele sai da mão */
+    if (gravou && segurando) { segurando = null; naMao = null; modo = "mesa"; }
     dizerDeQuando();
     marcarOExaminar();
     pintar();
@@ -1904,6 +1918,58 @@ EDICOES: tuple[Edicao, ...] = (
         porque=(
             '26/09/2026 — o reexame chega ao produto, e com um aparelho só a frase '
             'dizia «Por Que 1 Ficaram Sem Entrada».'
+        ),
+    ),
+    # ══ O-MAPA-QUE-ELA-CORRIGE-01, 26/09/2026 ══════════════════════════════
+    # Os pedidos dela, com o mapa aberto: renomear a entrada, trocar duas de
+    # lugar, dizer onde fica o hub e corrigir a velocidade. As edições daqui
+    # para baixo são desta sprint; o `porque` de cada uma diz o passo.
+    Edicao(
+        antes=(
+            "    var lg = ev.target.closest(\"#edita [data-liga]\");\n"
+            "    if (lg) {\n"
+        ),
+        depois=(
+            "    var lg = ev.target.closest(\"#edita [data-liga]\");\n"
+            "    /* A TELA ESPERA O DISCO — 26/09/2026, D-2609-A-TELA-DO-MAPA-ESPERA-O-DISCO.\n"
+            "       O botão que leva o gesto ao disco não pinta nada aqui: ele fica\n"
+            "       «em voo» (o carimbo do piloto), o produto grava e devolve o\n"
+            "       arranjo relido, e a página repinta pelo que o disco diz. Uma\n"
+            "       recusa não repinta, e a piscada acha o botão clicado. No\n"
+            "       exemplo, sem produto, a pintura continua local. */\n"
+            "    if (lg && lg.hasAttribute(\"data-gesto\")) return;\n"
+            "    if (lg) {\n"
+        ),
+        porque='26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 0) — «O que tem aqui» espera o disco.',
+    ),
+    Edicao(
+        antes="    var ub = ev.target.closest(\"#edita [data-usb]\");\n",
+        depois=(
+            "    var ub = ev.target.closest(\"#edita [data-usb]\");\n"
+            "    if (ub && ub.hasAttribute(\"data-gesto\")) return;\n"
+        ),
+        porque='26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 0) — «Velocidade» espera o disco.',
+    ),
+    Edicao(
+        antes=(
+            "    var soltos = APARELHOS.filter(function (a) { return !portaDe(a.id); }).length;\n"
+            "    document.getElementById(\"ajuda-bandeja\").textContent = segurando\n"
+            "      ? \"Na mão: \" + acha(segurando).tipo + \". Clique a entrada em que ele vai.\"\n"
+            "      : (soltos ? soltos + \" ainda sem lugar no mapa.\""
+            " : \"O número é a entrada em que cada um está.\");\n"
+        ),
+        depois=(
+            "    /* A DICA DIZ QUE A ENTRADA ABRE UM EDITOR — 26/09/2026: nada na tela\n"
+            "       dizia, e ela nunca o achou. Quantos estão sem lugar já está no\n"
+            "       painel («fora do mapa»). */\n"
+            "    document.getElementById(\"ajuda-bandeja\").textContent = segurando\n"
+            "      ? \"Na mão: \" + acha(segurando).tipo + \". Clique a entrada em que ele vai.\"\n"
+            "      : \"Clique numa entrada para dar nome, corrigir ou trocar.\";\n"
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 0) — medido no diário '
+            'dela: dois cliques no plugue e nenhuma escolha; a dica não dizia que '
+            'ali há um editor.'
         ),
     ),
 )

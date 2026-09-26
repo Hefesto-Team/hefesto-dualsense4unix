@@ -76,6 +76,22 @@ ROTULO_DA_ANTERIOR = "a leitura anterior"
 #: (`hefesto_vivo.Piloto._o_arranjo_relido`), o mesmo caminho da abertura.
 CHAVE_DA_ENTREGA = "arranjo"
 
+#: A CHAVE DO ARRANJO QUE VOLTA DE UMA GRAVAÇÃO — O-MAPA-QUE-ELA-CORRIGE-01,
+#: 26/09/2026 (D-2609-A-TELA-DO-MAPA-ESPERA-O-DISCO). O editor da entrada
+#: apertava o botão na hora, antes do disco: uma recusa ficava invisível, e a
+#: piscada procurava um botão que a repintura já tinha trocado. Agora o gesto
+#: grava e devolve o arranjo RELIDO nesta chave, e a página repinta pela
+#: verdade do disco, com o editor ainda aberto (:func:`js_da_entrega` com
+#: ``como="gravou"``). Uma chave própria, e não a do «Examinar»: o reexame
+#: muda o modo da página, e a gravação não muda.
+CHAVE_DEPOIS_DE_GRAVAR = "arranjoGravado"
+
+#: Os três jeitos de a página receber um arranjo: a abertura, o «Examinar» e a
+#: volta de uma gravação. É o segundo argumento de ``window.hefestoArranjo``.
+COMO_ABRE = ""
+COMO_REEXAME = "reexame"
+COMO_GRAVOU = "gravou"
+
 #: A IDENTIDADE DE UM APARELHO NA PÁGINA — O-MAPA-DAS-CONEXOES-NO-PRODUTO-02.
 #: O `id` era o caminho de barramento, e o caminho é justamente o que muda
 #: quando ela move o aparelho: o reexame não tinha como dizer «estava em», e
@@ -263,6 +279,17 @@ def reexaminar(**fontes: Any) -> dict[str, Any] | None:
     return _guardar_e_entregar(_ler_a_maquina(antes=_NA_TELA.ler(), **fontes))
 
 
+def depois_de_gravar(**fontes: Any) -> dict[str, Any] | None:
+    """O arranjo relido depois de uma gravação do editor — ver
+    :data:`CHAVE_DEPOIS_DE_GRAVAR`.
+
+    É a leitura do «Examinar» (o «antes» é a que a página tem, e quem ficou
+    parado continua com o mesmo ``id``), entregue sem mudar o modo da página.
+    Lê o ``/sys``: roda no fio do gesto, nunca no da janela.
+    """
+    return _guardar_e_entregar(_ler_a_maquina(antes=_NA_TELA.ler(), **fontes))
+
+
 def _guardar_e_entregar(lido: tuple[dict[str, Any], Lida] | None) -> dict[str, Any] | None:
     """A leitura que vai à página vira o «antes» do próximo «Examinar»."""
     if lido is None:
@@ -272,14 +299,24 @@ def _guardar_e_entregar(lido: tuple[dict[str, Any], Lida] | None) -> dict[str, A
     return dado
 
 
-def js_da_entrega(dado: Mapping[str, Any], *, reexame: bool = False) -> str:
-    """O JavaScript que entrega um arranjo à página — o da abertura e o do reexame.
+def js_da_entrega(
+    dado: Mapping[str, Any], *, reexame: bool = False, como: str = COMO_ABRE
+) -> str:
+    """O JavaScript que entrega um arranjo à página — a abertura, o reexame e a
+    volta de uma gravação (``como``: :data:`COMO_ABRE`, :data:`COMO_REEXAME`,
+    :data:`COMO_GRAVOU`; ``reexame=True`` é o mesmo que ``como="reexame"``).
 
-    UM dono para as duas entregas: o piloto monta as duas por aqui, e a régua
+    UM dono para as três entregas: o piloto monta as três por aqui, e a régua
     que abre a página no WebKit também.
     """
     corpo = json.dumps(dado, ensure_ascii=False)
-    return f"window.hefestoArranjo({corpo}, {'true' if reexame else 'false'})"
+    if reexame:
+        como = COMO_REEXAME
+    if como not in (COMO_ABRE, COMO_REEXAME, COMO_GRAVOU):
+        raise ValueError(f"{como!r} não é um jeito de a página receber o arranjo")
+    if como == COMO_GRAVOU:
+        return f"window.hefestoArranjo({corpo}, {json.dumps(COMO_GRAVOU)})"
+    return f"window.hefestoArranjo({corpo}, {'true' if como == COMO_REEXAME else 'false'})"
 
 
 def identidades(

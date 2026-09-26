@@ -139,11 +139,19 @@ def test_o_arranjo_da_pagina_pinta_a_velocidade_que_ela_disse() -> None:
 
 
 @pytest.fixture()
-def disco(tmp_path: Path) -> Path:
-    """O ``maquina.json`` desta régua mora no ``tmp_path`` — conferido antes."""
+def disco(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """O ``maquina.json`` desta régua mora no ``tmp_path`` — conferido antes.
+
+    E o barramento é o de mentira: o gesto do editor relê a máquina depois de
+    gravar (O-MAPA-QUE-ELA-CORRIGE-01), e a régua não lê o ``/sys`` de ninguém.
+    """
+    from hefesto_dualsense4unix.integrations import censo_do_barramento
+
     alvo = caminho_da_maquina()
     assert alvo.is_relative_to(tmp_path), f"o maquina.json da régua não está desviado: {alvo}"
     assert gravar_maquina({"mapa": _mapa().model_dump(mode="json")})
+    monkeypatch.setattr(censo_do_barramento, "ler_o_barramento", lambda: _censo())
+    monkeypatch.setattr(mapa_das_portas, "serial_do_no", lambda _no: "")
     return alvo
 
 
@@ -428,13 +436,11 @@ def test_o_clique_na_pagina_grava_e_a_pagina_relida_mostra(disco: Path) -> None:
         _clicar('.plug[data-porta="5"]'),
         _LER_A_PAGINA,
         _clicar('#edita [data-liga="hub"]'),
-        _clicar('.plug[data-porta="5.1"]'),
         _LER_A_PAGINA,
-        _clicar('#edita [data-liga="extensor"]'),
         _clicar('.plug[data-porta="7"]'),
         _clicar('#edita [data-usb="2"]'),
     ])
-    exemplo, _, entregue, _, editor_na_5, _, _, editor_na_51, _, _, _ = (
+    exemplo, _, entregue, _, editor_na_5, _, sem_esperar, _, _ = (
         json.loads(r) if r.startswith("{") else r for r in antes)
     assert exemplo["quando"], "o exemplo deixou de dizer que é exemplo"
     assert not entregue["quando"], "a leitura desta máquina ainda se anuncia no cabeçalho"
@@ -444,9 +450,10 @@ def test_o_clique_na_pagina_grava_e_a_pagina_relida_mostra(disco: Path) -> None:
         "entrada-o-que-tem:extensor@5", "entrada-velocidade:3@5",
         "entrada-velocidade:2@5"]), (
         f"a entrada do mapa dela não leva o gesto ao disco: {editor_na_5['gestos']}")
-    assert editor_na_51["gestos"] == [], (
-        "a entrada que o desenho monta (5.1) mandaria ao disco uma entrada "
-        "que ela nunca mapeou")
+    # A TELA ESPERA O DISCO (O-MAPA-QUE-ELA-CORRIGE-01): o «Hub» clicado não
+    # desenha o hub antes de o disco responder.
+    assert len(sem_esperar["faces"]) == len(entregue["faces"]), (
+        f"a página desenhou o hub antes do disco: {sem_esperar['faces']}")
 
     pedidos = [m for m in mensagens if m.get("gesto", "").startswith("entrada-")]
     assert [(m["gesto"], m.get("entrada")) for m in pedidos] == [
@@ -460,13 +467,20 @@ def test_o_clique_na_pagina_grava_e_a_pagina_relida_mostra(disco: Path) -> None:
     assert (portas["5"].liga, portas["7"].usb) == ("hub", 2)
     assert portas["5"].nos == _NOS["5"], "o clique apagou os nós que o Mapear gravou"
 
-    depois, _ = _na_pagina([
+    depois, mais = _na_pagina([
         _entregar(),
         _LER_A_PAGINA,
+        _clicar('.plug[data-porta="5.1"]'),
+        _LER_A_PAGINA,
+        _clicar('#edita [data-liga="extensor"]'),
         _clicar('.plug[data-porta="5"]'),
         _LER_A_PAGINA,
     ])
-    relida, editor = json.loads(depois[1]), json.loads(depois[3])
+    relida, editor_na_51, editor = (json.loads(depois[i]) for i in (1, 3, 6))
+    assert editor_na_51["gestos"] == [], (
+        "a entrada que o desenho monta (5.1) mandaria ao disco uma entrada "
+        "que ela nunca mapeou")
+    assert not [m for m in mais if m.get("gesto", "").startswith("entrada-")], mais
     assert ee.FACE_DO_HUB_DECLARADO.format(numero="5") in relida["faces"], (
         f"o hub não voltou ao reler: {relida['faces']}")
     assert relida["v3"]["7"] is False, "a 7 relida não é preta, e ela disse USB 2.0"

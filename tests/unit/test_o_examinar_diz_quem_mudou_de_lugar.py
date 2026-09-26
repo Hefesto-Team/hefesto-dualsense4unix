@@ -130,11 +130,21 @@ def _mapa(**declarado: dict[str, Any]) -> MapaDaMesa:
 
 
 @pytest.fixture()
-def disco(tmp_path: Path) -> Path:
-    """O ``maquina.json`` desta régua mora no ``tmp_path`` — conferido antes."""
+def disco(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """O ``maquina.json`` desta régua mora no ``tmp_path`` — conferido antes.
+
+    E o barramento é o de mentira (o teclado na 1): o gesto do editor relê a
+    máquina depois de gravar (O-MAPA-QUE-ELA-CORRIGE-01), e a régua não lê o
+    ``/sys`` de ninguém. A régua que precisa de outro barramento o troca.
+    """
+    from hefesto_dualsense4unix.integrations import censo_do_barramento
+
     alvo = caminho_da_maquina()
     assert alvo.is_relative_to(tmp_path), f"o maquina.json da régua não está desviado: {alvo}"
     assert gravar_maquina({"mapa": _mapa().model_dump(mode="json")})
+    monkeypatch.setattr(censo_do_barramento, "ler_o_barramento",
+                        lambda: _censo(_teclado("9-1")))
+    monkeypatch.setattr(mapa_das_portas, "serial_do_no", _serial)
     return alvo
 
 
@@ -764,33 +774,44 @@ def test_a_ponta_grava_pela_pagina_e_a_entrada_do_hub_nao_abre(disco: Path) -> N
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
     from hefesto_dualsense4unix.interface import pacotes
 
-    aberta = _ler(_teclado("9-1"))
-    lidas, mensagens = _na_pagina([
-        _js(aberta),
+    def levar_ao_disco(mensagens: list[dict[str, Any]]) -> list[tuple[str, str]]:
+        """O que o piloto faz com cada clique do editor: o gesto do pacote."""
+        pedidos = [m for m in mensagens if m.get("gesto", "").startswith("entrada-")]
+        for m in pedidos:
+            de_onde = m["pagina"]  # noqa-acento: chave ASCII da mensagem do piloto
+            dono = pacotes.gesto_da_pagina(de_onde, m["gesto"])
+            assert dono is not None
+            dono(None, m, None)
+        return [(m["gesto"], m.get("entrada")) for m in pedidos]
+
+    # A TELA ESPERA O DISCO (O-MAPA-QUE-ELA-CORRIGE-01): a ponta só existe
+    # depois que o «Extensor» foi ao disco e o arranjo relido chegou.
+    _, mensagens = _na_pagina([
+        _js(_ler(_teclado("9-1"))),
         _clicar('.plug[data-porta="3"]'),
         _clicar('#edita [data-liga="extensor"]'),
+    ])
+    assert levar_ao_disco(mensagens) == [("entrada-o-que-tem", "3")]
+    lidas, mensagens = _na_pagina([
+        _js(_ler(_teclado("9-1"))),
         _clicar('.plug[data-porta="3a"]'),
         _LER,
         _clicar('#edita [data-usb="3"]'),
         _clicar('.plug[data-porta="4"]'),
         _clicar('#edita [data-liga="hub"]'),
+    ])
+    na_ponta = lidas[2]
+    assert "entrada-velocidade:3@3a" in na_ponta["gestos"], na_ponta["gestos"]
+    assert na_ponta["v3"]["3a"] is False, "a ponta de uma entrada USB 2.0 nasceu azul"
+    assert levar_ao_disco(mensagens) == [
+        ("entrada-velocidade", "3a"), ("entrada-o-que-tem", "4")]
+    assert carregar_maquina().mapa.portas["3a"].usb == 3
+    lidas, mensagens = _na_pagina([
+        _js(_ler(_teclado("9-1"))),
         _clicar('.plug[data-porta="4.1"]'),
         _LER,
     ])
-    na_ponta, na_hub = lidas[4], lidas[9]
-    assert "entrada-velocidade:3@3a" in na_ponta["gestos"], na_ponta["gestos"]
-    assert na_ponta["v3"]["3a"] is False, "a ponta de uma entrada USB 2.0 nasceu azul"
-    assert na_hub["editor"] is False, "a entrada do hub desenhado abriu o editor sem gravar"
-    pedidos = [m for m in mensagens if m.get("gesto", "").startswith("entrada-")]
-    assert [(m["gesto"], m.get("entrada")) for m in pedidos] == [
-        ("entrada-o-que-tem", "3"), ("entrada-velocidade", "3a"),
-        ("entrada-o-que-tem", "4")], pedidos
-    for m in pedidos:
-        de_onde = m["pagina"]  # noqa-acento: chave ASCII da mensagem do piloto
-        dono = pacotes.gesto_da_pagina(de_onde, m["gesto"])
-        assert dono is not None
-        dono(None, m, None)
-    assert carregar_maquina().mapa.portas["3a"].usb == 3
+    assert lidas[2]["editor"] is False, "a entrada do hub desenhado abriu o editor sem gravar"
 
     relida, _ = _na_pagina([
         _js(_ler(_teclado("9-1"))),

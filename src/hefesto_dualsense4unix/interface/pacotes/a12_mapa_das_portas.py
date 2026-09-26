@@ -61,28 +61,37 @@ def _a_entrada(o: dict[str, Any]) -> str:
     return numero
 
 
-def _gravou(recibo: Any) -> None:
+def _gravou(recibo: Any) -> dict[str, Any]:
+    """A gravação aconteceu, e a página recebe o arranjo RELIDO do disco.
+
+    D-2609-A-TELA-DO-MAPA-ESPERA-O-DISCO (O-MAPA-QUE-ELA-CORRIGE-01): a página
+    não pinta o clique; ela repinta pelo que voltou daqui, com o editor aberto
+    na mesma entrada. A recusa levanta antes da releitura, e a página fica
+    como estava — com o botão clicado ainda lá para a piscada o achar.
+    """
     if not getattr(recibo, "gravou", False):
         raise RuntimeError(f"não gravei no mapa desta máquina ({recibo.motivo})")
+    dado = arranjo_desta_maquina.depois_de_gravar()
+    return {} if dado is None else {arranjo_desta_maquina.CHAVE_DEPOIS_DE_GRAVAR: dado}
 
 
 @gesto(PAGINA, "entrada-o-que-tem", grava="declarar_a_ligacao")
-def entrada_o_que_tem(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def entrada_o_que_tem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """«Direto», «Hub» ou «Extensor» na entrada — no `maquina.json` dela."""
     liga = str(o.get("liga") or "")
     if liga != DIRETO and liga not in ee.LIGACOES_DECLARAVEIS:
         raise ValueError(f"o clique não disse o que tem na entrada ({liga!r})")
-    _gravou(ee.declarar_a_ligacao(_a_entrada(o), None if liga == DIRETO else liga))
+    return _gravou(ee.declarar_a_ligacao(_a_entrada(o), None if liga == DIRETO else liga))
 
 
 @gesto(PAGINA, "entrada-velocidade", grava="declarar_a_velocidade")
-def entrada_velocidade(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+def entrada_velocidade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """USB 3.0 ou USB 2.0 na entrada — o que ela diz vence o firmware da placa."""
     try:
         usb = int(str(o.get("usb") or ""))
     except ValueError:
         raise ValueError("o clique não disse a velocidade") from None
-    _gravou(ee.declarar_a_velocidade(_a_entrada(o), usb))
+    return _gravou(ee.declarar_a_velocidade(_a_entrada(o), usb))
 
 
 @gesto(PAGINA, "reexaminar")
