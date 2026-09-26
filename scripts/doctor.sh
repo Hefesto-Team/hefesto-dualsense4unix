@@ -2654,7 +2654,7 @@ check_copias_do_wrapper() {
     local par nome fonte alvo razao velhas="" instaladas=0
     for par in \
         "hefesto-launch|assets/hefesto-launch.sh|" \
-        "hefesto-camadas|src/hefesto_dualsense4unix/integrations/camadas_vulkan.py|o «Corrigir Vulkan» não refaz no lançamento dos jogos" \
+        "hefesto-camadas|src/hefesto_dualsense4unix/integrations/camadas_vulkan.py|as sobreposições Vulkan não saem no lançamento dos jogos" \
         "hefesto-audio-ks|src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py|a vibração dos jogos da Sony pelo DualSense não chega ao jogo sob Proton"; do
         IFS='|' read -r nome fonte razao <<<"${par}"
         alvo="${bin}/${nome}"

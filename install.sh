@@ -3326,9 +3326,9 @@ fi
 # ---------------------------------------------------------------------------
 # 4b-3. Curador de camadas Vulkan (ENGASGO-VULKAN-01) — DEFAULT, sem flag
 # ---------------------------------------------------------------------------
-# Ele NÃO cura engasgo: a hipótese da sprint caiu no A/B de 23/08, e o
-# `vulkan-1` do Wine nem lê a camada (26/09). Ele tira a camada de terceiro que
-# ela manda tirar, e refaz no lançamento o que o Wine regrava.
+# Ele NÃO cura engasgo: a hipótese caiu no A/B de 23/08, e o `vulkan-1` do
+# Wine nem lê a camada (26/09). No lançamento de cada jogo ele tira a camada
+# que não é preservada, de novo se o Wine a regravou; só a devolvida fica.
 # Regra da casa (08/08/2026): toda cura entra no install, sem flag. O
 # `hefesto-launch` acima chama este arquivo em TODO jogo lançado (portão barato
 # em `sh`, 2 ms; o interpretador só sobe quando há camada ligada de verdade) e
@@ -3345,7 +3345,7 @@ if [[ "${DRY_RUN:-0}" -eq 1 && -f "${CAMADAS_SRC}" ]]; then
 elif [[ -f "${CAMADAS_SRC}" ]]; then
     install -Dm755 "${CAMADAS_SRC}" "${CAMADAS_TARGET}"
 else
-    warn "camadas_vulkan.py ausente — o «Corrigir Vulkan» não vai refazer no lançamento dos jogos"
+    warn "camadas_vulkan.py ausente — as sobreposições Vulkan não vão sair no lançamento dos jogos"
 fi
 
 # ---------------------------------------------------------------------------
