@@ -39,7 +39,10 @@ from hefesto_dualsense4unix.utils.maquina import (
     carregar_maquina,
     lugar_de,
 )
-from hefesto_dualsense4unix.utils.rotulo_da_entrada import FRASE_DO_NOME_COMPRIDO
+from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
+    FRASE_DO_NOME_COMPRIDO,
+    nome_que_vale,
+)
 
 PCI_A = "0000:0a:00.0"
 PCI_B = "0000:0b:00.0"
@@ -250,3 +253,49 @@ def test_o_gesto_do_nome_arma_no_clique_e_grava_no_change(
     assert carregar_maquina().mapa.portas["2"].nome == "Canto"
     with pytest.raises(ValueError, match=re.escape(FRASE_DO_NOME_COMPRIDO)):
         a12.entrada_nome(None, {"evento": "change", "entrada": "2", "valor": "z" * 25}, None)
+
+
+def _com_o_mapa_trocado_por_fora() -> dict[str, Any]:
+    """A forma do disco dela depois de 26/09/2026 às 15h43 (MEDIDO): o ``mapa``
+    trocou o buraco de 3↔4 e de 7↔8 (caminho e nós) por um gravador que não
+    tocou os ``lugares``. Cada lugar continua dizendo o número de antes, com o
+    número de antes como «nome» — e a amarra dele não valida mais."""
+    documento = _a_maquina_dela()
+    portas = documento["mapa"]["portas"]
+    for um, outro in (("3", "4"), ("7", "8")):
+        portas[um], portas[outro] = portas[outro], portas[um]
+    return documento
+
+
+def test_o_numero_de_outra_entrada_tambem_nao_e_nome() -> None:
+    """O «3» que o Mapear gravou no lugar da 3 não vira o nome da 4.
+
+    O-MAPA-QUE-ELA-CORRIGE-01, a conferência. Com o buraco da 3 lido na 4 (o
+    ``mapa`` trocado sem os ``lugares``), o dono só recusava o número IGUAL ao
+    da entrada: o lugar ``…usb-0:1`` (nome «3») caía na 4 e a tela dizia «3»
+    onde é a Entrada 4 — no «Já mapeadas», na linha de Rádio e Adaptadores e na
+    frase do governador («a entrada 3»). Número de entrada nunca é nome.
+
+    A MORDIDA: devolva ao ``nome_que_vale`` só a comparação com o próprio
+    número — as quatro reprovam com «3», «8» e «7».
+    """
+    documento = MaquinaConfig.model_validate(_com_o_mapa_trocado_por_fora())
+    controladores = {1: PCI_A, 3: PCI_B, 4: PCI_B}
+    hub, mouse = lugar_de(PCI_B, "1"), lugar_de(PCI_A, "5")
+    assert ee.nome_da_porta("3-1", maquina=documento, controladores=controladores) == (
+        "Entrada 4")
+    assert ee.nome_da_porta("1-5", maquina=documento, controladores=controladores) == (
+        "Entrada 8")
+    assert ee.rotulo_da_entrada(hub, maquina=documento, controladores=controladores) == (
+        "Entrada 4")
+    assert ee.nome_do_lugar(mouse, maquina=documento, controladores=controladores) == (
+        "Entrada 8")
+    # o «Já mapeadas» e o «O que o Hefesto mediu» leem o nome por aqui
+    assert ee._nome_declarado(documento, hub, "4", controladores) is None
+    assert ee._nome_declarado(documento, lugar_de(PCI_A, "6"), "7", controladores) is None
+    # e o nome de verdade continua valendo, mesmo curto ou com número dentro
+    assert ee.rotulo_do_numero("1", maquina=documento) == "Meio"
+    for nome in ("Meio", "USB 3", "3ª de cima", "Hub 2"):
+        assert nome_que_vale("4", nome) == nome
+    for numero_como_nome in ("3", "8", "15a", "Entrada 3", "entrada  12"):
+        assert nome_que_vale("4", numero_como_nome) is None, numero_como_nome

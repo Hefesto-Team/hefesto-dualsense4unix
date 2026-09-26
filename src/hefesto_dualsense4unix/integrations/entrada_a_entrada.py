@@ -2297,7 +2297,8 @@ def ler_o_mapa(
         vistos.add(chave_do_furo)
         medido = fatos(chave_do_furo)
         dele = documento.lugares.get(lugar)
-        nome = dele.nome if dele is not None else None
+        # o número que o Mapear gravou como nome não é nome, nem aqui
+        nome = nome_que_vale(None, dele.nome) if dele is not None else None
         portas.append(
             _porta_do_mapa(
                 lugar,
@@ -2347,8 +2348,8 @@ def ler_o_mapa(
             _porta_do_mapa(
                 lugar,
                 numero=None,
-                nome=dele.nome,
-                rotulo=dele.nome
+                nome=nome_que_vale(None, dele.nome),
+                rotulo=nome_que_vale(None, dele.nome)
                 or rotulo_da_entrada(lugar, maquina=documento, controladores=controladores),
                 face=None,
                 lugar=lugar,

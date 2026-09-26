@@ -21,11 +21,13 @@ aqui a frase é «a entrada Meio», «na Entrada 3».
 
 O NOME QUE NÃO É NOME. Treze das quinze entradas da máquina em que isto
 nasceu se chamavam pelo próprio número («2», «15»): o Mapear gravava o número
-como nome. Um nome igual ao número, ou igual a «Entrada N», é tratado como
-ausente (:func:`nome_que_vale`) — senão a tela diria «Entrada: 2».
+como nome. Um número de entrada (o dela ou o de outra), ou «Entrada N», é
+tratado como ausente (:func:`nome_que_vale`) — senão a tela diria «Entrada: 2».
 """
 
 from __future__ import annotations
+
+import re
 
 #: A palavra do produto para o buraco no gabinete (``D-A-PALAVRA-ENTRADA``). É o
 #: nome da entrada quando ela não deu outro: «Entrada 3». Ela morava no
@@ -50,6 +52,12 @@ MAXIMO_DO_NOME_DA_ENTRADA = 24
 FRASE_DO_NOME_COMPRIDO = f"O nome da entrada tem até {MAXIMO_DO_NOME_DA_ENTRADA} letras."
 
 
+#: Um número de entrada escrito como nome — «3», «15a», «Entrada 12» —, a forma
+#: do ``utils/maquina._NUMERO_DE_ENTRADA`` com a palavra opcional na frente.
+_SO_O_NUMERO = re.compile(
+    rf"^(?:{re.escape(PALAVRA_NA_FRASE)}\s+)?[0-9]{{1,3}}[a-z]?$", re.IGNORECASE)
+
+
 def _aparado(texto: str | None) -> str:
     return " ".join(str(texto or "").split())
 
@@ -60,9 +68,18 @@ def nome_que_vale(numero: str | None, nome: str | None) -> str | None:
     Vazio não é nome; o próprio número («2») não é nome; «Entrada 2» não é
     nome. Os três são o rótulo de reserva escrito por extenso, e tratá-los como
     nome faria a tela dizer «Entrada: 2» e «O 13».
+
+    E NENHUM NÚMERO DE ENTRADA É NOME, nem o de outra (a conferência da
+    O-MAPA-QUE-ELA-CORRIGE-01, 26/09/2026). MEDIDO no disco em que isto nasceu:
+    o ``mapa`` trocou o buraco da 3 com o da 4 sem mexer nos ``lugares``, e o
+    «3» que o Mapear gravou no lugar do hub passou a ser lido como o nome da
+    Entrada 4 — a tela dizia «3» sobre a 4. «3», «15a» e «Entrada 12» são
+    sempre o número escrito à mão; «USB 3» e «Hub 2» continuam nome.
     """
     limpo = _aparado(nome)
     if not limpo:
+        return None
+    if _SO_O_NUMERO.match(limpo):
         return None
     numero_limpo = _aparado(numero)
     if numero_limpo:
