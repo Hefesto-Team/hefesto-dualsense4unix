@@ -260,9 +260,9 @@ def _a_procedencia_da_mesma_cor(draft: Any, uniq: str, antes: Any) -> Any:
     decisão de 08/09), e o `with_controller_leds` troca a seção inteira por
     uma que só conhece cor, brilho e lâmpadas. Medido na mesa de quatro: o P4
     escolhia um tom, o «Salvar» o regravava igual — e sem o número. Sem ele a
-    cor vira `LEGADO`, e o resolvedor volta a provar fóssil pela forma: o tom
-    que ela escolheu e que por acaso é o do número de outro da mesa sai
-    sozinho na próxima troca.
+    cor vira `LEGADO`, e o resolvedor volta a provar fóssil pela forma: o P4
+    no tom do número 2 acendia, depois da troca manual seguinte, a cor do
+    número dele.
 
     Só a MESMA cor leva a procedência: a cor viva que difere do disco (a que
     atravessou a troca automática) não tem, no disco, para qual número foi
@@ -485,8 +485,9 @@ def _as_luzes_de_numero_de_cada_controle(nome: str, p: Any) -> None:
     Fraco do perfil, e a pílula — que pergunta ao daemon vivo — acendia
     Fraco. O disco seguia com o Forte: o «Salvar» não perdia nada, mas a tela
     dizia o contrário, e daí o *«ao salvar ele não salva»*. Os outros quatro
-    gestos da aba que gravam (cor, caixa, trilho e «Desligar») atravessam o
-    «Aplicar» e o «Salvar» — a régua deles é a mesma desta.
+    gestos da aba que gravam (tom, caixa, trilho e «Desligar») atravessam o
+    «Aplicar»; no «Salvar», o tom e a caixa perdiam o número da cor
+    (:func:`_a_procedencia_da_mesma_cor`). A régua dos cinco é uma só.
 
     A PORTA É A DA PÍLULA (`led.player_brightness_set` com o `uniq`), e só
     para quem ESCREVEU o campo — o mesmo «só quando foi escrito» de
@@ -496,10 +497,12 @@ def _as_luzes_de_numero_de_cada_controle(nome: str, p: Any) -> None:
     rascunho faz com a cor.
 
     A ECONOMIA DE BATERIA VENCE, como na ativação (`leds_na_economia` põe as
-    luzes no Fraco): o controle em economia não recebe a palavra, e fica no
-    que a ativação lhe deu. Mandá-la ali escreveria o Forte na camada dela,
-    que atravessa a troca automática — a economia desligada depois não o
-    devolveria.
+    luzes no Fraco): o controle em economia não recebe a palavra. Mandá-la
+    ali escreveria o Forte na camada dela, que atravessa a troca automática —
+    a economia desligada depois não o devolveria. Ele fica no global que a
+    ativação deixou: na «Bateria longa», o Fraco; na economia de um controle
+    só, o global do perfil, porque o `apply_draft` solta também o teto que a
+    ativação pôs naquele controle — e isso é de antes desta cura.
 
     O LUGAR CERTO DESTA ENTREGA É O RASCUNHO, e ela está aqui por posse: o
     campo viajando em `DraftConfig._controllers_to_ipc` e lido em
@@ -519,17 +522,17 @@ def _as_luzes_de_numero_de_cada_controle(nome: str, p: Any) -> None:
     except Exception:
         return
     mesa, ligados = economia_da_declaracao(carregar_maquina())
-    calados: list[str] = []
+    calado = False
     for uniq, dele in controles.items():
         leds = getattr(dele, "leds", None)
         if leds is None or "player_led_brightness" not in leds.model_fields_set:
             continue
         if economia_vale(uniq in ligados, mesa):
             continue
-        if p.player_led_brightness_set_detalhado(
-                leds.player_led_brightness, uniq=str(uniq)) is None:
-            calados.append(str(uniq))
-    if calados:
+        resposta = p.player_led_brightness_set_detalhado(
+            leds.player_led_brightness, uniq=str(uniq))
+        calado = calado or resposta is None
+    if calado:
         raise RuntimeError(sem_resposta_do_daemon())
 
 
