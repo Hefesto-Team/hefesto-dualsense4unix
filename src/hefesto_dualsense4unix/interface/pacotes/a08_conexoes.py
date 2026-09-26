@@ -1106,22 +1106,6 @@ def _dica_da_linha(item: Any) -> str:
 # (:func:`_dica_da_linha`, endereço `exame-calada`). Ver :func:`_html_da_ordem`.
 
 
-def _ordem_na_tela() -> Any:
-    """A ordem de serviço que a coluna da direita mostra, ou `None`.
-
-    UMA, E É A PRIMEIRA. O desenho tem UM card, e `ordens_da_mesa` pode devolver
-    várias — a GTK desenha um card por ordem numa zona que cresce
-    (`secao_exame._desenhar_o_que_fazer`), e aqui não há para onde crescer.
-    Mostrar a primeira da tira é o que o `_ORDENS_NA_TELA` já endereça: é a
-    mesma ordem que o ⊘ da linha dela dispensa.
-
-    O QUE SOBRA NÃO É MENTIRA, MAS ESCONDE, e é o mesmo buraco que
-    `gui.aba_conexoes.sobraram` mede na janela estável. Fica escrito para quem
-    desenhar o "+N" desta coluna.
-    """
-    return next((o for o in _ORDENS_NA_TELA if o is not None), None)
-
-
 def _dono_sabe_desenhar_a_ordem() -> bool:
     """O `gui.aba_conexoes.html_da_ordem` já aguenta uma `Ordem` de verdade?
 
@@ -1164,59 +1148,116 @@ def _dono_sabe_desenhar_a_ordem() -> bool:
     return True
 
 
-def _card_da_ordem(ordem: Any) -> str:
-    """O card de UMA ordem na coluna da direita: só o de→para, quando há destino.
+def _linha_da_sugestao(n: int, faca: str, de: str = "", para: str = "",
+                       *, de_html: str = "", para_html: str = "") -> str:
+    """UMA linha da Sugestão de Conexão: o número, a instrução e o de→para.
 
-    SEGUNDA GRAFIA COM DATA DE MORTE — ver :func:`_dono_sabe_desenhar_a_ordem`.
-    As classes são as do desenho dela (`.ordem`, `.receita`, `.caixa`, `.seta`),
-    as mesmas que o dono emite; o que muda é que aqui a `Ordem` é lida pelos
-    campos que ela TEM.
-
-    **O IMPERATIVO E O GANHO SAÍRAM DA VISTA — FRASES-E-DICAS-02, 13/09/2026.**
-    O card mostrava, sem clique, o imperativo da ordem (`div.faca`) e a linha
-    `Ganho esperado:` (`div.ganho`), inclusive quando ela dizia que o ganho não
-    foi medido. As duas são instrução e confissão sobre um estado, e a ordem
-    dela de 13/09 deixa na tela só estado e ajuda. O conteúdo não se perdeu: o
-    `?` da linha do exame à esquerda traz *Por que importa · Ganho esperado · O
-    que fazer* (:func:`_dica_da_linha`).
-
-    NOTA QUE CADUCOU NA MESMA DATA: aqui estava escrito *"O GANHO VAI SEMPRE,
-    inclusive quando ele confessa que não foi medido"*, citando
-    `secao_exame._card_da_ordem`. A citação não era palavra dela; a regra de
-    13/09 é, e ela vence.
-
-    A RECEITA SÓ APARECE COM DESTINO, e é o que o dono não faz: ele emite as
-    duas caixas sempre, e com `destino` vazio a tela mostraria `—  →  —`. Nas
-    DUAS ordens desta máquina o `destino` é `''` — a regra achou o problema e
-    não achou entrada livre nomeável para onde mandar (`SEM_DESTINO`) —, e sem
-    destino o card não existe: devolve `""`.
-
-    O QUE VAI NA CAIXA DA ESQUERDA é o `alvo.caminho` — o endereço de barramento
-    (`3-1.2`), que é *"a palavra comum entre este módulo, o censo e o mapa"*
-    (`gui.aba_conexoes.html_dos_adaptadores`).
+    As classes são as do desenho aprovado (`.ordem`, `.faca > .n`, `.receita`,
+    `.caixa`, `.seta`). A receita só sai com as duas pontas: sem destino, a
+    linha é só a instrução (um `— → —` seria ruído com cara de diagnóstico).
     """
     perfil._com_o_src()
-    from hefesto_dualsense4unix.gui.aba_conexoes import TRACO, _e
+    from hefesto_dualsense4unix.gui.aba_conexoes import _e
+
+    esquerda = de_html or _e(de)
+    direita = para_html or _e(para)
+    receita = (f'<div class="receita"><span class="caixa">{esquerda}</span>'
+               f'<span class="seta">→</span><span class="caixa alvo">{direita}</span></div>'
+               if esquerda and direita else "")
+    return (f'<div class="ordem"><div class="faca"><span class="n">{n}</span>'
+            f'{_e(faca)}</div>{receita}</div>')
+
+
+def _card_da_ordem(ordem: Any, n: int = 1) -> str:
+    """A linha de UMA ordem de serviço: a instrução, e o de→para quando há destino.
+
+    SEGUNDA GRAFIA COM DATA DE MORTE — ver :func:`_dono_sabe_desenhar_a_ordem`.
+    A instrução é a da própria ordem (`acao`), que já nomeia o aparelho; a caixa
+    da esquerda é o `alvo.caminho`, o endereço de barramento que é *"a palavra
+    comum entre este módulo, o censo e o mapa"*. O título da caixa mora FORA da
+    coluna (`aba08`, `.sugestao > .ordem-tit`), porque o tique repinta a coluna
+    inteira.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.gui.aba_conexoes import TRACO
 
     destino = str(getattr(ordem, "destino", "") or "")
-    if not destino:
-        return ""
     de = str(getattr(getattr(ordem, "alvo", None), "caminho", "") or TRACO)
-    # O TÍTULO E A INSTRUÇÃO VOLTARAM, e é escolha dela — 26/09/2026, olhando o
-    # desenho novo: *«o que é a área que marquei em vermelho?»*. Sem os dois o
-    # de→para era um par de endereços soltos. O título é o nome que ela deu à
-    # caixa; a instrução vem da própria ordem, que já nomeia o aparelho.
     instrucao = str(getattr(ordem, "acao", "") or "")  # (noqa-acento) campo da Ordem
-    faca = f'<div class="faca">{_e(instrucao)}</div>' if instrucao else ""
-    return ('<div class="ordem">'
-            f'<div class="ordem-tit">{TITULO_DA_ORDEM}</div>{faca}'
-            f'<div class="receita"><span class="caixa">{_e(de)}</span>'
-            f'<span class="seta">→</span>'
-            f'<span class="caixa alvo">{_e(destino)}</span></div></div>')
+    return _linha_da_sugestao(n, instrucao, de if destino else "", destino)
 
 
-#: O nome da caixa da ordem de serviço — dela, 26/09/2026.
-TITULO_DA_ORDEM = "Sugestão de conexão"
+#: O nome da caixa — dela, 26/09/2026 (`D-2609-A-SUGESTAO-DE-CONEXAO-DIZ-O-QUE-MOVER`),
+#: com a maiúscula do desenho. O gerador o escreve fora do campo `ordem`.
+TITULO_DA_ORDEM = "Sugestão de Conexão"
+
+#: A caixa sem nada a mudar — a sprint A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01. A
+#: caixa nunca some (`D-2609-A-SUGESTAO-FICA-LARGA-E-COM-TITULO`): sem
+#: sugestão, ela diz isso.
+NADA_A_MUDAR = "Nada a mudar agora."
+
+
+def _instrucao_do_item(item: Any) -> str:
+    """O «O que fazer» de uma linha AJUSTAR do exame, sem o prefixo do `?`."""
+    ordem = getattr(item, "ordem", None)
+    for texto in (getattr(item, "cura", None), getattr(ordem, "acao", None),
+                  getattr(item, "porque", None)):
+        if str(texto or "").strip():
+            return str(texto).strip()
+    return ""
+
+
+def _sugestoes_do_exame(vivos: list[Any]) -> list[tuple[str, Any]]:
+    """``(instrução, ordem ou None)`` de cada AJUSTAR do exame que ela não calou.
+
+    AJUSTAR é a palavra do dono (`gui.aba_conexoes.SELO_DO_ESTADO`), a mesma da
+    pílula à esquerda: a caixa diz o que fazer de cada linha que pede ajuste.
+    """
+    saida: list[tuple[str, Any]] = []
+    for item in vivos:
+        estado = str(getattr(item, "estado", "") or "")
+        if _selo_do_estado(estado)[1] != "AJUSTAR" or _calada(item):
+            continue
+        instrucao = _instrucao_do_item(item)
+        if instrucao:
+            saida.append((instrucao, getattr(item, "ordem", None)))
+    return saida
+
+
+def _sugestao_da_central(cena: dict[str, Any] | None) -> tuple[str, str, str] | None:
+    """A proposta da central (`radio_central.proposta`) como linha da caixa.
+
+    É o que o mapa das conexões dizia com «adaptador atual → ?», e ela mandou
+    para cá (*«deveria ocupar o lugar no canto superior direito»*). A central
+    propõe UM movimento por vez (R12): uma linha, ou nenhuma. Devolve
+    ``(instrução, de em HTML, para em HTML)``.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.gui.aba_conexoes import _e
+
+    proposta = (cena or {}).get("proposta") or {}
+    aparelhos = (cena or {}).get("aparelhos") or ()
+    lugares = {str(lug.get("id")): lug for lug in (cena or {}).get("lugares") or ()}
+    ap = next((a for a in aparelhos if a.get("id") == proposta.get("controle")), None)
+    para = lugares.get(str(proposta.get("destino") or ""))
+    if ap is None or para is None:
+        return None
+    de = lugares.get(str(ap.get("lugar") or ""))
+
+    def controles_em(lug: dict[str, Any]) -> int:
+        return sum(1 for a in aparelhos
+                   if a.get("lugar") == lug.get("id") and a.get("tipo") == "controle")
+
+    def caixa(lug: dict[str, Any]) -> str:
+        n = controles_em(lug)
+        return (f'{_e(_titulo_do_lugar(lug))} <span class="pt">•</span> '
+                f'{n} {"controle" if n == 1 else "controles"}')
+
+    jogador = ap.get("jogador")
+    quem = (f"o P{jogador}" if isinstance(jogador, int) and not isinstance(jogador, bool)
+            else nome_na_conexoes(ap))
+    return (f"Pareie {quem} no adaptador {_titulo_do_lugar(para)}",
+            caixa(de) if de is not None else "", caixa(para))
 
 
 #: O TETO DO DESENHO — decisão **08-Q7**, 06/09/2026. Mora aqui porque o `+N`
@@ -1353,75 +1394,44 @@ def _o_que_nao_coube(itens: list[Any]) -> dict[str, str]:
     }
 
 
-def _html_da_ordem(vivos: list[Any] | None = None) -> str:
-    """A coluna da direita inteira: o de→para da ordem, ou a frase de nada a mudar.
+def _html_da_ordem(vivos: list[Any] | None = None,
+                   cena: dict[str, Any] | None = None) -> str:
+    """A Sugestão de Conexão inteira: uma linha numerada por ajuste.
 
-    **A COLUNA ENXUGOU EM 13/09/2026 — FRASES-E-DICAS-02, §D.** Até aqui ela
-    desenhava três coisas, cada uma de uma decisão do PO de 04/09
-    (`docs/process/2026-09-04-O-PO-DECIDE-as-54-e-os-sete-conflitos.md`):
+    **A CAIXA DIZ CADA AJUSTE — 26/09/2026, A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01.**
+    Até aqui ela desenhava UMA ordem, e só se ela tinha destino; sem destino
+    mandava `monta.NADA_A_DIZER` e a caixa ficava vazia ao lado de três AJUSTAR
+    (a queixa dela: *«pq sumiu a parte da caixinha»*). Agora:
 
-    * **[03]** o cartão de cura abaixo da ordem, com *"O que fazer: …"* à
-      vista, sem clique;
-    * **[04]** a marca de procedência na linha do ganho;
-    * **[07]** o `+N` quando havia mais ordem aberta do que card.
+    * uma linha por AJUSTAR do exame (`vivos`, a MESMA lista que pintou a tira
+      à esquerda), com o de→para quando a ordem tem destino e o «O que fazer»
+      quando não tem — o `?` da linha continua trazendo o porquê;
+    * uma linha pela proposta da central (`cena`, a do rádio deste tique): o
+      controle no adaptador errado;
+    * sem nada, :data:`NADA_A_MUDAR`. O título mora fora do campo.
 
-    O cartão da ordem e o de cura eram instrução e confissão sobre um estado,
-    visíveis sem clique, e a ordem dela de 13/09 tira isso da tela
-    (`sprints/arquivados/2026-09-13-A-TERCEIRA-LISTA-DELA-INDICE.md`). Nada se perdeu: o
-    `?` de cada linha do exame à esquerda traz *Por que importa · Ganho
-    esperado · O que fazer* (:func:`_dica_da_linha`). O que fica é ESTADO: o
-    de→para quando a ordem tem destino, com o `+N` das ordens que não couberam,
-    e a frase do dono quando não há ordem nenhuma.
-
-    `vivos` É A MESMA LISTA QUE PINTOU A TIRA, e recebê-la é o que impede as duas
-    metades da seção de discordarem sobre quantas ordens estão abertas. Sem ela —
-    o padrão — só o card sai.
-
-    COLUNA SEM CARD É `monta.NADA_A_DIZER`, e não `""`: o `escrever()` do piloto
-    troca vazio por `—` antes de olhar o alvo, e a coluna ganharia um travessão
-    solto. É o caso das duas ordens desta máquina, que não têm destino.
-
-    ---
-
-    O QUE ESTAVA NA TELA DELA NO LUGAR, fotografado nesta bancada em 03/09/2026:
-    um card cravado no arquivo mandando **mover o adaptador Bluetooth da Entrada
-    3 para a Entrada 9**, com de→para, ganho e um `?` de duas frases — tudo
-    escrito à mão no mockup, tudo apresentado como diagnóstico da máquina dela.
-    É a forma mais cara de mentira que uma tela sabe cometer: não um número
-    errado, mas uma INSTRUÇÃO para mexer no gabinete.
-
-    O QUE A MÁQUINA DELA DIZ DE VERDADE, medido no mesmo dia: DUAS ordens
-    abertas, e nenhuma delas fala de Entrada 3 nem de Entrada 9 —
-    `dongle_atras_de_hub` (*"2 de 3 adaptadores Bluetooth chegam ao computador
-    por dentro de um hub"*) e `teclado_so_no_hub` (*"Se o hub sair da tomada,
-    você fica sem teclado antes de o Linux abrir."*).
-
-    `None` TEM TEXTO PRÓPRIO, E ELE É DO DONO: *"Nenhuma mudança recomendada
-    agora."* (`gui.aba_conexoes.html_da_ordem`, o ramo que funciona). Ele só é
-    honesto porque o exame COMPLETO corre ao entrar na aba
-    (:func:`_pedir_o_exame_de_entrada`) — sem aquilo, este cartão diria "nada a
-    fazer" sobre uma máquina que ninguém tinha examinado, que é a mesma
-    ausência-lida-como-sucesso com outra roupa.
-
-    COM ORDEM, QUEM DESENHA É :func:`_card_da_ordem`, e a razão é um defeito do
-    dono, não uma escolha: ver :func:`_dono_sabe_desenhar_a_ordem`.
+    Sem `vivos`, as linhas saem das ordens que o tique pintou (`_ORDENS_NA_TELA`).
     """
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.gui import aba_conexoes as _tela
-
-    ordem = _ordem_na_tela()
-    if ordem is None:
-        return str(_tela.html_da_ordem(None))
-    card = _card_da_ordem(ordem)
-    if not card:
-        return str(_monta().NADA_A_DIZER)
     if vivos is None:
-        return card
-    # AS ORDENS ABERTAS QUE NÃO COUBERAM — decisão [07], e só quando há card:
-    # um `+N` debaixo de uma coluna vazia contaria o que não coube num lugar que
-    # não mostra nada.
-    abertas = sum(1 for i in vivos if getattr(i, "ordem", None) is not None)
-    return card + _sobraram(abertas, 1, "recomendação", "recomendações")
+        itens = [(str(getattr(o, "acao", "") or ""), o)  # (noqa-acento) campo da Ordem
+                 for o in _ORDENS_NA_TELA if o is not None and not _ordem_calada(o)]
+        itens = [(t, o) for t, o in itens if t]
+    else:
+        itens = _sugestoes_do_exame(vivos)
+    linhas = []
+    for instrucao, ordem in itens:
+        n = len(linhas) + 1
+        if ordem is not None and str(getattr(ordem, "destino", "") or ""):
+            linhas.append(_card_da_ordem(ordem, n))
+        else:
+            linhas.append(_linha_da_sugestao(n, instrucao))
+    central = _sugestao_da_central(cena)
+    if central is not None:
+        faca, de, para = central
+        linhas.append(_linha_da_sugestao(len(linhas) + 1, faca, de_html=de, para_html=para))
+    if not linhas:
+        return f'<div class="nada-a-mudar">{NADA_A_MUDAR}</div>'
+    return "".join(linhas)
 
 
 def _carimbo_do_exame() -> str:
@@ -3016,11 +3026,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         if teto_campo is not None:
             colunas[uniq]["teto-da-vibracao"] = teto_campo
         # A LINHA DO CHECK-UP (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): os seis
-        # selos do estado, o botão da economia e o nome do dono.
+        # selos do estado, o Perfil de Desempenho e o nome do dono.
         if modo_da_mesa is None:
             modo_da_mesa = modo_da_fileira(st)
         colunas[uniq].update(estado_do_controle(c, eu, st, declaracao, modo_da_mesa))
-        colunas[uniq].update(campos_da_economia(declaracao, uniq))
+        colunas[uniq].update(perfil_na_linha(declaracao, uniq))
         colunas[uniq]["dono"] = dono_na_linha(nomes, uniq, eu.get("jogador"))
     # UMA LEITURA SÓ, e ela é a razão de esta linha não estar dentro do
     # dicionário: a `cobertura` conta os campos da confissão, e chamar a função
@@ -3030,6 +3040,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # chamar `_veredito_do_exame` duas vezes refaria a conta do cabeçalho no
     # mesmo tique.
     veredito = _veredito_do_exame(vivos)
+    # A SEÇÃO DO RÁDIO ANTES DA SUGESTÃO: a caixa diz a proposta da central,
+    # e a proposta é a da cena DESTE tique (`_CENA_NA_TELA`).
+    radio = campos_do_radio(ctx)
     return {
         # A TELA DO MAPEAR (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o que o dono do
         # mapa das portas vê agora — ver :func:`campos_do_mapear`.
@@ -3068,7 +3081,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # E A COLUNA CRESCEU EM 04/09/2026 — as decisões [03], [04] e [07] do
         # PO. `vivos` VAI JUNTO de propósito: é a mesma lista que pintou a tira
         # à esquerda, e as duas metades da seção têm de falar do mesmo exame.
-        "ordem": _html_da_ordem(vivos),
+        "ordem": _html_da_ordem(vivos, _CENA_NA_TELA),
         # A CONTAGEM DA SEÇÃO, pelo dono da frase
         # (`gui.aba_conexoes.texto_da_contagem`). Ela era `2 na mesa • 1 no cabo
         # • 1 no rádio` cravado — com um controle só na mesa, a seção continuava
@@ -3168,7 +3181,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         **_o_que_nao_coube(itens),
         # A SEÇÃO RÁDIO E ADAPTADORES — o `mapa-do-radio.html` aprovado,
         # TRANSPLANTE-DA-SECAO-01. Ver :func:`campos_do_radio`.
-        **campos_do_radio(ctx),
+        **radio,
         # O CARIMBO do topo do Check-up — publicado no mesmo dia e pela mesma
         # decisão, e também já pintado.
         "examinado": _carimbo_do_exame(),
@@ -3959,7 +3972,16 @@ def examinar_portas(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     :func:`_correr_o_exame_completo`, porque a ENTRADA na aba corre o mesmo
     exame (ver :func:`_pedir_o_exame_de_entrada`) e duas grafias do mesmo exame
     divergiriam no primeiro argumento novo.
+
+    E ELE RELÊ OS CONTROLES — 26/09/2026, `D-2609-O-ATUALIZAR-ENTRA-NO-EXAMINAR`
+    (*«não existe diferença entre o examinar entradas e atualizar»*): o
+    «Atualizar» saiu, e este clique faz também o que ele fazia — os nomes dos
+    donos no BlueZ e o rascunho do mapa das portas; a declaração (o microfone e
+    o perfil de cada controle) o exame já relê.
     """
+    global _LOGICA
+    _esquecer("bluez")
+    _LOGICA = None
     _correr_o_exame_completo()
 
 
@@ -4364,6 +4386,9 @@ def luz_nao_acende(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 import threading  # noqa: E402
 from collections.abc import Callable  # noqa: E402
 
+from hefesto_dualsense4unix.integrations import (  # noqa: E402
+    central_do_radio as _central_do_radio,
+)
 from hefesto_dualsense4unix.integrations.radio_da_mesa import (  # noqa: E402
     FATIAS_DA_PONTE,
     HZ_AUDIO_COM_MIC,
@@ -4416,14 +4441,17 @@ TENTAR_DE_NOVO = "Tentar de Novo"
 #: O controle que tem pareamento NESTE adaptador e não está no ar — é nele que o
 #: X alcança o controle desligado (o item 3: «ligado ou desligado»).
 DESLIGADO = "Desligado"
+#: O mesmo controle, quando ele está no USB — a palavra do transporte da tela
+#: (decisão dela de 21/09/2026: a tela diz USB e BT).
+USB = "USB"
 #: O «sim» da pergunta do X.
 ESQUECER = "Esquecer"
 #: QUANTO A LINHA DIZ «SEGURE PS + CREATE» antes de virar «Não Conectou», e é
-#: também quando «Conectar» e «Equilibrar» voltam. É a sprint (60 s), e cabe o
-#: que o firmware precisa, MEDIDO no diário dela de 26/09: a janela da busca
-#: (`gesto_de_pareamento.SEGUNDOS_DA_JANELA`, 30 s), o `Pair` mais lento da
-#: madrugada (o branco, 11 s) e a conferência da central (10 s) somam 51 s.
-ESPERA_NA_TELA_S = 60.0
+#: também quando «Conectar» e «Equilibrar» voltam. O PRAZO TEM UM DONO SÓ, a
+#: central (26/09/2026, A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01): com dois relógios,
+#: a tela soltava o «esperando» antes de a central soltar o movimento, e entre
+#: os dois o «Tentar de Novo» aparecia aceso e tremia.
+ESPERA_NA_TELA_S = _central_do_radio.PRAZO_DO_PENDENTE_S
 #: Por quanto tempo a tela ainda mostra o «Não Conectou» que ela não fechou. Ele
 #: fala do «Conectar» que ela ACABOU de fazer; o de uma hora atrás é história, e
 #: a central já nem o guarda depois de um reinício do serviço.
@@ -4832,8 +4860,10 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
                 f'{abre_o_painel}>'
                 f'{TENTAR_DE_NOVO}</button></div>' + vazia + _o_x(ap) + '</div>')
     if ap.get("desligado"):
+        fala, dica = ((USB, "Pareado neste adaptador, ligado no USB agora") if ap.get("usb")
+                      else (DESLIGADO, "Pareado neste adaptador, fora do ar"))
         return (abre + desenho + campo + '<div class="features"><span class="desligado" '
-                f'title="Pareado neste adaptador, fora do ar">{DESLIGADO}</span></div>'
+                f'title="{dica}">{fala}</span></div>'
                 + vazia + _o_x(ap) + '</div>')
     if ap.get("tipo") == "controle":
         faixa = _linha_do_controle(ap, cena, com_hz)
@@ -5876,7 +5906,9 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     falhas = _os_que_nao_conectaram(ctx, movimentos, agora, enderecos, aparelhos_bz,
                                     endereco_do_caminho)
     aparelhos += falhas
-    aparelhos += _os_desligados(aparelhos_bz, endereco_do_caminho, aparelhos)
+    no_usb = frozenset(_so_hex(str(c.get("uniq") or "")) for c in ctx.conectados
+                       if str(c.get("transport") or "").lower() == "usb")
+    aparelhos += _os_desligados(aparelhos_bz, endereco_do_caminho, aparelhos, no_usb)
     for lug in lugares:
         lug["nao_conectou"] = any(f["lugar"] == lug["id"] for f in falhas)
     _esquecer_as_meias_chaves(falhas)
@@ -6151,7 +6183,8 @@ def _e_controle_do_bluez(a: Any) -> bool:
 
 
 def _os_desligados(aparelhos_bz: tuple[Any, ...], endereco_do_caminho: dict[str, str],
-                   ja: list[dict[str, Any]]) -> list[dict[str, Any]]:
+                   ja: list[dict[str, Any]],
+                   no_usb: frozenset[str] = frozenset()) -> list[dict[str, Any]]:
     """Os controles com pareamento NESTE adaptador e fora do ar — o item 3: o X
     vale para controle ligado ou desligado, em qualquer adaptador.
 
@@ -6160,6 +6193,10 @@ def _os_desligados(aparelhos_bz: tuple[Any, ...], endereco_do_caminho: dict[str,
     Conectou» naquele adaptador. Um controle desligado com chave em dois
     adaptadores aparece nos dois: as duas chaves existem, e o X de cada uma é
     dela.
+
+    O CONTROLE NO USB NÃO ESTÁ DESLIGADO (26/09/2026): com a chave BT aqui e o
+    cabo na máquina, a linha diz «USB» (`no_usb`, os ``uniq`` que o daemon vê
+    no cabo), as palavras do transporte da tela. O X continua.
     """
     no_ar = {_so_hex(a.endereco) for a in aparelhos_bz if a.conectado is True}
     vivos = {_so_hex(str(a["id"])) for a in ja if not a.get("nao_conectou")}
@@ -6181,7 +6218,7 @@ def _os_desligados(aparelhos_bz: tuple[Any, ...], endereco_do_caminho: dict[str,
             "id": _mac(a.endereco), "aparelho": _mac(a.endereco), "tipo": "controle",
             "lugar": lugar, "nome": nomes.get(_mac(a.endereco), ""),
             "rotulo": alias if alias and not _e_nome_de_fabrica(alias) else "DualSense",
-            "modalias": str(a.modalias or ""), "desligado": True,
+            "modalias": str(a.modalias or ""), "desligado": True, "usb": h in no_usb,
             "esperando": False, "fixo": True,
         })
     return fora
@@ -7024,12 +7061,13 @@ PROVAS = [
 #: mapa das entradas), e `aparelho-renomear` grava o `Alias` no BlueZ. O
 #: `state_full` não publica nenhum dos três.
 #:
-#: OS SEIS DO CHECK-UP — A-08-O-CHECKUP-ABSORVE-A-GESTAO-01, 25/09/2026:
-#: `dono-renomear` grava o `Alias` no BlueZ; `economia-do-controle` grava
+#: OS CINCO DA GESTÃO DE CONTROLES — A-08-O-CHECKUP-ABSORVE-A-GESTAO-01,
+#: 25/09/2026, e a A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01, 26/09/2026:
+#: `dono-renomear` grava o `Alias` no BlueZ; `perfil-do-controle` grava
 #: `controles[uniq].economia` no `maquina.json`; `mapear-gravar` grava a porta
 #: da vez no `maquina.json` pelo dono do mapa; `mapear-comecar` e `mapear-parar`
-#: só ligam e desligam o olhar do dono no processo da interface; e
-#: `checkup-atualizar` só relê. O `state_full` não publica nenhum deles.
+#: só ligam e desligam o olhar do dono no processo da interface. O `state_full`
+#: não publica nenhum deles. (O «Atualizar» entrou no `examinar-portas`.)
 #:
 #: OS DOIS DO X — O-RADIO-CONECTA-ONDE-ELA-MANDA-01, 26/09/2026:
 #: `esquecer-aparelho` só abre a pergunta (ou tira a linha do «Não Conectou»);
@@ -7041,7 +7079,7 @@ SEM_ECO = ("sala-altura", "sala-visada", "mic-existe", "vizinho-o-que-e",
            "nova-entrada", "nova-extensao", "nova-face",
            "adaptador-renomear", "aparelho-renomear", "entrada-face",
            "entrada-nao-alcanco", "adaptador-reordenar",
-           "dono-renomear", "economia-do-controle", "mapear-gravar", "checkup-atualizar",
+           "dono-renomear", "perfil-do-controle", "mapear-gravar",
            "mapear-comecar", "mapear-parar", "esquecer-aparelho", "confirmar-esquecer")
 
 
@@ -7192,40 +7230,53 @@ def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any]
 TRAVESSAO_DA_LINHA = "—"
 
 
-def economia_do_controle(declaracao: Any, uniq: str) -> tuple[bool | None, bool]:
-    """``(a escolha deste controle, a mesa está em «Bateria longa»?)``.
+def economia_do_controle(declaracao: Any, uniq: str) -> tuple[bool | None, str | None]:
+    """``(a escolha deste controle, o teto da mesa)``, lidos da declaração.
 
-    O contrato é o da O-MODO-ECONOMIA-POR-CONTROLE-01: a escolha é
-    ``controles[uniq].economia`` e a mesa é ``schema.mesa_em_economia`` sobre o
-    teto do orçamento — a mesma declaração que o ``_orcamento_da_mesa`` lê.
+    A escolha é ``controles[uniq].economia``; o teto é o ``orcamento.teto``, o
+    Perfil Global de Bateria da aba Sistema — a mesma declaração que o
+    ``_orcamento_da_mesa`` lê.
     """
-    from hefesto_dualsense4unix.profiles import schema
-
     try:
         declarado = (declaracao.controles or {}).get(_so_hex(uniq))
         escolha = getattr(declarado, "economia", None)
     except Exception:
         escolha = None
     teto = getattr(getattr(declaracao, "orcamento", None), "teto", None)
-    return escolha, schema.mesa_em_economia(teto)
+    return escolha, (teto if isinstance(teto, str) else None)
 
 
-#: As três dicas do botão, uma por origem (`schema.origem_da_economia`).
-ECONOMIA_DICA = {
-    None: "Liga a economia de bateria só neste controle.",
-    "controle": "A economia de bateria está ligada neste controle. Clique para desligar.",
-    "mesa": "A «Bateria longa» da aba Sistema liga a economia em todos os controles.",
-}
+def perfil_na_linha(declaracao: Any, uniq: str) -> dict[str, str]:
+    """O botão aceso do Perfil de Desempenho do cartão (endereço `perfil`).
+
+    Quem responde é o dono dos perfis (`secao_orcamento.perfil_do_controle`),
+    o mesmo que a aba Sistema lê: a «Bateria Longa» global acende a «Bateria
+    Longa» de todos os cartões no tique seguinte, sem cópia.
+    """
+    from hefesto_dualsense4unix.app.actions.config import secao_orcamento
+
+    escolha, teto = economia_do_controle(declaracao, uniq)
+    return {"perfil": secao_orcamento.perfil_do_controle(teto, escolha)}
 
 
-def campos_da_economia(declaracao: Any, uniq: str) -> dict[str, str]:
-    """O estado do botão: `economia` (a classe acende) e `economia-dica`."""
-    from hefesto_dualsense4unix.profiles import schema
+def perfis_do_cartao() -> list[tuple[str, str, str]]:
+    """Os três botões do cartão, ``(id, rótulo, dica)``, lidos do dono.
 
-    escolha, mesa = economia_do_controle(declaracao, uniq)
-    origem = schema.origem_da_economia(escolha, mesa)
-    return {"economia": "mesa" if origem == "mesa" else ("ligada" if origem else ""),
-            "economia-dica": ECONOMIA_DICA[origem]}
+    O gerador (`aba08.linha_do_controle`) desenha por aqui: nenhuma palavra do
+    Perfil de Desempenho é digitada no desenho.
+    """
+    from hefesto_dualsense4unix.app.actions.config import secao_orcamento as orc
+
+    return [(p, orc.ROTULOS_DOS_PERFIS[p], orc.DICAS_DO_CARTAO[p]) for p in orc.PERFIS]
+
+
+def _recusa_da_mesa() -> str:
+    """Por que um cartão não sai da «Bateria Longa» global (vai ao diário)."""
+    from hefesto_dualsense4unix.app.actions.config import secao_orcamento as orc
+
+    longa = orc.ROTULOS_DOS_PERFIS[orc.PERFIL_BATERIA_LONGA]
+    return (f"A «{longa}» da aba Sistema vale para todos os controles; para mudar "
+            "um só, escolha outro Perfil Global de Bateria lá.")
 
 
 def _nomes_dos_donos() -> dict[str, str]:
@@ -7278,45 +7329,37 @@ def dono_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError("o Bluetooth do sistema não gravou o nome novo")
 
 
-@gesto("08-conexoes.html", "economia-do-controle", grava="machine_declare")
-def economia_do_controle_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O botão «Modo Economia de Bateria» da linha — liga ou desliga NESTE controle.
+@gesto("08-conexoes.html", "perfil-do-controle", grava="machine_declare")
+def perfil_do_controle_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """Os três botões do Perfil de Desempenho de UM controle.
 
-    O dono do que ele faz é a O-MODO-ECONOMIA-POR-CONTROLE-01: a tela só manda
-    ``machine.declare`` com ``schema.declaracao_da_economia`` (nunca o
-    ``profile.switch``, que é origem manual e trava a troca automática). Sob a
-    «Bateria longa» da mesa o botão está aceso pela aba Sistema, e o clique
-    aqui não apaga nada: recusa dizendo onde se desliga.
+    Grava pelo MESMO caminho do Perfil Global da aba Sistema (`machine.declare`,
+    o `maquina.json`), com o corpo do dono (`secao_orcamento.declaracao_do_perfil`),
+    e só o controle do cartão muda. A regra de quem vence é a do esquema: com a
+    «Bateria Longa» global, o cartão não sai dela — o clique recusa e diz onde
+    se muda. O daemon reaplica o perfil quando a economia muda
+    (`lifecycle.reaplicar_se_a_economia_mudou`), e o aparelho sente na hora.
     """
+    from hefesto_dualsense4unix.app.actions.config import secao_orcamento as orc
     from hefesto_dualsense4unix.profiles import schema
 
     uniq = _uniq(o)
     if not uniq:
-        raise ValueError("economia-do-controle: o clique não disse em qual controle")
-    escolha, mesa = economia_do_controle(_declaracao(), uniq)
-    if mesa:
-        raise RuntimeError("A «Bateria longa» da aba Sistema já liga a economia em todos os "
-                           "controles; para desligar, escolha outro perfil de bateria lá.")
-    corpo = schema.declaracao_da_economia(uniq, escolha is not True)
-    ok, motivo = _resposta(p.machine_declare(corpo))
+        raise ValueError("perfil-do-controle: o clique não disse em qual controle")
+    escolhido = str(o.get("valor") or o.get("v") or "")
+    if escolhido not in orc.PERFIS:
+        raise ValueError(f"perfil-do-controle: {escolhido!r} não é um dos três perfis")
+    escolha, teto = economia_do_controle(_declaracao(), uniq)
+    if schema.mesa_em_economia(teto):
+        if escolhido == orc.PERFIL_BATERIA_LONGA:
+            return
+        raise RuntimeError(_recusa_da_mesa())
+    if orc.ECONOMIA_POR_PERFIL[escolhido] is escolha:
+        return
+    ok, motivo = _resposta(p.machine_declare(orc.declaracao_do_perfil(uniq, escolhido)))
     if not ok:
         raise RuntimeError(motivo or "não consegui gravar o que você declarou")
     _reler_a_declaracao()
-
-
-@gesto("08-conexoes.html", "checkup-atualizar")
-def checkup_atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """«Atualizar» do Check-up: relê agora o que a linha de cada controle mostra.
-
-    O «Examinar Entradas» mede as portas (e custa segundos); este botão só
-    RELÊ, na hora: a declaração (o microfone e a economia de cada controle),
-    os nomes dos donos no BlueZ e o rascunho do mapa das portas. O que ele
-    lê o tique seguinte pinta.
-    """
-    global _LOGICA
-    _reler_a_declaracao()
-    _esquecer("bluez")
-    _LOGICA = None
 
 
 # ---------------------------------------------------------------------------

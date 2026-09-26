@@ -540,6 +540,29 @@ POR_PREF = {c["pref"]: c for c in MESA}
 #: encontra e escreve zero, calado.
 CAMPO_DA_ORDEM = "ordem"
 
+
+def _sugestao_da_cena():
+    """A Sugestão de Conexão da bancada, pelas MESMAS funções do produto.
+
+    Uma ordem com destino (o adaptador Bluetooth numa entrada que divide o
+    controlador) e a proposta da central (o P2 no adaptador com três
+    controles). O produto repinta a coluna inteira a cada tique.
+    """
+    ordem = SimpleNamespace(acao="Mova o adaptador Bluetooth para a Entrada 9",
+                            destino="Entrada 9", alvo=SimpleNamespace(caminho="Entrada 3"),
+                            chave="bancada", arranjo="")
+    cena = {"proposta": {"controle": "p2", "destino": "direita"},
+            "lugares": [{"id": "meio", "nome": "Meio"}, {"id": "direita", "nome": "Direita"}],
+            "aparelhos": ([{"id": f"p{n}", "tipo": "controle", "lugar": "meio", "jogador": n}
+                           for n in (1, 2, 3)]
+                          + [{"id": "p4", "tipo": "controle", "lugar": "direita", "jogador": 4}])}
+    antes = _pacote08._ORDENS_NA_TELA
+    try:
+        _pacote08._ORDENS_NA_TELA = (ordem,)
+        return _pacote08._html_da_ordem(None, cena)
+    finally:
+        _pacote08._ORDENS_NA_TELA = antes
+
 #: A CONTAGEM DA SEÇÃO GESTÃO DE CONTROLES, e ela tem UM dono: o
 #: `gui.aba_conexoes.texto_da_contagem`, que escreve *"2 controles • 1 USB •
 #: 1 BT"* — a frase inteira, com os números. Este arquivo a digitava,
@@ -1225,19 +1248,6 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc-est .est > b + .certo{margin-left:0}
   .gc-est .est.warn > b{color:var(--orange)}
   .gc-corpo{display:flex;flex-direction:column;gap:5px;margin-top:auto;padding-top:10px}
-  /* O LIGÁVEL DA ECONOMIA É A PÍLULA DA ABA SISTEMA (`.cadeado` da `aba09.py`):
-     verde e com o ponto aceso quando vale NESTE controle, com o ponto cinza
-     quando quem liga é a «Bateria longa» da mesa. Quem diz é o produto, pelo
-     atributo do ponto (`data-economia`), e o `:has()` estende a cor ao botão
-     sem um segundo endereço. */
-  .gc-corpo .btn.eco{width:100%;display:flex;align-items:center;justify-content:center;
-                     gap:7px;padding:0 10px;white-space:nowrap}
-  .eco-luz{display:inline-block;flex:0 0 auto;width:7px;height:7px;border-radius:50%;
-           background:var(--border-forte)}
-  .gc-corpo .btn.eco:has(.eco-luz[data-economia="ligada"]){border-color:var(--green);
-           background:rgba(80,250,123,.09);color:var(--green)}
-  .eco-luz[data-economia="ligada"]{background:var(--green);box-shadow:0 0 6px var(--green)}
-  .eco-luz[data-economia="mesa"]{background:var(--comment)}
   /* O PERFIL DE DESEMPENHO É DO CONTROLE — 26/09/2026, pedido dela: *«Modo
      Economia de Bateria Deveria Ser o Perfil de Desempenho»* e *«perfil do
      desempenho deveria aparecer por controle»*. Os três botões do mapa das
@@ -2184,19 +2194,23 @@ ESTADOS_DA_LINHA = ("est-mic", "est-som", "est-modo", "est-visto", "est-conexao"
 #: dono do nome (a memória dos controles, pelo endereço) disser.
 DONO_DA_CENA = {"p1": "Vitória"}
 #: O Perfil de Desempenho de cada lugar na cena do desenho — um de cada, para a
-#: foto mostrar o botão aceso nos dois estados.
+#: foto mostrar o botão aceso nos dois estados. Pelo MESMO dono que o produto
+#: chama a cada tique (`a08_conexoes.perfil_na_linha`), sobre a declaração da
+#: cena: o P2 com a economia dele ligada.
 PERFIL_DA_CENA = {"p1": "tudo_ligado", "p2": "bateria_longa"}
-#: Os três botões do cartão: o id do produto (`secao_orcamento.PERFIS`), o
-#: rótulo e a dica. A dica é a de `secao_orcamento.DICAS`, que é o dono; no
-#: desenho ela vai escrita, e o produto a lê de lá quando o cartão for ligado.
-PERFIS_DO_CARTAO = (
-    ("tudo_ligado", "Tudo Ligado",
-     "Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad."),
-    ("bateria_longa", "Bateria Longa",
-     "Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar."),
-    ("eu_escolho", "Personalizado",
-     "Nenhum teto: os ajustes de cada aba mandam neste controle."),
-)
+#: Os três botões do cartão, ``(id, rótulo, dica)``, lidos do dono
+#: (`secao_orcamento.ROTULOS_DOS_PERFIS` e `DICAS_DO_CARTAO`) pelo pacote.
+PERFIS_DO_CARTAO = tuple(_pacote08.perfis_do_cartao())
+
+
+def botao_do_perfil(pid, rotulo, dica, aceso):
+    """Um dos três botões: o produto acende o do controle pelo endereço `perfil`
+    (alvo `classe`, com o `aria-checked` junto, que é o que o leitor de tela diz)."""
+    return (f'<button class="btn{" on" if aceso else ""}" data-gesto="perfil-do-controle" '
+            f'value="{pid}" role="radio" aria-checked="{"true" if aceso else "false"}" '
+            f'data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" '
+            f'data-hef-quando="{pid}" data-hef-atributo="aria-checked" '
+            f'title="{dica}">{rotulo}</button>')
 DONO_DICA = ("Escreva o nome de quem joga com este controle. O nome fica no controle: "
              "vale em qualquer entrada e adaptador. Apague para voltar a «P N».")
 # o import mora aqui, e não no topo, para não empurrar as citações `aba08.py:N`
@@ -2204,6 +2218,8 @@ DONO_DICA = ("Escreva o nome de quem joga com este controle. O nome fica no cont
 from types import SimpleNamespace  # noqa: E402
 
 _DECLARACAO_DA_BANCADA = SimpleNamespace(controles={}, orcamento=SimpleNamespace(teto=None))
+#: A Sugestão de Conexão da cena — ver :func:`_sugestao_da_cena`.
+SUGESTAO_DA_CENA = _sugestao_da_cena()
 
 
 def _estado_da_bancada(c):
@@ -2428,7 +2444,7 @@ def linha_do_controle(c):
               <div class="gc-perfil">
                 <span class="rot">Perfil de Desempenho</span>
                 <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
-{chr(10).join(f'                  <button class="btn{" on" if PERFIL_DA_CENA.get(c["pref"], "tudo_ligado") == pid else ""}" data-gesto="perfil-do-controle" value="{pid}" role="radio" aria-checked="{"true" if PERFIL_DA_CENA.get(c["pref"], "tudo_ligado") == pid else "false"}" title="{dica}">{rotulo}</button>' for pid, rotulo, dica in PERFIS_DO_CARTAO)}
+{chr(10).join('                  ' + botao_do_perfil(pid, rotulo, dica, PERFIL_DA_CENA.get(c["pref"], "tudo_ligado") == pid) for pid, rotulo, dica in PERFIS_DO_CARTAO)}
                 </div>
               </div>
               {bloco_da_luz}
@@ -4209,25 +4225,8 @@ MIOLO = f'''
                  aqui agora (*«deveria ocupar o lugar no canto superior direito»*):
                  uma sugestão por linha, numerada, com o de→para. -->
             <div class="sugestao">
-              <div class="ordem-tit">Sugestão de Conexão</div>
-              <div class="col-ordem" data-campo="{CAMPO_DA_ORDEM}" data-hef-alvo="html">
-                <div class="ordem">
-                  <div class="faca"><span class="n">1</span>Mova o adaptador Bluetooth para a Entrada 9</div>
-                  <div class="receita">
-                    <span class="caixa" title="Entrada 3 — traseira do gabinete, USB 3.0. É a que divide o controlador com o receptor do teclado.">Entrada 3 <span class="pt">•</span> USB 3.0</span>
-                    <span class="seta">→</span>
-                    <span class="caixa alvo" title="Entrada 9 — traseira do gabinete, USB 2.0, num controlador que só ela usa.">Entrada 9 <span class="pt">•</span> USB 2.0</span>
-                  </div>
-                </div>
-                <div class="ordem">
-                  <div class="faca"><span class="n">2</span>Pareie o P2 no adaptador Direita</div>
-                  <div class="receita">
-                    <span class="caixa" title="O adaptador em que o P2 está pareado hoje, com três controles.">Meio <span class="pt">•</span> 3 controles</span>
-                    <span class="seta">→</span>
-                    <span class="caixa alvo" title="O adaptador com a folga maior.">Direita <span class="pt">•</span> 1 controle</span>
-                  </div>
-                </div>
-              </div>
+              <div class="ordem-tit">{_pacote08.TITULO_DA_ORDEM}</div>
+              <div class="col-ordem" data-campo="{CAMPO_DA_ORDEM}" data-hef-alvo="html">{SUGESTAO_DA_CENA}</div>
             </div>
           </div>
 
@@ -4406,10 +4405,11 @@ MIOLO = f'''
 {SPRITE_DO_RADIO}
 {SCRIPT_DA_SECAO_DO_RADIO}
 <script>
-/* O PERFIL DE DESEMPENHO ACENDE NO CLIQUE — 26/09/2026. No produto quem
-   repinta é o tique; aqui o botão acende na hora, para o desenho responder
-   a quem clica. */
+/* O PERFIL DE DESEMPENHO ACENDE NO CLIQUE — 26/09/2026, SÓ NA BANCADA. No
+   produto (onde o piloto pôs `window.__hef`) quem acende é o tique, pelo que
+   o daemon gravou: um clique recusado não pode ficar aceso. */
 document.addEventListener("click", function (ev) {{
+  if (window.__hef) return;
   var b = ev.target.closest(".gc-perfil .seg .btn");
   if (!b) return;
   b.parentElement.querySelectorAll(".btn").forEach(function (x) {{
