@@ -48,7 +48,10 @@ AS MORDIDAS (arranque a cura, veja reprovar, devolva):
   dongle) e o rádio numa entrada ``unknown`` vira dongle;
 * :func:`test_a_porta_que_ela_so_nomeou_e_do_mapa_e_se_renomeia` — tire o laço
   dos lugares identificados de ``ler_o_mapa`` e o nome que ela deu em Rádio e
-  Adaptadores some da lista.
+  Adaptadores some da lista; tire o ``and caminhos`` de ``fatos_do_buraco`` e
+  o -71 da porta sem nó lido vira zero;
+* :func:`test_o_lugar_e_universal_e_o_dela_continua_aceito` — tire o ``+ dela``
+  dos lugares de ``ler_o_mapa`` e a face que ela já tem deixa de ser escolhível.
 
 Faixa sintética da casa: controladores ``0000:0a:00.0`` e ``0000:0b:00.0``.
 """
@@ -429,6 +432,9 @@ def test_o_lugar_e_universal_e_o_dela_continua_aceito(mesa: Gabinete, disco: Pat
     )
     assert fluxo.gravar(lugar=ee.FACE_ESCRIVANINHA).gravou, "a quarta resposta de antes"
     assert carregar_maquina().lugares[lugar_de(PCI_A, "5")].nome == "só o nome, porta nova"
+    assert fluxo.estado()["lugares"] == [*ee.LUGARES_DA_PORTA, ee.FACE_ESCRIVANINHA], (
+        "a face que ela já tem continua escolhível para a próxima porta"
+    )
     assert fluxo.gravar(chave="1", lugar=ee.FACE_ESCRIVANINHA).gravou
     with pytest.raises(RuntimeError):
         fluxo.gravar(chave="99", nome="não existe")
@@ -461,6 +467,15 @@ def test_a_porta_que_ela_so_nomeou_e_do_mapa_e_se_renomeia(
     assert dongle is not None, "a porta que ela só nomeou sumiu do mapa"
     assert (dongle.nome, dongle.numero, dongle.ocupada) == ("Dongle azul", None, False)
     assert dongle.nos == ("3-4-port1", "4-4-port1")
+    mesa.tirar("3-4")
+    mesa.tirar("4-4")
+    sem_o_hub = ee.ler_o_mapa(
+        censo=mesa.ler(), entradas=mesa.entradas(), storm=STORM, adaptadores=()
+    ).porta(lugar_do_dongle)
+    assert sem_o_hub is not None and sem_o_hub.nos == ()
+    assert (sem_o_hub.ocupada, sem_o_hub.usb, sem_o_hub.storm) == (None, "", None), (
+        "o hub desligado: nada foi lido, e não sei não é zero"
+    )
     assert [p.lugar for p in mapa.portas].count(lugar_do_dongle) == 1
 
     assert fluxo.gravar(chave=lugar_do_dongle, nome="Dongle da TV").gravou

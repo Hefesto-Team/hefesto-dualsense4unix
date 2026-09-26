@@ -1557,7 +1557,18 @@ def ler_o_mapa(
     if adaptadores is None:
         adaptadores = _adaptadores_do_sistema(raiz_bt)
     sem_porta = sum(1 for a in adaptadores if not str(getattr(a, "no", "") or ""))
-    return MapaDasPortas(portas=tuple(portas), bluetooth_sem_porta=sem_porta)
+    # Os lugares que a tela oferece: os sete universais e, depois, as faces que
+    # ela JÁ tem com outro nome — a escolha dela continua escolhível.
+    dela = tuple(
+        dict.fromkeys(
+            f.nome for f in documento.mapa.faces if f.nome not in LUGARES_DA_PORTA
+        )
+    )
+    return MapaDasPortas(
+        portas=tuple(portas),
+        bluetooth_sem_porta=sem_porta,
+        lugares=LUGARES_DA_PORTA + dela,
+    )
 
 
 class MapearAsPortas:
