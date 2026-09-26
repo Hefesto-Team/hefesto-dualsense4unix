@@ -946,12 +946,12 @@ class DraftApplier:
                 **{lado: _gatilho_para_o_rascunho(getattr(vista.triggers, lado))
                    for lado in ("left", "right") if isinstance(trig_raw.get(lado), dict)},
             }
+        da_vista = vista.controllers or {}
         em_economia = frozenset(
-            u for u in (vista.controllers or {}) if economia_vale(u in ligados, mesa))
+            u for u in da_vista if economia_vale(u in ligados, mesa))
         controles = dict(ctrl_raw) if isinstance(ctrl_raw, dict) else {}
         for uniq in sorted(em_economia):
-            controles[uniq] = _entrada_na_economia(
-                controles.get(uniq), vista.controllers[uniq])
+            controles[uniq] = _entrada_na_economia(controles.get(uniq), da_vista[uniq])
         if controles:
             novo["controllers"] = controles
         self._em_economia = em_economia
