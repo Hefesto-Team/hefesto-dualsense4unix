@@ -110,9 +110,8 @@ def test_os_enderecos_novos_existem_na_bancada() -> None:
     html = BANCADA.read_text(encoding="utf-8")
     pac = _pacote()
     esperados = (
-        # POR CONTROLE
-        'data-campo="mic-existe"',
-        'data-campo="mic-caminho" data-hef-alvo="html"',
+        # POR CONTROLE. O `mic-existe` e o `mic-caminho` saíram em 25/09/2026
+        # com o «Microfone e botões» da linha (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01).
         # A TRAVA MUDOU DE NÓ EM 04/09/2026, e não de dono: ela saiu do
         # `<button>` para um `<i class="ltrava">` irmão, porque o vocabulário é
         # UM `data-campo` por nó e o botão precisava do dele para a DICA. A
@@ -141,24 +140,7 @@ def test_os_enderecos_novos_existem_na_bancada() -> None:
         "a dica da confissão voltou à bancada da 08")
 
 
-def test_o_resumo_do_mic_e_o_select_dividem_o_mesmo_endereco() -> None:
-    """`mic-existe` está no `<b>` da linha fechada E no `<select>` do corpo.
-
-    UM VALOR, DOIS TRAJES: o piloto distribui por `data-campo` e cada elemento
-    o veste como sabe (`texto` no `<b>`, `valor` no `<select>`). Dois endereços
-    para o mesmo fato é como duas grafias começam — e foi assim que a linha
-    fechada ficou dizendo "Ligado" enquanto o campo do corpo dizia a verdade.
-    """
-    html = BANCADA.read_text(encoding="utf-8")
-    # Um bloco por controle CONECTADO — o lugar vazio não desenha resumo.
-    blocos = re.findall(r'<div class="gc-item gc-p\d"[^>]*>.*?(?=<div class="gc-item)',
-                        html, flags=re.S)
-    assert blocos, "não achei uma linha de controle conectado na bancada da 08"
-    endereco = 'data-campo="mic-existe"'
-    for bloco in blocos:
-        assert bloco.count(endereco) == 2, (
-            "a linha fechada e o `<select>` do corpo têm de dividir o mesmo "
-            f"`mic-existe` — contei {bloco.count(endereco)}")
+# `test_o_resumo_do_mic_e_o_select_dividem_o_mesmo_endereco` SAIU — o controle «Microfone e botões» saiu da linha do controle em 25/09/2026, por pedido dela (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).
 
 
 def test_todo_botao_da_luz_tem_a_trava() -> None:

@@ -73,7 +73,10 @@ I1 = A1.replace(":", "").upper()
 I2 = A2.replace(":", "").upper()
 
 #: As âncoras da cerimônia — abrem por `:target`, e só por ele.
-ANCORAS = ("mapear-entradas", "mapear-entrada-a-entrada")
+#: As âncoras das telas do Mapear. DESDE 25/09/2026 é UMA, e ela mora no
+#: Check-up (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o «Mapear Entradas» e o
+#: «Mapear Entrada a Entrada» viraram um botão, por pedido dela.
+ANCORAS = ("mapear-portas",)
 
 _VAZIOS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link",
            "meta", "source", "track", "wbr"}
@@ -223,14 +226,18 @@ def _campos(mesa: Any, **kw: Any) -> dict[str, Any]:
 # 1. §P4 — âncora não é gesto
 # ---------------------------------------------------------------------------
 def test_as_ancoras_da_secao_nao_carregam_gesto() -> None:
-    """MORDIDA: ponha `data-gesto` no `<a href="#mapear-entradas">` do gerador."""
-    achadas = {a["href"][1:]: a for tag, a in _secao_da_pagina().elementos
-               if tag == "a" and a.get("href", "").startswith("#")
-               and a["href"][1:] in ANCORAS}
-    assert set(achadas) == set(ANCORAS), f"a seção perdeu uma porta: {sorted(achadas)}"
+    """MORDIDA: ponha `data-gesto` no `<a href="#mapear-portas">` do gerador.
+
+    A ÂNCORA SUBIU PARA O CHECK-UP em 25/09/2026, e por isso a régua lê a
+    página inteira em vez da seção do rádio.
+    """
+    tags = re.findall(r'<a [^>]*href="#(mapear-[\w-]+)"[^>]*>', _pagina())
+    achadas = {alvo: tag for alvo in tags
+               for tag in re.findall(rf'<a [^>]*href="#{alvo}"[^>]*>', _pagina())}
+    assert set(achadas) == set(ANCORAS), f"a página perdeu uma porta: {sorted(achadas)}"
     for alvo, a in achadas.items():
         assert "data-gesto" not in a, (
-            f"a âncora #{alvo} ganhou `data-gesto={a['data-gesto']!r}` — ela abre "
+            f"a âncora #{alvo} ganhou gesto ({a[:80]}) — ela abre "
             f"por `:target`, e o gesto seria um segundo nome para o mesmo ato")
 
 

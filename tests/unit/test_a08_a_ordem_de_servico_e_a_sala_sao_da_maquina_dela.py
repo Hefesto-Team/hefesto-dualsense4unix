@@ -501,7 +501,10 @@ def test_o_desenho_tem_endereco_para_os_cinco() -> None:
 
     html = BANCADA.read_text(encoding="utf-8")
     esperado = {"ordem": 1, "conta-gestao": 1, "sala-altura": 3,
-                "sala-visada": 3, "bateria": len(MESA)}
+                "sala-visada": 3,
+                # A BATERIA VIROU O SELO `est-bateria` em 25/09/2026
+                # (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): mesmo lugar, mesma conta.
+                "est-bateria": len(MESA)}
     for campo, quantos in esperado.items():
         achados = html.count(f'data-campo="{campo}"')
         assert achados == quantos, (

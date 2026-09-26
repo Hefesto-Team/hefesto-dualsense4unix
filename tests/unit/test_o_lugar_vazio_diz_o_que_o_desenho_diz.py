@@ -311,6 +311,10 @@ def test_as_sete_paginas_com_um_controle_no_p2(pagina: str) -> None:
 # 2. A 08 — a foto dela
 # ---------------------------------------------------------------------------
 PONTO = pacotes.PONTO_DO_ROTULO
+#: O RÓTULO DO LUGAR VAZIO DA 08 — «Desconectado». Era «Player N • Desconectado»
+#: até 25/09/2026: o «P N» virou o campo do dono, ao lado do rótulo, por pedido
+#: dela (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01).
+VAZIO_DA_08 = "Desconectado"
 
 
 def test_os_quatro_cartoes_da_08_dizem_player_n_desconectado() -> None:
@@ -321,7 +325,7 @@ def test_os_quatro_cartoes_da_08_dizem_player_n_desconectado() -> None:
     for n in range(1, 5):
         pref = f"p{n}"
         assert _o_que_diz(cravados, vivos, pref, "nome") == [
-            f"Player {n} {PONTO} Desconectado"], pref
+            VAZIO_DA_08], pref
         assert _o_que_diz(cravados, vivos, pref, "plastico") == [""], (
             f"{pref}: a barra ficou acesa com zero controles na mesa")
 
@@ -340,10 +344,10 @@ def test_o_p2_sai_e_volta_a_desconectado_no_tique_seguinte() -> None:
     assert nome_cheio and "Desconectado" not in nome_cheio[0], nome_cheio
     for n in (1, 3, 4):
         assert _o_que_diz(cravados, com, f"p{n}", "nome") == [
-            f"Player {n} {PONTO} Desconectado"]
+            VAZIO_DA_08]
     assert vazio["vazios"] == ["p1", "p2", "p3", "p4"]
     assert _o_que_diz(cravados, sem, "p2", "nome") == [
-        f"Player 2 {PONTO} Desconectado"], (
+        VAZIO_DA_08], (
         "o controle saiu e o cartão do P2 continuou dizendo o nome dele — o "
         "«cache» que ela fotografou")
     assert _o_que_diz(cravados, sem, "p2", "plastico") == [""]
@@ -564,7 +568,7 @@ def test_o_tique_do_piloto_leva_a_pagina_ao_apagador(
     pagina = "08-conexoes.html"
     cargas = _tiques_do_piloto(pagina, [[], [NO_P2], []], monkeypatch)
     cravados, telas, texto = _a_tela(pagina, cargas)
-    esperado_vazio = [f"Player {n} {PONTO} Desconectado" for n in range(1, 5)]
+    esperado_vazio = [VAZIO_DA_08 for n in range(1, 5)]
     for rotulo, vivos, carga in zip(("vazia", "P2", "P2 saiu"), telas, cargas, strict=True):
         vazaram = hefesto_vivo._o_desenho_cheio_no_lugar_vazio(
             cravados, vivos, carga["vazios"], texto)

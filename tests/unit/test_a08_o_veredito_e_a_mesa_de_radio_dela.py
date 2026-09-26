@@ -413,21 +413,7 @@ def test_a_dica_da_luz_chega_ao_pacote() -> None:
 # ---------------------------------------------------------------------------
 # O MICROFONE — o escopo virou leitura (D-12) e o custo virou derivado
 # ---------------------------------------------------------------------------
-def test_o_escopo_do_botao_do_mic_e_leitura_e_nao_escolha() -> None:
-    """**D-12.** A tela DIZ o que o botão físico faz; não pergunta.
-
-    A doutrina é a desta mesma aba, e está escrita na legenda dela: a chavinha
-    *"pelo cabo / pelo rádio"* saiu porque *"oferecia uma escolha que o
-    transporte já tinha feito"*. Aqui a escolha já tinha sido feita por ELA.
-    """
-    html = BANCADA.read_text()
-    assert 'data-gesto="mic-escopo"' not in html, (
-        "o `<select>` do escopo do microfone voltou: ele oferecia por CONTROLE "
-        "um valor que o produto guarda por MÁQUINA, e o segundo cartão "
-        "sobrescreveria a escolha do primeiro, calado")
-    assert html.count('data-campo="mic-escopo"') >= 1, (
-        "a leitura do escopo do microfone ficou sem endereço — trocar um botão "
-        "morto por um texto morto não é cura")
+# `test_o_escopo_do_botao_do_mic_e_leitura_e_nao_escolha` SAIU — o controle «Microfone e botões» saiu da linha do controle em 25/09/2026, por pedido dela (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).
 
 
 def test_o_escopo_le_o_valor_da_maquina() -> None:
@@ -477,17 +463,4 @@ def test_o_mic_pelo_cabo_nao_cobra_turno_de_radio() -> None:
         "a frase do cabo trouxe a conta do rádio junto")
 
 
-def test_o_titulo_do_resumo_do_mic_tem_endereco() -> None:
-    """Sem o endereço, o `title` congela no transporte da cena.
-
-    ARRANQUE A CURA: tire o `data-campo="mic-dica"` do `aba08.py`, regenere, e
-    este teste reprova.
-    """
-    html = BANCADA.read_text()
-    resumos = re.findall(r'<span[^>]*title="[^"]*microfone[^"]*"[^>]*>Microfone ',
-                         html)
-    assert resumos, "o resumo do microfone sumiu da linha fechada"
-    for resumo in resumos:
-        assert 'data-campo="mic-dica"' in resumo, (
-            "o `title` do resumo do microfone continua sendo o do desenho — "
-            "ele diz 'pelo cabo' com o controle no rádio")
+# `test_o_titulo_do_resumo_do_mic_tem_endereco` SAIU — o controle «Microfone e botões» saiu da linha do controle em 25/09/2026, por pedido dela (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).
