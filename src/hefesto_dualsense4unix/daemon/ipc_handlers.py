@@ -7404,7 +7404,16 @@ class IpcHandlersMixin:
         # declarar lá é de quem CONSOME a declaração: enquanto nenhum handler a
         # consulta, seria contrato sem leitor.
         vivo: Any = self.daemon
+        antes = getattr(vivo, "_maquina", None)
         vivo._maquina = await asyncio.to_thread(carregar_maquina)
+        # A ECONOMIA VALE NA HORA — O-MODO-ECONOMIA-POR-CONTROLE-01 (25/09/2026).
+        # A economia (a da mesa e a de cada controle) é lida na ativação do
+        # perfil; sem isto o clique dela só chegaria à luz, ao gatilho e à
+        # vibração na próxima troca de janela. O dono da decisão (mudou ou não)
+        # é `lifecycle.reaplicar_se_a_economia_mudou`; a falha dele não pode
+        # derrubar a declaração, que já está no disco.
+        with contextlib.suppress(Exception):
+            vivo.reaplicar_se_a_economia_mudou(antes)
         # QUATRO-MICROFONES-01 (22/08/2026): o "Aplicar" tem de VALER agora.
         #
         # O rebind acima já faz a fonte `DaemonConfig.bt_mic_uniqs` devolver o
