@@ -119,7 +119,11 @@ def test_a_coluna_nao_traz_cura_imperativo_nem_procedencia(pacote, cena) -> None
     O QUE A CENA TEM É LIDO, não afirmado: sem uma cura de conferência e sem um
     selo diferente de `medido aqui`, esta régua ficaria verde sobre nada.
 
-    MORDE: devolva o cartão de cura ou o `div.faca` a `_html_da_ordem`.
+    MORDE: devolva o cartão de cura ou o ganho a `_html_da_ordem`.
+
+    A `acao` SAIU DAS PROIBIDAS em 26/09/2026: a instrução voltou à caixa por
+    decisão dela (*«dá pra aceitar a instrução nisso»*), com o título
+    «Sugestão de conexão». Ver `a08_conexoes._card_da_ordem`.
     """
     from hefesto_dualsense4unix.app.actions.config.secao_exame import PREFIXO_DA_CURA
 
@@ -140,7 +144,6 @@ def test_a_coluna_nao_traz_cura_imperativo_nem_procedencia(pacote, cena) -> None
         assert 'class="ordem cura"' not in coluna and 'class="proc"' not in coluna
         proibidas = [PREFIXO_DA_CURA, *curas,
                      *(TEXTO_DO_SELO[s] for s in derivados),
-                     *(o.acao for o in ordens),
                      *(o.ganho_esperado.texto for o in ordens)]
         for frase in proibidas:
             assert frase not in coluna, (

@@ -248,7 +248,7 @@ def _cena(destino: str) -> list[Any]:
 @pytest.mark.parametrize("destino", ["", "Entrada 9"])
 def test_a_coluna_da_direita_da_08_nao_instrui_nem_confessa(
         monkeypatch: pytest.MonkeyPatch, destino: str) -> None:
-    """Sem o imperativo, sem o ganho, sem o cartão de cura — fica o de→para.
+    """Sem o ganho e sem o cartão de cura — fica o título, a instrução e o de→para.
 
     Sem destino (as duas ordens desta máquina) a coluna não tem card e manda o
     marcador de nada, que não vira travessão.
@@ -261,11 +261,14 @@ def test_a_coluna_da_direita_da_08_nao_instrui_nem_confessa(
     visivel = _sem_etiqueta(coluna)
     assert not _achadas(visivel, com_a_cura=True), visivel
     for item in cena:
-        if item.ordem is not None:
-            assert item.ordem.acao not in visivel, visivel
         assert item.cura not in visivel, visivel
     if destino:
         assert 'class="receita"' in coluna and destino in coluna, coluna
+        # A INSTRUÇÃO VOLTOU À CAIXA por decisão dela, 26/09/2026 — *«dá pra
+        # aceitar a instrução nisso»* —, com o título que ela nomeou.
+        acoes = [i.ordem.acao for i in cena if i.ordem is not None]
+        assert any(a in visivel for a in acoes), visivel
+        assert visivel.startswith(p.TITULO_DA_ORDEM), visivel
         assert visivel.endswith("+1 recomendação não coube aqui"), visivel
     else:
         assert coluna.strip() and visivel == "", coluna
@@ -363,7 +366,9 @@ _VAZIOS = frozenset({"area", "base", "br", "col", "embed", "hr", "img", "input",
 
 #: As classes do cartão da ordem que saíram da coluna visível em 13/09/2026: o
 #: imperativo, a linha do ganho, a marca de procedência e o cartão de cura.
-CLASSES_QUE_SAIRAM_DA_COLUNA = frozenset({"faca", "ganho", "proc", "cura"})
+#: O `faca` VOLTOU em 26/09/2026: a instrução da ordem, com o título «Sugestão
+#: de conexão», é decisão dela olhando o desenho novo da 08.
+CLASSES_QUE_SAIRAM_DA_COLUNA = frozenset({"ganho", "proc", "cura"})
 
 
 class _ClassesDoCampo(HTMLParser):
