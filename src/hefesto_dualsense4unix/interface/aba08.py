@@ -3635,7 +3635,11 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
         return;
       }
       // «Tentar de Novo» é o «Conectar» daquele adaptador: o mesmo painel abre.
-      if((b = perto(ev, '.radio .linha .tentar'))){ abrirPainel('conectar', ''); return; }
+      // Quem não é controle tenta o mesmo mover, e não tem painel (`data-abre`).
+      if((b = perto(ev, '.radio .linha .tentar'))){
+        if(b.dataset.abre) abrirPainel(b.dataset.abre, '');
+        return;
+      }
       if((b = perto(ev, '#rd-b-conectar'))){
         if(b.classList.contains('apagado')) balancar(b); else abrirPainel('conectar', '');
         return;

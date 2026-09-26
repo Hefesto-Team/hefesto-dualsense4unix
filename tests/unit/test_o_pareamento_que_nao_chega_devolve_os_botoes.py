@@ -31,6 +31,7 @@ Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
 
 from __future__ import annotations
 
+import re
 import threading
 import time
 from pathlib import Path
@@ -40,7 +41,16 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import central_do_radio as cr
 from tests.unit import radio_de_mentira as rm
-from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VARANDA, VERDE, VERMELHO
+from tests.unit.radio_de_mentira import (
+    AZUL,
+    FONE,
+    QUARTO,
+    ROXO,
+    SALA,
+    VARANDA,
+    VERDE,
+    VERMELHO,
+)
 from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
     Bancada,
     ela_segura_ps_create,
@@ -411,3 +421,167 @@ def _esquecer_com_prazo_curto(a08: Any, bancada: Bancada, clique: dict[str, Any]
         return bancada.gesto("confirmar-esquecer", **clique)
     finally:
         a08._esquecer_o_pareamento = antes
+
+
+# ---------------------------------------------------------------------------
+# 6. o conferente, 26/09/2026: o que a primeira entrega deixava passar
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("destino", (SALA, QUARTO, VARANDA))
+def test_a_meia_chave_so_sai_depois_do_veredito_da_central(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str,
+) -> None:
+    """Aos 61 s a TELA solta o «esperando» e diz «Não Conectou»; a CENTRAL ainda
+    diz «esperando» — ela confere o controle até o ``PRAZO_DO_PENDENTE_S`` dela, e
+    o objeto ``Paired`` sem ``Connected`` desse instante é a chave que ela está
+    conferindo. A tela não a apaga no relógio dela: a chave só sai quando a
+    central disser «não chegou».
+
+    MORDIDA: tire ``estado == _NAO_CHEGOU_NA_CENTRAL`` da ``meia`` de
+    ``_os_que_nao_conectaram`` — a chave sai aos 61 s, com a central ainda
+    conferindo, e esta régua reprova nos três adaptadores.
+    """
+    mundo, relogio = mundo_da_madrugada(), rm.Relogio()
+    mundo.pareado(destino, VERDE, conectado=False)
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    try:
+        quando = time.time() - (a08.ESPERA_NA_TELA_S + 1.0)
+        conferindo = cr.Movimento(VERDE, destino, cr.ESPERANDO, cr.PASSO_CONFERINDO,
+                                  motivo=cr.MOTIVO_SEM_CONFIRMACAO, pareou_no_destino=True,
+                                  quando=quando)
+        _com_a_central(bancada, monkeypatch, conferindo)
+        cena = bancada.cena()
+        (linha,) = _linhas(cena, destino, nao_conectou=True)
+        assert linha["aparelho"] == id_da_tela(VERDE) and linha["meia_chave"] is False
+        assert mundo.objeto(destino, VERDE) is not None, "a tela apagou a chave em conferência"
+        assert mundo.metodos("RemoveDevice") == [] and mundo.lapides == []
+
+        _com_a_central(bancada, monkeypatch, cr.Movimento(
+            VERDE, destino, cr.NAO_CHEGOU, cr.PASSO_FIM, motivo=cr.MOTIVO_PRAZO,
+            pareou_no_destino=True, quando=quando))
+        bancada.cena()
+        assert mundo.objeto(destino, VERDE) is None, "o «não chegou» deixou a meia chave"
+        assert mundo.lapides == [(destino, VERDE)]
+    finally:
+        bancada.fechar()
+
+
+@pytest.mark.xfail(strict=True, raises=RuntimeError, reason=(
+    "ZONA MORTA ABERTA, fora da posse desta sprint: a tela solta o «esperando» aos "
+    "a08_conexoes.ESPERA_NA_TELA_S (60 s) e a central o segura até "
+    "central_do_radio.PRAZO_DO_PENDENTE_S (120 s). Entre os dois, «Tentar de Novo» e "
+    "«Conectar» aparecem acesos e tremem — é o branco (item 5): o Pair dá, o HID não vem. "
+    "A cura é um dono só para o prazo: a central em 60 s, e a tela lendo dela."))
+def test_quando_a_tela_solta_o_esperando_a_central_aceita_o_tentar_de_novo(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A régua do contrato entre os dois relógios, com a CENTRAL REAL atrás do
+    tratador real do daemon: no instante em que a tela diz «Não Conectou» e acende
+    os botões, a central aceita o próximo «Conectar».
+
+    O movimento é o do branco, no estado em que a central o deixa (o ``Pair``
+    deu, o ``Connect`` e a conferência não confirmaram, e ela vigia), e a volta da
+    vigia é a de verdade (``vigiar``, o que o fio dela roda a cada segundo).
+
+    FOI ESTA A PROVA QUE A PRIMEIRA ENTREGA NÃO TINHA: a prova de tela clicou
+    «Tentar de Novo» aos 70 s contra um daemon de mentira que só recusava quando
+    o movimento em curso era um «Conectar» sem aparelho — mais frouxo que a
+    central, que recusa com QUALQUER movimento em curso.
+    """
+    mundo, relogio = mundo_da_madrugada(), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    try:
+        passou = a08.ESPERA_NA_TELA_S + 1.0
+        bancada.central._guardar(cr.Movimento(
+            VERDE, QUARTO, cr.ESPERANDO, cr.PASSO_CONFERINDO,
+            motivo=cr.MOTIVO_SEM_CONFIRMACAO, pareou_no_destino=True,
+            comecou=relogio() - passou, quando=time.time() - passou))
+        bancada.central.vigiar()
+        cena = bancada.cena()
+        assert cena["ocupado"] is False and _linhas(cena, QUARTO, nao_conectou=True)
+        assert bancada.gesto("tentar-de-novo", alvo=id_da_tela(QUARTO)) == {"armou": True}
+        bancada.esperar_a_central()
+    finally:
+        bancada.fechar()
+
+
+def test_o_nao_conectou_de_quem_nao_e_controle_tem_x_e_tenta_o_mesmo_aparelho(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O fone que ela moveu para a varanda não chegou. A linha «Não Conectou» dele
+    tem o X, com a pergunta (a linha nunca fica sem saída), e «Tentar de Novo»
+    refaz o MESMO mover — o fone para a varanda —, sem o painel do «Procurando»:
+    a janela do «Conectar» só aceita controle, e seguraria o rádio à toa.
+
+    MORDIDAS: o X só em controle (``_tem_x`` pedindo ``tipo == "controle"``) — a
+    linha fica sem X; e ``tentar_de_novo`` sempre com ``_mover(p, None, …)`` — o
+    pedido sai sem o aparelho.
+    """
+    mundo, relogio = mundo_da_madrugada(), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    try:
+        _com_a_central(bancada, monkeypatch, cr.Movimento(
+            FONE, VARANDA, cr.NAO_CHEGOU, cr.PASSO_FIM, motivo=cr.MOTIVO_SEM_GESTO,
+            e_controle=False, classe=rm.CLASSE_DE_FONE, quando=time.time() - 5.0))
+        campos = bancada.tique()
+        cena = dict(a08._CENA_NA_TELA)
+        (linha,) = _linhas(cena, VARANDA, nao_conectou=True)
+        assert linha["tipo"] != "controle" and linha["aparelho"] == id_da_tela(FONE)
+        varanda = id_da_tela(VARANDA)
+        assert (f'data-gesto="esquecer-aparelho" data-alvo="{linha["id"]}" '
+                f'data-lugar="{varanda}"') in campos["radio-sala"]
+        assert (f'data-esquecer="1" data-alvo="{linha["id"]}" data-destino="{varanda}"'
+                in campos["radio-moldes"])
+        tentar = re.search(r'<button class="btn tentar"[^>]*>', campos["radio-sala"])
+        assert tentar is not None and "data-abre" not in tentar.group(0)
+
+        bancada.gesto("tentar-de-novo", alvo=varanda)
+        bancada.esperar_a_central()
+        assert bancada.ponte.chamadas == [
+            ("radio.mover", {"destino": varanda, "aparelho": id_da_tela(FONE)})]
+    finally:
+        bancada.fechar()
+
+
+def test_todo_x_na_tela_tem_a_pergunta_dele(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O X não esquece sozinho: a página abre a pergunta pelo par ``(linha,
+    adaptador)``, e sem o molde dela o clique não faz NADA — nem pergunta, nem
+    tremida. Todo X que tem o que esquecer (o vermelho no ar, o roxo desligado em
+    cada adaptador, o branco que não chegou) tem a pergunta com o «Esquecer»
+    (``confirmar-esquecer``); o «Não Conectou» da busca que ninguém respondeu não
+    tem: o X dele só tira a linha.
+
+    MORDIDA: tire ``_moldes_de_esquecer`` de ``html_dos_moldes`` — todo X vira um
+    botão morto, e esta régua reprova.
+    """
+    mundo, relogio = _mesa_das_chaves(), rm.Relogio()
+    mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    try:
+        agora = time.time()
+        _com_a_central(bancada, monkeypatch,
+                       cr.Movimento(VERDE, QUARTO, cr.NAO_CHEGOU, cr.PASSO_FIM,
+                                    motivo=cr.MOTIVO_NAO_PAREOU, quando=agora - 5.0),
+                       cr.Movimento("", VARANDA, cr.NAO_CHEGOU, cr.PASSO_FIM,
+                                    motivo=cr.MOTIVO_SEM_GESTO, quando=agora - 5.0))
+        campos = bancada.tique()
+        xis = re.findall(r'data-gesto="esquecer-aparelho" data-alvo="([^"]+)" '
+                         r'data-lugar="([^"]+)"', campos["radio-sala"])
+        moldes = set(re.findall(
+            r'<template class="pergunta-molde" data-esquecer="1" data-alvo="([^"]+)" '
+            r'data-destino="([^"]+)" data-sim="Esquecer" data-gesto="confirmar-esquecer">',
+            campos["radio-moldes"]))
+        cena = dict(a08._CENA_NA_TELA)
+        sem_aparelho = {(a["id"], a["lugar"]) for a in cena["aparelhos"]
+                        if a.get("nao_conectou") and not a.get("aparelho")}
+        assert len(xis) >= 5 and len(sem_aparelho) == 1
+        for par in xis:
+            if par in sem_aparelho:
+                assert par not in moldes, f"o X que só tira a linha ganhou pergunta: {par}"
+            else:
+                assert par in moldes, f"o X de {par} não abre pergunta nenhuma"
+    finally:
+        bancada.fechar()
