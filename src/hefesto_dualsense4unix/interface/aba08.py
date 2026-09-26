@@ -7,7 +7,6 @@ import html
 import importlib.util
 import pathlib
 import re
-from types import SimpleNamespace
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
@@ -2220,6 +2219,10 @@ def nome_do_lugar_vazio(c):
 ESTADOS_DA_LINHA = ("est-mic", "est-som", "est-modo", "est-visto", "est-conexao", "est-bateria")
 DONO_DICA = ("Escreva o nome de quem joga com este controle. O nome fica no controle: "
              "vale em qualquer entrada e adaptador. Apague para voltar a «P N».")
+# o import mora aqui, e não no topo, para não empurrar as citações `aba08.py:N`
+# que outras abas fazem das linhas de cima (a `aba09.py:629` cita a 1053).
+from types import SimpleNamespace  # noqa: E402
+
 _DECLARACAO_DA_BANCADA = SimpleNamespace(controles={}, orcamento=SimpleNamespace(teto=None))
 
 
