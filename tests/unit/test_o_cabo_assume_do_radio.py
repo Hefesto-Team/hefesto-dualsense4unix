@@ -618,7 +618,7 @@ def plugar_o_cabo_e_esperar(
             {
                 "numeros": mesa.numeros(),
                 "jogo": mesa.o_jogo_ve(),
-                "primario": mesa.inst.primary_uniq,
+                "primário": mesa.inst.primary_uniq,
             }
         )
     return fotos
@@ -697,8 +697,8 @@ class TestOCaboAssume:
             # Em NENHUM instante outro controle dirige o jogador de alguém.
             assert foto["jogo"] == jogo_antes, f"no meio da troca o jogo viu {foto['jogo']}"
             # Sozinho na mesa, o vão é mesa vazia: sem posto, e sem ninguém para tomá-lo.
-            assert foto["primario"] == UNIQS[0] or (quantos == 1 and foto["primario"] is None), (
-                f"o posto de P1 passou para {foto['primario']} no meio da troca"
+            assert foto["primário"] == UNIQS[0] or (quantos == 1 and foto["primário"] is None), (
+                f"o posto de P1 passou para {foto['primário']} no meio da troca"
             )
             for uniq, numero in foto["numeros"].items():
                 assert numero == numeros_antes[uniq], f"{uniq} mudou de número no meio da troca"
@@ -1183,7 +1183,7 @@ class TestOCaboEmEspera:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestOLacoAcordaPeloCabo:
-    """Conferência de 25/09: o que acorda o laço, que régua nenhuma media.
+    """Conferência de 25/09: o que acorda o laço, e régua nenhuma conferia.
 
     O cabo recusado não cria nó em `/dev/input` (a probe falha antes), e o
     `InputDirWatch` do laço não o vê: sem o olhar no barramento HID, o cabo só

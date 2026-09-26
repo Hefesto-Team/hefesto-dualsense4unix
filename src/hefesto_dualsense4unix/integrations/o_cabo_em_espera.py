@@ -491,7 +491,7 @@ __all__ = [
     "REGRAS_QUE_RELIGAM",
     "TETO_POR_CONTROLE_S",
     "CaboEmEspera",
-    "Decisao",
+    "Decisao",  # (noqa-acento): nome de classe, identificador Python
     "VigiaDoCabo",
     "cabos_em_espera",
     "derrubar_o_radio",
