@@ -51,7 +51,10 @@ AS MORDIDAS (arranque a cura, veja reprovar, devolva):
   Adaptadores some da lista; tire o ``and caminhos`` de ``fatos_do_buraco`` e
   o -71 da porta sem nó lido vira zero;
 * :func:`test_o_lugar_e_universal_e_o_dela_continua_aceito` — tire o ``+ dela``
-  dos lugares de ``ler_o_mapa`` e a face que ela já tem deixa de ser escolhível.
+  dos lugares de ``ler_o_mapa`` e a face que ela já tem deixa de ser escolhível;
+* :func:`test_renomear_pela_lista_nao_troca_a_testemunha` — devolva o
+  ``porta.aparelho or …`` na testemunha, ou tire o ``or da_vez``/``numero is
+  None`` do ramo vivo, e o pendrive no lado 3.x vira o caminho da porta.
 
 Faixa sintética da casa: controladores ``0000:0a:00.0`` e ``0000:0b:00.0``.
 """
@@ -92,6 +95,9 @@ DONO = RAIZ / "src" / "hefesto_dualsense4unix" / "integrations" / "entrada_a_ent
 
 #: O -71 que o log do kernel-watch daria: cinco no dongle.
 STORM = {"3-4.1": 5}
+
+#: Um aparelho que só existe no lado 3.x do buraco (classe de armazenamento).
+PENDRIVE = ("aa01", "0001", ("08", "06", "50"))
 
 
 @pytest.fixture()
@@ -567,3 +573,38 @@ def test_o_encaixe_que_o_kernel_nao_sabe_nao_vira_dongle(tmp_path: Path) -> None
     )
     hub = mapa.porta(lugar_de(PCI_B, "4"))
     assert hub is not None and (hub.e_bluetooth, hub.bluetooth) == (False, "")
+
+
+def test_renomear_pela_lista_nao_troca_a_testemunha(mesa: Gabinete, disco: Path) -> None:
+    """Um pendrive no lado 3.x da porta 2 não vira a testemunha dela.
+
+    Renomear e reposicionar pela lista não provam nada do buraco: o aparelho que
+    estiver nele agora pode só existir no lado 3.x (``2-1``), e a amarra da
+    porta é do lado 2.0 (``1-1``), onde o DualSense a ensinou.
+    """
+    fluxo = _fluxo(mesa)
+    _mapear_tres(mesa, fluxo)
+    mesa.plugar(2, "1", PENDRIVE)
+    # o «Não alcanço» que ela deu um dia fica: renomear não é o cabo provando
+    assert declarar_a_maquina({"lugares": {lugar_de(PCI_A, "1"): {"fora": True}}}).gravou
+    antes = json.loads(disco.read_text(encoding="utf-8"))
+
+    assert fluxo.gravar(chave="2", nome="Atrás, a de cima").gravou
+    assert fluxo.gravar(chave="2", lugar=ee.LUGAR_TOPO).gravou
+    depois = json.loads(disco.read_text(encoding="utf-8"))
+    assert depois["mapa"]["portas"] == antes["mapa"]["portas"], (
+        "a revisita pela lista trocou o caminho da porta"
+    )
+    lugar_2 = lugar_de(PCI_A, "1")
+    assert depois["lugares"][lugar_2]["caminho"] == "1-1"
+    assert depois["lugares"][lugar_2]["entrada"] == "2"
+    assert depois["lugares"][lugar_2]["nome"] == "Atrás, a de cima"
+    assert depois["lugares"][lugar_2].get("fora") is True, "renomear desfez o «Não alcanço»"
+
+    # e a porta nova tocada pela lista, com o pendrive só no lado 3.x, também
+    # amarra pelo lado 2.0
+    mesa.plugar(4, "3", PENDRIVE)
+    assert fluxo.gravar(chave=lugar_de(PCI_B, "3"), lugar=ee.LUGAR_LATERAL).gravou
+    documento = carregar_maquina()
+    numero = documento.lugares[lugar_de(PCI_B, "3")].entrada
+    assert numero is not None and documento.mapa.portas[numero].caminho == "3-3"
