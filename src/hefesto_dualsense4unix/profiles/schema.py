@@ -5,6 +5,7 @@ Ver `docs/adr/005-profile-schema-v1.md` para a justificativa semântica
 """
 from __future__ import annotations
 
+import math
 import os
 import re
 from typing import Any, Literal, NamedTuple
@@ -1664,14 +1665,16 @@ class ControllerOverrides(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    # SÃO OITO, e a tela oferece dez. O que falta, e o CAMINHO que cada um
+    # SÃO NOVE, e a tela oferece dez. O que falta, e o CAMINHO que cada um
     # espera antes de poder entrar, está na fila da docstring acima — ordenada
     # por custo. O `mic` entrou em 03/09/2026 pelo `muted`, que é o campo dele
     # cuja escada carrega o `uniq` em todo degrau; o `sensores` entrou em
     # 04/09/2026, quando o interruptor que ele prometia passou a existir; a
     # `mascara` entrou em 08/09/2026, por decisão dela — e é a primeira que não
     # é uma SEÇÃO, e sim um valor só; o `movimento` entrou em 24/09/2026, com o
-    # chip «Mira Virtual» que ela pediu no cartão de cada controle.
+    # chip «Mira Virtual» que ela pediu no cartão de cada controle; a
+    # `economia` entrou em 25/09/2026, o botão da linha do controle, e ela não
+    # é uma seção nova: é um teto sobre três que já chegam à peça.
     leds: LedsConfig | None = None
     triggers: TriggersConfig | None = None
     rumble: ControllerRumbleOverride | None = None
@@ -1717,6 +1720,18 @@ class ControllerOverrides(BaseModel):
     #: jogo é ``roteador_de_movimento.da_peca``, perguntado pelo motor do tique
     #: com o ``uniq`` de cada jogador.
     movimento: ProfileMovimentoConfig | None = None
+    #: O MODO ECONOMIA DE BATERIA desta peça — O-MODO-ECONOMIA-POR-CONTROLE-01
+    #: (25/09/2026), o botão da linha do controle que ela pediu: *«se clica tá
+    #: setado na economia Low Iluminação Fraca, Vibraçao Economia, Gatilho»*.
+    #: <!-- noqa-acento: citação literal dela -->
+    #:
+    #: ``True`` liga; ``None`` (e ``False``, que vale o mesmo) não liga POR
+    #: ESTE CONTROLE. A mesa em «Bateria longa» liga em todos, e a regra
+    #: inteira — o que a economia faz em cada peça e quem vence entre o global
+    #: e o do controle — mora num dono só: :func:`economia_vale` e a tabela
+    #: :data:`A_ECONOMIA_EM_CADA_PECA`. Quem a leva ao aparelho é
+    #: ``manager._controllers_na_economia``, na ativação.
+    economia: bool | None = None
 
 
 # Regex para tokens aceitos em `Profile.key_bindings` values (FEAT-KEYBOARD-PERSISTENCE-01).
@@ -2347,6 +2362,434 @@ def resolver_teclado_emulado(profile: Profile | None, flag_global: bool) -> bool
 
 
 # ---------------------------------------------------------------------------
+# O MODO ECONOMIA — O-MODO-ECONOMIA-POR-CONTROLE-01 (25/09/2026)
+# ---------------------------------------------------------------------------
+#
+# Pedido dela: *«Modo Economia de Bateria (se clica tá setado na economia Low
+# Iluminação Fraca, Vibraçao Economia, Gatilho (algum de economia pra mantermos
+# as features funcionando mas gastando menos, entende?)»*
+# <!-- noqa-acento: citação literal dela -->
+#
+# ESTE BLOCO É O DONO DO «QUANTO GASTA», e ele responde três perguntas num
+# lugar só: o que a economia faz em cada peça (:data:`A_ECONOMIA_EM_CADA_PECA`
+# e as três funções ``*_na_economia``), quem vence entre o global e o do
+# controle (:func:`economia_vale`) e onde a escolha é gravada
+# (``ControllerOverrides.economia``, escrito por
+# :func:`com_a_economia_do_controle`). A tela lê e escreve por aqui; quem leva
+# ao aparelho é ``manager._controllers_na_economia``, na ativação do perfil.
+#
+# NENHUMA FEATURE DESLIGA, e é a régua: a luz fica mais fraca e não apaga, a
+# vibração ganha teto e não some, o gatilho gasta menos motor e continua com o
+# mesmo efeito. Todas as três são TETO (``min``), nunca troca: quem já escolheu
+# gastar menos do que a economia não é puxado para cima.
+#
+# A REGRA ENTRE O GLOBAL E O DO CONTROLE — decidida pelo padrão dela
+# ------------------------------------------------------------------
+# A economia vale na peça quando a MESA está em «Bateria longa» (o Perfil
+# Global de Bateria da aba Sistema, ``maquina.json`` → ``orcamento.teto``) OU
+# quando o controle a ligou. O global é o piso da mesa inteira; o botão do
+# controle liga a economia de um só quando a mesa está em «Tudo ligado» ou em
+# «Eu escolho». Por que não o contrário (o controle desligar a economia que a
+# mesa ligou):
+#
+# * a «Bateria longa» é uma promessa à mesa INTEIRA — a dica dela diz *"o que
+#   fica ligado em todos os controles"* —, e o teto de vibração dela já é
+#   aplicado no funil de todos (``core.rumble._effective_mult``). Um controle
+#   escapando dele pediria um segundo caminho de vibração, que é dono dobrado;
+# * o mais reversível: um clique no global desfaz tudo, e o do controle nunca
+#   deixa um estado que o global não saiba desfazer;
+# * quem precisa de vibração inteira num controle só (a pessoa que joga pelo
+#   tato) escolhe «Eu escolho» na mesa e liga a economia nos outros — o
+#   caminho existe, e cada aba continua mandando no que faz.
+#
+# Por isso ``False`` no disco vale o mesmo que ``None``: o controle não liga
+# por si. O escritor grava ``True`` ou apaga a chave.
+
+
+#: O teto do brilho da BARRA DE LUZ na economia — 30 % do trilho, o mesmo
+#: degrau que a vibração «Economia» entrega (``RUMBLE_POLICY_MULT``). É TETO:
+#: quem escolheu 10 % continua em 10 %, e zero continua zero (apagar a barra é
+#: escolha dela, nunca efeito da economia).
+BRILHO_DA_BARRA_NA_ECONOMIA = 0.3
+
+#: As LUZES DE NÚMERO na economia: o degrau mais baixo dos três
+#: (`D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`). Continuam acesas — o número
+#: do jogador não some, só gasta menos.
+BRILHO_DAS_LUZES_NA_ECONOMIA: Literal["fraco"] = "fraco"
+
+#: A política de VIBRAÇÃO da peça na economia — o degrau «Economia» que a aba
+#: Vibração já oferece. O número mora num lugar só
+#: (``daemon.subsystems.rumble.RUMBLE_POLICY_MULT``), e é lido lá.
+POLITICA_DA_VIBRACAO_NA_ECONOMIA: Literal["economia"] = "economia"
+
+#: A FORÇA DO GATILHO na economia: metade, com piso 1. Metade e não o 0,3 da
+#: vibração porque a escala do gatilho tem só oito níveis (1..8), e um terço
+#: juntaria os três de baixo no mesmo 1 — o efeito deixaria de ser o efeito.
+#: O piso é o que garante que a zona que resistia continua resistindo.
+FATOR_DO_GATILHO_NA_ECONOMIA = 0.5
+
+#: Em cada modo de gatilho, QUAIS parâmetros posicionais são força (ou
+#: amplitude) — os únicos que a economia toca. Posição, começo, fim e
+#: frequência ficam como estão, e é isso que mantém o efeito: o gatilho resiste
+#: no mesmo ponto, com menos motor. Os nomes vêm das fábricas de
+#: ``core.trigger_effects`` (a ordem posicional delas é o contrato do disco).
+#:
+#: FORA POR DECISÃO, e cada um com a razão: ``Off`` e ``Pulse`` não têm força;
+#: ``Galloping`` só tem tempo (pé, pé, frequência); ``Custom`` é o escape de
+#: bytes crus, e reescalar um byte cujo sentido ninguém declarou seria mudar o
+#: efeito sem saber qual — na dúvida, não se mexe.
+FORCAS_DO_GATILHO: dict[str, tuple[int, ...]] = {
+    "Rigid": (1,),  # (position, force 0-255)
+    "SimpleRigid": (0,),  # (strength 0-8)
+    "PulseA": (2,),  # (start, end, force 0-255)
+    "PulseB": (2,),  # (start, end, force 0-255)
+    "Resistance": (1,),  # (start, force 0-8)
+    "Bow": (2, 3),  # (start, end, force, snap)
+    "SemiAutoGun": (2,),  # (start, end, force)
+    "AutoGun": (1,),  # (start, strength, frequency)
+    "Machine": (2, 3),  # (start, end, amp_a, amp_b, frequency, period)
+    "Feedback": (1,),  # (position, strength)
+    "Weapon": (2,),  # (start, end, force)
+    "Vibration": (1,),  # (position, amplitude, frequency)
+    "SlopeFeedback": (2, 3),  # (start, end, start_strength, end_strength)
+    "MultiPositionFeedback": tuple(range(10)),  # (strengths x10)
+    "MultiPositionVibration": tuple(range(1, 11)),  # (frequency, strengths x10)
+}
+
+#: Os modos que a economia deixa como estão, com a razão acima.
+MODOS_DE_GATILHO_SEM_FORCA: frozenset[str] = frozenset(
+    {"Off", "Pulse", "Galloping", "Custom"}
+)
+
+
+class PecaDaEconomia(NamedTuple):
+    """Uma coisa que gasta bateria, e o que a economia faz com ela.
+
+    ``ponto_de_aplicacao`` é ``"módulo:atributo"`` — a função que a economia
+    usa para pôr o teto — ou ``None`` quando a peça fica de fora, e aí
+    ``o_que_faz`` diz por quê. A régua importa cada ponto declarado.
+    """
+
+    nome: str
+    o_que_faz: str
+    ponto_de_aplicacao: str | None
+
+
+#: O QUE A ECONOMIA FAZ EM CADA PEÇA — a tabela é o dono, e a tela a lê.
+A_ECONOMIA_EM_CADA_PECA: tuple[PecaDaEconomia, ...] = (
+    PecaDaEconomia(
+        "Barra de luz",
+        f"Brilho até {round(BRILHO_DA_BARRA_NA_ECONOMIA * 100)}%, na mesma cor.",
+        "hefesto_dualsense4unix.profiles.schema:leds_na_economia",
+    ),
+    PecaDaEconomia(
+        "Luzes de número",
+        "Brilho Fraco, com o número do jogador aceso.",
+        "hefesto_dualsense4unix.profiles.schema:leds_na_economia",
+    ),
+    PecaDaEconomia(
+        "Vibração",
+        "O teto da Economia, nos dois motores.",
+        "hefesto_dualsense4unix.profiles.schema:vibracao_na_economia",
+    ),
+    PecaDaEconomia(
+        "Gatilhos",
+        "O mesmo efeito, no mesmo ponto, com metade da força.",
+        "hefesto_dualsense4unix.profiles.schema:gatilho_na_economia",
+    ),
+    PecaDaEconomia(
+        "Microfone",
+        "Fica como está: é escolha de privacidade, não de bateria "
+        "(D-PERFIL-DE-DESEMPENHO, 24/08/2026).",
+        None,
+    ),
+    PecaDaEconomia(
+        "Alto-falante",
+        "Fica como está: o volume é o que se ouve, e baixar seria perder o som.",
+        None,
+    ),
+    PecaDaEconomia(
+        "Giroscópio",
+        "Fica como está: o DualSense não tem comando que desligue a IMU, e "
+        "desligar seria perder a mira.",
+        None,
+    ),
+)
+
+
+def economia_vale(escolha_do_controle: bool | None, mesa_em_economia: bool) -> bool:
+    """A economia vale nesta peça? A regra entre o global e o do controle.
+
+    Vale quando a mesa está em «Bateria longa» OU quando o controle a ligou —
+    ver a regra escrita no topo deste bloco. ``False`` do controle vale o mesmo
+    que ``None``: o controle não desliga a economia que a mesa ligou.
+    """
+    return bool(mesa_em_economia) or escolha_do_controle is True
+
+
+def origem_da_economia(
+    escolha_do_controle: bool | None, mesa_em_economia: bool
+) -> Literal["mesa", "controle"] | None:
+    """QUEM ligou a economia nesta peça: a mesa, o controle, ou ninguém.
+
+    A tela precisa da diferença para o botão da linha: sob a mesa em «Bateria
+    longa», o botão aceso é da mesa, e desligá-lo é na aba Sistema.
+    """
+    if mesa_em_economia:
+        return "mesa"
+    if escolha_do_controle is True:
+        return "controle"
+    return None
+
+
+def mesa_em_economia(teto_da_mesa: str | None) -> bool:
+    """A chave do Perfil Global de Bateria liga a economia na mesa inteira?
+
+    O dono de "este orçamento impõe teto" é ``core.rumble.teto_do_orcamento``
+    — hoje só a ``economia`` («Bateria longa») —, e esta função pergunta a ele
+    em vez de repetir a chave. Import tardio: ``profiles/`` é o mais baixo da
+    pilha, e ``core.rumble`` puxa o ``daemon`` pela tabela dos degraus.
+    """
+    from hefesto_dualsense4unix.core.rumble import teto_do_orcamento
+
+    return teto_do_orcamento(teto_da_mesa) is not None
+
+
+#: A FONTE do Perfil Global de Bateria, registrada pelo daemon no boot — a
+#: mesma ``DaemonConfig.orcamento_da_mesa`` que o teto de vibração lê. É FONTE
+#: e não valor pela mesma razão de lá: o ``machine.declare`` rebinda a
+#: declaração, e uma cópia feita no boot ficaria velha no instante do clique.
+#: ``None`` (ninguém registrou: a CLI, a suíte, o dublê) é a mesa SEM
+#: economia, o comportamento de antes desta sprint.
+_FONTE_DO_TETO_DA_MESA: Any = None
+
+
+def registrar_teto_da_mesa(fonte: Any) -> None:
+    """O daemon diz de onde ler a chave do Perfil Global de Bateria.
+
+    ``None`` desfaz o registro (a suíte o usa para voltar ao padrão).
+    """
+    global _FONTE_DO_TETO_DA_MESA
+    _FONTE_DO_TETO_DA_MESA = fonte if callable(fonte) else None
+
+
+def economia_da_mesa() -> bool:
+    """A mesa está em economia AGORA? Tolerante: fonte que levanta é ``False``.
+
+    ``False`` e não "levanta" porque quem pergunta é a ativação do perfil, e
+    uma declaração ilegível não pode derrubar a luz e o gatilho de todo mundo;
+    o teto que ninguém consegue ler é o de antes desta sprint — nenhum.
+    """
+    fonte = _FONTE_DO_TETO_DA_MESA
+    if fonte is None:
+        return False
+    try:
+        valor = fonte()
+    except Exception:
+        return False
+    return mesa_em_economia(valor if isinstance(valor, str) else None)
+
+
+def _escritos(modelo: BaseModel) -> dict[str, Any]:
+    """Só os campos que o modelo ESCREVEU — o vocabulário parcial do override.
+
+    ``exclude_unset`` e não ``include=model_fields_set``: o segundo despeja a
+    seção aninhada INTEIRA, e revalidá-la marcaria como escritos os campos que
+    a peça herdava do global (o player-LED apagado pisando o do perfil).
+    """
+    return modelo.model_dump(exclude_unset=True)
+
+
+def _forca_na_economia(valor: int) -> int:
+    """Metade da força, com piso 1. Zero continua zero: é zona inativa."""
+    if valor <= 0:
+        return valor
+    return max(1, math.ceil(valor * FATOR_DO_GATILHO_NA_ECONOMIA))
+
+
+def gatilho_na_economia(gatilho: TriggerConfig) -> TriggerConfig:
+    """O mesmo gatilho, no mesmo modo e no mesmo ponto, com a força no teto.
+
+    Só os parâmetros de :data:`FORCAS_DO_GATILHO` mudam. O formato aninhado
+    (``MultiPosition*``) é todo força — a frequência dele é implícita.
+    """
+    indices = FORCAS_DO_GATILHO.get(gatilho.mode)
+    if not indices or not gatilho.params:
+        return gatilho.model_copy()
+    params: list[int] | list[list[int]]
+    if gatilho.is_nested:
+        aninhado: list[list[int]] = gatilho.params  # type: ignore[assignment]
+        params = [[_forca_na_economia(int(v)) for v in sub] for sub in aninhado]
+    else:
+        plano: list[int] = list(gatilho.params)  # type: ignore[arg-type]
+        for i in indices:
+            if i < len(plano):
+                plano[i] = _forca_na_economia(int(plano[i]))
+        params = plano
+    return TriggerConfig(mode=gatilho.mode, params=params)
+
+
+def gatilhos_na_economia(
+    dele: TriggersConfig | None, do_perfil: TriggersConfig | None
+) -> TriggersConfig | None:
+    """Os gatilhos de UMA peça na economia, lado a lado.
+
+    ``do_perfil`` preenchido: o lado que a peça não escreveu é herdado do
+    perfil e posto no teto (é o controle ligando a economia sozinho). ``None``:
+    só o que a peça escreveu muda, porque o global já saiu em economia (é a
+    mesa em «Bateria longa»).
+    """
+    lados: dict[str, Any] = {}
+    for lado in ("left", "right"):
+        escrito = dele is not None and lado in dele.model_fields_set
+        if escrito:
+            fonte = getattr(dele, lado)
+        elif do_perfil is not None:
+            fonte = getattr(do_perfil, lado)
+        else:
+            continue
+        lados[lado] = gatilho_na_economia(fonte)
+    if not lados:
+        return dele
+    return TriggersConfig(**lados)
+
+
+def leds_na_economia(
+    dele: LedsConfig | None, do_perfil: LedsConfig | None
+) -> LedsConfig | None:
+    """A luz de UMA peça na economia — o brilho no teto, a cor de sempre.
+
+    Mesmo contrato de :func:`gatilhos_na_economia` para ``do_perfil``. A cor
+    nunca é escrita aqui: o override que só fala do brilho vira FATOR sobre a
+    base (``manager._controllers_to_led_scales``), e a cor do número do
+    jogador continua sendo a do número.
+    """
+    campos = _escritos(dele) if dele is not None else {}
+    if "lightbar_brightness" in campos:
+        brilho: float | None = float(campos["lightbar_brightness"])
+    elif do_perfil is not None:
+        brilho = float(do_perfil.lightbar_brightness)
+    else:
+        brilho = None
+    if brilho is not None:
+        campos["lightbar_brightness"] = min(brilho, BRILHO_DA_BARRA_NA_ECONOMIA)
+    if do_perfil is not None or "player_led_brightness" in campos:
+        campos["player_led_brightness"] = BRILHO_DAS_LUZES_NA_ECONOMIA
+    if not campos:
+        return dele
+    return LedsConfig.model_validate(campos)
+
+
+def leds_do_perfil_na_economia(leds: LedsConfig) -> LedsConfig:
+    """A seção GLOBAL da luz com a economia — a da mesa em «Bateria longa»."""
+    return leds.model_copy(
+        update={
+            "lightbar_brightness": min(
+                float(leds.lightbar_brightness), BRILHO_DA_BARRA_NA_ECONOMIA
+            ),
+            "player_led_brightness": BRILHO_DAS_LUZES_NA_ECONOMIA,
+        }
+    )
+
+
+def gatilhos_do_perfil_na_economia(triggers: TriggersConfig) -> TriggersConfig:
+    """A seção GLOBAL dos gatilhos com a economia — os dois lados."""
+    return TriggersConfig(
+        left=gatilho_na_economia(triggers.left),
+        right=gatilho_na_economia(triggers.right),
+    )
+
+
+def _mult_da_vibracao(policy: str | None, custom_mult: float | None) -> float | None:
+    """O multiplicador de uma política fixa, lido do dono dos degraus."""
+    if policy is None:
+        return None
+    if policy == "custom":
+        return None if custom_mult is None else float(custom_mult)
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
+
+    return RUMBLE_POLICY_MULT.get(policy)
+
+
+def vibracao_na_economia(
+    dela: ControllerRumbleOverride | None,
+    politica_do_perfil: str | None,
+    custom_do_perfil: float | None = None,
+    *,
+    mesa: bool = False,
+) -> ControllerRumbleOverride | None:
+    """A vibração de UMA peça sob o teto da economia.
+
+    O fator por peça é RELATIVO à política do perfil (``mult_da_peca /
+    mult_do_perfil``, ``manager.fator_da_unidade``), e o teto sai daí:
+
+    * a mesa em «Bateria longa» já corta o funil de TODOS no degrau Economia
+      (``core.rumble._effective_mult``). A peça só não pode passar do global —
+      um fator acima de 1 furaria o teto da mesa —, então a política própria
+      que amplifica sai, e a que é mais fraca fica;
+    * o controle sozinho: a peça vai ao degrau Economia, a menos que ela já
+      esteja abaixo dele.
+
+    As barras de motor (``motor_*_pct``) ficam sempre: elas só reduzem.
+    Política do perfil em ``auto`` (base móvel) devolve a peça como estava — o
+    consumidor já pula a peça nesse caso, e o ``auto`` segue a bateria.
+    """
+    base = _mult_da_vibracao(politica_do_perfil or "balanceado", custom_do_perfil)
+    if base is None or base <= 0.0:
+        return dela
+    escrito = dela is not None and "policy" in dela.model_fields_set
+    da_peca = (
+        _mult_da_vibracao(dela.policy, dela.custom_mult)
+        if escrito and dela is not None
+        else base
+    )
+    if da_peca is None:
+        return dela
+    teto = base if mesa else _mult_da_vibracao(POLITICA_DA_VIBRACAO_NA_ECONOMIA, None)
+    if teto is None or da_peca <= teto:
+        return dela
+    campos = _escritos(dela) if dela is not None else {}
+    campos.pop("policy", None)
+    campos.pop("custom_mult", None)
+    if not mesa:
+        campos["policy"] = POLITICA_DA_VIBRACAO_NA_ECONOMIA
+    if not campos:
+        return None
+    return ControllerRumbleOverride.model_validate(campos)
+
+
+def com_a_economia_do_controle(
+    perfil: Profile, chave: str, ligada: bool
+) -> Profile | None:
+    """O perfil com a economia DESTE controle ligada ou desligada — o escritor.
+
+    É o que a tela chama no clique do botão da linha (e grava pelo caminho de
+    sempre: ``save_profile`` + ``profile.switch``). ``chave`` é o ``uniq``
+    normalizado (doze hexa minúsculos, como o loader canoniza). ``None`` quando
+    nada muda: regravar um perfil idêntico faz o daemon reaplicá-lo à toa.
+
+    Desligar APAGA a chave em vez de gravar ``false``: o disco guarda só
+    opinião, e um Hefesto de antes desta sprint (``extra="forbid"``) recusaria
+    o perfil inteiro por uma chave que ele não conhece — o downgrade fica
+    possível para todo perfil em que a economia está desligada.
+    """
+    atuais = dict(perfil.controllers or {})
+    dele = atuais.get(chave)
+    antes = bool(dele is not None and dele.economia is True)
+    if antes == bool(ligada):
+        return None
+    campos = _escritos(dele) if dele is not None else {}
+    campos.pop("economia", None)
+    if ligada:
+        campos["economia"] = True
+    if campos:
+        atuais[chave] = ControllerOverrides.model_validate(campos)
+    else:
+        atuais.pop(chave, None)
+    return perfil.model_copy(update={"controllers": atuais})
+
+
+# ---------------------------------------------------------------------------
 # NASCE-LIGADO-01 — de onde vem o valor de cada campo quando o perfil CALA
 # ---------------------------------------------------------------------------
 #
@@ -2688,6 +3131,12 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "declarado perde a máscara própria em vez de mantê-la.",
         dono="hefesto_dualsense4unix.daemon.subsystems.external_mask:mascara_efetiva",
     ),
+    "ControllerOverrides.economia": Nascimento(
+        E_CONTRATO,
+        "Sem escrita = esta peça gasta o que a mesa manda (a «Bateria longa» "
+        "da aba Sistema liga a economia em todos). Não é feature que nasce "
+        "muda: a economia não desliga nada, só põe teto no que gasta.",
+    ),
     "ControllerOverrides.movimento": Nascimento(
         E_CONTRATO,
         "Seção ausente = esta peça segue a mira do perfil, e a do perfil não "
@@ -2842,12 +3291,18 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
 
 __all__ = [
     "AGUARDA_A_PALAVRA_DELA",
+    "A_ECONOMIA_EM_CADA_PECA",
+    "BRILHO_DAS_LUZES_NA_ECONOMIA",
+    "BRILHO_DA_BARRA_NA_ECONOMIA",
     "CONFIRMADA_POR_ESCOLHA",
     "CONFIRMADA_POR_GESTO",
     "CONFIRMADA_POR_SILENCIO",
     "E_CONTRATO",
     "E_OBRIGATORIO",
     "E_SECAO",
+    "FATOR_DO_GATILHO_NA_ECONOMIA",
+    "FORCAS_DO_GATILHO",
+    "MODOS_DE_GATILHO_SEM_FORCA",
     "MODO_DE_NASCIMENTO_DO_GATILHO",
     "NASCE_NA_ADOCAO",
     "NASCE_NO_ESQUEMA",
@@ -2855,6 +3310,7 @@ __all__ = [
     "NASCIMENTO_DOS_CAMPOS",
     "PARAMS_DE_NASCIMENTO_DO_GATILHO",
     "PILHA_DAS_FEATURES",
+    "POLITICA_DA_VIBRACAO_NA_ECONOMIA",
     "PRIORIDADE_MAXIMA",
     "PRIORIDADE_MINIMA",
     "ControllerMicOverride",
@@ -2867,6 +3323,7 @@ __all__ = [
     "MatchCriteria",
     "MatchManual",
     "Nascimento",
+    "PecaDaEconomia",
     "PonteConfirmada",
     "Profile",
     "ProfileMicConfig",
@@ -2876,11 +3333,23 @@ __all__ = [
     "TriggerConfig",
     "TriggersConfig",
     "classes_de_jogo_conhecidas",
+    "com_a_economia_do_controle",
     "com_o_brilho_das_luzes_de",
     "e_endereco_de_jogo",
+    "economia_da_mesa",
+    "economia_vale",
+    "gatilho_na_economia",
+    "gatilhos_do_perfil_na_economia",
+    "gatilhos_na_economia",
+    "leds_do_perfil_na_economia",
+    "leds_na_economia",
+    "mesa_em_economia",
     "normalizar_gamepad_flavor",
+    "origem_da_economia",
     "perfil_declara_modo_de_jogo",
     "perfil_e_regra_de_jogo",
     "registrar_classes_de_jogo",
+    "registrar_teto_da_mesa",
     "resolver_teclado_emulado",
+    "vibracao_na_economia",
 ]
