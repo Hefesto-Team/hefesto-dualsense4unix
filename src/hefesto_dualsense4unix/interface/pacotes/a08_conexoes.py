@@ -5747,21 +5747,33 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         "lugares": lugares, "aparelhos": aparelhos, "evitados": evitados,
         "canais_medidos": canais_medidos, "espectro": [], "vizinhos": vizinhos,
         "portas": portas, "pedido": pedido, "proposta": proposta, "ocupado": ocupado,
-        "aberto": _o_aberto(lugares, aparelhos),
+        "aberto": _o_aberto(lugares, aparelhos, proposta),
         "perto": _perto(aparelhos_bz, adaptadores_bz, aparelhos),
     }
     cena["destino_do_conectar"] = _destino_do_conectar(cena, st)
     return cena
 
 
-def _o_aberto(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]]) -> str | None:
+def _o_aberto(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]],
+              proposta: dict[str, Any] | None = None) -> str | None:
     """O adaptador aberto no acordeão.
 
     COM UM ADAPTADOR SÓ NA MÁQUINA, A CAIXA DELE NASCE E FICA ABERTA — decisão
     dela, 25/09/2026: *«Essa área se só tiver um conector ela tá sempre
     aberta.»* Não há outra para abrir no lugar, e fechar a única esconderia os
     controles atrás de um clique a mais. Com mais de um, o que ela abriu; sem
-    escolha dela, o que mais passou do limite. <!-- noqa-acento: citação literal dela -->
+    escolha dela, o que mais passou do limite; e sem esse, o da lâmpada.
+    <!-- noqa-acento: citação literal dela -->
+
+    A CAIXA DA LÂMPADA ABRE QUANDO NENHUMA OUTRA ABRIRIA (o conferente da
+    A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01, 25/09/2026). A lâmpada mora no
+    CORPO da caixa do destino — ao lado da vaga de soltar, onde o desenho dela
+    a pôs —, e o corpo de uma caixa fechada não aparece. Com os controles
+    amontoados sem som (os passos b4 e b5 dela) nenhuma passa do limite de
+    pontes, nenhuma caixa abria, e a lâmpada da proposta nova ficava escondida:
+    *«A lâmpada não apareceu»* de novo, com a proposta chegando à tela. Abre UMA
+    caixa, como no desenho; a escolha dela (abrir outra, ou fechar esta) vence.
+    <!-- noqa-acento: citação literal dela -->
     """
     if len(lugares) == 1:
         return str(lugares[0]["id"])
@@ -5774,7 +5786,12 @@ def _o_aberto(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]]) ->
                   None) or next((str(lug["id"]) for lug in lugares if lug.get("conectando")), None)
     if espera:
         return espera
-    return _ABERTO["lugar"] if "lugar" in _ABERTO else _o_mais_cheio(lugares, aparelhos)
+    if "lugar" in _ABERTO:
+        escolhido = _ABERTO["lugar"]
+        return str(escolhido) if escolhido else None
+    lampada = str((proposta or {}).get("destino") or "")
+    return _o_mais_cheio(lugares, aparelhos) or next(
+        (str(lug["id"]) for lug in lugares if str(lug["id"]) == lampada), None)
 
 
 def _chave_da_ordem(lug: dict[str, Any]) -> str:
