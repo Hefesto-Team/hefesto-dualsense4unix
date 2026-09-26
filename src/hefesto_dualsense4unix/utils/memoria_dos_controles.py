@@ -512,24 +512,28 @@ def lugares(alcance: str, de_quem: str | None = None) -> tuple[Lugar, ...]:
     return tuple(escolhidos)
 
 
-def _constante_do_dono(modulo: str, nome: str) -> str:
-    """Uma constante de texto de ``integrations/<modulo>.py``, lida sem importar.
+def _constante_do_dono(dono: str, nome: str) -> str:
+    """Uma constante de texto de ``integrations/<dono>.py``, lida sem importar.
 
     O caminho da allowlist tem UM dono (``steam_launch_options``, régua
-    ``test_t15_a_allowlist_tem_um_caminho_so``), e aquele módulo não é só
+    ``test_t15_a_allowlist_tem_um_caminho_so``), e aquele arquivo não é só
     biblioteca padrão: importá-lo quebraria o script avulso do uninstall. A
     árvore sintática lê o valor do dono sem executá-lo.
     """
     import ast
 
-    arquivo = Path(__file__).resolve().parents[1] / "integrations" / f"{modulo}.py"
+    arquivo = Path(__file__).resolve().parents[1] / "integrations" / f"{dono}.py"
     for no in ast.parse(arquivo.read_text(encoding="utf-8")).body:
-        alvo = no.targets[0] if isinstance(no, ast.Assign) and len(no.targets) == 1 else (
-            no.target if isinstance(no, ast.AnnAssign) else None)
-        if isinstance(alvo, ast.Name) and alvo.id == nome and no.value is not None:
-            valor = ast.literal_eval(no.value)
-            if isinstance(valor, str):
-                return valor
+        if isinstance(no, ast.Assign) and len(no.targets) == 1:
+            alvo, valor = no.targets[0], no.value
+        elif isinstance(no, ast.AnnAssign) and no.value is not None:
+            alvo, valor = no.target, no.value
+        else:
+            continue
+        if isinstance(alvo, ast.Name) and alvo.id == nome:
+            texto = ast.literal_eval(valor)
+            if isinstance(texto, str):
+                return texto
     raise ImportError(f"{arquivo} não tem mais a constante {nome}")
 
 
