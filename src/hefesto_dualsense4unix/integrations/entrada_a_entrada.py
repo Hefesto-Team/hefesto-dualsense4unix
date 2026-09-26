@@ -1707,6 +1707,7 @@ class MapearAsPortas:
                 lidas=lidas,
                 gravar=self._gravar,
                 controladores=_controladores(censo),
+                da_vez=chave is None,
             )
             self._ultima = gravacao
             if gravacao.gravou:
@@ -1796,15 +1797,18 @@ def _gravar_a_porta(
     lidas: Sequence[NoDeEntrada],
     gravar: Callable[[Mapping[str, Any]], Recibo],
     controladores: Mapping[int, str],
+    da_vez: bool = False,
 ) -> Gravacao:
     """A gravação da porta do fluxo único — pelo mesmo compositor do laço.
 
-    Sem lugar no gabinete (``face`` ``None``), só o nome vai ao disco. Com o
-    buraco lido (os nós dela estão no ``/sys`` de agora) e o lugar sabido, é o
+    Sem lugar no gabinete (``face`` ``None``), só o nome vai ao disco. A porta
+    SEM número, com o buraco lido (os nós dela estão no ``/sys`` de agora), e
+    a porta da vez (o DualSense acabou de prová-la) passam pelo
     :func:`_gravar_as_portas` de sempre: o número que o lugar já tem (ou o
-    menor livre), a face, os nós, a amarra e o nome, juntos. Sem o buraco (o
-    hub dela foi desligado), só a revisita de uma porta numerada: a face e o
-    nome, e nada do que a primeira vez gravou sai.
+    menor livre), a face, os nós, a amarra e o nome, juntos. A porta numerada
+    tocada PELA LISTA é revisita pura: a face e o nome, e nada do que a
+    primeira vez gravou sai — nem a testemunha do caminho, que o aparelho que
+    estiver nela agora (um pendrive no lado 3.x) trocaria.
     """
     if face is None:
         # SÓ O NOME, numa porta que ainda não tem lugar no gabinete (a que ela
@@ -1829,8 +1833,12 @@ def _gravar_a_porta(
             (porta.numero,) if porta.numero else (),
         )
     lidos = {e.no for e in lidas}
-    if porta.lugar and porta.nos and set(porta.nos) & lidos:
-        caminho = porta.aparelho or _caminho_do_lado_20(porta.nos)
+    no_sys = bool(porta.lugar and porta.nos and set(porta.nos) & lidos)
+    if no_sys and (porta.numero is None or da_vez):
+        # A testemunha é o caminho do lado 2.0, o mesmo de que sai o lugar
+        # (:func:`_lugar_do_furo`) e onde o DualSense enumera — nunca o de um
+        # aparelho que só existe no lado 3.x.
+        caminho = _caminho_do_lado_20(porta.nos) or porta.aparelho
         if not caminho:
             return Gravacao(porta.lugar, "", face, False, MOTIVO_SEM_LUGAR)
         vista = PortaVista(lugar=porta.lugar, caminho=caminho)
