@@ -77,7 +77,7 @@ import os
 import re
 import tempfile
 import threading
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any, Literal, NamedTuple
 
@@ -1440,7 +1440,11 @@ def _o_que_ainda_vale(bruto: Mapping[str, Any]) -> tuple[MaquinaConfig, tuple[st
         if campo != VERSION_FIELD and not _campo_isolado_passa(campo, salvo[campo])
     )
     for campo in descartados:
-        del salvo[campo]
+        resgatado = _O_RESGATE_POR_DENTRO.get(campo, _nada_se_resgata)(salvo[campo])
+        if resgatado is not None and _campo_isolado_passa(campo, resgatado):
+            salvo[campo] = resgatado
+        else:
+            del salvo[campo]
     return MaquinaConfig.model_validate(salvo), descartados
 
 
@@ -1452,6 +1456,97 @@ def _campo_isolado_passa(campo: str, valor: Any) -> bool:
     except ValidationError:
         return False
     return True
+
+
+# ---------------------------------------------------------------------------
+# O resgate por dentro do ``mapa`` — O-MAPA-QUE-ELA-CORRIGE-01, passo 1
+# ---------------------------------------------------------------------------
+#
+# MEDIDO em 26/09/2026: um campo desconhecido em ``mapa.portas["3"]`` (o que um
+# código mais velho vê quando o novo grava ``nome``, ``liga`` ou ``usb``) fazia o
+# resgate de cima descartar o ``mapa`` INTEIRO — 0 entradas e 0 faces, porque
+# ``PortaDeclarada`` é ``extra="forbid"``. O resgate agora desce um nível: cada
+# entrada e cada face são validadas sozinhas, e sai só o que não passa (o campo
+# torto sai da entrada; a entrada que ainda assim não passa, ou fica vazia,
+# sai). Isso protege do PRÓXIMO campo em diante; o código velho que já está na
+# máquina de alguém continua com o resgate velho.
+
+
+def _nada_se_resgata(_valor: Any) -> Any:
+    return None
+
+
+def _passa(modelo: type[BaseModel], valor: Any) -> bool:
+    try:
+        modelo.model_validate(valor)
+    except ValidationError:
+        return False
+    return True
+
+
+def _so_os_campos_que_passam(
+    modelo: type[BaseModel], valor: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Cada campo validado sozinho no ``modelo``: o torto e o desconhecido saem."""
+    return {
+        chave: dado
+        for chave, dado in valor.items()
+        if isinstance(chave, str) and _passa(modelo, {chave: dado})
+    }
+
+
+def _a_entrada_que_ainda_vale(porta: Any) -> Any:
+    """A entrada sem o campo torto; ``None`` quando nada dela sobra de pé."""
+    if _passa(PortaDeclarada, porta):
+        return porta
+    if not isinstance(porta, Mapping):
+        return None
+    limpa = _so_os_campos_que_passam(PortaDeclarada, porta)
+    return limpa if limpa and _passa(PortaDeclarada, limpa) else None
+
+
+def _a_face_que_ainda_vale(face: Any) -> Any:
+    """A face sem o campo torto e sem o número de entrada torto."""
+    if _passa(FaceDeclarada, face):
+        return face
+    if not isinstance(face, Mapping):
+        return None
+    limpa = _so_os_campos_que_passam(FaceDeclarada, face)
+    numeros = face.get("portas")
+    if isinstance(numeros, list):
+        limpa["portas"] = [
+            n for n in numeros if isinstance(n, str) and _NUMERO_DE_ENTRADA.match(n)
+        ]
+    return limpa if limpa and _passa(FaceDeclarada, limpa) else None
+
+
+def _o_mapa_que_ainda_vale(mapa: Any) -> dict[str, Any] | None:
+    """O ``mapa`` com cada entrada e cada face resgatadas uma a uma."""
+    if not isinstance(mapa, Mapping):
+        return None
+    saida: dict[str, Any] = {}
+    faces = mapa.get("faces")
+    if isinstance(faces, list):
+        saida["faces"] = [
+            vale for face in faces if (vale := _a_face_que_ainda_vale(face)) is not None
+        ]
+    portas = mapa.get("portas")
+    if isinstance(portas, Mapping):
+        saida["portas"] = {
+            numero: vale
+            for numero, porta in portas.items()
+            if isinstance(numero, str)
+            and _NUMERO_DE_ENTRADA.match(numero)
+            and (vale := _a_entrada_que_ainda_vale(porta)) is not None
+        }
+    return saida
+
+
+#: Os campos de topo que o resgate sabe abrir. Os outros continuam saindo
+#: inteiros, como sempre saíram.
+_O_RESGATE_POR_DENTRO: dict[str, Callable[[Any], Any]] = {
+    "mapa": _o_mapa_que_ainda_vale,
+}
 
 
 def _guardar_os_bytes_recusados() -> None:

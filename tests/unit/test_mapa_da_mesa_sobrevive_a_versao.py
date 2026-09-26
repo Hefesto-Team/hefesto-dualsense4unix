@@ -228,6 +228,73 @@ def test_mapa_corrompido_nao_leva_a_mesa_junto(arquivo: Path) -> None:
     assert lido.mapa.portas == {}, "o mapa torto entrou mesmo assim"
 
 
+# --- 3b. O campo que um código mais NOVO pôs numa entrada --------------------
+#
+# O-MAPA-QUE-ELA-CORRIGE-01, passo 1 (26/09/2026). MEDIDO: com um campo
+# desconhecido em `portas["3"]`, o resgate campo-a-campo descartava o `mapa`
+# INTEIRO — 0 entradas e 0 faces. É o que o código de hoje faz quando o de
+# amanhã grava um campo novo numa entrada (`liga` e `usb` já entraram assim).
+#
+# A MORDIDA: tire o `_O_RESGATE_POR_DENTRO` do `_o_que_ainda_vale` (volte ao
+# `del salvo[campo]` direto) — as duas réguas abaixo voltam a zero entradas.
+
+#: O gabinete de quinze entradas: duas na frente, seis atrás e sete no hub.
+_QUINZE: dict[str, Any] = {
+    "faces": [
+        {"nome": "Frente", "portas": ["1", "2"], "perto": True, "alto": False},
+        {"nome": "Traseira", "portas": ["3", "4", "5", "6", "7", "8"],
+         "perto": False, "alto": False},
+        {"nome": "Hub", "portas": [str(n) for n in range(9, 16)],
+         "perto": False, "alto": True},
+    ],
+    "portas": {str(n): {"caminho": f"9-{n}"} for n in range(1, 16)},
+}
+
+
+def _com_o_campo(numero: str, **campos: Any) -> dict[str, Any]:
+    documento = json.loads(json.dumps({"version": 1, "mapa": _QUINZE}))
+    documento["mapa"]["portas"][numero].update(campos)
+    documento["mesa"] = {"altura_da_antena": "acima"}
+    return documento
+
+
+def test_o_campo_desconhecido_numa_entrada_nao_leva_o_mapa_junto(arquivo: Path) -> None:
+    arquivo.write_text(json.dumps(_com_o_campo("3", campo_do_futuro=1)), encoding="utf-8")
+
+    lido = carregar_maquina()
+
+    assert len(lido.mapa.portas) == 15, (
+        f"o campo novo da entrada 3 levou o mapa junto: {sorted(lido.mapa.portas)}")
+    assert [f.nome for f in lido.mapa.faces] == ["Frente", "Traseira", "Hub"]
+    assert lido.mapa.portas["3"].caminho == "9-3", "a entrada 3 perdeu o que era dela"
+    assert lido.mesa.altura_da_antena == "acima"
+
+
+def test_o_nome_comprido_demais_perde_so_o_nome(arquivo: Path) -> None:
+    arquivo.write_text(json.dumps(_com_o_campo("3", nome="x" * 200)), encoding="utf-8")
+
+    lido = carregar_maquina()
+
+    assert len(lido.mapa.portas) == 15, sorted(lido.mapa.portas)
+    assert lido.mapa.portas["3"].caminho == "9-3"
+    assert getattr(lido.mapa.portas["3"], "nome", None) is None
+
+
+def test_a_gravacao_de_um_campo_novo_nao_apaga_o_mapa_do_disco(arquivo: Path) -> None:
+    """O código de hoje grava por cima de um documento com o campo de amanhã:
+    as quinze entradas continuam no disco, e só o campo que ele não entende sai
+    (a cópia inteira fica no ``maquina.json.invalido``)."""
+    arquivo.write_text(json.dumps(_com_o_campo("3", campo_do_futuro=1)), encoding="utf-8")
+
+    resultado = modulo.gravar_maquina_com_descartes({"mesa": {"linha_de_visada": "livre"}})
+
+    assert resultado.gravou
+    documento = _documento(arquivo)
+    assert len(documento["mapa"]["portas"]) == 15, sorted(documento["mapa"]["portas"])
+    assert "campo_do_futuro" not in documento["mapa"]["portas"]["3"]
+    assert (arquivo.parent / (arquivo.name + ".invalido")).exists()
+
+
 # --- 4. As três regras de validação -----------------------------------------
 
 
