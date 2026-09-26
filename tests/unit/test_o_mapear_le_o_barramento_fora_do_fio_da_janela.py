@@ -33,6 +33,17 @@ AS MORDIDAS, uma por teste:
 * :func:`test_o_salvar_vai_para_onde_o_controle_esta` — tire o
   ``self._andar(censo, lidas)`` do ``gravar``: o nome da segunda porta vai
   para a primeira.
+* :func:`test_o_tique_inteiro_da_08_nao_espera_o_barramento` — ponha um
+  ``_ler_o_censo_agora()`` no ``pacote()``: a régua que não precisa saber
+  quem são os chamadores.
+* :func:`test_a_leitura_de_antes_de_reabrir_nao_e_a_primeira_da_vez_nova` —
+  tire o ``self._sessao != sessao`` do ``olhar`` do dono.
+* :func:`test_ja_chega_durante_o_comecar_nao_reabre_a_cerimonia` — tire a
+  sessão do ``comecar`` do laço.
+* :func:`test_a_resposta_dada_antes_vale_para_a_pergunta_do_clique` — faça o
+  ``responder`` pegar a pergunta da vez DEPOIS da leitura.
+* :func:`test_o_salvar_antes_da_primeira_foto_nao_apaga_o_71` — amarre a
+  leitura do log do -71 à primeira leitura do barramento.
 
 Faixa sintética da casa: controladores ``0000:0a:00.0`` e ``0000:0b:00.0``.
 """
@@ -53,6 +64,7 @@ from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina, carregar_ma
 from tests.unit.test_entrada_a_entrada_02_as_telas_aprovadas import (
     BOOT_1,
     DUALSENSE,
+    MOUSE,
     PCI_A,
     TECLADO,
     Gabinete,
@@ -62,6 +74,9 @@ from tests.unit.test_entrada_a_entrada_02_as_telas_aprovadas import (
 TETO_S = 0.05
 #: O sono do lock do kernel: o ``tique lento`` dela chegou a 15 s.
 SONO_S = 6.0
+#: O teto do TIQUE INTEIRO da 08 (o ``pacote()``, que monta a aba toda): folga
+#: larga sobre os milissegundos dele, e ainda seis vezes abaixo do sono.
+TETO_DO_PACOTE_S = 1.0
 
 
 class Portao:
@@ -111,7 +126,9 @@ def _esperar(pergunta: Callable[[], Any], prazo: float = 3.0) -> Any:
         time.sleep(0.01)
 
 
-def _medir(chamar: Callable[[], Any], vezes: int = 10) -> tuple[list[float], Any]:
+def _medir(
+    chamar: Callable[[], Any], vezes: int = 10, teto: float = TETO_S
+) -> tuple[list[float], Any]:
     """``vezes`` tiques seguidos; o primeiro que passa do teto encerra a conta
     (sem a cura, cada tique dorme o sono inteiro, e dez seriam um minuto)."""
     custos, ultimo = [], None
@@ -119,7 +136,7 @@ def _medir(chamar: Callable[[], Any], vezes: int = 10) -> tuple[list[float], Any
         t0 = time.perf_counter()
         ultimo = chamar()
         custos.append(time.perf_counter() - t0)
-        if custos[-1] >= TETO_S:
+        if custos[-1] >= teto:
             break
     return custos, ultimo
 
@@ -381,3 +398,203 @@ def test_o_salvar_vai_para_onde_o_controle_esta(gabinete: Gabinete, disco: Path)
     assert fluxo.foto_sem_esperar()["porta"]["aparelho"] == "1-3", (
         "a foto do tique seguinte não mostra o que ela acabou de salvar")
     fluxo.parar()
+
+
+# ---------------------------------------------------------------------------
+# O TIQUE INTEIRO — a régua que não depende de saber quem são os chamadores
+# ---------------------------------------------------------------------------
+
+
+def _ctx() -> Any:
+    """Uma mesa de dois, na faixa sintética da casa — o bastante para o
+    ``pacote()`` da 08 correr inteiro."""
+    from hefesto_dualsense4unix.interface.pacotes import Contexto
+
+    p1, p2 = "aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"
+    mesa = [
+        {"pref": "p1", "uniq": p1, "jogador": 1, "cor": "white", "nome": "White",
+         "via": "USB", "transporte": "usb", "mascara": "DualSense"},
+        {"pref": "p2", "uniq": p2, "jogador": 2, "cor": "galactic-purple",
+         "nome": "Galactic Purple", "via": "BT", "transporte": "bt", "mascara": "DualSense"},
+    ]
+    conectados = [
+        {"uniq": p1, "transport": "usb", "connected": True, "battery_pct": 100},
+        {"uniq": p2, "transport": "bt", "connected": True, "battery_pct": 64},
+    ]
+    return Contexto(state={"controllers": conectados}, mesa=mesa, conectados=conectados,
+                    estados={})
+
+
+def test_o_tique_inteiro_da_08_nao_espera_o_barramento(
+    gabinete: Gabinete, disco: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A RÉGUA DO TIQUE INTEIRO, e não de um chamador — a cura cobre todos.
+
+    O ``ler_o_barramento`` que TODO leitor do censo alcança fica preso, com o
+    Mapear e a cerimônia abertos, e o ``pacote()`` da 08 (o tique que o piloto
+    roda no fio da janela) volta sem esperar. As réguas acima medem os três
+    chamadores de hoje; esta pega o quarto, o que alguém escrever amanhã. E
+    ela exige que os três PEDIRAM a leitura: um tique que não pede nada
+    passaria sem medir coisa nenhuma.
+    """
+    pac = _pac()
+    from hefesto_dualsense4unix.integrations import censo_do_barramento
+
+    gabinete.plugar(1, "5", DUALSENSE)
+    gabinete.plugar(1, "3", TECLADO)
+    portao = Portao(gabinete.ler)
+    monkeypatch.setattr(censo_do_barramento, "ler_o_barramento", lambda *_a, **_k: portao())
+    # os donos com o leitor DO SISTEMA, que passa pelo `ler_o_barramento` preso
+    fluxo = ee.MapearAsPortas(entradas=gabinete.entradas, storm={}, adaptadores=lambda: ())
+    laco = ee.LacoDaEntrada(entradas=gabinete.entradas)
+    monkeypatch.setattr(pac, "_o_mapa", lambda: fluxo)
+    monkeypatch.setattr(pac, "_laco", lambda: laco)
+    monkeypatch.setattr(pac, "_LOGICA", None)
+    # o exame completo tem fio próprio desde 03/09, e aqui leria a máquina de quem roda
+    monkeypatch.setattr(pac, "_EXAME_PEDIDO", True)
+    monkeypatch.setattr(pac, "LER_NA_HORA", False)
+    monkeypatch.setattr(pac, "_FUNDO", {})
+    monkeypatch.setattr(pac, "_FUNDO_EM_VOO", set())
+    monkeypatch.setattr(pac, "_GERACAO", {})
+    monkeypatch.setattr(pac, "_CENSO", None)
+    pac.pacote(_ctx())  # os imports e o que se lê uma vez por janela, fora da conta
+    assert _esperar(lambda: "censo" not in pac._FUNDO_EM_VOO)
+    monkeypatch.setattr(pac, "_CENSO", None)
+    assert laco.comecar()["estado"] == ee.SENTADA
+    pac.mapear_comecar(None, {}, None)
+
+    antes = portao.leituras
+    portao.segurar()
+    try:
+        custos, _ = _medir(lambda: pac.pacote(_ctx()), vezes=3, teto=TETO_DO_PACOTE_S)
+        assert max(custos) < TETO_DO_PACOTE_S, (
+            f"o tique da 08 esperou o /sys: {[round(c * 1000) for c in custos]} ms")
+        assert _esperar(lambda: portao.leituras - antes == 3), (
+            f"o censo da aba, o Mapear e a cerimônia pedem UMA leitura cada; "
+            f"pediram {portao.leituras - antes}")
+    finally:
+        portao.soltar()
+    assert _esperar(lambda: "censo" not in pac._FUNDO_EM_VOO)
+    laco.parar()
+    fluxo.parar()
+    assert _pousou(laco) and _pousou(fluxo)
+
+
+# ---------------------------------------------------------------------------
+# A leitura presa atravessa os gestos dela: o que chegou depois não é desfeito
+# ---------------------------------------------------------------------------
+
+
+def test_a_leitura_de_antes_de_reabrir_nao_e_a_primeira_da_vez_nova(
+    gabinete: Gabinete, disco: Path
+) -> None:
+    """Ela fechou o Mapear com uma leitura presa no kernel, encaixou o segundo
+    DualSense e abriu de novo. A leitura que saiu ANTES viu um controle só; se
+    ela valesse como a primeira da vez nova, o segundo, que já estava
+    encaixado quando ela abriu, viraria «Entrada encontrada»: uma porta que
+    ela não mostrou."""
+    gabinete.plugar(1, "5", DUALSENSE)
+    de_antes = [gabinete.ler()]  # o barramento do instante em que a leitura saiu
+    portao = Portao(lambda: de_antes.pop() if de_antes else gabinete.ler())
+    fluxo = _fluxo(gabinete, portao)
+    fluxo.abrir()
+    portao.segurar()
+    try:
+        fluxo.foto_sem_esperar()
+        assert portao.entrou.wait(2)
+        fluxo.parar()
+        gabinete.plugar(1, "3", DUALSENSE)
+        fluxo.abrir()
+    finally:
+        portao.soltar()
+    assert _pousou(fluxo)
+    fluxo.foto_sem_esperar()
+    assert _pousou(fluxo)
+    foto = fluxo.foto_sem_esperar()
+    assert not de_antes, "a leitura de antes não voltou: a régua não mediu nada"
+    assert foto["estado"] == ee.ESPERANDO and foto["porta"] is None, (
+        f"a leitura de antes de reabrir andou o fluxo novo: {foto['estado']}, "
+        f"{(foto['porta'] or {}).get('aparelho')}")
+    fluxo.parar()
+    assert _pousou(fluxo)
+
+
+def test_ja_chega_durante_o_comecar_nao_reabre_a_cerimonia(
+    gabinete: Gabinete, disco: Path
+) -> None:
+    """Ela abriu a cerimônia com o kernel segurando o ``/sys`` e, antes de a
+    primeira pergunta aparecer, clicou «Já chega por hoje». Os dois gestos
+    chegaram nessa ordem, e o fim é o dela: fechada."""
+    gabinete.plugar(1, "3", TECLADO)
+    portao = Portao(gabinete.ler)
+    laco = ee.LacoDaEntrada(ler=portao, entradas=gabinete.entradas)
+    portao.segurar()
+    fio = threading.Thread(target=laco.comecar, daemon=True)
+    fio.start()
+    try:
+        assert portao.entrou.wait(2)
+        laco.parar()
+    finally:
+        portao.soltar()
+        fio.join(SONO_S)
+    assert laco.foto_sem_esperar()["estado"] == ee.PARADO, (
+        "a leitura presa reabriu a cerimônia que ela fechou")
+
+
+@pytest.mark.parametrize("depois", ["pular", "parar"])
+def test_a_resposta_dada_antes_vale_para_a_pergunta_do_clique(
+    gabinete: Gabinete, disco: Path, depois: str
+) -> None:
+    """Ela respondeu «Frente» para o teclado e, com o kernel segurando a
+    leitura, clicou «Não sei onde fica» (ou «Já chega por hoje»). A resposta
+    vai ao disco para o TECLADO, que era a pergunta do clique; o mouse, a
+    pergunta seguinte, não herda a face dela. Nada se perde."""
+    gabinete.plugar(1, "3", TECLADO)
+    gabinete.plugar(1, "4", MOUSE)
+    portao = Portao(gabinete.ler)
+    laco = ee.LacoDaEntrada(ler=portao, entradas=gabinete.entradas)
+    foto = laco.comecar()
+    assert (foto["pergunta"]["caminho"], foto["total"]) == ("1-3", 2), foto
+
+    respostas: list[Any] = []
+    portao.segurar()
+    fio = threading.Thread(
+        target=lambda: respostas.append(laco.responder(ee.FACE_FRENTE)), daemon=True)
+    fio.start()
+    try:
+        assert portao.entrou.wait(2)
+        getattr(laco, depois)()
+    finally:
+        portao.soltar()
+        fio.join(SONO_S)
+    assert respostas and respostas[0].gravou, "a resposta dada antes se perdeu"
+    documento = carregar_maquina()
+    teclado = documento.lugares.get(lugar_de(PCI_A, "3"))
+    mouse = documento.lugares.get(lugar_de(PCI_A, "4"))
+    assert teclado is not None and teclado.entrada, "a resposta não foi para o teclado"
+    assert mouse is None or not mouse.entrada, "a face dela foi para o mouse"
+    if depois == "pular":
+        foto = laco.foto_sem_esperar()
+        assert foto["pergunta"]["caminho"] == "1-4", "o mouse saiu da fila sem resposta"
+    laco.parar()
+
+
+def test_o_salvar_antes_da_primeira_foto_nao_apaga_o_71(gabinete: Gabinete, disco: Path) -> None:
+    """Com o kernel segurando a primeira leitura, ela deu o nome e salvou
+    antes de a primeira foto voltar. O Salvar lê o barramento, não o log do
+    -71: a leitura do log fica para o fio do tique, e o -71 da porta aparece
+    na foto seguinte."""
+    gabinete.plugar(1, "5", DUALSENSE)
+    fluxo = ee.MapearAsPortas(
+        ler=gabinete.ler, entradas=gabinete.entradas, storm={"1-5": 3},
+        adaptadores=lambda: (),
+    )
+    fluxo.abrir()
+    assert fluxo.gravar(nome="Frente de baixo", lugar=ee.LUGAR_FRENTE).gravou
+    fluxo.foto_sem_esperar()
+    assert _pousou(fluxo)
+    porta = fluxo.foto_sem_esperar()["porta"]
+    assert porta is not None and porta["storm"] == 3, (
+        f"o -71 sumiu da sessão: {porta and porta['storm']}")
+    fluxo.parar()
+    assert _pousou(fluxo)

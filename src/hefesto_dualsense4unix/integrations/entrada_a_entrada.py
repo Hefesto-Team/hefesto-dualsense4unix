@@ -503,9 +503,17 @@ class LacoDaEntrada:
 
         ``lugar`` é o atalho «Onde fica?» de um cartão (o ``data-alvo`` do
         ``mapa-do-radio.html``): a pergunta que cobre aquele lugar vem primeiro.
+
+        O «Já chega por hoje» que chegar durante a leitura vence: os dois
+        gestos vieram nessa ordem, e a leitura presa no kernel não reabre a
+        cerimônia que ela fechou.
         """
+        with self._trava:
+            sessao = self._sessao
         censo = self._ler_o_censo()
         with self._trava:
+            if self._sessao != sessao:
+                return self._pintar()
             self._zerar(SENTADA)
             self._primeiro = lugar or None
             self._andar_sentada(censo)
@@ -556,17 +564,27 @@ class LacoDaEntrada:
         sem pergunta: são os dois jeitos de o gesto chegar errado, e o tratador
         da aba os devolve como recusa (a piscada), nunca como recado. O disco
         que recusa deixa a pergunta onde está.
+
+        A PERGUNTA É A DO CLIQUE, e não a da vez quando a leitura volta: com o
+        kernel segurando o ``/sys``, um «Não sei onde fica» ou um «Já chega por
+        hoje» clicado depois passa na frente, e a face dela iria para a
+        pergunta seguinte — ou se perderia. Ela vale para o que ela respondeu,
+        e nada se perde; só a sessão que continua aberta anda.
         """
         if face not in FACES:
             raise ValueError(f"{face!r} não é uma das quatro respostas")
         with self._trava:
             if self._fase != SENTADA or not self._perguntas:
                 raise RuntimeError("não há pergunta para responder")
+            sessao, clicada = self._sessao, self._perguntas[0]
         censo, lidas = self._ler_o_censo(), self._ler_as_entradas()
         with self._trava:
-            if self._fase != SENTADA or not self._perguntas:
-                raise RuntimeError("não há pergunta para responder")
-            pergunta = self._perguntas[0]
+            aberta = self._sessao == sessao
+            # a mesma pergunta como está agora (os pendentes do hub podem ter
+            # crescido); se ela já saiu da fila, a do clique
+            agora = [p for p in self._perguntas if p.porta.lugar == clicada.porta.lugar]
+            da_vez = aberta and bool(agora)
+            pergunta = agora[0] if da_vez else clicada
             if _nao_sei(censo):
                 # A leitura não respondeu: "não sei" não é "o aparelho saiu", e
                 # a pergunta da vez fica onde está.
@@ -575,8 +593,9 @@ class LacoDaEntrada:
             if pergunta.porta.caminho not in presentes:
                 # O aparelho saiu entre o tique e o toque: gravar agora poria a
                 # resposta dela num buraco vazio. A pergunta da vez anda.
-                self._andar_sentada(censo)
-                self._pintar()
+                if aberta and self._fase == SENTADA:
+                    self._andar_sentada(censo)
+                    self._pintar()
                 raise RuntimeError("o aparelho da pergunta saiu do barramento")
             gravacao = _gravar_as_portas(
                 [
@@ -589,14 +608,22 @@ class LacoDaEntrada:
                 gravar=self._gravar,
                 controladores=_controladores(censo),
             )
+            if not aberta:
+                # ela fechou durante a leitura: a resposta foi ao disco, e a
+                # cerimônia fechada continua fechada
+                return gravacao
             self._ultima = gravacao
             if gravacao.gravou:
                 self._feitas += len(gravacao.entradas)
-                self._andadas += 1
                 self._ja_perguntados.update(pergunta.lugares())
-                self._perguntas = self._perguntas[1:]
-                if not self._perguntas:
-                    self._fase = FIM
+                if da_vez:
+                    self._andadas += 1
+                    lugar = pergunta.porta.lugar
+                    self._perguntas = tuple(
+                        p for p in self._perguntas if p.porta.lugar != lugar
+                    )
+                    if not self._perguntas and self._fase == SENTADA:
+                        self._fase = FIM
             self._pintar()
             return gravacao
 
@@ -1754,6 +1781,10 @@ class MapearAsPortas:
         self._antes: frozenset[tuple[str, ...]] = frozenset()
         self._da_vez: tuple[str, ...] = ()
         self._storm: Mapping[str, int] | None = None
+        #: O log do -71 já foi lido nesta sessão? É dele, e não da primeira
+        #: leitura do barramento: o Salvar que chegar antes da primeira foto
+        #: gasta a primeira sem ler o log, e o -71 sumiria da sessão inteira.
+        self._storm_lido = False
         self._ultima: Gravacao | None = None
         self._feitas = 0
         #: A sessão do fluxo: cada abrir e cada parar a trocam, e a leitura que
@@ -1780,6 +1811,7 @@ class MapearAsPortas:
             self._ultima = None
             self._feitas = 0
             self._storm = None
+            self._storm_lido = False
             self._primeira = True
             self._sessao += 1
             self._pintada = None
@@ -1800,14 +1832,14 @@ class MapearAsPortas:
         with self._trava:
             if self._fase == PARADO:
                 return self._foto_parada()
-            sessao, primeira = self._sessao, self._primeira
-        storm = self._ler_o_storm() if primeira else None
+            sessao, ler_o_log = self._sessao, not self._storm_lido
+        storm = self._ler_o_storm() if ler_o_log else None
         censo, lidas, adaptadores = self._ler_o_sys()
         with self._trava:
             if self._sessao != sessao or self._fase == PARADO:
                 return self._foto_de_agora()
-            if primeira and self._primeira:
-                self._storm = storm
+            if ler_o_log and not self._storm_lido:
+                self._storm, self._storm_lido = storm, True
             self._andar(censo, lidas)
             self._pintada = self._foto(censo, lidas, adaptadores)
             return self._pintada
