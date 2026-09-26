@@ -286,3 +286,60 @@ def test_o_mapear_e_um_botao_so_e_os_que_repetiam_sairam(pagina: pathlib.Path) -
     assert "mapear-entrada-a-entrada" not in ancoras and "mapear-entradas" not in ancoras
     gc = html[html.index('class="gc"'):html.index('id="rd-secao"')]
     assert "Microfone e botões" not in gc and "Limite da vibração" not in gc
+
+
+# ---------------------------------------------------------------------------
+# O DESENHO DE QUEM COORDENA — 25-26/09/2026, depois de ela ver o acordeão:
+# *«tá quebradíssima a 8»*. Um cartão por lugar, nada abre nem fecha; o Mapear
+# em duas colunas; a ordem de serviço com título e instrução.
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("pagina", [BANCADA, PUBLICADA])
+def test_um_cartao_por_lugar_e_nada_abre_nem_fecha(pagina: pathlib.Path) -> None:
+    """MORDIDA: devolva as setas do acordeão à `linha_do_controle` → reprova."""
+    html = pagina.read_text(encoding="utf-8")
+    gc = html[html.index('<div class="gc">'):html.index('id="rd-secao"')]
+    lugares = re.findall(r'<div class="gc-item gc-(p\d)[^"]*" data-controle="(p\d)"', gc)
+    assert [a for a, _b in lugares] == ["p1", "p2", "p3", "p4"], lugares
+    assert "gc-seta" not in html, "a seta do acordeão voltou: o cartão não abre nem fecha"
+    assert ".gc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))" in html
+
+
+def test_a_entrada_da_vez_sai_em_pares_e_a_lista_so_com_nome() -> None:
+    """MORDIDA: devolva a entrada sem nome à lista → reprova."""
+    pac = _pac()
+    porta = {"rotulo": "Entrada 3", "usb": "3.0", "hub": "", "storm": 0}
+    fatos = pac.html_da_porta_medida(porta)
+    assert fatos.startswith('<dl class="mp-fatos">')
+    assert "<dt>Velocidade</dt><dd>USB 3.0</dd>" in fatos
+    assert "<dt>Quedas</dt><dd>nenhuma em 7 dias</dd>" in fatos
+    assert "Onde fica" not in fatos, "o que não foi medido não entra"
+    lista = pac.html_das_entradas_mapeadas([
+        {"nome": "Frente de cima", "rotulo": "Entrada 1", "lugar": "Frente"},
+        {"nome": "", "rotulo": "Entrada 2", "lugar": ""},
+    ])
+    assert "Frente de cima" in lista and "Entrada 2" not in lista
+    assert pac.html_das_entradas_mapeadas([]) == '<li class="vazio">Nenhuma ainda.</li>'
+    campos = pac.campos_do_mapear({"estado": "esperando", "portas": []})
+    assert campos["mapear-estado"] == "esperando"
+
+
+@pytest.mark.parametrize("pagina", [BANCADA, PUBLICADA])
+def test_o_mapear_tem_onde_pintar_a_lista_e_o_passo(pagina: pathlib.Path) -> None:
+    html = pagina.read_text(encoding="utf-8")
+    for campo in ("mapear-lista", "mapear-estado"):
+        assert f'data-campo="{campo}"' in html, f"a página não tem onde pintar `{campo}`"
+
+
+def test_a_ordem_diz_o_que_e_e_o_que_mover() -> None:
+    """MORDIDA: tire o título ou a `acao` do `_card_da_ordem` → reprova."""
+    pac = _pac()
+    from hefesto_dualsense4unix.integrations.ordens_da_mesa import Identidade, Linha, Ordem
+
+    vazio = Linha(texto="", selo="")
+    ordem = Ordem(chave="teste", acao="Mova o adaptador Bluetooth para a Entrada 9",
+                  o_que_eu_vi=vazio, por_que_importa=vazio, ganho_esperado=vazio,
+                  alvo=Identidade(caminho="3-1"), destino="Entrada 9")
+    card = pac._card_da_ordem(ordem)
+    assert f'<div class="ordem-tit">{pac.TITULO_DA_ORDEM}</div>' in card
+    assert '<div class="faca">Mova o adaptador Bluetooth para a Entrada 9</div>' in card
+    assert pac.TITULO_DA_ORDEM == "Sugestão de conexão"

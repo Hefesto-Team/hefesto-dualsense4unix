@@ -1202,10 +1202,21 @@ def _card_da_ordem(ordem: Any) -> str:
     if not destino:
         return ""
     de = str(getattr(getattr(ordem, "alvo", None), "caminho", "") or TRACO)
+    # O TÍTULO E A INSTRUÇÃO VOLTARAM, e é escolha dela — 26/09/2026, olhando o
+    # desenho novo: *«o que é a área que marquei em vermelho?»*. Sem os dois o
+    # de→para era um par de endereços soltos. O título é o nome que ela deu à
+    # caixa; a instrução é a `acao` da ordem, que já nomeia o aparelho.
+    acao = str(getattr(ordem, "acao", "") or "")  # (noqa-acento) campo da Ordem
+    faca = f'<div class="faca">{_e(acao)}</div>' if acao else ""
     return ('<div class="ordem">'
+            f'<div class="ordem-tit">{TITULO_DA_ORDEM}</div>{faca}'
             f'<div class="receita"><span class="caixa">{_e(de)}</span>'
             f'<span class="seta">→</span>'
             f'<span class="caixa alvo">{_e(destino)}</span></div></div>')
+
+
+#: O nome da caixa da ordem de serviço — dela, 26/09/2026.
+TITULO_DA_ORDEM = "Sugestão de conexão"
 
 
 #: O TETO DO DESENHO — decisão **08-Q7**, 06/09/2026. Mora aqui porque o `+N`
