@@ -10,17 +10,17 @@ seja, nasce dentro do laço de quadro do jogo, não de temporizador do sistema.
 
 Caiu tudo o que era fácil culpar, cada linha medida: GPU em 51% a 65 °C com
 todos os `Clocks Event Reasons` em `Not Active`; oito jogos dela no MESMO
-GE-Proton10-34 e só um engasga; engasga com o Hefesto DESLIGADO e com um
-jogador só; Mortal Kombat e Wukong no ultra, lisos; e os próprios medidores
-saem da conta (69,9/min com eles, 70,7/min sem).
+GE-Proton10-34 e só um engasga; engasga com um jogador só; Mortal Kombat e
+Wukong no ultra, lisos; e os próprios medidores saem da conta (69,9/min com
+eles, 70,7/min sem). E um RELATO dela, sem instrumento: engasga com o Hefesto
+DESLIGADO.
 
-O que sobrou foi a varredura dos **27 prefixos `compatdata`** dela: 26 têm SÓ
-`winevulkan.json` — o driver Vulkan do próprio Wine, obrigatório — e **um
-único** tem camada a mais, o do Sackboy, com o `EOSOverlayVkLayer` do Epic
-Online Services registrado como camada IMPLÍCITA. Camada implícita embrulha a
-chamada de apresentação do quadro, o que explica cada observação de uma vez: a
-média intacta, a CPU firme, a GPU sem estrangulamento, o período solto do
-relógio e o "só neste jogo".
+A varredura dos **27 prefixos `compatdata`** dela achou **um único** com camada
+a mais — o do Sackboy, com o `EOSOverlayVkLayer` do Epic Online Services
+registrado como camada IMPLÍCITA; os outros 26 têm SÓ `winevulkan.json`, o
+driver Vulkan do próprio Wine, obrigatório. Naquela noite a camada virou a
+hipótese da causa, e a hipótese caiu duas vezes: **a camada não é a causa do
+engasgo, e tirá-la não o cura.**
 
 **Grau de confiança: EVIDÊNCIA CONTRÁRIA (23/08/2026, medido).** O A/B saiu, e
 derrubou a hipótese. Dois logs por quadro, guardados em
@@ -35,10 +35,17 @@ na sessão sem a camada ela estava jogando e na outra o jogo passou mais tempo
 parado — carga diferente, e isso não foi controlado. O que a diferença de carga
 NÃO explica é a rampa estar presente dos dois lados.
 
+**E o porquê de tirar quase nunca mudar a imagem, lido em 26/09/2026:** a camada
+registrada no `system.reg` só é lida pelo carregador Vulkan do PRÓPRIO Windows,
+num jogo que o traga. O `vulkan-1` do Wine devolve zero camadas, e o
+vkd3d-proton chama o `winevulkan` direto; nos 31 prefixos da máquina dela, os
+31 usam o `vulkan-1` do Wine. As duas queixas de engasgo dela depois de 23/08
+vieram com a camada já desligada.
+
 **Este módulo continua valendo, e por outro motivo.** Camada implícita de
-terceiro no caminho de apresentação é coisa que quem usa tem o direito de ver e
-de tirar, e antes disto o produto não sabia nem enumerar. O que ele não pode
-fazer é prometer cura de engasgo — não há.
+terceiro registrada no prefixo do jogo é coisa que quem usa tem o direito de
+ver e de tirar, e antes disto o produto não sabia nem enumerar. O que ele não
+pode fazer é prometer cura de engasgo — não há.
 
 Pedido dela, textual: *"faz uma cura universal e coloca isso naqueles botões do
 emulação tipo travar próton e coloca essa cura contra o vulcan em todos os
@@ -93,8 +100,7 @@ antes de qualquer clique:
   seguro na única direção que sobra — uma ferramenta legítima e nova pode ser
   desligada, e o preço disso é "o meu medidor sumiu", com o produto dizendo o
   nome do que desligou e um clique para devolver. O preço do desenho contrário
-  é o jogo engasgando sem ninguém saber por quê, que é exatamente o defeito que
-  custou esta madrugada.
+  é camada nova de terceiro pendurada no prefixo sem ninguém saber que está lá.
 - **"Tudo que não é o driver, mostrando antes"** é o que a interface FAZ: o
   diálogo lista jogo por jogo o que achou. A lista de preservados é o que
   decide o que fica de fora da mira; a mostra é o que garante que nada saia às

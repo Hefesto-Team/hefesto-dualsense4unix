@@ -390,8 +390,8 @@ texto, ambiente da área de trabalho) não está em nenhuma das dez páginas de 
   (`Wayland · COSMIC`) e **Ligar junto com o computador**.
 - **O exame de hoje** — oito linhas sobre o que costuma brigar com os controles:
   a regra de permissão, o serviço no login, o Steam Input, o áudio dos
-  controles, sobreposições que picotam o jogo, os gamepads virtuais do co-op, a
-  fixação do Proton e o Bluetooth. Cada linha diz **o que eu vi**, **por que
+  controles, as sobreposições Vulkan dentro dos jogos, os gamepads virtuais do
+  co-op, a fixação do Proton e o Bluetooth. Cada linha diz **o que eu vi**, **por que
   importa** e **o que fazer**, e o selo carrega **símbolo e cor juntos**, para
   quem não distingue verde de laranja ler o estado pelo desenho. Os consertos
   automáticos **já rodaram** neste exame — é por isso que os achados falam no

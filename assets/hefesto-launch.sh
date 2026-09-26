@@ -340,12 +340,13 @@ enter_game_mode() {
     return 0
 }
 
-# --- Camadas Vulkan que engasgam o jogo (ENGASGO-VULKAN-01) -----------------
-# Uma camada Vulkan IMPLÍCITA registrada dentro do prefixo Wine embrulha a
-# chamada de apresentação de cada quadro. Medido em 23/08/2026 no Sackboy dela:
-# 60 fps de média perfeita e ~70 quadros longos por minuto (47 a 91 ms), num
-# metrônomo de 1,021 s solto do relógio de parede — e de 27 prefixos, o único
-# com camada a mais era o único que engasgava.
+# --- Camadas Vulkan implícitas do prefixo (ENGASGO-VULKAN-01) ---------------
+# Uma camada Vulkan IMPLÍCITA registrada dentro do prefixo Wine. Ela nasceu
+# como hipótese do engasgo do Sackboy dela (23/08/2026), e a hipótese caiu: o
+# A/B mediu a camada desligada PIOR, e o `vulkan-1` do Wine nem a lê (26/09).
+# Tirá-la não cura engasgo. O gancho existe para alcançar todo jogo, inclusive
+# o instalado amanhã (regra dela de 14/08), e para refazer o que o Wine regrava
+# ao sair (16/09). Os números estão em `integrations/camadas_vulkan.py`.
 #
 # Por que AQUI e não por variável de ambiente: camada Vulkan é lida de DENTRO do
 # prefixo, e é lá que ela tem de ser desarmada. Medido nesta mesma madrugada —
@@ -733,9 +734,9 @@ $hefesto_envs
 HEFESTO_EOF
 fi
 
-# Camada Vulkan que engasga (ENGASGO-VULKAN-01): antes do exec, porque o
-# `wineserver` deste prefixo só sobe DEPOIS — e é ele quem lê o registro. À
-# prova de falha, mesma disciplina do Game Mode.
+# As camadas Vulkan implícitas do prefixo (ENGASGO-VULKAN-01): antes do exec,
+# porque o `wineserver` deste prefixo só sobe DEPOIS — e é ele quem lê o
+# registro. À prova de falha, mesma disciplina do Game Mode.
 curar_camadas_vulkan || true
 
 # O device de áudio KS do DualSense (HAPTICA-NATIVA-01): também antes do exec,

@@ -531,10 +531,11 @@ e fazem cópia de segurança antes — e **Tirar a sobreposição Vulkan**.
 
 ### Tirar a sobreposição Vulkan
 
-Alguns jogos instalam, por dentro deles, uma sobreposição **Vulkan** que entra na
-frente de cada quadro desenhado — o caso medido aqui é o overlay do **Epic
-Online Services**, que vem junto de jogos que usam os serviços da Epic mesmo
-comprados na Steam.
+Alguns jogos registram, por dentro deles, uma sobreposição **Vulkan** — o caso
+medido aqui é o overlay do **Epic Online Services**, que vem junto de jogos que
+usam os serviços da Epic mesmo comprados na Steam. Ela só entra na frente dos
+quadros num jogo que traga o próprio Vulkan do Windows, o que é raro: o Vulkan
+do Proton não a lê. Por isso tirá-la quase nunca muda a imagem.
 
 **O botão não promete tirar o engasgo, e não pode.** Ele nasceu do jogo que
 mantinha a contagem de quadros e mesmo assim **picotava**, uma engasgada mais ou
@@ -572,7 +573,7 @@ respeita — não desliga outra vez no lançamento seguinte.
 > não foi controlada — o que ela não explica é a piora estar nos dois.
 >
 > **O botão continua valendo, e por outro motivo:** você tem o direito de ver e
-> de tirar o que um programa de terceiro põe na frente dos seus quadros. Ele
+> de tirar o que um programa de terceiro registra dentro dos seus jogos. Ele
 > não promete curar engasgo. Os dados crus estão em
 > `docs/process/estudos/dados/2026-08-23-frametime-sackboy/`.
 
