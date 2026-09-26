@@ -533,6 +533,7 @@ def test_o_examinar_na_pagina_diz_quem_mudou_de_lugar(disco: Path) -> None:
     assert re.search(r"Estava em 9-1 \(Entrada 1\), Agora Está em 9-2 \(Entrada 2\)", texto), texto
     assert "undefined" not in texto.lower(), texto
     assert "Agora Está em 9-3.1" in texto, texto
+    assert "Por Que 1 Ficou Sem Entrada" in texto, texto
     assert "Está no Hub" in texto and "Direto no Gabinete" not in texto, (
         "a webcam está no hub, e o reexame a põe direto no gabinete: " + texto)
     assert "Dongle" not in texto, "o dongle não saiu da 5, e o reexame o acusa"

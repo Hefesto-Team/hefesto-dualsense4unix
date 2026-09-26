@@ -1890,6 +1890,20 @@ EDICOES: tuple[Edicao, ...] = (
         ),
         porque='26/09/2026 — fecha o `soNaTela` das duas linhas do editor.',
     ),
+    Edicao(
+        antes=(
+            '+ \'<b style="color:var(--color-lacuna)">Por que \' + novos.length + '
+            '" ficaram sem entrada</b>"'
+        ),
+        depois=(
+            '+ \'<b style="color:var(--color-lacuna)">Por que \' + novos.length\n'
+            '            + (novos.length > 1 ? " ficaram" : " ficou") + " sem entrada</b>"'
+        ),
+        porque=(
+            '26/09/2026 — o reexame chega ao produto, e com um aparelho só a frase '
+            'dizia «Por Que 1 Ficaram Sem Entrada».'
+        ),
+    ),
 )
 
 
