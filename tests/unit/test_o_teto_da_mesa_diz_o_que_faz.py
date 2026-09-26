@@ -290,9 +290,15 @@ def test_so_a_vibracao_tem_ponto_de_aplicacao_hoje() -> None:
     É o portão contra a tela prometer teto que ninguém impõe. Quando uma linha
     ganhar ponto de aplicação de verdade, ela passa aqui; até lá, marcar o
     campo é reprovar.
+
+    O NOME FICOU, E A LISTA CRESCEU EM 25/09/2026: os gatilhos e a barra de
+    luz ganharam ponto de verdade com o Modo Economia
+    (O-MODO-ECONOMIA-POR-CONTROLE-01) — a «Bateria longa» liga a economia em
+    todos, e `manager._perfil_na_economia` os põe no teto na ativação. O nome
+    é citado pela tela (`a09_sistema.frases_do_teto`), e por isso não muda.
     """
     com_ponto = [linha for linha in secao_orcamento.LINHAS_DO_TETO if linha.tem_ponto]
-    assert [linha.nome for linha in com_ponto] == ["Vibração"], (
+    assert [linha.nome for linha in com_ponto] == ["Vibração", "Gatilhos", "Barra de luz"], (
         "uma linha ganhou ponto de aplicação; se ele existe mesmo, o teste é "
         "que muda — mas ele tem de ser IMPORTÁVEL abaixo"
     )
