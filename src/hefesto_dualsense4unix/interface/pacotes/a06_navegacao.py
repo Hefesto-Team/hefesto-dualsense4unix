@@ -4049,7 +4049,7 @@ SEM_GESTO = {
     # cache de órfãos HID. Medidos com `grep -n` no HEAD desta árvore, nunca
     # copiados de relatório.
     "acao-do-gesto": "os cinco combos são callbacks montados em código "
-                     "(`daemon/subsystems/hotkey.py:90,418`), não dado. O "
+                     "(`daemon/subsystems/hotkey.py:1096-1104`), não dado. O "
                      "vizinho deles, o `config.ps_button_action` do PS solo, "
                      "tem escritor VIVO (`daemon.reload` com `config_overrides`) "
                      "e nenhum que grave em disco — e ele nem é o que esta "
