@@ -12,7 +12,7 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import onde  # noqa: E402
 from monta import (DS, MESA, CONECTADOS, CSS_GLIFO, CSS_POPUP, TRAVESSAO,  # noqa: E402
-                   cor_da_zona, glifo, monta, player_slot_color,
+                   cor_da_zona, monta, player_slot_color,
                    ressalva as monta_ressalva, svg)
 
 # A RAIZ SAI DE `__file__`, NUNCA CRAVADA. Medido em 28/08/2026: oito
@@ -2224,7 +2224,6 @@ def linha_do_controle(c):
     tinta = ("" if (no_radio or not conectado)
              else f' style="color:{cor_da_zona(c["cor"])}"')
     barra = f'<i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"{tinta}></i>'
-    da_controles = DA_CONTROLES[c["pref"]]
     # só o CAMPO sai daqui: o "Vale …, do global" que ficava ao lado saiu da tela
     # (`D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES`) e vive agora no `?` do campo.
     # «MICROFONE E BOTÕES» E «LIMITE DA VIBRAÇÃO» SAÍRAM DA LINHA — pedido dela,
@@ -3744,7 +3743,7 @@ _MP_CENA = _pacote08.campos_do_mapear({
     "porta": {"rotulo": "Entrada 3", "usb": "3.0", "hub": False, "storm": 0,
               "lugar_no_gabinete": "Traseira, a segunda de cima"},
     "portas": [{"nome": "Frente de cima", "rotulo": "Entrada 1", "lugar": "Frente"},
-               {"nome": "Hub da mesa", "rotulo": "Entrada 7", "lugar": "Hub"}],
+               {"nome": "Hub do monitor", "rotulo": "Entrada 7", "lugar": "Hub"}],
 })
 TELA_MAPEAR_PORTAS = f'''
 <div class="tela-nova" id="mapear-portas">

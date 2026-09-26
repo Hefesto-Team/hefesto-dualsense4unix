@@ -140,7 +140,10 @@ def test_os_enderecos_novos_existem_na_bancada() -> None:
         "a dica da confissão voltou à bancada da 08")
 
 
-# `test_o_resumo_do_mic_e_o_select_dividem_o_mesmo_endereco` SAIU — o controle «Microfone e botões» saiu da linha do controle em 25/09/2026, por pedido dela (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).
+# `test_o_resumo_do_mic_e_o_select_dividem_o_mesmo_endereco` SAIU — o controle
+# «Microfone e botões» saiu da linha do controle em 25/09/2026, por pedido dela
+# (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra
+# só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).
 
 
 def test_todo_botao_da_luz_tem_a_trava() -> None:

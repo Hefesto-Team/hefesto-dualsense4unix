@@ -281,10 +281,10 @@ def test_salvar_a_porta_chama_o_dono_com_a_face() -> None:
 # ---------------------------------------------------------------------------
 # A PÁGINA — uma seção só, os endereços novos, e o que saiu
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize("pagina", [BANCADA, PUBLICADA])
-def test_a_gestao_mora_dentro_do_check_up(pagina: pathlib.Path) -> None:
+@pytest.mark.parametrize("arquivo", [BANCADA, PUBLICADA])
+def test_a_gestao_mora_dentro_do_check_up(arquivo: pathlib.Path) -> None:
     """MORDIDA: devolva o quadro «Gestão de Controles» ao `MIOLO` → reprova."""
-    html = pagina.read_text(encoding="utf-8")
+    html = arquivo.read_text(encoding="utf-8")
     assert ">Gestão de Controles<" not in html
     checkup = html[html.index('id="cx8-2"'):html.index('id="rd-secao"')]
     assert 'class="gc"' in checkup and 'class="ferramentas"' in checkup
@@ -297,9 +297,9 @@ def test_a_gestao_mora_dentro_do_check_up(pagina: pathlib.Path) -> None:
         assert f'data-gesto="{gesto}"' in html, f"o gesto `{gesto}` não tem botão"
 
 
-@pytest.mark.parametrize("pagina", [BANCADA, PUBLICADA])
-def test_o_mapear_e_um_botao_so_e_os_que_repetiam_sairam(pagina: pathlib.Path) -> None:
-    html = pagina.read_text(encoding="utf-8")
+@pytest.mark.parametrize("arquivo", [BANCADA, PUBLICADA])
+def test_o_mapear_e_um_botao_so_e_os_que_repetiam_sairam(arquivo: pathlib.Path) -> None:
+    html = arquivo.read_text(encoding="utf-8")
     ancoras = re.findall(r'<a [^>]*href="#(mapear-[\w-]+)"', html)
     assert ancoras.count("mapear-portas") == 1
     assert "mapear-entrada-a-entrada" not in ancoras and "mapear-entradas" not in ancoras
@@ -312,10 +312,10 @@ def test_o_mapear_e_um_botao_so_e_os_que_repetiam_sairam(pagina: pathlib.Path) -
 # *«tá quebradíssima a 8»*. Um cartão por lugar, nada abre nem fecha; o Mapear
 # em duas colunas; a ordem de serviço com título e instrução.
 # ---------------------------------------------------------------------------
-@pytest.mark.parametrize("pagina", [BANCADA, PUBLICADA])
-def test_um_cartao_por_lugar_e_nada_abre_nem_fecha(pagina: pathlib.Path) -> None:
+@pytest.mark.parametrize("arquivo", [BANCADA, PUBLICADA])
+def test_um_cartao_por_lugar_e_nada_abre_nem_fecha(arquivo: pathlib.Path) -> None:
     """MORDIDA: devolva as setas do acordeão à `linha_do_controle` → reprova."""
-    html = pagina.read_text(encoding="utf-8")
+    html = arquivo.read_text(encoding="utf-8")
     gc = html[html.index('<div class="gc">'):html.index('id="rd-secao"')]
     lugares = re.findall(r'<div class="gc-item gc-(p\d)[^"]*" data-controle="(p\d)"', gc)
     assert [a for a, _b in lugares] == ["p1", "p2", "p3", "p4"], lugares
@@ -342,20 +342,21 @@ def test_a_entrada_da_vez_sai_em_pares_e_a_lista_so_com_nome() -> None:
     assert campos["mapear-estado"] == "esperando"
 
 
-@pytest.mark.parametrize("pagina", [BANCADA, PUBLICADA])
-def test_o_mapear_tem_onde_pintar_a_lista_e_o_passo(pagina: pathlib.Path) -> None:
-    html = pagina.read_text(encoding="utf-8")
+@pytest.mark.parametrize("arquivo", [BANCADA, PUBLICADA])
+def test_o_mapear_tem_onde_pintar_a_lista_e_o_passo(arquivo: pathlib.Path) -> None:
+    html = arquivo.read_text(encoding="utf-8")
     for campo in ("mapear-lista", "mapear-estado"):
         assert f'data-campo="{campo}"' in html, f"a página não tem onde pintar `{campo}`"
 
 
 def test_a_ordem_diz_o_que_e_e_o_que_mover() -> None:
-    """MORDIDA: tire o título ou a `acao` do `_card_da_ordem` → reprova."""
+    """MORDIDA: tire o título ou a instrução do `_card_da_ordem` → reprova."""
     pac = _pac()
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import Identidade, Linha, Ordem
 
     vazio = Linha(texto="", selo="")
-    ordem = Ordem(chave="teste", acao="Mova o adaptador Bluetooth para a Entrada 9",
+    instrucao = "Mova o adaptador Bluetooth para a Entrada 9"
+    ordem = Ordem(chave="teste", acao=instrucao,  # (noqa-acento) campo da Ordem
                   o_que_eu_vi=vazio, por_que_importa=vazio, ganho_esperado=vazio,
                   alvo=Identidade(caminho="3-1"), destino="Entrada 9")
     card = pac._card_da_ordem(ordem)

@@ -568,7 +568,9 @@ def _pagina_publicada() -> str:
     return (onde.PUBLICADO / "08-conexoes.html").read_text(encoding="utf-8")
 
 
-# `test_a_pagina_publicada_tem_os_dois_enderecos` SAIU — o «Limite da vibração» saiu da linha do controle da 08 em 25/09/2026, por pedido dela (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): ele é da aba Vibração.
+# `test_a_pagina_publicada_tem_os_dois_enderecos` SAIU — o «Limite da vibração» saiu da
+# linha do controle da 08 em 25/09/2026, por pedido dela
+# (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): ele é da aba Vibração.
 
 
 def test_o_piloto_sabe_pintar_html() -> None:
@@ -1200,4 +1202,6 @@ def test_a_camada_de_tela_desta_aba_continua_sem_gtk() -> None:
         f"medidas escritas logo abaixo dela. Saída: {saida.stdout!r}")
 
 
-# `test_as_opcoes_que_ela_clica_sao_as_que_a_borda_aceita` SAIU — o «Limite da vibração» saiu da linha do controle da 08 em 25/09/2026, por pedido dela (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): ele é da aba Vibração.
+# `test_as_opcoes_que_ela_clica_sao_as_que_a_borda_aceita` SAIU — o «Limite da vibração»
+# saiu da linha do controle da 08 em 25/09/2026, por pedido dela
+# (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): ele é da aba Vibração.
