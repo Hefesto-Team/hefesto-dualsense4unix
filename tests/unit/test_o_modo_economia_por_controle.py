@@ -590,3 +590,47 @@ async def test_o_daemon_registra_a_declaracao_no_boot_e_solta_ao_parar(
     depois = (schema.economia_da_mesa(), controles_em_economia())
     assert durante == (True, frozenset({UNIQS[1]})), durante
     assert depois == (False, frozenset()), depois
+
+
+def test_o_daemon_reaplica_o_perfil_so_quando_a_economia_muda(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O clique no botão chega ao aparelho na hora — e só o clique da economia.
+
+    ``machine.declare`` rebinda ``_maquina``; quem rebinda chama
+    ``reaplicar_se_a_economia_mudou`` com a declaração de antes. Mudou a
+    economia (a da mesa OU a de um controle): o perfil corrente é reaplicado.
+    Mudou outra coisa (a cor do plástico): nada. Em Modo Nativo: nada — a
+    saída do nativo reaplica.
+
+    MORDIDA: faça o método devolver ``False`` sem comparar — o «ligou no P2»
+    reprova; tire a guarda do nativo — o último reprova.
+    """
+    from hefesto_dualsense4unix.core.events import EventBus
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+    from hefesto_dualsense4unix.daemon.state_store import StateStore
+    from hefesto_dualsense4unix.testing import FakeController
+
+    daemon = Daemon(
+        controller=FakeController(transport="usb", states=[]),
+        bus=EventBus(), store=StateStore(), config=DaemonConfig(),
+    )
+    chamadas: list[int] = []
+    monkeypatch.setattr(daemon, "_reapply_last_profile", lambda: chamadas.append(1))
+
+    antes = MaquinaConfig()
+    daemon._maquina = MaquinaConfig(controles={UNIQS[1]: ControleDeclarado(economia=True)})
+    assert daemon.reaplicar_se_a_economia_mudou(antes) is True
+    assert chamadas == [1], "ligou no P2 e o perfil não foi reaplicado"
+
+    mesma = daemon._maquina
+    daemon._maquina = mesma.model_copy(
+        update={"controles": {UNIQS[1]: ControleDeclarado(economia=True, cor="Cobalt Blue")}}
+    )
+    assert daemon.reaplicar_se_a_economia_mudou(mesma) is False
+    assert chamadas == [1], "a cor mudou e o perfil foi reaplicado à toa"
+
+    daemon._maquina = MaquinaConfig(orcamento=OrcamentoDeclarado(teto="economia"))
+    daemon._native_mode = True
+    assert daemon.reaplicar_se_a_economia_mudou(antes) is False
+    assert chamadas == [1], "em Modo Nativo o controle está com o jogo"
