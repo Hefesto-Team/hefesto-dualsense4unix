@@ -108,6 +108,14 @@ JANELA_DO_PAR_PELA_CARGA_S = 60.0
 #: kernel recusasse por outro motivo faria o produto derrubar o rádio em laço.
 TETO_POR_CONTROLE_S = 120.0
 
+#: A derrubada que o BlueZ RECUSOU (a trava do rádio ocupada pela central, o
+#: barramento que não respondeu) é passageira: o cabo tenta de novo depois
+#: desta espera, até ``RECUSAS_ANTES_DE_DESISTIR`` vezes. Conferência de
+#: 25/09/2026 — antes, uma recusa só marcava o cabo como resolvido para sempre,
+#: e o controle ficava no rádio carregando até alguém tirar e pôr o cabo.
+ESPERA_DEPOIS_DA_RECUSA_S = 5.0
+RECUSAS_ANTES_DE_DESISTIR = 5
+
 #: O teto do ``journalctl``. Medido na mesa dela: 0,18 s para o boot inteiro.
 ESPERA_DO_DIARIO_S = 3.0
 
@@ -308,6 +316,10 @@ class VigiaDoCabo:
     avisados: set[str] = field(default_factory=set)
     #: quando o laço olhou os cabos pela última vez (``None`` = nunca).
     ultima_olhada: float | None = None
+    #: instância -> quantas derrubadas o BlueZ já recusou para este cabo.
+    recusas: dict[str, int] = field(default_factory=dict)
+    #: instância -> quando o cabo recusado volta a ser decidido.
+    tentar_de_novo_em: dict[str, float] = field(default_factory=dict)
     _cargas_vistas: dict[str, str | None] = field(default_factory=dict)
 
     def observar_a_carga(self, no_radio: Mapping[str, str | None], agora: float) -> None:
@@ -331,11 +343,16 @@ class VigiaDoCabo:
         for instancia in [i for i in self.visto_em if i not in vivos]:
             self.visto_em.pop(instancia, None)
             self.resolvidos.discard(instancia)
+            self.recusas.pop(instancia, None)
+            self.tentar_de_novo_em.pop(instancia, None)
         pendentes: list[CaboEmEspera] = []
         for instancia, cabo in vivos.items():
             self.visto_em.setdefault(instancia, agora)
-            if instancia not in self.resolvidos:
-                pendentes.append(cabo)
+            if instancia in self.resolvidos:
+                continue
+            if agora < self.tentar_de_novo_em.get(instancia, float("-inf")):
+                continue
+            pendentes.append(cabo)
         return pendentes
 
     def quer_olhar_de_novo(self, agora: float) -> bool:
@@ -343,7 +360,8 @@ class VigiaDoCabo:
 
         É o que encurta a espera do laço: sem isto, o cabo visto no tique do
         hotplug só seria decidido no fallback de 30 s. Responde sim UMA vez por
-        cabo — a olhada seguinte já o vê maduro.
+        cabo — a olhada seguinte já o vê maduro. O cabo que o BlueZ recusou
+        conta do mesmo jeito quando a espera da recusa acaba.
         """
         desde = self.ultima_olhada
         if desde is None:
@@ -352,6 +370,9 @@ class VigiaDoCabo:
             instancia not in self.resolvidos
             and desde < visto + ESPERA_PARA_SER_ORFAO_S <= agora
             for instancia, visto in self.visto_em.items()
+        ) or any(
+            instancia not in self.resolvidos and desde < quando <= agora
+            for instancia, quando in self.tentar_de_novo_em.items()
         )
 
     def decidir(
@@ -414,6 +435,24 @@ class VigiaDoCabo:
     def resolver(self, instancia: str) -> None:
         self.resolvidos.add(instancia)
 
+    def recusado(self, instancia: str, agora: float) -> bool:
+        """O BlueZ não derrubou o rádio deste cabo. ``True`` = tenta de novo.
+
+        A recusa é passageira (a trava do rádio, o barramento): o cabo volta a
+        ser decidido depois de ``ESPERA_DEPOIS_DA_RECUSA_S``. Na
+        ``RECUSAS_ANTES_DE_DESISTIR``-ésima ele fica resolvido — fica no rádio,
+        que é o comportamento de antes, e o laço não vira martelo.
+        """
+        vezes = self.recusas.get(instancia, 0) + 1
+        self.recusas[instancia] = vezes
+        if vezes >= RECUSAS_ANTES_DE_DESISTIR:
+            self.resolvidos.add(instancia)
+            self.tentar_de_novo_em.pop(instancia, None)
+            return False
+        self.resolvidos.discard(instancia)
+        self.tentar_de_novo_em[instancia] = agora + ESPERA_DEPOIS_DA_RECUSA_S
+        return True
+
     def derrubou(self, uniq: str, agora: float) -> None:
         self.derrubado_em[uniq] = agora
 
@@ -440,10 +479,12 @@ class VigiaDoCabo:
 
 __all__ = [
     "CARGA_DE_FORA",
+    "ESPERA_DEPOIS_DA_RECUSA_S",
     "ESPERA_PARA_SER_ORFAO_S",
     "JANELA_DO_PAR_PELA_CARGA_S",
     "NOME_DA_REGRA",
     "RAIZ_DO_BARRAMENTO_HID",
+    "RECUSAS_ANTES_DE_DESISTIR",
     "REGRAS_QUE_RELIGAM",
     "TETO_POR_CONTROLE_S",
     "CaboEmEspera",

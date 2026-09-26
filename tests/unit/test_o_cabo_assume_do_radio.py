@@ -997,6 +997,54 @@ class TestQuandoOCaboNaoAssume:
         assert not mesa.inst.em_troca_de_transporte(UNIQS[0])
         assert mesa.inst.primary_uniq == UNIQS[1], "passado o prazo, a NUM-01 volta"
 
+    @pytest.mark.parametrize(
+        "falha", ["trava-ocupada", "o-bluez-levantou", "o-bluez-nao-respondeu"]
+    )
+    @pytest.mark.parametrize("diario_legivel", [True, False], ids=["com-diario", "sem-diario"])
+    def test_o_radio_que_nao_caiu_de_primeira_cai_na_proxima(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        falha: str,
+        diario_legivel: bool,
+    ) -> None:
+        """Conferência de 25/09: uma recusa PASSAGEIRA do BlueZ não é desistência.
+
+        O `Disconnect` vai pela trava do rádio, que a central do rádio também
+        segura. Uma recusa ali (a trava ocupada, o BlueZ que não respondeu)
+        marcava o cabo como resolvido para sempre: ele ficava esperando sem
+        driver, e o controle no rádio carregando, até alguém tirar e pôr o cabo.
+        """
+        mesa = montar(monkeypatch, tmp_path, ("bt", "bt", "bt"), diario_legivel=diario_legivel)
+        desconectar = mesa.bluez.desconectar
+        aparelhos = mesa.bluez.aparelhos
+        estado = {"falhas": 1}
+
+        def _desconectar(caminho: str, *, quem: str) -> SimpleNamespace:
+            if estado["falhas"] and falha != "o-bluez-nao-respondeu":
+                estado["falhas"] -= 1
+                if falha == "o-bluez-levantou":
+                    raise RuntimeError("o barramento caiu no meio")
+                return SimpleNamespace(
+                    feita=False, erro="hefesto.TravaOcupada", mensagem="a central segura"
+                )
+            return desconectar(caminho, quem=quem)
+
+        def _aparelhos() -> tuple[SimpleNamespace, ...] | None:
+            if estado["falhas"] and falha == "o-bluez-nao-respondeu":
+                estado["falhas"] -= 1
+                return None
+            return aparelhos()
+
+        monkeypatch.setattr(mesa.bluez, "desconectar", _desconectar)
+        monkeypatch.setattr(mesa.bluez, "aparelhos", _aparelhos)
+        plugar_o_cabo_e_esperar(mesa, UNIQS[2], tiques=8)
+        assert estado["falhas"] == 0, "a primeira tentativa nem aconteceu"
+        assert mesa.transporte_de(UNIQS[2]) == "usb", (
+            "uma recusa passageira do BlueZ deixou o controle no rádio para sempre"
+        )
+        assert mesa.bluez.desconectados == [UNIQS[2]]
+
 
 # ---------------------------------------------------------------------------
 # As peças, uma a uma
@@ -1084,6 +1132,22 @@ class TestOCaboEmEspera:
         vigia.derrubou(UNIQS[0], 0.0)
         de_novo = vigia.decidir(cabo, diario=diario, no_radio=no_radio, agora=10.0)
         assert de_novo.par is None and de_novo.desistir
+
+    def test_a_recusa_do_bluez_espera_e_tem_teto(self) -> None:
+        vigia = oce.VigiaDoCabo()
+        cabo = oce.CaboEmEspera("0003:054C:0CE6.0033")
+        assert vigia.observar_os_cabos([cabo], 0.0) == [cabo]
+        vigia.resolver(cabo.instancia)
+        agora = 0.0
+        for vez in range(1, oce.RECUSAS_ANTES_DE_DESISTIR):
+            assert vigia.recusado(cabo.instancia, agora), f"desistiu na recusa {vez}"
+            assert vigia.observar_os_cabos([cabo], agora + 1.0) == [], "tentou sem esperar"
+            assert vigia.quer_olhar_de_novo(agora + oce.ESPERA_DEPOIS_DA_RECUSA_S)
+            agora += oce.ESPERA_DEPOIS_DA_RECUSA_S
+            assert vigia.observar_os_cabos([cabo], agora) == [cabo]
+            vigia.resolver(cabo.instancia)
+        assert not vigia.recusado(cabo.instancia, agora), "o laço virou martelo"
+        assert vigia.observar_os_cabos([cabo], agora + 60.0) == []
 
     def test_o_teto_sai_quando_o_cabo_assumiu(self) -> None:
         vigia = oce.VigiaDoCabo()
