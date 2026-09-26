@@ -407,6 +407,7 @@ class MesaDoCabo:
         mascara: str = "dualsense",
         diario_legivel: bool = True,
         regra_instalada: bool = True,
+        watch_de_verdade: bool = False,
     ) -> None:
         self.relogio = Relogio()
         self.kernel = Kernel(tmp_path / "sys-bus-hid-devices")
@@ -454,9 +455,12 @@ class MesaDoCabo:
             "hefesto_dualsense4unix.core.evdev_reader.discover_dualsense_evdevs",
             self.kernel.como_o_coop_ve,
         )
-        monkeypatch.setattr(
-            "hefesto_dualsense4unix.core.evdev_reader.InputDirWatch.poll", lambda _self: True
-        )
+        mesa = self
+
+        def _poll(watch: Any) -> bool:
+            return mesa._o_watch_de_verdade(watch) if watch_de_verdade else True
+
+        monkeypatch.setattr("hefesto_dualsense4unix.core.evdev_reader.InputDirWatch.poll", _poll)
         monkeypatch.setattr(
             "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad", self._nascer_vpad
         )
@@ -474,6 +478,33 @@ class MesaDoCabo:
 
     def ler_o_diario(self) -> str | None:
         return "\n".join(self.kernel.diario) if self.diario_legivel else None
+
+    def _o_watch_de_verdade(self, watch: Any) -> bool:
+        """O `InputDirWatch.poll` como o real: "mudou" só quando os nós mudaram.
+
+        O `True` de sempre faz o co-op refazer o ciclo cheio a cada tique — um
+        co-op mais atento que o do produto, que só olha a mesa de novo quando
+        `/dev/input` muda (ou quando alguém pede, `_retry_spawn`). Conferência
+        de 25/09: com o `True`, o jogador segurado na troca que não termina
+        era solto no prazo; com o watch de verdade ele ficava para sempre.
+        """
+        foto = frozenset(self.kernel.nodes.values())
+        antes = getattr(watch, "_foto_da_bancada", None)
+        watch._foto_da_bancada = foto
+        return foto != antes
+
+    def o_co_op_ve_antes(self) -> None:
+        """O co-op (laço de leitura, ~2 s) percebe a mesa ANTES do `connect()`.
+
+        Os dois laços do daemon não têm ordem entre si: o `tique` da bancada
+        roda o `connect()` primeiro, e esta é a outra metade do sorteio.
+        """
+        self.kernel.os_handles_percebem()
+        for leitor in list(_LeitorQueSegueOMac.vivos):
+            leitor.a_thread_anda()
+        self.coop.sync()
+        self.coop.forward_all()
+        self.conferir_invariantes()
 
     # -- os laços do daemon, na ordem do `reconnect_loop` ---------------------
 
@@ -776,6 +807,64 @@ class TestOCaboAssume:
         )
         assert mesa.bluez.desconectados == [alvo, alvo]
         assert mesa.numeros() == numeros
+
+    @pytest.mark.parametrize("jogo", [True, False], ids=["com-jogo", "sem-jogo"])
+    @pytest.mark.parametrize(
+        ("quantos", "posicao"),
+        [(2, 1), (3, 2), (4, 1), (4, 3)],
+        ids=["2-jogadores-P2", "3-jogadores-P3", "4-jogadores-P2", "4-jogadores-P4"],
+    )
+    def test_a_volta_com_o_co_op_olhando_antes_do_connect(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        quantos: int,
+        posicao: int,
+        jogo: bool,
+    ) -> None:
+        """Conferência de 25/09: a outra metade do sorteio de fase dos dois laços.
+
+        O co-op olha a mesa no laço de leitura e o `connect()` no laço de
+        reconexão, sem ordem entre eles. Quando o co-op vê o nó do cabo sumir
+        primeiro, a marca da volta ainda não existe (ela nasce na poda do
+        `connect()`), e o vpad do jogador caía — o jogo perdia o controle
+        justamente na volta que devia ser invisível.
+        """
+        mesa = montar(
+            monkeypatch,
+            tmp_path,
+            ("bt", "bt", "bt", "bt")[:quantos],
+            jogo=jogo,
+            watch_de_verdade=True,
+        )
+        alvo = UNIQS[posicao]
+        plugar_o_cabo_e_esperar(mesa, alvo)
+        for _ in range(int(FOLGA_DEPOIS_DA_TROCA_S / TIQUE) + 1):
+            mesa.tique()
+        assert not mesa.inst.em_troca_de_transporte(alvo)
+        boneco = mesa.boneco_de(alvo)
+        mortes = mesa.mortes_de_vpad()
+        jogo_antes = mesa.o_jogo_ve()
+        numeros = mesa.numeros()
+
+        inst = mesa.kernel.instancia(alvo, "usb")
+        assert inst is not None
+        mesa.kernel.desconectar(inst)  # ela tira o cabo
+        mesa.o_co_op_ve_antes()
+        assert mesa.mortes_de_vpad() == mortes, "o co-op derrubou o vpad antes da poda"
+        mesa.tique()
+        mesa.kernel.conectar(alvo, "bt")  # e ele volta pelo pareamento
+        mesa.o_co_op_ve_antes()
+        for _ in range(3):
+            mesa.tique()
+
+        assert mesa.transporte_de(alvo) == "bt"
+        assert mesa.boneco_de(alvo) is boneco, "o jogador ganhou outro boneco na volta"
+        assert mesa.mortes_de_vpad() == mortes, "um vpad morreu na volta"
+        assert mesa.o_jogo_ve() == jogo_antes
+        assert mesa.numeros() == numeros
+        jogador = mesa.coop._players[alvo]
+        assert jogador.reader.node == mesa.kernel.nodes[alvo], "o leitor ficou no nó do cabo"
 
 
 @pytest.mark.usefixtures("config_isolado")
