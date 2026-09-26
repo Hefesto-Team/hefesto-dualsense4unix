@@ -227,38 +227,14 @@ def _dubla_consertos(monkeypatch) -> tuple[Any, str]:
          "steam_input_jogos": ["Um Jogo"]})
 
 
-def _dubla_proton(monkeypatch) -> tuple[Any, str]:
-    from hefesto_dualsense4unix.integrations import proton_pin
-
-    travados = {"locked": 2, "skipped": 0, "errors": 0}
-    # `**_k`: o botão pede `todos=True` desde 18/09/2026 (ordem de 17/09).
-    monkeypatch.setattr(proton_pin, "lock_proton_for_all_games",
-                        lambda **_k: dict(travados), raising=False)
-    monkeypatch.setattr(proton_pin, "steam_running", lambda: False, raising=False)
-    # O clique 1 pergunta pelo pino no disco desde 18/09/2026, e o HOME de
-    # mentira não tem Steam: sem este dublê o botão recusa, com razão.
-    monkeypatch.setattr(proton_pin, "pino_instalado_nesta_maquina", lambda: True,
-                        raising=False)
-    return a09.refazer_proton, a09._daemon.format_proton_lock_result(travados)
-
-
-def _dubla_camadas(monkeypatch) -> tuple[Any, str]:
-    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    monkeypatch.setattr(cv, "censo", lambda *a, **k: ["um-prefixo"])
-    monkeypatch.setattr(cv, "pastas_compatdata", lambda *a, **k: ["/uma/pasta"])
-    monkeypatch.setattr(cv, "curar_todos", lambda *a, **k: [])
-    monkeypatch.setattr(a09._emulacao, "frase_do_censo",
-                        lambda p, bibliotecas=1: ("o censo", True, False))
-    monkeypatch.setattr(slo, "steam_game_running", lambda *a, **k: False)
-    return a09.procurar_camadas, a09._emulacao.frase_do_resultado([], devolver=False)
+# O Proton e as camadas SAÍRAM desta régua em 25/09/2026 (A-09-SISTEMA-EM-
+# TRES-SECOES-01): os dois viraram ligáveis de UM clique («Fixar Proton» e
+# «Corrigir Vulkan»), e não há segundo clique cuja pergunta pudesse ficar
+# velha no painel. O recibo deles continua indo ao diário.
 
 
 @pytest.mark.parametrize(("nome", "dublar"), [
     ("refazer-consertos", _dubla_consertos),
-    ("refazer-proton", _dubla_proton),
-    ("procurar-camadas", _dubla_camadas),
 ])
 def test_o_segundo_clique_limpa_o_painel_e_leva_o_recibo_ao_diario(
         monkeypatch, capsys, nome: str, dublar) -> None:

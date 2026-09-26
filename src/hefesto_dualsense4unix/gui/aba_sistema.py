@@ -789,7 +789,9 @@ def travas(leitura: Leitura) -> dict[str, str]:
             else "Não deu para saber se o serviço está pausado."
         )
     if not de_pe:
-        presas["desligar"] = "O serviço já está desligado."
+        # A chave é o gesto do botão do serviço desde 25/09/2026, quando o
+        # «Parar» e o «Retomar» viraram um botão só (`parar-ou-retomar`).
+        presas["parar-ou-retomar"] = "O serviço já está desligado."
         presas["reiniciar"] = "O serviço está desligado — não há o que reiniciar."
     # O `ver-plugins` saiu desta conta com o botão (SISTEMA-BOTOES-01, 13/09),
     # e o `ver-detalhes` com o dele (A-09-SISTEMA-EM-TRES-SECOES-01, 25/09).

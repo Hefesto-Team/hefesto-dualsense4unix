@@ -132,13 +132,21 @@ def test_as_seis_linhas_deixam_de_ser_o_travessao(a09, ctx):
         AssertionError: `bateria-impoe` continua no traço — o pacote está
         emitindo o endereço e a fonte dele não foi lida.
     """
+    # DESDE 25/09/2026 (A-09-SISTEMA-EM-TRES-SECOES-01) as linhas de estado
+    # moram no Status, uma lista só; as duas do Perfil de Bateria saíram por
+    # pedido dela. A régua cobra o mesmo: nenhuma pílula no traço.
+    import re
+
     p = a09.pacote(ctx)
-    for endereco in ("hefesto-estado", "hefesto-pausa", "hefesto-troca-de-perfil",
-                     "hefesto-ambiente", "bateria-impoe", "bateria-vale-para"):
-        assert endereco in p, f"o pacote parou de emitir `{endereco}`"
-        assert p[endereco] != "—", (
-            f"`{endereco}` continua no traço — o pacote está emitindo o "
-            f"endereço e a fonte dele não foi lida.")
+    lista = p[a09.CAMPO_DO_STATUS]
+    pilulas = re.findall(r'<span class="selo [a-z]+"><span class="sg">[^<]*</span>([^<]*)</span>',
+                         lista)
+    assert len(pilulas) == 4, lista
+    for ident in ("hefesto-estado", "hefesto-troca-de-perfil", "hefesto-ambiente"):
+        linha = re.search(r'data-id="' + ident + r'".*?</(?:div|a)>', lista)
+        assert linha, f"o Status parou de trazer `{ident}`"
+        assert '</span>—</span>' not in linha.group(0), (
+            f"`{ident}` continua no traço — a fonte dele não foi lida.")
 
 
 def test_a_faixa_lenta_nao_repete_o_subprocesso_a_cada_tique(a09, ctx):
@@ -443,14 +451,16 @@ def test_nenhuma_faixa_desta_aba_volta_ao_1fr_cru():
     """
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/aba09.py").read_text(
         encoding="utf-8")
-    for faixa in (".bloco2", ".saude-cols"):
+    # `.bloco2` SAIU em 25/09/2026 com a faixa do serviço; as faixas de hoje
+    # são as três da régua 5 do gerador.
+    for faixa in (".status3", ".avancadas", ".saude-cols"):
         regra = re.search(re.escape(faixa) + r"\{[^}]*grid-template-columns:([^;]*);",
                           fonte)
         assert regra, f"a faixa `{faixa}` sumiu do gerador — a régua ficou cega"
-        assert not re.search(r"(^|\s)1fr", regra.group(1)), (
+        assert not re.search(r"(^|\s)[12]fr", regra.group(1)), (
             f"a faixa `{faixa}` voltou ao `1fr` cru: {regra.group(1).strip()!r}. "
             f"O piso de `1fr` é o CONTEÚDO, e com os valores REAIS desta aba "
             f"isso estoura 27px (`.bloco2`) e 253px (`.saude-cols`).")
-    assert '".bloco2", ".saude-cols"' in fonte, (
+    assert '(".status3", ".avancadas", ".saude-cols")' in fonte, (
         "as duas faixas internas saíram da lista da régua 5 do gerador — foi "
         "por estarem de fora dela que o `1fr` cru sobreviveu ali.")

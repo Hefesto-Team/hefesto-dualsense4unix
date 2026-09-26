@@ -147,12 +147,12 @@ def test_o_primeiro_clique_arma_e_nao_para_nada(a09, ctx, janela):
 
         AssertionError: o primeiro clique mandou ['stop'] ao systemd
     """
-    a09.desligar(ctx, _clique(a09._rotulo_do_desenho("desligar")), None)
+    a09.desligar(ctx, _clique(a09._rotulo_do_desenho(a09.DESLIGAR)), None)
 
     assert janela.atos() == [], (
         f"o primeiro clique mandou {janela.atos()} ao systemd — ele tinha de "
         "ARMAR e mais nada.")
-    assert a09._armado_agora() == "desligar"
+    assert a09._armado_agora() == a09.DESLIGAR
 
 
 def test_o_botao_armado_veste_a_palavra_dela(a09, ctx):
@@ -167,11 +167,11 @@ def test_o_botao_armado_veste_a_palavra_dela(a09, ctx):
     """
     carga = a09.desligar(ctx, _clique("Parar o serviço"), None)
 
-    assert carga["blocos"]['[data-gesto="desligar"]'] == a09.CONFIRMA
+    assert carga["blocos"]['[data-gesto="parar-ou-retomar"]'] == a09.CONFIRMA
     # E OS OUTROS QUATRO NÃO SE MEXEM: armar um botão não pode pôr "Confirma?"
     # em cinco. Cada um continua com a palavra do desenho.
     for nome in a09.DESTRUTIVOS:
-        if nome != "desligar":
+        if nome != a09.DESLIGAR:
             assert carga["blocos"][f'[data-gesto="{nome}"]'] != a09.CONFIRMA
 
 
@@ -207,14 +207,14 @@ def test_o_segundo_clique_so_vale_com_o_rotulo_do_botao_armado(a09, ctx, janela)
     rótulo. Reprova dizendo que dois cliques na palavra do desenho pararam o
     serviço.
     """
-    rotulo = a09._rotulo_do_desenho("desligar")
+    rotulo = a09._rotulo_do_desenho(a09.DESLIGAR)
     a09.desligar(ctx, _clique(rotulo), None)
     a09.desligar(ctx, _clique(rotulo), None)
 
     assert janela.atos() == [], (
         f"dois cliques na palavra do desenho mandaram {janela.atos()} — o "
         "segundo tinha de REARMAR, não de agir.")
-    assert a09._armado_agora() == "desligar", "o segundo clique desarmou"
+    assert a09._armado_agora() == a09.DESLIGAR, "o segundo clique desarmou"
 
 
 def test_os_dois_cliques_param_o_servico_e_seguram_o_autostart(a09, ctx, janela):
@@ -229,7 +229,7 @@ def test_os_dois_cliques_param_o_servico_e_seguram_o_autostart(a09, ctx, janela)
     A MORDIDA: apague o `_matriz()._user_stopped_daemon = True`. Reprova dizendo
     que o desligamento não segura o autostart.
     """
-    a09.desligar(ctx, _clique(a09._rotulo_do_desenho("desligar")), None)
+    a09.desligar(ctx, _clique(a09._rotulo_do_desenho(a09.DESLIGAR)), None)
     carga = a09.desligar(ctx, _clique(a09.CONFIRMA), None)
 
     assert janela.atos() == ["stop"]
@@ -238,7 +238,7 @@ def test_os_dois_cliques_param_o_servico_e_seguram_o_autostart(a09, ctx, janela)
         "volta sozinho na próxima abertura da janela.")
     assert a09._armado_agora() == "", "o botão ficou armado depois de agir"
     # E o botão já volta a oferecer o caminho de volta, sem esperar o tique.
-    assert carga["blocos"]['[data-gesto="desligar"]'] == a09.ATIVAR
+    assert carga["blocos"]['[data-gesto="parar-ou-retomar"]'] == a09.ATIVAR
 
 
 def test_fora_do_prazo_ele_recusa_dizendo_e_nao_age(a09, ctx, janela, monkeypatch):
@@ -251,7 +251,7 @@ def test_fora_do_prazo_ele_recusa_dizendo_e_nao_age(a09, ctx, janela, monkeypatc
     A MORDIDA: tire o `raise` do ramo `if not armado`. Reprova dizendo que um
     clique de dez minutos depois parou o serviço.
     """
-    a09.desligar(ctx, _clique(a09._rotulo_do_desenho("desligar")), None)
+    a09.desligar(ctx, _clique(a09._rotulo_do_desenho(a09.DESLIGAR)), None)
     # O RELÓGIO É O DO PRODUTO, e o teste o EMPURRA em vez de digitar 21: quem
     # diz quanto dura o consentimento é `confirmacao.SEGUNDOS_PARA_CONFIRMAR`.
     a09._ARMADO["ate"] -= a09.segundos_para_confirmar() + 1
@@ -288,12 +288,12 @@ def test_o_tique_repoe_o_rotulo_quando_o_prazo_passa(a09, ctx):
     tique deixou a pergunta na tela depois do prazo.
     """
     a09.desligar(ctx, _clique("Parar o serviço"), None)
-    assert a09.pacote(ctx)["blocos"]['[data-gesto="desligar"]'] == a09.CONFIRMA
+    assert a09.pacote(ctx)["blocos"]['[data-gesto="parar-ou-retomar"]'] == a09.CONFIRMA
 
     a09._ARMADO["ate"] -= a09.segundos_para_confirmar() + 1
-    depois = a09.pacote(ctx)["blocos"]['[data-gesto="desligar"]']
+    depois = a09.pacote(ctx)["blocos"]['[data-gesto="parar-ou-retomar"]']
 
-    assert depois == a09._rotulo_do_desenho("desligar"), (
+    assert depois == a09._rotulo_do_desenho(a09.DESLIGAR), (
         f"o tique deixou {depois!r} no botão depois de o prazo passar.")
 
 
@@ -319,16 +319,16 @@ def test_armar_o_segundo_repoe_o_primeiro(a09, ctx, monkeypatch):
     defendida por aquela linha — e uma mordida que não morde é o instrumento
     mentindo sobre o que mede.
     """
-    from hefesto_dualsense4unix.integrations import proton_pin
-
-    monkeypatch.setattr(proton_pin, "steam_running", lambda: False)
-    monkeypatch.setattr(proton_pin, "pino_instalado_nesta_maquina", lambda: True)
+    # O «Refazer a fixação do Proton» virou o ligável «Fixar Proton» em
+    # 25/09/2026 e não pergunta mais (desligar desfaz); o segundo botão de dois
+    # tempos desta régua passou a ser o «Aplicar soluções nos lançadores».
     a09.desligar(ctx, _clique("Parar o serviço"), None)
-    carga = a09.refazer_proton(ctx, _clique("Refazer a fixação do Proton"), None)
+    carga = a09.aplicar_aos_jogos(
+        ctx, _clique("Aplicar soluções nos lançadores"), None)
 
-    assert carga["blocos"]['[data-gesto="refazer-proton"]'] == a09.CONFIRMA
-    assert carga["blocos"]['[data-gesto="desligar"]'] == a09._rotulo_do_desenho(
-        "desligar")
+    assert carga["blocos"]['[data-gesto="aplicar-aos-jogos"]'] == a09.CONFIRMA
+    assert carga["blocos"]['[data-gesto="parar-ou-retomar"]'] == a09._rotulo_do_desenho(
+        a09.DESLIGAR)
 
 
 def test_os_rotulos_saem_da_pagina_e_nao_de_uma_lista_aqui(a09):
@@ -367,7 +367,7 @@ def test_com_o_servico_parado_o_botao_oferece_ligar(a09, ctx_parado, janela):
     janela.status = "offline"
     a09._LENTO.clear()
 
-    assert a09.blocos_dos_botoes(False)['[data-gesto="desligar"]'] == a09.ATIVAR
+    assert a09.blocos_dos_botoes(False)['[data-gesto="parar-ou-retomar"]'] == a09.ATIVAR
 
 
 def test_o_pacote_veste_o_botao_mesmo_com_a_aba_muda(a09, ctx_parado, janela,
@@ -389,7 +389,7 @@ def test_o_pacote_veste_o_botao_mesmo_com_a_aba_muda(a09, ctx_parado, janela,
     carga = a09.pacote(ctx_parado)
 
     assert carga["sem_dono"]["tela"]["sem_dono"] is True
-    assert carga["blocos"]['[data-gesto="desligar"]'] == a09.ATIVAR
+    assert carga["blocos"]['[data-gesto="parar-ou-retomar"]'] == a09.ATIVAR
 
 
 def test_ligar_e_um_clique_so_e_desarma_a_trava_do_religa(a09, ctx_parado, janela,
