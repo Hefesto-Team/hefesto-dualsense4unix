@@ -39,6 +39,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     PonteConfirmada,
     Profile,
     ProfileModeConfig,
+    controles_em_economia,
     e_endereco_de_jogo,
     economia_da_mesa,
     economia_vale,
@@ -455,7 +456,9 @@ class ProfileManager:
         # e o controle que ligou a sua o põe só nele. A vista é memória: o
         # disco continua guardando o que ela escolheu, e desligar a economia
         # devolve tudo na próxima ativação. Ver `_perfil_na_economia`.
-        profile = _perfil_na_economia(profile, economia_da_mesa())
+        profile = _perfil_na_economia(
+            profile, economia_da_mesa(), controles_em_economia()
+        )
         left = build_from_name(profile.triggers.left.mode, profile.triggers.left.params)
         right = build_from_name(profile.triggers.right.mode, profile.triggers.right.params)
         settings = _to_led_settings(profile.leds)
@@ -2965,17 +2968,23 @@ def _controllers_na_economia(
     controllers: dict[str, ControllerOverrides] | None,
     profile: Profile,
     mesa: bool,
+    em_economia: frozenset[str] = frozenset(),
 ) -> dict[str, ControllerOverrides]:
     """O mapa por controle com a economia posta em quem ela vale.
 
-    O-MODO-ECONOMIA-POR-CONTROLE-01 (25/09/2026). É o CONSUMIDOR por peça do
-    ``ControllerOverrides.economia``: lê o campo de cada entrada, pergunta ao
-    dono da regra (:func:`economia_vale`) e devolve a peça com a luz, os
-    gatilhos e a vibração no teto (:func:`leds_na_economia`,
+    O-MODO-ECONOMIA-POR-CONTROLE-01 (25/09/2026). ``em_economia`` são os
+    ``uniq`` cujo controle ligou a sua economia (``maquina.json`` →
+    ``controles[<uniq>].economia``, :func:`controles_em_economia`), e ``mesa``
+    é o Perfil Global de Bateria em «Bateria longa». Para cada peça, pergunta
+    ao dono da regra (:func:`economia_vale`) e devolve a luz, os gatilhos e a
+    vibração dela no teto (:func:`leds_na_economia`,
     :func:`gatilhos_na_economia`, :func:`vibracao_na_economia`). Quem leva ao
     aparelho são os três conversores de sempre — ``_controllers_to_specs``,
     ``_controllers_to_led_scales`` e ``_controllers_to_rumble_scales`` —, que
     recebem este mapa em vez do do disco.
+
+    A peça que ligou a economia e que o perfil não cita ENTRA no mapa: a
+    economia é do controle, não do perfil, e vale em todo jogo.
 
     Com a MESA em economia, a seção global já saiu no teto
     (:func:`_perfil_na_economia`), então a peça só põe no teto o que ELA
@@ -2986,9 +2995,12 @@ def _controllers_na_economia(
     rumble = getattr(profile, "rumble", None)
     politica = getattr(rumble, "policy", None)
     custom = getattr(rumble, "custom_mult", None)
+    todos: dict[str, ControllerOverrides] = dict(controllers or {})
+    for uniq in sorted(em_economia):
+        todos.setdefault(uniq, ControllerOverrides())
     out: dict[str, ControllerOverrides] = {}
-    for uniq, cfg in (controllers or {}).items():
-        if not economia_vale(cfg.economia, mesa):
+    for uniq, cfg in todos.items():
+        if not economia_vale(uniq in em_economia, mesa):
             out[uniq] = cfg
             continue
         out[uniq] = cfg.model_copy(
@@ -3007,7 +3019,11 @@ def _controllers_na_economia(
     return out
 
 
-def _perfil_na_economia(profile: Profile, mesa: bool) -> Profile:
+def _perfil_na_economia(
+    profile: Profile,
+    mesa: bool,
+    em_economia: frozenset[str] = frozenset(),
+) -> Profile:
     """A VISTA do perfil que vai ao aparelho, com a economia posta.
 
     ``mesa`` é o Perfil Global de Bateria em «Bateria longa»
@@ -3017,16 +3033,15 @@ def _perfil_na_economia(profile: Profile, mesa: bool) -> Profile:
     vibração da mesa não é posta aqui: o funil já a corta
     (``core.rumble._effective_mult``), e pôr de novo cortaria duas vezes.
 
-    Perfil sem economia em lugar nenhum volta O MESMO objeto — a ativação de
-    quem não ligou nada é byte-idêntica à de antes desta sprint.
+    Mesa e controles sem economia devolvem O MESMO objeto — a ativação de quem
+    não ligou nada é byte-idêntica à de antes desta sprint.
     """
-    controllers = profile.controllers or {}
-    if not mesa and not any(
-        economia_vale(cfg.economia, False) for cfg in controllers.values()
-    ):
+    if not mesa and not em_economia:
         return profile
     update: dict[str, Any] = {
-        "controllers": _controllers_na_economia(controllers, profile, mesa),
+        "controllers": _controllers_na_economia(
+            profile.controllers, profile, mesa, em_economia
+        ),
     }
     if mesa:
         update["leds"] = leds_do_perfil_na_economia(profile.leds)

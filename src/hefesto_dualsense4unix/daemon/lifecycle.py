@@ -1106,14 +1106,17 @@ class Daemon:
         # `machine.declare` faz no "Aplicar" já vale no cálculo seguinte. Ver o
         # campo `DaemonConfig.orcamento_da_mesa`.
         self.config.orcamento_da_mesa = lambda: self._maquina.orcamento.teto
-        # O-MODO-ECONOMIA-POR-CONTROLE-01 (25/09/2026): a MESMA fonte, e o
-        # segundo leitor dela é a economia da luz e do gatilho — a «Bateria
-        # longa» põe o teto em todos na ativação do perfil. Lê pela config, e
-        # não por outro `lambda`, para que o gate que a suíte monta valha nos
-        # dois leitores. Ver `profiles.schema.economia_da_mesa`.
-        from hefesto_dualsense4unix.profiles.schema import registrar_teto_da_mesa
+        # O-MODO-ECONOMIA-POR-CONTROLE-01 (25/09/2026): o terceiro consumidor
+        # da declaração, e é a economia de bateria — a da mesa inteira
+        # («Bateria longa», o `orcamento.teto` acima) e a de cada controle
+        # (`controles[<uniq>].economia`). Mesma disciplina: a fonte fecha sobre
+        # `self`, então o rebind do `machine.declare` vale na próxima ativação
+        # do perfil. Ver `profiles.schema.economia_da_mesa`.
+        from hefesto_dualsense4unix.profiles.schema import (
+            registrar_declaracao_da_mesa,
+        )
 
-        registrar_teto_da_mesa(lambda: self.config.orcamento_da_mesa())
+        registrar_declaracao_da_mesa(lambda: self._maquina)
         # QUATRO-MICROFONES-01 (22/08/2026): o segundo consumidor, e é a ponte
         # de microfone POR CONTROLE. Mesma disciplina — a fonte fecha sobre
         # `self`, então o "Aplicar" vale sem reiniciar o daemon.

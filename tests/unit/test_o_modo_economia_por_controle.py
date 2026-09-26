@@ -15,7 +15,9 @@ a vibração ganha teto e não some, o gatilho gasta menos motor e mantém o efe
    rádio), o que cada um recebe com e sem a economia.
 3. A REGRA entre o global e o do controle, e a mesa em «Bateria longa» ligando
    em todos sem cortar a vibração duas vezes.
-4. O ESCRITOR que a tela chama, e o que ele deixa no disco.
+4. ONDE MORA: na declaração da mesa, ao lado do global — a economia do
+   controle atravessa a troca de perfil, e o escritor que a tela manda pelo
+   ``machine.declare`` não apaga o resto do controle.
 
 MORDIDAS (o que arrancar para ver reprovar) — cada teste diz a sua no corpo.
 MAC só da faixa forjada (aa:bb:cc).
@@ -49,13 +51,20 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
     RumbleConfig,
     TriggerConfig,
-    com_a_economia_do_controle,
+    controles_em_economia,
+    declaracao_da_economia,
     economia_vale,
     gatilho_na_economia,
     leds_na_economia,
     origem_da_economia,
-    registrar_teto_da_mesa,
+    registrar_declaracao_da_mesa,
     vibracao_na_economia,
+)
+from hefesto_dualsense4unix.utils.maquina import (
+    ControleDeclarado,
+    MaquinaConfig,
+    OrcamentoDeclarado,
+    fundir_declaracao,
 )
 from tests.unit.test_backend_multi_controller import _FakeHandle, _null_evdev
 
@@ -92,9 +101,19 @@ AMOSTRAS: dict[str, list[Any]] = {
 @pytest.fixture(autouse=True)
 def _mesa_sem_registro() -> Iterator[None]:
     """A fonte da mesa é estado de módulo: cada teste começa e termina sem ela."""
-    registrar_teto_da_mesa(None)
+    registrar_declaracao_da_mesa(None)
     yield
-    registrar_teto_da_mesa(None)
+    registrar_declaracao_da_mesa(None)
+
+
+def _declarar(teto: str | None = None, economia: tuple[str, ...] = ()) -> MaquinaConfig:
+    """A declaração da mesa que o daemon teria — e registrada como a viva."""
+    maquina = MaquinaConfig(
+        orcamento=OrcamentoDeclarado(teto=teto),  # type: ignore[arg-type]
+        controles={u: ControleDeclarado(economia=True) for u in economia},
+    )
+    registrar_declaracao_da_mesa(lambda: maquina)
+    return maquina
 
 
 # ---------------------------------------------------------------------------
@@ -151,7 +170,8 @@ def test_o_gatilho_aninhado_tambem_entra_na_economia() -> None:
         mode="MultiPositionFeedback", params=[[0], [1], [2], [3], [4], [5], [6], [7], [8], [8]]
     )
     depois = gatilho_na_economia(antes)
-    planos = [(sub_a[0], sub_d[0]) for sub_a, sub_d in zip(antes.params, depois.params, strict=True)]  # type: ignore[index]
+    pares = zip(antes.params, depois.params, strict=True)
+    planos = [(sub_a[0], sub_d[0]) for sub_a, sub_d in pares]  # type: ignore[index]
     assert all((a > 0) == (d > 0) and d <= a for a, d in planos)
     assert planos[-1] == (8, 4)
     build_from_name(depois.mode, depois.params)
@@ -218,7 +238,8 @@ def test_a_vibracao_tem_teto_e_nao_some(da_peca: str | None, do_perfil: str | No
     antes = _mult(do_perfil) if dela is None else _mult(da_peca, custom)
     assert no_motor > 0.0, "a economia calou o motor"
     assert no_motor <= economia + 1e-9, f"passou do teto: {no_motor}"
-    assert no_motor == pytest.approx(min(antes, economia)), "a economia puxou para baixo do escolhido"
+    assert no_motor == pytest.approx(min(antes, economia)), (
+        "a economia puxou para baixo do escolhido")
 
 
 def test_as_barras_de_motor_sobrevivem_a_economia() -> None:
@@ -285,8 +306,13 @@ def _o_que_cada_um_recebe(inst: Any, handles: list[_FakeHandle], perfil: Profile
 
 @pytest.mark.parametrize("transporte", ["USB", "BT"])
 @pytest.mark.parametrize("alvo", [0, 1, 2, 3], ids=["P1", "P2", "P3", "P4"])
-def test_so_o_controle_que_ligou_gasta_menos_e_continua_com_tudo(alvo: int, transporte: str) -> None:
+def test_so_o_controle_que_ligou_gasta_menos_e_continua_com_tudo(
+    alvo: int, transporte: str
+) -> None:
     """O backend de verdade, quatro peças: só a que ligou muda, e nada apaga.
+
+    O perfil NÃO cita a peça: a economia é do controle (declaração da mesa), e
+    vale no perfil que estiver ativo.
 
     MORDIDA: em ``ProfileManager.apply``, apague a linha
     ``profile = _perfil_na_economia(...)`` — o alvo recebe o mesmo que os
@@ -294,10 +320,9 @@ def test_so_o_controle_que_ligou_gasta_menos_e_continua_com_tudo(alvo: int, tran
     """
     inst, handles = _mesa_de_quatro(transporte, alvo)
     sem = _o_que_cada_um_recebe(inst, handles, _perfil())
+    _declarar(economia=(UNIQS[alvo],))
     inst, handles = _mesa_de_quatro(transporte, alvo)
-    com = _o_que_cada_um_recebe(
-        inst, handles, _perfil({UNIQS[alvo]: ControllerOverrides(economia=True)})
-    )
+    com = _o_que_cada_um_recebe(inst, handles, _perfil())
     for i in range(4):
         if i != alvo:
             assert com[i] == sem[i], f"P{i + 1} mudou sem ter ligado a economia"
@@ -316,11 +341,11 @@ def test_so_o_controle_que_ligou_gasta_menos_e_continua_com_tudo(alvo: int, tran
 
 def test_as_luzes_de_numero_do_controle_vao_ao_fraco() -> None:
     """O degrau das luzes de número sai no `OutputSpec` da peça, e só dela."""
-    perfil = _perfil({UNIQS[1]: ControllerOverrides(economia=True)})
+    perfil = _perfil()
     perfil = perfil.model_copy(
         update={"leds": perfil.leds.model_copy(update={"player_led_brightness": "forte"})}
     )
-    vista = _perfil_na_economia(perfil, mesa=False)
+    vista = _perfil_na_economia(perfil, mesa=False, em_economia=frozenset({UNIQS[1]}))
     specs = _controllers_to_specs(vista.controllers, vista.leds)
     from hefesto_dualsense4unix.core.led_control import degrau_do_brilho_das_luzes
 
@@ -360,7 +385,7 @@ def test_a_mesa_em_bateria_longa_liga_a_economia_em_todos() -> None:
     """
     inst, handles = _mesa_de_quatro("BT", 1)
     sem = _o_que_cada_um_recebe(inst, handles, _perfil())
-    registrar_teto_da_mesa(lambda: "economia")
+    _declarar(teto="economia")
     inst, handles = _mesa_de_quatro("BT", 1)
     com = _o_que_cada_um_recebe(inst, handles, _perfil())
     for i in range(4):
@@ -379,9 +404,10 @@ def test_sob_a_mesa_a_peca_nao_fura_o_teto_nem_corta_duas_vezes() -> None:
     perfil = _perfil({
         UNIQS[0]: ControllerOverrides(rumble=ControllerRumbleOverride(policy="max")),
         UNIQS[1]: ControllerOverrides(rumble=ControllerRumbleOverride(policy="economia")),
-        UNIQS[2]: ControllerOverrides(economia=True),
     })
-    vista = _controllers_na_economia(perfil.controllers, perfil, mesa=True)
+    vista = _controllers_na_economia(
+        perfil.controllers, perfil, mesa=True, em_economia=frozenset({UNIQS[2]})
+    )
     escalas = _controllers_to_rumble_scales(vista, perfil.rumble)
     assert escalas.get(UNIQS[0], 1.0) == 1.0
     assert escalas[UNIQS[1]] == pytest.approx(_mult("economia"))
@@ -400,60 +426,86 @@ def test_fonte_da_mesa_que_levanta_nao_derruba_a_ativacao() -> None:
     def quebra() -> str:
         raise OSError("maquina.json ilegível")
 
-    registrar_teto_da_mesa(quebra)
+    registrar_declaracao_da_mesa(quebra)
     assert schema.economia_da_mesa() is False
-    registrar_teto_da_mesa(lambda: "balanceado")
+    assert controles_em_economia() == frozenset()
+    _declarar(teto="balanceado")
     assert schema.economia_da_mesa() is False
-    registrar_teto_da_mesa(lambda: "economia")
+    _declarar(teto="economia", economia=(UNIQS[2],))
     assert schema.economia_da_mesa() is True
+    assert controles_em_economia() == frozenset({UNIQS[2]})
 
 
 # ---------------------------------------------------------------------------
-# 4. O ESCRITOR — o que a tela chama, e o que fica no disco
+# 4. ONDE MORA — a declaração da mesa, ao lado do global
 # ---------------------------------------------------------------------------
 
 
-def test_o_escritor_liga_desliga_e_nao_deixa_rastro() -> None:
-    """Ligar grava ``true``; desligar APAGA a chave, e a entrada vazia some.
+def test_a_economia_do_controle_atravessa_a_troca_de_perfil() -> None:
+    """Ligada no P2, ela vale no perfil do jogo que abrir depois.
 
-    O resto do override da peça continua parcial: a luz que só falava do
-    brilho não passa a falar da cor.
+    É a razão de ela morar na declaração da mesa e não no perfil: a bateria é
+    do controle. No perfil, a troca automática para o perfil de um jogo a
+    apagaria, e ela teria de ligar de novo em cada jogo.
 
-    MORDIDA: faça o escritor gravar ``economia=False`` ao desligar — o disco
-    guarda uma chave que um Hefesto de antes recusaria, e reprova.
+    MORDIDA: em ``ProfileManager.apply``, passe ``frozenset()`` no lugar de
+    ``controles_em_economia()`` — o P2 volta a gastar tudo e reprova.
     """
-    parcial = ControllerOverrides(leds=LedsConfig.model_validate({"lightbar_brightness": 0.5}))
-    perfil = _perfil({UNIQS[0]: parcial})
-
-    ligado = com_a_economia_do_controle(perfil, UNIQS[0], True)
-    assert ligado is not None
-    disco = ligado.controllers[UNIQS[0]].model_dump(exclude_unset=True)
-    assert disco == {"leds": {"lightbar_brightness": 0.5}, "economia": True}
-    assert com_a_economia_do_controle(ligado, UNIQS[0], True) is None
-
-    desligado = com_a_economia_do_controle(ligado, UNIQS[0], False)
-    assert desligado is not None
-    assert desligado.controllers[UNIQS[0]].model_dump(exclude_unset=True) == {
-        "leds": {"lightbar_brightness": 0.5}
-    }
-
-    so_ela = com_a_economia_do_controle(_perfil(), UNIQS[3], True)
-    assert so_ela is not None
-    volta = com_a_economia_do_controle(so_ela, UNIQS[3], False)
-    assert volta is not None and UNIQS[3] not in volta.controllers
+    _declarar(economia=(UNIQS[1],))
+    outro = Profile(name="um_jogo", match=MatchAny(),
+                    leds=LedsConfig(lightbar=(255, 0, 0), lightbar_brightness=1.0))
+    for perfil in (_perfil(), outro):
+        inst, handles = _mesa_de_quatro("BT", 1)
+        recebido = _o_que_cada_um_recebe(inst, handles, perfil)
+        assert max(recebido[1][0]) < max(recebido[0][0]), perfil.name
+        assert recebido[1][4] < recebido[0][4], perfil.name
 
 
-def test_o_perfil_com_a_economia_atravessa_o_disco(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """``save_profile`` grava a chave e ``load_profile`` a devolve."""
-    from hefesto_dualsense4unix.profiles import loader as loader_module
+def test_o_escritor_liga_desliga_e_nao_apaga_o_resto_do_controle() -> None:
+    """O corpo do ``machine.declare``: liga com ``true``, desliga com ``null``.
 
-    def fake_profiles_dir(ensure: bool = False) -> Any:
-        tmp_path.mkdir(parents=True, exist_ok=True)
-        return tmp_path
+    A fusão desce no dicionário, então o microfone e a cor do mesmo controle
+    ficam. E desligar é ``null`` presente (sobrescreve), nunca a chave ausente.
 
-    monkeypatch.setattr(loader_module, "profiles_dir", fake_profiles_dir)
-    perfil = com_a_economia_do_controle(_perfil(), UNIQS[2], True)
-    assert perfil is not None
-    loader_module.save_profile(perfil)
-    lido = loader_module.load_profile(perfil.name)
-    assert lido.controllers[UNIQS[2]].economia is True
+    MORDIDA: faça o desligar omitir a chave — a economia fica ligada no disco
+    e o «desligado» reprova.
+    """
+    disco = MaquinaConfig(
+        controles={UNIQS[1]: ControleDeclarado(microfone=False, cor="Cobalt Blue")}
+    ).model_dump()
+    ligado = fundir_declaracao(disco, declaracao_da_economia("AA:BB:CC:00:00:02", True))
+    maquina = MaquinaConfig.model_validate(ligado)
+    assert maquina.controles[UNIQS[1]].economia is True
+    assert maquina.controles[UNIQS[1]].microfone is False
+    assert maquina.controles[UNIQS[1]].cor == "Cobalt Blue"
+    registrar_declaracao_da_mesa(lambda: maquina)
+    assert controles_em_economia() == frozenset({UNIQS[1]})
+
+    desligado = MaquinaConfig.model_validate(
+        fundir_declaracao(ligado, declaracao_da_economia(UNIQS[1], False))
+    )
+    assert desligado.controles[UNIQS[1]].economia is None
+    assert desligado.controles[UNIQS[1]].microfone is False
+    registrar_declaracao_da_mesa(lambda: desligado)
+    assert controles_em_economia() == frozenset()
+
+    with pytest.raises(ValueError):
+        declaracao_da_economia("nao-e-endereco", True)
+
+
+def test_a_economia_atravessa_o_disco() -> None:
+    """``gravar_maquina_com_descartes`` grava a chave e ``carregar_maquina`` a lê."""
+    from pathlib import Path
+
+    from hefesto_dualsense4unix.utils import maquina as maquina_mod
+
+    assert not str(maquina_mod.caminho_da_maquina()).startswith(
+        str(Path("/home/vitoriamaria/.config"))
+    ), "a suíte ia escrever no maquina.json dela"
+    resultado = maquina_mod.gravar_maquina_com_descartes(
+        declaracao_da_economia(UNIQS[3], True)
+    )
+    assert resultado.gravou
+    lida = maquina_mod.carregar_maquina()
+    registrar_declaracao_da_mesa(lambda: lida)
+    assert controles_em_economia() == frozenset({UNIQS[3]})
