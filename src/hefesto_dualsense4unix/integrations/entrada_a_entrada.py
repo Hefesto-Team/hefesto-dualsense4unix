@@ -73,6 +73,15 @@ tique (``censo_do_barramento`` e ``entradas_do_gabinete``, os donos dessa
 leitura), e SÓ enquanto a cerimônia está aberta: a regra de «nunca em tique» é
 da aba montada, não da janela que ela abriu de propósito.
 
+E A LEITURA NUNCA É NO FIO DA JANELA (O-MAPEAR-NAO-CONGELA-A-JANELA-01,
+26/09/2026). O censo lê ``product`` e ``bMaxPower``, e o kernel serve os dois
+sob o lock do aparelho — o mesmo que ele segura enquanto enumera o DualSense
+que ela acabou de encaixar. A leitura de 8 ms virava 5, 10 e 15 s, a janela
+congelava e o COSMIC a derrubava: *«dá um crash feio»*. O tique pinta a última
+foto (``foto_sem_esperar``) e a próxima leitura sai num fio próprio
+(:class:`_VooDaLeitura`); a trava de cada dono guarda só a troca de estado,
+nunca uma leitura. <!-- noqa-acento: citação literal dela -->
+
 ONDE GRAVA — UM DONO, E ELE JÁ EXISTIA
 ---------------------------------------
 
@@ -101,6 +110,7 @@ O QUE ELE NÃO FAZ
 from __future__ import annotations
 
 import threading
+import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -222,6 +232,83 @@ _VID_DA_SONY = "054c"
 #: mais provavelmente são conectores internos, e são as que o «Não alcanço»
 #: tira da conta primeiro.
 _ENCAIXE_DE_FORA = "hotplug"
+
+#: QUANTO A LEITURA DO ``/sys`` PODE DEMORAR ANTES DE A FOTO DIZER «procurando»
+#: (O-MAPEAR-NAO-CONGELA-A-JANELA-01). Em repouso a leitura inteira custa 8 ms,
+#: medido; enquanto o kernel enumera o controle que acabou de chegar, ela
+#: espera o lock do aparelho por 3 a 15 s. Um segundo separa os dois com folga,
+#: e é o que impede a tela de mostrar a porta de ANTES como a da vez enquanto
+#: o controle já está noutra.
+FOLEGO_DA_LEITURA_S = 1.0
+
+
+# ---------------------------------------------------------------------------
+# A leitura fora do fio da janela
+# ---------------------------------------------------------------------------
+
+
+def _num_fio_proprio(trabalho: Callable[[], None], nome: str) -> None:
+    threading.Thread(target=trabalho, name=nome, daemon=True).start()
+
+
+class _VooDaLeitura:
+    """UMA leitura do ``/sys`` de cada vez, num fio próprio — quem pede não espera.
+
+    O MOLDE É O ``LeitorDeCor.disparar`` (``interface/mesa_viva.py``): reserva,
+    fio ``daemon=True``, e a volta — dê certo ou não — solta o voo. O tique
+    chama :meth:`disparar` a cada volta; com uma leitura no ar ele não pede
+    outra, e a fila não cresce enquanto o kernel segura o aparelho.
+
+    ``fio`` é quem põe o trabalho para correr; o default abre a thread.
+    """
+
+    def __init__(
+        self,
+        ler: Callable[[], object],
+        *,
+        nome: str,
+        fio: Callable[[Callable[[], None], str], None] | None = None,
+    ) -> None:
+        self._ler = ler
+        self._nome = nome
+        self._fio = fio or _num_fio_proprio
+        self._trava = threading.Lock()
+        #: Quando a leitura em voo saiu — ``None`` é nenhuma no ar.
+        self._desde: float | None = None
+
+    def disparar(self) -> bool:
+        """Pede a próxima leitura. ``False`` quando uma já está no ar."""
+        with self._trava:
+            if self._desde is not None:
+                return False
+            self._desde = time.monotonic()
+        try:
+            self._fio(self._voar, self._nome)
+        except Exception:  # defensivo — sem fio não há leitura, e o voo se solta
+            logger.debug("leitura_de_fundo_nao_saiu", nome=self._nome, exc_info=True)
+            self._pousar()
+            return False
+        return True
+
+    def no_ar(self) -> bool:
+        return self._desde is not None
+
+    def demorando(self) -> bool:
+        """A leitura no ar passou do fôlego? É o kernel segurando o aparelho."""
+        desde = self._desde
+        return desde is not None and time.monotonic() - desde >= FOLEGO_DA_LEITURA_S
+
+    def _voar(self) -> None:
+        try:
+            self._ler()
+        except Exception:  # defensivo — a leitura nunca derruba o fio
+            logger.debug("leitura_de_fundo_falhou", nome=self._nome, exc_info=True)
+        finally:
+            self._pousar()
+
+    def _pousar(self) -> None:
+        with self._trava:
+            self._desde = None
 
 
 # ---------------------------------------------------------------------------
@@ -348,10 +435,17 @@ class LacoDaEntrada:
     (``gravar``). O default de cada um é o do sistema; a régua troca todos, e
     nenhum caminho de ``/sys`` dela é tocado.
 
-    UMA TRAVA, porque o tique do piloto lê o barramento num fio próprio (desde
-    15/09 a janela não segura o laço do GTK) e o gesto dela chega pelo laço do
-    GTK: sem a trava, um ``responder`` no meio de um ``olhar`` gravaria a
-    pergunta que acabou de mudar.
+    UMA TRAVA, porque o olhar corre num fio próprio e o gesto dela chega por
+    outro: sem a trava, um ``responder`` no meio de um ``olhar`` gravaria a
+    pergunta que acabou de mudar. **A TRAVA NUNCA SEGURA UMA LEITURA DO
+    ``/sys``** (O-MAPEAR-NAO-CONGELA-A-JANELA-01): cada gesto lê antes de
+    tomá-la, e ela guarda só a troca de estado. ESTA FRASE DIZIA *"o tique do
+    piloto lê o barramento num fio próprio (desde 15/09 a janela não segura o
+    laço do GTK)"*, e era fato errado: o fio de 15/09 era o do IPC; o tique da
+    aba 08 chamava ``olhar`` no fio da janela até esta sprint.
+
+    O TIQUE CHAMA :meth:`foto_sem_esperar`, que não lê nada nem toma a trava:
+    pinta a última foto e pede a próxima leitura num fio próprio.
     """
 
     def __init__(
@@ -361,15 +455,23 @@ class LacoDaEntrada:
         entradas: Callable[[], Sequence[NoDeEntrada]] | None = None,
         carregar: Callable[[], MaquinaConfig] | None = None,
         gravar: Callable[[Mapping[str, Any]], Recibo] | None = None,
+        fio: Callable[[Callable[[], None], str], None] | None = None,
     ) -> None:
         self._ler = ler or _ler_o_barramento
         self._entradas = entradas or _listar_as_entradas
         self._carregar = carregar or carregar_maquina
         self._gravar = gravar or declarar_a_maquina
         self._trava = threading.Lock()
+        #: A sessão da cerimônia: cada começar e cada parar a trocam, e a
+        #: leitura que voltar de outra sessão não anda nada.
+        self._sessao = 0
         self._zerar(PARADO)
+        #: A última foto — o que o tique pinta sem esperar.
+        self._pintada: dict[str, Any] = self._foto()
+        self._voo = _VooDaLeitura(self.olhar, nome="entrada-a-entrada", fio=fio)
 
     def _zerar(self, fase: str) -> None:
+        self._sessao += 1
         self._fase = fase
         # -- sentada --
         #: Os lugares das perguntas, na ordem em que apareceram: a pergunta da
@@ -402,11 +504,12 @@ class LacoDaEntrada:
         ``lugar`` é o atalho «Onde fica?» de um cartão (o ``data-alvo`` do
         ``mapa-do-radio.html``): a pergunta que cobre aquele lugar vem primeiro.
         """
+        censo = self._ler_o_censo()
         with self._trava:
             self._zerar(SENTADA)
             self._primeiro = lugar or None
-            self._andar_sentada(self._ler_o_censo())
-            return self._foto()
+            self._andar_sentada(censo)
+            return self._pintar()
 
     def olhar(self) -> dict[str, Any]:
         """Um tique: relê o que a fase precisa e anda o laço. Parado e no fim,
@@ -417,17 +520,33 @@ class LacoDaEntrada:
         ``ler_o_barramento``) ou nenhum nó de entrada lido diriam "nenhuma
         pergunta" e "nenhuma vaga", e a fase pularia para o fim por um tique
         que não viu nada.
+
+        A LEITURA É FORA DA TRAVA, e a que voltar com a fase ou a sessão
+        trocadas (ela fechou, respondeu a última, levantou) não anda nada.
         """
         with self._trava:
-            if self._fase == SENTADA:
-                censo = self._ler_o_censo()
-                if not _nao_sei(censo):
+            fase, sessao = self._fase, self._sessao
+            if fase not in (SENTADA, EM_PE):
+                return self._pintar()
+        censo = self._ler_o_censo()
+        lidas = self._ler_as_entradas() if fase == EM_PE else ()
+        with self._trava:
+            if self._sessao == sessao and self._fase == fase and not _nao_sei(censo):
+                if fase == SENTADA:
                     self._andar_sentada(censo)
-            elif self._fase == EM_PE:
-                censo, lidas = self._ler_o_censo(), self._ler_as_entradas()
-                if not _nao_sei(censo) and lidas:
+                elif lidas:
                     self._andar_em_pe(censo, lidas)
-            return self._foto()
+            return self._pintar()
+
+    def foto_sem_esperar(self) -> dict[str, Any]:
+        """O que o TIQUE pinta: a última foto, sem ler nada e sem tomar a trava.
+
+        Com a cerimônia aberta numa fase que lê, a próxima leitura sai num fio
+        próprio (:class:`_VooDaLeitura`) — uma de cada vez.
+        """
+        if self._fase in (SENTADA, EM_PE):
+            self._voo.disparar()
+        return self._pintada
 
     def responder(self, face: str) -> Gravacao:
         """A resposta dela para a pergunta da vez — grava na hora, e vale para o
@@ -443,8 +562,11 @@ class LacoDaEntrada:
         with self._trava:
             if self._fase != SENTADA or not self._perguntas:
                 raise RuntimeError("não há pergunta para responder")
+        censo, lidas = self._ler_o_censo(), self._ler_as_entradas()
+        with self._trava:
+            if self._fase != SENTADA or not self._perguntas:
+                raise RuntimeError("não há pergunta para responder")
             pergunta = self._perguntas[0]
-            censo = self._ler_o_censo()
             if _nao_sei(censo):
                 # A leitura não respondeu: "não sei" não é "o aparelho saiu", e
                 # a pergunta da vez fica onde está.
@@ -454,8 +576,8 @@ class LacoDaEntrada:
                 # O aparelho saiu entre o tique e o toque: gravar agora poria a
                 # resposta dela num buraco vazio. A pergunta da vez anda.
                 self._andar_sentada(censo)
+                self._pintar()
                 raise RuntimeError("o aparelho da pergunta saiu do barramento")
-            lidas = self._ler_as_entradas()
             gravacao = _gravar_as_portas(
                 [
                     (porta, _nos_do_aparelho(porta.caminho, lidas))
@@ -475,6 +597,7 @@ class LacoDaEntrada:
                 self._perguntas = self._perguntas[1:]
                 if not self._perguntas:
                     self._fase = FIM
+            self._pintar()
             return gravacao
 
     def pular(self) -> dict[str, Any]:
@@ -494,7 +617,7 @@ class LacoDaEntrada:
             elif self._fase == EM_PE and self._vagas:
                 self._fora_hoje.update(self._vagas[0].furo.nos)
                 self._tirar_a_vaga_da_vez()
-            return self._foto()
+            return self._pintar()
 
     def levantar(self) -> dict[str, Any]:
         """«Vou mostrar agora»: guarda a leitura de agora como referência e
@@ -502,10 +625,14 @@ class LacoDaEntrada:
         with self._trava:
             if self._fase != FIM:
                 raise RuntimeError("a fase em pé só começa no fim da fase sentada")
+        censo, lidas = self._ler_o_censo(), self._ler_as_entradas()
+        with self._trava:
+            if self._fase != FIM:
+                raise RuntimeError("a fase em pé só começa no fim da fase sentada")
             self._fase = EM_PE
             self._referencia = set()
-            self._andar_em_pe(self._ler_o_censo(), self._ler_as_entradas())
-            return self._foto()
+            self._andar_em_pe(censo, lidas)
+            return self._pintar()
 
     def nao_alcanco(self) -> dict[str, Any]:
         """«Não alcanço»: tira a vaga da vez da conta DE VEZ.
@@ -533,12 +660,13 @@ class LacoDaEntrada:
                 self._ultima = Gravacao("", "", "", False, MOTIVO_SEM_LUGAR)
             self._fora_hoje.update(vaga.furo.nos)
             self._tirar_a_vaga_da_vez()
-            return self._foto()
+            return self._pintar()
 
     def parar(self) -> None:
         """«Já chega por hoje»: fecha, e nada se perde — cada resposta já foi."""
         with self._trava:
             self._zerar(PARADO)
+            self._pintar()
 
     def estado(self) -> dict[str, Any]:
         """O que o piloto da aba 08 pinta. Não lê nada."""
@@ -643,6 +771,11 @@ class LacoDaEntrada:
         except Exception:  # defensivo — o sysfs some sob a mão
             logger.debug("entrada_a_entrada_nos_falharam", exc_info=True)
             return ()
+
+    def _pintar(self) -> dict[str, Any]:
+        """A foto de agora vira a que o tique pinta. Chamada sob a trava."""
+        self._pintada = self._foto()
+        return self._pintada
 
     def _foto(self) -> dict[str, Any]:
         fase = self._fase
@@ -1577,16 +1710,26 @@ class MapearAsPortas:
     Sem GTK e sem IPC, como o laço: tudo o que lê entra por argumento, com o
     default do sistema, e a gravação é :func:`_gravar_no_mapa`.
 
-    O GESTO DELA: ``comecar`` → ela encaixa o DualSense numa porta → o tique
-    (``olhar``) acha a porta que ele acabou de mostrar e ela vira a PORTA DA
-    VEZ, com o medido e o que já se sabe dela → ``gravar(nome=…, lugar=…)``
-    → ela leva o controle para a próxima. ``gravar(chave=…)`` é o mesmo gesto
-    para uma porta da lista (renomear e reposicionar sem encaixar nada).
+    O GESTO DELA: ``abrir`` → ela encaixa o DualSense numa porta → o tique
+    (``foto_sem_esperar``, que pede o ``olhar`` num fio próprio) acha a porta
+    que ele acabou de mostrar e ela vira a PORTA DA VEZ, com o medido e o que
+    já se sabe dela → ``gravar(nome=…, lugar=…)`` → ela leva o controle para
+    a próxima. ``gravar(chave=…)`` é o mesmo gesto para uma porta da lista
+    (renomear e reposicionar sem encaixar nada). ``comecar`` é o ``abrir`` com
+    a primeira leitura na hora, para quem pode esperar o ``/sys``.
 
     SÓ O DUALSENSE MOSTRA UMA PORTA, pela mesma razão do laço: um dongle que
     re-enumera (o -71) não é «a porta que ela plugou». E a porta da vez é a
     que APARECEU: com dois controles já no cabo (a mesa de quatro), o que
     estava encaixado antes de ela começar não conta — só se for o único.
+
+    O TIQUE NÃO ESPERA O ``/sys`` (O-MAPEAR-NAO-CONGELA-A-JANELA-01, queixa
+    dela de 26/09: *«o mapear entradas toda hora tá fechando o app»*). Trocar
+    o controle de entrada com a tela aberta fazia o kernel segurar o lock do
+    aparelho enquanto enumerava, o censo esperava o lock no ``bMaxPower``, e a
+    janela esperava o censo: 5, 10 e 15 s. Agora a leitura é de um fio próprio
+    e a trava guarda só a troca de estado — um «Terminar» nunca espera o
+    ``/sys``. <!-- noqa-acento: citação literal dela -->
     """
 
     def __init__(
@@ -1598,6 +1741,7 @@ class MapearAsPortas:
         gravar: Callable[[Mapping[str, Any]], Recibo] | None = None,
         storm: Mapping[str, int] | None = None,
         adaptadores: Callable[[], Sequence[Any]] | None = None,
+        fio: Callable[[Callable[[], None], str], None] | None = None,
     ) -> None:
         self._ler = ler or _ler_o_barramento
         self._entradas = entradas or _listar_as_entradas
@@ -1612,46 +1756,61 @@ class MapearAsPortas:
         self._storm: Mapping[str, int] | None = None
         self._ultima: Gravacao | None = None
         self._feitas = 0
+        #: A sessão do fluxo: cada abrir e cada parar a trocam, e a leitura que
+        #: voltar de outra sessão não anda nada.
+        self._sessao = 0
+        #: A próxima leitura é a PRIMEIRA da sessão: é ela que diz o que já
+        #: estava encaixado quando ela abriu a tela.
+        self._primeira = False
+        #: A última foto que um fio tirou nesta sessão — ``None`` enquanto a
+        #: primeira não voltou.
+        self._pintada: dict[str, Any] | None = None
+        self._voo = _VooDaLeitura(self.olhar, nome="mapear-as-portas", fio=fio)
 
     # -- os gestos -----------------------------------------------------------
 
-    def comecar(self) -> dict[str, Any]:
-        """Abre o fluxo. Se UM DualSense já está numa porta, ela é a da vez."""
+    def abrir(self) -> None:
+        """Abre o fluxo SEM ler nada — o gesto da tela. A primeira leitura
+        (o log do -71 e o barramento) sai no fio do tique, e até ela voltar a
+        foto diz ``procurando``."""
         with self._trava:
             self._fase = ESPERANDO
             self._da_vez = ()
+            self._antes = frozenset()
             self._ultima = None
             self._feitas = 0
-            self._storm = (
-                self._storm_dado if self._storm_dado is not None else _storm_do_log()
-            )
-            censo, lidas = self._ler_o_censo(), self._ler_as_entradas()
-            agora = _buracos_com_dualsense(censo, lidas)
-            self._antes = frozenset(agora)
-            if len(agora) == 1:
-                self._da_vez = agora[0]
-                self._fase = NA_PORTA
-            return self._foto(censo, lidas)
+            self._storm = None
+            self._primeira = True
+            self._sessao += 1
+            self._pintada = None
+
+    def comecar(self) -> dict[str, Any]:
+        """Abre o fluxo e lê na hora. Se UM DualSense já está numa porta, ela é
+        a da vez. Quem chama espera o ``/sys``; a tela usa :meth:`abrir`."""
+        self.abrir()
+        return self.olhar()
 
     def olhar(self) -> dict[str, Any]:
         """Um tique: a porta em que o DualSense acabou de aparecer vira a da vez.
 
         Parado, não lê nada. A leitura que não respondeu não anda o fluxo —
-        "não sei" não é "o controle saiu".
+        "não sei" não é "o controle saiu". A leitura é FORA da trava, e a que
+        voltar de outra sessão (ela fechou ou reabriu no meio) não anda nada.
         """
         with self._trava:
             if self._fase == PARADO:
                 return self._foto_parada()
-            censo, lidas = self._ler_o_censo(), self._ler_as_entradas()
-            if _nao_sei(censo) or not lidas:
-                return self._foto(censo, lidas)
-            agora = _buracos_com_dualsense(censo, lidas)
-            novos = [nos for nos in agora if nos not in self._antes]
-            if novos:
-                self._da_vez = novos[0]
-                self._fase = NA_PORTA
-            self._antes = frozenset(agora)
-            return self._foto(censo, lidas)
+            sessao, primeira = self._sessao, self._primeira
+        storm = self._ler_o_storm() if primeira else None
+        censo, lidas, adaptadores = self._ler_o_sys()
+        with self._trava:
+            if self._sessao != sessao or self._fase == PARADO:
+                return self._foto_de_agora()
+            if primeira and self._primeira:
+                self._storm = storm
+            self._andar(censo, lidas)
+            self._pintada = self._foto(censo, lidas, adaptadores)
+            return self._pintada
 
     def gravar(
         self,
@@ -1668,6 +1827,12 @@ class MapearAsPortas:
         porta já tinha. Só o nome, numa porta sem lugar no gabinete, grava só
         o nome: o número e a face nascem quando ela disser onde fica.
 
+        A PORTA DA VEZ É A DA LEITURA DESTE GESTO, e não a da última foto: com
+        o ``/sys`` lento (o kernel enumerando o controle que ela acabou de
+        mudar de porta), a tela pode ainda mostrar a porta de antes quando ela
+        salva. O gesto lê de novo e anda o fluxo antes de escolher — o nome vai
+        para onde o DualSense está.
+
         Levanta ``ValueError`` quando o gesto chega errado (nada a gravar, um
         lugar que o produto não conhece) e
         ``RuntimeError`` quando não há porta (nenhuma da vez, chave que não
@@ -1676,10 +1841,15 @@ class MapearAsPortas:
         if nome is None and lugar is None:
             raise ValueError("nada a gravar: nem nome nem lugar")
         with self._trava:
+            sessao = self._sessao
+        censo, lidas, adaptadores = self._ler_o_sys()
+        with self._trava:
             maquina = self._carregar()
             if lugar is not None and not _face_aceita(lugar, maquina):
                 raise ValueError(f"{lugar!r} não é um lugar do gabinete que o produto conhece")
-            censo, lidas = self._ler_o_censo(), self._ler_as_entradas()
+            aberto = self._sessao == sessao and self._fase != PARADO
+            if chave is None and aberto:
+                self._andar(censo, lidas)
             mapa = ler_o_mapa(
                 maquina=maquina,
                 censo=censo,
@@ -1712,23 +1882,101 @@ class MapearAsPortas:
             self._ultima = gravacao
             if gravacao.gravou:
                 self._feitas += 1
+            if aberto:
+                # O que ela acabou de salvar aparece no tique seguinte, e não
+                # só quando a próxima leitura do fio voltar.
+                self._pintada = self._foto(censo, lidas, adaptadores)
             return gravacao
 
     def parar(self) -> None:
-        """Fecha. Nada se perde: cada porta já foi ao disco quando ela gravou."""
+        """Fecha. Nada se perde: cada porta já foi ao disco quando ela gravou.
+
+        Nunca espera o ``/sys``: a leitura em voo é de outra sessão quando
+        voltar, e não anda nada."""
         with self._trava:
             self._fase = PARADO
             self._da_vez = ()
             self._antes = frozenset()
+            self._primeira = False
+            self._sessao += 1
+            self._pintada = None
 
     def estado(self) -> dict[str, Any]:
-        """O que a tela pinta — relê o mapa (o fluxo aberto é de propósito)."""
+        """O que a tela pintaria, relendo o mapa agora (o fluxo aberto é de
+        propósito) — sem andar o fluxo. Quem chama espera o ``/sys``; o tique
+        usa :meth:`foto_sem_esperar`."""
         with self._trava:
             if self._fase == PARADO:
                 return self._foto_parada()
-            return self._foto(self._ler_o_censo(), self._ler_as_entradas())
+            sessao = self._sessao
+        censo, lidas, adaptadores = self._ler_o_sys()
+        with self._trava:
+            if self._sessao != sessao or self._fase == PARADO:
+                return self._foto_de_agora()
+            return self._foto(censo, lidas, adaptadores)
+
+    def foto_sem_esperar(self) -> dict[str, Any]:
+        """O que o TIQUE pinta — não lê o ``/sys`` e não toma a trava.
+
+        Com o fluxo aberto, a próxima leitura sai num fio próprio
+        (:class:`_VooDaLeitura`, uma de cada vez), e a foto é a última que um
+        fio tirou. Ela vem com ``procurando`` enquanto a primeira da sessão
+        não voltou, e quando a leitura no ar passa do fôlego
+        (:data:`FOLEGO_DA_LEITURA_S`) — aí sem a porta da vez, que pode ser a
+        de antes.
+        """
+        if self._fase == PARADO:
+            return self._foto_parada()
+        self._voo.disparar()
+        return self._foto_de_agora()
 
     # -- interno -------------------------------------------------------------
+
+    def _andar(self, censo: Censo, lidas: Sequence[NoDeEntrada]) -> None:
+        """Um passo do fluxo com uma leitura nova. Chamada sob a trava."""
+        if _nao_sei(censo) or not lidas:
+            return
+        agora = _buracos_com_dualsense(censo, lidas)
+        if self._primeira:
+            self._primeira = False
+            if len(agora) == 1:
+                self._da_vez = agora[0]
+                self._fase = NA_PORTA
+        else:
+            novos = [nos for nos in agora if nos not in self._antes]
+            if novos:
+                self._da_vez = novos[0]
+                self._fase = NA_PORTA
+        self._antes = frozenset(agora)
+
+    def _foto_de_agora(self) -> dict[str, Any]:
+        """A foto sem leitura nenhuma: a parada, a última, ou a que procura."""
+        if self._fase == PARADO:
+            return self._foto_parada()
+        foto = self._pintada
+        if foto is not None and not self._voo.demorando():
+            return foto
+        base = foto if foto is not None else {
+            "estado": self._fase,
+            "portas": None,
+            "lugares": list(LUGARES_DA_PORTA),
+            "bluetooth_sem_porta": 0,
+            "feitas": self._feitas,
+            _CHAVE_DA_ULTIMA: self._ultima_gravada(),
+        }
+        return {**base, "porta": None, "procurando": True}
+
+    def _ler_o_storm(self) -> Mapping[str, int] | None:
+        return self._storm_dado if self._storm_dado is not None else _storm_do_log()
+
+    def _ler_o_sys(self) -> tuple[Censo, tuple[NoDeEntrada, ...], tuple[Any, ...]]:
+        """O barramento, os nós de entrada e os adaptadores — sempre FORA da trava."""
+        censo, lidas = self._ler_o_censo(), self._ler_as_entradas()
+        try:
+            adaptadores = tuple(self._adaptadores())
+        except Exception:  # defensivo — o /sys/class/bluetooth some sob a mão
+            adaptadores = ()
+        return censo, lidas, adaptadores
 
     def _ler_o_censo(self) -> Censo:
         try:
@@ -1758,11 +2006,11 @@ class MapearAsPortas:
             _CHAVE_DA_ULTIMA: self._ultima_gravada(),
         }
 
-    def _foto(self, censo: Censo, lidas: Sequence[NoDeEntrada]) -> dict[str, Any]:
-        try:
-            adaptadores = tuple(self._adaptadores())
-        except Exception:  # defensivo — o /sys/class/bluetooth some sob a mão
-            adaptadores = ()
+    def _foto(
+        self, censo: Censo, lidas: Sequence[NoDeEntrada], adaptadores: Sequence[Any]
+    ) -> dict[str, Any]:
+        """A foto da leitura que já está na mão. Chamada sob a trava: o
+        ``maquina.json`` é lido aqui, depois de qualquer gravação."""
         mapa = ler_o_mapa(
             maquina=self._carregar(),
             censo=censo,
@@ -2174,6 +2422,7 @@ __all__ = [
     "FACE_QUE_E_ALTO",
     "FACE_QUE_E_PERTO",
     "FIM",
+    "FOLEGO_DA_LEITURA_S",
     "LUGARES_DA_PORTA",
     "LUGAR_FRENTE",
     "LUGAR_HUB",

@@ -250,30 +250,30 @@ def _dongles(recarregar: bool = False) -> Any:
     return _DONGLES
 
 
-#: O CENSO DO BARRAMENTO, lido UMA vez e renovado pelo "Examinar Portas" — a
-#: mesma regra do `_mesa_do_radio` acima, e pelo mesmo motivo: é varredura de
-#: `/sys`, e o tique desta aba é de 100 ms.
+#: O CENSO DO BARRAMENTO, lido UMA vez por janela e NUM FIO PRÓPRIO: é
+#: varredura de `/sys` que o kernel pode segurar por segundos (ver
+#: :func:`_censo`), e o tique desta aba é de 100 ms.
 _CENSO: Any = None
 
 
 def _censo(recarregar: bool = False) -> Any:
     """Tudo que o barramento tem, para o motor julgar as entradas.
 
-    `None` quando a leitura falhou, e ele é diferente de um censo VAZIO: sem
-    censo o motor não julga, e o mapa mostra as entradas sem veredito — o que é
-    honesto. Um censo vazio faria toda entrada parecer livre.
-    """
-    global _CENSO
-    if _CENSO is None or recarregar:
-        try:
-            perfil._com_o_src()
-            from hefesto_dualsense4unix.integrations.censo_do_barramento import (
-                ler_o_barramento,
-            )
+    `None` quando a leitura falhou OU AINDA NÃO VOLTOU, e ele é diferente de
+    um censo VAZIO: sem censo o motor não julga, e o mapa mostra as entradas
+    sem veredito — o que é honesto. Um censo vazio faria toda entrada livre.
 
-            _CENSO = ler_o_barramento()
-        except Exception:
-            return None
+    A LEITURA É DE UM FIO PRÓPRIO (O-MAPEAR-NAO-CONGELA-A-JANELA-01): o
+    censo lê `product` e `bMaxPower`, que o kernel serve sob o lock do
+    aparelho, e com um controle enumerando o primeiro tique desta aba
+    esperava segundos no fio da janela. `recarregar` lê na hora: é de quem
+    já está fora dele (o fio de um gesto).
+    """
+    if recarregar:
+        return _ler_o_censo_agora()
+    if _CENSO is None:
+        # a volta do fio guarda em `_CENSO`; até lá, «não sei»
+        _em_fundo("censo", _ler_o_censo_agora, 0.0)
     return _CENSO
 
 
@@ -6078,10 +6078,9 @@ def _campos_da_cerimonia() -> dict[str, Any]:
     from hefesto_dualsense4unix.app.widgets import calibrar_entradas as calib
     from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
 
-    laco = _laco()
-    foto = laco.estado()
-    if foto.get("estado") not in (None, ee.PARADO, ee.FIM):
-        foto = laco.olhar()
+    # A FOTO SEM ESPERAR (O-MAPEAR-NAO-CONGELA-A-JANELA-01): o `olhar` lê o
+    # `/sys`, e com ela encaixando o DualSense o kernel o segura por segundos.
+    foto = _laco().foto_sem_esperar()
     contador, quem = "", ""
     if foto.get("estado") == ee.SENTADA:
         contador = (f'entrada {foto.get("passo")} de {foto.get("total")} '
@@ -6882,11 +6881,15 @@ def checkup_atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 # nome e adiciona o posicionamento»*. A tela não guarda estado: a foto do dono
 # é o estado, e o tique a pinta. <!-- noqa-acento: citação literal dela -->
 # ---------------------------------------------------------------------------
-#: O que a tela diz em cada estado do fluxo (`foto["estado"]`).
+#: O que a tela diz em cada estado do fluxo (`foto["estado"]`). O `procurando`
+#: não é estado do fluxo: é a foto que ainda espera o `/sys` — a primeira da
+#: vez, ou a leitura que o kernel está segurando porque o controle acabou de
+#: chegar (`entrada_a_entrada.FOLEGO_DA_LEITURA_S`).
 MAPEAR_DIZ = {
     "parado": "Conecte o DualSense por USB numa entrada do computador.",
     "esperando": "Conecte o DualSense por USB numa entrada do computador.",
     "porta": "Entrada encontrada. Dê um nome e o lugar dela, e salve.",
+    "procurando": "Procurando…",
 }
 
 
@@ -6895,6 +6898,22 @@ def _o_mapa() -> Any:
     from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
 
     return ee.o_mapa()
+
+
+def _ler_o_censo_agora() -> Any:
+    """`ler_o_barramento`, guardado em `_CENSO` quando responde. BLOQUEIA:
+    corre no fio de :func:`_censo`, ou no de um gesto — nunca no da janela."""
+    global _CENSO
+    try:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.integrations.censo_do_barramento import (
+            ler_o_barramento,
+        )
+
+        _CENSO = ler_o_barramento()
+    except Exception:
+        return None
+    return _CENSO
 
 
 def html_da_porta_medida(porta: dict[str, Any] | None) -> str:
@@ -6935,22 +6954,32 @@ def html_das_entradas_mapeadas(portas: Any) -> str:
 
 
 def campos_do_mapear(foto: dict[str, Any] | None = None) -> dict[str, str]:
-    """Os campos da tela do Mapear, a partir da foto do dono."""
+    """Os campos da tela do Mapear, a partir da foto do dono.
+
+    O TIQUE NÃO LÊ O `/sys` — O-MAPEAR-NAO-CONGELA-A-JANELA-01, queixa dela de
+    26/09: *«o mapear entradas toda hora tá fechando o app»*. Aqui estavam o
+    `estado()` e o `olhar()` do dono, as duas leituras no fio da janela; com
+    ela trocando o controle de entrada, o kernel segurava o aparelho e o
+    tique custava 5, 10 e 15 s. A foto é a última que o fio do dono tirou.
+    Enquanto a foto vem `procurando`, a luz pulsa e a lista fica como estava
+    — ou vazia, se nenhuma leitura voltou ainda. <!-- noqa-acento: citação literal dela -->
+    """
     if foto is None:
         try:
-            mapa = _o_mapa()
-            foto = mapa.estado()
-            if foto.get("estado") != "parado":
-                foto = mapa.olhar()
+            foto = _o_mapa().foto_sem_esperar()
         except Exception:
             foto = {"estado": "parado"}
+    procurando = bool(foto.get("procurando"))
     estado = str(foto.get("estado") or "parado")
     feitas = foto.get("feitas") or 0
+    portas = foto.get("portas")
     return {
-        "mapear-diz": MAPEAR_DIZ.get(estado, MAPEAR_DIZ["parado"]),
-        "mapear-estado": estado,
-        "mapear-porta": html_da_porta_medida(foto.get("porta")),
-        "mapear-lista": html_das_entradas_mapeadas(foto.get("portas")),
+        "mapear-diz": MAPEAR_DIZ.get("procurando" if procurando else estado,
+                                     MAPEAR_DIZ["parado"]),
+        "mapear-estado": "esperando" if procurando else estado,
+        "mapear-porta": html_da_porta_medida(None if procurando else foto.get("porta")),
+        "mapear-lista": (_monta().NADA_A_DIZER if procurando and portas is None
+                         else html_das_entradas_mapeadas(portas)),
         "mapear-conta": ("Nenhuma entrada salva ainda." if not feitas
                          else f"{feitas} {'entrada salva' if feitas == 1 else 'entradas salvas'}."),
     }
@@ -6958,10 +6987,15 @@ def campos_do_mapear(foto: dict[str, Any] | None = None) -> dict[str, str]:
 
 @gesto("08-conexoes.html", "mapear-comecar")
 def mapear_comecar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """A tela do Mapear abriu: o dono começa a esperar a porta da vez."""
+    """A tela do Mapear abriu: o dono começa a esperar a porta da vez.
+
+    SÓ ABRE, E NÃO LÊ: o log do -71 e o barramento vão para o fio do dono
+    (O-MAPEAR-NAO-CONGELA-A-JANELA-01), e a tela diz «Procurando…» até a
+    primeira foto voltar.
+    """
     global _LOGICA
     _LOGICA = None
-    _o_mapa().comecar()
+    _o_mapa().abrir()
 
 
 @gesto("08-conexoes.html", "mapear-gravar",
