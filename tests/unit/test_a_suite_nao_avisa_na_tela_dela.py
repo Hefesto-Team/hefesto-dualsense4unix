@@ -62,22 +62,53 @@ def _caches_zerados() -> Iterator[None]:
     avisos.reset_throttle_cache()
 
 
+#: O `jeepney` de mentira, em texto, porque o processo filho precisa do MESMO:
+#: um `jeepney.io.blocking` cujo `open_dbus_connection` anota e RECUSA.
+#:
+#: POR QUE DE MENTIRA, e não o de verdade com o `open_dbus_connection` trocado:
+#: o `jeepney` é do extra `cosmic`, e o CI instala só o `.[dev]`. Com um
+#: `importorskip` aqui, seis dos sete casos PULAVAM no CI — medido com o
+#: `jeepney` escondido, 25/09/2026: `1 passed, 6 skipped` — e a trava podia
+#: sair sem o CI ver. Portão que só pula é portão que não existe. O `notify`
+#: importa o `jeepney` na chamada, então vê o de mentira de `sys.modules`.
+_JEEPNEY_DE_MENTIRA = textwrap.dedent(
+    """
+    import sys
+    import types
+
+    aberturas = []
+
+    def _abrir(bus="SESSION", **_):
+        aberturas.append(bus)
+        raise ConnectionRefusedError("barramento de mentira: nada sai daqui")
+
+    jeepney = types.ModuleType("jeepney")
+    jeepney.DBusAddress = lambda *a, **k: None
+    jeepney.new_method_call = lambda *a, **k: None
+    jeepney_io = types.ModuleType("jeepney.io")
+    jeepney_io_blocking = types.ModuleType("jeepney.io.blocking")
+    jeepney_io_blocking.open_dbus_connection = _abrir
+    jeepney.io = jeepney_io
+    jeepney_io.blocking = jeepney_io_blocking
+    """
+)
+
+
 @pytest.fixture
 def aberturas_do_barramento(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """Cada vez que o `notify` tenta abrir um barramento, uma linha aqui.
 
-    O dublê fica no `jeepney.io.blocking` de verdade — o `notify` o importa na
-    chamada, então vê o dublê — e ele RECUSA depois de anotar: nenhum caso
-    deste arquivo chega ao barramento da sessão dela, nem com a cura arrancada.
+    O dublê é um `jeepney` inteiro de mentira em `sys.modules` (ver
+    `_JEEPNEY_DE_MENTIRA`), e ele RECUSA depois de anotar: nenhum caso deste
+    arquivo chega ao barramento da sessão dela, nem com a cura arrancada — e
+    todos rodam também onde o `jeepney` não está instalado, como no CI.
     """
-    blocking = pytest.importorskip("jeepney.io.blocking")
-    aberturas: list[str] = []
-
-    def _abrir(bus: str = "SESSION", **_: Any) -> Any:
-        aberturas.append(bus)
-        raise ConnectionRefusedError("barramento de mentira: nada sai daqui")
-
-    monkeypatch.setattr(blocking, "open_dbus_connection", _abrir)
+    modulos: dict[str, Any] = {}
+    exec(_JEEPNEY_DE_MENTIRA, modulos)
+    monkeypatch.setitem(sys.modules, "jeepney", modulos["jeepney"])
+    monkeypatch.setitem(sys.modules, "jeepney.io", modulos["jeepney_io"])
+    monkeypatch.setitem(sys.modules, "jeepney.io.blocking", modulos["jeepney_io_blocking"])
+    aberturas: list[str] = modulos["aberturas"]
     return aberturas
 
 
@@ -138,18 +169,13 @@ def test_o_escape_herdado_nao_atravessa_para_o_teste() -> None:
     )
 
 
-_FILHO = textwrap.dedent(
+_FILHO = _JEEPNEY_DE_MENTIRA + textwrap.dedent(
     """
-    import sys
-    from jeepney.io import blocking
-
-    aberturas = []
-
-    def _abrir(bus="SESSION", **_):
-        aberturas.append(bus)
-        raise ConnectionRefusedError("barramento de mentira")
-
-    blocking.open_dbus_connection = _abrir
+    sys.modules.update({
+        "jeepney": jeepney,
+        "jeepney.io": jeepney_io,
+        "jeepney.io.blocking": jeepney_io_blocking,
+    })
     from hefesto_dualsense4unix.integrations import desktop_notifications as avisos
 
     assert "pytest" not in sys.modules
@@ -160,7 +186,6 @@ _FILHO = textwrap.dedent(
 
 
 def _aberturas_no_filho(ambiente: dict[str, str]) -> int:
-    pytest.importorskip("jeepney.io.blocking")
     saida = subprocess.run(
         [sys.executable, "-c", _FILHO],
         env=ambiente,
@@ -256,6 +281,10 @@ class _ServidorDeAvisos:
 def barramento_de_mentira(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> Iterator[_ServidorDeAvisos]:
+    # Aqui o `jeepney` é o DE VERDADE, e pular sem ele é honesto: o servidor de
+    # avisos fala o protocolo, e sem o `jeepney` o `notify` não alcança
+    # barramento nenhum. Os casos de cima, com o de mentira, seguram a trava
+    # no CI.
     pytest.importorskip("jeepney.io.blocking")
     dbus_daemon = shutil.which("dbus-daemon")
     if dbus_daemon is None:
