@@ -383,6 +383,37 @@ class TestOPopenDeSempre:
         assert ab.caminho == "unidade"
         assert ab.unidade is not None
 
+    def test_a_espera_do_systemd_run_cabe_no_teto_do_mesmo_toque(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O botão PS chama o ``abrir`` INLINE no laço de leitura do daemon
+        (``hotkey.py``, REVIEW-M5-PGREP-BLOCK-01), depois do ``pgrep`` e do
+        ``wmctrl`` do mesmo toque. Um gerenciador que não responde segura a
+        entrada dos quatro controles pela espera inteira: ela não passa do
+        teto que aqueles dois já têm.
+
+        MORDE: volte ``ESPERA_DO_SYSTEMD_RUN_S`` para os 10 s com que nasceu e
+        a primeira comparação reprova; troque o ``timeout=`` do
+        ``_executar_de_verdade`` por outro valor e a segunda reprova.
+        """
+        esperas: dict[str, float] = {}
+
+        def _run(cmd: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+            esperas[cmd[0]] = kwargs["timeout"]
+            return subprocess.CompletedProcess(list(cmd), 0, stdout="", stderr="")
+
+        monkeypatch.setattr(steam_launcher.subprocess, "run", _run)
+        steam_launcher._default_pgrep(["pgrep", "-x", "steam"])
+        steam_launcher._default_wmctrl(["wmctrl", "-lx"])
+        teto = min(esperas["pgrep"], esperas["wmctrl"])
+        assert teto >= fds.ESPERA_DO_SYSTEMD_RUN_S
+
+        # O dublê de `subprocess.run` já está no lugar: a pergunta da suíte
+        # pode dizer "não" sem que nada chegue ao gerenciador de verdade.
+        monkeypatch.setattr(fds, "_a_suite_esta_rodando", lambda: False)
+        fds._executar_de_verdade(["systemd-run", "--user", "--", "steam"], {})
+        assert esperas["systemd-run"] == fds.ESPERA_DO_SYSTEMD_RUN_S
+
 
 # ---------------------------------------------------------------------------
 # 4 — a suíte nunca chega ao gerenciador de verdade

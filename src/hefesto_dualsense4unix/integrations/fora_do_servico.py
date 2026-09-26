@@ -125,8 +125,12 @@ FORMAS_DE_VIVER: tuple[str, ...] = ("ExitType=cgroup", "KillMode=process")
 #: que fica ativa, vazia, depois de o aplicativo fechar.
 PREFIXO_DA_UNIDADE = "app-hefesto-"
 
-#: Quanto se espera o ``systemd-run`` voltar. Medido: 6 a 12 ms.
-ESPERA_DO_SYSTEMD_RUN_S = 10.0
+#: Quanto se espera o ``systemd-run`` voltar. Medido em 26/09: 6 a 12 ms ele
+#: sozinho, 12 a 20 ms o ``abrir`` inteiro. O teto é o do ``pgrep`` e do
+#: ``wmctrl`` do mesmo toque (``steam_launcher``): o botão PS chama isto INLINE
+#: no laço de leitura do daemon, e um gerenciador que não responde seguraria a
+#: entrada dos quatro controles pelo tempo inteiro da espera.
+ESPERA_DO_SYSTEMD_RUN_S = 2.0
 
 #: ``systemd-run`` recusa nome de variável fora disto (medido com
 #: ``BASH_FUNC_x%%``: «Cannot assign environment variable»).

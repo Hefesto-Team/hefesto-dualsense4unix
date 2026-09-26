@@ -17,7 +17,8 @@ Contrato:
   - NUNCA usa `shell=True`.
   - Execução em thread worker e responsabilidade do chamador; a função em si
     faz chamadas subprocess sincronas de curta duracao (pgrep/wmctrl, e o
-    `systemd-run`, medido em 6 a 12 ms) e não espera a Steam.
+    `systemd-run`, medido em 6 a 20 ms e com o mesmo teto de 2 s) e não
+    espera a Steam.
 """
 from __future__ import annotations
 
