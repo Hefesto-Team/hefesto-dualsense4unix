@@ -947,6 +947,31 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             '1fr)); }\n'
             '  .edita .seg .escolha { justify-content: center; text-align: ce'
             'nter; }\n'
+            '  /* «Arruma o alinhamento dos blocos» — 26/09/2026. O «Voltar» '
+            'entra na linha\n'
+            '     do título, os três modos têm a mesma largura, as colunas de'
+            ' entradas têm a\n'
+            '     mesma largura em todas as chapas, e a bandeja começa na alt'
+            'ura da primeira\n'
+            '     chapa e acompanha a rolagem. */\n'
+            '  .topo { padding-left: 0 !important; align-items: center; }\n'
+            '  .topo > a[href="08-conexoes.html"] { position: static !importa'
+            'nt; }\n'
+            '  .modos { display: grid; grid-template-columns: repeat(3, 8.5re'
+            'm); }\n'
+            '  .modos .modo { justify-content: center; text-align: center; }\n'
+            '  .chapa.grade-tras { grid-template-columns: repeat(2, 17rem); }'
+            '\n'
+            '  .chapa.fileira { grid-template-columns: repeat(3, 17rem); }\n'
+            '  .palco > .bandeja { margin-top: 29px; position: sticky; top: .'
+            '5rem; }\n'
+            '  @media (max-width: 640px) {\n'
+            '    .chapa.fileira, .chapa.grade-tras { grid-template-columns: m'
+            'inmax(0, 1fr); }\n'
+            '    .modos { grid-template-columns: repeat(3, minmax(0, 1fr)); }'
+            '\n'
+            '    .palco > .bandeja { margin-top: 0; position: static; }\n'
+            '  }\n'
             '</style>\n'
             '</head>'
         ),
@@ -1062,14 +1087,14 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             '        \'<button class="modo" data-modo="mesa" aria-pressed="\' +'
             ' (modo === "mesa") + \'">Atual</button>\'\n'
             '      + \'<button class="modo destaque" data-modo="ideal" aria-pr'
-            'essed="\' + (modo === "ideal") + \'">Melhorar</button>\'\n'
+            'essed="\' + (modo === "ideal") + \'">Sugestões</button>\'\n'
             '      + \'<button class="modo" data-modo="mao" aria-pressed="\' + '
-            '(modo === "mao") + \'">Plugar</button>\';\n'
+            '(modo === "mao") + \'">Adicionar</button>\';\n'
         ),
         porque=(
             '26/09/2026, pedido dela: *«muda os nomes dos botões pra algo fác'
-            'il de entender. No máximo 1 palavra.»* O `data-modo` não muda: é'
-            ' endereço.'
+            'il de entender. No máximo 1 palavra.»* Os nomes são dela: *«Atua'
+            'l, Sugestões, Adicionar»*. O `data-modo` não muda: é endereço.'
         ),
     ),
     Edicao(
@@ -1124,7 +1149,7 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             '            + (sem.length > 1 ? "s" : "") + " fora do mapa</b>" '
             ': "")\n'
             '        + (pend ? \' · clique em <b style="color:var(--color-ok)"'
-            '>Melhorar</b>\' : "")\n'
+            '>Sugestões</b>\' : "")\n'
             '        + "</p>";\n'
             '    }\n'
         ),
@@ -1442,7 +1467,7 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             'la». Os\n'
             '     conectivos ficam minúsculos no meio da frase, que é como el'
             'a mesma escreve\n'
-            '     («Gestão dos Controles», «Perfil de Desempenho»). Caminho d'
+            '     («Gestão de Controles», «Perfil de Desempenho»). Caminho d'
             'e barramento,\n'
             '     número e código não mudam. Roda no fim de cada pintura, sob'
             're a página\n'
@@ -1490,6 +1515,22 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             '26/09/2026, pedidos dela: *«ao clicar em um desses usb mapeados '
             'eu pudesse setar que tem tal coisa lá»* e *«Todas as palavras In'
             'iciam com a letra maíscula»*.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '[{"n": "1", "usb": 2, "onde": "pc", "par": "2"}, {"n": "2", "usb'
+            '": 2, "onde": "pc", "par": "1"}]'
+        ),
+        depois=(
+            '[{"n": "1", "usb": 3, "onde": "pc", "par": "2"}, {"n": "2", "usb'
+            '": 3, "onde": "pc", "par": "1"}]'
+        ),
+        porque=(
+            '26/09/2026, resposta dela: as duas entradas da frente são AZUIS '
+            '(USB 3.0), e as 7 e 8 da traseira são pretas ou brancas (USB 2.0'
+            '). O firmware dizia o contrário da frente; o desenho mostra o qu'
+            'e ela declarou.'
         ),
     ),
 )

@@ -320,6 +320,22 @@
   .edita .seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .3rem; }
   .edita .seg.dois { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .edita .seg .escolha { justify-content: center; text-align: center; }
+  /* «Arruma o alinhamento dos blocos» — 26/09/2026. O «Voltar» entra na linha
+     do título, os três modos têm a mesma largura, as colunas de entradas têm a
+     mesma largura em todas as chapas, e a bandeja começa na altura da primeira
+     chapa e acompanha a rolagem. */
+  .topo { padding-left: 0 !important; align-items: center; }
+  .topo > a[href="08-conexoes.html"] { position: static !important; }
+  .modos { display: grid; grid-template-columns: repeat(3, 8.5rem); }
+  .modos .modo { justify-content: center; text-align: center; }
+  .chapa.grade-tras { grid-template-columns: repeat(2, 17rem); }
+  .chapa.fileira { grid-template-columns: repeat(3, 17rem); }
+  .palco > .bandeja { margin-top: 29px; position: sticky; top: .5rem; }
+  @media (max-width: 640px) {
+    .chapa.fileira, .chapa.grade-tras { grid-template-columns: minmax(0, 1fr); }
+    .modos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .palco > .bandeja { margin-top: 0; position: static; }
+  }
 </style>
 </head>
 <body>
@@ -382,7 +398,7 @@
       {"id": "hub", "tipo": "Hub", "nome": "TP-Link UH700", "sementeDoCaminho": "3-1", "cor": "#6272a4", "classe": "hub", "usb": 3, "mA": 100}
     ],
     "faces": [
-      {"nome": "Frente do gabinete", "forma": "coluna", "perto": true, "regiao": "pc", "portas": [{"n": "1", "usb": 2, "onde": "pc", "par": "2"}, {"n": "2", "usb": 2, "onde": "pc", "par": "1"}]},
+      {"nome": "Frente do gabinete", "forma": "coluna", "perto": true, "regiao": "pc", "portas": [{"n": "1", "usb": 3, "onde": "pc", "par": "2"}, {"n": "2", "usb": 3, "onde": "pc", "par": "1"}]},
       {"nome": "Traseira", "forma": "grade-tras", "regiao": "pc", "donaDaFaixaPc": true, "portas": [{"n": "3", "usb": 3, "onde": "pc", "par": "4"}, {"n": "4", "usb": 3, "onde": "pc", "par": "3"}, {"n": "5", "usb": 3, "onde": "pc", "par": "6"}, {"n": "6", "usb": 3, "onde": "pc", "par": "5"}, {"n": "7", "usb": 2, "onde": "pc", "par": "8"}, {"n": "8", "usb": 2, "onde": "pc", "par": "7"}]},
       {"nome": "Hub, no alto do rack", "forma": "fileira", "alto": true, "regiao": "hub", "portas": [{"n": "9", "usb": 3, "onde": "hub", "pos": 1, "par": "10"}, {"n": "10", "usb": 3, "onde": "hub", "pos": 2, "par": "9"}, {"n": "11", "usb": 3, "onde": "hub", "pos": 3, "par": "12"}, {"n": "12", "usb": 3, "onde": "hub", "pos": 4, "par": "11"}, {"n": "13", "usb": 3, "onde": "hub", "pos": 5, "par": "14"}, {"n": "14", "usb": 3, "onde": "hub", "pos": 6, "par": "13"}, {"n": "15", "usb": 3, "onde": "hub", "pos": 7, "filho": {"n": "15a", "usb": 3, "onde": "hub", "pos": 9, "esticada": true, "cabo": "extensor de 1 m, declarado por você"}}]}
     ],
@@ -1242,7 +1258,7 @@
   /* ══ TODA PALAVRA COM MAIÚSCULA — 26/09/2026 ════════════════════════════
      Pedido dela: «Todas as palavras Iniciam com a letra maiúscula». Os
      conectivos ficam minúsculos no meio da frase, que é como ela mesma escreve
-     («Gestão dos Controles», «Perfil de Desempenho»). Caminho de barramento,
+     («Gestão de Controles», «Perfil de Desempenho»). Caminho de barramento,
      número e código não mudam. Roda no fim de cada pintura, sobre a página
      inteira, e é idempotente. */
   var MINUSCULAS = ["a", "o", "as", "os", "e", "de", "da", "das", "do", "dos", "em", "no", "na",
@@ -1279,8 +1295,8 @@
     /* os modos */
     document.getElementById("modos").innerHTML =
         '<button class="modo" data-modo="mesa" aria-pressed="' + (modo === "mesa") + '">Atual</button>'
-      + '<button class="modo destaque" data-modo="ideal" aria-pressed="' + (modo === "ideal") + '">Melhorar</button>'
-      + '<button class="modo" data-modo="mao" aria-pressed="' + (modo === "mao") + '">Plugar</button>';
+      + '<button class="modo destaque" data-modo="ideal" aria-pressed="' + (modo === "ideal") + '">Sugestões</button>'
+      + '<button class="modo" data-modo="mao" aria-pressed="' + (modo === "mao") + '">Adicionar</button>';
 
     /* o painel */
     var painel = document.getElementById("painel"), html = "";
@@ -1389,7 +1405,7 @@
         + Object.keys(MAPA).length + " de " + todasPortas().length + " entradas mapeadas"
         + (sem.length ? ' · <b style="color:var(--color-lacuna)">' + sem.length + " aparelho"
             + (sem.length > 1 ? "s" : "") + " fora do mapa</b>" : "")
-        + (pend ? ' · clique em <b style="color:var(--color-ok)">Melhorar</b>' : "")
+        + (pend ? ' · clique em <b style="color:var(--color-ok)">Sugestões</b>' : "")
         + "</p>";
     }
     painel.innerHTML = html;
