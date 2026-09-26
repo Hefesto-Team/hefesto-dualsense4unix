@@ -1038,8 +1038,12 @@ _OS_QUE_PODEM = {
     ),
     ("integrations/arranjo_da_mesa.py", "compõe uma f-string"): (
         "o porte do motor medido contra o ouro (`tests/fixtures/motor_do_arranjo_"
-        "do_mockup.js`), sem chamador na tela: a página do mapa tem o motor dela, "
-        "que já pergunta ao dono (`naFraseDe`); e o arquivo é `nao_toca`"
+        "do_mockup.js`); a página do mapa tem o motor dela, que já pergunta ao "
+        "dono (`naFraseDe`). CHEGA À TELA por um caminho só, o desenho do "
+        "gabinete da tela «Mapear Entradas» da aba 08 (`a08_conexoes."
+        "_html_do_mapa` → `mapa_da_mesa.veredito_do_quadrado` → `julgar`, o "
+        "«colada no …, na entrada N»): o arquivo e o `app/widgets/` são "
+        "`nao_toca` da O-MAPA-QUE-ELA-CORRIGE-01 — dívida declarada na conferência"
     ),
     ("integrations/arranjo_da_mesa.py", "tem um modelo de .format"): (
         "o mesmo porte do motor, pela mesma razão"
