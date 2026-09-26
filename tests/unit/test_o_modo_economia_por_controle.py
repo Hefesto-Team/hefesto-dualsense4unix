@@ -51,6 +51,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
     RumbleConfig,
     TriggerConfig,
+    TriggersConfig,
     controles_em_economia,
     declaracao_da_economia,
     economia_vale,
@@ -306,6 +307,25 @@ def _o_que_cada_um_recebe(
     ]
 
 
+def _gatilhos_no_aparelho(
+    perfil: Profile, transporte: str, alvo: int
+) -> list[tuple[Any, list[int], Any, list[int]]]:
+    """O que os dois gatilhos de cada uma das quatro peças receberam."""
+    inst, handles = _mesa_de_quatro(transporte, alvo)
+    ProfileManager(controller=inst).apply(perfil)
+    return [
+        (h.triggerL.mode, list(h.triggerL.forces), h.triggerR.mode, list(h.triggerR.forces))
+        for h in handles
+    ]
+
+
+def _perfil_com_gatilho(gatilho: TriggerConfig) -> Profile:
+    perfil = _perfil()
+    return perfil.model_copy(
+        update={"triggers": TriggersConfig(left=gatilho, right=gatilho.model_copy())}
+    )
+
+
 @pytest.mark.parametrize("transporte", ["USB", "BT"])
 @pytest.mark.parametrize("alvo", [0, 1, 2, 3], ids=["P1", "P2", "P3", "P4"])
 def test_so_o_controle_que_ligou_gasta_menos_e_continua_com_tudo(
@@ -322,6 +342,14 @@ def test_so_o_controle_que_ligou_gasta_menos_e_continua_com_tudo(
     """
     inst, handles = _mesa_de_quatro(transporte, alvo)
     sem = _o_que_cada_um_recebe(inst, handles, _perfil())
+    gatilhos = _perfil().triggers
+    oraculo = _gatilhos_no_aparelho(
+        _perfil().model_copy(update={"triggers": TriggersConfig(
+            left=gatilho_na_economia(gatilhos.left),
+            right=gatilho_na_economia(gatilhos.right),
+        )}),
+        transporte, alvo,
+    )
     _declarar(economia=(UNIQS[alvo],))
     inst, handles = _mesa_de_quatro(transporte, alvo)
     com = _o_que_cada_um_recebe(inst, handles, _perfil())
@@ -333,12 +361,96 @@ def test_so_o_controle_que_ligou_gasta_menos_e_continua_com_tudo(
     # A LUZ: mais fraca, acesa, e na mesma cor.
     assert 0 < max(cor_com) < max(cor_sem)
     assert [c > 0 for c in cor_com] == [c > 0 for c in cor_sem]
-    # O GATILHO: o mesmo efeito, com menos força.
+    # O GATILHO: o mesmo efeito, com menos força — e EXATAMENTE o da economia.
+    # "Diferente do de antes" sozinho dava verde sobre a força zerada no mesmo
+    # modo (medido na conferência de 25/09/2026); o oráculo é o que morde.
     assert modo_com == modo_sem
     assert l_com != l_sem and r_com != r_sem
+    assert (modo_com, l_com, r_com) == (
+        oraculo[alvo][0], oraculo[alvo][1], oraculo[alvo][3]
+    ), "o aparelho não recebeu o gatilho da economia"
     # A VIBRAÇÃO: no degrau Economia, e viva.
     assert 0 < forte_com < forte_sem and 0 < fraco_com < fraco_sem
     assert forte_com == round(forte_sem * _mult("economia"))
+
+
+@pytest.mark.parametrize("modo", sorted(PRESET_FACTORIES))
+def test_o_aparelho_recebe_o_gatilho_da_economia_em_todo_modo(modo: str) -> None:
+    """No aparelho, a peça que ligou recebe EXATAMENTE o gatilho da economia.
+
+    O oráculo é o mesmo perfil com o gatilho já passado por
+    :func:`gatilho_na_economia` e sem economia nenhuma — a função que a régua
+    de cada modo prova que mantém o efeito e não apaga a zona. Sem este elo, o
+    caminho até o aparelho (``gatilhos_na_economia``, o mapa por peça, o
+    ``OutputSpec``) podia zerar a força no MESMO modo: o byte do modo ficava
+    igual, a força ficava diferente da de antes, e as duas asserções do teste
+    de quatro peças davam verde sobre o gatilho desligado (medido na
+    conferência de 25/09/2026).
+
+    O alvo é o P3 pelo rádio; a posição e o transporte são do teste de quatro
+    peças acima, que usa o mesmo oráculo de P1 a P4 nos dois — aqui o que
+    varia é o MODO, e cada modo custa três ativações da mesa inteira.
+
+    MORDIDA: em ``gatilhos_na_economia``, devolva o lado com as forças em
+    ``0`` — o alvo recebe o gatilho apagado e reprova em todo modo com força.
+    """
+    alvo, transporte = 2, "BT"
+    lado = TriggerConfig(mode=modo, params=list(AMOSTRAS[modo]))
+    perfil = _perfil_com_gatilho(lado)
+    sem = _gatilhos_no_aparelho(perfil, transporte, alvo)
+    esperado = _gatilhos_no_aparelho(
+        _perfil_com_gatilho(gatilho_na_economia(lado)), transporte, alvo
+    )
+    _declarar(economia=(UNIQS[alvo],))
+    com = _gatilhos_no_aparelho(perfil, transporte, alvo)
+    for i in range(4):
+        if i != alvo:
+            assert com[i] == sem[i], f"P{i + 1} mudou sem ter ligado a economia"
+    assert com[alvo] == esperado[alvo], (
+        f"{modo}: o aparelho não recebeu o gatilho da economia: {com[alvo]} "
+        f"(esperado {esperado[alvo]})")
+    if modo in MODOS_DE_GATILHO_SEM_FORCA:
+        assert com[alvo] == sem[alvo], f"{modo}: a economia mexeu num modo sem força"
+
+
+@pytest.mark.parametrize("modo", sorted(PRESET_FACTORIES))
+def test_a_mesa_em_bateria_longa_leva_o_gatilho_da_economia_aos_quatro(modo: str) -> None:
+    """«Bateria longa»: as quatro peças recebem o gatilho da economia, e só ele.
+
+    MORDIDA: em ``gatilhos_do_perfil_na_economia``, zere as forças — as quatro
+    recebem o gatilho apagado e reprovam.
+    """
+    lado = TriggerConfig(mode=modo, params=list(AMOSTRAS[modo]))
+    esperado = _gatilhos_no_aparelho(
+        _perfil_com_gatilho(gatilho_na_economia(lado)), "BT", 1
+    )
+    _declarar(teto="economia")
+    com = _gatilhos_no_aparelho(_perfil_com_gatilho(lado), "BT", 1)
+    assert com == esperado, f"{modo}: a mesa não levou o gatilho da economia"
+
+
+@pytest.mark.parametrize("transporte", ["USB", "BT"])
+@pytest.mark.parametrize("alvo", [0, 1, 2, 3], ids=["P1", "P2", "P3", "P4"])
+def test_desligar_a_economia_devolve_o_aparelho_ao_de_antes(alvo: int, transporte: str) -> None:
+    """Liga, desliga, e o MESMO aparelho volta ao que recebia antes.
+
+    É o «mais reversível» do padrão dela, medido no backend que fica de pé
+    entre as ativações (não num backend novo a cada uma): a peça que ligou a
+    economia sem estar no perfil entra no mapa por peça, e a ativação seguinte
+    tem de tirá-la de lá — a luz, o gatilho e a vibração dela voltam inteiros.
+
+    MORDIDA: em ``ProfileManager.apply``, troque o ``set_led_scales``,
+    o ``set_rumble_scales`` ou o ``reset_profile_overrides`` por uma fusão que
+    não SUBSTITUI o mapa, e a economia fica presa na peça depois de desligada.
+    """
+    inst, handles = _mesa_de_quatro(transporte, alvo)
+    sem = _o_que_cada_um_recebe(inst, handles, _perfil())
+    _declarar(economia=(UNIQS[alvo],))
+    com = _o_que_cada_um_recebe(inst, handles, _perfil())
+    assert com[alvo] != sem[alvo], "a economia não chegou ao aparelho"
+    _declarar()
+    depois = _o_que_cada_um_recebe(inst, handles, _perfil())
+    assert depois == sem, "desligada, a economia ficou presa no aparelho"
 
 
 def test_as_luzes_de_numero_do_controle_vao_ao_fraco() -> None:
