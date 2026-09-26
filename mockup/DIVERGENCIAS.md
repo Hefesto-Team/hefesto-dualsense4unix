@@ -21,4 +21,18 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 08-conexoes.html
+- **25/09/2026** — A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01, esperando quem
+  coordena publicar. **A publicação vai JUNTO com o merge**: o pacote já pinta
+  o nome do controle como `Nome ● Modelo do plástico ● Pn` (o `.quem` e o
+  `.quem-resto`), e a folha da publicada ainda tem a coluna do nome em 13
+  caracteres — medido na bancada de tela, o nome quebra em três linhas na
+  publicada. A bancada traz as duas decisões dela da lista «Conexões hoje» (o
+  formato do nome, com a coluna de 13 a 30 caracteres; e a caixa do adaptador
+  que se arrasta pela linha de cima, com a ordem gravada pelo `#rd-reordenar`
+  escondido) e três curas do roteiro, todas medidas clicando na bancada: o
+  painel aberto segue o molde (o «Procurando» mostra o que a busca acha
+  enquanto está aberto, e fecha quando alguém chega), a caixa única não fecha,
+  e o «Examinar Entradas» abre o Check-up quando o exame aplica. Nenhuma
+  palavra nova na tela; a dica «Arraste para mudar a ordem» é o `title` da
+  linha de cima.
