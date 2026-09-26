@@ -296,7 +296,10 @@ def test_a_pagina_abre_a_porta_e_recusa_meio_arranjo() -> None:
     tenho nada ligado"* — o vazio mais convincente que existe.
     """
     pagina = pagina_do_mapa.pagina()
-    assert "window.hefestoArranjo = function (dado)" in pagina
+    # O segundo argumento (`comoReexame`) entrou em 26/09/2026, com o
+    # «Examinar» que relê (O-MAPA-DAS-CONEXOES-NO-PRODUTO-02): a régua cobra a
+    # porta e o primeiro argumento, não a lista inteira.
+    assert "window.hefestoArranjo = function (dado" in pagina
     assert "CAMPOS_DO_ARRANJO.filter" in pagina, (
         "a porta parou de conferir o que recebe")
     assert 'throw new Error("arranjo incompleto' in pagina, (

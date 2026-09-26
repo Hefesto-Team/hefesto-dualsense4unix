@@ -60,7 +60,7 @@ import itertools
 import os
 import re
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from hefesto_dualsense4unix.integrations import arranjo_da_mesa as motor
 from hefesto_dualsense4unix.integrations.censo_do_barramento import (
@@ -541,9 +541,22 @@ def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
         )
         entradas: list[motor.Entrada] = []
         for numero in numeros:
+            entrada = _entrada_do_motor(
+                mapa,
+                numero,
+                pares=pares,
+                regiao=regioes.get(numero) or regiao_da_face,
+                velocidades=velocidades,
+                aparelhos=aparelhos_medidos,
+                lacunas=lacunas,
+            )
             filhas = filhas_de(mapa, numero)
-            filho = None
             if filhas:
+                # A PONTA É DA VELOCIDADE DE QUEM A HOSPEDA quando nada dela diz
+                # outra coisa (O-MAPA-DAS-CONEXOES-NO-PRODUTO-02, 26/09/2026):
+                # o extensor passivo não tem descritor, e a ponta que o editor
+                # grava não tem nós. Sem isto, declarar algo na ponta a pintava
+                # de USB 2.0 ao reler, com a mãe azul ao lado.
                 filho = _entrada_do_motor(
                     mapa,
                     filhas[0],
@@ -553,19 +566,10 @@ def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
                     aparelhos=aparelhos_medidos,
                     lacunas=lacunas,
                     esticada=True,
+                    usb_de_quem_hospeda=entrada.usb,
                 )
-            entradas.append(
-                _entrada_do_motor(
-                    mapa,
-                    numero,
-                    pares=pares,
-                    regiao=regioes.get(numero) or regiao_da_face,
-                    velocidades=velocidades,
-                    aparelhos=aparelhos_medidos,
-                    lacunas=lacunas,
-                    filho=filho,
-                )
-            )
+                entrada = replace(entrada, filho=filho)
+            entradas.append(entrada)
         faces.append(
             motor.Face(
                 nome=face.nome,
@@ -636,8 +640,13 @@ def _entrada_do_motor(
     aparelhos: Mapping[str, float] | None = None,
     esticada: bool = False,
     filho: motor.Entrada | None = None,
+    usb_de_quem_hospeda: int | None = None,
 ) -> motor.Entrada:
-    """Uma entrada do desenho na forma do motor, anotando o que faltou."""
+    """Uma entrada do desenho na forma do motor, anotando o que faltou.
+
+    ``usb_de_quem_hospeda`` é a velocidade da entrada em que o extensor está:
+    a ponta dele a herda quando nem os nós nem ela dizem outra coisa.
+    """
     par = pares.get(numero)
     if par is None and not esticada:
         # A entrada por extensão NÃO tem irmã por desenho (o cabo de um metro a
@@ -650,6 +659,8 @@ def _entrada_do_motor(
         None if declarada is None else declarada.usb,
         aparelhos,
     )
+    if rapido is None and usb_de_quem_hospeda is not None:
+        rapido = usb_de_quem_hospeda == 3
     if rapido is None:
         lacunas.add(LACUNA_VELOCIDADE)
     return motor.Entrada(
@@ -1116,6 +1127,17 @@ def _serial_do_no(no: str) -> str:
         return ""
 
 
+def serial_do_no(no: str) -> str:
+    """O ``serial`` de um nó USB, para a identidade do aparelho no mapa das conexões.
+
+    O-MAPA-DAS-CONEXOES-NO-PRODUTO-02. Quem o lê para a página
+    (``interface/arranjo_desta_maquina.identidades``) o resume com sal antes
+    de qualquer coisa: ele não vai à tela nem ao disco. Lê o ``/sys``, então
+    nunca no fio da janela.
+    """
+    return _serial_do_no(no)
+
+
 __all__ = [
     "BLUETOOTH_DA_PLACA",
     "BLUETOOTH_DONGLE",
@@ -1143,6 +1165,7 @@ __all__ = [
     "porta_do_adaptador",
     "portas_livres",
     "resumo_do_mapa",
+    "serial_do_no",
     "velocidade_da_entrada",
     "velocidades_dos_aparelhos",
     "vizinhas_de_verdade",

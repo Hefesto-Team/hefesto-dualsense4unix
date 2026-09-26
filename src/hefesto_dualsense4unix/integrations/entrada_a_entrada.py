@@ -109,6 +109,7 @@ O QUE ELE NÃO FAZ
 
 from __future__ import annotations
 
+import re
 import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -217,6 +218,15 @@ FACE_DO_HUB_DECLARADO = f"Hub na {PALAVRA_DA_ENTRADA} {{numero}}"
 #: velocidades — a gramática de ``utils/maquina.PortaDeclarada``.
 LIGACOES_DECLARAVEIS = ("hub", "extensor")
 VELOCIDADES_DECLARAVEIS = (2, 3)
+
+#: A PONTA DO EXTENSOR — O-MAPA-DAS-CONEXOES-NO-PRODUTO-02, 26/09/2026. O
+#: extensor declarado na entrada ``5`` desenha a entrada-filha ``5a``, a mesma
+#: letra da ``15a`` que o desenho sempre teve. Só a entrada de número puro tem
+#: ponta que grava: ``5aa`` não é um número de entrada que o
+#: ``utils/maquina.PortaDeclarada`` aceite, e o editor da página confere a
+#: mesma forma antes de mandar o gesto (``interface/pagina_do_mapa``).
+LETRA_DA_PONTA = "a"
+_SO_DIGITOS = re.compile(r"^[0-9]{1,3}$")
 
 #: As fases do laço — chaves de máquina, para o piloto da aba 08.
 PARADO = "parado"
@@ -1516,20 +1526,63 @@ def _declarar_na_entrada(
     maquina: MaquinaConfig | None,
     gravar: Callable[[Mapping[str, Any]], Recibo],
 ) -> Recibo:
-    """Os campos na ``mapa.portas[numero]``, SÓ se a entrada é do mapa dela.
+    """Os campos na ``mapa.portas[numero]``, se a entrada é do mapa dela — ou é
+    a PONTA de um extensor que ela declarou numa entrada do mapa.
 
-    A entrada que o desenho monta a partir do que ela declarou (as do hub, a
-    ponta do extensor) não tem número no disco, e o exemplo da página não é o
-    gabinete de ninguém: declarar sobre eles gravaria no ``maquina.json`` uma
-    entrada que ela nunca mapeou.
+    A PONTA GRAVA desde a O-MAPA-DAS-CONEXOES-NO-PRODUTO-02 (26/09/2026): o que
+    ela dizia ali sumia ao reler, sem aviso. Ela vai ao disco como a
+    entrada-filha que o ``PortaDeclarada.filha_de`` sempre descreveu, e daí o
+    motor a desenha sozinho (``mapa_das_portas.filhas_de``). Quando a entrada
+    deixa de ser extensor, a ponta que só o editor escreveu sai junto: sem
+    isso ela continuaria desenhada como filha de uma entrada «Direto».
+
+    AS ENTRADAS DO HUB DESENHADO (``5.1``…) NÃO GRAVAM: o ponto não cabe no
+    número de entrada que o ``utils/maquina`` aceita, e o exemplo da página não
+    é o gabinete de ninguém. Declarar sobre eles gravaria uma entrada que ela
+    nunca mapeou; o editor da página nem manda o gesto.
     """
     documento = maquina if maquina is not None else carregar_maquina()
-    if numero not in entradas_do_mapa(documento.mapa):
+    mapa = documento.mapa
+    if numero in entradas_do_mapa(mapa):
+        declaracao: dict[str, Any] = {numero: dict(campos)}
+    elif (mae := _mae_da_ponta(mapa, numero)) is not None:
+        declaracao = {numero: {"filha_de": mae, **campos}}
+    else:
         raise ValueError(f"a entrada {numero!r} não está no mapa desta máquina")
-    recibo = _gravar_no_mapa(gravar, {"mapa": {"portas": {numero: dict(campos)}}})
+    ponta = ponta_do_extensor(numero)
+    dela = mapa.portas.get(ponta) if ponta else None
+    if (
+        ponta
+        and "liga" in campos
+        and campos["liga"] != "extensor"
+        and dela is not None
+        and dela.filha_de == numero
+        and not dela.caminho
+        and not dela.nos
+    ):
+        declaracao[ponta] = {"filha_de": None, "liga": None, "usb": None}
+    recibo = _gravar_no_mapa(gravar, {"mapa": {"portas": declaracao}})
     if not recibo.gravou:
         logger.warning("entrada_declarada_nao_gravou", motivo=recibo.motivo)
     return recibo
+
+
+def ponta_do_extensor(numero: str) -> str | None:
+    """A entrada-filha que um extensor na entrada ``numero`` desenha, ou ``None``.
+
+    ``None`` para a entrada que já é ponta ou é do hub desenhado: a ponta dela
+    não é um número que o disco aceite (ver :data:`LETRA_DA_PONTA`).
+    """
+    return f"{numero}{LETRA_DA_PONTA}" if _SO_DIGITOS.match(numero) else None
+
+
+def _mae_da_ponta(mapa: MapaDaMesa, numero: str) -> str | None:
+    """A entrada do mapa com extensor declarado cuja ponta é ``numero``."""
+    for mae in entradas_do_mapa(mapa):
+        porta = mapa.portas.get(mae)
+        if porta is not None and porta.liga == "extensor" and ponta_do_extensor(mae) == numero:
+            return mae
+    return None
 
 
 def faces_dos_hubs(mapa: MapaDaMesa) -> dict[str, str]:
@@ -2582,6 +2635,7 @@ __all__ = [
     "FACE_QUE_E_PERTO",
     "FIM",
     "FOLEGO_DA_LEITURA_S",
+    "LETRA_DA_PONTA",
     "LIGACOES_DECLARAVEIS",
     "LUGARES_DA_PORTA",
     "LUGAR_FRENTE",
@@ -2617,6 +2671,7 @@ __all__ = [
     "nome_do_lugar",
     "o_laco",
     "o_mapa",
+    "ponta_do_extensor",
     "rotulo_da_entrada",
     "rotulo_do_numero",
 ]

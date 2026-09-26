@@ -3793,7 +3793,7 @@ class Piloto:
                             if k not in fora_da_pintura}
         if frase:
             print(f"[relato] {pagina} · {nome}: {frase}", file=sys.stderr)
-        return self._deu_certo(pagina, nome, resposta)
+        return self._deu_certo(pagina, nome, self._o_arranjo_relido(pagina, resposta))
 
     def _a_pagina_morreu(self, motivo: str) -> None:
         """O processo web do WebKit caiu. A janela já está recarregando; aqui se DIZ.
@@ -3905,16 +3905,54 @@ class Piloto:
         A FALHA VAI PARA `cegueiras`, como a da camada da dica: a página
         continua na tela, com o exemplo, e quem olhar o relato vê que a leitura
         desta máquina não chegou — em vez de concluir que ela não existe.
-        """
-        import json
 
+        A LEITURA SAI DO FIO DA JANELA (O-MAPA-DAS-CONEXOES-NO-PRODUTO-02,
+        26/09/2026). O arranjo lê o `/sys` USB, e o kernel segura `product`,
+        `bMaxPower` e `serial` enquanto enumera o aparelho que acabou de
+        chegar: a O-MAPEAR-NAO-CONGELA-A-JANELA-01 mediu a janela parada 15 s.
+        O fio lê; a volta é pelo laço do GTK, e só se a página ainda é esta.
+        """
         from hefesto_dualsense4unix.interface import arranjo_desta_maquina
 
-        dado = arranjo_desta_maquina.arranjo()
-        if dado is None:
-            return
-        js = f"window.hefestoArranjo({json.dumps(dado, ensure_ascii=False)})"
+        pagina = self.pagina
+
+        def ler() -> None:
+            dado = arranjo_desta_maquina.para_a_pagina()
+            if dado is not None:
+                GLib.idle_add(lambda: self._entregar(pagina, dado, reexame=False))
+
+        threading.Thread(target=ler, name="arranjo-desta-maquina", daemon=True).start()
+
+    def _entregar(self, pagina: str, dado: Any, *, reexame: bool) -> bool:
+        """O arranjo lido vai à página — no laço do GTK, e só se ela ainda é a dele.
+
+        UM caminho para as duas entregas, a da abertura e a do «Examinar»: o
+        JavaScript é do dono (`arranjo_desta_maquina.js_da_entrega`).
+        """
+        from hefesto_dualsense4unix.interface import arranjo_desta_maquina
+
+        if self.pagina != pagina:
+            return False
+        js = arranjo_desta_maquina.js_da_entrega(dado, reexame=reexame)
         self.ponte.perguntar(js, self._arranjo_entregue)
+        return False
+
+    def _o_arranjo_relido(self, pagina: str, resposta: object) -> object:
+        """A resposta do «Examinar» traz um arranjo: ele sai da carga e vai à página.
+
+        O-MAPA-DAS-CONEXOES-NO-PRODUTO-02, 26/09/2026. O retorno de um gesto só
+        pinta `data-campo`, e o arranjo é o gabinete inteiro: ele é entregue
+        pelo `window.hefestoArranjo(dado, true)`, a mesma porta da abertura, e
+        o resto da resposta segue para a pintura como antes.
+        """
+        from hefesto_dualsense4unix.interface import arranjo_desta_maquina
+
+        chave = arranjo_desta_maquina.CHAVE_DA_ENTREGA
+        if not isinstance(resposta, dict) or chave not in resposta:
+            return resposta
+        resto = {k: v for k, v in resposta.items() if k != chave}
+        self._entregar(pagina, resposta[chave], reexame=True)
+        return resto
 
     def _arranjo_entregue(self, valor: Any, erro: Any) -> None:
         if erro is not None:
