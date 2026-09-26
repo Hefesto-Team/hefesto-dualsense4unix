@@ -269,7 +269,7 @@ LINHAS_DO_TETO: tuple[LinhaDoTeto, ...] = (
 #: pela dela de 25/09 para a economia: *«mantermos as features funcionando mas
 #: gastando menos»* — a luz fica mais fraca e não apaga. <!-- noqa-acento: citação literal dela -->
 def _dica_da_bateria_longa() -> str:
-    """O que o perfil de bateria faz HOJE, e o que ele ainda não alcança."""
+    """O que o perfil de bateria faz HOJE, e o que fica como está."""
     chave = TETO_POR_PERFIL[PERFIL_BATERIA_LONGA]
     teto = teto_do_orcamento(chave) if isinstance(chave, str) else None
     forca = f"{round(teto * 100)}% da força" if teto is not None else SEM_TETO
@@ -284,10 +284,11 @@ def _dica_da_bateria_longa() -> str:
     pendentes = [linha.nome for linha in LINHAS_DO_TETO if not linha.tem_ponto]
     if not pendentes:
         return f"{frase}."
-    return (
-        f"{frase}. {_lista(pendentes)} continuam como estão: o teto ainda não "
-        "os alcança."
-    )
+    # «continuam como estão», e não mais «o teto ainda não os alcança»: desde
+    # 25/09/2026 o que sobra aqui (microfone e giroscópio) fica de fora POR
+    # DECISÃO (`profiles.schema.A_ECONOMIA_EM_CADA_PECA`), não por dívida — e
+    # a tela não confessa dívida que não existe.
+    return f"{frase}. {_lista(pendentes)} continuam como estão."
 
 
 DICAS: dict[str, str] = {
