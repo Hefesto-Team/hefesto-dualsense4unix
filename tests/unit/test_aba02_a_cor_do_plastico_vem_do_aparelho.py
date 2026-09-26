@@ -354,32 +354,19 @@ def test_a_borda_e_o_chip_da_fita_nunca_discordam(a02):
             f"a borda do card e o chip da fita discordam em `{slug}`")
 
 
-#: OS TRÊS QUE SÃO O MESMO MODELO ESCRITO DE DOIS JEITOS — medido em 03/09/2026.
-#: ``código -> (nome no CSV dela, nome no mapa do produto)``.
+#: AS GRAFIAS E A LACUNA FECHARAM EM 25/09/2026 (O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01).
 #:
-#: **FATO SUBSTITUÍDO, no mesmo dia.** Aqui estava escrito que *"a tela não sofre
-#: com isso hoje (…) o nome vivo sai de `NOMES_DE_FABRICA` pelo CÓDIGO que o
-#: aparelho publica, então a borda sai certa"*. **Sofria.** O nome vivo NÃO sai
-#: de `NOMES_DE_FABRICA`: `mesa_viva.mesa_do_estado` o tira de `mesa_viva.CORES`,
-#: que lê o CSV **dela** — então a mesa entrega `God of War Ragnarök` com trema,
-#: `Marvel's Spider-Man 2` com o `Marvel's`, e `Icon Blue Special Edition`. Os
-#: três não casavam com a tabela do produto, e os três saíam
-#: `var(--border-forte)` — sem borda de identidade nenhuma, medido rodando
-#: `mesa_do_estado` + `folha_do_plastico` com um controle de cada código no cabo.
-#:
-#: A CURA FOI TROCAR A CHAVE: a folha casa por `cor` (o `id` da linha dela) e não
-#: por nome de tela, então esta divergência deixou de alcançar a cor. Ela
-#: continua declarada porque ainda alcança o TEXTO — o cabeçalho do card e o
-#: chip da fita escrevem o nome, e dois arquivos com grafias diferentes é
-#: divergência silenciosa esperando a próxima pessoa.
-GRAFIA_DIVERGENTE = {
-    "Z1": ("God of War Ragnarök", "God of War Ragnarok"),
-    "Z2": ("Marvel's Spider-Man 2", "Spider-Man 2"),
-    "ZB": ("Icon Blue Special Edition", "Icon Blue Limited Edition"),
-}
+#: Até ali `cor_do_plastico.NOMES_DE_FABRICA` era uma tabela DIGITADA de 21
+#: códigos, e dois marcadores viviam aqui, medidos em 03/09/2026: três modelos
+#: escritos de dois jeitos (Z1 sem o trema, Z2 sem o `Marvel's`, ZB «Limited» em
+#: vez de «Special») e sete que o mapa dela tinha e o produto não (13, 14, 15,
+#: ZC, ZD, ZE, ZF), que chegavam à mesa **sem cor nenhuma** e saíam «Não sei».
+#: A cura foi a que o comentário daquele dia pediu: o dono LÊ o CSV em vez de
+#: repetir a lista. Agora os dois marcadores medem o contrário — que não sobrou
+#: grafia nem código de um lado só —, e a tabela de 21 de volta reprova aqui.
 
 
-def test_as_grafias_divergentes_estao_declaradas():
+def test_o_produto_escreve_cada_modelo_como_o_mapa_dela():
     """Dois arquivos com o mesmo modelo escrito diferente é divergência silenciosa."""
     from hefesto_dualsense4unix.integrations.cor_do_plastico import NOMES_DE_FABRICA
 
@@ -389,51 +376,18 @@ def test_as_grafias_divergentes_estao_declaradas():
         for c in sorted(do_csv)
         if c in NOMES_DE_FABRICA and do_csv[c] != NOMES_DE_FABRICA[c]
     }
-    assert achadas == GRAFIA_DIVERGENTE, (
+    assert achadas == {}, (
         "a grafia dos modelos divergiu entre `cores-do-dualsense.csv` (o mapa "
-        "dela) e `cor_do_plastico.NOMES_DE_FABRICA` (o que o produto sabe).\n"
-        f"  hoje: {achadas}\n  declarado: {GRAFIA_DIVERGENTE}")
+        f"dela) e `cor_do_plastico.NOMES_DE_FABRICA` (o que o produto sabe): {achadas}")
 
 
-#: OS SETE QUE ELA MAPEOU E O PRODUTO AINDA NÃO SABE — medido em 03/09/2026.
-#:
-#: `docs/data/cores-do-dualsense.csv` cataloga 28 modelos com código de fábrica;
-#: `integrations/cor_do_plastico.NOMES_DE_FABRICA` conhece 21. Quem tiver um
-#: destes sete vê a borda NEUTRA: honesto (o produto não inventa cor), mas não é
-#: *"o app se adaptou ao controle dele"*, que é o que ela pediu.
-#:
-#: **E A LACUNA MUDOU DE LUGAR EM 03/09/2026, sem mudar de tamanho.** Desde que
-#: `cor_da_borda` passou a ler o mapa dela, TRÊS destes sete já têm hexa do lado
-#: da aba — HyperPop Techno Red `#e11d2e`, Remix Green `#8fbf3a`, Rhythm Blue
-#: `#3aa0e8` —, e mesmo assim continuam sem chegar à tela. O que os barra agora
-#: é UM degrau acima: `LeitorDeCor` → `cor_do_serial` → `cor_do_codigo` devolve
-#: `None` para um código fora das 21, então a mesa nasce **sem cor nenhuma** e o
-#: slug nunca é escrito. Os outros quatro (Ghost of Yōtei, Marathon, Genshin,
-#: 007) ficariam neutros de qualquer jeito: ela não amostrou a casca deles.
-#:
-#: NÃO É DEFEITO DESTA ABA, e por isso não se conserta aqui: o dono é
-#: `integrations/cor_do_plastico.py`, e a cura é ele LER o CSV em vez de repetir
-#: a lista. Esta constante é o marcador — no dia em que alguém fechar a lacuna,
-#: este teste reprova dizendo exatamente isto, e o número aqui desce.
-SEM_TOM_NO_PRODUTO = {
-    "13": "HyperPop Techno Red",
-    "14": "HyperPop Remix Green",
-    "15": "HyperPop Rhythm Blue",
-    "ZC": "Ghost of Yōtei Limited Edition",
-    "ZD": "Marathon Limited Edition",
-    "ZE": "Genshin Impact Limited Edition",
-    "ZF": "007 First Light Limited Edition",
-}
-
-
-def test_a_lacuna_entre_o_mapa_dela_e_o_produto_esta_declarada():
-    """Régua que acha zero é erro; esta acha SETE, e diz quais."""
+def test_nenhum_modelo_do_mapa_dela_falta_no_produto():
+    """A régua não acha zero por cegueira: ela exige os 28 do lado do produto."""
     from hefesto_dualsense4unix.integrations.cor_do_plastico import NOMES_DE_FABRICA
 
     faltam = {c: n for c, n in _modelos_do_mapa().items() if c not in NOMES_DE_FABRICA}
-    assert faltam == SEM_TOM_NO_PRODUTO, (
-        "a lacuna entre `cores-do-dualsense.csv` (o mapa dela) e "
-        "`cor_do_plastico.NOMES_DE_FABRICA` (o que o produto sabe) mudou.\n"
-        f"  hoje faltam: {sorted(faltam)}\n"
-        f"  declarado:   {sorted(SEM_TOM_NO_PRODUTO)}\n"
-        "Se alguém fechou a lacuna, apague daqui os que entraram.")
+    assert faltam == {}, (
+        "o mapa dela tem modelos que `cor_do_plastico.NOMES_DE_FABRICA` não "
+        f"sabe nomear: {sorted(faltam)}")
+    assert set(NOMES_DE_FABRICA) == set(_modelos_do_mapa())
+    assert len(NOMES_DE_FABRICA) == 28
