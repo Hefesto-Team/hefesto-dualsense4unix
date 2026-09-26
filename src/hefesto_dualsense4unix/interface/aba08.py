@@ -3276,12 +3276,29 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .queda-desde{font-size:11px;color:var(--texto-mudo);padding:2px 4px}
   .radio .conectar{display:flex;flex-direction:column;gap:11px;min-height:0}
   .radio .soltar.apagado,.radio .lampada.apagado{cursor:not-allowed;opacity:.5}
-  .radio .linha{grid-template-columns:36px minmax(13ch,30ch) 1fr 6ch}
+  .radio .linha{grid-template-columns:36px minmax(13ch,30ch) 1fr 6ch 22px}
   .radio .linha .quem{display:flex;align-items:center;min-width:0;overflow:hidden;white-space:nowrap}
   .radio .linha .quem .nome{flex:0 1 auto;min-width:4ch}
   .radio .linha .quem-resto{font-size:12.5px;color:var(--texto-suave);flex:none}
   .radio .lugar-topo[draggable="true"]{cursor:grab}
   .radio .lugar.arrastando{opacity:.45}
+  .radio .linha .esquecer{width:22px;height:22px;padding:0;display:inline-flex;align-items:center;
+                          justify-content:center;border-radius:50%;border:1px solid transparent;
+                          background:transparent;color:var(--texto-mudo);cursor:pointer;font-size:12px}
+  .radio .linha .esquecer:hover{border-color:var(--orange);color:var(--orange)}
+  .radio .linha .esquecer:focus-visible{outline:2px solid var(--purple);outline-offset:2px}
+  .radio .linha .nome-fixo{font-size:12.5px;color:var(--texto-suave);overflow:hidden;
+                           text-overflow:ellipsis}
+  .radio .linha .features .nao-conectou{color:var(--orange);font-size:11.5px;margin-right:8px}
+  .radio .linha .features .desligado{color:var(--texto-mudo);font-size:11.5px}
+  .radio .linha .btn.tentar{height:24px;padding:0 9px;display:inline-flex;align-items:center;
+                            font-size:11.5px;border-color:var(--green);color:var(--green)}
+  .radio .linha.nao-conectou .features,.radio .linha.desligado .features{display:flex;
+                            align-items:center}
+  .radio .linha.nao-conectou,.radio .linha.desligado{cursor:default}
+  .radio .linha.desligado .ds{opacity:.55}
+  .radio .lugar.nao-conectou{border-color:var(--orange)}
+  .radio .selo-fora .palpite{font-family:var(--font-corpo);font-size:10.5px}
 """
 
 
@@ -3397,6 +3414,21 @@ def _cena_do_desenho() -> dict:
                                              if a["lugar"] == lg["id"] and a["ponte"]),
                                          lg["varrendo"]))
     quem_sai = [a for a in aparelhos if a["lugar"] == cheio["id"] and a["ponte"]][-1]
+    # O-RADIO-CONECTA-ONDE-ELA-MANDA-01 (26/09/2026): os estados que a lista
+    # dela de 26/09 pediu, na caixa aberta — o «Conectar» que não chegou (com o
+    # «Tentar de Novo» e o X), e um controle pareado ali e desligado (com o X).
+    # E os dois receptores sem nome que o kernel sugere, com a palavra junto.
+    aparelhos.append({"id": f"nao-conectou-{cheio['id']}", "aparelho": "", "tipo": "controle",
+                      "lugar": cheio["id"], "nome": "", "rotulo": "DualSense", "cor": "",
+                      "cor_nome": "", "nao_conectou": True, "chave": "desenho",
+                      "esperando": False, "fixo": True})
+    aparelhos.append({"id": "D9", "aparelho": "D9", "tipo": "controle", "lugar": cheio["id"],
+                      "nome": "", "rotulo": "DualSense", "desligado": True,
+                      "esperando": False, "fixo": True})
+    cheio["nao_conectou"] = True
+    vizinhos += [{"id": f"E{len(vizinhos) + 1 + i}", "tipo": "", "nome": "",
+                  "sugestao": s, "sugestao_tipo": s.lower()}
+                 for i, s in enumerate(("Teclado", "Mouse"))]
     cena = {
         "lugares": lugares, "aparelhos": aparelhos, "evitados": evitados,
         "canais_medidos": {lg["id"]: True for lg in lugares}, "espectro": [],
@@ -3471,8 +3503,14 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
     // ---- a PERGUNTA, antes de todo mover (R7) ----
     var antesDaPergunta = null;
     function moldeDe(alvo, destino){
-      return um('.radio template.pergunta-molde:not([data-pedido])[data-alvo="' + aspas(alvo)
-                + '"][data-destino="' + aspas(destino) + '"]');
+      return um('.radio template.pergunta-molde:not([data-pedido]):not([data-esquecer])[data-alvo="'
+                + aspas(alvo) + '"][data-destino="' + aspas(destino) + '"]');
+    }
+    // A PERGUNTA DO X (26/09/2026): o endereço é a linha E o adaptador — o mesmo
+    // controle desligado mora em cada adaptador em que tem chave.
+    function moldeDoX(alvo, lugar){
+      return um('.radio template.pergunta-molde[data-esquecer][data-alvo="' + aspas(alvo)
+                + '"][data-destino="' + aspas(lugar) + '"]');
     }
     function perguntar(m){
       if(!m) return false;
@@ -3484,6 +3522,8 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       var outro = document.getElementById('rd-pergunta-outro');
       sim.textContent = m.dataset.sim || ''; sim.hidden = !m.dataset.sim;
       sim.dataset.alvo = m.dataset.alvo || ''; sim.dataset.destino = m.dataset.destino || '';
+      // O «SIM» É O GESTO DO MOLDE: «Mover» por padrão, «Esquecer» no X.
+      sim.dataset.gesto = m.dataset.gesto || 'confirmar-mudanca';
       outro.textContent = m.dataset.outro || ''; outro.hidden = !m.dataset.outro;
       outro.dataset.alvo = m.dataset.alvo || '';
       todos('.radio .lugar.alvo').forEach(function(l){ l.classList.remove('alvo'); });
@@ -3586,6 +3626,16 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
         return;
       }
       if((b = perto(ev, '.radio .selo-fora.vizinho'))){ abrirPainel('o-que-e', b.dataset.alvo); return; }
+      // O X: a pergunta antes (o «Não Conectou» sem aparelho não tem pergunta —
+      // o Python só tira a linha). Com um controle esperando, não há molde, e
+      // o Python faz o botão tremer.
+      if((b = perto(ev, '.radio .linha .esquecer'))){
+        var mx = moldeDoX(b.dataset.alvo, b.dataset.lugar);
+        if(mx) perguntar(mx);
+        return;
+      }
+      // «Tentar de Novo» é o «Conectar» daquele adaptador: o mesmo painel abre.
+      if((b = perto(ev, '.radio .linha .tentar'))){ abrirPainel('conectar', ''); return; }
       if((b = perto(ev, '#rd-b-conectar'))){
         if(b.classList.contains('apagado')) balancar(b); else abrirPainel('conectar', '');
         return;

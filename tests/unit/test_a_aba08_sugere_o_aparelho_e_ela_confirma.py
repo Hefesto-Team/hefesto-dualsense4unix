@@ -320,8 +320,10 @@ def test_a_pagina_tem_o_selo_e_o_painel_de_cada_vizinho():
     from hefesto_dualsense4unix.interface import onde
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
+    # O VIZINHO SEM NOME TAMBÉM É SELO (`sem-nome`, 26/09/2026): era ele o balão
+    # cinza que ela não sabia ler, e a régua só contava os que ela já nomeou.
     selos = set(re.findall(
-        r'<button class="selo-fora vizinho"[^>]*data-gesto="vizinho-o-que-e" '
+        r'<button class="selo-fora vizinho(?: sem-nome)?"[^>]*data-gesto="vizinho-o-que-e" '
         r'data-alvo="([^"]+)"', html))
     paineis = set(re.findall(
         r'<template class="painel-molde" data-painel="o-que-e" data-alvo="([^"]+)"', html))

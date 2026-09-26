@@ -113,6 +113,10 @@ ESCREVEM = {
     # 25/09/2026: vai para o `gui_preferences.json` dela.
     "guardar_ordem_dos_adaptadores",
     "escrever_propriedade",    # grava o `Alias` de um aparelho no BlueZ dela
+    # O X DA ABA 08 — O-RADIO-CONECTA-ONDE-ELA-MANDA-01, 26/09/2026: apaga a
+    # chave do pareamento de um controle num adaptador do BlueZ dela
+    # (`RemoveDevice` e o verbo `esquecer` da ponte privilegiada).
+    "esquecer_o_pareamento",
     # AS DUAS RESPOSTAS DO «MAPEAR ENTRADA A ENTRADA» (a cerimônia da 08): a
     # face e o «Não alcanço» vão ao `maquina.json` dela na hora.
     "responder",
