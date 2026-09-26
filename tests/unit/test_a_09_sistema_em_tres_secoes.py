@@ -141,13 +141,13 @@ def test_os_tres_ligaveis_tem_o_endereco_do_produto_na_pagina() -> None:
             in tag.group(0), tag.group(0)
 
 
-@pytest.mark.parametrize(("conteudo", "esperado"), [
+@pytest.mark.parametrize(("dado", "esperado"), [
     (None, False),
     ({"tool_name": "GE-Proton10-1", "changes": {"123": ""}}, True),
     ({"tool_name": "GE-Proton10-1", "changes": {}}, False),
     ("não é json", None),
 ])
-def test_o_proton_fixado_le_o_registro_da_trava(monkeypatch, tmp_path, conteudo,
+def test_o_proton_fixado_le_o_registro_da_trava(monkeypatch, tmp_path, dado,
                                                 esperado) -> None:
     """Ligado é «há o que o destravar desfaria» — as mesmas chaves do dono.
 
@@ -158,8 +158,8 @@ def test_o_proton_fixado_le_o_registro_da_trava(monkeypatch, tmp_path, conteudo,
     from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
     estado = tmp_path / "proton-lock-state.json"
-    if conteudo is not None:
-        estado.write_text(conteudo if isinstance(conteudo, str) else json.dumps(conteudo),
+    if dado is not None:
+        estado.write_text(dado if isinstance(dado, str) else json.dumps(dado),
                           encoding="utf-8")
     monkeypatch.setattr(proton_pin, "default_lock_state_path", lambda *a, **k: estado)
     assert a09.proton_fixado() is esperado

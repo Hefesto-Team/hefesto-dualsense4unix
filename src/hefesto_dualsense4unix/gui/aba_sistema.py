@@ -188,8 +188,8 @@ class Leitura(NamedTuple):
     :param ambiente: ``ambiente_na_tela.descrever_display_grafico(state)``.
     :param perfil: a chave do perfil da mesa (``secao_orcamento.PERFIS``), ou
         ``None`` quando ninguém escolheu.
-    :param sessao: ``"Wayland · COSMIC"`` — o tipo da sessão e a área de
-        trabalho (``app/ambiente.ambiente_efetivo``). Entrou em 25/09/2026.
+    :param sessao: ``"Wayland · COSMIC"``, tipo e área (noqa-acento: nome do campo).
+        Vem de ``app/ambiente.ambiente_efetivo``. Entrou em 25/09/2026.
     :param adaptadores: quantos adaptadores Bluetooth a máquina tem
         (``integrations/mesa_de_radio.adaptadores_bluetooth``). Entrou em 25/09.
     """

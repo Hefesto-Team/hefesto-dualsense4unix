@@ -795,7 +795,7 @@ LEGENDA = '''<div class="nota">
 # `import aba09` reprova um desenho quebrado sem tocar em disco nenhum.
 #
 # A FORMA MUDOU EM 25/09/2026 (A-09-SISTEMA-EM-TRES-SECOES-01). Cada régua que
-# media a forma velha acompanha a nova; a que perdeu o objeto sai com a razão
+# olhava a forma velha acompanha a nova; a que perdeu o objeto sai com a razão
 # numa linha no lugar dela.
 # ---------------------------------------------------------------------------
 def _medida(texto, regra, prop):
