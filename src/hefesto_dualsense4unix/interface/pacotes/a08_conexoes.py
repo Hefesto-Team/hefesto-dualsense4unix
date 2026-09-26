@@ -2898,6 +2898,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     #
     _correr_as_esperas()
 
+    # O NOME DO DONO DE CADA CONTROLE, uma leitura por tique para a mesa
+    # inteira (ver :func:`_nomes_dos_donos`).
+    nomes = _nomes_dos_donos()
     colunas = {}
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
@@ -2984,6 +2987,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         }
         if teto_campo is not None:
             colunas[uniq]["teto-da-vibracao"] = teto_campo
+        # A LINHA DO CHECK-UP (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): os seis
+        # selos do estado, o botão da economia e o nome do dono.
+        colunas[uniq].update(estado_do_controle(c, eu, st, declaracao))
+        colunas[uniq].update(campos_da_economia(declaracao, uniq))
+        colunas[uniq]["dono"] = dono_na_linha(nomes, uniq, eu.get("jogador"))
     # UMA LEITURA SÓ, e ela é a razão de esta linha não estar dentro do
     # dicionário: a `cobertura` conta os campos da confissão, e chamar a função
     # duas vezes releria o barramento no mesmo tique.
@@ -2993,6 +3001,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # mesmo tique.
     veredito = _veredito_do_exame(vivos)
     return {
+        # A TELA DO MAPEAR (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o que o dono do
+        # mapa das portas vê agora — ver :func:`campos_do_mapear`.
+        **campos_do_mapear(),
         "colunas": colunas,
         # O MAPA DO GABINETE, trocado INTEIRO — 01/09/2026. Ele não se pinta
         # campo a campo porque o número de faces e de entradas é o que ELA
@@ -6547,4 +6558,341 @@ SEM_ECO = ("sala-altura", "sala-visada", "mic-existe", "vizinho-o-que-e",
            "escolher-aparelho", "escolher-entrada", "tirar-daqui",
            "nova-entrada", "nova-extensao", "nova-face",
            "adaptador-renomear", "aparelho-renomear", "entrada-face",
-           "entrada-nao-alcanco", "adaptador-reordenar")
+           "entrada-nao-alcanco", "adaptador-reordenar",
+           # A-08-O-CHECKUP (25/09/2026): o nome do dono vai ao `Alias` do
+           # BlueZ e a economia ao `maquina.json`; o `state_full` não publica
+           # nenhum dos dois.
+           "dono-renomear", "economia-do-controle",
+           # e o Mapear grava direto no `maquina.json` pelo dono do mapa.
+           "mapear-gravar", "checkup-atualizar", "mapear-comecar", "mapear-parar")
+
+
+# ---------------------------------------------------------------------------
+# A LINHA DE CADA CONTROLE NO CHECK-UP — A-08-O-CHECKUP-ABSORVE-A-GESTAO-01,
+# 25/09/2026. Pedido dela: *«aproveitariamos para unificarmos o Gestão de
+# Controles ao Check-up»*, e a linha passa a dizer o ESTADO do controle agora,
+# só leitura, com o ✓ de «tudo certo». <!-- noqa-acento: citação literal dela -->
+#
+# UM DONO PARA A PEÇA E DOIS CHAMADORES: o gerador (`aba08.linha_do_controle`)
+# desenha a cena da bancada com as mesmas funções, e este pacote as chama a
+# cada tique com o daemon vivo. Nada do que a linha diz é digitado no desenho.
+# ---------------------------------------------------------------------------
+#: O sinal de «tudo certo». Ele é o mesmo nos seis selos, e o `ok` da classe é
+#: o que a folha pinta de verde; `warn` é o laranja do que pede olho.
+CERTO = "✓"
+#: «Modo de conexão»: o caminho que o jogo usa para falar com este controle.
+#: `native_mode` é do daemon (o jogo lê o DualSense de verdade); fora dele, o
+#: jogo fala com o controle que o Hefesto apresenta.
+MODO_NATIVO = "Nativo"
+MODO_PELO_HEFESTO = "Pelo Hefesto"
+
+
+def selo_do_estado(rotulo: str, valor: str = "", estado: str = "ok") -> str:
+    """Um selo da linha: «Mic ✓», «Bateria 64% · carregando», «Visto como Xbox 360».
+
+    `estado` é `ok` (o ✓ verde), `warn` (laranja, sem ✓) ou `""` (neutro: é
+    informação, não juízo — o modo e o «visto como» não estão certos nem
+    errados). O VALOR vai em negrito; o rótulo é a palavra fixa do selo.
+    """
+    miolo = html.escape(rotulo)
+    if valor:
+        miolo += f" <b>{html.escape(valor)}</b>"
+    if estado == "ok":
+        miolo += f' <i class="certo">{CERTO}</i>'
+    return f'<span class="est {estado}">{miolo}</span>' if estado else f'<span class="est">{miolo}</span>'
+
+
+def _estado_de_carga(c: dict[str, Any]) -> str:
+    """A palavra do estado de carga, pelo dono da aba 02 (`carga_na_tela`)."""
+    try:
+        from .a02_controles import carga_na_tela
+
+        return str(carga_na_tela(c.get("battery_state")) or "")
+    except Exception:
+        return ""
+
+
+def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any],
+                       declaracao: Any) -> dict[str, str]:
+    """Os seis selos de UM controle, lidos do daemon vivo e da declaração.
+
+    `c` é a entrada do `state_full` (o `ctx.conectados`), `eu` a da mesa (o
+    número e a máscara por aparelho), `st` o estado inteiro. Vale para todo
+    transporte e todo modo: nenhum ramo pergunta qual é o controle nem quantos
+    há na mesa.
+    """
+    uniq = str(c.get("uniq") or "")
+    via = str(c.get("transport") or "").lower()
+    audio = c.get("audio") if isinstance(c.get("audio"), dict) else {}
+
+    # O MIC: ✓ também desligado, quando foi escolha dela (a declaração diz).
+    if not _mic_declarado(declaracao, uniq):
+        mic = selo_do_estado("Mic", "desligado")
+    elif audio.get("mic_mudo") is True:
+        mic = selo_do_estado("Mic", "mudo")
+    elif via == "bt" and uniq not in (st.get("pontes_confirmadas") or {}) \
+            and not c.get("hz_voz"):
+        # pelo rádio o microfone só chega por uma ponte; sem ela confirmada e
+        # sem voz medida, ele não está chegando — e isso não é «certo».
+        mic = selo_do_estado("Mic", "sem ponte", "warn")
+    else:
+        mic = selo_do_estado("Mic")
+
+    # O SOM: o bloco `speaker` só existe quando o daemon leu o alto-falante.
+    fala = c.get("speaker") if isinstance(c.get("speaker"), dict) else None
+    if fala is None:
+        som = selo_do_estado("Som", TRAVESSAO_DA_LINHA, "")
+    elif fala.get("muted"):
+        som = selo_do_estado("Som", "mudo")
+    else:
+        som = selo_do_estado("Som")
+
+    modo = selo_do_estado("Modo de conexão",
+                          MODO_NATIVO if st.get("native_mode") else MODO_PELO_HEFESTO, "")
+    visto = selo_do_estado("Visto como", str(eu.get("mascara") or TRAVESSAO_DA_LINHA), "")
+
+    # A CONEXÃO: no cabo não há o que engasgar; no rádio quem diz é o
+    # movimento medido (o mesmo `_e_pouco` que pinta a linha de Rádio e
+    # Adaptadores). Sem medida, não há juízo.
+    hz = c.get("hz_movimento")
+    if via == "usb":
+        conexao = selo_do_estado("Conexão estável")
+    elif _e_pouco(hz):
+        conexao = selo_do_estado("Conexão", "instável", "warn")
+    elif isinstance(hz, (int, float)) and not isinstance(hz, bool):
+        conexao = selo_do_estado("Conexão estável")
+    else:
+        conexao = selo_do_estado("Conexão", TRAVESSAO_DA_LINHA, "")
+
+    carga = _estado_de_carga(c)
+    bateria_txt = _texto_da_bateria(c.get("battery_pct"))
+    if carga:
+        bateria_txt = f"{bateria_txt} · {carga.lower()}"
+    bateria = selo_do_estado("Bateria", bateria_txt, "")
+
+    return {"est-mic": mic, "est-som": som, "est-modo": modo, "est-visto": visto,
+            "est-conexao": conexao, "est-bateria": bateria}
+
+
+#: O travessão da linha: *«isto eu não sei»*, o mesmo do `pacotes.__init__`.
+TRAVESSAO_DA_LINHA = "—"
+
+
+def economia_do_controle(declaracao: Any, uniq: str) -> tuple[bool | None, bool]:
+    """``(a escolha deste controle, a mesa está em «Bateria longa»?)``.
+
+    O contrato é o da O-MODO-ECONOMIA-POR-CONTROLE-01: a escolha é
+    ``controles[uniq].economia`` e a mesa é ``schema.mesa_em_economia`` sobre o
+    teto do orçamento — a mesma declaração que o ``_orcamento_da_mesa`` lê.
+    """
+    from hefesto_dualsense4unix.profiles import schema
+
+    try:
+        declarado = (declaracao.controles or {}).get(_so_hex(uniq))
+        escolha = getattr(declarado, "economia", None)
+    except Exception:
+        escolha = None
+    teto = getattr(getattr(declaracao, "orcamento", None), "teto", None)
+    return escolha, schema.mesa_em_economia(teto)
+
+
+#: As três dicas do botão, uma por origem (`schema.origem_da_economia`).
+ECONOMIA_DICA = {
+    None: "Liga a economia de bateria só neste controle.",
+    "controle": "A economia de bateria está ligada neste controle. Clique para desligar.",
+    "mesa": "A «Bateria longa» da aba Sistema liga a economia em todos os controles.",
+}
+
+
+def campos_da_economia(declaracao: Any, uniq: str) -> dict[str, str]:
+    """O estado do botão: `economia` (a classe acende) e `economia-dica`."""
+    from hefesto_dualsense4unix.profiles import schema
+
+    escolha, mesa = economia_do_controle(declaracao, uniq)
+    origem = schema.origem_da_economia(escolha, mesa)
+    return {"economia": "mesa" if origem == "mesa" else ("ligada" if origem else ""),
+            "economia-dica": ECONOMIA_DICA[origem]}
+
+
+def _nomes_dos_donos() -> dict[str, str]:
+    """``{endereço: nome}`` pelo dono do nome (o ``Alias`` do BlueZ).
+
+    O nome é do CONTROLE, pelo endereço — o mesmo que a A-CONEXOES lê em
+    ``_aparelhos_da_cena``. A leitura é a do fundo (``_em_fundo("bluez")``),
+    que o tique da seção do rádio já paga: nenhuma viagem nova ao barramento.
+    """
+    bluez = _em_fundo("bluez", _ler_o_bluez, 3.0)
+    if not bluez:
+        return {}
+    return _nomes_por_endereco(bluez[1])
+
+
+def dono_na_linha(nomes: dict[str, str], uniq: str, jogador: Any) -> str:
+    """O que o campo do dono mostra: o nome dela, ou «P N» quando não há nome."""
+    nome = nomes.get(_mac(uniq), "")
+    if nome:
+        return nome
+    if isinstance(jogador, int) and not isinstance(jogador, bool):
+        return f"P{jogador}"
+    return ""
+
+
+_SO_O_NUMERO = re.compile(r"\s*p\s*\d+\s*", re.IGNORECASE)
+
+
+@gesto("08-conexoes.html", "dono-renomear", grava="escrever_propriedade")
+def dono_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O nome do jogador dono do controle — pelo dono do nome (o `Alias`).
+
+    Apagar o campo, ou deixar só «P N», devolve o nome de fábrica, e a linha
+    volta a dizer «P N» (a decisão [02] da aba 01: apagar o nome volta a ele).
+    """
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("dono-renomear: o clique não disse em qual controle")
+    novo = str(o.get("valor") or "").strip()
+    if _SO_O_NUMERO.fullmatch(novo):
+        novo = ""
+    if novo == _nomes_dos_donos().get(_mac(uniq), ""):
+        return
+    endereco = _so_hex(uniq)
+    if len(endereco) != 12:
+        raise RuntimeError(_sem_endereco())
+    endereco = ":".join(endereco[i:i + 2] for i in range(0, 12, 2)).upper()
+    escrita = _alias_do_aparelho(endereco, novo)
+    if not getattr(escrita, "feita", False):
+        raise RuntimeError("o Bluetooth do sistema não gravou o nome novo")
+
+
+@gesto("08-conexoes.html", "economia-do-controle", grava="machine_declare")
+def economia_do_controle_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O botão «Modo Economia de Bateria» da linha — liga ou desliga NESTE controle.
+
+    O dono do que ele faz é a O-MODO-ECONOMIA-POR-CONTROLE-01: a tela só manda
+    ``machine.declare`` com ``schema.declaracao_da_economia`` (nunca o
+    ``profile.switch``, que é origem manual e trava a troca automática). Sob a
+    «Bateria longa» da mesa o botão está aceso pela aba Sistema, e o clique
+    aqui não apaga nada: recusa dizendo onde se desliga.
+    """
+    from hefesto_dualsense4unix.profiles import schema
+
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError("economia-do-controle: o clique não disse em qual controle")
+    escolha, mesa = economia_do_controle(_declaracao(), uniq)
+    if mesa:
+        raise RuntimeError(ECONOMIA_DICA["mesa"])
+    corpo = schema.declaracao_da_economia(uniq, escolha is not True)
+    ok, motivo = _resposta(p.machine_declare(corpo))
+    if not ok:
+        raise RuntimeError(motivo or "não consegui gravar o que você declarou")
+    _reler_a_declaracao()
+
+
+@gesto("08-conexoes.html", "checkup-atualizar")
+def checkup_atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Atualizar» do Check-up: relê agora o que a linha de cada controle mostra.
+
+    O «Examinar Entradas» mede as portas (e custa segundos); este botão só
+    RELÊ, na hora: a declaração (o microfone e a economia de cada controle),
+    os nomes dos donos no BlueZ e o rascunho do mapa das portas. O que ele
+    lê o tique seguinte pinta.
+    """
+    global _LOGICA
+    _reler_a_declaracao()
+    _esquecer("bluez")
+    _LOGICA = None
+
+
+# ---------------------------------------------------------------------------
+# O MAPEAR NUM BOTÃO SÓ — o fluxo guiado porta a porta, pelo dono do mapa
+# (`integrations.entrada_a_entrada.o_mapa()`, A-08-UM-MAPEAR-SO-01). Pedido
+# dela: *«Use um controle do dualsense (o mesmo), vá de porta em porta
+# conectando ele, carrega a informação que medimos, aí ele salva, adiciona um
+# nome e adiciona o posicionamento»*. A tela não guarda estado: a foto do dono
+# é o estado, e o tique a pinta. <!-- noqa-acento: citação literal dela -->
+# ---------------------------------------------------------------------------
+#: O que a tela diz em cada estado do fluxo (`foto["estado"]`).
+MAPEAR_DIZ = {
+    "parado": "Ligue o DualSense pelo cabo numa entrada do computador.",
+    "esperando": "Ligue o DualSense pelo cabo numa entrada do computador.",
+    "porta": "Dê um nome e o lugar desta entrada, e salve. Depois, passe o cabo para a próxima.",
+}
+
+
+def _o_mapa() -> Any:
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
+
+    return ee.o_mapa()
+
+
+def html_da_porta_medida(porta: dict[str, Any] | None) -> str:
+    """O que o Hefesto mediu da porta da vez, numa linha: nome, USB, onde, quedas."""
+    if not porta:
+        return '<i class="nada"></i>'
+    partes = [f"<b>{html.escape(str(porta.get('rotulo') or ''))}</b>"]
+    if porta.get("usb"):
+        partes.append(f"USB {html.escape(str(porta['usb']))}")
+    partes.append(f"num hub ({html.escape(str(porta.get('hub_produto') or 'hub'))})"
+                  if porta.get("hub") else "direto no computador")
+    storm = porta.get("storm")
+    if isinstance(storm, int) and not isinstance(storm, bool):
+        partes.append("sem quedas em 7 dias" if storm == 0
+                      else f"{storm} {'queda' if storm == 1 else 'quedas'} em 7 dias")
+    if porta.get("lugar_no_gabinete"):
+        partes.append(html.escape(str(porta["lugar_no_gabinete"])))
+    return _PONTO.join(partes)
+
+
+def campos_do_mapear(foto: dict[str, Any] | None = None) -> dict[str, str]:
+    """Os três campos da tela do Mapear, a partir da foto do dono."""
+    if foto is None:
+        try:
+            mapa = _o_mapa()
+            foto = mapa.estado()
+            if foto.get("estado") != "parado":
+                foto = mapa.olhar()
+        except Exception:
+            foto = {"estado": "parado"}
+    estado = str(foto.get("estado") or "parado")
+    feitas = foto.get("feitas") or 0
+    return {
+        "mapear-diz": MAPEAR_DIZ.get(estado, MAPEAR_DIZ["parado"]),
+        "mapear-porta": html_da_porta_medida(foto.get("porta")),
+        "mapear-conta": ("Nenhuma entrada salva ainda." if not feitas
+                         else f"{feitas} {'entrada salva' if feitas == 1 else 'entradas salvas'}."),
+    }
+
+
+@gesto("08-conexoes.html", "mapear-comecar")
+def mapear_comecar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """A tela do Mapear abriu: o dono começa a esperar a porta da vez."""
+    global _LOGICA
+    _LOGICA = None
+    _o_mapa().comecar()
+
+
+@gesto("08-conexoes.html", "mapear-gravar",
+       grava="a porta da vez no mapa das portas do maquina.json, pelo dono do mapa")
+def mapear_gravar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Salvar esta entrada»: o nome e o lugar da porta da vez, pelo dono.
+
+    `lugar` é a FACE do gabinete (um dos `LUGARES_DA_PORTA`), nunca o lugar D3
+    da porta; vazio mantém a face. `ValueError`/`RuntimeError` do dono são a
+    recusa dele (nada a gravar, ou não há porta da vez).
+    """
+    global _LOGICA
+    forma = o.get("forma") if isinstance(o.get("forma"), dict) else {}
+    nome = str(forma.get("nome") or "").strip() or None
+    lugar = str(forma.get("lugar") or "").strip() or None
+    _o_mapa().gravar(nome=nome, lugar=lugar)
+    # o rascunho velho do gabinete não pode mandar por cima o que o dono gravou
+    _LOGICA = None
+    _reler_a_declaracao()
+
+
+@gesto("08-conexoes.html", "mapear-parar")
+def mapear_parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """A tela do Mapear fechou: o dono para de olhar as portas."""
+    _o_mapa().parar()

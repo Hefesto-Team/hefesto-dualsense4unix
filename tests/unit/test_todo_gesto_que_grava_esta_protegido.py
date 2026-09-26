@@ -255,6 +255,11 @@ ISENTOS: dict[tuple[str, str], str] = {
 #: lado.** Um "declarou por frase" solto seria a porta por onde qualquer gesto
 #: escaparia da conferência — bastaria escrever uma frase em vez do nome.
 FORA_DA_ARVORE: dict[tuple[str, str], str] = {
+    ("08-conexoes.html", "mapear-gravar"):
+        "grava o nome e o lugar da porta da vez no `maquina.json` dela pelo "
+        "`MapearAsPortas.gravar` do dono do mapa (`entrada_a_entrada.o_mapa()`, "
+        "A-08-UM-MAPEAR-SO-01): é método de um objeto devolvido por função, e a "
+        "árvore só desce por ajudante chamado pelo nome",
     ("01-jogar.html", "modo-navegacao"):
         "liga o mouse emulado pela preferência persistida (`mouse.emulation."
         "restore`); o perigo é o CURSOR andando na tela dela, e cursor não é "
