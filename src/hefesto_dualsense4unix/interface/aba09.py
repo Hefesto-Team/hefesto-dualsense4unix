@@ -617,7 +617,7 @@ STATUS = [
 # AS LINHAS SÃO CURTAS, E A FRASE INTEIRA FICA NO `title` — pedido dela, 25/09:
 # *«Vamos simplificar cada texto, seja tooltip ou seja do doctor que aparece
 # ali.»* O produto corta a frase do `doctor` na cabeça
-# (`a09_sistema.cabeca_da_frase`); o desenho mostra o que essa regra produz. O
+# (`a09_sistema.frase_curta_do_exame`); o desenho mostra frases dessa forma. O
 # Bluetooth SAIU daqui e foi para o Status: duas linhas dizendo a mesma coisa
 # na mesma faixa seria dizer duas vezes.
 ACHADOS = [
@@ -771,7 +771,7 @@ LEGENDA = '''<div class="nota">
       forma do exame (a pílula e o texto curto): <b>Serviço</b> (LIGADO, PAUSADO ou PARADO — a
       pausa deixou de ter linha própria), <b>Troca de perfil</b>, <b>Ambiente gráfico</b> e
       <b>Bluetooth</b>, que leva à seção do rádio da aba Conexões. O exame fica ao lado, em duas
-      colunas, e o Bluetooth saiu dele. As frases do exame mostram a cabeça; a inteira fica no
+      colunas, e o Bluetooth saiu dele. As frases do exame saem curtas; a inteira fica no
       <code>title</code>.</li>
     <li><b>2. Configurações Avançadas</b> — quatro colunas: <b>Serviço</b> (Parar/Retomar num botão
       só, Atualizar, Reiniciar), <b>Perfil Global de Bateria</b> (as três escolhas na vertical),
