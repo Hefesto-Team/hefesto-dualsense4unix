@@ -177,6 +177,21 @@ def test_camada_que_nunca_foi_nossa_nao_conta_como_trabalho_feito(
     assert texto is not None and "nenhuma tirada" in texto, texto
 
 
+def test_a_frase_da_linha_tem_um_dono_so(monkeypatch: pytest.MonkeyPatch) -> None:
+    """ARRANQUE o `cv.frase_do_estado` da linha e este teste reprova.
+
+    O desenho da aba (`interface/aba09.py`) monta a cena com a mesma função.
+    Uma segunda montagem aqui deixaria o desenho e a tela viva dizendo coisas
+    diferentes sobre o mesmo censo — foi assim que o desenho mostrou, por um
+    mês, uma linha que a tela nunca pintou (26/09/2026).
+    """
+    monkeypatch.setattr(cv, "frase_do_estado", lambda t, p, n: f"DONO {t}/{p}/{n}")
+    texto = _montar(monkeypatch, prefixos=7,
+                    jogos=[_Jogo("42", (_Camada("K", r"C:\c\X.json", ligada=True),))],
+                    estado={})
+    assert texto == "DONO 0/1/7", texto
+
+
 def test_a_sobra_aparece_como_posta(monkeypatch: pytest.MonkeyPatch) -> None:
     """A segunda metade da pergunta: o que o botão AINDA faria."""
     texto = _montar(monkeypatch, prefixos=7,
