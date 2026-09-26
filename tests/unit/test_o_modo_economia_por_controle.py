@@ -748,3 +748,28 @@ def test_o_daemon_reaplica_o_perfil_so_quando_a_economia_muda(
     daemon._native_mode = True
     assert daemon.reaplicar_se_a_economia_mudou(antes) is False
     assert chamadas == [1], "em Modo Nativo o controle está com o jogo"
+
+
+@pytest.mark.parametrize(
+    "alvo",
+    [
+        "02:fe:00:00:00:01",  # o gamepad virtual — não é peça de plástico
+        "02:aa:bb:00:00:01",  # o endereço que o DKMS forja — o disco o recusa
+        "path:/dev/input/event9",
+        "usb-0000:00:14.0-3",
+        "",
+    ],
+)
+def test_o_escritor_recusa_a_chave_em_que_nao_e_seguro_gravar(alvo: str) -> None:
+    """A chave de peça que grava e o que o disco aceita são perguntas aos DONOS.
+
+    Medido na conferência de 25/09/2026: o escritor normalizava a chave com uma
+    terceira grafia própria, que aceitava o gamepad virtual e o endereço
+    forjado — o primeiro gravaria a economia numa peça que não existe, e o
+    segundo voltaria do ``machine.declare`` como ``declaracao_invalida``.
+
+    MORDIDA: devolva no escritor a normalização própria (tirar tudo que não é
+    hexa e exigir doze) — as duas primeiras reprovam.
+    """
+    with pytest.raises(ValueError):
+        declaracao_da_economia(alvo, True)

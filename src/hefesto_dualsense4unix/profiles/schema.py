@@ -2615,14 +2615,15 @@ def economia_da_declaracao(declaracao: Any) -> tuple[bool, frozenset[str]]:
     controles = getattr(declaracao, "controles", None)
     if not isinstance(controles, dict):
         return mesa, frozenset()
+    # A chave JÁ é a canônica: o ``MaquinaConfig`` recusa na leitura toda
+    # chave de ``controles`` que não seja doze hexa minúsculos
+    # (``utils.maquina._chave_de_controle_e_mac_de_hardware``), então não há
+    # o que normalizar aqui — e uma segunda normalização seria a terceira
+    # grafia da chave de peça, que a casa já juntou em ``norm_mac``.
     ligados = frozenset(
-        chave
-        for chave in (
-            _so_hex(uniq)
-            for uniq, declarado in controles.items()
-            if getattr(declarado, "economia", None) is True
-        )
-        if chave
+        uniq
+        for uniq, declarado in controles.items()
+        if isinstance(uniq, str) and getattr(declarado, "economia", None) is True
     )
     return mesa, ligados
 
@@ -2632,18 +2633,11 @@ def economia_da_mesa() -> bool:
     return economia_da_declaracao(_declaracao_viva())[0]
 
 
-def _so_hex(uniq: object) -> str:
-    """O ``uniq`` em doze hexa minúsculos, a forma das duas chaves de disco."""
-    texto = re.sub(r"[^0-9a-fA-F]", "", str(uniq or ""))
-    return texto.lower() if len(texto) == 12 else ""
-
-
 def controles_em_economia() -> frozenset[str]:
     """Os ``uniq`` (doze hexa) cujo controle LIGOU a sua economia, AGORA.
 
     Só ``True`` conta: ``False`` e a ausência são o mesmo aqui (ver
-    :func:`economia_vale`). A chave é normalizada de novo porque um
-    ``maquina.json`` editado à mão pode trazer os dois-pontos.
+    :func:`economia_vale`).
     """
     return economia_da_declaracao(_declaracao_viva())[1]
 
@@ -2658,12 +2652,26 @@ def declaracao_da_economia(uniq: str, ligada: bool) -> dict[str, Any]:
     economia ligada no disco com o botão apagado na tela. O resto do controle
     (``cor``, ``microfone``…) não é tocado — a fusão desce no dicionário.
 
-    ``ValueError`` num ``uniq`` que não é endereço: gravar a economia sob uma
-    chave que nenhum controle casa seria a escolha dela sumindo calada.
+    ``ValueError`` num ``uniq`` em que não é seguro gravar: gravar a economia
+    sob uma chave que nenhum controle casa seria a escolha dela sumindo calada.
+    As duas perguntas vão aos DONOS, e nenhuma é escrita de novo aqui: a chave
+    de peça que grava é a de ``manager.chave_de_peca_que_grava`` (doze hexa,
+    e o gamepad virtual não é peça de plástico), e o que o disco aceita é o
+    que o ``MaquinaConfig`` valida (o endereço forjado pelo DKMS é recusado
+    lá, e o ``machine.declare`` devolveria ``declaracao_invalida``).
     """
-    chave = _so_hex(uniq)
-    if not chave:
+    from pydantic import ValidationError
+
+    from hefesto_dualsense4unix.profiles.manager import chave_de_peca_que_grava
+    from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
+
+    chave = chave_de_peca_que_grava(str(uniq or ""))
+    if chave is None:
         raise ValueError(f"economia: {uniq!r} não é o endereço de um controle")
+    try:
+        MaquinaConfig.model_validate({"controles": {chave: {"economia": True}}})
+    except ValidationError as exc:
+        raise ValueError(f"economia: {uniq!r} não é chave de controle: {exc}") from exc
     return {"controles": {chave: {"economia": True if ligada else None}}}
 
 
