@@ -3537,7 +3537,7 @@ def sala_altura(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 def sala_visada(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Tem gente sentada entre o dongle e o sofá?" — grava a resposta.
 
-    O par da de cima: `MesaDeclarada.linha_de_visada` (`utils/maquina.py:307`),
+    O par da de cima: `MesaDeclarada.linha_de_visada` (`utils/maquina.py:311`),
     `"com_gente"` / `"livre"` / `None`. Corpo humano absorve 2,4 GHz e nenhum
     barramento sabe disso — é o que o cabeçalho do `utils/maquina.py` chama de "o
     que nenhum barramento sabe".
@@ -3635,7 +3635,7 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     continua publicando a fonte. O que a tela promete aqui é outra coisa —
     *"Desligado, nenhum programa o enxerga"* — e isso é a PONTE, que existe ou
     não existe: `ControleDeclarado.microfone` no `maquina.json`
-    (`utils/maquina.py:708`), decisão dela de 22/08/2026 (*"por controle"*).
+    (`utils/maquina.py:736`), decisão dela de 22/08/2026 (*"por controle"*).
 
     QUEM CONSOME, e é por isso que o clique vale AGORA: o
     `_handle_machine_declare` relê o disco, rebinda `daemon._maquina` e SOBE OU
