@@ -931,3 +931,121 @@ def test_o_carimbo_de_um_minuto_e_singular_ate_os_dois_minutos() -> None:
     for segundos in (45.0, 60.0, 89.0, 90.0, 100.0, 119.9):
         assert secao_exame.frase_de_quando(segundos) == "Há 1 minuto", segundos
     assert secao_exame.frase_de_quando(120.0) == "Há 2 minutos"
+
+
+# ---------------------------------------------------------------------------
+# O QUE O CONFERENTE ACHOU (25/09/2026) — a cura que só valia para o DualSense
+# ---------------------------------------------------------------------------
+# O rádio de mentira respondia o `HID_PHYS` só pelo DualSense e dava movimento a
+# qualquer aparelho: mais frouxo que o kernel (todo HID pelo rádio tem hidraw) e
+# que o daemon (ele só mede o movimento do DualSense). Com ele fiel, três curas
+# desta sprint caíam fora do DualSense de classe publicada.
+
+TECLADO_LE = "aa:bb:cc:00:00:7d"
+OUTRO_CONTROLE = "aa:bb:cc:00:00:8b"
+
+
+@pytest.mark.parametrize("controles", [1, 4])
+def test_o_teclado_de_baixo_consumo_se_move_como_teclado(
+    mesa: Any, relogio: rm.Relogio, controles: int
+) -> None:
+    """O «BT5.0 Keyboard» dela é de baixo consumo: sem ``Class``, com o ``Icon``
+    que o BlueZ deriva da ``Appearance``, e com hidraw pelo rádio como todo HID.
+    Ele se move como teclado — não vira controle, não espera o movimento de
+    DualSense, e chega.
+
+    MORDIDA: devolva ao ``_e_controle`` a pergunta ao kernel no lugar do ``Icon``
+    (*«o aparelho que tem hidraw no rádio é controle»*) — o teclado vira
+    controle, o CONFERIR espera um movimento que ele não tem, e esta régua
+    reprova.
+    """
+    mundo, dono, central = mesa(controles)
+    mundo.pareado(SALA, TECLADO_LE, classe=None, icone="input-keyboard", hid=True)
+    dono._fotografar()
+    assert mundo.onde_esta(rm.uniq(TECLADO_LE)) == SALA, "o kernel dá hidraw ao teclado"
+    relogio.agendar(2.0, lambda: mundo.segurar_ps_create(TECLADO_LE))
+
+    feito = central.mover(TECLADO_LE, QUARTO)
+
+    assert feito.e_controle is False, "o teclado de baixo consumo virou controle"
+    assert (feito.estado, feito.destino) == (cr.CHEGOU, QUARTO)
+    assert feito.publicar()["icone"] == "input-keyboard"
+    assert mundo.lapides == [(SALA, TECLADO_LE)]
+    for outro in QUATRO[:controles]:
+        assert mundo.onde_esta(rm.uniq(outro)) == SALA
+
+
+@pytest.mark.parametrize("modalias", [
+    "bluetooth:v2DC8p6002d0100",   # um controle de outra marca
+    "bluetooth:v054Cp09CCd0100",   # um DualShock 4: Sony, e o daemon não o lê
+])
+@pytest.mark.parametrize("caminho", ["mover", "conectar"])
+def test_o_controle_que_o_daemon_nao_le_chega_pelo_hid_phys(
+    mesa: Any, relogio: rm.Relogio, modalias: str, caminho: str
+) -> None:
+    """O controle desconhecido da régua dela: é controle pela classe, e o daemon
+    nunca mede o movimento dele (``None`` para sempre). O ``HID_PHYS`` no destino
+    é a confirmação — senão o mover esperava o prazo inteiro, dizia «não chegou»
+    com ele lá, e a central ficava ocupada.
+
+    MORDIDA: devolva ao ``_chegou`` o ``hz is not None and hz > 0`` sem a
+    pergunta ``_o_daemon_mede`` — ele fica «esperando» e esta régua reprova.
+    """
+    mundo, dono, central = mesa(2)
+    if caminho == "mover":
+        mundo.pareado(SALA, OUTRO_CONTROLE, modalias=modalias)
+        dono._fotografar()
+        mundo.desligar(OUTRO_CONTROLE)
+        relogio.agendar(2.0, lambda: mundo.segurar_ps_create(OUTRO_CONTROLE))
+        feito = central.mover(OUTRO_CONTROLE, QUARTO)
+    else:
+        mundo.fisicos[OUTRO_CONTROLE] = rm.Fisico(OUTRO_CONTROLE, rm.CLASSE_DE_CONTROLE,
+                                                  modalias=modalias)
+        relogio.agendar(2.0, lambda: mundo.segurar_ps_create(OUTRO_CONTROLE))
+        feito = central.conectar(QUARTO)
+
+    assert mundo.hz(rm.uniq(OUTRO_CONTROLE)) is None, "o daemon não mede este controle"
+    assert (feito.estado, feito.aparelho, feito.destino) == (
+        cr.CHEGOU, OUTRO_CONTROLE, QUARTO), feito.motivo
+    assert feito.e_controle is True
+    assert not central.em_curso, "a central ficou ocupada com ele já lá"
+
+
+def test_o_dualsense_sem_movimento_medido_continua_esperando(
+    mesa: Any, relogio: rm.Relogio
+) -> None:
+    """A cura de cima não afrouxa o DualSense: o movimento dele o daemon mede, e
+    «não sei» (o ``SensorHub`` antes de fechar uma janela) não é «chegou».
+
+    MORDIDA: faça o ``_o_daemon_mede`` responder sempre que não — o DualSense
+    passa a chegar sem movimento nenhum, e esta régua reprova.
+    """
+    mundo, _dono, central = mesa(2)
+    central._movimento = lambda _u: None
+    relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERMELHO))
+
+    feito = central.mover(VERMELHO, QUARTO)
+
+    assert mundo.onde_esta(rm.uniq(VERMELHO)) == QUARTO
+    assert (feito.estado, feito.motivo) == (cr.ESPERANDO, cr.MOTIVO_SEM_CONFIRMACAO)
+
+
+def test_o_teclado_de_baixo_consumo_esperando_tem_o_desenho_do_teclado(
+    a08: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A linha de quem espera, pelo que a central leu: sem classe, o ``Icon``
+    diz o tipo — o mesmo dono da linha de quem está ligado.
+
+    MORDIDA: tire o ``Icon`` do tipo de quem espera (só a classe) — o teclado
+    de baixo consumo vira «outro», com o desenho genérico, e esta régua reprova.
+    """
+    _montar(a08, monkeypatch)
+    central = {"movimentos": [_esperando(TECLADO_LE, 2, e_controle=False, classe=None,
+                                         icone="input-keyboard", modalias="", nome="")],
+               "proposta": None}
+    cena = _cena(a08, _estado({VERMELHO: 0}, central=central))
+    linha = _linha(a08, cena, TECLADO_LE)
+    assert "#rd-teclado" in linha and "#rd-ds" not in linha
+    assert "PS + Create" not in linha
+    assert "ponha o teclado para parear" in linha
+

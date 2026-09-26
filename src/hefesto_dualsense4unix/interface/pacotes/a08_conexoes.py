@@ -5913,10 +5913,13 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
         # O QUE ESTÁ ESPERANDO, PELO QUE A CENTRAL LEU ANTES DE ESQUECER A
         # ORIGEM: depois dela o BlueZ não tem mais objeto do aparelho, e o
         # daemon já não o publica (desligado). Sem a classe, um teclado virava
-        # «outro» — e o controle, um DualSense sem nome.
+        # «outro» — e o controle, um DualSense sem nome. O `Icon` vem junto: é o
+        # único tipo do aparelho de baixo consumo, que não tem classe (o mesmo
+        # dono da linha de quem está ligado, `_tipo_do_aparelho`).
         classe = m.get("classe")
         tipo = ("controle" if m.get("e_controle")
-                else _tipo_pela_classe(classe if isinstance(classe, int) else None))
+                else _tipo_do_aparelho(str(m.get("icone") or ""),
+                                       classe if isinstance(classe, int) else None))
         fora.append({"id": str(m.get("aparelho")), "tipo": tipo,
                      "lugar": _mac(m.get("destino")), "nome": str(m.get("nome") or ""),
                      "modalias": str(m.get("modalias") or ""),

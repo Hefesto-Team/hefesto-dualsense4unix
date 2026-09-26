@@ -489,12 +489,13 @@ def test_o_publicado_so_tem_os_tres_estados_e_nenhum_texto_de_tela(
     assert estados <= set(cr.ESTADOS)
     assert estados == {cr.ESPERANDO, cr.NAO_CHEGOU}
     for movimento in publicado["movimentos"]:
-        # «classe», «modalias» e «nome» (25/09/2026): o que a tela precisa para
-        # dizer O QUE está esperando depois de a origem sair. O «nome» é o que
-        # ELA deu ao aparelho — dado dela, e não texto de tela do produto.
+        # «classe», «modalias», «icone» e «nome» (25/09/2026): o que a tela
+        # precisa para dizer O QUE está esperando depois de a origem sair (o
+        # «icone» é o tipo do aparelho de baixo consumo, que não tem classe). O
+        # «nome» é o que ELA deu ao aparelho — dado dela, e não texto de tela.
         assert set(movimento) == {
             "aparelho", "destino", "estado", "passo", "motivo", "origens", "e_controle",
-            "classe", "modalias", "nome", "quando",
+            "classe", "modalias", "icone", "nome", "quando",
         }
 
 

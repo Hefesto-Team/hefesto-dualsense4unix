@@ -44,6 +44,17 @@ e até ela este dublê era MAIS FROUXO que o controle de verdade:
 O ``Alias`` nasce igual ao ``Name`` de fábrica, como no BlueZ; o nome que ela
 dá é o ``Alias`` diferente dele.
 
+E A FÍSICA DO KERNEL E DO DAEMON, que o conferente da mesma sprint mediu (este
+dublê respondia só pelo DualSense, e era mais frouxo que o real):
+
+* **todo aparelho HID pelo rádio tem hidraw**, e o ``HID_PHYS`` dele é o
+  adaptador — o teclado e o mouse também, e o de baixo consumo (sem ``Class``)
+  também. :meth:`RadioDeMentira.onde_esta` responde por todos eles;
+* **o daemon só mede o movimento do DualSense** (Sony ``054C``, ``0CE6`` e
+  ``0DF2``): de um teclado, de um DualShock 4 ou de um 8BitDo, o
+  :meth:`RadioDeMentira.hz` responde ``None`` — «não sei», como o
+  ``SensorHub``.
+
 Os dois botões de defeito que a régua aperta:
 
 * ``pair_falha`` — o ``Pair`` responde erro;
@@ -56,6 +67,7 @@ Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
 from __future__ import annotations
 
 import copy
+import re
 import threading
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
@@ -82,7 +94,7 @@ CLASSE_DE_FONE = 0x240404
 CLASSE_DE_TECLADO = 0x002540
 
 #: O ``Name`` de fábrica — o ``Alias`` nasce igual a ele.
-NOME_DE_FABRICA = {CLASSE_DE_CONTROLE: "DualSense Wireless Controller",
+NOME_DE_FABRICA: dict[int | None, str] = {CLASSE_DE_CONTROLE: "DualSense Wireless Controller",
                    CLASSE_DE_FONE: "Fone de mentira", CLASSE_DE_TECLADO: "BT5.0 Keyboard"}
 #: O ``Modalias`` do DualSense (Sony 054C, produto 0CE6), como o BlueZ publica.
 MODALIAS_DO_DUALSENSE = "bluetooth:v054Cp0CE6d0100"
@@ -101,7 +113,8 @@ class Fisico:
     """O aparelho na mão dela: o host que ELE guarda, e onde está conectado."""
 
     endereco: str
-    classe: int
+    #: ``None`` é o aparelho de baixo consumo, que não publica ``Class``.
+    classe: int | None
     host: str = ""
     conectado_em: str = ""
     pareando: bool = False
@@ -109,6 +122,30 @@ class Fisico:
     #: Os hosts de ANTES do de agora, o mais recente primeiro — o pareamento
     #: antigo a que ele volta sozinho quando a chave ainda existe lá.
     antigos: list[str] = field(default_factory=list)
+    #: O ``Modalias`` que o BlueZ publica; ``None`` = o da classe (o DualSense
+    #: no controle, nada no resto).
+    modalias: str | None = None
+    #: O ``Icon`` que o BlueZ deriva — o único tipo do aparelho sem ``Class``.
+    icone: str = ""
+    #: Tem hidraw no rádio? ``None`` = pela classe (periférico, maior ``0x05``);
+    #: o aparelho de baixo consumo, que não tem classe, diz aqui.
+    hid: bool | None = None
+
+    @property
+    def modalias_publicado(self) -> str:
+        if self.modalias is not None:
+            return self.modalias
+        return MODALIAS_DO_DUALSENSE if self.classe == CLASSE_DE_CONTROLE else ""
+
+    @property
+    def tem_hidraw(self) -> bool:
+        if self.hid is not None:
+            return self.hid
+        return self.classe is not None and (self.classe >> 8) & 0x1F == 0x05
+
+    @property
+    def o_daemon_mede(self) -> bool:
+        return re.search(r"v054Cp(0CE6|0DF2)", self.modalias_publicado, re.I) is not None
 
 
 class RadioDeMentira:
@@ -162,15 +199,21 @@ class RadioDeMentira:
         adaptador: str,
         aparelho: str,
         *,
-        classe: int = CLASSE_DE_CONTROLE,
+        classe: int | None = CLASSE_DE_CONTROLE,
         conectado: bool = True,
         host: bool = True,
         nome: str = "",
+        modalias: str | None = None,
+        icone: str = "",
+        hid: bool | None = None,
     ) -> None:
         """Um bond que já existe. ``host`` diz se o CONTROLE guarda este adaptador.
 
-        ``nome`` é o ``Alias`` que ela deu; sem ele, o de fábrica."""
-        fisico = self.fisicos.setdefault(aparelho, Fisico(aparelho, classe))
+        ``nome`` é o ``Alias`` que ela deu; sem ele, o de fábrica. ``classe``
+        ``None`` é o aparelho de baixo consumo, que o BlueZ conhece pelo
+        ``icone``."""
+        fisico = self.fisicos.setdefault(
+            aparelho, Fisico(aparelho, classe, modalias=modalias, icone=icone, hid=hid))
         if host:
             fisico.host = adaptador
             if conectado:
@@ -181,7 +224,8 @@ class RadioDeMentira:
                 "Address": aparelho.upper(),
                 "Name": fabrica,
                 "Alias": nome or fabrica,
-                "Modalias": MODALIAS_DO_DUALSENSE if classe == CLASSE_DE_CONTROLE else "",
+                "Modalias": fisico.modalias_publicado,
+                "Icon": fisico.icone,
                 "Paired": True,
                 "Bonded": True,
                 "Trusted": True,
@@ -254,17 +298,23 @@ class RadioDeMentira:
                 self._mudar(caminho, bd.APARELHO, "Connected", True)
 
     def onde_esta(self, u: str) -> str:
-        """O ``HID_PHYS``: o adaptador em que o controle está conectado agora."""
+        """O ``HID_PHYS``: o adaptador em que o aparelho HID está conectado agora.
+
+        TODO aparelho HID — o kernel dá hidraw ao teclado e ao mouse pelo rádio
+        também, com o ``HID_PHYS`` no adaptador. O fone não é HID."""
         with self.tranca:
             for fisico in self.fisicos.values():
-                if uniq(fisico.endereco) == u and fisico.classe == CLASSE_DE_CONTROLE:
+                if uniq(fisico.endereco) == u and fisico.tem_hidraw:
                     return fisico.conectado_em
         return ""
 
     def hz(self, u: str) -> float | None:
+        """O movimento que o daemon mede — só do DualSense; do resto, ``None``."""
         with self.tranca:
             for fisico in self.fisicos.values():
                 if uniq(fisico.endereco) == u:
+                    if not fisico.o_daemon_mede:
+                        return None
                     return fisico.hz if fisico.conectado_em else 0.0
         return None
 
@@ -382,7 +432,10 @@ class RadioDeMentira:
                 "Address": fisico.endereco.upper(),
                 "Name": fabrica,
                 "Alias": fabrica,
-                "Modalias": MODALIAS_DO_DUALSENSE if fisico.classe == CLASSE_DE_CONTROLE else "",
+                # o Modalias chega com o pareamento (o registro PnP do SDP), e o
+                # aparelho achado na busca ainda não o tem
+                "Modalias": "",
+                "Icon": fisico.icone,
                 "Paired": False,
                 "Bonded": False,
                 "Trusted": False,
@@ -455,6 +508,8 @@ class RadioDeMentira:
                 return recusa
             self._mudar(caminho, bd.APARELHO, "Paired", True)
             self._mudar(caminho, bd.APARELHO, "Bonded", True)
+            if fisico.modalias_publicado:
+                self._mudar(caminho, bd.APARELHO, "Modalias", fisico.modalias_publicado)
             if self.pair_mente:
                 return bd.Escrita(True, resposta=())
             fisico.pareando = False

@@ -106,6 +106,7 @@ aparece na janela, pela classe —, e o segundo fica para a próxima.
 from __future__ import annotations
 
 import contextlib
+import re
 import subprocess
 import threading
 import time
@@ -201,6 +202,17 @@ ESQUECEU_A_SOBRA = "esqueceu a sobra de um bond"
 #: O ``o_que`` da linha quando o «Conectar» acaba pelo pareamento antigo.
 VOLTOU_PELO_PAREAMENTO_ANTIGO = "o controle voltou pelo pareamento antigo"
 
+# --- o que é controle, e qual o daemon mede -----------------------------------
+
+#: O ``Icon`` que o BlueZ dá ao joystick e ao gamepad — da classe no rádio
+#: clássico, da ``Appearance`` no de baixo consumo. O teclado é
+#: ``input-keyboard``, o mouse ``input-mouse``: nenhum dos dois é controle.
+ICONE_DE_CONTROLE = "input-gaming"
+
+#: O ``Modalias`` do controle cujo movimento o daemon lê: o DualSense (Sony
+#: ``054C``, ``0CE6``) e o Edge (``0DF2``).
+_MODALIAS_QUE_O_DAEMON_MEDE = re.compile(r"v054Cp(0CE6|0DF2)", re.IGNORECASE)
+
 # --- os prazos ----------------------------------------------------------------
 
 #: Quanto um gesto de TELA espera a trava do rádio — decisão de quem coordena,
@@ -282,6 +294,10 @@ class Movimento:
     #: não se pareia com PS + Create (a lista dela de 25/09, passo c3).
     classe: int | None = None
     modalias: str = ""
+    #: O ``Icon`` que o BlueZ deriva (da classe, ou da ``Appearance`` no de baixo
+    #: consumo), lido junto: é o único tipo de um aparelho LE, que não tem classe
+    #: — o «BT5.0 Keyboard» da lista dela (passos b7 e c3).
+    icone: str = ""
     #: O nome que ela deu ao aparelho (o ``Alias``), lido na origem: ele é do
     #: APARELHO, e vai junto para o objeto novo no destino. ``""`` = o nome de
     #: fábrica, que o BlueZ dá sozinho.
@@ -307,6 +323,7 @@ class Movimento:
             "e_controle": self.e_controle,
             "classe": self.classe,
             "modalias": self.modalias,
+            "icone": self.icone,
             "nome": self.nome,
             "quando": round(self.quando, 3),
         }
@@ -1047,7 +1064,7 @@ class CentralDoRadio:
     def _quem_e(
         self, foto: _Foto, dono: bluez_dbus.LeitorDoBluez, *, exceto: str = ""
     ) -> dict[str, Any]:
-        """A classe, o ``Modalias`` e o nome dela, lidos ANTES de a origem sair.
+        """A classe, o ``Modalias``, o ``Icon`` e o nome dela, lidos ANTES de a origem sair.
 
         O nome é o ``Alias`` que difere do ``Name`` de fábrica — o do objeto
         CONECTADO primeiro, porque é nele que ela renomeou por último; sem ele,
@@ -1060,6 +1077,7 @@ class CentralDoRadio:
         objetos = [o for _e, o in pares]
         classe = next((o.classe for o in objetos if o.classe is not None), None)
         modalias = next((o.modalias for o in objetos if o.modalias), "")
+        icone = next((o.icone for o in objetos if o.icone), "")
         nome = ""
         for endereco, objeto in pares:
             if endereco == exceto:
@@ -1069,7 +1087,7 @@ class CentralDoRadio:
             if alias and alias != str(fabrica or "").strip():
                 nome = alias
                 break
-        return {"classe": classe, "modalias": modalias, "nome": nome}
+        return {"classe": classe, "modalias": modalias, "icone": icone, "nome": nome}
 
     def _desligar_e_esquecer_a_origem(
         self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez, foto: _Foto
@@ -1243,12 +1261,45 @@ class CentralDoRadio:
     # -- os passos -------------------------------------------------------------
 
     def _e_controle(self, foto: _Foto, alvo: str) -> bool:
-        """Pergunta à CLASSE do aparelho, nunca ao nome. Sem classe publicada,
-        pergunta ao kernel: o aparelho que tem hidraw no rádio é controle."""
+        """Pergunta à CLASSE do aparelho, nunca ao nome. Sem classe, ao ``Icon``
+        que o próprio BlueZ deriva (da ``Appearance``, no de baixo consumo); sem
+        os dois, ao daemon — o controle que ele publica é controle.
+
+        FATO SUBSTITUÍDO (o conferente da A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01,
+        25/09/2026): sem classe, a pergunta ia ao kernel — *«o aparelho que tem
+        hidraw no rádio é controle»*. Todo aparelho HID pelo rádio tem hidraw, e
+        o ``HID_PHYS`` dele é o adaptador: o teclado de baixo consumo, que não
+        publica ``Class`` (o «BT5.0 Keyboard» da lista dela, passos b7 e c3),
+        virava controle. A tela o vestia de DualSense com «Segure PS + Create»,
+        e o CONFERIR esperava um movimento que teclado não tem até o prazo — com
+        a origem já esquecida e a central ocupada por dois minutos.
+        """
         for objeto in foto.do_aparelho.values():
             if objeto.classe is not None:
                 return e_controle(objeto.classe)
-        return bool(self._onde_esta(_hex12(alvo)))
+        icones = {objeto.icone for objeto in foto.do_aparelho.values() if objeto.icone}
+        if icones:
+            return ICONE_DE_CONTROLE in icones
+        alvo12 = _hex12(alvo)
+        return any(_hex12(str(c.get("uniq") or "")) == alvo12 for c in self._ultimos_controles)
+
+    def _o_daemon_mede(self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez) -> bool:
+        """O daemon mede o movimento DESTE controle? Só o do DualSense (Sony
+        ``054C``, produtos ``0CE6`` e ``0DF2``), que é o controle que ele lê.
+
+        O ``Modalias`` é o lido antes de a origem sair ou, no «Conectar» (que
+        acha o controle ANTES de parear, quando o BlueZ ainda não tem o
+        ``Modalias`` dele), o do objeto no destino. Sem ``Modalias`` nenhum é
+        «não sei», e «não sei» não afrouxa o CONFERIR: vale o movimento.
+        """
+        modalias = movimento.modalias
+        if not modalias:
+            no = dono.caminho_do_aparelho(movimento.aparelho, adaptador=movimento.destino)
+            if no is not None:
+                modalias = str(dono.propriedade(no, bluez_dbus.APARELHO, "Modalias") or "")
+        if not modalias:
+            return True
+        return _MODALIAS_QUE_O_DAEMON_MEDE.search(modalias) is not None
 
     def _preparar_o_adaptador(
         self, dono: bluez_dbus.LeitorDoBluez, adaptador: bluez_dbus.AdaptadorDoBluez
@@ -1361,7 +1412,14 @@ class CentralDoRadio:
 
     def _chegou(self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez) -> bool:
         """A pergunta do CONFERIR, UMA vez. Controle: ``HID_PHYS`` no destino E o
-        movimento chegando. Outro aparelho: o BlueZ o diz conectado no destino."""
+        movimento chegando. Outro aparelho: o BlueZ o diz conectado no destino.
+
+        O CONTROLE QUE O DAEMON NÃO LÊ (um 8BitDo, um DualShock 4 — o controle
+        desconhecido da régua dela de 25/09) nunca terá movimento medido: para
+        ele, o ``HID_PHYS`` no destino é a confirmação, que é a do kernel. Sem
+        isto o mover dele esperava o prazo inteiro, dizia «não chegou» com o
+        controle lá, e a central ficava ocupada dois minutos.
+        """
         if movimento.e_controle:
             uniq = _hex12(movimento.aparelho)
             if self._onde_esta(uniq) != movimento.destino:
@@ -1369,7 +1427,9 @@ class CentralDoRadio:
             if self._movimento is None:
                 return True
             hz = self._movimento(uniq)
-            return hz is not None and hz > 0
+            if hz is not None:
+                return hz > 0
+            return not self._o_daemon_mede(movimento, dono)
         no = dono.caminho_do_aparelho(movimento.aparelho, adaptador=movimento.destino)
         if no is None:
             return False
@@ -1659,6 +1719,7 @@ __all__ = [
     "ESPERA_DO_DESLIGAR_S",
     "ESQUECEU_A_SOBRA",
     "ESTADOS",
+    "ICONE_DE_CONTROLE",
     "INTERVALO_DA_FAXINA_S",
     "MOTIVO_FALHOU",
     "MOTIVO_FORA_DO_RADIO",
