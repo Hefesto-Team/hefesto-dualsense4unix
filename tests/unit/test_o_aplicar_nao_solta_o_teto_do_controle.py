@@ -44,7 +44,10 @@ A CURA, e cada régua abaixo mede uma parte:
   quadro intermediário;
 * tire o `player_led_brightness` de `_controllers_to_ipc` → a seção 3 reprova,
   e a seção 1 da O-BRILHO junto;
-* tire o `_com_a_procedencia_da_mesma_cor` do `with_controller_leds` → a seção 4.
+* tire o `_com_a_procedencia_da_mesma_cor` do `with_controller_leds` → a seção 4;
+* e as quatro da conferência (seção 5): as procedências de
+  `_publicar_a_economia` (ou o número no rascunho), o teto do global da mesa,
+  o `_o_rascunho_tem_o_mapa` e o resto da entrada em `_entrada_na_economia`.
 
 A régua dela, a de toda decisão: *«nunca é pensada só em um modo, rota, forma
 de conexão se cabo ou se bt, ou só pro player 1.»* <!-- noqa-acento: citação literal dela -->
@@ -364,3 +367,153 @@ def test_o_rodape_nao_escreve_no_rascunho_pela_porta_privada() -> None:
         no.attr for no in ast.walk(ast.parse(fonte))
         if isinstance(no, ast.Attribute) and no.attr.startswith("_with_")})
     assert privados == [], f"o rodapé escreve no rascunho por {privados}"
+
+
+# ---------------------------------------------------------------------------
+# 5. O que a conferência achou (26/09/2026) — quatro mordidas que não mordiam
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("modo", ["um", "mesa"])
+@pytest.mark.parametrize("via", ["usb", "bt"])
+def test_o_tom_do_numero_de_outro_nao_vira_fossil_no_aplicar_da_economia(
+        mesa_de, economia, via: str, modo: str) -> None:
+    """O P4 no tom do número 2, em economia: o «Aplicar» mantém a cor da ativação.
+
+    O controle em economia vai na camada do PERFIL, e a ativação a publica com
+    o número de cada cor (`manager._controllers_to_procedencias`). Sem ele a
+    cor entra `LEGADO`, e o resolvedor a prova fóssil pela forma: medido na
+    conferência, na «Bateria longa» o P4 acendia `(76, 0, 0)` na ativação e
+    `(76, 0, 38)` — a cor do número dele — depois do «Aplicar».
+
+    **A MORDIDA:** tire as procedências de `DraftApplier._publicar_a_economia`
+    (ou o `lightbar_para_o_numero` de `DraftConfig._controllers_to_ipc`) e a
+    «Bateria longa» reprova no P4.
+    """
+    from hefesto_dualsense4unix.core.led_control import player_slot_color
+    from hefesto_dualsense4unix.profiles.schema import declaracao_da_economia
+
+    mesa = mesa_de(via)
+    mesa.clicar_no_tom(4, player_slot_color(2))
+    assert mesa.disco(NOME, 4).lightbar_para_o_numero == 4, "a régua precisa do número no disco"
+    if modo == "um":
+        economia(declaracao_da_economia(UNIQS[3], True))
+    else:
+        economia({"orcamento": {"teto": "economia"}})
+    mesa.trocar(NOME, "manual")
+    esperado = _mesa_inteira(mesa)
+    assert esperado[4]["luzes"] == (FRACO, FRACO), "a régua precisa do P4 em economia"
+    _o_aplicar_nao_mexe_e_nao_pisca(mesa, esperado, f"tom/{modo}/{via}")
+    regua_do_brilho._salvar(mesa)
+    assert mesa.disco(NOME, 4).lightbar_para_o_numero == 4, (
+        f"o «Salvar» na economia tirou o número do tom: {mesa.disco(NOME, 4)}")
+
+
+@pytest.mark.parametrize("via", ["usb", "bt"])
+def test_na_bateria_longa_quem_herda_o_global_fica_no_teto_depois_do_aplicar(
+        mesa_de, economia, via: str) -> None:
+    """O P1 e o P3 sem opinião própria herdam o global — e o global vai no teto.
+
+    A seção 2 dá a cada controle a palavra e o trilho dele, e aí o global da
+    vista não aparece em lugar nenhum: o teto do global podia sair calado.
+    Aqui o «Todos» é o Forte e o perfil está a 82%, e dois controles herdam.
+
+    **A MORDIDA:** tire o `novo["leds"]` da mesa em `_a_vista_da_economia` e o
+    P1 e o P3 voltam a 82% no «Aplicar».
+    """
+    mesa = mesa_de(via)
+    regua_do_brilho._o_global_das_luzes(mesa, "forte")
+    mesa.clicar_na_pilula(2, "medio")  # (noqa-acento) chave ASCII
+    mesa.clicar_na_pilula(4, "forte")
+    economia({"orcamento": {"teto": "economia"}})
+    mesa.trocar(NOME, "manual")
+    esperado = _mesa_inteira(mesa)
+    for n in (1, 3):
+        assert esperado[n]["luzes"] == (FRACO, FRACO), (n, esperado[n])
+        assert max(esperado[n]["luz"]) <= 255 * 0.3, (n, esperado[n])
+    _o_aplicar_nao_mexe_e_nao_pisca(mesa, esperado, f"herda/{via}")
+
+
+@pytest.mark.parametrize("via", ["usb", "bt"])
+def test_sem_mapa_no_rascunho_o_aplicar_da_economia_nao_apaga_a_camada_dela(
+        mesa_de, economia, via: str) -> None:
+    """Perfil sem opinião por controle: o «Aplicar» não troca o mapa (Z4/T8).
+
+    O rascunho sem `controllers` é «sem opinião», e o `DraftApplier` não
+    toca a camada dela. Com a economia no P2, a vista acrescenta o P2 ao
+    rascunho — e isso não pode virar um mapa vazio que apaga a cor que ela
+    deu ao P3 pelo `led.set` (que não grava no disco).
+
+    **A MORDIDA:** tire o `_o_rascunho_tem_o_mapa` de `_apply_controllers` e o
+    P3 perde o roxo no «Aplicar».
+    """
+    from hefesto_dualsense4unix.app.draft_config import DraftConfig
+    from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+    from hefesto_dualsense4unix.profiles.schema import declaracao_da_economia
+
+    from tests.unit.test_a_04_pergunta_ao_daemon_vivo import ROXO, _na
+    from tests.unit.test_a_marca_da_cor_nao_some import BRILHO_GLOBAL
+
+    mesa = mesa_de(via)
+    save_profile(load_profile(NOME).model_copy(update={"controllers": {}}), origem="regua")
+    assert DraftConfig.from_profile(load_profile(NOME)).to_ipc_dict()["controllers"] is None, (
+        "a régua precisa de um perfil sem mapa por controle")
+    economia(declaracao_da_economia(UNIQS[1], True))
+    mesa.trocar(NOME, "manual")
+    mesa.ponte.led_set_detalhado(ROXO, BRILHO_GLOBAL, UNIQS[2])
+    assert mesa.luz(3) == _na(ROXO, BRILHO_GLOBAL), "a régua precisa do roxo no P3"
+    esperado = _mesa_inteira(mesa)
+    assert esperado[2]["luzes"] == (FRACO, FRACO), "a régua precisa do P2 em economia"
+    _o_aplicar_nao_mexe_e_nao_pisca(mesa, esperado, f"sem-mapa/{via}")
+
+
+def test_o_alto_falante_do_controle_em_economia_viaja_no_aplicar() -> None:
+    """A economia não toca o alto-falante, e a vista não o pode perder.
+
+    `_entrada_na_economia` troca a luz, os gatilhos e a vibração do controle
+    em economia, e o resto da entrada segue como veio
+    (`schema.A_ECONOMIA_EM_CADA_PECA`: «Fica como está»).
+
+    **A MORDIDA:** faça `_entrada_na_economia` começar vazia e o volume do P2
+    não chega ao aparelho.
+    """
+    from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
+    from hefesto_dualsense4unix.profiles.schema import (
+        declaracao_da_economia,
+        registrar_declaracao_da_mesa,
+    )
+    from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
+
+    class _Controle:
+        def __init__(self) -> None:
+            self.falantes: list[tuple[str | None, int, bool]] = []
+
+        def set_speaker_volume(self, volume: int, *, muted: bool = False,
+                               uniq: str | None = None, rota: int | None = None) -> None:
+            self.falantes.append((uniq, volume, muted))
+
+        def apply_output_defaults(self, spec: Any) -> str:
+            return "escreveu"
+
+        def apply_output_for(self, uniq: str, spec: Any, **_: Any) -> str:
+            return "escreveu"
+
+        def reset_output_overrides(self, overrides: Any = None, **_: Any) -> None:
+            return None
+
+        def reset_profile_overrides(self, overrides: Any = None, **_: Any) -> None:
+            return None
+
+    declaracao = MaquinaConfig.model_validate(declaracao_da_economia(UNIQS[1], True))
+    registrar_declaracao_da_mesa(lambda: declaracao)
+    try:
+        ctl = _Controle()
+        applier = DraftApplier(controller=ctl, store=object(), daemon=None)  # type: ignore[arg-type]
+        applier.apply({"controllers": {
+            UNIQS[1]: {"leds": {"player_led_brightness": "forte"},
+                       "speaker": {"volume": 200, "muted": False}},
+            UNIQS[3]: {"speaker": {"volume": 90, "muted": True}},
+        }})
+    finally:
+        registrar_declaracao_da_mesa(None)
+    assert applier._em_economia == frozenset({UNIQS[1]}), applier._em_economia
+    assert sorted(ctl.falantes) == sorted([(UNIQS[1], 200, False), (UNIQS[3], 90, True)]), (
+        f"o «Aplicar» levou {ctl.falantes}")

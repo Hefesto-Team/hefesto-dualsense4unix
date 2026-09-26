@@ -71,6 +71,9 @@ class DraftApplier:
         #: Os controles em que a economia vale neste «Aplicar» — a camada deles
         #: é a do perfil, como na ativação (`_com_o_teto_da_economia`).
         self._em_economia: frozenset[str] = frozenset()
+        #: PARA QUAL NÚMERO a cor de cada controle em economia foi escolhida —
+        #: o par da camada do perfil, lido pelo dono da ativação.
+        self._procedencias_da_economia: dict[str, object] = {}
         #: O rascunho trouxe o mapa `controllers` (e não `None`): só então o
         #: mapa de overrides do daemon é trocado (Z4/T8).
         self._o_rascunho_tem_o_mapa = False
@@ -888,6 +891,7 @@ class DraftApplier:
 
         mesa, ligados = economia_da_mesa(), controles_em_economia()
         self._em_economia = frozenset()
+        self._procedencias_da_economia = {}
         if not mesa and not ligados:
             return params
         try:
@@ -901,7 +905,10 @@ class DraftApplier:
         self, params: dict[str, Any], mesa: bool, ligados: frozenset[str]
     ) -> dict[str, Any]:
         """O corpo de `_com_o_teto_da_economia`: rascunho → esquema → teto → rascunho."""
-        from hefesto_dualsense4unix.profiles.manager import _perfil_na_economia
+        from hefesto_dualsense4unix.profiles.manager import (
+            _controllers_to_procedencias,
+            _perfil_na_economia,
+        )
         from hefesto_dualsense4unix.profiles.schema import (
             LedsConfig,
             Profile,
@@ -955,6 +962,14 @@ class DraftApplier:
         if controles:
             novo["controllers"] = controles
         self._em_economia = em_economia
+        # O NÚMERO DE CADA COR vai com a camada do perfil, pelo MESMO dono da
+        # ativação (`manager._controllers_to_procedencias`): sem ele a cor do
+        # controle em economia entrava `LEGADO`, e na «Bateria longa» o tom que
+        # é o número de outro da mesa virava fóssil pela forma — o P4 no tom do
+        # número 2 acendia, depois do «Aplicar», a cor do número dele
+        # (conferência da O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01, 26/09).
+        self._procedencias_da_economia = _controllers_to_procedencias(
+            {u: da_vista[u] for u in em_economia})
         return novo
 
     def _publicar_a_economia(self, specs: dict[str, OutputSpec]) -> None:
@@ -965,16 +980,27 @@ class DraftApplier:
         ``system`` (`lifecycle.reaplicar_se_a_economia_mudou`), e a camada da
         usuária atravessa essa ativação — o P2 seguiria a 30% com a economia
         desligada. Na do perfil, a ativação seguinte o republica sem o teto.
-        Backend sem camadas recebe o mesmo `apply_output_for` de sempre.
+        Backend sem camadas recebe o `apply_output_for` de sempre. Nos dois, a
+        cor leva o número para o qual foi escolhida, pelas duas portas da
+        ativação (`manager._publicar_camada`/`_aplicar_com_procedencia`).
         """
         if not specs:
             return
+        from hefesto_dualsense4unix.core.led_control import LEGADO
+        from hefesto_dualsense4unix.profiles.manager import (
+            _aplicar_com_procedencia,
+            _publicar_camada,
+        )
+
+        procedencias = self._procedencias_da_economia
         publicar = getattr(self.controller, "reset_profile_overrides", None)
         if callable(publicar):
-            publicar(specs)
+            _publicar_camada(publicar, specs, procedencias)
             return
         for uniq, spec in specs.items():
-            self.controller.apply_output_for(uniq, spec)
+            _aplicar_com_procedencia(
+                self.controller.apply_output_for, uniq, spec,
+                procedencias.get(uniq, LEGADO))
 
 
 # ---------------------------------------------------------------------------
@@ -995,6 +1021,9 @@ def _leds_do_rascunho(leds_raw: dict[str, Any]) -> Any:
         campos["lightbar_brightness"] = brilho
     if isinstance(leds_raw.get("player_leds"), list):
         campos["player_leds"] = [bool(b) for b in leds_raw["player_leds"]]
+    numero = leds_raw.get("lightbar_para_o_numero")
+    if isinstance(numero, int) and not isinstance(numero, bool):
+        campos["lightbar_para_o_numero"] = numero
     if leds_raw.get("player_led_brightness") is not None:
         campos["player_led_brightness"] = str(leds_raw["player_led_brightness"])
     return LedsConfig.model_validate(campos) if campos else None

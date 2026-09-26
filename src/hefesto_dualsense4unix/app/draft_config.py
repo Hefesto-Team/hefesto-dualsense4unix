@@ -1766,6 +1766,14 @@ class DraftConfig(BaseModel):
                     if rgb is not None:
                         leds_entry["lightbar_rgb"] = list(rgb)
                         leds_entry["lightbar_brightness"] = brilho
+                        # O NÚMERO PARA O QUAL A COR FOI ESCOLHIDA viaja com
+                        # ela: o controle em economia vai na camada do perfil,
+                        # e sem o número a cor seria `LEGADO` — o fóssil pela
+                        # forma na «Bateria longa» (conferência da
+                        # O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01, 26/09).
+                        numero = override.leds.lightbar_para_o_numero
+                        if "lightbar" in campos and numero is not None:
+                            leds_entry["lightbar_para_o_numero"] = int(numero)
                     elif "lightbar_brightness" in campos:
                         leds_entry["lightbar_brightness"] = brilho
                 if "player_leds" in campos:
