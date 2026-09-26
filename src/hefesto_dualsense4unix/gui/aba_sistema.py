@@ -148,11 +148,12 @@ SEM_DONO = (
 #: A resposta honesta no lugar do valor. Um traço, e o motivo na dica.
 NAO_DEU = "—"
 
-#: Os três selos que o desenho tem para uma linha de estado, e mais nada:
-#: ``.est.ok`` (verde), ``.est.warn`` (laranja) e ``.est.info`` (ciano)
-#: (``aba09.py:539-541``). **NÃO HÁ classe vermelha para linha de estado** — o
-#: desenho não a tem, e inventá-la mudaria o que ela aprovou. Por isso o
-#: "Desligado" sai em ``warn``, e isso está declarado em vez de escondido.
+#: Os três tons de uma linha de estado, e mais nada: verde, laranja e neutro.
+#: Desde 25/09/2026 a linha veste a pílula do exame (:data:`PILULA_OK`,
+#: :data:`PILULA_AVISO`, :data:`PILULA_NOTA`, as regras ``.selo.*`` do
+#: gerador); a `.est` de antes saiu com a tabela da bateria. **NÃO HÁ tom
+#: vermelho para linha de estado** — o desenho não o tem, e inventá-lo mudaria
+#: o que ela aprovou. Por isso o "PARADO" sai em laranja, declarado.
 OK, AVISO, INFO, NEUTRO = "ok", "warn", "info", ""
 GLIFO_OK, GLIFO_AVISO, GLIFO_INFO, GLIFO_NENHUM = "✓", "!", "◆", ""
 
