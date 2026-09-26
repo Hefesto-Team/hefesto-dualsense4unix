@@ -33,7 +33,7 @@ from hefesto_dualsense4unix.integrations.censo_do_barramento import (
     Censo,
 )
 from hefesto_dualsense4unix.integrations.entradas_do_gabinete import NoDeEntrada
-from hefesto_dualsense4unix.interface import arranjo_desta_maquina, pagina_do_mapa
+from hefesto_dualsense4unix.interface import arranjo_desta_maquina, onde, pagina_do_mapa
 from hefesto_dualsense4unix.utils.maquina import (
     FaceDeclarada,
     MapaDaMesa,
@@ -285,7 +285,7 @@ def test_a_pagina_e_o_produto_desenham_o_mesmo_hub_e_o_mesmo_extensor() -> None:
 def test_a_pagina_manda_os_dois_gestos_e_eles_tem_dono() -> None:
     """Os dois gestos do editor saem da página e chegam a quem grava."""
     pagina = pagina_do_mapa.pagina()
-    produto = (Path(pagina_do_mapa.__file__).parent / "paginas" / "mapa-das-portas.html")
+    produto = onde.pagina(arranjo_desta_maquina.PAGINA, publicado=True)
     assert produto.read_text(encoding="utf-8") == pagina_do_mapa.pagina(com_as_que_esperam=False)
     gestos = set(re.findall(r'gravaNaEntrada\(editando, "([a-z-]+)"\)', pagina))
     assert gestos == {"entrada-o-que-tem", "entrada-velocidade"}, gestos
