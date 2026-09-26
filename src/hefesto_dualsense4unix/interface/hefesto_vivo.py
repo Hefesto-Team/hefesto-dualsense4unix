@@ -3541,6 +3541,7 @@ class Piloto:
                 # `desta_vez`: o pouso não pode ler estado que outra thread muda.
                 so_armou = (isinstance(resposta, dict)
                             and bool(resposta.get(CHAVE_DO_CLIQUE_QUE_SO_ARMOU)))
+                resposta = self._o_arranjo_relido(pagina, resposta)
                 GLib.idle_add(
                     lambda r=resposta: self._deu_certo_dizendo(pagina, nome, alvo, r))
             finally:
@@ -3793,7 +3794,7 @@ class Piloto:
                             if k not in fora_da_pintura}
         if frase:
             print(f"[relato] {pagina} · {nome}: {frase}", file=sys.stderr)
-        return self._deu_certo(pagina, nome, self._o_arranjo_relido(pagina, resposta))
+        return self._deu_certo(pagina, nome, resposta)
 
     def _a_pagina_morreu(self, motivo: str) -> None:
         """O processo web do WebKit caiu. A janela já está recarregando; aqui se DIZ.
@@ -3944,6 +3945,10 @@ class Piloto:
         pinta `data-campo`, e o arranjo é o gabinete inteiro: ele é entregue
         pelo `window.hefestoArranjo(dado, true)`, a mesma porta da abertura, e
         o resto da resposta segue para a pintura como antes.
+
+        RODA NO FIO DO GESTO, e por isso a entrega vai pelo laço do GTK: o
+        `idle_add` daqui entra na fila ANTES do da pintura e do pouso, então o
+        botão só volta do voo com o reexame já na tela.
         """
         from hefesto_dualsense4unix.interface import arranjo_desta_maquina
 
@@ -3951,7 +3956,8 @@ class Piloto:
         if not isinstance(resposta, dict) or chave not in resposta:
             return resposta
         resto = {k: v for k, v in resposta.items() if k != chave}
-        self._entregar(pagina, resposta[chave], reexame=True)
+        dado = resposta[chave]
+        GLib.idle_add(lambda: self._entregar(pagina, dado, reexame=True))
         return resto
 
     def _arranjo_entregue(self, valor: Any, erro: Any) -> None:
