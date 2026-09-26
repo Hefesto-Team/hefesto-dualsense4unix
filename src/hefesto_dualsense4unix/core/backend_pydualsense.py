@@ -5871,7 +5871,7 @@ class PyDualSenseController(IController):
         perfil *"só corre na TRANSIÇÃO offline→online do daemon"* e que *"o
         segundo controle a chegar numa mesa já online nunca era coberto por
         ele"*. A primeira metade caiu com a BORDA-DE-QUEDA-01: há um ramo POR
-        ALVO (`daemon/connection.py:324` → `anunciar_bordas_por_alvo` →
+        ALVO (`daemon/connection.py:332` → `anunciar_bordas_por_alvo` →
         `reapply_speaker_after_connect(uniq=…)`) que cobre a chave nova sem
         transição agregada. O que continuava verdadeiro era a segunda guarda —
         o gancho exigia a seção `speaker` GLOBAL —, e ela foi o defeito da
