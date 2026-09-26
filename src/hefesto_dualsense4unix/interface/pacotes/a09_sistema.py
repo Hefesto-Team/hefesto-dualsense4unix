@@ -3530,8 +3530,14 @@ def _diario() -> str:
     unidade = identidade.atual().unit_daemon
     try:
         saida = subprocess.run(
+            # `--output cat` É A LINHA DO DAEMON, e nada mais — a razão do
+            # «Ver detalhes» de 01/09 continua valendo, e o painel sempre à
+            # vista a torna maior. O `short-iso` prefixa cada linha com a data,
+            # o NOME DA MÁQUINA e `unidade[pid]:` (uns 60 caracteres antes da
+            # mensagem), um SEGUNDO carimbo ao lado do que o daemon já escreve,
+            # e o nome da máquina iria junto no «Copiar» para um relato público.
             ["journalctl", "--user", "-u", unidade, "-n", str(LINHAS_DO_DIARIO),
-             "--no-pager", "--output", "short-iso"],
+             "--no-pager", "--output", "cat"],
             capture_output=True, text=True, timeout=8)
     except Exception as erro:  # a frase de tela precisa do motivo, e ele vem do erro
         return f"Não consegui ler o registro de {unidade}: {erro}"
