@@ -2925,6 +2925,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # O NOME DO DONO DE CADA CONTROLE, uma leitura por tique para a mesa
     # inteira (ver :func:`_nomes_dos_donos`).
     nomes = _nomes_dos_donos()
+    # o «Modo de conexão» é da mesa: lido no primeiro controle, e só se houver um
+    modo_da_mesa: str | None = None
     colunas = {}
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
@@ -3015,7 +3017,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             colunas[uniq]["teto-da-vibracao"] = teto_campo
         # A LINHA DO CHECK-UP (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): os seis
         # selos do estado, o botão da economia e o nome do dono.
-        colunas[uniq].update(estado_do_controle(c, eu, st, declaracao))
+        if modo_da_mesa is None:
+            modo_da_mesa = modo_da_fileira(st)
+        colunas[uniq].update(estado_do_controle(c, eu, st, declaracao, modo_da_mesa))
         colunas[uniq].update(campos_da_economia(declaracao, uniq))
         colunas[uniq]["dono"] = dono_na_linha(nomes, uniq, eu.get("jogador"))
     # UMA LEITURA SÓ, e ela é a razão de esta linha não estar dentro do
@@ -6640,8 +6644,36 @@ def _estado_de_carga(c: dict[str, Any]) -> str:
         return ""
 
 
+def modo_da_fileira(st: dict[str, Any]) -> str:
+    """O «Modo de conexão» da linha: o nome do chip aceso na aba Jogar.
+
+    O pedido dela diz *«Modo de conexão (DualSense)»*: é o modo que ela escolhe
+    na fileira da Jogar, e não a posição do interruptor. Quem decide qual chip
+    acende é o dono da Jogar (`a01_jogar._estado_da_tela`), e o nome do chip é
+    o da tabela da fileira (`painel.CHIPS_DA_ESCADA`) — nada digitado aqui. Com
+    o Hefesto desligado a palavra é a do interruptor (``Nativo``); sem leitura,
+    a de antes (``Pelo Hefesto``), que é verdade enquanto o daemon responde.
+    """
+    if st.get("native_mode"):
+        return MODO_NATIVO
+    try:
+        from hefesto_dualsense4unix.app.actions.jogar import painel
+
+        from . import a01_jogar
+
+        tela = a01_jogar._estado_da_tela(st)
+        chave = (a01_jogar.CHIP_DO_STEAM_INPUT if tela.get("steam-input-aceso")
+                 else str(tela.get("modo-aceso") or ""))
+        for chip in painel.CHIPS_DA_ESCADA:
+            if chip.chave == chave:
+                return str(chip.rotulo)
+    except Exception:
+        pass
+    return MODO_PELO_HEFESTO
+
+
 def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any],
-                       declaracao: Any) -> dict[str, str]:
+                       declaracao: Any, modo: str | None = None) -> dict[str, str]:
     """Os seis selos de UM controle, lidos do daemon vivo e da declaração.
 
     `c` é a entrada do `state_full` (o `ctx.conectados`), `eu` a da mesa (o
@@ -6675,8 +6707,10 @@ def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any]
     else:
         som = selo_do_estado("Som")
 
-    modo = selo_do_estado("Modo de conexão",
-                          MODO_NATIVO if st.get("native_mode") else MODO_PELO_HEFESTO, "")
+    # O MODO É DA MESA, e quem chama com os quatro controles o lê uma vez só:
+    # a pergunta do Steam Input vai ao disco quando o caminho é o dele.
+    modo_da_linha = selo_do_estado("Modo de conexão",
+                                   modo if modo is not None else modo_da_fileira(st), "")
     visto = selo_do_estado("Visto como", str(eu.get("mascara") or TRAVESSAO_DA_LINHA), "")
 
     # A CONEXÃO: no cabo não há o que engasgar; no rádio quem diz é o
@@ -6698,7 +6732,7 @@ def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any]
         bateria_txt = f"{bateria_txt} · {carga.lower()}"
     bateria = selo_do_estado("Bateria", bateria_txt, "")
 
-    return {"est-mic": mic, "est-som": som, "est-modo": modo, "est-visto": visto,
+    return {"est-mic": mic, "est-som": som, "est-modo": modo_da_linha, "est-visto": visto,
             "est-conexao": conexao, "est-bateria": bateria}
 
 
