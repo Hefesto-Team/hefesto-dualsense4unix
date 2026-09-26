@@ -451,14 +451,15 @@ def external_key(entry: dict[str, Any]) -> str:
 #: (``integrations/cor_do_plastico.NOMES_DE_FABRICA``). O sétimo é o "Outra", que
 #: não é código nenhum: é a porta do texto livre da decisão C2.
 #:
-#: A tabela tem VINTE E UMA entradas e a lista mostra seis. Não é recorte
+#: A tabela tem as entradas do mapa dela (28 em 25/09/2026, lidas de
+#: ``docs/data/cores-do-dualsense.csv``) e a lista mostra seis. Não é recorte
 #: arbitrário: ``00``-``05`` são as cores de catálogo do DualSense, e as outras
-#: quinze são edições especiais e coleções, que caberiam na lista do jeito que
+#: são edições especiais e coleções, que caberiam na lista do jeito que
 #: cabem na vida — pelo nome, no campo livre.
 #:
 #: O PAPEL DELA MUDOU EM 25/08/2026 (LEX-5), e ela não caducou. O card deixou de
 #: mostrar estes seis como BOTÕES — quem lista agora é :func:`cores_para_busca`,
-#: com as vinte e uma. O que estes seis pares passaram a ser é a tradução para o
+#: com a tabela inteira. O que estes seis pares passaram a ser é a tradução para o
 #: PORTUGUÊS das cores de catálogo, e ela virou o SINÔNIMO de busca
 #: (:func:`sinonimos_da_busca`): quem digita "vermelho" acha "Cosmic Red" sem
 #: que a tela deixe de dizer "Cosmic Red". Sem isso, trocar a lista pela busca
@@ -550,8 +551,8 @@ def sinonimos_da_busca() -> dict[str, str]:
 
     ESTA FUNÇÃO EXISTE PORQUE A BUSCA CRIARIA UMA REGRESSÃO SEM ELA, e a
     regressão tem nome: a lista de botões que ela substituiu mostrava seis
-    rótulos em PORTUGUÊS ("Vermelho", "Azul"...), e os vinte e um nomes de
-    fábrica são todos em inglês. Quem sabe o nome do próprio controle digita
+    rótulos em PORTUGUÊS ("Vermelho", "Azul"...), e os nomes de fábrica são
+    todos em inglês. Quem sabe o nome do próprio controle digita
     "Cosmic Red" — que é o gesto que ela descreveu. Quem só sabe que *é
     vermelho* digitaria "vermelho" e não acharia nada, e essa pessoa era
     exatamente quem a lista de seis atendia.

@@ -155,9 +155,11 @@ class TestIdentidadeDe:
     def test_sem_modelo_sobra_o_transporte_e_nunca_um_padrao(self) -> None:
         """RÉGUA 2: `None` não vira nome de outro aparelho.
 
-        A tabela `NOMES_DE_FABRICA` tem vinte e uma entradas e a Sony fabrica
+        A tabela `NOMES_DE_FABRICA` tem os 28 modelos do mapa e a Sony fabrica
         edições novas sem avisar. "White" como default poria na tela um aparelho
-        que ninguém mediu.
+        que ninguém mediu. (Com a MESA, o nome que sobra é o do modelo —
+        «DualSense» —, e é `test_o_controle_nunca_visto_tem_nome_e_cor.py` que o
+        guarda; sem mesa, é o transporte.)
         """
         from hefesto_dualsense4unix.integrations.cor_do_plastico import (
             NOMES_DE_FABRICA,
