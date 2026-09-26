@@ -150,8 +150,8 @@ def _cenas() -> list[dict[str, Any]]:
 
 #: O ROTEIRO INTEIRO NUMA IDA SÓ ao motor. Ele abre o quadro da Gestão, pinta
 #: cada cena com o pintor do piloto e lê o PESO computado de cada chip (o
-#: destaque é `font-weight:600`) e a ALTURA computada de cada corpo do
-#: acordeão (`0px` fechado, `40px` aberto). Depois troca as regras da fita
+#: destaque é `font-weight:600`) e a SOMBRA computada de cada cartão (a borda
+#: roxa do cartão marcado; `none` nos outros). Depois troca as regras da fita
 #: pelas de antes e roda as cenas da mordida.
 ROTEIRO = r"""
 (function(){
@@ -160,9 +160,10 @@ ROTEIRO = r"""
   function ler(){
     const chips = [...document.querySelectorAll('.fita .chip')].map(function(el){
       return [el.getAttribute('data-pref'), getComputedStyle(el).fontWeight]; });
+    // O CARTÃO MARCADO — 26/09/2026: a Gestão virou um cartão por lugar, e o
+    // que acompanha o alvo é a borda roxa (`box-shadow`), não um corpo que abre.
     const linhas = [...document.querySelectorAll('.gc-item')].map(function(el){
-      const corpo = el.querySelector('.gc-corpo');
-      return [el.getAttribute('data-controle'), corpo ? getComputedStyle(corpo).height : ''];
+      return [el.getAttribute('data-controle'), getComputedStyle(el).boxShadow];
     });
     return {chips: chips, linhas: linhas};
   }
@@ -210,15 +211,24 @@ def _bootstrap() -> str:
     return achou.group(1)
 
 
+def _marcados_esperados(cena: dict[str, Any]) -> list[str]:
+    """Os cartões com a borda da escolha: o do alvo; em «Todos», nenhum."""
+    return [] if cena["nome"].endswith("aberto todos") else sorted(cena["abertas"])
+
+
+def _marcados(lida: dict[str, Any]) -> list[str]:
+    return sorted(p for p, sombra in lida["linhas"] if sombra not in ("", "none"))
+
+
 def _confere(cena: dict[str, Any], lida: dict[str, Any]) -> str | None:
-    """`None` se a tela acendeu e abriu o que a cena pede; senão, a queixa."""
+    """`None` se a tela acendeu e marcou o que a cena pede; senão, a queixa."""
     acesos = [p for p, peso in lida["chips"] if int(float(peso or 0)) >= 600]
-    abertas = sorted(p for p, altura in lida["linhas"] if altura not in ("", "0px"))
+    marcados = _marcados(lida)
     if acesos != cena["acesos"]:
         return f"{cena['nome']}: a fita acende {acesos}, e o aberto pede {cena['acesos']}"
-    if abertas != sorted(cena["abertas"]):
-        return (f"{cena['nome']}: o acordeão abre {abertas}, e o aberto pede "
-                f"{sorted(cena['abertas'])}")
+    if marcados != _marcados_esperados(cena):
+        return (f"{cena['nome']}: o cartão marcado é {marcados}, e o aberto pede "
+                f"{_marcados_esperados(cena)}")
     return None
 
 
@@ -321,9 +331,8 @@ def test_a_regua_morde_a_regra_por_posicao(medido: dict[str, Any]) -> None:
         assert acesos == DEFEITO_MEDIDO[cena["nome"]], (
             f"{cena['nome']}: com a regra por posição a fita acende {acesos}, e o "
             f"piloto mediu {DEFEITO_MEDIDO[cena['nome']]} — a régua não reproduz o defeito")
-        abertas = sorted(p for p, altura in lida["linhas"] if altura not in ("", "0px"))
-        assert abertas == cena["abertas"], (
-            f"{cena['nome']}: o acordeão abriu {abertas} — a cena não foi pintada")
+        assert _marcados(lida) == _marcados_esperados(cena), (
+            f"{cena['nome']}: o cartão marcado é {_marcados(lida)} — a cena não foi pintada")
         assert _confere(cena, lida), f"{cena['nome']}: a conferência não acusou o defeito"
 
 
@@ -348,9 +357,9 @@ def test_a_pagina_acha_o_chip_pelo_jogador_e_nunca_pela_posicao() -> None:
         assert f'body:has(#gc-{estado}:checked) .fita .chip[data-pref="{estado}"]' in css, (
             f"o estado {estado!r} não tem a regra do chip DELE")
     for lugar in LUGARES:
-        assert f".quadro-corpo:has(#gc-{lugar}:checked) .gc-{lugar} .gc-corpo" in css, (
-            f"o {lugar.upper()} não tem a regra que abre a linha dele — com ele na "
-            f"mesa, abrir a linha não abriria nada")
+        assert f".quadro-corpo:has(#gc-{lugar}:checked) .gc-{lugar}{{border-color:" in css, (
+            f"o {lugar.upper()} não tem a regra que marca o cartão dele — com ele na "
+            f"mesa, escolhê-lo não marcaria nada")
 
 
 # ---------------------------------------------------------------------------
@@ -552,23 +561,24 @@ def test_o_aviso_do_externo_na_08_diz_a_palavra_do_dono(a08: Any) -> None:
     assert not _transporte_na_lingua_do_mapa(texto), texto
 
 
-def test_a_seta_que_fecha_nao_conta_os_controles_do_desenho() -> None:
-    """A dica da ▴ vale em qualquer mesa: «todos abrem juntos», sem número.
+def test_a_dica_do_cartao_nao_conta_os_controles_do_desenho() -> None:
+    """A dica do número do cartão vale em qualquer mesa: sem número de controles.
 
-    Ela dizia «os {len(CONECTADOS)} abrem juntos» — os DOIS conectados do
-    desenho —, e o `title` é estático: o piloto não o repinta, então com os
-    quatro na mesa a tela dizia «os 2».
+    ERA A DA SETA ▴ do acordeão, que dizia «os {len(CONECTADOS)} abrem juntos»
+    — os DOIS do desenho — num `title` estático que o piloto não repinta. O
+    acordeão saiu em 26/09/2026 (os cartões), e a regra fica para a dica que
+    sobrou: o `title` do «P N» e do aparelho.
 
-    MORDIDA: devolva `os {len(CONECTADOS)}` ao `aba08.linha_do_controle` e
-    regere a 08 — reprova.
+    MORDIDA: ponha `len(CONECTADOS)` na `dica_linha` do `aba08.linha_do_controle`
+    e regere a 08 — reprova.
     """
     x = BANCADA.read_text(encoding="utf-8")
-    dicas = re.findall(r'<label class="gc-seta fecha"[^>]*?title="([^"]*)"', x)
-    assert len(dicas) == len(LUGARES), (
-        f"a 08 tem {len(dicas)} setas que fecham, e a mesa tem {len(LUGARES)} "
-        f"lugares — a régua ficou cega")
+    dicas = re.findall(r'<label class="gc-(?:num|abre)"[^>]*?title="([^"]*)"', x)
+    assert len(dicas) == 2 * len(LUGARES), (
+        f"a 08 tem {len(dicas)} dicas de cartão, e a mesa tem {len(LUGARES)} "
+        f"lugares com duas cada — a régua ficou cega")
     com_numero = sorted({d for d in dicas if re.search(r"\d", d)})
-    assert not com_numero, f"a dica da ▴ conta os controles do desenho: {com_numero}"
+    assert not com_numero, f"a dica do cartão conta os controles do desenho: {com_numero}"
 
 
 # ---------------------------------------------------------------------------

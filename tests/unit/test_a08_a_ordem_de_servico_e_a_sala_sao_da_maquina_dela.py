@@ -134,10 +134,13 @@ def test_a_ordem_de_servico_e_da_maquina_dela() -> None:
     assert FRASE_DO_MOCKUP not in card, (
         "a frase cravada no mockup voltou ao card — é uma INSTRUÇÃO para ela "
         "mexer no gabinete, sobre entradas que a máquina dela pode não ter")
-    for fora in (ordem.acao, ordem.ganho_esperado.texto):
-        assert fora not in card, (
-            f"{fora!r} voltou à coluna visível — ele mora no `?` da linha do "
-            f"exame desde 13/09/2026")
+    assert ordem.ganho_esperado.texto not in card, (
+        f"{ordem.ganho_esperado.texto!r} voltou à coluna visível — ele mora no `?` "
+        f"da linha do exame desde 13/09/2026")
+    # A INSTRUÇÃO VOLTOU em 26/09/2026, por decisão dela olhando o desenho novo:
+    # *«dá pra aceitar a instrução nisso»*. É a `acao` da ordem VIVA, com o
+    # título que ela nomeou — nunca a frase do mockup.
+    assert ordem.acao in card and p.TITULO_DA_ORDEM in card, card
 
 
 def test_o_card_traz_as_duas_frases_da_ordem_no_interrogacao() -> None:
