@@ -147,6 +147,13 @@ _CONSUMIDOR: dict[str, ConsumidorPorUnidade] = {
             "vpad daquela peça nasce (ou é recriado) com o VID/PID dela"
         ),
     ),
+    "economia": ConsumidorPorUnidade(
+        funcao="_controllers_na_economia",
+        chega_em=(
+            "a luz, os gatilhos e a vibração daquela peça no teto, entregues "
+            "aos três conversores de sempre (O-MODO-ECONOMIA-POR-CONTROLE-01)"
+        ),
+    ),
     "movimento": ConsumidorPorUnidade(
         funcao="_controllers_to_miras",
         chega_em=(
@@ -200,6 +207,7 @@ def test_a_regua_sabe_recusar() -> None:
     sintetico = {"leds", "touchpad"}
     assert _campos_sem_consumidor(sintetico, _CONSUMIDOR) == ["touchpad"]
     assert _consumidores_orfaos(sintetico, _CONSUMIDOR) == [
+        "economia",
         "mascara",
         "mic",
         "movimento",
@@ -417,7 +425,33 @@ def _prova_movimento(uniq: str) -> object:
         REGISTRO.limpar()
 
 
+def _prova_economia(uniq: str) -> object:
+    """A economia ligada numa peça põe o teto só nela (O-MODO-ECONOMIA-...-01).
+
+    O ENDEREÇO É O TESTE: a peça que ligou sai com o brilho no teto e a
+    vibração no degrau Economia; a vizinha, sem opinião, não entra no mapa.
+    """
+    from hefesto_dualsense4unix.profiles.manager import _perfil_na_economia
+
+    perfil = Profile(
+        name="uma_peca_so",
+        match=MatchAny(),
+        controllers={uniq: ControllerOverrides(economia=True)},
+    )
+    vista = _perfil_na_economia(perfil, mesa=False)
+    specs = _controllers_to_specs(vista.controllers, vista.leds)
+    escalas = _controllers_to_rumble_scales(vista.controllers, vista.rumble)
+    vizinha = "aabbcc0000ff"
+    return (
+        uniq in specs
+        and uniq in escalas
+        and vizinha not in specs
+        and vizinha not in escalas
+    ) or None
+
+
 _PROVAS = {
+    "economia": _prova_economia,
     "leds": _prova_leds,
     "triggers": _prova_triggers,
     "rumble": _prova_rumble,
