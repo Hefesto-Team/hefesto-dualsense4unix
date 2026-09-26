@@ -602,11 +602,15 @@ async def vigiar_o_cabo_em_espera(
             if callable(cancelar):
                 with contextlib.suppress(Exception):
                     cancelar(par, motivo="o_radio_nao_caiu")
+            # Conferência de 25/09: a recusa do BlueZ é passageira (a trava do
+            # rádio, o barramento) e não resolve o cabo para sempre.
+            tenta_de_novo = vigia.recusado(cabo.instancia, agora)
             logger.warning(
                 "o_cabo_nao_assumiu",
                 uniq=oce.mascarar(par),
                 instancia=cabo.instancia,
                 motivo=motivo,
+                tenta_de_novo=tenta_de_novo,
             )
             continue
         vigia.derrubou(par, agora)
