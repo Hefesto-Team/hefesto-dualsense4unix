@@ -87,6 +87,11 @@ CHAVE_DA_ENTREGA = "arranjo"
 _SAL = secrets.token_bytes(16)
 _PREFIXO_DO_ID = "ap-"
 
+#: UMA LEITURA, COMO O REEXAME SEGUINTE A CONFERE: ``id -> (caminho, modelo)``.
+#: O modelo (``vid:pid``) não vai à página; ele fica na memória para dizer se
+#: quem está hoje num caminho é do mesmo modelo de quem estava ali antes.
+Lida = dict[str, tuple[str, str]]
+
 #: A forma do desenho de cada face, e ela não é declarada por ninguém: o
 #: ``MapaDaMesa`` guarda quantas entradas a face tem e onde ela fica, não como
 #: desenhá-la. A escolha é de tela e mora aqui, com o critério à vista.
@@ -118,7 +123,7 @@ def arranjo(
     carregar: Callable[[], Any] | None = None,
     ler_o_barramento: Callable[[], Any] | None = None,
     *,
-    antes: Mapping[str, str] | None = None,
+    antes: Mapping[str, tuple[str, str]] | None = None,
     ler_o_serial: Callable[[str], str] | None = None,
 ) -> dict[str, Any] | None:
     """O arranjo desta máquina, ou ``None`` quando não há o que desenhar.
@@ -127,7 +132,7 @@ def arranjo(
     no ``/sys`` da máquina de ninguém — e sem um ``monkeypatch`` que alcança
     só quem importar pelo mesmo caminho.
 
-    ``antes`` é a leitura que a página já tem (``id -> caminho``), e só o
+    ``antes`` é a leitura que a página já tem (:data:`Lida`), e só o
     «Examinar» a passa (:func:`reexaminar`): sem ela, as duas leituras nascem
     iguais, que é o que é verdade na primeira abertura.
 
@@ -144,6 +149,20 @@ def arranjo(
     * o import falhou (árvore sem ``src``), que é o caso de quem roda a página
       solta no navegador.
     """
+    lido = _ler_a_maquina(agora, carregar, ler_o_barramento,
+                          antes=antes, ler_o_serial=ler_o_serial)
+    return None if lido is None else lido[0]
+
+
+def _ler_a_maquina(
+    agora: _dt.datetime | None = None,
+    carregar: Callable[[], Any] | None = None,
+    ler_o_barramento: Callable[[], Any] | None = None,
+    *,
+    antes: Mapping[str, tuple[str, str]] | None = None,
+    ler_o_serial: Callable[[str], str] | None = None,
+) -> tuple[dict[str, Any], Lida] | None:
+    """O :func:`arranjo` e a :data:`Lida` dele, que o reexame seguinte confere."""
     try:
         from hefesto_dualsense4unix.integrations import mapa_das_portas
         from hefesto_dualsense4unix.integrations.censo_do_barramento import (
@@ -161,8 +180,10 @@ def arranjo(
             return None
         censo = (ler_o_barramento or _ler)()
         bancada = mapa_das_portas.mesa_do_motor(declarado, censo)
+        conectados = censo.conectados()
         ids = identidades(
-            censo.conectados(), ler_o_serial or mapa_das_portas.serial_do_no)
+            conectados, ler_o_serial or mapa_das_portas.serial_do_no, antes)
+        modelos = _modelos(conectados)
     except Exception:
         return None
 
@@ -177,8 +198,10 @@ def arranjo(
     anterior = (
         {"rotulo": ROTULO_DE_ANTES, "caminho": dict(caminhos)}
         if antes is None
-        else {"rotulo": ROTULO_DA_ANTERIOR, "caminho": dict(antes)}
+        else {"rotulo": ROTULO_DA_ANTERIOR,
+              "caminho": {i: caminho for i, (caminho, _m) in antes.items()}}
     )
+    lida = {i: (caminho, modelos.get(caminho, "")) for i, caminho in caminhos.items()}
     return {
         "quando": QUANDO_DE_AGORA.format(quando=quando),
         "aparelhos": [_aparelho(a, ids.get(a.id, a.id)) for a in mesa.aparelhos],
@@ -189,14 +212,14 @@ def arranjo(
             "antes": anterior,
         },
         "declarado": _declarado(declarado, entradas_do_mapa(declarado)),
-    }
+    }, lida
 
 
 # ── O «Examinar» relê: a leitura anterior mora aqui, na memória ─────────────
 
 
 class _ALeituraNaTela:
-    """O ``id -> caminho`` da última leitura entregue à página.
+    """A :data:`Lida` da última leitura entregue à página.
 
     É o «antes» do próximo «Examinar». Mora na memória do processo, junto com
     o sal das identidades, e nunca vai a disco: fora deste processo os ``id``
@@ -206,16 +229,16 @@ class _ALeituraNaTela:
 
     def __init__(self) -> None:
         self._trava = threading.Lock()
-        self._caminho: dict[str, str] | None = None
+        self._lida: Lida | None = None
 
-    def ler(self) -> dict[str, str] | None:
+    def ler(self) -> Lida | None:
         with self._trava:
-            return None if self._caminho is None else dict(self._caminho)
+            return None if self._lida is None else dict(self._lida)
 
-    def guardar(self, dado: Mapping[str, Any]) -> None:
-        caminho = dict(dado["leituras"]["agora"]["caminho"])
+    def guardar(self, lida: Mapping[str, tuple[str, str]]) -> None:
+        copia = dict(lida)
         with self._trava:
-            self._caminho = caminho
+            self._lida = copia
 
 
 _NA_TELA = _ALeituraNaTela()
@@ -223,10 +246,7 @@ _NA_TELA = _ALeituraNaTela()
 
 def para_a_pagina(**fontes: Any) -> dict[str, Any] | None:
     """A leitura que a página recebe ao abrir — e que vira o «antes» do reexame."""
-    dado = arranjo(**fontes)
-    if dado is not None:
-        _NA_TELA.guardar(dado)
-    return dado
+    return _guardar_e_entregar(_ler_a_maquina(**fontes))
 
 
 def reexaminar(**fontes: Any) -> dict[str, Any] | None:
@@ -235,9 +255,15 @@ def reexaminar(**fontes: Any) -> dict[str, Any] | None:
     Sem leitura anterior (a página ainda não recebeu nenhuma), as duas nascem
     iguais — a mesma verdade da abertura.
     """
-    dado = arranjo(antes=_NA_TELA.ler(), **fontes)
-    if dado is not None:
-        _NA_TELA.guardar(dado)
+    return _guardar_e_entregar(_ler_a_maquina(antes=_NA_TELA.ler(), **fontes))
+
+
+def _guardar_e_entregar(lido: tuple[dict[str, Any], Lida] | None) -> dict[str, Any] | None:
+    """A leitura que vai à página vira o «antes» do próximo «Examinar»."""
+    if lido is None:
+        return None
+    dado, lida = lido
+    _NA_TELA.guardar(lida)
     return dado
 
 
@@ -252,7 +278,9 @@ def js_da_entrega(dado: Mapping[str, Any], *, reexame: bool = False) -> str:
 
 
 def identidades(
-    aparelhos: Sequence[Any], ler_o_serial: Callable[[str], str]
+    aparelhos: Sequence[Any],
+    ler_o_serial: Callable[[str], str],
+    antes: Mapping[str, tuple[str, str]] | None = None,
 ) -> dict[str, str]:
     """``caminho -> id`` de cada aparelho, o mesmo enquanto ele for o mesmo.
 
@@ -265,28 +293,61 @@ def identidades(
        serial, ou com o MESMO serial de fábrica, como o ``123456`` que um
        adaptador Wi-Fi desta casa responde). Aí mover um deles não se
        reconhece, e a página o mostra como quem chegou — nunca como o outro.
+       O caminho vai COM o modelo: outro modelo que chega no mesmo caminho é
+       outro aparelho, e não herda o ``id`` de quem saiu dali.
+
+    QUEM FICOU PARADO CONTINUA SENDO ELE (a conferência da 02, 26/09/2026). Com
+    ``antes`` (a :data:`Lida` que a página tem), o aparelho sem serial só dele
+    que está no MESMO caminho, com o MESMO modelo, de um aparelho da leitura
+    anterior é aquele aparelho. Sem isto, o gêmeo que chega (ou sai) trocava a
+    semente de quem não se mexeu — o modelo deixava de ser único, ou voltava a
+    ser — e o reexame dizia que ele «mudou de lugar». O serial só dele vence
+    sempre: com ele, dois aparelhos que trocam de caminho se separam.
 
     A semente passa por um resumo com :data:`_SAL`: o ``id`` não refaz o
     serial, e o sal morre com o processo.
     """
+    modelos = _modelos(aparelhos)
     sementes: dict[str, str] = {}
     for aparelho in aparelhos:
-        modelo = f"{aparelho.vid}:{aparelho.pid}"
+        caminho = aparelho.nome_do_kernel
         serial = (ler_o_serial(aparelho.no) or "").strip()
         if serial:
-            sementes[aparelho.nome_do_kernel] = f"serial|{modelo}|{serial}"
+            sementes[caminho] = f"serial|{modelos[caminho]}|{serial}"
         elif aparelho.vid or aparelho.pid:
-            sementes[aparelho.nome_do_kernel] = f"modelo|{modelo}"
+            sementes[caminho] = f"modelo|{modelos[caminho]}"
         else:
-            sementes[aparelho.nome_do_kernel] = ""
+            sementes[caminho] = ""
     repetidas = Counter(sementes.values())
+    parados = {(caminho, modelo): i for i, (caminho, modelo) in (antes or {}).items()}
     fora: dict[str, str] = {}
     for caminho, semente in sementes.items():
-        if not semente or repetidas[semente] > 1:
-            semente = f"caminho|{caminho}"
-        resumo = hashlib.blake2s(semente.encode("utf-8"), key=_SAL, digest_size=8)
-        fora[caminho] = _PREFIXO_DO_ID + resumo.hexdigest()
+        if semente.startswith("serial|") and repetidas[semente] == 1:
+            fora[caminho] = _resumo(semente)
+    usados = set(fora.values())
+    for caminho in sementes:
+        de_antes = parados.get((caminho, modelos[caminho]))
+        if caminho not in fora and de_antes is not None and de_antes not in usados:
+            fora[caminho] = de_antes
+            usados.add(de_antes)
+    for caminho, semente in sementes.items():
+        if caminho in fora:
+            continue
+        pelo_caminho = _resumo(f"caminho|{modelos[caminho]}|{caminho}")
+        resumo = pelo_caminho if not semente or repetidas[semente] > 1 else _resumo(semente)
+        fora[caminho] = pelo_caminho if resumo in usados else resumo
+        usados.add(fora[caminho])
     return fora
+
+
+def _modelos(aparelhos: Sequence[Any]) -> dict[str, str]:
+    """``caminho -> vid:pid`` — o modelo, que não separa dois iguais."""
+    return {a.nome_do_kernel: f"{a.vid}:{a.pid}" for a in aparelhos}
+
+
+def _resumo(semente: str) -> str:
+    feito = hashlib.blake2s(semente.encode("utf-8"), key=_SAL, digest_size=8)
+    return _PREFIXO_DO_ID + feito.hexdigest()
 
 
 def _declarado(mapa: Any, numeros: Any) -> dict[str, dict[str, Any]]:

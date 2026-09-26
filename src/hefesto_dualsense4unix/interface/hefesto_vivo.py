@@ -3941,9 +3941,9 @@ class Piloto:
         """A resposta do «Examinar» traz um arranjo: ele sai da carga e vai à página.
 
         O-MAPA-DAS-CONEXOES-NO-PRODUTO-02, 26/09/2026. O retorno de um gesto só
-        pinta `data-campo`, e o arranjo é o gabinete inteiro: ele é entregue
-        pelo `window.hefestoArranjo(dado, true)`, a mesma porta da abertura, e
-        o resto da resposta segue para a pintura como antes.
+        pinta `data-campo`, e o arranjo é o gabinete inteiro: ele vai pelo
+        `window.hefestoArranjo(dado, true)`, a porta da abertura, e o resto
+        segue para a pintura. SÓ NO MAPA: noutra página a chave é campo dela.
 
         RODA NO LAÇO DO GTK, na volta do gesto (`_gesto`), dentro da mesma
         linha que leva a resposta à pintura: lá, uma linha a mais empurraria as
@@ -3953,8 +3953,8 @@ class Piloto:
         """
         from hefesto_dualsense4unix.interface import arranjo_desta_maquina
 
-        chave = arranjo_desta_maquina.CHAVE_DA_ENTREGA
-        if not isinstance(resposta, dict) or chave not in resposta:
+        chave, do_mapa = arranjo_desta_maquina.CHAVE_DA_ENTREGA, arranjo_desta_maquina.PAGINA
+        if pagina != do_mapa or not isinstance(resposta, dict) or chave not in resposta:
             return resposta
         resto = {k: v for k, v in resposta.items() if k != chave}
         self._entregar(pagina, resposta[chave], reexame=True)
