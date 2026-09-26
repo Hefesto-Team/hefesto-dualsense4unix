@@ -186,19 +186,19 @@ _DONGLES: Any = None
 
 
 def _declaracao(recarregar: bool = False) -> Any:
-    """O `maquina.json` já validado, ou `None` se não deu para ler.
-
-    `carregar_maquina` **nunca levanta** — no pior caso devolve o documento
-    todo em "não sei" —, então o `None` daqui só acontece se o import falhar,
-    que é o caso de uma árvore sem `src/`.
+    """O `maquina.json` já validado (`None` só se o import falhar: `carregar_maquina`
+    nunca levanta), RELIDO QUANDO O ARQUIVO MUDA (:func:`_selo_da_declaracao`): a
+    aba Sistema e o daemon também o gravam, e o Perfil de Desempenho do cartão é o
+    mesmo dado que o Perfil Global da Sistema — o cartão o vê no tique seguinte.
     """
-    global _DECLARACAO
-    if _DECLARACAO is None or recarregar:
+    global _DECLARACAO, _SELO_DA_DECLARACAO
+    selo = _selo_da_declaracao()
+    if _DECLARACAO is None or recarregar or selo != _SELO_DA_DECLARACAO:
         try:
             perfil._com_o_src()
             from hefesto_dualsense4unix.utils.maquina import carregar_maquina
 
-            _DECLARACAO = carregar_maquina()
+            _DECLARACAO, _SELO_DA_DECLARACAO = carregar_maquina(), selo
         except Exception:
             return None
     return _DECLARACAO
@@ -7506,3 +7506,33 @@ def mapear_gravar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 def mapear_parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """A tela do Mapear fechou: o dono para de olhar as portas."""
     _o_mapa().parar()
+
+
+def _selo_da_declaracao() -> tuple[int, int, int] | None:
+    """`(inode, mtime_ns, tamanho)` do `maquina.json`, ou `None` sem ele.
+
+    A CONEXÕES FALA DIRETO COM A SISTEMA (26/09/2026,
+    `D-2609-A-CONEXOES-E-A-SISTEMA-FALAM-O-MESMO-PERFIL`), e a conferência da
+    A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01 mediu o contrário no piloto: esta aba
+    guardava o `maquina.json` até um gesto DELA reler, e a «Bateria Longa» que
+    a Sistema acabara de gravar não acendia os cartões; pior, o clique no
+    cartão, sem saber da mesa, gravava por cima da escolha daquele controle.
+
+    O INODE entra porque o escritor troca o arquivo inteiro (`os.replace`, em
+    `utils.maquina._escrever`): duas gravações no mesmo tique do relógio do
+    sistema de arquivos, com o mesmo tamanho, ainda são arquivos diferentes. Um
+    `stat` por leitura, nenhum parse. Mora no fim do módulo para as citações
+    `arquivo:linha` não andarem.
+    """
+    try:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina
+
+        st = caminho_da_maquina().stat()
+    except Exception:
+        return None
+    return (st.st_ino, st.st_mtime_ns, st.st_size)
+
+
+#: O selo do `maquina.json` que `_DECLARACAO` leu. Ver :func:`_selo_da_declaracao`.
+_SELO_DA_DECLARACAO: tuple[int, int, int] | None = None

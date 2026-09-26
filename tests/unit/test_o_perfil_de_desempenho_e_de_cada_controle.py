@@ -121,12 +121,18 @@ class _PonteDoDisco:
 
 @pytest.fixture
 def disco(monkeypatch: pytest.MonkeyPatch) -> Iterator[_PonteDoDisco]:
-    """O `maquina.json` do lar de mentira como a declaração que a aba lê."""
-    from hefesto_dualsense4unix.utils.maquina import carregar_maquina
+    """O `maquina.json` do lar de mentira, lido pela LEITURA DA ABA (`_declaracao`).
 
+    FATO SUBSTITUÍDO na conferência (26/09/2026): este dublê trocava o
+    `_declaracao` da aba por um `carregar_maquina()` a cada chamada — mais
+    frouxo que o produto, que GUARDAVA o arquivo até um gesto da própria aba
+    reler. Com ele a régua dava verde enquanto, no piloto, a «Bateria Longa»
+    gravada pela Sistema não acendia os cartões e o clique no P2 gravava por
+    cima da escolha dele. Agora só o guardado de outro teste é esquecido.
+    """
     a08 = _a08()
-    monkeypatch.setattr(a08, "_declaracao", lambda recarregar=False: carregar_maquina())
-    monkeypatch.setattr(a08, "_reler_a_declaracao", carregar_maquina)
+    monkeypatch.setattr(a08, "_DECLARACAO", None)
+    monkeypatch.setattr(a08, "_SELO_DA_DECLARACAO", None)
     yield _PonteDoDisco()
 
 
@@ -137,10 +143,10 @@ def _clicar(ponte: _PonteDoDisco, k: int, perfil: str, via: str = "usb") -> None
 
 
 def _acesos() -> dict[int, str]:
-    from hefesto_dualsense4unix.utils.maquina import carregar_maquina
-
-    dec = carregar_maquina()
-    return {n: _a08().perfil_na_linha(dec, UNIQS[n - 1])["perfil"] for n in (1, 2, 3, 4)}
+    """O botão aceso de cada cartão, pela MESMA leitura que o tique pinta."""
+    a08 = _a08()
+    dec = a08._declaracao()
+    return {n: a08.perfil_na_linha(dec, UNIQS[n - 1])["perfil"] for n in (1, 2, 3, 4)}
 
 
 @pytest.mark.parametrize("via", ["usb", "bt"])
@@ -178,22 +184,30 @@ def test_um_perfil_que_nao_existe_recusa_sem_gravar(disco: _PonteDoDisco) -> Non
 # 3. A SISTEMA E A CONEXÕES — o mesmo dado, pelo mesmo dono
 # ---------------------------------------------------------------------------
 def test_a_bateria_longa_da_sistema_acende_os_quatro_cartoes(disco: _PonteDoDisco) -> None:
-    """O clique do Perfil Global é o gesto da aba 09, e o cartão lê o mesmo disco."""
+    """O clique do Perfil Global é o gesto da aba 09, e o cartão lê o mesmo disco.
+
+    A ordem é a do piloto da conferência (26/09/2026): o cartão já leu o disco
+    (o clique no P2 e no P3) ANTES de a Sistema gravar. MORDIDA: tire o
+    `selo != _SELO_DA_DECLARACAO` de `a08_conexoes._declaracao` → os cartões
+    não acendem, e o clique no P2 grava por cima da «Bateria Longa» dele.
+    """
     from hefesto_dualsense4unix.interface.pacotes import a09_sistema
 
     orc = _orc()
+    _clicar(disco, 2, orc.PERFIL_BATERIA_LONGA)
     _clicar(disco, 3, orc.PERFIL_EU_ESCOLHO)
     a09_sistema.perfil_da_mesa(None, {"v": orc.PERFIL_BATERIA_LONGA}, disco)
     assert _acesos() == dict.fromkeys((1, 2, 3, 4), orc.PERFIL_BATERIA_LONGA)
     # sob a «Bateria Longa» global, o cartão não sai dela e não grava nada
     antes = len(disco.corpos)
-    with pytest.raises(RuntimeError, match="Perfil Global de Bateria"):
-        _clicar(disco, 2, orc.PERFIL_TUDO_LIGADO)
+    for k in (1, 2, 3, 4):
+        with pytest.raises(RuntimeError, match="Perfil Global de Bateria"):
+            _clicar(disco, k, orc.PERFIL_TUDO_LIGADO)
     _clicar(disco, 2, orc.PERFIL_BATERIA_LONGA)
     assert len(disco.corpos) == antes
     # a Sistema sai da «Bateria Longa»: cada cartão volta ao que era dele
     a09_sistema.perfil_da_mesa(None, {"v": orc.PERFIL_TUDO_LIGADO}, disco)
-    assert _acesos() == {1: orc.PERFIL_TUDO_LIGADO, 2: orc.PERFIL_TUDO_LIGADO,
+    assert _acesos() == {1: orc.PERFIL_TUDO_LIGADO, 2: orc.PERFIL_BATERIA_LONGA,
                          3: orc.PERFIL_EU_ESCOLHO, 4: orc.PERFIL_TUDO_LIGADO}
 
 
