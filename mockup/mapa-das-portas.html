@@ -322,6 +322,9 @@
   .edita .seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .3rem; }
   .edita .seg.dois { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .edita .seg .escolha { justify-content: center; text-align: center; }
+  /* a escolha que não cabe: cinza, com a razão na dica, e responde (D-03) */
+  .edita .seg .escolha.apagado { opacity: .45; cursor: not-allowed; }
+  .edita .seg .escolha.apagado:hover { background: var(--color-paper-3); }
   /* «Arruma o alinhamento dos blocos» — 26/09/2026. O «Voltar» entra na linha
      do título, os três modos têm a mesma largura, as colunas de entradas têm a
      mesma largura em todas as chapas, e a bandeja começa na altura da primeira
@@ -474,12 +477,19 @@
      O lado USB 3.0 do mesmo hub físico aparece noutro barramento (`4-1.x`
      contra `3-1.x`) porque hub 3.0 é dual-bus — mesmo metal, dois números.  */
   function regiaoDoCaminho(c) {
-    var h = leitura()["hub"];
-    if (!h || !c) return null;
-    if (c.indexOf(h + ".") === 0) return "hub";
-    var mh = h.match(/^(\d+)-(.+)$/), mc = c.match(/^(\d+)-(.+)$/);
-    if (mh && mc && mc[1] !== mh[1] && mc[2].indexOf(mh[2] + ".") === 0) return "hub";
-    return "pc";
+    /* O HUB É QUEM TEM A CLASSE DE HUB — 26/09/2026. Aqui se perguntava
+       pelo aparelho de id "hub", que só o exemplo tem: no produto a
+       resposta era sempre «não sei», e o reexame dizia «está direto no
+       gabinete» de quem estava no hub. */
+    var cam = leitura();
+    var hubs = APARELHOS.filter(function (a) { return a.classe === "hub" && cam[a.id]; })
+      .map(function (a) { return cam[a.id]; });
+    if (!hubs.length || !c) return null;
+    return hubs.some(function (h) {
+      if (c.indexOf(h + ".") === 0) return true;
+      var mh = h.match(/^(\d+)-(.+)$/), mc = c.match(/^(\d+)-(.+)$/);
+      return !!(mh && mc && mc[1] !== mh[1] && mc[2].indexOf(mh[2] + ".") === 0);
+    }) ? "hub" : "pc";
   }
 
   /* aparelhos que a leitura vê e o mapa não sabe onde estão */
@@ -660,13 +670,24 @@
     return { n: n, razoes: razoes, peso: peso };
   }
 
+  /* O HUB DESENHADO — 26/09/2026. A face que o desenho monta de um hub
+     declarado (`daEntrada`) tem entradas que ninguém leu: o número e a
+     quantidade são do desenho. A Sugestão nunca manda um aparelho para
+     dentro delas. Medido: com o dongle direto na 5 e o hub declarado
+     na 5, ela mandava o dongle «da Entrada 5 para a 5.1». */
+  function doHubDesenhado(p) {
+    return FACES.some(function (f) {
+      return !!f.daEntrada && f.portas.some(function (x) { return x === p || x.filho === p; });
+    });
+  }
+
   function planejar(op) {
     op = op || {};
     var bonusParado = op.bonusParado === undefined ? 1 : op.bonusParado;
     var proibida = op.proibir || function () { return false; };
     alocacao = alocacaoDerivada();   /* nunca planejar sobre leitura velha */
     var plano = {}, motivo = {};
-    var portas = todasPortas().filter(function (p) { return !proibida(p); });
+    var portas = todasPortas().filter(function (p) { return !proibida(p) && !doHubDesenhado(p); });
     /* ordem de decisão: quem tem exigência dura escolhe antes */
     var ordem = ["hub", "teclado", "wifi", "bt", "mouse", "webcam"];
     var jaPostos = [];
@@ -1210,8 +1231,19 @@
      ao disco. No exemplo e nas entradas que o desenho monta do que ela
      declarou (as do hub, a ponta do extensor), o editor fica só na tela. */
   var GRAVA = [];
+  /* A PONTA DO EXTENSOR GRAVA — 26/09/2026. A ponta de um extensor
+     declarado numa entrada que grava é a entrada-filha dele no disco
+     (`entrada_a_entrada.ponta_do_extensor`): o número puro mais «a». As
+     do hub desenhado (`5.1`…) não cabem no disco, e não gravam. */
+  function podeGravar(n) {
+    n = String(n);
+    if (GRAVA.indexOf(n) !== -1) return true;
+    var mae = maeDe(n);
+    return !!mae && /^[0-9]{1,3}$/.test(mae.n) && n === mae.n + "a"
+      && GRAVA.indexOf(mae.n) !== -1 && (DECLARADO[mae.n] || {}).liga === "extensor";
+  }
   function gravaNaEntrada(n, gesto) {
-    if (GRAVA.indexOf(String(n)) === -1) return "";
+    if (!podeGravar(n)) return "";
     return ' data-gesto="' + gesto + '" data-entrada="' + n + '"';
   }
 
@@ -1237,16 +1269,30 @@
     if (!ed) return;
     var p = editando && porNum(editando);
     var plug = p && document.querySelector('.plug[data-porta="' + editando + '"]');
-    if (!p || !plug || modo === "ideal" || segurando) { ed.hidden = true; return; }
+    /* o editor escondido não guarda os botões da entrada de antes: um
+       clique neles levaria ao disco o gesto de outra entrada */
+    if (!p || !plug || modo === "ideal" || segurando) { ed.hidden = true; ed.innerHTML = ""; return; }
     var liga = (DECLARADO[editando] || {}).liga || "direto";
     var face = FACES.filter(function (f) {
       return f.portas.some(function (x) { return x === p || x.filho === p; });
     })[0];
     var quem = alocacao[editando] ? acha(alocacao[editando]) : null;
+    /* A ENTRADA QUE SÓ EXISTE NO DESENHO — 26/09/2026. No produto, o que
+       ela declarasse numa entrada que não grava (as do hub desenhado)
+       sumiria ao reler, sem aviso: ali o editor só mostra quem está
+       nela, e sem ninguém ele não abre. No exemplo, tudo é só tela. */
+    var soNaTela = doProduto() && !podeGravar(editando);
+    if (soNaTela && !quem) { ed.hidden = true; ed.innerHTML = ""; return; }
     ed.innerHTML = '<div class="edita-cab"><b>Entrada ' + editando + "</b><span>" + (face ? face.nome : "") + "</span>"
       + '<button class="btn fecha" id="edita-fecha" aria-label="Fechar">&times;</button></div>'
-      + '<div class="edita-linha"><span>O que tem aqui</span><div class="seg">'
+      + (soNaTela ? "" : '<div class="edita-linha"><span>O que tem aqui</span><div class="seg">'
       + [["direto", "Direto"], ["hub", "Hub"], ["extensor", "Extensor"]].map(function (o) {
+          /* O HUB NÃO CABE ONDE HÁ UM APARELHO DIRETO QUE NÃO É HUB: cinza,
+             com a razão na dica (a D-03 dela), e o clique não declara. */
+          if (o[0] === "hub" && quem && quem.classe !== "hub") {
+            return '<button class="escolha apagado" data-liga="hub" aria-disabled="true" aria-pressed="' + (liga === "hub")
+              + '" title="' + quem.tipo + ' Está Direto Nesta Entrada">' + o[1] + "</button>";
+          }
           return '<button class="escolha" data-liga="' + o[0] + '"' + gravaNaEntrada(editando, "entrada-o-que-tem") + ' aria-pressed="' + (liga === o[0]) + '">' + o[1] + "</button>";
         }).join("")
       + "</div></div>"
@@ -1254,7 +1300,7 @@
       + [[3, "USB 3.0"], [2, "USB 2.0"]].map(function (o) {
           return '<button class="escolha" data-usb="' + o[0] + '"' + gravaNaEntrada(editando, "entrada-velocidade") + ' aria-pressed="' + (p.usb === o[0]) + '">' + o[1] + "</button>";
         }).join("")
-      + "</div></div>"
+      + "</div></div>")
       + (quem ? '<div class="edita-linha"><span>' + quem.tipo + ' está aqui</span>'
           + '<button class="btn" data-tirar="' + editando + '">Mudar de entrada</button></div>' : "");
     ed.hidden = false;
@@ -1353,7 +1399,7 @@
         var fim = movs.filter(function (m) { return m.semNumero; })[0];
         if (fim) html += '<div class="nada-a-fazer" style="margin-top:.5rem"><b>' + fim.titulo + "</b><ul style=\"list-style:none;margin:.3rem 0 0;padding:0;display:flex;flex-direction:column;gap:.2rem\">"
           + fim.linhas.map(function (l) { return '<li style="display:flex;gap:.4rem;align-items:baseline;font-size:var(--text-sm);color:var(--color-ink-quiet)"><span class="selo ' + l.s + '">' + l.s + "</span><span>" + l.t + "</span></li>"; }).join("") + "</ul></div>";
-        html += '<div class="acoes"><button class="btn forte" id="reexaminar">Já movi — veja o que mudou</button>'
+        html += '<div class="acoes"><button class="btn forte" id="reexaminar"' + examinaNoProduto() + '>Já movi — veja o que mudou</button>'
              +  '<button class="btn" id="voltar">Desfazer o que eu declarei</button></div>'
              +  '<p style="margin:.5rem 0 0;font-size:var(--text-xs);color:var(--color-ink-faint)">'
              +  'Eu <b>não presumo</b> que você seguiu a ordem à risca: leio o sistema de novo, vejo quem mudou de lugar '
@@ -1376,9 +1422,11 @@
               var reconhecido = !!m.entradaAgora;
               return "<li><div><h4>" + m.ap.tipo + " · " + m.ap.nome
                 + (reconhecido ? "" : "  ·  em entrada não declarada") + "</h4><ul>"
-                + '<li><span class="selo medido">medido</span><span>Estava em <code>' + m.antes + "</code>"
-                + (m.entradaAntes ? " (entrada <b>" + m.entradaAntes + "</b>)" : "")
-                + ", agora está em <code>" + m.agora + "</code>"
+                + '<li><span class="selo medido">medido</span><span>'
+                + (m.antes ? "Estava em <code>" + m.antes + "</code>"
+                    + (m.entradaAntes ? " (entrada <b>" + m.entradaAntes + "</b>)" : "")
+                    + ", agora está em " : "Agora está em ")
+                + "<code>" + m.agora + "</code>"
                 + (reconhecido ? " (entrada <b>" + m.entradaAgora + "</b>)" : "") + ".</span></li>"
                 + linhaDoAchado(m, reconhecido)
                 + "</ul></div></li>";
@@ -1491,7 +1539,11 @@
     if (ev.target.closest(".modo[data-modo]")) editando = null;
     if (ev.target.id === "edita-fecha") { editando = null; pintar(); return; }
     var lg = ev.target.closest("#edita [data-liga]");
-    if (lg) { declarar(editando, "liga", lg.getAttribute("data-liga")); pintar(); return; }
+    if (lg) {
+      /* o apagado responde e não declara: a razão está na dica */
+      if (lg.getAttribute("aria-disabled") !== "true") declarar(editando, "liga", lg.getAttribute("data-liga"));
+      pintar(); return;
+    }
     var ub = ev.target.closest("#edita [data-usb]");
     if (ub) { declarar(editando, "usb", parseInt(ub.getAttribute("data-usb"), 10)); pintar(); return; }
     var tb = ev.target.closest("#edita [data-tirar]");
@@ -1522,7 +1574,9 @@
     if (vb) { variante = vb.getAttribute("data-var"); pintar(); return; }
 
     if (ev.target.id === "reexaminar") {
-      /* relata a diferença; NÃO troca o que o mapa mostra */
+      /* relata a diferença; NÃO troca o que o mapa mostra. No produto quem
+         abre o reexame é a leitura nova, que chega pelo `hefestoArranjo`. */
+      if (doProduto()) return;
       modo = "reexame"; segurando = null; naMao = null; pintar(); return;
     }
     if (ev.target.id === "voltar-leitura") { modo = "mesa"; pintar(); return; }
@@ -1621,15 +1675,36 @@
     if (el && fonte.quando !== EXEMPLO.quando) el.remove();
   }
 
-  window.hefestoArranjo = function (dado) {
+  /* O «EXAMINAR» NO PRODUTO — 26/09/2026, O-MAPA-DAS-CONEXOES-NO-PRODUTO-02.
+     Com a leitura desta máquina na tela, quem relê é o produto: o botão leva
+     o gesto `reexaminar`, a leitura nova sai fora do fio da janela e volta por
+     `hefestoArranjo(dado, true)`, com a que a página tinha como «antes». No
+     exemplo não há o que reler, e o reexame é o das duas leituras dele. */
+  function doProduto() { return fonte !== EXEMPLO; }
+  function examinaNoProduto() { return doProduto() ? ' data-gesto="reexaminar"' : ""; }
+  function marcarOExaminar() {
+    var ex = document.querySelector(".topo #reexaminar");
+    if (ex && doProduto()) ex.setAttribute("data-gesto", "reexaminar");
+  }
+
+  window.hefestoArranjo = function (dado, comoReexame) {
     var falta = CAMPOS_DO_ARRANJO.filter(function (c) { return !dado || !dado[c]; });
     if (falta.length) {
       /* RECUSAR É METADE DO TRABALHO: meio arranjo desenharia um gabinete sem
          entradas, e isso se lê como "não tenho nada ligado". */
       throw new Error("arranjo incompleto, falta: " + falta.join(", "));
     }
+    /* O REEXAME RELÊ ONDE CADA APARELHO ESTÁ, e não o que ela ensinou ao
+       mapa nesta tela: o mapa da tela fica, como ficava antes de o produto
+       reler. */
+    var mapaDaTela = comoReexame && doProduto() ? [MAPA, MAPA_ORIGINAL] : null;
     aplicarArranjo(dado);
+    if (comoReexame) {
+      if (mapaDaTela) { MAPA = mapaDaTela[0]; MAPA_ORIGINAL = mapaDaTela[1]; }
+      modo = "reexame"; segurando = null; naMao = null;
+    }
     dizerDeQuando();
+    marcarOExaminar();
     pintar();
     return "ok";
   };

@@ -22,24 +22,33 @@ e `integrations/mapa_das_portas.velocidade_da_entrada`).
 POR QUE `a12_` E ISTO NÃO É UMA ABA: é página avulsa, como a `a11` da
 calibração. O prefixo é o que o `_carregar_tudo()` e as réguas varrem.
 
+O «EXAMINAR» RELÊ (O-MAPA-DAS-CONEXOES-NO-PRODUTO-02, 26/09/2026). Ele dizia
+sempre «Nada Mudou de Lugar»: as duas leituras nasciam iguais e o gesto não
+tinha por onde entregar outra. O gesto `reexaminar` relê a máquina no fio do
+gesto (nunca no da janela) e devolve o arranjo novo na chave
+`arranjo_desta_maquina.CHAVE_DA_ENTREGA`, com a leitura que a página tinha
+como «antes»; o piloto o entrega pelo mesmo `window.hefestoArranjo` da
+abertura.
+
 O QUE ELE NÃO FAZ: não pinta nada (a página recebe o arranjo inteiro pelo
 `hefesto_vivo._entregar_o_arranjo`, e entrar em `PACOTES` faria o despachante
-das dez contar onze), e não grava a entrada que o desenho monta a partir do
-que ela declarou (as do hub, a ponta do extensor): essas não têm número no
-disco, e o editor da página nem manda o gesto para elas.
+das dez contar onze), e não grava as entradas do hub desenhado (`5.1`…): o
+número delas não cabe no disco, e o editor da página nem manda o gesto para
+elas. A ponta do extensor grava desde a 02, como entrada-filha.
 """
 from __future__ import annotations
 
 from typing import Any
 
 from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
+from hefesto_dualsense4unix.interface import arranjo_desta_maquina
 
 from . import Contexto, gesto
 
 PAGINA = "mapa-das-portas.html"
 
-#: Os dois gestos do editor da entrada. Só sobe.
-PISO_DA_ABA = 2
+#: Os dois gestos do editor da entrada e o «Examinar». Só sobe.
+PISO_DA_ABA = 3
 
 #: O «Direto» do editor: é a ausência de declaração no disco (`liga` nulo).
 DIRETO = "direto"
@@ -74,6 +83,21 @@ def entrada_velocidade(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     except ValueError:
         raise ValueError("o clique não disse a velocidade") from None
     _gravou(ee.declarar_a_velocidade(_a_entrada(o), usb))
+
+
+@gesto(PAGINA, "reexaminar")
+def reexaminar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Examinar»: relê a máquina e devolve o arranjo novo para a página.
+
+    Não grava nada: a leitura anterior mora na memória
+    (`arranjo_desta_maquina.reexaminar`). ``None`` é a leitura que não veio (o
+    mapa sumiu do disco, o ``/sys`` não respondeu): recusar pisca o botão, e a
+    página continua com o que tinha — nunca um gabinete vazio.
+    """
+    dado = arranjo_desta_maquina.reexaminar()
+    if dado is None:
+        raise RuntimeError("não li o mapa deste computador de novo")
+    return {arranjo_desta_maquina.CHAVE_DA_ENTREGA: dado}
 
 
 PONTE: set[str] = set()

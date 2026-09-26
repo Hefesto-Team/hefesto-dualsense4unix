@@ -302,15 +302,36 @@ ABRE_A_PORTA = """\
     if (el && fonte.quando !== EXEMPLO.quando) el.remove();
   }
 
-  window.hefestoArranjo = function (dado) {
+  /* O «EXAMINAR» NO PRODUTO — 26/09/2026, O-MAPA-DAS-CONEXOES-NO-PRODUTO-02.
+     Com a leitura desta máquina na tela, quem relê é o produto: o botão leva
+     o gesto `reexaminar`, a leitura nova sai fora do fio da janela e volta por
+     `hefestoArranjo(dado, true)`, com a que a página tinha como «antes». No
+     exemplo não há o que reler, e o reexame é o das duas leituras dele. */
+  function doProduto() { return fonte !== EXEMPLO; }
+  function examinaNoProduto() { return doProduto() ? ' data-gesto="reexaminar"' : ""; }
+  function marcarOExaminar() {
+    var ex = document.querySelector(".topo #reexaminar");
+    if (ex && doProduto()) ex.setAttribute("data-gesto", "reexaminar");
+  }
+
+  window.hefestoArranjo = function (dado, comoReexame) {
     var falta = CAMPOS_DO_ARRANJO.filter(function (c) { return !dado || !dado[c]; });
     if (falta.length) {
       /* RECUSAR É METADE DO TRABALHO: meio arranjo desenharia um gabinete sem
          entradas, e isso se lê como "não tenho nada ligado". */
       throw new Error("arranjo incompleto, falta: " + falta.join(", "));
     }
+    /* O REEXAME RELÊ ONDE CADA APARELHO ESTÁ, e não o que ela ensinou ao
+       mapa nesta tela: o mapa da tela fica, como ficava antes de o produto
+       reler. */
+    var mapaDaTela = comoReexame && doProduto() ? [MAPA, MAPA_ORIGINAL] : null;
     aplicarArranjo(dado);
+    if (comoReexame) {
+      if (mapaDaTela) { MAPA = mapaDaTela[0]; MAPA_ORIGINAL = mapaDaTela[1]; }
+      modo = "reexame"; segurando = null; naMao = null;
+    }
     dizerDeQuando();
+    marcarOExaminar();
     pintar();
     return "ok";
   };
@@ -1607,6 +1628,267 @@ EDICOES: tuple[Edicao, ...] = (
             '  .topo .quando + .examinar { margin-left: 0; }\n'
         ),
         porque='26/09/2026 — a linha do exemplo e o «Examinar» ficam juntos, à direita.',
+    ),
+    # ═══ O QUE A 01 DEIXOU — 26/09/2026, O-MAPA-DAS-CONEXOES-NO-PRODUTO-02 ═══
+    # Os três buracos que a conferência da 01 mediu: o «Examinar» que dizia
+    # sempre «Nada Mudou de Lugar», o hub oferecido onde há um aparelho direto
+    # que não é hub (e a Sugestão mandando o dongle para dentro de um hub
+    # desenhado), e as entradas desenhadas que editavam sem gravar.
+    Edicao(
+        antes=(
+            '    if (ev.target.id === "reexaminar") {\n'
+            '      /* relata a diferença; NÃO troca o que o mapa mostra */\n'
+            '      modo = "reexame"; segurando = null; naMao = null; pintar(); return;\n'
+            '    }\n'
+        ),
+        depois=(
+            '    if (ev.target.id === "reexaminar") {\n'
+            '      /* relata a diferença; NÃO troca o que o mapa mostra. No produto quem\n'
+            '         abre o reexame é a leitura nova, que chega pelo `hefestoArranjo`. */\n'
+            '      if (doProduto()) return;\n'
+            '      modo = "reexame"; segurando = null; naMao = null; pintar(); return;\n'
+            '    }\n'
+        ),
+        porque=(
+            '26/09/2026 — o «Examinar» do produto espera a leitura nova: pintar o '
+            'reexame no clique compararia a leitura da tela com ela mesma, e diria '
+            '«Nada Mudou de Lugar» de quem mudou.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '\'<div class="acoes"><button class="btn forte" id="reexaminar">Já movi — '
+            'veja o que mudou</button>\''
+        ),
+        depois=(
+            '\'<div class="acoes"><button class="btn forte" id="reexaminar"\' + '
+            'examinaNoProduto() + \'>Já movi — veja o que mudou</button>\''
+        ),
+        porque=(
+            '26/09/2026 — o «Já movi» das Sugestões é o mesmo «Examinar», e no '
+            'produto leva o mesmo gesto.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '                + \'<li><span class="selo medido">medido</span>'
+            '<span>Estava em <code>\' '
+            '+ m.antes + "</code>"\n'
+            '                + (m.entradaAntes ? " (entrada <b>" + m.entradaAntes + "</b>)" : "")\n'
+            '                + ", agora está em <code>" + m.agora + "</code>"\n'
+        ),
+        depois=(
+            '                + \'<li><span class="selo medido">medido</span><span>\'\n'
+            '                + (m.antes ? "Estava em <code>" + m.antes + "</code>"\n'
+            '                    + (m.entradaAntes ? " (entrada <b>" '
+            '+ m.entradaAntes + "</b>)" : "")\n'
+            '                    + ", agora está em " : "Agora está em ")\n'
+            '                + "<code>" + m.agora + "</code>"\n'
+        ),
+        porque=(
+            '26/09/2026 — o aparelho que chegou depois da leitura anterior não '
+            '«estava» em lugar nenhum: a frase dizia «Estava em undefined».'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '  function regiaoDoCaminho(c) {\n'
+            '    var h = leitura()["hub"];\n'
+            '    if (!h || !c) return null;\n'
+            '    if (c.indexOf(h + ".") === 0) return "hub";\n'
+            '    var mh = h.match(/^(\\d+)-(.+)$/), mc = c.match(/^(\\d+)-(.+)$/);\n'
+            '    if (mh && mc && mc[1] !== mh[1] '
+            '&& mc[2].indexOf(mh[2] + ".") === 0) return "hub";\n'
+            '    return "pc";\n'
+            '  }\n'
+        ),
+        depois=(
+            '  function regiaoDoCaminho(c) {\n'
+            '    /* O HUB É QUEM TEM A CLASSE DE HUB — 26/09/2026. Aqui se perguntava\n'
+            '       pelo aparelho de id "hub", que só o exemplo tem: no produto a\n'
+            '       resposta era sempre «não sei», e o reexame dizia «está direto no\n'
+            '       gabinete» de quem estava no hub. */\n'
+            '    var cam = leitura();\n'
+            '    var hubs = APARELHOS.filter(function (a) { '
+            'return a.classe === "hub" && cam[a.id]; })\n'
+            '      .map(function (a) { return cam[a.id]; });\n'
+            '    if (!hubs.length || !c) return null;\n'
+            '    return hubs.some(function (h) {\n'
+            '      if (c.indexOf(h + ".") === 0) return true;\n'
+            '      var mh = h.match(/^(\\d+)-(.+)$/), mc = c.match(/^(\\d+)-(.+)$/);\n'
+            '      return !!(mh && mc && mc[1] !== mh[1] && mc[2].indexOf(mh[2] + ".") === 0);\n'
+            '    }) ? "hub" : "pc";\n'
+            '  }\n'
+        ),
+        porque=(
+            '26/09/2026 — o id do aparelho no produto não é "hub" (é a identidade '
+            'estável, `arranjo_desta_maquina.identidades`): o hub se acha pela '
+            'classe, e o exemplo, que tem um hub só, responde como antes.'
+        ),
+    ),
+    Edicao(
+        antes='  function planejar(op) {\n',
+        depois=(
+            '  /* O HUB DESENHADO — 26/09/2026. A face que o desenho monta de um hub\n'
+            '     declarado (`daEntrada`) tem entradas que ninguém leu: o número e a\n'
+            '     quantidade são do desenho. A Sugestão nunca manda um aparelho para\n'
+            '     dentro delas. Medido: com o dongle direto na 5 e o hub declarado\n'
+            '     na 5, ela mandava o dongle «da Entrada 5 para a 5.1». */\n'
+            '  function doHubDesenhado(p) {\n'
+            '    return FACES.some(function (f) {\n'
+            '      return !!f.daEntrada && f.portas.some(function (x) { '
+            'return x === p || x.filho === p; });\n'
+            '    });\n'
+            '  }\n'
+            '\n'
+            '  function planejar(op) {\n'
+        ),
+        porque='26/09/2026 — quem responde se uma entrada é do hub desenhado.',
+    ),
+    Edicao(
+        antes=(
+            '    var portas = todasPortas().filter(function (p) { return !proibida(p); });\n'
+        ),
+        depois=(
+            '    var portas = todasPortas().filter(function (p) { return !proibida(p) && '
+            '!doHubDesenhado(p); });\n'
+        ),
+        porque=(
+            '26/09/2026 — a Sugestão nunca manda mover um aparelho para dentro de '
+            'um hub desenhado.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '  .edita .seg .escolha { justify-content: center; text-align: center; }\n'
+        ),
+        depois=(
+            '  .edita .seg .escolha { justify-content: center; text-align: center; }\n'
+            '  /* a escolha que não cabe: cinza, com a razão na dica, e responde (D-03) */\n'
+            '  .edita .seg .escolha.apagado { opacity: .45; cursor: not-allowed; }\n'
+            '  .edita .seg .escolha.apagado:hover { background: var(--color-paper-3); }\n'
+        ),
+        porque='26/09/2026 — a cara do «Hub» que não cabe na entrada.',
+    ),
+    Edicao(
+        antes=(
+            '          return \'<button class="escolha" data-liga="\' + o[0] + \'"\' + '
+            'gravaNaEntrada(editando, "entrada-o-que-tem") + \' aria-pressed="\' + '
+            '(liga === o[0]) + \'">\' + o[1] + "</button>";\n'
+        ),
+        depois=(
+            '          /* O HUB NÃO CABE ONDE HÁ UM APARELHO DIRETO QUE NÃO É HUB: cinza,\n'
+            '             com a razão na dica (a D-03 dela), e o clique não declara. */\n'
+            '          if (o[0] === "hub" && quem && quem.classe !== "hub") {\n'
+            '            return \'<button class="escolha apagado" data-liga="hub" '
+            'aria-disabled="true" aria-pressed="\' + (liga === "hub")\n'
+            '              + \'" title="\' + quem.tipo + \' Está Direto Nesta Entrada">\' + '
+            'o[1] + "</button>";\n'
+            '          }\n'
+            '          return \'<button class="escolha" data-liga="\' + o[0] + \'"\' + '
+            'gravaNaEntrada(editando, "entrada-o-que-tem") + \' aria-pressed="\' + '
+            '(liga === o[0]) + \'">\' + o[1] + "</button>";\n'
+        ),
+        porque=(
+            '26/09/2026 — medido: o dongle Bluetooth direto na 5, ela declara Hub '
+            'na 5, e a página desenha um hub que não pode estar ali.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    if (lg) { declarar(editando, "liga", lg.getAttribute("data-liga")); '
+            'pintar(); return; }\n'
+        ),
+        depois=(
+            '    if (lg) {\n'
+            '      /* o apagado responde e não declara: a razão está na dica */\n'
+            '      if (lg.getAttribute("aria-disabled") !== "true") '
+            'declarar(editando, "liga", lg.getAttribute("data-liga"));\n'
+            '      pintar(); return;\n'
+            '    }\n'
+        ),
+        porque='26/09/2026 — o clique no «Hub» cinza não declara um hub que não cabe.',
+    ),
+    Edicao(
+        antes=(
+            '  function gravaNaEntrada(n, gesto) {\n'
+            '    if (GRAVA.indexOf(String(n)) === -1) return "";\n'
+        ),
+        depois=(
+            '  /* A PONTA DO EXTENSOR GRAVA — 26/09/2026. A ponta de um extensor\n'
+            '     declarado numa entrada que grava é a entrada-filha dele no disco\n'
+            '     (`entrada_a_entrada.ponta_do_extensor`): o número puro mais «a». As\n'
+            '     do hub desenhado (`5.1`…) não cabem no disco, e não gravam. */\n'
+            '  function podeGravar(n) {\n'
+            '    n = String(n);\n'
+            '    if (GRAVA.indexOf(n) !== -1) return true;\n'
+            '    var mae = maeDe(n);\n'
+            '    return !!mae && /^[0-9]{1,3}$/.test(mae.n) && n === mae.n + "a"\n'
+            '      && GRAVA.indexOf(mae.n) !== -1 && (DECLARADO[mae.n] || {}).liga '
+            '=== "extensor";\n'
+            '  }\n'
+            '  function gravaNaEntrada(n, gesto) {\n'
+            '    if (!podeGravar(n)) return "";\n'
+        ),
+        porque=(
+            '26/09/2026 — o que ela declara na ponta do extensor vai ao disco, e '
+            'volta ao reler.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    var quem = alocacao[editando] ? acha(alocacao[editando]) : null;\n'
+            '    ed.innerHTML = \'<div class="edita-cab"><b>Entrada \' + editando + '
+            '"</b><span>" + (face ? face.nome : "") + "</span>"\n'
+            '      + \'<button class="btn fecha" id="edita-fecha" aria-label="Fechar">'
+            '&times;</button></div>\'\n'
+            '      + \'<div class="edita-linha"><span>O que tem aqui</span><div class="seg">\'\n'
+        ),
+        depois=(
+            '    var quem = alocacao[editando] ? acha(alocacao[editando]) : null;\n'
+            '    /* A ENTRADA QUE SÓ EXISTE NO DESENHO — 26/09/2026. No produto, o que\n'
+            '       ela declarasse numa entrada que não grava (as do hub desenhado)\n'
+            '       sumiria ao reler, sem aviso: ali o editor só mostra quem está\n'
+            '       nela, e sem ninguém ele não abre. No exemplo, tudo é só tela. */\n'
+            '    var soNaTela = doProduto() && !podeGravar(editando);\n'
+            '    if (soNaTela && !quem) { ed.hidden = true; ed.innerHTML = ""; return; }\n'
+            '    ed.innerHTML = \'<div class="edita-cab"><b>Entrada \' + editando + '
+            '"</b><span>" + (face ? face.nome : "") + "</span>"\n'
+            '      + \'<button class="btn fecha" id="edita-fecha" aria-label="Fechar">'
+            '&times;</button></div>\'\n'
+            '      + (soNaTela ? "" : \'<div class="edita-linha"><span>O que tem aqui'
+            '</span><div class="seg">\'\n'
+        ),
+        porque=(
+            '26/09/2026 — as entradas desenhadas editavam sem gravar: o que ela '
+            'declarava ali sumia ao reabrir.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    if (!p || !plug || modo === "ideal" || segurando) { ed.hidden = true; return; }\n'
+        ),
+        depois=(
+            '    /* o editor escondido não guarda os botões da entrada de antes: um\n'
+            '       clique neles levaria ao disco o gesto de outra entrada */\n'
+            '    if (!p || !plug || modo === "ideal" || segurando) { ed.hidden = true; '
+            'ed.innerHTML = ""; return; }\n'
+        ),
+        porque=(
+            '26/09/2026 — medido na régua que clica: com o editor escondido, o '
+            'botão da entrada 5 continuava no DOM com o `data-entrada` dela.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      + "</div></div>"\n'
+            '      + (quem ? \'<div class="edita-linha"><span>\''
+        ),
+        depois=(
+            '      + "</div></div>")\n'
+            '      + (quem ? \'<div class="edita-linha"><span>\''
+        ),
+        porque='26/09/2026 — fecha o `soNaTela` das duas linhas do editor.',
     ),
 )
 
