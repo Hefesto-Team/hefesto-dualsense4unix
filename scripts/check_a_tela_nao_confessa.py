@@ -203,9 +203,12 @@ FATOS: dict[str, str] = {
     "o Hefesto não consegue nomear o que o sistema não nomeia":
         "LIMITE DO SISTEMA, nomeado por ela como legal em 07/09/2026 — o Linux "
         "não nomeia, e a frase o diz na mesma linha",
-    "sem ela o Hefesto não consegue escrever nos controles":
-        "LIMITE DE UM PRÉ-REQUISITO EXTERNO, nomeado por ela como legal em "
-        "07/09/2026 — explica para que serve o módulo do kernel",
+    # A TERCEIRA SAIU EM 25/09/2026, e também não por estar errada: «sem ela o
+    # Hefesto não consegue escrever nos controles» morava no `?` do achado da
+    # regra de permissão, no desenho da aba Sistema, e a A-09-SISTEMA-EM-TRES-
+    # SECOES-01 trocou as dicas longas do exame pela frase inteira no `title`
+    # (pedido dela: *«simplificar cada texto»*). A frase saiu da tela, e a
+    # declaração sai junto.
     # DUAS DECLARAÇÕES SAÍRAM AQUI EM 11/09/2026, e nenhuma porque estivesse
     # errada: as duas FRASES deixaram de existir na tela, cada uma por uma
     # frente diferente da onda da língua — e foi o próprio portão que cobrou as
