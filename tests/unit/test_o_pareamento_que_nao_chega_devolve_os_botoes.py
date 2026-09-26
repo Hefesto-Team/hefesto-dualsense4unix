@@ -16,7 +16,8 @@ esperando PS + Create para sempre.
 
 O que esta régua segura, sempre com o rádio de mentira de três adaptadores:
 
-1. o «esperando» segura a tela por :data:`ESPERA_NA_TELA_S` (60 s) e NÃO MAIS —
+1. o «esperando» segura a tela por :data:`ESPERA_NA_TELA_S` — o prazo da
+   central, ``central_do_radio.PRAZO_DO_PENDENTE_S``, desde 26/09/2026 — e NÃO MAIS —
    depois disso a linha diz «Não Conectou», e «Tentar de Novo» e o X aparecem;
 2. a busca que ninguém respondeu vira «Não Conectou» sem aparelho, e o X só
    tira a linha (não há pareamento a esquecer);
@@ -95,28 +96,36 @@ def _linhas(cena: dict[str, Any], lugar: str, **marca: Any) -> list[dict[str, An
 
 
 # ---------------------------------------------------------------------------
-# 1. o «esperando» segura a tela por 60 s, e não mais
+# 1. o «esperando» segura a tela pelo prazo da central, e não mais
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("destino", (SALA, QUARTO, VARANDA))
-def test_o_esperando_segura_a_tela_por_sessenta_segundos_e_nao_mais(
+def test_o_esperando_segura_a_tela_pelo_prazo_da_central_e_nao_mais(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str,
 ) -> None:
-    """Aos 59 s a janela ainda é dela: a tela está ocupada, a caixa do destino
-    aberta, e nada de «Não Conectou». Aos 61 s os botões voltam: a linha diz
+    """Um segundo antes do prazo a janela ainda é dela: a tela está ocupada, a
+    caixa do destino aberta, e nada de «Não Conectou». Um segundo depois os
+    botões voltam: a linha diz
     «Não Conectou», com «Tentar de Novo» NAQUELE adaptador e o X — e o próximo
     «Conectar» vai para onde ela abrir, não mais para a janela morta.
 
+    O PRAZO É UM SÓ desde 26/09/2026 (A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01):
+    a tela lê o da central (``ESPERA_NA_TELA_S = PRAZO_DO_PENDENTE_S``), e era
+    de 60 s contra os 120 s dela — a zona morta da régua do contrato abaixo.
+
     MORDIDA: tire a idade de ``_ainda_espera`` (o «esperando» vale para sempre)
-    — o caso dos 61 s reprova, que é o «estado morto» dela.
+    — o caso de depois do prazo reprova, que é o «estado morto» dela.
     """
+    assert a08.ESPERA_NA_TELA_S == cr.PRAZO_DO_PENDENTE_S, (
+        "a tela e a central voltaram a ter dois prazos")
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     try:
         agora = time.time()
         _com_a_central(bancada, monkeypatch, cr.Movimento(
-            "", destino, cr.ESPERANDO, cr.PASSO_GESTO, quando=agora - 59.0))
+            "", destino, cr.ESPERANDO, cr.PASSO_GESTO,
+            quando=agora - (a08.ESPERA_NA_TELA_S - 1.0)))
         cena = bancada.cena()
         assert cena["ocupado"] is True
         assert cena["aberto"] == id_da_tela(destino)
@@ -126,10 +135,11 @@ def test_o_esperando_segura_a_tela_por_sessenta_segundos_e_nao_mais(
             bancada.gesto("conectar-aparelho")
 
         _com_a_central(bancada, monkeypatch, cr.Movimento(
-            "", destino, cr.ESPERANDO, cr.PASSO_GESTO, quando=agora - 61.0))
+            "", destino, cr.ESPERANDO, cr.PASSO_GESTO,
+            quando=agora - (a08.ESPERA_NA_TELA_S + 1.0)))
         sala = bancada.tique()["radio-sala"]
         cena = dict(a08._CENA_NA_TELA)
-        assert cena["ocupado"] is False, "a janela morta segurou a tela depois de 60 s"
+        assert cena["ocupado"] is False, "a janela morta segurou a tela depois do prazo"
         (linha,) = _linhas(cena, destino, nao_conectou=True)
         assert linha["aparelho"] == ""
         assert "Não Conectou" in sala
@@ -432,14 +442,14 @@ def _esquecer_com_prazo_curto(a08: Any, bancada: Bancada, clique: dict[str, Any]
 def test_a_meia_chave_so_sai_depois_do_veredito_da_central(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str,
 ) -> None:
-    """Aos 61 s a TELA solta o «esperando» e diz «Não Conectou»; a CENTRAL ainda
+    """Passado o prazo, a TELA solta o «esperando» e diz «Não Conectou»; a CENTRAL ainda
     diz «esperando» — ela confere o controle até o ``PRAZO_DO_PENDENTE_S`` dela, e
     o objeto ``Paired`` sem ``Connected`` desse instante é a chave que ela está
     conferindo. A tela não a apaga no relógio dela: a chave só sai quando a
     central disser «não chegou».
 
     MORDIDA: tire ``estado == _NAO_CHEGOU_NA_CENTRAL`` da ``meia`` de
-    ``_os_que_nao_conectaram`` — a chave sai aos 61 s, com a central ainda
+    ``_os_que_nao_conectaram`` — a chave sai com o prazo da tela, com a central ainda
     conferindo, e esta régua reprova nos três adaptadores.
     """
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
@@ -467,12 +477,12 @@ def test_a_meia_chave_so_sai_depois_do_veredito_da_central(
         bancada.fechar()
 
 
-@pytest.mark.xfail(strict=True, raises=RuntimeError, reason=(
-    "ZONA MORTA ABERTA, fora da posse desta sprint: a tela solta o «esperando» aos "
-    "a08_conexoes.ESPERA_NA_TELA_S (60 s) e a central o segura até "
-    "central_do_radio.PRAZO_DO_PENDENTE_S (120 s). Entre os dois, «Tentar de Novo» e "
-    "«Conectar» aparecem acesos e tremem — é o branco (item 5): o Pair dá, o HID não vem. "
-    "A cura é um dono só para o prazo: a central em 60 s, e a tela lendo dela."))
+# A ZONA MORTA FECHOU em 26/09/2026 (A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01), e o
+# `xfail(strict=True)` que a guardava saiu: a tela soltava o «esperando» aos 60 s
+# (`a08_conexoes.ESPERA_NA_TELA_S`) e a central o segurava até os 120 s dela
+# (`central_do_radio.PRAZO_DO_PENDENTE_S`); entre os dois, «Tentar de Novo» e
+# «Conectar» apareciam acesos e tremiam. A cura foi um dono só para o prazo — a
+# tela lê o da central —, e esta régua passou a ser o contrato que segura isso.
 def test_quando_a_tela_solta_o_esperando_a_central_aceita_o_tentar_de_novo(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:

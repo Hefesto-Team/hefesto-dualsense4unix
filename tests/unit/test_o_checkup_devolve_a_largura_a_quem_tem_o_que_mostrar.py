@@ -1,4 +1,16 @@
-"""O Check-up fica com a parte maior, e com TUDO quando não há ordem de serviço.
+"""O exame fica com a largura do texto dele, e a Sugestão de Conexão nunca some.
+
+**A METADE «SEM ORDEM, O EXAME LEVA TUDO» CAIU EM 26/09/2026**, por pergunta
+dela olhando a aba sem controle: *«pq sumiu a parte da caixinha no canto
+superior direito?»* (`D-2609-A-SUGESTAO-FICA-LARGA-E-COM-TITULO`,
+A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01). A caixa tem título, fica sempre, e
+quando não há o que mudar diz «Nada a mudar agora.»; e os dois blocos têm a
+mesma altura, com a Sugestão encostada no exame (*«equipa a altura dos dois
+blocos e aumenta a largura do bloco da direita até chegar ao lado do bloco da
+esquerda»*). O exame fica com a largura do texto dele, até 62% — a frase de 90
+caracteres continua cabendo numa linha. A metade que ficou de 19/09 é o teto
+das frases do exame (`TETO_DA_FRASE`), e a medição no navegador, que agora mede
+a caixa que FICA. O registro de 19/09 segue abaixo, porque é decisão medida.
 
 CHECKUP-VAO-01 — decisão dela, 19/09/2026:
 
@@ -61,14 +73,19 @@ EXAME = RAIZ / "src/hefesto_dualsense4unix/integrations/exame_da_mesa.py"
 #: para a próxima pessoa não precisar remedir ao acrescentar um achado.
 TETO_DA_FRASE = 100
 
+#: As regras do desenho de 26/09: o exame com a largura do texto (até 62%) e a
+#: Sugestão com o resto, encostada nele; e a frase de quando não há o que mudar.
 REGRAS = (
+    ".duas-colunas:has(.col-exame){grid-template-columns:fit-content(62%) minmax(0,1fr);",
+    ".sugestao .nada-a-mudar{",
+)
+
+#: As que ESCONDIAM a coluna (19/09) e saíram em 26/09: nenhuma delas pode
+#: voltar à página, porque a caixa não some mais.
+AS_QUE_ESCONDIAM = (
     ".duas-colunas:has(.col-exame){grid-template-columns:1.7fr 1fr}",
-    ".duas-colunas:has(.col-exame):has(.col-ordem:empty){grid-template-columns:1fr}",
-    ".duas-colunas:has(.col-exame):has(.col-ordem:empty) > .lado-d{display:none}",
-    ".duas-colunas:has(.col-exame):has(.col-ordem > .nada:only-child)"
-    "{grid-template-columns:1fr}",
-    ".duas-colunas:has(.col-exame):has(.col-ordem > .nada:only-child)"
-    " > .lado-d{display:none}",
+    ".duas-colunas:has(.col-exame):has(.col-ordem:empty)",
+    ".duas-colunas:has(.col-exame):has(.col-ordem > .nada:only-child)",
 )
 
 #: O QUE O PRODUTO PÕE NA COLUNA DA DIREITA, nos três estados que ela tem.
@@ -93,6 +110,15 @@ def test_a_pagina_publicada_traz_as_tres(regra: str) -> None:
     assert regra in PAGINA.read_text(encoding="utf-8"), (
         "falta `check_o_desenho_aprovado.py --publicar 08`"
     )
+
+
+@pytest.mark.parametrize("regra", AS_QUE_ESCONDIAM)
+def test_nenhuma_regra_que_escondia_a_caixa_voltou(regra: str) -> None:
+    """A caixa não some mais (26/09): nenhuma regra de 19/09 volta à página."""
+    for pagina in (PAGINA, RAIZ / "mockup/08-conexoes.html"):
+        assert regra not in pagina.read_text(encoding="utf-8"), (
+            f"{pagina.name} voltou a trazer `{regra}` — a Sugestão de Conexão "
+            "sumiria na tela sem ajuste, a foto de *«pq sumiu a parte da caixinha»*")
 
 
 def frases_do_exame() -> list[str]:
@@ -162,7 +188,7 @@ def tela():  # o tipo é o `Page` do playwright, importado lá dentro
 
 
 def _larguras(pg, ordem: str, achados: int = 8) -> dict:
-    """Pinta um tique com essa coluna da direita e mede as duas metades."""
+    """Pinta um tique com essa coluna da direita e mede os dois blocos."""
     # O ESTADO VEM DO DONO (`exame_da_mesa.ESTADO_ATENCAO`) e não digitado. Ele
     # é chave de MÁQUINA, ASCII por contrato — digitá-lo aqui poria a régua a
     # afirmar uma palavra do produto por conta própria, e é a classe de defeito
@@ -179,22 +205,53 @@ def _larguras(pg, ordem: str, achados: int = 8) -> dict:
         "ordem": ordem,
     }})
     return pg.evaluate("""() => {
-        const e = document.querySelector('.lado-e');
+        const e = document.querySelector('.lado-e').getBoundingClientRect();
         const d = document.querySelector('.lado-d');
-        const ls = Array.from(document.querySelectorAll('.col-exame .exame'))
-                        .filter(x => x.offsetHeight > 0);
-        return {esquerda: Math.round(e.getBoundingClientRect().width),
-                direita: d.offsetHeight > 0
-                         ? Math.round(d.getBoundingClientRect().width) : 0,
-                linhas: ls.length}}""")
+        const s = document.querySelector('.sugestao');
+        const r = s.getBoundingClientRect();
+        const nada = s.querySelector('.nada-a-mudar');
+        const quadro = document.querySelector('.duas-colunas').getBoundingClientRect();
+        return {esquerda: Math.round(e.width),
+                direita: d.offsetHeight > 0 ? Math.round(r.width) : 0,
+                quadro: Math.round(quadro.width),
+                vao: Math.round(r.left - e.right),
+                altura_e: Math.round(e.height), altura_d: Math.round(r.height),
+                titulo: (s.querySelector('.ordem-tit') || {}).textContent || '',
+                nada: nada && nada.offsetHeight > 0 ? nada.textContent : ''}}""")
 
 
-def test_a_coluna_sem_card_devolve_a_largura_com_o_nada_a_dizer(tela) -> None:
-    """O CASO DELA, e é o que as três versões anteriores desta régua não viam.
+def _a08():
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 
-    A bancada dela tem ordens SEM DESTINO, e `_html_da_ordem` devolve
-    `monta.NADA_A_DIZER` para elas. Esse é o caminho normal desta máquina — e
-    era exatamente o que o `:empty` sozinho não pegava.
+    return a08_conexoes
+
+
+def _os_dois_blocos_se_encostam(r: dict) -> None:
+    assert r["direita"] > 300, (
+        f"a Sugestão de Conexão ficou com {r['direita']}px — a caixa sumiu, que é "
+        "a foto de *«pq sumiu a parte da caixinha no canto superior direito?»*")
+    assert r["titulo"] == _a08().TITULO_DA_ORDEM, r
+    assert r["vao"] == 10, f"a Sugestão não encosta no exame (vão de {r['vao']}px)"
+    assert abs(r["altura_e"] - r["altura_d"]) <= 1, (
+        f"os dois blocos não têm a mesma altura ({r['altura_e']} e {r['altura_d']} px)")
+    assert r["esquerda"] <= round(r["quadro"] * 0.62) + 1, (
+        f"o exame passou dos 62% ({r['esquerda']} de {r['quadro']}px)")
+
+
+def test_sem_ajuste_a_caixa_fica_e_diz_que_nao_ha_o_que_mudar(tela) -> None:
+    """O CASO DELA de 26/09: a aba sem ajuste — a caixa fica, com a frase."""
+    a08 = _a08()
+    r = _larguras(tela, a08._html_da_ordem([], None))
+    _os_dois_blocos_se_encostam(r)
+    assert r["nada"] == a08.NADA_A_MUDAR, r
+
+
+def test_o_nada_a_dizer_do_piloto_tambem_nao_esconde_a_caixa(tela) -> None:
+    """O filho invisível de 19/09 (`monta.NADA_A_DIZER`) não esconde mais nada.
+
+    MORDIDA: devolva à página publicada a regra
+    `.duas-colunas:has(.col-exame):has(.col-ordem > .nada:only-child) > .lado-d{display:none}`
+    — esta reprova com a caixa em zero px.
     """
     # O APELIDO EM `sys.modules`, e não um `sys.path.insert`: `monta.py` faz
     # `import onde` CRU (nasceu como script de gerador, onde `interface/` é o
@@ -208,34 +265,15 @@ def test_a_coluna_sem_card_devolve_a_largura_com_o_nada_a_dizer(tela) -> None:
     sys.modules.setdefault("onde", _onde)
     from hefesto_dualsense4unix.interface.monta import NADA_A_DIZER
 
-    r = _larguras(tela, NADA_A_DIZER)
-    assert r["direita"] == 0, (
-        f"a coluna da direita ainda ocupa {r['direita']}px mostrando só o "
-        f"`NADA_A_DIZER`. É metade do quadro em branco — a foto que ela mandou "
-        f"em 19/09 com a legenda *'tá vazio aqui ainda'*.")
-    assert r["esquerda"] > 1000, (
-        f"a esquerda ficou com {r['esquerda']}px e devia levar o quadro "
-        f"inteiro (~1080 a 1180px de janela)")
-
-
-def test_a_coluna_zerada_tambem_devolve_a_largura(tela) -> None:
-    """O caminho `:empty` continua valendo — ele não some, ganha um irmão."""
-    r = _larguras(tela, "")
-    assert r["direita"] == 0 and r["esquerda"] > 1000, r
+    _os_dois_blocos_se_encostam(_larguras(tela, NADA_A_DIZER))
 
 
 def test_com_card_de_verdade_a_coluna_fica(tela) -> None:
-    """A MORDIDA DO OUTRO LADO: alargar sempre esconderia a ordem de serviço.
-
-    Sem esta linha, a cura acima poderia ser um `display:none` cravado — e a
-    coluna sumiria no único dia em que ela tem algo a dizer.
-    """
-    card = ('<div class="ordem"><div class="receita">'
+    """Com um de→para a mostrar, a caixa fica, do mesmo tamanho do exame."""
+    card = ('<div class="ordem"><div class="faca"><span class="n">1</span>Mova o '
+            'adaptador</div><div class="receita">'
             '<span class="caixa">Entrada 3</span><span class="seta">→</span>'
             '<span class="caixa alvo">Entrada 9</span></div></div>')
     r = _larguras(tela, card)
-    assert r["direita"] > 300, (
-        f"com um de→para para mostrar, a coluna da direita sumiu "
-        f"({r['direita']}px). A ordem de serviço deixou de chegar à tela.")
-    assert 600 < r["esquerda"] < 800, (
-        f"a esquerda ficou com {r['esquerda']}px — o `1.7fr 1fr` mudou")
+    _os_dois_blocos_se_encostam(r)
+    assert r["nada"] == "", r

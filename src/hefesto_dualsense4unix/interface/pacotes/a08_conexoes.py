@@ -1198,9 +1198,13 @@ NADA_A_MUDAR = "Nada a mudar agora."
 
 
 def _instrucao_do_item(item: Any) -> str:
-    """O «O que fazer» de uma linha AJUSTAR do exame, sem o prefixo do `?`."""
+    """O «O que fazer» de uma linha AJUSTAR do exame, sem o prefixo do `?`.
+
+    A ordem fala primeiro (a instrução dela já nomeia o aparelho, e é a mesma
+    com ou sem destino); a conferência, pela cura; sem as duas, a medição.
+    """
     ordem = getattr(item, "ordem", None)
-    for texto in (getattr(item, "cura", None), getattr(ordem, "acao", None),
+    for texto in (getattr(ordem, "acao", None), getattr(item, "cura", None),
                   getattr(item, "porque", None)):
         if str(texto or "").strip():
             return str(texto).strip()
@@ -7259,17 +7263,6 @@ def perfil_na_linha(declaracao: Any, uniq: str) -> dict[str, str]:
     return {"perfil": secao_orcamento.perfil_do_controle(teto, escolha)}
 
 
-def perfis_do_cartao() -> list[tuple[str, str, str]]:
-    """Os três botões do cartão, ``(id, rótulo, dica)``, lidos do dono.
-
-    O gerador (`aba08.linha_do_controle`) desenha por aqui: nenhuma palavra do
-    Perfil de Desempenho é digitada no desenho.
-    """
-    from hefesto_dualsense4unix.app.actions.config import secao_orcamento as orc
-
-    return [(p, orc.ROTULOS_DOS_PERFIS[p], orc.DICAS_DO_CARTAO[p]) for p in orc.PERFIS]
-
-
 def _recusa_da_mesa() -> str:
     """Por que um cartão não sai da «Bateria Longa» global (vai ao diário)."""
     from hefesto_dualsense4unix.app.actions.config import secao_orcamento as orc
@@ -7350,7 +7343,9 @@ def perfil_do_controle_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if escolhido not in orc.PERFIS:
         raise ValueError(f"perfil-do-controle: {escolhido!r} não é um dos três perfis")
     escolha, teto = economia_do_controle(_declaracao(), uniq)
-    if schema.mesa_em_economia(teto):
+    # Quem ligou a economia deste controle (`schema.origem_da_economia`): sob a
+    # mesa, o botão aceso é da aba Sistema, e é lá que ele se desliga.
+    if schema.origem_da_economia(escolha, schema.mesa_em_economia(teto)) == "mesa":
         if escolhido == orc.PERFIL_BATERIA_LONGA:
             return
         raise RuntimeError(_recusa_da_mesa())

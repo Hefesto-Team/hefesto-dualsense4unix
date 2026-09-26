@@ -1734,11 +1734,17 @@
      conexões desceram para cada cartão; o aceso é o deste controle. */
   .gc-perfil{display:flex;flex-direction:column;gap:5px}
   .gc-perfil .rot{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--texto-mudo)}
-  .gc-perfil .seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+  /* CADA BOTÃO COM A LARGURA DA PALAVRA DELE, E A SOBRA REPARTIDA — medido
+     em 26/09/2026 (A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01): com três colunas
+     iguais, «Bateria Longa» e «Personalizado» perdiam 7 a 8 px no tamanho do
+     desenho (1212 px) e viravam reticências. Com `flex:1 1 auto` a 11px os
+     três cabem a partir de 1181 px, a menor janela com quatro cartões numa
+     fileira (abaixo dela a grade vira duas e o cartão alarga). */
+  .gc-perfil .seg{display:flex;flex-wrap:nowrap;gap:3px}
   /* `min-width:0` porque o `.btn` do esqueleto nasce com 150px, e três de 150
      não cabem num cartão de 350. */
-  .gc-perfil .seg .btn{width:100%;min-width:0;padding:0 4px;font-size:11.5px;white-space:nowrap;
-                       overflow:hidden;text-overflow:ellipsis}
+  .gc-perfil .seg .btn{flex:1 1 auto;width:auto;min-width:0;padding:0 2px;font-size:11px;
+                       white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .gc-perfil .seg .btn.on{border-color:var(--purple);background:rgba(189,147,249,.16);
                           color:var(--fg);font-weight:600}
   /* «A LUZ NÃO ACENDE» VIROU BOTÃO — 26/09/2026, pedido dela: *«A luz não
@@ -3095,7 +3101,7 @@
         <div class="ferramentas">
           <a class="btn" href="#mapear-portas" title="Mapear Entradas — ligue o DualSense em cada entrada, uma por vez, e dê nome e lugar a cada uma">
             <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg> Mapear Entradas</a>
-          <button class="btn" data-gesto="examinar-portas" title="Examinar Entradas — refaz o exame das entradas, da energia e do rádio, e relê o estado de cada controle">
+          <button class="btn" data-gesto="examinar-portas" title="Examinar Entradas — refaz o exame das entradas, da energia e do Bluetooth, e relê o estado de cada controle">
             <svg class="i" aria-hidden="true"><use href="#rd-reexaminar"/></svg> Examinar Entradas</button>
           <a class="btn" href="mapa-do-controle.html" title="O mapa do controle — abre no navegador">
             <svg class="i ds" aria-hidden="true"><use href="#rd-ds"/></svg> Mapa do Controle</a>
@@ -3460,7 +3466,7 @@
                 <span class="rot">Perfil de Desempenho</span>
                 <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
                   <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Tudo Ligado</button>
-                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por rádio e Giroscópio continuam como estão.">Bateria Longa</button>
+                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e Giroscópio continuam como estão.">Bateria Longa</button>
                   <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" data-hef-atributo="aria-checked" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
                 </div>
               </div>
@@ -3779,7 +3785,7 @@
                 <span class="rot">Perfil de Desempenho</span>
                 <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
                   <button class="btn" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Tudo Ligado</button>
-                  <button class="btn on" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por rádio e Giroscópio continuam como estão.">Bateria Longa</button>
+                  <button class="btn on" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e Giroscópio continuam como estão.">Bateria Longa</button>
                   <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" data-hef-atributo="aria-checked" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
                 </div>
               </div>
@@ -4098,7 +4104,7 @@
                 <span class="rot">Perfil de Desempenho</span>
                 <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
                   <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Tudo Ligado</button>
-                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por rádio e Giroscópio continuam como estão.">Bateria Longa</button>
+                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e Giroscópio continuam como estão.">Bateria Longa</button>
                   <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" data-hef-atributo="aria-checked" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
                 </div>
               </div>
@@ -4417,7 +4423,7 @@
                 <span class="rot">Perfil de Desempenho</span>
                 <div class="seg" role="radiogroup" aria-label="Perfil de Desempenho">
                   <button class="btn on" data-gesto="perfil-do-controle" value="tudo_ligado" role="radio" aria-checked="true" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" data-hef-atributo="aria-checked" title="Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad.">Tudo Ligado</button>
-                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por rádio e Giroscópio continuam como estão.">Bateria Longa</button>
+                  <button class="btn" data-gesto="perfil-do-controle" value="bateria_longa" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" data-hef-atributo="aria-checked" title="Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar. Microfone por BT e Giroscópio continuam como estão.">Bateria Longa</button>
                   <button class="btn" data-gesto="perfil-do-controle" value="eu_escolho" role="radio" aria-checked="false" data-campo="perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" data-hef-atributo="aria-checked" title="Nenhum teto: os ajustes de cada aba mandam neste controle.">Personalizado</button>
                 </div>
               </div>

@@ -54,16 +54,22 @@ def test_toda_linha_traz_o_interrogacao_colado_ao_texto() -> None:
     )
 
 
-def test_o_ignorar_continua_isolado_na_coluna() -> None:
-    """A outra metade da decisão dela de 01/09 não pode cair junto."""
-    fonte = (
-        pathlib.Path(__file__).resolve().parents[2]
-        / "src/hefesto_dualsense4unix/interface/aba08.py"
-    ).read_text(encoding="utf-8")
-    assert ".exame .ignora{margin-left:auto}" in fonte, (
-        "o `⊘` perdeu o vão que o separa do `?` — *\"só deixar o ignorar "
-        "isolado\"* é decisão dela, de 01/09"
-    )
+def test_o_ignorar_encosta_no_interrogacao() -> None:
+    """O `⊘` segue o `?`, e o `?` continua colado na última palavra.
+
+    **A METADE «SÓ DEIXAR O IGNORAR ISOLADO» (01/09) CAIU EM 26/09/2026**, por
+    pedido dela olhando o desenho novo: *«aproxima o botão de ignora pra deixar
+    ele mais a esquerda»* — na ponta da coluna ele ficava a meia tela da frase
+    que ele cala. O `margin-left:auto` virou `margin-left:0`, no gerador e na
+    página publicada. MORDIDA: devolva o `auto` ao gerador e regere — reprova.
+    """
+    raiz = pathlib.Path(__file__).resolve().parents[2]
+    fonte = (raiz / "src/hefesto_dualsense4unix/interface/aba08.py").read_text(encoding="utf-8")
+    for nome, texto in (("aba08.py", fonte), (PAGINA.name, PAGINA.read_text(encoding="utf-8"))):
+        assert ".exame .ignora{margin-left:0}" in texto, (
+            f"{nome}: o `⊘` voltou para a ponta da coluna — *«aproxima o botão de "
+            "ignora pra deixar ele mais a esquerda»* é pedido dela, de 26/09")
+        assert ".exame .ignora{margin-left:auto}" not in texto, nome
     assert ".exame .dito .ajuda{display:inline-block" in fonte, (
         "sem `inline-block` o `?` é um <span> de 17px que o navegador ignora"
     )

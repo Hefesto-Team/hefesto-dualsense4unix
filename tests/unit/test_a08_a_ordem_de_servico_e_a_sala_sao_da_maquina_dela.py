@@ -138,9 +138,11 @@ def test_a_ordem_de_servico_e_da_maquina_dela() -> None:
         f"{ordem.ganho_esperado.texto!r} voltou à coluna visível — ele mora no `?` "
         f"da linha do exame desde 13/09/2026")
     # A INSTRUÇÃO VOLTOU em 26/09/2026, por decisão dela olhando o desenho novo:
-    # *«dá pra aceitar a instrução nisso»*. É a instrução da ordem VIVA, com o
-    # título que ela nomeou — nunca a frase do mockup.
-    assert ordem.acao in card and p.TITULO_DA_ORDEM in card, card  # (noqa-acento) campo da Ordem
+    # *«dá pra aceitar a instrução nisso»*. É a instrução da ordem VIVA —
+    # nunca a frase do mockup. O título que ela nomeou mora fora da coluna
+    # (`.sugestao > .ordem-tit`), porque o tique repinta a coluna inteira.
+    assert ordem.acao in card, card  # (noqa-acento) campo da Ordem
+    assert p.TITULO_DA_ORDEM not in card, card
 
 
 def test_o_card_traz_as_duas_frases_da_ordem_no_interrogacao() -> None:
@@ -186,16 +188,18 @@ def test_sem_destino_o_card_nao_desenha_um_de_para_de_travessoes() -> None:
 
 
 def test_sem_ordem_a_coluna_diz_a_frase_do_produto() -> None:
-    """Zero ordens tem texto próprio, e ele é do dono — nunca um quadro vazio."""
-    from hefesto_dualsense4unix.gui.aba_conexoes import html_da_ordem
+    """Zero ordens tem texto próprio — nunca um quadro vazio.
 
+    A FRASE MUDOU DE DONO em 26/09/2026 (A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01):
+    a Sugestão de Conexão nunca some e, sem ajuste, diz
+    `a08_conexoes.NADA_A_MUDAR` — «Nada a mudar agora.», a frase da sprint.
+    """
     p = _pacote()
     antes = p._ORDENS_NA_TELA
     try:
         p._ORDENS_NA_TELA = (None, None)
-        assert p._html_da_ordem() == html_da_ordem(None), (
-            "sem ordem, a coluna tem de dizer exatamente o que "
-            "`gui.aba_conexoes.html_da_ordem(None)` diz")
+        assert p._html_da_ordem() == f'<div class="nada-a-mudar">{p.NADA_A_MUDAR}</div>', (
+            "sem ordem, a coluna tem de dizer que não há o que mudar")
     finally:
         p._ORDENS_NA_TELA = antes
 

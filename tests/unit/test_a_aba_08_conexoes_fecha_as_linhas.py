@@ -123,7 +123,9 @@ def test_a_coluna_nao_traz_cura_imperativo_nem_procedencia(pacote, cena) -> None
 
     A INSTRUÇÃO SAIU DAS PROIBIDAS em 26/09/2026: ela voltou à caixa por
     decisão dela (*«dá pra aceitar a instrução nisso»*), com o título
-    «Sugestão de conexão». Ver `a08_conexoes._card_da_ordem`.
+    «Sugestão de Conexão». E A CURA DA CONFERÊNCIA TAMBÉM, na mesma data
+    (A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01): cada AJUSTAR ganha a sua linha, e
+    sem ordem a instrução é o «O que fazer» dela — sem o prefixo, que é do `?`.
     """
     from hefesto_dualsense4unix.app.actions.config.secao_exame import PREFIXO_DA_CURA
 
@@ -142,7 +144,8 @@ def test_a_coluna_nao_traz_cura_imperativo_nem_procedencia(pacote, cena) -> None
     for destino in ("", "Entrada 9"):
         coluna = _coluna(pacote, _com_destino(cena, destino))
         assert 'class="ordem cura"' not in coluna and 'class="proc"' not in coluna
-        proibidas = [PREFIXO_DA_CURA, *curas,
+        assert all(c in coluna for c in curas), coluna
+        proibidas = [PREFIXO_DA_CURA,
                      *(TEXTO_DO_SELO[s] for s in derivados),
                      *(o.ganho_esperado.texto for o in ordens)]
         for frase in proibidas:
@@ -150,19 +153,19 @@ def test_a_coluna_nao_traz_cura_imperativo_nem_procedencia(pacote, cena) -> None
                 f"{frase!r} voltou à coluna da direita (destino {destino!r})")
 
 
-def test_o_mais_n_conta_a_ordem_que_nao_coube(pacote, cena) -> None:
+def test_toda_ordem_aberta_tem_a_sua_linha(pacote, cena) -> None:
     """Decisão [07] — a segunda ordem de 03/09 deixa de sumir.
 
-    O DESENHO TEM UM CARD e esta cena tem DUAS ordens abertas; a diferença é o
-    que a linha diz. O número sai da cena.
-
-    COM DESTINO desde 13/09/2026: o card enxugou até o de→para (ver acima), e
-    uma ordem sem destino não desenha card — nem o `+N` que o acompanha.
+    O CARD ÚNICO SAIU EM 26/09/2026 (A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01): a
+    Sugestão de Conexão tem uma linha numerada por ajuste, e nenhuma ordem
+    aberta fica de fora — com ou sem destino. O `+N` desta caixa não tem mais o
+    que contar. O número sai da cena.
     """
-    abertas = sum(1 for i in cena if i.ordem is not None)
-    coluna = _coluna(pacote, _com_destino(cena, "Entrada 9"))
-    assert f"+{abertas - 1} " in coluna
-    assert 'class="mais"' in coluna
+    abertas = [i.ordem.acao for i in cena if i.ordem is not None]
+    for destino in ("", "Entrada 9"):
+        coluna = _coluna(pacote, _com_destino(cena, destino))
+        assert all(acao in coluna for acao in abertas), coluna
+        assert 'class="mais"' not in coluna
 
 
 def test_o_mais_n_cala_quando_tudo_cabe(pacote) -> None:

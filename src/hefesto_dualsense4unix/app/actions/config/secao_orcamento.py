@@ -248,7 +248,7 @@ LINHAS_DO_TETO: tuple[LinhaDoTeto, ...] = (
         "Lightbar",
         "hefesto_dualsense4unix.profiles.manager:_perfil_na_economia",
     ),
-    LinhaDoTeto("Microfone por rádio", "Os controles"),
+    LinhaDoTeto("Microfone por BT", "Os controles"),
     LinhaDoTeto("Giroscópio", "Perfis"),
 )
 

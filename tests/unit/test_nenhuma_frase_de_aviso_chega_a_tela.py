@@ -248,10 +248,14 @@ def _cena(destino: str) -> list[Any]:
 @pytest.mark.parametrize("destino", ["", "Entrada 9"])
 def test_a_coluna_da_direita_da_08_nao_instrui_nem_confessa(
         monkeypatch: pytest.MonkeyPatch, destino: str) -> None:
-    """Sem o ganho e sem o cartão de cura — fica o título, a instrução e o de→para.
+    """Sem o ganho, sem a procedência e sem o prefixo da cura — fica a instrução numerada.
 
-    Sem destino (as duas ordens desta máquina) a coluna não tem card e manda o
-    marcador de nada, que não vira travessão.
+    A CAIXA DIZ O QUE FAZER DESDE 26/09/2026 (A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01,
+    `D-2609-A-SUGESTAO-FICA-LARGA-E-COM-TITULO`: *«sumida, a tela sem controle
+    mostrava três AJUSTAR sem dizer o que fazer»*): uma linha por AJUSTAR, com
+    a instrução da ordem (ou a cura da conferência, sem o «O que fazer:») e o
+    de→para quando há destino. O título mora fora da coluna, e nada fica de
+    fora — o `+N` das ordens saiu com o card único.
     """
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as p
 
@@ -260,18 +264,11 @@ def test_a_coluna_da_direita_da_08_nao_instrui_nem_confessa(
     coluna = p._html_da_ordem(cena)
     visivel = _sem_etiqueta(coluna)
     assert not _achadas(visivel, com_a_cura=True), visivel
-    for item in cena:
-        assert item.cura not in visivel, visivel
-    if destino:
-        assert 'class="receita"' in coluna and destino in coluna, coluna
-        # A INSTRUÇÃO VOLTOU À CAIXA por decisão dela, 26/09/2026 — *«dá pra
-        # aceitar a instrução nisso»* —, com o título que ela nomeou.
-        acoes = [i.ordem.acao for i in cena if i.ordem is not None]
-        assert any(a in visivel for a in acoes), visivel
-        assert visivel.startswith(p.TITULO_DA_ORDEM), visivel
-        assert visivel.endswith("+1 recomendação não coube aqui"), visivel
-    else:
-        assert coluna.strip() and visivel == "", coluna
+    esperadas = [i.ordem.acao if i.ordem is not None else i.cura for i in cena]
+    assert re.findall(r'<span class="n">(\d+)</span>([^<]*)<', coluna) == [
+        (str(n), frase) for n, frase in enumerate(esperadas, start=1)], coluna
+    assert p.TITULO_DA_ORDEM not in visivel and "não coube" not in visivel, visivel
+    assert ('class="receita"' in coluna) is bool(destino), coluna
 
 
 def test_o_interrogacao_do_exame_continua_dizendo_o_que_fazer() -> None:

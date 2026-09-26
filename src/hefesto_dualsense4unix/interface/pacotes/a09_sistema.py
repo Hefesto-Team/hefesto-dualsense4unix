@@ -1120,7 +1120,7 @@ CAMPO_DOS_PENDENTES = f"{CAMPO_DO_ALCANCE}-pendentes"
 #: que a linha vizinha já dá. A frase INTEIRA continua no `title` do valor.
 APELIDO_NA_TELA: dict[str, str] = {
     "Barra de luz": "luz",
-    "Microfone por rádio": "microfone",
+    "Microfone por BT": "microfone",
 }
 
 
