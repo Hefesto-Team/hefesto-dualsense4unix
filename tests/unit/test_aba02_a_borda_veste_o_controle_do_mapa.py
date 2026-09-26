@@ -283,10 +283,12 @@ def test_a_mordida_com_a_tabela_velha_a_tela_erra_a_cor(medido: dict) -> None:
 def test_a_mordida_da_grafia_a_borda_some_no_spider_man(medido: dict) -> None:
     """`Marvel's Spider-Man 2` é o nome que a MESA entrega, do CSV dela.
 
-    `NOMES_DE_FABRICA` escreve `Spider-Man 2`, sem o `Marvel's`. Pela regra
-    velha os dois não casavam e a borda caía no neutro — o card perdia a única
-    marca que diz de quem ele é. São TRÊS modelos assim; ver
-    `GRAFIA_DIVERGENTE`, em `test_aba02_a_cor_do_plastico_vem_do_aparelho.py`.
+    Até 25/09/2026 `NOMES_DE_FABRICA` escrevia `Spider-Man 2`, sem o
+    `Marvel's`. Pela regra velha os dois não casavam e a borda caía no neutro —
+    o card perdia a única marca que diz de quem ele é. Eram TRÊS modelos assim;
+    a grafia fechou quando a tabela passou a ser lida do CSV (ver
+    `test_aba02_a_cor_do_plastico_vem_do_aparelho.py`). A mordida continua
+    medindo a regra velha, por nome, que é o que ela prova.
     """
     from pacotes import a02_controles as a02
 
