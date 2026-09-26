@@ -67,7 +67,6 @@ ENDERECOS: dict[str, str] = {
     "vulkan-corrigido": "`camadas_vulkan.ler_estado` cruzado com o censo — há "
     "camada que NÓS desligamos",
     "bateria-perfil": "`app/actions/config/secao_orcamento.ROTULOS_DOS_PERFIS:125`",
-    "exame-contagem": "DERIVADA da lista — nunca digitada",
     "exame-lista": "`integrations/storm_doctor.storm_report:755`",
     "registro-texto": "`systemctl status` + a identidade de fábrica + o diário "
     "da unit (`journalctl --user`), com o endereço dos controles mascarado",
@@ -540,8 +539,9 @@ def _lista(nomes: list[str]) -> str:
 # A-09-SISTEMA-EM-TRES-SECOES-01, 25/09/2026, pedido dela: *«As quatro linhas
 # do Status ficam, no MESMO estilo das linhas do O exame de hoje (a pílula à
 # esquerda e o texto curto)»*, e *«simplificar cada texto, seja tooltip ou seja
-# do doctor»*. A pílula diz o ESTADO numa palavra; o texto diz DE QUÊ; o `?`
-# diz o resto em uma frase.
+# do doctor»*. A pílula diz o ESTADO numa palavra; o texto diz DE QUÊ; a `dica`
+# diz o resto em uma frase, no `title` da linha (o `?` saiu às 22h13 de 25/09,
+# pedido dela: *«remove a tooltip»*).
 #
 # AS LINHAS DE ONTEM CONTINUAM SENDO A LEITURA: `linha_do_hefesto`,
 # `linha_da_pausa`, `linha_da_troca_de_perfil` e `linha_do_ambiente` decidem o
@@ -698,37 +698,22 @@ def _selo(veredito: object) -> tuple[str, str, str]:
 
 
 def exame(achados: list[tuple[str, str]] | None) -> dict[str, Any]:
-    """A lista de achados e a CONTAGEM DERIVADA dela.
+    """A lista de achados, uma linha por veredito do ``storm_report``.
 
-    **A contagem é derivada, e é aí que mora o defeito que esta função evita.**
-    O desenho congelou em "8 linhas · nenhum aviso" — mas ``storm_report``
-    devolve SEIS, e as duas condicionais do produto devolvem ``None`` quando não
-    há divergência. Um "8" digitado seria falso na primeira máquina que não
-    tivesse oito.
+    A CONTAGEM SAIU — 25/09/2026, pedido dela às 22h13: *«Remove esse 8 linhas
+    deixa o espaço vazio»*. Ela era derivada daqui e só a tela a lia; sem o
+    lugar na página, uma chave a mais seria um escritor sem lugar.
     """
     if achados is None:
         return {
-            "contagem": NAO_DEU,
             "linhas": [],
             "vazio": "O exame não respondeu — não dá para dizer o que esta máquina tem.",
         }
     linhas = []
-    avisos = 0
     for veredito, frase in achados:
         selo, cls, glifo = _selo(veredito)
-        if cls == "aviso":
-            avisos += 1
         linhas.append({"selo": selo, "cls": cls, "g": glifo, "txt": frase})
-    quantas = len(linhas)
-    if avisos == 0:
-        cauda = "nenhum aviso"
-    elif avisos == 1:
-        cauda = "1 aviso"
-    else:
-        cauda = f"{avisos} avisos"
-    plural = "linha" if quantas == 1 else "linhas"
     return {
-        "contagem": f"{quantas} {plural} · {cauda}",
         "linhas": linhas,
         "vazio": "" if linhas else "O exame não achou nada a relatar nesta máquina.",
     }

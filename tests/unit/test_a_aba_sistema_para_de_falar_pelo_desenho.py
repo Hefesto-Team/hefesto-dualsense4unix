@@ -26,8 +26,9 @@ AS QUATRO COISAS QUE ELA COBRA, e cada uma é um jeito diferente de recair:
 2. **O pacote emite endereço DA PÁGINA, e não nome de camada.** Foi por aqui que
    a chave `perfil` (o rótulo do perfil de BATERIA) apagou o `perfil` do
    cabeçalho — o perfil de JOGO, que é das dez abas.
-3. **O exame vem do DADO.** A contagem e a lista saem do `storm_report`, com o
-   `<span class="sep">` do desenho preservado.
+3. **O exame vem do DADO.** A lista sai do `storm_report`. A contagem que
+   ficava em cima dela saiu da página por pedido dela (25/09/2026, 22h13), e o
+   endereço saiu junto.
 4. **O painel de registro não pisca.** O que um gesto "Ver …" escreve fica; a
    pintura do tique seguinte repete o mesmo texto em vez de apagá-lo.
 
@@ -295,22 +296,23 @@ def test_o_que_nao_chega_na_tela_esta_declarado(a09, ctx):
 # ---------------------------------------------------------------------------
 # 3. O exame vem do DADO
 # ---------------------------------------------------------------------------
-def test_a_contagem_do_exame_sai_da_lista_e_guarda_o_separador(a09):
-    """`N linhas · nenhum aviso`, com o `·` dentro do `<span class="sep">`.
+def test_a_contagem_do_exame_saiu_dos_dois_lados(a09, ctx):
+    """A contagem do exame saiu da página, e o endereço saiu dos dois lados.
 
-    O "8" do desenho é literal de bancada e seria falso na primeira máquina que
-    não tivesse oito — esta tem seis. E o separador tem classe própria no
-    desenho: escrever a frase como texto puro apagaria o `<span>` e mudaria a
-    cor do `·` na tela dela.
+    Pedido dela, 25/09/2026, 22h13: *«Remove esse 8 linhas deixa o espaço
+    vazio»*. Um endereço que o pacote escreve sem lugar na página é escritor
+    calado; um lugar na página sem quem o escreva mostra o «8» da bancada.
 
-    **A MORDIDA:** troque o `.replace(" · ", …)` por `return html.escape(...)`
-    e este teste reprova por falta do `<span class="sep">`.
+    **A MORDIDA:** devolva `fora["exame-contagem"] = …` no `pacote` e este
+    teste reprova pelo pacote; devolva a chave em `aba_sistema.ENDERECOS` e
+    ele reprova pelo contrato.
     """
-    saida = a09._html_da_contagem("6 linhas · nenhum aviso")
-    assert '<span class="sep">·</span>' in saida, (
-        f"o separador perdeu a classe do desenho: {saida!r}")
-    assert saida.startswith("6 linhas"), saida
-    assert a09._html_da_contagem(None) == ""
+    from hefesto_dualsense4unix.gui import aba_sistema as tela
+
+    assert "exame-contagem" not in tela.ENDERECOS
+    assert not hasattr(a09, "_html_da_contagem")
+    assert "exame-contagem" not in a09.pacote(ctx)
+    assert "contagem" not in tela.exame([("[OK]", "tudo certo")])
 
 
 def test_a_lista_do_exame_tem_uma_linha_por_achado(a09):
@@ -322,7 +324,7 @@ def test_a_lista_do_exame_tem_uma_linha_por_achado(a09):
     """
     exame = {"linhas": [{"selo": "OK", "cls": "ok", "g": "✓", "txt": f"achado {i}"}
                         for i in range(6)],
-             "contagem": "6 linhas · nenhum aviso", "vazio": ""}
+             "vazio": ""}
     html_ = a09._html_do_exame(exame)
     assert html_.count('class="saude"') == 6, html_
     assert html_.count('class="col-lista"') == 2, html_
@@ -341,7 +343,7 @@ def test_a_lista_do_exame_escapa_a_frase_do_produto(a09):
     """
     exame = {"linhas": [{"selo": "OK", "cls": "ok", "g": "✓",
                          "txt": '<b>x</b> & "y"'}],
-             "contagem": "1 linha · nenhum aviso", "vazio": ""}
+             "vazio": ""}
     html_ = a09._html_do_exame(exame)
     assert "<b>x</b>" not in html_, "a frase do produto entrou crua no HTML da tela."
     assert "&lt;b&gt;x&lt;/b&gt;" in html_, html_
@@ -354,7 +356,7 @@ def test_o_exame_vazio_diz_qual_dos_dois_vazios_e(a09):
     que a lista vazia leve a frase à tela em vez de um painel em branco.
     """
     html_ = a09._html_do_exame(
-        {"linhas": [], "contagem": "—",
+        {"linhas": [],
          "vazio": "O exame não respondeu — não dá para dizer o que esta máquina tem."})
     assert "O exame não respondeu" in html_, html_
     assert 'class="saude"' in html_, html_
@@ -371,13 +373,15 @@ def test_o_endereco_do_exame_existe_na_bancada(a09, ctx):
     import onde
 
     doc = onde.pagina("09-sistema.html").read_text(encoding="utf-8")
-    for endereco in ("exame-contagem", "exame-lista"):
-        assert f'data-campo="{endereco}"' in doc, (
-            f"o gerador parou de marcar `{endereco}` na bancada — o exame volta "
-            f"a mostrar os oito achados de bancada do `aba09.py`.")
-    assert doc.count('data-hef-alvo="html"') >= 2, (
-        "os dois endereços do exame perderam o alvo `html`: a pintura passaria "
-        "a escrever a marcação como TEXTO na tela dela.")
+    assert 'data-campo="exame-lista"' in doc, (
+        "o gerador parou de marcar `exame-lista` na bancada — o exame volta "
+        "a mostrar os oito achados de bancada do `aba09.py`.")
+    assert re.search(r'data-campo="exame-lista"[^>]*data-hef-alvo="html"', doc), (
+        "o endereço do exame perdeu o alvo `html`: a pintura passaria a "
+        "escrever a marcação como TEXTO na tela dela.")
+    assert 'data-campo="exame-contagem"' not in doc, (
+        "a contagem do exame voltou à bancada — ela saiu por pedido dela "
+        "(25/09/2026, 22h13), e o pacote não a escreve mais.")
     p = a09.pacote(ctx)
     assert p["exame-lista"].startswith('<div class="col-lista">'), p["exame-lista"][:80]
 

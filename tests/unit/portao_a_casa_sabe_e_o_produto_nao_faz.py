@@ -1498,8 +1498,8 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "perde em UM ponto: nenhuma das dez páginas tem hoje um `data-campo` "
         "onde a linha pouse. O destino proposto é a aba 09, Sistema — é o que a "
         "própria frase viva manda ('A aba Sistema diz por quê'), e a página já "
-        "publica uma lista de achados com selo, glifo e frase (`exame-lista` / "
-        "`exame-contagem`, de `a09_sistema`), onde as dez cabem sem peça de tela "
+        "publica uma lista de achados com selo, glifo e frase (`exame-lista`, "
+        "de `a09_sistema`), onde as dez cabem sem peça de tela "
         "nova. Fecha-se chamando esta função de `a09_sistema.pacote` e "
         "acrescentando as linhas à lista — `aba09.py` e `a09_sistema.py` são de "
         "outra posse, e por isso a proposta não virou entrega no mesmo dia.",

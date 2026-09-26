@@ -255,7 +255,6 @@ window.HEF = (function(){
   // `MEIO = len/2 + len%2`, que é o que o gerador faz.
   function exame(e){
     let n = 0;
-    n += txt(end('exame-contagem'), e.contagem);
     const caixa = end('exame-lista'); if(!caixa) return n;
     const cols = qa('.col-lista', caixa); if(cols.length !== 2) return n;
     for(const c of cols) c.innerHTML = '';

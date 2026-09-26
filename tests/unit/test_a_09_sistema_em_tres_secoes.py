@@ -421,3 +421,82 @@ def test_a_dica_da_bateria_nao_conta_os_controles_da_cena() -> None:
     pagina = PUBLICADA.read_text(encoding="utf-8")
     assert not re.search(r"Vale para os \d+ controles", pagina)
     assert "Vale para todos os controles" in pagina
+
+
+# ---------------------------------------------------------------------------
+# 9. os quatro ajustes dela das 22h13 (25/09/2026) — «se fizer tá aprovado»
+# ---------------------------------------------------------------------------
+def _faixa_do_status(pagina: str) -> str:
+    faixa = re.search(r'<div class="sec-rot sr-status3">(.*?)</div>', pagina, re.S)
+    assert faixa, "a faixa dos rótulos da seção 1 sumiu da página publicada"
+    return faixa.group(1)
+
+
+def test_o_exame_nao_tem_rotulo_nem_contagem_e_o_lugar_fica_vazio() -> None:
+    """*«remove o exame de hoje e tooltip dele»* e *«Remove esse 8 linhas»*.
+
+    O lugar fica VAZIO: a faixa continua com as três colunas (o `Status`, o
+    risco e a do exame, vazia), para nada subir nem andar.
+
+    MORDIDA: devolva «O exame de hoje» ao terceiro `<span>` do `sr-status3` no
+    gerador e publique.
+    """
+    pagina = PUBLICADA.read_text(encoding="utf-8")
+    faixa = _faixa_do_status(pagina)
+    # a frase continua nas CITAÇÕES dela (o CSS diz «no MESMO estilo das linhas
+    # do O exame de hoje»); o que não pode é ser rótulo na tela.
+    assert "O exame de hoje" not in faixa and "<span>O exame" not in pagina
+    assert "exame-contagem" not in pagina and "linhas <span" not in faixa
+    assert faixa.strip().endswith("<span></span><span></span>"), faixa
+    assert faixa.count('class="ajuda"') == 1, (
+        f"a faixa da seção 1 tem de ter só o `?` do Status: {faixa!r}")
+
+
+def test_as_linhas_do_status_nao_tem_o_ajuda_e_a_frase_vai_no_title(a09) -> None:
+    """*«remove a tooltip»*, com o risco na coluna dos quatro `?` do Status.
+
+    Nas duas pontas: a página publicada (a primeira pintura) e a linha que o
+    pacote monta a cada tique. A frase continua, no `title` da linha.
+
+    MORDIDA: devolva o `<span class="ajuda">` em `a09_sistema.linha_do_status`.
+    """
+    html = a09.linha_do_status(tela.status_do_servico("online_systemd",
+                                                      {"paused": False}))
+    assert 'class="ajuda"' not in html, html
+    assert 'title="Roda por trás e volta sozinho se travar."' in html, html
+    pagina = PUBLICADA.read_text(encoding="utf-8")
+    lista = re.search(r'data-campo="status-lista"[^>]*>(.*?)\n\s*</div>\n', pagina, re.S)
+    assert lista, "a lista do Status sumiu da página publicada"
+    assert lista.group(1).count('class="saude') == 4, lista.group(1)
+    assert 'class="ajuda"' not in lista.group(1), lista.group(1)
+    assert lista.group(1).count(' title="') == 4, lista.group(1)
+
+
+def test_configuracoes_avancadas_tem_a_letra_do_titulo_sistema() -> None:
+    """*«Configurações Avançadas — Escreve com a mesma cor e tamanho de Sistema»*.
+
+    MORDIDA: tire o `<span class="quadro-titulo">` do `.sec-grupo` no gerador.
+    """
+    pagina = PUBLICADA.read_text(encoding="utf-8")
+    assert '<span class="quadro-titulo">Sistema</span>' in pagina
+    assert ('<div class="sec-grupo"><span class="quadro-titulo">'
+            "Configurações Avançadas</span></div>") in pagina
+
+
+def test_o_registro_de_exemplo_cita_so_os_controles_da_cena() -> None:
+    """O registro do desenho citava p3 e p4 numa cena com 2 controles.
+
+    Quem conta os controles da cena é a mesma lista que diz «nos 2» e «cor de
+    fábrica lida (p1, p2)» na mesma linha: os jogadores citados têm de ser os
+    mesmos nas três.
+
+    MORDIDA: volte o `for c in MESA` na linha `[23:41:02]` do gerador.
+    """
+    pagina = PUBLICADA.read_text(encoding="utf-8")
+    linha = re.search(r"\[23:41:02\] (p\d.*?) · fw 0x0356 nos (\d+) · "
+                      r"cor de fábrica lida \(([^)]*)\)", pagina)
+    assert linha, "a segunda linha do registro de exemplo mudou de forma"
+    citados = re.findall(r"p(\d) (?:usb|bt)", linha.group(1))
+    lidos = re.findall(r"p(\d)", linha.group(3))
+    assert len(citados) == int(linha.group(2)), linha.group(0)
+    assert citados == lidos, linha.group(0)

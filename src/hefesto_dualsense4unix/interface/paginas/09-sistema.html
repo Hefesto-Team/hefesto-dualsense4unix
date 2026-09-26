@@ -1039,7 +1039,6 @@
            margin-bottom:5px;height:17px;display:grid;gap:0 20px;align-items:center}
   .sec-rot > span{display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap}
   .sec-rot .ajuda{text-transform:none;letter-spacing:0}
-  .sec-rot .conta{text-transform:none;letter-spacing:0}
   .sr-status3{grid-template-columns:minmax(0,1fr) 1px minmax(0,2fr)}
   .sr-avancadas{grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px
                 minmax(0,1fr) 1px minmax(0,1fr)}
@@ -1050,9 +1049,12 @@
      sem isto o navegador espreme os rótulos para dar altura ao registro. Quem
      cresce e encolhe é só o `.registro`. */
   .quadro-corpo > *{flex-shrink:0}
-  /* o título da seção 2 — o nome que ela deu, uma linha acima dos quatro rótulos. */
-  .sec-grupo{font-size:12.5px;font-weight:600;color:var(--texto-suave);
-             margin:14px 0 8px;padding-top:10px;border-top:1px solid var(--border-sutil)}
+  /* o título da seção 2 — o nome que ela deu, uma linha acima dos quatro rótulos.
+     A LETRA É A DO «Sistema», e o pedido é dela (25/09/2026, 22h13):
+     *«Configurações Avançadas — Escreve com a mesma cor e tamanho de Sistema»*.
+     Quem pinta é o `.quadro-titulo` do topo, no `<span>` de dentro; aqui fica
+     só o lugar: o vão e o risco de cima. */
+  .sec-grupo{margin:14px 0 8px;padding-top:10px;border-top:1px solid var(--border-sutil)}
   .sec-alta{margin-top:14px;padding-top:10px;border-top:1px solid var(--border-sutil)}
 
   /* AS LINHAS DO STATUS E DO EXAME SÃO A MESMA PEÇA — pedido dela: *«no MESMO
@@ -1073,7 +1075,6 @@
   .selo.nt{background:var(--comment);color:var(--app-bg)}
   .saude .txt{flex:1;display:flex;align-items:center;gap:7px;min-width:0}
   .saude .txt span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .saude .ajuda .dica{left:auto;right:22px}
   /* A LINHA QUE LEVA A OUTRO LUGAR (a do Bluetooth, para a seção do rádio da
      aba Conexões) é um `<a>` inteiro: a mão vira e a linha acende no hover. */
   a.saude.vai{cursor:pointer}
@@ -1340,18 +1341,20 @@
       </div>
       <div class="quadro-corpo">
 
-        <!-- ---------- 1. STATUS + O EXAME DE HOJE ---------- -->
+        <!-- ---------- 1. STATUS + O EXAME ---------- -->
+        <!-- O RÓTULO DO EXAME E A CONTAGEM SAÍRAM, E O LUGAR FICA VAZIO — pedido
+             dela, 25/09/2026, 22h13: «remove o exame de hoje e tooltip dele» e
+             «Remove esse 8 linhas deixa o espaço vazio». O `<span>` vazio segura
+             a terceira faixa: nada sobe, e o exame continua onde estava. -->
         <div class="sec-rot sr-status3">
-          <span>Status <span class="ajuda">?<span class="dica">Como o Hefesto está agora neste computador. A pílula diz o estado.</span></span></span><span></span>
-          <span>O exame de hoje <span class="ajuda">?<span class="dica">O que costuma brigar com os controles neste computador. Passe o mouse numa linha para ler a frase inteira.</span></span>
-            <span class="conta" data-id="exame-contagem" data-campo="exame-contagem" data-hef-alvo="html">8 linhas <span class="sep">·</span> nenhum aviso</span></span>
+          <span>Status <span class="ajuda">?<span class="dica">Como o Hefesto está agora neste computador. A pílula diz o estado.</span></span></span><span></span><span></span>
         </div>
         <div class="status3">
           <div class="col-lista" data-id="status-lista" data-campo="status-lista" data-hef-alvo="html">
-            <div class="saude" data-id="hefesto-estado"><span class="selo ok"><span class="sg">✓</span>LIGADO</span><span class="txt"><span>Serviço</span></span><span class="ajuda">?<span class="dica">Roda por trás e volta sozinho se travar.</span></span></div>
-            <div class="saude" data-id="hefesto-troca-de-perfil"><span class="selo ok"><span class="sg">✓</span>LIGADO</span><span class="txt"><span>Troca de perfil ao abrir o jogo</span></span><span class="ajuda">?<span class="dica">O perfil do jogo entra sozinho quando ele abre.</span></span></div>
-            <div class="saude" data-id="hefesto-ambiente"><span class="selo nt"><span class="sg">i</span>NOTA</span><span class="txt"><span>Ambiente gráfico: Wayland · COSMIC</span></span><span class="ajuda">?<span class="dica">É por ele que o Hefesto vê qual janela está na frente.</span></span></div>
-            <a class="saude vai" data-id="status-bluetooth" href="08-conexoes.html#rd-secao"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt"><span>Bluetooth: 1 adaptador · 1 controle</span></span><span class="ajuda">?<span class="dica">Clique para ver os adaptadores na aba Conexões.</span></span></a>
+            <div class="saude" data-id="hefesto-estado"><span class="selo ok"><span class="sg">✓</span>LIGADO</span><span class="txt" title="Roda por trás e volta sozinho se travar."><span>Serviço</span></span></div>
+            <div class="saude" data-id="hefesto-troca-de-perfil"><span class="selo ok"><span class="sg">✓</span>LIGADO</span><span class="txt" title="O perfil do jogo entra sozinho quando ele abre."><span>Troca de perfil ao abrir o jogo</span></span></div>
+            <div class="saude" data-id="hefesto-ambiente"><span class="selo nt"><span class="sg">i</span>NOTA</span><span class="txt" title="É por ele que o Hefesto vê qual janela está na frente."><span>Ambiente gráfico: Wayland · COSMIC</span></span></div>
+            <a class="saude vai" data-id="status-bluetooth" href="08-conexoes.html#rd-secao"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt" title="Clique para ver os adaptadores na aba Conexões."><span>Bluetooth: 1 adaptador · 1 controle</span></span></a>
           </div>
           <div class="risco"></div>
           <div class="saude-cols" data-id="exame-lista" data-campo="exame-lista" data-hef-alvo="html">
@@ -1372,7 +1375,7 @@
         </div>
 
         <!-- ---------- 2. CONFIGURAÇÕES AVANÇADAS ---------- -->
-        <div class="sec-grupo">Configurações Avançadas</div>
+        <div class="sec-grupo"><span class="quadro-titulo">Configurações Avançadas</span></div>
         <div class="sec-rot sr-avancadas">
           <span>Serviço <span class="ajuda">?<span class="dica">Parar aqui não é o mesmo que desligar o Hefesto na aba Jogar: lá ele só sai do meio do jogo.</span></span></span><span></span>
           <span>Perfil Global de Bateria <span class="ajuda">?<span class="dica">Vale para todos os controles, e cada um pode ter o seu na aba Conexões.</span></span></span><span></span>
@@ -1411,7 +1414,7 @@
         </div>
         <div class="registro">
           <div class="log" data-id="registro-texto" data-campo="registro-texto" data-hef-rolar="fim">[23:41:02] daemon pronto · 2 controles · 2 gamepads virtuais · controle virtual ok
-[23:41:02] p1 usb · p2 bt · p3 bt · p4 usb · fw 0x0356 nos 2 · cor de fábrica lida (p1, p2)
+[23:41:02] p1 usb · p2 bt · fw 0x0356 nos 2 · cor de fábrica lida (p1, p2)
 [23:41:07] exame: steam input desligado em 2 jogos · proton 9.0-4 fixado em 3
 [23:41:09] perfil "Mortal Kombat" aplicado aos 2 · gatilho L2 escrito, sem leitura de volta
 [23:41:12] rádio: 1 adaptador · 1 controle · sem fila
@@ -1491,7 +1494,9 @@
       pausa deixou de ter linha própria), <b>Troca de perfil</b>, <b>Ambiente gráfico</b> e
       <b>Bluetooth</b>, que leva à seção do rádio da aba Conexões. O exame fica ao lado, em duas
       colunas, e o Bluetooth saiu dele. As frases do exame saem curtas; a inteira fica no
-      <code>title</code>.</li>
+      <code>title</code>. As linhas do Status não têm <code>?</code>: a frase de cada uma fica no
+      <code>title</code>, e o exame não tem rótulo nem contagem — o lugar fica vazio (os ajustes
+      dela das 22h13).</li>
     <li><b>2. Configurações Avançadas</b> — quatro colunas: <b>Serviço</b> (Parar/Retomar num botão
       só, Atualizar, Reiniciar), <b>Perfil Global de Bateria</b> (as três escolhas na vertical),
       <b>Saúde do App</b> (Reaplicar correções automáticas, Aplicar soluções nos lançadores,
