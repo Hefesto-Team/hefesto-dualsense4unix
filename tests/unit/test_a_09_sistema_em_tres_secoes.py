@@ -14,7 +14,8 @@ O que estas réguas prendem, cada uma com a mordida escrita:
 4. o botão do serviço é um só e tem três caras;
 5. a frase do exame sai curta, com a inteira no `title`;
 6. o diário sai com os endereços mascarados, nas três formas;
-7. o «Copiar» copia o painel inteiro, e recusa o vazio.
+7. o «Copiar» copia o painel inteiro, e recusa o vazio;
+8. a linha longa do registro dobra, em vez de sair pela direita.
 """
 
 from __future__ import annotations
@@ -303,3 +304,18 @@ def test_o_ver_detalhes_saiu_da_pagina_e_do_contrato() -> None:
     assert 'data-gesto="ver-detalhes"' not in pagina
     assert "ver-detalhes" not in tela.GESTOS
     assert 'data-gesto="copiar-registro"' in pagina
+
+
+def test_a_linha_do_registro_dobra_e_nao_sai_pela_direita() -> None:
+    """A linha do journal tem uns 200 caracteres: com `pre` ela saía cortada.
+
+    Medido no clique do lar de mentira (25/09/2026): para ler uma linha
+    inteira era preciso rolar de lado. A regra do painel na página publicada
+    tem de dobrar (`pre-wrap`) e quebrar a palavra longa.
+    """
+    pagina = PUBLICADA.read_text(encoding="utf-8")
+    regra = re.search(r"\n\s*\.log\{([^}]*)\}", pagina)
+    assert regra, "a regra do painel do registro sumiu da página"
+    corpo = re.sub(r"\s+", "", regra.group(1))
+    assert "white-space:pre-wrap" in corpo, corpo
+    assert "overflow-wrap:anywhere" in corpo, corpo
