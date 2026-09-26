@@ -284,12 +284,12 @@ def test_o_piloto_tira_o_arranjo_da_resposta_e_entrega_como_reexame() -> None:
     rodar_o_laco()
     assert len(perguntas) == 1, "o arranjo foi entregue a outra página"
 
-    # e é o fio do gesto que tira o arranjo da resposta, antes da pintura
+    # e é a volta do gesto que tira o arranjo da resposta, antes da pintura
     import inspect
 
     fonte = inspect.getsource(hefesto_vivo.Piloto._gesto)
-    assert fonte.index("self._o_arranjo_relido(pagina, resposta)") < fonte.index(
-        "self._deu_certo_dizendo(pagina, nome, alvo, r)"), (
+    assert re.search(r"_deu_certo_dizendo\(\s*pagina, nome, alvo, "
+                     r"self\._o_arranjo_relido\(pagina, r\)\)", fonte), (
         "o arranjo relido não sai da resposta antes de ela ir à pintura")
 
 

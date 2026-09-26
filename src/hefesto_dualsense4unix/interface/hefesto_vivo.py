@@ -3541,8 +3541,8 @@ class Piloto:
                 # `desta_vez`: o pouso não pode ler estado que outra thread muda.
                 so_armou = (isinstance(resposta, dict)
                             and bool(resposta.get(CHAVE_DO_CLIQUE_QUE_SO_ARMOU)))
-                GLib.idle_add(lambda r=self._o_arranjo_relido(pagina, resposta):
-                              self._deu_certo_dizendo(pagina, nome, alvo, r))
+                GLib.idle_add(lambda r=resposta: self._deu_certo_dizendo(
+                    pagina, nome, alvo, self._o_arranjo_relido(pagina, r)))
             finally:
                 # O POUSO É DOS TRÊS DESFECHOS, e por isso mora no `finally`: um
                 # gesto que levante fora do contrato (nem `RuntimeError` nem
@@ -3945,11 +3945,11 @@ class Piloto:
         pelo `window.hefestoArranjo(dado, true)`, a mesma porta da abertura, e
         o resto da resposta segue para a pintura como antes.
 
-        RODA NO FIO DO GESTO, no argumento do `idle_add` da pintura em `_gesto`
-        (lá, uma linha a mais empurraria as citações `hefesto_vivo.py:NNN` que
-        outras posses fazem das linhas de baixo). A entrega vai pelo laço do
-        GTK: o `idle_add` daqui entra na fila ANTES do da pintura e do pouso,
-        então o botão só volta do voo com o reexame já na tela.
+        RODA NO LAÇO DO GTK, na volta do gesto (`_gesto`), dentro da mesma
+        linha que leva a resposta à pintura: lá, uma linha a mais empurraria as
+        citações `hefesto_vivo.py:NNN` que outras posses fazem das linhas de
+        baixo. A volta entra na fila antes do pouso, então o botão só volta do
+        voo com o reexame já na tela.
         """
         from hefesto_dualsense4unix.interface import arranjo_desta_maquina
 
@@ -3957,8 +3957,7 @@ class Piloto:
         if not isinstance(resposta, dict) or chave not in resposta:
             return resposta
         resto = {k: v for k, v in resposta.items() if k != chave}
-        dado = resposta[chave]
-        GLib.idle_add(lambda: self._entregar(pagina, dado, reexame=True))
+        self._entregar(pagina, resposta[chave], reexame=True)
         return resto
 
     def _arranjo_entregue(self, valor: Any, erro: Any) -> None:
