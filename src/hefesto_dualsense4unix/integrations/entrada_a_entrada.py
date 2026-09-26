@@ -155,6 +155,31 @@ FACE_HUB = "Num hub ou extensão"
 FACE_ESCRIVANINHA = "Na escrivaninha"
 FACES = (FACE_FRENTE, FACE_ATRAS, FACE_HUB, FACE_ESCRIVANINHA)
 
+#: OS LUGARES DO GABINETE QUE A PESSOA ESCOLHE — A-08-UM-MAPEAR-SO-01
+#: (25/09/2026). O fluxo único pergunta *onde fica* com uma lista que serve a
+#: QUALQUER computador: a torre (frente, traseira, topo, lateral), o hub, o
+#: monitor e «outro». As três que já existiam ficam com a MESMA grafia — o
+#: lugar é a face do ``mapa``, e trocar a palavra deixaria órfãs as faces que
+#: ela já gravou. A face que ela gravou por outro nome (a «Na escrivaninha» da
+#: lista de antes, ou uma que ela escreveu no «Mapear Entradas») continua
+#: aceita na revisita: é dela, e não se apaga por não estar na lista nova.
+LUGAR_FRENTE = FACE_FRENTE
+LUGAR_TRASEIRA = FACE_ATRAS
+LUGAR_TOPO = "Topo do gabinete"
+LUGAR_LATERAL = "Lateral do gabinete"
+LUGAR_HUB = FACE_HUB
+LUGAR_MONITOR = "No monitor"
+LUGAR_OUTRO = "Outro lugar"
+LUGARES_DA_PORTA = (
+    LUGAR_FRENTE,
+    LUGAR_TRASEIRA,
+    LUGAR_TOPO,
+    LUGAR_LATERAL,
+    LUGAR_HUB,
+    LUGAR_MONITOR,
+    LUGAR_OUTRO,
+)
+
 #: A face virada para quem senta (``FaceDeclarada.perto``) e a que fica no alto
 #: do rack (``FaceDeclarada.alto``) — fato físico que só ela tem, e que só
 #: nasce quando ela escolhe a face. A mesma regra de ``calibrar_entradas``.
@@ -497,7 +522,9 @@ class LacoDaEntrada:
                 raise RuntimeError("não há vaga para tirar da conta")
             vaga = self._vagas[0]
             if vaga.lugar:
-                recibo = self._gravar({"lugares": {vaga.lugar: {"fora": True}}})
+                recibo = _gravar_no_mapa(
+                    self._gravar, {"lugares": {vaga.lugar: {"fora": True}}}
+                )
                 self._ultima = Gravacao(vaga.lugar, "", "", recibo.gravou, recibo.motivo)
                 if not recibo.gravou:
                     logger.warning("entrada_a_entrada_fora_nao_gravou", motivo=recibo.motivo)
@@ -870,9 +897,14 @@ def _gravar_as_portas(
     maquina: MaquinaConfig,
     gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
     controladores: Mapping[int, str],
+    nome: str | None = None,
 ) -> Gravacao:
     """A resposta dela vira desenho e amarra — numa gravação só, o hub e o que
     pende dele juntos.
+
+    ``nome`` é o nome que ela deu à PRIMEIRA porta (a do aparelho), no mesmo
+    gesto (A-08-UM-MAPEAR-SO-01): ``None`` não toca o nome que o lugar já
+    tinha, texto grava, e texto vazio apaga.
 
     O NÚMERO de cada porta, nesta ordem:
 
@@ -887,8 +919,8 @@ def _gravar_as_portas(
     TESTEMUNHA do caminho (``LugarDeclarado.caminho``) e desfaz o «Não
     alcanço»: o cabo provou que ela alcança.
     """
-    if face not in FACES:
-        raise ValueError(f"{face!r} não é uma das quatro respostas")
+    if not _face_aceita(face, maquina):
+        raise ValueError(f"{face!r} não é um lugar do gabinete que o produto conhece")
     validas = [
         (porta, nos)
         for porta, nos in portas
@@ -931,15 +963,18 @@ def _gravar_as_portas(
             "caminho": porta.caminho,
             "fora": None,
         }
+        if indice == 0 and nome is not None:
+            declaracao_dos_lugares[porta.lugar]["nome"] = nome.strip() or None
         for outro, dele in maquina.lugares.items():
             if outro not in declaracao_dos_lugares and dele.entrada == numero:
                 declaracao_dos_lugares[outro] = {"entrada": None}
 
-    recibo = gravar(
+    recibo = _gravar_no_mapa(
+        gravar,
         {
             "mapa": {"faces": faces, "portas": declaracao_das_portas},
             "lugares": declaracao_dos_lugares,
-        }
+        },
     )
     if not recibo.gravou:
         logger.warning("entrada_a_entrada_nao_gravou", motivo=recibo.motivo)
@@ -951,6 +986,28 @@ def _gravar_as_portas(
         recibo.motivo,
         tuple(numeros),
     )
+
+
+def _face_aceita(face: str, maquina: MaquinaConfig) -> bool:
+    """A face é uma das respostas do produto, ou uma que ela JÁ tem no mapa."""
+    if face in FACES or face in LUGARES_DA_PORTA:
+        return True
+    return any(existente.nome == face for existente in maquina.mapa.faces)
+
+
+def _gravar_no_mapa(
+    gravar: Callable[[Mapping[str, Any]], Recibo], declaracao: Mapping[str, Any]
+) -> Recibo:
+    """O ÚNICO ponto deste módulo que escreve no disco — A-08-UM-MAPEAR-SO-01.
+
+    Toda gravação do mapa das portas passa por aqui: a porta que o controle
+    mostrou, o nome e o lugar da revisita, o «Não alcanço» e o ``dar_nome``.
+    A régua (``tests/unit/test_a_08_um_mapear_so.py``) conta as chamadas ao
+    gravador no fonte, e um segundo escritor reprova. O gravador é o
+    ``lugar_declarado.declarar_a_maquina`` (sem IPC, a mesma porta de antes),
+    ou o dublê da régua.
+    """
+    return gravar(declaracao)
 
 
 def _por_na_face(faces: list[dict[str, Any]], face: str, numero: str) -> None:
@@ -1234,8 +1291,646 @@ def dar_nome(
     if partes_do_lugar(lugar) is None:
         raise ValueError(f"{lugar!r} não é um lugar")
     limpo = nome.strip() or None
-    recibo = gravar({"lugares": {lugar: {"nome": limpo}}})
+    recibo = _gravar_no_mapa(gravar, {"lugares": {lugar: {"nome": limpo}}})
     return NomeDado(lugar, limpo, recibo.gravou, recibo.motivo)
+
+
+# ---------------------------------------------------------------------------
+# O MAPA DAS PORTAS — um fluxo, uma gravação, um nome (A-08-UM-MAPEAR-SO-01)
+# ---------------------------------------------------------------------------
+#
+# Pedido dela, 25/09/2026: *«Dava pra ser um botão só né?»*. O «Mapear
+# Entradas» (o rascunho da aba, que manda o ``mapa`` inteiro pelo IPC) e o
+# «Mapear Entrada a Entrada» (o laço acima) viram UM fluxo: ela leva o MESMO
+# DualSense de porta em porta; a porta que ele acabou de mostrar chega com o
+# que se mediu dela; ela dá o nome e escolhe onde fica. A primeira vez e a
+# revisita são o mesmo gesto — na revisita a porta já chega com o número, o
+# nome e o lugar de antes, e gravar de novo só troca o que ela trocou.
+#
+# UMA GRAVAÇÃO: :func:`_gravar_no_mapa`, a mesma do laço. UM NOME PARA LER:
+# :func:`ler_o_mapa`, que devolve cada porta com o declarado (número, nome,
+# lugar no gabinete) e o medido agora (USB 2.0/3.0, controlador, hub, -71,
+# Bluetooth da placa ou dongle). O medido NÃO vai ao disco: ver
+# ``mapa_das_portas.fatos_do_buraco``.
+
+#: As fases do fluxo único. ``PARADO`` é o mesmo do laço.
+ESPERANDO = "esperando"
+NA_PORTA = "porta"
+
+#: A chave da última gravação na foto — a mesma do laço, ASCII por contrato.
+_CHAVE_DA_ULTIMA = "ultima"  # (noqa-acento) chave de máquina
+
+#: O ``/sys/class/bluetooth`` do sistema — desviável, como a raiz do USB.
+RAIZ_BT_PADRAO = "/sys/class/bluetooth"
+
+
+@dataclass(frozen=True)
+class PortaDoMapa:
+    """Uma porta do mapa: o que ela declarou e o que o ``/sys`` diz agora.
+
+    ``chave`` é o que a tela devolve em :meth:`MapearAsPortas.gravar`: o
+    número quando a porta já tem um, e o lugar (``pci-…-usb-0:4.1``) quando
+    ainda não. ``rotulo`` é o nome que ela deu, ou «Entrada 3» — a palavra do
+    dono (:func:`nome_da_porta`). ``lugar_no_gabinete`` é a face do mapa
+    («Frente do gabinete»). Os campos medidos são os de
+    ``mapa_das_portas.FatosDoBuraco``, e ``""``/``None`` neles é "não sei".
+    """
+
+    chave: str
+    numero: str | None = None
+    nome: str | None = None
+    rotulo: str | None = None
+    lugar_no_gabinete: str | None = None
+    lugar: str = ""
+    caminho: str = ""
+    nos: tuple[str, ...] = ()
+    fora: bool = False
+    usb: str = ""
+    controlador: str = ""
+    hub: str = ""
+    hub_produto: str = ""
+    encaixe: str = ""
+    ocupada: bool | None = None
+    aparelho: str = ""
+    especie: str = ""
+    produto: str = ""
+    e_dualsense: bool = False
+    bluetooth: str = ""
+    storm: int | None = None
+
+    def como_dicionario(self) -> dict[str, Any]:
+        from dataclasses import asdict
+
+        saida = asdict(self)
+        saida["nos"] = list(self.nos)
+        return saida
+
+
+@dataclass(frozen=True)
+class MapaDasPortas:
+    """O mapa inteiro, pelo nome único que todo leitor pede.
+
+    ``bluetooth_sem_porta`` conta os adaptadores Bluetooth que não penduram em
+    porta USB nenhuma — o rádio da placa por SDIO/UART/PCIe. O da placa que
+    pendura num conector USB interno aparece como porta, com
+    ``bluetooth="placa"``.
+    """
+
+    portas: tuple[PortaDoMapa, ...] = ()
+    bluetooth_sem_porta: int = 0
+    lugares: tuple[str, ...] = LUGARES_DA_PORTA
+
+    def porta(self, chave: str) -> PortaDoMapa | None:
+        """A porta pela chave, pelo número ou pelo lugar — ``None`` se nenhuma."""
+        if not chave:
+            return None
+        return next(
+            (p for p in self.portas if chave in (p.chave, p.numero, p.lugar)), None
+        )
+
+    def como_dicionario(self) -> dict[str, Any]:
+        return {
+            "portas": [p.como_dicionario() for p in self.portas],
+            "bluetooth_sem_porta": self.bluetooth_sem_porta,
+            "lugares": list(self.lugares),
+        }
+
+
+def ler_o_mapa(
+    *,
+    maquina: MaquinaConfig | None = None,
+    censo: Censo | None = None,
+    entradas: Sequence[NoDeEntrada] | None = None,
+    raiz_usb: str | None = None,
+    adaptadores: Sequence[Any] | None = None,
+    raiz_bt: str = RAIZ_BT_PADRAO,
+    storm: Mapping[str, int] | None = None,
+    medir_storm: bool = True,
+    tambem: Sequence[Sequence[str]] = (),
+) -> MapaDasPortas:
+    """O MAPA DAS PORTAS — o nome único que a tela, o Check-up, Rádio e
+    Adaptadores e o exame pedem.
+
+    Cada entrada numerada do ``mapa`` (na ordem das faces) e cada buraco
+    OCUPADO agora que ainda não tem número, com o que o ``/sys`` diz dele.
+    ``tambem`` são buracos (pelos nós) que entram mesmo vazios — a porta que
+    o controle mostrou e de que ela já o tirou.
+
+    Tudo o que lê entra por argumento, com o default do sistema: ``raiz_usb``
+    desvia as duas leituras do barramento (a régua monta um ``/sys`` de
+    mentira), ``adaptadores`` e ``raiz_bt`` o Bluetooth, e ``storm`` o -71
+    (``{caminho do kernel: quantos}``). Sem ``storm``, e com a raiz do
+    sistema, o -71 sai do log do kernel-watch (``exame_da_mesa``); com outra
+    raiz o log não é daquela máquina, e o -71 fica ``None`` — não medido.
+    """
+    from hefesto_dualsense4unix.integrations import mapa_das_portas as junta
+
+    documento = maquina if maquina is not None else carregar_maquina()
+    if raiz_usb is None:
+        lido = censo if censo is not None else _ler_o_barramento()
+        lidas = tuple(entradas) if entradas is not None else _listar_as_entradas()
+        do_sistema = True
+    else:
+        from hefesto_dualsense4unix.integrations.censo_do_barramento import (
+            ler_o_barramento,
+        )
+        from hefesto_dualsense4unix.integrations.entradas_do_gabinete import (
+            listar_entradas,
+        )
+
+        lido = censo if censo is not None else ler_o_barramento(raiz_usb=raiz_usb)
+        lidas = (
+            tuple(entradas) if entradas is not None else listar_entradas(raiz_usb=raiz_usb)
+        )
+        do_sistema = False
+    if storm is None and medir_storm and do_sistema:
+        storm = _storm_do_log()
+    controladores = _controladores(lido)
+    buracos = furos(lidas)
+
+    def fatos(nos: Sequence[str]) -> Any:
+        return junta.fatos_do_buraco(nos, lidas, lido, controladores, storm=storm)
+
+    portas: list[PortaDoMapa] = []
+    vistos: set[tuple[str, ...]] = set()
+    for numero in _numeros_do_mapa(documento.mapa):
+        furo = _furo_da_entrada(numero, documento, buracos, controladores)
+        declarada = documento.mapa.portas.get(numero)
+        amarrado = lugar_da_entrada(documento, numero, controladores)
+        lugar = amarrado or (_lugar_do_furo(furo, controladores) if furo else "")
+        nos = tuple(furo.nos) if furo else tuple(declarada.nos if declarada else ())
+        medido = fatos(nos)
+        if furo is not None:
+            vistos.add(tuple(furo.nos))
+        dele = documento.lugares.get(lugar) if lugar else None
+        nome = dele.nome if dele is not None else None
+        portas.append(
+            _porta_do_mapa(
+                numero,
+                numero=numero,
+                nome=nome,
+                rotulo=nome or rotulo_do_numero(numero),
+                face=_face_da_entrada(documento.mapa, numero),
+                lugar=lugar,
+                caminho=medido.aparelho or (declarada.caminho if declarada else "") or "",
+                nos=nos,
+                fora=bool(dele is not None and dele.fora),
+                medido=medido,
+            )
+        )
+
+    extras = {tuple(nos) for nos in tambem if nos}
+    for furo in buracos:
+        chave_do_furo = tuple(furo.nos)
+        if chave_do_furo in vistos:
+            continue
+        if not furo.aparelho and not (set(chave_do_furo) & {n for e in extras for n in e}):
+            continue
+        lugar = _lugar_do_furo(furo, controladores)
+        if not lugar:
+            continue
+        vistos.add(chave_do_furo)
+        medido = fatos(chave_do_furo)
+        dele = documento.lugares.get(lugar)
+        nome = dele.nome if dele is not None else None
+        portas.append(
+            _porta_do_mapa(
+                lugar,
+                numero=None,
+                nome=nome,
+                rotulo=nome
+                or rotulo_da_entrada(lugar, maquina=documento, controladores=controladores),
+                face=None,
+                lugar=lugar,
+                caminho=medido.aparelho,
+                nos=chave_do_furo,
+                fora=bool(dele is not None and dele.fora),
+                medido=medido,
+            )
+        )
+
+    if adaptadores is None:
+        adaptadores = _adaptadores_do_sistema(raiz_bt)
+    sem_porta = sum(1 for a in adaptadores if not str(getattr(a, "no", "") or ""))
+    return MapaDasPortas(portas=tuple(portas), bluetooth_sem_porta=sem_porta)
+
+
+class MapearAsPortas:
+    """O fluxo ÚNICO do mapa das portas — a primeira vez e a revisita.
+
+    Sem GTK e sem IPC, como o laço: tudo o que lê entra por argumento, com o
+    default do sistema, e a gravação é :func:`_gravar_no_mapa`.
+
+    O GESTO DELA: ``comecar`` → ela encaixa o DualSense numa porta → o tique
+    (``olhar``) acha a porta que ele acabou de mostrar e ela vira a PORTA DA
+    VEZ, com o medido e o que já se sabe dela → ``gravar(nome=…, lugar=…)``
+    → ela leva o controle para a próxima. ``gravar(chave=…)`` é o mesmo gesto
+    para uma porta da lista (renomear e reposicionar sem encaixar nada).
+
+    SÓ O DUALSENSE MOSTRA UMA PORTA, pela mesma razão do laço: um dongle que
+    re-enumera (o -71) não é «a porta que ela plugou». E a porta da vez é a
+    que APARECEU: com dois controles já no cabo (a mesa de quatro), o que
+    estava encaixado antes de ela começar não conta — só se for o único.
+    """
+
+    def __init__(
+        self,
+        *,
+        ler: Callable[[], Censo] | None = None,
+        entradas: Callable[[], Sequence[NoDeEntrada]] | None = None,
+        carregar: Callable[[], MaquinaConfig] | None = None,
+        gravar: Callable[[Mapping[str, Any]], Recibo] | None = None,
+        storm: Mapping[str, int] | None = None,
+        adaptadores: Callable[[], Sequence[Any]] | None = None,
+    ) -> None:
+        self._ler = ler or _ler_o_barramento
+        self._entradas = entradas or _listar_as_entradas
+        self._carregar = carregar or carregar_maquina
+        self._gravar = gravar or declarar_a_maquina
+        self._storm_dado = storm
+        self._adaptadores = adaptadores or (lambda: _adaptadores_do_sistema(RAIZ_BT_PADRAO))
+        self._trava = threading.Lock()
+        self._fase = PARADO
+        self._antes: frozenset[tuple[str, ...]] = frozenset()
+        self._da_vez: tuple[str, ...] = ()
+        self._storm: Mapping[str, int] | None = None
+        self._ultima: Gravacao | None = None
+        self._feitas = 0
+
+    # -- os gestos -----------------------------------------------------------
+
+    def comecar(self) -> dict[str, Any]:
+        """Abre o fluxo. Se UM DualSense já está numa porta, ela é a da vez."""
+        with self._trava:
+            self._fase = ESPERANDO
+            self._da_vez = ()
+            self._ultima = None
+            self._feitas = 0
+            self._storm = (
+                self._storm_dado if self._storm_dado is not None else _storm_do_log()
+            )
+            censo, lidas = self._ler_o_censo(), self._ler_as_entradas()
+            agora = _buracos_com_dualsense(censo, lidas)
+            self._antes = frozenset(agora)
+            if len(agora) == 1:
+                self._da_vez = agora[0]
+                self._fase = NA_PORTA
+            return self._foto(censo, lidas)
+
+    def olhar(self) -> dict[str, Any]:
+        """Um tique: a porta em que o DualSense acabou de aparecer vira a da vez.
+
+        Parado, não lê nada. A leitura que não respondeu não anda o fluxo —
+        "não sei" não é "o controle saiu".
+        """
+        with self._trava:
+            if self._fase == PARADO:
+                return self._foto_parada()
+            censo, lidas = self._ler_o_censo(), self._ler_as_entradas()
+            if _nao_sei(censo) or not lidas:
+                return self._foto(censo, lidas)
+            agora = _buracos_com_dualsense(censo, lidas)
+            novos = [nos for nos in agora if nos not in self._antes]
+            if novos:
+                self._da_vez = novos[0]
+                self._fase = NA_PORTA
+            self._antes = frozenset(agora)
+            return self._foto(censo, lidas)
+
+    def gravar(
+        self,
+        *,
+        chave: str | None = None,
+        nome: str | None = None,
+        lugar: str | None = None,
+    ) -> Gravacao:
+        """Grava o nome e o lugar no gabinete da porta — numa gravação só.
+
+        ``chave`` ``None`` é a porta da vez; senão, a ``chave`` (ou o número,
+        ou o lugar) de uma porta de :func:`ler_o_mapa`. ``nome`` ``None`` não
+        mexe no nome, ``""`` apaga; ``lugar`` ``None`` mantém o lugar que a
+        porta já tinha. A porta nova precisa de um lugar.
+
+        Levanta ``ValueError`` quando o gesto chega errado (nada a gravar, um
+        lugar que o produto não conhece, a porta nova sem lugar) e
+        ``RuntimeError`` quando não há porta (nenhuma da vez, chave que não
+        existe): o tratador da aba devolve os dois como recusa.
+        """
+        if nome is None and lugar is None:
+            raise ValueError("nada a gravar: nem nome nem lugar")
+        with self._trava:
+            maquina = self._carregar()
+            if lugar is not None and not _face_aceita(lugar, maquina):
+                raise ValueError(f"{lugar!r} não é um lugar do gabinete que o produto conhece")
+            censo, lidas = self._ler_o_censo(), self._ler_as_entradas()
+            mapa = ler_o_mapa(
+                maquina=maquina,
+                censo=censo,
+                entradas=lidas,
+                adaptadores=(),
+                storm={},
+                tambem=(self._da_vez,) if self._da_vez else (),
+            )
+            if chave is None:
+                if not self._da_vez:
+                    raise RuntimeError("não há porta da vez: encaixe o controle numa porta")
+                porta = next(
+                    (p for p in mapa.portas if set(p.nos) & set(self._da_vez)), None
+                )
+            else:
+                porta = mapa.porta(chave)
+            if porta is None:
+                raise RuntimeError("não achei essa porta no mapa")
+            face = lugar if lugar is not None else porta.lugar_no_gabinete
+            gravacao = _gravar_a_porta(
+                porta,
+                face,
+                nome,
+                maquina=maquina,
+                lidas=lidas,
+                gravar=self._gravar,
+                controladores=_controladores(censo),
+            )
+            self._ultima = gravacao
+            if gravacao.gravou:
+                self._feitas += 1
+            return gravacao
+
+    def parar(self) -> None:
+        """Fecha. Nada se perde: cada porta já foi ao disco quando ela gravou."""
+        with self._trava:
+            self._fase = PARADO
+            self._da_vez = ()
+            self._antes = frozenset()
+
+    def estado(self) -> dict[str, Any]:
+        """O que a tela pinta — relê o mapa (o fluxo aberto é de propósito)."""
+        with self._trava:
+            if self._fase == PARADO:
+                return self._foto_parada()
+            return self._foto(self._ler_o_censo(), self._ler_as_entradas())
+
+    # -- interno -------------------------------------------------------------
+
+    def _ler_o_censo(self) -> Censo:
+        try:
+            return self._ler()
+        except Exception:  # defensivo — a leitura some sob a mão
+            logger.debug("mapa_das_portas_leitura_falhou", exc_info=True)
+            return Censo()
+
+    def _ler_as_entradas(self) -> tuple[NoDeEntrada, ...]:
+        try:
+            return tuple(self._entradas())
+        except Exception:  # defensivo — o sysfs some sob a mão
+            logger.debug("mapa_das_portas_nos_falharam", exc_info=True)
+            return ()
+
+    def _ultima_gravada(self) -> dict[str, Any] | None:
+        return None if self._ultima is None else self._ultima.como_dicionario()
+
+    def _foto_parada(self) -> dict[str, Any]:
+        return {
+            "estado": PARADO,
+            "porta": None,
+            "portas": [],
+            "lugares": list(LUGARES_DA_PORTA),
+            "bluetooth_sem_porta": 0,
+            "feitas": self._feitas,
+            _CHAVE_DA_ULTIMA: self._ultima_gravada(),
+        }
+
+    def _foto(self, censo: Censo, lidas: Sequence[NoDeEntrada]) -> dict[str, Any]:
+        try:
+            adaptadores = tuple(self._adaptadores())
+        except Exception:  # defensivo — o /sys/class/bluetooth some sob a mão
+            adaptadores = ()
+        mapa = ler_o_mapa(
+            maquina=self._carregar(),
+            censo=censo,
+            entradas=lidas,
+            adaptadores=adaptadores,
+            storm=self._storm,
+            medir_storm=False,
+            tambem=(self._da_vez,) if self._da_vez else (),
+        )
+        da_vez = (
+            next((p for p in mapa.portas if set(p.nos) & set(self._da_vez)), None)
+            if self._da_vez
+            else None
+        )
+        return {
+            "estado": self._fase,
+            "porta": None if da_vez is None else da_vez.como_dicionario(),
+            "portas": [p.como_dicionario() for p in mapa.portas],
+            "lugares": list(mapa.lugares),
+            "bluetooth_sem_porta": mapa.bluetooth_sem_porta,
+            "feitas": self._feitas,
+            _CHAVE_DA_ULTIMA: self._ultima_gravada(),
+        }
+
+
+def _gravar_a_porta(
+    porta: PortaDoMapa,
+    face: str | None,
+    nome: str | None,
+    *,
+    maquina: MaquinaConfig,
+    lidas: Sequence[NoDeEntrada],
+    gravar: Callable[[Mapping[str, Any]], Recibo],
+    controladores: Mapping[int, str],
+) -> Gravacao:
+    """A gravação da porta do fluxo único — pelo mesmo compositor do laço.
+
+    Com o buraco lido (os nós dela estão no ``/sys`` de agora) e o lugar
+    sabido, é o :func:`_gravar_as_portas` de sempre: o número que o lugar já
+    tem (ou o menor livre), a face, os nós, a amarra e o nome, juntos. Sem o
+    buraco (o hub dela foi desligado), só a revisita de uma porta numerada: a
+    face e o nome, e nada do que a primeira vez gravou sai.
+    """
+    lidos = {e.no for e in lidas}
+    if porta.lugar and porta.nos and set(porta.nos) & lidos:
+        if face is None:
+            raise ValueError("a porta nova precisa de um lugar no gabinete")
+        caminho = porta.aparelho or _caminho_do_lado_20(porta.nos)
+        if not caminho:
+            return Gravacao(porta.lugar, "", face, False, MOTIVO_SEM_LUGAR)
+        vista = PortaVista(lugar=porta.lugar, caminho=caminho)
+        return _gravar_as_portas(
+            [(vista, porta.nos)],
+            face,
+            maquina=maquina,
+            gravar=gravar,
+            controladores=controladores,
+            nome=nome,
+        )
+    if porta.numero is None:
+        return Gravacao(porta.lugar, "", face or "", False, MOTIVO_SEM_LUGAR)
+    declaracao: dict[str, Any] = {}
+    face_final = face or ""
+    if face is not None:
+        declarada = maquina.mapa.portas.get(porta.numero)
+        if declarada is None or declarada.filha_de is None:
+            faces = [f.model_dump(mode="json") for f in maquina.mapa.faces]
+            _por_na_face(faces, face, porta.numero)
+            declaracao["mapa"] = {"faces": faces}
+        else:
+            face_final = _face_da_entrada(maquina.mapa, porta.numero) or face
+    if nome is not None:
+        if not porta.lugar:
+            return Gravacao("", porta.numero, face_final, False, MOTIVO_SEM_LUGAR)
+        declaracao["lugares"] = {porta.lugar: {"nome": nome.strip() or None}}
+    if not declaracao:
+        return Gravacao(porta.lugar, porta.numero, face_final, True, "", (porta.numero,))
+    recibo = _gravar_no_mapa(gravar, declaracao)
+    if not recibo.gravou:
+        logger.warning("mapa_das_portas_nao_gravou", motivo=recibo.motivo)
+    return Gravacao(
+        porta.lugar, porta.numero, face_final, recibo.gravou, recibo.motivo, (porta.numero,)
+    )
+
+
+def _porta_do_mapa(
+    chave: str,
+    *,
+    numero: str | None,
+    nome: str | None,
+    rotulo: str | None,
+    face: str | None,
+    lugar: str,
+    caminho: str,
+    nos: tuple[str, ...],
+    fora: bool,
+    medido: Any,
+) -> PortaDoMapa:
+    return PortaDoMapa(
+        chave=chave,
+        numero=numero,
+        nome=nome,
+        rotulo=rotulo,
+        lugar_no_gabinete=face,
+        lugar=lugar,
+        caminho=caminho,
+        nos=nos,
+        fora=fora,
+        usb=medido.usb,
+        controlador=medido.controlador,
+        hub=medido.hub,
+        hub_produto=medido.hub_produto,
+        encaixe=medido.encaixe,
+        ocupada=medido.ocupada,
+        aparelho=medido.aparelho,
+        especie=medido.especie,
+        produto=medido.produto,
+        e_dualsense=medido.e_dualsense,
+        bluetooth=medido.bluetooth,
+        storm=medido.storm,
+    )
+
+
+def _numeros_do_mapa(mapa: MapaDaMesa) -> tuple[str, ...]:
+    """Os números do desenho: os das faces, na ordem dela, e depois o resto."""
+    achados: list[str] = []
+    for face in mapa.faces:
+        for numero in face.portas:
+            if numero not in achados:
+                achados.append(numero)
+                achados.extend(
+                    filha
+                    for filha, porta in sorted(mapa.portas.items())
+                    if porta.filha_de == numero and filha not in achados
+                )
+    achados.extend(numero for numero in sorted(mapa.portas) if numero not in achados)
+    return tuple(achados)
+
+
+def _furo_da_entrada(
+    numero: str,
+    maquina: MaquinaConfig,
+    buracos: Sequence[Furo],
+    controladores: Mapping[int, str],
+) -> Furo | None:
+    """O buraco de agora que é esta entrada — pela amarra, pelos nós, pelo caminho.
+
+    A mesma escada de :func:`_o_furo_e_conhecido`, do outro lado: a amarra
+    pelo lugar sobrevive ao boot; os nós e o caminho carregam o número do
+    barramento e valem só para a entrada que ainda não tem amarra.
+    """
+    lugar = lugar_da_entrada(maquina, numero, controladores)
+    if lugar:
+        achado = next((f for f in buracos if _lugar_do_furo(f, controladores) == lugar), None)
+        if achado is not None:
+            return achado
+    declarada = maquina.mapa.portas.get(numero)
+    if declarada is None:
+        return None
+    if declarada.nos and not lugar:
+        achado = next((f for f in buracos if set(f.nos) & set(declarada.nos)), None)
+        if achado is not None:
+            return achado
+    if declarada.caminho and not lugar:
+        return next(
+            (
+                f
+                for f in buracos
+                if f.aparelho == declarada.caminho
+                or declarada.caminho in {caminho_do_no(no) for no in f.nos}
+            ),
+            None,
+        )
+    return None
+
+
+def _buracos_com_dualsense(
+    censo: Censo, lidas: Sequence[NoDeEntrada]
+) -> list[tuple[str, ...]]:
+    """Os buracos (pelos nós) em que há um DualSense agora, na ordem do ``/sys``."""
+    return [
+        tuple(furo.nos)
+        for furo in furos(lidas)
+        if _o_dualsense_no_furo(furo, censo) is not None
+    ]
+
+
+def _caminho_do_lado_20(nos: Sequence[str]) -> str:
+    """O caminho que um aparelho 2.0 teria neste buraco — o lado de barramento menor."""
+    caminhos = sorted(
+        (caminho_do_no(no) for no in nos if caminho_do_no(no)),
+        key=lambda caminho: int(caminho.partition("-")[0]),
+    )
+    return caminhos[0] if caminhos else ""
+
+
+def _storm_do_log() -> dict[str, int] | None:
+    """``{caminho do kernel: quantos -71}`` dos últimos 7 dias — ``None`` sem log.
+
+    O dono da leitura é o ``exame_da_mesa.storm_por_porta``; aqui só se conta.
+    Sem o log do kernel-watch não há medição, e ``None`` não é zero.
+    """
+    try:
+        from hefesto_dualsense4unix.integrations import exame_da_mesa
+
+        log = exame_da_mesa.log_do_kernel_watch()
+        if log is None:
+            return None
+        laudo = exame_da_mesa.storm_por_porta(log=log, nomear=exame_da_mesa._sem_nome)
+    except Exception:  # defensivo — o -71 nunca derruba o mapa
+        logger.debug("mapa_das_portas_storm_falhou", exc_info=True)
+        return None
+    if laudo.porque_nao:
+        return None
+    return {porta.porta: porta.quantos for porta in laudo.portas}
+
+
+def _adaptadores_do_sistema(raiz_bt: str) -> tuple[Any, ...]:
+    try:
+        from hefesto_dualsense4unix.integrations.mesa_de_radio import (
+            adaptadores_bluetooth,
+        )
+
+        return tuple(adaptadores_bluetooth(raiz_bt=raiz_bt))
+    except Exception:  # defensivo — sem Bluetooth é resposta, não defeito
+        return ()
 
 
 # ---------------------------------------------------------------------------
@@ -1253,6 +1948,18 @@ def o_laco() -> LacoDaEntrada:
         if _O_LACO is None:
             _O_LACO = LacoDaEntrada()
         return _O_LACO
+
+
+_O_MAPA: MapearAsPortas | None = None
+
+
+def o_mapa() -> MapearAsPortas:
+    """O fluxo único do processo — um só, como o laço (A-08-UM-MAPEAR-SO-01)."""
+    global _O_MAPA
+    with _TRAVA_DO_LACO:
+        if _O_MAPA is None:
+            _O_MAPA = MapearAsPortas()
+        return _O_MAPA
 
 
 # ---------------------------------------------------------------------------
@@ -1371,6 +2078,7 @@ def _controladores_do_sistema() -> dict[int, str]:
 
 __all__ = [
     "EM_PE",
+    "ESPERANDO",
     "FACES",
     "FACE_ATRAS",
     "FACE_EM_PE",
@@ -1380,22 +2088,36 @@ __all__ = [
     "FACE_QUE_E_ALTO",
     "FACE_QUE_E_PERTO",
     "FIM",
+    "LUGARES_DA_PORTA",
+    "LUGAR_FRENTE",
+    "LUGAR_HUB",
+    "LUGAR_LATERAL",
+    "LUGAR_MONITOR",
+    "LUGAR_OUTRO",
+    "LUGAR_TOPO",
+    "LUGAR_TRASEIRA",
+    "NA_PORTA",
     "PALAVRA_DA_ENTRADA",
     "PARADO",
     "SENTADA",
     "TELAS",
     "Gravacao",
     "LacoDaEntrada",
+    "MapaDasPortas",
+    "MapearAsPortas",
     "NomeDado",
     "Pergunta",
+    "PortaDoMapa",
     "PortaVista",
     "com_o_nome_dela",
     "dar_nome",
     "face_do_lugar",
+    "ler_o_mapa",
     "nome_da_porta",
     "nome_do_adaptador",
     "nome_do_lugar",
     "o_laco",
+    "o_mapa",
     "rotulo_da_entrada",
     "rotulo_do_numero",
 ]
