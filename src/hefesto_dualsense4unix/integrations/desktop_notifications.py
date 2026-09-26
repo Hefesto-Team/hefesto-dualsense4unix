@@ -86,7 +86,7 @@ def notify(
     """Emite uma notification D-Bus padrão freedesktop.
 
     Retorna `True` em sucesso, `False` em qualquer falha (jeepney ausente,
-    daemon não responde, exceção D-Bus). Não levanta.
+    daemon não responde, exceção D-Bus, a suíte no ar). Não levanta.
 
     Args:
         summary: Título da notificação (linha 1, negrito no GNOME/COSMIC).
@@ -107,7 +107,7 @@ def notify(
     Returns:
         bool: True se a notification foi entregue ao bus.
     """
-    if once_key is not None and once_key in _announced_once:
+    if _a_suite_esta_rodando() or (once_key is not None and once_key in _announced_once):
         return False
 
     try:
@@ -463,3 +463,41 @@ __all__ = [
     "reset_throttle_cache",
     "statusnotifierwatcher_available",
 ]
+
+
+# ---------------------------------------------------------------------------
+# A-SUITE-NAO-AVISA-NA-TELA-DELA-01 — com a suíte no ar, nenhum aviso sai.
+# ---------------------------------------------------------------------------
+#
+# Ela, 25/09/2026, com a foto: três «Teclado na tela aberto pelo L3.»
+# empilhados na tela dela às 20h18, com o daemon dela calado (o diário dele
+# registra todo aviso que manda). Era a SUÍTE, e desde 06/09: medido num
+# barramento de mentira, o lote do teclado e do hotkey manda 22 `Notify` —
+# 20 do teclado na tela e 2 do modo jogo —, de três arquivos que apertam o L3
+# sem dublar o aviso. A suíte já desviava a janela (TELA-DELA-01) e o rádio
+# (`bluez_dbus.a_suite_esta_rodando`); o aviso era a porta que sobrava.
+#
+# A trava mora AQUI, e não em cada teste, porque por aqui passam todos os
+# chamadores — inclusive quem copiou a referência com `from … import notify`
+# (a bandeja), que um dublê posto no módulo não alcança. A pergunta é a mesma
+# do rádio: `PYTEST_CURRENT_TEST` (que o processo filho de um teste herda) ou
+# o `pytest` carregado. Em produção nenhum dos dois existe.
+#
+# Fica no fim do módulo de propósito: acrescentar linhas no meio empurraria as
+# citações `desktop_notifications.py:<linha>` que a aba Sistema e a janela
+# fazem, e a cura não tem nada a dizer a elas.
+
+#: O ESCAPE. Um teste que PRECISA atravessar o `notify` inteiro declara
+#: ``HEFESTO_AVISO_DE_VERDADE=1`` com `monkeypatch` — e dubla o barramento,
+#: como o `tests/unit/test_desktop_notifications.py`. O `tests/conftest.py`
+#: tira a chave do ambiente herdado: ela só vale escrita dentro do teste.
+AVISO_DE_VERDADE_NA_SUITE = "HEFESTO_AVISO_DE_VERDADE"
+
+
+def _a_suite_esta_rodando() -> bool:
+    """A suíte está no ar? Então nenhum aviso sai para a área de trabalho."""
+    import sys
+
+    if os.environ.get(AVISO_DE_VERDADE_NA_SUITE) == "1":
+        return False
+    return bool(os.environ.get("PYTEST_CURRENT_TEST")) or "pytest" in sys.modules

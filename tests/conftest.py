@@ -139,6 +139,23 @@ from hefesto_dualsense4unix.utils.tela_de_mentira import (
 garantir_tela_de_mentira(anunciar=False)
 
 # ---------------------------------------------------------------------------
+# A-SUITE-NAO-AVISA-NA-TELA-DELA-01 — nenhum aviso de teste chega à tela dela.
+# ---------------------------------------------------------------------------
+#
+# Ela, 25/09/2026, com a foto: três «Teclado na tela aberto pelo L3.» na tela
+# dela às 20h18, com o daemon dela calado. Era a suíte: o `notify` falava com
+# o `org.freedesktop.Notifications` da SESSÃO dela, e a janela de mentira acima
+# não alcança o barramento. Quem recusa é o próprio `notify`, com a suíte no ar
+# (`integrations/desktop_notifications._a_suite_esta_rodando`): lá passam todos
+# os chamadores, inclusive o `from … import notify` da bandeja.
+#
+# O papel DESTE arquivo é o escape: `HEFESTO_AVISO_DE_VERDADE=1` devolve o
+# caminho inteiro a quem declara, e ele só vale escrito DENTRO do teste, com
+# `monkeypatch` e o barramento dublado. Herdado do terminal de quem roda a
+# suíte, ele mandaria de novo cada L3 da suíte para a tela dela — então sai.
+os.environ.pop("HEFESTO_AVISO_DE_VERDADE", None)
+
+# ---------------------------------------------------------------------------
 # GUARDA-GI-REAL-01 — o `gi` do processo é o de verdade, ou é um stub?
 # ---------------------------------------------------------------------------
 
@@ -2306,6 +2323,10 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     # `test_carona_do_wrapper_01_*.py` faz). Não é flag de produto: em produção
     # a variável não existe e a carona está sempre ligada.
     monkeypatch.setenv("HEFESTO_CARONA_WRAPPER", "0")
+    # A-SUITE-NAO-AVISA-NA-TELA-DELA-01 — o escape do aviso nunca atravessa de
+    # um teste para o seguinte: quem o escreveu em `os.environ` sem
+    # `monkeypatch` deixaria a suíte inteira mandando aviso para a tela dela.
+    monkeypatch.delenv("HEFESTO_AVISO_DE_VERDADE", raising=False)
 
 
 @pytest.fixture(autouse=True)

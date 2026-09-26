@@ -83,6 +83,10 @@ def _install_fake_jeepney(
     monkeypatch.setitem(sys.modules, "jeepney", jeepney_mod)
     monkeypatch.setitem(sys.modules, "jeepney.io", jeepney_io)
     monkeypatch.setitem(sys.modules, "jeepney.io.blocking", jeepney_io_blocking)
+    # A-SUITE-NAO-AVISA-NA-TELA-DELA-01: com a suíte no ar o `notify` recusa
+    # antes do barramento. O escape anda JUNTO do dublê, e só com ele: quem
+    # atravessa o `notify` inteiro aqui fala com o jeepney de mentira acima.
+    monkeypatch.setenv(desktop_notifications.AVISO_DE_VERDADE_NA_SUITE, "1")
 
     return _FakeConn.instances
 
