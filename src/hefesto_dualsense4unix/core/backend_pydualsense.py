@@ -8166,7 +8166,7 @@ class PyDualSenseController(IController):
 
         alvo = norm_mac(uniq) if uniq else None
         with self._io_lock:
-            return self._troca_valida_locked(alvo)
+            return self._troca_valida_locked(alvo) or self._a_volta_ja_comecou_locked(alvo)
 
     def trocas_de_transporte_pendentes(self) -> frozenset[str]:
         """Os MACs que estão FORA da mesa por estarem trocando de transporte.
@@ -8302,6 +8302,46 @@ class PyDualSenseController(IController):
                     motivo="no_trocado_no_mesmo_tique",
                 )
 
+    def _quem_volta_pelo_radio_locked(self, key: str, handle: Any) -> str | None:
+        """O MAC de `key` se o handle que sai é o CABO de quem já esteve no rádio.
+
+        A regra da volta num lugar só: quem a marca (`_segurar_a_volta_pelo_radio_locked`,
+        na poda do `connect()`) e quem a enxerga antes da poda
+        (`_a_volta_ja_comecou_locked`, a pergunta do co-op). Sob `_io_lock`.
+        """
+        uniq = self._key_to_uniq(key)
+        if uniq is None:
+            return None
+        try:
+            transporte = self._detect_transport(handle)
+        except Exception:
+            return None
+        if transporte != "usb" or "bt" not in (self._transportes_da_sessao or {}).get(key, ()):
+            return None
+        return uniq
+
+    def _a_volta_ja_comecou_locked(self, uniq: str | None) -> bool:
+        """O cabo de `uniq` saiu e o `connect()` ainda não podou o handle dele.
+
+        Conferência de 25/09/2026. O co-op olha a mesa no ritmo DELE (~2 s, no
+        laço de leitura), sem ordem nenhuma com o laço de reconexão: quando ele
+        vê o nó do cabo sumir ANTES de o `connect()` podar o handle — e só a
+        poda marca a volta —, a pergunta chegava sem marca e o vpad do jogador
+        caía, metade das vezes, pelo sorteio de fase dos dois laços. O handle do
+        cabo que já não está `connected`, de quem esteve no rádio nesta sessão,
+        JÁ É a volta: a resposta é a mesma que a marca daria dois segundos
+        depois. Só leitura (a marca continua nascendo na poda). Sob `_io_lock`.
+        """
+        if not uniq:
+            return False
+        for key, handle in self._handles.items():
+            if self._key_to_uniq(key) != uniq:
+                continue
+            if bool(getattr(handle, "connected", False)):
+                return False
+            return self._quem_volta_pelo_radio_locked(key, handle) is not None
+        return False
+
     def _segurar_a_volta_pelo_radio_locked(self, key: str, handle: Any) -> None:
         """O cabo saiu de um controle que veio do rádio: o lugar espera ele voltar.
 
@@ -8310,14 +8350,8 @@ class PyDualSenseController(IController):
         pareamento aqui, e reconecta sozinho — o prazo é o mesmo da ida. O que
         nunca esteve no rádio sai como sempre saiu. Sob `_io_lock`.
         """
-        uniq = self._key_to_uniq(key)
+        uniq = self._quem_volta_pelo_radio_locked(key, handle)
         if uniq is None:
-            return
-        try:
-            transporte = self._detect_transport(handle)
-        except Exception:
-            return
-        if transporte != "usb" or "bt" not in (self._transportes_da_sessao or {}).get(key, ()):
             return
         trocas = self._trocas_de_transporte
         if trocas is None:
