@@ -739,9 +739,21 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      duas primeiras, a Sugestão de Conexão as duas últimas, e as bordas das
      duas caem nas mesmas linhas verticais dos quatro botões e dos quatro
      cartões embaixo. */
-  .duas-colunas:has(.col-exame){grid-template-columns:repeat(4,minmax(0,1fr));column-gap:10px}
-  .duas-colunas:has(.col-exame) > .lado-e{grid-column:1/3;padding-right:0}
-  .duas-colunas:has(.col-exame) > .lado-d{grid-column:3/5;padding-left:0;border-left:none}
+  /* OS DOIS BLOCOS TÊM A MESMA ALTURA, E A SUGESTÃO ENCOSTA NO EXAME — pedido
+     dela, 26/09/2026: *«equipa a altura dos dois blocos e aumenta a largura do
+     bloco da direita até chegar ao lado do bloco da esquerda»*. O exame fica
+     com a largura do texto dele (até 62%, e o achado de 121 caracteres ainda
+     cabe numa linha), a Sugestão com o resto; os dois são caixas, e o
+     `stretch` da grade dá a mesma altura às duas. */
+  .duas-colunas:has(.col-exame){grid-template-columns:fit-content(62%) minmax(0,1fr);
+                                column-gap:10px;align-items:stretch}
+  .duas-colunas:has(.col-exame) > .lado-e{padding:10px 12px;border:1px solid var(--border-sutil);
+                                border-radius:7px;background:var(--app-bg)}
+  .duas-colunas:has(.col-exame) > .lado-d{padding-left:0;border-left:none}
+  /* a sobra de altura se reparte entre as linhas do exame; margem `auto` e não
+     `space-evenly`, porque com a coluna rolando a margem vira zero e o
+     `space-evenly` cortaria a primeira linha */
+  .duas-colunas:has(.col-exame) .col-exame > .exame{margin:auto 0}
   /* DOIS SELETORES E NÃO UM — 19/09/2026, e o segundo é a cura de um `:empty`
      que NUNCA DISPAROU na máquina dela.
 
@@ -2182,7 +2194,7 @@ PERFIS_DO_CARTAO = (
      "Gatilho adaptativo, vibração no que o jogo pedir, barra de luz, giroscópio e touchpad."),
     ("bateria_longa", "Bateria Longa",
      "Vibração com 30% da força; gatilhos e barra de luz mais fracos, sem apagar."),
-    ("eu_escolho", "Eu Escolho",
+    ("eu_escolho", "Personalizado",
      "Nenhum teto: os ajustes de cada aba mandam neste controle."),
 )
 DONO_DICA = ("Escreva o nome de quem joga com este controle. O nome fica no controle: "
@@ -4045,7 +4057,7 @@ MIOLO = f'''
            que vale igual para caixa e para rádio. -->
       <input class="abre" type="radio" name="cx8-secao" id="cx8-2" checked>
       <div class="quadro-topo">
-        <label class="quadro-titulo" for="cx8-2">Gestão dos Controles</label>
+        <label class="quadro-titulo" for="cx8-2">Gestão de Controles</label>
         <span class="ajuda">?<span class="dica">
           Os seus controles e as entradas deles: o exame à esquerda, a Sugestão de
           Conexão à direita, e embaixo um cartão por controle com o estado dele agora e o
