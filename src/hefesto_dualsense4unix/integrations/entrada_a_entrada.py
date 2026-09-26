@@ -1406,14 +1406,14 @@ def ler_o_mapa(
     raiz_bt: str = RAIZ_BT_PADRAO,
     storm: Mapping[str, int] | None = None,
     medir_storm: bool = True,
-    tambem: Sequence[Sequence[str]] = (),
+    incluir: Sequence[Sequence[str]] = (),
 ) -> MapaDasPortas:
     """O MAPA DAS PORTAS — o nome único que a tela, o Check-up, Rádio e
     Adaptadores e o exame pedem.
 
     Cada entrada numerada do ``mapa`` (na ordem das faces) e cada buraco
     OCUPADO agora que ainda não tem número, com o que o ``/sys`` diz dele.
-    ``tambem`` são buracos (pelos nós) que entram mesmo vazios — a porta que
+    ``incluir`` são buracos (pelos nós) que entram mesmo vazios — a porta que
     o controle mostrou e de que ela já o tirou.
 
     Tudo o que lê entra por argumento, com o default do sistema: ``raiz_usb``
@@ -1479,7 +1479,7 @@ def ler_o_mapa(
             )
         )
 
-    extras = {tuple(nos) for nos in tambem if nos}
+    extras = {tuple(nos) for nos in incluir if nos}
     for furo in buracos:
         chave_do_furo = tuple(furo.nos)
         if chave_do_furo in vistos:
@@ -1629,7 +1629,7 @@ class MapearAsPortas:
                 entradas=lidas,
                 adaptadores=(),
                 storm={},
-                tambem=(self._da_vez,) if self._da_vez else (),
+                incluir=(self._da_vez,) if self._da_vez else (),
             )
             if chave is None:
                 if not self._da_vez:
@@ -1712,7 +1712,7 @@ class MapearAsPortas:
             adaptadores=adaptadores,
             storm=self._storm,
             medir_storm=False,
-            tambem=(self._da_vez,) if self._da_vez else (),
+            incluir=(self._da_vez,) if self._da_vez else (),
         )
         da_vez = (
             next((p for p in mapa.portas if set(p.nos) & set(self._da_vez)), None)
