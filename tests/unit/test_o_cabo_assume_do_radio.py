@@ -866,6 +866,43 @@ class TestOCaboAssume:
         jogador = mesa.coop._players[alvo]
         assert jogador.reader.node == mesa.kernel.nodes[alvo], "o leitor ficou no nó do cabo"
 
+    @pytest.mark.parametrize("caso", ["a-ida-que-nao-sobe", "a-volta-que-nao-volta"])
+    @pytest.mark.parametrize("posicao", [1, 3], ids=["P2", "P4"])
+    def test_a_troca_que_nao_termina_solta_o_jogador_no_prazo(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, posicao: int, caso: str
+    ) -> None:
+        """Conferência de 25/09: o lugar espera o PRAZO, e não para sempre.
+
+        Com o watch de verdade, o co-op só refaz o ciclo cheio quando
+        `/dev/input` muda. O jogador segurado fora da mesa não muda nó nenhum,
+        e sem pedir a próxima olhada o vpad dele ficava de pé no jogo para
+        sempre — um controle fantasma parado, de alguém que foi embora.
+        """
+        mesa = montar(monkeypatch, tmp_path, ("bt", "bt", "bt", "bt"), watch_de_verdade=True)
+        alvo = UNIQS[posicao]
+        if caso == "a-ida-que-nao-sobe":
+            boneco = mesa.boneco_de(alvo)
+            mesa.kernel.regra_instalada = False  # instalada no disco, e a probe não vem
+            plugar_o_cabo_e_esperar(mesa, alvo)
+            assert mesa.bluez.desconectados == [alvo]
+        else:
+            plugar_o_cabo_e_esperar(mesa, alvo)
+            for _ in range(int(FOLGA_DEPOIS_DA_TROCA_S / TIQUE) + 1):
+                mesa.tique()
+            boneco = mesa.boneco_de(alvo)
+            inst = mesa.kernel.instancia(alvo, "usb")
+            assert inst is not None
+            mesa.kernel.desconectar(inst)  # ela tira o cabo, e o controle não volta
+            mesa.tique()
+        assert boneco is not None and getattr(boneco, "vivo", False)
+        assert mesa.inst.em_troca_de_transporte(alvo), "o lugar não esperou"
+        for _ in range(int(PRAZO_DA_TROCA_DE_TRANSPORTE_S / TIQUE) + 2):
+            mesa.tique()
+
+        assert not mesa.inst.em_troca_de_transporte(alvo)
+        assert alvo not in mesa.coop._players, "o jogador de quem foi embora ficou no jogo"
+        assert not getattr(boneco, "vivo", True), "o vpad fantasma ficou de pé"
+
 
 @pytest.mark.usefixtures("config_isolado")
 class TestQuandoOCaboNaoAssume:

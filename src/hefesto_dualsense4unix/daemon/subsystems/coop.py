@@ -885,6 +885,12 @@ class CoopManager:
             return False
         if no_de_agora is None:
             logger.debug("coop_player_segura_na_troca", identity=player.identity)
+            # Conferência de 25/09: o jogador segurado fora da mesa não muda
+            # `/dev/input`, e o ciclo cheio só volta com o watch mudando. Sem
+            # pedir a próxima olhada, a troca que não termina (o cabo que não
+            # sobe, a volta que não volta) deixava o vpad dele de pé no jogo
+            # para sempre. Pedida, o prazo solta o jogador no ~2 s seguinte.
+            self._retry_spawn = True
             return True
         logger.info(
             "coop_player_reapontado_na_troca",
