@@ -244,9 +244,16 @@ def test_o_piloto_tira_o_arranjo_da_resposta_e_entrega_como_reexame() -> None:
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa o piloto, que carrega o GTK")
+    from gi.repository import GLib
+
     from hefesto_dualsense4unix.interface import hefesto_vivo
 
     perguntas: list[str] = []
+
+    def rodar_o_laco() -> None:
+        contexto = GLib.MainContext.default()
+        while contexto.iteration(False):
+            pass
 
     class _Ponte:
         def perguntar(self, js: str, volta: Any) -> None:
@@ -266,6 +273,7 @@ def test_o_piloto_tira_o_arranjo_da_resposta_e_entrega_como_reexame() -> None:
     resto = hefesto_vivo.Piloto._o_arranjo_relido(
         _Piloto(), arranjo_desta_maquina.PAGINA, {chave: dado, "outro": 1})
     assert resto == {"outro": 1}, "o arranjo ficou na carga da pintura"
+    rodar_o_laco()
     assert perguntas == [arranjo_desta_maquina.js_da_entrega(dado, reexame=True)]
     assert perguntas[0].endswith(", true)"), perguntas[0]
 
@@ -273,7 +281,16 @@ def test_o_piloto_tira_o_arranjo_da_resposta_e_entrega_como_reexame() -> None:
     outra.pagina = "08-conexoes.html"
     hefesto_vivo.Piloto._o_arranjo_relido(
         outra, arranjo_desta_maquina.PAGINA, {chave: dado})
+    rodar_o_laco()
     assert len(perguntas) == 1, "o arranjo foi entregue a outra página"
+
+    # e é o fio do gesto que tira o arranjo da resposta, antes da pintura
+    import inspect
+
+    fonte = inspect.getsource(hefesto_vivo.Piloto._gesto)
+    assert fonte.index("self._o_arranjo_relido(pagina, resposta)") < fonte.index(
+        "self._deu_certo_dizendo(pagina, nome, alvo, r)"), (
+        "o arranjo relido não sai da resposta antes de ela ir à pintura")
 
 
 def test_a_primeira_entrega_nao_le_no_fio_da_janela(monkeypatch: pytest.MonkeyPatch) -> None:
