@@ -555,6 +555,104 @@ def test_o_reconectar_chama_de_volta_o_edge_pelo_radio() -> None:
 # ---------------------------------------------------------------------------
 # 8 · O QUE A CONFERÊNCIA ACHOU SEM RÉGUA (25/09/2026)
 # ---------------------------------------------------------------------------
+def _pergunta_que_falha(forma: str) -> Any:
+    """O firmware de mentira nas quatro FALHAS que o leitor distingue.
+
+    A trava roda antes de tudo, como no real. ``trava`` é a própria trava
+    recusando (o ``PedidoRecusadoError`` que o ``_perguntar_ao_hidraw`` deixa
+    subir); ``levanta`` é o ``ioctl`` estourando; ``sem-eco`` é a resposta que
+    não traz ``[1, 19, 2]``; ``calado`` é a porta que não abriu.
+    """
+
+    def perguntar(_caminho: str, pedido: bytes) -> bytes | None:
+        cp.conferir_pedido(pedido)
+        if forma == "trava":
+            raise cp.PedidoRecusadoError("a trava recusou o pedido")
+        if forma == "levanta":
+            raise OSError(5, "Input/output error")
+        if forma == "sem-eco":
+            resposta = bytearray(cp.TAMANHO_DO_FEATURE)
+            resposta[0:4] = bytes([cp.FEATURE_RESPOSTA, 1, 18, 2])
+            return bytes(resposta)
+        return None
+
+    return perguntar
+
+
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+@pytest.mark.parametrize("forma", ["calado", "sem-eco", "levanta", "trava"])
+def test_o_edge_se_chama_edge_em_toda_forma_de_falha(forma: str, transporte: str) -> None:
+    """O modelo sai do sysfs, e as QUATRO saídas de falha o carregam.
+
+    A régua de antes cobria só a porta calada. As outras três (a trava, o
+    ``ioctl`` que estoura, a resposta sem o eco) são ramos próprios de
+    ``ler_identidade_pelo_cabo``, e um deles sem o ``modelo`` punha o Edge na
+    tela como «DualSense» até a próxima pergunta — no cabo e no rádio.
+    """
+    aparelhos = Aparelhos([("aa:bb:cc:00:00:01", transporte, "edge", "00")])
+    aparelhos.perguntar = _pergunta_que_falha(forma)  # type: ignore[method-assign]
+    achado = aparelhos.identidade("aa:bb:cc:00:00:01")
+    assert achado.cor is None and achado.modelo == "DualSense Edge", (forma, achado)
+    assert _mesa(aparelhos)[0]["nome"] == "DualSense Edge"
+
+
+@pytest.mark.parametrize(
+    ("gravado", "de_fabrica"),
+    [
+        ("Spider-Man 2", "Z2"),
+        ("God of War Ragnarok", "Z1"),
+        ("Icon Blue Limited Edition", "ZB"),
+        ("GOD OF WAR RAGNARÖK", "Z1"),
+        ("Ghost of Yotei Limited Edition", "ZC"),
+    ],
+)
+def test_a_declaracao_gravada_com_a_grafia_de_antes_acha_a_cor(
+    gravado: str, de_fabrica: str
+) -> None:
+    """``ControleDeclarado.cor`` é texto livre, gravado no ``maquina.json`` dela.
+
+    Até 25/09/2026 a busca oferecia a grafia da tabela digitada (sem o trema,
+    sem o ``Marvel's``, «Limited» em vez de «Special»), e quem escolheu naquela
+    época tem esse texto no disco. Ler o mapa não pode tirar a borda dele.
+    """
+    achada = cp.cor_do_nome(gravado)
+    assert achada is not None and achada.codigo == de_fabrica, (gravado, achada)
+    assert achada.nome == _do_mapa(de_fabrica)[1]
+
+
+def test_a_topologia_sai_do_sysfs_de_verdade(tmp_path: pathlib.Path) -> None:
+    """Sem nada injetado além da raiz, é o ``realpath`` do pai HID que separa o vpad.
+
+    A régua de cima injeta o ``resolver``; o produto não injeta nada. Aqui a
+    árvore é de arquivos e LINKS de verdade (num diretório de teste, nunca o
+    ``/sys``): o Edge no cabo com pai USB é alvo, e um ``0003:054C:0DF2`` sob
+    ``/misc/uhid/`` — o lugar onde só o vpad nasce — não é, mesmo sem as marcas
+    dele. Um default que não resolvesse o link cairia só nas marcas (D2).
+    """
+    raiz = tmp_path / "class" / "hidraw"
+
+    def no(nome: str, pai: str, uniq: str) -> None:
+        dispositivo = tmp_path / "devices" / pai
+        dispositivo.mkdir(parents=True)
+        (dispositivo / "uevent").write_text(
+            f"HID_ID=0003:0000054C:00000DF2\nHID_UNIQ={uniq}\n"
+            "HID_PHYS=usb-0000:00:14.0-3/input3\n",
+            encoding="utf-8",
+        )
+        (raiz / nome).mkdir(parents=True)
+        (raiz / nome / "device").symlink_to(dispositivo)
+
+    no("hidraw3", "pci0000:00/0000:00:14.0/usb3/3-3/3-3:1.3/0003:054C:0DF2.0007",
+       "aa:bb:cc:00:00:01")
+    no("hidraw9", "virtual/misc/uhid/0003:054C:0DF2.0042", "aa:bb:cc:00:00:02")
+
+    alvo = cp.alvo_do_controle("aa:bb:cc:00:00:01", raiz=str(raiz))
+    assert alvo is not None
+    assert (alvo.caminho, alvo.transporte, alvo.modelo) == (
+        "/dev/hidraw3", cp.CABO, "DualSense Edge")
+    assert cp.alvo_do_controle("aa:bb:cc:00:00:02", raiz=str(raiz)) is None
+
+
 def test_um_mapa_ilegivel_nao_derruba_ninguem(tmp_path: pathlib.Path) -> None:
     """«NUNCA LEVANTA» vale também para o arquivo que existe e não é UTF-8.
 
@@ -567,3 +665,67 @@ def test_um_mapa_ilegivel_nao_derruba_ninguem(tmp_path: pathlib.Path) -> None:
     pasta = tmp_path / "uma-pasta.csv"
     pasta.mkdir()
     assert cp.ler_a_tabela(pasta) == {}
+
+
+#: OS ARQUIVOS DE `src/` QUE ESCREVEM O PID DO DUALSENSE SEM O DO EDGE, e por
+#: quê. Medido em 25/09/2026 pela varredura abaixo — é o item 4 da sprint pelo
+#: lado do MODELO: a régua de cima prova que nenhuma função lê a COR, e esta
+#: prova que nenhum filtro novo esquece o Edge. Quem entrar na lista entra com
+#: a razão; quem passar a aceitar o ``0DF2`` tem de sair dela.
+SO_O_0CE6_POR_ESCOLHA = {
+    # O par do FÍSICO no IGNORE e no DISABLE do jogo: o 0DF2 é o par do vpad
+    # (ver o bloco em `PAR_DUALSENSE_FISICO`), e o Edge sai pela topologia.
+    "daemon/launch_env.py": "o 0DF2 é o vpad; o Edge físico sai pelo udev e pelo broker",
+    "integrations/steam_launch_options.py": "a assinatura do IGNORE antigo do jogo, a mesma razão",
+    # O quirk do kernel é gravado com os DOIS PIDs juntos
+    # (`kernel_cmdline.HEFESTO_QUIRK_IDS`); achar um é achar a linha.
+    "app/actions/emulation_actions.py": "marcador do quirk, que sai com os dois PIDs",
+    "integrations/storm_doctor.py": "diagnóstico do quirk, que sai com os dois PIDs",
+    # A identidade que o NOSSO endpoint veste diante do jogo: é a que ele reconhece.
+    "integrations/vestido_de_dualsense.py": "a identidade forjada para o jogo",
+    # DÍVIDA, com dono em voo (O-FISICO-NASCE-ESCONDIDO-EM-QUALQUER-MAQUINA-01):
+    # o carimbo do nascimento da barra não enxerga o Edge pelo rádio.
+    "integrations/sinal_da_barra.py": "DÍVIDA: o Edge pelo rádio fica sem o carimbo da barra",
+}
+
+
+def _pids_escritos(arq: pathlib.Path) -> tuple[bool, bool]:
+    """``(escreve 0CE6, escreve 0DF2)`` no CÓDIGO — docstring não conta."""
+    import re
+
+    arvore = ast.parse(arq.read_text(encoding="utf-8"))
+    docs = {
+        id(no.body[0].value)
+        for no in ast.walk(arvore)
+        if isinstance(no, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        and no.body and isinstance(no.body[0], ast.Expr)
+        and isinstance(no.body[0].value, ast.Constant)
+    }
+    ce6 = df2 = False
+    for no in ast.walk(arvore):
+        if not isinstance(no, ast.Constant) or id(no) in docs:
+            continue
+        if isinstance(no.value, int) and not isinstance(no.value, bool):
+            ce6 |= no.value == 0x0CE6
+            df2 |= no.value == 0x0DF2
+        elif isinstance(no.value, str):
+            ce6 |= re.search("0ce6", no.value, re.IGNORECASE) is not None
+            df2 |= re.search("0df2", no.value, re.IGNORECASE) is not None
+    return ce6, df2
+
+
+def test_nenhum_filtro_novo_esquece_o_edge() -> None:
+    raiz = RAIZ / "src" / "hefesto_dualsense4unix"
+    so_o_0ce6 = set()
+    for arq in raiz.rglob("*.py"):
+        ce6, df2 = _pids_escritos(arq)
+        if ce6 and not df2:
+            so_o_0ce6.add(str(arq.relative_to(raiz)))
+    assert so_o_0ce6 - set(SO_O_0CE6_POR_ESCOLHA) == set(), (
+        "arquivo novo escreve o PID do DualSense sem o do Edge — o controle que o "
+        "daemon adota fica de fora dele. Aceite o 0DF2 (os PIDs são "
+        "`broker/hidraw_broker.PHYS_PRODUCTS`) ou declare a razão aqui: "
+        f"{sorted(so_o_0ce6 - set(SO_O_0CE6_POR_ESCOLHA))}")
+    assert set(SO_O_0CE6_POR_ESCOLHA) - so_o_0ce6 == set(), (
+        "estes já aceitam o Edge (ou não escrevem mais o PID) e têm de sair da "
+        f"lista: {sorted(set(SO_O_0CE6_POR_ESCOLHA) - so_o_0ce6)}")
