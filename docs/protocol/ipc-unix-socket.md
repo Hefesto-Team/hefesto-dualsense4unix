@@ -92,11 +92,11 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `identity.renumber` | `daemon/ipc_handlers.py:1700` (`_handle_identity_renumber`) | Reordena a FILA de preferência (DualSense + externos) — ONDA-U/NUM-01. | sim |
 | `identity.number.set` | `daemon/ipc_handlers.py:2014` (`_handle_identity_number_set`) | Atribui o NÚMERO EXIBIDO de UM controle (PLAYER-01, 25/07). | sim |
 | `machine.declare` | `daemon/ipc_handlers.py:7326` (`_handle_machine_declare`) | Grava no `maquina.json` o que ela DECLAROU sobre a mesa (CONFIG-03). | sim |
-| `plugin.list` | `daemon/ipc_handlers.py:7431` (`_handle_plugin_list`) | Lista plugins carregados no daemon (FEAT-PLUGIN-01). | **não** |
-| `plugin.reload` | `daemon/ipc_handlers.py:7443` (`_handle_plugin_reload`) | Recarrega plugins do disco (FEAT-PLUGIN-01). | **não** |
-| `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:7698` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
-| `radio.mover` | `daemon/ipc_handlers.py:7740` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
-| `mira.set` | `daemon/ipc_handlers.py:7827` (`_handle_mira_set`) | `mira.set` — o chip «Mira Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |
+| `plugin.list` | `daemon/ipc_handlers.py:7440` (`_handle_plugin_list`) | Lista plugins carregados no daemon (FEAT-PLUGIN-01). | **não** |
+| `plugin.reload` | `daemon/ipc_handlers.py:7452` (`_handle_plugin_reload`) | Recarrega plugins do disco (FEAT-PLUGIN-01). | **não** |
+| `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:7707` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
+| `radio.mover` | `daemon/ipc_handlers.py:7749` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
+| `mira.set` | `daemon/ipc_handlers.py:7836` (`_handle_mira_set`) | `mira.set` — o chip «Mira Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |
 
 <!-- FIM DO BLOCO GERADO -->
 
