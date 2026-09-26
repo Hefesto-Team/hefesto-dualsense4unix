@@ -260,7 +260,10 @@ def test_o_clique_no_plugue_ensina_pelo_disco(disco: Path) -> None:
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
     from hefesto_dualsense4unix.interface import pacotes
 
-    com_ele = _censo(_aparelho(_PENDRIVE))
+    # o hub na 3 dá região às entradas dele: o pendrive direto no PC não acende lá
+    hub = Aparelho(no="/sys/3-1", nome_do_kernel="3-1", produto="Hub de prova",
+                   classe="09", velocidade_mbps=480.0, e_hub=True)
+    com_ele = _censo(_aparelho(_PENDRIVE), hub)
     dado = _arranjo(com_ele)
     pendrive = next(i for i, c in dado["leituras"]["agora"]["caminho"].items()
                     if c == _PENDRIVE)
@@ -279,6 +282,9 @@ def test_o_clique_no_plugue_ensina_pelo_disco(disco: Path) -> None:
         "sem nada na mão, um plugue já leva o gesto de ensinar")
     assert segurado["segurando"] == pendrive, "o chip do pendrive não foi para a mão"
     assert segurado["plugs"]["2"] == f"entrada-ensinar|{_PENDRIVE}", segurado["plugs"]
+    assert (segurado["plugs"]["3"], segurado["plugs"]["9"]) == ("|", "|"), (
+        "a entrada ocupada (o hub na 3) ou de outra região (9, no hub) acende: "
+        f"{segurado['plugs']}")
     assert depois_do_clique["segurando"] == pendrive and (
         pendrive not in depois_do_clique["alocados"]), (
         "a página ensinou na memória antes de o disco responder")

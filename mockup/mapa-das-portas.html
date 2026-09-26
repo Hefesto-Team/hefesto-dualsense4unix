@@ -1345,11 +1345,13 @@
      aparelho fora do mapa na mão, a entrada livre do mapa dela leva o
      gesto `entrada-ensinar` e o caminho em que a página lê o aparelho
      agora; o produto grava o nó dele na entrada. Só as do disco
-     (`GRAVA`): a ponta e o hub desenhado não têm nó a gravar. */
+     (`GRAVA`): a ponta e o hub desenhado não têm nó a gravar. E só
+     as que acendem: a ocupada e a de «outra região» (o aparelho
+     direto no PC não está num buraco do hub) ficam sem o gesto. */
   function ensinaNaEntrada(porta) {
     if (!segurando || !doProduto() || GRAVA.indexOf(String(porta.n)) === -1) return "";
-    var c = leitura()[segurando];
-    if (!c || ocupada(alocacao, porta)) return "";
+    var c = leitura()[segurando], j = julgar(porta);
+    if (!c || (j && (j.v === "cheia" || j.v === "fora"))) return "";
     return ' data-gesto="entrada-ensinar" data-entrada="' + porta.n
       + '" data-caminho="' + emAtributo(c) + '"';
   }
