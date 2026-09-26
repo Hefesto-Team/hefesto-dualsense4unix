@@ -224,6 +224,11 @@ _LUGAR = FORMA_DO_LUGAR
 #: (``apelido_do_dongle.TETO_DE_BYTES``).
 _MAXIMO_DO_NOME_DO_LUGAR = 60
 
+#: O teto do nome de um controle, em BYTES: o do nome de um aparelho
+#: Bluetooth (248, o ``Remote Name`` do HCI), que é onde o ``Alias`` o
+#: projeta (O-RADIO-CONECTA-ONDE-ELA-MANDA-02).
+_MAXIMO_DO_NOME_DO_CONTROLE = 248
+
 
 class RadioDeclarado(BaseModel):
     """Um aparelho vizinho que divide a faixa de 2,4 GHz com os controles.
@@ -699,6 +704,83 @@ class ControleDeclarado(BaseModel):
     #: ``A_ECONOMIA_EM_CADA_PECA``); o escritor é
     #: ``profiles.schema.declaracao_da_economia``.
     economia: bool | None = None
+    #: O NOME QUE ELA DEU ao controle — O-RADIO-CONECTA-ONDE-ELA-MANDA-02
+    #: (26/09/2026), o item 4 da lista dela da madrugada: *«quando eu conectar
+    #: os dispositivos bt novamente eu quero que o nome deles sejam lidos
+    #: novamente»*. O BlueZ guarda o nome (o ``Alias``) POR OBJETO, um por
+    #: adaptador, e o objeto morre com a chave: esquecida a última, o
+    #: ``Pair`` seguinte nascia com o nome de fábrica. Aqui ele mora pelo
+    #: endereço do controle, e não depende de chave nenhuma. Quem grava e quem
+    #: reaplica é a central do rádio (``integrations/central_do_radio.py``,
+    #: ``cuidar_dos_nomes`` e ``_dar_o_nome``); o ``Alias`` é a projeção.
+    #: ``None`` = ela não deu nome (vale o de fábrica, e a tela diz «Player N»).
+    #: <!-- noqa-acento: citação literal dela -->
+    nome: str | None = None
+
+    @field_validator("nome")
+    @classmethod
+    def _nome_aparado_e_do_tamanho_do_alias(cls, valor: str | None) -> str | None:
+        """Espaço em volta sai; nome vazio é ``None`` — "ela não deu nome".
+
+        O teto é o do ``Alias`` do BlueZ (:data:`_MAXIMO_DO_NOME_DO_CONTROLE`,
+        em BYTES): um nome que o BlueZ não guardaria não é um nome a reaplicar.
+        """
+        if valor is None:
+            return None
+        limpo = valor.strip()
+        if not limpo:
+            return None
+        if len(limpo.encode("utf-8")) > _MAXIMO_DO_NOME_DO_CONTROLE:
+            raise ValueError(
+                f"nome de {len(limpo.encode('utf-8'))} bytes não cabe no Alias do "
+                f"Bluetooth (até {_MAXIMO_DO_NOME_DO_CONTROLE})"
+            )
+        return limpo
+
+
+def chave_do_controle(endereco: object) -> str | None:
+    """``aa:bb:…`` ou doze hex → a chave de ``controles`` (doze hex minúsculos).
+
+    ``None`` quando o endereço não tem forma, ou quando é SINTETIZADO (o
+    ``02`` do nosso DKMS, ver :data:`_OCTETO_SINTETIZADO`): o schema o recusa,
+    e gravar o nome ali fundiria dois clones.
+    """
+    if not isinstance(endereco, str):
+        return None
+    chave = endereco.strip().lower().replace(":", "").replace("-", "")
+    if not _CHAVE_DE_CONTROLE.match(chave) or chave.startswith(_OCTETO_SINTETIZADO):
+        return None
+    return chave
+
+
+def nomes_dos_controles(maquina: MaquinaConfig) -> dict[str, str]:
+    """``{chave de controle: o nome que ela deu}`` — só quem tem nome."""
+    return {
+        chave: declarado.nome
+        for chave, declarado in (maquina.controles or {}).items()
+        if declarado.nome
+    }
+
+
+def gravar_o_nome_do_controle(endereco: str, nome: str | None) -> bool:
+    """Grava (ou, com ``None``/vazio, esquece) o nome que ela deu. **Nunca levanta.**
+
+    A fusão de :func:`gravar_maquina` desce nos dicionários: o ``microfone``, a
+    ``economia`` e a ``cor`` do mesmo controle ficam como estavam. ``False`` =
+    não gravou (endereço sem forma ou sintetizado, nome que o schema recusa,
+    disco que recusa, versão estranha) — o ``Alias`` do BlueZ continua sendo o
+    nome, e a próxima volta de quem chama tenta de novo.
+    """
+    chave = chave_do_controle(endereco)
+    if chave is None:
+        return False
+    valor = (nome or "").strip() or None
+    try:
+        return gravar_maquina({"controles": {chave: {"nome": valor}}})
+    except (ValueError, OSError) as exc:
+        logger.warning("maquina_nome_do_controle_nao_gravou", err=str(exc)[:200])
+        return False
+
 
 
 #: A CHAVE DE UM LANÇADOR DECLARADO, e a forma é estreita porque ela vira

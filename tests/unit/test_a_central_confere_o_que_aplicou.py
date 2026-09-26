@@ -219,7 +219,12 @@ def test_o_esperando_que_passa_do_prazo_nao_chegou(
     central.vigiar()
     feito = central.movimento_de(VERMELHO)
     assert (feito.estado, feito.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_PRAZO)
-    assert mundo.lapides == [(SALA, VERMELHO)], "nenhuma lápide a mais no prazo"
+    # FATO SUBSTITUÍDO (O-RADIO-CONECTA-ONDE-ELA-MANDA-02, 26/09/2026): aqui se
+    # lia «nenhuma lápide a mais no prazo». O ``Pair`` que deu sem o controle
+    # chegar deixa uma MEIA CHAVE no destino, e desde a 02 a central a tira no
+    # «não chegou» — a do destino, e nenhuma outra.
+    assert mundo.lapides == [(SALA, VERMELHO), (QUARTO, VERMELHO)]
+    assert mundo.objeto(QUARTO, VERMELHO) is None
 
 
 # ---------------------------------------------------------------------------
