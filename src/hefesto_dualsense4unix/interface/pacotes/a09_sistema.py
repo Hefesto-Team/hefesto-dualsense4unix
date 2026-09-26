@@ -2056,10 +2056,6 @@ def frase_curta_do_exame(frase: str) -> str:
     return cabeca_da_frase(frase)
 
 
-
-
-
-
 # ---------------------------------------------------------------------------
 # OS GESTOS — ver o exemplo comentado em `a04_iluminacao.py`
 # ---------------------------------------------------------------------------
