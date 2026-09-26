@@ -3,7 +3,10 @@
 Cobre:
   - `HotkeyManager` dispara callback `on_ps_solo` no release sem combo.
   - PS + D-pad (combo) suprime PS solo.
-  - `steam_launcher.open_or_focus_steam` usa spawn quando pgrep falha.
+  - `steam_launcher.open_or_focus_steam` usa spawn quando pgrep falha — aqui
+    no `Popen` de sempre, o caminho de quem chama já sendo da pessoa; o de
+    dentro do serviço do daemon (STEAM-FORA-DO-SERVICO-01) está em
+    `test_steam_fora_do_servico_01.py`.
   - Usa wmctrl quando pgrep acha processo.
   - Binário ausente loga warning uma vez e retorna False.
   - Nunca chama `shell=True`.
@@ -15,7 +18,7 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.integrations import steam_launcher
+from hefesto_dualsense4unix.integrations import fora_do_servico, steam_launcher
 from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyConfig, HotkeyManager
 
 # ---------------------------------------------------------------------------
@@ -202,6 +205,10 @@ def _reset_missing_warning():
     steam_launcher._reset_missing_warning_for_tests()
 
 
+#: Quem chama já é da pessoa (a janela aberta pelo painel): o `Popen` de sempre.
+_DA_PESSOA = fora_do_servico.Contexto(gerenciador=True, herdaria=None, oom_do_gerenciador=100)
+
+
 def test_open_or_focus_steam_spawn_quando_nao_roda():
     popen_calls: list[tuple[list[str], dict[str, Any]]] = []
 
@@ -217,6 +224,7 @@ def test_open_or_focus_steam_spawn_quando_nao_roda():
         which=lambda _name: "/usr/bin/steam",
         pgrep_runner=fake_pgrep,
         popen_runner=fake_popen,
+        contexto=_DA_PESSOA,
     )
     assert ok is True
     assert len(popen_calls) == 1

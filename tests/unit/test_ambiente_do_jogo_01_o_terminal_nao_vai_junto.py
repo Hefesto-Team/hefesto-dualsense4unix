@@ -53,6 +53,11 @@ _WRAPPER = _RAIZ / "assets" / "hefesto-launch.sh"
 _DISABLE = _RAIZ / "scripts" / "disable_steam_input.sh"
 _SLO = Path(slo.__file__).resolve()
 _LAUNCHER = Path(steam_launcher.__file__).resolve()
+#: STEAM-FORA-DO-SERVICO-01: os outros dois que abrem aplicativo da pessoa — os
+#: lançadores repostos pelo «Reiniciar» e o comando próprio do botão PS.
+_PACOTE = _RAIZ / "src" / "hefesto_dualsense4unix"
+_REPOSICAO = _PACOTE / "integrations" / "reposicao_dos_lancadores.py"
+_HOTKEY = _PACOTE / "daemon" / "subsystems" / "hotkey.py"
 
 #: As funções em shell que repetem o dono, na ordem em que aparecem.
 _FUNCOES_EM_SHELL = ("podar_bins_do_interpretador", "limpar_ambiente_do_interpretador")
@@ -297,14 +302,18 @@ class TestAPontaPython:
         assert chamadas[0]["cmd"] == ["steam"]
         _confere_limpo(chamadas[0]["env"], terminal_sujo, sessao)
 
-    @pytest.mark.parametrize("arquivo", [_SLO, _LAUNCHER], ids=lambda p: p.name)
+    @pytest.mark.parametrize(
+        "arquivo", [_SLO, _LAUNCHER, _REPOSICAO, _HOTKEY], ids=lambda p: p.name
+    )
     def test_toda_steam_que_nasce_do_modulo_passa_pelo_dono(self, arquivo: Path) -> None:
         """Um `Popen` novo, ou uma chamada nova com a Steam no argv, sem
         `env=ambiente_limpo(os.environ)` reprova aqui.
 
-        Nos dois módulos que fazem a Steam nascer. O argumento tem de ser o
-        ambiente do processo: `ambiente_limpo({})` tiraria a sessão junto, e a
-        Steam não abriria.
+        Nos dois módulos que fazem a Steam nascer, e nos dois que abrem outro
+        aplicativo da pessoa (os lançadores e o comando próprio do PS). O
+        argumento tem de ser o ambiente do processo: `ambiente_limpo({})`
+        tiraria a sessão junto, e a Steam não abriria. Desde
+        STEAM-FORA-DO-SERVICO-01 o `fora_do_servico.abrir` conta como abertura.
         """
         chamadas = _quem_abre_processo(ast.parse(arquivo.read_text(encoding="utf-8")))
         assert chamadas, f"a régua não achou chamada nenhuma em {arquivo.name}"
@@ -377,6 +386,21 @@ def _so_repassa(chamada: ast.Call) -> bool:
     return None in nomes and "env" not in nomes
 
 
+def _pelo_dono_de_abrir(chamada: ast.Call) -> bool:
+    """`fora_do_servico.abrir(...)` — STEAM-FORA-DO-SERVICO-01, 26/09/2026.
+
+    Desde então a Steam de `reopen_steam` e `start_steam_game` nasce por ele,
+    com o `argv` numa variável do laço: sem esta pergunta a régua deixaria de
+    ver as duas, e o `env` delas poderia voltar a ser o do terminal.
+    """
+    return (
+        isinstance(chamada.func, ast.Attribute)
+        and chamada.func.attr == "abrir"
+        and isinstance(chamada.func.value, ast.Name)
+        and chamada.func.value.id == "fora_do_servico"
+    )
+
+
 def _quem_abre_processo(arvore: ast.AST) -> list[ast.Call]:
     return [
         no
@@ -389,6 +413,7 @@ def _quem_abre_processo(arvore: ast.AST) -> list[ast.Call]:
                 and not _so_repassa(no)
             )
             or _argv_da_steam(no)
+            or _pelo_dono_de_abrir(no)
         )
     ]
 
