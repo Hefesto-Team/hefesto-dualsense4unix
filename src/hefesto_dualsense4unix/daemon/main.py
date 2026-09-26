@@ -100,11 +100,19 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
 
     acquire_or_takeover(single_instance_name())
 
-    # PERF-MULTI-CONTROLLER-01: o daemon nunca deve disputar CPU de igual com o
-    # JOGO (SCHED_OTHER). Com 2+ controles as threads de evdev/report somam
-    # carga real; um nice moderado elimina o stutter por starvation sem
-    # prejudicar a latência de input (as threads acordam por evento). Opt-out /
-    # ajuste: HEFESTO_DUALSENSE4UNIX_NICE=0..19 (default 5).
+    # PERF-MULTI-CONTROLLER-01 (13/07/2026, `60bbf1910`): o daemon roda em
+    # nice 5 para não disputar CPU de igual com o jogo. Opt-out / ajuste:
+    # HEFESTO_DUALSENSE4UNIX_NICE=0..19 (default 5).
+    #
+    # FATO ERRADO, SUBSTITUÍDO (26/09/2026): aqui se lia que o nice moderado
+    # «elimina o stutter por starvation». Nunca foi medido — o commit que o
+    # trouxe não tem medição, e o estudo do engasgo do Sackboy (§3.4 e C3) não
+    # achou nenhuma. O que se mediu foi o custo: todo filho do daemon nasce com
+    # este nice (60 de 60 `pactl` em nice 5), e a Steam que o botão PS abria o
+    # passava ao jogo. Por isso aplicativo da pessoa nasce fora do serviço
+    # (`integrations/fora_do_servico.py`, STEAM-FORA-DO-SERVICO-01). E, nesta
+    # máquina, o nice nem disputa com o compositor: ele roda em
+    # `session-N.scope`, outro grupo de CPU (a conferência do estudo, §6).
     try:
         nice_level = int(os.getenv("HEFESTO_DUALSENSE4UNIX_NICE", "5"))
         if nice_level > 0:

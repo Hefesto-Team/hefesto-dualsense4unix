@@ -66,8 +66,10 @@ from pathlib import Path
 from typing import Any
 
 try:  # importado como módulo do pacote (GUI/daemon/testes)
+    from . import fora_do_servico
     from .ambiente_do_jogo import ambiente_limpo
 except ImportError:  # pragma: no cover - executado como script avulso pelo install/uninstall
+    import fora_do_servico  # type: ignore[no-redef]
     from ambiente_do_jogo import ambiente_limpo  # type: ignore[no-redef]
 
 #: Caminho estável do wrapper no $HOME (passo de USUÁRIO do install.sh, sem
@@ -1382,18 +1384,16 @@ def start_steam_game(appid: int) -> bool:
 
     Com a Steam fechada, este pedido É a Steam que nasce, e ela nasce sem o
     ambiente de interpretador de quem chamou (AMBIENTE-DO-JOGO-01, ver
-    `ambiente_do_jogo`): o jogo a herda.
+    `ambiente_do_jogo`): o jogo a herda. E fora do serviço de quem chama,
+    quando quem chama está num (STEAM-FORA-DO-SERVICO-01, `fora_do_servico`).
     """
     url = f"steam://rungameid/{int(appid)}"
     for cmd in (["steam", url], ["xdg-open", url]):
         if shutil.which(cmd[0]) is None:
             continue
         try:
-            subprocess.Popen(
-                cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                env=ambiente_limpo(os.environ),
+            fora_do_servico.abrir(
+                cmd, env=ambiente_limpo(os.environ), popen=subprocess.Popen
             )
             return True
         except (OSError, subprocess.SubprocessError):
@@ -1459,18 +1459,17 @@ def reopen_steam() -> bool:
     herdava daquele terminal a venv, o conda ou o pyenv ativo — e todo jogo da
     sessão com ela. Ela nasce agora com `ambiente_limpo`, que tira só essa
     classe e deixa a tela e o barramento de sessão como estão.
+
+    STEAM-FORA-DO-SERVICO-01 (26/09/2026): e nasce por
+    `fora_do_servico.abrir` — de dentro de um serviço (a bandeja do autostart
+    é um), numa unidade própria; do terminal ou do painel, pelo `Popen`.
     """
     for cmd in (["steam"], ["xdg-open", "steam://open/main"]):
         if shutil.which(cmd[0]) is None:
             continue
         try:
-            subprocess.Popen(
-                cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                stdin=subprocess.DEVNULL,
-                start_new_session=True,
-                env=ambiente_limpo(os.environ),
+            fora_do_servico.abrir(
+                cmd, env=ambiente_limpo(os.environ), popen=subprocess.Popen
             )
             return True
         except (OSError, subprocess.SubprocessError):

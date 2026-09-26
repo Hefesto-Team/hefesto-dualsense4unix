@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import os
 import subprocess as _sp
 import threading
 from dataclasses import dataclass
@@ -248,14 +249,27 @@ def build_ps_solo_callback(daemon: DaemonProtocol) -> Any:
             if not command:
                 logger.warning("hotkey_ps_solo_custom_sem_comando")
                 return
-            with contextlib.suppress(Exception):
-                _sp.Popen(
-                    command,
-                    stdin=_sp.DEVNULL,
-                    stdout=_sp.DEVNULL,
-                    stderr=_sp.DEVNULL,
-                    start_new_session=True,
+            # STEAM-FORA-DO-SERVICO-01: o programa dela nasce FORA do serviço
+            # do daemon, como a Steam — senão herda o nice e o oom dele e
+            # morre no restart da unit. O `Popen` de sempre é o fallback.
+            from hefesto_dualsense4unix.integrations import fora_do_servico
+            from hefesto_dualsense4unix.integrations.ambiente_do_jogo import (
+                ambiente_limpo,
+            )
+
+            try:
+                abertura = fora_do_servico.abrir(
+                    command, env=ambiente_limpo(os.environ), popen=_sp.Popen
                 )
+            except Exception as exc:
+                logger.warning("hotkey_ps_solo_custom_falhou", err=str(exc))
+                return
+            logger.info(
+                "hotkey_ps_solo_custom_aberto",
+                caminho=abertura.caminho,
+                unidade=abertura.unidade,
+                motivo=abertura.motivo,
+            )
 
     return _on_ps_solo
 

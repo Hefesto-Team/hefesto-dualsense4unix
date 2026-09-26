@@ -7,13 +7,17 @@ Contrato:
     seja reiniciado. Evita poluir log com tentativas repetidas.
   - Se `pgrep -x steam` localiza PID, usa `wmctrl -lx` para achar a janela
     com WM_CLASS casando `steam.Steam` e chama `wmctrl -ia <id>`.
-  - Se o processo não esta rodando, faz `Popen(["steam"], start_new_session=True,
-    stdin/out/err=DEVNULL)` e desprende do daemon, com o ambiente de
-    `ambiente_do_jogo.ambiente_limpo` (AMBIENTE-DO-JOGO-01).
+  - Se o processo não esta rodando, abre `steam` por `fora_do_servico.abrir`
+    (STEAM-FORA-DO-SERVICO-01): de dentro do serviço do daemon, numa unidade
+    própria do gerenciador de usuário (nice 0, oom do gerenciador, e viva
+    depois de um restart do serviço); de fora dele, ou sem systemd de
+    usuário, o `Popen(start_new_session=True, stdin/out/err=DEVNULL)` de
+    sempre. Nos dois, com o ambiente de `ambiente_do_jogo.ambiente_limpo`
+    (AMBIENTE-DO-JOGO-01).
   - NUNCA usa `shell=True`.
   - Execução em thread worker e responsabilidade do chamador; a função em si
-    faz chamadas subprocess sincronas de curta duracao (pgrep/wmctrl) e um
-    Popen não-bloqueante para o launcher.
+    faz chamadas subprocess sincronas de curta duracao (pgrep/wmctrl, e o
+    `systemd-run`, medido em 6 a 12 ms) e não espera a Steam.
 """
 from __future__ import annotations
 
@@ -24,6 +28,7 @@ import threading
 from collections.abc import Callable
 from typing import Any
 
+from hefesto_dualsense4unix.integrations import fora_do_servico
 from hefesto_dualsense4unix.integrations.ambiente_do_jogo import ambiente_limpo
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -127,25 +132,35 @@ def _default_wmctrl(cmd: list[str]) -> subprocess.CompletedProcess[str]:
 
 def _spawn_steam(
     popen_runner: Callable[..., object] | None = None,
+    *,
+    contexto: fora_do_servico.Contexto | None = None,
+    executar: fora_do_servico.Executar | None = None,
 ) -> bool:
-    """Dispara Steam em sessão nova, desprendida do daemon.
+    """Dispara a Steam FORA do serviço do Hefesto, desprendida de quem chama.
 
-    AMBIENTE-DO-JOGO-01 (18/09/2026): sob a unit `systemd --user` o daemon já
-    nasce sem venv nem conda (medido no `environ` dele: zero variáveis da
-    classe), então aqui não há vetor hoje. O `ambiente_limpo` entra porque o
+    STEAM-FORA-DO-SERVICO-01 (26/09/2026): o botão PS abria a Steam por
+    `Popen` de dentro do daemon, e a Steam e o jogo nasciam no cgroup
+    `hefesto-dualsense4unix.service`, com o nice 5 e o oom 200 dele — e
+    morriam no restart do serviço. Quem decide a forma é
+    `fora_do_servico.abrir`: de dentro de um serviço, uma unidade própria do
+    gerenciador de usuário; de um lugar que já é da pessoa, ou sem systemd de
+    usuário, o `Popen` de sempre (`start_new_session=True`).
+
+    AMBIENTE-DO-JOGO-01 (18/09/2026): o `ambiente_limpo` entra porque o
     daemon também sobe fora da unit — pelo terminal de quem desenvolve, ou
     pelo `Popen` da janela quando o `systemctl` falta —, e a Steam que nasce
-    daqui é a que todo jogo da sessão herda.
+    daqui é a que todo jogo da sessão herda. Pela unidade ele vai por
+    `--setenv`.
     """
     runner = popen_runner or _default_popen
     try:
-        runner(
+        abertura = fora_do_servico.abrir(
             [STEAM_BINARY],
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
             env=ambiente_limpo(os.environ),
+            aplicativo=STEAM_BINARY,
+            contexto=contexto,
+            executar=executar,
+            popen=runner,
         )
     except FileNotFoundError:
         _warn_steam_missing_once()
@@ -153,7 +168,13 @@ def _spawn_steam(
     except Exception as exc:
         logger.warning("steam_spawn_failed", err=str(exc))
         return False
-    logger.info("steam_spawn_requested")
+    logger.info(
+        "steam_spawn_requested",
+        caminho=abertura.caminho,
+        unidade=abertura.unidade,
+        motivo=abertura.motivo,
+        tentativas=list(abertura.tentativas),
+    )
     return True
 
 
@@ -169,11 +190,14 @@ def open_or_focus_steam(
     pgrep_runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
     wmctrl_runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
     popen_runner: Callable[..., object] | None = None,
+    contexto: fora_do_servico.Contexto | None = None,
+    executar: fora_do_servico.Executar | None = None,
 ) -> bool:
     """Ponto de entrada publico. Nunca levanta.
 
     Retorna True se a tentativa foi bem-sucedida (focus ou spawn). False
-    caso contrario. Parametros opcionais permitem injetar fakes em testes.
+    caso contrario. Parametros opcionais permitem injetar fakes em testes;
+    `contexto` e `executar` vão a `fora_do_servico.abrir`.
     """
     which_fn = which or shutil.which
     if which_fn(STEAM_BINARY) is None:
@@ -188,8 +212,12 @@ def open_or_focus_steam(
                 return True
             # Processo existe mas janela não achada: fallback para spawn.
             logger.info("ps_button_action_steam", outcome="refocus_fallback_spawn")
-            return _spawn_steam(popen_runner=popen_runner)
-        spawned = _spawn_steam(popen_runner=popen_runner)
+            return _spawn_steam(
+                popen_runner=popen_runner, contexto=contexto, executar=executar
+            )
+        spawned = _spawn_steam(
+            popen_runner=popen_runner, contexto=contexto, executar=executar
+        )
         if spawned:
             logger.info("ps_button_action_steam", outcome="spawned")
         return spawned

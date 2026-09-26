@@ -49,6 +49,7 @@ import subprocess
 import time
 from dataclasses import dataclass
 
+from hefesto_dualsense4unix.integrations import fora_do_servico
 from hefesto_dualsense4unix.integrations.ambiente_do_jogo import ambiente_limpo
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -249,12 +250,14 @@ def abrir(lancador: Lancador) -> bool:
         return False
 
     try:
-        subprocess.Popen(
+        # STEAM-FORA-DO-SERVICO-01: de dentro de um serviço (a bandeja do
+        # autostart é um), o lançador nasce numa unidade própria; da janela
+        # aberta pelo painel, pelo `Popen` de sempre.
+        fora_do_servico.abrir(
             comando,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
             env=ambiente_limpo(os.environ),
+            aplicativo=lancador.flatpak or lancador.nativo or lancador.chave,
+            popen=subprocess.Popen,
         )
     except (OSError, subprocess.SubprocessError) as erro:
         logger.warning("repor_lancador_nao_abriu",
