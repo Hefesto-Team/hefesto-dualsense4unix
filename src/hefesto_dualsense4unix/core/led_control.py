@@ -536,7 +536,7 @@ def apply_led_settings(controller: IController, settings: LedSettings) -> None:
 
     Quem acende os cinco pontinhos numa troca de perfil é `ProfileManager.apply`,
     que emite `player_leds` dentro do `OutputSpec` de `apply_output_defaults`
-    (profiles/manager.py:358). O backend converte ali mesmo, em
+    (profiles/manager.py:366). O backend converte ali mesmo, em
     `_write_partial_output`: `mask = sum(1 << i for i, b in
     enumerate(out.player_leds) if b)` (core/backend_pydualsense.py:5138) — o
     MESMO layout que `player_bitmask` calcula neste arquivo. As duas conversões

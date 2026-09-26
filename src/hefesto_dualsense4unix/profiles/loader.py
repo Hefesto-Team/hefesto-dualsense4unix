@@ -840,7 +840,7 @@ def o_freestyle_de_fabrica_nasce_ligado(dest_dir: Path | None = None) -> Path | 
 
 #: R-12 (auditoria 23/07): marker da migração do `match` inalcançável do
 #: coop_local. O preset de fábrica de 14/07 saiu com `MatchCriteria` de campos
-#: TODOS vazios — `matches()` devolve False sem condição alguma (schema.py:120),
+#: TODOS vazios — `matches()` devolve False sem condição alguma (schema.py:121),
 #: então o autoswitch NUNCA o escolhe. O asset novo tem o regex de jogos de
 #: co-op; `seed_default_presets` não sobrescreve (está no `.seeded_presets`),
 #: então o arquivo LOCAL de quem já tinha o preset velho fica preso — por isso
