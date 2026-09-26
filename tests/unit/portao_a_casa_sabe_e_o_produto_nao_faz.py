@@ -2943,6 +2943,17 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # `quedas` e `o_fato_da_queda` (o sino de cada adaptador), e
     # `entrada_a_entrada.o_laco`, `dar_nome` e `com_o_nome_dela` (a cerimônia,
     # o nome do lugar e o conselho de porta com o nome dela).
+    "integrations/entrada_a_entrada.py::o_mapa":
+        "A-08-UM-MAPEAR-SO-01, 25/09/2026. O fluxo único do mapa das portas "
+        "(o «Mapear Entradas» e o «Mapear Entrada a Entrada» num botão só) "
+        "nasce ANTES da tela, pela divisão de quem coordena: esta frente é o "
+        "DONO, e a tela é da A-08-O-CHECKUP-ABSORVE-A-GESTAO-01. ONDE O "
+        "CAMINHO SE PERDE: `interface/pacotes/a08_conexoes.py` ainda chama o "
+        "laço de antes (`_laco`, pelo `o_laco()`) e o rascunho da "
+        "`LogicaDoMapa` (`_logica_do_mapa`), fora da posse desta frente. O QUE "
+        "O FECHARIA: o botão único daquela sprint chamando `o_mapa()` — "
+        "`comecar`, `olhar` no tique, `gravar` e `parar` — e esta linha sai no "
+        "mesmo commit.",
     "integrations/entrada_a_entrada.py::nome_do_adaptador":
         "ENTRADA-A-ENTRADA-01, 23/09/2026. D3: o adaptador herda o nome da "
         "porta em que está, pelo lugar e nunca pelo hciN. A TRANSPLANTE-DA-"
