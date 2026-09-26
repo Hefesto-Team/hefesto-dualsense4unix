@@ -151,6 +151,7 @@
   /* a divergência do hub: uma linha a mais, sem culpa */
   .diverge { margin: 0 0 var(--space-2xs); font-size: var(--text-xs); color: var(--color-lacuna); }
   .edita .lido { font-size: var(--text-xs); color: var(--color-ink-quiet); }
+  .edita .origem { font-size: var(--text-xs); color: var(--color-ink-quiet); }
 
   .chapa { border: 1px solid var(--color-rule); border-radius: var(--radius-md);
            background: linear-gradient(160deg, var(--color-paper-3), var(--color-paper-2)); padding: var(--space-sm); }
@@ -1264,6 +1265,14 @@
   var FACE_DO_HUB = "Hub na Entrada {numero}";
   var ROTULOS = {};
   var HUB_LIDO = {};
+  var USB_DE = {};
+  var FRASES_DA_ORIGEM = {"placa": "É o que a placa-mãe diz.", "declarada": "É o que você disse.", "aparelho": "Um aparelho está nela a 5 Gbps.", "": "A placa-mãe não diz. Diga você."};
+  /* a origem só se diz no produto: no exemplo ninguém mediu nada */
+  function origemDaVelocidade(n) {
+    if (!doProduto() || !podeGravar(n)) return "";
+    var frase = FRASES_DA_ORIGEM[USB_DE[String(n)] || ""];
+    return frase ? '<span class="origem">' + frase + "</span>" : "";
+  }
   function rotuloDe(n) {
     var r = ROTULOS[String(n)];
     if (r) return r.rotulo;
@@ -1398,7 +1407,7 @@
       + [[3, "USB 3.0"], [2, "USB 2.0"]].map(function (o) {
           return '<button class="escolha" data-usb="' + o[0] + '"' + gravaNaEntrada(editando, "entrada-velocidade") + ' aria-pressed="' + (p.usb === o[0]) + '">' + o[1] + "</button>";
         }).join("")
-      + "</div></div>")
+      + "</div>" + origemDaVelocidade(editando) + "</div>")
       + (quem ? '<div class="edita-linha"><span>' + quem.tipo + ' está aqui</span></div>' : "")
       + (soNaTela ? "" : linhaDaTroca(editando));
     ed.hidden = false;
@@ -1787,6 +1796,9 @@
     /* AS ENTRADAS EM QUE O COMPUTADOR LÊ UM HUB (D-2609-O-HUB-PENDE-DA-
        ENTRADA): o editor delas nasce com «Hub», e o plugue ganha a marca. */
     HUB_LIDO = f.hubLido || {};
+    /* DE ONDE VEIO A VELOCIDADE de cada entrada: a mesma precedência que
+       pintou o plugue (aparelho, depois o que ela disse, depois a placa). */
+    USB_DE = f.usbDe || {};
     /* A VOLTA DE UMA GRAVAÇÃO NÃO FECHA O EDITOR — 26/09/2026,
        O-MAPA-QUE-ELA-CORRIGE-01: ela clicou numa entrada, e a entrada
        continua aberta com o que o disco diz agora. */

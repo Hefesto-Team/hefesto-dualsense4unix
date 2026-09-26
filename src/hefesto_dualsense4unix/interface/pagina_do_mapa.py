@@ -192,6 +192,18 @@ COR_SEM_CLASSE = CORES_POR_CLASSE["hub"]
 #: vez de desenhar metade de um gabinete — ver `ABRE_A_PORTA`.
 CAMPOS_DO_ARRANJO = ("quando", "aparelhos", "faces", "mapa", "leituras")
 
+#: DE ONDE VEIO A VELOCIDADE DA ENTRADA, na linha de baixo de «Velocidade» —
+#: O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-A-VELOCIDADE-DELA-VENCE-A-PLACA). As
+#: chaves são as de ``mapa_das_portas`` (``USB_PELO_APARELHO``,
+#: ``USB_DECLARADA``, ``USB_PELA_PLACA``; ``""`` é «não se sabe»), e a régua
+#: confere as duas pontas.
+FRASES_DA_ORIGEM_DA_VELOCIDADE = {
+    "placa": "É o que a placa-mãe diz.",
+    "declarada": "É o que você disse.",
+    "aparelho": "Um aparelho está nela a 5 Gbps.",
+    "": "A placa-mãe não diz. Diga você.",
+}
+
 
 def _exemplo_em_js(recuo: str = "  ") -> str:
     """O censo de exemplo como um literal JavaScript legível.
@@ -301,6 +313,9 @@ ABRE_A_PORTA = """\
     /* AS ENTRADAS EM QUE O COMPUTADOR LÊ UM HUB (D-2609-O-HUB-PENDE-DA-
        ENTRADA): o editor delas nasce com «Hub», e o plugue ganha a marca. */
     HUB_LIDO = f.hubLido || {};
+    /* DE ONDE VEIO A VELOCIDADE de cada entrada: a mesma precedência que
+       pintou o plugue (aparelho, depois o que ela disse, depois a placa). */
+    USB_DE = f.usbDe || {};
     /* A VOLTA DE UMA GRAVAÇÃO NÃO FECHA O EDITOR — 26/09/2026,
        O-MAPA-QUE-ELA-CORRIGE-01: ela clicou numa entrada, e a entrada
        continua aberta com o que o disco diz agora. */
@@ -2005,6 +2020,15 @@ EDICOES: tuple[Edicao, ...] = (
             + json.dumps(FACE_DO_HUB_DECLARADO, ensure_ascii=False) + ";\n"
             "  var ROTULOS = {};\n"
             "  var HUB_LIDO = {};\n"
+            "  var USB_DE = {};\n"
+            "  var FRASES_DA_ORIGEM = "
+            + json.dumps(FRASES_DA_ORIGEM_DA_VELOCIDADE, ensure_ascii=False) + ";\n"
+            "  /* a origem só se diz no produto: no exemplo ninguém mediu nada */\n"
+            "  function origemDaVelocidade(n) {\n"
+            "    if (!doProduto() || !podeGravar(n)) return \"\";\n"
+            "    var frase = FRASES_DA_ORIGEM[USB_DE[String(n)] || \"\"];\n"
+            "    return frase ? '<span class=\"origem\">' + frase + \"</span>\" : \"\";\n"
+            "  }\n"
             "  function rotuloDe(n) {\n"
             "    var r = ROTULOS[String(n)];\n"
             "    if (r) return r.rotulo;\n"
@@ -2629,6 +2653,41 @@ EDICOES: tuple[Edicao, ...] = (
         porque=(
             '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 5) — a linha da diver'
             'gência e a do editor.'
+        ),
+    ),
+    # ══ O-MAPA-QUE-ELA-CORRIGE-01 (passo 6), 26/09/2026: de onde veio a velocidade ══
+    Edicao(
+        antes=(
+            'gravaNaEntrada(editando, "entrada-velocidade") + \' aria-pressed="\''
+            ' + (p.usb === o[0]) + \'">\' + o[1] + "</button>";\n'
+            '        }).join("")\n'
+            '      + "</div></div>")\n'
+        ),
+        depois=(
+            'gravaNaEntrada(editando, "entrada-velocidade") + \' aria-pressed="\''
+            ' + (p.usb === o[0]) + \'">\' + o[1] + "</button>";\n'
+            '        }).join("")\n'
+            '      + "</div>" + origemDaVelocidade(editando) + "</div>")\n'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 6) — a linha de baixo'
+            ' de «Velocidade» diz de onde ela veio.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '  .edita .lido { font-size: var(--text-xs); color: var(--color-ink'
+            '-quiet); }\n'
+        ),
+        depois=(
+            '  .edita .lido { font-size: var(--text-xs); color: var(--color-ink'
+            '-quiet); }\n'
+            '  .edita .origem { font-size: var(--text-xs); color: var(--color-i'
+            'nk-quiet); }\n'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 6) — a linha da orige'
+            'm.'
         ),
     ),
 )

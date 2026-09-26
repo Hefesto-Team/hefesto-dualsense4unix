@@ -122,7 +122,6 @@ from hefesto_dualsense4unix.integrations.censo_do_barramento import (
     cadeia_de_hubs,
 )
 from hefesto_dualsense4unix.integrations.entradas_do_gabinete import (
-    VELOCIDADE_SUPERSPEED_MBPS,
     Furo,
     NoDeEntrada,
     entrada_de,
@@ -2007,26 +2006,22 @@ def faces_dos_hubs(mapa: MapaDaMesa) -> dict[str, str]:
 
 
 def _usb_da_porta(
-    medido: Any, declarada: int | None, censo: Censo | None
+    medido: Any, declarada: int | None, censo: Censo | None, nos: Sequence[str] = ()
 ) -> tuple[str, str]:
     """``(USB 3.0 | USB 2.0 | "", de onde)`` de uma porta do Mapear.
 
     A precedência é de ``mapa_das_portas.velocidade_da_entrada``: o aparelho
-    que enumerou a 5000M+ nela, depois o que ela declarou, depois a placa (o
-    ``medido.usb``, lido dos hubs que hospedam os nós do buraco).
+    que enumerou a 5000M+ num dos ``nos`` dela (a MESMA pergunta do arranjo,
+    ``mapa_das_portas.aparelho_usb3_na_entrada``), depois o que ela declarou,
+    depois a placa (o ``medido.usb``, lido dos hubs que hospedam os nós).
     """
     from hefesto_dualsense4unix.integrations import mapa_das_portas as junta
 
     placa = {junta.USB_3: True, junta.USB_2: False}.get(medido.usb)
-    dentro = (
-        next((a for a in censo.aparelhos if a.nome_do_kernel == medido.aparelho), None)
-        if censo is not None and medido.aparelho
-        else None
-    )
     rapido, de_onde = junta.velocidade_da_entrada(
         placa,
         declarada,
-        dentro is not None and dentro.velocidade_mbps >= VELOCIDADE_SUPERSPEED_MBPS,
+        censo is not None and junta.aparelho_usb3_na_entrada(nos, censo),
     )
     if rapido is None:
         return "", de_onde
@@ -2218,7 +2213,7 @@ def ler_o_mapa(
                 nos=nos,
                 fora=bool(dele is not None and dele.fora),
                 medido=medido,
-                usb=_usb_da_porta(medido, declarada.usb if declarada else None, lido),
+                usb=_usb_da_porta(medido, declarada.usb if declarada else None, lido, nos),
             )
         )
 

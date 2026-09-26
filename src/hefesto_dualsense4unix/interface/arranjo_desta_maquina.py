@@ -243,6 +243,10 @@ def _ler_a_maquina(
         ),
         "rotulos": rotulos_das_entradas(documento),
         "hubLido": hub_lido,
+        # DE ONDE VEIO A VELOCIDADE de cada entrada (D-2609-A-VELOCIDADE-DELA-
+        # VENCE-A-PLACA): o editor diz «É o que você disse.», «É o que a
+        # placa-mãe diz.»… Da mesma chamada que deu a `usb` das faces.
+        "usbDe": dict(bancada.usb_de),
     }, lida
 
 

@@ -60,7 +60,7 @@ import itertools
 import os
 import re
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 
 from hefesto_dualsense4unix.integrations import arranjo_da_mesa as motor
 from hefesto_dualsense4unix.integrations.censo_do_barramento import (
@@ -494,6 +494,12 @@ class Bancada:
 
     mesa: motor.Mesa
     lacunas: tuple[str, ...] = ()
+    #: ``número -> de onde veio a velocidade`` (:data:`USB_PELO_APARELHO`,
+    #: :data:`USB_DECLARADA`, :data:`USB_PELA_PLACA` ou ``""``) — da MESMA
+    #: chamada da precedência que deu a ``usb`` de cada entrada
+    #: (O-MAPA-QUE-ELA-CORRIGE-01, D-2609-A-VELOCIDADE-DELA-VENCE-A-PLACA). Fora
+    #: do ``motor.Entrada`` de propósito: aquele é contrato do ouro.
+    usb_de: Mapping[str, str] = field(default_factory=dict)
 
 
 def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
@@ -557,6 +563,7 @@ def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
     velocidades = _velocidade_por_hub(censo)
     aparelhos_medidos = velocidades_dos_aparelhos(censo)
     lacunas: set[str] = set()
+    origens: dict[str, str] = {}
     if any(not aparelho.classe for aparelho in aparelhos):
         lacunas.add(LACUNA_ESPECIE)
     if mapa.faces:
@@ -592,6 +599,7 @@ def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
                 velocidades=velocidades,
                 aparelhos=aparelhos_medidos,
                 lacunas=lacunas,
+                origens=origens,
             )
             filhas = filhas_de(mapa, numero)
             if filhas:
@@ -610,6 +618,8 @@ def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
                     lacunas=lacunas,
                     esticada=True,
                     usb_de_quem_hospeda=entrada.usb,
+                    origens=origens,
+                    origem_de_quem_hospeda=origens.get(numero, ""),
                 )
                 entrada = replace(entrada, filho=filho)
             entradas.append(entrada)
@@ -631,6 +641,7 @@ def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
             leitura=leitura,
         ),
         lacunas=tuple(sorted(lacunas)),
+        usb_de=origens,
     )
 
 
@@ -725,11 +736,15 @@ def _entrada_do_motor(
     esticada: bool = False,
     filho: motor.Entrada | None = None,
     usb_de_quem_hospeda: int | None = None,
+    origens: dict[str, str] | None = None,
+    origem_de_quem_hospeda: str = "",
 ) -> motor.Entrada:
     """Uma entrada do desenho na forma do motor, anotando o que faltou.
 
     ``usb_de_quem_hospeda`` é a velocidade da entrada em que o extensor está:
-    a ponta dele a herda quando nem os nós nem ela dizem outra coisa.
+    a ponta dele a herda quando nem os nós nem ela dizem outra coisa — e a
+    origem junto (``origem_de_quem_hospeda``). ``origens`` recebe de onde veio
+    a velocidade desta entrada (:attr:`Bancada.usb_de`).
     """
     par = pares.get(numero)
     if par is None and not esticada:
@@ -737,16 +752,18 @@ def _entrada_do_motor(
         # põe longe de todo mundo), e essa ausência não é lacuna.
         lacunas.add(LACUNA_PAR)
     declarada = mapa.portas.get(numero)
-    rapido = _rapido_do_no(
+    rapido, origem = _velocidade_do_no(
         () if declarada is None else declarada.nos,
         velocidades,
         None if declarada is None else declarada.usb,
         aparelhos,
     )
     if rapido is None and usb_de_quem_hospeda is not None:
-        rapido = usb_de_quem_hospeda == 3
+        rapido, origem = usb_de_quem_hospeda == 3, origem_de_quem_hospeda
     if rapido is None:
         lacunas.add(LACUNA_VELOCIDADE)
+    if origens is not None:
+        origens[numero] = origem
     return motor.Entrada(
         n=numero,
         usb=3 if rapido else 2,
@@ -810,6 +827,16 @@ def _rapido_do_no(
     ela ``declarada`` vence o firmware, e um aparelho USB 3 enumerado num dos
     ``nos`` (``aparelhos``: nome do kernel -> Mbps) vence os dois.
     """
+    return _velocidade_do_no(nos, velocidades, declarada, aparelhos)[0]
+
+
+def _velocidade_do_no(
+    nos: Sequence[str],
+    velocidades: Mapping[str, float],
+    declarada: int | None = None,
+    aparelhos: Mapping[str, float] | None = None,
+) -> tuple[bool | None, str]:
+    """:func:`_rapido_do_no` com a origem: ``(é USB 3?, de onde veio)``."""
     lidas = [
         velocidades[hub]
         for hub in (no.rpartition(_SUFIXO_DO_NO)[0] for no in nos)
@@ -822,7 +849,7 @@ def _rapido_do_no(
         placa = any(valor >= VELOCIDADE_SUPERSPEED_MBPS for valor in lidas)
     return velocidade_da_entrada(
         placa, declarada, _aparelho_usb3_nos_nos(nos, aparelhos or {})
-    )[0]
+    )
 
 
 #: DE ONDE VEIO A VELOCIDADE DE UMA ENTRADA — O-MAPA-DAS-CONEXOES-NO-PRODUTO-01,
@@ -871,6 +898,17 @@ def _aparelho_usb3_nos_nos(nos: Sequence[str], aparelhos: Mapping[str, float]) -
     return any(
         aparelhos.get(caminho_do_no(no), 0.0) >= VELOCIDADE_SUPERSPEED_MBPS for no in nos
     )
+
+
+def aparelho_usb3_na_entrada(nos: Sequence[str], censo: Censo) -> bool:
+    """O lado «aparelho» de :func:`velocidade_da_entrada`, pelos NÓS da entrada.
+
+    O Mapear perguntava pelo primeiro aparelho que achava nos nós — no hub de
+    dois chips, o lado 2.0 (480M) — e o arranjo, por todos: a mesma entrada
+    saía «É o que a placa-mãe diz.» num e «Um aparelho está nela» no outro
+    (O-MAPA-QUE-ELA-CORRIGE-01, D4: uma régua só).
+    """
+    return _aparelho_usb3_nos_nos(nos, velocidades_dos_aparelhos(censo))
 
 
 def _caminhos_do_censo(censo: Censo) -> frozenset[str]:
@@ -1239,6 +1277,7 @@ __all__ = [
     "FatosDoBuraco",
     "Incoerencia",
     "Resumo",
+    "aparelho_usb3_na_entrada",
     "caminho_de",
     "fatos_do_buraco",
     "filhas_de",

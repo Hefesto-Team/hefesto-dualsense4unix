@@ -336,6 +336,8 @@ _LER_A_PAGINA = r"""
       b => b.dataset.gesto + ':' + (b.dataset.liga || b.dataset.usb) + '@' + b.dataset.entrada),
     apertados: botoes.filter(b => b.getAttribute('aria-pressed') === 'true').map(
       b => b.dataset.liga || b.dataset.usb),
+    origem: ed && !ed.hidden && ed.querySelector('.origem')
+      ? ed.querySelector('.origem').textContent.trim() : null,
   });
 })()
 """
@@ -478,8 +480,10 @@ def test_o_clique_na_pagina_grava_e_a_pagina_relida_mostra(disco: Path) -> None:
         _clicar('#edita [data-liga="extensor"]'),
         _clicar('.plug[data-porta="5"]'),
         _LER_A_PAGINA,
+        _clicar('.plug[data-porta="7"]'),
+        _LER_A_PAGINA,
     ])
-    relida, editor_na_51, editor = (json.loads(depois[i]) for i in (1, 3, 6))
+    relida, editor_na_51, editor, editor_na_7 = (json.loads(depois[i]) for i in (1, 3, 6, 8))
     assert editor_na_51["gestos"] == [], (
         "a entrada que o desenho monta (5.1) mandaria ao disco uma entrada "
         "que ela nunca mapeou")
@@ -489,3 +493,167 @@ def test_o_clique_na_pagina_grava_e_a_pagina_relida_mostra(disco: Path) -> None:
     assert relida["v3"]["7"] is False, "a 7 relida não é preta, e ela disse USB 2.0"
     assert relida["v3"]["5.1"] is True and "5.1a" not in relida["v3"]
     assert "hub" in editor["apertados"], f"o editor da 5 relido: {editor['apertados']}"
+    # DE ONDE VEIO (O-MAPA-QUE-ELA-CORRIGE-01, passo 6): a 5 é da placa, a 7 é dela.
+    frases = pagina_do_mapa.FRASES_DA_ORIGEM_DA_VELOCIDADE
+    assert (editor["origem"] or "").lower() == frases[mapa_das_portas.USB_PELA_PLACA].lower()
+    assert (editor_na_7["origem"] or "").lower() == frases[mapa_das_portas.USB_DECLARADA].lower()
+    assert exemplo["origem"] is None and editor_na_51["origem"] is None, (
+        "a origem se diz só na entrada do mapa dela")
+
+
+# ── 6. de onde veio a velocidade, e uma régua só (O-MAPA-QUE-ELA-CORRIGE-01) ──
+#
+# D-2609-A-VELOCIDADE-DELA-VENCE-A-PLACA. A precedência já tinha um dono só
+# (``mapa_das_portas.velocidade_da_entrada``); faltava DIZER de onde veio, no
+# editor, e travar que todo leitor da velocidade da ENTRADA responde por ele.
+# A régua pegou uma segunda pergunta viva: o Mapear olhava só o PRIMEIRO
+# aparelho dos nós (no hub de dois chips, o lado de 480M) e dizia «placa» onde
+# o arranjo dizia «aparelho» — agora os dois perguntam
+# ``mapa_das_portas.aparelho_usb3_na_entrada``.
+#
+# A MORDIDA: inverta o aparelho e a declarada no ``velocidade_da_entrada`` —
+# a 5 (aparelho a 5 Gbps e ela dizendo USB 2.0) reprova aqui.
+
+#: A velocidade de cada hub da máquina sintética de 15 entradas
+#: (``test_o_nome_da_entrada_e_da_posicao``): o ``usb1`` e o ``usb3`` são os
+#: lentos, o ``usb2`` e o ``usb4`` os rápidos, e o hub de dois chips na 3.
+_HUBS = {"usb1": 480.0, "usb2": 5000.0, "usb3": 480.0, "usb4": 10000.0,
+         "3-1": 480.0, "3-1.1": 480.0, "4-1": 5000.0, "4-1.1": 5000.0}
+
+
+def _a_placa_que_erra() -> dict[str, Any]:
+    """A máquina de 15 entradas com a placa trocada e a declaração contrária.
+
+    A frente (1, 2) só tem o nó do ``usb1``, sem ``peer``: a placa diz USB 2.0,
+    e ela diz 3.0. A 7 ganha o lado do ``usb2`` (a placa diz 3.0), e ela diz
+    2.0; a 8 também ganha, e ela não diz nada. A 5 tem um aparelho a 5 Gbps
+    no lado rápido, e ela diz 2.0: vence o aparelho.
+    """
+    from tests.unit.test_o_nome_da_entrada_e_da_posicao import _a_maquina_dela
+
+    dado = _a_maquina_dela()
+    portas = dado["mapa"]["portas"]
+    portas["7"]["nos"] = ["usb1-port5", "usb2-port1"]
+    portas["8"]["nos"] = ["usb1-port6", "usb2-port2"]
+    for numero, usb in (("1", 3), ("2", 3), ("5", 2), ("7", 2)):
+        portas[numero]["usb"] = usb
+    return dado
+
+
+def _o_censo_da_placa_que_erra() -> Censo:
+    def hub(caminho: str) -> Aparelho:
+        return Aparelho(no=f"/sys/{caminho}", nome_do_kernel=caminho, produto="Hub",
+                        classe="09", velocidade_mbps=_HUBS[caminho], e_hub=True)
+
+    return Censo(
+        aparelhos=(hub("3-1"), hub("3-1.1"), hub("4-1"), hub("4-1.1"),
+                   _aparelho("4-3", 5000.0)),
+        barramentos=tuple(
+            Barramento(no=f"/sys/{nome}", nome_do_kernel=nome, velocidade_mbps=mbps)
+            for nome, mbps in _HUBS.items() if nome.startswith("usb")),
+    )
+
+
+def _os_nos_lidos(documento: MaquinaConfig, censo: Censo) -> tuple[NoDeEntrada, ...]:
+    """O que o ``/sys`` diria dos nós: a velocidade do hub que hospeda, o
+    ``peer`` do outro lado e o aparelho encaixado — a mesma máquina do censo."""
+    from hefesto_dualsense4unix.utils.lugar import caminho_do_no
+
+    plugados = {a.nome_do_kernel for a in censo.aparelhos}
+    lidas: list[NoDeEntrada] = []
+    for porta in documento.mapa.portas.values():
+        for no in porta.nos:
+            hub, _, numero = no.rpartition("-port")
+            outro = next((n for n in porta.nos if n != no), "")
+            dentro = caminho_do_no(no) if caminho_do_no(no) in plugados else ""
+            lidas.append(NoDeEntrada(
+                no=no, caminho_sysfs=f"/sys/{no}", hub=hub, numero=int(numero),
+                estado="" if dentro else "not attached", par=outro,
+                aparelho=dentro, velocidade_mbps=_HUBS[hub]))
+    return tuple(lidas)
+
+
+def _as_duas_leituras(documento: MaquinaConfig) -> tuple[dict[str, Any], dict[str, Any]]:
+    """``{N: (usb, de onde)}`` do arranjo da página e do Mapear, lado a lado."""
+    censo = _o_censo_da_placa_que_erra()
+    veio = arranjo_desta_maquina.arranjo(
+        carregar=lambda: documento, ler_o_barramento=lambda: censo,
+        ler_o_serial=lambda _no: "")
+    assert veio is not None
+    usb = {p["n"]: p["usb"] for f in veio["faces"] for p in f["portas"]}
+    da_tela = {n: (usb[n], veio["usbDe"].get(n, "")) for n in usb}
+    mapa = ee.ler_o_mapa(maquina=documento, censo=censo,
+                         entradas=_os_nos_lidos(documento, censo),
+                         adaptadores=(), storm={})
+    grafia = {mapa_das_portas.USB_3: 3, mapa_das_portas.USB_2: 2}
+    do_mapear = {p.numero: (grafia.get(p.usb), p.usb_de) for p in mapa.portas if p.numero}
+    return da_tela, do_mapear
+
+
+def test_o_arranjo_e_o_mapear_dizem_a_mesma_velocidade_e_a_mesma_origem() -> None:
+    da_tela, do_mapear = _as_duas_leituras(MaquinaConfig.model_validate(_a_placa_que_erra()))
+    assert sorted(do_mapear, key=int) == [str(n) for n in range(1, 16)]
+    divergentes = {n: (da_tela.get(n), do_mapear[n]) for n in do_mapear
+                   if da_tela.get(n) != do_mapear[n]}
+    assert not divergentes, f"a tela e o Mapear dizem velocidades diferentes: {divergentes}"
+    aparelho, dela, placa = (mapa_das_portas.USB_PELO_APARELHO,
+                             mapa_das_portas.USB_DECLARADA, mapa_das_portas.USB_PELA_PLACA)
+    assert {n: da_tela[n] for n in ("1", "2", "3", "5", "7", "8", "9")} == {
+        "1": (3, dela), "2": (3, dela),   # a frente: a placa diz 2.0, ela diz 3.0
+        "3": (3, aparelho),               # o lado de 5 Gbps do hub de dois chips
+        "5": (3, aparelho),               # ela diz 2.0, e há um aparelho a 5 Gbps
+        "7": (2, dela), "8": (3, placa),  # a placa diz 3.0 nas duas; ela, 2.0 na 7
+        "9": (3, placa),
+    }
+
+
+def test_depois_de_trocar_7_com_8_a_velocidade_foi_com_o_buraco(tmp_path: Path) -> None:
+    from hefesto_dualsense4unix.integrations.lugar_declarado import declarar_a_maquina
+
+    assert caminho_da_maquina().is_relative_to(tmp_path), "o maquina.json não está desviado"
+    assert declarar_a_maquina(_a_placa_que_erra()).gravou
+    assert ee.trocar_as_entradas("7", "8").gravou
+    portas = carregar_maquina().mapa.portas
+    assert (portas["7"].usb, portas["8"].usb) == (None, 2)
+    da_tela, do_mapear = _as_duas_leituras(carregar_maquina())
+    assert da_tela["8"] == do_mapear["8"] == (2, mapa_das_portas.USB_DECLARADA)
+    assert da_tela["7"] == do_mapear["7"] == (3, mapa_das_portas.USB_PELA_PLACA)
+
+
+def test_as_frases_da_origem_cobrem_as_chaves_do_dono() -> None:
+    """Cada origem que o dono devolve tem a frase do editor — e só elas."""
+    chaves = {mapa_das_portas.USB_PELO_APARELHO, mapa_das_portas.USB_DECLARADA,
+              mapa_das_portas.USB_PELA_PLACA, ""}
+    frases = pagina_do_mapa.FRASES_DA_ORIGEM_DA_VELOCIDADE
+    assert set(frases) == chaves
+    pagina = pagina_do_mapa.pagina()
+    assert "function origemDaVelocidade(n)" in pagina
+    assert "+ origemDaVelocidade(editando) +" in pagina, "o editor não diz de onde veio"
+    assert json.dumps(frases, ensure_ascii=False) in pagina
+
+
+def test_nenhum_leitor_decide_a_velocidade_da_entrada_fora_do_dono() -> None:
+    """Uma régua só: fora de ``mapa_das_portas`` (e de ``entradas_do_gabinete``,
+    que MEDE o nó), nenhum módulo lê ``Furo.rapido`` nem as velocidades dos
+    hubs para decidir a velocidade de uma ENTRADA."""
+    import ast
+
+    raiz = Path(ee.__file__).resolve().parents[1]
+    donos = {"integrations/mapa_das_portas.py", "integrations/entradas_do_gabinete.py"}
+    proibidos = {"_velocidade_por_hub", "_rapido_do_no", "_velocidade_do_no",
+                 "_aparelho_usb3_nos_nos"}
+    intrusos: list[str] = []
+    for arquivo in sorted(raiz.rglob("*.py")):
+        nome = arquivo.relative_to(raiz).as_posix()
+        if nome in donos:
+            continue
+        for no in ast.walk(ast.parse(arquivo.read_text(encoding="utf-8"))):
+            if (isinstance(no, ast.Attribute) and no.attr == "rapido"
+                    and not (isinstance(no.value, ast.Name) and no.value.id == "args")):
+                intrusos.append(f"{nome}:{no.lineno} lê .rapido")
+            elif isinstance(no, ast.Attribute | ast.Name | ast.alias):
+                nome_do_no = getattr(no, "attr", None) or getattr(no, "id", None) or getattr(
+                    no, "name", "")
+                if nome_do_no in proibidos:
+                    intrusos.append(f"{nome}:{getattr(no, 'lineno', '?')} usa {nome_do_no}")
+    assert not intrusos, f"a velocidade da entrada tem outro dono: {intrusos}"
