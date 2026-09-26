@@ -173,6 +173,8 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     # (qual adaptador, qual pareamento, o nome do lugar) — que é do BlueZ e do
     # `maquina.json`, não do perfil nem do controle.
     "abrir-adaptador": "abre um adaptador no acordeão — é da tela",
+    "adaptador-reordenar": "grava a ordem em que ela arrastou as caixas dos adaptadores, "
+                           "no `gui_prefs` — é da tela",
     "adaptador-historico": "abre o sino de um adaptador — é leitura do diário do rádio",
     "sugerir-alocacao": "mostra a sugestão da central para um adaptador — é da tela",
     "aceitar-sugestao": "abre a pergunta de mover a partir do balão — é da tela; "
