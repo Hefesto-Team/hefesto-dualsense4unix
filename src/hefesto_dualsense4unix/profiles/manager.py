@@ -40,7 +40,14 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
     ProfileModeConfig,
     e_endereco_de_jogo,
+    economia_da_mesa,
+    economia_vale,
+    gatilhos_do_perfil_na_economia,
+    gatilhos_na_economia,
+    leds_do_perfil_na_economia,
+    leds_na_economia,
     normalizar_gamepad_flavor,
+    vibracao_na_economia,
 )
 from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -441,6 +448,14 @@ class ProfileManager:
             if callable(soltar):
                 soltar()
 
+        # O MODO ECONOMIA — O-MODO-ECONOMIA-POR-CONTROLE-01 (25/09/2026). Daqui
+        # para baixo, a luz, o gatilho e a vibração saem da VISTA do perfil com
+        # a economia já posta: a mesa em «Bateria longa» põe o teto na seção
+        # global (e, por ela, em todo controle, inclusive o que chegar depois),
+        # e o controle que ligou a sua o põe só nele. A vista é memória: o
+        # disco continua guardando o que ela escolheu, e desligar a economia
+        # devolve tudo na próxima ativação. Ver `_perfil_na_economia`.
+        profile = _perfil_na_economia(profile, economia_da_mesa())
         left = build_from_name(profile.triggers.left.mode, profile.triggers.left.params)
         right = build_from_name(profile.triggers.right.mode, profile.triggers.right.params)
         settings = _to_led_settings(profile.leds)
@@ -2944,6 +2959,79 @@ def _controllers_to_specs(
             player_led_brightness=brilho_das_luzes,
         )
     return out
+
+
+def _controllers_na_economia(
+    controllers: dict[str, ControllerOverrides] | None,
+    profile: Profile,
+    mesa: bool,
+) -> dict[str, ControllerOverrides]:
+    """O mapa por controle com a economia posta em quem ela vale.
+
+    O-MODO-ECONOMIA-POR-CONTROLE-01 (25/09/2026). É o CONSUMIDOR por peça do
+    ``ControllerOverrides.economia``: lê o campo de cada entrada, pergunta ao
+    dono da regra (:func:`economia_vale`) e devolve a peça com a luz, os
+    gatilhos e a vibração no teto (:func:`leds_na_economia`,
+    :func:`gatilhos_na_economia`, :func:`vibracao_na_economia`). Quem leva ao
+    aparelho são os três conversores de sempre — ``_controllers_to_specs``,
+    ``_controllers_to_led_scales`` e ``_controllers_to_rumble_scales`` —, que
+    recebem este mapa em vez do do disco.
+
+    Com a MESA em economia, a seção global já saiu no teto
+    (:func:`_perfil_na_economia`), então a peça só põe no teto o que ELA
+    escreveu; sem a mesa, a peça que ligou a sua herda do perfil o que não
+    escreveu, e põe no teto também.
+    """
+    herdar = not mesa
+    rumble = getattr(profile, "rumble", None)
+    politica = getattr(rumble, "policy", None)
+    custom = getattr(rumble, "custom_mult", None)
+    out: dict[str, ControllerOverrides] = {}
+    for uniq, cfg in (controllers or {}).items():
+        if not economia_vale(cfg.economia, mesa):
+            out[uniq] = cfg
+            continue
+        out[uniq] = cfg.model_copy(
+            update={
+                "leds": leds_na_economia(
+                    cfg.leds, profile.leds if herdar else None
+                ),
+                "triggers": gatilhos_na_economia(
+                    cfg.triggers, profile.triggers if herdar else None
+                ),
+                "rumble": vibracao_na_economia(
+                    cfg.rumble, politica, custom, mesa=mesa
+                ),
+            }
+        )
+    return out
+
+
+def _perfil_na_economia(profile: Profile, mesa: bool) -> Profile:
+    """A VISTA do perfil que vai ao aparelho, com a economia posta.
+
+    ``mesa`` é o Perfil Global de Bateria em «Bateria longa»
+    (``schema.economia_da_mesa``): a seção global da luz e dos gatilhos vai no
+    teto, e com ela todo controle que não escreveu a sua — inclusive o que se
+    conectar depois, porque o hotplug aplica o padrão desta ativação. A
+    vibração da mesa não é posta aqui: o funil já a corta
+    (``core.rumble._effective_mult``), e pôr de novo cortaria duas vezes.
+
+    Perfil sem economia em lugar nenhum volta O MESMO objeto — a ativação de
+    quem não ligou nada é byte-idêntica à de antes desta sprint.
+    """
+    controllers = profile.controllers or {}
+    if not mesa and not any(
+        economia_vale(cfg.economia, False) for cfg in controllers.values()
+    ):
+        return profile
+    update: dict[str, Any] = {
+        "controllers": _controllers_na_economia(controllers, profile, mesa),
+    }
+    if mesa:
+        update["leds"] = leds_do_perfil_na_economia(profile.leds)
+        update["triggers"] = gatilhos_do_perfil_na_economia(profile.triggers)
+    return profile.model_copy(update=update)
 
 
 def _controllers_to_procedencias(
