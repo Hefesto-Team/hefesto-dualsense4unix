@@ -512,6 +512,31 @@ def lugares(alcance: str, de_quem: str | None = None) -> tuple[Lugar, ...]:
     return tuple(escolhidos)
 
 
+def _constante_do_dono(modulo: str, nome: str) -> str:
+    """Uma constante de texto de ``integrations/<modulo>.py``, lida sem importar.
+
+    O caminho da allowlist tem UM dono (``steam_launch_options``, régua
+    ``test_t15_a_allowlist_tem_um_caminho_so``), e aquele módulo não é só
+    biblioteca padrão: importá-lo quebraria o script avulso do uninstall. A
+    árvore sintática lê o valor do dono sem executá-lo.
+    """
+    import ast
+
+    arquivo = Path(__file__).resolve().parents[1] / "integrations" / f"{modulo}.py"
+    for no in ast.parse(arquivo.read_text(encoding="utf-8")).body:
+        alvo = no.targets[0] if isinstance(no, ast.Assign) and len(no.targets) == 1 else (
+            no.target if isinstance(no, ast.AnnAssign) else None)
+        if isinstance(alvo, ast.Name) and alvo.id == nome and no.value is not None:
+            valor = ast.literal_eval(no.value)
+            if isinstance(valor, str):
+                return valor
+    raise ImportError(f"{arquivo} não tem mais a constante {nome}")
+
+
+_ALLOWLIST_DA_STEAM = _constante_do_dono(
+    "steam_launch_options", "STEAM_INPUT_ALLOWLIST_RELPATH")
+
+
 #: O que o produto grava no lar e NÃO é memória de controle — cada nome que a
 #: régua acha no código tem de estar aqui ou no inventário, com a razão. É o que
 #: impede um arquivo novo de nascer fora do comando sem ninguém decidir.
@@ -548,7 +573,7 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "hefesto-dualsense4unix/jogos_sem_wrapper.txt": (CASA, "os jogos sem o atalho"),
     "hefesto-dualsense4unix/lista_de_exclusao.json": (CASA, "a lista de exclusão"),
     "hefesto-dualsense4unix/opcoes_por_jogo.txt": (CASA, "as opções por jogo dela"),
-    "hefesto-dualsense4unix/steam_input_apps.txt": (CASA, "os jogos com o Steam Input"),
+    _ALLOWLIST_DA_STEAM: (CASA, "os jogos com o Steam Input"),
     "freestyle.json": (CASA, "um perfil semeado"),
     "meu_perfil.json": (CASA, "um perfil semeado"),
     "personalizado.json": (CASA, "um perfil semeado"),
