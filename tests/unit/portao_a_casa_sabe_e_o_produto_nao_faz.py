@@ -2964,6 +2964,28 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "dentro do campo que ela edita. ONDE O CAMINHO SE PERDE: nenhuma frase "
         "da tela precisa hoje de UM nome só para o adaptador. O QUE O FECHARIA: "
         "a primeira frase que precise — um recado sobre o adaptador pelo nome.",
+    # O-MODO-ECONOMIA-POR-CONTROLE-01 (25/09/2026): as duas pontas do contrato
+    # que a TELA usa. O resto do bloco (a regra, a leitura da declaração, as
+    # três peças no teto) já tem caminho pela ativação do perfil.
+    "profiles/schema.py::declaracao_da_economia":
+        "O-MODO-ECONOMIA-POR-CONTROLE-01, 25/09/2026. É o corpo do "
+        "`machine.declare` que liga e desliga o Modo Economia de UM controle "
+        "(`profiles/schema.py:2651`): `true` liga, `null` desliga sem apagar a "
+        "cor nem o microfone do mesmo controle. ONDE O CAMINHO SE PERDE: o "
+        "botão da linha do controle na aba Conexões é da "
+        "A-08-O-CHECKUP-ABSORVE-A-GESTAO-01, que nasce depois desta e lê o "
+        "contrato escrito na sprint; esta frente não toca `interface/`. O QUE "
+        "O FECHARIA: o clique desse botão chamar "
+        "`p.machine_declare(declaracao_da_economia(uniq, ligada))`.",
+    "profiles/schema.py::origem_da_economia":
+        "O-MODO-ECONOMIA-POR-CONTROLE-01, 25/09/2026. Diz QUEM acendeu a "
+        "economia de um controle — a mesa em «Bateria longa» ou o próprio "
+        "controle (`profiles/schema.py:2542`) —, que é o que o botão da linha "
+        "precisa para saber se o clique dele apaga alguma coisa. ONDE O "
+        "CAMINHO SE PERDE: o mesmo botão da A-08-O-CHECKUP-ABSORVE-A-GESTAO-01, "
+        "fora da posse desta frente. O QUE O FECHARIA: a linha do controle "
+        "pintar o botão a partir desta resposta, com a declaração que a aba "
+        "já lê.",
 }
 
 #: ONDA0-Z7 (24/08/2026): achado FORA do escopo desta sprint, durante a
