@@ -272,10 +272,15 @@ class DraftApplier:
         resolvido de cada um (`backend_pydualsense`, a razão está lá). Com um
         controle que termina noutro degrau — a palavra dele, ou o Fraco da
         economia —, o global cru seria nele um QUADRO INTERMEDIÁRIO antes da
-        palavra dele. Então o global só vai cru quando ninguém termina noutro degrau; senão
-        o padrão fica o que a ativação do perfil deixou, que é o mesmo global
-        do disco (o «Todos» só muda pela ativação), e cada controle recebe o
-        seu pela seção `controllers`.
+        palavra dele: medido na mesa de quatro com o global sempre cru, o P1
+        no Forte passava por `[2, 0, 0]` (o Fraco do «Todos», depois o dele).
+        Então o global só vai cru quando ninguém termina noutro degrau; senão
+        o padrão fica o que a ativação do perfil ativo deixou — o mesmo global
+        do disco, porque a tela só escreve a palavra por controle —, e cada
+        controle recebe a sua pela seção `controllers`. O que sobra (um
+        «Todos» mudado no disco sem ativação, com alguém noutro degrau) espera
+        a próxima ativação: o backend não tem porta que grave o padrão sem o
+        escrever cru, e ela não é desta posse.
         """
         palavra = leds_raw.get("player_led_brightness")
         if palavra is None:
