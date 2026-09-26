@@ -6568,18 +6568,20 @@ PROVAS = [
 #: `entrada-face` e `entrada-nao-alcanco` gravam no `maquina.json` (o nome e o
 #: mapa das entradas), e `aparelho-renomear` grava o `Alias` no BlueZ. O
 #: `state_full` não publica nenhum dos três.
+#:
+#: OS SEIS DO CHECK-UP — A-08-O-CHECKUP-ABSORVE-A-GESTAO-01, 25/09/2026:
+#: `dono-renomear` grava o `Alias` no BlueZ; `economia-do-controle` grava
+#: `controles[uniq].economia` no `maquina.json`; `mapear-gravar` grava a porta
+#: da vez no `maquina.json` pelo dono do mapa; `mapear-comecar` e `mapear-parar`
+#: só ligam e desligam o olhar do dono no processo da interface; e
+#: `checkup-atualizar` só relê. O `state_full` não publica nenhum deles.
 SEM_ECO = ("sala-altura", "sala-visada", "mic-existe", "vizinho-o-que-e",
            "ignorar", "examinar-portas", "teto-da-vibracao",
            "escolher-aparelho", "escolher-entrada", "tirar-daqui",
            "nova-entrada", "nova-extensao", "nova-face",
            "adaptador-renomear", "aparelho-renomear", "entrada-face",
            "entrada-nao-alcanco", "adaptador-reordenar",
-           # A-08-O-CHECKUP (25/09/2026): o nome do dono vai ao `Alias` do
-           # BlueZ e a economia ao `maquina.json`; o `state_full` não publica
-           # nenhum dos dois.
-           "dono-renomear", "economia-do-controle",
-           # e o Mapear grava direto no `maquina.json` pelo dono do mapa.
-           "mapear-gravar", "checkup-atualizar", "mapear-comecar", "mapear-parar")
+           "dono-renomear", "economia-do-controle", "mapear-gravar", "checkup-atualizar", "mapear-comecar", "mapear-parar")
 
 
 # ---------------------------------------------------------------------------
@@ -6829,8 +6831,8 @@ def checkup_atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 # ---------------------------------------------------------------------------
 #: O que a tela diz em cada estado do fluxo (`foto["estado"]`).
 MAPEAR_DIZ = {
-    "parado": "Ligue o DualSense pelo cabo numa entrada do computador.",
-    "esperando": "Ligue o DualSense pelo cabo numa entrada do computador.",
+    "parado": "Conecte o DualSense por USB numa entrada do computador.",
+    "esperando": "Conecte o DualSense por USB numa entrada do computador.",
     "porta": "Dê um nome e o lugar desta entrada, e salve. Depois, passe o cabo para a próxima.",
 }
 

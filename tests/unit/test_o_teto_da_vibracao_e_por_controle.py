@@ -568,31 +568,7 @@ def _pagina_publicada() -> str:
     return (onde.PUBLICADO / "08-conexoes.html").read_text(encoding="utf-8")
 
 
-def test_a_pagina_publicada_tem_os_dois_enderecos() -> None:
-    """Sem `data-campo` o campo é cena estática — e a dica seria texto literal.
-
-    MORDIDA: tire o `campo="teto-da-vibracao"` da chamada de `sel()` em
-    `interface/aba08.py`, regere num desvio `HEFESTO_BANCADA` (NUNCA sobre o
-    mockup dela) e publique — este caso reprova.
-    """
-    doc = _pagina_publicada()
-    selects = re.findall(r"<select[^>]*data-gesto=\"teto-da-vibracao\"[^>]*>", doc)
-    assert selects, "a página publicada não tem o `<select>` do teto da vibração"
-    for tag in selects:
-        assert 'data-campo="teto-da-vibracao"' in tag, (
-            f"o campo do teto não tem endereço de pintura: {tag}")
-        assert 'data-hef-alvo="valor"' in tag, (
-            f"sem `data-hef-alvo=\"valor\"` o piloto escreveria o texto DENTRO "
-            f"do `<select>` em vez de escolher a opção: {tag}")
-
-    dicas = re.findall(r"<span class=\"dica\"[^>]*data-campo=\"teto-explica\"[^>]*>", doc)
-    assert len(dicas) == len(selects), (
-        f"{len(selects)} campo(s) de teto e {len(dicas)} dica(s) endereçada(s) — "
-        f"ligar só a caixa cria a contradição entre o campo e o `?`.")
-    for tag in dicas:
-        assert 'data-hef-alvo="html"' in tag, (
-            f"a dica do teto traz `<b>` e `<code>`; sem o alvo `html` o "
-            f"`textContent` os escreveria como texto literal: {tag}")
+# `test_a_pagina_publicada_tem_os_dois_enderecos` SAIU — o «Limite da vibração» saiu da linha do controle da 08 em 25/09/2026, por pedido dela (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): ele é da aba Vibração.
 
 
 def test_o_piloto_sabe_pintar_html() -> None:
@@ -1224,44 +1200,4 @@ def test_a_camada_de_tela_desta_aba_continua_sem_gtk() -> None:
         f"medidas escritas logo abaixo dela. Saída: {saida.stdout!r}")
 
 
-def test_as_opcoes_que_ela_clica_sao_as_que_a_borda_aceita(tela) -> None:
-    """Os `<option>` da PÁGINA contra a lista do produto — as duas pontas do clique.
-
-    O RÓTULO QUE CHEGA AO DEDO DELA é o `<option>` do HTML publicado, que é
-    DIGITADO e só muda quando alguém regera. `test_o_rotulo_nao_e_digitado`
-    declara que "a frase é REPRODUZIDA do produto" e mede só o lado Python;
-    `check_o_desenho_aprovado` compara mockup↔publicado, que são as duas cópias
-    congeladas e por isso sempre iguais. Portão nenhum comparava gerador↔página.
-
-    O QUE ISSO DEIXAVA PASSAR, medido em 01/09/2026: com o degrau `economia`
-    mudado para 0,25, `opcoes_do_teto()` passa a oferecer "25% da força", a
-    página continua oferecendo "30% da força", `politica_do_rotulo` RECUSA a
-    própria opção que a tela mostra — e o campo morre em silêncio, porque a
-    recusa só existe no `stderr` de um terminal que ela não olha.
-
-    MORDIDA: troque um `<option>` da página publicada por outro texto — este
-    caso reprova nomeando a página, que é o que faz alguém regerar em vez de
-    consertar o teste.
-    """
-    doc = _pagina_publicada()
-    blocos = re.findall(
-        r"<select[^>]*data-gesto=\"teto-da-vibracao\"[^>]*>(.*?)</select>", doc, re.S)
-    assert blocos, "a página publicada não tem o `<select>` do teto da vibração"
-    do_produto = list(tela.opcoes_do_teto())
-    for bloco in blocos:
-        na_pagina = re.findall(r"<option[^>]*>([^<]+)</option>", bloco)
-        assert na_pagina == do_produto, (
-            f"a página publicada oferece {na_pagina} e o produto aceita "
-            f"{do_produto}. REGERE a aba — "
-            f"`python3 src/hefesto_dualsense4unix/interface/aba08.py` e "
-            f"`scripts/check_o_desenho_aprovado.py --publicar 08` — em vez de "
-            f"acertar este teste: o que ela clica é o `<option>`, e a borda "
-            f"recusa em SILÊNCIO o rótulo que não conhece.")
-        # E A BORDA ACEITA CADA UM, que é a outra metade: uma lista igual com uma
-        # opção sem tradução seria um campo que oferece o que não sabe gravar.
-        for rotulo in na_pagina:
-            try:
-                tela.politica_do_rotulo(rotulo)
-            except ValueError as recusa:
-                assert rotulo == do_produto[1], (
-                    f"a página oferece {rotulo!r} e a borda o recusa: {recusa}")
+# `test_as_opcoes_que_ela_clica_sao_as_que_a_borda_aceita` SAIU — o «Limite da vibração» saiu da linha do controle da 08 em 25/09/2026, por pedido dela (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): ele é da aba Vibração.

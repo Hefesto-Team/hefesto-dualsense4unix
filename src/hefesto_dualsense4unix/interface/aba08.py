@@ -4042,7 +4042,7 @@ MIOLO = f'''
         <label class="quadro-titulo" for="cx8-2">Check-up</label>
         <span class="ajuda">?<span class="dica">
           Um exame da sala e dos controles: em que entradas os aparelhos estão, quanta
-          energia elas dão, quem mais fala no rádio perto do seu adaptador — e, embaixo,
+          energia elas dão, quem mais usa os 2,4 GHz perto do seu adaptador — e, embaixo,
           uma linha por controle com o estado dele agora. Ele não muda nada sozinho:
           quando acha algo, aparece ao lado uma ordem de serviço dizendo o que mover
           para onde.

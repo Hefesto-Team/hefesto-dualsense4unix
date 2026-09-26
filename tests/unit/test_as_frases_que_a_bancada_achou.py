@@ -258,45 +258,10 @@ def test_a_tabela_da_gestao_diz_o_que_o_dono_diz(cru: str) -> None:
 # ---------------------------------------------------------------------------
 # 3. A 08 — a linha do Microfone e as duas dicas dela
 # ---------------------------------------------------------------------------
-def test_a_linha_do_microfone_na_pagina_fala_o_transporte_da_linha() -> None:
-    """Cada linha diz «pelo <a palavra do nome dela>», no texto e no `title`.
-
-    MORDIDA: devolva `("pelo rádio", "Pela ponte")` ao
-    `a08_conexoes._CAMINHO_DO_MIC`, regere a 08 — reprova na linha do BT.
-    """
-    vistas = 0
-    for nome, bloco in _cartoes_da_gestao():
-        via = _palavra_do_cartao(nome)
-        if via is None:
-            continue
-        vistas += 1
-        caminho = re.search(r'data-campo="mic-caminho"[^>]*>(.*?)</span></span>',
-                            bloco, flags=re.S)
-        assert caminho, f"a linha {nome!r} perdeu o `mic-caminho`"
-        texto = _texto(caminho.group(1))
-        assert texto.startswith(f"pelo {via} •"), (
-            f"a linha {nome!r} termina em {via} e o microfone dela diz {texto!r}")
-        dica = re.search(r'data-campo="mic-dica"[^>]*title="([^"]*)"', bloco)
-        assert dica, f"a linha {nome!r} perdeu o `mic-dica`"
-        assert f"<b>pelo {via}</b>" in html.unescape(dica.group(1)), (
-            f"a dica do microfone da linha {nome!r} não diz «pelo {via}»: "
-            f"{html.unescape(dica.group(1))[:120]!r}")
-    assert vistas >= 2, "a cena da 08 perdeu o par USB/BT — a régua ficou cega"
+# `test_a_linha_do_microfone_na_pagina_fala_o_transporte_da_linha` SAIU — o controle «Microfone e botões» saiu da linha do controle em 25/09/2026, por pedido dela (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).
 
 
-def test_o_interruptor_do_microfone_nomeia_as_duas_palavras() -> None:
-    """O `?` do Ligado/Desligado manda ler a linha ao lado — na língua dela.
-
-    MORDIDA: devolva *"quem decide é o cabo ou o rádio"* ao
-    `aba08.MIC_LIGADO_DICA`, regere a 08 — reprova.
-    """
-    x = _pagina("08-conexoes.html")
-    dicas = [_texto(d) for d in re.findall(
-        r'<span class="dica">(Liga o microfone deste controle\..*?)<br><br>', x, flags=re.S)]
-    assert dicas, "o `?` do Ligado/Desligado do microfone sumiu da 08 gerada"
-    for dica in dicas:
-        assert f"o {palavra('usb')} ou o {palavra('bt')}" in dica, (
-            f"o `?` do microfone não fala a palavra do transporte: {dica!r}")
+# `test_o_interruptor_do_microfone_nomeia_as_duas_palavras` SAIU — o controle «Microfone e botões» saiu da linha do controle em 25/09/2026, por pedido dela (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o mic é da aba Jogar/Controles, e a linha mostra só o selo «Mic ✓» (tests/unit/test_a_08_o_checkup_absorve_a_gestao.py).
 
 
 @pytest.mark.parametrize("via", ["usb", "bt"])
