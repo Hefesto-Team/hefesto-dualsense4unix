@@ -590,7 +590,11 @@ def test_a_sugestao_nunca_manda_para_dentro_do_hub_desenhado(disco: Path) -> Non
 
 
 def test_a_ponta_grava_pela_pagina_e_a_entrada_do_hub_nao_abre(disco: Path) -> None:
-    """Extensor na 3 → a ponta 3a leva o gesto; hub na 4 → a 4.1 não edita."""
+    """Extensor na 3 → a ponta 3a leva o gesto; hub na 4 → a 4.1 não edita.
+
+    A 3 não tem nó gravado, e a velocidade dela é USB 2.0: a ponta herda isso.
+    Ela diz USB 3.0 na ponta, e é o azul da ponta relida que prova o disco.
+    """
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
@@ -603,14 +607,15 @@ def test_a_ponta_grava_pela_pagina_e_a_entrada_do_hub_nao_abre(disco: Path) -> N
         _clicar('#edita [data-liga="extensor"]'),
         _clicar('.plug[data-porta="3a"]'),
         _LER,
-        _clicar('#edita [data-usb="2"]'),
+        _clicar('#edita [data-usb="3"]'),
         _clicar('.plug[data-porta="4"]'),
         _clicar('#edita [data-liga="hub"]'),
         _clicar('.plug[data-porta="4.1"]'),
         _LER,
     ])
     na_ponta, na_hub = lidas[4], lidas[9]
-    assert "entrada-velocidade:2@3a" in na_ponta["gestos"], na_ponta["gestos"]
+    assert "entrada-velocidade:3@3a" in na_ponta["gestos"], na_ponta["gestos"]
+    assert na_ponta["v3"]["3a"] is False, "a ponta de uma entrada USB 2.0 nasceu azul"
     assert na_hub["editor"] is False, "a entrada do hub desenhado abriu o editor sem gravar"
     pedidos = [m for m in mensagens if m.get("gesto", "").startswith("entrada-")]
     assert [(m["gesto"], m.get("entrada")) for m in pedidos] == [
@@ -621,12 +626,13 @@ def test_a_ponta_grava_pela_pagina_e_a_entrada_do_hub_nao_abre(disco: Path) -> N
         dono = pacotes.gesto_da_pagina(de_onde, m["gesto"])
         assert dono is not None
         dono(None, m, None)
-    assert carregar_maquina().mapa.portas["3a"].usb == 2
+    assert carregar_maquina().mapa.portas["3a"].usb == 3
 
     relida, _ = _na_pagina([
         _js(_ler(_teclado("9-1"))),
         _clicar('.plug[data-porta="3a"]'),
         _LER,
     ])
-    assert relida[2]["v3"]["3a"] is False, "a ponta relida não é preta, e ela disse USB 2.0"
-    assert "2" in relida[2]["apertados"], relida[2]
+    assert relida[2]["v3"]["3a"] is True, "a ponta relida não é azul, e ela disse USB 3.0"
+    assert relida[2]["v3"]["3"] is False, "a mãe mudou de velocidade junto com a ponta"
+    assert "3" in relida[2]["apertados"], relida[2]
