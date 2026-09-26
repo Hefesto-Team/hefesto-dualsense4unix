@@ -1404,7 +1404,18 @@ class Daemon:
             self._tasks.append(self._reconnect_task)
             await self._stop_event.wait()
         finally:
-            await shutdown(self)
+            try:
+                await shutdown(self)
+            finally:
+                # A fonte da economia registrada no boot fecha sobre ESTE
+                # daemon: parado, ele não responde mais pela mesa. Sem isto um
+                # daemon da suíte, já parado, seguiria dizendo a economia da
+                # mesa dele à ativação de perfil do teste seguinte.
+                from hefesto_dualsense4unix.profiles.schema import (
+                    registrar_declaracao_da_mesa as _soltar_a_mesa,
+                )
+
+                _soltar_a_mesa(None)
 
     def stop(self) -> None:
         """Sinaliza parada; idempotente."""
