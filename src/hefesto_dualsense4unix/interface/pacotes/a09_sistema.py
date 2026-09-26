@@ -408,7 +408,7 @@ def _limpar_o_painel() -> None:
 #: A REGRA QUE ISSO DEIXA, e ela é a que cabe nas duas: **recibo de status
 #: sai; recibo de ato que não se vê FICA.** Um gesto novo só entra aqui se o
 #: efeito dele não aparecer em nenhum outro lugar da tela.
-RECIBO_QUE_FICA_NA_TELA = ("procurar-camadas",)
+RECIBO_QUE_FICA_NA_TELA = ("corrigir-vulkan",)
 
 
 def _relatar_o_recibo(gesto_: str, frase: str) -> None:
@@ -1148,54 +1148,11 @@ def _lista_em_portugues(nomes: list[str]) -> str:
     return f"{', '.join(nomes[:-1])} e {nomes[-1]}"
 
 
-def frase_das_linhas(nomes: list[str], curto: bool = True) -> str:
-    """A lista em CAIXA DE FRASE: só a primeira letra é maiúscula.
-
-    Regra dela, 30/08: *"a maiúscula a regra é sobre a primeira letra a ser
-    capitalizada"*. `LINHAS_DO_TETO` guarda cada nome capitalizado porque lá
-    cada um é um TÍTULO de linha; enroladas num valor de campo só, elas viram
-    uma frase — e "Gatilhos, Barra de luz e Giroscópio" tem três maiúsculas no
-    meio de uma.
-
-    `curto=False` devolve a frase INTEIRA, e é o que vai para o `title`.
-    Encurtar sem guardar o completo em lugar nenhum não é simplificar, é
-    apagar: "barra de luz" e "microfone POR RÁDIO" carregam o qualificador que
-    diz de qual microfone se fala.
-    """
-    if not nomes:
-        return ""
-    curtos = [APELIDO_NA_TELA.get(n, n) for n in nomes] if curto else list(nomes)
-    return _lista_em_portugues(
-        [curtos[0]] + [n[0].lower() + n[1:] for n in curtos[1:]])
-
-
-def frases_do_teto() -> tuple[str, str]:
-    """As duas linhas do Perfil de Bateria, LIDAS DO DONO a cada tique.
-
-    ELAS ERAM ESTÁTICAS ATÉ 06/09/2026, e o defeito não é de forma: o gerador
-    lia `LINHAS_DO_TETO` no instante em que escrevia o HTML e cravava o
-    resultado na página. No dia em que os "Gatilhos" ganharem ponto de
-    aplicação no daemon, a tela dela continuaria dizendo que o teto não os
-    alcança — até alguém lembrar de regerar a página e ela lembrar de publicar.
-    **A aba afirmaria sobre o produto de ontem.**
-
-    O DONO É `secao_orcamento.LINHAS_DO_TETO`, e é ele quem responde aqui — a
-    mesma tupla que a tabela da janela antiga percorre e que o portão
-    `test_so_a_vibracao_tem_ponto_de_aplicacao_hoje` IMPORTA linha a linha. A
-    conta é a de `alcance_de_hoje()`, do mesmo módulo: `tem_ponto` separa as
-    duas metades, e nada é digitado.
-
-    Devolve `(alcança, ainda sem teto)`. Uma metade vazia devolve `""`, e a
-    régua da tela a lê como *"campo sem informação não mostra nada"* — que é
-    o certo: uma linha "Ainda sem teto: —" afirmaria uma pendência que acabou.
-    """
-    try:
-        linhas = list(_orcamento.LINHAS_DO_TETO)
-    except Exception:
-        return ("", "")
-    com = [str(linha.nome) for linha in linhas if linha.tem_ponto]
-    sem = [str(linha.nome) for linha in linhas if not linha.tem_ponto]
-    return (frase_das_linhas(com), frase_das_linhas(sem))
+# As duas linhas do teto («Com limite», «Sem limite») e a frase que as
+# montava (`frases_do_teto`, `frase_das_linhas`) SAÍRAM em 25/09/2026, pedido
+# dela: as tabelas de baixo do Perfil de Bateria somem. O dono da lista
+# continua sendo `secao_orcamento.LINHAS_DO_TETO`, e a camada de tela ainda
+# a diz inteira em `aba_sistema.frase_do_teto`.
 
 
 def _perfil_da_bateria() -> str | None:
@@ -2238,7 +2195,7 @@ def _trava(ctx: Contexto, nome: str,
 #: e `test_a_09_sistema_fecha_a_paridade.py` a cobra nos dois sentidos, para
 #: que ela não vire um esquecimento no dia em que `travas()` for corrigida.
 TRAVA_QUE_NAO_VALE_AQUI: dict[str, str] = {
-    "desligar": "`travas()` o tranca com o serviço desligado, dizendo *'O "
+    "parar-ou-retomar": "`travas()` o tranca com o serviço desligado, dizendo *'O "
                 "serviço já está desligado'* — e isso era verdade até 03/09/2026, "
                 "quando ele deixou de ser um botão só de parar. Ela mandou o "
                 "mesmo botão LIGAR nesse estado (*'um específico pra parar o "
@@ -2657,8 +2614,6 @@ _CONFIRMA_DO_GESTO: dict[str, str] = {}
 #: que é o que faltava: o botão em repouso diz "Tirar" mesmo quando o que ele
 #: tem a fazer é devolver, porque o rótulo em repouso é lido do DESENHO
 #: (`_rotulo_do_desenho`) e o desenho não sabe o que há nos prefixos dela.
-CONFIRMA_TIRAR = "Confirma tirar?"
-CONFIRMA_DEVOLVER = "Confirma devolver?"
 
 #: O VERBO É DELA — *"em sistema um específico pra parar o Daemon E Ativar o
 #: Daemon"*, 03/09/2026. O SUBSTANTIVO não é escolha minha: é o vocabulário
@@ -3291,85 +3246,11 @@ def restaurar_de_fabrica(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
             "recado": _rodape.frase_do_restauro()}
 
 
-def refazer_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """"Refazer a fixação do Proton" — dois cliques, e o motor é o da GTK.
-
-    O QUE MUDOU EM 03/09/2026: ele estava entre os cinco sem dono porque
-    *"promete perguntar antes"*. A pergunta existe agora (ver o bloco do
-    consentimento), e o motor **nunca foi o handler** — é
-    `integrations.proton_pin.lock_proton_for_all_games`, com o portão da Steam
-    aberta e a frase de retorno de `daemon_actions.format_proton_lock_result`.
-    O `on_proton_lock:1793` da janela antiga é o diálogo e o toast em volta
-    dele; nada aqui reescreve uma linha do ato.
-
-    O `getattr` DEFENSIVO É DO CONTRATO DA LANE DO PIN (PLAT-01), e não zelo
-    meu: uma instalação sem o módulo — ou sem a função — recusa DIZENDO e
-    apontando o caminho, em vez de rebentar com `AttributeError`. A frase de
-    "como atualizar" é a do produto.
-
-    A STEAM ABERTA RECUSA, e a razão é da própria lane: ela regrava o
-    `config.vdf` ao sair, e a edição seria perdida. Um botão que "aplicasse" e
-    perdesse a aplicação é o botão que responde calado com outro nome.
-
-    O RECIBO SAIU DO PAINEL — TELA-CALADA-03, 13/09/2026. Este parágrafo dizia
-    que ele ia para o painel de registro, *"e jogar fora o
-    `format_proton_lock_result` seria perder exatamente o que ele diz"*. A
-    segunda metade continua valendo, e é por ela que a frase não é jogada fora:
-    ela vai ao diário da janela (:func:`_relatar_o_recibo`). A primeira caducou
-    pela palavra dela — *"essas frases de status (…) não deveria estar
-    aparecendo"* —, e o segundo clique devolve só os rótulos e limpa o painel.
-
-    **FATO ERRADO, SUBSTITUÍDO — 06/09/2026.** Esta linha dizia *"NÃO É CLICADO
-    POR RÉGUA NENHUMA: `("09-sistema.html", "refazer-proton")` já está em
-    `hefesto_vivo.PERIGOSOS` desde antes de ele ter dono"*, e ele NÃO estava —
-    a entrada tinha sido apagada de lá. A `--prova-gesto` clica cada gesto UMA
-    vez por execução, então os dois cliques o protegem numa volta; DUAS
-    execuções dentro de :func:`segundos_para_confirmar` o disparam de verdade,
-    com o `config.vdf` dela do outro lado.
-
-    **AGORA ELE ESTÁ, e a cura não é mais "uma linha noutro arquivo":** o
-    decorador deste gesto declara `grava=`, e `PERIGOSOS` é derivada da
-    declaração (`ONDA3-GESTO-DECLARA-01`). A declaração é por FRASE e não pelo
-    nome de uma porta porque a escrita chega por `travar()`, que é um
-    `getattr(pin, "lock_proton_for_all_games")` — a árvore não vê o nome. A
-    assinatura fica em `FORA_DA_ARVORE`, na régua.
-
-    **A STEAM ABERTA RECUSA NO CLIQUE 1 — SISTEMA-BOTOES-01, 13/09/2026.** Ela
-    só era conferida no clique 2, depois de armar e piscar verde: na máquina
-    dela, com a Steam aberta (medido), o botão era morto — armava calado e
-    recusava calado. Agora :func:`_porque_o_proton_nao_trava` roda antes de
-    armar e de novo antes de agir, e cobre também a instalação sem o
-    `proton-pin.conf` (por pacote), que fazia `lock_proton_for_all_games`
-    levantar `FileNotFoundError` no clique 2. O clique que arma pergunta com o
-    `title` publicado (:func:`_pergunta_do_botao`).
-    """
-    import importlib
-
-    try:
-        pin: Any = importlib.import_module(
-            "hefesto_dualsense4unix.integrations.proton_pin")
-    except ImportError:
-        pin = None
-    travar: Any = getattr(pin, "lock_proton_for_all_games", None)
-
-    def _recusa_se_nao_da() -> None:
-        motivo = _porque_o_proton_nao_trava(pin, travar)
-        if motivo:
-            raise RuntimeError(motivo)
-
-    if not _confirmado(o, "refazer-proton", antes_de_armar=_recusa_se_nao_da):
-        return _so_armou(_de_pe(ctx), _para_o_painel(
-            _pergunta_do_botao("refazer-proton"), pergunta_de="refazer-proton"))
-    _limpar_o_painel()
-    _recusa_se_nao_da()
-    # `todos=True` — 18/09/2026. É o botão que o install manda usar quando a
-    # trava é adiada, e ele rodava com a guarda `preservado` que a ordem dela
-    # de 17/09 revogou: o terminal dizia `--lock --todos` e o botão fazia
-    # outra coisa. Com a Steam aberta ele continua recusando (a pergunta dele
-    # não pede para fechá-la); quem trava quando ela sai é o vigia.
-    _relatar_o_recibo("refazer-proton",
-                      _daemon.format_proton_lock_result(travar(todos=True)))
-    return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
+# O «Refazer a fixação do Proton» (dois cliques) SAIU em 25/09/2026 —
+# A-09-SISTEMA-EM-TRES-SECOES-01: virou o ligável «Fixar Proton»
+# (:func:`fixar_proton`), que trava num clique e destrava no seguinte. As
+# recusas dele (a Steam aberta, o pino ausente, o `proton-pin.conf` que não
+# existe) continuam todas em :func:`_porque_o_proton_nao_trava`.
 
 
 def _porque_o_proton_nao_trava(pin: Any, travar: Any) -> str | None:
@@ -3600,113 +3481,10 @@ def refazer_consertos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
 
 
-#: O QUE O CENSO DO CLIQUE 1 DE `procurar-camadas` ACHOU:
-#: `{"tirar": bool, "devolver": bool}`. Vazio = ninguém olhou ainda.
-_CAMADAS: dict[str, Any] = {}
-
-
-def procurar_camadas(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """"Tirar a sobreposição Vulkan" — os TRÊS tempos que o rótulo promete.
-
-    O MOTOR É O DA JANELA ANTIGA, chamado e não copiado: `on_camadas_engasgo`
-    (`emulation_actions.py:2125`) é o DIÁLOGO em volta do ato, e o ato são
-    `camadas_vulkan.censo`, `pastas_compatdata` e `curar_todos`, com as duas
-    frases puras do mesmo módulo. Nada aqui reescreve uma linha dele.
-
-    ERA UM CLIQUE MORTO, e o que o segurava estava escrito: *"o botão promete
-    MOSTRAR o achado ENTRE procurar e tirar, e isso é uma tela que ainda não
-    existe"*. **Ela existe** — é o painel de registro desta mesma faixa, onde o
-    `ver-detalhes` e o `refazer-proton` já põem o que responderam. Nenhum pixel
-    novo, nenhuma decisão de desenho.
-
-    O CLIQUE 1 OLHA (o censo do `system.reg` de cada prefixo, ~1 s, read-only) e
-    escreve `emulation_actions.frase_do_censo` no painel — jogo por jogo, com o
-    estado de cada camada, inclusive *"o arquivo não está no disco"*, que é o
-    estado em que a máquina dela estava. A frase é PURA e é do dono; nenhuma
-    palavra dela nasce aqui.
-
-    **OS BOTÕES SEGUEM O QUE EXISTE**, e isto é a regra da janela antiga
-    (`_build_camadas_dialog`: *"Tirar só aparece quando há camada ligada;
-    Devolver só quando há camada que nós desligamos. Botão que aparece e não faz
-    nada ensina que a tela é enfeite"*). Aqui há UM botão, e quem segue o que
-    existe é o ARMAR: sem nada a tirar e sem nada a devolver, o clique 1 mostra
-    o achado e **não arma** — não há segundo tempo a oferecer. O que o clique 2
-    vai fazer está escrito na última linha do que o clique 1 mostrou.
-
-    O CLIQUE 2 limpa o painel e age em todos os prefixos. `frase_do_resultado`,
-    também do dono, é recibo — e desde 13/09/2026 (TELA-CALADA-03) vai ao diário
-    da janela, não à tela. `forcar=True` é a regra dela de 09/08/2026: o clique
-    é gesto explícito e a vontade da tela prevalece; só o gancho de lançamento
-    respeita a memória sem perguntar.
-
-    RECUSA COM JOGO ABERTO, e a razão é do produto: o Wine mantém o registro do
-    prefixo em MEMÓRIA e o regrava ao sair, então escrever agora seria trabalho
-    perdido — e perdido em silêncio, que é pior.
-    """
-    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
-    from hefesto_dualsense4unix.integrations import lista_de_exclusao
-
-    if not _confirmado(o, "procurar-camadas"):
-        prefixos = cv.censo()
-        bibliotecas = len(cv.pastas_compatdata())
-        corpo, tem_tirar, tem_devolver = _emulacao.frase_do_censo(
-            prefixos, bibliotecas=bibliotecas)
-        _CAMADAS.update(tirar=bool(tem_tirar), devolver=bool(tem_devolver))
-        if not (tem_tirar or tem_devolver):
-            # NADA A OFERECER, LOGO NADA A ARMAR. Deixar o botão perguntando
-            # "Confirma?" sobre um segundo tempo que não existe é o enfeite que
-            # o desenho da janela antiga já recusava.
-            _ARMADO.clear()
-            carga = _para_o_painel(corpo)
-            carga["blocos"] = blocos_dos_botoes(_de_pe(ctx))
-            return carga
-        proximo = ("tirar" if tem_tirar else "devolver")
-        fim = ("Clique de novo para TIRAR."
-               if proximo == "tirar"
-               else "Clique de novo para DEVOLVER o que eu tinha tirado.")
-        # O VERBO VAI PARA O BOTÃO — 21/09/2026. Ver `_CONFIRMA_DO_GESTO`: a
-        # frase acima já dizia qual dos dois atos vem, e ela clicou olhando
-        # para o botão, que dizia "Tirar" e depois "Confirma?".
-        _CONFIRMA_DO_GESTO["procurar-camadas"] = (
-            CONFIRMA_TIRAR if proximo == "tirar" else CONFIRMA_DEVOLVER)
-        # QUANDO A PERGUNTA VENCE, O CENSO FICA e só a instrução sai — ver
-        # `_PERGUNTA` (13/09/2026).
-        return _so_armou(_de_pe(ctx), _para_o_painel(
-            f"{corpo}\n\n{fim}", pergunta_de="procurar-camadas", fica=corpo))
-
-    from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
-
-    _CONFIRMA_DO_GESTO.pop("procurar-camadas", None)
-    _limpar_o_painel()
-    # A PERGUNTA DO JOGO PASSOU A SER A DO DONO — 21/09/2026. Era
-    # `slo.steam_game_running()` direto, e ele lê uma FOTO de até 5 s. Decidir
-    # um ato destrutivo sobre uma foto de 5 s atrás é decidir sobre um jogo que
-    # já fechou — ou não ver um que acabou de abrir. `rl.jogo_aberto` invalida
-    # a foto antes de perguntar, que é o que todo gesto destrutivo desta casa
-    # faz desde 25/08/2026.
-    #
-    # E ELE ALCANÇA O HEROIC E O LUTRIS, que era o §2 desta sprint: os dois
-    # lançam pelo `umu`, que se anuncia como Steam (`steam_app_<N>`), então a
-    # agulha do `reaper SteamLaunch AppId=` casa os jogos deles também.
-    if rl.jogo_aberto():
-        raise RuntimeError(
-            "Tem jogo aberto — feche-o e clique de novo. Com o jogo vivo o "
-            "Windows do Proton regrava esse ajuste ao sair, e a mudança seria "
-            "perdida.")
-    devolver = not _CAMADAS.get("tirar", True)
-    resultados = cv.curar_todos(
-        religar=devolver, forcar=True, excluir=lista_de_exclusao.appids())
-    _CAMADAS.clear()
-    _relatar_o_recibo("procurar-camadas",
-                      _emulacao.frase_do_resultado(resultados, devolver=devolver))
-    return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
-
-
-# O «Ver os plugins» SAIU DA ABA — SISTEMA-BOTOES-01, 13/09/2026. Os plugins
-# vêm desligados por padrão e nenhuma tela os liga, então o botão só podia dizer
-# que estavam desligados; e a decisão dela D-OS-PLUGINS-APARECEM-ONDE-AGEM
-# (`docs/data/decisoes-dela.csv`) diz que plugin não ganha seção própria. A CLI
-# (`cli/cmd_plugin.py`) e os métodos IPC do daemon ficam.
+# O «Tirar a sobreposição Vulkan» (dois cliques, com o censo no painel) SAIU
+# em 25/09/2026 — A-09-SISTEMA-EM-TRES-SECOES-01: virou o ligável «Corrigir
+# Vulkan» (:func:`corrigir_vulkan`). O motor é o mesmo (`curar_todos`, com
+# `forcar=True` e a lista de exclusão), e desligar é o `religar` de antes.
 
 
 #: QUANTAS LINHAS DO DIÁRIO O PAINEL MOSTRA. É o número do antigo «Ver
@@ -3827,6 +3605,7 @@ def fixar_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     aberta — ela regrava o arquivo ao sair —, e isso continua recusando antes
     de tocar em nada (:func:`_porque_o_proton_nao_trava`).
     """
+    _ARMADO.clear()  # um clique noutro botão desfaz a pergunta que estava no ar
     pin, travar = _o_pino()
     motivo = _porque_o_proton_nao_trava(pin, travar)
     if motivo:
@@ -3862,6 +3641,7 @@ def corrigir_vulkan(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     from hefesto_dualsense4unix.integrations import lista_de_exclusao
     from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
 
+    _ARMADO.clear()  # um clique noutro botão desfaz a pergunta que estava no ar
     if rl.jogo_aberto():
         raise RuntimeError(
             "Tem jogo aberto — feche-o e clique de novo. Com o jogo vivo o "

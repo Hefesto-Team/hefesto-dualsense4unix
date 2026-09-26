@@ -158,72 +158,59 @@ def _pagina() -> str:
 # ---------------------------------------------------------------------------
 # 1. O GLIFO DE CADA LINHA É DADO
 # ---------------------------------------------------------------------------
-#: As seis linhas de estado que o pacote pinta. Saem do contrato do produto, e
-#: não digitadas: o que se lista aqui é só quais delas o `est()` monta.
-LINHAS = ("hefesto-estado", "hefesto-pausa", "hefesto-troca-de-perfil",
-          "hefesto-ambiente", "bateria-impoe", "bateria-vale-para")
+#: AS SEIS LINHAS DE ESTADO SAÍRAM EM 25/09/2026 (A-09-SISTEMA-EM-TRES-SECOES-01):
+#: o Status virou UMA lista na forma do exame, e o glifo viaja DENTRO da
+#: pílula de cada linha. O que estas réguas protegiam — o selo nunca é o
+#: literal do desenho — continua medido, agora sobre a lista.
+def _pilulas(html: str) -> list[tuple[str, str]]:
+    """`(glifo, palavra)` de cada pílula do HTML, na ordem."""
+    return re.findall(r'<span class="selo [a-z]+"><span class="sg">([^<]*)</span>([^<]*)</span>',
+                      html)
 
 
-@pytest.mark.parametrize("linha", LINHAS)
-def test_o_glifo_de_cada_linha_tem_endereco_na_pagina(linha):
-    """O `<span class="g">` de cada linha de estado leva `data-campo="…-g"`.
+def test_o_status_tem_endereco_na_pagina():
+    """A lista do Status leva `data-campo` com o alvo `html` na página publicada.
 
-    **A MORDIDA:** tire o `gc` da `est()` em `interface/aba09.py`, regere e
-    publique os endereços. Executada em 03/09/2026:
-
-        AssertionError: o glifo de `hefesto-estado` não tem endereço na página
-        publicada — ele volta a ser o literal do desenho, e a linha passa a
-        mostrar um selo que não tem como discordar de nada porque ninguém o
-        escreve.
+    **A MORDIDA:** tire o `data-campo` da coluna do Status no gerador e
+    publique — a lista volta a ser o literal do desenho.
     """
-    assert f'data-campo="{linha}-g"' in _pagina(), (
-        f"o glifo de `{linha}` não tem endereço na página publicada — ele volta "
-        f"a ser o literal do desenho, e a linha passa a mostrar um selo que não "
-        f"tem como discordar de nada porque ninguém o escreve.")
+    assert re.search(r'data-campo="status-lista" data-hef-alvo="html"', _pagina()), (
+        "o Status não tem endereço na página publicada — as quatro linhas voltam "
+        "a ser o literal do desenho, e a pílula não tem como discordar de nada.")
 
 
-@pytest.mark.parametrize("linha", LINHAS)
-def test_o_pacote_emite_o_glifo_de_cada_linha(a09, ctx, linha):
-    """E o pacote escreve nele. Endereço sem escritor é pior que endereço nenhum.
+def test_o_pacote_emite_o_glifo_de_cada_linha_do_status(a09, ctx):
+    """E o pacote escreve as quatro, cada uma com glifo E palavra.
 
-    **A MORDIDA:** apague a linha `fora[f"{chave}-g"] = …` do achatamento em
-    `pacote()`. Executada:
-
-        AssertionError: o pacote não emite `hefesto-estado-g`. O endereço existe
-        na página e ninguém escreve nele — a régua da identidade conta isso como
-        endereço morto, e a tela continua com o glifo do desenho.
+    **A MORDIDA:** esvazie o `g` em `aba_sistema._linha_de_status`. Reprova
+    dizendo qual pílula saiu sem glifo.
     """
-    p = a09.pacote(ctx)
-    assert f"{linha}-g" in p, (
-        f"o pacote não emite `{linha}-g`. O endereço existe na página e ninguém "
-        f"escreve nele — a régua da identidade conta isso como endereço morto, e "
-        f"a tela continua com o glifo do desenho.")
-    assert p[f"{linha}-g"], f"`{linha}-g` saiu vazio, e vazio apaga o glifo."
+    pilulas = _pilulas(a09.pacote(ctx)[a09.CAMPO_DO_STATUS])
+    assert len(pilulas) == 4, pilulas
+    for glifo, palavra in pilulas:
+        assert glifo.strip() and palavra.strip(), (
+            f"a pílula {palavra!r} saiu sem glifo — quem não distingue verde de "
+            "laranja perde a leitura do estado.")
 
 
 def test_o_glifo_da_pausa_desmente_o_desenho(a09, ctx):
-    """Com `paused: False`, o glifo é `✓` — e o DESENHO crava `!`.
+    """Com a pausa ATIVA o Serviço diz `! PAUSADO` — e o DESENHO crava `✓ LIGADO`.
 
-    É o teste que prende o defeito da foto de 04:26: valor certo, selo do
-    mockup. Ele mede as duas metades ao mesmo tempo — o que o pacote diz e o
-    que a página traz cravado —, porque só as duas juntas provam que a pintura
-    é necessária.
-
-    **A MORDIDA:** faça `fora[f"{chave}-g"] = ""` e o teste reprova dizendo que
-    o glifo saiu vazio; troque a emissão por `v.get("cls")` e ele reprova
-    dizendo que `ok` não é glifo nenhum.
+    Ele mede as duas metades ao mesmo tempo — o que o pacote diz e o que a
+    página traz cravado —, porque só as duas juntas provam que a pintura é
+    necessária.
     """
-    p = a09.pacote(ctx)
-    assert p["hefesto-pausa"] == "Não"
-    assert p["hefesto-pausa-g"] == "✓", (
-        "com o daemon NÃO pausado o selo é o de estado bom. O que o pacote "
-        f"emitiu foi {p['hefesto-pausa-g']!r}.")
-    cravado = re.search(
-        r'data-campo="hefesto-pausa-g">(.)</span>', _pagina())
-    assert cravado and cravado.group(1) == "!", (
-        "o desenho deixou de cravar `!` no glifo da pausa. Este teste existe "
-        "porque os dois DISCORDAM: sem pintura, a tela mostra o `!` do mockup "
-        "ao lado do valor `Não`.")
+    import pacotes
+
+    pausado = pacotes.Contexto(state={**ESTADO, "paused": True}, mesa=[],
+                               conectados=list(ESTADO["controllers"]), estados={})
+    servico = _pilulas(a09.pacote(pausado)[a09.CAMPO_DO_STATUS])[0]
+    assert servico == ("!", "PAUSADO"), servico
+    cravado = _pilulas(_pagina())[0]
+    assert cravado == ("✓", "LIGADO"), (
+        "o desenho deixou de cravar `✓ LIGADO` no Serviço. Este teste existe "
+        "porque os dois DISCORDAM: sem pintura, a tela mostra o LIGADO do mockup "
+        "com o serviço pausado.")
 
 
 # ---------------------------------------------------------------------------
@@ -258,18 +245,14 @@ def test_o_interruptor_do_autostart_e_dado(a09, ctx, monkeypatch):
         "com `is-enabled` respondendo `disabled` a chave tem de APAGAR. Hoje "
         "ela acerta por coincidência nesta máquina, e é isso que este teste "
         "existe para não deixar voltar.")
-    assert p["hefesto-autostart-g"] == "○", (
-        "o glifo da linha do autostart tem de acompanhar a chave — os dois "
-        "saíam de `AUTOSTART_LIGADO` no gerador justamente para não poderem "
-        "discordar, e agora saem os dois da mesma leitura.")
+    # O GLIFO DA LINHA SAIU com a chave em 25/09/2026 — o autostart virou o
+    # ligável «Iniciar com o sistema», e a pílula dele é a classe `ligada`.
 
     # `None` NÃO É `False`: "não consegui perguntar ao systemd" não é "desligado".
     monkeypatch.setattr(a09, "_autostart", lambda: None)
     a09._LENTO.clear()
     p = a09.pacote(ctx)
     assert p["hefesto-autostart"] is None
-    assert p["hefesto-autostart-g"] not in ("✓", "○"), (
-        "sem leitura, o glifo não pode afirmar nem ligado nem desligado.")
 
 
 def test_o_aceso_do_perfil_de_bateria_e_dado(a09, ctx):
@@ -554,11 +537,11 @@ def test_decisao_10_o_serial_de_fabrica_aparece_inteiro(a09, ctx):
     assert a09.ROTULO_DA_IDENTIDADE in texto
     assert SERIAL_DE_MENTIRA in texto, (
         "o serial saiu cortado, e ela pediu INTEIRO.")
-    # E ele é o FIM do painel, que é o pedaço que a tela mostra sem rolar.
-    cauda = "\n".join(texto.splitlines()[-3:])
-    assert SERIAL_DE_MENTIRA in cauda, (
-        "o serial está no painel e fora da vista: o painel rola para o FIM, e "
-        "a identidade tem de ser o fim.")
+    # ELE DEIXOU DE SER O FIM em 25/09/2026: o fim do painel é o registro vivo
+    # do serviço, por ordem dela (A-09-SISTEMA-EM-TRES-SECOES-01). A identidade
+    # vem logo antes do diário — no «Copiar» e a uma rolada.
+    antes_do_diario = texto.split(a09.ROTULO_DO_DIARIO, 1)[0]
+    assert SERIAL_DE_MENTIRA in antes_do_diario, texto
     # O controle SEM leitura não inventa serial nenhum.
     assert a09.SEM_SERIAL_LIDO in texto, (
         "o controle do rádio não deu serial, e a linha dele tem de dizer isso "
@@ -667,17 +650,14 @@ def test_o_systemctl_que_falha_recusa_dizendo(a09, ctx):
 
 
 def test_o_retomar_recusa_quando_nao_ha_pausa(a09, ctx):
-    """"Retomar" verde e clicável sem pausa é um no-op que se apresenta como ação.
+    """"Retomar" sem pausa é um no-op que se apresenta como ação.
 
-    A conta é da camada do produto — `aba_sistema.travas()` —, que já estava
-    escrita e ligada até a penúltima camada: ela cobre `retomar`, `desligar`,
-    `reiniciar` e `ver-detalhes`, com o motivo pronto para o tooltip (o
-    `ver-plugins` saiu da aba em 13/09/2026). Faltava alguém chamá-la.
+    DESDE 25/09/2026 o «Retomar» é uma cara do botão do serviço
+    (`parar-ou-retomar`), e só aparece com a pausa ativa; a função `retomar`
+    continua sendo quem fala `daemon.resume`, e continua recusando sem pausa.
 
-    **A MORDIDA:** apague a checagem do `_trava` em `retomar`. Executada:
-
-        Failed: DID NOT RAISE <class 'RuntimeError'> — o clique mandou
-        `daemon.resume` a um daemon que não está pausado.
+    **A MORDIDA:** apague a checagem do `_trava` em `retomar`. Reprova com
+    `DID NOT RAISE`.
     """
     class PonteDeMentira:
         def __init__(self):
@@ -688,9 +668,8 @@ def test_o_retomar_recusa_quando_nao_ha_pausa(a09, ctx):
             return True
 
     p = PonteDeMentira()
-    acao = __import__("pacotes").gesto_da_pagina("09-sistema.html", "retomar")
     with pytest.raises(RuntimeError) as erro:
-        acao(ctx, {}, p)
+        a09.retomar(ctx, {}, p)
     assert "não está pausado" in str(erro.value)
     assert not p.chamou, "recusou e mandou `daemon.resume` assim mesmo."
 
@@ -699,10 +678,12 @@ def test_o_retomar_recusa_quando_nao_ha_pausa(a09, ctx):
     pausado = pacotes.Contexto(state={**ESTADO, "paused": True}, mesa=[],
                                conectados=list(ESTADO["controllers"]), estados={})
     a09._LENTO.clear()
-    acao(pausado, {}, p)
+    botao = pacotes.gesto_da_pagina("09-sistema.html", "parar-ou-retomar")
+    carga = botao(pausado, {}, p)
     assert p.chamou == ["daemon.resume"], (
-        "com a pausa ATIVA o botão tem de agir — a trava não pode virar uma "
-        "recusa permanente.")
+        "com a pausa ATIVA o botão do serviço tem de retomar — um clique, sem "
+        "pergunta.")
+    assert carga["blocos"]['[data-gesto="parar-ou-retomar"]'] != a09.CONFIRMA
 
 
 def test_a_classe_da_linha_esta_declarada_como_sem_alvo(a09, ctx):

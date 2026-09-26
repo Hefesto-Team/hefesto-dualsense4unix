@@ -51,12 +51,15 @@ PAGINA = "09-sistema.html"
 PUBLICADA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas" / PAGINA
 
 #: OS CINCO QUE ARMAM, e os três cuja pergunta é o `title` publicado.
-ARMAM = ("desligar", "restaurar-de-fabrica", "refazer-proton",
+#: 25/09/2026 (A-09-SISTEMA-EM-TRES-SECOES-01): o «Parar» virou o botão
+#: `parar-ou-retomar`, e o «Refazer a fixação do Proton» virou o ligável
+#: «Fixar Proton», que age num clique (desligar desfaz) — saiu dos que armam.
+ARMAM = ("parar-ou-retomar", "restaurar-de-fabrica",
          "refazer-consertos", "aplicar-aos-jogos")
-PERGUNTA_E_O_TITLE = ("desligar", "restaurar-de-fabrica", "refazer-proton")
+PERGUNTA_E_O_TITLE = ("parar-ou-retomar", "restaurar-de-fabrica")
 
 #: OS CINCO QUE RECUSAM na tela viva, cada um pelo motivo do §V.
-RECUSAS = ("retomar", "atualizar", "corrigir-modo", "refazer-proton",
+RECUSAS = ("atualizar", "corrigir-modo", "fixar-proton",
            "aplicar-aos-jogos")
 
 #: O QUE A PINTURA DE PROVA PÕE NO PAINEL quando ninguém pediu nada.
@@ -106,7 +109,7 @@ def _limpar(mod: Any) -> None:
     mod._ARMADO.clear()
     mod._PAINEL[0] = None
     mod._PERGUNTA.clear()
-    mod._CAMADAS.clear()
+    mod._VULKAN.clear()
     mod._ANTES_DO_CONSERTO.clear()
 
 
@@ -149,6 +152,10 @@ def pin(monkeypatch, tmp_path):
     monkeypatch.setattr(proton_pin, "pino_instalado_nesta_maquina",
                         lambda: estado["pino"])
     monkeypatch.setattr(proton_pin, "steam_running", lambda: estado["steam"])
+    # O REGISTRO DA TRAVA TAMBÉM É DE MENTIRA (25/09/2026): o ligável «Fixar
+    # Proton» lê de lá se está ligado, e a régua não pode ler o disco de quem roda.
+    monkeypatch.setattr(proton_pin, "default_lock_state_path",
+                        lambda *a, **k: tmp_path / "proton-lock-state.json")
     monkeypatch.setattr(proton_pin, "lock_proton_for_all_games",
                         lambda *a, **k: (estado["travou"].append(a),
                                          estado["com"].append(k))[0] or {})
@@ -275,7 +282,7 @@ def test_o_clique_2_limpa_o_painel_antes_de_agir(a09, ctx, janela):
 
     MORDIDA: tire o `_limpar_o_painel()` do ramo confirmado do `desligar`.
     """
-    a09.desligar(ctx, _clique(a09._rotulo_do_desenho("desligar")), None)
+    a09.desligar(ctx, _clique(a09._rotulo_do_desenho(a09.DESLIGAR)), None)
     a09.desligar(ctx, _clique(a09.CONFIRMA), None)
 
     assert janela.atos() == ["stop"]
@@ -291,7 +298,7 @@ def test_a_pergunta_vencida_sai_no_tique_seguinte(a09, ctx):
 
     MORDIDA: tire o `_a_pergunta_venceu()` de `_no_painel`.
     """
-    carga = a09.desligar(ctx, _clique(a09._rotulo_do_desenho("desligar")), None)
+    carga = a09.desligar(ctx, _clique(a09._rotulo_do_desenho(a09.DESLIGAR)), None)
     pergunta = carga["mesa"][a09.REGISTRO]
     assert a09._no_painel(REPOUSO) == pergunta
 
@@ -303,36 +310,18 @@ def test_a_pergunta_vencida_sai_no_tique_seguinte(a09, ctx):
 
 def test_a_recusa_de_outro_botao_tira_a_pergunta_no_tique(a09, ctx, pin):
     """Outro botão desarmou o `desligar`: a pergunta dele não vale mais."""
-    a09.desligar(ctx, _clique(a09._rotulo_do_desenho("desligar")), None)
+    a09.desligar(ctx, _clique(a09._rotulo_do_desenho(a09.DESLIGAR)), None)
     pin["steam"] = True
     with pytest.raises(RuntimeError):
-        a09.refazer_proton(ctx, _clique(a09._rotulo_do_desenho("refazer-proton")), None)
+        a09.fixar_proton(ctx, {}, None)
 
     assert a09._armado_agora() == ""
     assert a09._no_painel(REPOUSO) == REPOUSO
 
 
-def test_o_censo_das_camadas_fica_quando_a_pergunta_vence(a09, ctx, monkeypatch):
-    """O preço que a TELA-CALADA-03 apontou não se paga: sai só a instrução.
-
-    MORDIDA: tire o `fica=corpo` do clique 1 de `procurar_camadas`.
-    """
-    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
-
-    monkeypatch.setattr(cv, "censo", lambda: [])
-    monkeypatch.setattr(cv, "pastas_compatdata", lambda: [])
-    monkeypatch.setattr(a09._emulacao, "frase_do_censo",
-                        lambda prefixos, bibliotecas=0: ("CENSO DE PROVA", True, False))
-
-    carga = _gesto("procurar-camadas")(
-        ctx, _clique(a09._rotulo_do_desenho("procurar-camadas")), None)
-    assert carga.get(a09.ARMOU) is True
-    assert a09._no_painel(REPOUSO).startswith("CENSO DE PROVA\n\n")
-
-    _vencer(a09)
-
-    assert a09._no_painel(REPOUSO) == "CENSO DE PROVA", (
-        "a pergunta venceu e levou o censo das camadas junto")
+# (O censo das camadas que ficava quando a pergunta vencia SAIU em 25/09/2026:
+# o «Tirar a sobreposição Vulkan» de dois tempos virou o ligável «Corrigir
+# Vulkan», que age num clique e não arma pergunta.)
 
 
 # ---------------------------------------------------------------------------
@@ -341,13 +330,12 @@ def test_o_censo_das_camadas_fica_quando_a_pergunta_vence(a09, ctx, monkeypatch)
 def test_o_proton_com_a_steam_aberta_recusa_no_clique_1(a09, ctx, pin):
     """Na máquina dela a Steam fica aberta: o botão armava calado e recusava calado.
 
-    MORDIDA: tire o `antes_de_armar=_recusa_se_nao_da` de `refazer_proton`.
+    MORDIDA: tire o `_porque_o_proton_nao_trava` de `fixar_proton`.
     """
     pin["steam"] = True
     with pytest.raises(RuntimeError):
-        a09.refazer_proton(ctx, _clique(a09._rotulo_do_desenho("refazer-proton")), None)
+        a09.fixar_proton(ctx, {}, None)
 
-    assert a09._armado_agora() == "", "a Steam aberta deixou o botão armado"
     assert a09._PAINEL[0] is None, "a recusa escreveu no painel"
     assert pin["travou"] == []
 
@@ -363,21 +351,14 @@ def test_o_proton_sem_o_pino_no_disco_recusa_no_clique_1_com_a_frase_dele(a09, c
     """
     pin["pino"] = False
     with pytest.raises(RuntimeError) as recusa:
-        a09.refazer_proton(ctx, _clique(a09._rotulo_do_desenho("refazer-proton")), None)
+        a09.fixar_proton(ctx, {}, None)
 
     assert str(recusa.value) == a09._daemon.frase_sem_o_proton_pinado()
-    assert a09._armado_agora() == "", "o pino ausente deixou o botão armado"
     assert pin["travou"] == []
 
 
-def test_o_proton_confere_a_steam_de_novo_no_clique_2(a09, ctx, pin):
-    """Ela abriu a Steam entre os dois cliques: a fixação não sai."""
-    a09.refazer_proton(ctx, _clique(a09._rotulo_do_desenho("refazer-proton")), None)
-    pin["steam"] = True
-    with contextlib.redirect_stderr(io.StringIO()), pytest.raises(RuntimeError):
-        a09.refazer_proton(ctx, _clique(a09.CONFIRMA), None)
-
-    assert pin["travou"] == []
+# (O «confere a Steam de novo no clique 2» SAIU em 25/09/2026: o ligável
+# «Fixar Proton» não tem clique 2 — ele confere a Steam no único clique.)
 
 
 def test_o_proton_no_clique_2_trava_todo_jogo(a09, ctx, pin):
@@ -387,11 +368,10 @@ def test_o_proton_no_clique_2_trava_todo_jogo(a09, ctx, pin):
     com a guarda `preservado` que a ordem revogou (o terminal dizia
     `--lock --todos`, o botão fazia outra coisa).
 
-    MORDIDA: volte `travar(todos=True)` para `travar()` em `refazer_proton`.
+    MORDIDA: volte `travar(todos=True)` para `travar()` em `fixar_proton`.
     """
-    a09.refazer_proton(ctx, _clique(a09._rotulo_do_desenho("refazer-proton")), None)
     with contextlib.redirect_stderr(io.StringIO()):
-        a09.refazer_proton(ctx, _clique(a09.CONFIRMA), None)
+        a09.fixar_proton(ctx, {}, None)
 
     assert len(pin["travou"]) == 1, pin
     assert pin["com"][0].get("todos") is True, pin["com"]
@@ -412,9 +392,8 @@ def test_o_proton_sem_o_conf_recusa_em_vez_de_rebentar(a09, ctx, pin, tmp_path, 
                    "sem-caminho": _sem_caminho, "levanta": _levanta}[como]
 
     with pytest.raises(RuntimeError):
-        a09.refazer_proton(ctx, _clique(a09._rotulo_do_desenho("refazer-proton")), None)
+        a09.fixar_proton(ctx, {}, None)
 
-    assert a09._armado_agora() == ""
     assert pin["travou"] == []
 
 
@@ -474,7 +453,9 @@ def test_o_ver_os_plugins_nao_esta_em_pagina_nenhuma(a09, publicado):
     corpo = onde.pagina(PAGINA, publicado=publicado).read_text(encoding="utf-8")
     assert 'data-gesto="ver-plugins"' not in corpo
     assert "Ver os plugins" not in corpo
-    assert a09.BOTOES_CINZAS == ("retomar", "reiniciar")
+    # O «Retomar» deixou de ser botão cinza em 25/09/2026 (virou uma cara do
+    # botão do serviço).
+    assert a09.BOTOES_CINZAS == ("reiniciar",)
 
 
 # ---------------------------------------------------------------------------
@@ -483,10 +464,10 @@ def test_o_ver_os_plugins_nao_esta_em_pagina_nenhuma(a09, publicado):
 #: A ORDEM DO ROTEIRO. As recusas vêm antes das perguntas, e o `vence` empurra
 #: o relógio do consentimento que o último clique armou.
 ROTEIRO = (
-    ("recusa", "retomar"), ("recusa", "atualizar"), ("recusa", "corrigir-modo"),
-    ("steam", "aberta"), ("recusa", "refazer-proton"), ("steam", "fechada"),
-    ("arma", "desligar"), ("foto", "depois-a-pergunta-do-parar"),
-    ("arma", "restaurar-de-fabrica"), ("arma", "refazer-proton"),
+    ("recusa", "atualizar"), ("recusa", "corrigir-modo"),
+    ("steam", "aberta"), ("recusa", "fixar-proton"), ("steam", "fechada"),
+    ("arma", "parar-ou-retomar"), ("foto", "depois-a-pergunta-do-parar"),
+    ("arma", "restaurar-de-fabrica"),
     ("arma", "refazer-consertos"), ("arma", "aplicar-aos-jogos"),
     ("vence", "aplicar-aos-jogos"), ("foto", "depois-a-pergunta-vencida"),
     ("rearma", "aplicar-aos-jogos"), ("recusa", "aplicar-aos-jogos"),
@@ -596,7 +577,7 @@ def na_tela(tmp_path_factory) -> dict:
     # O PACOTE QUE O PILOTO ATENDE é o do registro dele — o import pelo nome da
     # pasta (`pacotes`) é outro objeto de módulo, e dublar aquele não mudaria o
     # clique.
-    a9 = sys.modules[hv.pacotes.gesto_da_pagina(PAGINA, "retomar").__module__]
+    a9 = sys.modules[hv.pacotes.gesto_da_pagina(PAGINA, "atualizar").__module__]
 
     berco = tmp_path_factory.mktemp("sistema-botoes")
     conf = berco / "proton-pin.conf"
@@ -848,7 +829,7 @@ def test_na_tela_a_recusa_veste_o_botao_e_nao_escreve(na_tela: dict, gesto_: str
 
 def test_na_tela_nenhuma_recusa_fixou_o_proton_nem_fechou_a_steam(na_tela: dict) -> None:
     """A Steam aberta recusou antes da fixação; a janela da Steam só no clique 2."""
-    _marco(na_tela, "recusa:refazer-proton")
+    _marco(na_tela, "recusa:fixar-proton")
     assert na_tela["travou"] == []
     assert len(na_tela["fechou"]) == 1, (
         f"a janela da Steam foi pedida {len(na_tela['fechou'])} vez(es) — o "
@@ -880,6 +861,6 @@ def test_na_tela_a_pergunta_vencida_sai_no_tique(na_tela: dict) -> None:
 
 def test_a_largura_da_pergunta_e_a_do_painel(a09) -> None:
     """A pergunta usa a largura medida do painel, e nenhuma palavra muda."""
-    dica = _title_publicado("desligar")
-    pergunta = a09._pergunta_do_botao("desligar")
+    dica = _title_publicado(a09.DESLIGAR)
+    pergunta = a09._pergunta_do_botao(a09.DESLIGAR)
     assert pergunta.split("\n\n")[0] == textwrap.fill(dica, a09.LARGURA_DA_PERGUNTA)
