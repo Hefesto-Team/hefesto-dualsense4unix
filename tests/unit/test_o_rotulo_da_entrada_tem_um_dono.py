@@ -188,3 +188,51 @@ def test_a_leitura_das_ordens_leva_o_nome_das_entradas(
     monkeypatch.setattr(entradas_do_gabinete, "listar_entradas", lambda **_k: ())
     lida: Any = secao_exame.leitura_das_ordens(documento)
     assert dict(lida.nomes_das_entradas) == {"1": "Meio"}, lida.nomes_das_entradas
+
+
+def test_o_nome_dado_no_mapa_chega_a_sugestao_e_a_ordem(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """De ponta a ponta: o nome que ela dá no editor do mapa (``dar_nome_a_entrada``,
+    no disco) é o que a caixinha da Sugestão e o imperativo da ordem dizem.
+
+    A conferência da O-MAPA-QUE-ELA-CORRIGE-01: as réguas de cima leem o
+    «Meio» que mora no LUGAR (a reserva); nenhuma gravava um nome pelo gesto
+    e o seguia até a 08. MORDIDAS: tire o ``maquina=dela`` do destino em
+    ``a08_conexoes._card_da_ordem``, ou o ``nomes_das_entradas`` de
+    ``secao_exame.leitura_das_ordens`` — esta reprova.
+    """
+    from tests.conftest import exigir_gi_real
+
+    exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
+    from hefesto_dualsense4unix.app.actions.config import secao_exame
+    from hefesto_dualsense4unix.integrations import censo_do_barramento, entradas_do_gabinete
+    from hefesto_dualsense4unix.integrations.lugar_declarado import declarar_a_maquina
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
+    from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina, carregar_maquina
+
+    assert caminho_da_maquina().is_relative_to(tmp_path), "o maquina.json não está desviado"
+    assert declarar_a_maquina(_a_maquina_dela()).gravou
+    assert ee.dar_nome_a_entrada("2", "Frente de cima").gravou
+    dela = carregar_maquina()
+    assert dela.mapa.portas["2"].nome == "Frente de cima"
+
+    monkeypatch.setattr(censo_do_barramento, "ler_o_barramento", lambda **_k: Censo())
+    monkeypatch.setattr(entradas_do_gabinete, "listar_entradas", lambda **_k: ())
+    lida: Any = secao_exame.leitura_das_ordens(dela)
+    assert dict(lida.nomes_das_entradas) == {"1": "Meio", "2": "Frente de cima"}
+
+    from tests.unit.test_ordens_da_mesa import leitura
+
+    ordem = ordens.radio_largo_no_mesmo_hub(leitura(
+        entradas_livres_declaradas=("2",), nomes_das_entradas=lida.nomes_das_entradas))
+    assert ordem is not None and ordem.acao.endswith("para a entrada Frente de cima"), ordem
+
+    monkeypatch.setattr(a08_conexoes, "_declaracao", lambda *_a, **_k: dela)
+    vazio = ordens.Linha(texto="", selo="")
+    card = a08_conexoes._card_da_ordem(ordens.Ordem(
+        chave="teste", acao=ordem.acao, o_que_eu_vi=vazio, por_que_importa=vazio,
+        ganho_esperado=vazio, alvo=ordens.Identidade(caminho="1-4"), destino="2"))
+    assert '<span class="caixa">Meio</span>' in card, card
+    assert '<span class="caixa alvo">Frente de cima</span>' in card, card
+    _limpo(card)
