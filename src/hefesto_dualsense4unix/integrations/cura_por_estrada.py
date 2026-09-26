@@ -602,6 +602,10 @@ def _devolver_chaves(pares: Pares, chaves: Iterable[str], entrada: Entrada,
     Um valor que ela mudou depois do Hefesto é dela e fica. O valor que estava
     lá antes da primeira escrita volta; o que não existia volta a não existir.
     A chave sai do registro nos dois casos: dali em diante ela é dela.
+
+    **O VALOR DE ANTES VOLTA NO LUGAR EM QUE ESTAVA** (conferência de 25/09): a
+    escrita pôs o nosso por cima do dela, na mesma posição
+    (:func:`_por_por_cima`), e o desfazer o devolve ali — não no fim da lista.
     """
     for chave in list(chaves):
         marca = entrada.chaves.pop(chave)
@@ -610,11 +614,21 @@ def _devolver_chaves(pares: Pares, chaves: Iterable[str], entrada: Entrada,
             if any(a == chave for a, _ in pares):
                 contas.ficaram.append(chave)
             continue
-        pares = [(a, b) for a, b in pares if not (a == chave and b in nossos)]
+        #: Um valor que não é nosso na mesma chave é dela, e o de antes não volta
+        #: por cima dele.
+        devolver = marca.antes is not None and not any(
+            a == chave and b not in nossos for a, b in pares)
+        novos: Pares = []
+        for a, b in pares:
+            if a == chave and b in nossos:
+                if devolver and marca.antes is not None:
+                    novos.append((a, marca.antes))
+                    devolver = False
+                    contas.devolvidas.append(chave)
+                continue
+            novos.append((a, b))
+        pares = novos
         contas.tiradas.append(chave)
-        if marca.antes is not None and not any(a == chave for a, _ in pares):
-            pares.append((chave, marca.antes))
-            contas.devolvidas.append(chave)
     return pares
 
 
