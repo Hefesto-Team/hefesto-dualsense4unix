@@ -380,7 +380,7 @@ def linha_do_ambiente(frase: str | None) -> Linha:
 
 
 def autostart_ligado(autostart: str | None) -> bool | None:
-    """A chave "Ligar junto com o computador". ``None`` = não deu para ler.
+    """O ligável «Iniciar com o sistema». ``None`` = não deu para ler.
 
     ``None`` **não é** ``False``: a chave desenhada tem dois estados e nenhum
     deles quer dizer "não sei". Quem pinta trata os três.
