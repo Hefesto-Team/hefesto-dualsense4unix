@@ -299,6 +299,8 @@
   .topo .examinar { margin-left: auto; align-self: center; display: inline-flex;
                     align-items: center; gap: .4rem; }
   .topo .examinar span { pointer-events: none; }
+  /* a linha do exemplo já empurra o «Examinar» para a direita */
+  .topo .quando + .examinar { margin-left: 0; }
   .painel .fina { margin: .35rem 0 0; font-size: var(--text-sm); }
   /* o editor da entrada: o que tem nela e a velocidade dela */
   .palco { position: relative; }
@@ -353,6 +355,7 @@
               border:1px solid var(--border-forte);background:var(--panel);
               color:var(--texto-suave);font-size:12px">← Voltar</a>
     <h1>Mapa das <em>Conexões</em></h1>
+    <p class="quando" id="de-quando">leitura de exemplo · 24/08/2026</p>
     <button class="btn examinar" id="reexaminar" title="Lê o computador de novo e mostra o que mudou de lugar"><span aria-hidden="true">⟳</span> Examinar</button>
   </header>
 
@@ -1610,10 +1613,12 @@
 
   function dizerDeQuando() {
     /* O cabeçalho nasce dizendo o exemplo, no HTML, para a página ser honesta
-       mesmo sem JavaScript nenhum. Aqui ele passa a dizer de quando é o que
-       está na tela. */
+       mesmo sem JavaScript nenhum. FATO SUBSTITUÍDO em 26/09/2026: aqui ele
+       passava a dizer de quando era a leitura desta máquina, e ela pediu que
+       isso saísse («essa info some»). A linha existe só para o exemplo se
+       dizer exemplo; com a leitura de quem abre, ela sai da página. */
     var el = document.getElementById("de-quando");
-    if (el) el.textContent = fonte.quando;
+    if (el && fonte.quando !== EXEMPLO.quando) el.remove();
   }
 
   window.hefestoArranjo = function (dado) {

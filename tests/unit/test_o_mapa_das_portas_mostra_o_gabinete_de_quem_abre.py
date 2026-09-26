@@ -241,24 +241,39 @@ def test_uma_face_so_e_dona_da_faixa_do_pc() -> None:
 
 
 def test_o_cabecalho_diz_de_quando_e_o_que_esta_na_tela() -> None:
-    """O cabeçalho é o que ela pediu em 26/09/2026, e a data segue no dado.
+    """A única defesa da página contra ser lida como verdade de qualquer máquina.
 
-    FATO SUBSTITUÍDO em 26/09/2026 (O-MAPA-DAS-CONEXOES-NO-PRODUTO-01). Esta
-    régua cobrava a linha `de-quando` no cabeçalho — a defesa de 11/09 contra
-    a página ser lida como verdade de qualquer máquina. Ela pediu que saísse:
-    *«leitura deste computador · 26/09/2026 03h13 essa info some»*, e o
-    «Examinar» ocupa o lugar dela. O que fica: o título novo, o «Examinar» no
-    cabeçalho, o `dizerDeQuando` que não quebra sem a linha, e as duas frases
-    diferentes no dado — o exemplo e a leitura desta máquina.
+    O EXEMPLO SE DIZ EXEMPLO; A LEITURA DESTA MÁQUINA NÃO SE ANUNCIA. Em
+    26/09/2026 ela pediu que a linha saísse do cabeçalho — *«leitura deste
+    computador · 26/09/2026 03h13 essa info some»* —, e a primeira publicação
+    tirou a linha INTEIRA, o que devolvia a quem ainda não mapeou nada o
+    gabinete de outra pessoa sem aviso (o defeito de 11/09). A conferência da
+    O-MAPA-DAS-CONEXOES-NO-PRODUTO-01 devolveu a linha SÓ ao exemplo: o
+    `dizerDeQuando` a tira quando o produto entrega a leitura desta máquina.
+    Quem mede a retirada no WebKit é
+    `test_a_entrada_declarada_vence_o_firmware.py`.
+
+    E A CLASSE NÃO PODE SER `.nota`: a folha do produto apaga `.nota` com
+    `!important`, e no Chrome o aviso aparecia enquanto na tela dela não. Quem
+    responde o que o produto esconde é o dono da folha.
     """
+    from hefesto_dualsense4unix.interface.folha_da_casa import seletores_escondidos
+
     pagina = pagina_do_mapa.pagina()
     cabecalho = pagina[pagina.index('<header class="topo"'):pagina.index("</header>")]
     assert "<h1>Mapa das <em>Conexões</em></h1>" in cabecalho
     assert 'id="reexaminar"' in cabecalho, "o «Examinar» saiu do cabeçalho"
-    assert 'id="de-quando"' not in cabecalho, "a data voltou ao cabeçalho"
-    assert "if (el) el.textContent = fonte.quando;" in pagina, (
-        "o `dizerDeQuando` deixou de aceitar a linha ausente — e sem ela a "
-        "entrega do arranjo estouraria")
+    linha = re.search(r'<p class="([^"]+)" id="de-quando">([^<]+)</p>', cabecalho)
+    assert linha, "o exemplo deixou de dizer, no cabeçalho, que é exemplo"
+    classe, texto = linha.group(1), linha.group(2)
+    assert texto == pagina_do_mapa.QUANDO_DO_EXEMPLO
+    escondidas = {s.lstrip(".").split()[-1] for s in seletores_escondidos()}
+    assert classe not in escondidas, (
+        f"a folha do produto esconde `.{classe}` — o aviso da página volta a "
+        f"existir só no Chrome. O que ela esconde hoje: {sorted(escondidas)}")
+    assert "if (el && fonte.quando !== EXEMPLO.quando) el.remove();" in pagina, (
+        "a leitura desta máquina voltou a se anunciar no cabeçalho — ela pediu "
+        "que saísse")
 
     documento, censo = _gabinete()
     veio = arranjo_desta_maquina.arranjo(
