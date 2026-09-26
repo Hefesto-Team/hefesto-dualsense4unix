@@ -217,14 +217,31 @@ class LinhaDoTeto:
 #: As cinco coisas que o perfil deveria alcançar. Dono único: a tabela e a
 #: frase de apoio saem daqui, e quando uma delas ganhar ponto de aplicação,
 #: mudar o campo muda as duas de uma vez.
+#:
+#: OS GATILHOS E A BARRA DE LUZ GANHARAM O PONTO em 25/09/2026
+#: (O-MODO-ECONOMIA-POR-CONTROLE-01): a «Bateria longa» liga o Modo Economia
+#: em todos os controles, e a ativação do perfil os põe no teto — a luz mais
+#: fraca sem apagar, o gatilho com metade da força no mesmo ponto. O que a
+#: economia faz em cada peça tem dono próprio
+#: (``profiles.schema.A_ECONOMIA_EM_CADA_PECA``); esta tabela só diz que o
+#: teto os alcança. Microfone e giroscópio ficam de fora por decisão escrita
+#: lá.
 LINHAS_DO_TETO: tuple[LinhaDoTeto, ...] = (
     LinhaDoTeto(
         "Vibração",
         "Rumble",
         "hefesto_dualsense4unix.core.rumble:_effective_mult",
     ),
-    LinhaDoTeto("Gatilhos", "Gatilhos"),
-    LinhaDoTeto("Barra de luz", "Lightbar"),
+    LinhaDoTeto(
+        "Gatilhos",
+        "Gatilhos",
+        "hefesto_dualsense4unix.profiles.manager:_perfil_na_economia",
+    ),
+    LinhaDoTeto(
+        "Barra de luz",
+        "Lightbar",
+        "hefesto_dualsense4unix.profiles.manager:_perfil_na_economia",
+    ),
     LinhaDoTeto("Microfone por rádio", "Os controles"),
     LinhaDoTeto("Giroscópio", "Perfis"),
 )
@@ -247,17 +264,29 @@ LINHAS_DO_TETO: tuple[LinhaDoTeto, ...] = (
 #: clique não produz. Derivando da tabela, a frase não pode prometer mais do
 #: que a tabela mostra, e o dia em que a barra de luz ganhar esse ponto ela
 #: entra sozinha nas duas.
+#:
+#: GANHOU EM 25/09/2026, e a palavra de 24/08 (*"barra de luz apagada"*) caiu
+#: pela dela de 25/09 para a economia: *«mantermos as features funcionando mas
+#: gastando menos»* — a luz fica mais fraca e não apaga. <!-- noqa-acento: citação literal dela -->
 def _dica_da_bateria_longa() -> str:
     """O que o perfil de bateria faz HOJE, e o que ele ainda não alcança."""
     chave = TETO_POR_PERFIL[PERFIL_BATERIA_LONGA]
     teto = teto_do_orcamento(chave) if isinstance(chave, str) else None
     forca = f"{round(teto * 100)}% da força" if teto is not None else SEM_TETO
+    frase = f"Vibração com {forca}"
+    mais_fracos = [
+        linha.nome.lower()
+        for linha in LINHAS_DO_TETO
+        if linha.tem_ponto and linha.nome != "Vibração"
+    ]
+    if mais_fracos:
+        frase += f"; {_lista(mais_fracos)} mais fracos, sem apagar"
     pendentes = [linha.nome for linha in LINHAS_DO_TETO if not linha.tem_ponto]
     if not pendentes:
-        return f"Vibração com {forca}."
+        return f"{frase}."
     return (
-        f"Vibração com {forca}. {_lista(pendentes)} continuam como estão: o "
-        "teto ainda não os alcança."
+        f"{frase}. {_lista(pendentes)} continuam como estão: o teto ainda não "
+        "os alcança."
     )
 
 
