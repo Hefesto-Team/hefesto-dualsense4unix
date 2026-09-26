@@ -71,6 +71,7 @@ from hefesto_dualsense4unix.core.backend_pydualsense import (
     PyDualSenseController,
 )
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
+from hefesto_dualsense4unix.core.evdev_reader import InputDirWatch
 from hefesto_dualsense4unix.daemon import connection as conn_mod
 from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
@@ -98,6 +99,9 @@ TIQUE = 2.0
 
 #: O `derrubar_o_radio` do produto, guardado antes de qualquer monkeypatch.
 _DERRUBAR_REAL = oce.derrubar_o_radio
+
+#: O `InputDirWatch.poll` do produto, pela mesma razão.
+_POLL_REAL = InputDirWatch.poll
 
 
 # ---------------------------------------------------------------------------
@@ -458,6 +462,10 @@ class MesaDoCabo:
         mesa = self
 
         def _poll(watch: Any) -> bool:
+            # O watch do barramento HID (o do laço, `_o_barramento_hid_mudou`)
+            # olha a pasta forjada de verdade: é ela que o cabo recusado muda.
+            if getattr(watch, "_root", None) == str(self.kernel.raiz):
+                return bool(_POLL_REAL(watch))
             return mesa._o_watch_de_verdade(watch) if watch_de_verdade else True
 
         monkeypatch.setattr("hefesto_dualsense4unix.core.evdev_reader.InputDirWatch.poll", _poll)
@@ -1173,6 +1181,92 @@ class TestOCaboEmEspera:
         assert vigia.decidir(cabo, diario=diario, no_radio=no_radio, agora=10.0).par == UNIQS[0]
 
 
+@pytest.mark.usefixtures("config_isolado")
+class TestOLacoAcordaPeloCabo:
+    """Conferência de 25/09: o que acorda o laço, que régua nenhuma media.
+
+    O cabo recusado não cria nó em `/dev/input` (a probe falha antes), e o
+    `InputDirWatch` do laço não o vê: sem o olhar no barramento HID, o cabo só
+    seria decidido no fallback de 30 s — meio minuto carregando pelo rádio.
+    """
+
+    def test_o_cabo_recusado_acorda_o_laco_pelo_barramento_hid(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        mesa = montar(monkeypatch, tmp_path, ("bt", "bt"))
+        nos_antes = dict(mesa.kernel.nodes)
+        assert conn_mod._o_barramento_hid_mudou(mesa.daemon) is False  # a linha de base
+        assert conn_mod._o_barramento_hid_mudou(mesa.daemon) is False  # nada mudou
+        mesa.kernel.conectar(UNIQS[1], "usb")  # recusado: nenhum nó novo
+        assert mesa.kernel.nodes == nos_antes, "a bancada criou nó para o cabo recusado"
+        assert conn_mod._o_barramento_hid_mudou(mesa.daemon) is True
+        assert conn_mod._o_barramento_hid_mudou(mesa.daemon) is False
+
+    def test_a_espera_online_acorda_pelo_cabo_recusado(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """A espera de verdade (`_wait_online_or_hotplug`), com `/dev/input` parado."""
+        mesa = montar(monkeypatch, tmp_path, ("bt", "bt"))
+
+        async def _nada(*_a: Any, **_k: Any) -> int:
+            return 0
+
+        monkeypatch.setattr(conn_mod, "vigiar_o_sequestro", _nada)
+        monkeypatch.setattr(conn_mod, "vigiar_escritor_cru", _nada)
+        monkeypatch.setattr(conn_mod, "disparar_gatilhos_devidos", _nada)
+        fatias: list[float] = []
+
+        async def _dormir(_daemon: Any, passo: float) -> None:
+            fatias.append(passo)
+            if len(fatias) == 1:
+                mesa.kernel.conectar(UNIQS[1], "usb")  # ela pluga o cabo
+
+        monkeypatch.setattr(conn_mod, "_wait_or_stop", _dormir)
+        mesa.daemon._is_stopping = lambda: False  # type: ignore[attr-defined]
+
+        class _DevInputParado:
+            def poll(self) -> bool:
+                return False
+
+        assert conn_mod._o_barramento_hid_mudou(mesa.daemon) is False  # a linha de base
+        acordou = asyncio.run(
+            conn_mod._wait_online_or_hotplug(mesa.daemon, _DevInputParado())  # type: ignore[arg-type]
+        )
+        assert acordou is True and len(fatias) == 1, (
+            f"o cabo recusado só seria visto no fallback: {len(fatias)} fatias, {sum(fatias)} s"
+        )
+
+    def test_o_cabo_que_amadurece_acorda_o_laco_uma_vez(self) -> None:
+        vigia = oce.VigiaDoCabo()
+        cabo = oce.CaboEmEspera("0003:054C:0CE6.0034")
+        vigia.observar_os_cabos([cabo], 100.0)
+        assert not vigia.quer_olhar_de_novo(100.0 + oce.ESPERA_PARA_SER_ORFAO_S - 0.1)
+        assert vigia.quer_olhar_de_novo(100.0 + oce.ESPERA_PARA_SER_ORFAO_S)
+        vigia.observar_os_cabos([cabo], 100.0 + oce.ESPERA_PARA_SER_ORFAO_S)
+        assert not vigia.quer_olhar_de_novo(200.0), "acordou o laço de novo pelo mesmo cabo"
+
+    def test_o_backend_enxuto_nao_olha_o_barramento(self) -> None:
+        daemon = SimpleNamespace(controller=SimpleNamespace())
+        assert conn_mod._o_barramento_hid_mudou(daemon) is False  # type: ignore[arg-type]
+        assert not hasattr(daemon, "_watch_do_barramento_hid")
+
+    def test_o_radio_que_nao_caiu_solta_a_marca(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        mesa = montar(monkeypatch, tmp_path, ("bt", "bt"))
+
+        def _recusa(caminho: str, *, quem: str) -> SimpleNamespace:
+            return SimpleNamespace(feita=False, erro="hefesto.TravaOcupada", mensagem="")
+
+        monkeypatch.setattr(mesa.bluez, "desconectar", _recusa)
+        mesa.kernel.conectar(UNIQS[1], "usb")
+        mesa.tique()
+        assert mesa.transporte_de(UNIQS[1]) == "bt"
+        assert not mesa.inst.em_troca_de_transporte(UNIQS[1]), (
+            "o rádio não caiu e o lugar ficou marcado como trocando"
+        )
+
+
 class TestAEnumeracaoPrefereOCabo:
     """Um kernel que deixasse os dois nós: a escolha não é mais do sorteio."""
 
@@ -1336,7 +1430,10 @@ def test_o_laco_nao_publica_queda_e_devolve_o_som(
             mesa.kernel.conectar(UNIQS[0], "usb")  # ela pluga o cabo no P1
         return True
 
-    async def _espera_offline(daemon_: Any, _t: float) -> None:
+    esperas_offline: list[float] = []
+
+    async def _espera_offline(daemon_: Any, t: float) -> None:
+        esperas_offline.append(t)
         await _espera(daemon_, None)
 
     monkeypatch.setattr(conn_mod, "_wait_online_or_hotplug", _espera)
@@ -1368,6 +1465,14 @@ def test_o_laco_nao_publica_queda_e_devolve_o_som(
     assert reaplicados == [UNIQS[0]], (
         f"o som foi reaplicado em {reaplicados} — o handle do cabo nasce sem a posse do áudio"
     )
+    if quantos == 1 and vao:
+        # Sozinho na mesa, o vão é mesa vazia: a espera offline é a curta da
+        # troca, e não os 5 s do probe (conferência de 25/09: sem régua).
+        assert esperas_offline, "a mesa vazia do vão não passou pela espera offline"
+        passo = conn_mod.PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC
+        assert max(esperas_offline) <= passo, (
+            f"o jogador ficou parado {max(esperas_offline)} s no vão da troca"
+        )
 
 
 # ---------------------------------------------------------------------------
