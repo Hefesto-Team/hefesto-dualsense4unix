@@ -1,0 +1,413 @@
+"""O pareamento que não chega devolve os botões — O-RADIO-CONECTA-ONDE-ELA-MANDA-01.
+
+Os relatos dela de 26/09/2026:
+
+    *«Ficou com a mensagem esperando por eternidade (…) e os botões ficaram
+    desabilitados sem resposta nenhuma. Travou num estado morto.»*
+    <!-- noqa-acento: citação literal dela -->
+
+    *«precisamos de um X do lado de cada controle, pra poder remover o pareamento
+    dele»* (item 3) <!-- noqa-acento: citação literal dela -->
+
+E o controle BRANCO (item 5), MEDIDO no ``radio-diario.jsonl`` dela: o ``Pair``
+deu, a busca de serviços caiu em ``Host is down``, e ele ficou ``Paired`` sem
+nunca ficar ``Connected`` — um pareamento pela metade no adaptador, e a tela
+esperando PS + Create para sempre.
+
+O que esta régua segura, sempre com o rádio de mentira de três adaptadores:
+
+1. o «esperando» segura a tela por :data:`ESPERA_NA_TELA_S` (60 s) e NÃO MAIS —
+   depois disso a linha diz «Não Conectou», e «Tentar de Novo» e o X aparecem;
+2. a busca que ninguém respondeu vira «Não Conectou» sem aparelho, e o X só
+   tira a linha (não há pareamento a esquecer);
+3. o branco — ``Pair`` que dá e controle que não conecta — perde a meia chave
+   SÓ naquele adaptador, e «Tentar de Novo» abre outro «Conectar» no mesmo;
+4. o controle que o ``Pair`` já conecta não recebe ``Connect`` (item 5b: o
+   ``Connect`` fica para quando ele não está no ar);
+5. o X esquece o controle ligado ou desligado SÓ no adaptador da linha.
+
+Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
+"""
+
+from __future__ import annotations
+
+import threading
+import time
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from hefesto_dualsense4unix.integrations import central_do_radio as cr
+from tests.unit import radio_de_mentira as rm
+from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VARANDA, VERDE, VERMELHO
+from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
+    Bancada,
+    ela_segura_ps_create,
+    id_da_tela,
+    mundo_da_madrugada,
+    onde_buscou,
+    onde_pareou,
+    preparar_a_tela,
+    preparar_o_diario,
+)
+
+
+@pytest.fixture()
+def diario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    return preparar_o_diario(tmp_path, monkeypatch)
+
+
+@pytest.fixture()
+def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
+    return preparar_a_tela(monkeypatch)
+
+
+def _com_a_central(bancada: Bancada, monkeypatch: pytest.MonkeyPatch,
+                   *movimentos: cr.Movimento) -> None:
+    """O ``radio_central`` publicado com ESTES movimentos (a hora de parede é a
+    que a régua quer), e os controles da mesa como o daemon publicaria."""
+    real = bancada.estado
+
+    def estado() -> dict[str, Any]:
+        st = real()
+        st["radio_central"] = {"movimentos": [m.publicar() for m in movimentos],
+                               "em_curso": any(m.em_curso for m in movimentos),
+                               "proposta": None}
+        return st
+
+    monkeypatch.setattr(bancada, "estado", estado)
+
+
+def _linhas(cena: dict[str, Any], lugar: str, **marca: Any) -> list[dict[str, Any]]:
+    return [a for a in cena["aparelhos"] if a.get("lugar") == id_da_tela(lugar)
+            and all(a.get(k) == v for k, v in marca.items())]
+
+
+# ---------------------------------------------------------------------------
+# 1. o «esperando» segura a tela por 60 s, e não mais
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("destino", (SALA, QUARTO, VARANDA))
+def test_o_esperando_segura_a_tela_por_sessenta_segundos_e_nao_mais(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str,
+) -> None:
+    """Aos 59 s a janela ainda é dela: a tela está ocupada, a caixa do destino
+    aberta, e nada de «Não Conectou». Aos 61 s os botões voltam: a linha diz
+    «Não Conectou», com «Tentar de Novo» NAQUELE adaptador e o X — e o próximo
+    «Conectar» vai para onde ela abrir, não mais para a janela morta.
+
+    MORDIDA: tire a idade de ``_ainda_espera`` (o «esperando» vale para sempre)
+    — o caso dos 61 s reprova, que é o «estado morto» dela.
+    """
+    mundo, relogio = mundo_da_madrugada(), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    try:
+        agora = time.time()
+        _com_a_central(bancada, monkeypatch, cr.Movimento(
+            "", destino, cr.ESPERANDO, cr.PASSO_GESTO, quando=agora - 59.0))
+        cena = bancada.cena()
+        assert cena["ocupado"] is True
+        assert cena["aberto"] == id_da_tela(destino)
+        assert cena["destino_do_conectar"] == id_da_tela(destino)
+        assert not _linhas(cena, destino, nao_conectou=True)
+        with pytest.raises(RuntimeError):
+            bancada.gesto("conectar-aparelho")
+
+        _com_a_central(bancada, monkeypatch, cr.Movimento(
+            "", destino, cr.ESPERANDO, cr.PASSO_GESTO, quando=agora - 61.0))
+        sala = bancada.tique()["radio-sala"]
+        cena = dict(a08._CENA_NA_TELA)
+        assert cena["ocupado"] is False, "a janela morta segurou a tela depois de 60 s"
+        (linha,) = _linhas(cena, destino, nao_conectou=True)
+        assert linha["aparelho"] == ""
+        assert "Não Conectou" in sala
+        assert f'data-gesto="tentar-de-novo" data-alvo="{id_da_tela(destino)}"' in sala
+        assert (f'data-gesto="esquecer-aparelho" data-alvo="{linha["id"]}" '
+                f'data-lugar="{id_da_tela(destino)}"') in sala
+        assert cena["aberto"] == id_da_tela(destino), "a caixa de quem não chegou fechou"
+
+        # Ela abre outra caixa: o «Conectar» vai para lá, não para a janela morta.
+        outro = next(e for e in (SALA, QUARTO, VARANDA) if e != destino)
+        bancada.gesto("abrir-adaptador", alvo=id_da_tela(outro))
+        assert bancada.cena()["destino_do_conectar"] == id_da_tela(outro)
+    finally:
+        bancada.fechar()
+
+
+def test_com_a_janela_aberta_o_x_treme(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O X segue o um-por-vez do «Mover»: com um controle esperando PS + Create
+    noutro adaptador, o X do vermelho treme e nada sai do rádio."""
+    mundo, relogio = mundo_da_madrugada(), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    try:
+        _com_a_central(bancada, monkeypatch, cr.Movimento(
+            "", QUARTO, cr.ESPERANDO, cr.PASSO_GESTO, quando=time.time()))
+        bancada.cena()
+        vermelho = {"alvo": rm.uniq(VERMELHO), "lugar": id_da_tela(SALA)}
+        with pytest.raises(RuntimeError):
+            bancada.gesto("esquecer-aparelho", **vermelho)
+        with pytest.raises(RuntimeError):
+            bancada.gesto("confirmar-esquecer", **vermelho)
+        assert mundo.metodos("RemoveDevice") == [] and mundo.lapides == []
+    finally:
+        bancada.fechar()
+
+
+# ---------------------------------------------------------------------------
+# 2. a busca que ninguém respondeu
+# ---------------------------------------------------------------------------
+
+
+def test_a_busca_que_ninguem_respondeu_vira_nao_conectou_e_o_x_tira_a_linha(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Ela abre a varanda, clica «Conectar», e não segura PS + Create: a central
+    fecha a janela com «não chegou», e a linha da varanda diz «Não Conectou».
+    O X não tem pareamento a esquecer — ele tira a linha, e nada sai do rádio."""
+    mundo, relogio = mundo_da_madrugada(), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    try:
+        bancada.cena()
+        bancada.gesto("abrir-adaptador", alvo=id_da_tela(VARANDA))
+        bancada.cena()
+        bancada.gesto("conectar-aparelho")
+        bancada.esperar_a_central()
+        (feito,) = bancada.central.movimentos()
+        assert (feito.estado, feito.destino) == (cr.NAO_CHEGOU, VARANDA)
+
+        cena = bancada.cena()
+        (linha,) = _linhas(cena, VARANDA, nao_conectou=True)
+        assert linha["aparelho"] == "" and linha["meia_chave"] is False
+        assert cena["ocupado"] is False and cena["aberto"] == id_da_tela(VARANDA)
+
+        assert bancada.gesto("esquecer-aparelho", alvo=linha["id"],
+                             lugar=id_da_tela(VARANDA)) == {"armou": True}
+        assert not _linhas(bancada.cena(), VARANDA, nao_conectou=True)
+        assert mundo.metodos("RemoveDevice") == [] and mundo.lapides == []
+    finally:
+        bancada.fechar()
+
+
+# ---------------------------------------------------------------------------
+# 3. o controle branco: o Pair dá e ele não conecta
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("destino", (SALA, QUARTO, VARANDA))
+def test_o_branco_perde_a_meia_chave_so_ali_e_tenta_de_novo_no_mesmo_adaptador(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str,
+) -> None:
+    """O ``Pair`` do branco dá, e ele não fica ``Connected`` (a física do diário
+    dela). A tela mostra «Não Conectou» com o nome dele, a meia chave sai SÓ
+    naquele adaptador — pelo mesmo verbo do X —, e «Tentar de Novo» abre outro
+    «Conectar» no MESMO adaptador, onde ele chega.
+
+    MORDIDA: faça ``_esquecer_as_meias_chaves`` não fazer nada — o objeto
+    ``Paired`` sem ``Connected`` fica no adaptador e esta régua reprova.
+    """
+    mundo, relogio = mundo_da_madrugada(), rm.Relogio()
+    mundo.pair_mente = True
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    try:
+        bancada.cena()
+        bancada.gesto("escolher-adaptador", alvo=id_da_tela(destino))
+        bancada.cena()
+        ela_segura_ps_create(mundo, relogio, VERDE)
+        bancada.gesto("conectar-aparelho")
+        bancada.esperar_a_central()
+        (feito,) = [m for m in bancada.central.movimentos() if m.estado == cr.NAO_CHEGOU]
+        assert feito.destino == destino
+        assert onde_pareou(mundo) == [rm.HCIS[destino]]
+
+        cena = bancada.cena()
+        (linha,) = _linhas(cena, destino, nao_conectou=True)
+        assert linha["aparelho"] == id_da_tela(VERDE)
+        assert mundo.objeto(destino, VERDE) is None, "a meia chave ficou no adaptador"
+        assert mundo.lapides == [(destino, VERDE)]
+        for outro in (SALA, QUARTO, VARANDA):
+            if outro != destino:
+                assert mundo.objeto(outro, VERDE) is None
+        assert mundo.objeto(SALA, VERMELHO) is not None and mundo.objeto(SALA, AZUL) is not None
+
+        # Uma vez por movimento: o tique seguinte não pede de novo.
+        bancada.cena()
+        assert mundo.lapides == [(destino, VERDE)]
+
+        # «Tentar de Novo»: agora ele conecta.
+        mundo.pair_mente = False
+        ela_segura_ps_create(mundo, relogio, VERDE)
+        assert bancada.gesto("tentar-de-novo", alvo=id_da_tela(destino)) == {"armou": True}
+        bancada.esperar_a_central()
+        assert onde_buscou(mundo) == [rm.HCIS[destino]] * 2
+        assert mundo.onde_esta(rm.uniq(VERDE)) == destino
+        cena = bancada.cena()
+        assert not _linhas(cena, destino, nao_conectou=True)
+        assert cena["aberto"] == id_da_tela(destino)
+    finally:
+        bancada.fechar()
+
+
+# ---------------------------------------------------------------------------
+# 4. o Connect fica para quem não está no ar
+# ---------------------------------------------------------------------------
+
+
+def test_o_controle_que_o_pair_conecta_nao_recebe_connect(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Item 5b, MEDIDO no diário dela: dos sete pareamentos da madrugada, só o
+    do branco recebeu ``Connect`` — o ``Pair`` do DualSense já conecta. A régua
+    segura isso: o ``Connect`` depois do ``Pair`` é a última tentativa, só para
+    quem não está no ar.
+
+    MORDIDA: faça o ``_parear_e_conferir`` da central chamar ``Connect`` sempre.
+    """
+    mundo, relogio = mundo_da_madrugada(), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    try:
+        bancada.cena()
+        bancada.gesto("abrir-adaptador", alvo=id_da_tela(QUARTO))
+        bancada.cena()
+        ela_segura_ps_create(mundo, relogio, VERDE)
+        bancada.gesto("conectar-aparelho")
+        bancada.esperar_a_central()
+        assert mundo.onde_esta(rm.uniq(VERDE)) == QUARTO
+        assert mundo.metodos("Connect") == []
+    finally:
+        bancada.fechar()
+
+
+# ---------------------------------------------------------------------------
+# 5. o X esquece só no adaptador da linha
+# ---------------------------------------------------------------------------
+
+
+def _mesa_das_chaves() -> rm.RadioDeMentira:
+    """O vermelho no ar na sala, com uma chave velha no quarto; o roxo desligado,
+    com chave na varanda e na sala."""
+    mundo = rm.RadioDeMentira()
+    mundo.pareado(SALA, VERMELHO, nome="André")
+    mundo.pareado(QUARTO, VERMELHO, host=False)
+    mundo.pareado(VARANDA, ROXO, conectado=False, nome="Vitória")
+    mundo.pareado(SALA, ROXO, host=False)
+    return mundo
+
+
+def test_o_desligado_aparece_em_cada_adaptador_em_que_tem_chave(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O X vale para controle ligado ou desligado: o roxo desligado tem uma linha
+    «Desligado» (com X) em cada adaptador em que tem chave; o vermelho, no ar na
+    sala, não vira «Desligado» no quarto — a linha dele é a viva."""
+    mundo, relogio = _mesa_das_chaves(), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    try:
+        sala = bancada.tique()["radio-sala"]
+        cena = dict(a08._CENA_NA_TELA)
+        assert len(_linhas(cena, VARANDA, desligado=True)) == 1
+        assert len(_linhas(cena, SALA, desligado=True)) == 1
+        assert not _linhas(cena, QUARTO, desligado=True), "o vermelho no ar virou Desligado"
+        assert sala.count("Desligado</span>") == 2
+        for lugar in (VARANDA, SALA):
+            assert (f'data-gesto="esquecer-aparelho" data-alvo="{id_da_tela(ROXO)}" '
+                    f'data-lugar="{id_da_tela(lugar)}"') in sala
+        # A linha viva tem o ``uniq`` do daemon como id; a desligada, o endereço.
+        assert (f'data-gesto="esquecer-aparelho" data-alvo="{rm.uniq(VERMELHO)}" '
+                f'data-lugar="{id_da_tela(SALA)}"') in sala
+    finally:
+        bancada.fechar()
+
+
+@pytest.mark.parametrize(("quem", "onde", "fica"), [
+    (ROXO, VARANDA, SALA),      # desligado: sai da varanda, a chave da sala fica
+    (ROXO, SALA, VARANDA),      # desligado: sai da sala, a da varanda fica
+    (VERMELHO, SALA, QUARTO),   # no ar: sai da sala (e desconecta), a do quarto fica
+])
+def test_o_x_esquece_so_no_adaptador_da_linha(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
+    quem: str, onde: str, fica: str,
+) -> None:
+    """O X abre a pergunta (nada sai), e o «Esquecer» dela tira a chave DAQUELE
+    controle NAQUELE adaptador — o ``RemoveDevice`` e o verbo ``esquecer`` da
+    ponte, que já existia. A chave dele no outro adaptador fica.
+
+    MORDIDA: faça ``esquecer_o_pareamento`` procurar o objeto sem o adaptador
+    (``caminho_do_aparelho(alvo)``) — ele tira a chave do primeiro adaptador da
+    árvore, e os casos em que a linha não é a primeira reprovam.
+    """
+    mundo, relogio = _mesa_das_chaves(), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    try:
+        bancada.cena()
+        no_ar = mundo.onde_esta(rm.uniq(quem)) == onde
+        clique = {"alvo": rm.uniq(quem) if no_ar else id_da_tela(quem),
+                  "lugar": id_da_tela(onde)}
+        assert bancada.gesto("esquecer-aparelho", **clique) == {"armou": True}
+        assert mundo.metodos("RemoveDevice") == [] and mundo.lapides == [], "o X esqueceu sem ela"
+
+        bancada.gesto("confirmar-esquecer", **clique)
+        assert mundo.objeto(onde, quem) is None
+        assert mundo.objeto(fica, quem) is not None, "o X esqueceu noutro adaptador"
+        assert mundo.lapides == [(onde, quem)]
+        cena = bancada.cena()
+        assert not [a for a in cena["aparelhos"]
+                    if str(a["id"]).lower() == rm.uniq(quem)
+                    and a.get("lugar") == id_da_tela(onde)]
+        if quem == VERMELHO:
+            assert mundo.onde_esta(rm.uniq(VERMELHO)) == ""
+    finally:
+        bancada.fechar()
+
+
+def test_o_esquecer_que_nao_deu_treme(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sem a trava do rádio (outro dono a segura), o «Esquecer» não finge: o
+    botão treme e a linha continua lá."""
+    from hefesto_dualsense4unix.integrations import diario_do_radio
+
+    mundo, relogio = _mesa_das_chaves(), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    try:
+        bancada.cena()
+        clique = {"alvo": id_da_tela(ROXO), "lugar": id_da_tela(VARANDA)}
+        segurando, soltar = threading.Event(), threading.Event()
+
+        def outro_dono() -> None:
+            with diario_do_radio.trava_do_radio("outro"):
+                segurando.set()
+                soltar.wait(5)
+
+        fio = threading.Thread(target=outro_dono, daemon=True)
+        fio.start()
+        assert segurando.wait(5)
+        try:
+            with pytest.raises(RuntimeError):
+                _esquecer_com_prazo_curto(a08, bancada, clique)
+        finally:
+            soltar.set()
+            fio.join(5)
+        assert mundo.objeto(VARANDA, ROXO) is not None
+        assert _linhas(bancada.cena(), VARANDA, desligado=True)
+    finally:
+        bancada.fechar()
+
+
+def _esquecer_com_prazo_curto(a08: Any, bancada: Bancada, clique: dict[str, Any]) -> Any:
+    """O «Esquecer» com o prazo da trava curto — a trava do outro dono não solta."""
+    from hefesto_dualsense4unix.integrations import gesto_de_pareamento as gp
+
+    def esquecer(lugar: str, aparelho: str) -> Any:
+        return gp.esquecer_o_pareamento(
+            a08._com_dois_pontos(lugar), a08._com_dois_pontos(aparelho), dono=bancada.dono,
+            esquecer_na_ponte=bancada.mundo.esquecer_na_ponte, quem="tela", prazo_s=0.1)
+
+    a08._esquecer_o_pareamento, antes = esquecer, a08._esquecer_o_pareamento
+    try:
+        return bancada.gesto("confirmar-esquecer", **clique)
+    finally:
+        a08._esquecer_o_pareamento = antes

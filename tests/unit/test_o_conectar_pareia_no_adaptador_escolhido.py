@@ -148,8 +148,7 @@ class Bancada:
         self.dono.fechar()
 
 
-@pytest.fixture()
-def diario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+def preparar_o_diario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A trava e o diário numa pasta de teste — nunca os dela, em ``/run``."""
     monkeypatch.setenv(diario_do_radio.ENV_TRAVA, str(tmp_path / "radio.lock"))
     caminho = tmp_path / "radio-diario.jsonl"
@@ -157,8 +156,8 @@ def diario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return caminho
 
 
-@pytest.fixture()
-def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
+def preparar_a_tela(monkeypatch: pytest.MonkeyPatch) -> Any:
+    """O pacote da 08 lendo na hora, sem nada da tela de antes nem do disco dela."""
     from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
@@ -175,6 +174,17 @@ def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
     return a08_conexoes
 
 
+
+@pytest.fixture()
+def diario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    return preparar_o_diario(tmp_path, monkeypatch)
+
+
+@pytest.fixture()
+def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
+    return preparar_a_tela(monkeypatch)
+
+
 def mundo_da_madrugada() -> rm.RadioDeMentira:
     """Dois controles no ar na sala (com som), e o verde novo, desligado, na mão dela."""
     mundo = rm.RadioDeMentira()
@@ -189,11 +199,11 @@ def ela_segura_ps_create(mundo: rm.RadioDeMentira, relogio: rm.Relogio, aparelho
     relogio.agendar(2.0, lambda: mundo.segurar_ps_create(aparelho))
 
 
-def _onde_buscou(mundo: rm.RadioDeMentira) -> list[str]:
+def onde_buscou(mundo: rm.RadioDeMentira) -> list[str]:
     return [c for c, _a in mundo.metodos("StartDiscovery")]
 
 
-def _onde_pareou(mundo: rm.RadioDeMentira) -> list[str]:
+def onde_pareou(mundo: rm.RadioDeMentira) -> list[str]:
     return [c.rsplit("/", 1)[0] for c, _a in mundo.metodos("Pair")]
 
 
@@ -233,8 +243,8 @@ def test_abrir_o_adaptador_e_conectar_pareia_nele(
         bancada.esperar_a_central()
 
         assert bancada.ponte.chamadas == [("radio.mover", {"destino": id_da_tela(destino)})]
-        assert _onde_buscou(mundo) == [rm.HCIS[destino]], "a busca saiu de outro adaptador"
-        assert _onde_pareou(mundo) == [rm.HCIS[destino]], "o Pair saiu de outro adaptador"
+        assert onde_buscou(mundo) == [rm.HCIS[destino]], "a busca saiu de outro adaptador"
+        assert onde_pareou(mundo) == [rm.HCIS[destino]], "o Pair saiu de outro adaptador"
         (feito,) = [m for m in bancada.central.movimentos() if m.aparelho == VERDE]
         assert (feito.estado, feito.destino) == (cr.CHEGOU, destino)
         assert mundo.onde_esta(rm.uniq(VERDE)) == destino
@@ -261,7 +271,7 @@ def test_o_chip_do_procurando_abre_o_mesmo_adaptador(
         ela_segura_ps_create(mundo, relogio, VERDE)
         bancada.gesto("conectar-aparelho")
         bancada.esperar_a_central()
-        assert _onde_buscou(mundo) == [rm.HCIS[VARANDA]]
+        assert onde_buscou(mundo) == [rm.HCIS[VARANDA]]
     finally:
         bancada.fechar()
 
@@ -285,7 +295,7 @@ def test_sem_nenhum_aberto_vale_a_escolha_da_central(
         ela_segura_ps_create(mundo, relogio, VERDE)
         bancada.gesto("conectar-aparelho")
         bancada.esperar_a_central()
-        (hci,) = _onde_buscou(mundo)
+        (hci,) = onde_buscou(mundo)
         assert id_da_tela(next(e for e, c in rm.HCIS.items() if c == hci)) == d8
         assert bancada.cena()["aberto"] == d8, "a caixa do destino não ficou aberta"
     finally:
