@@ -1981,10 +1981,17 @@ Mais os códigos `Z1` a `ZB`, que são edições especiais.
 códigos, e a fonte da verdade das cores desta casa — `docs/data/cores-do-dualsense.csv`
 — conhece **28**. Faltam aqui `13` HyperPop Techno Red, `14` HyperPop Remix
 Green, `15` HyperPop Rhythm Blue, `ZC` Ghost of Yōtei, `ZD` Marathon, `ZE`
-Genshin Impact e `ZF` 007 First Light — os sete mais novos. O produto tem a
-mesma lacuna (`integrations/cor_do_plastico.NOMES_DE_FABRICA`, 21 nomes), e
-fechá-la é a `ONDA-CONEXOES-12`, que faz as duas listas saírem do CSV. **Não
-copie esta tabela para lugar nenhum:** o dono do dado é o CSV.
+Genshin Impact e `ZF` 007 First Light — os sete mais novos. O PRODUTO NÃO
+TEM MAIS ESSA LACUNA desde 25/09/2026 (O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01):
+`integrations/cor_do_plastico.TABELA` é LIDA do CSV, com os 28, e um código que
+nem o CSV conhece sai com o nome do modelo pelo PID («DualSense» ou «DualSense
+Edge»). **Não copie esta tabela para lugar nenhum:** o dono do dado é o CSV.
+
+**O DualSense Edge (`054C:0DF2`) recebe o MESMO pedido desde 25/09/2026, e isso
+não foi medido num Edge de verdade** — esta bancada não tem nenhum. A tradução
+do código é a do DualSense (as três fontes acima não separam os dois), e um Edge
+que recusar, não responder ou devolver um código fora do CSV sai com o nome
+«DualSense Edge», sem cor. O primeiro Edge que passar pela mesa vira a medição.
 
 **As fontes, e por que o grau não é BAIXA:** `dualshock-tools.github.io`,
 `js/controllers/ds5-controller.js:196-226` e `:404-414`, com o mantenedor
