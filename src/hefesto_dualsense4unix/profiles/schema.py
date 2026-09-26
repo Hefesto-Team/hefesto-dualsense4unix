@@ -1665,16 +1665,14 @@ class ControllerOverrides(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    # SÃO NOVE, e a tela oferece dez. O que falta, e o CAMINHO que cada um
+    # SÃO OITO, e a tela oferece dez. O que falta, e o CAMINHO que cada um
     # espera antes de poder entrar, está na fila da docstring acima — ordenada
     # por custo. O `mic` entrou em 03/09/2026 pelo `muted`, que é o campo dele
     # cuja escada carrega o `uniq` em todo degrau; o `sensores` entrou em
     # 04/09/2026, quando o interruptor que ele prometia passou a existir; a
     # `mascara` entrou em 08/09/2026, por decisão dela — e é a primeira que não
     # é uma SEÇÃO, e sim um valor só; o `movimento` entrou em 24/09/2026, com o
-    # chip «Mira Virtual» que ela pediu no cartão de cada controle; a
-    # `economia` entrou em 25/09/2026, o botão da linha do controle, e ela não
-    # é uma seção nova: é um teto sobre três que já chegam à peça.
+    # chip «Mira Virtual» que ela pediu no cartão de cada controle.
     leds: LedsConfig | None = None
     triggers: TriggersConfig | None = None
     rumble: ControllerRumbleOverride | None = None
@@ -1720,18 +1718,6 @@ class ControllerOverrides(BaseModel):
     #: jogo é ``roteador_de_movimento.da_peca``, perguntado pelo motor do tique
     #: com o ``uniq`` de cada jogador.
     movimento: ProfileMovimentoConfig | None = None
-    #: O MODO ECONOMIA DE BATERIA desta peça — O-MODO-ECONOMIA-POR-CONTROLE-01
-    #: (25/09/2026), o botão da linha do controle que ela pediu: *«se clica tá
-    #: setado na economia Low Iluminação Fraca, Vibraçao Economia, Gatilho»*.
-    #: <!-- noqa-acento: citação literal dela -->
-    #:
-    #: ``True`` liga; ``None`` (e ``False``, que vale o mesmo) não liga POR
-    #: ESTE CONTROLE. A mesa em «Bateria longa» liga em todos, e a regra
-    #: inteira — o que a economia faz em cada peça e quem vence entre o global
-    #: e o do controle — mora num dono só: :func:`economia_vale` e a tabela
-    #: :data:`A_ECONOMIA_EM_CADA_PECA`. Quem a leva ao aparelho é
-    #: ``manager._controllers_na_economia``, na ativação.
-    economia: bool | None = None
 
 
 # Regex para tokens aceitos em `Profile.key_bindings` values (FEAT-KEYBOARD-PERSISTENCE-01).
@@ -2374,9 +2360,29 @@ def resolver_teclado_emulado(profile: Profile | None, flag_global: bool) -> bool
 # lugar só: o que a economia faz em cada peça (:data:`A_ECONOMIA_EM_CADA_PECA`
 # e as três funções ``*_na_economia``), quem vence entre o global e o do
 # controle (:func:`economia_vale`) e onde a escolha é gravada
-# (``ControllerOverrides.economia``, escrito por
-# :func:`com_a_economia_do_controle`). A tela lê e escreve por aqui; quem leva
-# ao aparelho é ``manager._controllers_na_economia``, na ativação do perfil.
+# (:func:`declaracao_da_economia`). A tela lê e escreve por aqui; quem leva ao
+# aparelho é ``manager._controllers_na_economia``, na ativação do perfil.
+#
+# ONDE A ESCOLHA MORA: NA DECLARAÇÃO DA MESA, AO LADO DO GLOBAL
+# --------------------------------------------------------------
+# ``maquina.json`` → ``controles[<uniq>].economia`` (``utils.maquina.
+# ControleDeclarado``), vizinho do ``orcamento.teto`` que é o Perfil Global de
+# Bateria. NÃO no perfil, e a sprint pedia o perfil; a troca é decisão pelo
+# padrão dela, medida em 25/09/2026:
+#
+# * custa menos a quem joga: a bateria é do CONTROLE, não do jogo. No perfil,
+#   a economia que ela ligou no P2 sumiria na primeira troca automática para o
+#   perfil de um jogo, e ela teria de ligar de novo em cada jogo — é a mesma
+#   surpresa que fez o ``microfone`` por controle morar ali
+#   (``ControleDeclarado``, *"um microfone que liga ao trocar de jogo"*);
+# * um dono só: o global e o do controle ficam no MESMO documento, com o MESMO
+#   gesto (``machine.declare``) e a MESMA leitura (a declaração que o daemon
+#   rebinda no clique);
+# * o downgrade: o ``maquina.json`` resgata campo a campo o que conhece
+#   (``_so_o_que_o_schema_conhece``); um campo novo no PERFIL faria um Hefesto
+#   de antes recusar o perfil inteiro (``extra="forbid"``) — e exigiria uma
+#   coluna nova na aba Perfis (medido: oito réguas da coluna «Ajuste próprio»
+#   reprovam), tela fora das duas abas desta leva.
 #
 # NENHUMA FEATURE DESLIGA, e é a régua: a luz fica mais fraca e não apaga, a
 # vibração ganha teto e não some, o gatilho gasta menos motor e continua com o
@@ -2403,7 +2409,7 @@ def resolver_teclado_emulado(profile: Profile | None, flag_global: bool) -> bool
 #   caminho existe, e cada aba continua mandando no que faz.
 #
 # Por isso ``False`` no disco vale o mesmo que ``None``: o controle não liga
-# por si. O escritor grava ``True`` ou apaga a chave.
+# por si. O escritor grava ``true`` ou ``null``.
 
 
 #: O teto do brilho da BARRA DE LUZ na economia — 30 % do trilho, o mesmo
@@ -2555,39 +2561,91 @@ def mesa_em_economia(teto_da_mesa: str | None) -> bool:
     return teto_do_orcamento(teto_da_mesa) is not None
 
 
-#: A FONTE do Perfil Global de Bateria, registrada pelo daemon no boot — a
-#: mesma ``DaemonConfig.orcamento_da_mesa`` que o teto de vibração lê. É FONTE
-#: e não valor pela mesma razão de lá: o ``machine.declare`` rebinda a
-#: declaração, e uma cópia feita no boot ficaria velha no instante do clique.
-#: ``None`` (ninguém registrou: a CLI, a suíte, o dublê) é a mesa SEM
-#: economia, o comportamento de antes desta sprint.
-_FONTE_DO_TETO_DA_MESA: Any = None
+#: A FONTE da declaração da mesa, registrada pelo daemon no boot: um chamável
+#: que devolve o ``MaquinaConfig`` vivo (``Daemon._maquina``). É FONTE e não
+#: valor pela razão do ``DaemonConfig.orcamento_da_mesa``: o
+#: ``machine.declare`` rebinda a declaração, e uma cópia feita no boot ficaria
+#: velha no instante do clique. ``None`` (ninguém registrou: a CLI, a suíte, o
+#: dublê) é a mesa sem economia nenhuma, o comportamento de antes desta sprint.
+_FONTE_DA_DECLARACAO: Any = None
 
 
-def registrar_teto_da_mesa(fonte: Any) -> None:
-    """O daemon diz de onde ler a chave do Perfil Global de Bateria.
+def registrar_declaracao_da_mesa(fonte: Any) -> None:
+    """O daemon diz de onde ler a declaração da mesa (o ``maquina.json`` vivo).
 
     ``None`` desfaz o registro (a suíte o usa para voltar ao padrão).
     """
-    global _FONTE_DO_TETO_DA_MESA
-    _FONTE_DO_TETO_DA_MESA = fonte if callable(fonte) else None
+    global _FONTE_DA_DECLARACAO
+    _FONTE_DA_DECLARACAO = fonte if callable(fonte) else None
+
+
+def _declaracao_viva() -> Any:
+    """A declaração de agora, ou ``None``. Fonte que levanta é ``None``.
+
+    ``None`` e não "levanta" porque quem pergunta é a ativação do perfil, e uma
+    declaração ilegível não pode derrubar a luz e o gatilho de todo mundo; o
+    teto que ninguém consegue ler é o de antes desta sprint — nenhum.
+    """
+    fonte = _FONTE_DA_DECLARACAO
+    if fonte is None:
+        return None
+    try:
+        return fonte()
+    except Exception:
+        return None
 
 
 def economia_da_mesa() -> bool:
-    """A mesa está em economia AGORA? Tolerante: fonte que levanta é ``False``.
+    """A mesa está em «Bateria longa» AGORA?"""
+    orcamento = getattr(_declaracao_viva(), "orcamento", None)
+    teto = getattr(orcamento, "teto", None)
+    return mesa_em_economia(teto if isinstance(teto, str) else None)
 
-    ``False`` e não "levanta" porque quem pergunta é a ativação do perfil, e
-    uma declaração ilegível não pode derrubar a luz e o gatilho de todo mundo;
-    o teto que ninguém consegue ler é o de antes desta sprint — nenhum.
+
+def _so_hex(uniq: object) -> str:
+    """O ``uniq`` em doze hexa minúsculos, a forma das duas chaves de disco."""
+    texto = re.sub(r"[^0-9a-fA-F]", "", str(uniq or ""))
+    return texto.lower() if len(texto) == 12 else ""
+
+
+def controles_em_economia() -> frozenset[str]:
+    """Os ``uniq`` (doze hexa) cujo controle LIGOU a sua economia.
+
+    Só ``True`` conta: ``False`` e a ausência são o mesmo aqui (ver
+    :func:`economia_vale`). A chave é normalizada de novo porque um
+    ``maquina.json`` editado à mão pode trazer os dois-pontos.
     """
-    fonte = _FONTE_DO_TETO_DA_MESA
-    if fonte is None:
-        return False
-    try:
-        valor = fonte()
-    except Exception:
-        return False
-    return mesa_em_economia(valor if isinstance(valor, str) else None)
+    controles = getattr(_declaracao_viva(), "controles", None)
+    if not isinstance(controles, dict):
+        return frozenset()
+    return frozenset(
+        chave
+        for chave in (
+            _so_hex(uniq)
+            for uniq, declarado in controles.items()
+            if getattr(declarado, "economia", None) is True
+        )
+        if chave
+    )
+
+
+def declaracao_da_economia(uniq: str, ligada: bool) -> dict[str, Any]:
+    """A declaração PARCIAL que liga ou desliga a economia de um controle.
+
+    É o corpo do ``machine.declare`` que a tela manda no clique do botão da
+    linha: ``{"controles": {"<uniq>": {"economia": true}}}``. Desligar manda
+    ``null``, que SOBRESCREVE (``utils.maquina.fundir_declaracao``: *"None
+    presente na declaração é uma escolha"*); omitir a chave deixaria a
+    economia ligada no disco com o botão apagado na tela. O resto do controle
+    (``cor``, ``microfone``…) não é tocado — a fusão desce no dicionário.
+
+    ``ValueError`` num ``uniq`` que não é endereço: gravar a economia sob uma
+    chave que nenhum controle casa seria a escolha dela sumindo calada.
+    """
+    chave = _so_hex(uniq)
+    if not chave:
+        raise ValueError(f"economia: {uniq!r} não é o endereço de um controle")
+    return {"controles": {chave: {"economia": True if ligada else None}}}
 
 
 def _escritos(modelo: BaseModel) -> dict[str, Any]:
@@ -2756,37 +2814,6 @@ def vibracao_na_economia(
     if not campos:
         return None
     return ControllerRumbleOverride.model_validate(campos)
-
-
-def com_a_economia_do_controle(
-    perfil: Profile, chave: str, ligada: bool
-) -> Profile | None:
-    """O perfil com a economia DESTE controle ligada ou desligada — o escritor.
-
-    É o que a tela chama no clique do botão da linha (e grava pelo caminho de
-    sempre: ``save_profile`` + ``profile.switch``). ``chave`` é o ``uniq``
-    normalizado (doze hexa minúsculos, como o loader canoniza). ``None`` quando
-    nada muda: regravar um perfil idêntico faz o daemon reaplicá-lo à toa.
-
-    Desligar APAGA a chave em vez de gravar ``false``: o disco guarda só
-    opinião, e um Hefesto de antes desta sprint (``extra="forbid"``) recusaria
-    o perfil inteiro por uma chave que ele não conhece — o downgrade fica
-    possível para todo perfil em que a economia está desligada.
-    """
-    atuais = dict(perfil.controllers or {})
-    dele = atuais.get(chave)
-    antes = bool(dele is not None and dele.economia is True)
-    if antes == bool(ligada):
-        return None
-    campos = _escritos(dele) if dele is not None else {}
-    campos.pop("economia", None)
-    if ligada:
-        campos["economia"] = True
-    if campos:
-        atuais[chave] = ControllerOverrides.model_validate(campos)
-    else:
-        atuais.pop(chave, None)
-    return perfil.model_copy(update={"controllers": atuais})
 
 
 # ---------------------------------------------------------------------------
@@ -3131,12 +3158,6 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "declarado perde a máscara própria em vez de mantê-la.",
         dono="hefesto_dualsense4unix.daemon.subsystems.external_mask:mascara_efetiva",
     ),
-    "ControllerOverrides.economia": Nascimento(
-        E_CONTRATO,
-        "Sem escrita = esta peça gasta o que a mesa manda (a «Bateria longa» "
-        "da aba Sistema liga a economia em todos). Não é feature que nasce "
-        "muda: a economia não desliga nada, só põe teto no que gasta.",
-    ),
     "ControllerOverrides.movimento": Nascimento(
         E_CONTRATO,
         "Seção ausente = esta peça segue a mira do perfil, e a do perfil não "
@@ -3333,8 +3354,9 @@ __all__ = [
     "TriggerConfig",
     "TriggersConfig",
     "classes_de_jogo_conhecidas",
-    "com_a_economia_do_controle",
     "com_o_brilho_das_luzes_de",
+    "controles_em_economia",
+    "declaracao_da_economia",
     "e_endereco_de_jogo",
     "economia_da_mesa",
     "economia_vale",
@@ -3349,7 +3371,7 @@ __all__ = [
     "perfil_declara_modo_de_jogo",
     "perfil_e_regra_de_jogo",
     "registrar_classes_de_jogo",
-    "registrar_teto_da_mesa",
+    "registrar_declaracao_da_mesa",
     "resolver_teclado_emulado",
     "vibracao_na_economia",
 ]

@@ -35,6 +35,9 @@ SRC = RAIZ / "src/hefesto_dualsense4unix"
 #: Verificado por baixo: o arquivo existe e contém o `algo` citado.
 CONSUMIDOR_DE_PRODUCAO: dict[str, str] = {
     "controles.microfone": "daemon/subsystems/bt_mic.py:def uniqs_declarados",
+    # O-MODO-ECONOMIA-POR-CONTROLE-01 (25/09/2026): quem lê é a ativação do
+    # perfil (`manager._perfil_na_economia`), por este leitor.
+    "controles.economia": "profiles/schema.py:def controles_em_economia",
     "orcamento.teto": "core/rumble.py:def _orcamento_declarado",
     # T3, CONFIGURAÇÕES-FECHA-01 (24/08/2026): o exame da mesa passou a
     # RECEBER a declaração por argumento e a citar o que falta declarar.

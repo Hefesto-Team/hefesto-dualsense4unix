@@ -679,6 +679,16 @@ class ControleDeclarado(BaseModel):
     botoes: Literal["xbox", "nintendo"] | None = None
     cor: str | None = None
     microfone: bool | None = None
+    #: O MODO ECONOMIA DE BATERIA deste controle — O-MODO-ECONOMIA-POR-
+    #: CONTROLE-01 (25/09/2026), o botão da linha do controle. ``True`` liga;
+    #: ``None`` e ``False`` não ligam por este controle (a «Bateria longa» do
+    #: ``orcamento`` liga em todos). Mora aqui, e não no perfil, pela razão do
+    #: ``microfone`` logo acima: a bateria é do controle, e uma economia que
+    #: some ao trocar de jogo é a surpresa. O dono do que ela FAZ e de quem
+    #: vence é ``profiles.schema`` (``economia_vale``,
+    #: ``A_ECONOMIA_EM_CADA_PECA``); o escritor é
+    #: ``profiles.schema.declaracao_da_economia``.
+    economia: bool | None = None
 
 
 #: A CHAVE DE UM LANÇADOR DECLARADO, e a forma é estreita porque ela vira
