@@ -1830,6 +1830,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     fora["bateria-perfil"] = perfil_da_bateria
     fora[REGISTRO] = _no_painel(repouso)
     exame = bruto.get("exame")
+    # D-A-CONTAGEM-DO-EXAME-SAIU — 25/09/2026, 22h13, pedido dela: *«Remove esse
+    # 8 linhas deixa o espaço vazio»*. O exame é só a lista; o endereço da
+    # contagem saiu da página e daqui (`docs/data/paridade-gtk-html.csv`).
     if isinstance(exame, dict):
         fora["exame-lista"] = _html_do_exame(exame)
     tira = _html_da_fita(ctx.mesa)
