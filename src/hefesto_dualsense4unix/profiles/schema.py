@@ -5,7 +5,6 @@ Ver `docs/adr/005-profile-schema-v1.md` para a justificativa semântica
 """
 from __future__ import annotations
 
-import math
 import os
 import re
 from typing import Any, Literal, NamedTuple
@@ -2687,6 +2686,11 @@ def _escritos(modelo: BaseModel) -> dict[str, Any]:
 
 def _forca_na_economia(valor: int) -> int:
     """Metade da força, com piso 1. Zero continua zero: é zona inativa."""
+    # `import math` aqui e não no topo: uma linha a mais no cabeçalho empurra
+    # toda citação `profiles/schema.py:N` da casa, e quatro delas moram em
+    # arquivos de outras frentes em voo.
+    import math
+
     if valor <= 0:
         return valor
     return max(1, math.ceil(valor * FATOR_DO_GATILHO_NA_ECONOMIA))

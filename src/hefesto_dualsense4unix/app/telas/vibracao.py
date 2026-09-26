@@ -206,12 +206,12 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "rumble_policy_set_checked` — a ÚNICA porta desde 26/08/2026. É GLOBAL: o "
     "handler não aceita `uniq` (`daemon/ipc_handlers.py:5012`). E `auto` por "
     "unidade é RECUSADO pelo esquema, com validador e mensagem dedicados "
-    "(`profiles/schema.py:1206-1210`): ele escala pela bateria do controle "
+    "(`profiles/schema.py:1228-1237`): ele escala pela bateria do controle "
     "PRIMÁRIO, então guardá-lo por peça faria duas escalarem pela bateria da "
     "mesma.",
     "barra:forca": "rumble.policy_custom {mult} pela ponte `app/ipc_bridge."
     "rumble_policy_custom`. Global, e o teto do esquema é "
-    "`RUMBLE_CUSTOM_MULT_MAX` = 2,0 (`profiles/schema.py:76`) — maior que os "
+    "`RUMBLE_CUSTOM_MULT_MAX` = 2,0 (`profiles/schema.py:90`) — maior que os "
     "150% que esta barra desenha, e baixá-lo para 1,5 é decisão dela.",
     "barra:motor": "rumble.set {weak, strong} pela ponte `app/ipc_bridge."
     "rumble_set_checked`. O par é da MESA, e os dois valores viajam JUNTOS: não "
