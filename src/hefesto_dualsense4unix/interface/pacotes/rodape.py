@@ -416,6 +416,9 @@ def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     SEM PERFIL ATIVO, MANDA O «FREESTYLE» — o mesmo que o Salvar grava e o boot
     restaura (:func:`perfil_do_rodape`).
+
+    E AS LUZES DE NÚMERO DE CADA CONTROLE VÃO LOGO DEPOIS
+    (:func:`_as_luzes_de_numero_de_cada_controle`) — o rascunho não as leva.
     """
     nome = perfil_do_rodape(ctx.state)
     draft = _draft_do_ativo(nome)
@@ -424,8 +427,75 @@ def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "aplicar: não há perfil ativo para mandar aos controles. "
             "Escolha um na aba Perfis.")
     p.apply_draft_detalhado(draft.to_ipc_dict())
+    _as_luzes_de_numero_de_cada_controle(nome, p)
     _recado(perfil.com_a_carona())
     return None
+
+
+def _as_luzes_de_numero_de_cada_controle(nome: str, p: Any) -> None:
+    """O Fraco, o Médio ou o Forte que o perfil guarda para CADA controle, ao aparelho.
+
+    O-BRILHO-DAS-LUZES-SOBREVIVE-AO-APLICAR-01, 26/09/2026. A queixa dela:
+    *«o botão aplicar da interface faz o reset dos valores (…) tentei alterar
+    a força dos leds fraco medio e forte <!-- noqa-acento: citação literal dela -->
+    e ao aplicar ele não aplicar»*.
+
+    ONDE O VALOR MORRIA, medido na mesa de quatro (o handler real, o merge
+    real, P1 a P4, cabo e rádio): a pílula grava a palavra no override do
+    controle e a leva ao aparelho; o «Aplicar» manda o rascunho, cuja seção
+    `controllers` não tem o campo (`DraftConfig._controllers_to_ipc` só
+    conhece cor, brilho da barra e as cinco lâmpadas); e o `DraftApplier`
+    TROCA o mapa inteiro de overrides do daemon (`reset_output_overrides`)
+    pelo do rascunho. O Forte do P2 sumia do merge, o aparelho voltava ao
+    Fraco do perfil, e a pílula — que pergunta ao daemon vivo — acendia
+    Fraco. O disco seguia com o Forte: o «Salvar» não perdia nada, mas a tela
+    dizia o contrário, e daí o *«ao salvar ele não salva»*. Os outros quatro
+    gestos da aba que gravam (cor, caixa, trilho e «Desligar») atravessam o
+    «Aplicar» e o «Salvar» — a régua deles é a mesma desta.
+
+    A PORTA É A DA PÍLULA (`led.player_brightness_set` com o `uniq`), e só
+    para quem ESCREVEU o campo — o mesmo «só quando foi escrito» de
+    `manager._controllers_to_specs`, que é o que a ativação do perfil manda.
+    Quem não escreveu herda o global que a ativação deixou. O controle
+    desconectado também vai: o daemon guarda para quando ele chegar, como o
+    rascunho faz com a cor.
+
+    A ECONOMIA DE BATERIA VENCE, como na ativação (`leds_na_economia` põe as
+    luzes no Fraco): o controle em economia não recebe a palavra, e fica no
+    que a ativação lhe deu. Mandá-la ali escreveria o Forte na camada dela,
+    que atravessa a troca automática — a economia desligada depois não o
+    devolveria.
+
+    O LUGAR CERTO DESTA ENTREGA É O RASCUNHO, e ela está aqui por posse: o
+    campo viajando em `DraftConfig._controllers_to_ipc` e lido em
+    `DraftApplier._controller_override_spec` poupa esta segunda viagem.
+    Enquanto não viaja, a ordem importa — depois do `apply_draft`, que é quem
+    solta.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+    from hefesto_dualsense4unix.profiles.schema import economia_da_declaracao, economia_vale
+    from hefesto_dualsense4unix.utils.maquina import carregar_maquina
+
+    from .a04_iluminacao import sem_resposta_do_daemon
+
+    try:
+        controles = load_profile(nome).controllers or {}
+    except Exception:
+        return
+    mesa, ligados = economia_da_declaracao(carregar_maquina())
+    calados: list[str] = []
+    for uniq, dele in controles.items():
+        leds = getattr(dele, "leds", None)
+        if leds is None or "player_led_brightness" not in leds.model_fields_set:
+            continue
+        if economia_vale(uniq in ligados, mesa):
+            continue
+        if p.player_led_brightness_set_detalhado(
+                leds.player_led_brightness, uniq=str(uniq)) is None:
+            calados.append(str(uniq))
+    if calados:
+        raise RuntimeError(sem_resposta_do_daemon())
 
 
 @gesto("*", "salvar", grava="save_profile")
@@ -587,5 +657,6 @@ PROVAS: list[dict[str, Any]] = [
     # O "aplicar" e o "salvar" dependem do perfil ATIVO, e a régua roda sem
     # daemon: eles são provados pelo teste de recusa, abaixo, e no aparelho.
 ]
-PONTE = {"apply_draft_detalhado", "escolher_arquivo", "salvar_arquivo"}
+PONTE = {"apply_draft_detalhado", "player_led_brightness_set_detalhado",
+         "escolher_arquivo", "salvar_arquivo"}
 METODOS: set[str] = set()
