@@ -702,6 +702,25 @@ def censo(home: Path | None = None, *, com_nomes: bool = True) -> list[PrefixoDe
     return saida
 
 
+def frase_do_estado(tiradas: int, postas: int, prefixos: int) -> str:
+    """*"Sobreposição Vulkan: tirada em N jogo · posta em M · P prefixos vistos"*.
+
+    A linha que o exame da aba Sistema pinta
+    (`a09_sistema.linha_da_sobreposicao_vulkan`) e a que o desenho da aba
+    (`interface/aba09.py`) mostra na cena. UM dono para os dois — 26/09/2026:
+    o desenho digitava a sua própria linha, «Nenhuma sobreposição picotando o
+    jogo», que a tela viva nunca pintou e que prometia o que o A/B de 23/08
+    derrubou. Pura e stdlib, porque o gerador do desenho não sobe GTK.
+    """
+    jogo_ou_jogos = "jogo" if tiradas == 1 else "jogos"
+    partes = [
+        f"tirada em {tiradas} {jogo_ou_jogos}" if tiradas else "nenhuma tirada",
+        f"posta em {postas}" if postas else "nenhuma posta",
+        f"{prefixos} prefixos vistos",
+    ]
+    return f"Sobreposição Vulkan: {' · '.join(partes)}"
+
+
 # --------------------------------------------------------------------------
 # Estado local — o que mexemos e, sobretudo, o que ela mandou MANTER
 # --------------------------------------------------------------------------

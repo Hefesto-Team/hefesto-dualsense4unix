@@ -750,13 +750,8 @@ def linha_da_sobreposicao_vulkan() -> tuple[str, str] | None:
     # custa um segundo e já roda aqui, na faixa lenta; uma segunda varredura
     # para a pílula seria a segunda resposta sobre o mesmo disco.
     _VULKAN.update(tiradas=tiradas, postas=postas, prefixos=prefixos)
-    jogo_ou_jogos = "jogo" if tiradas == 1 else "jogos"
-    partes = [
-        f"tirada em {tiradas} {jogo_ou_jogos}" if tiradas else "nenhuma tirada",
-        f"posta em {postas}" if postas else "nenhuma posta",
-        f"{prefixos} prefixos vistos",
-    ]
-    return (SELO_INFORMATIVO, f"Sobreposição Vulkan: {' · '.join(partes)}")
+    # A FRASE TEM UM DONO SÓ, e o desenho da aba lê o mesmo (26/09/2026).
+    return (SELO_INFORMATIVO, cv.frase_do_estado(tiradas, postas, prefixos))
 
 
 #: O PRONTUÁRIO DOS JOGOS LEVA 7,1 SEGUNDOS — medido na máquina dela em

@@ -33,6 +33,12 @@ from onde import RAIZ as R  # noqa: E402
 # dentro da função que cria a janela, não no topo.
 from hefesto_dualsense4unix.gui import ponte_da_tela as _ponte  # noqa: E402
 
+# A LINHA DO VULKAN NO EXAME TEM DONO, e é o módulo das camadas (stdlib, sem
+# GTK): o produto pinta a mesma frase em `a09_sistema.linha_da_sobreposicao_vulkan`.
+from hefesto_dualsense4unix.integrations.camadas_vulkan import (  # noqa: E402
+    frase_do_estado as _frase_do_vulkan,
+)
+
 # ---------------------------------------------------------------------------
 # A MESA MANDA NOS NÚMEROS DESTA ABA.
 #
@@ -501,6 +507,13 @@ CSS = """
 #: O ESTADO DOS TRÊS LIGÁVEIS NA CENA DO DESENHO. Nenhum deles é verdade da
 #: máquina de ninguém: na tela viva quem acende é o produto, a cada tique. O
 #: desenho mostra os dois estados para ela ver a pílula acesa e a apagada.
+#:
+#: A DICA DO «Corrigir Vulkan» NÃO PROMETE CURA — 26/09/2026. De 25/09 até
+#: aqui ela dizia que a sobreposição «engasga a imagem», e é falso: o
+#: `vulkan-1` do Wine devolve zero camadas, o vkd3d-proton chama o
+#: `winevulkan` direto, e o A/B de 23/08 mediu a camada desligada PIOR
+#: (`integrations/camadas_vulkan.py`). O rótulo é dela e fica; trocá-lo é
+#: pergunta da sessão dos desenhos (`docs/data/decisoes-dela.csv`).
 LIGAVEIS = (
     ("Iniciar com o sistema", "autostart", "hefesto-autostart", True,
      "Liga o serviço junto com o computador. Clique para trocar."),
@@ -508,8 +521,9 @@ LIGAVEIS = (
      "Mantém os jogos na versão do Proton que faz o controle vibrar e tocar "
      "som. Clique para trocar, com a Steam fechada."),
     ("Corrigir Vulkan", "corrigir-vulkan", "vulkan-corrigido", False,
-     "Tira dos jogos a sobreposição Vulkan que engasga a imagem. Desligar "
-     "devolve o que foi tirado."),
+     "Tira as sobreposições Vulkan registradas dentro do Proton de cada jogo "
+     "e guarda cópia. Quase nunca muda a imagem, e não cura engasgo. "
+     "Desligar devolve o que foi tirado."),
 )
 
 
@@ -629,6 +643,20 @@ STATUS = [
 # (`a09_sistema.frase_curta_do_exame`); o desenho mostra frases dessa forma. O
 # Bluetooth SAIU daqui e foi para o Status: duas linhas dizendo a mesma coisa
 # na mesma faixa seria dizer duas vezes.
+#
+# A LINHA DO VULKAN É A QUE O PRODUTO PINTA — 26/09/2026. Aqui morava «✓ OK ·
+# Nenhuma sobreposição picotando o jogo»: a tela viva nunca a mostrou (o exame
+# é repintado) e ela prometia o que o A/B de 23/08 derrubou. A frase vem do
+# dono, com o selo NOTA do produto, e fica por último, onde o produto a
+# acrescenta. Os números seguem a pílula da cena: apagada é nada tirado e um
+# jogo com o que tirar, que é o estado em que o clique age.
+_VULKAN_ACESO = next(lig for _r, g, _c, lig, _d in LIGAVEIS if g == "corrigir-vulkan")
+PREFIXOS_DA_CENA = 33
+FRASE_DO_VULKAN = _frase_do_vulkan(
+    tiradas=1 if _VULKAN_ACESO else 0,
+    postas=0 if _VULKAN_ACESO else 1,
+    prefixos=PREFIXOS_DA_CENA,
+)
 ACHADOS = [
     linha("OK", "ok", "✓", "Regra de permissão dos controles instalada",
           title="Regra de permissão dos controles instalada"),
@@ -638,14 +666,13 @@ ACHADOS = [
           title="Steam Input desligado para o DualSense"),
     linha("OK", "ok", "✓", f"Áudio dos {N} controles roteado",
           title=f"Áudio dos {N} controles roteado"),
-    linha("OK", "ok", "✓", "Nenhuma sobreposição picotando o jogo",
-          title="Nenhuma sobreposição picotando o jogo"),
     linha("NOTA", "nt", "i", "Um gamepad virtual por jogador",
           title="Um gamepad virtual por jogador"),
     linha("NOTA", "nt", "i", "Proton fixado em 9.0-4 para 3 jogos",
           title="Proton fixado em 9.0-4 para 3 jogos"),
     linha("NOTA", "nt", "i", "Som do sistema: sai em Controle 1",
           title="Som do sistema: sai em Controle 1"),
+    linha("NOTA", "nt", "i", FRASE_DO_VULKAN, title=FRASE_DO_VULKAN),
 ]
 MEIO = len(ACHADOS) // 2 + len(ACHADOS) % 2
 
