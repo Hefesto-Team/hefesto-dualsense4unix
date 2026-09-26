@@ -158,3 +158,28 @@ def test_o_titulo_mora_fora_do_campo_que_o_tique_repinta(arquivo: pathlib.Path) 
     assert ":has(.col-ordem:empty)" not in html
     assert ".duas-colunas:has(.col-exame):has(.col-ordem > .nada:only-child)" not in html
     assert ".sugestao .nada-a-mudar{" in html
+
+
+def test_o_lugar_que_o_bluez_ainda_nao_nomeou_nao_entra_na_frase() -> None:
+    """No primeiro tique o BlueZ ainda não disse o adaptador (`sabido` falso) e o
+    lugar não tem nome nem entrada: a frase sairia «Pareie o P2 no adaptador ».
+
+    Achado pela conferência (26/09/2026); o balão da central já esperava o
+    `sabido` (`_molde_do_balao`). Destino sem nome: nenhuma linha. Origem sem
+    nome: a linha sai, sem o de→para. MORDIDA: tire o filtro do `sabido` de
+    `_sugestao_da_central` → reprova.
+    """
+    a08 = _a08()
+    anonimo = {"id": "L2", "nome": "", "entrada": "", "sabido": False}
+    esquerda = {"id": "L1", "nome": "Esquerda"}
+    para_o_anonimo = {"proposta": {"controle": "ap", "destino": "L2"},
+                      "lugares": [esquerda, anonimo],
+                      "aparelhos": [{"id": "ap", "tipo": "controle", "lugar": "L1",
+                                     "jogador": 2}]}
+    assert a08._html_da_ordem([], para_o_anonimo) == (
+        f'<div class="nada-a-mudar">{a08.NADA_A_MUDAR}</div>')
+    do_anonimo = {**para_o_anonimo, "proposta": {"controle": "ap", "destino": "L1"},
+                  "aparelhos": [{"id": "ap", "tipo": "controle", "lugar": "L2", "jogador": 2}]}
+    html = a08._html_da_ordem([], do_anonimo)
+    assert _linhas(html) == [("1", "Pareie o P2 no adaptador Esquerda")], html
+    assert 'class="receita"' not in html, html
