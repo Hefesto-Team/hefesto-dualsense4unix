@@ -95,10 +95,13 @@ De propósito são: o backup que o próprio uninstall faz
 cada `localconfig.vdf`, o Proton que o Hefesto extraiu (é seu) e o quirk do
 boot (só sai com `--remove-usb-quirk`).
 
-Enquanto as sprints propostas não fecham, ele acha até três defeitos do
-uninstall: o ambiente da ponte no `config.json` do Heroic, o mesmo ambiente no
-`override` do Flatpak de cada lançador, e a pasta de estado que o
-`conexao-zumbi.json` segura.
+O uninstall tira do `config.json` do Heroic e do `override` do Flatpak de cada
+lançador só o ambiente que o Hefesto escreveu — o que você pôs ali fica, e o
+que estava lá antes volta (O-UNINSTALL-NAO-DEIXA-RASTRO-01): quem escreve
+anota em `launch_env/estradas.json`, e o desfazer lê. Com `--purge-config` a
+pasta de estado sai inteira; um desfazer que ficou para depois (um lançador
+cujo arquivo não abriu, a Steam aberta, sem root) deixa o registro dele lá, e
+o `limpa` acusa a pasta até o desfazer terminar.
 
 Depois do devolver, a pasta do root (`/var/lib/hefesto-memoria-guardada/…`)
 continua com as chaves de pareamento antigas: apague-a quando não servir mais.

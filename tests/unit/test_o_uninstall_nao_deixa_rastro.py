@@ -121,8 +121,9 @@ def _ambiente(pasta: Path, corpo: str = AMBIENTE_EMULADO) -> Path:
 
 def _curar(lar: Path, pasta: Path) -> tuple[str, ...]:
     """A carona do daemon — `curar_todas_as_estradas`, o chamador de verdade."""
-    return cura.curar_todas_as_estradas(
+    escritos: tuple[str, ...] = cura.curar_todas_as_estradas(
         lar=lar, pasta_do_ambiente=pasta, raiz_sistema=lar.parent / "flatpak-do-sistema")
+    return escritos
 
 
 def _opcoes(alvo: Path) -> dict[str, str]:

@@ -823,20 +823,24 @@ def desinstalar_de_mentira(r: m.Raizes, monkeypatch: pytest.MonkeyPatch) -> None
     - o strip das Opções de Inicialização (``steam_launch_options --strip``,
       que é ``transform_vdf_text(texto, "strip")``) e o destravar do Proton
       (``proton_pin --unlock``), pelos donos;
+    - o desfazer dos lançadores (``cura_por_estrada --desfazer``, pelo dono):
+      o ``config.json`` do Heroic e os ``overrides`` do Flatpak perdem o
+      ambiente do Hefesto (O-UNINSTALL-NAO-DEIXA-RASTRO-01, 25/09/2026);
     - apaga ``~/.config/<slug>`` (com o backup ``.backup-<ts>`` ao lado), a
       pasta de dados, o cache e os arquivos de estado que ele NOMEIA
       (``launch_env``, ``wrapper-visto.json``, ``gabinete.json``,
-      ``lugares-dos-adaptadores.json``, os diários, ``kernel.log``,
-      ``camadas-vulkan.json``), tenta o ``rmdir`` da pasta de estado;
+      ``lugares-dos-adaptadores.json``, ``conexao-zumbi.json``, os diários,
+      ``kernel.log``, ``camadas-vulkan.json``), e a pasta de estado sai;
     - tira as units, o atalho, o binário, o drop-in do WirePlumber;
     - do lado do sistema, o que ele remove com sudo; o quirk do boot FICA sem
-      ``--remove-usb-quirk``;
-    - NÃO toca no ``config.json`` do Heroic nem nos ``overrides`` do Flatpak (o
-      ``uninstall.sh`` não os cita), nem no ``conexao-zumbi.json``.
+      ``--remove-usb-quirk``.
+
+    O ``uninstall.sh`` DE VERDADE, num lar de mentira com a guarda que sai, é
+    medido em ``tests/unit/test_o_uninstall_nao_deixa_rastro.py``.
     """
     import shutil
 
-    from hefesto_dualsense4unix.integrations import proton_pin
+    from hefesto_dualsense4unix.integrations import cura_por_estrada, proton_pin
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
     for vdf in slo.discover_vdfs(r.lar):
@@ -846,18 +850,25 @@ def desinstalar_de_mentira(r: m.Raizes, monkeypatch: pytest.MonkeyPatch) -> None
     feito = proton_pin.unlock_games_from_pinned_proton(home=r.lar)
     assert feito["status"] == "unlocked", feito
     estado = r.estado / m.SLUG
+    _feitos, completo = cura_por_estrada.desfazer_as_estradas([estado / "launch_env"], r.lar)
+    assert completo
     for nome in ("launch_env", "wrapper-visto.json", "teclado-na-tela.conf", "gabinete.json",
-                 "lugares-dos-adaptadores.json", "radio-diario.jsonl", "radio-diario.jsonl.1",
-                 "kernel.log", "kernel-watch.boot", "camadas-vulkan.json"):
+                 "lugares-dos-adaptadores.json", "conexao-zumbi.json", "radio-diario.jsonl",
+                 "radio-diario.jsonl.1", "kernel.log", "kernel-watch.boot",
+                 "camadas-vulkan.json"):
         alvo = estado / nome
         if alvo.is_dir():
             shutil.rmtree(alvo)
         elif alvo.exists():
             alvo.unlink()
-    with pytest.raises(OSError):  # ``rmdir ... || true``: o zumbi segura a pasta
-        estado.rmdir()
     backup = r.config / f"{m.SLUG}.backup-1790000000"
     backup.mkdir()
+    # Com --purge-config, o que nenhum passo nomeia vai para o backup, e a
+    # pasta de estado sai («o estado sai inteiro»).
+    for sobra in sorted(estado.iterdir()):
+        (backup / "estado").mkdir(exist_ok=True)
+        shutil.move(str(sobra), str(backup / "estado" / sobra.name))
+    estado.rmdir()
     for pasta in (r.config / m.SLUG, r.dados / m.SLUG, r.cache / m.SLUG):
         if pasta.is_dir():
             shutil.copytree(pasta, backup / pasta.name, dirs_exist_ok=True)
@@ -909,15 +920,12 @@ def test_a_casa_inteira_da_a_volta_completa(
     desinstalar_de_mentira(r, monkeypatch)
 
     # 3. «a máquina está limpa?» — o que sobrar e não é de propósito é defeito
-    #    do uninstall. Na máquina de mentira sobram EXATAMENTE os três que o
-    #    uninstall.sh não visita.
+    #    do uninstall. Até 25/09 sobravam três (o Heroic, o override do Lutris
+    #    e a pasta de estado que o zumbi segurava); a O-UNINSTALL-NAO-DEIXA-
+    #    RASTRO-01 os tirou, e a máquina de mentira sai limpa.
     rastros = m.conferir_a_casa(r)
     defeitos = sorted(x.onde.replace(str(tmp_path), "") for x in rastros if not x.de_proposito)
-    assert defeitos == [
-        "/lar/.config/heroic/config.json",
-        "/lar/.local/share/flatpak/overrides/net.lutris.Lutris",
-        f"/lar/.local/state/{m.SLUG}",
-    ], defeitos
+    assert defeitos == [], defeitos
     de_proposito = {x.o_que for x in rastros if x.de_proposito}
     assert "o backup que o uninstall faz" in de_proposito
     assert any("quirk usbcore" in o for o in de_proposito)
