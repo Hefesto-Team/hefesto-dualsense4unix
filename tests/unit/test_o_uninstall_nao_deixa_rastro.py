@@ -554,6 +554,25 @@ def _defeitos(r: m.Raizes, tmp_path: Path) -> list[str]:
                   for x in m.conferir_a_casa(r) if not x.de_proposito and not x.nao_sei)
 
 
+def _limpa(r: m.Raizes, tmp_path: Path) -> subprocess.CompletedProcess[str]:
+    """O INSTRUMENTO de verdade: `guardar-e-devolver-a-casa.py limpa`, com o
+    `python3` do sistema (é assim que ela o roda depois do uninstall) e a
+    guarda de ensaio da ESQUECER ligada — ela RECUSA se uma raiz for a real."""
+    py = shutil.which("python3", path=SISTEMA)
+    assert py, "sem python3 no sistema"
+    env = {"HOME": str(r.lar), "XDG_CONFIG_HOME": str(r.config),
+           "XDG_STATE_HOME": str(r.estado), "XDG_DATA_HOME": str(r.dados),
+           "XDG_CACHE_HOME": str(r.cache), "XDG_RUNTIME_DIR": str(r.execucao),
+           "HEFESTO_MEMORIA_BLUEZ": str(r.bluez), "HEFESTO_MEMORIA_VARLIB": str(r.varlib),
+           "HEFESTO_MEMORIA_GUARDADO_ROOT": str(r.guardado_do_root),
+           "HEFESTO_MEMORIA_SISTEMA": str(r.sistema), m.ENV_ENSAIO: "1",
+           "PATH": SISTEMA, "LANG": "C.UTF-8", "PYTHONDONTWRITEBYTECODE": "1"}
+    return subprocess.run(
+        [py, "-I", str(RAIZ / "scripts/guardar-e-devolver-a-casa.py"), "limpa"],
+        env=env, capture_output=True, text=True, timeout=120, check=False,
+        cwd=str(tmp_path))
+
+
 @pytest.mark.parametrize(
     ("xdg_fora", "heroic_nativo", "com_venv"),
     [(False, False, True), (True, True, False)],
@@ -574,6 +593,8 @@ def test_o_uninstall_de_verdade_nao_deixa_rastro(
         + "\n".join(x for x in diario.splitlines() if x.startswith("RECUSADO")))
     defeitos = _defeitos(r, tmp_path)
     assert not defeitos, "o «limpa?» achou rastro do Hefesto:\n" + "\n".join(defeitos)
+    limpa = _limpa(r, tmp_path)
+    assert limpa.returncode == 0, limpa.stdout + limpa.stderr
     assert json.loads(alvos["heroic"].read_text(encoding="utf-8")) == HEROIC_DELA, (
         "o Heroic dela não voltou a ser o dela")
     assert alvos["lutris"].read_text(encoding="utf-8") == LUTRIS_DELA
@@ -601,6 +622,9 @@ def test_a_mordida_sem_o_passo_dos_lancadores_o_limpa_acusa(tmp_path: Path) -> N
     defeitos = " ".join(_defeitos(r, tmp_path))
     assert "heroic/config.json" in defeitos, defeitos
     assert f"overrides/{LUTRIS}" in defeitos and f"overrides/{MGBA}" in defeitos, defeitos
+    limpa = _limpa(r, tmp_path)
+    assert limpa.returncode == 1, limpa.stdout + limpa.stderr
+    assert "SOBROU" in limpa.stdout and "heroic/config.json" in limpa.stdout
 
 
 def test_sem_purge_fica_so_o_historico_e_o_uninstall_diz(tmp_path: Path) -> None:
