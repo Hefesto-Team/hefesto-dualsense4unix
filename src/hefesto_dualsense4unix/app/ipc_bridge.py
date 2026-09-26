@@ -915,6 +915,9 @@ _ROTULOS_SEM_SECAO: dict[str, str] = {
     "mapa": "O desenho das entradas",
     "lancadores": "Onde estão os seus lançadores",
     "lugares": "O lugar de cada entrada",
+    # D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO (26/09/2026): o nome de cada adaptador,
+    # escrito pelo campo do cartão em «Rádio e Adaptadores».
+    "adaptadores": "O nome de cada adaptador Bluetooth",
 }
 
 

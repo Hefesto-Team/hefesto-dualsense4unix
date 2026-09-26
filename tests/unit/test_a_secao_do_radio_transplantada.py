@@ -178,7 +178,8 @@ def mesa(a08: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
                         "AA:BB:CC:00:00:44", nome="Caixa", conectado=True, classe=0x240414),
     )
     monkeypatch.setattr(a08, "_ler_o_bluez", lambda: (adaptadores, aparelhos))
-    maquina = MaquinaConfig(lugares={LUGAR_1: {"nome": "Sala"}})
+    maquina = MaquinaConfig(lugares={LUGAR_1: {}},
+                            adaptadores={A1.replace(":", ""): {"nome": "Sala"}})
     monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (maquina, {3: PCI}))
     monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
     return a08
@@ -678,7 +679,7 @@ def test_o_nome_que_ela_digita_nao_vira_marcacao(mesa: Any, monkeypatch: pytest.
                                                   ) -> None:
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
-    maquina = MaquinaConfig(lugares={LUGAR_1: {"nome": "<b>Sala</b>"}})
+    maquina = MaquinaConfig(adaptadores={A1.replace(":", ""): {"nome": "<b>Sala</b>"}})
     monkeypatch.setattr(mesa, "_ler_a_maquina", lambda: (maquina, {3: PCI}))
     campos = _campos(mesa)
     for chave in ("radio-sala", "radio-moldes"):
@@ -733,7 +734,7 @@ def test_depois_de_um_gesto_que_grava_a_sala_nao_pisca(
 
     def ler_devagar() -> Any:
         solta.wait(5)
-        return MaquinaConfig(lugares={LUGAR_1: {"nome": "Sala nova"}}), {3: PCI}
+        return MaquinaConfig(adaptadores={A1.replace(":", ""): {"nome": "Sala nova"}}), {3: PCI}
 
     monkeypatch.setattr(mesa, "LER_NA_HORA", False)
     monkeypatch.setattr(mesa, "_ler_a_maquina", ler_devagar)

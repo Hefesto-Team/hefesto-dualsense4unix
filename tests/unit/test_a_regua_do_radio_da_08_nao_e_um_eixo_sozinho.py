@@ -61,7 +61,7 @@ def bancada(monkeypatch: Any) -> Any:
 
     Devolve um `def declarar(nomes)`: `None` é o BlueZ que NÃO RESPONDEU (e ele
     é diferente de uma lista vazia); uma lista de nomes vira um adaptador por
-    nome, cada um numa porta com o nome que ela deu ao lugar.
+    nome, cada um numa porta e com o nome que ela deu a ele.
     """
     from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez
     from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa
@@ -85,7 +85,10 @@ def bancada(monkeypatch: Any) -> Any:
                              lugar=lugar)
             for i, lugar in enumerate(lugares))
         monkeypatch.setattr(p, "_ler_o_bluez", lambda: (adaptadores, ()))
-        maquina = MaquinaConfig(lugares={lg: {"nome": nome} for lg, nome in lugares.items()})
+        # O NOME É DO ADAPTADOR, pelo endereço (D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO).
+        maquina = MaquinaConfig(
+            lugares={lg: {} for lg in lugares},
+            adaptadores={f"aabbcc0000{i + 10:02d}": {"nome": nome} for i, nome in enumerate(nomes)})
         monkeypatch.setattr(p, "_ler_a_maquina", lambda: (maquina, {3: PCI}))
 
     return declarar
@@ -156,7 +159,7 @@ def test_um_cartao_por_adaptador_mesmo_com_a_mesa_no_cabo(bancada: Any) -> None:
     assert len(re.findall(r'<div class="lugar[ "]', sala)) == 3, sala[:600]
     for nome in ("Sala", "Extra", "Terceiro"):
         assert f'value="{nome}"' in sala, (
-            f"o cartão de {nome!r} saiu sem o nome que ela deu ao lugar")
+            f"o cartão de {nome!r} saiu sem o nome que ela deu ao adaptador")
     assert 'class="linha' not in sala, (
         "um cartão ganhou a linha de um controle que está no CABO")
 
