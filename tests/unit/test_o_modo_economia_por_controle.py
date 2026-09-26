@@ -109,7 +109,7 @@ def _mesa_sem_registro() -> Iterator[None]:
 def _declarar(teto: str | None = None, economia: tuple[str, ...] = ()) -> MaquinaConfig:
     """A declaração da mesa que o daemon teria — e registrada como a viva."""
     maquina = MaquinaConfig(
-        orcamento=OrcamentoDeclarado(teto=teto),  # type: ignore[arg-type]
+        orcamento=OrcamentoDeclarado(teto=teto),
         controles={u: ControleDeclarado(economia=True) for u in economia},
     )
     registrar_declaracao_da_mesa(lambda: maquina)
@@ -171,7 +171,7 @@ def test_o_gatilho_aninhado_tambem_entra_na_economia() -> None:
     )
     depois = gatilho_na_economia(antes)
     pares = zip(antes.params, depois.params, strict=True)
-    planos = [(sub_a[0], sub_d[0]) for sub_a, sub_d in pares]  # type: ignore[index]
+    planos = [(sub_a[0], sub_d[0]) for sub_a, sub_d in pares]
     assert all((a > 0) == (d > 0) and d <= a for a, d in planos)
     assert planos[-1] == (8, 4)
     build_from_name(depois.mode, depois.params)
@@ -207,7 +207,7 @@ def _mult(policy: str | None, custom: float | None = None) -> float:
     if policy == "custom":
         assert custom is not None
         return custom
-    return RUMBLE_POLICY_MULT[policy or "balanceado"]
+    return float(RUMBLE_POLICY_MULT[policy or "balanceado"])
 
 
 @pytest.mark.parametrize("da_peca", [None, "balanceado", "max", "economia", "custom"])
@@ -226,12 +226,12 @@ def test_a_vibracao_tem_teto_e_nao_some(da_peca: str | None, do_perfil: str | No
     dela = (
         None
         if da_peca is None
-        else ControllerRumbleOverride(policy=da_peca, custom_mult=custom)  # type: ignore[arg-type]
+        else ControllerRumbleOverride(policy=da_peca, custom_mult=custom)
     )
     nova = vibracao_na_economia(dela, do_perfil, mesa=False)
     fator = _controllers_to_rumble_scales(
         {UNIQS[0]: ControllerOverrides(rumble=nova)} if nova is not None else {},
-        RumbleConfig(policy=do_perfil),  # type: ignore[arg-type]
+        RumbleConfig(policy=do_perfil),
     ).get(UNIQS[0], 1.0)
     no_motor = _mult(do_perfil) * fator
     economia = _mult("economia")
@@ -294,7 +294,9 @@ def _perfil(controllers: dict[str, ControllerOverrides] | None = None) -> Profil
     )
 
 
-def _o_que_cada_um_recebe(inst: Any, handles: list[_FakeHandle], perfil: Profile) -> list[tuple]:
+def _o_que_cada_um_recebe(
+    inst: Any, handles: list[_FakeHandle], perfil: Profile
+) -> list[tuple[Any, ...]]:
     ProfileManager(controller=inst).apply(perfil)
     inst.set_rumble(weak=200, strong=200)
     return [
