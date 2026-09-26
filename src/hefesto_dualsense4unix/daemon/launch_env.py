@@ -105,6 +105,20 @@ ENV_ALLOWLIST = (
 #: `daemon -> integrations -> core` só para ler dois inteiros. Quem impede as
 #: duas cópias de divergirem é um teste dedicado
 #: (`tests/unit/test_launch_env_lista_vidpid.py`), não a boa vontade de quem for editar.
+#:
+#: O DUALSENSE EDGE FÍSICO NÃO ENTRA AQUI, E NÃO É ESQUECIMENTO — medido em
+#: 25/09/2026 (O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01). O par dele,
+#: `054c:0df2`, é o MESMO do nosso vpad em toda máscara DualSense (uhid e
+#: uinput), e a máscara troca DENTRO do jogo (PS + L3), depois de a env já ter
+#: sido lida: um `0x054c/0x0df2` no IGNORE esconderia o vpad que nascesse
+#: depois — zero controles, o pior caso desta casa —, e no DISABLE tiraria do
+#: vpad o hidraw por onde a háptica e os gatilhos do jogo chegam. O Edge físico
+#: sai do jogo pela TOPOLOGIA, que é o que separa os dois: os nós dele (hidraw,
+#: evdev e joydev, cabo e rádio) nascem `0600 root` pelas regras
+#: `assets/73-hefesto-ps5-controller.rules` e
+#: `assets/72-hefesto-touchpad-motion-uaccess.rules`, e o broker os serve só ao
+#: daemon (`broker/hidraw_broker._e_o_nosso_vpad`). A régua é
+#: `tests/unit/test_o_controle_nunca_visto_tem_nome_e_cor.py`.
 PAR_DUALSENSE_FISICO = (0x054C, 0x0CE6)
 
 #: O gamepad VIRTUAL que o Steam Input cria — Valve, `28de:11ff`.
