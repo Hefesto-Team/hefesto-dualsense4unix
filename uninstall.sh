@@ -2328,7 +2328,10 @@ for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
                     log "fica ${_sobra}: o desfazer dele foi adiado (a linha dele, acima, diz como terminar)"
                     ;;
                 *)
-                    _backup_do_estado="${backup_dir:-${XDG_CONFIG_HOME:-${HOME}/.config}/hefesto-dualsense4unix.backup-$(date +%s)}/estado"
+                    # Uma subpasta por pasta de estado, com o nome do caminho —
+                    # a mesma forma do backup da configuração, logo acima.
+                    _rel_do_estado="${_estado#"${HOME}"/}"
+                    _backup_do_estado="${backup_dir:-${XDG_CONFIG_HOME:-${HOME}/.config}/hefesto-dualsense4unix.backup-$(date +%s)}/${_rel_do_estado//\//_}"
                     mkdir -p "${_backup_do_estado}"
                     if mv -f "${_sobra}" "${_backup_do_estado}/" 2>/dev/null; then
                         log "guardando ${_sobra} no backup (${_backup_do_estado}) — nenhum passo o nomeia"
