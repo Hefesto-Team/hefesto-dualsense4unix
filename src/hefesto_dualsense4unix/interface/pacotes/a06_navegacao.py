@@ -245,7 +245,7 @@ SEM_ENDERECO: dict[str, str] = {
 #: DUAS TÊM DONO E UMA NÃO, e qual é qual foi MEDIDO — ver o `fato_derrubado`
 #: no corpo de `teclado()`. O que o teclado emulado faz hoje **já é** "só fora
 #: do jogo": o daemon cala a emulação de desktop quando um jogo assume
-#: (`_jogo_no_controle_do_desktop`, `daemon/lifecycle.py:2917`, e o
+#: (`_jogo_no_controle_do_desktop`, `daemon/lifecycle.py:2963`, e o
 #: `gamepad_dispatched` do laço em `:5863`), e o `suppress_desktop_emulation`
 #: do perfil é a versão explícita e por perfil da MESMA coisa. Quem não tem
 #: dono é o INVERSO — "só dentro do jogo".
@@ -1220,7 +1220,7 @@ def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
 # `_persist_key_bindings_to_draft` protege o que a lista não mostra. **Aqui é o
 # contrário**: o "Voltar ao padrão" desta tela zera `key_bindings` inteiro, e o
 # "Guardar" faz `apply_button_actions` reescrever o conjunto todo a partir do de
-# fábrica (`profiles/manager.py:681`, `core/acoes_de_botao.resolver`, que nunca
+# fábrica (`profiles/manager.py:699`, `core/acoes_de_botao.resolver`, que nunca
 # consulta `profile.key_bindings`). Copiar a frase de lá seria a tela afirmando
 # o oposto do que este produto faz — e é a família de defeito que esta casa
 # persegue acima de todas.
@@ -1357,7 +1357,7 @@ def atalhos_que_param_de_valer(p: dict[str, Any]) -> list[tuple[str, str]]:
     """Os `key_bindings` do perfil que o "Guardar" desta tela faz parar de valer.
 
     **É A METADE VISÍVEL DO DEFEITO §3-1**, e o defeito é do produto, não desta
-    aba: `apply_button_actions` (`profiles/manager.py:681`) roda DEPOIS do
+    aba: `apply_button_actions` (`profiles/manager.py:699`) roda DEPOIS do
     `apply_keyboard` e chama `teclado.set_bindings(...)` com o conjunto INTEIRO
     que `acoes_de_botao.resolver()` deriva — e `resolver()` parte de
     `acoes.padrao()` e **nunca consulta `profile.key_bindings`**. Logo, um perfil com
@@ -2693,7 +2693,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
        mouse/teclado no desktop (jogos de GAMEPAD que leem o controle cru)"*.
        O perfil é ativado quando o jogo casa; logo a supressão vale **durante o
        jogo** — o teclado funciona FORA dele.
-    2. `apply_profile_suppression` (`daemon/lifecycle.py:2566`) recebe esse
+    2. `apply_profile_suppression` (`daemon/lifecycle.py:2612`) recebe esse
        campo a cada ativação de perfil e liga a supressão com `desired=True`.
     3. Sem perfil nenhum a dizer o contrário, o daemon **já** cala a emulação de
        desktop quando um jogo assume: `_jogo_no_controle_do_desktop`
@@ -2710,11 +2710,11 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     SEM PORTÃO DE MODO, ao contrário do gesto `modo` logo acima, e é medido: o
     portão de lá existe porque ligar o MOUSE derruba o gamepad virtual — o
-    `set_mouse_emulation` (`daemon/lifecycle.py:1739`).
+    `set_mouse_emulation` (`daemon/lifecycle.py:1785`).
 
     Do outro lado, o teclado não mexe no gamepad virtual em momento nenhum.
     Quem o liga e desliga é o
-    `set_keyboard_emulation` (`daemon/lifecycle.py:2075`): ele cria ou destrói o
+    `set_keyboard_emulation` (`daemon/lifecycle.py:2121`): ele cria ou destrói o
     teclado virtual e nada mais.
 
     E COM O GAMEPAD DESPACHANDO, o teclado nem chega a ser consultado — a
@@ -4009,7 +4009,7 @@ def padrao_remapeamento(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
 #:    tela mostra" —, então pendurá-lo num "Voltar ao padrão" faria o botão
 #:    prometer uma coisa e fazer outra;
 #: 3. **ele LIGA o mouse.** `restore_mouse_preference`
-#:    (`daemon/lifecycle.py:1805`) chama `set_mouse_emulation(pref, …)` e, com a
+#:    (`daemon/lifecycle.py:1851`) chama `set_mouse_emulation(pref, …)` e, com a
 #:    preferência nunca gravada, `pref` vira `True` por default (`:1785`) — o
 #:    cursor DELA passa a andar pelo controle, e o gamepad virtual cai junto
 #:    (`:1741`). Isso o põe na mesma prateleira do gesto `modo`, que já está em
