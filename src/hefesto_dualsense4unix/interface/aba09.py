@@ -586,7 +586,7 @@ def _botoes_bateria():
         f' data-gesto="{_gesto("perfil-da-mesa")}" data-v="{p}"'
         f' data-campo="{_id("bateria-perfil")}" data-hef-alvo="classe"'
         f' data-hef-classe="on" data-hef-quando="{p}"'
-        f' title="{ROT_PERFIL[p]}: {impoe(p).lower()}. Vale para os {N} controles —'
+        f' title="{ROT_PERFIL[p]}: {impoe(p).lower()}. Vale para todos os controles —'
         f' cada um pode ter o seu na aba Conexões.">{ROT_PERFIL[p]}</button>'
         for p in ORC["PERFIS"])
 
@@ -654,7 +654,7 @@ D_SERVICO = ('<span class="ajuda">?<span class="dica">'
              'só sai do meio do jogo.'
              '</span></span>')
 D_BATERIA = ('<span class="ajuda">?<span class="dica">'
-             f'Vale para os {N} controles, e cada um pode ter o seu na aba Conexões.'
+             'Vale para todos os controles, e cada um pode ter o seu na aba Conexões.'
              '</span></span>')
 D_SAUDE = ('<span class="ajuda">?<span class="dica">'
            'Consertos que o exame já faz sozinho, para repetir quando precisar.'
