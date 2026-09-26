@@ -299,10 +299,15 @@ def recolher(
                 break
         if any(nome.startswith(p) for p in SO_RELATO):
             continue
-        if entrada.is_symlink():
-            continue  # Link nunca é seguido: o alvo dele pode ser qualquer coisa.
+        # O `_nosso` VEM ANTES e engole o `OSError`: um ponto de montagem FUSE
+        # morto no `/tmp` (o AppImage de um emulador que caiu, medido em
+        # 26/09/2026 com `.mount_azahar*`) responde ENOTCONN até ao `lstat`, e
+        # o `is_symlink` do Python só ignora ENOENT/ENOTDIR/EBADF/ELOOP — a
+        # faxina inteira caía numa entrada que nem é do usuário.
         if not _nosso(entrada):
             continue
+        if entrada.is_symlink():
+            continue  # Link nunca é seguido: o alvo dele pode ser qualquer coisa.
 
         pid = _pid_do_berco(nome)
         if pid is not None and entrada.is_dir():
