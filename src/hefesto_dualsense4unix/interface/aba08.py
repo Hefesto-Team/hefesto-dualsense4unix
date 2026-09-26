@@ -810,8 +810,12 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .ordem .receita:first-child{margin-top:0}
   /* A CAIXA DIZ O QUE ELA É — 26/09/2026, a pergunta dela olhando o desenho:
      *«o que é a área que marquei em vermelho?»*. Sem título e sem o aparelho,
-     o de→para era um par de endereços soltos. O título repete a palavra do
-     veredito, na cor do AJUSTAR, e a linha de baixo nomeia o aparelho. */
+     o de→para era um par de endereços soltos. O título diz o que a caixa é,
+     na cor do AJUSTAR, e o nome é dela:
+     *«algo tipo sujestões de Conexão»*  (noqa-acento: citação literal dela)
+     A linha de baixo nomeia o aparelho. A instrução visível é escolha dela
+     também (26/09/2026, *«dá pra aceitar a instrução nisso»*), e ela abre uma
+     exceção à ordem de 13/09 só nesta caixa. */
   .ordem-tit{font-size:12px;font-weight:600;color:var(--orange);margin-bottom:4px}
   /* 11px, e o número é MEDIDO, não escolhido: com os botões dentro das colunas o
      vão nascia da sobra que os itens de cada coluna repartiam entre si, e não de
@@ -4069,7 +4073,7 @@ MIOLO = f'''
                  o que o produto pinta quando a ordem tem destino — ver
                  `a08_conexoes._html_da_ordem`. -->
             <div class="ordem">
-              <div class="ordem-tit">Mudança recomendada</div>
+              <div class="ordem-tit">Sugestão de conexão</div>
               <div class="faca">Mova o adaptador Bluetooth para a Entrada 9</div>
               <div class="receita">
                 <span class="caixa" title="Entrada 3 — traseira do gabinete, USB 3.0. É a que divide o controlador com o receptor do teclado.">Entrada 3 <span class="pt">•</span> USB 3.0</span>
