@@ -324,7 +324,10 @@ def frase_de_quando(idade_s: float) -> str:
     """
     if idade_s < 45:
         return "Agora mesmo"
-    if idade_s < 90:
+    # ATÉ OS DOIS MINUTOS É «1 minuto» (25/09/2026, a prova de tela da
+    # A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01): o corte estava nos 90 s e a
+    # divisão inteira dava 1 entre 90 e 119 — o carimbo dizia «Há 1 minutos».
+    if idade_s < 120:
         return "Há 1 minuto"
     if idade_s < 3600:
         return f"Há {int(idade_s // 60)} minutos"

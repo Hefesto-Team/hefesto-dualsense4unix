@@ -454,7 +454,7 @@ def plano_por_adaptador(
 
     uniqs = [_hex(str(c.get("uniq") or "")) for c in conectados]
     publicados = {
-        uniq: str(c.get("adaptador") or "").lower()
+        uniq: _mac_minusculo(str(c.get("adaptador") or ""))
         for c, uniq in zip(conectados, uniqs, strict=True)
         if uniq and _mac_minusculo(str(c.get("adaptador") or ""))
     }
@@ -512,8 +512,20 @@ def plano_por_adaptador(
 
 
 def _mac_minusculo(valor: str) -> str:
-    """``aa:bb:…`` minúsculo, ou ``""`` — pela régua ESTRITA de ``conexao_zumbi``."""
-    return mac_limpo(str(valor or "")) or ""
+    """``aa:bb:…`` minúsculo, ou ``""`` — pela régua ESTRITA de ``conexao_zumbi``.
+
+    E OS DOZE HEX CRUS TAMBÉM, desde 25/09/2026 (A-CONEXOES-O-QUE-A-LISTA-DELA-
+    ACHOU-01): é a forma em que a tela endereça um adaptador (``AABBCC0000B2``),
+    e o «Conectar» da aba 08 mandava os adaptadores assim. A régua estrita os
+    DESCARTAVA em silêncio, o adaptador vazio sumia do plano, e a D8 escolhia
+    sempre um adaptador que já tinha controles — o mais cheio, na mesa dela
+    (os três na Direita, e o chip do «Conectar» nascia na Direita). Continua
+    estrita: doze dígitos hex e nada mais; texto com hex no meio não passa.
+    """
+    texto = str(valor or "").strip().lower()
+    if len(texto) == 12 and all(c in "0123456789abcdef" for c in texto):
+        texto = ":".join(texto[i:i + 2] for i in range(0, 12, 2))
+    return mac_limpo(texto) or ""
 
 
 def cabe_mais_um(ocupacao: Ocupacao, *, com_mic: bool) -> tuple[bool, Ocupacao]:
