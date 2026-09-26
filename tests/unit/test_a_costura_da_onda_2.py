@@ -1028,10 +1028,6 @@ _OS_QUE_PODEM = {
         "o contador da calibração («entrada 3 de 7») conta PASSOS, não nomeia uma "
         "entrada; e `app/widgets/` está fora da posse da O-MAPA-QUE-ELA-CORRIGE-01"
     ),
-    ("app/widgets/mapa_da_mesa.py", "tem um modelo de .format"): (
-        "o widget GTK do mapa, fora da posse da O-MAPA-QUE-ELA-CORRIGE-01 "
-        "(`app/widgets/` é `nao_toca`) — dívida declarada no relatório dela"
-    ),
     ("app/actions/config/secao_mesa.py", "tem um modelo de .format"): (
         "a dica de procedência da seção GTK («está na entrada {numero}»), fora da "
         "posse da O-MAPA-QUE-ELA-CORRIGE-01 — dívida declarada no relatório dela"
