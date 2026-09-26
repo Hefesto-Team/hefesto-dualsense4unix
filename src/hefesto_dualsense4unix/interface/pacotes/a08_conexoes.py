@@ -1769,7 +1769,8 @@ def _html_dos_aparelhos() -> str:
     for a in mm.aparelhos_para_colocar(censo):
         caminho = a.nome_do_kernel
         em = onde_esta.get(caminho, "")
-        dica = (mm.DICA_JA_COLOCADO.format(n=em) if em else "")
+        dica = (mm.DICA_JA_COLOCADO.format(onde=_a_entrada_na_frase(em, em=True))
+                if em else "")
         aceso = " on" if logica.escolhido == caminho else ""
         fora.append(
             f'          <button class="mm-ap{aceso}" data-gesto="escolher-aparelho" '
@@ -7403,14 +7404,21 @@ def html_das_entradas_mapeadas(portas: Any) -> str:
     «2 · Entrada 2 · pci-0000:…-usb-0:3» — o número gravado como nome, o
     rótulo, e o endereço do sistema. Agora é o nome pelo dono, em negrito, e a
     face do gabinete («Frente do gabinete»), que é o que ela procura com os olhos.
+    Ao lado da face vai a palavra do número, «Entrada 1 · Frente», como no
+    desenho aprovado: o nome sozinho não diz em qual buraco ela está.
     """
     nomeadas = [p for p in (portas or []) if isinstance(p, dict) and p.get("nome")]
     if not nomeadas:
         return '<li class="vazio">Nenhuma ainda.</li>'
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations.entrada_a_entrada import rotulo_do_numero
+
     linhas = []
     for porta in nomeadas:
         nome = str(porta.get("nome") or porta.get("rotulo") or "")
-        onde = str(porta.get("lugar_no_gabinete") or "")
+        numero = str(porta.get("numero") or "")
+        entrada = (rotulo_do_numero(numero) or "") if numero else ""
+        onde = " · ".join(x for x in (entrada, str(porta.get("lugar_no_gabinete") or "")) if x)
         linhas.append(f"<li><b>{html.escape(nome)}</b>"
                       f"<span>{html.escape(onde)}</span></li>")
     return "".join(linhas)

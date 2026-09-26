@@ -106,8 +106,8 @@ def test_a_linha_de_radio_e_adaptadores_diz_o_nome_da_entrada(
 
 
 def test_o_ja_mapeadas_diz_o_nome_e_a_face(documento: MaquinaConfig) -> None:
-    """O «Já mapeadas» do Mapear: «<b>Meio</b>» e a face, nunca «<b>2</b>» nem o
-    endereço do sistema."""
+    """O «Já mapeadas» do Mapear: «<b>Meio</b>», a palavra do número e a face,
+    como no desenho aprovado; nunca «<b>2</b>» nem o endereço do sistema."""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
@@ -120,7 +120,7 @@ def test_o_ja_mapeadas_diz_o_nome_e_a_face(documento: MaquinaConfig) -> None:
     rotulos = {p["numero"]: p["rotulo"] for p in portas}
     assert (rotulos["1"], rotulos["2"], rotulos["13"]) == ("Meio", "Entrada 2", "Entrada 13")
     lista = a08_conexoes.html_das_entradas_mapeadas(portas)
-    assert "<b>Meio</b><span>Frente do gabinete</span>" in lista, lista
+    assert "<b>Meio</b><span>Entrada 1 · Frente do gabinete</span>" in lista, lista
     assert "pci-" not in lista, "o endereço do sistema voltou para a lista"
     _limpo(lista)
 

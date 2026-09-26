@@ -290,10 +290,11 @@ def test_a_entrada_da_vez_sai_em_pares_e_a_lista_so_com_nome() -> None:
     assert "<dt>Quedas</dt><dd>nenhuma em 7 dias</dd>" in fatos
     assert "Onde fica" not in fatos, "o que não foi medido não entra"
     lista = pac.html_das_entradas_mapeadas([
-        {"nome": "Frente de cima", "rotulo": "Entrada 1", "lugar": "Frente"},
-        {"nome": "", "rotulo": "Entrada 2", "lugar": ""},
+        {"nome": "Frente de cima", "numero": "1", "lugar_no_gabinete": "Frente"},
+        {"nome": "", "numero": "2", "rotulo": "Entrada 2", "lugar_no_gabinete": ""},
     ])
-    assert "Frente de cima" in lista and "Entrada 2" not in lista
+    assert "<b>Frente de cima</b><span>Entrada 1 · Frente</span>" in lista, lista
+    assert "Entrada 2" not in lista
     assert pac.html_das_entradas_mapeadas([]) == '<li class="vazio">Nenhuma ainda.</li>'
     campos = pac.campos_do_mapear({"estado": "esperando", "portas": []})
     assert campos["mapear-estado"] == "esperando"

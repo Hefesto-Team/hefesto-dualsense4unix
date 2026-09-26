@@ -2791,9 +2791,11 @@ from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import (  # noqa: E402
     DICA_EXTENSAO,
     DICA_JA_COLOCADO,
 )
+from hefesto_dualsense4unix.utils.rotulo_da_entrada import com_artigo, na_frase  # noqa: E402
+
 _MAPA_PY = R / "src/hefesto_dualsense4unix/app/widgets/mapa_da_mesa.py"
 _confere_no_produto(_MAPA_PY, [
-    "Você já colocou este aparelho na entrada {n}.",
+    "Você já colocou este aparelho {onde}.",
     "O sistema enumera este aparelho como {c}.",
     "Foi você quem disse que há uma extensão aqui.",
     "botao.set_size_request(84, 56)",
@@ -2809,7 +2811,7 @@ def ap_botao(esp, no, em, quem):
     """
     # SEM DICA quando não há lugar: o produto também não põe
     # (`mapa_da_mesa._desenhar_aparelhos` só chama `set_tooltip_text` sob `if onde:`).
-    dica = DICA_JA_COLOCADO.format(n=em) if em else ""
+    dica = DICA_JA_COLOCADO.format(onde=com_artigo(na_frase(em), em=True)) if em else ""
     # A PALAVRA "mesa" SAIU DA TELA — 05/09/2026, ordem dela. Esta metade da
     # dica é da BANCADA, não do produto (o `_desenhar_aparelhos` da janela GTK
     # não a põe): ela ETIQUETA o aparelho daquele botão. "O objeto:" é o termo
@@ -3797,8 +3799,8 @@ _MP_CENA = _pacote08.campos_do_mapear({
     "estado": "porta", "feitas": 2,
     "porta": {"rotulo": "Entrada 3", "usb": "3.0", "hub": False, "storm": 0,
               "lugar_no_gabinete": "Traseira, a segunda de cima"},
-    "portas": [{"nome": "Frente de cima", "rotulo": "Entrada 1", "lugar": "Frente"},
-               {"nome": "Hub do monitor", "rotulo": "Entrada 7", "lugar": "Hub"}],
+    "portas": [{"nome": "Frente de cima", "numero": "1", "lugar_no_gabinete": "Frente"},
+               {"nome": "Hub do monitor", "numero": "7", "lugar_no_gabinete": "Hub"}],
 })
 TELA_MAPEAR_PORTAS = f'''
 <div class="tela-nova" id="mapear-portas">

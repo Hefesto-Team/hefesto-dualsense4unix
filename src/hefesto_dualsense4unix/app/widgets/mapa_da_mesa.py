@@ -75,6 +75,7 @@ from hefesto_dualsense4unix.integrations.censo_do_barramento import Aparelho, Ce
 from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
+from hefesto_dualsense4unix.utils.rotulo_da_entrada import com_artigo, na_frase
 
 logger = get_logger(__name__)
 
@@ -115,7 +116,8 @@ NOME_DA_FACE_EM_BRANCO = "Nome da face"
 #: (`_confere_no_produto`) existia só para conferir que as duas ainda batiam.
 #: Um portão que compara duas cópias é a confissão de que há duas; agora há uma,
 #: e os dois desenhos a leem.
-DICA_JA_COLOCADO = "Você já colocou este aparelho na entrada {n}."
+#: ``{onde}`` vem do dono da grafia: «na Entrada 3», «na entrada Meio».
+DICA_JA_COLOCADO = "Você já colocou este aparelho {onde}."
 DICA_ENUMERA = "O sistema enumera este aparelho como {c}."
 DICA_EXTENSAO = (
     "Foi você quem disse que há uma extensão aqui. Nenhuma "
@@ -663,7 +665,7 @@ if _GTK_DISPONIVEL:
                 onde = self.logica.entrada_do_caminho(aparelho.nome_do_kernel)
                 if onde:
                     botao.set_tooltip_text(
-                        _(DICA_JA_COLOCADO).format(n=onde)
+                        _(DICA_JA_COLOCADO).format(onde=com_artigo(na_frase(onde), em=True))
                     )
                 botao.connect("clicked", self._ao_escolher, aparelho.nome_do_kernel)
                 self._caixa_aparelhos.pack_start(botao, False, False, 0)
