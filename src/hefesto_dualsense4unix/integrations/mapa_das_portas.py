@@ -852,7 +852,11 @@ USB_2 = "2.0"
 
 #: O adaptador Bluetooth encaixado na porta: o da PLACA (módulo interno num
 #: conector que ninguém alcança de fora — ``connect_type`` ``hardwired``) ou
-#: um DONGLE (qualquer outro encaixe). Chaves de máquina.
+#: um DONGLE (a entrada é ``hotplug``, ou pende de um hub encaixado numa
+#: entrada ``hotplug``). Chaves de máquina. O ``unknown`` NÃO é nenhum dos
+#: dois: numa máquina sem a tabela ACPI das portas toda entrada diz
+#: ``unknown``, a de gabinete e a interna — e ali o produto responde "não sei"
+#: (``bluetooth == ""`` com ``e_bluetooth``), nunca «dongle».
 BLUETOOTH_DA_PLACA = "placa"
 BLUETOOTH_DONGLE = "dongle"
 
@@ -860,8 +864,10 @@ BLUETOOTH_DONGLE = "dongle"
 #: ``_CLASSE_DO_MOTOR_POR_TRIPLA`` e de ``censo_do_barramento._especie``.
 _TRIPLA_DO_BLUETOOTH = ("e0", "01", "01")
 
-#: O ``connect_type`` do conector interno da placa.
+#: O ``connect_type`` do conector interno da placa, e o da entrada que se
+#: alcança de fora (o mesmo ``_ENCAIXE_DE_FORA`` do ``entrada_a_entrada``).
 _ENCAIXE_INTERNO = "hardwired"
+_ENCAIXE_DE_FORA = "hotplug"
 
 
 @dataclass(frozen=True)
@@ -871,7 +877,9 @@ class FatosDoBuraco:
     ``usb`` é :data:`USB_3`, :data:`USB_2` ou ``""`` (não deu para saber).
     ``hub`` é o nome do kernel do hub de que o buraco pende (``3-4``), ``""``
     quando ele é do próprio computador. ``storm`` é ``None`` quando o -71 não
-    foi medido — que é diferente de zero.
+    foi medido — que é diferente de zero. ``e_bluetooth`` diz que o aparelho é
+    um rádio Bluetooth; ``bluetooth`` diz de onde ele é (placa ou dongle), e
+    ``""`` com ``e_bluetooth`` é "não sei de onde".
     """
 
     usb: str = ""
@@ -884,6 +892,7 @@ class FatosDoBuraco:
     especie: str = ""
     produto: str = ""
     e_dualsense: bool = False
+    e_bluetooth: bool = False
     bluetooth: str = ""
     storm: int | None = None
 
@@ -946,14 +955,10 @@ def fatos_do_buraco(
                     if getattr(e, "tipo_de_encaixe", "")), "")
 
     aparelho = por_nome.get(dentro)
-    bluetooth = ""
-    if aparelho is not None and (
+    e_bluetooth = aparelho is not None and (
         aparelho.classe, aparelho.subclasse, aparelho.protocolo
-    ) == _TRIPLA_DO_BLUETOOTH:
-        interno = any(
-            getattr(e, "tipo_de_encaixe", "") == _ENCAIXE_INTERNO for e in meus
-        )
-        bluetooth = BLUETOOTH_DA_PLACA if interno else BLUETOOTH_DONGLE
+    ) == _TRIPLA_DO_BLUETOOTH
+    bluetooth = _origem_do_bluetooth(nos, entradas) if e_bluetooth else ""
 
     medido: int | None = None
     if storm is not None:
@@ -971,9 +976,50 @@ def fatos_do_buraco(
         especie="" if aparelho is None else aparelho.especie,
         produto="" if aparelho is None else aparelho.produto.strip(),
         e_dualsense=aparelho is not None and aparelho.vid.lower() == "054c",
+        e_bluetooth=e_bluetooth,
         bluetooth=bluetooth,
         storm=medido,
     )
+
+
+def _origem_do_bluetooth(nos: Sequence[str], entradas: Sequence[object]) -> str:
+    """Placa, dongle ou ``""`` — pelo ``connect_type`` do buraco e de quem o hospeda.
+
+    1. o buraco diz ``hardwired``: o conector interno da placa;
+    2. o buraco, ou o de um hub acima dele, diz ``hotplug``: alguém encaixou
+       aquilo de fora — é dongle, mesmo que o hub não publique o encaixe das
+       entradas dele (hub externo não tem tabela ACPI);
+    3. o resto é "não sei". Um hub INTERNO (num conector ``hardwired``) pode
+       hospedar tanto o rádio da placa quanto as entradas do painel frontal,
+       e ``unknown`` é o que TODA entrada diz numa máquina sem a tabela.
+    """
+    por_no = {str(getattr(e, "no", "")): e for e in entradas}
+    alvo = set(nos)
+    vistos: set[str] = set()
+    primeiro = True
+    while alvo and not alvo <= vistos:
+        vistos |= alvo
+        tipos = {
+            str(getattr(por_no[no], "tipo_de_encaixe", "") or "")
+            for no in alvo
+            if no in por_no
+        }
+        if primeiro and _ENCAIXE_INTERNO in tipos:
+            return BLUETOOTH_DA_PLACA
+        if _ENCAIXE_DE_FORA in tipos:
+            return BLUETOOTH_DONGLE
+        primeiro = False
+        hubs = {
+            dono
+            for no in alvo
+            if (dono := no.rpartition(_SUFIXO_DO_NO)[0]) and not dono.startswith("usb")
+        }
+        alvo = {
+            no
+            for no, e in por_no.items()
+            if str(getattr(e, "aparelho", "") or "") in hubs
+        }
+    return ""
 
 
 def _serial_do_no(no: str) -> str:
