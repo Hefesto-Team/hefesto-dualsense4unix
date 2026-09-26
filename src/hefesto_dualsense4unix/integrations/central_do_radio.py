@@ -52,7 +52,13 @@ OS TRÊS ESTADOS que a tela lê
 «chegou»**: um aplicar que o BlueZ disse que deu, e que o ``HID_PHYS`` não
 confirma, fica em «esperando» — e é vigiado, sem a trava, até
 :data:`PRAZO_DO_PENDENTE_S`. Se o controle aparece no destino, vira «chegou»;
-se o prazo acaba, «não chegou».
+se o prazo acaba, «não chegou» — e a MEIA CHAVE que o ``Pair`` deixou no
+destino sai antes do veredito (:meth:`CentralDoRadio._fechar_sem_chegar`). O
+prazo é UM, o da tela também, e o pedido seguinte não espera a vigia para
+encontrá-lo vencido (:meth:`CentralDoRadio._vencer_os_prazos`).
+
+O NOME DELA mora pelo endereço do controle, e não na chave
+(:meth:`CentralDoRadio.cuidar_dos_nomes`, O-RADIO-CONECTA-ONDE-ELA-MANDA-02).
 
 IDEMPOTÊNCIA É REQUISITO
 ========================
@@ -1233,8 +1239,8 @@ class CentralDoRadio:
         classe = next((o.classe for o in objetos if o.classe is not None), None)
         modalias = next((o.modalias for o in objetos if o.modalias), "")
         icone = next((o.icone for o in objetos if o.icone), "")
-        nome = next((self._nome_dado(dono, o) for e, o in pares
-                     if e != exceto and self._nome_dado(dono, o)), "")
+        dados = (self._nome_dado(dono, o) for e, o in pares if e != exceto)
+        nome = next((dado for dado in dados if dado), "")
         if not nome and objetos:
             nome = self._nome_guardado(objetos[0].endereco)
         return {"classe": classe, "modalias": modalias, "icone": icone, "nome": nome}
