@@ -852,11 +852,11 @@ USB_2 = "2.0"
 
 #: O adaptador Bluetooth encaixado na porta: o da PLACA (módulo interno num
 #: conector que ninguém alcança de fora — ``connect_type`` ``hardwired``) ou
-#: um DONGLE (a entrada é ``hotplug``, ou pende de um hub encaixado numa
-#: entrada ``hotplug``). Chaves de máquina. O ``unknown`` NÃO é nenhum dos
-#: dois: numa máquina sem a tabela ACPI das portas toda entrada diz
-#: ``unknown``, a de gabinete e a interna — e ali o produto responde "não sei"
-#: (``bluetooth == ""`` com ``e_bluetooth``), nunca «dongle».
+#: um DONGLE (a entrada é ``hotplug``, ou ele pende de um hub que não está
+#: num conector interno). Chaves de máquina. O rádio direto numa porta-raiz
+#: ``unknown`` NÃO é nenhum dos dois: numa máquina sem a tabela ACPI das
+#: portas toda entrada diz ``unknown``, a de gabinete e a interna — e ali o
+#: produto responde "não sei" (``bluetooth == ""`` com ``e_bluetooth``).
 BLUETOOTH_DA_PLACA = "placa"
 BLUETOOTH_DONGLE = "dongle"
 
@@ -992,14 +992,21 @@ def _origem_do_bluetooth(nos: Sequence[str], entradas: Sequence[object]) -> str:
     2. o buraco, ou o de um hub acima dele, diz ``hotplug``: alguém encaixou
        aquilo de fora — é dongle, mesmo que o hub não publique o encaixe das
        entradas dele (hub externo não tem tabela ACPI);
-    3. o resto é "não sei". Um hub INTERNO (num conector ``hardwired``) pode
-       hospedar tanto o rádio da placa quanto as entradas do painel frontal,
-       e ``unknown`` é o que TODA entrada diz numa máquina sem a tabela.
+    3. atrás de hub, sem nenhum ``hardwired`` na corrente: dongle. O rádio da
+       placa (a placa M.2 de Wi-Fi e Bluetooth, o módulo soldado) vai nos
+       pinos de uma porta-raiz, não atrás de um hub que o firmware nem
+       descreve. Medido na mesa dela em 25/09/2026: toda entrada diz
+       ``unknown``, e os três rádios estão atrás do hub da mesa — são dongles;
+    4. o resto é "não sei": o rádio direto numa porta-raiz ``unknown`` (numa
+       máquina sem a tabela ACPI toda entrada diz isso, a de gabinete e a
+       interna), e o que pende de um hub INTERNO (num conector ``hardwired``),
+       que hospeda tanto o rádio da placa quanto o painel da frente.
     """
     por_no = {str(getattr(e, "no", "")): e for e in entradas}
     alvo = set(nos)
     vistos: set[str] = set()
-    primeiro = True
+    degraus = 0
+    interno = False
     while alvo and not alvo <= vistos:
         vistos |= alvo
         tipos = {
@@ -1007,22 +1014,28 @@ def _origem_do_bluetooth(nos: Sequence[str], entradas: Sequence[object]) -> str:
             for no in alvo
             if no in por_no
         }
-        if primeiro and _ENCAIXE_INTERNO in tipos:
-            return BLUETOOTH_DA_PLACA
+        if _ENCAIXE_INTERNO in tipos:
+            if not degraus:
+                return BLUETOOTH_DA_PLACA
+            interno = True
         if _ENCAIXE_DE_FORA in tipos:
             return BLUETOOTH_DONGLE
-        primeiro = False
         hubs = {
             dono
             for no in alvo
             if (dono := no.rpartition(_SUFIXO_DO_NO)[0]) and not dono.startswith("usb")
         }
+        if not hubs:
+            break
+        degraus += 1
         alvo = {
             no
             for no, e in por_no.items()
             if str(getattr(e, "aparelho", "") or "") in hubs
         }
-    return ""
+        if not alvo:
+            return ""  # o buraco do hub não foi lido: não sei o que há acima
+    return BLUETOOTH_DONGLE if degraus and not interno else ""
 
 
 def _serial_do_no(no: str) -> str:
