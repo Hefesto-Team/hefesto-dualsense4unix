@@ -544,6 +544,23 @@ ESPERADO_VERMELHO: dict[tuple[str, str], str] = {
     ),
 }
 
+#: O MESMO REGISTRO, para o artigo 1 (o próprio tamanho do desenho), e por PEÇA:
+#: a chave é a aba e o começo do `title` da peça cortada. Só ela sai da conta — o
+#: resto da aba continua medido —, e no dia em que ela couber o artigo 1 reprova
+#: até a linha sair daqui, que é o `strict` desta tabela.
+CORTE_CONHECIDO_NO_DESENHO: dict[tuple[str, str], str] = {
+    ("09-sistema.html", "Sobreposição Vulkan:"): (
+        "DEFEITO VIVO que o desenho escondia até 26/09/2026 — a linha do Vulkan "
+        "do exame é a frase que o produto pinta desde 21/09 "
+        "(`camadas_vulkan.frase_do_estado`, ~70 caracteres), e a coluna do "
+        "exame corta 135 px dela a 1212 px; o `title` guarda a frase inteira. O "
+        "desenho mostrava no lugar «Nenhuma sobreposição picotando o jogo», que a "
+        "tela nunca pintou. CURA: uma frase que caiba na coluna, escolha de texto "
+        "que vai à sessão dos desenhos (o docstring de "
+        "`a09_sistema.linha_da_sobreposicao_vulkan` quer os três números na linha)"
+    ),
+}
+
 #: O MESMO REGISTRO, para o artigo 4 (os campos de escolha). Tabela separada
 #: porque o defeito é outro e a cura cai noutro lugar do gerador.
 ESPERADO_VERMELHO_SELECT: dict[tuple[str, str], str] = {
@@ -647,10 +664,21 @@ def test_no_tamanho_do_desenho_nada_e_cortado(medido, aba):
     e é a metade verde da mordida do tamanho.
     """
     lido = medido[(aba, "desenho")]
-    assert not lido["cortados"], (
+    cortados = list(lido["cortados"])
+    for (pagina, comeco), razao in CORTE_CONHECIDO_NO_DESENHO.items():
+        if pagina != aba:
+            continue
+        conhecidos = [c for c in cortados
+                      if str(c["peca"].get("titulo") or "").startswith(comeco)]
+        assert conhecidos, (
+            f"{aba}: «{comeco}…» deixou de ser cortada no tamanho do desenho — a "
+            "cura entrou, e a linha dela sai de `CORTE_CONHECIDO_NO_DESENHO`. "
+            f"({razao})")
+        cortados = [c for c in cortados if c not in conhecidos]
+    assert not cortados, (
         f"{aba} corta conteúdo no PRÓPRIO tamanho do desenho "
         f"({LARGURA_DO_DESENHO}x{ALTURA_DO_DESENHO}), o que nenhuma janela "
-        f"estreita explica{_a_letra(lido)}:\n" + _contar(lido["cortados"]))
+        f"estreita explica{_a_letra(lido)}:\n" + _contar(cortados))
     assert not lido["selects_apertados"], (
         f"{aba} tem `<select>` cuja opção escolhida não cabe no PRÓPRIO tamanho "
         f"do desenho{_a_letra(lido)}:\n" + _contar_selects(lido["selects_apertados"]))
