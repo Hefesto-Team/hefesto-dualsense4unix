@@ -79,10 +79,13 @@ def _html() -> str:
 
 def _rotulos_das_linhas() -> dict[str, str]:
     """``data-id`` → o rótulo que a pessoa LÊ naquela linha de estado."""
+    # DESDE 25/09/2026 a linha de estado é a do Status, na forma do exame
+    # (A-09-SISTEMA-EM-TRES-SECOES-01): o rótulo mora no `.txt`.
     achados: dict[str, str] = {}
-    for div in re.findall(r'<div class="est[^"]*"[^>]*>.*?</div>', _html(), re.S):
-        ident = re.search(r'data-id="([^"]+)"', div)
-        rot = re.search(r'<span class="rot">([^<]*)</span>', div)
+    for linha in re.findall(r'<(?:div|a) class="saude[^"]*"[^>]*data-id="[^"]+".*?</(?:div|a)>',
+                            _html(), re.S):
+        ident = re.search(r'data-id="([^"]+)"', linha)
+        rot = re.search(r'<span class="txt"><span>([^<]*)</span>', linha)
         if ident and rot:
             achados[ident.group(1)] = rot.group(1).strip()
     return achados
@@ -148,7 +151,11 @@ def test_a_regua_sabe_onde_olhar() -> None:
         "NENHUM botão desta aba diz 'serviço' — mesma pergunta da linha acima. "
         f"Botões vistos: {botoes}"
     )
-    assert set(_rotulos_das_linhas()) & set(aba_sistema.ENDERECOS), (
+    # Desde 25/09/2026 as linhas moram numa lista só (`status-lista`), e quem
+    # as nomeia é `aba_sistema.linhas_do_status` — é com ela que a página casa.
+    do_produto = {linha["id"] for linha in aba_sistema.linhas_do_status(
+        aba_sistema.Leitura())}
+    assert set(_rotulos_das_linhas()) & do_produto, (
         "os `data-id` da página e os endereços de `aba_sistema.ENDERECOS` não "
         "se encontram mais — sem interseção, esta régua percorre o vazio"
     )
@@ -202,7 +209,8 @@ class TestOQueONomeDaLinhaObriga:
         Se este teste reprovar, alguém varreu a aba inteira e apagou a frase
         que existe para desfazer a confusão. É o erro ao contrário.
         """
-        titulos = re.findall(r'<button[^>]*title="([^"]*)"[^>]*data-gesto="desligar"', _html())
+        titulos = re.findall(
+            r'<button[^>]*title="([^"]*)"[^>]*data-gesto="parar-ou-retomar"', _html())
         assert titulos, "o botão de parar o serviço perdeu o `title` que explica a diferença"
         assert any(PALAVRA in t for t in titulos), (
             "o `title` do botão que para o serviço deixou de citar o Hefesto. "

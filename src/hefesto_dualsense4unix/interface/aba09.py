@@ -717,7 +717,7 @@ MIOLO = f'''
         </div>
         <div class="avancadas">
           <div class="coluna col-servico">
-{item(ROTULO_PARAR, "Para o serviço, e pergunta antes. Com a pausa ativa vira Retomar; com ele parado, Ativar o serviço.", "btn vermelho", gesto=_gesto("parar-ou-retomar"), extra=f' data-campo="{CAMPO_DO_VERDE}" data-hef-alvo="classe" data-hef-classe="verde"')}
+{item(ROTULO_PARAR, "O Hefesto deixa de rodar e os controles viram gamepads comuns. Pergunta antes.", "btn vermelho", gesto=_gesto("parar-ou-retomar"), extra=f' data-campo="{CAMPO_DO_VERDE}" data-hef-alvo="classe" data-hef-classe="verde"')}
 {item(ROTULO_ATUALIZAR, DICA_ATUALIZAR, gesto=_gesto("atualizar"), em_voo=EM_VOO_ATUALIZAR)}
 {item_escondido("Corrigir o serviço", "O serviço está rodando por fora do sistema, e ali reiniciar não funciona. Este botão o faz subir do jeito certo.", "corrigir-modo", CAMPO_DO_MODO_AVULSO)}
 {item_cinza("Reiniciar", "Para e liga de novo o serviço. Resolve a maioria dos travamentos, e nenhum ajuste seu se perde.", "reiniciar")}
