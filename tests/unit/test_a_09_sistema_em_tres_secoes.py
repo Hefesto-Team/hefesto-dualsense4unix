@@ -247,14 +247,56 @@ def test_a_cabeca_da_frase_do_exame(a09, frase, cabeca) -> None:
 
 
 def test_a_linha_do_exame_guarda_a_frase_inteira_no_title(a09) -> None:
-    """A tela mostra a cabeça; quem passa o mouse lê o resto.
+    """A tela mostra a frase curta; quem passa o mouse lê o resto.
 
-    MORDIDA: escreva `txt` no `<span>` em vez de `cabeca_da_frase(txt)`.
+    MORDIDA: escreva `txt` no `<span>` em vez de `frase_curta_do_exame(txt)`.
     """
     frase = "quirk anti-storm ativo (054c:0ce6 — áudio USB esp)"
     html = a09._linha_do_exame({"cls": "ok", "g": "✓", "selo": "OK", "txt": frase})
-    assert "<span>Quirk anti-storm ativo</span>" in html, html
-    assert "054c:0ce6" in html.split("<span>Quirk", 1)[0], "o title perdeu a frase inteira"
+    assert "<span>Proteção do áudio USB ligada</span>" in html, html
+    assert "054c:0ce6" in html.split("<span>Proteção", 1)[0], "o title perdeu a frase inteira"
+
+
+@pytest.mark.parametrize(("frase", "curta"), [
+    ("quirk anti-storm ativo (054c:0ce6 — áudio USB espaçado)",
+     "Proteção do áudio USB ligada"),
+    ("regra áudio-off inativa — o mic e o fone do controle estão liberados.",
+     "Mic e fone do controle liberados"),
+    ("WirePlumber configurado (51-hefesto-dualsense-no-default-source.conf)",
+     "Ajuste de áudio instalado"),
+    ("Steam Input: não encontrei a Steam nesta máquina (nenhum localconfig.vdf).",
+     "Steam não encontrada"),
+    ("o ajuste de áudio do Hefesto não está instalado — sem ele o controle",
+     "Ajuste de áudio não instalado"),
+    ("cura do travamento do USB ATIVA (mic e fone do controle preservados)",
+     "Cura do travamento do USB ativa"),
+    # o que a tabela não conhece cai na regra da cabeça, e nunca sai inteiro
+    ("áudio presente nos 2 controles no cabo (mic+fone do DualSense ativos)",
+     "Áudio presente nos 2 controles no cabo"),
+])
+def test_a_frase_do_doctor_sai_na_lingua_de_quem_joga(a09, frase, curta) -> None:
+    """Conferência de 25/09/2026: a cabeça ainda era jargão do terminal.
+
+    MORDIDA: esvazie `FRASES_CURTAS_DO_EXAME` — «Quirk anti-storm ativo» volta.
+    """
+    assert a09.frase_curta_do_exame(frase) == curta
+
+
+def test_cada_frase_curta_tem_o_seu_achado_no_doctor(a09) -> None:
+    """O começo de cada linha da tabela existe no dono das frases.
+
+    Uma tabela que lê uma frase que o `doctor` deixou de escrever é uma lista
+    digitada que envelheceu calada: a linha da tela cairia na regra da cabeça
+    sem ninguém saber. E a frase curta cabe na coluna do exame.
+
+    MORDIDA: troque um começo da tabela por um que o `doctor` não escreve.
+    """
+    fonte = (RAIZ / "src/hefesto_dualsense4unix/integrations/storm_doctor.py"
+             ).read_text(encoding="utf-8").lower()
+    orfas = [c for c, _ in a09.FRASES_CURTAS_DO_EXAME if c not in fonte]
+    assert not orfas, f"começos que o storm_doctor não escreve mais: {orfas}"
+    longas = [f for _, f in a09.FRASES_CURTAS_DO_EXAME if len(f) > 36]
+    assert not longas, f"frases curtas que não cabem na coluna: {longas}"
 
 
 # ---------------------------------------------------------------------------

@@ -1965,7 +1965,7 @@ def _linha_do_exame(achado: dict[str, Any]) -> str:
             f'<span class="sg">{html.escape(str(achado.get("g") or ""))}</span>'
             f'{html.escape(str(achado.get("selo") or ""))}</span>'
             f'<span class="txt" title="{html.escape(txt, quote=True)}">'
-            f'<span>{html.escape(cabeca_da_frase(txt))}</span>'
+            f'<span>{html.escape(frase_curta_do_exame(txt))}</span>'
             "</span></div>")
 
 
@@ -1990,6 +1990,50 @@ def cabeca_da_frase(frase: str) -> str:
             cabeca = pedaco
     cabeca = cabeca.rstrip(".").strip()
     return cabeca[:1].upper() + cabeca[1:] if cabeca else ""
+
+
+#: A CABEÇA NÃO BASTA — conferência de 25/09/2026. Medido no lar de mentira,
+#: a regra de cima entregava o JARGÃO do terminal («Quirk anti-storm ativo»,
+#: «Regra áudio-off inativa», «WirePlumber configurado») e duas cabeças ainda
+#: longas demais para a coluna («Steam Input: não encontrei a Steam nesta
+#: máquina» saía cortada em reticências). Ela pediu *«simples pro user»*
+#: <!-- noqa-acento: citação literal dela -->, e o jargão não é simples.
+#:
+#: A FRASE DA TELA PARA CADA ACHADO QUE O `doctor` SABE DAR, pelo começo da
+#: frase dele (sem caixa). O terminal continua lendo a frase inteira, e o
+#: `title` da linha também; o que não estiver aqui cai na regra da cabeça —
+#: uma frase nova do exame nunca sai inteira, só sai menos bonita. Cada começo
+#: tem de existir no `integrations/storm_doctor.py`: a régua
+#: `test_cada_frase_curta_tem_o_seu_achado_no_doctor` reprova o começo que o
+#: dono deixou de escrever.
+FRASES_CURTAS_DO_EXAME: tuple[tuple[str, str], ...] = (
+    ("quirk anti-storm ativo", "Proteção do áudio USB ligada"),
+    ("o cinto extra do áudio usb não está posto",
+     "Proteção extra do áudio desligada"),
+    ("steam input: não encontrei a steam", "Steam não encontrada"),
+    ("steam input ligado para", "Steam Input ligado em jogos"),
+    ("steam input ligado no ajuste global", "Steam Input ligado na Steam toda"),
+    ("steam input desligado (com exceções", "Steam Input desligado, com exceções"),
+    ("steam input desligado para o dualsense", "Steam Input desligado"),
+    ("wireplumber configurado", "Ajuste de áudio instalado"),
+    ("o ajuste de áudio do hefesto não está instalado",
+     "Ajuste de áudio não instalado"),
+    ("o mic e o fone do controle estão desligados de propósito",
+     "Mic e fone desligados por escolha"),
+    ("regra áudio-off inativa", "Mic e fone do controle liberados"),
+    ("cura do travamento do usb ativa", "Cura do travamento do USB ativa"),
+    ("a cura do travamento está agendada", "Cura do travamento agendada"),
+    ("cura do travamento do usb ausente", "Cura do travamento do USB ausente"),
+)
+
+
+def frase_curta_do_exame(frase: str) -> str:
+    """A frase da tela para um achado do exame: a da tabela, ou a cabeça."""
+    chave = frase.strip().lower()
+    for comeco, curta in FRASES_CURTAS_DO_EXAME:
+        if chave.startswith(comeco):
+            return curta
+    return cabeca_da_frase(frase)
 
 
 def _html_da_contagem(texto: Any) -> str:
