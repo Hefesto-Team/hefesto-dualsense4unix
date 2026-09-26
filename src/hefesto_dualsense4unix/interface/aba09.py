@@ -505,7 +505,7 @@ LIGAVEIS = (
      "Liga o serviço junto com o computador. Clique para trocar."),
     ("Fixar Proton", "fixar-proton", "proton-fixado", True,
      "Mantém os jogos na versão do Proton que faz o controle vibrar e tocar "
-     "som. Clique para trocar; com a Steam aberta ele espera."),
+     "som. Clique para trocar, com a Steam fechada."),
     ("Corrigir Vulkan", "corrigir-vulkan", "vulkan-corrigido", False,
      "Tira dos jogos a sobreposição Vulkan que engasga a imagem. Desligar "
      "devolve o que foi tirado."),
