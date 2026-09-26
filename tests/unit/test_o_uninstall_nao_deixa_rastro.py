@@ -891,3 +891,25 @@ def test_o_desfazer_adiado_termina_depois_e_a_casa_fica_limpa(tmp_path: Path) ->
     assert not estado.exists(), f"a pasta de estado ficou: {sorted(os.listdir(estado))}"
     limpa = _limpa(r, tmp_path)
     assert limpa.returncode == 0, limpa.stdout + limpa.stderr
+
+
+def test_o_zumbi_sai_das_duas_casas_sem_purge(tmp_path: Path) -> None:
+    """O daemon grava o `conexao-zumbi.json` pelo XDG do AMBIENTE DELE (a unit
+    do usuário), que pode não ser o do terminal que desinstala: com o
+    XDG_STATE_HOME fora do lar no terminal, o do daemon pode estar no lar. As
+    duas casas perdem o zumbi, sem `--purge-config` também.
+
+    A MORDIDA: volte o `rm` a olhar só o `ESTADO_DO_RADIO` e o zumbi do lar
+    fica.
+    """
+    r, repo = _casa_de_mentira(tmp_path, xdg_fora=True)
+    _instalar_pelos_donos(r, repo, heroic_nativo=False, com_venv=True)
+    no_lar = r.lar / ".local/state" / m.SLUG
+    (no_lar / "conexao-zumbi.json").write_text('{"links": {}}', encoding="utf-8")
+
+    rodou, _ = _desinstalar(tmp_path, r, repo, UNINSTALL.read_text(encoding="utf-8"),
+                            xdg_fora=True, flags="--yes")
+
+    assert rodou.returncode == 0, rodou.stderr[-3000:]
+    for estado in (r.estado / m.SLUG, no_lar):
+        assert not (estado / "conexao-zumbi.json").exists(), estado

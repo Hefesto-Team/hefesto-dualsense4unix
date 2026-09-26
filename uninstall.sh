@@ -2263,11 +2263,15 @@ fi
 # - `conexao-zumbi.json` (a vigia de conexões, `daemon/subsystems/conexoes.py`):
 #   estado, não histórico — a última volta da vigia, com o endereço de cada
 #   link. Sai SEMPRE, como o dos lugares (O-UNINSTALL-NAO-DEIXA-RASTRO-01): até
-#   25/09 ninguém o nomeava, e ele segurava a pasta de estado de pé.
-if [[ -f "${ESTADO_DO_RADIO}/conexao-zumbi.json" ]]; then
-    log "removendo a última volta da vigia de conexões (${ESTADO_DO_RADIO}/conexao-zumbi.json)"
-    rm -f "${ESTADO_DO_RADIO}/conexao-zumbi.json"
-fi
+#   25/09 ninguém o nomeava, e ele segurava a pasta de estado de pé. Nas duas
+#   pastas de estado: o daemon o grava pelo XDG da unit do usuário, que pode
+#   não ser o deste terminal.
+for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
+    if [[ -f "${_estado}/conexao-zumbi.json" ]]; then
+        log "removendo a última volta da vigia de conexões (${_estado}/conexao-zumbi.json)"
+        rm -f "${_estado}/conexao-zumbi.json"
+    fi
+done
 # - o DIÁRIO do rádio da sessão (`radio-diario.jsonl` e o `.1`): histórico, com
 #   a mesma regra do diário do root lá em cima — guardado com o carimbo da
 #   desinstalação no nome (a próxima instalação não o relê no arranque), e
