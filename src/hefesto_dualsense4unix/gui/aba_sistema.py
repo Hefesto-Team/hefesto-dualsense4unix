@@ -55,40 +55,50 @@ from typing import Any, NamedTuple
 #: ``None`` quando não há o que dizer); ``achado-1``..``8`` congelaria em oito o
 #: que o produto não congela.
 ENDERECOS: dict[str, str] = {
-    "hefesto-estado": "a matriz de três fontes de `daemon_actions._daemon_status`",
-    "hefesto-pausa": '`state_full["paused"]` (daemon/ipc_handlers.py:2140)',
-    "hefesto-troca-de-perfil": "`daemon_actions.descrever_deteccao_de_janela:123`",
-    "hefesto-ambiente": "`app/actions/ambiente_na_tela.descrever_display_grafico:76`",
+    # A-09-SISTEMA-EM-TRES-SECOES-01, 25/09/2026: as quatro linhas do Status
+    # viram UM endereço, como a lista do exame — a pílula muda de COR com o
+    # estado, e o alvo `classe` do piloto acende uma classe só (ver
+    # `a09_sistema.SEM_ALVO_NA_PAGINA`, que perdeu o objeto com isto).
+    "status-lista": "`linhas_do_status` deste módulo — serviço, troca de perfil, "
+    "ambiente gráfico e Bluetooth",
     "hefesto-autostart": "`systemctl --user is-enabled` da unidade normal",
+    "proton-fixado": "o registro da trava do Proton "
+    "(`proton_pin.default_lock_state_path`, as mesmas chaves que o destravar lê)",
+    "vulkan-corrigido": "`camadas_vulkan.ler_estado` cruzado com o censo — há "
+    "camada que NÓS desligamos",
     "bateria-perfil": "`app/actions/config/secao_orcamento.ROTULOS_DOS_PERFIS:125`",
-    "bateria-impoe": "`core.rumble.teto_do_orcamento` + `TETO_POR_PERFIL:137`",
-    "bateria-vale-para": '`state_full["controllers"]`',
-    "bateria-frase": "`secao_orcamento.LINHAS_DO_TETO:206`",
     "exame-contagem": "DERIVADA da lista — nunca digitada",
     "exame-lista": "`integrations/storm_doctor.storm_report:755`",
-    "registro-texto": "NÃO TEM FONTE — ver SEM_FONTE",
+    "registro-texto": "`systemctl status` + a identidade de fábrica + o diário "
+    "da unit (`journalctl --user`), com o endereço dos controles mascarado",
 }
 
 #: O DONO REAL DE CADA GESTO, DECLARADO NUM LUGAR SÓ. É a mesma disciplina do
 #: ``DONOS_DOS_GESTOS`` do piloto da aba Controles: o gesto chega ao Python, e
 #: quem o aplica está escrito aqui — inclusive quando a resposta é "ninguém".
 GESTOS: dict[str, str] = {
-    "retomar": "IPC `daemon.resume` (daemon/ipc_server.py:129 → ipc_handlers.py:2702). "
-    "O ÚNICO chamador em src/ é `cli/app.py:421` — o terminal. A pausa fica "
-    "gravada em disco e sobrevive a desligar o computador; até hoje só o "
-    "terminal saía dela.",
+    # O «Retomar» e o «Parar o serviço» viraram UM botão — A-09-SISTEMA-EM-
+    # TRES-SECOES-01, 25/09/2026, pedido dela. O dono dos dois atos continua o
+    # mesmo; o que mudou é que um clique só decide qual.
+    "parar-ou-retomar": "`a09_sistema.desligar` — com a pausa ativa, IPC "
+    "`daemon.resume` (daemon/ipc_server.py:129); com o serviço de pé, "
+    "`systemctl --user stop` em dois cliques e `_user_stopped_daemon` armado "
+    "(o mesmo de `daemon_actions.on_daemon_stop:2234`); com ele parado, "
+    "`a09_sistema.ativar_o_servico`.",
     "reiniciar": "`daemon_actions.on_daemon_service_restart:2277`",
     "atualizar": "`daemon_actions.on_daemon_refresh:2267`",
-    "desligar": "`daemon_actions.on_daemon_stop:2234` — e ele arma "
-    "`_user_stopped_daemon` para o `ensure_daemon_running` não o ressuscitar "
-    "na próxima abertura.",
     "autostart": "`daemon_actions.on_daemon_autostart_toggled:2398`",
     "perfil-da-mesa": "`app/actions/config/secao_orcamento._ao_escolher`",
     "refazer-consertos": "`daemon_actions.on_storm_fix_safe:1218`",
-    "refazer-proton": "`daemon_actions.on_proton_lock:1793`",
-    "procurar-camadas": "`emulation_actions.on_camadas_engasgo` — MORA NA ABA QUE "
-    "MORRE. Quem desmontar a Emulação leva o handler junto sem perceber, e o "
-    "achado `Nenhuma sobreposição` perde o motor no mesmo commit.",
+    # OS DOIS LIGÁVEIS QUE ERAM BOTÕES DE UM ATO SÓ — 25/09/2026. Ligar faz o
+    # que o «Refazer a fixação do Proton» e o «Tirar a sobreposição Vulkan»
+    # faziam; desligar desfaz pela cópia que os dois já guardavam.
+    "fixar-proton": "`integrations.proton_pin.lock_proton_for_all_games` para "
+    "ligar e `unlock_games_from_pinned_proton` para desligar — o registro da "
+    "trava é a cópia que o destravar lê.",
+    "corrigir-vulkan": "`integrations.camadas_vulkan.curar_todos` — "
+    "`religar=False` para ligar, `religar=True` (o que a memória diz que NÓS "
+    "desligamos) para desligar.",
     "restaurar-de-fabrica": "`app/actions/footer_actions.on_restore_default:1477`, "
     "hoje no RODAPÉ (`main.glade:4272`, botão `btn_footer_restore_default`), "
     "com confirmação em `app/gui_dialogs.confirm_restore_default:696`.",
@@ -103,15 +113,14 @@ GESTOS: dict[str, str] = {
     "frases do recibo são `daemon_actions.MIGRAR_DEU_CERTO` e `MIGRAR_NAO_DEU`.",
     "aplicar-aos-jogos": "`daemon_actions.on_steam_apply_launch` e o worker "
     "dele — `integrations.steam_launch_options.apply_wrapper_to_all_games` "
-    "dentro de uma janela de `with_steam_closed`. É a metade que APLICA o que "
-    "o «Copiar a linha» da aba Lançadores só entrega na área de transferência; "
-    "mora nesta aba por decisão dela (`D-0609-STEAM-DIVIDIDO`).",
-    # «Ver os plugins» SAIU — SISTEMA-BOTOES-01, 13/09/2026, pela decisão dela
-    # D-OS-PLUGINS-APARECEM-ONDE-AGEM (`docs/data/decisoes-dela.csv`): plugin
-    # não ganha seção própria. A CLI e o IPC ficam.
-    "ver-detalhes": "`daemon_actions.on_daemon_view_logs:2387` — e ele mostra "
-    "OUTRA coisa: o `systemctl status`, não as últimas linhas de registro que "
-    "o desenho pediu.",
+    "dentro de uma janela de `with_steam_closed`. Na tela desde 25/09 diz "
+    "«Aplicar soluções nos lançadores»: nesta leva só a Steam, e a extensão é "
+    "a AS-SOLUCOES-NOS-LANCADORES-01.",
+    # «Ver detalhes» SAIU — A-09-SISTEMA-EM-TRES-SECOES-01, 25/09/2026: o
+    # registro passou a estar sempre à vista, e o gesto que sobra é o de copiar.
+    "copiar-registro": "`a09_sistema.copiar_registro` — o texto inteiro do "
+    "painel na área de transferência (`Gtk.Clipboard`, o mesmo caminho de "
+    "`daemon_actions.on_storm_copy_launch`).",
 }
 
 #: O QUE A TELA DESENHOU E O PRODUTO NÃO TEM COMO PREENCHER. Fica declarado, com
@@ -178,6 +187,10 @@ class Leitura(NamedTuple):
     :param ambiente: ``ambiente_na_tela.descrever_display_grafico(state)``.
     :param perfil: a chave do perfil da mesa (``secao_orcamento.PERFIS``), ou
         ``None`` quando ninguém escolheu.
+    :param sessao: ``"Wayland · COSMIC"`` — o tipo da sessão e a área de
+        trabalho (``app/ambiente.ambiente_efetivo``). Entrou em 25/09/2026.
+    :param adaptadores: quantos adaptadores Bluetooth a máquina tem
+        (``integrations/mesa_de_radio.adaptadores_bluetooth``). Entrou em 25/09.
     """
 
     status: str | None = None
@@ -187,6 +200,8 @@ class Leitura(NamedTuple):
     deteccao: str | None = None
     ambiente: str | None = None
     perfil: str | None = None
+    sessao: str | None = None
+    adaptadores: int | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -519,6 +534,140 @@ def _lista(nomes: list[str]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# O Status — as quatro linhas, na forma do exame
+# ---------------------------------------------------------------------------
+# A-09-SISTEMA-EM-TRES-SECOES-01, 25/09/2026, pedido dela: *«As quatro linhas
+# do Status ficam, no MESMO estilo das linhas do O exame de hoje (a pílula à
+# esquerda e o texto curto)»*, e *«simplificar cada texto, seja tooltip ou seja
+# do doctor»*. A pílula diz o ESTADO numa palavra; o texto diz DE QUÊ; o `?`
+# diz o resto em uma frase.
+#
+# AS LINHAS DE ONTEM CONTINUAM SENDO A LEITURA: `linha_do_hefesto`,
+# `linha_da_pausa`, `linha_da_troca_de_perfil` e `linha_do_ambiente` decidem o
+# estado; aqui só se escolhe a palavra da pílula. Duas leituras do mesmo estado
+# seriam duas respostas possíveis para a mesma linha.
+#: A pílula de cada estado: (palavra, classe do selo, glifo). As três classes
+#: são as do exame (`.selo.ok`, `.selo.aviso`, `.selo.nt`) e mais nada.
+PILULA_OK, PILULA_AVISO, PILULA_NOTA = "ok", "aviso", "nt"
+
+
+def _linha_de_status(ident: str, palavra: str, cls: str, g: str,
+                     txt: str, dica: str, href: str = "") -> dict[str, str]:
+    return {"id": ident, "selo": palavra, "cls": cls, "g": g, "txt": txt,
+            "dica": dica, "href": href}
+
+
+def status_do_servico(status: str | None, state: object) -> dict[str, str]:
+    """LIGADO, PAUSADO ou PARADO — a pausa deixou de ter linha própria."""
+    base = linha_do_hefesto(status)
+    pausa = linha_da_pausa(state)
+    if pausa.cls == AVISO and status in DE_PE:
+        return _linha_de_status(
+            "hefesto-estado", "PAUSADO", PILULA_AVISO, GLIFO_AVISO, "Serviço",
+            "Pausado, e continua assim depois de reiniciar. O botão Retomar "
+            "tira da pausa.")
+    if status == "online_systemd":
+        return _linha_de_status("hefesto-estado", "LIGADO", PILULA_OK, GLIFO_OK,
+                                "Serviço", "Roda por trás e volta sozinho se travar.")
+    if status == "online_avulso":
+        return _linha_de_status(
+            "hefesto-estado", "LIGADO", PILULA_AVISO, GLIFO_AVISO,
+            "Serviço improvisado",
+            "Roda por fora do sistema: não liga com o computador nem volta "
+            "sozinho se travar.")
+    if status == "iniciando":
+        return _linha_de_status("hefesto-estado", "LIGANDO", PILULA_AVISO,
+                                GLIFO_AVISO, "Serviço", "Terminando de ligar.")
+    if status == "offline":
+        return _linha_de_status(
+            "hefesto-estado", "PARADO", PILULA_AVISO, GLIFO_AVISO, "Serviço",
+            "Parado: o controle funciona, mas sem luz, gatilhos nem os seus "
+            "ajustes.")
+    return _linha_de_status("hefesto-estado", NAO_DEU, PILULA_NOTA, "i",
+                            "Serviço", base.dica)
+
+
+def status_da_troca(state: object) -> dict[str, str]:
+    """A troca de perfil ao abrir o jogo: LIGADO, SEM VER ou NÃO DÁ."""
+    campos = _campos_de_janela(state)
+    rot = "Troca de perfil ao abrir o jogo"
+    if campos is None:
+        return _linha_de_status("hefesto-troca-de-perfil", NAO_DEU, PILULA_NOTA,
+                                "i", rot, "O serviço não respondeu.")
+    backend = campos["backend"]
+    if not isinstance(backend, str) or backend in ("", "null"):
+        return _linha_de_status(
+            "hefesto-troca-de-perfil", "NÃO DÁ", PILULA_AVISO, GLIFO_AVISO, rot,
+            "Este ambiente gráfico não deixa ver a janela da frente.")
+    if campos["vendo"]:
+        return _linha_de_status("hefesto-troca-de-perfil", "LIGADO", PILULA_OK,
+                                GLIFO_OK, rot,
+                                "O perfil do jogo entra sozinho quando ele abre.")
+    return _linha_de_status(
+        "hefesto-troca-de-perfil", "SEM VER", PILULA_AVISO, GLIFO_AVISO, rot,
+        "Agora não vejo a janela da frente, e o perfil não troca sozinho.")
+
+
+def status_do_ambiente(sessao: str | None) -> dict[str, str]:
+    """O ambiente gráfico em duas palavras: ``Wayland · COSMIC``."""
+    txt = f"Ambiente gráfico: {sessao}" if sessao else "Ambiente gráfico"
+    return _linha_de_status(
+        "hefesto-ambiente", "NOTA" if sessao else NAO_DEU, PILULA_NOTA, "i", txt,
+        "É por ele que o Hefesto vê qual janela está na frente.")
+
+
+def controles_no_radio(state: object) -> int | None:
+    """Quantos controles conectados estão no Bluetooth. ``None`` = não deu."""
+    if not isinstance(state, dict) or not isinstance(state.get("controllers"), list):
+        return None
+    return sum(1 for c in state["controllers"]
+               if isinstance(c, dict) and c.get("connected") is not False
+               and str(c.get("transport") or "").lower() == "bt")
+
+
+#: A LINHA DO BLUETOOTH LEVA À SEÇÃO DO RÁDIO NA ABA 08 — é o «interativa de
+#: verdade» dela: o clique vai para onde o rádio se mexe, e nenhuma linha vira
+#: botão sem dono.
+ENDERECO_DO_RADIO = "08-conexoes.html#rd-secao"
+
+
+def status_do_bluetooth(adaptadores: int | None, state: object) -> dict[str, str]:
+    """Quantos adaptadores e quantos controles no rádio — a linha que ela sentiu falta.
+
+    ZERO ADAPTADOR NÃO É DEFEITO: é o PC de mesa sem dongle, e a
+    `mesa_de_radio.adaptadores_bluetooth` já diz que lista vazia é a resposta
+    mais comum. Sai NOTA, não AVISO.
+    """
+    no_radio = controles_no_radio(state)
+    if adaptadores is None:
+        return _linha_de_status("status-bluetooth", NAO_DEU, PILULA_NOTA, "i",
+                                "Bluetooth", "Não consegui ler os adaptadores.",
+                                ENDERECO_DO_RADIO)
+    if adaptadores == 0:
+        return _linha_de_status("status-bluetooth", "NOTA", PILULA_NOTA, "i",
+                                "Bluetooth: nenhum adaptador",
+                                "Sem adaptador, os controles só ligam pelo cabo.",
+                                ENDERECO_DO_RADIO)
+    partes = [f"{adaptadores} {'adaptador' if adaptadores == 1 else 'adaptadores'}"]
+    if no_radio is not None:
+        partes.append(f"{no_radio} {'controle' if no_radio == 1 else 'controles'}")
+    return _linha_de_status("status-bluetooth", "OK", PILULA_OK, GLIFO_OK,
+                            f"Bluetooth: {' · '.join(partes)}",
+                            "Clique para ver os adaptadores na aba Conexões.",
+                            ENDERECO_DO_RADIO)
+
+
+def linhas_do_status(leitura: Leitura) -> list[dict[str, str]]:
+    """As quatro linhas do Status, na ordem do desenho."""
+    return [
+        status_do_servico(leitura.status, leitura.state),
+        status_da_troca(leitura.state),
+        status_do_ambiente(leitura.sessao),
+        status_do_bluetooth(leitura.adaptadores, leitura.state),
+    ]
+
+
+# ---------------------------------------------------------------------------
 # O exame
 # ---------------------------------------------------------------------------
 #: Como o veredito de ``storm_doctor`` vira selo na tela. Os três selos são os
@@ -642,9 +791,8 @@ def travas(leitura: Leitura) -> dict[str, str]:
     if not de_pe:
         presas["desligar"] = "O serviço já está desligado."
         presas["reiniciar"] = "O serviço está desligado — não há o que reiniciar."
-    # O `ver-plugins` saiu desta conta com o botão (SISTEMA-BOTOES-01, 13/09).
-    if not de_pe:
-        presas["ver-detalhes"] = "O serviço está desligado — não há o que perguntar a ele."
+    # O `ver-plugins` saiu desta conta com o botão (SISTEMA-BOTOES-01, 13/09),
+    # e o `ver-detalhes` com o dele (A-09-SISTEMA-EM-TRES-SECOES-01, 25/09).
     return presas
 
 
@@ -673,6 +821,7 @@ def pacote(leitura: Leitura) -> dict[str, Any]:
         "frase": frase_do_teto(),
         "exame": exame(leitura.achados),
         "registro": {"txt": NAO_DEU, "dica": SEM_FONTE["registro-texto"]},
+        "status": linhas_do_status(leitura),
         "travas": travas(leitura),
     }
 
@@ -680,6 +829,7 @@ def pacote(leitura: Leitura) -> dict[str, Any]:
 __all__ = [
     "DE_PE",
     "ENDERECOS",
+    "ENDERECO_DO_RADIO",
     "GESTOS",
     "GLIFO_AVISO",
     "GLIFO_INFO",
@@ -690,6 +840,7 @@ __all__ = [
     "Leitura",
     "Linha",
     "autostart_ligado",
+    "controles_no_radio",
     "exame",
     "forca_do_perfil",
     "frase_do_teto",
@@ -699,6 +850,7 @@ __all__ = [
     "linha_do_hefesto",
     "linha_do_impoe",
     "linha_do_vale_para",
+    "linhas_do_status",
     "pacote",
     "perfil_do_rotulo",
     "quantos_controles",
