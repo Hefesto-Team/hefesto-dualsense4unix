@@ -3234,6 +3234,11 @@ def _css_do_radio() -> str:
 #: desfaz — medido lado a lado no Chrome (a caixa de cada peça na seção contra
 #: a mesma peça no `mapa-do-radio.html`). A folha do desenho vence onde diz
 #: alguma coisa; estas linhas apagam o que ela CALA e a página diz.
+#:
+#: AS SEIS ÚLTIMAS SÃO AS DECISÕES DELA DE 25/09/2026, que o desenho não tinha
+#: (A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01): o nome do controle na forma
+#: `Nome ● Modelo do plástico ● Pn` (a coluna do nome vai de 13 a 30 caracteres,
+#: e o campo encosta o resto nele) e a caixa do adaptador que se arrasta.
 CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .btn{height:auto;padding-top:7px;padding-bottom:7px}
   .radio .btn.so-icone{padding:7px}
@@ -3257,6 +3262,12 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio .queda-desde{font-size:11px;color:var(--texto-mudo);padding:2px 4px}
   .radio .conectar{display:flex;flex-direction:column;gap:11px;min-height:0}
   .radio .soltar.apagado,.radio .lampada.apagado{cursor:not-allowed;opacity:.5}
+  .radio .linha{grid-template-columns:36px minmax(13ch,30ch) 1fr 6ch}
+  .radio .linha .quem{display:flex;align-items:center;min-width:0;overflow:hidden;white-space:nowrap}
+  .radio .linha .quem .nome{flex:0 1 auto;min-width:4ch}
+  .radio .linha .quem-resto{font-size:12.5px;color:var(--texto-suave);flex:none}
+  .radio .lugar-topo[draggable="true"]{cursor:grab}
+  .radio .lugar.arrastando{opacity:.45}
 """
 
 
@@ -3422,9 +3433,12 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       setTimeout(function(){ b.classList.remove('recusa'); }, 500); }
 
     // ---- o acordeão: abrir um adaptador fecha os outros (o Python lembra) ----
+    // Com UMA caixa só ela fica aberta (decisão dela, 25/09): o pacote nem
+    // pinta a seta, e esta guarda cobre a página de antes do próximo tique.
     document.addEventListener('click', function(ev){
       var b = perto(ev, '.radio .abre-lugar');
       if(!b) return;
+      if(todos('.radio .sala .lugar').length < 2) return;
       var card = b.closest('.lugar'), abrindo = !card.classList.contains('aberto');
       todos('.radio .lugar').forEach(function(l){
         l.classList.remove('aberto');
@@ -3436,6 +3450,8 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
     document.addEventListener('input', function(ev){
       var n = perto(ev, '.radio .lugar-nome');
       if(n) n.style.width = Math.max((n.value || n.placeholder).length + 2, 10) + 'ch';
+      var c = perto(ev, '.radio .quem .nome');
+      if(c) c.style.width = Math.max((c.value || c.placeholder).length + 2, 6) + 'ch';
     });
 
     // ---- a PERGUNTA, antes de todo mover (R7) ----
@@ -3479,26 +3495,53 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
     });
 
     // ---- o PAINEL lateral: o que a página abre, o Python já pintou ----
-    var quemAbriu = null;
-    function abrirPainel(tipo, alvo){
-      var m = um('.radio template.painel-molde[data-painel="' + tipo + '"][data-alvo="'
-                 + aspas(alvo || '') + '"]');
-      if(!m) return false;
-      abrirASecao();
-      quemAbriu = document.activeElement;
-      var p = document.getElementById('rd-painel');
+    // O PAINEL SEGUE O MOLDE ENQUANTO ESTÁ ABERTO (25/09/2026, a lista dela,
+    // passo b6: *«não apareceu na lista»*). Ele era uma CÓPIA tirada no clique:
+    // o tique repintava o molde com o aparelho que a busca achou, e o
+    // «Procurando» aberto continuava mostrando a lista do instante do clique.
+    var quemAbriu = null, painelAberto = null;
+    function moldeDoPainel(tipo, alvo){
+      return um('.radio template.painel-molde[data-painel="' + tipo + '"][data-alvo="'
+                + aspas(alvo || '') + '"]');
+    }
+    function encherOPainel(m){
       document.getElementById('rd-painel-titulo').textContent = m.dataset.titulo || '';
       document.getElementById('rd-pulso').style.display = m.dataset.pulso ? '' : 'none';
       var corpo = document.getElementById('rd-painel-corpo');
       corpo.innerHTML = ''; corpo.appendChild(m.content.cloneNode(true));
+      return corpo;
+    }
+    function abrirPainel(tipo, alvo){
+      var m = moldeDoPainel(tipo, alvo);
+      if(!m) return false;
+      abrirASecao();
+      quemAbriu = document.activeElement;
+      var p = document.getElementById('rd-painel');
+      var corpo = encherOPainel(m);
+      painelAberto = {tipo: tipo, alvo: alvo || '', html: m.innerHTML};
       p.classList.add('aberto'); p.removeAttribute('inert'); p.setAttribute('aria-hidden', 'false');
       document.getElementById('rd-veu').classList.add('aberto');
       var primeiro = um('button, a, input', corpo) || document.getElementById('rd-fechar');
       if(primeiro) primeiro.focus();
       return true;
     }
+    function seguirOPainel(){
+      if(!painelAberto) return;
+      var m = moldeDoPainel(painelAberto.tipo, painelAberto.alvo);
+      if(!m){ fecharPainel(); return; }
+      if(m.innerHTML === painelAberto.html) return;
+      var foco = document.activeElement, corpo = document.getElementById('rd-painel-corpo');
+      var chave = (foco && corpo.contains(foco) && foco.dataset)
+        ? '[data-gesto="' + aspas(foco.dataset.gesto || '') + '"][data-alvo="' + aspas(foco.dataset.alvo || '') + '"]'
+        : '';
+      encherOPainel(m);
+      painelAberto.html = m.innerHTML;
+      var volta = chave ? um(chave, corpo) : null;
+      if(volta) volta.focus();
+    }
     function fecharPainel(){
       var p = document.getElementById('rd-painel');
+      painelAberto = null;
       if(!p.classList.contains('aberto')) return;
       if(p.contains(document.activeElement)) document.activeElement.blur();
       p.classList.remove('aberto'); p.setAttribute('inert', ''); p.setAttribute('aria-hidden', 'true');
@@ -3563,6 +3606,54 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       ev.preventDefault(); abrirPainel('para-onde', l.dataset.id);
     });
 
+    // ---- ARRASTAR AS CAIXAS: a ordem é dela, e fica gravada ----
+    // Decisão dela, 25/09/2026: ela segura a linha de cima de um adaptador e
+    // arrasta para mudar a ordem (a frase dela está no `adaptador_reordenar` do
+    // pacote). A caixa anda na página enquanto ela arrasta; ao soltar, a ordem
+    // nova (os `data-id`, de cima para baixo) vai ao Python pelo
+    // `#rd-reordenar` — o botão escondido que o ouvinte do piloto escuta, como
+    // o `#rd-comecar` da cerimônia. O tipo do arrasto é PRÓPRIO: a linha de um
+    // aparelho, que também se arrasta, não se confunde com a caixa.
+    var caixa = null, idDaCaixa = '', ordemAntes = '';
+    function ordemDasCaixas(){
+      return todos('.radio .sala .lugar').map(function(l){ return l.dataset.id; }).join(' ');
+    }
+    function aCaixa(){
+      if(caixa && !document.contains(caixa))
+        caixa = um('.radio .sala .lugar[data-id="' + aspas(idDaCaixa) + '"]');
+      return caixa;
+    }
+    document.addEventListener('dragstart', function(ev){
+      var topo = perto(ev, '.radio .lugar-topo[draggable="true"]');
+      if(!topo || perto(ev, '.radio .linha') || !ev.dataTransfer) return;
+      if(perto(ev, '.radio .lugar-nome')){ ev.preventDefault(); return; }
+      caixa = topo.closest('.lugar'); idDaCaixa = caixa.dataset.id; ordemAntes = ordemDasCaixas();
+      ev.dataTransfer.setData('application/x-hef-caixa', idDaCaixa);
+      ev.dataTransfer.effectAllowed = 'move';
+      caixa.classList.add('arrastando');
+    });
+    document.addEventListener('dragover', function(ev){
+      if(!caixa) return;
+      var c = perto(ev, '.radio .sala .lugar'), eu = aCaixa();
+      if(!c || !eu) return;
+      ev.preventDefault();
+      if(ev.dataTransfer) ev.dataTransfer.dropEffect = 'move';
+      if(c === eu || c.parentNode !== eu.parentNode) return;
+      var r = c.getBoundingClientRect();
+      c.parentNode.insertBefore(eu, ev.clientY > r.top + r.height / 2 ? c.nextSibling : c);
+    });
+    document.addEventListener('drop', function(ev){
+      if(caixa && perto(ev, '.radio .sala')) ev.preventDefault();
+    });
+    document.addEventListener('dragend', function(){
+      if(!caixa) return;
+      var eu = aCaixa(), antes = ordemAntes;
+      caixa = null; idDaCaixa = ''; ordemAntes = '';
+      if(eu) eu.classList.remove('arrastando');
+      var agora = ordemDasCaixas(), b = document.getElementById('rd-reordenar');
+      if(b && agora && agora !== antes){ b.value = agora; b.click(); }
+    });
+
     // ---- ARRASTAR: o destino é o adaptador inteiro, aberto ou fechado ----
     document.addEventListener('dragstart', function(ev){
       var l = perto(ev, '.radio .linha[draggable="true"]');
@@ -3577,6 +3668,7 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       todos('.radio .linha.arrastando').forEach(function(l){ l.classList.remove('arrastando'); });
     });
     document.addEventListener('dragover', function(ev){
+      if(caixa) return;
       var c = perto(ev, '.radio .lugar');
       if(!c) return;
       ev.preventDefault();
@@ -3589,6 +3681,7 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       if(c && !c.contains(ev.relatedTarget)) c.classList.remove('alvo');
     });
     document.addEventListener('drop', function(ev){
+      if(caixa) return;
       var c = perto(ev, '.radio .lugar');
       if(!c) return;
       ev.preventDefault();
@@ -3616,11 +3709,36 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
           var k = c.dataset.id + '|' + q;
           if(chegados[k]) return;
           chegados[k] = true;
+          // quem chegou encerra a procura: o «Procurando» fecha, e a caixa
+          // que recebeu pisca à vista (o controle que volta pelo pareamento
+          // antigo chega por aqui também — a lista dela, passo b6)
+          if(painelAberto && painelAberto.tipo === 'conectar') fecharPainel();
           c.classList.add('recebeu');
           setTimeout(function(){ c.classList.remove('recebeu'); }, 900);
         });
       });
     }
+
+    // ---- «Examinar Entradas»: o resultado é o Check-up, e ele se abre ----
+    // A lista dela, passo b8: *«não pareceu acontecer nada»*. O exame corria,
+    // o botão piscava verde e o carimbo do Check-up mudava — mas o Check-up é
+    // outra seção do acordeão, FECHADA enquanto ela está no rádio. Quando o
+    // exame aplica (a piscada verde do piloto), a seção dele se abre. O olho
+    // nasce no CLIQUE, sobre o botão clicado: guardado no carregar da página,
+    // ele vigiava um nó que o piloto já trocara (medido na bancada de tela).
+    document.addEventListener('click', function(ev){
+      var b = perto(ev, '.radio [data-gesto="examinar-portas"]');
+      if(!b || !window.MutationObserver) return;
+      var olho = new MutationObserver(function(){
+        if(b.classList.contains('hef-recusou')){ olho.disconnect(); return; }
+        if(!b.classList.contains('hef-deu-certo')) return;
+        olho.disconnect();
+        var r = document.getElementById('cx8-2');
+        if(r) r.checked = true;
+      });
+      olho.observe(b, {attributes: true, attributeFilter: ['class']});
+      setTimeout(function(){ olho.disconnect(); }, 30000);
+    }, true);
 
     // ---- a cerimônia: a âncora abre, o laço do Python diz a tela ----
     var alvoDaCerimonia = '', ultimaTela = '';
@@ -3651,7 +3769,7 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
     }
 
     // ---- UM observador para as três leituras: o tique troca, a página olha ----
-    function olhar(){ olharOsPedidos(); olharAsChegadas(); seguirATela(); }
+    function olhar(){ olharOsPedidos(); olharAsChegadas(); seguirATela(); seguirOPainel(); }
     var raiz = document.getElementById('rd-secao');
     if(raiz && window.MutationObserver){
       new MutationObserver(olhar).observe(raiz, {subtree: true, childList: true,
@@ -4092,6 +4210,7 @@ MIOLO = f'''
         </div>
 
         <div class="sala" data-campo="radio-sala" data-hef-alvo="html">{SALA_DO_DESENHO}</div>
+        <button hidden id="rd-reordenar" data-gesto="adaptador-reordenar" value=""></button>
         <div class="moldes" data-campo="radio-moldes" data-hef-alvo="html">{CAMPOS_DO_RADIO["radio-moldes"]}</div>
 
         <div class="entradas">
