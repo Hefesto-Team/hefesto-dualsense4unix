@@ -226,6 +226,7 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
         # presente vence, campo não escrito herda o global. É exatamente o que
         # este ponto precisa, e o rodapé simplesmente não o chamava.
         efetivo = draft.effective_leds_for(uniq)
+        do_override = getattr(draft.controller_override(uniq), "leds", None)
         draft = draft.with_controller_leds(uniq, LedsDraft(
             # AS FORMAS SÃO FIXAS NO SCHEMA — três canais de cor e cinco
             # lâmpadas —, e o `LedsDraft` as declara assim. Um `tuple(...)`
@@ -244,9 +245,43 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None) -> Any:
             # senão salvar a escolha dela a apagaria no próximo Aplicar.
             auto_player_colors=False,
         ))
+        draft = _a_procedencia_da_mesma_cor(draft, uniq, do_override)
         draft = _o_som_daquela_peca(draft, c, uniq)
         draft = _os_sensores_daquela_peca(draft, c, uniq)
     return _o_que_e_da_mesa_inteira(draft, ctx)
+
+
+def _a_procedencia_da_mesma_cor(draft: Any, uniq: str, antes: Any) -> Any:
+    """A cor que o «Salvar» regrava igual guarda o número para o qual foi escolhida.
+
+    O-BRILHO-DAS-LUZES-SOBREVIVE-AO-APLICAR-01, 26/09/2026, achado pela
+    varredura dos gestos que gravam: o tom e a caixa `#RRGGBB` da aba 04
+    gravam a cor COM a procedência (`LedsConfig.lightbar_para_o_numero`, a
+    decisão de 08/09), e o `with_controller_leds` troca a seção inteira por
+    uma que só conhece cor, brilho e lâmpadas. Medido na mesa de quatro: o P4
+    escolhia um tom, o «Salvar» o regravava igual — e sem o número. Sem ele a
+    cor vira `LEGADO`, e o resolvedor volta a provar fóssil pela forma: o tom
+    que ela escolheu e que por acaso é o do número de outro da mesa sai
+    sozinho na próxima troca.
+
+    Só a MESMA cor leva a procedência: a cor viva que difere do disco (a que
+    atravessou a troca automática) não tem, no disco, para qual número foi
+    escolhida, e inventar um seria afirmar o que ninguém sabe.
+
+    **RELATADO:** o dono desta regra é o `DraftConfig.with_controller_leds`,
+    como o `schema.com_o_brilho_das_luzes_de` é o do brilho das luzes; fora da
+    posse desta sprint, e por isso o `_with_override_section` privado aqui.
+    """
+    campo = "lightbar_para_o_numero"
+    if antes is None or not {"lightbar", campo} <= antes.model_fields_set:
+        return draft
+    depois = getattr(draft.controller_override(uniq), "leds", None)
+    if (depois is None or "lightbar" not in depois.model_fields_set
+            or campo in depois.model_fields_set
+            or tuple(depois.lightbar) != tuple(antes.lightbar)):
+        return draft
+    return draft._with_override_section(
+        uniq, "leds", depois.model_copy(update={campo: getattr(antes, campo)}))
 
 
 def _o_som_daquela_peca(draft: Any, c: dict[str, Any], uniq: str) -> Any:
