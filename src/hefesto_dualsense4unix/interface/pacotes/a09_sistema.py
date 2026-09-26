@@ -2519,7 +2519,7 @@ def _systemctl(verbo: str) -> None:
 
 @gesto("09-sistema.html", "autostart", grava="_systemctl")
 def autostart(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O interruptor "Ligar junto com o computador". `systemctl --user enable|disable`.
+    """O ligável «Iniciar com o sistema». `systemctl --user enable|disable`.
 
     ELE ERA UM INTERRUPTOR MORTO, e essa é a pior espécie de botão morto: parece
     ter dois estados, o clique não muda nem a aparência (não há um `<script>` na
