@@ -109,6 +109,10 @@ ESCREVEM = {
     # (`entrada_a_entrada.dar_nome`, no `maquina.json`); a porta antiga ficou
     # sem chamador na tela, e um nome sem chamador não acusa coisa alguma.
     "dar_nome",                # grava o nome do lugar no `maquina.json` dela
+    # O EDITOR DA ENTRADA DO MAPA DAS CONEXÕES — O-MAPA-DAS-CONEXOES-NO-PRODUTO-01,
+    # 26/09/2026: o hub, o extensor e a velocidade vão ao `maquina.json` dela.
+    "declarar_a_ligacao",
+    "declarar_a_velocidade",
     # A ORDEM DAS CAIXAS DOS ADAPTADORES — A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01,
     # 25/09/2026: vai para o `gui_preferences.json` dela.
     "guardar_ordem_dos_adaptadores",

@@ -479,7 +479,7 @@ def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
     ``Entrada.par``             :func:`irmas_de` — o desenho dela, de duas em duas
     ``Entrada.filho``           :func:`filhas_de` — a extensão que ela declarou
     ``Entrada.onde``            ``arranjo_da_mesa.regiao_do_caminho``, do barramento
-    ``Entrada.usb``             o hub em que o nó declarado mora, pela velocidade
+    ``Entrada.usb``             :func:`velocidade_da_entrada` — aparelho, ela, placa
     ``Entrada.pos``             **NINGUÉM** — ver ``LACUNA_POSICAO``
     ==========================  ==================================================
 
@@ -512,6 +512,7 @@ def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
 
     pares = irmas_de(mapa)
     velocidades = _velocidade_por_hub(censo)
+    aparelhos_medidos = velocidades_dos_aparelhos(censo)
     lacunas: set[str] = set()
     if any(not aparelho.classe for aparelho in aparelhos):
         lacunas.add(LACUNA_ESPECIE)
@@ -549,6 +550,7 @@ def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
                     pares=pares,
                     regiao=regioes.get(filhas[0]) or regiao_da_face,
                     velocidades=velocidades,
+                    aparelhos=aparelhos_medidos,
                     lacunas=lacunas,
                     esticada=True,
                 )
@@ -559,6 +561,7 @@ def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
                     pares=pares,
                     regiao=regioes.get(numero) or regiao_da_face,
                     velocidades=velocidades,
+                    aparelhos=aparelhos_medidos,
                     lacunas=lacunas,
                     filho=filho,
                 )
@@ -630,6 +633,7 @@ def _entrada_do_motor(
     regiao: str,
     velocidades: Mapping[str, float],
     lacunas: set[str],
+    aparelhos: Mapping[str, float] | None = None,
     esticada: bool = False,
     filho: motor.Entrada | None = None,
 ) -> motor.Entrada:
@@ -640,7 +644,12 @@ def _entrada_do_motor(
         # põe longe de todo mundo), e essa ausência não é lacuna.
         lacunas.add(LACUNA_PAR)
     declarada = mapa.portas.get(numero)
-    rapido = _rapido_do_no(() if declarada is None else declarada.nos, velocidades)
+    rapido = _rapido_do_no(
+        () if declarada is None else declarada.nos,
+        velocidades,
+        None if declarada is None else declarada.usb,
+        aparelhos,
+    )
     if rapido is None:
         lacunas.add(LACUNA_VELOCIDADE)
     return motor.Entrada(
@@ -692,28 +701,81 @@ def _velocidade_por_hub(censo: Censo) -> dict[str, float]:
 
 
 def _rapido_do_no(
-    nos: Sequence[str], velocidades: Mapping[str, float]
+    nos: Sequence[str],
+    velocidades: Mapping[str, float],
+    declarada: int | None = None,
+    aparelhos: Mapping[str, float] | None = None,
 ) -> bool | None:
     """O buraco declarado alcança SuperSpeed? ``None`` = não deu para saber.
 
-    Mesma régua de ``entradas_do_gabinete.Furo.rapido``, e de propósito: a
-    velocidade mora no HUB que hospeda, nunca no nó. ``None`` é a resposta de
-    quem nunca abriu a janela de calibração — e é a maioria hoje: o único
-    escritor de ``PortaDeclarada.nos`` é ``app/widgets/calibrar_entradas.py``,
-    que nasceu em 26/08/2026.
+    O que a PLACA diz é a mesma régua de ``entradas_do_gabinete.Furo.rapido``,
+    e de propósito: a velocidade mora no HUB que hospeda, nunca no nó. ``None``
+    é a resposta de quem nunca abriu a janela de calibração. Mas a placa não
+    tem a última palavra — ver :func:`velocidade_da_entrada`: a velocidade que
+    ela ``declarada`` vence o firmware, e um aparelho USB 3 enumerado num dos
+    ``nos`` (``aparelhos``: nome do kernel -> Mbps) vence os dois.
     """
     lidas = [
         velocidades[hub]
         for hub in (no.rpartition(_SUFIXO_DO_NO)[0] for no in nos)
         if hub in velocidades
     ]
-    if not lidas:
-        return None
-    if any(valor >= VELOCIDADE_SUPERSPEED_MBPS for valor in lidas):
-        return True
-    if all(valor <= 0 for valor in lidas):
-        return None
-    return False
+    placa: bool | None
+    if not lidas or all(valor <= 0 for valor in lidas):
+        placa = None
+    else:
+        placa = any(valor >= VELOCIDADE_SUPERSPEED_MBPS for valor in lidas)
+    return velocidade_da_entrada(
+        placa, declarada, _aparelho_usb3_nos_nos(nos, aparelhos or {})
+    )[0]
+
+
+#: DE ONDE VEIO A VELOCIDADE DE UMA ENTRADA — O-MAPA-DAS-CONEXOES-NO-PRODUTO-01,
+#: 26/09/2026. Chaves de máquina, na ordem da certeza: o aparelho USB 3 que
+#: enumerou nela, o que ela disse, o par que a placa publica.
+USB_PELO_APARELHO = "aparelho"
+USB_DECLARADA = "declarada"
+USB_PELA_PLACA = "placa"
+
+
+def velocidade_da_entrada(
+    placa: bool | None, declarada: int | None, aparelho_usb3: bool = False
+) -> tuple[bool | None, str]:
+    """``(é USB 3?, de onde veio)`` — o dono ÚNICO da precedência.
+
+    A resposta dela de 26/09/2026, olhando a cor do plástico: a frente é azul
+    (USB 3.0) e as 7 e 8 de trás são pretas (USB 2.0) — e o ``maquina.json``
+    dizia o contrário da frente, porque o ``peer`` do ``/sys`` vem da tabela
+    ACPI da placa, e a placa erra. Por isso:
+
+    1. ``aparelho_usb3`` — um aparelho enumerado a 5000M+ na entrada é
+       medição, e nada o contradiz;
+    2. ``declarada`` (2 ou 3) — o que ela disse no editor vence o firmware;
+    3. ``placa`` — o que sobra, e ``None`` é "não sei".
+
+    O motor pergunta por :func:`_rapido_do_no`; o Mapear
+    (``entrada_a_entrada.ler_o_mapa``) pergunta aqui com o que ele mediu.
+    """
+    if aparelho_usb3:
+        return True, USB_PELO_APARELHO
+    if declarada in (2, 3):
+        return declarada == 3, USB_DECLARADA
+    return placa, (USB_PELA_PLACA if placa is not None else "")
+
+
+def velocidades_dos_aparelhos(censo: Censo) -> dict[str, float]:
+    """``nome do kernel -> Mbps`` de tudo que enumerou — o lado de :func:`velocidade_da_entrada`
+    que é medição."""
+    return {a.nome_do_kernel: a.velocidade_mbps for a in censo.conectados()}
+
+
+def _aparelho_usb3_nos_nos(nos: Sequence[str], aparelhos: Mapping[str, float]) -> bool:
+    """Algum aparelho encaixado num destes nós enumerou a 5000M ou mais?"""
+    from hefesto_dualsense4unix.utils.lugar import caminho_do_no
+
+    return any(
+        aparelhos.get(caminho_do_no(no), 0.0) >= VELOCIDADE_SUPERSPEED_MBPS for no in nos
+    )
 
 
 def _caminhos_do_censo(censo: Censo) -> frozenset[str]:
@@ -1064,6 +1126,9 @@ __all__ = [
     "LACUNA_VELOCIDADE",
     "USB_2",
     "USB_3",
+    "USB_DECLARADA",
+    "USB_PELA_PLACA",
+    "USB_PELO_APARELHO",
     "Bancada",
     "FatosDoBuraco",
     "Incoerencia",
@@ -1078,5 +1143,7 @@ __all__ = [
     "porta_do_adaptador",
     "portas_livres",
     "resumo_do_mapa",
+    "velocidade_da_entrada",
+    "velocidades_dos_aparelhos",
     "vizinhas_de_verdade",
 ]

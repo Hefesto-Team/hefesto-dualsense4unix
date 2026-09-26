@@ -75,7 +75,16 @@ _TETO_DA_COLUNA = 2
 #: 1 m" porque alguém mediu aquele cabo; aqui o comprimento não se sabe, e a
 #: frase diz só o que é verdade. Sem ela o desenho escreveria `undefined` ao
 #: lado da entrada — o `porta.filho.cabo` é lido sem defesa no JavaScript.
-CABO_DECLARADO = "extensão declarada por você"
+#: FATO SUBSTITUÍDO em 26/09/2026: dizia «extensão declarada por você»; o
+#: editor da entrada (`pagina_do_mapa`) escreve «Extensor», e a mesma ponta de
+#: cabo não pode ter dois nomes antes e depois de a página ser relida.
+CABO_DECLARADO = "Extensor, declarado por você"
+
+#: QUANTAS ENTRADAS O HUB DECLARADO DESENHA — 26/09/2026, o desenho aprovado do
+#: editor da entrada. O número de buracos do hub dela não se lê de lugar
+#: nenhum que este módulo leia, e quatro é o que o desenho mostra; a entrada
+#: que ela mapear nele pelo Mapear vira face de verdade e toma o lugar destas.
+ENTRADAS_DO_HUB_DECLARADO = 4
 
 
 def arranjo(
@@ -102,7 +111,8 @@ def arranjo(
         from hefesto_dualsense4unix.integrations.censo_do_barramento import (
             ler_o_barramento as _ler,
         )
-        from hefesto_dualsense4unix.utils.maquina import carregar_maquina
+        from hefesto_dualsense4unix.integrations.entrada_a_entrada import faces_dos_hubs
+        from hefesto_dualsense4unix.utils.maquina import carregar_maquina, entradas_do_mapa
     except Exception:
         return None
 
@@ -122,16 +132,85 @@ def arranjo(
 
     quando = (agora or _dt.datetime.now()).strftime("%d/%m/%Y %Hh%M")
     caminhos = {aparelho.id: aparelho.id for aparelho in mesa.aparelhos}
+    faces = _faces(mesa.faces)
+    _o_que_ela_declarou_nas_entradas(faces, declarado, faces_dos_hubs(declarado))
     return {
         "quando": QUANDO_DE_AGORA.format(quando=quando),
         "aparelhos": [_aparelho(a) for a in mesa.aparelhos],
-        "faces": _faces(mesa.faces),
+        "faces": faces,
         "mapa": dict(mesa.mapa),
         "leituras": {
             "agora": {"rotulo": ROTULO_DE_AGORA, "caminho": caminhos},
             "antes": {"rotulo": ROTULO_DE_ANTES, "caminho": dict(caminhos)},
         },
+        "declarado": _declarado(declarado, entradas_do_mapa(declarado)),
     }
+
+
+def _declarado(mapa: Any, numeros: Any) -> dict[str, dict[str, Any]]:
+    """O que ela disse de cada entrada DO MAPA DELA, para o editor da página.
+
+    TODA entrada do mapa vem, com ``{}`` quando ela não disse nada: a lista de
+    chaves é a lista das entradas que o editor GRAVA. A que o desenho monta a
+    partir do que ela declarou (as do hub, a ponta do extensor) não tem número
+    no disco e não vem — ali o editor fica só na tela, como no exemplo.
+    """
+    saida: dict[str, dict[str, Any]] = {}
+    for numero in sorted(numeros):
+        porta = mapa.portas.get(numero)
+        dito: dict[str, Any] = {}
+        if porta is not None and porta.liga:
+            dito["liga"] = porta.liga
+        if porta is not None and porta.usb:
+            dito["usb"] = porta.usb
+        saida[numero] = dito
+    return saida
+
+
+def _o_que_ela_declarou_nas_entradas(
+    faces: list[dict[str, Any]], mapa: Any, hubs: dict[str, str]
+) -> None:
+    """O hub declarado vira face, e o extensor declarado vira entrada-filha.
+
+    É a MESMA forma que o editor da página monta quando ela declara na tela
+    (a `declarar` do `pagina_do_mapa`): a face «Hub na Entrada N», com
+    ``daEntrada`` para o editor saber de quem ela é, e a ``filho`` que o motor
+    do desenho já sabe desenhar. Reler a página tem de mostrar o que ela viu
+    ao clicar.
+
+    O hub que ela JÁ mapeou pelo Mapear tem face de verdade com esse nome, e
+    ela vence: as entradas dela são as do metal, e as quatro daqui são desenho.
+    """
+    por_numero: dict[str, dict[str, Any]] = {}
+    for face in faces:
+        for entrada in face["portas"]:
+            por_numero.setdefault(entrada["n"], entrada)
+    nomes = {face["nome"] for face in faces}
+    for numero, nome in hubs.items():
+        entrada = por_numero.get(numero)
+        if entrada is None or nome in nomes:
+            continue
+        faces.append({
+            "nome": nome,
+            "forma": _FILEIRA_DO_HUB,
+            "regiao": "hub",
+            "daEntrada": numero,
+            "portas": [
+                {"n": f"{numero}.{i}", "usb": entrada["usb"], "onde": "hub", "pos": i}
+                for i in range(1, ENTRADAS_DO_HUB_DECLARADO + 1)
+            ],
+        })
+    for numero, entrada in por_numero.items():
+        porta = mapa.portas.get(numero)
+        if porta is None or porta.liga != "extensor" or "filho" in entrada:
+            continue
+        entrada["filho"] = {
+            "n": f"{numero}a",
+            "usb": entrada["usb"],
+            "onde": entrada["onde"],
+            "esticada": True,
+            "cabo": CABO_DECLARADO,
+        }
 
 
 def _aparelho(aparelho: Any) -> dict[str, Any]:

@@ -1202,6 +1202,15 @@
      página; gravar no `maquina.json` é do produto. */
   var DECLARADO = {};
   var editando = null;
+  /* O EDITOR GRAVA — 26/09/2026. `GRAVA` são as entradas do mapa de quem abre,
+     entregues pelo produto em `hefestoArranjo`; só nelas o botão leva o gesto
+     ao disco. No exemplo e nas entradas que o desenho monta do que ela
+     declarou (as do hub, a ponta do extensor), o editor fica só na tela. */
+  var GRAVA = [];
+  function gravaNaEntrada(n, gesto) {
+    if (GRAVA.indexOf(String(n)) === -1) return "";
+    return ' data-gesto="' + gesto + '" data-entrada="' + n + '"';
+  }
 
   function declarar(n, campo, valor) {
     var p = porNum(n);
@@ -1235,12 +1244,12 @@
       + '<button class="btn fecha" id="edita-fecha" aria-label="Fechar">&times;</button></div>'
       + '<div class="edita-linha"><span>O que tem aqui</span><div class="seg">'
       + [["direto", "Direto"], ["hub", "Hub"], ["extensor", "Extensor"]].map(function (o) {
-          return '<button class="escolha" data-liga="' + o[0] + '" aria-pressed="' + (liga === o[0]) + '">' + o[1] + "</button>";
+          return '<button class="escolha" data-liga="' + o[0] + '"' + gravaNaEntrada(editando, "entrada-o-que-tem") + ' aria-pressed="' + (liga === o[0]) + '">' + o[1] + "</button>";
         }).join("")
       + "</div></div>"
       + '<div class="edita-linha"><span>Velocidade</span><div class="seg dois">'
       + [[3, "USB 3.0"], [2, "USB 2.0"]].map(function (o) {
-          return '<button class="escolha" data-usb="' + o[0] + '" aria-pressed="' + (p.usb === o[0]) + '">' + o[1] + "</button>";
+          return '<button class="escolha" data-usb="' + o[0] + '"' + gravaNaEntrada(editando, "entrada-velocidade") + ' aria-pressed="' + (p.usb === o[0]) + '">' + o[1] + "</button>";
         }).join("")
       + "</div></div>"
       + (quem ? '<div class="edita-linha"><span>' + quem.tipo + ' está aqui</span>'
@@ -1589,6 +1598,14 @@
     leituraAnterior = "antes";
     CONTROLES = f.controles || controlesSobre(APARELHOS, EXEMPLO.controles);
     quantos = CONTROLES.length;
+    /* O QUE ELA DECLAROU EM CADA ENTRADA — 26/09/2026, o editor da entrada.
+       Toda entrada do mapa dela vem, com {} quando ela não disse nada, e as
+       chaves são as que o editor GRAVA no disco. A que o desenho monta do que
+       ela declarou (as do hub, a ponta do extensor) não vem: ali, e no
+       exemplo, o editor fica só na tela. */
+    DECLARADO = JSON.parse(JSON.stringify(f.declarado || {}));
+    GRAVA = Object.keys(DECLARADO);
+    editando = null;
   }
 
   function dizerDeQuando() {

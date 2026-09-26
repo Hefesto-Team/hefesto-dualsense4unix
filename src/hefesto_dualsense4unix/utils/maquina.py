@@ -456,6 +456,16 @@ class PortaDeclarada(BaseModel):
     caminho: str | None = None
     filha_de: str | None = None
     nos: list[str] = Field(default_factory=list)
+    #: O QUE ELA DISSE QUE TEM NA ENTRADA — O-MAPA-DAS-CONEXOES-NO-PRODUTO-01,
+    #: 26/09/2026, o editor do mapa das conexões. ``None`` é «Direto», o que o
+    #: produto já supunha; o hub e o extensor são o que ela sabe e o desenho não
+    #: tinha como perguntar (o extensor passivo nem aparece no ``/sys``).
+    liga: Literal["hub", "extensor"] | None = None
+    #: A VELOCIDADE QUE ELA DISSE (2 = USB 2.0, 3 = USB 3.0). Vence o par que o
+    #: firmware da placa publica (``peer``), que erra: na mesa em que isto
+    #: nasceu a frente é USB 3.0 e a tabela ACPI a dava como 2.0. Quem responde
+    #: com as duas é ``mapa_das_portas._rapido_do_no``.
+    usb: Literal[2, 3] | None = None
 
     @field_validator("caminho")
     @classmethod

@@ -691,8 +691,9 @@ def test_o_mockup_carrega_os_mesmos_numeros_que_o_python() -> None:
         assert (
             "var CUSTO_SEM_MIC = 260.4, CUSTO_COM_MIC = 276.7, SLOTS = 1600;" in texto
         ), f"{caminho}: as constantes do motor não são as medidas"
-        assert ">276,7</b>/s" in texto, f"{caminho}: a legenda não diz 276,7"
-        assert ">260,4</b>/s" in texto, f"{caminho}: a legenda não diz 260,4"
+        # A LEGENDA SAIU DA TELA em 26/09/2026, com a seção «Os controles»
+        # inteira, a pedido dela (O-MAPA-DAS-CONEXOES-NO-PRODUTO-01). O número
+        # medido continua no motor, acima; o que não pode voltar é o arredondado.
         assert ">277<" not in texto, f"{caminho}: o número arredondado voltou"
         assert "dualsense_bt_audio.py" in texto, (
             f"{caminho}: a legenda tem de citar onde o A/B foi medido")
@@ -758,18 +759,45 @@ def test_toda_edicao_do_gerador_acha_o_seu_alvo_uma_vez() -> None:
     assert edicoes, "nenhuma edição — a régua passaria por vacuidade"
     # AS QUE ESPERAM A SESSÃO DELA SÃO COBRADAS NA BANCADA, que é a única casa
     # que as recebe antes do `--publicar`.
-    casas = [(edicao, produto, "cópia do produto") for edicao in edicoes]
-    casas += [(edicao, bancada, "bancada") for edicao in _esperando()]
-    for numero, (edicao, casa, nome_da_casa) in enumerate(casas, 1):
-        assert origem.count(edicao.antes) == 1, (
-            f"edição {numero}: o pedaço aparece {origem.count(edicao.antes)} "
-            f"vez(es) na origem congelada, e tem de aparecer UMA.\n"
-            f"  motivo declarado: {edicao.porque}")
-        assert casa.count(edicao.depois) == 1, (
-            f"edição {numero}: o que ela escreve aparece "
-            f"{casa.count(edicao.depois)} vez(es) na {nome_da_casa}. "
-            "Ou a página não foi regerada, ou duas edições escrevem a mesma "
-            f"coisa.\n  motivo declarado: {edicao.porque}")
+    #
+    # O `antes` É COBRADO NO TEXTO DA VEZ DELA, e não mais só na origem — 26/09/
+    # 2026, O-MAPA-DAS-CONEXOES-NO-PRODUTO-01. As doze do mapa das conexões
+    # editam o que as de 11/09 escreveram (o cabeçalho, os modos), e o gerador
+    # as aplica EM ORDEM. A que escreve algo que uma edição de depois consome
+    # tem de nomear quem consumiu: o `depois` dela some do produto só por uma
+    # edição posterior, e nunca calado.
+    casas = [(edicoes, produto, "cópia do produto"),
+             (edicoes + _esperando(), bancada, "bancada")]
+    for lista, casa, nome_da_casa in casas:
+        texto = origem
+        vez: list[str] = []
+        for edicao in lista:
+            assert texto.count(edicao.antes) == 1, (
+                f"edição {len(vez) + 1}: o pedaço aparece "
+                f"{texto.count(edicao.antes)} vez(es) no texto da vez dela, e "
+                f"tem de aparecer UMA.\n  motivo declarado: {edicao.porque}")
+            texto = texto.replace(edicao.antes, edicao.depois, 1)
+            vez.append(texto)
+        assert texto == casa, f"a {nome_da_casa} não é o que as edições escrevem"
+        for numero, edicao in enumerate(lista, 1):
+            if not edicao.depois:
+                # A EDIÇÃO QUE TIRA (a seção dos controles, 26/09/2026): o que
+                # ela cobra é o pedaço não estar mais lá.
+                assert edicao.antes not in casa, (
+                    f"edição {numero} tira um pedaço que voltou à {nome_da_casa}")
+                continue
+            if casa.count(edicao.depois) == 1:
+                continue
+            consumida = any(
+                edicao.depois in vez[j - 1] and edicao.depois not in vez[j]
+                for j in range(numero, len(lista)))
+            assert consumida, (
+                f"edição {numero}: o que ela escreve aparece "
+                f"{casa.count(edicao.depois)} vez(es) na {nome_da_casa}, e "
+                "nenhuma edição de depois o consumiu. Ou a página não foi "
+                "regerada, ou duas edições escrevem a mesma coisa.\n"
+                f"  motivo declarado: {edicao.porque}")
+    for numero, edicao in enumerate(edicoes + _esperando(), 1):
         assert _DATA_NA_RAZAO.search(edicao.porque), (
             f"edição {numero} não diz QUANDO foi decidida: {edicao.porque!r}. "
             "Uma razão sem data é uma razão que ninguém consegue conferir "
@@ -825,6 +853,10 @@ def test_a_regua_da_igualdade_sabe_recusar() -> None:
         pagina_do_mapa.EDICOES = inteiras[:fora] + inteiras[fora + 1:]
         try:
             sem_uma = pagina_do_mapa.pagina(com_as_que_esperam=False)
+        except SystemExit:
+            # UMA EDIÇÃO DE DEPOIS EDITA O QUE ESTA ESCREVEU (26/09/2026): sem
+            # ela o gerador recusa em voz alta, que é o oposto de não fazer nada.
+            continue
         finally:
             pagina_do_mapa.EDICOES = inteiras
         assert sem_uma != produto, (
