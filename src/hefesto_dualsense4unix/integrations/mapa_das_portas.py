@@ -961,9 +961,12 @@ def fatos_do_buraco(
     bluetooth = _origem_do_bluetooth(nos, entradas) if e_bluetooth else ""
 
     medido: int | None = None
-    if storm is not None:
-        caminhos = {caminho_do_no(no) for no in nos} | ({dentro} if dentro else set())
-        medido = sum(storm.get(caminho, 0) for caminho in caminhos if caminho)
+    caminhos = {caminho_do_no(no) for no in nos} | ({dentro} if dentro else set())
+    caminhos.discard("")
+    if storm is not None and caminhos:
+        # Sem caminho nenhum (a porta de um hub desligado, sem nós lidos), o
+        # log não tem a quem ser atribuído: é "não sei", e não zero.
+        medido = sum(storm.get(caminho, 0) for caminho in caminhos)
 
     return FatosDoBuraco(
         usb=usb,
