@@ -45,7 +45,10 @@ AS MORDIDAS (arranque a cura, veja reprovar, devolva):
   o gesto deixa de ser UMA gravação;
 * :func:`test_o_encaixe_que_o_kernel_nao_sabe_nao_vira_dongle` — devolva o
   ``else BLUETOOTH_DONGLE`` de antes (todo encaixe que não é ``hardwired`` vira
-  dongle) e o rádio numa entrada ``unknown`` vira dongle;
+  dongle) e o rádio numa entrada ``unknown`` vira dongle; troque o ``return
+  BLUETOOTH_DONGLE if degraus…`` por ``return ""`` e o dongle da mesa dela
+  (atrás do hub, tudo ``unknown``) vira "não sei"; tire o ``interno = True`` e
+  o que pende do hub interno vira dongle;
 * :func:`test_a_porta_que_ela_so_nomeou_e_do_mapa_e_se_renomeia` — tire o laço
   dos lugares identificados de ``ler_o_mapa`` e o nome que ela deu em Rádio e
   Adaptadores some da lista; tire o ``and caminhos`` de ``fatos_do_buraco`` e
@@ -543,6 +546,8 @@ def test_o_encaixe_que_o_kernel_nao_sabe_nao_vira_dongle(tmp_path: Path) -> None
             "usb1-port3": "hardwired",
             "1-3-port1": "unknown",
             "3-3-port1": "unknown",
+            "usb1-port5": "unknown",
+            "1-5-port1": "unknown",
         },
     )
     gabinete.plugar(3, "2", DONGLE_BT)
@@ -550,6 +555,8 @@ def test_o_encaixe_que_o_kernel_nao_sabe_nao_vira_dongle(tmp_path: Path) -> None
     gabinete.plugar(3, "4.1", DONGLE_BT)
     gabinete.plugar(1, "3", HUB, portas=4)
     gabinete.plugar(1, "3.1", DONGLE_BT)
+    gabinete.plugar(1, "5", HUB, portas=4)
+    gabinete.plugar(1, "5.1", DONGLE_BT)
     gabinete.plugar(3, "3", HUB, portas=4)
     gabinete.plugar(3, "3.1", DONGLE_BT)
 
@@ -571,6 +578,10 @@ def test_o_encaixe_que_o_kernel_nao_sabe_nao_vira_dongle(tmp_path: Path) -> None
     assert no_hub_interno is not None and no_hub_interno.bluetooth == "", (
         "o hub interno hospeda o rádio da placa E o painel da frente: não sei"
     )
+    # a mesa dela, medida em 25/09: toda entrada diz unknown, e os rádios estão
+    # atrás do hub da mesa — o rádio da placa não mora atrás de hub
+    na_mesa_dela = mapa.porta(lugar_de(PCI_A, "5.1"))
+    assert na_mesa_dela is not None and na_mesa_dela.bluetooth == junta.BLUETOOTH_DONGLE
     hub = mapa.porta(lugar_de(PCI_B, "4"))
     assert hub is not None and (hub.e_bluetooth, hub.bluetooth) == (False, "")
 
