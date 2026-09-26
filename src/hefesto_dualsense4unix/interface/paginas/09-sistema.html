@@ -1132,12 +1132,18 @@
      um filho absoluto não conta para a altura do pai, então o registro vivo,
      com as suas oitenta linhas, ROLA POR DENTRO em vez de empurrar a página
      (a cura da ROLAGEM-01, de 09/09, continua a mesma). O piso guarda que ela
-     nunca caia abaixo de seis linhas. */
+     nunca caia abaixo de seis linhas.
+
+     A LINHA QUEBRA, E NÃO SAI PELA DIREITA — 25/09/2026. Era `pre`, e a linha
+     do journal (uns 200 caracteres) saía cortada: para ler uma linha inteira
+     era preciso rolar de lado, e ela pediu o painel «mais fácil de ser lido».
+     `pre-wrap` guarda as quebras do texto e dobra o que não cabe. */
   .registro{flex:1 1 auto;flex-shrink:1;min-height:120px;position:relative}
   .registro > .log{position:absolute;top:0;right:0;bottom:0;left:0}
   .log{padding:10px 12px;border:1px solid var(--border-sutil);border-radius:7px;
        background:var(--app-bg);font-family:'JetBrains Mono',monospace;font-size:11px;
-       line-height:1.6;color:var(--texto-suave);overflow:auto;white-space:pre}
+       line-height:1.6;color:var(--texto-suave);overflow:auto;white-space:pre-wrap;
+       overflow-wrap:anywhere}
   .sec-rot .btn.copiar{height:22px;padding:0 12px;font-size:11.5px}
 
   /* Os glifos são os MESMOS SVGs da aba Status (assets/glyphs, 27 peças).
