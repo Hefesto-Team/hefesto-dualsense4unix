@@ -632,6 +632,161 @@ def test_o_prazo_que_vence_na_conferencia_fecha_na_hora(diario: Path) -> None:
         dono.fechar()
 
 
+# ---------------------------------------------------------------------------
+# A conferência da O-RADIO-CONECTA-ONDE-ELA-MANDA-02 (26/09/2026): as curas que
+# nenhuma régua mordia. Cada uma foi arrancada e a régua inteira do território
+# ficou verde — estas são as que passam a reprovar.
+# ---------------------------------------------------------------------------
+
+
+def _para_onde_move_o_vermelho(destino: str) -> str:
+    """O vermelho mora na sala: o «Mover» dele vai para um adaptador que não é
+    o dele nem o do branco esperando."""
+    return next(a for a in (QUARTO, VARANDA, SALA) if a not in (SALA, destino))
+
+
+@pytest.mark.parametrize("destino", (SALA, QUARTO, VARANDA))
+def test_o_mover_aos_sessenta_e_um_segundos_tambem_e_aceito(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str,
+) -> None:
+    """O E1 não é só do «Conectar»: aos 61 s a tela também devolve o «Mover»
+    (a pergunta da mudança), e a central o aceita no mesmo instante — sem
+    volta da vigia no meio. Aos 59 s, as duas dizem «ainda não».
+
+    MORDIDA: tire o ``_vencer_os_prazos`` do ``comecar_a_mover`` — o «Mover»
+    dos 61 s treme, e o E1 valia só para um dos dois gestos que movem.
+    """
+    mundo, relogio = mundo_da_madrugada(), rm.Relogio()
+    mundo.pareado(destino, VERDE, conectado=False, host=False)
+    para = _para_onde_move_o_vermelho(destino)
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    try:
+        _o_branco_esperando(bancada, destino, a08.ESPERA_NA_TELA_S - 1.0)
+        assert bancada.cena()["ocupado"] is True
+        recusa = bancada.central.comecar_a_mover(VERMELHO, para)
+        assert recusa.motivo == cr.MOTIVO_OCUPADO, "a central soltou antes da tela"
+
+        _o_branco_esperando(bancada, destino, a08.ESPERA_NA_TELA_S + 1.0)
+        assert bancada.cena()["ocupado"] is False
+        assert bancada.gesto("confirmar-mudanca", alvo=VERMELHO, destino=para) == {
+            "armou": True}
+        (velho,) = [m for m in bancada.central.movimentos() if m.aparelho == VERDE]
+        assert (velho.estado, velho.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_PRAZO)
+        assert (destino, VERDE) in mundo.lapides, "o «não chegou» deixou a meia chave"
+        bancada.esperar_a_central()
+        assert any(m.aparelho == VERMELHO and m.destino == para
+                   for m in bancada.central.movimentos()), "o «Mover» não começou"
+    finally:
+        bancada.fechar()
+
+
+PARES_DE_ADAPTADORES = [(o, d) for o in (SALA, QUARTO, VARANDA)
+                        for d in (SALA, QUARTO, VARANDA) if o != d]
+
+
+@pytest.mark.parametrize(("origem", "destino"), PARES_DE_ADAPTADORES)
+def test_o_que_volta_para_a_origem_leva_embora_a_meia_chave_do_destino(
+    diario: Path, origem: str, destino: str,
+) -> None:
+    """O «não chegou» que não é o do prazo: o branco tem chave na ``origem``,
+    ela clica «Conectar» no ``destino``, o ``Pair`` dá e o HID não vem — e ela
+    aperta PS: ele volta para a origem. A meia chave que o ``Pair`` deixou no
+    destino sai (é o mesmo «não chegou», com a janela fechada), e a chave da
+    origem, onde ele está no ar, fica.
+
+    MORDIDA: devolva o «voltou» de ``_vigiar_um`` ao ``_acabou`` sem a meia
+    chave — o destino fica com o branco ``Paired`` e nunca ``Connected``.
+    """
+    mundo, relogio = mundo_da_madrugada(), rm.Relogio()
+    mundo.pareado(origem, VERDE, conectado=False)
+    mundo.pair_mente = True
+    central, dono = _central_sem_tela(mundo, relogio)
+    try:
+        ela_segura_ps_create(mundo, relogio, VERDE)
+        feito = central.conectar(destino)
+        assert (feito.estado, feito.passo, feito.aparelho) == (
+            cr.ESPERANDO, cr.PASSO_CONFERINDO, VERDE)
+        assert feito.origens == (origem,)
+
+        mundo.apertar_ps(VERDE)
+        assert mundo.onde_esta(rm.uniq(VERDE)) == origem
+        central.vigiar()
+        fim = central.movimento_de(VERDE)
+        assert (fim.estado, fim.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_VOLTOU)
+        assert mundo.objeto(destino, VERDE) is None, "a meia chave ficou no destino"
+        assert mundo.lapides == [(destino, VERDE)]
+        assert mundo.objeto(origem, VERDE)["Connected"] is True
+    finally:
+        central.fechar(espera=5.0)
+        dono.fechar()
+
+
+@pytest.mark.parametrize("quem_diz", ("o-bluez", "o-kernel"))
+@pytest.mark.parametrize("destino", (SALA, QUARTO, VARANDA))
+def test_no_nao_chegou_quem_esta_no_ar_no_destino_nao_perde_a_chave(
+    diario: Path, destino: str, quem_diz: str,
+) -> None:
+    """A meia chave é a que NUNCA conectou. Vencido o prazo sem confirmação,
+    o branco que o BlueZ diz ``Connected`` no destino (e o kernel ainda não),
+    ou que o kernel diz no destino (e o movimento dele ainda não se mediu),
+    continua com a chave: o «não chegou» sai, e nada se esquece.
+
+    MORDIDAS: tire de ``_esquecer_a_meia_chave`` a guarda do ``Connected`` — o
+    caso ``o-bluez`` reprova; tire a do ``HID_PHYS`` — o caso ``o-kernel``
+    reprova. Nos dois, a chave de um controle no ar sairia.
+    """
+    mundo, relogio = mundo_da_madrugada(), rm.Relogio()
+    mundo.pair_mente = True
+    central, dono = _central_sem_tela(mundo, relogio)
+    try:
+        ela_segura_ps_create(mundo, relogio, VERDE)
+        feito = central.conectar(destino)
+        assert (feito.estado, feito.passo) == (cr.ESPERANDO, cr.PASSO_CONFERINDO)
+        if quem_diz == "o-bluez":
+            mundo.escrever(rm.no_de(destino, VERDE), bd.APARELHO, "Connected", "b", True,
+                           espera=1.0)
+        else:
+            mundo.fisicos[VERDE].conectado_em = destino
+            mundo.fisicos[VERDE].hz = 0.0
+
+        relogio.agora = feito.comecou + cr.PRAZO_DO_PENDENTE_S
+        central.vigiar()
+        fim = central.movimento_de(VERDE)
+        assert (fim.estado, fim.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_PRAZO)
+        assert mundo.objeto(destino, VERDE) is not None, "a chave de quem está no ar saiu"
+        assert mundo.lapides == []
+    finally:
+        central.fechar(espera=5.0)
+        dono.fechar()
+
+
+@pytest.mark.parametrize("destino", (SALA, QUARTO, VARANDA))
+def test_o_pair_em_voo_passado_o_prazo_nao_se_fecha_pelo_pedido(
+    diario: Path, destino: str,
+) -> None:
+    """O pedido só resolve o «esperando» da CONFERÊNCIA. Um movimento que ainda
+    está no ``Pair`` (o fio dele segura a trava e o ``Pair`` do BlueZ pode
+    levar até 45 s) não se fecha por fora: o próximo «Conectar» recebe
+    «ocupado», e o movimento em voo fica como estava. Fechá-lo abriria uma
+    segunda janela com a primeira ainda pareando.
+
+    MORDIDA: tire de ``_vencer_os_prazos`` a condição do passo — o pedido
+    fecha o ``Pair`` em voo e o «Conectar» seguinte começa por cima dele.
+    """
+    mundo, relogio = mundo_da_madrugada(), rm.Relogio()
+    central, dono = _central_sem_tela(mundo, relogio)
+    try:
+        em_voo = central._guardar(cr.Movimento(
+            VERDE, destino, cr.ESPERANDO, cr.PASSO_PAREANDO,
+            comecou=relogio() - cr.PRAZO_DO_PENDENTE_S - 1.0))
+        recusa = central.comecar_a_conectar(_para_onde_move_o_vermelho(destino))
+        assert recusa.motivo == cr.MOTIVO_OCUPADO
+        assert central.movimento_de(VERDE) == em_voo
+    finally:
+        central.fechar(espera=5.0)
+        dono.fechar()
+
+
 def test_o_nao_conectou_de_quem_nao_e_controle_tem_x_e_tenta_o_mesmo_aparelho(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
