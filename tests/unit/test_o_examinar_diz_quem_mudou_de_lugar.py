@@ -288,8 +288,7 @@ def test_o_piloto_tira_o_arranjo_da_resposta_e_entrega_como_reexame() -> None:
     import inspect
 
     fonte = inspect.getsource(hefesto_vivo.Piloto._gesto)
-    assert re.search(r"_deu_certo_dizendo\(\s*pagina, nome, alvo, "
-                     r"self\._o_arranjo_relido\(pagina, r\)\)", fonte), (
+    assert _A_VOLTA_DO_GESTO.search(fonte), (
         "o arranjo relido não sai da resposta antes de ela ir à pintura")
 
 
@@ -339,6 +338,13 @@ def test_a_primeira_entrega_nao_le_no_fio_da_janela(monkeypatch: pytest.MonkeyPa
         contexto.iteration(False)
         leu.wait(0.01)
     assert perguntas == [arranjo_desta_maquina.js_da_entrega(dado)], perguntas
+
+
+#: A volta do gesto no piloto, como o `_gesto` a escreve: os nomes são
+#: variáveis do código dele.
+_A_VOLTA_DO_GESTO = re.compile(
+    r"_deu_certo_dizendo\(\s*pagina, nome, alvo, "  # noqa-acento: código do piloto
+    r"self\._o_arranjo_relido\(pagina, r\)\)")  # noqa-acento: código do piloto
 
 
 # ── 3. a ponta do extensor grava; a entrada do hub desenhado não ─────────
