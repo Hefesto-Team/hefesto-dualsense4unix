@@ -2595,11 +2595,35 @@ def _declaracao_viva() -> Any:
         return None
 
 
+def economia_da_declaracao(declaracao: Any) -> tuple[bool, frozenset[str]]:
+    """``(a mesa em «Bateria longa», os uniq que ligaram a sua)`` de UMA declaração.
+
+    Função pura sobre o ``MaquinaConfig`` (ou ``None``): é a mesma resposta que
+    a ativação do perfil lê da declaração viva, e é com ela que o daemon
+    compara o antes e o depois de um ``machine.declare``
+    (``Daemon.reaplicar_se_a_economia_mudou``).
+    """
+    orcamento = getattr(declaracao, "orcamento", None)
+    teto = getattr(orcamento, "teto", None)
+    mesa = mesa_em_economia(teto if isinstance(teto, str) else None)
+    controles = getattr(declaracao, "controles", None)
+    if not isinstance(controles, dict):
+        return mesa, frozenset()
+    ligados = frozenset(
+        chave
+        for chave in (
+            _so_hex(uniq)
+            for uniq, declarado in controles.items()
+            if getattr(declarado, "economia", None) is True
+        )
+        if chave
+    )
+    return mesa, ligados
+
+
 def economia_da_mesa() -> bool:
     """A mesa está em «Bateria longa» AGORA?"""
-    orcamento = getattr(_declaracao_viva(), "orcamento", None)
-    teto = getattr(orcamento, "teto", None)
-    return mesa_em_economia(teto if isinstance(teto, str) else None)
+    return economia_da_declaracao(_declaracao_viva())[0]
 
 
 def _so_hex(uniq: object) -> str:
@@ -2609,24 +2633,13 @@ def _so_hex(uniq: object) -> str:
 
 
 def controles_em_economia() -> frozenset[str]:
-    """Os ``uniq`` (doze hexa) cujo controle LIGOU a sua economia.
+    """Os ``uniq`` (doze hexa) cujo controle LIGOU a sua economia, AGORA.
 
     Só ``True`` conta: ``False`` e a ausência são o mesmo aqui (ver
     :func:`economia_vale`). A chave é normalizada de novo porque um
     ``maquina.json`` editado à mão pode trazer os dois-pontos.
     """
-    controles = getattr(_declaracao_viva(), "controles", None)
-    if not isinstance(controles, dict):
-        return frozenset()
-    return frozenset(
-        chave
-        for chave in (
-            _so_hex(uniq)
-            for uniq, declarado in controles.items()
-            if getattr(declarado, "economia", None) is True
-        )
-        if chave
-    )
+    return economia_da_declaracao(_declaracao_viva())[1]
 
 
 def declaracao_da_economia(uniq: str, ligada: bool) -> dict[str, Any]:
@@ -3358,6 +3371,7 @@ __all__ = [
     "controles_em_economia",
     "declaracao_da_economia",
     "e_endereco_de_jogo",
+    "economia_da_declaracao",
     "economia_da_mesa",
     "economia_vale",
     "gatilho_na_economia",

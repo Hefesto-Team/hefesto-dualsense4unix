@@ -1609,6 +1609,30 @@ class Daemon:
             with contextlib.suppress(Exception):
                 mute(True)
 
+    def reaplicar_se_a_economia_mudou(self, antes: Any) -> bool:
+        """Reaplica o perfil ativo quando a economia da declaração mudou.
+
+        O-MODO-ECONOMIA-POR-CONTROLE-01 (25/09/2026). A economia — a da mesa
+        («Bateria longa») e a de cada controle — é lida na ATIVAÇÃO do perfil;
+        um ``machine.declare`` que a muda rebinda ``_maquina`` e o aparelho só
+        a sentiria na próxima troca de janela. Quem rebinda chama isto com a
+        declaração de ANTES: se a economia mudou, o perfil corrente é
+        reaplicado pela rota de sempre (``_reapply_last_profile``, origem
+        ``system``), e o clique dela chega à luz, ao gatilho e à vibração na
+        hora. Nada muda para quem declarou outra coisa (a antena, a cor).
+
+        Em Modo Nativo não reaplica: o controle está com o jogo, e a saída do
+        nativo já reaplica o perfil — com a economia nova.
+        """
+        from hefesto_dualsense4unix.profiles.schema import economia_da_declaracao
+
+        if economia_da_declaracao(antes) == economia_da_declaracao(self._maquina):
+            return False
+        if self._native_mode:
+            return False
+        self._reapply_last_profile()
+        return True
+
     def _reapply_last_profile(self) -> None:
         """Re-ativa o perfil corrente ao sair do Modo Nativo (gatilhos/teclado).
 
