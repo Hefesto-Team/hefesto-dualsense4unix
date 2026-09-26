@@ -179,6 +179,25 @@ def test_o_desfazer_tira_so_o_que_e_nosso_e_devolve_o_que_era_dela(
     assert "devolvi o seu valor de antes em __GL_SHADER_DISK_CACHE" in frases
 
 
+def test_o_valor_de_antes_volta_no_lugar_em_que_estava(mesa: dict[str, Path]) -> None:
+    """A escrita põe o nosso por cima do dela, NA MESMA POSIÇÃO; o desfazer o
+    devolve ali. O `HEROIC_DELA` tem o cache de shader por ÚLTIMO, e por isso
+    não via a ordem — aqui ele vem PRIMEIRO, antes do `MANGOHUD`.
+
+    A MORDIDA: devolva o «antes» com `pares.append` (no fim da lista), como
+    era, e o `config.json` dela volta com a ordem trocada.
+    """
+    dela = json.loads(json.dumps(HEROIC_DELA))
+    dela["defaultSettings"]["enviromentOptions"].reverse()
+    mesa["heroic"].write_text(json.dumps(dela, indent=2) + "\n", encoding="utf-8")
+    _curar(mesa["lar"], mesa["pasta"])
+
+    cura.desfazer_as_estradas([mesa["pasta"]], mesa["lar"])
+
+    assert json.loads(mesa["heroic"].read_text(encoding="utf-8")) == dela, (
+        "o valor de antes voltou, mas fora do lugar em que ela o tinha")
+
+
 def test_o_valor_que_ela_mudou_depois_do_hefesto_fica(mesa: dict[str, Path]) -> None:
     _curar(mesa["lar"], mesa["pasta"])
     dado = json.loads(mesa["heroic"].read_text(encoding="utf-8"))
