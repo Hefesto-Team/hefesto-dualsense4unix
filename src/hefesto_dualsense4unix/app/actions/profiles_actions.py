@@ -4709,7 +4709,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
 #     (`f5311616^:app/app.py:490`). NÃO VOLTOU, e ninguém aponta para ele:
 #     quem o chamava era o `_render_slow_state` DA JANELA, um override que saiu
 #     junto. O `_render_slow_state` que ficou é o do `StatusActionsMixin`
-#     (`status_actions.py:2888`) e nunca teve essas linhas.
+#     (`status_actions.py:2892`) e nunca teve essas linhas.
 #
 # O QUE O RECUO DA PEÇA 2 PERDE, lido nas duas pontas. O original fazia QUATRO
 # coisas; `_refresh_all_tabs` sozinho faz a última, sobre um `self.draft` que
