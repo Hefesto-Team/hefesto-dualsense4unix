@@ -472,7 +472,7 @@ def test_o_mapa_recarregado_reinstala_a_ponte_e_recebe_o_arranjo() -> None:
 
 # ── passo 2: o nome da entrada ───────────────────────────────────────────
 
-_O_CAMPO = '#edita input.nome-entrada[data-gesto="entrada-nome"]'
+_O_CAMPO = '#edita input.campo-nome[data-gesto="entrada-nome"]'
 
 
 def _o_campo() -> str:
@@ -514,3 +514,44 @@ def test_o_nome_da_entrada_grava_e_o_cabecalho_diz_ele(disco: Path) -> None:
     assert carregar_maquina().mapa.portas["2"].nome == "Canto"
     assert recusado["existe"] and "hef-recusou" in recusado["classe"], recusado
     assert carregar_maquina().mapa.portas["2"].nome == "Canto", "a recusa gravou"
+
+
+# ── passo 3: o nome aparece onde a entrada aparece ───────────────────────
+
+_O_PLUGUE_1 = r"""
+(function(){
+  const s = document.querySelector('.plug[data-porta="1"]').closest('.soquete');
+  const nome = s.querySelector('.rotulo .nomeada');
+  const vazio = document.querySelector('.plug[data-porta="2"]');
+  return JSON.stringify({
+    nome: nome ? nome.textContent : null,
+    dica: nome ? nome.getAttribute('title') : null,
+    corta: nome ? getComputedStyle(nome).textOverflow : null,
+    num: s.querySelector('.num').textContent,
+    dicaDoVazio: vazio.getAttribute('title'),
+  });
+})()
+"""
+
+
+def test_o_nome_aparece_no_plugue_e_no_cabecalho(disco: Path) -> None:
+    """Com «Canto da mesa» na 1: o plugue diz o nome (com reticências, e o nome
+    inteiro na dica), o selo continua o número do metal, e o cabeçalho do
+    editor diz o nome. A 2, sem nome, é «Entrada 2» na dica do plugue vazio.
+
+    O «Canto da Mesa» com maiúscula é o ``emTitulo`` da página (pedido dela:
+    toda palavra com maiúscula); a dica guarda o nome como ela escreveu.
+    """
+    assert ee.dar_nome_a_entrada("1", "Canto da mesa").gravou
+    lidas, _ = _na_pagina([
+        _js(_aberta()),
+        _O_PLUGUE_1,
+        _clicar('.plug[data-porta="1"]'),
+        _O_EDITOR,
+    ])
+    plugue, editor = lidas[1], lidas[3]
+    assert (plugue["nome"], plugue["dica"], plugue["num"]) == (
+        "Canto da Mesa", "Canto da mesa", "1"), plugue
+    assert plugue["corta"] == "ellipsis"
+    assert plugue["dicaDoVazio"].startswith("Entrada 2"), plugue
+    assert editor["cabecalho"].startswith("Canto da Mesa"), editor

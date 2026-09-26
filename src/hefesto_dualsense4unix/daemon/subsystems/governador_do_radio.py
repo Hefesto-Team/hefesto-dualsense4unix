@@ -296,18 +296,20 @@ def nome_da_porta(endereco: str, *, amostra: Mapping[str, Any] | None = None) ->
 
 
 def _o_lugar(nome: str, *, com_em: bool = False, maiuscula: bool = False) -> str:
-    """O nome com o artigo do desenho (``comoSeChamaOLugar``): «a Entrada 3»,
-    e «o <nome>» para o nome que ela deu. ``com_em`` contrai: «na», «no».
+    """O nome com o artigo: «a Entrada 3», «na entrada Meio».
 
-    A palavra é a do dono do nome (``entrada_a_entrada.PALAVRA_DA_ENTRADA``).
+    O ARTIGO É SEMPRE FEMININO, porque concorda com «entrada» e não com o nome
+    (O-MAPA-QUE-ELA-CORRIGE-01, D-2609-O-NOME-E-DA-POSICAO). Aqui se adivinhava
+    o gênero pelo nome, e a tela dizia «O 13 já tem…» e «no Meio». A frase e
+    o artigo são do dono da grafia (``utils/rotulo_da_entrada``); este
+    governador não compõe nada.
     """
-    from hefesto_dualsense4unix.integrations.entrada_a_entrada import PALAVRA_DA_ENTRADA
+    from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
+        com_artigo,
+        na_frase_do_rotulo,
+    )
 
-    feminino = nome.startswith(PALAVRA_DA_ENTRADA + " ")
-    artigo = ("na" if feminino else "no") if com_em else ("a" if feminino else "o")
-    if maiuscula:
-        artigo = artigo[:1].upper() + artigo[1:]
-    return f"{artigo} {nome}"
+    return com_artigo(na_frase_do_rotulo(nome), em=com_em, maiuscula=maiuscula)
 
 
 def _chave(uniq: str) -> str:

@@ -107,6 +107,7 @@ from hefesto_dualsense4unix.integrations.portas_do_barramento import (
     hubs_do_mesmo_plastico,
 )
 from hefesto_dualsense4unix.utils.lugar import caminho_do_no
+from hefesto_dualsense4unix.utils.rotulo_da_entrada import com_artigo, na_frase
 
 # ---------------------------------------------------------------------------
 # Os três selos.
@@ -316,6 +317,12 @@ class Leitura:
     entradas_livres_declaradas: tuple[str, ...] = ()
     nomes_declarados: Mapping[str, str] = field(default_factory=dict)
     tipos_declarados: Mapping[str, str] = field(default_factory=dict)
+    #: ``{"1": "Meio"}`` — o nome que ela deu a cada entrada que tem nome
+    #: (O-MAPA-QUE-ELA-CORRIGE-01, D-2609-O-NOME-E-DA-POSICAO). Quem o lê é o
+    #: dono (``entrada_a_entrada.nome_da_entrada``), e quem preenche é
+    #: ``secao_exame.leitura_das_ordens``; aqui só se compõe a frase, pelo dono
+    #: da grafia (``utils/rotulo_da_entrada``): «para a entrada Meio».
+    nomes_das_entradas: Mapping[str, str] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -500,7 +507,8 @@ def radio_largo_no_mesmo_hub(leitura: Leitura) -> Ordem | None:
     nome = _nome_do_aparelho(leitura, alvo)
     return Ordem(
         chave=R1_RADIO_LARGO_NO_MESMO_HUB,
-        acao=_acao(f"Mova {nome}", len(livres), destino, bool(leitura.ocupante_da_entrada)),
+        acao=_acao(f"Mova {nome}", len(livres), destino, bool(leitura.ocupante_da_entrada),
+                   leitura.nomes_das_entradas),
         o_que_eu_vi=Linha(
             texto=(
                 # «que você ainda não identificou» saiu do nome em 19/09
@@ -571,7 +579,8 @@ def dois_radios_colados(leitura: Leitura) -> Ordem | None:
         acao="Mude um dos dois para uma entrada mais longe",
         o_que_eu_vi=Linha(
             texto=(
-                f"As entradas {primeira} e {segunda}, coladas, têm dois "
+                f"{_a_entrada(leitura, primeira, maiuscula=True)} e "
+                f"{_a_entrada(leitura, segunda)}, coladas, têm dois "
                 "rádios de 2,4 GHz."
             ),
             selo=MEDIDO_AQUI,
@@ -621,7 +630,7 @@ def dongle_atras_de_hub(leitura: Leitura) -> Ordem | None:
     return Ordem(
         chave=R3_DONGLE_ATRAS_DE_HUB,
         acao=_acao("Leve um dos adaptadores Bluetooth", len(livres), destino,
-                   bool(leitura.ocupante_da_entrada)),
+                   bool(leitura.ocupante_da_entrada), leitura.nomes_das_entradas),
         o_que_eu_vi=Linha(
             texto=(
                 f"{len(atras)} de {total} "
@@ -700,7 +709,8 @@ def teclado_so_no_hub(leitura: Leitura) -> Ordem | None:
     destino = _destino_declarado(leitura, livres)
     return Ordem(
         chave=R4_TECLADO_SO_NO_HUB,
-        acao=_acao("Leve um teclado", len(livres), destino, bool(leitura.ocupante_da_entrada)),
+        acao=_acao("Leve um teclado", len(livres), destino, bool(leitura.ocupante_da_entrada),
+                   leitura.nomes_das_entradas),
         o_que_eu_vi=Linha(
             texto=(
                 _plural(
@@ -804,7 +814,7 @@ def entrada_reclamou_de_corrente(leitura: Leitura) -> Ordem | None:
     return Ordem(
         chave=R6_ENTRADA_RECLAMOU_DE_CORRENTE,
         acao=_acao("Leve esse adaptador", len(livres), destino,
-                   bool(leitura.ocupante_da_entrada)),
+                   bool(leitura.ocupante_da_entrada), leitura.nomes_das_entradas),
         o_que_eu_vi=Linha(
             texto=(
                 "A entrada de "
@@ -1256,13 +1266,27 @@ def _destino_declarado(leitura: Leitura, livres: Sequence[Furo]) -> str:
     return sem_lugar
 
 
-def _acao(verbo: str, quantos_livres: int, destino: str, desenhou: bool = False) -> str:
+def _a_entrada(leitura: Leitura, numero: str, *, maiuscula: bool = False) -> str:
+    """«a Entrada 3», «a entrada Meio» — pelo dono da grafia."""
+    return com_artigo(
+        na_frase(numero, leitura.nomes_das_entradas.get(numero)), maiuscula=maiuscula
+    )
+
+
+def _acao(
+    verbo: str,
+    quantos_livres: int,
+    destino: str,
+    desenhou: bool = False,
+    nomes: Mapping[str, str] | None = None,
+) -> str:
     """O imperativo da ordem — e ele diz o que falta para virar um endereço.
 
     Três formas, e a diferença entre a segunda e a terceira é
     ``D-O-QUE-O-PRODUTO-DIZ-SEM-SABER``:
 
-    * **com destino**: "… para a entrada 4". Ela desenhou, e o produto aponta;
+    * **com destino**: "… para a Entrada 4" (ou "… para a entrada Meio", com o
+      nome que ela deu, pelo dono da grafia). Ela desenhou, e o produto aponta;
     * **sem destino e com buraco livre**: "… para uma entrada do próprio
       computador — há 9 livres." mais :data:`NAO_DECLARADO`. O produto CONTA o
       que mediu e diz exatamente o que falta para ele conseguir apontar. Isso
@@ -1278,7 +1302,7 @@ def _acao(verbo: str, quantos_livres: int, destino: str, desenhou: bool = False)
     if not quantos_livres:
         return ""
     if destino:
-        return f"{verbo} para a entrada {destino}"
+        return f"{verbo} para {com_artigo(na_frase(destino, (nomes or {}).get(destino)))}"
     # ELA JÁ DESENHOU (26/09/2026): o «você ainda não desenhou» saía com as 15
     # entradas mapeadas. Com desenho e sem número que sirva, a ordem manda para
     # outra controladora e não cobra o desenho de novo.

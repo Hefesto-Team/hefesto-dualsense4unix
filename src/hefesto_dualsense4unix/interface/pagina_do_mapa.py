@@ -55,8 +55,10 @@ from typing import Any, NamedTuple
 
 from hefesto_dualsense4unix.interface import caixa_da_janela, onde
 from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
+    FACE_DO_HUB_DECLARADO,
     MAXIMO_DO_NOME_DA_ENTRADA,
     PALAVRA_DA_ENTRADA,
+    PALAVRA_NA_FRASE,
 )
 
 #: A ESPECIFICAÇÃO EXECUTÁVEL. Congelada por decisão: reescrevê-la reescreveria
@@ -1992,7 +1994,12 @@ EDICOES: tuple[Edicao, ...] = (
             "     escreve aqui; no exemplo, o nome é o que se digitou nesta tela. */\n"  # noqa-acento: citação literal dela
             "  var PALAVRA_DA_ENTRADA = "
             + json.dumps(PALAVRA_DA_ENTRADA, ensure_ascii=False) + ";\n"
+            "  var PALAVRA_NA_FRASE = "
+            + json.dumps(PALAVRA_NA_FRASE, ensure_ascii=False) + ";\n"
             "  var MAXIMO_DO_NOME = " + str(MAXIMO_DO_NOME_DA_ENTRADA) + ";\n"
+            "  /* o nome da face de um hub declarado, no disco: o do dono */\n"
+            "  var FACE_DO_HUB = "
+            + json.dumps(FACE_DO_HUB_DECLARADO, ensure_ascii=False) + ";\n"
             "  var ROTULOS = {};\n"
             "  function rotuloDe(n) {\n"
             "    var r = ROTULOS[String(n)];\n"
@@ -2000,13 +2007,20 @@ EDICOES: tuple[Edicao, ...] = (
             "    return nomeDe(n) || PALAVRA_DA_ENTRADA + \" \" + n;\n"
             "  }\n"
             "  function nomeDe(n) { return (DECLARADO[n] || {}).nome || \"\"; }\n"
+            "  /* o sintagma sem artigo, para o meio da frase: «Entrada 3», «entrada Meio» */\n"
+            "  function naFraseDe(n) {\n"
+            "    var r = ROTULOS[String(n)];\n"
+            "    if (r) return r.naFrase;\n"
+            "    var nome = nomeDe(n);\n"
+            "    return nome ? PALAVRA_NA_FRASE + \" \" + nome : PALAVRA_DA_ENTRADA + \" \" + n;\n"
+            "  }\n"
             "  function emAtributo(t) {\n"
             "    return String(t).replace(/&/g, \"&amp;\").replace(/\"/g, \"&quot;\")"
             ".replace(/</g, \"&lt;\");\n"
             "  }\n"
             "  function linhaDoNome(n) {\n"
             "    return '<div class=\"edita-linha\"><span>Nome</span>"
-            "<input class=\"nome-entrada\" type=\"text\"'\n"
+            "<input class=\"campo-nome\" type=\"text\"'\n"
             "      + ' data-nome=\"' + n + '\"' + gravaNaEntrada(n, \"entrada-nome\")\n"
             "      + ' maxlength=\"' + MAXIMO_DO_NOME + '\" value=\"'"
             " + emAtributo(nomeDe(n)) + '\"'\n"
@@ -2074,14 +2088,253 @@ EDICOES: tuple[Edicao, ...] = (
             "  .edita .seg .escolha.apagado:hover { background: var(--color-paper-3); }\n"
             "  /* o nome da entrada: o campo tem fundo, cor e borda próprios — no\n"
             "     WebKitGTK o campo sem eles nasce com as cores do sistema */\n"
-            "  .edita .nome-entrada { font: inherit; font-size: var(--text-sm); width: 100%;\n"
+            "  .edita .campo-nome { font: inherit; font-size: var(--text-sm); width: 100%;\n"
             "                         box-sizing: border-box; padding: .35rem .5rem;\n"
             "                         background: var(--color-paper); color: var(--color-ink);\n"
             "                         border: 1px solid var(--color-rule);"
             " border-radius: var(--radius-sm); }\n"
-            "  .edita .nome-entrada:focus { outline: none; border-color: var(--color-accent); }\n"
+            "  .edita .campo-nome:focus { outline: none; border-color: var(--color-accent); }\n"
         ),
         porque='26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 2) — o campo «Nome».',
+    ),
+    # ══ O-MAPA-QUE-ELA-CORRIGE-01 (passo 3), 26/09/2026: a entrada pelo dono ══
+    Edicao(
+        antes=(
+            '          txt: "a entrada " + atual + " passou a ser do " + '
+            '(acha(plano[atual]) || {}).tipo + ", entao este precisa de o'
+            'utro lugar" });\n'
+            '        motivo[ap.id] = {'
+        ),
+        depois=(
+            '          txt: "a " + naFraseDe(atual) + " passou a ser do "'
+            ' + (acha(plano[atual]) || {}).tipo + ", entao este precisa d'
+            'e outro lugar" });\n'
+            '        motivo[ap.id] = {'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — a razão da'
+            ' entrada tomada diz o nome dela.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '          txt: "a entrada " + atual + " passou a ser do " + '
+            '(acha(plano[atual]) || {}).tipo + ", entao este precisa de o'
+            'utro lugar" });\n'
+            '        motivo[a.id] = {'
+        ),
+        depois=(
+            '          txt: "a " + naFraseDe(atual) + " passou a ser do "'
+            ' + (acha(plano[atual]) || {}).tipo + ", entao este precisa d'
+            'e outro lugar" });\n'
+            '        motivo[a.id] = {'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — a razão da'
+            ' entrada tomada diz o nome dela (a variante).'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        txt: "a entrada " + de + " passou a ser do " + (acha'
+            '(plano[de]) || {}).tipo + ", entao este precisa de outro lug'
+            'ar" });\n'
+        ),
+        depois=(
+            '        txt: "a " + naFraseDe(de) + " passou a ser do " + (a'
+            'cha(plano[de]) || {}).tipo + ", entao este precisa de outro '
+            'lugar" });\n'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — a razão da'
+            ' entrada tomada diz o nome dela (a receita).'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        titulo: (function (r) { return de ? "Mova " + r.g + '
+            '" " + r.n + " da entrada " + de + " para a " + para\n'
+            '                                     : "Ponha " + r.g + " " '
+            '+ r.n + " na entrada " + para; })(rot(a))\n'
+        ),
+        depois=(
+            '        titulo: (function (r) { return de ? "Mova " + r.g + '
+            '" " + r.n + " da " + naFraseDe(de) + " para a " + naFraseDe('
+            'para)\n'
+            '                                     : "Ponha " + r.g + " " '
+            '+ r.n + " na " + naFraseDe(para); })(rot(a))\n'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — o moviment'
+            'o diz as duas entradas pelo nome.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      if (vzRadio) return { v: "evite", txt: "vale evitar", '
+            'porque: "colada no " + vz.tipo + ", na entrada " + porta.par'
+            ' };\n'
+            '      if (porta.esticada) return { v: "melhor"'
+        ),
+        depois=(
+            '      if (vzRadio) return { v: "evite", txt: "vale evitar", '
+            'porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.p'
+            'ar) };\n'
+            '      if (porta.esticada) return { v: "melhor"'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — a vizinha '
+            'colada diz o nome da entrada (o adaptador).'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      if (vzRadio) return { v: "evite", txt: "vale evitar", '
+            'porque: "colada no " + vz.tipo + ", na entrada " + porta.par'
+            ' };\n'
+            '      return { v: "melhor", txt: "melhor lugar", porque: "az'
+            'ul,'
+        ),
+        depois=(
+            '      if (vzRadio) return { v: "evite", txt: "vale evitar", '
+            'porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.p'
+            'ar) };\n'
+            '      return { v: "melhor", txt: "melhor lugar", porque: "az'
+            'ul,'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — a vizinha '
+            'colada diz o nome da entrada (o Wi-Fi).'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      if (vzRadio) return { v: "evite", txt: "vale evitar", '
+            'porque: "colada no " + vz.tipo + ", na entrada " + porta.par'
+            ' };\n'
+            '      return { v: "melhor", txt: "melhor lugar", porque: "di'
+            'reta do PC'
+        ),
+        depois=(
+            '      if (vzRadio) return { v: "evite", txt: "vale evitar", '
+            'porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.p'
+            'ar) };\n'
+            '      return { v: "melhor", txt: "melhor lugar", porque: "di'
+            'reta do PC'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — a vizinha '
+            'colada diz o nome da entrada (o teclado).'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      if (vzRadio) return { v: "evite", txt: "vale evitar", '
+            'porque: "colada no " + vz.tipo + ", na entrada " + porta.par'
+            ' };\n'
+            '      if (noHub && superspeedNoHub()) return { v: "evite", t'
+            'xt: "vale evitar", porque: "hub com'
+        ),
+        depois=(
+            '      if (vzRadio) return { v: "evite", txt: "vale evitar", '
+            'porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.p'
+            'ar) };\n'
+            '      if (noHub && superspeedNoHub()) return { v: "evite", t'
+            'xt: "vale evitar", porque: "hub com'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — a vizinha '
+            'colada diz o nome da entrada (o mouse).'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        return { id: a.id, entrada: p, rotulo: p ? "entrada '
+            '" + p : "entrada por confirmar" };\n'
+        ),
+        depois=(
+            '        return { id: a.id, entrada: p, rotulo: p ? naFraseDe'
+            '(p) : "entrada por confirmar" };\n'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — o adaptado'
+            'r diz a entrada em que está pelo nome.'
+        ),
+    ),
+    Edicao(
+        antes='        porque = de ? "estava na entrada " + de : "ainda sem lugar";\n',
+        depois='        porque = de ? "estava na " + naFraseDe(de) : "ainda sem lugar";\n',
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — o plano di'
+            'z de onde veio pelo nome.'
+        ),
+    ),
+    Edicao(
+        antes='        porque = "vai para a entrada " + portaDeEm(ctx.plano, idAgora);\n',
+        depois='        porque = "vai para a " + naFraseDe(portaDeEm(ctx.plano, idAgora));\n',
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — o plano di'
+            'z para onde vai pelo nome.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    var titulo = ap ? ap.tipo + " — " + ap.nome : "entrada "'
+            ' + porta.n + ", vazia";\n'
+        ),
+        depois='    var titulo = ap ? ap.tipo + " — " + ap.nome : rotuloDe(porta.n) + ", vazia";\n',
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — a dica do '
+            'plugue vazio diz o nome da entrada.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    if (ap) {\n'
+            '      h += \'<b class="nome" style="color:\' + ap.cor + \'">\' +'
+            ' ap.tipo'
+        ),
+        depois=(
+            '    /* O NOME QUE ELA DEU, na primeira linha do rótulo — cor'
+            'tado com\n'
+            '       reticências, e inteiro na dica. O selo `.num` continu'
+            'a o número:\n'
+            '       é o do metal. */\n'
+            '    var batismo = nomeDe(porta.n);\n'
+            '    if (batismo) h += \'<span class="nomeada" title="\' + emAt'
+            'ributo(batismo) + \'">\'\n'
+            "      + emAtributo(batismo) + '</span>';\n"
+            '    if (ap) {\n'
+            '      h += \'<b class="nome" style="color:\' + ap.cor + \'">\' +'
+            ' ap.tipo'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — o plugue m'
+            'ostra o nome que ela deu à entrada.'
+        ),
+    ),
+    Edicao(
+        antes='  .rotulo .vazio { color: var(--color-ink-faint); font-style: italic; }\n',
+        depois=(
+            '  .rotulo .vazio { color: var(--color-ink-faint); font-style'
+            ': italic; }\n'
+            '  /* o nome que ela deu à entrada: uma linha só, com reticên'
+            'cias */\n'
+            '  .rotulo .nomeada { display: block; font-weight: 700; white'
+            '-space: nowrap;\n'
+            '                     overflow: hidden; text-overflow: ellips'
+            'is; }\n'
+        ),
+        porque='26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — a linha do nome no plugue.',
+    ),
+    Edicao(
+        antes='      FACES.push({ nome: "Hub na Entrada " + n,',
+        depois='      FACES.push({ nome: FACE_DO_HUB.replace("{numero}", n),',
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 3) — o nome da face do '
+            'hub é o do dono (`FACE_DO_HUB_DECLARADO`), e a página não compõe a '
+            'palavra.'
+        ),
     ),
 )
 

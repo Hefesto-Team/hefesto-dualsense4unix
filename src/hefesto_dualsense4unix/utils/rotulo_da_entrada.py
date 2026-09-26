@@ -32,8 +32,9 @@ from __future__ import annotations
 #: ``entrada_a_entrada`` até 26/09/2026, que a reexporta.
 PALAVRA_DA_ENTRADA = "Entrada"
 
-#: A palavra no meio da frase, antes do nome que ela deu: «a entrada Meio».
-_PALAVRA_NA_FRASE = PALAVRA_DA_ENTRADA.lower()
+#: A palavra no meio da frase, antes do nome que ela deu: «a entrada Meio». A
+#: página do mapa a recebe do gerador, como a :data:`PALAVRA_DA_ENTRADA`.
+PALAVRA_NA_FRASE = PALAVRA_DA_ENTRADA.lower()
 
 #: A FACE QUE UM HUB DECLARADO GANHA NO DISCO — O-MAPA-DAS-CONEXOES-NO-PRODUTO-01.
 #: É a CHAVE da face (o nome gravado em ``mapa.faces``), e leva o número: a troca
@@ -67,7 +68,7 @@ def nome_que_vale(numero: str | None, nome: str | None) -> str | None:
     if numero_limpo:
         dobrado = limpo.casefold()
         if dobrado in (numero_limpo.casefold(),
-                       f"{_PALAVRA_NA_FRASE} {numero_limpo}".casefold()):
+                       f"{PALAVRA_NA_FRASE} {numero_limpo}".casefold()):
             return None
     return limpo
 
@@ -88,8 +89,38 @@ def na_frase(numero: str | None, nome: str | None = None) -> str:
     """O sintagma sem artigo, para o meio da frase: «entrada Meio» ou «Entrada 3»."""
     vale = nome_que_vale(numero, nome)
     if vale:
-        return f"{_PALAVRA_NA_FRASE} {vale}"
+        return f"{PALAVRA_NA_FRASE} {vale}"
     return rotulo(numero)
+
+
+def na_frase_do_rotulo(rotulo_pronto: str) -> str:
+    """O sintagma de um rótulo que já veio pronto do dono (``nome_da_porta``).
+
+    Para quem recebe o rótulo e não o número: o governador pergunta o nome do
+    adaptador pela porta e compõe a frase da recusa. «Entrada 3» (a reserva)
+    fica como está; o nome que ela deu ganha a palavra na frente: «entrada
+    Meio». Vazio fica vazio.
+    """
+    limpo = _aparado(rotulo_pronto)
+    if not limpo or limpo.startswith(f"{PALAVRA_DA_ENTRADA} "):
+        return limpo
+    return f"{PALAVRA_NA_FRASE} {limpo}"
+
+
+def com_artigo(
+    frase: str, *, em: bool = False, de: bool = False, maiuscula: bool = False
+) -> str:
+    """«a Entrada 3», «na entrada Meio», «da Entrada 3» — sempre feminino.
+
+    ``em`` contrai em «na»; ``de``, em «da». ``maiuscula`` é o começo de frase:
+    «A Entrada 3 já tem…».
+    """
+    if em and de:
+        raise ValueError("o artigo contrai com «em» ou com «de», não com os dois")
+    artigo = "na" if em else ("da" if de else "a")
+    if maiuscula:
+        artigo = artigo[:1].upper() + artigo[1:]
+    return f"{artigo} {frase}" if frase else ""
 
 
 __all__ = [
@@ -97,7 +128,10 @@ __all__ = [
     "FRASE_DO_NOME_COMPRIDO",
     "MAXIMO_DO_NOME_DA_ENTRADA",
     "PALAVRA_DA_ENTRADA",
+    "PALAVRA_NA_FRASE",
+    "com_artigo",
     "na_frase",
+    "na_frase_do_rotulo",
     "nome_que_vale",
     "rotulo",
 ]

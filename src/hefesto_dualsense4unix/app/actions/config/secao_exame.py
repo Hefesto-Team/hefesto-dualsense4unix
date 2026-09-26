@@ -467,10 +467,12 @@ def leitura_das_ordens(maquina: Any) -> Any:
     """
     from hefesto_dualsense4unix.integrations import (
         censo_do_barramento,
+        entrada_a_entrada,
         entradas_do_gabinete,
         mapa_das_portas,
         ordens_da_mesa,
     )
+    from hefesto_dualsense4unix.utils.maquina import entradas_do_mapa
 
     censo = censo_do_barramento.ler_o_barramento()
     mapa = maquina.mapa
@@ -491,6 +493,13 @@ def leitura_das_ordens(maquina: Any) -> Any:
         },
         tipos_declarados={
             chave: radio.tipo for chave, radio in radios.items() if radio.tipo
+        },
+        # O nome que ela deu a cada entrada, pelo dono da leitura: a ordem diz
+        # «para a entrada Meio» (O-MAPA-QUE-ELA-CORRIGE-01).
+        nomes_das_entradas={
+            numero: nome
+            for numero in entradas_do_mapa(mapa)
+            if (nome := entrada_a_entrada.nome_da_entrada(numero, maquina=maquina))
         },
     )
 

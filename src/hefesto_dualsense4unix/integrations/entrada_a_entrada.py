@@ -1526,12 +1526,13 @@ def rotulo_da_entrada(
     maquina: MaquinaConfig | None = None,
     controladores: Mapping[int, str] | None = None,
 ) -> str | None:
-    """«Entrada 3», ou «Entrada 4.1.4» — o rótulo da porta SEM o nome dela.
+    """O rótulo da entrada de um lugar: «Meio», «Entrada 3» ou «Entrada 4.1.4».
 
-    É o que a seção do rádio põe ao lado do nome que ela deu (o campo editável
-    mostra o nome; a marca da face mostra a entrada). ``None`` = não é porta:
-    o lugar do adaptador embutido, que não pendura em entrada nenhuma. O
-    rótulo de reserva desempata como o do :func:`nome_da_porta`.
+    É a linha «entrada» de Rádio e Adaptadores, ao lado do nome do ADAPTADOR
+    (que é dele desde 26/09/2026). Desde a O-MAPA-QUE-ELA-CORRIGE-01 ela diz o
+    nome que ela deu à ENTRADA (D-2609-O-NOME-E-DA-POSICAO), pelo dono. ``None``
+    = não é porta: o lugar do adaptador embutido, que não pendura em entrada
+    nenhuma. O rótulo de reserva desempata como o do :func:`nome_da_porta`.
     """
     partes = partes_do_lugar(lugar)
     if partes is None:
@@ -1540,7 +1541,12 @@ def rotulo_da_entrada(
     barramentos = controladores if controladores is not None else _controladores_do_sistema()
     numero = _numero_conhecido(documento, lugar, "", barramentos)
     if numero is not None:
-        return rotulo_do_numero(numero)
+        return rotulo_do_numero(
+            numero,
+            maquina=documento,
+            controladores=barramentos,
+            nome_no_lugar=_nome_declarado(documento, lugar),
+        )
     return _rotulo_de_reserva(partes[0], partes[1], barramentos)
 
 
@@ -1703,7 +1709,7 @@ def _declarar_na_entrada(
     elif (mae := _mae_da_ponta(mapa, numero)) is not None:
         declaracao = {numero: {"filha_de": mae, **campos}}
     else:
-        raise ValueError(f"a entrada {numero!r} não está no mapa desta máquina")
+        raise ValueError(f"o número {numero!r} não está no mapa desta máquina")
     ponta = ponta_do_extensor(numero)
     dela = mapa.portas.get(ponta) if ponta else None
     if (

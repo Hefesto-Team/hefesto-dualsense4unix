@@ -903,8 +903,9 @@ def test_o_governador_pergunta_o_nome_ao_dono_da_entrada(
         CONTROLE_3, ADAPTADOR_A, "som", gov.MOTIVO_CHEIO, (ADAPTADOR_B,),
         nomear=lambda e: gov.nome_da_porta(e, amostra=amostra),
     )
+    # O artigo concorda com «entrada», e não com o nome (O-MAPA-QUE-ELA-CORRIGE-01).
     assert recusa.frase == (
-        "O Sala já tem 2 controles com som ou vibração. Há vaga em outro adaptador."
+        "A entrada Sala já tem 2 controles com som ou vibração. Há vaga em outro adaptador."
     )
 
 
@@ -1020,6 +1021,42 @@ _OS_QUE_PODEM = {
         "a cópia que o gerador da aba 08 lê por AST — não importa do dono sem "
         "quebrar o gerador; travada junto por test_entrada_a_entrada_grava.py"
     ),
+    # ── os achados da busca SEM MAIÚSCULA (O-MAPA-QUE-ELA-CORRIGE-01, 26/09/2026).
+    # Os que diziam a entrada na tela foram curados (as ordens, as recusas da
+    # aba 08, o governador, a página do mapa); estes ficam, cada um pela razão.
+    ("app/widgets/calibrar_entradas.py", "tem um modelo de .format"): (
+        "o contador da calibração («entrada 3 de 7») conta PASSOS, não nomeia uma "
+        "entrada; e `app/widgets/` está fora da posse da O-MAPA-QUE-ELA-CORRIGE-01"
+    ),
+    ("app/widgets/mapa_da_mesa.py", "tem um modelo de .format"): (
+        "o widget GTK do mapa, fora da posse da O-MAPA-QUE-ELA-CORRIGE-01 "
+        "(`app/widgets/` é `nao_toca`) — dívida declarada no relatório dela"
+    ),
+    ("app/actions/config/secao_mesa.py", "tem um modelo de .format"): (
+        "a dica de procedência da seção GTK («está na entrada {numero}»), fora da "
+        "posse da O-MAPA-QUE-ELA-CORRIGE-01 — dívida declarada no relatório dela"
+    ),
+    ("integrations/arranjo_da_mesa.py", "compõe uma f-string"): (
+        "o porte do motor medido contra o ouro (`tests/fixtures/motor_do_arranjo_"
+        "do_mockup.js`), sem chamador na tela: a página do mapa tem o motor dela, "
+        "que já pergunta ao dono (`naFraseDe`); e o arquivo é `nao_toca`"
+    ),
+    ("integrations/arranjo_da_mesa.py", "tem um modelo de .format"): (
+        "o mesmo porte do motor, pela mesma razão"
+    ),
+    ("interface/aba08.py", "tem um modelo de .format"): (
+        "o gerador do desenho aprovado da aba 08, fora da posse da "
+        "O-MAPA-QUE-ELA-CORRIGE-01 (a sprint manda parar e avisar): o contador "
+        "da calibração e as frases do desenho — dívida declarada no relatório"
+    ),
+    ("interface/pacotes/a08_conexoes.py", "compõe uma f-string"): (
+        "o contador da calibração («entrada 3 de 7») conta PASSOS, não nomeia uma "
+        "entrada; as recusas da aba perguntam ao dono (`_a_entrada_na_frase`)"
+    ),
+    ("utils/maquina.py", "compõe uma f-string"): (
+        "as mensagens de validação do schema citam o VALOR recusado («número de "
+        "entrada '1234'»), não nomeiam uma entrada para a tela"
+    ),
 }
 
 
@@ -1032,7 +1069,10 @@ def _composicoes_da_palavra(raiz: Path) -> set[tuple[str, str]]:
     import itertools
     import re
 
-    palavra_no_fim = re.compile(r"\bEntrada\s*$")
+    # SEM DISTINGUIR MAIÚSCULA desde 26/09/2026 (O-MAPA-QUE-ELA-CORRIGE-01): o
+    # «para a entrada {destino}» das ordens compunha a palavra em minúscula, e a
+    # régua não o via.
+    palavra_no_fim = re.compile(r"\bEntrada\s*$", re.IGNORECASE)
     achados: set[tuple[str, str]] = set()
     for arquivo in sorted(raiz.rglob("*.py")):
         arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
@@ -1067,7 +1107,7 @@ def _composicoes_da_palavra(raiz: Path) -> set[tuple[str, str]]:
                 isinstance(no, ast.Constant)
                 and isinstance(no.value, str)
                 and id(no) not in docstrings
-                and re.search(r"\bEntrada \{", no.value)
+                and re.search(r"\bEntrada \{", no.value, re.IGNORECASE)
             ):
                 achados.add((nome, "tem um modelo de .format"))
             elif (

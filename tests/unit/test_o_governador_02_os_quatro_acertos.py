@@ -588,8 +588,10 @@ def test_sem_nome_a_frase_diz_este_adaptador_e_nunca_o_endereco() -> None:
         CONTROLE_3, ADAPTADOR_A, "som", gov.MOTIVO_CHEIO, (ADAPTADOR_B, "aa:bb:cc:00:00:c3"),
         nomear={ADAPTADOR_A: "Sala", "aa:bb:cc:00:00:c3": "Entrada 9"}.get,
     )
+    # O artigo concorda com «entrada», e não com o nome (O-MAPA-QUE-ELA-CORRIGE-01,
+    # D-2609-O-NOME-E-DA-POSICAO): «O Sala» e «O 13» adivinhavam o gênero.
     assert com_nome.frase == (
-        "O Sala já tem 2 controles com som ou vibração. Há vaga na Entrada 9."
+        "A entrada Sala já tem 2 controles com som ou vibração. Há vaga na Entrada 9."
     )
 
 

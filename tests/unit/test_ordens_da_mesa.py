@@ -466,7 +466,8 @@ def test_com_desenho_a_acao_aponta_o_numero_dela() -> None:
     )
     assert ordem is not None
     assert ordem.destino == "4"
-    assert ordem.acao.endswith("para a entrada 4")
+    # a palavra é a do dono da grafia (O-MAPA-QUE-ELA-CORRIGE-01): «Entrada 4»
+    assert ordem.acao.endswith("para a Entrada 4")
     assert ordens.NAO_DECLARADO not in ordem.acao
 
 
@@ -493,7 +494,7 @@ def test_o_destino_e_uma_entrada_livre_de_outra_controladora() -> None:
     ))
     assert ordem is not None
     assert ordem.destino == "2"
-    assert ordem.acao.endswith("para a entrada 2")
+    assert ordem.acao.endswith("para a Entrada 2")
 
 
 def test_duas_ordens_nao_mandam_para_a_mesma_entrada() -> None:

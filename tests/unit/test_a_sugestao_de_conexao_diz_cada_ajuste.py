@@ -120,17 +120,19 @@ def test_as_duas_pontas_dizem_a_entrada(monkeypatch: pytest.MonkeyPatch, caminho
     """26/09/2026, foto dela: a caixa da esquerda mostrava «4-1.1.4» e a da
     direita só «2». MORDIDA: volte a caixa da esquerda ao `alvo.caminho`, ou
     tire o laço dos nós do `mapa_das_portas.porta_de` — reprova."""
-    from types import SimpleNamespace
-
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import Identidade, Linha, Ordem
-    from hefesto_dualsense4unix.utils.maquina import MapaDaMesa, PortaDeclarada
+    from hefesto_dualsense4unix.utils.maquina import MapaDaMesa, MaquinaConfig, PortaDeclarada
 
     a08 = _a08()
     mapa = MapaDaMesa(portas={
         "9": PortaDeclarada(caminho="9-1.1.4", nos=["9-1.1-port4", "10-1.1-port4"]),
         "15": PortaDeclarada(caminho="9-1.2", nos=["9-1-port2", "10-1-port2"]),
     })
-    monkeypatch.setattr(a08, "_declaracao", lambda recarregar=False: SimpleNamespace(mapa=mapa))
+    # O documento de VERDADE: o dublê só com `mapa` era mais pobre que o produto,
+    # e caiu quando a caixa passou a perguntar o nome da entrada
+    # (O-MAPA-QUE-ELA-CORRIGE-01).
+    documento = MaquinaConfig(mapa=mapa)
+    monkeypatch.setattr(a08, "_declaracao", lambda recarregar=False: documento)
     vazio = Linha(texto="", selo="")
     ordem = Ordem(chave="k", acao="Mova isto para a entrada 2",  # (noqa-acento) campo da Ordem
                   o_que_eu_vi=vazio, por_que_importa=vazio, ganho_esperado=vazio,

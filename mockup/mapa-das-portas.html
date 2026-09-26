@@ -184,6 +184,9 @@
   .rotulo .nome { display: block; font-weight: 600; }
   .rotulo .caminho { display: block; font-family: var(--font-dado); color: var(--color-ink-faint); font-size: .6875rem; }
   .rotulo .vazio { color: var(--color-ink-faint); font-style: italic; }
+  /* o nome que ela deu à entrada: uma linha só, com reticências */
+  .rotulo .nomeada { display: block; font-weight: 700; white-space: nowrap;
+                     overflow: hidden; text-overflow: ellipsis; }
   .rotulo .veredito { display: block; font-weight: 600; }
   .rotulo .veredito.melhor, .rotulo .veredito.chega { color: var(--color-ok); }
   .rotulo .veredito.serve, .rotulo .veredito.fica { color: var(--color-ink-quiet); }
@@ -327,11 +330,11 @@
   .edita .seg .escolha.apagado:hover { background: var(--color-paper-3); }
   /* o nome da entrada: o campo tem fundo, cor e borda próprios — no
      WebKitGTK o campo sem eles nasce com as cores do sistema */
-  .edita .nome-entrada { font: inherit; font-size: var(--text-sm); width: 100%;
+  .edita .campo-nome { font: inherit; font-size: var(--text-sm); width: 100%;
                          box-sizing: border-box; padding: .35rem .5rem;
                          background: var(--color-paper); color: var(--color-ink);
                          border: 1px solid var(--color-rule); border-radius: var(--radius-sm); }
-  .edita .nome-entrada:focus { outline: none; border-color: var(--color-accent); }
+  .edita .campo-nome:focus { outline: none; border-color: var(--color-accent); }
   /* «Arruma o alinhamento dos blocos» — 26/09/2026. O «Voltar» entra na linha
      do título, os três modos têm a mesma largura, as colunas de entradas têm a
      mesma largura em todas as chapas, e a bandeja começa na altura da primeira
@@ -720,7 +723,7 @@
         var notaAtual = (atual && !tomada) ? notaDe(ap, porNum(atual), plano, jaPostos).n : -Infinity;
         var razoes = melhorNota.nota.razoes.slice();
         if (tomada) razoes.unshift({ selo: "derivado",
-          txt: "a entrada " + atual + " passou a ser do " + (acha(plano[atual]) || {}).tipo + ", entao este precisa de outro lugar" });
+          txt: "a " + naFraseDe(atual) + " passou a ser do " + (acha(plano[atual]) || {}).tipo + ", entao este precisa de outro lugar" });
         motivo[ap.id] = {
           razoes: razoes,
           peso: melhorNota.nota.peso,
@@ -765,7 +768,7 @@
         var na = (atual && !tomada2) ? notaDe(a, porNum(atual), plano, []).n : -Infinity;
         var rz = n.razoes.slice();
         if (tomada2) rz.unshift({ selo: "derivado",
-          txt: "a entrada " + atual + " passou a ser do " + (acha(plano[atual]) || {}).tipo + ", entao este precisa de outro lugar" });
+          txt: "a " + naFraseDe(atual) + " passou a ser do " + (acha(plano[atual]) || {}).tipo + ", entao este precisa de outro lugar" });
         motivo[a.id] = { razoes: rz, peso: n.peso, ganho: tomada2 ? Infinity : (n.n - na), forcado: !!tomada2,
                          essencial: !!tomada2 || (n.peso === "essencial" && (n.n - na) >= 30) };
       });
@@ -819,7 +822,7 @@
       var na = tomada ? -Infinity : notaDe(a, pd, plano, []).n;
       var rz = n.razoes.slice();
       if (tomada) rz.unshift({ selo: "derivado",
-        txt: "a entrada " + de + " passou a ser do " + (acha(plano[de]) || {}).tipo + ", entao este precisa de outro lugar" });
+        txt: "a " + naFraseDe(de) + " passou a ser do " + (acha(plano[de]) || {}).tipo + ", entao este precisa de outro lugar" });
       else if (!volta) rz.unshift({ selo: "derivado", txt: PORQUE_A_VARIANTE_TIROU.replace("{de}", de) });
       motivo[a.id] = { razoes: rz, peso: n.peso,
         ganho: (tomada || !volta) ? Infinity : (n.n - na),
@@ -856,8 +859,8 @@
       });
       movs.push({
         essencial: !!m.essencial, ganho: m.ganho,
-        titulo: (function (r) { return de ? "Mova " + r.g + " " + r.n + " da entrada " + de + " para a " + para
-                                     : "Ponha " + r.g + " " + r.n + " na entrada " + para; })(rot(a))
+        titulo: (function (r) { return de ? "Mova " + r.g + " " + r.n + " da " + naFraseDe(de) + " para a " + naFraseDe(para)
+                                     : "Ponha " + r.g + " " + r.n + " na " + naFraseDe(para); })(rot(a))
                 + (m.essencial ? "" : "  ·  melhora, não é urgente"),
         linhas: linhas
       });
@@ -909,7 +912,7 @@
 
     if (naMao === "bt") {
       if (noHub && superspeedNoHub()) return { v: "ruim", txt: "evite", porque: "o Wi-Fi usa o SuperSpeed deste mesmo hub, e esse tráfego vira ruído em 2,4 GHz" };
-      if (vzRadio) return { v: "evite", txt: "vale evitar", porque: "colada no " + vz.tipo + ", na entrada " + porta.par };
+      if (vzRadio) return { v: "evite", txt: "vale evitar", porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.par) };
       if (porta.esticada) return { v: "melhor", txt: "melhor lugar", porque: "na ponta do extensor: a antena mais longe das outras" };
       if (noHub) return { v: "melhor", txt: "melhor lugar", porque: "no alto do rack, com a antena acima das cabeças" };
       return { v: "serve", txt: "serve", porque: "entrada direta, mas na altura da escrivaninha" };
@@ -917,16 +920,16 @@
     if (naMao === "wifi") {
       if (noHub) return { v: "ruim", txt: "evite", porque: "aqui o tráfego dele em 5 Gbps fica ao lado dos dongles do controle" };
       if (porta.usb !== 3) return { v: "evite", txt: "vale evitar", porque: "entrada preta — o Wi-Fi perde velocidade" };
-      if (vzRadio) return { v: "evite", txt: "vale evitar", porque: "colada no " + vz.tipo + ", na entrada " + porta.par };
+      if (vzRadio) return { v: "evite", txt: "vale evitar", porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.par) };
       return { v: "melhor", txt: "melhor lugar", porque: "azul, direta do PC e longe das antenas de rádio" };
     }
     if (naMao === "teclado") {
       if (noHub) return { v: "ruim", txt: "evite", porque: "no hub você pode ficar sem teclado na BIOS" };
-      if (vzRadio) return { v: "evite", txt: "vale evitar", porque: "colada no " + vz.tipo + ", na entrada " + porta.par };
+      if (vzRadio) return { v: "evite", txt: "vale evitar", porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.par) };
       return { v: "melhor", txt: "melhor lugar", porque: "direta do PC — funciona na BIOS e na recuperação" };
     }
     if (naMao === "mouse") {
-      if (vzRadio) return { v: "evite", txt: "vale evitar", porque: "colada no " + vz.tipo + ", na entrada " + porta.par };
+      if (vzRadio) return { v: "evite", txt: "vale evitar", porque: "colada no " + vz.tipo + ", na " + naFraseDe(porta.par) };
       if (noHub && superspeedNoHub()) return { v: "evite", txt: "vale evitar", porque: "hub com o tráfego do Wi-Fi ao lado" };
       if (porta.usb === 3) return { v: "serve", txt: "serve", porque: "gasta uma entrada azul que ele não usa" };
       return { v: "melhor", txt: "melhor lugar", porque: "entrada preta, longe de outro rádio" };
@@ -1117,7 +1120,7 @@
     return APARELHOS.filter(function (a) { return a.classe === "bt"; })
       .map(function (a) {
         var p = portaDe(a.id);
-        return { id: a.id, entrada: p, rotulo: p ? "entrada " + p : "entrada por confirmar" };
+        return { id: a.id, entrada: p, rotulo: p ? naFraseDe(p) : "entrada por confirmar" };
       });
   }
 
@@ -1189,10 +1192,10 @@
       if (idPlano && idPlano !== idAgora) {
         estado = "chega"; vered = "vem para cá";
         var de = portaDe(idPlano);
-        porque = de ? "estava na entrada " + de : "ainda sem lugar";
+        porque = de ? "estava na " + naFraseDe(de) : "ainda sem lugar";
       } else if (!idPlano && idAgora) {
         ap = acha(idAgora); estado = "sai"; vered = "sai daqui";
-        porque = "vai para a entrada " + portaDeEm(ctx.plano, idAgora);
+        porque = "vai para a " + naFraseDe(portaDeEm(ctx.plano, idAgora));
       } else if (idPlano) { estado = "fica"; vered = "fica"; porque = "já está certa"; }
     } else {
       var id = alocacao[porta.n];
@@ -1205,11 +1208,17 @@
       } else if (j) { estado = j.v; vered = j.txt; porque = j.porque; }
     }
 
-    var titulo = ap ? ap.tipo + " — " + ap.nome : "entrada " + porta.n + ", vazia";
+    var titulo = ap ? ap.tipo + " — " + ap.nome : rotuloDe(porta.n) + ", vazia";
     h += '<div class="soquete"><span class="num">' + porta.n + "</span>"
       + '<button class="plug' + (porta.usb === 3 ? " v3" : "") + '" data-porta="' + porta.n + '"'
       + (estado ? ' data-v="' + estado + '"' : "") + problema
       + ' aria-label="' + titulo + '" title="' + titulo + '"></button><span class="rotulo">';
+    /* O NOME QUE ELA DEU, na primeira linha do rótulo — cortado com
+       reticências, e inteiro na dica. O selo `.num` continua o número:
+       é o do metal. */
+    var batismo = nomeDe(porta.n);
+    if (batismo) h += '<span class="nomeada" title="' + emAtributo(batismo) + '">'
+      + emAtributo(batismo) + '</span>';
     if (ap) {
       h += '<b class="nome" style="color:' + ap.cor + '">' + ap.tipo + '</b><span class="caminho">' + (caminhoDe(ap.id) || "—") + "</span>";
       if (vered) h += '<span class="veredito ' + estado + '">' + vered + "</span>";
@@ -1239,7 +1248,10 @@
      `rotulos` no arranjo. A palavra de reserva é a do dono, que o gerador
      escreve aqui; no exemplo, o nome é o que se digitou nesta tela. */
   var PALAVRA_DA_ENTRADA = "Entrada";
+  var PALAVRA_NA_FRASE = "entrada";
   var MAXIMO_DO_NOME = 24;
+  /* o nome da face de um hub declarado, no disco: o do dono */
+  var FACE_DO_HUB = "Hub na Entrada {numero}";
   var ROTULOS = {};
   function rotuloDe(n) {
     var r = ROTULOS[String(n)];
@@ -1247,11 +1259,18 @@
     return nomeDe(n) || PALAVRA_DA_ENTRADA + " " + n;
   }
   function nomeDe(n) { return (DECLARADO[n] || {}).nome || ""; }
+  /* o sintagma sem artigo, para o meio da frase: «Entrada 3», «entrada Meio» */
+  function naFraseDe(n) {
+    var r = ROTULOS[String(n)];
+    if (r) return r.naFrase;
+    var nome = nomeDe(n);
+    return nome ? PALAVRA_NA_FRASE + " " + nome : PALAVRA_DA_ENTRADA + " " + n;
+  }
   function emAtributo(t) {
     return String(t).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
   }
   function linhaDoNome(n) {
-    return '<div class="edita-linha"><span>Nome</span><input class="nome-entrada" type="text"'
+    return '<div class="edita-linha"><span>Nome</span><input class="campo-nome" type="text"'
       + ' data-nome="' + n + '"' + gravaNaEntrada(n, "entrada-nome")
       + ' maxlength="' + MAXIMO_DO_NOME + '" value="' + emAtributo(nomeDe(n)) + '"'
       + ' placeholder="' + emAtributo(PALAVRA_DA_ENTRADA + " " + n) + '" aria-label="Nome"></div>';
@@ -1287,7 +1306,7 @@
     FACES = FACES.filter(function (f) { return f.daEntrada !== String(n); });
     delete p.filho;
     if (valor === "hub") {
-      FACES.push({ nome: "Hub na Entrada " + n, forma: "fileira", regiao: "hub", daEntrada: String(n),
+      FACES.push({ nome: FACE_DO_HUB.replace("{numero}", n), forma: "fileira", regiao: "hub", daEntrada: String(n),
         portas: [1, 2, 3, 4].map(function (i) { return { n: n + "." + i, usb: p.usb, onde: "hub", pos: i }; }) });
     } else if (valor === "extensor") {
       p.filho = { n: n + "a", usb: p.usb, onde: p.onde, esticada: true, cabo: "Extensor, declarado por você" };

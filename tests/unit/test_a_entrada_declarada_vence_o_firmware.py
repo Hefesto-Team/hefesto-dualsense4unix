@@ -282,8 +282,11 @@ def test_a_pagina_e_o_produto_desenham_o_mesmo_hub_e_o_mesmo_extensor() -> None:
     muda sozinho quando a janela reabre.
     """
     pagina = pagina_do_mapa.pagina()
-    prefixo = ee.FACE_DO_HUB_DECLARADO.format(numero="")
-    assert f'"{prefixo}" + n' in pagina, "o hub da página tem outro nome"
+    # O NOME VEM DO DONO, injetado pelo gerador (O-MAPA-QUE-ELA-CORRIGE-01): a
+    # página não compõe a palavra.
+    molde = json.dumps(ee.FACE_DO_HUB_DECLARADO, ensure_ascii=False)
+    assert f"var FACE_DO_HUB = {molde};" in pagina, "o hub da página tem outro nome"
+    assert 'nome: FACE_DO_HUB.replace("{numero}", n)' in pagina
     tamanho = arranjo_desta_maquina.ENTRADAS_DO_HUB_DECLARADO
     quatro = ", ".join(str(i) for i in range(1, tamanho + 1))
     assert f"[{quatro}].map(function (i)" in pagina, "o hub da página tem outro tamanho"

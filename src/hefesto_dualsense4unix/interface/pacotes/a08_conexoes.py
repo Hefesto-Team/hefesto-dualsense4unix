@@ -1164,6 +1164,19 @@ def _linha_da_sugestao(n: int, faca: str, de: str = "", para: str = "",
             f'{_e(faca)}</div>{receita}</div>')
 
 
+def _a_entrada_na_frase(numero: str, *, em: bool = False, maiuscula: bool = False) -> str:
+    """«a Entrada 3», «na entrada Meio» — o nome pelo dono da leitura e a
+    frase pelo dono da grafia (O-MAPA-QUE-ELA-CORRIGE-01)."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations.entrada_a_entrada import nome_da_entrada
+    from hefesto_dualsense4unix.utils.rotulo_da_entrada import com_artigo, na_frase
+
+    declaracao = _declaracao()
+    nome = (nome_da_entrada(numero, maquina=declaracao)
+            if getattr(declaracao, "mapa", None) is not None else None)
+    return com_artigo(na_frase(numero, nome), em=em, maiuscula=maiuscula)
+
+
 def _card_da_ordem(ordem: Any, n: int = 1) -> str:
     """A linha de UMA ordem de serviço: a instrução, e o de→para quando há destino.
 
@@ -1188,10 +1201,15 @@ def _card_da_ordem(ordem: Any, n: int = 1) -> str:
     # esquerda mostrava o caminho do kernel («4-1.1.4») e a da direita só o
     # número («2»). A entrada do aparelho sai do mapa dela, pelos dois lados
     # do buraco; sem entrada declarada, o caminho fica, porque é o que se sabe.
-    mapa = getattr(_declaracao(), "mapa", None)
+    # E AS DUAS DIZEM O NOME QUE ELA DEU (O-MAPA-QUE-ELA-CORRIGE-01): «Meio →
+    # Entrada 2», pelo dono da leitura.
+    declaracao = _declaracao()
+    mapa = getattr(declaracao, "mapa", None)
     numero = mapa_das_portas.porta_de(mapa, caminho) if mapa is not None else None
-    de = rotulo_do_numero(numero or "") or caminho or TRACO
-    return _linha_da_sugestao(n, instrucao, de, rotulo_do_numero(destino) or destino)
+    dela = declaracao if mapa is not None else None
+    de = rotulo_do_numero(numero or "", maquina=dela) or caminho or TRACO
+    return _linha_da_sugestao(
+        n, instrucao, de, rotulo_do_numero(destino, maquina=dela) or destino)
 
 
 #: O nome da caixa — dela, 26/09/2026 (`D-2609-A-SUGESTAO-DE-CONEXAO-DIZ-O-QUE-MOVER`),
@@ -4165,8 +4183,8 @@ def escolher_entrada(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "tempos: primeiro o que vai, depois onde vai.")
     if not logica.colocar(numero):
         raise RuntimeError(
-            f"não consegui pôr o aparelho na entrada {numero} — ela não está no "
-            f"desenho do gabinete.")
+            f"não consegui pôr o aparelho {_a_entrada_na_frase(numero, em=True)} — "
+            "ela não está no desenho do gabinete.")
     _gravar_o_mapa(p)
 
 
@@ -4182,7 +4200,7 @@ def tirar_daqui(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not numero:
         raise ValueError("o clique não disse de qual entrada tirar.")
     if not _logica_do_mapa().tirar(numero):
-        raise RuntimeError(f"a entrada {numero} já está vazia.")
+        raise RuntimeError(f"{_a_entrada_na_frase(numero, maiuscula=True)} já está vazia.")
     _gravar_o_mapa(p)
 
 
@@ -7367,14 +7385,21 @@ def html_da_porta_medida(porta: dict[str, Any] | None) -> str:
 
 
 def html_das_entradas_mapeadas(portas: Any) -> str:
-    """As entradas que já têm nome, uma por linha: o nome e o lugar dela."""
+    """As entradas que já têm nome, uma por linha: o nome e onde ela fica.
+
+    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-O-NOME-E-DA-POSICAO): a linha dizia
+    «2 · Entrada 2 · pci-0000:…-usb-0:3» — o número gravado como nome, o
+    rótulo, e o endereço do sistema. Agora é o nome pelo dono, em negrito, e a
+    face do gabinete («Frente do gabinete»), que é o que ela procura com os olhos.
+    """
     nomeadas = [p for p in (portas or []) if isinstance(p, dict) and p.get("nome")]
     if not nomeadas:
         return '<li class="vazio">Nenhuma ainda.</li>'
     linhas = []
     for porta in nomeadas:
-        onde = " · ".join(str(x) for x in (porta.get("rotulo"), porta.get("lugar")) if x)
-        linhas.append(f"<li><b>{html.escape(str(porta['nome']))}</b>"
+        nome = str(porta.get("nome") or porta.get("rotulo") or "")
+        onde = str(porta.get("lugar_no_gabinete") or "")
+        linhas.append(f"<li><b>{html.escape(nome)}</b>"
                       f"<span>{html.escape(onde)}</span></li>")
     return "".join(linhas)
 
