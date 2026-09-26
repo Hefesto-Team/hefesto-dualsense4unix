@@ -1049,3 +1049,42 @@ def test_o_teclado_de_baixo_consumo_esperando_tem_o_desenho_do_teclado(
     assert "PS + Create" not in linha
     assert "ponha o teclado para parear" in linha
 
+
+@pytest.mark.parametrize("quantos", [2, 3, 4])
+def test_a_lampada_aparece_sem_ela_abrir_caixa_nenhuma(
+    a08: Any, monkeypatch: pytest.MonkeyPatch, quantos: int
+) -> None:
+    """O passo b5 dela, pelo que ela VÊ: a lâmpada mora no corpo da caixa do
+    destino, e o corpo de uma caixa fechada não aparece. Com os controles
+    amontoados sem som nenhuma caixa passava do limite, nenhuma abria, e a
+    lâmpada da proposta ficava escondida — a prova de tela a clicava por
+    JavaScript num botão que ela não via. A caixa da lâmpada abre quando
+    nenhuma outra abriria; a escolha dela vence.
+
+    MORDIDA: tire o destino da proposta do ``_o_aberto`` — nenhuma caixa abre,
+    a lâmpada fica no corpo escondido, e esta régua reprova.
+    """
+    from hefesto_dualsense4unix.integrations import plano_de_radio
+
+    _montar(a08, monkeypatch)
+    onde = {c: 1 for c in QUATRO[:quantos]}
+    planos = plano_de_radio.plano_por_adaptador(
+        _estado(onde)["controllers"], adaptadores=ADAPTADORES_DA_TELA,
+        listar=lambda _p: [], raiz="/nao/existe")
+    ordem = plano_de_radio.ordem_de_redistribuicao(planos)
+    assert ordem is not None
+    estado = _estado(onde, central={"movimentos": [], "proposta": ordem.publicar()})
+    cena = _cena(a08, estado)
+
+    destino = _id(ordem.destino)
+    assert cena["aberto"] == destino
+    cartao = a08.html_do_lugar(next(lug for lug in cena["lugares"] if lug["id"] == destino),
+                               cena)
+    assert cartao.startswith('<div class="lugar aberto"') and 'class="lampada"' in cartao
+
+    # A escolha dela vence: fechar a caixa da lâmpada a deixa fechada.
+    a08.abrir_adaptador(None, {"alvo": destino}, None)
+    assert _cena(a08, estado)["aberto"] is None
+    # E abrir outra abre a outra.
+    a08.abrir_adaptador(None, {"alvo": _id(ADAPTADORES_DA_TELA[1])}, None)
+    assert _cena(a08, estado)["aberto"] == _id(ADAPTADORES_DA_TELA[1])
