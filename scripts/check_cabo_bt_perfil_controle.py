@@ -84,7 +84,8 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "procurar-o-arquivo": "abre o seletor do sistema para ela apontar o "
                           "`.desktop` — é da máquina, e nada aqui toca o "
                           "controle",
-    "ver-detalhes": "joga o registro técnico no painel — é leitura",
+    "copiar-registro": "copia o registro técnico para a área de transferência "
+                       "— é leitura (o «Ver detalhes» saiu em 25/09/2026)",
     # ---- o «Criar perfil para um jogo» (21/09/2026) ----
     # OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01. Ele só abre a escolha do
     # jogo; quem cria o perfil é o gravador da aba Perfis. Os quatro da lista
@@ -105,8 +106,8 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                    "(TESTAR-O-MICROFONE-01, 20/09/2026)",
     # ---- máquina e serviço: nada disso passa pelo controle ----
     "hefesto": "liga e desliga o MODO do produto — é do serviço",
-    "desligar": "para o serviço — é systemd",
-    "retomar": "retoma o serviço — é systemd",
+    "parar-ou-retomar": "para, retoma ou ativa o serviço — é systemd (o "
+                        "«Parar» e o «Retomar» viraram um botão só em 25/09/2026)",
     "reiniciar": "reinicia o serviço — é systemd",
     "atualizar": "atualiza o produto — é da máquina",
     "autostart": "liga junto com o computador — é do sistema",
@@ -114,8 +115,8 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "restaurar-de-fabrica": "devolve o perfil de fábrica — é do perfil",
     "aplicar-aos-jogos": "escreve a linha de inicialização na Steam — é do disco",
     "refazer-consertos": "refaz os consertos automáticos — é da máquina",
-    "refazer-proton": "refixa o Proton — é da máquina",
-    "procurar-camadas": "procura camadas Vulkan — é da máquina",
+    "fixar-proton": "fixa ou solta o Proton dos jogos — é da máquina",
+    "corrigir-vulkan": "tira ou devolve a sobreposição Vulkan — é da máquina",
     "perfil-da-mesa": "escolhe o perfil de energia — é do daemon",
     "examinar-portas": "examina as portas USB — é leitura do barramento",
     "escolher-aparelho": "escolhe o aparelho da aba Conexões — é da tela",
