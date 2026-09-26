@@ -1229,6 +1229,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     pastas = ([Path(x) for x in a.pasta_do_ambiente] if a.pasta_do_ambiente
               else _pastas_do_ambiente_padrao(lar))
     feitos, completo = desfazer_as_estradas(pastas, lar)
+    if completo:
+        #: O DESFAZER QUE FICOU PARA DEPOIS deixou a pasta de estado de pé SÓ
+        #: pelo registro (o uninstall apagou o resto): terminado ele, ela sai.
+        #: Só `rmdir` — uma pasta com qualquer outra coisa dentro fica, e é o
+        #: passo dela que a nomeia. No uninstall de uma vez, o `default.env`
+        #: ainda está ali e nada sai daqui.
+        for pasta in pastas:
+            if pasta.name != "launch_env":
+                continue
+            for vazia in (pasta, pasta.parent):
+                with contextlib.suppress(OSError):
+                    vazia.rmdir()
     linhas = [f for f in (frase_do_desfeito(x) for x in feitos) if f]
     for linha in linhas:
         print(linha)

@@ -821,3 +821,52 @@ def test_sem_purge_fica_so_o_historico_e_o_uninstall_diz(tmp_path: Path) -> None
     # Os lançadores saem com ou sem --purge-config: não são configuração do Hefesto.
     assert json.loads(alvos["heroic"].read_text(encoding="utf-8")) == HEROIC_DELA
     assert not alvos["mgba"].exists()
+
+
+def test_o_desfazer_adiado_termina_depois_e_a_casa_fica_limpa(tmp_path: Path) -> None:
+    """O caminho do ADIADO, de ponta a ponta: o `config.json` do Heroic não
+    abre na hora do uninstall (um Heroic que morreu no meio de um `write`). O
+    uninstall não o reescreve, e o registro das estradas FICA — sozinho — na
+    pasta de estado, com `--purge-config` inclusive. Ela abre o Heroic, que
+    regrava o arquivo, e roda o comando que o ADIADO disse: o desfazer termina
+    pelo registro (o valor de antes dela volta), e a pasta que só existia por
+    ele sai junto — o «limpa?» responde limpo.
+
+    AS MORDIDAS: apague o `launch_env` inteiro no uninstall mesmo com o
+    desfazer adiado e o registro some (o valor de antes dela não volta); tire
+    do `main` o `rmdir` do que ficou vazio e o «limpa?» acusa a pasta de estado
+    para sempre.
+    """
+    r, repo = _casa_de_mentira(tmp_path, xdg_fora=False)
+    alvos = _instalar_pelos_donos(r, repo, heroic_nativo=False, com_venv=True)
+    inteiro = alvos["heroic"].read_text(encoding="utf-8")
+    alvos["heroic"].write_text(inteiro[: len(inteiro) // 2], encoding="utf-8")
+
+    rodou, _ = _desinstalar(tmp_path, r, repo, UNINSTALL.read_text(encoding="utf-8"),
+                            xdg_fora=False)
+
+    assert rodou.returncode == 0, rodou.stderr[-3000:]
+    assert "ADIADO" in rodou.stdout
+    estado = r.estado / m.SLUG
+    assert sorted(os.listdir(estado)) == ["launch_env"], sorted(os.listdir(estado))
+    assert sorted(os.listdir(estado / "launch_env")) == ["estradas.json"]
+    assert alvos["lutris"].read_text(encoding="utf-8") == LUTRIS_DELA, (
+        "o arquivo que não abriu segurou o desfazer dos outros lançadores")
+    assert _limpa(r, tmp_path).returncode == 1, "o «limpa?» não viu o desfazer pendente"
+
+    alvos["heroic"].write_text(inteiro, encoding="utf-8")  # ela abriu o Heroic
+    py = shutil.which("python3", path=SISTEMA)
+    assert py, "sem python3 no sistema"
+    depois = subprocess.run(
+        [py, "-I", str(RAIZ / "src/hefesto_dualsense4unix/integrations/cura_por_estrada.py"),
+         "--desfazer"],
+        env={"HOME": str(r.lar), "PATH": SISTEMA, "LANG": "C.UTF-8",
+             "PYTHONDONTWRITEBYTECODE": "1"},
+        capture_output=True, text=True, timeout=60, check=False, cwd=str(tmp_path))
+
+    assert depois.returncode == 0, depois.stdout + depois.stderr
+    assert json.loads(alvos["heroic"].read_text(encoding="utf-8")) == HEROIC_DELA, (
+        "o desfazer de depois não sabia mais o que era nosso: o registro se perdeu")
+    assert not estado.exists(), f"a pasta de estado ficou: {sorted(os.listdir(estado))}"
+    limpa = _limpa(r, tmp_path)
+    assert limpa.returncode == 0, limpa.stdout + limpa.stderr
