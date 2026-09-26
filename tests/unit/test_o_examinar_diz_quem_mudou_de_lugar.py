@@ -26,6 +26,19 @@ AS MORDIDAS, uma por cura (arranque, veja reprovar, devolva):
   dongle para a 5.1;
 * o ramo do «Hub» cinza no editor → o «Hub» volta a levar o gesto ao disco;
 * o ramo da ponta no ``_declarar_na_entrada`` → a ponta volta a recusar.
+
+E AS DA CONFERÊNCIA (26/09/2026), cada uma sem régua que a pegasse:
+
+* o ``parados`` de ``identidades`` → o gêmeo que chega (ou sai) faz o
+  reexame dizer que o aparelho parado «mudou de lugar»;
+* o modelo fora da semente do caminho → outro modelo que chega no caminho de
+  quem saiu herda o ``id`` dele, e o reexame não o vê chegar;
+* o ``examinaNoProduto()`` do «Já movi» das Sugestões → no produto o botão
+  fica morto (a página não pinta, e o piloto não é chamado);
+* o ``mapaDaTela`` do ``hefestoArranjo`` → o reexame joga fora o que ela
+  ensinou nesta tela;
+* o ``quem.classe !== "hub"`` do «Hub» cinza → o hub de verdade na entrada
+  também apaga o «Hub».
 """
 
 from __future__ import annotations
@@ -177,6 +190,45 @@ def test_dois_iguais_sem_serial_nao_viram_um_so() -> None:
     assert ids["9-3"] != ids["9-4"], "o serial de fábrica repetido juntou dois aparelhos"
 
 
+def _mouse(no: str, caminho: str, vid: str = "3333", pid: str = "0003") -> Aparelho:
+    return _aparelho(no, caminho, vid, pid, "Mouse", ("03", "01", "02"), "Mouse de prova")
+
+
+def _mudaram(dado: dict[str, Any]) -> dict[str, tuple[str | None, str]]:
+    """``id -> (antes, agora)`` de quem o reexame da página listaria."""
+    antes, agora = (dado["leituras"][k]["caminho"] for k in ("antes", "agora"))
+    return {i: (antes.get(i), c) for i, c in agora.items() if antes.get(i) != c}
+
+
+def test_o_gemeo_que_chega_nao_move_quem_ficou(disco: Path) -> None:
+    """Sem serial, o gêmeo que chega ou sai não move quem não se mexeu.
+
+    O único mouse daquele modelo tem o ``id`` do modelo; quando chega o gêmeo,
+    o modelo deixa de separar os dois, e a semente de quem ficou na 9-3 virava
+    o caminho: o reexame dizia «Agora Está em 9-3» de quem não saiu dali.
+    """
+    _ler(_mouse("/sys/x/a", "9-3"))
+    chegou = _ler(_mouse("/sys/x/a", "9-3"), _mouse("/sys/x/b", "9-4"), reexame=True)
+    assert [c for _a, c in _mudaram(chegou).values()] == ["9-4"], (
+        "o mouse que ficou na 9-3 foi listado como quem mudou de lugar: "
+        f"{_mudaram(chegou)}")
+    saiu = _ler(_mouse("/sys/x/a", "9-3"), reexame=True)
+    assert _mudaram(saiu) == {}, f"o gêmeo saiu e o que ficou «mudou»: {_mudaram(saiu)}"
+    # e o único, quando se move, continua reconhecido pelo modelo
+    movido = _ler(_mouse("/sys/x/a", "9-5"), reexame=True)
+    assert list(_mudaram(movido).values()) == [("9-3", "9-5")], _mudaram(movido)
+
+
+def test_outro_modelo_no_caminho_de_quem_saiu_e_outro_aparelho(disco: Path) -> None:
+    """Dois gêmeos saem e dois de outro modelo chegam: um deles, no mesmo caminho."""
+    _ler(_mouse("/sys/x/a", "9-3"), _mouse("/sys/x/b", "9-4"))
+    trocou = _ler(_mouse("/sys/x/c", "9-3", "4444", "0004"),
+                  _mouse("/sys/x/d", "9-5", "4444", "0004"), reexame=True)
+    assert sorted(c for _a, c in _mudaram(trocou).values()) == ["9-3", "9-5"], (
+        "o aparelho de outro modelo que chegou na 9-3 herdou o id de quem saiu "
+        f"dali, e o reexame não o viu chegar: {_mudaram(trocou)}")
+
+
 def test_o_serial_nao_chega_a_pagina(disco: Path) -> None:
     """O ``id`` é um resumo com sal: nem o serial, nem o resumo sem sal."""
     import hashlib
@@ -283,6 +335,13 @@ def test_o_piloto_tira_o_arranjo_da_resposta_e_entrega_como_reexame() -> None:
         outra, arranjo_desta_maquina.PAGINA, {chave: dado})
     rodar_o_laco()
     assert len(perguntas) == 1, "o arranjo foi entregue a outra página"
+    # noutra página a chave é campo dela: segue para a pintura, inteira
+    de_outra = {chave: "campo da 08", "outro": 2}
+    assert hefesto_vivo.Piloto._o_arranjo_relido(
+        outra, "08-conexoes.html", de_outra) is de_outra, (
+        "o piloto comeu a chave de outra página como se fosse o arranjo do mapa")
+    rodar_o_laco()
+    assert len(perguntas) == 1, "o piloto tentou entregar um arranjo a outra página"
 
     # e é a volta do gesto que tira o arranjo da resposta, antes da pintura
     import inspect
@@ -560,6 +619,68 @@ def test_o_examinar_na_pagina_diz_quem_mudou_de_lugar(disco: Path) -> None:
     assert "Está no Hub" in texto and "Direto no Gabinete" not in texto, (
         "a webcam está no hub, e o reexame a põe direto no gabinete: " + texto)
     assert "Dongle" not in texto, "o dongle não saiu da 5, e o reexame o acusa"
+
+
+def test_o_ja_movi_das_sugestoes_tambem_rele(disco: Path) -> None:
+    """O «Já movi» das Sugestões é o mesmo «Examinar»: no produto, leva o gesto."""
+    aberta = _ler(_teclado("9-1"), _dongle("9-5"), _webcam("9-4"))
+    lidas, mensagens = _na_pagina([
+        _js(aberta),
+        _clicar('.modo[data-modo="ideal"]'),
+        _LER_O_JA_MOVI,
+        _clicar("#painel #reexaminar"),
+        _LER,
+    ])
+    ja_movi, depois = lidas[2], lidas[4]
+    assert ja_movi == "reexaminar", (
+        f"no produto o «Já movi» não leva o gesto, e fica morto: {ja_movi!r}")
+    assert [m for m in mensagens if m.get("gesto") == "reexaminar"], (
+        f"o clique no «Já movi» não chegou ao piloto: {mensagens}")
+    assert depois["modo"] == "ideal" and "Nada Mudou" not in depois["painel"], (
+        "o «Já movi» pintou o reexame antes de a leitura nova chegar")
+
+
+def test_o_reexame_guarda_o_que_ela_ensinou_na_tela(disco: Path) -> None:
+    """Ela ensina que a webcam está na 4, e o «Examinar» não desfaz isso."""
+    aberta = _ler(_teclado("9-1"), _dongle("9-5"), _webcam("9-4"))
+    relida = _ler(_teclado("9-2"), _dongle("9-5"), _webcam("9-4"), reexame=True)
+    webcam = next(a["id"] for a in aberta["aparelhos"] if a["tipo"] == "Webcam")
+    lidas, _ = _na_pagina([
+        _js(aberta),
+        _clicar(f'.chip[data-ap="{webcam}"]'),
+        _clicar('.plug[data-porta="4"]'),
+        _LER,
+        _js(relida, reexame=True),
+        _LER,
+        _clicar("#voltar-leitura"),
+        _LER,
+    ])
+    ensinado, reexame, fechado = lidas[3], lidas[5], lidas[7]
+    assert "4 de 5 Entradas Mapeadas" in ensinado["painel"], ensinado["painel"]
+    assert "Webcam" not in reexame["painel"], (
+        "a webcam não saiu da 4, e o reexame a lista: " + reexame["painel"])
+    assert "4 de 5 Entradas Mapeadas" in fechado["painel"], (
+        "o «Examinar» jogou fora o que ela ensinou nesta tela: " + fechado["painel"])
+    assert "Fora do Mapa" not in fechado["painel"], fechado["painel"]
+
+
+def test_o_hub_de_verdade_na_entrada_nao_apaga_o_hub(disco: Path) -> None:
+    """Um hub direto na 3 é hub: ali o «Hub» continua oferecido, e grava."""
+    mapa = _mapa()
+    mapa.portas["3"] = PortaDeclarada(caminho="9-3")
+    assert gravar_maquina({"mapa": mapa.model_dump(mode="json")})
+    aberta = _ler(_teclado("9-1"), _hub("9-3"))
+    lidas, _ = _na_pagina([_js(aberta), _clicar('.plug[data-porta="3"]'), _LER])
+    hub = lidas[2]["hub"]
+    assert hub is not None and hub["cinza"] is None, (
+        f"o hub de verdade na 3 apagou o «Hub»: {hub}")
+    assert hub["gesto"] == "entrada-o-que-tem", hub
+
+
+#: O gesto do «Já movi» das Sugestões — o segundo botão com o id `reexaminar`.
+_LER_O_JA_MOVI = (
+    "(function(){const b=document.querySelector('#painel #reexaminar');"
+    "return b ? (b.dataset.gesto || '') : 'sem o botão';})()")
 
 
 def test_o_examinar_do_exemplo_continua_na_pagina() -> None:
