@@ -6833,7 +6833,7 @@ def checkup_atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 MAPEAR_DIZ = {
     "parado": "Conecte o DualSense por USB numa entrada do computador.",
     "esperando": "Conecte o DualSense por USB numa entrada do computador.",
-    "porta": "Dê um nome e o lugar desta entrada, e salve. Depois, passe o cabo para a próxima.",
+    "porta": "Entrada encontrada. Dê um nome e o lugar dela, e salve.",
 }
 
 
@@ -6845,25 +6845,44 @@ def _o_mapa() -> Any:
 
 
 def html_da_porta_medida(porta: dict[str, Any] | None) -> str:
-    """O que o Hefesto mediu da porta da vez, numa linha: nome, USB, onde, quedas."""
+    """O que o Hefesto mediu da porta da vez, em pares «o quê · valor».
+
+    A lista é de fatos MEDIDOS: a entrada, a velocidade, se está direto no
+    computador ou num hub, as quedas dos últimos 7 dias e o lugar que a medição
+    deu. O que não foi medido não entra — a linha some, não vira travessão.
+    """
     if not porta:
         return '<i class="nada"></i>'
-    partes = [f"<b>{html.escape(str(porta.get('rotulo') or ''))}</b>"]
+    fatos = [("Entrada", str(porta.get("rotulo") or ""))]
     if porta.get("usb"):
-        partes.append(f"USB {html.escape(str(porta['usb']))}")
-    partes.append(f"num hub ({html.escape(str(porta.get('hub_produto') or 'hub'))})"
-                  if porta.get("hub") else "direto no computador")
+        fatos.append(("Velocidade", f"USB {porta['usb']}"))
+    fatos.append(("Ligação", f"num hub ({porta.get('hub_produto') or 'hub'})"
+                  if porta.get("hub") else "direto no computador"))
     storm = porta.get("storm")
     if isinstance(storm, int) and not isinstance(storm, bool):
-        partes.append("sem quedas em 7 dias" if storm == 0
-                      else f"{storm} {'queda' if storm == 1 else 'quedas'} em 7 dias")
+        fatos.append(("Quedas", "nenhuma em 7 dias" if storm == 0
+                      else f"{storm} {'queda' if storm == 1 else 'quedas'} em 7 dias"))
     if porta.get("lugar_no_gabinete"):
-        partes.append(html.escape(str(porta["lugar_no_gabinete"])))
-    return _PONTO.join(partes)
+        fatos.append(("Onde fica", str(porta["lugar_no_gabinete"])))
+    pares = "".join(f"<dt>{html.escape(k)}</dt><dd>{html.escape(v)}</dd>" for k, v in fatos if v)
+    return f'<dl class="mp-fatos">{pares}</dl>'
+
+
+def html_das_entradas_mapeadas(portas: Any) -> str:
+    """As entradas que já têm nome, uma por linha: o nome e o lugar dela."""
+    nomeadas = [p for p in (portas or []) if isinstance(p, dict) and p.get("nome")]
+    if not nomeadas:
+        return '<li class="vazio">Nenhuma ainda.</li>'
+    linhas = []
+    for porta in nomeadas:
+        onde = " · ".join(str(x) for x in (porta.get("rotulo"), porta.get("lugar")) if x)
+        linhas.append(f"<li><b>{html.escape(str(porta['nome']))}</b>"
+                      f"<span>{html.escape(onde)}</span></li>")
+    return "".join(linhas)
 
 
 def campos_do_mapear(foto: dict[str, Any] | None = None) -> dict[str, str]:
-    """Os três campos da tela do Mapear, a partir da foto do dono."""
+    """Os campos da tela do Mapear, a partir da foto do dono."""
     if foto is None:
         try:
             mapa = _o_mapa()
@@ -6876,7 +6895,9 @@ def campos_do_mapear(foto: dict[str, Any] | None = None) -> dict[str, str]:
     feitas = foto.get("feitas") or 0
     return {
         "mapear-diz": MAPEAR_DIZ.get(estado, MAPEAR_DIZ["parado"]),
+        "mapear-estado": estado,
         "mapear-porta": html_da_porta_medida(foto.get("porta")),
+        "mapear-lista": html_das_entradas_mapeadas(foto.get("portas")),
         "mapear-conta": ("Nenhuma entrada salva ainda." if not feitas
                          else f"{feitas} {'entrada salva' if feitas == 1 else 'entradas salvas'}."),
     }

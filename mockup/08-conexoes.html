@@ -1176,11 +1176,13 @@
          `pointer-events:none` é a mesma promessa, e ela se desfaz sozinha no
          tique em que o piloto tira o `off`. */
   .gc-item.off .gc-nome{color:var(--comment)}
-  .gc-item.off{cursor:default}
+  .gc-item.off{cursor:default;border-style:dashed}
   .gc-item.off .gc-resumo,
-  .gc-item.off .gc-seta{display:none}
+  .gc-item.off .gc-corpo{display:none}
+  .gc-item.off .gc-dono{visibility:hidden}
+  .gc-item.off .ds-mini{opacity:.3}
   .gc-item.off .gc-abre,
-  .gc-item.off .gc-seta{pointer-events:none}
+  .gc-item.off .gc-num{pointer-events:none;color:var(--comment)}
 
   /* ================= Conexões =================
      Três assuntos, três quadros, agrupados por PERGUNTA:
@@ -1304,6 +1306,10 @@
   .col-exame::-webkit-scrollbar-thumb{background:var(--comment);border-radius:3px}
   .lado-d .col-ordem{flex:1;display:flex;flex-direction:column}
   .lado-d .col-ordem > .ordem{flex:1;display:flex;flex-direction:column}
+  /* o de→para fica no MEIO da caixa: encostado no canto de cima ele deixava
+     a caixa inteira parecendo vazia. */
+  .lado-d .col-ordem > .ordem{justify-content:center;align-items:center}
+  .ordem .receita:first-child{margin-top:0}
   /* 11px, e o número é MEDIDO, não escolhido: com os botões dentro das colunas o
      vão nascia da sobra que os itens de cada coluna repartiam entre si, e não de
      uma margem. 11 é o que devolve o quadro aos mesmos 204px e a fileira ao mesmo
@@ -1582,6 +1588,9 @@
      para o que pede atenção — e ele não acusa o Hefesto: a morte é do driver
      do kernel, e a saída estável é o cabo. */
   .gc .ext-vaga{display:contents}
+  /* NA GRADE DOS CARTÕES o externo atravessa as quatro colunas, embaixo. */
+  .gc .ext-linha{grid-column:1/-1;border:1px solid var(--border-sutil);
+                 border-left:3px dashed var(--border-forte);border-radius:7px}
   .gc .ext-vaga > .nada{display:none}
   .gc .ext-linha{display:flex;align-items:center;gap:11px;
                  min-height:30px;padding:4px 12px;
@@ -1607,255 +1616,160 @@
   /* o dropdown que ainda espera resposta chama o olho pela borda, não por faixa */
   select.pronto.pergunta{border-color:var(--cyan);color:var(--cyan)}
 
-  /* ================= o acordeão da Gestão de Controles =================
-     CSS PURO, ZERO JAVASCRIPT — o mockup inteiro não tem uma linha de script, e
-     o cruzamento do mapa do controle já é feito só com `:has()`. Aqui a peça é
-     um grupo de `<input type=radio>` escondido: cada linha fechada é um
-     `<label>` que o marca, e por ser RÁDIO marcar um desmarca os outros — que é,
-     ao pé da letra, *"clicar num abre e fecha os outros"*.
+  /* ================= os cartões da Gestão de Controles =================
+     A-08-O-CHECKUP-ABSORVE-A-GESTAO-01, 25/09/2026 — o desenho de quem
+     coordena, depois de ela ver o acordeão com a Gestão dentro do Check-up:
+     *«tá quebradíssima a 8»*. A linha que abria e fechava virou UM CARTÃO POR
+     LUGAR, os quatro lado a lado — a mesa desta aba é de quatro —, e nada mais
+     abre nem fecha: o que era o corpo escondido fica à vista. O rádio `gc-*`
+     continua sendo o ALVO de saída (a fita e o cartão marcado), e só isso.
+     A gramática é a da aba Sistema que ela aprovou: rótulo à esquerda, valor
+     à direita, fio de 1px entre as linhas, 25,5px por linha.
 
-     A CLASSE NÃO PODE SE CHAMAR `peca` NEM `tira` NEM `mesa`, e as três
-     cicatrizes são medidas: `class="peca"` aparece 39 vezes DENTRO do
-     `ds_limpo.svg`; `.tira` é a fila de abas do esqueleto (a aba Controles
-     pagou 8px de cabeçalho por isso); `.mesa` já existe no `topo.html`. Nome de
-     classe se confere no `topo.html` E no SVG, ANTES de escrever. */
+     CSS PURO, ZERO JAVASCRIPT, como o acordeão era. E A CLASSE NÃO SE CHAMA
+     `peca` NEM `tira` NEM `mesa`: as três já têm dono (o SVG, a fila de abas
+     do esqueleto e o `topo.html`). */
   .gc-r{display:none}
-  /* UMA LISTA EMOLDURADA, E NÃO QUATRO CARTÕES SOLTOS — e o preço estava medido.
-     Quatro cartões com borda de 2px e 9px de vão entre eles custavam 4×4 de
-     borda + 27 de vão = **43px** que não mostram nada: mais do que uma linha
-     inteira de controle (34). Com uma moldura só e fios de 1px entre as linhas
-     o mesmo conteúdo cabe em 125px fechado, contra 163 — e foram esses 44px que
-     puseram o terceiro quadro de volta na tela.
-     A COR LIDA NÃO SE PERDEU: ela virou a barra de 3px na aresta esquerda de
-     cada linha, que é a MESMA promessa da borda inteira e agora cai numa coluna
-     só, alinhada nas quatro — que é mais fácil de comparar do que quatro
-     retângulos de cores diferentes. */
-  .gc{display:flex;flex-direction:column;border:1px solid var(--border-forte);
-      border-radius:9px;background:var(--app-bg);overflow:hidden}
-  /* A BORDA É A COR QUE O HEFESTO LEU DO APARELHO — e só isso.
-     Decisão dela, 28/08: sem seletor de cor nesta aba; quem o produto lê,
-     mostra; quem ele não lê fica com borda NEUTRA, e está dito. Pelo cabo ele
-     pergunta e o valor vem de lá; pelo rádio ele AINDA NÃO PERGUNTA
-     (`ONDA-CONEXOES-11`) — e uma borda colorida ali seria uma cor que ninguém
-     leu.
-
-     A COR VIROU ELEMENTO — 03/09/2026, `IDENTIDADE-VEM-DE-CIMA-01`. Ela era um
-     `--plastico:#hex` INLINE no `.gc-item`, e um `#hex` inline é o mockup
-     mandando na tela: com o controle White dela no cabo, a linha continuava com
-     a borda do Cosmic Red do desenho. O `escrever()` do piloto **não tem alvo de
-     variável de CSS** — não há como um pacote escrever um `--plastico`. Então a
-     cor lida passa a ser a tinta de um elemento, sobreposta aos mesmos 3px da
-     borda: o desenho não muda um pixel e o pacote passa a pintá-la.
-
-     O ALVO É `cor` E NÃO `fundo`, e a diferença é MEDIDA, não de gosto: o
-     `fundo` compara antes de escrever, e o CSSOM normaliza na atribuição
-     (`#ae335a` volta `rgb(174, 51, 90)`). Um hex por ali nunca volta igual ao
-     que se escreveu e soma UMA pintura por tique, para sempre — o contador de
-     pinturas é O instrumento com que esta casa prova que um endereço existe, e
-     um contador que infla é pior que um campo parado. O alvo `cor` escreve e
-     SÓ ENTÃO compara, exatamente por causa disso. Daí o `background:currentColor`.
-
-     VAZIO NÃO INVENTA: sem cor lida o pacote manda vazio, o alvo `cor` devolve
-     o elemento à folha de estilo (`color:transparent`) e a borda neutra
-     reaparece — regra dela, campo sem informação não mostra nada. */
-  .gc-item{position:relative;
-           border-left:3px solid var(--border-forte);
-           border-top:1px solid var(--border-sutil)}
-  .gc-item:first-child{border-top:none}
-  /* `left:-3px` é medido do lado de DENTRO da borda (o bloco que contém um
-     absoluto é a caixa de padding), logo a tinta cai exatamente sobre os 3px da
-     borda esquerda. `top:-1px` cobre também a linha de 1px que separa uma linha
-     da outra — sem ele a barra nasceria 1px abaixo em todas menos a primeira. */
-  .gc-cor{position:absolute;left:-3px;top:-1px;bottom:0;width:3px;display:block;
+  .gc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .gc-item{position:relative;display:flex;flex-direction:column;min-width:0;
+           padding:3px 12px 8px;border:1px solid var(--border-forte);
+           border-radius:9px;background:var(--app-bg);overflow:hidden}
+  /* A COR LIDA DO PLÁSTICO é a faixa de 3px no alto do cartão. Ela é a TINTA
+     DE UM ELEMENTO, e não uma variável de CSS: o `escrever()` do piloto não
+     tem alvo de variável, e o alvo é `cor` e não `fundo` porque o CSSOM
+     normaliza o hex na atribuição e o `fundo` acusaria mudança em todo tique
+     (medido em 03/09/2026). Sem cor lida o pacote manda vazio, o elemento
+     volta a `color:transparent` e a faixa some — campo sem informação não
+     mostra nada. */
+  .gc-cor{position:absolute;left:0;right:0;top:0;height:3px;display:block;
           color:transparent;background:currentColor}
-  .gc-cabeca{display:flex;align-items:center;gap:11px;
-             height:30px;padding:0 12px;font-size:12px;color:var(--texto-mudo)}
-  /* O ALVO DO CLIQUE ENVOLVE O TEXTO, e não o cobre. Uma capa `position:absolute`
-     por cima da linha inteira resolvia o clique e MATAVA o `title` de cada
-     pedaço: quem passasse o mouse sobre "vê como Xbox 360" via a dica da capa,
-     não a do campo. Com o `<label>` ENVOLVENDO os spans, o clique continua
-     valendo em toda a linha e a dica de dentro é a que aparece.
-     E o gesto de FECHAR mora na seta, que é um segundo `<label>` — o `for` de um
-     label não muda com CSS, e `<label>` dentro de `<label>` é HTML inválido. */
-  .gc-abre{flex:1;min-width:0;height:100%;display:flex;align-items:center;gap:11px;
-           cursor:pointer;border-radius:7px}
-  .gc-abre:hover,.gc-seta:hover{background:rgba(255,255,255,.035)}
-  /* O NOME TEM UMA LARGURA SÓ NAS QUATRO LINHAS, e isso não é capricho: com ele
-     natural, os quatro rótulos mediam 200,4 / 206,2 / 214,3 / 168,9 px, e o vão
-     entre o nome e o resumo mudava 45px de uma linha para a outra — ela repara
-     em dois. Com a coluna fixa o vão é o mesmo nas quatro, e o resumo continua
-     encostado à direita. O teto é o rótulo mais largo da mesa (o P3, "Galactic
-     Purple"); a folga é a diferença para ele. */
-  .gc-nome{color:var(--fg);font-weight:600;white-space:nowrap;flex:0 0 var(--larg-nome)}
-  /* GRADE, e não uma fila: as colunas do resumo — máscara, microfone e bateria —
-     têm de começar no MESMO x nas linhas todas. Em fila cada uma começava onde o
-     nome do controle acabava, e são nomes de comprimentos diferentes: o olho
-     compara colunas que não existem.
-     AS FRAÇÕES SÃO AS LARGURAS NATURAIS MEDIDAS (126 / 272 / 76 px, o conteúdo
-     mais largo de cada coluna nas quatro linhas), e não três números escolhidos:
-     em `fr` elas repartem a linha inteira na mesma proporção, o que apaga o vão
-     de 350px que sobrava entre o nome e um resumo encostado à direita. Como as
-     linhas têm todas a mesma largura, as colunas caem no mesmo x sozinhas.
-     A última é `justify-self:end` para os percentuais terminarem juntos, colados
-     na seta — número que se compara se lê pela direita. */
-  /* OS SEIS SELOS DO ESTADO — A-08-O-CHECKUP-ABSORVE-A-GESTAO-01, 25/09/2026.
-     A grade de três colunas (máscara, microfone, bateria) virou uma fila que
-     quebra: são seis selos, e o que não cabe desce em vez de cortar. */
-  .gc-resumo{flex:1;display:flex;flex-wrap:wrap;gap:3px 14px;align-items:center;
-             font-size:11.5px;color:var(--texto-mudo);min-width:0}
-  .gc-est .est{white-space:nowrap}
-  .gc-est .certo{font-style:normal;color:var(--green);margin-left:1px}
-  .gc-est .est.warn,.gc-est .est.warn b{color:var(--orange)}
-  /* O DONO: o campo mostra «P N» ou o nome dela, e só se veste de campo
-     quando o mouse ou o foco chegam — em repouso ele é o nome da linha. */
-  .gc-dono{flex:0 0 92px;width:92px;margin-left:10px;padding:3px 6px;
+  .gc-cabeca{display:flex;align-items:center;gap:6px;height:38px;
+             border-bottom:1px solid var(--border-sutil)}
+  .gc-num{flex:0 0 auto;font-size:13.5px;font-weight:700;color:var(--purple);
+          cursor:pointer}
+  /* O DONO: em repouso ele é texto; só se veste de campo com o mouse ou o
+     foco. Vazio, o `placeholder` diz para que serve. */
+  .gc-dono{flex:1;min-width:0;height:26px;padding:0 7px;
            border:1px solid transparent;border-radius:6px;background:transparent;
-           color:var(--fg);font:inherit;font-weight:700;text-overflow:ellipsis}
-  .gc-dono:hover,.gc-dono:focus{border-color:var(--border-forte);background:var(--app-bg);outline:none}
-  /* O BOTÃO DA ECONOMIA: a luz acende quando a declaração diz que vale — verde
-     quando é deste controle, apagada-cinza quando é a «Bateria longa» da mesa. */
-  .gc-corpo .btn.eco{display:inline-flex;align-items:center;gap:6px}
-  .eco-luz{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--border-forte)}
-  .eco-luz[data-economia="ligada"]{background:var(--green)}
+           color:var(--fg);font:inherit;font-size:12.5px;font-weight:600;
+           text-overflow:ellipsis}
+  .gc-dono::placeholder{color:var(--texto-mudo);font-weight:400}
+  .gc-dono:hover{border-color:var(--border-sutil)}
+  .gc-dono:focus{border-color:var(--purple);outline:none}
+  /* O APARELHO: o desenho e o nome, e é ele o alvo do clique que aponta a fita
+     para este controle. O `<label>` ENVOLVE o texto, não o cobre, para a dica
+     de dentro continuar sendo a que aparece. */
+  .gc-abre{display:flex;align-items:center;gap:12px;height:62px;
+           cursor:pointer;border-radius:7px}
+  .gc-abre:hover .gc-nome{color:var(--fg)}
+  /* A PROPORÇÃO É A DO `viewBox` (116,684 × 80,472); só a largura é escolhida:
+     76px dão 52 de altura, e o cartão cabe com o quadro do rádio à vista. */
+  .gc-abre .ds-mini{flex:0 0 76px;width:76px;height:auto}
+  .gc-nome{min-width:0;font-size:12.5px;font-weight:600;color:var(--texto-suave);
+           white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* OS SEIS SELOS, UM POR LINHA. O selo é do produto
+     (`a08_conexoes.selo_do_estado`: o rótulo, o valor em `<b>` e o ✓ em
+     `<i class="certo">`), e a linha só o arruma: o rótulo à esquerda e o que
+     vier depois dele empurrado para a direita. */
+  .gc-resumo{display:flex;flex-direction:column;border-top:1px solid var(--border-sutil)}
+  .gc-est{display:block;border-bottom:1px solid var(--border-sutil)}
+  .gc-est .est{display:flex;align-items:center;gap:6px;height:25.5px;min-width:0;
+               font-size:12px;color:var(--texto-mudo);white-space:nowrap}
+  .gc-est .est > b{margin-left:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;
+                   color:var(--fg);font-weight:600}
+  .gc-est .est > .certo{margin-left:auto;font-style:normal;font-weight:700;color:var(--green)}
+  .gc-est .est > b + .certo{margin-left:0}
+  .gc-est .est.warn > b{color:var(--orange)}
+  .gc-corpo{display:flex;flex-direction:column;gap:5px;margin-top:auto;padding-top:10px}
+  /* O LIGÁVEL DA ECONOMIA É A PÍLULA DA ABA SISTEMA (`.cadeado` da `aba09.py`):
+     verde e com o ponto aceso quando vale NESTE controle, com o ponto cinza
+     quando quem liga é a «Bateria longa» da mesa. Quem diz é o produto, pelo
+     atributo do ponto (`data-economia`), e o `:has()` estende a cor ao botão
+     sem um segundo endereço. */
+  .gc-corpo .btn.eco{width:100%;display:flex;align-items:center;justify-content:center;
+                     gap:7px;padding:0 10px;white-space:nowrap}
+  .eco-luz{display:inline-block;flex:0 0 auto;width:7px;height:7px;border-radius:50%;
+           background:var(--border-forte)}
+  .gc-corpo .btn.eco:has(.eco-luz[data-economia="ligada"]){border-color:var(--green);
+           background:rgba(80,250,123,.09);color:var(--green)}
+  .eco-luz[data-economia="ligada"]{background:var(--green);box-shadow:0 0 6px var(--green)}
   .eco-luz[data-economia="mesa"]{background:var(--comment)}
-  /* AS FERRAMENTAS DO CHECK-UP — o Mapear num botão só, o exame, o Atualizar
-     e os dois mapas. */
-  .ferramentas{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0}
-  .ferramentas .i{width:14px;height:14px;vertical-align:-2px;fill:none;stroke:currentColor;
-                  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-  .ferramentas .mapa{display:inline-flex;align-items:center;justify-content:center;width:30px;
-                     height:30px;border-radius:7px;border:1px solid var(--border-forte);
-                     color:var(--texto-suave)}
-  /* O FLUXO DO MAPEAR */
-  .mp{display:flex;flex-direction:column;gap:12px}
-  .mp-diz{margin:0;color:var(--fg);font-weight:600}
-  .mp-porta{min-height:20px;color:var(--texto-suave)}
-  .mp-campos{display:flex;flex-wrap:wrap;gap:12px}
-  .mp-campos label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--rot-campo)}
-  .mp-campos input,.mp-campos select{min-width:200px;padding:5px 8px;border-radius:6px;
-                  border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg);font:inherit}
-  .mp-conta{margin:0;font-size:11.5px;color:var(--texto-mudo)}
-  .gc-resumo > :last-child{justify-self:end}
-  .gc-resumo b{color:var(--texto-suave);font-weight:500}
-  /* 42px E NÃO 16, e a largura é a MESMA nos três estados de propósito: no
-     estado "Todos" o gesto não é uma seta, é a palavra `só este` — e uma coluna
-     que muda de largura quando a pessoa clica desloca os percentuais de bateria
-     das quatro linhas de uma vez. Largura fixa, conteúdo variável. */
-  .gc-seta{flex:0 0 42px;height:100%;display:flex;align-items:center;justify-content:center;
-           color:var(--comment);font-size:9px;cursor:pointer;border-radius:5px}
-  /* O MENOR DEFEITO DA MEDIÇÃO, e ele era de SENTIDO: no estado "Todos" as
-     quatro linhas mostravam `▾` com a dica *"Abre este controle"* — quatro setas
-     de abrir sobre quatro linhas já abertas. Ali o gesto é outro (estreitar para
-     um), e por isso ganha palavra em vez de seta. A dica do corpo da linha
-     também mudou: ela agora vale nos dois estados, porque `title` não muda com
-     CSS — "deixa só este aberto, os outros fecham" é verdade tanto quando esta
-     linha está fechada quanto quando as quatro estão abertas. */
-  .gc-seta.so{font-size:10px;letter-spacing:.2px}
-  .gc-seta.fecha,.gc-seta.so{display:none}
-  /* O CORPO NASCE FECHADO — e fecha por ALTURA ZERO, não por `display:none`.
-     A razão é medida: a régua mede TODO `<select>` e TODO `<button>` do miolo e
-     exige que cada família tenha uma altura só. Com `display:none` os campos dos
-     três controles fechados medem **0**, e ela reprova a aba inteira —
-     `altura divergente em select.pronto: 36 / 0`. Com `height:0;overflow:hidden`
-     o navegador continua dando ao campo os 36px do token e simplesmente não o
-     pinta: a régua mede o que o desenho promete, e o olho não vê nada.
-     `box-sizing:border-box` do esqueleto faz os 40 do aberto já incluírem os
-     2+2 de padding — 36 de campo, que é o `--h-escolha`. Foram 48 até 28/08: os
-     8px vieram do padding, e não do campo, porque a linha fechada logo acima já
-     dá ar ao campo — e no estado "Todos" eles são multiplicados por quatro. */
-  .gc-corpo{display:flex;align-items:center;gap:8px;padding:0 12px;
-            height:0;overflow:hidden}
-  /* 48px e não 58: nesta largura o desenho mede 33,1px de altura e cabe DENTRO
-     da linha de 36 do campo, sem crescer o corpo da linha. A proporção é a do
-     `viewBox` (116,684 × 80,472), e não uma altura digitada.
-
-     ESTE DESENHO SEGUE O APARELHO desde 03/09/2026 — ver `desenho_do_controle`,
-     que é quem lhe dá o endereço. A cor dele viaja num ATRIBUTO
-     (`data-colorway` do `<svg>`), e o alvo `atributo` do piloto é quem o
-     escreve: vinte bytes por tique.
-
-     A ROTA ÓBVIA FOI TENTADA E REPROVOU NA MEDIÇÃO, e é por isso que o alvo não
-     é `html`: envolver o `<svg>` num `data-campo` com alvo `html` e o pacote
-     emitir o desenho na cor lida custa, com os dois controles dela, 31 tiques:
-
-         sem o desenho    2 pinturas / 31 tiques    tique mediano  4,24 ms
-         com o desenho   31 pinturas / 31 tiques    tique mediano 13,56 ms
-
-     Uma pintura POR TIQUE, para sempre: o `innerHTML` que o navegador devolve
-     de um `<svg>` nunca volta igual ao que se escreveu, então a comparação do
-     `escrever()` acusa mudança em todo tique — o mesmo tropeço que o alvo `cor`
-     documenta para o CSSOM. E o desenho tem 50 KB; dois deles atravessam a
-     ponte a cada meio segundo. */
-  .gc-corpo .ds-mini{flex:0 0 48px;width:48px}
-  /* cada bloco do corpo é uma dupla rótulo+campo, e a barra vertical separa
-     irmãos — a mesma gramática das colunas dos outros dois quadros */
-  .gc-bloco{display:flex;align-items:center;gap:8px;flex:0 0 auto}
-  .gc-bloco.barra{padding-left:12px;margin-left:2px;border-left:1px solid var(--border-sutil)}
-  .gc-bloco .rot{font-size:11.5px;font-weight:600;color:var(--rot-campo);white-space:nowrap;
-                 display:flex;align-items:center;gap:6px}
-  /* `.le` (a leitura "Vale Sem teto, do global, abaixo" ao lado do campo) SAIU
-     em 28/08 — `D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES`. A regra sai junto: CSS de
-     elemento que não existe mais é a segunda versão viva de uma decisão. */
-  .gc-corpo .btn{margin-left:auto;white-space:nowrap;flex:0 0 auto}
-  /* A PONTA DIREITA DA LINHA vira uma caixa só — 06/09/2026, a espera pelo PS.
-     A trava, a linha da espera e o botão andam juntos, e é a caixa que carrega
-     o `margin-left:auto`: com o `auto` em dois filhos o espaço livre se DIVIDE
-     entre eles, e a frase da espera flutuaria no meio da linha com um vão até o
-     botão. Aqui há um `auto` só, e ele é o da caixa.
-
-     A TRAVA CONTINUA DENTRO, e não é arrumação: `.ltrava.on ~ .btn` é irmandade,
-     e tirá-la da caixa apagaria a regra que pinta o botão do cabo. */
-  .gc-corpo .gc-luz{display:flex;align-items:center;gap:8px;margin-left:auto;
-                    flex:0 1 auto;min-width:0}
-  /* A LINHA DA ESPERA DENTRO DA LINHA DO CONTROLE. O `margin-top` da `.ressalva`
-     do esqueleto é para quem a usa EMBAIXO de um valor; aqui ela é irmã na
-     mesma linha, e 5px a empurrariam para fora do eixo dos 40px do corpo. */
-  .gc-luz .ressalva{margin-top:0;white-space:nowrap;overflow:hidden;
-                    text-overflow:ellipsis;min-width:0}
+  /* «A LUZ NÃO ACENDE» É UM LINK DISCRETO, e não um botão do tamanho da
+     economia: é o conserto de um caso raro. A trava continua IRMÃ e colada
+     antes do botão (`></i><button`), porque o `~` só alcança irmãos
+     posteriores — é ela que o apaga no cabo, onde o gesto não vale. */
+  .gc-corpo .gc-luz{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+  .gc-luz .ressalva{margin-top:0;text-align:center}
+  .gc-luz .btn{height:auto;padding:2px 4px;border:none;background:none;
+               font-size:11.5px;color:var(--texto-mudo);
+               text-decoration:underline dotted;text-underline-offset:3px}
+  .gc-luz .btn:hover{color:var(--cyan);background:none}
+  .gc-corpo .ltrava{display:none}
+  .gc-corpo .ltrava.on ~ .btn{opacity:.55;cursor:help}
+  .gc-corpo .ltrava.on ~ .btn:hover{color:var(--texto-mudo)}
   /* REGRA DELA, escrita em `secao_controles.py:150`: *"sempre visível mas só
-     acionável quando tiver no rádio"* — na linha do cabo o botão VAI, apagado,
-     com a dica dizendo por quê. Botão que SOME ensina que a tela é instável. */
+     acionável quando tiver no rádio"* — botão que SOME ensina que a tela é
+     instável. */
   .btn.apagado{border-color:var(--border-forte);color:var(--texto-mudo);
                opacity:.55;cursor:help}
   .btn.apagado:hover{border-color:var(--border-forte);color:var(--texto-mudo)}
-  /* A TRAVA VIROU IRMÃ — 04/09/2026, e a razão é o vocabulário: UM `data-campo`
-     por nó. O botão tinha o dele gasto na CLASSE (`luz-trava`), e por isso o
-     `title` continuava sendo o do desenho — a dica dizia "este controle está no
-     cabo" com o controle no rádio, e ao contrário. Estava escrito ali mesmo,
-     como dívida: *"um segundo campo para o `title` pede outro elemento"*.
-
-     ELE É ESSE OUTRO ELEMENTO. O `<i class="ltrava">` invisível recebe a classe
-     e o botão fica com a DICA — que agora vem do produto inteira, com o aviso da
-     mesa suja e a razão do carimbo de nascimento juntos
-     (`a08_conexoes.dica_da_luz`). Zero pixel se move: a regra abaixo pinta o
-     mesmo `.btn.apagado` de cima, pelo irmão.
-
-     É O MESMO DESENHO dos `<i class="est">` das cinco linhas do exame, e pela
-     mesma razão. */
-  /* UMA LEITURA NO LUGAR DE UMA ESCOLHA — 04/09/2026, o escopo do botão físico
-     do microfone. Ela ocupa a MESMA fatia que o `<select>` ocupava (mesma
-     altura de linha, mesmo alinhamento), e a diferença é justamente a que se
-     quer: nada aqui parece clicável, porque não há o que clicar.
-
-     A GRAMÁTICA É A DA CASA para valor lido: peso normal, cor de texto, sem
-     moldura — é o que separa "isto é uma resposta" de "isto é um campo". */
-  .gc-corpo .leitura{font-size:11.5px;color:var(--texto-suave);white-space:nowrap;
-                     cursor:help}
-  .gc-corpo .ltrava{display:none}
-  .gc-corpo .ltrava.on ~ .btn{border-color:var(--border-forte);color:var(--texto-mudo);
-                              opacity:.55;cursor:help}
-  /* o SVG real ganha a barra de luz acesa. A BARRA É PREENCHIDA, E NÃO
-     CONTORNADA: estava `stroke:var(--luz)` com `stroke-width:1.2` numa forma de
-     2×9,6px — metade do traço cai FORA da forma, e o que sobra dentro pinta
-     menos de um pixel de cada lado. `fill` é o que a aba04 e a aba06 usam, e as
-     duas acendem. Medido em 28/08/2026.
-     AS LÂMPADAS DE JOGADOR SAEM DOS DESENHOS PEQUENOS — decisão dela, 28/08:
-     neste tamanho elas medem 1,0 × 0,33 px, que é tinta que ninguém vê. Elas
-     ficam nos desenhos grandes, da Iluminação.
-     E SAEM DO DESENHO, não do CSS: quem as tira é `svg(..., lampadas=False)`.
-     A regra `display:none` que morava aqui deixava as 24 no DOM — apagar não é
-     tirar, e o grupo fora é o que não volta sozinho. */
-  .gc-corpo [id$="-lightbar"] .peca{fill:var(--luz,var(--border-forte))}
+  /* o SVG real ganha a barra de luz acesa, PREENCHIDA (um contorno de 1,2 numa
+     forma de 2px pinta menos de um pixel). As lâmpadas de jogador saem do
+     desenho pequeno por `svg(..., lampadas=False)`, decisão dela de 28/08. */
+  .gc-item [id$="-lightbar"] .peca{fill:var(--luz,var(--border-forte))}
+  /* AS FERRAMENTAS DO CHECK-UP — cinco botões de largura IGUAL, a régua dela
+     para todo grupo (273×4 na Jogar, 173×6 na Perfis). O mapa das entradas
+     ganhou nome: um ícone solto era o único botão da faixa sem palavra. */
+  .ferramentas{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;
+               margin:10px 0 12px}
+  .ferramentas .btn{width:100%;display:flex;align-items:center;justify-content:center;
+                    gap:7px;padding:0 10px;white-space:nowrap}
+  .ferramentas .i{width:14px;height:14px;flex:0 0 auto;fill:none;stroke:currentColor;
+                  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  /* O FLUXO DO MAPEAR — a moldura da `.tela-nova` com duas colunas: à
+     esquerda a entrada da vez (o que foi medido, e o nome e o lugar que ela dá),
+     à direita as que já têm nome. A frase do alto diz em que passo o fluxo
+     está, e o ponto pulsa enquanto o Hefesto espera o cabo chegar. */
+  .mp-cx{width:760px}
+  .mp{display:flex;flex-direction:column;gap:14px}
+  .mp-diz{margin:0;display:flex;align-items:center;gap:9px;color:var(--fg);
+          font-size:13px;font-weight:600}
+  .mp-luz{flex:0 0 auto;width:8px;height:8px;border-radius:50%;background:var(--comment)}
+  .mp-luz[data-estado="esperando"]{background:var(--cyan);animation:mp-pulso 1.4s ease-in-out infinite}
+  .mp-luz[data-estado="porta"]{background:var(--green);box-shadow:0 0 6px var(--green)}
+  @keyframes mp-pulso{0%,100%{opacity:1}50%{opacity:.25}}
+  @media (prefers-reduced-motion:reduce){.mp-luz[data-estado="esperando"]{animation:none}}
+  .mp-duas{display:grid;grid-template-columns:minmax(0,1.5fr) 1px minmax(0,1fr);gap:0 18px}
+  .mp-duas::before{content:"";grid-column:2;grid-row:1;background:var(--border-sutil)}
+  .mp-esq{grid-column:1;grid-row:1;display:flex;flex-direction:column;gap:8px;min-width:0}
+  .mp-dir{grid-column:3;grid-row:1;display:flex;flex-direction:column;gap:8px;min-width:0}
+  .mp-rot{font-size:12px;font-weight:600;color:var(--rot-campo)}
+  .mp-porta{border:1px solid var(--border-sutil);border-radius:7px;background:var(--app-bg);
+            padding:4px 12px;min-height:42px}
+  .mp-porta > .nada{display:none}
+  .mp-fatos{display:grid;grid-template-columns:auto minmax(0,1fr);margin:0}
+  .mp-fatos dt,.mp-fatos dd{margin:0;height:25.5px;display:flex;align-items:center;font-size:12px;
+                            border-bottom:1px solid var(--border-sutil)}
+  .mp-fatos dt{color:var(--texto-mudo);padding-right:16px}
+  .mp-fatos dd{color:var(--fg);font-weight:600;min-width:0;overflow:hidden;
+               text-overflow:ellipsis;white-space:nowrap}
+  .mp-fatos dt:nth-last-child(2),.mp-fatos dd:last-child{border-bottom:none}
+  .mp-campos{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:4px}
+  .mp-campos label{display:flex;flex-direction:column;gap:5px;min-width:0}
+  .mp-campos input,.mp-campos select{width:100%;height:var(--h-escolha,34px);padding:0 9px;
+                  border-radius:7px;border:1px solid var(--border-forte);background:var(--app-bg);
+                  color:var(--fg);font:inherit;font-size:12.5px}
+  .mp-campos input:focus,.mp-campos select:focus{border-color:var(--purple);outline:none}
+  .mp-lista{list-style:none;margin:0;padding:0;border-top:1px solid var(--border-sutil)}
+  .mp-lista li{display:flex;align-items:center;gap:8px;height:25.5px;font-size:12px;
+               border-bottom:1px solid var(--border-sutil);min-width:0}
+  .mp-lista li b{color:var(--fg);font-weight:600;white-space:nowrap}
+  .mp-lista li span{margin-left:auto;color:var(--texto-mudo);white-space:nowrap;
+                    overflow:hidden;text-overflow:ellipsis}
+  .mp-lista li.vazio{color:var(--texto-mudo)}
+  .mp-conta{margin:0;font-size:11.5px;color:var(--texto-mudo)}
+  .mp-cx .tn-rod .btn.principal{border-color:var(--green);color:var(--green)}
+  .mp-cx .tn-rod .btn.principal:hover{background:rgba(80,250,123,.09)}
   .acao{font-size:10.5px;color:var(--cyan);border-bottom:1px dotted var(--cyan);cursor:pointer}
 
   /* ---- o inventário da mesa: DUAS tabelas, ambas com cabeçalho roxo ---- */
@@ -2130,45 +2044,22 @@
      apaga o chip que nasceu marcado no HTML. */
   .fita .chip.on{background:var(--app-bg);color:var(--texto-mudo);font-weight:400;border-color:var(--border-forte)}
   .fita .chip.plastico.on{border-color:var(--plastico,var(--border-forte))}
-  /* o corpo do controle que a fita aponta */
-  /* O `:not(.off)` É DE 07/09/2026, e ele acompanha o cartão vazio que
-     passou a carregar os mesmos endereços do cheio. As duas regras deste
-     bloco alcançam TODO `.gc-corpo` e TODA `.gc-seta` do acordeão — sem o
-     recorte, clicar em “Todos” abriria também os lugares sem dono e a
-     faixa de 40px nasceria vazia, com a palavra “só este” ao lado. E o
-     recorte se desfaz sozinho: quem tira o `off` é o piloto, no tique em
-     que o controle chega. */
-  .quadro-corpo:has(#gc-todos:checked) .gc-item:not(.off) .gc-corpo{height:40px;padding:2px 12px}
-  /* NO ESTADO “Todos” AS QUATRO JÁ ESTÃO ABERTAS: a seta de abrir sai, e no
-     lugar dela entra a palavra do gesto que ali existe — estreitar para um. */
-  .quadro-corpo:has(#gc-todos:checked) .gc-seta.abre{display:none}
-  .quadro-corpo:has(#gc-todos:checked) .gc-item:not(.off) .gc-seta.so{display:flex}
+  /* O CARTÃO QUE A FITA APONTA ganha a borda roxa da escolha, a mesma do
+     chip. Em «Todos» nenhum cartão se destaca: todos são o alvo. */
   body:has(#gc-todos:checked) .fita .chip[data-pref="todos"],body:has(#gc-todos:checked) .fita:not(:has(.chip[data-pref="todos"])) .chip[data-pref]{background:var(--sel-bg);color:var(--fg);font-weight:600;border-color:var(--purple)}
   body:has(#gc-todos:checked) .fita .chip[data-pref="todos"].plastico,body:has(#gc-todos:checked) .fita:not(:has(.chip[data-pref="todos"])) .chip[data-pref].plastico{border-color:var(--plastico,var(--border-forte))}
   body:has(#gc-p1:checked) .fita .chip[data-pref="p1"]{background:var(--sel-bg);color:var(--fg);font-weight:600;border-color:var(--purple)}
   body:has(#gc-p1:checked) .fita .chip[data-pref="p1"].plastico{border-color:var(--plastico,var(--border-forte))}
-  .quadro-corpo:has(#gc-p1:checked) .gc-p1 .gc-corpo{height:40px;padding:2px 12px}
-  .quadro-corpo:has(#gc-p1:checked) .gc-p1 .gc-seta.abre{display:none}
-  .quadro-corpo:has(#gc-p1:checked) .gc-p1 .gc-seta.fecha{display:flex}
-  .quadro-corpo:has(#gc-p1:checked) .gc-p1{background:linear-gradient(0deg,var(--sel-bg),var(--sel-bg)),var(--app-bg)}
+  .quadro-corpo:has(#gc-p1:checked) .gc-p1{border-color:var(--purple);box-shadow:0 0 0 1px var(--purple)}
   body:has(#gc-p2:checked) .fita .chip[data-pref="p2"]{background:var(--sel-bg);color:var(--fg);font-weight:600;border-color:var(--purple)}
   body:has(#gc-p2:checked) .fita .chip[data-pref="p2"].plastico{border-color:var(--plastico,var(--border-forte))}
-  .quadro-corpo:has(#gc-p2:checked) .gc-p2 .gc-corpo{height:40px;padding:2px 12px}
-  .quadro-corpo:has(#gc-p2:checked) .gc-p2 .gc-seta.abre{display:none}
-  .quadro-corpo:has(#gc-p2:checked) .gc-p2 .gc-seta.fecha{display:flex}
-  .quadro-corpo:has(#gc-p2:checked) .gc-p2{background:linear-gradient(0deg,var(--sel-bg),var(--sel-bg)),var(--app-bg)}
+  .quadro-corpo:has(#gc-p2:checked) .gc-p2{border-color:var(--purple);box-shadow:0 0 0 1px var(--purple)}
   body:has(#gc-p3:checked) .fita .chip[data-pref="p3"]{background:var(--sel-bg);color:var(--fg);font-weight:600;border-color:var(--purple)}
   body:has(#gc-p3:checked) .fita .chip[data-pref="p3"].plastico{border-color:var(--plastico,var(--border-forte))}
-  .quadro-corpo:has(#gc-p3:checked) .gc-p3 .gc-corpo{height:40px;padding:2px 12px}
-  .quadro-corpo:has(#gc-p3:checked) .gc-p3 .gc-seta.abre{display:none}
-  .quadro-corpo:has(#gc-p3:checked) .gc-p3 .gc-seta.fecha{display:flex}
-  .quadro-corpo:has(#gc-p3:checked) .gc-p3{background:linear-gradient(0deg,var(--sel-bg),var(--sel-bg)),var(--app-bg)}
+  .quadro-corpo:has(#gc-p3:checked) .gc-p3{border-color:var(--purple);box-shadow:0 0 0 1px var(--purple)}
   body:has(#gc-p4:checked) .fita .chip[data-pref="p4"]{background:var(--sel-bg);color:var(--fg);font-weight:600;border-color:var(--purple)}
   body:has(#gc-p4:checked) .fita .chip[data-pref="p4"].plastico{border-color:var(--plastico,var(--border-forte))}
-  .quadro-corpo:has(#gc-p4:checked) .gc-p4 .gc-corpo{height:40px;padding:2px 12px}
-  .quadro-corpo:has(#gc-p4:checked) .gc-p4 .gc-seta.abre{display:none}
-  .quadro-corpo:has(#gc-p4:checked) .gc-p4 .gc-seta.fecha{display:flex}
-  .quadro-corpo:has(#gc-p4:checked) .gc-p4{background:linear-gradient(0deg,var(--sel-bg),var(--sel-bg)),var(--app-bg)}
+  .quadro-corpo:has(#gc-p4:checked) .gc-p4{border-color:var(--purple);box-shadow:0 0 0 1px var(--purple)}
 
   .porta{margin-left:auto;font-size:11px;line-height:17px;height:17px;
     color:var(--texto-mudo);text-decoration:none;white-space:nowrap}
@@ -3142,8 +3033,7 @@
             <svg class="i" aria-hidden="true"><use href="#rd-reexaminar"/></svg> Examinar Entradas</button>
           <button class="btn" data-gesto="checkup-atualizar" title="Relê agora o estado de cada controle, os nomes e o mapa das entradas">Atualizar</button>
           <a class="btn" href="mapa-do-controle.html" title="O mapa do controle — abre no navegador">Mapa do controle</a>
-          <a class="mapa so-icone" href="mapa-das-portas.html" title="O mapa das entradas, com o que o Hefesto mediu de cada uma — abre no navegador" aria-label="O mapa das entradas — abre no navegador">
-            <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg></a>
+          <a class="btn" href="mapa-das-portas.html" title="O mapa das entradas, com o que o Hefesto mediu de cada uma — abre no navegador">Mapa das entradas</a>
         </div>
         <!-- O ACORDEÃO PASSOU A SER LIDO DE VOLTA — 06/09/2026,
              `CONEXOES-LIGAR-TUDO-01`. Os 5 rádios são o alvo de
@@ -3194,29 +3084,12 @@
           <div class="gc-item gc-p1" data-controle="p1">
             <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor" style="color:#ae335a"></i>
             <div class="gc-cabeca">
+              <label class="gc-num" for="gc-p1" data-gesto="alvo" title="Deixa só este controle aberto; os outros fecham. A fita do topo passa a apontar para ele.">P1</label>
               <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
-                     value="P1" placeholder="P1" maxlength="24" spellcheck="false"
+                     value="Vitória" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
                      aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
-              <label class="gc-abre" for="gc-p1" data-gesto="alvo"
-                     title="Deixa só este controle aberto; os outros fecham. A fita do topo passa a apontar para ele.">
-              <span class="gc-nome" data-campo="nome" data-hef-alvo="html" title="A borda é a cor lida deste aparelho.">Cosmic Red <span class="pt">•</span> USB</span>
-              <span class="gc-resumo">
-                <span class="gc-est" data-campo="est-mic" data-hef-alvo="html"><span class="est ok">Mic <i class="certo">✓</i></span></span>
-                <span class="gc-est" data-campo="est-som" data-hef-alvo="html"><span class="est ok">Som <i class="certo">✓</i></span></span>
-                <span class="gc-est" data-campo="est-modo" data-hef-alvo="html"><span class="est">Modo de conexão <b>Pelo Hefesto</b></span></span>
-                <span class="gc-est" data-campo="est-visto" data-hef-alvo="html"><span class="est">Visto como <b>DualSense</b></span></span>
-                <span class="gc-est" data-campo="est-conexao" data-hef-alvo="html"><span class="est ok">Conexão estável <i class="certo">✓</i></span></span>
-                <span class="gc-est" data-campo="est-bateria" data-hef-alvo="html"><span class="est">Bateria <b>100%</b></span></span>
-              </span>
-              </label>
-              <label class="gc-seta abre" for="gc-p1" data-gesto="alvo"
-                     title="Deixa só este controle aberto; os outros fecham.">▾</label>
-              <label class="gc-seta so" for="gc-p1" data-gesto="alvo"
-                     title="Deixa só este controle aberto; os outros fecham.">só este</label>
-              <label class="gc-seta fecha" for="gc-todos" data-gesto="todos"
-                     title="Fecha. A fita volta para «Todos» e todos abrem juntos.">▴</label>
             </div>
-            <div class="gc-corpo">
+            <label class="gc-abre" for="gc-p1" data-gesto="alvo" title="Deixa só este controle aberto; os outros fecham. A fita do topo passa a apontar para ele.">
               <?xml version="1.0" encoding="utf-8"?>
 <svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="cosmic-red" class="ds-svg ds-mini"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -3505,6 +3378,17 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
+              <span class="gc-nome" data-campo="nome" data-hef-alvo="html" title="A borda é a cor lida deste aparelho.">Cosmic Red <span class="pt">•</span> USB</span>
+            </label>
+            <div class="gc-resumo">
+              <span class="gc-est" data-campo="est-mic" data-hef-alvo="html"><span class="est ok">Mic <i class="certo">✓</i></span></span>
+              <span class="gc-est" data-campo="est-som" data-hef-alvo="html"><span class="est ok">Som <i class="certo">✓</i></span></span>
+              <span class="gc-est" data-campo="est-modo" data-hef-alvo="html"><span class="est">Modo de conexão <b>Pelo Hefesto</b></span></span>
+              <span class="gc-est" data-campo="est-visto" data-hef-alvo="html"><span class="est">Visto como <b>DualSense</b></span></span>
+              <span class="gc-est" data-campo="est-conexao" data-hef-alvo="html"><span class="est ok">Conexão estável <i class="certo">✓</i></span></span>
+              <span class="gc-est" data-campo="est-bateria" data-hef-alvo="html"><span class="est">Bateria <b>100%</b></span></span>
+            </div>
+            <div class="gc-corpo">
               <button class="btn eco" data-gesto="economia-do-controle" data-campo="economia-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Liga a economia de bateria só neste controle."><i class="eco-luz" data-campo="economia" data-hef-alvo="atributo" data-hef-atributo="data-economia"></i>Modo Economia de Bateria</button>
               <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava on" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Só funciona com o controle no BT. Este está no USB, onde a barra de luz não depende de reconexão."><span data-campo="luz-texto">A luz não acende</span></button></span>
             </div>
@@ -3512,29 +3396,12 @@
           <div class="gc-item gc-p2" data-controle="p2">
             <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"></i>
             <div class="gc-cabeca">
+              <label class="gc-num" for="gc-p2" data-gesto="alvo" title="Deixa só este controle aberto; os outros fecham. A fita do topo passa a apontar para ele.">P2</label>
               <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
-                     value="P2" placeholder="P2" maxlength="24" spellcheck="false"
+                     value="" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
                      aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
-              <label class="gc-abre" for="gc-p2" data-gesto="alvo"
-                     title="Deixa só este controle aberto; os outros fecham. A fita do topo passa a apontar para ele.">
-              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Starlight Blue <span class="pt">•</span> BT</span>
-              <span class="gc-resumo">
-                <span class="gc-est" data-campo="est-mic" data-hef-alvo="html"><span class="est ok">Mic <i class="certo">✓</i></span></span>
-                <span class="gc-est" data-campo="est-som" data-hef-alvo="html"><span class="est ok">Som <i class="certo">✓</i></span></span>
-                <span class="gc-est" data-campo="est-modo" data-hef-alvo="html"><span class="est">Modo de conexão <b>Pelo Hefesto</b></span></span>
-                <span class="gc-est" data-campo="est-visto" data-hef-alvo="html"><span class="est">Visto como <b>Xbox 360</b></span></span>
-                <span class="gc-est" data-campo="est-conexao" data-hef-alvo="html"><span class="est ok">Conexão estável <i class="certo">✓</i></span></span>
-                <span class="gc-est" data-campo="est-bateria" data-hef-alvo="html"><span class="est">Bateria <b>64%</b></span></span>
-              </span>
-              </label>
-              <label class="gc-seta abre" for="gc-p2" data-gesto="alvo"
-                     title="Deixa só este controle aberto; os outros fecham.">▾</label>
-              <label class="gc-seta so" for="gc-p2" data-gesto="alvo"
-                     title="Deixa só este controle aberto; os outros fecham.">só este</label>
-              <label class="gc-seta fecha" for="gc-todos" data-gesto="todos"
-                     title="Fecha. A fita volta para «Todos» e todos abrem juntos.">▴</label>
             </div>
-            <div class="gc-corpo">
+            <label class="gc-abre" for="gc-p2" data-gesto="alvo" title="Deixa só este controle aberto; os outros fecham. A fita do topo passa a apontar para ele.">
               <?xml version="1.0" encoding="utf-8"?>
 <svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="starlight-blue" class="ds-svg ds-mini"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -3823,6 +3690,17 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
+              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Starlight Blue <span class="pt">•</span> BT</span>
+            </label>
+            <div class="gc-resumo">
+              <span class="gc-est" data-campo="est-mic" data-hef-alvo="html"><span class="est ok">Mic <i class="certo">✓</i></span></span>
+              <span class="gc-est" data-campo="est-som" data-hef-alvo="html"><span class="est ok">Som <i class="certo">✓</i></span></span>
+              <span class="gc-est" data-campo="est-modo" data-hef-alvo="html"><span class="est">Modo de conexão <b>Pelo Hefesto</b></span></span>
+              <span class="gc-est" data-campo="est-visto" data-hef-alvo="html"><span class="est">Visto como <b>Xbox 360</b></span></span>
+              <span class="gc-est" data-campo="est-conexao" data-hef-alvo="html"><span class="est ok">Conexão estável <i class="certo">✓</i></span></span>
+              <span class="gc-est" data-campo="est-bateria" data-hef-alvo="html"><span class="est">Bateria <b>64%</b></span></span>
+            </div>
+            <div class="gc-corpo">
               <button class="btn eco" data-gesto="economia-do-controle" data-campo="economia-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Liga a economia de bateria só neste controle."><i class="eco-luz" data-campo="economia" data-hef-alvo="atributo" data-hef-atributo="data-economia"></i>Modo Economia de Bateria</button>
               <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Desliga este controle do BT. Aperte PS para ele voltar, e a barra de luz volta a obedecer."><span data-campo="luz-texto">A luz não acende</span></button></span>
             </div>
@@ -3830,29 +3708,12 @@
           <div class="gc-item gc-p3 off" data-controle="p3" data-conectado="nao">
             <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"></i>
             <div class="gc-cabeca">
+              <label class="gc-num" for="gc-p3" data-gesto="alvo" title="Nenhum controle neste lugar.">P3</label>
               <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
-                     value="" placeholder="P3" maxlength="24" spellcheck="false"
+                     value="" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
                      aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
-              <label class="gc-abre" for="gc-p3" data-gesto="alvo"
-                     title="Nenhum controle neste lugar.">
-              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Desconectado</span>
-              <span class="gc-resumo">
-                <span class="gc-est" data-campo="est-mic" data-hef-alvo="html">—</span>
-                <span class="gc-est" data-campo="est-som" data-hef-alvo="html">—</span>
-                <span class="gc-est" data-campo="est-modo" data-hef-alvo="html">—</span>
-                <span class="gc-est" data-campo="est-visto" data-hef-alvo="html">—</span>
-                <span class="gc-est" data-campo="est-conexao" data-hef-alvo="html">—</span>
-                <span class="gc-est" data-campo="est-bateria" data-hef-alvo="html">—</span>
-              </span>
-              </label>
-              <label class="gc-seta abre" for="gc-p3" data-gesto="alvo"
-                     title="Deixa só este controle aberto; os outros fecham.">▾</label>
-              <label class="gc-seta so" for="gc-p3" data-gesto="alvo"
-                     title="Deixa só este controle aberto; os outros fecham.">só este</label>
-              <label class="gc-seta fecha" for="gc-todos" data-gesto="todos"
-                     title="Fecha. A fita volta para «Todos» e todos abrem juntos.">▴</label>
             </div>
-            <div class="gc-corpo">
+            <label class="gc-abre" for="gc-p3" data-gesto="alvo" title="Nenhum controle neste lugar.">
               <?xml version="1.0" encoding="utf-8"?>
 <svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="galactic-purple" class="ds-svg ds-mini"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -4141,6 +4002,17 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
+              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Desconectado</span>
+            </label>
+            <div class="gc-resumo">
+              <span class="gc-est" data-campo="est-mic" data-hef-alvo="html">—</span>
+              <span class="gc-est" data-campo="est-som" data-hef-alvo="html">—</span>
+              <span class="gc-est" data-campo="est-modo" data-hef-alvo="html">—</span>
+              <span class="gc-est" data-campo="est-visto" data-hef-alvo="html">—</span>
+              <span class="gc-est" data-campo="est-conexao" data-hef-alvo="html">—</span>
+              <span class="gc-est" data-campo="est-bateria" data-hef-alvo="html">—</span>
+            </div>
+            <div class="gc-corpo">
               <button class="btn eco" data-gesto="economia-do-controle" data-campo="economia-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Liga a economia de bateria só neste controle."><i class="eco-luz" data-campo="economia" data-hef-alvo="atributo" data-hef-atributo="data-economia"></i>Modo Economia de Bateria</button>
               <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="—"><span data-campo="luz-texto">—</span></button></span>
             </div>
@@ -4148,29 +4020,12 @@
           <div class="gc-item gc-p4 off" data-controle="p4" data-conectado="nao">
             <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"></i>
             <div class="gc-cabeca">
+              <label class="gc-num" for="gc-p4" data-gesto="alvo" title="Nenhum controle neste lugar.">P4</label>
               <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
-                     value="" placeholder="P4" maxlength="24" spellcheck="false"
+                     value="" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
                      aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
-              <label class="gc-abre" for="gc-p4" data-gesto="alvo"
-                     title="Nenhum controle neste lugar.">
-              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Desconectado</span>
-              <span class="gc-resumo">
-                <span class="gc-est" data-campo="est-mic" data-hef-alvo="html">—</span>
-                <span class="gc-est" data-campo="est-som" data-hef-alvo="html">—</span>
-                <span class="gc-est" data-campo="est-modo" data-hef-alvo="html">—</span>
-                <span class="gc-est" data-campo="est-visto" data-hef-alvo="html">—</span>
-                <span class="gc-est" data-campo="est-conexao" data-hef-alvo="html">—</span>
-                <span class="gc-est" data-campo="est-bateria" data-hef-alvo="html">—</span>
-              </span>
-              </label>
-              <label class="gc-seta abre" for="gc-p4" data-gesto="alvo"
-                     title="Deixa só este controle aberto; os outros fecham.">▾</label>
-              <label class="gc-seta so" for="gc-p4" data-gesto="alvo"
-                     title="Deixa só este controle aberto; os outros fecham.">só este</label>
-              <label class="gc-seta fecha" for="gc-todos" data-gesto="todos"
-                     title="Fecha. A fita volta para «Todos» e todos abrem juntos.">▴</label>
             </div>
-            <div class="gc-corpo">
+            <label class="gc-abre" for="gc-p4" data-gesto="alvo" title="Nenhum controle neste lugar.">
               <?xml version="1.0" encoding="utf-8"?>
 <svg data-campo="desenho" data-hef-alvo="atributo" data-hef-atributo="data-colorway" data-colorway="white" class="ds-svg ds-mini"  xmlns="http://www.w3.org/2000/svg" viewBox="6.399 22.990 116.684 80.472" width="1160" height="800" data-controle="dualsense" data-modelo="Sony DualSense" xmlns:bx="https://boxy-svg.com">
   <defs>
@@ -4459,6 +4314,17 @@
       <text style="dominant-baseline: central; fill: rgb(200, 204, 218); font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre;" x="15.971" y="17.025">R</text>
     </g>
 </svg>
+              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Desconectado</span>
+            </label>
+            <div class="gc-resumo">
+              <span class="gc-est" data-campo="est-mic" data-hef-alvo="html">—</span>
+              <span class="gc-est" data-campo="est-som" data-hef-alvo="html">—</span>
+              <span class="gc-est" data-campo="est-modo" data-hef-alvo="html">—</span>
+              <span class="gc-est" data-campo="est-visto" data-hef-alvo="html">—</span>
+              <span class="gc-est" data-campo="est-conexao" data-hef-alvo="html">—</span>
+              <span class="gc-est" data-campo="est-bateria" data-hef-alvo="html">—</span>
+            </div>
+            <div class="gc-corpo">
               <button class="btn eco" data-gesto="economia-do-controle" data-campo="economia-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Liga a economia de bateria só neste controle."><i class="eco-luz" data-campo="economia" data-hef-alvo="atributo" data-hef-atributo="data-economia"></i>Modo Economia de Bateria</button>
               <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="—"><span data-campo="luz-texto">—</span></button></span>
             </div>
@@ -5196,24 +5062,33 @@
   </div>
 </div>
 <div class="tela-nova" id="mapear-portas">
-  <div class="tn-cx">
+  <div class="tn-cx mp-cx">
     <div class="tn-topo">
       <span class="tn-tit">Mapear Entradas</span>
       <span class="ajuda">?<span class="dica">Use o mesmo DualSense em todas: ligue o cabo numa entrada, espere o Hefesto mostrar o que mediu dela, dê um <b>nome</b> e o <b>lugar</b>, e salve. Depois passe o cabo para a próxima. O nome e o lugar aparecem no Check-up e em <b>Rádio e Adaptadores</b>.</span></span>
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo mp" id="mp-forma">
-      <p class="mp-diz" data-campo="mapear-diz">Conecte o DualSense por USB numa entrada do computador.</p>
-      <div class="mp-porta" data-campo="mapear-porta" data-hef-alvo="html"><i class="nada"></i></div>
-      <div class="mp-campos">
-        <label>Nome da entrada <input type="text" data-linha="nome" maxlength="32" placeholder="Frente, a de cima"></label>
-        <label>Lugar <select data-linha="lugar"><option value="">Escolha o lugar</option><option>Frente do gabinete</option><option>Atrás do gabinete</option><option>Topo do gabinete</option><option>Lateral do gabinete</option><option>Num hub ou extensão</option><option>No monitor</option><option>Outro lugar</option></select></label>
+      <p class="mp-diz"><i class="mp-luz" data-campo="mapear-estado" data-hef-alvo="atributo" data-hef-atributo="data-estado" data-estado="porta"></i><span data-campo="mapear-diz">Entrada encontrada. Dê um nome e o lugar dela, e salve.</span></p>
+      <div class="mp-duas">
+        <div class="mp-esq">
+          <div class="mp-rot">O que o Hefesto mediu</div>
+          <div class="mp-porta" data-campo="mapear-porta" data-hef-alvo="html"><dl class="mp-fatos"><dt>Entrada</dt><dd>Entrada 3</dd><dt>Velocidade</dt><dd>USB 3.0</dd><dt>Ligação</dt><dd>direto no computador</dd><dt>Quedas</dt><dd>nenhuma em 7 dias</dd><dt>Onde fica</dt><dd>Traseira, a segunda de cima</dd></dl></div>
+          <div class="mp-campos">
+            <label><span class="mp-rot">Nome da entrada</span><input type="text" data-linha="nome" maxlength="32" placeholder="Ex.: Frente, a de cima"></label>
+            <label><span class="mp-rot">Lugar</span><select data-linha="lugar"><option value="">Escolha o lugar</option><option>Frente do gabinete</option><option>Atrás do gabinete</option><option>Topo do gabinete</option><option>Lateral do gabinete</option><option>Num hub ou extensão</option><option>No monitor</option><option>Outro lugar</option></select></label>
+          </div>
+        </div>
+        <div class="mp-dir">
+          <div class="mp-rot">Já mapeadas</div>
+          <ul class="mp-lista" data-campo="mapear-lista" data-hef-alvo="html"><li><b>Frente de cima</b><span>Entrada 1 · Frente</span></li><li><b>Hub da mesa</b><span>Entrada 7 · Hub</span></li></ul>
+          <p class="mp-conta" data-campo="mapear-conta">2 entradas salvas.</p>
+        </div>
       </div>
-      <p class="mp-conta" data-campo="mapear-conta">Nenhuma entrada salva ainda.</p>
     </div>
     <div class="tn-rod">
-      <button class="btn principal" data-gesto="mapear-gravar" data-hef-forma="mp-forma">Salvar esta entrada</button>
       <a class="btn" href="#">Terminar</a>
+      <button class="btn principal" data-gesto="mapear-gravar" data-hef-forma="mp-forma">Salvar e ir para a próxima</button>
       <button hidden id="mp-comecar" data-gesto="mapear-comecar"></button>
       <button hidden id="mp-parar" data-gesto="mapear-parar"></button>
     </div>
@@ -5240,9 +5115,10 @@
 <div class="nota">
   <h2>O Check-up absorveu a Gestão de Controles (25/09)</h2>
   <ul>
-    <li><b>Uma seção só</b>: o exame em cima, as ferramentas no meio (o <b>Mapear Entradas</b> num botão só, que abre o fluxo porta a porta, o exame, o Atualizar e os dois mapas) e uma linha por controle embaixo.</li>
-    <li><b>A linha diz o estado de agora</b>: Mic, Som, Modo de conexão, Visto como, Conexão e Bateria, com o ✓ de «tudo certo». «Microfone e botões» e «Limite da vibração» saíram: são das abas Controles e Vibração.</li>
-    <li><b>«P N» é o nome do dono</b>: escreva o nome de quem joga; apagado, volta a «P N». Aberta, a linha tem o botão <b>Modo Economia de Bateria</b> daquele controle.</li>
+    <li><b>Uma seção só</b>: o exame em cima, cinco ferramentas do mesmo tamanho no meio (o <b>Mapear Entradas</b> num botão só, que abre o fluxo porta a porta) e um cartão por controle embaixo.</li>
+    <li><b>O cartão diz o estado de agora</b>, no molde da aba Sistema: Mic, Som, Modo de conexão, Visto como, Conexão e Bateria, com o ✓ de «tudo certo». Nada abre nem fecha.</li>
+    <li><b>O nome ao lado do «P N» é de quem joga</b>: escreva; apagado, o campo volta vazio. Embaixo, o <b>Modo Economia de Bateria</b> daquele controle, verde quando ligado. O lugar sem controle fica, tracejado, com «Desconectado».</li>
+    <li><b>Mapear Entradas</b> abre uma tela com o que o Hefesto mediu da entrada da vez, o nome e o lugar que você dá, e a lista das que já têm nome.</li>
   </ul>
   <h2>«Rádio e Adaptadores» é o desenho que você aprovou em 23/09 — e o que ficou diferente</h2>
   <ul>
