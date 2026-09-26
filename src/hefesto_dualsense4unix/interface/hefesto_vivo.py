@@ -3541,9 +3541,8 @@ class Piloto:
                 # `desta_vez`: o pouso não pode ler estado que outra thread muda.
                 so_armou = (isinstance(resposta, dict)
                             and bool(resposta.get(CHAVE_DO_CLIQUE_QUE_SO_ARMOU)))
-                resposta = self._o_arranjo_relido(pagina, resposta)
-                GLib.idle_add(
-                    lambda r=resposta: self._deu_certo_dizendo(pagina, nome, alvo, r))
+                GLib.idle_add(lambda r=self._o_arranjo_relido(pagina, resposta):
+                              self._deu_certo_dizendo(pagina, nome, alvo, r))
             finally:
                 # O POUSO É DOS TRÊS DESFECHOS, e por isso mora no `finally`: um
                 # gesto que levante fora do contrato (nem `RuntimeError` nem
@@ -3946,9 +3945,11 @@ class Piloto:
         pelo `window.hefestoArranjo(dado, true)`, a mesma porta da abertura, e
         o resto da resposta segue para a pintura como antes.
 
-        RODA NO FIO DO GESTO, e por isso a entrega vai pelo laço do GTK: o
-        `idle_add` daqui entra na fila ANTES do da pintura e do pouso, então o
-        botão só volta do voo com o reexame já na tela.
+        RODA NO FIO DO GESTO, no argumento do `idle_add` da pintura em `_gesto`
+        (lá, uma linha a mais empurraria as citações `hefesto_vivo.py:NNN` que
+        outras posses fazem das linhas de baixo). A entrega vai pelo laço do
+        GTK: o `idle_add` daqui entra na fila ANTES do da pintura e do pouso,
+        então o botão só volta do voo com o reexame já na tela.
         """
         from hefesto_dualsense4unix.interface import arranjo_desta_maquina
 
