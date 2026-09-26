@@ -31,6 +31,7 @@ Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
 
 from __future__ import annotations
 
+import time
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -582,8 +583,6 @@ def test_sem_proposta_o_equilibrar_treme(a08: Any, monkeypatch: pytest.MonkeyPat
 
 
 def _esperando(aparelho: str, destino: int, **kw: Any) -> dict[str, Any]:
-    import time
-
     return {"aparelho": aparelho, "destino": ADAPTADORES_DA_TELA[destino],
             "estado": "esperando", "passo": "gesto", "motivo": "", "origens": [],
             "quando": time.time(), **kw}
@@ -758,8 +757,6 @@ def test_quem_voltou_pelo_pareamento_antigo_pisca_no_adaptador_em_que_chegou(
     """O movimento «chegou» pelo pareamento antigo tem o destino ONDE ele
     chegou, e é esse cartão que ganha o ``data-chegou`` que o roteiro da página
     faz piscar."""
-    import time
-
     _montar(a08, monkeypatch)
     chegou = {"aparelho": ROXO, "destino": ADAPTADORES_DA_TELA[0], "estado": "chegou",
               "passo": "fim", "motivo": cr.MOTIVO_PELO_PAREAMENTO_ANTIGO, "origens": [],
@@ -824,3 +821,113 @@ def test_a_ordem_que_ela_arrasta_fica_gravada(a08: Any, monkeypatch: pytest.Monk
     # A ordem que não diz os adaptadores da tela recusa.
     with pytest.raises(ValueError):
         a08.adaptador_reordenar(None, {"valor": "AABBCC0000FF"}, None)
+
+
+def test_a_caixa_unica_nao_tem_seta_e_as_varias_se_arrastam(
+    a08: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A caixa única não tem a seta (abriria e fecharia nada) nem se arrasta;
+    com mais de uma, a linha de cima é o que ela segura para arrastar.
+
+    MORDIDA: pinte a seta e o ``draggable`` sempre, no ``html_do_lugar`` — a
+    caixa única ganha um botão morto e esta régua reprova.
+    """
+    for quantos in (1, 2, 3):
+        _montar(a08, monkeypatch, adaptadores=quantos)
+        cena = _cena(a08, _estado({VERMELHO: 0, AZUL: 0}))
+        for lug in cena["lugares"]:
+            cartao = a08.html_do_lugar(lug, cena)
+            assert ('class="abre-lugar"' in cartao) is (quantos > 1), quantos
+            assert ('<div class="lugar-topo" draggable="true"' in cartao) is (quantos > 1)
+
+
+# -- o que a prova de tela desta sprint achou ----------------------------------
+
+
+@pytest.mark.parametrize("quantos", [1, 2, 3, 4])
+@pytest.mark.parametrize("adaptadores", [2, 3])
+def test_o_conectar_nasce_no_adaptador_de_menos_controles(
+    a08: Any, monkeypatch: pytest.MonkeyPatch, quantos: int, adaptadores: int
+) -> None:
+    """A foto 2 dela: o chip do «Procurando» nascia na DIREITA, a dos três
+    controles. A tela mandava os adaptadores à D8 no formato de 12 hex da tela,
+    a régua estrita do plano os descartava, o adaptador vazio sumia — e a D8
+    escolhia sempre um que já tinha controles. De 1 a 4 controles amontoados em
+    qualquer adaptador, o «Conectar» nasce num que não é o deles.
+
+    MORDIDA: devolva o ``_mac_minusculo`` do plano à régua só com dois-pontos —
+    o destino volta a ser o adaptador cheio.
+    """
+    _montar(a08, monkeypatch, adaptadores=adaptadores)
+    for cheio in range(adaptadores):
+        cena = _cena(a08, _estado({c: cheio for c in QUATRO[:quantos]}))
+        assert cena["destino_do_conectar"] != _id(ADAPTADORES_DA_TELA[cheio]), (quantos, cheio)
+
+
+def test_com_a_janela_aberta_o_chip_e_o_da_janela_e_o_outro_recusa(
+    a08: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O adaptador em que a janela abriu passa a VARRER, e a D8 manda quem varre
+    para o fim — o chip pulava para outro adaptador com a janela aberta no
+    primeiro. Enquanto o movimento espera, o chip é o da janela, e o chip de
+    outro adaptador recusa (a janela não muda de adaptador no meio).
+
+    MORDIDA: tire o laço dos movimentos do ``_destino_do_conectar`` — com o
+    Centro varrendo, o chip pula para a Esquerda.
+    """
+    from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez
+
+    _montar(a08, monkeypatch)
+    centro = ADAPTADORES_DA_TELA[2]
+    lidos = tuple(
+        AdaptadorDoBluez(f"/org/bluez/hci{i}", f"hci{i}", ADAPTADORES_DA_TELA[i].upper(),
+                         lugar=LUGARES_DA_TELA[i], varrendo=(i == 2))
+        for i in range(3))
+    monkeypatch.setattr(a08, "_ler_o_bluez", lambda: (lidos, ()))
+    janela = {"aparelho": "", "destino": centro, "estado": "esperando", "passo": "gesto",
+              "motivo": "", "origens": [], "e_controle": True, "quando": time.time()}
+    cena = _cena(a08, _estado({VERMELHO: 1, AZUL: 1},
+                              central={"movimentos": [janela], "proposta": None}))
+    assert cena["destino_do_conectar"] == _id(centro)
+    assert cena["aberto"] == _id(centro), "a caixa da janela abre sozinha"
+    with pytest.raises(RuntimeError):
+        a08.escolher_adaptador(None, {"alvo": _id(ADAPTADORES_DA_TELA[0])}, None)
+    a08.escolher_adaptador(None, {"alvo": _id(centro)}, None)
+
+
+@pytest.mark.parametrize("destino", [0, 1, 2])
+def test_a_caixa_de_quem_espera_o_gesto_abre_sozinha(
+    a08: Any, monkeypatch: pytest.MonkeyPatch, destino: int
+) -> None:
+    """O «Segure PS + Create» mora na linha que espera, DENTRO da caixa do
+    destino; com a caixa fechada, o que ela precisa fazer custava um clique. A
+    caixa do movimento em curso vence a escolha dela enquanto ele espera, e
+    depois volta a de antes.
+
+    MORDIDA: tire o ``espera`` do ``_o_aberto`` — a caixa do destino nasce
+    fechada e a linha do gesto fica escondida.
+    """
+    _montar(a08, monkeypatch)
+    alvo = ADAPTADORES_DA_TELA[destino]
+    mover = {"aparelho": VERMELHO, "destino": alvo, "estado": "esperando", "passo": "gesto",
+             "motivo": "", "origens": [ADAPTADORES_DA_TELA[(destino + 1) % 3]],
+             "e_controle": True, "quando": time.time()}
+    cena = _cena(a08, _estado({AZUL: 0}, central={"movimentos": [mover], "proposta": None}))
+    assert cena["aberto"] == _id(alvo)
+    cartao = a08.html_do_lugar(next(lug for lug in cena["lugares"] if lug["id"] == _id(alvo)), cena)
+    assert "aberto" in cartao.split('"', 2)[1] and "Segure PS + Create" in cartao
+    # acabou: volta a ser a escolha dela (nenhuma, e ninguém passou do limite)
+    assert _cena(a08, _estado({AZUL: 0}))["aberto"] is None
+
+
+def test_o_carimbo_de_um_minuto_e_singular_ate_os_dois_minutos() -> None:
+    """«Examinado há 1 minutos», na foto da prova de tela: o corte estava nos
+    90 s e a divisão inteira dava 1 até os 119.
+
+    MORDIDA: devolva o corte a 90 — os 100 s dizem «Há 1 minutos».
+    """
+    from hefesto_dualsense4unix.app.actions.config import secao_exame
+
+    for segundos in (45.0, 60.0, 89.0, 90.0, 100.0, 119.9):
+        assert secao_exame.frase_de_quando(segundos) == "Há 1 minuto", segundos
+    assert secao_exame.frase_de_quando(120.0) == "Há 2 minutos"

@@ -4686,8 +4686,13 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
              f'draggable="true" data-gesto="aparelho-renomear" data-alvo="{aid}">')
     if ap.get("tipo") == "controle":
         # O FORMATO DA ABA CONEXÕES (decisão dela de 25/09): o campo guarda o
-        # NOME, e o plástico e o número vêm depois dele, do daemon vivo.
+        # NOME, e o plástico e o número vêm depois dele, do daemon vivo. O
+        # campo tem a largura do nome, para o resto encostar nele (a largura
+        # segue o que ela digita pelo roteiro da página, como a do adaptador).
         resto = nome_na_conexoes({**ap, "nome": "", "rotulo": ""})
+        largura = max(len(nome or rotulo) + 2, 6)
+        campo = campo.replace('<input class="nome" ',
+                              f'<input class="nome" style="width:{largura}ch" ', 1)
         campo = (f'<span class="quem">{campo}'
                  + (f'<span class="quem-resto">{_x(SEPARADOR_DO_NOME + resto)}</span>'
                     if resto else "") + "</span>")
@@ -4856,12 +4861,19 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = Fals
         sino = (f'<button class="sino" title="{dica}" aria-label="{dica}" '
                 f'data-gesto="adaptador-historico" data-alvo="{lid}">{_ic("aviso")}</button>')
     chegou = " ".join(sorted(_x(c) for c in lug.get("chegou") or ()))
-    topo = (
-        '<div class="lugar-topo">'
+    # A CAIXA ÚNICA NÃO TEM SETA, E VÁRIAS SE ARRASTAM — decisões dela, 25/09:
+    # com um adaptador só a caixa fica aberta (a seta abriria e fecharia nada,
+    # e botão que não muda nada é botão morto), e com mais de um ela segura a
+    # linha de cima e arrasta para mudar a ordem (o roteiro da página grava).
+    unica = len(cena.get("lugares") or ()) == 1
+    seta = "" if unica else (
         f'<button class="abre-lugar" aria-expanded="{str(aberto).lower()}" title="{ver}" '
         f'aria-label="{ver}" data-gesto="abrir-adaptador" data-alvo="{lid}">'
-        '<span aria-hidden="true">▶</span></button>'
-        f'<input class="lugar-nome" value="{_x(nome)}" placeholder="{DE_UM_NOME}" '
+        '<span aria-hidden="true">▶</span></button>')
+    arrasta = "" if unica else ' draggable="true" title="Arraste para mudar a ordem"'
+    topo = (
+        f'<div class="lugar-topo"{arrasta}>' + seta
+        + f'<input class="lugar-nome" value="{_x(nome)}" placeholder="{DE_UM_NOME}" '
         f'aria-label="Nome deste adaptador" style="width:{largura}ch" '
         f'data-gesto="adaptador-renomear" data-alvo="{lid}">'
         + _marcas_de_onde(lug, cena) + sino + _barra_do_lugar(lug, cena)
@@ -5753,6 +5765,15 @@ def _o_aberto(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]]) ->
     """
     if len(lugares) == 1:
         return str(lugares[0]["id"])
+    # A CAIXA QUE ESPERA O GESTO ABRE SOZINHA (25/09/2026, a prova de tela
+    # desta sprint): o «Segure PS + Create» mora na linha que espera, DENTRO da
+    # caixa do destino, e com ela fechada o que ela precisa fazer custava um
+    # clique — a regra de 07/09 desta casa. Enquanto a janela está aberta, a
+    # caixa dela vence a escolha; quando o movimento acaba, volta a de antes.
+    espera = next((str(a["lugar"]) for a in aparelhos if a.get("esperando") and a.get("lugar")),
+                  None) or next((str(lug["id"]) for lug in lugares if lug.get("conectando")), None)
+    if espera:
+        return espera
     return _ABERTO["lugar"] if "lugar" in _ABERTO else _o_mais_cheio(lugares, aparelhos)
 
 
@@ -5945,6 +5966,15 @@ def _destino_do_conectar(cena: dict[str, Any], st: dict[str, Any]) -> str:
     `radio.mover` — a ordem da tela e a da central não divergem no empate."""
     if not cena["lugares"]:
         return ""
+    # A JANELA ABERTA É A VERDADE DO CHIP (25/09/2026, a prova de tela): o
+    # adaptador em que a janela abriu passa a VARRER, e a D8 manda quem varre
+    # para o fim — o chip do «Procurando» pulava para outro adaptador com a
+    # janela aberta no primeiro. Enquanto um movimento espera, o chip é o dele.
+    for m in (_dicionario(st.get("radio_central")).get("movimentos") or ()):
+        if isinstance(m, dict) and m.get("estado") == "esperando" and m.get("destino"):
+            aberto = _mac(str(m.get("destino")))
+            if any(lug["id"] == aberto for lug in cena["lugares"]):
+                return aberto
     escolhido = _ABERTO.get("destino")
     if escolhido and any(lug["id"] == escolhido for lug in cena["lugares"]):
         return str(escolhido)
@@ -6216,8 +6246,15 @@ def parear_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 
 @gesto("08-conexoes.html", "escolher-adaptador")
 def escolher_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """O chip do «Conectar»: o destino que ela escolheu vale no próximo pedido."""
+    """O chip do «Conectar»: o destino que ela escolheu vale no próximo pedido.
+
+    COM A JANELA ABERTA NOUTRO ADAPTADOR, O CHIP RECUSA (25/09/2026): a janela
+    não muda de adaptador no meio, e um chip que acende sem mudar onde a busca
+    acontece diria uma coisa e o rádio faria outra. A recusa pisca, sem recado.
+    """
     lug = _lugar_na_tela(o)
+    if _CENA_NA_TELA.get("ocupado") and lug["id"] != _CENA_NA_TELA.get("destino_do_conectar"):
+        raise RuntimeError("a busca já está aberta noutro adaptador")
     _ABERTO["destino"] = lug["id"]
     _CENA_NA_TELA["destino_do_conectar"] = lug["id"]
     return {"armou": True}
