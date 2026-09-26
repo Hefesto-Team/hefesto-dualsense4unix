@@ -84,7 +84,7 @@ def _frequency(default: int = 10) -> TriggerParamSpec:
 #
 # O `name` é CONTRATO e não muda: ele está serializado no perfil no disco dela
 # (`triggers.left.mode`, validado contra PRESET_FACTORIES pelo `_validate_mode`
-# em `profiles/schema.py:221`), no IPC (`daemon/ipc_handlers.py`, comando
+# em `profiles/schema.py:220`), no IPC (`daemon/ipc_handlers.py`, comando
 # `trigger.set`) e no protocolo DSX (`daemon/udp_server.py`). Trocar um `name`
 # faz os perfis que ela já salvou pararem de abrir.
 #
