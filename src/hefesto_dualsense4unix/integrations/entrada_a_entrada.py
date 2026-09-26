@@ -121,6 +121,7 @@ from hefesto_dualsense4unix.integrations.censo_do_barramento import (
     cadeia_de_hubs,
 )
 from hefesto_dualsense4unix.integrations.entradas_do_gabinete import (
+    VELOCIDADE_SUPERSPEED_MBPS,
     Furo,
     NoDeEntrada,
     entrada_de,
@@ -204,6 +205,18 @@ FACE_EM_PE = FACE_ATRAS
 #: A palavra do produto para o buraco no gabinete (``D-A-PALAVRA-ENTRADA``).
 #: É o nome da porta quando ela não deu outro: «Entrada 3».
 PALAVRA_DA_ENTRADA = "Entrada"
+
+#: A FACE QUE UM HUB DECLARADO GANHA — O-MAPA-DAS-CONEXOES-NO-PRODUTO-01,
+#: 26/09/2026. Ela diz no editor do mapa que a entrada 5 tem um hub, e o hub
+#: vira um lugar: o desenho o mostra como face, e o Mapear o oferece em «onde
+#: fica». O editor da página escreve a mesma frase enquanto ela ainda não
+#: releu a página (``interface/pagina_do_mapa``); a régua confere as duas.
+FACE_DO_HUB_DECLARADO = f"Hub na {PALAVRA_DA_ENTRADA} {{numero}}"
+
+#: O que ela pode dizer que tem numa entrada, além de «Direto» (``None``), e as
+#: velocidades — a gramática de ``utils/maquina.PortaDeclarada``.
+LIGACOES_DECLARAVEIS = ("hub", "extensor")
+VELOCIDADES_DECLARAVEIS = (2, 3)
 
 #: As fases do laço — chaves de máquina, para o piloto da aba 08.
 PARADO = "parado"
@@ -1149,8 +1162,11 @@ def _gravar_as_portas(
 
 
 def _face_aceita(face: str, maquina: MaquinaConfig) -> bool:
-    """A face é uma das respostas do produto, ou uma que ela JÁ tem no mapa."""
+    """A face é uma das respostas do produto, uma que ela JÁ tem no mapa, ou
+    a de um hub que ela declarou (:func:`faces_dos_hubs`)."""
     if face in FACES or face in LUGARES_DA_PORTA:
+        return True
+    if face in faces_dos_hubs(maquina.mapa).values():
         return True
     return any(existente.nome == face for existente in maquina.mapa.faces)
 
@@ -1456,6 +1472,103 @@ def dar_nome(
 
 
 # ---------------------------------------------------------------------------
+# O que tem na entrada, e a velocidade dela (O-MAPA-DAS-CONEXOES-NO-PRODUTO-01)
+# ---------------------------------------------------------------------------
+#
+# O editor do mapa das conexões, 26/09/2026. Pedido dela: *«ao clicar em um
+# desses usb mapeados eu pudesse setar que tem tal coisa lá. no caso o hub ou
+# afins»*; e a velocidade, porque o firmware da placa erra (ver
+# ``mapa_das_portas.velocidade_da_entrada``). As duas vão ao ``maquina.json``
+# dela, ao lado do caminho e dos nós da entrada, pelo gravador único deste
+# módulo. <!-- noqa-acento: citação literal dela -->
+
+
+def declarar_a_ligacao(
+    numero: str,
+    liga: str | None,
+    *,
+    maquina: MaquinaConfig | None = None,
+    gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
+) -> Recibo:
+    """«Direto» (``None``), «Hub» ou «Extensor» na entrada ``numero``."""
+    if liga is not None and liga not in LIGACOES_DECLARAVEIS:
+        raise ValueError(f"{liga!r} não é o que se declara numa entrada")
+    return _declarar_na_entrada(numero, {"liga": liga}, maquina=maquina, gravar=gravar)
+
+
+def declarar_a_velocidade(
+    numero: str,
+    usb: int,
+    *,
+    maquina: MaquinaConfig | None = None,
+    gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
+) -> Recibo:
+    """USB 2.0 (``2``) ou USB 3.0 (``3``) na entrada ``numero`` — vence o firmware."""
+    if usb not in VELOCIDADES_DECLARAVEIS:
+        raise ValueError(f"{usb!r} não é uma velocidade que se declara")
+    return _declarar_na_entrada(numero, {"usb": usb}, maquina=maquina, gravar=gravar)
+
+
+def _declarar_na_entrada(
+    numero: str,
+    campos: Mapping[str, Any],
+    *,
+    maquina: MaquinaConfig | None,
+    gravar: Callable[[Mapping[str, Any]], Recibo],
+) -> Recibo:
+    """Os campos na ``mapa.portas[numero]``, SÓ se a entrada é do mapa dela.
+
+    A entrada que o desenho monta a partir do que ela declarou (as do hub, a
+    ponta do extensor) não tem número no disco, e o exemplo da página não é o
+    gabinete de ninguém: declarar sobre eles gravaria no ``maquina.json`` uma
+    entrada que ela nunca mapeou.
+    """
+    documento = maquina if maquina is not None else carregar_maquina()
+    if numero not in entradas_do_mapa(documento.mapa):
+        raise ValueError(f"a entrada {numero!r} não está no mapa desta máquina")
+    recibo = _gravar_no_mapa(gravar, {"mapa": {"portas": {numero: dict(campos)}}})
+    if not recibo.gravou:
+        logger.warning("entrada_declarada_nao_gravou", motivo=recibo.motivo)
+    return recibo
+
+
+def faces_dos_hubs(mapa: MapaDaMesa) -> dict[str, str]:
+    """``número da entrada -> nome da face`` de cada hub declarado, na ordem do desenho."""
+    return {
+        numero: FACE_DO_HUB_DECLARADO.format(numero=numero)
+        for numero in _numeros_do_mapa(mapa)
+        if (porta := mapa.portas.get(numero)) is not None and porta.liga == "hub"
+    }
+
+
+def _usb_da_porta(
+    medido: Any, declarada: int | None, censo: Censo | None
+) -> tuple[str, str]:
+    """``(USB 3.0 | USB 2.0 | "", de onde)`` de uma porta do Mapear.
+
+    A precedência é de ``mapa_das_portas.velocidade_da_entrada``: o aparelho
+    que enumerou a 5000M+ nela, depois o que ela declarou, depois a placa (o
+    ``medido.usb``, lido dos hubs que hospedam os nós do buraco).
+    """
+    from hefesto_dualsense4unix.integrations import mapa_das_portas as junta
+
+    placa = {junta.USB_3: True, junta.USB_2: False}.get(medido.usb)
+    dentro = (
+        next((a for a in censo.aparelhos if a.nome_do_kernel == medido.aparelho), None)
+        if censo is not None and medido.aparelho
+        else None
+    )
+    rapido, de_onde = junta.velocidade_da_entrada(
+        placa,
+        declarada,
+        dentro is not None and dentro.velocidade_mbps >= VELOCIDADE_SUPERSPEED_MBPS,
+    )
+    if rapido is None:
+        return "", de_onde
+    return (junta.USB_3 if rapido else junta.USB_2), de_onde
+
+
+# ---------------------------------------------------------------------------
 # O MAPA DAS PORTAS — um fluxo, uma gravação, um nome (A-08-UM-MAPEAR-SO-01)
 # ---------------------------------------------------------------------------
 #
@@ -1506,6 +1619,9 @@ class PortaDoMapa:
     nos: tuple[str, ...] = ()
     fora: bool = False
     usb: str = ""
+    #: De onde veio o ``usb`` — ``mapa_das_portas.USB_PELO_APARELHO``,
+    #: ``USB_DECLARADA`` ou ``USB_PELA_PLACA``; ``""`` quando não se sabe.
+    usb_de: str = ""
     controlador: str = ""
     hub: str = ""
     hub_produto: str = ""
@@ -1637,6 +1753,7 @@ def ler_o_mapa(
                 nos=nos,
                 fora=bool(dele is not None and dele.fora),
                 medido=medido,
+                usb=_usb_da_porta(medido, declarada.usb if declarada else None, lido),
             )
         )
 
@@ -1718,10 +1835,12 @@ def ler_o_mapa(
         adaptadores = _adaptadores_do_sistema(raiz_bt)
     sem_porta = sum(1 for a in adaptadores if not str(getattr(a, "no", "") or ""))
     # Os lugares que a tela oferece: os sete universais e, depois, as faces que
-    # ela JÁ tem com outro nome — a escolha dela continua escolhível.
+    # ela JÁ tem com outro nome — a escolha dela continua escolhível — e o hub
+    # que ela declarou no mapa das conexões, que vira lugar para as entradas dele.
     dela = tuple(
         dict.fromkeys(
-            f.nome for f in documento.mapa.faces if f.nome not in LUGARES_DA_PORTA
+            [f.nome for f in documento.mapa.faces if f.nome not in LUGARES_DA_PORTA]
+            + list(faces_dos_hubs(documento.mapa).values())
         )
     )
     return MapaDasPortas(
@@ -2169,7 +2288,11 @@ def _porta_do_mapa(
     nos: tuple[str, ...],
     fora: bool,
     medido: Any,
+    usb: tuple[str, str] | None = None,
 ) -> PortaDoMapa:
+    """``usb`` é ``(velocidade, de onde)`` quando a porta tem declaração — ver
+    :func:`_usb_da_porta`; sem ele vale o que o ``/sys`` mediu."""
+    velocidade, de_onde = usb if usb is not None else _usb_da_porta(medido, None, None)
     return PortaDoMapa(
         chave=chave,
         numero=numero,
@@ -2180,7 +2303,8 @@ def _porta_do_mapa(
         caminho=caminho,
         nos=nos,
         fora=fora,
-        usb=medido.usb,
+        usb=velocidade,
+        usb_de=de_onde,
         controlador=medido.controlador,
         hub=medido.hub,
         hub_produto=medido.hub_produto,
@@ -2449,6 +2573,7 @@ __all__ = [
     "ESPERANDO",
     "FACES",
     "FACE_ATRAS",
+    "FACE_DO_HUB_DECLARADO",
     "FACE_EM_PE",
     "FACE_ESCRIVANINHA",
     "FACE_FRENTE",
@@ -2457,6 +2582,7 @@ __all__ = [
     "FACE_QUE_E_PERTO",
     "FIM",
     "FOLEGO_DA_LEITURA_S",
+    "LIGACOES_DECLARAVEIS",
     "LUGARES_DA_PORTA",
     "LUGAR_FRENTE",
     "LUGAR_HUB",
@@ -2470,6 +2596,7 @@ __all__ = [
     "PARADO",
     "SENTADA",
     "TELAS",
+    "VELOCIDADES_DECLARAVEIS",
     "Gravacao",
     "LacoDaEntrada",
     "MapaDasPortas",
@@ -2480,7 +2607,10 @@ __all__ = [
     "PortaVista",
     "com_o_nome_dela",
     "dar_nome",
+    "declarar_a_ligacao",
+    "declarar_a_velocidade",
     "face_do_lugar",
+    "faces_dos_hubs",
     "ler_o_mapa",
     "nome_da_porta",
     "nome_do_adaptador",

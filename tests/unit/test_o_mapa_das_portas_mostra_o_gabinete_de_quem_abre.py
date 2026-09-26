@@ -241,27 +241,24 @@ def test_uma_face_so_e_dona_da_faixa_do_pc() -> None:
 
 
 def test_o_cabecalho_diz_de_quando_e_o_que_esta_na_tela() -> None:
-    """A única defesa da página contra ser lida como verdade de qualquer máquina.
+    """O cabeçalho é o que ela pediu em 26/09/2026, e a data segue no dado.
 
-    As duas frases moram uma ao lado da outra em `pagina_do_mapa` e
-    `arranjo_desta_maquina`, e as duas são diferentes de propósito: "exemplo" e
-    "deste computador" não podem sair iguais, senão a distinção não existe.
-
-    E A CLASSE NÃO PODE SER `.nota`, que é o defeito inteiro: a folha do produto
-    apaga `.nota` com `!important`, e no Chrome o aviso aparecia enquanto na
-    tela dela não. Quem responde o que o produto esconde é o dono da folha.
+    FATO SUBSTITUÍDO em 26/09/2026 (O-MAPA-DAS-CONEXOES-NO-PRODUTO-01). Esta
+    régua cobrava a linha `de-quando` no cabeçalho — a defesa de 11/09 contra
+    a página ser lida como verdade de qualquer máquina. Ela pediu que saísse:
+    *«leitura deste computador · 26/09/2026 03h13 essa info some»*, e o
+    «Examinar» ocupa o lugar dela. O que fica: o título novo, o «Examinar» no
+    cabeçalho, o `dizerDeQuando` que não quebra sem a linha, e as duas frases
+    diferentes no dado — o exemplo e a leitura desta máquina.
     """
-    from hefesto_dualsense4unix.interface.folha_da_casa import seletores_escondidos
-
     pagina = pagina_do_mapa.pagina()
-    linha = re.search(r'<p class="([^"]+)" id="de-quando">([^<]+)</p>', pagina)
-    assert linha, "a linha que diz de quando é a leitura sumiu do cabeçalho"
-    classe, texto = linha.group(1), linha.group(2)
-    assert texto == pagina_do_mapa.QUANDO_DO_EXEMPLO
-    escondidas = {s.lstrip(".").split()[-1] for s in seletores_escondidos()}
-    assert classe not in escondidas, (
-        f"a folha do produto esconde `.{classe}` — o aviso da página volta a "
-        f"existir só no Chrome. O que ela esconde hoje: {sorted(escondidas)}")
+    cabecalho = pagina[pagina.index('<header class="topo"'):pagina.index("</header>")]
+    assert "<h1>Mapa das <em>Conexões</em></h1>" in cabecalho
+    assert 'id="reexaminar"' in cabecalho, "o «Examinar» saiu do cabeçalho"
+    assert 'id="de-quando"' not in cabecalho, "a data voltou ao cabeçalho"
+    assert "if (el) el.textContent = fonte.quando;" in pagina, (
+        "o `dizerDeQuando` deixou de aceitar a linha ausente — e sem ela a "
+        "entrega do arranjo estouraria")
 
     documento, censo = _gabinete()
     veio = arranjo_desta_maquina.arranjo(

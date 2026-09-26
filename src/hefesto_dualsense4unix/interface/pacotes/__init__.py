@@ -1863,6 +1863,9 @@ from . import (  # noqa: E402
     # do `portao_a_casa_sabe_e_o_produto_nao_faz` lê o AST, e um nome montado
     # pelo `_carregar_tudo()` não aparece ali. F3-CALIBRAR, 11/09/2026.
     a11_calibrar_sensores,  # noqa: F401
+    # A `a12` é a outra página avulsa, o «Mapa das Conexões»: só os gestos do
+    # editor da entrada, pela mesma razão do AST. O-MAPA-DAS-CONEXOES-NO-PRODUTO-01.
+    a12_mapa_das_portas,  # noqa: F401
     rodape,  # noqa: F401
 )
 

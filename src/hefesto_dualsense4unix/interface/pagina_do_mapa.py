@@ -282,6 +282,14 @@ ABRE_A_PORTA = """\
     leituraAnterior = "antes";
     CONTROLES = f.controles || controlesSobre(APARELHOS, EXEMPLO.controles);
     quantos = CONTROLES.length;
+    /* O QUE ELA DECLAROU EM CADA ENTRADA — 26/09/2026, o editor da entrada.
+       Toda entrada do mapa dela vem, com {} quando ela não disse nada, e as
+       chaves são as que o editor GRAVA no disco. A que o desenho monta do que
+       ela declarou (as do hub, a ponta do extensor) não vem: ali, e no
+       exemplo, o editor fica só na tela. */
+    DECLARADO = JSON.parse(JSON.stringify(f.declarado || {}));
+    GRAVA = Object.keys(DECLARADO);
+    editando = null;
   }
 
   function dizerDeQuando() {
@@ -866,24 +874,11 @@ EDICOES: tuple[Edicao, ...] = (
         depois="  </footer>\n  </div>\n</div>\n\n<script>\n",
         porque="24/09/2026 — e fecha depois do rodapé, que rola junto com o resto.",
     ),
-)
-
-
-#: ══ AS EDIÇÕES QUE ESPERAM A SESSÃO DOS DESENHOS — 24/09/2026 ════════════
-#:
-#: A tela para no mockup até o OK dela (ordem de 23/09), e esta página tem DUAS
-#: casas que o gerador responde: a bancada, que o `main()` grava, e a cópia do
-#: produto, que só muda pelo `--publicar`. As edições daqui entram na bancada e
-#: ficam FORA da conta da cópia do produto (o `com_as_que_esperam=False`)
-#: — é isso que deixa a régua da igualdade (`test_arranjo_invariantes`) verde
-#: enquanto o desenho espera por ela.
-#:
-#: QUEM PUBLICAR, no mesmo commit do `--publicar mapa-das-portas.html`, junta
-#: as edições daqui ao fim de `EDICOES` e deixa esta tupla vazia. A régua da
-#: igualdade reprova dizendo isto se a cópia do produto receber o desenho e as
-#: edições continuarem aqui.
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
     # ═══ O MAPA DAS CONEXÕES — 26/09/2026, o que ela pediu olhando a página ═══
+    # Publicadas em 26/09/2026 pela O-MAPA-DAS-CONEXOES-NO-PRODUTO-01, por
+    # delegação dela («quem implementa publica»). Várias editam o que uma edição
+    # de antes escreveu (o cabeçalho e os modos de 11/09): o gerador as aplica
+    # em ordem, e a régua cobra cada `antes` no texto da vez dela.
     Edicao(
         antes=(
             '</head>'
@@ -1533,7 +1528,69 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             'e ela declarou.'
         ),
     ),
+    # ═══ O EDITOR GRAVA — 26/09/2026, O-MAPA-DAS-CONEXOES-NO-PRODUTO-01 ═══
+    Edicao(
+        antes=(
+            '  var DECLARADO = {};\n'
+            '  var editando = null;\n'
+        ),
+        depois=(
+            '  var DECLARADO = {};\n'
+            '  var editando = null;\n'
+            '  /* O EDITOR GRAVA — 26/09/2026. `GRAVA` são as entradas do mapa de'
+            ' quem abre,\n'
+            '     entregues pelo produto em `hefestoArranjo`; só nelas o botão l'
+            'eva o gesto\n'
+            '     ao disco. No exemplo e nas entradas que o desenho monta do que'
+            ' ela\n'
+            '     declarou (as do hub, a ponta do extensor), o editor fica só na'
+            ' tela. */\n'
+            '  var GRAVA = [];\n'
+            '  function gravaNaEntrada(n, gesto) {\n'
+            '    if (GRAVA.indexOf(String(n)) === -1) return "";\n'
+            '    return \' data-gesto="\' + gesto + \'" data-entrada="\' + n + \'"\';\n'
+            '  }\n'
+        ),
+        porque=(
+            '26/09/2026 — o que ela declara numa entrada do mapa dela vai ao `m'
+            'aquina.json` (`pacotes/a12_mapa_das_portas.py`), e volta na próxi'
+            'ma leitura pelo `f.declarado`.'
+        ),
+    ),
+    Edicao(
+        antes='data-liga="\' + o[0] + \'" aria-pressed="',
+        depois=(
+            'data-liga="\' + o[0] + \'"\' + gravaNaEntrada(editando, "entrada-o-que-tem")'
+            ' + \' aria-pressed="'
+        ),
+        porque='26/09/2026 — «O que tem aqui» grava: o gesto `entrada-o-que-tem`.',
+    ),
+    Edicao(
+        antes='data-usb="\' + o[0] + \'" aria-pressed="',
+        depois=(
+            'data-usb="\' + o[0] + \'"\' + gravaNaEntrada(editando, "entrada-velocidade")'
+            ' + \' aria-pressed="'
+        ),
+        porque='26/09/2026 — «Velocidade» grava: o gesto `entrada-velocidade`.',
+    ),
 )
+
+
+#: ══ AS EDIÇÕES QUE ESPERAM A SESSÃO DOS DESENHOS — 24/09/2026 ════════════
+#:
+#: A tela para no mockup até o OK dela (ordem de 23/09), e esta página tem DUAS
+#: casas que o gerador responde: a bancada, que o `main()` grava, e a cópia do
+#: produto, que só muda pelo `--publicar`. As edições daqui entram na bancada e
+#: ficam FORA da conta da cópia do produto (o `com_as_que_esperam=False`)
+#: — é isso que deixa a régua da igualdade (`test_arranjo_invariantes`) verde
+#: enquanto o desenho espera por ela.
+#:
+#: QUEM PUBLICAR, no mesmo commit do `--publicar mapa-das-portas.html`, junta
+#: as edições daqui ao fim de `EDICOES` e deixa esta tupla vazia. A régua da
+#: igualdade reprova dizendo isto se a cópia do produto receber o desenho e as
+#: edições continuarem aqui. Vazia desde 26/09/2026: as doze do mapa das
+#: conexões foram publicadas pela O-MAPA-DAS-CONEXOES-NO-PRODUTO-01.
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:

@@ -55,9 +55,24 @@ def test_a_promessa_saiu_da_bancada_e_do_publicado() -> None:
         )
 
 
+#: A LISTA QUE PROPÕE MOVER UM CONTROLE DE ADAPTADOR — é onde a promessa morava.
+LISTA_DE_MOVER = "no adaptador errado"
+
+
 def test_o_texto_novo_diz_o_que_ha_hoje() -> None:
+    """Onde a página propõe mover um controle, ela diz o caminho de hoje.
+
+    26/09/2026 (O-MAPA-DAS-CONEXOES-NO-PRODUTO-01): a seção «Os controles»
+    saiu da página inteira, a pedido dela — os controles no adaptador errado
+    viraram a Sugestão de Conexão da aba. Sem a lista não há onde dizer o
+    caminho; se ela voltar, volta dizendo. A origem congelada prova que o
+    seletor ainda enxerga a lista.
+    """
+    assert LISTA_DE_MOVER in CONGELADO.read_text(encoding="utf-8")
     for arquivo in (BANCADA, PUBLICADO):
         texto = re.sub(r"\s+", " ", arquivo.read_text(encoding="utf-8"))
+        if LISTA_DE_MOVER not in texto:
+            continue
         assert "gesto de terminal" in texto, (
             f"{arquivo.name}: a promessa saiu mas nada entrou no lugar — a "
             "pessoa fica sem saber como mover o controle."
