@@ -412,24 +412,61 @@ def test_os_espelhos_do_desfazer() -> None:
     assert cura._PASTAS_DO_HEROIC == m.PASTAS_DO_HEROIC
 
 
-def test_o_desfazer_roda_com_o_python_do_sistema(mesa: dict[str, Path], tmp_path: Path) -> None:
+#: SÓ A BIBLIOTECA PADRÃO, e por recusa, não por sorte: o `python3` do sistema
+#: desta bancada TEM o `platformdirs` (`/usr/lib/python3/dist-packages`), e um
+#: `-I` sozinho deixaria o desfazer importá-lo aqui e cair noutra máquina.
+_SO_A_BIBLIOTECA_PADRAO = (
+    "import os, runpy, sys\n"
+    "class _Recusa:\n"
+    "    def find_spec(self, nome, path=None, target=None):\n"
+    "        topo = nome.partition('.')[0]\n"
+    "        if (topo in sys.stdlib_module_names or topo.startswith('_')\n"
+    "                or topo == 'hefesto_dualsense4unix'):\n"
+    "            return None\n"
+    "        raise ImportError(f'fora da biblioteca padrão: {nome}')\n"
+    "sys.meta_path.insert(0, _Recusa())\n"
+    "script = sys.argv[1]\n"
+    "sys.argv = sys.argv[1:]\n"
+    "sys.path.insert(0, os.path.dirname(script))\n"
+    "runpy.run_path(script, run_name='__main__')\n"
+)
+
+
+@pytest.mark.parametrize("pasta_pedida", [True, False], ids=["pasta-pedida", "pasta-padrao"])
+def test_o_desfazer_roda_com_o_python_do_sistema(tmp_path: Path, pasta_pedida: bool) -> None:
     """Depois de a `.venv` sair, o uninstall o roda com o `python3` do sistema
     (`-I`: nem PYTHONPATH, nem o site do usuário) — o pacote se acha pelo
-    caminho do arquivo, e a corrente do desfazer é só biblioteca padrão."""
+    caminho do arquivo, e a corrente do desfazer é só biblioteca padrão.
+
+    As DUAS formas de chamar: a do `uninstall.sh` (com `--pasta-do-ambiente`)
+    e a que o ADIADO manda ela rodar depois (sem argumento: as pastas pela
+    regra do XDG). A MORDIDA: um `import platformdirs` no topo do módulo e as
+    duas reprovam — sem a recusa, só reprovariam numa máquina sem ele.
+    """
     py = shutil.which("python3", path=SISTEMA)
     if py is None:
         pytest.skip("sem python3 no sistema")
-    _curar(mesa["lar"], mesa["pasta"])
+    lar = tmp_path / "lar"
+    lar.mkdir()
+    _instalar_flatpak(lar, MGBA)
+    heroic = _heroic(lar, nativo=False)
+    mgba = lar / ".local/share/flatpak/overrides" / MGBA
+    pasta = _ambiente(lar / ".local/state" / m.SLUG / "launch_env")
+    _curar(lar, pasta)
+    recusa = tmp_path / "so_a_biblioteca_padrao.py"
+    recusa.write_text(_SO_A_BIBLIOTECA_PADRAO, encoding="utf-8")
     arquivo = RAIZ / "src/hefesto_dualsense4unix/integrations/cura_por_estrada.py"
+    argv = [py, "-I", str(recusa), str(arquivo), "--desfazer"]
+    if pasta_pedida:
+        argv += ["--lar", str(lar), "--pasta-do-ambiente", str(pasta)]
     r = subprocess.run(
-        [py, "-I", str(arquivo), "--desfazer", "--lar", str(mesa["lar"]),
-         "--pasta-do-ambiente", str(mesa["pasta"])],
-        env={"HOME": str(mesa["lar"]), "PATH": SISTEMA, "LANG": "C.UTF-8",
-             "PYTHONDONTWRITEBYTECODE": "1"},
+        argv, env={"HOME": str(lar), "PATH": SISTEMA, "LANG": "C.UTF-8",
+                   "PYTHONDONTWRITEBYTECODE": "1"},
         capture_output=True, text=True, timeout=60, check=False, cwd=str(tmp_path))
     assert r.returncode == 0, r.stdout + r.stderr
-    assert json.loads(mesa["heroic"].read_text(encoding="utf-8")) == HEROIC_DELA
-    assert not mesa["mgba"].exists()
+    assert json.loads(heroic.read_text(encoding="utf-8")) == HEROIC_DELA
+    assert not mgba.exists()
+    assert not cura.caminho_do_registro(pasta).exists()
     assert "tirei" in r.stdout
 
 
