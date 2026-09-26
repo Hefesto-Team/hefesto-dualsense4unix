@@ -2378,11 +2378,17 @@ def resolver_teclado_emulado(profile: Profile | None, flag_global: bool) -> bool
 # * um dono só: o global e o do controle ficam no MESMO documento, com o MESMO
 #   gesto (``machine.declare``) e a MESMA leitura (a declaração que o daemon
 #   rebinda no clique);
-# * o downgrade: o ``maquina.json`` resgata campo a campo o que conhece
-#   (``_so_o_que_o_schema_conhece``); um campo novo no PERFIL faria um Hefesto
-#   de antes recusar o perfil inteiro (``extra="forbid"``) — e exigiria uma
-#   coluna nova na aba Perfis (medido: oito réguas da coluna «Ajuste próprio»
-#   reprovam), tela fora das duas abas desta leva.
+# * a tela: um campo novo no PERFIL exigiria uma coluna nova na aba Perfis
+#   (medido: oito réguas da coluna «Ajuste próprio» reprovam), tela fora das
+#   duas abas desta leva.
+#
+# O PREÇO DO DOWNGRADE, medido e não escondido: o disco só guarda
+# ``"economia": true`` de quem ligou (``utils.maquina._podar`` tira o ``null``
+# de quem desligou). Com algum ``true`` lá, um Hefesto de ANTES desta sprint
+# recusa a seção ``controles`` inteira na leitura (``extra="forbid"`` no
+# ``ControleDeclarado``) e a resgata sem ela — o mesmo preço que todo campo
+# novo daquela classe pagou (o ``microfone``, em 22/08). No perfil o preço
+# seria maior: o perfil inteiro recusado.
 #
 # NENHUMA FEATURE DESLIGA, e é a régua: a luz fica mais fraca e não apaga, a
 # vibração ganha teto e não some, o gatilho gasta menos motor e continua com o
