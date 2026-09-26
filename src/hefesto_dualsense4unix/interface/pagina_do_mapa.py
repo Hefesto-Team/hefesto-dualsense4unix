@@ -1079,7 +1079,7 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             '      + \'<button class="modo destaque" data-modo="ideal" aria-pr'
             'essed="\' + (modo === "ideal") + \'">O que mudar</button>\'\n'
             '      + \'<button class="modo" data-modo="mao" aria-pressed="\' + '
-            '(modo === "mao") + \'">Tenho algo na mão</button>\'\n'
+            '(modo === "mao") + \'">Tenho algo na mão</button>\'\n'  # (noqa-acento: JS)
             '      + \'<button class="modo" id="reexaminar" aria-pressed="fals'
             'e" style="margin-left:auto">Examinar de novo</button>\';\n'
         ),
@@ -1089,7 +1089,7 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             '      + \'<button class="modo destaque" data-modo="ideal" aria-pr'
             'essed="\' + (modo === "ideal") + \'">Sugestões</button>\'\n'
             '      + \'<button class="modo" data-modo="mao" aria-pressed="\' + '
-            '(modo === "mao") + \'">Adicionar</button>\';\n'
+            '(modo === "mao") + \'">Adicionar</button>\';\n'  # (noqa-acento: JS)
         ),
         porque=(
             '26/09/2026, pedido dela: *«muda os nomes dos botões pra algo fác'
@@ -1331,7 +1331,7 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             '      var nt = tb.getAttribute("data-tirar"), quemT = acha(aloca'
             'cao[nt]);\n'
             '      delete MAPA[nt]; editando = null;\n'
-            '      segurando = quemT.id; modo = "mao";\n'
+            '      segurando = quemT.id; modo = "mao";\n'  # (noqa-acento: JS)
             '      naMao = ({ bt: "bt", wifi: "wifi", teclado: "teclado", mou'
             'se: "mouse", webcam: "webcam" })[quemT.classe] || null;\n'
             '      pintar(); return;\n'
@@ -1347,11 +1347,11 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
     ),
     Edicao(
         antes=(
-            '      } else if (alocacao[n]) {\n'
-            '        var quem = acha(alocacao[n]);\n'
+            '      } else if (alocacao[n]) {\n'  # (noqa-acento: JS)
+            '        var quem = acha(alocacao[n]);\n'  # (noqa-acento: JS)
             '        delete MAPA[n];                 /* desdeclara: ela vai d'
             'izer onde é */\n'
-            '        segurando = quem.id; modo = "mao";\n'
+            '        segurando = quem.id; modo = "mao";\n'  # (noqa-acento: JS)
             '        naMao = ({ bt: "bt", wifi: "wifi", teclado: "teclado", m'
             'ouse: "mouse", webcam: "webcam" })[quem.classe] || null;\n'
             '      }\n'
@@ -1421,7 +1421,7 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
             '      return f.portas.some(function (x) { return x === p || x.fi'
             'lho === p; });\n'
             '    })[0];\n'
-            '    var quem = alocacao[editando] ? acha(alocacao[editando]) : n'
+            '    var quem = alocacao[editando] ? acha(alocacao[editando]) : n'  # (noqa-acento: JS)
             'ull;\n'
             '    ed.innerHTML = \'<div class="edita-cab"><b>Entrada \' + editan'
             'do + "</b><span>" + (face ? face.nome : "") + "</span>"\n'
