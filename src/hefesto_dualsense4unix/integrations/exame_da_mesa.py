@@ -186,7 +186,7 @@ def energia_do_radio(
             chave="energia_do_radio",
             rotulo=ROTULO_ENERGIA_DO_RADIO,
             estado=ESTADO_CERTO,
-            porque="O sistema está proibido de desligar o rádio dos controles.",
+            porque="O sistema não desliga o rádio dos controles.",
         )
     if conf.is_file():
         if not valor:
@@ -195,8 +195,7 @@ def energia_do_radio(
                 rotulo=ROTULO_ENERGIA_DO_RADIO,
                 estado=ESTADO_NAO_SEI,
                 porque=(
-                    "A regra está no lugar, mas não há adaptador Bluetooth "
-                    "ligado agora para conferir."
+                    "A regra está no lugar; nenhum adaptador BT ligado agora."
                 ),
             )
         return Item(
@@ -204,8 +203,7 @@ def energia_do_radio(
             rotulo=ROTULO_ENERGIA_DO_RADIO,
             estado=ESTADO_ATENCAO,
             porque=(
-                "A regra está no lugar, mas o adaptador só a recebe no "
-                "próximo encaixe."
+                "A regra está no lugar; vale no próximo encaixe do adaptador."
             ),
             cura=(
                 "Desencaixe e encaixe o adaptador Bluetooth de novo, ou "
@@ -217,8 +215,7 @@ def energia_do_radio(
         rotulo=ROTULO_ENERGIA_DO_RADIO,
         estado=ESTADO_ATENCAO,
         porque=(
-            "O sistema pode desligar o adaptador para poupar energia, e "
-            "o controle cai no meio do jogo."
+            "O sistema pode desligar o adaptador, e o controle cai."
         ),
         cura="Rode a instalação do Hefesto de novo: a regra entra por padrão.",
     )
@@ -262,7 +259,7 @@ def energia_das_portas(
             rotulo=ROTULO_ENERGIA_DAS_PORTAS,
             estado=ESTADO_CERTO,
             porque=(
-                f"Nenhuma das {total} portas USB está em economia de energia."
+                f"As {total} portas USB ficam sempre ligadas."
             ),
         )
     return Item(
@@ -270,8 +267,7 @@ def energia_das_portas(
         rotulo=ROTULO_ENERGIA_DAS_PORTAS,
         estado=ESTADO_ATENCAO,
         porque=(
-            f"{dormindo} das {total} portas USB podem dormir, e o que "
-            "estiver nelas cai sem aviso."
+            f"{dormindo} de {total} portas USB podem dormir e derrubar aparelhos."
         ),
         cura="Rode a instalação do Hefesto de novo: a regra entra por padrão.",
     )
@@ -299,21 +295,21 @@ def suporte_ao_controle(
                     chave="suporte_ao_controle",
                     rotulo=ROTULO_SUPORTE_AO_CONTROLE,
                     estado=ESTADO_CERTO,
-                    porque="A parte do sistema que fala com o DualSense está carregada.",
+                    porque="O sistema já sabe falar com o DualSense.",
                 )
     if diretorio_do_modulo.is_dir():
         return Item(
             chave="suporte_ao_controle",
             rotulo=ROTULO_SUPORTE_AO_CONTROLE,
             estado=ESTADO_CERTO,
-            porque="A parte do sistema que fala com o DualSense vem embutida neste kernel.",
+            porque="O suporte ao DualSense vem embutido no sistema.",
         )
     return Item(
         chave="suporte_ao_controle",
         rotulo=ROTULO_SUPORTE_AO_CONTROLE,
         estado=ESTADO_ATENCAO,
         porque=(
-            "A parte do sistema que fala com o DualSense não está carregada."
+            "O sistema ainda não sabe falar com o DualSense."
         ),
         cura="Reinicie o computador; se continuar, o kernel pode ser antigo demais.",
     )
@@ -361,8 +357,7 @@ def pareamentos(
             rotulo=ROTULO_PAREAMENTOS,
             estado=ESTADO_CERTO,
             porque=(
-                "Nenhum controle pareado por BT — não há pareamento pela "
-                "metade possível."
+                "Nenhum controle pareado por BT ainda."
             ),
         )
     pela_metade = 0
@@ -385,8 +380,7 @@ def pareamentos(
             rotulo=ROTULO_PAREAMENTOS,
             estado=ESTADO_PROBLEMA,
             porque=(
-                f"{pela_metade} pareamento(s) pela metade: o controle cai "
-                "logo depois de conectar."
+                f"{pela_metade} pareamento(s) pela metade: o controle cai."
             ),
             cura=(
                 "No Bluetooth do sistema, remova esse controle e pareie de "
@@ -398,7 +392,7 @@ def pareamentos(
             chave="pareamentos",
             rotulo=ROTULO_PAREAMENTOS,
             estado=ESTADO_NAO_SEI,
-            porque="O Bluetooth desta máquina não informa se o pareamento está inteiro.",
+            porque="O BT não diz se o pareamento está inteiro.",
         )
     return Item(
         chave="pareamentos",
@@ -468,7 +462,7 @@ def vizinhanca_das_portas(
             chave="vizinhanca_das_portas",
             rotulo=ROTULO_VIZINHANCA,
             estado=ESTADO_CERTO,
-            porque="Nenhum aparelho encaixado colado a um adaptador Bluetooth.",
+            porque="Nenhum aparelho colado a um adaptador BT.",
         )
     nada_declarado = altura_da_antena is None and linha_de_visada is None
     if nada_declarado:
@@ -480,16 +474,14 @@ def vizinhanca_das_portas(
         )
     else:
         cura = (
-            "Abra “Rádio e Adaptadores”, logo abaixo, e mude um dos dois para uma "
-            "porta mais longe."
+            "Mude um dos dois para uma porta mais longe."
         )
     return Item(
         chave="vizinhanca_das_portas",
         rotulo=ROTULO_VIZINHANCA,
         estado=ESTADO_ATENCAO,
         porque=(
-            f"{len(apertadas)} par(es) em portas coladas: rádio ao lado de "
-            "rádio atrapalha o controle."
+            f"{len(apertadas)} par(es) de rádios em portas coladas."
         ),
         cura=cura,
     )
@@ -560,7 +552,7 @@ def _itens_das_ordens(leitura: Callable[[], Leitura]) -> list[Item]:
                 rotulo=ROTULO_DAS_ORDENS,
                 estado=ESTADO_NAO_SEI,
                 porque=(
-                    "Não deu para conferir como os aparelhos estão encaixados."
+                    "Não deu para conferir os encaixes agora."
                 ),
             )
         ]

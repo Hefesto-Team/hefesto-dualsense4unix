@@ -1119,6 +1119,13 @@
      outras doze páginas). Quando o esqueleto descongelar, ela sobe para lá e
      esta some. */
   .quadro:has(> input.abre) .quadro-topo{padding-bottom:11px}
+  /* A SEÇÃO ABERTA SOBE OS BLOCOS — 26/09/2026, pedido dela: *«tem uma linha
+     abaixo do gestão de controles que não tá sendo usada. Deveriamos subir os
+     blocos de seção pra ocupar ali de cima tambem»*. O respiro de baixo do
+     rótulo (11px) é do acordeão FECHADO; aberto, o corpo vem logo embaixo e
+     os dois respiros somavam 21px de faixa vazia. (noqa-acento: citação literal dela) */
+  .quadro:has(> input.abre:checked) .quadro-topo{padding-bottom:5px}
+  .quadro:has(> input.abre:checked) > .quadro-corpo{padding-top:4px}
 
   /* O GLIFO DE IGNORAR, um por linha do exame. Ele mora na ponta direita, depois
      do `?`, e nasce apagado: é gesto de recusa, não de ação principal — aceso
@@ -1245,10 +1252,9 @@
   /* OS DOIS BLOCOS TÊM A MESMA ALTURA, E A SUGESTÃO ENCOSTA NO EXAME — pedido
      dela, 26/09/2026: *«equipa a altura dos dois blocos e aumenta a largura do
      bloco da direita até chegar ao lado do bloco da esquerda»*. O exame fica
-     com a largura do texto dele (até 62%, e o achado de 121 caracteres ainda
-     cabe numa linha), a Sugestão com o resto; os dois são caixas, e o
-     `stretch` da grade dá a mesma altura às duas. */
-  .duas-colunas:has(.col-exame){grid-template-columns:minmax(0,40%) minmax(0,1fr);
+     com 46% e a Sugestão com o resto; os dois são caixas, e o `stretch` da
+     grade dá a mesma altura às duas. */
+  .duas-colunas:has(.col-exame){grid-template-columns:minmax(0,46%) minmax(0,1fr);
                                 column-gap:10px;align-items:stretch}
   .duas-colunas:has(.col-exame) > .lado-e{padding:10px 12px;border:1px solid var(--border-sutil);
                                 border-radius:7px;background:var(--app-bg)}
@@ -1262,8 +1268,10 @@
      usando o espaço horizontral por completo»* (noqa-acento: citação literal
      dela). Medido no WebKitGTK: com `fit-content` a coluna do exame parava em
      421 px e três das cinco linhas quebravam (34 px contra 20), e a ordem
-     ocupava 289 px de uma caixa de 1029. O exame fica com 40% (o achado mais
-     longo, de 121 caracteres, cabe a 1920 px), e a ordem ocupa a caixa. */
+     ocupava 289 px de uma caixa de 1029. O exame foi a 40% e, na foto
+     seguinte dela (*«ainda tá quebrando a linha no primeiro ajustar»*), a
+     46%, com as frases encurtadas para até ~65 caracteres; a ordem ocupa a
+     caixa. (noqa-acento: citação literal dela) */
   .lado-d .sugestao .col-ordem > .ordem{align-items:stretch}
   /* DOIS SELETORES E NÃO UM — 19/09/2026, e o segundo é a cura de um `:empty`
      que NUNCA DISPAROU na máquina dela.
@@ -2962,14 +2970,6 @@
           Perfil de Desempenho dele. Nada muda sozinho: a sugestão diz o que mover para
           onde.
         </span></span>
-        <!-- O CARIMBO GANHOU ENDEREÇO em 02/09/2026. Ele dizia "há 3 minutos"
-             desde que o mockup nasceu, e nunca soube nada: nenhum pacote
-             escrevia aqui, então a frase era a mesma com o exame recém-corrido
-             e com a aba aberta desde ontem. A palavra da idade é do produto
-             (`secao_exame.frase_de_quando`), e a moldura "Examinado …" é a
-             deste desenho. -->
-        <span class="conta" data-campo="examinado">Examinado há 3 minutos</span>
-        <span class="conta" data-campo="conta-gestao" data-hef-alvo="html">2 controles <span class="pt">•</span> 1 USB <span class="pt">•</span> 1 BT</span>
       </div>
       <div class="quadro-corpo">
         <!-- A LINHA DE VEREDITO SAIU — 26/09/2026, pedido dela com a janela
@@ -3434,7 +3434,7 @@
                 <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
                        value="Vitória" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
                        aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
-                <span class="gc-nome" data-campo="nome" data-hef-alvo="html" title="A borda é a cor lida deste aparelho.">Cosmic Red <span class="pt">•</span> USB</span>
+                <span class="gc-nome" data-campo="nome" data-hef-alvo="html" title="A borda é a cor lida deste aparelho.">Cosmic Red <span class="pt">•</span> USB <span class="pt">•</span> 100%</span>
               </div>
             </div>
             <div class="gc-resumo">
@@ -3442,8 +3442,6 @@
               <span class="gc-est" data-campo="est-som" data-hef-alvo="html"><span class="est ok">Som <i class="certo">✓</i></span></span>
               <span class="gc-est" data-campo="est-modo" data-hef-alvo="html"><span class="est">Modo de conexão <b>Sony DualSense</b></span></span>
               <span class="gc-est" data-campo="est-visto" data-hef-alvo="html"><span class="est">Visto como <b>DualSense</b></span></span>
-              <span class="gc-est" data-campo="est-conexao" data-hef-alvo="html"><span class="est ok">Conexão estável <i class="certo">✓</i></span></span>
-              <span class="gc-est" data-campo="est-bateria" data-hef-alvo="html"><span class="est">Bateria <b>100%</b></span></span>
             </div>
             <div class="gc-corpo">
               <div class="gc-perfil">
@@ -3754,7 +3752,7 @@
                 <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
                        value="" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
                        aria-label="Nome de quem joga com este controle" title="Escreva o nome de quem joga com este controle. O nome fica no controle: vale em qualquer entrada e adaptador. Apague para voltar a «P N».">
-                <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Starlight Blue <span class="pt">•</span> BT</span>
+                <span class="gc-nome" data-campo="nome" data-hef-alvo="html">Starlight Blue <span class="pt">•</span> BT <span class="pt">•</span> 64%</span>
               </div>
             </div>
             <div class="gc-resumo">
@@ -3762,8 +3760,6 @@
               <span class="gc-est" data-campo="est-som" data-hef-alvo="html"><span class="est ok">Som <i class="certo">✓</i></span></span>
               <span class="gc-est" data-campo="est-modo" data-hef-alvo="html"><span class="est">Modo de conexão <b>Sony DualSense</b></span></span>
               <span class="gc-est" data-campo="est-visto" data-hef-alvo="html"><span class="est">Visto como <b>Xbox 360</b></span></span>
-              <span class="gc-est" data-campo="est-conexao" data-hef-alvo="html"><span class="est ok">Conexão estável <i class="certo">✓</i></span></span>
-              <span class="gc-est" data-campo="est-bateria" data-hef-alvo="html"><span class="est">Bateria <b>64%</b></span></span>
             </div>
             <div class="gc-corpo">
               <div class="gc-perfil">
@@ -4082,8 +4078,6 @@
               <span class="gc-est" data-campo="est-som" data-hef-alvo="html">—</span>
               <span class="gc-est" data-campo="est-modo" data-hef-alvo="html">—</span>
               <span class="gc-est" data-campo="est-visto" data-hef-alvo="html">—</span>
-              <span class="gc-est" data-campo="est-conexao" data-hef-alvo="html">—</span>
-              <span class="gc-est" data-campo="est-bateria" data-hef-alvo="html">—</span>
             </div>
             <div class="gc-corpo">
               <div class="gc-perfil">
@@ -4402,8 +4396,6 @@
               <span class="gc-est" data-campo="est-som" data-hef-alvo="html">—</span>
               <span class="gc-est" data-campo="est-modo" data-hef-alvo="html">—</span>
               <span class="gc-est" data-campo="est-visto" data-hef-alvo="html">—</span>
-              <span class="gc-est" data-campo="est-conexao" data-hef-alvo="html">—</span>
-              <span class="gc-est" data-campo="est-bateria" data-hef-alvo="html">—</span>
             </div>
             <div class="gc-corpo">
               <div class="gc-perfil">

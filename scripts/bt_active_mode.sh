@@ -537,7 +537,7 @@ for chave, dele in sorted(adaptadores.items() if isinstance(adaptadores, dict) e
         fi
         if busctl set-property org.bluez "${ADAPTER_OBJ}" org.bluez.Adapter1 Alias s "${NOVO}" 2>/dev/null; then
             if [[ -n "${NOME}" ]]; then
-                log "alias do adaptador ${HCI} -> '${NOVO}' (o nome da porta em que ele está)"
+                log "alias do adaptador ${HCI} -> '${NOVO}' (o nome dado a ele na aba Conexões)"
             else
                 log "alias do adaptador ${HCI} -> '${NOVO}' (tira o Pro do sniff frágil)"
             fi

@@ -441,7 +441,7 @@ def contagens_do_cabecalho(itens: Sequence[Item]) -> tuple[int, int]:
     return len(conferencias) - sem_resposta, sem_resposta
 
 
-def _leitura_das_ordens(maquina: Any) -> Any:
+def leitura_das_ordens(maquina: Any) -> Any:
     """O que o catálogo de ordens lê — o barramento MAIS o desenho dela.
 
     O módulo do exame é 100% stdlib e não pode abrir o `maquina.json` (contrato
@@ -480,7 +480,7 @@ def _leitura_das_ordens(maquina: Any) -> Any:
         entradas=entradas_do_gabinete.listar_entradas(),
         vizinhas=mapa_das_portas.vizinhas_de_verdade(mapa, censo),
         ocupante_da_entrada={
-            numero: (mapa_das_portas.caminho_de(mapa, numero) or "")
+            numero: mapa_das_portas.ocupante_de(mapa, numero, censo)
             for numero in mapa.portas
         },
         entradas_livres_declaradas=mapa_das_portas.portas_livres(mapa, censo),
@@ -1076,7 +1076,7 @@ class PainelDoExame:
                 guardado: dict[str, Any] = {}
 
                 def _ler_as_ordens() -> Any:
-                    guardado["leitura"] = _leitura_das_ordens(maquina)
+                    guardado["leitura"] = leitura_das_ordens(maquina)
                     return guardado["leitura"]
 
                 itens = exame_da_mesa.exame(

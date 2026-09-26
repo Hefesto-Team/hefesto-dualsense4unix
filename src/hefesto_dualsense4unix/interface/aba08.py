@@ -554,22 +554,6 @@ def _sugestao_da_cena():
     finally:
         _pacote08._ORDENS_NA_TELA = antes
 
-#: A CONTAGEM DA SEÇÃO GESTÃO DE CONTROLES, e ela tem UM dono: o
-#: `gui.aba_conexoes.texto_da_contagem`, que escreve *"2 controles • 1 USB •
-#: 1 BT"* — a frase inteira, com os números. Este arquivo a digitava,
-#: e era a segunda grafia: com um controle só na mesa, o produto continuava
-#: mostrando 2/1/1 porque o `<span>` não tinha endereço nem dono.
-#:
-#: O `Controle` DA BANCADA É MONTADO AQUI porque o dono conta por
-#: `Controle.pelo_radio`, e ele lê a chave CRUA (`"usb"`/`"bt"`). Quem traduz a
-#: cena é :func:`transporte_de`, e é ele o único tradutor deste arquivo — o
-#: `.lower()` que morava aqui era a segunda grafia da mesma tradução, e a que
-#: ficaria certa por acidente no dia em que a cena falasse a língua da tela.
-CONTA_DA_GESTAO = _pacote08.html_da_conta(_aba_conexoes.texto_da_contagem([
-    _aba_conexoes.Controle(uniq=str(c["pref"]), jogador=int(c["jogador"]),
-                           via=transporte_de(c), bateria=None)
-    for c in CONECTADOS]))
-
 #: O microfone segue o TRANSPORTE — ponto final dela, 28/08: *"se tiver em modo
 #: rádio, então o mic é modo rádio"*. Não há chavinha e não há heurística de
 #: orçamento: os turnos do rádio viraram CONSEQUÊNCIA, e a consequência aparece
@@ -592,7 +576,7 @@ def tem_mic_pelo_radio(c):
 #: dois únicos campos minúsculos da linha fechada, ao lado de "Vê como
 #: DualSense" e "Bateria 100%". Medido em 28/08 nas quatro linhas.
 #: O DONO DAS DUAS FRASES MUDOU-SE PARA O PACOTE — 03/09/2026, mesmo molde do
-#: `rotulo_do_controle` e do `html_da_conta`. Enquanto elas moravam só aqui, o
+#: `rotulo_do_controle`. Enquanto elas moravam só aqui, o
 #: produto não tinha como reescrevê-las: a linha fechada dizia "pelo cabo •
 #: Placa do controle" no primeiro lugar e "pelo rádio • Pela ponte" no segundo
 #: porque foi assim que a CENA foi desenhada, e não porque o daemon tenha dito.
@@ -630,6 +614,13 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      outras doze páginas). Quando o esqueleto descongelar, ela sobe para lá e
      esta some. */
   .quadro:has(> input.abre) .quadro-topo{padding-bottom:11px}
+  /* A SEÇÃO ABERTA SOBE OS BLOCOS — 26/09/2026, pedido dela: *«tem uma linha
+     abaixo do gestão de controles que não tá sendo usada. Deveriamos subir os
+     blocos de seção pra ocupar ali de cima tambem»*. O respiro de baixo do
+     rótulo (11px) é do acordeão FECHADO; aberto, o corpo vem logo embaixo e
+     os dois respiros somavam 21px de faixa vazia. (noqa-acento: citação literal dela) */
+  .quadro:has(> input.abre:checked) .quadro-topo{padding-bottom:5px}
+  .quadro:has(> input.abre:checked) > .quadro-corpo{padding-top:4px}
 
   /* O GLIFO DE IGNORAR, um por linha do exame. Ele mora na ponta direita, depois
      do `?`, e nasce apagado: é gesto de recusa, não de ação principal — aceso
@@ -756,10 +747,9 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   /* OS DOIS BLOCOS TÊM A MESMA ALTURA, E A SUGESTÃO ENCOSTA NO EXAME — pedido
      dela, 26/09/2026: *«equipa a altura dos dois blocos e aumenta a largura do
      bloco da direita até chegar ao lado do bloco da esquerda»*. O exame fica
-     com a largura do texto dele (até 62%, e o achado de 121 caracteres ainda
-     cabe numa linha), a Sugestão com o resto; os dois são caixas, e o
-     `stretch` da grade dá a mesma altura às duas. */
-  .duas-colunas:has(.col-exame){grid-template-columns:minmax(0,40%) minmax(0,1fr);
+     com 46% e a Sugestão com o resto; os dois são caixas, e o `stretch` da
+     grade dá a mesma altura às duas. */
+  .duas-colunas:has(.col-exame){grid-template-columns:minmax(0,46%) minmax(0,1fr);
                                 column-gap:10px;align-items:stretch}
   .duas-colunas:has(.col-exame) > .lado-e{padding:10px 12px;border:1px solid var(--border-sutil);
                                 border-radius:7px;background:var(--app-bg)}
@@ -773,8 +763,10 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      usando o espaço horizontral por completo»* (noqa-acento: citação literal
      dela). Medido no WebKitGTK: com `fit-content` a coluna do exame parava em
      421 px e três das cinco linhas quebravam (34 px contra 20), e a ordem
-     ocupava 289 px de uma caixa de 1029. O exame fica com 40% (o achado mais
-     longo, de 121 caracteres, cabe a 1920 px), e a ordem ocupa a caixa. */
+     ocupava 289 px de uma caixa de 1029. O exame foi a 40% e, na foto
+     seguinte dela (*«ainda tá quebrando a linha no primeiro ajustar»*), a
+     46%, com as frases encurtadas para até ~65 caracteres; a ordem ocupa a
+     caixa. (noqa-acento: citação literal dela) */
   .lado-d .sugestao .col-ordem > .ordem{align-items:stretch}
   /* DOIS SELETORES E NÃO UM — 19/09/2026, e o segundo é a cura de um `:empty`
      que NUNCA DISPAROU na máquina dela.
@@ -2122,9 +2114,10 @@ def nome_do_lugar_vazio(c):
     return "Desconectado"
 
 
-#: Os seis selos do estado, na ordem do pedido dela (25/09/2026): Mic, Som,
-#: Modo de conexão, Visto como, Conexão estável, Bateria.
-ESTADOS_DA_LINHA = ("est-mic", "est-som", "est-modo", "est-visto", "est-conexao", "est-bateria")
+#: Os quatro selos do estado, na ordem do pedido dela (25/09/2026): Mic, Som,
+#: Modo de conexão, Visto como. «Conexão estável» e «Bateria» saíram em
+#: 26/09/2026; a bateria foi para o nome (`nome_com_a_bateria`).
+ESTADOS_DA_LINHA = ("est-mic", "est-som", "est-modo", "est-visto")
 #: O nome de quem joga, na CENA do desenho: o P1 com nome escrito e o P2 sem,
 #: para o desenho mostrar os dois estados do campo. O produto escreve o que o
 #: dono do nome (a memória dos controles, pelo endereço) disser.
@@ -2376,7 +2369,7 @@ def linha_do_controle(c):
                 <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
                        value="{vale(DONO_DA_CENA.get(c["pref"], ""), "")}" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
                        aria-label="Nome de quem joga com este controle" title="{DONO_DICA}">
-                <span class="gc-nome" data-campo="nome" data-hef-alvo="html"{dica_da_borda}>{vale(_pacote08.rotulo_curto_do_controle(c), nome_do_lugar_vazio(c))}</span>
+                <span class="gc-nome" data-campo="nome" data-hef-alvo="html"{dica_da_borda}>{vale(_pacote08.nome_com_a_bateria(_pacote08.rotulo_curto_do_controle(c), DA_CONTROLES[c["pref"]]["bat"]), nome_do_lugar_vazio(c))}</span>
               </div>
             </div>
             <div class="gc-resumo">
@@ -4047,14 +4040,6 @@ MIOLO = f'''
           Perfil de Desempenho dele. Nada muda sozinho: a sugestão diz o que mover para
           onde.
         </span></span>
-        <!-- O CARIMBO GANHOU ENDEREÇO em 02/09/2026. Ele dizia "há 3 minutos"
-             desde que o mockup nasceu, e nunca soube nada: nenhum pacote
-             escrevia aqui, então a frase era a mesma com o exame recém-corrido
-             e com a aba aberta desde ontem. A palavra da idade é do produto
-             (`secao_exame.frase_de_quando`), e a moldura "Examinado …" é a
-             deste desenho. -->
-        <span class="conta" data-campo="examinado">Examinado há 3 minutos</span>
-        <span class="conta" data-campo="conta-gestao" data-hef-alvo="html">{CONTA_DA_GESTAO}</span>
       </div>
       <div class="quadro-corpo">
         <!-- A LINHA DE VEREDITO SAIU — 26/09/2026, pedido dela com a janela
@@ -4774,11 +4759,14 @@ if __name__ == "__main__":
         return int(achado.group(1))
 
 
-    # A PALAVRA "mesa" SAIU DA TELA EM 05/09/2026, ordem dela. A régua segue o
-    # rótulo em vez de o cravar: quem escreve a frase é
-    # `gui.aba_conexoes.texto_da_contagem`, e é dele que sai o "controles".
-    _exigir(_numero(r">(\d+) controles", "a contagem do cabeçalho") == len(_na_mesa),
-            f"o cabeçalho da Gestão não conta os {len(_na_mesa)} controles ligados")
+    # O CANTO DA GESTÃO FICA LIMPO — 26/09/2026, pedido dela: o carimbo
+    # «Examinado …» e a contagem «4 controles • 4 BT» saíram do cabeçalho.
+    #    A trava lê o cabeçalho da seção e não cita os endereços velhos: a
+    #    paridade vigia a ausência deles, e a citação aqui seria a volta.
+    _inicio_da_gestao = _HTML.index('id="cx8-2"')
+    _topo_da_gestao = _HTML[_inicio_da_gestao:_HTML.index('class="quadro-corpo"', _inicio_da_gestao)]
+    _exigir('class="conta"' not in _topo_da_gestao,
+            "o cabeçalho da Gestão voltou a ter o carimbo ou a contagem no canto")
     _exigir(_numero(r"energia para o?s? ?(\d+) ", "a frase da energia") == _cabo,
             f"o Check-up não fala dos {_cabo} controle(s) no cabo — ele voltou a contar "
             "quem não está na mesa")

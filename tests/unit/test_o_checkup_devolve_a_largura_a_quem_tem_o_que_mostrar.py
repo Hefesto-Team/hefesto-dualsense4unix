@@ -1,4 +1,4 @@
-"""O exame fica com 40% da largura, e a Sugestão de Conexão nunca some.
+"""O exame fica com 46% da largura, e a Sugestão de Conexão nunca some.
 
 **A METADE «SEM ORDEM, O EXAME LEVA TUDO» CAIU EM 26/09/2026**, por pergunta
 dela olhando a aba sem controle: *«pq sumiu a parte da caixinha no canto
@@ -7,9 +7,10 @@ A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01). A caixa tem título, fica sempre, e
 quando não há o que mudar diz «Nada a mudar agora.»; e os dois blocos têm a
 mesma altura, com a Sugestão encostada no exame (*«equipa a altura dos dois
 blocos e aumenta a largura do bloco da direita até chegar ao lado do bloco da
-esquerda»*). O exame fica com 40% da largura (era a largura do texto, até 62%,
-e o WebKitGTK da janela a calculava curta demais) — a frase de 90 caracteres
-continua cabendo numa linha. A metade que ficou de 19/09 é o teto
+esquerda»*). O exame fica com 46% da largura (era a largura do texto, até 62%,
+e o WebKitGTK da janela a calculava curta demais; foi a 40% e, na foto seguinte
+dela, a 46%, com as frases encurtadas) — o achado mais longo cabe numa linha de
+1366 px para cima. A metade que ficou de 19/09 é o teto
 das frases do exame (`TETO_DA_FRASE`), e a medição no navegador, que agora mede
 a caixa que FICA. O registro de 19/09 segue abaixo, porque é decisão medida.
 
@@ -70,16 +71,18 @@ GERADOR = RAIZ / "src/hefesto_dualsense4unix/interface/aba08.py"
 PAGINA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html"
 EXAME = RAIZ / "src/hefesto_dualsense4unix/integrations/exame_da_mesa.py"
 
-#: O teto que a medição sustenta. 90 é a maior frase que sobrou; o folgado é
-#: para a próxima pessoa não precisar remedir ao acrescentar um achado.
-TETO_DA_FRASE = 100
+#: O teto que a medição sustenta. As frases foram encurtadas de novo em
+#: 26/09/2026 (*«talvez encurtar as frases da primeira seção ajude a limpar
+#: mais o nosso layout»*): a maior do fonte tem 67 caracteres.
+#: (noqa-acento: citação literal dela)
+TETO_DA_FRASE = 70
 
-#: As regras do desenho de 26/09: o exame com 40% e a Sugestão com o resto,
+#: As regras do desenho de 26/09: o exame com 46% e a Sugestão com o resto,
 #: encostada nele; e a frase de quando não há o que mudar. Era `fit-content(62%)`
 #: até a foto dela da janela maximizada: o WebKitGTK calculava a coluna curta demais
 #: e três das cinco linhas quebravam (o comentário mora no gerador).
 REGRAS = (
-    ".duas-colunas:has(.col-exame){grid-template-columns:minmax(0,40%) minmax(0,1fr);",
+    ".duas-colunas:has(.col-exame){grid-template-columns:minmax(0,46%) minmax(0,1fr);",
     ".lado-d .sugestao .col-ordem > .ordem{align-items:stretch}",
     ".sugestao .nada-a-mudar{",
 )
@@ -238,8 +241,8 @@ def _os_dois_blocos_se_encostam(r: dict) -> None:
     assert r["vao"] == 10, f"a Sugestão não encosta no exame (vão de {r['vao']}px)"
     assert abs(r["altura_e"] - r["altura_d"]) <= 1, (
         f"os dois blocos não têm a mesma altura ({r['altura_e']} e {r['altura_d']} px)")
-    assert r["esquerda"] <= round(r["quadro"] * 0.40) + 1, (
-        f"o exame passou dos 40% ({r['esquerda']} de {r['quadro']}px)")
+    assert r["esquerda"] <= round(r["quadro"] * 0.46) + 1, (
+        f"o exame passou dos 46% ({r['esquerda']} de {r['quadro']}px)")
 
 
 def test_sem_ajuste_a_caixa_fica_e_diz_que_nao_ha_o_que_mudar(tela) -> None:

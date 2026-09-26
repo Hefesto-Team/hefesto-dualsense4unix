@@ -375,46 +375,40 @@ def test_o_desenho_da_bancada_endereca_o_ponto_de_interrogacao():
         "as cinco linhas do Check-up da bancada perderam o endereço do `?` — "
         "regere com `python src/hefesto_dualsense4unix/interface/aba08.py`"
     )
-    assert 'data-campo="examinado"' in html
 
 
-def test_o_gerador_e_quem_escreve_os_dois_enderecos():
-    """A bancada é gerada: quem os apagar do gerador some com eles no próximo `abaNN.py`."""
+def test_o_gerador_e_quem_escreve_o_endereco_da_dica():
+    """A bancada é gerada: quem o apagar do gerador some com ele no próximo `abaNN.py`."""
     fonte = GERADOR.read_text(encoding="utf-8")
     assert 'data-campo="achado-explica" data-hef-alvo="html"' in fonte
-    assert 'data-campo="examinado"' in fonte
 
 
-def test_o_pacote_emite_os_dois_enderecos_novos():
+def test_o_pacote_emite_a_dica_da_linha():
     """Emitir antes da publicação é o que faz a dica nascer certa no dia dela."""
     fonte = PACOTE.read_text(encoding="utf-8")
     assert '"achado-explica": [i["dica"] for i in itens]' in fonte
-    assert '"examinado": _carimbo_do_exame()' in fonte
 
 
-# --- o carimbo ------------------------------------------------------------
+# --- o carimbo saiu ------------------------------------------------------
 
 
-def test_o_carimbo_diz_agora_mesmo_antes_do_botao():
-    """Sem **Examinar Portas** nesta sessão, o que a tira mostra é deste tique."""
-    guardado = a08._QUANDO_O_EXAME
-    try:
-        a08._QUANDO_O_EXAME = None
-        assert a08._carimbo_do_exame() == "Examinado agora mesmo"
-    finally:
-        a08._QUANDO_O_EXAME = guardado
-
-
-def test_o_carimbo_envelhece_com_o_exame_completo():
-    """Ele deixou de ser a frase fixa "há 3 minutos" que o mockup cravava."""
-    import time
-
-    guardado = a08._QUANDO_O_EXAME
-    try:
-        a08._QUANDO_O_EXAME = time.monotonic() - 600
-        assert a08._carimbo_do_exame() == "Examinado há 10 minutos"
-    finally:
-        a08._QUANDO_O_EXAME = guardado
+def test_o_carimbo_e_a_contagem_sairam_do_canto_da_gestao():
+    """26/09/2026, pedido dela: *«vamos remover essas infos que aparecem no
+    canto superior de Gestão de controles também»*. O «Examinado …» e o
+    «4 controles • 4 BT» não voltam — nem no desenho, nem no pacote.
+    (noqa-acento: citação literal dela)"""
+    html = BANCADA.read_text(encoding="utf-8")
+    assert 'data-campo="examinado"' not in html
+    assert 'data-campo="conta-gestao"' not in html
+    # O que não pode voltar é o `<span class="conta">` do canto — no cabeçalho
+    # da Gestão; a seção do rádio tem a contagem dela, e ela fica.
+    for texto in (html, GERADOR.read_text(encoding="utf-8")):
+        inicio = texto.index('for="cx8-2">Gestão de Controles</label>')
+        topo = texto[inicio:texto.index('class="quadro-corpo"', inicio)]
+        assert 'class="conta"' not in topo, topo
+    pacote = PACOTE.read_text(encoding="utf-8")
+    assert '"examinado":' not in pacote and '"conta-gestao":' not in pacote
+    assert not hasattr(a08, "_carimbo_do_exame")
 
 
 # --- a chave do `maquina.json`: uma conta só ------------------------------

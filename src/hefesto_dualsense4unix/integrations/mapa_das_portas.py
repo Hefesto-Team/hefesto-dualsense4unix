@@ -253,11 +253,34 @@ def portas_livres(mapa: MapaDaMesa, censo: Censo) -> tuple[str, ...]:
     for numero in _entradas_da_fileira(mapa):
         if filhas_de(mapa, numero):
             continue
-        caminho = caminho_de(mapa, numero)
-        if caminho and caminho in presentes:
+        if _caminho_presente(mapa, numero, presentes):
             continue
         livres.append(numero)
     return tuple(livres)
+
+
+def ocupante_de(mapa: MapaDaMesa, numero: str, censo: Censo) -> str:
+    """O caminho do aparelho que está NESTA entrada agora, ou o declarado.
+
+    O aparelho USB 3 enumera no lado SuperSpeed do buraco (``4-1.1.4``), e a
+    entrada declara o lado 2.0 (``3-1.1.4``): perguntar só pelo declarado dava
+    a entrada do Wi-Fi como vazia, e a Sugestão mandava o adaptador para ela.
+    """
+    return (_caminho_presente(mapa, numero, _caminhos_do_censo(censo))
+            or caminho_de(mapa, numero) or "")
+
+
+def _caminho_presente(mapa: MapaDaMesa, numero: str, presentes: frozenset[str]) -> str:
+    """O caminho, dos dois lados do buraco, em que há aparelho agora — ``""`` se nenhum."""
+    from hefesto_dualsense4unix.utils.lugar import caminho_do_no
+
+    porta = mapa.portas.get(numero)
+    if porta is None:
+        return ""
+    for caminho in (porta.caminho, *(caminho_do_no(no) for no in porta.nos)):
+        if caminho and caminho in presentes:
+            return caminho
+    return ""
 
 
 def vizinhas_de_verdade(
@@ -283,8 +306,7 @@ def vizinhas_de_verdade(
     presentes = _caminhos_do_censo(censo)
 
     def ocupada(numero: str) -> bool:
-        caminho = caminho_de(mapa, numero)
-        return bool(caminho) and caminho in presentes
+        return bool(_caminho_presente(mapa, numero, presentes))
 
     pares: list[tuple[str, str]] = []
     vistos: set[tuple[str, str]] = set()
