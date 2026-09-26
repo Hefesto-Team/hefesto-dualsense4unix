@@ -243,6 +243,7 @@ class TestOMundoMedido:
         bancada.mundo.abrir_o_jogo_do_ge()
         assert bancada.volta() == set(), "a partida abriu agora: ninguém mexeu ainda"
         retrato = bancada.sub._retrato_do_jogo
+        assert retrato is not None, "a volta não guardou o que viu do jogo"
         assert retrato.eventos == frozenset(), "o GE não segura evdev de DualSense"
         assert qjl.hidraws_de_vpad(retrato.hidraws) == {HIDRAW_DO_VPAD[u] for u in MESA}, (
             "o mundo não é o medido: o jogo segura o hidraw de todos os vpads"
@@ -326,8 +327,8 @@ class TestAPartida:
     def test_o_jogo_que_reabre_pede_entrada_nova(self, bancada: Bancada) -> None:
         """A marca é da partida: a de ontem não vale no jogo de hoje.
 
-        MORDIDA: tire o ``self._marcas = {}`` do ramo que ABRE a partida — o
-        P2 entra na partida nova sem tocar no controle.
+        MORDIDA: tire as DUAS limpezas (``self._marcas = {}`` do ramo que abre
+        e do que fecha) — o P2 entra na partida nova sem tocar no controle.
         """
         bancada.mundo.abrir_o_jogo_do_ge()
         bancada.volta()
@@ -341,7 +342,10 @@ class TestAPartida:
         assert bancada.volta() == {P4}
 
     def test_outro_jogo_sem_passar_pelo_vazio_zera_a_marca(self, bancada: Bancada) -> None:
-        """Um jogo fecha e outro abre entre duas voltas: pids sem nada em comum."""
+        """Um jogo fecha e outro abre entre duas voltas: pids sem nada em comum.
+
+        MORDIDA: tire o ``self._marcas = {}`` do ramo que ABRE a partida.
+        """
         bancada.mundo.abrir_o_jogo_do_ge()
         bancada.volta()
         bancada.mexer(P2)
@@ -477,7 +481,8 @@ def _partida_aberta() -> qm.QuemMexe:
 
 class TestAFiacao:
     def test_o_forward_all_marca_o_secundario_que_mexeu(self) -> None:
-        """MORDIDA: tire o ``marcas.anotar(...)`` do ``forward_all``."""
+        """MORDIDA: tire o ``marcas.anotar(...)`` do ``forward_all``; ou a zona
+        morta de ``teve_entrada`` (o parado, com 3 de drift, entra)."""
         daemon = SimpleNamespace(
             controller=SimpleNamespace(primary_uniq=colada(P1), _evdev=None),
             _gamepad_device=_Vpad(),
@@ -497,7 +502,8 @@ class TestAFiacao:
             for n, (u, leitor) in enumerate(((P2, parado), (P3, mexendo)), start=2)
         }
         coop.forward_all()
-        assert daemon._quem_mexe.quem_joga() == {colada(P3)}, "o drift de 3 não é mão"
+        assert colada(P3) in daemon._quem_mexe.quem_joga(), "o forward_all não marcou quem mexeu"
+        assert colada(P2) not in daemon._quem_mexe.quem_joga(), "o drift de 3 não é mão"
 
     def test_sem_partida_o_forward_all_nao_marca(self) -> None:
         daemon = SimpleNamespace(
@@ -594,6 +600,7 @@ class TestAFiacao:
          "gatilho", "botao"],
 )
 def test_a_entrada_que_conta(entrada: dict[str, Any], conta: bool) -> None:
+    """MORDIDA: troque a zona morta por zero — o drift e o gatilho encostado contam."""
     base: dict[str, Any] = {
         "botoes": frozenset(), "lx": 128, "ly": 128, "rx": 128, "ry": 128, "l2": 0, "r2": 0
     }
