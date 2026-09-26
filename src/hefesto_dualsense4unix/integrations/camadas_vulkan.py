@@ -715,8 +715,8 @@ def frase_do_estado(tiradas: int, postas: int, prefixos: int) -> str:
     (`a09_sistema.linha_da_sobreposicao_vulkan`) e a que o desenho da aba
     (`interface/aba09.py`) mostra na cena. UM dono para os dois — 26/09/2026:
     o desenho digitava a sua própria linha, «Nenhuma sobreposição picotando o
-    jogo», que a tela viva nunca pintou e que prometia o que o A/B de 23/08
-    derrubou. Pura e stdlib, porque o gerador do desenho não sobe GTK.
+    jogo», que a tela viva só mostrava antes da primeira pintura e que
+    prometia o que o A/B de 23/08 derrubou. Pura e stdlib, porque o gerador do desenho não sobe GTK.
     """
     jogo_ou_jogos = "jogo" if tiradas == 1 else "jogos"
     partes = [

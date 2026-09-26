@@ -183,7 +183,8 @@ def test_a_frase_da_linha_tem_um_dono_so(monkeypatch: pytest.MonkeyPatch) -> Non
     O desenho da aba (`interface/aba09.py`) monta a cena com a mesma função.
     Uma segunda montagem aqui deixaria o desenho e a tela viva dizendo coisas
     diferentes sobre o mesmo censo — foi assim que o desenho mostrou, por um
-    mês, uma linha que a tela nunca pintou (26/09/2026).
+    mês, uma linha que a tela só mostrava antes da primeira pintura
+    (26/09/2026).
     """
     monkeypatch.setattr(cv, "frase_do_estado", lambda t, p, n: f"DONO {t}/{p}/{n}")
     texto = _montar(monkeypatch, prefixos=7,

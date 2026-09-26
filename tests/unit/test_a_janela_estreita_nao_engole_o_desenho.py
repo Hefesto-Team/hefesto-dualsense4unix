@@ -555,8 +555,8 @@ CORTE_CONHECIDO_NO_DESENHO: dict[tuple[str, str], str] = {
         "(`camadas_vulkan.frase_do_estado`, ~70 caracteres), e a coluna do "
         "exame corta 135 px dela a 1212 px; o `title` guarda a frase inteira. O "
         "desenho mostrava no lugar «Nenhuma sobreposição picotando o jogo», que a "
-        "tela nunca pintou. CURA: uma frase que caiba na coluna, escolha de texto "
-        "que vai à sessão dos desenhos (o docstring de "
+        "tela só mostrava antes da primeira pintura. CURA: uma frase que caiba na "
+        "coluna, escolha de texto que vai à sessão dos desenhos (o docstring de "
         "`a09_sistema.linha_da_sobreposicao_vulkan` quer os três números na linha)"
     ),
 }
