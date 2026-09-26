@@ -1017,390 +1017,128 @@
   .fita:not(.inerte) label.chip{cursor:pointer}
 
 
-  /* ---------- Sistema ---------- */
+  /* ---------- Sistema, em três seções (A-09-SISTEMA-EM-TRES-SECOES-01, 25/09/2026) ----------
+     Pedido dela: *«praticamente vamos só mudar de lugar as coisas dessa aba»*.
+     1. Status (três colunas: o Status e o exame em duas);
+     2. Configurações Avançadas (quatro colunas de botões);
+     3. os Detalhes técnicos, com a altura que sobra.
+     O quadro é `estica`: a seção 3 é a única que sabe crescer, e cresce. */
 
-  /* AS FAIXAS. Cada uma é [bloco | barra de 1px | bloco], e o rótulo de cada
-     coluna nasce EXATAMENTE no x da coluna que ele nomeia — por isso o
+  /* `minmax(0,1fr)` EM TODA FAIXA — a lição de 31/08 continua valendo: `1fr` tem
+     por piso o CONTEÚDO, e uma frase longa do exame empurraria a coluna vizinha
+     para fora do quadro. A régua 5, lá embaixo, cobra as três. */
+  .status3{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,2fr);
+           gap:0 20px;align-items:start}
+  .avancadas{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px
+             minmax(0,1fr) 1px minmax(0,1fr);gap:0 20px;align-items:start}
+  .risco{background:var(--border-sutil);align-self:stretch}
+
+  /* o rótulo de cada coluna nasce no x da coluna que ele nomeia — por isso o
      `sec-rot` repete o `grid-template-columns` da faixa que encabeça. */
-  /* `minmax(0,1fr)` NAS TRÊS FAIXAS — 31/08/2026, e o defeito foi ela quem viu:
-     o Perfil de Bateria **saindo para fora do limite** da coluna, levando junto o
-     terceiro botão e os quatro valores.
-
-     A CAUSA, medida subindo a cadeia de ancestrais: `1fr` é `minmax(auto,1fr)`, e
-     `auto` num item de grid tem por piso o TAMANHO DO CONTEÚDO. A coluna do
-     Perfil de Bateria pedia 569px, recusava-se a encolher, e as colunas somavam
-     mais que o grid: `527 + 1 + 569 + 40 de gap = 1137` dentro de **1112** — os
-     **+25px** exatos que vazavam.
-
-     DUAS HIPÓTESES CAÍRAM ANTES DESTA, e as duas eram minhas: o grid dos três
-     botões (curado com `minmax(0,1fr)`, e os 569 continuaram) e o valor em
-     `nowrap` (idem). Nenhuma era a causa — os dois só ACOMPANHAVAM uma coluna
-     que já tinha estourado. A pista estava na medida desde o começo: valores e
-     botões vazavam os MESMOS +25px, e o que vaza junto tem um dono só.
-
-     As três faixas levam a cura, não só a de cima: é a mesma armadilha, e a
-     próxima linha longa cairia na primeira que ficasse sem. */
-  .par2{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr);gap:0 20px;align-items:stretch}
-
-  .exame{display:grid;grid-template-columns:minmax(0,1fr) 1px 246px;gap:0 20px;align-items:stretch}
-  .avancado{display:grid;grid-template-columns:246px 1px minmax(0,1fr);gap:0 20px;align-items:stretch}
-  .risco{background:var(--border-sutil)}
-
-  /* A CAIXA ALTA SAIU — 30/08/2026. A regra desta casa sobre maiúscula é a
-     PRIMEIRA LETRA, e ela confirmou: *"a maiúscula a regra é sobre a primeira
-     letra a ser capitalizada, é o padrão do projeto"*. O `text-transform:
-     uppercase` a violava calado, e ainda cobrava o preço de legibilidade que
-     ela apontou (*"essa fonte tem um contraste horrível"*): caixa alta a 11px
-     é a forma mais difícil de ler que existe.
-     O `letter-spacing` sai junto — ele existia para abrir a caixa alta.
-     O texto-fonte já está em caixa de frase ("Força da vibração", "Selecione o
-     player"), então nada precisou ser reescrito. */
   .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);
            margin-bottom:5px;height:17px;display:grid;gap:0 20px;align-items:center}
   .sec-rot > span{display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap}
   .sec-rot .ajuda{text-transform:none;letter-spacing:0}
   .sec-rot .conta{text-transform:none;letter-spacing:0}
-  .sr-par2{grid-template-columns:1fr 1px 1fr}
-  .sr-exame{grid-template-columns:1fr 1px 246px}
-  .sr-avancado{grid-template-columns:246px 1px 1fr}
-  /* o respiro entre uma faixa e o rótulo da seguinte. `margin-top` na faixa e
-     não `justify-content` no corpo: a cura de um vão é na altura. */
-  /* 10px -> 8px em 06/09/2026, e são os 4px que faltavam para o quarto botão
-     dos gestos raros caber sem a página rolar. O corte é no vão ENTRE as
-     faixas — nenhum bloco encolhe, nenhum texto muda de tamanho —, e ele é
-     reversível numa linha: devolva o 10px e a página volta a rolar 4px. */
-  .sec-alta{margin-top:8px}
+  .sr-status3{grid-template-columns:minmax(0,1fr) 1px minmax(0,2fr)}
+  .sr-avancadas{grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr) 1px
+                minmax(0,1fr) 1px minmax(0,1fr)}
+  /* A LINHA DO TÍTULO DA SEÇÃO 3 LEVA O «Copiar», que é mais alto que os 17px
+     de um rótulo: ela mede o que tem dentro, e a borda de cima fica nela. */
+  .sr-log{grid-template-columns:minmax(0,1fr) auto;height:auto}
+  /* NENHUMA FAIXA ENCOLHE — o quadro é `estica` e o corpo é uma coluna flex:
+     sem isto o navegador espreme os rótulos para dar altura ao registro. Quem
+     cresce e encolhe é só o `.registro`. */
+  .quadro-corpo > *{flex-shrink:0}
+  /* o título da seção 2 — o nome que ela deu, uma linha acima dos quatro rótulos. */
+  .sec-grupo{font-size:12.5px;font-weight:600;color:var(--texto-suave);
+             margin:14px 0 8px;padding-top:10px;border-top:1px solid var(--border-sutil)}
+  .sec-alta{margin-top:14px;padding-top:10px;border-top:1px solid var(--border-sutil)}
 
-  /* ---------------------------------------------------------------------
-     ESTADO À ESQUERDA, BARRA DE 1px, AÇÃO À DIREITA — nas três faixas.
-     Pedido dela em 27/08: "na aba Sistemas temos os status acima e os botões
-     abaixo. Podemos mandar esses botões pra direita e ocupando o mesmo espaço
-     vertical."
-     --------------------------------------------------------------------- */
-  /* `minmax(0,1fr)` E NÃO `1fr` — 02/09/2026, e é a mesma cura da régua 5 lá
-     embaixo, numa faixa que a régua não cobria. O piso de `1fr` é o CONTEÚDO:
-     com os valores DE VERDADE a coluna de estado não encolhe, empurra a coluna
-     dos botões e ela atravessa o risco por cima do Perfil de Bateria.
-     MEDIDO no Chrome (1920x1080), a página PUBLICADA com os valores que o
-     pacote emite hoje — o vizinho começa em x=973:
-         valores do desenho ............ botões [748..932]  folga  41px
-         valores reais, `1fr` .......... botões [816..1000] ESTOURO 27px
-         valores reais, `minmax(0,1fr)`  botões [748..932]  folga  41px
-     O que revelou foi a aba parar de mentir: "Como ele enxerga a janela" era
-     `Wayland · COSMIC` no desenho e é `Sem ver nada agora (sem_foco_x)` na
-     máquina dela. Com o desenho curto, o defeito não aparecia. */
-  .bloco2{display:grid;grid-template-columns:minmax(0,1fr) 1px 184px;gap:0 14px;align-items:stretch}
-  .col-acao{display:flex;flex-direction:column;gap:6px}
-  /* Botão do mesmo grupo com a MESMA largura, e o grupo preenchendo a coluna:
-     antes eram três larguras (138,2 / 141,3 / 80,7) numa fileira que deixava
-     157,8px de sobra. */
-  .col-acao .btn{width:100%;justify-content:center;padding:0 8px}
-  /* O BOTÃO QUE SÓ NASCE NUM ESTADO (a L315). Fora dele, ele sai do FLUXO —
-     `display:none` e não `visibility:hidden`, senão reservaria 30px de coluna
-     no estado em que ele não tem nada a fazer, que é quase sempre. Quem acende
-     `mostra` é o piloto, pelo `data-campo` que o pacote escreve todo tique. */
-  .so-avulso:not(.mostra){display:none}
-  /* E ELE ENTRA NO LUGAR DO VIZINHO, não ao lado dele — 06/09/2026, e a razão
-     é de ALTURA e de VERDADE ao mesmo tempo.
-
-     DE ALTURA: com cinco botões a coluna do serviço mede 194px contra 156 do
-     Perfil de Bateria, e a aba passa a ROLAR 38px por dentro — medido no
-     WebKit, com o botão à mostra. Esta faixa promete que as duas colunas irmãs
-     acabam no mesmo y, e a página inteira cabe em 530px sem rolar.
-
-     DE VERDADE: no modo improvisado o «Reiniciar o serviço» é justamente o
-     clique que NÃO funciona. `systemctl restart` sobe a unit, a unit encontra
-     o Hefesto avulso segurando a instância única e não sobe — é o terceiro
-     portão de `ativar_o_servico` (BUG-MULTI-INSTANCE-01), e `travas()` não o
-     tranca nesse estado. Trocar um pelo outro é pôr no lugar do clique que
-     falha o clique que conserta.
-
-     É o irmão CSS do que o botão «Parar o serviço»/«Ativar o serviço» já faz
-     com duas caras (decisão dela, 03/09) — e aqui sai de graça, porque o
-     `+` alcança o vizinho seguinte e o `.acao` do Reiniciar é exatamente ele. */
-  .so-avulso.mostra + .acao{display:none}
-
-  /* A CAIXA DO BOTÃO QUE PODE FICAR CINZA (D-03, decisão [02] do PO).
-     Ela é de ALTURA, não de enfeite: `.col-acao` e `.lista` são colunas de
-     flex, e um `?` solto viraria UMA FILEIRA a mais no instante em que o
-     piloto o mostrasse — as duas colunas irmãs desta faixa deixariam de acabar
-     no mesmo `y`, que é o vão de 58px que ela apontou em 31/08. Aqui ele fica
-     na LINHA do botão: com razão o botão encolhe ~13px de largura; sem razão a
-     folha comum esconde o `?` e o botão ocupa a linha inteira. A altura é a
-     mesma nos dois estados, e é isso que o portão dos dois blocos exige. */
-  .acao{display:flex;align-items:center}
-  /* `.col-acao`/`.lista` NO SELETOR, e não `.acao > .btn` solto: as duas
-     colunas declaram `width:100%` no `.btn` DEPOIS deste bloco, e a mesma
-     especificidade faria a última regra vencer. O `flex:1` é o que deixa o
-     botão encolher os 13px do `?` em vez de estourar a coluna. */
-  .col-acao .acao > .btn,.lista .acao > .btn{flex:1;min-width:0;width:auto}
-  /* A DICA ABRE PARA A ESQUERDA NA COLUNA DA DIREITA. Medido: a coluna de
-     ações da faixa do serviço acaba em x=932 e a `.dica` tem 330px a partir de
-     `left:22px` — 932+22+330 = 1284 numa janela de 1180. É a mesma cura que o
-     `saude()` já carrega em linha (`left:auto;right:22px`), aqui em regra
-     porque a peça das dez não escreve `style`. */
-  .col-acao .ajuda.porque .dica{left:auto;right:22px}
-
-  /* a linha de estado: glifo E cor mudam juntos — quem não distingue verde de
-     laranja continua lendo o estado pelo símbolo. Antes "ok" e "aviso" usavam o MESMO ●. */
-  .est{display:flex;align-items:center;gap:8px;height:30px;font-size:11.5px;color:var(--texto-mudo)}
-
-  /* A LINHA HORIZONTAL QUE SEPARA UM CAMPO DO OUTRO — pedido dela, 30/08:
-     *"as linhas divisórias em todas as páginas (…) a primeira coluna serve como
-     nome da linha e a divisória entre eles tem que estar clara. pra todas as
-     abas"*. Mesmo molde da Iluminação (`aba04.py`), com a razão escrita lá.
-     A ÚLTIMA não leva: separador depois do último campo vira moldura, e a
-     moldura do quadro já existe. */
-  .est{border-bottom:1px solid var(--rot-linha)}
-  .col-est .est:last-child, .bat .est:last-child{border-bottom:0}
-  /* custo de layout ZERO: `box-sizing:border-box` põe a borda dentro dos 30px. */
-
-  /* O RÓTULO NÃO É VERDE — 31/08/2026, e o defeito foi ela quem viu:
-     *"Trocar de perfil ao abrir o jogo / Ligado tem a mesma cor. tá difícil e
-     confuso entender"*. Estava: `.est .rot` era `--rot-campo` (verde) e
-     `.est.ok .val` também é verde — nas linhas ligadas o nome e a resposta
-     saíam da mesma cor, encostados na mesma linha.
-     A REGRA É A QUE ELA APROVOU NA ABA PERFIS meia hora antes: **o verde é de
-     ESTADO, não de nome.** Aqui o estado tem dois donos que bastam — o glifo e o
-     valor —, e o nome passa a ser o texto secundário da linha, que é o que ele é:
-     quem lê a coluna procura a RESPOSTA. */
-  .est .rot{flex:0 0 170px;white-space:nowrap;color:var(--texto-mudo);font-weight:600}
-  /* O VALOR ENCOLHE ANTES DE EMPURRAR — 31/08/2026, e esta é a cura de verdade
-     do que ela viu: o bloco do Perfil de Bateria saindo do limite da coluna.
-     A primeira hipótese foi o grid dos três botões, e a medição a DERRUBOU: com
-     `minmax(0,1fr)` os 569px continuaram lá. Quem estoura é o VALOR — `Gatilhos,
-     barra de luz, microfone por rádio e giroscópio` em `nowrap`, sem poder
-     encolher, cresce o `.est`, que cresce o `.bat`, e os botões apenas ACOMPANHAM
-     a largura que já estourou. A pista estava na medida: os quatro valores vazavam
-     exatamente os mesmos +25px que os botões.
-     `min-width:0` é o que falta a todo filho de flex para poder encolher; as
-     reticências são o que sobra quando ele encolhe até o limite — e o `title` do
-     valor guarda a frase inteira, para não perder informação no corte. */
-  .est{min-width:0}
-  /* O `nowrap` SAIU EM 11/09/2026, e quem o derrubou foi uma fala aprovada
-     por ela: a linha do Pausado passou de «Sim, e volta pausado» para «Sim — e
-     continua depois de reiniciar», 16 caracteres mais longa, e ela estourou a
-     caixa em 72 px NO PRÓPRIO TAMANHO DO DESENHO — não numa janela estreita.
-     Com `nowrap` a saída era reticências, e reticências no tamanho cheio é
-     texto escondido sem que nada tenha ficado apertado. Quebrar em duas linhas
-     mostra a frase inteira; as linhas curtas, que são quase todas, continuam
-     numa linha só porque cabem. O `ellipsis` fica para quem encolher de
-     verdade, e o `title` continua guardando a frase. */
-  .est .val{color:var(--fg);font-weight:600;margin-left:auto;
-            text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis}
-  .est .g{flex:0 0 14px;text-align:center;font-size:11px;font-weight:700}
-  .est.ok .g{color:var(--green)} .est.ok .val{color:var(--green)}
-  .est.warn .g{color:var(--orange)} .est.warn .val{color:var(--orange)}
-  .est.info .g{color:var(--cyan)}
-  /* desligado: o glifo existe e está apagado — some seria voltar ao vazio. */
-  .est.off .g{color:var(--texto-mudo)}
-  /* OS TRÊS BOTÕES DIVIDEM A LARGURA EM PARTES IGUAIS. `1fr 1fr 1fr` e não o
-     `flex` solto do `.seg`: com flex cada botão fica do tamanho do próprio nome,
-     e `Tudo ligado`, `Bateria longa` e `Eu escolho` têm três larguras — três
-     alvos de clique diferentes para três escolhas do mesmo peso. A altura é a
-     mesma `--h-escolha` do `<select>` que saiu. */
-  /* `minmax(0,1fr)` E NÃO `1fr` — 31/08/2026, e o defeito foi ELA quem viu, na
-     máquina dela: o bloco do Perfil de Bateria saía **para fora do limite** da
-     coluna, levando junto o terceiro botão e os quatro valores da direita.
-
-     `1fr` é `minmax(auto,1fr)`, e `auto` num item de grid é o TAMANHO DO
-     CONTEÚDO: os três botões se recusavam a encolher abaixo do próprio texto e
-     empurravam o bloco inteiro para fora. Com a fonte do Chrome headless os três
-     cabiam (536px numa coluna que dá 536) e nada vazava — por isso a minha foto
-     estava limpa e a tela dela não. Medido com o texto a 14px: **569px**, e o
-     bloco vazando **+25px**, com os quatro valores fora junto.
-
-     `minmax(0,…)` deixa a coluna encolher; o `min-width:0` e o corte por
-     reticências são a rede: numa fonte grande demais o nome do perfil abrevia,
-     que é feio mas fica DENTRO — e a tela deixa de mentir sobre onde acaba. */
-  .bat-perfis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;
-              height:var(--h-escolha)}
-  .bat-perfis button{min-width:0;padding:0 8px;overflow:hidden;
-                     text-overflow:ellipsis;white-space:nowrap}
-
-  /* O VALOR ANCORA NA DIREITA — 31/08/2026, e o defeito foi ela quem viu:
-     *"o alinhamento da seção O serviço tá muito estranha"*.
-     MEDIDO antes de mexer, e a medida explica o que o olho dela pegou: a coluna
-     do rótulo é fixa em 170px, e os dez rótulos desta aba medem de 47 a 168.
-     `Trocar de perfil ao abrir o jogo` (167) e `Ligar junto com o computador`
-     (168) paravam a **3px e 2px** do valor, colados; `Pausado` (47) parava a
-     123px dele. Na mesma coluna, duas linhas encostavam e as outras oito
-     flutuavam — e nada disso é alinhamento, é o resto de uma largura fixa.
-     Com o valor na borda direita, toda linha passa a ter as duas âncoras que uma
-     lista de estado quer: o NOME onde a coluna começa, a RESPOSTA onde ela
-     acaba. O vão do meio deixa de ser um número aleatório por linha. */
-  /* (a âncora da direita mora na regra `.est .val` lá em cima, junto das
-     outras propriedades do valor: duas regras para o mesmo seletor é o que fez
-     esta régua ler a primeira e reprovar a cura que estava na segunda.) */
-  /* `vm` = valor-mono. NÃO se chama `mono`: o esqueleto da Jogar já tem
-     `.mono{font-family:'JetBrains Mono'}` (topo.html:30), que pegaria a LINHA
-     inteira e levaria o RÓTULO junto — duas tipografias na mesma coluna de
-     rótulos. É a mesma cicatriz de colisão de nome que obrigou `.nota` a virar
-     `.nt` aqui dentro. Só o valor é mono. */
-  .est.vm .val{font-family:'JetBrains Mono',monospace;font-weight:400;font-size:11px}
-  /* O INTERRUPTOR SEGUE OS VALORES, e em 31/08/2026 eles se mudaram.
-     Esta regra era `margin-left:0` e tinha razão escrita: *"o interruptor obedece
-     à MESMA coluna de valores das outras linhas"* — sem ela, o `margin-left:auto`
-     da `.chave` o jogava para a borda direita, sozinho, longe da coluna onde
-     todos os valores começavam.
-     A PREMISSA CADUCOU no mesmo dia: os valores passaram a ancorar na borda
-     direita (ver a regra do `.est .val`, acima), e é lá que a chave tem de estar
-     para continuar obedecendo à mesma coluna. A regra mudou de valor porque o que
-     ela persegue — *a chave onde estão os valores* — não mudou. */
-  .est .chave{margin-left:auto}
-
-  /* ---------------------------------------------------------------------
-     O PERFIL DE BATERIA — o bloco que tomou o lugar do Gamepad virtual.
-     Decisão dela, 28/08 (D-O-GAMEPAD-VIRTUAL-SAI-DA-INTERFACE): *"colocar Teto
-     da Vibração (que na verdade é Perfil de Bateria) e colocar em sistema no
-     lugar do Gamepad virtual"*.
-
-     UMA COLUNA SÓ, e não as duas do irmão: aqui não há coluna de AÇÃO — a
-     escolha é o próprio seletor, e uma barra de 1px separando o nada do nada
-     desenharia uma divisão que não existe. A LARGURA continua igual (o `.par2`
-     dá 1fr a cada metade) e a ALTURA também (o `align-items:stretch` do `.par2`
-     faz esta metade herdar a altura do irmão) — que é o que ela pediu em 27/08:
-     *"Altura e largura dos blocos O Hefesto e Gamepad virtual são iguais"*.
-     --------------------------------------------------------------------- */
-  .bat{display:flex;flex-direction:column}
-  /* a linha do seletor é mais alta que uma linha de estado porque o `select`
-     mede `--h-escolha` (36px) — encaixá-lo numa linha de 30 o cortaria. */
-  .est.escolhe{height:var(--h-escolha)}
-  /* A ROUPA DO `<select>` é de cada aba, não do esqueleto: o `topo.html` só lhe
-     dá a ALTURA (`--h-escolha`, 36px, para não haver quatro alturas de campo na
-     mesma janela). Estas seis linhas são as MESMAS do `aba08.py:1053` — o
-     dropdown que se mudou para cá não podia mudar de roupa no caminho. Sem
-     elas ele volta a ser o `<select>` cru do Chrome: fundo claro e do tamanho
-     que o sistema quiser, que foi o que a primeira foto desta rodada mostrou.
-     (O dono único desta roupa é o `<style>` do esqueleto, e é para lá que ela
-     vai quando o `monta.py` deixar de ser território de outro agente.) */
-  select.pronto{border-radius:6px;font-size:11.5px;font-family:inherit;padding:0 8px;
-    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-suave);
-    cursor:pointer}
-  select.pronto:hover{border-color:var(--comment)}
-  /* O seletor começa na MESMA coluna dos valores das outras linhas e acaba na
-     borda do bloco — como os quatro botões do irmão, que também vão de ponta a
-     ponta da coluna deles. É a régua dela de 27/08: colunas terminando juntas. */
-  .est select.pronto{flex:1;min-width:0}
-  /* A `.frase` SAIU do CSS junto com o parágrafo que ela vestia (31/08/2026).
-     O que ela dizia — onde o teto age e onde ainda não age — continua na tela,
-     como duas linhas de estado: é a razão do `alcance_de_hoje()` no produto
-     (*"silêncio, nesta tela, seria lido como «o teto vale para tudo»"*) dita em
-     dado, não em prosa. Regra deixada para quem vier: um bloco desta aba ACABA
-     onde o irmão acaba, e a cura do vão é conteúdo em altura — nunca
-     `space-between`, nunca linha esticada. */
-
-  /* a saúde: selo curto + veredito; o "o que eu vi / por que importa / o que fazer"
-     mora na dica (D-TUDO-QUE-EXPLICA-VIRA-DICA). O selo carrega GLIFO e cor.
-     25,5px e não 28,5: quatro linhas de achado passam a medir os mesmos 102px
-     dos três botões ao lado, e as duas colunas acabam no mesmo y. */
-  .saude{display:flex;align-items:center;gap:9px;height:25.5px;font-size:12px;color:var(--texto-suave);
-         border-bottom:1px solid var(--border-sutil)}
+  /* AS LINHAS DO STATUS E DO EXAME SÃO A MESMA PEÇA — pedido dela: *«no MESMO
+     estilo das linhas do O exame de hoje (a pílula à esquerda e o texto
+     curto)»*. 25,5px por linha, e quatro linhas em cada uma das três colunas:
+     elas acabam no mesmo y. */
+  .saude{display:flex;align-items:center;gap:9px;height:25.5px;font-size:12px;
+         color:var(--texto-suave);border-bottom:1px solid var(--border-sutil);
+         text-decoration:none}
   .saude:last-child{border-bottom:none}
-  .saude .selo{flex:0 0 68px;text-align:center}
+  /* 76px E NÃO 68 — a pílula do Status diz a palavra do estado («PAUSADO»,
+     «SEM VER»), e ela tem nove letras. As três colunas usam a mesma largura:
+     pílula de tamanho diferente na mesma faixa seria duas peças. */
+  .saude .selo{flex:0 0 76px;text-align:center}
   .selo .sg{margin-right:4px;font-weight:700}
   .selo.ok{background:var(--green);color:var(--app-bg)}
   .selo.aviso{background:var(--orange);color:var(--app-bg)}
   .selo.nt{background:var(--comment);color:var(--app-bg)}
   .saude .txt{flex:1;display:flex;align-items:center;gap:7px;min-width:0}
   .saude .txt span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  /* ---------------------------------------------------------------------
-     O EXAME EM DUAS COLUNAS, e a barra de 1px entre elas.
-     Por que duas: com os três consertos rodando SOZINHOS no exame (decisão
-     dela, 27/08), a coluna de botões caiu de sete para três — 102px — e o
-     cartão de saúde continuou com oito achados. Uma coluna só deixava 126px de
-     vão escuro ao lado dos botões, e a cura de um vão é na ALTURA: o cartão
-     encolhe reflowando, não perdendo achado.
-     --------------------------------------------------------------------- */
-  /* `minmax(0,1fr)` pelo mesmo motivo do `.bloco2`, e achado no mesmo dia: as
-     frases do `storm_report` são LONGAS ("regra áudio-off inativa — o mic e o
-     fone do controle estão liberados. O que fazer: nada."), e as do desenho são
-     curtas. Com `1fr` cru a coluna não encolhe, as reticências de
-     `.saude .txt span:last-child` nunca chegam a agir, e a segunda coluna passa
-     por cima de "Preparar os jogos". Fotografado na bancada em 02/09/2026, com
-     os seis achados desta máquina. */
+  .saude .ajuda .dica{left:auto;right:22px}
+  /* A LINHA QUE LEVA A OUTRO LUGAR (a do Bluetooth, para a seção do rádio da
+     aba Conexões) é um `<a>` inteiro: a mão vira e a linha acende no hover. */
+  a.saude.vai{cursor:pointer}
+  a.saude.vai:hover .txt{color:var(--fg)}
   .saude-cols{display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr);gap:0 18px}
-  .col-lista{display:flex;flex-direction:column}
-  /* Os três botões do exame não levam vão entre si: quatro linhas de achado
-     medem 102px, e 3 × 34 dá exatamente 102. As duas colunas acabam juntas. */
-  .exame .col-acao{gap:0}
+  .col-lista{display:flex;flex-direction:column;min-width:0}
 
-  /* a fileira que não cabia vira LISTA: cinco botões somavam 1230px numa janela de 1180 */
-  /* O VÃO ENTRE OS BOTÕES DESTA COLUNA SUMIU EM 06/09/2026, e ele é o preço do
-     quarto botão (o "Aplicar aos jogos da Steam", a L340). A gramática não é
-     nova nesta página: `.exame .col-acao` já empilha os seus três sem vão desde
-     que a aba nasceu. Com quatro botões e vão de 4px a coluna mediria 148px;
-     sem vão ela mede 136, e são 12px que a página não tem — o miolo passaria a
-     ROLAR POR DENTRO, que é como esta aba escondeu 93px em 28/08. */
-  .lista{display:flex;flex-direction:column;gap:0}
-  .lista .btn{width:100%;justify-content:flex-start;padding:0 13px}
-  .chave{margin-left:auto;width:36px;height:20px;border-radius:10px;background:var(--border-forte);
-         position:relative;cursor:pointer;flex:0 0 36px}
-  .chave::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;
-                border-radius:50%;background:var(--texto-mudo)}
-  .chave.on{background:var(--purple)}
-  .chave.on::after{left:18px;background:var(--fg)}
+  /* AS QUATRO COLUNAS DE BOTÕES — três itens em cada, na vertical, da mesma
+     altura (`--h-acao`) e com o mesmo vão: as quatro acabam no mesmo y. */
+  .coluna{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .coluna .btn{width:100%;justify-content:center;padding:0 8px}
+  /* O BOTÃO QUE SÓ NASCE NUM ESTADO — o «Corrigir o serviço» do modo
+     improvisado. Fora dele sai do FLUXO (`display:none`, e não `visibility`),
+     e quando aparece entra NO LUGAR do Reiniciar, que é o clique que não
+     funciona nesse modo (o `+` alcança a `.acao` vizinha). */
+  .so-avulso:not(.mostra){display:none}
+  .so-avulso.mostra + .acao{display:none}
+  /* a caixa do botão que pode ficar cinza: o `?` da razão fica na LINHA do
+     botão, e a altura é a mesma nos dois estados (régua 8). */
+  .acao{display:flex;align-items:center}
+  .coluna .acao > .btn{flex:1;min-width:0;width:auto}
+  .coluna .ajuda.porque .dica{left:auto;right:22px}
+  /* O BOTÃO DO SERVIÇO TEM DUAS CORES, e quem escolhe é o produto: vermelho
+     quando o clique PARA, verde quando ele DEVOLVE o serviço (a pausa ativa,
+     ou ele parado). A classe `verde` é acesa pelo campo que o pacote escreve
+     todo tique; a regra de baixo só a deixa vencer o vermelho. */
+  .btn.vermelho.verde{color:var(--green)}
+  .btn.vermelho.verde:hover{border-color:var(--green);color:var(--green)}
 
-  /* O painel tem a altura da coluna de botões ao lado (3 × 34 + 2 × 4 = 110):
-     duas colunas irmãs acabam no mesmo y, e as quatro linhas cabem inteiras.
-     A quinta linha aparecia cortada ao meio, que lê como quadro quebrado; o que
-     ela dizia foi para o fim da segunda: a cor de fábrica só é perguntada NO
-     CABO (`app/actions/config/secao_controles.py:929`), e por isso p2 e p3, que
-     estão no rádio, não têm leitura. */
-  /* A CAIXA NÃO MANDA NA FILEIRA — ROLAGEM-01, 09/09/2026, e é a cura da barra
-     que ela achou em 08/09.
+  /* O PERFIL GLOBAL DE BATERIA, NA VERTICAL — os três botões da aba Vibração
+     (`.seg`), empilhados, na altura dos botões vizinhos. Escolha única: o aceso
+     é o `on`, e o nome de cada um vem do produto. */
+  .seg.bat-perfis{flex-direction:column;flex-wrap:nowrap;gap:6px}
+  .seg.bat-perfis button{flex:0 0 var(--h-acao);height:var(--h-acao);min-width:0;
+                         padding:0 8px;overflow:hidden;text-overflow:ellipsis;
+                         white-space:nowrap}
 
-     O comentário abaixo PROMETE que "a altura do irmão CHEGA aqui sozinha", e
-     ele estava certo no Chrome, com as quatro linhas de registro do desenho.
-     Com o DAEMON VIVO o registro tem dezenas de linhas, e `white-space:pre` não
-     quebra nenhuma: medido no WebKit com os quatro na mesa, `.avancado` fechava
-     em **438px** onde a lista dos quatro botões pede **136** — os 302px que
-     estouravam o `.miolo` (`866>564`) eram a caixa arrastando a fileira do
-     grid, e não o contrário.
+  /* OS LIGÁVEIS SÃO A PÍLULA DO «Modo Freestyle» DA ABA JOGAR — a mesma peça
+     (`aba01.py`, `.cadeado` e `.ligada`): verde e com o ponto aceso quando
+     ligado, apagado quando não. O estado vem do produto, nunca do clique. */
+  .cadeado{display:inline-flex;align-items:center;justify-content:center;gap:7px;
+           height:var(--h-acao);width:100%;white-space:nowrap;
+           border-radius:7px;padding:0 12px;font-size:12.5px;font-family:inherit;
+           cursor:pointer;
+           border:1px solid var(--border-forte);background:var(--app-bg);
+           color:var(--texto-mudo)}
+  .cadeado .p{width:7px;height:7px;border-radius:50%;flex:0 0 auto;
+              background:var(--border-forte);box-shadow:none}
+  .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
+                  color:var(--green)}
+  .cadeado.ligada .p{background:var(--green);box-shadow:0 0 6px var(--green)}
 
-     `position:absolute` É O QUE TORNA A PROMESSA VERDADEIRA: um filho absoluto
-     não conta para o tamanho do pai, então a fileira do `.avancado` volta a ser
-     medida pela `.lista` — o irmão — e a caixa preenche o que sobrar. Um
-     `max-height:136px` digitado aqui seria a segunda verdade sobre a altura da
-     lista, que é exatamente o que o comentário abaixo proíbe.
-
-     O registro passa a ROLAR por dentro, e é o desenho: quantas linhas o daemon
-     escreveu não é assunto desta aba — o `data-hef-rolar="fim"` do HTML já dizia
-     isso desde que nasceu. Está declarado em `POR_DESENHO`
-     (`scripts/ensaios/a_janela_cabe_no_que_ela_ve.py`).
-
-     MEDIDO DEPOIS: `.avancado` 438 -> **136**, `.miolo` 866 -> **564**. A página
-     fecha em 530 de conteúdo para 530 de espaço útil, que é o par `ALTURA,
-     MIOLO_H` escrito no topo deste arquivo. O número já estava certo; o que
-     faltava era a caixa obedecer a ele. */
-  /* O PISO MORA NA CÉLULA — 13/09/2026, validação da SISTEMA-BOTOES-01. Com três
-     botões a `.lista` mede 102px, e o `min-height:110px` do `.log`, filho
-     absoluto, vazava 8px abaixo da fileira: os dois quadros deixaram de fechar na
-     mesma linha. Na célula do grid o piso mede a FILEIRA, a lista estica junto, e
-     com quatro botões ou mais quem manda continua sendo ela. */
-  .col-log{display:flex;flex-direction:column;min-height:110px;position:relative}
-  .col-log > .log{position:absolute;top:0;right:0;bottom:0;left:0}
-  /* A CAIXA ACOMPANHA O IRMÃO — TELA-TRES-01 §1, pedido dela de 08/09/2026:
-     "em sistema aumentar a altura do detalhes técnicos pra ficar igual ao
-     bloco à esquerda".
-
-     MEDIDO NO CHROME, na página publicada, antes da cura: a lista dos quatro
-     botões fechava em 136px e esta caixa em 110px — 26px de diferença, e a
-     lista das identidades de fábrica rolava enquanto sobrava espaço embaixo
-     dela. Com QUATRO controles na mesa são quatro linhas, e é o caso dela.
-
-     `flex:1` E NÃO UMA SEGUNDA ALTURA CRAVADA: o `.avancado` já é um grid com
-     `align-items:stretch` e o `.col-log` já é uma coluna flex — a altura do
-     irmão CHEGA aqui sozinha. Um `height:136px` digitado seria a segunda
-     verdade sobre a altura da lista, e envelheceria no dia em que o quinto
-     botão entrasse (o quarto entrou em 06/09 e já custou 26px a esta caixa).
-
-     O `min-height` GUARDA O PISO: se um dia a faixa encolher, a caixa não cai
-     abaixo do que já cabia — quatro linhas de identidade mais o título. */
+  /* OS DETALHES TÉCNICOS OCUPAM O QUE SOBRA — pedido dela: *«ganhar altura pra
+     ocupar melhor esse espaço abaixo dele. e ser mais fácil de ser lido»*.
+     A seção cresce com o quadro (`estica`), e a caixa é ABSOLUTA dentro dela:
+     um filho absoluto não conta para a altura do pai, então o registro vivo,
+     com as suas oitenta linhas, ROLA POR DENTRO em vez de empurrar a página
+     (a cura da ROLAGEM-01, de 09/09, continua a mesma). O piso guarda que ela
+     nunca caia abaixo de seis linhas. */
+  .registro{flex:1 1 auto;flex-shrink:1;min-height:120px;position:relative}
+  .registro > .log{position:absolute;top:0;right:0;bottom:0;left:0}
   .log{padding:10px 12px;border:1px solid var(--border-sutil);border-radius:7px;
-       background:var(--app-bg);font-family:'JetBrains Mono',monospace;font-size:10.5px;
-       line-height:1.6;color:var(--texto-mudo);flex:1;min-height:110px;
-       overflow:auto;white-space:pre}
+       background:var(--app-bg);font-family:'JetBrains Mono',monospace;font-size:11px;
+       line-height:1.6;color:var(--texto-suave);overflow:auto;white-space:pre}
+  .sec-rot .btn.copiar{height:22px;padding:0 12px;font-size:11.5px}
 
   /* Os glifos são os MESMOS SVGs da aba Status (assets/glyphs, 27 peças).
      `currentColor` faz cada um herdar a cor da linha em que está. */
@@ -1586,7 +1324,7 @@
   <!-- ================= MIOLO ================= -->
   <div class="miolo">
 
-    <div class="quadro">
+    <div class="quadro estica">
       <div class="quadro-topo">
         <span class="quadro-titulo">Sistema</span>
         <span class="ajuda">?<span class="dica">
@@ -1596,185 +1334,82 @@
       </div>
       <div class="quadro-corpo">
 
-        <!-- ---------- O HEFESTO · PERFIL DE BATERIA ---------- -->
-        <div class="sec-rot sr-par2">
-          <span>O serviço <span class="ajuda">?<span class="dica">O Hefesto rodando por trás. Sem ele, o Linux vê 2 gamepads comuns e nada mais. Parar aqui não é o mesmo que desligar o Hefesto na aba Jogar: lá ele só sai do meio do jogo.</span></span></span><span></span>
-          <span>Perfil de Bateria <span class="ajuda">?<span class="dica">Quanto os controles podem gastar de bateria. Vale para os 2, e cada um pode ter o seu na aba Conexões. Nenhum ajuste seu é apagado.</span></span></span>
-        </div>
-        <div class="par2">
-
-          <div class="bloco2">
-            <div class="col-est">
-            <div class="est ok" data-id="hefesto-estado"><span class="g" data-campo="hefesto-estado-g">✓</span><span class="rot">Serviço</span><span class="val" data-campo="hefesto-estado" title="Ligado">Ligado</span></div>
-            <div class="est warn" title="O botão Retomar, ao lado, tira o serviço da pausa." data-id="hefesto-pausa"><span class="g" data-campo="hefesto-pausa-g">!</span><span class="rot">Pausado</span><span class="val" data-campo="hefesto-pausa" title="Sim — e continua depois de reiniciar">Sim — e continua depois de reiniciar</span></div>
-            <div class="est ok" data-id="hefesto-troca-de-perfil"><span class="g" data-campo="hefesto-troca-de-perfil-g">✓</span><span class="rot">Trocar de perfil ao abrir o jogo</span><span class="val" data-campo="hefesto-troca-de-perfil" data-hef-alvo="html" title="Ligado">Ligado</span></div>
-            <div class="est info" title="É por ele que o Hefesto descobre qual janela está na frente." data-id="hefesto-ambiente"><span class="g" data-campo="hefesto-ambiente-g">◆</span><span class="rot">Ambiente gráfico</span><span class="val" data-campo="hefesto-ambiente" title="Wayland · COSMIC">Wayland · COSMIC</span></div>
-              <div class="est ok" data-id="hefesto-autostart"><span class="g" data-campo="hefesto-autostart-g">✓</span><span class="rot">Ligar junto com o computador</span>
-                <span class="chave on" data-gesto="autostart" data-campo="hefesto-autostart" data-hef-alvo="classe" data-hef-classe="on"></span></div>
-            </div>
-            <div class="risco"></div>
-            <div class="col-acao">
-            <div class="acao"><button class="btn verde" data-campo="retomar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="retomar" title="Tira o serviço da pausa.">Retomar</button><span class="ajuda porque" tabindex="0">?<span class="dica" data-campo="retomar-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
-            <button class="btn so-avulso" title="O serviço está de pé por fora do sistema, e ali reiniciar não funciona. Este botão o faz sair e subir do jeito certo. Nada do que você ajustou se perde." data-gesto="corrigir-modo" data-campo="corrigir-modo-quando" data-hef-alvo="classe" data-hef-classe="mostra">Corrigir o serviço</button>
-            <div class="acao"><button class="btn" data-campo="reiniciar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="reiniciar" title="Para e liga de novo. Resolve a maioria dos travamentos, e nenhum ajuste seu se perde.">Reiniciar o serviço</button><span class="ajuda porque" tabindex="0">?<span class="dica" data-campo="reiniciar-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
-            <button class="btn" title="Manda o serviço reler os atalhos do controle e reescrever os arquivos de ambiente que a Steam usa para lançar os jogos; no fim, relê o que esta aba mostra. Leva alguns segundos, e o botão avisa enquanto trabalha." data-gesto="atualizar" data-hef-em-voo="Atualizando…">Atualizar</button>
-            <button class="btn vermelho" title="O Hefesto deixa de rodar e os controles viram gamepads comuns do Linux. Pergunta antes, dizendo o que se perde." data-gesto="desligar">Parar o serviço</button>
-            </div>
-          </div>
-
-          <div class="risco"></div>
-
-          <div class="bat">
-            <!-- TRÊS BOTÕES, ESCOLHA ÚNICA — ponto 7.1 da lista dela, 31/08/2026:
-                 *"perfil da bateria transforma em três botões lado a lado com escolha
-                 única e tira o 'O perfil da mesa' pronto isso resolve"*.
-
-                 O RÓTULO SAI E NADA SE PERDE: ele nomeava a linha do `<select>`, e
-                 três botões visíveis já dizem que ali se escolhe um entre três. Era
-                 a última linha desta aba a gastar 89px de coluna para nomear o que a
-                 forma do controle nomeia sozinha.
-
-                 OS TRÊS NOMES NÃO SE INVENTAM — saem de `ROTULOS_DOS_PERFIS`, no
-                 `secao_orcamento.py`, e o `title` de cada um sai de `impoe()`, que é a
-                 conta de `RUMBLE_POLICY_MULT`. Um nome digitado aqui divergiria do
-                 produto no dia em que alguém renomeasse um perfil lá.
-
-                 A GRAMÁTICA É A DA ABA VIBRAÇÃO (`.seg` do esqueleto), como a lista
-                 dela manda: *"copie, não invente"*. A altura é a mesma `--h-escolha`
-                 do `<select>` que saiu, então a conta do portão dos dois blocos não
-                 muda de valor — só de forma. -->
-            <div class="seg bat-perfis" data-id="bateria-perfil"><button class="on" data-gesto="perfil-da-mesa" data-v="tudo_ligado" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" title="Tudo ligado: nada é limitado. Vale para os 2 controles — cada um pode sobrepô-lo na linha dele.">Tudo ligado</button><button class="" data-gesto="perfil-da-mesa" data-v="bateria_longa" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" title="Bateria longa: vibração em 30% da força. Vale para os 2 controles — cada um pode sobrepô-lo na linha dele.">Bateria longa</button><button class="" data-gesto="perfil-da-mesa" data-v="eu_escolho" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" title="Eu escolho: nada é limitado. Vale para os 2 controles — cada um pode sobrepô-lo na linha dele.">Eu escolho</button></div>
-            <div class="est info" title="O que este perfil limita hoje, em todos os controles." data-id="bateria-impoe"><span class="g" data-campo="bateria-impoe-g">◆</span><span class="rot">Limite</span><span class="val" data-campo="bateria-impoe" title="Nada é limitado">Nada é limitado</span></div>
-            <div class="est info" title="É o limite geral. Cada controle pode ter o seu na aba Conexões, e o campo de lá diz qual está valendo." data-id="bateria-vale-para"><span class="g" data-campo="bateria-vale-para-g">◆</span><span class="rot">Vale para</span><span class="val" data-campo="bateria-vale-para" title="Os 2 controles">Os 2 controles</span></div>
-            <div class="est info" title="Onde o limite do perfil age hoje." data-id="bateria-frase"><span class="g" data-campo="bateria-frase-g">◆</span><span class="rot">Com limite</span><span class="val" data-campo="bateria-frase" title="Vibração">Vibração</span></div>
-            <div class="est info" title="Estes ficam livres do limite do perfil." data-id="bateria-frase-pendentes"><span class="g" data-campo="bateria-frase-pendentes-g">◆</span><span class="rot">Sem limite</span><span class="val" data-campo="bateria-frase-pendentes" title="Gatilhos, barra de luz, microfone por rádio e giroscópio">Gatilhos, luz, microfone e giroscópio</span></div>
-            <!-- O VÃO DE 58px, E POR QUE ELE ERA O DEFEITO — 31/08/2026.
-                 Palavra dela: *"aqui em perfil da bateria essa seção tá muito feia
-                 e distoante do resto da página, tá destacando negativamente"*.
-
-                 MEDIDO no Chrome antes de mexer: o bloco tem 154px (a altura vem
-                 do irmão, "O serviço", que soma 4 botões de 34 + 3 vãos de 6), e o
-                 conteúdo daqui tinha 96 — 36 do seletor + 30 + 30. Sobravam **58px
-                 de painel vazio**, o único vão da aba: as outras cinco colunas
-                 desta página são engenhadas para ACABAR NO MESMO y (4 achados de
-                 25,5 = 3 botões de 34 = 102; 3 botões de 34 + 2 vãos = o log de
-                 110). Esta era a única que não acabava com a irmã, e por isso era
-                 a única que destoava.
-
-                 O vão nasceu em 30/08, quando a `.frase` que o preenchia saiu por
-                 repetir a dica. Tirar o texto estava certo; deixar o buraco, não —
-                 e o buraco é o que ela viu no dia seguinte.
-
-                 A CURA NÃO É DEVOLVER A PROSA. O que a frase dizia vira DADO, na
-                 mesma gramática do resto da página (rótulo → valor): duas linhas
-                 de estado de 30px. 36 + 30×4 = 156, e o irmão estica 2px junto.
-                 Medido depois: vão 0, e o miolo ainda não rola (sobram 2px).
-                 E a dica perdeu o parágrafo que estas duas linhas passaram a
-                 dizer — na conta final a tela tem MENOS texto que em 29/08, não
-                 mais. -->
-          </div>
-
-        </div>
-
-        <!-- ---------- SAÚDE DO SISTEMA + PREPARAR OS JOGOS ---------- -->
-        <div class="sec-rot sr-exame sec-alta">
-          <span>O exame de hoje <span class="ajuda">?<span class="dica">O que costuma brigar com os controles neste computador. Passe o mouse numa linha para ler o que foi visto e o que fazer. Os consertos já rodaram; os botões ao lado servem para repetir.</span></span>
+        <!-- ---------- 1. STATUS + O EXAME DE HOJE ---------- -->
+        <div class="sec-rot sr-status3">
+          <span>Status <span class="ajuda">?<span class="dica">Como o Hefesto está agora neste computador. A pílula diz o estado.</span></span></span><span></span>
+          <span>O exame de hoje <span class="ajuda">?<span class="dica">O que costuma brigar com os controles neste computador. Passe o mouse numa linha para ler a frase inteira.</span></span>
             <span class="conta" data-id="exame-contagem" data-campo="exame-contagem" data-hef-alvo="html">8 linhas <span class="sep">·</span> nenhum aviso</span></span>
-          <span></span>
-          <span>Preparar os jogos</span>
         </div>
-        <div class="exame">
+        <div class="status3">
+          <div class="col-lista" data-id="status-lista" data-campo="status-lista" data-hef-alvo="html">
+            <div class="saude" data-id="hefesto-estado"><span class="selo ok"><span class="sg">✓</span>LIGADO</span><span class="txt"><span>Serviço</span></span><span class="ajuda">?<span class="dica">Roda por trás e volta sozinho se travar.</span></span></div>
+            <div class="saude" data-id="hefesto-troca-de-perfil"><span class="selo ok"><span class="sg">✓</span>LIGADO</span><span class="txt"><span>Troca de perfil ao abrir o jogo</span></span><span class="ajuda">?<span class="dica">O perfil do jogo entra sozinho quando ele abre.</span></span></div>
+            <div class="saude" data-id="hefesto-ambiente"><span class="selo nt"><span class="sg">i</span>NOTA</span><span class="txt"><span>Ambiente gráfico: Wayland · COSMIC</span></span><span class="ajuda">?<span class="dica">É por ele que o Hefesto vê qual janela está na frente.</span></span></div>
+            <a class="saude vai" data-id="status-bluetooth" href="08-conexoes.html#rd-secao"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt"><span>Bluetooth: 1 adaptador · 1 controle</span></span><span class="ajuda">?<span class="dica">Clique para ver os adaptadores na aba Conexões.</span></span></a>
+          </div>
+          <div class="risco"></div>
           <div class="saude-cols" data-id="exame-lista" data-campo="exame-lista" data-hef-alvo="html">
             <div class="col-lista">
-            <div class="saude">
-              <span class="selo ok"><span class="sg">✓</span>OK</span>
-              <span class="txt"><span>Regra de permissão dos controles instalada</span></span>
-              <span class="ajuda">?<span class="dica" style="left:auto;right:22px"><b>O que eu vi:</b> a regra <b>73-hefesto-ps5-controller.rules</b> está em /etc/udev/rules.d e foi lida pelo sistema.<br><br><b>Por que importa:</b> sem ela o Hefesto não consegue escrever nos controles, e gatilho, luz e vibração ficam mudos.<br><br><b>O que fazer:</b> nada — está no lugar.</span></span>
-            </div>
-            <div class="saude">
-              <span class="selo ok"><span class="sg">✓</span>OK</span>
-              <span class="txt"><span>O serviço sobe sozinho no login</span></span>
-              <span class="ajuda">?<span class="dica" style="left:auto;right:22px"><b>O que eu vi:</b> a unidade <b>hefesto.service</b> está habilitada para o seu usuário.<br><br><b>Por que importa:</b> sem isso você teria de ligar o serviço à mão toda vez que ligasse o computador.<br><br><b>O que fazer:</b> nada. Para desfazer, é o interruptor <b>Ligar junto com o computador</b>, acima.</span></span>
-            </div>
-            <div class="saude">
-              <span class="selo ok"><span class="sg">✓</span>OK</span>
-              <span class="txt"><span>Steam Input estava ligado em 2 jogos — desliguei</span></span>
-              <span class="ajuda">?<span class="dica" style="left:auto;right:22px"><b>O que eu vi:</b> <b>Mortal Kombat 1</b> e <b>Elden Ring</b> estavam com o Steam Input ligado. O exame desligou nos dois, sem senha e sem fechar a Steam.<br><br><b>Por que importa:</b> a Steam faz um espelho Xbox de <b>cada</b> controle que enxerga, inclusive dos gamepads virtuais do Hefesto. Com 2 controles ligados isso são 2 espelhos, e o jogo passaria a ver <b>4</b> onde você tem 2. Alguns jogos escolhem o errado.<br><br><b>O que fazer:</b> nada. Para refazer, é <b>Refazer os consertos automáticos</b>, ao lado.</span></span>
-            </div>
-            <div class="saude">
-              <span class="selo ok"><span class="sg">✓</span>OK</span>
-              <span class="txt"><span class="gls"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Alto-falante</title>
-
-  <path d="M6,12 h5 l7,-6 v20 l-7,-6 H6 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M22,11 Q26,16 22,21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <path d="M26,7 Q32,16 26,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Microfone</title>
-
-  <rect x="11" y="4" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <path d="M7,17 Q7,25 16,25 Q25,25 25,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="16" y1="25" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="11" y1="30" x2="21" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span><span>Áudio dos 2 controles roteado</span></span>
-              <span class="ajuda">?<span class="dica" style="left:auto;right:22px"><b>O que eu vi:</b> o PipeWire está enxergando os 2 DualSense como saída e entrada.<br><br><b>Por que importa:</b> é o que faz o alto-falante e o microfone de cada controle funcionarem.<br><br><b>O que fazer:</b> nada. O volume de cada um fica na aba <b>Controles</b>.</span></span>
-            </div>
+            <div class="saude"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt" title="Regra de permissão dos controles instalada"><span>Regra de permissão dos controles instalada</span></span></div>
+            <div class="saude"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt" title="O serviço sobe sozinho no login"><span>O serviço sobe sozinho no login</span></span></div>
+            <div class="saude"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt" title="Steam Input desligado para o DualSense"><span>Steam Input desligado para o DualSense</span></span></div>
+            <div class="saude"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt" title="Áudio dos 2 controles roteado"><span>Áudio dos 2 controles roteado</span></span></div>
             </div>
             <div class="risco"></div>
             <div class="col-lista">
-            <div class="saude">
-              <span class="selo ok"><span class="sg">✓</span>OK</span>
-              <span class="txt"><span>Nenhuma sobreposição picotando o jogo</span></span>
-              <span class="ajuda">?<span class="dica" style="left:auto;right:22px"><b>O que eu vi:</b> o exame procurou camadas de gravação e de estatística sobre os jogos e não achou nenhuma.<br><br><b>Por que importa:</b> sobreposição mal comportada engasga o jogo e a culpa costuma cair no controle.<br><br><b>O que fazer:</b> nada agora. Para olhar de novo, é <b>Tirar a sobreposição Vulkan</b>, ao lado — ele mostra o que achou antes de tirar.</span></span>
+            <div class="saude"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt" title="Nenhuma sobreposição picotando o jogo"><span>Nenhuma sobreposição picotando o jogo</span></span></div>
+            <div class="saude"><span class="selo nt"><span class="sg">i</span>NOTA</span><span class="txt" title="Um gamepad virtual por jogador"><span>Um gamepad virtual por jogador</span></span></div>
+            <div class="saude"><span class="selo nt"><span class="sg">i</span>NOTA</span><span class="txt" title="Proton fixado em 9.0-4 para 3 jogos"><span>Proton fixado em 9.0-4 para 3 jogos</span></span></div>
+            <div class="saude"><span class="selo nt"><span class="sg">i</span>NOTA</span><span class="txt" title="Som do sistema: sai em Controle 1"><span>Som do sistema: sai em Controle 1</span></span></div>
             </div>
-            <div class="saude">
-              <span class="selo nt"><span class="sg">i</span>NOTA</span>
-              <span class="txt"><span class="gls"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Indicador de jogador</title>
-
-  <rect x="3"  y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <rect x="11" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <rect x="15" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <rect x="19" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-  <rect x="27" y="13" width="3" height="6" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/>
-</svg></span><span>Um gamepad virtual por jogador</span></span>
-              <span class="ajuda">?<span class="dica" style="left:auto;right:22px"><b>O que eu vi:</b> o Hefesto criou <b>2</b> gamepads virtuais, um para cada controle.<br><br><b>Por que importa:</b> é o que dá um jogador a cada pessoa em vez de todo mundo mexer no mesmo boneco.<br><br><b>O que fazer:</b> nada — é assim que o jogo local funciona.</span></span>
-            </div>
-            <div class="saude">
-              <span class="selo nt"><span class="sg">i</span>NOTA</span>
-              <span class="txt"><span>Proton fixado em 9.0-4 para 3 jogos</span></span>
-              <span class="ajuda">?<span class="dica" style="left:auto;right:22px"><b>O que eu vi:</b> três jogos estão travados na versão de Proton que você validou.<br><br><b>Por que importa:</b> uma atualização da Steam não vai trocar a versão sob os seus pés.<br><br><b>O que fazer:</b> nada — é uma escolha sua, registrada. Para soltar ou trocar, é <b>Refazer a fixação do Proton</b>.</span></span>
-            </div>
-            <div class="saude">
-              <span class="selo nt"><span class="sg">i</span>NOTA</span>
-              <span class="txt"><span>Bluetooth: 1 adaptador, 1 controles no rádio</span></span>
-              <span class="ajuda">?<span class="dica" style="left:auto;right:22px"><b>O que eu vi:</b> um adaptador ativo, com o Player 2 conectados por rádio.<br><br><b>Por que importa:</b> o rádio é onde nascem os engasgos de entrada que parecem defeito do controle, e dois controles dividem a banda do mesmo adaptador.<br><br><b>O que fazer:</b> nada aqui. Vizinhança, porta e orçamento de banda ficam na aba <b>Conexões</b>.</span></span>
-            </div>
-            </div>
-          </div>
-          <div class="risco"></div>
-          <div class="col-acao">
-            <button class="btn" title="Desliga o Steam Input onde ele atrapalha. Sem senha e sem fechar nada, e com cópia de segurança." data-gesto="refazer-consertos">Refazer os consertos automáticos</button>
-            <button class="btn" title="Trava de novo o Proton que você validou nos jogos escolhidos — o que faz o controle vibrar e tocar som dentro do jogo. Quando não dá, diz o motivo." data-gesto="refazer-proton">Refazer a fixação do Proton</button>
-            <button class="btn" title="Mostra, jogo por jogo, a sobreposição Vulkan pendurada por dentro, e só então tira. Guarda cópia do arquivo. Tirar pode não resolver o engasgo." data-gesto="procurar-camadas">Tirar a sobreposição Vulkan</button>
           </div>
         </div>
 
-        <!-- ---------- AVANÇADO + DETALHES ---------- -->
-        <div class="sec-rot sr-avancado sec-alta">
-          <span>Avançado <span class="ajuda">?<span class="dica">Gestos raros. O painel ao lado é a saída crua do Hefesto: copie daqui para relatar um problema.</span></span></span><span></span>
-          <span>Detalhes técnicos</span>
+        <!-- ---------- 2. CONFIGURAÇÕES AVANÇADAS ---------- -->
+        <div class="sec-grupo">Configurações Avançadas</div>
+        <div class="sec-rot sr-avancadas">
+          <span>Serviço <span class="ajuda">?<span class="dica">Parar aqui não é o mesmo que desligar o Hefesto na aba Jogar: lá ele só sai do meio do jogo.</span></span></span><span></span>
+          <span>Perfil Global de Bateria <span class="ajuda">?<span class="dica">Vale para os 2 controles, e cada um pode ter o seu na aba Conexões.</span></span></span><span></span>
+          <span>Saúde do App <span class="ajuda">?<span class="dica">Consertos que o exame já faz sozinho, para repetir quando precisar.</span></span></span><span></span>
+          <span>Automático <span class="ajuda">?<span class="dica">Verde é ligado. Clique para trocar.</span></span></span>
         </div>
-        <div class="avancado">
-          <div class="lista">
-            <button class="btn vermelho" title="Devolve o perfil de fábrica. Pergunta antes, e os seus perfis salvos ficam onde estão." data-gesto="restaurar-de-fabrica">Restaurar de fábrica</button>
-            <button class="btn" title="Põe a linha de inicialização do Hefesto em todos os jogos instalados, sem perder as opções que você já tem e com cópia de segurança. Pergunta antes: precisa fechar a Steam por uns 20 segundos." data-gesto="aplicar-aos-jogos">Aplicar aos jogos da Steam</button>
-            <button class="btn" title="Põe as últimas 80 linhas do registro técnico no painel ao lado." data-gesto="ver-detalhes">Ver detalhes</button>
+        <div class="avancadas">
+          <div class="coluna col-servico">
+            <button class="btn vermelho" title="Para o serviço, e pergunta antes. Com a pausa ativa vira Retomar; com ele parado, Ativar o serviço." data-gesto="parar-ou-retomar" data-campo="parar-ou-retomar-verde" data-hef-alvo="classe" data-hef-classe="verde">Parar o serviço</button>
+            <button class="btn" title="Manda o serviço reler os atalhos do controle e os arquivos que a Steam usa para abrir os jogos. Leva alguns segundos." data-gesto="atualizar" data-hef-em-voo="Atualizando…">Atualizar</button>
+            <button class="btn so-avulso" title="O serviço está rodando por fora do sistema, e ali reiniciar não funciona. Este botão o faz subir do jeito certo." data-gesto="corrigir-modo" data-campo="corrigir-modo-quando" data-hef-alvo="classe" data-hef-classe="mostra">Corrigir o serviço</button>
+            <div class="acao"><button class="btn" data-campo="reiniciar-razao" data-hef-alvo="classe" data-hef-classe="apagado" data-hef-atributo="aria-disabled" data-gesto="reiniciar" title="Para e liga de novo o serviço. Resolve a maioria dos travamentos, e nenhum ajuste seu se perde.">Reiniciar</button><span class="ajuda porque" tabindex="0">?<span class="dica" data-campo="reiniciar-razao" data-hef-alvo="html"><i class="nada"></i></span></span></div>
           </div>
           <div class="risco"></div>
-          <div class="col-log">
-            <div class="log" data-id="registro-texto" data-campo="registro-texto" data-hef-rolar="fim">[23:41:02] daemon pronto · 2 controles · 2 gamepads virtuais · controle virtual ok
-[23:41:02] p1 usb · p2 bt · p3 bt · p4 usb · fw 0x0356 nos 2 · cor de fábrica só no cabo (p1)
+          <div class="coluna">
+            <div class="seg bat-perfis" data-id="bateria-perfil"><button class="on" data-gesto="perfil-da-mesa" data-v="tudo_ligado" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="tudo_ligado" title="Tudo ligado: nada é limitado. Vale para os 2 controles — cada um pode ter o seu na aba Conexões.">Tudo ligado</button><button class="" data-gesto="perfil-da-mesa" data-v="bateria_longa" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="bateria_longa" title="Bateria longa: vibração em 30% da força. Vale para os 2 controles — cada um pode ter o seu na aba Conexões.">Bateria longa</button><button class="" data-gesto="perfil-da-mesa" data-v="eu_escolho" data-campo="bateria-perfil" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="eu_escolho" title="Eu escolho: nada é limitado. Vale para os 2 controles — cada um pode ter o seu na aba Conexões.">Eu escolho</button></div>
+          </div>
+          <div class="risco"></div>
+          <div class="coluna">
+            <button class="btn" title="Desliga o Steam Input onde ele atrapalha. Sem senha, sem fechar nada, e com cópia de segurança." data-gesto="refazer-consertos">Reaplicar correções automáticas</button>
+            <button class="btn" title="Põe a linha do Hefesto nos jogos da Steam, sem perder as suas opções. Pergunta antes: fecha a Steam por uns 20 segundos." data-gesto="aplicar-aos-jogos">Aplicar soluções nos lançadores</button>
+            <button class="btn vermelho" title="Devolve o perfil de fábrica. Pergunta antes, e os seus perfis salvos ficam." data-gesto="restaurar-de-fabrica">Restaurar de fábrica</button>
+          </div>
+          <div class="risco"></div>
+          <div class="coluna col-ligaveis">
+            <button class="cadeado ligada" title="Liga o serviço junto com o computador. Clique para trocar." data-gesto="autostart" data-campo="hefesto-autostart" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Iniciar com o sistema</button>
+            <button class="cadeado ligada" title="Mantém os jogos na versão do Proton que faz o controle vibrar e tocar som. Clique para trocar; com a Steam aberta ele espera." data-gesto="fixar-proton" data-campo="proton-fixado" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Fixar Proton</button>
+            <button class="cadeado" title="Tira dos jogos a sobreposição Vulkan que engasga a imagem. Desligar devolve o que foi tirado." data-gesto="corrigir-vulkan" data-campo="vulkan-corrigido" data-hef-alvo="classe" data-hef-classe="ligada"><span class="p"></span>Corrigir Vulkan</button>
+          </div>
+        </div>
+
+        <!-- ---------- 3. DETALHES TÉCNICOS ---------- -->
+        <div class="sec-rot sr-log sec-alta">
+          <span>Detalhes técnicos <span class="ajuda">?<span class="dica">O registro do serviço, sempre à vista. Copie para relatar um problema.</span></span></span>
+          <span><button class="btn copiar" title="Copia o registro inteiro para colar num relato." data-gesto="copiar-registro">Copiar</button></span>
+        </div>
+        <div class="registro">
+          <div class="log" data-id="registro-texto" data-campo="registro-texto" data-hef-rolar="fim">[23:41:02] daemon pronto · 2 controles · 2 gamepads virtuais · controle virtual ok
+[23:41:02] p1 usb · p2 bt · p3 bt · p4 usb · fw 0x0356 nos 2 · cor de fábrica lida (p1, p2)
 [23:41:07] exame: steam input desligado em 2 jogos · proton 9.0-4 fixado em 3
-[23:41:09] perfil "Mortal Kombat" aplicado aos 2 · gatilho L2 escrito, sem leitura de volta</div>
-          </div>
+[23:41:09] perfil "Mortal Kombat" aplicado aos 2 · gatilho L2 escrito, sem leitura de volta
+[23:41:12] rádio: 1 adaptador · 1 controle · sem fila
+[23:41:15] janela da frente: steam_app_1971870 · perfil "Mortal Kombat" mantido</div>
         </div>
 
       </div>
@@ -1841,172 +1476,26 @@
 
 <!-- ================= LEGENDA DO MOCKUP ================= -->
 <div class="nota">
-  <h2>A palavra "Hefesto" ficou com a aba Jogar — esta aba nomeia o SERVIÇO (31/08/2026)</h2>
+  <h2>A aba Sistema em três seções — 25/09/2026</h2>
   <ul>
-    <li><b>A colisão.</b> Duas abas diziam <i>"Hefesto ligado/desligado"</i> e significavam coisas
-      diferentes: na <b>Jogar</b> é o <b>modo</b> (o Hefesto no meio do jogo, ou o aparelho puro),
-      e aqui era o <b>processo</b> (<code>systemctl --user stop</code>). Quem desligava na Jogar
-      continuava com o serviço rodando; quem desligava aqui matava tudo. É a mesma família da
-      confusão <i>Nativo × DualSense</i> que ela mandou desfazer no mesmo dia.</li>
-    <li><b>A escolha dela.</b> A palavra <b>Hefesto</b> fica com a <b>Jogar</b>. Aqui: a faixa
-      <i>O Hefesto</i> virou <b>O serviço</b>, a linha <i>O Hefesto está</i> virou <b>O serviço
-      está</b>, <i>Reiniciar o Hefesto</i> virou <b>Reiniciar o serviço</b> e <i>Desligar o
-      Hefesto</i> virou <b>Parar o serviço</b>.</li>
-    <li><b>Quatro ocorrências ficaram, e não é esquecimento.</b> Onde "Hefesto" é o <b>programa</b>
-      — quem escreve nos controles, quem cria os 2 gamepads virtuais, o dono do registro técnico
-      — a palavra fica. Trocá-las seria o defeito ao contrário: a tela passaria a dizer que quem
-      cria gamepad virtual é uma unidade do systemd.</li>
-    <li><b>A dica agora explica a diferença</b>, porque as duas coisas passaram a existir na mesma
-      interface: <i>"Parar o serviço não é desligar o Hefesto na aba Jogar: lá ele continua rodando
-      e só sai do meio do jogo; aqui ele deixa de rodar."</i> O botão vermelho repete o ponteiro
-      curto — <i>"não é o interruptor Hefesto da aba Jogar"</i> — porque é ali que a confusão custa.</li>
-    <li><b>Nenhum <code>data-id</code> e nenhum <code>data-gesto</code> mudou.</b>
-      <code>hefesto-estado</code>, <code>hefesto-pausa</code>, <code>desligar</code>… são
-      <b>endereços</b> do contrato de <code>gui/aba_sistema.py</code>, lidos por AST em
-      <code>_id()</code>/<code>_gesto()</code>. O vocabulário da <b>tela</b> e o endereço do
-      <b>dado</b> são coisas separadas — é por isso que esta mudança coube num arquivo só, sem
-      tocar o produto que ela usa.</li>
-  </ul>
-
-  <h2>O defeito que esta rodada curou: 93px escondidos</h2>
-  <ul>
-    <li><b>O que a foto mostrava.</b> O miolo rolava <b>93px por dentro</b>: o segundo botão do
-      "Avançado" saía <b>fatiado ao meio</b> e o painel de registro mostrava <b>uma</b> das quatro
-      linhas. Nada na tela dizia que havia mais.</li>
-    <li><b>A conta que explica.</b> O miolo tem 634px, dos quais 508 de conteúdo. Cada quadro
-      custa <b>54px só de moldura</b> (28 do topo, 24 do padding do corpo, 2 de borda), mais 14px
-      de vão entre fileiras. <b>Quatro quadros em três fileiras = 190px de moldura</b> para 411px
-      de conteúdo: 411 + 190 + 34 = <b>635</b>, numa janela de 634.</li>
-    <li><b>Espremer não fechava a conta.</b> Com toda linha no mínimo — botão colado em botão,
-      rótulo sem respiro — as três fileiras ainda somavam ~550. O que sobrava era a
-      <b>moldura repetida</b>, e foi ela que saiu.</li>
-    <li><b>Um quadro só, e é a norma da casa.</b> Das dez abas, <b>sete têm um quadro só</b>, com o
-      nome da aba no título e as seções por dentro (<code>sec-rot</code>, como a Navegação e a
-      Vibração). As duas que fugiam disso eram exatamente as duas que escondiam conteúdo: esta e a
-      Conexões. As seções viraram <b>faixas rotuladas</b> dentro de um quadro:
-      <b>54px de moldura no lugar de 190</b>. Hoje o conteúdo mede <b>530px</b> em
-      634 — <b>nada rola, nada é fatiado</b>.</li>
-    <li><b>Nenhuma linha foi cortada por falta de espaço.</b> Os 10 botões, os 8 achados e as
-      4 linhas do registro continuam todos na tela — o que saiu depois saiu por decisão dela, não
-      por caber. O painel de registro <b>ganhou</b> altura (89 → 110px), para acabar no mesmo y da
-      coluna de botões ao lado.</li>
-  </ul>
-
-  <h2>O Gamepad virtual saiu, e o Perfil de Bateria tomou o bloco</h2>
-  <ul>
-    <li><b>A palavra dela, 28/08</b> (<code>D-O-GAMEPAD-VIRTUAL-SAI-DA-INTERFACE</code>):
-      <i>"some da interface; o controle já tá certinho hoje. aquilo foi pra outro momento que não
-      faz sentido na interface hoje."</i> Saiu o bloco inteiro — as cinco linhas de estado
-      (<i>Gamepad virtual (<code>uinput</code>)</i>, <i>Nó do gamepad virtual</i>, <i>Aparelhos físicos</i>,
-      <i>Código do fabricante</i>, <i>Controles detectados</i>), os quatro chips
-      <code>P1</code>..<code>P4</code> e o diagraminha da cadeia.</li>
-    <li><b>E no lugar dele, o que ela mandou:</b> <i>"colocar Teto da Vibração (que na verdade é
-      Perfil de Bateria) e colocar em sistema no lugar do Gamepad virtual."</i> O dropdown vinha da
-      <b>Conexões</b>, da seção que se chamava <i>Desempenho</i> — e o nome dela é que estava
-      errado: o produto já chama a chave de <code>PERFIL_BATERIA_LONGA</code>
-      (<code>secao_orcamento.py:127</code>), e a <code>D-PERFIL-DE-DESEMPENHO</code> registra que o
-      perfil <i>"decide o que custa BATERIA"</i>.</li>
-    <li><b>O bloco herdou a medida do irmão, e está medido:</b> <b>535,5 × 156px</b>, o mesmo
-      <i>x</i>, <i>y</i>, largura e altura do bloco "O Hefesto" — que é o que ela pediu em 27/08
-      (<i>"Altura e largura dos blocos O Hefesto e Gamepad virtual são iguais"</i>). O miolo
-      continua em <b>634px sem rolar nada</b>.</li>
-    <li><b>Nenhum rótulo e nenhum número foram digitados.</b> Os três perfis
-      (<b>Tudo ligado</b>, <b>Bateria longa</b> e <b>Eu escolho</b>), a tradução perfil→disco e o degrau do teto são <b>lidos do
-      produto por AST</b> — <code>ROTULOS_DOS_PERFIS</code>, <code>TETO_POR_PERFIL</code>,
-      <code>RUMBLE_POLICY_MULT</code> e <code>LINHAS_DO_TETO</code>. É a mesma cura que a Conexões
-      já tinha: em 28/08 a dica de lá afirmava que "Bateria longa" corta a força em <b>60%</b>, e o
-      produto corta em <b>30% da força</b> — o dobro do limite real, e nenhuma régua podia vê-lo, porque
-      era literal.</li>
-    <li><b>A leitura "Sem teto" NÃO veio junto</b> (<code>D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES</code>):
-      ela mandou tirá-la dos dois lugares da Conexões, e trazer o campo para cá seria fazê-lo
-      renascer numa terceira tela. Veio o seletor. A tela não afirma teto onde não há — diz
-      <i>"Nada é limitado"</i> e <b>nomeia em duas linhas</b> onde o teto age e onde ainda não age,
-      que é a razão escrita do <code>alcance_de_hoje()</code> no produto: <i>"silêncio, nesta
-      tela, seria lido como «o teto vale para tudo»"</i>.</li>
-    <li><b>Duas minúsculas sumiram sozinhas:</b> <i>os seus</i> e <i>um por jogador</i> eram os
-      rótulos da cadeia, e foram embora com ela.</li>
-    <li><b>O vão de 58px, e a régua que nasceu dele — 31/08/2026.</b> Palavra dela: <i>"aqui em
-      perfil da bateria essa seção tá muito feia e distoante do resto da página, tá destacando
-      negativamente"</i>. O bloco tinha <b>96px de conteúdo em 154</b> — o único vão da aba, num
-      lugar onde as outras duas faixas são engenhadas para acabar no mesmo <i>y</i>. Ele nasceu em
-      30/08, quando a <code>.frase</code> saiu por repetir a dica: tirar o texto estava certo,
-      deixar o buraco não. O que a frase dizia virou <b>duas linhas de estado</b> — a gramática do
-      resto da página —, e a dica perdeu o parágrafo que elas passaram a dizer: <b>menos texto na
-      tela que em 29/08, não mais</b>. Agora há portão no gerador: ele lê as quatro alturas do CSS
-      e do esqueleto, conta as linhas dos dois blocos e <b>reprova em voz alta</b> quando eles
-      deixam de acabar juntos — <code>96px … 58px de painel vazio</code>, com a cura arrancada.</li>
-  </ul>
-
-  <h2>A regra da maiúscula, escrita para as outras abas seguirem</h2>
-  <ul>
-    <li><b>Valor de campo começa com maiúscula:</b> <i>Ligado</i>, <i>Sim — e continua depois de reiniciar</i>,
-      <i>Nada é limitado</i>, <i>Os 2 controles</i>. Ele é uma <b>resposta</b> a um rótulo, não a
-      continuação da frase dele — quem lê a coluna de valores sozinha lê uma lista de respostas.</li>
-    <li><b>O que não é valor de campo fica em minúscula:</b> a contagem no rótulo de uma seção
-      (<i>8 linhas · nenhum aviso</i>), a legenda sob um elemento, o rótulo de uma coluna.
-      Nenhum deles responde a um rótulo — são a moldura, não o conteúdo. <b>É por isso que aquela
-      contagem continua minúscula</b>, e não porque passou despercebida.</li>
-    <li><b>Nome próprio, caminho e sigla mantêm a forma de fábrica:</b> <code>Wayland · COSMIC</code>.
-      Capitalizar um caminho o quebraria; capitalizar uma sigla mudaria o que ela é.</li>
-    <li>A regra mora no <code>est()</code> do gerador desta aba, para a próxima não ter de
-      reinventá-la.</li>
-  </ul>
-
-  <h2>O que continua valendo desde ontem</h2>
-  <ul>
-    <li><b>Toda contagem sai da <code>MESA</code>.</b> "1 controles no rádio", "áudio dos
-      2 controles", "vale para os 2 controles", as linhas do registro técnico e o cabeçalho —
-      nenhum "quatro" digitado. Um controle a mais na bancada muda todos de uma vez.</li>
-    <li><b>Sete botões de "Preparar os jogos" viraram três</b>, e os três <b>rodam sozinhos no
-      exame</b> — por isso os achados falam no pretérito. O rótulo virou <b>Refazer</b>.</li>
-        <li><b>Os glifos são os do mapa</b> (<code>assets/glyphs/</code>): alto-falante e microfone na
-      linha do áudio, o indicador de jogador na linha dos gamepads virtuais.</li>
-  </ul>
-
-  <h2>O que eu assumi — e que precisa do olho dela</h2>
-  <ul>
-    <li><b>O título do quadro virou "Sistema"</b>, o nome da aba, como na Iluminação, na Vibração,
-      na Navegação e nos Perfis. Os títulos antigos — <i>O Hefesto</i>, <i>Perfil de Bateria</i>,
-      <i>Avançado</i> — viraram rótulos de faixa, e cada um levou o seu <b>?</b> junto. O do exame
-      levou também a contagem de linhas.</li>
-    <li><b>As linhas de achado encolheram de 28,5 para 25,5px.</b> Quatro delas passam a medir os
-      mesmos 102px dos três botões ao lado, e as duas colunas acabam no mesmo y — que é a regra da
-      casa. Se ficou apertado ao olho dela, o caminho é devolver 3px e tirá-los da faixa de cima.</li>
-    <li><b>O painel de registro cresceu para 110px</b> para acabar no mesmo y dos três botões de
-      "Avançado". As quatro linhas cabem inteiras, e sobra o respiro de um terminal.</li>
-    <li><b>O perfil aparece com "Tudo ligado" escolhido</b>, que é o estado que o dropdown já
-      mostrava na Conexões. Trocá-lo no transplante faria as quatro linhas de teto por controle de
-      lá passarem a mentir sobre o global — o estado é dela, não meu.</li>
-    <li><b>Os 2 controles não aparecem mais nesta aba.</b> O rol com nome, bateria e transporte é
-      da <b>Jogar</b> e da <b>Controles</b>; com a cadeia fora, nada aqui é por controle.</li>
-  </ul>
-
-  <h2>Ainda aberto — vai para o chat, com escolhas</h2>
-  <ul>
-    <li><b>O interruptor "avisar quando a bateria estiver acabando" mora aqui, na Sistema?</b> As
-      duas funções de notificação estão escritas e testadas e ninguém as chama
-      (<code>integrations/desktop_notifications.py:272</code>). Com 2 controles a pergunta pesa
-      mais: são 2 baterias a acabar em horários diferentes. Opções: (a) na faixa <b>Perfil de
-      Bateria</b>, que nasceu hoje e é onde a palavra "bateria" agora mora; (b) na faixa "O
-      serviço"; (c) na aba Controles, junto da bateria de cada um.</li>
-    <li><b>Entra uma linha de saúde para o canal DSX?</b> A porta 127.0.0.1:6969 aceita gatilho e
-      cor de qualquer programa local e nenhuma tela conta isso
-      (<code>daemon/udp_server.py</code>). É a explicação que falta quando o gatilho muda sozinho.
-      Opções: (a) nono achado; (b) só no painel de Detalhes técnicos; (c) fica invisível.</li>
-  </ul>
-
-  <h2>Já decidido por ela — não é pergunta</h2>
-  <ul>
-    <li><b>Os botões de Steam ficam na Sistema</b> (D-A-ABA-LANCADORES-NASCE-PLACEHOLDER):
-      <i>"a aba nova não existe ainda"</i>.</li>
-    <li><b>O "o que fazer" das linhas de saúde fica na dica</b> (D-TUDO-QUE-EXPLICA-VIRA-DICA): na
-      tela ficam título, rótulo e estado; explicação vai para o "?".</li>
-    <li><b>A aba é mostrada com a pausa ATIVA</b> — sem isso o botão Retomar não teria o que
-      ilustrar. No produto ele só acende nesse estado.</li>
-    <li><b>O Gamepad virtual sai da interface</b> (<code>D-O-GAMEPAD-VIRTUAL-SAI-DA-INTERFACE</code>)
-      e <b>o Perfil de Bateria toma o bloco</b> — as duas são a mesma decisão dela, de 28/08.</li>
-    <li><b>A leitura "Sem teto" sai dos dois lugares</b>
-      (<code>D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES</code>): vem o seletor, e só.</li>
+    <li><b>O pedido dela:</b> <i>"praticamente vamos só mudar de lugar as coisas dessa aba"</i>,
+      com menos texto e mais gesto. <!-- noqa-acento: citação literal dela --></li>
+    <li><b>1. Status</b> — o antigo <i>O serviço</i> virou <b>Status</b>, com quatro linhas na
+      forma do exame (a pílula e o texto curto): <b>Serviço</b> (LIGADO, PAUSADO ou PARADO — a
+      pausa deixou de ter linha própria), <b>Troca de perfil</b>, <b>Ambiente gráfico</b> e
+      <b>Bluetooth</b>, que leva à seção do rádio da aba Conexões. O exame fica ao lado, em duas
+      colunas, e o Bluetooth saiu dele. As frases do exame mostram a cabeça; a inteira fica no
+      <code>title</code>.</li>
+    <li><b>2. Configurações Avançadas</b> — quatro colunas: <b>Serviço</b> (Parar/Retomar num botão
+      só, Atualizar, Reiniciar), <b>Perfil Global de Bateria</b> (as três escolhas na vertical),
+      <b>Saúde do App</b> (Reaplicar correções automáticas, Aplicar soluções nos lançadores,
+      Restaurar de fábrica) e <b>Automático</b> (Iniciar com o sistema, Fixar Proton, Corrigir
+      Vulkan — a pílula do Modo Freestyle, verde quando ligada).</li>
+    <li><b>3. Detalhes técnicos</b> — sempre à vista, com o registro do serviço, a altura que sobra
+      e um <b>Copiar</b>. O <i>Ver detalhes</i> deixou de existir.</li>
+    <li><b>Saíram</b>: a chave <i>Ligar junto com o computador</i> do topo (virou o ligável
+      <i>Iniciar com o sistema</i>) e as quatro linhas de baixo do Perfil de Bateria (Limite, Vale
+      para, Com limite, Sem limite).</li>
   </ul>
 </div>
 
