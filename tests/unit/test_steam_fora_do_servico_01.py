@@ -124,6 +124,9 @@ class TestADoDaemonNasceFora:
         assert "--property=Type=exec" in cmd
         assert "--property=ExitType=cgroup" in cmd
         assert "--property=OOMScoreAdjust=100" in cmd
+        # O DEVNULL do Popen de sempre, e não o diário de todo serviço.
+        assert "--property=StandardOutput=null" in cmd
+        assert "--property=StandardError=null" in cmd
         assert _depois_do_traco(cmd) == ["steam"]
         unidade = next(a for a in cmd if a.startswith("--unit="))
         assert unidade.startswith("--unit=app-hefesto-steam-")

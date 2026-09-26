@@ -335,6 +335,10 @@ def argv_da_unidade(
         "--quiet",
         "--property=Type=exec",
         f"--property={forma}",
+        # O `DEVNULL` do `Popen` de sempre: sem isto a saída do aplicativo iria
+        # para o diário (o padrão de todo serviço), e a Steam fala muito.
+        "--property=StandardOutput=null",
+        "--property=StandardError=null",
     ]
     if oom is not None:
         cmd.append(f"--property=OOMScoreAdjust={oom}")
