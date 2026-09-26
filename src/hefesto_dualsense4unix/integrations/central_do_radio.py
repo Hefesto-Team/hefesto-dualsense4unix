@@ -227,10 +227,19 @@ CONFERIR_S = 10.0
 #: De quanto em quanto tempo a conferência e a espera do gesto perguntam de novo.
 PASSO_S = 0.5
 
-#: Quanto um movimento aplicado e não confirmado fica «esperando», vigiado sem a
-#: trava, antes de virar «não chegou». Dois minutos cobrem ela apertar PS de novo
-#: com calma; mais que isso seguraria o «Equilibrar» sem motivo.
-PRAZO_DO_PENDENTE_S = 120.0
+#: Quanto um movimento fica «esperando», contado do COMEÇO dele, antes de virar
+#: «não chegou». É também quanto a tela segura o «Segure PS + Create»
+#: (``a08_conexoes.ESPERA_NA_TELA_S``): UM PRAZO, UM DONO, e o dono é este — o
+#: nome é público e estável, e a tela passa a lê-lo daqui.
+#:
+#: FATO SUBSTITUÍDO (O-RADIO-CONECTA-ONDE-ELA-MANDA-02, 26/09/2026): eram 120 s,
+#: «dois minutos cobrem ela apertar PS de novo com calma». A tela soltava o
+#: «esperando» aos 60 s e a central recusava com «ocupado» até os 120: no
+#: controle branco, «Tentar de Novo» e «Conectar» voltavam acesos e tremiam por
+#: um minuto inteiro. Os 60 s são MEDIDOS no diário dela de 26/09: a janela da
+#: busca (30 s) + o ``Pair`` mais lento da madrugada (o branco, 11 s) + a
+#: conferência (10 s) somam 51 s.
+PRAZO_DO_PENDENTE_S = 60.0
 
 #: Quanto a central espera o objeto velho sumir da foto do dono depois de um
 #: ``RemoveDevice`` — o sinal ``InterfacesRemoved`` chega pelo fio do barramento.
@@ -257,6 +266,14 @@ INTERVALO_DA_FAXINA_S = 30.0
 #: A chave do fio da faxina em ``_fios`` — não tem forma de endereço, então não
 #: esbarra na de um movimento.
 _FIO_DA_FAXINA = "faxina"
+
+#: De quanto em quanto tempo o fio da faxina cuida do NOME dela
+#: (:meth:`CentralDoRadio.cuidar_dos_nomes`): é a demora entre ela renomear e o
+#: nome ir ao ``maquina.json``, e entre o controle conectar e o nome voltar ao
+#: objeto dele. Com o dono vivo cada volta é leitura da foto em memória; pelo
+#: caminho de reserva (``busctl``), que custa subprocessos, a volta vai no passo
+#: da faxina.
+INTERVALO_DOS_NOMES_S = 2.0
 
 
 # ---------------------------------------------------------------------------
@@ -342,6 +359,56 @@ Movimentacao = Callable[[str], "float | None"]
 
 #: ``(adaptador, aparelho)`` → ``(fez, motivo)``: o verbo ``esquecer`` da ponte.
 EsquecerNaPonte = Callable[[str, str], "tuple[bool, str]"]
+
+
+class GuardaDosNomes(Protocol):
+    """Onde mora o nome que ela deu a cada controle, pelo ENDEREÇO dele.
+
+    No produto é o ``maquina.json`` (:class:`NomesNaMaquina`); a régua troca
+    por um dublê que não é mais frouxo que ele.
+    """
+
+    def ler(self) -> Mapping[str, str] | None:
+        """``{endereço aa:bb:…: nome}``; ``None`` = não deu para ler (não é «não há»)."""
+        ...
+
+    def gravar(self, aparelho: str, nome: str | None) -> bool:
+        """Grava o nome (``None`` esquece). ``False`` = não gravou."""
+        ...
+
+
+class NomesNaMaquina:
+    """O nome dela no ``maquina.json`` (``ControleDeclarado.nome``) — o dono é
+    ``utils/maquina``. Relido só quando o arquivo muda: a volta dos nomes
+    pergunta a cada :data:`INTERVALO_DOS_NOMES_S`."""
+
+    def __init__(self) -> None:
+        self._lido: tuple[tuple[int, int] | None, dict[str, str]] | None = None
+
+    def ler(self) -> Mapping[str, str] | None:
+        from hefesto_dualsense4unix.utils import maquina
+
+        try:
+            estado = maquina.caminho_da_maquina().stat()
+            marca: tuple[int, int] | None = (estado.st_mtime_ns, estado.st_size)
+        except FileNotFoundError:
+            marca = None
+        except OSError:
+            return None
+        if self._lido is not None and self._lido[0] == marca:
+            return dict(self._lido[1])
+        nomes: dict[str, str] = {}
+        for chave, nome in maquina.nomes_dos_controles(maquina.carregar_maquina()).items():
+            endereco = endereco_de(chave)
+            if endereco is not None:
+                nomes[endereco] = nome
+        self._lido = (marca, nomes)
+        return dict(nomes)
+
+    def gravar(self, aparelho: str, nome: str | None) -> bool:
+        from hefesto_dualsense4unix.utils.maquina import gravar_o_nome_do_controle
+
+        return gravar_o_nome_do_controle(aparelho, nome)
 
 
 class Janela(Protocol):
@@ -455,6 +522,19 @@ def _nao_correr_sob_a_suite(_argumentos: Sequence[str]) -> tuple[int, str]:
     return 1, "a suíte está no ar e esta é a ponte de verdade"
 
 
+def _o_bluez_diz_controle(objetos: Iterable[bluez_dbus.AparelhoDoBluez]) -> bool | None:
+    """A CLASSE decide quando algum objeto a tem; sem ela, o ``Icon`` que o
+    BlueZ deriva; sem os dois, ``None`` (o BlueZ não diz). Nunca o nome."""
+    vistos = tuple(objetos)
+    for objeto in vistos:
+        if objeto.classe is not None:
+            return e_controle(objeto.classe)
+    icones = {objeto.icone for objeto in vistos if objeto.icone}
+    if icones:
+        return ICONE_DE_CONTROLE in icones
+    return None
+
+
 # ---------------------------------------------------------------------------
 # A foto que a central lê antes de decidir.
 # ---------------------------------------------------------------------------
@@ -485,6 +565,37 @@ def _ler(dono: bluez_dbus.LeitorDoBluez, aparelho: str) -> _Foto | None:
     return _Foto({a.endereco: a for a in adaptadores}, do_aparelho)
 
 
+def _controles_pelo_endereco(
+    aparelhos: Iterable[bluez_dbus.AparelhoDoBluez],
+) -> dict[str, list[bluez_dbus.AparelhoDoBluez]]:
+    """Os objetos de cada CONTROLE, pelo endereço — um por adaptador que o conhece."""
+    grupos: dict[str, list[bluez_dbus.AparelhoDoBluez]] = {}
+    for objeto in aparelhos:
+        grupos.setdefault(objeto.endereco, []).append(objeto)
+    return {e: objs for e, objs in sorted(grupos.items()) if _o_bluez_diz_controle(objs)}
+
+
+def _o_nome_que_vale(
+    objetos: Sequence[bluez_dbus.AparelhoDoBluez],
+    dados: Mapping[str, str],
+    vistos_antes: Mapping[str, str],
+    guardado: str,
+) -> str:
+    """O nome que vale DEPOIS desta volta — ver :meth:`CentralDoRadio.cuidar_dos_nomes`.
+
+    ``dados`` é o nome dela em cada objeto (``""`` = o de fábrica);
+    ``vistos_antes``, o ``Alias`` de cada objeto na volta anterior.
+    """
+    mudaram = [o for o in objetos
+               if dados[o.caminho] and vistos_antes.get(o.caminho) != str(o.nome or "").strip()]
+    if mudaram:
+        mudaram.sort(key=lambda o: o.conectado is not True)
+        return dados[mudaram[0].caminho]
+    apagou = bool(guardado) and any(
+        vistos_antes.get(o.caminho) == guardado and not dados[o.caminho] for o in objetos)
+    return "" if apagou else guardado
+
+
 # ---------------------------------------------------------------------------
 # A central.
 # ---------------------------------------------------------------------------
@@ -507,6 +618,7 @@ class CentralDoRadio:
         movimento: Movimentacao | None = None,
         esquecer_na_ponte: EsquecerNaPonte | None = None,
         abrir_janela: AbrirJanela | None = None,
+        nomes: GuardaDosNomes | None = None,
         sysfs: Mapping[str, Any] | None = None,
         relogio: Callable[[], float] = time.monotonic,
         dormir: Callable[[float], None] = time.sleep,
@@ -520,6 +632,15 @@ class CentralDoRadio:
         self._movimento = movimento
         self._esquecer_na_ponte = esquecer_na_ponte or esquecer_pela_ponte
         self._abrir_janela = abrir_janela or _janela_de_busca
+        self._nomes: GuardaDosNomes = nomes if nomes is not None else NomesNaMaquina()
+        #: ``{caminho do objeto: o Alias dele}`` na volta anterior dos nomes — é
+        #: por ela que :meth:`cuidar_dos_nomes` separa «ela renomeou» (o
+        #: ``Alias`` mudou) e «ela apagou o nome» (o MESMO objeto voltou ao de
+        #: fábrica) de «o objeto é novo» (nasceu de fábrica, e o nome volta).
+        self._alias_vistos: dict[str, str] = {}
+        #: Sobe a cada movimento que começa: um movimento tira e recria objetos,
+        #: e a volta dos nomes que o atravessou não guarda o que viu.
+        self._geracao_dos_nomes = 0
         self._sysfs = dict(sysfs or {})
         self._relogio = relogio
         self._dormir = dormir
@@ -780,6 +901,7 @@ class CentralDoRadio:
         if alvo is None:
             return Movimento(str(aparelho), destino or "", NAO_CHEGOU, PASSO_FIM,
                              MOTIVO_FORA_DO_RADIO)
+        self._vencer_os_prazos()
         repetido = self._o_mesmo_em_curso(alvo, destino)
         if repetido is not None:
             return repetido
@@ -796,6 +918,7 @@ class CentralDoRadio:
         se sabe QUEM vai chegar, só ONDE (a D8) — e ganha o endereço quando o
         controle aparece na janela. Um por vez, como o :meth:`comecar_a_mover`.
         """
+        self._vencer_os_prazos()
         repetido = self._o_mesmo_em_curso(CONECTANDO, destino)
         if repetido is not None:
             return repetido
@@ -814,6 +937,27 @@ class CentralDoRadio:
         janela nenhuma: o ``Pairable`` que ela ligasse não teria quem desligar.
         """
         return self._parar.is_set() or self.em_curso
+
+    def _vencer_os_prazos(self) -> None:
+        """O «esperando» que já passou do prazo resolve AGORA, antes do pedido.
+
+        A tela solta o «esperando» no mesmo :data:`PRAZO_DO_PENDENTE_S`, contado
+        do mesmo começo (o ``quando`` publicado) — e acende «Tentar de Novo» e
+        «Conectar». A vigia só pergunta uma vez por segundo: sem esta volta, o
+        clique que chega entre o prazo e a vigia seguinte encontrava a central
+        «ocupada», e o botão aceso tremia (a zona morta da
+        O-RADIO-CONECTA-ONDE-ELA-MANDA-02). Só o movimento vencido é vigiado
+        aqui; o que ainda está no prazo segue com o fio dele.
+        """
+        agora = self._relogio()
+        for movimento in self.movimentos():
+            if (movimento.em_curso and movimento.passo == PASSO_CONFERINDO
+                    and agora - movimento.comecou >= self._prazo_do_pendente_s):
+                try:
+                    self._vigiar_um(movimento)
+                except Exception:
+                    logger.warning("central_prazo_levantou",
+                                   aparelho=mascarar(movimento.aparelho), exc_info=True)
 
     def _recusa_por_outro(self, chave: str, destino: str | None) -> Movimento:
         """A recusa do um por vez — a mesma forma da trava ocupada, e não guardada."""
@@ -903,6 +1047,7 @@ class CentralDoRadio:
         if alvo is None:
             return Movimento(str(aparelho), destino or "", NAO_CHEGOU, PASSO_FIM,
                              MOTIVO_FORA_DO_RADIO)
+        self._vencer_os_prazos()
         repetido = self._o_mesmo_em_curso(alvo, destino)
         if repetido is not None:
             return repetido
@@ -923,6 +1068,7 @@ class CentralDoRadio:
                 # o gesto da tela leria o movimento de ontem, já acabado.
                 self._guardar(Movimento(alvo, destino or "", ESPERANDO, PASSO_PREPARANDO,
                                         comecou=self._relogio()))
+                self._esquecer_os_nomes_vistos()
                 if _ao_pegar_a_trava is not None:
                     _ao_pegar_a_trava()
                 try:
@@ -949,6 +1095,7 @@ class CentralDoRadio:
         """
         from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
 
+        self._vencer_os_prazos()
         repetido = self._o_mesmo_em_curso(CONECTANDO, destino)
         if repetido is not None:
             return repetido
@@ -964,6 +1111,7 @@ class CentralDoRadio:
                     return self._recusa_por_outro(CONECTANDO, destino)
                 self._guardar(Movimento(CONECTANDO, destino or "", ESPERANDO, PASSO_PREPARANDO,
                                         comecou=self._relogio()))
+                self._esquecer_os_nomes_vistos()
                 if _ao_pegar_a_trava is not None:
                     _ao_pegar_a_trava()
                 try:
@@ -1072,22 +1220,45 @@ class CentralDoRadio:
         repetindo a fábrica, e não vai junto (o destino já o terá). O objeto do
         DESTINO (``exceto``) não conta para o nome: ou é a sobra velha que a R6
         tira, ou é o recém-achado pela janela, que só tem o nome de fábrica.
+
+        SEM ``Alias`` DELA EM OBJETO NENHUM, VALE O GUARDADO
+        (O-RADIO-CONECTA-ONDE-ELA-MANDA-02, 26/09/2026): esquecida a última
+        chave do controle, não sobra objeto de onde copiar, e o ``Pair``
+        seguinte nascia com o nome de fábrica — o E3 dela. O nome mora no
+        ``maquina.json`` pelo endereço (:class:`GuardaDosNomes`) e volta por
+        aqui em todo ``Pair`` (:meth:`_dar_o_nome`).
         """
         pares = sorted(foto.do_aparelho.items(), key=lambda par: par[1].conectado is not True)
         objetos = [o for _e, o in pares]
         classe = next((o.classe for o in objetos if o.classe is not None), None)
         modalias = next((o.modalias for o in objetos if o.modalias), "")
         icone = next((o.icone for o in objetos if o.icone), "")
-        nome = ""
-        for endereco, objeto in pares:
-            if endereco == exceto:
-                continue
-            alias = str(objeto.nome or "").strip()
-            fabrica = dono.propriedade(objeto.caminho, bluez_dbus.APARELHO, "Name")
-            if alias and alias != str(fabrica or "").strip():
-                nome = alias
-                break
+        nome = next((self._nome_dado(dono, o) for e, o in pares
+                     if e != exceto and self._nome_dado(dono, o)), "")
+        if not nome and objetos:
+            nome = self._nome_guardado(objetos[0].endereco)
         return {"classe": classe, "modalias": modalias, "icone": icone, "nome": nome}
+
+    @staticmethod
+    def _nome_dado(dono: bluez_dbus.LeitorDoBluez, objeto: bluez_dbus.AparelhoDoBluez) -> str:
+        """O ``Alias`` DESTE objeto quando é um nome que ela deu; ``""`` quando é
+        o de fábrica — igual ao ``Name``, ou o endereço que o BlueZ põe quando o
+        aparelho ainda não disse o nome (``AA-BB-CC-…``)."""
+        alias = str(objeto.nome or "").strip()
+        if not alias:
+            return ""
+        fabrica = str(dono.propriedade(objeto.caminho, bluez_dbus.APARELHO, "Name") or "").strip()
+        if alias == fabrica or alias.replace("-", ":").lower() == objeto.endereco:
+            return ""
+        return alias
+
+    def _nome_guardado(self, aparelho: str) -> str:
+        """O nome que ela deu a este aparelho, pelo endereço; ``""`` sem nome ou sem ler."""
+        try:
+            return str((self._nomes.ler() or {}).get(aparelho) or "")
+        except Exception:
+            logger.warning("central_nomes_nao_leu", exc_info=True)
+            return ""
 
     def _desligar_e_esquecer_a_origem(
         self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez, foto: _Foto
@@ -1194,7 +1365,12 @@ class CentralDoRadio:
         movimento = self._guardar(replace(movimento, passo=PASSO_CONFERINDO))
         if not self._conferir(movimento, dono):
             logger.info("central_mover_sem_confirmacao", aparelho=mascarar(movimento.aparelho))
-            return self._guardar(replace(movimento, motivo=MOTIVO_SEM_CONFIRMACAO))
+            pendente = self._guardar(replace(movimento, motivo=MOTIVO_SEM_CONFIRMACAO))
+            if self._relogio() - pendente.comecou >= self._prazo_do_pendente_s:
+                # O prazo venceu DENTRO da conferência: o «não chegou» sai já,
+                # no mesmo instante em que a tela solta o «esperando».
+                return self._fechar_sem_chegar(pendente, MOTIVO_PRAZO, dono)
+            return pendente
         return self._esquecer_as_origens(movimento, dono)
 
     def _quem_chegou(
@@ -1278,12 +1454,9 @@ class CentralDoRadio:
         e o CONFERIR esperava um movimento que teclado não tem até o prazo — com
         a origem já esquecida e a central ocupada por dois minutos.
         """
-        for objeto in foto.do_aparelho.values():
-            if objeto.classe is not None:
-                return e_controle(objeto.classe)
-        icones = {objeto.icone for objeto in foto.do_aparelho.values() if objeto.icone}
-        if icones:
-            return ICONE_DE_CONTROLE in icones
+        pelo_bluez = _o_bluez_diz_controle(foto.do_aparelho.values())
+        if pelo_bluez is not None:
+            return pelo_bluez
         alvo12 = _hex12(alvo)
         return any(_hex12(str(c.get("uniq") or "")) == alvo12 for c in self._ultimos_controles)
 
@@ -1442,8 +1615,11 @@ class CentralDoRadio:
         ) is True
 
     def _conferir(self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez) -> bool:
-        """Até :data:`CONFERIR_S` perguntando. Sem confirmação, nunca «chegou»."""
-        fim = self._relogio() + self._conferir_s
+        """Até :data:`CONFERIR_S` perguntando — e nunca além do
+        :data:`PRAZO_DO_PENDENTE_S` do movimento, que é o da tela. Sem
+        confirmação, nunca «chegou»."""
+        fim = min(self._relogio() + self._conferir_s,
+                  movimento.comecou + self._prazo_do_pendente_s)
         while True:
             if self._chegou(movimento, dono):
                 return True
@@ -1508,10 +1684,88 @@ class CentralDoRadio:
     def _acabou(self, movimento: Movimento, estado: str, motivo: str) -> Movimento:
         feito = self._guardar(replace(movimento, estado=estado, passo=PASSO_FIM, motivo=motivo))
         if estado == NAO_CHEGOU:
-            self._no_diario(O_APARELHO_NAO_CHEGOU, motivo, feito,
-                            depois={"pareou_no_destino": feito.pareou_no_destino,
-                                    "origens_esquecidas": feito.origens_esquecidas})
+            self._no_diario_do_nao_chegou(feito)
         return feito
+
+    def _no_diario_do_nao_chegou(self, feito: Movimento, *, meia_chave: bool = False) -> None:
+        self._no_diario(O_APARELHO_NAO_CHEGOU, feito.motivo, feito,
+                        depois={"pareou_no_destino": feito.pareou_no_destino,
+                                "origens_esquecidas": feito.origens_esquecidas,
+                                "meia_chave_esquecida": meia_chave or None})
+
+    def _fechar_sem_chegar(
+        self, movimento: Movimento, motivo: str, dono: bluez_dbus.LeitorDoBluez
+    ) -> Movimento:
+        """O «não chegou» da vigia e do prazo — com a MEIA CHAVE saindo antes.
+
+        A MEIA CHAVE DO LADO DO DAEMON (O-RADIO-CONECTA-ONDE-ELA-MANDA-02,
+        26/09/2026). O controle branco, MEDIDO no diário dela: o ``Pair`` deu, a
+        busca de serviços caiu em ``Host is down``, e ele ficou ``Paired`` sem
+        nunca ficar ``Connected`` no destino. Até aqui quem tirava essa chave
+        era a TELA, e só com a janela aberta — com ela fechada, a chave ficava,
+        e o próximo «Conectar» naquele adaptador nem o via (o destino já o
+        «conhecia»). Agora ela sai aqui, SÓ naquele adaptador, pelo mesmo
+        ``_esquecer`` do mover (``RemoveDevice`` e a lápide da ponte), e ANTES
+        de o «não chegou» ser publicado: a tela, que só apaga depois do
+        veredito, encontra o adaptador limpo.
+
+        Um de cada vez: a trava e a conferida de que o movimento ainda é este
+        impedem a vigia do fio e a do pedido (:meth:`_vencer_os_prazos`) de
+        fecharem duas vezes. Sem a trava no prazo do gesto, o «não chegou» sai
+        do mesmo jeito — a central não fica «ocupada» por uma chave —, e a
+        chave fica para a tela.
+        """
+        from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
+
+        try:
+            with bluez_dbus.na_trava(QUEM, prazo_s=self._prazo_da_trava_s):
+                if self._pela_chave(movimento.aparelho) != movimento:
+                    return self._pela_chave(movimento.aparelho) or movimento
+                esquecida = self._esquecer_a_meia_chave(movimento, dono)
+                return self._acabou_se_ainda(movimento, motivo, meia_chave=esquecida)
+        except TravaOcupadaError:
+            logger.warning("central_meia_chave_sem_trava", aparelho=mascarar(movimento.aparelho))
+            return self._acabou_se_ainda(movimento, motivo, meia_chave=False)
+
+    def _acabou_se_ainda(self, movimento: Movimento, motivo: str, *, meia_chave: bool) -> Movimento:
+        """«Não chegou» só se o movimento guardado ainda é ESTE — conferido e
+        trocado de uma vez, sob a tranca."""
+        feito = replace(movimento, estado=NAO_CHEGOU, passo=PASSO_FIM, motivo=motivo)
+        with self._tranca:
+            atual = self._movimentos.get(movimento.aparelho)
+            if atual != movimento:
+                return atual or movimento
+            self._movimentos[movimento.aparelho] = feito
+        self._no_diario_do_nao_chegou(feito, meia_chave=meia_chave)
+        return feito
+
+    def _esquecer_a_meia_chave(
+        self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez
+    ) -> bool:
+        """A chave que ESTE movimento criou no destino e que nunca conectou sai.
+
+        Só quando o ``Pair`` deste movimento deu (``pareou_no_destino``), o
+        BlueZ diz o objeto ``Paired`` e não ``Connected``, e o kernel não o diz
+        naquele adaptador. Quem está no ar nunca sai por aqui, e nenhum outro
+        adaptador é tocado.
+        """
+        if not movimento.pareou_no_destino or not movimento.destino:
+            return False
+        no = dono.caminho_do_aparelho(movimento.aparelho, adaptador=movimento.destino)
+        if no is None:
+            return False
+        pareado = bluez_dbus.como_booleano(dono.propriedade(no, bluez_dbus.APARELHO, "Paired"))
+        conectado = bluez_dbus.como_booleano(
+            dono.propriedade(no, bluez_dbus.APARELHO, "Connected"))
+        if pareado is not True or conectado is True:
+            return False
+        if self._onde_esta(_hex12(movimento.aparelho)) == movimento.destino:
+            return False
+        logger.info("central_esquece_a_meia_chave", aparelho=mascarar(movimento.aparelho),
+                    adaptador=mascarar(movimento.destino))
+        self._esquecer(dono, movimento.destino, movimento.aparelho)
+        self._esperar_sumir(dono, movimento.aparelho, movimento.destino)
+        return True
 
     def _no_diario(
         self, o_que: str, por_que: str, movimento: Movimento, *, depois: Mapping[str, Any]
@@ -1576,10 +1830,10 @@ class CentralDoRadio:
         if movimento.e_controle and movimento.origens:
             onde = self._onde_esta(_hex12(movimento.aparelho))
             if onde and onde in movimento.origens:
-                self._acabou(movimento, NAO_CHEGOU, MOTIVO_VOLTOU)
+                self._fechar_sem_chegar(movimento, MOTIVO_VOLTOU, dono)
                 return
         if self._relogio() - movimento.comecou >= self._prazo_do_pendente_s:
-            self._acabou(movimento, NAO_CHEGOU, MOTIVO_PRAZO)
+            self._fechar_sem_chegar(movimento, MOTIVO_PRAZO, dono)
 
     def _vigiar_ate_resolver(self, alvo: str) -> None:
         """O fio do gesto, depois do mover: vigia o «esperando» até resolver."""
@@ -1696,6 +1950,10 @@ class CentralDoRadio:
         A primeira volta espera um intervalo inteiro: no arranque os controles
         ainda estão conectando, e o ``HID_PHYS`` de quem não chegou é «não
         sei». O :meth:`fechar` o para como para os fios do mover.
+
+        O MESMO FIO CUIDA DO NOME DELA (:meth:`cuidar_dos_nomes`), a cada
+        :data:`INTERVALO_DOS_NOMES_S` com o dono vivo, e no passo da faxina
+        pelo caminho de reserva.
         """
         with self._tranca:
             vivo = self._fios.get(_FIO_DA_FAXINA)
@@ -1711,8 +1969,101 @@ class CentralDoRadio:
         fio.start()
 
     def _faxinar_sempre(self, intervalo_s: float) -> None:
-        while not self._parar.wait(intervalo_s):
-            self.esquecer_as_sobras()
+        passo = min(intervalo_s, INTERVALO_DOS_NOMES_S)
+        desde_a_faxina = 0.0
+        while not self._parar.wait(passo):
+            desde_a_faxina += passo
+            faxina = desde_a_faxina >= intervalo_s
+            if faxina or self._o_dono_e_a_foto_viva():
+                self.cuidar_dos_nomes()
+            if faxina:
+                desde_a_faxina = 0.0
+                self.esquecer_as_sobras()
+
+    def _o_dono_e_a_foto_viva(self) -> bool:
+        """O dono de agora lê da foto em memória (o Gio), e não de subprocessos."""
+        visto = self._dono_sem_abrir()
+        return visto is not None and visto.atende_o_proprio_pareamento
+
+    # -- o nome dela: mora pelo endereço, e não depende da chave ---------------
+
+    def _esquecer_os_nomes_vistos(self) -> None:
+        """Um movimento começou: ele tira e recria objetos, e o que a volta dos
+        nomes viu antes dele não diz mais nada sobre «ela apagou o nome»."""
+        with self._tranca:
+            self._alias_vistos = {}
+            self._geracao_dos_nomes += 1
+
+    def cuidar_dos_nomes(self) -> tuple[tuple[str, str], ...] | None:
+        """UMA volta do NOME DELA: guarda o que ela deu, e o devolve a todo objeto.
+
+        O-RADIO-CONECTA-ONDE-ELA-MANDA-02 (26/09/2026), o item 4 da lista dela:
+        *«Eu mudei o nome do dispositivo quando eu conectar os dispositivos bt
+        novamente eu quero que o nome deles sejam lidos novamente»*. O BlueZ
+        guarda o nome (o ``Alias``) POR OBJETO, e o objeto morre com a chave.
+        O nome passa a morar pelo ENDEREÇO do controle
+        (:class:`GuardaDosNomes`, o ``maquina.json`` no produto), e o ``Alias``
+        é a projeção dele. Para cada controle que o BlueZ conhece, pela classe:
+        <!-- noqa-acento: citação literal dela -->
+
+        * **ela renomeou** — um objeto trouxe um ``Alias`` que não é o de
+          fábrica e que mudou desde a volta anterior (pela tela, pelo
+          ``bluetoothctl``, pelo sistema: o produto é para qualquer
+          computador): ele é guardado. Entre dois objetos que mudaram juntos,
+          vale o conectado;
+        * **ela apagou o nome** — o MESMO objeto que tinha o nome guardado
+          voltou ao de fábrica: o guardado sai, e a tela volta ao «Player N»;
+        * **o objeto é novo** (um ``Pair`` feito fora da central, uma chave
+          nova em qualquer adaptador) ou perdeu o nome: o guardado volta a ele.
+          É o «reaplicado em toda conexão»; o ``Pair`` da central já nasce com
+          ele (:meth:`_quem_e` e :meth:`_dar_o_nome`).
+
+        Só controle (``ControleDeclarado``), e só objeto com chave recebe o
+        nome. Com um movimento em curso a volta não roda: ele tira e recria os
+        objetos, e o que ela visse lá no meio é o movimento, não ela.
+
+        Devolve ``(endereço, nome)`` de cada escrita — no disco ou no
+        ``Alias`` —, ou ``None`` quando não rodou. Nunca levanta.
+        """
+        if self._ocupada():
+            return None
+        try:
+            with self._tranca:
+                geracao = self._geracao_dos_nomes
+                vistos_antes = dict(self._alias_vistos)
+            dono = self._dono()
+            aparelhos = dono.aparelhos()
+            guardados = self._nomes.ler()
+            if aparelhos is None or guardados is None:
+                return None
+            vistos: dict[str, str] = {}
+            feitos: list[tuple[str, str]] = []
+            for endereco, objetos in _controles_pelo_endereco(aparelhos).items():
+                dados = {o.caminho: self._nome_dado(dono, o) for o in objetos}
+                guardado = str(guardados.get(endereco) or "")
+                vale = _o_nome_que_vale(objetos, dados, vistos_antes, guardado)
+                if vale != guardado and self._nomes.gravar(endereco, vale or None):
+                    logger.info("central_guardou_o_nome", aparelho=mascarar(endereco),
+                                apagou=not vale)
+                    feitos.append((endereco, vale))
+                    guardado = vale
+                for objeto in objetos:
+                    alias = str(objeto.nome or "").strip()
+                    vistos[objeto.caminho] = alias
+                    if not guardado or objeto.pareado is not True or alias == guardado:
+                        continue
+                    escrita = dono.escrever_propriedade(
+                        objeto.caminho, bluez_dbus.APARELHO, "Alias", "s", guardado, quem=QUEM)
+                    if escrita.feita:
+                        logger.info("central_devolveu_o_nome", aparelho=mascarar(endereco))
+                        feitos.append((endereco, guardado))
+            with self._tranca:
+                if geracao == self._geracao_dos_nomes:
+                    self._alias_vistos = vistos
+            return tuple(feitos)
+        except Exception:
+            logger.warning("central_nomes_levantou", exc_info=True)
+            return None
 
 
 __all__ = [
@@ -1725,6 +2076,7 @@ __all__ = [
     "ESTADOS",
     "ICONE_DE_CONTROLE",
     "INTERVALO_DA_FAXINA_S",
+    "INTERVALO_DOS_NOMES_S",
     "MOTIVO_FALHOU",
     "MOTIVO_FORA_DO_RADIO",
     "MOTIVO_JA_ESTAVA",
@@ -1753,7 +2105,9 @@ __all__ = [
     "QUEM",
     "VOLTOU_PELO_PAREAMENTO_ANTIGO",
     "CentralDoRadio",
+    "GuardaDosNomes",
     "Movimento",
+    "NomesNaMaquina",
     "endereco_de",
     "esquecer_pela_ponte",
 ]
