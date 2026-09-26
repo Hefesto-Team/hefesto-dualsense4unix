@@ -295,3 +295,180 @@ def test_a_pagina_manda_os_dois_gestos_e_eles_tem_dono() -> None:
         assert f'@gesto(PAGINA, "{nome}"' in fonte, f"o gesto {nome} não tem dono"
     assert "GRAVA = Object.keys(DECLARADO);" in pagina, (
         "a página deixou de saber quais entradas o editor grava")
+
+
+# ── 5. o clique na página chega ao disco — no WebKit, pela ponte do piloto ──
+#
+# As réguas de cima medem o gravador e o arranjo, e a de cima desta lê o
+# JavaScript como TEXTO. Nenhuma clicava: a conferência de 26/09/2026 arrancou
+# o `gravaNaEntrada` inteiro (o botão nunca leva o gesto) e o `_declarado`
+# passou a mandar só as entradas que JÁ tinham declaração — o que deixa quem
+# nunca declarou nada sem gravar coisa alguma —, e as dez passaram. Esta régua
+# abre a página PUBLICADA num WebKit fora da tela, instala o BOOTSTRAP do
+# piloto (o mesmo ouvinte de clique que o produto usa), entrega o arranjo,
+# clica, leva cada mensagem ao pacote como o piloto leva, e relê.
+
+_LER_A_PAGINA = r"""
+(function(){
+  const plugs = {};
+  for (const p of document.querySelectorAll('.plug[data-porta]')) {
+    plugs[p.dataset.porta] = p.classList.contains('v3');
+  }
+  const ed = document.getElementById('edita');
+  const botoes = ed && !ed.hidden
+    ? [...ed.querySelectorAll('button[data-liga],button[data-usb]')] : [];
+  return JSON.stringify({
+    faces: [...document.querySelectorAll('.face-cab h3')].map(h => h.textContent.trim()),
+    v3: plugs,
+    quando: !!document.getElementById('de-quando'),
+    gestos: botoes.filter(b => b.dataset.gesto).map(
+      b => b.dataset.gesto + ':' + (b.dataset.liga || b.dataset.usb) + '@' + b.dataset.entrada),
+    apertados: botoes.filter(b => b.getAttribute('aria-pressed') === 'true').map(
+      b => b.dataset.liga || b.dataset.usb),
+  });
+})()
+"""
+
+
+def _clicar(seletor: str) -> str:
+    alvo = json.dumps(seletor)
+    return (f"(function(){{const b=document.querySelector({alvo});"
+            f"if(!b){{return 'sem ' + {alvo};}} b.click(); return 'clicou';}})()")
+
+
+def _na_pagina(passos: list[str]) -> tuple[list[str], list[dict[str, Any]]]:
+    """Abre a página publicada, instala o BOOTSTRAP e roda os ``passos`` em ordem.
+
+    Devolve o que cada passo respondeu e as mensagens que a página mandou pelo
+    canal do piloto. ``Gtk.OffscreenWindow``: sob Xvfb uma janela comum fica
+    1x1, e ela tem UMA tela — janela de teste não nasce na frente dela.
+
+    O canal é montado aqui, com o WebKit cru, e não pela ``PonteDaTela`` da
+    janela GTK que está saindo (D-0609-GTK-LEVA-INTEIRA): o que a régua precisa
+    é do nome que o BOOTSTRAP pronuncia, ``messageHandlers.hefesto``.
+    """
+    from tests.conftest import exigir_gi_real
+
+    exigir_gi_real("abre a página num WebKit")
+    import gi
+
+    gi.require_version("Gtk", "3.0")
+    gi.require_version("WebKit2", "4.1")
+    from gi.repository import GLib, Gtk, WebKit2
+
+    if not Gtk.init_check(None)[0]:
+        pytest.skip("sem sessão gráfica — o WebKit não abre")
+    from hefesto_dualsense4unix.interface import hefesto_vivo
+
+    mensagens: list[dict[str, Any]] = []
+    respostas: list[str] = []
+    ucm = WebKit2.UserContentManager()
+    ucm.register_script_message_handler("hefesto")  # a série 4.1 leva UM argumento
+    ucm.connect("script-message-received::hefesto",
+                lambda _u, r: mensagens.append(json.loads(r.get_js_value().to_string())))
+    view = WebKit2.WebView.new_with_user_content_manager(ucm)
+    janela = Gtk.OffscreenWindow()
+    janela.set_default_size(1200, 900)
+    janela.add(view)
+    janela.show_all()
+    fila = [hefesto_vivo.BOOTSTRAP, *passos]
+
+    def seguinte() -> bool:
+        if not fila:
+            # as mensagens do último clique atravessam a ponte depois da resposta
+            GLib.timeout_add(400, lambda: (Gtk.main_quit(), False)[1])
+            return False
+        js = fila.pop(0)
+
+        def respondeu(v: Any, res: Any, _u: Any = None) -> None:
+            try:
+                respostas.append(v.evaluate_javascript_finish(res).to_string())
+            except Exception as erro:  # a exceção É a resposta do passo
+                respostas.append(f"ERRO {erro}")
+            GLib.idle_add(seguinte)
+
+        view.evaluate_javascript(js, -1, None, None, None, respondeu, None)
+        return False
+
+    def carregou(_v: Any, evento: Any) -> None:
+        if evento == WebKit2.LoadEvent.FINISHED:
+            seguinte()
+
+    view.connect("load-changed", carregou)
+    view.load_uri(onde.pagina(arranjo_desta_maquina.PAGINA, publicado=True).as_uri())
+    guarda = GLib.timeout_add(30000, Gtk.main_quit)
+    try:
+        Gtk.main()
+    finally:
+        GLib.source_remove(guarda)
+        janela.destroy()
+    assert len(respostas) == len(passos) + 1, f"o WebKit parou no meio: {respostas}"
+    assert respostas[0] == "ok", f"o BOOTSTRAP do piloto não instalou: {respostas[0]}"
+    return respostas[1:], mensagens
+
+
+def _entregar() -> str:
+    veio = arranjo_desta_maquina.arranjo(carregar=carregar_maquina, ler_o_barramento=_censo)
+    assert veio is not None
+    return f"window.hefestoArranjo({json.dumps(veio, ensure_ascii=False)})"
+
+
+def test_o_clique_na_pagina_grava_e_a_pagina_relida_mostra(disco: Path) -> None:
+    """E1 de ponta a ponta: clique → mensagem do piloto → pacote → disco → página.
+
+    Quem NUNCA declarou nada é o caso que decide: nenhuma entrada do disco tem
+    ``liga`` nem ``usb`` antes do primeiro clique.
+    """
+    from hefesto_dualsense4unix.interface import pacotes
+
+    antes, mensagens = _na_pagina([
+        _LER_A_PAGINA,
+        _entregar(),
+        _LER_A_PAGINA,
+        _clicar('.plug[data-porta="5"]'),
+        _LER_A_PAGINA,
+        _clicar('#edita [data-liga="hub"]'),
+        _clicar('.plug[data-porta="5.1"]'),
+        _LER_A_PAGINA,
+        _clicar('#edita [data-liga="extensor"]'),
+        _clicar('.plug[data-porta="7"]'),
+        _clicar('#edita [data-usb="2"]'),
+    ])
+    exemplo, _, entregue, _, editor_na_5, _, _, editor_na_51, _, _, _ = (
+        json.loads(r) if r.startswith("{") else r for r in antes)
+    assert exemplo["quando"], "o exemplo deixou de dizer que é exemplo"
+    assert not entregue["quando"], "a leitura desta máquina ainda se anuncia no cabeçalho"
+    assert entregue["v3"]["1"] is False, "o firmware de mentira diz USB 2.0 na frente"
+    assert sorted(editor_na_5["gestos"]) == sorted([
+        "entrada-o-que-tem:direto@5", "entrada-o-que-tem:hub@5",
+        "entrada-o-que-tem:extensor@5", "entrada-velocidade:3@5",
+        "entrada-velocidade:2@5"]), (
+        f"a entrada do mapa dela não leva o gesto ao disco: {editor_na_5['gestos']}")
+    assert editor_na_51["gestos"] == [], (
+        "a entrada que o desenho monta (5.1) mandaria ao disco uma entrada "
+        "que ela nunca mapeou")
+
+    pedidos = [m for m in mensagens if m.get("gesto", "").startswith("entrada-")]
+    assert [(m["gesto"], m.get("entrada")) for m in pedidos] == [
+        ("entrada-o-que-tem", "5"), ("entrada-velocidade", "7")], pedidos
+    for m in pedidos:
+        de_onde = m["pagina"]  # noqa-acento: chave ASCII da mensagem do piloto
+        dono = pacotes.gesto_da_pagina(de_onde, m["gesto"])
+        assert dono is not None, f"{de_onde} · {m['gesto']} não tem dono"
+        dono(None, m, None)
+    portas = carregar_maquina().mapa.portas
+    assert (portas["5"].liga, portas["7"].usb) == ("hub", 2)
+    assert portas["5"].nos == _NOS["5"], "o clique apagou os nós que o Mapear gravou"
+
+    depois, _ = _na_pagina([
+        _entregar(),
+        _LER_A_PAGINA,
+        _clicar('.plug[data-porta="5"]'),
+        _LER_A_PAGINA,
+    ])
+    relida, editor = json.loads(depois[1]), json.loads(depois[3])
+    assert ee.FACE_DO_HUB_DECLARADO.format(numero="5") in relida["faces"], (
+        f"o hub não voltou ao reler: {relida['faces']}")
+    assert relida["v3"]["7"] is False, "a 7 relida não é preta, e ela disse USB 2.0"
+    assert relida["v3"]["5.1"] is True and "5.1a" not in relida["v3"]
+    assert "hub" in editor["apertados"], f"o editor da 5 relido: {editor['apertados']}"

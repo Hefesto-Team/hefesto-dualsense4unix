@@ -294,10 +294,12 @@ ABRE_A_PORTA = """\
 
   function dizerDeQuando() {
     /* O cabeçalho nasce dizendo o exemplo, no HTML, para a página ser honesta
-       mesmo sem JavaScript nenhum. Aqui ele passa a dizer de quando é o que
-       está na tela. */
+       mesmo sem JavaScript nenhum. FATO SUBSTITUÍDO em 26/09/2026: aqui ele
+       passava a dizer de quando era a leitura desta máquina, e ela pediu que
+       isso saísse («essa info some»). A linha existe só para o exemplo se
+       dizer exemplo; com a leitura de quem abre, ela sai da página. */
     var el = document.getElementById("de-quando");
-    if (el) el.textContent = fonte.quando;
+    if (el && fonte.quando !== EXEMPLO.quando) el.remove();
   }
 
   window.hefestoArranjo = function (dado) {
@@ -1572,6 +1574,39 @@ EDICOES: tuple[Edicao, ...] = (
             ' + \' aria-pressed="'
         ),
         porque='26/09/2026 — «Velocidade» grava: o gesto `entrada-velocidade`.',
+    ),
+    # ═══ O EXEMPLO CONTINUA DIZENDO QUE É EXEMPLO — 26/09/2026 ═══
+    # A conferência da O-MAPA-DAS-CONEXOES-NO-PRODUTO-01. O pedido dela
+    # (*«leitura deste computador · 26/09/2026 03h13 essa info some»*) é sobre
+    # a leitura DA MÁQUINA DELA, e a edição do cabeçalho tirou junto a única
+    # defesa de 11/09: quem ainda não mapeou nada via o gabinete de exemplo
+    # (os aparelhos de outra pessoa, «4 Coisas para Mudar de Lugar») sem nada
+    # dizendo que não é o dele. A linha volta SÓ no exemplo: quando o produto
+    # entrega a leitura desta máquina, ela sai da página.
+    Edicao(
+        antes=(
+            '<h1>Mapa das <em>Conexões</em></h1>\n'
+            '    <button class="btn examinar"'
+        ),
+        depois=(
+            '<h1>Mapa das <em>Conexões</em></h1>\n'
+            f'    <p class="quando" id="de-quando">{QUANDO_DO_EXEMPLO}</p>\n'
+            '    <button class="btn examinar"'
+        ),
+        porque=(
+            '26/09/2026 — o exemplo se diz exemplo no cabeçalho (a defesa de '
+            '11/09), ao lado do «Examinar»; a leitura desta máquina não mostra '
+            'a linha, que é o pedido dela.'
+        ),
+    ),
+    Edicao(
+        antes='  .topo .examinar span { pointer-events: none; }\n',
+        depois=(
+            '  .topo .examinar span { pointer-events: none; }\n'
+            '  /* a linha do exemplo já empurra o «Examinar» para a direita */\n'
+            '  .topo .quando + .examinar { margin-left: 0; }\n'
+        ),
+        porque='26/09/2026 — a linha do exemplo e o «Examinar» ficam juntos, à direita.',
     ),
 )
 
