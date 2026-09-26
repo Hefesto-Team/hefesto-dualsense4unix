@@ -1138,6 +1138,10 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      do esqueleto e o `topo.html`). */
   .gc-r{display:none}
   .gc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  /* NA JANELA ESTREITA os cartões vão dois a dois: em quatro colunas de 200px o
+     nome do controle e o modo eram cortados (a régua da janela estreita, em
+     940 px, mediu quatro peças engolidas). */
+  @media (max-width:1180px){.gc{grid-template-columns:repeat(2,minmax(0,1fr))}}
   .gc-item{position:relative;display:flex;flex-direction:column;min-width:0;
            padding:3px 12px 8px;border:1px solid var(--border-forte);
            border-radius:9px;background:var(--app-bg);overflow:hidden}
@@ -1972,13 +1976,14 @@ BOTAO_DICA_CURTA = (
     "O que o botão físico do microfone cala. É um ajuste do computador, um só "
     "para todos os controles.")
 
-#: A DICA DO GESTO, e ela é a MESMA nos três estados de propósito.
+#: A DICA DO GESTO, e ela descreve o RESULTADO, não o movimento.
 #:
-#: `title` não muda com CSS. A dica antiga dizia *"Abre este controle — e fecha
-#: os outros"*, e no estado "Todos" ela mentia duas vezes: a linha já estava
-#: aberta, e o que o clique faz ali é FECHAR as outras três. Esta frase é
-#: verdadeira nos dois casos, porque descreve o RESULTADO e não o movimento.
-SO_ESTE_DICA = ("Deixa só este controle aberto; os outros fecham.")
+#: `title` não muda com CSS. Ela dizia *"Deixa só este controle aberto; os
+#: outros fecham"*, que era o acordeão; desde 26/09/2026 os cartões não abrem
+#: nem fecham, e o que o clique faz é o do daemon: as ações de saída passam a
+#: mirar só este controle (`controller.target.set`).
+SO_ESTE_DICA = ("Escolhe só este controle: a luz, os gatilhos e a vibração "
+                "passam a mirar nele.")
 
 
 def teto_dica(c):
