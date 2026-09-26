@@ -427,7 +427,9 @@ class TestODesenhoCarregaAPeca:
 #: quebraria — e foi o vão de 58px que ela apontou em 31/08.
 LER_A_TELA = r"""
 (function(){
-  const alvos = ['retomar','reiniciar'];  // o 'ver-plugins' saiu em 13/09/2026
+  // o 'ver-plugins' saiu em 13/09/2026; o 'retomar' virou o 'parar-ou-retomar'
+  // em 25/09/2026 (A-09-SISTEMA-EM-TRES-SECOES-01), e ele não tem cinza.
+  const alvos = ['reiniciar'];
   const botoes = {};
   for(const g of alvos){
     const b = document.querySelector('[data-gesto="' + g + '"]');
@@ -444,9 +446,11 @@ LER_A_TELA = r"""
       largura: Math.round(b.getBoundingClientRect().width),
     };
   }
-  const est = document.querySelector('.bloco2 .col-est');
-  const acao = document.querySelector('.bloco2 .col-acao');  // (noqa-acento) classe
-  const bloco = document.querySelector('.bloco2');
+  // AS COLUNAS IRMÃS DE HOJE são as das Configurações Avançadas (25/09/2026):
+  // a do Serviço, onde mora o botão que acinzenta, e a dos ligáveis, a última.
+  const est = document.querySelector('.avancadas .col-servico');
+  const acao = document.querySelector('.avancadas .col-ligaveis');  // (noqa-acento) nome
+  const bloco = document.querySelector('.avancadas');
   const miolo = document.querySelector('.janela > .miolo') ||
                 document.querySelector('.miolo');
   const rea = document.querySelector('[data-gesto="atualizar"]');
