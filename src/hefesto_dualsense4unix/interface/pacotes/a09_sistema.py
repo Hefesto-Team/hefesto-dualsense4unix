@@ -1372,18 +1372,31 @@ def _esquecer_a_mesa_de_antes(na_mesa: frozenset[str]) -> None:
 _BARATO: dict[str, Any] = {}
 
 
-def _sessao() -> str | None:
-    """``Wayland · COSMIC`` — o tipo da sessão e a área de trabalho, ou `None`."""
+def _sessao(variaveis: dict[str, str] | None = None) -> str | None:
+    """``Wayland · COSMIC`` — o tipo da sessão e a área de trabalho, ou `None`.
+
+    O NOME É O DE TELA, E NÃO O ID — conferência de 25/09/2026. Saía o id de
+    `ambiente_efetivo` cru: «Wayland · cosmic» na máquina dela e **«Wayland ·
+    outro»** num KDE, que é dizer a quem joga que o computador dele não tem
+    nome. COSMIC e GNOME saem pelo `ambiente.NOMES_DE_TELA` (o dono da
+    capitalização); o «outro» diz o que a sessão declara (`KDE`, `XFCE`…).
+    """
     import os
 
     from hefesto_dualsense4unix.app import ambiente
 
+    fonte = os.environ if variaveis is None else variaveis
     tipo = {"wayland": "Wayland", "x11": "X11"}.get(
-        os.environ.get("XDG_SESSION_TYPE", "").strip().lower(), "")
+        str(fonte.get("XDG_SESSION_TYPE", "")).strip().lower(), "")
     try:
-        area = ambiente.ambiente_efetivo()
+        ident = ambiente.ambiente_efetivo(variaveis=fonte)
+        cru = ambiente.ambiente_lido(variaveis=fonte)
     except Exception:
-        area = ""
+        ident, cru = "", ""
+    if ident in ambiente.NOMES_DE_TELA and ident != "outro":
+        area = ambiente.NOMES_DE_TELA[ident]
+    else:
+        area = cru.split(":", 1)[0].strip() if cru else ""
     partes = [p for p in (tipo, area) if p]
     return " · ".join(partes) or None
 

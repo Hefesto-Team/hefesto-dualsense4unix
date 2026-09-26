@@ -391,3 +391,19 @@ def test_o_diario_pede_so_a_linha_do_daemon(a09, monkeypatch) -> None:
     argv = pedidos[0]
     assert argv[argv.index("--output") + 1] == "cat", argv
     assert texto.endswith("uniq=aabbcc0000ff"), texto
+
+
+@pytest.mark.parametrize(("variaveis", "esperado"), [
+    ({"XDG_SESSION_TYPE": "wayland", "XDG_CURRENT_DESKTOP": "COSMIC"}, "Wayland · COSMIC"),
+    ({"XDG_SESSION_TYPE": "x11", "XDG_CURRENT_DESKTOP": "pop:GNOME"}, "X11 · GNOME"),
+    ({"XDG_SESSION_TYPE": "wayland", "XDG_CURRENT_DESKTOP": "KDE"}, "Wayland · KDE"),
+    ({"XDG_SESSION_TYPE": "wayland"}, "Wayland"),
+    ({}, None),
+])
+def test_o_ambiente_diz_o_nome_de_tela_em_qualquer_computador(a09, variaveis,
+                                                               esperado) -> None:
+    """Conferência de 25/09/2026: saía «Wayland · cosmic», e num KDE «Wayland · outro».
+
+    MORDIDA: devolva `ambiente_efetivo()` cru no lugar do nome de tela.
+    """
+    assert a09._sessao(variaveis) == esperado
