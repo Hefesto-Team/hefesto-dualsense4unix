@@ -335,6 +335,13 @@
                          background: var(--color-paper); color: var(--color-ink);
                          border: 1px solid var(--color-rule); border-radius: var(--radius-sm); }
   .edita .campo-nome:focus { outline: none; border-color: var(--color-accent); }
+  /* a lista da troca: fundo, cor e borda próprios (no WebKitGTK o que não
+     os tem nasce cinza) */
+  .edita .troca { font: inherit; font-size: var(--text-sm); width: 100%;
+                  box-sizing: border-box; padding: .3rem .4rem;
+                  background: var(--color-paper); color: var(--color-ink);
+                  border: 1px solid var(--color-rule); border-radius: var(--radius-sm); }
+  .edita .troca option { background: var(--color-paper); color: var(--color-ink); }
   /* «Arruma o alinhamento dos blocos» — 26/09/2026. O «Voltar» entra na linha
      do título, os três modos têm a mesma largura, as colunas de entradas têm a
      mesma largura em todas as chapas, e a bandeja começa na altura da primeira
@@ -1269,6 +1276,31 @@
   function emAtributo(t) {
     return String(t).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
   }
+  /* «TROCAR COM…» — 26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-TROCAR-MOVE-
+     O-BURACO). Pedido dela: «trocar elas de lugar no mapeamento». Só nas
+     entradas que gravam, sem as pontas; cada opção diz o nome, a face e o que
+     está nela. O produto troca o buraco das duas, e a página repinta pelo
+     disco. */
+  function faceDe(m) {
+    var f = FACES.filter(function (x) {
+      return x.portas.some(function (q) { return q.n === m || (q.filho && q.filho.n === m); });
+    })[0];
+    return f ? f.nome : "";
+  }
+  function linhaDaTroca(n) {
+    if (GRAVA.indexOf(String(n)) === -1 || !/^[0-9]{1,3}$/.test(String(n))) return "";
+    var outras = GRAVA.filter(function (m) { return m !== String(n) && /^[0-9]{1,3}$/.test(m); });
+    if (!outras.length) return "";
+    return '<div class="edita-linha"><span>Trocar de lugar</span>'
+      + '<select class="troca" data-gesto="entrada-trocar" data-entrada="' + n + '">'
+      + '<option value="">Trocar com…</option>'
+      + outras.map(function (m) {
+          var ali = alocacao[m] ? acha(alocacao[m]) : null;
+          var partes = [rotuloDe(m), faceDe(m), ali ? ali.tipo : "vazia"].filter(Boolean);
+          return '<option value="' + m + '">' + emAtributo(partes.join(" · ")) + "</option>";
+        }).join("")
+      + "</select></div>";
+  }
   function linhaDoNome(n) {
     return '<div class="edita-linha"><span>Nome</span><input class="campo-nome" type="text"'
       + ' data-nome="' + n + '"' + gravaNaEntrada(n, "entrada-nome")
@@ -1351,8 +1383,8 @@
           return '<button class="escolha" data-usb="' + o[0] + '"' + gravaNaEntrada(editando, "entrada-velocidade") + ' aria-pressed="' + (p.usb === o[0]) + '">' + o[1] + "</button>";
         }).join("")
       + "</div></div>")
-      + (quem ? '<div class="edita-linha"><span>' + quem.tipo + ' está aqui</span>'
-          + '<button class="btn" data-tirar="' + editando + '">Mudar de entrada</button></div>' : "");
+      + (quem ? '<div class="edita-linha"><span>' + quem.tipo + ' está aqui</span></div>' : "")
+      + (soNaTela ? "" : linhaDaTroca(editando));
     ed.hidden = false;
     var palco = ed.parentElement.getBoundingClientRect(), r = plug.getBoundingClientRect();
     ed.style.left = Math.max(0, Math.min(r.left - palco.left, palco.width - 310)) + "px";
@@ -1388,7 +1420,7 @@
       var pai = no.parentElement;
       if (!pai || pai.closest("code, script, style, .caminho, .chip .txt span")) return;
       var abre = !no.previousSibling;
-      var novo = no.nodeValue.replace(/[^\s—·,.;:()«»"→↳]+/g, function (w, pos) {
+      var novo = no.nodeValue.replace(/[^\s—·,.;:()«»"→↳…]+/g, function (w, pos) {
         if (!/^[A-Za-zÀ-ÿ]/.test(w)) return w;
         /* começo de frase conta como primeira palavra: «Possíveis. O Melhor» */
         var antes = no.nodeValue.slice(0, pos).trim();
@@ -1616,16 +1648,6 @@
     var ub = ev.target.closest("#edita [data-usb]");
     if (ub && ub.hasAttribute("data-gesto")) return;
     if (ub) { declarar(editando, "usb", parseInt(ub.getAttribute("data-usb"), 10)); pintar(); return; }
-    var tb = ev.target.closest("#edita [data-tirar]");
-    if (tb) {
-      /* «Mudar de Entrada» é o que o clique no plugue ocupado fazia antes:
-         a entrada deixa de ser dele, e ele fica na mão até ela dizer onde está. */
-      var nt = tb.getAttribute("data-tirar"), quemT = acha(alocacao[nt]);
-      delete MAPA[nt]; editando = null;
-      segurando = quemT.id; modo = "mao";
-      naMao = ({ bt: "bt", wifi: "wifi", teclado: "teclado", mouse: "mouse", webcam: "webcam" })[quemT.classe] || null;
-      pintar(); return;
-    }
     if (editando && !ev.target.closest("#edita") && !ev.target.closest(".plug[data-porta]")) {
       editando = null; pintar();
     }
@@ -1667,6 +1689,13 @@
     if (esc) { var x = esc.getAttribute("data-mao"); naMao = (naMao === x ? null : x); segurando = null; pintar(); return; }
 
     var chip = ev.target.closest(".chip[data-ap]");
+    /* NO PRODUTO, O APARELHO QUE JÁ ESTÁ NUMA ENTRADA abre o editor dela: quem
+       corrige ali é o «Trocar com…» (um ato por porta). O que não está em
+       entrada nenhuma continua indo para a mão, para ser ensinado. */
+    if (chip && doProduto() && portaDe(chip.getAttribute("data-ap"))) {
+      editando = portaDe(chip.getAttribute("data-ap")); modo = "mesa";
+      segurando = null; naMao = null; pintar(); return;
+    }
     if (chip) {
       modo = "mao";
       var ap = acha(chip.getAttribute("data-ap"));

@@ -47,9 +47,9 @@ from . import Contexto, gesto
 
 PAGINA = "mapa-das-portas.html"
 
-#: Os gestos do editor da entrada (o que tem, a velocidade, o nome) e o
-#: «Examinar». Só sobe.
-PISO_DA_ABA = 4
+#: Os gestos do editor da entrada (o que tem, a velocidade, o nome, a troca)
+#: e o «Examinar». Só sobe.
+PISO_DA_ABA = 5
 
 #: O «Direto» do editor: é a ausência de declaração no disco (`liga` nulo).
 DIRETO = "direto"
@@ -72,8 +72,18 @@ def _gravou(recibo: Any) -> dict[str, Any]:
     """
     if not getattr(recibo, "gravou", False):
         raise RuntimeError(f"não gravei no mapa desta máquina ({recibo.motivo})")
+    _o_rascunho_da_08_caducou()
     dado = arranjo_desta_maquina.depois_de_gravar()
     return {} if dado is None else {arranjo_desta_maquina.CHAVE_DEPOIS_DE_GRAVAR: dado}
+
+
+def _o_rascunho_da_08_caducou() -> None:
+    """O rascunho do gabinete da aba 08 (`a08_conexoes._LOGICA`) é do mapa de
+    antes: sem esquecê-lo, o próximo gesto dele regravaria o mapa velho por cima
+    do que o editor acabou de gravar (O-MAPA-QUE-ELA-CORRIGE-01)."""
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
+
+    a08_conexoes.esquecer_o_rascunho_do_mapa()
 
 
 @gesto(PAGINA, "entrada-o-que-tem", grava="declarar_a_ligacao")
@@ -108,6 +118,23 @@ def entrada_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     if str(o.get("evento") or "") == "click":
         return {"armou": True}
     return _gravou(ee.dar_nome_a_entrada(_a_entrada(o), str(o.get("valor") or "")))
+
+
+@gesto(PAGINA, "entrada-trocar", grava="trocar_as_entradas")
+def entrada_trocar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """«Trocar com…»: o buraco desta entrada e o da escolhida trocam de posição.
+
+    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-TROCAR-MOVE-O-BURACO). A entrada vem do
+    `data-entrada`, e a outra do `valor` do `<select>`. O clique que só abre a
+    lista arma; o valor vazio («Trocar com…») não faz nada. As recusas são as
+    frases do dono.
+    """
+    if str(o.get("evento") or "") == "click":
+        return {"armou": True}
+    outra = str(o.get("valor") or "").strip()
+    if not outra:
+        return None
+    return _gravou(ee.trocar_as_entradas(_a_entrada(o), outra))
 
 
 @gesto(PAGINA, "reexaminar")

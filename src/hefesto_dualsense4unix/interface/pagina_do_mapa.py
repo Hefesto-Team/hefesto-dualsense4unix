@@ -2336,6 +2336,157 @@ EDICOES: tuple[Edicao, ...] = (
             'palavra.'
         ),
     ),
+    # ══ O-MAPA-QUE-ELA-CORRIGE-01 (passo 4), 26/09/2026: «Trocar com…» ══
+    Edicao(
+        antes=(
+            '      + (quem ? \'<div class="edita-linha"><span>\' + quem.tipo + \' '
+            "está aqui</span>'\n"
+            '          + \'<button class="btn" data-tirar="\' + editando + \'">Mud'
+            'ar de entrada</button></div>\' : "");\n'
+        ),
+        depois=(
+            '      + (quem ? \'<div class="edita-linha"><span>\' + quem.tipo + \' '
+            'está aqui</span></div>\' : "")\n'
+            '      + (soNaTela ? "" : linhaDaTroca(editando));\n'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 4) — «Mudar de Entrad'
+            'a» sai: o ato dele é o «Trocar com…», que grava.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    var tb = ev.target.closest("#edita [data-tirar]");\n'
+            '    if (tb) {\n'
+            '      /* «Mudar de Entrada» é o que o clique no plugue ocupado faz'
+            'ia antes:\n'
+            '         a entrada deixa de ser dele, e ele fica na mão até ela di'
+            'zer onde está. */\n'
+            '      var nt = tb.getAttribute("data-tirar"), quemT = acha(alocaca'
+            'o[nt]);\n'
+            '      delete MAPA[nt]; editando = null;\n'
+            '      segurando = quemT.id; modo = "mao";\n'  # (noqa-acento: JS)
+            '      naMao = ({ bt: "bt", wifi: "wifi", teclado: "teclado", mouse'
+            ': "mouse", webcam: "webcam" })[quemT.classe] || null;\n'
+            '      pintar(); return;\n'
+            '    }\n'
+        ),
+        depois="",
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 4) — o botão «Mudar d'
+            'e Entrada» saiu, e o ouvinte dele junto.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '  function linhaDoNome(n) {\n'
+        ),
+        depois=(
+            '  /* «TROCAR COM…» — 26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (D-2609'
+            '-TROCAR-MOVE-\n'
+            '     O-BURACO). Pedido dela: «trocar elas de lugar no mapeamento».'
+            ' Só nas\n'
+            '     entradas que gravam, sem as pontas; cada opção diz o nome, a '
+            'face e o que\n'
+            '     está nela. O produto troca o buraco das duas, e a página repi'
+            'nta pelo\n'
+            '     disco. */\n'
+            '  function faceDe(m) {\n'
+            '    var f = FACES.filter(function (x) {\n'
+            '      return x.portas.some(function (q) { return q.n === m || (q.f'
+            'ilho && q.filho.n === m); });\n'
+            '    })[0];\n'
+            '    return f ? f.nome : "";\n'
+            '  }\n'
+            '  function linhaDaTroca(n) {\n'
+            '    if (GRAVA.indexOf(String(n)) === -1 || !/^[0-9]{1,3}$/.test(St'
+            'ring(n))) return "";\n'
+            '    var outras = GRAVA.filter(function (m) { return m !== String(n'
+            ') && /^[0-9]{1,3}$/.test(m); });\n'
+            '    if (!outras.length) return "";\n'
+            '    return \'<div class="edita-linha"><span>Trocar de lugar</span>\''
+            '\n'
+            '      + \'<select class="troca" data-gesto="entrada-trocar" data-en'
+            'trada="\' + n + \'">\'\n'
+            '      + \'<option value="">Trocar com…</option>\'\n'
+            '      + outras.map(function (m) {\n'
+            '          var ali = alocacao[m] ? acha(alocacao[m]) : null;\n'  # (noqa-acento: JS)
+            '          var partes = [rotuloDe(m), faceDe(m), ali ? ali.tipo : "'
+            'vazia"].filter(Boolean);\n'
+            '          return \'<option value="\' + m + \'">\' + emAtributo(partes.'
+            'join(" · ")) + "</option>";\n'
+            '        }).join("")\n'
+            '      + "</select></div>";\n'
+            '  }\n'
+            '  function linhaDoNome(n) {\n'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 4) — a linha «Trocar '
+            'de lugar» do editor.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    var chip = ev.target.closest(".chip[data-ap]");\n'
+            '    if (chip) {\n'
+            '      modo = "mao";\n'  # (noqa-acento: JS)
+        ),
+        depois=(
+            '    var chip = ev.target.closest(".chip[data-ap]");\n'
+            '    /* NO PRODUTO, O APARELHO QUE JÁ ESTÁ NUMA ENTRADA abre o edit'
+            'or dela: quem\n'
+            '       corrige ali é o «Trocar com…» (um ato por porta). O que não'
+            ' está em\n'
+            '       entrada nenhuma continua indo para a mão, para ser ensinado'
+            '. */\n'
+            '    if (chip && doProduto() && portaDe(chip.getAttribute("data-ap"'
+            '))) {\n'
+            '      editando = portaDe(chip.getAttribute("data-ap")); modo = "me'
+            'sa";\n'
+            '      segurando = null; naMao = null; pintar(); return;\n'
+            '    }\n'
+            '    if (chip) {\n'
+            '      modo = "mao";\n'  # (noqa-acento: JS)
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 4) — o chip do aparel'
+            'ho que já está numa entrada abre o editor dela.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '  .edita .campo-nome:focus { outline: none; border-color: var(--co'
+            'lor-accent); }\n'
+        ),
+        depois=(
+            '  .edita .campo-nome:focus { outline: none; border-color: var(--co'
+            'lor-accent); }\n'
+            '  /* a lista da troca: fundo, cor e borda próprios (no WebKitGTK o'
+            ' que não\n'
+            '     os tem nasce cinza) */\n'
+            '  .edita .troca { font: inherit; font-size: var(--text-sm); width:'
+            ' 100%;\n'
+            '                  box-sizing: border-box; padding: .3rem .4rem;\n'
+            '                  background: var(--color-paper); color: var(--col'
+            'or-ink);\n'
+            '                  border: 1px solid var(--color-rule); border-radi'
+            'us: var(--radius-sm); }\n'
+            '  .edita .troca option { background: var(--color-paper); color: va'
+            'r(--color-ink); }\n'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 4) — a lista «Trocar '
+            'com…».'
+        ),
+    ),
+    Edicao(
+        antes='no.nodeValue.replace(/[^\\s—·,.;:()«»"→↳]+/g',
+        depois='no.nodeValue.replace(/[^\\s—·,.;:()«»"→↳…]+/g',
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 4) — as reticências '
+            'separam a palavra: «Trocar com…» não vira «Trocar Com…».'
+        ),
+    ),
 )
 
 

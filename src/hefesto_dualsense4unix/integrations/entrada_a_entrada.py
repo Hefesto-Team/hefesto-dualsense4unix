@@ -243,6 +243,12 @@ VELOCIDADES_DECLARAVEIS = (2, 3)
 LETRA_DA_PONTA = "a"
 _SO_DIGITOS = re.compile(r"^[0-9]{1,3}$")
 
+#: AS RECUSAS DO «TROCAR COM…» — O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-TROCAR-MOVE-O-
+#: BURACO). Vão na piscada do controle, e a régua de língua as lê daqui.
+RECUSA_A_MESMA_ENTRADA = "As duas são a mesma entrada."
+RECUSA_FORA_DO_MAPA = "Esta entrada não está no mapa."
+RECUSA_NENHUMA_MAPEADA = "Nenhuma das duas foi mapeada ainda."
+
 #: As fases do laço — chaves de máquina, para o piloto da aba 08.
 PARADO = "parado"
 SENTADA = "sentada"
@@ -1661,6 +1667,118 @@ def declarar_a_velocidade(
     return _declarar_na_entrada(numero, {"usb": usb}, maquina=maquina, gravar=gravar)
 
 
+def trocar_as_entradas(
+    numero: str,
+    outro: str,
+    *,
+    maquina: MaquinaConfig | None = None,
+    gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
+) -> Recibo:
+    """«Trocar com…»: o buraco da ``numero`` e o da ``outro`` trocam de posição.
+
+    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-TROCAR-MOVE-O-BURACO). Pedido dela: *«trocar
+    elas de lugar no mapeamento»*. O Mapear pôs o cabo de uma entrada no número
+    de outra, e ela corrige sem mapear de novo. UM ATO SÓ, numa gravação:
+    <!-- noqa-acento: citação literal dela -->
+
+    * **vai com o buraco** — o ``caminho`` e os ``nos`` (sempre juntos: mover
+      só o caminho era o defeito do ``colocar``), a ``liga`` e a ``usb``; a
+      ponta do extensor inteira (``Na`` vira ``Ma``, com o nome dela); a amarra
+      de cada lugar (``lugares[L].entrada``), cuja testemunha e ``fora`` são
+      do próprio lugar; e a face do hub declarado, renomeada pelo número;
+    * **fica na posição** — o número, o nome (D-2609-O-NOME-E-DA-POSICAO), a
+      face e a ordem da fileira, e as ordens dispensadas.
+
+    Desfazer é trocar de novo: a troca é uma involução. Recusa com
+    ``ValueError`` e a frase do dono: :data:`RECUSA_A_MESMA_ENTRADA`,
+    :data:`RECUSA_FORA_DO_MAPA` (fora do mapa, buraco desenhado ``3.1`` ou
+    ponta ``Na``) e :data:`RECUSA_NENHUMA_MAPEADA`.
+
+    O nome que ainda mora no lugar muda de casa ANTES da troca (a mesma
+    mudança do :func:`_o_nome_que_sai_do_lugar`): senão a reserva o leria no
+    lugar que foi para a outra entrada, e o nome andaria com o buraco.
+    """
+    documento = maquina if maquina is not None else carregar_maquina()
+    mapa = documento.mapa
+    if numero == outro:
+        raise ValueError(RECUSA_A_MESMA_ENTRADA)
+    for um in (numero, outro):
+        if (
+            um not in entradas_do_mapa(mapa)
+            or not _SO_DIGITOS.match(um)
+            or (mapa.portas.get(um) is not None and mapa.portas[um].filha_de)
+        ):
+            raise ValueError(RECUSA_FORA_DO_MAPA)
+    de_um, de_outro = mapa.portas.get(numero), mapa.portas.get(outro)
+    if not any(p is not None and (p.caminho or p.nos) for p in (de_um, de_outro)):
+        raise ValueError(RECUSA_NENHUMA_MAPEADA)
+
+    portas: dict[str, Any] = {
+        numero: _o_buraco(de_outro),
+        outro: _o_buraco(de_um),
+    }
+    ponta_um, ponta_outro = ponta_do_extensor(numero), ponta_do_extensor(outro)
+    if ponta_um and ponta_outro:
+        cabo_um = _a_ponta_de(mapa, ponta_um, numero)
+        cabo_outro = _a_ponta_de(mapa, ponta_outro, numero=outro)
+        if cabo_um is not None or cabo_outro is not None:
+            portas[ponta_outro] = _a_ponta_inteira(cabo_um, outro)
+            portas[ponta_um] = _a_ponta_inteira(cabo_outro, numero)
+
+    trocados = {numero: outro, outro: numero}
+    if ponta_um and ponta_outro:
+        trocados.update({ponta_um: ponta_outro, ponta_outro: ponta_um})
+    nomes_dos_hubs = {
+        FACE_DO_HUB_DECLARADO.format(numero=de): FACE_DO_HUB_DECLARADO.format(numero=para)
+        for de, para in trocados.items()
+    }
+    faces = []
+    for face in mapa.faces:
+        corpo = face.model_dump(mode="json")
+        corpo["nome"] = nomes_dos_hubs.get(face.nome, face.nome)
+        faces.append(corpo)
+
+    lugares: dict[str, Any] = {}
+    for de, para in ((numero, outro), (outro, numero)):
+        lugar = lugar_da_entrada(documento, de)
+        if lugar:
+            lugares[lugar] = {"entrada": para}
+
+    troca: dict[str, Any] = {"mapa": {"faces": faces, "portas": portas}}
+    if lugares:
+        troca["lugares"] = lugares
+    declaracao = fundir_declaracao(_o_nome_que_sai_do_lugar(documento, {}), troca)
+    recibo = _gravar_no_mapa(gravar, declaracao, maquina=documento)
+    if not recibo.gravou:
+        logger.warning("troca_de_entradas_nao_gravou", motivo=recibo.motivo)
+    return recibo
+
+
+def _o_buraco(porta: Any) -> dict[str, Any]:
+    """O que é do buraco físico numa entrada — o que a troca leva junto."""
+    if porta is None:
+        return {"caminho": None, "nos": [], "liga": None, "usb": None}
+    return {"caminho": porta.caminho, "nos": list(porta.nos), "liga": porta.liga,
+            "usb": porta.usb}
+
+
+def _a_ponta_de(mapa: MapaDaMesa, ponta: str, numero: str) -> Any:
+    """A entrada-filha ``ponta`` do extensor da ``numero``, ou ``None``."""
+    dela = mapa.portas.get(ponta)
+    return dela if dela is not None and dela.filha_de == numero else None
+
+
+def _a_ponta_inteira(ponta: Any, filha_de: str) -> dict[str, Any]:
+    """A ponta do extensor inteira, pendurada em ``filha_de`` — ou apagada."""
+    if ponta is None:
+        return {"caminho": None, "nos": [], "liga": None, "usb": None,
+                "filha_de": None, "nome": None}
+    corpo = ponta.model_dump(mode="json")
+    corpo["filha_de"] = filha_de
+    corpo.setdefault("nos", [])
+    return corpo
+
+
 def dar_nome_a_entrada(
     numero: str,
     nome: str | None,
@@ -2844,6 +2962,9 @@ __all__ = [
     "NA_PORTA",
     "PALAVRA_DA_ENTRADA",
     "PARADO",
+    "RECUSA_A_MESMA_ENTRADA",
+    "RECUSA_FORA_DO_MAPA",
+    "RECUSA_NENHUMA_MAPEADA",
     "SENTADA",
     "TELAS",
     "VELOCIDADES_DECLARAVEIS",
@@ -2872,4 +2993,5 @@ __all__ = [
     "rotulo_da_entrada",
     "rotulo_do_numero",
     "rotulos_das_entradas",
+    "trocar_as_entradas",
 ]

@@ -115,6 +115,7 @@ ESCREVEM = {
     # O NOME DA ENTRADA — O-MAPA-QUE-ELA-CORRIGE-01, 26/09/2026: da posição,
     # em `mapa.portas[N].nome` (D-2609-O-NOME-E-DA-POSICAO).
     "dar_nome_a_entrada",
+    "trocar_as_entradas",      # o «Trocar com…»: o buraco de duas entradas troca
     # A ORDEM DAS CAIXAS DOS ADAPTADORES — A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01,
     # 25/09/2026: vai para o `gui_preferences.json` dela.
     "guardar_ordem_dos_adaptadores",

@@ -555,3 +555,62 @@ def test_o_nome_aparece_no_plugue_e_no_cabecalho(disco: Path) -> None:
     assert plugue["corta"] == "ellipsis"
     assert plugue["dicaDoVazio"].startswith("Entrada 2"), plugue
     assert editor["cabecalho"].startswith("Canto da Mesa"), editor
+
+
+# ── passo 4: «Trocar com…» ───────────────────────────────────────────────
+
+_A_TROCA = '#edita select.troca[data-gesto="entrada-trocar"]'
+
+
+def _a_lista_da_troca() -> str:
+    alvo = json.dumps(_A_TROCA)
+    return (f"(function(){{const t=document.querySelector({alvo});"
+            f"if(!t) return JSON.stringify({{existe: false}});"
+            f"const c=getComputedStyle(t);"
+            f"return JSON.stringify({{existe: true, entrada: t.getAttribute('data-entrada'),"
+            f" itens: [...t.options].map(o => [o.value, o.textContent]),"
+            f" fundo: c.backgroundColor, cor: c.color}});}})()")
+
+
+def test_trocar_com_grava_e_o_editor_fica_aberto(disco: Path) -> None:
+    """A 2 (vazia) trocada com a 5 (o mouse): o buraco do mouse passa a ser a 2,
+    o editor da 2 continua aberto e diz que o mouse está nela. «Mudar de
+    Entrada» não existe mais, e a lista não nasce cinza."""
+    lidas, _ = _na_pagina([
+        _js(_aberta()),
+        _clicar('.plug[data-porta="2"]'),
+        _a_lista_da_troca(),
+        "String(!!document.querySelector('#edita [data-tirar]'))",
+        _mudar(_A_TROCA, "5"),
+        _o_piloto_responde("entrada-trocar", evento="change"),
+        _O_EDITOR,
+    ])
+    lista, tirar, editor = lidas[2], lidas[3], lidas[6]
+    assert lista["existe"] and lista["entrada"] == "2", lista
+    valores = [v for v, _t in lista["itens"]]
+    assert valores == ["", "1", "3", "4", "5", "6"], lista["itens"]
+    assert lista["itens"][0][1] == "Trocar com…"
+    assert "Mouse" in lista["itens"][4][1] and "Entrada 5" in lista["itens"][4][1]
+    assert lista["fundo"] != "rgb(192, 192, 192)", "a lista nasceu cinza no WebKitGTK"
+    assert tirar == "false", "o «Mudar de Entrada» voltou"
+    assert editor["aberto"] and editor["cabecalho"].startswith("Entrada 2"), editor
+    assert "Mouse Está Aqui" in editor["texto"], editor
+    documento = carregar_maquina()
+    assert (documento.mapa.portas["2"].caminho, documento.mapa.portas["5"].caminho) == (
+        "9-5", "9-2")
+
+
+def test_no_produto_o_chip_de_quem_esta_numa_entrada_abre_o_editor(disco: Path) -> None:
+    """O teclado está na 1: o chip dele abre o editor da 1, e não o põe na mão."""
+    lidas, _ = _na_pagina([
+        _js(_aberta()),
+        "(function(){const c=[...document.querySelectorAll('.chip[data-ap]')]"
+        ".find(x => x.dataset.alocado === '1'); if(!c) return 'sem chip'; c.click();"
+        " return 'clicou';})()",
+        _O_EDITOR,
+        "String(document.querySelector('.modo[data-modo=\"mao\"]')"  # (noqa-acento: JS)
+        ".getAttribute('aria-pressed'))",
+    ])
+    assert lidas[1] == "clicou"
+    assert lidas[2]["aberto"] and lidas[2]["cabecalho"].startswith("Entrada 1"), lidas[2]
+    assert lidas[3] == "false", "o chip pôs o aparelho na mão"

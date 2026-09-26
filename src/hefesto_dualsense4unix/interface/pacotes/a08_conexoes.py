@@ -303,6 +303,18 @@ def _logica_do_mapa() -> Any:
 _LOGICA: Any = None
 
 
+def esquecer_o_rascunho_do_mapa() -> None:
+    """O mapa mudou no disco por outro gesto (o editor do mapa das conexões):
+    o rascunho velho não pode regravar o mapa de antes por cima.
+
+    O mesmo que o `mapear_gravar` faz depois de gravar
+    (O-MAPA-QUE-ELA-CORRIGE-01: a troca de duas entradas muda o mapa inteiro).
+    """
+    global _LOGICA
+    _LOGICA = None
+    _reler_a_declaracao()
+
+
 def _chave_do_radio(r: Any) -> str:
     """`vid:pid` — a chave do `maquina.json`, e não o nó do sysfs.
 
