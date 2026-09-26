@@ -245,7 +245,9 @@ def test_initial_poll_fallback_pinta_header_quando_nenhum_poll_sucedeu(
     # confere que o rótulo existe de VERDADE é
     # `tests/unit/test_a_vibracao_nao_manda_num_botao_que_nao_existe.py`, que
     # pergunta às páginas em vez de decorar.
-    assert "Reiniciar o serviço" in header.markup
+    # E ELE É «Reiniciar» desde 25/09/2026: a coluna «Serviço» da aba em três
+    # seções já diz de quem é o botão.
+    assert '"Reiniciar"' in header.markup
     assert "#ff5555" in header.markup
     assert host._reconnect_state == "offline"
     daemon_label = host.builder.get_object("status_daemon")
