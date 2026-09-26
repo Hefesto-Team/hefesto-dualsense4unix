@@ -137,13 +137,19 @@ FOLGA_DO_AMBIENTE = 0
 #: de "Está tudo certo?", 8 de "Os controles", 99 de "Conexões", 39 de
 #: "Desempenho" e 24 de "A janela".
 #:
+#: VALE 194 DESDE 25/09/2026 (O-MODO-ECONOMIA-POR-CONTROLE-01): os «Gatilhos»
+#: e a «Barra de luz» ganharam ponto de aplicação na tabela do "Desempenho"
+#: (a «Bateria longa» liga o Modo Economia em todos), e as duas linhas trocaram
+#: a frase única de quem não tem por onde ser limitado pelas três células de
+#: quem tem — medido: 190 → 194, a folga do ambiente continua zero.
+#:
 #: A RAZÃO QUE ESTAVA ESCRITA AQUI EM 08/09 CAIU NA MEDIÇÃO, e fica registrada
 #: para ninguém a rederivar: ela dizia que os textos que faltavam saíam da seção
 #: "Os controles" por não haver controle ligado. Medido com QUATRO DualSense
 #: adotados, a seção montou os mesmos 8 textos — o pedido ao daemon é
 #: assíncrono, e a colheita é tomada antes de qualquer resposta. Desde 13/09 o
 #: pedido nem sai: com `_mesa_leitor` de pé a seção desenha o estado vazio.
-PISO_DA_COLHEITA = 190
+PISO_DA_COLHEITA = 194
 
 #: Piso POR MOLDURA. Uma seção que monta OCA ainda colhe o título e a dica do
 #: próprio `Gtk.Frame` — 5 textos, medido em 13/09/2026 com o `montar` de "Os
