@@ -112,11 +112,15 @@ def _esperar(pergunta: Callable[[], Any], prazo: float = 3.0) -> Any:
 
 
 def _medir(chamar: Callable[[], Any], vezes: int = 10) -> tuple[list[float], Any]:
+    """``vezes`` tiques seguidos; o primeiro que passa do teto encerra a conta
+    (sem a cura, cada tique dorme o sono inteiro, e dez seriam um minuto)."""
     custos, ultimo = [], None
     for _ in range(vezes):
         t0 = time.perf_counter()
         ultimo = chamar()
         custos.append(time.perf_counter() - t0)
+        if custos[-1] >= TETO_S:
+            break
     return custos, ultimo
 
 
