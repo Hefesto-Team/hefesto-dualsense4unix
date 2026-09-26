@@ -1095,9 +1095,13 @@ class CentralDoRadio:
         """A PARTE DO PRODUTO, antes de pedir o gesto — a R1 dela ao pé da letra.
 
         1. DESLIGA: ``Disconnect`` em todo adaptador em que o aparelho está
-           conectado. O DualSense desliga quando o host solta o enlace, e é
-           desligado que o PS + Create o põe em modo de parear — ligado, o gesto
-           não faz nada (a lista dela, passo c1).
+           conectado. É fora do ar que o PS + Create o põe em modo de parear —
+           conectado, o gesto não faz nada (a lista dela, passo c1). O que
+           ninguém mediu é se o controle APAGA quando o host solta o enlace ou
+           fica procurando o host: o mapa diz o desligar por software «não
+           localizado» (``energia.desligar@dualsense``). A cura não depende
+           disso — pede o controle fora do ar (o ``HID_PHYS`` vazio), e com a
+           chave da origem esquecida a procura dele não tem onde pousar.
         2. ESQUECE cada origem: ``RemoveDevice`` mais o verbo ``esquecer`` da
            ponte, com lápide. Sem a chave lá, o controle não tem para onde
            voltar sozinho (passo c2: *«muda de adaptador, fica um tempo, e volta

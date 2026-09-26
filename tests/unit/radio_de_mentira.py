@@ -32,8 +32,10 @@ e até ela este dublê era MAIS FROUXO que o controle de verdade:
   modo de parear»*). O controle só entra em modo de pareamento DESLIGADO — e
   este dublê o deixava pareando conectado, o que escondia o mover que nunca
   desligava o controle;
-* **o host que solta o enlace desliga o controle** (``Disconnect``), e ela
-  desliga na mão segurando o PS (:meth:`RadioDeMentira.desligar`);
+* **o host que solta o enlace tira o controle do ar** (``Disconnect``), e ela
+  desliga na mão segurando o PS (:meth:`RadioDeMentira.desligar`). Se ele
+  APAGA ou fica procurando o host ninguém mediu (``energia.desligar@dualsense``
+  no mapa): para o dublê, os dois são «fora do ar»;
 * **o controle volta sozinho ao pareamento antigo quando ele existe** (passo
   c2: *«muda de adaptador, fica um tempo, e volta para o anterior»*): ele
   lembra os hosts de antes (``Fisico.antigos``), e
@@ -529,7 +531,7 @@ class RadioDeMentira:
             self._mudar(caminho, bd.APARELHO, "Connected", True)
             return bd.Escrita(True, resposta=())
         if metodo == "Disconnect":
-            # O HOST QUE SOLTA O ENLACE DESLIGA O CONTROLE (o kernel tira o nó).
+            # O HOST QUE SOLTA O ENLACE TIRA O CONTROLE DO AR (o kernel tira o nó).
             self.linha_do_tempo.append(("Disconnect", adaptador, aparelho))
             if fisico is not None and fisico.conectado_em == adaptador:
                 fisico.conectado_em = ""
