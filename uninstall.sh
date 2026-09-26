@@ -2061,13 +2061,16 @@ fi
 # abririam SEM controle. Quem escreveu é quem sabe o que escreveu: o registro
 # ao lado do `default.env` diz, arquivo por arquivo, o que é nosso, e o
 # `--desfazer` tira só isso (o MANGOHUD dela fica; o valor que ela tinha antes
-# volta; o arquivo que nasceu com o Hefesto sai). Roda ANTES de o launch_env
-# sair, porque o registro mora nele; com um arquivo que não abriu, ou sem
-# python3, o registro FICA para o desfazer de depois.
+# volta; o arquivo que nasceu com o Hefesto sai). E passa pelas CÓPIAS POR JOGO
+# que o próprio Heroic tira da lista global (`GamesConfig/<jogo>.json`, na
+# primeira vez que ela muda uma opção daquele jogo): sem isso, o jogo com opção
+# própria ficava com o IGNORE. Roda ANTES de o launch_env sair, porque o
+# registro mora nele; com um arquivo que não abriu, ou sem python3, o registro
+# FICA para o desfazer de depois.
 CURA_POR_ESTRADA_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/cura_por_estrada.py"
 _estradas_desfeitas=0
 if [[ -f "${CURA_POR_ESTRADA_PY}" ]] && command -v python3 >/dev/null 2>&1; then
-    log "tirando dos lançadores (Heroic, overrides do Flatpak) só o ambiente que o Hefesto escreveu"
+    log "tirando dos lançadores (Heroic e as cópias por jogo dele, overrides do Flatpak) só o ambiente que o Hefesto escreveu"
     _args_das_estradas=(--desfazer --lar "${HOME}")
     for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
         _args_das_estradas+=(--pasta-do-ambiente "${_estado}/launch_env")
