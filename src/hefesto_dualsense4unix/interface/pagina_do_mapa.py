@@ -1837,7 +1837,8 @@ EDICOES: tuple[Edicao, ...] = (
     ),
     Edicao(
         antes=(
-            '    var quem = alocacao[editando] ? acha(alocacao[editando]) : null;\n'
+            '    var quem = alocacao[editando] ? '  # (noqa-acento: JS)
+            'acha(alocacao[editando]) : null;\n'  # (noqa-acento: JS)
             '    ed.innerHTML = \'<div class="edita-cab"><b>Entrada \' + editando + '
             '"</b><span>" + (face ? face.nome : "") + "</span>"\n'
             '      + \'<button class="btn fecha" id="edita-fecha" aria-label="Fechar">'
@@ -1845,7 +1846,8 @@ EDICOES: tuple[Edicao, ...] = (
             '      + \'<div class="edita-linha"><span>O que tem aqui</span><div class="seg">\'\n'
         ),
         depois=(
-            '    var quem = alocacao[editando] ? acha(alocacao[editando]) : null;\n'
+            '    var quem = alocacao[editando] ? '  # (noqa-acento: JS)
+            'acha(alocacao[editando]) : null;\n'  # (noqa-acento: JS)
             '    /* A ENTRADA QUE SÓ EXISTE NO DESENHO — 26/09/2026. No produto, o que\n'
             '       ela declarasse numa entrada que não grava (as do hub desenhado)\n'
             '       sumiria ao reler, sem aviso: ali o editor só mostra quem está\n'
