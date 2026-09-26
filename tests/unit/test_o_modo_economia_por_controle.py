@@ -754,7 +754,6 @@ def test_o_daemon_reaplica_o_perfil_so_quando_a_economia_muda(
     "alvo",
     [
         "02:fe:00:00:00:01",  # o gamepad virtual — não é peça de plástico
-        "02:aa:bb:00:00:01",  # o endereço que o DKMS forja — o disco o recusa
         "path:/dev/input/event9",
         "usb-0000:00:14.0-3",
         "",
@@ -769,7 +768,29 @@ def test_o_escritor_recusa_a_chave_em_que_nao_e_seguro_gravar(alvo: str) -> None
     segundo voltaria do ``machine.declare`` como ``declaracao_invalida``.
 
     MORDIDA: devolva no escritor a normalização própria (tirar tudo que não é
-    hexa e exigir doze) — as duas primeiras reprovam.
+    hexa e exigir doze) — a do gamepad virtual reprova.
     """
     with pytest.raises(ValueError):
         declaracao_da_economia(alvo, True)
+
+
+def test_o_escritor_pergunta_ao_disco_o_que_ele_aceita(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A segunda pergunta é ao ``MaquinaConfig``: o endereço forjado (``02…``).
+
+    O dono da chave de peça só recusa o gamepad virtual; o disco recusa todo
+    endereço que começa por ``02``. Para chegar a essa segunda porta sem
+    escrever um MAC fora da faixa forjada, o dono da chave é trocado por um
+    que deixa passar tudo — e a chave ``02fe…``, que ele deixaria, tem de ser
+    recusada pelo disco.
+
+    MORDIDA: tire do escritor o ``MaquinaConfig.model_validate`` e reprova.
+    """
+    from hefesto_dualsense4unix.profiles import manager
+
+    monkeypatch.setattr(
+        manager, "chave_de_peca_que_grava", lambda alvo: alvo.replace(":", "").lower()
+    )
+    with pytest.raises(ValueError):
+        declaracao_da_economia("02:fe:00:00:00:02", True)
