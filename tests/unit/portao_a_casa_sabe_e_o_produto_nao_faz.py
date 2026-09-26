@@ -479,6 +479,18 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "instrumento e não promessa: o produto instalado não lê esta chave, "
         "nenhum fluxo dela passa por aqui, e ligá-la não abre feature nenhuma."
     ),
+    "HEFESTO_AVISO_DE_VERDADE": (
+        "25/09/2026 — o ESCAPE da guarda do aviso da área de trabalho "
+        "(`integrations/desktop_notifications._a_suite_esta_rodando`). Ela "
+        "nasceu de uma foto dela: três «Teclado na tela aberto pelo L3.» na "
+        "tela dela às 20h18, mandados pela SUÍTE — 22 avisos no lote do teclado "
+        "e do hotkey, medidos num barramento de mentira. Com a suíte no ar o "
+        "`notify` recusa antes do barramento; `HEFESTO_AVISO_DE_VERDADE=1` "
+        "devolve o caminho inteiro ao teste que o declara com o barramento "
+        "dublado, e o `tests/conftest.py` a tira do ambiente herdado. É "
+        "instrumento e não promessa: fora da suíte ela não muda nada, nenhum "
+        "fluxo dela passa por aqui, e ligá-la não abre feature nenhuma."
+    ),
     "HEFESTO_NA_TELA": (
         "04/09/2026 — o ESCAPE da guarda TELA-DELA-01/02. Sem ele, a suíte e "
         "os 21 instrumentos de `scripts/` que abrem `Gtk.Window` desviam a "
