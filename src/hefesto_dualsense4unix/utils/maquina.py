@@ -224,11 +224,6 @@ _LUGAR = FORMA_DO_LUGAR
 #: (``apelido_do_dongle.TETO_DE_BYTES``).
 _MAXIMO_DO_NOME_DO_LUGAR = 60
 
-#: O teto do nome de um controle, em BYTES: o do nome de um aparelho
-#: Bluetooth (248, o ``Remote Name`` do HCI), que é onde o ``Alias`` o
-#: projeta (O-RADIO-CONECTA-ONDE-ELA-MANDA-02).
-_MAXIMO_DO_NOME_DO_CONTROLE = 248
-
 
 class RadioDeclarado(BaseModel):
     """Um aparelho vizinho que divide a faixa de 2,4 GHz com os controles.
@@ -738,48 +733,10 @@ class ControleDeclarado(BaseModel):
         return limpo
 
 
-def chave_do_controle(endereco: object) -> str | None:
-    """``aa:bb:…`` ou doze hex → a chave de ``controles`` (doze hex minúsculos).
-
-    ``None`` quando o endereço não tem forma, ou quando é SINTETIZADO (o
-    ``02`` do nosso DKMS, ver :data:`_OCTETO_SINTETIZADO`): o schema o recusa,
-    e gravar o nome ali fundiria dois clones.
-    """
-    if not isinstance(endereco, str):
-        return None
-    chave = endereco.strip().lower().replace(":", "").replace("-", "")
-    if not _CHAVE_DE_CONTROLE.match(chave) or chave.startswith(_OCTETO_SINTETIZADO):
-        return None
-    return chave
-
-
-def nomes_dos_controles(maquina: MaquinaConfig) -> dict[str, str]:
-    """``{chave de controle: o nome que ela deu}`` — só quem tem nome."""
-    return {
-        chave: declarado.nome
-        for chave, declarado in (maquina.controles or {}).items()
-        if declarado.nome
-    }
-
-
-def gravar_o_nome_do_controle(endereco: str, nome: str | None) -> bool:
-    """Grava (ou, com ``None``/vazio, esquece) o nome que ela deu. **Nunca levanta.**
-
-    A fusão de :func:`gravar_maquina` desce nos dicionários: o ``microfone``, a
-    ``economia`` e a ``cor`` do mesmo controle ficam como estavam. ``False`` =
-    não gravou (endereço sem forma ou sintetizado, nome que o schema recusa,
-    disco que recusa, versão estranha) — o ``Alias`` do BlueZ continua sendo o
-    nome, e a próxima volta de quem chama tenta de novo.
-    """
-    chave = chave_do_controle(endereco)
-    if chave is None:
-        return False
-    valor = (nome or "").strip() or None
-    try:
-        return gravar_maquina({"controles": {chave: {"nome": valor}}})
-    except (ValueError, OSError) as exc:
-        logger.warning("maquina_nome_do_controle_nao_gravou", err=str(exc)[:200])
-        return False
+#: O teto do nome de um controle, em BYTES: o do nome de um aparelho
+#: Bluetooth (248, o ``Remote Name`` do HCI), que é onde o ``Alias`` o
+#: projeta (O-RADIO-CONECTA-ONDE-ELA-MANDA-02).
+_MAXIMO_DO_NOME_DO_CONTROLE = 248
 
 
 
@@ -1334,6 +1291,55 @@ def gravar_maquina_com_descartes(declaracao: Mapping[str, Any]) -> ResultadoDaGr
         _escrever(documento)
         logger.debug("maquina_gravada", campos=sorted(declaracao))
     return ResultadoDaGravacao(True, descartados)
+
+
+# ---------------------------------------------------------------------------
+# O nome que ela deu a um controle (O-RADIO-CONECTA-ONDE-ELA-MANDA-02)
+# ---------------------------------------------------------------------------
+
+
+def chave_do_controle(endereco: object) -> str | None:
+    """``aa:bb:…`` ou doze hex → a chave de ``controles`` (doze hex minúsculos).
+
+    ``None`` quando o endereço não tem forma, ou quando é SINTETIZADO (o
+    ``02`` do nosso DKMS, ver :data:`_OCTETO_SINTETIZADO`): o schema o recusa,
+    e gravar o nome ali fundiria dois clones.
+    """
+    if not isinstance(endereco, str):
+        return None
+    chave = endereco.strip().lower().replace(":", "").replace("-", "")
+    if not _CHAVE_DE_CONTROLE.match(chave) or chave.startswith(_OCTETO_SINTETIZADO):
+        return None
+    return chave
+
+
+def nomes_dos_controles(maquina: MaquinaConfig) -> dict[str, str]:
+    """``{chave de controle: o nome que ela deu}`` — só quem tem nome."""
+    return {
+        chave: declarado.nome
+        for chave, declarado in (maquina.controles or {}).items()
+        if declarado.nome
+    }
+
+
+def gravar_o_nome_do_controle(endereco: str, nome: str | None) -> bool:
+    """Grava (ou, com ``None``/vazio, esquece) o nome que ela deu. **Nunca levanta.**
+
+    A fusão de :func:`gravar_maquina` desce nos dicionários: o ``microfone``, a
+    ``economia`` e a ``cor`` do mesmo controle ficam como estavam. ``False`` =
+    não gravou (endereço sem forma ou sintetizado, nome que o schema recusa,
+    disco que recusa, versão estranha) — o ``Alias`` do BlueZ continua sendo o
+    nome, e a próxima volta de quem chama tenta de novo.
+    """
+    chave = chave_do_controle(endereco)
+    if chave is None:
+        return False
+    valor = (nome or "").strip() or None
+    try:
+        return gravar_maquina({"controles": {chave: {"nome": valor}}})
+    except (ValueError, OSError) as exc:
+        logger.warning("maquina_nome_do_controle_nao_gravou", err=str(exc)[:200])
+        return False
 
 
 # ---------------------------------------------------------------------------
