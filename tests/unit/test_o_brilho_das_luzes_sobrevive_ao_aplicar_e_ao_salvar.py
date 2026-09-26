@@ -28,17 +28,19 @@ A MATRIZ, a regra dela: os três brilhos, P1 a P4, cabo e rádio.
 
 **AS MORDIDAS**, arrancadas e devolvidas:
 
-* tire a chamada de `_as_luzes_de_numero_de_cada_controle` do `rodape.aplicar`
-  e a seção 1 inteira e a linha `brilho-luzes` da seção 2 reprovam;
-* tire o `_a_procedencia_da_mesma_cor` do `rodape._draft_do_ativo` e a
-  varredura reprova no tom, na caixa e nas «Cores automáticas» (P2 e P4) e em
-  todo gesto do P2, além do tom que vira fóssil;
+* tire o `player_led_brightness` de `DraftConfig._controllers_to_ipc` e a
+  seção 1 inteira e a linha `brilho-luzes` da seção 2 reprovam — desde a
+  O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01 (26/09/2026) a palavra de cada
+  controle viaja no rascunho, e a segunda viagem do rodapé saiu;
+* tire o `_com_a_procedencia_da_mesma_cor` do `DraftConfig.with_controller_leds`
+  e a varredura reprova no tom, na caixa e nas «Cores automáticas» (P2 e P4) e
+  em todo gesto do P2, além do tom que vira fóssil;
 * tire a comparação das duas cores dela e a cor nova sai com o número da
   antiga (`test_a_cor_que_mudou_nao_leva_o_numero_da_antiga`);
-* tire o `raise` do daemon calado e o «Aplicar» pisca verde sem as luzes
-  (`test_sem_resposta_do_daemon_o_aplicar_recusa_dizendo`);
-* tire o pulo de `economia_vale` dela e a seção 3 reprova — o Forte dela
-  venceria a «Bateria longa».
+* tire o `is None` do `rodape.aplicar` e o «Aplicar» pisca verde com o daemon
+  calado (`test_sem_resposta_do_daemon_o_aplicar_recusa_dizendo`);
+* tire o `_com_o_teto_da_economia` do `DraftApplier.apply` e a seção 3
+  reprova — o Forte dela venceria a «Bateria longa».
 
 O LAR É DE MENTIRA: o `conftest` desvia o `HOME` e os `XDG_*`; o perfil e o
 `maquina.json` gravados aqui moram dentro dele.
@@ -108,23 +110,31 @@ def mesa_de(tmp_path, monkeypatch):
 
 
 class _PonteDoRodape(barra._PonteDoRodape):
-    """A ponte do rodapé com as DUAS portas do «Aplicar», nos handlers REAIS.
+    """A ponte do rodapé, que guarda o rascunho que o «Aplicar» leva ao handler REAL.
 
-    A da A-BARRA só conhecia o `profile.apply_draft`, e recusa o resto: um
-    dublê que aceita tudo mede menos que o produto.
+    O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01 (26/09/2026): o «Aplicar» é UMA
+    viagem só, e a palavra de cada controle vai no rascunho. A porta da pílula
+    (`led.player_brightness_set`), que era a segunda viagem, é recusada como a
+    da A-BARRA recusa o resto: um dublê que aceita tudo mede menos que o
+    produto.
     """
 
     def __init__(self, mesa: Any) -> None:
         super().__init__(mesa)
-        self.luzes: list[dict[str, Any]] = []
+        self.rascunhos: list[dict[str, Any]] = []
 
-    def player_led_brightness_set_detalhado(self, brilho: str,
-                                            uniq: str | None = None) -> Any:
-        payload: dict[str, Any] = {"brilho": brilho}
-        if uniq:
-            payload["uniq"] = uniq
-        self.luzes.append(payload)
-        return self.mesa.rodar(self.mesa.server._handle_led_player_brightness_set(payload))
+    def apply_draft_detalhado(self, payload: dict[str, Any]) -> Any:
+        self.rascunhos.append(payload)
+        return super().apply_draft_detalhado(payload)
+
+    @property
+    def luzes(self) -> list[dict[str, Any]]:
+        """A palavra que o rascunho levou de cada controle — só de quem a escreveu."""
+        return [{"brilho": palavra, "uniq": uniq}
+                for rascunho in self.rascunhos
+                for uniq, entrada in sorted((rascunho.get("controllers") or {}).items())
+                if (palavra := ((entrada or {}).get("leds") or {}).get(
+                    "player_led_brightness")) is not None]
 
 
 def _aplicar(mesa: Any) -> _PonteDoRodape:
@@ -377,31 +387,33 @@ def test_a_cor_que_mudou_nao_leva_o_numero_da_antiga(mesa_de, via: str) -> None:
 
 @pytest.mark.parametrize("via", ["usb", "bt"])
 def test_sem_resposta_do_daemon_o_aplicar_recusa_dizendo(mesa_de, via: str) -> None:
-    """O daemon calado na palavra das luzes: o «Aplicar» recusa com a frase do motor.
+    """O daemon calado: o «Aplicar» recusa com a frase do motor, com ou sem a palavra.
 
     A frase é a que a pílula já usa (`a04_iluminacao.sem_resposta_do_daemon`):
-    nada de recado novo. E o controle que não escreveu o campo não pergunta
-    nada — um perfil sem palavra própria não recusa por uma porta que não usou.
+    nada de recado novo. Até a O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01 só
+    recusava quem tinha a palavra das luzes, pela segunda viagem; o perfil sem
+    ela piscava verde com o daemon desligado.
 
-    **A MORDIDA:** tire o `raise` de `_as_luzes_de_numero_de_cada_controle` e
-    o «Aplicar» pisca verde com as luzes do P2 no global do perfil.
+    **A MORDIDA:** tire o `is None` do `rodape.aplicar` e o «Aplicar» pisca
+    verde sem ter chegado a lugar nenhum.
     """
     import re
 
     class _Calada(_PonteDoRodape):
-        def player_led_brightness_set_detalhado(self, brilho: str,
-                                                uniq: str | None = None) -> Any:
-            self.luzes.append({"brilho": brilho, "uniq": uniq})
+        def apply_draft_detalhado(self, payload: dict[str, Any]) -> Any:
+            self.rascunhos.append(payload)
             return None
 
     mesa = mesa_de("todos", via)
+    frase = re.escape(a04_iluminacao.sem_resposta_do_daemon())
     calada = _Calada(mesa)
-    rodape.aplicar(mesa.ctx(), CLIQUE, calada)
-    assert calada.luzes == [], "sem palavra no perfil, o «Aplicar» perguntou ao daemon"
+    with pytest.raises(RuntimeError, match=frase):
+        rodape.aplicar(mesa.ctx(), CLIQUE, calada)
+    assert calada.luzes == [], "sem palavra no perfil, o rascunho levou uma"
 
     mesa.clicar_na_pilula(2, "forte")
     calada = _Calada(mesa)
-    with pytest.raises(RuntimeError, match=re.escape(a04_iluminacao.sem_resposta_do_daemon())):
+    with pytest.raises(RuntimeError, match=frase):
         rodape.aplicar(mesa.ctx(), CLIQUE, calada)
     assert calada.luzes == [{"brilho": "forte", "uniq": UNIQS[1]}], calada.luzes
 
@@ -430,7 +442,9 @@ def test_na_bateria_longa_o_aplicar_nao_tira_as_luzes_do_fraco(
     """A mesa em «Bateria longa»: o Forte do disco não volta pelo «Aplicar».
 
     A ativação põe as luzes de todos no Fraco (`leds_na_economia`), e o
-    «Aplicar» não pode ser a porta que escapa dela.
+    «Aplicar» não pode ser a porta que escapa dela. O rascunho leva o Forte
+    dela — é o que o disco guarda —, e o teto é posto do outro lado
+    (`DraftApplier._com_o_teto_da_economia`, O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01).
     """
     fraco, forte = BRILHOS_DAS_LUZES["fraco"], BRILHOS_DAS_LUZES["forte"]
     mesa = mesa_de("todos", via)
@@ -439,24 +453,30 @@ def test_na_bateria_longa_o_aplicar_nao_tira_as_luzes_do_fraco(
     mesa.trocar(NOME, "manual")
     assert mesa.degrau(2)[0] == fraco, "a régua precisa da economia pondo o P2 no Fraco"
     ponte = _aplicar(mesa)
-    assert ponte.luzes == [], f"o «Aplicar» mandou {ponte.luzes} por cima da economia"
-    assert mesa.degrau(2)[0] == fraco, (
+    assert ponte.luzes == [{"brilho": "forte", "uniq": UNIQS[1]}], ponte.luzes
+    assert mesa.degrau(2) == (fraco, fraco), (
         f"o «Aplicar» tirou o P2 da economia: {mesa.degrau(2)} (Forte é {forte})")
 
 
 @pytest.mark.parametrize("via", ["usb", "bt"])
 def test_a_economia_de_um_controle_so_nao_recebe_a_palavra_e_o_vizinho_recebe(
         mesa_de, economia, via: str) -> None:
-    """A economia ligada só no P2: o «Aplicar» leva o Forte do P4, e não o do P2."""
+    """A economia ligada só no P2: o aparelho do P4 no Forte, e o do P2 no Fraco.
+
+    O rascunho leva o Forte dos dois — é o que o disco guarda —, e o teto do
+    P2 é posto do outro lado, pelo mesmo dono da ativação
+    (O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01).
+    """
     from hefesto_dualsense4unix.profiles.schema import declaracao_da_economia
 
-    forte = BRILHOS_DAS_LUZES["forte"]
+    fraco, forte = BRILHOS_DAS_LUZES["fraco"], BRILHOS_DAS_LUZES["forte"]
     mesa = mesa_de("todos", via)
     mesa.clicar_na_pilula(2, "forte")
     mesa.clicar_na_pilula(4, "forte")
     economia(declaracao_da_economia(UNIQS[1], True))
     mesa.trocar(NOME, "manual")
     ponte = _aplicar(mesa)
-    assert ponte.luzes == [{"brilho": "forte", "uniq": UNIQS[3]}], ponte.luzes
+    assert ponte.luzes == [{"brilho": "forte", "uniq": UNIQS[1]},
+                           {"brilho": "forte", "uniq": UNIQS[3]}], ponte.luzes
     assert mesa.degrau(4) == (forte, forte)
-    assert mesa.degrau(2)[0] != forte, "o Forte dela venceu a economia do P2"
+    assert mesa.degrau(2) == (fraco, fraco), "o Forte dela venceu a economia do P2"

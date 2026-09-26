@@ -1272,13 +1272,15 @@ class DraftConfig(BaseModel):
         # grava é a pílula da linha LEDs, direto no override. A seção é trocada
         # INTEIRA logo abaixo, e sem o dono da regra o «Salvar» do rodapé
         # apagava o brilho que ela escolheu para o controle.
+        # E A MESMA COR GUARDA O NÚMERO PARA O QUAL FOI ESCOLHIDA
+        # (`_com_a_procedencia_da_mesma_cor`, no fim deste arquivo).
         from hefesto_dualsense4unix.profiles.schema import com_o_brilho_das_luzes_de
 
+        antes = getattr(self.controller_override(uniq), "leds", None)
         secao = com_o_brilho_das_luzes_de(
-            getattr(self.controller_override(uniq), "leds", None),
-            _leds_draft_to_config(leds, only_fields=campos),
-        )
-        return self._with_override_section(uniq, "leds", secao)
+            antes, _leds_draft_to_config(leds, only_fields=campos))
+        return self._with_override_section(
+            uniq, "leds", _com_a_procedencia_da_mesma_cor(antes, secao))
 
     def with_controller_triggers(
         self, uniq: str, triggers: TriggersDraft
@@ -1770,6 +1772,11 @@ class DraftConfig(BaseModel):
                     leds_entry["player_leds"] = [
                         bool(b) for b in override.leds.player_leds
                     ]
+                # O FRACO, O MÉDIO OU O FORTE DESTE CONTROLE, só quando foi
+                # escrito (O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01, 26/09).
+                if "player_led_brightness" in campos:
+                    leds_entry["player_led_brightness"] = str(
+                        override.leds.player_led_brightness)
                 if leds_entry:
                     entry["leds"] = leds_entry
             if override.triggers is not None:
@@ -1938,6 +1945,9 @@ class DraftConfig(BaseModel):
                 # propaga ao registro de identidade (mesmo destino da
                 # ativação de perfil); daemon antigo ignora a chave (aditivo).
                 "auto_player_colors": self.leds.auto_player_colors,
+                # O «Todos» das luzes de número; o de cada controle viaja em
+                # `controllers` (O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01).
+                "player_led_brightness": self.leds.player_led_brightness,
             },
             "rumble": {
                 "weak": self.rumble.weak,
@@ -2183,6 +2193,34 @@ def registrar_microfone_no_rascunho(
     janela.draft = draft.with_mic(
         volume=volume, muted=muted, soltar_mudo=soltar_mudo
     )
+
+
+def _com_a_procedencia_da_mesma_cor(antes: Any, novos: Any) -> Any:
+    """``novos`` com o número para o qual a MESMA cor de ``antes`` foi escolhida.
+
+    O-BRILHO-DAS-LUZES-SOBREVIVE-AO-APLICAR-01 achou, e a
+    O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01 trouxe a regra para cá, que é o
+    dono (26/09/2026): o tom, a caixa `#RRGGBB` e o interruptor «Cores
+    automáticas» da aba 04 gravam a cor COM a procedência
+    (`LedsConfig.lightbar_para_o_numero`, a decisão de 08/09), e o
+    `with_controller_leds` troca a seção inteira por uma que só conhece cor,
+    brilho e lâmpadas. Sem o número a cor vira `LEGADO`, e o resolvedor volta a
+    provar fóssil pela forma: o P4 no tom do número 2 acendia, depois do
+    «Salvar» e da troca manual seguinte, a cor do número dele. Até hoje a regra
+    morava no rodapé, que usava o `_with_override_section` privado para isso.
+
+    Só a MESMA cor leva a procedência: a cor que difere (a que atravessou a
+    troca automática) não tem, no disco, para qual número foi escolhida, e
+    inventar um seria afirmar o que ninguém sabe. É o irmão do
+    `schema.com_o_brilho_das_luzes_de`, que devolve o brilho das luzes.
+    """
+    campo = "lightbar_para_o_numero"
+    if antes is None or not {"lightbar", campo} <= antes.model_fields_set:
+        return novos
+    if ("lightbar" not in novos.model_fields_set or campo in novos.model_fields_set
+            or tuple(novos.lightbar) != tuple(antes.lightbar)):
+        return novos
+    return novos.model_copy(update={campo: getattr(antes, campo)})
 
 
 __all__ = [
