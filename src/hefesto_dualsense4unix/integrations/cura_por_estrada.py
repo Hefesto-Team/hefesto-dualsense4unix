@@ -63,21 +63,75 @@ O QUE ESTE MÓDULO NUNCA FAZ
 * **nunca escreve fora da allowlist** (`daemon.launch_env.ENV_ALLOWLIST`). O
   arquivo do daemon é lido por um wrapper `sh` que filtra por essa lista
   justamente contra arquivo adulterado; a mesma lista filtra aqui.
+
+O QUE É NOSSO TEM UM DONO, E É ESTE MÓDULO — 25/09/2026
+--------------------------------------------------------
+
+O-UNINSTALL-NAO-DEIXA-RASTRO-01. A auditoria da ESQUECER-OS-CONTROLES-01
+mediu, num lar de mentira: depois do `uninstall.sh --purge-config`, o
+`config.json` do Heroic e o override do Flatpak de cada lançador continuavam
+com `SDL_GAMECONTROLLER_IGNORE_DEVICES` e `PROTON_DISABLE_HIDRAW` — os jogos
+ficavam sem o DualSense físico e sem o Hefesto para servi-lo.
+
+Quem escreve é quem sabe o que escreveu. A cada escrita, o **registro das
+estradas** (`estradas.json`, ao lado do `default.env`, dentro do
+`launch_env/` que o daemon materializa) anota, por arquivo: cada chave nossa,
+os valores que já pusemos nela, o valor que estava lá ANTES da primeira vez, e
+o que o arquivo não tinha (o próprio arquivo, a seção `[Environment]`, a lista
+`enviromentOptions`). O desfazer (:func:`desfazer_as_estradas`, que o
+`uninstall.sh` roda por `--desfazer`) lê esse registro e tira exatamente isso:
+
+* uma chave nossa sai só se o valor ainda for um dos NOSSOS — se ela o mudou
+  depois, ele é dela e fica;
+* o valor que ela tinha antes volta; o que não existia volta a não existir;
+* o que é dela e nunca foi nosso (`MANGOHUD`, a `[Context]`) não é tocado.
+
+**A MESMA CONTA SERVE A ESCRITA.** Uma chave nossa que saiu do ambiente (o
+Modo Nativo não tem `IGNORE` nem `DISABLE_HIDRAW`) sai do arquivo na escrita
+seguinte, pela mesma regra — antes ela ficava lá, congelada, e o jogo do
+Heroic no Modo Nativo abria sem o controle que o Modo Nativo existe para
+mostrar.
+
+**O NOME DO PRODUTO, quando o registro não sabe.** Uma instalação anterior a
+este registro escreveu sem anotar. Para ela vale a regra do espaço de nomes: as
+variáveis que só o produto usa (:data:`_DO_PRODUTO_SEM_REGISTRO`) são
+presumidas nossas; as duas que uma pessoa costuma pôr sozinha
+(:data:`PODEM_SER_DELA`) não são. O erro mais barato para quem joga é esse: um
+`IGNORE` esquecido deixa o jogo com ZERO controles; um `PROTON_DISABLE_HIDRAW`
+que ela mesma tivesse posto já tinha sido sobrescrito pelo produto enquanto ele
+estava instalado.
+
+**SÓ BIBLIOTECA PADRÃO NO CAMINHO DO DESFAZER, e é estrutural:** o
+`uninstall.sh` o roda depois de a `.venv` sair, com o `python3` do sistema,
+como faz com o `proton_pin` e o `camadas_vulkan`. Por isso o import de
+`utils/xdg_paths` (que puxa o `platformdirs`) é tardio, e o pacote se acha pelo
+caminho deste arquivo quando não está instalado.
 """
 from __future__ import annotations
 
+import argparse
 import configparser
 import contextlib
+import copy
 import json
 import os
 import stat
+import sys
 import tempfile
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
 
-from hefesto_dualsense4unix.integrations import sandbox_dos_lancadores as _caixa
-from hefesto_dualsense4unix.utils.xdg_paths import launch_env_dir
+try:
+    from hefesto_dualsense4unix.integrations import sandbox_dos_lancadores as _caixa
+except ImportError:  # pragma: no cover - script avulso do uninstall, sem a .venv
+    # `python3 <este arquivo>` põe a pasta das integrações no `sys.path`, e não
+    # o `src/`: o pacote se acha pelo caminho deste arquivo. A corrente que o
+    # desfazer importa (`sandbox_dos_lancadores`, `censo_dos_lancadores`,
+    # `identidade_de_janela`) é só biblioteca padrão.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from hefesto_dualsense4unix.integrations import sandbox_dos_lancadores as _caixa
 
 #: AS DUAS ESTRADAS. O nome é o do ARQUIVO que se escreve, e não o do lançador:
 #: quem ganhar uma terceira estrada amanhã (um lançador nativo com config
@@ -107,6 +161,47 @@ SEM_AMBIENTE = ("O serviço ainda não publicou o ambiente desta sessão. Ligue 
 ILEGIVEL = ("Não consegui ler o `{arquivo}` deste lançador, e não vou "
             "reescrevê-lo por cima. Abra o lançador uma vez e tente de novo.")
 
+#: AS DUAS QUE UMA PESSOA COSTUMA PÔR SOZINHA — o cache de shader da NVIDIA. É
+#: a mesma leitura do «limpa?» (`utils/memoria_dos_controles`, a régua confere
+#: que são iguais): o valor que ela tinha antes da primeira escrita do Hefesto
+#: é guardado e volta no desfazer.
+PODEM_SER_DELA: frozenset[str] = frozenset(
+    {"__GL_SHADER_DISK_CACHE", "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP"})
+
+#: O QUE UMA VERSÃO SEM REGISTRO ESCREVEU, e o conjunto é HISTÓRICO: são as
+#: variáveis da `ENV_ALLOWLIST` em 25/09/2026, o dia em que o registro nasceu,
+#: menos as :data:`PODEM_SER_DELA`. Uma variável que a allowlist ganhar depois
+#: já nasce anotada no registro e NÃO entra aqui. Ela mora neste módulo, e não é
+#: lida do daemon, porque o desfazer roda com o `python3` do sistema, e o
+#: `daemon/launch_env` puxa dependência que a `.venv` levou junto.
+_DO_PRODUTO_SEM_REGISTRO: frozenset[str] = frozenset({
+    "SDL_GAMECONTROLLER_IGNORE_DEVICES",
+    "SDL_JOYSTICK_HIDAPI",
+    "SDL_GAMECONTROLLER_USE_BUTTON_LABELS",
+    "PROTON_DISABLE_HIDRAW",
+    "SDL_ACCELEROMETER_AS_JOYSTICK",
+    "PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE",
+    "PROTON_ENABLE_MHWILDS_USB_AUDIO",
+})
+
+#: Quantos valores nossos o registro lembra por chave. O último é o de agora;
+#: os de antes cobrem a escrita que caiu no meio e o arquivo que o «devolver»
+#: da ESQUECER-OS-CONTROLES-01 trouxe de volta com um valor nosso mais velho.
+_VALORES_LEMBRADOS = 16
+
+
+def _pasta_do_ambiente(pasta: Path | None) -> Path:
+    """A pasta `launch_env` — a pedida, ou a do daemon (import tardio).
+
+    O `utils/xdg_paths` puxa o `platformdirs`, que o `python3` do sistema não
+    tem: o desfazer do uninstall sempre diz a pasta, e nunca chega aqui.
+    """
+    if pasta is not None:
+        return pasta
+    from hefesto_dualsense4unix.utils.xdg_paths import launch_env_dir
+
+    return launch_env_dir()
+
 
 def ambiente_da_ponte(pasta: Path | None = None) -> dict[str, str]:
     """O ambiente que o daemon publicou para ESTA sessão — ou `{}`.
@@ -128,7 +223,7 @@ def ambiente_da_ponte(pasta: Path | None = None) -> dict[str, str]:
     """
     from hefesto_dualsense4unix.daemon.launch_env import ENV_ALLOWLIST
 
-    alvo = (launch_env_dir() if pasta is None else pasta) / "default.env"
+    alvo = _pasta_do_ambiente(pasta) / "default.env"
     try:
         cru = alvo.read_text(encoding="utf-8", errors="replace")
     except OSError:
@@ -174,6 +269,9 @@ class Plano:
     #: *"Ajustei o ambiente de heroic"* — a chave do `data-lancador` na frente
     #: dela, que é a língua de dentro num recado de tela.
     nome: str = ""
+    #: A pasta `launch_env` de onde o ambiente veio — e onde mora o registro
+    #: do que a escrita põe nos arquivos dela. `None` = a do daemon.
+    pasta_do_ambiente: Path | None = None
 
     @property
     def rotulo(self) -> str:
@@ -181,10 +279,18 @@ class Plano:
         return self.nome or self.cartao
 
 
+#: Onde o Flatpak do usuário guarda o override de cada aplicativo — no lar,
+#: como o `sandbox_dos_lancadores` lê.
+_PASTA_DOS_OVERRIDES = ".local/share/flatpak/overrides"
+
+#: As duas casas do Heroic no lar — flatpak primeiro, nativo depois.
+_PASTAS_DO_HEROIC = (f".var/app/{_HEROIC_APP_ID}/config/heroic", ".config/heroic")
+
+
 def _pasta_do_heroic(lar: Path) -> Path | None:
     """A pasta de configuração do Heroic — flatpak primeiro, nativo depois."""
-    for tentativa in (lar / ".var/app" / _HEROIC_APP_ID / "config/heroic",
-                      lar / ".config/heroic"):
+    for rel in _PASTAS_DO_HEROIC:
+        tentativa = lar / rel
         if tentativa.is_dir():
             return tentativa
     return None
@@ -212,7 +318,7 @@ def estradas_do_cartao(chave: str, atalhos: tuple[str, ...],
         if pasta is None:
             return ()
         return (Estrada(chave, HEROIC_CONFIG, pasta / "config.json"),)
-    raiz = lar / ".local/share/flatpak/overrides"
+    raiz = lar / _PASTA_DOS_OVERRIDES
     #: QUEM SABE QUAIS CAIXAS ESTE CARTÃO TEM é o `sandbox_dos_lancadores` —
     #: a mesma função que o cartão «Flatpak» usa para contar. Duas listas de
     #: `app-id`, uma para contar e outra para escrever, divergiriam no dia em
@@ -233,11 +339,11 @@ def planejar(chave: str, atalhos: tuple[str, ...], lar: Path | None = None,
     estradas = estradas_do_cartao(chave, atalhos, lar, raiz_sistema)
     if not estradas:
         return Plano(chave, (), {}, "não há por onde entrar neste lançador",
-                     nome)
+                     nome, pasta_do_ambiente)
     ambiente = ambiente_da_ponte(pasta_do_ambiente)
     if not ambiente:
-        return Plano(chave, estradas, {}, SEM_AMBIENTE, nome)
-    return Plano(chave, estradas, ambiente, "", nome)
+        return Plano(chave, estradas, {}, SEM_AMBIENTE, nome, pasta_do_ambiente)
+    return Plano(chave, estradas, ambiente, "", nome, pasta_do_ambiente)
 
 
 def tem_estrada(chave: str, atalhos: tuple[str, ...],
@@ -348,27 +454,243 @@ def _ler_heroic(alvo: Path) -> dict[str, object] | None:
     return dado if isinstance(dado, dict) else None
 
 
-def _escrever_no_heroic(alvo: Path, ambiente: dict[str, str]) -> None:
-    """Funde o ambiente em `defaultSettings.enviromentOptions`.
+# ── O REGISTRO DAS ESTRADAS: o que é nosso, anotado por quem escreve ───────
 
-    O QUE JÁ ESTAVA LÁ FICA. A lista é de `{key, value}`; as nossas substituem
-    as de mesmo `key` e as demais seguem na ordem em que estavam — um
-    `MANGOHUD=1` dela não pode sumir porque o Hefesto passou por ali.
+
+@dataclass
+class Marca:
+    """Uma chave nossa num arquivo dela."""
+
+    #: Os valores que o Hefesto já pôs nela, o de agora por último.
+    valores: list[str]
+    #: O que estava lá antes da primeira escrita (``None`` = nada). Só as
+    #: :data:`PODEM_SER_DELA` guardam um valor aqui: as demais são do produto
+    #: (ver o cabeçalho, «o nome do produto»).
+    antes: str | None = None
+
+
+@dataclass
+class Entrada:
+    """O que o Hefesto pôs num arquivo de lançador."""
+
+    tipo: str
+    #: O arquivo não existia antes da primeira escrita.
+    nasceu: bool = False
+    #: As peças de estrutura que o arquivo não tinha e a escrita criou: a seção
+    #: ``Environment`` do override, ou ``defaultSettings``/``enviromentOptions``
+    #: do Heroic. Vazias depois do desfazer, elas saem.
+    moldura: list[str] = field(default_factory=list)
+    chaves: dict[str, Marca] = field(default_factory=dict)
+
+
+#: Um par ``(chave, valor)`` na ordem em que está no arquivo dela.
+Pares = list[tuple[str, str]]
+
+
+def caminho_do_registro(pasta_do_ambiente: Path | None = None) -> Path:
+    """O registro mora AO LADO do `default.env`, dentro do `launch_env/`.
+
+    É a mesma pasta de onde a escrita tira o ambiente, a que o daemon
+    materializa a cada transição e que o uninstall apaga — depois de desfazer.
     """
+    return _pasta_do_ambiente(pasta_do_ambiente) / "estradas.json"
+
+
+def _entrada_de(dado: object) -> Entrada | None:
+    """Uma entrada lida do disco; torta = ``None`` (o registro nunca levanta)."""
+    if not isinstance(dado, dict):
+        return None
+    tipo = dado.get("tipo")
+    if tipo not in (HEROIC_CONFIG, FLATPAK_OVERRIDE):
+        return None
+    chaves: dict[str, Marca] = {}
+    cru = dado.get("chaves")
+    for nome, marca in (cru.items() if isinstance(cru, dict) else ()):
+        if not isinstance(marca, dict):
+            continue
+        valores = [str(v) for v in marca.get("valores", []) if isinstance(v, str)]
+        if not valores:
+            continue
+        antes = marca.get("antes")
+        chaves[str(nome)] = Marca(valores, antes if isinstance(antes, str) else None)
+    moldura = dado.get("moldura")
+    return Entrada(
+        str(tipo), bool(dado.get("nasceu")),
+        [str(x) for x in moldura] if isinstance(moldura, list) else [], chaves)
+
+
+def ler_registro(pasta_do_ambiente: Path | None = None) -> dict[str, Entrada]:
+    """``{arquivo: entrada}``. Ausente ou torto = ``{}`` — NUNCA levanta."""
+    try:
+        dado = json.loads(caminho_do_registro(pasta_do_ambiente).read_text(
+            encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    arquivos = dado.get("arquivos") if isinstance(dado, dict) else None
+    fora: dict[str, Entrada] = {}
+    for caminho, cru in (arquivos.items() if isinstance(arquivos, dict) else ()):
+        entrada = _entrada_de(cru)
+        if entrada is not None:
+            fora[str(caminho)] = entrada
+    return fora
+
+
+def gravar_registro(registro: dict[str, Entrada],
+                    pasta_do_ambiente: Path | None = None) -> None:
+    """Grava o registro — e, vazio, o apaga: nada nosso, nada a lembrar."""
+    alvo = caminho_do_registro(pasta_do_ambiente)
+    if not registro:
+        alvo.unlink(missing_ok=True)
+        return
+    dado = {"forma": 1, "arquivos": {
+        caminho: {"tipo": e.tipo, "nasceu": e.nasceu, "moldura": e.moldura,
+                  "chaves": {k: {"valores": m.valores, "antes": m.antes}
+                             for k, m in sorted(e.chaves.items())}}
+        for caminho, e in sorted(registro.items())}}
+    _escrever_atomico(alvo, json.dumps(dado, indent=2, ensure_ascii=False) + "\n")
+
+
+def _entrada_para(alvo: Path, tipo: str, entrada: Entrada | None) -> Entrada:
+    """A entrada que a escrita atualiza — nova quando o arquivo não existe.
+
+    Um arquivo que sumiu (ela o apagou) e volta a nascer começa do zero: o
+    «antes» da entrada velha falava de um arquivo que não existe mais.
+    """
+    if not alvo.exists():
+        return Entrada(tipo, nasceu=True)
+    if entrada is None or entrada.tipo != tipo:
+        return Entrada(tipo)
+    return copy.deepcopy(entrada)
+
+
+def _anotar_moldura(entrada: Entrada, *pecas: str) -> None:
+    for peca in pecas:
+        if peca not in entrada.moldura:
+            entrada.moldura.append(peca)
+
+
+def _por_por_cima(pares: Pares, ambiente: dict[str, str]) -> Pares:
+    """As nossas no lugar em que já estavam; as que faltam, no fim, em ordem.
+
+    O QUE JÁ ESTAVA LÁ FICA, na ordem em que estava — um `MANGOHUD=1` dela não
+    some porque o Hefesto passou por ali. Uma chave nossa repetida na lista
+    dela vira uma só.
+    """
+    fora: Pares = []
+    vistas: set[str] = set()
+    for chave, valor in pares:
+        if chave not in ambiente:
+            fora.append((chave, valor))
+        elif chave not in vistas:
+            vistas.add(chave)
+            fora.append((chave, ambiente[chave]))
+    fora += [(k, v) for k, v in sorted(ambiente.items()) if k not in vistas]
+    return fora
+
+
+@dataclass
+class _Contas:
+    tiradas: list[str] = field(default_factory=list)
+    devolvidas: list[str] = field(default_factory=list)
+    ficaram: list[str] = field(default_factory=list)
+
+
+def _devolver_chaves(pares: Pares, chaves: Iterable[str], entrada: Entrada,
+                     contas: _Contas) -> Pares:
+    """Tira as chaves nossas pedidas — só onde o valor ainda é NOSSO.
+
+    Um valor que ela mudou depois do Hefesto é dela e fica. O valor que estava
+    lá antes da primeira escrita volta; o que não existia volta a não existir.
+    A chave sai do registro nos dois casos: dali em diante ela é dela.
+    """
+    for chave in list(chaves):
+        marca = entrada.chaves.pop(chave)
+        nossos = set(marca.valores)
+        if not any(a == chave and b in nossos for a, b in pares):
+            if any(a == chave for a, _ in pares):
+                contas.ficaram.append(chave)
+            continue
+        pares = [(a, b) for a, b in pares if not (a == chave and b in nossos)]
+        contas.tiradas.append(chave)
+        if marca.antes is not None and not any(a == chave for a, _ in pares):
+            pares.append((chave, marca.antes))
+            contas.devolvidas.append(chave)
+    return pares
+
+
+def _tomar(pares: Pares, ambiente: dict[str, str], entrada: Entrada) -> Pares:
+    """A ESCRITA sobre os pares do arquivo, anotando no registro o que é nosso.
+
+    Uma chave nossa que saiu do ambiente sai do arquivo (o Modo Nativo não tem
+    `IGNORE`: um `IGNORE` congelado no Heroic deixava o jogo sem o controle
+    que o Modo Nativo existe para mostrar). As de agora entram por cima.
+    """
+    atual = dict(pares)
+    pares = _devolver_chaves(
+        pares, [k for k in entrada.chaves if k not in ambiente], entrada, _Contas())
+    for chave, valor in ambiente.items():
+        marca = entrada.chaves.get(chave)
+        if marca is None:
+            #: A PRIMEIRA VEZ. Só as que podem ser dela guardam o «antes»: as
+            #: demais são do produto, e um valor que já estava lá é presumido de
+            #: uma versão que escrevia sem registro (ver o cabeçalho).
+            antes = atual.get(chave) if chave in PODEM_SER_DELA else None
+            entrada.chaves[chave] = Marca([valor], antes)
+        elif marca.valores[-1] != valor:
+            marca.valores = (
+                [v for v in marca.valores if v != valor] + [valor])[-_VALORES_LEMBRADOS:]
+    return _por_por_cima(pares, ambiente)
+
+
+def _desfazer_pares(pares: Pares, entrada: Entrada) -> tuple[Pares, _Contas]:
+    """O DESFAZER sobre os pares: as do registro, e as do produto sem registro."""
+    contas = _Contas()
+    sem_registro = sorted({a for a, _ in pares
+                           if a in _DO_PRODUTO_SEM_REGISTRO and a not in entrada.chaves})
+    pares = [(a, b) for a, b in pares if a not in sem_registro]
+    contas.tiradas += sem_registro
+    pares = _devolver_chaves(pares, list(entrada.chaves), entrada, contas)
+    return pares, contas
+
+
+def _pares_do_heroic(raiz: dict[str, object]) -> Pares:
+    padroes = raiz.get("defaultSettings")
+    lista = padroes.get(CHAVE_DO_HEROIC) if isinstance(padroes, dict) else None
+    return [(str(x.get("key", "")), str(x.get("value", "")))
+            for x in (lista if isinstance(lista, list) else []) if isinstance(x, dict)]
+
+
+def _heroic_fundido(alvo: Path, ambiente: dict[str, str],
+                    entrada: Entrada | None = None) -> tuple[str, Entrada]:
+    """O `config.json` do Heroic com o ambiente fundido, e o registro dele.
+
+    Não escreve: é a conta. A lista é de `{key, value}`; o resto do arquivo
+    (a biblioteca, o caminho do Wine, a língua) passa intacto.
+    """
+    nova = _entrada_para(alvo, HEROIC_CONFIG, entrada)
     raiz = _ler_heroic(alvo) or {}
     padroes = raiz.get("defaultSettings")
     if not isinstance(padroes, dict):
         padroes = {}
-    velhas = padroes.get(CHAVE_DO_HEROIC)
-    lista: list[dict[str, str]] = [
-        {"key": str(x.get("key", "")), "value": str(x.get("value", ""))}
-        for x in (velhas if isinstance(velhas, list) else [])
-        if isinstance(x, dict) and str(x.get("key", "")) not in ambiente
-    ]
-    lista += [{"key": k, "value": v} for k, v in sorted(ambiente.items())]
-    padroes[CHAVE_DO_HEROIC] = lista
+        _anotar_moldura(nova, "defaultSettings", CHAVE_DO_HEROIC)
+    elif not isinstance(padroes.get(CHAVE_DO_HEROIC), list):
+        _anotar_moldura(nova, CHAVE_DO_HEROIC)
+    pares = _tomar(_pares_do_heroic({"defaultSettings": padroes}), ambiente, nova)
+    padroes[CHAVE_DO_HEROIC] = [{"key": k, "value": v} for k, v in pares]
     raiz["defaultSettings"] = padroes
-    _escrever_atomico(alvo, json.dumps(raiz, indent=2, ensure_ascii=False) + "\n")
+    return json.dumps(raiz, indent=2, ensure_ascii=False) + "\n", nova
+
+
+def _escrever_no_heroic(alvo: Path, ambiente: dict[str, str],
+                        entrada: Entrada | None = None) -> Entrada:
+    """Funde o ambiente em `defaultSettings.enviromentOptions` e grava.
+
+    O QUE JÁ ESTAVA LÁ FICA: as nossas substituem as de mesmo `key` e as
+    demais seguem na ordem em que estavam. Devolve o registro do arquivo.
+    """
+    texto, nova = _heroic_fundido(alvo, ambiente, entrada)
+    _escrever_atomico(alvo, texto)
+    return nova
 
 
 def _render_ini(cfg: configparser.ConfigParser) -> str:
@@ -406,21 +728,41 @@ def _ler_override(alvo: Path) -> configparser.ConfigParser | None:
     return cfg
 
 
-def _escrever_no_override(alvo: Path, ambiente: dict[str, str]) -> None:
-    """Põe o ambiente em `[Environment]`, preservando todo o resto do arquivo.
+def _repor_secao(cfg: configparser.ConfigParser, secao: str, pares: Pares) -> None:
+    """A seção com estes pares, nesta ordem — sem mudar o lugar dela no arquivo."""
+    for chave in list(cfg.options(secao)):
+        cfg.remove_option(secao, chave)
+    for chave, valor in pares:
+        cfg.set(secao, chave, valor)
 
-    É O MESMO ARQUIVO de `flatpak override --user --env=NOME=VALOR`, e por isso
-    ele continua reversível pelo caminho dela: `flatpak override --user --reset`
-    apaga o arquivo inteiro, e `--unset-env=NOME` tira uma linha.
-    """
+
+def _override_fundido(alvo: Path, ambiente: dict[str, str],
+                      entrada: Entrada | None = None) -> tuple[str, Entrada]:
+    """O override com o ambiente em `[Environment]`, e o registro dele. Não escreve."""
+    nova = _entrada_para(alvo, FLATPAK_OVERRIDE, entrada)
     cfg = _ler_override(alvo)
     if cfg is None:  # pragma: no cover - `escrever_a_estrada` já recusou antes
         raise RuntimeError(ILEGIVEL.format(arquivo=alvo.name))
     if not cfg.has_section("Environment"):
         cfg.add_section("Environment")
-    for nome, valor in sorted(ambiente.items()):
-        cfg.set("Environment", nome, valor)
-    _escrever_atomico(alvo, _render_ini(cfg))
+        _anotar_moldura(nova, "Environment")
+    pares = _tomar(list(cfg.items("Environment")), ambiente, nova)
+    _repor_secao(cfg, "Environment", pares)
+    return _render_ini(cfg), nova
+
+
+def _escrever_no_override(alvo: Path, ambiente: dict[str, str],
+                          entrada: Entrada | None = None) -> Entrada:
+    """Põe o ambiente em `[Environment]`, preservando todo o resto do arquivo.
+
+    É O MESMO ARQUIVO de `flatpak override --user --env=NOME=VALOR`, e por isso
+    ele continua reversível pelo caminho dela: `flatpak override --user --reset`
+    apaga o arquivo inteiro, e `--unset-env=NOME` tira uma linha. Devolve o
+    registro do arquivo.
+    """
+    texto, nova = _override_fundido(alvo, ambiente, entrada)
+    _escrever_atomico(alvo, texto)
+    return nova
 
 
 def frase_do_feito(plano: Plano) -> str:
@@ -475,11 +817,24 @@ def escrever_a_estrada(plano: Plano) -> str:
                    else _ler_override(estrada.arquivo))
         if legivel is None:
             raise RuntimeError(ILEGIVEL.format(arquivo=estrada.arquivo.name))
+    lido = ler_registro(plano.pasta_do_ambiente)
+    registro = dict(lido)
+    textos: list[tuple[Path, str]] = []
     for estrada in plano.estradas:
-        if estrada.tipo == HEROIC_CONFIG:
-            _escrever_no_heroic(estrada.arquivo, plano.ambiente)
-        else:
-            _escrever_no_override(estrada.arquivo, plano.ambiente)
+        fundir = _heroic_fundido if estrada.tipo == HEROIC_CONFIG else _override_fundido
+        texto, entrada = fundir(estrada.arquivo, plano.ambiente,
+                                registro.get(str(estrada.arquivo)))
+        registro[str(estrada.arquivo)] = entrada
+        textos.append((estrada.arquivo, texto))
+    #: O REGISTRO VAI ANTES DOS ARQUIVOS, e a ordem é a do lado seguro: uma
+    #: escrita que cair no meio deixa o registro dizendo «nosso» sobre um valor
+    #: que ainda não chegou — e o desfazer, que só tira valor nosso, não tira
+    #: nada que não esteja lá. Na ordem inversa, o valor chegaria sem ninguém
+    #: saber de quem é.
+    if registro != lido:
+        gravar_registro(registro, plano.pasta_do_ambiente)
+    for alvo, texto in textos:
+        _escrever_atomico(alvo, texto)
     return frase_do_feito(plano)
 
 
@@ -555,3 +910,205 @@ def curar_todas_as_estradas(
             continue
         escritos.append(chave)
     return tuple(escritos)
+
+
+# ── O DESFAZER: o uninstall tira exatamente o que é nosso ─────────────────
+
+
+@dataclass
+class Desfeito:
+    """O que o desfazer fez num arquivo de lançador."""
+
+    arquivo: Path
+    tiradas: list[str] = field(default_factory=list)
+    devolvidas: list[str] = field(default_factory=list)
+    ficaram: list[str] = field(default_factory=list)
+    #: O arquivo nasceu com o Hefesto, e sem o que é nosso ficou vazio: saiu.
+    apagado: bool = False
+    #: Não abriu, ou não gravou: não se reescreve por cima (ver
+    #: :func:`_ler_heroic`), e o registro fica para a próxima vez.
+    erro: str = ""
+
+
+def estradas_possiveis(lar: Path) -> list[tuple[Path, str]]:
+    """Todo arquivo de lançador em que a cura pode ter escrito, e que existe.
+
+    É a rede de quem escreveu SEM registro: o `config.json` nas duas casas do
+    Heroic, e o override de cada `app-id` dos cartões com estrada — instalado
+    ou não, porque desinstalar o lançador pelo Flatpak não leva o override.
+    """
+    achados: list[tuple[Path, str]] = []
+    for rel in _PASTAS_DO_HEROIC:
+        alvo = lar / rel / "config.json"
+        if alvo.is_file():
+            achados.append((alvo, HEROIC_CONFIG))
+    raiz = lar / _PASTA_DOS_OVERRIDES
+    for chave, atalhos in cartoes_com_estrada():
+        if chave == "heroic":  # a estrada dele é o `config.json` (estradas_do_cartao)
+            continue
+        for app_id in atalhos:
+            alvo = raiz / app_id
+            if "." in app_id and alvo.is_file():
+                achados.append((alvo, FLATPAK_OVERRIDE))
+    return achados
+
+
+def _desfazer_no_heroic(alvo: Path, entrada: Entrada, feito: Desfeito) -> str | None:
+    """O texto novo do `config.json` sem o que é nosso; ``""`` = apagar; ``None`` = igual."""
+    raiz = _ler_heroic(alvo)
+    if raiz is None:
+        feito.erro = "não consegui ler — não reescrevo por cima"
+        return None
+    pares = _pares_do_heroic(raiz)
+    novos, contas = _desfazer_pares(pares, copy.deepcopy(entrada))
+    feito.tiradas, feito.devolvidas, feito.ficaram = (
+        contas.tiradas, contas.devolvidas, contas.ficaram)
+    mudou = novos != pares
+    padroes = raiz.get("defaultSettings")
+    if isinstance(padroes, dict):
+        if isinstance(padroes.get(CHAVE_DO_HEROIC), list):
+            if mudou:
+                padroes[CHAVE_DO_HEROIC] = [{"key": k, "value": v} for k, v in novos]
+            if CHAVE_DO_HEROIC in entrada.moldura and not novos:
+                del padroes[CHAVE_DO_HEROIC]
+                mudou = True
+        if "defaultSettings" in entrada.moldura and not padroes:
+            del raiz["defaultSettings"]
+            mudou = True
+    if entrada.nasceu and not raiz:
+        return ""
+    return json.dumps(raiz, indent=2, ensure_ascii=False) + "\n" if mudou else None
+
+
+def _desfazer_no_override(alvo: Path, entrada: Entrada, feito: Desfeito) -> str | None:
+    """O override sem o que é nosso; ``""`` = apagar; ``None`` = igual."""
+    cfg = _ler_override(alvo)
+    if cfg is None:
+        feito.erro = "não consegui ler — não reescrevo por cima"
+        return None
+    tem = cfg.has_section("Environment")
+    pares: Pares = list(cfg.items("Environment")) if tem else []
+    novos, contas = _desfazer_pares(pares, copy.deepcopy(entrada))
+    feito.tiradas, feito.devolvidas, feito.ficaram = (
+        contas.tiradas, contas.devolvidas, contas.ficaram)
+    mudou = novos != pares
+    if tem:
+        _repor_secao(cfg, "Environment", novos)
+        if "Environment" in entrada.moldura and not novos:
+            cfg.remove_section("Environment")
+            mudou = True
+    if entrada.nasceu and not cfg.sections():
+        return ""
+    return _render_ini(cfg) if mudou else None
+
+
+def _desfazer_no_arquivo(alvo: Path, entrada: Entrada) -> Desfeito:
+    feito = Desfeito(alvo)
+    if not alvo.is_file():
+        return feito
+    desfazer = _desfazer_no_heroic if entrada.tipo == HEROIC_CONFIG else _desfazer_no_override
+    texto = desfazer(alvo, entrada, feito)
+    try:
+        if texto == "":
+            alvo.unlink()
+            feito.apagado = True
+        elif texto is not None:
+            _escrever_atomico(alvo, texto)
+    except OSError as erro:
+        feito.erro = f"não consegui gravar ({erro.strerror or erro})"
+    return feito
+
+
+def desfazer_as_estradas(pastas_do_ambiente: Iterable[Path],
+                         lar: Path | None = None) -> tuple[list[Desfeito], bool]:
+    """Tira de todo lançador o que o Hefesto escreveu. ``(o que fez, completo)``.
+
+    Os arquivos vêm do registro de cada pasta (a do ``XDG_STATE_HOME`` e a do
+    lar, quando são duas) e da rede de :func:`estradas_possiveis`. Completo, o
+    registro sai; com um arquivo que não abriu, o que é dele fica anotado na
+    primeira pasta, para o desfazer de novo — e a resposta é ``False``.
+    """
+    lar = Path.home() if lar is None else lar
+    pastas = list(pastas_do_ambiente)
+    registro: dict[str, Entrada] = {}
+    for pasta in pastas:
+        for caminho, entrada in ler_registro(pasta).items():
+            registro.setdefault(caminho, entrada)
+    alvos = dict(registro)
+    for arquivo, tipo in estradas_possiveis(lar):
+        alvos.setdefault(str(arquivo), Entrada(tipo))
+    feitos: list[Desfeito] = []
+    sobrou: dict[str, Entrada] = {}
+    for caminho, entrada in alvos.items():
+        feito = _desfazer_no_arquivo(Path(caminho), entrada)
+        feitos.append(feito)
+        if feito.erro and caminho in registro:
+            sobrou[caminho] = entrada
+    for i, pasta in enumerate(pastas):
+        with contextlib.suppress(OSError):
+            gravar_registro(sobrou if i == 0 else {}, pasta)
+    return feitos, not any(f.erro for f in feitos)
+
+
+def frase_do_desfeito(feito: Desfeito) -> str:
+    """A linha que o uninstall diz sobre um arquivo — ``""`` quando não houve nada."""
+    partes: list[str] = []
+    if feito.erro:
+        partes.append(feito.erro)
+    if feito.tiradas:
+        partes.append("tirei " + ", ".join(feito.tiradas))
+    if feito.devolvidas:
+        partes.append("devolvi o seu valor de antes em " + ", ".join(feito.devolvidas))
+    if feito.ficaram:
+        partes.append("ficaram as que você mudou depois do Hefesto: "
+                      + ", ".join(feito.ficaram))
+    if feito.apagado:
+        partes.append("o arquivo nasceu com o Hefesto e saiu junto")
+    return f"{feito.arquivo}: " + "; ".join(partes) if partes else ""
+
+
+def _pastas_do_ambiente_padrao(lar: Path) -> list[Path]:
+    """As `launch_env` desta casa pela regra do XDG — e a do lar, se for outra.
+
+    Só biblioteca padrão: é a conta que o `uninstall.sh` também faz.
+    """
+    from hefesto_dualsense4unix.utils import identidade
+
+    slug = identidade.atual().slug
+    xdg = os.environ.get("XDG_STATE_HOME", "").strip()
+    estados = [Path(xdg)] if os.path.isabs(xdg) else []
+    estados.append(lar / ".local/state")
+    fora: list[Path] = []
+    for estado in estados:
+        pasta = estado / slug / "launch_env"
+        if pasta not in fora:
+            fora.append(pasta)
+    return fora
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """`--desfazer`: o passo do `uninstall.sh`. Sai 0 completo, 1 com sobra."""
+    p = argparse.ArgumentParser(
+        prog="cura_por_estrada.py",
+        description="Tira dos lançadores (Heroic, overrides do Flatpak) o "
+                    "ambiente que o Hefesto escreveu — só o que é dele.")
+    p.add_argument("--desfazer", action="store_true", required=True,
+                   help="tira o que o Hefesto pôs e devolve o que estava lá")
+    p.add_argument("--lar", default=None, help="o lar (padrão: $HOME)")
+    p.add_argument("--pasta-do-ambiente", action="append", default=None,
+                   help="a pasta launch_env com o registro (repita para as duas)")
+    a = p.parse_args(argv)
+    lar = Path(a.lar) if a.lar else Path.home()
+    pastas = ([Path(x) for x in a.pasta_do_ambiente] if a.pasta_do_ambiente
+              else _pastas_do_ambiente_padrao(lar))
+    feitos, completo = desfazer_as_estradas(pastas, lar)
+    linhas = [f for f in (frase_do_desfeito(x) for x in feitos) if f]
+    for linha in linhas:
+        print(linha)
+    if not linhas:
+        print("nenhum ambiente do Hefesto nos lançadores")
+    return 0 if completo else 1
+
+
+if __name__ == "__main__":  # pragma: no cover - passo do uninstall.sh
+    sys.exit(main())
