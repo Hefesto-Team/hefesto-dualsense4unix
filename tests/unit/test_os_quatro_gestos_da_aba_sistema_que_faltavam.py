@@ -576,7 +576,7 @@ LER_A_TELA = r"""
   const b = document.querySelector('[data-gesto="corrigir-modo"]');
   const r = document.querySelector('[data-gesto="reiniciar"]');
   const alvos = {};
-  for(const g of ['retomar','reiniciar','autostart','atualizar']){
+  for(const g of ['reiniciar','autostart','atualizar']){
     const e = document.querySelector('[data-gesto="' + g + '"]');
     alvos[g] = e ? {verde: e.classList.contains('hef-deu-certo'),
                     em_voo: e.classList.contains('hef-em-voo')} : null;
@@ -598,7 +598,7 @@ LER_A_TELA = r"""
 
 CLICAR = r"""
 (function(){
-  const nomes = ['retomar','reiniciar','autostart','atualizar'];
+  const nomes = ['reiniciar','autostart','atualizar'];
   let n = 0;
   for(const g of nomes){
     const e = document.querySelector('[data-gesto="' + g + '"]');
@@ -640,8 +640,10 @@ def na_tela() -> dict:
                     dirs_exist_ok=True)
     shutil.copy2(BANCADA, berco / "paginas" / PAGINA)  # (noqa-acento) PASTA
 
-    chaves = [(PAGINA, g) for g in ("retomar", "reiniciar", "autostart",
-                                    "atualizar")]
+    # O `retomar` SAIU EM 25/09/2026: a aba em três seções o juntou ao
+    # «Parar o serviço» num botão só (`parar-ou-retomar`), que pede
+    # confirmação e não é um sucesso calado de um clique.
+    chaves = [(PAGINA, g) for g in ("reiniciar", "autostart", "atualizar")]
     guardado = (hv.onde.PUBLICADO, hv.mesa_viva.estado_do_daemon,
                 hv.pacotes.PACOTES.get(PAGINA),
                 {c: hv.pacotes.GESTOS.get(c) for c in chaves})
@@ -651,10 +653,10 @@ def na_tela() -> dict:
     # OS DUBLÊS: três voltam sem levantar (o sucesso calado) e um RECUSA. Um
     # dublê que só sabe passar não é régua — e é a recusa que prova que a
     # piscada verde não é um carimbo automático do pouso.
-    for pagina, nome in chaves[:3]:
+    for pagina, nome in chaves[:2]:
         hv.pacotes.GESTOS[(pagina, nome)] = (  # type: ignore[assignment]
             lambda ctx, o, p: None)
-    hv.pacotes.GESTOS[chaves[3]] = (  # type: ignore[assignment]
+    hv.pacotes.GESTOS[chaves[2]] = (  # type: ignore[assignment]
         lambda ctx, o, p: (_ for _ in ()).throw(RuntimeError("recusei de propósito")))
 
     carga = {"o_que": {a09.CAMPO_DO_MODO_AVULSO: a09.MODO_A_CORRIGIR}}
@@ -802,8 +804,8 @@ class TestNaTelaViva:
         `.chave` do interruptor, e a folha da casa pinta `outline`, que qualquer
         elemento aceita.
         """
-        assert na_tela["cliques"] == "4", na_tela["cliques"]
-        for nome in ("retomar", "reiniciar", "autostart"):
+        assert na_tela["cliques"] == "3", na_tela["cliques"]
+        for nome in ("reiniciar", "autostart"):
             visto = na_tela["depois-do-pouso"]["alvos"][nome]
             assert visto is not None, f"{nome} não está na página"
             assert visto["verde"] is True, (
