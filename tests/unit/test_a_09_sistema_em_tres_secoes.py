@@ -319,3 +319,33 @@ def test_a_linha_do_registro_dobra_e_nao_sai_pela_direita() -> None:
     corpo = re.sub(r"\s+", "", regra.group(1))
     assert "white-space:pre-wrap" in corpo, corpo
     assert "overflow-wrap:anywhere" in corpo, corpo
+
+
+def test_o_diario_pede_so_a_linha_do_daemon(a09, monkeypatch) -> None:
+    """O diário lê `--output cat`: sem o nome da máquina e sem o segundo carimbo.
+
+    Conferência de 25/09/2026: o painel saía em `short-iso`, e cada linha
+    começava com a data, o NOME DA MÁQUINA e `unidade[pid]:` antes do carimbo
+    que o daemon já escreve — o «Copiar» levava o nome da máquina para o
+    relato, e a linha dobrava duas vezes antes de chegar à mensagem.
+
+    MORDIDA: volte o `--output` do `_diario` para `short-iso`.
+    """
+    import subprocess
+
+    pedidos: list[list[str]] = []
+
+    class _Saida:
+        stdout = "2026-09-25T22:11:08.392690 [info     ] daemon_pronto uniq=aabbcc1234ff"
+        stderr = ""
+
+    def _run(argv, **_k):
+        pedidos.append(list(argv))
+        return _Saida()
+
+    monkeypatch.setattr(subprocess, "run", _run)
+    texto = a09._diario()
+    assert pedidos and pedidos[0][0] == "journalctl", pedidos
+    argv = pedidos[0]
+    assert argv[argv.index("--output") + 1] == "cat", argv
+    assert texto.endswith("uniq=aabbcc0000ff"), texto
