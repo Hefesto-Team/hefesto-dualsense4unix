@@ -71,15 +71,6 @@ logger = get_logger(__name__)
 
 DEFAULT_POLL_HZ = 60
 
-#: Os campos da saída por controle que a economia põe no teto — a luz, o
-#: degrau das luzes de número e os dois gatilhos (`profiles.schema.
-#: A_ECONOMIA_EM_CADA_PECA`; a vibração não é campo da saída). São os que o
-#: controle que ENTRA na economia solta da camada da usuária
-#: (`Daemon.reaplicar_se_a_economia_mudou`).
-CAMPOS_DO_TETO_DA_ECONOMIA: Final[tuple[str, ...]] = (
-    "led", "player_led_brightness", "trigger_left", "trigger_right",
-)
-
 #: Período de assentamento (settling/grace) pós-conexão em segundos
 #: (BUG-DAEMON-CONNECT-GHOST-INPUT-01). Enquanto ativo, o poll loop continua
 #: lendo estado/bateria e publicando STATE_UPDATE, mas NÃO despacha
@@ -1632,33 +1623,13 @@ class Daemon:
 
         Em Modo Nativo não reaplica: o controle está com o jogo, e a saída do
         nativo já reaplica o perfil — com a economia nova.
-
-        O TETO FICA POR CIMA DA CAMADA DELA (26/09/2026,
-        A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01). A reativação `system` não solta
-        a camada da usuária, e o que o «Aplicar» deixou nela atravessava: com
-        a economia ligada DEPOIS de um «Aplicar», o P2 ficava a 70% e no
-        Médio. Quem ENTRA na economia solta, só nele, os campos que ela põe no
-        teto (:data:`CAMPOS_DO_TETO_DA_ECONOMIA`), e a ativação o publica na
-        camada do PERFIL com o teto — o mesmo lugar em que o «Aplicar» põe o
-        controle em economia (`DraftApplier._publicar_a_economia`), pelo mesmo
-        dono do teto (`manager._perfil_na_economia`). O que ela escolheu está
-        no perfil (as abas gravam no clique), e é o que a ativação republica.
         """
         from hefesto_dualsense4unix.profiles.schema import economia_da_declaracao
-
-        mesa_antes, ligados_antes = economia_da_declaracao(antes)
-        mesa, ligados = economia_da_declaracao(self._maquina)
-        if (mesa_antes, ligados_antes) == (mesa, ligados):
+        if economia_da_declaracao(antes) == economia_da_declaracao(self._maquina):
             return False
         if self._native_mode:
             return False
-        entraram: frozenset[str] | None = (
-            None if (mesa and not mesa_antes)
-            else (frozenset() if mesa else ligados - ligados_antes))
-        soltar = getattr(self.controller, "clear_user_output_overrides", None)
-        if (entraram is None or entraram) and callable(soltar):
-            with contextlib.suppress(Exception):
-                soltar(entraram, CAMPOS_DO_TETO_DA_ECONOMIA)
+        _soltar_o_teto_de_quem_entra(self, antes)  # o teto fica por cima dela
         self._reapply_last_profile()
         return True
 
@@ -6215,6 +6186,55 @@ class Daemon:
         if not callable(garantir):
             return HUB_AUSENTE
         return garantir()
+
+
+#: Os campos da saída por controle que a economia põe no teto — a luz, o
+#: degrau das luzes de número e os dois gatilhos (`profiles.schema.
+#: A_ECONOMIA_EM_CADA_PECA`; a vibração não é campo da saída).
+CAMPOS_DO_TETO_DA_ECONOMIA: Final[tuple[str, ...]] = (
+    "led", "player_led_brightness", "trigger_left", "trigger_right",
+)
+
+
+def _soltar_o_teto_de_quem_entra(daemon: Any, antes: Any) -> None:
+    """Solta da camada da usuária o teto de quem ENTRA na economia.
+
+    O TETO FICA POR CIMA DA CAMADA DELA (26/09/2026,
+    A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01). A reativação `system` de
+    :meth:`Daemon.reaplicar_se_a_economia_mudou` não solta a camada da
+    usuária, e o que o «Aplicar» deixou nela atravessava: com a economia
+    ligada DEPOIS de um «Aplicar», o P2 ficava a 70% e no Médio. Quem entra na
+    economia solta, só nele, os campos que ela põe no teto
+    (:data:`CAMPOS_DO_TETO_DA_ECONOMIA`), e a ativação o publica na camada do
+    PERFIL com o teto — o mesmo lugar em que o «Aplicar» põe o controle em
+    economia (`DraftApplier._publicar_a_economia`), pelo mesmo dono do teto
+    (`manager._perfil_na_economia`). O que ela escolheu está no perfil (as
+    abas gravam no clique), e é o que a ativação republica.
+
+    A «Bateria Longa» da mesa que liga agora solta todo controle; a que já
+    estava ligada não solta ninguém (todos já estavam no teto). Quem SAI da
+    economia não solta nada: o ajuste dela volta a valer por cima.
+
+    Mora no fim do módulo, e o método a chama numa linha que ocupou uma linha
+    em branco, de propósito: as citações `arquivo:linha` deste arquivo (no
+    `docs/data/mapa-controles.csv` e em outros módulos) não andam por causa
+    desta cura.
+    """
+    from hefesto_dualsense4unix.profiles.schema import economia_da_declaracao
+
+    mesa_antes, ligados_antes = economia_da_declaracao(antes)
+    mesa, ligados = economia_da_declaracao(daemon._maquina)
+    if mesa and mesa_antes:
+        return
+    entraram: frozenset[str] | None = None if mesa else ligados - ligados_antes
+    if entraram is not None and not entraram:
+        return
+    # `getattr` duplo: o gancho do `machine.declare` roda também num daemon
+    # ainda sem controle (e na régua do gancho, que não o monta).
+    soltar = getattr(getattr(daemon, "controller", None), "clear_user_output_fields", None)
+    if callable(soltar):
+        with contextlib.suppress(Exception):
+            soltar(entraram, CAMPOS_DO_TETO_DA_ECONOMIA)
 
 
 class _HubAusente:
