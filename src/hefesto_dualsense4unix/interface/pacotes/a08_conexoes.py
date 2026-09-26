@@ -1172,7 +1172,7 @@ def _card_da_ordem(ordem: Any, n: int = 1) -> str:
     """A linha de UMA ordem de serviço: a instrução, e o de→para quando há destino.
 
     SEGUNDA GRAFIA COM DATA DE MORTE — ver :func:`_dono_sabe_desenhar_a_ordem`.
-    A instrução é a da própria ordem (`acao`), que já nomeia o aparelho; a caixa
+    A instrução é a da própria ordem (`acao`), que nomeia o aparelho; a caixa  (noqa-acento)
     da esquerda é o `alvo.caminho`, o endereço de barramento que é *"a palavra
     comum entre este módulo, o censo e o mapa"*. O título da caixa mora FORA da
     coluna (`aba08`, `.sugestao > .ordem-tit`), porque o tique repinta a coluna
@@ -1204,7 +1204,7 @@ def _instrucao_do_item(item: Any) -> str:
     com ou sem destino); a conferência, pela cura; sem as duas, a medição.
     """
     ordem = getattr(item, "ordem", None)
-    for texto in (getattr(ordem, "acao", None), getattr(item, "cura", None),
+    for texto in (getattr(ordem, "acao", None), getattr(item, "cura", None),  # (noqa-acento)
                   getattr(item, "porque", None)):
         if str(texto or "").strip():
             return str(texto).strip()
