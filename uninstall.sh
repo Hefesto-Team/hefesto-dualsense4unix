@@ -181,6 +181,18 @@ readonly ENVIRONMENTD_GAMEMODE="${HOME}/.config/environment.d/91-hefesto-dualsen
 readonly ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly VENV_HEFESTO="${ROOT_DIR}/.venv/bin/hefesto-dualsense4unix"
 
+# AS DUAS PASTAS DE ESTADO (O-UNINSTALL-NAO-DEIXA-RASTRO-01, 25/09/2026). O
+# produto grava o estado pela regra do XDG (o `platformdirs`, o `storm_watch.sh`,
+# o `proton_pin`, o `camadas_vulkan`): quem move o XDG_STATE_HOME o tem lá. E o
+# install.sh grava alguns arquivos no lar, sem o XDG (o gabinete.json, o
+# teclado-na-tela.conf, o broker-owner.conf). O uninstall olha as DUAS — a do
+# XDG primeiro, a do lar quando for outra. Sem XDG_STATE_HOME, é uma só.
+readonly ESTADO_DO_XDG="${XDG_STATE_HOME:-${HOME}/.local/state}/${APP_ID}"
+ESTADOS_DO_HEFESTO=("${ESTADO_DO_XDG}")
+if [[ "${HOME}/.local/state/${APP_ID}" != "${ESTADO_DO_XDG}" ]]; then
+    ESTADOS_DO_HEFESTO+=("${HOME}/.local/state/${APP_ID}")
+fi
+
 # Default: remove udev rules + modules-load (espelha install.sh, que aplica por default).
 # Ver BUG-UNINSTALL-UDEV-DEFAULT-01 no cabeçalho.
 REMOVE_UDEV=1
@@ -607,10 +619,13 @@ rm -f "${STORM_SCRIPT_TARGET}"
 # estiver VAZIO. Resultado medido: ~/.local/share/hefesto-dualsense4unix/
 # sobrevivia ao wipe. `rmdir` sem -p e best-effort: se alguém pôs algo lá, fica.
 rmdir "${HOME}/.local/share/hefesto-dualsense4unix/scripts" 2>/dev/null || true
-if [[ -L "${HOME}/.local/state/hefesto-dualsense4unix/storm.log" ]]; then
-    log "removendo symlink de compat storm.log→kernel.log (o kernel.log fica — é seu histórico)"
-    rm -f "${HOME}/.local/state/hefesto-dualsense4unix/storm.log"
-fi
+# O symlink nasce do `storm_watch.sh`, que grava pelo XDG_STATE_HOME: as duas pastas.
+for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
+    if [[ -L "${_estado}/storm.log" ]]; then
+        log "removendo symlink de compat storm.log→kernel.log (o kernel.log fica — é seu histórico)"
+        rm -f "${_estado}/storm.log"
+    fi
+done
 
 # Guard do Steam Input (path + timer, --user) — FEAT-STEAM-INPUT-SELF-HEAL-01
 log "removendo guard do Steam Input (path/timer/service --user)"
@@ -628,9 +643,12 @@ if [[ -e /usr/share/applications/dsx-dualsense.desktop ]]; then
     sudo rm -f /usr/share/applications/dsx-dualsense.desktop 2>/dev/null || true
 fi
 
+# O `-L` junto do `-e` (O-UNINSTALL-NAO-DEIXA-RASTRO-01): o BIN_SYMLINK aponta
+# para a `.venv`, e um uninstall que roda de novo — ou depois de a `.venv` sair —
+# acha o link PENDURADO, que o `-e` não vê. Ele ficava no PATH para sempre.
 for path in "${DESKTOP_TARGET}" "${AUTOSTART_TARGET}" "${ICON_TARGET}" \
             "${LAUNCHER}" "${BIN_SYMLINK}" "${CHAVE_BIN}"; do
-    if [[ -e "${path}" ]]; then
+    if [[ -e "${path}" || -L "${path}" ]]; then
         log "removendo ${path}"
         rm -f "${path}"
     else
@@ -715,6 +733,32 @@ if [[ -f "${WIREPLUMBER_DROPIN_ACORDADO}" ]]; then
     log "removendo drop-in WirePlumber (nunca-dorme): ${WIREPLUMBER_DROPIN_ACORDADO}"
     rm -f "${WIREPLUMBER_DROPIN_ACORDADO}"
     systemctl --user restart wireplumber >/dev/null 2>&1 || true
+fi
+
+# OS MESMOS QUATRO NO XDG_CONFIG_HOME (O-UNINSTALL-NAO-DEIXA-RASTRO-01). Os de
+# cima são os do lar, onde o install e o `fix_wireplumber_default_source.sh`
+# gravam; o produto grava pelo `utils/xdg_paths.wireplumber_config_dir`, que
+# honra o XDG_CONFIG_HOME — e o WirePlumber também lê de lá. Mesma regra: o 51
+# marcado como «recriado manualmente» fica.
+_wp_do_xdg="${XDG_CONFIG_HOME:-${HOME}/.config}/wireplumber/wireplumber.conf.d"
+if [[ "${_wp_do_xdg}" != "${HOME}/.config/wireplumber/wireplumber.conf.d" ]]; then
+    for _wp in 51-hefesto-dualsense-no-default-source.conf \
+               52-hefesto-dualsense-disable-source.conf \
+               53-hefesto-dualsense-disable-output.conf \
+               54-hefesto-dualsense-alto-falante-nunca-dorme.conf; do
+        [[ -f "${_wp_do_xdg}/${_wp}" ]] || continue
+        # Para uma variável, e não `| grep -q`: sob `pipefail` o cano devolve
+        # 141 quando ACHA (test_o_pipefail_nao_transforma_acerto_em_falha).
+        _cabecalho="$(head -5 "${_wp_do_xdg}/${_wp}" 2>/dev/null || true)"
+        if [[ "${_wp}" == 51-* ]] \
+                && grep -qiE 'recriado manualmente|workaround|standalone' <<<"${_cabecalho}"; then
+            log "preservando drop-in WirePlumber (marker 'recriado manualmente' no header): ${_wp_do_xdg}/${_wp}"
+            continue
+        fi
+        log "removendo drop-in WirePlumber: ${_wp_do_xdg}/${_wp}"
+        rm -f "${_wp_do_xdg}/${_wp}"
+        systemctl --user restart wireplumber >/dev/null 2>&1 || true
+    done
 fi
 
 # DROPIN-AMBIGUO-01: a marca do gesto do microfone sai junto do 51 (acima).
@@ -1874,7 +1918,9 @@ for _fp_id in "${HEFESTO_FLATPAK_APP_IDS[@]}"; do
     [[ -d "${_fp_home}" ]] || continue
     rm -rf "${_fp_home}/cache" 2>/dev/null || true
     if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
-        _fp_backup="${HOME}/.config/hefesto-dualsense4unix.backup-$(date +%s)-flatpak-${_fp_id}"
+        # O backup mora onde o produto procura a configuração (o XDG), que é
+        # onde o «limpa?» o reconhece como de propósito.
+        _fp_backup="${XDG_CONFIG_HOME:-${HOME}/.config}/hefesto-dualsense4unix.backup-$(date +%s)-flatpak-${_fp_id}"
         mkdir -p "${_fp_backup}"
         cp -a "${_fp_home}/." "${_fp_backup}/" 2>/dev/null || true
         log "backup do sandbox ${_fp_id} em ${_fp_backup}"
@@ -1899,15 +1945,31 @@ done
 # Configs e dados do user. PRESERVADOS por padrão; --purge-config apaga (com
 # backup antes). Cobre o caminho atual (longo) E o legado curto (~/.config/
 # hefesto), onde versões pré-rename gravavam perfis/sessão/preferências.
+#
+# E COBRE O XDG (O-UNINSTALL-NAO-DEIXA-RASTRO-01, 25/09/2026): o produto lê e
+# grava a configuração, os dados e o cache pelo `platformdirs`, que honra o
+# XDG_CONFIG_HOME, o XDG_DATA_HOME e o XDG_CACHE_HOME; o install grava parte no
+# lar. As duas casas entram (a repetida some na segunda volta, porque a pasta
+# já saiu), e o backup mora onde o produto procura a configuração — é lá que o
+# «limpa?» o reconhece como de propósito.
+_cfg_do_xdg="${XDG_CONFIG_HOME:-${HOME}/.config}"
+_dados_do_xdg="${XDG_DATA_HOME:-${HOME}/.local/share}"
+_cache_do_xdg="${XDG_CACHE_HOME:-${HOME}/.cache}"
 if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
-    backup_dir="${HOME}/.config/hefesto-dualsense4unix.backup-$(date +%s)"
+    backup_dir="${_cfg_do_xdg}/hefesto-dualsense4unix.backup-$(date +%s)"
     backed_up=0
     for path in \
+        "${_cfg_do_xdg}/hefesto-dualsense4unix" \
         "${HOME}/.config/hefesto-dualsense4unix" \
+        "${_dados_do_xdg}/hefesto-dualsense4unix" \
         "${HOME}/.local/share/hefesto-dualsense4unix" \
+        "${_cache_do_xdg}/hefesto-dualsense4unix" \
         "${HOME}/.cache/hefesto-dualsense4unix" \
+        "${_cfg_do_xdg}/hefesto" \
         "${HOME}/.config/hefesto" \
+        "${_dados_do_xdg}/hefesto" \
         "${HOME}/.local/share/hefesto" \
+        "${_cache_do_xdg}/hefesto" \
         "${HOME}/.cache/hefesto"; do
         if [[ -d "$path" ]]; then
             mkdir -p "${backup_dir}"
@@ -1990,6 +2052,43 @@ else
     fi
 fi
 
+# O AMBIENTE NOS OUTROS LANÇADORES (O-UNINSTALL-NAO-DEIXA-RASTRO-01, 25/09/2026).
+# O daemon escreve o ambiente da ponte no `config.json` do Heroic e no override
+# do Flatpak de cada lançador (a carona de `integrations/cura_por_estrada`), e
+# este script não os visitava. Era o pior rastro da casa: o
+# SDL_GAMECONTROLLER_IGNORE_DEVICES esconde o DualSense físico, e o Hefesto que
+# o servia acabou de sair — os jogos do Heroic, do Lutris e dos emuladores
+# abririam SEM controle. Quem escreveu é quem sabe o que escreveu: o registro
+# ao lado do `default.env` diz, arquivo por arquivo, o que é nosso, e o
+# `--desfazer` tira só isso (o MANGOHUD dela fica; o valor que ela tinha antes
+# volta; o arquivo que nasceu com o Hefesto sai). Roda ANTES de o launch_env
+# sair, porque o registro mora nele; com um arquivo que não abriu, ou sem
+# python3, o registro FICA para o desfazer de depois.
+CURA_POR_ESTRADA_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/cura_por_estrada.py"
+_estradas_desfeitas=0
+if [[ -f "${CURA_POR_ESTRADA_PY}" ]] && command -v python3 >/dev/null 2>&1; then
+    log "tirando dos lançadores (Heroic, overrides do Flatpak) só o ambiente que o Hefesto escreveu"
+    _args_das_estradas=(--desfazer --lar "${HOME}")
+    for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
+        _args_das_estradas+=(--pasta-do-ambiente "${_estado}/launch_env")
+    done
+    _rc_das_estradas=0
+    _saida_das_estradas="$(python3 "${CURA_POR_ESTRADA_PY}" "${_args_das_estradas[@]}" 2>&1)" \
+        || _rc_das_estradas=$?
+    while IFS= read -r _linha; do
+        if [[ -n "${_linha}" ]]; then log "  ${_linha}"; fi
+    done <<<"${_saida_das_estradas}"
+    if [[ "${_rc_das_estradas}" -eq 0 ]]; then
+        _estradas_desfeitas=1
+    else
+        log "  ADIADO: feche o lançador e rode: python3 ${CURA_POR_ESTRADA_PY} --desfazer"
+        log "  (o registro do que é do Hefesto fica em launch_env/estradas.json até lá)"
+    fi
+else
+    log "cura_por_estrada.py ausente ou sem python3 — o ambiente do Hefesto pode ter ficado no Heroic e nos overrides do Flatpak"
+    log "  (o registro fica em launch_env/estradas.json; rode depois: python3 <repositório>/src/hefesto_dualsense4unix/integrations/cura_por_estrada.py --desfazer)"
+fi
+
 # PLAT-01: destrava o CompatToolMapping do Proton pinado — SÓ o que NÓS
 # escrevemos (registro em ~/.local/state/.../proton-pin-lock.json). Roda ANTES
 # do strip das Launch Options DE PROPÓSITO: o strip (--stop-steam) REABRE a
@@ -2051,10 +2150,13 @@ if [[ -e "${CAMADAS_TARGET}" ]]; then
     log "removendo curador de camadas ${CAMADAS_TARGET}"
     rm -f "${CAMADAS_TARGET}"
 fi
-if [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/camadas-vulkan.json" ]]; then
-    log "removendo o registro das sobreposições (~/.local/state/hefesto-dualsense4unix/camadas-vulkan.json)"
-    rm -f "${HOME}/.local/state/hefesto-dualsense4unix/camadas-vulkan.json"
-fi
+# O `camadas_vulkan` grava pelo XDG_STATE_HOME: as duas pastas de estado.
+for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
+    if [[ -f "${_estado}/camadas-vulkan.json" ]]; then
+        log "removendo o registro das sobreposições (${_estado}/camadas-vulkan.json)"
+        rm -f "${_estado}/camadas-vulkan.json"
+    fi
+done
 
 # HAPTICA-NATIVA-01: o device de áudio KS que gravamos no prefixo de cada jogo
 # sai ANTES do curador, pelo mesmo motivo das camadas — é dado nosso dentro do
@@ -2086,20 +2188,36 @@ if [[ -L "${HOME}/.local/bin/hefesto-launch" || -e "${HOME}/.local/bin/hefesto-l
     rm -f "${HOME}/.local/bin/hefesto-launch"
 fi
 rmdir "${HOME}/.local/share/hefesto-dualsense4unix/bin" 2>/dev/null || true
-if [[ -d "${HOME}/.local/state/hefesto-dualsense4unix/launch_env" ]]; then
-    log "removendo materialização de launch (~/.local/state/hefesto-dualsense4unix/launch_env)"
-    rm -rf "${HOME}/.local/state/hefesto-dualsense4unix/launch_env"
-fi
+# Nas duas pastas de estado: o daemon materializa pelo XDG_STATE_HOME, e o
+# install cria a do lar. O REGISTRO DAS ESTRADAS (`estradas.json`) mora aqui e
+# FICA quando o desfazer dos lançadores foi adiado (lá em cima): sem ele, o
+# desfazer de depois não saberia o que é nosso no Heroic e no Flatpak.
+for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
+    [[ -d "${_estado}/launch_env" ]] || continue
+    if [[ "${_estradas_desfeitas}" -eq 1 || ! -e "${_estado}/launch_env/estradas.json" ]]; then
+        log "removendo materialização de launch (${_estado}/launch_env)"
+        rm -rf "${_estado}/launch_env"
+    else
+        log "removendo materialização de launch (${_estado}/launch_env) — menos o registro das estradas, que fica até o desfazer"
+        for _le in "${_estado}/launch_env"/* "${_estado}/launch_env"/.[!.]*; do
+            [[ -e "${_le}" || -L "${_le}" ]] || continue
+            [[ "${_le##*/}" == "estradas.json" ]] && continue
+            rm -rf "${_le}"
+        done
+    fi
+done
 # SENTINELA-WRAPPER-01: a memória de "quais jogos estão com o wrapper" é
 # estado NOSSO e sai junto — o `--strip` acima já tirou o wrapper do vdf, então
 # manter o registro faria a próxima instalação chamar de REGRESSÃO ("este jogo
 # perdeu o wrapper!") exatamente a remoção que o uninstall acabou de fazer.
 # O `jogos_sem_wrapper.txt` NÃO sai: é escolha DELA sobre a biblioteca dela, e
 # vale de novo no dia em que ela reinstalar.
-if [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/wrapper-visto.json" ]]; then
-    log "removendo o registro do wrapper (~/.local/state/hefesto-dualsense4unix/wrapper-visto.json)"
-    rm -f "${HOME}/.local/state/hefesto-dualsense4unix/wrapper-visto.json"
-fi
+for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
+    if [[ -f "${_estado}/wrapper-visto.json" ]]; then
+        log "removendo o registro do wrapper (${_estado}/wrapper-visto.json)"
+        rm -f "${_estado}/wrapper-visto.json"
+    fi
+done
 # TECLADO-QUE-NAO-DIGITA-01: o PACOTE do teclado na tela (wvkbd / onboard) NÃO
 # sai daqui. É pacote de SISTEMA, instalado pelo gerenciador da distribuição, e
 # pode estar servindo a qualquer outra coisa da máquina dela — remover seria o
@@ -2111,19 +2229,23 @@ fi
 # ela existir dizendo "instalado", o doctor leria uma máquina já desinstalada
 # como "o pacote sumiu depois do install" — daria diagnóstico de um produto que
 # não está mais aqui.
-if [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/teclado-na-tela.conf" ]]; then
-    log "removendo a sentinela do teclado na tela (o PACOTE wvkbd/onboard fica — é do sistema)"
-    rm -f "${HOME}/.local/state/hefesto-dualsense4unix/teclado-na-tela.conf"
-fi
+for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
+    if [[ -f "${_estado}/teclado-na-tela.conf" ]]; then
+        log "removendo a sentinela do teclado na tela (o PACOTE wvkbd/onboard fica — é do sistema)"
+        rm -f "${_estado}/teclado-na-tela.conf"
+    fi
+done
 # MOTOR-7: o censo do gabinete. É estado NOSSO — o instalador o grava lendo a
 # tabela 8 do SMBIOS (`scripts/lib/camada_de_maquina.sh`), e a aba Conexões o
 # lê para saber quantos conectores a máquina tem. Sem esta linha ele
 # sobrevivia ao uninstall e ainda fazia o `rmdir` abaixo falhar calado,
 # deixando o diretório de estado inteiro de pé.
-if [[ -f "${HOME}/.local/state/hefesto-dualsense4unix/gabinete.json" ]]; then
-    log "removendo o censo do gabinete (~/.local/state/hefesto-dualsense4unix/gabinete.json)"
-    rm -f "${HOME}/.local/state/hefesto-dualsense4unix/gabinete.json"
-fi
+for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
+    if [[ -f "${_estado}/gabinete.json" ]]; then
+        log "removendo o censo do gabinete (${_estado}/gabinete.json)"
+        rm -f "${_estado}/gabinete.json"
+    fi
+done
 # O RÁDIO DA SESSÃO (a leva do rádio, 23/09/2026) — o que o produto escreve no
 # estado dela, e o destino de cada coisa:
 ESTADO_DO_RADIO="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix"
@@ -2134,6 +2256,14 @@ ESTADO_DO_RADIO="${XDG_STATE_HOME:-${HOME}/.local/state}/hefesto-dualsense4unix"
 if [[ -f "${ESTADO_DO_RADIO}/lugares-dos-adaptadores.json" ]]; then
     log "removendo o registro dos lugares dos adaptadores (${ESTADO_DO_RADIO}/lugares-dos-adaptadores.json)"
     rm -f "${ESTADO_DO_RADIO}/lugares-dos-adaptadores.json"
+fi
+# - `conexao-zumbi.json` (a vigia de conexões, `daemon/subsystems/conexoes.py`):
+#   estado, não histórico — a última volta da vigia, com o endereço de cada
+#   link. Sai SEMPRE, como o dos lugares (O-UNINSTALL-NAO-DEIXA-RASTRO-01): até
+#   25/09 ninguém o nomeava, e ele segurava a pasta de estado de pé.
+if [[ -f "${ESTADO_DO_RADIO}/conexao-zumbi.json" ]]; then
+    log "removendo a última volta da vigia de conexões (${ESTADO_DO_RADIO}/conexao-zumbi.json)"
+    rm -f "${ESTADO_DO_RADIO}/conexao-zumbi.json"
 fi
 # - o DIÁRIO do rádio da sessão (`radio-diario.jsonl` e o `.1`): histórico, com
 #   a mesma regra do diário do root lá em cima — guardado com o carimbo da
@@ -2176,6 +2306,47 @@ if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
 fi
 rmdir "${HOME}/.local/state/hefesto-dualsense4unix" 2>/dev/null || true
 rmdir "${ESTADO_DO_RADIO}" 2>/dev/null || true
+# O ESTADO SAI INTEIRO (O-UNINSTALL-NAO-DEIXA-RASTRO-01, 25/09/2026). Os dois
+# `rmdir` acima são puros e falhavam CALADOS: um arquivo que ninguém nomeava
+# segurava a pasta de estado de pé (o `conexao-zumbi.json` fez isso até 25/09).
+# Nas duas pastas de estado, agora:
+#   - com --purge-config, o que sobrou sai — MENOS o registro de um desfazer
+#     que ficou para depois (o do Proton pinado com a Steam aberta, o da linha
+#     do kernel sem root, o do broker sem root, o das estradas com um lançador
+#     que não abriu): sem ele, o desfazer de depois não saberia o que é nosso.
+#     O que ninguém nomeia vai para o backup da configuração, como ela: apagar
+#     sem rede o que não se conhece não é o lado seguro;
+#   - sem --purge-config fica o histórico (o kernel.log, a marca do boot, os
+#     diários guardados), e o uninstall DIZ o que ficou, em vez de calar.
+for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
+    [[ -d "${_estado}" ]] || continue
+    if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
+        for _sobra in "${_estado}"/* "${_estado}"/.[!.]*; do
+            [[ -e "${_sobra}" || -L "${_sobra}" ]] || continue
+            case "${_sobra##*/}" in
+                proton-pin-lock.json|cmdline-owners.conf|broker-owner.conf|launch_env)
+                    log "fica ${_sobra}: o desfazer dele foi adiado (a linha dele, acima, diz como terminar)"
+                    ;;
+                *)
+                    _backup_do_estado="${backup_dir:-${XDG_CONFIG_HOME:-${HOME}/.config}/hefesto-dualsense4unix.backup-$(date +%s)}/estado"
+                    mkdir -p "${_backup_do_estado}"
+                    if mv -f "${_sobra}" "${_backup_do_estado}/" 2>/dev/null; then
+                        log "guardando ${_sobra} no backup (${_backup_do_estado}) — nenhum passo o nomeia"
+                    else
+                        log "não consegui guardar ${_sobra} no backup — ficou"
+                    fi
+                    ;;
+            esac
+        done
+    fi
+    if ! rmdir "${_estado}" 2>/dev/null && [[ -d "${_estado}" ]]; then
+        mapfile -t _ficou < <(ls -A "${_estado}" 2>/dev/null)
+        log "a pasta de estado ${_estado} fica, com: ${_ficou[*]}"
+        if [[ "${KEEP_CONFIG}" -eq 1 ]]; then
+            log "  (o histórico fica de propósito; apagar de vez: --purge-config)"
+        fi
+    fi
+done
 # O passo anterior de limpeza do share-dir roda antes do wrapper sair — repete
 # a checagem de diretório-pai vazio para não deixar rastro.
 if [[ -d "${HOME}/.local/share/hefesto-dualsense4unix" ]] \
