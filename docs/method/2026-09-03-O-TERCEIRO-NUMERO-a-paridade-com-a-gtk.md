@@ -89,9 +89,9 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 06-navegacao | 40 | 15 | 16 | 0 | 9 | 0 | 38% |
 | 07-lancadores | 29 | 9 | 12 | 0 | 8 | 0 | 31% |
 | 08-conexoes | 49 | 16 | 26 | 5 | 2 | 0 | 33% |
-| 09-sistema | 38 | 12 | 18 | 4 | 4 | 0 | 32% |
+| 09-sistema | 38 | 13 | 18 | 4 | 3 | 0 | 34% |
 | 10-perfis | 50 | 14 | 20 | 7 | 9 | 0 | 28% |
-| TODAS | 395 | 130 | 172 | 35 | 55 | 3 | 33% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 395 | 131 | 172 | 35 | 54 | 3 | 33% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -656,3 +656,13 @@ função.
 
 **A MORDIDA:** com a tabela devolvida à contagem velha, o portão reprova em
 `numero-publicado` nomeando `01-jogar` e `TODAS`.
+
+## Nota de verificação — 25/09/2026, a contagem do exame sai da aba Sistema
+
+`A-09-SISTEMA-EM-TRES-SECOES-01`, os ajustes dela das 22h13: *«Remove esse 8
+linhas deixa o espaço vazio»*. A linha da contagem no CSV foi de `SO_NO_HTML`
+para **`IGUAL`**, pelo mesmo caminho do «Ver os plugins» (13/09): nenhum dos
+dois lados conta as linhas do exame, e o sinal é a decisão escrita no pacote
+(`D-A-CONTAGEM-DO-EXAME-SAIU`). A tabela foi recontada do CSV: `09-sistema`
+vai de `12 IGUAL · 4 SO_HTML · 32%` para `13 · 3 · 34%`, e `TODAS` de
+`130 · 55` para `131 · 54`.
