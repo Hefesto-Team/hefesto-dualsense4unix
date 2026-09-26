@@ -346,8 +346,10 @@ def test_nada_mais_escreve_o_marcador_caduco(prefixo: Path, casa: Path) -> None:
 def test_a_interface_nao_ganhou_gesto_novo_por_causa_disto() -> None:
     """*"sem adicionar nada novo na interface"* — ela, 16/09/2026.
 
-    O caminho de volta continua sendo o botão «devolver» que já existia, pelo
-    gesto `procurar-camadas`. Esta régua trava a tentação de resolver a decisão
+    O caminho de volta continua sendo UM gesto só. Desde 25/09/2026 ele é o
+    ligável «Corrigir Vulkan» (`corrigir-vulkan`), que ela pediu no lugar do
+    «Tirar a sobreposição Vulkan» (A-09-SISTEMA-EM-TRES-SECOES-01): desligar
+    é o «devolver» de antes. Esta régua trava a tentação de resolver a decisão
     dela com mais um controle na tela.
     """
     aba = (
@@ -359,7 +361,7 @@ def test_a_interface_nao_ganhou_gesto_novo_por_causa_disto() -> None:
         / "a09_sistema.py"
     )
     texto = aba.read_text(encoding="utf-8")
-    gestos = texto.count('@gesto("09-sistema.html", "procurar-camadas"')
+    gestos = texto.count('@gesto("09-sistema.html", "corrigir-vulkan"')
     assert gestos == 1, f"o gesto das camadas deixou de ser um só: {gestos}"
     # A CHAMADA GANHOU UM ARGUMENTO em 21/09/2026 (`excluir=`, a lista de
     # exclusão do Hefesto), e a régua olha os DOIS que ela protege, não a

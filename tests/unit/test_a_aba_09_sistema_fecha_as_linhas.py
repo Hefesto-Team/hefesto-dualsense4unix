@@ -140,11 +140,14 @@ def _com_a_leitura(monkeypatch: pytest.MonkeyPatch, status: str,
 class TestOPacoteEmiteARazao:
     """A razão de cada botão cinza, em todo tique."""
 
-    def test_de_pe_e_sem_pausa_so_o_retomar_tem_razao(
+    def test_de_pe_e_sem_pausa_o_reiniciar_nao_tem_razao(
             self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # O «Retomar» deixou de ser um botão cinza em 25/09/2026: virou uma cara
+        # do botão do serviço (A-09-SISTEMA-EM-TRES-SECOES-01), que só aparece
+        # com a pausa ativa — não há mais razão de cinza para ele.
         ctx = _com_a_leitura(monkeypatch, "online_systemd", pausado=False)
         fora = a09.razoes_do_cinza(ctx)
-        assert fora[f"retomar{a09.SUFIXO_DA_RAZAO}"], fora
+        assert f"retomar{a09.SUFIXO_DA_RAZAO}" not in fora, fora
         assert fora[f"reiniciar{a09.SUFIXO_DA_RAZAO}"] == ""
         # O `ver-plugins` saiu da aba em 13/09/2026 (SISTEMA-BOTOES-01).
         assert f"ver-plugins{a09.SUFIXO_DA_RAZAO}" not in fora

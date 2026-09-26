@@ -3717,14 +3717,25 @@ LINHAS_DO_DIARIO = 80
 #: O ENDEREÇO DE UM CONTROLE NO DIÁRIO SAI COM A MÁSCARA DA CASA — os octetos
 #: 4 e 5 zerados. O painel existe para ser COPIADO num relato de defeito, e o
 #: relato vai para fora da máquina dela.
-_MAC_NO_DIARIO = re.compile(
-    r"\b([0-9A-Fa-f]{2}):([0-9A-Fa-f]{2}):([0-9A-Fa-f]{2}):[0-9A-Fa-f]{2}:"
-    r"[0-9A-Fa-f]{2}:([0-9A-Fa-f]{2})\b")
+#:
+#: TRÊS FORMAS, E AS TRÊS FORAM MEDIDAS NO DIÁRIO DE VERDADE (25/09/2026): o
+#: endereço separado (`aa:bb:cc:dd:ee:ff`), o COLADO que o daemon escreve no
+#: `uniq=` (doze letras, sem separador) e o SUFIXO de seis letras que nomeia a
+#: fonte do microfone (`hefesto_mic_<octetos 4, 5 e 6>`). Uma máscara só da
+#: primeira forma deixaria as outras duas saírem inteiras no «Copiar».
+_MAC_SEPARADO = re.compile(
+    r"\b([0-9A-Fa-f]{2})([:-])([0-9A-Fa-f]{2})\2([0-9A-Fa-f]{2})\2[0-9A-Fa-f]{2}\2"
+    r"[0-9A-Fa-f]{2}\2([0-9A-Fa-f]{2})\b")
+_MAC_COLADO = re.compile(r"(?<![0-9A-Za-z])([0-9A-Fa-f]{6})[0-9A-Fa-f]{4}([0-9A-Fa-f]{2})"
+                         r"(?![0-9A-Za-z])")
+_MAC_SUFIXO = re.compile(r"(?<=_)[0-9A-Fa-f]{4}([0-9A-Fa-f]{2})(?![0-9A-Za-z])")
 
 
 def mascarar_o_diario(texto: str) -> str:
-    """`AA:BB:CC:DD:EE:FF` -> `AA:BB:CC:00:00:FF`, em cada endereço do texto."""
-    return _MAC_NO_DIARIO.sub(r"\1:\2:\3:00:00:\4", texto)
+    """Os octetos 4 e 5 zerados, nas três formas em que o diário escreve um endereço."""
+    texto = _MAC_SEPARADO.sub(r"\1\2\3\2\4\g<2>00\g<2>00\2\5", texto)
+    texto = _MAC_COLADO.sub(r"\g<1>0000\2", texto)
+    return _MAC_SUFIXO.sub(r"0000\1", texto)
 
 
 def _diario() -> str:

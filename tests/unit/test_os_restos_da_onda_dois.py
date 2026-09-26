@@ -387,7 +387,8 @@ DIGITO = re.compile(r"\d")
 def test_a_09_o_title_do_parar_nao_crava_numero(publicado: bool) -> None:
     """MORDIDA: devolva o `{N}` ao `title` do Parar em `aba09.py` e publique."""
     tags = [t for t in re.findall(r"<button\b[^>]*>", _pagina(PAGINA_09, publicado))
-            if 'data-gesto="desligar"' in t]
+            # `desligar` virou `parar-ou-retomar` em 25/09/2026 (um botão só).
+            if 'data-gesto="parar-ou-retomar"' in t]
     assert len(tags) == 1, tags
     dica = re.search(r'title="([^"]*)"', tags[0])
     assert dica, tags[0]

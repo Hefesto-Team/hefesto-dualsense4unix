@@ -270,10 +270,16 @@ FORA_DA_ARVORE: dict[tuple[str, str], str] = {
         "roda os scripts de `CONSERTOS` por `subprocess.run([\"bash\", "
         "str(caminho), …])`, com o caminho montado em variável — a árvore vê um "
         "`run`, que é genérico demais para virar porta sem encher de falso",
-    ("09-sistema.html", "refazer-proton"):
-        "chama `travar()`, que é um `getattr(pin, \"lock_proton_for_all_games\")` "
-        "— o nome não está no fonte como chamada, e trava o Proton de TODOS os "
-        "jogos dela",
+    # O «Refazer a fixação do Proton» virou o ligável «Fixar Proton» em
+    # 25/09/2026 (A-09-SISTEMA-EM-TRES-SECOES-01) — a mesma razão, o gesto novo.
+    ("09-sistema.html", "fixar-proton"):
+        "chama `travar()`, que é um `getattr(pin, \"lock_proton_for_all_games\")`, "
+        "e o destravar pelo mesmo `getattr` — o nome não está no fonte como "
+        "chamada, e trava ou solta o Proton de TODOS os jogos dela",
+    ("09-sistema.html", "copiar-registro"):
+        "põe o texto na área de transferência DELA pelo `Gtk.Clipboard`, dentro "
+        "de um `GLib.idle_add` — a chamada mora numa função aninhada, e o perigo "
+        "é apagar o que ela tinha copiado, que nenhuma porta de disco nomeia",
 }
 
 

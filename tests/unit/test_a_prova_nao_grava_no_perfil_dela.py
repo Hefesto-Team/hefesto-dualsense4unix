@@ -157,7 +157,8 @@ def test_a_prova_clique_recusa_o_que_mexe_na_maquina_dela() -> None:
 
 def test_a_prova_clique_recusa_mesmo_quando_o_perigoso_vem_no_meio() -> None:
     """Um gesto inócuo na frente não pode comprar passagem para o perigoso."""
-    piloto = _PilotoDeMentira("09-sistema.html", "atualizar,desligar")
+    # `desligar` virou `parar-ou-retomar` em 25/09/2026 (um botão só).
+    piloto = _PilotoDeMentira("09-sistema.html", "atualizar,parar-ou-retomar")
     with pytest.raises(SystemExit):
         hefesto_vivo.Piloto._provar_cliques(piloto)
 
