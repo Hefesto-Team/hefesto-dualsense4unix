@@ -255,10 +255,11 @@ def _a_procedencia_da_mesma_cor(draft: Any, uniq: str, antes: Any) -> Any:
     """A cor que o «Salvar» regrava igual guarda o número para o qual foi escolhida.
 
     O-BRILHO-DAS-LUZES-SOBREVIVE-AO-APLICAR-01, 26/09/2026, achado pela
-    varredura dos gestos que gravam: o tom e a caixa `#RRGGBB` da aba 04
-    gravam a cor COM a procedência (`LedsConfig.lightbar_para_o_numero`, a
-    decisão de 08/09), e o `with_controller_leds` troca a seção inteira por
-    uma que só conhece cor, brilho e lâmpadas. Medido na mesa de quatro: o P4
+    varredura dos gestos que gravam: o tom, a caixa `#RRGGBB` e o interruptor
+    «Cores automáticas» da aba 04 gravam a cor COM a procedência
+    (`LedsConfig.lightbar_para_o_numero`, a decisão de 08/09), e o
+    `with_controller_leds` troca a seção inteira por uma que só conhece cor,
+    brilho e lâmpadas. Medido na mesa de quatro: o P4
     escolhia um tom, o «Salvar» o regravava igual — e sem o número. Sem ele a
     cor vira `LEGADO`, e o resolvedor volta a provar fóssil pela forma: o P4
     no tom do número 2 acendia, depois da troca manual seguinte, a cor do
@@ -484,10 +485,11 @@ def _as_luzes_de_numero_de_cada_controle(nome: str, p: Any) -> None:
     pelo do rascunho. O Forte do P2 sumia do merge, o aparelho voltava ao
     Fraco do perfil, e a pílula — que pergunta ao daemon vivo — acendia
     Fraco. O disco seguia com o Forte: o «Salvar» não perdia nada, mas a tela
-    dizia o contrário, e daí o *«ao salvar ele não salva»*. Os outros quatro
-    gestos da aba que gravam (tom, caixa, trilho e «Desligar») atravessam o
-    «Aplicar»; no «Salvar», o tom e a caixa perdiam o número da cor
-    (:func:`_a_procedencia_da_mesma_cor`). A régua dos cinco é uma só.
+    dizia o contrário, e daí o *«ao salvar ele não salva»*. Os outros cinco
+    gestos da aba que gravam (tom, caixa, trilho, «Desligar» e «Cores
+    automáticas») atravessam o «Aplicar»; no «Salvar», o tom, a caixa e o
+    interruptor perdiam o número da cor (:func:`_a_procedencia_da_mesma_cor`).
+    A régua dos seis é uma só.
 
     A PORTA É A DA PÍLULA (`led.player_brightness_set` com o `uniq`), e só
     para quem ESCREVEU o campo — o mesmo «só quando foi escrito» de

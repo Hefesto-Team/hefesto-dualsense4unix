@@ -16,13 +16,13 @@ P2 e o ciano do P3 gravados no perfil), com o Forte clicado no P2:
 O valor morria no «Aplicar»: o rascunho não leva o campo, e o `DraftApplier`
 troca o mapa inteiro de overrides do daemon (`reset_output_overrides`) pelo do
 rascunho. O «Salvar» nunca perdeu o brilho no disco; a tela é que dizia
-Fraco, porque a pílula pergunta ao daemon vivo. Dos cinco gestos da aba 04 que
+Fraco, porque a pílula pergunta ao daemon vivo. Dos seis gestos da aba 04 que
 gravam no perfil, só este morria no «Aplicar» — e a varredura da seção 2, que
-mede os cinco, achou a outra metade da classe no «Salvar»: o tom e a caixa
-`#RRGGBB` gravam a cor com o número para o qual ela foi escolhida
-(`lightbar_para_o_numero`), e o «Salvar» a regravava sem ele. Sem o número a
-cor é `LEGADO`, e o tom do número de outro controle virava fóssil na troca
-seguinte.
+mede os seis, achou a outra metade da classe no «Salvar»: o tom, a caixa
+`#RRGGBB` e o interruptor «Cores automáticas» gravam a cor com o número para o
+qual ela foi escolhida (`lightbar_para_o_numero`), e o «Salvar» a regravava
+sem ele. Sem o número a cor é `LEGADO`, e o tom do número de outro controle
+virava fóssil na troca seguinte.
 
 A MATRIZ, a regra dela: os três brilhos, P1 a P4, cabo e rádio.
 
@@ -31,8 +31,12 @@ A MATRIZ, a regra dela: os três brilhos, P1 a P4, cabo e rádio.
 * tire a chamada de `_as_luzes_de_numero_de_cada_controle` do `rodape.aplicar`
   e a seção 1 inteira e a linha `brilho-luzes` da seção 2 reprovam;
 * tire o `_a_procedencia_da_mesma_cor` do `rodape._draft_do_ativo` e a
-  varredura reprova no tom e na caixa (P2 e P4) e em todo gesto do P2, além do
-  tom que vira fóssil;
+  varredura reprova no tom, na caixa e nas «Cores automáticas» (P2 e P4) e em
+  todo gesto do P2, além do tom que vira fóssil;
+* tire a comparação das duas cores dela e a cor nova sai com o número da
+  antiga (`test_a_cor_que_mudou_nao_leva_o_numero_da_antiga`);
+* tire o `raise` do daemon calado e o «Aplicar» pisca verde sem as luzes
+  (`test_sem_resposta_do_daemon_o_aplicar_recusa_dizendo`);
 * tire o pulo de `economia_vale` dela e a seção 3 reprova — o Forte dela
   venceria a «Bateria longa».
 
@@ -64,6 +68,25 @@ CLIQUE = {"tipo": "button", "evento": "click"}
 OUTRA = {"fraco": "forte", "medio": "fraco", "forte": "medio"}  # (noqa-acento) chaves ASCII
 
 
+class _PonteDaAba(viva._Ponte):
+    """A ponte da aba 04 com as duas portas do `perfil.gravar_e_reaplicar`, nos handlers REAIS.
+
+    O interruptor «Cores automáticas» grava o perfil e o reaplica
+    (`profile.switch`, depois `launch_env.refresh`). A ponte da A-04 recusa as
+    duas, e sem elas a varredura da seção 2 não sabia clicar nele.
+    """
+
+    def profile_switch(self, nome: str) -> bool:
+        self.mesa.rodar(self.mesa.server._handle_profile_switch({"name": nome}))
+        return True
+
+    def chamar(self, metodo: str, timeout: float | None = None, **params: Any) -> bool:
+        if metodo != "launch_env.refresh":
+            raise AttributeError(f"a régua não previu a aba chamar {metodo!r}")
+        return isinstance(self.mesa.rodar(
+            self.mesa.server._handle_launch_env_refresh(params)), dict)
+
+
 @pytest.fixture
 def mesa_de(tmp_path, monkeypatch):
     """A mesa de quatro da A-04-PERGUNTA-AO-DAEMON-VIVO-01, no transporte pedido."""
@@ -73,6 +96,7 @@ def mesa_de(tmp_path, monkeypatch):
         monkeypatch.setattr(marca, "_handle_falso", lambda: viva._handle(via))
         m = viva.MesaViva(tmp_path / f"mesa-{len(feitas)}", pacotes, a04_iluminacao,
                           alvo=alvo)
+        m.ponte = _PonteDaAba(m)
         feitas.append(m)
         vias = {m.ctl._detect_transport(h) for h in m.ctl._handles.values()}
         assert vias == {via}, f"a mesa pediu {via} e o backend leu {vias}"
@@ -200,20 +224,29 @@ def test_o_aplicar_leva_a_palavra_de_cada_um_e_nao_escreve_em_quem_nao_escolheu(
 # 2. E2 — a varredura da classe: todo gesto da aba 04 que grava no perfil
 # ---------------------------------------------------------------------------
 def _gestos_que_gravam() -> list[str]:
-    """Os gestos da aba 04 que declaram `grava="save_profile"` — lidos, não digitados."""
-    return sorted(nome for (pagina, nome), porta in pacotes.GESTOS_QUE_MEXEM.items()
-                  if pagina == a04_iluminacao.PAGINA and porta == "save_profile")
+    """Os gestos da aba 04 que declaram `grava=` — lidos, não digitados.
+
+    TODA porta, e não só a `save_profile`: o interruptor «Cores automáticas»
+    declara `grava="gravar_e_reaplicar"` e grava a cor de cada controle COM o
+    número dela, que é a outra metade da classe que o «Salvar» perdia. Um
+    filtro pela porta deixava de fora um gesto que grava no mesmo perfil.
+    """
+    return sorted(nome for (pagina, nome) in pacotes.GESTOS_QUE_MEXEM
+                  if pagina == a04_iluminacao.PAGINA)
 
 
 #: COMO A TELA CLICA CADA UM na coluna de um controle. A lista de QUEM entra é
 #: a de cima; esta tabela só diz o clique — um gesto novo que grava e não está
 #: aqui reprova nomeando (`test_a_varredura_conhece_todo_gesto_que_grava`).
+#: O `auto-cores` é da aba inteira: o `uniq` do clique não o endereça, e a
+#: coluna medida é a do controle cuja cor ele gravou.
 CLIQUES: dict[str, dict[str, Any]] = {
     "cor": {"hex": "8000FF"},
     "reenviar": {"texto": "#12AB34"},
     "brilho": {"valor": "40", "tipo": "input", "evento": "change"},
     "apagar": {},
     "brilho-luzes": {"luzes": "forte"},
+    "auto-cores": {"tipo": "input", "evento": "change"},
 }
 
 #: O QUE A COLUNA PINTA do gesto — a tela que ela olha depois de cada botão.
@@ -235,10 +268,20 @@ def _o_que_a_tela_mostra(mesa: Any, n: int) -> dict[str, Any]:
 
 
 def _o_disco(mesa: Any, n: int) -> dict[str, Any]:
+    """Os campos escritos na luz do P<n>, e os dois globais da aba que a coluna lê.
+
+    O interruptor «Cores automáticas» é da aba inteira: no P2, que já tinha a
+    cor gravada com o número, o que ele muda no disco é o global.
+    """
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
+    globais = load_profile(NOME).leds
+    saida = {f"global.{campo}": getattr(globais, campo)
+             for campo in ("auto_player_colors", "player_led_brightness")}
     leds = mesa.disco(NOME, n)
     if leds is None:
-        return {}
-    return {campo: getattr(leds, campo) for campo in leds.model_fields_set}
+        return saida
+    return {**saida, **{campo: getattr(leds, campo) for campo in leds.model_fields_set}}
 
 
 @pytest.mark.parametrize("via", ["usb", "bt"])
@@ -300,6 +343,67 @@ def test_o_tom_regravado_pelo_salvar_nao_vira_fossil(mesa_de, via: str) -> None:
     mesa.trocar(NOME, "manual")
     assert mesa.luz(4) == _na(tom, BRILHO_GLOBAL), (
         f"o tom que ela escolheu virou fóssil depois do «Salvar»: o P4 acende {mesa.luz(4)}")
+
+
+@pytest.mark.parametrize("via", ["usb", "bt"])
+def test_a_cor_que_mudou_nao_leva_o_numero_da_antiga(mesa_de, via: str) -> None:
+    """A cor viva que difere do disco é gravada SEM o número da cor que ela substitui.
+
+    O P4 escolhe o tom do número 2 (o disco guarda o número 4 com ele); depois
+    a luz dele muda só no daemon — é a camada da mão que atravessa a troca
+    automática de perfil. O «Salvar» grava a cor viva, e o número 4 era da cor
+    antiga: colá-lo na nova afirmaria para qual número ela foi escolhida sem
+    ninguém saber.
+
+    **A MORDIDA:** tire a comparação das duas cores de
+    `_a_procedencia_da_mesma_cor` e o disco sai com a cor nova e o número velho.
+    """
+    from hefesto_dualsense4unix.core.led_control import player_slot_color
+
+    from tests.unit.test_a_04_pergunta_ao_daemon_vivo import ROXO, _na
+    from tests.unit.test_a_marca_da_cor_nao_some import BRILHO_GLOBAL
+
+    mesa = mesa_de("todos", via)
+    mesa.clicar_no_tom(4, player_slot_color(2))
+    assert mesa.disco(NOME, 4).lightbar_para_o_numero == 4, "a régua precisa do número no disco"
+    mesa.ponte.led_set_detalhado(ROXO, BRILHO_GLOBAL, UNIQS[3])
+    assert mesa.luz(4) == _na(ROXO, BRILHO_GLOBAL), "a régua precisa da luz nova no P4"
+    _salvar(mesa)
+    leds = mesa.disco(NOME, 4)
+    assert tuple(leds.lightbar) == ROXO, f"o «Salvar» não gravou a cor viva: {leds}"
+    assert leds.lightbar_para_o_numero is None, (
+        f"o «Salvar» colou o número da cor antiga na cor nova: {leds}")
+
+
+@pytest.mark.parametrize("via", ["usb", "bt"])
+def test_sem_resposta_do_daemon_o_aplicar_recusa_dizendo(mesa_de, via: str) -> None:
+    """O daemon calado na palavra das luzes: o «Aplicar» recusa com a frase do motor.
+
+    A frase é a que a pílula já usa (`a04_iluminacao.sem_resposta_do_daemon`):
+    nada de recado novo. E o controle que não escreveu o campo não pergunta
+    nada — um perfil sem palavra própria não recusa por uma porta que não usou.
+
+    **A MORDIDA:** tire o `raise` de `_as_luzes_de_numero_de_cada_controle` e
+    o «Aplicar» pisca verde com as luzes do P2 no global do perfil.
+    """
+    import re
+
+    class _Calada(_PonteDoRodape):
+        def player_led_brightness_set_detalhado(self, brilho: str,
+                                                uniq: str | None = None) -> Any:
+            self.luzes.append({"brilho": brilho, "uniq": uniq})
+            return None
+
+    mesa = mesa_de("todos", via)
+    calada = _Calada(mesa)
+    rodape.aplicar(mesa.ctx(), CLIQUE, calada)
+    assert calada.luzes == [], "sem palavra no perfil, o «Aplicar» perguntou ao daemon"
+
+    mesa.clicar_na_pilula(2, "forte")
+    calada = _Calada(mesa)
+    with pytest.raises(RuntimeError, match=re.escape(a04_iluminacao.sem_resposta_do_daemon())):
+        rodape.aplicar(mesa.ctx(), CLIQUE, calada)
+    assert calada.luzes == [{"brilho": "forte", "uniq": UNIQS[1]}], calada.luzes
 
 
 # ---------------------------------------------------------------------------
