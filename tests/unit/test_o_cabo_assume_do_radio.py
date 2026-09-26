@@ -1105,6 +1105,35 @@ class TestOCaboEmEspera:
         regra.write_text("", encoding="utf-8")
         assert oce.impedimentos_da_troca() == []
 
+    def test_o_bluez_da_bancada_tem_a_forma_do_real(self) -> None:
+        """O dublê :class:`BlueZ` fala a língua do dono de verdade (conferência de 25/09).
+
+        O `derrubar_o_radio` é real nesta régua, e o dono do BlueZ é da outra
+        frente da leva (A-CONEXOES): se a assinatura de lá andar, a bancada
+        seguiria verde falando com um BlueZ que não existe mais.
+        """
+        import dataclasses
+        import inspect
+
+        from hefesto_dualsense4unix.integrations import bluez_dbus
+
+        for leitor in (bluez_dbus.LeitorDoBluez, bluez_dbus.PeloBusctl, bluez_dbus.DonoVivo):
+            aparelhos = inspect.signature(leitor.aparelhos).parameters
+            assert all(
+                p.default is not inspect.Parameter.empty
+                for nome, p in aparelhos.items()
+                if nome != "self"
+            ), f"{leitor.__name__}.aparelhos() passou a exigir argumento"
+            desconectar = inspect.signature(leitor.desconectar).parameters
+            assert list(desconectar)[:2] == ["self", "caminho"]
+            assert desconectar["quem"].kind is inspect.Parameter.KEYWORD_ONLY
+        campos = {c.name for c in dataclasses.fields(bluez_dbus.AparelhoDoBluez)}
+        assert {"caminho", "endereco", "conectado"} <= campos
+        escrita = {c.name for c in dataclasses.fields(bluez_dbus.Escrita)}
+        assert {"feita", "erro", "mensagem"} <= escrita
+        # E o endereço do real é minúsculo com dois-pontos, como o da bancada.
+        assert bluez_dbus.endereco_do_aparelho("/org/bluez/hci0/dev_AA_BB_CC_00_00_01") == MACS[0]
+
     def test_derrubar_so_desconecta_e_so_quem_esta_ligado(self) -> None:
         chamadas: list[str] = []
 
