@@ -80,11 +80,14 @@ REGRAS_QUE_RELIGAM: tuple[str, ...] = (
 )
 
 #: O HID de um DualSense (comum ou Edge) NO CABO: barramento 0003, Sony 054C.
-_FORMA_DO_CABO = re.compile(r"^0003:054C:(0CE6|0DF2)\.[0-9A-F]{4}$")
+#: O número depois do ponto é o contador de HID do boot, que só cresce (todo
+#: vpad que nasce por ``uhid`` também conta), e o ``%04X`` do kernel é largura
+#: MÍNIMA: passado ``FFFF`` ele ganha o quinto dígito, e a forma não pode morrer ali.
+_FORMA_DO_CABO = re.compile(r"^0003:054C:(0CE6|0DF2)\.[0-9A-F]{4,}$")
 
 #: A linha do kernel que diz QUEM esperava: a instância e o endereço recusado.
 _LINHA_DA_RECUSA = re.compile(
-    r"(?P<inst>[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4}): "
+    r"(?P<inst>[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4,}): "
     r"Duplicate device found for MAC address (?P<mac>[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5})"
 )
 

@@ -1073,6 +1073,17 @@ class TestOCaboEmEspera:
         )
         assert oce.enderecos_recusados(texto) == {"0003:054C:0CE6.001B": UNIQS[1]}
 
+    def test_o_contador_do_kernel_passa_de_quatro_digitos(self, tmp_path: Path) -> None:
+        """``%04X`` é largura mínima: a instância 0x10020 existe num boot longo."""
+        raiz = tmp_path / "hid"
+        (raiz / "0003:054C:0CE6.10020").mkdir(parents=True)
+        assert oce.cabos_em_espera(raiz) == [oce.CaboEmEspera("0003:054C:0CE6.10020")]
+        texto = (
+            "playstation 0003:054C:0CE6.10020: Duplicate device found for MAC address "
+            "aa:bb:cc:00:00:03.\n"
+        )
+        assert oce.enderecos_recusados(texto) == {"0003:054C:0CE6.10020": UNIQS[2]}
+
     def test_o_diario_que_nao_se_deixa_ler_e_nao_sei(self) -> None:
         assert oce.ler_o_diario_do_kernel(lambda _cmd: "") is None
         assert oce.ler_o_diario_do_kernel(lambda _cmd: None) is None
