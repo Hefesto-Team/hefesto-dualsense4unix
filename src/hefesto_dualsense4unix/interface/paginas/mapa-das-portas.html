@@ -1223,6 +1223,7 @@
     h += '<div class="soquete"><span class="num">' + porta.n + "</span>"
       + '<button class="plug' + (porta.usb === 3 ? " v3" : "") + '" data-porta="' + porta.n + '"'
       + (estado ? ' data-v="' + estado + '"' : "") + problema
+      + ensinaNaEntrada(porta)
       + ' aria-label="' + titulo + '" title="' + titulo + '"></button><span class="rotulo">';
     /* O NOME QUE ELA DEU, na primeira linha do rótulo — cortado com
        reticências, e inteiro na dica. O selo `.num` continua o número:
@@ -1339,6 +1340,18 @@
   function gravaNaEntrada(n, gesto) {
     if (!podeGravar(n)) return "";
     return ' data-gesto="' + gesto + '" data-entrada="' + n + '"';
+  }
+  /* O PLUGUE QUE APRENDE — 26/09/2026, D-2609-ENSINAR-GRAVA-O-NO. Com um
+     aparelho fora do mapa na mão, a entrada livre do mapa dela leva o
+     gesto `entrada-ensinar` e o caminho em que a página lê o aparelho
+     agora; o produto grava o nó dele na entrada. Só as do disco
+     (`GRAVA`): a ponta e o hub desenhado não têm nó a gravar. */
+  function ensinaNaEntrada(porta) {
+    if (!segurando || !doProduto() || GRAVA.indexOf(String(porta.n)) === -1) return "";
+    var c = leitura()[segurando];
+    if (!c || ocupada(alocacao, porta)) return "";
+    return ' data-gesto="entrada-ensinar" data-entrada="' + porta.n
+      + '" data-caminho="' + emAtributo(c) + '"';
   }
 
   function declarar(n, campo, valor) {
@@ -1739,6 +1752,11 @@
       if (modo === "ideal") return;
       var n = plug.getAttribute("data-porta"), p = porNum(n);
       if (segurando) {
+        /* NO PRODUTO A PÁGINA ESPERA O DISCO (D-2609-ENSINAR-GRAVA-O-NO): o
+           plugue candidato levou o gesto, e o arranjo relido tira o
+           aparelho da mão. A entrada que não grava não aprende: o que
+           ficava só na memória a releitura desfazia. */
+        if (doProduto()) return;
         if (ocupada(alocacao, p)) return;
         /* ENSINAR O MAPA: esta entrada é o caminho deste aparelho, para sempre */
         var c = leitura()[segurando];
@@ -1840,16 +1858,15 @@
          entradas, e isso se lê como "não tenho nada ligado". */
       throw new Error("arranjo incompleto, falta: " + falta.join(", "));
     }
-    /* O REEXAME RELÊ ONDE CADA APARELHO ESTÁ, e não o que ela ensinou ao
-       mapa nesta tela: o mapa da tela fica, como ficava antes de o produto
-       reler. */
-    var mapaDaTela = comoReexame && doProduto() ? [MAPA, MAPA_ORIGINAL] : null;
+    /* O REEXAME RELÊ O QUE ELA ENSINOU, porque o ensinar grava no disco
+       (O-MAPA-QUE-ELA-CORRIGE-01, D-2609-ENSINAR-GRAVA-O-NO). Até aqui o
+       mapa da tela era guardado por cima da releitura: o que ela ensinava
+       só vivia na memória, e a releitura o desfazia. */
     /* a leitura anterior da tela fica: gravar não é reexaminar */
     var antesDaTela = gravou && LEITURAS ? LEITURAS.antes : null;
     aplicarArranjo(dado, gravou);
     if (antesDaTela) LEITURAS = { agora: dado.leituras.agora, antes: antesDaTela };
     if (comoReexame) {
-      if (mapaDaTela) { MAPA = mapaDaTela[0]; MAPA_ORIGINAL = mapaDaTela[1]; }
       modo = "reexame"; segurando = null; naMao = null;
     }
     /* o aparelho que estava na mão foi ensinado: ele sai da mão */

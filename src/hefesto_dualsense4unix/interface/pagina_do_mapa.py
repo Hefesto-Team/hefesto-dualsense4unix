@@ -357,16 +357,15 @@ ABRE_A_PORTA = """\
          entradas, e isso se lê como "não tenho nada ligado". */
       throw new Error("arranjo incompleto, falta: " + falta.join(", "));
     }
-    /* O REEXAME RELÊ ONDE CADA APARELHO ESTÁ, e não o que ela ensinou ao
-       mapa nesta tela: o mapa da tela fica, como ficava antes de o produto
-       reler. */
-    var mapaDaTela = comoReexame && doProduto() ? [MAPA, MAPA_ORIGINAL] : null;
+    /* O REEXAME RELÊ O QUE ELA ENSINOU, porque o ensinar grava no disco
+       (O-MAPA-QUE-ELA-CORRIGE-01, D-2609-ENSINAR-GRAVA-O-NO). Até aqui o
+       mapa da tela era guardado por cima da releitura: o que ela ensinava
+       só vivia na memória, e a releitura o desfazia. */
     /* a leitura anterior da tela fica: gravar não é reexaminar */
     var antesDaTela = gravou && LEITURAS ? LEITURAS.antes : null;
     aplicarArranjo(dado, gravou);
     if (antesDaTela) LEITURAS = { agora: dado.leituras.agora, antes: antesDaTela };
     if (comoReexame) {
-      if (mapaDaTela) { MAPA = mapaDaTela[0]; MAPA_ORIGINAL = mapaDaTela[1]; }
       modo = "reexame"; segurando = null; naMao = null;
     }
     /* o aparelho que estava na mão foi ensinado: ele sai da mão */
@@ -2688,6 +2687,81 @@ EDICOES: tuple[Edicao, ...] = (
         porque=(
             '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 6) — a linha da orige'
             'm.'
+        ),
+    ),
+    # ══ O-MAPA-QUE-ELA-CORRIGE-01 (passo 7), 26/09/2026: ensinar grava o nó ══
+    Edicao(
+        antes=(
+            '  function gravaNaEntrada(n, gesto) {\n'
+            '    if (!podeGravar(n)) return "";\n'
+            '    return \' data-gesto="\' + gesto + \'" data-entrada="\' + n + \'"\';'
+            '\n'
+            '  }\n'
+        ),
+        depois=(
+            '  function gravaNaEntrada(n, gesto) {\n'
+            '    if (!podeGravar(n)) return "";\n'
+            '    return \' data-gesto="\' + gesto + \'" data-entrada="\' + n + \'"\';'
+            '\n'
+            '  }\n'
+            '  /* O PLUGUE QUE APRENDE — 26/09/2026, D-2609-ENSINAR-GRAVA-O-NO.'
+            ' Com um\n'
+            '     aparelho fora do mapa na mão, a entrada livre do mapa dela le'
+            'va o\n'
+            '     gesto `entrada-ensinar` e o caminho em que a página lê o apar'
+            'elho\n'
+            '     agora; o produto grava o nó dele na entrada. Só as do disco\n'
+            '     (`GRAVA`): a ponta e o hub desenhado não têm nó a gravar. */\n'
+            '  function ensinaNaEntrada(porta) {\n'
+            '    if (!segurando || !doProduto() || GRAVA.indexOf(String(porta.n'
+            ')) === -1) return "";\n'
+            '    var c = leitura()[segurando];\n'
+            '    if (!c || ocupada(alocacao, porta)) return "";\n'  # (noqa-acento: JS)
+            '    return \' data-gesto="entrada-ensinar" data-entrada="\' + porta.'
+            'n\n'
+            '      + \'" data-caminho="\' + emAtributo(c) + \'"\';\n'
+            '  }\n'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 7) — o plugue candida'
+            'to leva o gesto de ensinar.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      + \' aria-label="\' + titulo + \'" title="\' + titulo + \'"></but'
+            'ton><span class="rotulo">\';\n'
+        ),
+        depois=(
+            '      + ensinaNaEntrada(porta)\n'
+            '      + \' aria-label="\' + titulo + \'" title="\' + titulo + \'"></but'
+            'ton><span class="rotulo">\';\n'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 7) — o plugue do soqu'
+            'ete diz o gesto.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      if (segurando) {\n'
+            '        if (ocupada(alocacao, p)) return;\n'  # (noqa-acento: JS)
+        ),
+        depois=(
+            '      if (segurando) {\n'
+            '        /* NO PRODUTO A PÁGINA ESPERA O DISCO (D-2609-ENSINAR-GRAV'
+            'A-O-NO): o\n'
+            '           plugue candidato levou o gesto, e o arranjo relido tira'
+            ' o\n'
+            '           aparelho da mão. A entrada que não grava não aprende: o'
+            ' que\n'
+            '           ficava só na memória a releitura desfazia. */\n'
+            '        if (doProduto()) return;\n'
+            '        if (ocupada(alocacao, p)) return;\n'  # (noqa-acento: JS)
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 7) — no produto o cli'
+            'que não ensina na memória.'
         ),
     ),
 )

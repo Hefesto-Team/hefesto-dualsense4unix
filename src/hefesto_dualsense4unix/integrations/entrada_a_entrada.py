@@ -249,6 +249,13 @@ RECUSA_A_MESMA_ENTRADA = "As duas são a mesma entrada."
 RECUSA_FORA_DO_MAPA = "Esta entrada não está no mapa."
 RECUSA_NENHUMA_MAPEADA = "Nenhuma das duas foi mapeada ainda."
 
+#: AS RECUSAS DO ENSINAR — O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-ENSINAR-GRAVA-O-NO).
+#: A de fora do mapa é a mesma do «Trocar com…» (:data:`RECUSA_FORA_DO_MAPA`).
+RECUSA_O_APARELHO_JA_TEM_ENTRADA = "Este aparelho já está numa entrada."
+RECUSA_A_ENTRADA_OCUPADA = "Esta entrada está ocupada agora."
+RECUSA_O_APARELHO_SAIU = "Este aparelho não está plugado agora."
+RECUSA_LIGACOES_DEMAIS = "Esta entrada já tem ligações demais."
+
 #: As fases do laço — chaves de máquina, para o piloto da aba 08.
 PARADO = "parado"
 SENTADA = "sentada"
@@ -1754,6 +1761,66 @@ def trocar_as_entradas(
     return recibo
 
 
+def ensinar_a_entrada(
+    numero: str,
+    caminho: str,
+    *,
+    maquina: MaquinaConfig | None = None,
+    lidas: Sequence[NoDeEntrada] | None = None,
+    gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
+) -> Recibo:
+    """ENSINAR: o nó em que o aparelho ``caminho`` está agora passa a ser da ``numero``.
+
+    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-ENSINAR-GRAVA-O-NO). Ela pega o aparelho
+    que o mapa vê «fora do mapa» e clica a entrada em que ele está. Até aqui a
+    página guardava isso só na memória, e a releitura o mostrava pendente de
+    novo. É a cura universal da pista que o firmware não liga: os nós vêm da
+    leitura de agora (:func:`_nos_do_aparelho` — o do aparelho e o ``peer``
+    dele), e somam aos que a entrada já tinha. Sem ``caminho`` na entrada, ela
+    ganha o do lado 2.0 (:func:`_caminho_do_lado_20`). Os ``lugares`` ficam: a
+    amarra é do Mapear.
+
+    Vale só para o aparelho que não está em entrada nenhuma — o que já está
+    abre o editor dela, e quem corrige ali é o «Trocar com…». Recusa com
+    ``ValueError`` e a frase do dono: :data:`RECUSA_FORA_DO_MAPA`,
+    :data:`RECUSA_O_APARELHO_SAIU`, :data:`RECUSA_O_APARELHO_JA_TEM_ENTRADA`,
+    :data:`RECUSA_A_ENTRADA_OCUPADA` e :data:`RECUSA_LIGACOES_DEMAIS` (o teto de
+    nós do ``PortaDeclarada``).
+    """
+    documento = maquina if maquina is not None else carregar_maquina()
+    mapa = documento.mapa
+    if not _SO_DIGITOS.match(numero) or numero not in entradas_do_mapa(mapa):
+        raise ValueError(RECUSA_FORA_DO_MAPA)
+    lidos = tuple(lidas) if lidas is not None else _listar_as_entradas()
+    novos = _nos_do_aparelho(caminho, lidos)
+    if not novos:
+        raise ValueError(RECUSA_O_APARELHO_SAIU)
+    onde_mora = {caminho, *(caminho_do_no(no) for no in novos)}
+    for outra, porta in mapa.portas.items():
+        if outra != numero and (
+            set(novos) & set(porta.nos) or (porta.caminho and porta.caminho in onde_mora)
+        ):
+            raise ValueError(RECUSA_O_APARELHO_JA_TEM_ENTRADA)
+    dela = mapa.portas.get(numero) or PortaDeclarada()
+    plugados = {e.no: e.aparelho for e in lidos if e.aparelho}
+    if any(plugados.get(no) for no in set(dela.nos) - set(novos)) or (
+        dela.caminho and dela.caminho in set(plugados.values()) - {caminho}
+    ):
+        raise ValueError(RECUSA_A_ENTRADA_OCUPADA)
+    nos = list(dict.fromkeys([*dela.nos, *novos]))
+    try:
+        PortaDeclarada(nos=nos)
+    except ValueError:  # o teto de nós é do dono do schema
+        raise ValueError(RECUSA_LIGACOES_DEMAIS) from None
+    campos: dict[str, Any] = {"nos": nos}
+    if not dela.caminho:
+        campos["caminho"] = _caminho_do_lado_20(nos)
+    recibo = _gravar_no_mapa(gravar, {"mapa": {"portas": {numero: campos}}}, maquina=documento)
+    if not recibo.gravou:
+        logger.warning("entrada_ensinada_nao_gravou", motivo=recibo.motivo)
+    return recibo
+
+
 def _o_buraco(porta: PortaDeclarada | None) -> dict[str, Any]:
     """O que é do buraco físico numa entrada — o que a troca leva junto."""
     if porta is None:
@@ -3090,9 +3157,13 @@ __all__ = [
     "NA_PORTA",
     "PALAVRA_DA_ENTRADA",
     "PARADO",
+    "RECUSA_A_ENTRADA_OCUPADA",
     "RECUSA_A_MESMA_ENTRADA",
     "RECUSA_FORA_DO_MAPA",
+    "RECUSA_LIGACOES_DEMAIS",
     "RECUSA_NENHUMA_MAPEADA",
+    "RECUSA_O_APARELHO_JA_TEM_ENTRADA",
+    "RECUSA_O_APARELHO_SAIU",
     "SENTADA",
     "TELAS",
     "VELOCIDADES_DECLARAVEIS",
@@ -3111,6 +3182,7 @@ __all__ = [
     "de_quem_pende",
     "declarar_a_ligacao",
     "declarar_a_velocidade",
+    "ensinar_a_entrada",
     "face_do_lugar",
     "faces_dos_hubs",
     "ler_o_mapa",

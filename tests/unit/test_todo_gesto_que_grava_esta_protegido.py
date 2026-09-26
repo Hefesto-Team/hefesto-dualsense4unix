@@ -116,6 +116,7 @@ ESCREVEM = {
     # em `mapa.portas[N].nome` (D-2609-O-NOME-E-DA-POSICAO).
     "dar_nome_a_entrada",
     "trocar_as_entradas",      # o «Trocar com…»: o buraco de duas entradas troca
+    "ensinar_a_entrada",       # o ensinar: o nó do aparelho fora do mapa vai à entrada
     # A ORDEM DAS CAIXAS DOS ADAPTADORES — A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01,
     # 25/09/2026: vai para o `gui_preferences.json` dela.
     "guardar_ordem_dos_adaptadores",

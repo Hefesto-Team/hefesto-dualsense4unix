@@ -47,9 +47,9 @@ from . import Contexto, gesto
 
 PAGINA = "mapa-das-portas.html"
 
-#: Os gestos do editor da entrada (o que tem, a velocidade, o nome, a troca)
-#: e o «Examinar». Só sobe.
-PISO_DA_ABA = 5
+#: Os gestos do editor da entrada (o que tem, a velocidade, o nome, a troca),
+#: o ensinar e o «Examinar». Só sobe.
+PISO_DA_ABA = 6
 
 #: O «Direto» do editor: é a ausência de declaração no disco (`liga` nulo).
 DIRETO = "direto"
@@ -135,6 +135,20 @@ def entrada_trocar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
     if not outra:
         return None
     return _gravou(ee.trocar_as_entradas(_a_entrada(o), outra))
+
+
+@gesto(PAGINA, "entrada-ensinar", grava="ensinar_a_entrada")
+def entrada_ensinar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """Ensinar: o aparelho fora do mapa está NESTA entrada — o nó dele passa a ser dela.
+
+    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-ENSINAR-GRAVA-O-NO). A entrada vem do
+    `data-entrada` do plugue, e o aparelho do `data-caminho` (o caminho em que
+    a página o lê agora). As recusas são as frases do dono.
+    """
+    caminho = str(o.get("caminho") or "").strip()
+    if not caminho:
+        raise ValueError("o clique não disse qual aparelho")
+    return _gravou(ee.ensinar_a_entrada(_a_entrada(o), caminho))
 
 
 @gesto(PAGINA, "reexaminar")

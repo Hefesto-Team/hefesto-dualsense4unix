@@ -36,7 +36,10 @@ E AS DA CONFERÊNCIA (26/09/2026), cada uma sem régua que a pegasse:
 * o ``examinaNoProduto()`` do «Já movi» das Sugestões → no produto o botão
   fica morto (a página não pinta, e o piloto não é chamado);
 * o ``mapaDaTela`` do ``hefestoArranjo`` → o reexame joga fora o que ela
-  ensinou nesta tela;
+  ensinou nesta tela. CADUCOU em 26/09/2026 (O-MAPA-QUE-ELA-CORRIGE-01,
+  D-2609-ENSINAR-GRAVA-O-NO): o ensinar grava o nó no disco e o reexame o
+  relê, então o mapa da tela saiu; a mordida agora é devolver o ``MAPA[n]``
+  só na memória (``test_ensinar_a_entrada_grava_o_no``);
 * o ``quem.classe !== "hub"`` do «Hub» cinza → o hub de verdade na entrada
   também apaga o «Hub».
 """
@@ -669,22 +672,52 @@ def test_o_ja_movi_das_sugestoes_tambem_rele(disco: Path) -> None:
         "o «Já movi» pintou o reexame antes de a leitura nova chegar")
 
 
-def test_o_reexame_guarda_o_que_ela_ensinou_na_tela(disco: Path) -> None:
-    """Ela ensina que a webcam está na 4, e o «Examinar» não desfaz isso."""
+def test_o_reexame_guarda_o_que_ela_ensinou_na_tela(
+    disco: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ela ensina que a webcam está na 4, e o «Examinar» não desfaz isso.
+
+    Desde a O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-ENSINAR-GRAVA-O-NO) o clique no
+    plugue grava o nó da webcam na 4, e o reexame o relê do disco: o que ela
+    ensinou vem da releitura, e não de um mapa da tela guardado por cima dela.
+    """
+    from tests.conftest import exigir_gi_real
+
+    exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
+    from hefesto_dualsense4unix.integrations.entradas_do_gabinete import NoDeEntrada
+    from hefesto_dualsense4unix.interface import pacotes
+
+    nos_de_agora = tuple(
+        NoDeEntrada(no=f"usb9-port{n}", caminho_sysfs=f"/sys/usb9-port{n}", hub="usb9",
+                    numero=n, aparelho=f"9-{n}", velocidade_mbps=480.0)
+        for n in (1, 4, 5))
+    monkeypatch.setattr(ee, "_listar_as_entradas", lambda: nos_de_agora)
     aberta = _ler(_teclado("9-1"), _dongle("9-5"), _webcam("9-4"))
-    relida = _ler(_teclado("9-2"), _dongle("9-5"), _webcam("9-4"), reexame=True)
     webcam = next(a["id"] for a in aberta["aparelhos"] if a["tipo"] == "Webcam")
-    lidas, _ = _na_pagina([
+    _, mensagens = _na_pagina([
         _js(aberta),
         _clicar(f'.chip[data-ap="{webcam}"]'),
         _clicar('.plug[data-porta="4"]'),
+    ])
+    pedidos = [m for m in mensagens if m.get("gesto") == "entrada-ensinar"]
+    assert [(m.get("entrada"), m.get("caminho")) for m in pedidos] == [("4", "9-4")], (
+        f"o clique no plugue não levou o ensinar ao piloto: {mensagens}")
+    dono = pacotes.gesto_da_pagina(pedidos[0]["pagina"], "entrada-ensinar")  # noqa-acento: chave
+    assert dono is not None
+    dono(None, pedidos[0], None)
+    assert carregar_maquina().mapa.portas["4"].nos == ["usb9-port4"]
+
+    gravada = _ler(_teclado("9-1"), _dongle("9-5"), _webcam("9-4"))
+    relida = _ler(_teclado("9-2"), _dongle("9-5"), _webcam("9-4"), reexame=True)
+    lidas, _ = _na_pagina([
+        _js(gravada),
         _LER,
         _js(relida, reexame=True),
         _LER,
         _clicar("#voltar-leitura"),
         _LER,
     ])
-    ensinado, reexame, fechado = lidas[3], lidas[5], lidas[7]
+    ensinado, reexame, fechado = lidas[1], lidas[3], lidas[5]
     assert "4 de 5 Entradas Mapeadas" in ensinado["painel"], ensinado["painel"]
     assert "Webcam" not in reexame["painel"], (
         "a webcam não saiu da 4, e o reexame a lista: " + reexame["painel"])
