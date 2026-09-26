@@ -59,7 +59,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, ClassVar
 from unittest.mock import patch
 
 import pytest
@@ -269,8 +269,8 @@ class _Handle:
 class _LeitorQueSegueOMac:
     """O `EvdevReader` de um jogador do co-op, com o reencontro pelo MAC do real."""
 
-    kernel: Kernel | None = None
-    vivos: list[_LeitorQueSegueOMac] = []
+    kernel: ClassVar[Kernel | None] = None
+    vivos: ClassVar[list[_LeitorQueSegueOMac]] = []
 
     def __init__(self, device_path: Any = None, target_uniq: str | None = None) -> None:
         self.target_uniq = target_uniq
