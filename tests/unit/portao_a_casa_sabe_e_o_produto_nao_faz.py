@@ -2955,16 +2955,9 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # A LÁPIDE DO `o_mapa` SAIU em 26/09/2026: a A-08-O-CHECKUP-ABSORVE-A-
     # GESTAO-01 fiou o botão único do Mapear (`mapear-comecar`, `-gravar`,
     # `-parar` e o `campos_do_mapear` no tique) ao dono, como a linha pedia.
-    "integrations/entrada_a_entrada.py::nome_do_adaptador":
-        "ENTRADA-A-ENTRADA-01, 23/09/2026. D3: o adaptador herda o nome da "
-        "porta em que está, pelo lugar e nunca pelo hciN. A TRANSPLANTE-DA-"
-        "SECAO-01 NÃO A CHAMA, E É DE PROPÓSITO: o campo do cartão mostra SÓ o "
-        "nome que ela deu (o `maquina.lugares[lugar].nome`, a mesma leitura de "
-        "`_nome_declarado`) com a entrada AO LADO, por `rotulo_da_entrada`; "
-        "esta função funde os dois (o nome, ou «Entrada 3») e poria o número "
-        "dentro do campo que ela edita. ONDE O CAMINHO SE PERDE: nenhuma frase "
-        "da tela precisa hoje de UM nome só para o adaptador. O QUE O FECHARIA: "
-        "a primeira frase que precise — um recado sobre o adaptador pelo nome.",
+    # A LÁPIDE DO `nome_do_adaptador` SAIU em 26/09/2026 com a função: o nome
+    # do adaptador mora no endereço (D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO), e a
+    # cena o lê pelo dono (`utils/maquina.nome_dado_ao_adaptador`).
     # O-MODO-ECONOMIA-POR-CONTROLE-01: as duas pontas do contrato da tela
     # (`declaracao_da_economia`, `origem_da_economia`) saíram daqui em 25/09/2026 —
     # o botão da linha do controle (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01) as chama.

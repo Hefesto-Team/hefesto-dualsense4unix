@@ -3040,10 +3040,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # dicionário: a `cobertura` conta os campos da confissão, e chamar a função
     # duas vezes releria o barramento no mesmo tique.
     confissao = _confissao_do_mapa()
-    # PELA MESMA RAZÃO DA CONFISSÃO: a `cobertura` conta os campos do veredito, e
-    # chamar `_veredito_do_exame` duas vezes refaria a conta do cabeçalho no
-    # mesmo tique.
-    veredito = _veredito_do_exame(vivos)
     # A SEÇÃO DO RÁDIO ANTES DA SUGESTÃO: a caixa diz a proposta da central,
     # e a proposta é a da cena DESTE tique (`_CENA_NA_TELA`).
     radio = campos_do_radio(ctx)
@@ -3189,12 +3185,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # O CARIMBO do topo do Check-up — publicado no mesmo dia e pela mesma
         # decisão, e também já pintado.
         "examinado": _carimbo_do_exame(),
-        # A RESPOSTA EM UMA LINHA — **S-09, D-16**. Ver :func:`_veredito_do_exame`.
-        # O carimbo acima diz QUANDO; esta linha diz O QUÊ, e na cor do pior
-        # achado. O dicionário pode vir VAZIO, e o vazio é resposta: sem exame
-        # não há juízo, e um travessão numa linha de veredito seria a tela
-        # afirmando um nada.
-        **veredito,
+        # A LINHA DE VEREDITO SAIU da tela em 26/09/2026, a pedido dela (a D-16
+        # revogada: a Sugestão de Conexão já numera cada mudança). O
+        # `_veredito_do_exame` fica para quem conta a cor do pior achado.
         "exame": itens,
         "achados": len(itens),
         "graves": sum(1 for i in itens if i["grave"]),
@@ -3244,14 +3237,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # contaria pintura que não aconteceu nos dois últimos casos.
         # Os dois novos POR CONTROLE (`mic-caminho`, `luz-trava`) não precisam
         # de termo: eles entram pelo `sum(len(v) …)` das colunas.
-        # O `+ len(veredito)` são a frase do veredito e os quatro interruptores
-        # de estado dela, LIDOS em vez de digitados — o dicionário vem vazio
-        # quando o produto não pôde responder. O `+ 2 + 5`: as DUAS linhas de
+        # O veredito saiu da tela em 26/09/2026 e não conta mais. O `+ 2 + 5`: as DUAS linhas de
         # ressalva (`sem-driver`, `radio-fragil`) e os CINCO rádios do acordeão
         # que o `alvo-aberto` marca — as ressalvas contam mesmo caladas, porque
         # `monta.NADA_A_DIZER` é uma escrita. O `+ 12` são os campos da seção
         # do rádio (:func:`campos_da_secao`), e a cerimônia entra pelo `sum`.
-        "cobertura": {"pintados": 2 + 1 + 2 + 5 + len(confissao) + len(veredito)
+        "cobertura": {"pintados": 2 + 1 + 2 + 5 + len(confissao)
                       + len(itens) * 4 + 1 + 12
                       + sum(len(v) for v in colunas.values()),
                       "sem_dono": len(SEM_DONO) + len(sem_dono)},
@@ -3654,7 +3645,7 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     continua publicando a fonte. O que a tela promete aqui é outra coisa —
     *"Desligado, nenhum programa o enxerga"* — e isso é a PONTE, que existe ou
     não existe: `ControleDeclarado.microfone` no `maquina.json`
-    (`utils/maquina.py:680`), decisão dela de 22/08/2026 (*"por controle"*).
+    (`utils/maquina.py:708`), decisão dela de 22/08/2026 (*"por controle"*).
 
     QUEM CONSOME, e é por isso que o clique vale AGORA: o
     `_handle_machine_declare` relê o disco, rebinda `daemon._maquina` e SOBE OU
@@ -3872,8 +3863,9 @@ def teto_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 # este adaptador"*, e nenhum código da interface nova chamava
 # `integrations/apelido_do_dongle`. **Ela digitava e perdia.**
 #
-# O NOME É DO LUGAR, desde 23/09/2026 (TRANSPLANTE-DA-SECAO-01, item 1): o
-# escritor é UM, `entrada_a_entrada.dar_nome`, e é o mesmo da janela estável
+# O NOME É DO ADAPTADOR, pelo endereço desde 26/09/2026 (era do LUGAR desde
+# 23/09, e se confundia com o da entrada): o escritor é UM,
+# `entrada_a_entrada.dar_nome_ao_adaptador`, e é o mesmo da janela estável
 # (`secao_mesa._ao_salvar_o_nome`). O `Alias` do BlueZ é a projeção desse nome.
 
 #: O NOME DO GESTO, e ele é UM só: o HTML o escreve, o teste o lê e o relatório
@@ -5379,6 +5371,10 @@ def html_dos_canais(cena: dict[str, Any]) -> str:
     return "".join(partes)
 
 
+#: A palavra do balão do rádio que ninguém sabe o que é — nem ela, nem o kernel.
+SEM_NOME_NO_BALAO = "Sem nome"
+
+
 def html_fora_da_faixa(cena: dict[str, Any]) -> str:
     """O que está no ar e não tem lugar na régua: quem está em 5 GHz, e os
     vizinhos cujo canal a máquina não diz (o produto não inventa a faixa)."""
@@ -5403,13 +5399,15 @@ def html_fora_da_faixa(cena: dict[str, Any]) -> str:
         sugerido = str(viz.get("sugestao_tipo") or "")
         icone = (ICONE_DO_RADIO.get(tipo, "radio") if tipo
                  else ICONE_DO_RADIO.get(sugerido, "ajuda") if sugerido else "ajuda")
-        # O BALÃO DIZ O QUE O KERNEL ACHA QUE ELE É (26/09/2026, item 6 dela:
-        # *«o que diabos deveria ser esse svg ali? como identificar o que é
-        # dessa forma?»*): o ícone sozinho não se lê, e a palavra vai junto, só
-        # para o olho (`aria-hidden`: o `aria-label` já a diz, e o leitor de tela
-        # a leria duas vezes). <!-- noqa-acento: citação literal dela -->
-        palpite = (f'<span class="palpite" aria-hidden="true">{_x(_em_titulo(sugestao))}?</span>'
-                   if sugestao and not tipo else "")
+        # O BALÃO DIZ O QUE ELE É (26/09/2026, item 6 dela: *«o que diabos
+        # deveria ser esse svg ali? como identificar o que é dessa forma?»*): o
+        # ícone sozinho não se lê, e a palavra vai junto — o nome que ela deu,
+        # o palpite do kernel com «?», ou «Sem nome». Só para o olho
+        # (`aria-hidden`: o `aria-label` já a diz, e o leitor de tela a leria
+        # duas vezes). <!-- noqa-acento: citação literal dela -->
+        palavra = (rotulo if tipo and rotulo else _em_titulo(tipo.replace("_", " ")) if tipo
+                   else f"{_em_titulo(sugestao)}?" if sugestao else SEM_NOME_NO_BALAO)
+        palpite = f'<span class="palpite" aria-hidden="true">{_x(palavra)}</span>'
         partes.append(f'<button class="selo-fora vizinho{"" if tipo else " sem-nome"}" '
                       f'title="{dica}" aria-label="{dica}" data-gesto="vizinho-o-que-e" '
                       f'data-alvo="{_x(viz["id"])}">{_ic(icone)}{palpite}</button>')
@@ -5809,7 +5807,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     """A cena da seção pela máquina dela — os donos, e nada estimado (R10)."""
     perfil._com_o_src()
     from hefesto_dualsense4unix.integrations import entrada_a_entrada
-    from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
+    from hefesto_dualsense4unix.utils.maquina import MaquinaConfig, nome_dado_ao_adaptador
 
     st: dict[str, Any] = ctx.state or {}
     ar: dict[str, Any] = _dicionario(st.get("radio_ar"))
@@ -5851,7 +5849,6 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         caminho = str(getattr(mz, "caminho", "") or "")
         if caminho:
             caminho_para_endereco[caminho] = end
-        declarado = maquina.lugares.get(lugar) if (maquina is not None and lugar) else None
         # Antes da primeira leitura do `maquina.json` (ela é de fundo), o
         # documento em branco: a porta aparece como «Entrada 1.2» e não como
         # «Dentro da máquina» — que é só do adaptador sem porta.
@@ -5871,7 +5868,10 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
             junto = "colado em outro rádio"
         lugares.append({
             "id": end, "lugar": lugar,
-            "nome": str(getattr(declarado, "nome", "") or ""),
+            # O NOME É DO ADAPTADOR, pelo endereço (26/09/2026,
+            # D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO): o da entrada vai na linha
+            # «entrada», e os dois não se confundem mais.
+            "nome": nome_dado_ao_adaptador(maquina, end),
             # «Dentro da máquina» é RESPOSTA do BlueZ (o adaptador que ele
             # descreveu sem porta), não o que sobra: um endereço que só o
             # daemon publicou — o primeiro tique, com o BlueZ ainda no fio —
@@ -6566,14 +6566,14 @@ def adaptador_reordenar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         lug for i, lug in na_tela.items() if i not in ids]
 
 
-def _gravar_o_nome(lugar: str, nome: str) -> Any:
-    """O nome é do LUGAR (D3) e mora no `maquina.json`; o `Alias` do BlueZ é a
-    projeção dele, e quem o escreve é o `bt_active_mode.sh`, UM escritor só
-    (TRANSPLANTE-DA-SECAO-01, item 1: eram três)."""
+def _gravar_o_nome(endereco: str, nome: str) -> Any:
+    """O nome é do ADAPTADOR, pelo endereço, e mora no `maquina.json`; o `Alias`
+    do BlueZ é a projeção dele, e quem o escreve é o `bt_active_mode.sh`, UM
+    escritor só (TRANSPLANTE-DA-SECAO-01, item 1: eram três)."""
     perfil._com_o_src()
-    from hefesto_dualsense4unix.integrations.entrada_a_entrada import dar_nome
+    from hefesto_dualsense4unix.integrations.entrada_a_entrada import dar_nome_ao_adaptador
 
-    feito = dar_nome(lugar, nome)
+    feito = dar_nome_ao_adaptador(endereco, nome)
     _esquecer("maquina")
     _reler_a_declaracao()
     return feito
@@ -6585,18 +6585,16 @@ def _so_o_foco(o: dict[str, Any]) -> bool:
     return str(o.get("evento") or "") == "click"
 
 
-@gesto("08-conexoes.html", GESTO_DO_APELIDO, grava="dar_nome")
+@gesto("08-conexoes.html", GESTO_DO_APELIDO, grava="dar_nome_ao_adaptador")
 def adaptador_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """O nome que ela dá ao adaptador — no lugar dele, e o adaptador herda."""
+    """O nome que ela dá ao adaptador — dele, pelo endereço, e vai com ele."""
     if _so_o_foco(o):
         return {"armou": True}
     lug = _lugar_na_tela(o)
-    if not lug.get("lugar"):
-        raise RuntimeError("este adaptador é da placa-mãe: não tem entrada a nomear")
     novo = str(o.get("valor") or "").strip()
     if novo == str(lug.get("nome") or ""):
         return None
-    feito = _gravar_o_nome(str(lug["lugar"]), novo)
+    feito = _gravar_o_nome(str(lug["id"]), novo)
     if not getattr(feito, "gravou", False):
         raise RuntimeError("o nome não foi gravado")
     return None

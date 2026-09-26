@@ -140,8 +140,10 @@ PERFIS: tuple[str, ...] = (
 #: «Personalizado», com o mesmo sentido (cada aba manda), e as três palavras
 #: ganharam a maiúscula que o desenho aprovado da Conexões já escreve.
 ROTULOS_DOS_PERFIS: dict[str, str] = {
-    PERFIL_TUDO_LIGADO: "Tudo Ligado",
-    PERFIL_BATERIA_LONGA: "Bateria Longa",
+    # Os nomes são dela, 26/09/2026: *«Os nomes dos botões Viram Perfil Máximo.
+    # Perfil Econômico e Personalizado.»* A chave de disco não muda.
+    PERFIL_TUDO_LIGADO: "Perfil Máximo",
+    PERFIL_BATERIA_LONGA: "Perfil Econômico",
     PERFIL_EU_ESCOLHO: "Personalizado",
 }
 

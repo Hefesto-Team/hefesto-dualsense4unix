@@ -1688,15 +1688,16 @@ class _PainelDaMesa:
         return False
 
     def _ao_salvar_o_nome(self, campo: Any, endereco: str) -> None:
-        """Grava o nome do LUGAR do adaptador — e só quando ele MUDOU.
+        """Grava o nome do adaptador, pelo endereço — e só quando ele MUDOU.
 
         UM ESCRITOR SÓ — TRANSPLANTE-DA-SECAO-01, item 1 (23/09/2026). Esta
         janela escrevia o `Alias` no BlueZ por endereço (`renomear_o_dongle`),
         a aba 08 também, e o `bt_active_mode.sh` trocava o apelido pelo nome do
         lugar no tique seguinte: três escritores do mesmo nome, e o último a
-        escrever ganhava. Agora o nome é da ENTRADA
-        (`entrada_a_entrada.dar_nome`, no `maquina.json`), e o `Alias` é a
-        projeção que o watchdog escreve.
+        escrever ganhava. Agora o nome mora no `maquina.json`
+        (`entrada_a_entrada.dar_nome_ao_adaptador`, pelo endereço desde
+        26/09/2026 — antes era o da entrada, e os dois se confundiam), e o
+        `Alias` é a projeção que o watchdog escreve.
 
         A comparação é contra `Dongle.nome`, que é o alias já limpo da costura:
         sem ela, cada troca de aba regravaria o nome que já está lá.
@@ -1714,21 +1715,14 @@ class _PainelDaMesa:
         novo = campo.get_text().strip()
         if novo == alvo.nome:
             return
-        interface = alvo.objeto.rsplit("/", 1)[-1]
-        lugar = next((str(a.lugar or "") for a in self._mesa.adaptadores
-                      if a.interface == interface), "")
-        if not lugar:
-            # O ADAPTADOR DA PLACA-MÃE não pendura em entrada: não há lugar
-            # onde o nome morar, e o campo volta ao que era.
-            with contextlib.suppress(Exception):
-                campo.set_text(alvo.nome)
-            return
         try:
-            from hefesto_dualsense4unix.integrations.entrada_a_entrada import dar_nome
+            from hefesto_dualsense4unix.integrations.entrada_a_entrada import (
+                dar_nome_ao_adaptador,
+            )
 
-            feito = dar_nome(lugar, novo)
+            feito = dar_nome_ao_adaptador(endereco, novo)
         except Exception:
-            logger.warning("nome_do_lugar_falhou", exc_info=True)
+            logger.warning("nome_do_adaptador_falhou", exc_info=True)
             return
         if not feito.gravou:
             with contextlib.suppress(Exception):

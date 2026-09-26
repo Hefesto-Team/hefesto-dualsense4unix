@@ -330,8 +330,9 @@ def test_o_campo_do_nome_do_adaptador_tem_gesto(pacote) -> None:
     """Ela digita e o produto tem onde ouvir — o defeito da §3 desta aba.
 
     DESDE 23/09/2026 o campo é o `input.lugar-nome` do cartão de cada adaptador
-    (TRANSPLANTE-DA-SECAO-01), e o gesto grava pelo dono do nome do LUGAR
-    (`grava="dar_nome"`). A RÉGUA LÊ O CARTÃO QUE O PRODUTO EMITE, não o gerador.
+    (TRANSPLANTE-DA-SECAO-01), e o gesto grava pelo dono do nome do adaptador
+    (`grava="dar_nome_ao_adaptador"`, pelo endereço desde 26/09/2026). A RÉGUA
+    LÊ O CARTÃO QUE O PRODUTO EMITE, não o gerador.
     """
     from hefesto_dualsense4unix.interface.pacotes import GESTOS
 
@@ -370,8 +371,8 @@ def test_renomear_nao_escreve_quando_o_nome_nao_mudou(pacote, monkeypatch) -> No
     class _Feito:
         gravou = True
 
-    def _escreveu(lugar: str, nome: str) -> _Feito:
-        chamou.append((lugar, nome))
+    def _escreveu(endereco: str, nome: str) -> _Feito:
+        chamou.append((endereco, nome))
         return _Feito()
 
     monkeypatch.setattr(pacote, "_CENA_NA_TELA", {"lugares": [
@@ -383,7 +384,7 @@ def test_renomear_nao_escreve_quando_o_nome_nao_mudou(pacote, monkeypatch) -> No
     gesto(None, {"alvo": "E8473A000009", "valor": "Sala", "evento": "change"}, None)
     assert chamou == []
     gesto(None, {"alvo": "E8473A000009", "valor": "Sala do fundo", "evento": "change"}, None)
-    assert chamou == [("pci-0000:00:14.0-usb-0:1.2", "Sala do fundo")]
+    assert chamou == [("E8473A000009", "Sala do fundo")]
 
 
 def test_o_escritor_do_nome_chama_o_dono_com_a_assinatura_dele(
@@ -394,21 +395,22 @@ def test_o_escritor_do_nome_chama_o_dono_com_a_assinatura_dele(
     *"Duas vezes em 04/09 um gesto passou VERDE sem gravar um byte: uma porque o
     dicionário ia como `timeout` posicional, outra porque `_run_blocking` não
     aceita keywords."* Aqui a régua fixa o contrato do escritor ÚNICO de
-    23/09/2026: `entrada_a_entrada.dar_nome(lugar, nome)`, os dois posicionais.
+    23/09/2026, pelo endereço desde 26/09/2026:
+    `entrada_a_entrada.dar_nome_ao_adaptador(endereco, nome)`, os dois posicionais.
     """
     from hefesto_dualsense4unix.integrations import entrada_a_entrada
 
     visto: dict[str, object] = {}
 
-    def _falso(lugar, nome, **kw):
-        visto.update(lugar=lugar, nome=nome, **kw)
-        return entrada_a_entrada.NomeDado(lugar, nome, True, "")
+    def _falso(endereco, nome, **kw):
+        visto.update(endereco=endereco, nome=nome, **kw)
+        return entrada_a_entrada.NomeDado(endereco, nome, True, "")
 
-    monkeypatch.setattr(entrada_a_entrada, "dar_nome", _falso)
+    monkeypatch.setattr(entrada_a_entrada, "dar_nome_ao_adaptador", _falso)
     monkeypatch.setattr(pacote, "_reler_a_declaracao", lambda: None)
-    feito = pacote._gravar_o_nome("pci-0000:00:14.0-usb-0:1.2", "Sala do fundo")
+    feito = pacote._gravar_o_nome("E8:47:3A:00:00:09", "Sala do fundo")
     assert feito.gravou
-    assert visto == {"lugar": "pci-0000:00:14.0-usb-0:1.2", "nome": "Sala do fundo"}
+    assert visto == {"endereco": "E8:47:3A:00:00:09", "nome": "Sala do fundo"}
 
 
 # ---------------------------------------------------------------------------

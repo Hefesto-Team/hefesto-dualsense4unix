@@ -21,9 +21,10 @@ O QUE ESTE PORTÃO COBRA:
    (TRANSPLANTE-DA-SECAO-01, item 1). Até ali salvar `"Extra"` escrevia
    `"Nintendo Extra"` no `Alias` do BlueZ por endereço; eram três escritores
    do mesmo nome (esta janela, a aba 08 e o `bt_active_mode.sh`), e o último
-   ganhava. Agora o nome é do lugar (`entrada_a_entrada.dar_nome`, no
-   `maquina.json`), e a costura do prefixo que segura o Pro é do único
-   escritor do `Alias`, o `bt_active_mode.sh`;
+   ganhava. Agora o nome mora no `maquina.json` pelo ENDEREÇO do adaptador
+   (`entrada_a_entrada.dar_nome_ao_adaptador`, desde 26/09/2026 — antes era o
+   nome da entrada, e os dois se confundiam), e a costura do prefixo que
+   segura o Pro é do único escritor do `Alias`, o `bt_active_mode.sh`;
 4. **nome igual não escreve.** Sem essa comparação, cada troca de aba
    regravaria o nome dos três adaptadores;
 5. **a junção da tabela é por `hciN` e nunca é guardada**; a junção do medidor
@@ -95,24 +96,20 @@ def _mesa() -> Mesa:
     )
 
 
-def _lugar(interface: str) -> str:
-    return next(a.lugar for a in _mesa().adaptadores if a.interface == interface)
-
-
 class _DonoDoNome:
-    """O `dar_nome` de mentira: registra o que o produto GRAVARIA, e responde
-    como o dono — com um `NomeDado` e nunca mais frouxo que ele (a assinatura
-    é a mesma: `lugar` e `nome`, posicionais)."""
+    """O `dar_nome_ao_adaptador` de mentira: registra o que o produto GRAVARIA,
+    e responde como o dono — com um `NomeDado` e nunca mais frouxo que ele (a
+    assinatura é a mesma: `endereco` e `nome`, posicionais)."""
 
     def __init__(self, gravou: bool = True) -> None:
         self.gravacoes: list[tuple[str, str]] = []
         self._gravou = gravou
 
-    def __call__(self, lugar: str, nome: str) -> Any:
+    def __call__(self, endereco: str, nome: str) -> Any:
         from hefesto_dualsense4unix.integrations.entrada_a_entrada import NomeDado
 
-        self.gravacoes.append((lugar, nome))
-        return NomeDado(lugar, nome, self._gravou, "")
+        self.gravacoes.append((endereco, nome))
+        return NomeDado(endereco, nome, self._gravou, "")
 
 
 @pytest.fixture
@@ -120,7 +117,7 @@ def dono_do_nome(monkeypatch: pytest.MonkeyPatch) -> _DonoDoNome:
     from hefesto_dualsense4unix.integrations import entrada_a_entrada
 
     dono = _DonoDoNome()
-    monkeypatch.setattr(entrada_a_entrada, "dar_nome", dono)
+    monkeypatch.setattr(entrada_a_entrada, "dar_nome_ao_adaptador", dono)
     return dono
 
 
@@ -289,14 +286,14 @@ def test_a_secao_diz_que_o_nome_nao_espera_o_aplicar() -> None:
 
 
 def test_salvar_um_nome_grava_no_lugar_e_sem_a_costura(dono_do_nome: _DonoDoNome) -> None:
-    """"Casa" num adaptador com Pro vai ao dono do LUGAR como "Casa".
+    """"Casa" num adaptador com Pro vai ao dono do nome como "Casa".
 
     A COSTURA NÃO MORA MAIS AQUI (23/09/2026): o prefixo `Nintendo` é do
-    `bt_active_mode.sh`, que escreve o `Alias` lendo o nome do lugar. Gravar
+    `bt_active_mode.sh`, que escreve o `Alias` lendo o nome dela. Gravar
     "Nintendo Casa" no `maquina.json` poria no nome DELA uma palavra que é
     proteção do rádio — e o watchdog costuraria de novo por cima.
 
-    Mordida: voltar a chamar `renomear_o_dongle` — o dono do lugar não é
+    Mordida: voltar a chamar `renomear_o_dongle` — o dono do nome não é
     chamado, e a lista fica vazia.
     """
     caixa, painel = _montar(_Hospedeiro())
@@ -304,8 +301,8 @@ def test_salvar_um_nome_grava_no_lugar_e_sem_a_costura(dono_do_nome: _DonoDoNome
     campo.set_text("Casa")
     painel._ao_salvar_o_nome(campo, _EXTRA)
 
-    assert dono_do_nome.gravacoes == [(_lugar("hci1"), "Casa")], (
-        f"o nome não foi ao dono do lugar, cru: {dono_do_nome.gravacoes}")
+    assert dono_do_nome.gravacoes == [(_EXTRA, "Casa")], (
+        f"o nome não foi ao dono, cru e pelo endereço: {dono_do_nome.gravacoes}")
 
 
 def test_salvar_num_adaptador_sem_nintendo_grava_o_nome_dela(
@@ -317,7 +314,7 @@ def test_salvar_num_adaptador_sem_nintendo_grava_o_nome_dela(
     campo.set_text("Sofá")
     painel._ao_salvar_o_nome(campo, _SALA)
 
-    assert dono_do_nome.gravacoes == [(_lugar("hci0"), "Sofá")]
+    assert dono_do_nome.gravacoes == [(_SALA, "Sofá")]
 
 
 def test_nome_que_nao_mudou_nao_grava(dono_do_nome: _DonoDoNome) -> None:
@@ -360,14 +357,15 @@ def test_o_espelho_de_memoria_impede_a_segunda_escrita_igual(
     )
 
 
-def test_o_adaptador_sem_lugar_nao_grava_e_o_campo_volta(
+def test_o_adaptador_sem_lugar_tambem_ganha_nome(
     dono_do_nome: _DonoDoNome,
 ) -> None:
-    """O adaptador da placa-mãe não pendura em entrada: não há onde o nome morar.
+    """O adaptador da placa-mãe não pendura em entrada, e ganha nome do mesmo jeito.
 
-    Sem o controlador PCI a mesa não sabe o LUGAR, e gravar sob uma chave vazia
-    seria um nome que nenhum adaptador herda. O campo volta ao que era, em vez
-    de fingir que gravou.
+    Até 26/09/2026 o nome era do LUGAR, e o adaptador sem lugar voltava o campo
+    sem gravar. O nome é do endereço agora: o embutido é nomeado como os outros.
+
+    Mordida: devolva a `_ao_salvar_o_nome` a exigência do lugar — nada é gravado.
     """
     caixa, painel = _montar(_Hospedeiro())
     painel._mesa = Mesa(adaptadores=tuple(
@@ -377,8 +375,7 @@ def test_o_adaptador_sem_lugar_nao_grava_e_o_campo_volta(
     campo.set_text("Sofá")
     painel._ao_salvar_o_nome(campo, _SALA)
 
-    assert not dono_do_nome.gravacoes
-    assert campo.get_text() == "Sala"
+    assert dono_do_nome.gravacoes == [(_SALA, "Sofá")]
 
 
 # --- 3. As duas junções ----------------------------------------------------

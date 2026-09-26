@@ -493,9 +493,22 @@ def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
     separa de um adaptador de rede com fio, e as regras de Wi-Fi do motor
     (o SuperSpeed no mesmo hub) valem só para rádio. Ele entra com classe
     vazia e a lacuna ``LACUNA_ESPECIE`` diz isso.
+
+    **O BURACO TEM DOIS NÓS, E A LEITURA VALE PELOS DOIS** — 26/09/2026, foto
+    dela: *«dentro do hub identificou errado são 4 dispositivos
+    conectados»*. A entrada declara o caminho do lado USB 2.0 (``3-1.1.4``) e
+    os nós dos DOIS lados (``3-1.1-port4``, ``4-1.1-port4``); o Wi-Fi que
+    enumera no lado 3.0 (``4-1.1.4``) não casava com caminho nenhum e caía em
+    «sem entrada». Agora o aparelho encaixado em qualquer nó de uma entrada é
+    lido no caminho DELA (:func:`_leitura_pelas_entradas`), e o chip de dentro
+    do hub e o gêmeo 3.0 do hub saem da lista de aparelhos — não são coisa que
+    ela plugou.
     """
-    aparelhos = tuple(_aparelho_do_motor(a) for a in censo.conectados())
-    leitura = {aparelho.id: aparelho.id for aparelho in aparelhos}
+    leitura, fora = _leitura_pelas_entradas(mapa, censo.conectados())
+    aparelhos = tuple(
+        _aparelho_do_motor(a) for a in censo.conectados() if a.nome_do_kernel not in fora
+    )
+    leitura = {aparelho.id: leitura[aparelho.id] for aparelho in aparelhos}
     declarado = {
         numero: porta.caminho
         for numero, porta in sorted(mapa.portas.items())
@@ -594,6 +607,47 @@ def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
 # ---------------------------------------------------------------------------
 # Interno
 # ---------------------------------------------------------------------------
+
+
+def _leitura_pelas_entradas(
+    mapa: MapaDaMesa, conectados: Sequence[Aparelho]
+) -> tuple[dict[str, str], frozenset[str]]:
+    """``(aparelho -> caminho em que o mapa o lê, os hubs que não são aparelho)``.
+
+    O caminho é o da entrada cujo NÓ o aparelho ocupa, dos dois lados do buraco
+    (``utils/lugar.caminho_do_no``), ou o dele mesmo quando nenhuma entrada o
+    declara. Um hub sai da lista em dois casos, e os dois são o mesmo plástico:
+
+    * o CHIP DE DENTRO — ele hospeda entradas declaradas e não está em entrada
+      nenhuma (``3-1.1`` e ``4-1.1``, no hub de dois chips desta bancada);
+    * o GÊMEO 3.0 — ele cai no caminho de outro hub já lido (``4-1`` é o lado
+      SuperSpeed do ``3-1``, na mesma entrada).
+    """
+    from hefesto_dualsense4unix.utils.lugar import caminho_do_no
+
+    da_entrada: dict[str, str] = {}
+    anfitrioes: set[str] = set()
+    for _numero, porta in sorted(mapa.portas.items()):
+        for no in porta.nos:
+            anfitrioes.add(no.rpartition(_SUFIXO_DO_NO)[0])
+            if porta.caminho and caminho_do_no(no):
+                da_entrada.setdefault(caminho_do_no(no), porta.caminho)
+    leitura: dict[str, str] = {}
+    fora: set[str] = set()
+    lidos_de_hub: set[str] = set()
+    # O lado 2.0 primeiro: é o caminho que a entrada declara, e o gêmeo que
+    # sobra é o do outro barramento.
+    for aparelho in sorted(conectados, key=lambda a: a.nome_do_kernel not in da_entrada.values()):
+        nome = aparelho.nome_do_kernel
+        caminho = da_entrada.get(nome, nome)
+        leitura[nome] = caminho
+        if not aparelho.e_hub:
+            continue
+        if (nome not in da_entrada and nome in anfitrioes) or caminho in lidos_de_hub:
+            fora.add(nome)
+        else:
+            lidos_de_hub.add(caminho)
+    return leitura, frozenset(fora)
 
 
 def _aparelho_do_motor(aparelho: Aparelho) -> motor.Aparelho:
