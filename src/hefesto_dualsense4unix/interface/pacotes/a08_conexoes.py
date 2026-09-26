@@ -6130,13 +6130,24 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
 
 def _e_controle_do_bluez(a: Any) -> bool:
     """Pergunta à CLASSE (o dono é `gesto_de_pareamento.e_controle`), e sem ela
-    ao ``Icon`` que o BlueZ deriva e ao fabricante do ``Modalias`` — nunca ao nome."""
+    ao ``Icon`` que o BlueZ deriva e ao fabricante do ``Modalias`` — nunca ao nome.
+
+    NESSA ORDEM, E A PRIMEIRA QUE RESPONDE DECIDE (o conferente, 26/09/2026), a
+    mesma da central (`central_do_radio._e_controle`). O código perguntava às
+    três com ``or``: um fone ou um teclado da Sony, com a classe dizendo o que
+    ele é e o ``054C`` no ``Modalias``, virava a linha «Desligado» de um
+    controle — com o X que esquece o pareamento dele.
+    """
     perfil._com_o_src()
     from hefesto_dualsense4unix.integrations.gesto_de_pareamento import e_controle
 
-    return (e_controle(getattr(a, "classe", None))
-            or str(getattr(a, "icone", "") or "") == "input-gaming"
-            or "V054C" in str(getattr(a, "modalias", "") or "").upper())
+    classe = getattr(a, "classe", None)
+    if classe is not None:
+        return e_controle(classe)
+    icone = str(getattr(a, "icone", "") or "")
+    if icone:
+        return icone == "input-gaming"
+    return "V054C" in str(getattr(a, "modalias", "") or "").upper()
 
 
 def _os_desligados(aparelhos_bz: tuple[Any, ...], endereco_do_caminho: dict[str, str],

@@ -585,3 +585,28 @@ def test_todo_x_na_tela_tem_a_pergunta_dele(
                 assert par in moldes, f"o X de {par} não abre pergunta nenhuma"
     finally:
         bancada.fechar()
+
+
+def test_o_fone_da_sony_desligado_nao_vira_controle(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A CLASSE decide quando ela existe, e só sem ela o ``Icon`` e o
+    ``Modalias`` falam — a regra da central (``_e_controle``). Um fone pareado e
+    desligado, com a classe de fone e o ``054C`` da Sony no ``Modalias``, não é
+    a linha «Desligado» de um controle, e não ganha o X que esqueceria o
+    pareamento dele. O DualSense desligado ao lado continua ganhando.
+
+    MORDIDA: volte ``_e_controle_do_bluez`` a perguntar às três com ``or`` — o
+    fone vira controle, e esta régua reprova.
+    """
+    mundo, relogio = mundo_da_madrugada(), rm.Relogio()
+    mundo.pareado(SALA, FONE, classe=rm.CLASSE_DE_FONE, conectado=False,
+                  modalias="bluetooth:v054Cp0D58d0100")
+    mundo.pareado(QUARTO, ROXO, conectado=False)
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    try:
+        cena = bancada.cena()
+        desligados = {(a["id"], a["lugar"]) for a in cena["aparelhos"] if a.get("desligado")}
+        assert desligados == {(id_da_tela(ROXO), id_da_tela(QUARTO))}
+    finally:
+        bancada.fechar()
