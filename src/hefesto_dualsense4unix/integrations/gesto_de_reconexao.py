@@ -241,12 +241,23 @@ def desconectar(mac: str, *, executar: Executar | None = None) -> Resultado:
     return Resultado(ESTADO_DESCONECTOU, FRASE_DESCONECTOU, mascara)
 
 
-#: O par do DualSense FÍSICO, escrito como o `Modalias` do BlueZ o entrega.
-#: Os números são os mesmos do broker (`broker/hidraw_broker.py:98`,
-#: `PHYS_PRODUCT`), e a pergunta é por PROPRIEDADE, nunca pelo `Alias`: o nome
-#: é editável e a mesa dela tem quatro aparelhos com o mesmo, que é a doença
-#: que esta casa já pagou casando nó de som por rótulo.
-_MODALIAS_DO_DUALSENSE = "v054Cp0CE6"
+def _modalias_dos_dualsense() -> tuple[str, ...]:
+    """Os pares dos DualSense FÍSICOS, escritos como o `Modalias` do BlueZ os entrega.
+
+    Os números SÃO os do broker (`broker/hidraw_broker.PHYS_VENDOR` e
+    `PHYS_PRODUCTS`), lidos de lá, e a pergunta é por PROPRIEDADE, nunca pelo
+    `Alias`: o nome é editável e a mesa dela tem quatro aparelhos com o mesmo,
+    que é a doença que esta casa já pagou casando nó de som por rótulo.
+
+    **O EDGE ENTROU EM 25/09/2026** (O-CONTROLE-NUNCA-VISTO-TEM-NOME-E-COR-01).
+    Aqui estava o par do DualSense digitado (`v054Cp0CE6`), e o «Reconectar
+    controles» nunca chamava de volta um DualSense Edge pelo rádio — o controle
+    que o daemon adota, numera e acende como qualquer outro. O `0DF2` do nosso
+    vpad não é aparelho do BlueZ, então aqui ele não confunde ninguém.
+    """
+    from hefesto_dualsense4unix.broker.hidraw_broker import PHYS_PRODUCTS, PHYS_VENDOR
+
+    return tuple(f"v{PHYS_VENDOR:04X}p{pid:04X}" for pid in sorted(PHYS_PRODUCTS))
 
 
 def dualsenses_do_radio(
@@ -269,7 +280,9 @@ def dualsenses_do_radio(
         if mac is None:
             continue
         modalias = leitor.propriedade(caminho, bluez_dbus.APARELHO, "Modalias")
-        if not isinstance(modalias, str) or _MODALIAS_DO_DUALSENSE not in modalias:
+        if not isinstance(modalias, str) or not any(
+            par.upper() in modalias.upper() for par in _modalias_dos_dualsense()
+        ):
             continue
         achados.append((mac, _conectado(leitor, caminho)))
     return achados
