@@ -1233,15 +1233,15 @@ def _sugestao_da_central(cena: dict[str, Any] | None) -> tuple[str, str, str] | 
 
     É o que o mapa das conexões dizia com «adaptador atual → ?», e ela mandou
     para cá (*«deveria ocupar o lugar no canto superior direito»*). A central
-    propõe UM movimento por vez (R12): uma linha, ou nenhuma. Devolve
-    ``(instrução, de em HTML, para em HTML)``.
+    propõe UM movimento por vez (R12): uma linha, ou nenhuma: ``(instrução, de, para)``.
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.gui.aba_conexoes import _e
 
     proposta = (cena or {}).get("proposta") or {}
     aparelhos = (cena or {}).get("aparelhos") or ()
-    lugares = {str(lug.get("id")): lug for lug in (cena or {}).get("lugares") or ()}
+    lugares = {str(lug.get("id")): lug for lug in (cena or {}).get("lugares") or ()
+               if lug.get("sabido", True)}  # sem o BlueZ o lugar não tem nome: não se diz
     ap = next((a for a in aparelhos if a.get("id") == proposta.get("controle")), None)
     para = lugares.get(str(proposta.get("destino") or ""))
     if ap is None or para is None:
@@ -1422,7 +1422,7 @@ def _html_da_ordem(vivos: list[Any] | None = None,
         itens = [(t, o) for t, o in itens if t]
     else:
         itens = _sugestoes_do_exame(vivos)
-    linhas = []
+    linhas: list[str] = []
     for instrucao, ordem in itens:
         n = len(linhas) + 1
         if ordem is not None and str(getattr(ordem, "destino", "") or ""):
@@ -5405,10 +5405,10 @@ def html_fora_da_faixa(cena: dict[str, Any]) -> str:
                  else ICONE_DO_RADIO.get(sugerido, "ajuda") if sugerido else "ajuda")
         # O BALÃO DIZ O QUE O KERNEL ACHA QUE ELE É (26/09/2026, item 6 dela:
         # *«o que diabos deveria ser esse svg ali? como identificar o que é
-        # dessa forma?»*): o ícone sozinho não se lê, e a palavra vai junto,
-        # com a interrogação de quem ainda não foi confirmado. O clique
-        # continua perguntando o que é. <!-- noqa-acento: citação literal dela -->
-        palpite = (f'<span class="palpite">{_x(_em_titulo(sugestao))}?</span>'
+        # dessa forma?»*): o ícone sozinho não se lê, e a palavra vai junto, só
+        # para o olho (`aria-hidden`: o `aria-label` já a diz, e o leitor de tela
+        # a leria duas vezes). <!-- noqa-acento: citação literal dela -->
+        palpite = (f'<span class="palpite" aria-hidden="true">{_x(_em_titulo(sugestao))}?</span>'
                    if sugestao and not tipo else "")
         partes.append(f'<button class="selo-fora vizinho{"" if tipo else " sem-nome"}" '
                       f'title="{dica}" aria-label="{dica}" data-gesto="vizinho-o-que-e" '

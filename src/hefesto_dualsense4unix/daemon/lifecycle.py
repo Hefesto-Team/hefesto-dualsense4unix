@@ -1622,14 +1622,14 @@ class Daemon:
         hora. Nada muda para quem declarou outra coisa (a antena, a cor).
 
         Em Modo Nativo não reaplica: o controle está com o jogo, e a saída do
-        nativo já reaplica o perfil — com a economia nova.
+        nativo reaplica o perfil com a economia nova — e a camada dela já solta.
         """
         from hefesto_dualsense4unix.profiles.schema import economia_da_declaracao
         if economia_da_declaracao(antes) == economia_da_declaracao(self._maquina):
             return False
+        _soltar_o_teto_de_quem_entra(self, antes)  # o teto fica por cima dela
         if self._native_mode:
             return False
-        _soltar_o_teto_de_quem_entra(self, antes)  # o teto fica por cima dela
         self._reapply_last_profile()
         return True
 

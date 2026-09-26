@@ -4431,11 +4431,11 @@ document.addEventListener("click", function (ev) {{
 '''
 
 LEGENDA = f'''<div class="nota">
-  <h2>O Check-up absorveu a Gestão de Controles (25/09)</h2>
+  <h2>A Gestão de Controles (25/09 e 26/09)</h2>
   <ul>
-    <li><b>Uma seção só</b>: o exame em cima, cinco ferramentas do mesmo tamanho no meio (o <b>{MAPEAR_ENTRADAS}</b> num botão só, que abre o fluxo porta a porta) e um cartão por controle embaixo.</li>
+    <li><b>Uma seção só</b>: o exame e a <b>Sugestão de Conexão</b> (um ajuste por linha, numerado) em cima, quatro ferramentas com ícone no meio (o «Atualizar» entrou no «{EXAMINAR_PORTAS}»; o <b>{MAPEAR_ENTRADAS}</b> abre o fluxo porta a porta) e um cartão por controle embaixo.</li>
     <li><b>O cartão diz o estado de agora</b>, no molde da aba Sistema: Mic, Som, Modo de conexão, Visto como, Conexão e Bateria, com o ✓ de «tudo certo». Nada abre nem fecha.</li>
-    <li><b>O nome ao lado do «P N» é de quem joga</b>: escreva; apagado, o campo volta vazio. Embaixo, o <b>Modo Economia de Bateria</b> daquele controle, verde quando ligado. O lugar sem controle fica, tracejado, com «Desconectado».</li>
+    <li><b>O nome ao lado do «P N» é de quem joga</b>: escreva; apagado, o campo volta vazio. Embaixo, o <b>Perfil de Desempenho</b> daquele controle (Tudo Ligado, Bateria Longa ou Personalizado), o mesmo dado da aba Sistema. O lugar sem controle fica, tracejado, com «Desconectado».</li>
     <li><b>{MAPEAR_ENTRADAS}</b> abre uma tela com o que o Hefesto mediu da entrada da vez, o nome e o lugar que você dá, e a lista das que já têm nome.</li>
   </ul>
   <h2>«Rádio e Adaptadores» é o desenho que você aprovou em 23/09 — e o que ficou diferente</h2>

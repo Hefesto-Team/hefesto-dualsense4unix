@@ -374,3 +374,43 @@ def test_a_bateria_longa_da_sistema_depois_do_aplicar_poe_o_teto_nos_quatro(
     for n, estado in regua_do_aplicar._mesa_inteira(mesa).items():
         assert estado["luzes"] == (regua_do_aplicar.FRACO, regua_do_aplicar.FRACO), (n, estado)
         assert estado["barra"] is not None and estado["barra"] <= 0.3, (n, estado)
+
+
+@pytest.mark.parametrize("via", ["usb", "bt"])
+@pytest.mark.parametrize("k", [1, 2, 3, 4], ids=["P1", "P2", "P3", "P4"])
+def test_a_bateria_longa_no_modo_nativo_poe_o_teto_na_saida_do_jogo(
+        mesa_de: Any, declarar: Any, k: int, via: str) -> None:
+    """Nunca só um modo: o clique com o jogo em Modo Nativo também põe o teto.
+
+    Achado pela conferência (26/09/2026). No Modo Nativo o daemon não reaplica
+    no clique (o controle é do jogo); quem reaplica é a SAÍDA do nativo
+    (`_reapply_last_profile`, origem `system`). A camada do «Aplicar» tem de
+    estar solta já no clique, senão ela atravessa essa reativação e o P<k> sai
+    do jogo a 70% e no Médio. MORDIDA: devolva o `_soltar_o_teto_de_quem_entra`
+    para depois do `if self._native_mode` → reprova nos oito.
+    """
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon
+    from hefesto_dualsense4unix.utils.maquina import carregar_maquina
+
+    orc = _orc()
+    mesa = mesa_de(via)
+    regua_do_aplicar._cada_um_no_seu(mesa)
+    livre = regua_do_aplicar._mesa_inteira(mesa)
+    regua_do_brilho._aplicar(mesa)
+
+    antes = carregar_maquina()
+    declarar(orc.declaracao_do_perfil(UNIQS[k - 1], orc.PERFIL_BATERIA_LONGA))
+    reaplicou: list[bool] = []
+    vivo = SimpleNamespace(controller=mesa.ctl, _maquina=carregar_maquina(), _native_mode=True,
+                           _reapply_last_profile=lambda: reaplicou.append(True))
+    assert not Daemon.reaplicar_se_a_economia_mudou(vivo, antes)  # type: ignore[arg-type]
+    assert reaplicou == [], "no Modo Nativo o clique não reaplica: o controle é do jogo"
+
+    mesa.trocar(NOME, "system")  # a saída do Modo Nativo
+    depois = regua_do_aplicar._mesa_inteira(mesa)
+    assert depois[k]["luzes"] == (regua_do_aplicar.FRACO, regua_do_aplicar.FRACO), (
+        f"P{k}/{via}: saiu do jogo com as luzes {depois[k]['luzes']} — a camada do "
+        "«Aplicar» atravessou o teto")
+    assert depois[k]["barra"] is not None and depois[k]["barra"] <= 0.3, depois[k]
+    for n in {1, 2, 3, 4} - {k}:
+        assert depois[n] == livre[n], f"P{k}/{via}: a economia do P{k} mexeu no P{n}"

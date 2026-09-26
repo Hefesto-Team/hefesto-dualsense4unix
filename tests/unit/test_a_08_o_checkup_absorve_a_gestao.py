@@ -329,3 +329,23 @@ def test_a_ordem_diz_o_que_e_e_o_que_mover() -> None:
     assert ('<div class="faca"><span class="n">1</span>'
             'Mova o adaptador Bluetooth para a Entrada 9</div>') in card
     assert pac.TITULO_DA_ORDEM == "Sugestão de Conexão"
+
+
+def test_o_examinar_tambem_rele_os_controles(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`D-2609-O-ATUALIZAR-ENTRA-NO-EXAMINAR`: o «Atualizar» saiu, e o «Examinar
+    Entradas» faz o que ele fazia — os nomes dos donos no BlueZ e o rascunho do
+    mapa das portas lidos de novo — além de refazer o exame (que relê a
+    declaração). Achado sem régua pela conferência de 26/09/2026.
+
+    MORDIDA: tire o `_esquecer("bluez")` ou o `_LOGICA = None` de
+    `examinar_portas` → reprova.
+    """
+    pac = _pac()
+    corridas: list[bool] = []
+    monkeypatch.setattr(pac, "_correr_o_exame_completo", lambda: corridas.append(True))
+    monkeypatch.setattr(pac, "_LOGICA", object())
+    antes = pac._GERACAO.get("bluez", 0)
+    pac.examinar_portas(None, {}, None)
+    assert corridas == [True], "o «Examinar Entradas» não refez o exame"
+    assert pac._LOGICA is None, "o rascunho do mapa das portas não foi relido"
+    assert pac._GERACAO.get("bluez", 0) == antes + 1, "os nomes no BlueZ não foram relidos"
