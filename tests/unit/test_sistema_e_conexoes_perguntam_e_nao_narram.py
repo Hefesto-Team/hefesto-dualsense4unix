@@ -292,13 +292,12 @@ def test_com_o_servico_parado_o_pacote_escreve_o_painel_e_o_exame(monkeypatch) -
     carga = a09.pacote(_ctx())
     assert carga.get("sem_dono"), "o ramo de erro não foi exercido"
     nada = str(a09._monta().NADA_A_DIZER)
-    for campo in (a09.REGISTRO, "exame-lista", "exame-contagem"):
+    for campo in (a09.REGISTRO, "exame-lista"):
         assert campo in carga, (
             f"o ramo de erro não emite `{campo}` — a página continua com o "
             "literal do desenho nesse endereço")
     assert carga[a09.REGISTRO] == "—", carga[a09.REGISTRO]
     assert carga["exame-lista"] == nada
-    assert carga["exame-contagem"] == nada
 
 
 def test_com_o_servico_parado_o_que_ela_pediu_continua_no_painel(monkeypatch) -> None:
@@ -316,16 +315,13 @@ ROTEIRO_09 = """
 (function(){
   const r = document.querySelector('[data-campo="registro-texto"]');
   const l = document.querySelector('[data-campo="exame-lista"]');
-  const c = document.querySelector('[data-campo="exame-contagem"]');
-  if(!r || !l || !c) return JSON.stringify({erro: 'a página não tem os endereços'});
-  const fora = {inicial: {registro: r.textContent, lista: l.textContent,
-                          contagem: c.textContent}};
+  if(!r || !l) return JSON.stringify({erro: 'a página não tem os endereços'});
+  const fora = {inicial: {registro: r.textContent, lista: l.textContent}};
   for(const [nome, carga] of CARGAS){
     fora[nome] = {
       pintou: window.__hef.pintar(carga),
       registro: r.textContent,
       lista: l.textContent,
-      contagem: c.textContent,
       largura: [r.clientWidth, r.scrollWidth],
     };
   }
@@ -428,8 +424,6 @@ def test_no_pixel_o_servico_parado_apaga_o_registro_e_o_exame_do_desenho(
     assert "Mortal Kombat" not in visto["registro"]
     assert inicial["lista"].strip() and not visto["lista"].strip(), (
         f"o exame do desenho continua na tela: {visto['lista'][:120]!r}")
-    assert inicial["contagem"] != visto["contagem"], visto["contagem"]
-    assert "linhas" not in visto["contagem"], visto["contagem"]
 
 
 def test_no_pixel_a_pergunta_cabe_no_painel_sem_rolar_de_lado(no_webkit_09) -> None:

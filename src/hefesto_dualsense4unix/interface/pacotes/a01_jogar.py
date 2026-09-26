@@ -924,7 +924,7 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
     que a própria frase viva já manda, com estas palavras, **A aba Sistema diz
     por quê**. A 09 é a página cujo trabalho inteiro é a máquina se explicar;
     ela já publica uma lista de achados com selo, glifo e frase
-    (`exame-lista` / `exame-contagem`, de `a09_sistema`) e já recebe uma das
+    (`exame-lista`, de `a09_sistema`) e já recebe uma das
     onze — a cura do travamento do USB. As dez órfãs cabem na MESMA lista, sem
     peça de tela nova.
 

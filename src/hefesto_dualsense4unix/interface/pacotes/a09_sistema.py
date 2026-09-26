@@ -1811,7 +1811,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                     if _status_do_daemon(ctx.state) == "online_avulso" else ""),
                 REGISTRO: _no_painel(None),
                 CAMPO_DO_VERDE: "",
-                "exame-contagem": nada,
                 "exame-lista": nada,
                 **razoes_do_cinza(ctx),
                 "cobertura": {"pintados": 0, "sem_dono": 1}}
@@ -1832,7 +1831,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     fora[REGISTRO] = _no_painel(repouso)
     exame = bruto.get("exame")
     if isinstance(exame, dict):
-        fora["exame-contagem"] = _html_da_contagem(exame.get("contagem"))
         fora["exame-lista"] = _html_do_exame(exame)
     tira = _html_da_fita(ctx.mesa)
     if tira:
@@ -1857,19 +1855,26 @@ def _pausado(ctx: Contexto) -> bool:
 def _html_do_status(linhas: list[dict[str, Any]]) -> str:
     """As quatro linhas do Status, na MESMA marcação das linhas do exame.
 
-    A pílula, o texto curto e o `?` com a frase — o que ela pediu: *«no MESMO
-    estilo das linhas do O exame de hoje»*. A linha que tem para onde levar
-    (a do Bluetooth) é um `<a>` inteiro: o clique vai à seção do rádio na aba
-    Conexões, como as abas do topo levam de uma página a outra.
+    A pílula, o texto curto e a frase no `title` — o que ela pediu: *«no MESMO
+    estilo das linhas do O exame de hoje»*, e às 22h13 de 25/09/2026, com o
+    risco em cima da coluna dos quatro `?`: *«remove a tooltip»*. A linha que
+    tem para onde levar (a do Bluetooth) é um `<a>` inteiro: o clique vai à
+    seção do rádio na aba Conexões, como as abas do topo levam de uma página a
+    outra.
     """
     return "".join(linha_do_status(linha) for linha in linhas)
 
 
 def linha_do_status(linha: dict[str, Any]) -> str:
-    """Uma linha do Status. Tudo escapado: o texto vem da camada do produto."""
+    """Uma linha do Status. Tudo escapado: o texto vem da camada do produto.
+
+    A frase da `dica` vai no `title` do texto, como a frase inteira do exame
+    (`_linha_do_exame`) — sem o `?`, que ela mandou tirar em 25/09/2026.
+    """
     cls = html.escape(str(linha.get("cls") or "nt"))
     ident = html.escape(str(linha.get("id") or ""))
     dica = html.escape(str(linha.get("dica") or ""))
+    titulo = f' title="{dica}"' if dica else ""
     href = str(linha.get("href") or "")
     tag, fim = ("a", "a") if href else ("div", "div")
     destino = f' href="{html.escape(href)}"' if href else ""
@@ -1877,9 +1882,8 @@ def linha_do_status(linha: dict[str, Any]) -> str:
             f'<span class="selo {cls}"><span class="sg">'
             f'{html.escape(str(linha.get("g") or ""))}</span>'
             f'{html.escape(str(linha.get("selo") or ""))}</span>'
-            f'<span class="txt"><span>{html.escape(str(linha.get("txt") or ""))}'
-            f"</span></span>"
-            f'<span class="ajuda">?<span class="dica">{dica}</span></span>'
+            f'<span class="txt"{titulo}>'
+            f'<span>{html.escape(str(linha.get("txt") or ""))}</span></span>'
             f"</{fim}>")
 
 
@@ -2049,18 +2053,6 @@ def frase_curta_do_exame(frase: str) -> str:
     return cabeca_da_frase(frase)
 
 
-def _html_da_contagem(texto: Any) -> str:
-    """`6 linhas · nenhum aviso` com o `·` de volta no `<span class="sep">`.
-
-    A FRASE É DA CAMADA DO PRODUTO (`aba_sistema.exame`), que a deriva da lista
-    — o "8" do desenho é literal de bancada e seria falso na primeira máquina
-    que não tivesse oito. O que se faz aqui é devolver ao separador a classe que
-    o desenho lhe deu; escrever a frase como texto puro apagaria o `<span>` e
-    mudaria a cor do `·` na tela dela.
-    """
-    if not texto:
-        return ""
-    return html.escape(str(texto)).replace(" · ", ' <span class="sep">·</span> ')
 
 
 

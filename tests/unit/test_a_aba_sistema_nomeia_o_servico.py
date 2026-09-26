@@ -80,12 +80,13 @@ def _html() -> str:
 def _rotulos_das_linhas() -> dict[str, str]:
     """``data-id`` → o rótulo que a pessoa LÊ naquela linha de estado."""
     # DESDE 25/09/2026 a linha de estado é a do Status, na forma do exame
-    # (A-09-SISTEMA-EM-TRES-SECOES-01): o rótulo mora no `.txt`.
+    # (A-09-SISTEMA-EM-TRES-SECOES-01): o rótulo mora no `.txt`, e o `.txt` leva
+    # a frase da linha no `title` desde que o `?` saiu (22h13 do mesmo dia).
     achados: dict[str, str] = {}
     for linha in re.findall(r'<(?:div|a) class="saude[^"]*"[^>]*data-id="[^"]+".*?</(?:div|a)>',
                             _html(), re.S):
         ident = re.search(r'data-id="([^"]+)"', linha)
-        rot = re.search(r'<span class="txt"><span>([^<]*)</span>', linha)
+        rot = re.search(r'<span class="txt"[^>]*><span>([^<]*)</span>', linha)
         if ident and rot:
             achados[ident.group(1)] = rot.group(1).strip()
     return achados
