@@ -28,13 +28,16 @@ O QUE ESTA RÉGUA COBRA, no ``/sys`` de mentira da ENTRADA-A-ENTRADA-02 (o
 AS MORDIDAS (arranque a cura, veja reprovar, devolva):
 
 * :func:`test_a_revisita_so_troca_o_que_ela_trocou` — faça o ramo da revisita
-  de ``_gravar_a_porta`` mandar só a face mexida (``{"faces": [ela]}``) e as
+  de ``_gravar_a_porta`` (o hub desligado) começar as faces de ``[]`` e as
   outras faces somem do disco;
 * :func:`test_um_gravador_so_no_dono` — ponha um ``self._gravar({...})`` direto
   em qualquer método e ela reprova;
-* :func:`test_o_mesmo_controle_de_porta_em_porta_mapeia_cada_uma` — troque o
-  ``set(nos) & self._antes`` por ``agora[0]`` e a porta da vez fica presa na
-  primeira;
+* :func:`test_o_controle_que_ja_estava_no_cabo_nao_e_a_porta_da_vez` — troque
+  o ``nos not in self._antes`` de ``MapearAsPortas.olhar`` por ``agora[:1]`` e a
+  porta da vez vira o controle que já estava no cabo;
+* :func:`test_a_revisita_so_troca_o_que_ela_trocou` (a segunda) — troque o
+  ``nome is not None`` de ``_gravar_as_portas`` por nada e reposicionar apaga
+  o nome;
 * :func:`test_cada_porta_diz_o_que_o_metal_e` — troque o ``hardwired`` do
   Bluetooth da placa por ``hotplug`` e o nativo vira dongle.
 
@@ -164,9 +167,12 @@ def test_o_controle_que_ja_estava_no_cabo_nao_e_a_porta_da_vez(
     assert fluxo.comecar()["porta"] is None
 
     mesa.tirar("1-6")
-    mesa.plugar(1, "1", DUALSENSE)
+    mesa.plugar(3, "4.3", DUALSENSE)
     foto = fluxo.olhar()
-    assert foto["porta"]["nos"] == ["usb1-port1", "usb2-port1"]
+    assert foto["porta"]["nos"] == ["3-4-port3", "4-4-port3"], (
+        "a porta da vez é a que APARECEU, não a primeira da leitura"
+    )
+    assert fluxo.olhar()["porta"]["nos"] == ["3-4-port3", "4-4-port3"]
 
     sozinho = Gabinete(mesa.raiz.parent / "outra", BOOT_1)
     sozinho.plugar(1, "3", DUALSENSE)
@@ -278,6 +284,24 @@ def test_a_revisita_so_troca_o_que_ela_trocou(mesa: Gabinete, disco: Path) -> No
     assert documento.lugares[lugar_1].nome == "Frente", "mudar o lugar não apaga o nome"
     assert documento.lugares[lugar_1].entrada == "1", "a revisita não troca o número"
     assert documento.mapa.portas["3"].nos == ["3-4-port2", "4-4-port2"]
+
+    # o hub desligado: a porta 3 não está no /sys, e a revisita ainda vale
+    mesa.tirar("3-4")
+    mesa.tirar("4-4")
+    antes = json.loads(disco.read_text(encoding="utf-8"))
+    assert fluxo.gravar(chave="3", nome="Hub do monitor", lugar=ee.LUGAR_MONITOR).gravou
+    depois = json.loads(disco.read_text(encoding="utf-8"))
+    faces_antes = {f["nome"]: f["portas"] for f in antes["mapa"]["faces"]}
+    faces_depois = {f["nome"]: f["portas"] for f in depois["mapa"]["faces"]}
+    assert faces_depois.pop(ee.LUGAR_MONITOR) == ["3"]
+    faces_antes[ee.LUGAR_HUB] = []
+    assert faces_depois == faces_antes, "a revisita apagou as outras faces"
+    assert depois["mapa"]["portas"] == antes["mapa"]["portas"]
+    lugar_3 = lugar_de(PCI_B, "4.2")
+    assert depois["lugares"][lugar_3]["nome"] == "Hub do monitor"
+    assert _sem(depois, ("lugares", lugar_3, "nome"), ("mapa",)) == _sem(
+        antes, ("lugares", lugar_3, "nome"), ("mapa",)
+    )
 
 
 def test_a_revisita_nao_apaga_o_que_o_laco_de_antes_gravou(
