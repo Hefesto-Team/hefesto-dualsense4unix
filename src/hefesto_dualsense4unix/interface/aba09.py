@@ -8,7 +8,6 @@ from monta import (  # noqa: E402
     MESA,
     CONECTADOS,
     botao_cinza,
-    glifo,
     monta,
     CSS_GLIFO,
 )
@@ -757,7 +756,7 @@ MIOLO = f'''
     </div>
 '''
 
-LEGENDA = f'''<div class="nota">
+LEGENDA = '''<div class="nota">
   <h2>A aba Sistema em três seções — 25/09/2026</h2>
   <ul>
     <li><b>O pedido dela:</b> <i>"praticamente vamos só mudar de lugar as coisas dessa aba"</i>,
