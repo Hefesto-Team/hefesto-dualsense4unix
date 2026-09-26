@@ -780,14 +780,14 @@ def registrar_modo_jogo_no_rascunho(janela: Any, ligado: bool) -> bool:
 # 26/08/2026, quando a BG-PALAVRA-02 pagou a dívida da E3 da PALAVRA-01.)
 #
 # O QUE ELE FAZ: desliga, dentro do prefixo Wine de cada jogo, as camadas Vulkan
-# implícitas que não são o driver do Wine nem ferramenta reconhecida. Elas
-# embrulham a apresentação de cada quadro — medido em 23/08/2026: 60 fps de
-# média perfeita com ~70 quadros longos por minuto, e de 27 prefixos dela só um
-# tinha camada a mais (o do Sackboy, com o overlay do Epic Online Services), que
-# era justamente o único que engasgava. **O A/B saiu em 23/08 e DERRUBOU a
-# hipótese**: com a camada desligada a degradação mediu PIOR (p99 subindo
-# 4,19 ms/min contra 2,35, e 121 picos/min contra 51), e a rampa aparece nos
-# dois casos. Os números e a ressalva de carga estão em
+# implícitas que não são o driver do Wine nem ferramenta reconhecida. A hipótese
+# de 23/08/2026 era que elas embrulhassem a apresentação de cada quadro: 60 fps
+# de média com ~70 quadros longos por minuto, e de 27 prefixos só um com camada
+# a mais (o do Sackboy, com o overlay do Epic Online Services), o único que
+# engasgava. **O A/B de 23/08 DERRUBOU a hipótese** (desligada mediu PIOR: p99
+# +4,19 ms/min contra +2,35, 121 picos/min contra 51), e em 26/09 a leitura do
+# Wine disse por quê: o `vulkan-1` do Wine devolve zero camadas, e o vkd3d-proton
+# chama o `winevulkan` direto. Os números e a ressalva de carga estão em
 # `integrations/camadas_vulkan.py`. A interface não promete cura de engasgo, e
 # não pode: promete o que tirou, que é o contrato honesto deste botão.
 #
@@ -858,9 +858,9 @@ def frase_do_censo(
     corpo = "\n".join(linhas)
     if tem_sobra:
         rodape = (
-            "\n\nO que estiver ligado acima entra na frente de cada quadro que "
-            "o jogo desenha. Já medimos tirar isso no Sackboy e o engasgo "
-            "continuou — então não prometo que resolve. Tirar não apaga nada: "
+            "\n\nO que estiver ligado acima só é lido por um jogo que traga o "
+            "próprio Vulkan do Windows, o que é raro: tirar quase nunca muda a "
+            "imagem, e não cura engasgo. Tirar não apaga nada: "
             "eu só marco a sobreposição como desligada no jogo, guardo cópia "
             "do arquivo antes, e você pode devolver aqui mesmo."
         )

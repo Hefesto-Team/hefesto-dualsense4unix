@@ -260,8 +260,8 @@ def test_o_exame_do_desenho_diz_a_frase_que_o_produto_pinta() -> None:
     """ARRANQUE o `frase_do_estado` do gerador e este teste reprova.
 
     Até 26/09/2026 o desenho trazia *«✓ OK · Nenhuma sobreposição picotando o
-    jogo»*: uma linha que a tela viva NUNCA pintou (o exame é repintado com
-    `a09_sistema.linha_da_sobreposicao_vulkan`) e que dava um selo de «tudo
+    jogo»*: uma linha que a tela viva só mostrava antes da primeira pintura (o
+    exame é repintado com `a09_sistema.linha_da_sobreposicao_vulkan`) e que dava um selo de «tudo
     bem» a uma causa que o A/B derrubou. A cena tem de mostrar a frase do
     dono (`camadas_vulkan.frase_do_estado`), com o selo NOTA do produto, e com
     os números que a pílula da mesma cena diz: acesa se, e só se, há algo
@@ -414,6 +414,23 @@ class TestFraseDoCenso:
             [_prefixo("Jogo (1)", _camada("overlay.json", ligada=False))]
         )
         assert (tem_sobra, tem_devolucao) == (False, True)
+
+    def test_o_rodape_nao_poe_a_camada_na_frente_do_quadro(self) -> None:
+        """ARRANQUE o rodapé de 26/09/2026 e este teste reprova.
+
+        Até 26/09 ele dizia que o que está ligado *«entra na frente de cada
+        quadro que o jogo desenha»*, e nomeava o Sackboy. O `vulkan-1` do Wine
+        devolve zero camadas e o vkd3d-proton chama o `winevulkan` direto
+        (`integrations/camadas_vulkan.py`): a camada só é lida por jogo que
+        traga o próprio Vulkan do Windows. A frase é a da dica do ligável.
+        """
+        texto, tem_sobra, _ = frase_do_censo(
+            [_prefixo("Jogo (1)", _camada("EOSOverlayVkLayer-Win64.json"))]
+        )
+        assert tem_sobra is True
+        assert "não cura engasgo" in texto, texto
+        for velho in ("frente de cada quadro", "Sackboy", "resolve"):
+            assert velho not in texto, (velho, texto)
 
 
 # ---------------------------------------------------------------------------
