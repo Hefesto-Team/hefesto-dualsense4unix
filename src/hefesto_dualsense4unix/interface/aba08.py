@@ -2150,7 +2150,18 @@ def _estado_da_bancada(c):
             "battery_pct": DA_CONTROLES[c["pref"]]["bat"], "hz_movimento": 480,
             "hz_voz": 1 if radio else None, "speaker": {"volume": 100, "muted": False}}
     return _pacote08.estado_do_controle(vivo, {"mascara": c["mascara"]}, {"native_mode": False},
-                                        _DECLARACAO_DA_BANCADA)
+                                        _DECLARACAO_DA_BANCADA, _MODO_DA_CENA)
+
+
+#: O «Modo de conexão» da cena: o chip «Sony DualSense», que é o aceso no
+#: desenho da aba Jogar. O nome vem da tabela da fileira, como no produto.
+def _modo_da_cena():
+    from hefesto_dualsense4unix.app.actions.jogar import painel as _painel
+
+    return next(ch.rotulo for ch in _painel.CHIPS_DA_ESCADA if ch.chave == "dualsense")
+
+
+_MODO_DA_CENA = _modo_da_cena()
 
 
 def linha_do_controle(c):

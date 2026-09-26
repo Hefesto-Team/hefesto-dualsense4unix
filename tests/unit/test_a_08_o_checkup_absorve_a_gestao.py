@@ -134,13 +134,32 @@ def test_a_conexao_instavel_pelo_radio_e_laranja() -> None:
     assert "warn" in selo and "instável" in selo
 
 
-def test_o_modo_de_conexao_vem_do_daemon() -> None:
+def test_o_modo_de_conexao_e_o_chip_aceso_da_jogar(monkeypatch: pytest.MonkeyPatch) -> None:
+    """*«Modo de conexão (DualSense)»*: o nome do chip que a aba Jogar acende.
+
+    MORDIDA: devolva o ``MODO_PELO_HEFESTO`` fixo em `modo_da_fileira` → reprova.
+    """
     pac = _pac()
+    from hefesto_dualsense4unix.interface.pacotes import a01_jogar
+
     c = {"uniq": UNIQS[0], "transport": "usb"}
-    assert pac.MODO_NATIVO in pac.estado_do_controle(c, {}, {"native_mode": True},
-                                                     _Declaracao())["est-modo"]
-    assert pac.MODO_PELO_HEFESTO in pac.estado_do_controle(c, {}, {"native_mode": False},
-                                                           _Declaracao())["est-modo"]
+
+    def modo(st: dict[str, Any]) -> str:
+        return pac.estado_do_controle(c, {}, st, _Declaracao())["est-modo"]
+
+    assert pac.MODO_NATIVO in modo({"native_mode": True})
+    monkeypatch.setattr(a01_jogar, "_estado_da_tela",
+                        lambda st: {"modo-aceso": "xbox", "steam-input-aceso": ""})
+    assert "<b>Xbox</b>" in modo({"native_mode": False})
+    monkeypatch.setattr(a01_jogar, "_estado_da_tela",
+                        lambda st: {"modo-aceso": "", "steam-input-aceso": "steam"})
+    assert "<b>Steam Input</b>" in modo({"native_mode": False})
+    monkeypatch.setattr(a01_jogar, "_estado_da_tela",
+                        lambda st: {"modo-aceso": "dualsense", "steam-input-aceso": ""})
+    assert "<b>Sony DualSense</b>" in modo({"native_mode": False})
+    # e o modo lido uma vez para a mesa inteira chega igual a cada controle
+    assert "<b>Navegação</b>" in pac.estado_do_controle(
+        c, {}, {"native_mode": False}, _Declaracao(), "Navegação")["est-modo"]
 
 
 # ---------------------------------------------------------------------------
