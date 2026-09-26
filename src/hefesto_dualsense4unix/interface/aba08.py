@@ -4073,7 +4073,7 @@ MIOLO = f'''
                  o que o produto pinta quando a ordem tem destino — ver
                  `a08_conexoes._html_da_ordem`. -->
             <div class="ordem">
-              <div class="ordem-tit">Sugestão de conexão</div>
+              <div class="ordem-tit">{_pacote08.TITULO_DA_ORDEM}</div>
               <div class="faca">Mova o adaptador Bluetooth para a Entrada 9</div>
               <div class="receita">
                 <span class="caixa" title="Entrada 3 — traseira do gabinete, USB 3.0. É a que divide o controlador com o receptor do teclado.">Entrada 3 <span class="pt">•</span> USB 3.0</span>
