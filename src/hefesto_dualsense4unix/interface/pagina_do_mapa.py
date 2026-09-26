@@ -2507,6 +2507,29 @@ EDICOES: tuple[Edicao, ...] = (
         ),
     ),
     Edicao(
+        antes=(
+            '  .edita .troca option { background: var(--color-paper); color: va'
+            'r(--color-ink); }\n'
+        ),
+        depois=(
+            '  .edita .troca option { background: var(--color-paper); color: va'
+            'r(--color-ink); }\n'
+            '  /* O NOME COMPRIDO NO CABEÇALHO — 26/09/2026: a face desce inteira'
+            ' para a\n'
+            '     linha de baixo quando não cabe ao lado do nome, e o «Fechar» fica no'
+            ' canto. */\n'
+            '  .edita-cab { flex-wrap: wrap; position: relative; padding-right: '
+            '2.2rem; row-gap: .1rem; }\n'
+            '  .edita-cab span { white-space: nowrap; }\n'
+            '  .edita-cab .fecha { position: absolute; top: 0; right: 0; }\n'
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (a conferência) — com um nome'
+            ' de 24 letras o nome e a face quebravam cada um em duas linhas, lado'
+            ' a lado; a sprint pede que a face desça para uma linha própria.'
+        ),
+    ),
+    Edicao(
         antes='no.nodeValue.replace(/[^\\s—·,.;:()«»"→↳]+/g',
         depois='no.nodeValue.replace(/[^\\s—·,.;:()«»"→↳…]+/g',
         porque=(

@@ -346,6 +346,11 @@
                   background: var(--color-paper); color: var(--color-ink);
                   border: 1px solid var(--color-rule); border-radius: var(--radius-sm); }
   .edita .troca option { background: var(--color-paper); color: var(--color-ink); }
+  /* O NOME COMPRIDO NO CABEÇALHO — 26/09/2026: a face desce inteira para a
+     linha de baixo quando não cabe ao lado do nome, e o «Fechar» fica no canto. */
+  .edita-cab { flex-wrap: wrap; position: relative; padding-right: 2.2rem; row-gap: .1rem; }
+  .edita-cab span { white-space: nowrap; }
+  .edita-cab .fecha { position: absolute; top: 0; right: 0; }
   /* «Arruma o alinhamento dos blocos» — 26/09/2026. O «Voltar» entra na linha
      do título, os três modos têm a mesma largura, as colunas de entradas têm a
      mesma largura em todas as chapas, e a bandeja começa na altura da primeira

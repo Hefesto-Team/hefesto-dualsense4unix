@@ -133,10 +133,12 @@ def _aberta() -> dict[str, Any]:
 Passo = str | Callable[[list[dict[str, Any]]], str | None]
 
 
-def _na_pagina(passos: list[Passo]) -> tuple[list[Any], list[dict[str, Any]]]:
+def _na_pagina(
+    passos: list[Passo], tamanho: tuple[int, int] = (1400, 1000)
+) -> tuple[list[Any], list[dict[str, Any]]]:
     """A página publicada num WebKit fora da tela; o lixo recolhido no fio do GTK."""
     try:
-        return _na_pagina_sem_recolher(passos)
+        return _na_pagina_sem_recolher(passos, tamanho)
     finally:
         gc.collect()
         from gi.repository import Gtk
@@ -145,7 +147,9 @@ def _na_pagina(passos: list[Passo]) -> tuple[list[Any], list[dict[str, Any]]]:
             Gtk.main_iteration_do(False)
 
 
-def _na_pagina_sem_recolher(passos: list[Passo]) -> tuple[list[Any], list[dict[str, Any]]]:
+def _na_pagina_sem_recolher(
+    passos: list[Passo], tamanho: tuple[int, int] = (1400, 1000)
+) -> tuple[list[Any], list[dict[str, Any]]]:
     """Cada passo é um JavaScript, ou uma função das mensagens que devolve um
     (``None`` = ainda não: tenta de novo em 50 ms, até 3 s)."""
     from tests.conftest import exigir_gi_real
@@ -169,7 +173,7 @@ def _na_pagina_sem_recolher(passos: list[Passo]) -> tuple[list[Any], list[dict[s
                 lambda _u, r: mensagens.append(json.loads(r.get_js_value().to_string())))
     view = WebKit2.WebView.new_with_user_content_manager(ucm)
     janela = Gtk.OffscreenWindow()
-    janela.set_default_size(1400, 1000)
+    janela.set_default_size(*tamanho)
     janela.add(view)
     janela.show_all()
     fila: list[Passo] = [hefesto_vivo.BOOTSTRAP, *passos]
@@ -614,3 +618,68 @@ def test_no_produto_o_chip_de_quem_esta_numa_entrada_abre_o_editor(disco: Path) 
     assert lidas[1] == "clicou"
     assert lidas[2]["aberto"] and lidas[2]["cabecalho"].startswith("Entrada 1"), lidas[2]
     assert lidas[3] == "false", "o chip pôs o aparelho na mão"
+
+
+# ── a conferência: o editor a 1212 px, com o nome mais comprido ──────────
+
+_A_GEOMETRIA_DO_EDITOR = r"""
+(function(){
+  const ed = document.getElementById('edita');
+  if (!ed || ed.hidden) return JSON.stringify({aberto: false});
+  const cab = ed.querySelector('.edita-cab');
+  const nome = cab.querySelector('b'), face = cab.querySelector('span');
+  const fecha = cab.querySelector('.fecha');
+  const r = e => e.getBoundingClientRect();
+  const letra = parseFloat(getComputedStyle(face).fontSize);
+  return JSON.stringify({
+    aberto: true,
+    largura: Math.round(r(ed).width),
+    cabeNaJanela: r(ed).left >= 0 && r(ed).right <= innerWidth,
+    janela: [innerWidth, innerHeight],
+    paginaTransborda: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    cinza: [...ed.querySelectorAll('button,select,input')].filter(
+      c => getComputedStyle(c).backgroundColor === 'rgb(192, 192, 192)').map(
+      c => c.outerHTML.slice(0, 60)),
+    faceDesceu: r(face).top >= r(nome).bottom - 1,
+    faceNumaLinha: r(face).height < 2 * letra,
+    fechaNoCanto: r(fecha).top < r(nome).bottom && r(fecha).right <= r(ed).right,
+    fechaSobreONome: r(fecha).left < r(nome).right && r(fecha).bottom > r(nome).top,
+  });
+})()
+"""
+
+
+def test_o_editor_cabe_a_1212_e_a_face_desce_com_o_nome_comprido(disco: Path) -> None:
+    """A conferência da O-MAPA-QUE-ELA-CORRIGE-01, no WebKit à largura do
+    desenho (1212 por 809): o editor tem 300 px e cabe na janela, a página não
+    rola de lado, nenhum botão, lista ou campo nasce cinza (rgb 192), e com um
+    nome de 24 letras a face desce INTEIRA para a linha de baixo (a sprint:
+    «se a face não couber no cabeçalho, ela desce para uma linha própria»); com
+    o nome curto ela fica ao lado. O «Fechar» fica no canto, sem cobrir o nome.
+
+    A MORDIDA: tire a edição «O NOME COMPRIDO NO CABEÇALHO» do
+    ``pagina_do_mapa`` e publique — o nome e a face quebram cada um em duas
+    linhas, lado a lado, e ``faceNumaLinha`` reprova (MEDIDO).
+    """
+    mapa = _mapa()
+    mapa.faces[0].nome = ee.FACE_FRENTE
+    mapa.faces[1].nome = ee.FACE_ATRAS
+    assert gravar_maquina({"mapa": mapa.model_dump(mode="json")})
+    assert ee.dar_nome_a_entrada("1", "Traseira de cima do meio").gravou
+    lidas, _ = _na_pagina([
+        _js(_aberta()),
+        _clicar('.plug[data-porta="1"]'),
+        _A_GEOMETRIA_DO_EDITOR,
+        _clicar('.plug[data-porta="3"]'),
+        _A_GEOMETRIA_DO_EDITOR,
+    ], tamanho=(1212, 809))
+    comprido, curto = lidas[2], lidas[4]
+    for editor in (comprido, curto):
+        assert editor["aberto"], editor
+        assert editor["largura"] == 300 and editor["cabeNaJanela"], editor
+        assert not editor["paginaTransborda"], editor
+        assert editor["cinza"] == [], f"nasceu cinza no WebKitGTK: {editor['cinza']}"
+        assert editor["faceNumaLinha"], editor
+        assert editor["fechaNoCanto"] and not editor["fechaSobreONome"], editor
+    assert comprido["faceDesceu"], f"a face não desceu com o nome de 24: {comprido}"
+    assert not curto["faceDesceu"], f"a face desceu com o nome curto: {curto}"
