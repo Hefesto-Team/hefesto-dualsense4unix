@@ -438,7 +438,31 @@ def celula_do_perfil(perfil: str, linha: LinhaDoTeto) -> str:
     chave = TETO_POR_PERFIL.get(perfil)
     if chave is None:
         return CADA_ABA_MANDA
-    return celula_do_teto(chave)
+    if linha.nome == "Vibração":
+        return celula_do_teto(chave)
+    return celula_da_economia(chave, linha.nome)
+
+
+def celula_da_economia(orcamento: str, nome: str) -> str:
+    """O que a coluna de um orçamento diz sobre uma peça que não é a vibração.
+
+    25/09/2026 (O-MODO-ECONOMIA-POR-CONTROLE-01): a luz e os gatilhos ganharam
+    ponto, e o teto deles NÃO é o percentual da vibração — a célula que
+    reusasse `celula_do_teto` diria "30% da força" de um gatilho que vai a
+    metade. A frase sai do dono do que a economia faz em cada peça
+    (`profiles.schema.A_ECONOMIA_EM_CADA_PECA`), casada pelo nome da linha.
+    """
+    from hefesto_dualsense4unix.profiles.schema import (
+        A_ECONOMIA_EM_CADA_PECA,
+        mesa_em_economia,
+    )
+
+    if not mesa_em_economia(orcamento):
+        return SEM_TETO
+    for peca in A_ECONOMIA_EM_CADA_PECA:
+        if peca.nome == nome and peca.ponto_de_aplicacao:
+            return peca.o_que_faz
+    return SEM_PONTO_DE_APLICACAO
 
 
 def montar(host: Any, caixa: Any) -> None:
