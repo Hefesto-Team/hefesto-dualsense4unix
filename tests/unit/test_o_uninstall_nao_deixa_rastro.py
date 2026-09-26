@@ -623,6 +623,22 @@ def _instalar_pelos_donos(r: m.Raizes, repo: Path, *, heroic_nativo: bool,
     no_lar.mkdir(parents=True, exist_ok=True)
     (no_lar / "gabinete.json").write_text("{}", encoding="utf-8")
     (no_lar / "teclado-na-tela.conf").write_text("resultado=pulado\n", encoding="utf-8")
+    # Os drop-ins do WirePlumber: o produto grava pelo XDG_CONFIG_HOME
+    # (`xdg_paths.wireplumber_config_dir`), o install no lar. O 51 marcado
+    # «recriado manualmente» é dela, e fica. (Em minúsculas: o «limpa?» só
+    # reconhece a marca assim, e o uninstall a reconhece de qualquer jeito — a
+    # divergência é do dono do «limpa?», fora desta sprint.)
+    wp_xdg = r.config / "wireplumber/wireplumber.conf.d"
+    wp_lar = lar / ".config/wireplumber/wireplumber.conf.d"
+    for pasta_wp, nome_wp, corpo_wp in (
+        (wp_xdg, "51-hefesto-dualsense-no-default-source.conf",
+         "# recriado manualmente apos o uninstall\n"),
+        (wp_xdg, "52-hefesto-dualsense-disable-source.conf", "# do Hefesto\n"),
+        (wp_xdg, "54-hefesto-dualsense-alto-falante-nunca-dorme.conf", "# do Hefesto\n"),
+        (wp_lar, "53-hefesto-dualsense-disable-output.conf", "# do Hefesto\n"),
+    ):
+        pasta_wp.mkdir(parents=True, exist_ok=True)
+        (pasta_wp / nome_wp).write_text(corpo_wp, encoding="utf-8")
     (r.config / m.SLUG / "profiles").mkdir(parents=True)
     (r.config / m.SLUG / "profiles/fallback.json").write_text("{}", encoding="utf-8")
     (r.dados / m.SLUG).mkdir(parents=True, exist_ok=True)
@@ -764,6 +780,11 @@ def test_o_uninstall_de_verdade_nao_deixa_rastro(
     assert not alvos["mgba"].exists()
     for estado in {r.estado / m.SLUG, r.lar / ".local/state" / m.SLUG}:
         assert not estado.exists(), f"a pasta de estado ficou: {sorted(os.listdir(estado))}"
+    # O WirePlumber nas duas casas (o «limpa?» só olha a do XDG): o nosso sai, o
+    # 51 que ela marcou fica.
+    wps = {p.name for casa in {r.config, r.lar / ".config"}
+           for p in (casa / "wireplumber/wireplumber.conf.d").glob("*hefesto*")}
+    assert wps == {"51-hefesto-dualsense-no-default-source.conf"}, wps
     assert list(r.config.glob(f"{m.SLUG}.backup-*/*/mesa-de-medicao/registro.json")), (
         "o que nenhum passo nomeia tem de ir para o backup, e não sumir sem rede")
 
