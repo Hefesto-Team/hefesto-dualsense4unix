@@ -4748,13 +4748,25 @@ def _vaga_de(ap: dict[str, Any], cena: dict[str, Any]) -> int:
     return pontes.index(ap) + 1 if ap in pontes else 0
 
 
+def _tem_x(ap: dict[str, Any]) -> bool:
+    """Quem tem o X: todo controle de todo adaptador (item 3), e TODA linha
+    «Não Conectou», de qualquer aparelho (item 2: a linha vem com «Tentar de
+    Novo» e o X). O conferente, 26/09/2026: o X só de controle deixava o
+    «Não Conectou» de um fone ou de um teclado que ela moveu sem saída nenhuma
+    por dez minutos (:data:`LEMBRA_O_NAO_CONECTOU_S`). Quem espera PS + Create
+    não tem X: a janela está aberta."""
+    if ap.get("esperando"):
+        return False
+    return ap.get("tipo") == "controle" or bool(ap.get("nao_conectou"))
+
+
 def _o_x(ap: dict[str, Any]) -> str:
     """O X do item 3 dela — em todo controle de todo adaptador: no ar, desligado
-    ou que não chegou. Ele não esquece sozinho: a página abre a pergunta, e é o
-    «Esquecer» dela que apaga (`confirmar-esquecer`). No «Não Conectou» sem
-    aparelho (a busca que ninguém respondeu) não há o que esquecer, e o X só
-    tira a linha. Quem espera PS + Create não tem X: a janela está aberta."""
-    if ap.get("tipo") != "controle" or ap.get("esperando"):
+    ou que não chegou (:func:`_tem_x`). Ele não esquece sozinho: a página abre a
+    pergunta, e é o «Esquecer» dela que apaga (`confirmar-esquecer`). No «Não
+    Conectou» sem aparelho (a busca que ninguém respondeu) não há o que
+    esquecer, e o X só tira a linha."""
+    if not _tem_x(ap):
         return ""
     nome = nome_na_conexoes(ap) or str(ap.get("rotulo") or "")
     dica = ("Tirar esta linha" if ap.get("nao_conectou") and not ap.get("aparelho")
@@ -4809,10 +4821,15 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
         # aparelho (quando se sabe quem) já não tem pareamento neste adaptador.
         fixo = (f'<span class="quem"><span class="nome-fixo">{_x(nome_na_conexoes(ap))}'
                 '</span></span>')
+        # O PAINEL DO «PROCURANDO» É DO «CONECTAR», QUE É DE CONTROLE: para quem
+        # não é controle, «Tentar de Novo» é o mesmo mover (`tentar_de_novo`), e
+        # a espera mora na linha do destino, sem painel por cima.
+        abre_o_painel = ' data-abre="conectar"' if ap.get("tipo") == "controle" else ""
         return (abre + desenho + fixo + '<div class="features">'
                 f'<span class="nao-conectou">{NAO_CONECTOU}</span>'
                 '<button class="btn tentar" title="Conectar de novo neste adaptador" '
-                f'data-gesto="tentar-de-novo" data-alvo="{_x(ap.get("lugar") or "")}">'
+                f'data-gesto="tentar-de-novo" data-alvo="{_x(ap.get("lugar") or "")}"'
+                f'{abre_o_painel}>'
                 f'{TENTAR_DE_NOVO}</button></div>' + vazia + _o_x(ap) + '</div>')
     if ap.get("desligado"):
         return (abre + desenho + campo + '<div class="features"><span class="desligado" '
@@ -5098,9 +5115,7 @@ def _moldes_de_esquecer(cena: dict[str, Any]) -> str:
     lugares = {str(lug["id"]): lug for lug in cena.get("lugares", ()) if lug.get("sabido", True)}
     moldes = []
     for ap in cena.get("aparelhos", ()):
-        if ap.get("tipo") != "controle" or ap.get("esperando"):
-            continue
-        if ap.get("nao_conectou") and not ap.get("aparelho"):
+        if not _tem_x(ap) or (ap.get("nao_conectou") and not ap.get("aparelho")):
             continue
         lug = lugares.get(str(ap.get("lugar")))
         if lug is None:
@@ -6059,6 +6074,15 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
     sem nunca ficar ``Connected`` — um pareamento pela metade no adaptador. A
     linha sabe disso pelo BlueZ (``meia_chave``), e a tela a esquece
     (:func:`_esquecer_as_meias_chaves`).
+
+    A MEIA CHAVE SÓ É MEIA DEPOIS DO VEREDITO DA CENTRAL (o conferente,
+    26/09/2026). Enquanto ela diz «esperando», o movimento ainda está vivo: o
+    ``Pair`` pode ter acabado de dar, e o ``Connect`` e a conferência correm,
+    ou ela vigia o controle até o ``PRAZO_DO_PENDENTE_S`` dela. O objeto
+    ``Paired`` sem ``Connected`` desse instante é a chave que ela está
+    conferindo, e apagá-la no relógio da tela matava um pareamento que ainda
+    podia chegar. A linha «Não Conectou» aparece no prazo da tela; a chave sai
+    quando a central disser «não chegou».
     """
     ultimo: dict[str, dict[str, Any]] = {}
     for m in movimentos:
@@ -6085,10 +6109,10 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
                 else _tipo_do_aparelho(str(m.get("icone") or ""),
                                        classe if isinstance(classe, int) else None))
         cor = _hex_do_plastico(str(eu.get("cor") or ""))
-        meia = any(
+        meia = bool(aparelho) and estado == _NAO_CHEGOU_NA_CENTRAL and any(
             _mac(a.endereco) == aparelho and endereco_do_caminho.get(str(a.adaptador)) == destino
             and a.pareado is True and a.conectado is not True
-            for a in aparelhos_bz) if aparelho else False
+            for a in aparelhos_bz)
         linhas.append({
             "id": f"nao-conectou-{_so_hex(destino)}", "aparelho": aparelho,
             "tipo": tipo, "lugar": destino, "nome": str(m.get("nome") or ""),
@@ -6171,10 +6195,11 @@ def _esquecer_o_pareamento(lugar: str, aparelho: str) -> Any:
 
 
 def _esquecer_as_meias_chaves(falhas: list[dict[str, Any]]) -> None:
-    """VENCIDO O PRAZO, A MEIA CHAVE SAI (item 5): o controle que o ``Pair``
+    """DITO O «NÃO CHEGOU», A MEIA CHAVE SAI (item 5): o controle que o ``Pair``
     registrou e que nunca ficou ``Connected`` não fica com pareamento pela
-    metade no adaptador — e a linha oferece «Tentar de Novo». Uma vez por
-    movimento, num fio: o tique não espera o rádio.
+    metade no adaptador — e a linha oferece «Tentar de Novo». O prazo é o da
+    central, que é a dona do movimento (:func:`_os_que_nao_conectaram`). Uma
+    vez por movimento, num fio: o tique não espera o rádio.
 
     Só a chave DAQUELE controle, naquele adaptador, e só com o BlueZ dizendo
     ``Paired`` e não ``Connected`` (`_os_que_nao_conectaram`). Quem está no ar
@@ -6610,8 +6635,9 @@ def ligar_mesmo_assim(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("08-conexoes.html", "conectar-aparelho", grava="radio.mover")
 def conectar_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Conectar»: sem alvo, a janela abre no destino da D8 e o controle que
-    ela segurar chega; com alvo (um achado que o destino já conhece), é Mover."""
+    """«Conectar»: sem alvo, a janela abre no adaptador ABERTO na lista (sem
+    nenhum aberto, no da D8 — :func:`_destino_do_conectar`) e o controle que ela
+    segurar chega; com alvo (um achado que o destino já conhece), é Mover."""
     destino = str(_CENA_NA_TELA.get("destino_do_conectar") or "")
     if not destino:
         raise RuntimeError("não há adaptador Bluetooth para conectar")
@@ -6665,10 +6691,22 @@ def _linha_na_tela(o: dict[str, Any]) -> dict[str, Any]:
 def tentar_de_novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """«Tentar de Novo»: o mesmo «Conectar», no MESMO adaptador da linha — e em
     nenhum outro. A linha «Não Conectou» sai quando a central aceita; recusada,
-    ela fica, e o botão treme."""
+    ela fica, e o botão treme.
+
+    O «CONECTAR» É DE CONTROLE (o conferente, 26/09/2026): a janela dele só
+    aceita quem a CLASSE diz controle (`central_do_radio._esperar_um_controle_novo`).
+    O «Não Conectou» de um fone ou de um teclado que ela moveu abria, aqui, uma
+    janela que nunca o acharia e segurava o rádio pelo tempo dela. Para quem
+    não é controle, tentar de novo é o MESMO mover, do mesmo aparelho para o
+    mesmo adaptador; a central diz na hora se ainda o conhece.
+    """
     lug = _lugar_na_tela(o)
     lid = str(lug["id"])
-    feito = _mover(p, None, lid)
+    linha = next((ap for ap in _CENA_NA_TELA.get("aparelhos", ())
+                  if ap.get("nao_conectou") and ap.get("lugar") == lid), None)
+    outro = (str(linha.get("aparelho") or "")
+             if linha is not None and linha.get("tipo") != "controle" else "")
+    feito = _mover(p, outro or None, lid)
     for ap in _CENA_NA_TELA.get("aparelhos", ()):
         if ap.get("nao_conectou") and ap.get("lugar") == lid:
             _DISPENSADOS.add(str(ap.get("chave") or ""))
