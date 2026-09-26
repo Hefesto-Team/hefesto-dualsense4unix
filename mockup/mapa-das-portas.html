@@ -1434,7 +1434,8 @@
           + "</ol>";
         if (novos.length) {
           html += '<div class="nada-a-fazer" style="margin-top:.6rem;border-left-color:var(--color-lacuna)">'
-            + '<b style="color:var(--color-lacuna)">Por que ' + novos.length + " ficaram sem entrada</b>"
+            + '<b style="color:var(--color-lacuna)">Por que ' + novos.length
+            + (novos.length > 1 ? " ficaram" : " ficou") + " sem entrada</b>"
             + '<p style="margin:.3rem 0 0;font-size:var(--text-sm);color:var(--color-ink-quiet)">'
             + "Você declarou " + Object.keys(MAPA).length + " das " + todasPortas().length
             + " entradas — só as que tinham algo no dia. Quando você move um aparelho para uma entrada"
