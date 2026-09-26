@@ -169,7 +169,12 @@ def test_o_primeiro_clique_do_aplicar_poe_a_pergunta_no_painel(monkeypatch) -> N
 
 
 def test_a_pergunta_cabe_na_largura_do_painel(monkeypatch) -> None:
-    """O painel é `white-space:pre`: linha que não cabe sai pela direita."""
+    """A pergunta cabe inteira na largura do painel.
+
+    O painel é `pre-wrap` desde 25/09/2026 (a linha longa do journal dobra em
+    vez de sair pela direita); a pergunta continua cortada à mão para não
+    dobrar no meio de uma palavra.
+    """
     _com_a_steam(monkeypatch)
     carga = a09.aplicar_aos_jogos(_ctx(), _primeiro("aplicar-aos-jogos"),
                                   PonteDeMentira())
