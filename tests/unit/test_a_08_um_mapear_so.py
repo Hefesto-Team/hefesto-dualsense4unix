@@ -39,7 +39,16 @@ AS MORDIDAS (arranque a cura, veja reprovar, devolva):
   ``nome is not None`` de ``_gravar_as_portas`` por nada e reposicionar apaga
   o nome;
 * :func:`test_cada_porta_diz_o_que_o_metal_e` — troque o ``hardwired`` do
-  Bluetooth da placa por ``hotplug`` e o nativo vira dongle.
+  Bluetooth da placa por ``hotplug`` e o nativo vira dongle;
+* :func:`test_o_mesmo_controle_de_porta_em_porta_mapeia_cada_uma` — parta a
+  gravação de ``_gravar_as_portas`` em duas (o mapa numa, os lugares noutra) e
+  o gesto deixa de ser UMA gravação;
+* :func:`test_o_encaixe_que_o_kernel_nao_sabe_nao_vira_dongle` — devolva o
+  ``else BLUETOOTH_DONGLE`` de antes (todo encaixe que não é ``hardwired`` vira
+  dongle) e o rádio numa entrada ``unknown`` vira dongle;
+* :func:`test_a_porta_que_ela_so_nomeou_e_do_mapa_e_se_renomeia` — tire o laço
+  dos lugares identificados de ``ler_o_mapa`` e o nome que ela deu em Rádio e
+  Adaptadores some da lista.
 
 Faixa sintética da casa: controladores ``0000:0a:00.0`` e ``0000:0b:00.0``.
 """
@@ -55,6 +64,7 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
 from hefesto_dualsense4unix.integrations import mapa_das_portas as junta
+from hefesto_dualsense4unix.integrations.lugar_declarado import declarar_a_maquina
 from hefesto_dualsense4unix.integrations.mesa_de_radio import Adaptador
 from hefesto_dualsense4unix.utils.maquina import (
     MaquinaConfig,
@@ -137,8 +147,22 @@ def _mapear_tres(gabinete: Gabinete, fluxo: ee.MapearAsPortas) -> None:
 def test_o_mesmo_controle_de_porta_em_porta_mapeia_cada_uma(
     mesa: Gabinete, disco: Path
 ) -> None:
-    fluxo = _fluxo(mesa)
+    gravacoes: list[dict[str, Any]] = []
+
+    def contar(declaracao: Any) -> Any:
+        gravacoes.append(json.loads(json.dumps(declaracao)))
+        return declarar_a_maquina(declaracao)
+
+    fluxo = ee.MapearAsPortas(
+        ler=mesa.ler,
+        entradas=mesa.entradas,
+        storm=STORM,
+        gravar=contar,
+        adaptadores=lambda: (Adaptador(interface="hci9"),),
+    )
     _mapear_tres(mesa, fluxo)
+    assert len(gravacoes) == 3, "cada gesto dela é UMA gravação: número, face, amarra e nome juntos"
+    assert all({"mapa", "lugares"} <= set(g) for g in gravacoes), gravacoes
 
     documento = carregar_maquina()
     faces = {face.nome: face.portas for face in documento.mapa.faces}
@@ -235,7 +259,10 @@ def test_a_raiz_desviada_nao_le_o_log_desta_maquina(mesa: Gabinete) -> None:
     mapa = ee.ler_o_mapa(
         maquina=MaquinaConfig(), raiz_usb=str(mesa.lista), adaptadores=()
     )
-    assert {p.controlador for p in mapa.portas} <= {PCI_A, PCI_B}
+    assert {p.aparelho for p in mapa.portas} == {"3-2", "3-4", "3-4.1"}, (
+        "a raiz desviada tem de LER o /sys de mentira — lista vazia passaria calada"
+    )
+    assert {p.controlador for p in mapa.portas} == {PCI_B}
     assert all(p.storm is None for p in mapa.portas), "outra raiz: o -71 é não medido"
 
 
@@ -393,9 +420,95 @@ def test_o_lugar_e_universal_e_o_dela_continua_aceito(mesa: Gabinete, disco: Pat
     fluxo.olhar()
     with pytest.raises(ValueError):
         fluxo.gravar(nome="x", lugar="Na lua")
-    with pytest.raises(ValueError):
-        fluxo.gravar(nome="só o nome, porta nova")
+    so_o_nome = fluxo.gravar(nome="só o nome, porta nova")
+    assert so_o_nome.gravou and so_o_nome.entrada == "" and so_o_nome.face == ""
+    documento = carregar_maquina()
+    assert documento.lugares[lugar_de(PCI_A, "5")].nome == "só o nome, porta nova"
+    assert not documento.mapa.faces and not documento.mapa.portas, (
+        "sem o «onde fica», o produto não inventa face nem número por ela"
+    )
     assert fluxo.gravar(lugar=ee.FACE_ESCRIVANINHA).gravou, "a quarta resposta de antes"
+    assert carregar_maquina().lugares[lugar_de(PCI_A, "5")].nome == "só o nome, porta nova"
     assert fluxo.gravar(chave="1", lugar=ee.FACE_ESCRIVANINHA).gravou
     with pytest.raises(RuntimeError):
         fluxo.gravar(chave="99", nome="não existe")
+
+
+# ---------------------------------------------------------------------------
+# 6. o que ela só nomeou também é do mapa (conferência, 25/09/2026)
+# ---------------------------------------------------------------------------
+
+
+def test_a_porta_que_ela_so_nomeou_e_do_mapa_e_se_renomeia(
+    mesa: Gabinete, disco: Path
+) -> None:
+    """O nome dado em Rádio e Adaptadores (``dar_nome``) mora no lugar, sem número.
+
+    Ela pediu que o mesmo botão renomeie *«as entradas já mapeadas ou
+    identificadas»*: o dongle que ela nomeou é identificado, e continua dela
+    com o dongle fora da porta. <!-- noqa-acento: citação literal dela -->
+    """
+    lugar_do_dongle = lugar_de(PCI_B, "4.1")
+    assert ee.dar_nome(lugar_do_dongle, "Dongle azul").gravou
+    mesa.tirar("3-4.1")
+    fluxo = _fluxo(mesa)
+    fluxo.comecar()
+
+    mapa = ee.ler_o_mapa(
+        censo=mesa.ler(), entradas=mesa.entradas(), storm=STORM, adaptadores=()
+    )
+    dongle = mapa.porta(lugar_do_dongle)
+    assert dongle is not None, "a porta que ela só nomeou sumiu do mapa"
+    assert (dongle.nome, dongle.numero, dongle.ocupada) == ("Dongle azul", None, False)
+    assert dongle.nos == ("3-4-port1", "4-4-port1")
+    assert [p.lugar for p in mapa.portas].count(lugar_do_dongle) == 1
+
+    assert fluxo.gravar(chave=lugar_do_dongle, nome="Dongle da TV").gravou
+    documento = carregar_maquina()
+    assert documento.lugares[lugar_do_dongle].nome == "Dongle da TV"
+    assert documento.lugares[lugar_do_dongle].entrada is None
+    assert not documento.mapa.faces, "renomear não inventa face"
+
+
+def test_o_encaixe_que_o_kernel_nao_sabe_nao_vira_dongle(tmp_path: Path) -> None:
+    """``unknown`` é "não sei", e o hub encaixado de fora faz o dongle."""
+    gabinete = Gabinete(
+        tmp_path / "sys",
+        BOOT_1,
+        encaixe={
+            "usb3-port2": "unknown",
+            "usb4-port2": "unknown",
+            "3-4-port1": "unknown",
+            "usb1-port3": "hardwired",
+            "1-3-port1": "unknown",
+            "3-3-port1": "unknown",
+        },
+    )
+    gabinete.plugar(3, "2", DONGLE_BT)
+    gabinete.plugar(3, "4", HUB, portas=4)
+    gabinete.plugar(3, "4.1", DONGLE_BT)
+    gabinete.plugar(1, "3", HUB, portas=4)
+    gabinete.plugar(1, "3.1", DONGLE_BT)
+    gabinete.plugar(3, "3", HUB, portas=4)
+    gabinete.plugar(3, "3.1", DONGLE_BT)
+
+    mapa = ee.ler_o_mapa(
+        maquina=MaquinaConfig(), raiz_usb=str(gabinete.lista), adaptadores=()
+    )
+    sem_saber = mapa.porta(lugar_de(PCI_B, "2"))
+    atras_do_hub = mapa.porta(lugar_de(PCI_B, "4.1"))
+    no_hub_de_fora = mapa.porta(lugar_de(PCI_B, "3.1"))
+    assert sem_saber is not None and atras_do_hub is not None and no_hub_de_fora is not None
+    assert (sem_saber.e_bluetooth, sem_saber.bluetooth) == (True, ""), (
+        "entrada unknown: o produto não sabe se é da placa ou dongle"
+    )
+    assert atras_do_hub.bluetooth == junta.BLUETOOTH_DONGLE, (
+        "o hub numa entrada hotplug foi encaixado de fora — o que pende dele é dongle"
+    )
+    assert no_hub_de_fora.bluetooth == junta.BLUETOOTH_DONGLE
+    no_hub_interno = mapa.porta(lugar_de(PCI_A, "3.1"))
+    assert no_hub_interno is not None and no_hub_interno.bluetooth == "", (
+        "o hub interno hospeda o rádio da placa E o painel da frente: não sei"
+    )
+    hub = mapa.porta(lugar_de(PCI_B, "4"))
+    assert hub is not None and (hub.e_bluetooth, hub.bluetooth) == (False, "")

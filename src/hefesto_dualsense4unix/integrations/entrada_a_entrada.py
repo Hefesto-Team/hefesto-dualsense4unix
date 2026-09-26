@@ -94,8 +94,8 @@ O QUE ELE NÃO FAZ
   UM escritor, o ``bt_active_mode.sh``, que lê o nome do lugar deste mesmo
   ``maquina.json`` no tique do watchdog (ENTRADA-A-ENTRADA-02; a
   ``D-COSTURA-BLUEZ`` dela em ``docs/data/decisoes-dela.csv``).
-* **Não inventa quinta resposta.** As quatro são as do produto; a «Traseira»
-  do ``mapa-do-radio.html`` é a mesma pergunta em outra língua.
+* **O laço não inventa quinta resposta**: ele fica nas quatro; o fluxo único
+  (``MapearAsPortas``) pergunta com os sete de :data:`LUGARES_DA_PORTA`.
 """
 
 from __future__ import annotations
@@ -1355,6 +1355,7 @@ class PortaDoMapa:
     especie: str = ""
     produto: str = ""
     e_dualsense: bool = False
+    e_bluetooth: bool = False
     bluetooth: str = ""
     storm: int | None = None
 
@@ -1509,6 +1510,50 @@ def ler_o_mapa(
             )
         )
 
+    # O QUE ELA JÁ IDENTIFICOU SEM NÚMERO também é do mapa: o nome que ela deu
+    # em Rádio e Adaptadores (``dar_nome``) e o «Não alcanço» moram no lugar,
+    # e a revisita renomeia «as entradas já mapeadas ou identificadas» — com o
+    # dongle fora da porta, ela continua sendo dela.
+    listados = {p.lugar for p in portas if p.lugar}
+    numerados = {p.numero for p in portas if p.numero}
+    for lugar, dele in sorted(documento.lugares.items()):
+        partes = partes_do_lugar(lugar)
+        if (
+            lugar in listados
+            or not (dele.nome or dele.fora)
+            or (dele.entrada is not None and dele.entrada in numerados)
+            or partes is None
+            or not partes[1]
+        ):
+            continue
+        furo_do_lugar = next(
+            (
+                f
+                for f in buracos
+                if tuple(f.nos) not in vistos and _lugar_do_furo(f, controladores) == lugar
+            ),
+            None,
+        )
+        nos_do_lugar = tuple(furo_do_lugar.nos) if furo_do_lugar is not None else ()
+        if nos_do_lugar:
+            vistos.add(nos_do_lugar)
+        medido = fatos(nos_do_lugar)
+        portas.append(
+            _porta_do_mapa(
+                lugar,
+                numero=None,
+                nome=dele.nome,
+                rotulo=dele.nome
+                or rotulo_da_entrada(lugar, maquina=documento, controladores=controladores),
+                face=None,
+                lugar=lugar,
+                caminho=medido.aparelho or dele.caminho or "",
+                nos=nos_do_lugar,
+                fora=bool(dele.fora),
+                medido=medido,
+            )
+        )
+
     if adaptadores is None:
         adaptadores = _adaptadores_do_sistema(raiz_bt)
     sem_porta = sum(1 for a in adaptadores if not str(getattr(a, "no", "") or ""))
@@ -1609,10 +1654,11 @@ class MapearAsPortas:
         ``chave`` ``None`` é a porta da vez; senão, a ``chave`` (ou o número,
         ou o lugar) de uma porta de :func:`ler_o_mapa`. ``nome`` ``None`` não
         mexe no nome, ``""`` apaga; ``lugar`` ``None`` mantém o lugar que a
-        porta já tinha. A porta nova precisa de um lugar.
+        porta já tinha. Só o nome, numa porta sem lugar no gabinete, grava só
+        o nome: o número e a face nascem quando ela disser onde fica.
 
         Levanta ``ValueError`` quando o gesto chega errado (nada a gravar, um
-        lugar que o produto não conhece, a porta nova sem lugar) e
+        lugar que o produto não conhece) e
         ``RuntimeError`` quando não há porta (nenhuma da vez, chave que não
         existe): o tratador da aba devolve os dois como recusa.
         """
@@ -1742,16 +1788,37 @@ def _gravar_a_porta(
 ) -> Gravacao:
     """A gravação da porta do fluxo único — pelo mesmo compositor do laço.
 
-    Com o buraco lido (os nós dela estão no ``/sys`` de agora) e o lugar
-    sabido, é o :func:`_gravar_as_portas` de sempre: o número que o lugar já
-    tem (ou o menor livre), a face, os nós, a amarra e o nome, juntos. Sem o
-    buraco (o hub dela foi desligado), só a revisita de uma porta numerada: a
-    face e o nome, e nada do que a primeira vez gravou sai.
+    Sem lugar no gabinete (``face`` ``None``), só o nome vai ao disco. Com o
+    buraco lido (os nós dela estão no ``/sys`` de agora) e o lugar sabido, é o
+    :func:`_gravar_as_portas` de sempre: o número que o lugar já tem (ou o
+    menor livre), a face, os nós, a amarra e o nome, juntos. Sem o buraco (o
+    hub dela foi desligado), só a revisita de uma porta numerada: a face e o
+    nome, e nada do que a primeira vez gravou sai.
     """
+    if face is None:
+        # SÓ O NOME, numa porta que ainda não tem lugar no gabinete (a que ela
+        # só nomeou em Rádio e Adaptadores, a porta da vez sem o «onde fica»,
+        # ou a que perdeu a face): o nome vai para o lugar — o mesmo gesto do
+        # ``dar_nome`` — e o produto não inventa face nem número por ela.
+        if nome is None:
+            raise ValueError("nada a gravar: nem nome nem lugar")
+        if not porta.lugar:
+            return Gravacao("", porta.numero or "", "", False, MOTIVO_SEM_LUGAR)
+        recibo = _gravar_no_mapa(
+            gravar, {"lugares": {porta.lugar: {"nome": nome.strip() or None}}}
+        )
+        if not recibo.gravou:
+            logger.warning("mapa_das_portas_nao_gravou", motivo=recibo.motivo)
+        return Gravacao(
+            porta.lugar,
+            porta.numero or "",
+            "",
+            recibo.gravou,
+            recibo.motivo,
+            (porta.numero,) if porta.numero else (),
+        )
     lidos = {e.no for e in lidas}
     if porta.lugar and porta.nos and set(porta.nos) & lidos:
-        if face is None:
-            raise ValueError("a porta nova precisa de um lugar no gabinete")
         caminho = porta.aparelho or _caminho_do_lado_20(porta.nos)
         if not caminho:
             return Gravacao(porta.lugar, "", face, False, MOTIVO_SEM_LUGAR)
@@ -1765,17 +1832,16 @@ def _gravar_a_porta(
             nome=nome,
         )
     if porta.numero is None:
-        return Gravacao(porta.lugar, "", face or "", False, MOTIVO_SEM_LUGAR)
+        return Gravacao(porta.lugar, "", face, False, MOTIVO_SEM_LUGAR)
     declaracao: dict[str, Any] = {}
-    face_final = face or ""
-    if face is not None:
-        declarada = maquina.mapa.portas.get(porta.numero)
-        if declarada is None or declarada.filha_de is None:
-            faces = [f.model_dump(mode="json") for f in maquina.mapa.faces]
-            _por_na_face(faces, face, porta.numero)
-            declaracao["mapa"] = {"faces": faces}
-        else:
-            face_final = _face_da_entrada(maquina.mapa, porta.numero) or face
+    face_final = face
+    declarada = maquina.mapa.portas.get(porta.numero)
+    if declarada is None or declarada.filha_de is None:
+        faces = [f.model_dump(mode="json") for f in maquina.mapa.faces]
+        _por_na_face(faces, face, porta.numero)
+        declaracao["mapa"] = {"faces": faces}
+    else:
+        face_final = _face_da_entrada(maquina.mapa, porta.numero) or face
     if nome is not None:
         if not porta.lugar:
             return Gravacao("", porta.numero, face_final, False, MOTIVO_SEM_LUGAR)
@@ -1823,6 +1889,7 @@ def _porta_do_mapa(
         especie=medido.especie,
         produto=medido.produto,
         e_dualsense=medido.e_dualsense,
+        e_bluetooth=medido.e_bluetooth,
         bluetooth=medido.bluetooth,
         storm=medido.storm,
     )
