@@ -89,7 +89,7 @@ CHAVE_DEPOIS_DE_GRAVAR = "arranjoGravado"
 #: Os três jeitos de a página receber um arranjo: a abertura, o «Examinar» e a
 #: volta de uma gravação. É o segundo argumento de ``window.hefestoArranjo``.
 COMO_ABRE = ""
-COMO_REEXAME = "reexame"
+COMO_REEXAME = "releitura"
 COMO_GRAVOU = "gravou"
 
 #: A IDENTIDADE DE UM APARELHO NA PÁGINA — O-MAPA-DAS-CONEXOES-NO-PRODUTO-02.
@@ -184,7 +184,11 @@ def _ler_a_maquina(
         from hefesto_dualsense4unix.integrations.censo_do_barramento import (
             ler_o_barramento as _ler,
         )
-        from hefesto_dualsense4unix.integrations.entrada_a_entrada import faces_dos_hubs
+        from hefesto_dualsense4unix.integrations.entrada_a_entrada import (
+            faces_dos_hubs,
+            nome_da_entrada,
+            rotulos_das_entradas,
+        )
         from hefesto_dualsense4unix.utils.maquina import carregar_maquina, entradas_do_mapa
     except Exception:
         return None
@@ -232,7 +236,12 @@ def _ler_a_maquina(
             "agora": {"rotulo": ROTULO_DE_AGORA, "caminho": caminhos},
             "antes": anterior,
         },
-        "declarado": _declarado(declarado, entradas_do_mapa(declarado)),
+        "declarado": _declarado(
+            declarado,
+            entradas_do_mapa(declarado),
+            lambda numero: nome_da_entrada(numero, maquina=documento),
+        ),
+        "rotulos": rotulos_das_entradas(documento),
     }, lida
 
 
@@ -304,7 +313,7 @@ def js_da_entrega(
 ) -> str:
     """O JavaScript que entrega um arranjo à página — a abertura, o reexame e a
     volta de uma gravação (``como``: :data:`COMO_ABRE`, :data:`COMO_REEXAME`,
-    :data:`COMO_GRAVOU`; ``reexame=True`` é o mesmo que ``como="reexame"``).
+    :data:`COMO_GRAVOU`; ``reexame=True`` é o mesmo que ``como=COMO_REEXAME``).
 
     UM dono para as três entregas: o piloto monta as três por aqui, e a régua
     que abre a página no WebKit também.
@@ -398,8 +407,14 @@ def _resumo(semente: str) -> str:
     return _PREFIXO_DO_ID + feito.hexdigest()
 
 
-def _declarado(mapa: Any, numeros: Any) -> dict[str, dict[str, Any]]:
+def _declarado(
+    mapa: Any, numeros: Any, nome_de: Callable[[str], str | None] | None = None
+) -> dict[str, dict[str, Any]]:
     """O que ela disse de cada entrada DO MAPA DELA, para o editor da página.
+
+    ``nome`` é o nome que ela deu à entrada (O-MAPA-QUE-ELA-CORRIGE-01), pelo
+    dono da leitura (``entrada_a_entrada.nome_da_entrada``): é o que o campo
+    «Nome» do editor mostra. O rótulo que a tela escreve vai em ``rotulos``.
 
     TODA entrada do mapa vem, com ``{}`` quando ela não disse nada: a lista de
     chaves é a lista das entradas que o editor GRAVA. A ponta de um extensor
@@ -417,6 +432,9 @@ def _declarado(mapa: Any, numeros: Any) -> dict[str, dict[str, Any]]:
             dito["liga"] = porta.liga
         if porta is not None and porta.usb:
             dito["usb"] = porta.usb
+        nome = nome_de(numero) if nome_de is not None else None
+        if nome:
+            dito["nome"] = nome
         saida[numero] = dito
     return saida
 

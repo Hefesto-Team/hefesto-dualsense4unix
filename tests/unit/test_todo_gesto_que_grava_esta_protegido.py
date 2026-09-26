@@ -112,6 +112,9 @@ ESCREVEM = {
     # 26/09/2026: o hub, o extensor e a velocidade vão ao `maquina.json` dela.
     "declarar_a_ligacao",
     "declarar_a_velocidade",
+    # O NOME DA ENTRADA — O-MAPA-QUE-ELA-CORRIGE-01, 26/09/2026: da posição,
+    # em `mapa.portas[N].nome` (D-2609-O-NOME-E-DA-POSICAO).
+    "dar_nome_a_entrada",
     # A ORDEM DAS CAIXAS DOS ADAPTADORES — A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01,
     # 25/09/2026: vai para o `gui_preferences.json` dela.
     "guardar_ordem_dos_adaptadores",

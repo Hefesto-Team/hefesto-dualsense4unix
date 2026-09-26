@@ -431,7 +431,11 @@ def test_o_adaptador_na_entrada_numerada_nao_herda_o_numero() -> None:
             "lugares": {lugar: {"entrada": "9", "nome": "9"}},
         }
     )
-    assert ee.nome_da_porta("3-4.1.4", maquina=documento, controladores=BOOT_1) == "9"
+    # O «9» gravado como nome não é nome (D-2609-O-NOME-E-DA-POSICAO): a porta
+    # se chama «Entrada 9», e não «9».
+    assert (
+        ee.nome_da_porta("3-4.1.4", maquina=documento, controladores=BOOT_1) == "Entrada 9"
+    )
     assert not maquina.nome_dado_ao_adaptador(documento, adaptador.endereco)
 
 

@@ -1007,11 +1007,15 @@ def test_a_frase_e_a_coluna_dizem_o_mesmo_nome_da_mesma_porta(
 
 
 #: Quem pode compor o nome da porta, e por quê. Tudo o mais em ``src/`` que junte
-#: a palavra «Entrada» com um número é um segundo dono.
-_O_DONO = "integrations/entrada_a_entrada.py"
+#: a palavra «Entrada» com um número é um segundo dono. O DONO DA GRAFIA mudou
+#: de casa em 26/09/2026 (O-MAPA-QUE-ELA-CORRIGE-01, D-2609-O-NOME-E-DA-POSICAO):
+#: ``utils/rotulo_da_entrada.py``, só stdlib, para as ordens compor dali sem o
+#: ``pydantic``; o ``entrada_a_entrada`` reexporta a palavra por ``import``, que
+#: não é ``Assign``, e é o dono da LEITURA do nome.
+_O_DONO = "utils/rotulo_da_entrada.py"
 _OS_QUE_PODEM = {
-    (_O_DONO, "define a palavra"): "é o dono (ENTRADA-A-ENTRADA-01)",
-    (_O_DONO, "compõe com a palavra"): "é o dono (ENTRADA-A-ENTRADA-01)",
+    (_O_DONO, "define a palavra"): "é o dono (D-2609-O-NOME-E-DA-POSICAO)",
+    (_O_DONO, "compõe com a palavra"): "é o dono (D-2609-O-NOME-E-DA-POSICAO)",
     ("app/widgets/calibrar_entradas.py", "define a palavra"): (
         "a cópia que o gerador da aba 08 lê por AST — não importa do dono sem "
         "quebrar o gerador; travada junto por test_entrada_a_entrada_grava.py"

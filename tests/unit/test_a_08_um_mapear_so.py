@@ -190,8 +190,12 @@ def test_o_mesmo_controle_de_porta_em_porta_mapeia_cada_uma(
     assert documento.mapa.portas["3"].nos == ["3-4-port2", "4-4-port2"]
     lugar_1 = lugar_de(PCI_A, "5")
     assert documento.lugares[lugar_1].entrada == "1"
-    assert documento.lugares[lugar_1].nome == "Frente de baixo"
-    assert documento.lugares[lugar_de(PCI_B, "4.2")].nome == "Hub da mesa"
+    # O NOME É DA POSIÇÃO desde 26/09/2026 (D-2609-O-NOME-E-DA-POSICAO): vai
+    # para a entrada, e o lugar fica sem nome.
+    assert documento.mapa.portas["1"].nome == "Frente de baixo"
+    assert documento.lugares[lugar_1].nome is None
+    assert documento.mapa.portas["3"].nome == "Hub da mesa"
+    assert documento.lugares[lugar_de(PCI_B, "4.2")].nome is None
     assert fluxo.estado()["feitas"] == 3
 
 
@@ -304,9 +308,9 @@ def test_a_revisita_so_troca_o_que_ela_trocou(mesa: Gabinete, disco: Path) -> No
     assert fluxo.gravar(chave="1", nome="Frente").gravou
     depois = json.loads(disco.read_text(encoding="utf-8"))
     lugar_1 = lugar_de(PCI_A, "5")
-    assert depois["lugares"][lugar_1]["nome"] == "Frente"
-    assert _sem(depois, ("lugares", lugar_1, "nome")) == _sem(
-        antes, ("lugares", lugar_1, "nome")
+    assert depois["mapa"]["portas"]["1"]["nome"] == "Frente"
+    assert _sem(depois, ("mapa", "portas", "1", "nome")) == _sem(
+        antes, ("mapa", "portas", "1", "nome")
     ), "renomear mexeu em mais do que o nome"
 
     # reposicionar pela lista
@@ -322,7 +326,7 @@ def test_a_revisita_so_troca_o_que_ela_trocou(mesa: Gabinete, disco: Path) -> No
     assert (foto["porta"]["numero"], foto["porta"]["nome"]) == ("1", "Frente")
     assert fluxo.gravar(lugar=ee.LUGAR_LATERAL).gravou
     documento = carregar_maquina()
-    assert documento.lugares[lugar_1].nome == "Frente", "mudar o lugar não apaga o nome"
+    assert documento.mapa.portas["1"].nome == "Frente", "mudar o lugar não apaga o nome"
     assert documento.lugares[lugar_1].entrada == "1", "a revisita não troca o número"
     assert documento.mapa.portas["3"].nos == ["3-4-port2", "4-4-port2"]
 
@@ -337,12 +341,11 @@ def test_a_revisita_so_troca_o_que_ela_trocou(mesa: Gabinete, disco: Path) -> No
     assert faces_depois.pop(ee.LUGAR_MONITOR) == ["3"]
     faces_antes[ee.LUGAR_HUB] = []
     assert faces_depois == faces_antes, "a revisita apagou as outras faces"
-    assert depois["mapa"]["portas"] == antes["mapa"]["portas"]
-    lugar_3 = lugar_de(PCI_B, "4.2")
-    assert depois["lugares"][lugar_3]["nome"] == "Hub do monitor"
-    assert _sem(depois, ("lugares", lugar_3, "nome"), ("mapa",)) == _sem(
-        antes, ("lugares", lugar_3, "nome"), ("mapa",)
+    assert _sem(depois["mapa"]["portas"], ("3", "nome")) == _sem(
+        antes["mapa"]["portas"], ("3", "nome")
     )
+    assert depois["mapa"]["portas"]["3"]["nome"] == "Hub do monitor"
+    assert _sem(depois, ("mapa",)) == _sem(antes, ("mapa",))
 
 
 def test_a_revisita_nao_apaga_o_que_o_laco_de_antes_gravou(
@@ -603,13 +606,13 @@ def test_renomear_pela_lista_nao_troca_a_testemunha(mesa: Gabinete, disco: Path)
     assert fluxo.gravar(chave="2", nome="Atrás, a de cima").gravou
     assert fluxo.gravar(chave="2", lugar=ee.LUGAR_TOPO).gravou
     depois = json.loads(disco.read_text(encoding="utf-8"))
-    assert depois["mapa"]["portas"] == antes["mapa"]["portas"], (
-        "a revisita pela lista trocou o caminho da porta"
-    )
+    assert _sem(depois["mapa"]["portas"], ("2", "nome")) == _sem(
+        antes["mapa"]["portas"], ("2", "nome")
+    ), "a revisita pela lista trocou o caminho da porta"
     lugar_2 = lugar_de(PCI_A, "1")
     assert depois["lugares"][lugar_2]["caminho"] == "1-1"
     assert depois["lugares"][lugar_2]["entrada"] == "2"
-    assert depois["lugares"][lugar_2]["nome"] == "Atrás, a de cima"
+    assert depois["mapa"]["portas"]["2"]["nome"] == "Atrás, a de cima"
     assert depois["lugares"][lugar_2].get("fora") is True, "renomear desfez o «Não alcanço»"
 
     # e a porta nova tocada pela lista, com o pendrive só no lado 3.x, também

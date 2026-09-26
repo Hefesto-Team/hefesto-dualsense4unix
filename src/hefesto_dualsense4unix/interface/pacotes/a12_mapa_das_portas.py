@@ -47,8 +47,9 @@ from . import Contexto, gesto
 
 PAGINA = "mapa-das-portas.html"
 
-#: Os dois gestos do editor da entrada e o «Examinar». Só sobe.
-PISO_DA_ABA = 3
+#: Os gestos do editor da entrada (o que tem, a velocidade, o nome) e o
+#: «Examinar». Só sobe.
+PISO_DA_ABA = 4
 
 #: O «Direto» do editor: é a ausência de declaração no disco (`liga` nulo).
 DIRETO = "direto"
@@ -92,6 +93,21 @@ def entrada_velocidade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
     except ValueError:
         raise ValueError("o clique não disse a velocidade") from None
     return _gravou(ee.declarar_a_velocidade(_a_entrada(o), usb))
+
+
+@gesto(PAGINA, "entrada-nome", grava="dar_nome_a_entrada")
+def entrada_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O nome que ela dá à entrada — da POSIÇÃO, no `maquina.json` dela.
+
+    O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-O-NOME-E-DA-POSICAO). Pedido dela:
+    *«me referi as portas renomear»*. O clique que só põe o cursor no campo
+    arma e não grava (o ouvinte do piloto ouve `click` e `change` no mesmo
+    campo); o `change` grava; vazio volta a «Entrada N». Mais de 24
+    caracteres é recusa, com a frase do dono. <!-- noqa-acento: citação literal dela -->
+    """
+    if str(o.get("evento") or "") == "click":
+        return {"armou": True}
+    return _gravou(ee.dar_nome_a_entrada(_a_entrada(o), str(o.get("valor") or "")))
 
 
 @gesto(PAGINA, "reexaminar")

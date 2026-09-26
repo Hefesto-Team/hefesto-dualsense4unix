@@ -43,6 +43,7 @@ from hefesto_dualsense4unix.interface import arranjo_desta_maquina, pagina_do_ma
 from hefesto_dualsense4unix.utils.maquina import (
     FaceDeclarada,
     MapaDaMesa,
+    MaquinaConfig,
     PortaDeclarada,
 )
 
@@ -72,12 +73,14 @@ def _aparelho(no: str, especie: str, produto: str,
     )
 
 
-class _Documento:
-    def __init__(self, mapa: MapaDaMesa) -> None:
-        self.mapa = mapa
+def _documento(mapa: MapaDaMesa) -> MaquinaConfig:
+    """O documento de VERDADE com este mapa — um dublê que só tinha ``mapa`` era
+    mais pobre que o produto, e caiu no dia em que o arranjo passou a perguntar
+    o nome da entrada (O-MAPA-QUE-ELA-CORRIGE-01, 26/09/2026)."""
+    return MaquinaConfig(mapa=mapa)
 
 
-def _gabinete() -> tuple[_Documento, Censo]:
+def _gabinete() -> tuple[MaquinaConfig, Censo]:
     """Duas entradas declaradas, dois aparelhos lidos. Não é o de ninguém."""
     mapa = MapaDaMesa(
         faces=[FaceDeclarada(nome="Traseira", portas=["1", "2"], perto=True)],
@@ -87,7 +90,7 @@ def _gabinete() -> tuple[_Documento, Censo]:
         _aparelho("9-1", "Bluetooth", "Adaptador de prova"),
         _aparelho("9-2", "Teclado", "Teclado de prova", _TRIPLA_TECLADO),
     ))
-    return _Documento(mapa), censo
+    return _documento(mapa), censo
 
 
 # ── 1. sem declaração não há gabinete, e isso se DIZ ─────────────────────
@@ -104,7 +107,7 @@ def test_sem_face_declarada_o_arranjo_nao_existe() -> None:
     UMA RÉGUA QUE SÓ MEDE O `None` MEDIRIA UM IMPORT QUEBRADO com a mesma cara.
     Por isso o caso de baixo: com uma face declarada, o arranjo VEM.
     """
-    vazio = _Documento(MapaDaMesa())
+    vazio = _documento(MapaDaMesa())
     _, censo = _gabinete()
     assert arranjo_desta_maquina.arranjo(
         carregar=lambda: vazio, ler_o_barramento=lambda: censo) is None
@@ -202,7 +205,7 @@ def test_a_entrada_esticada_leva_o_cabo_que_o_desenho_escreve() -> None:
         _aparelho("9-2", "Bluetooth", "Adaptador de prova"),
     ))
     veio = arranjo_desta_maquina.arranjo(
-        carregar=lambda: _Documento(mapa), ler_o_barramento=lambda: censo)
+        carregar=lambda: _documento(mapa), ler_o_barramento=lambda: censo)
     assert veio is not None
     filhas = [p["filho"] for f in veio["faces"] for p in f["portas"] if "filho" in p]
     assert filhas, "a entrada-filha declarada não chegou ao desenho"
@@ -230,7 +233,7 @@ def test_uma_face_so_e_dona_da_faixa_do_pc() -> None:
         _aparelho("9-3", "Mouse", "Mouse de prova", _TRIPLA_MOUSE),
     ))
     veio = arranjo_desta_maquina.arranjo(
-        carregar=lambda: _Documento(mapa), ler_o_barramento=lambda: censo)
+        carregar=lambda: _documento(mapa), ler_o_barramento=lambda: censo)
     assert veio is not None
     donas = [f["nome"] for f in veio["faces"] if f.get("donaDaFaixaPc")]
     assert len(donas) == 1, f"faces donas da faixa do PC: {donas}"

@@ -54,6 +54,10 @@ import sys
 from typing import Any, NamedTuple
 
 from hefesto_dualsense4unix.interface import caixa_da_janela, onde
+from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
+    MAXIMO_DO_NOME_DA_ENTRADA,
+    PALAVRA_DA_ENTRADA,
+)
 
 #: A ESPECIFICAÇÃO EXECUTÁVEL. Congelada por decisão: reescrevê-la reescreveria
 #: o ouro de 120 cenários, e apagaria o registro de como o motor falava em
@@ -289,6 +293,9 @@ ABRE_A_PORTA = """\
        exemplo, o editor fica só na tela. */
     DECLARADO = JSON.parse(JSON.stringify(f.declarado || {}));
     GRAVA = Object.keys(DECLARADO);
+    /* O NOME DE CADA ENTRADA, composto pelo dono (O-MAPA-QUE-ELA-CORRIGE-01):
+       `entrada_a_entrada.rotulos_das_entradas`. */
+    ROTULOS = f.rotulos || {};
     /* A VOLTA DE UMA GRAVAÇÃO NÃO FECHA O EDITOR — 26/09/2026,
        O-MAPA-QUE-ELA-CORRIGE-01: ela clicou numa entrada, e a entrada
        continua aberta com o que o disco diz agora. */
@@ -319,10 +326,10 @@ ABRE_A_PORTA = """\
 
   window.hefestoArranjo = function (dado, como) {
     /* COMO ELE CHEGA — 26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01: `false` é a
-       abertura, `true` (ou "reexame") é o «Examinar», e "gravou" é a volta
+       abertura, `true` é o «Examinar», e "gravou" é a volta
        de uma gravação do editor (`arranjo_desta_maquina.CHAVE_DEPOIS_DE_GRAVAR`):
        a página repinta pelo disco sem mudar de modo nem fechar o editor. */
-    var comoReexame = como === true || como === "reexame";
+    var comoReexame = como === true;
     var gravou = como === "gravou";
     var falta = CAMPOS_DO_ARRANJO.filter(function (c) { return !dado || !dado[c]; });
     if (falta.length) {
@@ -1971,6 +1978,110 @@ EDICOES: tuple[Edicao, ...] = (
             'dela: dois cliques no plugue e nenhuma escolha; a dica não dizia que '
             'ali há um editor.'
         ),
+    ),
+    # ══ O-MAPA-QUE-ELA-CORRIGE-01 (passo 2), 26/09/2026: o nome da entrada ══
+    Edicao(
+        antes="  var DECLARADO = {};\n  var editando = null;\n",
+        depois=(
+            "  var DECLARADO = {};\n"
+            "  var editando = null;\n"
+            "  /* O NOME DA ENTRADA — 26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (D1). Pedido\n"
+            "     dela: «me referi as portas renomear». O nome é da POSIÇÃO, e quem o\n"
+            "     compõe é o Python (`utils/rotulo_da_entrada`): o produto entrega os\n"
+            "     `rotulos` no arranjo. A palavra de reserva é a do dono, que o gerador\n"
+            "     escreve aqui; no exemplo, o nome é o que se digitou nesta tela. */\n"  # noqa-acento: citação literal dela
+            "  var PALAVRA_DA_ENTRADA = "
+            + json.dumps(PALAVRA_DA_ENTRADA, ensure_ascii=False) + ";\n"
+            "  var MAXIMO_DO_NOME = " + str(MAXIMO_DO_NOME_DA_ENTRADA) + ";\n"
+            "  var ROTULOS = {};\n"
+            "  function rotuloDe(n) {\n"
+            "    var r = ROTULOS[String(n)];\n"
+            "    if (r) return r.rotulo;\n"
+            "    return nomeDe(n) || PALAVRA_DA_ENTRADA + \" \" + n;\n"
+            "  }\n"
+            "  function nomeDe(n) { return (DECLARADO[n] || {}).nome || \"\"; }\n"
+            "  function emAtributo(t) {\n"
+            "    return String(t).replace(/&/g, \"&amp;\").replace(/\"/g, \"&quot;\")"
+            ".replace(/</g, \"&lt;\");\n"
+            "  }\n"
+            "  function linhaDoNome(n) {\n"
+            "    return '<div class=\"edita-linha\"><span>Nome</span>"
+            "<input class=\"nome-entrada\" type=\"text\"'\n"
+            "      + ' data-nome=\"' + n + '\"' + gravaNaEntrada(n, \"entrada-nome\")\n"
+            "      + ' maxlength=\"' + MAXIMO_DO_NOME + '\" value=\"'"
+            " + emAtributo(nomeDe(n)) + '\"'\n"
+            "      + ' placeholder=\"' + emAtributo(PALAVRA_DA_ENTRADA + \" \" + n)"
+            " + '\" aria-label=\"Nome\"></div>';\n"
+            "  }\n"
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 2) — o nome da entrada '
+            'vem do dono, e o editor ganha o campo «Nome».'
+        ),
+    ),
+    Edicao(
+        antes=(
+            "    ed.innerHTML = '<div class=\"edita-cab\"><b>Entrada ' + editando"
+            " + \"</b><span>\" + (face ? face.nome : \"\") + \"</span>\"\n"
+            "      + '<button class=\"btn fecha\" id=\"edita-fecha\" aria-label=\"Fechar\">"
+            "&times;</button></div>'\n"
+            "      + (soNaTela ? \"\" : '<div class=\"edita-linha\"><span>O que tem aqui"
+            "</span><div class=\"seg\">'\n"
+        ),
+        depois=(
+            "    ed.innerHTML = '<div class=\"edita-cab\"><b>' + emAtributo(rotuloDe(editando))"
+            " + \"</b><span>\" + (face ? face.nome : \"\") + \"</span>\"\n"
+            "      + '<button class=\"btn fecha\" id=\"edita-fecha\" aria-label=\"Fechar\">"
+            "&times;</button></div>'\n"
+            "      + (soNaTela ? \"\" : linhaDoNome(editando))\n"
+            "      + (soNaTela ? \"\" : '<div class=\"edita-linha\"><span>O que tem aqui"
+            "</span><div class=\"seg\">'\n"
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 2) — o cabeçalho do '
+            'editor diz o nome dela, e o campo «Nome» vem antes do resto.'
+        ),
+    ),
+    Edicao(
+        antes=(
+            "  document.addEventListener(\"keydown\", function (ev) {\n"
+            "    if (ev.key === \"Escape\" && editando) { editando = null; pintar(); }\n"
+            "  });\n"
+        ),
+        depois=(
+            "  document.addEventListener(\"keydown\", function (ev) {\n"
+            "    if (ev.key === \"Escape\" && editando) { editando = null; pintar(); }\n"
+            "  });\n"
+            "  /* O NOME, NO EXEMPLO — 26/09/2026. No produto o campo leva o gesto\n"
+            "     `entrada-nome`, e a página espera o disco; aqui, sem produto, o nome\n"
+            "     fica só na tela. */\n"
+            "  document.addEventListener(\"change\", function (ev) {\n"
+            "    var campo = ev.target.closest && ev.target.closest(\"#edita [data-nome]\");\n"
+            "    if (!campo || campo.hasAttribute(\"data-gesto\")) return;\n"
+            "    declarar(campo.getAttribute(\"data-nome\"), \"nome\","
+            " campo.value.trim().slice(0, MAXIMO_DO_NOME));\n"
+            "    pintar();\n"
+            "  });\n"
+        ),
+        porque=(
+            '26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 2) — o nome no exemplo '
+            'é só da tela.'
+        ),
+    ),
+    Edicao(
+        antes="  .edita .seg .escolha.apagado:hover { background: var(--color-paper-3); }\n",
+        depois=(
+            "  .edita .seg .escolha.apagado:hover { background: var(--color-paper-3); }\n"
+            "  /* o nome da entrada: o campo tem fundo, cor e borda próprios — no\n"
+            "     WebKitGTK o campo sem eles nasce com as cores do sistema */\n"
+            "  .edita .nome-entrada { font: inherit; font-size: var(--text-sm); width: 100%;\n"
+            "                         box-sizing: border-box; padding: .35rem .5rem;\n"
+            "                         background: var(--color-paper); color: var(--color-ink);\n"
+            "                         border: 1px solid var(--color-rule);"
+            " border-radius: var(--radius-sm); }\n"
+            "  .edita .nome-entrada:focus { outline: none; border-color: var(--color-accent); }\n"
+        ),
+        porque='26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (passo 2) — o campo «Nome».',
     ),
 )
 

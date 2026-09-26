@@ -108,6 +108,10 @@ from hefesto_dualsense4unix.utils.lugar import lugar_de as lugar_de
 from hefesto_dualsense4unix.utils.lugar import lugar_do_caminho as lugar_do_caminho
 from hefesto_dualsense4unix.utils.lugar import lugar_do_no as lugar_do_no
 from hefesto_dualsense4unix.utils.lugar import partes_do_lugar as partes_do_lugar
+from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
+    FRASE_DO_NOME_COMPRIDO,
+    MAXIMO_DO_NOME_DA_ENTRADA,
+)
 
 logger = get_logger(__name__)
 
@@ -466,6 +470,13 @@ class PortaDeclarada(BaseModel):
     #: nasceu a frente é USB 3.0 e a tabela ACPI a dava como 2.0. Quem responde
     #: com as duas é ``mapa_das_portas._rapido_do_no``.
     usb: Literal[2, 3] | None = None
+    #: O NOME QUE ELA DEU À ENTRADA — O-MAPA-QUE-ELA-CORRIGE-01, 26/09/2026
+    #: (D-2609-O-NOME-E-DA-POSICAO). O nome é da POSIÇÃO: numa troca de duas
+    #: entradas ele fica com o número. Até 24 caracteres (o que cabe no plugue
+    #: do mapa). Quem o lê é ``entrada_a_entrada.nome_da_entrada``, e quem o
+    #: escreve na tela é ``utils/rotulo_da_entrada``. Morava em
+    #: ``lugares[<lugar>].nome``, e sai de lá na primeira gravação.
+    nome: str | None = None
 
     @field_validator("caminho")
     @classmethod
@@ -486,6 +497,12 @@ class PortaDeclarada(BaseModel):
                 "letra opcional"
             )
         return valor
+
+    @field_validator("nome")
+    @classmethod
+    def _nome_aparado(cls, valor: str | None) -> str | None:
+        """Espaço em volta sai; nome vazio é ``None``; até 24 caracteres."""
+        return _nome_aparado(valor, MAXIMO_DO_NOME_DA_ENTRADA, FRASE_DO_NOME_COMPRIDO)
 
     @field_validator("nos")
     @classmethod
@@ -622,17 +639,28 @@ class LugarDeclarado(BaseModel):
     @classmethod
     def _nome_aparado(cls, valor: str | None) -> str | None:
         """Espaço em volta sai; nome vazio é ``None`` — "ela não deu nome"."""
-        if valor is None:
-            return None
-        limpo = valor.strip()
-        if not limpo:
-            return None
-        if len(limpo) > _MAXIMO_DO_NOME_DO_LUGAR:
-            raise ValueError(
-                f"nome de {len(limpo)} caracteres não cabe no cartão do "
-                f"adaptador (até {_MAXIMO_DO_NOME_DO_LUGAR})"
-            )
-        return limpo
+        return _nome_aparado(
+            valor,
+            _MAXIMO_DO_NOME_DO_LUGAR,
+            f"o nome não cabe no cartão (até {_MAXIMO_DO_NOME_DO_LUGAR} caracteres)",
+        )
+
+
+def _nome_aparado(valor: str | None, teto: int, frase_do_teto: str) -> str | None:
+    """O aparo do nome que ela dá — UM para a entrada e para o lugar.
+
+    Espaço em volta sai; vazio é ``None`` ("ela não deu nome"); acima do
+    ``teto`` a gravação recusa com a ``frase_do_teto``. A entrada tem teto 24
+    (o plugue do mapa) e o lugar, 60 (O-MAPA-QUE-ELA-CORRIGE-01).
+    """
+    if valor is None:
+        return None
+    limpo = valor.strip()
+    if not limpo:
+        return None
+    if len(limpo) > teto:
+        raise ValueError(f"{frase_do_teto} ({len(limpo)} caracteres)")
+    return limpo
 
 
 class AdaptadorDeclarado(BaseModel):

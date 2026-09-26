@@ -237,9 +237,12 @@ def test_terminar_nao_espera_o_sys(gabinete: Gabinete, disco: Path, gesto: str) 
         fio.join(SONO_S)
     assert fluxo.foto_sem_esperar()["estado"] == ee.PARADO, (
         "a leitura de antes do Terminar reabriu o fluxo")
-    dela = carregar_maquina().lugares.get(lugar_de(PCI_A, "5"))
+    documento = carregar_maquina()
+    dela = documento.lugares.get(lugar_de(PCI_A, "5"))
     if gesto == "gravar":
-        assert dela is not None and dela.nome == "Frente", (
+        # o nome é da POSIÇÃO (D-2609-O-NOME-E-DA-POSICAO): pergunta ao dono
+        assert dela is not None and dela.entrada is not None
+        assert ee.nome_da_entrada(dela.entrada, maquina=documento) == "Frente", (
             "o Salvar clicado antes do Terminar se perdeu — e nada se perde")
     else:
         assert dela is None, f"`{gesto}` gravou alguma coisa"
@@ -392,9 +395,14 @@ def test_o_salvar_vai_para_onde_o_controle_esta(gabinete: Gabinete, disco: Path)
     assert fluxo.gravar(nome="Frente de cima", lugar=ee.LUGAR_FRENTE).gravou
 
     documento = carregar_maquina()
-    assert documento.lugares[lugar_de(PCI_A, "5")].nome == "Frente de baixo", (
+
+    def nome_de(lugar: str) -> str | None:
+        entrada = documento.lugares[lugar].entrada
+        return None if entrada is None else ee.nome_da_entrada(entrada, maquina=documento)
+
+    assert nome_de(lugar_de(PCI_A, "5")) == "Frente de baixo", (
         "o Salvar da segunda porta renomeou a primeira")
-    assert documento.lugares[lugar_de(PCI_A, "3")].nome == "Frente de cima"
+    assert nome_de(lugar_de(PCI_A, "3")) == "Frente de cima"
     assert fluxo.foto_sem_esperar()["porta"]["aparelho"] == "1-3", (
         "a foto do tique seguinte não mostra o que ela acabou de salvar")
     fluxo.parar()

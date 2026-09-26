@@ -468,3 +468,49 @@ def test_o_mapa_recarregado_reinstala_a_ponte_e_recebe_o_arranjo() -> None:
     hefesto_vivo.Piloto._carregou(com_ponte, None, WebKit2.LoadEvent.FINISHED)
     assert com_ponte.instalou == 0 and com_ponte.pronto, (
         "a primeira carga que confirma depois da instalação instalou duas vezes")
+
+
+# ── passo 2: o nome da entrada ───────────────────────────────────────────
+
+_O_CAMPO = '#edita input.nome-entrada[data-gesto="entrada-nome"]'
+
+
+def _o_campo() -> str:
+    alvo = json.dumps(_O_CAMPO)
+    return (f"(function(){{const c=document.querySelector({alvo});"
+            f"if(!c) return JSON.stringify({{existe: false}});"
+            f"return JSON.stringify({{existe: true, valor: c.value,"
+            f" dica: c.getAttribute('placeholder'), teto: c.maxLength,"
+            f" entrada: c.getAttribute('data-entrada'), classe: c.className}});}})()")
+
+
+def test_o_nome_da_entrada_grava_e_o_cabecalho_diz_ele(disco: Path) -> None:
+    """O campo «Nome» do editor: o clique arma, o ``change`` grava na POSIÇÃO,
+    e o cabeçalho do editor passa a dizer o nome — pelo que o disco devolveu.
+
+    E a recusa: 25 caracteres não gravam, o disco fica, e o campo pisca.
+    """
+    lidas, _ = _na_pagina([
+        _js(_aberta()),
+        _clicar('.plug[data-porta="2"]'),
+        _o_campo(),
+        _clicar(_O_CAMPO),
+        _o_piloto_responde("entrada-nome", evento="click"),
+        _mudar(_O_CAMPO, "  Canto  "),
+        _o_piloto_responde("entrada-nome", evento="change"),
+        _O_EDITOR,
+        _o_campo(),
+        _mudar(_O_CAMPO, "x" * 25),
+        _o_piloto_responde("entrada-nome", evento="change"),
+        _o_campo(),
+    ])
+    antes, editor, depois, recusado = lidas[2], lidas[7], lidas[8], lidas[11]
+    assert antes["existe"], "o editor da entrada 2 não tem o campo «Nome» que grava"
+    assert (antes["valor"], antes["dica"], antes["teto"], antes["entrada"]) == (
+        "", "Entrada 2", 24, "2")
+    assert editor["aberto"], "a volta da gravação fechou o editor"
+    assert editor["cabecalho"].startswith("Canto"), editor
+    assert depois["valor"] == "Canto", depois
+    assert carregar_maquina().mapa.portas["2"].nome == "Canto"
+    assert recusado["existe"] and "hef-recusou" in recusado["classe"], recusado
+    assert carregar_maquina().mapa.portas["2"].nome == "Canto", "a recusa gravou"
