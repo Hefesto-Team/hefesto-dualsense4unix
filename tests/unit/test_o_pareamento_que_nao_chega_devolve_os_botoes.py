@@ -239,11 +239,16 @@ def test_o_branco_perde_a_meia_chave_so_ali_e_tenta_de_novo_no_mesmo_adaptador(
     naquele adaptador — pelo mesmo verbo do X —, e «Tentar de Novo» abre outro
     «Conectar» no MESMO adaptador, onde ele chega.
 
-    MORDIDA: faça o ``_esquecer_a_meia_chave`` da central não fazer nada — o
-    objeto ``Paired`` sem ``Connected`` fica no adaptador e esta régua reprova.
-    (Até a O-RADIO-CONECTA-ONDE-ELA-MANDA-02 quem o tirava era a tela, pelo
-    ``_esquecer_as_meias_chaves``; desde ela a central o tira ANTES de publicar
-    o «não chegou», e a tela encontra o adaptador limpo — uma lápide só.)
+    DOIS DONOS PARA A MESMA CHAVE, E UMA LÁPIDE SÓ: desde a
+    O-RADIO-CONECTA-ONDE-ELA-MANDA-02 a central a tira ANTES de publicar o «não
+    chegou» (``_esquecer_a_meia_chave``), e a tela, que só apaga depois do
+    veredito (``_esquecer_as_meias_chaves``), encontra o adaptador limpo. Com a
+    janela aberta, qualquer um dos dois basta — a régua da janela FECHADA, que
+    só tem a central, é ``test_com_a_janela_fechada_a_central_tira_a_meia_chave_no_nao_chegou``.
+
+    MORDIDA: faça os DOIS não fazerem nada — o objeto ``Paired`` sem
+    ``Connected`` fica no adaptador e esta régua reprova. (Medido em 26/09:
+    arrancar só o da central deixa esta verde, pela tela.)
     """
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     mundo.pair_mente = True
