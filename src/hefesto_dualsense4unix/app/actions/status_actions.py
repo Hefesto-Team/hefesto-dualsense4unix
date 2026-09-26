@@ -2620,6 +2620,10 @@ class StatusActionsMixin(WidgetAccessMixin):
         Hefesto"* não aparece em nenhuma. "Reiniciar o serviço" é o que
         responde ao caso desta função — o serviço não respondeu — e é o botão
         que a pessoa acha quando abre a aba.
+
+        E ELE VIROU «Reiniciar» EM 25/09/2026: a aba Sistema em três seções
+        (A-09-SISTEMA-EM-TRES-SECOES-01) põe o botão na coluna «Serviço», e o
+        rótulo não repete a palavra da coluna.
         """
         if self._first_poll_succeeded:
             return False  # one-shot, não reagendar
@@ -2631,7 +2635,7 @@ class StatusActionsMixin(WidgetAccessMixin):
             header.set_markup(
                 '<span foreground="#ff5555">'
                 "&#9675; Desconectado — abra a aba Sistema e clique em "
-                "\"Reiniciar o serviço\""
+                "\"Reiniciar\""
                 "</span>"
             )
         self._set_estado_global("status_daemon", "Sem resposta (ligue na aba Sistema)")
@@ -2813,7 +2817,7 @@ class StatusActionsMixin(WidgetAccessMixin):
             header.set_markup(
                 '<span foreground="#ff5555">'
                 "&#9675; Hefesto desligado — abra a aba Sistema e clique em "
-                "\"Reiniciar o serviço\""
+                "\"Reiniciar\""
                 "</span>"
             )
         self._set_estado_global("status_daemon", "Desligado")
