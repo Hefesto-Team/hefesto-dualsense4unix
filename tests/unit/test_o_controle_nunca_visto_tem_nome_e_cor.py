@@ -550,3 +550,20 @@ def test_o_reconectar_chama_de_volta_o_edge_pelo_radio() -> None:
 
     achados = [mac for mac, _ in radio.dualsenses_do_radio(executar=_BlueZ())]
     assert achados == ["aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"], achados
+
+
+# ---------------------------------------------------------------------------
+# 8 · O QUE A CONFERÊNCIA ACHOU SEM RÉGUA (25/09/2026)
+# ---------------------------------------------------------------------------
+def test_um_mapa_ilegivel_nao_derruba_ninguem(tmp_path: pathlib.Path) -> None:
+    """«NUNCA LEVANTA» vale também para o arquivo que existe e não é UTF-8.
+
+    A tabela é lida na IMPORTAÇÃO, e quem importa é o daemon e a janela: um
+    ``UnicodeDecodeError`` ali não é uma cor a menos, é o produto sem abrir.
+    """
+    ruim = tmp_path / "cores.csv"
+    ruim.write_bytes(b"codigo_da_cor,id,nome,zona,hex\n00,white,Wh\xffte,casca_esq,#E4E0D8\n")
+    assert cp.ler_a_tabela(ruim) == {}
+    pasta = tmp_path / "uma-pasta.csv"
+    pasta.mkdir()
+    assert cp.ler_a_tabela(pasta) == {}

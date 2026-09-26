@@ -355,11 +355,15 @@ def ler_a_tabela(caminho: str | os.PathLike[str] | None = None) -> dict[str, Cor
     que é verdade e não derruba o daemon nem a janela. O ``caminho`` resolve
     na CHAMADA, não no default: é o que deixa a régua medir a tabela vazia sem
     tocar no disco de ninguém.
+
+    O arquivo que ABRE e não é UTF-8 cai no mesmo vazio que o que não abre: a
+    tabela é lida na importação, pelo daemon e pela janela, e um
+    ``UnicodeDecodeError`` ali seria o produto sem abrir, não uma cor a menos.
     """
     alvo = pathlib.Path(caminho) if caminho is not None else TABELA_DAS_CORES
     try:
         texto = alvo.read_text(encoding="utf-8")
-    except OSError as erro:
+    except (OSError, UnicodeDecodeError) as erro:
         logger.warning("cor_do_plastico_sem_tabela", caminho=str(alvo), erro=str(erro))
         return {}
     linhas = [ln for ln in texto.splitlines() if ln.strip() and not ln.startswith("#")]
