@@ -2284,6 +2284,15 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         sysfs_vazio = xdg_root / "sys-class-input"
         sysfs_vazio.mkdir(parents=True, exist_ok=True)
         monkeypatch.setattr(evdev_reader, "SYS_CLASS_INPUT", str(sysfs_vazio))
+    # A-HAPTICA-QUEM-JOGA-01 (26/09/2026) — a irmã da linha de cima: a linha
+    # do portão fechado lê o `uevent` de cada `hidrawN` que o jogo segura, para
+    # contar os de vpad. Numa pasta vazia, nenhum teste lê o de um aparelho
+    # dela; quem precisa de árvore monta a sua e aponta por cima.
+    from hefesto_dualsense4unix.integrations import quem_o_jogo_le
+
+    hidraw_vazio = xdg_root / "sys-class-hidraw"
+    hidraw_vazio.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(quem_o_jogo_le, "RAIZ_CLASS_HIDRAW", str(hidraw_vazio))
     # DIÁRIO-QUE-NAO-MENTE-01 (15/08/2026) — mesma classe do BROKER-01 acima, e
     # medida ao vivo: vários testes rodam os scripts `bt_*.sh` DE VERDADE, e
     # eles registram no journal. Os DADOS já eram isolados (raízes em tmp); o

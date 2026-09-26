@@ -98,8 +98,10 @@ import contextlib
 import functools
 import threading
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.daemon.subsystems.base import numero_do_assento_na_mesa
@@ -781,6 +783,18 @@ class AltoFalanteSubsystem:
     #: compartilhado por todas as instâncias.
     _jogando: frozenset[str] = frozenset()
 
+    #: O que a última volta viu do jogo (``quem_o_jogo_le.RetratoDoJogo``):
+    #: os pids, os ``eventN`` e os ``hidrawN`` que ele segura, da MESMA
+    #: varredura de ``/proc`` que decide quem o jogo lê. ``None`` = a pergunta
+    #: não foi feita ou falhou, e aí a partida não abre nem fecha
+    #: (A-HAPTICA-QUEM-JOGA-01). No corpo da classe pela razão do ``_jogando``.
+    _retrato_do_jogo: Any = None
+    #: ``{uniq: motivo}`` de quem está com o portão da háptica fechado AGORA —
+    #: o endpoint tocando e o controle fora de quem joga. Lembrado para a
+    #: linha ``haptica_portao_fechado`` sair só na mudança. Imutável no corpo
+    #: da classe; cada mudança troca o dicionário inteiro.
+    _portao_fechado: Mapping[str, str] = MappingProxyType({})
+
     #: O GOVERNADOR DO RÁDIO (GOVERNADOR-DO-RADIO-01, 23/09/2026): quem dá a
     #: vaga de cada ponte, por adaptador, e manda ceder na fonte quando o
     #: adaptador não escoa. Nasce no ``start()``; ``None`` num dublê montado
@@ -1261,16 +1275,23 @@ class AltoFalanteSubsystem:
         reportou em 20/09.
 
         A lista de físicos vem de TODOS os controles da mesa, e não só dos do
-        rádio: com máscara, o jogo abre o vpad, e quem o alimenta pode ser o
-        do cabo. Quem diz QUEM ALIMENTA cada vpad é o co-op, e não a forja do
-        MAC (A-HAPTICA-SEGUE-QUEM-ALIMENTA-O-VPAD-01): o MAC diz de quem o vpad
-        nasceu, e o posto troca de mão sem renascer.
+        rádio: com máscara, o evdev que o jogo seguraria é o do vpad, e quem o
+        alimenta pode ser o do cabo. Quem diz QUEM ALIMENTA cada vpad é o
+        co-op, e não a forja do MAC (A-HAPTICA-SEGUE-QUEM-ALIMENTA-O-VPAD-01):
+        o MAC diz de quem o vpad nasceu, e o posto troca de mão sem renascer.
+
+        **Com o GE-Proton este caminho sai vazio** — o winebus não segura evdev
+        de DualSense nenhum, só o ``hidraw`` (A-HAPTICA-QUEM-JOGA-01). Quem
+        responde por quem joga, aí, é :meth:`_quem_mexeu_na_partida`; este fica
+        como caminho a mais. A mesma passada de ``/proc`` deixa em
+        ``self._retrato_do_jogo`` o que o jogo segura.
         """
         from hefesto_dualsense4unix.integrations.quem_o_jogo_le import (
             dono_do_vpad_pelo_coop,
             quem_o_jogo_le,
         )
 
+        self._retrato_do_jogo = None
         fisicos = [str(getattr(c, "uniq", "") or "") for c in controles]
         fisicos = [u for u in fisicos if u]
         if not fisicos:
@@ -1280,6 +1301,7 @@ class AltoFalanteSubsystem:
             return quem_o_jogo_le(
                 fisicos=fisicos,
                 dono_do_vpad=dono_do_vpad_pelo_coop(coop, fisicos),
+                ao_ver_o_jogo=self._ver_o_jogo,
             )
         except Exception as erro:
             # AUSÊNCIA É RESPOSTA, e ela é registrada: um erro aqui cala a
@@ -1287,6 +1309,82 @@ class AltoFalanteSubsystem:
             # que esta casa mais persegue.
             logger.info("haptica_nao_sei_quem_joga", motivo=str(erro))
             return set()
+
+    def _ver_o_jogo(self, retrato: Any) -> None:
+        """Guarda o que a varredura desta volta viu do jogo (ver ``_retrato_do_jogo``)."""
+        self._retrato_do_jogo = retrato
+
+    def _quem_mexeu_na_partida(self, controles: list[Any]) -> set[str]:
+        """Os ``uniq`` (em minúsculas) de quem teve entrada desde que o jogo abriu.
+
+        A-HAPTICA-QUEM-JOGA-01, decisão ``D-2609-QUEM-JOGA-E-QUEM-MEXE``: quem
+        joga é o controle FÍSICO que teve entrada — botão, gatilho ou eixo
+        fora da zona morta — desde que o jogo abriu. O laço do daemon marca
+        (``quem_mexe``); aqui a volta diz à partida o que viu do jogo, e ela
+        abre, segue ou fecha. Sem retrato (a pergunta falhou), a partida fica
+        como está: na dúvida, não mexe.
+
+        Devolve na grafia da lista de controles, a mesma com que o portão
+        compara.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import quem_mexe_de
+        from hefesto_dualsense4unix.integrations.quem_o_jogo_le import _digitos
+
+        marcas = quem_mexe_de(getattr(self, "_daemon", None))
+        if marcas is None:
+            return set()
+        retrato = self._retrato_do_jogo
+        if retrato is not None:
+            marcas.acompanhar_o_jogo(retrato.pids)
+        mexeram = marcas.quem_joga()
+        if not mexeram:
+            return set()
+        uniqs = (str(getattr(c, "uniq", "") or "") for c in controles)
+        return {u.lower() for u in uniqs if u and _digitos(u) in mexeram}
+
+    def _por_que_o_portao_fecha(self) -> str:
+        """O motivo de um controle estar fora de quem joga, pelo retrato da volta."""
+        retrato = self._retrato_do_jogo
+        if retrato is None:
+            return "nao_sei"
+        if not retrato.pids:
+            return "sem_jogo"
+        return "sem_entrada"
+
+    def _vigiar_o_portao(self, uniq: str, *, fechado: bool) -> None:
+        """A linha ``haptica_portao_fechado``, SÓ quando o estado anômalo muda.
+
+        A-HAPTICA-QUEM-JOGA-01, a Parte 1: *o portão diz por que fechou*. O
+        estado anômalo é o endpoint de háptica daquele controle TOCANDO e o
+        controle FORA de quem joga — o PRAGMATA de 26/09 passou sete minutos
+        nele sem uma linha no diário. Uma linha por controle quando o estado
+        começa ou muda de motivo, com o que o jogo segura (os ``eventN`` e os
+        ``hidrawN`` de vpad): com o PRAGMATA, ``evdev_do_jogo=0
+        hidraw_de_vpad=2`` teria dito a causa sem ninguém medir. O repouso
+        (endpoint sem stream) não loga, e sair do estado também não.
+        """
+        anterior = self._portao_fechado.get(uniq)
+        if not fechado:
+            if anterior is not None:
+                self._portao_fechado = {
+                    u: m for u, m in self._portao_fechado.items() if u != uniq
+                }
+            return
+        motivo = self._por_que_o_portao_fecha()
+        if anterior == motivo:
+            return
+        self._portao_fechado = {**self._portao_fechado, uniq: motivo}
+        from hefesto_dualsense4unix.daemon.battery_journal import mascarar_endereco
+        from hefesto_dualsense4unix.integrations.quem_o_jogo_le import hidraws_de_vpad
+
+        retrato = self._retrato_do_jogo
+        logger.info(
+            "haptica_portao_fechado",
+            uniq=mascarar_endereco(uniq),
+            motivo=motivo,
+            evdev_do_jogo=None if retrato is None else len(retrato.eventos),
+            hidraw_de_vpad=None if retrato is None else len(hidraws_de_vpad(retrato.hidraws)),
+        )
 
     def _casar_as_pontes(self, controles: list[Any]) -> None:
         """Sobe uma ponte por controle NO RÁDIO, e derruba a de quem saiu.
@@ -1456,7 +1554,15 @@ class AltoFalanteSubsystem:
         #
         # É calculado UMA VEZ por volta, e não por controle: são duas varreduras
         # de `/proc`, e repeti-las por peça multiplicaria o custo pela mesa.
+        #
+        # E QUEM JOGA É TAMBÉM QUEM MEXEU — A-HAPTICA-QUEM-JOGA-01, 26/09/2026.
+        # Com máscara DualSense o GE segura só o hidraw de TODOS os vpads e
+        # nenhum evdev: o conjunto de cima sai vazio por construção, e contar o
+        # hidraw devolveria o espelhado de 20/09. Decisão D-2609-QUEM-JOGA-E-
+        # QUEM-MEXE: quem joga é o físico que teve entrada desde que o jogo
+        # abriu; o evdev fica como caminho a mais.
         jogando = self._quem_o_jogo_le(controles)
+        jogando |= self._quem_mexeu_na_partida(controles)
         self._jogando = frozenset(jogando)
 
         governador = self.governador
@@ -1479,13 +1585,14 @@ class AltoFalanteSubsystem:
             # arranjo com a bomba rodando mudaria o corpo do report no meio.
             endpoint = self._endpoints.get(uniq)
             # O GATE TEM DOIS LADOS, e os dois precisam ser verdade: o jogo
-            # abriu o canal DAQUELE endpoint (o sinal de sempre) E o jogo está
-            # LENDO aquele controle (o sinal novo). Só o primeiro deixava três
-            # controles vibrarem num jogo de um jogador.
-            o_jogo_le_este = uniq.lower() in jogando
+            # abriu o canal DAQUELE endpoint (o sinal de sempre) E aquele
+            # controle JOGA — o jogo o lê, ou ele mexeu desde que o jogo abriu.
+            # Só o primeiro deixava três controles vibrarem num jogo de um
+            # jogador.
+            este_joga = uniq.lower() in jogando
             modo = (
                 "haptica"
-                if (endpoint and o_jogo_le_este and sink_esta_tocando(endpoint.nome))
+                if (endpoint and este_joga and sink_esta_tocando(endpoint.nome))
                 else "som"
             )
             # A PONTE DO SOM SÓ EXISTE ENQUANTO HÁ SOM — RADIO-AFOGADO-01,
@@ -1894,6 +2001,15 @@ class AltoFalanteSubsystem:
         quem o jogo LÊ. O vigia reusa a última resposta (`self._jogando`) só
         para não acordar a volta à toa; estar velha custa uma reconciliação a
         mais, nunca uma ponte errada.
+
+        **E OLHA A MARCA VIVA DE QUEM MEXEU — A-HAPTICA-QUEM-JOGA-01, 26/09/2026.**
+        O primeiro toque da partida acorda a volta em :data:`VIGIA_DO_MODO_S`, e
+        não na volta seguinte. A pergunta é um dicionário, sem ``/proc``.
+
+        **E É AQUI QUE O PORTÃO DIZ POR QUE FECHOU** (:meth:`_vigiar_o_portao`):
+        o vigia já sabe, na mesma passada, quem toca em TODO endpoint; na volta,
+        o «tocando» de quem não joga nunca é perguntado. Todos os controles são
+        olhados — acordar a volta não interrompe a passada.
         """
         nomes = {uniq: ep.nome for uniq, ep in self._endpoints.items() if ep.nome}
         if not nomes:
@@ -1916,9 +2032,19 @@ class AltoFalanteSubsystem:
             return False
         if tocando is None:
             return False  # servidor mudo não é "ninguém toca"
+        from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import marcas_da_partida
+
+        marcas = marcas_da_partida(getattr(self, "_daemon", None))
+        if any(u not in nomes for u in self._portao_fechado):
+            self._portao_fechado = {
+                u: m for u, m in self._portao_fechado.items() if u in nomes
+            }
         esperando = dict(self._esperando_vaga)
+        acordar = False
         for uniq, nome in nomes.items():
-            if nome in tocando and uniq.lower() in self._jogando:
+            joga = uniq.lower() in self._jogando or (marcas is not None and marcas.joga(uniq))
+            self._vigiar_o_portao(uniq, fechado=nome in tocando and not joga)
+            if nome in tocando and joga:
                 agora: str | None = "haptica"
             elif alto_falantes.get(uniq, "") in tocando:
                 agora = "som"
@@ -1926,12 +2052,12 @@ class AltoFalanteSubsystem:
                 agora = None
             # Quem espera vaga do governador já foi decidido nesta volta: a
             # pergunta está com ela. Acordar a volta não muda a resposta.
-            if (self._modo_da_ponte.get(uniq) or esperando.get(uniq)) != agora:
+            if not acordar and (self._modo_da_ponte.get(uniq) or esperando.get(uniq)) != agora:
                 logger.info(
                     "vigia_do_modo_acordou_a_volta", uniq=uniq, modo=agora or "nenhuma"
                 )
-                return True
-        return False
+                acordar = True
+        return acordar
 
     def _reconciliar(self, gerenciador: Any) -> None:
         """Uma varredura: quem está na lista ganha nó, quem saiu perde.

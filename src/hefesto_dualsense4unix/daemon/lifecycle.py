@@ -5675,6 +5675,7 @@ class Daemon:
         # tique fora do Modo Nativo: uma comparação de float.
         exposicao_nativa_next_at: float = 0.0
         from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
+        from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import anotar_o_primario
         previous_buttons: frozenset[str] = frozenset()
         # BUG-DAEMON-CONNECT-GHOST-INPUT-01: rastreia a borda
         # desconectado→conectado. Começa False (boot pode ser sem hardware);
@@ -5896,6 +5897,10 @@ class Daemon:
             # de ANTES da borda — ou seja, sem o settling anti-ghost, que é o
             # defeito inteiro que o BUG-DAEMON-CONNECT-GHOST-INPUT-01 curou.
             grace_passed = tick_started >= self._input_ready_at
+            if grace_passed:
+                # A-HAPTICA-QUEM-JOGA-01: a mão no controle do posto, com o que
+                # este tique JÁ leu. Sem jogo aberto, um `getattr`.
+                anotar_o_primario(self, state, buttons_pressed)
             gamepad_dispatched = False
             if grace_passed and self._gamepad_device is not None:
                 self._dispatch_gamepad_emulation(state, buttons_pressed)

@@ -2329,6 +2329,9 @@ class CoopManager:
         # LIDO UMA VEZ POR TIQUE, como a troca acima: o arranjo é global no
         # perfil, e perguntá-lo por jogador seria o mesmo `getattr` quatro vezes.
         arranjo_de_movimento = roteador_ativo(getattr(self._daemon, "store", None))
+        # A-HAPTICA-QUEM-JOGA-01 (26/09/2026): quem MEXE na partida é quem joga,
+        # para a háptica pelo rádio. Sem jogo aberto, isto é um `getattr`.
+        marcas = marcas_da_partida(self._daemon)
         for player in list(self._players.values()):
             if player.vpad is None:
                 continue  # aguardando confirmação de grab
@@ -2342,6 +2345,10 @@ class CoopManager:
                 snap = player.reader.snapshot()
                 botoes, l2, r2 = snap.buttons_pressed, snap.l2_raw, snap.r2_raw
                 lx, ly, rx, ry = snap.lx, snap.ly, snap.rx, snap.ry
+                if marcas is not None:  # a MÃO dele, antes da troca e da mira
+                    marcas.anotar(
+                        player.identity, botoes=botoes, lx=lx, ly=ly, rx=rx, ry=ry, l2=l2, r2=r2
+                    )
                 if arranjo_de_movimento is not None:
                     # O GATILHO LÊ OS BOTÕES ORIGINAIS, e por isso esta linha
                     # vem ANTES da troca — igual ao primário. Com o
@@ -2781,6 +2788,9 @@ from hefesto_dualsense4unix.core.roteador_de_movimento import (  # noqa: E402
 )
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (  # noqa: E402
     aplicar_o_movimento,
+)
+from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import (  # noqa: E402
+    marcas_da_partida,
 )
 
 

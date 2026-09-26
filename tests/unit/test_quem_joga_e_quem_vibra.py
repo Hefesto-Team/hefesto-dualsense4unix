@@ -155,7 +155,12 @@ class TestAAusenciaEResposta:
 
 
 class TestADobraDoVpad:
-    """Com máscara DualSense, o jogo abre o VIRTUAL — e ignorá-lo cala quem joga.
+    """Com máscara, o evdev que o jogo segura é o do VIRTUAL — e ignorá-lo cala quem joga.
+
+    Com o GE-Proton o jogo não segura evdev de DualSense nenhum, só o
+    ``hidraw`` (A-HAPTICA-QUEM-JOGA-01, 26/09/2026); quem joga, aí, é quem
+    mexeu desde que o jogo abriu (``test_a_haptica_quem_joga_e_quem_mexe.py``).
+    Este caminho fica para o processo de jogo que segura um evdev com ``uniq``.
 
     Quem diz de quem é cada vpad é o co-op, que liga cada físico ao vpad dele
     (A-HAPTICA-SEGUE-QUEM-ALIMENTA-O-VPAD-01, 25/09/2026). A tradução
@@ -183,7 +188,7 @@ class TestADobraDoVpad:
         assert dono_do_vpad_pelo_coop(coop, MESA)(vpad_mac(P1, 1)) == P2
 
     def test_o_jogo_lendo_so_o_vpad_ainda_acha_o_dono(self, tmp_path):
-        """O caso da mesa dela: máscara DualSense, e o jogo nunca abre o físico.
+        """Um processo de jogo segura o evdev do vpad, e nunca o do físico.
 
         MORDIDA: não passar `dono_do_vpad` — o resultado vira vazio e o
         controle de quem está jogando fica mudo.
@@ -236,18 +241,18 @@ class TestOGateEstaLigado:
         )
 
     def test_o_modo_haptica_exige_os_dois_sinais(self):
-        """O canal aberto E o jogo lendo aquele controle.
+        """O canal aberto E aquele controle jogando (o jogo o lê, ou ele mexeu).
 
         Só o primeiro deixava três controles vibrarem num jogo de um jogador.
 
-        MORDIDA: tirar `o_jogo_le_este` da condição.
+        MORDIDA: tirar `este_joga` da condição.
         """
         fonte = pathlib.Path(
             "src/hefesto_dualsense4unix/daemon/subsystems/alto_falante.py"
         ).read_text(encoding="utf-8")
         i = fonte.index('modo = (')
         condicao = fonte[i : i + 240]
-        assert "o_jogo_le_este" in condicao, "o gate saiu da condição do modo"
+        assert "este_joga" in condicao, "o gate saiu da condição do modo"
         assert "sink_esta_tocando" in condicao, "o sinal do canal saiu"
 
 

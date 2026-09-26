@@ -36,16 +36,29 @@ por caso*.
 A DOBRA QUE NENHUMA LEITURA INGÊNUA ATRAVESSA
 =============================================
 
-**Com máscara, o jogo não lê o controle físico — lê o VIRTUAL.** Medido na mesa
-dela em 20/09, com os quatro ligados e o PRAGMATA aberto::
-
-    event21, event264, event265   uniq=02:fe:f0:…   «DualSense (Hefesto P1)»
-    event22, event27,  event28    uniq=d4:2f:4b:…   o P3 FÍSICO
-
-O ``02:fe:f0:…`` é o vpad que o Hefesto publica. Um jogo com máscara DualSense
-abre **esse**, e casar por ``uniq`` físico devolveria "ninguém está jogando" —
+**Com máscara, o jogo não lê o controle físico — lê o VIRTUAL.** Quando um
+processo de jogo segura o ``eventN`` de um vpad, o ``uniq`` do nó é o MAC que
+o vpad veste, e casar por ``uniq`` físico devolveria "ninguém está jogando" —
 o tipo de resposta plausível e falsa que esta casa persegue. Por isso a
 tradução virtual→físico entra aqui, e quem responde é o dono da ligação.
+
+**E O GE-PROTON NÃO SEGURA EVDEV DE DUALSENSE NENHUM** (conferência de
+26/09/2026, A-HAPTICA-QUEM-JOGA-01). O winebus fecha todo evdev de DualSense —
+o físico por estar na lista de ignorados do SDL, o vpad ``0df2`` por
+«deferring … to a different backend» — e fica só com o ``hidraw`` (o fonte
+``bus_udev.c``, o rastro ``+hid`` do PRAGMATA de 17/09, e os ``fd`` medidos em
+26/09: nenhum ``eventN``, o ``hidraw`` dos vpads). Com máscara DualSense este
+sinal sai VAZIO por construção. E o ``hidraw`` não o substitui: o
+``winedevice`` segura o de TODOS os vpads, e contá-lo devolveria o espelhado
+de 20/09. Quem diz quem joga, nesse caso, é a entrada do físico desde que o
+jogo abriu (``daemon/subsystems/quem_mexe.py``); este sinal fica como caminho a
+mais, para o processo de jogo que segura um evdev com ``uniq``.
+
+FATO SUBSTITUÍDO: aqui estava *"Medido na mesa dela em 20/09 … event21,
+event264, event265 uniq=02:fe:f0:… Um jogo com máscara DualSense abre esse"*.
+A lista era de nós que o DAEMON via (a sprint de 20/09: «83 descritores
+visíveis»), sem nomear quem os segurava; e no ``017d72d1c`` a mesma frase dizia
+«máscara Xbox».
 
 QUEM ALIMENTA O VPAD, E NÃO DE QUEM ELE NASCEU
 ==============================================
@@ -62,10 +75,10 @@ dirigia o posto. Quem sabe quem alimenta cada vpad AGORA é o co-op
 (``CoopManager.quem_alimenta_cada_vpad``), e a mesma resposta é a que o
 rumble do jogo já segue.
 
-**Nada muda sem vpad nem com o vpad ``uinput``.** No Modo Nativo o jogo abre
-o físico, que casa pelo próprio ``uniq``, e o tradutor não decide nada. Com
-a máscara Xbox o vpad é ``uinput`` e não carrega ``uniq``: o jogo que o lê
-não entra no conjunto, antes e depois desta cura.
+**Nada muda sem vpad nem com o vpad ``uinput``.** No Modo Nativo, o jogo que
+segura o evdev do físico casa pelo próprio ``uniq``, e o tradutor não decide
+nada. Com a máscara Xbox o vpad é ``uinput`` e não carrega ``uniq``: o jogo
+que o lê não entra no conjunto, antes e depois desta cura.
 
 AUSÊNCIA É RESPOSTA, E AQUI ELA TEM LADO
 ========================================
@@ -82,12 +95,17 @@ import os
 import pathlib
 import re
 from collections.abc import Callable, Iterable
+from dataclasses import dataclass
 from typing import Any
 
 __all__ = [
     "ENV_DO_JOGO",
+    "RAIZ_CLASS_HIDRAW",
+    "RetratoDoJogo",
     "dono_do_vpad_pelo_coop",
     "evdevs_abertos_por",
+    "hidraws_de_vpad",
+    "nos_abertos_por",
     "pids_de_jogo",
     "quem_o_jogo_le",
     "uniq_por_evdev",
@@ -101,6 +119,29 @@ ENV_DO_JOGO = "STEAM_COMPAT_DATA_PATH"
 
 #: `eventN` no alvo de um link de `/proc/<pid>/fd`.
 _EVENTO = re.compile(r"/(event\d+)$")
+#: `hidrawN` no alvo de um link de `/proc/<pid>/fd`.
+_HIDRAW = re.compile(r"/(hidraw\d+)$")
+
+#: Onde o kernel lista os ``hidrawN``. Lida na CHAMADA, e não no padrão do
+#: argumento: a suíte a aponta para uma pasta vazia (``tests/conftest.py``), e
+#: nenhum teste lê o ``uevent`` de um aparelho dela.
+RAIZ_CLASS_HIDRAW = "/sys/class/hidraw"
+
+
+@dataclass(frozen=True)
+class RetratoDoJogo:
+    """O que a volta viu do jogo, numa passada só de ``/proc``.
+
+    A-HAPTICA-QUEM-JOGA-01. Quem precisa saber se há jogo (a partida de
+    ``quem_mexe``) e o que ele segura (a linha do portão fechado) recebe isto
+    da MESMA varredura que :func:`quem_o_jogo_le` já fazia: medido em 26/09
+    com o jogo aberto, ela custa 8 ms para achar os 18 processos e 15 ms para
+    ler os descritores — uma segunda por volta dobraria a conta.
+    """
+
+    pids: frozenset[int] = frozenset()
+    eventos: frozenset[str] = frozenset()
+    hidraws: frozenset[str] = frozenset()
 
 
 def uniq_por_evdev(raiz: pathlib.Path | str = "/sys/class/input") -> dict[str, str]:
@@ -157,16 +198,17 @@ def pids_de_jogo(raiz_proc: pathlib.Path | str = "/proc") -> set[int]:
     return achados
 
 
-def evdevs_abertos_por(
+def nos_abertos_por(
     pids: Iterable[int], raiz_proc: pathlib.Path | str = "/proc"
-) -> set[str]:
-    """Os ``eventN`` que aqueles processos têm abertos AGORA.
+) -> tuple[frozenset[str], frozenset[str]]:
+    """Os ``(eventN, hidrawN)`` que aqueles processos têm abertos AGORA.
 
     Um descritor que não se consegue ler não é um "não": é um desconhecido, e
     ele simplesmente não entra no conjunto. Quem chama trata o vazio.
     """
     raiz = pathlib.Path(raiz_proc)
-    abertos: set[str] = set()
+    eventos: set[str] = set()
+    hidraws: set[str] = set()
     for pid in pids:
         fd = raiz / str(pid) / "fd"
         try:
@@ -180,8 +222,47 @@ def evdevs_abertos_por(
                 continue
             achado = _EVENTO.search(alvo)
             if achado:
-                abertos.add(achado.group(1))
-    return abertos
+                eventos.add(achado.group(1))
+                continue
+            achado = _HIDRAW.search(alvo)
+            if achado:
+                hidraws.add(achado.group(1))
+    return frozenset(eventos), frozenset(hidraws)
+
+
+def evdevs_abertos_por(
+    pids: Iterable[int], raiz_proc: pathlib.Path | str = "/proc"
+) -> set[str]:
+    """Os ``eventN`` que aqueles processos têm abertos AGORA."""
+    return set(nos_abertos_por(pids, raiz_proc)[0])
+
+
+def hidraws_de_vpad(nomes: Iterable[str]) -> frozenset[str]:
+    """Dos ``hidrawN`` dados, os que são do NOSSO vpad — pelo ``uevent`` do pai HID.
+
+    A marca é a que só o produto escreve (``uhid_gamepad.VPAD_HID_PHYS``,
+    ``hefesto-vpad``), a mesma que o backend e o broker usam. Morar sob
+    ``/devices/virtual/misc/uhid/`` não separa nada: com o BlueZ de hoje, o
+    DualSense FÍSICO pelo rádio também nasce por ``uhid``. Nó ilegível não
+    conta. Só a linha do portão fechado pergunta, e só quando ela muda.
+    """
+    from hefesto_dualsense4unix.integrations.uhid_gamepad import VPAD_HID_PHYS
+
+    raiz = pathlib.Path(RAIZ_CLASS_HIDRAW)
+    achados: set[str] = set()
+    for nome in nomes:
+        try:
+            texto = (raiz / nome / "device" / "uevent").read_text(
+                encoding="utf-8", errors="replace"
+            )
+        except OSError:
+            continue
+        for linha in texto.splitlines():
+            chave, _, valor = linha.partition("=")
+            if chave == "HID_PHYS" and valor.strip().startswith(VPAD_HID_PHYS):
+                achados.add(nome)
+                break
+    return frozenset(achados)
 
 
 def quem_o_jogo_le(
@@ -190,6 +271,7 @@ def quem_o_jogo_le(
     dono_do_vpad: Callable[[str], str | None] | None = None,
     raiz_proc: pathlib.Path | str = "/proc",
     raiz_input: pathlib.Path | str = "/sys/class/input",
+    ao_ver_o_jogo: Callable[[RetratoDoJogo], None] | None = None,
 ) -> set[str]:
     """Os ``uniq`` FÍSICOS que algum jogo está lendo agora.
 
@@ -200,6 +282,10 @@ def quem_o_jogo_le(
         físico que o ALIMENTA agora (:func:`dono_do_vpad_pelo_coop`). É
         injetável porque o dono dessa ligação é o co-op — perguntar a ele é a
         regra da casa.
+    :param ao_ver_o_jogo: recebe o :class:`RetratoDoJogo` desta passada, antes
+        de qualquer resposta — também quando não há jogo, que é o retrato vazio.
+        É por ele que a volta sabe se a partida abriu sem varrer ``/proc`` de
+        novo.
 
     Devolve conjunto VAZIO quando não há jogo, quando ``/proc`` não se lê, ou
     quando o que o jogo abriu não se traduz em controle nenhum. O vazio aqui
@@ -207,11 +293,10 @@ def quem_o_jogo_le(
     """
     conhecidos = {str(u).lower() for u in fisicos if u}
     pids = pids_de_jogo(raiz_proc)
-    if not pids:
-        return set()
-
-    abertos = evdevs_abertos_por(pids, raiz_proc)
-    if not abertos:
+    abertos, hidraws = nos_abertos_por(pids, raiz_proc) if pids else (frozenset(), frozenset())
+    if ao_ver_o_jogo is not None:
+        ao_ver_o_jogo(RetratoDoJogo(pids=frozenset(pids), eventos=abertos, hidraws=hidraws))
+    if not pids or not abertos:
         return set()
 
     donos = uniq_por_evdev(raiz_input)
@@ -224,8 +309,8 @@ def quem_o_jogo_le(
             jogando.add(uniq)
             continue
         # NÃO É UM CONTROLE FÍSICO: é o vpad que o Hefesto publica, e com
-        # máscara é EXATAMENTE ele que o jogo abre. Sem tradutor, a resposta
-        # honesta é não contar — nunca chutar um físico.
+        # máscara é ele que o jogo lê. Sem tradutor, a resposta honesta é não
+        # contar — nunca chutar um físico.
         if dono_do_vpad is None:
             continue
         fisico = dono_do_vpad(uniq)
