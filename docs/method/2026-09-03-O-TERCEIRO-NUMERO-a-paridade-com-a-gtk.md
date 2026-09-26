@@ -88,10 +88,10 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 05-vibracao | 31 | 13 | 11 | 4 | 3 | 0 | 42% |
 | 06-navegacao | 40 | 15 | 16 | 0 | 9 | 0 | 38% |
 | 07-lancadores | 29 | 9 | 12 | 0 | 8 | 0 | 31% |
-| 08-conexoes | 49 | 16 | 26 | 5 | 2 | 0 | 33% |
+| 08-conexoes | 49 | 17 | 26 | 5 | 1 | 0 | 35% |
 | 09-sistema | 38 | 13 | 18 | 4 | 3 | 0 | 34% |
 | 10-perfis | 50 | 14 | 20 | 7 | 9 | 0 | 28% |
-| TODAS | 395 | 131 | 172 | 35 | 54 | 3 | 33% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 395 | 132 | 172 | 35 | 53 | 3 | 33% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -666,3 +666,14 @@ dois lados conta as linhas do exame, e o sinal é a decisão escrita no pacote
 (`D-A-CONTAGEM-DO-EXAME-SAIU`). A tabela foi recontada do CSV: `09-sistema`
 vai de `12 IGUAL · 4 SO_HTML · 32%` para `13 · 3 · 34%`, e `TODAS` de
 `130 · 55` para `131 · 54`.
+
+## Nota de verificação — 26/09/2026, o escopo do microfone sai da aba Conexões
+
+`A-08-O-CHECKUP-ABSORVE-A-GESTAO-01`: o «Microfone e botões» saiu da linha do
+controle a pedido dela (repetia a aba Jogar/Controles), e com ele o escopo do
+botão físico do microfone. A linha do CSV foi de `SO_NO_HTML` para **`IGUAL`**,
+pelo mesmo caminho da contagem do exame da 09: nenhum dos dois lados oferece o
+escopo nesta aba, e o sinal é a decisão escrita no pacote
+(`D-O-ESCOPO-DO-MIC-SAIU-DA-08`). A tabela foi recontada do CSV: `08-conexoes`
+vai de `16 IGUAL · 2 SO_HTML · 33%` para `17 · 1 · 35%`, e `TODAS` de
+`131 · 54` para `132 · 53`.
