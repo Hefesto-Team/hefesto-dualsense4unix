@@ -237,8 +237,8 @@ _MODE_DESCRIPTIONS = {
 #: glossário desta casa proíbe com todas as letras — *qualquer frase que mande a
 #: pessoa procurar um botão ou uma janela que não existe*.
 #:
-#: O botão foi MEDIDO, e não escolhido: quem retoma o serviço é o `Retomar` da
-#: aba Sistema (`pacotes/a09_sistema.py:1697`, `data-campo="hefesto-pausa"`). O
+#: O botão foi MEDIDO: quem retoma o serviço é o botão da aba Sistema que diz
+#: `Retomar` com a pausa ativa (`pacotes/a09_sistema.py:2703`, `RETOMAR`). O
 #: interruptor da aba Jogar NÃO serve — ele é Ligado/Desligado entre o gamepad
 #: do Hefesto e o modo nativo, e nunca chama `daemon.pause`/`daemon.resume`
 #: (decisão dela, 31/08/2026, escrita no gesto `hefesto`).
