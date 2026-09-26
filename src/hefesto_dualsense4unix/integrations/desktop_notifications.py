@@ -448,6 +448,7 @@ def notify_teclado_na_tela_aberto() -> bool:
 
 
 __all__ = [
+    "AVISO_DE_VERDADE_NA_SUITE",
     "notify",
     "notify_battery_low",
     "notify_battery_recovered",
@@ -473,9 +474,10 @@ __all__ = [
 # empilhados na tela dela às 20h18, com o daemon dela calado (o diário dele
 # registra todo aviso que manda). Era a SUÍTE, e desde 06/09: medido num
 # barramento de mentira, o lote do teclado e do hotkey manda 22 `Notify` —
-# 20 do teclado na tela e 2 do modo jogo —, de três arquivos que apertam o L3
-# sem dublar o aviso. A suíte já desviava a janela (TELA-DELA-01) e o rádio
-# (`bluez_dbus.a_suite_esta_rodando`); o aviso era a porta que sobrava.
+# 20 do teclado na tela, de três arquivos que apertam o L3, e 2 do modo jogo,
+# de um quarto; nenhum dublava o aviso. A suíte já desviava a janela
+# (TELA-DELA-01) e o rádio (`bluez_dbus.a_suite_esta_rodando`); o aviso era a
+# porta que sobrava.
 #
 # A trava mora AQUI, e não em cada teste, porque por aqui passam todos os
 # chamadores — inclusive quem copiou a referência com `from … import notify`
