@@ -1176,11 +1176,22 @@ def _card_da_ordem(ordem: Any, n: int = 1) -> str:
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.gui.aba_conexoes import TRACO
+    from hefesto_dualsense4unix.integrations import mapa_das_portas
+    from hefesto_dualsense4unix.integrations.entrada_a_entrada import rotulo_do_numero
 
     destino = str(getattr(ordem, "destino", "") or "")
-    de = str(getattr(getattr(ordem, "alvo", None), "caminho", "") or TRACO)
+    caminho = str(getattr(getattr(ordem, "alvo", None), "caminho", "") or "")
     instrucao = str(getattr(ordem, "acao", "") or "")  # (noqa-acento) campo da Ordem
-    return _linha_da_sugestao(n, instrucao, de if destino else "", destino)
+    if not destino:
+        return _linha_da_sugestao(n, instrucao)
+    # AS DUAS PONTAS DIZEM A ENTRADA (26/09/2026, foto dela): a caixa da
+    # esquerda mostrava o caminho do kernel («4-1.1.4») e a da direita só o
+    # número («2»). A entrada do aparelho sai do mapa dela, pelos dois lados
+    # do buraco; sem entrada declarada, o caminho fica, porque é o que se sabe.
+    mapa = getattr(_declaracao(), "mapa", None)
+    numero = mapa_das_portas.porta_de(mapa, caminho) if mapa is not None else None
+    de = rotulo_do_numero(numero or "") or caminho or TRACO
+    return _linha_da_sugestao(n, instrucao, de, rotulo_do_numero(destino) or destino)
 
 
 #: O nome da caixa — dela, 26/09/2026 (`D-2609-A-SUGESTAO-DE-CONEXAO-DIZ-O-QUE-MOVER`),

@@ -99,7 +99,7 @@ def test_a_ordem_com_destino_traz_o_de_para_e_a_calada_nao_entra(
     from hefesto_dualsense4unix.integrations.exame_da_mesa import ESTADO_ATENCAO
 
     a08 = _a08()
-    com = _ordem("porta", "Mova o adaptador Bluetooth para a Entrada 9", destino="Entrada 9",
+    com = _ordem("porta", "Mova o adaptador Bluetooth para a Entrada 9", destino="9",
                  arranjo="a1")
     calada = _ordem("calada", "Isto ela calou.", arranjo="a2")
     monkeypatch.setattr(a08, "_DISPENSADAS", {"calada": "a2"})
@@ -108,6 +108,36 @@ def test_a_ordem_com_destino_traz_o_de_para_e_a_calada_nao_entra(
     assert _linhas(html) == [("1", "Mova o adaptador Bluetooth para a Entrada 9")], html
     assert ('<div class="receita"><span class="caixa">3-1.2</span><span class="seta">→</span>'
             '<span class="caixa alvo">Entrada 9</span></div>') in html
+
+
+@pytest.mark.parametrize(("caminho", "esperado"), [
+    ("9-1.2", "Entrada 15"),      # o caminho que ela declarou na entrada
+    ("10-1.1.4", "Entrada 9"),    # o lado USB 3 do buraco, que o aparelho 3.0 usa
+    ("9-7", "9-7"),               # fora do mapa: fica o caminho, que é o que se sabe
+])
+def test_as_duas_pontas_dizem_a_entrada(monkeypatch: pytest.MonkeyPatch, caminho: str,
+                                        esperado: str) -> None:
+    """26/09/2026, foto dela: a caixa da esquerda mostrava «4-1.1.4» e a da
+    direita só «2». MORDIDA: volte a caixa da esquerda ao `alvo.caminho`, ou
+    tire o laço dos nós do `mapa_das_portas.porta_de` — reprova."""
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.integrations.ordens_da_mesa import Identidade, Linha, Ordem
+    from hefesto_dualsense4unix.utils.maquina import MapaDaMesa, PortaDeclarada
+
+    a08 = _a08()
+    mapa = MapaDaMesa(portas={
+        "9": PortaDeclarada(caminho="9-1.1.4", nos=["9-1.1-port4", "10-1.1-port4"]),
+        "15": PortaDeclarada(caminho="9-1.2", nos=["9-1-port2", "10-1-port2"]),
+    })
+    monkeypatch.setattr(a08, "_declaracao", lambda recarregar=False: SimpleNamespace(mapa=mapa))
+    vazio = Linha(texto="", selo="")
+    ordem = Ordem(chave="k", acao="Mova isto para a entrada 2",  # (noqa-acento) campo da Ordem
+                  o_que_eu_vi=vazio, por_que_importa=vazio, ganho_esperado=vazio,
+                  alvo=Identidade(caminho=caminho), destino="2", arranjo="a")
+    html = a08._card_da_ordem(ordem, 1)
+    assert (f'<span class="caixa">{esperado}</span><span class="seta">→</span>'
+            '<span class="caixa alvo">Entrada 2</span>') in html, html
 
 
 # ---------------------------------------------------------------------------
