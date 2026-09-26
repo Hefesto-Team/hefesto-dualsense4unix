@@ -1875,6 +1875,19 @@ def rotulo_do_controle(c: Any, completo: bool = True) -> str:
     return f'{marca}{jogador} <span class="pt">•</span> {plastico}{c["via"]}'
 
 
+def rotulo_curto_do_controle(c: Any) -> str:
+    """«Cosmic Red • USB» — o rótulo da linha do Check-up, sem a marca e sem o jogador.
+
+    A-08-O-CHECKUP-ABSORVE-A-GESTAO-01 (25/09/2026): o «Player N» virou o campo
+    do dono («P N», ou o nome que ela escreveu), logo a linha não o repete. O
+    plástico some quando ninguém o leu, como em :func:`rotulo_do_controle`.
+    """
+    nome = str(c.get("nome") or "")
+    plastico = (f'{nome} <span class="pt">•</span> '
+                if nome and nome != _cor_desconhecida() else "")
+    return f'{plastico}{c.get("via") or ""}'
+
+
 #: O SEPARADOR DO DESENHO. Ele é um `<span>` com classe, e não um `•` solto,
 #: porque a folha dela pinta o ponto mais apagado que o texto em volta. As duas
 #: funções que compõem frase para esta tela usam este mesmo — ver
@@ -2925,7 +2938,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # a Gestão de Controles dizia `Sony · Player 1 · Cosmic Red · USB`.
             # O alvo é `html` porque o rótulo traz os `<span class="pt">•</span>`
             # que separam os campos — em `texto` eles apareceriam escritos.
-            "nome": rotulo_do_controle(eu) if eu else "",
+            # O «Player N» SAIU DO RÓTULO em 25/09/2026: ele é o campo do dono
+            # (`dono`), logo abaixo — ver :func:`rotulo_curto_do_controle`.
+            "nome": rotulo_curto_do_controle(eu) if eu else "",
             # A COR DA BARRA DA ESQUERDA, no alvo `cor` (ver o CSS do `.gc-cor`).
             # VAZIO APAGA, e é o alvo que garante: `el.style.color = ''` devolve
             # o elemento à folha de estilo, que o pinta `transparent`. Sem cor

@@ -7,6 +7,7 @@ import html
 import importlib.util
 import pathlib
 import re
+from types import SimpleNamespace
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
@@ -1195,9 +1196,43 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      linhas têm todas a mesma largura, as colunas caem no mesmo x sozinhas.
      A última é `justify-self:end` para os percentuais terminarem juntos, colados
      na seta — número que se compara se lê pela direita. */
-  .gc-resumo{flex:1;display:grid;grid-template-columns:126fr 272fr 76fr;
-             gap:10px;align-items:center;font-size:11.5px;color:var(--texto-mudo);
-             white-space:nowrap}
+  /* OS SEIS SELOS DO ESTADO — A-08-O-CHECKUP-ABSORVE-A-GESTAO-01, 25/09/2026.
+     A grade de três colunas (máscara, microfone, bateria) virou uma fila que
+     quebra: são seis selos, e o que não cabe desce em vez de cortar. */
+  .gc-resumo{flex:1;display:flex;flex-wrap:wrap;gap:3px 14px;align-items:center;
+             font-size:11.5px;color:var(--texto-mudo);min-width:0}
+  .gc-est .est{white-space:nowrap}
+  .gc-est .certo{font-style:normal;color:var(--green);margin-left:1px}
+  .gc-est .est.warn,.gc-est .est.warn b{color:var(--orange)}
+  /* O DONO: o campo mostra «P N» ou o nome dela, e só se veste de campo
+     quando o mouse ou o foco chegam — em repouso ele é o nome da linha. */
+  .gc-dono{flex:0 0 92px;width:92px;margin-left:10px;padding:3px 6px;
+           border:1px solid transparent;border-radius:6px;background:transparent;
+           color:var(--fg);font:inherit;font-weight:700;text-overflow:ellipsis}
+  .gc-dono:hover,.gc-dono:focus{border-color:var(--border-forte);background:var(--app-bg);outline:none}
+  /* O BOTÃO DA ECONOMIA: a luz acende quando a declaração diz que vale — verde
+     quando é deste controle, apagada-cinza quando é a «Bateria longa» da mesa. */
+  .gc-corpo .btn.eco{display:inline-flex;align-items:center;gap:6px}
+  .eco-luz{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--border-forte)}
+  .eco-luz[data-economia="ligada"]{background:var(--green)}
+  .eco-luz[data-economia="mesa"]{background:var(--comment)}
+  /* AS FERRAMENTAS DO CHECK-UP — o Mapear num botão só, o exame, o Atualizar
+     e os dois mapas. */
+  .ferramentas{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0}
+  .ferramentas .i{width:14px;height:14px;vertical-align:-2px;fill:none;stroke:currentColor;
+                  stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .ferramentas .mapa{display:inline-flex;align-items:center;justify-content:center;width:30px;
+                     height:30px;border-radius:7px;border:1px solid var(--border-forte);
+                     color:var(--texto-suave)}
+  /* O FLUXO DO MAPEAR */
+  .mp{display:flex;flex-direction:column;gap:12px}
+  .mp-diz{margin:0;color:var(--fg);font-weight:600}
+  .mp-porta{min-height:20px;color:var(--texto-suave)}
+  .mp-campos{display:flex;flex-wrap:wrap;gap:12px}
+  .mp-campos label{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--rot-campo)}
+  .mp-campos input,.mp-campos select{min-width:200px;padding:5px 8px;border-radius:6px;
+                  border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg);font:inherit}
+  .mp-conta{margin:0;font-size:11.5px;color:var(--texto-mudo)}
   .gc-resumo > :last-child{justify-self:end}
   .gc-resumo b{color:var(--texto-suave);font-weight:500}
   /* 42px E NÃO 16, e a largura é a MESMA nos três estados de propósito: no
@@ -2176,7 +2211,31 @@ def desenho_do_controle(c, luz):
 #: `rotulo(c)`. Assim o piloto tem por onde escrever a identidade quando o
 #: controle chegar, e até lá a tela diz o que ela mandou dizer.
 def nome_do_lugar_vazio(c):
-    return (f'Player {c["jogador"]} <span class="pt">•</span> Desconectado')
+    """O rótulo do lugar sem aparelho. O «P N» dele é o campo do dono, ao lado."""
+    return "Desconectado"
+
+
+#: Os seis selos do estado, na ordem do pedido dela (25/09/2026): Mic, Som,
+#: Modo de conexão, Visto como, Conexão estável, Bateria.
+ESTADOS_DA_LINHA = ("est-mic", "est-som", "est-modo", "est-visto", "est-conexao", "est-bateria")
+DONO_DICA = ("Escreva o nome de quem joga com este controle. O nome fica no controle: "
+             "vale em qualquer entrada e adaptador. Apague para voltar a «P N».")
+_DECLARACAO_DA_BANCADA = SimpleNamespace(controles={}, orcamento=SimpleNamespace(teto=None))
+
+
+def _estado_da_bancada(c):
+    """Os seis selos da cena, pelo MESMO dono que o produto chama a cada tique.
+
+    A cena é a de «tudo certo»: o microfone declarado ligado, a ponte do rádio
+    de pé, o alto-falante lido e o movimento liso. O produto troca cada selo
+    pelo que o daemon disser no primeiro tique.
+    """
+    radio = e_radio(c)
+    vivo = {"uniq": "", "transport": "bt" if radio else "usb",
+            "battery_pct": DA_CONTROLES[c["pref"]]["bat"], "hz_movimento": 480,
+            "hz_voz": 1 if radio else None, "speaker": {"volume": 100, "muted": False}}
+    return _pacote08.estado_do_controle(vivo, {"mascara": c["mascara"]}, {"native_mode": False},
+                                        _DECLARACAO_DA_BANCADA)
 
 
 def linha_do_controle(c):
@@ -2242,37 +2301,13 @@ def linha_do_controle(c):
     da_controles = DA_CONTROLES[c["pref"]]
     # só o CAMPO sai daqui: o "Vale …, do global" que ficava ao lado saiu da tela
     # (`D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES`) e vive agora no `?` do campo.
-    campo_teto = teto_que_vale(c)[0]
-    # A LISTA E A SUA ORDEM SÃO DO PRODUTO — `gui.aba_conexoes.opcoes_do_teto`.
-    # Montá-la aqui pela terceira vez é o que fazia a borda do gesto conferir o
-    # clique contra literais em vez de contra a lista que a tela desenhou.
-    opcoes_teto = list(_aba_conexoes.opcoes_do_teto())
-    # O LUGAR SEM DONO SEGUE O GLOBAL, e isso não é um valor escolhido: um
-    # `<select>` marca sempre alguma opção, e "sobrepõe o global em 30%" seria a
-    # tela afirmando um ajuste POR CONTROLE de um controle que não está aqui.
-    # `opcoes_do_teto()[0]` é a primeira da lista do produto — a que diz *"não
-    # há sobreposição"* —, e ela é lida de lá em vez de digitada porque a lista
-    # tem dono. O piloto reescreve o campo no primeiro tique com dono; até lá o
-    # travessão que ele manda é no-op num `<select>` sem opção `—`, e por isso a
-    # opção honesta precisa estar marcada desde o nascimento.
-    campo_teto = vale(campo_teto, opcoes_teto[0])
-    mic_dica = _pacote08.dica_do_microfone("BT" if no_radio else "USB")
-    # O RESUMO DO MICROFONE GANHOU ENDEREÇO — 03/09/2026, e as duas metades
-    # dele estavam mentindo na mesa dela ao mesmo tempo:
-    #
-    #   · o `<b>Ligado</b>` era palavra do desenho. Medido em 03/09 com a mesa
-    #     dela: o `maquina.json` diz que a ponte deste controle está
-    #     DESLIGADA, e a linha fechada dizia "Microfone Ligado". O endereço é o
-    #     MESMO `mic-existe` do `<select>` do corpo, de propósito — o piloto
-    #     distribui um valor por `data-campo` e cada elemento o veste como
-    #     sabe: `texto` no `<b>`, `valor` no `<select>`. Dois endereços para o
-    #     mesmo fato é como duas grafias começam.
-    #   · o caminho ("pelo cabo · Placa do controle") vinha do transporte da
-    #     CENA. Ver `_pacote08.caminho_do_microfone`, que agora é o dono único.
-    #
-    # O `title` FICA COMO ESTÁ, e é dívida declarada: ele é do transporte da
-    # cena e não segue o vivo. O alvo é um por elemento, e o que ela LÊ sem
-    # passar o mouse é o texto.
+    # «MICROFONE E BOTÕES» E «LIMITE DA VIBRAÇÃO» SAÍRAM DA LINHA — pedido dela,
+    # 25/09/2026 (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): os dois repetiam outras
+    # abas (o mic é da Jogar/Controles; o limite é da Vibração). No lugar deles
+    # entra o ESTADO do controle agora, só leitura, pelo mesmo dono que o
+    # produto chama a cada tique (`a08_conexoes.estado_do_controle`).
+    estado = _estado_da_bancada(c) if conectado else {}
+    economia = _pacote08.campos_da_economia(_DECLARACAO_DA_BANCADA, "")
     # A TRAVA DO BOTÃO VIROU DADO — 03/09/2026. A classe `apagado` continua
     # nascendo do transporte da CENA (é o que ela vê ao abrir o arquivo), e o
     # `data-campo="luz-trava"` é o que deixa o produto reescrevê-la a cada
@@ -2373,28 +2408,17 @@ def linha_do_controle(c):
     # tira da tela. Com a cor lida a dica fica; sem ela, o `<span>` não tem dica.
     dica_da_borda = (' title="A borda é a cor lida deste aparelho."'
                      if (conectado and not no_radio) else "")
-    # O ÚNICO CAMPO QUE NÃO RECEBE O TRAVESSÃO É O `<select>` DO MICROFONE, e a
-    # razão é do widget, não da decisão: as opções são `Ligado`/`Desligado`, um
-    # `<select>` marca sempre uma, e não há terceira que diga *"não sei"*.
-    # Inventar uma opção `—` mudaria a lista que o gesto confere e faria a borda
-    # do `mic-existe` aceitar um valor que o produto nunca emite.
-    #
-    # O `<b>` IRMÃO, ESSE RECEBE — os dois dividem o `data-campo="mic-existe"` de
-    # propósito (um fato, um endereço), e o piloto veste cada um como sabe:
-    # `texto` no `<b>`, `valor` no `<select>`. O que ela LÊ sem clicar é o `<b>`,
-    # e ele diz travessão. O `<select>` está dentro do corpo fechado e, num lugar
-    # sem aparelho, a regra S-04 do `monta.py` o apaga.
-
     return f'''          <div class="gc-item gc-{c["pref"]}{marca}" data-controle="{c["pref"]}"{diz}>
             {barra}
             <div class="gc-cabeca">
+              <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
+                     value="{vale(f'P{c["jogador"]}', '')}" placeholder="P{c["jogador"]}" maxlength="24" spellcheck="false"
+                     aria-label="Nome de quem joga com este controle" title="{DONO_DICA}">
               <label class="gc-abre" for="gc-{c["pref"]}" data-gesto="alvo"
                      title="{dica_linha}">
-              <span class="gc-nome" data-campo="nome" data-hef-alvo="html">{vale(rotulo(c), nome_do_lugar_vazio(c))}</span>
+              <span class="gc-nome" data-campo="nome" data-hef-alvo="html"{dica_da_borda}>{vale(_pacote08.rotulo_curto_do_controle(c), nome_do_lugar_vazio(c))}</span>
               <span class="gc-resumo">
-                <span{dica_da_borda}>Vê como <b>{vale(c["mascara"])}</b></span>
-                <span data-campo="mic-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="{vale(mic_dica)}">Microfone <b data-campo="mic-existe">{vale("Ligado")}</b>, <span data-campo="mic-caminho" data-hef-alvo="html">{vale(caminho_do_mic(c))}</span></span>
-                <span title="A bateria vem da aba Controles, que é quem a lê do aparelho.">Bateria <b data-campo="bateria">{vale(f'{da_controles["bat"]}%')}</b></span>
+{chr(10).join(f'                <span class="gc-est" data-campo="{k}" data-hef-alvo="html">{estado.get(k, TRAVESSAO)}</span>' for k in ESTADOS_DA_LINHA)}
               </span>
               </label>
               <label class="gc-seta abre" for="gc-{c["pref"]}" data-gesto="alvo"
@@ -2406,17 +2430,7 @@ def linha_do_controle(c):
             </div>
             <div class="gc-corpo">
               {desenho_do_controle(c, luz)}
-              <span class="gc-bloco">
-                <span class="rot">{glifo("mic", ativo=True, tam=16)} Microfone e botões
-                  <span class="ajuda">?<span class="dica">{MIC_LIGADO_DICA}<br><br>{BOTAO_DICA}</span></span></span>
-                {sel(["Ligado", "Desligado"], "Ligado", gesto="mic-existe", campo="mic-existe", dica="Liga o microfone deste controle. Desligado, nenhum programa o ouve.")}
-                <span class="leitura" data-campo="mic-escopo" title="{BOTAO_DICA_CURTA}">{vale(BOTAO_DO_MIC)}</span>
-              </span>
-              <span class="gc-bloco barra">
-                <span class="rot">{glifo("rumble_esquerdo", ativo=True, tam=16)} Limite da vibração
-                  <span class="ajuda">?<span class="dica" data-campo="teto-explica" data-hef-alvo="html">{vale(teto_dica(c))}</span></span></span>
-                {sel(opcoes_teto, campo_teto, gesto="teto-da-vibracao", campo="teto-da-vibracao", dica="O limite deste controle. Ele vence o limite geral — o ? ao lado diz qual está valendo.")}
-              </span>
+              <button class="btn eco" data-gesto="economia-do-controle" data-campo="economia-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="{economia["economia-dica"]}"><i class="eco-luz" data-campo="economia" data-hef-alvo="atributo" data-hef-atributo="data-economia"></i>Modo Economia de Bateria</button>
               {bloco_da_luz}
             </div>
           </div>'''
@@ -3782,6 +3796,64 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
 
 
 _CALIB_PY = R / "src/hefesto_dualsense4unix/app/widgets/calibrar_entradas.py"
+
+
+# ---------------------------------------------------------------------------
+# O MAPEAR NUM BOTÃO SÓ — A-08-O-CHECKUP-ABSORVE-A-GESTAO-01, 25/09/2026. O fluxo
+# guiado que ela descreveu: *«Use um controle do dualsense (o mesmo), vá de
+# porta em porta conectando ele, carrega a informação que medimos, aí ele salva,
+# adiciona um nome e adiciona o posicionamento»*. A tela é só a moldura: o que
+# ela diz e o que mediu vêm da foto do dono do mapa (`a08_conexoes.
+# campos_do_mapear`), e o Salvar grava pelo dono. <!-- noqa-acento: citação literal dela -->
+# ---------------------------------------------------------------------------
+from hefesto_dualsense4unix.integrations import entrada_a_entrada as _ee  # noqa: E402
+
+_MP_INICIO = _pacote08.campos_do_mapear({"estado": "parado", "portas": []})
+TELA_MAPEAR_PORTAS = f'''
+<div class="tela-nova" id="mapear-portas">
+  <div class="tn-cx">
+    <div class="tn-topo">
+      <span class="tn-tit">{MAPEAR_ENTRADAS}</span>
+      {ajuda("Use o mesmo DualSense em todas: ligue o cabo numa entrada, espere o Hefesto "
+             "mostrar o que mediu dela, dê um <b>nome</b> e o <b>lugar</b>, e salve. Depois "
+             "passe o cabo para a próxima. O nome e o lugar aparecem no Check-up e em "
+             "<b>Rádio e Adaptadores</b>.")}
+      <a class="tn-x" href="#" title="Fechar">×</a>
+    </div>
+    <div class="tn-corpo mp" id="mp-forma">
+      <p class="mp-diz" data-campo="mapear-diz">{_MP_INICIO["mapear-diz"]}</p>
+      <div class="mp-porta" data-campo="mapear-porta" data-hef-alvo="html">{_MP_INICIO["mapear-porta"]}</div>
+      <div class="mp-campos">
+        <label>Nome da entrada <input type="text" data-linha="nome" maxlength="32" placeholder="Frente, a de cima"></label>
+        <label>Lugar <select data-linha="lugar"><option value="">Escolha o lugar</option>{"".join(f'<option>{l}</option>' for l in _ee.LUGARES_DA_PORTA)}</select></label>
+      </div>
+      <p class="mp-conta" data-campo="mapear-conta">{_MP_INICIO["mapear-conta"]}</p>
+    </div>
+    <div class="tn-rod">
+      <button class="btn principal" data-gesto="mapear-gravar" data-hef-forma="mp-forma">Salvar esta entrada</button>
+      <a class="btn" href="#">Terminar</a>
+      <button hidden id="mp-comecar" data-gesto="mapear-comecar"></button>
+      <button hidden id="mp-parar" data-gesto="mapear-parar"></button>
+    </div>
+  </div>
+</div>
+<script>
+  // A ÂNCORA ABRE, E O FLUXO COMEÇA E PARA COM ELA: o dono do mapa só olha as
+  // portas enquanto a tela está aberta.
+  (function(){{
+    var aberto = false;
+    function seguir(){{
+      var agora = location.hash === '#mapear-portas';
+      if(agora === aberto) return;
+      aberto = agora;
+      var b = document.getElementById(agora ? 'mp-comecar' : 'mp-parar');
+      if(b) b.click();
+    }}
+    window.addEventListener('hashchange', seguir);
+    seguir();
+  }})();
+</script>
+'''
 PROGRESSO = "entrada {feitos} de {total}"
 _confere_no_produto(_CALIB_PY, [
     '"entrada {feitos} de {total}"', 'botao.set_size_request(-1, 30)',
@@ -3969,10 +4041,11 @@ MIOLO = f'''
       <div class="quadro-topo">
         <label class="quadro-titulo" for="cx8-2">Check-up</label>
         <span class="ajuda">?<span class="dica">
-          Um exame da sala: em que entradas os aparelhos estão, quanta energia elas dão e
-          quem mais está falando no rádio perto do seu adaptador. Ele não muda nada sozinho:
-          quando acha algo, aparece ao lado uma ordem de serviço dizendo o que mover para
-          onde.
+          Um exame da sala e dos controles: em que entradas os aparelhos estão, quanta
+          energia elas dão, quem mais fala no rádio perto do seu adaptador — e, embaixo,
+          uma linha por controle com o estado dele agora. Ele não muda nada sozinho:
+          quando acha algo, aparece ao lado uma ordem de serviço dizendo o que mover
+          para onde.
         </span></span>
         <!-- O CARIMBO GANHOU ENDEREÇO em 02/09/2026. Ele dizia "há 3 minutos"
              desde que o mockup nasceu, e nunca soube nada: nenhum pacote
@@ -3981,6 +4054,7 @@ MIOLO = f'''
              (`secao_exame.frase_de_quando`), e a moldura "Examinado …" é a
              deste desenho. -->
         <span class="conta" data-campo="examinado">Examinado há 3 minutos</span>
+        <span class="conta" data-campo="conta-gestao" data-hef-alvo="html">{CONTA_DA_GESTAO}</span>
       </div>
       <div class="quadro-corpo">
         <!-- A LINHA DE VEREDITO — decisão D-16 dela, 04/09/2026:
@@ -4090,23 +4164,21 @@ MIOLO = f'''
              onde reabrir uma ordem ignorada**. O desenho precisa dizer para onde
              a linha ignorada vai — apagada na própria lista é o caminho mais
              curto, e é decisão dela. -->
-      </div>
-    </div>
-
-    <!-- ======== 2. GESTÃO DE CONTROLES — acordeão, um por controle ligado ======== -->
-    <div class="quadro">
-      <input class="abre" type="radio" name="cx8-secao" id="cx8-1">
-      <div class="quadro-topo">
-        <label class="quadro-titulo" for="cx8-1">Gestão de Controles</label>
-        <span class="ajuda">?<span class="dica">
-          Uma linha por controle ligado. A linha fechada diz o que o jogo vê como, o microfone
-          e a bateria — as três são leitura aqui; quem as governa é outra aba. A borda e o
-          desenho usam a cor lida do aparelho; sem leitura, ficam neutros. A barra de luz não
-          é essa cor: é a cor do jogador.
-        </span></span>
-        <span class="conta" data-campo="conta-gestao" data-hef-alvo="html">{CONTA_DA_GESTAO}</span>
-      </div>
-      <div class="quadro-corpo">
+        <!-- AS FERRAMENTAS MORAM NO CHECK-UP — 25/09/2026, pedido dela
+             (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01). O «Mapear Entradas» é UM botão
+             só: a âncora abre o fluxo guiado porta a porta (`#mapear-portas`),
+             que chama o dono do mapa (`entrada_a_entrada.o_mapa()`). A âncora
+             não é gesto (a §P4): quem começa o fluxo é o `#mp-comecar`. -->
+        <div class="ferramentas">
+          <a class="btn" href="#mapear-portas" title="{MAPEAR_ENTRADAS} — ligue o DualSense em cada entrada, uma por vez, e dê nome e lugar a cada uma">
+            <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg> {MAPEAR_ENTRADAS}</a>
+          <button class="btn" data-gesto="examinar-portas" title="{EXAMINAR_PORTAS} — refaz o exame das entradas, energia e rádio, e repinta o Check-up">
+            <svg class="i" aria-hidden="true"><use href="#rd-reexaminar"/></svg> {EXAMINAR_PORTAS}</button>
+          <button class="btn" data-gesto="checkup-atualizar" title="Relê agora o estado de cada controle, os nomes e o mapa das entradas">Atualizar</button>
+          <a class="btn" href="mapa-do-controle.html" title="O mapa do controle — abre no navegador">Mapa do controle</a>
+          <a class="mapa so-icone" href="mapa-das-portas.html" title="O mapa das entradas, com o que o Hefesto mediu de cada uma — abre no navegador" aria-label="O mapa das entradas — abre no navegador">
+            <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg></a>
+        </div>
         <!-- O ACORDEÃO PASSOU A SER LIDO DE VOLTA — 06/09/2026,
              `CONEXOES-LIGAR-TUDO-01`. Os {len(MESA) + 1} rádios são o alvo de
              saída do daemon (`output_target_index`), e até hoje o `checked`
@@ -4213,15 +4285,10 @@ MIOLO = f'''
         <button hidden id="rd-reordenar" data-gesto="adaptador-reordenar" value=""></button>
         <div class="moldes" data-campo="radio-moldes" data-hef-alvo="html">{CAMPOS_DO_RADIO["radio-moldes"]}</div>
 
-        <div class="entradas">
-          <a class="btn" href="#mapear-entradas" title="{MAPEAR_ENTRADAS} — as entradas do gabinete numeradas por face">
-            <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg> {MAPEAR_ENTRADAS}</a>
-          <a class="btn" href="#mapear-entrada-a-entrada" title="{MAPEAR_UMA_A_UMA} — um toque por aparelho: você pluga, ele aprende">
-            <svg class="i" aria-hidden="true"><use href="#rd-uma-a-uma"/></svg> {MAPEAR_UMA_A_UMA}</a>
-          <button class="btn" data-gesto="examinar-portas" title="{EXAMINAR_PORTAS} — refaz o exame das entradas, energia e rádio, e repinta o Check-up">
-            <svg class="i" aria-hidden="true"><use href="#rd-reexaminar"/></svg> {EXAMINAR_PORTAS}</button>
-          <a class="mapa so-icone" href="mapa-das-portas.html" title="O mapa das entradas — abre no navegador" aria-label="O mapa das entradas — abre no navegador">
-            <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg></a>
+        <!-- OS BOTÕES DAS ENTRADAS SUBIRAM PARA O CHECK-UP — 25/09/2026. Ficam
+             aqui só as duas peças escondidas da cerimônia antiga, que o roteiro
+             desta seção ainda lê (`#rd-comecar` e `entrada-tela`). -->
+        <div class="entradas" hidden>
           <button hidden id="rd-comecar" data-gesto="entrada-comecar" data-alvo=""></button>
           <i hidden data-campo="entrada-tela" data-hef-alvo="atributo" data-hef-atributo="data-tela"></i>
         </div>
@@ -4252,6 +4319,12 @@ MIOLO = f'''
 '''
 
 LEGENDA = f'''<div class="nota">
+  <h2>O Check-up absorveu a Gestão de Controles (25/09)</h2>
+  <ul>
+    <li><b>Uma seção só</b>: o exame em cima, as ferramentas no meio (o <b>{MAPEAR_ENTRADAS}</b> num botão só, que abre o fluxo porta a porta, o exame, o Atualizar e os dois mapas) e uma linha por controle embaixo.</li>
+    <li><b>A linha diz o estado de agora</b>: Mic, Som, Modo de conexão, Visto como, Conexão e Bateria, com o ✓ de «tudo certo». «Microfone e botões» e «Limite da vibração» saíram: são das abas Controles e Vibração.</li>
+    <li><b>«P N» é o nome do dono</b>: escreva o nome de quem joga; apagado, volta a «P N». Aberta, a linha tem o botão <b>Modo Economia de Bateria</b> daquele controle.</li>
+  </ul>
   <h2>«Rádio e Adaptadores» é o desenho que você aprovou em 23/09 — e o que ficou diferente</h2>
   <ul>
     <li><b>A seção inteira é o <code>mapa-do-radio.html</code></b>: a folha, os ícones e esta cena de exemplo são lidos dele. No produto quem pinta é o Hefesto, com os Hz medidos, as pontes «N de {_pacote08.PONTES_POR_ADAPTADOR}» e o sino de cada adaptador.</li>
@@ -4384,7 +4457,8 @@ if __name__ == "__main__":
     MARCA = "<!-- ================= LEGENDA DO MOCKUP ================= -->"
     if MARCA not in x:
         raise SystemExit("ERRO: a marca da legenda mudou no fim.html")
-    TELAS = "\n".join(t.strip() for t in (TELA_MAPEAR, TELA_SENTADA, TELA_FIM, TELA_EM_PE))
+    TELAS = "\n".join(t.strip() for t in (TELA_MAPEAR, TELA_SENTADA, TELA_FIM, TELA_EM_PE,
+                                             TELA_MAPEAR_PORTAS))
     x = x.replace(MARCA, TELAS + "\n\n" + MARCA, 1)
 
     # ---------------------------------------------------------------------------
@@ -4480,8 +4554,11 @@ if __name__ == "__main__":
 
     # 1. ABRIR UMA MINIMIZA AS OUTRAS. Três rádios com o MESMO `name` — com
     #    `checkbox` as três abriam juntas e a página passava 248px do miolo.
+    #    DUAS DESDE 25/09/2026: a Gestão de Controles entrou no Check-up, por
+    #    pedido dela (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01) — sobram o Check-up e
+    #    Rádio e Adaptadores, e a exclusão entre as duas continua valendo.
     _ABRE = re.findall(r'<input class="abre" type="(\w+)"(?: name="([^"]*)")?', _HTML)
-    _exigir(len(_ABRE) == 3, f"não são 3 seções que expandem, e sim {len(_ABRE)}")
+    _exigir(len(_ABRE) == 2, f"não são 2 seções que expandem, e sim {len(_ABRE)}")
     _exigir(all(t == "radio" for t, _ in _ABRE),
             "uma seção voltou a ser `checkbox` — duas abertas ao mesmo tempo é o que "
             "ela mandou desfazer: *abrir uma expansão minimiza a outra*")
@@ -4731,8 +4808,8 @@ if __name__ == "__main__":
         raise SystemExit("ERRO em 08-conexoes — decisão dela desfeita:\n  "
                          + "\n  ".join(f"- {f}" for f in _falhas))
 
-    print(f"08-conexoes: OK, {n} divs · 4 telas novas "
-          f"(1 do desenho + {3} da cerimônia) · 3 seções exclusivas · "
+    print(f"08-conexoes: OK, {n} divs · 5 telas novas "
+          f"(1 do desenho + {3} da cerimônia + o Mapear) · 2 seções exclusivas · "
           f"{len(CONECTADOS)} na mesa + {len(_FORA)} desconectado(s)")
     shutil.copyfile(_prova / "08-conexoes.html", _real / "08-conexoes.html")
     shutil.rmtree(_prova)
