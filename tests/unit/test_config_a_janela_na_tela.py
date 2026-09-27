@@ -90,6 +90,7 @@ _gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app import ambiente as ambiente_mod
+from hefesto_dualsense4unix.app import escala as escala_mod
 from hefesto_dualsense4unix.app import theme as theme_mod
 from hefesto_dualsense4unix.app.actions.config import ABA_CONFIG
 from hefesto_dualsense4unix.app.actions.config import secao_janela
@@ -194,7 +195,7 @@ def _montar(
     bancada.prefs = dict(prefs or {})
 
     monkeypatch.setattr(ambiente_mod, "load_gui_prefs", lambda: dict(bancada.prefs))
-    monkeypatch.setattr(theme_mod, "load_gui_prefs", lambda: dict(bancada.prefs))
+    monkeypatch.setattr(escala_mod, "load_gui_prefs", lambda: dict(bancada.prefs))
     monkeypatch.setattr(
         ambiente_mod, "set_pref", lambda chave, valor: bancada.prefs.update({chave: valor})
     )
