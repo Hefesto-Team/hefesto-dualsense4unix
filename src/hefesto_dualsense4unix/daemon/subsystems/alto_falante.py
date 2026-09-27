@@ -771,9 +771,9 @@ class AltoFalanteSubsystem:
 
     name = "alto_falante"
 
-    #: Quem JOGAVA na última volta (quem mexeu desde que o jogo abriu) —
-    #: lembrado para o vigia do modo poder adivinhar o que a volta decidiria
-    #: sem varrer `/proc` a cada :data:`VIGIA_DO_MODO_S`. Fica velho por até uma volta, e o preço de
+    #: Quem JOGAVA na última volta (quem mexeu desde que o jogo abriu) — lembrado
+    #: para o vigia do modo adivinhar o que a volta decidiria sem varrer `/proc` a
+    #: cada :data:`VIGIA_DO_MODO_S`. Fica velho por até uma volta, e o preço de
     #: estar velho é UMA reconciliação a mais, nunca uma ponte errada.
     #:
     #: **MORA NO CORPO DA CLASSE, e não no `__init__`** — e o motivo é uma
