@@ -16,6 +16,21 @@ from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.testing import FakeController
 
 
+async def _ate(condicao, prazo_s: float = 3.0) -> bool:  # type: ignore[no-untyped-def]
+    """Espera a condição com prazo, em vez de um sono fixo que o tique pode perder.
+
+    Medido em 27/09/2026: com 0,2 s fixos, `test_borda_de_queda_limpa_o_estado_publicado`
+    reprovava 4 vezes em 12 corridas do arquivo, com o daemon certo.
+    """
+    laco = asyncio.get_running_loop()
+    fim = laco.time() + prazo_s
+    while not condicao():
+        if laco.time() > fim:
+            return False
+        await asyncio.sleep(0.01)
+    return True
+
+
 def _mk_states(n: int, transport: str = "usb") -> list[ControllerState]:
     return [
         ControllerState(
@@ -198,13 +213,14 @@ async def test_borda_de_queda_limpa_o_estado_publicado():
     )
 
     run_task = asyncio.create_task(daemon.run())
-    await asyncio.sleep(0.2)
     # Sanidade: antes da queda, o daemon LEU alguma coisa de verdade.
-    assert store.snapshot().controller is not None
-    assert daemon._last_state is not None
+    assert await _ate(
+        lambda: store.snapshot().controller is not None and daemon._last_state is not None
+    ), "o daemon não leu nada antes da queda"
 
     fc.disconnect()  # a queda: nenhum controle na mesa a partir daqui
-    await asyncio.sleep(0.2)  # tempo para o próximo tick perceber a borda
+    # o próximo tick percebe a borda; sem a limpeza, o prazo estoura
+    await _ate(lambda: store.snapshot().controller is None and daemon._last_state is None)
 
     daemon.stop()
     await run_task
