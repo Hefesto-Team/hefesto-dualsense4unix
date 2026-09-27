@@ -124,7 +124,6 @@ from __future__ import annotations
 
 import contextlib
 import os
-import select
 import threading
 import time
 from collections.abc import Callable
@@ -132,6 +131,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.core.ds_output_report import BT_INPUT_CRC_SEED, bt_crc32
 from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
+from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -972,9 +972,7 @@ class PhysicalReportReader:
                 self._reopen_flag.clear()
                 return
             try:
-                pronto, _, _ = select.select(
-                    [fd, self._wake_r], [], [], _SELECT_TIMEOUT_S
-                )
+                pronto = prontos_para_ler([fd, self._wake_r], _SELECT_TIMEOUT_S)
             except (OSError, ValueError):
                 return  # fd morreu debaixo do select (ENODEV de hotplug)
             if self._wake_r in pronto:

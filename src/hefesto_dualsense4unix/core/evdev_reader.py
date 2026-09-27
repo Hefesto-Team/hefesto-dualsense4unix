@@ -14,13 +14,13 @@ from __future__ import annotations
 
 import contextlib
 import os
-import select
 import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, ClassVar
 
+from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -1213,14 +1213,11 @@ class _EvdevReconnectLoop:
     def _wait_ready(self, dev: Any) -> list[Any]:
         """Espera o fd do `dev` OU o self-pipe de wake ficarem prontos.
 
-        Extraído em método próprio (em vez de `select.select` inline) para os
+        Extraído em método próprio (em vez da espera inline) para os
         testes conseguirem simular prontidão/timeout sem precisar de fds
         reais — só esta chamada toca o `select` de verdade.
         """
-        ready, _, _ = select.select(
-            [dev.fd, self._wake_r], [], [], self._SELECT_TIMEOUT_S
-        )
-        return list(ready)
+        return prontos_para_ler([dev.fd, self._wake_r], self._SELECT_TIMEOUT_S)
 
     def _find_device(self) -> Path | None:  # pragma: no cover - abstract
         raise NotImplementedError
@@ -2875,7 +2872,7 @@ def _esperar_o_backoff(leitor: _EvdevReconnectLoop, segundos: float) -> bool:
     `stop()`, ou um dublê montado por `__new__`), volta a espera de antes.
     """
     try:
-        pronto, _, _ = select.select([getattr(leitor, "_wake_r", -1)], [], [], segundos)
+        pronto = prontos_para_ler([getattr(leitor, "_wake_r", -1)], segundos)
     except (OSError, ValueError):
         return leitor._stop_flag.wait(segundos)
     if pronto:

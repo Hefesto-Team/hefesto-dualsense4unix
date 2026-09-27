@@ -231,7 +231,6 @@ import contextlib
 import ctypes
 import fcntl
 import os
-import select
 import shutil
 import subprocess
 import threading
@@ -250,6 +249,7 @@ from hefesto_dualsense4unix.integrations.fontes_de_captura import (
     PREFIXO_SOURCE_PONTE_BT,
 )
 from hefesto_dualsense4unix.integrations.storm_doctor import gesto_de_instalar
+from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -1398,7 +1398,7 @@ class PonteMicBluetooth:
             # gravação. O intervalo é o que segura o custo.
             self._talvez_seguir_a_source()
             try:
-                prontos, _, _ = select.select([fd], [], [], _SELECT_TIMEOUT_S)
+                prontos = prontos_para_ler([fd], _SELECT_TIMEOUT_S)
             except OSError as exc:
                 logger.info("bt_mic_select_falhou", err=str(exc))
                 return

@@ -54,12 +54,13 @@ from __future__ import annotations
 
 import contextlib
 import fcntl
-import select
 import socket
 import struct
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+
+from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 
 #: ``_IOR('H', 210..212, int)`` de ``include/net/bluetooth/hci_sock.h``.
 HCIGETDEVLIST = 0x800448D2
@@ -559,7 +560,7 @@ def ler_mapa_afh(
             if restante <= 0:
                 return None
             try:
-                prontos, _, _ = select.select([sock], [], [], restante)
+                prontos = prontos_para_ler([sock], restante)
                 if not prontos:
                     return None
                 evento = sock.recv(260)

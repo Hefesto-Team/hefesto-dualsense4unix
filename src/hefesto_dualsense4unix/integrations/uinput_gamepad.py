@@ -41,7 +41,6 @@ from __future__ import annotations
 
 import contextlib
 import functools
-import select
 import threading
 import time
 from collections.abc import Callable
@@ -49,6 +48,7 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 from hefesto_dualsense4unix.core.rumble import pedido_mais_forte
+from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -817,7 +817,7 @@ class UinputGamepad:
         """
         while not pare.is_set():
             try:
-                prontos, _, _ = select.select([fd], [], [], _FF_FIO_ACORDA_S)
+                prontos = prontos_para_ler([fd], _FF_FIO_ACORDA_S)
             except (OSError, ValueError):
                 return  # fd fechado pelo stop()
             if not prontos or pare.is_set():
