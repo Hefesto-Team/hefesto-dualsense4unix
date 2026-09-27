@@ -779,3 +779,40 @@ def test_o_dono_unico_nao_confia_num_mock() -> None:
     assert marcas.joga(P1) is False
     assert qm.marcas_da_partida(MagicMock()) is None
     assert qm.quem_mexe_de(None) is None
+
+
+# ---------------------------------------------------------------------------
+# A tentativa que falhou espera a volta — 26/09/2026
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("papel", ["som", "haptica"])
+def test_a_fonte_que_falha_nao_poe_o_vigia_em_laco(
+    bancada: Bancada, monkeypatch: pytest.MonkeyPatch, papel: str
+) -> None:
+    """Sem fonte (do som ou da háptica), o vigia não acorda a volta antes da seguinte.
+
+    Com a marca de quem mexeu, o vigia passou a ver «háptica» num controle cuja
+    ponte não sobe. O modo nunca virava o que ele via, e a cada 0,4 s ele
+    acordava a volta, que subia um ``pw-record`` novo (conferência da
+    A-HAPTICA-QUEM-JOGA-02, «o laço de custo»).
+
+    MORDIDA: tire o ``continue`` da tentativa que falhou no vigia — ele acorda.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import alto_falante as sub
+    from hefesto_dualsense4unix.integrations import alto_falante_bt as af
+
+    def fonte(nome: str, **kw: Any) -> tuple[Any, Any, str]:
+        if kw.get("papel") == papel:
+            return None, None, "sem_gravador"
+        return (lambda _n: b""), f"g:{nome}", ""
+
+    monkeypatch.setattr(af, "fonte_do_monitor_do_no", fonte)
+    bancada.mundo.abrir_o_jogo_do_ge()
+    bancada.volta()
+    bancada.mexer(P3)
+    assert bancada.vigiar() is True, "o primeiro toque acorda a volta"
+    assert bancada.volta() == set(), "sem fonte, ninguém entra em háptica"
+    assert bancada.vigiar() is False, "a tentativa que falhou espera a volta seguinte"
+    bancada.sub._tentativa_falhou[P3] -= sub.RECONCILIA_S
+    assert bancada.vigiar() is True, "passada uma volta, o vigia volta a acordar"

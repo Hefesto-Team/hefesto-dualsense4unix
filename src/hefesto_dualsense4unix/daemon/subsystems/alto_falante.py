@@ -841,6 +841,11 @@ class AltoFalanteSubsystem:
         self._modo_da_ponte: dict[str, str] = {}
         #: `uniq -> quando o `subir()` falhou` — ver :data:`RECUSA_DA_PONTE_S`.
         self._ponte_recusada: dict[str, float] = {}
+        #: `uniq -> quando a última tentativa da volta falhou` (sem fonte do
+        #: som ou da háptica, ou a ponte que não subiu). Enquanto vale, o vigia não acorda
+        #: a volta por aquele controle: quem tenta de novo é a volta seguinte,
+        #: a cada :data:`RECONCILIA_S`. Ver :meth:`_o_modo_de_alguem_mudou`.
+        self._tentativa_falhou: dict[str, float] = {}
         #: Quantos controles no rádio ficaram sem âncora USB na última volta —
         #: lembrado para o aviso sair na MUDANÇA, e não a cada `RECONCILIA_S`.
         self._faltam_ancoras = 0
@@ -1714,6 +1719,7 @@ class AltoFalanteSubsystem:
                 # daquele controle não tem por onde entregar, e continuar
                 # publicado o faria engolir o áudio dela.
                 self._ponte_recusada[uniq] = time.monotonic()
+                self._tentativa_falhou[uniq] = time.monotonic()
                 logger.info("som_ponte_sem_fonte", uniq=uniq, motivo=motivo)
                 continue
             # O CAMINHO VAI NO FECHO, e o `functools.partial` diz o tipo: um
@@ -1748,6 +1754,7 @@ class AltoFalanteSubsystem:
                         derrubar_leitor_de_pipe(gravador_h)
                     gravador_h = None
                     modo = "som"
+                    self._tentativa_falhou[uniq] = time.monotonic()
                     logger.info("haptica_sem_fonte", uniq=uniq, motivo=motivo_h)
                     # E A PORTA DOS FUNDOS: cair para o alto-falante sem
                     # ninguém tocando nele devolveria a enxurrada por aqui. O
@@ -1776,12 +1783,14 @@ class AltoFalanteSubsystem:
                 self._modo_da_ponte[uniq] = modo
                 # SUBIU: o caminho está provado, e a recusa velha não vale mais.
                 self._ponte_recusada.pop(uniq, None)
+                self._tentativa_falhou.pop(uniq, None)
             else:
                 ponte.descer()
                 # NÃO SUBIU com o som dela na mão: isto é falha de verdade, e
                 # o nó daquele controle tem de sumir com a frase honesta em vez
                 # de engolir áudio. Ver :data:`RECUSA_DA_PONTE_S`.
                 self._ponte_recusada[uniq] = time.monotonic()
+                self._tentativa_falhou[uniq] = time.monotonic()
                 logger.info("som_ponte_nao_subiu", uniq=uniq, motivo=ponte.motivo)
         self._esperando_vaga = frozenset(esperando)
 
@@ -2084,6 +2093,14 @@ class AltoFalanteSubsystem:
                 agora = "som"
             else:
                 agora = None
+            # A TENTATIVA QUE FALHOU ESPERA A VOLTA — 26/09/2026. Sem fonte do
+            # som ou da háptica, ou com a ponte que não subiu, o modo nunca vira o que o
+            # vigia vê, e ele acordaria a volta a cada VIGIA_DO_MODO_S — um
+            # `pw-record` novo a cada 0,4 s, para sempre. Quem tenta de novo é
+            # a volta seguinte, no ritmo dela.
+            falhou = self._tentativa_falhou.get(uniq)
+            if falhou is not None and time.monotonic() - falhou < RECONCILIA_S:
+                continue
             # Quem espera vaga do governador já foi decidido nesta volta: a
             # pergunta está com ela. Acordar a volta não muda a resposta.
             if not acordar and (self._modo_da_ponte.get(uniq) or esperando.get(uniq)) != agora:
