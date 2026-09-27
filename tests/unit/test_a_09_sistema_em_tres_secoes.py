@@ -26,6 +26,10 @@ from pathlib import Path
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa `gui.aba_sistema`, que carrega o GTK")
+
 from hefesto_dualsense4unix.gui import aba_sistema as tela
 
 pytest_plugins = ["tests.unit.test_a_09_sistema_fecha_a_paridade"]

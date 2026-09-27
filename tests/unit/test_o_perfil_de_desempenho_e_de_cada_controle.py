@@ -36,6 +36,10 @@ from typing import Any
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa as réguas da aba 04, que carregam o GTK")
+
 from tests.unit import test_a_04_pergunta_ao_daemon_vivo as viva
 from tests.unit import test_a_marca_da_cor_nao_some as marca
 from tests.unit import test_o_aplicar_nao_solta_o_teto_do_controle as regua_do_aplicar
