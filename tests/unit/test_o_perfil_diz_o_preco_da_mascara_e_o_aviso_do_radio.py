@@ -208,6 +208,23 @@ def disco(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
 
 @pytest.fixture
+def a_10_com_a_luz_viva(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A aba 10 DONA DA LUZ, só nesta régua — para as guardas serem alcançadas.
+
+    Desde 26/09/2026 (O-SALVAR-DA-VIBRACAO-01) a aba 10 não é dona de seção
+    viva nenhuma, e `_com_o_que_esta_valendo` devolve o disco antes de chegar
+    às três guardas do caminho do rascunho: a do perfil que está valendo, o
+    `try/except` e a volta pelo nome antigo. Medido na conferência do mesmo
+    dia: arrancadas as três, as doze réguas deste arquivo ficavam verdes. Dar
+    à 10 uma seção, aqui dentro, é o que faz cada guarda voltar a morder sem
+    mudar o produto.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import rodape
+
+    monkeypatch.setitem(rodape.SECOES_DO_VIVO, PAGINA, frozenset({"leds"}))
+
+
+@pytest.fixture
 def disco_de_steam(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     """A mesma pasta, com um perfil de JOGO DA STEAM.
 
@@ -417,7 +434,7 @@ def test_os_dois_gestos_do_ambiente_tambem_nao_levam_o_vivo(
 
 
 def test_a_sobreposicao_so_vale_para_o_perfil_que_esta_valendo(
-    disco: dict[str, Any],
+    disco: dict[str, Any], a_10_com_a_luz_viva: None,
 ) -> None:
     """Sem perfil valendo, o disco é a verdade — e tem de continuar sendo.
 
@@ -429,9 +446,9 @@ def test_a_sobreposicao_so_vale_para_o_perfil_que_esta_valendo(
 
     MORDIDA: tire a guarda `mesmo_slug` de `_com_o_que_esta_valendo` e isto
     reprova — a cor viva vaza para um perfil que não está valendo. Desde
-    26/09 a aba 10 não sobrepõe seção nenhuma, e a guarda só volta a ser
-    alcançada no dia em que `rodape.SECOES_DO_VIVO` der uma seção a ela: a
-    mordida passa a pedir as duas coisas juntas.
+    26/09 a aba 10 não sobrepõe seção nenhuma no produto; a fixture
+    `a_10_com_a_luz_viva` lhe dá a luz aqui, e é ela que mantém a guarda
+    alcançável.
     """
     _prioridade(_ctx(valendo=None), PonteDeMentira())
 
@@ -443,7 +460,8 @@ def test_a_sobreposicao_so_vale_para_o_perfil_que_esta_valendo(
 
 
 def test_o_gesto_grava_mesmo_quando_a_sobreposicao_falha(
-    disco: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+    disco: dict[str, Any], monkeypatch: pytest.MonkeyPatch,
+    a_10_com_a_luz_viva: None,
 ) -> None:
     """A sobreposição é um GANHO, nunca uma condição para ela salvar.
 
@@ -454,7 +472,8 @@ def test_o_gesto_grava_mesmo_quando_a_sobreposicao_falha(
 
     MORDIDA: tire o `try/except` de `_com_o_que_esta_valendo` e isto vira o
     `RuntimeError` do dublê subindo pelo gesto — a tela recusaria um renomear
-    por causa de um campo do daemon.
+    por causa de um campo do daemon (com a fixture `a_10_com_a_luz_viva`, que
+    é o que faz o dublê ser chamado desde 26/09).
     """
     from hefesto_dualsense4unix.interface.pacotes import rodape
 
@@ -498,16 +517,42 @@ def test_renomear_nao_perde_a_regra_nem_o_modo(disco: dict[str, Any]) -> None:
         to_profile("Pragmata")  → difere do original em NADA
         to_profile("Sackboy")   → perde match, mode e suppress
 
-    MORDIDA: faça `_com_o_que_esta_valendo` devolver
-    `draft.to_profile(nome_novo, ...)` e isto reprova em três campos de uma vez
-    (desde 26/09 o caminho do rascunho só é alcançado quando a aba 10 tiver
-    seção viva em `rodape.SECOES_DO_VIVO`; hoje ele devolve o disco).
+    Desde 26/09 o produto devolve o disco antes do rascunho (a aba 10 não é
+    dona de seção viva), e quem mede a volta pelo nome antigo é a irmã de
+    baixo, que passa pelo rascunho.
     """
     antes = disco["perfil"]
     _renomear(_ctx(), PonteDeMentira())
 
     assert disco["salvos"]
     gravado = disco["salvos"][-1]
+    _a_regra_e_o_modo_ficaram(antes, gravado)
+    # E A COR É A DO DISCO — a luz é seção da aba 04 (nota de 26/09 no
+    # cabeçalho); até essa data aqui se cobrava a viva.
+    assert _cor_gravada(gravado) == NO_DISCO
+
+
+def test_renomear_pelo_rascunho_nao_perde_a_regra_nem_o_modo(
+    disco: dict[str, Any], a_10_com_a_luz_viva: None,
+) -> None:
+    """A mesma armadilha, com o caminho do rascunho percorrido.
+
+    MORDIDA: faça `_com_o_que_esta_valendo` devolver
+    `draft.to_profile(nome_novo, ...)` e isto reprova em três campos de uma
+    vez. A cor VIVA no arquivo é a prova de que o rascunho foi montado: sem
+    ela, esta régua passaria pelo disco e não mediria a volta.
+    """
+    antes = disco["perfil"]
+    _renomear(_ctx(), PonteDeMentira())
+
+    assert disco["salvos"]
+    gravado = disco["salvos"][-1]
+    assert _cor_gravada(gravado) == VIVA, (
+        "o renomear não passou pelo rascunho — a régua não mediu a volta")
+    _a_regra_e_o_modo_ficaram(antes, gravado)
+
+
+def _a_regra_e_o_modo_ficaram(antes: Profile, gravado: Profile) -> None:
     assert gravado.name == "Sackboy"
     assert gravado.match == antes.match, (
         f"o renomear perdeu a regra do perfil: {gravado.match!r} — o perfil "
@@ -518,6 +563,3 @@ def test_renomear_nao_perde_a_regra_nem_o_modo(disco: dict[str, Any]) -> None:
         "o renomear perdeu a supressão da emulação de desktop")
     assert gravado.priority == antes.priority, (
         f"o renomear trocou a prioridade: {gravado.priority}")
-    # E A COR É A DO DISCO — a luz é seção da aba 04 (nota de 26/09 no
-    # cabeçalho); até essa data aqui se cobrava a viva.
-    assert _cor_gravada(gravado) == NO_DISCO
