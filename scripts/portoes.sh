@@ -376,6 +376,7 @@ completo|referencias-docs|py|scripts/validar-referencias-docs.py --all
 completo|anonimato|bash|scripts/check_anonymity.sh
 completo|acentuacao|py|scripts/validar-acentuacao.py --all
 completo|mypy|bin|mypy src/hefesto_dualsense4unix
+completo|coleta-sem-gtk|py|scripts/check_a_coleta_sem_gtk.py
 suite|suite|bin|pytest -q
 TABELA
 }
@@ -390,6 +391,7 @@ _DIVERGENCIAS() {
 FORA-DO-LOCAL|scripts/ci/instalar_como_usuaria.sh|ensaio de instalação em máquina descartável; rodar na máquina dela mexeria no sistema vivo.
 FORA-DO-LOCAL|scripts/i18n_compile.sh|regenera os .mo, que são artefato compartilhado, e não tem forma --check. Portão que reescreve artefato não roda na árvore de agente.
 FORA-DO-CI|scripts/check_o_endereco_dela_em_toda_forma.py|pergunta à máquina dela os endereços reais (maquina.json do HOME de verdade, bluetoothctl e sysfs) e procura os octetos 4 e 5 em toda forma; no runner não há endereço nenhum a perguntar, e o portão só diria NÃO MEDIDO (O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01, 27/09).
+FORA-DO-CI|scripts/check_a_coleta_sem_gtk.py|é o espelho local do passo «Censo de coleta» do lint-test, que o CI já roda direto com o pytest (e com o piso, que fica só lá). Existe porque esta máquina tem o GTK: em 26/09 cinco módulos sem exigir_gi_real() deram verde aqui e vermelho em oito corridas do CI (VERDE-NAO-E-PROVA-01).
 FORA-DO-CI|scripts/mover-sprints-fechadas.py|mede docs/process/sprints/, que é .gitignore:178 e não viaja pelo git. No CI a pasta nunca existe, então o portão só saberia dizer NÃO MEDIDO — um job que não pode reprovar ensina a não acreditar na esteira. Localmente ele mede 46 sprints; medido em 20/09.
 FORA-DO-LOCAL|pre-commit|DECISÃO EM ABERTO, e não é minha: ou o framework entra no install.sh sem flag, ou os dez portões do .pre-commit-config.yaml migram para o gancho e o .yaml some (INFRA-DE-EXECUCAO-01, I14 e §9.4). Enquanto não decidido, o CI é o único que o roda -- e esta linha declara isso em vez de fingir que não existe. Medido: `which pre-commit` -> not found nesta máquina.
 DIV
