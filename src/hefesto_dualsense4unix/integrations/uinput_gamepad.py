@@ -40,6 +40,9 @@ FEAT-VPAD-FF-PASSTHROUGH-01 — force-feedback (rumble do JOGO):
 from __future__ import annotations
 
 import contextlib
+import functools
+import select
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -169,6 +172,36 @@ MAX_FF_EFFECTS = 16
 #: Cap de eventos FF drenados por tick — proteção contra flood no fd (jogo
 #: emitindo play/stop em rajada); o excedente fica para o próximo tick.
 _FF_MAX_EVENTS_PER_PUMP = 64
+
+#: O-PAD-VIRTUAL-ATENDE-A-VIBRACAO-DESDE-QUE-NASCE-01: de quanto em quanto o fio
+#: da vibração acorda sem evento, só para ver se o `stop()` pediu para ele sair.
+_FF_FIO_ACORDA_S = 0.25
+
+
+@functools.cache
+def _uinput_sem_no_proprio(base: type) -> type:
+    """A classe do `UInput` que NÃO abre o próprio nó depois de criar.
+
+    O-PAD-VIRTUAL-ATENDE-A-VIBRACAO-DESDE-QUE-NASCE-01 (27/09/2026). O
+    construtor do python-evdev faz `self.device = self._find_device(self.fd)`
+    logo depois do `UI_DEV_CREATE`: abre `/dev/input/eventN` e tenta de novo a
+    cada 100 ms enquanto o udev não dá o grupo ao nó. Com o `cosmic-osk` de pé,
+    o `gilrs` dele manda um efeito de vibração ao pad novo nesse meio-tempo; o
+    kernel espera o DONO responder segurando a trava do nó por até 30 s, e o
+    dono somos nós, parados no `open()` do mesmo nó. O logind (um fio só) trava
+    junto no `TakeDevice`, e o `cosmic-comp` aborta com a sessão dela: medido
+    duas vezes na noite de 27/09 e reproduzido de propósito na tela de login.
+
+    Nenhum código do Hefesto usa esse `InputDevice`: a vibração é atendida
+    pelo fd do uinput. Sem o `open()`, não há espera circular.
+    """
+
+    class _UInputSemNoProprio(base):  # type: ignore[misc]
+        def _find_device(self, _fd: int) -> None:
+            return None
+
+    _UInputSemNoProprio.__name__ = f"{base.__name__}SemNoProprio"
+    return _UInputSemNoProprio
 
 #: Teto de segurança para efeito de duração 0 ("toca até mandar parar").
 #:
@@ -680,6 +713,18 @@ class UinputGamepad:
     #: vibração por falha nossa (catálogo perdido). Sem contá-lo, o descarte
     #: era invisível e a tela dizia "o jogo não pediu".
     _ff_descartado_count: int = 0
+    # --- O-PAD-VIRTUAL-ATENDE-A-VIBRACAO-DESDE-QUE-NASCE-01 (27/09/2026) -----
+    #: O fio que atende o protocolo de vibração por prontidão, desde a linha
+    #: seguinte à criação. Sem ele, quem manda um efeito ao pad (o jogo, ou o
+    #: `cosmic-osk` de toda sessão do COSMIC) esperava o tique do repasse da
+    #: entrada, de 8 ms a mais de 1 s, com a trava do nó presa no kernel.
+    #: None = pad sem fd de verdade (os dublês da suíte): o tique atende, como
+    #: antes.
+    _ff_fio: threading.Thread | None = None
+    #: Guarda o catálogo de efeitos entre o fio e o tique (`_refresh_ff`).
+    _ff_trava: threading.Lock = field(default_factory=threading.Lock)
+    #: Pedido de saída do fio, feito pelo `stop()`.
+    _ff_pare: threading.Event = field(default_factory=threading.Event)
 
     @classmethod
     def for_flavor(
@@ -741,17 +786,68 @@ class UinputGamepad:
             logger.warning("uinput_ff_indisponivel_vpad_sem_rumble", name=self.name)
         self._device = device
         self._ecodes = ecodes
+        if self._ff_supported:
+            self._iniciar_o_fio_da_vibracao()
         logger.info("uinput_device_created", name=self.name, flavor=self.flavor,
                     vendor=hex(self.vendor), product=hex(self.product),
                     ff=self._ff_supported)
         return True
 
+    def _iniciar_o_fio_da_vibracao(self) -> None:
+        """Sobe o fio que responde a vibração na hora (só com fd de verdade)."""
+        fd = getattr(self._device, "fd", None)
+        if not isinstance(fd, int) or fd < 0:
+            return
+        self._ff_pare = threading.Event()
+        fio = threading.Thread(
+            target=self._atender_a_vibracao,
+            args=(self._device, fd, self._ff_pare),
+            name=f"hefesto-ff-{self.flavor}",
+            daemon=True,
+        )
+        self._ff_fio = fio
+        fio.start()
+
+    def _atender_a_vibracao(self, device: Any, fd: int, pare: threading.Event) -> None:
+        """O laço do fio: acorda quando o fd tem evento e atende na hora.
+
+        Atende o handshake (`UI_FF_UPLOAD`/`UI_FF_ERASE`), o play/stop e o
+        ganho, sob a trava do catálogo. A expiração e a entrega ao físico
+        (`_refresh_ff`) seguem no tique, com o rate-limit e o dedup de sempre.
+        """
+        while not pare.is_set():
+            try:
+                prontos, _, _ = select.select([fd], [], [], _FF_FIO_ACORDA_S)
+            except (OSError, ValueError):
+                return  # fd fechado pelo stop()
+            if not prontos or pare.is_set():
+                continue
+            with self._ff_trava:
+                for _ in range(_FF_MAX_EVENTS_PER_PUMP):
+                    try:
+                        event = device.read_one()
+                    except (BlockingIOError, OSError):
+                        break
+                    if event is None:
+                        break
+                    try:
+                        self._handle_ff_event(event)
+                    except Exception as exc:
+                        logger.warning("vpad_ff_event_failed", err=str(exc))
+
     def _create_device(self, *, with_ff: bool) -> Any | None:
-        """Cria o UInput do python-evdev; None em falha (o start decide o fallback)."""
+        """Cria o UInput do python-evdev; None em falha (o start decide o fallback).
+
+        O pad nasce da classe que não abre o próprio nó
+        (:func:`_uinput_sem_no_proprio`). Quando o `evdev.UInput` não é uma
+        classe (a vigia da suíte o troca por uma função), a chamada vai direto
+        a ele, e a vigia registra e recusa como sempre.
+        """
         from evdev import UInput
 
+        fabrica = _uinput_sem_no_proprio(UInput) if isinstance(UInput, type) else UInput
         try:
-            return UInput(
+            return fabrica(
                 _build_capabilities(with_ff=with_ff, flavor=self.flavor),
                 name=self.name,
                 vendor=self.vendor,
@@ -767,6 +863,13 @@ class UinputGamepad:
     def stop(self) -> None:
         if self._device is None:
             return
+        # O fio da vibração sai ANTES do fd fechar: um select num fd fechado
+        # (e talvez reaproveitado por outro aparelho) atenderia o pad errado.
+        fio = getattr(self, "_ff_fio", None)
+        if fio is not None:
+            self._ff_pare.set()
+            fio.join(timeout=2 * _FF_FIO_ACORDA_S + 0.5)
+            self._ff_fio = None
         # FEAT-VPAD-FF-PASSTHROUGH-01: se o FF do jogo deixou motor ligado,
         # zera o rumble físico antes de fechar (o vpad some; ninguém mais
         # mandaria o stop e o DualSense ficaria vibrando).
@@ -968,6 +1071,12 @@ class UinputGamepad:
         """
         device = self._device
         if device is None or not self._ff_supported:
+            return
+        fio = getattr(self, "_ff_fio", None)
+        if fio is not None and fio.is_alive():
+            # O fio já atendeu o protocolo; o tique só expira e entrega.
+            with self._ff_trava:
+                self._refresh_ff()
             return
         for _ in range(_FF_MAX_EVENTS_PER_PUMP):
             try:
