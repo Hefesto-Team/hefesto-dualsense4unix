@@ -60,14 +60,14 @@ from hefesto_dualsense4unix.app.ambiente import (
     gravar_correcao_de_ambiente,
     mensagem_da_bandeja,
 )
-from hefesto_dualsense4unix.app.gui_prefs import set_pref
-from hefesto_dualsense4unix.app.ipc_bridge import run_in_thread
-from hefesto_dualsense4unix.app.theme import (
+from hefesto_dualsense4unix.app.escala import (
     CHAVE_ESCALA,
     DEGRAUS_DE_ESCALA,
     degrau_da_escala,
     escala_gravada,
 )
+from hefesto_dualsense4unix.app.gui_prefs import set_pref
+from hefesto_dualsense4unix.app.ipc_bridge import run_in_thread
 from hefesto_dualsense4unix.app.widgets.segmented_selector import SegmentedSelector
 from hefesto_dualsense4unix.integrations.desktop_notifications import (
     statusnotifierwatcher_available,

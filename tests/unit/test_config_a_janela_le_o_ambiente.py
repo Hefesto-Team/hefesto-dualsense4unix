@@ -36,6 +36,7 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.app import ambiente as ambiente_mod
+from hefesto_dualsense4unix.app import escala
 from hefesto_dualsense4unix.app.ambiente import (
     AMBIENTES,
     CHAVE_AMBIENTE,
@@ -265,12 +266,11 @@ def test_os_tres_degraus_cobrem_a_faixa_inteira() -> None:
     reinício: há gente com 5 gravado. Um 5 que não marca nada deixa a pessoa
     sem saber o que está valendo.
     """
-    theme = _theme()
-    assert theme.degrau_da_escala(0) == "compacto"
-    assert theme.degrau_da_escala(theme.ESCALA_PADRAO) == "normal"
-    assert theme.degrau_da_escala(theme.ESCALA_MAXIMA) == "grande"
-    for delta in range(0, theme.ESCALA_MAXIMA + 1):
-        assert theme.degrau_da_escala(delta) in theme.DEGRAUS_DE_ESCALA
+    assert escala.degrau_da_escala(0) == "compacto"
+    assert escala.degrau_da_escala(escala.ESCALA_PADRAO) == "normal"
+    assert escala.degrau_da_escala(escala.ESCALA_MAXIMA) == "grande"
+    for delta in range(0, escala.ESCALA_MAXIMA + 1):
+        assert escala.degrau_da_escala(delta) in escala.DEGRAUS_DE_ESCALA
 
 
 def test_cada_degrau_se_reconhece() -> None:
@@ -279,18 +279,16 @@ def test_cada_degrau_se_reconhece() -> None:
     Sem isto, a fileira poderia nascer marcando um botão diferente do que a
     pessoa acabou de clicar.
     """
-    theme = _theme()
-    for nome, valor in theme.DEGRAUS_DE_ESCALA.items():
-        assert theme.degrau_da_escala(valor) == nome
+    for nome, valor in escala.DEGRAUS_DE_ESCALA.items():
+        assert escala.degrau_da_escala(valor) == nome
 
 
 def test_nenhum_degrau_passa_do_teto_de_seguranca() -> None:
     """`ESCALA_MAXIMA` é onde a janela deixa de caber numa tela 1080p."""
-    theme = _theme()
-    assert set(theme.DEGRAUS_DE_ESCALA) == {"compacto", "normal", "grande"}
-    for valor in theme.DEGRAUS_DE_ESCALA.values():
-        assert 0 <= valor <= theme.ESCALA_MAXIMA
-    assert theme.DEGRAUS_DE_ESCALA["normal"] == theme.ESCALA_PADRAO
+    assert set(escala.DEGRAUS_DE_ESCALA) == {"compacto", "normal", "grande"}
+    for valor in escala.DEGRAUS_DE_ESCALA.values():
+        assert 0 <= valor <= escala.ESCALA_MAXIMA
+    assert escala.DEGRAUS_DE_ESCALA["normal"] == escala.ESCALA_PADRAO
 
 
 def test_a_escala_gravada_ignora_o_cache_da_sessao(
@@ -307,7 +305,7 @@ def test_a_escala_gravada_ignora_o_cache_da_sessao(
     """
     theme = _theme()
     monkeypatch.setattr(theme, "_escala_aplicada", 0)
-    monkeypatch.setattr(theme, "load_gui_prefs", lambda: {theme.CHAVE_ESCALA: 6})
+    monkeypatch.setattr(escala, "load_gui_prefs", lambda: {escala.CHAVE_ESCALA: 6})
 
     assert theme.escala_fonte() == 0
     assert theme.escala_gravada() == 6
@@ -318,11 +316,8 @@ def test_a_escala_gravada_defende_o_arquivo_editado_a_mao(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Tipo errado cai no padrão; número fora da faixa é aparado no teto."""
-    theme = _theme()
-    monkeypatch.setattr(theme, "_escala_aplicada", None)
+    monkeypatch.setattr(escala, "load_gui_prefs", lambda: {escala.CHAVE_ESCALA: "grande"})
+    assert escala.escala_gravada() == escala.ESCALA_PADRAO
 
-    monkeypatch.setattr(theme, "load_gui_prefs", lambda: {theme.CHAVE_ESCALA: "grande"})
-    assert theme.escala_gravada() == theme.ESCALA_PADRAO
-
-    monkeypatch.setattr(theme, "load_gui_prefs", lambda: {theme.CHAVE_ESCALA: 99})
-    assert theme.escala_gravada() == theme.ESCALA_MAXIMA
+    monkeypatch.setattr(escala, "load_gui_prefs", lambda: {escala.CHAVE_ESCALA: 99})
+    assert escala.escala_gravada() == escala.ESCALA_MAXIMA
