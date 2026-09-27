@@ -257,30 +257,53 @@ def test_cada_secao_viva_tem_uma_aba_dona_so() -> None:
         "o clique que não diz de que aba veio não é dono de seção nenhuma")
 
 
+#: AS TRÊS PORTAS DA SOBREPOSIÇÃO cujo padrão é TODAS as seções, e quantos
+#: argumentos posicionais cada uma recebe ANTES de `secoes`. A primeira só
+#: sobrepõe com o `ctx`; as outras duas sempre sobrepõem.
+_PORTAS_DO_VIVO: dict[str, int] = {
+    "_draft_do_ativo": 2,
+    "_o_som_daquela_peca": 3,
+    "_o_que_e_da_mesa_inteira": 2,
+}
+
+
 def test_todo_chamador_do_produto_diz_as_secoes() -> None:
-    """O padrão de `_draft_do_ativo` é TODAS as seções, e ele é de quem mede.
+    """O padrão das portas do vivo é TODAS as seções, e ele é de quem mede.
 
     Um gesto do produto que passe o `ctx` sem dizer as seções volta a pôr o
     vivo por cima do perfil inteiro — o defeito das 18:38:37. A régua lê o
-    fonte de `interface/` e cobra as seções em toda chamada com o `ctx`.
+    fonte do PACOTE inteiro (não só de `interface/`: a janela de `app/` já
+    citou este dono) e cobra as seções em toda chamada que sobrepõe, com o
+    `ctx` posicional ou por nome.
+
+    MORDIDA (conferência de 26/09): tire o `secoes` de uma das três chamadas
+    internas do `rodape` ou da do `a10_perfis` e esta régua aponta a linha.
     """
     import ast
     import pathlib
 
-    raiz = pathlib.Path(rodape.__file__).resolve().parent.parent
+    raiz = pathlib.Path(rodape.__file__).resolve().parents[2]
     sem_secoes: list[str] = []
     for arq in sorted(raiz.rglob("*.py")):
-        for no in ast.walk(ast.parse(arq.read_text(encoding="utf-8"))):
+        texto = arq.read_text(encoding="utf-8")
+        if not any(porta in texto for porta in _PORTAS_DO_VIVO):
+            continue
+        for no in ast.walk(ast.parse(texto)):
             if not isinstance(no, ast.Call):
                 continue
             alvo = no.func
             nome = alvo.attr if isinstance(alvo, ast.Attribute) else getattr(alvo, "id", "")
-            if nome != "_draft_do_ativo" or len(no.args) < 2:
+            antes = _PORTAS_DO_VIVO.get(nome)
+            if antes is None:
                 continue
-            if len(no.args) < 3 and not any(k.arg == "secoes" for k in no.keywords):
+            chaves = {k.arg for k in no.keywords}
+            if (nome == "_draft_do_ativo" and len(no.args) < 2
+                    and "ctx" not in chaves):
+                continue  # sem o ctx não há vivo a sobrepor (o «Aplicar»)
+            if len(no.args) <= antes and "secoes" not in chaves:
                 sem_secoes.append(f"{arq.relative_to(raiz)}:{no.lineno}")
     assert not sem_secoes, (
-        f"chamada de `_draft_do_ativo` com o ctx e sem as seções: {sem_secoes}")
+        f"chamada que sobrepõe o vivo sem dizer as seções: {sem_secoes}")
 
 
 # --------------------------------------------------------------------------
