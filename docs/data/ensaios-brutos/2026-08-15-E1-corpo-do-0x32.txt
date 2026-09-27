@@ -92,7 +92,7 @@ A SAÍDA DO PRODUTO, comando a comando (é ele quem escreve)
   $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic unmute --uniq a0:fa:9c:00:00:f0
       microfone do firmware .... ATIVO
         o controle declara ....... MUDO
-        ainda mudo? o firmware pode levar um report para convergir. Se o medidor 
+        ainda mudo? o firmware pode levar um report para convergir. Se o medidor
       seguir parado, o resto é WirePlumber: rode `scripts/doctor.sh --fix`.
   $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic release --uniq a0:fa:9c:00:00:f0
       microfone do firmware .... posse devolvida ao kernel
@@ -103,7 +103,7 @@ A SAÍDA DO PRODUTO, comando a comando (é ele quem escreve)
   $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic unmute --uniq d4:2f:4b:00:00:d8
       microfone do firmware .... ATIVO
         o controle declara ....... MUDO
-        ainda mudo? o firmware pode levar um report para convergir. Se o medidor 
+        ainda mudo? o firmware pode levar um report para convergir. Se o medidor
       seguir parado, o resto é WirePlumber: rode `scripts/doctor.sh --fix`.
   $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic release --uniq d4:2f:4b:00:00:d8
       microfone do firmware .... posse devolvida ao kernel
@@ -117,12 +117,12 @@ A SAÍDA DO PRODUTO, comando a comando (é ele quem escreve)
   $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic release --uniq a0:fa:9c:00:00:f0
       microfone do firmware .... posse devolvida ao kernel
         o controle declara ....... MUDO
-        ainda mudo? o firmware pode levar um report para convergir. Se o medidor 
+        ainda mudo? o firmware pode levar um report para convergir. Se o medidor
       seguir parado, o resto é WirePlumber: rode `scripts/doctor.sh --fix`.
   $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic release --uniq d4:2f:4b:00:00:d8
       microfone do firmware .... posse devolvida ao kernel
         o controle declara ....... MUDO
-        ainda mudo? o firmware pode levar um report para convergir. Se o medidor 
+        ainda mudo? o firmware pode levar um report para convergir. Se o medidor
       seguir parado, o resto é WirePlumber: rode `scripts/doctor.sh --fix`.
   $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic bt
       (sem saída)
@@ -131,12 +131,12 @@ A SAÍDA DO PRODUTO, comando a comando (é ele quem escreve)
   $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic unmute --uniq a0:fa:9c:00:00:f0
       microfone do firmware .... ATIVO
         o controle declara ....... MUDO
-        ainda mudo? o firmware pode levar um report para convergir. Se o medidor 
+        ainda mudo? o firmware pode levar um report para convergir. Se o medidor
       seguir parado, o resto é WirePlumber: rode `scripts/doctor.sh --fix`.
   $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic unmute --uniq d4:2f:4b:00:00:d8
       microfone do firmware .... ATIVO
         o controle declara ....... MUDO
-        ainda mudo? o firmware pode levar um report para convergir. Se o medidor 
+        ainda mudo? o firmware pode levar um report para convergir. Se o medidor
       seguir parado, o resto é WirePlumber: rode `scripts/doctor.sh --fix`.
   $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic release --uniq a0:fa:9c:00:00:f0
       microfone do firmware .... posse devolvida ao kernel
@@ -151,12 +151,12 @@ A SAÍDA DO PRODUTO, comando a comando (é ele quem escreve)
   $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic unmute --uniq a0:fa:9c:00:00:f0
       microfone do firmware .... ATIVO
         o controle declara ....... MUDO
-        ainda mudo? o firmware pode levar um report para convergir. Se o medidor 
+        ainda mudo? o firmware pode levar um report para convergir. Se o medidor
       seguir parado, o resto é WirePlumber: rode `scripts/doctor.sh --fix`.
   $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic unmute --uniq d4:2f:4b:00:00:d8
       microfone do firmware .... ATIVO
         o controle declara ....... MUDO
-        ainda mudo? o firmware pode levar um report para convergir. Se o medidor 
+        ainda mudo? o firmware pode levar um report para convergir. Se o medidor
       seguir parado, o resto é WirePlumber: rode `scripts/doctor.sh --fix`.
   $ /mnt/Apate/Desenvolvimento/hefesto-dualsense4unix/.venv/bin/hefesto-dualsense4unix mic release --uniq a0:fa:9c:00:00:f0
       microfone do firmware .... posse devolvida ao kernel
@@ -173,26 +173,26 @@ A SAÍDA DO PRODUTO, comando a comando (é ele quem escreve)
         broker de hidraw ... ok
         controle BT ........ /dev/hidraw4  a0:fa:9c:00:00:f0
         controle BT ........ /dev/hidraw5  d4:2f:4b:00:00:d8
-      
+
         subindo a ponte… (Ctrl-C encerra e desliga o mic)
-      
+
         sem-ouvinte = quadros descartados porque nenhum app está gravando (esperado)
-      
+
       2026-08-15T21:36:19.791680 [info     ] bt_mic_pedido                  ligar=True no=/dev/hidraw4 seq=1
       2026-08-15T21:36:19.800425 [info     ] bt_mic_pedido                  ligar=True no=/dev/hidraw5 seq=1
-        hefesto_dualsense_bt_0000f0  MUDO  quadros=0 entregues=0 sem-ouvinte=0 
+        hefesto_dualsense_bt_0000f0  MUDO  quadros=0 entregues=0 sem-ouvinte=0
       invalidos=0 rearmes=0 mudo=100%
-        hefesto_dualsense_bt_0000d8  MUDO  quadros=0 entregues=0 sem-ouvinte=0 
+        hefesto_dualsense_bt_0000d8  MUDO  quadros=0 entregues=0 sem-ouvinte=0
       invalidos=0 rearmes=0 mudo=100%
-        hefesto_dualsense_bt_0000f0  MUDO  quadros=500 entregues=8 sem-ouvinte=492 
+        hefesto_dualsense_bt_0000f0  MUDO  quadros=500 entregues=8 sem-ouvinte=492
       invalidos=0 rearmes=0 mudo=100%
-        hefesto_dualsense_bt_0000d8  MUDO  quadros=499 entregues=8 sem-ouvinte=491 
+        hefesto_dualsense_bt_0000d8  MUDO  quadros=499 entregues=8 sem-ouvinte=491
       invalidos=0 rearmes=0 mudo=100%
       2026-08-15T21:36:29.604528 [info     ] bt_mic_pedido                  ligar=False no=/dev/hidraw4 seq=2
       2026-08-15T21:36:29.614520 [info     ] bt_mic_pedido                  ligar=False no=/dev/hidraw5 seq=2
-      
+
         ponte encerrada; microfone devolvido ao estado anterior.
-      
+
       --- BRAÇO B ---
       Microfone do DualSense por Bluetooth
         libopus ............ libopus 1.4
@@ -201,24 +201,24 @@ A SAÍDA DO PRODUTO, comando a comando (é ele quem escreve)
         broker de hidraw ... ok
         controle BT ........ /dev/hidraw4  a0:fa:9c:00:00:f0
         controle BT ........ /dev/hidraw5  d4:2f:4b:00:00:d8
-      
+
         subindo a ponte… (Ctrl-C encerra e desliga o mic)
-      
+
         sem-ouvinte = quadros descartados porque nenhum app está gravando (esperado)
-      
+
       2026-08-15T21:36:56.664435 [info     ] bt_mic_pedido                  ligar=True no=/dev/hidraw4 seq=1
       2026-08-15T21:36:56.674312 [info     ] bt_mic_pedido                  ligar=True no=/dev/hidraw5 seq=1
-        hefesto_dualsense_bt_0000f0  ativo  quadros=0 entregues=0 sem-ouvinte=0 
+        hefesto_dualsense_bt_0000f0  ativo  quadros=0 entregues=0 sem-ouvinte=0
       invalidos=0 rearmes=0 mudo=0%
-        hefesto_dualsense_bt_0000d8  ativo  quadros=0 entregues=0 sem-ouvinte=0 
+        hefesto_dualsense_bt_0000d8  ativo  quadros=0 entregues=0 sem-ouvinte=0
       invalidos=0 rearmes=0 mudo=0%
-        hefesto_dualsense_bt_0000f0  MUDO  quadros=500 entregues=8 sem-ouvinte=492 
+        hefesto_dualsense_bt_0000f0  MUDO  quadros=500 entregues=8 sem-ouvinte=492
       invalidos=0 rearmes=0 mudo=95%
-        hefesto_dualsense_bt_0000d8  MUDO  quadros=499 entregues=8 sem-ouvinte=491 
+        hefesto_dualsense_bt_0000d8  MUDO  quadros=499 entregues=8 sem-ouvinte=491
       invalidos=0 rearmes=0 mudo=93%
       2026-08-15T21:37:06.474583 [info     ] bt_mic_pedido                  ligar=False no=/dev/hidraw4 seq=2
       2026-08-15T21:37:06.479568 [info     ] bt_mic_pedido                  ligar=False no=/dev/hidraw5 seq=2
-      
+
         ponte encerrada; microfone devolvido ao estado anterior.
 
 O VEREDITO, UNIDADE A UNIDADE

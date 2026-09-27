@@ -118,6 +118,7 @@ EXCLUIR_SUFIXO = {
 EXCLUIR_CAMINHO = {
     "docs/usage/assets/PROVA-DA-FOTO.txt",
     "scripts/check_endereco_de_radio.py",   # este arquivo cita os exemplos
+    "scripts/check_o_endereco_dela_em_toda_forma.py",  # cita o exemplo da máscara
     "poetry.lock", "package-lock.json", "flake.lock",
 }
 
@@ -211,6 +212,22 @@ def acusa_serial(linha: str) -> list[str]:
     return achados
 
 
+#: O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01 (27/09/2026): o nome de nó de som
+#: leva os octetos 4, 5 e 6 do controle (`nome_do_sink`). Ao lado do endereço
+#: mascarado do mesmo controle, ele devolve o endereço inteiro. A forma da casa
+#: é `hefesto_som_0000FF`. Em `tests/`, a fixture sintética pode ter qualquer
+#: sufixo; quem pergunta ao dono se ele é dela é o
+#: `check_o_endereco_dela_em_toda_forma.py`.
+NO_DE_SOM = re.compile(
+    r"(?:hefesto_(?:som|mic|haptica|hapt|dualsense_bt)_|HEFESTO)([0-9A-Fa-f]{6})(?![0-9A-Fa-f])"
+)
+
+
+def acusa_no(linha: str) -> list[str]:
+    """Nomes de nó de som cujo sufixo não está mascarado (`0000` e o octeto 6)."""
+    return [m.group(0) for m in NO_DE_SOM.finditer(linha) if m.group(1)[:4] != "0000"]
+
+
 def arquivos_versionados() -> list[Path]:
     try:
         saida = subprocess.run(
@@ -272,6 +289,9 @@ def main() -> int:
                 achados.append(f"{rel}:{n}: MAC real    {a}")
             for a in acusa_serial(linha):
                 achados.append(f"{rel}:{n}: serial USB  {a}")
+            if not str(rel).startswith("tests/"):
+                for a in acusa_no(linha):
+                    achados.append(f"{rel}:{n}: nó de som   {a}")
 
     if achados:
         print(f"FALHA: {len(achados)} endereço(s) de rádio REAL em arquivo versionado.\n")
@@ -282,6 +302,7 @@ def main() -> int:
         print("\nA máscara da casa zera os octetos 4 e 5:")
         print("  AA:BB:CC:DD:EE:FF  ->  AA:BB:CC:00:00:FF")
         print("  AABBCCDDEEFF       ->  AABBCC0000FF")
+        print("  hefesto_som_DDEEFF ->  hefesto_som_0000FF")
         print("\nSe o achado NÃO for endereço (hash, carimbo, UUID), acrescente o")
         print("caminho a EXCLUIR_CAMINHO neste arquivo, com o motivo escrito ao lado.")
         return 1

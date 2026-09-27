@@ -143,6 +143,7 @@ rapido|donos-de-comportamento|py|scripts/check_donos_de_comportamento.py
 completo|nada-aponta-para-a-janela|py|scripts/check_nada_aponta_para_a_janela.py
 rapido|test-data|bash|scripts/check_test_data.sh
 rapido|endereco-de-radio|py|scripts/check_endereco_de_radio.py
+rapido|endereco-dela-em-toda-forma|py|scripts/check_o_endereco_dela_em_toda_forma.py
 # O IRMÃO DO DE CIMA, PARA O SERIAL — 03/09/2026, e o pedido é dela: *"sim, faz
 # o portão pro número de série"*. O serial de fábrica identifica a unidade dela
 # tão bem quanto o MAC, e a regra desta casa é sobre ARQUIVO VERSIONADO, não
@@ -388,6 +389,7 @@ _DIVERGENCIAS() {
   cat <<'DIV'
 FORA-DO-LOCAL|scripts/ci/instalar_como_usuaria.sh|ensaio de instalação em máquina descartável; rodar na máquina dela mexeria no sistema vivo.
 FORA-DO-LOCAL|scripts/i18n_compile.sh|regenera os .mo, que são artefato compartilhado, e não tem forma --check. Portão que reescreve artefato não roda na árvore de agente.
+FORA-DO-CI|scripts/check_o_endereco_dela_em_toda_forma.py|pergunta à máquina dela os endereços reais (maquina.json do HOME de verdade, bluetoothctl e sysfs) e procura os octetos 4 e 5 em toda forma; no runner não há endereço nenhum a perguntar, e o portão só diria NÃO MEDIDO (O-SUFIXO-DO-NO-NAO-ENTREGA-O-ENDERECO-01, 27/09).
 FORA-DO-CI|scripts/mover-sprints-fechadas.py|mede docs/process/sprints/, que é .gitignore:178 e não viaja pelo git. No CI a pasta nunca existe, então o portão só saberia dizer NÃO MEDIDO — um job que não pode reprovar ensina a não acreditar na esteira. Localmente ele mede 46 sprints; medido em 20/09.
 FORA-DO-LOCAL|pre-commit|DECISÃO EM ABERTO, e não é minha: ou o framework entra no install.sh sem flag, ou os dez portões do .pre-commit-config.yaml migram para o gancho e o .yaml some (INFRA-DE-EXECUCAO-01, I14 e §9.4). Enquanto não decidido, o CI é o único que o roda -- e esta linha declara isso em vez de fingir que não existe. Medido: `which pre-commit` -> not found nesta máquina.
 DIV

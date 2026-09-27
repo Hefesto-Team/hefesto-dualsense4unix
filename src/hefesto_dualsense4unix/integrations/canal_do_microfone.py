@@ -301,7 +301,7 @@ def sufixo_do_controle(uniq: str) -> str:
     E ELE EXIGE UM ENDEREÇO INTEIRO, não "seis dígitos hex em algum lugar" —
     medido ao escrever este módulo, em 05/09/2026: ``so_hex`` sobre
     ``"sem-identidade"`` devolve ``"emdedade"``, porque **e**, **d** e **a** são
-    dígitos hex, e o canal nasceria batizado ``hefesto_mic_0000de``. É a mesma
+    dígitos hex, e o canal nasceria com o sufixo ``dedade``. É a mesma
     armadilha de casamento por acaso que `fontes_de_captura.sufixo_da_ponte_bt`
     já paga com o ``so_hex(resto) != resto``, aqui na entrada em vez da saída.
     """
