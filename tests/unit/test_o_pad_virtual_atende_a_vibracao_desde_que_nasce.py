@@ -16,6 +16,7 @@ As duas réguas medem as duas metades da cura, e as duas mordem:
 """
 from __future__ import annotations
 
+import contextlib
 import os
 import sys
 import time
@@ -66,16 +67,12 @@ class _UInputComoOPythonEvdev:
     def close(self) -> None:
         self.fechado = True
         for fd in (self.fd, self._aviso):
-            try:
+            with contextlib.suppress(OSError):
                 os.close(fd)
-            except OSError:
-                pass
 
     def read_one(self) -> SimpleNamespace | None:
-        try:
+        with contextlib.suppress(BlockingIOError):
             os.read(self.fd, 1)
-        except BlockingIOError:
-            pass
         return self.fila.popleft() if self.fila else None
 
     def begin_upload(self, request_id: int) -> SimpleNamespace:
