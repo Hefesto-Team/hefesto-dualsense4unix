@@ -767,8 +767,21 @@ class TestOTradutor:
         dono = dono_do_vpad_pelo_coop(coop, self.MESA)
         assert dono(vpad_mac(P1, 1)) is None
 
-    def test_a_pergunta_que_falha_cala_a_mesa_e_diz_por_que(self) -> None:
-        """Na dúvida, ninguém vibra — e o diário diz a razão."""
+    def test_a_pergunta_que_falha_diz_por_que_e_nao_traduz_ninguem(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
+    ) -> None:
+        """Na dúvida, o vpad não se traduz — e o diário diz a razão.
+
+        Desde a A-HAPTICA-QUEM-JOGA-02 (26/09/2026) a pergunta tem ``try``
+        próprio e a varredura segue sem tradutor (é dela que sai o retrato da
+        partida); o ``/proc`` aqui é de mentira e vazio, para a régua não medir
+        a máquina.
+        """
+        monkeypatch.setattr(
+            qjl,
+            "quem_o_jogo_le",
+            functools.partial(qjl.quem_o_jogo_le, raiz_proc=tmp_path, raiz_input=tmp_path),
+        )
 
         def _falha() -> dict[str, str]:
             raise RuntimeError("a mesa mudou no meio")
