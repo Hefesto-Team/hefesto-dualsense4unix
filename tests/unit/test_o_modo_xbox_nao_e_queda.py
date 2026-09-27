@@ -16,7 +16,15 @@ Mordidas: devolva ao `_promote_player` o critério antigo (máscara DualSense no
 uinput, sem o caminho) e o anúncio volta no modo Xbox; devolva ao
 `_vpad_backend_motivo` o piso `sem_uhid` sem o caminho e o estado volta a dizer
 queda.
+
+E a promoção do connect (`gamepad.upgrade_primary_vpad_to_uhid`) era o sétimo
+lugar, achado no diário do install de 27/09 às 16h15: o Freestyle aplicou o
+modo Xbox, o controle conectou, e a promoção tratou o pad como queda, o
+recriou sem caminho e o modo da sessão voltou ao DualSense
+(`vpad_promovendo_para_uhid` seguido de `caminho=dualsense`). Mordidas: devolva
+ao gate a pergunta só pela máscara, ou tire o caminho do restart.
 """
+
 from __future__ import annotations
 
 import sys
@@ -28,6 +36,7 @@ import pytest
 
 from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager, _SecondaryPlayer
+from hefesto_dualsense4unix.daemon.subsystems import gamepad
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import dedup_status
 from hefesto_dualsense4unix.integrations import uhid_gamepad
 from hefesto_dualsense4unix.integrations.virtual_pad import (
@@ -172,9 +181,7 @@ class TestOCoopEOEstadoPerguntamAoDono:
         daemon, publicados = _promove(CAMINHO_DUALSENSE, monkeypatch)
         vpad = daemon._coop_manager._players[_JOGADOR_2].vpad
         try:
-            assert publicados == [
-                ("vpad.degraded", {"player": 2, "motivo": "uhid_indisponivel"})
-            ]
+            assert publicados == [("vpad.degraded", {"player": 2, "motivo": "uhid_indisponivel"})]
             assert IpcHandlersMixin._vpad_backend_motivo(vpad) == (
                 "uinput",
                 "uhid_indisponivel",
@@ -191,3 +198,57 @@ class TestOCoopEOEstadoPerguntamAoDono:
                 assert dedup_status(daemon) == (not esperado, esperado), caminho
             finally:
                 vpad.stop()
+
+
+def _connect(pad: Any, monkeypatch: pytest.MonkeyPatch) -> tuple[bool, list[Any]]:
+    """O controle conecta com o `pad` já de pé e o uhid de volta ao ar.
+
+    O uhid só volta DEPOIS de o pad nascer: a fábrica real, com ele no ar,
+    abriria o `/dev/uhid` da máquina.
+    """
+    partidas: list[Any] = []
+    monkeypatch.setattr(
+        gamepad, "stop_gamepad_emulation", lambda _d, **kw: partidas.append(("stop", kw))
+    )
+    monkeypatch.setattr(
+        gamepad,
+        "start_gamepad_emulation",
+        lambda _d, flavor=None, **kw: partidas.append(("start", kw)) or True,
+    )
+    monkeypatch.setattr(uhid_gamepad, "uhid_available", lambda: True)
+    daemon = SimpleNamespace(
+        _gamepad_device=pad,
+        controller=SimpleNamespace(hidraw_path=lambda uniq=None: None),
+        config=SimpleNamespace(gamepad_flavor="dualsense", gamepad_emulation_enabled=True),
+    )
+    return gamepad.upgrade_primary_vpad_to_uhid(daemon), partidas  # type: ignore[arg-type]
+
+
+@pytest.mark.usefixtures("fabrica_sem_kernel")
+class TestAPromocaoDoConnectPerguntaAoDono:
+    def test_o_modo_xbox_nao_e_promovido_quando_o_controle_conecta(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        pad = _pad(CAMINHO_XBOX)
+        try:
+            promoveu, partidas = _connect(pad, monkeypatch)
+            assert (promoveu, partidas) == (False, []), (
+                "o connect promoveu o pad do modo Xbox para o uhid e desfez a "
+                "escolha dela: foi o Freestyle no install de 27/09"
+            )
+        finally:
+            pad.stop()
+
+    def test_o_pad_que_caiu_renasce_no_caminho_em_que_nasceu(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        pad = _pad(CAMINHO_DUALSENSE)
+        try:
+            promoveu, partidas = _connect(pad, monkeypatch)
+            assert promoveu is True
+            assert partidas[-1] == ("start", {"origin": "profile", "caminho": CAMINHO_DUALSENSE}), (
+                "a promoção muda só o canal; sem o caminho o start não opina e "
+                "o modo da sessão volta ao default"
+            )
+        finally:
+            pad.stop()

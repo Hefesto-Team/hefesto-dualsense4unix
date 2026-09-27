@@ -30,7 +30,11 @@ from hefesto_dualsense4unix.integrations import uhid_gamepad
 
 
 class _FakeUinputPad:
+    """O pad que caiu: máscara DualSense no uinput, sem modo escolhido."""
+
     flavor = "dualsense"
+    backend = "uinput"
+    caminho = None
 
     def __init__(self) -> None:
         self.parado = False

@@ -1761,8 +1761,10 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
     chamada quando o controle conecta (boot em `lifecycle.run`; hotplug tardio
     no `reconnect_loop` — VPAD-01). Conservadora de propósito:
 
-    - só age no vpad do P1 que é uinput com máscara DualSense (a Xbox é uinput
-      por design — o `hid_playstation` não faz bind em VID/PID da Microsoft);
+    - só age no vpad do P1 que caiu (`motivo_da_degradacao`): máscara DualSense
+      no uinput com o caminho do DualSense. A máscara Xbox é uinput por design
+      (o `hid_playstation` não faz bind em VID/PID da Microsoft), e o modo Xbox
+      é uinput por escolha dela; o pad renasce no caminho em que nasceu;
     - precheck `uhid_available()` (ressalva do VPAD-01): sem ele, com o uhid
       persistentemente quebrado (permissão do nó, kernel sem `hid_playstation`),
       cada conexão destruiria e recriaria o vpad uinput que ESTÁ funcionando —
@@ -1787,6 +1789,10 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
     from hefesto_dualsense4unix.integrations.uhid_gamepad import (
         UhidDualSense,
         uhid_available,
+    )
+    from hefesto_dualsense4unix.integrations.virtual_pad import (
+        caminho_do_vpad,
+        motivo_da_degradacao,
     )
 
     device = getattr(daemon, "_gamepad_device", None)
@@ -1818,7 +1824,9 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
         )
         # ORIGEM-QUE-MENTE-01: revive pós-falha é rede de segurança, não gesto.
         return start_gamepad_emulation(daemon, origin="profile")
-    if getattr(device, "flavor", None) != "dualsense":
+    # O uinput do modo Xbox é escolha dela, não queda (O-MODO-XBOX-NAO-E-QUEDA-02):
+    # a pergunta tem um dono só, e ele lê a máscara, o canal e o caminho.
+    if motivo_da_degradacao(device) is None:
         return False
     if not uhid_available():
         return False  # uhid segue quebrado: derrubar o uinput seria só input drop
@@ -1860,7 +1868,12 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
     # `config.gamepad_flavor` (a da sessão, intacta) enquanto `mascara_efetiva`
     # devolve a escolha do aparelho para o vpad — que é o uhid que esta função
     # veio buscar. O gate lá em cima já garantiu que a efetiva é dualsense.
-    return start_gamepad_emulation(daemon, origin="profile")
+    #
+    # E o caminho é o do pad que caiu, pelo mesmo motivo: sem ele o start não
+    # opina, e o modo da sessão (o do perfil em foco) voltava ao default.
+    return start_gamepad_emulation(
+        daemon, origin="profile", caminho=caminho_do_vpad(device)
+    )
 
 
 def primary_identity(daemon: DaemonProtocol) -> str | None:
@@ -2264,6 +2277,7 @@ def start_gamepad_emulation(
     flavor: str | None = None,
     *,
     origin: OrigemEmulacao,
+    caminho: str | None = None,
 ) -> bool:
     """Cria o gamepad virtual com a máscara `flavor`. Idempotente. True = ATIVO.
 
@@ -2280,7 +2294,7 @@ def start_gamepad_emulation(
     devolveu o default. Há portão que reprova o retorno dele.
     """
     return (
-        start_gamepad_emulation_desfecho(daemon, flavor, origin=origin)
+        start_gamepad_emulation_desfecho(daemon, flavor, origin=origin, caminho=caminho)
         in DESFECHOS_EMULACAO_ATIVA
     )
 
