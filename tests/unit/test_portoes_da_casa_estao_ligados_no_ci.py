@@ -121,12 +121,27 @@ CABECALHO = "_LISTA()"
 #: passarem por vacuidade. Sobe quando alguém quiser subi-lo.
 PISO = 7
 
-#: Portão da tabela que, por decisão registrada, NÃO roda no CI. Vazio em
-#: 12/08/2026 — os sete estão todos lá. A chave é o caminho do script; o valor
-#: é a razão, com data e com o motivo pelo qual o CI não é o lugar dele.
-#: Declarar é honesto e este portão não castiga honestidade — só não deixa a
-#: lápide envelhecer calada.
-SO_NA_MAQUINA_DELA: dict[str, str] = {}
+def so_na_maquina_dela() -> dict[str, str]:
+    """Os portões da tabela que, por decisão registrada, NÃO rodam no CI.
+
+    O dono é o bloco `_DIVERGENCIAS` do `scripts/portoes.sh`, nas linhas
+    `FORA-DO-CI|<script>|<razão>`. Até 27/09/2026 esta guarda tinha a própria
+    lista, vazia, enquanto o `portoes.sh` já declarava os portões locais: dois
+    donos para a mesma pergunta, e o portão declarado lá reprovava aqui.
+    Declarar é honesto e este portão não castiga honestidade — só não deixa a
+    lápide envelhecer calada.
+    """
+    texto = PORTOES_SH.read_text(encoding="utf-8")
+    inicio = texto.find("_DIVERGENCIAS()")
+    assert inicio != -1, "o portoes.sh perdeu o bloco `_DIVERGENCIAS()`"
+    declarados: dict[str, str] = {}
+    for linha in texto[inicio:].splitlines()[1:]:
+        if linha.strip() == "}":
+            break
+        if linha.startswith("FORA-DO-CI|"):
+            _, caminho, razao = linha.split("|", 2)
+            declarados[caminho] = razao
+    return declarados
 
 
 #: A CICATRIZ, e ela está CURADA — fica porque explica o desenho de hoje.
@@ -159,7 +174,11 @@ def bloco_de_portoes() -> str:
     inicio = texto.find("_LISTA()")
     if inicio < 0:
         return ""
-    fim = texto.find("TABELA", texto.find("<<'TABELA'", inicio) + 10)
+    # O fim é a LINHA `TABELA`, que fecha o heredoc. Até 27/09/2026 era a
+    # primeira ocorrência da palavra, e um comentário da própria tabela («a
+    # TABELA dela», linha 261) cortava o bloco ali: os portões de baixo
+    # ficavam fora desta guarda.
+    fim = texto.find("\nTABELA\n", texto.find("<<'TABELA'", inicio))
     return texto[inicio:fim] if fim > 0 else ""
 
 
@@ -320,7 +339,7 @@ def test_a_ancora_da_lista_de_portoes_continua_de_pe() -> None:
 def test_todo_portao_da_casa_e_invocado_no_ci() -> None:
     """O que a casa manda rodar antes da leva tem de rodar no CI também."""
     for portao in portoes_da_casa():
-        if portao in SO_NA_MAQUINA_DELA:
+        if portao in so_na_maquina_dela():
             continue
         assert passos_que_rodam(portao), (
             f"nenhum passo do ci.yml INVOCA `{portao}`, e o portoes.sh manda "
@@ -329,7 +348,7 @@ def test_todo_portao_da_casa_e_invocado_no_ci() -> None:
             "portão tem de rodar, não de ser mencionado.\n"
             "Foi assim que o check_test_data.sh passou meses existindo, "
             "reprovando e não rodando (BUG-GATE-TEST-DATA-NAO-RODAVA-01).\n"
-            "Se ele NÃO deve rodar no CI, declare em `SO_NA_MAQUINA_DELA` "
+            "Se ele NÃO deve rodar no CI, declare-o `FORA-DO-CI` no `scripts/portoes.sh` "
             "com a razão e a data."
         )
 
@@ -402,9 +421,9 @@ def test_todo_portao_da_casa_aponta_para_arquivo_que_existe() -> None:
 
 
 def test_a_lista_de_lacunas_nao_envelhece_calada() -> None:
-    """Sem isto, `SO_NA_MAQUINA_DELA` vira o lugar onde se esconde o que incomoda."""
+    """Sem isto, o `FORA-DO-CI` vira o lugar onde se esconde o que incomoda."""
     derivados = portoes_da_casa()
-    for chave, razao in SO_NA_MAQUINA_DELA.items():
+    for chave, razao in so_na_maquina_dela().items():
         assert chave in derivados, (
             f"{chave!r} está declarado como portão de fora do CI e nem consta "
             "mais da tabela — APAGUE a entrada."
