@@ -134,8 +134,17 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> _Estado:
     # este dublê elas reprovavam por AMBIENTE (a máquina da suíte não tem jogo
     # aberto), e um vermelho de ambiente se lê como regressão: foi o que
     # aconteceu, e ficou vermelho na árvore por dias.
+    #
+    # **E O VOTO MUDOU DE DONO — A-HAPTICA-QUEM-JOGA-02, 26/09/2026.** Quem
+    # joga é quem mexeu desde que o jogo abriu (`_quem_mexeu_na_partida`); o
+    # evdev que o jogo segura (`_quem_o_jogo_le`) virou pista e não vota. O
+    # dublê do voto põe todo controle jogando; o da pista segue, para a
+    # varredura não ler o `/proc` da máquina.
     monkeypatch.setattr(
-        mod.AltoFalanteSubsystem, "_quem_o_jogo_le",
+        mod.AltoFalanteSubsystem, "_quem_o_jogo_le", lambda self, controles: set()
+    )
+    monkeypatch.setattr(
+        mod.AltoFalanteSubsystem, "_quem_mexeu_na_partida",
         lambda self, controles: {
             str(getattr(c, "uniq", "")).lower() for c in controles},
     )

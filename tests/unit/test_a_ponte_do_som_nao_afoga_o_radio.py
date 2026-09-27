@@ -150,10 +150,15 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> _Bancada:
     monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **_: type("N", (), {"fd": 7})())
     # O SEGUNDO LADO DO GATE DA HÁPTICA, dublado pela mesma razão das réguas
     # irmãs: a máquina da suíte não tem jogo aberto, e vermelho de ambiente
-    # se lê como regressão.
+    # se lê como regressão. Quem vota é `_quem_mexeu_na_partida` desde a
+    # A-HAPTICA-QUEM-JOGA-02 (26/09/2026); o `_quem_o_jogo_le` é pista,
+    # dublado vazio só para não ler o `/proc` da máquina.
+    monkeypatch.setattr(
+        mod.AltoFalanteSubsystem, "_quem_o_jogo_le", lambda self, controles: set()
+    )
     monkeypatch.setattr(
         mod.AltoFalanteSubsystem,
-        "_quem_o_jogo_le",
+        "_quem_mexeu_na_partida",
         lambda self, controles: {str(getattr(c, "uniq", "")).lower() for c in controles},
     )
 

@@ -1,5 +1,14 @@
 """A-HAPTICA-SEGUE-QUEM-ALIMENTA-O-VPAD-01 — vibra o controle que dirige o boneco.
 
+**NOTA DE 26/09/2026 (A-HAPTICA-QUEM-JOGA-02): o evdev deixou de votar.** O
+GE não segura evdev de DualSense nenhum, e em 21/09 o evdev pôs os quatro em
+háptica num jogo de um jogador. Quem vota no portão é quem MEXEU desde que o
+jogo abriu (``daemon/subsystems/quem_mexe.py``). O tradutor medido aqui segue
+de pé e responde a PISTA da linha ``haptica_portao_fechado``
+(``evdev_le_este``); a régua da fiação (``quem_vibra``) passou a marcar a mão
+que o laço marca — a do dono do posto de agora, ``primary_uniq``, o mesmo dono
+que o tradutor pergunta ao co-op. O resto deste texto é o registro de 25/09.
+
 **O defeito.** O gate da háptica pelo rádio (QUEM-JOGA-E-QUEM-VIBRA-01) só
 deixa entrar em modo háptica o controle que o JOGO está lendo, e com máscara o
 jogo lê o vpad. A tradução vpad→físico derivava o MAC de cada físico
@@ -26,7 +35,8 @@ alvo que o rumble do jogo já segue) e ``quem_o_jogo_le.dono_do_vpad_pelo_coop``
 
 **Quem vibra** é medido também pela FIAÇÃO: ``_casar_as_pontes`` com o jogo
 tocando no endpoint de TODO controle no rádio (o pior caso de 20/09) — só a
-ponte de quem dirige um boneco que o jogo lê entra em modo háptica.
+ponte de quem dirige um boneco entra em modo háptica (desde 26/09, pela mão
+que o laço marca, e não pelo evdev: ver a nota no alto).
 
 **A matriz vai de UM a quatro** (conferência, 25/09/2026): um controle só é
 a mesa de quase todo mundo, e o posto do boot dele era o que a forja nunca
@@ -457,7 +467,16 @@ def quem_vibra(
     proc: pathlib.Path,
     entrada: pathlib.Path,
 ) -> set[str]:
-    """Os controles no rádio cuja ponte subiu em modo HÁPTICA nesta volta."""
+    """Os controles no rádio cuja ponte subiu em modo HÁPTICA, com a mão no posto.
+
+    A primeira volta abre a partida (o jogo do ``proc`` de mentira). Depois, a
+    mão no controle do posto, marcada como o laço do daemon marca
+    (``anotar_o_primario``, que pergunta ``primary_uniq`` ao backend da
+    bancada); e a segunda volta decide. O evdev não vota
+    (A-HAPTICA-QUEM-JOGA-02).
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import anotar_o_primario
+
     _as_pontes_de_mentira(monkeypatch)
     monkeypatch.setattr(
         qjl,
@@ -465,6 +484,11 @@ def quem_vibra(
         functools.partial(qjl.quem_o_jogo_le, raiz_proc=proc, raiz_input=entrada),
     )
     sub = AltoFalanteSubsystem(daemon=bancada.daemon)
+    sub._casar_as_pontes(os_controles(bancada))
+    a_mao_no_posto = SimpleNamespace(
+        raw_lx=128, raw_ly=128, raw_rx=128, raw_ry=128, l2_raw=0, r2_raw=255
+    )
+    anotar_o_primario(bancada.daemon, a_mao_no_posto, frozenset())
     sub._casar_as_pontes(os_controles(bancada))
     return {uniq for uniq, modo in sub._modo_da_ponte.items() if modo == "haptica"}
 

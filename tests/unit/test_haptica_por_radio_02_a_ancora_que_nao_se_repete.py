@@ -280,9 +280,14 @@ def mesa(monkeypatch: pytest.MonkeyPatch) -> _Mesa:
     # QUEM-JOGA-E-QUEM-VIBRA-01 exige também que o jogo esteja LENDO aquele
     # controle, e a máquina da suíte não tem jogo aberto. Sem o dublê estas
     # réguas reprovam por AMBIENTE, e vermelho de ambiente se lê como
-    # regressão.
+    # regressão. Desde a A-HAPTICA-QUEM-JOGA-02 (26/09/2026) quem vota é
+    # `_quem_mexeu_na_partida`; o `_quem_o_jogo_le` é pista, dublado vazio
+    # só para a varredura não ler o `/proc` da máquina.
     monkeypatch.setattr(
-        mod.AltoFalanteSubsystem, "_quem_o_jogo_le",
+        mod.AltoFalanteSubsystem, "_quem_o_jogo_le", lambda self, controles: set()
+    )
+    monkeypatch.setattr(
+        mod.AltoFalanteSubsystem, "_quem_mexeu_na_partida",
         lambda self, controles: {
             str(getattr(c, "uniq", "")).lower() for c in controles},
     )

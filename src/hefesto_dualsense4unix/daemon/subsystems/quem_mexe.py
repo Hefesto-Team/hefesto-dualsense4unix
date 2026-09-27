@@ -15,7 +15,10 @@ E o ``hidraw`` não separa quem joga: o ``winedevice`` segura o de TODOS os
 vpads. Contá-lo devolveria o espelhado de 20/09 (o P3 vibrando num jogo de um
 jogador). O report de saída que o jogo escreve no vpad também não separa: o
 jogo escreveu gatilho em três vpads em 21/09, e a Steam escreve LED nos vpads
-antes de o jogo abrir.
+antes de o jogo abrir. E o ``eventN``, quando algum processo de jogo o segura,
+também não separa: em 21/09 ele pôs os QUATRO em háptica num jogo de um
+jogador. **Nenhum fd aberto vota** (A-HAPTICA-QUEM-JOGA-02); o evdev fica só
+como pista na linha do portão fechado.
 
 O SINAL QUE SOBRA, E O DAEMON JÁ O TEM
 ======================================

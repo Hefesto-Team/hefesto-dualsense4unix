@@ -771,9 +771,9 @@ class AltoFalanteSubsystem:
 
     name = "alto_falante"
 
-    #: Quem o jogo estava LENDO na última volta — lembrado para o vigia do
-    #: modo poder adivinhar o que a volta decidiria sem varrer `/proc` a cada
-    #: :data:`VIGIA_DO_MODO_S`. Fica velho por até uma volta, e o preço de
+    #: Quem JOGAVA na última volta (quem mexeu desde que o jogo abriu) —
+    #: lembrado para o vigia do modo poder adivinhar o que a volta decidiria
+    #: sem varrer `/proc` a cada :data:`VIGIA_DO_MODO_S`. Fica velho por até uma volta, e o preço de
     #: estar velho é UMA reconciliação a mais, nunca uma ponte errada.
     #:
     #: **MORA NO CORPO DA CLASSE, e não no `__init__`** — e o motivo é uma
@@ -784,11 +784,15 @@ class AltoFalanteSubsystem:
     _jogando: frozenset[str] = frozenset()
 
     #: O que a última volta viu do jogo (``quem_o_jogo_le.RetratoDoJogo``):
-    #: os pids, os ``eventN`` e os ``hidrawN`` que ele segura, da MESMA
-    #: varredura de ``/proc`` que decide quem o jogo lê. ``None`` = a pergunta
-    #: não foi feita ou falhou, e aí a partida não abre nem fecha
-    #: (A-HAPTICA-QUEM-JOGA-01). No corpo da classe pela razão do ``_jogando``.
+    #: os pids, os ``eventN`` e os ``hidrawN`` que ele segura, da varredura de
+    #: ``/proc`` da volta. ``None`` = a varredura não foi feita ou falhou, e aí
+    #: a partida não abre nem fecha (A-HAPTICA-QUEM-JOGA-01). No corpo da
+    #: classe pela razão do ``_jogando``.
     _retrato_do_jogo: Any = None
+    #: Os ``uniq`` cujo evdev um processo de jogo segurava na última volta —
+    #: a PISTA de :meth:`_quem_o_jogo_le`, que não vota (A-HAPTICA-QUEM-JOGA-02)
+    #: e vai à linha ``haptica_portao_fechado`` como ``evdev_le_este``.
+    _lidos_pelo_evdev: frozenset[str] = frozenset()
     #: ``{uniq: motivo}`` de quem está com o portão da háptica fechado AGORA —
     #: o endpoint tocando e o controle fora de quem joga. Lembrado para a
     #: linha ``haptica_portao_fechado`` sair só na mudança. Imutável no corpo
@@ -1266,13 +1270,19 @@ class AltoFalanteSubsystem:
         self._faltam_ancoras = faltam
 
     def _quem_o_jogo_le(self, controles: list[Any]) -> set[str]:
-        """Os ``uniq`` que algum JOGO está lendo agora — em minúsculas.
+        """Os ``uniq`` (em minúsculas) cujo evdev algum processo de jogo segura. PISTA, NÃO VOTO.
 
-        QUEM-JOGA-E-QUEM-VIBRA-01. Devolve conjunto VAZIO quando não há jogo,
-        quando `/proc` não se lê, ou quando o que o jogo abriu não se traduz em
-        controle nenhum. **O vazio é o lado seguro**: um controle que não vibra
-        é uma falta; um que vibra sozinho na mão de alguém é o defeito que ela
-        reportou em 20/09.
+        QUEM-JOGA-E-QUEM-VIBRA-01 (20/09) fez disto o voto do portão da
+        háptica. A A-HAPTICA-QUEM-JOGA-02 (26/09) o tirou de lá: o GE não segura
+        evdev de DualSense nenhum, e em 21/09 o evdev deixou os QUATRO entrarem
+        num jogo de um jogador. Quem vota é :meth:`_quem_mexeu_na_partida`; o que
+        esta passada entrega de essencial é o RETRATO do jogo
+        (``self._retrato_do_jogo``), que abre e fecha a partida. O conjunto
+        devolvido vai só à linha do portão fechado (``evdev_le_este``) — é por
+        ela que o detentor de 21/09, se voltar, aparece no diário.
+
+        Devolve conjunto VAZIO quando não há jogo, quando `/proc` não se lê, ou
+        quando o que o jogo abriu não se traduz em controle nenhum.
 
         A lista de físicos vem de TODOS os controles da mesa, e não só dos do
         rádio: com máscara, o evdev que o jogo seguraria é o do vpad, e quem o
@@ -1280,11 +1290,11 @@ class AltoFalanteSubsystem:
         co-op, e não a forja do MAC (A-HAPTICA-SEGUE-QUEM-ALIMENTA-O-VPAD-01):
         o MAC diz de quem o vpad nasceu, e o posto troca de mão sem renascer.
 
-        **Com o GE-Proton este caminho sai vazio** — o winebus não segura evdev
-        de DualSense nenhum, só o ``hidraw`` (A-HAPTICA-QUEM-JOGA-01). Quem
-        responde por quem joga, aí, é :meth:`_quem_mexeu_na_partida`; este fica
-        como caminho a mais. A mesma passada de ``/proc`` deixa em
-        ``self._retrato_do_jogo`` o que o jogo segura.
+        **A pergunta ao co-op tem ``try`` próprio** (A-HAPTICA-QUEM-JOGA-02): ela
+        só serve para traduzir o evdev de um vpad, e o erro dela levava junto a
+        varredura inteira — o retrato não chegava à volta, e a partida, que não
+        precisa do co-op, não abria nem fechava. Sem tradutor, o vpad não se
+        traduz: nunca se chuta um físico.
         """
         from hefesto_dualsense4unix.integrations.quem_o_jogo_le import (
             dono_do_vpad_pelo_coop,
@@ -1297,16 +1307,18 @@ class AltoFalanteSubsystem:
         if not fisicos:
             return set()
         coop = getattr(getattr(self, "_daemon", None), "_coop_manager", None)
+        # AUSÊNCIA É RESPOSTA, e ela é registrada nos dois `except`: calar sem
+        # dizer por quê é o defeito que esta casa mais persegue.
+        dono: Any = None
+        try:
+            dono = dono_do_vpad_pelo_coop(coop, fisicos)
+        except Exception as erro:
+            logger.info("haptica_nao_sei_quem_joga", motivo=str(erro))
         try:
             return quem_o_jogo_le(
-                fisicos=fisicos,
-                dono_do_vpad=dono_do_vpad_pelo_coop(coop, fisicos),
-                ao_ver_o_jogo=self._ver_o_jogo,
+                fisicos=fisicos, dono_do_vpad=dono, ao_ver_o_jogo=self._ver_o_jogo
             )
         except Exception as erro:
-            # AUSÊNCIA É RESPOSTA, e ela é registrada: um erro aqui cala a
-            # háptica da mesa inteira, e calar sem dizer por quê é o defeito
-            # que esta casa mais persegue.
             logger.info("haptica_nao_sei_quem_joga", motivo=str(erro))
             return set()
 
@@ -1360,7 +1372,9 @@ class AltoFalanteSubsystem:
         nele sem uma linha no diário. Uma linha por controle quando o estado
         começa ou muda de motivo, com o que o jogo segura (os ``eventN`` e os
         ``hidrawN`` de vpad): com o PRAGMATA, ``evdev_do_jogo=0
-        hidraw_de_vpad=2`` teria dito a causa sem ninguém medir. O repouso
+        hidraw_de_vpad=2`` teria dito a causa sem ninguém medir. E com a pista
+        do evdev (``evdev_le_este``, A-HAPTICA-QUEM-JOGA-02): o evdev não vota,
+        e esta é a linha que mostra quando ele diria outra coisa. O repouso
         (endpoint sem stream) não loga, e sair do estado também não.
         """
         anterior = self._portao_fechado.get(uniq)
@@ -1383,6 +1397,7 @@ class AltoFalanteSubsystem:
             motivo=motivo,
             evdev_do_jogo=evdev,
             hidraw_de_vpad=hidraw,
+            evdev_le_este=uniq.lower() in self._lidos_pelo_evdev,
         )
 
     def _o_que_o_jogo_segura(self) -> tuple[int | None, int | None]:
@@ -1570,17 +1585,19 @@ class AltoFalanteSubsystem:
         # entrava em TODO controle cujo endpoint tivesse stream — e num jogo de
         # um jogador isso não é ninguém além de quem segura o controle.
         #
-        # É calculado UMA VEZ por volta, e não por controle: são duas varreduras
-        # de `/proc`, e repeti-las por peça multiplicaria o custo pela mesa.
+        # QUEM JOGA É QUEM MEXEU DESDE QUE O JOGO ABRIU — decisão
+        # D-2609-QUEM-JOGA-E-QUEM-MEXE, A-HAPTICA-QUEM-JOGA-01 e -02, 26/09/2026.
+        # O FD ABERTO PELO JOGO NÃO VOTA, nem o `hidraw` nem o `eventN`: o
+        # winedevice do GE segura o hidraw de TODOS os vpads e evdev nenhum (o
+        # PRAGMATA de 26/09 ficou sem ninguém), e em 21/09 o evdev pôs os QUATRO
+        # em háptica num jogo de um jogador. Um fd diz o que o processo abriu,
+        # não quem está jogando.
         #
-        # E QUEM JOGA É TAMBÉM QUEM MEXEU — A-HAPTICA-QUEM-JOGA-01, 26/09/2026.
-        # Com máscara DualSense o GE segura só o hidraw de TODOS os vpads e
-        # nenhum evdev: o conjunto de cima sai vazio por construção, e contar o
-        # hidraw devolveria o espelhado de 20/09. Decisão D-2609-QUEM-JOGA-E-
-        # QUEM-MEXE: quem joga é o físico que teve entrada desde que o jogo
-        # abriu; o evdev fica como caminho a mais.
-        jogando = self._quem_o_jogo_le(controles)
-        jogando |= self._quem_mexeu_na_partida(controles)
+        # A varredura de `/proc` roda UMA VEZ por volta, e ANTES: é dela que sai
+        # o retrato que abre e fecha a partida. O que o evdev traduz fica só como
+        # pista da linha do portão fechado (`evdev_le_este`).
+        self._lidos_pelo_evdev = frozenset(self._quem_o_jogo_le(controles))
+        jogando = self._quem_mexeu_na_partida(controles)
         self._jogando = frozenset(jogando)
 
         governador = self.governador
@@ -1604,9 +1621,8 @@ class AltoFalanteSubsystem:
             endpoint = self._endpoints.get(uniq)
             # O GATE TEM DOIS LADOS, e os dois precisam ser verdade: o jogo
             # abriu o canal DAQUELE endpoint (o sinal de sempre) E aquele
-            # controle JOGA — o jogo o lê, ou ele mexeu desde que o jogo abriu.
-            # Só o primeiro deixava três controles vibrarem num jogo de um
-            # jogador.
+            # controle JOGA — mexeu desde que o jogo abriu. Só o primeiro
+            # deixava três controles vibrarem num jogo de um jogador.
             este_joga = uniq.lower() in jogando
             modo = (
                 "haptica"
@@ -2016,7 +2032,7 @@ class AltoFalanteSubsystem:
 
         **NÃO DUPLICA A DECISÃO**, e por isso o palpite é grosseiro: quem
         decide o modo continua sendo `_casar_as_pontes`, que também pergunta
-        quem o jogo LÊ. O vigia reusa a última resposta (`self._jogando`) só
+        quem JOGA. O vigia reusa a última resposta (`self._jogando`) só
         para não acordar a volta à toa; estar velha custa uma reconciliação a
         mais, nunca uma ponte errada.
 

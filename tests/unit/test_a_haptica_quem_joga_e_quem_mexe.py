@@ -10,7 +10,9 @@ vibrava, e o diário não dizia nada.
 **A decisão** (``D-2609-QUEM-JOGA-E-QUEM-MEXE``, por delegação): quem joga é o
 físico que teve entrada — botão, gatilho ou eixo fora da zona morta — desde
 que o jogo abriu, somado ao endpoint dele tocando. Contar o ``hidraw``
-devolveria o espelhado de 20/09 (o P3 vibrando num jogo de um jogador).
+devolveria o espelhado de 20/09 (o P3 vibrando num jogo de um jogador), e o
+``eventN`` também não vota (A-HAPTICA-QUEM-JOGA-02): em 21/09 ele pôs os
+quatro em háptica; aqui ele é só a pista ``evdev_le_este`` da linha do portão.
 
 **O mundo destas réguas é o medido**, montado de mentira: um ``/proc`` com o
 processo do jogo segurando só o ``hidraw`` dos vpads (e o de um teclado), a
@@ -235,10 +237,10 @@ class TestOMundoMedido:
     def test_so_o_controle_que_mexeu_entra_em_haptica(self, bancada: Bancada) -> None:
         """A régua da sprint.
 
-        MORDIDA: tire ``jogando |= self._quem_mexeu_na_partida(controles)`` do
-        ``_casar_as_pontes`` — ninguém entra (o defeito de 26/09). E trocar o
-        sinal por «o jogo segura o hidraw do vpad» põe os QUATRO: o mundo
-        abaixo prova que o jogo segura os quatro.
+        MORDIDA: troque ``jogando = self._quem_mexeu_na_partida(controles)``
+        por ``set()`` no ``_casar_as_pontes`` — ninguém entra (o defeito de
+        26/09). E trocar o sinal por «o jogo segura o hidraw do vpad» põe os
+        QUATRO: o mundo abaixo prova que o jogo segura os quatro.
         """
         bancada.mundo.abrir_o_jogo_do_ge()
         assert bancada.volta() == set(), "a partida abriu agora: ninguém mexeu ainda"
@@ -269,6 +271,72 @@ class TestOMundoMedido:
         bancada.mexer(P1)
         assert bancada.marcas.jogo_aberto is False
         assert bancada.volta() == set()
+
+
+# ---------------------------------------------------------------------------
+# O fd aberto não vota — A-HAPTICA-QUEM-JOGA-02
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "nos",
+    [[f"event{500 + i}" for i in range(4)], [f"event{30 + i}" for i in range(4)]],
+    ids=["evdev-dos-quatro-vpads", "evdev-dos-quatro-fisicos"],
+)
+def test_o_evdev_cheio_nao_poe_ninguem_em_haptica(bancada: Bancada, nos: list[str]) -> None:
+    """Um processo de jogo segura o ``eventN`` dos quatro, e só o P2 mexeu: só o P2 vibra.
+
+    O mundo que as réguas acima não montam: nelas o GE não segura evdev nenhum,
+    e uma união com o evdev passaria sem nunca ter sido medida cheia. Em 21/09,
+    às 01:51, com o PRAGMATA de um jogador, o portão pôs os QUATRO em háptica, e
+    o único sinal daquele código era o evdev (conferência de 26/09, §2.1). O
+    detentor não foi achado; se ele voltar — ou se um Proton segurar o evdev dos
+    vpads, como o SDL faz com todo controle —, o evdev diz «o jogo lê os
+    quatro». O primeiro caso é o dos vpads (o tradutor do co-op liga cada um ao
+    físico que o alimenta); o segundo, o de 21/09, com os físicos.
+
+    MORDIDA: devolva ``jogando |= <o que o evdev traduz>`` ao ``_casar_as_pontes``
+    — os quatro entram antes de alguém tocar num controle.
+    """
+    bancada.mundo.abrir_o_jogo_do_ge()
+    bancada.mundo.processo(4400, jogo=True, nos=nos)
+    assert bancada.volta() == set(), "o fd aberto pôs em háptica quem não tocou no controle"
+    with structlog.testing.capture_logs() as registros:
+        bancada.vigiar()
+    linhas = _linhas(registros)
+    assert {r["uniq"] for r in linhas} == set(MESA)
+    assert {r["evdev_le_este"] for r in linhas} == {True}, (
+        "a pista do evdev tem de chegar ao diário: é por ela que o detentor aparece"
+    )
+    bancada.mexer(P2)
+    assert bancada.volta() == {P2}
+    assert bancada.vigiar() is False, "o vigia acordou a volta por quem não mexeu"
+
+
+def test_a_pergunta_ao_coop_que_falha_nao_segura_a_partida(bancada: Bancada) -> None:
+    """O co-op levanta quando o jogo abre, e mesmo assim a partida abre e o P3 entra.
+
+    A marca não precisa do co-op; só o tradutor do evdev precisa. Com a pergunta
+    avaliada ANTES da varredura, o erro dela levava o retrato junto, e a partida
+    não abria nem fechava.
+
+    MORDIDA: devolva a pergunta ao co-op para o argumento de ``quem_o_jogo_le``,
+    dentro do mesmo ``try`` — a partida não abre.
+    """
+
+    def _falha() -> dict[str, str]:
+        raise RuntimeError("a mesa mudou no meio")
+
+    bancada.daemon._coop_manager = SimpleNamespace(quem_alimenta_cada_vpad=_falha)
+    bancada.mundo.abrir_o_jogo_do_ge()
+    with structlog.testing.capture_logs() as registros:
+        assert bancada.volta() == set()
+    assert "haptica_nao_sei_quem_joga" in [r["event"] for r in registros], (
+        "o erro do co-op tem de ir ao diário"
+    )
+    assert bancada.marcas.jogo_aberto is True, "o erro do co-op segurou a partida fechada"
+    bancada.mexer(P3)
+    assert bancada.volta() == {P3}
 
 
 # ---------------------------------------------------------------------------
@@ -470,6 +538,45 @@ class TestOPortaoDizPorQueFechou:
         assert [r["uniq"] for r in _linhas(registros)] == ["aa:bb:cc:00:00:05"]
         assert _linhas(registros)[0]["motivo"] == "sem_jogo"
 
+    def test_a_varredura_que_falha_diz_nao_sei(
+        self, bancada: Bancada, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Sem retrato, o motivo é ``nao_sei`` — não ``sem_jogo``, nem ``nao_mexeu``.
+
+        MORDIDA: faça ``_por_que_o_portao_fecha`` responder ``nao_mexeu`` sem
+        retrato — a linha afirma sobre um jogo que ninguém viu.
+        """
+
+        def _quebra(**_k: Any) -> set[str]:
+            raise OSError("o /proc não se leu")
+
+        monkeypatch.setattr(qjl, "quem_o_jogo_le", _quebra)
+        bancada.volta()
+        with structlog.testing.capture_logs() as registros:
+            bancada.vigiar()
+        linhas = _linhas(registros)
+        assert {r["motivo"] for r in linhas} == {"nao_sei"}
+        assert {(r["evdev_do_jogo"], r["hidraw_de_vpad"]) for r in linhas} == {(None, None)}
+
+    def test_quem_sai_da_mesa_e_volta_no_mesmo_estado_diz_de_novo(self, bancada: Bancada) -> None:
+        """O controle que cai e volta no meio do jogo é outro endpoint: a linha sai de novo.
+
+        MORDIDA: tire a poda de ``_portao_fechado`` do vigia — o P4 volta calado,
+        porque o vigia ainda lembra o motivo de antes da queda.
+        """
+        bancada.mundo.abrir_o_jogo_do_ge()
+        bancada.volta()
+        bancada.vigiar()
+        todos = bancada.controles
+        bancada.controles = [c for c in todos if c.uniq != P4]
+        bancada.volta()
+        bancada.vigiar()
+        bancada.controles = todos
+        bancada.volta()
+        with structlog.testing.capture_logs() as registros:
+            bancada.vigiar()
+        assert [r["uniq"] for r in _linhas(registros)] == [P4]
+
 
 # ---------------------------------------------------------------------------
 # A fiação: quem marca, e com o que já leu
@@ -556,48 +663,83 @@ class TestAFiacao:
         MORDIDA: tire a chamada a ``anotar_o_primario`` do ``_poll_loop``.
         E o snapshot segue um por tique (a régua do cache do evdev).
         """
-        from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
-        from hefesto_dualsense4unix.testing import FakeController
-
-        monkeypatch.setattr("hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0)
-        estados = [
-            ControllerState(battery_pct=80, l2_raw=255, r2_raw=0, connected=True, transport="bt")
-            for _ in range(200)
-        ]
-        fc = FakeController(transport="bt", states=estados)
-        fc.primary_uniq = colada(P1)  # type: ignore[attr-defined]
-        chamadas: list[int] = []
-        evdev = MagicMock()
-        evdev.is_available.return_value = True
-        evdev.snapshot.side_effect = lambda: chamadas.append(1) or SimpleNamespace(
-            buttons_pressed=[]
-        )
-        fc._evdev = evdev
-        daemon = Daemon(
-            controller=fc,
-            config=DaemonConfig(
-                poll_hz=200,
-                auto_reconnect=False,
-                ipc_enabled=False,
-                udp_enabled=False,
-                autoswitch_enabled=False,
-                mouse_emulation_enabled=False,
-                keyboard_emulation_enabled=False,
-            ),
-        )
-        daemon._quem_mexe = _partida_aberta()  # type: ignore[attr-defined]
-        tarefa = asyncio.create_task(daemon.run())
-        # Espera o LAÇO, e não um relógio: a subida dos subsystems varia com a
-        # máquina, e um tempo fixo mediria a subida em vez do tique.
-        for _ in range(300):
-            if daemon.store.counter("poll.tick") >= 5:
-                break
-            await asyncio.sleep(0.01)
-        daemon.stop()
-        await tarefa
-        assert daemon.store.counter("poll.tick") >= 5, "o laço não tiquetaqueou"
+        daemon, ticks, chamadas = await _rodar_o_laco(monkeypatch, assentamento_s=0.0)
         assert daemon._quem_mexe.quem_joga() == {colada(P1)}  # type: ignore[attr-defined]
-        assert len(chamadas) == daemon.store.counter("poll.tick"), "um snapshot por tique"
+        assert chamadas == ticks, "um snapshot por tique"
+
+    @pytest.mark.asyncio
+    async def test_o_fantasma_da_reconexao_nao_marca_o_primario(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Com o assentamento armado, o gatilho no fundo é o fantasma da conexão.
+
+        A-HAPTICA-QUEM-JOGA-02. O BUG-DAEMON-CONNECT-GHOST-INPUT-01 arma o
+        ``_input_ready_at`` na borda desconectado→conectado, e todo input fica
+        suprimido até ele passar. Um controle PARADO que cai e volta no meio da
+        partida entraria em háptica pelo lixo da primeira leitura — o espelhado
+        de 20/09 pela porta da reconexão.
+
+        MORDIDA: tire ``anotar_o_primario`` de dentro do ``if grace_passed:`` —
+        o primário é marcado sem ninguém tocar nele.
+        """
+        daemon, ticks, _ = await _rodar_o_laco(monkeypatch, assentamento_s=600.0)
+        assert ticks >= 5, "o laço não tiquetaqueou dentro do assentamento"
+        assert daemon._quem_mexe.quem_joga() == frozenset(), (  # type: ignore[attr-defined]
+            "o fantasma da reconexão marcou o primário"
+        )
+
+
+async def _rodar_o_laco(
+    monkeypatch: pytest.MonkeyPatch, *, assentamento_s: float
+) -> tuple[Any, int, int]:
+    """O ``_poll_loop`` de verdade por cinco tiques, com o P1 de gatilho no fundo.
+
+    Devolve o daemon, os tiques e quantos snapshots do evdev foram pedidos.
+    """
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+    from hefesto_dualsense4unix.testing import FakeController
+
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", assentamento_s
+    )
+    estados = [
+        ControllerState(battery_pct=80, l2_raw=255, r2_raw=0, connected=True, transport="bt")
+        for _ in range(200)
+    ]
+    fc = FakeController(transport="bt", states=estados)
+    fc.primary_uniq = colada(P1)  # type: ignore[attr-defined]
+    chamadas: list[int] = []
+    evdev = MagicMock()
+    evdev.is_available.return_value = True
+    evdev.snapshot.side_effect = lambda: chamadas.append(1) or SimpleNamespace(
+        buttons_pressed=[]
+    )
+    fc._evdev = evdev
+    daemon = Daemon(
+        controller=fc,
+        config=DaemonConfig(
+            poll_hz=200,
+            auto_reconnect=False,
+            ipc_enabled=False,
+            udp_enabled=False,
+            autoswitch_enabled=False,
+            mouse_emulation_enabled=False,
+            keyboard_emulation_enabled=False,
+        ),
+    )
+    daemon._quem_mexe = _partida_aberta()  # type: ignore[attr-defined]
+    tarefa = asyncio.create_task(daemon.run())
+    # Espera o LAÇO, e não um relógio: a subida dos subsystems varia com a
+    # máquina, e um tempo fixo mediria a subida em vez do tique.
+    for _ in range(300):
+        if daemon.store.counter("poll.tick") >= 5:
+            break
+        await asyncio.sleep(0.01)
+    daemon.stop()
+    await tarefa
+    ticks = daemon.store.counter("poll.tick")
+    assert ticks >= 5, "o laço não tiquetaqueou"
+    return daemon, ticks, len(chamadas)
 
 
 # ---------------------------------------------------------------------------

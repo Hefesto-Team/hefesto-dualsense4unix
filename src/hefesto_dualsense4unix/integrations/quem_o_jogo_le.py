@@ -1,4 +1,12 @@
-"""Quais controles o JOGO está lendo — a pergunta que decide quem vibra.
+"""Quais controles o evdev diz que o JOGO lê — e o retrato do jogo que a volta usa.
+
+**DESDE 26/09/2026 ESTE SINAL NÃO VOTA** (A-HAPTICA-QUEM-JOGA-02, decisão
+``D-2609-QUEM-JOGA-E-QUEM-MEXE``). Quem joga, para o portão da háptica pelo
+rádio, é quem MEXEU desde que o jogo abriu (``daemon/subsystems/quem_mexe.py``).
+Daqui a volta usa o :class:`RetratoDoJogo` (os pids que abrem e fecham a
+partida, e o que o jogo segura), e o conjunto de :func:`quem_o_jogo_le` vai à
+linha ``haptica_portao_fechado`` como pista (``evdev_le_este``). O texto abaixo
+é o registro de 20 e 25/09, quando ele votava.
 
 **A CORREÇÃO É DELA, 20/09/2026, e derrubou a premissa de uma sprint inteira:**
 
@@ -50,9 +58,11 @@ o físico por estar na lista de ignorados do SDL, o vpad ``0df2`` por
 26/09: nenhum ``eventN``, o ``hidraw`` dos vpads). Com máscara DualSense este
 sinal sai VAZIO por construção. E o ``hidraw`` não o substitui: o
 ``winedevice`` segura o de TODOS os vpads, e contá-lo devolveria o espelhado
-de 20/09. Quem diz quem joga, nesse caso, é a entrada do físico desde que o
-jogo abriu (``daemon/subsystems/quem_mexe.py``); este sinal fica como caminho a
-mais, para o processo de jogo que segura um evdev com ``uniq``.
+de 20/09. Quem diz quem joga é a entrada do físico desde que o jogo abriu
+(``daemon/subsystems/quem_mexe.py``), e este sinal não vota nem quando existe:
+em 21/09, com o PRAGMATA de um jogador, o evdev deixou os QUATRO entrarem em
+háptica (A-HAPTICA-QUEM-JOGA-02). Um fd diz o que o processo abriu, não quem
+está jogando.
 
 FATO SUBSTITUÍDO: aqui estava *"Medido na mesa dela em 20/09 … event21,
 event264, event265 uniq=02:fe:f0:… Um jogo com máscara DualSense abre esse"*.

@@ -12,6 +12,12 @@ exercita «um jogando» passa verde sobre a regra «sempre o P1», que é
 exatamente a que ela recusou ao escolher entre as três opções — e a família
 `regua-que-mede-o-arranjo-facil` já mordeu esta casa neste mesmo dia, duas
 vezes.
+
+**NOTA DE 26/09/2026 (A-HAPTICA-QUEM-JOGA-02):** a regra dela fica; o sinal
+medido aqui (o evdev que o jogo segura) deixou de votar. Em 21/09 ele pôs os
+quatro em háptica num jogo de um jogador, e com o GE ele sai vazio. Quem vota
+é quem mexeu desde que o jogo abriu (`test_a_haptica_quem_joga_e_quem_mexe.py`);
+estas réguas medem a pista que vai à linha `haptica_portao_fechado`.
 """
 
 from __future__ import annotations
@@ -225,11 +231,14 @@ class TestOGateEstaLigado:
     """*A cura escrita e nunca ligada* é o defeito mais caro desta casa."""
 
     def test_o_subsystem_consulta_quem_joga_antes_de_decidir_o_modo(self):
-        """MORDIDA: tirar a chamada a `_quem_o_jogo_le` do `_casar_as_pontes`.
+        """MORDIDA: tirar a chamada a `_quem_mexeu_na_partida` (o voto) ou a
+        `_quem_o_jogo_le` (a varredura que abre a partida) do `_casar_as_pontes`.
 
-        Sem ela o gate existe, tem régua verde, e o produto segue mandando
-        háptica para quem não joga — que é exatamente o estado de 20/09 às
-        13h36, com o P3 espelhando o jogo do P1.
+        Sem elas o gate existe, tem régua verde, e o produto segue sem saber
+        quem joga — em 20/09 às 13h36 isso era o P3 espelhando o jogo do P1.
+        Desde a A-HAPTICA-QUEM-JOGA-02 (26/09/2026) quem vota é quem mexeu, e
+        o evdev é só pista: a varredura segue aqui porque é dela que sai o
+        retrato do jogo.
         """
         fonte = pathlib.Path(
             "src/hefesto_dualsense4unix/daemon/subsystems/alto_falante.py"
@@ -237,11 +246,14 @@ class TestOGateEstaLigado:
         corpo = fonte[fonte.index("def _casar_as_pontes") :]
         corpo = corpo[: corpo.index('modo = (')]
         assert "self._quem_o_jogo_le(controles)" in corpo, (
-            "o gate não é consultado dentro de `_casar_as_pontes`"
+            "a varredura do jogo não roda dentro de `_casar_as_pontes`"
+        )
+        assert "jogando = self._quem_mexeu_na_partida(controles)" in corpo, (
+            "o voto de quem joga não é consultado dentro de `_casar_as_pontes`"
         )
 
     def test_o_modo_haptica_exige_os_dois_sinais(self):
-        """O canal aberto E aquele controle jogando (o jogo o lê, ou ele mexeu).
+        """O canal aberto E aquele controle jogando (mexeu desde que o jogo abriu).
 
         Só o primeiro deixava três controles vibrarem num jogo de um jogador.
 
