@@ -39,7 +39,8 @@ def _daemon(
     players = {
         f"mac{i}": SimpleNamespace(
             player_index=idx,
-            vpad=SimpleNamespace(backend=b) if b is not None else None,
+            # O pad do co-op veste a máscara da sessão, como o de verdade.
+            vpad=SimpleNamespace(backend=b, flavor=flavor) if b is not None else None,
         )
         for i, (idx, b) in enumerate(coop)
     }

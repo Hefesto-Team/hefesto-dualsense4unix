@@ -1358,24 +1358,21 @@ class CoopManager:
             player=player.player_index,
             players=self.player_count(),
         )
-        # BT-03: vpad de secundário que nasceu degradado (máscara DualSense em
-        # uinput) é transição anunciada — mesma borda do P1 (log estruturado +
-        # bus), nunca reavaliada por tick. Máscara xbox é uinput POR DESIGN e
-        # não degradação (o mesmo critério do `dedup_status`).
-        if (
-            getattr(vpad, "flavor", None) == "dualsense"
-            and getattr(vpad, "backend", None) == "uinput"
-        ):
+        # BT-03: vpad de secundário que nasceu degradado é transição anunciada
+        # — mesma borda do P1 (log estruturado + bus), nunca reavaliada por
+        # tick. Quem diz se degradou é `motivo_da_degradacao`, o mesmo dono do
+        # `dedup_status`: o caminho Xbox em uinput é escolha dela, não queda.
+        from hefesto_dualsense4unix.integrations.virtual_pad import motivo_da_degradacao
+
+        motivo = motivo_da_degradacao(vpad)
+        if motivo is not None:
             from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
                 notify_vpad_degradado,
             )
 
-            motivo = getattr(vpad, "fallback_motivo", None)
             with contextlib.suppress(Exception):
                 notify_vpad_degradado(
-                    self._daemon,
-                    player=player.player_index,
-                    motivo=motivo if isinstance(motivo, str) and motivo else "sem_uhid",
+                    self._daemon, player=player.player_index, motivo=motivo
                 )
         # DEDUP-04: gatilho "mudança do conjunto de jogadores" — o dedup_ok do
         # launch é POR JOGADOR (um único vpad de co-op degradado em uinput já

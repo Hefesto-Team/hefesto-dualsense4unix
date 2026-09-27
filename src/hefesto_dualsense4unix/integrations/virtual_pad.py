@@ -139,6 +139,29 @@ def caminho_do_vpad(vpad: object) -> str | None:
     return None
 
 
+def motivo_da_degradacao(vpad: object) -> str | None:
+    """Por que ESTE vpad caiu do canal que pediu — ``None`` quando não caiu.
+
+    Degradado é uma coisa só: a máscara DualSense no ``uinput`` quando o caminho
+    é o do DualSense. O caminho Xbox no ``uinput`` é escolha dela (PS-L3-MASCARA-01),
+    e a máscara que o ``uhid`` não veste também não é queda. O modo, a máscara e
+    a forma de conexão são três eixos, e esta é a única pergunta que junta os
+    dois primeiros para dizer «degradou»: o diário (``vpad_degradado``), o
+    estado (``vpad_motivo``, ``degraded``) e o ``dedup_status`` a fazem aqui.
+
+    O motivo é o que a fábrica pendurou (``fallback_motivo``), com ``sem_uhid``
+    de piso para o pad que não sabe dizer. Pad sem caminho resolve pela máscara,
+    como :func:`caminho_do_vpad` manda.
+    """
+    mascara = getattr(vpad, "flavor", None)
+    if mascara != "dualsense" or getattr(vpad, "backend", None) != "uinput":
+        return None
+    if caminho_resolvido(caminho_do_vpad(vpad), mascara) == CAMINHO_XBOX:
+        return None
+    motivo = getattr(vpad, "fallback_motivo", None)
+    return motivo if isinstance(motivo, str) and motivo else "sem_uhid"
+
+
 def _pendurar_o_caminho(pad: object, caminho: str) -> None:
     """Grava no pad o caminho em que ele nasceu. Best-effort: nunca derruba."""
     try:
@@ -437,6 +460,7 @@ __all__ = [
     "caminho_do_vpad",
     "caminho_resolvido",
     "make_virtual_pad",
+    "motivo_da_degradacao",
     "normalizar_caminho",
     "quer_uhid",
 ]

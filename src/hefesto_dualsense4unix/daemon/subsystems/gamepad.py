@@ -1548,7 +1548,7 @@ def dedup_status(daemon: DaemonProtocol) -> tuple[bool, list[str]]:
     Só leitura de atributos — nunca propaga exceção pro `state_full` (getattr
     defensivo em tudo; daemons dublados de teste não têm coop/store).
     """
-    from hefesto_dualsense4unix.integrations.virtual_pad import CAMINHO_XBOX, caminho_do_vpad
+    from hefesto_dualsense4unix.integrations.virtual_pad import motivo_da_degradacao
 
     cfg = getattr(daemon, "config", None)
     enabled = bool(getattr(cfg, "gamepad_emulation_enabled", False))
@@ -1563,17 +1563,15 @@ def dedup_status(daemon: DaemonProtocol) -> tuple[bool, list[str]]:
     if getattr(device, "flavor", None) != "dualsense":
         return True, []
     motivos: list[str] = []
-    if getattr(device, "backend", None) == "uinput" and caminho_do_vpad(device) != CAMINHO_XBOX:
-        motivo = getattr(device, "fallback_motivo", None)
-        motivos.append(motivo if isinstance(motivo, str) and motivo else "sem_uhid")
+    motivo_do_p1 = motivo_da_degradacao(device)
+    if motivo_do_p1 is not None:
+        motivos.append(motivo_do_p1)
     coop = getattr(daemon, "_coop_manager", None)
     players = getattr(coop, "_players", None)
     if isinstance(players, dict):
         for player in players.values():
             vpad = getattr(player, "vpad", None)
-            if vpad is None or getattr(vpad, "backend", None) != "uinput":
-                continue
-            if caminho_do_vpad(vpad) == CAMINHO_XBOX:
+            if vpad is None or motivo_da_degradacao(vpad) is None:
                 continue
             indice = getattr(player, "player_index", None)
             rotulo = str(indice) if isinstance(indice, int) else "?"
@@ -2348,6 +2346,7 @@ def start_gamepad_emulation_desfecho(
         caminho_do_vpad,
         caminho_resolvido,
         make_virtual_pad,
+        motivo_da_degradacao,
         normalizar_caminho,
         quer_uhid,
     )
@@ -2528,13 +2527,12 @@ def start_gamepad_emulation_desfecho(
         return EMU_FALHOU
 
     daemon._gamepad_device = device
-    # `mascara_do_p1`, não `key`: a degradação é "máscara DualSense em uinput",
-    # e a máscara que o vpad VESTE é a efetiva. Perguntar pela do jogo acusaria
-    # degradação num P1 marcado como xbox numa sessão dualsense (uinput por
-    # design, não degradação) e calaria o aviso no caso inverso.
-    # MODO-DE-CONEXAO-01: e só quem PEDIU o uhid degrada — `uhid_pedido` já traz
-    # a máscara DualSense dentro. O caminho Xbox em uinput é a escolha dela.
-    if uhid_pedido and getattr(device, "backend", None) == "uinput":
+    # A pergunta é ao VPAD, pela máscara que ele veste e pelo caminho em que
+    # nasceu, e mora em `motivo_da_degradacao`: perguntar pela máscara do jogo
+    # acusaria degradação num P1 marcado como xbox numa sessão dualsense, e o
+    # caminho Xbox em uinput é a escolha dela (MODO-DE-CONEXAO-01).
+    motivo_da_queda = motivo_da_degradacao(device)
+    if motivo_da_queda is not None:
         # VPAD-05 — fallback NUNCA silencioso: além do motivo que a factory já
         # logou, o degrau vira contador no store (doctor) e o `state_full` expõe
         # `gamepad_emulation.degraded`/`degraded_motivo` para a GUI. getattr
@@ -2544,12 +2542,7 @@ def start_gamepad_emulation_desfecho(
             with contextlib.suppress(Exception):
                 store.bump("gamepad.uhid.fallback")
         # BT-03: a degradação do P1 é uma transição anunciada (log + bus).
-        motivo = getattr(device, "fallback_motivo", None)
-        notify_vpad_degradado(
-            daemon,
-            player=1,
-            motivo=motivo if isinstance(motivo, str) and motivo else "sem_uhid",
-        )
+        notify_vpad_degradado(daemon, player=1, motivo=motivo_da_queda)
     # GYRO-01: com o vpad uhid de pé, o gyro/accel/touchpad do físico passa a
     # fluir pelo espelho de report (thread própria; no fallback uinput é no-op).
     start_motion_reader(daemon, device)

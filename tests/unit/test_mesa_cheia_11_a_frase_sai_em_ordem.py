@@ -125,6 +125,9 @@ class TestNaMesaRealAJanelaLeCrescente:
 
 
 class _VpadDegradado:
+    """A máscara DualSense no uinput, que é o que faz um pad degradado."""
+
+    flavor = "dualsense"
     backend = "uinput"
 
 

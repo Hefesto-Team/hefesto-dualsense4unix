@@ -3146,26 +3146,16 @@ class IpcHandlersMixin:
                 # "uhid_vetado_pelo_chamador").
                 with contextlib.suppress(Exception):
                     # MODO-DE-CONEXAO-01: e só quem PEDIU o canal do DualSense
-                    # degrada. O caminho Xbox em `uinput` é a escolha dela.
+                    # degrada. O caminho Xbox em `uinput` é a escolha dela, e a
+                    # pergunta tem um dono só (`motivo_da_degradacao`).
                     from hefesto_dualsense4unix.integrations.virtual_pad import (
-                        caminho_do_vpad,
-                        quer_uhid,
+                        motivo_da_degradacao,
                     )
 
-                    degraded = bool(
-                        getattr(gp_dev, "flavor", None) == "dualsense"
-                        and getattr(gp_dev, "backend", None) == "uinput"
-                        and quer_uhid(
-                            caminho_do_vpad(gp_dev)
-                            or getattr(daemon_cfg, "gamepad_caminho", None),
-                            "dualsense",
-                        )
-                    )
-                    result["gamepad_emulation"]["degraded"] = degraded
-                    if degraded:
-                        motivo = getattr(gp_dev, "fallback_motivo", None)
-                        if isinstance(motivo, str) and motivo:
-                            result["gamepad_emulation"]["degraded_motivo"] = motivo
+                    motivo = motivo_da_degradacao(gp_dev)
+                    result["gamepad_emulation"]["degraded"] = motivo is not None
+                    if motivo is not None:
+                        result["gamepad_emulation"]["degraded_motivo"] = motivo
                 # CANAL-SEM-VOZ-01 (17/09/2026) — CAMPO NOVO, DONO NOVO.
                 #
                 # `degraded` acima e `dedup_ok` abaixo respondem *"o canal caiu
@@ -4707,18 +4697,15 @@ class IpcHandlersMixin:
     def _vpad_backend_motivo(vpad: Any) -> tuple[str | None, str | None]:
         """(backend, motivo) de UM vpad — motivo só quando degradado (BT-03).
 
-        Degradado = máscara DualSense servida por uinput (sem hidraw → sem
-        vibração in-game, sem dedup por PID próprio); o motivo é o
-        `fallback_motivo` da factory, com "sem_uhid" de piso. Máscara xbox é
-        uinput POR DESIGN — nunca é degradação (invariante do `dedup_status`).
+        Quem diz se degradou é `virtual_pad.motivo_da_degradacao`, o mesmo dono
+        do `dedup_status` e do diário: a máscara DualSense no uinput quando o
+        caminho é o do DualSense. O caminho Xbox em uinput é escolha dela.
         """
+        from hefesto_dualsense4unix.integrations.virtual_pad import motivo_da_degradacao
+
         raw_backend = getattr(vpad, "backend", None)
         backend = raw_backend if isinstance(raw_backend, str) and raw_backend else None
-        motivo: str | None = None
-        if backend == "uinput" and getattr(vpad, "flavor", None) == "dualsense":
-            raw = getattr(vpad, "fallback_motivo", None)
-            motivo = raw if isinstance(raw, str) and raw else "sem_uhid"
-        return backend, motivo
+        return backend, motivo_da_degradacao(vpad)
 
     # --- NUMA-05: sinal de autoridade de exibição (game/daemon/unknown) ----
 
