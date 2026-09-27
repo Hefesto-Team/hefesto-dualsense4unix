@@ -814,5 +814,6 @@ def test_a_fonte_que_falha_nao_poe_o_vigia_em_laco(
     assert bancada.vigiar() is True, "o primeiro toque acorda a volta"
     assert bancada.volta() == set(), "sem fonte, ninguém entra em háptica"
     assert bancada.vigiar() is False, "a tentativa que falhou espera a volta seguinte"
-    bancada.sub._tentativa_falhou[P3] -= sub.RECONCILIA_S
+    falhou = bancada.sub._tentativa_falhou[P3]
+    bancada.sub._tentativa_falhou = {P3: falhou - sub.RECONCILIA_S}
     assert bancada.vigiar() is True, "passada uma volta, o vigia volta a acordar"

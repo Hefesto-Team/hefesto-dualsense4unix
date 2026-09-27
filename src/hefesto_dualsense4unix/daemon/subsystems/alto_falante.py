@@ -798,6 +798,12 @@ class AltoFalanteSubsystem:
     #: linha ``haptica_portao_fechado`` sair só na mudança. Imutável no corpo
     #: da classe; cada mudança troca o dicionário inteiro.
     _portao_fechado: Mapping[str, str] = MappingProxyType({})
+    #: `uniq -> quando a última tentativa da volta falhou` (sem fonte do som ou
+    #: da háptica, ou a ponte que não subiu). Enquanto vale, o vigia não acorda
+    #: a volta por aquele controle: quem tenta de novo é a volta seguinte, a
+    #: cada :data:`RECONCILIA_S`. Imutável no corpo da classe pela mesma razão
+    #: do :attr:`_portao_fechado`; quem escreve é :meth:`_anotar_a_falha`.
+    _tentativa_falhou: Mapping[str, float] = MappingProxyType({})
 
     #: O GOVERNADOR DO RÁDIO (GOVERNADOR-DO-RADIO-01, 23/09/2026): quem dá a
     #: vaga de cada ponte, por adaptador, e manda ceder na fonte quando o
@@ -841,11 +847,6 @@ class AltoFalanteSubsystem:
         self._modo_da_ponte: dict[str, str] = {}
         #: `uniq -> quando o `subir()` falhou` — ver :data:`RECUSA_DA_PONTE_S`.
         self._ponte_recusada: dict[str, float] = {}
-        #: `uniq -> quando a última tentativa da volta falhou` (sem fonte do
-        #: som ou da háptica, ou a ponte que não subiu). Enquanto vale, o vigia não acorda
-        #: a volta por aquele controle: quem tenta de novo é a volta seguinte,
-        #: a cada :data:`RECONCILIA_S`. Ver :meth:`_o_modo_de_alguem_mudou`.
-        self._tentativa_falhou: dict[str, float] = {}
         #: Quantos controles no rádio ficaram sem âncora USB na última volta —
         #: lembrado para o aviso sair na MUDANÇA, e não a cada `RECONCILIA_S`.
         self._faltam_ancoras = 0
@@ -1719,7 +1720,7 @@ class AltoFalanteSubsystem:
                 # daquele controle não tem por onde entregar, e continuar
                 # publicado o faria engolir o áudio dela.
                 self._ponte_recusada[uniq] = time.monotonic()
-                self._tentativa_falhou[uniq] = time.monotonic()
+                self._anotar_a_falha(uniq, falhou=True)
                 logger.info("som_ponte_sem_fonte", uniq=uniq, motivo=motivo)
                 continue
             # O CAMINHO VAI NO FECHO, e o `functools.partial` diz o tipo: um
@@ -1754,7 +1755,7 @@ class AltoFalanteSubsystem:
                         derrubar_leitor_de_pipe(gravador_h)
                     gravador_h = None
                     modo = "som"
-                    self._tentativa_falhou[uniq] = time.monotonic()
+                    self._anotar_a_falha(uniq, falhou=True)
                     logger.info("haptica_sem_fonte", uniq=uniq, motivo=motivo_h)
                     # E A PORTA DOS FUNDOS: cair para o alto-falante sem
                     # ninguém tocando nele devolveria a enxurrada por aqui. O
@@ -1783,16 +1784,23 @@ class AltoFalanteSubsystem:
                 self._modo_da_ponte[uniq] = modo
                 # SUBIU: o caminho está provado, e a recusa velha não vale mais.
                 self._ponte_recusada.pop(uniq, None)
-                self._tentativa_falhou.pop(uniq, None)
+                self._anotar_a_falha(uniq, falhou=False)
             else:
                 ponte.descer()
                 # NÃO SUBIU com o som dela na mão: isto é falha de verdade, e
                 # o nó daquele controle tem de sumir com a frase honesta em vez
                 # de engolir áudio. Ver :data:`RECUSA_DA_PONTE_S`.
                 self._ponte_recusada[uniq] = time.monotonic()
-                self._tentativa_falhou[uniq] = time.monotonic()
+                self._anotar_a_falha(uniq, falhou=True)
                 logger.info("som_ponte_nao_subiu", uniq=uniq, motivo=ponte.motivo)
         self._esperando_vaga = frozenset(esperando)
+
+    def _anotar_a_falha(self, uniq: str, *, falhou: bool) -> None:
+        """Lembra (ou esquece) que a última tentativa da volta falhou para ``uniq``."""
+        resto = {u: t for u, t in self._tentativa_falhou.items() if u != uniq}
+        if falhou:
+            resto[uniq] = time.monotonic()
+        self._tentativa_falhou = MappingProxyType(resto)
 
     def _esquecer_a_espera(self, uniq: str) -> None:
         """Ela respondeu «Ligar aqui»: quem esperava vaga deixa de esperar.
