@@ -402,7 +402,7 @@ class TestOPortaoDizPorQueFechou:
                 bancada.vigiar()
         linhas = _linhas(registros)
         assert sorted(r["uniq"] for r in linhas) == sorted(MESA)
-        assert {r["motivo"] for r in linhas} == {"sem_entrada"}
+        assert {r["motivo"] for r in linhas} == {"nao_mexeu"}
         assert {(r["evdev_do_jogo"], r["hidraw_de_vpad"]) for r in linhas} == {(0, 4)}, (
             "a linha tem de dizer o que o jogo segura: nenhum evdev, os quatro vpads"
         )
@@ -432,6 +432,27 @@ class TestOPortaoDizPorQueFechou:
         with structlog.testing.capture_logs() as registros:
             bancada.vigiar()
         assert _linhas(registros) == []
+
+    def test_o_sysfs_que_falha_nao_derruba_a_thread_do_som(
+        self, bancada: Bancada, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O vigia mora fora do ``try`` do laço: a linha sai, e sem a contagem.
+
+        MORDIDA: tire o ``try`` de ``_o_que_o_jogo_segura`` — a exceção sobe
+        do vigia, e na produção ela mataria a thread do alto-falante.
+        """
+
+        def _quebra(_nomes: Any) -> frozenset[str]:
+            raise RuntimeError("sysfs sumiu no meio")
+
+        bancada.mundo.abrir_o_jogo_do_ge()
+        bancada.volta()
+        monkeypatch.setattr(qjl, "hidraws_de_vpad", _quebra)
+        with structlog.testing.capture_logs() as registros:
+            bancada.vigiar()
+        linhas = _linhas(registros)
+        assert len(linhas) == len(MESA)
+        assert {(r["evdev_do_jogo"], r["hidraw_de_vpad"]) for r in linhas} == {(None, None)}
 
     def test_o_endereco_sai_mascarado(self, mundo: Mundo, monkeypatch: pytest.MonkeyPatch) -> None:
         """Octetos 4 e 5 zerados, como o diário da bateria já faz.

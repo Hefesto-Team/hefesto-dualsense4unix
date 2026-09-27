@@ -1349,7 +1349,7 @@ class AltoFalanteSubsystem:
             return "nao_sei"
         if not retrato.pids:
             return "sem_jogo"
-        return "sem_entrada"
+        return "nao_mexeu"
 
     def _vigiar_o_portao(self, uniq: str, *, fechado: bool) -> None:
         """A linha ``haptica_portao_fechado``, SÓ quando o estado anômalo muda.
@@ -1375,16 +1375,34 @@ class AltoFalanteSubsystem:
             return
         self._portao_fechado = {**self._portao_fechado, uniq: motivo}
         from hefesto_dualsense4unix.daemon.battery_journal import mascarar_endereco
-        from hefesto_dualsense4unix.integrations.quem_o_jogo_le import hidraws_de_vpad
 
-        retrato = self._retrato_do_jogo
+        evdev, hidraw = self._o_que_o_jogo_segura()
         logger.info(
             "haptica_portao_fechado",
             uniq=mascarar_endereco(uniq),
             motivo=motivo,
-            evdev_do_jogo=None if retrato is None else len(retrato.eventos),
-            hidraw_de_vpad=None if retrato is None else len(hidraws_de_vpad(retrato.hidraws)),
+            evdev_do_jogo=evdev,
+            hidraw_de_vpad=hidraw,
         )
+
+    def _o_que_o_jogo_segura(self) -> tuple[int | None, int | None]:
+        """``(eventN, hidrawN de vpad)`` que o jogo segura, do retrato da volta.
+
+        ``None`` quando não se sabe — sem retrato, ou o sysfs que não se leu.
+        **Nunca levanta**: quem chama é o vigia, e o vigia mora fora do ``try``
+        do ``_loop`` — uma exceção aqui mataria a thread do som inteira por
+        causa de uma linha de diário.
+        """
+        retrato = self._retrato_do_jogo
+        if retrato is None:
+            return None, None
+        try:
+            from hefesto_dualsense4unix.integrations.quem_o_jogo_le import hidraws_de_vpad
+
+            return len(retrato.eventos), len(hidraws_de_vpad(retrato.hidraws))
+        except Exception as exc:
+            logger.debug("haptica_portao_sem_contagem", err=str(exc))
+            return None, None
 
     def _casar_as_pontes(self, controles: list[Any]) -> None:
         """Sobe uma ponte por controle NO RÁDIO, e derruba a de quem saiu.

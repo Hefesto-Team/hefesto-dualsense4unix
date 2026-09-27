@@ -25,7 +25,7 @@ import pytest
 from hefesto_dualsense4unix.integrations.quem_o_jogo_le import (
     ENV_DO_JOGO,
     dono_do_vpad_pelo_coop,
-    evdevs_abertos_por,
+    nos_abertos_por,
     pids_de_jogo,
     quem_o_jogo_le,
     uniq_por_evdev,
@@ -81,7 +81,7 @@ class TestOSinalBruto:
 
     def test_os_descritores_abertos_viram_eventos(self, tmp_path):
         base = _proc_de_mentira(tmp_path, {11: (True, ["event7", "event9"])})
-        assert evdevs_abertos_por([11], base) == {"event7", "event9"}
+        assert nos_abertos_por([11], base)[0] == {"event7", "event9"}
 
 
 class TestAMesaDeQuatro:

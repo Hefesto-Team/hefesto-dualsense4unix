@@ -103,7 +103,6 @@ __all__ = [
     "RAIZ_CLASS_HIDRAW",
     "RetratoDoJogo",
     "dono_do_vpad_pelo_coop",
-    "evdevs_abertos_por",
     "hidraws_de_vpad",
     "nos_abertos_por",
     "pids_de_jogo",
@@ -228,13 +227,6 @@ def nos_abertos_por(
             if achado:
                 hidraws.add(achado.group(1))
     return frozenset(eventos), frozenset(hidraws)
-
-
-def evdevs_abertos_por(
-    pids: Iterable[int], raiz_proc: pathlib.Path | str = "/proc"
-) -> set[str]:
-    """Os ``eventN`` que aqueles processos têm abertos AGORA."""
-    return set(nos_abertos_por(pids, raiz_proc)[0])
 
 
 def hidraws_de_vpad(nomes: Iterable[str]) -> frozenset[str]:
