@@ -108,10 +108,20 @@ def _state(
     flavor: str = "dualsense",
     backend: str | None = "uinput",
     native_mode: bool = False,
+    degraded: bool | None = None,
 ) -> dict[str, Any]:
+    """O estado como o daemon o publica: com pad de pé, sai também o `degraded`.
+
+    Sem `degraded` explícito vale a regra do daemon sem modo escolhido
+    (`motivo_da_degradacao`): máscara DualSense no `uinput` é queda.
+    """
     gamepad: dict[str, Any] = {"enabled": enabled, "flavor": flavor}
     if backend is not None:
         gamepad["backend"] = backend
+    if backend:
+        gamepad["degraded"] = (
+            (flavor == "dualsense" and backend == "uinput") if degraded is None else degraded
+        )
     return {
         "gamepad_emulation": gamepad,
         "native_mode": native_mode,
@@ -128,6 +138,12 @@ class TestVpadDegradationText:
     def test_dualsense_uinput_gamepad_acende(self) -> None:
         """(dualsense, uinput, gamepad) → o texto de degradação, verbatim."""
         assert vpad_degradation_text(_state()) == VPAD_DEGRADED_TEXT
+
+    def test_o_modo_xbox_com_a_mascara_dualsense_nao_acende(self) -> None:
+        """O-MODO-XBOX-NAO-E-QUEDA-02: máscara DualSense no `uinput` pelo modo
+        Xbox que ela escolheu não é queda, e o daemon publica `degraded=False`.
+        Mordida: devolva ao banner a leitura `backend == "uinput"`."""
+        assert vpad_degradation_text(_state(degraded=False)) is None
 
     def test_dualsense_uhid_gamepad_nao_acende(self) -> None:
         """(dualsense, uhid, gamepad) → vpad saudável, nada a avisar."""

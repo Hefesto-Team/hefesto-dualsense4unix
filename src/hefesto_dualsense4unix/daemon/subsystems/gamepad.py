@@ -887,6 +887,13 @@ def suspend_vpads_for_steam_input(
     daemon._steam_input_flavor_suspenso = (  # type: ignore[attr-defined]
         flavor if device is not None else None
     )
+    # E o modo em que o pad nasceu, pela mesma razão (O-MODO-XBOX-NAO-E-QUEDA-02):
+    # a volta sem caminho não opina, e o Xbox do perfil voltaria DualSense.
+    from hefesto_dualsense4unix.integrations.virtual_pad import caminho_do_vpad
+
+    daemon._steam_input_caminho_suspenso = (  # type: ignore[attr-defined]
+        caminho_do_vpad(device) if device is not None else None
+    )
     with getattr(daemon, "_emu_lock", contextlib.nullcontext()):
         if coop is not None:
             with contextlib.suppress(Exception):
@@ -975,8 +982,10 @@ def resume_vpads_after_steam_input(daemon: DaemonProtocol) -> bool:
     if not steam_input_vpad_suspenso(daemon):
         return False
     flavor = getattr(daemon, "_steam_input_flavor_suspenso", None)
+    caminho = getattr(daemon, "_steam_input_caminho_suspenso", None)
     daemon._steam_input_vpad_suspenso = False  # type: ignore[attr-defined]
     daemon._steam_input_flavor_suspenso = None  # type: ignore[attr-defined]
+    daemon._steam_input_caminho_suspenso = None  # type: ignore[attr-defined]
     # CONTAGEM-E-COOP-01: o aviso do co-op derrubado morre com a suspensão, aqui
     # e em TODAS as saídas dela — inclusive nas que devolvem antes do
     # `coop.sync(force=True)` do fim (Modo Nativo, "não havia vpad"). Zerar só no
@@ -1015,7 +1024,7 @@ def resume_vpads_after_steam_input(daemon: DaemonProtocol) -> bool:
     # `_emu_lock` pelo mesmo motivo da suspensão: criar device é operação
     # serializada com as outras superfícies (IPC/GUI/hotplug).
     with getattr(daemon, "_emu_lock", contextlib.nullcontext()):
-        start_gamepad_emulation(daemon, flavor=flavor, origin="profile")
+        start_gamepad_emulation(daemon, flavor=flavor, origin="profile", caminho=caminho)
         # O conjunto de jogadores foi a zero na suspensão; o ciclo normal do
         # co-op (~2 s no poll loop) recria os secundários sozinho, mas
         # `force=True` faz o P2+ voltar no mesmo instante que o P1 em vez de
@@ -1823,7 +1832,13 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
             flavor=getattr(daemon.config, "gamepad_flavor", None),
         )
         # ORIGEM-QUE-MENTE-01: revive pós-falha é rede de segurança, não gesto.
-        return start_gamepad_emulation(daemon, origin="profile")
+        # O caminho é o da sessão (O-MODO-XBOX-NAO-E-QUEDA-02): sem ele o start
+        # não opina, e o modo que o perfil escolheu voltava ao DualSense.
+        return start_gamepad_emulation(
+            daemon,
+            origin="profile",
+            caminho=getattr(daemon.config, "gamepad_caminho", None),
+        )
     # O uinput do modo Xbox é escolha dela, não queda (O-MODO-XBOX-NAO-E-QUEDA-02):
     # a pergunta tem um dono só, e ele lê a máscara, o canal e o caminho.
     if motivo_da_degradacao(device) is None:

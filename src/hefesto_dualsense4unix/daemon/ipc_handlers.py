@@ -77,25 +77,27 @@ def _config_que_viaja(cfg: object) -> dict[str, Any]:
 
 
 def _caminho_publicado(daemon: object) -> str | None:
-    """O CAMINHO de pé, na forma que a tela lê — MODO-DE-CONEXAO-01, 13/09/2026.
+    """O MODO de pé, na forma que a tela lê — MODO-DE-CONEXAO-01, 13/09/2026.
 
-    O escolhido (`config.gamepad_caminho`) ou, sem escolha, o que sai da máscara
-    que o vpad do P1 veste — o produto de antes, pela regra de
-    `virtual_pad.caminho_resolvido`, escrita uma vez, lá. Sem vpad a máscara é a
-    da sessão. ``None`` só sem config legível (um daemon dublado sem nada).
+    O escolhido (`config.gamepad_caminho`) ou, sem escolha, o de fábrica
+    (`dualsense`, CAMINHO-CONTAGIO-01). ``None`` só sem config legível (um
+    daemon dublado sem nada).
+
+    NOTA DATADA — 27/09/2026 (O-MODO-XBOX-NAO-E-QUEDA-02): sem escolha, isto
+    publicava o caminho que sai da máscara do pad do P1. Com o cartão do P1 em
+    Xbox e os outros três em DualSense no `uhid`, o chip de modo dizia «Xbox»
+    para a mesa inteira. O modo, a máscara e a conexão são três eixos: a
+    máscara de cada controle sai em `por_aparelho`, e o modo não se deduz dela.
     """
-    from hefesto_dualsense4unix.integrations.virtual_pad import caminho_resolvido
+    from hefesto_dualsense4unix.integrations.virtual_pad import (
+        CAMINHO_DUALSENSE,
+        normalizar_caminho,
+    )
 
     cfg = getattr(daemon, "config", None)
     if cfg is None:
         return None
-    device = getattr(daemon, "_gamepad_device", None)
-    mascara = (
-        getattr(device, "flavor", None)
-        if device is not None
-        else getattr(cfg, "gamepad_flavor", None)
-    )
-    return caminho_resolvido(getattr(cfg, "gamepad_caminho", None), mascara)
+    return normalizar_caminho(getattr(cfg, "gamepad_caminho", None)) or CAMINHO_DUALSENSE
 
 
 def _mascaras_por_aparelho(handlers: object) -> dict[str, str]:

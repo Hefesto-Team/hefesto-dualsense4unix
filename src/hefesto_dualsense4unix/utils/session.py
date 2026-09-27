@@ -619,6 +619,31 @@ def save_coop_enabled(enabled: bool) -> None:
 _COOP_OPTOUT_MIGRATION_MARKER = ".coop_optout_migrated"
 
 
+#: O-MODO-XBOX-NAO-E-QUEDA-02 (27/09/2026): as duas devoluções do boot
+#: (`lifecycle._a_escolha_dela_sem_o_vazamento` e a irmã da máscara) rodam UMA
+#: vez. Sem a marca elas rodavam em todo boot e desfaziam o Xbox que ela
+#: escolhesse de propósito, contra a própria docstring.
+MARCA_DO_CAMINHO_DEVOLVIDO = ".caminho_xbox_do_vazamento_devolvido"
+MARCA_DA_MASCARA_DEVOLVIDA = ".mascara_xbox_do_vazamento_devolvida"
+
+
+def migracao_ainda_nao_feita(marca: str) -> bool:
+    """True só na primeira chamada: grava a marca e deixa a migração rodar.
+
+    Sem disco (a marca não se lê nem se grava) responde False: na dúvida a
+    migração não roda, porque ela mexe numa escolha dela.
+    """
+    try:
+        alvo = config_dir(ensure=True) / marca
+        if alvo.exists():
+            return False
+        alvo.write_text("1\n", encoding="utf-8")
+        return True
+    except Exception as exc:
+        logger.debug("migracao_marca_falhou", marca=marca, err=str(exc))
+        return False
+
+
 def migrate_coop_optout() -> bool:
     """One-shot: apaga o `coop_disabled.flag` das versões antigas. True = migrou.
 

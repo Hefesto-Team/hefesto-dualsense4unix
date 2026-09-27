@@ -269,8 +269,9 @@ def test_com_o_cartao_em_xbox_360_o_chip_acende_o_escolhido_e_nao_a_mascara() ->
     d = _preparar("dualsense", "xbox")
     antes = d._gamepad_device
     assert (antes.backend, antes.flavor) == ("uinput", "xbox"), "premissa da bancada"
-    assert aba._estado_da_tela(_estado(d))["modo-aceso"] == "xbox", (
-        "premissa: sem caminho escolhido, ele sai da máscara, como antes da cura"
+    assert aba._estado_da_tela(_estado(d))["modo-aceso"] == "dualsense", (
+        "sem modo escolhido, o chip acende o de fábrica, e não a máscara do P1 "
+        "(O-MODO-XBOX-NAO-E-QUEDA-02: o modo não se deduz da máscara)"
     )
 
     aba.modo_dualsense(_ctx(d), {"texto": "Sony DualSense"}, _Ponte(d))

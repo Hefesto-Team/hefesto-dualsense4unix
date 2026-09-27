@@ -252,3 +252,52 @@ class TestAPromocaoDoConnectPerguntaAoDono:
             )
         finally:
             pad.stop()
+
+
+def test_o_revive_depois_da_falha_total_volta_no_modo_da_sessao(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Sem pad nenhum (o boot perdeu a corrida da ACL), o revive recria o P1 no
+    modo que a sessão escolheu. Mordida: tire o `caminho=` do revive."""
+    partidas: list[Any] = []
+    monkeypatch.setattr(
+        gamepad,
+        "start_gamepad_emulation",
+        lambda _d, flavor=None, **kw: partidas.append(kw) or True,
+    )
+    daemon = SimpleNamespace(
+        _gamepad_device=None,
+        controller=SimpleNamespace(hidraw_path=lambda uniq=None: None),
+        config=SimpleNamespace(
+            gamepad_flavor="dualsense",
+            gamepad_emulation_enabled=True,
+            gamepad_caminho=CAMINHO_XBOX,
+        ),
+    )
+    assert gamepad.upgrade_primary_vpad_to_uhid(daemon) is True  # type: ignore[arg-type]
+    assert partidas == [{"origin": "profile", "caminho": CAMINHO_XBOX}]
+
+
+@pytest.mark.parametrize(
+    ("devolucao", "gravador"),
+    [
+        ("_a_escolha_dela_sem_o_vazamento", "save_gamepad_caminho"),
+        ("_a_mascara_dela_sem_o_vazamento", "save_gamepad_emulation"),
+    ],
+)
+def test_a_devolucao_do_xbox_roda_uma_vez_e_a_escolha_seguinte_fica(
+    devolucao: str, gravador: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O primeiro boot devolve o `xbox` do vazamento de 18 a 21/09; o seguinte,
+    com o `xbox` que ela escolheu depois, não mexe. Mordida: tire a marca."""
+    from hefesto_dualsense4unix.daemon import lifecycle
+    from hefesto_dualsense4unix.utils import session
+
+    escritos: list[Any] = []
+    monkeypatch.setattr(session, gravador, lambda *a, **k: escritos.append(a))
+    funcao = getattr(lifecycle, devolucao)
+
+    assert funcao("xbox") == "dualsense"
+    assert len(escritos) == 1
+    assert funcao("xbox") == "xbox", "o segundo boot desfez o Xbox que ela escolheu"
+    assert len(escritos) == 1

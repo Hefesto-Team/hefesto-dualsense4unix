@@ -861,7 +861,10 @@ def vpad_degradation_text(state: dict[str, Any] | None) -> str | None:
         return None
     if gamepad.get("flavor") != "dualsense":
         return None
-    if gamepad.get("backend") == "uinput":
+    # O-MODO-XBOX-NAO-E-QUEDA-02 (27/09/2026): quem diz se o pad caiu é o
+    # daemon (`degraded`, de `motivo_da_degradacao`). Ler `backend == "uinput"`
+    # aqui acendia o aviso de queda sobre o modo Xbox que ela escolheu.
+    if gamepad.get("degraded") is True:
         return VPAD_DEGRADED_TEXT
     motivo = gamepad.get("dedup_motivo")
     if (

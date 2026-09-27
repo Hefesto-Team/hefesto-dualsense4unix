@@ -495,25 +495,32 @@ def _a_mascara_dela_sem_o_vazamento(do_disco: object) -> str | None:
     (`controller_masks.json` — os quatro dela em `dualsense`). O único caminho
     intencional é a CLI (`cli/cmd_gamepad.py:76`, com `--flavor`).
 
-    **UMA VEZ, e não a cada boot:** quem devolve escreve o arquivo, então a
-    volta seguinte lê `dualsense` e esta função não faz nada. É o que a torna
-    migração, e não uma regra permanente — ela continua podendo escolher Xbox
-    para tudo pela CLI, e a escolha fica.
+    **UMA VEZ, e não a cada boot**, pela marca `MARCA_DA_MASCARA_DEVOLVIDA`
+    (O-MODO-XBOX-NAO-E-QUEDA-02, 27/09/2026). Até ali a docstring dizia que a
+    volta seguinte lia `dualsense` e não fazia nada, e isso só valia enquanto
+    ela não escolhesse Xbox: com a escolha, cada boot a desfazia.
     """
     from hefesto_dualsense4unix.integrations.uinput_gamepad import resolver_flavor
+    from hefesto_dualsense4unix.utils.session import (
+        MARCA_DA_MASCARA_DEVOLVIDA,
+        migracao_ainda_nao_feita,
+    )
 
     lido = resolver_flavor(do_disco) if do_disco else None
-    if lido != "xbox":
+    if not migracao_ainda_nao_feita(MARCA_DA_MASCARA_DEVOLVIDA) or lido != "xbox":
         return lido
     with contextlib.suppress(Exception):
         from hefesto_dualsense4unix.utils.session import save_gamepad_emulation
 
         save_gamepad_emulation(True, "dualsense")
+    # A origem do `xbox` no arquivo não se mede daqui: o diário diz que foi a
+    # migração única, e não uma causa (O-MODO-XBOX-NAO-E-QUEDA-02).
     logger.info(
         "mascara_global_devolvida_ao_default",
         era=lido,
         agora="dualsense",
-        motivo="escrita_pelo_perfil_ou_pelo_gesto_sem_mascara",
+        origem="desconhecida",
+        migracao="unica",
     )
     return "dualsense"
 
@@ -537,19 +544,24 @@ def _a_escolha_dela_sem_o_vazamento(do_disco: object) -> str | None:
     apagar um valor que ela tenha escolhido de propósito seria atropelar a
     escolha em nome de consertá-la.
 
-    **UMA VEZ, e não a cada boot:** quem devolve escreve o arquivo, então a
-    volta seguinte lê `dualsense` e esta função não faz nada. É o que a torna
-    uma migração, e não uma regra permanente que impediria ela de escolher
-    Xbox para tudo se quiser — pelo caminho normal, com jogo nenhum em foco.
+    **UMA VEZ, e não a cada boot**, pela marca `MARCA_DO_CAMINHO_DEVOLVIDO`
+    (O-MODO-XBOX-NAO-E-QUEDA-02, 27/09/2026). Até ali a docstring dizia que a
+    volta seguinte lia `dualsense` e não fazia nada, e isso só valia enquanto
+    ela não escolhesse Xbox: com a escolha (o PS + R3 fora do jogo), cada boot
+    a desfazia.
     """
     from hefesto_dualsense4unix.integrations.virtual_pad import (
         CAMINHO_DUALSENSE,
         CAMINHO_XBOX,
         normalizar_caminho,
     )
+    from hefesto_dualsense4unix.utils.session import (
+        MARCA_DO_CAMINHO_DEVOLVIDO,
+        migracao_ainda_nao_feita,
+    )
 
     lido = normalizar_caminho(do_disco)
-    if lido != CAMINHO_XBOX:
+    if not migracao_ainda_nao_feita(MARCA_DO_CAMINHO_DEVOLVIDO) or lido != CAMINHO_XBOX:
         return lido
     with contextlib.suppress(Exception):
         from hefesto_dualsense4unix.utils.session import save_gamepad_caminho
@@ -559,7 +571,8 @@ def _a_escolha_dela_sem_o_vazamento(do_disco: object) -> str | None:
         "caminho_global_devolvido_ao_default",
         era=lido,
         agora=CAMINHO_DUALSENSE,
-        motivo="escrito_pelo_vazamento_do_gesto_no_jogo",
+        origem="desconhecida",
+        migracao="unica",
     )
     return CAMINHO_DUALSENSE
 FALHOU = "falhou"

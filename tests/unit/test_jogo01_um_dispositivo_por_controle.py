@@ -244,6 +244,23 @@ class TestSuspensaoDoVpad:
         assert vigia is not None, "sem vigia o vpad nunca voltaria"
         assert vigia in daemon._tasks
 
+    async def test_a_suspensao_guarda_o_modo_em_que_o_pad_nasceu(
+        self,
+        _broker_falso: None,
+        _sem_disco: list[Any],
+    ) -> None:
+        """O-MODO-XBOX-NAO-E-QUEDA-02: a máscara volta, e o modo tem de voltar junto.
+
+        Mordida: tire a linha que guarda o caminho na suspensão e esta reprova.
+        """
+        daemon = _DaemonFalso()
+        daemon._gamepad_device.caminho = "xbox"
+
+        gp.suspend_vpads_for_steam_input(daemon, appid=MMJ)
+        await _encerrar_vigia(daemon)
+
+        assert daemon._steam_input_caminho_suspenso == "xbox"
+
     async def test_a_preferencia_em_disco_nao_e_tocada(
         self,
         _broker_falso: None,
@@ -396,6 +413,25 @@ class TestDevolucaoDoVpad:
         assert daemon._coop_manager.syncs == [True], "P2+ voltam junto com o P1"
         assert _sem_disco == [], "a volta também não escreve preferência nenhuma"
         assert daemon.grabs == [True] and daemon.hides == ["/dev/hidraw0"]
+
+    def test_a_devolucao_volta_no_modo_em_que_o_pad_nasceu(
+        self, monkeypatch: pytest.MonkeyPatch, _broker_falso: None, _sem_disco: list[Any]
+    ) -> None:
+        """O-MODO-XBOX-NAO-E-QUEDA-02: sem o caminho o start não opina, e o Xbox
+        do perfil voltava DualSense. Mordida: tire o `caminho=` da devolução."""
+        daemon = self._suspenso(flavor="dualsense")
+        daemon._steam_input_caminho_suspenso = "xbox"
+        partidas: list[dict[str, Any]] = []
+        monkeypatch.setattr(
+            gp,
+            "start_gamepad_emulation",
+            lambda _d, flavor=None, **kw: partidas.append({"flavor": flavor, **kw}) or True,
+        )
+
+        assert gp.resume_vpads_after_steam_input(daemon) is True
+
+        assert partidas == [{"flavor": "dualsense", "origin": "profile", "caminho": "xbox"}]
+        assert daemon._steam_input_caminho_suspenso is None
 
     def test_sem_mascara_gravada_a_devolucao_nao_inventa_um_vpad(
         self, _broker_falso: None, _sem_disco: list[Any]
