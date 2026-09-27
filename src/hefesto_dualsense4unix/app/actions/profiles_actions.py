@@ -983,7 +983,7 @@ def mensagem_do_salvar(
 
 # --- P2: o carimbo de ponte aparece NESTA aba ------------------------------
 # PERFIS-ABRE-O-QUE-GUARDA-01/§2.2/1 (24/08/2026). O daemon PUBLICA
-# `pontes_confirmadas` desde 19/08 (`daemon/ipc_handlers.py:2058`), com o
+# `pontes_confirmadas` desde 19/08 (`daemon/ipc_handlers.py:2060`), com o
 # comentário dizendo a intenção em letra: *"para a janela dizer 'este jogo já
 # sabe por onde entra'"*. Medido:
 #

@@ -5144,7 +5144,7 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         # colapsa isso no mesmo `True` de um pedido honrado, e a tela pintava
         # o selo do card certo sobre um número que aquele controle nunca teve.
         #
-        # O CAMPO EXISTE DESDE 20/08 (`por_uniq`, `ipc_handlers.py:6557`) e a
+        # O CAMPO EXISTE DESDE 20/08 (`por_uniq`, `ipc_handlers.py:6559`) e a
         # janela ANTIGA já o lê (`controller_card:4443`). Quem não lia era esta.
         corpo = _corpo(p.mic_volume_set_detalhado(pedido, uniq=uniq))
         # `sem_fonte` TEM FRASE PRÓPRIA, e SÓ ele: os outros `status` continuam

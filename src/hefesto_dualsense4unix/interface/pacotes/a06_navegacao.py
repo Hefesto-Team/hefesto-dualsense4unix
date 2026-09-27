@@ -2718,7 +2718,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     teclado virtual e nada mais.
 
     E COM O GAMEPAD DESPACHANDO, o teclado nem chega a ser consultado — a
-    guarda está em `lifecycle.py:5110`, no `if not gamepad_dispatched`. Copiar o
+    guarda está em `lifecycle.py:5123`, no `if not gamepad_dispatched`. Copiar o
     portão daqui bloquearia, dentro do jogo, o único interruptor que existe
     para calar o Alt+Tab do R1 — que é o defeito que este método nasceu para
     curar (queixa dela, 29/07).
@@ -4004,7 +4004,7 @@ def padrao_remapeamento(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
 #:
 #: 1. o handler diz o lugar dele com todas as letras — *"entra na transição de
 #:    modo (`app/actions/mode_transition.py`), **nunca em um botão solto**"*
-#:    (`daemon/ipc_handlers.py:5039`);
+#:    (`daemon/ipc_handlers.py:5041`);
 #: 2. ele devolve a preferência PERSISTIDA — não "o de fábrica" nem "o que a
 #:    tela mostra" —, então pendurá-lo num "Voltar ao padrão" faria o botão
 #:    prometer uma coisa e fazer outra;

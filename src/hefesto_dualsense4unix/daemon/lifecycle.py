@@ -370,7 +370,7 @@ class DaemonConfig:
     #
     # É uma FONTE (chamável), não uma cópia da chave, e a diferença é o gesto
     # do "Aplicar": o `machine.declare` relê o `maquina.json` e REBINDA
-    # `daemon._maquina` (`ipc_handlers.py:5246`), então uma cópia tirada no boot
+    # `daemon._maquina` (`ipc_handlers.py:5248`), então uma cópia tirada no boot
     # ficaria velha no instante exato em que ela acabou de escolher — e o teto
     # novo só valeria no próximo início do Hefesto. Com a fonte, o próximo
     # cálculo de vibração já lê a declaração nova, sem tique nem invalidação.
@@ -520,7 +520,7 @@ def _a_mascara_dela_sem_o_vazamento(do_disco: object) -> str | None:
         era=lido,
         agora="dualsense",
         origem="desconhecida",
-        migracao="unica",
+        migracao="única",
     )
     return "dualsense"
 
@@ -572,7 +572,7 @@ def _a_escolha_dela_sem_o_vazamento(do_disco: object) -> str | None:
         era=lido,
         agora=CAMINHO_DUALSENSE,
         origem="desconhecida",
-        migracao="unica",
+        migracao="única",
     )
     return CAMINHO_DUALSENSE
 FALHOU = "falhou"
