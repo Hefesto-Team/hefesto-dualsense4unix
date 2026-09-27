@@ -171,7 +171,7 @@ TOUCH_REGIOES = [f"clique {x.strip()}" for x in
 # é esse estado, e só ele, que vai para o mouse (`_dispatch_mouse_emulation`,
 # :5712), para o teclado (:5723) e para o `hotkey_manager.observe` (:5726). Os
 # secundários do co-op têm UM caminho só, o do gamepad virtual
-# (`daemon/subsystems/coop.py:2057` — `forward_analog`/`forward_buttons`).
+# (`daemon/subsystems/coop.py:2366` — `forward_analog`/`forward_buttons`).
 # Logo: com quatro na mesa, mouse, teclado e os seis gestos saem de um
 # controle só, o do jogador 1. A aba diz isso na cara em vez de esconder.
 # QUEM NAVEGA SAI DOS CONECTADOS, não da MESA — 31/08/2026, quando a mesa passou

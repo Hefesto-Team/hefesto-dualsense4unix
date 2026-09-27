@@ -1300,7 +1300,7 @@ def _indice(ctx: Contexto, uniq: str) -> int:
     """A POSIÇÃO daquele controle na lista do daemon — o que o alvo espera.
 
     `controller.target.set` recebe `index` (0 = primário), **não** `uniq`:
-    `daemon/ipc_handlers.py:5108`. O número sai do próprio bloco `controllers`
+    `daemon/ipc_handlers.py:5176`. O número sai do próprio bloco `controllers`
     (`core/backend_pydualsense.py:7520`, `"index": idx`), que é a posição em
     `list(self._handles)` — o MESMO que cada linha do seletor da janela estável
     carrega (`app/actions/status_actions.py:1585`).

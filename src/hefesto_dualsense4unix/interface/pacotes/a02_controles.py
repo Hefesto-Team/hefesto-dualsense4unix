@@ -5418,7 +5418,7 @@ METODOS: set[str] = set()
 #: sozinha que o gesto pegou.
 #:
 #: O `machine.declare` está **fora do `daemon.state_full` de propósito**, e o
-#: handler diz a razão (`ipc_handlers.py:7104`): *"aquilo é o tique de 20 Hz, e
+#: handler diz a razão (`ipc_handlers.py:7356`): *"aquilo é o tique de 20 Hz, e
 #: a declaração muda por gesto dela, não por quadro"*. Ele grava em disco
 #: (`maquina.json`), e a única confirmação é o `(ok, motivo)` da chamada — que é
 #: exatamente por que o gesto levanta com o motivo em vez de voltar calado.
