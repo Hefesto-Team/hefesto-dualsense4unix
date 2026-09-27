@@ -432,6 +432,49 @@ def pytest_collectstart(collector: Any) -> None:
         _MODULOS_DESPOLUIDOS.append(str(getattr(collector, "nodeid", collector)))
 
 
+def _falta_o_gtk(erro: BaseException | None) -> bool:
+    """O erro é a falta do GTK real: o `gi` ausente, ou o stub de outro arquivo."""
+    vistos: set[int] = set()
+    while erro is not None and id(erro) not in vistos:
+        vistos.add(id(erro))
+        texto = str(erro)
+        if isinstance(erro, ModuleNotFoundError) and (erro.name or "").split(".")[0] in (
+            "gi",
+            "cairo",
+        ):
+            return True
+        if isinstance(erro, ImportError) and "from 'gi.repository'" in texto:
+            return True
+        if isinstance(erro, AttributeError) and "module 'gi.repository." in texto:
+            return True
+        erro = erro.__cause__ or erro.__context__
+    return False
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item: Any, call: Any) -> Any:
+    """Sem o GTK real, o teste que precisa dele PULA com o motivo, e não reprova.
+
+    27/09/2026: o `lint-test` do CI roda sem PyGObject, e dois mil testes das
+    páginas reprovavam com `No module named 'gi'`, porque o gerador das páginas
+    alcança módulos do GTK. Marcar arquivo a arquivo (`exigir_gi_real`) cobria
+    sete de cento e cinquenta. A regra é uma só: o que falha pela falta do GTK
+    vira pulo, entra no resumo da GUARDA-GI-REAL-01, e roda no job com o GTK
+    real, onde `HEFESTO_EXIGE_GTK_REAL=1` desliga esta regra e o pulo reprova.
+    """
+    resultado = yield
+    if GI_REAL_DISPONIVEL or EXIGE_GTK_REAL or call.excinfo is None:
+        return
+    relatorio = resultado.get_result()
+    if relatorio.outcome != "failed" or not _falta_o_gtk(call.excinfo.value):
+        return
+    caminho, linha, _ = item.location
+    relatorio.outcome = "skipped"
+    relatorio.longrepr = (str(item.path), (linha or 0) + 1, f"Skipped: {_MOTIVO_SEM_GI}")
+    if caminho not in _MODULOS_PULADOS_SEM_GI:
+        _MODULOS_PULADOS_SEM_GI.append(caminho)
+
+
 def pytest_runtest_setup(item: Any) -> None:
     """Diz à vigia QUEM está na mesa — sem isto o livro acusa sem endereço."""
     vigia = vigia_da_sessao()

@@ -397,6 +397,7 @@ FORA-DO-CI|scripts/check_o_endereco_dela_em_toda_forma.py|27/09/2026, O-SUFIXO-D
 FORA-DO-CI|scripts/check_a_coleta_sem_gtk.py|27/09/2026: é o espelho local do passo «Censo de coleta» do lint-test, que o CI já roda direto com o pytest (e com o piso, que fica só lá). Existe porque esta máquina tem o GTK: em 26/09 cinco módulos sem exigir_gi_real() deram verde aqui e vermelho em oito corridas do CI (VERDE-NAO-E-PROVA-01).
 FORA-DO-CI|scripts/mover-sprints-fechadas.py|20/09/2026: mede docs/process/sprints/, que é .gitignore:178 e não viaja pelo git. No CI a pasta nunca existe, então o portão só saberia dizer NÃO MEDIDO — um job que não pode reprovar ensina a não acreditar na esteira. Localmente ele mede 46 sprints; medido em 20/09.
 FORA-DO-LOCAL|pre-commit|DECISÃO EM ABERTO, e não é minha: ou o framework entra no install.sh sem flag, ou os dez portões do .pre-commit-config.yaml migram para o gancho e o .yaml some (INFRA-DE-EXECUCAO-01, I14 e §9.4). Enquanto não decidido, o CI é o único que o roda -- e esta linha declara isso em vez de fingir que não existe. Medido: `which pre-commit` -> not found nesta máquina.
+FORA-DO-LOCAL|scripts/rodar-a-suite.sh|27/09/2026: é a suíte inteira, e em casa ela roda no fecho, por quem coordena e com a máquina livre, depois dos portões (o GUIA.md, «Antes de fechar qualquer leva»): toca nós uinput de verdade e leva quarenta minutos. No CI é o job gtk-real, com o GTK real.
 DIV
 }
 

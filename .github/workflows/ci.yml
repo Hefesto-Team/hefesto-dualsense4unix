@@ -607,8 +607,10 @@ jobs:
           # a coisa medida. As guardas do teste agora PULAM nesses casos, e é
           # justamente por isso que estes dois pacotes têm de estar aqui: portão
           # que só pula é portão que não existe.
+          # `libopus0` (27/09/2026): sem ela o codec do som pelo rádio levanta
+          # `OpusIndisponivelError` e seis arquivos reprovavam por ambiente.
           sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev \
-            bubblewrap librsvg2-common
+            bubblewrap librsvg2-common libopus0
           # E instalar o `bwrap` não basta: o Ubuntu 24.04 bloqueia user
           # namespace sem privilégio por AppArmor, então ele saía com 1 — e o
           # teste lia esse 1 como resposta do doctor, reprovando com "o doctor
@@ -747,13 +749,12 @@ jobs:
       # `--continue-on-collection-errors` é deliberado: sem ele, UM módulo
       # quebrado aborta a suíte inteira e esconde o estado dos outros 5.000.
       # O run continua vermelho — só para de ser cego.
+      # Sem o GTK real, o teste que precisa dele PULA com o motivo (a regra do
+      # `tests/conftest.py`, 27/09/2026) e roda no `gtk-real`, que mede a suíte
+      # inteira e a cobertura dela. Aqui fica a pergunta das três versões.
       - name: Pytest unit
         run: |
-          pytest tests/unit -v \
-            --continue-on-collection-errors \
-            --cov=hefesto_dualsense4unix \
-            --cov-report=term-missing \
-            --cov-fail-under=70
+          pytest tests/unit -v --continue-on-collection-errors
       # CI-TESTS-CORE-ORFAO-01: `tests/core` (12 testes) não era rodado por
       # NENHUM job — existia no repo e nunca reprovava nada.
       - name: Pytest core
@@ -796,8 +797,10 @@ jobs:
             libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev \
             xvfb dbus-x11 \
             librsvg2-2 librsvg2-common gir1.2-rsvg-2.0 \
-            gir1.2-webkit2-4.1 libopus0 \
+            gir1.2-webkit2-4.1 libopus0 bubblewrap \
             fonts-space-grotesk-ttf fonts-jetbrains-mono
+          # O `bwrap` do doctor precisa de user namespace (ver o `lint-test`).
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
             # A PONTE DAS DEZ ABAS E O SOM PELO RÁDIO — 25/09/2026. A interface
             # nova é HTML num `WebKit2.WebView` (`gi.require_version("WebKit2",
             # "4.1")` no piloto e na ponte), e o alto-falante pelo rádio codifica
@@ -893,39 +896,23 @@ jobs:
       # HEFESTO_EXIGE_GTK_REAL=1 vira a chave da guarda: aqui, "pulei porque
       # não tenho GTK" não é sucesso, é REPROVAÇÃO. Se o ambiente degradar, o
       # job fala; não fica verde por omissão.
-      - name: Testes de interface sob Xvfb
+      # A SUÍTE INTEIRA, como na máquina dela (27/09/2026). Este passo rodava
+      # só os arquivos marcados com `exigir_gi_real`, sete de cento e cinquenta;
+      # o resto da interface pulava no `lint-test` e não rodava em lugar nenhum.
+      # Em 24 partes, pelo `scripts/rodar-a-suite.sh` (um processo só morre no
+      # meio), e a cobertura se mede sobre a suíte inteira.
+      - name: A suíte inteira sob Xvfb, com o GTK real
         env:
           HEFESTO_EXIGE_GTK_REAL: "1"
           GDK_BACKEND: x11
           NO_AT_BRIDGE: "1"
+          SUITE_PYTEST_ARGS: --cov=hefesto_dualsense4unix --cov-append --cov-report=
         run: |
-          # SÓ os testes de INTERFACE, não a suíte inteira. A suíte completa já
-          # roda no `lint-test`, com o piso de cobertura; repeti-la aqui, sob
-          # Xvfb e com o GTK real carregado, custou 39% da coleta e a morte
-          # silenciosa do processo na estreia deste job (v0.3.0, 29/07) — sem
-          # traceback, que é a assinatura de OOM no runner.
-          #
-          # O critério de "teste de interface" é o mesmo da guarda: o arquivo
-          # chama `exigir_gi_real` ou usa o marcador `skip_sem_gi_real`. Assim a
-          # lista não precisa ser mantida à mão, e um arquivo novo entra sozinho
-          # no dia em que ganhar a guarda.
-          ALVOS=$(grep -rlE 'exigir_gi_real|skip_sem_gi_real' tests/unit \
-                  --include='*.py' | sort | tr '\n' ' ')
-          echo "arquivos de interface: $(echo $ALVOS | wc -w)"
-          test -n "$ALVOS" || { echo "::error::nenhum teste de interface encontrado"; exit 1; }
           xvfb-run -a --server-args="-screen 0 1280x1024x24" \
-            .venv/bin/python -m pytest $ALVOS -v \
-              --continue-on-collection-errors
-      # O PORTÃO DO ALVO SAIU EM 06/09/2026 (`GTK-3`), com o que ele media.  # noqa-acento (verbo medir, imperfeito)
-      # `scripts/portao_alvo_tem_dono.py` importava `HefestoApp` para conferir
-      # `HefestoApp._ALVO_POR_ABA` — a fita "Ajustes vão para:" da JANELA GTK,
-      # aposentada por decisão dela (`D-0609-GTK-LEVA-INTEIRA`). Sem a janela
-      # não há mapa de aba a conferir, e um portão que importa arquivo apagado
-      # é vermelho que não mede nada.
-      #
-      # QUEM VIGIA A MESMA PERGUNTA NA TELA DE HOJE: a tira das dez páginas tem
-      # `scripts/check_regua_de_tela.py` e a régua da fita vive em
-      # `tests/unit/test_a_fita_diz_o_que_a_aba_faz_e_deixa_escolher.py`, na suíte.
+            bash scripts/rodar-a-suite.sh
+      - name: A cobertura da suíte inteira
+        if: always()
+        run: .venv/bin/python -m coverage report --fail-under=70
 
   pre-commit:
     name: pre-commit run --all-files

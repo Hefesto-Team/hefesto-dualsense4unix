@@ -51,6 +51,8 @@ echo "        saída  $SAIDA"
 echo
 
 so_esta="${1:-}"
+# Argumentos a mais para cada parte; o CI passa a cobertura por aqui.
+read -r -a extra <<< "${SUITE_PYTEST_ARGS:-}"
 vermelhos=0
 verdes=0
 for f in "$SAIDA"/parte-*; do
@@ -64,7 +66,7 @@ for f in "$SAIDA"/parte-*; do
 
   # Um arquivo por linha vira um argumento por arquivo — é o ponto do array.
   mapfile -t arquivos < "$f"
-  PYTHONPATH="$RAIZ/src" "$PY" -m pytest "${arquivos[@]}" \
+  PYTHONPATH="$RAIZ/src" "$PY" -m pytest "${arquivos[@]}" "${extra[@]}" \
       -q -p no:cacheprovider > "$SAIDA/parte-$n.log" 2>&1
   linha=$(tail -1 "$SAIDA/parte-$n.log")
 
