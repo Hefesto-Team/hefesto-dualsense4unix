@@ -643,6 +643,10 @@ jobs:
       # mostrar uma lista que já não é a do disco.
       - name: A página das frases de tela reflete o dado versionado
         run: python3 scripts/gerar-frases-de-tela.py --check
+      # O index.html de html/ diz de que commit nasceu cada página gerada. Ele só
+      # era conferido pelo gancho do pre-commit (27/09/2026).
+      - name: O índice das páginas geradas reflete o carimbo das três
+        run: python3 scripts/gerar-indice-html.py --check
       # GUARDA-GI-REAL-01: um módulo que some da coleta some CALADO. O `pytest`
       # aborta com "Interrupted: N errors during collection" no meio de
       # milhares de linhas de log, e um `6 skipped` na coleta não aparece em

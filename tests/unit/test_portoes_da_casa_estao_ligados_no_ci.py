@@ -353,6 +353,29 @@ def test_todo_portao_da_casa_e_invocado_no_ci() -> None:
         )
 
 
+def test_todo_gancho_do_pre_commit_e_portao_da_casa() -> None:
+    """O pre-commit só roda no CI; o que ele confere tem de rodar em casa também.
+
+    27/09/2026: o `gerar-indice-html.py --check` era gancho do pre-commit e não
+    era portão, e o CI do `dev` reprovou com os 65 portões verdes em casa.
+    """
+    config = yaml.safe_load((RAIZ / ".pre-commit-config.yaml").read_text(encoding="utf-8"))
+    casa = set(portoes_da_casa())
+    faltam = [
+        f"{gancho['id']}: {script}"
+        for repo in config["repos"]
+        for gancho in repo["hooks"]
+        for script in re.findall(r"scripts/[\w./-]+\.(?:sh|py)", gancho.get("entry", ""))
+        if script not in casa
+    ]
+    assert not faltam, (
+        f"estes ganchos do pre-commit não são portão da casa: {faltam}. O "
+        "pre-commit não roda nesta máquina (FORA-DO-LOCAL), então o que ele "
+        "confere só reprova no CI, depois do empurrão. Ponha o script na "
+        "tabela do `scripts/portoes.sh`."
+    )
+
+
 def test_nenhum_portao_da_casa_virou_aviso() -> None:
     """`continue-on-error` transforma portão em decoração com nome de portão."""
     for portao in portoes_da_casa():
