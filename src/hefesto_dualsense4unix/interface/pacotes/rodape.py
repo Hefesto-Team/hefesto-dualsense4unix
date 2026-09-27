@@ -369,8 +369,6 @@ def _o_som_daquela_peca(draft: Any, c: dict[str, Any], uniq: str,
     comparar é o `DraftConfig`, e uma segunda cópia dessa regra é como duas
     telas passam a discordar.
     """
-    from hefesto_dualsense4unix.app.draft_config import MicDraft
-
     som = c.get("speaker")
     if ("speaker" in secoes and isinstance(som, dict)
             and som.get("volume") is not None):
@@ -391,11 +389,20 @@ def _o_som_daquela_peca(draft: Any, c: dict[str, Any], uniq: str,
     if "mic" in secoes and isinstance(audio, dict):
         mudo = audio.get("mic_mudo")
         captura = audio.get("volume_captura")
-        if mudo is not None or captura is not None:
-            draft = draft.with_controller_mic(uniq, MicDraft(
-                muted=None if mudo is None else bool(mudo),
-                volume=None if captura is None else int(captura),
-            ))
+        # O MESMO MOLDE DO ALTO-FALANTE, e ele faltava aqui — conferência da
+        # O-SALVAR-DA-VIBRACAO-01, 26/09/2026. O `MicDraft(muted, volume)` nu
+        # ia ao `with_controller_mic`, que substitui a seção da peça: o `gain`
+        # (que o daemon não publica) sumia em todo Salvar da 02, e o `volume`
+        # sumia quando o canal ainda não tinha resposta. A base é o efetivo
+        # da peça, e o vivo troca só o que ele leu.
+        lido: dict[str, Any] = {}
+        if mudo is not None:
+            lido["muted"] = bool(mudo)
+        if captura is not None:
+            lido["volume"] = int(captura)
+        if lido:
+            draft = draft.with_controller_mic(
+                uniq, draft.effective_mic_for(uniq).model_copy(update=lido))
     return draft
 
 

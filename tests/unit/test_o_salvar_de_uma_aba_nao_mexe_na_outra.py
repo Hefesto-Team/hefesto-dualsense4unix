@@ -30,6 +30,9 @@ AS MORDIDAS, uma por cura (medidas na entrega):
   microfone e a fonte;
 - devolva o ``SpeakerDraft(volume, muted, rota)`` nu a ``_o_som_daquela_peca``
   e :func:`test_o_salvar_da_02_guarda_a_fonte_e_a_rota` reprova com a fonte;
+- devolva o ``MicDraft(muted, volume)`` nu ao microfone da mesma função e
+  :func:`test_o_salvar_da_02_guarda_o_ganho_e_o_volume_do_microfone` reprova
+  com o ganho;
 - faça ``a10_perfis._com_o_que_esta_valendo`` pedir todas as seções e
   :func:`test_o_editor_da_10_so_muda_o_campo_dele` reprova com o microfone.
 """
@@ -328,6 +331,36 @@ def test_o_salvar_da_02_guarda_a_fonte_e_a_rota() -> None:
         "o Salvar da 02 apagou a fonte do alto-falante — o `SpeakerDraft` foi "
         "remontado sem ela")
     assert depois.get(f"controllers.{P3}.speaker.rota") == 2
+
+
+def test_o_salvar_da_02_guarda_o_ganho_e_o_volume_do_microfone() -> None:
+    """O microfone do vivo troca o que ele lê, e o resto da peça fica.
+
+    O MESMO MOLDE DA FONTE, na seção vizinha (conferência da
+    O-SALVAR-DA-VIBRACAO-01, 26/09/2026). O daemon publica o mudo e, quando o
+    laço do canal já perguntou ao PipeWire, o `volume_captura`; o GANHO da
+    placa ele não publica. O vivo era montado num `MicDraft(muted, volume)`
+    nu, e o `with_controller_mic` substitui a seção inteira da peça: o Salvar
+    da 02 apagava o `gain` sempre, e o `volume` quando o canal ainda não tinha
+    resposta. É a assinatura da escrita das 18:40:14 no Freestyle dela
+    (`mic.volume` 64 → ausente).
+    """
+    from hefesto_dualsense4unix.profiles.schema import Profile
+
+    cru = json.loads(json.dumps(PERFIL))
+    cru["controllers"][P3]["mic"] = {"muted": True, "volume": 68, "gain": 40}
+    loader.save_profile(Profile.model_validate(cru), origem="teste")
+    vivo = {**VIVO_DAS_18H38,
+            "audio": {"mic_mudo": False, "mic_mudo_desejado": None}}
+    rodape.salvar(_ctx(vivo, MESA_DAS_18H38),
+                  _clique_do_salvar("02-controles.html"), PonteDeMentira())
+    depois = _o_disco()
+    assert depois.get(f"controllers.{P3}.mic.gain") == 40, (
+        "o Salvar da 02 apagou o ganho do microfone do …:03 — o `MicDraft` "
+        "foi remontado sem ele")
+    assert depois.get(f"controllers.{P3}.mic.volume") == 68, (
+        "o Salvar da 02 apagou o volume do microfone do …:03 com o canal "
+        "ainda sem resposta")
 
 
 # --------------------------------------------------------------------------
