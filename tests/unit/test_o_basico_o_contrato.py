@@ -846,3 +846,40 @@ def test_o_pad_uinput_da_mascara_dualsense_e_nosso_e_o_edge_de_verdade_nao(tmp_p
     assert identidade.e_pad_uinput_do_hefesto(DUALSENSE_EDGE_NAME, str(nosso), nomes)
     assert not identidade.e_pad_uinput_do_hefesto(DUALSENSE_EDGE_NAME, str(edge), nomes)
     assert not identidade.e_pad_uinput_do_hefesto("Microsoft X-Box 360 pad 0", str(espelho), nomes)
+
+
+# ---------------------------------------------------------------------------
+# O comando da CLI acha o protocolo, ou diz que ele não veio
+# ---------------------------------------------------------------------------
+
+
+def test_o_comando_da_cli_sem_o_protocolo_na_instalacao_e_nao_sei(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from hefesto_dualsense4unix.cli import cmd_basico
+
+    monkeypatch.setattr(cmd_basico, "encontrar_arquivo_do_repo", lambda rel: None)
+    assert cmd_basico.basico_cmd(["retrato"]) == cmd_basico.RC_NAO_SEI
+    assert "não veio nesta instalação" in capsys.readouterr().err
+
+
+def test_o_comando_da_cli_passa_os_argumentos_e_o_rc_inteiros(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from hefesto_dualsense4unix.cli import cmd_basico
+
+    pedidos: list[list[str]] = []
+
+    class Feito:
+        returncode = 2
+
+    def rodar(argv: list[str], check: bool) -> Feito:
+        pedidos.append(argv)
+        return Feito()
+
+    monkeypatch.setattr(cmd_basico.subprocess, "run", rodar)
+    assert cmd_basico.basico_cmd(["eixos", "--trocar-modo", "xbox"]) == 2
+    (argv,) = pedidos
+    assert argv[0] == sys.executable
+    assert Path(argv[1]) == SCRIPTS / "o_basico.py"
+    assert argv[2:] == ["eixos", "--trocar-modo", "xbox"]
