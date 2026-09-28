@@ -75,8 +75,17 @@ Nem um byte, em transporte nenhum. `read()` de hidraw pela porta do broker,
 `EVIOCGABS`/`EVIOCGBIT` de evdev (que não é grab e não disputa nada), e
 arquivos de `/sys`. Nenhuma unit é tocada, nenhum estado do sistema é sujo.
 
+O ENDEREÇO NUNCA SAI CRU, E HÁ UMA FORMA DE MÁQUINA (O-BASICO-MEDIDO-01, 28/09)
+-------------------------------------------------------------------------------
+As tabelas chamam cada físico pelo endereço: toda linha passa pelo dono da
+máscara da casa (`core/formas_do_endereco.mascarar`), com os endereços da mesa
+como conhecidos, no terminal e no `--bruto`. O `--json` é o que o
+`o_basico.py entrada` lê: os pares pad↔físico, se o ótimo é único, os eixos
+cujo centro o pad muda e os valores que ele inventa, e se houve mão na janela.
+
 USO
     .venv/bin/python scripts/ensaios/entrada_em_repouso.py
+    .venv/bin/python scripts/ensaios/entrada_em_repouso.py --json
     .venv/bin/python scripts/ensaios/entrada_em_repouso.py --segundos 60
     .venv/bin/python scripts/ensaios/entrada_em_repouso.py --bruto docs/data/ensaios-brutos/
     .venv/bin/python scripts/ensaios/entrada_em_repouso.py --apertar   # BLOCO DELA
@@ -119,6 +128,7 @@ from comum import (
     resumo,
     tabela,
 )
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 
 # ---------------------------------------------------------------------------
 # O corpo do report de entrada — driver-hid-playstation.md §1.1
@@ -268,9 +278,9 @@ class Coleta:
     aparelho: Aparelho
     porta: str = ""
     quadros: int = 0
-    ids: Counter = field(default_factory=Counter)
-    tamanhos: Counter = field(default_factory=Counter)
-    eixo: dict[str, Counter] = field(default_factory=lambda: defaultdict(Counter))
+    ids: Counter[int] = field(default_factory=Counter)
+    tamanhos: Counter[int] = field(default_factory=Counter)
+    eixo: dict[str, Counter[int]] = field(default_factory=lambda: defaultdict(Counter))
     valores_por_offset: dict[int, set[int]] = field(default_factory=lambda: defaultdict(set))
     contador_andou: int = 0
     contador_parado: int = 0
@@ -1050,9 +1060,60 @@ def monta_relatorio(coletas: dict[str, Coleta], segundos: float) -> tuple[str, s
     return "\n".join(partes), linha
 
 
+def resultado_json(coletas: dict[str, Coleta], segundos: float, conhecidos: list[str]) -> dict[str, object]:
+    """A forma que o ``o_basico.py entrada`` lê — sem endereço cru.
+
+    ``vpad`` é o número que o produto carimba no pad (``P1``…); ``controle`` é
+    o endereço mascarado do físico casado. ``muda`` são os eixos cujo CENTRO o pad publica
+    diferente do físico; ``inventa`` são os que ganharam valor que o físico
+    não mandou. ``mao_na_janela`` suspende o veredito de repouso.
+    """
+    fisicos_c = {h: c for h, c in coletas.items() if not c.aparelho.e_vpad and c.quadros}
+    dos_vpads = {h: c for h, c in coletas.items() if c.aparelho.e_vpad and c.quadros}
+    pares, nota = casar_por_assinatura(
+        {h: c.assinatura for h, c in fisicos_c.items()},
+        {h: c.assinatura for h, c in dos_vpads.items()},
+    )
+    por_bat = casar_por_bateria(
+        {h: c.bateria for h, c in fisicos_c.items()},
+        {h: c.bateria for h, c in dos_vpads.items()},
+    )
+    sujos = [c for c in coletas.values() if c.quadros and not (c.botoes_em_repouso and c.status_parado)]
+    mortos = [c for c in coletas.values() if c.quadros and not c.fluxo_vivo]
+    pares_json = []
+    for par in pares:
+        v, f = coletas[par.vpad], coletas[par.fisico]
+        muda = [nome for nome, _ in STICKS if v.centro(nome) != f.centro(nome)]
+        inventa = [nome for nome, _ in STICKS if not set(v.eixo[nome]) <= set(f.eixo[nome])]
+        pares_json.append({
+            "vpad": v.aparelho.rotulo,
+            "controle": mascarar(f.aparelho.mac, conhecidos) if f.aparelho.mac else None,
+            "transporte": f.transporte,
+            "sem_empate": par.unico,
+            "discordancias": list(par.discordancias),
+            "bateria_confirma": (por_bat[par.vpad] == par.fisico) if par.vpad in por_bat else None,
+            "muda": muda,
+            "inventa": inventa,
+        })
+    return {
+        "veredito": nota,
+        "alvos_inicio": [mascarar(c.aparelho.apelido, conhecidos) for c in coletas.values()],
+        "alvos_fim": [mascarar(c.aparelho.apelido, conhecidos) for c in coletas.values() if c.quadros],
+        "mexeu": ["abre o hidraw do pad (01 A12)"] if dos_vpads else [],
+        "medidas": {
+            "segundos": segundos,
+            "nota_do_casamento": nota,
+            "pares": pares_json,
+            "mao_na_janela": bool(sujos),
+            "fluxo_morto": [mascarar(c.aparelho.apelido, conhecidos) for c in mortos],
+        },
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--segundos", type=float, default=20.0)
+    ap.add_argument("--json", action="store_true", help="a forma que o o_basico.py lê")
     ap.add_argument("--bruto", default="", help="diretório onde gravar a saída literal")
     ap.add_argument(
         "--apertar",
@@ -1066,6 +1127,13 @@ def main() -> int:
         return 0
 
     aparelhos = descobrir_aparelhos()
+    conhecidos = [a.mac for a in aparelhos if a.mac]
+    if args.json:
+        import json
+
+        dado = resultado_json(coletar(aparelhos, args.segundos), args.segundos, conhecidos)
+        print(mascarar(json.dumps(dado, ensure_ascii=False, indent=1), conhecidos))
+        return 0
     nos_evdev = [
         e
         for e in (evdev_principal(a.dir_device) for a in aparelhos if not a.e_vpad)
@@ -1091,12 +1159,12 @@ def main() -> int:
         f"  janela ........... {args.segundos:.0f} s, TODOS os nós ao mesmo tempo",
         f"  T0 (parede) ...... {datetime.now():%Y-%m-%d %H:%M:%S.%f}"[:40],
     ]
-    print("\n".join(saida))
+    print(mascarar("\n".join(saida), conhecidos))
 
     coletas = coletar(aparelhos, args.segundos)
     relatorio, linha = monta_relatorio(coletas, args.segundos)
-    print(relatorio)
-    print(resumo(linha))
+    print(mascarar(relatorio, conhecidos))
+    print(mascarar(resumo(linha), conhecidos))
 
     if args.bruto:
         os.makedirs(args.bruto, exist_ok=True)
@@ -1104,7 +1172,7 @@ def main() -> int:
             args.bruto, f"{datetime.now():%Y-%m-%d}-entrada-em-repouso.txt"
         )
         with open(alvo, "w", encoding="utf-8") as fh:
-            fh.write("\n".join(saida) + "\n" + relatorio + "\n" + resumo(linha) + "\n")
+            fh.write(mascarar("\n".join(saida) + "\n" + relatorio + "\n" + resumo(linha) + "\n", conhecidos))
         print(f"\nbruto gravado em {alvo}")
     return 0
 

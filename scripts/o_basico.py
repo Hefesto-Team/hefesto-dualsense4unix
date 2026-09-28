@@ -536,6 +536,10 @@ def _lista(valor: object) -> list[dict[str, Any]]:
     return [dict(x) for x in valor if isinstance(x, Mapping)] if isinstance(valor, list) else []
 
 
+def _textos(valor: object) -> list[str]:
+    return [str(x) for x in valor] if isinstance(valor, list) else []
+
+
 def controles_na_mesa(estado: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Os controles conectados com número de jogador, em ordem de jogador."""
     fora = [
@@ -1957,9 +1961,11 @@ def sub_entrada(s: Sessao, a: argparse.Namespace) -> None:
         elif not par.get("sem_empate"):
             _passo(s, "a entrada por par (repouso)", jogador, transporte_de(c), VERMELHO,
                    "o par saiu AMBÍGUO: duas unidades com o mesmo centro de stick")
-        elif par.get("achatados"):
+        elif par.get("muda") or par.get("inventa"):
             _passo(s, "a entrada por par (repouso)", jogador, transporte_de(c), VERMELHO,
-                   "o pad achata: " + ", ".join(map(str, par["achatados"])))
+                   "o pad muda o centro de: " + (", ".join(_textos(par.get("muda"))) or "—")
+                   + "; inventa valor em: " + (", ".join(_textos(par.get("inventa"))) or "—"),
+                   medida=dict(par))
         else:
             _passo(s, "a entrada por par (repouso)", jogador, transporte_de(c), VERDE,
                    "o pad casou com o físico dele e repete o repouso byte a byte")
