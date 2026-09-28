@@ -2276,10 +2276,20 @@ def _desvio(valores: Sequence[float]) -> float:
     return math.sqrt(sum((v - media) ** 2 for v in valores) / len(valores))
 
 
+#: Quantos quadros um físico precisa em CADA janela para contar como lido. O
+#: rádio entrega ~250 por segundo: abaixo disto o fio parou, e um desvio de
+#: zero quadros é zero — que se leria «parado» sobre um controle não lido.
+QUADROS_PARA_LER = 20
+
+
 def tremor_por_fisico(
     quadros: Mapping[str, Sequence[tuple[float, bytes]]], base: tuple[float, float], janela: tuple[float, float]
 ) -> dict[str, tuple[float, float]]:
-    """``{físico: (desvio na base, desvio na janela)}`` do módulo do acelerômetro."""
+    """``{físico: (desvio na base, desvio na janela)}`` do módulo do acelerômetro.
+
+    Só entram os físicos com :data:`QUADROS_PARA_LER` nas duas janelas: o
+    que não se leu fica FORA, e quem decide lê a falta como «não sei».
+    """
     fora: dict[str, tuple[float, float]] = {}
     for doze, lista in quadros.items():
         medidas: dict[str, list[float]] = {"base": [], "janela": []}
@@ -2291,27 +2301,40 @@ def tremor_por_fisico(
                 medidas["base"].append(modulo_da_aceleracao(corpo))
             elif janela[0] <= instante < janela[1]:
                 medidas["janela"].append(modulo_da_aceleracao(corpo))
-        fora[doze] = (_desvio(medidas["base"]), _desvio(medidas["janela"]))
+        if min(len(medidas["base"]), len(medidas["janela"])) >= QUADROS_PARA_LER:
+            fora[doze] = (_desvio(medidas["base"]), _desvio(medidas["janela"]))
     return fora
 
 
-def veredito_do_tremor(tremores: Mapping[str, tuple[float, float]], alvo: str) -> tuple[str, str]:
+def veredito_do_tremor(
+    tremores: Mapping[str, tuple[float, float]], alvo: str, esperados: Iterable[str] = ()
+) -> tuple[str, str]:
     """Só o alvo treme: ele ≥ 5× a própria base e os vizinhos ≤ 2× (hipótese do limiar).
 
-    Os números de 19/09 foram 2.000 a 3.000 contra 50 a 300.
+    Os números de 19/09 foram 2.000 a 3.000 contra 50 a 300. ``esperados``
+    são os físicos da mesa: um vizinho que não se leu não é um vizinho
+    parado, e o verde «só o alvo tremeu» não sai sobre ele.
     """
     if alvo not in tremores:
         return NAO_SEI, "o físico do alvo não se leu"
+    nao_lidos = sorted(set(esperados) - set(tremores))
     def razao(par: tuple[float, float]) -> float:
         return par[1] / max(par[0], 1.0)
     do_alvo = razao(tremores[alvo])
     outros = {d: razao(p) for d, p in tremores.items() if d != alvo}
     tremeram = [d for d, r in outros.items() if r > 2.0]
+    if do_alvo >= 5.0 and not tremeram and nao_lidos:
+        return NAO_SEI, f"o alvo tremeu ({do_alvo:.1f}× a base), e {len(nao_lidos)} vizinho(s) não se leram"
     if do_alvo >= 5.0 and not tremeram:
         return VERDE, f"só o alvo tremeu ({do_alvo:.1f}× a base)"
     if tremeram:
         return VERMELHO, f"{len(tremeram)} vizinho(s) tremeram junto (o alvo: {do_alvo:.1f}× a base)"
     return VERMELHO, f"o alvo não tremeu ({do_alvo:.1f}× a base)"
+
+
+def _fisicos_da_mesa(mesa: Sequence[Mapping[str, Any]]) -> set[str]:
+    """Os doze hex de cada físico da mesa: quem o leitor TEM de ter lido."""
+    return {d for c in mesa if (d := _hex12(c.get("uniq")))}
 
 
 def estado_do_gatilho(corpo: bytes) -> tuple[int, int]:
@@ -2441,7 +2464,7 @@ def _vibracao_do_produto(s: Sessao, mesa: Sequence[Mapping[str, Any]], leitor: L
             (leitor.marcas[f"{jogador}:base"], leitor.marcas[f"{jogador}:pedido"]),
             (leitor.marcas[f"{jogador}:pedido"] + 0.3, leitor.marcas[f"{jogador}:fim"]),
         )
-        veredito, porque = veredito_do_tremor(tremores, doze or "")
+        veredito, porque = veredito_do_tremor(tremores, doze or "", _fisicos_da_mesa(mesa))
         if leitor.problemas and veredito == VERDE:
             veredito, porque = NAO_SEI, porque + ", mas nem todo físico se leu"
         _passo(s, "3b, a vibração do produto", jogador, transporte_de(c), veredito, porque,
@@ -2488,7 +2511,7 @@ def _vibracao_que_o_jogo_pede(s: Sessao, mesa: Sequence[Mapping[str, Any]], leit
             (leitor.marcas[f"{jogador}:jogo:base"], leitor.marcas[f"{jogador}:jogo:pedido"]),
             (leitor.marcas[f"{jogador}:jogo:pedido"] + 0.3, leitor.marcas[f"{jogador}:jogo:fim"]),
         )
-        veredito, porque = veredito_do_tremor(tremores, _hex12(c.get("uniq")) or "")
+        veredito, porque = veredito_do_tremor(tremores, _hex12(c.get("uniq")) or "", _fisicos_da_mesa(mesa))
         _passo(s, "3c, a vibração que o jogo pede", jogador, transporte_de(c), veredito, porque,
                comando="0x02 USB (build_usb_report) no hidraw do pad", mexe=["os motores, pelo pad"])
     for pad in uinput:
@@ -2514,7 +2537,7 @@ def _vibracao_que_o_jogo_pede(s: Sessao, mesa: Sequence[Mapping[str, Any]], leit
             (leitor.marcas[f"{pad.handlers}:base"], leitor.marcas[f"{pad.handlers}:pedido"]),
             (leitor.marcas[f"{pad.handlers}:pedido"] + 0.3, leitor.marcas[f"{pad.handlers}:fim"]),
         )
-        veredito, porque = veredito_do_tremor(tremores, _hex12(c.get("uniq")) or "")
+        veredito, porque = veredito_do_tremor(tremores, _hex12(c.get("uniq")) or "", _fisicos_da_mesa(mesa))
         _passo(s, "3c, a vibração que o jogo pede", f"P{subiram[0]}", transporte_de(c), veredito, porque,
                comando="EV_FF no evdev do pad uinput (casado por pulso, 01 A2)", mexe=["os motores, pelo pad"])
     if compositor is not None and _pid_do_compositor(s.maquina) != compositor:
@@ -2560,10 +2583,13 @@ def _o_gatilho(s: Sessao, mesa: Sequence[Mapping[str, Any]], leitor: LeitorDosFi
         doze = _hex12(c.get("uniq")) or ""
         mudou = {d: gatilho_mudou(q, base, janela) for d, q in leitor.quadros.items()}
         outros = [d for d, m in mudou.items() if d != doze and m]
+        nao_lidos = [d for d in _fisicos_da_mesa(mesa) if d != doze and mudou.get(d) is None]
         if mudou.get(doze) is None:
             veredito, porque = NAO_SEI, "o físico do alvo não se leu"
         elif outros:
             veredito, porque = VERMELHO, f"o gatilho mudou em {len(outros)} vizinho(s)"
+        elif nao_lidos:
+            veredito, porque = NAO_SEI, f"{len(nao_lidos)} vizinho(s) não se leram: «só no alvo» não se prova"
         elif mudou[doze]:
             veredito, porque = VERDE, "o estado do gatilho mudou só no alvo"
         else:

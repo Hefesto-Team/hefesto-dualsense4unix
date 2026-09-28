@@ -1229,3 +1229,41 @@ def test_a_volta_ve_o_wrapper_que_a_steam_apagou_no_meio(ob: ModuleType, tmp_pat
     assert ob.executar(["--saida", str(saida), "retrato"], maquina) == ob.RC_RECUSADO
     recusas = resumo(saida)["recusas"]
     assert any("steam.wrapper.faltantes" in r for r in recusas), recusas
+
+
+def _quadro_usb(aceleracao: int = 0, gatilho: int = 0) -> bytes:
+    """Um relatório de entrada ``0x01`` do cabo: o acelerômetro em ``corpo[21..26]``."""
+    corpo = bytearray(63)
+    corpo[21:23] = aceleracao.to_bytes(2, "little", signed=True)
+    corpo[25:27] = (8192).to_bytes(2, "little", signed=True)
+    corpo[41] = gatilho
+    return bytes([0x01]) + bytes(corpo)
+
+
+def _fio(base: int, janela: int, *, quadros: int = 50) -> list[tuple[float, bytes]]:
+    """Um fio lido: ``quadros`` na base (0 a 2 s) e na janela (2,3 a 3,5 s).
+
+    O eixo x alterna entre zero e a amplitude (o MÓDULO é o que se mede, e ±a
+    dá o mesmo módulo).
+    """
+    fora = [(0.01 * i, _quadro_usb(base if i % 2 else 0)) for i in range(quadros)]
+    fora += [(2.4 + 0.01 * i, _quadro_usb(janela if i % 2 else 0)) for i in range(quadros)]
+    return fora
+
+
+def test_o_vizinho_que_nao_se_leu_nao_conta_como_parado(ob: ModuleType) -> None:
+    """3b/3c: um vizinho com o fio parado tem desvio ZERO — e se lia «não tremeu».
+
+    O verde «só o alvo tremeu» sobre um vizinho não lido é verde sobre nada, e
+    um alvo não lido saía «não tremeu» (vermelho) em vez de «não sei».
+    Mordida: devolver o piso de quadros ou os ``esperados`` — o vizinho mudo
+    vira parado e a linha sai verde.
+    """
+    base, janela = (0.0, 2.0), (2.3, 3.5)
+    lidos = {"a1": _fio(40, 4000), "a2": _fio(40, 40), "a3": []}
+    tremores = ob.tremor_por_fisico(lidos, base, janela)
+    assert set(tremores) == {"a1", "a2"}
+    veredito, porque = ob.veredito_do_tremor(tremores, "a1", {"a1", "a2", "a3"})
+    assert veredito == ob.NAO_SEI and "não se leram" in porque
+    assert ob.veredito_do_tremor(tremores, "a1", {"a1", "a2"})[0] == ob.VERDE
+    assert ob.veredito_do_tremor(tremores, "a3", {"a1", "a2", "a3"})[0] == ob.NAO_SEI
