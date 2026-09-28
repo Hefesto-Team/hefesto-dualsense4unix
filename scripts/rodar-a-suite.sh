@@ -62,6 +62,25 @@ so_esta="${1:-}"
 read -r -a extra <<< "${SUITE_PYTEST_ARGS:-}"
 vermelhos=0
 verdes=0
+passaram=0
+pulados=0
+
+# O RECIBO DA MEDIDA. A trava do push da máquina só deixa o `dev` subir com o
+# recibo da suíte da MESMA árvore (`<git comum>/hefesto-recibos/<árvore>.suite`),
+# e quem o escreve é `scripts/recibo_da_medida.py`: `abrir` antes da primeira
+# parte e `fechar` no fim, com o rc desta corrida. Só a corrida INTEIRA deixa
+# recibo: com uma parte só, ou com argumentos a mais (um `-k` ou um
+# `--deselect` encolhem a suíte sem mudar o nome dela), não há recibo.
+recibo_da_corrida=""
+if [ -z "$so_esta" ] && [ ${#extra[@]} -eq 0 ]; then
+  recibo_da_corrida="$SAIDA/recibo-da-corrida.json"
+  "$PY" "$RAIZ/scripts/recibo_da_medida.py" abrir suite \
+    --raiz "$RAIZ" --corrida "$recibo_da_corrida" || true
+  echo
+elif [ -z "$so_esta" ]; then
+  echo "recibo: esta corrida não deixa recibo — ela leva argumentos a mais (SUITE_PYTEST_ARGS)"
+  echo
+fi
 for f in "$SAIDA"/parte-*; do
   case "$f" in *.log|*.txt) continue;; esac
   n="${f##*parte-}"
@@ -91,6 +110,11 @@ for f in "$SAIDA"/parte-*; do
     *) verdes=$((verdes+1));;
   esac
   echo "  parte-$n ($quantos arq): $linha"
+  # A contagem do recibo: `N passed` não casa `N xpassed` (há um `x` antes).
+  n_ok=$(printf '%s\n' "$linha" | grep -o '[0-9]\+ passed' | grep -o '[0-9]\+' || true)
+  n_pulo=$(printf '%s\n' "$linha" | grep -o '[0-9]\+ skipped' | grep -o '[0-9]\+' || true)
+  passaram=$((passaram + ${n_ok:-0}))
+  pulados=$((pulados + ${n_pulo:-0}))
 done
 
 echo
@@ -100,4 +124,16 @@ echo "partes verdes: $verdes · partes com vermelho: $vermelhos · testes vermel
 [ "$quantas" -eq 0 ] || { echo; cat "$SAIDA/falhas.txt"; }
 echo
 echo "os logs ficam em $SAIDA"
-[ "$vermelhos" -eq 0 ] && exit 0 || exit 1
+rc=1
+[ "$vermelhos" -eq 0 ] && rc=0
+if [ -n "$recibo_da_corrida" ]; then
+  # Pulo não é verde: o teste pulado sai no recibo como NÃO MEDIDO.
+  nao_medidos=()
+  [ "$pulados" -eq 0 ] || nao_medidos=(--nao-medido "$pulados testes pulados")
+  echo
+  "$PY" "$RAIZ/scripts/recibo_da_medida.py" fechar suite "$rc" \
+    --raiz "$RAIZ" --corrida "$recibo_da_corrida" \
+    --contagem "$total arquivos em $PARTES partes; $verdes partes verdes; $passaram testes passaram; $pulados pulados" \
+    ${nao_medidos[@]+"${nao_medidos[@]}"} || true
+fi
+exit "$rc"

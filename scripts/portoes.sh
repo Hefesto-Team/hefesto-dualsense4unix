@@ -573,6 +573,39 @@ _AMBIENTE_DE_MENTIRA=(
   "XDG_RUNTIME_DIR=$LAR_DE_MENTIRA/runtime"
 )
 
+# --- O RECIBO DA MEDIDA -----------------------------------------------------
+#
+# A trava do push da máquina só deixa o `dev` subir com o recibo da camada
+# completa da MESMA árvore (`<git comum>/hefesto-recibos/<árvore>.portoes-completo`).
+# Em 26 e 27/09/2026 o `dev` subiu dez vezes com o CI vermelho: os portões só
+# travavam se alguém os rodasse. Quem escreve o recibo é
+# `scripts/recibo_da_medida.py`: `abrir` aqui, antes do primeiro portão, e
+# `fechar` em `_sair`, com o rc que este script decide. Só quando a camada
+# `completo` roda: o `--rapido` NUNCA deixa recibo. O recibo não muda o rc.
+RECIBO_DA_CORRIDA=""
+case " $CAMADAS " in
+  *" completo "*)
+    RECIBO_DA_CORRIDA="$(mktemp "${TMPDIR:-/tmp}/portoes-recibo-XXXXXX")"
+    trap 'rm -rf "$LAR_DE_MENTIRA" "$RECIBO_DA_CORRIDA"' EXIT
+    "$PY" "$RAIZ/scripts/recibo_da_medida.py" abrir portoes-completo \
+      --raiz "$RAIZ" --corrida "$RECIBO_DA_CORRIDA" || true
+    echo ;;
+esac
+
+# O fim de toda corrida que chega ao veredito: fecha o recibo e sai com o rc.
+_sair() {
+  local rc="$1" id bandeiras=()
+  if [ -n "$RECIBO_DA_CORRIDA" ]; then
+    for id in ${NAO_MEDIDOS[@]+"${NAO_MEDIDOS[@]}"}; do bandeiras+=(--nao-medido "$id"); done
+    echo
+    "$PY" "$RAIZ/scripts/recibo_da_medida.py" fechar portoes-completo "$rc" \
+      --raiz "$RAIZ" --corrida "$RECIBO_DA_CORRIDA" \
+      --contagem "$((TOTAL - ${#NAO_MEDIDOS[@]})) de ${TOTAL} portões verdes" \
+      ${bandeiras[@]+"${bandeiras[@]}"} || true
+  fi
+  exit "$rc"
+}
+
 # --- a corrida -------------------------------------------------------------
 VERMELHOS=()
 AUSENTES=()
@@ -670,7 +703,7 @@ if [ ${#VERMELHOS[@]} -eq 0 ] && [ ${#AUSENTES[@]} -eq 0 ]; then
   else
     echo "TODOS VERDES — ${TOTAL} portões."
   fi
-  exit 0
+  _sair 0
 fi
 echo "REPROVOU: ${#VERMELHOS[@]} vermelho(s) de ${TOTAL}${VERMELHOS[0]+ -> }${VERMELHOS[*]:-}"
-exit 1
+_sair 1
