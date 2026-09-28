@@ -4176,7 +4176,7 @@ def _lembrar_do_som(
     daemon confirmou. O perfil é o REGISTRO do que já está de pé.
 
     E o disco não fica para trás: `ProfileManager.activate` faz
-    `load_profile(name)` a CADA ativação (`profiles/manager.py:297`) — não há
+    `load_profile(name)` a CADA ativação (`profiles/manager.py:363`) — não há
     cópia do `Profile` em memória atravessando ativações, então a próxima
     (hotplug, troca de jogo, boot) lê o que esta função escreveu.
 
@@ -4798,7 +4798,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 #: O QUE O 🎙 E O ♪ ACEITAM DE VOLUME. O mic é 0-100 por contrato do daemon
-#: (`mic.volume.set`, `ipc_handlers.py:5319-5324`); o alto-falante também sai
+#: (`mic.volume.set`, `ipc_handlers.py:6801-6807`); o alto-falante também sai
 #: daqui em 0-100 e quem converte para o registrador 0-255 é o dono da curva
 #: (`core/speaker_scale.volume_do_percentual`), a MESMA que pinta o `alto-num`.
 #: Digitar 255 aqui seria a segunda escala.

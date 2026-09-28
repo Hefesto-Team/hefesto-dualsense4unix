@@ -2650,7 +2650,7 @@ def _pref_do_alvo(ctx: Contexto) -> str:
 
     **A CONVERSÃO É O PONTO INTEIRO, e ela tem duas ordens diferentes.** O
     daemon guarda `output_target_index`, que é a POSIÇÃO em `controllers`
-    ("0 = primário", `ipc_handlers.py:4399`); o desenho endereça por `pref`, que
+    ("0 = primário", `ipc_handlers.py:5227`); o desenho endereça por `pref`, que
     é o NÚMERO do jogador desde 20/09/2026 (`mesa_viva._lugares_da_mesa`): com o
     P1 fora, o índice 0 é o P2, e o `pref` dele é `p2`. As duas divergem sempre
     que um lugar fica vazio ou o primário não é o de menor número — é a mesma
@@ -3397,7 +3397,7 @@ def _indice(ctx: Contexto, uniq: str) -> int | None:
     """A posição daquele controle em `controllers` — o que o daemon numera.
 
     **NÃO é o número do jogador.** `controller.target.set` pede `index`, "posição
-    em `controllers`, 0 = primário" (`ipc_handlers.py:4399`), e o próprio produto
+    em `controllers`, 0 = primário" (`ipc_handlers.py:5227`), e o próprio produto
     já separa as duas coisas: `status_actions._controller_target_rows:1579` ORDENA
     a lista pelo número de identidade e CARREGA em cada linha o `index` da
     enumeração, com o comentário dizendo por quê — *"a usuária clicaria no chip do
@@ -3468,7 +3468,7 @@ def alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     a mirar nele. A fita do topo passa a apontar para ele."*
 
     `controller.target.set` é exatamente isso, e o handler diz com todas as
-    letras (`daemon/ipc_handlers.py:4500`): *"Com o alvo setado,
+    letras (`daemon/ipc_handlers.py:5231`): *"Com o alvo setado,
     lightbar/gatilhos/player-LED/rumble/mic-LED passam a mirar SÓ aquele
     controle"*. É o mesmo método que o seletor da GUI estável chama
     (`app/actions/status_actions.py:2453`).
@@ -3641,7 +3641,7 @@ def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     QUEM CONSOME, e é por isso que o clique vale AGORA: o
     `_handle_machine_declare` relê o disco, rebinda `daemon._maquina` e SOBE OU
     DESCE o subsystem `bt_mic` no mesmo pedido — a nota está no próprio handler
-    (`ipc_handlers.py:7326`, QUATRO-MICROFONES-01): *"o 'Aplicar' tem de VALER
+    (`ipc_handlers.py:7394`, QUATRO-MICROFONES-01): *"o 'Aplicar' tem de VALER
     agora"*. Sem essa parte, a escolha dela só valeria no próximo início do
     daemon.
 
@@ -3726,7 +3726,7 @@ def _com_o_teto(prof: Any, chave: str, policy: str | None) -> Any:
 
     "SEGUE O GLOBAL" APAGA A SEÇÃO INTEIRA (``rumble=None``), e não grava
     ``policy=None``. `_controllers_to_rumble_scales` tem DOIS desvios seguidos:
-    `cfg.rumble is None` (`profiles/manager.py:3240`) e `"policy" not in
+    `cfg.rumble is None` (`profiles/manager.py:3316`) e `"policy" not in
     model_fields_set` (`:2481`). O primeiro é o que o esquema chama de "campo
     não escrito = sem opinião", e é o que o merge POR CAMPO promete
     (`ControllerRumbleOverride`, docstring). O segundo existe para um override
@@ -3738,7 +3738,7 @@ def _com_o_teto(prof: Any, chave: str, policy: str | None) -> Any:
     `app/draft_config.with_controller_rumble:1193-1223` já decidiu que
     "intensidade igual à global não vira override". A razão é aritmética:
     `_controllers_to_rumble_scales` calcula `mult / base` e DESCARTA o fator
-    1,0 (`profiles/manager.py:3172-3222`) — guardar o override só deixaria no
+    1,0 (`profiles/manager.py:3248-3298`) — guardar o override só deixaria no
     disco uma opinião que o motor ignora.
     """
     from hefesto_dualsense4unix.profiles.schema import (
@@ -4126,7 +4126,7 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 # OS CINCO QUE GRAVAM SÃO **SEM ECO**, e isso foi MEDIDO em 02/09/2026, não
 # deduzido: as chaves de topo do `state_full` do daemon vivo são 47, e nenhuma
 # delas é `mapa` nem `maquina`. O caminho é `machine_declare` →
-# `_handle_machine_declare` (`daemon/ipc_handlers.py:7326`) → `maquina.json`, e
+# `_handle_machine_declare` (`daemon/ipc_handlers.py:7394`) → `maquina.json`, e
 # ali ele PARA. Nada volta pelo estado. Ver a nota do `SEM_ECO`, no fim deste
 # arquivo, para o que isso significa para quem lê a régua do piloto.
 

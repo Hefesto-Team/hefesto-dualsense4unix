@@ -1817,7 +1817,7 @@ class Profile(BaseModel):
     mouse: ProfileMouseConfig | None = None
     # Z4/T14 (24/08/2026), PROVISÓRIO — decisão dela em aberto (D-A do
     # 2026-08-24-ONDA0-Z4). Hoje o liga/desliga do TECLADO emulado mora só na
-    # flag global `keyboard_emulation.flag` (utils/session.py:372), enquanto o
+    # flag global `keyboard_emulation.flag` (utils/session.py:416), enquanto o
     # `mouse` logo acima — o interruptor VIZINHO na mesma aba — é por perfil
     # desde a FEAT-POINT-AND-CLICK-01. Mesmo contrato dos outros opcionais
     # desta classe: None = sem opinião (a ativação NÃO mexe na flag; ela

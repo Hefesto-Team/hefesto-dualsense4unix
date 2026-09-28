@@ -240,7 +240,7 @@ class StateStore:
         exatamente o que aconteceu na máquina dela às 00:04:58, quando o
         `profile.switch` manual para `Sackboy` apagou a pergunta.
 
-        Limpa também no `None` (o `delete()` do perfil ativo, `manager.py:188`):
+        Limpa também no `None` (o `delete()` do perfil ativo, `manager.py:331`):
         preferimos perder a dica a exibi-la velha. O journal guarda o fato
         original de qualquer jeito.
         """
