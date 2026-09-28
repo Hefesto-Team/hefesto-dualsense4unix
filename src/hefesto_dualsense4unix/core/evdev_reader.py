@@ -558,9 +558,10 @@ def _event_num(path: Path) -> int:
 class InputDirWatch:
     """Detector barato de mudança em /dev/input (PERF-MULTI-CONTROLLER-01).
 
-    A enumeração completa (`discover_dualsense_evdevs`) abre TODOS os nodes de
-    input (open + ioctls + close, ~10-40ms) — caro demais para rodar em timer
-    de 2s no event loop (era o hitch rítmico do co-op). O conjunto de nodes só
+    A enumeração dos gamepads (`discover_dualsense_evdevs`) abre cada nó de
+    gamepad (open + ioctls + close; o do físico, pelo broker) — caro demais
+    para rodar em timer de 2s no event loop (era o hitch rítmico do co-op). O
+    conjunto de nodes só
     muda em hotplug/re-enumeração, e isso é observável por um `os.listdir`
     (~µs). Cada consumidor tem a SUA instância (o "mudou?" é relativo ao último
     `poll()` DESTE watch).
@@ -925,10 +926,13 @@ def discover_gamepads(
     partida. O veto de 19/07 (*"externo não ganha controle virtual"*) segue de
     pé; quem o derruba é a `E3`, e ela é dela.
 
-    CUSTO (lição PERF-MULTI-CONTROLLER-01): sem espécie, abre TODOS os nodes
-    de /dev/input que não são virtuais (open + ioctls + close, ~10-40 ms), e o
-    do DualSense físico, que nasce fechado, abre pelo broker — cada abertura
-    dessas é uma linha em cada diário. Fora do event loop, sempre. **GRAU:
+    CUSTO (lição PERF-MULTI-CONTROLLER-01): abre cada nó não virtual que o
+    sysfs diz ter botão de gamepad (open + ioctls + close), e o do DualSense
+    físico, que nasce fechado, abre pelo broker — cada abertura dessas é uma
+    linha em cada diário. Touchpad, movimento, teclado, mouse e botão de
+    energia ficam de fora pelo sysfs, sem abrir
+    (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026); o nó de sysfs
+    ilegível ainda abre. Fora do event loop, sempre. **GRAU:
     SUSPEITA COM MECANISMO** sobre o delta: o caminho DualSense passa a chamar
     `capabilities()` também nos nodes de outro vendor (antes o filtro de vendor
     curto-circuitava antes) — alguns ioctls a mais por node, num caminho que já
@@ -954,10 +958,15 @@ def discover_gamepads(
         # ilegível segue para a abertura e a classificação abaixo o descarta.
         if especie == ESPECIE_EXTERNAL and _no_de_dualsense_no_sysfs(path):
             continue
+        # A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01: o nó sem botão de
+        # gamepad no sysfs (touchpad, movimento, teclado, mouse, energia) sai
+        # da volta ANTES de abrir — o filtro de caps abaixo o descartaria de
+        # qualquer jeito. O ilegível segue para a abertura, como antes.
+        if not _sysfs_tem_tecla(path, _BTN_GAMEPAD):
+            continue
         try:
             # HIDE-SO-O-HIDRAW-02: o nó do físico está FECHADO; ao broker vai
-            # só o do gamepad (os auxiliares cairiam no filtro de caps logo
-            # abaixo, e cada pedido é uma linha no diário do broker).
+            # só o do gamepad (cada pedido é uma linha no diário do broker).
             dev = abrir_input_device(
                 path,
                 pede_ao_broker=lambda c: _sysfs_tem_tecla(c, _BTN_GAMEPAD),
@@ -1063,10 +1072,11 @@ def discover_external_gamepads() -> list[dict[str, Any]]:
     CUSTO (lição PERF-MULTI-CONTROLLER-01, e o custo de hoje): o nó que o
     sysfs diz ser de DualSense NÃO é aberto — nem pelo caminho, nem pelo
     broker (O-INVENTARIO-DOS-EXTERNOS-NAO-ABRE-O-DUALSENSE-01, 25/09/2026). O
-    resto ainda abre pelo caminho, um por um (open + ioctls + close): todo nó
-    não virtual que não é de DualSense, com ou sem botão de gamepad. Na
-    máquina dela são 20 por volta (botões de energia, entradas de áudio, HDMI,
-    mouse e teclado), calados e sem broker. Fora do event loop, sempre. Quem
+    resto abre pelo caminho, um por um (open + ioctls + close), só quando o
+    sysfs diz que o nó tem botão de gamepad: os 20 nós por volta que a máquina
+    dela abria (botões de energia, entradas de áudio, HDMI, mouse e teclado)
+    ficam de fora sem abrir desde a A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01
+    (28/09/2026). Fora do event loop, sempre. Quem
     chama: o tique dos externos do daemon, a cada 2 s
     (`ExternalLedSync.tick`, no executor), e o `controller.list` com
     `{"external": true}`, via thread — a janela aberta pede a cada 4 s, e a

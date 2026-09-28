@@ -59,6 +59,15 @@ NOMES = {
     "Motion Sensors": "DualSense Wireless Controller Motion Sensors",
     "Touchpad": "DualSense Wireless Controller Touchpad",
 }
+#: O bitmap `capabilities/key` que o kernel publica para cada nó (o mesmo da
+#: régua da HIDE-SO-O-HIDRAW-02): o do gamepad tem BTN_SOUTH..BTN_THUMBR na
+#: palavra 4, o do touchpad não tem o BTN_GAMEPAD, e o de movimento é vazio.
+TECLAS = {
+    NOMES["gamepad"]: "7fdb000000000000 0 0 0 0",
+    NOMES["Motion Sensors"]: "0",
+    NOMES["Touchpad"]: "e520 10000 0 0 0 0",
+}
+
 #: O vpad do próprio daemon: os mesmos nomes, o MAC forjado `02:fe`, e a
 #: morada de `/devices/virtual/misc/uhid/`. Adotá-lo seria o daemon lendo a
 #: própria saída.
@@ -94,7 +103,7 @@ class Mesa:
         self, evento: str, nome: str, uniq: str, bus: int, *, virtual: bool = False
     ) -> str:
         caminho = str(self.dev / evento)
-        publicar_no(self.sys, caminho, nome=nome, uniq=uniq, bus=bus)
+        publicar_no(self.sys, caminho, nome=nome, uniq=uniq, bus=bus, teclas=TECLAS[nome])
         morada = (
             self.devices / "virtual" / "misc" / "uhid" / "0005:054C:0CE6.0099" / evento
             if virtual
@@ -124,13 +133,24 @@ class Mesa:
 
     def abrir(self, caminho: Any, **_kw: Any) -> Any:
         """O dublê do `abrir_input_device`: publica o que o real publica."""
+        from evdev import ecodes
+
         self.aberturas.append(str(caminho))
         nome, uniq, bus = self.nos[str(caminho)]
+        caps: dict[int, list[Any]] = {
+            NOMES["gamepad"]: {
+                ecodes.EV_KEY: [ecodes.BTN_SOUTH, ecodes.BTN_EAST],
+                ecodes.EV_ABS: [],
+            },
+            NOMES["Motion Sensors"]: {ecodes.EV_ABS: []},
+            NOMES["Touchpad"]: {ecodes.EV_KEY: [ecodes.BTN_LEFT, ecodes.BTN_TOUCH]},
+        }[nome]
         return SimpleNamespace(
             info=SimpleNamespace(vendor=0x054C, product=0x0CE6, bustype=bus),
             name=nome,
             uniq=uniq,
             path=str(caminho),
+            capabilities=lambda **_kw: caps,
             close=lambda: None,
         )
 
@@ -226,6 +246,26 @@ def test_o_no_fechado_sem_broker_fica_de_fora(
     monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(tmp_path / "nao-ha.sock"))
     assert er.discover_dualsense_motion_evdevs() == {}
     assert mesa.aberturas == []
+
+
+def test_a_descoberta_do_gamepad_nao_abre_os_nos_auxiliares(mesa: Mesa) -> None:
+    """A descoberta do GAMEPAD abre o nó de gamepad (ela lê a forma dos eixos),
+    e só ele: o touchpad e o movimento ficam de fora pelo sysfs, sem abrir.
+
+    **A MORDIDA:** tire o `_sysfs_tem_tecla(path, _BTN_GAMEPAD)` de antes da
+    abertura e os oito nós auxiliares dos quatro controles voltam a ser
+    abertos em toda volta — e o filtro de caps os descarta logo depois.
+    """
+    achados = er.discover_gamepads(com_sysfs=False)
+    gamepads = {
+        caminho for caminho, (nome, uniq, _bus) in mesa.nos.items()
+        if nome == NOMES["gamepad"] and uniq != VPAD
+    }
+    assert {g.evdev_path for g in achados} == gamepads
+    abertos_a_mais = sorted(set(mesa.aberturas) - gamepads)
+    assert abertos_a_mais == [], (
+        f"a descoberta do gamepad abriu {len(abertos_a_mais)} nó(s) auxiliar(es)"
+    )
 
 
 def test_o_controle_que_saiu_nao_aparece(mesa: Mesa) -> None:

@@ -19,8 +19,10 @@ ficava com `inputs: None` e METADE DA MESA emudecia por desenho.
 As três regras que moldaram este desenho:
 
 1. **A descoberta é cara e o event loop é único.** Enumerar `/dev/input`
-   abre TODOS os nodes (~10-40 ms — a lição PERF-MULTI-CONTROLLER-01). Fazer
-   isso no `state_full` congelaria o daemon inteiro dez vezes por segundo.
+   custa: a do gamepad abre cada nó de gamepad (a lição
+   PERF-MULTI-CONTROLLER-01), e a do touchpad e a do movimento leem dezenas
+   de arquivos do sysfs. Fazer isso no `state_full` congelaria o daemon inteiro
+   dez vezes por segundo.
    Aqui `leitura()` só toca dicionários sob lock (µs) e TODA descoberta mora
    na thread de manutenção.
 
@@ -623,9 +625,9 @@ class SensorHub:
             "touchpad": self._descobrir_touch,
             "gamepad": self._descobrir_gamepad,
         }
-        # SÓ o tipo que falta paga a descoberta. Cada descobridor abre todos os
-        # nodes de `/dev/input` (~10-40 ms — PERF-MULTI-CONTROLLER-01) e o caso
-        # normal é faltar um tipo só; pagar os três aqui era desperdício desde
+        # SÓ o tipo que falta paga a descoberta. Cada descobridor varre
+        # `/dev/input` (o do gamepad abre os nós de gamepad; os outros dois leem
+        # o sysfs) e o caso normal é faltar um tipo só; pagar os três era desperdício desde
         # antes do "gamepad", e com ele passaria a custar 50% a mais.
         nodes = {
             tipo: self._chamar_descobridor(descobridores[tipo])
