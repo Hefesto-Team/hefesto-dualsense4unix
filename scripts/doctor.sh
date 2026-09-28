@@ -3218,6 +3218,152 @@ PYEOF
     done <<<"${out}"
 }
 
+# O-DOCTOR-PERGUNTA-O-MODO-E-A-HORA-DO-PAD-01 (27/09/2026): as duas perguntas
+# que o fecho de 27/09 não fazia. As respostas moram em
+# `core/o_modo_no_ar.py` (funções puras, com régua); aqui só se lê o socket e o
+# diário e se imprime o veredito, uma linha por jogador ou por pad, com o
+# jogador, o modo, o backend e o número: nenhum nó, nenhum endereço.
+#
+# Às 16h16 de 27/09, «pads no uhid e nenhum vpad_degradado» foi aceito como
+# fecho com o Freestyle dela no modo Xbox; o `degraded` e o `dedup_ok` diziam
+# íntegro, porque perguntam outra coisa. Esta checagem compara o canal que o
+# modo pedido dá com o pad no ar, por jogador.
+_saida_do_modo_no_ar() {
+    local sock="$1" py="$2"
+    HEFESTO_SRC="${ROOT_DIR}/src" "${py}" - "${sock}" <<'PY' 2>/dev/null
+import json
+import os
+import socket
+import sys
+
+src = os.environ.get("HEFESTO_SRC", "")
+if src and os.path.isdir(src):
+    sys.path.insert(0, src)
+try:
+    from hefesto_dualsense4unix.core.o_modo_no_ar import modo_contra_o_ar
+except Exception:  # noqa: BLE001 - qualquer falha de import é "não sei"
+    print("sem-produto")
+    raise SystemExit(0)
+try:
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.settimeout(2.0)
+    s.connect(sys.argv[1])
+    s.sendall(
+        json.dumps({"jsonrpc": "2.0", "id": 1, "method": "daemon.state_full", "params": {}}).encode(
+            "utf-8"
+        )
+        + b"\n"
+    )
+    buf = b""
+    while not buf.endswith(b"\n"):
+        chunk = s.recv(65536)
+        if not chunk:
+            break
+        buf += chunk
+    estado = json.loads(buf.decode("utf-8")).get("result") or {}
+except Exception:  # noqa: BLE001 - daemon travado ou resposta ilegível
+    print("sem-ipc")
+    raise SystemExit(0)
+try:
+    linhas = modo_contra_o_ar(estado)
+except Exception:  # noqa: BLE001 - o pacote sem as dependências do dono do canal
+    print("sem-produto")
+    raise SystemExit(0)
+for linha in linhas:
+    print(f"{linha.veredito}|{linha.frase()}")
+PY
+}
+
+check_o_modo_no_ar() {
+    local sock py saida
+    sock="$(runtime_socket)"
+    if [[ ! -S "${sock}" ]]; then
+        info "daemon parado — sem modo no ar a conferir (suba o daemon e rode de novo)"
+        return
+    fi
+    py="$(_python_do_produto)"
+    [[ -n "${py}" ]] || { info "sem python para conferir o modo de cada jogador"; return; }
+    saida="$(_saida_do_modo_no_ar "${sock}" "${py}")" || saida=""
+    case "${saida}" in
+        sem-produto)
+            info "o modo de cada jogador não foi conferido (o pacote não está ao alcance do python ${py})"
+            return ;;
+        sem-ipc|"")
+            warn "IPC não respondeu — o modo de cada jogador não foi conferido (daemon travado?)"
+            return ;;
+    esac
+    local veredito frase
+    while IFS='|' read -r veredito frase; do
+        case "${veredito}" in
+            ok)    pass "${frase}" ;;
+            aviso) warn "${frase}" ;;
+            falha) fail "${frase}" ;;
+        esac
+    done <<<"${saida}"
+}
+
+# A hora do pad. Na noite de 27/09 os pads uinput levaram de 28,7 a 30,3 s
+# entre o kernel criar o nó e o daemon registrar, com o cosmic-osk de pé, e o
+# compositor caiu duas vezes na esteira (a O-PAD-VIRTUAL-…-01 curou às 13h07).
+# O kernel vem de `_TRANSPORT=kernel` com `-b` explícito, nunca do `-k`; o
+# daemon, da unit de usuário, desde o último `daemon_starting` (a conta é do
+# `hora_do_pad`). O diário passa por substituição de processo: a saída de um
+# boot inteiro não cabe numa variável de ambiente.
+check_a_hora_do_pad() {
+    local sock py saida
+    sock="$(runtime_socket)"
+    if [[ ! -S "${sock}" ]]; then
+        info "daemon parado — a hora de nascer de cada pad não se mede (suba o daemon e rode de novo)"
+        return
+    fi
+    command -v journalctl >/dev/null 2>&1 || { info "journalctl ausente — a hora de nascer de cada pad não se mede"; return; }
+    py="$(_python_do_produto)"
+    [[ -n "${py}" ]] || { info "sem python para medir a hora de nascer de cada pad"; return; }
+    saida="$(HEFESTO_SRC="${ROOT_DIR}/src" "${py}" - \
+        <(journalctl -b _TRANSPORT=kernel -o short-iso-precise --no-pager 2>/dev/null \
+            | grep -E ' as /devices/virtual/input/input[0-9]+$') \
+        <(journalctl --user -b -u "${APP_ID}.service" -o short-iso-precise --no-pager 2>/dev/null \
+            | grep -E 'daemon_starting|uinput_device_created') <<'PY' 2>/dev/null
+import os
+import sys
+
+src = os.environ.get("HEFESTO_SRC", "")
+if src and os.path.isdir(src):
+    sys.path.insert(0, src)
+try:
+    from hefesto_dualsense4unix.core.o_modo_no_ar import hora_do_pad
+except Exception:  # noqa: BLE001 - qualquer falha de import é "não sei"
+    print("sem-produto")
+    raise SystemExit(0)
+with open(sys.argv[1], encoding="utf-8", errors="replace") as fh:
+    kernel = fh.read().splitlines()
+with open(sys.argv[2], encoding="utf-8", errors="replace") as fh:
+    daemon = fh.read().splitlines()
+medidas = hora_do_pad(kernel, daemon)
+if not medidas:
+    print("sem-pad")
+for medida in medidas:
+    print(f"{medida.veredito}|{medida.frase()}")
+PY
+)" || saida=""
+    case "${saida}" in
+        sem-produto)
+            info "a hora de nascer de cada pad não foi medida (o pacote não está ao alcance do python ${py})"
+            return ;;
+        sem-pad|"")
+            info "nenhum pad uinput nasceu desde que o daemon subiu — a hora do pad não tem o que medir"
+            return ;;
+    esac
+    local veredito frase
+    while IFS='|' read -r veredito frase; do
+        case "${veredito}" in
+            ok)    pass "${frase}" ;;
+            aviso) warn "${frase}" ;;
+            falha) fail "${frase}" ;;
+        esac
+    done <<<"${saida}"
+}
+
 # FEAT-WINDOW-DETECT-DIAG-01: diagnóstico do detector de janela do autoswitch
 # (perfil-por-jogo). Quando a detecção falha, o autoswitch fica silenciosamente
 # cego e o perfil-por-jogo vira letra morta — esta seção torna o estado visível.
@@ -8333,6 +8479,9 @@ main() {
     check_dedup_ipc
     check_display_authority
     check_proton_pin
+    hdr "o modo de cada jogador e a hora de cada pad"
+    check_o_modo_no_ar
+    check_a_hora_do_pad
     hdr "broker hide-hidraw (BROKER-01 — cura de raiz do duplicado)"
     check_hidraw_broker
     check_quem_segura_o_fisico
