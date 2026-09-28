@@ -1,4 +1,4 @@
-"""Salvar não pode desfazer o que a aba já gravou — os TRÊS campos atropelados.
+"""Salvar não pode desfazer o que a aba já gravou.
 
 MEDIDO EM 05/09/2026, atrás do pedido dela: *"aplicar aplica todas as configs
 naquele perfil e salvar se lembra disso quando eu for jogar o jogo e no dia
@@ -7,34 +7,31 @@ abas 02, 04, 05 e 06, volta e clica **Salvar** no rodapé — mostrou que **5 de
 11 campos sobreviviam**, e que três deles não se perdiam por esquecimento: o
 produto já tinha gravado o valor certo no disco e o Salvar o **desfazia**.
 
-OS TRÊS, e as duas causas:
+AS DUAS CAUSAS DE 05/09, e onde cada uma mora hoje:
 
-1. ``lightbar_brightness`` e ``player_leds`` — ``rodape._draft_do_ativo``
-   montava o override DAQUELE controle lendo ``draft.leds.*``, que é a seção
-   **GLOBAL**. Só a cor vinha do controle certo. Com a aba 04 tendo gravado
-   brilho 0,25 e as lâmpadas 1 e 2 do P1, o Salvar regravava o cheio e as cinco
-   apagadas. A cura é chamar ``effective_leds_for(uniq)``, que já existia,
-   já é público e já faz o merge POR CAMPO.
+1. ``lightbar_brightness`` e ``player_leds`` do override — o Salvar montava a
+   luz DAQUELE controle com a seção GLOBAL. Desde 27/09
+   (`D-2709-O-SALVAR-LE-O-PERFIL`) o Salvar não monta luz nenhuma: ele lê o
+   disco, e o override sai como a aba 04 o gravou (§1).
+2. ``button_actions`` e ``teclado_emulado`` — ``DraftConfig.to_profile`` não
+   os emitia, e todo Salvar os zerava. A cura é do ``to_profile``, e o Salvar
+   de hoje passa por ele (§2).
 
-2. ``button_actions`` e ``teclado_emulado`` — ``DraftConfig.to_profile`` monta
-   o ``Profile(...)`` com catorze campos e **estes dois não estavam lá**; os
-   nomes apareciam ZERO vezes no arquivo. Todo Salvar os zerava, mesmo no
-   round-trip mais favorável (mesmo nome). E o alcance passava da interface
-   nova: ``footer_actions.py`` (janela GTK) e ``profiles_actions.py`` (aba
-   Perfis) chamam o mesmo método.
+E O QUE O APARELHO PUBLICA NÃO ENTRA (§3): cada aba grava a escolha dela no
+clique (o som na 02, a luz na 04, a força na 05, o mouse na 06, o sensor pelo
+``sensor.set`` do daemon), e o Salvar regrava isso, com o aparelho dizendo
+outra coisa.
 
-A MORDIDA, campo por campo:
+A MORDIDA, por seção:
 
-- troque ``efetivo.lightbar_brightness`` de volta por
-  ``draft.leds.lightbar_brightness`` em ``rodape._draft_do_ativo`` e
-  :func:`test_o_brilho_daquele_controle_sobrevive_ao_salvar` reprova;
-- idem com ``player_leds`` e
-  :func:`test_as_lampadas_daquele_controle_sobrevivem_ao_salvar`;
+- devolva ao ``rodape.salvar`` a luz acesa por cima do disco (a cor e o
+  brilho do aparelho no override) e §1 reprova;
 - apague a linha ``button_actions=self.source_button_actions`` de
-  ``to_profile`` e :func:`test_as_acoes_de_botao_sobrevivem_ao_salvar` reprova.
+  ``to_profile`` e :func:`test_as_acoes_de_botao_sobrevivem_ao_salvar` reprova;
+- devolva ao ``rodape.salvar`` o microfone do aparelho e §3 reprova no
+  ``mic.muted``.
 
-Irmão deste arquivo, mesma função e mesmo dia de origem diferente:
-``test_salvar_nao_apaga_a_cor_dela.py``.
+Irmão deste arquivo: ``test_salvar_nao_apaga_a_cor_dela.py``.
 """
 
 from __future__ import annotations
@@ -69,23 +66,34 @@ COR_DELA = (0, 0, 255)
 
 
 class _Ctx:
-    """O mínimo de ``Contexto`` que ``_draft_do_ativo`` lê."""
+    """O mínimo de ``Contexto`` que o «Salvar» do rodapé recebe."""
 
     def __init__(self, conectados: list[dict[str, Any]],
                  state: dict[str, Any] | None = None) -> None:
         self.conectados = conectados
+        self.mesa = conectados
         self.state = state or {}
 
 
-def _controle_aceso() -> dict[str, Any]:
-    """Um controle com a barra ACESA — o único estado em que há cor a gravar.
+#: A COR QUE O APARELHO ACENDE, e ela não é a do disco: é a forma do que o
+#: Salvar lia até 27/09 (a luz pós-brilho, a camada da mão, a economia).
+COR_ACESA = (255, 0, 255)
 
-    Com a barra apagada `_draft_do_ativo` sai fora antes do `with_controller_leds`
-    (é o que o arquivo irmão mede), e o override nem chega a ser montado: a
-    régua daria verde sem exercitar uma linha do que se quer medir.
-    """
-    return {"uniq": UNIQ, "lightbar_rgb": list(COR_DELA),
-            "lightbar_on": True, "lightbar_source": "sysfs"}
+
+def _controle_aceso() -> dict[str, Any]:
+    """Um controle com a barra ACESA noutra cor e noutro brilho que o disco."""
+    return {"uniq": UNIQ, "lightbar_rgb": list(COR_ACESA),
+            "lightbar_on": True, "lightbar_source": "sysfs",
+            "brilho_da_barra": 0.9, "brilho_das_luzes": "forte"}
+
+
+def _salvar(perfil: str, ctx: _Ctx) -> Any:
+    """O «Salvar Perfil» do rodapé com este perfil valendo, e o que ficou no disco."""
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
+    ctx.state = {**ctx.state, "active_profile": perfil}
+    rodape.salvar(ctx, {"gesto": "salvar"}, None)
+    return load_profile(perfil)
 
 
 @pytest.fixture
@@ -120,53 +128,46 @@ def perfil_configurado(monkeypatch: pytest.MonkeyPatch) -> str:
     return nome
 
 
-def _leds_gravados(draft: Any) -> Any:
-    """A seção ``leds`` que o rascunho levaria ao disco PARA ESTE controle."""
-    dono = draft.controller_override(UNIQ)
+def _leds_gravados(prof: Any) -> Any:
+    """A seção ``leds`` que o disco guarda PARA ESTE controle."""
+    dono = (prof.controllers or {}).get(UNIQ)
     assert dono is not None and getattr(dono, "leds", None) is not None, (
-        "o rascunho não montou override nenhum para este controle — a régua "
-        "mediria o vazio")
+        "o disco perdeu o override deste controle — a régua mediria o vazio")
     return dono.leds
 
 
 # --------------------------------------------------------------------------
-# 1. o rodapé para de atropelar o override com a seção global
+# 1. o Salvar não atropela o override da aba 04
 # --------------------------------------------------------------------------
 def test_o_brilho_daquele_controle_sobrevive_ao_salvar(
         perfil_configurado: str) -> None:
-    """O brilho do override é DELE, e não o global de 100."""
-    ctx = _Ctx([_controle_aceso()])
-    draft = rodape._draft_do_ativo(perfil_configurado, ctx)
-    assert draft is not None
-    assert _leds_gravados(draft).lightbar_brightness == BRILHO_DELA_NO_DISCO, (
-        "o Salvar regravou o brilho GLOBAL por cima do que a aba 04 gravou "
-        "para este controle")
+    """O brilho do override é DELE: nem o global de 100, nem o aceso de 90."""
+    salvo = _salvar(perfil_configurado, _Ctx([_controle_aceso()]))
+    assert _leds_gravados(salvo).lightbar_brightness == BRILHO_DELA_NO_DISCO, (
+        "o Salvar regravou outro brilho por cima do que a aba 04 gravou para "
+        "este controle")
 
 
 def test_as_lampadas_daquele_controle_sobrevivem_ao_salvar(
         perfil_configurado: str) -> None:
     """As cinco lâmpadas são do override, e não as do global."""
-    ctx = _Ctx([_controle_aceso()])
-    draft = rodape._draft_do_ativo(perfil_configurado, ctx)
-    assert draft is not None
-    assert tuple(_leds_gravados(draft).player_leds) == LAMPADAS_DELAS, (
+    salvo = _salvar(perfil_configurado, _Ctx([_controle_aceso()]))
+    assert tuple(_leds_gravados(salvo).player_leds) == LAMPADAS_DELAS, (
         "o Salvar apagou as lâmpadas deste controle com as do global")
 
 
-def test_a_cor_viva_continua_vencendo_o_disco(perfil_configurado: str) -> None:
-    """A cura não pode desfazer o que o rodapé JÁ acertava.
+def test_a_cor_acesa_nao_vence_o_disco(perfil_configurado: str) -> None:
+    """A cor que o aparelho acende não é a escolha dela; a do disco é.
 
-    O ponto inteiro de `_draft_do_ativo` é a cor VIVA vencer o disco (medido
-    em 01/09). Se `effective_leds_for` passasse a mandar nos três campos, a
-    cura de hoje quebraria a de 01/09 — e o defeito voltaria pelo outro lado.
+    Até 27/09 a cor viva vencia o disco no Salvar (medido em 01/09, quando o
+    clique na cor ainda não gravava). Desde 09/09 o clique grava
+    (`a04_iluminacao._guardar_a_cor_no_perfil`, medido em
+    `test_a_cor_escolhida_vai_ao_disco_e_o_trilho_nao_reescala.py`), e a luz
+    acesa que difere do disco é camada, teto ou automático.
     """
-    viva = (255, 0, 255)
-    controle = _controle_aceso()
-    controle["lightbar_rgb"] = list(viva)
-    draft = rodape._draft_do_ativo(perfil_configurado, _Ctx([controle]))
-    assert draft is not None
-    assert tuple(_leds_gravados(draft).lightbar) == viva, (
-        "a cor que está acesa AGORA deixou de vencer o disco")
+    salvo = _salvar(perfil_configurado, _Ctx([_controle_aceso()]))
+    assert tuple(_leds_gravados(salvo).lightbar) == COR_DELA, (
+        f"o Salvar gravou a cor acesa {COR_ACESA} como a escolha dela")
 
 
 # --------------------------------------------------------------------------
@@ -208,28 +209,56 @@ def test_os_dois_viajam_com_nome_novo(perfil_configurado: str) -> None:
 
 
 # --------------------------------------------------------------------------
-# 3. o ciclo inteiro dela — o que o rodapé passou a LER do vivo
+# 3. o que as abas gravaram no clique atravessa o Salvar, e o aparelho não
 # --------------------------------------------------------------------------
-#: O QUE O DAEMON PUBLICA POR PEÇA, medido no `daemon.state_full` da bancada em
-#: 05/09/2026 com um DualSense na mesa. As chaves estão escritas aqui com o
-#: nome exato que ele usa — `mic_mudo` e não `muted`, `volume_captura` e não
-#: `volume` —, e a régua morre se algum mudar, que é o ponto: um nome que o
-#: daemon renomeia sem avisar faz o rodapé voltar a ler `None` calado.
+#: O QUE O DAEMON PUBLICA POR PEÇA, com as chaves que ele usa (`mic_mudo`,
+#: `volume_captura`), divergindo em tudo do que as abas gravaram.
 VIVO_DA_PECA: dict[str, Any] = {
-    "speaker": {"volume": 102, "muted": False},
-    "audio": {"mic_mudo": True, "volume_captura": 44},
-    "sensores": {"giroscopio_ligado": False, "acelerometro_ligado": True},
+    "speaker": {"volume": 30, "muted": True},
+    "audio": {"mic_mudo": False, "volume_captura": 90},
+    "sensores": {"giroscopio_ligado": True, "acelerometro_ligado": False},
 }
 
-#: O QUE ELE PUBLICA UMA VEZ PARA A MÁQUINA TODA (decisão D3, 05/09/2026).
+#: O QUE ELE PUBLICA UMA VEZ PARA A MÁQUINA TODA, divergindo também.
 VIVO_DA_MESA: dict[str, Any] = {
-    "rumble_policy": "max",
-    "rumble_passthrough": False,
-    "mouse_emulation": {"enabled": True, "speed": 11, "scroll_speed": 4},
+    "rumble_policy": "economia",
+    "rumble_passthrough": True,
+    "rumble_policy_custom_mult": 0.7,
+    "mouse_emulation": {"enabled": False, "speed": 3, "scroll_speed": 1},
 }
 
 
-def _ctx_do_ciclo() -> _Ctx:
+@pytest.fixture
+def perfil_das_abas(perfil_configurado: str) -> str:
+    """O perfil como as abas o deixam, cada uma no seu clique.
+
+    A 02 grava o alto-falante e o microfone (`_lembrar_do_som`), o sensor
+    desligado vai pelo `sensor.set` do daemon, a 05 a política e a 06 o mouse.
+    """
+    from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+    from hefesto_dualsense4unix.profiles.schema import (
+        ControllerMicOverride,
+        ControllerSensoresOverride,
+        ProfileMouseConfig,
+        ProfileSpeakerConfig,
+        RumbleConfig,
+    )
+
+    p = load_profile(perfil_configurado)
+    dele = p.controllers[UNIQ].model_copy(update={
+        "speaker": ProfileSpeakerConfig(volume=102, muted=False),
+        "mic": ControllerMicOverride(muted=True, volume=44),
+        "sensores": ControllerSensoresOverride(giroscopio=False),
+    })
+    save_profile(p.model_copy(update={
+        "controllers": {UNIQ: dele},
+        "rumble": RumbleConfig(policy="max", passthrough=False),
+        "mouse": ProfileMouseConfig(enabled=True, speed=11, scroll_speed=4),
+    }), origem="teste")
+    return perfil_configurado
+
+
+def _ctx_do_aparelho() -> _Ctx:
     controle = _controle_aceso()
     controle.update(VIVO_DA_PECA)
     return _Ctx([controle], state=dict(VIVO_DA_MESA))
@@ -241,70 +270,39 @@ def _ctx_do_ciclo() -> _Ctx:
     ("mic.muted", True),
     ("mic.volume", 44),
     ("sensores.giroscopio", False),
+    ("sensores.acelerometro", None),
 ])
-def test_o_que_o_daemon_publica_por_peca_chega_ao_disco(
-        perfil_configurado: str, campo: str, esperado: Any) -> None:
-    """As três seções que o rodapé não lia — alto-falante, microfone, sensores.
+def test_o_que_a_aba_gravou_por_peca_sobrevive_ao_salvar(
+        perfil_das_abas: str, campo: str, esperado: Any) -> None:
+    """O alto-falante, o microfone e os sensores daquela peça saem como a aba os gravou.
 
-    Medido em 05/09/2026: o daemon publicava as três por peça e o Salvar
-    reemitia o DISCO. Ela mexia no volume do microfone do P2, salvava, e o
-    número voltava ao de ontem sem uma palavra.
+    O `acelerometro` sem opinião (`None`) continua sem opinião com o
+    aparelho dizendo desligado: `D-AUDIO-E-GIRO-NASCEM-LIGADOS`.
     """
-    draft = rodape._draft_do_ativo(perfil_configurado, _ctx_do_ciclo())
+    salvo = _salvar(perfil_das_abas, _ctx_do_aparelho())
     secao, chave = campo.split(".")
-    override = draft.controller_override(UNIQ)
-    cfg = getattr(override, secao, None)
-    assert cfg is not None, f"o rodapé não montou a seção `{secao}` desta peça"
+    cfg = getattr(salvo.controllers[UNIQ], secao, None)
+    assert cfg is not None, f"o Salvar apagou a seção `{secao}` desta peça"
     assert getattr(cfg, chave) == esperado, (
-        f"`{campo}` não chegou ao rascunho — o Salvar levaria o disco de ontem")
-
-
-def test_o_sensor_ligado_nao_vira_opiniao(perfil_configurado: str) -> None:
-    """Ligado é o DEFAULT, e default não se grava como escolha.
-
-    ``D-AUDIO-E-GIRO-NASCEM-LIGADOS`` (25/08/2026): o sensor nasce ligado em
-    todo jogo. Gravar `True` porque ele está ligado AGORA faria todo perfil
-    salvo IMPOR os sensores a todo jogo — o contrário do que ela pediu.
-    Desligado nunca é default, então só pode ter vindo de um ato dela.
-    """
-    draft = rodape._draft_do_ativo(perfil_configurado, _ctx_do_ciclo())
-    sens = draft.controller_override(UNIQ).sensores
-    assert sens.giroscopio is False, "o desligado dela não foi guardado"
-    assert sens.acelerometro is None, (
-        "o acelerômetro LIGADO virou opinião explícita — todo perfil passaria "
-        "a impor o sensor a todo jogo")
+        f"`{campo}` saiu {getattr(cfg, chave)!r} do Salvar, e a aba gravou "
+        f"{esperado!r} — o aparelho entrou no disco")
 
 
 @pytest.mark.parametrize(("caminho", "esperado"), [
     ("rumble.policy", "max"),
     ("rumble.passthrough", False),
+    ("rumble.custom_mult", None),
     ("mouse.speed", 11),
     ("mouse.scroll_speed", 4),
     ("mouse.enabled", True),
 ])
-def test_o_que_e_da_mesa_inteira_tambem_chega(
-        perfil_configurado: str, caminho: str, esperado: Any) -> None:
-    """Os globais que o daemon publica e o rodapé reemitia do disco.
+def test_o_que_e_da_mesa_inteira_sobrevive_ao_salvar(
+        perfil_das_abas: str, caminho: str, esperado: Any) -> None:
+    """A política de vibração e o mouse saem como o disco os tinha.
 
-    São globais por MEDIÇÃO (decisão D3): o `Daemon` tem UM `_mouse_device`,
-    alimentado por um `read_state()` por tique, e o input vem sempre do
-    controle primário.
+    O teto lembrado de um `custom` antigo (`rumble_policy_custom_mult`) não
+    entra: foi ele que fazia o Salvar recusar em 06/09.
     """
-    draft = rodape._draft_do_ativo(perfil_configurado, _ctx_do_ciclo())
+    salvo = _salvar(perfil_das_abas, _ctx_do_aparelho())
     secao, chave = caminho.split(".")
-    assert getattr(getattr(draft, secao), chave) == esperado
-
-
-def test_a_velocidade_do_mouse_sobrevive_ao_to_profile(
-        perfil_configurado: str) -> None:
-    """O `dirty` não é ornamento — sem ele a seção `mouse` some no Salvar.
-
-    ``to_profile`` só emite `mouse` com `dirty` ou `in_profile`. O rodapé lia
-    o vivo e não marcava; a velocidade que ela acabou de mexer na aba 06 saía
-    do Salvar como se nunca tivesse existido.
-    """
-    draft = rodape._draft_do_ativo(perfil_configurado, _ctx_do_ciclo())
-    salvo = draft.to_profile(perfil_configurado)
-    assert salvo.mouse is not None, "a seção `mouse` não foi persistida"
-    assert salvo.mouse.speed == 11
-    assert salvo.mouse.scroll_speed == 4
+    assert getattr(getattr(salvo, secao), chave) == esperado
