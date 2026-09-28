@@ -1,23 +1,16 @@
 """O segfault da suíte diz onde morreu (VERDE-NAO-E-PROVA-01, passo 4).
 
-Em 26/09/2026 uma parte da suíte morreu com `rc=139` (segfault, com o WebKit
-no lote) e nenhum log tinha a pilha. O `catchsegv` saiu da glibc na 2.35, e
-nesta máquina o `core_pattern` vai para o apport, sem `coredumpctl`. A pilha
-em Python vem do `faulthandler`: o pytest o liga no próprio processo, e o
-`tests/conftest.py` põe `PYTHONFAULTHANDLER=1` no ambiente para os filhos. A
-nativa vem de `scripts/pilha_nativa.c`, que o `scripts/rodar-a-suite.sh`
-compila e carrega em todo pytest; e cada arquivo do WebKit roda em processo
-próprio, para o sinal levar um arquivo e não a parte.
+Em 26/09/2026 uma parte da suíte morreu com `rc=139` (o WebKit no lote) e
+nenhum log tinha a pilha. A Python vem do `faulthandler` (o pytest o liga, e o
+`tests/conftest.py` põe `PYTHONFAULTHANDLER=1` para os filhos); a nativa, de
+`scripts/pilha_nativa.c`, que o `scripts/rodar-a-suite.sh` carrega em todo
+pytest; e cada arquivo do WebKit roda em processo próprio. O processo que
+morre de propósito se declara não despejável antes do sinal: o apport dorme.
 
-Nenhum teste acorda o apport: o processo que morre de propósito se declara
-não despejável (`PR_SET_DUMPABLE` 0) antes do sinal, e o kernel não chama
-ninguém.
-
-AS MORDIDAS: tire o `os.environ.setdefault("PYTHONFAULTHANDLER", "1")` do
-conftest e `test_o_python_filho_herda_o_faulthandler` reprova; troque a `saida`
-da `pilha_nativa.c` pelo `STDERR_FILENO` e as duas réguas da pilha reprovam
-(a captura do pytest engole o texto); tire o `LD_PRELOAD` ou o processo
-próprio do `rodar-a-suite.sh` e a régua da suíte de brinquedo reprova.
+AS MORDIDAS: tire o `PYTHONFAULTHANDLER` do conftest, e a régua do filho
+reprova; troque a `saida` da `pilha_nativa.c` pelo `STDERR_FILENO`, e as duas
+da pilha reprovam (a captura do pytest engole o texto); tire o `LD_PRELOAD` ou
+o processo próprio do `rodar-a-suite.sh`, e a da suíte de brinquedo reprova.
 """
 from __future__ import annotations
 

@@ -2,19 +2,13 @@
  * pilha_nativa.c: a pilha nativa de um processo da suíte que morre por sinal.
  *
  * O `scripts/rodar-a-suite.sh` compila isto e o carrega por `LD_PRELOAD` em
- * cada pytest. Um processo que morre com `rc=139` (o WebKit, em 26/09/2026)
- * sai do log com duas pilhas: a do Python, pelo `faulthandler`, e a nativa,
- * por aqui. Nesta máquina não há `catchsegv` (saiu da glibc na 2.35) nem
- * `coredumpctl`, e o `core_pattern` vai para o apport.
- *
- * A ordem dos tratadores: este nasce no construtor, antes do Python; o
- * `faulthandler` entra depois, escreve a pilha Python, devolve o tratador
- * anterior (este) e levanta o sinal de novo. Aqui sai a pilha da linha que
- * falhou (`backtrace`) e, se o `eu-stack` existir, a de todas as linhas; depois
- * o sinal volta ao padrão e o processo morre com o mesmo número.
- *
- * Só o pytest leva o tratador: o construtor tira esta biblioteca do
- * `LD_PRELOAD` antes de o Python ler o ambiente, e os filhos nascem sem ela.
+ * cada pytest (não há `catchsegv` na glibc 2.35+, e o `core_pattern` desta
+ * casa vai para o apport). O construtor arma o tratador antes do Python; o
+ * `faulthandler` entra depois, escreve a pilha Python, devolve este tratador
+ * e levanta o sinal de novo. Aqui sai a pilha da linha que falhou e, com o
+ * `eu-stack`, a de todas; então o sinal volta ao padrão e o processo morre
+ * com o mesmo número. O construtor também tira a biblioteca do `LD_PRELOAD`:
+ * os filhos do pytest nascem sem ela.
  */
 #define _GNU_SOURCE
 #include <dlfcn.h>
