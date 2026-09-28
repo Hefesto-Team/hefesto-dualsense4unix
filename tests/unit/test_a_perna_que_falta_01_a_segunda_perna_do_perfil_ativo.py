@@ -338,6 +338,12 @@ def test_o_censo_dos_leitores_do_store_no_ipc_handlers() -> None:
         "_handle_profile_switch": "so-le",
         "_handle_daemon_status": "so-le",
         "_handle_daemon_state_full": "so-le",
+        # O-FREESTYLE-E-UMA-CAMADA-SO-01, 28/09/2026. O chip «Jogar pelo
+        # Hefesto» pergunta o modo ao perfil ativo, e o `freestyle.set`
+        # desligado relata o perfil que ficou. Nenhum dos dois grava: com o
+        # daemon sem saber, o chip cai no padrão da máquina, que é o de sempre.
+        "_caminho_do_perfil_ativo": "so-le",
+        "_o_jogo_vivo_volta": "so-le",
     }
 
     achados: dict[str, list[int]] = {}
