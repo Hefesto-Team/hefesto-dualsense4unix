@@ -251,8 +251,11 @@ class TestHotkeyEMic:
         # A TERCEIRA chave entrou em 22/08/2026 (QUATRO-MICROFONES-01): `uniqs`
         # diz de QUAIS controles a ponte de microfone está de pé. As outras duas
         # são do PROCESSO; só esta fala de controle, e é a que o medidor de
-        # rádio consome.
-        assert payload["bt_mic"] == {"enabled": False, "running": False, "uniqs": []}
+        # rádio consome. A QUARTA, `motivo`, entrou em 28/09/2026 (c2c9a8e7c): o
+        # que do sistema segura a ponte; vazia quando nada segura.
+        assert payload["bt_mic"] == {
+            "enabled": False, "running": False, "uniqs": [], "motivo": "",
+        }
 
 
 class TestSpeakerSet:
