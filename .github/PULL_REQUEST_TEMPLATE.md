@@ -1,59 +1,34 @@
 ## Descrição
 
-<!-- Resumo em PT-BR do que esta PR faz e por quê. Link para issue ou sprint: Closes #N ou refs SPRINT-ID. -->
+<!-- O que esta mudança faz e por quê. Se houver issue: Closes #N. -->
 
 ## Tipo de mudança
 
-- [ ] `feat` — funcionalidade nova
-- [ ] `fix` — correção de bug
-- [ ] `refactor` — refatoração sem mudança de comportamento
-- [ ] `chore` — manutenção, tooling, infraestrutura
-- [ ] `docs` — documentação
-- [ ] `test` — apenas testes
-- [ ] `polish` — ajustes de UI/UX sem lógica nova
-- [ ] `release` — corte de release
+- [ ] `feat`: funcionalidade nova
+- [ ] `fix`: correção de defeito
+- [ ] `refactor`: reorganização sem mudança de comportamento
+- [ ] `chore`: manutenção, ferramentas, infraestrutura
+- [ ] `docs`: documentação
+- [ ] `test`: só testes
 
-## Escopo tocado
+## Escopo
 
-- [ ] Runtime (daemon, IPC, HID, UDP)
-- [ ] GUI (GTK3)
-- [ ] TUI (Textual)
-- [ ] CLI (typer)
-- [ ] Perfis e autoswitch
-- [ ] Build / packaging (.deb, Flatpak, AppImage)
-- [ ] CI / workflows
+- [ ] Serviço (daemon, IPC, HID, UDP)
+- [ ] Janela
+- [ ] Interface de terminal
+- [ ] Linha de comando
+- [ ] Perfis e troca automática
+- [ ] Instalador e pacotes (.deb, Flatpak, AppImage, Arch, Fedora, Nix)
+- [ ] CI
 - [ ] Documentação
 
-## Checklist de gates locais
+## Checklist
 
-- [ ] `.venv/bin/pytest tests/unit -q` passa (sem regressões).
-- [ ] `.venv/bin/ruff check src/ tests/` sem violações.
-- [ ] `.venv/bin/mypy src/hefesto_dualsense4unix` fecha com zero erros.
-- [ ] `python3 scripts/validar-acentuacao.py --all` sem violações.
-- [ ] `bash scripts/check_anonymity.sh` limpo (zero menção a IA, modelo, assistente, autor).
-- [ ] Pre-commit rodou localmente sem bypass (`--no-verify` não usado).
+- [ ] `.venv/bin/ruff check src/ tests/` sem apontamentos.
+- [ ] `.venv/bin/mypy src/hefesto_dualsense4unix` sem erros.
+- [ ] `bash scripts/rodar-a-suite.sh` sem falhas.
+- [ ] O pre-commit rodou, sem `--no-verify`.
 
-## Proof-of-work runtime (se tocou runtime)
+## Como testei
 
-<!-- Cole output relevante: -->
-
-```
-# smoke USB
-HEFESTO_DUALSENSE4UNIX_FAKE=1 HEFESTO_DUALSENSE4UNIX_FAKE_TRANSPORT=usb HEFESTO_DUALSENSE4UNIX_SMOKE_DURATION=2.0 ./run.sh --smoke
-
-# (cole últimas linhas aqui)
-```
-
-## Evidência visual (se tocou UI/TUI/GUI)
-
-- [ ] Screenshot anexada (PNG).
-- [ ] `sha256sum` incluído.
-- [ ] Descrição multimodal (3-5 linhas: elementos visíveis, acentuação PT-BR, contraste, comparação antes/depois).
-
-## Impactos e riscos
-
-<!-- Breve análise do que pode quebrar. Armadilhas conhecidas tocadas? Ver VALIDATOR_BRIEF.md seção Armadilhas. -->
-
-## Notas para o revisor
-
-<!-- Pontos de atenção, decisões questionáveis, alternativas consideradas. -->
+<!-- O que você rodou e o que viu. Se tocou o serviço, cole o fim da saída de `./run.sh --smoke`. Se tocou a janela, anexe um print de antes e de depois. -->

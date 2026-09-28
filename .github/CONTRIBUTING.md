@@ -1,196 +1,50 @@
-# Contribuindo com o Hefesto - DualSense4Unix
+# Contribuindo
 
-Obrigado pelo interesse em contribuir. Este é um projeto pessoal com ciclo de desenvolvimento próprio, mas contribuições externas são bem-vindas desde que sigam os protocolos descritos aqui.
+Issues e pull requests são bem-vindos. Para uma mudança grande, abra uma issue antes, para combinarmos o caminho.
 
----
+Tudo no projeto é escrito em português do Brasil, com acentuação: código, comentários, documentação e mensagens de commit.
 
-## Natureza do projeto
-
-Hefesto - DualSense4Unix é um **projeto pessoal** mantido em regime de anonimato pelo autor. O fluxo interno de desenvolvimento usa um pipeline de sprints automatizadas com auto-merge em `main` sem PR formal — esse é o modo normal de operação.
-
-**Contribuições externas de pessoas desconhecidas passam por revisão manual antes do merge.** Não há prazo garantido de resposta, mas toda PR bem documentada será lida.
-
-Se sua intenção é uma mudança grande, abra uma issue primeiro descrevendo o problema/proposta antes de investir tempo em código. Isso evita retrabalho.
-
----
-
-## Preparação de ambiente
-
-Script idempotente que garante `.venv/` viva e dependências corretas:
+## Ambiente
 
 ```bash
-bash scripts/dev-setup.sh
+bash scripts/dev_bootstrap.sh              # cria a .venv com as dependências
+bash scripts/dev_bootstrap.sh --with-tray  # inclui PyGObject e GTK, para a janela e a bandeja
+pip install pre-commit && pre-commit install
 ```
 
-Na primeira clonagem, use o bootstrap completo:
+## Antes de abrir o pull request
 
 ```bash
-bash scripts/dev_bootstrap.sh              # base
-bash scripts/dev_bootstrap.sh --with-tray  # inclui PyGObject + GTK3 (para GUI)
-```
-
-Ative o pre-commit antes do primeiro commit:
-
-```bash
-pip install pre-commit
-pre-commit install
-```
-
-O pre-commit bloqueia:
-
-- Acentuação PT-BR faltando (`acao`, `funcao`, `descricao`, `configuracao`, etc.).
-- Menção a IA, modelo, assistente ou similares (anonimato).
-- Falha de `ruff check`.
-- Emojis gráficos em commits, docs e código.
-
-Glyphs Unicode de estado (`U+25CF BLACK CIRCLE`, `U+25CB WHITE CIRCLE`, box drawing, block elements) são permitidos — fazem parte da UI textual.
-
----
-
-## Rodando os gates locais
-
-Antes de qualquer commit:
-
-```bash
-# Testes unitários
-.venv/bin/pytest tests/unit -q
-
-# Lint
 .venv/bin/ruff check src/ tests/
-
-# Tipagem (gate rígido)
 .venv/bin/mypy src/hefesto_dualsense4unix
-
-# Acentuação periférica
-python3 scripts/validar-acentuacao.py --all
-
-# Anonimato
-bash scripts/check_anonymity.sh
+bash scripts/portoes.sh
+bash scripts/rodar-a-suite.sh
 ```
 
-Se algum falhar, corrija antes de seguir. Não use `--no-verify` para bypassar hooks.
+Se a mudança toca o serviço, rode `./run.sh --smoke`, que sobe o serviço por alguns segundos com um controle simulado no cabo (`./run.sh --smoke --bt` simula o Bluetooth). Se toca a janela, anexe um print de antes e de depois.
 
----
+## Regras do projeto
 
-## Fluxo de sprint
+- Um teste tem de reprovar quando a correção que ele protege é arrancada. Antes de entregar, tire a correção, veja o teste falhar e devolva.
+- Um fato errado se substitui pelo certo em todos os lugares onde aparece, e não só onde foi notado. Procure o valor antigo na árvore inteira antes de fechar.
+- As verificações de `scripts/portoes.sh` só enxergam arquivo que o git conhece: rode-as depois do `git add`.
+- O lint usa o comando exato do CI: `ruff check src/ tests/`.
+- O `install.sh` nunca roda com `sudo` na frente, porque o `HOME` passaria a ser o do root. Sem terminal interativo, use `./install.sh --yes`.
+- Endereço de aparelho, em teste ou documento, só nas faixas fictícias (`aa:bb:cc`, `02:fe:`, `e8:47:3a`), nunca o de um controle de verdade.
 
-O projeto organiza trabalho em **sprints**. Cada sprint tem:
+## Commits
 
-- ID canônico (`FEAT-*`, `BUG-*`, `REFACTOR-*`, `CHORE-*`, `DOCS-*`, `INFRA-*`, `AUDIT-*`).
-- Spec própria com contexto, decisão, critérios de aceite e proof-of-work.
-- Status: `PLANNED`, `READY`, `IN_PROGRESS`, `MERGED`, `PROTOCOL_READY`, `SUPERSEDED`.
+Uma linha no formato `tipo(escopo): o que muda`. Tipos: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`. Se precisar, um corpo curto com o porquê.
 
-As specs e o índice de status vivem no arquivo de processo, fora da `main` (ver
-"Arquivo de processo" no fim deste documento).
+## Dados pessoais
 
-Para contribuir:
-
-1. Identifique ou proponha uma sprint com ID claro.
-2. Use `gh issue develop N --checkout` se houver issue correspondente.
-3. Implemente seguindo o spec; não expanda escopo sem registrar achado colateral.
-4. Se tocar runtime (HID, daemon, IPC), prove via smoke real: `./run.sh --smoke`.
-5. Se tocar UI/TUI/GUI, anexe screenshot + sha256 + descrição multimodal.
-6. Se descobrir algo não-óbvio, registre: ADR em `docs/adr/` quando muda arquitetura, nota em `docs/research/` quando é medição.
-
-### A sprint é a unidade que segura a release
-
-O critério de release desta casa é contado **em sprints**, e por isso ele
-pertence a este fluxo: **sprint aberta segura a `0.9.5`**, e **sprint nova zera
-o relógio de duas semanas da `1.0.0`**. Abrir uma sprint não é de graça — é
-adiar a série, e é decisão dela.
-
-A tabela dos marcos, com a frase dela que a originou, é canônica no preâmbulo do
-[`CHANGELOG.md`](../CHANGELOG.md) (seção "Versionamento"). Não a copie para uma
-terceira página: duas cópias já divergem.
-
----
-
-## Convenção de commit
-
-PT-BR acentuado, sem emojis, sem menção a IA.
-
-Formato:
-
-```
-<tipo>: <ID-SPRINT> — <descrição curta imperativa>
-
-<corpo opcional explicando o porquê>
-```
-
-Tipos: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `polish`, `release`.
-
-Exemplo:
-
-```
-feat: FEAT-LED-BRIGHTNESS-03 — handler GUI persiste brightness no state
-
-Slider de luminosidade agora sincroniza com state_full via guard anti-loop;
-valor é incluído no JSON salvo pelo editor.
-```
-
-Squash merge ao fechar PR externa; mensagem final segue o mesmo padrão.
-
----
-
-## Protocolo anti-débito
-
-Achado colateral durante implementação **não é corrigido silenciosamente**. Opções válidas:
-
-1. **Edit-pronto:** patch separado com ID novo (`BUG-<NN>`), commit isolado.
-2. **Sprint-nova:** abra issue ou arquivo de spec descrevendo o achado; deixe o fix para o próximo ciclo.
-
-Nunca use `# TODO` ou `# FIXME` como substituto de spec. Débitos silenciosos quebram a rastreabilidade do projeto.
-
----
-
-## Verbosidade e fato errado
-
-Ver [ADR-021](../docs/adr/021-verbosidade-tem-custo-medido.md). Em resumo:
-
-1. **Fato errado sai de TODOS os lugares onde aparece**, não só de onde foi
-   notado. A prova é barata: `grep` pelo valor antigo na árvore, e o resultado
-   tem de ser vazio ou só histórico datado.
-2. **Verbosidade é custo**, em atenção de quem lê e em contexto de quem
-   processa. Vale para código, documento, comentário e mensagem de commit.
-3. **Na dúvida entre repetir e referenciar, referencie.** Na dúvida entre
-   guardar e cortar, guarde.
-
-O que separa decisão medida de número errado: *se apagar isto faria alguém
-repetir um trabalho ou pagar um custo já pago?* Se sim, leva data e fica. Se
-não, sai.
-
----
-
-## Anonimato
-
-O autor mantém anonimato absoluto. Contribuições devem respeitar:
-
-- Nenhum arquivo (código, doc, commit message) menciona o autor por nome próprio completo.
-- E-mail de contato público é `andre.dsbf@gmail.com` (já presente nos commits históricos).
-- Nenhum crédito é devido a assistentes de IA; menções são bloqueadas pelo pre-commit.
-
-Se sua PR expõe dados pessoais de terceiros por engano, avise imediatamente para reescrita do histórico.
-
----
+Além do endereço do aparelho, não ponha número de série nem caminho da sua máquina em teste ou documento.
 
 ## A língua do produto
 
-**Decisão de 07/08/2026: o português do Brasil é a língua do Hefesto.** Ele não
-é a língua de partida de um produto multilíngue à espera de tradutores; é a
-língua em que o produto está escrito, e é assim que ele é entregue.
+O português do Brasil é a língua do Hefesto: é a língua em que o produto está escrito e em que ele é entregue.
 
-Até esta data, esta página trazia uma receita completa de como um voluntário
-acrescentaria o francês ou o espanhol. **O convite era falso**, e o motivo é
-medido — os módulos que escrevem o texto vivo das abas não passam pela função
-de tradução, então quem traduzisse os catálogos veria mudar o esqueleto fixo e
-não o que a janela diz enquanto roda.
-
-**A contagem abaixo é GERADA, e não digitada.** Ela já saiu de seis jeitos
-diferentes conforme a pasta crescia (18, 19, 20, 29, 31, 34), recontada à mão a
-cada leva — e *um número que já saiu de seis jeitos não é fato, é opinião com
-cara de dado*. Desde 20/09/2026 quem a escreve é
-`scripts/check_o_projeto_e_traduzivel.py --publicar`, e há portão que reprova se
-o documento divergir do AST.
+O encanamento de tradução existe (`po/`, `scripts/i18n_extract.sh`, `scripts/i18n_compile.sh` e `src/hefesto_dualsense4unix/utils/i18n.py`), mas a maior parte do texto das abas ainda não passa por ele:
 
 <!-- CONTAGEM-GERADA — não edite à mão: scripts/check_o_projeto_e_traduzivel.py --publicar -->
 Dos **34** arquivos `.py` de `src/hefesto_dualsense4unix/app/actions/`
@@ -203,84 +57,10 @@ Critério, lido do AST e não de um grep: importa `_` de `hefesto_dualsense4unix
 ou `gettext`; tem literal com caractere acentuado fora de docstring.
 <!-- /CONTAGEM-GERADA -->
 
-O portão que guarda esta decisão refaz a contagem a cada rodada — ver abaixo.
+Por isso o projeto ainda não pede traduções. Quem mexer em i18n mexe para ligar o encanamento às telas; quando a contagem acima chegar a zero, a tradução passa a alcançar a janela inteira.
 
-### O encanamento de i18n continua vivo, e de propósito
-
-Nada de i18n foi removido: `po/en.po`, `po/pt_BR.po`, `scripts/i18n_extract.sh`,
-`scripts/i18n_compile.sh` e `src/hefesto_dualsense4unix/utils/i18n.py` continuam
-onde estavam. O encanamento está **correto**; o que não existe é o texto
-passando por ele.
-
-**FATO SUBSTITUÍDO — 20/09/2026.** Esta linha citava «os 308
-`translatable="yes"` de `gui/main.glade`» entre o que continua funcionando. O
-XML da janela GTK saiu do disco em 06/09/2026 (`D-0609-GTK-LEVA-INTEIRA`), e
-com ele o caminho padrão do extrator: das 413 `msgid` do catálogo, 317 citam
-esse arquivo ausente e 352 (85,2%) não alcançam tela nenhuma. Quem for ligar o
-encanamento liga-o à interface de hoje, e pede o catálogo menor por escrito
-(`scripts/i18n_extract.sh --sem-a-janela`).
-
-Removê-lo para "ficar coerente" seria destruir trabalho bom para provar um
-ponto — e é exatamente o que esta casa não faz. Quem for mexer em i18n mexe
-para **ligar** o encanamento às telas, não para arrancá-lo.
-
-### Quando o convite pode voltar
-
-Quando a contagem acima chegar a zero, ou seja: quando nenhum módulo de
-`app/actions/` escrever prosa em português fora da função de tradução. Aí o
-convite passa a ser verdadeiro, e o portão para de reprová-lo sozinho — sem que
-ninguém precise editar o teste.
-
-Enquanto isso, **nenhuma página que ensina** (`README.md`, `docs/usage/`,
-`docs/adr/`, `docs/protocol/` e esta) pode trazer a receita de volta. Há
-portão: `tests/unit/test_lingua_do_produto_01_o_convite_a_traduzir.py`.
-
-### O vocabulário que fica em inglês dentro do português
-
-Isto é decisão de produto, não convenção de tradutor, e continua valendo:
-
-| termo | por quê |
-|---|---|
-| `lightbar` | nome Sony do componente; não tem tradução consagrada |
-| `rumble` | nome Sony da vibração; idem |
-| `daemon` | termo técnico Unix, e é como o próprio serviço se chama |
-
-Fora esses, a regra é a da casa: **português do Brasil, com acentuação
-correta**, em código, comentário, documentação e mensagem de commit. Há portão
-(`scripts/validar-acentuacao.py`).
-
-Registro completo desta decisão — o que foi medido e o que ficou aberto — está
-no arquivo de processo, fora deste repositório (ver a seção **Arquivo de
-processo**, abaixo).
-
----
+Ficam em inglês dentro do português: `lightbar` e `rumble`, os nomes que a Sony dá às peças, e `daemon`, o termo do Unix.
 
 ## Dúvidas
 
-Abra uma issue com o template `question` ou consulte:
-
-- `docs/adr/` — Architecture Decision Records.
-- `docs/usage/quickstart.md` — uso da ferramenta.
-- `docs/research/` — pesquisas e medições.
-
----
-
-## Arquivo de processo
-
-Sprints, estudos, entregas, diário de descobertas, decisões e roadmap interno
-**não ficam neste repositório** — nem na `main`, nem na `dev`, nem em tag
-nenhuma. Decisão dela, 15/09/2026: o material de processo é dela e do André, e
-é compartilhado fora do git.
-
-Todo caminho `docs/process/...` citado em comentário, docstring ou documento
-daqui é uma **citação de procedência**: ele diz de onde veio aquela cura, e
-quem tem os arquivos a segue. A régua sabe disso — `docs/process/` está
-declarado em `scripts/validar-referencias-docs.py` (`FORA_DO_GIT`) como fonte
-fora desta árvore, ao lado de `xpadneo/` e `sony_gamepad.py`, e há guarda que
-reprova se algum desses caminhos voltar a ser rastreado.
-
-**Se você precisa de um desses arquivos, peça a quem mantém o projeto.**
-
----
-
-*"A forja não revela o ferreiro. Só a espada."*
+Abra uma issue com o modelo «Pergunta».

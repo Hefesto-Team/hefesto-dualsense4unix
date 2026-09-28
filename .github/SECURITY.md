@@ -2,13 +2,12 @@
 
 ## Versões suportadas
 
-Apenas a versão estável mais recente recebe correções de segurança. Não há backport para versões anteriores.
+Só a versão mais recente recebe correções de segurança. Não há backport para versões anteriores.
 
 | Versão | Suporte |
 |--------|---------|
-| 2.1.x  | Sim     |
-| 2.0.x  | Não     |
-| < 2.0  | Não     |
+| 0.9.x, a mais recente | Sim |
+| anteriores | Não |
 
 Consulte `CHANGELOG.md` para o estado atual.
 
@@ -24,7 +23,7 @@ Consulte `CHANGELOG.md` para o estado atual.
 Inclua no relatório:
 
 1. Descrição da vulnerabilidade e impacto estimado.
-2. Passos para reproduzir em árvore limpa (`git checkout main && git pull`).
+2. Passos para reproduzir a partir de um clone novo do ramo `dev`.
 3. Versão afetada (`hefesto-dualsense4unix --version`).
 4. Distribuição e kernel (`uname -a`).
 5. Prova de conceito mínima, se aplicável.
@@ -75,7 +74,3 @@ Não há chave PGP ativa no momento. Se o relatório exigir canal criptografado,
 ## Histórico
 
 Nenhum advisory público até esta data. Este documento será atualizado quando houver.
-
----
-
-*"A forja não revela o ferreiro. Só a espada."*

@@ -474,18 +474,21 @@ def test_nenhuma_pagina_que_ensina_convida_a_traduzir(documento: str) -> None:
 
 
 def test_a_contributing_diz_o_que_o_convite_perdido_foi_substituido_por() -> None:
-    """Tirar sem explicar é apagar. A página tem de carregar a decisão."""
+    """Tirar sem explicar é apagar. A página tem de carregar a decisão.
+
+    A decisão é dita sem data: quem contribui precisa saber a regra de hoje,
+    e a data de quando ela foi tomada mora no histórico do git.
+    """
     texto = (RAIZ / ".github" / "CONTRIBUTING.md").read_text(encoding="utf-8")
 
     for esperado in (
-        "07/08/2026",
         "português do Brasil é a língua",
         "encanamento",
     ):
         assert esperado in texto, (
             f"`.github/CONTRIBUTING.md` não diz {esperado!r}. A seção de "
-            "traduções foi removida em 07/08/2026 e o lugar dela é de quem "
-            "explica a decisão — senão a próxima pessoa reabre o convite."
+            "traduções saiu da página, e o lugar dela é de quem explica a "
+            "decisão; senão a próxima pessoa reabre o convite."
         )
 
 
