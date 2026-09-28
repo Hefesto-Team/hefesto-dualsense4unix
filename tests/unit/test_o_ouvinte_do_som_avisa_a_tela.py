@@ -13,8 +13,13 @@ leitura sob demanda (`get-default-sink`), e nada que ficasse sabendo quando ela
 trocava a saída no painel do sistema.
 
 **NENHUM TESTE DESTE ARQUIVO TOCA O SERVIDOR DE SOM DELA.** As funções que
-decidem são puras (`interessa`, `descricoes_da_lista`,
-`linha_do_som_do_sistema`) e o laço é medido com um `pactl` de mentira.
+decidem são puras (`tipo_do_evento`, `linha_do_som_do_sistema`), os nomes de
+gente saem do retrato do som alimentado com a saída MEDIDA, e o laço é medido
+com um `pactl` de mentira.
+
+Desde 28/09/2026 (O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01) o filtro e os nomes
+são do retrato do som: as réguas das seções 1 e 2 medem o caminho que o
+produto usa, e não mais as duas funções que ficaram sem chamador.
 """
 
 from __future__ import annotations
@@ -28,8 +33,8 @@ from hefesto_dualsense4unix.core.events import EventTopic
 from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
 
 #: A SAÍDA REAL DE `pactl list sinks` NA MÁQUINA DELA, em 21/09/2026, cortada
-#: nos dois campos que importam. É o oráculo de `descricoes_da_lista`: uma
-#: régua escrita contra um formato inventado mede a invenção.
+#: nos dois campos que importam. É o oráculo dos nomes de gente do retrato do
+#: som: uma régua escrita contra um formato inventado mede a invenção.
 LISTA_MEDIDA = """
 Sink #551
 \tName: alsa_output.usb-Sony_..._Controller-00.HiFi__Speaker__sink
@@ -51,41 +56,64 @@ Sink #56923
     "Event 'new' on sink #66580",
     "Event 'remove' on source #12",
 ])
-def test_o_que_importa_acorda_o_lacos(linha: str) -> None:
-    assert ods.interessa(linha) is True
+def test_o_que_importa_rele_o_padrao(linha: str) -> None:
+    assert ods.tipo_do_evento(linha) in ods._TIPOS_DO_PADRAO
 
 
-@pytest.mark.parametrize("linha", [
-    "Event 'change' on sink-input #4211",
-    "Event 'new' on client #66347",
-    "Event 'change' on source-output #9",
-    "",
-    "lixo",
+@pytest.mark.parametrize(("linha", "tipo"), [
+    ("Event 'change' on sink-input #4211", "sink-inputs"),
+    ("Event 'new' on client #66347", None),
+    ("Event 'change' on source-output #9", "source-outputs"),
+    ("", None),
+    ("lixo", None),
 ])
-def test_o_que_nao_importa_nao_acorda(linha: str) -> None:
+def test_o_que_nao_importa_nao_rele_o_padrao(linha: str, tipo: str | None) -> None:
     """`sink-input` CONTÉM `sink`, e é o stream de qualquer app tocando som.
 
-    MORDE: troque o `partes[3] in EVENTOS_QUE_IMPORTAM` por um `in linha` e
-    esta régua reprova — o laço passaria a reler o padrão a cada frame de
-    áudio de qualquer programa aberto.
+    Ele relê os fluxos no retrato (é o tipo dele), e não o padrão.
+
+    MORDE: troque o `partes[3]` de `tipo_do_evento` por uma busca de
+    substring na linha e esta régua reprova — o laço passaria a reler o
+    padrão a cada frame de áudio de qualquer programa aberto.
     """
-    assert ods.interessa(linha) is False
+    assert ods.tipo_do_evento(linha) == tipo
+    assert ods.tipo_do_evento(linha) not in ods._TIPOS_DO_PADRAO
 
 
 # ---------------------------------------------------------------------------
 # 2 — OS NOMES SÃO OS DO PAINEL DELA
 # ---------------------------------------------------------------------------
-def test_a_descricao_sai_do_formato_longo_medido() -> None:
-    mapa = ods.descricoes_da_lista(LISTA_MEDIDA)
-    assert mapa["hefesto_som_000003"] == "Alto-falante do Controle 1"
-    assert mapa["alsa_output.pci-0000_0a_00.1.hdmi-stereo"] == (
+def _retrato_com(saidas: str, padrao_da_saida: str = "") -> Any:
+    """O retrato do som, vivo, alimentado com a saída dada — sem servidor nenhum."""
+    from hefesto_dualsense4unix.integrations import retrato_do_som as rs
+
+    respostas = {
+        ("pactl", "list", "sinks"): saidas,
+        ("pactl", "info"): f"Default Sink: {padrao_da_saida}\nDefault Source: \n",
+    }
+    retrato = rs.RetratoDoSom(ler=lambda argv: respostas.get(tuple(argv), ""))
+    assert retrato.carregar()
+    retrato.assumir()
+    return retrato
+
+
+def test_a_descricao_sai_do_formato_longo_medido(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O padrão publicado leva o nome do painel dela, pelo caminho do produto."""
+    from hefesto_dualsense4unix.integrations import retrato_do_som as rs
+
+    retrato = _retrato_com(LISTA_MEDIDA, padrao_da_saida="hefesto_som_000003")
+    monkeypatch.setattr(rs, "RETRATO", retrato)
+    som = ods._o_padrao_do_retrato()
+    assert som.saida == "hefesto_som_000003"
+    assert som.saida_nome == "Alto-falante do Controle 1"
+    assert retrato.descricoes()["alsa_output.pci-0000_0a_00.1.hdmi-stereo"] == (
         "HDA NVidia Estéreo digital (HDMI)")
 
 
 def test_um_no_sem_descricao_nao_entra() -> None:
     """Melhor o nome cru na tela que um par errado."""
-    mapa = ods.descricoes_da_lista("\tName: so_o_nome\nSink #2\n\tName: outro\n"
-                                   "\tDescription: Outro\n")
+    mapa = _retrato_com("\tName: so_o_nome\nSink #2\n\tName: outro\n"
+                        "\tDescription: Outro\n").descricoes()
     assert "so_o_nome" not in mapa
     assert mapa["outro"] == "Outro"
 

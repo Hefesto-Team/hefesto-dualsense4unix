@@ -143,47 +143,20 @@ def _o_padrao_do_retrato() -> SomDoSistema:
         entrada_nome=descricoes.get(entrada, ""))
 
 
-def descricoes_da_lista(bruto: str) -> dict[str, str]:
-    """`{nome cru: Description}` de uma saída de `pactl list sinks|sources`.
-
-    FUNÇÃO PURA, e por isso ela é o oráculo: a régua lhe dá a saída medida na
-    máquina dela e confere o par, sem servidor de som nenhum.
-
-    **O FORMATO LONGO É O ÚNICO QUE TRAZ A DESCRIÇÃO.** O `short` tem cinco
-    colunas e nenhuma delas é o nome de gente — e ler o longo esperando o short
-    devolve lixo, que é um defeito que esta casa já pagou
-    (`fontes_dualsense`, 20/09/2026).
-
-    Cada nó começa em `Name:` e a descrição vem depois; um `Name:` novo fecha o
-    anterior. Nó sem `Description` simplesmente não entra — e aí a tela cai no
-    nome cru, que é longo e feio mas é verdade.
-    """
-    return {no.nome: no.descricao
-            for no in retrato_do_som.nos_do_texto(bruto) if no.descricao}
-
-
-def interessa(linha: str) -> bool:
-    """Esta linha do `subscribe` pede uma releitura?
-
-    A forma é `Event 'change' on server #0`. Casar pela PALAVRA do alvo, e não
-    por substring solta, é o que impede um `sink-input` (o stream de um app
-    qualquer) de acordar o laço a cada frame de áudio — `sink-input` contém
-    `sink`.
-
-    Desde 28/09/2026 o `sink-input` acorda o laço, e com razão: ele relê o
-    tipo DELE no retrato (:func:`tipo_do_evento`). O que ele continua sem
-    fazer é reler o PADRÃO, e é esta a pergunta que esta função responde.
-    """
-    return tipo_do_evento(linha) in _TIPOS_DO_PADRAO
-
-
 def tipo_do_evento(linha: str) -> str | None:
     """O tipo do retrato que esta linha do `subscribe` manda reler, ou `None`.
 
-    Pela PALAVRA do alvo, como :func:`interessa`: `sink-input` é um tipo, e
-    `sink` é outro. `client` não relê nada — cada `pactl` do próprio retrato é
-    um cliente, e reler por eles faria o retrato perguntar por causa das
-    próprias perguntas.
+    A forma é `Event 'change' on server #0`. Casar pela PALAVRA do alvo, e não
+    por substring solta: `sink-input` (o fluxo de um app qualquer) CONTÉM
+    `sink`, e é um tipo à parte — ele relê os fluxos, e não o padrão, que só
+    se relê pelos tipos de :data:`_TIPOS_DO_PADRAO`. `client` não relê nada —
+    cada `pactl` do próprio retrato é um cliente, e reler por eles faria o
+    retrato perguntar por causa das próprias perguntas.
+
+    Até 28/09/2026 moravam aqui `interessa` e `descricoes_da_lista`, o filtro
+    e os nomes de gente do padrão. O retrato os substituiu (a releitura por
+    tipo e `RetratoDoSom.descricoes`), e as réguas deles passaram a medir o
+    caminho do produto.
     """
     partes = linha.split()
     if len(partes) < 4 or partes[0] != "Event":
@@ -389,8 +362,6 @@ __all__ = [
     "EVENTOS_QUE_IMPORTAM",
     "RAJADA_S",
     "SomDoSistema",
-    "descricoes_da_lista",
-    "interessa",
     "ler_o_padrao",
     "ouvinte_do_som_loop",
     "som_do_sistema_payload",
