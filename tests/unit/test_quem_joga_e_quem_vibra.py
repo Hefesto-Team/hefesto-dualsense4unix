@@ -273,7 +273,7 @@ class TestOGateEstaLigado:
         condicao = corpo[i : corpo.index("\n", i)]
         assert "este_joga" in condicao, "o gate saiu da condição do modo"
         assert "endpoint_toca" in condicao, "o canal saiu da condição do modo"
-        assert "endpoint_toca = bool(endpoint) and sink_esta_tocando(endpoint.nome)" in corpo
+        assert "endpoint_toca = endpoint is not None and sink_esta_tocando(endpoint.nome)" in corpo
 
 
 @pytest.mark.parametrize("quem", [P1, P2, P3, P4])

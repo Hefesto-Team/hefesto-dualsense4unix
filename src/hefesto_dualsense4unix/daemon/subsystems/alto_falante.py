@@ -1690,7 +1690,7 @@ class AltoFalanteSubsystem:
             # só escreve o bloco que tem sinal nos motores. No menu, com o
             # fluxo aberto e mudo, o rádio fica livre.
             este_joga = uniq.lower() in jogando
-            endpoint_toca = bool(endpoint) and sink_esta_tocando(endpoint.nome)
+            endpoint_toca = endpoint is not None and sink_esta_tocando(endpoint.nome)
             modo = "haptica" if (endpoint_toca and este_joga) else "som"
             self._vigiar_o_portao(
                 uniq, fechado=endpoint_toca and not este_joga, controles=controles
