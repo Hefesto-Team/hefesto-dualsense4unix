@@ -257,6 +257,9 @@ _PASTAS_DE_MAQUINA = "pastas e binários de máquina (.git, venv, caches), que n
 
 #: As listas em que nenhuma entrada é defeito aceito, com a razão.
 NAO_SAO_DIVIDA: dict[str, str] = {
+    "scripts/ensaios/quem_e_quem.py::CONHECIDOS": (
+        "os endereços da mesa, lidos quando o ensaio roda, para o dono da máscara "
+        "pegar toda forma deles; nasce vazia e não isenta nada"),
     "scripts/check_a_grafia_do_nome.py::ISENTOS": _A_PROPRIA_REGUA,
     "scripts/check_broadcast_proibido.py::_EXCECOES_DELIBERADAS": (
         "o broadcast deliberado, com a frase de verdade no docstring da função"),

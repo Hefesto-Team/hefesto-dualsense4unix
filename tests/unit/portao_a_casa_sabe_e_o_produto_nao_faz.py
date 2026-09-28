@@ -1422,28 +1422,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
 #: No dia em que o caminho nascer, a entrada deixa de bater com a árvore e
 #: ``test_a_lista_de_lacunas_nao_envelhece_calada`` cobra que ela seja apagada.
 _SEM_CAMINHO_HOJE: dict[str, str] = {
-    # O DONO DA MÁSCARA NASCEU ANTES DOS CHAMADORES, de propósito (28/09/2026):
-    # a O-BASICO-MEDIDO-01 o importa de `scripts/`, e a onda 2 da mesma sprint
-    # fia o produto a ele — e apaga estas duas linhas no mesmo commit.
-    "core/formas_do_endereco.py::mascarar": (
-        "28/09/2026, O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-01 (onda 1b: só "
-        "o dono). ONDE O CAMINHO SE PERDE: a cadeia do structlog em "
-        "`utils/logging_config.py` não tem máscara, e o «Copiar» da aba "
-        "Sistema (`interface/pacotes/a09_sistema.py`, `copiar_registro`) "
-        "passa pelo `mascarar_o_diario` próprio, que conhece três formas. "
-        "FECHA na onda 2 da mesma sprint (itens 5 e 6 da cura): o dono vira o "
-        "último passo da cadeia do diário e o «Copiar» passa o painel por ele."
-    ),
-    "core/formas_do_endereco.py::mascarar_endereco": (
-        "28/09/2026, O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-01 (onda 1b: só "
-        "o dono). ONDE O CAMINHO SE PERDE: os cinco mascaradores de um "
-        "endereço só (`battery_journal.mascarar_endereco`, "
-        "`gesto_de_reconexao.mascarar`, `sinal_da_barra.mascarar`, "
-        "`o_cabo_em_espera.mascarar` e `ar_do_adaptador._mascarar`) e o "
-        "`_id_visivel` de `app/actions/perfis_web.py` ainda têm a conta "
-        "própria. FECHA na onda 2 da mesma sprint (itens 3 e 4 da cura), que "
-        "os troca pelo dono."
-    ),
     # CINCO LÁPIDES DA PONTE-SEM-CHAMADOR-01 SAÍRAM EM 23/09/2026, e quem mandou
     # foi ESTE PORTÃO (`test_nenhuma_lapide_sobreviveu_a_propria_cura`): a
     # `JanelaDeBusca`, o `Candidato`, o `Resultado`, o `e_controle` e o
