@@ -64,6 +64,7 @@ from tests.unit.barramento_de_mentira import (
     ICONE_DO_DUALSENSE,
     PONTE,
     VIZINHO,
+    ainda_varrendo,
     ambiente,
     caminho_do,
     montar,
@@ -381,17 +382,18 @@ def test_fechar_derruba_a_varredura(barramento: Path) -> None:
     Uma varredura esquecida aberta custa de 32% a 43% dos pacotes do adaptador
     que a hospeda — é o custo que este módulo existe para não pagar.
     """
-    varrendo = barramento / "varrendo"
     janela = _janela_contra_a_ponte(barramento, 60)
     with janela:
         limite = time.monotonic() + 5.0
-        while not varrendo.exists() and time.monotonic() < limite:
+        while not ainda_varrendo(barramento) and time.monotonic() < limite:
             time.sleep(0.05)
-        assert varrendo.exists(), "a janela nem chegou a abrir"
+        assert ainda_varrendo(barramento), "a janela nem chegou a abrir"
+    #: O PROCESSO da janela, e não o arquivo que o `trap` dela apaga: o bash
+    #: não garante esse `trap` sob os sinais do `timeout` — ver `ainda_varrendo`.
     limite = time.monotonic() + 5.0
-    while varrendo.exists() and time.monotonic() < limite:
+    while ainda_varrendo(barramento) and time.monotonic() < limite:
         time.sleep(0.1)
-    assert not varrendo.exists(), "a varredura ficou de pé depois do fechar"
+    assert not ainda_varrendo(barramento), "a varredura ficou de pé depois do fechar"
 
 
 # --- o relógio da tela -------------------------------------------------------

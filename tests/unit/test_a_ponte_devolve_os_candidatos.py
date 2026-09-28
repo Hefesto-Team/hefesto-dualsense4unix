@@ -56,6 +56,7 @@ from tests.unit.barramento_de_mentira import (
     CONTROLE,
     PONTE,
     VIZINHO,
+    ainda_varrendo,
     ambiente,
     montar,
 )
@@ -263,20 +264,25 @@ def test_a_varredura_cai_junto_com_a_ponte(barramento: Path) -> None:
         bufsize=1,
         env=_ambiente(barramento),
     )
-    varrendo = barramento / "varrendo"
     try:
         assert processo.stdout is not None
         assert processo.stdout.readline().strip(), "a ponte não chegou a varrer"
-        assert varrendo.exists(), "a janela de mentira nem abriu"
+        #: A janela vai para o fundo ANTES da primeira linha, mas é outro
+        #: processo: a linha não prova que ele já nasceu. Espera com prazo.
+        limite = time.monotonic() + 5.0
+        while not ainda_varrendo(barramento) and time.monotonic() < limite:
+            time.sleep(0.02)
+        assert ainda_varrendo(barramento), "a janela de mentira nem abriu"
         processo.terminate()
         processo.wait(timeout=10)
-        #: A queda não é instantânea: o `timeout` repassa o sinal ao filho, e o
-        #: filho ainda corre o próprio `trap`. Cinco segundos é folga de sobra
-        #: contra um teto de 60 s de janela.
+        #: A queda não é instantânea: o `timeout` repassa o sinal ao filho.
+        #: Cinco segundos é folga de sobra contra um teto de 60 s de janela. O
+        #: que se pergunta é o PROCESSO da janela, e não o arquivo que o `trap`
+        #: dela apaga — ver `ainda_varrendo`.
         limite = time.monotonic() + 5.0
-        while varrendo.exists() and time.monotonic() < limite:
+        while ainda_varrendo(barramento) and time.monotonic() < limite:
             time.sleep(0.1)
-        assert not varrendo.exists(), (
+        assert not ainda_varrendo(barramento), (
             "a ponte morreu e a varredura continuou de pé no adaptador — é o "
             "custo de rádio que esta sprint existe para não pagar"
         )

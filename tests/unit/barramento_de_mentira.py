@@ -77,9 +77,10 @@ _BLUETOOTHCTL = """#!/usr/bin/env bash
 set -u
 raiz="${BUSCTL_FALSO_RAIZ}"
 seg=5
-#: `varrendo` existe exatamente enquanto esta janela vive. É por ele que a
-#: régua do sinal mede se a varredura caiu junto com a ponte.
-: >"${raiz}/varrendo"
+#: `varrendo` nasce com o PID desta janela, e é pelo PID que a régua do sinal
+#: mede se a varredura caiu junto com a ponte — ver `ainda_varrendo`. O `trap`
+#: só arruma a saída pelo `--timeout`.
+printf '%s\\n' "$$" >"${raiz}/varrendo"
 trap 'rm -f -- "${raiz}/varrendo"' EXIT
 printf '%s\\n' "$*" >>"${raiz}/argv"
 while [[ $# -gt 0 ]]; do
@@ -92,6 +93,38 @@ done
 ( sleep 1; : >"${raiz}/marcador" ) &
 sleep "${seg}"
 """
+
+
+def ainda_varrendo(raiz: Path) -> bool:
+    """A janela de mentira ainda está de pé AGORA? Pergunta ao processo dela.
+
+    A varredura de verdade morre junto com o `bluetoothctl` que a pediu — o
+    BlueZ solta a descoberta quando o cliente sai do barramento, por qualquer
+    sinal. O arquivo `varrendo` era a resposta enquanto o `trap` de EXIT do
+    dublê o apagava, e o bash NÃO garante esse `trap` sob a sequência de
+    sinais do `timeout` que a ponte usa (TERM no filho, TERM no grupo, CONT nos
+    dois): medido em 27/09/2026, o dublê morreu sem correr o `trap` em 2 de 100
+    com a sequência inteira e em 0 de 100 com cada sinal sozinho — e, dentro da
+    suíte, `test_a_varredura_cai_junto_com_a_ponte` e
+    `test_fechar_derruba_a_varredura` reprovaram de 2 a 4 em 10 com a ponte
+    certa e a janela já morta. O que interessa ao rádio é o processo, e é ele
+    que se pergunta: vivo e com a linha de comando do dublê desta pasta.
+    """
+    marcador = raiz / "varrendo"
+    try:
+        texto = marcador.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        return False
+    if not texto:
+        return True  # o dublê acabou de criar o arquivo e ainda escreve o PID
+    try:
+        linha = Path(f"/proc/{int(texto)}/cmdline").read_bytes()
+        estado = Path(f"/proc/{int(texto)}/stat").read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        return False
+    #: O campo 3 do `stat` é o estado; `Z` é o zumbi que ninguém colheu ainda.
+    vivo = estado.rsplit(")", 1)[-1].split()[0] != "Z"
+    return vivo and str(raiz / "bin" / "bluetoothctl").encode() in linha
 
 
 def caminho_do(mac: str) -> str:
