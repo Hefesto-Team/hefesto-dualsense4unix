@@ -53,7 +53,9 @@ OS TRÊS ESTADOS que a tela lê
 confirma, fica em «esperando» — e é vigiado, sem a trava, até
 :data:`PRAZO_DO_PENDENTE_S`. Se o controle aparece no destino, vira «chegou»;
 se o prazo acaba, «não chegou» — e a MEIA CHAVE que o ``Pair`` deixou no
-destino sai antes do veredito (:meth:`CentralDoRadio._fechar_sem_chegar`). O
+destino sai antes do veredito (:meth:`CentralDoRadio._fechar_sem_chegar`), em
+TODA saída sem chegada; sem a trava, ela fica devida e sai na primeira vez em
+que a central a tem (:meth:`CentralDoRadio._pagar_as_meias_chaves`). O
 prazo é UM, o da tela também, e o pedido seguinte não espera a vigia para
 encontrá-lo vencido (:meth:`CentralDoRadio._vencer_os_prazos`).
 
@@ -72,6 +74,13 @@ Com um movimento em curso — no gesto, ou aplicado e ainda «esperando» a
 conferência, já sem a trava —, nenhum outro começa: o pedido volta
 :data:`MOTIVO_OCUPADO`, e o botão treme. A conferida é feita duas vezes, antes
 e DEPOIS de pegar a trava, porque o outro pode nascer enquanto este espera.
+
+O DESTINO SEGUE A CAIXA QUE ELA ABRIU (O-CONECTAR-SEGUE-A-CAIXA-QUE-ELA-ABRIU-01):
+o pedido para o MESMO movimento, ainda antes de o aparelho aparecer na janela
+(:data:`PASSOS_EM_QUE_O_DESTINO_MUDA`), não é outro movimento — é o chip dela
+levando a busca junto. A janela fecha onde estava e recomeça no destino novo
+(:meth:`CentralDoRadio._mudar_o_destino`), e um «Mover» segue «Mover» do
+mesmo controle.
 
 O «CONECTAR» (D8) é o mesmo caminho sem alvo: a janela abre no destino com
 mais vaga de ponte (:func:`plano_de_radio.ordem_dos_destinos`), e o controle
@@ -161,6 +170,9 @@ PASSO_PAREANDO = "pareando"
 PASSO_CONFERINDO = "conferindo"
 PASSO_ESQUECENDO = "esquecendo"
 PASSO_FIM = "fim"
+#: Os passos ANTES de o aparelho aparecer na janela: nada foi pareado ainda, e o
+#: destino muda no pedido dela (:meth:`CentralDoRadio._mudar_o_destino`).
+PASSOS_EM_QUE_O_DESTINO_MUDA = frozenset({PASSO_PREPARANDO, PASSO_DESLIGANDO, PASSO_GESTO})
 
 # --- por que um movimento acabou como acabou (chaves de máquina) ------------
 
@@ -205,6 +217,10 @@ O_APARELHO_NAO_CHEGOU = "o aparelho não chegou"
 #: O ``o_que`` da linha da FAXINA: a chave que ficou num adaptador em que o
 #: controle não mora saiu.
 ESQUECEU_A_SOBRA = "esqueceu a sobra de um bond"
+#: O ``o_que`` da linha quando a meia chave DEVIDA sai
+#: (:meth:`CentralDoRadio._pagar_as_meias_chaves`): o «não chegou» dela saiu sem
+#: a trava, e a chave, na primeira vez em que a central a teve.
+ESQUECEU_A_MEIA_CHAVE = "esqueceu a meia chave de um pareamento que não chegou"
 #: O ``o_que`` da linha quando o «Conectar» acaba pelo pareamento antigo.
 VOLTOU_PELO_PAREAMENTO_ANTIGO = "o controle voltou pelo pareamento antigo"
 
@@ -679,6 +695,14 @@ class CentralDoRadio:
         self._prazo_da_trava_s = float(prazo_da_trava_s)
         self._tranca = threading.Lock()
         self._movimentos: dict[str, Movimento] = {}
+        #: O destino que ela pediu por último para o movimento em curso, e que o
+        #: fio dele ainda não atendeu (:meth:`_mudar_o_destino`). Um, como o
+        #: movimento; ``None`` = nenhum.
+        self._destino_pedido: str | None = None
+        #: ``{(adaptador, aparelho)}``: as meias chaves que um «não chegou» não
+        #: pôde tirar (a trava de outro motor, ou um erro no meio). Saem na
+        #: primeira vez em que a central segura a trava (:meth:`_pagar_as_meias_chaves`).
+        self._meias_chaves: set[tuple[str, str]] = set()
         self._fios: dict[str, threading.Thread] = {}
         #: A chave do último movimento que ESTE fio guardou — é por ela que um
         #: erro no meio acha o movimento a encerrar (o «Conectar» troca de chave).
@@ -760,17 +784,58 @@ class CentralDoRadio:
         self._no_fio_atual.chave = movimento.aparelho
         return movimento
 
+    def _comecar(self, movimento: Movimento) -> Movimento:
+        """O «esperando» de um movimento novo — e nenhum destino pedido para o de antes.
+
+        Um pedido que o movimento de antes não atendeu (ele achou o controle
+        pelo pareamento antigo, ou acabou por outro caminho) não vale para este:
+        é o chip de uma busca que já não existe.
+        """
+        with self._tranca:
+            self._destino_pedido = None
+        return self._guardar(movimento)
+
+    def _sair_do_gesto(self, movimento: Movimento, **mudancas: Any) -> Movimento | None:
+        """O movimento deixa a espera do gesto — para o ``Pair`` ou para o «não
+        chegou» — SE ela não pediu outro destino; com o pedido na fila, nada se
+        guarda e volta ``None``: a janela fecha, e recomeça no destino novo.
+
+        A pergunta e a troca vão de uma vez, sob a mesma tranca do
+        :meth:`_mudar_o_destino`: ou o pedido chega antes e é atendido, ou chega
+        depois e encontra o movimento fora do gesto (a recusa do um por vez). O
+        pedido nunca é aceito para uma janela que já achou o controle.
+        """
+        feito = replace(movimento, **mudancas)
+        with self._tranca:
+            if self._destino_pedido is not None and not self._parar.is_set():
+                return None
+            if feito.aparelho != movimento.aparelho:
+                self._movimentos.pop(movimento.aparelho, None)
+            self._movimentos[feito.aparelho] = feito
+        self._no_fio_atual.chave = feito.aparelho
+        return feito
+
     def _falhou(self, chave: str) -> Movimento:
         """Um erro no meio do mover: o movimento deste fio acaba «não chegou».
 
         Sem isto a promessa de nunca levantar caía, e o movimento ficava
         «esperando» para sempre — o «Equilibrar» mudo e o mesmo pedido
         devolvendo o movimento morto até o daemon reiniciar.
+
+        Depois do ``Pair``, é um «não chegou» como os outros: a meia chave sai
+        antes do veredito (:meth:`_fechar_sem_chegar`; quem chama já segura a
+        trava). Se nem isso der, ela fica devida (:meth:`_acabou`).
         """
         logger.warning("central_mover_levantou", aparelho=mascarar(chave), exc_info=True)
         atual = self._pela_chave(getattr(self._no_fio_atual, "chave", chave))
         if atual is None or not atual.em_curso:
             return atual or Movimento(chave, "", NAO_CHEGOU, PASSO_FIM, MOTIVO_FALHOU)
+        if atual.pareou_no_destino:
+            try:
+                return self._fechar_sem_chegar(atual, MOTIVO_FALHOU, self._dono())
+            except Exception:
+                logger.warning("central_meia_chave_levantou", aparelho=mascarar(atual.aparelho),
+                               exc_info=True)
         return self._acabou(atual, NAO_CHEGOU, MOTIVO_FALHOU)
 
     def publicar(
@@ -922,15 +987,19 @@ class CentralDoRadio:
         que não fica guardada — o botão treme e nada mudou.
 
         UM POR VEZ (A-COSTURA-DA-ONDA-2-01): com QUALQUER movimento em curso — de
-        outro aparelho, ou deste para outro destino — a recusa sai na hora, sem
+        outro aparelho, ou deste já depois do gesto — a recusa sai na hora, sem
         fio e sem esperar a trava. O mesmo pedido de novo devolve o mesmo
-        movimento (a idempotência da MOVER).
+        movimento (a idempotência da MOVER); o deste aparelho para outro destino,
+        ainda antes do gesto, leva a busca junto (:meth:`_mudar_o_destino`).
         """
         alvo = endereco_de(aparelho)
         if alvo is None:
             return Movimento(str(aparelho), destino or "", NAO_CHEGOU, PASSO_FIM,
                              MOTIVO_FORA_DO_RADIO)
         self._vencer_os_prazos()
+        mudou = self._mudar_o_destino(alvo, destino)
+        if mudou is not None:
+            return mudou
         repetido = self._o_mesmo_em_curso(alvo, destino)
         if repetido is not None:
             return repetido
@@ -946,8 +1015,16 @@ class CentralDoRadio:
         O movimento nasce com :data:`CONECTANDO` no lugar do endereço — ainda não
         se sabe QUEM vai chegar, só ONDE (a D8) — e ganha o endereço quando o
         controle aparece na janela. Um por vez, como o :meth:`comecar_a_mover`.
+
+        É também o pedido do CHIP do «Procurando» (a tela manda o mesmo
+        ``radio.mover`` sem aparelho): com a busca de pé noutro adaptador, ela vai
+        para o do chip (:meth:`_mudar_o_destino`) — seja um «Conectar», seja um
+        «Mover» dela, que segue «Mover» do mesmo controle.
         """
         self._vencer_os_prazos()
+        mudou = self._mudar_o_destino(CONECTANDO, destino)
+        if mudou is not None:
+            return mudou
         repetido = self._o_mesmo_em_curso(CONECTANDO, destino)
         if repetido is not None:
             return repetido
@@ -987,6 +1064,57 @@ class CentralDoRadio:
                 except Exception:
                     logger.warning("central_prazo_levantou",
                                    aparelho=mascarar(movimento.aparelho), exc_info=True)
+
+    def _mudar_o_destino(self, chave: str, destino: str | None) -> Movimento | None:
+        """O chip de outro adaptador com a busca de pé: a busca vai junto.
+
+        A conferência da A-CAIXA-FICA-ONDE-ELA-ABRIU-01 (28/09/2026): o clique
+        dela é o dono da caixa aberta, e o chip pede ao rádio que a busca o
+        siga. Com o movimento em curso ainda ANTES do aparelho
+        (:data:`PASSOS_EM_QUE_O_DESTINO_MUDA`), o destino muda: o fio dele fecha
+        a janela onde estava e a abre no novo, com a janela e o prazo
+        recomeçando (:meth:`_ir_para`). O último pedido vence, e pedir o destino
+        de agora desfaz um pedido que ainda não andou.
+
+        Só o MESMO movimento muda de destino: o pedido sem aparelho (o chip, o
+        «Conectar») leva o que está em curso, e um «Mover» segue «Mover» do mesmo
+        controle — nunca vira um «Conectar» anônimo por cima dele; o pedido com
+        aparelho, só o movimento daquele aparelho. Outro aparelho, o movimento
+        que já achou o seu, a central fechada ou um adaptador que não está na
+        máquina: ``None``, e o pedido segue o caminho de sempre (o mesmo em curso,
+        ou a recusa do um por vez).
+
+        Devolve o movimento como ele fica, no destino pedido.
+        """
+        novo = endereco_de(destino) if destino else None
+        if novo is None or self._parar.is_set():
+            return None
+        with self._tranca:
+            atual = next((m for m in self._movimentos.values() if m.em_curso), None)
+        if atual is None or atual.passo not in PASSOS_EM_QUE_O_DESTINO_MUDA:
+            return None
+        if chave not in (CONECTANDO, atual.aparelho):
+            return None
+        adaptadores = self._adaptadores()
+        if adaptadores is None or novo not in {a.endereco for a in adaptadores}:
+            return None
+        with self._tranca:
+            # De novo, sob a tranca: é ela que o fio pega para sair do gesto
+            # (:meth:`_sair_do_gesto`), e o pedido ou chega antes, ou não chega.
+            agora = self._movimentos.get(atual.aparelho)
+            if (agora is None or not agora.em_curso
+                    or agora.passo not in PASSOS_EM_QUE_O_DESTINO_MUDA):
+                return None
+            self._destino_pedido = None if novo == agora.destino else novo
+        logger.info("central_o_destino_segue_a_caixa", aparelho=mascarar(agora.aparelho),
+                    de=mascarar(agora.destino), para=mascarar(novo))
+        return replace(agora, destino=novo)
+
+    def _tomar_o_destino_pedido(self) -> str | None:
+        """O destino que ela pediu e o fio ainda não atendeu — e ele sai da fila."""
+        with self._tranca:
+            novo, self._destino_pedido = self._destino_pedido, None
+        return novo
 
     def _recusa_por_outro(self, chave: str, destino: str | None) -> Movimento:
         """A recusa do um por vez — a mesma forma da trava ocupada, e não guardada."""
@@ -1077,6 +1205,9 @@ class CentralDoRadio:
             return Movimento(str(aparelho), destino or "", NAO_CHEGOU, PASSO_FIM,
                              MOTIVO_FORA_DO_RADIO)
         self._vencer_os_prazos()
+        mudou = self._mudar_o_destino(alvo, destino)
+        if mudou is not None:
+            return mudou
         repetido = self._o_mesmo_em_curso(alvo, destino)
         if repetido is not None:
             return repetido
@@ -1095,11 +1226,12 @@ class CentralDoRadio:
                     return self._recusa_por_outro(alvo, destino)
                 # O «esperando» nasce ANTES de avisar quem espera a trava: senão
                 # o gesto da tela leria o movimento de ontem, já acabado.
-                self._guardar(Movimento(alvo, destino or "", ESPERANDO, PASSO_PREPARANDO,
+                self._comecar(Movimento(alvo, destino or "", ESPERANDO, PASSO_PREPARANDO,
                                         comecou=self._relogio()))
                 if _ao_pegar_a_trava is not None:
                     _ao_pegar_a_trava()
                 try:
+                    self._pagar_as_meias_chaves(self._dono())
                     return self._mover_na_trava(alvo, destino)
                 except Exception:
                     return self._falhou(alvo)
@@ -1124,6 +1256,9 @@ class CentralDoRadio:
         from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
 
         self._vencer_os_prazos()
+        mudou = self._mudar_o_destino(CONECTANDO, destino)
+        if mudou is not None:
+            return mudou
         repetido = self._o_mesmo_em_curso(CONECTANDO, destino)
         if repetido is not None:
             return repetido
@@ -1137,11 +1272,15 @@ class CentralDoRadio:
                     return repetido
                 if self._ocupada():
                     return self._recusa_por_outro(CONECTANDO, destino)
-                self._guardar(Movimento(CONECTANDO, destino or "", ESPERANDO, PASSO_PREPARANDO,
+                self._comecar(Movimento(CONECTANDO, destino or "", ESPERANDO, PASSO_PREPARANDO,
                                         comecou=self._relogio()))
                 if _ao_pegar_a_trava is not None:
                     _ao_pegar_a_trava()
                 try:
+                    # A meia chave devida sai ANTES do ``antes``: o destino que
+                    # ainda a guardasse «conheceria» o controle, e a janela o
+                    # ignoraria.
+                    self._pagar_as_meias_chaves(self._dono())
                     return self._conectar_na_trava(destino)
                 except Exception:
                     return self._falhou(CONECTANDO)
@@ -1220,21 +1359,29 @@ class CentralDoRadio:
             return self._guardar(replace(conferindo, motivo=MOTIVO_SEM_CONFIRMACAO))
 
         movimento = self._guardar(movimento)
-        velho = foto.do_aparelho.get(pedido)
-        if velho is not None:
-            # O objeto velho no DESTINO sai antes de a janela abrir (R6 revista:
-            # é dele). Com bond, o `Pair` responderia «já existe» sobre uma
-            # chave que o controle não tem mais — sai pela ponte, com lápide.
-            # Sem bond, é sobra de uma busca antiga, e a espera do gesto o leria
-            # como «ela apertou PS + Create» antes de ela apertar.
-            if velho.pareado:
-                self._esquecer(dono, pedido, alvo)
-            else:
-                dono.remover_aparelho(velho.caminho, quem=QUEM)
-            self._esperar_sumir(dono, alvo, pedido)
-
+        self._tirar_o_velho_do_destino(dono, alvo, pedido, foto.do_aparelho.get(pedido))
         movimento = self._desligar_e_esquecer_a_origem(movimento, dono, foto)
         return self._parear_e_conferir(movimento, dono, foto.adaptadores[pedido])
+
+    def _tirar_o_velho_do_destino(
+        self,
+        dono: bluez_dbus.LeitorDoBluez,
+        alvo: str,
+        destino: str,
+        velho: bluez_dbus.AparelhoDoBluez | None,
+    ) -> None:
+        """O objeto velho do aparelho no DESTINO sai antes de a janela abrir (R6
+        revista: é dele). Com bond, o ``Pair`` responderia «já existe» sobre uma
+        chave que o controle não tem mais — sai pela ponte, com lápide. Sem
+        bond, é sobra de uma busca antiga, e a espera do gesto o leria como «ela
+        apertou PS + Create» antes de ela apertar."""
+        if velho is None:
+            return
+        if velho.pareado:
+            self._esquecer(dono, destino, alvo)
+        else:
+            dono.remover_aparelho(velho.caminho, quem=QUEM)
+        self._esperar_sumir(dono, alvo, destino)
 
     def _quem_e(
         self, foto: _Foto, dono: bluez_dbus.LeitorDoBluez, *, exceto: str = ""
@@ -1357,38 +1504,33 @@ class CentralDoRadio:
         nome dela, o ``Connect``; depois o ``HID_PHYS``. ``antes`` diz que é um
         «Conectar»: o alvo é o controle novo que aparecer na janela — ou o que
         voltar pelo pareamento antigo (``ligados_antes`` são os que já estavam
-        conectados quando a janela abriu, e esses não são o dela)."""
-        restaurar = self._preparar_o_adaptador(dono, adaptador)
-        janela = self._abrir_janela(adaptador.endereco, self._segundos, dono)
-        try:
-            motivo = janela.abrir_a_janela()
-            if motivo:
-                logger.warning("central_janela_nao_abriu", motivo=motivo[:200])
-                return self._acabou(movimento, NAO_CHEGOU, MOTIVO_SEM_JANELA)
-            movimento = self._guardar(replace(movimento, passo=PASSO_GESTO))
-            if antes is not None:
-                achado = self._esperar_um_controle_novo(
-                    janela, antes, dono, ligados_antes, comeco=self._relogio()
-                )
-                if achado is None:
-                    return self._acabou(movimento, NAO_CHEGOU, MOTIVO_SEM_GESTO)
-                endereco, pelo_antigo = achado
-                if pelo_antigo:
-                    return self._voltou_pelo_antigo(movimento, endereco, dono)
-                movimento = self._quem_chegou(movimento, endereco, dono)
-            elif not self._esperar_o_gesto(janela, movimento.aparelho, comeco=self._relogio()):
-                return self._acabou(movimento, NAO_CHEGOU, MOTIVO_SEM_GESTO)
-            movimento = self._guardar(replace(movimento, passo=PASSO_PAREANDO))
-            resultado = janela.parear(movimento.aparelho)
-            if resultado.estado not in (ESTADO_PAREOU, ESTADO_JA_PAREADO):
-                return self._acabou(movimento, NAO_CHEGOU, MOTIVO_NAO_PAREOU)
-            movimento = self._guardar(replace(movimento, pareou_no_destino=True))
-            self._dar_o_nome(dono, movimento)
-            self._lembrar_o_alias(dono, movimento.aparelho, movimento.destino)
-            self._conectar(dono, movimento.aparelho, movimento.destino)
-        finally:
-            janela.fechar()
-            restaurar()
+        conectados quando a janela abriu, e esses não são o dela).
+
+        UMA JANELA POR DESTINO, E O DESTINO É O ÚLTIMO QUE ELA PEDIU
+        (O-CONECTAR-SEGUE-A-CAIXA-QUE-ELA-ABRIU-01): o pedido que chega antes de
+        o aparelho aparecer fecha a janela onde ela está e a abre no destino
+        novo (:meth:`_ir_para`), e a volta recomeça. A janela que fechou por um
+        pedido que ela desfez no mesmo instante recomeça onde estava."""
+        fechou = False
+        while True:
+            novo = self._tomar_o_destino_pedido()
+            if fechou or (novo is not None and novo != adaptador.endereco):
+                ida = self._ir_para(movimento, novo or adaptador.endereco, dono,
+                                    conectar=antes is not None)
+                if isinstance(ida, Movimento):
+                    return ida
+                movimento, adaptador, antes_la = ida
+                if antes is not None:
+                    antes = antes_la
+            desfecho = self._uma_janela(movimento, dono, adaptador, antes=antes,
+                                        ligados_antes=ligados_antes)
+            fechou = desfecho is None
+            if desfecho is None:
+                continue
+            if not desfecho.em_curso:
+                return desfecho
+            movimento = desfecho
+            break
 
         movimento = self._guardar(replace(movimento, passo=PASSO_CONFERINDO))
         if not self._conferir(movimento, dono):
@@ -1401,22 +1543,119 @@ class CentralDoRadio:
             return pendente
         return self._esquecer_as_origens(movimento, dono)
 
+    def _uma_janela(
+        self,
+        movimento: Movimento,
+        dono: bluez_dbus.LeitorDoBluez,
+        adaptador: bluez_dbus.AdaptadorDoBluez,
+        *,
+        antes: frozenset[str] | None,
+        ligados_antes: frozenset[str],
+    ) -> Movimento | None:
+        """A janela num destino: o gesto, o ``Pair``, o nome dela e o ``Connect``.
+
+        Devolve o movimento pareado (ainda «esperando», para o CONFERIR), o
+        movimento acabado, ou ``None`` quando ela pediu outro destino antes de o
+        aparelho aparecer — a janela daqui fecha no ``finally``, como fecha
+        sempre.
+        """
+        restaurar = self._preparar_o_adaptador(dono, adaptador)
+        janela = self._abrir_janela(adaptador.endereco, self._segundos, dono)
+        try:
+            motivo = janela.abrir_a_janela()
+            if motivo:
+                logger.warning("central_janela_nao_abriu", motivo=motivo[:200])
+                return self._sem_chegar_do_gesto(movimento, MOTIVO_SEM_JANELA)
+            movimento = self._guardar(replace(movimento, passo=PASSO_GESTO))
+            if antes is not None:
+                achado = self._esperar_um_controle_novo(
+                    janela, antes, dono, ligados_antes, comeco=self._relogio()
+                )
+                if achado is None:
+                    return self._sem_chegar_do_gesto(movimento, MOTIVO_SEM_GESTO)
+                endereco, pelo_antigo = achado
+                if pelo_antigo:
+                    return self._voltou_pelo_antigo(movimento, endereco, dono)
+                pareando = self._quem_chegou(movimento, endereco, dono)
+            elif not self._esperar_o_gesto(janela, movimento.aparelho, comeco=self._relogio()):
+                return self._sem_chegar_do_gesto(movimento, MOTIVO_SEM_GESTO)
+            else:
+                pareando = self._sair_do_gesto(movimento, passo=PASSO_PAREANDO)
+            if pareando is None:
+                return None
+            movimento = pareando
+            resultado = janela.parear(movimento.aparelho)
+            if resultado.estado not in (ESTADO_PAREOU, ESTADO_JA_PAREADO):
+                return self._acabou(movimento, NAO_CHEGOU, MOTIVO_NAO_PAREOU)
+            movimento = self._guardar(replace(movimento, pareou_no_destino=True))
+            self._dar_o_nome(dono, movimento)
+            self._lembrar_o_alias(dono, movimento.aparelho, movimento.destino)
+            self._conectar(dono, movimento.aparelho, movimento.destino)
+            return movimento
+        finally:
+            janela.fechar()
+            restaurar()
+
+    def _sem_chegar_do_gesto(self, movimento: Movimento, motivo: str) -> Movimento | None:
+        """O «não chegou» de uma janela sem gesto — ou ``None``, com o pedido de
+        outro destino na fila: aí não acabou, a janela vai para lá."""
+        feito = self._sair_do_gesto(movimento, estado=NAO_CHEGOU, passo=PASSO_FIM, motivo=motivo)
+        if feito is not None:
+            self._no_diario_do_nao_chegou(feito)
+        return feito
+
+    def _ir_para(
+        self, movimento: Movimento, novo: str, dono: bluez_dbus.LeitorDoBluez, *, conectar: bool
+    ) -> Movimento | tuple[Movimento, bluez_dbus.AdaptadorDoBluez, frozenset[str]]:
+        """O movimento vai para o destino que ela pediu, antes de o aparelho aparecer.
+
+        A janela recomeça inteira, e o prazo com ela: o ``comecou`` e o
+        ``quando`` são de agora — a tela conta o «Segure PS + Create» do
+        ``quando``, e a busca que ela acabou de pedir tem os mesmos 30 s de
+        qualquer outra. O destino novo deixa de ser origem.
+
+        * No «Conectar», o que o destino novo já conhecia é o ``antes`` de lá.
+        * No «Mover», o objeto velho do controle no destino novo sai como sai no
+          primeiro (a R6, :meth:`_tirar_o_velho_do_destino`); as origens já
+          saíram antes da primeira janela.
+
+        Devolve ``(movimento, adaptador, antes)``, ou o movimento acabado quando
+        o destino saiu da máquina no meio (:data:`MOTIVO_SEM_DESTINO`).
+        """
+        movimento = self._guardar(replace(
+            movimento, destino=novo, passo=PASSO_PREPARANDO,
+            origens=tuple(o for o in movimento.origens if o != novo),
+            comecou=self._relogio(), quando=time.time(),
+        ))
+        logger.info("central_a_janela_foi_para_o_destino_novo",
+                    aparelho=mascarar(movimento.aparelho), adaptador=mascarar(novo))
+        adaptador = next((a for a in dono.adaptadores() or () if a.endereco == novo), None)
+        if adaptador is None:
+            return self._acabou(movimento, NAO_CHEGOU, MOTIVO_SEM_DESTINO)
+        if conectar:
+            antes = frozenset(a.endereco for a in dono.aparelhos(adaptador=adaptador.caminho) or ())
+            return movimento, adaptador, antes
+        foto = _ler(dono, movimento.aparelho)
+        if foto is not None:
+            self._tirar_o_velho_do_destino(dono, movimento.aparelho, novo,
+                                           foto.do_aparelho.get(novo))
+        return movimento, adaptador, frozenset()
+
     def _quem_chegou(
         self, movimento: Movimento, achado: str, dono: bluez_dbus.LeitorDoBluez
-    ) -> Movimento:
-        """O «Conectar» ganha o endereço: sai a chave :data:`CONECTANDO`, entra o
-        controle, com as origens que ele tinha em OUTROS adaptadores."""
+    ) -> Movimento | None:
+        """O «Conectar» ganha o endereço e vai para o ``Pair``: sai a chave
+        :data:`CONECTANDO`, entra o controle, com as origens que ele tinha em
+        OUTROS adaptadores. ``None`` se ela pediu outro destino antes
+        (:meth:`_sair_do_gesto`)."""
         foto = _ler(dono, achado)
         origens = tuple(sorted(
             e for e, a in (foto.do_aparelho.items() if foto is not None else ())
             if e != movimento.destino and a.pareado
         ))
         quem = self._quem_e(foto, dono, exceto=movimento.destino) if foto is not None else {}
-        with self._tranca:
-            self._movimentos.pop(CONECTANDO, None)
-        return self._guardar(
-            replace(movimento, aparelho=achado, origens=origens, e_controle=True, **quem)
-        )
+        return self._sair_do_gesto(movimento, aparelho=achado, origens=origens, e_controle=True,
+                                   passo=PASSO_PAREANDO, **quem)
 
     def _voltou_pelo_antigo(
         self, movimento: Movimento, achado: str, dono: bluez_dbus.LeitorDoBluez
@@ -1543,7 +1782,8 @@ class CentralDoRadio:
         while True:
             if any(getattr(c, "endereco", "") == alvo for c in janela.candidatos()):
                 return True
-            if self._parar.is_set() or self._relogio() >= fim or not janela.aberta:
+            if (self._parar.is_set() or self._relogio() >= fim or not janela.aberta
+                    or self._destino_pedido is not None):
                 return False
             self._dormir(PASSO_S)
 
@@ -1583,7 +1823,8 @@ class CentralDoRadio:
             voltou = self._quem_voltou_sozinho(dono, ligados_antes)
             if voltou:
                 return voltou, True
-            if self._parar.is_set() or self._relogio() >= fim or not janela.aberta:
+            if (self._parar.is_set() or self._relogio() >= fim or not janela.aberta
+                    or self._destino_pedido is not None):
                 return None
             self._dormir(PASSO_S)
 
@@ -1711,10 +1952,84 @@ class CentralDoRadio:
         return feito
 
     def _acabou(self, movimento: Movimento, estado: str, motivo: str) -> Movimento:
+        """O fim do movimento. O «não chegou» que chega aqui depois do ``Pair``
+        não tirou a meia chave (um erro no meio), e ela fica DEVIDA."""
         feito = self._guardar(replace(movimento, estado=estado, passo=PASSO_FIM, motivo=motivo))
         if estado == NAO_CHEGOU:
+            self._dever_a_meia_chave(feito)
             self._no_diario_do_nao_chegou(feito)
         return feito
+
+    def _dever_a_meia_chave(self, movimento: Movimento) -> None:
+        """A chave que ESTE movimento pode ter deixado no destino entra na fila
+        do :meth:`_pagar_as_meias_chaves` — só depois do ``Pair`` dele."""
+        if movimento.pareou_no_destino and movimento.destino:
+            with self._tranca:
+                self._meias_chaves.add((movimento.destino, movimento.aparelho))
+
+    def _pagar_as_meias_chaves(self, dono: bluez_dbus.LeitorDoBluez) -> tuple[tuple[str, str], ...]:
+        """COM A TRAVA NA MÃO: cada meia chave devida sai — se ainda é meia chave.
+
+        A pergunta é feita ao rádio agora (:meth:`_esquecer_se_meia_chave`): o
+        controle que conectou naquele adaptador depois não perde a chave, e a
+        dívida sai da fila do mesmo jeito. Só a que levantou fica, para a
+        próxima vez. Devolve ``(adaptador, aparelho)`` de cada chave que saiu.
+        Nunca levanta.
+        """
+        with self._tranca:
+            devidas = sorted(self._meias_chaves)
+        pagas: list[tuple[str, str]] = []
+        for adaptador, aparelho in devidas:
+            try:
+                if self._esquecer_se_meia_chave(dono, adaptador, aparelho):
+                    pagas.append((adaptador, aparelho))
+            except Exception:
+                logger.warning("central_meia_chave_levantou", aparelho=mascarar(aparelho),
+                               adaptador=mascarar(adaptador), exc_info=True)
+                continue
+            with self._tranca:
+                self._meias_chaves.discard((adaptador, aparelho))
+        if pagas:
+            self._no_diario_das_meias_chaves(pagas)
+        return tuple(pagas)
+
+    def tirar_as_meias_chaves(self) -> tuple[tuple[str, str], ...]:
+        """UMA volta da faxina sobre as meias chaves devidas: pega a trava e as tira.
+
+        ``()`` quando não havia dívida, quando um movimento está em curso (o
+        começo dele já as pagou, antes da janela), ou quando a trava não veio no
+        prazo — a próxima volta tenta de novo. Nunca levanta.
+        """
+        from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
+
+        with self._tranca:
+            devendo = bool(self._meias_chaves)
+        if not devendo or self._ocupada():
+            return ()
+        try:
+            with bluez_dbus.na_trava(QUEM, prazo_s=self._prazo_da_trava_s):
+                if self._ocupada():
+                    return ()
+                return self._pagar_as_meias_chaves(self._dono())
+        except TravaOcupadaError:
+            logger.info("central_meias_chaves_trava_ocupada")
+        except Exception:
+            logger.warning("central_meias_chaves_levantou", exc_info=True)
+        return ()
+
+    def _no_diario_das_meias_chaves(self, pagas: Sequence[tuple[str, str]]) -> None:
+        try:
+            from hefesto_dualsense4unix.integrations import diario_do_radio
+
+            for adaptador, aparelho in pagas:
+                diario_do_radio.registrar(
+                    QUEM, ESQUECEU_A_MEIA_CHAVE,
+                    "o pareamento não chegou, e a chave que ficou no destino saiu quando "
+                    "a central teve a trava",
+                    depois={"adaptador": adaptador}, controle=aparelho, adaptador=adaptador,
+                )
+        except Exception:
+            logger.warning("central_diario_nao_gravou", exc_info=True)
 
     def _no_diario_do_nao_chegou(self, feito: Movimento, *, meia_chave: bool = False) -> None:
         self._no_diario(O_APARELHO_NAO_CHEGOU, feito.motivo, feito,
@@ -1742,7 +2057,10 @@ class CentralDoRadio:
         impedem a vigia do fio e a do pedido (:meth:`_vencer_os_prazos`) de
         fecharem duas vezes. Sem a trava no prazo do gesto, o «não chegou» sai
         do mesmo jeito — a central não fica «ocupada» por uma chave —, e a
-        chave fica para a tela.
+        chave fica DEVIDA (O-CONECTAR-SEGUE-A-CAIXA-QUE-ELA-ABRIU-01): a tela não
+        a tira mais desde a A-CAIXA-FICA-ONDE-ELA-ABRIU-01, e ela sai na primeira
+        vez em que a central segura a trava — o começo do próximo movimento,
+        antes da janela dele, ou a volta da faxina (:meth:`tirar_as_meias_chaves`).
         """
         from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
 
@@ -1754,33 +2072,45 @@ class CentralDoRadio:
                 return self._acabou_se_ainda(movimento, motivo, meia_chave=esquecida)
         except TravaOcupadaError:
             logger.warning("central_meia_chave_sem_trava", aparelho=mascarar(movimento.aparelho))
-            return self._acabou_se_ainda(movimento, motivo, meia_chave=False)
+            return self._acabou_se_ainda(movimento, motivo, meia_chave=False, devida=True)
 
-    def _acabou_se_ainda(self, movimento: Movimento, motivo: str, *, meia_chave: bool) -> Movimento:
+    def _acabou_se_ainda(
+        self, movimento: Movimento, motivo: str, *, meia_chave: bool, devida: bool = False
+    ) -> Movimento:
         """«Não chegou» só se o movimento guardado ainda é ESTE — conferido e
-        trocado de uma vez, sob a tranca."""
+        trocado de uma vez, sob a tranca. ``devida``: a meia chave não pôde sair
+        agora, e entra na fila junto com o veredito."""
         feito = replace(movimento, estado=NAO_CHEGOU, passo=PASSO_FIM, motivo=motivo)
         with self._tranca:
             atual = self._movimentos.get(movimento.aparelho)
             if atual != movimento:
                 return atual or movimento
             self._movimentos[movimento.aparelho] = feito
+        if devida:
+            self._dever_a_meia_chave(feito)
         self._no_diario_do_nao_chegou(feito, meia_chave=meia_chave)
         return feito
 
     def _esquecer_a_meia_chave(
         self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez
     ) -> bool:
-        """A chave que ESTE movimento criou no destino e que nunca conectou sai.
-
-        Só quando o ``Pair`` deste movimento deu (``pareou_no_destino``), o
-        BlueZ diz o objeto ``Paired`` e não ``Connected``, e o kernel não o diz
-        naquele adaptador. Quem está no ar nunca sai por aqui, e nenhum outro
-        adaptador é tocado.
-        """
+        """A chave que ESTE movimento criou no destino e que nunca conectou sai
+        — só quando o ``Pair`` deste movimento deu (``pareou_no_destino``)."""
         if not movimento.pareou_no_destino or not movimento.destino:
             return False
-        no = dono.caminho_do_aparelho(movimento.aparelho, adaptador=movimento.destino)
+        return self._esquecer_se_meia_chave(dono, movimento.destino, movimento.aparelho)
+
+    def _esquecer_se_meia_chave(
+        self, dono: bluez_dbus.LeitorDoBluez, adaptador: str, aparelho: str
+    ) -> bool:
+        """A meia chave de ``aparelho`` em ``adaptador`` sai — se ainda é meia chave.
+
+        O BlueZ diz o objeto ``Paired`` e não ``Connected``, e o kernel não o
+        diz naquele adaptador. Quem está no ar nunca sai por aqui, e nenhum
+        outro adaptador é tocado. UM dono para a pergunta: o «não chegou» de
+        agora e a dívida paga depois (:meth:`_pagar_as_meias_chaves`).
+        """
+        no = dono.caminho_do_aparelho(aparelho, adaptador=adaptador)
         if no is None:
             return False
         pareado = bluez_dbus.como_booleano(dono.propriedade(no, bluez_dbus.APARELHO, "Paired"))
@@ -1788,12 +2118,12 @@ class CentralDoRadio:
             dono.propriedade(no, bluez_dbus.APARELHO, "Connected"))
         if pareado is not True or conectado is True:
             return False
-        if self._onde_esta(_hex12(movimento.aparelho)) == movimento.destino:
+        if self._onde_esta(_hex12(aparelho)) == adaptador:
             return False
-        logger.info("central_esquece_a_meia_chave", aparelho=mascarar(movimento.aparelho),
-                    adaptador=mascarar(movimento.destino))
-        self._esquecer(dono, movimento.destino, movimento.aparelho)
-        self._esperar_sumir(dono, movimento.aparelho, movimento.destino)
+        logger.info("central_esquece_a_meia_chave", aparelho=mascarar(aparelho),
+                    adaptador=mascarar(adaptador))
+        self._esquecer(dono, adaptador, aparelho)
+        self._esperar_sumir(dono, aparelho, adaptador)
         return True
 
     def _no_diario(
@@ -1982,7 +2312,8 @@ class CentralDoRadio:
 
         O MESMO FIO CUIDA DO NOME DELA (:meth:`cuidar_dos_nomes`), a cada
         :data:`INTERVALO_DOS_NOMES_S` com o dono vivo, e no passo da faxina
-        pelo caminho de reserva.
+        pelo caminho de reserva; e, a cada passo, da MEIA CHAVE DEVIDA
+        (:meth:`tirar_as_meias_chaves`) — só pega a trava quando há dívida.
         """
         with self._tranca:
             vivo = self._fios.get(_FIO_DA_FAXINA)
@@ -2003,6 +2334,9 @@ class CentralDoRadio:
         while not self._parar.wait(passo):
             desde_a_faxina += passo
             faxina = desde_a_faxina >= intervalo_s
+            # A meia chave devida não espera a faxina inteira: ela é o que faz o
+            # próximo «Conectar» naquele adaptador não ver o controle.
+            self.tirar_as_meias_chaves()
             if faxina or self._o_dono_e_a_foto_viva():
                 self.cuidar_dos_nomes()
             if faxina:
@@ -2145,6 +2479,7 @@ __all__ = [
     "CONFERIR_S",
     "ESPERANDO",
     "ESPERA_DO_DESLIGAR_S",
+    "ESQUECEU_A_MEIA_CHAVE",
     "ESQUECEU_A_SOBRA",
     "ESTADOS",
     "ICONE_DE_CONTROLE",
@@ -2166,6 +2501,7 @@ __all__ = [
     "MOVEU_O_APARELHO",
     "NAO_CHEGOU",
     "O_APARELHO_NAO_CHEGOU",
+    "PASSOS_EM_QUE_O_DESTINO_MUDA",
     "PASSO_CONFERINDO",
     "PASSO_DESLIGANDO",
     "PASSO_ESQUECENDO",

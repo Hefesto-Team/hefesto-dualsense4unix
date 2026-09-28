@@ -325,17 +325,18 @@ def test_sem_nenhum_aberto_vale_a_escolha_da_central(
         bancada.fechar()
 
 
-def test_com_a_janela_aberta_o_chip_de_outro_adaptador_treme(
+def test_com_a_janela_aberta_o_chip_de_outro_adaptador_leva_a_busca(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Com a busca de pé no quarto, o chip da varanda PEDE ao rádio a busca
-    para lá, e quem recusa é a central (a de hoje não muda a janela de
-    adaptador no meio): o botão treme, e o destino continua o quarto.
+    para lá, e a central a leva (O-CONECTAR-SEGUE-A-CAIXA-QUE-ELA-ABRIU-01): a
+    janela do quarto fecha, a da varanda abre inteira, e o verde que ela segura
+    depois chega na varanda — o adaptador que ela escolheu por último.
 
-    A CENTRAL ESTÁ OCUPADA DE VERDADE (A-CAIXA-FICA-ONDE-ELA-ABRIU-01): até
-    28/09 esta régua publicava um movimento de mentira com a central real
-    parada, e o chip recusava pela tela. Com o chip perguntando à central,
-    aquele dublê era mais frouxo que o rádio — a central parada aceitaria.
+    A CENTRAL É A REAL (A-CAIXA-FICA-ONDE-ELA-ABRIU-01): até 28/09 esta régua
+    publicava um movimento de mentira com a central real parada, e o chip
+    recusava pela tela. FATO SUBSTITUÍDO (28/09/2026): até a O-CONECTAR a
+    central respondia ``ocupado``, e esta régua conferia o botão tremendo.
     """
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
@@ -348,11 +349,17 @@ def test_com_a_janela_aberta_o_chip_de_outro_adaptador_treme(
         assert busca.dentro.wait(5.0), "a central não abriu a janela"
         cena = bancada.cena()
         assert cena["ocupado"] and cena["destino_do_conectar"] == id_da_tela(QUARTO)
-        with pytest.raises(RuntimeError):
-            bancada.gesto("escolher-adaptador", alvo=id_da_tela(VARANDA))
+        assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(VARANDA)) == {"armou": True}
         assert bancada.ponte.chamadas[-1] == ("radio.mover", {"destino": id_da_tela(VARANDA)})
-        assert a08._CENA_NA_TELA["destino_do_conectar"] == id_da_tela(QUARTO)
-        assert onde_buscou(mundo) == [rm.HCIS[QUARTO]]
+        assert a08._CENA_NA_TELA["destino_do_conectar"] == id_da_tela(VARANDA)
+
+        ela_segura_ps_create(mundo, relogio, VERDE)
+        busca.soltar()
+        bancada.esperar_a_central()
+        assert onde_buscou(mundo) == [rm.HCIS[QUARTO], rm.HCIS[VARANDA]]
+        assert onde_pareou(mundo) == [rm.HCIS[VARANDA]]
+        assert mundo.onde_esta(rm.uniq(VERDE)) == VARANDA
+        assert bancada.cena()["aberto"] == id_da_tela(VARANDA)
     finally:
         busca.soltar()
         bancada.fechar()

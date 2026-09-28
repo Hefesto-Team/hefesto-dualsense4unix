@@ -9,8 +9,10 @@ MEDIDO antes da cura (28/09, com o pacote e a central reais): com o «Conectar»
 esperando PS + Create na Direita e o clique dela no Meio, o ``_o_aberto``
 devolvia a Direita em 30 de 30 tiques; o chip do Meio recusava sem perguntar a
 ninguém; e o ``radio.mover`` para o Meio, pelo tratador real do daemon até a
-``CentralDoRadio`` real, responde ``ocupado`` — a central de hoje não muda a
-busca de adaptador no meio (a metade dela é pendência da central).
+``CentralDoRadio`` real, respondia ``ocupado``: a central não mudava a busca
+de adaptador no meio. Essa metade fechou na
+O-CONECTAR-SEGUE-A-CAIXA-QUE-ELA-ABRIU-01 (28/09/2026): a central aceita, e a
+busca vai para o adaptador do chip.
 
 O que esta régua segura, com o rádio de mentira, o ``DonoVivo`` real por cima
 dele, o tratador real do daemon e a central real, e a busca DE PÉ (a central
@@ -23,8 +25,8 @@ segura a janela aberta, esperando o gesto):
 3. ela fecha todas: nada abre sozinho, e o cabeçalho do adaptador da busca
    mostra a espera;
 4. o chip de outro adaptador pede ao rádio (``radio.mover`` para ele) e não
-   recusa por conta própria; a central decide, e o chip aceso diz onde a busca
-   está.
+   recusa por conta própria; a central aceita, a busca vai para ele, e o chip
+   aceso diz onde a busca está.
 
 MORDIDA: devolva a espera para antes do ``_ABERTO`` no ``_o_aberto`` — o caso 1
 reprova em todos os pares.
@@ -261,28 +263,38 @@ def test_o_chip_de_outro_adaptador_pede_a_busca_ao_radio(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde_busca: str, chip: str,
 ) -> None:
     """Com a busca de pé, o chip de outro adaptador manda o ``radio.mover`` para
-    ELE — o mesmo pedido do «Conectar» —, e quem responde é a central. A de hoje
-    responde ``ocupado`` (MEDIDO): o chip treme, a busca fica onde estava, e a
-    caixa aberta continua a dela. O chip do adaptador da busca só abre a caixa,
-    sem pedido nenhum."""
+    ELE — o mesmo pedido do «Conectar» —, e quem responde é a central. Ela
+    aceita (O-CONECTAR-SEGUE-A-CAIXA-QUE-ELA-ABRIU-01): a caixa aberta e o
+    destino vão para o chip, e a busca sai de onde estava e abre nele. O chip
+    do adaptador em que a busca está só abre a caixa, sem pedido nenhum.
+
+    FATO SUBSTITUÍDO (28/09/2026): até a O-CONECTAR esta régua conferia a central
+    respondendo ``ocupado`` — o chip tremia e a busca ficava onde estava.
+    """
     mundo, relogio = mundo_com(TRES), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     busca = BuscaDePe(relogio)
     try:
         _a_busca_abre_em(bancada, busca, onde_busca)
         bancada.cena()
-        with pytest.raises(RuntimeError, match="ocupado"):
-            bancada.gesto("escolher-adaptador", alvo=id_da_tela(chip))
+        assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca)) == {
+            "armou": True}
+        assert len(bancada.ponte.chamadas) == 1, "o chip da busca pediu ao rádio"
+
+        assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(chip)) == {"armou": True}
         assert bancada.ponte.chamadas == [
             ("radio.mover", {"destino": id_da_tela(onde_busca)}),
             ("radio.mover", {"destino": id_da_tela(chip)}),
         ], "o chip recusou sem perguntar ao rádio"
-        assert a08._ABERTO["lugar"] == id_da_tela(onde_busca)
-        assert onde_buscou(mundo) == [rm.HCIS[onde_busca]]
+        assert a08._ABERTO["lugar"] == id_da_tela(chip)
 
-        assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca)) == {
-            "armou": True}
-        assert len(bancada.ponte.chamadas) == 2
+        busca.soltar()
+        bancada.esperar_a_central()
+        assert onde_buscou(mundo) == [rm.HCIS[onde_busca], rm.HCIS[chip]]
+        (movimento,) = bancada.central.movimentos()
+        assert movimento.destino == chip
+        cena = bancada.cena()
+        assert cena["aberto"] == cena["destino_do_conectar"] == id_da_tela(chip)
     finally:
         busca.soltar()
         bancada.fechar()
@@ -290,9 +302,9 @@ def test_o_chip_de_outro_adaptador_pede_a_busca_ao_radio(
 
 class PonteQueAceita:
     """A resposta da central que MUDA a busca de adaptador — o ``ok`` do
-    tratador real, com o movimento novo esperando no destino pedido. A central
-    de hoje não a dá com a busca de pé (a metade dela está pendente); esta é a
-    régua do lado da tela, para quando der."""
+    tratador real, com o movimento esperando no destino pedido. Isola o lado da
+    tela; a central real que a dá é a régua acima e a
+    ``test_o_conectar_segue_a_caixa_que_ela_abriu.py``."""
 
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, dict[str, Any]]] = []
