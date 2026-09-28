@@ -523,3 +523,55 @@ async def test_no_tempo_o_fantasma_nao_chega_a_eleicao(
     evento = fila.get_nowait()
     assert evento["uniq"] == _QUATRO[1]
     assert evento["mudo"] is False, "o P2 estava mudo: o aperto pede ligar"
+
+
+# ---------------------------------------------------------------------------
+# 5. A prova que fica para ela: o instrumento separa a mão do bit
+# ---------------------------------------------------------------------------
+
+
+def test_o_instrumento_da_bancada_separa_a_mao_de_quem_vira_o_bit() -> None:
+    """Quem virou o bit do branco sem a mão continua sem medida.
+
+    O instrumento `scripts/ensaios/a_permanencia_do_bit_do_mic.py` só lê o
+    hidraw, e passou a contar, pelo MESMO extrator do produto, os apertos e as
+    viradas do bit de mudo com o botão parado. Aqui ele lê reports de verdade
+    do rádio: duas viradas sem ninguém, um aperto com o eco do kernel e do ato
+    logo atrás, e um quadro de áudio com o bit do botão dentro do Opus.
+    """
+    import importlib.util
+    import sys
+    from pathlib import Path
+
+    caminho = (
+        Path(__file__).resolve().parents[2]
+        / "scripts/ensaios/a_permanencia_do_bit_do_mic.py"
+    )
+    spec = importlib.util.spec_from_file_location("ensaio_a_permanencia_do_bit", caminho)
+    assert spec is not None and spec.loader is not None
+    modulo = importlib.util.module_from_spec(spec)
+    sys.modules["ensaio_a_permanencia_do_bit"] = modulo
+    spec.loader.exec_module(modulo)
+
+    quem = modulo.QuemVirou()
+    agora = 0.0
+
+    def ler(status: int, *, botao: bool = False, s: float = 1.0) -> None:
+        nonlocal agora
+        for _ in range(max(1, round(s / _PERIODO_S))):
+            quem.ler(_report("radio", status=status, botao=botao), agora)
+            agora += _PERIODO_S
+
+    ler(LIVRE)
+    ler(MUDO)  # ninguém apertou: a primeira virada sem a mão
+    ler(MUDO, botao=True, s=0.06)  # o dedo desce
+    ler(LIVRE, s=0.3)  # o kernel escreve
+    ler(MUDO, s=0.5)  # o ato escreve de novo, antes de confirmar
+    ler(LIVRE, s=4.0)  # e confirma: ainda dentro da janela do dedo
+    cru = bytearray(_report("radio", status=MUDO, botao=True))
+    cru[1] |= prr.INPUT_FLAG_AUDIO
+    quem.ler(bytes(cru), agora)  # Opus: nem dedo, nem bit
+    ler(MUDO)  # quatro segundos depois do dedo: sem a mão de novo
+
+    assert len(quem.apertos) == 1, quem.apertos
+    assert len(quem.sem_mao) == 2, quem.sem_mao

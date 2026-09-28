@@ -38,9 +38,21 @@ Ele **não liga o microfone** — quem liga é o daemon, quando ela aperta o bot
 do plástico. Cada aperto dá ~1,1 s de gating antes de o defeito o derrubar, e
 ~17 permanências. Aperte umas cinco vezes durante a corrida.
 
+QUEM VIRA O BIT SEM A MÃO (28/09/2026, O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01)
+-------------------------------------------------------------------------
+A sustentação de 300 ms saiu do produto: o gesto passou a ser o BOTÃO
+(`buttons[2]` bit 2), e o bit de mudo só diz o que o firmware segura. Mas na
+sessão dela de 28/09 o bit do branco virou três vezes sem ela apertar, e quem
+o escreveu ninguém mediu. Por isso a corrida também conta, pelo MESMO extrator
+do produto (`core/physical_report_reader.extract_estado_do_mic`, com CRC e sem
+o quadro de áudio), cada aperto e cada virada do bit de mudo que aconteceu com
+o botão parado — com a hora do relógio, para casar com o diário do daemon.
+
 USO
     a_permanencia_do_bit_do_mic.py --listar          # só diz o que leria
     a_permanencia_do_bit_do_mic.py --segundos 60     # mede, e ela aperta o mic
+    a_permanencia_do_bit_do_mic.py --no hidraw5 --segundos 600
+                                  # com mais de um DualSense no rádio, diga qual
 """
 
 from __future__ import annotations
@@ -68,6 +80,11 @@ from comum import (
     resumo,
 )
 
+#: O botão e o `status[1]` do MESMO report, pelo extrator do produto.
+from hefesto_dualsense4unix.core.physical_report_reader import (
+    extract_estado_do_mic,
+)
+
 #: O byte de status e o bit, do dono único da metade de ENTRADA.
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     STATUS_MIC_MUDO,
@@ -80,8 +97,55 @@ OFFSET_STATUS = 55
 #: Um report de entrada por rádio cabe folgado nisto.
 TAMANHO_DA_LEITURA = 600
 
+#: Quanto tempo depois do dedo uma virada do bit de mudo ainda é do aperto. Um
+#: aperto move o bit até duas vezes: o kernel escreve logo depois de ler o
+#: report, e o ato do daemon pode escrever de novo até confirmar — o teto dele
+#: é `hotkey.CONFIRMACAO_DO_MUDO_S`, três segundos. O que vira fora disso, com
+#: o botão parado, foi escrito por outro.
+JANELA_DO_DEDO_S = 3.0
 
-def permanencias(fd: int, segundos: float) -> tuple[list[float], list[float], int]:
+
+class QuemVirou:
+    """Os apertos e as viradas do bit de mudo SEM a mão, com a hora de cada um.
+
+    Lê só reports de ESTADO íntegros (`extract_estado_do_mic`): o quadro de
+    áudio do rádio e o report com CRC ruim não dizem nada sobre o dedo.
+    """
+
+    def __init__(self) -> None:
+        self.apertos: list[str] = []
+        self.sem_mao: list[str] = []
+        self._botao: bool | None = None
+        self._mudo: bool | None = None
+        self._dedo_em = float("-inf")
+
+    def ler(self, dados: bytes, agora: float) -> None:
+        lido = extract_estado_do_mic(dados)
+        if lido is None:
+            return
+        status, botao = lido
+        mudo = bool(status & STATUS_MIC_MUDO)
+        if botao:
+            if self._botao is False:
+                self.apertos.append(f"{_hora()}  aperto (o bit segurava mudo={mudo})")
+            self._dedo_em = agora
+        self._botao = botao
+        if self._mudo is not None and mudo != self._mudo and (
+            agora - self._dedo_em
+        ) > JANELA_DO_DEDO_S:
+            self.sem_mao.append(f"{_hora()}  o bit virou para mudo={mudo} SEM A MÃO")
+        self._mudo = mudo
+
+
+def _hora() -> str:
+    """A hora do relógio, no formato do diário do daemon."""
+    agora = time.time()
+    return time.strftime("%H:%M:%S", time.localtime(agora)) + f".{int(agora * 1000) % 1000:03d}"
+
+
+def permanencias(
+    fd: int, segundos: float, quem: QuemVirou | None = None
+) -> tuple[list[float], list[float], int]:
     """`(permanências de MUDO, de NÃO-MUDO, reports lidos)`, em segundos."""
     mudo_agora: bool | None = None
     desde = 0.0
@@ -102,6 +166,8 @@ def permanencias(fd: int, segundos: float) -> tuple[list[float], list[float], in
         lidos += 1
         mudo = bool(dados[OFFSET_STATUS] & STATUS_MIC_MUDO)
         agora = time.monotonic()
+        if quem is not None:
+            quem.ler(dados, agora)
         if mudo_agora is None:
             mudo_agora, desde = mudo, agora
             continue
@@ -126,9 +192,13 @@ def descrever(nome: str, amostras: list[float]) -> list[str]:
     ]
 
 
-def o_controle_no_radio():  # o tipo é o `Aparelho` de `comum`
-    """O DualSense do rádio. Um só: com dois, não se sabe de quem é o bit."""
+def o_controle_no_radio(no: str | None = None):  # o tipo é o `Aparelho` de `comum`
+    """O DualSense do rádio. Um só, ou o `no` que ela disse: o bit é de um."""
     reais = [a for a in fisicos(descobrir_aparelhos()) if a.transporte == RADIO]
+    if no:
+        nome = os.path.basename(no)
+        escolhido = [a for a in reais if a.hidraw == nome]
+        return escolhido[0] if escolhido else None
     return reais[0] if len(reais) == 1 else None
 
 
@@ -136,6 +206,11 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--segundos", type=float, default=60.0)
     ap.add_argument("--listar", action="store_true", help="só diz o que leria")
+    ap.add_argument(
+        "--no",
+        default=None,
+        help="o hidrawN do DualSense do rádio a ler, quando há mais de um",
+    )
     args = ap.parse_args()
 
     print(
@@ -147,11 +222,12 @@ def main() -> int:
         )
     )
 
-    alvo = o_controle_no_radio()
+    alvo = o_controle_no_radio(args.no)
     if alvo is None:
         print(resumo(
-            "preciso de EXATAMENTE UM DualSense no rádio. Com dois, não se sabe "
-            "de qual controle é o bit que oscila."))
+            "preciso de EXATAMENTE UM DualSense no rádio, ou do `--no hidrawN` "
+            "de um deles. Com dois e sem o nó, não se sabe de qual controle é o "
+            "bit que oscila."))
         return 1
     print(f"O CONTROLE: {alvo.hidraw}  ({alvo.transporte})")
 
@@ -175,12 +251,17 @@ def main() -> int:
         ">>> derrubar — e é nesse trecho que o bit oscila.",
         flush=True,
     )
+    quem = QuemVirou()
     try:
-        em_mudo, em_claro, lidos = permanencias(fd, args.segundos)
+        em_mudo, em_claro, lidos = permanencias(fd, args.segundos, quem)
     finally:
         os.close(fd)
 
     print(f"\n{lidos} report(s) de entrada lidos em {args.segundos:g} s")
+    print(f"\nO DEDO E O BIT ({len(quem.apertos)} aperto(s), "
+          f"{len(quem.sem_mao)} virada(s) do bit sem a mão):")
+    for linha in sorted(quem.apertos + quem.sem_mao):
+        print(f"  {linha}")
     print("\nPERMANÊNCIA DO BIT `MicMuted`:")
     for linha in descrever("MUDO=True ", em_mudo):
         print(linha)
@@ -208,11 +289,12 @@ def main() -> int:
     ms = sorted(v * 1000.0 for v in todas)
     print("\nQUANTAS PERMANÊNCIAS SOBREVIVEM A CADA JANELA:")
     print("  (cada sobrevivente é uma BORDA FALSA em potencial)")
+    # O produto não usa janela nenhuma desde 28/09/2026: conta o botão. A
+    # tabela fica pela pergunta de 10/09, que ainda mede o gating do driver.
     for janela_ms in (50, 100, 150, 200, 250, 300, 400, 500):
         passam = sum(1 for v in ms if v >= janela_ms)
-        marca = "  <- a que o produto usa" if janela_ms == 300 else ""
         print(f"    {janela_ms:>4} ms: {passam:>5} de {len(ms)} "
-              f"({100.0 * passam / len(ms):5.2f}%){marca}")
+              f"({100.0 * passam / len(ms):5.2f}%)")
 
     # O CASO FELIZ QUEBRAVA ESTE RESUMO — cura de 10/09/2026, na corrida que
     # PROVOU a cura do driver. Sem gating não há permanência curta, e
