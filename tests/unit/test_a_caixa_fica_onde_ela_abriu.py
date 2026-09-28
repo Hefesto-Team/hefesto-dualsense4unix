@@ -490,3 +490,80 @@ def test_no_motor_com_o_piloto_o_chip_nao_acende_no_clique(chip_no_webkit: dict[
     assert len(fora["no_molde"]) == 1
     assert fora["sem_piloto"] == [fora["clicado_sem_piloto"]], "o desenho perdeu o clique"
     assert fora["com_piloto"] == fora["no_molde"], "o chip acendeu antes do rádio responder"
+
+
+# ---------------------------------------------------------------------------
+# 7. o «Mover» também é o clique dela (a conferência, 28/09/2026)
+# ---------------------------------------------------------------------------
+
+#: O vermelho mora na Esquerda (``mundo_com``): o «Mover» dele vai para um dos
+#: outros dois, e a caixa que ela deixou aberta antes é qualquer outra.
+MOVER = [(destino, dela) for destino in (QUARTO, VARANDA) for dela in TRES if dela != destino]
+
+
+@pytest.mark.parametrize(("destino", "dela"), MOVER)
+def test_o_mover_abre_a_caixa_do_destino_e_o_clique_seguinte_dela_fica(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str, dela: str,
+) -> None:
+    """O «Mover» (a pergunta da mudança, ``confirmar-mudanca``) é um clique dela
+    num destino, como o «Conectar» e o «Tentar de Novo»: a caixa do destino
+    abre, com a linha que diz «Segure PS + Create» e o nome do controle movido
+    dentro. Até 28/09 quem a abria era a espera, a cada tique e por cima de
+    tudo; com o clique dela como dono, o «Mover» ficava com a caixa de antes
+    aberta e o controle movido escondido atrás de um clique.
+
+    E a busca de um aparelho conhecido (a linha ``esperando``, e não o
+    «Conectar» sem alvo) também não vence o ▶ que ela der depois.
+
+    MORDIDA: tire o ``_abrir_na_tela(destino)`` do ``confirmar_mudanca`` — a
+    caixa de antes fica aberta nos 30 tiques e esta régua reprova.
+    """
+    mundo, relogio = mundo_com(TRES), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    busca = BuscaDePe(relogio)
+    try:
+        bancada.cena()
+        if a08._CENA_NA_TELA.get("aberto") != id_da_tela(dela):
+            bancada.gesto("abrir-adaptador", alvo=id_da_tela(dela))
+        assert bancada.cena()["aberto"] == id_da_tela(dela)
+        assert bancada.gesto("confirmar-mudanca", alvo=VERMELHO,
+                             destino=id_da_tela(destino)) == {"armou": True}
+        assert busca.dentro.wait(5.0), "a central não começou o «Mover»"
+        for _ in range(TIQUES):
+            cena = bancada.cena()
+            assert cena["aberto"] == id_da_tela(destino), "o «Mover» deixou o destino fechado"
+        (linha,) = [a for a in cena["aparelhos"] if a.get("esperando")]
+        assert linha["lugar"] == id_da_tela(destino)
+
+        outra = next(a for a in TRES if a != destino)
+        bancada.gesto("abrir-adaptador", alvo=id_da_tela(outra))
+        abertos = [bancada.cena()["aberto"] for _ in range(TIQUES)]
+        assert abertos == [id_da_tela(outra)] * TIQUES, "a espera do «Mover» desfez o clique dela"
+    finally:
+        busca.soltar()
+        bancada.fechar()
+
+
+def test_a_escolha_de_um_adaptador_que_saiu_nao_segura_a_caixa(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A caixa que ela abriu era a de um adaptador que saiu da máquina: aquela
+    escolha não é sobre as caixas de agora, e a busca que começa abre a dela
+    (a regra de sem escolha). Quando ele volta, a escolha dela volta junto.
+
+    MORDIDA: faça o ``_o_aberto`` devolver o ``_ABERTO`` sem conferir que o
+    adaptador está na lista — nenhuma caixa abre, e esta régua reprova.
+    """
+    mundo, relogio = mundo_com((SALA, QUARTO)), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio, ordem=(SALA, QUARTO))
+    busca = BuscaDePe(relogio)
+    try:
+        bancada.cena()
+        a08._ABERTO["lugar"] = id_da_tela(VARANDA)
+        bancada.central.comecar_a_conectar(QUARTO)
+        assert busca.dentro.wait(5.0)
+        for _ in range(TIQUES):
+            assert bancada.cena()["aberto"] == id_da_tela(QUARTO)
+    finally:
+        busca.soltar()
+        bancada.fechar()

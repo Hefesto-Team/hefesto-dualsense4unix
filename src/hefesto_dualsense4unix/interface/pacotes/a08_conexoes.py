@@ -6626,11 +6626,20 @@ def _pedir_ao_radio(p: Any, aparelho: str | None, destino: str) -> dict[str, Any
 
 @gesto("08-conexoes.html", "confirmar-mudanca", grava="radio.mover")
 def confirmar_mudanca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Mover» (e «Mover e ligar»): o aparelho vai para o destino da pergunta."""
+    """«Mover» (e «Mover e ligar»): o aparelho vai para o destino da pergunta.
+
+    A CAIXA DO DESTINO ABRE NO CLIQUE DELA (A-CAIXA-FICA-ONDE-ELA-ABRIU-01, a
+    conferência de 28/09/2026), como no «Conectar» e no «Tentar de Novo»: o
+    «Segure PS + Create» do aparelho movido mora na linha dele, dentro da caixa
+    do destino. Quem a abria era a espera, a cada tique e por cima de tudo; com
+    o clique dela como dono da caixa (:func:`_o_aberto`), o «Mover» é esse
+    clique, e o ▶ que ela der depois vence."""
     alvo, destino = str(o.get("alvo") or ""), str(o.get("destino") or "")
     if not alvo or not destino:
         raise ValueError("a pergunta não disse quem vai nem para onde")
-    return _mover(p, alvo, destino)
+    feito = _mover(p, alvo, destino)
+    _abrir_na_tela(destino)
+    return feito
 
 
 def _ligar_aqui(p: Any, uniq: str) -> None:
