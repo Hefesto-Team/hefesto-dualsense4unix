@@ -2565,6 +2565,10 @@ class CoopManager:
             fixos=frozenset({_CHAVE_DO_P1}) if autoridade else frozenset(),
             compacta=not autoridade,
         )
+        if not autoridade:
+            # A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01, item 3: com o jogo
+            # solto, quem tem o nome velho renasce com o número dele.
+            recriar = self._com_os_nomes_velhos(recriar, cartas)
         if vago:
             cartas_no_diario = {_rotulo(c): n for c, n in cartas.items() if c != _CHAVE_DO_P1}
         else:
@@ -2855,6 +2859,128 @@ class CoopManager:
             numeros={mascarar_endereco(m): n for m, n in numeros.items()},
         )
         self._publicar_camada_coop(padroes)
+
+    # -- o nome que o jogo vê (A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01) ---
+    # No fim da classe pela razão de sempre: o mapa de canais cita os métodos
+    # desta classe por número de linha.
+
+    def _nomes_que_ficaram_para_tras(self, cartas: Mapping[str, int]) -> dict[str, tuple[int, int]]:
+        """Chave da mesa do jogo -> (o número no nome do vpad, o número de agora).
+
+        O nome vai no `UHID_CREATE2` e não se troca vivo
+        (:meth:`numero_para_o_nome`): um vpad que nasceu antes de a fila andar
+        guarda o número de quando nasceu. Medido na bancada de queda em
+        28/09/2026, nas 24 ordens de chegada dos quatro e sem jogo: a carta 1
+        sai além do prazo, a NUM-01 renumera, e os vpads do roxo e do azul
+        seguem «Hefesto P3» e «Hefesto P4» com a carta dizendo 2 e 3 — a
+        ordem está certa, então o co-op não os recriava. Com o jogo aberto a
+        ordem já os recria (o boneco anda junto), e com o `-02` o posto do P1
+        é a carta 1.
+
+        O número de agora é o do dono do nome (:meth:`numeros_de_jogador`, o
+        mesmo que :meth:`numero_para_o_nome` e o `nome_divergente` leem). O do
+        nome é o `vpad_indice` de :func:`identidade_do_vpad`: o `uinput` não
+        carrega número no nome e fica de fora.
+        """
+        numeros = self.numeros_de_jogador()
+        primario = self._primary_identity()
+        velhos: dict[str, tuple[int, int]] = {}
+        for chave in self._mesa_do_jogo.values():
+            if chave not in cartas:
+                continue
+            if chave == _CHAVE_DO_P1:
+                vpad = getattr(self._daemon, "_gamepad_device", None)
+                dono = primario
+            else:
+                jogador = self._players.get(chave)
+                if jogador is None or jogador.cedido_ao_primario:
+                    continue
+                vpad, dono = jogador.vpad, chave
+            if vpad is None or dono is None or dono.startswith("path:"):
+                continue
+            no_nome = identidade_do_vpad(vpad)["vpad_indice"]
+            agora = numeros.get(dono)
+            if no_nome is not None and agora is not None and no_nome != agora:
+                velhos[chave] = (no_nome, agora)
+        return velhos
+
+    def _a_mesa_esta_assentada(self) -> bool:
+        """Nenhum lugar guardado, e todo controle da mesa com o virtual dele.
+
+        As duas esperas foram medidas na bancada de queda em 28/09/2026, com a
+        carta 1 saindo e voltando sem jogo:
+
+        - **o lugar guardado** (`identity.prazo_do_lugar_guardado`: a queda
+          curta e a troca de transporte). Sem esperar, o posto do P1 renascia
+          duas vezes em 30 s, e o segundo vestia o endereço do controle que
+          depois ganha vpad próprio. Se quem saiu volta no prazo, nada precisa
+          renascer;
+        - **quem ainda não tem virtual** (a volta, o grab pendente, a ordem
+          que espera). Sem esperar, os de carta maior renasciam pelo nome e,
+          no mesmo `sync`, de novo pela ordem de quem nasceu depois.
+
+        A contagem é pelo registro de identidade (quem está na mesa) contra os
+        virtuais de pé; sem registro não há número a mudar, e nada espera.
+        """
+        registro = getattr(self._daemon, "identity_registry", None)
+        guardados = getattr(registro, "guardados", None)
+        conectados = getattr(registro, "snapshot_connected", None)
+        if not callable(guardados) or not callable(conectados):
+            return True
+        try:
+            if guardados():
+                return False
+            na_mesa = len(conectados())
+        except Exception:
+            return False
+        com_virtual = sum(
+            1
+            for jogador in self._players.values()
+            if jogador.vpad is not None and not jogador.cedido_ao_primario
+        )
+        if (
+            getattr(self._daemon, "_gamepad_device", None) is not None
+            and self._primary_identity() is not None
+        ):
+            com_virtual += 1
+        return com_virtual >= na_mesa
+
+    def _com_os_nomes_velhos(self, recriar: list[str], cartas: Mapping[str, int]) -> list[str]:
+        """`recriar` mais quem tem o nome velho, na ordem do jogo. Só com o jogo SOLTO.
+
+        A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01, item 3. Quem chama já
+        sabe que o jogo não está com a autoridade: recriar com o jogo
+        segurando arranca o controle da partida (a R-04), e o nome não vale
+        esse preço. Aqui, sem jogo, o custo é um replug que ninguém está
+        jogando.
+
+        Recria-se a partir da MENOR carta de nome velho, todo mundo de carta
+        igual ou maior: sem jogo, quem renasce vai para o fim da ordem de
+        nascimento (`_compactar`), e recriar só o do meio desarrumaria a ordem
+        que o jogo que abrir depois vai enumerar. O plano de ordem que chega em
+        `recriar` já é um sufixo de cartas nesse caso, então a união continua
+        um sufixo, e a ordem continua certa.
+
+        **E SÓ COM A MESA ASSENTADA** (:meth:`_a_mesa_esta_assentada`): o
+        número de quem ficou é de passagem enquanto alguém tem o lugar guardado
+        ou ainda espera o virtual dele, e quem nasce depois faz a ordem recriar
+        os de carta maior de qualquer jeito.
+        """
+        if not self._a_mesa_esta_assentada():
+            return recriar
+        velhos = self._nomes_que_ficaram_para_tras(cartas)
+        if not velhos:
+            return recriar
+        piso = min(cartas[chave] for chave in velhos)
+        sentados = [chave for _lugar, chave in sorted(self._mesa_do_jogo.items())]
+        juntos = [c for c in sentados if c in recriar or cartas.get(c, 0) >= piso]
+        nomes = sorted(velhos.values())
+        if nomes != getattr(self, "_nomes_velhos_ditos", None):
+            # Uma linha por episódio: se a ordem não convergir, a trava do
+            # `_ordenar` para as recriações e o diário não repete a cada `sync`.
+            self._nomes_velhos_ditos = nomes
+            logger.info("coop_nome_do_virtual_renasce", nomes=nomes, recriados=len(juntos))
+        return juntos
 
 
 # F1-REMAPEAR (13/09/2026): o import da troca de botões mora AQUI, depois da

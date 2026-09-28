@@ -36,6 +36,7 @@ from __future__ import annotations
 import array
 import contextlib
 import fcntl
+import itertools
 import os
 import socket
 import struct
@@ -47,6 +48,7 @@ from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.daemon.subsystems.identity import prazo_do_lugar_guardado
 from hefesto_dualsense4unix.integrations import uhid_gamepad
 from hefesto_dualsense4unix.integrations.uhid_blueprint import canonical_blueprint
 from hefesto_dualsense4unix.integrations.uhid_gamepad import (
@@ -61,6 +63,11 @@ from hefesto_dualsense4unix.integrations.uhid_gamepad import (
     UHID_START,
     UhidDualSense,
 )
+from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (
+    TIQUE,
+    config_isolado,  # noqa: F401 — o lar de mentira da bancada do item 3
+)
+from tests.unit.test_o_modo_tem_um_dono import FILA_DELA, TRANSPORTES, _a_mesa_do_boot
 
 #: `UHID_BUFSIZE` do `drivers/hid/uhid.c`. O `uhid_queue` recusa quando a
 #: cabeça nova alcançaria o rabo: cabem 31.
@@ -384,3 +391,138 @@ def test_o_dublê_sem_fd_de_verdade_segue_no_tique(monkeypatch: pytest.MonkeyPat
         assert pad.is_bound
     finally:
         pad.stop()
+
+
+# ---------------------------------------------------------------------------
+# O item 3: o nome que o jogo vê é o número do jogador.
+#
+# A bancada é a de queda (backend, co-op e registro de identidade REAIS), com a
+# fila gravada da mesa dela (branco 1, vermelho 2, roxo 3, azul 4) e o jogo
+# visto de fora (`JogoPorFora`). O vpad da bancada carrega o número no nome
+# como o uhid carrega (`player`, que o `identidade_do_vpad` lê como
+# `vpad_indice`). O alarme que a régua lê é o do PRODUTO: o `nome_divergente`
+# da `CoopManager.mesa()`, o mesmo que o `state_full` publica.
+#
+# MEDIDO ANTES DA CURA (28/09/2026), nas 24 ordens de chegada dos quatro: sem
+# jogo, a carta 1 que sai além do prazo deixava o roxo e o azul com «P3» e
+# «P4» e a carta dizendo 2 e 3, em 24 de 24; com o jogo, a ordem já os recria.
+# ---------------------------------------------------------------------------
+
+#: Tiques até o lugar guardado vencer (o prazo é do produto), com folga.
+_PASSA_O_PRAZO = 3 + int(prazo_do_lugar_guardado() // TIQUE)
+
+#: Todas as ordens de chegada de dois, três e quatro controles da fila dela.
+_ORDENS = [
+    ordem for quantos in (2, 3, 4) for ordem in itertools.permutations(FILA_DELA[:quantos])
+]
+
+
+def _nomes_errados(bancada: Any) -> list[dict[str, Any]]:
+    """Os itens da mesa em que o número no nome do vpad não é o número de agora."""
+    return [item for item in bancada.coop.mesa() if item["nome_divergente"]]
+
+
+def _vivos(bancada: Any) -> set[int]:
+    return {id(v) for v in bancada.vpads if v.vivo}
+
+
+@pytest.mark.usefixtures("config_isolado")
+@pytest.mark.parametrize("transporte", sorted(TRANSPORTES))
+@pytest.mark.parametrize(
+    "chegada", _ORDENS, ids=["-".join(u[-1] for u in o) for o in _ORDENS]
+)
+def test_com_o_jogo_solto_o_nome_e_o_numero(
+    monkeypatch: pytest.MonkeyPatch, chegada: tuple[str, ...], transporte: str
+) -> None:
+    """Sem jogo, em toda ordem de chegada: o nome de cada vpad é o número dele.
+
+    A carta 1 sai além do prazo (a NUM-01 renumera) e volta.
+
+    MORDE: tire a linha `recriar = self._com_os_nomes_velhos(recriar, cartas)`
+    do `_ordenar` — com três ou quatro na mesa, quem ficou segue com o nome
+    velho depois da saída.
+    """
+    bancada = _a_mesa_do_boot(monkeypatch, chegada, jogo=False, transporte=transporte)
+    for _ in range(6):
+        bancada.tique()
+    assert _nomes_errados(bancada) == [], "premissa: a mesa nasce com os nomes certos"
+
+    bancada.mesa.levantar(FILA_DELA[0])
+    for _ in range(_PASSA_O_PRAZO):
+        bancada.tique()
+    assert _nomes_errados(bancada) == [], (
+        "a fila andou e o vpad seguiu com o número de quando nasceu"
+    )
+
+    bancada.mesa.sentar(FILA_DELA[0], transporte=transporte)
+    for _ in range(6):
+        bancada.tique()
+    assert _nomes_errados(bancada) == []
+
+
+@pytest.mark.usefixtures("config_isolado")
+def test_o_nome_espera_a_mesa_assentar(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Quem ficou renasce UMA vez pelo nome, e só com a mesa assentada.
+
+    Medido na bancada (28/09/2026), a mesa dela na ordem, sem jogo: a carta 1
+    sai além do prazo e dois renascem (o roxo e o azul, com o número novo); na
+    volta dela, a ordem recria os dois de novo para o vermelho nascer antes, e
+    o nome não recria mais ninguém.
+
+    MORDE: tire o `_a_mesa_esta_assentada()` do `_com_os_nomes_velhos` — dentro
+    do prazo o posto do P1 renasce pelo nome e veste o endereço do vermelho,
+    que o vpad dele pede na volta (a bancada reprova o MAC repetido); e na
+    volta os dois renascem pelo nome e de novo pela ordem.
+    """
+    bancada = _a_mesa_do_boot(monkeypatch, FILA_DELA, jogo=False)
+    for _ in range(6):
+        bancada.tique()
+    nascidos = len(bancada.vpads)
+
+    bancada.mesa.levantar(FILA_DELA[0])
+    for _ in range(_PASSA_O_PRAZO):
+        bancada.tique()
+    assert len(bancada.vpads) - nascidos == 2, "a saída da carta 1: o roxo e o azul"
+
+    nascidos = len(bancada.vpads)
+    bancada.mesa.sentar(FILA_DELA[0])
+    for _ in range(6):
+        bancada.tique()
+    assert len(bancada.vpads) - nascidos == 3, (
+        "a volta: o vermelho, e o roxo e o azul uma vez só"
+    )
+    assert _nomes_errados(bancada) == []
+
+
+@pytest.mark.usefixtures("config_isolado")
+@pytest.mark.parametrize("quem", ["posto", "secundario"])
+def test_com_o_jogo_segurando_nenhum_virtual_renasce_pelo_nome(
+    monkeypatch: pytest.MonkeyPatch, quem: str
+) -> None:
+    """Com o jogo na autoridade, o nome velho espera; o jogo solta, e ele renasce.
+
+    O nome velho é o estado que a fila deixa quando anda depois de o vpad
+    nascer: o número dentro do nome é o de antes.
+
+    MORDE: tire o `if not autoridade:` do `_ordenar` (os nomes valendo com o
+    jogo aberto) — o vpad é arrancado da partida.
+    """
+    bancada = _a_mesa_do_boot(monkeypatch, FILA_DELA, jogo=True)
+    for _ in range(6):
+        bancada.tique()
+    assert _nomes_errados(bancada) == []
+    alvo = bancada.daemon._gamepad_device if quem == "posto" else bancada.vpad_de(FILA_DELA[2])
+    alvo.player = 4 if quem == "posto" else 2  # nasceu com o número de antes
+    assert _nomes_errados(bancada), "premissa: o nome velho aparece no alarme"
+    vivos = _vivos(bancada)
+
+    for _ in range(4):
+        bancada.tique()
+    assert _vivos(bancada) == vivos, "um vpad renasceu com o jogo segurando"
+    assert alvo.vivo
+
+    bancada.daemon.display_authority = "daemon"  # o jogo soltou
+    for _ in range(3):
+        bancada.tique()
+    assert not alvo.vivo, "o jogo soltou e o vpad seguiu com o nome velho"
+    assert _nomes_errados(bancada) == []
