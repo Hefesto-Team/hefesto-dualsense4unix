@@ -993,3 +993,79 @@ def test_o_clique_de_volta_pela_tela_desfaz_o_pedido_que_a_busca_ainda_nao_levou
     finally:
         busca.soltar()
         bancada.fechar()
+
+
+def _o_bluetoothd_sai(mundo: rm.RadioDeMentira) -> None:
+    """O ``bluetoothd`` sai do barramento (um restart, a queda do rádio)."""
+    mundo.bluez_de_pe = False
+    mundo._emitir(bd.Sinal("dono", dono_novo=""))
+
+
+def _o_bluetoothd_volta(mesa: Mesa) -> None:
+    mesa.mundo.bluez_de_pe = True
+    mesa.mundo._emitir(bd.Sinal("dono", dono_novo=rm.RadioDeMentira.DONO_DO_BLUEZ))
+    fim = time.monotonic() + 5.0
+    while mesa.dono.caminhos() is None and time.monotonic() < fim:
+        time.sleep(0.01)
+    assert mesa.dono.caminhos() is not None, "o dono não refotografou"
+
+
+@pytest.mark.parametrize("quando_cala", ["no_veredito", "no_pagamento"])
+def test_nao_sei_do_radio_nao_paga_a_meia_chave(
+    diario: Path, fechar: list[Any], quando_cala: str,
+) -> None:
+    """«Não sei» não é «não é mais meia chave». Com o ``bluetoothd`` fora do
+    barramento, a pergunta «ainda é meia chave?» não tem resposta: no veredito
+    do «não chegou» (com a trava na mão) a chave fica DEVIDA, e no pagamento a
+    dívida fica na fila. Quando o rádio volta, ela sai.
+
+    MORDIDA: responda «não sei» como «não é» no ``_esquecer_se_meia_chave`` — a
+    dívida some com o rádio mudo, e a meia chave fica no adaptador para sempre
+    (o «Conectar» seguinte ali não vê o controle).
+    """
+    mesa = Mesa(mundo_da_madrugada(), prazo_da_trava_s=0.2)
+    fechar.append(mesa.fechar)
+    feito = _o_verde_pareou_e_nao_conectou(mesa, QUARTO)
+    mesa.relogio.agora = feito.comecou + cr.PRAZO_DO_PENDENTE_S
+    if quando_cala == "no_veredito":
+        _o_bluetoothd_sai(mesa.mundo)
+        mesa.central.vigiar()
+    else:
+        _sem_a_trava(mesa.central.vigiar)
+        _o_bluetoothd_sai(mesa.mundo)
+        assert mesa.central.tirar_as_meias_chaves() == ()
+    fim = mesa.de(VERDE)
+    assert (fim.estado, fim.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_PRAZO)
+    assert mesa.mundo.lapides == []
+
+    _o_bluetoothd_volta(mesa)
+    assert mesa.central.tirar_as_meias_chaves() == ((QUARTO, VERDE),)
+    assert mesa.mundo.objeto(QUARTO, VERDE) is None, "a meia chave ficou no adaptador"
+    assert mesa.mundo.lapides == [(QUARTO, VERDE)]
+
+
+def test_a_chave_que_nao_sumiu_nao_conta_como_paga(
+    diario: Path, fechar: list[Any],
+) -> None:
+    """A dívida só sai quando a chave sumiu do rádio. Um esquecer que não
+    tirou nada (o ``RemoveDevice`` e a ponte recusados) deixa a dívida para a
+    volta seguinte — e o diário não diz «esqueceu».
+
+    MORDIDA: dê a dívida por paga sem conferir que a chave sumiu — a primeira
+    volta a devolve como paga, e a chave fica.
+    """
+    mesa = Mesa(mundo_da_madrugada(), prazo_da_trava_s=0.2)
+    fechar.append(mesa.fechar)
+    feito = _o_verde_pareou_e_nao_conectou(mesa, QUARTO)
+    mesa.relogio.agora = feito.comecou + cr.PRAZO_DO_PENDENTE_S
+    _sem_a_trava(mesa.central.vigiar)
+
+    mesa.central._esquecer = lambda _dono, _adaptador, _aparelho: False  # type: ignore[method-assign,assignment]
+    assert mesa.central.tirar_as_meias_chaves() == ()
+    assert mesa.mundo.objeto(QUARTO, VERDE) is not None
+    del mesa.central._esquecer
+    assert mesa.central.tirar_as_meias_chaves() == ((QUARTO, VERDE),)
+    assert mesa.mundo.objeto(QUARTO, VERDE) is None
+    pagas = [e for e in diario_do_radio.ler(caminhos=[diario])
+             if e["o_que"] == cr.ESQUECEU_A_MEIA_CHAVE]
+    assert len(pagas) == 1, pagas

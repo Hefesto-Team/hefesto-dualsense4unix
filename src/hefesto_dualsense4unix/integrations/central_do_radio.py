@@ -2020,21 +2020,25 @@ class CentralDoRadio:
 
         A pergunta é feita ao rádio agora (:meth:`_esquecer_se_meia_chave`): o
         controle que conectou naquele adaptador depois não perde a chave, e a
-        dívida sai da fila do mesmo jeito. Só a que levantou fica, para a
-        próxima vez. Devolve ``(adaptador, aparelho)`` de cada chave que saiu.
-        Nunca levanta.
+        dívida sai da fila do mesmo jeito. Ficam, para a próxima vez, a que
+        levantou e a que o rádio não soube responder («não sei» não é «não é
+        mais meia chave»). Devolve ``(adaptador, aparelho)`` de cada chave que
+        saiu. Nunca levanta.
         """
         with self._tranca:
             devidas = sorted(self._meias_chaves)
         pagas: list[tuple[str, str]] = []
         for adaptador, aparelho in devidas:
             try:
-                if self._esquecer_se_meia_chave(dono, adaptador, aparelho):
-                    pagas.append((adaptador, aparelho))
+                saiu = self._esquecer_se_meia_chave(dono, adaptador, aparelho)
             except Exception:
                 logger.warning("central_meia_chave_levantou", aparelho=mascarar(aparelho),
                                adaptador=mascarar(adaptador), exc_info=True)
                 continue
+            if saiu is None:
+                continue
+            if saiu:
+                pagas.append((adaptador, aparelho))
             with self._tranca:
                 self._meias_chaves.discard((adaptador, aparelho))
         if pagas:
@@ -2117,7 +2121,9 @@ class CentralDoRadio:
                 if self._pela_chave(movimento.aparelho) != movimento:
                     return self._pela_chave(movimento.aparelho) or movimento
                 esquecida = self._esquecer_a_meia_chave(movimento, dono)
-                return self._acabou_se_ainda(movimento, motivo, meia_chave=esquecida)
+                # «Não sei» (o rádio mudo, a chave que não sumiu) também deve.
+                return self._acabou_se_ainda(movimento, motivo, meia_chave=esquecida is True,
+                                             devida=esquecida is None)
         except TravaOcupadaError:
             logger.warning("central_meia_chave_sem_trava", aparelho=mascarar(movimento.aparelho))
             return self._acabou_se_ainda(movimento, motivo, meia_chave=False, devida=True)
@@ -2141,29 +2147,42 @@ class CentralDoRadio:
 
     def _esquecer_a_meia_chave(
         self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez
-    ) -> bool:
+    ) -> bool | None:
         """A chave que ESTE movimento criou no destino e que nunca conectou sai
-        — só quando o ``Pair`` deste movimento deu (``pareou_no_destino``)."""
+        — só quando o ``Pair`` deste movimento deu (``pareou_no_destino``).
+        As três respostas são as do :meth:`_esquecer_se_meia_chave`."""
         if not movimento.pareou_no_destino or not movimento.destino:
             return False
         return self._esquecer_se_meia_chave(dono, movimento.destino, movimento.aparelho)
 
     def _esquecer_se_meia_chave(
         self, dono: bluez_dbus.LeitorDoBluez, adaptador: str, aparelho: str
-    ) -> bool:
+    ) -> bool | None:
         """A meia chave de ``aparelho`` em ``adaptador`` sai — se ainda é meia chave.
 
         O BlueZ diz o objeto ``Paired`` e não ``Connected``, e o kernel não o
         diz naquele adaptador. Quem está no ar nunca sai por aqui, e nenhum
         outro adaptador é tocado. UM dono para a pergunta: o «não chegou» de
         agora e a dívida paga depois (:meth:`_pagar_as_meias_chaves`).
+
+        ``True``: saiu. ``False``: não é, ou não é mais, meia chave. ``None``:
+        NÃO SEI — o rádio não respondeu, o adaptador não está na máquina (a
+        chave volta com ele), ou o esquecer não a tirou. Quem pergunta a deixa
+        devida: «não sei» nunca vira «não há» (a conferência de 28/09/2026 —
+        com o ``bluetoothd`` fora do barramento, a dívida saía da fila sem a
+        chave sair do adaptador).
         """
+        adaptadores = dono.adaptadores()
+        if adaptadores is None or adaptador not in {a.endereco for a in adaptadores}:
+            return None
         no = dono.caminho_do_aparelho(aparelho, adaptador=adaptador)
         if no is None:
-            return False
+            return None if dono.caminhos() is None else False
         pareado = bluez_dbus.como_booleano(dono.propriedade(no, bluez_dbus.APARELHO, "Paired"))
         conectado = bluez_dbus.como_booleano(
             dono.propriedade(no, bluez_dbus.APARELHO, "Connected"))
+        if pareado is None:
+            return None
         if pareado is not True or conectado is True:
             return False
         if self._onde_esta(_hex12(aparelho)) == adaptador:
@@ -2172,6 +2191,11 @@ class CentralDoRadio:
                     adaptador=mascarar(adaptador))
         self._esquecer(dono, adaptador, aparelho)
         self._esperar_sumir(dono, aparelho, adaptador)
+        if (dono.caminho_do_aparelho(aparelho, adaptador=adaptador) is not None
+                or dono.caminhos() is None):
+            logger.warning("central_meia_chave_nao_sumiu", aparelho=mascarar(aparelho),
+                           adaptador=mascarar(adaptador))
+            return None
         return True
 
     def _no_diario(
@@ -2360,7 +2384,7 @@ class CentralDoRadio:
 
         O MESMO FIO CUIDA DO NOME DELA (:meth:`cuidar_dos_nomes`), a cada
         :data:`INTERVALO_DOS_NOMES_S` com o dono vivo, e no passo da faxina
-        pelo caminho de reserva; e, a cada passo, da MEIA CHAVE DEVIDA
+        pelo caminho de reserva; e, no mesmo ritmo, da MEIA CHAVE DEVIDA
         (:meth:`tirar_as_meias_chaves`) — só pega a trava quando há dívida.
         """
         with self._tranca:
@@ -2382,10 +2406,14 @@ class CentralDoRadio:
         while not self._parar.wait(passo):
             desde_a_faxina += passo
             faxina = desde_a_faxina >= intervalo_s
-            # A meia chave devida não espera a faxina inteira: ela é o que faz o
-            # próximo «Conectar» naquele adaptador não ver o controle.
-            self.tirar_as_meias_chaves()
             if faxina or self._o_dono_e_a_foto_viva():
+                # A meia chave devida não espera a faxina inteira: ela é o que
+                # faz o próximo «Conectar» naquele adaptador não ver o controle.
+                # Pelo caminho de reserva (subprocessos) ela vai no passo da
+                # faxina, como o nome: a dívida que o rádio não sabe responder
+                # (o adaptador fora da máquina) fica na fila, e perguntaria de
+                # novo a cada passo.
+                self.tirar_as_meias_chaves()
                 self.cuidar_dos_nomes()
             if faxina:
                 desde_a_faxina = 0.0
