@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
-"""O endpoint de mentira — HAPTICA-POR-RADIO-01, P3.
+"""Os endpoints de háptica — o laudo do que o GE-Proton leria, controle a controle.
+
+**O NOME MUDOU EM 28/09/2026** (O-BASICO-MEDIDO-01, A5 do protocolo do
+básico): este ensaio se chamava ``o_endpoint_de_mentira.py``, e o nome
+enganava. Sem argumento ele nunca listou só o endpoint de mentira: o
+``status`` lê TODO sink com ``HEFESTO`` no nome, e isso inclui os endpoints do
+PRODUTO (``integrations/endpoint_de_haptica.py``, que usa o mesmo molde). Sem
+argumento, então, ele é a leitura do produto: um laudo por endpoint vivo, que o
+``o_basico.py retrato`` pede com ``--json``. Montar um de mentira continua
+existindo, atrás de ``--montar --marca``; o ``--desmontar`` derruba só o que
+ele mesmo montou, e nunca um endpoint do produto.
+
+O desenho abaixo é o de HAPTICA-POR-RADIO-01, P3, que o ensaio mediu em 18/09.
 
 PELO CABO o jogo acha a háptica porque existe uma placa de áudio de verdade no
 controle. PELO RÁDIO não existe: o DualSense não publica endpoint nenhum, e o
@@ -67,6 +79,7 @@ _RAIZ = Path(__file__).resolve().parents[2]
 if str(_RAIZ / "src") not in sys.path:
     sys.path.insert(0, str(_RAIZ / "src"))
 
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 from hefesto_dualsense4unix.integrations.alto_falante_bt import rodar_pactl
 from hefesto_dualsense4unix.integrations.audio_ks_dualsense import (
     container_id,
@@ -99,6 +112,11 @@ CANAIS = 4
 #: O nó não pode virar a saída padrão da máquina. Mesma razão e mesmo valor do
 #: nó do alto-falante (`alto_falante_bt.PRIORIDADE_SESSAO_DO_SOM`).
 _PRIORIDADE = 0
+
+#: A marca que só o endpoint montado por ESTE ensaio carrega. O ``--desmontar``
+#: derruba só os módulos que a trazem: o produto monta endpoints com o mesmo
+#: molde de nome, e derrubá-los tiraria a háptica de quem joga.
+MARCA_DO_ENSAIO = "hefesto.origem=ensaio"
 
 
 @dataclass(frozen=True)
@@ -235,6 +253,7 @@ def propriedades(ancora: Ancora, marca: str) -> str:
         f"device.description='DualSense {marca} (háptica pelo rádio)'",
         f"priority.session={_PRIORIDADE}",
         "device.icon_name=audio-speakers",
+        MARCA_DO_ENSAIO,
     )
     return 'sink_properties="' + " ".join(campos) + '"'
 
@@ -322,57 +341,87 @@ def montar(marca: str, ancora: Ancora) -> int:
     )
     linhas = [ln.strip() for ln in (saida or "").splitlines() if ln.strip()]
     if not linhas or not linhas[-1].isdigit():
-        print(f"NÃO MONTOU: {saida!r}")
+        _dizer(f"NÃO MONTOU: {saida!r}")
         return 1
     print(f"montado  module #{linhas[-1]}")
-    print(f"nome     {nome}")
+    _dizer(f"nome     {nome}")
     print(f"âncora   {ancora.nome}  {ancora.syspath}")
     print(f"declara  {ancora.declarado}   ← o pai DISTO é a âncora")
     print(f"Container{ancora.container_id()}   ← é ISTO que o device KS tem de declarar")
     depois = _default_sink()
     if depois != antes and antes:
         rodar_pactl(["pactl", "set-default-sink", antes])
-        print(f"a saída padrão tinha mudado para {depois}; devolvida a {antes}")
+        _dizer(f"a saída padrão tinha mudado para {depois}; devolvida a {antes}")
     return 0
 
 
 def desmontar() -> int:
+    """Derruba só o que ESTE ensaio montou (a :data:`MARCA_DO_ENSAIO`)."""
     saida = rodar_pactl(["pactl", "list", "short", "modules"]) or ""
     ids = [
         ln.split("\t", 1)[0]
         for ln in saida.splitlines()
-        if "module-null-sink" in ln and "HEFESTO" in ln
+        if "module-null-sink" in ln and MARCA_DO_ENSAIO in ln
     ]
     for mid in ids:
         rodar_pactl(["pactl", "unload-module", mid])
-    print(f"removidos: {len(ids)} módulo(s)")
+    print(f"removidos: {len(ids)} módulo(s) montados por este ensaio")
     return 0
 
 
+def _dizer(texto: str) -> None:
+    """Toda linha pelo dono da máscara: o nome do endpoint carrega o rabo do endereço."""
+    print(mascarar(texto))
+
+
+def leitura() -> dict[str, object]:
+    """O laudo de cada endpoint vivo, na forma que o ``o_basico.py`` lê (``--json``)."""
+    endpoints = []
+    for sink in nossos_sinks():
+        laudo = _laudo(sink)
+        endpoints.append({
+            "nome": mascarar(sink["nome"]),
+            "espec": sink["espec"],
+            "laudo": [[ok, mascarar(frase)] for ok, frase in laudo],
+            "completo": all(ok for ok, _frase in laudo),
+        })
+    completos = sum(1 for e in endpoints if e["completo"])
+    return {
+        "veredito": f"{completos} de {len(endpoints)} endpoint(s) com o laudo inteiro",
+        "alvos_inicio": [e["nome"] for e in endpoints],
+        "alvos_fim": [e["nome"] for e in endpoints],
+        "mexeu": [],
+        "medidas": {"endpoints": len(endpoints), "completos": completos},
+        "endpoints": endpoints,
+    }
+
+
 def status() -> int:
+    """A leitura do produto: um laudo por endpoint vivo, o do produto e o de mentira."""
     achados = nossos_sinks()
     if not achados:
-        print("nenhum endpoint de mentira montado")
+        _dizer("nenhum endpoint de háptica no servidor de som")
         return 0
     for sink in achados:
-        print(f"\nSink #{sink['id']}  {sink['nome']}")
-        print(f"  {sink['espec']}")
+        _dizer(f"\nSink #{sink['id']}  {sink['nome']}")
+        _dizer(f"  {sink['espec']}")
         for ok, frase in _laudo(sink):
-            print(f"  [{'x' if ok else ' '}] {frase}")
+            _dizer(f"  [{'x' if ok else ' '}] {frase}")
     # O FECHO DO CÍRCULO: o que o curador vai gravar sai da MESMA função que
     # lê os nós vivos. Se estas linhas não aparecerem, o device KS não sairá —
     # e foi assim que o erro de um nível na árvore do USB se escondeu.
     for controle in controles_no_radio():
         guids = " · ".join(container_id(controle, d4) for d4 in variantes_de_data4(controle, []))
-        print(f"\n  o device KS vai declarar: {guids}")
-    return 0
+        _dizer(f"\n  o device KS vai declarar: {guids}")
+    return 0 if all(all(ok for ok, _f in _laudo(s)) for s in achados) else 1
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--montar", action="store_true", help="sobe o endpoint")
     p.add_argument("--desmontar", action="store_true", help="derruba os nossos")
-    p.add_argument("--marca", default="0000d8", help="os seis hex do rabo do uniq do controle")
+    p.add_argument("--marca", default="", help="os seis hex do rabo do uniq do controle (exigido no --montar)")
+    p.add_argument("--json", action="store_true", help="a leitura, na forma que o o_basico.py lê")
     p.add_argument("--ancora", default="", help="syspath do usb_device âncora (o padrão é o primeiro)")
     p.add_argument("--ancoras", action="store_true", help="lista as âncoras candidatas")
     args = p.parse_args(argv)
@@ -385,12 +434,21 @@ def main(argv: list[str] | None = None) -> int:
     if args.desmontar:
         return desmontar()
     if args.montar:
+        if not re.fullmatch(r"[0-9A-Fa-f]{6}", args.marca or ""):
+            print("RECUSO: o --montar exige a --marca (os seis hex do rabo do uniq)")
+            return 2
         if not disponiveis:
             print("sem âncora: nenhum usb_device sem placa de som neste host")
             return 1
         escolhida = next((a for a in disponiveis if a.syspath == args.ancora), disponiveis[0])
         rc = montar(args.marca, escolhida)
         return rc or status()
+    if args.json:
+        import json
+
+        dado = leitura()
+        print(json.dumps(dado, ensure_ascii=False, indent=1))
+        return 0 if dado["endpoints"] and all(e["completo"] for e in dado["endpoints"]) else 1
     return status()
 
 
