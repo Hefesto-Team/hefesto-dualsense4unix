@@ -305,9 +305,11 @@ async def _uma_volta(daemon: Any) -> None:
         # esperava a vez é relida agora, antes de o retrato dizer "não sei".
         for tarefa in tarefas:
             tarefa.cancel()
-        for tarefa in tarefas:
-            with contextlib.suppress(asyncio.CancelledError, Exception):
-                await tarefa
+        # `gather` e não um `await` por tarefa dentro de `suppress(CancelledError)`:
+        # aquele engolia também o cancelamento DESTE laço, que chegasse bem
+        # aqui, e o daemon não conseguia parar o ouvinte com o servidor caído
+        # (achado pela mordida do «sem servidor», 28/09/2026).
+        await asyncio.gather(*tarefas, return_exceptions=True)
         tarefas.clear()
         if pendentes:
             await aplicar()

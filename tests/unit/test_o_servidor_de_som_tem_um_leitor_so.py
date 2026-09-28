@@ -299,11 +299,11 @@ class _Espiao:
         return rs.ler_do_servidor(argv)
 
 
-async def _ate(condicao: Callable[[], bool], prazo: float = 8.0) -> None:
+async def _ate(condicao: Callable[[], bool], motivo: str, prazo: float = 8.0) -> None:
     fim = time.monotonic() + prazo
     while not condicao():
         if time.monotonic() > fim:
-            raise AssertionError("o estado esperado não chegou no prazo")
+            raise AssertionError(f"não chegou no prazo: {motivo}")
         await asyncio.sleep(0.01)
 
 
@@ -345,7 +345,26 @@ def _uma_volta_dos_leitores() -> dict[str, Any]:
 
 
 def _correr(cenario: Callable[[], Any]) -> None:
-    asyncio.run(cenario())
+    """Um laço próprio que FECHA mesmo se o ouvinte não parar — ver :func:`_parar`."""
+    laco = asyncio.new_event_loop()
+    try:
+        laco.run_until_complete(cenario())
+        laco.run_until_complete(laco.shutdown_default_executor())
+    finally:
+        laco.close()
+
+
+async def _parar(tarefa: asyncio.Task[Any]) -> None:
+    """Cancela o ouvinte como o `connection.shutdown` do daemon: UMA vez.
+
+    Um ouvinte que engole o cancelamento prende o desligamento do daemon — e
+    prenderia esta régua para sempre, em vez de reprovar. Medido: a mordida do
+    «sem servidor» achou exatamente isso, um `suppress(CancelledError)` em
+    volta do `await` das tarefas da rajada.
+    """
+    tarefa.cancel()
+    feitas, _ = await asyncio.wait({tarefa}, timeout=5.0)
+    assert feitas, "o ouvinte engoliu o cancelamento: o daemon não conseguiria parar"
 
 
 # ---------------------------------------------------------------------------
@@ -366,6 +385,7 @@ def test_cem_tiques_sem_evento_nao_perguntam_nada_e_respondem_igual(
     MORDIDA: `retrato_do_som.responder` devolvendo sempre `None` — a conta
     volta, e o canal do microfone sozinho pergunta 5 vezes por controle.
     """
+    from hefesto_dualsense4unix.daemon.subsystems import hotkey
     from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
 
     espiao = _Espiao()
@@ -380,7 +400,7 @@ def test_cem_tiques_sem_evento_nao_perguntam_nada_e_respondem_igual(
     async def cenario() -> None:
         tarefa = asyncio.create_task(ods.ouvinte_do_som_loop(_Daemon()))
         try:
-            await _ate(lambda: rs.RETRATO.vivo)
+            await _ate(lambda: rs.RETRATO.vivo, "o retrato vivo")
             await servidor.abrir_os_eventos()
             assert sorted(espiao.lidas) == sorted(
                 " ".join(a[1:]) for a in rs._LEITURA_DO_TIPO.values()), (
@@ -391,14 +411,21 @@ def test_cem_tiques_sem_evento_nao_perguntam_nada_e_respondem_igual(
             for _ in range(99):
                 await asyncio.to_thread(_uma_volta_dos_leitores)
             perguntas = servidor.chamadas()
+            servidor.zerar()
+            # O CANAL DO MICROFONE SOZINHO, que é a mordida escrita na sprint:
+            # devolvido ao `pactl`, ele conta 5 perguntas por controle por volta.
+            for _ in range(100):
+                await asyncio.to_thread(lambda: [hotkey._ler_o_canal(u) for u in UNIQS])
+            do_canal = len(servidor.chamadas())
+            assert do_canal == 0, (
+                f"o canal do microfone perguntou {do_canal} vezes em 100 voltas — "
+                f"{do_canal / (100 * len(UNIQS)):.0f} por controle por volta")
             assert perguntas == [], (
                 f"100 tiques sem evento perguntaram {len(perguntas)} vezes ao servidor: "
                 f"{Counter(perguntas).most_common(6)}")
             assert depois == antes, "o retrato respondeu diferente do servidor"
         finally:
-            tarefa.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await tarefa
+            await _parar(tarefa)
 
     _correr(cenario)
 
@@ -424,7 +451,7 @@ def test_um_evento_rele_so_o_tipo_que_mudou(
     async def cenario() -> None:
         tarefa = asyncio.create_task(ods.ouvinte_do_som_loop(_Daemon()))
         try:
-            await _ate(lambda: rs.RETRATO.vivo)
+            await _ate(lambda: rs.RETRATO.vivo, "o retrato vivo")
             await servidor.abrir_os_eventos()
             antes = await asyncio.to_thread(hotkey._ler_o_canal, UNIQS[2])
             assert antes["canal_mudo"] is False
@@ -438,15 +465,13 @@ def test_um_evento_rele_so_o_tipo_que_mudou(
             marca = rs.RETRATO.marca(("sources",))
             servidor.montar(mic_mudo=f"hefesto_mic_{HEX[2]}")
             servidor.evento("Event 'change' on source #403")
-            await _ate(lambda: rs.RETRATO.marca(("sources",)) != marca)
+            await _ate(lambda: rs.RETRATO.marca(("sources",)) != marca, "o retrato reler as fontes")
             depois = await asyncio.to_thread(hotkey._ler_o_canal, UNIQS[2])
             assert depois["canal_mudo"] is True, "o retrato não acompanhou o evento"
             assert servidor.chamadas() == ["list sources"], (
                 f"um evento de fonte devia reler UMA vez: {servidor.chamadas()}")
         finally:
-            tarefa.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await tarefa
+            await _parar(tarefa)
 
     _correr(cenario)
 
@@ -466,7 +491,7 @@ def test_a_rajada_de_eventos_rele_uma_vez(
     async def cenario() -> None:
         tarefa = asyncio.create_task(ods.ouvinte_do_som_loop(_Daemon()))
         try:
-            await _ate(lambda: rs.RETRATO.vivo)
+            await _ate(lambda: rs.RETRATO.vivo, "o retrato vivo")
             await servidor.abrir_os_eventos()
             servidor.zerar()
             marca = rs.RETRATO.geracao
@@ -475,9 +500,7 @@ def test_a_rajada_de_eventos_rele_uma_vez(
             assert servidor.chamadas() == ["list sink-inputs"], servidor.chamadas()
             assert rs.RETRATO.geracao == marca, "nada mudou e o retrato acordou quem espera"
         finally:
-            tarefa.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await tarefa
+            await _parar(tarefa)
 
     _correr(cenario)
 
@@ -507,10 +530,11 @@ def test_sem_servidor_o_retrato_diz_nao_sei_e_se_refaz(
     async def cenario() -> None:
         tarefa = asyncio.create_task(ods.ouvinte_do_som_loop(_Daemon()))
         try:
-            await _ate(lambda: rs.RETRATO.vivo)
+            await _ate(lambda: rs.RETRATO.vivo, "o retrato vivo")
             await servidor.abrir_os_eventos()
             servidor.cair()
-            await _ate(lambda: not rs.RETRATO.vivo)
+            await _ate(lambda: not rs.RETRATO.vivo,
+                       "o retrato dizer «não sei» com o servidor caído")
             assert rs.RETRATO.dono, "o dono soltou o retrato só porque o servidor caiu"
             servidor.zerar()
             espiao.lidas.clear()
@@ -524,13 +548,11 @@ def test_sem_servidor_o_retrato_diz_nao_sei_e_se_refaz(
             assert not fora, f"com o servidor caído, leitores perguntaram por conta própria: {fora}"
 
             servidor.voltar()
-            await _ate(lambda: rs.RETRATO.vivo)
+            await _ate(lambda: rs.RETRATO.vivo, "o retrato vivo")
             await servidor.abrir_os_eventos()
             assert afb.sinks_que_tocam([ENDPOINT.format(h=HEX[0])]) == {ENDPOINT.format(h=HEX[0])}
         finally:
-            tarefa.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await tarefa
+            await _parar(tarefa)
         assert not rs.RETRATO.dono, "o ouvinte parou e o retrato ficou com dono"
 
     _correr(cenario)
@@ -730,21 +752,32 @@ def test_todo_executor_com_o_retrato_vivo_nao_pergunta_nada(
     assert set(formas) == set(executores), (
         f"executor sem pergunta ou pergunta sem executor: {set(formas) ^ set(executores)}")
 
+    espiao = _Espiao()
+    quem_perguntou: dict[str, dict[str, int]] = {}
+
     def uma_volta() -> dict[tuple[str, tuple[str, ...]], Any]:
-        return {(k, f): _texto_de(executores[k](list(f)))
-                for k, fs in sorted(formas.items()) for f in sorted(fs)}
+        respostas = {}
+        for k, fs in sorted(formas.items()):
+            servidor.zerar()
+            espiao.lidas.clear()
+            for f in sorted(fs):
+                respostas[(k, f)] = _texto_de(executores[k](list(f)))
+            fora = _de_quem_mais(servidor, espiao)
+            if fora:
+                quem_perguntou[k] = dict(fora)
+        return respostas
 
     gabarito = uma_volta()
-    assert servidor.chamadas(), "com o retrato solto ninguém perguntou — o gabarito é oco"
-    espiao = _Espiao()
+    assert len(quem_perguntou) == len(executores), (
+        "com o retrato solto, algum executor não perguntou — o gabarito é oco: "
+        f"{set(executores) - set(quem_perguntou)}")
+    quem_perguntou.clear()
     monkeypatch.setattr(rs.RETRATO, "_ler_injetado", espiao)
     assert rs.RETRATO.carregar()
     rs.RETRATO.assumir()
-    servidor.zerar()
-    espiao.lidas.clear()
     agora = uma_volta()
-    fora = _de_quem_mais(servidor, espiao)
-    assert not fora, f"executores perguntaram ao servidor com o retrato vivo: {dict(fora)}"
+    assert not quem_perguntou, (
+        f"executores perguntaram ao servidor com o retrato vivo: {quem_perguntou}")
     diferentes = [k for k in gabarito if agora[k] != gabarito[k]]
     assert not diferentes, f"o retrato respondeu diferente do servidor em: {diferentes}"
 
@@ -940,3 +973,140 @@ def test_quem_espera_acorda_so_pelo_assunto_dele() -> None:
     inicio = time.monotonic()
     assert r.esperar(fontes, 0.05, ("sources", "server")) == fontes
     assert time.monotonic() - inicio >= 0.04
+
+
+# ---------------------------------------------------------------------------
+# «Os laços deixam de perguntar: eles acordam pelo evento»
+# ---------------------------------------------------------------------------
+
+
+def test_o_canal_do_microfone_acorda_pelo_evento_das_fontes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A prova 2 da sprint, na metade que cabe numa régua: o selo do canal
+    acompanha o gesto em menos de 1 s porque o laço acorda pelo evento — e não
+    na volta de 2 s. Um fluxo de SAÍDA que muda no meio do jogo não o acorda.
+
+    MORDIDA: devolva o `asyncio.sleep(CANAL_TTL_S)` ao laço.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import hotkey
+
+    voltas: list[str] = []
+
+    async def ler(_daemon: Any, uniq: str) -> dict[str, Any]:
+        voltas.append(uniq)
+        return {"fonte": None}
+
+    async def conferir(_daemon: Any, _uniqs: list[str]) -> list[str]:
+        return []
+
+    monkeypatch.setattr(hotkey, "_uniqs_conectados", lambda _d: [UNIQS[0]])
+    monkeypatch.setattr(hotkey, "_ler_o_canal_deste", ler)
+    monkeypatch.setattr(hotkey, "_conferir_quem_saiu_do_ar", conferir)
+    monkeypatch.setattr(hotkey, "_CANAL_POR_UNIQ", {})
+    monkeypatch.setattr(hotkey, "CANAL_TTL_S", 30.0)
+
+    class _D:
+        parar = False
+
+        def _is_stopping(self) -> bool:
+            return self.parar
+
+    async def cenario() -> None:
+        daemon = _D()
+        tarefa = asyncio.create_task(hotkey.canal_do_microfone_loop(daemon))  # type: ignore[arg-type]
+        try:
+            await asyncio.sleep(0.05)
+            assert voltas == []
+            rs.RETRATO._avisar({"sink-inputs"})
+            await asyncio.sleep(0.2)
+            assert voltas == [], "um fluxo de saída acordou o canal do microfone"
+            rs.RETRATO._avisar({"sources"})
+            await _ate(lambda: voltas == [UNIQS[0]], "o canal acordar pelo evento das fontes",
+                       prazo=1.0)
+        finally:
+            daemon.parar = True
+            rs.RETRATO._avisar({"sources"})
+            await asyncio.wait_for(tarefa, 2.0)
+
+    _correr(cenario)
+
+
+def test_o_vigia_do_alto_falante_acorda_pelo_fluxo_que_nasce(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O jogo abre um fluxo no endpoint: o vigia acorda na hora, e não no teto da fatia.
+
+    E a parada do subsystem também o acorda (`RETRATO.acordar`), sem esperar
+    a fatia — o vigia dorme no retrato, e não no `_parar`.
+
+    MORDIDA: devolva o `self._parar.wait(VIGIA_DO_MODO_S)` à fatia.
+    """
+    import threading
+
+    from hefesto_dualsense4unix.daemon.subsystems import alto_falante as af
+
+    monkeypatch.setattr(af, "VIGIA_DO_MODO_S", 3.0)
+    monkeypatch.setattr(af, "RECONCILIA_S", 10.0)
+    quem = object.__new__(af.AltoFalanteSubsystem)
+    quem._parar = threading.Event()  # type: ignore[attr-defined]
+    mudou = [False]
+    quem._o_modo_de_alguem_mudou = lambda: mudou[0]  # type: ignore[method-assign]
+
+    class _Gerenciador:
+        def dormir(self, _s: float) -> bool:
+            return False
+
+    fim: list[tuple[bool, float]] = []
+
+    def esperar() -> None:
+        inicio = time.monotonic()
+        fim.append((quem._esperar_de_olho_no_modo(_Gerenciador()), time.monotonic() - inicio))
+
+    fio = threading.Thread(target=esperar)
+    fio.start()
+    time.sleep(0.1)
+    mudou[0] = True
+    rs.RETRATO._avisar({"sink-inputs"})
+    fio.join(2.0)
+    assert fim and fim[0][0] is False and fim[0][1] < 1.0, (
+        f"o fluxo que nasceu não acordou o vigia: {fim}")
+
+    fim.clear()
+    mudou[0] = False
+    fio = threading.Thread(target=esperar)
+    fio.start()
+    time.sleep(0.1)
+    quem._parar.set()
+    rs.RETRATO.acordar()
+    fio.join(2.0)
+    assert fim and fim[0][0] is True and fim[0][1] < 1.0, (
+        f"a parada esperou a fatia inteira: {fim}")
+
+
+def test_o_ouvinte_para_quando_mandam_mesmo_com_o_servidor_caido(
+    servidor: Servidor, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O desligamento do daemon cancela o ouvinte UMA vez, em qualquer ponto da volta.
+
+    Com o servidor caído o ouvinte religa sem parar, e o cancelamento pode cair
+    em qualquer `await` da volta — inclusive no que recolhe as tarefas da
+    rajada. Achado pela mordida do «sem servidor» em 28/09/2026: um
+    `suppress(CancelledError)` ali engolia o cancelamento, e o ouvinte (e a
+    régua) ficavam presos para sempre. Quarenta cancelamentos em pontos
+    diferentes da volta.
+
+    MORDIDA: devolva o `await` por tarefa dentro de `suppress(CancelledError)`.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
+
+    monkeypatch.setattr(ods, "ESPERA_PARA_RELIGAR_S", 0.0)
+    servidor.cair()
+
+    async def cenario() -> None:
+        for i in range(40):
+            tarefa = asyncio.create_task(ods.ouvinte_do_som_loop(_Daemon()))
+            await asyncio.sleep(0.002 * i)
+            await _parar(tarefa)
+
+    _correr(cenario)
