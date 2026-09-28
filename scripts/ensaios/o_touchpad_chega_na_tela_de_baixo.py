@@ -109,7 +109,8 @@ from comum import (  # o chão dos instrumentos: um cabeçalho, uma tabela
     resumo,
     tabela,
 )
-from sanitizar_saida_de_agente import mascarar_enderecos  # a máscara da casa
+
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar  # a máscara da casa
 
 #: O emulador desta medição, e o atalho dela — que é quem carrega a cura.
 #: O `rodar.sh` lê o `default.env` VIVO a cada abertura, então ele nunca
@@ -143,8 +144,14 @@ THREAD_DO_TRAVAMENTO = "HIDAPI Rumble"
 
 
 def diga(texto: object = "") -> None:
-    """Imprime com a máscara da casa aplicada — endereço e HOME."""
-    print(mascarar_enderecos(str(texto), home=str(Path.home())))
+    """Imprime com a máscara da casa aplicada — endereço e HOME.
+
+    O endereço é do dono no produto (`core/formas_do_endereco`); até 28/09/2026
+    ele vinha de um módulo que o `.gitignore` tira do clone, e o ensaio morria
+    com `ModuleNotFoundError` em toda máquina que não fosse a dela. O HOME é
+    deste ensaio: o dono só cuida de identidade de aparelho.
+    """
+    print(mascarar(str(texto)).replace(str(Path.home()), "~"))
 
 
 # ---------------------------------------------------------------------------

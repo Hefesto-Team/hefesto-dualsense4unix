@@ -133,6 +133,14 @@ from comum import (
     tamanhos_do_descritor,
 )
 
+# A MÁSCARA TEM UM DONO NO PRODUTO desde 28/09/2026 (O-REGISTRO-COPIADO-NAO-
+# ENTREGA-O-ENDERECO-01): o `comum` acima já pôs o `src/` no caminho. O número
+# de caracteres públicos do serial nasceu aqui e passou ao dono.
+from hefesto_dualsense4unix.core.formas_do_endereco import (
+    CARACTERES_PUBLICOS_DO_SERIAL,
+)
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar as _mascarar_pelo_dono
+
 # ---------------------------------------------------------------------------
 # Os números, todos com procedência, nenhum chutado
 # ---------------------------------------------------------------------------
@@ -414,18 +422,18 @@ def mascarar(mac: str) -> str:
     REAL de um dos controles da bancada — a docstring da função que mascara era,
     ela mesma, o vazamento, e passou verde porque o portão não conhecia aquele
     OUI (15/08/2026; ver a nota datada em `tests/unit/test_docs_mac_anonimato.py`).
+
+    Quem mascara é o dono no produto (`core/formas_do_endereco`), desde
+    28/09/2026.
     """
-    partes = mac.split(":")
-    if len(partes) != 6:
-        return mac
-    return ":".join([*partes[:3], "00", "00", partes[5]])
+    return _mascarar_pelo_dono(mac)
 
 
-#: Quantos caracteres do serial sobrevivem no arquivo. Seis: os quatro de
-#: modelo/planta, que são compartilhados por lote e não identificam unidade
-#: nenhuma, MAIS os dois da cor, que são o objeto inteiro deste ensaio. Os onze
-#: restantes são o número de série da unidade dela.
-CARACTERES_PUBLICOS_DO_SERIAL = 6
+# QUANTOS CARACTERES DO SERIAL SOBREVIVEM NO ARQUIVO: seis, os quatro de
+# modelo/planta, que são compartilhados por lote e não identificam unidade
+# nenhuma, MAIS os dois da cor, que são o objeto inteiro deste ensaio. Os onze
+# restantes são o número de série da unidade dela. O número mora no dono
+# (`CARACTERES_PUBLICOS_DO_SERIAL`, importado no topo).
 
 
 def mascarar_serial(serial: str) -> str:
@@ -445,11 +453,16 @@ def mascarar_serial(serial: str) -> str:
     Na TELA o serial sai inteiro (é dela, é a máquina dela). No ARQUIVO, nunca:
     é o mesmo desenho de `imu_no_cabo.py`, onde o CSV mascara sempre, mesmo com
     `--sem-mascara` pedido para a tela.
+
+    Quem mascara é o dono no produto, com o serial como conhecido. O dono só
+    aceita como serial o que é alfanumérico e tem algarismo; um valor que ele
+    recusa (uma leitura corrompida, com `\ufffd` do `errors="replace"`) sai
+    inteiro em `#`, e nunca cru num arquivo versionado.
     """
-    if len(serial) <= CARACTERES_PUBLICOS_DO_SERIAL:
-        return serial
-    resto = len(serial) - CARACTERES_PUBLICOS_DO_SERIAL
-    return serial[:CARACTERES_PUBLICOS_DO_SERIAL] + "#" * resto
+    mascarado = _mascarar_pelo_dono(serial, conhecidos=[serial])
+    if mascarado == serial and len(serial) > CARACTERES_PUBLICOS_DO_SERIAL:
+        return "#" * len(serial)
+    return mascarado
 
 
 # ---------------------------------------------------------------------------
