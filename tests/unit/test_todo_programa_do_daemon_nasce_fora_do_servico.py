@@ -451,8 +451,8 @@ def test_o_teclado_nasce_numa_unidade_e_o_pid_vem_dela(
 ) -> None:
     """Prova 1 da sprint, em bancada: a linha é a do dono, e o PID é o da unidade.
 
-    MORDE: tire o ramo da unidade de ``_pid_vivo`` e o ``aberto()`` responde
-    «fechado» com o teclado de pé — o L3 seguinte empilharia outro.
+    MORDE: no ``_abrir``, deixe de perguntar o PID à unidade e o arquivo de
+    sessão não nasce — o daemon seguinte não adotaria o teclado.
     """
     ctrl = teclado._OSKController()
     ctrl.open()
@@ -468,6 +468,26 @@ def test_o_teclado_nasce_numa_unidade_e_o_pid_vem_dela(
     assert sessao["pid"] == gerenciador.nascidos[0].pid, (
         "o PID anotado não é o do teclado — o do systemd-run não fecharia nada")
     assert sessao["unidade"] == _unidade_de(cmd)
+
+
+def test_sem_o_arquivo_de_sessao_a_unidade_responde(
+    gerenciador: _GerenciadorDeMentira, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Sem ``XDG_RUNTIME_DIR`` gravável o arquivo de sessão não nasce, e o
+    daemon não guarda processo nenhum: quem sabe do teclado é a unidade.
+
+    MORDE: tire o ramo da unidade de ``_pid_vivo`` e o ``aberto()`` responde
+    «fechado» com o teclado de pé — o L3 seguinte empilharia outro, e o R3
+    não fecharia nada.
+    """
+    monkeypatch.setattr(teclado, "_gravar_sessao", lambda *_a, **_k: None)
+    ctrl = teclado._OSKController()
+    ctrl.open()
+    assert ctrl.aberto() is True
+    ctrl.dispatch_token(TOKEN_TOGGLE_OSK, "press")
+    assert ctrl.esperar_os_toques(5.0)
+    assert _morreu(gerenciador.nascidos[0]), "o L3 não fechou o teclado da unidade"
+    assert len(gerenciador.chamadas) == 1, "o L3 abriu um segundo teclado"
 
 
 def test_o_r3_fecha_o_teclado_da_unidade(gerenciador: _GerenciadorDeMentira) -> None:
