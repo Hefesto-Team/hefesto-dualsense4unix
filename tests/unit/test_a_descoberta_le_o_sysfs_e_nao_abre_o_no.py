@@ -313,6 +313,10 @@ class _AvisoContado:
         self.real = er.InputDirWatch(str(pasta))
         self.voltas = 0
 
+    @property
+    def nasceu(self) -> bool:
+        return self.real.nasceu
+
     def poll(self) -> bool:
         self.voltas += 1
         return self.real.poll()
@@ -435,6 +439,23 @@ def test_com_o_aviso_o_leitor_descobre_e_abre_na_hora(cena: _Cena) -> None:
     assert aviso.voltas - voltas <= 3, (
         f"o leitor levou {aviso.voltas - voltas} voltas para ver o nó que voltou"
     )
+
+
+def test_o_controle_que_sai_nao_faz_o_ausente_procurar(cena: _Cena) -> None:
+    """A pasta que só perde entradas não traz nó nenhum de volta.
+
+    Outro controle sai da mesa (o P2): `/dev/input` muda, e o leitor do
+    ausente segue dormindo. **A MORDIDA:** troque o `aviso.poll() and
+    getattr(aviso, "nasceu", True)` por `aviso.poll()` e cada saída vira uma
+    descoberta — mais as três no relógio.
+    """
+    cena.abrir_e_perder()
+    assert _esperar(lambda: bool(cena.avisos)), "o leitor não armou o aviso"
+    aviso = cena.avisos[-1]
+    cena.mesa.remover("aa:bb:cc:00:00:02")
+    voltas = aviso.voltas
+    assert _esperar(lambda: aviso.voltas >= voltas + 10, prazo=5.0)
+    assert len(cena.buscas) == 1, "a saída de outro controle fez o ausente procurar"
 
 
 def test_o_no_que_nasce_sem_permissao_e_achado_no_relogio(

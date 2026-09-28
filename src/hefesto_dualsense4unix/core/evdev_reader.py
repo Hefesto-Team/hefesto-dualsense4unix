@@ -565,11 +565,16 @@ class InputDirWatch:
     muda em hotplug/re-enumeração, e isso é observável por um `os.listdir`
     (~µs). Cada consumidor tem a SUA instância (o "mudou?" é relativo ao último
     `poll()` DESTE watch).
+
+    `nasceu` diz se a última mudança TROUXE algum nó (e não só levou): quem
+    espera um controle voltar não tem o que procurar numa pasta que só
+    perdeu entradas (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01).
     """
 
     def __init__(self, root: str = "/dev/input") -> None:
         self._root = root
         self._last: frozenset[str] | None = None
+        self.nasceu = False
 
     def poll(self) -> bool:
         """True se o conteúdo de /dev/input mudou desde o último poll (ou 1ª vez)."""
@@ -580,6 +585,7 @@ class InputDirWatch:
         except OSError:
             current = frozenset()
         changed = current != self._last
+        self.nasceu = bool(current - (self._last or frozenset()))
         self._last = current
         return changed
 
@@ -2986,7 +2992,7 @@ def _esperar_o_no(leitor: _EvdevReconnectLoop) -> bool:
 
 
 def _esperar_o_aviso(leitor: _EvdevReconnectLoop, aviso: Any) -> bool:
-    """Dorme até `/dev/input` mudar, até o `_wake`, ou até o teto.
+    """Dorme até nascer um nó em `/dev/input`, até o `_wake`, ou até o teto.
 
     Um passo é o `select` no self-pipe com o `_SELECT_TIMEOUT_S` do leitor, e
     entre dois passos um `listdir` — microssegundos, contra a descoberta
@@ -3006,7 +3012,9 @@ def _esperar_o_aviso(leitor: _EvdevReconnectLoop, aviso: Any) -> bool:
             return leitor._stop_flag.is_set()
         if leitor._stop_flag.is_set():
             return True
-        if aviso.poll():
+        # A pasta que só PERDEU entradas (o próprio controle saindo, outro
+        # controle saindo) não traz o nó de volta: a espera segue.
+        if aviso.poll() and getattr(aviso, "nasceu", True):
             return False
         esperado += passo
     return leitor._stop_flag.is_set()
