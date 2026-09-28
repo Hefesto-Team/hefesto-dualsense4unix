@@ -75,6 +75,39 @@ def test_o_modo_compacto_tem_dono() -> None:
     )
 
 
+def _docstring_do_card_de_producao() -> str:
+    """A docstring do `ControllerCard` que a janela monta, lida do FONTE.
+
+    27/09/2026: `inspect.getdoc(ControllerCard)` perguntava ao módulo
+    IMPORTADO, e sem o GTK real o `controller_card.py` entrega o STUB (o
+    `else:` do `_GTK_DISPONIVEL`), cuja docstring é outra. O `lint-test` do CI
+    reprovava esta régua sobre um card que nenhuma janela monta — e, pior, a
+    mordida dela não mordia lá. A prosa mora no fonte, e o card de produção é
+    o que herda do GTK: é esse que se lê, com ou sem o GTK no processo.
+    """
+    arquivo = _SRC / "app" / "widgets" / "controller_card.py"
+    arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
+    cards = [
+        no
+        for no in ast.walk(arvore)
+        if isinstance(no, ast.ClassDef)
+        and no.name == "ControllerCard"
+        and any(
+            isinstance(base, ast.Attribute)
+            and isinstance(base.value, ast.Name)
+            and base.value.id == "Gtk"
+            for base in no.bases
+        )
+    ]
+    assert len(cards) == 1, (
+        f"achei {len(cards)} `ControllerCard` herdando do GTK em {arquivo} — a "
+        "régua precisa de exatamente um, o que a janela monta. Se o card mudou "
+        "de casa ou de base, aponte esta leitura para ele; sem isso ela mediria "
+        "o stub, ou nada."
+    )
+    return ast.get_docstring(cards[0]) or ""
+
+
 def test_a_docstring_do_card_nao_ensina_o_modo_que_ninguem_constroi() -> None:
     """O exemplo de uso tem de ser o que a aba faz — e era o oposto.
 
@@ -84,13 +117,11 @@ def test_a_docstring_do_card_nao_ensina_o_modo_que_ninguem_constroi() -> None:
     copia.
 
     **A mordida:** devolva o exemplo antigo (`ControllerCard(compact=True)`
-    com o comentário "compact = 2+ cards") e o teste reprova.
+    com o comentário "compact = 2+ cards") e o teste reprova — com e sem o
+    GTK real, porque a docstring é lida do FONTE (ver
+    `_docstring_do_card_de_producao`).
     """
-    import inspect
-
-    from hefesto_dualsense4unix.app.widgets.controller_card import ControllerCard
-
-    doc = inspect.getdoc(ControllerCard) or ""
+    doc = _docstring_do_card_de_producao()
     assert "compact=True" not in doc, (
         "a docstring de `ControllerCard` volta a ensinar `compact=True` como "
         "o uso normal. Produção passa `compact=False` desde 02/08/2026, e "
