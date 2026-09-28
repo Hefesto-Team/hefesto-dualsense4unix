@@ -1311,3 +1311,47 @@ def test_o_numero_do_cliente_no_info_nao_e_mudanca(monkeypatch: pytest.MonkeyPat
     marca = r.marca(("server",))
     assert r.reler({"server"}) == frozenset()
     assert r.marca(("server",)) == marca, "o número do cliente acordou quem espera"
+
+
+def test_um_tipo_que_nao_le_nao_cala_os_outros(
+    servidor: Servidor, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Um tipo que o servidor não responde não segura o retrato inteiro.
+
+    Numa máquina em que UMA pergunta falha sempre (um servidor que não lista
+    os módulos, por exemplo), o retrato que exigia as seis respostas para
+    assumir ficava solto para sempre: todo leitor voltava a perguntar ao
+    servidor — o defeito inteiro — e o padrão publicado ficava vazio, embora o
+    servidor respondesse o resto. E a insistência relê só o que falta.
+
+    MORDIDAS: exija a leitura inteira para o primeiro dono assumir (o retrato
+    nunca fica vivo); releia todos os tipos na insistência (as saídas voltam a
+    ser perguntadas sem evento).
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
+
+    espiao = _Espiao()
+    monkeypatch.setattr(rs.RETRATO, "_ler_injetado", espiao)
+    monkeypatch.setattr(ods, "ESPERA_PARA_RELIGAR_S", 0.1)
+    (servidor.raiz / "modules.curto").unlink()
+    daemon = _Daemon()
+
+    async def cenario() -> None:
+        tarefa = asyncio.create_task(ods.ouvinte_do_som_loop(daemon))
+        try:
+            await _ate(lambda: rs.RETRATO.vivo, "o retrato vivo sem os módulos", prazo=3.0)
+            await servidor.abrir_os_eventos()
+            assert rs.RETRATO.padrao("sink") == HDMI
+            assert any(p.get("saida") == HDMI for p in daemon.publicados), (
+                "o padrão não foi publicado")
+            assert rs.RETRATO.responder(["pactl", "list", "modules", "short"]) is rs.NAO_SEI
+            servidor.zerar()
+            await asyncio.sleep(0.6)
+            chamadas = servidor.chamadas()
+            assert "list modules short" in chamadas, "a insistência parou de tentar"
+            outras = sorted({c for c in chamadas if c != "list modules short"})
+            assert not outras, f"a insistência releu o que já sabia: {outras}"
+        finally:
+            await _parar(tarefa)
+
+    _correr(cenario)

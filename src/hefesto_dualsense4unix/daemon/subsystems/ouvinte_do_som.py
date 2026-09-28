@@ -206,11 +206,14 @@ async def ouvinte_do_som_loop(daemon: Any) -> None:
 async def _carregar_o_retrato(retrato: retrato_do_som.RetratoDoSom) -> bool:
     """A leitura inteira, fora do laço de eventos. True = o retrato assumiu."""
     completo = await asyncio.to_thread(retrato.carregar)
-    if completo or (retrato.dono and retrato.algum_em_dia()):
-        # DONO DE ANTES QUE RELIGOU volta a responder já, mesmo que um tipo
-        # tenha falhado: o tipo em dúvida diz "não sei" sozinho, e os outros
-        # não precisam esperar por ele. Se NADA respondeu, o servidor não
-        # voltou, e o retrato continua sem servidor.
+    if completo or retrato.algum_em_dia():
+        # O RETRATO ASSUME COM O QUE RESPONDEU, mesmo que um tipo tenha
+        # falhado: o tipo em dúvida diz "não sei" sozinho, e os outros não
+        # precisam esperar por ele. Exigir os seis deixava o retrato solto para
+        # sempre numa máquina em que UMA pergunta nunca responde — todo leitor
+        # de volta ao servidor e o padrão publicado vazio (conferência de
+        # 28/09/2026). Se NADA respondeu, o servidor não está de pé: o retrato
+        # de antes continua sem servidor, e o que nunca assumiu, solto.
         retrato.assumir(asyncio.get_running_loop())
         return True
     return False
@@ -241,10 +244,9 @@ async def _uma_volta(daemon: Any) -> None:
             nonlocal anterior
             tipos = set(pendentes)
             pendentes.clear()
-            if not retrato.completo():
-                tipos.update(retrato_do_som.TIPOS)
+            tipos.update(retrato.faltando())
             await asyncio.to_thread(retrato.reler, tipos)
-            if not retrato.vivo and retrato.completo():
+            if not retrato.vivo and retrato.algum_em_dia():
                 retrato.assumir(asyncio.get_running_loop())
             if not tipos & _TIPOS_DO_PADRAO:
                 return
@@ -272,7 +274,7 @@ async def _uma_volta(daemon: Any) -> None:
             # até alguém mexer no som.
             while not retrato.completo():
                 await asyncio.sleep(ESPERA_PARA_RELIGAR_S)
-                pendentes.update(retrato_do_som.TIPOS)
+                pendentes.update(retrato.faltando())
                 await aplicar()
 
         if not retrato.completo():

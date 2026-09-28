@@ -548,8 +548,16 @@ class RetratoDoSom:
         return self.completo()
 
     def completo(self) -> bool:
+        return not self.faltando()
+
+    def faltando(self) -> frozenset[str]:
+        """Os tipos que o retrato não sabe: nunca lidos, ou com a última releitura falha.
+
+        É o que a insistência do ouvinte relê — e SÓ isso: um tipo que o
+        servidor não responde nunca não pode custar a releitura dos outros.
+        """
         with self._trava:
-            return all(t in self._textos for t in TIPOS) and not self._duvida
+            return frozenset(t for t in TIPOS if t not in self._textos or t in self._duvida)
 
     def algum_em_dia(self) -> bool:
         """Algum tipo foi lido e não está em dúvida — o servidor respondeu algo."""
