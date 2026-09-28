@@ -170,7 +170,14 @@ def test_a_entrada_aprendida_guarda_os_nos_do_buraco() -> None:
     ``caminho`` nomeia o APARELHO e some do ``/sys`` quando ele sai; ``nos``
     nomeia o BURACO. Sem a lista, "a entrada 7" só existiria enquanto houvesse
     algo nela — que é o defeito que esta tela inteira existe para curar.
+
+    NOTA DATADA (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026): o ``caminho``
+    deixou de ser guardado. Ele é do BURACO agora, calculado na leitura — o do
+    lado 2.0 dos nós, ou o do lugar com os controladores deste boot — e nunca
+    vai ao disco. Quem diz se há aparelho é o censo, não o caminho.
     """
+    from hefesto_dualsense4unix.utils.lugar import caminho_do_lado_20
+
     logica = _logica()
     furo = logica.caminhada()[0]
     numero = logica.aprender(furo, FACE_ATRAS)
@@ -178,8 +185,9 @@ def test_a_entrada_aprendida_guarda_os_nos_do_buraco() -> None:
     assert logica.portas[numero]["nos"] == list(furo.nos)
     mapa = MapaDaMesa.model_validate(logica.como_documento())
     assert mapa.portas[numero].nos == list(furo.nos)
-    assert mapa.portas[numero].caminho is None, (
-        "uma entrada vazia não tem aparelho, e inventar um seria mentir"
+    assert mapa.portas[numero].caminho == caminho_do_lado_20(furo.nos)
+    assert "caminho" not in mapa.model_dump(exclude_computed_fields=True)["portas"][numero], (
+        "uma entrada vazia não guarda aparelho, e inventar um seria mentir"
     )
 
 

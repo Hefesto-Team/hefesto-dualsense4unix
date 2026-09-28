@@ -150,7 +150,9 @@ def test_tirar_daqui_apaga_a_entrada_no_disco() -> None:
         "tirar apaga a chave do rascunho em vez de escrever None: a chave "
         "ausente manda a gravação preservar o que estava no disco"
     )
-    assert documento["mapa"]["portas"]["13"]["caminho"] == "3-1.1.1", (
+    # O caminho não vai ao disco desde a A-ENTRADA-TEM-UM-REGISTRO-SO-01
+    # (28/09/2026): a entrada guarda o nó do buraco.
+    assert documento["mapa"]["portas"]["13"]["nos"] == ["3-1.1-port1"], (
         "tirar UMA entrada levou as outras junto"
     )
     # E a forma que faz isso funcionar — o `None` explícito, não a ausência.

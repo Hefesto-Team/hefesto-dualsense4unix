@@ -46,7 +46,7 @@ from hefesto_dualsense4unix.app.widgets.calibrar_entradas import (
     FACE_HUB,
     LogicaDaCalibracao,
 )
-from hefesto_dualsense4unix.utils.maquina import MapaDaMesa, caminho_da_maquina
+from hefesto_dualsense4unix.utils.maquina import MapaDaMesa, caminho_da_maquina, carregar_maquina
 from tests.unit.test_a_fase_sentada_resolve_o_hub import (
     mesa_com_hub_e_tres_aparelhos,
 )
@@ -107,7 +107,10 @@ def test_grava_sem_ipc(tmp_path: Path) -> None:
     documento = json.loads(caminho.read_text(encoding="utf-8"))
     portas = documento["mapa"]["portas"]
     assert set(portas) == set(numeros)
-    assert portas[numeros[0]]["caminho"] == "3-1"
+    # O caminho não vai ao disco desde a A-ENTRADA-TEM-UM-REGISTRO-SO-01
+    # (28/09/2026): o buraco do hub vai pelo nó dele.
+    assert "caminho" not in portas[numeros[0]]
+    assert carregar_maquina().mapa.portas[numeros[0]].caminho == "3-1"
     assert ipc.tentativas == [], "a gravação passou por IPC, e não devia"
     assert logica.ultimo_recibo is not None and logica.ultimo_recibo.gravou
 

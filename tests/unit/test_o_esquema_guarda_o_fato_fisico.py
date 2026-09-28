@@ -141,13 +141,19 @@ def test_a_entrada_vazia_existe_no_esquema_sem_caminho_nenhum() -> None:
     bancada respondem ``state`` com e sem aparelho. Sem este campo, "a entrada
     7" só existe enquanto houver algo nela — que é como quatro dos cinco
     aparelhos que ela moveu em 24/08 sumiram do mapa.
+
+    NOTA DATADA (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026): o ``caminho``
+    deixou de ser guardado. Ele é do BURACO agora, calculado na leitura — o do
+    lado 2.0 dos nós, ou o do lugar com os controladores deste boot — e nunca
+    vai ao disco. Quem diz se há aparelho é o censo, não o caminho.
     """
     mapa = MapaDaMesa.model_validate(
         {"portas": {"7": {"nos": ["usb1-port7", "usb2-port3"]}}}
     )
     vazia = mapa.portas["7"]
-    assert vazia.caminho is None
     assert vazia.nos == ["usb1-port7", "usb2-port3"]
+    assert vazia.caminho == "1-7", "o caminho do buraco é o do lado 2.0 dos nós"
+    assert "caminho" not in vazia.model_dump(exclude_computed_fields=True)
 
 
 @pytest.mark.parametrize(
@@ -251,10 +257,17 @@ def test_o_mapa_de_ontem_continua_valendo() -> None:
     escrever. Um arquivo declarado antes de 25/08 tem de continuar abrindo, com
     os campos novos no ``default_factory`` — o contrário faria toda máquina que
     já declarou perder a mesa na primeira leitura.
+
+    NOTA DATADA (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026): o ``caminho``
+    deixou de ser guardado. Ele é do BURACO agora, calculado na leitura — o do
+    lado 2.0 dos nós, ou o do lugar com os controladores deste boot — e nunca
+    vai ao disco. Quem diz se há aparelho é o censo, não o caminho. O ``caminho``
+    de ontem vira o nó do buraco, e a leitura devolve o mesmo caminho.
     """
     antigo = mapa_dela()
     assert all(not f.perto and not f.alto for f in antigo.faces)
-    assert all(p.nos == [] for p in antigo.portas.values())
+    assert antigo.portas["1"].nos == ["usb1-port3"] and antigo.portas["1"].caminho == "1-3"
+    assert antigo.portas["7"].nos == ["usb4-port4"] and antigo.portas["7"].caminho == "4-4"
     assert irmas_de(antigo)["1"] == "2", (
         "o desenho dela responde sem uma linha de campo novo declarada"
     )
