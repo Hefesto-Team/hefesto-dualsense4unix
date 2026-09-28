@@ -30,3 +30,9 @@ seção daqui**: a aba deixou de estar em trabalho.
   continua acendendo o chip no clique: com a busca de pé, o chip de outro
   adaptador treme (a central recusa) e fica aceso até a próxima troca do
   painel.
+
+## 09-sistema.html
+- **28/09/2026** — O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01: a dica do
+  «Corrigir Vulkan» diz o que ele tira do jogo e o preço (sai o «não cura
+  engasgo» de 26/09), e a linha do exame diz o que chega ao jogo. Espera a
+  sessão dos desenhos.

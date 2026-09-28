@@ -198,10 +198,27 @@ def _as_duas_paginas() -> list[Path]:
 
     Os caminhos têm dono (`interface/onde`); a régua mede as duas porque a
     promessa de 25/09 estava nas duas, e curar uma só deixaria a outra viva.
+
+    O PUBLICADO SÓ ENTRA QUANDO A ABA NÃO ESTÁ EM TRABALHO — 28/09/2026. Com a
+    09 declarada em `mockup/DIVERGENCIAS.md`, o publicado está atrás do desenho
+    de propósito (a direção é `mockup/` → produto, decisão dela de 31/08), e a
+    régua mede só a bancada. Quem diz o que está declarado é o dono do contrato
+    (`scripts/check_o_desenho_aprovado.declaradas`), e a régua se rearma sozinha
+    no dia em que a aba for publicada.
     """
+    import importlib.util
+
     from hefesto_dualsense4unix.interface import onde
 
-    return [onde.pagina(PAGINA), onde.pagina(PAGINA, publicado=True)]
+    spec = importlib.util.spec_from_file_location(
+        "check_o_desenho_aprovado", RAIZ / "scripts" / "check_o_desenho_aprovado.py")
+    assert spec is not None and spec.loader is not None
+    portao = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(portao)
+    paginas = [onde.pagina(PAGINA)]
+    if PAGINA not in portao.declaradas():
+        paginas.append(onde.pagina(PAGINA, publicado=True))
+    return paginas
 
 
 def test_a_dica_nao_promete_cura_de_engasgo() -> None:
@@ -209,27 +226,28 @@ def test_a_dica_nao_promete_cura_de_engasgo() -> None:
 
     De 25/09 (`8fe83895b`) a 26/09/2026 a dica dizia *«Tira dos jogos a
     sobreposição Vulkan que engasga a imagem»* — e é falso: o A/B de 23/08
-    mediu a camada desligada PIOR, e o `vulkan-1` do Wine nem a lê
-    (`integrations/camadas_vulkan.py`). O texto honesto já tinha existido
-    (*«Tirar pode não resolver o engasgo»*) e voltou a prometer num redesenho,
-    um dia antes da queixa dela. A régua que guardava o rótulo tinha saído com a
-    janela GTK; esta guarda a dica, que é onde a promessa voltou.
+    mediu a camada desligada PIOR, e o `vulkan-1` do Wine nem a lê. Em 26/09
+    ela passou a dizer que o botão «não cura engasgo», e ela chamou isso de
+    pichação: *«ou seja não resolveu e meteu uma placa falando que não
+    presta.»* <!-- noqa-acento: citação literal dela -->
+
+    **28/09/2026 — O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01** (a decisão
+    dela de 27/09 entra no `docs/data/decisoes-dela.csv` no fecho): o botão tira
+    do jogo as duas camadas da Steam, e a dica diz o ato e o preço, sem falar
+    de engasgo — nem para prometer, nem para negar.
     """
-    decisao = "D-2609-A-DICA-DO-VULKAN-NAO-PROMETE-CURA"  # docs/data/decisoes-dela.csv
     for pagina in _as_duas_paginas():
         linha = next((ln for ln in pagina.read_text(encoding="utf-8").splitlines()
                       if f'data-gesto="{GESTO}"' in ln), "")
         achado = re.search(r'title="([^"]*)"', linha)
         assert achado, f"{pagina.name}: o ligável `{GESTO}` sumiu ou perdeu a dica"
         dica = html.unescape(achado.group(1))
-        assert "não cura engasgo" in dica, (
-            f"{pagina.name}: a dica não diz mais que não cura engasgo ({decisao}): "
-            f"{dica!r}")
-        resto = dica.replace("não cura engasgo", "").lower()
-        for promessa in ("engasg", "picot", "resolv"):
-            assert promessa not in resto, (
-                f"{pagina.name}: a dica voltou a prometer ({promessa!r}, {decisao}): "
-                f"{dica!r}")
+        assert "Steam" in dica and "shaders" in dica, (
+            f"{pagina.name}: a dica não diz o que o botão tira do jogo: {dica!r}")
+        for pichacao in ("engasg", "picot", "resolv", "não cura", "prefixo"):
+            assert pichacao not in dica.lower(), (
+                f"{pagina.name}: a dica fala do que o botão não faz "
+                f"({pichacao!r}): {dica!r}")
 
 
 #: Uma linha do EXAME na marcação do produto (`a09_sistema._linha_do_exame`): o
@@ -240,32 +258,15 @@ _LINHA_DO_EXAME = re.compile(
     r'</span>(?P<selo>[^<]*)</span><span class="txt" title="(?P<frase>[^"]*)">')
 
 
-def _numeros_da_frase(frase: str) -> tuple[int, int, int] | None:
-    """Os três números da linha do Vulkan, lidos na forma do produto."""
-    tirada = re.search(r"tirada em (\d+) jogos?", frase)
-    posta = re.search(r"posta em (\d+)", frase)
-    vistos = re.search(r"(\d+) prefixos vistos", frase)
-    if vistos is None:
-        return None
-    if tirada is None and "nenhuma tirada" not in frase:
-        return None
-    if posta is None and "nenhuma posta" not in frase:
-        return None
-    return (int(tirada.group(1)) if tirada else 0,
-            int(posta.group(1)) if posta else 0,
-            int(vistos.group(1)))
-
-
 def test_o_exame_do_desenho_diz_a_frase_que_o_produto_pinta() -> None:
     """ARRANQUE o `frase_do_estado` do gerador e este teste reprova.
 
     Até 26/09/2026 o desenho trazia *«✓ OK · Nenhuma sobreposição picotando o
     jogo»*: uma linha que a tela viva só mostrava antes da primeira pintura (o
-    exame é repintado com `a09_sistema.linha_da_sobreposicao_vulkan`) e que dava um selo de «tudo
-    bem» a uma causa que o A/B derrubou. A cena tem de mostrar a frase do
-    dono (`camadas_vulkan.frase_do_estado`), com o selo NOTA do produto, e com
-    os números que a pílula da mesma cena diz: acesa se, e só se, há algo
-    tirado — a mesma conta de `a09_sistema.vulkan_corrigido`.
+    exame é repintado com `a09_sistema.linha_da_sobreposicao_vulkan`). A cena
+    tem de mostrar a frase do dono (`camadas_vulkan.frase_do_estado`), com o
+    selo NOTA do produto, e a MESMA escolha que a pílula da cena diz — desde
+    28/09, a que chega ao jogo (`a09_sistema.vulkan_corrigido`).
     """
     from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
 
@@ -287,14 +288,12 @@ def test_o_exame_do_desenho_diz_a_frase_que_o_produto_pinta() -> None:
         assert (m.group("cls"), m.group("selo")) == ("nt", "NOTA"), (
             f"{pagina.name}: a linha do Vulkan tem de levar o selo NOTA do "
             f"produto, e leva {m.group('selo')!r}")
-        numeros = _numeros_da_frase(frase)
-        assert numeros is not None and frase == cv.frase_do_estado(*numeros), (
-            f"{pagina.name}: {frase!r} não é a frase que o produto pinta")
         botao = next(ln for ln in texto.splitlines() if f'data-gesto="{GESTO}"' in ln)
         acesa = 'class="cadeado ligada"' in botao
-        assert acesa == (numeros[0] > 0), (
+        assert frase == cv.frase_do_estado(acesa), (
             f"{pagina.name}: a pílula está {'acesa' if acesa else 'apagada'} e o "
-            f"exame da mesma cena diz {frase!r} — o produto acende pela mesma conta")
+            f"exame da mesma cena diz {frase!r} — o produto pinta "
+            f"{cv.frase_do_estado(acesa)!r}")
 
 
 def test_o_handler_esta_registrado_no_dono_de_hoje() -> None:

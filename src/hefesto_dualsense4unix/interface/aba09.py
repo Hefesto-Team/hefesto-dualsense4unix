@@ -508,14 +508,15 @@ CSS = """
 #: máquina de ninguém: na tela viva quem acende é o produto, a cada tique. O
 #: desenho mostra os dois estados para ela ver a pílula acesa e a apagada.
 #:
-#: A DICA DO «Corrigir Vulkan» NÃO PROMETE CURA — 26/09/2026. De 25/09 até
-#: aqui ela dizia que a sobreposição «engasga a imagem», e é falso: o
-#: `vulkan-1` do Wine devolve zero camadas, o vkd3d-proton chama o
-#: `winevulkan` direto, e o A/B de 23/08 mediu a camada desligada PIOR
-#: (`integrations/camadas_vulkan.py`). O rótulo é dela e fica; trocá-lo é
-#: pergunta da sessão dos desenhos (`docs/data/decisoes-dela.csv`). E «que
-#: cada jogo deixa», não «as sobreposições» secas: a da Steam e as ferramentas
-#: instaladas de propósito FICAM (`camadas_vulkan.CAMADAS_PRESERVADAS`).
+#: A DICA DO «Corrigir Vulkan» DIZ O QUE ELE FAZ E O PREÇO — 28/09/2026,
+#: O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01. Até aqui ela dizia que o botão
+#: tirava as sobreposições do registro do Proton e «não cura engasgo»: a tela
+#: contradizia o próprio botão. Agora ele tira do jogo as duas camadas da
+#: Steam, onde elas carregam (o lançador, `integrations/camadas_vulkan.py`), e
+#: a dica não promete cura: diz o ato e o preço. O preço sai do mecanismo (a
+#: sobreposição da Steam é quem desenha o Shift+Tab num jogo Vulkan; o gravador
+#: guarda os shaders dele), e o ensaio 1 da sprint o confere. O rótulo é dela e
+#: fica; o texto novo vai à sessão dos desenhos.
 LIGAVEIS = (
     ("Iniciar com o sistema", "autostart", "hefesto-autostart", True,
      "Liga o serviço junto com o computador. Clique para trocar."),
@@ -523,9 +524,9 @@ LIGAVEIS = (
      "Mantém os jogos na versão do Proton que faz o controle vibrar e tocar "
      "som. Clique para trocar, com a Steam fechada."),
     ("Corrigir Vulkan", "corrigir-vulkan", "vulkan-corrigido", False,
-     "Tira as sobreposições Vulkan que cada jogo deixa registradas dentro do "
-     "Proton e guarda cópia. Quase nunca muda a imagem, e não cura engasgo. "
-     "Desligar devolve o que foi tirado."),
+     "Tira dos jogos a sobreposição e o gravador de shaders da Steam. Sem "
+     "eles, o Shift+Tab da Steam some e ela não guarda os shaders do jogo. "
+     "Vale no próximo jogo que abrir."),
 )
 
 
@@ -649,17 +650,11 @@ STATUS = [
 # A LINHA DO VULKAN É A QUE O PRODUTO PINTA — 26/09/2026. Aqui morava «✓ OK ·
 # Nenhuma sobreposição picotando o jogo»: a tela viva só a mostrava antes da
 # primeira pintura (o exame é repintado) e ela prometia o que o A/B de 23/08
-# derrubou. A frase vem do
-# dono, com o selo NOTA do produto, e fica por último, onde o produto a
-# acrescenta. Os números seguem a pílula da cena: apagada é nada tirado e um
-# jogo com o que tirar, que é o estado em que o clique age.
+# derrubou. A frase vem do dono, com o selo NOTA do produto, e fica por último,
+# onde o produto a acrescenta. Desde 28/09 ela diz o que chega ao jogo, e segue
+# a pílula da cena.
 _VULKAN_ACESO = next(lig for _r, g, _c, lig, _d in LIGAVEIS if g == "corrigir-vulkan")
-PREFIXOS_DA_CENA = 33
-FRASE_DO_VULKAN = _frase_do_vulkan(
-    tiradas=1 if _VULKAN_ACESO else 0,
-    postas=0 if _VULKAN_ACESO else 1,
-    prefixos=PREFIXOS_DA_CENA,
-)
+FRASE_DO_VULKAN = _frase_do_vulkan(_VULKAN_ACESO)
 ACHADOS = [
     linha("OK", "ok", "✓", "Regra de permissão dos controles instalada",
           title="Regra de permissão dos controles instalada"),
