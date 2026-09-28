@@ -68,43 +68,6 @@ from . import Contexto, gesto, perfil
 
 PAGINA = "*"
 
-#: O QUE O VIVO PODE PÔR POR CIMA DO DISCO, POR ABA — O-SALVAR-DA-VIBRACAO-01,
-#: 26/09/2026. Medido no disco dela: às 18:38:37 o «Salvar Perfil» clicado na
-#: aba VIBRAÇÃO ligou o microfone do …:03 no PRAGMATA (`mic.muted` de true
-#: para false) e apagou a `fonte` do alto-falante dele. O Salvar é um gesto só
-#: para as dez abas, e punha o vivo por cima de TODAS as seções — o microfone
-#: que o aparelho tinha ligado virou a escolha dela.
-#:
-#: A REGRA: salvar numa aba não altera campo de seção de outra aba. O vivo só
-#: sobrepõe as seções que a aba do clique mostra e mexe; o resto sai do disco
-#: como estava. A premissa de 01/09 (*"carregar só do disco faria o Salvar
-#: gravar o que JÁ ESTAVA LÁ"*) caducou com a D2 de 05/09: cada gesto de seção
-#: grava no clique — a cor da 04 (`_guardar_a_cor_no_perfil`, desde 09/09), o
-#: som da 02 (`_lembrar_do_som`), a força da 05, a velocidade da 06 e o sensor
-#: pelo daemon. O que o vivo traz de diferente do disco hoje é, em regra,
-#: estado que não foi ato dela, e ele fica restrito à aba em que ela está.
-#:
-#: Aba fora da tabela não é dona de seção viva, e o clique que não diz de que
-#: aba veio também não: o Salvar delas grava o perfil do disco (e a carona).
-#: Decisão `D-2609-O-SALVAR-GRAVA-A-SECAO-DA-ABA`.
-SECOES_DO_VIVO: dict[str, frozenset[str]] = {
-    "02-controles.html": frozenset({"speaker", "mic", "sensores"}),
-    "04-iluminacao.html": frozenset({"leds"}),
-    "05-vibracao.html": frozenset({"rumble"}),
-    "06-navegacao.html": frozenset({"mouse"}),
-}
-
-#: TODAS as seções que a sobreposição sabe ler do vivo. É o padrão de
-#: :func:`_draft_do_ativo` para quem mede a sobreposição peça por peça; os dois
-#: gestos que gravam (o Salvar e o editor da aba Perfis) dizem a sua.
-TODAS_AS_SECOES_DO_VIVO: frozenset[str] = frozenset().union(*SECOES_DO_VIVO.values())
-
-
-def secoes_do_vivo(aba: str) -> frozenset[str]:
-    """As seções que o vivo sobrepõe no Salvar clicado na ``aba`` (o arquivo dela)."""
-    return SECOES_DO_VIVO.get(str(aba or ""), frozenset())
-
-
 def _recado(frase: str) -> None:
     """A notícia da carona vai ao DIÁRIO da janela — e não mais à tela.
 
@@ -130,49 +93,20 @@ def _recado(frase: str) -> None:
         print(f"[relato] rodapé · carona: {frase}", file=sys.stderr)
 
 
-def _draft_do_ativo(nome: str, ctx: Contexto | None = None,
-                    secoes: frozenset[str] = TODAS_AS_SECOES_DO_VIVO) -> Any:
-    """O `DraftConfig` do perfil ativo, com o que está VALENDO por cima.
+def _draft_do_ativo(nome: str) -> Any:
+    """O `DraftConfig` do perfil `nome`, lido do disco e só dele.
 
-    **SÓ NAS `secoes` PEDIDAS — O-SALVAR-DA-VIBRACAO-01, 26/09/2026.** Quem
-    grava diz quais seções o vivo pode sobrepor (ver `SECOES_DO_VIVO`); as
-    outras saem do disco como estavam. O padrão (todas) é o de quem mede a
-    sobreposição peça por peça; os dois gestos que gravam pedem as suas.
+    É o rascunho que o «Aplicar» manda aos controles e o que o «Salvar»
+    regrava normalizado, em qualquer aba. O perfil no disco é o único dono do
+    valor; o aparelho é a projeção dele. O estado vivo tem três fontes que não
+    são escolha dela (a ativação que não aplica todo campo, as camadas como a
+    economia, e o próprio controle, como o botão do microfone), e ler o vivo
+    fazia dessas três a escolha dela. Cada escolha dela vai ao disco no gesto
+    que a fez (`tests/unit/test_todo_gesto_que_muda_escolha_grava.py`).
+    Decisão `D-2709-O-SALVAR-LE-O-PERFIL`.
 
-    O DRAFT É DO PRODUTO e não se reescreve: `app/draft_config.DraftConfig` é
-    pydantic puro (zero GTK), com `from_profile`, `to_ipc_dict` e `to_profile`.
-    É o mesmo objeto que o rodapé da janela estável monta.
-
-    O QUE MUDA AQUI É DE ONDE VEM O CONTEÚDO, e a razão é a decisão dela de
-    01/09: **a interface nova é de ação imediata** — clicar num tom já pinta o
-    controle, sem passar por rascunho. A janela estável guarda um `self.draft`
-    em memória e o atualiza a cada widget mexido; aqui não há esse draft, e
-    carregar só do disco faria o "Salvar" gravar o que JÁ ESTAVA LÁ.
-
-    MEDIDO em 01/09/2026, e por isso esta função existe assim: com a luz do P1
-    em `[255, 0, 255]` (clicada) e o perfil no disco dizendo `[0, 255, 128]`, um
-    "Salvar" que só lesse o disco gravaria o verde — **perdendo a mudança
-    dela**, calado.
-
-    O QUE O DAEMON PUBLICA VENCE O DISCO — **HOJE, UMA COISA SÓ: a cor da
-    barra.** Estas linhas prometiam seis (cor, política de vibração,
-    passthrough, velocidade do mouse, mudo do microfone, volume do
-    alto-falante) e o laço abaixo chama um método só, `with_controller_leds`.
-    Medido em 05/09/2026: as outras cinco vinham todas do DISCO, e cinco das
-    seis frases eram falsas. **Fato errado se substitui** — a frase agora
-    descreve o que o código faz, e o que falta virou fila com endereço, não
-    promessa em docstring.
-
-    A FILA, para quem for fechar: `speaker`, `audio.mic_mudo` e `sensores`
-    por controle, e `rumble_policy`/`passthrough` e `mouse_emulation`
-    globais, o daemon PUBLICA — só ninguém lê aqui. Antes disso, o
-    `DraftConfig` precisa de `with_controller_mic` e
-    `with_controller_sensores`, que são as duas únicas das seis seções do
-    esquema que ele ainda não sabe escrever.
-
-    O QUE ELE NÃO PUBLICA fica do perfil — e o caso é os GATILHOS: o DualSense
-    não devolve o modo em que está (é comando de ida), como o
-    `a03_gatilhos.py` mede pela outra ponta.
+    `None` quando não há nome ou o perfil não se lê: cada gesto recusa
+    dizendo o que fazer.
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.app.draft_config import DraftConfig
@@ -181,331 +115,9 @@ def _draft_do_ativo(nome: str, ctx: Contexto | None = None,
     if not nome:
         return None
     try:
-        draft = DraftConfig.from_profile(load_profile(nome))
+        return DraftConfig.from_profile(load_profile(nome))
     except Exception:
         return None
-    if ctx is None or not secoes:
-        return draft
-
-    luz = _a_luz_daquela_peca(nome, ctx) if "leds" in secoes else None
-    for c in ctx.conectados:
-        uniq = str(c.get("uniq") or "")
-        if not uniq:
-            continue
-        if luz is not None:
-            draft = luz(draft, c, uniq)
-        draft = _o_som_daquela_peca(draft, c, uniq, secoes)
-        if "sensores" in secoes:
-            draft = _os_sensores_daquela_peca(draft, c, uniq)
-    return _o_que_e_da_mesa_inteira(draft, ctx, secoes)
-
-
-def _a_luz_daquela_peca(nome: str, ctx: Contexto) -> Any:
-    """``(draft, c, uniq) -> draft``: a cor acesa DAQUELE controle no rascunho.
-
-    Uma fábrica, e não a função direta, porque o perfil cru e a economia se
-    leem UMA vez por Salvar, e não uma vez por controle. Saiu do laço de
-    `_draft_do_ativo` em 26/09/2026 (O-SALVAR-DA-VIBRACAO-01): a luz é a seção
-    da aba 04, e o `continue` da barra apagada pulava junto o som e os
-    sensores da peça.
-    """
-    from hefesto_dualsense4unix.app.draft_config import LedsDraft
-
-    # QUEM DECIDE SE HÁ COR A GRAVAR É O DONO DA LEITURA, e não este pacote.
-    # `rotulo_lightbar` devolve a cor BASE como `None` exatamente nos dois
-    # estados em que não há cor a afirmar — "cor desconhecida" e "apagada" —, e
-    # é a mesma função que o cartão da GUI estável usa. Reler os campos crus
-    # aqui seria uma segunda verdade, e a aba 04 já pagou por essa: o
-    # `c.get("lightbar_on", True)` que estava lá tinha o padrão INVERTIDO e
-    # AFIRMAVA aceso na ausência do campo, que é o estado de partida de um
-    # controle no rádio.
-    from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
-    from hefesto_dualsense4unix.core.led_control import LedSettings
-
-    from .a04_iluminacao import brilho_aceso
-    from .a04_iluminacao import cor_escolhida as a_cor_pedida
-
-    #: O PERFIL CRU, para o brilho de cada controle — lido UMA vez e pelo dono
-    #: da conta (`a04_iluminacao.brilho_aceso`), o mesmo que a coluna da aba 04
-    #: imprime e com que o trilho escala: o do daemon vivo, e o do disco só
-    #: quando ele não diz (A-04-PERGUNTA-AO-DAEMON-VIVO-01).
-    cru = perfil.ativo(nome)
-    na_economia = _quem_esta_em_economia()
-
-    def luz(draft: Any, c: dict[str, Any], uniq: str) -> Any:
-        # A BARRA APAGADA NÃO É UMA COR PRETA, e a diferença custa o trabalho
-        # dela. O `LedsDraft` não tem campo de aceso/apagado — só `lightbar_rgb`
-        # —, então gravar o `(0,0,0)` de uma barra desligada não guarda "estava
-        # apagada": guarda PRETO por cima da cor que ela escolheu, e não há como
-        # voltar. Medido em 03/09/2026 e nomeado pelo juiz da leva como o achado
-        # mais grave do dia: desligar a barra e salvar apagava a escolha dela,
-        # em silêncio, para sempre.
-        #
-        # O QUE ESTÁ NO DISCO É A COR PARA QUANDO ACENDER, e é isso que o
-        # esquema sabe dizer. Com a barra apagada, o certo é não mexer nela.
-        _recado, base = rotulo_lightbar(c, ctx.state)
-        rgb = list(base) if base is not None else []
-        if len(rgb) < 3:
-            return draft
-        # A COR ACESA É PÓS-BRILHO, E O DISCO GUARDA A PEDIDA — 25/09/2026,
-        # A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01. O `lightbar_rgb` do daemon já
-        # vem escalado (D8), e gravá-lo como a cor do controle, ao lado do
-        # brilho dele, fazia o brilho entrar DUAS vezes na aplicação seguinte.
-        # Medido na mesa de quatro real: o P1 a 60% acendia `#000099`, o Salvar
-        # gravava `#000099` como a cor escolhida, e o trilho seguinte a 40%
-        # acendia `#00003D`; cada Salvar e troca de perfil escurecia mais. Quem
-        # desfaz a escala é o dono da inversão (`a04_iluminacao.cor_escolhida`,
-        # o mesmo da caixa `#RRGGBB`), e a luz que não inverte em tom nenhum
-        # volta inteira, como antes: a cor viva continua vencendo o disco.
-        #
-        # ANTES DA INVERSÃO, A COR DO DISCO: ela só conhece os catorze tons da
-        # casa, e o global dela (`#2850B4`), sem a paleta, acende fora deles. A
-        # cor que o disco já dá a este controle (a dele, ou o global que ele
-        # herda) é a pedida quando ela, no brilho dele, é EXATAMENTE a luz —
-        # a conta prova, e nada se adivinha.
-        acesa = (int(rgb[0]), int(rgb[1]), int(rgb[2]))
-        #: O BRILHO DA LUZ É O QUE O DAEMON A ACENDEU — 25/09/2026,
-        #: A-04-PERGUNTA-AO-DAEMON-VIVO-01. O do disco é o do perfil ATIVO, e a
-        #: camada da usuária atravessa a troca automática: o P1 a 60% que
-        #: atravessou o autoswitch para um perfil a 82% não se invertia em tom
-        #: nenhum, e o Salvar gravava a luz escura como a cor dela.
-        brilho = brilho_aceso(c, cru, uniq)
-        do_disco = draft.effective_leds_for(uniq).lightbar_rgb
-        if (brilho is not None and do_disco is not None
-                and LedSettings(lightbar=do_disco).apply_brightness(brilho).lightbar
-                == acesa):
-            rgb = list(do_disco)
-        else:
-            rgb = list(a_cor_pedida(acesa, brilho))
-        # A COR VIVA VIRA OVERRIDE DAQUELE CONTROLE, e não a cor global: cada
-        # controle tem a sua, e é assim que o perfil já guarda (o
-        # `ControllerOverrides.leds` do schema existe desde antes desta aba).
-        # O BRILHO E AS LÂMPADAS SÃO DAQUELE CONTROLE, NÃO DO GLOBAL — e esta
-        # linha nasceu de perda de dado medida em 05/09/2026: com a aba 04
-        # tendo gravado brilho 0,25 e as lâmpadas 1 e 2 do P1 no disco, um
-        # "Salvar" do rodapé regravava 1,0 e as cinco apagadas, porque este
-        # bloco lia `draft.leds.*` — a seção GLOBAL — para montar o override
-        # DELE. Só a cor vinha do controle certo; os outros dois campos vinham
-        # do vizinho errado e atropelavam o que a aba tinha acabado de gravar.
-        #
-        # O leitor certo já existia e é público: `effective_leds_for(uniq)`
-        # faz o merge POR CAMPO guiado pelo `model_fields_set` — override
-        # presente vence, campo não escrito herda o global. É exatamente o que
-        # este ponto precisa, e o rodapé simplesmente não o chamava.
-        #
-        # A MESMA COR REGRAVADA GUARDA O NÚMERO para o qual foi escolhida
-        # (`lightbar_para_o_numero`), e quem cuida disso é o próprio
-        # `with_controller_leds` desde a O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01.
-        efetivo = draft.effective_leds_for(uniq)
-        return draft.with_controller_leds(uniq, LedsDraft(
-            # AS FORMAS SÃO FIXAS NO SCHEMA — três canais de cor e cinco
-            # lâmpadas —, e o `LedsDraft` as declara assim. Um `tuple(...)`
-            # genérico ou uma `list` perdem esse tamanho, e o produto passa a
-            # aceitar quatro cores sem ninguém ver.
-            lightbar_rgb=(int(rgb[0]), int(rgb[1]), int(rgb[2])),
-            # O BRILHO VAI JUNTO COM A COR QUE ELE INVERTEU: o Salvar grava o
-            # que está aceso, e a cor pedida sem o brilho dela acenderia, no
-            # perfil reaplicado, outra luz que a que ela via ao salvar. SALVO
-            # NA ECONOMIA: ali o aceso é o TETO, e o dela é o do disco.
-            lightbar_brightness=(efetivo.lightbar_brightness
-                                 if brilho is None or na_economia(uniq)
-                                 else round(brilho * 100)),
-            player_leds=(efetivo.player_leds[0], efetivo.player_leds[1],
-                         efetivo.player_leds[2], efetivo.player_leds[3],
-                         efetivo.player_leds[4]),
-            # SE ELA ESCOLHEU UMA COR, a automática não pode voltar por cima —
-            # senão salvar a escolha dela a apagaria no próximo Aplicar.
-            auto_player_colors=False,
-        ))
-
-    return luz
-
-
-def _quem_esta_em_economia() -> Any:
-    """``uniq -> bool``: a economia vale neste controle AGORA?
-
-    O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01, 26/09/2026. Medido na mesa de
-    quatro: com a economia ligada no P2, o «Salvar» lia o brilho aceso dele —
-    os 30% do teto — e o gravava no disco como a escolha dela; desligada a
-    economia, o P2 seguia a 30% para sempre. Na «Bateria longa», o mesmo em
-    todos os controles.
-
-    A PERGUNTA VAI AO DONO DA ECONOMIA, e nada dela se reescreve aqui: a
-    declaração da mesa que o gesto `economia-do-controle` grava
-    (`maquina.json`), lida por `schema.economia_da_declaracao`, e a regra entre
-    a mesa e o controle, `schema.economia_vale` — as mesmas que a ativação lê.
-    Declaração ilegível é «ninguém em economia», o comportamento de antes.
-    """
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.profiles.schema import economia_da_declaracao, economia_vale
-    from hefesto_dualsense4unix.utils.maquina import carregar_maquina
-
-    from .a04_iluminacao import chave_do_override
-
-    try:
-        mesa, ligados = economia_da_declaracao(carregar_maquina())
-    except Exception:
-        mesa, ligados = False, frozenset()
-    return lambda uniq: economia_vale(chave_do_override(uniq) in ligados, mesa)
-
-
-def _o_som_daquela_peca(draft: Any, c: dict[str, Any], uniq: str,
-                        secoes: frozenset[str] = TODAS_AS_SECOES_DO_VIVO) -> Any:
-    """O alto-falante e o microfone DAQUELE controle, do vivo para o rascunho.
-
-    Cada um só quando a sua seção está em `secoes` — são duas seções do
-    perfil, e o Salvar de uma aba que não é a 02 não mexe em nenhuma
-    (O-SALVAR-DA-VIBRACAO-01).
-
-    O daemon publica os dois por peça — ``c["speaker"]`` com ``volume``/
-    ``muted`` e ``c["audio"]`` com ``mic_mudo``/``volume_captura``. Até
-    05/09/2026 ninguém lia nenhum dos dois aqui, e o Salvar reemitia o disco:
-    ela mexia no volume do microfone do P2, salvava, e o número voltava ao de
-    ontem sem uma palavra.
-
-    OS DOIS ESCRITORES LIMPAM SOZINHOS quando o valor iguala o global — é a
-    regra COR-04, e é ela que impede o perfil de encher de override que só
-    repete o que já valia. Por isso não há um `if` de igualdade aqui: quem sabe
-    comparar é o `DraftConfig`, e uma segunda cópia dessa regra é como duas
-    telas passam a discordar.
-    """
-    som = c.get("speaker")
-    if ("speaker" in secoes and isinstance(som, dict)
-            and som.get("volume") is not None):
-        # O VIVO TROCA SÓ O QUE ELE LÊ, E A BASE É O EFETIVO DA PEÇA —
-        # 26/09/2026, O-SALVAR-DA-VIBRACAO-01. Aqui se montava um
-        # `SpeakerDraft(volume, muted, rota)` nu, e o `with_controller_speaker`
-        # substitui a seção inteira: a rota era herdada à mão, a `fonte` (que
-        # entrou no draft em 10/09) não, e o Salvar das 18:38:37 apagou a
-        # `fonte: sfx` do …:03 dela. Partir do efetivo guarda a rota, a fonte e
-        # o campo que vier depois, sem uma lista a esquecer.
-        draft = draft.with_controller_speaker(
-            uniq, draft.effective_speaker_for(uniq).model_copy(update={
-                "volume": int(som["volume"]),
-                "muted": bool(som.get("muted", False)),
-            }))
-
-    audio = c.get("audio")
-    if "mic" in secoes and isinstance(audio, dict):
-        mudo = audio.get("mic_mudo")
-        captura = audio.get("volume_captura")
-        # O MESMO MOLDE DO ALTO-FALANTE, e ele faltava aqui — conferência da
-        # O-SALVAR-DA-VIBRACAO-01, 26/09/2026. O `MicDraft(muted, volume)` nu
-        # ia ao `with_controller_mic`, que substitui a seção da peça: o `gain`
-        # (que o daemon não publica) sumia em todo Salvar da 02, e o `volume`
-        # sumia quando o canal ainda não tinha resposta. A base é o efetivo
-        # da peça, e o vivo troca só o que ele leu.
-        lido: dict[str, Any] = {}
-        if mudo is not None:
-            lido["muted"] = bool(mudo)
-        if captura is not None:
-            lido["volume"] = int(captura)
-        if lido:
-            draft = draft.with_controller_mic(
-                uniq, draft.effective_mic_for(uniq).model_copy(update=lido))
-    return draft
-
-
-def _os_sensores_daquela_peca(draft: Any, c: dict[str, Any], uniq: str) -> Any:
-    """Giroscópio e acelerômetro DAQUELE controle — e só quando DESLIGADOS.
-
-    **A ASSIMETRIA É O PONTO, e ela vem de duas decisões dela.**
-    ``D-AUDIO-E-GIRO-NASCEM-LIGADOS`` (25/08/2026) diz que o sensor nasce
-    ligado em todo jogo, e o esquema escreve isso como *sem opinião* — campo
-    ``None``. Gravar `True` porque o sensor está ligado AGORA transformaria
-    "não pedi nada" em "pedi ligado", e todo perfil salvo passaria a impor os
-    sensores a todo jogo — exatamente o contrário do que ela pediu.
-
-    Desligado é diferente: **nunca é o default**, então só pode ter vindo de
-    um ato dela. Esse, sim, o perfil guarda. É a decisão D1 de 05/09 aplicada
-    a um caso em que o produto não tem flag `dirty` para consultar: o próprio
-    valor carrega o carimbo.
-    """
-    sens = c.get("sensores")
-    if not isinstance(sens, dict):
-        return draft
-    giro = sens.get("giroscopio_ligado")
-    acel = sens.get("acelerometro_ligado")
-    return draft.with_controller_sensores(
-        uniq,
-        giroscopio=False if giro is False else None,
-        acelerometro=False if acel is False else None,
-    )
-
-
-def _o_que_e_da_mesa_inteira(draft: Any, ctx: Contexto,
-                             secoes: frozenset[str] = TODAS_AS_SECOES_DO_VIVO) -> Any:
-    """O que o daemon publica UMA vez para a máquina toda.
-
-    A vibração é da aba 05 e o mouse da aba 06, e cada um só entra quando a
-    sua seção está em `secoes` (O-SALVAR-DA-VIBRACAO-01).
-
-    SÃO GLOBAIS POR MEDIÇÃO, não por preguiça — decisão D3 de 05/09/2026: o
-    `Daemon` tem UM `_mouse_device` e UM `_keyboard_device`, alimentados por um
-    `read_state()` por tique, e o input vem sempre do controle PRIMÁRIO.
-    Guardar por controle antes de o caminho de entrada existir é o que a régua
-    `test_perfil_por_controle_o_campo_espera_o_caminho.py` proíbe: *campo que
-    grava e ninguém lê faz a tela prometer*.
-
-    O `dirty=True` do mouse não é ornamento: `to_profile` só emite a seção
-    `mouse` com `dirty` ou `in_profile`, e sem ele a velocidade que ela acabou
-    de mexer na aba 06 sai do Salvar como se nunca tivesse existido.
-    """
-    from hefesto_dualsense4unix.app.draft_config import MouseDraft
-
-    estado = getattr(ctx, "state", None)
-    if not isinstance(estado, dict):
-        return draft
-
-    if "rumble" in secoes:
-        politica = estado.get("rumble_policy")
-        passthrough = estado.get("rumble_passthrough")
-        mult = estado.get("rumble_policy_custom_mult")
-        mudancas: dict[str, Any] = {}
-        if politica is not None:
-            mudancas["policy"] = str(politica)
-        if passthrough is not None:
-            mudancas["passthrough"] = bool(passthrough)
-        # O TETO SÓ EXISTE SOB "custom", E O DAEMON PUBLICA OS DOIS SEMPRE.
-        #
-        # ACHADO ABRINDO A TELA E CLICANDO, em 06/09/2026, com o daemon dela vivo:
-        # o «Salvar Perfil» do rodapé **recusava** com
-        #
-        #     1 validation error for RumbleConfig
-        #       custom_mult só é válido com policy='custom' (policy='balanceado')
-        #
-        # e o perfil dela não era gravado — nem a cor, nem o som, nem os sensores,
-        # nem o mouse. O `rumble_policy_custom_mult` do daemon é uma MEMÓRIA (o teto
-        # que ela usou quando o degrau era "custom") e continua publicado depois de
-        # o degrau mudar; estas linhas copiavam os dois SOLTOS, e o esquema recusa o
-        # par — com razão: *"o valor seria silenciosamente ignorado pelo daemon"*.
-        #
-        # A DONA DO PAR É A ABA VIBRAÇÃO, e ela já os escreve JUNTOS
-        # (`a05_vibracao.py:1287`). Aqui a regra é a mesma, lida em vez de digitada:
-        # o teto acompanha a política que VAI VALER, e some quando ela não é
-        # "custom" — inclusive o teto que veio do DISCO, que é a metade que ler só o
-        # daemon deixaria viva.
-        politica_final = mudancas.get("policy", draft.rumble.policy)
-        teto = draft.rumble.custom_mult if mult is None else float(mult)
-        if politica_final != "custom":
-            teto = None
-        if teto != draft.rumble.custom_mult:
-            mudancas["custom_mult"] = teto
-        if mudancas:
-            draft = draft.model_copy(
-                update={"rumble": draft.rumble.model_copy(update=mudancas)})
-
-    if "mouse" in secoes:
-        rato = estado.get("mouse_emulation")
-        if isinstance(rato, dict) and rato.get("speed") is not None:
-            draft = draft.model_copy(update={"mouse": MouseDraft(
-                enabled=bool(rato.get("enabled", False)),
-                speed=int(rato["speed"]),
-                scroll_speed=int(rato.get("scroll_speed", 1)),
-                dirty=True,
-                in_profile=draft.mouse.in_profile,
-            )})
-    return draft
 
 
 # OS TRÊS GESTOS DESTE RODAPÉ PERGUNTAM O PERFIL A `perfil_do_rodape`, e nenhum
@@ -531,8 +143,9 @@ def _o_que_e_da_mesa_inteira(draft: Any, ctx: Contexto,
 def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O botão verde. Manda o perfil ativo aos controles, sem gravar.
 
-    `profile.apply_draft` é o método, e o payload é o `to_ipc_dict()` do draft —
-    o MESMO caminho do `footer_actions.on_apply_draft`. Nada aqui monta payload.
+    `profile.apply_draft` é o método, e o payload é o `to_ipc_dict()` do
+    rascunho que :func:`_draft_do_ativo` lê do disco: o MESMO que o «Salvar»
+    regrava, em qualquer aba. Nada aqui monta payload nem lê o aparelho.
 
     O QUE ESTA VERSÃO AINDA NÃO FAZ, e é honesto dizer: o "depois" (modo e
     máscara) da janela estável vem de uma escolha PENDENTE da aba Início, que a
@@ -568,39 +181,30 @@ def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("*", "salvar", grava="save_profile")
 def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Grava o que está valendo no perfil ATIVO, no disco dela.
+    """Regrava o perfil ATIVO como o disco o tem, normalizado, e roda a carona.
 
-    A JANELA ESTÁVEL PERGUNTA O NOME — `on_save_profile` abre um diálogo. Aqui
-    ela grava no perfil ativo, sem perguntar, e a razão é a decisão dela de
-    01/09: a interface nova é de AÇÃO IMEDIATA. Salvar com outro nome é o
-    "Duplicar" da aba Perfis, que é outro botão.
+    O MESMO RASCUNHO DO «APLICAR», EM TODA ABA (:func:`_draft_do_ativo`), e
+    nunca o aparelho: cada escolha dela já foi ao disco no gesto que a fez
+    (decisão D2 de 05/09). O que sobra ao Salvar é a rede de segurança dessa
+    decisão: validar, migrar e escrever o arquivo na forma de hoje. Salvar duas
+    vezes grava o mesmo arquivo. Decisão `D-2709-O-SALVAR-LE-O-PERFIL`.
 
-    ESCREVE NO DISCO DELA. É o único gesto desta leva que escreve, e por isso
-    ele exige perfil ativo em vez de escolher um: gravar no perfil errado é o
-    tipo de estrago que não se desfaz por engano.
+    A JANELA ESTÁVEL PERGUNTA O NOME; aqui ele grava no perfil ativo, sem
+    perguntar (a interface nova é de ação imediata, decisão dela de 01/09).
+    Salvar com outro nome é o "Duplicar" da aba Perfis.
 
-    SEM PERFIL ATIVO, GRAVA NO «FREESTYLE» — O-MODO-FREESTYLE-02, 24/09/2026.
-    Não é escolher um: nenhum perfil valendo quer dizer a sessão vazia e o
-    daemon calado, e é o Freestyle que o boot restaura nesse caso
+    SEM PERFIL ATIVO, GRAVA NO «FREESTYLE», o que o boot restaura
     (:func:`perfil_do_rodape`). A recusa fica para a máquina sem ele no disco.
-
-    GRAVA A SEÇÃO DA ABA EM QUE FOI CLICADO — O-SALVAR-DA-VIBRACAO-01,
-    26/09/2026. O vivo só vai por cima do disco nas seções da aba do clique
-    (`SECOES_DO_VIVO`, pela aba que todo clique carrega); o resto do perfil
-    sai como estava. O Salvar da Vibração ligava o microfone dela.
     """
     nome = perfil_do_rodape(ctx.state)
-    # O `ctx` VAI JUNTO: é o que faz o Salvar gravar o que ESTÁ VALENDO, e não
-    # o que já estava no disco — nas seções da aba de onde veio o clique.
-    aba = str(o.get("pagina") or "")  # (noqa-acento: chave do clique)
-    draft = _draft_do_ativo(nome, ctx, secoes_do_vivo(aba))
+    draft = _draft_do_ativo(nome)
     if draft is None:
         raise ValueError("salvar: não há perfil ativo. Escolha um na aba Perfis.")
     perfil._com_o_src()
-    from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+    from hefesto_dualsense4unix.profiles.loader import save_profile
 
-    atual = load_profile(nome)
-    save_profile(draft.to_profile(nome, priority=atual.priority),
+    # A PRIORIDADE É A QUE O DISCO JÁ TINHA, e viaja no próprio rascunho.
+    save_profile(draft.to_profile(nome, priority=draft.source_priority),
                  origem="interface-nova")
     _recado(perfil.com_a_carona())
     return None

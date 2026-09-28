@@ -4740,7 +4740,7 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
 #    têm ZERO ocorrências em `src/`. Repor a peça 2 seria repor as quatro.
 #  * A PREMISSA DELA FOI DECIDIDA CONTRA. A interface nova é de ação imediata
 #    (decisão dela, 01/09) e não guarda `self.draft` nenhum: quem lê o perfil
-#    ativo lá é `interface/pacotes/rodape.py:91`, que monta o `DraftConfig` na
+#    ativo lá é `rodape._draft_do_ativo`, que monta o `DraftConfig` do disco na
 #    hora. Reconstruir aqui a arquitetura da janela seria reescrita de memória —
 #    justamente o que a volta da peça 1 evitou ao ser fiel ao original.
 #

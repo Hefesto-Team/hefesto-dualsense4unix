@@ -2202,8 +2202,7 @@ def _secao_do_mouse(prof: Any, ctx: Contexto, campos: dict[str, Any]) -> Any:
     que já diz exatamente isto (gravar de novo seria escrever o mesmo arquivo a
     cada passagem do arraste), e o daemon que ainda não falou.
 
-    A SEÇÃO NASCE COM O QUE ESTÁ VALENDO quando o perfil não a tinha, e é a
-    mesma escolha do rodapé (`rodape._o_que_e_da_mesa_inteira`): `enabled` é
+    A SEÇÃO NASCE COM O QUE ESTÁ VALENDO quando o perfil não a tinha: `enabled` é
     campo OBRIGATÓRIO do `ProfileMouseConfig`, então uma seção que nasce por um
     arraste de velocidade precisa dizer alguma coisa sobre o liga/desliga — e a
     única coisa verdadeira que existe é o estado vivo. Inventar `False` faria o
