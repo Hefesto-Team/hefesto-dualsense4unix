@@ -167,8 +167,16 @@ def test_o_visor_recusa_em_vez_de_abrir_escondido() -> None:
     visor voltar a abrir janela, e essa é decisão dela, não consequência de uma
     régua. O que esta régua garante é que, no dia em que a guarda voltar, a
     trava já esteja de pé.
+
+    SEM O GTK REAL, PULA — 27/09/2026. `ver.py` importa o `gi` no topo (é um
+    visor GTK com `WebView`), e no `lint-test` do CI o filho morria no import
+    com `rc=1` antes de chegar à trava: a régua dizia "ele abriu" sobre um
+    visor que nem nasceu. O repasse devolve a falta ao pai, e a regra do
+    `tests/conftest.py` pula com o motivo; no `gtk-real` a trava é medida.
     """
     import os
+
+    from tests.conftest import repassar_a_falta_do_gtk
 
     ambiente = dict(os.environ)
     ambiente["HEFESTO_SEM_JANELA"] = "1"
@@ -189,6 +197,7 @@ def test_o_visor_recusa_em_vez_de_abrir_escondido() -> None:
         env=ambiente,
     )
 
+    repassar_a_falta_do_gtk(proc)
     assert proc.returncode == 2, (
         "o visor NÃO recusou com a variável no ar — ele abriu (ou morreu por "
         f"outro motivo). Saída: {proc.stderr[-400:]!r}"
