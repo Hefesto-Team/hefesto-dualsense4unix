@@ -1138,3 +1138,60 @@ def test_a_sessao_observa_a_janela_e_ve_o_panico_que_chega_nela(
     (linha,) = da_linha(saida, "o compositor")
     assert linha["veredito"] == ob.VERMELHO, linha
     assert "1 pânico" in linha["porque"]
+
+
+def _rodar_a_troca(ob: ModuleType, tmp_path: Path, bancada: str | None) -> tuple[int, Path, Any]:
+    estado = estado_da_mesa(caminho="xbox", backend="uinput")
+    ensaios = {"quem_e_quem.py": quem_e_quem_json(ob, estado)}
+    if bancada is not None:
+        ensaios["bancada.sh"] = bancada
+    maquina = fazer_maquina(ob, estado, tmp_path / "config", dispositivos=pads_uinput_xbox(ob),
+                            ensaios=ensaios)
+    saida = tmp_path / "saida"
+    rc = ob.executar(["--saida", str(saida), "eixos", "--trocar-modo", "dualsense"], maquina)
+    return rc, saida, maquina
+
+
+def test_a_troca_de_modo_reserva_a_bancada_antes_de_escrever(
+    ob: ModuleType, tmp_path: Path
+) -> None:
+    """A troca escreve na sessão do daemon e recria os pads: é escrita (01 §3.2).
+
+    Com a bancada tomada (o ``exigir`` sai rc=1), nada é escrito e a corrida
+    é recusada. Mordida: tirar o ``reservar_a_bancada`` da troca — o
+    ``gamepad.emulation.set`` sai com a bancada de outro.
+    """
+    rc, saida, maquina = _rodar_a_troca(ob, tmp_path / "tomada", bancada=None)
+    assert rc == ob.RC_RECUSADO
+    assert any("bancada" in r for r in resumo(saida)["recusas"])
+    assert [m for m, _p in maquina.chamados if m == "gamepad.emulation.set"] == []
+
+    _rc, saida, maquina = _rodar_a_troca(ob, tmp_path / "livre", bancada="")
+    rodados = [Path(a[1]).name + " " + a[2] for a in maquina.rodados if len(a) > 2]
+    assert "bancada.sh exigir" in rodados and "bancada.sh liberar" in rodados
+    assert [m for m, _p in maquina.chamados if m == "gamepad.emulation.set"]
+    # O quem_e_quem roda antes e depois da troca, e cada corrida guarda o seu arquivo.
+    (sessao,) = sessoes(saida)
+    assert (sessao / "ensaios" / "quem_e_quem.txt").is_file()
+    assert (sessao / "ensaios" / "quem_e_quem-2.txt").is_file()
+
+
+def test_o_reinicio_assenta_quando_a_mesa_do_comeco_volta_em_todo_modo(
+    ob: ModuleType, tmp_path: Path
+) -> None:
+    """«Pads >= jogadores» nunca assentava na Conexão Nativa, que não cria pad.
+
+    Assentar é a mesa do começo de volta, duas leituras seguidas. Mordida:
+    voltar à contagem de pads — a Nativa recusa com «não assentou».
+    """
+    estado = _estado_sem_pad("nativo")
+    maquina = fazer_maquina(
+        ob, estado, tmp_path / "config", dispositivos="",
+        diario=[linha_do_diario(1.0, "daemon_starting")],
+        ensaios={"bancada.sh": "", "--user": ""},  # o systemctl --user restart responde 0
+    )
+    saida = tmp_path / "saida"
+    ob.executar(["--saida", str(saida), SUB_DA_SESSAO, "--boot"], maquina)
+    recusas = resumo(saida)["recusas"]
+    assert not any("assentou" in r for r in recusas), recusas
+    assert ["systemctl", "--user", "restart", "hefesto-dualsense4unix"] in maquina.rodados

@@ -1194,6 +1194,8 @@ class Sessao:
 
     def reservar_a_bancada(self) -> None:
         """Reserva a bancada antes de escrever (01 §3.2); ocupada é recusa, nunca contorno."""
+        if self.bancada_reservada:
+            return  # o `exigir` diria «ocupada» pela nossa própria reserva
         bancada = RAIZ / "scripts" / "bancada.sh"
         if not bancada.is_file():
             self.dizer("  (esta instalação não tem o semáforo da bancada: sigo sem reserva, declarado)")
@@ -1544,6 +1546,8 @@ def sub_sessao(s: Sessao, a: argparse.Namespace) -> None:
     inicio = s.maquina.agora()
 
     if a.boot:
+        # Reiniciar o daemon mexe (recria os pads): reserva a bancada antes (01 §3.2).
+        s.reservar_a_bancada()
         _reiniciar_o_daemon(s, "o --boot da sessão")
 
     sondas = _subir_as_sondas(s, a, ("trava-por-pad.bt", "uhid-raw-request.bt"), a.segundos)
@@ -1623,16 +1627,23 @@ def _reiniciar_o_daemon(s: Sessao, motivo: str) -> None:
     s.declarar(f"o daemon reiniciado ({motivo})", "de pé", "reiniciado" if rc == 0 else texto.strip())
     if rc != 0:
         raise Recusa(f"o reinício do daemon falhou: {texto.strip()}")
+    # Assentar é a MESA DO COMEÇO de volta, duas leituras seguidas: os mesmos
+    # controles, os mesmos pads no daemon e no kernel. «Pads >= jogadores»
+    # voltava no meio do boot, com os pads sobrando do multiplicador ainda
+    # vivos (27/09: sete para quatro), e a relistagem do fim recusava a volta;
+    # e na Conexão Nativa, sem pad nenhum, nunca assentava.
     prazo = s.maquina.agora() + 60.0
-    jogadores = len(controles_na_mesa(s.estado_inicio))
+    seguidas = 0
     while s.maquina.agora() < prazo:
         s.maquina.dormir(2.0)
         novo = s.maquina.estado()
-        if novo is not None and len(controles_na_mesa(novo)) >= jogadores:
-            pads = _lista(_dict(novo.get("rumble_ff")).get("per_vpad"))
-            if len(pads) >= jogadores:
-                return
-    raise Recusa("o daemon não assentou em 60 s depois do reinício")
+        igual = novo is not None and not diferencas_da_mesa(
+            s.mesa_inicio, mesa_de(novo, s.maquina.dispositivos_de_entrada())
+        )
+        seguidas = seguidas + 1 if igual else 0
+        if seguidas >= 2:
+            return
+    raise Recusa("o daemon não assentou em 60 s depois do reinício (a mesa não voltou à do começo)")
 
 
 def _subir_as_sondas(
@@ -1901,6 +1912,9 @@ def _trocar_o_modo_e_voltar(s: Sessao, destino: str) -> None:
         raise Recusa(f"o modo de agora é {antes!r}: a troca só vale entre dualsense e xbox")
     if _jogo_vivo(s.estado_inicio):
         raise Recusa("há jogo aberto: a troca recriaria os pads no meio da partida")
+    # A troca escreve na sessão do daemon e recria os pads: reserva a bancada
+    # antes, como todo passo que escreve (01 §3.2).
+    s.reservar_a_bancada()
     compositor = _pid_do_compositor(s.maquina)
     marco = s.maquina.agora()
     try:
