@@ -28,6 +28,15 @@ Quem elege microfone continua sendo `integrations/eleicao_de_microfone`, que é
 o dono, e escrever um `set-default-source` daqui criaria o segundo escritor que
 a eleição existe para acabar.
 
+**E ELE PASSOU A SER O ÚNICO OUVIDO DO RETRATO** —
+O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01 (28/09/2026). Até esta data ele só
+publicava a saída e a entrada padrão, e o daemon perguntava todo o resto ao
+servidor por conta própria, 22 a 23 vezes por segundo. Agora ele escuta todo
+evento de nó, de fluxo, de módulo e de servidor, junta cada rajada em
+:data:`RAJADA_S` e manda o `integrations/retrato_do_som` reler SÓ o tipo que
+mudou. Sem evento, zero `pactl`. O padrão publicado sai do retrato, sem
+pergunta própria.
+
 **A LÍNGUA FICA PRESA EM C.** O `pactl` desta casa responde em português
 (`LC_ALL` do sistema), e um leitor que dependa do idioma da máquina já
 respondeu *"não há"* sobre aparelho de pé duas vezes.
@@ -42,6 +51,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from hefesto_dualsense4unix.core.events import EventTopic
+from hefesto_dualsense4unix.integrations import retrato_do_som
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -52,9 +62,10 @@ logger = get_logger(__name__)
 #: sessão — que é exatamente o defeito que ele vem curar.
 ESPERA_PARA_RELIGAR_S: float = 3.0
 
-#: O teto de uma leitura do estado (`pactl info`). Curto de propósito: o laço
-#: roda no daemon, e uma leitura pendurada seguraria o `stop()`.
-TETO_DA_LEITURA_S: float = 4.0
+#: Quanto o ouvinte junta eventos antes de mandar reler. Um jogo que abre
+#: emite uma rajada — o fluxo nasce, muda, o nó acorda — e reler a cada linha
+#: faria da rajada a mesma chuva de `pactl` que esta sprint veio curar.
+RAJADA_S: float = 0.05
 
 #: As linhas do `subscribe` que interessam. O `subscribe` fala de tudo —
 #: clientes que abrem e fecham, streams de cada app — e reagir a tudo faria uma
@@ -64,6 +75,11 @@ TETO_DA_LEITURA_S: float = 4.0
 #: nasce e morre, que é a outra metade da queixa dela (o nó do controle some e
 #: a tela fica acesa no que estava).
 EVENTOS_QUE_IMPORTAM = ("server", "sink", "source")
+
+#: Os tipos do retrato cuja releitura pode mudar o padrão publicado: o
+#: `server` diz quem é o padrão, e as listas de nós dizem o nome de gente dele.
+_TIPOS_DO_PADRAO = frozenset(
+    retrato_do_som.TIPO_DO_EVENTO[e] for e in EVENTOS_QUE_IMPORTAM)
 
 
 @dataclass(frozen=True)
@@ -94,44 +110,24 @@ def _ambiente() -> dict[str, str]:
 
 
 async def ler_o_padrao() -> SomDoSistema:
-    """`pactl get-default-sink` + `get-default-source`, sem levantar.
+    """A saída e a entrada padrão, com os nomes de gente — pelo RETRATO, sem `pactl`.
 
-    DUAS PERGUNTAS CURTAS em vez de um `pactl info` inteiro: o `info` traz
-    dezenove campos e muda de forma entre versões, e estas duas respondem
-    exatamente o que a tela mostra.
+    Até 28/09/2026 esta função fazia quatro perguntas próprias ao servidor
+    (`get-default-sink`, `get-default-source`, `list sinks`, `list sources`) a
+    cada evento. O retrato já sabe as quatro respostas, relidas pelo mesmo
+    evento que acordou quem pergunta.
 
-    Erro de qualquer natureza devolve o que se conseguiu ler — um campo vazio é
-    *"não sei"*, e é o que a tela já sabe pintar. Levantar aqui derrubaria o
-    laço por causa de um `pactl` que saiu do PATH.
+    Retrato sem resposta devolve os campos vazios — *"não sei"*, que é o que a
+    tela já sabe pintar.
     """
-    valores = [await _pactl("get-default-sink"), await _pactl("get-default-source")]
-    descricoes = await _descricoes()
+    retrato = retrato_do_som.RETRATO
+    saida = retrato.padrao("sink") or ""
+    entrada = retrato.padrao("source") or ""
+    descricoes = retrato.descricoes()
     return SomDoSistema(
-        saida=valores[0], entrada=valores[1],
-        saida_nome=descricoes.get(valores[0], ""),
-        entrada_nome=descricoes.get(valores[1], ""))
-
-
-async def _pactl(*args: str) -> str:
-    """Um `pactl` de LEITURA. Saída limpa, ou `""` — nunca levanta."""
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            "pactl", *args,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.DEVNULL,
-            env=_ambiente())
-    except (OSError, ValueError):
-        return ""
-    try:
-        bruto, _ = await asyncio.wait_for(
-            proc.communicate(), timeout=TETO_DA_LEITURA_S)
-    except (TimeoutError, asyncio.TimeoutError):
-        with contextlib.suppress(ProcessLookupError):
-            proc.kill()
-        return ""
-    if proc.returncode != 0:
-        return ""
-    return bruto.decode("utf-8", "replace").strip()
+        saida=saida, entrada=entrada,
+        saida_nome=descricoes.get(saida, ""),
+        entrada_nome=descricoes.get(entrada, ""))
 
 
 def descricoes_da_lista(bruto: str) -> dict[str, str]:
@@ -149,28 +145,8 @@ def descricoes_da_lista(bruto: str) -> dict[str, str]:
     anterior. Nó sem `Description` simplesmente não entra — e aí a tela cai no
     nome cru, que é longo e feio mas é verdade.
     """
-    fora: dict[str, str] = {}
-    nome = ""
-    for linha in bruto.splitlines():
-        limpa = linha.strip()
-        if limpa.startswith("Name:"):
-            nome = limpa[len("Name:"):].strip()
-        elif limpa.startswith("Description:") and nome:
-            fora[nome] = limpa[len("Description:"):].strip()
-            nome = ""
-    return fora
-
-
-async def _descricoes() -> dict[str, str]:
-    """Os nomes de gente de todas as saídas e entradas, num mapa só.
-
-    DUAS CHAMADAS, e elas custam o que custam porque só acontecem quando o
-    servidor AVISA que algo mudou — nunca por tique da janela.
-    """
-    fora: dict[str, str] = {}
-    for alvo in ("sinks", "sources"):
-        fora.update(descricoes_da_lista(await _pactl("list", alvo)))
-    return fora
+    return {no.nome: no.descricao
+            for no in retrato_do_som.nos_do_texto(bruto) if no.descricao}
 
 
 def interessa(linha: str) -> bool:
@@ -180,11 +156,26 @@ def interessa(linha: str) -> bool:
     por substring solta, é o que impede um `sink-input` (o stream de um app
     qualquer) de acordar o laço a cada frame de áudio — `sink-input` contém
     `sink`.
+
+    Desde 28/09/2026 o `sink-input` acorda o laço, e com razão: ele relê o
+    tipo DELE no retrato (:func:`tipo_do_evento`). O que ele continua sem
+    fazer é reler o PADRÃO, e é esta a pergunta que esta função responde.
+    """
+    return tipo_do_evento(linha) in _TIPOS_DO_PADRAO
+
+
+def tipo_do_evento(linha: str) -> str | None:
+    """O tipo do retrato que esta linha do `subscribe` manda reler, ou `None`.
+
+    Pela PALAVRA do alvo, como :func:`interessa`: `sink-input` é um tipo, e
+    `sink` é outro. `client` não relê nada — cada `pactl` do próprio retrato é
+    um cliente, e reler por eles faria o retrato perguntar por causa das
+    próprias perguntas.
     """
     partes = linha.split()
     if len(partes) < 4 or partes[0] != "Event":
-        return False
-    return partes[3] in EVENTOS_QUE_IMPORTAM
+        return None
+    return retrato_do_som.TIPO_DO_EVENTO.get(partes[3])
 
 
 async def _publicar(daemon: Any, agora: SomDoSistema) -> None:
@@ -200,57 +191,129 @@ async def _publicar(daemon: Any, agora: SomDoSistema) -> None:
 
 
 async def ouvinte_do_som_loop(daemon: Any) -> None:
-    """Segue o `pactl subscribe` e publica toda mudança de padrão.
+    """Segue o `pactl subscribe`, mantém o retrato em dia e publica toda mudança de padrão.
 
     **O ESTADO VIVE NO DAEMON, não aqui**: `daemon.som_do_sistema` é lido pelo
     `state_full` a cada tique da janela, e guardar uma cópia neste módulo daria
     dois donos do mesmo fato.
 
-    **A PRIMEIRA LEITURA É ANTES DO `subscribe`**, e a ordem é a entrega: sem
-    ela a tela ficaria sem resposta até a primeira mudança acontecer — que pode
-    ser nunca.
+    **A PRIMEIRA LEITURA É ANTES DE ESCUTAR QUALQUER EVENTO**, e a ordem é a
+    entrega: sem ela a tela ficaria sem resposta até a primeira mudança
+    acontecer — que pode ser nunca.
+
+    **QUEM PARA O LAÇO SOLTA O RETRATO**: sem ouvinte não há evento, e uma
+    foto que ninguém mantém responderia sobre o passado.
     """
-    while True:
-        try:
-            await _uma_volta(daemon)
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            logger.warning("ouvinte_do_som_caiu", exc_info=True)
-        await asyncio.sleep(ESPERA_PARA_RELIGAR_S)
+    try:
+        while True:
+            try:
+                await _uma_volta(daemon)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.warning("ouvinte_do_som_caiu", exc_info=True)
+            await asyncio.sleep(ESPERA_PARA_RELIGAR_S)
+    finally:
+        retrato_do_som.RETRATO.soltar()
+
+
+async def _carregar_o_retrato(retrato: retrato_do_som.RetratoDoSom) -> bool:
+    """A leitura inteira, fora do laço de eventos. True = o retrato assumiu."""
+    completo = await asyncio.to_thread(retrato.carregar)
+    if completo or retrato.dono:
+        # DONO DE ANTES QUE RELIGOU volta a responder já, mesmo que um tipo
+        # tenha falhado: o tipo em dúvida diz "não sei" sozinho, e os outros
+        # não precisam esperar por ele.
+        retrato.assumir(asyncio.get_running_loop())
+        return True
+    return False
 
 
 async def _uma_volta(daemon: Any) -> None:
     """Uma sessão de `subscribe`, do início até o `pactl` morrer."""
-    anterior = await ler_o_padrao()
-    _guardar(daemon, anterior)
-    await _publicar(daemon, anterior)
-
+    retrato = retrato_do_som.RETRATO
     proc = await asyncio.create_subprocess_exec(
         "pactl", "subscribe",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.DEVNULL,
         env=_ambiente())
-    logger.info("ouvinte_do_som_ligado", saida=anterior.saida,
-                entrada=anterior.entrada)
+    pendentes: set[str] = set()
+    tarefas: list[asyncio.Task[None]] = []
     try:
-        assert proc.stdout is not None
-        async for bruto in proc.stdout:
-            if not interessa(bruto.decode("utf-8", "replace").strip()):
-                continue
+        # O `subscribe` ABRE ANTES DA LEITURA INTEIRA: um evento que chegue no
+        # meio dela fica na fila do pipe e relê o tipo depois — o contrário
+        # perderia a mudança que acontecesse entre ler e escutar.
+        await _carregar_o_retrato(retrato)
+        anterior = await ler_o_padrao()
+        _guardar(daemon, anterior)
+        await _publicar(daemon, anterior)
+        logger.info("ouvinte_do_som_ligado", saida=anterior.saida,
+                    entrada=anterior.entrada, retrato=retrato.vivo)
+
+        async def aplicar() -> None:
+            nonlocal anterior
+            tipos = set(pendentes)
+            pendentes.clear()
+            if not retrato.completo():
+                tipos.update(retrato_do_som.TIPOS)
+            await asyncio.to_thread(retrato.reler, tipos)
+            if not retrato.vivo and retrato.completo():
+                retrato.assumir(asyncio.get_running_loop())
+            if not tipos & _TIPOS_DO_PADRAO:
+                return
             agora = await ler_o_padrao()
             if agora == anterior:
                 # O SERVIDOR FALA MAIS DO QUE MUDA: um nó que nasce emite
                 # evento e não troca padrão nenhum. Publicar aqui faria a tela
                 # repintar por nada, que é o defeito medido em 05/09/2026 (80
                 # repinturas em 80 tiques).
-                continue
+                return
             anterior = agora
             _guardar(daemon, agora)
             await _publicar(daemon, agora)
             logger.info("som_do_sistema_mudou", saida=agora.saida,
                         entrada=agora.entrada)
+
+        async def descarregar() -> None:
+            while pendentes:
+                await asyncio.sleep(RAJADA_S)
+                await aplicar()
+
+        async def insistir() -> None:
+            # A LEITURA INTEIRA QUE FALHOU TENTA DE NOVO sem esperar evento: um
+            # servidor parado não avisa nada, e o retrato ficaria "não sei"
+            # até alguém mexer no som.
+            while not retrato.completo():
+                await asyncio.sleep(ESPERA_PARA_RELIGAR_S)
+                pendentes.update(retrato_do_som.TIPOS)
+                await aplicar()
+
+        if not retrato.completo():
+            tarefas.append(asyncio.create_task(insistir()))
+        vez: asyncio.Task[None] | None = None
+        assert proc.stdout is not None
+        async for bruto in proc.stdout:
+            tipo = tipo_do_evento(bruto.decode("utf-8", "replace").strip())
+            if tipo is None:
+                continue
+            pendentes.add(tipo)
+            if vez is None or vez.done():
+                vez = asyncio.create_task(descarregar())
+                tarefas.append(vez)
+        # O CANAL FECHOU (o servidor caiu, ou o `pactl` morreu): a rajada que
+        # esperava a vez é relida agora, antes de o retrato dizer "não sei".
+        for tarefa in tarefas:
+            tarefa.cancel()
+        for tarefa in tarefas:
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await tarefa
+        tarefas.clear()
+        if pendentes:
+            await aplicar()
     finally:
+        for tarefa in tarefas:
+            tarefa.cancel()
+        retrato.perdeu_o_servidor()
         with contextlib.suppress(ProcessLookupError):
             proc.kill()
         with contextlib.suppress(Exception):
@@ -286,6 +349,7 @@ def start_ouvinte_do_som(daemon: Any) -> None:
 __all__ = [
     "ESPERA_PARA_RELIGAR_S",
     "EVENTOS_QUE_IMPORTAM",
+    "RAJADA_S",
     "SomDoSistema",
     "descricoes_da_lista",
     "interessa",
@@ -293,4 +357,5 @@ __all__ = [
     "ouvinte_do_som_loop",
     "som_do_sistema_payload",
     "start_ouvinte_do_som",
+    "tipo_do_evento",
 ]
