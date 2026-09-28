@@ -337,8 +337,9 @@ def _prioridade(ctx: Contexto, ponte: Any) -> None:
 #
 # O QUE ESTE CASO PROVAVA CONTINUA PROVADO pelos outros quatro: *todo* gesto
 # que grava o perfil INTEIRO lê a mesma base (`_o_perfil_no_disco`), e o funil
-# é o mesmo (`_gravar`); quatro gestos o exercem. Um quinto que não existe não acrescenta cobertura; ele só
-# faria a régua morrer com um `AttributeError` que não é sobre o defeito.
+# é o mesmo (`_gravar`); quatro gestos o exercem. Um quinto que não existe não
+# acrescenta cobertura; ele só faria a régua morrer com um `AttributeError` que
+# não é sobre o defeito.
 
 
 def _jogo(ctx: Contexto, ponte: Any) -> None:

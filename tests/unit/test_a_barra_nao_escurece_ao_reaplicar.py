@@ -27,8 +27,9 @@ mesmo byte que a primeira.
 
 AS MORDIDAS, arrancadas e devolvidas com md5 (a lista está no relatório da
 sprint): o `_scaled_led` de volta sobre a cor resolvida; o `rodape` gravando a
-luz acesa (desde 27/09, a luz acesa de volta no Salvar); o `_scaled_led` pela razão em vez do `reescalar`; o
-`_controllers_to_led_scales` pulando quem tem cor; o `_primeiro_tom_livre` com
+luz acesa (desde 27/09, a luz acesa de volta no Salvar); o `_scaled_led` pela
+razão em vez do `reescalar`; o `_controllers_to_led_scales` pulando quem tem
+cor; o `_primeiro_tom_livre` com
 o tom cheio e comparando bytes; o manager sem publicar o brilho do perfil; e o
 `_brilho_da_peca_locked` sem o arredondamento.
 """
