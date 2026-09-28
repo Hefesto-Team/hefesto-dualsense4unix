@@ -66,11 +66,11 @@ daria um replay que passa e não representa o transporte — o oposto do que um
 capture determinístico serve para fazer. Fica registrada como ausência, e a
 gravação como trabalho aberto para quando houver o controle em BT à mão.
 
-O comando de gravação citado na mesma linha também não roda: `--script
-captures/script_default.yaml` não existe em `scripts/record_hid_capture.py`
-(zero ocorrências de `--script` no arquivo). O YAML existe em `captures/`, mas
-nenhum flag o consome. A invocação real, do `--help` do próprio script, exige
-`--transport` e `--output`:
+O comando de gravação citado na mesma linha também não roda: `--script`
+não existe em `scripts/record_hid_capture.py` (zero ocorrências no arquivo), e
+o YAML de roteiro que ele citaria saiu da árvore porque nenhum flag o consumia.
+A invocação real, do `--help` do próprio script, exige `--transport` e
+`--output`:
 
 ```bash
 python scripts/record_hid_capture.py --transport bt --guided \

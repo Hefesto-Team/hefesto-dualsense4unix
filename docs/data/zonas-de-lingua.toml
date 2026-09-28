@@ -207,11 +207,6 @@ zona = "REGISTRA"
 razao = "é história de versão; corrigir o passado apagaria o que aconteceu."
 
 [[regra]]
-caminho = "captures/**"
-zona = "REGISTRA"
-razao = "capturas de HID: prova bruta, e prova não se edita."
-
-[[regra]]
 caminho = "LICENSE"
 zona = "REGISTRA"
 razao = "texto legal: traduzir licença sem advogado é criar outra licença."

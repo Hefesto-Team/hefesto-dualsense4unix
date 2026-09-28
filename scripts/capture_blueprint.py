@@ -8,8 +8,9 @@ pede. Requer só a ACL de `uaccess` do hidraw (sem sudo).
 
 Serve para:
   (a) regenerar as constantes de `integrations/uhid_blueprint.py` e os `.bin`
-      de `captures/` quando um firmware novo justificar (o vpad usa o blueprint
-      canônico EMBUTIDO; este script não participa do caminho de criação);
+      de `tests/fixtures/hid/` quando um firmware novo justificar (o vpad usa
+      o blueprint canônico EMBUTIDO; este script não participa do caminho de
+      criação);
   (b) diagnosticar um controle que recusa features — por exemplo, o sintoma
       medido em BT: controle ocioso não responde features e cada GET_REPORT
       estoura o timeout de 5 s do hidp do kernel com EIO.

@@ -6,7 +6,8 @@ O que estes testes travam (critérios de aceite dos dois sprint docs):
    do transporte BT — copiá-lo produzia vpad `BUS_USB` torto) e byte-idêntico ao
    capture de referência do repo.
 2. **Features 0x05/0x20 com 41/64 B**, report id certo, byte-idênticos aos
-   `.bin` de `captures/` (procedência fossilizada, conferível para sempre).
+   `.bin` de `tests/fixtures/hid/` (procedência fossilizada, conferível para
+   sempre).
 3. **0x09 NUNCA fossilizado com identidade**: template de exatamente 20 B com a
    assinatura `08 25 00` nos bytes 7-9 e as DUAS áreas de MAC zeradas (bytes
    1..6 = device, 10..15 = host pareado). O MAC de verdade é o forjado que o
@@ -31,7 +32,7 @@ from hefesto_dualsense4unix.integrations.uhid_blueprint import (
     canonical_blueprint,
 )
 
-_CAPTURES = Path(__file__).resolve().parents[2] / "captures"
+_CAPTURES = Path(__file__).resolve().parents[1] / "fixtures" / "hid"
 
 
 class TestDescriptor:
@@ -112,7 +113,10 @@ class TestTemplate0x09SemIdentidade:
 
     def test_nao_existe_bin_fossilizado_do_0x09(self) -> None:
         """A regra de anonimato em forma de teste: o 0x09 é sempre gerado, nunca
-        capturado para o repo — um `.bin` dele em captures/ seria identidade."""
+        capturado para o repo — um `.bin` dele em `tests/fixtures/hid/` seria
+        identidade. A pasta tem de existir: um glob numa pasta que não existe
+        devolve vazio, e a régua passaria sobre o caminho errado."""
+        assert _CAPTURES.is_dir(), f"a pasta das capturas sumiu: {_CAPTURES}"
         suspeitos = [p.name for p in _CAPTURES.glob("*0x09*")]
 
         assert suspeitos == []

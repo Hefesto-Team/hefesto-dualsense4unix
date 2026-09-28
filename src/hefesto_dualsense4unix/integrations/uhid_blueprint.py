@@ -23,11 +23,11 @@ Procedência (fossilizada, com validação viva)
 Capturado em 2026-07-16 de um DualSense físico (054c:0ce6) por CABO USB, via
 HIDIOCGFEATURE read-only — o MESMO controle/firmware (update `0x0630`,
 "Jul  4 2025") da validação viva do vpad uhid (commit bfd51db). O descriptor é
-byte-idêntico a `captures/dualsense_usb_descriptor_054c0ce6.bin` (conferido com
-`cmp` ao vivo); os features 0x05/0x20 estão em
-`captures/dualsense_usb_feature_0x05_calibracao.bin` e
-`captures/dualsense_usb_feature_0x20_firmware.bin`, e o teste hermético compara
-as constantes com os `.bin` byte a byte. Recaptura/diagnóstico:
+byte-idêntico a `tests/fixtures/hid/dualsense_usb_descriptor_054c0ce6.bin`
+(conferido com `cmp` ao vivo); os features 0x05/0x20 estão em
+`tests/fixtures/hid/dualsense_usb_feature_0x05_calibracao.bin` e
+`tests/fixtures/hid/dualsense_usb_feature_0x20_firmware.bin`, e o teste
+hermético compara as constantes com os `.bin` byte a byte. Recaptura/diagnóstico:
 `scripts/capture_blueprint.py`.
 
 O feature 0x09 (pairing) NUNCA é fossilizado de um controle real — ele carrega o
