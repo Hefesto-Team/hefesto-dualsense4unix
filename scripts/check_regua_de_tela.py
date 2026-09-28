@@ -547,7 +547,7 @@ def _diagnostico(raiz: Path) -> int:
     print()
     print("  Numa worktree ligada o `.git` é um ARQUIVO (`gitdir: …`), então o")
     print("  caminho que o gancho global testa não pode existir. Cai fora TODO o")
-    print("  gancho deste repositório: os quatro instrumentos HTML, o contrato")
+    print("  gancho deste repositório: o mapa de canais (docs/specs.html), o contrato")
     print("  IPC, as citações `arquivo:linha` e o portão da foto.")
     print()
     print("  O conserto é de UMA linha, e é DELA: o arquivo é global e vale para")

@@ -48,7 +48,7 @@ Devolver a `procedencia()` a chave `sujos` e ao `carimbo()` o trecho
     test_a_pagina_publicada_... ..................... 5 campos onde cabiam 4,
                                                       e a palavra `branch`
 
-Devolvida a cura, as nove passam. Cada teste diz, no próprio docstring, a
+Devolvida a cura, as sete passam. Cada teste diz, no próprio docstring, a
 mutação que o faz reprovar e o número que ela produziu.
 
 AS DUAS MUTAÇÕES QUE ESTA FOLHA DEIXAVA PASSAR, E COMO ELAS FORAM FECHADAS
