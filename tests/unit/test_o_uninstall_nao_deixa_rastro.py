@@ -491,13 +491,19 @@ _DUBLES = {
         "modprobe", "depmod"), "exit 0"),
     "busctl": "exit 1", "dpkg": "exit 1", "btmgmt": "exit 1",
 }
-#: Os `.py` que o uninstall roda e que rodam de verdade aqui — com a Steam do
-#: lar FECHADA (a detecção olharia os processos da máquina) e sem poder abrir
-#: processo nenhum. Os demais (camadas, device KS) só são anotados.
+#: Os `.py` que o uninstall roda e que rodam de verdade aqui, sem poder abrir
+#: processo nenhum e lendo a TABELA DE PROCESSOS DO LAR (`processos.json`), e
+#: nunca a da máquina. Os demais (camadas, device KS) só são anotados.
 _PY_QUE_RODAM = ("proton_pin.py", "steam_launch_options.py", "cura_por_estrada.py")
 
+#: A tabela de processos do lar, `pid -> cmdline`. Vazia: nada roda aqui, nem a
+#: Steam nem jogo. Até 28/09/2026 os três testes do uninstall liam a da máquina
+#: e reprovavam com um jogo aberto nela (VERDE-NAO-E-PROVA-01, passo 3).
+NADA_RODANDO: dict[int, str] = {}
 
-def _montar_o_path(raiz: Path, diario: Path) -> Path:
+
+def _montar_o_path(raiz: Path, diario: Path,
+                   processos: dict[int, str] | None = None) -> Path:
     binp = raiz / "bin"
     binp.mkdir()
     for nome in _REAIS:
@@ -523,27 +529,57 @@ def _montar_o_path(raiz: Path, diario: Path) -> Path:
             encoding="utf-8")
     real_py = shutil.which("python3", path=SISTEMA)
     assert real_py, "sem python3 no sistema"
+    tabela = raiz / "processos.json"
+    tabela.write_text(json.dumps(processos or NADA_RODANDO), encoding="utf-8")
     partida = raiz / "py_guardado.py"
     partida.write_text(
-        "import importlib, os, subprocess, sys\n"
+        "import builtins, importlib, json, os, re, subprocess, sys\n"
         f"RAIZ = {str(raiz)!r}\n"
+        f"DIARIO = {str(diario)!r}\n"
         'if not os.environ["HOME"].startswith(RAIZ + "/"):\n'
         '    sys.exit("guarda: o HOME saiu do lar de mentira")\n'
         "def _recusa(*a, **k):\n"
         '    raise RuntimeError(f"o lar de mentira não abre processo: {a!r}")\n'
         "subprocess.Popen = _recusa\n"
         "os.system = _recusa\n"
+        # A tabela de processos do lar. Os dois leitores da tabela de verdade
+        # (a varredura de `/proc` e o `pgrep` do `steam_running`) passam a ler
+        # esta; qualquer outro que tente a da máquina fica no diário e recusa.
+        f"PROCESSOS = {{int(k): v for k, v in json.load(open({str(tabela)!r})).items()}}\n"
+        "def _leu_a_maquina(caminho):\n"
+        '    with open(DIARIO, "a", encoding="utf-8") as d:\n'
+        '        d.write(f"RECUSADO leu a tabela de processos da máquina: {caminho}\\n")\n'
+        '    raise PermissionError(f"o lar de mentira não lê a tabela da máquina: {caminho}")\n'
+        "_listdir, _scandir, _open = os.listdir, os.scandir, builtins.open\n"
+        "def _e_proc(caminho):\n"
+        '    return isinstance(caminho, (str, bytes, os.PathLike)) and os.fsdecode(caminho).rstrip("/") == "/proc"\n'
+        "def _listdir_do_lar(caminho='.'):\n"
+        "    return [str(p) for p in PROCESSOS] if _e_proc(caminho) else _listdir(caminho)\n"
+        "def _scandir_do_lar(caminho='.'):\n"
+        "    return _leu_a_maquina(caminho) if _e_proc(caminho) else _scandir(caminho)\n"
+        "def _open_do_lar(arquivo, *a, **k):\n"
+        '    if isinstance(arquivo, (str, bytes, os.PathLike)) and re.match(r"/proc/\\d", os.fsdecode(arquivo)):\n'
+        "        _leu_a_maquina(arquivo)\n"
+        "    return _open(arquivo, *a, **k)\n"
+        "os.listdir, os.scandir, builtins.open = _listdir_do_lar, _scandir_do_lar, _open_do_lar\n"
         "script = sys.argv[1]\n"
         "sys.argv = sys.argv[1:]\n"
         "sys.path.insert(0, os.path.dirname(script))\n"
         "import steam_launch_options as slo\n"
-        "slo.steam_running = lambda: False\n"
+        "def _cmdline_do_lar(pid):\n"
+        '    return PROCESSOS.get(int(pid), "")\n'
+        "def _steam_do_lar():\n"
+        # O que o `pgrep -af steamrt64/steam` e o `pgrep -x steamwebhelper`
+        # do `steam_running` casariam, perguntado à tabela do lar.
+        "    return any('steamrt64/steam' in c\n"
+        "               or os.path.basename(c.split(' ')[0])[:15] == 'steamwebhelper'\n"
+        "               for c in PROCESSOS.values())\n"
+        "slo._cmdline_of = slo.cmdline_de_pid = _cmdline_do_lar\n"
+        "slo.steam_running = _steam_do_lar\n"
         "slo.stop_steam = _recusa\n"
+        # Antes do import do módulo: o `proton_pin` copia `steam_running` e
+        # `steam_game_running` do `slo` quando importa.
         "mod = importlib.import_module(os.path.basename(script)[:-3])\n"
-        'if hasattr(mod, "steam_running"):\n'
-        "    mod.steam_running = lambda: False\n"
-        'if hasattr(mod, "_steam_gate"):\n'
-        "    mod._steam_gate = lambda *a, **k: None\n"
         "sys.exit(mod.main())\n", encoding="utf-8")
     casos = "|".join(f"*/{n}" for n in _PY_QUE_RODAM)
     (binp / "python3").write_text(
@@ -690,11 +726,12 @@ def _casa_de_mentira(tmp_path: Path, *, xdg_fora: bool) -> tuple[m.Raizes, Path]
 
 def _desinstalar(tmp_path: Path, r: m.Raizes, repo: Path, texto: str, *, xdg_fora: bool,
                  flags: str = "--purge-config --yes",
+                 processos: dict[int, str] | None = None,
                  ) -> tuple[subprocess.CompletedProcess[str], str]:
     """Roda o uninstall — por uma GUARDA que sai antes se o lar vazar."""
     (repo / "uninstall.sh").write_text(texto, encoding="utf-8")
     diario = tmp_path / "diario.log"
-    binp = _montar_o_path(tmp_path, diario)
+    binp = _montar_o_path(tmp_path, diario, processos)
     (tmp_path / "tmp").mkdir()
     (tmp_path / "sys-bluetooth").mkdir()
     env = {"HOME": str(r.lar), "XDG_RUNTIME_DIR": str(r.execucao), "PATH": str(binp),
@@ -891,6 +928,47 @@ def test_o_desfazer_adiado_termina_depois_e_a_casa_fica_limpa(tmp_path: Path) ->
     assert not estado.exists(), f"a pasta de estado ficou: {sorted(os.listdir(estado))}"
     limpa = _limpa(r, tmp_path)
     assert limpa.returncode == 0, limpa.stdout + limpa.stderr
+
+
+#: Um jogo da Steam aberto NA TABELA DO LAR: a Steam e o `reaper` que ela põe
+#: na frente de todo jogo que lança.
+UM_JOGO_ABERTO: dict[int, str] = {
+    4242: "/lar/.local/share/Steam/ubuntu12_64/steamrt64/steam -silent",
+    4243: "reaper SteamLaunch AppId=100 -- /lar/jogo/jogo.exe",
+}
+
+
+def test_o_uninstall_le_a_tabela_de_processos_do_lar(tmp_path: Path) -> None:
+    """Os testes do uninstall não dependem do que roda na máquina.
+
+    Até 28/09/2026 a partida do lar dublava o `steam_running` e o `_steam_gate`
+    e deixava o `steam_game_running` ler o `/proc` da máquina. Com um jogo
+    aberto nela, o uninstall do lar recusava tirar o atalho da Steam e três
+    testes deste arquivo reprovavam (medido com um jogo de mentira num
+    namespace de montagem próprio, VERDE-NAO-E-PROVA-01, passo 3).
+
+    Aqui o jogo está na tabela DO LAR: o uninstall tem de vê-lo, sem ler a
+    tabela da máquina.
+
+    A MORDIDA: devolva a partida antiga (o `_cmdline_of` e o `os.listdir` da
+    máquina) e este teste reprova numa máquina sem jogo aberto.
+    """
+    r, repo = _casa_de_mentira(tmp_path, xdg_fora=False)
+    _instalar_pelos_donos(r, repo, heroic_nativo=False, com_venv=True)
+
+    rodou, diario = _desinstalar(tmp_path, r, repo, UNINSTALL.read_text(encoding="utf-8"),
+                                 xdg_fora=False, processos=UM_JOGO_ABERTO)
+
+    assert rodou.returncode == 0, rodou.stdout[-3000:] + rodou.stderr[-3000:]
+    assert "RECUSADO" not in diario, (
+        "o uninstall do lar leu fora do lar:\n"
+        + "\n".join(x for x in diario.splitlines() if x.startswith("RECUSADO")))
+    assert "JOGO da Steam em execução" in rodou.stdout, (
+        "o atalho da Steam saiu com um jogo aberto na tabela do lar: a detecção "
+        "não leu a tabela do lar\n" + rodou.stdout[-3000:])
+    defeitos = " ".join(_defeitos(r, tmp_path))
+    assert "localconfig.vdf" in defeitos, (
+        f"com o jogo aberto o atalho da Steam fica, e o «limpa?» o acusa: {defeitos}")
 
 
 def test_o_zumbi_sai_das_duas_casas_sem_purge(tmp_path: Path) -> None:
