@@ -119,7 +119,20 @@ async def ler_o_padrao() -> SomDoSistema:
 
     Retrato sem resposta devolve os campos vazios — *"não sei"*, que é o que a
     tela já sabe pintar.
+
+    **A CONSULTA RODA FORA DO LAÇO DO DAEMON.** Ela quase sempre sai da foto,
+    mas nem sempre: uma escrita que deixou o tipo pendente, um recuo do
+    servidor vencido ou uma releitura que falhou fazem o retrato perguntar ao
+    servidor na hora, com `subprocess.run` e até
+    `retrato_do_som.TETO_DA_LEITURA_S` de prazo. No laço, esse `pactl`
+    seguraria o daemon inteiro — era por isso que a leitura de antes era
+    assíncrona.
     """
+    return await asyncio.to_thread(_o_padrao_do_retrato)
+
+
+def _o_padrao_do_retrato() -> SomDoSistema:
+    """O corpo de :func:`ler_o_padrao`, que pode bloquear. Fora do laço sempre."""
     retrato = retrato_do_som.RETRATO
     saida = retrato.padrao("sink") or ""
     entrada = retrato.padrao("source") or ""
@@ -299,6 +312,7 @@ async def _uma_volta(daemon: Any) -> None:
                 continue
             pendentes.add(tipo)
             if vez is None or vez.done():
+                _podar(tarefas)
                 vez = asyncio.create_task(descarregar())
                 tarefas.append(vez)
         # O CANAL FECHOU (o servidor caiu, ou o `pactl` morreu): a rajada que
@@ -321,6 +335,27 @@ async def _uma_volta(daemon: Any) -> None:
             proc.kill()
         with contextlib.suppress(Exception):
             await proc.wait()
+
+
+def _podar(tarefas: list[asyncio.Task[None]]) -> None:
+    """Tira da lista da volta as tarefas que acabaram — e diz a falha de quem caiu.
+
+    **A LISTA NÃO CRESCE COM A SESSÃO.** Cada rajada é uma tarefa nova, e uma
+    volta dura o que o `subscribe` durar: numa sessão boa, o dia inteiro. Sem
+    a poda, um jogo que mexe nos fluxos uma vez por segundo guardaria dezenas
+    de milhares de tarefas acabadas por noite no processo do daemon (medido
+    pela conferência de 28/09/2026: trinta rajadas, trinta guardadas).
+
+    A exceção de uma rajada que caiu é lida AQUI, e não esquecida: sem isto
+    ela só sairia no `gather` do fim da volta, que a engole.
+    """
+    vivas: list[asyncio.Task[None]] = []
+    for tarefa in tarefas:
+        if not tarefa.done():
+            vivas.append(tarefa)
+        elif not tarefa.cancelled() and tarefa.exception() is not None:
+            logger.warning("ouvinte_do_som_rajada_caiu", err=str(tarefa.exception()))
+    tarefas[:] = vivas
 
 
 def _guardar(daemon: Any, agora: SomDoSistema) -> None:
