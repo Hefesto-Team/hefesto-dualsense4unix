@@ -2235,6 +2235,24 @@ class ControllerIdentityRegistry:
                 return False
             return key in self._connected or key in self._guardados_locked()
 
+    def posto_na_fila(self, uniq: str | None) -> int | None:
+        """O lugar GRAVADO de ``uniq`` na fila — ou None. Leitura pura.
+
+        O-MODO-XBOX-NAO-E-QUEDA-02, item 4: o primário é o controle da carta 1,
+        e o backend elege no ``connect()``, antes de o tique lento pôr alguém
+        na mesa — sem lâmpada, a carta é a da fila gravada, que é a mesma que o
+        boot vai acender (``sync_connected``: quem chega junto desempata pelo
+        gravado). Não atribui, não põe na mesa: o vpad (D9) e o endereço que
+        nunca estreou respondem None.
+        """
+        if not uniq or not isinstance(uniq, str):
+            return None
+        key, persistable = self._chave(uniq)
+        if not key or (persistable and key.startswith(_VPAD_MAC_PREFIX)):
+            return None
+        with self._lock:
+            return self._ordem.get(key)
+
 
 def make_auto_output_provider(
     registry: ControllerIdentityRegistry,
@@ -2380,6 +2398,9 @@ def make_auto_output_provider(
 
     provider.numero_do_slot = numero_do_slot  # type: ignore[attr-defined]
     provider.uniqs_da_mesa = uniqs_da_mesa  # type: ignore[attr-defined]
+    # O-MODO-XBOX-NAO-E-QUEDA-02: a carta de quem ainda não tem lâmpada, para
+    # o backend eleger o primário no `connect()` (ver `posto_na_fila`).
+    provider.posto_na_fila = registry.posto_na_fila  # type: ignore[attr-defined]
     return provider
 
 

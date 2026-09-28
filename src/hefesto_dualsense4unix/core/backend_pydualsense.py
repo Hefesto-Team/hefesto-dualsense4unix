@@ -3825,10 +3825,10 @@ class PyDualSenseController(IController):
     def _recompute_primary(self) -> None:
         """(Re)elege o primário e re-atrela evdev/transport SÓ quando ele muda.
 
-        Primário = 1ª chave de inserção ainda presente (`next(iter(...))`).
-        Controles novos entram no fim, então nunca roubam o primário de um já
-        conectado; se o primário cai, promove o próximo mais antigo. Chamado sob
-        `_io_lock`. A vaga com o jogo aberto é de `_quem_senta_no_posto`.
+        Primário = o controle da CARTA MENOR na mesa (`_quem_senta_no_posto`): a
+        lâmpada que acende o «1» manda, e o primeiro que conectou não manda mais
+        (O-MODO-XBOX-NAO-E-QUEDA-02). Sem carta, a 1ª chave de inserção. Chamado
+        sob `_io_lock`. A vaga com o jogo aberto também é de `_quem_senta_no_posto`.
 
         COOP-QUE-NAO-DESMONTA-01 / E2(a) — **com UMA exceção à regra da 1ª
         chave**: o controle que ERA o primário e voltou dentro de
@@ -3853,8 +3853,8 @@ class PyDualSenseController(IController):
             self._primary_key, self._posto_vago_de = retomada, None
             self._primario_deposto = None
             logger.info("primario_retomou_o_posto", key=retomada)
-        elif self._primary_key is None or self._primary_key not in self._handles:
-            self._primary_key = self._quem_senta_no_posto()
+        else:  # o posto vazio, ou a carta menor na mesa (O-MODO-XBOX-NAO-E-QUEDA-02)
+            self._primary_key = self._quem_senta_no_posto(sentado=self._primary_key)
         if self._primary_key is None or self._primary_key == prev:
             return
         # E1: o co-op precisa SOLTAR o node do controle que virou primário
@@ -7976,11 +7976,13 @@ class PyDualSenseController(IController):
         chave = self._primary_key or self._posto_vago_de
         return self._key_to_uniq(chave) if chave else None
 
-    def _quem_senta_no_posto(self) -> str | None:
+    def _quem_senta_no_posto(self, sentado: str | None = None) -> str | None:
         """Quem ocupa o posto de P1 que ficou vazio — ou None, se ele ESPERA.
 
-        Chamado pelo `_recompute_primary`, sob o `_io_lock`, quando o primário
-        não está na mesa.
+        Chamado pelo `_recompute_primary`, sob o `_io_lock`. Com o primário
+        `sentado` na mesa, a pergunta é outra: a carta menor chegou? — ver
+        `_a_carta_menor_locked` (O-MODO-XBOX-NAO-E-QUEDA-02, item 4). Com o
+        posto vazio, senta quem tem a carta menor, e não o 1º que conectou.
 
         **A DECISÃO (24/09/2026, por delegação dela,
         `D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO`):** o jogo também espera a carta
@@ -8005,6 +8007,8 @@ class PyDualSenseController(IController):
         Nunca deixa a mesa sem ninguém à toa: sem handle nenhum não há vaga a
         guardar (o posto fica vazio porque ninguém está na mesa).
         """
+        if sentado is not None and sentado in self._handles:
+            return self._a_carta_menor_locked(sentado)
         reserva = self._primario_deposto
         pergunta = self._espera_do_posto
         if reserva is not None and self._handles and self._a_troca_espera_locked(reserva[0]):
@@ -8040,7 +8044,7 @@ class PyDualSenseController(IController):
         if self._posto_vago_de is not None:
             logger.info("posto_do_p1_liberado", key=self._posto_vago_de)
             self._posto_vago_de = None
-        return next(iter(self._handles), None)
+        return next(iter(self._na_ordem_da_carta_locked(list(self._handles))), None)
 
     def _ds_depois_da_vaga(self) -> pydualsense | None:
         """O handle do P1 para o `read_state` enquanto o posto está vago.
@@ -8398,6 +8402,106 @@ class PyDualSenseController(IController):
                     if override is not None:
                         setattr(override, campo, None)
             self._prune_overrides_locked()
+
+    # --- o P1 é a carta 1 (O-MODO-XBOX-NAO-E-QUEDA-02, item 4) -------------
+    #
+    # Mora no fim da classe pela razão de sempre deste arquivo: as citações
+    # `arquivo:linha` desta classe não andam por causa dela.
+    #
+    # A palavra dela, 27/09, 23h40: *«O led do player 1 no exemplo não é
+    # simbolico.»* O primário era o primeiro controle que o backend enumerou —
+    # na sessão dela, o roxo, com a lâmpada dizendo 3 —, e o co-op recriava o
+    # vpad do P1 a cada start para pô-lo atrás das cartas 1 e 2
+    # (`coop_ordem_recriada recriar=[…, 'p1']`). O primário é quem acende o «1».
+
+    def _cartas_locked(self, chaves: list[str]) -> dict[str, int]:
+        """A carta de cada key de `chaves` — vazio quando a mesa não tem carta.
+
+        As duas fontes são do registro de identidade, pelo fio que já existe
+        (`set_auto_output_provider` e as companheiras que ele pendura):
+
+        1. a LÂMPADA (`numero_do_slot`), o número que cada controle acende
+           agora. Vale quando TODOS têm uma;
+        2. o LUGAR GRAVADO (`posto_na_fila`): no `connect()` do boot o tique
+           lento ainda não pôs ninguém na mesa, e ninguém tem lâmpada — a fila
+           gravada é a que o boot vai acender. Sem lugar, a key vai para o fim.
+
+        Sem provider (dublê, backend sem fiação) ou sem carta nenhuma, devolve
+        vazio, e a eleição fica na ordem de entrada, como sempre foi. Sob o
+        `_io_lock`; o provider é memória pura, na hierarquia de sempre.
+        """
+        uniqs = {k: self._key_to_uniq(k) for k in chaves}
+        lampadas = {k: self._numero_do_slot(u) for k, u in uniqs.items()}
+        if chaves and all(n is not None for n in lampadas.values()):
+            return {k: n for k, n in lampadas.items() if n is not None}
+        consulta = getattr(self._auto_output_provider, "posto_na_fila", None)
+        if not callable(consulta):
+            return {}
+        postos: dict[str, int | None] = {}
+        for chave, uniq in uniqs.items():
+            posto: int | None = None
+            if uniq is not None:
+                with contextlib.suppress(Exception):
+                    bruto = consulta(uniq)
+                    if isinstance(bruto, int) and not isinstance(bruto, bool):
+                        posto = bruto
+            postos[chave] = posto
+        conhecidos = [p for p in postos.values() if p is not None]
+        if not conhecidos:
+            return {}
+        fim = max(conhecidos) + 1
+        return {k: (p if p is not None else fim) for k, p in postos.items()}
+
+    def _na_ordem_da_carta_locked(self, chaves: list[str]) -> list[str]:
+        """`chaves` na ordem da carta; o empate e a falta de carta ficam na de entrada."""
+        cartas = self._cartas_locked(chaves)
+        if not cartas:
+            return list(chaves)
+        return sorted(chaves, key=cartas.__getitem__)
+
+    def _a_carta_menor_locked(self, sentado: str) -> str:
+        """O primário `sentado` fica — a não ser que a carta MENOR esteja na mesa.
+
+        É o caso que a eleição do posto vazio não cobre: o primário está na
+        mesa, e a lâmpada de outro diz um número menor. Acontece quando ela
+        troca o número na aba Controles, quando o boot elegeu antes de o
+        registro saber quem está na mesa, e quando a carta 1 volta depois de o
+        posto ter sido passado adiante. Controle NOVO continua sem roubar o
+        posto de ninguém: ele entra no fim da fila, com a carta maior.
+
+        Só troca com carta ESTRITAMENTE menor: empate nunca tira ninguém do
+        posto. Sob o `_io_lock`.
+        """
+        chaves = list(self._handles)
+        cartas = self._cartas_locked(chaves)
+        if sentado not in cartas:
+            return sentado
+        melhor = min(chaves, key=cartas.__getitem__)
+        if cartas[melhor] >= cartas[sentado]:
+            return sentado
+        logger.info(
+            "primario_segue_a_carta",
+            uniq=_endereco_mascarado(self._key_to_uniq(melhor)),
+            antes=_endereco_mascarado(self._key_to_uniq(sentado)),
+            carta=cartas[melhor],
+            carta_de_antes=cartas[sentado],
+        )
+        return melhor
+
+    def seguir_a_carta(self) -> bool:
+        """O posto de P1 segue a carta 1 sem esperar hotplug. Devolve se ele andou.
+
+        Quem chama é o tique lento do daemon, logo depois de o registro de
+        identidade olhar a mesa (`lifecycle._seguir_a_carta`): com a mesa
+        parada o `connect()` só roda a cada ~30 s, e o número que ela troca na
+        tela, ou a lâmpada que o registro acabou de dar no boot, não mexe em
+        `/dev/input`. Passa pelo MESMO caminho da eleição (`_recompute_primary`):
+        o aviso ao co-op, o transporte e o `retarget` do evdev.
+        """
+        with self._io_lock:
+            antes = self._primary_key
+            self._recompute_primary()
+            return self._primary_key != antes
 
 
 #: O nibble ALTO do byte de bateria (`status[0]`), traduzido — BATERIA-PARADA-01.

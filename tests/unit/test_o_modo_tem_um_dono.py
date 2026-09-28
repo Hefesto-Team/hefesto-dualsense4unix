@@ -444,7 +444,7 @@ def _config_do_boot() -> lifecycle.DaemonConfig:
     )
 
 
-async def _o_boot(*, com_foco: bool) -> lifecycle.Daemon:
+async def _o_boot(*, com_foco: bool, controle: Any = None) -> lifecycle.Daemon:
     """Sobe o `Daemon` REAL até o restore, e (com foco) ativa o Freestyle como o
     autoswitch ativa: com o `apply_profile_mode` do daemon como applier."""
     store = StateStore()
@@ -453,7 +453,7 @@ async def _o_boot(*, com_foco: bool) -> lifecycle.Daemon:
         transport="usb", buttons_pressed=frozenset(),
     )
     daemon = lifecycle.Daemon(
-        controller=FakeController(transport="usb", states=[estado]),
+        controller=controle or FakeController(transport="usb", states=[estado]),
         bus=EventBus(), store=store, config=_config_do_boot(),
     )
     corrida = asyncio.create_task(daemon.run())
@@ -581,3 +581,147 @@ def test_o_perfil_que_entra_veste_o_p1_na_mesma_ativacao(
         "seguiu vestido (G3)"
     )
     assert vp.caminho_do_vpad(daemon._gamepad_device) == "xbox"
+
+
+# ---------------------------------------------------------------------------
+# Item 4 — o P1 é o controle da carta 1 (a lâmpada que acende o «1»)
+# ---------------------------------------------------------------------------
+# A sessão dela de 27/09 (G0 e o arme das 21h07): o primário era o roxo, o
+# primeiro que o backend enumerou, e a lâmpada dele dizia 3. O co-op pôs cada
+# secundário no boneco da carta dele, e o vpad do P1 (carta 3) ficou fora de
+# ordem: `coop_ordem_recriada recriar=[…, 'p1']` a cada start. A bancada é a de
+# queda (backend, co-op e registro de identidade REAIS), com o provider de cor
+# fiado como o `lifecycle._wire_identity_registry` fia.
+
+from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (  # noqa: E402
+    UNIQS,
+    MesaDoJogo,
+    Relogio,
+    config_isolado,  # noqa: F401 — a fixture do lar de mentira da bancada
+)
+
+BRANCO, VERMELHO, ROXO, AZUL = UNIQS[:4]
+#: A fila gravada da mesa dela: o branco é a carta 1, o azul a 4.
+FILA_DELA = (BRANCO, VERMELHO, ROXO, AZUL)
+
+
+def _gravar_a_fila_dela() -> None:
+    """A fila de uma sessão anterior no disco do lar de mentira: branco 1 … azul 4."""
+    from hefesto_dualsense4unix.daemon.subsystems.identity import ControllerIdentityRegistry
+
+    anterior = ControllerIdentityRegistry(clock=Relogio())
+    anterior.sync_connected(list(FILA_DELA))
+
+
+def _a_mesa_do_boot(
+    monkeypatch: pytest.MonkeyPatch, chegada: tuple[str, ...], *, jogo: bool = False
+) -> MesaDoJogo:
+    """O daemon sobe com a fila gravada, e os controles entram na ordem `chegada`.
+
+    O vpad do P1 já está de pé (o `_safe_start("gamepad")` vem antes do primeiro
+    `connect()`), e o provider de cor é o do produto.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.identity import make_auto_output_provider
+
+    _gravar_a_fila_dela()
+    bancada = MesaDoJogo(monkeypatch, relogio=(r := Relogio()), tempo=r, jogo=jogo)
+    bancada.reg.load()
+    bancada.inst.set_auto_output_provider(make_auto_output_provider(bancada.reg))
+    for uniq in chegada:
+        bancada.mesa.sentar(uniq, transporte="bt")
+    return bancada
+
+
+def _recriacoes_do_p1(diario: list[dict[str, Any]]) -> list[Any]:
+    return [
+        r.get("recriar")
+        for r in diario
+        if r["event"] == "coop_ordem_recriada" and "p1" in (r.get("recriar") or [])
+    ]
+
+
+@pytest.mark.usefixtures("config_isolado")
+@pytest.mark.parametrize("jogo", [False, True], ids=["sem-jogo", "com-jogo"])
+def test_o_p1_e_a_carta_1_e_nao_quem_conectou_primeiro(
+    monkeypatch: pytest.MonkeyPatch, jogo: bool
+) -> None:
+    """Fila branco=1, vermelho=2, roxo=3, azul=4; o roxo conecta primeiro.
+
+    MORDE: devolva o `_quem_senta_no_posto` à 1ª chave de inserção
+    (`next(iter(self._handles))`) — o roxo senta no posto, e o co-op recria o
+    vpad do P1 para pô-lo atrás das cartas 1 e 2.
+    """
+    bancada = _a_mesa_do_boot(monkeypatch, (ROXO, BRANCO, VERMELHO, AZUL), jogo=jogo)
+    vpad_do_p1 = bancada.vpad_do_p1
+    with structlog.testing.capture_logs() as diario:
+        for _ in range(4):
+            bancada.tique()
+
+    assert bancada.a_tela() == {u: n + 1 for n, u in enumerate(FILA_DELA)}, (
+        "premissa: a lâmpada segue a fila gravada"
+    )
+    assert bancada.inst.primary_uniq == BRANCO, (
+        f"o primário é {bancada.inst.primary_uniq}, e a carta 1 é o branco"
+    )
+    assert _recriacoes_do_p1(diario) == [], (
+        f"o co-op recriou o vpad do P1 para pô-lo em ordem: {_recriacoes_do_p1(diario)}"
+    )
+    assert bancada.daemon._gamepad_device is vpad_do_p1 and vpad_do_p1.vivo
+    assert bancada.o_jogo_ve() == {n + 1: u for n, u in enumerate(FILA_DELA)}
+    bancada.o_jogo_segue_a_tela()
+
+
+@pytest.mark.usefixtures("config_isolado")
+def test_o_numero_que_ela_troca_na_tela_leva_o_posto(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ela dá o «1» ao vermelho na aba Controles: o posto vai com a lâmpada.
+
+    Sem hotplug nenhum — o `connect()` só roda a cada ~30 s com a mesa parada —,
+    quem pergunta é o tique lento (`seguir_a_carta`), logo depois do registro.
+
+    MORDE: tire o ramo da carta menor do `_quem_senta_no_posto` (o posto
+    ocupado não se reelege) — o branco segue primário com a lâmpada dizendo 2.
+    """
+    bancada = _a_mesa_do_boot(monkeypatch, (BRANCO, VERMELHO, ROXO, AZUL))
+    for _ in range(3):
+        bancada.tique()
+    assert bancada.inst.primary_uniq == BRANCO
+
+    bancada.reg.escolha_da_mao({VERMELHO: 1, BRANCO: 2, ROXO: 3, AZUL: 4})
+    bancada.reg.liberar_as_lampadas()
+    assert bancada.a_tela()[VERMELHO] == 1, "premissa: o vermelho acende o 1"
+
+    with structlog.testing.capture_logs() as diario:
+        assert bancada.inst.seguir_a_carta() is True
+    assert bancada.inst.primary_uniq == VERMELHO
+    assert [r.get("uniq") for r in diario if r["event"] == "primario_segue_a_carta"], (
+        "o diário não disse que o posto seguiu a carta"
+    )
+    assert bancada.inst.seguir_a_carta() is False, "a segunda pergunta não muda nada"
+
+
+class _ControleQueSegueACarta(FakeController):
+    """O Fake com a pergunta do backend real, contada."""
+
+    def __init__(self, **kw: Any) -> None:
+        super().__init__(**kw)
+        self.perguntas = 0
+
+    def seguir_a_carta(self) -> bool:
+        self.perguntas += 1
+        return False
+
+
+def test_o_tique_lento_pergunta_a_carta(_lar_do_boot: list[Any]) -> None:
+    """O laço do daemon pergunta ao backend, a cada tique lento, se a carta 1 mudou.
+
+    MORDE: tire o `self._seguir_a_carta()` do tique lento do `_poll_loop` — o
+    backend nunca é perguntado, e o número que ela troca na tela só levaria o
+    posto no próximo hotplug.
+    """
+    estado = ControllerState(
+        battery_pct=80, l2_raw=0, r2_raw=0, connected=True,
+        transport="usb", buttons_pressed=frozenset(),
+    )
+    controle = _ControleQueSegueACarta(transport="usb", states=[estado])
+    asyncio.run(_o_boot(com_foco=False, controle=controle))
+    assert controle.perguntas >= 1, "o tique lento não perguntou a carta ao backend"

@@ -5019,6 +5019,23 @@ class Daemon:
         except Exception as exc:  # nunca derrubar o poll loop
             logger.debug("identity_sync_falhou", err=str(exc))
 
+    def _seguir_a_carta(self) -> None:
+        """O primário segue a carta 1, no tique lento (O-MODO-XBOX-NAO-E-QUEDA-02).
+
+        O backend elege no `connect()`, e com a mesa parada o `connect()` só
+        roda a cada ~30 s: o número que ela troca na aba Controles e a lâmpada
+        que o registro dá no boot não mexem em `/dev/input`. Quem responde é o
+        backend (`seguir_a_carta`); backend sem a pergunta (o Fake) fica como
+        está. Nunca derruba o poll loop.
+        """
+        seguir = getattr(self.controller, "seguir_a_carta", None)
+        if not callable(seguir):
+            return
+        try:
+            seguir()
+        except Exception as exc:
+            logger.warning("seguir_a_carta_falhou", err=str(exc))
+
     def _amostrar_bateria(self, agora: float) -> None:
         """Sonda a carga de cada controle e deixa no journal o que valer linha.
 
@@ -5819,6 +5836,10 @@ class Daemon:
             if tick_started >= identity_sync_next_at:
                 identity_sync_next_at = tick_started + 2.0
                 self._sync_identity_registry()
+                # O-MODO-XBOX-NAO-E-QUEDA-02, item 4: o posto de P1 segue a
+                # carta 1 que o registro acabou de dar — antes do co-op, que
+                # põe cada secundário no boneco da carta dele.
+                self._seguir_a_carta()
                 # AUTO-01.1: dois controles na mesa ligam a emulação sozinhos —
                 # sem ela o co-op não existe e os quatro DualSense viram um
                 # cursor só. Aqui, no MESMO tique do reconcile de identidade,
