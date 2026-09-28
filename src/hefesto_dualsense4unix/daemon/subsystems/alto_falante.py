@@ -135,7 +135,17 @@ RECONCILIA_S = 5.0
 #: 0,4 s e não menos: a prova de pronto da sprint é *"a vibração ligando em
 #: menos de 0,5 s"*, e o vigia tem de caber dentro dela com folga para a
 #: passada do `pactl`.
+#:
+#: **DESDE 28/09/2026 A PASSADA NÃO CUSTA `pactl`** e o vigia acorda ANTES do
+#: teto (O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01): ele espera o retrato do som
+#: mudar nas saídas ou nos fluxos, e a olhada sai da foto. Medido com o código
+#: de antes, contra um servidor de mentira que conta os clientes: 2 `pactl` por
+#: fatia — 5 por segundo, parado. Com o retrato vivo, zero.
 VIGIA_DO_MODO_S = 0.4
+
+#: O que o vigia lê no retrato do som: as saídas (quem é o endpoint e o nó de
+#: som) e os fluxos que tocam nelas. O microfone de alguém que abre não o acorda.
+_O_QUE_O_VIGIA_LE: tuple[str, ...] = ("sinks", "sink-inputs")
 
 #: Quanto tempo a ponte que NÃO SUBIU segura a rota daquele controle —
 #: RADIO-AFOGADO-01, 22/09/2026.
@@ -1919,6 +1929,11 @@ class AltoFalanteSubsystem:
         pontes (que colhem os gravadores) e só então tirar os nós.
         """
         self._parar.set()
+        # O vigia dorme no retrato do som, e não no `_parar`: sem este toque a
+        # thread só veria a parada no fim da fatia.
+        from hefesto_dualsense4unix.integrations.retrato_do_som import RETRATO
+
+        RETRATO.acordar()
         thread = self._thread
         self._thread = None
         if thread is not None:
@@ -2024,14 +2039,27 @@ class AltoFalanteSubsystem:
         servidor de som não respondeu, e aí a espera segue como antes — um
         `pactl` que falhou não pode derrubar a ponte de um jogo aberto, que é a
         decisão dela de 08/09.
+
+        **A FATIA ACABA NO EVENTO** (O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01,
+        28/09/2026): cada fatia espera o retrato do som mudar nas saídas ou nos
+        fluxos, com :data:`VIGIA_DO_MODO_S` de teto — o fluxo que nasce acorda
+        o vigia na hora. A VOLTA acaba por RELÓGIO, e não por contagem de
+        fatias: com fatias curtas por evento, contar fatias faria um jogo que
+        mexe nos fluxos reconciliar a cada meio segundo.
         """
-        fatias = max(1, int(RECONCILIA_S / VIGIA_DO_MODO_S))
-        for _ in range(fatias):
-            if self._parar.wait(VIGIA_DO_MODO_S) or gerenciador.dormir(0.0):
+        from hefesto_dualsense4unix.integrations.retrato_do_som import RETRATO
+
+        fim = time.monotonic() + RECONCILIA_S
+        marca = RETRATO.marca(_O_QUE_O_VIGIA_LE)
+        while True:
+            falta = fim - time.monotonic()
+            if falta <= 0:
+                return False
+            marca = RETRATO.esperar(marca, min(VIGIA_DO_MODO_S, falta), _O_QUE_O_VIGIA_LE)
+            if self._parar.is_set() or gerenciador.dormir(0.0):
                 return True
             if self._o_modo_de_alguem_mudou():
                 return False
-        return False
 
     def _o_modo_de_alguem_mudou(self) -> bool:
         """Alguém passou a tocar (ou parou) desde a última volta?

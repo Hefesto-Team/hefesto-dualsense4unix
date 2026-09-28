@@ -239,11 +239,22 @@ def _lembrar_quem_ouve(uniq: str, ouvintes: list[str] | None) -> None:
 #: report da pydualsense já atualizou, sem HID I/O.
 INTERVALO_S: float = 0.25
 
-#: Cadência de QUEM OUVE (PEÇA A). Ela é a leitura CARA — dois `pactl` por
+#: Cadência de QUEM OUVE (PEÇA A). Ela era a leitura CARA — dois `pactl` por
 #: pergunta, 6,8 ms de CPU medidos em 03/09/2026 —, e a sprint fixa o alvo:
 #: *"Custo alvo: leitura de ~1 Hz, sem processo permanente"*. A resposta fica
 #: guardada entre uma pergunta e outra, então a decisão continua a 4 Hz.
+#:
+#: **DESDE 28/09/2026 ELA NÃO CUSTA `pactl`** (O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01):
+#: medidos contra um servidor de mentira que conta os clientes, eram TRÊS por
+#: pergunta (`list source-outputs`, `list sources short`, `list sources`);
+#: com o retrato do som vivo, as três saem da foto. E a pergunta passa a ser
+#: feita também quando o retrato muda nas fontes ou nos fluxos de gravação —
+#: um programa que abre o microfone acende a luz no tique seguinte, e não na
+#: volta de 1 s.
 INTERVALO_DE_QUEM_OUVE_S: float = 1.0
+
+#: O que QUEM OUVE lê no retrato do som: os fluxos de gravação e as fontes.
+_O_QUE_A_LUZ_LE: tuple[str, ...] = ("source-outputs", "sources")
 
 #: O quarto estado é a bateria, e o número é dela: *"pisca lento, se a bateria
 #: do controle tiver abaixo de 30%"*. Abaixo, não abaixo-ou-igual.
@@ -748,7 +759,10 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
     Guardar o valor antigo faria o laço achar que o byte já está certo e nunca
     reescrevê-lo — a luz nasceria errada e ficaria.
     """
+    from hefesto_dualsense4unix.integrations.retrato_do_som import RETRATO
+
     relogio = asyncio.get_running_loop().time
+    marca_vista: int | None = None
     escrito: dict[str, int] = {}
     posse: set[str] = set()
     sem_resposta_desde: dict[str, float] = {}
@@ -802,11 +816,13 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                 posse.discard(uniq)
                 sem_resposta_desde.pop(uniq, None)
 
-            if (agora - perguntei_em) >= INTERVALO_DE_QUEM_OUVE_S:
+            marca = RETRATO.marca(_O_QUE_A_LUZ_LE)
+            if marca != marca_vista or (agora - perguntei_em) >= INTERVALO_DE_QUEM_OUVE_S:
                 ouvintes_por_uniq = await _fora_do_laco(
                     daemon, _quem_ouve, mesa, cache_das_pecas
                 )
                 perguntei_em = agora
+                marca_vista = marca
                 # O MEDIDOR SEGUE SÓ QUEM JÁ TEM OUVINTE (§1.1: o `2` vive
                 # dentro do `1`). Com a sala vazia não se resolve fonte, não se
                 # abre `parec`, e o medidor nem chega a nascer.

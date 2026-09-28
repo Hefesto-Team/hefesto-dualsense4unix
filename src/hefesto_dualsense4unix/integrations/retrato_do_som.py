@@ -457,6 +457,13 @@ def ler_do_servidor(argv: Sequence[str]) -> str | None:
     return proc.stdout or ""
 
 
+def _servidor_sob_suspeita() -> bool:
+    """O recuo do servidor está de pé (em curso, ou vencido sem resposta desde então)."""
+    from hefesto_dualsense4unix.integrations.dualsense_bt_audio import PACTL
+
+    return PACTL.espera_s > 0
+
+
 class RetratoDoSom:
     """O que o servidor de som disse por último, com um dono por processo.
 
@@ -679,6 +686,16 @@ class RetratoDoSom:
 
         Só com o retrato VIVO: sem dono não há evento que o mantenha em dia, e
         uma foto que ninguém atualiza responderia sobre o passado para sempre.
+
+        **SERVIDOR SOB SUSPEITA NÃO RESPONDE PELA FOTO.** Um `pipewire-pulse`
+        TRAVADO não derruba o `subscribe` — ele só para de falar —, e a foto
+        continuaria respondendo como se nada houvesse. Quem percebe o
+        travamento é o recuo do servidor (`dualsense_bt_audio.PACTL`), pelo
+        prazo estourado de uma escrita ou de uma releitura. Com o recuo de pé,
+        toda resposta passa a exigir leitura nova: em recuo ela nem sai («não
+        sei»); com o recuo vencido, a primeira que responder o zera — é a
+        mesma sondagem de `alto_falante_bt._o_servidor_atende`, pela porta do
+        retrato.
         """
         if not self.vivo:
             return None
@@ -686,6 +703,7 @@ class RetratoDoSom:
             falhou = self._duvida.get(tipo)
             precisa = (tipo in self._pendente_desde or tipo not in self._textos
                        or falhou is not None)
+        precisa = precisa or _servidor_sob_suspeita()
         if precisa:
             if falhou is not None and time.monotonic() - falhou < INTERVALO_DA_DUVIDA_S:
                 return None
