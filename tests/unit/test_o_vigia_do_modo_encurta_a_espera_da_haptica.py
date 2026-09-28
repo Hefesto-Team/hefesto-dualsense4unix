@@ -18,6 +18,16 @@ explicitamente *"sem multiplicar as chamadas ao servidor de som"*:
 Perguntando um endpoint por vez, a volta de quatro controles gasta OITO
 subprocessos. `sinks_que_tocam` responde por todos numa passada de DOIS — o
 vigia é mais barato por controle que o laço que já existia.
+
+**O VIGIA SAIU EM 28/09/2026** (A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01).
+Ele adivinhava o modo de cada controle a cada 0,4 s e acordava a volta quando o
+palpite divergia da ponte — e, quando a ponte NÃO PODIA virar o modo dele,
+acordava para sempre, o que pediu a espera da tentativa que falhou (26/09). A
+volta agora acorda pelo aviso (o retrato do som, o toque de quem entra na
+partida) e reconcilia quando o que ELA LEU mudou: os fluxos nos nós dos
+controles do rádio. As réguas abaixo medem essa comparação, com os mesmos
+casos que o vigia tinha, e o dublê segue respondendo SÓ sobre o que foi
+perguntado.
 """
 
 from __future__ import annotations
@@ -80,7 +90,7 @@ def test_a_forma_singular_continua_valendo() -> None:
 
 
 # ---------------------------------------------------------------------------
-# O vigia — encurta a espera, e só isso
+# A volta acorda quando o que ela leu mudou — e só então
 # ---------------------------------------------------------------------------
 
 
@@ -90,18 +100,21 @@ class _Endpoint:
 
 
 def _subsystem(
-    *, endpoints: dict[str, str], modos: dict[str, str], jogando: set[str] | None = None
+    *, endpoints: dict[str, str], no_radio: set[str] | None = None, viu: set[str] | None
 ) -> Any:
+    """O subsystem montado por `__new__`: o que ele lê mora no corpo da classe.
+
+    ``viu`` é o que a última volta leu quando começou (``None`` = não soube).
+    """
     quem = object.__new__(af.AltoFalanteSubsystem)
     quem._endpoints = {u: _Endpoint(n) for u, n in endpoints.items()}  # type: ignore[attr-defined]
-    quem._modo_da_ponte = dict(modos)  # type: ignore[attr-defined]
-    if jogando is not None:
-        quem._jogando = frozenset(j.lower() for j in jogando)  # type: ignore[attr-defined]
+    quem._no_radio = frozenset(no_radio if no_radio is not None else endpoints)  # type: ignore[attr-defined]
+    quem._o_que_a_volta_viu = None if viu is None else frozenset(viu)  # type: ignore[attr-defined]
     return quem
 
 
 def _som(uniq: str) -> str:
-    """O nome do `hefesto_som_<hex6>` daquele controle, como o vigia o pede."""
+    """O nome do `hefesto_som_<hex6>` daquele controle, como a volta o pede."""
     return bt.nome_do_sink(uniq)
 
 
@@ -112,8 +125,8 @@ def _com_tocando(monkeypatch: pytest.MonkeyPatch, resposta: object) -> None:
     RADIO-AFOGADO-01, 22/09/2026, e isto foi achado pela mordida: até aqui o
     dublê devolvia a resposta inteira ignorando os nomes recebidos, e por isso
     era mais FROUXO que o produto. Com ele, arrancar `nome_do_sink` da pergunta
-    do vigia deixava as catorze réguas VERDES — a régua do alto-falante passava
-    sobre uma pergunta que nunca fora feita.
+    deixava as réguas VERDES — a régua do alto-falante passava sobre uma
+    pergunta que nunca fora feita.
     """
 
     def falso(nomes: Any) -> Any:
@@ -130,108 +143,88 @@ def _com_tocando(monkeypatch: pytest.MonkeyPatch, resposta: object) -> None:
 def test_o_jogo_que_comeca_a_tocar_acorda_a_volta(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """É o defeito de 18/09: a ponte em «som» com o jogo já tocando."""
-    quem = _subsystem(endpoints={P1: "hef_p1"}, modos={P1: "som"}, jogando={P1})
-    _com_tocando(monkeypatch, {"hef_p1", _som(P1)})
-    assert quem._o_modo_de_alguem_mudou() is True
+    """É o defeito de 18/09: o jogo abre o endpoint e a volta não sabe."""
+    quem = _subsystem(endpoints={P1: "hef_p1"}, viu=set())
+    _com_tocando(monkeypatch, {"hef_p1"})
+    assert quem._a_mesa_do_som_mudou() is True
 
 
 def test_o_som_que_comeca_acorda_a_volta(monkeypatch: pytest.MonkeyPatch) -> None:
-    """RADIO-AFOGADO-01, 22/09/2026 — o lado que o vigia não via.
+    """RADIO-AFOGADO-01, 22/09/2026 — o nó de som também é entrada da volta.
 
-    A ponte do som passou a só existir com som; sem esta linha, o primeiro som
-    de cada partida espera a volta INTEIRA (`RECONCILIA_S`, 5 s) em vez de
-    `VIGIA_DO_MODO_S` (0,4 s).
+    A ponte do som só existe com fluxo; sem esta linha, o primeiro som de cada
+    partida espera a volta INTEIRA (`RECONCILIA_S`, 5 s).
 
-    MORDIDA: tire `nome_do_sink` da pergunta do vigia — o alto-falante some da
-    passada, o vigia não vê nada mudar e devolve `False`.
+    MORDIDA: tire `nome_do_sink` da pergunta de `_o_que_a_mesa_do_som_diz` — o
+    alto-falante some da passada, nada muda, e a volta não acorda.
     """
-    quem = _subsystem(endpoints={P1: "hef_p1"}, modos={})
+    quem = _subsystem(endpoints={P1: "hef_p1"}, viu=set())
     _com_tocando(monkeypatch, {_som(P1)})
-    assert quem._o_modo_de_alguem_mudou() is True
+    assert quem._a_mesa_do_som_mudou() is True
+
+
+def test_o_som_de_quem_nao_tem_endpoint_tambem_acorda(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Sem âncora USB não há endpoint de háptica, e o alto-falante segue sendo dele."""
+    quem = _subsystem(endpoints={}, no_radio={P2}, viu=set())
+    _com_tocando(monkeypatch, {_som(P2)})
+    assert quem._a_mesa_do_som_mudou() is True
 
 
 def test_a_mesa_ociosa_nao_acorda_a_volta(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Quatro controles parados, nenhuma ponte: não há o que reconciliar.
-
-    Sem isto a cura se pagaria com uma reconciliação a cada 0,4 s — a
-    tempestade de `pactl` que a sprint do vigia veta.
-    """
-    quem = _subsystem(endpoints={P1: "hef_p1", P2: "hef_p2"}, modos={})
+    """Quatro controles parados, nenhum fluxo: não há o que reconciliar."""
+    quem = _subsystem(endpoints={P1: "hef_p1", P2: "hef_p2"}, viu=set())
     _com_tocando(monkeypatch, set())
-    assert quem._o_modo_de_alguem_mudou() is False
+    assert quem._a_mesa_do_som_mudou() is False
 
 
-def test_o_som_que_para_derruba_a_ponte(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O outro lado: ponte de pé sem ninguém tocando é a enxurrada de volta."""
-    quem = _subsystem(endpoints={P1: "hef_p1"}, modos={P1: "som"})
+def test_o_som_que_para_acorda_para_derrubar_a_ponte(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O outro lado: ponte de pé sem ninguém tocando desce na volta, e não em 5 s."""
+    quem = _subsystem(endpoints={P1: "hef_p1"}, viu={_som(P1)})
     _com_tocando(monkeypatch, set())
-    assert quem._o_modo_de_alguem_mudou() is True
-
-
-def test_o_endpoint_de_quem_o_jogo_nao_le_nao_acorda(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """O palpite do vigia usa os DOIS sinais, como a volta.
-
-    Sem `self._jogando`, um endpoint tocando num controle que o jogo não lê
-    faria o vigia pedir háptica, a volta recusar, e o vigia pedir de novo — 2,5
-    reconciliações por segundo, para sempre.
-    """
-    quem = _subsystem(endpoints={P1: "hef_p1"}, modos={}, jogando=set())
-    _com_tocando(monkeypatch, {"hef_p1"})
-    assert quem._o_modo_de_alguem_mudou() is False
+    assert quem._a_mesa_do_som_mudou() is True
 
 
 def test_o_jogo_que_fecha_tambem_acorda(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O outro lado: sem ele o alto-falante fica mudo até a volta inteira."""
-    quem = _subsystem(endpoints={P1: "hef_p1"}, modos={P1: "haptica"}, jogando={P1})
+    """Sem ele o alto-falante fica mudo até a volta inteira."""
+    quem = _subsystem(endpoints={P1: "hef_p1"}, viu={"hef_p1"})
     _com_tocando(monkeypatch, set())
-    assert quem._o_modo_de_alguem_mudou() is True
+    assert quem._a_mesa_do_som_mudou() is True
 
 
 def test_nada_mudou_nao_acorda(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Acordar a cada fatia devolveria a tempestade de `pactl` que a sprint veta."""
-    quem = _subsystem(
-        endpoints={P1: "hef_p1", P2: "hef_p2"},
-        modos={P1: "haptica", P2: "som"},
-        jogando={P1},
-    )
+    """Acordar sem mudança devolveria a tempestade que a sprint do vigia vetou.
+
+    E é o caso que o vigia errava: a ponte que NÃO PÔDE virar háptica (sem
+    fonte, sem vaga) — a entrada não mudou, e a volta não acorda.
+    """
+    quem = _subsystem(endpoints={P1: "hef_p1", P2: "hef_p2"}, viu={"hef_p1", _som(P2)})
     _com_tocando(monkeypatch, {"hef_p1", _som(P2)})
-    assert quem._o_modo_de_alguem_mudou() is False
+    assert quem._a_mesa_do_som_mudou() is False
 
 
 def test_servidor_mudo_nao_mexe_em_ponte_nenhuma(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Um `pactl` que falhou não pode derrubar a ponte de um jogo aberto."""
-    quem = _subsystem(endpoints={P1: "hef_p1"}, modos={P1: "haptica"}, jogando={P1})
+    quem = _subsystem(endpoints={P1: "hef_p1"}, viu={"hef_p1"})
     _com_tocando(monkeypatch, None)
-    assert quem._o_modo_de_alguem_mudou() is False
+    assert quem._a_mesa_do_som_mudou() is False
 
 
-def test_sem_endpoint_nem_pergunta(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem endpoint não há o que vigiar — e nenhum subprocesso é gasto."""
+def test_sem_no_nenhum_nem_pergunta(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Sem controle no rádio não há o que olhar — e nenhum subprocesso é gasto."""
     chamou: list[int] = []
     monkeypatch.setattr(
         bt, "sinks_que_tocam", lambda _n: chamou.append(1) or set()
     )
-    quem = _subsystem(endpoints={}, modos={})
-    assert quem._o_modo_de_alguem_mudou() is False
+    quem = _subsystem(endpoints={}, no_radio=set(), viu=set())
+    assert quem._a_mesa_do_som_mudou() is False
     assert chamou == [], "perguntou ao servidor de som sem ter o que perguntar"
 
 
 def test_a_excecao_nao_derruba_a_thread_do_som(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    quem = _subsystem(endpoints={P1: "hef_p1"}, modos={P1: "som"})
+    quem = _subsystem(endpoints={P1: "hef_p1"}, viu=set())
     _com_tocando(monkeypatch, RuntimeError("sem servidor"))
-    assert quem._o_modo_de_alguem_mudou() is False
-
-
-def test_a_cadencia_cabe_na_prova_de_pronto() -> None:
-    """*"a vibração ligando em menos de 0,5 s"* — a sprint, virada número."""
-    assert af.VIGIA_DO_MODO_S <= 0.5
-    assert af.VIGIA_DO_MODO_S < af.RECONCILIA_S
-    fatias = int(af.RECONCILIA_S / af.VIGIA_DO_MODO_S)
-    assert fatias >= 10, "poucas fatias: a espera volta a ser a volta inteira"
+    assert quem._a_mesa_do_som_mudou() is False

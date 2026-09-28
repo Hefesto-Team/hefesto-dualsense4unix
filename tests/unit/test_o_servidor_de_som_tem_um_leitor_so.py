@@ -332,7 +332,8 @@ def _uma_volta_dos_leitores() -> dict[str, Any]:
         "canal": [hotkey._ler_o_canal(u) for u in UNIQS],
         # luz_do_mic._quem_ouve, a cada INTERVALO_DE_QUEM_OUVE_S
         "quem_ouve": luz_do_mic._quem_ouve(list(UNIQS), {}),
-        # alto_falante._o_modo_de_alguem_mudou, a cada VIGIA_DO_MODO_S
+        # alto_falante._a_mesa_do_som_mudou, quando o retrato avisa (o vigia de
+        # 0,4 s saiu em 28/09, A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01)
         "vigia": afb.sinks_que_tocam([*endpoints, *(afb.nome_do_sink(u) for u in UNIQS)]),
         # alto_falante._casar_as_pontes, por endpoint
         "pontes": [(afb.sink_esta_tocando(e, na_duvida=True), afb.volumes_do_sink(e))
@@ -1037,53 +1038,64 @@ def test_o_canal_do_microfone_acorda_pelo_evento_das_fontes(
 def test_o_vigia_do_alto_falante_acorda_pelo_fluxo_que_nasce(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O jogo abre um fluxo no endpoint: o vigia acorda na hora, e não no teto da fatia.
+    """O jogo abre um fluxo no endpoint: a volta do alto-falante acorda na hora.
 
-    E a parada do subsystem também o acorda (`RETRATO.acordar`), sem esperar
-    a fatia — o vigia dorme no retrato, e não no `_parar`.
+    Desde 28/09 (A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01) não há vigia
+    de 0,4 s: o OUVINTE do alto-falante dorme no retrato e arma o aviso da
+    volta, que olha se o que ela leu mudou. A parada solta os dois sem esperar
+    o relógio — o ouvinte pelo `RETRATO.acordar`, a espera pelo aviso.
 
-    MORDIDA: devolva o `self._parar.wait(VIGIA_DO_MODO_S)` à fatia.
+    MORDIDA: tire o `self._acordar.set()` de `_ouvir_o_retrato` — o fluxo que
+    nasce espera a volta inteira.
     """
     import threading
 
     from hefesto_dualsense4unix.daemon.subsystems import alto_falante as af
 
-    monkeypatch.setattr(af, "VIGIA_DO_MODO_S", 3.0)
     monkeypatch.setattr(af, "RECONCILIA_S", 10.0)
     quem = object.__new__(af.AltoFalanteSubsystem)
     quem._parar = threading.Event()  # type: ignore[attr-defined]
+    quem._acordar = threading.Event()  # type: ignore[attr-defined]
     mudou = [False]
-    quem._o_modo_de_alguem_mudou = lambda: mudou[0]  # type: ignore[method-assign]
+    quem._a_mesa_do_som_mudou = lambda: mudou[0]  # type: ignore[method-assign]
 
     class _Gerenciador:
         def dormir(self, _s: float) -> bool:
             return False
 
+    ouvinte = threading.Thread(target=quem._ouvir_o_retrato, daemon=True)
+    ouvinte.start()
     fim: list[tuple[bool, float]] = []
 
     def esperar() -> None:
         inicio = time.monotonic()
-        fim.append((quem._esperar_de_olho_no_modo(_Gerenciador()), time.monotonic() - inicio))
+        fim.append((quem._esperar_a_mesa_do_som(_Gerenciador()), time.monotonic() - inicio))
 
-    fio = threading.Thread(target=esperar)
-    fio.start()
-    time.sleep(0.1)
-    mudou[0] = True
-    rs.RETRATO._avisar({"sink-inputs"})
-    fio.join(2.0)
-    assert fim and fim[0][0] is False and fim[0][1] < 1.0, (
-        f"o fluxo que nasceu não acordou o vigia: {fim}")
+    try:
+        fio = threading.Thread(target=esperar)
+        fio.start()
+        time.sleep(0.1)
+        mudou[0] = True
+        rs.RETRATO._avisar({"sink-inputs"})
+        fio.join(2.0)
+        assert fim and fim[0][0] is False and fim[0][1] < 1.0, (
+            f"o fluxo que nasceu não acordou a volta: {fim}")
 
-    fim.clear()
-    mudou[0] = False
-    fio = threading.Thread(target=esperar)
-    fio.start()
-    time.sleep(0.1)
-    quem._parar.set()
-    rs.RETRATO.acordar()
-    fio.join(2.0)
-    assert fim and fim[0][0] is True and fim[0][1] < 1.0, (
-        f"a parada esperou a fatia inteira: {fim}")
+        fim.clear()
+        mudou[0] = False
+        fio = threading.Thread(target=esperar)
+        fio.start()
+        time.sleep(0.1)
+        quem._parar.set()
+        quem._acordar.set()
+        fio.join(2.0)
+        assert fim and fim[0][0] is True and fim[0][1] < 1.0, (
+            f"a parada esperou o relógio inteiro: {fim}")
+    finally:
+        quem._parar.set()
+        rs.RETRATO.acordar()
+        ouvinte.join(2.0)
+    assert not ouvinte.is_alive(), "o ouvinte não parou com o `RETRATO.acordar`"
 
 
 def test_o_ouvinte_para_quando_mandam_mesmo_com_o_servidor_caido(

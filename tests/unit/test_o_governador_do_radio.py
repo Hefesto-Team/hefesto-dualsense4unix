@@ -832,18 +832,30 @@ def test_a_terceira_espera_a_resposta_sem_gravador_e_sem_derrubar_o_no(som: Any)
     assert sub._esperando_vaga == frozenset({(CONTROLE_3, "som")})
 
 
-def test_quem_espera_vaga_nao_acorda_o_vigia(
+def test_quem_espera_vaga_nao_acorda_a_volta_e_a_resposta_acorda(
     som: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """MORDIDA: tire o `esperando.get(uniq)` do vigia e ele acorda a volta a
-    cada 0,4 s enquanto ela não responde."""
+    """A pergunta está com ela: esperar a vaga não acorda a volta, e a resposta sim.
+
+    A volta acorda quando o que ela LEU muda (A-HAPTICA-DO-RADIO-OBEDECE-AO-
+    SINAL-DO-JOGO-01), e esperar a vaga não muda leitura nenhuma — o vigia de
+    0,4 s, que olhava o modo, precisava de uma exceção para não acordar a volta
+    a cada fatia enquanto ela não respondia.
+
+    MORDIDA: tire o ``self._acordar_a_volta()`` de ``_esquecer_a_espera`` — ela
+    responde «Ligar aqui» e a ponte espera a volta seguinte, cinco segundos.
+    """
     sub, _ = som
-    sub._esperando_vaga = frozenset({(CONTROLE_3, "som")})
-    sub._endpoints = {CONTROLE_3: type("E", (), {"nome": "endpoint::3"})()}
     monkeypatch.setattr(
-        af, "sinks_que_tocam", lambda nomes: {af.nome_do_sink(CONTROLE_3)}
+        af, "sinks_que_tocam", lambda nomes: {n for n in nomes if n == af.nome_do_sink(CONTROLE_3)}
     )
-    assert sub._o_modo_de_alguem_mudou() is False
+    sub._no_radio = frozenset({CONTROLE_3})
+    sub._o_que_a_volta_viu = sub._o_que_a_mesa_do_som_diz()
+    sub._esperando_vaga = frozenset({(CONTROLE_3, "som")})
+    assert sub._a_mesa_do_som_mudou() is False
+    assert sub._volta_pedida is False
+    sub._esquecer_a_espera(CONTROLE_3)
+    assert sub._volta_pedida is True and sub._acordar.is_set()
 
 
 def test_a_ponte_que_terminou_sozinha_sai_e_a_sob_demanda_religa(som: Any) -> None:

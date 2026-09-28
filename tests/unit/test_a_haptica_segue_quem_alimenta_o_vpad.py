@@ -451,6 +451,18 @@ def _as_pontes_de_mentira(monkeypatch: pytest.MonkeyPatch) -> dict[str, bool]:
     )
     monkeypatch.setattr(af, "PonteDeSomPorRadio", _PonteDeMentira)
     monkeypatch.setattr(af, "sink_esta_tocando", _tocando)
+    # O DONO DOS FLUXOS É O JOGO (A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01,
+    # 28/09/2026): a partida abre pelo cliente que toca nos endpoints, e ele
+    # segue conectado enquanto o jogo vive. O dublê responde SÓ sobre os nós
+    # perguntados que tocam, como `_tocando`.
+    monkeypatch.setattr(
+        af,
+        "donos_dos_fluxos",
+        lambda nomes, *_a, **_k: frozenset({"4243"})
+        if any(_tocando(n) for n in nomes)
+        else frozenset(),
+    )
+    monkeypatch.setattr(af, "clientes_conectados", lambda *_a, **_k: frozenset({"4243"}))
     monkeypatch.setattr(eh, "EndpointDeHaptica", _EndpointDeMentira)
     monkeypatch.setattr(
         eh,
@@ -469,7 +481,7 @@ def quem_vibra(
 ) -> set[str]:
     """Os controles no rádio cuja ponte subiu em modo HÁPTICA, com a mão no posto.
 
-    A primeira volta abre a partida (o jogo do ``proc`` de mentira). Depois, a
+    A primeira volta abre a partida (o fluxo do jogo nos endpoints). Depois, a
     mão no controle do posto, marcada como o laço do daemon marca
     (``anotar_o_primario``, que pergunta ``primary_uniq`` ao backend da
     bancada); e a segunda volta decide. O evdev não vota

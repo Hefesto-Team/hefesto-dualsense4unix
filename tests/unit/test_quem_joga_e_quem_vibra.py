@@ -18,6 +18,10 @@ medido aqui (o evdev que o jogo segura) deixou de votar. Em 21/09 ele pôs os
 quatro em háptica num jogo de um jogador, e com o GE ele sai vazio. Quem vota
 é quem mexeu desde que o jogo abriu (`test_a_haptica_quem_joga_e_quem_mexe.py`);
 estas réguas medem a pista que vai à linha `haptica_portao_fechado`.
+
+**NOTA DE 28/09/2026 (A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01):** a
+partida também deixou de sair daqui — quem a abre é o dono do fluxo no
+endpoint —, e a varredura de `/proc` só roda quando a linha do portão sai.
 """
 
 from __future__ import annotations
@@ -230,42 +234,46 @@ class TestADobraDoVpad:
 class TestOGateEstaLigado:
     """*A cura escrita e nunca ligada* é o defeito mais caro desta casa."""
 
-    def test_o_subsystem_consulta_quem_joga_antes_de_decidir_o_modo(self):
-        """MORDIDA: tirar a chamada a `_quem_mexeu_na_partida` (o voto) ou a
-        `_quem_o_jogo_le` (a varredura que abre a partida) do `_casar_as_pontes`.
-
-        Sem elas o gate existe, tem régua verde, e o produto segue sem saber
-        quem joga — em 20/09 às 13h36 isso era o P3 espelhando o jogo do P1.
-        Desde a A-HAPTICA-QUEM-JOGA-02 (26/09/2026) quem vota é quem mexeu, e
-        o evdev é só pista: a varredura segue aqui porque é dela que sai o
-        retrato do jogo.
-        """
+    def _corpo(self) -> str:
         fonte = pathlib.Path(
             "src/hefesto_dualsense4unix/daemon/subsystems/alto_falante.py"
         ).read_text(encoding="utf-8")
         corpo = fonte[fonte.index("def _casar_as_pontes") :]
-        corpo = corpo[: corpo.index('modo = (')]
-        assert "self._quem_o_jogo_le(controles)" in corpo, (
-            "a varredura do jogo não roda dentro de `_casar_as_pontes`"
-        )
-        assert "jogando = self._quem_mexeu_na_partida(controles)" in corpo, (
+        return corpo[: corpo.index("\n    def ", 1)]
+
+    def test_o_subsystem_consulta_quem_joga_antes_de_decidir_o_modo(self) -> None:
+        """MORDIDA: tire a chamada a `_quem_mexeu_na_partida` (o voto e a
+        partida) do `_casar_as_pontes`.
+
+        Sem ela o gate existe, tem régua verde, e o produto segue sem saber
+        quem joga — em 20/09 às 13h36 isso era o P3 espelhando o jogo do P1.
+
+        E A VARREDURA DE `/proc` NÃO RODA MAIS A CADA VOLTA (A-HAPTICA-DO-
+        RADIO-OBEDECE-AO-SINAL-DO-JOGO-01): a partida é o dono do fluxo, e a
+        pista do evdev só se pergunta quando a linha do portão sai.
+        """
+        corpo = self._corpo()
+        antes_do_modo = corpo[: corpo.index('modo = "haptica"')]
+        assert "jogando = self._quem_mexeu_na_partida(controles)" in antes_do_modo, (
             "o voto de quem joga não é consultado dentro de `_casar_as_pontes`"
         )
+        assert "self._quem_o_jogo_le(controles)" not in corpo, (
+            "a varredura de /proc voltou a rodar a cada volta"
+        )
 
-    def test_o_modo_haptica_exige_os_dois_sinais(self):
+    def test_o_modo_haptica_exige_os_dois_sinais(self) -> None:
         """O canal aberto E aquele controle jogando (mexeu desde que o jogo abriu).
 
         Só o primeiro deixava três controles vibrarem num jogo de um jogador.
 
         MORDIDA: tirar `este_joga` da condição.
         """
-        fonte = pathlib.Path(
-            "src/hefesto_dualsense4unix/daemon/subsystems/alto_falante.py"
-        ).read_text(encoding="utf-8")
-        i = fonte.index('modo = (')
-        condicao = fonte[i : i + 240]
+        corpo = self._corpo()
+        i = corpo.index('modo = "haptica"')
+        condicao = corpo[i : corpo.index("\n", i)]
         assert "este_joga" in condicao, "o gate saiu da condição do modo"
-        assert "sink_esta_tocando" in condicao, "o sinal do canal saiu"
+        assert "endpoint_toca" in condicao, "o canal saiu da condição do modo"
+        assert "endpoint_toca = bool(endpoint) and sink_esta_tocando(endpoint.nome)" in corpo
 
 
 @pytest.mark.parametrize("quem", [P1, P2, P3, P4])
