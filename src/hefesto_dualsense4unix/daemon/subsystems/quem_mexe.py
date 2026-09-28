@@ -29,14 +29,32 @@ cada tique para mandá-la ao vpad: o laço lê o do posto, e o
 snapshot a mais, e custa uma comparação por controle e tique — e, com o jogo
 fechado, um ``getattr``.
 
-A PARTIDA É A JANELA
-====================
-A marca vale da abertura do jogo até ele fechar, e ZERA nas duas pontas. Quem
-diz que o jogo abriu é a volta do portão, com o MESMO predicado com que ela já
-decide se há jogo (``quem_o_jogo_le.pids_de_jogo``) e na MESMA varredura de
-``/proc``: o jogo abre quando a volta vê processo de jogo e a anterior não via,
-ou via um conjunto sem nenhum pid em comum (é outro jogo); fecha quando não vê
-nenhum.
+A PARTIDA É A JANELA, E QUEM A ABRE É O DONO DO FLUXO
+=====================================================
+A marca vale da abertura do jogo até ele fechar, e ZERA nas duas pontas.
+
+**Desde 28/09/2026 quem diz que o jogo abriu é o fluxo dele no endpoint**
+(A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01): a volta do alto-falante
+passa os DONOS dos fluxos que tocam nos endpoints de háptica — o cliente do
+servidor de som, pelo índice que o próprio servidor dá —, e a partida abre
+quando aparece o primeiro dono. Antes, quem abria era qualquer processo com
+``STEAM_COMPAT_DATA_PATH`` no ambiente, numa varredura de ``/proc`` a cada
+volta; um ``run`` auxiliar do GE-Proton abria e fechava a partida três vezes
+antes de o jogo rodar, e das 00h12 às 05h21 de 27/09 foram 35 aberturas, uma
+delas zerando as quatro marcas do Sackboy no meio do jogo.
+
+**A partida não zera porque o conjunto de donos mudou** (a régua dos donos
+alternados, A, B, A, B). Ela só vira OUTRA partida quando nenhum dono de antes
+segue conectado ao servidor, e só fecha quando não sobra fluxo nem dono vivo:
+o jogo que fecha e reabre o fluxo (o GE remira a háptica a cada hotplug de
+endpoint) segue sendo o mesmo jogo.
+
+FATO SUBSTITUÍDO: a proposta da auditoria de 27/09 era o dono pela credencial
+``pipewire.sec.pid``. Medido em 28/09 no servidor desta máquina (PipeWire
+1.6.8): para todo cliente do protocolo do PulseAudio — o ``winepulse`` do
+Proton, o SDL, o ``pactl`` — a credencial é o PID do próprio
+``pipewire-pulse``, igual para todos. O dono que distingue é o CLIENTE do
+servidor, e a vida dele se pergunta ao servidor, sem PID nenhum.
 
 Não «os últimos N segundos»: numa cena parada (cutscene, menu, a pessoa lendo)
 a háptica cairia no meio da cena que vibra. Quem pegou o controle nesta
@@ -54,7 +72,7 @@ from __future__ import annotations
 
 import threading
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Hashable, Iterable
 from typing import Any
 
 from hefesto_dualsense4unix.daemon.battery_journal import mascarar_endereco
@@ -97,8 +115,8 @@ def teve_entrada(
 class QuemMexe:
     """As marcas da partida: ``{12 dígitos do físico: instante da primeira entrada}``.
 
-    Escrito pelo laço do daemon (o tique) e lido pela volta e pelo vigia do
-    alto-falante, que moram noutra thread — daí a trava. Fora da partida, a
+    Escrito pelo laço do daemon (o tique) e lido pela volta do alto-falante,
+    que mora noutra thread — daí a trava. Fora da partida, a
     marca nem nasce: ``anotar`` devolve na primeira comparação.
     """
 
@@ -108,8 +126,12 @@ class QuemMexe:
         self._marcas: dict[str, float] = {}
         #: Quando a partida começou (o relógio de ``relogio``); None = sem jogo.
         self._aberto_em: float | None = None
-        #: Os pids de jogo que a última volta viu — para reconhecer outro jogo.
-        self._pids: frozenset[int] = frozenset()
+        #: Os donos de fluxo que esta partida já viu — para reconhecer outro jogo.
+        self._donos: frozenset[Hashable] = frozenset()
+        #: Quem acordar quando um controle entra na partida (a volta do
+        #: alto-falante, que sobe a ponte da háptica dele). Chamado fora da
+        #: trava, uma vez por controle e partida; ``None`` = ninguém.
+        self.ao_marcar: Callable[[str], None] | None = None
 
     # -- a partida (a volta do alto-falante) ------------------------------
 
@@ -117,32 +139,71 @@ class QuemMexe:
     def jogo_aberto(self) -> bool:
         return self._aberto_em is not None
 
-    def acompanhar_o_jogo(self, pids: Iterable[int]) -> None:
-        """A volta diz quais processos de jogo viu; a partida abre, segue ou fecha.
+    def acompanhar_o_jogo(
+        self,
+        donos: Iterable[Hashable],
+        *,
+        vivos: Callable[[frozenset[Hashable]], frozenset[Hashable] | None] | None = None,
+    ) -> None:
+        """A volta diz quem é dono de fluxo nos endpoints; a partida abre, segue ou fecha.
 
-        Abrir e fechar ZERAM as marcas: a entrada de antes da partida não é
-        desta partida, e a de um jogo fechado não é do próximo.
+        ``donos`` são os donos dos fluxos que tocam AGORA nos endpoints de
+        háptica (o índice do cliente no servidor de som). ``vivos`` responde,
+        dos donos já vistos, quais seguem conectados ao servidor — ``None`` é
+        «não sei», e aí a partida não muda de dono nem fecha. Sem ``vivos``,
+        ninguém sabe perguntar: um dono novo é da mesma partida, e sem fluxo a
+        partida fecha.
+
+        Abrir e virar outra partida ZERAM as marcas: a entrada de antes da
+        partida não é desta partida, e a de um jogo fechado não é do próximo.
+        **Donos que se alternam não zeram nada** — só a ausência de todo dono
+        de antes diz que o jogo é outro.
         """
-        agora = frozenset(pids)
+        agora = frozenset(donos)
         with self._trava:
-            antes, aberto = self._pids, self._aberto_em
-            self._pids = agora
-            if not agora:
-                if aberto is None:
-                    return
-                marcados = len(self._marcas)
-                self._aberto_em = None
-                self._marcas = {}
-            elif aberto is None or agora.isdisjoint(antes):
-                marcados = len(self._marcas)
-                self._aberto_em = self._relogio()
-                self._marcas = {}
-            else:
-                return
+            conhecidos, aberto = self._donos, self._aberto_em
+        if aberto is None:
+            if agora:
+                self._abrir(agora)
+            return
+        if agora and agora <= conhecidos:
+            return
+        # Um dono novo, ou nenhum fluxo: os de antes seguem no servidor?
+        seguem = vivos(conhecidos) if vivos is not None else (conhecidos if agora else frozenset())
+        if seguem is None:
+            # NA DÚVIDA, NÃO MEXE: sem saber se o jogo de antes vive, a
+            # partida segue, e o dono novo entra nela.
+            with self._trava:
+                self._donos = conhecidos | agora
+            return
         if agora:
-            logger.info("haptica_partida_aberta", processos=len(agora), zerou=marcados)
-        else:
-            logger.info("haptica_partida_fechada", quem_jogou=marcados)
+            if seguem:
+                with self._trava:
+                    self._donos = frozenset(seguem) | agora
+                return
+            self._abrir(agora)
+            return
+        if seguem:
+            # O jogo fechou o fluxo e segue vivo (o GE remira a háptica a cada
+            # hotplug de endpoint): é a mesma partida.
+            with self._trava:
+                self._donos = frozenset(seguem)
+            return
+        with self._trava:
+            marcados = len(self._marcas)
+            self._aberto_em = None
+            self._marcas = {}
+            self._donos = frozenset()
+        logger.info("haptica_partida_fechada", quem_jogou=marcados)
+
+    def _abrir(self, donos: frozenset[Hashable]) -> None:
+        """Uma partida nova: as marcas de antes não valem nela."""
+        with self._trava:
+            marcados = len(self._marcas)
+            self._aberto_em = self._relogio()
+            self._marcas = {}
+            self._donos = donos
+        logger.info("haptica_partida_aberta", donos=len(donos), zerou=marcados)
 
     def quem_joga(self) -> frozenset[str]:
         """Os doze dígitos de quem mexeu nesta partida (vazio sem jogo)."""
@@ -197,6 +258,15 @@ class QuemMexe:
             uniq=mascarar_endereco(chave),
             desde_a_abertura_s=round(agora - aberto, 1),
         )
+        # O CONTROLE QUE ENTRA É AVISADO, E NÃO CAÇADO (A-HAPTICA-DO-RADIO-
+        # OBEDECE-AO-SINAL-DO-JOGO-01): a volta do alto-falante acorda e sobe a
+        # ponte da háptica dele, sem vigia perguntando a cada 0,4 s.
+        ao_marcar = self.ao_marcar
+        if ao_marcar is not None:
+            try:
+                ao_marcar(chave)
+            except Exception as exc:  # o laço do daemon não cai por um aviso
+                logger.debug("haptica_aviso_de_quem_joga_falhou", err=str(exc))
 
 
 def quem_mexe_de(daemon: Any) -> QuemMexe | None:

@@ -117,35 +117,20 @@ logger = get_logger(__name__)
 #: *"apareceu/sumiu controle?"*. O mesmo número da metade de entrada.
 RECONCILIA_S = 5.0
 
-#: Cadência do VIGIA DO MODO — HAPTICA-RADIO-INICIO-01, 19/09/2026.
+#: O QUE ACORDA A VOLTA ANTES DO RELÓGIO — A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-
+#: DO-JOGO-01, 28/09/2026: o retrato do som mudando nas saídas ou nos fluxos
+#: (o jogo abriu ou fechou um fluxo), e o aviso de quem precisa da volta agora
+#: (o controle que entra na partida, a resposta dela ao «Ligar aqui»).
 #:
-#: O QUE ELE CURA, medido com três DualSense no rádio em 18/09: a vibração do
-#: jogo começou **2, 4 e 5 s** depois de o jogo começar a tocar. A causa estava
-#: escrita no próprio laço — a troca para o modo háptica só acontece quando
-#: `sink_esta_tocando` responde sim, e a pergunta era feita **uma vez por
-#: volta**, a cada :data:`RECONCILIA_S`. Um pulso de 1,5 s podia nunca vibrar.
-#:
-#: E ELE NÃO MULTIPLICA AS CHAMADAS AO SERVIDOR DE SOM, que é a ressalva
-#: escrita na sprint. O vigia usa `sinks_que_tocam`, que responde por TODOS os
-#: endpoints numa passada de dois `pactl` (2,9 ms + 2,6 ms, medidos nesta
-#: máquina). Com quatro controles, a volta inteira gasta OITO subprocessos e o
-#: vigia gasta DOIS — 5,5 ms a cada 0,4 s é 1,4% de um núcleo, e o custo deixa
-#: de crescer com o número de controles.
-#:
-#: 0,4 s e não menos: a prova de pronto da sprint é *"a vibração ligando em
-#: menos de 0,5 s"*, e o vigia tem de caber dentro dela com folga para a
-#: passada do `pactl`.
-#:
-#: **DESDE 28/09/2026 A PASSADA NÃO CUSTA `pactl`** e o vigia acorda ANTES do
-#: teto (O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01): ele espera o retrato do som
-#: mudar nas saídas ou nos fluxos, e a olhada sai da foto. Medido com o código
-#: de antes, contra um servidor de mentira que conta os clientes: 2 `pactl` por
-#: fatia — 5 por segundo, parado. Com o retrato vivo, zero.
-VIGIA_DO_MODO_S = 0.4
-
-#: O que o vigia lê no retrato do som: as saídas (quem é o endpoint e o nó de
-#: som) e os fluxos que tocam nelas. O microfone de alguém que abre não o acorda.
-_O_QUE_O_VIGIA_LE: tuple[str, ...] = ("sinks", "sink-inputs")
+#: FATO SUBSTITUÍDO: aqui morava o VIGIA DO MODO (HAPTICA-RADIO-INICIO-01,
+#: 19/09), que a cada 0,4 s adivinhava o modo de cada controle e acordava a
+#: volta quando o palpite divergia da ponte. O palpite não sabia quando a
+#: ponte NÃO PODIA virar o modo dele (sem fonte, sem vaga), e acordava a volta
+#: a cada fatia, para sempre — daí a espera da tentativa que falhou, de 26/09,
+#: que era um remendo em cima do laço. A volta agora acorda quando o que ELA
+#: leu mudou (:meth:`AltoFalanteSubsystem._a_mesa_do_som_mudou`), e uma
+#: tentativa que falha espera a mudança seguinte, ou o relógio.
+_O_QUE_A_VOLTA_OUVE: tuple[str, ...] = ("sinks", "sink-inputs")
 
 #: Quanto tempo a ponte que NÃO SUBIU segura a rota daquele controle —
 #: RADIO-AFOGADO-01, 22/09/2026.
@@ -781,39 +766,36 @@ class AltoFalanteSubsystem:
 
     name = "alto_falante"
 
-    #: Quem JOGAVA na última volta (quem mexeu desde que o jogo abriu) — lembrado
-    #: para o vigia do modo adivinhar o que a volta decidiria sem varrer `/proc` a
-    #: cada :data:`VIGIA_DO_MODO_S`. Fica velho por até uma volta, e o preço de
-    #: estar velho é UMA reconciliação a mais, nunca uma ponte errada.
-    #:
-    #: **MORA NO CORPO DA CLASSE, e não no `__init__`** — e o motivo é uma
-    #: armadilha desta casa: dublê montado por `object.__new__` não roda o
-    #: `__init__`, e estado novo que só nasce lá deixa o dublê mais POBRE que
-    #: o produto. `frozenset` e não `set`: um mutável no corpo da classe seria
-    #: compartilhado por todas as instâncias.
-    _jogando: frozenset[str] = frozenset()
-
-    #: O que a última volta viu do jogo (``quem_o_jogo_le.RetratoDoJogo``):
-    #: os pids, os ``eventN`` e os ``hidrawN`` que ele segura, da varredura de
-    #: ``/proc`` da volta. ``None`` = a varredura não foi feita ou falhou, e aí
-    #: a partida não abre nem fecha (A-HAPTICA-QUEM-JOGA-01). No corpo da
-    #: classe pela razão do ``_jogando``.
+    #: O que a última volta viu do jogo pela PISTA do evdev
+    #: (``quem_o_jogo_le.RetratoDoJogo``): os pids, os ``eventN`` e os
+    #: ``hidrawN`` que ele segura. Desde 28/09 só a linha
+    #: ``haptica_portao_fechado`` pergunta, e só quando ela muda — a partida
+    #: não sai mais daqui. **Mora no corpo da classe, e não no ``__init__``** —
+    #: dublê montado por ``object.__new__`` não roda o ``__init__``, e estado
+    #: novo que só nasce lá deixa o dublê mais POBRE que o produto.
     _retrato_do_jogo: Any = None
-    #: Os ``uniq`` cujo evdev um processo de jogo segurava na última volta —
-    #: a PISTA de :meth:`_quem_o_jogo_le`, que não vota (A-HAPTICA-QUEM-JOGA-02)
-    #: e vai à linha ``haptica_portao_fechado`` como ``evdev_le_este``.
+    #: Os ``uniq`` cujo evdev um processo de jogo segurava na última pergunta
+    #: — a PISTA ``evdev_le_este`` da linha ``haptica_portao_fechado``, que
+    #: não vota (A-HAPTICA-QUEM-JOGA-02).
     _lidos_pelo_evdev: frozenset[str] = frozenset()
     #: ``{uniq: motivo}`` de quem está com o portão da háptica fechado AGORA —
     #: o endpoint tocando e o controle fora de quem joga. Lembrado para a
     #: linha ``haptica_portao_fechado`` sair só na mudança. Imutável no corpo
     #: da classe; cada mudança troca o dicionário inteiro.
     _portao_fechado: Mapping[str, str] = MappingProxyType({})
-    #: `uniq -> quando a última tentativa da volta falhou` (sem fonte do som ou
-    #: da háptica, ou a ponte que não subiu). Enquanto vale, o vigia não acorda
-    #: a volta por aquele controle: quem tenta de novo é a volta seguinte, a
-    #: cada :data:`RECONCILIA_S`. Imutável no corpo da classe pela mesma razão
-    #: do :attr:`_portao_fechado`; quem escreve é :meth:`_anotar_a_falha`.
-    _tentativa_falhou: Mapping[str, float] = MappingProxyType({})
+    #: Os donos dos fluxos que tocavam nos endpoints de háptica na última volta
+    #: (os clientes do servidor de som) — a partida do jogo. ``None`` = a
+    #: volta não soube (o servidor não respondeu), e a partida não mudou.
+    _donos_da_volta: frozenset[str] | None = None
+    #: Os ``uniq`` dos controles no rádio da última volta: os nós que decidem
+    #: a volta são os deles (o endpoint de háptica e o nó de som).
+    _no_radio: frozenset[str] = frozenset()
+    #: Quais desses nós tinham fluxo quando a última volta COMEÇOU. A volta
+    #: acorda antes do relógio quando isto muda — ver :meth:`_a_mesa_do_som_mudou`.
+    _o_que_a_volta_viu: frozenset[str] | None = None
+    #: Alguém pediu a volta agora (o controle que entrou na partida, a resposta
+    #: dela ao «Ligar aqui»). Lido e zerado pelo laço.
+    _volta_pedida: bool = False
 
     #: O GOVERNADOR DO RÁDIO (GOVERNADOR-DO-RADIO-01, 23/09/2026): quem dá a
     #: vaga de cada ponte, por adaptador, e manda ceder na fonte quando o
@@ -823,9 +805,8 @@ class AltoFalanteSubsystem:
     governador: Any = None
     #: ``(uniq, modo)`` de quem tem som esperando uma vaga que o governador
     #: ainda não deu (o adaptador cheio, à espera da resposta dela; ou o
-    #: adaptador parado). Refeito a cada volta. O vigia do modo o lê como o
-    #: modo ATUAL daquele controle — sem isso, a mesma pergunta acordaria a
-    #: volta a cada 0,4 s enquanto ela não responde.
+    #: adaptador parado). Refeito a cada volta. Quando ela responde «Ligar
+    #: aqui», :meth:`_esquecer_a_espera` tira o controle daqui e acorda a volta.
     _esperando_vaga: frozenset[tuple[str, str]] = frozenset()
 
     def __init__(
@@ -878,6 +859,14 @@ class AltoFalanteSubsystem:
         self._numerador_anterior: Any = Ellipsis
         #: Quem respondia a `fonte` antes de nós — devolvido no `stop()`.
         self._dizedor_anterior: Any = None
+        #: O que acorda o laço antes do relógio: o ouvinte do retrato do som
+        #: (:meth:`_ouvir_o_retrato`) e quem pede a volta
+        #: (:meth:`_acordar_a_volta`). Um ``Event`` e não o ``Condition`` do
+        #: retrato: com duas fontes de aviso, esperar no retrato perderia o
+        #: pedido que chegasse entre olhar e dormir.
+        self._acordar = threading.Event()
+        #: A thread que escuta o retrato do som e acorda o laço.
+        self._ouvinte: threading.Thread | None = None
 
     # -- contrato Subsystem ----------------------------------------------
 
@@ -1291,11 +1280,13 @@ class AltoFalanteSubsystem:
         QUEM-JOGA-E-QUEM-VIBRA-01 (20/09) fez disto o voto do portão da
         háptica. A A-HAPTICA-QUEM-JOGA-02 (26/09) o tirou de lá: o GE não segura
         evdev de DualSense nenhum, e em 21/09 o evdev deixou os QUATRO entrarem
-        num jogo de um jogador. Quem vota é :meth:`_quem_mexeu_na_partida`; o que
-        esta passada entrega de essencial é o RETRATO do jogo
-        (``self._retrato_do_jogo``), que abre e fecha a partida. O conjunto
-        devolvido vai só à linha do portão fechado (``evdev_le_este``) — é por
-        ela que o detentor de 21/09, se voltar, aparece no diário.
+        num jogo de um jogador. **E DESDE 28/09 A PARTIDA TAMBÉM NÃO SAI DAQUI**
+        (A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01): quem a abre é o dono
+        do fluxo no endpoint (:meth:`_quem_mexeu_na_partida`), e esta
+        varredura de ``/proc`` deixou de rodar a cada volta. Ela roda só quando
+        a linha ``haptica_portao_fechado`` vai sair (:meth:`_vigiar_o_portao`),
+        para dizer o que o jogo segura — é por ela que o detentor de 21/09, se
+        voltar, aparece no diário.
 
         Devolve conjunto VAZIO quando não há jogo, quando `/proc` não se lê, ou
         quando o que o jogo abriu não se traduz em controle nenhum.
@@ -1307,10 +1298,9 @@ class AltoFalanteSubsystem:
         o MAC diz de quem o vpad nasceu, e o posto troca de mão sem renascer.
 
         **A pergunta ao co-op tem ``try`` próprio** (A-HAPTICA-QUEM-JOGA-02): ela
-        só serve para traduzir o evdev de um vpad, e o erro dela levava junto a
-        varredura inteira — o retrato não chegava à volta, e a partida, que não
-        precisa do co-op, não abria nem fechava. Sem tradutor, o vpad não se
-        traduz: nunca se chuta um físico.
+        só serve para traduzir o evdev de um vpad, e o erro dela não pode levar
+        junto a varredura inteira. Sem tradutor, o vpad não se traduz: nunca se
+        chuta um físico.
         """
         from hefesto_dualsense4unix.integrations.quem_o_jogo_le import (
             dono_do_vpad_pelo_coop,
@@ -1339,18 +1329,61 @@ class AltoFalanteSubsystem:
             return set()
 
     def _ver_o_jogo(self, retrato: Any) -> None:
-        """Guarda o que a varredura desta volta viu do jogo (ver ``_retrato_do_jogo``)."""
+        """Guarda o que a varredura da pista viu do jogo (ver ``_retrato_do_jogo``)."""
         self._retrato_do_jogo = retrato
+
+    def _donos_dos_fluxos(self) -> frozenset[str] | None:
+        """Os clientes do servidor de som que tocam nos endpoints de háptica. ``None`` = não sei.
+
+        A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01: a partida é o dono do
+        fluxo no endpoint, e não qualquer processo com
+        ``STEAM_COMPAT_DATA_PATH`` no ambiente. Um processo auxiliar da Steam
+        (o ``run`` do GE-Proton) não abre fluxo no endpoint de controle
+        nenhum, e por isso não abre partida. Sem endpoint não há de quem
+        perguntar: a resposta é vazia, e não «não sei».
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import donos_dos_fluxos
+
+        nomes = [str(getattr(ep, "nome", "") or "") for ep in self._endpoints.values()]
+        nomes = [n for n in nomes if n]
+        if not nomes:
+            return frozenset()
+        try:
+            return donos_dos_fluxos(nomes)
+        except Exception as erro:  # a pergunta nunca derruba a volta
+            logger.debug("haptica_donos_ilegiveis", err=str(erro))
+            return None
+
+    def _clientes_vivos(self, donos: frozenset[Any]) -> frozenset[Any] | None:
+        """Dos donos de fluxo de antes, os que seguem conectados ao servidor de som.
+
+        É assim que a partida sabe que o jogo que fechou o fluxo ainda vive (e
+        segue a mesma), ou que o dono novo é outro jogo (e a marca zera) — sem
+        PID e sem ``/proc``. ``None`` = não sei.
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import clientes_conectados
+
+        try:
+            conectados = clientes_conectados()
+        except Exception as erro:  # a pergunta nunca derruba a volta
+            logger.debug("haptica_clientes_ilegiveis", err=str(erro))
+            return None
+        if conectados is None:
+            return None
+        return frozenset(d for d in donos if str(d) in conectados)
 
     def _quem_mexeu_na_partida(self, controles: list[Any]) -> set[str]:
         """Os ``uniq`` (em minúsculas) de quem teve entrada desde que o jogo abriu.
 
         A-HAPTICA-QUEM-JOGA-01, decisão ``D-2609-QUEM-JOGA-E-QUEM-MEXE``: quem
         joga é o controle FÍSICO que teve entrada — botão, gatilho ou eixo
-        fora da zona morta — desde que o jogo abriu. O laço do daemon marca
-        (``quem_mexe``); aqui a volta diz à partida o que viu do jogo, e ela
-        abre, segue ou fecha. Sem retrato (a pergunta falhou), a partida fica
-        como está: na dúvida, não mexe.
+        fora da zona morta — desde que o jogo abriu. E é a escolha (b) dela de
+        27/09 para o jogo que espelha a vibração nos quatro, como o PRAGMATA
+        mediu na noite: vibra quem está com o controle na mão, e o controle
+        parado na mão não vibra. O laço do daemon marca (``quem_mexe``); aqui
+        a volta diz à partida quem é dono de fluxo nos endpoints, e ela abre,
+        segue ou fecha (A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01). Sem
+        resposta do servidor, a partida fica como está: na dúvida, não mexe.
 
         Devolve na grafia da lista de controles, a mesma com que o portão
         compara.
@@ -1361,9 +1394,10 @@ class AltoFalanteSubsystem:
         marcas = quem_mexe_de(getattr(self, "_daemon", None))
         if marcas is None:
             return set()
-        retrato = self._retrato_do_jogo
-        if retrato is not None:
-            marcas.acompanhar_o_jogo(retrato.pids)
+        donos = self._donos_dos_fluxos()
+        self._donos_da_volta = donos
+        if donos is not None:
+            marcas.acompanhar_o_jogo(donos, vivos=self._clientes_vivos)
         mexeram = marcas.quem_joga()
         if not mexeram:
             return set()
@@ -1371,15 +1405,16 @@ class AltoFalanteSubsystem:
         return {u.lower() for u in uniqs if u and _digitos(u) in mexeram}
 
     def _por_que_o_portao_fecha(self) -> str:
-        """O motivo de um controle estar fora de quem joga, pelo retrato da volta."""
-        retrato = self._retrato_do_jogo
-        if retrato is None:
+        """O motivo de um controle estar fora de quem joga, pela partida da volta."""
+        from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import marcas_da_partida
+
+        if self._donos_da_volta is None:
             return "nao_sei"
-        if not retrato.pids:
+        if marcas_da_partida(getattr(self, "_daemon", None)) is None:
             return "sem_jogo"
         return "nao_mexeu"
 
-    def _vigiar_o_portao(self, uniq: str, *, fechado: bool) -> None:
+    def _vigiar_o_portao(self, uniq: str, *, fechado: bool, controles: list[Any]) -> None:
         """A linha ``haptica_portao_fechado``, SÓ quando o estado anômalo muda.
 
         A-HAPTICA-QUEM-JOGA-01, a Parte 1: *o portão diz por que fechou*. O
@@ -1389,9 +1424,12 @@ class AltoFalanteSubsystem:
         começa ou muda de motivo, com o que o jogo segura (os ``eventN`` e os
         ``hidrawN`` de vpad): com o PRAGMATA, ``evdev_do_jogo=0
         hidraw_de_vpad=2`` teria dito a causa sem ninguém medir. E com a pista
-        do evdev (``evdev_le_este``, A-HAPTICA-QUEM-JOGA-02): o evdev não vota,
-        e esta é a linha que mostra quando ele diria outra coisa. O repouso
-        (endpoint sem stream) não loga, e sair do estado também não.
+        do evdev (``evdev_le_este``, A-HAPTICA-QUEM-JOGA-02). O repouso
+        (endpoint sem fluxo) não loga, e sair do estado também não.
+
+        **A PISTA SÓ SE PERGUNTA AQUI** (A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-
+        DO-JOGO-01): a varredura de ``/proc`` roda quando a linha sai, e não a
+        cada volta.
         """
         anterior = self._portao_fechado.get(uniq)
         if not fechado:
@@ -1406,6 +1444,7 @@ class AltoFalanteSubsystem:
         self._portao_fechado = {**self._portao_fechado, uniq: motivo}
         from hefesto_dualsense4unix.daemon.battery_journal import mascarar_endereco
 
+        self._lidos_pelo_evdev = frozenset(self._quem_o_jogo_le(controles))
         evdev, hidraw = self._o_que_o_jogo_segura()
         logger.info(
             "haptica_portao_fechado",
@@ -1417,11 +1456,10 @@ class AltoFalanteSubsystem:
         )
 
     def _o_que_o_jogo_segura(self) -> tuple[int | None, int | None]:
-        """``(eventN, hidrawN de vpad)`` que o jogo segura, do retrato da volta.
+        """``(eventN, hidrawN de vpad)`` que o jogo segura, do retrato da pista.
 
         ``None`` quando não se sabe — sem retrato, ou o sysfs que não se leu.
-        **Nunca levanta**: quem chama é o vigia, e o vigia mora fora do ``try``
-        do ``_loop`` — uma exceção aqui mataria a thread do som inteira por
+        **Nunca levanta**: uma exceção aqui derrubaria a volta inteira por
         causa de uma linha de diário.
         """
         retrato = self._retrato_do_jogo
@@ -1609,15 +1647,20 @@ class AltoFalanteSubsystem:
         # em háptica num jogo de um jogador. Um fd diz o que o processo abriu,
         # não quem está jogando.
         #
-        # A varredura de `/proc` roda UMA VEZ por volta, e ANTES: é dela que sai
-        # o retrato que abre e fecha a partida. O que o evdev traduz fica só como
-        # pista da linha do portão fechado (`evdev_le_este`).
-        self._lidos_pelo_evdev = frozenset(self._quem_o_jogo_le(controles))
+        # A PARTIDA É O DONO DO FLUXO NO ENDPOINT — A-HAPTICA-DO-RADIO-OBEDECE-
+        # AO-SINAL-DO-JOGO-01, 28/09/2026. A varredura do `environ` de todo
+        # processo a cada volta saiu: um `run` auxiliar do GE-Proton abria e
+        # fechava a partida, e cada abertura zerava quem já jogava. Quem abre a
+        # partida é o cliente que toca nos endpoints, perguntado ao servidor de
+        # som (`_quem_mexeu_na_partida`); o evdev é pista, e só se pergunta
+        # quando a linha do portão fechado sai.
         jogando = self._quem_mexeu_na_partida(controles)
-        self._jogando = frozenset(jogando)
 
         governador = self.governador
         esperando: set[tuple[str, str]] = set()
+        # Quem saiu da mesa sai da memória do portão: se voltar no mesmo
+        # estado, é outro endpoint, e a linha sai de novo.
+        self._portao_fechado = {u: m for u, m in self._portao_fechado.items() if u in vivos}
         for uniq, caminho in vivos.items():
             # A PONTE QUE TERMINOU SOZINHA SAI DA LISTA — GOVERNADOR-DO-RADIO-01.
             # A fonte secou, a escrita foi recusada, ou o teto de ceder a
@@ -1636,14 +1679,21 @@ class AltoFalanteSubsystem:
             # arranjo com a bomba rodando mudaria o corpo do report no meio.
             endpoint = self._endpoints.get(uniq)
             # O GATE TEM DOIS LADOS, e os dois precisam ser verdade: o jogo
-            # abriu o canal DAQUELE endpoint (o sinal de sempre) E aquele
-            # controle JOGA — mexeu desde que o jogo abriu. Só o primeiro
-            # deixava três controles vibrarem num jogo de um jogador.
+            # abriu o canal DAQUELE endpoint E aquele controle JOGA — mexeu
+            # desde que o jogo abriu. Só o primeiro deixava três controles
+            # vibrarem num jogo de um jogador. E o jogo que ESPELHA a vibração
+            # nos quatro (o PRAGMATA, medido na noite de 27/09) cai na escolha
+            # (b) dela: vibra quem está com o controle na mão.
+            #
+            # **O CANAL ABERTO É ESCUTA, E NÃO ENVIO** (A-HAPTICA-DO-RADIO-
+            # OBEDECE-AO-SINAL-DO-JOGO-01): a ponte lê o monitor o tempo todo e
+            # só escreve o bloco que tem sinal nos motores. No menu, com o
+            # fluxo aberto e mudo, o rádio fica livre.
             este_joga = uniq.lower() in jogando
-            modo = (
-                "haptica"
-                if (endpoint and este_joga and sink_esta_tocando(endpoint.nome))
-                else "som"
+            endpoint_toca = bool(endpoint) and sink_esta_tocando(endpoint.nome)
+            modo = "haptica" if (endpoint_toca and este_joga) else "som"
+            self._vigiar_o_portao(
+                uniq, fechado=endpoint_toca and not este_joga, controles=controles
             )
             # A PONTE DO SOM SÓ EXISTE ENQUANTO HÁ SOM — RADIO-AFOGADO-01,
             # 22/09/2026, e é o defeito que tirou três dos quatro controles
@@ -1730,7 +1780,6 @@ class AltoFalanteSubsystem:
                 # daquele controle não tem por onde entregar, e continuar
                 # publicado o faria engolir o áudio dela.
                 self._ponte_recusada[uniq] = time.monotonic()
-                self._anotar_a_falha(uniq, falhou=True)
                 logger.info("som_ponte_sem_fonte", uniq=uniq, motivo=motivo)
                 continue
             # O CAMINHO VAI NO FECHO, e o `functools.partial` diz o tipo: um
@@ -1765,7 +1814,6 @@ class AltoFalanteSubsystem:
                         derrubar_leitor_de_pipe(gravador_h)
                     gravador_h = None
                     modo = "som"
-                    self._anotar_a_falha(uniq, falhou=True)
                     logger.info("haptica_sem_fonte", uniq=uniq, motivo=motivo_h)
                     # E A PORTA DOS FUNDOS: cair para o alto-falante sem
                     # ninguém tocando nele devolveria a enxurrada por aqui. O
@@ -1794,30 +1842,21 @@ class AltoFalanteSubsystem:
                 self._modo_da_ponte[uniq] = modo
                 # SUBIU: o caminho está provado, e a recusa velha não vale mais.
                 self._ponte_recusada.pop(uniq, None)
-                self._anotar_a_falha(uniq, falhou=False)
             else:
                 ponte.descer()
                 # NÃO SUBIU com o som dela na mão: isto é falha de verdade, e
                 # o nó daquele controle tem de sumir com a frase honesta em vez
                 # de engolir áudio. Ver :data:`RECUSA_DA_PONTE_S`.
                 self._ponte_recusada[uniq] = time.monotonic()
-                self._anotar_a_falha(uniq, falhou=True)
                 logger.info("som_ponte_nao_subiu", uniq=uniq, motivo=ponte.motivo)
         self._esperando_vaga = frozenset(esperando)
-
-    def _anotar_a_falha(self, uniq: str, *, falhou: bool) -> None:
-        """Lembra (ou esquece) que a última tentativa da volta falhou para ``uniq``."""
-        resto = {u: t for u, t in self._tentativa_falhou.items() if u != uniq}
-        if falhou:
-            resto[uniq] = time.monotonic()
-        self._tentativa_falhou = MappingProxyType(resto)
 
     def _esquecer_a_espera(self, uniq: str) -> None:
         """Ela respondeu «Ligar aqui»: quem esperava vaga deixa de esperar.
 
-        Com o controle fora de :attr:`_esperando_vaga`, o vigia do modo vê som
-        sem ponte e acorda a volta em até :data:`VIGIA_DO_MODO_S` — a ponte
-        sobe logo, e não na volta seguinte, cinco segundos depois.
+        O controle sai de :attr:`_esperando_vaga` e a volta é ACORDADA
+        (:meth:`_acordar_a_volta`): a ponte sobe logo, e não na volta seguinte,
+        cinco segundos depois.
         """
         from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
@@ -1829,6 +1868,21 @@ class AltoFalanteSubsystem:
         self._esperando_vaga = frozenset(
             (u, m) for u, m in self._esperando_vaga if (norm_mac(u) or u.lower()) != alvo
         )
+        self._acordar_a_volta()
+
+    def _acordar_a_volta(self, _por_quem: str = "") -> None:
+        """Pede a volta AGORA, sem esperar o relógio. Nunca levanta.
+
+        A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01: quem precisa da volta
+        avisa, e ninguém fica perguntando. Os dois que avisam são o controle
+        que entra na partida (``QuemMexe.ao_marcar``, o argumento é o endereço
+        dele) — a ponte da háptica dele sobe na hora, e não na volta seguinte —
+        e a resposta dela ao «Ligar aqui» (:meth:`_esquecer_a_espera`).
+        """
+        self._volta_pedida = True
+        acordar = getattr(self, "_acordar", None)
+        if acordar is not None:
+            acordar.set()
 
     def _descer_ponte_ociosa(self, uniq: str) -> None:
         """A ponte de quem não tem o que tocar desce. Idempotente.
@@ -1907,11 +1961,42 @@ class AltoFalanteSubsystem:
                 logger.warning("governador_do_radio_nao_subiu", exc_info=True)
                 self.governador = None
         self._parar.clear()
+        self._acordar.clear()
+        self._ouvir_quem_entra_na_partida(self._acordar_a_volta)
+        self._ouvinte = threading.Thread(
+            target=self._ouvir_o_retrato, name="hefesto-som-fluxos", daemon=True
+        )
+        self._ouvinte.start()
         self._thread = threading.Thread(
             target=self._loop, name="hefesto-som-sup", daemon=True
         )
         self._thread.start()
         logger.info("som_subsystem_iniciado")
+
+    def _ouvir_quem_entra_na_partida(self, aviso: Any) -> None:
+        """Liga (ou desliga, com ``None``) o aviso do controle que entra na partida.
+
+        O dono das marcas nasce aqui se ainda não existe
+        (``quem_mexe.quem_mexe_de``): quem sabe da partida é esta volta. Um
+        dublê de daemon que recusa atributo fica sem aviso, e a volta segue
+        pelo relógio.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import (
+            ATRIBUTO,
+            QuemMexe,
+            quem_mexe_de,
+        )
+
+        daemon = getattr(self, "_daemon", None)
+        if aviso is None:
+            # Desligar não cria o dono: sem marcas, não há aviso a tirar.
+            marcas = getattr(daemon, ATRIBUTO, None)
+            if isinstance(marcas, QuemMexe):
+                marcas.ao_marcar = None
+            return
+        marcas = quem_mexe_de(daemon)
+        if marcas is not None:
+            marcas.ao_marcar = aviso
 
     async def stop(self) -> None:
         """Derruba as pontes, e SÓ ENTÃO os nós. Idempotente.
@@ -1929,16 +2014,19 @@ class AltoFalanteSubsystem:
         pontes (que colhem os gravadores) e só então tirar os nós.
         """
         self._parar.set()
-        # O vigia dorme no retrato do som, e não no `_parar`: sem este toque a
-        # thread só veria a parada no fim da fatia.
+        self._ouvir_quem_entra_na_partida(None)
+        # O laço dorme no `_acordar`, e o ouvinte no retrato do som: sem os
+        # dois toques, cada um só veria a parada no fim da espera.
         from hefesto_dualsense4unix.integrations.retrato_do_som import RETRATO
 
+        self._acordar.set()
         RETRATO.acordar()
-        thread = self._thread
-        self._thread = None
-        if thread is not None:
-            with contextlib.suppress(Exception):
-                await asyncio.to_thread(thread.join, 2.0)
+        thread, ouvinte = self._thread, self._ouvinte
+        self._thread = self._ouvinte = None
+        for fio in (thread, ouvinte):
+            if fio is not None:
+                with contextlib.suppress(Exception):
+                    await asyncio.to_thread(fio.join, 2.0)
         # As pontes MORREM COM O SUBSYSTEM. Cada uma segura um fd de hidraw e
         # um `pw-record`; deixá-las de pé depois do `stop()` é vazar os dois
         # por controle, e o próximo `start()` abriria um segundo par. Descem
@@ -2021,130 +2109,103 @@ class AltoFalanteSubsystem:
                 self._reconciliar(gerenciador)
             except Exception as exc:  # nunca derruba a thread
                 logger.debug("som_reconciliacao_falhou", err=str(exc))
-            if self._esperar_de_olho_no_modo(gerenciador):
+            if self._esperar_a_mesa_do_som(gerenciador):
                 return
 
-    def _esperar_de_olho_no_modo(self, gerenciador: Any) -> bool:
-        """Espera até a próxima volta, mas volta CEDO se o modo mudou. True = parar.
+    def _ouvir_o_retrato(self) -> None:
+        """O ouvinte: o retrato do som mudou nas saídas ou nos fluxos, e o laço acorda.
 
-        HAPTICA-RADIO-INICIO-01, 19/09/2026.
-
-        **NÃO DUPLICA A DECISÃO.** Quem troca de modo continua sendo
-        `_reconciliar` — descer e subir a ponte é ato de um escritor só, e ter
-        dois lugares mexendo no fio é o defeito que o «escritor é UM SÓ» desta
-        casa existe para impedir. O vigia só responde *"vale a pena reconciliar
-        agora?"*, e encurta a espera quando vale.
-
-        **NA DÚVIDA, NÃO MEXE.** `sinks_que_tocam` devolve ``None`` quando o
-        servidor de som não respondeu, e aí a espera segue como antes — um
-        `pactl` que falhou não pode derrubar a ponte de um jogo aberto, que é a
-        decisão dela de 08/09.
-
-        **A FATIA ACABA NO EVENTO** (O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01,
-        28/09/2026): cada fatia espera o retrato do som mudar nas saídas ou nos
-        fluxos, com :data:`VIGIA_DO_MODO_S` de teto — o fluxo que nasce acorda
-        o vigia na hora. A VOLTA acaba por RELÓGIO, e não por contagem de
-        fatias: com fatias curtas por evento, contar fatias faria um jogo que
-        mexe nos fluxos reconciliar a cada meio segundo.
+        A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01. **O fluxo que nasce é
+        avisado, e não caçado**: o retrato (O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-
+        SO-01) é mantido em dia pelo ``pactl subscribe``, e esta thread só
+        dorme nele. Sem mudança, nenhuma pergunta ao servidor; quem decide se
+        a mudança importa é :meth:`_a_mesa_do_som_mudou`, no laço.
         """
         from hefesto_dualsense4unix.integrations.retrato_do_som import RETRATO
 
+        marca = RETRATO.marca(_O_QUE_A_VOLTA_OUVE)
+        while not self._parar.is_set():
+            nova = RETRATO.esperar(marca, RECONCILIA_S, _O_QUE_A_VOLTA_OUVE)
+            if nova != marca:
+                marca = nova
+                self._acordar.set()
+
+    def _esperar_a_mesa_do_som(self, gerenciador: Any) -> bool:
+        """Espera até a próxima volta, e volta CEDO se o que a volta leu mudou. True = parar.
+
+        A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01. Acorda por três
+        motivos, e nenhum é um relógio curto: o ouvinte do retrato
+        (:meth:`_ouvir_o_retrato`), quem pede a volta
+        (:meth:`_acordar_a_volta`) e a parada. O pedido reconcilia sempre; a
+        mudança do retrato só quando ela toca os nós dos controles do rádio.
+
+        **NÃO DUPLICA A DECISÃO**: quem decide o modo de cada ponte continua
+        sendo :meth:`_casar_as_pontes`. Esta espera só responde *"vale a pena
+        reconciliar agora?"*, comparando ENTRADAS, e não resultados — uma
+        tentativa que falhou não muda entrada nenhuma, e por isso não prende
+        a volta num laço.
+
+        O ``Event`` é limpo ANTES de olhar: um aviso que chegue enquanto se
+        olha fica armado para a espera seguinte, e nenhum se perde.
+        """
         fim = time.monotonic() + RECONCILIA_S
-        marca = RETRATO.marca(_O_QUE_O_VIGIA_LE)
+        acordar = self._acordar
         while True:
             falta = fim - time.monotonic()
             if falta <= 0:
                 return False
-            marca = RETRATO.esperar(marca, min(VIGIA_DO_MODO_S, falta), _O_QUE_O_VIGIA_LE)
+            acordar.wait(falta)
             if self._parar.is_set() or gerenciador.dormir(0.0):
                 return True
-            if self._o_modo_de_alguem_mudou():
+            acordar.clear()
+            if self._volta_pedida:
+                self._volta_pedida = False
+                return False
+            if self._a_mesa_do_som_mudou():
                 return False
 
-    def _o_modo_de_alguem_mudou(self) -> bool:
-        """Alguém passou a tocar (ou parou) desde a última volta?
+    def _o_que_a_mesa_do_som_diz(self) -> frozenset[str] | None:
+        """Quais nós dos controles do rádio têm fluxo agora. ``None`` = não sei.
 
-        Uma passada de `pactl` para todos os nós — ver :data:`VIGIA_DO_MODO_S`.
-        Sem endpoint não há o que vigiar, e a pergunta nem é feita.
-
-        **O VIGIA OLHA OS DOIS NÓS DE CADA CONTROLE — RADIO-AFOGADO-01,
-        22/09/2026.** Até esta data ele via só o endpoint da háptica, porque a
-        ponte do som estava sempre de pé e não havia partida a esperar. Agora
-        ela só sobe com som tocando, e um vigia cego ao `hefesto_som_<hex6>`
-        deixaria o primeiro som dela esperar a volta inteira —
-        :data:`RECONCILIA_S`, cinco segundos. A pergunta é a MESMA: os dois
-        nomes vão na mesma passada, e `sinks_que_tocam` não cobra por nome.
-
-        **NÃO DUPLICA A DECISÃO**, e por isso o palpite é grosseiro: quem
-        decide o modo continua sendo `_casar_as_pontes`, que também pergunta
-        quem JOGA. O vigia reusa a última resposta (`self._jogando`) só
-        para não acordar a volta à toa; estar velha custa uma reconciliação a
-        mais, nunca uma ponte errada.
-
-        **E OLHA A MARCA VIVA DE QUEM MEXEU — A-HAPTICA-QUEM-JOGA-01, 26/09/2026.**
-        O primeiro toque da partida acorda a volta em :data:`VIGIA_DO_MODO_S`, e
-        não na volta seguinte. A pergunta é um dicionário, sem ``/proc``.
-
-        **E É AQUI QUE O PORTÃO DIZ POR QUE FECHOU** (:meth:`_vigiar_o_portao`):
-        o vigia já sabe, na mesma passada, quem toca em TODO endpoint; na volta,
-        o «tocando» de quem não joga nunca é perguntado. Todos os controles são
-        olhados — acordar a volta não interrompe a passada.
+        São as ENTRADAS da decisão da volta: o endpoint de háptica e o nó de
+        som de cada controle no rádio. Uma passada só pelo retrato do som, sem
+        ``pactl`` no daemon (``sinks_que_tocam``). Sem nó nenhum, nem se
+        pergunta.
         """
-        nomes = {uniq: ep.nome for uniq, ep in self._endpoints.items() if ep.nome}
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+            nome_do_sink,
+            sinks_que_tocam,
+        )
+
+        nomes = [str(getattr(ep, "nome", "") or "") for ep in self._endpoints.values()]
+        nomes += [nome_do_sink(u) for u in self._no_radio]
+        nomes = [n for n in nomes if n]
         if not nomes:
-            return False
+            return frozenset()
         try:
-            # Import local pela mesma razão do `_reconciliar`: o módulo de som
-            # puxa o PipeWire, e a importação no topo arrastaria isso para todo
-            # processo que só quer o subsystem.
-            from hefesto_dualsense4unix.integrations.alto_falante_bt import (
-                nome_do_sink,
-                sinks_que_tocam,
-            )
-
-            alto_falantes = {uniq: nome_do_sink(uniq) for uniq in nomes}
-            tocando = sinks_que_tocam(
-                [*nomes.values(), *(n for n in alto_falantes.values() if n)]
-            )
+            tocando = sinks_que_tocam(nomes)
         except Exception as exc:  # nunca derruba a thread do som
-            logger.debug("vigia_do_modo_falhou", err=str(exc))
-            return False
-        if tocando is None:
-            return False  # servidor mudo não é "ninguém toca"
-        from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import marcas_da_partida
+            logger.debug("som_mesa_ilegivel_no_retrato", err=str(exc))
+            return None
+        return None if tocando is None else frozenset(tocando)
 
-        marcas = marcas_da_partida(getattr(self, "_daemon", None))
-        if any(u not in nomes for u in self._portao_fechado):
-            self._portao_fechado = {
-                u: m for u, m in self._portao_fechado.items() if u in nomes
-            }
-        esperando = dict(self._esperando_vaga)
-        acordar = False
-        for uniq, nome in nomes.items():
-            joga = uniq.lower() in self._jogando or (marcas is not None and marcas.joga(uniq))
-            self._vigiar_o_portao(uniq, fechado=nome in tocando and not joga)
-            if nome in tocando and joga:
-                agora: str | None = "haptica"
-            elif alto_falantes.get(uniq, "") in tocando:
-                agora = "som"
-            else:
-                agora = None
-            # A TENTATIVA QUE FALHOU ESPERA A VOLTA — 26/09/2026. Sem fonte do
-            # som ou da háptica, ou com a ponte que não subiu, o modo nunca vira o que o
-            # vigia vê, e ele acordaria a volta a cada VIGIA_DO_MODO_S — um
-            # `pw-record` novo a cada 0,4 s, para sempre. Quem tenta de novo é
-            # a volta seguinte, no ritmo dela.
-            falhou = self._tentativa_falhou.get(uniq)
-            if falhou is not None and time.monotonic() - falhou < RECONCILIA_S:
-                continue
-            # Quem espera vaga do governador já foi decidido nesta volta: a
-            # pergunta está com ela. Acordar a volta não muda a resposta.
-            if not acordar and (self._modo_da_ponte.get(uniq) or esperando.get(uniq)) != agora:
-                logger.info(
-                    "vigia_do_modo_acordou_a_volta", uniq=uniq, modo=agora or "nenhuma"
-                )
-                acordar = True
-        return acordar
+    def _a_mesa_do_som_mudou(self) -> bool:
+        """Algum nó dos controles do rádio abriu ou fechou fluxo desde que a volta começou?
+
+        **NA DÚVIDA, NÃO MEXE**: servidor mudo não é «ninguém toca», e a
+        espera segue até o relógio.
+        """
+        agora = self._o_que_a_mesa_do_som_diz()
+        if agora is None:
+            return False
+        if agora == self._o_que_a_volta_viu:
+            return False
+        logger.debug(
+            "som_volta_acordada_pelo_fluxo",
+            antes=len(self._o_que_a_volta_viu or ()),
+            agora=len(agora),
+        )
+        return True
 
     def _reconciliar(self, gerenciador: Any) -> None:
         """Uma varredura: quem está na lista ganha nó, quem saiu perde.
@@ -2154,7 +2215,17 @@ class AltoFalanteSubsystem:
         sysfs com a chance de discordar da primeira — que é o defeito que
         `bt_mic._conectados_da_mesa` já pagou.
         """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import e_radio
+
         alvos = self.alvos(list(self._fonte()))
+        # O QUE ESTA VOLTA LÊ, GUARDADO ANTES DE AGIR: se um fluxo nascer
+        # enquanto ela age, a espera seguinte vê a diferença e volta na hora.
+        self._no_radio = frozenset(
+            str(getattr(c, "uniq", "") or "")
+            for c in alvos
+            if e_radio(str(getattr(c, "transporte", "") or ""))
+        )
+        self._o_que_a_volta_viu = self._o_que_a_mesa_do_som_diz()
         # A PONTE PRIMEIRO, O NÓ DEPOIS — e a ordem é medida, não estética.
         # `rota_do_no` pergunta à ponte se ela está de pé no momento em que o
         # nó nasce. Fiar na ordem inversa publicaria a rota do rádio como
@@ -2166,7 +2237,6 @@ class AltoFalanteSubsystem:
 
 __all__ = [
     "RECONCILIA_S",
-    "VIGIA_DO_MODO_S",
     "AltoFalanteSubsystem",
     "ControleNaLista",
     "GerenciadorDeNosDeSom",

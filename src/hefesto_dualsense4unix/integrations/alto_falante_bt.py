@@ -2846,15 +2846,46 @@ def sinks_que_tocam(
     ``None`` = **não se sabe** (prazo estourado, `pactl` que falhou), e é
     diferente de conjunto vazio, que é o servidor respondendo *"ninguém toca"*.
     Quem chama decide o que fazer com a dúvida — `sink_esta_tocando` devolve o
-    ``na_duvida`` dele, e o vigia do modo NÃO MEXE em ponte nenhuma.
+    ``na_duvida`` dele, e a volta do alto-falante NÃO MEXE em ponte nenhuma.
+    """
+    fluxos = fluxos_por_sink(nomes, runner)
+    if fluxos is None:
+        return na_duvida
+    return {nome for nome, clientes in fluxos.items() if clientes}
+
+
+#: O cliente que o `pactl list short sink-inputs` imprime para o fluxo sem
+#: programa por trás (um `module-loopback`, por exemplo): o `PA_INVALID_INDEX`.
+SEM_CLIENTE = "-"
+
+
+def fluxos_por_sink(
+    nomes: Iterable[str],
+    runner: Callable[[list[str]], str | None] | None = None,
+) -> dict[str, tuple[str, ...]] | None:
+    """``{sink: (cliente de cada fluxo que toca nele, …)}`` — numa passada de dois `pactl`.
+
+    A forma de :func:`sinks_que_tocam` que diz também DE QUEM é cada fluxo
+    (A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01): a coluna 3 da linha
+    curta de ``sink-inputs`` é o índice do CLIENTE no servidor, e o fluxo sem
+    cliente sai como :data:`SEM_CLIENTE`. Só os sinks pedidos que existem
+    entram; ``None`` é «não sei», como sempre.
+
+    **O DONO SE DIZ PELO CLIENTE, E NÃO PELO PID** — medido em 28/09/2026 no
+    servidor desta máquina (PipeWire 1.6.8, ``pactl list clients``): para
+    todo cliente do protocolo do PulseAudio, a credencial ``pipewire.sec.pid``
+    é o PID do próprio ``pipewire-pulse`` (o mesmo nos clientes do ``winepulse``,
+    do SDL e do ``pactl``), e o ``application.process.id`` é o que o programa
+    DECLARA — num sandbox, o PID de dentro dele. O índice do cliente é o
+    servidor falando de quem está conectado a ele, e não se repete.
     """
     alvos = {n for n in nomes if n}
     if not alvos:
-        return set()
+        return {}
     correr: Any = runner or rodar_pactl
     sinks = correr(["pactl", "list", "short", "sinks"])
     if sinks is None:
-        return na_duvida
+        return None
     #: índice do sink -> nome, só para os alvos. A coluna 2 de `sink-inputs` é
     #: o índice do sink, o mesmo da coluna 1 de `sinks` — no `pipewire-pulse`
     #: e no PulseAudio.
@@ -2864,18 +2895,62 @@ def sinks_que_tocam(
         if len(campos) > 1 and campos[1] in alvos:
             por_indice[campos[0].strip()] = campos[1]
     if not por_indice:
-        return set()
+        return {}
     entradas = correr(["pactl", "list", "short", "sink-inputs"])
     if entradas is None:
-        return na_duvida
-    tocando: set[str] = set()
+        return None
+    fluxos: dict[str, list[str]] = {nome: [] for nome in por_indice.values()}
     for linha in entradas.splitlines():
         campos = linha.split("\t")
         if len(campos) > 1:
             alvo = por_indice.get(campos[1].strip())
             if alvo is not None:
-                tocando.add(alvo)
-    return tocando
+                cliente = campos[2].strip() if len(campos) > 2 else ""
+                fluxos[alvo].append(cliente or SEM_CLIENTE)
+    return {nome: tuple(clientes) for nome, clientes in fluxos.items()}
+
+
+def donos_dos_fluxos(
+    nomes: Iterable[str],
+    runner: Callable[[list[str]], str | None] | None = None,
+) -> frozenset[str] | None:
+    """Os clientes do servidor que tocam nestes sinks — a partida do jogo.
+
+    A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01. O fluxo sem cliente
+    (:data:`SEM_CLIENTE`, um módulo do próprio servidor) não é jogo e não
+    entra. ``None`` é «não sei».
+    """
+    fluxos = fluxos_por_sink(nomes, runner)
+    if fluxos is None:
+        return None
+    return frozenset(
+        cliente
+        for clientes in fluxos.values()
+        for cliente in clientes
+        if cliente and cliente != SEM_CLIENTE
+    )
+
+
+def clientes_conectados(
+    runner: Callable[[list[str]], str | None] | None = None,
+) -> frozenset[str] | None:
+    """Os índices dos clientes conectados ao servidor de som agora. ``None`` = não sei.
+
+    É por aqui que a partida sabe se o jogo que abriu o fluxo ainda vive,
+    sem PID e sem ``/proc``: a coluna 1 de ``pactl list short clients``. O
+    retrato do som não fotografa os clientes — cada ``pactl`` é um —, então
+    esta leitura sai pela porta dele e custa UM ``pactl``, só quando um dono
+    de fluxo some ou muda.
+    """
+    correr: Any = runner or rodar_pactl
+    saida = correr(["pactl", "list", "short", "clients"])
+    if saida is None:
+        return None
+    return frozenset(
+        linha.split("\t", 1)[0].strip()
+        for linha in saida.splitlines()
+        if linha.strip()
+    )
 
 
 def fonte_do_monitor_do_no(

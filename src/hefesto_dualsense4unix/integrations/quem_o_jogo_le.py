@@ -1,12 +1,20 @@
-"""Quais controles o evdev diz que o JOGO lê — e o retrato do jogo que a volta usa.
+"""Quais controles o evdev diz que o JOGO lê — a PISTA da linha do portão fechado.
 
 **DESDE 26/09/2026 ESTE SINAL NÃO VOTA** (A-HAPTICA-QUEM-JOGA-02, decisão
 ``D-2609-QUEM-JOGA-E-QUEM-MEXE``). Quem joga, para o portão da háptica pelo
 rádio, é quem MEXEU desde que o jogo abriu (``daemon/subsystems/quem_mexe.py``).
-Daqui a volta usa o :class:`RetratoDoJogo` (os pids que abrem e fecham a
-partida, e o que o jogo segura), e o conjunto de :func:`quem_o_jogo_le` vai à
-linha ``haptica_portao_fechado`` como pista (``evdev_le_este``). O texto abaixo
-é o registro de 20 e 25/09, quando ele votava.
+
+**E DESDE 28/09/2026 A PARTIDA NÃO SAI DAQUI** (A-HAPTICA-DO-RADIO-OBEDECE-AO-
+SINAL-DO-JOGO-01). Quem abre e fecha a partida é o dono do fluxo no endpoint
+de háptica, perguntado ao servidor de som; :func:`pids_de_jogo`, que lê o
+``environ`` de todo processo, deixou de rodar a cada volta — um ``run``
+auxiliar do GE-Proton, com ``STEAM_COMPAT_DATA_PATH`` e sem jogo nenhum,
+abria e fechava a partida. O :class:`RetratoDoJogo` e o conjunto de
+:func:`quem_o_jogo_le` vão só à linha ``haptica_portao_fechado`` como pista
+(``evdev_le_este``), e só quando ela sai. :func:`pids_de_jogo` segue também na
+guarda do rótulo da háptica (``_ha_jogo_aberto``), que precisa ver o jogo
+ANTES de ele abrir o primeiro fluxo. O texto abaixo é o registro de 20 e
+25/09, quando o evdev votava.
 
 **A CORREÇÃO É DELA, 20/09/2026, e derrubou a premissa de uma sprint inteira:**
 
@@ -141,11 +149,10 @@ RAIZ_CLASS_HIDRAW = "/sys/class/hidraw"
 class RetratoDoJogo:
     """O que a volta viu do jogo, numa passada só de ``/proc``.
 
-    A-HAPTICA-QUEM-JOGA-01. Quem precisa saber se há jogo (a partida de
-    ``quem_mexe``) e o que ele segura (a linha do portão fechado) recebe isto
-    da MESMA varredura que :func:`quem_o_jogo_le` já fazia: medido em 26/09
-    com o jogo aberto, ela custa 8 ms para achar os 18 processos e 15 ms para
-    ler os descritores — uma segunda por volta dobraria a conta.
+    A-HAPTICA-QUEM-JOGA-01. A linha do portão fechado recebe o que o jogo
+    segura da MESMA varredura que :func:`quem_o_jogo_le` já fazia: medido em
+    26/09 com o jogo aberto, ela custa 8 ms para achar os 18 processos e 15 ms
+    para ler os descritores. Desde 28/09 ela só roda quando a linha sai.
     """
 
     pids: frozenset[int] = frozenset()
@@ -286,8 +293,8 @@ def quem_o_jogo_le(
         regra da casa.
     :param ao_ver_o_jogo: recebe o :class:`RetratoDoJogo` desta passada, antes
         de qualquer resposta — também quando não há jogo, que é o retrato vazio.
-        É por ele que a volta sabe se a partida abriu sem varrer ``/proc`` de
-        novo.
+        É por ele que a linha do portão fechado diz o que o jogo segura sem
+        varrer ``/proc`` de novo.
 
     Devolve conjunto VAZIO quando não há jogo, quando ``/proc`` não se lê, ou
     quando o que o jogo abriu não se traduz em controle nenhum. O vazio aqui
