@@ -1133,7 +1133,10 @@ def _gravar_as_portas(
     ``lugar`` e os ``nos`` do buraco, e o caminho não vai ao disco. Um buraco é
     de UMA entrada: outra entrada que guardava este lugar, ou que (sem lugar)
     tinha o caminho deste aparelho, fica vazia; a que dividia um nó perde o
-    nó. E o lugar sai do «Não alcanço»: o cabo provou que ela alcança.
+    nó. E o lugar sai do «Não alcanço» quando a porta ganha o «onde fica»: o
+    cabo provou que ela alcança. Só o nome (``face`` ``None``) não prova nada
+    do buraco, e o «Não alcanço» fica — a mesma regra da revisita pela lista
+    (:func:`_gravar_a_porta`).
     """
     if face is not None and not _face_aceita(face, maquina):
         raise ValueError(f"{face!r} não é um lugar do gabinete que o produto conhece")
@@ -1187,7 +1190,7 @@ def _gravar_as_portas(
                 declaracao_das_portas[outro] = {
                     "nos": [no for no in dela.nos if no not in buraco]
                 }
-        if porta.lugar in fora:
+        if face is not None and porta.lugar in fora:
             fora.remove(porta.lugar)
         if indice == 0 and nome is not None:
             # O NOME É DA POSIÇÃO (D-2609-O-NOME-E-DA-POSICAO).

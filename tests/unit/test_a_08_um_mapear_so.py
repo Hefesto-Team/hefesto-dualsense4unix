@@ -553,6 +553,33 @@ def test_a_porta_que_ela_so_nomeou_e_do_mapa_e_se_renomeia(
     assert not documento.mapa.faces, "renomear não inventa face"
 
 
+def test_so_o_nome_nao_desfaz_o_nao_alcanco(mesa: Gabinete, disco: Path) -> None:
+    """O nome dado à porta do «Não alcanço», sem o «onde fica», não prova o
+    buraco: a porta vira entrada com o nome, e o «Não alcanço» fica — a regra
+    da revisita pela lista (``test_renomear_pela_lista_nao_troca_a_testemunha``),
+    agora para a porta que ainda não tinha número. Até 28/09/2026 esse nome ia
+    para ``lugares[L].nome`` e o ``fora`` do lugar nem era tocado.
+
+    MORDIDA: tire o ``face is not None`` da saída do «Não alcanço» em
+    ``_gravar_as_portas`` — só o nome desfaz o «Não alcanço», e esta régua
+    reprova.
+    """
+    vaga = lugar_de(PCI_B, "4.3")
+    fluxo = _fluxo(mesa)
+    fluxo.comecar()
+    assert declarar_a_maquina({"mapa": {"fora": [vaga]}}).gravou
+    assert fluxo.gravar(chave=vaga, nome="Atrás do hub").gravou
+    documento = carregar_maquina()
+    assert documento.mapa.fora == [vaga], "só o nome desfez o «Não alcanço»"
+    numero = utils_maquina.entrada_do_lugar(documento, vaga)
+    assert numero is not None and documento.mapa.portas[numero].nome == "Atrás do hub"
+    assert not documento.mapa.faces, "o nome não inventa face"
+    porta = ee.ler_o_mapa(
+        censo=mesa.ler(), entradas=mesa.entradas(), storm=STORM, adaptadores=()
+    ).porta(vaga)
+    assert porta is not None and porta.fora and porta.nome == "Atrás do hub", porta
+
+
 def test_o_encaixe_que_o_kernel_nao_sabe_nao_vira_dongle(tmp_path: Path) -> None:
     """``unknown`` é "não sei", e o hub encaixado de fora faz o dongle."""
     gabinete = Gabinete(
