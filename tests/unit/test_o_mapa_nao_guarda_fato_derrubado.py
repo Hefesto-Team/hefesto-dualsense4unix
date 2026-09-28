@@ -297,10 +297,11 @@ FATOS_DERRUBADOS: tuple[Derrubado, ...] = (
         caiu_em="01/09/2026",
         quem_derrubou=(
             "o mudo VOLTA no bit 0x04 de payload[53] — o mesmo byte do jack — e "
-            "o produto o LÊ desde a MIC-DA-MESA-ELEICAO-01: `extract_jack_status`"
-            " → `_registrar_borda_do_mic` → `bordas_do_mic` → `mic_da_mesa_loop`,"
-            " nos dois transportes. A linha irmã `audio.jack.deteccao@dualsense` "
-            "sempre disse que o bit2 desse byte é o MIC_MUTE"
+            "o produto o LÊ desde a MIC-DA-MESA-ELEICAO-01 (hoje pelo "
+            "`extract_estado_do_mic`, junto do botão, que é o gesto desde "
+            "28/09), nos dois transportes. A linha irmã "
+            "`audio.jack.deteccao@dualsense` sempre disse que o bit2 desse byte "
+            "é o MIC_MUTE"
         ),
     ),
     Derrubado(
@@ -421,6 +422,41 @@ FATOS_DERRUBADOS: tuple[Derrubado, ...] = (
             "duas irmãs (@pro, @sn30) e as DUAS células de código de "
             "`plataforma.slot_jogador@dualsense` — que é o endereço que o "
             "`specs.html` publica para quem for procurar o slot no código"
+        ),
+    ),
+    # ------------------------------------------------------------------
+    # QUARTA RODADA — 28/09/2026, o fecho da leva de 28/09. A
+    # O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01 trocou o gesto do microfone e curou
+    # o código e a referência canônica; o mapa ficou dizendo o gesto velho
+    # em quatro células de três linhas.
+    # ------------------------------------------------------------------
+    Derrubado(
+        nome="o gesto de eleição do microfone é a virada do bit de mudo",
+        padrao=re.compile(
+            r"é ele que dá o sujeito do gesto"
+            r"|mascara `STATUS_MIC_MUDO` e conta BORDAS",
+        ),
+        caiu_em="28/09/2026",
+        quem_derrubou=(
+            "a O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01: o bit de mudo vira com "
+            "qualquer um que escreva o mudo no firmware (três bordas que ela "
+            "não deu, no branco, na sessão de 28/09); o gesto passou a ser o "
+            "botão (`buttons[2]` bit 2), lido com o `status[1]` do mesmo "
+            "report por `extract_estado_do_mic`"
+        ),
+    ),
+    Derrubado(
+        nome="a borda do microfone exige sustentação (`SUSTENTACAO_DO_MUDO_S`)",
+        padrao=re.compile(
+            r"CURA APLICADA: a borda passa a exigir SUSTENTA"
+            r"|SUSTENTACAO_DO_MUDO_S",
+        ),
+        caiu_em="28/09/2026",
+        quem_derrubou=(
+            "a O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01: a sustentação de 300 ms "
+            "olhava a virada do bit, e o gesto passou a ser o botão, que nem o "
+            "gating do rádio nem o eco da nossa escrita apertam; a constante "
+            "saiu do `core/backend_pydualsense.py`"
         ),
     ),
 )
