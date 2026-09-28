@@ -51,13 +51,9 @@ POR_EXTENSO = {
 
 #: As páginas que afirmam a contagem de parâmetros do `DaemonConfig`.
 #:
-#: O `README.md` entrou em 01/08, fechando a isenção de processo que o deixara
-#: de fora: ele afirmava a MESMA frase e continuava dizendo "três parâmetros"
-#: porque pertencia a outro agente na leva daquele dia. Ele é a página de
-#: entrada do projeto — deixá-lo fora era guardar as três páginas internas e
-#: soltar a única que quase todo mundo lê.
+#: O `README.md` não está aqui: ele não afirma a contagem. Quem a afirma é a
+#: página de métricas, que é onde a pessoa procura as variáveis de ambiente.
 PAGINAS_DA_CONTAGEM = (
-    "README.md",
     "docs/usage/metrics.md",
     "docs/adr/016-prometheus-metrics.md",
 )
