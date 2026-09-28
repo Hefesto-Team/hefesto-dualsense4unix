@@ -3349,8 +3349,8 @@ class Daemon:
             flavor_atual = getattr(self._gamepad_device, "flavor", None)
             # MODO-DE-CONEXAO-01 (13/09/2026): a seção `mode` também diz o
             # CAMINHO, e ele é pedido pela mesma porta da máscara. `None` é "sem
-            # opinião de caminho": não troca e não apaga o que ela escolheu (a
-            # máscara sem opinião, essa, vale a da máquina, logo acima).
+            # opinião": o de fábrica (CAMINHO-CONTAGIO-01), e nunca o do perfil
+            # anterior; a escolha global dela fica (só o gesto dela a grava).
             caminho = _caminho_da_secao(mode)
             adiada_por_jogo = False
             if (
@@ -3358,6 +3358,10 @@ class Daemon:
                 or flavor_do_jogo != _mascara_da_sessao(self)
                 or _o_p1_vestiria(self, flavor_do_jogo) != flavor_atual
                 or (caminho is not None and caminho != _caminho_vivo(self))
+                # O dono ainda com o caminho de OUTRO perfil (conferência da
+                # O-MODO-XBOX-NAO-E-QUEDA-02): o start sem opinião o limpa, e só
+                # recria o pad se o canal mudar.
+                or (caminho is None and getattr(self.config, "gamepad_caminho", None))
             ):
                 adiada_por_jogo = self._pedir_mascara_do_perfil(
                     flavor_do_jogo,

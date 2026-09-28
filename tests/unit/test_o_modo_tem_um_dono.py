@@ -677,6 +677,57 @@ def test_o_perfil_que_entra_veste_o_p1_na_mesma_ativacao(
     assert vp.caminho_do_vpad(daemon._gamepad_device) == "xbox"
 
 
+@pytest.mark.usefixtures("_bancada")
+@pytest.mark.parametrize("mascara", [None, "dualsense"], ids=["sem-mascara", "dualsense"])
+@pytest.mark.parametrize("origem", ["autoswitch", "manual", "launch"])
+def test_o_perfil_sem_caminho_nao_herda_o_xbox_do_anterior(
+    origem: str, mascara: str | None, _lar: Any
+) -> None:
+    """Freestyle (Xbox) → um jogo `gamepad` SEM `caminho`: o P1 volta ao DualSense.
+
+    Sem opinião de caminho vale o de fábrica, e nunca o do perfil anterior
+    (CAMINHO-CONTAGIO-01, a ordem dela de 19/09 em `gamepad._caminho_a_herdar`:
+    *«tudo ligado mascara dualsense por default»*).  <!-- noqa-acento: citação literal dela -->
+    As réguas daquela sprint chamavam o start direto; a ativação de verdade
+    tinha um atalho: com a máscara igual, o `apply_profile_mode` não pedia
+    nada, e o pad seguia no
+    caminho Xbox com a máscara DualSense (o uinput que o jogo não vê) — com o
+    dono dizendo Xbox para todo restart seguinte. 26 dos 29 perfis dela não têm
+    `caminho` (medido em 18/09). Conferência de 28/09.
+
+    MORDE: tire do `apply_profile_mode` a pergunta pelo dono com o perfil sem
+    caminho — o P1 fica `("xbox", "uinput")`, e o dono em Xbox.
+    """
+    loader.save_profile(
+        Profile(
+            name="Freestyle",
+            match=MatchAny(),
+            mode=ProfileModeConfig(kind="gamepad", caminho="xbox"),
+        ),
+        origem="teste",
+    )
+    loader.save_profile(
+        Profile(
+            name="Jogo sem caminho",
+            match=MatchAny(),
+            mode=ProfileModeConfig(kind="gamepad", gamepad_flavor=mascara),
+        ),
+        origem="teste",
+    )
+    daemon, gerente = _daemon_do_g3()
+    gerente.activate("Freestyle", origin="autoswitch")
+    assert gp.caminho_da_sessao(daemon) == "xbox", "premissa: o Freestyle pôs o Xbox"
+
+    gerente.activate("Jogo sem caminho", origin=origem)
+
+    pad = daemon._gamepad_device
+    assert (vp.caminho_do_vpad(pad), pad.backend) == ("dualsense", "uhid"), (
+        "o perfil sem caminho herdou o Xbox do Freestyle: "
+        f"{(vp.caminho_do_vpad(pad), pad.backend)}"
+    )
+    assert gp.caminho_da_sessao(daemon) is None, "o dono seguiu com o caminho do anterior"
+
+
 #: O appid da régua: um jogo qualquer da biblioteca, só o número do marcador.
 APPID_DO_G3 = 1599660
 
