@@ -2154,9 +2154,11 @@ class AltoFalanteSubsystem:
             falta = fim - time.monotonic()
             if falta <= 0:
                 return False
-            acordar.wait(falta)
+            avisado = acordar.wait(falta)
             if self._parar.is_set() or gerenciador.dormir(0.0):
                 return True
+            if not avisado:
+                return False  # o relógio: a volta vem, e ninguém olhou nada
             acordar.clear()
             if self._volta_pedida:
                 self._volta_pedida = False
