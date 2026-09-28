@@ -126,6 +126,10 @@ _HASHES_UPSTREAM_DOCUMENTADOS = frozenset(
         "444553540000",
         # PKEY_Device_ContainerId {8c7ed206-3f8a-4827-b3ab-ae9e1faefc6c},2.
         "ae9e1faefc6c",
+        # EFI_GLOBAL_VARIABLE {8be4df61-93ca-11d2-aa0d-00e098032b8c}, da
+        # especificação UEFI: o sufixo do nome da `SecureBoot-*` na efivars de
+        # qualquer máquina (test_o_secure_boot_se_le_sem_mokutil.py).
+        "00e098032b8c",
     }
 )
 
