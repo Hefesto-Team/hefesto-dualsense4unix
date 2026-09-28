@@ -18,7 +18,7 @@ As réguas:
    nascer o programa de verdade e o publica no ``cgroup.procs`` da unidade,
    onde o real publica; o PID se pergunta a ela, e o R3 fecha;
 4. **o laço de leitura não espera o gerenciador**: com um ``systemd-run`` que
-   leva um segundo, o toque do PS e o do L3 voltam na hora, e o laço segue
+   leva dois segundos, o toque do PS e o do L3 voltam na hora, e o laço segue
    dando tique.
 
 Nenhum caso daqui chega ao gerenciador de usuário de quem roda a suíte: o
@@ -537,7 +537,11 @@ def test_a_parada_nao_deixa_teclado_sem_dono(gerenciador: _GerenciadorDeMentira)
     ctrl.dispatch_token(TOKEN_TOGGLE_OSK, "press")  # abriria de novo
     parada = threading.Thread(target=ctrl.close)
     parada.start()
-    time.sleep(0.3)
+    # Solta o gerenciador só depois de a parada ter mexido na fila (ou de
+    # cinco segundos, quando ela não mexe — é a mordida).
+    limite = time.monotonic() + 5.0
+    while ctrl._fio._fila and time.monotonic() < limite:
+        time.sleep(0.02)
     gerenciador.segurar.set()
     parada.join(10.0)
     assert not parada.is_alive()
@@ -551,19 +555,21 @@ def test_a_parada_nao_deixa_teclado_sem_dono(gerenciador: _GerenciadorDeMentira)
 # 3 — o laço de leitura não espera o gerenciador
 # ---------------------------------------------------------------------------
 
-#: O que um tique do laço pode custar aqui. O laço lê a 60 Hz, e o
-#: ``systemd-run`` de mentira leva um segundo inteiro: qualquer tique que o
-#: esperasse passaria disto por uma ordem de grandeza.
-_TIQUE_S = 0.1
+#: O que o gerenciador de mentira leva, e o que um tique pode custar aqui. O
+#: laço lê a 60 Hz; o teto do tique é um quarto da demora, folga de sobra para
+#: a cobertura e a carga do CI, e um tique que esperasse o gerenciador passa
+#: dele inteiro.
+_DEMORA_DO_GERENCIADOR_S = 2.0
+_TIQUE_S = _DEMORA_DO_GERENCIADOR_S / 4
 
 
 def test_o_l3_nao_segura_o_laco(gerenciador: _GerenciadorDeMentira) -> None:
-    """Com o gerenciador levando 1 s, o toque volta na hora.
+    """Com o gerenciador lento, o toque volta na hora.
 
     MORDE: faça o ``dispatch_token`` chamar ``self._atender(token)`` direto e
-    o toque leva o segundo inteiro.
+    o toque leva a demora inteira.
     """
-    gerenciador.demora_s = 1.0
+    gerenciador.demora_s = _DEMORA_DO_GERENCIADOR_S
     ctrl = teclado._OSKController()
     t0 = time.monotonic()
     ctrl.dispatch_token(TOKEN_TOGGLE_OSK, "press")
@@ -583,9 +589,9 @@ def _daemon_do_ps() -> Any:
 
 @pytest.fixture
 def steam_lenta(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> _GerenciadorDeMentira:
-    """A Steam fechada, e o gerenciador levando 1 s. Nada nasce."""
+    """A Steam fechada, e o gerenciador lento. Nada nasce."""
     ger = _GerenciadorDeMentira(tmp_path / "cgroup", nascer=False)
-    ger.demora_s = 1.0
+    ger.demora_s = _DEMORA_DO_GERENCIADOR_S
     monkeypatch.setattr(steam_launcher.shutil, "which", lambda n: f"/usr/bin/{n}")
     monkeypatch.setattr(
         steam_launcher, "_default_pgrep",
@@ -599,13 +605,13 @@ def steam_lenta(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> _Gerenciador
 def test_o_ps_nao_segura_o_laco(steam_lenta: _GerenciadorDeMentira) -> None:
     """A régua do achado 9 da auditoria, pelo detector de verdade.
 
-    O toque curto do PS dispara no release; com o ``systemd-run`` levando 1 s,
+    O toque curto do PS dispara no release; com o ``systemd-run`` lento,
     o tique do release volta na hora e os seguintes também, e a Steam sai pelo
     dono uma vez só.
 
     MORDE: troque o ``fio.disparar(...)`` do ``_on_ps_solo`` pela chamada
     direta ``_a_acao_da_maquina(da_maquina, comando)`` e o tique do release
-    leva o segundo inteiro.
+    leva a demora inteira.
     """
     gesto = hotkey.build_ps_solo_callback(_daemon_do_ps())
     mgr = HotkeyManager(on_ps_solo=gesto, config=HotkeyConfig(buffer_ms=0))
