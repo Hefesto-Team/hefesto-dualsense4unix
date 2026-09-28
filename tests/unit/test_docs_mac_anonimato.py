@@ -72,6 +72,16 @@ import re
 import subprocess
 from pathlib import Path
 
+# O SERIAL E AS JANELAS TÊM UM DONO NO PRODUTO desde 28/09/2026
+# (O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-01): as duas constantes do serial
+# eram ESPELHOS escritos aqui e em `scripts/ensaios/cor_do_plastico.py`, e o
+# `core/formas_do_endereco` passou a ser quem mascara o diário e o «Copiar».
+from hefesto_dualsense4unix.core.formas_do_endereco import (
+    CARACTERES_PUBLICOS_DO_SERIAL,
+    PADRAO_DE_SERIAL,
+    formas_do_endereco,
+)
+
 #: OUIs de hardware REAL desta bancada (adaptador BT, DualSense, 8BitDo,
 #: Nintendo, roteador) — prefixos já públicos nos docs mascarados.
 #:
@@ -549,19 +559,12 @@ def test_o_regex_nao_confunde_pedaco_de_hexadecimal_maior() -> None:
 # pareça com o real tem de montá-lo por concatenação, como os testes de mordida
 # desta seção fazem — nunca escrevê-lo por extenso.
 
-#: Os 6 primeiros caracteres são o que a máscara da casa preserva.
-#: ESPELHO de `CARACTERES_PUBLICOS_DO_SERIAL` em scripts/ensaios/cor_do_plastico.py.
-CARACTERES_PUBLICOS_DO_SERIAL = 6
-
-#: A forma do serial de fábrica do DualSense, como MEDIDA nos aparelhos da
-#: bancada. ESPELHO do padrão embutido em `scripts/check_anonymity.sh`; o teste
-#: `test_o_check_anonymity_usa_o_mesmo_padrao_de_serial` reprova a divergência.
-PADRAO_DE_SERIAL = (
-    r"(?<![A-Z0-9])"
-    r"[A-Z][0-9]{2}[A-Z0-9][0-9]{2}"
-    r"[A-Z0-9]{11}"
-    r"(?![A-Z0-9])"
-)
+#: Os 6 primeiros caracteres são o que a máscara da casa preserva, e a forma
+#: do serial de fábrica do DualSense, como MEDIDA nos aparelhos da bancada: as
+#: duas constantes vêm do dono no produto (`core/formas_do_endereco`, o import
+#: no topo). O padrão embutido em `scripts/check_anonymity.sh` segue sendo uma
+#: cópia, e o teste `test_o_check_anonymity_usa_o_mesmo_padrao_de_serial`
+#: reprova a divergência.
 SERIAL_DE_FABRICA_RE = re.compile(PADRAO_DE_SERIAL)
 
 #: Um par hexadecimal SOLTO — o vizinho não pode ser outro dígito hexadecimal.
@@ -797,3 +800,92 @@ def test_o_check_anonymity_usa_o_mesmo_padrao_de_serial() -> None:
         f"  script: {remontado}\n"
         f"  aqui:   {PADRAO_DE_SERIAL}"
     )
+
+
+# ===========================================================================
+# O TEXTO EM TODA GRAFIA E NAS DUAS ORDENS — O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-01
+# ===========================================================================
+#
+# GRAU: MEDIDO (28/09/2026). O ``MAC_COMPLETO_RE`` lê o endereço na ordem
+# direta, com ``[:_-]`` ou colado. O despejo de um report escreve o endereço
+# como bytes soltos por espaço, e o ``0x09`` e o ``0x0b`` do DualSense o trazem
+# INVERTIDO — do sexto octeto ao primeiro. Foi assim que um endereço inteiro de
+# um controle dela ficou em ``docs/data/ensaios-brutos/`` desde 15/08, com os
+# quatro portões verdes: o de bytes procura BINÁRIO, e este só lia a direta.
+#
+# A decisão de "entrega o 4.º ou o 5.º?" é do dono (``formas_do_endereco``, as
+# janelas nas duas ordens e em toda grafia): a linha reprova quando o trecho
+# achado carrega uma janela dele. Sem a ordem invertida no dono, o despejo
+# invertido passaria — é a mordida escrita na régua do dono
+# (``test_o_registro_copiado_nao_entrega_o_endereco.py``).
+
+#: Seis octetos com o mesmo separador (``:`` ``_`` ``-`` ``.``, espaço) ou
+#: colados, sobrepostos (o lookahead acha um em cada octeto).
+_SEIS_OCTETOS_EM_TEXTO = re.compile(
+    r"(?i)(?<![0-9a-f])(?=([0-9a-f]{2})([:_\-. ]?)([0-9a-f]{2})\2([0-9a-f]{2})\2"
+    r"([0-9a-f]{2})\2([0-9a-f]{2})\2([0-9a-f]{2})(?![0-9a-f]))"
+)
+
+
+def _ocorrencias_em_texto_nas_duas_ordens(texto: str) -> list[tuple[int, str, str]]:
+    """(linha, ordem, oui) de todo endereço de OUI real em texto que entrega o 4.º ou o 5.º."""
+    achados: list[tuple[int, str, str]] = []
+    for m in _SEIS_OCTETOS_EM_TEXTO.finditer(texto):
+        lidos = tuple(m.group(i).lower() for i in (1, 3, 4, 5, 6, 7))
+        trecho = m.group(2).join(lidos)
+        for ordem, octetos in (("direta", lidos), ("invertida", lidos[::-1])):
+            if octetos[:3] not in _OUIS_REAIS_OCTETOS:
+                continue
+            if any(p in trecho for p in formas_do_endereco(octetos) if p == p.lower()):
+                linha = texto.count("\n", 0, m.start()) + 1
+                achados.append((linha, ordem, ":".join(octetos[:3])))
+    return achados
+
+
+def test_nenhum_mac_real_em_texto_em_toda_grafia_e_nas_duas_ordens() -> None:
+    """Nenhum arquivo versionado escreve um endereço real invertido, ou solto por espaço.
+
+    Para arrancar e ver morder: escreva, num arquivo da árvore, um despejo
+    com os seis bytes de um endereço de OUI real do sexto octeto ao primeiro
+    (monte-o por concatenação), ou tire a ordem invertida do dono — o teste
+    ``test_mordida_sem_a_ordem_invertida_as_reguas_de_forma_nao_veem_o_despejo``
+    faz isso sem tocar a árvore.
+    """
+    repo_root = Path(__file__).resolve().parents[2]
+    violacoes: list[str] = []
+    for path in _tracked_files(repo_root):
+        dados = _conteudo(path)
+        if dados is None:
+            continue
+        texto = dados.decode("utf-8", errors="ignore")
+        for num, ordem, oui in _ocorrencias_em_texto_nas_duas_ordens(texto):
+            violacoes.append(
+                f"{path.relative_to(repo_root)}:{num}: MAC real sem máscara, "
+                f"na ordem {ordem} ({oui}:xx:xx:xx)"
+            )
+    assert not violacoes, (
+        "MAC de hardware REAL em texto, com o 4.º ou o 5.º octeto à mostra. Zere "
+        "os dois nas posições do endereço (na invertida, o 2.º e o 3.º bytes "
+        "depois do sexto octeto):\n" + "\n".join(violacoes)
+    )
+
+
+def _despejo_invertido(sufixo: tuple[str, str, str]) -> str:
+    """Um report ``0x09`` com o endereço de um OUI real invertido, montado aqui."""
+    octetos = (*_OUIS_REAIS_OCTETOS[0], *sufixo)
+    return "0x09: 09 " + " ".join(reversed(octetos)) + " 08 25\n"
+
+
+def test_o_despejo_invertido_com_espaco_reprova_e_o_mascarado_passa() -> None:
+    cru = _despejo_invertido(("11", "22", "33"))
+    assert _ocorrencias_em_texto_nas_duas_ordens(cru) == [
+        (1, "invertida", ":".join(_OUIS_REAIS_OCTETOS[0]))
+    ]
+    assert _ocorrencias_em_texto_nas_duas_ordens(_despejo_invertido(("00", "00", "33"))) == []
+    # E a mesma coisa em outra grafia: dois-pontos, ponto e colado.
+    for separador in (":", "."):
+        linha = cru.replace(" ", separador).replace("0x09:" + separador, "0x09: ")
+        assert _ocorrencias_em_texto_nas_duas_ordens(linha), separador
+    colado = "".join(reversed((*_OUIS_REAIS_OCTETOS[0], "11", "22", "33")))
+    assert _ocorrencias_em_texto_nas_duas_ordens(f"bruto={colado}\n")
+

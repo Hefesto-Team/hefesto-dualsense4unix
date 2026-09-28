@@ -85,6 +85,17 @@ passava **mesmo já commitado** — não era cegueira a arquivo novo, era um bur
 permanente. A companhia do ``.png`` era analogia, não medição: em PNG doze
 hexadecimais são bytes comprimidos casando por acaso; num SVG são caracteres
 que alguém digitou.
+
+OS PEDAÇOS DO ACUSADO (O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-01, 28/09/2026)
+--------------------------------------------------------------------------------
+Um endereço que vazou inteiro raramente vazou uma vez só: o mesmo relato traz o
+nome do nó, o despejo do report com os bytes invertidos, a janela colada. Por
+forma, esta régua não vê esses pedaços — sem o endereço, três octetos soltos
+não são nada. Com ele, são: cada endereço acusado aqui tem as suas janelas
+(``core/formas_do_endereco.formas_do_endereco``, nas duas ordens e em toda
+grafia) procuradas na árvore inteira, e a linha que carrega uma delas sai
+acusada junto, sem imprimir o valor. Limpar só a linha do endereço inteiro
+deixaria o resto dele para a próxima pessoa achar.
 """
 from __future__ import annotations
 
@@ -94,6 +105,10 @@ import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
+if (RAIZ / "src").is_dir() and str(RAIZ / "src") not in sys.path:
+    sys.path.insert(0, str(RAIZ / "src"))
+
+from hefesto_dualsense4unix.core.formas_do_endereco import formas_do_endereco
 
 #: Binário e artefato onde doze hexadecimais são ruído, não endereço.
 #:
@@ -228,6 +243,47 @@ def acusa_no(linha: str) -> list[str]:
     return [m.group(0) for m in NO_DE_SOM.finditer(linha) if m.group(1)[:4] != "0000"]
 
 
+#: Uma corrida de três octetos ou mais com o MESMO separador, ou seis hex
+#: colados ou mais: onde uma janela de três octetos pode morar.
+_CORRIDA = re.compile(
+    r"(?i)(?<![0-9a-f])(?:[0-9a-f]{2}([:\-_. ])[0-9a-f]{2}(?:\1[0-9a-f]{2})+|[0-9a-f]{6,})"
+    r"(?![0-9a-f])"
+)
+
+
+def octetos_de(achado: str) -> tuple[str, ...] | None:
+    """Os seis octetos (minúsculos) de um endereço acusado, em qualquer grafia."""
+    hexa = re.sub(r"[^0-9A-Fa-f]", "", achado).lower()
+    return tuple(hexa[i:i + 2] for i in range(0, 12, 2)) if len(hexa) == 12 else None
+
+
+def pedacos_dos_acusados(acusados: list[tuple[str, ...]]) -> dict[str, str]:
+    """As janelas de cada endereço acusado, pelo dono → o rótulo (`A<n>`), sem valor."""
+    pedacos: dict[str, str] = {}
+    for n, octetos in enumerate(acusados):
+        for pedaco in formas_do_endereco(octetos):
+            pedacos.setdefault(pedaco.lower(), f"A{n}")
+    return pedacos
+
+
+def acusa_pedaco(linha: str, pedacos: dict[str, str]) -> list[str]:
+    """Os rótulos dos acusados que têm uma janela nesta linha.
+
+    A corrida colada se alinha pelo começo dela, como a do dono.
+    """
+    rotulos = []
+    for m in _CORRIDA.finditer(linha):
+        separador = m.group(1) or ""
+        corrida = m.group(0).lower()
+        octetos = (corrida.split(separador) if separador
+                   else [corrida[i:i + 2] for i in range(0, len(corrida) - 1, 2)])
+        for i in range(len(octetos) - 2):
+            rotulo = pedacos.get(separador.join(octetos[i:i + 3]))
+            if rotulo:
+                rotulos.append(rotulo)
+    return rotulos
+
+
 def arquivos_versionados() -> list[Path]:
     try:
         saida = subprocess.run(
@@ -274,6 +330,8 @@ def _texto_de(p: Path) -> str | None:
 
 def main() -> int:
     achados: list[str] = []
+    acusados: list[tuple[str, ...]] = []
+    lidos: list[Path] = []
     for p in arquivos_versionados():
         try:
             texto = _texto_de(p)
@@ -282,16 +340,29 @@ def main() -> int:
         if texto is None:
             continue
         rel = p.relative_to(RAIZ)
+        lidos.append(p)
         for n, linha in enumerate(texto.splitlines(), 1):
             if ISENCAO.search(linha):
                 continue
             for a in acusa_mac(linha):
                 achados.append(f"{rel}:{n}: MAC real    {a}")
+                acusados.append(octetos_de(a) or ())
             for a in acusa_serial(linha):
                 achados.append(f"{rel}:{n}: serial USB  {a}")
+                acusados.append(octetos_de(a) or ())
             if not str(rel).startswith("tests/"):
                 for a in acusa_no(linha):
                     achados.append(f"{rel}:{n}: nó de som   {a}")
+
+    pedacos = pedacos_dos_acusados([o for o in dict.fromkeys(acusados) if o])
+    ja = {a.split(": ", 1)[0] for a in achados}
+    for p in lidos if pedacos else ():
+        rel = p.relative_to(RAIZ)
+        for n, linha in enumerate((_texto_de(p) or "").splitlines(), 1):
+            if f"{rel}:{n}" in ja or ISENCAO.search(linha):
+                continue
+            for rotulo in sorted(set(acusa_pedaco(linha, pedacos))):
+                achados.append(f"{rel}:{n}: pedaço do endereço acusado {rotulo}")
 
     if achados:
         print(f"FALHA: {len(achados)} endereço(s) de rádio REAL em arquivo versionado.\n")

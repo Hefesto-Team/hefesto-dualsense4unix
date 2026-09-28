@@ -896,3 +896,312 @@ def test_um_defeito_no_dono_nao_derruba_o_log(monkeypatch: pytest.MonkeyPatch) -
     saida = buf.getvalue()
     assert saida.count("mascara_do_diario_falhou erro=ValueError") >= 3, saida
     assert _janelas_que_sobram(saida) == []
+
+
+# --- régua 5: o «Copiar» -------------------------------------------------------------------
+
+#: Um segundo endereço, que só o `maquina.json` conhece: o despejo invertido dele no painel
+#: só sai mascarado se o «Copiar» levar as chaves dela como conhecidas.
+_SO_DA_MAQUINA = ("aa", "bb", "cc", "21", "43", "5d")
+
+
+class _JanelaDeMentira:
+    """O dublê do `DaemonActionsMixin`: nada de `systemctl` na máquina de quem roda."""
+
+    def _systemctl_status_text(self, unit: str) -> str:
+        return "● unidade ativa"
+
+    def _daemon_status(self) -> str:
+        return "online_systemd"
+
+
+@pytest.fixture
+def a09(monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
+    from tests.conftest import exigir_gi_real
+
+    exigir_gi_real("importa `gui.aba_sistema`, que carrega o GTK")
+    monkeypatch.syspath_prepend(str(RAIZ / "src/hefesto_dualsense4unix/interface"))
+    from pacotes import a09_sistema as mod  # type: ignore[import-not-found]
+
+    monkeypatch.setattr(mod, "_JANELA_ANTIGA", [_JanelaDeMentira()])
+    mod._PAINEL[0] = None
+    yield mod
+    mod._PAINEL[0] = None
+
+
+def _estado(serial: str) -> dict[str, Any]:
+    return {"controllers": [{
+        "uniq": ENDERECO, "serial": serial, "connected": True, "transport": "usb",
+        "player_slot": 1,
+    }]}
+
+
+def _o_painel_de_mentira(serial: str) -> str:
+    """O painel da 09: o status, a identidade com o serial, e o diário nas seis formas."""
+    return "\n".join([
+        "● unidade ativa",
+        "",
+        "Identidade de fábrica",
+        f"  P1 · USB · {serial}",
+        "",
+        "Registro do serviço",
+        *(linha for linha, _mascarada in _formas().values()),
+        f"0x0b: 0b {' '.join(reversed(_SO_DA_MAQUINA))} 08 25",
+    ])
+
+
+def _copiar(a09: Any, monkeypatch: pytest.MonkeyPatch, serial: str) -> list[str]:
+    """O «Copiar» de verdade, com o painel de mentira e um coletor no lugar da área."""
+    import pacotes  # type: ignore[import-not-found]
+
+    from hefesto_dualsense4unix.utils import maquina
+
+    coletado: list[str] = []
+    painel = _o_painel_de_mentira(serial)
+    monkeypatch.setattr(a09, "_faixa_lenta",
+                        lambda *a, **k: (None, None, None, "online_systemd", painel))
+    monkeypatch.setattr(a09, "_por_na_area_de_transferencia",
+                        lambda texto: coletado.append(texto) or True)
+    declarada = maquina.MaquinaConfig(
+        controles={"".join(_SO_DA_MAQUINA): maquina.ControleDeclarado()})
+    monkeypatch.setattr(a09._maquina, "carregar_maquina", lambda: declarada)
+    estado = _estado(serial)
+    ctx = pacotes.Contexto(state=estado, mesa=[], conectados=estado["controllers"], estados={})
+    a09.copiar_registro(ctx, {}, None)
+    return coletado
+
+
+def test_o_copiar_leva_o_painel_sem_janela_e_o_serial_mascarado(
+    a09: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    serial = _serial_forjado_na_forma_real()
+    (texto,) = _copiar(a09, monkeypatch, serial)
+    assert "Registro do serviço" in texto and "Identidade de fábrica" in texto
+    assert _janelas_que_sobram(texto) == []
+    assert _janelas_que_sobram(texto, _SO_DA_MAQUINA) == []
+    for virtual in _virtuais():
+        assert _hash_que_sobra(texto, virtual) == []
+    assert serial not in texto
+    assert serial[:dono.CARACTERES_PUBLICOS_DO_SERIAL] + "#" * 11 in texto
+
+
+def test_a_tela_guarda_o_serial_inteiro(a09: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Resposta 13 dela: a tela mostra inteiro; o «Copiar» leva mascarado."""
+    serial = _serial_forjado_na_forma_real()
+    monkeypatch.setattr(a09, "_diario", lambda: "linha do diário")
+    tela = a09._repouso_do_painel(_estado(serial))
+    assert f"· {serial}" in tela
+
+
+def test_mordida_o_copiar_sem_o_dono_vaza(a09: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    import types
+
+    monkeypatch.setattr(a09, "_formas", types.SimpleNamespace(
+        mascarar=lambda texto, conhecidos=(): texto))
+    (texto,) = _copiar(a09, monkeypatch, _serial_forjado_na_forma_real())
+    assert _janelas_que_sobram(texto) != []
+
+
+def test_mordida_o_copiar_sem_o_maquina_json_deixa_o_despejo_dele(
+    a09: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original = a09._conhecidos_do_copiar
+    monkeypatch.setattr(
+        a09, "_conhecidos_do_copiar",
+        lambda ctx: [c for c in original(ctx) if c != "".join(_SO_DA_MAQUINA)],
+    )
+    (texto,) = _copiar(a09, monkeypatch, _serial_forjado_na_forma_real())
+    assert _janelas_que_sobram(texto) == []
+    assert _janelas_que_sobram(texto, _SO_DA_MAQUINA) != []
+
+
+# --- régua 6: o ensaio do touchpad abre num clone limpo -------------------------------------
+
+_ENSAIO_DO_TOUCHPAD = RAIZ / "scripts/ensaios/o_touchpad_chega_na_tela_de_baixo.py"
+_PASTAS_LOCAIS = ("scripts/ensaios", "scripts")
+
+
+def _versionados() -> set[str]:
+    saida = subprocess.run(
+        ["git", "ls-files", "-z", "--", "scripts"], cwd=RAIZ, capture_output=True,
+        text=True, check=True, timeout=60,
+    ).stdout
+    return {nome for nome in saida.split("\0") if nome}
+
+
+def _imports_que_nao_resolvem(fonte: str, versionados: set[str], vistos: set[str]) -> list[str]:
+    """Os imports que um clone limpo não resolve, seguindo os módulos locais que ele traz.
+
+    Resolve: a biblioteca padrão, o pacote, um módulo de `scripts/` VERSIONADO, e um
+    pacote instalado fora da árvore. Um arquivo local que o git não tem não resolve.
+    """
+    import importlib.util
+
+    ruins: list[str] = []
+    for no in ast.walk(ast.parse(fonte)):
+        if isinstance(no, ast.Import):
+            nomes = [a.name for a in no.names]
+        elif isinstance(no, ast.ImportFrom) and no.level == 0 and no.module:
+            nomes = [no.module]
+        else:
+            continue
+        for nome in nomes:
+            topo = nome.split(".")[0]
+            if topo in sys.stdlib_module_names or topo == "hefesto_dualsense4unix":
+                continue
+            locais = [f"{pasta}/{topo}.py" for pasta in _PASTAS_LOCAIS
+                      if (RAIZ / pasta / f"{topo}.py").exists()]
+            if locais:
+                if locais[0] not in versionados:
+                    ruins.append(nome)
+                elif locais[0] not in vistos:
+                    vistos.add(locais[0])
+                    ruins += _imports_que_nao_resolvem(
+                        (RAIZ / locais[0]).read_text(encoding="utf-8"), versionados, vistos)
+                continue
+            spec = importlib.util.find_spec(topo)
+            if spec is None or RAIZ in Path(spec.origin or "/").resolve().parents:
+                ruins.append(nome)
+    return ruins
+
+
+def test_o_ensaio_do_touchpad_so_importa_o_que_o_clone_tem() -> None:
+    fonte = _ENSAIO_DO_TOUCHPAD.read_text(encoding="utf-8")
+    assert _imports_que_nao_resolvem(fonte, _versionados(), set()) == []
+    assert "from hefesto_dualsense4unix.core.formas_do_endereco import mascarar" in fonte
+
+
+def test_mordida_o_import_do_modulo_ignorado_reprova() -> None:
+    fonte = _ENSAIO_DO_TOUCHPAD.read_text(encoding="utf-8")
+    velha = fonte.replace(
+        "from hefesto_dualsense4unix.core.formas_do_endereco import mascarar",
+        "from sanitizar_saida_de_agente import mascarar_enderecos",
+    )
+    assert velha != fonte
+    assert _imports_que_nao_resolvem(velha, _versionados(), set()) == [
+        "sanitizar_saida_de_agente"
+    ]
+
+
+# --- régua 7: as réguas de forma veem a invertida -------------------------------------------
+
+#: O endereço do lar de mentira: fora da faixa que a régua do dono chama de sintética
+#: (`aa:bb` e `02`), na faixa localmente administrada, que a IEEE nunca dá a fabricante.
+_DA_MAQUINA = ("06", "de", "ad", "21", "43", "5d")
+_REGUA_DO_DONO = RAIZ / "scripts/check_o_endereco_dela_em_toda_forma.py"
+
+
+def _carregar(caminho: Path, nome: str) -> Any:
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(nome, caminho)
+    assert spec is not None and spec.loader is not None
+    modulo = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(modulo)
+    return modulo
+
+
+def _o_lar_de_mentira(raiz: Path) -> Path:
+    import json
+
+    config = raiz / "lar" / ".config" / "hefesto-dualsense4unix"
+    config.mkdir(parents=True)
+    (config / "maquina.json").write_text(
+        json.dumps({"version": 1, "controles": {"".join(_DA_MAQUINA): {}}}), encoding="utf-8")
+    return raiz / "lar"
+
+
+def _despejo(octetos: tuple[str, ...]) -> str:
+    return f"0x09: 09 {' '.join(reversed(octetos))} 08 25\n"
+
+
+def _rodar_a_regua_do_dono(lar: Path, arquivo: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(_REGUA_DO_DONO), "--lar", str(lar), "--arquivo", str(arquivo)],
+        capture_output=True, text=True, timeout=120, env=os.environ.copy(), check=False,
+    )
+
+
+def test_a_regua_do_dono_ve_o_despejo_invertido_pelo_arquivo(tmp_path: Path) -> None:
+    from hefesto_dualsense4unix.integrations.uhid_gamepad import vpad_mac
+
+    lar = _o_lar_de_mentira(tmp_path)
+    copiado = tmp_path / "copiado.txt"
+    virtual = vpad_mac(":".join(_DA_MAQUINA), 1)
+    copiado.write_text(_despejo(_DA_MAQUINA) + f"mac={virtual.replace(':', '')}\n",
+                       encoding="utf-8")
+    r = _rodar_a_regua_do_dono(lar, copiado)
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "copiado.txt:1: 1x o endereço E0" in r.stdout
+    assert "copiado.txt:2: 1x o endereço V0 de E0" in r.stdout
+    assert " ".join(_DA_MAQUINA[3:5][::-1]) not in r.stdout
+    assert virtual.replace(":", "")[4:] not in r.stdout
+
+    mascarado = (*_DA_MAQUINA[:3], "00", "00", _DA_MAQUINA[5])
+    copiado.write_text(_despejo(mascarado) + "mac=02fe80000000\n", encoding="utf-8")
+    r = _rodar_a_regua_do_dono(lar, copiado)
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_o_portao_de_oui_ve_o_despejo_invertido() -> None:
+    from tests.unit import test_docs_mac_anonimato as portao
+
+    cru = portao._despejo_invertido(("11", "22", "33"))
+    assert [ordem for _linha, ordem, _oui in portao._ocorrencias_em_texto_nas_duas_ordens(cru)] == [
+        "invertida"
+    ]
+
+
+def test_mordida_sem_a_ordem_invertida_as_reguas_de_forma_nao_veem_o_despejo(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from tests.unit import test_docs_mac_anonimato as portao
+
+    regua = _carregar(_REGUA_DO_DONO, "_regua_do_dono_na_mordida")
+    copiado = tmp_path / "copiado.txt"
+    copiado.write_text(_despejo(_DA_MAQUINA), encoding="utf-8")
+    cru = portao._despejo_invertido(("11", "22", "33"))
+
+    def varrer() -> list[str]:
+        return cast(list[str], regua.varrer(
+            [copiado], regua.padrao_das_janelas({_DA_MAQUINA}),
+            regua.janelas_coladas({_DA_MAQUINA})))
+
+    assert varrer() != [] and portao._ocorrencias_em_texto_nas_duas_ordens(cru) != []
+
+    def so_a_direta(octetos: Any) -> Iterator[tuple[int, int, int]]:
+        for inicio in (1, 2, 3):
+            if any(octetos[i] != "00" for i in (3, 4) if inicio <= i < inicio + 3):
+                yield (inicio, inicio + 1, inicio + 2)
+
+    monkeypatch.setattr(dono, "_janelas", so_a_direta)
+    assert varrer() == []
+    assert portao._ocorrencias_em_texto_nas_duas_ordens(cru) == []
+
+
+def test_a_regua_de_forma_acusa_os_pedacos_do_endereco_acusado(tmp_path: Path) -> None:
+    """Um endereço que vazou inteiro num arquivo tem o despejo dele acusado no outro."""
+    forma = _carregar(RAIZ / "scripts/check_endereco_de_radio.py", "_regua_de_forma_2")
+    acusado = ("06", "1b", "44", "11", "3a", "b7")
+    pedacos = forma.pedacos_dos_acusados([acusado])
+    assert forma.acusa_pedaco(_despejo(acusado), pedacos) == ["A0"] * 3  # as três janelas
+    assert forma.acusa_pedaco(f"uniq={''.join(acusado)}", pedacos) != []
+    mascarado = (*acusado[:3], "00", "00", acusado[5])
+    assert forma.acusa_pedaco(_despejo(mascarado), pedacos) == []
+
+    repo = tmp_path / "repo"
+    (repo / "scripts").mkdir(parents=True)
+    (repo / "scripts" / "check_endereco_de_radio.py").write_bytes(
+        (RAIZ / "scripts/check_endereco_de_radio.py").read_bytes())
+    (repo / "docs").mkdir()
+    (repo / "docs" / "relato.md").write_text(
+        f"adaptador {':'.join(acusado).upper()}\n", encoding="utf-8")
+    (repo / "docs" / "despejo.txt").write_text("x\n" + _despejo(acusado), encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repo, check=True, timeout=60)
+    r = subprocess.run(
+        [sys.executable, "scripts/check_endereco_de_radio.py"], cwd=repo,
+        capture_output=True, text=True, timeout=120, env=os.environ.copy(), check=False,
+    )
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "docs/despejo.txt:2: pedaço do endereço acusado A0" in r.stdout
+    assert " ".join(acusado[3:5][::-1]) not in r.stdout.split("despejo.txt")[-1]

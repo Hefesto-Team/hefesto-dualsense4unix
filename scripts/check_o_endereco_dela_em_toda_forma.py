@@ -18,9 +18,23 @@ isso não viam os pedaços que entregam o que a máscara esconde:
 Esta régua não adivinha por forma: ela lê os endereços reais DESTA máquina
 (`maquina.json` e `controllers.json` do HOME de verdade, `bluetoothctl` e o
 sysfs) e procura, na árvore versionada, **toda janela de três octetos que
-contenha o octeto 4 ou o 5**, com dois-pontos, com hífen e colada. Ela nunca
-imprime o valor achado: diz o arquivo, a linha, o endereço pelo índice e o
-último octeto (que a máscara já mostra).
+contenha o octeto 4 ou o 5**. Ela nunca imprime o valor achado: diz o
+arquivo, a linha, o endereço pelo índice e o último octeto (que a máscara já
+mostra).
+
+AS JANELAS SÃO DO DONO (O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-01,
+28/09/2026): `core/formas_do_endereco.formas_do_endereco`, nas duas ordens de
+byte, com `:` `-` `_` `.`, espaço e colada. Até ali esta régua lia só `[:-]` e
+a ordem direta, e o despejo invertido com espaço de um ensaio de 15/08 passava
+por ela. E ela procura também os MACs dos virtuais de cada endereço
+(`uhid_gamepad.vpad_macs_do_aparelho`, sem copiar a conta): o virtual é o
+endereço disfarçado, e dois bytes do hash ao lado da máscara bastam para
+voltar a ele.
+
+`--arquivo <caminho>` mede o que se colou FORA da árvore (um «Copiar», um
+relato), e `--lar <pasta>` troca a máquina inteira por um lar de mentira: lê
+só o `maquina.json` e o `controllers.json` de lá, sem perguntar ao
+`bluetoothctl` nem ao sysfs.
 
 Fica fora do CI (`FORA-DO-CI` no `portoes.sh`): no runner não há endereço
 nenhum a perguntar.
@@ -30,7 +44,9 @@ Isenção de linha, como a do `check_endereco_de_radio.py`:
 """
 from __future__ import annotations
 
+import argparse
 import contextlib
+import itertools
 import os
 import pwd
 import re
@@ -39,6 +55,14 @@ import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
+if (RAIZ / "src").is_dir() and str(RAIZ / "src") not in sys.path:
+    sys.path.insert(0, str(RAIZ / "src"))
+
+from hefesto_dualsense4unix.core.formas_do_endereco import formas_do_endereco
+
+#: Quantos MACs de virtual por endereço: o do aparelho e os seguintes do mesmo
+#: aparelho, que o dono dos vivos veste quando o anterior já está vestido.
+VIRTUAIS_POR_ENDERECO = 64
 
 EXCLUIR_SUFIXO = {
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf",
@@ -83,12 +107,15 @@ def _home_de_verdade() -> Path:
     return Path(pwd.getpwuid(os.getuid()).pw_dir)
 
 
-def enderecos_da_maquina() -> set[tuple[str, ...]]:
+def enderecos_da_maquina(lar: Path | None = None) -> set[tuple[str, ...]]:
+    """Os endereços reais desta máquina — ou só os do lar de mentira, quando há um."""
     reais: set[tuple[str, ...]] = set()
-    config = _home_de_verdade() / ".config" / "hefesto-dualsense4unix"
+    config = (lar or _home_de_verdade()) / ".config" / "hefesto-dualsense4unix"
     for nome in ("maquina.json", "controllers.json"):
         with contextlib.suppress(OSError):
             reais |= enderecos_do_texto((config / nome).read_text(errors="ignore"), colado=True)
+    if lar is not None:
+        return reais
     for args in (["bluetoothctl", "devices"], ["bluetoothctl", "list"]):
         try:
             saida = subprocess.run(args, capture_output=True, text=True, timeout=5).stdout
@@ -118,11 +145,20 @@ def janelas(o: tuple[str, ...]) -> list[tuple[int, tuple[str, str, str]]]:
 _SEQUENCIA_HEX = re.compile(r"(?i)(?<![0-9a-f])[0-9a-f]{6,12}(?![0-9a-f])")
 
 
+def _separadas(o: tuple[str, ...]) -> list[str]:
+    """Os pedaços COM separador que o dono diz entregarem o 4.º ou o 5.º octeto."""
+    return sorted(p for p in formas_do_endereco(o) if p == p.lower() and len(p) == 8)
+
+
+def _coladas(o: tuple[str, ...]) -> list[str]:
+    return sorted(p for p in formas_do_endereco(o) if p == p.lower() and len(p) == 6)
+
+
 def padrao_das_janelas(reais: set[tuple[str, ...]]) -> dict[str, re.Pattern[str]]:
-    """Rótulo (`E<n>…<último octeto>`) → regex das janelas COM separador."""
+    """Rótulo (`E<n>…<último octeto>`) → regex das janelas COM separador, pelo dono."""
     padroes: dict[str, re.Pattern[str]] = {}
     for n, o in enumerate(sorted(reais)):
-        alternativas = [f"{a}[:-]{b}[:-]{c}" for _inicio, (a, b, c) in janelas(o)]
+        alternativas = [re.escape(p) for p in _separadas(o)]
         if alternativas:
             padroes[f"E{n}…{o[5]}"] = re.compile(
                 r"(?i)(?<![0-9a-f])(?:" + "|".join(alternativas) + r")(?![0-9a-f])"
@@ -131,12 +167,79 @@ def padrao_das_janelas(reais: set[tuple[str, ...]]) -> dict[str, re.Pattern[str]
 
 
 def janelas_coladas(reais: set[tuple[str, ...]]) -> dict[str, str]:
-    """As janelas SEM separador (`aabbcc`) → o rótulo do endereço."""
+    """As janelas SEM separador (`aabbcc`, nas duas ordens) → o rótulo do endereço."""
     return {
-        f"{a}{b}{c}": f"E{n}…{o[5]}"
+        pedaco: f"E{n}…{o[5]}"
         for n, o in enumerate(sorted(reais))
-        for _inicio, (a, b, c) in janelas(o)
+        for pedaco in _coladas(o)
     }
+
+
+def virtuais_da_maquina(reais: set[tuple[str, ...]]) -> dict[str, tuple[str, ...]]:
+    """Rótulo (`V<k> de E<n>`) → os octetos de cada MAC de virtual de cada endereço.
+
+    O rótulo não leva octeto nenhum do virtual: todos os quatro de baixo são
+    hash do endereço.
+    """
+    from hefesto_dualsense4unix.integrations.uhid_gamepad import vpad_macs_do_aparelho
+
+    virtuais: dict[str, tuple[str, ...]] = {}
+    for n, o in enumerate(sorted(reais)):
+        macs = vpad_macs_do_aparelho(":".join(o), 1)
+        for k, mac in enumerate(itertools.islice(macs, VIRTUAIS_POR_ENDERECO)):
+            virtuais[f"V{k} de E{n}"] = tuple(mac.lower().split(":"))
+    return virtuais
+
+
+#: Os separadores do dono, e o colado.
+_SEPARADORES = (":", "-", "_", ".", " ", "")
+
+
+def pedacos_dos_virtuais(virtuais: dict[str, tuple[str, ...]]) -> dict[str, str]:
+    """Os QUATRO bytes do hash de cada virtual, nas duas ordens e em toda grafia → o rótulo.
+
+    Quatro, e não a janela de três do dono, por medida (28/09/2026): a árvore
+    tem 153 mil janelas de três octetos separados por espaço (quase todas no
+    despejo decodificado do HCI de 15/08), e 64 virtuais por endereço fariam
+    dezenas de janelas casarem por acaso — o portão ficaria vermelho de ruído.
+    Os quatro bytes juntos são o virtual inteiro menos o prefixo, e o acaso
+    deles é desprezível.
+    """
+    pedacos: dict[str, str] = {}
+    for rotulo, o in virtuais.items():
+        for ordem in (o[2:], o[2:][::-1]):
+            for separador in _SEPARADORES:
+                pedacos[separador.join(ordem)] = rotulo
+    return pedacos
+
+
+#: Uma corrida de três octetos ou mais com o MESMO separador, ou colada.
+_CORRIDA = re.compile(
+    r"(?i)(?<![0-9a-f])(?:[0-9a-f]{2}([:\-_. ])[0-9a-f]{2}(?:\1[0-9a-f]{2})+|[0-9a-f]{8,})"
+    r"(?![0-9a-f])"
+)
+
+
+def achados_dos_virtuais(linha: str, pedacos: dict[str, str]) -> list[str]:
+    """Os rótulos dos virtuais cujos quatro bytes de hash estão na linha.
+
+    Por dicionário, e não por regex: são 64 virtuais por endereço, e uma regex
+    por rótulo custaria 64 varreduras de cada linha da árvore. A corrida colada
+    se alinha pelo começo dela, como a do dono.
+    """
+    if not pedacos:
+        return []
+    rotulos = []
+    for m in _CORRIDA.finditer(linha):
+        separador = m.group(1) or ""
+        corrida = m.group(0).lower()
+        octetos = (corrida.split(separador) if separador
+                   else [corrida[i:i + 2] for i in range(0, len(corrida) - 1, 2)])
+        for i in range(len(octetos) - 3):
+            rotulo = pedacos.get(separador.join(octetos[i:i + 4]))
+            if rotulo:
+                rotulos.append(rotulo)
+    return rotulos
 
 
 def achados_colados(linha: str, coladas: dict[str, str]) -> list[str]:
@@ -169,10 +272,19 @@ def arquivos_versionados() -> list[Path]:
     ]
 
 
+def _nome(p: Path) -> str:
+    """O caminho relativo à árvore, ou o de fora como veio (o `--arquivo`)."""
+    try:
+        return str(p.resolve().relative_to(RAIZ))
+    except ValueError:
+        return str(p)
+
+
 def varrer(
     arquivos: list[Path],
     padroes: dict[str, re.Pattern[str]],
     coladas: dict[str, str] | None = None,
+    virtuais: dict[str, str] | None = None,
 ) -> list[str]:
     achados = []
     for p in arquivos:
@@ -184,19 +296,31 @@ def varrer(
             if ISENCAO.search(linha):
                 continue
             rotulos = [r for r, padrao in padroes.items() for _ in padrao.findall(linha)]
+            rotulos += achados_dos_virtuais(linha, virtuais or {})
             rotulos += achados_colados(linha, coladas or {})
             for rotulo in sorted(set(rotulos)):
                 k = rotulos.count(rotulo)
-                achados.append(f"{p.relative_to(RAIZ)}:{n}: {k}x o endereço {rotulo}")
+                achados.append(f"{_nome(p)}:{n}: {k}x o endereço {rotulo}")
     return achados
 
 
-def main() -> int:
-    reais = enderecos_da_maquina()
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--arquivo", action="append", type=Path, default=[],
+                        help="mede este arquivo (fora da árvore) em vez do versionado")
+    parser.add_argument("--lar", type=Path, default=None,
+                        help="um lar de mentira: os endereços saem só do config dele")
+    args = parser.parse_args(argv)
+    reais = enderecos_da_maquina(args.lar)
     if not reais:
         print("NÃO MEDIDO: esta máquina não tem endereço real a perguntar.")
         return 0
-    achados = varrer(arquivos_versionados(), padrao_das_janelas(reais), janelas_coladas(reais))
+    achados = varrer(
+        args.arquivo or arquivos_versionados(),
+        padrao_das_janelas(reais),
+        janelas_coladas(reais),
+        pedacos_dos_virtuais(virtuais_da_maquina(reais)),
+    )
     if achados:
         print(f"FALHA: {len(achados)} linha(s) com os octetos 4 ou 5 de um endereço dela.\n")
         for a in achados[:60]:
@@ -205,8 +329,11 @@ def main() -> int:
             print(f"  … e mais {len(achados) - 60}.")
         print("\nA máscara da casa zera os octetos 4 e 5 em TODA forma:")
         print("  AA:BB:CC:DD:EE:FF -> AA:BB:CC:00:00:FF   e   hefesto_som_DDEEFF -> hefesto_som_0000FF")
+        print("  e o virtual derivado sai 02:fe:80:00:00:00 (core/formas_do_endereco).")
         return 1
-    print(f"OK: {len(reais)} endereço(s) da máquina, nenhum pedaço escondido na árvore.")
+    onde = "nos arquivos pedidos" if args.arquivo else "na árvore"
+    print(f"OK: {len(reais)} endereço(s) da máquina e os virtuais deles, "
+          f"nenhum pedaço escondido {onde}.")
     return 0
 
 
