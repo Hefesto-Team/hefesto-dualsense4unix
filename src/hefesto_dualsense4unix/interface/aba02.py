@@ -3047,7 +3047,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                  sentido o liberar ali"*.
 
                  EU TINHA MEDIDO O CONTRÁRIO e ela me corrigiu num plano acima. O
-                 `mic.set {{muted: null}}` EXISTE (`ipc_handlers.py:4838`) e devolve a
+                 `mic.set {{muted: null}}` EXISTE (`ipc_handlers.py:6473`) e devolve a
                  posse ao `hid-playstation` — a minha objeção era que o botão tinha
                  dono. Mas ter dono não é ter SENTIDO: se o botão físico do controle
                  nunca deixa de comandar a interface, não há posse a devolver, e um

@@ -2178,7 +2178,7 @@ def _faces_do_microfone(a: dict[str, Any]) -> tuple[bool, bool]:
         calado = calado or mudo_do_canal
     elif "canal_mudo" in a:
         # `None` DENTRO da chave é o que o daemon devolve quando não há fonte
-        # para perguntar (`hotkey.py:929`) — "não consegui ler", e não "está no
+        # para perguntar (`hotkey.py:1240`) — "não consegui ler", e não "está no
         # ar". A chave AUSENTE é o mesmo desfecho por outro caminho.
         nao_sei = True
     else:
@@ -3926,7 +3926,7 @@ def _volume_conhecido(dele: dict[str, Any]) -> dict[str, Any]:
 #:
 #: `mic.button_toggles_system` é UM por MÁQUINA: quem o lê é
 #: `hotkey.mic_button_loop`, em `daemon.config.mic_button_toggles_system`, sem
-#: consultar `uniq` nenhum (`daemon/subsystems/hotkey.py:1308`). O esquema o
+#: consultar `uniq` nenhum (`daemon/subsystems/hotkey.py:1380`). O esquema o
 #: RECUSA por peça (`ControllerMicOverride._o_que_ainda_nao_tem_caminho_por_peca`)
 #: — e a régua da casa é `test_perfil_por_controle_o_campo_espera_o_caminho.py`,
 #: nos dois sentidos. Guardá-lo por controle faria quatro controles gravarem
@@ -5418,7 +5418,7 @@ METODOS: set[str] = set()
 #: sozinha que o gesto pegou.
 #:
 #: O `machine.declare` está **fora do `daemon.state_full` de propósito**, e o
-#: handler diz a razão (`ipc_handlers.py:7454`): *"aquilo é o tique de 20 Hz, e
+#: handler diz a razão (`ipc_handlers.py:7459`): *"aquilo é o tique de 20 Hz, e
 #: a declaração muda por gesto dela, não por quadro"*. Ele grava em disco
 #: (`maquina.json`), e a única confirmação é o `(ok, motivo)` da chamada — que é
 #: exatamente por que o gesto levanta com o motivo em vez de voltar calado.
