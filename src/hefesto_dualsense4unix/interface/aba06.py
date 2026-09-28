@@ -3101,9 +3101,9 @@ LEGENDA = f'''<div class="nota">
   <ul>
     <li><b>Mouse, teclado e os seis gestos saem de UM controle só.</b> Com um
     controle ligado ninguém podia ver isso. O poll loop lê o estado do controle
-    <b>primário</b> (<code>daemon/lifecycle.py:4541</code>) e é esse estado que vai
-    para o mouse (<code>:4744</code>), para o teclado (<code>:4754</code>) e para o
-    <code>hotkey_manager.observe</code> (<code>:4757</code>); os secundários do
+    <b>primário</b> (<code>daemon/lifecycle.py:5976</code>) e é esse estado que vai
+    para o mouse (<code>:6189</code>), para o teclado (<code>:6200</code>) e para o
+    <code>hotkey_manager.observe</code> (<code>:6208</code>); os secundários do
     co-op têm um caminho só, o do gamepad virtual
     (<code>daemon/subsystems/coop.py:2366</code>). Por isso o cartão do
     <b>Player {NAVEGA}</b> diz <i>{PAPEL_QUE_NAVEGA}</i> e os outros dizem <i>{PAPEL_SO_A_JANELA}</i>,
