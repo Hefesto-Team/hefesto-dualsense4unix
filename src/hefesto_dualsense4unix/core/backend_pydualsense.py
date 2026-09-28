@@ -3452,6 +3452,8 @@ class PyDualSenseController(IController):
                     trocados[key] = self._detect_transport(antigo)
                     with contextlib.suppress(Exception):
                         antigo.close()
+                    # Antes do `_reapply_desired` do handle novo, que lê o mapa.
+                    self._levar_ao_mapa_a_posse_que_a_mao_soltou(key, antigo)
                     logger.info(
                         "handle_trocado_de_no",
                         uniq=_endereco_mascarado(self._key_to_uniq(key)),
@@ -3695,6 +3697,8 @@ class PyDualSenseController(IController):
             self._segurar_a_volta_pelo_radio_locked(key, handle)
             with contextlib.suppress(Exception):
                 handle.close()
+            # Depois do `close`: a thread do report parou e não marca mais.
+            self._levar_ao_mapa_a_posse_que_a_mao_soltou(key, handle)
         if self._primary_key is not None and self._primary_key not in self._handles:
             self._reservar_o_posto_de_primario(self._primary_key)
             self._primary_key = None
@@ -3825,6 +3829,7 @@ class PyDualSenseController(IController):
                 handle = self._handles.pop(key)
                 with contextlib.suppress(Exception):
                     handle.close()
+                self._levar_ao_mapa_a_posse_que_a_mao_soltou(key, handle)
             # E2(a): o `reconnect()` do poll loop é disconnect + connect — do
             # ponto de vista dela, a mesma piscada do hotplug-out. Sem reservar
             # aqui, um blip de leitura devolvia o posto para quem enumerasse
@@ -6255,6 +6260,12 @@ class PyDualSenseController(IController):
         """
         from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
+        # A posse que a mão soltou chega ao mapa ANTES de o mapa responder —
+        # com ou sem o laço das bordas no ar (O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01).
+        with self._io_lock:
+            items = list(self._handles.items())
+        for key, handle_da_mesa in items:
+            self._levar_ao_mapa_a_posse_que_a_mao_soltou(key, handle_da_mesa)
         alvo = (norm_mac(uniq) if uniq else self.primary_uniq) or None
         if alvo is not None and len(alvo) == 12:
             with self._io_lock:
@@ -7441,22 +7452,18 @@ class PyDualSenseController(IController):
         **O MAPA DA POSSE ACOMPANHA A MÃO.** O aperto solta a posse do mudo no
         handle, na thread do report (`_registrar_borda_do_mic`); o mapa
         por-uniq (`_mic_mute_by_uniq`, MIC-BT-DONO-01) é quem a rependura na
-        reconexão e quem responde `microphone_mute_for`. É aqui, na leitura que
-        o laço das bordas faz a 20 Hz ANTES de publicar o aperto, que o mapa
-        solta junto — e só se ninguém tomou a posse de novo depois do aperto.
+        reconexão e quem responde `microphone_mute_for`. Aqui, na leitura que o
+        laço das bordas faz a 20 Hz ANTES de publicar o aperto, o mapa solta
+        junto — pelo dono único, `_levar_ao_mapa_a_posse_que_a_mao_soltou`.
         """
         with self._io_lock:
             items = list(self._handles.items())
         out: dict[str, tuple[int, bool, float | None]] = {}
         for key, handle in items:
+            self._levar_ao_mapa_a_posse_que_a_mao_soltou(key, handle)
             uniq = self._key_to_uniq(key)
             if uniq is None:
                 continue
-            if getattr(handle, "_mic_posse_solta_pela_mao", False):
-                handle._mic_posse_solta_pela_mao = False
-                if getattr(handle, "_mic_mute_desejado", None) is None:
-                    self._registrar_posse_do_mudo(uniq, None)
-                    logger.info("mic_posse_solta_pela_mao", uniq=uniq)
             seq = getattr(handle, "_mic_mudo_seq", None)
             lido = getattr(handle, "_mic_mudo", None)
             if not isinstance(seq, int) or not isinstance(lido, bool):
@@ -7466,6 +7473,39 @@ class PyDualSenseController(IController):
             quando = getattr(handle, "_mic_mudo_em", None)
             out[uniq] = (seq, mudo, quando if isinstance(quando, float) else None)
         return out
+
+    def _levar_ao_mapa_a_posse_que_a_mao_soltou(self, key: str, handle: Any) -> None:
+        """Leva ao mapa por-uniq a posse do mudo que o aperto soltou no handle.
+
+        O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01 (28/09/2026). O aperto solta a posse
+        no handle, na thread do report, e deixa a marca
+        `_mic_posse_solta_pela_mao`; o mapa `_mic_mute_by_uniq` é quem responde
+        `microphone_mute_for` (o `mic_mudo_desejado` do `state_full`, que a
+        tela pinta) e quem rependura a posse na reconexão. **Esta função é a
+        única que consome a marca**, e ela é chamada de todo lugar que lê o
+        mapa ou perde o handle: as bordas, a pergunta de quem manda, e a saída
+        do handle (`disconnect`, o hotplug e a troca de nó).
+
+        O laço das bordas sozinho não bastava, e a conta é do boot: ele só sobe
+        com `mic_button_toggles_system` ligado (`hotkey.start_mic_hotkey`).
+        Desligado, ninguém lia a marca — o handle já não mandava mudo, e o mapa
+        seguia dizendo «o Hefesto manda mudo» à tela e rependurando o mudo
+        velho na reconexão. Dois lugares que precisam concordar, acertados por
+        caminhos diferentes, é a família de defeito que esta casa já nomeia.
+
+        Só solta se ninguém tomou a posse de novo depois do aperto: o ato (ou o
+        perfil) que escreveu por cima vale.
+        """
+        if not getattr(handle, "_mic_posse_solta_pela_mao", False):
+            return
+        handle._mic_posse_solta_pela_mao = False
+        if getattr(handle, "_mic_mute_desejado", None) is not None:
+            return
+        uniq = self._key_to_uniq(key)
+        if uniq is None:
+            return
+        self._registrar_posse_do_mudo(uniq, None)
+        logger.info("mic_posse_solta_pela_mao", uniq=uniq)
 
     # --- introspecção / leitura do primário -----------------------------
 

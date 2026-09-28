@@ -353,6 +353,86 @@ def test_o_bit_virando_sem_mao_nao_solta_a_posse(transporte: str) -> None:
     assert backend.microphone_mute_for(_QUATRO[1]) is True
 
 
+@_TRANSPORTES
+def test_quem_retoma_a_posse_depois_do_aperto_fica_com_ela(transporte: str) -> None:
+    """A mão soltou, e antes de alguém ler a marca o ato tomou a posse de novo.
+
+    A marca do aperto não pode apagar do mapa uma posse que o handle voltou a
+    afirmar: o handle mandaria mudo em todo report e o `state_full` diria que
+    o kernel é o dono.
+
+    MORDIDA: tire a guarda `_mic_mute_desejado is None` de
+    `_levar_ao_mapa_a_posse_que_a_mao_soltou` e o mapa perde a posse nova.
+    """
+    h = _Handle()
+    backend = _backend({_QUATRO[0]: h})
+    _segurar(h, transporte, status=MUDO)
+    backend.set_microphone_mute(True, uniq=_QUATRO[0])
+    _apertar(h, transporte, antes=MUDO, depois=LIVRE)
+    assert backend.set_microphone_mute(True, uniq=_QUATRO[0]) is True
+
+    backend.bordas_do_mic()
+
+    assert h._mic_mute_desejado is True
+    assert backend._mic_mute_by_uniq.get(_QUATRO[0]) is True
+    assert backend.microphone_mute_for(_QUATRO[0]) is True
+
+
+@_TRANSPORTES
+def test_sem_o_laco_das_bordas_quem_manda_no_mudo_diz_a_verdade(transporte: str) -> None:
+    """O laço das bordas só sobe com `mic_button_toggles_system` ligado no boot.
+
+    Desligado, ninguém chama `bordas_do_mic`, e o mapa por-uniq — a fonte do
+    `mic_mudo_desejado` do `state_full` e da posse que a reconexão rependura —
+    seguia dizendo «o Hefesto manda mudo» depois de a mão já ter devolvido a
+    posse ao kernel.
+
+    MORDIDA: tire a chamada de `microphone_mute_for` e o mapa responde `True`.
+    """
+    h = _Handle()
+    backend = _backend({_QUATRO[2]: h})
+    _segurar(h, transporte, status=MUDO)
+    backend.set_microphone_mute(True, uniq=_QUATRO[2])
+    _apertar(h, transporte, antes=MUDO, depois=LIVRE)
+
+    assert backend.microphone_mute_for(_QUATRO[2]) is None
+    assert _QUATRO[2] not in backend._mic_mute_by_uniq
+
+
+@_TRANSPORTES
+@pytest.mark.parametrize("saida", ["disconnect", "hotplug"])
+def test_o_controle_que_sai_leva_ao_mapa_a_posse_que_a_mao_soltou(
+    transporte: str, saida: str
+) -> None:
+    """A mão soltou e o controle caiu antes de alguém ler a marca.
+
+    O handle sai com a marca dentro; sem levá-la ao mapa na saída, a reconexão
+    rependura no handle novo o mudo que ela acabou de desfazer.
+
+    MORDIDA: tire a chamada de `disconnect` (ou a de `_close_handles`) e o mapa
+    guarda o `True` velho.
+    """
+    h = _Handle()
+    backend = _backend({_QUATRO[3]: h})
+    backend._primary_key = None
+    backend._sysfs = {}
+    backend._segurar_a_volta_pelo_radio_locked = lambda *_a: None
+    _segurar(h, transporte, status=MUDO)
+    backend.set_microphone_mute(True, uniq=_QUATRO[3])
+    _apertar(h, transporte, antes=MUDO, depois=LIVRE)
+
+    if saida == "disconnect":
+        backend.disconnect()
+    else:
+        backend._close_handles(keep=set())
+
+    assert backend._handles == {}
+    assert _QUATRO[3] not in backend._mic_mute_by_uniq, (
+        "o controle saiu com a posse solta pela mão, e o mapa rependura o mudo "
+        "velho na volta dele"
+    )
+
+
 # ---------------------------------------------------------------------------
 # 3. Nunca só o P1: os quatro, nos dois transportes
 # ---------------------------------------------------------------------------
