@@ -728,6 +728,15 @@ class TestODoctorPergunta:
         assert "o diário do daemon não tem a subida dele" in saida, saida
         assert "nenhum pad uinput nasceu" not in saida
 
+    def test_a_medida_que_morre_calada_avisa(self, lar: Path) -> None:
+        """O python que morre sem dizer nada não é «o diário não tem a subida»."""
+        _servir(_socket(lar), {"connected": True})
+        binario = _bin(lar, BOOT_KERNEL, BOOT_DAEMON)
+        (binario / "python3").write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+        saida = _doctor(lar, "check_a_hora_do_pad", binario)
+        assert "[WARN] a medida da hora de cada pad não respondeu" in saida, saida
+        assert "o diário do daemon não tem a subida dele" not in saida
+
     def test_a_linha_que_a_funcao_nao_le_avisa(self, lar: Path) -> None:
         """O formato do daemon mudou (aqui, com cor): o que sobra não é «nenhum pad»."""
         colorida = (

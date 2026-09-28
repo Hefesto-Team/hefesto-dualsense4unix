@@ -3408,8 +3408,11 @@ PY
         sem-produto)
             info "a hora de nascer de cada pad não foi medida (o pacote não está ao alcance do python ${py})"
             return ;;
-        sem-diario|"")
+        sem-diario)
             info "o diário do daemon não tem a subida dele — a hora de nascer de cada pad não foi medida"
+            return ;;
+        "")
+            warn "a medida da hora de cada pad não respondeu — a hora não foi medida"
             return ;;
         erro\|*)
             warn "a medida da hora de cada pad quebrou (${saida#erro|}) — a hora não foi medida"
