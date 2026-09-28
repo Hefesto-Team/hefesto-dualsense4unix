@@ -45,6 +45,7 @@ AS MORDIDAS:
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -56,6 +57,8 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 UNIT_DIR = REPO_ROOT / "assets" / "systemd"
 SCRIPT_DIR = REPO_ROOT / "scripts"
+#: As units de terceiros copiadas da máquina dela (ver o `LEIA.md` de lá).
+DE_TERCEIROS = REPO_ROOT / "tests" / "fixtures" / "systemd" / "de-terceiros"
 
 #: Onde o install.sh põe os scripts da casa. É o prefixo que aparece dentro das
 #: units e dentro dos próprios scripts quando um chama o outro.
@@ -66,10 +69,10 @@ PREFIXO_INSTALADO = "/usr/local/lib/hefesto-dualsense4unix"
 class Hospedeira:
     """O sandbox da unit de TERCEIRO em que a casa pendura um drop-in.
 
-    É a peça que não dá para derivar do nosso repositório — ela mora no pacote
-    de outra pessoa. Fica aqui com a medição que a sustenta, e o
-    `test_a_hospedeira_declarada_bate_com_a_maquina` a confronta com o systemd
-    vivo quando há um.
+    Ela mora no pacote de outra pessoa, e por isso sai de LER a cópia byte a
+    byte da unit da máquina dela (`DE_TERCEIROS`); o
+    `test_a_hospedeira_declarada_bate_com_a_maquina` confronta a cópia com o
+    systemd vivo onde o bluez está carregado.
     """
 
     unit: str
@@ -79,18 +82,6 @@ class Hospedeira:
     state_directory: tuple[str, ...] = ()
     private_tmp: bool = False
 
-
-#: MEDIDO em 04/08/2026 e reconferido em 22/08/2026 com
-#: `systemctl cat bluetooth.service` (bluez 5.86, Pop!_OS 24.04):
-#: ProtectSystem=strict, StateDirectory=bluetooth, ReadWritePaths ausente.
-HOSPEDEIRAS = {
-    "bluetooth-dropin-10-hefesto-resilience.conf": Hospedeira(
-        unit="bluetooth.service",
-        protect_system="strict",
-        state_directory=("bluetooth",),
-        private_tmp=True,
-    ),
-}
 
 #: Subárvores de API que o `ProtectSystem=` nunca torna somente-leitura.
 SEMPRE_GRAVAVEIS = ("/dev", "/proc", "/sys")
@@ -147,6 +138,54 @@ def _lista(diretivas: dict[str, list[str]], chave: str) -> list[str]:
 def _programa_do_exec(valor: str) -> str:
     """O argv[0] de uma linha `Exec*=`, sem os modificadores `-`, `+`, `!`, `@`, `:`."""
     return valor.lstrip("-+!@:").split()[0] if valor.strip() else ""
+
+
+def _sim(valor: str) -> bool:
+    return valor in ("yes", "true", "1")
+
+
+def _hospedeira_da_copia(unit: str) -> Hospedeira:
+    """O sandbox da hospedeira lido da cópia versionada da unit dela."""
+    diretivas = _diretivas_do_service((DE_TERCEIROS / unit).read_text(encoding="utf-8"))
+    return Hospedeira(
+        unit=unit,
+        protect_system=(diretivas.get("ProtectSystem") or ["no"])[-1],
+        state_directory=tuple(_lista(diretivas, "StateDirectory")),
+        private_tmp=_sim((diretivas.get("PrivateTmp") or ["no"])[-1]),
+    )
+
+
+def _sandbox_vivo(unit: str) -> Hospedeira | None:
+    """O sandbox da unit segundo o systemd desta máquina, ou None se ela não está carregada.
+
+    O `systemctl show` de uma unit que não existe sai com 0 e imprime os
+    DEFAULTS (`ProtectSystem=no`, `LoadState=not-found`). Lido só o
+    `ProtectSystem`, o runner do CI sem bluez vira um bluez sem sandbox: foi o
+    vermelho da corrida 36354426805 (27/09/2026). Quem diz se a hospedeira
+    existe é o `LoadState`.
+    """
+    proc = subprocess.run(
+        ["systemctl", "show", unit, "-p", "LoadState", "-p", "ProtectSystem",
+         "-p", "PrivateTmp", "-p", "StateDirectory"],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        check=False,
+    )
+    campos = dict(linha.partition("=")[::2] for linha in proc.stdout.splitlines())
+    if proc.returncode != 0 or campos.get("LoadState") != "loaded":
+        return None
+    return Hospedeira(
+        unit=unit,
+        protect_system=campos.get("ProtectSystem", ""),
+        state_directory=tuple(campos.get("StateDirectory", "").split()),
+        private_tmp=_sim(campos.get("PrivateTmp", "")),
+    )
+
+
+HOSPEDEIRAS = {
+    "bluetooth-dropin-10-hefesto-resilience.conf": _hospedeira_da_copia("bluetooth.service"),
+}
 
 
 # ---------------------------------------------------------------------------
@@ -381,7 +420,7 @@ def _alvos() -> list[Alvo]:
         gravaveis += [f"/var/log/{d}" for d in _lista(diretivas, "LogsDirectory")]
         gravaveis += [f"/var/cache/{d}" for d in _lista(diretivas, "CacheDirectory")]
         protect = (diretivas.get("ProtectSystem") or ["no"])[-1]
-        tmp_privado = (diretivas.get("PrivateTmp") or ["no"])[-1] in ("yes", "true", "1")
+        tmp_privado = _sim((diretivas.get("PrivateTmp") or ["no"])[-1])
         if hospedeira is not None:
             protect = hospedeira.protect_system
             gravaveis += [f"/var/lib/{d}" for d in hospedeira.state_directory]
@@ -522,29 +561,62 @@ class TestSandboxCobreAsEscritas:
 class TestAHospedeiraNaoEnvelheceCalada:
     """A `Hospedeira` é o único dado deste arquivo que vem de fora do repo."""
 
-    def test_a_hospedeira_declarada_bate_com_a_maquina(self) -> None:
-        """Segunda régua: o systemd vivo confirma o `ProtectSystem` da tabela.
+    def test_o_portao_mede_sob_o_sandbox_da_copia(self) -> None:
+        """A cópia da máquina dela chega ao portão, em toda máquina.
 
-        Pula onde não há systemd nem bluez (CI headless, contêiner). Onde há,
-        é o que impede a tabela de envelhecer em silêncio quando o pacote do
-        BlueZ afrouxar ou apertar o sandbox numa atualização.
+        Se a leitura da cópia devolvesse `ProtectSystem=no`, o portão de
+        cobertura PULARIA ("/var já é gravável") e ficaria verde sem medir.
+        """
+        alvo = next(a for a in ALVOS if a.nome in HOSPEDEIRAS)
+        assert alvo.protect_system == "strict", alvo
+        assert "/var/lib/bluetooth" in alvo.gravaveis and "/tmp" in alvo.gravaveis, alvo
+
+    def test_o_leitor_nao_toma_unit_ausente_por_hospedeira(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O leitor do systemd vivo, contra um `systemctl` de mentira.
+
+        As duas respostas são as do systemd 255 de verdade, medidas em
+        27/09/2026: a da máquina dela e a de uma unit que não existe — que é o
+        que o runner do CI, sem bluez, responde para o `bluetooth.service`.
+        """
+        dubles = tmp_path / "bin"
+        dubles.mkdir()
+        monkeypatch.setenv("PATH", f"{dubles}:{os.environ.get('PATH', '')}")
+
+        def systemd_responde(saida: str) -> None:
+            falso = dubles / "systemctl"
+            falso.write_text(f"#!/bin/sh\ncat <<'FIM'\n{saida}FIM\n", encoding="utf-8")
+            falso.chmod(0o755)
+
+        systemd_responde("PrivateTmp=no\nProtectSystem=no\nStateDirectory=\nLoadState=not-found\n")
+        assert _sandbox_vivo("bluetooth.service") is None
+        systemd_responde(
+            "PrivateTmp=yes\nProtectSystem=strict\nStateDirectory=bluetooth\nLoadState=loaded\n"
+        )
+        assert _sandbox_vivo("bluetooth.service") == HOSPEDEIRAS[
+            "bluetooth-dropin-10-hefesto-resilience.conf"
+        ]
+
+    def test_a_hospedeira_declarada_bate_com_a_maquina(self) -> None:
+        """O systemd vivo confirma a cópia, onde o bluez está carregado.
+
+        É o que impede a cópia de envelhecer em silêncio quando o pacote do
+        BlueZ afrouxar ou apertar o sandbox numa atualização. Onde ele não está
+        carregado (o runner do CI, um contêiner) não há hospedeira para
+        confrontar: a cópia continua medida pelos dois testes acima, e esta
+        régua roda na máquina dela, na suíte de fim de leva.
         """
         if shutil.which("systemctl") is None:
             pytest.skip("sem systemctl")
-        for hospedeira in HOSPEDEIRAS.values():
-            proc = subprocess.run(
-                ["systemctl", "show", hospedeira.unit, "-p", "ProtectSystem"],
-                capture_output=True,
-                text=True,
-                timeout=20,
-            )
-            vivo = proc.stdout.strip().partition("=")[2]
-            if proc.returncode != 0 or not vivo:
-                pytest.skip(f"{hospedeira.unit} não existe nesta máquina")
-            assert vivo == hospedeira.protect_system, (
-                f"{hospedeira.unit} roda com ProtectSystem={vivo}, e a tabela "
-                f"deste teste diz {hospedeira.protect_system}. Atualize a tabela "
-                "— e confira se o `ReadWritePaths` do nosso drop-in ainda basta."
+        for declarada in HOSPEDEIRAS.values():
+            viva = _sandbox_vivo(declarada.unit)
+            if viva is None:
+                pytest.skip(f"{declarada.unit} não está carregado nesta máquina (LoadState)")
+            assert viva == declarada, (
+                f"{declarada.unit} roda com {viva}, e a cópia em {DE_TERCEIROS} "
+                f"diz {declarada}. Copie a unit de novo (ver o LEIA.md de lá) — e "
+                "confira se o `ReadWritePaths` do nosso drop-in ainda basta."
             )
 
     def test_o_dropin_abre_os_dois_lugares_que_a_volta_escreve(self) -> None:
