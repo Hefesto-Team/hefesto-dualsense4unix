@@ -3805,13 +3805,18 @@ class IpcHandlersMixin:
 
             bt_mic_sub = getattr(self.daemon, "_bt_mic_subsystem", None)
             com_ponte: list[str] = []
+            motivo = ""
             if bt_mic_sub is not None:
                 with contextlib.suppress(Exception):
                     com_ponte = sorted(bt_mic_sub.uniqs_com_ponte())
+                with contextlib.suppress(Exception):
+                    motivo = str(bt_mic_sub.motivo)
             result["bt_mic"] = {
                 "enabled": bool(uniqs_pedidos(daemon_cfg)) or habilitado_por_env(),
                 "running": bt_mic_sub is not None,
                 "uniqs": com_ponte,
+                # O que do SISTEMA segura a ponte (O-PRODUTO-EM-QUALQUER-MAQUINA-01).
+                "motivo": motivo,
             }
             rumble_active = getattr(daemon_cfg, "rumble_active", None)
             result["rumble_passthrough"] = rumble_active is None

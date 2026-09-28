@@ -236,6 +236,32 @@ class TestOStateFullDizDeQuemEACadaPonte:
         assert bloco["enabled"] is True, "os dois foram PEDIDOS"
         assert bloco["uniqs"] == [UM], "só um SUBIU"
 
+    @pytest.mark.asyncio
+    async def test_o_state_full_diz_o_que_do_sistema_segura_a_ponte(
+        self, servidor: Any, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O driver sem a guarda do áudio segura a ponte, e a tela precisa saber.
+
+        O-PRODUTO-EM-QUALQUER-MAQUINA-01 (28/09/2026): o `BtMicSubsystem.motivo`
+        diz o que do SISTEMA segura a ponte; sem a chave no `state_full`, quem
+        lê o bloco vê «Desligado» sem motivo, como se fosse escolha dela.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems import bt_mic
+
+        monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_BT_MIC", raising=False)
+        socket_path, daemon_mock = servidor
+        assert (await _state_full(socket_path))["bt_mic"]["motivo"] == ""
+
+        daemon_mock.config.bt_mic_uniqs = lambda: frozenset({UM})
+        subsystem = BtMicSubsystem()
+        subsystem._config = daemon_mock.config
+        subsystem._gerenciador = _Gerenciador()
+        subsystem._motivo = bt_mic.MOTIVO_SEM_A_GUARDA
+        daemon_mock._bt_mic_subsystem = subsystem
+
+        bloco = (await _state_full(socket_path))["bt_mic"]
+        assert bloco["motivo"] == bt_mic.MOTIVO_SEM_A_GUARDA
+
 
 # ===========================================================================
 # 2. O elo da janela: a seção "A mesa" lê a chave e a barra se mexe
