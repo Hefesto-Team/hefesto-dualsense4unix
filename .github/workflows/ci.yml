@@ -758,9 +758,9 @@ jobs:
       # saía «cancelled», que não se lê como defeito: quatro corridas do `dev`
       # no 3.10, de 25 a 27/09, pararam assim num `Daemon.run()` cujo
       # `shutdown` não voltava. O teto mora no PASSO, e não no job, porque o do
-      # job CANCELA e o do passo REPROVA. Medido nas corridas do `dev` de 25 a
-      # 27/09 que chegaram ao fim: este passo levou de 27 a 56 minutos. O teto
-      # é 80.
+      # job CANCELA e o do passo REPROVA. Medido nas onze pernas das corridas
+      # do `dev` de 25 a 27/09 que chegaram ao fim: este passo levou de 27,6 a
+      # 56,9 minutos. O teto é 80.
       - name: Pytest unit
         timeout-minutes: 80
         run: |
@@ -911,9 +911,10 @@ jobs:
       # o resto da interface pulava no `lint-test` e não rodava em lugar nenhum.
       # Em 24 partes, pelo `scripts/rodar-a-suite.sh` (um processo só morre no
       # meio), e a cobertura se mede sobre a suíte inteira.
-      # O TETO, pela mesma razão do `Pytest unit` do lint-test: medido nas
-      # corridas do `dev` de 25 a 27/09 que chegaram ao fim, este passo levou
-      # de 52 a 66 minutos. O teto é 95.
+      # O TETO, pela mesma razão do `Pytest unit` do lint-test. Este passo roda
+      # a suíte inteira desde 27/09, e só duas corridas do `dev` o levaram ao
+      # fim: 52,5 e 66,7 minutos. O teto é 95. Com duas medidas só, um estouro
+      # sem teste preso no log se mede de novo antes de subir o teto.
       - name: A suíte inteira sob Xvfb, com o GTK real
         timeout-minutes: 95
         env:
