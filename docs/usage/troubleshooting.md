@@ -119,21 +119,12 @@ busctl --user list | grep -i StatusNotifierWatcher  # provavelmente vazio
 
 **Fix**:
 
-1. **Janela compacta (default v3.3.0+)**: o Hefesto detecta automatic-
-   amente e abre uma janela 320×90 sempre-on-top com bateria + perfil +
-   botões. Se ela não aparecer, garantir que não há
-   `HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0` no ambiente:
-   ```bash
-   env | grep COMPACT_WINDOW          # esperado: vazio (default ligado)
-   ```
-2. **Habilitar cosmic-applets de status**: aguardando lançamento do
+1. **Habilitar cosmic-applets de status**: aguardando lançamento do
    `cosmic-applet-status-area` no Pop!_OS estável. O projeto já traz um applet
    COSMIC nativo em Rust (`packaging/cosmic-applet/`), instalado por padrão
    **em sessões COSMIC** (fora do COSMIC, só com `--enable-cosmic-applet`;
    `--no-cosmic-applet` desliga). Se `cargo`/`just` faltarem, o instalador
    avisa e segue sem o applet.
-3. **Desativar janela compacta** se preferir só GUI principal:
-   `HEFESTO_DUALSENSE4UNIX_COMPACT_WINDOW=0 hefesto-dualsense4unix-gui`.
 
 ---
 
