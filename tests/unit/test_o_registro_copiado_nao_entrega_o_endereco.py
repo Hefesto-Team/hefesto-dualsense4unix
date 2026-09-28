@@ -243,7 +243,7 @@ def _linhas_que_nao_sao_endereco() -> dict[str, str]:
         ),
         "o carimbo do journal": f"set 28 03:{par[0]}:{par[1]} hefesto-dualsense4unix[1234]: ok",
         "o PID de quatro algarismos": f"daemon_iniciado pid={par[0]}{par[1]}",
-        "o UUID": f"/home/x/.ferramenta/{uuid}/scratchpad/a.txt",
+        "o UUID": f"/home/x/.cache/sessoes/{uuid}/rascunho/a.txt",
         "o despejo do 0x31": (
             f"report 0x31: 31 01 7f 80 7f 7f 08 00 00 00 00 {par[0]} {par[1]} 00 00 00 12 34"
         ),
