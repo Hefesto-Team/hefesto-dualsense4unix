@@ -75,9 +75,19 @@ def _subir_filho_com_lock(nome: str, pid_file: Path) -> subprocess.Popen[bytes]:
 
 @pytest.fixture
 def isolated_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Redireciona $XDG_RUNTIME_DIR para tmp_path; isola pid files."""
+    """Redireciona $XDG_RUNTIME_DIR para tmp_path; isola pid files.
+
+    O berço é 0700 porque a especificação XDG exige esse modo do runtime dir, e
+    o `platformdirs` 4.12 passou a conferir: com outro modo ele recusa o berço
+    e cai no `/run/user/<uid>` DE VERDADE, onde mora o `daemon.pid` do Hefesto
+    de quem roda a suíte. Medido no CI de 27/09/2026 (corrida 36354426805,
+    `platformdirs` 4.12.0, umask 022): os pid files dos sete testes foram para o
+    `/run/user/1001` do runner, e o `acquire_or_takeover("daemon")` numa
+    máquina com o daemon de pé leria o PID dele como predecessor e o mataria.
+    """
     target = tmp_path / "runtime"
     target.mkdir()
+    target.chmod(0o700)
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(target))
     # platformdirs cacheia o valor em módulo — reimporta para pegar novo env.
     import importlib
@@ -85,6 +95,14 @@ def isolated_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     from hefesto_dualsense4unix.utils import xdg_paths as xdg
     importlib.reload(xdg)
     importlib.reload(single_instance)
+    # A guarda vale para qualquer versão do platformdirs: se o berço for
+    # recusado por outra razão, o teste para aqui, antes de um pid file ou um
+    # sinal sair da árvore do teste.
+    resolvido = xdg.runtime_dir()
+    assert resolvido.parent == target, (
+        f"o runtime resolveu para {resolvido}, fora do berço {target}: os pid "
+        "files e o takeover iriam para o runtime de verdade de quem roda"
+    )
     return target
 
 
