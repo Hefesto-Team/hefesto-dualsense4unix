@@ -63,7 +63,7 @@ ESTADO = {
 
 
 @pytest.fixture
-def a09():
+def a09(monkeypatch):
     from pacotes import a09_sistema as mod
 
     # O PERFIL DE BATERIA É GRAVADO NO DISCO DE MENTIRA, e não injetado: o
@@ -80,13 +80,29 @@ def a09():
 
     gravar_maquina({"orcamento": {"teto": TETO_POR_PERFIL[PERFIL_BATERIA_LONGA]}})
 
+    # A SESSÃO GRÁFICA TAMBÉM É DECLARADA, e não herdada de quem roda — medido
+    # em 27/09/2026, na corrida 36354426805 do CI. A linha `hefesto-ambiente`
+    # sai de `_sessao()`, que lê `XDG_SESSION_TYPE` e `XDG_CURRENT_DESKTOP` do
+    # processo: na máquina dela a sessão COSMIC atravessava a suíte e a linha
+    # dizia «Wayland · COSMIC»; no runner não há sessão, e o traço é a resposta
+    # HONESTA do produto (o `({}, None)` de `test_a_09_sistema_em_tres_secoes`
+    # a cobra). Esta régua mede um `Leitura` COMPLETO, e a sessão é parte dele,
+    # como o `ESTADO` do daemon logo acima.
+    monkeypatch.setenv("XDG_SESSION_TYPE", "wayland")
+    monkeypatch.setenv("XDG_CURRENT_DESKTOP", "COSMIC")
+    monkeypatch.delenv("XDG_SESSION_DESKTOP", raising=False)
+
     # O CACHE DA FAIXA LENTA É ESVAZIADO A CADA TESTE, e é por isso que ele é um
     # `dict` de módulo e não um `lru_cache`: um cache que a régua não zera daria
-    # verde sobre a leitura do teste ANTERIOR.
+    # verde sobre a leitura do teste ANTERIOR. O `_BARATO` guarda a sessão por
+    # `LENTO_S`: sem esvaziá-lo, a sessão lida por outro arquivo no mesmo
+    # processo (o `lint-test` roda vinte mil testes num só) venceria a declarada.
     mod._LENTO.clear()
+    mod._BARATO.clear()
     mod._PAINEL[0] = None
     yield mod
     mod._LENTO.clear()
+    mod._BARATO.clear()
     mod._PAINEL[0] = None
 
 
@@ -132,6 +148,10 @@ def test_as_seis_linhas_deixam_de_ser_o_travessao(a09, ctx):
 
         AssertionError: `bateria-impoe` continua no traço — o pacote está
         emitindo o endereço e a fonte dele não foi lida.
+
+    **A SEGUNDA MORDIDA (27/09/2026):** tire a sessão declarada do `a09` e rode
+    com o ambiente vazio do runner (`env -i`): reprova em `hefesto-ambiente`,
+    como reprovou nos dois jobs do CI.
     """
     # DESDE 25/09/2026 (A-09-SISTEMA-EM-TRES-SECOES-01) as linhas de estado
     # moram no Status, uma lista só; as duas do Perfil de Bateria saíram por
