@@ -17,6 +17,12 @@
 #      aborta o LOTE INTEIRO, e `no tests ran` lê-se como limpo. Por isso a
 #      lista nasce de `ls` DESTA árvore, e há uma trava que recusa lote vazio.
 #
+# E O PROCESSO QUE MORRE POR SINAL DIZ ONDE. Em 26/09/2026 uma parte morreu
+# com `rc=139` (o WebKit) e nenhum log tinha a pilha. Cada arquivo que carrega
+# o WebKit roda em processo próprio (o sinal leva um arquivo, não a parte), e
+# todo pytest leva a `scripts/pilha_nativa.c` por `LD_PRELOAD`: o log de quem
+# morre tem a pilha Python (o `faulthandler`) e a nativa.
+#
 # USO:
 #     bash scripts/rodar-a-suite.sh              # as 24 partes, em série
 #     bash scripts/rodar-a-suite.sh 07           # só a parte 07
@@ -81,8 +87,72 @@ elif [ -z "$so_esta" ]; then
   echo "recibo: esta corrida não deixa recibo — ela leva argumentos a mais (SUITE_PYTEST_ARGS)"
   echo
 fi
+# A PILHA NATIVA, compilada a cada corrida para a máquina de quem roda. Sem
+# compilador, o processo que morre por sinal sai só com a pilha Python.
+pilha=""
+if [ -f "$RAIZ/scripts/pilha_nativa.c" ] && command -v cc > /dev/null 2>&1; then
+  if cc -shared -fPIC -O1 -o "$SAIDA/pilha-nativa.so" "$RAIZ/scripts/pilha_nativa.c" -ldl \
+      > "$SAIDA/pilha-nativa.cc.log" 2>&1; then
+    pilha="$SAIDA/pilha-nativa.so"
+  fi
+fi
+[ -n "$pilha" ] || echo "pilha nativa: sem compilador ou sem a fonte; quem morrer por sinal sai só com a pilha Python"
+
+# QUEM CARREGA O WEBKIT: os módulos de `src/` e `scripts/` que o pedem no
+# código, lidos agora. O arquivo de teste é do WebKit se diz `WebKit2` ou
+# importa um deles; errar para mais custa um processo, errar para menos põe o
+# WebKit de volta no processo da parte.
+mapfile -t _modulos < <(grep -rlE --include='*.py' \
+    "^[[:space:]]*(gi\.require_version\([\"']WebKit2|from gi\.repository import .*\bWebKit2\b)" \
+    src scripts 2> /dev/null | sed 's|.*/||; s|\.py$||' | LC_ALL=C sort -u)
+modulos_do_webkit=$(IFS='|'; printf '%s' "${_modulos[*]}")
+e_do_webkit() {
+  grep -qF 'WebKit2' "$1" && return 0
+  [ -n "$modulos_do_webkit" ] || return 1
+  grep -qE "^[[:space:]]*(import[[:space:]]+([A-Za-z_]+\.)*($modulos_do_webkit)\b|from[[:space:]]+([A-Za-z_]+\.)*($modulos_do_webkit)[[:space:]]+import|from[[:space:]]+[A-Za-z_.]+[[:space:]]+import[[:space:]].*\b($modulos_do_webkit)\b)" "$1"
+}
+
+# Um processo de pytest: o sumário em `linha`, e a parte fica vermelha se ele
+# reprova, some sem sumário ou morre por sinal.
+rodar_pytest() {  # $1 = o log; o resto, os arquivos
+  local log="$1" rc_do_processo
+  shift
+  if [ -n "$pilha" ]; then
+    LD_PRELOAD="$pilha${LD_PRELOAD:+ $LD_PRELOAD}" PYTHONPATH="$RAIZ/src" \
+      "$PY" -m pytest "$@" "${extra[@]}" -q -p no:cacheprovider > "$log" 2>&1
+  else
+    PYTHONPATH="$RAIZ/src" "$PY" -m pytest "$@" "${extra[@]}" -q -p no:cacheprovider > "$log" 2>&1
+  fi
+  rc_do_processo=$?
+  linha=$(tail -1 "$log")
+  # SILÊNCIO DE PYTEST NÃO É VERDE. Sem linha de sumário, o processo morreu.
+  case "$linha" in
+    *passed*|*failed*|*error*|*deselected*|*"no tests ran"*) ;;
+    *) linha="SEM SUMÁRIO — o processo morreu no meio"; ;;
+  esac
+  # O WebKit também morre DEPOIS do sumário, ao sair: o rc diz o sinal.
+  if [ "$rc_do_processo" -gt 128 ]; then
+    linha="$linha · MORREU PELO SINAL $((rc_do_processo - 128)): a pilha está em $log"
+  fi
+  # `xfailed` e `xpassed` CONTÊM "failed" e "passed" — casar por substring aqui
+  # conta reprovação onde não há. Medido no primeiro uso deste script: uma parte
+  # com `750 passed, 4 xfailed` foi contada como vermelha.
+  local semx="${linha//xfailed/}"
+  semx="${semx//xpassed/}"
+  case "$semx" in
+    *failed*|*error*|*SEM\ SUMÁRIO*|*"no tests ran"*|*"MORREU PELO SINAL"*) vermelha=1;;
+  esac
+  # A contagem do recibo: `N passed` não casa `N xpassed` (há um `x` antes).
+  local n_ok n_pulo
+  n_ok=$(printf '%s\n' "$linha" | grep -o '[0-9]\+ passed' | grep -o '[0-9]\+' || true)
+  n_pulo=$(printf '%s\n' "$linha" | grep -o '[0-9]\+ skipped' | grep -o '[0-9]\+' || true)
+  passaram=$((passaram + ${n_ok:-0}))
+  pulados=$((pulados + ${n_pulo:-0}))
+}
+
+sozinhos=0
 for f in "$SAIDA"/parte-*; do
-  case "$f" in *.log|*.txt) continue;; esac
+  case "$f" in *.log|*.txt|*.so) continue;; esac
   n="${f##*parte-}"
   [ -z "$so_esta" ] || [ "$n" = "$so_esta" ] || continue
 
@@ -92,30 +162,29 @@ for f in "$SAIDA"/parte-*; do
 
   # Um arquivo por linha vira um argumento por arquivo — é o ponto do array.
   mapfile -t arquivos < "$f"
-  PYTHONPATH="$RAIZ/src" "$PY" -m pytest "${arquivos[@]}" "${extra[@]}" \
-      -q -p no:cacheprovider > "$SAIDA/parte-$n.log" 2>&1
-  linha=$(tail -1 "$SAIDA/parte-$n.log")
-
-  # SILÊNCIO DE PYTEST NÃO É VERDE. Sem linha de sumário, o processo morreu.
-  case "$linha" in
-    *passed*|*failed*|*error*|*"no tests ran"*) ;;
-    *) linha="SEM SUMÁRIO — o processo morreu no meio (ver o log)"; ;;
-  esac
-  # `xfailed` e `xpassed` CONTÊM "failed" e "passed" — casar por substring aqui
-  # conta reprovação onde não há. Medido no primeiro uso deste script: uma parte
-  # com `750 passed, 4 xfailed` foi contada como vermelha.
-  semx="${linha//xfailed/}"; semx="${semx//xpassed/}"
-  case "$semx" in
-    *failed*|*error*|*SEM\ SUMÁRIO*|*"no tests ran"*) vermelhos=$((vermelhos+1));;
-    *) verdes=$((verdes+1));;
-  esac
-  echo "  parte-$n ($quantos arq): $linha"
-  # A contagem do recibo: `N passed` não casa `N xpassed` (há um `x` antes).
-  n_ok=$(printf '%s\n' "$linha" | grep -o '[0-9]\+ passed' | grep -o '[0-9]\+' || true)
-  n_pulo=$(printf '%s\n' "$linha" | grep -o '[0-9]\+ skipped' | grep -o '[0-9]\+' || true)
-  passaram=$((passaram + ${n_ok:-0}))
-  pulados=$((pulados + ${n_pulo:-0}))
+  comuns=()
+  do_webkit=()
+  for a in "${arquivos[@]}"; do
+    if e_do_webkit "$a"; then do_webkit+=("$a"); else comuns+=("$a"); fi
+  done
+  vermelha=0
+  # A TRAVA DA LISTA VAZIA: pytest sem arquivo roda a suíte inteira.
+  if [ ${#comuns[@]} -gt 0 ]; then
+    rodar_pytest "$SAIDA/parte-$n.log" "${comuns[@]}"
+    echo "  parte-$n ($quantos arq): $linha"
+  else
+    echo "  parte-$n ($quantos arq): todos do WebKit"
+  fi
+  for a in "${do_webkit[@]}"; do
+    nome="${a##*/}"
+    nome="${nome%.py}"
+    rodar_pytest "$SAIDA/parte-$n-$nome.log" "$a"
+    echo "    $nome, em processo próprio: $linha"
+    sozinhos=$((sozinhos+1))
+  done
+  if [ "$vermelha" -eq 0 ]; then verdes=$((verdes+1)); else vermelhos=$((vermelhos+1)); fi
 done
+[ "$sozinhos" -eq 0 ] || echo "  (os $sozinhos arquivos do WebKit rodaram em processo próprio)"
 
 echo
 grep -ho "^FAILED [^ ]*\|^ERROR [^ ]*" "$SAIDA"/parte-*.log 2>/dev/null | sort -u > "$SAIDA/falhas.txt"
