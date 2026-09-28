@@ -4808,7 +4808,8 @@ fi
 # (kernelstub), e o produto não depende da bancada de ninguém. O que o fecho faz
 # agora: ativo, nada a dizer; AGENDADO (no bootloader e ainda não no kernel que
 # roda), é mais um item do «reinicie» abaixo; ausente em todo lugar (o 3e não
-# achou kernelstub), o comando à mão continua sendo dito.
+# o escreveu: sem kernelstub, com o grub, ou com o passo pulado), o comando à
+# mão continua sendo dito.
 QUIRK_MARKER="054c:0ce6:gn"
 quirk_ativo=0
 quirk_agendado=0
@@ -4822,8 +4823,8 @@ elif [[ "${quirk_ativo}" -eq 0 ]]; then
     printf '\n'
     printf ' Vai usar o MICROFONE do DualSense no cabo?\n'
     printf '   O quirk de áudio USB segura o storm -71 com o mic ligado, e o\n'
-    printf '   passo 3e não achou onde escrevê-lo. Para aplicá-lo (vale no\n'
-    printf '   próximo boot):\n'
+    printf '   install não o escreveu na linha de comando do kernel. Para\n'
+    printf '   aplicá-lo (vale no próximo boot):\n'
     printf '     bash scripts/install_usb_quirk.sh\n'
     printf '─────────────────────────────────────────\n'
 fi
