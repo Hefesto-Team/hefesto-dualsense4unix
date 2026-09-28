@@ -29,6 +29,14 @@ sempre (`start()` → `os.open("/dev/uhid")`).
   virtual, e o último pedido de vibração chega;
 - o `stop` encerra o fio antes de fechar o fd.
 
+**E as que a conferência de 28/09 acrescentou** (cada uma com a mordida na
+docstring): o CLOSE que o fio atende devolve o perfil e para o motor no
+tique, e o `stop` antes do tique entrega o que ficou anotado; o `stop` não
+espera o prazo do `poll`; os quatro virtuais atendem juntos, não só o do P2;
+o virtual nasce sem pipe e sem fio novo; dois `stop` juntos fecham o
+despertador uma vez; e o pad Xbox responde o envio de efeito antes de 5 ms,
+o número da sprint (a régua irmã da O-PAD mede 0,5 s).
+
 Nenhum endereço real: o MAC do virtual sai do número (o piso `02:fe`).
 """
 from __future__ import annotations
@@ -36,8 +44,10 @@ from __future__ import annotations
 import array
 import contextlib
 import fcntl
+import errno
 import itertools
 import os
+import statistics
 import socket
 import struct
 import termios
@@ -54,6 +64,7 @@ from hefesto_dualsense4unix.integrations import uhid_gamepad
 from hefesto_dualsense4unix.integrations.uhid_blueprint import canonical_blueprint
 from hefesto_dualsense4unix.integrations.uhid_gamepad import (
     HID_MAX_DESCRIPTOR_SIZE,
+    UHID_CLOSE,
     UHID_CREATE2,
     UHID_DESTROY,
     UHID_EVENT_SIZE,
@@ -64,11 +75,17 @@ from hefesto_dualsense4unix.integrations.uhid_gamepad import (
     UHID_START,
     UhidDualSense,
 )
+from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
 from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (
     TIQUE,
     config_isolado,  # noqa: F401 — o lar de mentira da bancada do item 3
 )
 from tests.unit.test_o_modo_tem_um_dono import FILA_DELA, TRANSPORTES, _a_mesa_do_boot
+from tests.unit.test_o_pad_virtual_atende_a_vibracao_desde_que_nasce import (
+    _UInputComoOPythonEvdev,
+    evdev_de_mentira,  # noqa: F401 — o evdev de mentira da régua do pad Xbox
+)
+from tests.unit.test_vpad_ff_passthrough import _rumble_effect
 
 #: `UHID_BUFSIZE` do `drivers/hid/uhid.c`. O `uhid_queue` recusa quando a
 #: cabeça nova alcançaria o rabo: cabem 31.
@@ -234,6 +251,7 @@ class Fisico:
     def __init__(self) -> None:
         self.vibracao: list[tuple[int, int]] = []
         self.luz: list[tuple[int, int, int]] = []
+        self.fins_de_sessao = 0
         self.fios: set[int] = set()
 
     def sinks(self) -> dict[str, Any]:
@@ -245,7 +263,11 @@ class Fisico:
             self.fios.add(threading.get_ident())
             self.luz.append((r, g, b))
 
-        return {"rumble_sink": _vib, "lightbar_sink": _luz}
+        def _fim() -> None:
+            self.fios.add(threading.get_ident())
+            self.fins_de_sessao += 1
+
+        return {"rumble_sink": _vib, "lightbar_sink": _luz, "session_end_sink": _fim}
 
 
 def _virtual(relogio: Relogio, fisico: Fisico | None = None) -> UhidDualSense:
@@ -394,6 +416,174 @@ def test_o_dublê_sem_fd_de_verdade_segue_no_tique(monkeypatch: pytest.MonkeyPat
         pad.stop()
 
 
+def _o_jogo_fecha(kernel: KernelDoUhid, pad: UhidDualSense) -> None:
+    """O jogo fecha o hidraw do virtual: o `UHID_CLOSE`, atendido pelo fio."""
+    assert kernel.enfileirar(struct.pack("<I", UHID_CLOSE))
+    _esperar(lambda: not pad.game_open, 1.0)
+    assert not pad.game_open, "o fio não atendeu o CLOSE"
+
+
+def test_o_fim_da_sessao_e_a_parada_vao_ao_fisico_no_tique(kernel: KernelDoUhid) -> None:
+    """O jogo fecha com o motor girando: a parada e o perfil voltam ao físico no tique.
+
+    O fio atende o CLOSE e só anota. O tique entrega as duas coisas, uma vez,
+    da thread do laço.
+
+    MORDE: tire o `_rumble_a_entregar = (0, 0)` do ramo do fio no
+    `_silence_rumble` (o motor segue girando depois de o jogo fechar); chame o
+    `session_end_sink` no fio, no `_end_game_session` (o perfil volta de outra
+    thread, antes do tique); ou tire o fim da sessão do `_entregar_o_pendente`
+    (o perfil não volta nunca).
+    """
+    fisico = Fisico()
+    pad = _virtual(Relogio(), fisico)
+    try:
+        kernel.enfileirar(_evento_de_saida(_vibracao(200, 100)))
+        kernel.enfileirar(_evento_de_saida(_luz(1, 2, 3)))
+        _esperar(lambda: pad.output_count >= 2, 1.0)
+        pad.pump_ff()
+        assert fisico.vibracao == [(200, 100)]
+        assert fisico.luz == [(1, 2, 3)]
+
+        _o_jogo_fecha(kernel, pad)
+        assert fisico.vibracao == [(200, 100)], "o fio parou o motor sem o tique"
+        assert fisico.fins_de_sessao == 0, "o fio devolveu o perfil sem o tique"
+
+        pad.pump_ff()  # o tique
+        assert fisico.vibracao[-1] == (0, 0), (
+            f"o jogo fechou com o motor girando e o tique não o parou: {fisico.vibracao}"
+        )
+        assert fisico.fins_de_sessao == 1, "o perfil não voltou ao físico"
+        assert fisico.fios == {threading.get_ident()}
+        pad.pump_ff()
+        assert fisico.fins_de_sessao == 1
+    finally:
+        pad.stop()
+
+
+def test_o_stop_entrega_o_que_o_fio_atendeu(kernel: KernelDoUhid) -> None:
+    """O jogo fecha e o virtual morre antes do tique: o perfil volta e o motor para.
+
+    MORDE: tire o `_entregar_o_pendente()` do `_destruir_o_device` — o fim da
+    sessão que o fio anotou morre com o virtual, e a camada do jogo fica
+    grudada no controle físico.
+    """
+    fisico = Fisico()
+    pad = _virtual(Relogio(), fisico)
+    try:
+        kernel.enfileirar(_evento_de_saida(_luz(4, 5, 6)))
+        _esperar(lambda: pad.output_count >= 1, 1.0)
+        pad.pump_ff()
+        assert fisico.luz == [(4, 5, 6)]
+        kernel.enfileirar(_evento_de_saida(_vibracao(50, 60)))
+        _esperar(lambda: pad.output_count >= 2, 1.0)
+        _o_jogo_fecha(kernel, pad)
+    finally:
+        pad.stop()  # sem tique nenhum depois do CLOSE
+    assert fisico.fins_de_sessao == 1, "o fim da sessão morreu com o virtual"
+    assert fisico.vibracao[-1:] == [(0, 0)], f"o motor ficou girando: {fisico.vibracao}"
+    assert fisico.fios == {threading.get_ident()}
+
+
+def test_o_stop_nao_espera_o_prazo_do_fio(kernel: KernelDoUhid) -> None:
+    """O `stop` acorda o fio na hora: o laço não para esperando o prazo do `poll`.
+
+    MORDE: tire o `os.write` do despertador no `_parar_o_fio_do_uhid` — o fio
+    acabou de voltar ao `poll` e só acorda no prazo (1 s).
+    """
+    pad = _virtual(Relogio())
+    kernel.enfileirar(_evento_de_saida(_luz(7, 8, 9)))
+    _esperar(lambda: pad.output_count >= 1, 1.0)
+    inicio = time.monotonic()
+    pad.stop()
+    durou = time.monotonic() - inicio
+    assert durou < PRAZO_S, f"o stop esperou {durou * 1000:.0f} ms pelo fio do virtual"
+
+
+@pytest.fixture
+def quatro_kernels(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[KernelDoUhid]]:
+    """Um `/dev/uhid` de mentira por virtual: cada `open` do nó é um kernel novo."""
+    kernels: list[KernelDoUhid] = []
+    abrir = os.open
+
+    def _abrir(caminho: Any, flags: int, *args: Any, **kwargs: Any) -> int:
+        if os.fsdecode(caminho) == uhid_gamepad.UHID_NODE:
+            k = KernelDoUhid()
+            kernels.append(k)
+            return k.fd_do_produto()
+        return abrir(caminho, flags, *args, **kwargs)
+
+    monkeypatch.setattr(os, "open", _abrir)
+    try:
+        yield kernels
+    finally:
+        for k in kernels:
+            k.fechar()
+
+
+def test_os_quatro_virtuais_atendem_ao_mesmo_tempo(quatro_kernels: list[KernelDoUhid]) -> None:
+    """Os quatro jogadores, cada um com o seu virtual: 200 eventos a cada um, sem tique.
+
+    Nenhum fica de fora: o fio é de cada virtual, e o do P1 não atende pelos
+    outros.
+
+    MORDE: devolva o dreno ao tique (tire o `_iniciar_o_fio_do_uhid` do
+    `_criar_o_device`) — as quatro filas enchem.
+    """
+    pads: list[UhidDualSense] = []
+    try:
+        for jogador in (1, 2, 3, 4):
+            pad = UhidDualSense(
+                player=jogador, blueprint=canonical_blueprint(), time_fn=Relogio()
+            )
+            assert pad.start() is True
+            pads.append(pad)
+        for pad in pads:
+            _esperar(lambda pad=pad: pad.is_bound, 1.0)
+            assert pad.is_bound, f"o virtual do P{pad.player} não fez bind"
+        assert len({pad.mac for pad in pads}) == 4
+        for n in range(EVENTOS):
+            for k in quatro_kernels:
+                k.enfileirar(_evento_de_saida(_vibracao(n % 256, 1)))
+            time.sleep(JANELA_S / EVENTOS)
+        for pad in pads:
+            _esperar(lambda pad=pad: pad.output_count >= EVENTOS, 1.0)
+        perdas = {pad.player: k.cheia for pad, k in zip(pads, quatro_kernels, strict=True)}
+        assert perdas == {1: 0, 2: 0, 3: 0, 4: 0}, (
+            f"o kernel descartou a saída de algum jogador (P -> descartados): {perdas}"
+        )
+        assert [pad.output_count for pad in pads] == [EVENTOS] * 4
+    finally:
+        for pad in pads:
+            pad.stop()
+
+
+def test_sem_descritor_para_o_despertador_o_tique_drena(
+    kernel: KernelDoUhid, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O processo sem descritor livre: o virtual nasce mesmo assim, e o tique atende.
+
+    MORDE: tire o `try` do `os.pipe()` no `_iniciar_o_fio_do_uhid` — o `start`
+    levanta com o device já criado no kernel.
+    """
+
+    def _sem_descritor() -> tuple[int, int]:
+        raise OSError(errno.EMFILE, "Too many open files")
+
+    monkeypatch.setattr(os, "pipe", _sem_descritor)
+    pad = _virtual(Relogio())  # o bind sai pelo tique, que o `_virtual` bombeia
+    try:
+        assert pad._fio_do_uhid is None
+        pedido = 91
+        assert kernel.enfileirar(_pedido_de_feature(pedido, 0x09))
+        time.sleep(0.02)
+        pad.pump_ff()
+        _esperar(lambda: pedido in kernel.respostas_de_feature, PRAZO_S)
+        assert pedido in kernel.respostas_de_feature, "o tique não atendeu o pedido"
+    finally:
+        pad.stop()
+
+
 def test_sem_fio_novo_o_virtual_nasce_e_nao_vaza_o_despertador(
     kernel: KernelDoUhid, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -468,6 +658,39 @@ def test_dois_stops_ao_mesmo_tempo_fecham_o_despertador_uma_vez(
         assert vezes == dict.fromkeys(despertador, 1), (
             f"o despertador fechou {vezes} vezes (ponta -> closes) com dois stops juntos"
         )
+
+
+@pytest.mark.usefixtures("evdev_de_mentira")
+def test_o_pad_xbox_responde_o_efeito_antes_de_5_ms() -> None:
+    """A régua da sprint para o pad Xbox: o envio de efeito, sem tique, antes de 5 ms.
+
+    A irmã da O-PAD-VIRTUAL-ATENDE-A-VIBRACAO-DESDE-QUE-NASCE-01 prova que a
+    resposta vem sem tique, com um prazo de 0,5 s. Aqui é o número da sprint:
+    a mediana de 21 envios, para a máquina carregada não decidir.
+
+    MORDE: devolva a resposta ao tique (o pad sem o fio que a atende) —
+    nenhum envio é respondido.
+    """
+    pad = UinputGamepad.for_flavor("xbox", rumble_sink=lambda _w, _s: None)
+    assert pad.start() is True
+    aparelho = _UInputComoOPythonEvdev.instancias[0]
+    esperas: list[float] = []
+    try:
+        for n in range(21):
+            inicio = time.monotonic()
+            aparelho.o_jogo_manda_um_efeito(
+                _rumble_effect(0, strong=0x8000, weak=0x4000), request_id=100 + n
+            )
+            while len(aparelho.uploads_feitos) <= n and time.monotonic() - inicio < PRAZO_S:
+                time.sleep(0.0001)
+            assert len(aparelho.uploads_feitos) > n, (
+                "o envio de efeito ficou sem resposta sem o tique"
+            )
+            esperas.append(time.monotonic() - inicio)
+    finally:
+        pad.stop()
+    mediana = statistics.median(esperas)
+    assert mediana < 0.005, f"o pad Xbox respondeu em {mediana * 1000:.1f} ms (mediana)"
 
 
 # ---------------------------------------------------------------------------
@@ -602,6 +825,39 @@ def test_com_o_jogo_segurando_nenhum_virtual_renasce_pelo_nome(
     for _ in range(3):
         bancada.tique()
     assert not alvo.vivo, "o jogo soltou e o vpad seguiu com o nome velho"
+    assert _nomes_errados(bancada) == []
+
+
+@pytest.mark.usefixtures("config_isolado")
+@pytest.mark.parametrize("transporte", sorted(TRANSPORTES))
+@pytest.mark.parametrize("quem_sai", range(4), ids=["carta-1", "carta-2", "carta-3", "carta-4"])
+def test_qualquer_carta_que_sai_deixa_os_nomes_certos(
+    monkeypatch: pytest.MonkeyPatch, quem_sai: int, transporte: str
+) -> None:
+    """Sem jogo, a mesa dela inteira, e sai qualquer um dos quatro (não só a carta 1).
+
+    Quem ficou atrás de quem saiu anda um número na fila, e o nome anda junto;
+    quem volta volta com o dele.
+
+    MORDE: tire a linha `recriar = self._com_os_nomes_velhos(recriar, cartas)`
+    do `_ordenar` — quem saiu do meio deixa os de trás com o número velho.
+    """
+    bancada = _a_mesa_do_boot(monkeypatch, FILA_DELA, jogo=False, transporte=transporte)
+    for _ in range(6):
+        bancada.tique()
+    assert _nomes_errados(bancada) == [], "premissa: a mesa nasce com os nomes certos"
+
+    saiu = FILA_DELA[quem_sai]
+    bancada.mesa.levantar(saiu)
+    for _ in range(_PASSA_O_PRAZO):
+        bancada.tique()
+    assert _nomes_errados(bancada) == [], (
+        f"a carta {quem_sai + 1} saiu e quem ficou seguiu com o número de quando nasceu"
+    )
+
+    bancada.mesa.sentar(saiu, transporte=TRANSPORTES[transporte][quem_sai])
+    for _ in range(6):
+        bancada.tique()
     assert _nomes_errados(bancada) == []
 
 
