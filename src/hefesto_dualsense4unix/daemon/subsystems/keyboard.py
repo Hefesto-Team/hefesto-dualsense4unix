@@ -611,7 +611,7 @@ class _OSKController:
         """
         if not self._fio.no_fio():
             self._fio.descartar()
-            self._fio.esperar(_OSK_ESPERA_DA_PARADA_S)
+            self.esperar_os_toques(_OSK_ESPERA_DA_PARADA_S)
         with self._tranca:
             self._fechar()
 

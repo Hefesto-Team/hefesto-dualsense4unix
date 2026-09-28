@@ -533,6 +533,13 @@ def test_a_parada_nao_deixa_teclado_sem_dono(gerenciador: _GerenciadorDeMentira)
     gerenciador.segurar = threading.Event()
     ctrl = teclado._OSKController()
     ctrl.dispatch_token(TOKEN_TOGGLE_OSK, "press")  # abre (em voo, preso)
+    # O primeiro tem de estar EM VOO (no gerenciador) antes dos outros: se a
+    # parada o achasse ainda na fila, ela o descartaria junto, e o caso seria
+    # outro.
+    limite = time.monotonic() + 5.0
+    while not gerenciador.chamadas and time.monotonic() < limite:
+        time.sleep(0.01)
+    assert gerenciador.chamadas, "o primeiro L3 nem chegou ao gerenciador"
     ctrl.dispatch_token(TOKEN_TOGGLE_OSK, "press")  # fecharia
     ctrl.dispatch_token(TOKEN_TOGGLE_OSK, "press")  # abriria de novo
     parada = threading.Thread(target=ctrl.close)
@@ -549,6 +556,37 @@ def test_a_parada_nao_deixa_teclado_sem_dono(gerenciador: _GerenciadorDeMentira)
     assert len(gerenciador.chamadas) == 1, (
         f"um toque da fila correu depois da parada: {len(gerenciador.chamadas)} aberturas")
     assert all(_morreu(p) for p in gerenciador.nascidos), "ficou teclado de pé"
+
+
+def test_a_parada_espera_o_toque_que_ja_saiu_da_fila(
+    gerenciador: _GerenciadorDeMentira, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O toque que o fio já tirou da fila termina antes de a parada fechar.
+
+    Entre o ``popleft`` do fio e a tranca do ``_atender`` há uma janela, e o
+    fio pode perder a vez ali. Sem a espera do ``close``, a parada pega a
+    tranca primeiro, não acha teclado nenhum, e o toque abre o teclado DEPOIS
+    dela: na tela, sem dono para fechá-lo. O dublê só alarga a janela.
+
+    MORDE: tire a espera do ``close`` e o teclado fica de pé.
+    """
+    ctrl = teclado._OSKController()
+    atender = ctrl._atender
+    saiu_da_fila = threading.Event()
+
+    def _perde_a_vez(token: str) -> None:
+        saiu_da_fila.set()
+        time.sleep(0.5)
+        atender(token)
+
+    monkeypatch.setattr(ctrl, "_atender", _perde_a_vez)
+    ctrl.dispatch_token(TOKEN_TOGGLE_OSK, "press")
+    assert saiu_da_fila.wait(5.0)
+    ctrl.close()
+    assert ctrl.esperar_os_toques(5.0)
+    assert len(gerenciador.chamadas) == 1
+    assert all(_morreu(p) for p in gerenciador.nascidos), (
+        "o toque abriu o teclado depois da parada, e ninguém o fecha")
 
 
 # ---------------------------------------------------------------------------
