@@ -351,9 +351,16 @@ class _Cena:
         classe, descobridor = LEITORES[marcador]
         original = getattr(er, descobridor)
 
+        #: O que acontece na mesa DURANTE a próxima procura (uma vez só).
+        self.na_busca: Callable[[], Any] | None = None
+
         def contar() -> dict[str, Path]:
             self.buscas.append(time.monotonic())
-            return original()
+            achados: dict[str, Path] = original()
+            acao, self.na_busca = self.na_busca, None
+            if acao is not None:
+                acao()
+            return achados
 
         def abrir(caminho: Any, **_kw: Any) -> _NoDoLeitor:
             no = _NoDoLeitor(str(caminho))
@@ -439,6 +446,25 @@ def test_com_o_aviso_o_leitor_descobre_e_abre_na_hora(cena: _Cena) -> None:
     assert aviso.voltas - voltas <= 3, (
         f"o leitor levou {aviso.voltas - voltas} voltas para ver o nó que voltou"
     )
+
+
+def test_o_no_que_nasce_durante_a_procura_acorda_o_leitor(cena: _Cena) -> None:
+    """O nó que nasce no meio da procura não pode sumir dentro da linha de base.
+
+    O `_procurar_o_no` tira a linha de base do aviso ANTES do `_find_device`:
+    o nó que nasce depois de a descoberta ler o sysfs muda a pasta depois da
+    linha de base, e a primeira volta da espera o enxerga.
+
+    **A MORDIDA:** tire a linha de base DEPOIS da procura e o nó que nasceu no
+    meio dela entra na linha de base: o leitor dorme até o teto de 60 s com o
+    nó do controle na pasta.
+    """
+    cena.na_busca = cena.devolver
+    cena.abrir_e_perder()
+    assert _esperar(lambda: len(cena.abertos) == 2, prazo=5.0), (
+        "o nó nasceu durante a procura e o leitor não acordou: o aviso se perdeu"
+    )
+    assert cena.abertos[1].path == str(cena.mesa.dev / "event9201")
 
 
 def test_o_controle_que_sai_nao_faz_o_ausente_procurar(cena: _Cena) -> None:
@@ -548,7 +574,7 @@ def _hub(descobrir: Callable[[], dict[str, Any]]) -> Any:
 
 
 def test_o_hub_procura_a_peca_desligada_fora_da_mesa_uma_vez(registro: Any) -> None:
-    """A «rajada» de 26/09: uma descoberta por volta de manutenção, por 66 min.
+    """A «rajada» de 26/09: uma descoberta por volta de manutenção, das 10h42 às 11h47.
 
     **A MORDIDA:** tire o `not faltando <= self._desligados_procurados` e as
     dez voltas pagam dez descobertas.
@@ -586,6 +612,32 @@ def test_o_hub_procura_de_novo_quando_a_pasta_muda_e_acha(registro: Any) -> None
 
     assert hub.grab_do_movimento("aa:bb:cc:00:00:04") == "held", (
         "a peça voltou com o sensor desligado e o nó dela não ficou exclusivo"
+    )
+
+
+def test_o_hub_procura_de_novo_na_volta_seguinte_a_mudanca(registro: Any) -> None:
+    """O nó nasce antes da permissão, e a troca de permissão não muda a pasta.
+
+    Sem broker, a lista da descoberta só traz o nó que o processo abre, e o
+    udev dá dono e permissão DEPOIS de o nó nascer. A volta da mudança procura,
+    e a volta seguinte, sem mudança, procura mais uma vez: só então a peça vira
+    «procurada». É o que as três buscas no relógio fazem no leitor.
+
+    **A MORDIDA:** marque a peça como procurada já na volta da mudança e o nó
+    que ganhou permissão uma volta depois nunca é achado.
+    """
+    mesa_viva: dict[str, Any] = {}
+    hub = _hub(lambda: dict(mesa_viva))
+    registro.definir("aa:bb:cc:00:00:04", acelerometro=False)
+    hub.reconciliar()
+    hub._watch.mudou = True  # o controle voltou: o nó nasceu, ainda fechado
+    hub.reconciliar()
+    mesa_viva["aa:bb:cc:00:00:04"] = "/dev/input/event9111"  # o udev o abriu
+    hub.reconciliar()
+
+    assert hub.grab_do_movimento("aa:bb:cc:00:00:04") == "held", (
+        "o nó ganhou permissão uma volta depois de nascer e o hub não o procurou "
+        "de novo: o sensor desligado continua chegando a quem lê o nó"
     )
 
 

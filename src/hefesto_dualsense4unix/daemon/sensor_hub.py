@@ -496,12 +496,13 @@ class SensorHub:
         entrar no ritmo de 1 s por precaução.
 
         **E a peça procurada e não achada só é procurada de novo quando
-        `/dev/input` muda** (`mudou`, A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01,
-        28/09/2026). Era o caso raro virando o de todo segundo: no diário de
-        26/09, depois do reinício das 10h42, o controle com o acelerômetro
-        desligado estava fora da mesa, e esta procura rodou a cada volta (1 s
-        mais a descoberta) das 10h42 às 11h47 — 3.023 pedidos ao broker em cada nó
-        de movimento dos outros dois, que a descoberta daquele dia abria.
+        `/dev/input` muda** — na volta da mudança e na seguinte (`mudou`,
+        A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026). Era o caso
+        raro virando o de todo segundo: no diário de 26/09, depois do reinício
+        das 10h42, o controle com o acelerômetro desligado estava fora da mesa,
+        e esta procura rodou a cada volta (1 s mais a descoberta) das 10h42 às
+        11h47 — 3.023 pedidos ao broker em cada nó de movimento dos outros
+        dois, que a descoberta daquele dia abria.
 
         Import tardio pela mesma razão de todos os outros daqui.
         """
@@ -523,7 +524,10 @@ class SensorHub:
             for uniq in self._chamar_descobridor(self._descobrir_motion):
                 if chave_de_sensor(uniq) in faltando:
                     achados.add(uniq)
-            self._desligados_procurados |= faltando
+            # Sem broker, o nó nasce antes de o udev lhe dar dono e permissão, e
+            # essa troca não muda a pasta: só a volta SEM mudança marca a peça.
+            if not mudou:
+                self._desligados_procurados |= faltando
         return achados
 
     def _reconciliar_grabs(self, desligados: set[str]) -> None:
