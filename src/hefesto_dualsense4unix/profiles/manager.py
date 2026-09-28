@@ -1012,6 +1012,25 @@ class ProfileManager:
         # ligado por outro perfil, respeitando gesto manual (política no
         # `Daemon.apply_profile_mode`). Ordem: por último, para que "sair do
         # nativo" não re-aplique nada por cima dos triggers/LEDs já aplicados.
+        # MASCARA-NO-PERFIL-01 (08/09/2026, decisão dela): a máscara de cada
+        # peça — e ANTES DO MODO, desde a O-MODO-XBOX-NAO-E-QUEDA-02 (item 2 da
+        # cura consolidada, 28/09/2026).
+        #
+        # NOTA DATADA — 28/09/2026. Esta seção vinha POR ÚLTIMO, com a razão
+        # *"é a única seção cuja aplicação pode DERRUBAR E RECRIAR o gamepad
+        # virtual do jogador"*. Não é: ela só escreve o registro
+        # (`controller_masks.json`), e quem recria é o `mode_applier` logo
+        # abaixo (o P1, e os secundários pelo `sync(force=True)`) ou o tique do
+        # co-op. O `mode_applier` decide se o P1 renasce comparando a máscara
+        # que ele veste com a EFETIVA, que lê este registro — e, com a ordem de
+        # antes, comparava com o cartão do perfil ANTERIOR, respondia
+        # `ja_estava`, e o cartão novo chegava sem ninguém para vestir o P1.
+        # Medido no Future Knight da sessão dela de 27/09 às 23h38 (G3): o P1 e
+        # o P3 ficaram com a DualSense do Freestyle. E os secundários renasciam
+        # duas vezes — pelo `sync(force=True)` do modo, com a máscara velha, e
+        # no tique seguinte do co-op, com a nova. Agora renascem uma vez, antes
+        # das seções de som, microfone e sensores.
+        self.apply_controller_mascaras(profile, origin=origin, relatorio=resultado)
         if self.mode_applier is not None:
             try:
                 # R-02: junto com a seção vai QUEM a mandou. Sem isso o applier
@@ -1121,12 +1140,6 @@ class ProfileManager:
         # que a tela dela ofereça, e um global aqui seria um interruptor sem
         # botão que uma troca de perfil acionaria pelas costas.
         self.apply_controller_sensores(profile, origin=origin, relatorio=resultado)
-        # MASCARA-NO-PERFIL-01 (08/09/2026, decisão dela): e a máscara daquela
-        # peça, POR ÚLTIMO. A ordem importa e é medida: esta é a única seção
-        # cuja aplicação pode DERRUBAR E RECRIAR o gamepad virtual do jogador,
-        # e um vpad recriado no meio da leva invalidaria os handles que as
-        # seções acima acabaram de escrever.
-        self.apply_controller_mascaras(profile, origin=origin, relatorio=resultado)
         return resultado
 
     def apply_controller_mascaras(

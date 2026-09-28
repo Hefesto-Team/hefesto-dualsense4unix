@@ -396,19 +396,24 @@ def test_arquivo_ilegivel_e_ninguem_escolheu(_arquivo_do_caminho: Any) -> None:
 
 
 @pytest.fixture
-def _lar_do_boot(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
-) -> Iterator[list[Any]]:
-    """Um lar de mentira com o Freestyle em Xbox e a emulação ligada no disco.
+def _lar(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> Any:
+    """O lar de mentira: os XDG da régua, com a guarda que sai.
 
-    A guarda sai se o `config_dir()` não for o do lar de mentira: o boot lê e
-    grava os arquivos de sessão.
+    As réguas daqui leem e gravam perfis, o registro de máscaras e os arquivos
+    de sessão; se o `config_dir()` não for o do lar de mentira, a sessão para.
     """
     for var, sub in (("XDG_CONFIG_HOME", "config"), ("XDG_STATE_HOME", "state")):
         monkeypatch.setenv(var, str(tmp_path / sub))
     casa = xdg_paths.config_dir(ensure=True)
     if not str(casa).startswith(str(tmp_path)):
-        pytest.exit(f"o boot da régua ia ler o config_dir de verdade: {casa}", returncode=3)
+        pytest.exit(f"a régua ia ler o config_dir de verdade: {casa}", returncode=3)
+    em._zerar_registro_de_mascaras()
+    return casa
+
+
+@pytest.fixture
+def _lar_do_boot(monkeypatch: pytest.MonkeyPatch, _lar: Any) -> Iterator[list[Any]]:
+    """O lar de mentira com o Freestyle em Xbox e a emulação ligada no disco."""
     monkeypatch.setattr(session, "load_gamepad_preference", _PREFERENCIA_REAL)
     _SALVAR_EMULACAO_REAL(True, "dualsense")
     loader.save_profile(
@@ -507,3 +512,72 @@ def test_sem_perfil_que_opine_o_boot_e_o_de_sempre(
     partidas = [r.get("caminho") for r in diario if r["event"] == "gamepad_emulation_started"]
     assert partidas == ["dualsense"]
     assert gp.caminho_da_sessao(daemon) is None
+
+
+# ---------------------------------------------------------------------------
+# Item 2 — o perfil que entra aplica o modo E a máscara, na mesma ativação
+# ---------------------------------------------------------------------------
+# G3 (a sessão dela, 27/09 23h38): o Future Knight abriu com o modo Xbox já de
+# pé, e o P1 e o P3 ficaram com a máscara DualSense do Freestyle. A ativação
+# aplicava o `mode` ANTES das máscaras por controle: o pedido do P1 comparava a
+# máscara com o cartão do perfil ANTERIOR (`ja_estava`), e o cartão novo só
+# chegava ao registro depois, sem ninguém para vestir o P1 — o juiz das máscaras
+# espera o jogo soltar a autoridade.
+
+
+def _perfis_do_g3() -> None:
+    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
+
+    loader.save_profile(
+        Profile(
+            name="Freestyle",
+            match=MatchAny(),
+            mode=ProfileModeConfig(kind="gamepad", caminho="xbox"),
+            controllers={P1: ControllerOverrides(mascara="dualsense")},
+        ),
+        origem="teste",
+    )
+    loader.save_profile(
+        Profile(
+            name="Future Knight",
+            match=MatchAny(),
+            mode=ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox", caminho="xbox"),
+        ),
+        origem="teste",
+    )
+
+
+def _daemon_do_g3() -> tuple[lifecycle.Daemon, Any]:
+    from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
+
+    controle = FakeController(transport="usb")
+    controle.primary_uniq = P1  # type: ignore[attr-defined]
+    store = StateStore()
+    daemon = lifecycle.Daemon(controller=controle, store=store, config=_config_do_boot())
+    return daemon, gerente_do_daemon(daemon, store=store)
+
+
+@pytest.mark.usefixtures("_bancada")
+@pytest.mark.parametrize("origem", ["autoswitch", "manual", "launch"])
+def test_o_perfil_que_entra_veste_o_p1_na_mesma_ativacao(
+    origem: str, _lar: Any
+) -> None:
+    """Freestyle (Xbox, cartão DualSense) → Future Knight (Xbox, máscara Xbox).
+
+    MORDE: devolva o `apply_controller_mascaras` para DEPOIS do `mode_applier`
+    em `ProfileManager.apply_emulation` — o P1 segue DualSense.
+    """
+    _perfis_do_g3()
+    daemon, gerente = _daemon_do_g3()
+    gerente.activate("Freestyle", origin="autoswitch")
+    assert daemon._gamepad_device is not None
+    assert (daemon._gamepad_device.flavor, vp.caminho_do_vpad(daemon._gamepad_device)) == (
+        "dualsense", "xbox"), "premissa: o Freestyle veste o P1 de DualSense no Xbox"
+
+    gerente.activate("Future Knight", origin=origem)
+
+    assert daemon._gamepad_device.flavor == "xbox", (
+        "a máscara do perfil do jogo não chegou ao P1: o cartão do Freestyle "
+        "seguiu vestido (G3)"
+    )
+    assert vp.caminho_do_vpad(daemon._gamepad_device) == "xbox"
