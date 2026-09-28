@@ -1,14 +1,18 @@
 """UX-05 (auditoria 24/07) — o cadeado tinha EFEITO visível e CAUSA invisível.
 
-`autoswitch_locked` só existia na GUI como o marcador de um checkbox
+`autoswitch_locked` (hoje `freestyle_ligado`) só existia na GUI como o marcador de um checkbox
 (`_render_home`, `set_active`). Na máquina dela a flag estava ligada desde
 24/07 20:42 e o que ela via era outra coisa: "o modo jogo não ativa", "os
 perfis não mudam". Ninguém relê uma caixinha de 16 px depois de marcá-la.
 
 A frase é gerada por uma função PURA (mesmo desenho de `vpad_degradation_text`
-e `wrapper_banner_text`) e diz as DUAS metades da política LOCK-CEDE-01 —
-o que congelou e o que continua entrando —, porque as duas surpreendem quem só
-vê o efeito.
+e `wrapper_banner_text`).
+
+28/09/2026 (O-FREESTYLE-E-UMA-CAMADA-SO-01): o cadeado virou o Modo Freestyle,
+e a chave do estado passou de `autoswitch_locked` a `freestyle_ligado`. A
+metade que a frase dizia da LOCK-CEDE-01 (*"jogos com perfil próprio ainda
+entram"*) caiu com a política: ligado, nenhum jogo entra por cima, e a frase
+diz isso.
 
 TESTE-HONESTO-01/E3 (13/08/2026): a fiação era medida por quatro asserts de
 substring sobre o TEXTO-FONTE do método. Nenhum deles proibia bug nenhum —
@@ -37,7 +41,7 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
 
 class TestDecisaoPura:
     def test_destravado_nao_diz_nada(self) -> None:
-        assert autoswitch_lock_text({"autoswitch_locked": False}) == ""
+        assert autoswitch_lock_text({"freestyle_ligado": False}) == ""
 
     def test_campo_ausente_nao_diz_nada(self) -> None:
         assert autoswitch_lock_text({"connected": True}) == ""
@@ -47,33 +51,38 @@ class TestDecisaoPura:
         assert autoswitch_lock_text(None) == ""
 
     def test_travado_explica_a_causa(self) -> None:
-        texto = autoswitch_lock_text({"autoswitch_locked": True})
+        texto = autoswitch_lock_text({"freestyle_ligado": True})
         assert "não troca sozinho" in texto
 
     def test_travado_nomeia_o_perfil_que_ficou(self) -> None:
         """'o perfil não troca sozinho' sem dizer QUAL perfil é meia
         informação — é o perfil que ela precisa reconhecer na aba Perfis."""
         texto = autoswitch_lock_text(
-            {"autoswitch_locked": True, "active_profile": "vitoria"}
+            {"freestyle_ligado": True, "active_profile": "vitoria"}
         )
         assert "vitoria" in texto
 
     def test_travado_sem_perfil_ativo_nao_inventa_nome(self) -> None:
         texto = autoswitch_lock_text(
-            {"autoswitch_locked": True, "active_profile": None}
+            {"freestyle_ligado": True, "active_profile": None}
         )
         assert "não troca sozinho" in texto
         assert "None" not in texto
 
-    def test_diz_que_o_jogo_com_perfil_proprio_ainda_entra(self) -> None:
-        """LOCK-CEDE-01: sem esta metade, "o modo jogo ligou sozinho mesmo com
-        o cadeado" volta a ser um mistério sem causa visível."""
-        texto = autoswitch_lock_text({"autoswitch_locked": True})
-        assert "perfil próprio" in texto
+    def test_diz_que_nem_o_jogo_troca(self) -> None:
+        """Ligado, o Freestyle vale também no jogo (D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA).
+
+        A frase de antes prometia que *"jogos com perfil próprio ainda
+        entram"*: com a LOCK-CEDE-01 revogada, ela afirmaria o contrário do
+        produto. MORDIDA: devolva a frase velha e as duas linhas reprovam.
+        """
+        texto = autoswitch_lock_text({"freestyle_ligado": True})
+        assert "nem no jogo" in texto
+        assert "perfil próprio" not in texto
 
     def test_payload_torto_nao_vira_frase(self) -> None:
         for torto in (0, "", [], {}):
-            assert autoswitch_lock_text({"autoswitch_locked": torto}) == ""
+            assert autoswitch_lock_text({"freestyle_ligado": torto}) == ""
 
 
 # ---------------------------------------------------------------------------
@@ -283,7 +292,7 @@ class TestFiacaoNaAbaInicio:
         o nome numa string é o que fazia este teste reprovar um `rename` que não
         muda comportamento nenhum (TESTE-HONESTO-01/E3).
         """
-        estado = {"autoswitch_locked": True, "active_profile": "vitoria"}
+        estado = {"freestyle_ligado": True, "active_profile": "vitoria"}
         espiao = MagicMock(return_value="FRASE-DO-CADEADO")
         monkeypatch.setattr(home_actions, autoswitch_lock_text.__name__, espiao)
 
@@ -295,17 +304,17 @@ class TestFiacaoNaAbaInicio:
 
     def test_destravado_apaga_a_frase(self, aba: _JanelaFalsa) -> None:
         """Sem cadeado não há causa a explicar — e sobra de texto é mentira."""
-        aba._render_home({"autoswitch_locked": True, "active_profile": "v"})
+        aba._render_home({"freestyle_ligado": True, "active_profile": "v"})
         assert aba._home_autoswitch_lock_hint.visible is True
 
-        aba._render_home({"autoswitch_locked": False})
+        aba._render_home({"freestyle_ligado": False})
 
         assert aba._home_autoswitch_lock_hint.get_text() == ""
         assert aba._home_autoswitch_lock_hint.visible is False
 
     def test_offline_apaga_a_frase(self, aba: _JanelaFalsa) -> None:
         """Estado morto nunca deixa uma afirmação viva na tela."""
-        aba._render_home({"autoswitch_locked": True, "active_profile": "v"})
+        aba._render_home({"freestyle_ligado": True, "active_profile": "v"})
         assert aba._home_autoswitch_lock_hint.visible is True
 
         aba._render_home(None)
@@ -315,10 +324,10 @@ class TestFiacaoNaAbaInicio:
 
     def test_o_cadeado_reflete_o_estado_do_daemon(self, aba: _JanelaFalsa) -> None:
         """O marcador continua sendo o EFEITO — a frase é a causa ao lado dele."""
-        aba._render_home({"autoswitch_locked": True})
+        aba._render_home({"freestyle_ligado": True})
         assert aba._home_autoswitch_lock.active is True
 
-        aba._render_home({"autoswitch_locked": False})
+        aba._render_home({"freestyle_ligado": False})
         assert aba._home_autoswitch_lock.active is False
 
     def test_o_rotulo_nasce_invisivel_e_o_show_all_do_build_nao_o_acende(
@@ -362,16 +371,16 @@ class TestEstadoDoDaemonCarregaOCampo:
         return daemon, _Handlers(daemon)
 
     @pytest.mark.asyncio
-    async def test_status_e_state_full_expoem_autoswitch_locked(self) -> None:
+    async def test_status_e_state_full_expoem_freestyle_ligado(self) -> None:
         daemon, handlers = self._handlers()
-        daemon.store.set_autoswitch_locked(True)
+        daemon.store.set_freestyle_ligado(True)
         daemon.store.set_active_profile("vitoria")
 
         for nome in ("_handle_daemon_status", "_handle_daemon_state_full"):
             payload = await getattr(handlers, nome)({})
-            assert "autoswitch_locked" in payload, f"{nome} não expõe o cadeado"
+            assert "freestyle_ligado" in payload, f"{nome} não expõe o cadeado"
             assert "active_profile" in payload, f"{nome} não expõe o perfil ativo"
-            assert payload["autoswitch_locked"] is True, nome
+            assert payload["freestyle_ligado"] is True, nome
             assert payload["active_profile"] == "vitoria", nome
             # E o fecho: com esse payload, a aba TEM frase para mostrar.
             assert "vitoria" in autoswitch_lock_text(payload), nome
@@ -379,10 +388,10 @@ class TestEstadoDoDaemonCarregaOCampo:
     @pytest.mark.asyncio
     async def test_destravado_chega_como_false_nos_dois(self) -> None:
         daemon, handlers = self._handlers()
-        daemon.store.set_autoswitch_locked(False)
+        daemon.store.set_freestyle_ligado(False)
 
         for nome in ("_handle_daemon_status", "_handle_daemon_state_full"):
             payload = await getattr(handlers, nome)({})
-            assert "autoswitch_locked" in payload, f"{nome} não expõe o cadeado"
-            assert payload["autoswitch_locked"] is False, nome
+            assert "freestyle_ligado" in payload, f"{nome} não expõe o cadeado"
+            assert payload["freestyle_ligado"] is False, nome
             assert autoswitch_lock_text(payload) == "", nome

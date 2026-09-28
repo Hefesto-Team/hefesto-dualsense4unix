@@ -33,10 +33,11 @@ from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.actions.home_actions import HomeActionsMixin
 
 #: O texto EXATO que o handler do cadeado deixa no rodapé ao destravar — é ele
-#: que ficou preso na tela dela com o cadeado já ligado.
+#: que ficou preso na tela dela com o cadeado já ligado. Desde 28/09/2026 o
+#: cadeado é o Modo Freestyle, e a frase diz «desligado» (era «LIBERADA»).
 FRASE_DO_CLIQUE_ANTIGO = (
-    "Troca automática de perfil LIBERADA — o Hefesto volta a escolher o perfil "
-    "ao abrir cada jogo."
+    "Modo Freestyle desligado — o Hefesto volta a escolher o perfil ao abrir "
+    "cada jogo."
 )
 
 
@@ -210,7 +211,7 @@ def _estado(*, cadeado: bool, perfil: str | None = None) -> dict[str, Any]:
         "gamepad_emulation": {"enabled": True, "flavor": "xbox"},
         "native_mode": False,
         "controllers": [],
-        "autoswitch_locked": cadeado,
+        "freestyle_ligado": cadeado,
     }
     if perfil is not None:
         estado["active_profile"] = perfil
@@ -234,8 +235,8 @@ class TestRodapeSegueOEstado:
         # Alguém religou o cadeado por fora (IPC direto); chega o tick.
         host._render_home(_estado(cadeado=True, perfil="Pragmata2"))
 
-        assert "LIBERADA" not in host.barra.visivel
-        assert "Cadeado ligado" in host.barra.visivel
+        assert "desligado" not in host.barra.visivel
+        assert "Modo Freestyle ligado" in host.barra.visivel
         assert "Pragmata2" in host.barra.visivel
 
     def test_rodape_e_frase_de_causa_dizem_a_mesma_coisa(
@@ -252,14 +253,14 @@ class TestRodapeSegueOEstado:
     def test_destravar_por_fora_limpa_o_aviso_de_cadeado_ligado(
         self, gtk_falso: None
     ) -> None:
-        """A mentira simétrica: "Cadeado ligado" preso com o cadeado solto."""
+        """A mentira simétrica: "Modo Freestyle ligado" preso com o cadeado solto."""
         host = _HomeStub()
         host._render_home(_estado(cadeado=True, perfil="Pragmata2"))
-        assert "Cadeado ligado" in host.barra.visivel
+        assert "Modo Freestyle ligado" in host.barra.visivel
 
         host._render_home(_estado(cadeado=False))
 
-        assert "Cadeado ligado" not in host.barra.visivel
+        assert "Modo Freestyle ligado" not in host.barra.visivel
 
     def test_daemon_desligado_nao_deixa_afirmacao_viva(
         self, gtk_falso: None
@@ -271,7 +272,7 @@ class TestRodapeSegueOEstado:
 
         host._render_home(None)
 
-        assert "Cadeado ligado" not in host.barra.visivel
+        assert "Modo Freestyle ligado" not in host.barra.visivel
 
     def test_toast_de_outra_acao_sobrevive_ao_tick_seguinte(
         self, gtk_falso: None

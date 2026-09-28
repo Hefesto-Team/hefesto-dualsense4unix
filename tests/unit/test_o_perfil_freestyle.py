@@ -586,7 +586,7 @@ def test_sem_sessao_o_boot_cai_no_freestyle(semeadura_ligada: None, transporte: 
 
     Era o trecho do boot ao primeiro jogo, e com o Modo Freestyle ligado (ou sem
     leitor de janela) ele não acabava nunca: o autoswitch não troca por janela
-    comum com a trava ligada.
+    comum com o modo ligado.
 
     MORDE: tire o `o_perfil_de_fora_do_jogo()` de `restore_last_profile` e o
     boot volta a deixar `active_profile` vazio.
@@ -595,7 +595,7 @@ def test_sem_sessao_o_boot_cai_no_freestyle(semeadura_ligada: None, transporte: 
     controle = _ControleQueGuarda(transport=transporte)
     controle.connect()
     store = StateStore()
-    store.set_autoswitch_locked(True)
+    store.set_freestyle_ligado(True)
 
     _boot(controle, store)
 
@@ -629,7 +629,7 @@ def _cena(travado: bool) -> list[str | None]:
                                 match=MatchCriteria(window_class=[JOGO]),
                                 priority=80))
     store = StateStore()
-    store.set_autoswitch_locked(travado)
+    store.set_freestyle_ligado(travado)
     controle = _ControleQueGuarda()
     controle.connect()
     _boot(controle, store)
@@ -648,16 +648,20 @@ def _cena(travado: bool) -> list[str | None]:
     return ativos
 
 
-def test_com_o_modo_freestyle_ligado_o_jogo_entra_por_cima_e_fica(
+def test_com_o_modo_freestyle_ligado_o_jogo_nao_entra(
     semeadura_ligada: None,
 ) -> None:
-    """`D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA`: o perfil do jogo entra.
+    """Ligado, o Freestyle vale no desktop, no jogo e na volta.
 
-    E a trava faz o que o nome diz: ao voltar ao desktop, janela comum nenhuma
-    troca o perfil — o do jogo fica até ela desligar o Modo Freestyle.
+    NOTA DATADA — 28/09/2026, O-FREESTYLE-E-UMA-CAMADA-SO-01. Esta régua media
+    `D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA` (o perfil do jogo entrava e
+    ficava até ela desligar o modo). A decisão dela
+    `D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA` a revogou: com o Modo Freestyle
+    ligado, nenhum jogo entra. A matriz do lançamento e dos quatro controles
+    mora em `test_o_freestyle_ligado_manda_em_tudo.py`.
     """
-    assert _cena(travado=True) == ["Freestyle", "Freestyle", "Mullet Mad Jack",
-                                   "Mullet Mad Jack"]
+    assert _cena(travado=True) == ["Freestyle", "Freestyle", "Freestyle",
+                                   "Freestyle"]
 
 
 def test_com_o_modo_freestyle_desligado_a_volta_e_ao_freestyle(

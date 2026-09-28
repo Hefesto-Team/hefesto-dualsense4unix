@@ -38,7 +38,7 @@
   },
   "external": null,
   "active_profile": null,
-  "autoswitch_locked": false,
+  "freestyle_ligado": false,
   "primary_grab_state": "pending",
   "window_detect_backend": "xlib",
   "window_detect_seeing": false,

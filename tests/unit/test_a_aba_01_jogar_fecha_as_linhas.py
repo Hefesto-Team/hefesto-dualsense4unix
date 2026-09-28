@@ -203,12 +203,12 @@ def test_o_cadeado_diz_o_que_o_daemon_guardou() -> None:
     as TRÊS do interruptor, cujo dono é o próprio pacote — por isso elas são
     LIDAS daqui, e não digitadas.
 
-    A MORDIDA: troque `state.get("autoswitch_locked") is True` por `False` e
+    A MORDIDA: troque `state.get("freestyle_ligado") is True` por `False` e
     esta régua reprova nas duas direções — a trava acesa com o perfil solto, e
     apagada com ele preso.
     """
-    assert aba._cadeado({**VIVO, "autoswitch_locked": True}) == aba.CADEADO_LIGADO
-    assert (aba._cadeado({**VIVO, "autoswitch_locked": False})
+    assert aba._cadeado({**VIVO, "freestyle_ligado": True}) == aba.CADEADO_LIGADO
+    assert (aba._cadeado({**VIVO, "freestyle_ligado": False})
             == aba.CADEADO_DESLIGADO)
     assert aba.CADEADO_LIGADO != aba.CADEADO_DESLIGADO, (
         "as duas palavras do interruptor ficaram iguais — a pílula não teria "
@@ -230,7 +230,7 @@ def test_sem_daemon_a_caixa_nao_afirma_uma_escolha_dela() -> None:
     """
     assert aba._cadeado({}) == TRAVESSAO
     assert aba._cadeado({**VIVO}) == TRAVESSAO, "daemon sem a chave acendeu a trava"
-    assert aba._cadeado({**VIVO, "autoswitch_locked": "sim"}) == TRAVESSAO, (
+    assert aba._cadeado({**VIVO, "freestyle_ligado": "sim"}) == TRAVESSAO, (
         "uma string ligou o cadeado — só o `True` literal pode")
     assert TRAVESSAO not in (aba.CADEADO_LIGADO, aba.CADEADO_DESLIGADO), (
         "o travessão virou uma das duas palavras do interruptor — o 'não sei' "
@@ -249,10 +249,10 @@ class _PonteDeMentira:
     não pode virar uma segunda lista das funções da ponte, que envelheceria em
     silêncio.
 
-    **MAS O `autoswitch_lock_set` GANHOU RESPOSTA PRÓPRIA — 06/09/2026, e a
+    **MAS O `freestyle_set` GANHOU RESPOSTA PRÓPRIA — 06/09/2026, e a
     razão é a forma de defeito que esta casa mediu três vezes em 05/09: *o dublê
     era mais frouxo que a função real*.** O `__getattr__` devolvia `True` para
-    tudo; `ipc_bridge.autoswitch_lock_set` devolve **o estado que ficou
+    tudo; `ipc_bridge.freestyle_set` devolve **o estado que ficou
     valendo** — logo um `True` sobre um pedido de DESTRAVAR era o dublê
     afirmando o contrário do que foi pedido, e um dublê assim não tem como
     revelar o gesto que ignora a resposta.
@@ -266,14 +266,14 @@ class _PonteDeMentira:
         self.chamadas: list[tuple[str, tuple, dict]] = []
         self.cadeado = cadeado
 
-    def autoswitch_lock_set(self, locked: Any = None) -> Any:
-        self.chamadas.append(("autoswitch_lock_set", (), {"locked": locked}))
+    def freestyle_set(self, ligado: Any = None) -> Any:
+        self.chamadas.append(("freestyle_set", (), {"ligado": ligado}))
         if isinstance(self.cadeado, BaseException):
             raise self.cadeado
         # O ECO É O QUE O DAEMON FAZ, e não uma gentileza do dublê:
-        # `_handle_autoswitch_lock` responde `novo = bool(pedido)` quando o
-        # `locked` vem no pedido — o toggle é só para quem não manda valor.
-        return bool(locked) if self.cadeado is _ECOA else self.cadeado
+        # `_handle_freestyle_set` usa o `ligado` quando ele vem no pedido — o
+        # toggle é só para quem não manda valor.
+        return bool(ligado) if self.cadeado is _ECOA else self.cadeado
 
     def __getattr__(self, nome: str):
         def registrar(*args, **kwargs):
@@ -288,30 +288,30 @@ def test_o_cadeado_manda_o_valor_absoluto_e_nunca_um_toggle() -> None:
     **É a metade que decide, e a razão é medida:** um clique chega DUAS vezes ao
     ouvinte único do piloto — ele está em `click` **e** em `change`
     (`hefesto_vivo.BOOTSTRAP`), e um `<input type="checkbox">` dispara os dois.
-    Com `locked=None` (o toggle que a ponte aceita) os dois se cancelariam: ela
+    Com `ligado=None` (o toggle que a ponte aceita) os dois se cancelariam: ela
     clicaria e NADA aconteceria, que é a queixa dela em estado puro.
 
-    A MORDIDA: troque `locked=…` por `locked=None` e esta régua reprova dizendo
+    A MORDIDA: troque `ligado=…` por `ligado=None` e esta régua reprova dizendo
     que o gesto mandou um toggle.
     """
     for guardado, pedido in ((False, True), (True, False)):
         p = _PonteDeMentira()
-        aba.cadeado(_ctx([], autoswitch_locked=guardado),
+        aba.cadeado(_ctx([], freestyle_ligado=guardado),
                     {"evento": "click"}, p)
         assert p.chamadas, "o cadeado não chamou NADA"
         nome, _, kwargs = p.chamadas[0]
-        assert nome == "autoswitch_lock_set", (
+        assert nome == "freestyle_set", (
             f"o cadeado chamou {nome!r} — o escritor é o da janela antiga")
-        assert kwargs.get("locked") is pedido, (
+        assert kwargs.get("ligado") is pedido, (
             f"com o cadeado guardado em {guardado} o clique pediu "
-            f"{kwargs.get('locked')!r}, esperava {pedido!r}. `None` é TOGGLE, e "
+            f"{kwargs.get('ligado')!r}, esperava {pedido!r}. `None` é TOGGLE, e "
             f"dois toggles num clique são um no-op")
 
 
 def test_um_clique_grava_uma_vez_so_no_disco_dela() -> None:
     """O ouvinte do piloto está em dois eventos; só um pode virar escrita.
 
-    `autoswitch.lock` chama `save_autoswitch_locked` (`ipc_handlers.py:2536`) —
+    `freestyle.set` grava pelo `profiles.manager.ligar_o_freestyle` —
     é disco dela. Duas entregas do mesmo gesto seriam duas gravações e duas
     linhas de log para um ato só.
 
@@ -332,7 +332,7 @@ def test_um_clique_grava_uma_vez_so_no_disco_dela() -> None:
     esta régua reprova dizendo que o `change` também gravou.
     """
     p = _PonteDeMentira()
-    ctx = _ctx([], autoswitch_locked=False)
+    ctx = _ctx([], freestyle_ligado=False)
     aba.cadeado(ctx, {"evento": "change"}, p)
     assert p.chamadas == [], (
         "o `change` gravou: um gesto na trava grava DUAS vezes no disco dela se "
@@ -373,7 +373,7 @@ def test_o_cadeado_confirma_em_verde() -> None:
     """
     # 1. O SERVIÇO CONFIRMOU: volta calado, e é isso que acende o verde.
     p = _PonteDeMentira()
-    assert aba.cadeado(_ctx([], autoswitch_locked=False),
+    assert aba.cadeado(_ctx([], freestyle_ligado=False),
                        {"evento": "click"}, p) is None
     assert p.chamadas, "o cadeado não chamou NADA"
 
@@ -382,7 +382,7 @@ def test_o_cadeado_confirma_em_verde() -> None:
     #    *"o produto recusou, e a frase VAI PARA A TELA"*.
     p = _PonteDeMentira(cadeado=None)
     with pytest.raises(RuntimeError) as caiu:
-        aba.cadeado(_ctx([], autoswitch_locked=False), {"evento": "click"}, p)
+        aba.cadeado(_ctx([], freestyle_ligado=False), {"evento": "click"}, p)
     assert str(caiu.value) == aba.CADEADO_RECUSA, (
         f"a recusa disse {str(caiu.value)!r} — a frase é a da janela antiga, e "
         f"texto de tela novo é palavra dela")
@@ -392,7 +392,7 @@ def test_o_cadeado_confirma_em_verde() -> None:
     #    recusa por uma piscada verde sobre nada.
     p = _PonteDeMentira(cadeado=RuntimeError("o socket recusou"))
     with pytest.raises(RuntimeError):
-        aba.cadeado(_ctx([], autoswitch_locked=True), {"evento": "click"}, p)
+        aba.cadeado(_ctx([], freestyle_ligado=True), {"evento": "click"}, p)
 
 
 def test_a_palavra_do_cadeado_e_a_que_ela_ja_leu() -> None:
@@ -432,7 +432,7 @@ def test_a_palavra_do_cadeado_e_a_que_ela_ja_leu() -> None:
     # `_on_home_autoswitch_lock_toggled` já dizia no `resultado is None`.
     assert aba.CADEADO_RECUSA in colado, (
         f"a recusa do cadeado ({aba.CADEADO_RECUSA!r}) não é a frase que a "
-        f"janela antiga põe na tela quando o `autoswitch_lock_set` volta "
+        f"janela antiga põe na tela quando o `freestyle_set` volta "
         f"`None`. Texto de tela NOVO é decisão dela (PROVA-DE-TELA-01); esta "
         f"linha existe para que a tela nova não invente uma segunda maneira de "
         f"dizer o mesmo desfecho")
@@ -1080,17 +1080,17 @@ def _painel_do_produto() -> Any:
 # o `BOOTSTRAP` vivo e o pouso do piloto decidindo a cor.
 #
 # E ELA NÃO TOCA NO DISCO DELA. O dublê entra em `hefesto_vivo.ponte`, um degrau
-# ANTES do socket: nenhum `autoswitch.lock` sai, nenhum
-# `save_autoswitch_locked` roda. É o que torna medível um gesto que está em
+# ANTES do socket: nenhum `freestyle.set` sai, nenhum
+# `save_freestyle_ligado` roda. É o que torna medível um gesto que está em
 # `PERIGOSOS` — a régua de clique do piloto continua, e deve continuar, sem
 # clicar esta caixa.
 
-#: A MESA DUBLÊ desta medição. `autoswitch_locked: False` é o que faz o clique
-#: pedir `locked=True` — a mesma direção da prova declarada em `PROVAS`.
+#: A MESA DUBLÊ desta medição. `freestyle_ligado: False` é o que faz o clique
+#: pedir `ligado=True` — a mesma direção da prova declarada em `PROVAS`.
 _ESTADO_DO_WEBKIT: dict[str, Any] = {
     "active_profile": "regua",
     "gamepad_emulation": {"flavor": "dualsense"},
-    "autoswitch_locked": False,
+    "freestyle_ligado": False,
     "controllers": [
         {"uniq": P1, "connected": True, "transport": "usb", "player": 1},
         {"uniq": P2, "connected": True, "transport": "bt", "player": 2},
@@ -1171,21 +1171,21 @@ def no_webkit() -> dict:
     # OS DUBLÊS SÃO DEVOLVIDOS NO FIM: `mesa_viva` e `pacotes.ponte` são módulos
     # COMPARTILHADOS do produto, e deixá-los sujos entrega uma mesa de mentira a
     # todo vizinho que abrir um `Piloto` depois, no mesmo processo.
-    guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.autoswitch_lock_set)
+    guardado = (hv.mesa_viva.estado_do_daemon, hv.ponte.freestyle_set)
     da_piscada_ms = int(hv.MS_DA_PISCADA)
     hv.mesa_viva.estado_do_daemon = (  # type: ignore[assignment]
         lambda *a, **k: _ESTADO_DO_WEBKIT)
 
     # O QUE A PONTE RESPONDE, trocado a cada etapa. O primeiro é o ECO do
-    # serviço vivo (`_handle_autoswitch_lock` responde `bool(pedido)`).
+    # serviço vivo (`_handle_freestyle_set` responde o `ligado` pedido).
     resposta: dict[str, Any] = {"como": "eco"}
 
-    def _ponte_do_cadeado(locked: Any = None) -> Any:
+    def _ponte_do_cadeado(ligado: Any = None) -> Any:
         if resposta["como"] == "levanta":
-            raise RuntimeError("o socket recusou o autoswitch.lock")
-        return bool(locked) if resposta["como"] == "eco" else None
+            raise RuntimeError("o socket recusou o freestyle.set")
+        return bool(ligado) if resposta["como"] == "eco" else None
 
-    hv.ponte.autoswitch_lock_set = _ponte_do_cadeado  # type: ignore[assignment]
+    hv.ponte.freestyle_set = _ponte_do_cadeado  # type: ignore[assignment]
 
     args = argparse.Namespace(
         oculta=True, segundos=0.0, passear=False, parada=900, foto="",
@@ -1282,7 +1282,7 @@ def no_webkit() -> dict:
         piloto.pronto = False
         piloto.tela.janela.destroy()
         (hv.mesa_viva.estado_do_daemon,
-         hv.ponte.autoswitch_lock_set) = guardado  # type: ignore[assignment]
+         hv.ponte.freestyle_set) = guardado  # type: ignore[assignment]
     assert "desfechos" in fora, (
         f"o roteiro não chegou ao fim — o que voltou foi {sorted(fora)}. Quem "
         f"guarda os `desfechos` é o último passo, e esperar por qualquer outro "
@@ -1338,12 +1338,12 @@ def test_o_cadeado_nao_pisca_sobre_o_que_nao_foi_guardado(no_webkit: dict) -> No
     """O serviço não respondeu — e a tela NÃO pode dizer que guardou.
 
     **É a metade que esta sprint existe para fechar.** Até 06/09/2026 a resposta
-    de `autoswitch_lock_set` ia para o lixo: com o serviço parado o gesto voltava
+    de `freestyle_set` ia para o lixo: com o serviço parado o gesto voltava
     calado, o piloto anotava `"aplicou"` e a caixa piscava VERDE — e desmarcava
-    no tique seguinte, porque `_cadeado` sem `autoswitch_locked` devolve `""`. A
+    no tique seguinte, porque `_cadeado` sem `freestyle_ligado` devolve `""`. A
     tela dizia *guardei* e *não está guardado* com 100 ms entre as duas.
 
-    A MORDIDA: devolva o corpo do gesto ao `p.autoswitch_lock_set(...)` sem
+    A MORDIDA: devolva o corpo do gesto ao `p.freestyle_set(...)` sem
     guarda e esta régua reprova na primeira asserção.
 
     A SEGUNDA: embrulhe a chamada num `try/except` e a última asserção reprova —

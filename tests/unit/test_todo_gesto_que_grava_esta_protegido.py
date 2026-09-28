@@ -102,8 +102,8 @@ ESCREVEM = {
     "machine_declare",         # grava `MesaDeclarada` no `maquina.json`
     "set_mask",                # grava a máscara daquele aparelho
     "clear_mask",
-    "autoswitch_lock_set",     # grava a trava da troca automática
-    "save_autoswitch_locked",  # o escritor por baixo dela
+    "freestyle_set",           # grava o Modo Freestyle ligado (era a trava da troca automática)
+    "save_freestyle_ligado",   # o escritor por baixo dela
     # `renomear_o_dongle` SAIU DAQUI em 23/09/2026 (TRANSPLANTE-DA-SECAO-01),
     # e o `dar_nome` do lugar em 26/09/2026: o nome do adaptador mora no
     # endereço dele (D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO), com UM escritor.
@@ -211,7 +211,7 @@ METODOS_QUE_ESCREVEM = {
     "machine.declare",
     "gamepad.mask.set",
     "profile.save",
-    "autoswitch.lock",
+    "freestyle.set",
     # O RÁDIO DELA — TRANSPLANTE-DA-SECAO-01, 23/09/2026. `radio.mover` tira o
     # controle de um adaptador e o pareia noutro (mexe nos pareamentos do
     # BlueZ dela); `radio.ponte.ligar_aqui` sobe uma ponte de som além do

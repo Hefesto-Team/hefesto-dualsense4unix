@@ -525,9 +525,9 @@ class TestOCadeadoDizQuandoEstaCego:
         silêncio por outro.
         """
         texto = home_actions.autoswitch_lock_text(
-            {"autoswitch_locked": True, "active_profile": "pragmata"}
+            {"freestyle_ligado": True, "active_profile": "pragmata"}
         )
-        assert "Cadeado ligado" in texto
+        assert "Modo Freestyle ligado" in texto
         assert "pragmata" in texto
 
     def test_a_frase_do_cadeado_nao_vai_para_o_rodape(self, fake_gtk: None) -> None:

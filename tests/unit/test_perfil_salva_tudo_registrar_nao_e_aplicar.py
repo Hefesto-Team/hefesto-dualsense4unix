@@ -63,7 +63,7 @@ NOMES_QUE_APLICAM = frozenset(
         "timeout_add",
         "run",
         "Popen",
-        "autoswitch_lock_set",
+        "freestyle_set",
     }
 )
 

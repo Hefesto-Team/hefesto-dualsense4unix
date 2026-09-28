@@ -196,8 +196,8 @@ class PonteDeMentira:
         self.chamadas.append(f"detalhado({metodo!r})")
         return (True, "")
 
-    def autoswitch_lock_set(self, **kw: object) -> object:
-        self.chamadas.append(f"autoswitch_lock_set({kw!r})")
+    def freestyle_set(self, **kw: object) -> object:
+        self.chamadas.append(f"freestyle_set({kw!r})")
         return {}
 
     def profile_switch(self, nome: str) -> bool:

@@ -61,11 +61,11 @@ def test_o_emissor_responde_as_tres_e_so_o_true_acende() -> None:
     """`_cadeado` na língua do alvo `classe`, e o travessão é o "não sei"."""
     from hefesto_dualsense4unix.interface.pacotes import a01_jogar as p
 
-    assert p._cadeado({"autoswitch_locked": True}) == p.CADEADO_LIGADO
-    assert p._cadeado({"autoswitch_locked": False}) == p.CADEADO_DESLIGADO
+    assert p._cadeado({"freestyle_ligado": True}) == p.CADEADO_LIGADO
+    assert p._cadeado({"freestyle_ligado": False}) == p.CADEADO_DESLIGADO
     # SEM DAEMON E COM LIXO caem no MESMO lugar, e não no `DESLIGADO`: a tela
     # não sabe, e o que ela mostra é o padrão do produto — não uma leitura.
-    for sem_resposta in ({}, {"autoswitch_locked": "sim"}, {"autoswitch_locked": 1}):
+    for sem_resposta in ({}, {"freestyle_ligado": "sim"}, {"freestyle_ligado": 1}):
         assert p._cadeado(sem_resposta) not in (p.CADEADO_LIGADO, p.CADEADO_DESLIGADO), (
             f"{sem_resposta!r} produziu uma AFIRMAÇÃO sobre a trava. Só o `True` "
             f"literal acende, e só o `False` literal nega.")

@@ -326,7 +326,7 @@ def autoswitch_lock_text(state: dict[str, Any] | None) -> str:
 
     ativo = perfil_que_esta_valendo(state).nome
     alvo = f" — vale o perfil “{ativo}”" if ativo else ""
-    return f"Modo Freestyle ligado: o perfil não troca sozinho{alvo}, nem no jogo."
+    return f"Modo Freestyle ligado: o perfil não troca sozinho, nem no jogo{alvo}."
 
 
 #: O que o botão «Modo Freestyle» NÃO vai fazer
@@ -2446,9 +2446,9 @@ class HomeActionsMixin(WidgetAccessMixin):
         # invisível. Na máquina dela a flag estava ligada desde 24/07 20:42 e o
         # que ela via era "o modo jogo não ativa" — o marcador do checkbox é uma
         # caixinha de 16 px que ninguém relê depois de marcar. Esta linha diz,
-        # em texto, o que está acontecendo AGORA e o que continua acontecendo
-        # (a exceção da regra de jogo, LOCK-CEDE-01), preenchida no
-        # `_render_home` a partir do estado do daemon; some quando destravado.
+        # em texto, o que está acontecendo AGORA (o Modo Freestyle ligado vale
+        # também no jogo desde 28/09/2026), preenchida no `_render_home` a
+        # partir do estado do daemon; some quando desligado.
         lock_hint = Gtk.Label(label="")
         lock_hint.set_xalign(0.0)
         lock_hint.set_line_wrap(True)

@@ -40,7 +40,7 @@ from hefesto_dualsense4unix.app.actions import home_actions as ha
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
 
 #: O estado que a máquina DELA reporta hoje: o daemon respondeu, e disse `null`.
-DAEMON_SEM_NOME: dict[str, Any] = {"active_profile": None, "autoswitch_locked": True}
+DAEMON_SEM_NOME: dict[str, Any] = {"active_profile": None, "freestyle_ligado": True}
 
 
 @pytest.fixture
@@ -161,7 +161,7 @@ class TestAsSuperficiesConcordam:
 
     def test_sem_ninguem_saber_a_inicio_cala_o_nome(self, disco_vazio: None) -> None:
         """O silêncio é parte da cura: inventar nome seria pior que não dizer."""
-        frase = ha.autoswitch_lock_text({"autoswitch_locked": True})
+        frase = ha.autoswitch_lock_text({"freestyle_ligado": True})
         assert "vale o perfil" not in frase
         assert "não troca sozinho" in frase, "o aviso do cadeado continua de pé"
 
@@ -169,5 +169,5 @@ class TestAsSuperficiesConcordam:
         self, marcador_no_disco: str
     ) -> None:
         """A cura não pode acender uma linha que não existia."""
-        assert ha.autoswitch_lock_text({"autoswitch_locked": False}) == ""
+        assert ha.autoswitch_lock_text({"freestyle_ligado": False}) == ""
         assert ha.autoswitch_lock_text(None) == ""

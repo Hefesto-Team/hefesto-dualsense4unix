@@ -43,16 +43,16 @@ JOGO = "steam_app_2111190"  # Mullet Mad Jack — o jogo sem perfil de 24/07
 # =============================================================================
 
 class _Ponte:
-    """Responde ao `autoswitch_lock_set` como `ipc_bridge` responde: o estado
+    """Responde ao `freestyle_set` como `ipc_bridge` responde: o estado
     que ficou valendo. Nada mais frouxo que o real — um `True` para tudo
-    mentiria sobre um pedido de soltar."""
+    mentiria sobre um pedido de desligar."""
 
     def __init__(self) -> None:
         self.chamadas: list[dict[str, Any]] = []
 
-    def autoswitch_lock_set(self, locked: bool | None = None) -> bool | None:
-        self.chamadas.append({"locked": locked})
-        return locked
+    def freestyle_set(self, ligado: bool | None = None) -> bool | None:
+        self.chamadas.append({"ligado": ligado})
+        return ligado
 
 
 def _mesa_de_quatro() -> list[dict[str, Any]]:
@@ -66,7 +66,7 @@ def _mesa_de_quatro() -> list[dict[str, Any]]:
 def test_o_freestyle_e_um_so_para_a_mesa_inteira(caminho: str, travado: bool) -> None:
     """Um clique, UMA chamada, com o valor absoluto — em qualquer caminho.
 
-    O Modo Freestyle trava a TROCA DE PERFIL, que é da máquina inteira: o gesto
+    O Modo Freestyle manda na máquina inteira: o gesto
     não lê o controle escolhido na fita, nem o transporte, nem o caminho. Se um
     dia ele virar por controle, esta régua reprova e a decisão volta a ela.
     """
@@ -74,14 +74,14 @@ def test_o_freestyle_e_um_so_para_a_mesa_inteira(caminho: str, travado: bool) ->
     from hefesto_dualsense4unix.interface.pacotes import a01_jogar as aba
 
     mesa = _mesa_de_quatro()
-    estado = {"controllers": mesa, "autoswitch_locked": travado,
+    estado = {"controllers": mesa, "freestyle_ligado": travado,
               "gamepad_emulation": {"caminho": caminho}}
     ponte = _Ponte()
 
     aba.cadeado(Contexto(state=estado, mesa=mesa, conectados=mesa),
                 {"evento": "click"}, ponte)
 
-    assert ponte.chamadas == [{"locked": not travado}]
+    assert ponte.chamadas == [{"ligado": not travado}]
 
 
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
@@ -90,19 +90,27 @@ def test_com_o_freestyle_ligado_a_janela_de_jogo_nao_troca_o_perfil(
 ) -> None:
     """A prova da sprint, no motor: liga o modo e abre uma janela de jogo.
 
-    Nos dois transportes, com o controle de mentira no cabo e no rádio: a trava
+    Nos dois transportes, com o controle de mentira no cabo e no rádio: o modo
     é da máquina, e o transporte não pode decidir o resultado.
 
-    O jogo aqui não tem perfil próprio — e é o caso em que a trava segura. O
-    jogo COM perfil próprio entra por cima (LOCK-CEDE-01, decisão dela de
-    24/07), e isso não mudou: `test_autoswitch_lock` guarda aquela metade.
+    NOTA DATADA — 28/09/2026, O-FREESTYLE-E-UMA-CAMADA-SO-01. Até aqui o jogo
+    COM perfil próprio entrava por cima (LOCK-CEDE-01, 24/07), e esta régua só
+    cobria o jogo sem perfil. A decisão dela
+    (`D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA`) revogou a exceção: ligado, o
+    Freestyle vale também no jogo que tem perfil, e o Mullet Mad Jack ganha um
+    aqui para provar.
     """
     loader.save_profile(Profile(name="Navegação",
                                 match=MatchCriteria(window_class=["steam"]),
                                 priority=50))
+    loader.save_profile(Profile(name="Mullet Mad Jack",
+                                match=MatchCriteria(window_class=[JOGO]),
+                                priority=90))
+    loader.save_profile(Profile(name=loader.NOME_DO_PADRAO,
+                                match=MatchCriteria(), priority=0))
     store = StateStore()
-    store.set_active_profile("Mullet Mad Jack")
-    store.set_autoswitch_locked(True)
+    store.set_active_profile(loader.NOME_DO_PADRAO)
+    store.set_freestyle_ligado(True)
     controle = FakeController(transport=transporte)
     controle.connect()
     sw = AutoSwitcher(manager=ProfileManager(controller=controle, store=store),
@@ -113,7 +121,7 @@ def test_com_o_freestyle_ligado_a_janela_de_jogo_nao_troca_o_perfil(
         for t in (0.0, 0.6, 30.0, 60.0):
             sw._tick(janela, t)
 
-    assert store.active_profile == "Mullet Mad Jack"
+    assert store.active_profile == loader.NOME_DO_PADRAO
 
 
 # =============================================================================

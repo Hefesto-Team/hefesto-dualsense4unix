@@ -340,7 +340,7 @@ def test_o_cadeado_nasce_apagado(medido: dict) -> None:
     """Destravado é o padrão do produto; acendê-lo afirmaria uma escolha dela.
 
     A PÍLULA NASCE SEM A CLASSE, que é o `el.checked === false` desta língua:
-    quem acende é o piloto, a partir do `autoswitch_locked` do daemon. Um
+    quem acende é o piloto, a partir do `freestyle_ligado` do daemon. Um
     desenho que já trouxesse `class="cadeado ligada"` diria TRAVADO antes de
     qualquer tique — e continuaria dizendo sobre um estado que ninguém leu, que
     é o terceiro estado que a pílula nasceu para não mentir.
