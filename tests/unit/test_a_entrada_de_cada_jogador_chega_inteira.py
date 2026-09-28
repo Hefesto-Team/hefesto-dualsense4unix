@@ -393,6 +393,82 @@ def test_o_dublê_sem_fd_de_verdade_segue_no_tique(monkeypatch: pytest.MonkeyPat
         pad.stop()
 
 
+def test_sem_fio_novo_o_virtual_nasce_e_nao_vaza_o_despertador(
+    kernel: KernelDoUhid, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O processo no teto de fios: o virtual nasce, o tique atende e o pipe fecha.
+
+    MORDE: tire o `try` do `fio.start()` no `_iniciar_o_fio_do_uhid` — o
+    `start` levanta com o device criado no kernel, e ninguém o destrói.
+    """
+    iniciar = threading.Thread.start
+    pipes: list[tuple[int, int]] = []
+    criar_pipe = os.pipe
+
+    def _pipe() -> tuple[int, int]:
+        par = criar_pipe()
+        pipes.append(par)
+        return par
+
+    def _start(fio: threading.Thread) -> None:
+        if fio.name.startswith("hefesto-uhid-"):
+            raise RuntimeError("can't start new thread")
+        iniciar(fio)
+
+    monkeypatch.setattr(os, "pipe", _pipe)
+    monkeypatch.setattr(threading.Thread, "start", _start)
+    pad = _virtual(Relogio())
+    try:
+        assert pad._fio_do_uhid is None
+        assert pipes, "premissa: o despertador chegou a nascer"
+        for ponta in pipes[-1]:
+            with pytest.raises(OSError):
+                os.fstat(ponta)
+    finally:
+        pad.stop()
+
+
+def test_dois_stops_ao_mesmo_tempo_fecham_o_despertador_uma_vez(
+    kernel: KernelDoUhid, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A interface e o laço derrubam o mesmo virtual juntos: cada ponta fecha uma vez.
+
+    Um segundo `close` do mesmo número cai no descritor que outra thread já
+    reaproveitou (um hidraw, o uhid de outro jogador).
+
+    MORDE: leia o despertador com `self._despertador` em vez de tirá-lo com o
+    `pop` no `_parar_o_fio_do_uhid` — as duas threads fecham as duas pontas.
+    """
+    fechar = os.close
+    fechados: list[int] = []
+
+    def _close(fd: int) -> None:
+        fechados.append(fd)
+        fechar(fd)
+
+    monkeypatch.setattr(os, "close", _close)
+    for _volta in range(8):
+        pad = _virtual(Relogio())
+        despertador = pad._despertador
+        assert despertador is not None
+        largada = threading.Barrier(2)
+
+        def _parar(pad: UhidDualSense = pad, largada: threading.Barrier = largada) -> None:
+            largada.wait()
+            pad.stop()
+
+        dupla = [threading.Thread(target=_parar) for _ in range(2)]
+        fechados.clear()
+        for fio in dupla:
+            fio.start()
+        for fio in dupla:
+            fio.join(timeout=5.0)
+        vezes = {ponta: fechados.count(ponta) for ponta in despertador}
+        assert vezes == dict.fromkeys(despertador, 1), (
+            f"o despertador fechou {vezes} vezes (ponta -> closes) com dois stops juntos"
+        )
+
+
 # ---------------------------------------------------------------------------
 # O item 3: o nome que o jogo vê é o número do jogador.
 #

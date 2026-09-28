@@ -2727,7 +2727,19 @@ class UhidDualSense:
         # Antes do `start()`: o primeiro evento já chega com o fio no ar, e
         # `_no_fio_do_uhid` tem de reconhecê-lo desde ele.
         self._fio_do_uhid = fio
-        fio.start()
+        try:
+            fio.start()
+        except RuntimeError as exc:
+            # O processo no teto de fios: o virtual nasce assim mesmo e o
+            # tique drena. Sem isto o `start()` levantava com o device já
+            # criado no kernel, e ninguém o destruiria: um controle a mais
+            # que o jogo vê e ninguém alimenta.
+            logger.warning("uhid_fio_nao_nasceu", err=str(exc), player=self.player)
+            self._fio_do_uhid = None
+            self.__dict__.pop("_despertador", None)
+            for ponta in (leitura, escrita):
+                with contextlib.suppress(OSError):
+                    os.close(ponta)
 
     def _atender_o_uhid(self, fd: int, despertador: int, pare: threading.Event) -> None:
         """O laço do fio: acorda quando o fd tem evento e o atende na hora.
@@ -2764,13 +2776,20 @@ class UhidDualSense:
                                        player=self.player)
 
     def _parar_o_fio_do_uhid(self) -> None:
-        """Acorda o fio, espera ele sair e fecha o despertador. Idempotente."""
+        """Acorda o fio, espera ele sair e fecha o despertador. Idempotente.
+
+        O despertador é de quem o tira primeiro (`dict.pop`, atômico sob o
+        GIL). Dois `stop()` ao mesmo tempo (a interface troca o modo enquanto o
+        laço derruba o vpad) liam o mesmo par antes do `join` e fechavam as
+        duas pontas duas vezes; o segundo `close` caía num descritor que outra
+        thread já tinha reaproveitado. Quem chega depois só espera o fio sair.
+        """
         fio = self._fio_do_uhid
         if fio is None:
             return
         if self._pare_o_fio is not None:
             self._pare_o_fio.set()
-        despertador = self._despertador
+        despertador: tuple[int, int] | None = self.__dict__.pop("_despertador", None)
         if despertador is not None:
             with contextlib.suppress(OSError):
                 os.write(despertador[1], b"x")
@@ -2778,8 +2797,8 @@ class UhidDualSense:
             fio.join(timeout=_UHID_FIO_ACORDA_S + 0.5)
             if fio.is_alive():
                 logger.warning("uhid_fio_nao_saiu", player=self.player)
-        self._fio_do_uhid = None
-        self._despertador = None
+        if self._fio_do_uhid is fio:
+            self._fio_do_uhid = None
         if despertador is not None:
             for ponta in despertador:
                 with contextlib.suppress(OSError):
