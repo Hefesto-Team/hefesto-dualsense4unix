@@ -2495,6 +2495,36 @@ def repassar_a_falta_do_gtk(filho: Any) -> None:
         raise erro
 
 
+def pytest_itemcollected(item: Any) -> None:
+    """Quem empresta fixture de um módulo que PULOU pula com o motivo dele.
+
+    `pytest_plugins = ["tests.unit.<outro_arquivo>"]` pega as fixtures de outro
+    arquivo de teste. Quando esse arquivo pula na importação
+    (`exigir_gi_real()` sem o GTK real, ou um insumo fora do git), o pytest
+    anota o plugin em `skipped_plugins` e o descarta CALADO — e quem pediu as
+    fixtures dele caía em `fixture 'a09' not found`, um ERRO que não diz a
+    razão. Foi o `lint-test` de 27/09 com os seis casos do botão do Vulkan.
+    O motivo do plugin vira o pulo de quem o pediu; com
+    `HEFESTO_EXIGE_GTK_REAL=1` o `exigir_gi_real()` do plugin reprova na
+    importação, e nada chega aqui.
+    """
+    pedidos = getattr(getattr(item, "module", None), "pytest_plugins", ())
+    if isinstance(pedidos, str):
+        pedidos = (pedidos,)
+    pulados = dict(item.config.pluginmanager.skipped_plugins)
+    for nome in pedidos:
+        if nome not in pulados:
+            continue
+        motivo = pulados[nome]
+        item.add_marker(
+            pytest.mark.skip(reason=f"{motivo} [as fixtures deste arquivo vêm de `{nome}`]")
+        )
+        caminho = item.location[0]
+        if motivo.startswith("GUARDA-GI-REAL-01") and caminho not in _MODULOS_PULADOS_SEM_GI:
+            _MODULOS_PULADOS_SEM_GI.append(caminho)
+        return
+
+
 # ---------------------------------------------------------------------------
 # PARIDADE-BYTE-01 — o transporte vira DIMENSÃO do caso, não rótulo num dict
 # ---------------------------------------------------------------------------

@@ -157,3 +157,61 @@ def test_o_filho_que_morre_por_outro_motivo_continua_reprovando(tmp_path: Path) 
         "o filho que morre por outro import tem de reprovar a régua, com o "
         f"stderr dele na cara.\n{saida[-800:]}"
     )
+
+
+# ---------------------------------------------------------------------------
+# A FIXTURE EMPRESTADA DE QUEM PULOU (27/09/2026)
+# ---------------------------------------------------------------------------
+#: O dono das fixtures pula sem o GTK real, como o
+#: `test_a_09_sistema_fecha_a_paridade.py`; o alvo as pede por `pytest_plugins`,
+#: como o `test_o_botao_do_vulkan_diz_o_que_fez.py`.
+_DONO_DA_FIXTURE = '''
+import pytest
+
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("régua de mentira que carrega o GTK")
+
+
+@pytest.fixture
+def emprestada():
+    return 1
+'''
+
+_PEDE_EMPRESTADA = '''
+pytest_plugins = ["dono_da_fixture_do_gtk"]
+
+
+def test_usa_a_fixture_emprestada(emprestada):
+    assert emprestada == 1
+'''
+
+
+@pytest.mark.parametrize("exige", [False, True], ids=["sem-exigencia", "com-exigencia"])
+def test_quem_empresta_fixture_de_quem_pulou_pula_com_o_motivo(
+    tmp_path: Path, exige: bool
+) -> None:
+    """Sem o GTK real, o arquivo que pede fixture a um módulo que pulou PULA.
+
+    Antes era `ERROR at setup … fixture 'emprestada' not found`: o pytest
+    descarta calado o plugin que pulou, e o erro não dizia a razão. Com a
+    exigência, o dono das fixtures reprova na importação, e o alvo não coleta.
+
+    A mordida: tire o `pytest_itemcollected` do `tests/conftest.py` e o caso
+    sem exigência reprova com `1 error`.
+    """
+    (tmp_path / "dono_da_fixture_do_gtk.py").write_text(_DONO_DA_FIXTURE, encoding="utf-8")
+    saida = _rodar(tmp_path, _PEDE_EMPRESTADA, exige=exige)
+    if exige:
+        assert "1 error" in saida and "GTK real NÃO está disponível" in saida, (
+            "com HEFESTO_EXIGE_GTK_REAL=1 o empréstimo de quem precisa do GTK "
+            f"tem de reprovar, e dizendo por quê.\n{saida[-800:]}"
+        )
+        return
+    assert "1 skipped" in saida and "dono_da_fixture_do_gtk" in saida, (
+        "quem pede fixture a um módulo que pulou pela falta do GTK pula com o "
+        f"motivo dele, e diz de onde a fixture vinha.\n{saida[-800:]}"
+    )
+    assert "not found" not in saida, (
+        f"o empréstimo voltou a virar ERRO sem razão.\n{saida[-800:]}"
+    )
