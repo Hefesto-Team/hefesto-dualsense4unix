@@ -34,6 +34,7 @@ Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
 
 from __future__ import annotations
 
+import ast
 import re
 import time
 from pathlib import Path
@@ -347,3 +348,44 @@ def test_o_chip_aceso_diz_onde_a_busca_esta(
     finally:
         busca.soltar()
         bancada.fechar()
+
+
+# ---------------------------------------------------------------------------
+# 5. a meia chave tem um dono só: a central (achado 8 da auditoria de 26/09)
+# ---------------------------------------------------------------------------
+
+INTERFACE = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "interface"
+
+
+def _quem_chama(nome: str) -> set[tuple[str, str]]:
+    """``(arquivo, função)`` de toda chamada a ``nome`` no pacote da interface."""
+    achados: set[tuple[str, str]] = set()
+    for arquivo in sorted(INTERFACE.rglob("*.py")):
+        arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
+        for funcao in ast.walk(arvore):
+            if not isinstance(funcao, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            for no in ast.walk(funcao):
+                if not isinstance(no, ast.Call):
+                    continue
+                alvo = no.func
+                chamado = (alvo.attr if isinstance(alvo, ast.Attribute)
+                           else alvo.id if isinstance(alvo, ast.Name) else "")
+                if chamado == nome:
+                    achados.add((arquivo.name, funcao.name))
+    return achados
+
+
+def test_so_o_x_dela_esquece_um_pareamento_pela_tela() -> None:
+    """Na tela, o pareamento sai por UM caminho: o X dela («Esquecer» da
+    pergunta, ``confirmar_esquecer``). A meia chave do «Não Conectou» é da
+    central (``central_do_radio._esquecer_a_meia_chave``); o fio da tela que a
+    tirava de novo, a partir de um retrato do BlueZ de até 3 s, podia apagar o
+    objeto ``Paired`` do «Tentar de Novo» feito logo depois do veredito.
+
+    MORDIDA: devolva o ``_esquecer_as_meias_chaves`` (o fio que chama
+    ``_esquecer_o_pareamento`` a cada «não chegou») — um segundo chamador
+    aparece e esta régua reprova.
+    """
+    assert _quem_chama("_esquecer_o_pareamento") == {("a08_conexoes.py", "confirmar_esquecer")}
+    assert _quem_chama("esquecer_o_pareamento") == {("a08_conexoes.py", "_esquecer_o_pareamento")}

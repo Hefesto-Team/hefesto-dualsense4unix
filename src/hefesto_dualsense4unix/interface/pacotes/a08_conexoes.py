@@ -5898,15 +5898,13 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
                            for a in adaptadores_bz}
     aparelhos = _aparelhos_da_cena(ctx, st, governador, esperando, aparelhos_bz,
                                    endereco_do_caminho, enderecos)
-    falhas = _os_que_nao_conectaram(ctx, movimentos, agora, enderecos, aparelhos_bz,
-                                    endereco_do_caminho)
+    falhas = _os_que_nao_conectaram(ctx, movimentos, agora, enderecos)
     aparelhos += falhas
     no_usb = frozenset(_so_hex(str(c.get("uniq") or "")) for c in ctx.conectados
                        if str(c.get("transport") or "").lower() == "usb")
     aparelhos += _os_desligados(aparelhos_bz, endereco_do_caminho, aparelhos, no_usb)
     for lug in lugares:
         lug["nao_conectou"] = any(f["lugar"] == lug["id"] for f in falhas)
-    _esquecer_as_meias_chaves(falhas)
     declarados = _radios_declarados(_declaracao())
     para_id, rotulo_do_tipo = _tipos_de_radio()
     vizinhos = []
@@ -6093,8 +6091,6 @@ _RECUSA_DA_CENTRAL = "ocupado"
 #: Os «Não Conectou» que ela fechou no X, ou refez no «Tentar de Novo» — pela
 #: chave do movimento, para o mesmo não voltar no tique seguinte.
 _DISPENSADOS: set[str] = set()
-#: As meias chaves que esta tela já mandou esquecer: uma vez por movimento.
-_MEIAS_CHAVES_PEDIDAS: set[str] = set()
 
 
 def _chave_da_falha(m: dict[str, Any]) -> str:
@@ -6103,8 +6099,7 @@ def _chave_da_falha(m: dict[str, Any]) -> str:
 
 
 def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agora: float,
-                           enderecos: list[str], aparelhos_bz: tuple[Any, ...],
-                           endereco_do_caminho: dict[str, str]) -> list[dict[str, Any]]:
+                           enderecos: list[str]) -> list[dict[str, Any]]:
     """A linha «Não Conectou» de cada adaptador cujo ÚLTIMO movimento não chegou.
 
     Não chegou é a central dizendo «não chegou» (qualquer motivo, menos a
@@ -6112,20 +6107,15 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
     :data:`ESPERA_NA_TELA_S`. Um por adaptador, o mais novo: o «Conectar» que
     ela refez e chegou apaga o de antes.
 
-    A MEIA CHAVE (item 5, MEDIDO no diário dela de 26/09): o ``Pair`` do branco
-    deu, a busca de serviços caiu em ``Host is down``, e ele ficou ``Paired``
-    sem nunca ficar ``Connected`` — um pareamento pela metade no adaptador. A
-    linha sabe disso pelo BlueZ (``meia_chave``), e a tela a esquece
-    (:func:`_esquecer_as_meias_chaves`).
-
-    A MEIA CHAVE SÓ É MEIA DEPOIS DO VEREDITO DA CENTRAL (o conferente,
-    26/09/2026). Enquanto ela diz «esperando», o movimento ainda está vivo: o
-    ``Pair`` pode ter acabado de dar, e o ``Connect`` e a conferência correm,
-    ou ela vigia o controle até o ``PRAZO_DO_PENDENTE_S`` dela. O objeto
-    ``Paired`` sem ``Connected`` desse instante é a chave que ela está
-    conferindo, e apagá-la no relógio da tela matava um pareamento que ainda
-    podia chegar. A linha «Não Conectou» aparece no prazo da tela; a chave sai
-    quando a central disser «não chegou».
+    A MEIA CHAVE É DA CENTRAL, E A TELA SÓ MOSTRA (achado 8 da auditoria de
+    26/09, A-CAIXA-FICA-ONDE-ELA-ABRIU-01). O ``Pair`` do branco deu, a busca de
+    serviços caiu em ``Host is down``, e ele ficou ``Paired`` sem nunca ficar
+    ``Connected`` (o diário dela de 26/09). Quem tira essa chave é a central,
+    antes de publicar o «não chegou» (``central_do_radio._esquecer_a_meia_chave``).
+    A tela a tirava de novo, num fio, a partir de um retrato do BlueZ de até 3 s
+    — e o «Tentar de Novo» logo depois do veredito podia ter criado o objeto
+    ``Paired`` do pareamento novo, que o fio da tela apagaria. A linha «Não
+    Conectou» aparece no prazo da tela, e o X dela esquece o que sobrar.
     """
     ultimo: dict[str, dict[str, Any]] = {}
     for m in movimentos:
@@ -6152,10 +6142,6 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
                 else _tipo_do_aparelho(str(m.get("icone") or ""),
                                        classe if isinstance(classe, int) else None))
         cor = _hex_do_plastico(str(eu.get("cor") or ""))
-        meia = bool(aparelho) and estado == _NAO_CHEGOU_NA_CENTRAL and any(
-            _mac(a.endereco) == aparelho and endereco_do_caminho.get(str(a.adaptador)) == destino
-            and a.pareado is True and a.conectado is not True
-            for a in aparelhos_bz)
         linhas.append({
             "id": f"nao-conectou-{_so_hex(destino)}", "aparelho": aparelho,
             "tipo": tipo, "lugar": destino, "nome": str(m.get("nome") or ""),
@@ -6165,7 +6151,7 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
             "cor": cor if cor.startswith("#") else "",
             "cor_nome": "" if str(eu.get("nome") or "") in ("", _cor_desconhecida())
             else str(eu["nome"]),
-            "nao_conectou": True, "meia_chave": meia, "chave": chave,
+            "nao_conectou": True, "chave": chave,
             "esperando": False, "fixo": True,
         })
     return linhas
@@ -6251,34 +6237,6 @@ def _esquecer_o_pareamento(lugar: str, aparelho: str) -> Any:
 
     return gesto_de_pareamento.esquecer_o_pareamento(
         _com_dois_pontos(lugar), _com_dois_pontos(aparelho), quem="tela")
-
-
-def _esquecer_as_meias_chaves(falhas: list[dict[str, Any]]) -> None:
-    """DITO O «NÃO CHEGOU», A MEIA CHAVE SAI (item 5): o controle que o ``Pair``
-    registrou e que nunca ficou ``Connected`` não fica com pareamento pela
-    metade no adaptador — e a linha oferece «Tentar de Novo». O prazo é o da
-    central, que é a dona do movimento (:func:`_os_que_nao_conectaram`). Uma
-    vez por movimento, num fio: o tique não espera o rádio.
-
-    Só a chave DAQUELE controle, naquele adaptador, e só com o BlueZ dizendo
-    ``Paired`` e não ``Connected`` (`_os_que_nao_conectaram`). Quem está no ar
-    nunca sai por aqui.
-    """
-    for f in falhas:
-        if not f.get("meia_chave") or f["chave"] in _MEIAS_CHAVES_PEDIDAS:
-            continue
-        _MEIAS_CHAVES_PEDIDAS.add(f["chave"])
-
-        def trabalhar(lugar: str = f["lugar"], aparelho: str = f["aparelho"]) -> None:
-            # A limpeza nunca derruba a tela: sem ela, o X segue valendo.
-            with contextlib.suppress(Exception):
-                _esquecer_o_pareamento(lugar, aparelho)
-            _esquecer("bluez")
-
-        if LER_NA_HORA:
-            trabalhar()
-        else:
-            threading.Thread(target=trabalhar, name="radio-meia-chave", daemon=True).start()
 
 
 def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, Any],

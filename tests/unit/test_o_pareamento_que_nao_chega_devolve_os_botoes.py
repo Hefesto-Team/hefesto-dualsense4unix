@@ -37,7 +37,8 @@ buracos que a conferência da 01 deixou fora da posse dela:
    volta da vigia;
 7. **a meia chave do lado do daemon**: ela saía só com a janela aberta (quem a
    tirava era a tela); agora a central a tira no «não chegou», antes de
-   publicá-lo, com a janela fechada.
+   publicá-lo, com a janela fechada — e desde 28/09 só ela
+   (A-CAIXA-FICA-ONDE-ELA-ABRIU-01: a tela só mostra).
 
 Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
 """
@@ -214,7 +215,7 @@ def test_a_busca_que_ninguem_respondeu_vira_nao_conectou_e_o_x_tira_a_linha(
 
         cena = bancada.cena()
         (linha,) = _linhas(cena, VARANDA, nao_conectou=True)
-        assert linha["aparelho"] == "" and linha["meia_chave"] is False
+        assert linha["aparelho"] == ""
         assert cena["ocupado"] is False and cena["aberto"] == id_da_tela(VARANDA)
 
         assert bancada.gesto("esquecer-aparelho", alvo=linha["id"],
@@ -239,16 +240,15 @@ def test_o_branco_perde_a_meia_chave_so_ali_e_tenta_de_novo_no_mesmo_adaptador(
     naquele adaptador — pelo mesmo verbo do X —, e «Tentar de Novo» abre outro
     «Conectar» no MESMO adaptador, onde ele chega.
 
-    DOIS DONOS PARA A MESMA CHAVE, E UMA LÁPIDE SÓ: desde a
-    O-RADIO-CONECTA-ONDE-ELA-MANDA-02 a central a tira ANTES de publicar o «não
-    chegou» (``_esquecer_a_meia_chave``), e a tela, que só apaga depois do
-    veredito (``_esquecer_as_meias_chaves``), encontra o adaptador limpo. Com a
-    janela aberta, qualquer um dos dois basta — a régua da janela FECHADA, que
-    só tem a central, é ``test_com_a_janela_fechada_a_central_tira_a_meia_chave_no_nao_chegou``.
+    UM DONO PARA A CHAVE, E UMA LÁPIDE SÓ: a central a tira ANTES de publicar o
+    «não chegou» (``_esquecer_a_meia_chave``, desde a
+    O-RADIO-CONECTA-ONDE-ELA-MANDA-02). Até 28/09 a tela a tirava de novo depois
+    do veredito; saiu na A-CAIXA-FICA-ONDE-ELA-ABRIU-01 (achado 8 da auditoria
+    de 26/09), e a tela só mostra.
 
-    MORDIDA: faça os DOIS não fazerem nada — o objeto ``Paired`` sem
-    ``Connected`` fica no adaptador e esta régua reprova. (Medido em 26/09:
-    arrancar só o da central deixa esta verde, pela tela.)
+    MORDIDA: faça ``_esquecer_a_meia_chave`` devolver ``False`` sem esquecer — o
+    objeto ``Paired`` sem ``Connected`` fica no adaptador e esta régua reprova
+    (até 28/09 ela ficava verde assim, pela tela).
     """
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     mundo.pair_mente = True
@@ -460,18 +460,24 @@ def _esquecer_com_prazo_curto(a08: Any, bancada: Bancada, clique: dict[str, Any]
 
 
 @pytest.mark.parametrize("destino", (SALA, QUARTO, VARANDA))
-def test_a_meia_chave_so_sai_depois_do_veredito_da_central(
+def test_a_tela_nao_tira_a_meia_chave_nem_depois_do_veredito(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str,
 ) -> None:
     """Passado o prazo, a TELA solta o «esperando» e diz «Não Conectou»; a CENTRAL ainda
     diz «esperando» — ela confere o controle até o ``PRAZO_DO_PENDENTE_S`` dela, e
     o objeto ``Paired`` sem ``Connected`` desse instante é a chave que ela está
-    conferindo. A tela não a apaga no relógio dela: a chave só sai quando a
-    central disser «não chegou».
+    conferindo. A tela não a apaga no relógio dela.
 
-    MORDIDA: tire ``estado == _NAO_CHEGOU_NA_CENTRAL`` da ``meia`` de
-    ``_os_que_nao_conectaram`` — a chave sai com o prazo da tela, com a central ainda
-    conferindo, e esta régua reprova nos três adaptadores.
+    E NEM DEPOIS DO VEREDITO (achado 8 da auditoria de 26/09,
+    A-CAIXA-FICA-ONDE-ELA-ABRIU-01): a meia chave é da central, que a tira antes
+    de publicar o «não chegou». Aqui o «não chegou» é publicado sem a central
+    ter rodado — a chave continua no adaptador, e nada sai do rádio pela tela.
+    Quem a tira de verdade é a régua da central,
+    ``test_com_a_janela_fechada_a_central_tira_a_meia_chave_no_nao_chegou``.
+
+    MORDIDA: devolva à tela o fio que esquecia a meia chave depois do veredito
+    (``_esquecer_as_meias_chaves`` no ``cena_do_radio``) — o ``RemoveDevice`` sai
+    pela tela e esta régua reprova nos três adaptadores.
     """
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     mundo.pareado(destino, VERDE, conectado=False)
@@ -484,16 +490,18 @@ def test_a_meia_chave_so_sai_depois_do_veredito_da_central(
         _com_a_central(bancada, monkeypatch, conferindo)
         cena = bancada.cena()
         (linha,) = _linhas(cena, destino, nao_conectou=True)
-        assert linha["aparelho"] == id_da_tela(VERDE) and linha["meia_chave"] is False
+        assert linha["aparelho"] == id_da_tela(VERDE)
         assert mundo.objeto(destino, VERDE) is not None, "a tela apagou a chave em conferência"
         assert mundo.metodos("RemoveDevice") == [] and mundo.lapides == []
 
         _com_a_central(bancada, monkeypatch, cr.Movimento(
             VERDE, destino, cr.NAO_CHEGOU, cr.PASSO_FIM, motivo=cr.MOTIVO_PRAZO,
             pareou_no_destino=True, quando=quando))
-        bancada.cena()
-        assert mundo.objeto(destino, VERDE) is None, "o «não chegou» deixou a meia chave"
-        assert mundo.lapides == [(destino, VERDE)]
+        for _ in range(3):
+            (linha,) = _linhas(bancada.cena(), destino, nao_conectou=True)
+        assert linha["aparelho"] == id_da_tela(VERDE), "a linha «Não Conectou» sumiu"
+        assert mundo.objeto(destino, VERDE) is not None, "a tela tirou a meia chave"
+        assert mundo.metodos("RemoveDevice") == [] and mundo.lapides == []
     finally:
         bancada.fechar()
 
