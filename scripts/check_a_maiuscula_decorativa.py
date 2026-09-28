@@ -247,6 +247,7 @@ SIGLA = frozenset({
 #: aqui reprova.
 #:
 #: LEVANTADA EM 11/09/2026, nas dez páginas publicadas.
+#: sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
 DIVIDA: dict[str, tuple[str, str]] = {
     # -- os rótulos de grupo do desenho do DualSense --------------------------
     # Dez títulos de `<title>` dentro do SVG, em caixa alta. Pela regra dela de

@@ -1015,8 +1015,10 @@ def test_a_frase_e_a_coluna_dizem_o_mesmo_nome_da_mesma_porta(
 #: não é ``Assign``, e é o dono da LEITURA do nome.
 _O_DONO = "utils/rotulo_da_entrada.py"
 _OS_QUE_PODEM = {
+    # fica: é o dono da palavra, e as duas entradas dele são a regra
     (_O_DONO, "define a palavra"): "é o dono (D-2609-O-NOME-E-DA-POSICAO)",
     (_O_DONO, "compõe com a palavra"): "é o dono (D-2609-O-NOME-E-DA-POSICAO)",
+    # sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01 (a cópia da palavra é um segundo dono)
     ("app/widgets/calibrar_entradas.py", "define a palavra"): (
         "a cópia que o gerador da aba 08 lê por AST — não importa do dono sem "
         "quebrar o gerador; travada junto por test_entrada_a_entrada_grava.py"
@@ -1024,10 +1026,12 @@ _OS_QUE_PODEM = {
     # ── os achados da busca SEM MAIÚSCULA (O-MAPA-QUE-ELA-CORRIGE-01, 26/09/2026).
     # Os que diziam a entrada na tela foram curados (as ordens, as recusas da
     # aba 08, o governador, a página do mapa); estes ficam, cada um pela razão.
+    # fica: o contador da calibração conta passos, não nomeia uma entrada
     ("app/widgets/calibrar_entradas.py", "tem um modelo de .format"): (
         "o contador da calibração («entrada 3 de 7») conta PASSOS, não nomeia uma "
         "entrada; e `app/widgets/` está fora da posse da O-MAPA-QUE-ELA-CORRIGE-01"
     ),
+    # sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
     ("app/actions/config/secao_mesa.py", "tem um modelo de .format"): (
         "a dica de procedência da seção GTK («está na entrada {numero}»), fora da "
         "posse da O-MAPA-QUE-ELA-CORRIGE-01 — dívida declarada no relatório dela"
@@ -1049,6 +1053,7 @@ _OS_QUE_PODEM = {
         "O-MAPA-QUE-ELA-CORRIGE-01 (a sprint manda parar e avisar): o contador "
         "da calibração e as frases do desenho — dívida declarada no relatório"
     ),
+    # fica: o contador conta passos, e a mensagem do esquema cita o valor recusado
     ("interface/pacotes/a08_conexoes.py", "compõe uma f-string"): (
         "o contador da calibração («entrada 3 de 7») conta PASSOS, não nomeia uma "
         "entrada; as recusas da aba perguntam ao dono (`_a_entrada_na_frase`)"

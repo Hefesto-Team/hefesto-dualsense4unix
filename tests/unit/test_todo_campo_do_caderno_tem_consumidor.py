@@ -51,6 +51,7 @@ CONSUMIDOR_DE_PRODUCAO: dict[str, str] = {
 #: campo → motivo NOMEADO da isenção. Sem consumidor de produção HOJE — a
 #: pergunta se deveria ter um é dela, e está registrada em §9 do
 #: CONFIGURAÇÕES-FECHA-01 (24/08/2026).
+#: sai com: AS-ISENCOES-QUE-ESPERAM-A-PALAVRA-DELA-01
 ISENTOS: dict[str, str] = {
     "mesa.radios": (
         "RadioDeclarado.tipo/apelido só repintam a própria seção "

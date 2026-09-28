@@ -82,6 +82,7 @@ _CAMADAS = ("rapido|", "completo|", "suite|")
 #: dívida envelhecer calada. No dia em que o chamador nascer, a entrada REPROVA
 #: e tem de ser apagada (`test_nenhuma_divida_sobreviveu_a_propria_cura`).
 _SEM_CHAMADOR_HOJE: dict[str, str] = {
+    # fica: é o portão do MERGE, por desenho: pergunta ao daemon vivo da mesa dela
     "scripts/check_a_conferencia_dela.py": (
         "MEDIDO em 08/09/2026, e ele fica fora das duas listas POR DESENHO, não "
         "por esquecimento. Ele é a tabela que ELA escreveu — a coluna «✓ na "
@@ -103,6 +104,7 @@ _SEM_CHAMADOR_HOJE: dict[str, str] = {
         "Ele fecha quando as três linhas da direita fecharem E existir bancada "
         "automatizada — a segunda condição é que não existe hoje."
     ),
+    # sai com: OS-PORTOES-QUE-NINGUEM-CHAMA-01
     "scripts/check_bancada_de_bt.py": (
         "MEDIDO em 01/09/2026, e ele NASCEU sem chamador de propósito. A escada "
         "de releases (`docs/process/2026-08-24-A-ESCADA-DE-RELEASES.md`, degrau "

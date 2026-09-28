@@ -253,6 +253,7 @@ def test_o_nao_sei_da_mesa_e_o_mesmo_texto_das_duas_bandas() -> None:
 #: caso estreito — a mesma linha, letra por letra, duas vezes no mesmo corpo —
 #: e o preço de fechá-lo seria trazer de volta o número de linha e o aluguel.
 EXCECOES_DATADAS: dict[str, str] = {
+    # fica: nenhuma das duas lê o jogador do controle (medido em 02/09 e 09/09)
     '_jogador_esperando: return "" if c.get("player") is not None else "1"': (
         "a01_jogar.py (04/09/2026) — A EXCEÇÃO MAIS ESTRITA DA LISTA, e a única "
         "em que trocar por `jogador_de` MATA a feature. Ela não lê o `player` "

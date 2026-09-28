@@ -55,6 +55,7 @@ ESTE_ARQUIVO = Path(__file__).resolve().name
 # rodar também contra o GTK real. Acrescentar um nome aqui = o portão foi
 # desligado; não faça — e o `TETO_DA_DIVIDA` abaixo reprova quem tentar.
 # ---------------------------------------------------------------------------
+# sai com: AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01
 DIVIDA_GI_FALSO: frozenset[str] = frozenset(
     {
         "test_auto01_um_clique_em_vez_de_dez.py",

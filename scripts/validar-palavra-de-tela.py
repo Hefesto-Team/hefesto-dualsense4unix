@@ -517,6 +517,7 @@ def conferir_html(raiz: Path = PAGINAS) -> list[str]:
 #: `ORFAOS-DA-MIGRACAO-01`. A régua avisava com todas as letras que a entrada
 #: tinha de sair (*"a frase foi trocada, e é uma boa notícia"*), e aqui a
 #: frase não foi trocada: o arquivo inteiro saiu do caminho.
+#: sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
 DIVIDA_DA_PALAVRA_01_PY: dict[str, str] = {
     "ERRO ao aplicar perfil (daemon offline?).": (
         "23/08/2026 — `app/actions/footer_actions.py`, o aviso de falha ao "

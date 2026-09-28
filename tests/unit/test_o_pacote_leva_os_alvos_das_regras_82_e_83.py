@@ -94,6 +94,7 @@ GANCHOS_DE_REMOCAO = {
 #: A DÍVIDA DECLARADA — `formato: razão com data`. Declarar é honesto e este
 #: portão não castiga honestidade; ele só não deixa a lápide envelhecer calada.
 #: A conferência da morte está em `test_lacuna_declarada_que_ja_nao_vale_reprova`.
+#: sai com: O-NIX-LEVA-AS-REGRAS-DO-HOST-01
 LACUNA_HOJE = {
     "nix": (
         "22/08/2026 — o package.nix leva as regras 82/83, mas NÃO leva o "

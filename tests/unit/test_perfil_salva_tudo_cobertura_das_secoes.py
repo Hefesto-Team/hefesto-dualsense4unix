@@ -57,6 +57,7 @@ _IRMAO = Path(__file__).with_name("test_perfil_salva_tudo_ida_e_volta.py")
 #: Campos de ``Profile`` que NÃO precisam de ida e volta, com a razão escrita.
 #: Isenção sem razão é lista de exceções disfarçada de decisão; a razão é o que
 #: permite a próxima pessoa discordar com conhecimento de causa.
+#: fica: o campo não tem gesto que o escreva por desenho, e a razão está no valor
 ISENTOS: dict[str, str] = {
     "button_actions": (
         "FEAT-ACOES-DE-BOTAO-01 (01/09/2026). A isenção é do INSTRUMENTO, não do "
@@ -125,6 +126,7 @@ ISENTOS: dict[str, str] = {
         "passthrough tem testemunha própria em "
         "`test_o_carimbo_de_ponte_sobrevive_ao_salvar.py`."
     ),
+    # sai com: AS-ISENCOES-QUE-ESPERAM-A-PALAVRA-DELA-01
     "teclado_emulado": (
         "Z4/T14 (24/08/2026), PROVISÓRIO — decisão dela em aberto (D-A do "
         "2026-08-24-ONDA0-Z4). O campo e a precedência pura "

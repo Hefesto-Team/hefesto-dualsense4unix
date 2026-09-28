@@ -337,6 +337,7 @@ FATOS: dict[str, str] = {
 #: outras frentes hoje (as 352 mudanças de texto dela), e reescrever a frase de
 #: quem está com o arquivo na mão é como se perde trabalho de duas pessoas.
 #: **O endereço de cada uma está aqui, e a lista volta a encolher.**
+#: sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
 A_DIVIDA: dict[str, str] = {
     "está desenhado na tela e o Hefesto não sabe montar essa máscara":
         "`interface/pacotes/a01_jogar.py` — a tela OFERECE uma máscara que o "
@@ -361,6 +362,7 @@ A_DIVIDA: dict[str, str] = {
     # (OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01). O sujeito é o JOGO que
     # ela escolheu, e o «não estivesse» é a ESCOLHA dela, não falta nossa: a
     # frase diz o que a exclusão faz, e o «Tirar da lista» desfaz.
+    # fica: a frase descreve a escolha dela, e não uma capacidade que devemos
     "como se o Hefesto não estivesse instalado":
         "o sujeito é o JOGO excluído por ela; a frase descreve a escolha, não "
         "uma capacidade que devemos — 21/09/2026",

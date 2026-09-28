@@ -548,6 +548,7 @@ ESPERADO_VERMELHO: dict[tuple[str, str], str] = {
 #: a chave é a aba e o começo do `title` da peça cortada. Só ela sai da conta — o
 #: resto da aba continua medido —, e no dia em que ela couber o artigo 1 reprova
 #: até a linha sair daqui, que é o `strict` desta tabela.
+#: sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
 CORTE_CONHECIDO_NO_DESENHO: dict[tuple[str, str], str] = {
     ("09-sistema.html", "Sobreposição Vulkan:"): (
         "DEFEITO VIVO que o desenho escondia até 26/09/2026 — a linha do Vulkan "
