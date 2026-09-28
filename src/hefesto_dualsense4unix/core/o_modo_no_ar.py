@@ -34,6 +34,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
+
 OK = "ok"
 AVISO = "aviso"
 FALHA = "falha"
@@ -389,7 +391,7 @@ class HoraDoPad:
         pad = f"o pad {_NOME_DA_MASCARA.get(self.mascara or '', 'virtual')} das {self.hora}"
         if self.atraso_s is None:
             return f"{pad} não foi medido: o diário do kernel não tem a criação dele"
-        numero = f"{self.atraso_s:.1f}".replace(".", ",")
+        numero = formata_pt_br(self.atraso_s)
         if self.veredito == FALHA:
             return (
                 f"{pad} levou {numero} s para nascer: algo pediu vibração antes de "
