@@ -1,0 +1,19 @@
+# As versões que a casa MEDIU no aparelho — O-PRODUTO-EM-QUALQUER-MAQUINA-01,
+# B3 (28/09/2026), a L4 do estudo `2026-09-27-o-basico-e-os-jogos`.
+#
+# O `pyproject.toml` diz o que o código ACEITA (`evdev>=1.6`); este arquivo diz o
+# que rodou com os controles na mesa. O `install.sh` e o CI instalam com
+# `pip install -c constraints.txt`, e uma régua
+# (`tests/unit/test_as_versoes_que_a_casa_mediu.py`) reprova a `.venv` que
+# divergir daqui.
+#
+# O PORQUÊ DO `evdev`: a cura da queda da sessão sobrescreve o
+# `UInput._find_device` (`integrations/uinput_gamepad.py`), e ela vale no 2.0.0
+# por COINCIDÊNCIA, e não por contrato. O pip de uma máquina nova entregava o
+# 2.0.0 (de 23/08/2026), que nenhum aparelho desta casa rodou; o daqui é o
+# 1.7.0, o do apt, que o `python3-inputremapper` trouxe. Trocar uma linha
+# destas é trocar de versão DE PROPÓSITO, com a medida no aparelho junto.
+evdev==1.7.0
+hidapi-usb==0.3.2
+pydantic==2.13.5
+pydualsense==0.7.5
