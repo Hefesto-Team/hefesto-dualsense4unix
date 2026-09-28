@@ -57,7 +57,7 @@ _IRMAO = Path(__file__).with_name("test_perfil_salva_tudo_ida_e_volta.py")
 #: Campos de ``Profile`` que NÃO precisam de ida e volta, com a razão escrita.
 #: Isenção sem razão é lista de exceções disfarçada de decisão; a razão é o que
 #: permite a próxima pessoa discordar com conhecimento de causa.
-#: fica: o campo não tem gesto que o escreva por desenho, e a razão está no valor
+#: fica: o valor não é escolha dela, ou a isenção é do instrumento e o campo tem régua própria
 ISENTOS: dict[str, str] = {
     "button_actions": (
         "FEAT-ACOES-DE-BOTAO-01 (01/09/2026). A isenção é do INSTRUMENTO, não do "
