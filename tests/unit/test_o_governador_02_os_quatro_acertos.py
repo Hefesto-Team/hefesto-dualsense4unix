@@ -649,10 +649,13 @@ def test_o_nome_da_porta_pergunta_aos_donos(monkeypatch: pytest.MonkeyPatch) -> 
     )
     assert gov.nome_da_porta(ADAPTADOR_A.upper(), amostra=amostra) == "Entrada 9"
 
-    # D3: o nome que ela deu ao LUGAR vence o número — é o dono quem diz.
+    # O nome que ela deu à ENTRADA vence o número — é o dono quem diz
+    # (D-2609-O-NOME-E-DA-POSICAO; o nome do LUGAR, a D3, caiu em 26/09, e o
+    # `lugares` saiu do esquema em 28/09).
     com_nome = maquina.MaquinaConfig(
-        mapa=declarada.mapa,
-        lugares={maquina.lugar_de(pci, "4.1.4"): maquina.LugarDeclarado(nome="Sala")},
+        mapa=maquina.MapaDaMesa(
+            portas={"9": maquina.PortaDeclarada(caminho="3-4.1.4", nome="Sala")}
+        ),
     )
     monkeypatch.setattr(ee, "carregar_maquina", lambda: com_nome)
     assert gov.nome_da_porta(ADAPTADOR_A, amostra=amostra) == "Sala"

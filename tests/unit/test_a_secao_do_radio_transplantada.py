@@ -178,8 +178,7 @@ def mesa(a08: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
                         "AA:BB:CC:00:00:44", nome="Caixa", conectado=True, classe=0x240414),
     )
     monkeypatch.setattr(a08, "_ler_o_bluez", lambda: (adaptadores, aparelhos))
-    maquina = MaquinaConfig(lugares={LUGAR_1: {}},
-                            adaptadores={A1.replace(":", ""): {"nome": "Sala"}})
+    maquina = MaquinaConfig(adaptadores={A1.replace(":", ""): {"nome": "Sala"}})
     monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (maquina, {3: PCI}))
     monkeypatch.setattr(a08, "_ler_o_historico", lambda: {})
     return a08

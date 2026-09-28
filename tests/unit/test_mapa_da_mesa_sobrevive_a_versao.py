@@ -97,9 +97,11 @@ def test_o_mapa_vai_ao_disco_e_volta_igual(arquivo: Path) -> None:
         "volta a dizer que o dongle está na porta do hub, que é onde ele NÃO "
         "está — o defeito que a extensão inteira existe para curar"
     )
+    # O caminho não vai ao disco desde a A-ENTRADA-TEM-UM-REGISTRO-SO-01
+    # (28/09/2026): ele vira o nó do buraco, e se calcula na leitura.
     assert _documento(arquivo)["mapa"]["portas"]["15a"] == {
-        "caminho": "3-1.1.4",
         "filha_de": "15",
+        "nos": ["3-1.1-port4"],
     }
 
 

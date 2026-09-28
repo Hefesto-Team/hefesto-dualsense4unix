@@ -87,7 +87,6 @@ def bancada(monkeypatch: Any) -> Any:
         monkeypatch.setattr(p, "_ler_o_bluez", lambda: (adaptadores, ()))
         # O NOME É DO ADAPTADOR, pelo endereço (D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO).
         maquina = MaquinaConfig(
-            lugares={lg: {} for lg in lugares},
             adaptadores={f"aabbcc0000{i + 10:02d}": {"nome": nome} for i, nome in enumerate(nomes)})
         monkeypatch.setattr(p, "_ler_a_maquina", lambda: (maquina, {3: PCI}))
 

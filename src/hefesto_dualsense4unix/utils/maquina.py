@@ -1209,7 +1209,8 @@ def migrar_o_documento(bruto: Mapping[str, Any]) -> dict[str, Any]:
        mora em ``adaptadores``), ou o de uma amarra caducada, que a tela já não
        mostrava. A cópia de antes (``.com-os-lugares``) os guarda.
     6. O ``caminho`` de cada entrada vira o nó do buraco
-       (``utils/lugar.no_do_caminho``) e sai: ele se calcula na leitura.
+       (``utils/lugar.no_do_caminho``) e sai: ele se calcula na leitura. O de
+       forma torta fica, para o esquema o recusar com o resgate de sempre.
 
     Sem ``lugares`` e sem ``caminho``, devolve uma cópia igual.
     """
@@ -1341,19 +1342,27 @@ def _levar_os_lugares(documento: dict[str, Any], lugares: Mapping[Any, Any]) -> 
 
 
 def _o_caminho_vira_no(numero: str, porta: dict[str, Any]) -> None:
-    """O passo 5 de :func:`migrar_o_documento`, numa entrada."""
-    caminho = porta.pop("caminho")
+    """O passo 6 de :func:`migrar_o_documento`, numa entrada.
+
+    O caminho de forma torta FICA: quem o recusa é o esquema, com o resgate
+    campo-a-campo de sempre (e a cópia ``.invalido``) — a migração não apaga
+    calada o que não entende.
+    """
+    caminho = porta.get("caminho")
+    if caminho is None:
+        porta.pop("caminho")
+        return
     no = no_do_caminho(caminho) if isinstance(caminho, str) else ""
     if not no:
         return
     nos = porta.get("nos")
     nos = [x for x in nos if isinstance(x, str)] if isinstance(nos, list) else []
-    if no in nos:
-        return
-    if len(nos) >= _MAXIMO_DE_NOS_POR_ENTRADA:
-        logger.warning("maquina_migracao_caminho_sem_vaga_nos_nos", entrada=numero)
-        return
-    porta["nos"] = [*nos, no]
+    if no not in nos:
+        if len(nos) >= _MAXIMO_DE_NOS_POR_ENTRADA:
+            logger.warning("maquina_migracao_caminho_sem_vaga_nos_nos", entrada=numero)
+        else:
+            porta["nos"] = [*nos, no]
+    porta.pop("caminho")
 
 
 def caminho_da_maquina() -> Path:

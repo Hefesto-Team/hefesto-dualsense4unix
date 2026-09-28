@@ -36,7 +36,7 @@ from hefesto_dualsense4unix.integrations.censo_do_barramento import (
     Censo,
 )
 from hefesto_dualsense4unix.interface import arranjo_desta_maquina
-from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
+from hefesto_dualsense4unix.utils.maquina import MaquinaConfig, migrar_o_documento
 from tests.unit.test_o_nome_da_entrada_e_da_posicao import _a_maquina_dela
 
 
@@ -72,7 +72,7 @@ def _documento(**mudar: Any) -> MaquinaConfig:
     dado = _a_maquina_dela()
     for numero, campos in mudar.items():
         dado["mapa"]["portas"].setdefault(numero.lstrip("_"), {}).update(campos)
-    return MaquinaConfig.model_validate(dado)
+    return MaquinaConfig.model_validate(migrar_o_documento(dado))
 
 
 def _arranjo(documento: MaquinaConfig, censo: Censo = _CENSO) -> dict[str, Any]:
@@ -134,7 +134,7 @@ def test_hub_declarado_com_nada_lido_desenha_os_quatro_buracos() -> None:
     for numero in range(9, 16):
         del dado["mapa"]["portas"][str(numero)]
     dado["mapa"]["portas"]["5"]["liga"] = "hub"
-    documento = MaquinaConfig.model_validate(dado)
+    documento = MaquinaConfig.model_validate(migrar_o_documento(dado))
     assert ee.de_quem_pende(documento.mapa) == {}
     arranjo = _arranjo(documento, Censo(barramentos=_CENSO.barramentos))
     fantasma = _a_face(arranjo, ee.FACE_DO_HUB_DECLARADO.format(numero="5"))
@@ -149,14 +149,14 @@ def test_dois_hubs_lidos_cada_um_com_a_sua_face() -> None:
     dado["mapa"]["faces"].append({"nome": "Outro hub", "portas": ["16", "17"]})
     dado["mapa"]["portas"]["16"] = {"caminho": "3-4.1", "nos": ["3-4-port1", "4-4-port1"]}
     dado["mapa"]["portas"]["17"] = {"caminho": "3-4.2", "nos": ["3-4-port2", "4-4-port2"]}
-    pende = ee.de_quem_pende(MaquinaConfig.model_validate(dado).mapa)
+    pende = ee.de_quem_pende(MaquinaConfig.model_validate(migrar_o_documento(dado)).mapa)
     assert {nome: p.entrada for nome, p in pende.items()} == {_HUB: "3", "Outro hub": "6"}
 
 
 def test_a_face_mista_nao_pende_de_ninguem() -> None:
     dado = _a_maquina_dela()
     dado["mapa"]["faces"][2]["portas"].append("7")
-    assert _HUB not in ee.de_quem_pende(MaquinaConfig.model_validate(dado).mapa)
+    assert _HUB not in ee.de_quem_pende(MaquinaConfig.model_validate(migrar_o_documento(dado)).mapa)
 
 
 def test_o_hub_desplugado_continua_ligado() -> None:

@@ -36,12 +36,17 @@ from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
 from hefesto_dualsense4unix.integrations import ordens_da_mesa as ordens
 from hefesto_dualsense4unix.integrations.censo_do_barramento import Censo
 from hefesto_dualsense4unix.interface import arranjo_desta_maquina, onde
-from hefesto_dualsense4unix.utils.maquina import MaquinaConfig, lugar_de
+from hefesto_dualsense4unix.utils.maquina import MaquinaConfig, lugar_de, migrar_o_documento
 from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
     PALAVRA_DA_ENTRADA,
     PALAVRA_NA_FRASE,
 )
-from tests.unit.test_o_nome_da_entrada_e_da_posicao import PCI_A, PCI_B, _a_maquina_dela
+from tests.unit.test_o_nome_da_entrada_e_da_posicao import (
+    PCI_A,
+    PCI_B,
+    _a_maquina_dela,
+    gravar_o_arquivo_de_antes,
+)
 
 #: A página PUBLICADA do mapa, pelo endereço que o produto usa.
 PAGINA = onde.pagina(arranjo_desta_maquina.PAGINA, publicado=True)
@@ -57,7 +62,7 @@ _O_QUE_NAO_SE_DIZ = ("O 13", "o 13", "Entrada: 2", "<b>2</b>", "no Meio", "O Mei
 
 @pytest.fixture()
 def documento() -> MaquinaConfig:
-    return MaquinaConfig.model_validate(_a_maquina_dela())
+    return MaquinaConfig.model_validate(migrar_o_documento(_a_maquina_dela()))
 
 
 def _limpo(texto: str) -> None:
@@ -207,12 +212,10 @@ def test_o_nome_dado_no_mapa_chega_a_sugestao_e_a_ordem(
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
     from hefesto_dualsense4unix.app.actions.config import secao_exame
     from hefesto_dualsense4unix.integrations import censo_do_barramento, entradas_do_gabinete
-    from hefesto_dualsense4unix.integrations.lugar_declarado import declarar_a_maquina
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
-    from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina, carregar_maquina
+    from hefesto_dualsense4unix.utils.maquina import carregar_maquina
 
-    assert caminho_da_maquina().is_relative_to(tmp_path), "o maquina.json não está desviado"
-    assert declarar_a_maquina(_a_maquina_dela()).gravou
+    gravar_o_arquivo_de_antes(tmp_path, _a_maquina_dela())
     assert ee.dar_nome_a_entrada("2", "Frente de cima").gravou
     dela = carregar_maquina()
     assert dela.mapa.portas["2"].nome == "Frente de cima"
