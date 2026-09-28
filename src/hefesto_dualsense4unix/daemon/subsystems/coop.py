@@ -2495,9 +2495,9 @@ class CoopManager:
         - **o controle virtual do PRIMÁRIO espera a carta 1**
           (`D-2309-O-PRIMARIO-ESPERA-A-CARTA-1`). O vpad do P1 nasce no boot,
           antes de o daemon saber qual controle é o primário — então «esperar»
-          é nascer de novo DEPOIS do vpad da carta 1, que é o que o jogo
-          enumera. Quem é o primário não muda: «controle novo nunca rouba o
-          posto» fica;
+          é nascer de novo DEPOIS do vpad da carta 1. NOTA DATADA, 28/09: o
+          primário passou a SER a carta 1 (O-MODO-XBOX-NAO-E-QUEDA-02, item 4),
+          e «quem é o primário não muda» caducou; controle novo não rouba;
         - **controle fora de ordem com o jogo aberto se recria na hora**
           (`D-2309-FORA-DE-ORDEM-SE-RECRIA-NA-HORA`): a carta renumerada na
           aba Controles, a carta menor que chega depois da maior, e o buraco

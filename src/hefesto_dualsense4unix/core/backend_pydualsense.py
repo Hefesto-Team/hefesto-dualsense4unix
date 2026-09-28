@@ -2078,9 +2078,9 @@ class PyDualSenseController(IController):
 
     def __init__(self, evdev_reader: EvdevReader | None = None) -> None:
         # chave (serial/MAC ou path) -> handle aberto. O `dict` preserva ordem
-        # de inserção (py3.7+): o 1º inserido que ainda estiver presente é o
-        # PRIMÁRIO. Controles novos entram no FIM, então nunca roubam o primário
-        # de um já conectado.
+        # de inserção (py3.7+); o PRIMÁRIO é a carta menor, e só sem carta o 1º
+        # inserido presente (O-MODO-XBOX-NAO-E-QUEDA-02, 28/09). Controle novo
+        # entra no FIM da fila, então não rouba o posto de um já conectado.
         self._handles: dict[str, pydualsense] = {}
         self._primary_key: str | None = None
         self._transport: Transport = "usb"
@@ -3835,8 +3835,8 @@ class PyDualSenseController(IController):
         `PRIMARIO_RESERVA_SEC` RETOMA o posto, mesmo já havendo outro sentado
         nele. Sem isso, quem cai entra no fim do dict e nunca mais é o Jogador
         1 — e no rádio, onde cair é rotina, quem é o Jogador 1 depois de
-        algumas piscadas é essencialmente sorteio. A regra da 1ª chave continua
-        valendo para todo o resto: controle NOVO nunca rouba o posto de ninguém.
+        algumas piscadas é essencialmente sorteio. Controle NOVO (sem carta, ou
+        com a carta do fim da fila) segue sem roubar o posto de ninguém.
 
         A armadilha que a sprint nomeou fica coberta por construção: a retomada
         entra pelo MESMO caminho da promoção, então `_detect_transport` e o
