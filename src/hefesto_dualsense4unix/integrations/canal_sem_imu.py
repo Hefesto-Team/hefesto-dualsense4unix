@@ -172,6 +172,14 @@ def canal_sem_imu(*, mascara: object, caminho: object, backend: object) -> bool:
 
     `caminho_resolvido` é chamada e não reimplementada: a regra de *"sem
     escolha, o caminho sai da máscara"* tem um dono, e é ele.
+
+    NOTA DATADA — 28/09/2026 (NO-MODO-XBOX-TUDO-FUNCIONA-01): no modo Xbox
+    escolhido o pad deixou de ser o Edge no `uinput`, que o jogo sob o Proton
+    não usava, e passou a vestir o Xbox 360 (`virtual_pad.mascara_no_jogo`).
+    A `mascara` daqui é a do cartão (o `flavor` do pad), e o evento continua
+    dizendo o mesmo fato: o cartão pediu DualSense, e as dez linhas não chegam
+    ao jogo pelo pad. O que as entrega no modo Xbox é a camada de tradução (a
+    Mira Virtual, o gatilho do perfil no físico), não este canal.
     """
     if str(mascara or "") != MASCARA_QUE_PROMETE:
         return False
