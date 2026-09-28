@@ -61,9 +61,9 @@ O LUGAR, E NUNCA O ``hciN`` NEM A ORDEM DE CHEGADA
 --------------------------------------------------
 
 A chave gravada é o lugar (``utils/lugar``: o controlador PCI e a cadeia de
-portas, a grafia do ``ID_PATH`` do udev), e a amarra confere o ``ID_PATH``
-INTEIRO (``utils/maquina.entrada_do_lugar``). O número do barramento é ordem
-de subida dos xHCI e muda entre boots.
+portas, a grafia do ``ID_PATH`` do udev), DENTRO da entrada
+(``mapa.portas[N].lugar``; ``utils/maquina.entrada_do_lugar`` é a pergunta).
+O número do barramento é ordem de subida dos xHCI e muda entre boots.
 
 "VÊ NO UDEV" É LER A ÁRVORE QUE O UDEV LÊ
 ------------------------------------------
@@ -88,10 +88,11 @@ ONDE GRAVA — UM DONO, E ELE JÁ EXISTIA
 O ``maquina.json``, pelo ``lugar_declarado.declarar_a_maquina``, sem IPC:
 
 * ``mapa.faces`` — o número na face;
-* ``mapa.portas[número]`` — o caminho de barramento e os nós do buraco (o que
-  os seis leitores de hoje e o ``mapa-das-portas.html`` entendem);
-* ``lugares[lugar]`` — a amarra pelo LUGAR, com a testemunha do caminho, e o
-  «Não alcanço» (``fora``).
+* ``mapa.portas[número]`` — UM registro por entrada (A-ENTRADA-TEM-UM-
+  REGISTRO-SO-01, 28/09/2026): o ``lugar`` do buraco, os ``nos``, o nome, a
+  ligação e a velocidade. O caminho de barramento não se guarda: ele se
+  calcula do lugar, com os controladores deste boot;
+* ``mapa.fora`` — os lugares do «Não alcanço».
 
 O QUE ELE NÃO FAZ
 -----------------
@@ -132,12 +133,19 @@ from hefesto_dualsense4unix.integrations.lugar_declarado import (
     declarar_a_maquina,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
-from hefesto_dualsense4unix.utils.lugar import FORMA_DO_CAMINHO, FORMA_DO_NO
+from hefesto_dualsense4unix.utils.lugar import (
+    FORMA_DO_CAMINHO,
+    FORMA_DO_NO,
+    caminho_do_lado_20,
+    no_do_caminho,
+)
 from hefesto_dualsense4unix.utils.maquina import (
     MapaDaMesa,
     MaquinaConfig,
     PortaDeclarada,
+    caminho_da_porta,
     caminho_do_no,
+    caminhos_da_porta,
     caminhos_do_lugar,
     carregar_maquina,
     chave_do_adaptador,
@@ -372,9 +380,10 @@ class PortaVista:
     """Um aparelho num lugar — e o que já se sabe daquele lugar.
 
     ``lugar`` é a chave (D3). ``caminho`` é o nome do kernel DESTE boot, e
-    existe para a tela mostrar («espécie · caminho») e para o ``mapa`` de hoje
-    entender — nunca para chavear. ``entrada``, ``face`` e ``nome`` vêm
-    preenchidos quando ela já disse algo sobre este lugar.
+    existe para a tela mostrar («espécie · caminho») e para achar os nós do
+    buraco na leitura de agora — nunca para chavear, e nunca vai ao disco.
+    ``entrada``, ``face`` e ``nome`` vêm preenchidos quando ela já disse algo
+    sobre este lugar.
     """
 
     lugar: str
@@ -716,7 +725,7 @@ class LacoDaEntrada:
     def nao_alcanco(self) -> dict[str, Any]:
         """«Não alcanço»: tira a vaga da vez da conta DE VEZ.
 
-        Grava ``lugares[lugar].fora`` — *"não vira dívida, não vira aviso, e o
+        Grava o lugar em ``mapa.fora`` — *"não vira dívida, não vira aviso, e o
         Hefesto não volta a perguntar"* — e diminui o TOTAL do contador, não o
         feito. A vaga tirada é a que o kernel menos diz ser de fora
         (``connect_type``), porque a tela não aponta uma: as que sobram são
@@ -728,8 +737,9 @@ class LacoDaEntrada:
                 raise RuntimeError("não há vaga para tirar da conta")
             vaga = self._vagas[0]
             if vaga.lugar:
+                fora = [*self._carregar().mapa.fora, vaga.lugar]
                 recibo = _gravar_no_mapa(
-                    self._gravar, {"lugares": {vaga.lugar: {"fora": True}}}
+                    self._gravar, {"mapa": {"fora": list(dict.fromkeys(fora))}}
                 )
                 self._ultima = Gravacao(vaga.lugar, "", "", recibo.gravou, recibo.motivo)
                 if not recibo.gravou:
@@ -820,8 +830,7 @@ class LacoDaEntrada:
             if set(furo.nos) & self._fora_hoje:
                 continue
             lugar = _lugar_do_furo(furo, controladores)
-            declarado = maquina.lugares.get(lugar) if lugar else None
-            if declarado is not None and declarado.fora:
+            if lugar and lugar in maquina.mapa.fora:
                 continue
             vagas.append(_Vaga(furo, lugar, furo.tipo_de_encaixe == _ENCAIXE_DE_FORA))
         # As que o kernel não diz serem de fora vêm primeiro: o «Não alcanço» e
@@ -1005,28 +1014,20 @@ def _lugar_do_furo(furo: Furo, controladores: Mapping[int, str]) -> str:
 def _o_furo_e_conhecido(
     furo: Furo, maquina: MaquinaConfig, controladores: Mapping[int, str]
 ) -> bool:
-    """Este buraco já é uma entrada dela? Pela amarra, pelos nós ou pelo caminho.
+    """Este buraco já é uma entrada dela? Pelo lugar, ou pelos nós.
 
-    A amarra pelo lugar é a resposta que sobrevive ao boot. Os nós e o caminho
-    são o que a outra janela (e a janela de ontem) gravaram no ``mapa``, e os
-    dois carregam o número do barramento: valem SÓ para a entrada que ainda
-    não tem amarra. Com amarra, o nó gravado é de um boot que talvez não seja
-    este — ``usb1-port2`` do primeiro boot é a porta 2 do OUTRO controlador no
+    O lugar que a entrada guarda é a resposta que sobrevive ao boot. Os nós
+    são o que a outra janela (e a janela de ontem) gravaram, e carregam o
+    número do barramento: valem SÓ para a entrada que ainda não guarda lugar.
+    Com o lugar, o nó gravado é de um boot que talvez não seja este —
+    ``usb1-port2`` do primeiro boot é a porta 2 do OUTRO controlador no
     segundo, e o buraco errado sairia da conta.
     """
     lugar = _lugar_do_furo(furo, controladores)
     if lugar and _numero_conhecido(maquina, lugar, "", controladores) is not None:
         return True
-    amarradas = {dele.entrada for dele in maquina.lugares.values() if dele.entrada}
     nos = set(furo.nos)
-    return any(
-        nos & set(porta.nos)
-        for numero, porta in maquina.mapa.portas.items()
-        if numero not in amarradas
-    ) or any(
-        _entrada_do_caminho(maquina, caminho_do_no(no), lugar, controladores) is not None
-        for no in furo.nos
-    )
+    return any(nos & set(porta.nos) for porta in maquina.mapa.portas.values() if not porta.lugar)
 
 
 def _nos_do_aparelho(caminho: str, lidas: Sequence[NoDeEntrada]) -> tuple[str, ...]:
@@ -1072,7 +1073,7 @@ def _porta_vista(
         e_hub=aparelho.e_hub if e_hub is None else e_hub,
         entrada=entrada,
         face=None if entrada is None else _face_da_entrada(maquina.mapa, entrada),
-        nome=_nome_declarado(maquina, lugar, entrada, controladores),
+        nome=None if entrada is None else nome_da_entrada(entrada, maquina=maquina),
     )
 
 
@@ -1084,54 +1085,56 @@ def _numero_conhecido(
 ) -> str | None:
     """O número que este lugar JÁ tem — ``None`` quando não tem nenhum.
 
-    1. a amarra pelo lugar (``utils/maquina.entrada_do_lugar``, pelo
-       ``ID_PATH`` inteiro);
-    2. sem ela, o desenho de hoje pelos caminhos deste lugar NESTE boot — os
-       dois lados do buraco, e o caminho que o aparelho tem agora. Dois
-       números para o mesmo lugar é "não sei".
+    1. a entrada que guarda este lugar (``utils/maquina.entrada_do_lugar``);
+    2. sem ela, a entrada que ela só desenhou (sem lugar), pelos caminhos deste
+       lugar NESTE boot — os dois lados do buraco, e o caminho que o aparelho
+       tem agora. Dois números para o mesmo lugar é "não sei".
     """
-    numero = entrada_do_lugar(maquina, lugar, controladores)
+    numero = entrada_do_lugar(maquina, lugar)
     if numero is not None:
         return numero
     caminhos = {caminho, *caminhos_do_lugar(lugar, controladores)} - {""}
     achados = {
         achado
         for um in caminhos
-        if (achado := _entrada_do_caminho(maquina, um, lugar, controladores)) is not None
+        if (achado := _entrada_do_caminho(maquina, um, controladores, sem_lugar=True))
+        is not None
     }
     return achados.pop() if len(achados) == 1 else None
 
 
 def _gravar_as_portas(
     portas: Sequence[tuple[PortaVista, Sequence[str]]],
-    face: str,
+    face: str | None,
     *,
     maquina: MaquinaConfig,
     gravar: Callable[[Mapping[str, Any]], Recibo] = declarar_a_maquina,
     controladores: Mapping[int, str],
     nome: str | None = None,
 ) -> Gravacao:
-    """A resposta dela vira desenho e amarra — numa gravação só, o hub e o que
-    pende dele juntos.
+    """A resposta dela vira a entrada — numa gravação só, o hub e o que pende
+    dele juntos.
 
     ``nome`` é o nome que ela deu à PRIMEIRA porta (a do aparelho), no mesmo
-    gesto (A-08-UM-MAPEAR-SO-01): ``None`` não toca o nome que o lugar já
-    tinha, texto grava, e texto vazio apaga.
+    gesto (A-08-UM-MAPEAR-SO-01): ``None`` não toca o nome que a entrada já
+    tinha, texto grava, e texto vazio apaga. ``face`` ``None`` é o nome sem o
+    «onde fica»: a entrada nasce com o número e o nome, e fora de toda face —
+    o produto não inventa face por ela.
 
     O NÚMERO de cada porta, nesta ordem:
 
     1. o que este LUGAR já tem (:func:`_numero_conhecido`) — a entrada que ela
-       numerou na outra janela ganha a amarra, e não um número novo;
+       numerou na outra janela ganha o lugar, e não um número novo;
     2. o menor inteiro que ainda não é entrada de face nenhuma — a regra do
        gabinete (``LogicaDoMapa.acrescentar_entrada``).
 
-    Um número é de UM lugar: outro lugar que dizia ser esta entrada perde a
-    amarra (o nome dele fica), e outra entrada que apontava para este mesmo
-    caminho fica vazia — um aparelho está em um lugar só. A amarra leva a
-    TESTEMUNHA do caminho (``LugarDeclarado.caminho``) e desfaz o «Não
-    alcanço»: o cabo provou que ela alcança.
+    UM REGISTRO SÓ (A-ENTRADA-TEM-UM-REGISTRO-SO-01): a entrada guarda o
+    ``lugar`` e os ``nos`` do buraco, e o caminho não vai ao disco. Um buraco é
+    de UMA entrada: outra entrada que guardava este lugar, ou que (sem lugar)
+    tinha o caminho deste aparelho, fica vazia; a que dividia um nó perde o
+    nó. E o lugar sai do «Não alcanço»: o cabo provou que ela alcança.
     """
-    if not _face_aceita(face, maquina):
+    if face is not None and not _face_aceita(face, maquina):
         raise ValueError(f"{face!r} não é um lugar do gabinete que o produto conhece")
     validas = [
         (porta, nos)
@@ -1140,22 +1143,25 @@ def _gravar_as_portas(
     ]
     if not validas:
         lugar = portas[0][0].lugar if portas else ""
-        return Gravacao(lugar, "", face, False, MOTIVO_SEM_LUGAR)
+        return Gravacao(lugar, "", face or "", False, MOTIVO_SEM_LUGAR)
 
     mapa = maquina.mapa
     faces = [face_.model_dump(mode="json") for face_ in mapa.faces]
     usados = set(entradas_do_mapa(mapa))
     numeros: list[str] = []
     declaracao_das_portas: dict[str, Any] = {}
-    declaracao_dos_lugares: dict[str, Any] = {}
-    face_final = face
+    fora = list(mapa.fora)
+    face_final = face or ""
     for indice, (porta, nos) in enumerate(validas):
         numero = _numero_conhecido(maquina, porta.lugar, porta.caminho, controladores)
         if numero is None or numero in numeros:
             numero = _menor_livre(usados | set(numeros))
         numeros.append(numero)
         declarada = mapa.portas.get(numero)
-        if declarada is not None and declarada.filha_de is not None:
+        if face is None:
+            if indice == 0:
+                face_final = _face_da_entrada(mapa, numero) or ""
+        elif declarada is not None and declarada.filha_de is not None:
             # A entrada que nasce de uma extensão desenha dentro do quadrado de
             # quem a hospeda e NÃO entra em fileira nenhuma (``FaceDeclarada``).
             if indice == 0:
@@ -1163,44 +1169,33 @@ def _gravar_as_portas(
         else:
             _por_na_face(faces, face, numero)
 
-        declaracao_das_portas[numero] = {"caminho": porta.caminho}
-        if nos:
-            declaracao_das_portas[numero]["nos"] = list(nos)
+        no_do_aparelho = no_do_caminho(porta.caminho)
+        buraco = list(nos) or ([no_do_aparelho] if no_do_aparelho else [])
+        declaracao_das_portas[numero] = {"lugar": porta.lugar, "nos": buraco}
         for outro, dela in mapa.portas.items():
             if outro in numeros:
                 continue
-            if dela.caminho == porta.caminho:
-                # O caminho sai de outra entrada, e os nós saem JUNTO: um nó
+            if dela.lugar == porta.lugar or (
+                not dela.lugar and porta.caminho and caminho_da_porta(dela) == porta.caminho
+            ):
+                # O buraco sai da outra entrada, e os nós saem JUNTO: um nó
                 # mora numa entrada só. O nó velho casava pelos nós em
                 # :func:`_furo_da_entrada` e punha o mesmo aparelho em duas.
-                declaracao_das_portas[outro] = {"caminho": None, "nos": []}
-            elif nos and set(dela.nos) & set(nos):
+                declaracao_das_portas[outro] = {"lugar": None, "nos": []}
+            elif buraco and set(dela.nos) & set(buraco):
                 declaracao_das_portas[outro] = {
-                    "nos": [no for no in dela.nos if no not in nos]
+                    "nos": [no for no in dela.nos if no not in buraco]
                 }
-
-        declaracao_dos_lugares[porta.lugar] = {
-            "entrada": numero,
-            "caminho": porta.caminho,
-            "fora": None,
-        }
+        if porta.lugar in fora:
+            fora.remove(porta.lugar)
         if indice == 0 and nome is not None:
-            # O NOME É DA POSIÇÃO (D-2609-O-NOME-E-DA-POSICAO): vai para a
-            # entrada, e o do lugar sai.
+            # O NOME É DA POSIÇÃO (D-2609-O-NOME-E-DA-POSICAO).
             declaracao_das_portas[numero]["nome"] = _o_nome_que_grava(numero, nome)
-            declaracao_dos_lugares[porta.lugar]["nome"] = None
-        for outro, dele in maquina.lugares.items():
-            if outro not in declaracao_dos_lugares and dele.entrada == numero:
-                declaracao_dos_lugares[outro] = {"entrada": None}
 
-    recibo = _gravar_no_mapa(
-        gravar,
-        {
-            "mapa": {"faces": faces, "portas": declaracao_das_portas},
-            "lugares": declaracao_dos_lugares,
-        },
-        maquina=maquina,
-    )
+    declaracao_do_mapa: dict[str, Any] = {"faces": faces, "portas": declaracao_das_portas}
+    if fora != list(mapa.fora):
+        declaracao_do_mapa["fora"] = fora
+    recibo = _gravar_no_mapa(gravar, {"mapa": declaracao_do_mapa})
     if not recibo.gravou:
         logger.warning("entrada_a_entrada_nao_gravou", motivo=recibo.motivo)
     return Gravacao(
@@ -1226,8 +1221,6 @@ def _face_aceita(face: str, maquina: MaquinaConfig) -> bool:
 def _gravar_no_mapa(
     gravar: Callable[[Mapping[str, Any]], Recibo],
     declaracao: Mapping[str, Any],
-    *,
-    maquina: MaquinaConfig | None = None,
 ) -> Recibo:
     """O ÚNICO ponto deste módulo que escreve no disco — A-08-UM-MAPEAR-SO-01.
 
@@ -1239,66 +1232,12 @@ def _gravar_no_mapa(
     ``lugar_declarado.declarar_a_maquina`` (sem IPC, a mesma porta de antes),
     ou o dublê da régua.
 
-    COM O ``maquina`` NA MÃO, O NOME SAI DO LUGAR na mesma gravação
-    (D-2609-O-NOME-E-DA-POSICAO): :func:`_o_nome_que_sai_do_lugar` vai por
-    baixo, e a declaração explícita vence por cima.
+    NOTA DATADA (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026): até aqui, com o
+    ``maquina`` na mão, esta função levava junto o nome que ainda morava em
+    ``lugares`` para a posição (a migração preguiçosa de 26/09). A migração
+    agora é inteira e roda ao carregar (``utils/maquina.migrar_o_documento``).
     """
-    if maquina is not None:
-        mudanca = _o_nome_que_sai_do_lugar(maquina, declaracao)
-        if mudanca:
-            declaracao = fundir_declaracao(mudanca, declaracao)
     return gravar(declaracao)
-
-
-def _o_nome_que_sai_do_lugar(
-    maquina: MaquinaConfig, declaracao: Mapping[str, Any]
-) -> dict[str, Any]:
-    """O nome de cada entrada que ainda mora no lugar vai para a posição.
-
-    O nome morava em ``lugares[<lugar>].nome`` até 26/09/2026, e o Mapear
-    gravava o número como nome («2», «15»). Para cada número do mapa com um
-    lugar amarrado (a MESMA relação que a reserva de :func:`nome_da_entrada`
-    lê, então o rótulo não muda com a mudança):
-
-    * o nome que vale vai para ``portas[N].nome`` — se a posição ainda não
-      tem nome próprio — e o do lugar vira ``None``;
-    * o nome que não é nome (o número, «Entrada N») só sai do lugar;
-    * o nome de mais de 24 caracteres não muda de casa: a reserva continua
-      o lendo.
-
-    O lugar sem número não se toca, nem o lugar cuja amarra esta mesma
-    declaração muda: o lugar que perde a amarra guarda o nome dele. É
-    idempotente: depois da primeira gravação, devolve ``{}``.
-    """
-    declarados = declaracao.get("lugares")
-    tocados = {
-        lugar
-        for lugar, campos in (declarados or {}).items()
-        if isinstance(campos, Mapping) and "entrada" in campos
-    }
-    portas: dict[str, Any] = {}
-    lugares: dict[str, Any] = {}
-    for numero in _numeros_do_mapa(maquina.mapa):
-        lugar = lugar_da_entrada(maquina, numero)
-        if not lugar or lugar in tocados:
-            continue
-        dele = maquina.lugares.get(lugar)
-        if dele is None or not dele.nome:
-            continue
-        vale = nome_que_vale(numero, dele.nome)
-        if vale is not None and len(vale) > MAXIMO_DO_NOME_DA_ENTRADA:
-            continue
-        declarada = maquina.mapa.portas.get(numero)
-        proprio = nome_que_vale(numero, declarada.nome if declarada else None)
-        if vale is not None and proprio is None:
-            portas[numero] = {"nome": vale}
-        lugares[lugar] = {"nome": None}
-    mudanca: dict[str, Any] = {}
-    if portas:
-        mudanca["mapa"] = {"portas": portas}
-    if lugares:
-        mudanca["lugares"] = lugares
-    return mudanca
 
 
 def _por_na_face(faces: list[dict[str, Any]], face: str, numero: str) -> None:
@@ -1348,32 +1287,30 @@ def nome_do_lugar(
     maquina: MaquinaConfig | None = None,
     controladores: Mapping[int, str] | None = None,
 ) -> str | None:
-    """O nome desta porta: o que ela deu, ou «Entrada 3». ``None`` = não sei.
+    """O nome desta porta: o que ela deu à entrada, ou «Entrada 3». ``None`` = não sei.
 
     É o que a seção nova põe no lugar do «Entrada 4.1.4» e o que o conselho de
     porta do vigia diz. O adaptador plugado nela NÃO herda este nome desde
     26/09/2026 (ver ``utils/maquina.AdaptadorDeclarado``).
 
-    Sem amarra pelo lugar, vale o número que o desenho de hoje dá a um dos
+    O nome é da ENTRADA (``mapa.portas[N].nome``), e o lugar sem entrada não
+    tem nome. Até 28/09/2026 o lugar sem entrada respondia o nome que ainda
+    morava em ``lugares`` — o «Centro» que o adaptador do meio herdara da
+    porta, contra o «Meio» que ela deu ao adaptador (A-ENTRADA-TEM-UM-REGISTRO-
+    SO-01). Sem entrada que guarde o lugar, vale a que ela só desenhou, pelos
     caminhos deste lugar NESTE boot (``utils/lugar.caminhos_do_lugar``). Dois
     números para o mesmo lugar é "não sei".
     """
     documento = maquina if maquina is not None else carregar_maquina()
-    numero = entrada_do_lugar(documento, lugar, controladores)
-    barramentos = controladores
+    numero = entrada_do_lugar(documento, lugar)
     if numero is None:
         barramentos = (
             controladores if controladores is not None else _controladores_do_sistema()
         )
         numero = _numero_conhecido(documento, lugar, "", barramentos)
     if numero is None:
-        return _nome_declarado(documento, lugar)
-    return rotulo_do_numero(
-        numero,
-        maquina=documento,
-        controladores=barramentos,
-        nome_no_lugar=_nome_declarado(documento, lugar),
-    )
+        return None
+    return rotulo_do_numero(numero, maquina=documento)
 
 
 def nome_da_porta(
@@ -1386,10 +1323,10 @@ def nome_da_porta(
     """O nome da porta por QUALQUER das duas chaves da casa.
 
     ``chave`` é o lugar (``pci-…-usb-0:4.1.4``, o do dono do BlueZ) ou o
-    caminho de barramento (``3-4.1.4``, o que a ponte root e o ``mapa``
-    escrevem). O caminho é traduzido pelo ``utils/lugar.lugar_do_caminho``
-    com os barramentos DESTE boot; e, se o lugar não tem amarra, vale o número
-    que o desenho de hoje dá a este caminho — o ``mapa`` não migrou.
+    caminho de barramento (``3-4.1.4``, o que a ponte root escreve). O caminho
+    é traduzido pelo ``utils/lugar.lugar_do_caminho`` com os barramentos DESTE
+    boot; e, se nenhuma entrada guarda aquele lugar, vale o número que o
+    desenho de hoje dá a este caminho (:func:`_entrada_do_caminho`).
 
     SEM NOME E SEM NÚMERO, A PORTA SE CHAMA COMO O DESENHO APROVADO MOSTRA —
     «Entrada 4.1.4», o ``devpath`` (TRANSPLANTE-DA-SECAO-01, item 4 de quem
@@ -1426,53 +1363,35 @@ def nome_da_porta(
         nome = nome_do_lugar(lugar, maquina=documento, controladores=barramentos)
         if nome:
             return nome
-    numero = _entrada_do_caminho(documento, chave, lugar, barramentos)
+    numero = _entrada_do_caminho(documento, chave, barramentos)
     if numero is not None:
-        return rotulo_do_numero(numero, maquina=documento, controladores=barramentos)
+        return rotulo_do_numero(numero, maquina=documento)
     if so_o_declarado or not FORMA_DO_CAMINHO.match(chave):
         return None
     busnum, _, devpath = chave.partition("-")
     return _rotulo_de_reserva(barramentos.get(int(busnum), ""), devpath, barramentos)
 
 
-def nome_da_entrada(
-    numero: str,
-    *,
-    maquina: MaquinaConfig,
-    controladores: Mapping[int, str] | None = None,
-) -> str | None:
+def nome_da_entrada(numero: str, *, maquina: MaquinaConfig) -> str | None:
     """O nome que ela deu à entrada ``numero`` — ``None`` quando não deu.
 
     O ÚNICO LEITOR QUE CONHECE ONDE O NOME MORA (D-2609-O-NOME-E-DA-POSICAO):
-    ``mapa.portas[N].nome``. Na máquina que ainda não gravou nada depois do
-    install, o nome ainda está no lugar amarrado ao número, e a RESERVA o lê
-    (``lugares[lugar_da_entrada(N)].nome``): a primeira gravação o muda de
-    casa (:func:`_o_nome_que_sai_do_lugar`), e a reserva some sozinha. O nome
-    que não é nome (o próprio número, «Entrada N») é ``None`` nos dois.
+    ``mapa.portas[N].nome``. O nome que não é nome (o próprio número, «Entrada
+    N») é ``None``. NOTA DATADA (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026):
+    a RESERVA que lia ``lugares[lugar_da_entrada(N)].nome`` saiu com o
+    ``lugares``; o nome de verdade que morava ali veio para a posição na
+    migração (``utils/maquina.migrar_o_documento``).
     """
     declarada = maquina.mapa.portas.get(numero)
-    proprio = nome_que_vale(numero, declarada.nome if declarada is not None else None)
-    if proprio is not None:
-        return proprio
-    lugar = lugar_da_entrada(maquina, numero, controladores)
-    dele = maquina.lugares.get(lugar) if lugar else None
-    return nome_que_vale(numero, dele.nome if dele is not None else None)
+    return nome_que_vale(numero, declarada.nome if declarada is not None else None)
 
 
-def rotulo_do_numero(
-    numero: str,
-    *,
-    maquina: MaquinaConfig | None = None,
-    controladores: Mapping[int, str] | None = None,
-    nome_no_lugar: str | None = None,
-) -> str | None:
+def rotulo_do_numero(numero: str, *, maquina: MaquinaConfig | None = None) -> str | None:
     """«Meio» quando ela deu nome à entrada; «Entrada 3» quando não deu — ou
     «Entrada 4.1.4» para quem ela ainda não nomeou nem numerou.
 
     Sem ``maquina``, é a palavra do dono diante do número (ou do ``devpath``),
     sem nome: é o que o gerador da aba 08 põe no desenho aprovado.
-    ``nome_no_lugar`` é o nome que o lugar da porta tem quando a amarra dele
-    não se confirma neste boot (quem pergunta pelo lugar já o tem na mão).
 
     PÚBLICA PARA QUE NINGUÉM MAIS COMPONHA A PALAVRA: compor fora daqui seria
     o segundo dono que a ``test_a_costura_da_onda_2`` recusa
@@ -1480,19 +1399,11 @@ def rotulo_do_numero(
     """
     if not numero:
         return None
-    nome = (
-        nome_da_entrada(numero, maquina=maquina, controladores=controladores)
-        if maquina is not None
-        else None
-    )
-    if nome is None and nome_no_lugar is not None:
-        nome = nome_que_vale(numero, nome_no_lugar)
+    nome = nome_da_entrada(numero, maquina=maquina) if maquina is not None else None
     return _rotulo(numero, nome)
 
 
-def rotulos_das_entradas(
-    maquina: MaquinaConfig, controladores: Mapping[int, str] | None = None
-) -> dict[str, dict[str, str]]:
+def rotulos_das_entradas(maquina: MaquinaConfig) -> dict[str, dict[str, str]]:
     """``{N: {"rotulo": «Meio», "naFrase": «entrada Meio»}}`` de cada entrada do mapa.
 
     Para as duas fronteiras sem ``pydantic``: as ordens (``ordens_da_mesa``,
@@ -1500,7 +1411,7 @@ def rotulos_das_entradas(
     """
     saida: dict[str, dict[str, str]] = {}
     for numero in _numeros_do_mapa(maquina.mapa):
-        nome = nome_da_entrada(numero, maquina=maquina, controladores=controladores)
+        nome = nome_da_entrada(numero, maquina=maquina)
         saida[numero] = {"rotulo": _rotulo(numero, nome), "naFrase": _na_frase(numero, nome)}
     return saida
 
@@ -1554,12 +1465,7 @@ def rotulo_da_entrada(
     barramentos = controladores if controladores is not None else _controladores_do_sistema()
     numero = _numero_conhecido(documento, lugar, "", barramentos)
     if numero is not None:
-        return rotulo_do_numero(
-            numero,
-            maquina=documento,
-            controladores=barramentos,
-            nome_no_lugar=_nome_declarado(documento, lugar),
-        )
+        return rotulo_do_numero(numero, maquina=documento)
     return _rotulo_de_reserva(partes[0], partes[1], barramentos)
 
 
@@ -1688,22 +1594,23 @@ def trocar_as_entradas(
     de outra, e ela corrige sem mapear de novo. UM ATO SÓ, numa gravação:
     <!-- noqa-acento: citação literal dela -->
 
-    * **vai com o buraco** — o ``caminho`` e os ``nos`` (sempre juntos: mover
-      só o caminho era o defeito do ``colocar``), a ``liga`` e a ``usb``; a
-      ponta do extensor inteira (``Na`` vira ``Ma``, com o nome dela); a amarra
-      de cada lugar (``lugares[L].entrada``), cuja testemunha e ``fora`` são
-      do próprio lugar; e a face do hub declarado, renomeada pelo número;
+    * **vai com o buraco** — o ``lugar`` e os ``nos`` (sempre juntos: mover
+      só um deles era o defeito do ``colocar``), a ``liga`` e a ``usb``; a
+      ponta do extensor inteira (``Na`` vira ``Ma``, com o nome dela); e a
+      face do hub declarado, renomeada pelo número;
     * **fica na posição** — o número, o nome (D-2609-O-NOME-E-DA-POSICAO), a
       face e a ordem da fileira, e as ordens dispensadas.
+
+    TROCAR DOIS REGISTROS (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026). A
+    troca movia cinco coisas em dois registros — o buraco, a ponta, a amarra
+    em ``lugares``, o nome que «mudava de casa antes da troca» e a face do hub
+    —, e em 26/09 uma troca feita fora do produto moveu o ``mapa`` e não os
+    ``lugares``. Com o lugar dentro da entrada, o buraco inteiro é o que vai.
 
     Desfazer é trocar de novo: a troca é uma involução. Recusa com
     ``ValueError`` e a frase do dono: :data:`RECUSA_A_MESMA_ENTRADA`,
     :data:`RECUSA_FORA_DO_MAPA` (fora do mapa, buraco desenhado ``3.1`` ou
     ponta ``Na``) e :data:`RECUSA_NENHUMA_MAPEADA`.
-
-    O nome que ainda mora no lugar muda de casa ANTES da troca (a mesma
-    mudança do :func:`_o_nome_que_sai_do_lugar`): senão a reserva o leria no
-    lugar que foi para a outra entrada, e o nome andaria com o buraco.
     """
     documento = maquina if maquina is not None else carregar_maquina()
     mapa = documento.mapa
@@ -1717,7 +1624,7 @@ def trocar_as_entradas(
         ):
             raise ValueError(RECUSA_FORA_DO_MAPA)
     de_um, de_outro = mapa.portas.get(numero), mapa.portas.get(outro)
-    if not any(p is not None and (p.caminho or p.nos) for p in (de_um, de_outro)):
+    if not any(p is not None and (p.lugar or p.nos) for p in (de_um, de_outro)):
         raise ValueError(RECUSA_NENHUMA_MAPEADA)
 
     portas: dict[str, Any] = {
@@ -1745,17 +1652,7 @@ def trocar_as_entradas(
         corpo["nome"] = nomes_dos_hubs.get(face.nome, face.nome)
         faces.append(corpo)
 
-    lugares: dict[str, Any] = {}
-    for de, para in ((numero, outro), (outro, numero)):
-        lugar = lugar_da_entrada(documento, de)
-        if lugar:
-            lugares[lugar] = {"entrada": para}
-
-    troca: dict[str, Any] = {"mapa": {"faces": faces, "portas": portas}}
-    if lugares:
-        troca["lugares"] = lugares
-    declaracao = fundir_declaracao(_o_nome_que_sai_do_lugar(documento, {}), troca)
-    recibo = _gravar_no_mapa(gravar, declaracao, maquina=documento)
+    recibo = _gravar_no_mapa(gravar, {"mapa": {"faces": faces, "portas": portas}})
     if not recibo.gravou:
         logger.warning("troca_de_entradas_nao_gravou", motivo=recibo.motivo)
     return recibo
@@ -1776,9 +1673,8 @@ def ensinar_a_entrada(
     página guardava isso só na memória, e a releitura o mostrava pendente de
     novo. É a cura universal da pista que o firmware não liga: os nós vêm da
     leitura de agora (:func:`_nos_do_aparelho` — o do aparelho e o ``peer``
-    dele), e somam aos que a entrada já tinha. Sem ``caminho`` na entrada, ela
-    ganha o do lado 2.0 (:func:`_caminho_do_lado_20`). Os ``lugares`` ficam: a
-    amarra é do Mapear.
+    dele), e somam aos que a entrada já tinha. O ``lugar`` fica como estava:
+    quem o grava é o Mapear, com o DualSense no buraco.
 
     Vale só para o aparelho que não está em entrada nenhuma — o que já está
     abre o editor dela, e quem corrige ali é o «Trocar com…». Recusa com
@@ -1797,25 +1693,20 @@ def ensinar_a_entrada(
         raise ValueError(RECUSA_O_APARELHO_SAIU)
     onde_mora = {caminho, *(caminho_do_no(no) for no in novos)}
     for outra, porta in mapa.portas.items():
-        if outra != numero and (
-            set(novos) & set(porta.nos) or (porta.caminho and porta.caminho in onde_mora)
-        ):
+        if outra != numero and set(novos) & set(porta.nos):
+            raise ValueError(RECUSA_O_APARELHO_JA_TEM_ENTRADA)
+        if outra != numero and caminho_da_porta(porta) in onde_mora - {""}:
             raise ValueError(RECUSA_O_APARELHO_JA_TEM_ENTRADA)
     dela = mapa.portas.get(numero) or PortaDeclarada()
     plugados = {e.no: e.aparelho for e in lidos if e.aparelho}
-    if any(plugados.get(no) for no in set(dela.nos) - set(novos)) or (
-        dela.caminho and dela.caminho in set(plugados.values()) - {caminho}
-    ):
+    if any(plugados.get(no) for no in set(dela.nos) - set(novos)):
         raise ValueError(RECUSA_A_ENTRADA_OCUPADA)
     nos = list(dict.fromkeys([*dela.nos, *novos]))
     try:
         PortaDeclarada(nos=nos)
     except ValueError:  # o teto de nós é do dono do schema
         raise ValueError(RECUSA_LIGACOES_DEMAIS) from None
-    campos: dict[str, Any] = {"nos": nos}
-    if not dela.caminho:
-        campos["caminho"] = _caminho_do_lado_20(nos)
-    recibo = _gravar_no_mapa(gravar, {"mapa": {"portas": {numero: campos}}}, maquina=documento)
+    recibo = _gravar_no_mapa(gravar, {"mapa": {"portas": {numero: {"nos": nos}}}})
     if not recibo.gravou:
         logger.warning("entrada_ensinada_nao_gravou", motivo=recibo.motivo)
     return recibo
@@ -1824,8 +1715,8 @@ def ensinar_a_entrada(
 def _o_buraco(porta: PortaDeclarada | None) -> dict[str, Any]:
     """O que é do buraco físico numa entrada — o que a troca leva junto."""
     if porta is None:
-        return {"caminho": None, "nos": [], "liga": None, "usb": None}
-    return {"caminho": porta.caminho, "nos": list(porta.nos), "liga": porta.liga,
+        return {"lugar": None, "nos": [], "liga": None, "usb": None}
+    return {"lugar": porta.lugar, "nos": list(porta.nos), "liga": porta.liga,
             "usb": porta.usb}
 
 
@@ -1838,9 +1729,9 @@ def _a_ponta_de(mapa: MapaDaMesa, ponta: str, numero: str) -> PortaDeclarada | N
 def _a_ponta_inteira(ponta: PortaDeclarada | None, filha_de: str) -> dict[str, Any]:
     """A ponta do extensor inteira, pendurada em ``filha_de`` — ou apagada."""
     if ponta is None:
-        return {"caminho": None, "nos": [], "liga": None, "usb": None,
+        return {"lugar": None, "nos": [], "liga": None, "usb": None,
                 "filha_de": None, "nome": None}
-    corpo: dict[str, Any] = ponta.model_dump(mode="json")
+    corpo: dict[str, Any] = ponta.model_dump(mode="json", exclude_computed_fields=True)
     corpo["filha_de"] = filha_de
     corpo.setdefault("nos", [])
     return corpo
@@ -1903,11 +1794,11 @@ def _declarar_na_entrada(
         and campos["liga"] != "extensor"
         and dela is not None
         and dela.filha_de == numero
-        and not dela.caminho
+        and not dela.lugar
         and not dela.nos
     ):
         declaracao[ponta] = {"filha_de": None, "liga": None, "usb": None}
-    recibo = _gravar_no_mapa(gravar, {"mapa": {"portas": declaracao}}, maquina=documento)
+    recibo = _gravar_no_mapa(gravar, {"mapa": {"portas": declaracao}})
     if not recibo.gravou:
         logger.warning("entrada_declarada_nao_gravou", motivo=recibo.motivo)
     return recibo
@@ -2257,17 +2148,19 @@ def ler_o_mapa(
 
     portas: list[PortaDoMapa] = []
     vistos: set[tuple[str, ...]] = set()
+    fora_de_alcance = set(documento.mapa.fora)
     for numero in _numeros_do_mapa(documento.mapa):
         furo = _furo_da_entrada(numero, documento, buracos, controladores)
         declarada = documento.mapa.portas.get(numero)
-        amarrado = lugar_da_entrada(documento, numero, controladores)
+        amarrado = lugar_da_entrada(documento, numero)
         lugar = amarrado or (_lugar_do_furo(furo, controladores) if furo else "")
         nos = tuple(furo.nos) if furo else tuple(declarada.nos if declarada else ())
         medido = fatos(nos)
         if furo is not None:
             vistos.add(tuple(furo.nos))
-        dele = documento.lugares.get(lugar) if lugar else None
-        nome = _nome_declarado(documento, lugar, numero, controladores)
+        nome = nome_da_entrada(numero, maquina=documento)
+        caminho = medido.aparelho or (
+            caminho_da_porta(declarada, controladores) if declarada is not None else "")
         portas.append(
             _porta_do_mapa(
                 numero,
@@ -2276,9 +2169,9 @@ def ler_o_mapa(
                 rotulo=_rotulo(numero, nome),
                 face=_face_da_entrada(documento.mapa, numero),
                 lugar=lugar,
-                caminho=medido.aparelho or (declarada.caminho if declarada else "") or "",
+                caminho=caminho,
                 nos=nos,
-                fora=bool(dele is not None and dele.fora),
+                fora=bool(lugar) and lugar in fora_de_alcance,
                 medido=medido,
                 usb=_usb_da_porta(medido, declarada.usb if declarada else None, lido, nos),
             )
@@ -2296,41 +2189,29 @@ def ler_o_mapa(
             continue
         vistos.add(chave_do_furo)
         medido = fatos(chave_do_furo)
-        dele = documento.lugares.get(lugar)
-        # o número que o Mapear gravou como nome não é nome, nem aqui
-        nome = nome_que_vale(None, dele.nome) if dele is not None else None
         portas.append(
             _porta_do_mapa(
                 lugar,
                 numero=None,
-                nome=nome,
-                rotulo=nome
-                or rotulo_da_entrada(lugar, maquina=documento, controladores=controladores),
+                nome=None,
+                rotulo=rotulo_da_entrada(lugar, maquina=documento, controladores=controladores),
                 face=None,
                 lugar=lugar,
                 caminho=medido.aparelho,
                 nos=chave_do_furo,
-                fora=bool(dele is not None and dele.fora),
+                fora=lugar in fora_de_alcance,
                 medido=medido,
             )
         )
 
-    # O QUE ELA JÁ IDENTIFICOU SEM NÚMERO também é do mapa: o nome que ela deu
-    # à entrada (o de antes de 26/09/2026 também vinha de Rádio e Adaptadores)
-    # e o «Não alcanço» moram no lugar,
-    # e a revisita renomeia «as entradas já mapeadas ou identificadas» — com o
-    # dongle fora da porta, ela continua sendo dela.
+    # O «NÃO ALCANÇO» TAMBÉM É DO MAPA: o lugar que ela disse não alcançar
+    # continua dela com o buraco vazio, e a revisita o mostra. O nome que ela
+    # dá a um buraco sem número já nasce entrada (:func:`_gravar_a_porta`), e
+    # vem no primeiro laço: não há mais nome morando no lugar
+    # (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026).
     listados = {p.lugar for p in portas if p.lugar}
-    numerados = {p.numero for p in portas if p.numero}
-    for lugar, dele in sorted(documento.lugares.items()):
-        partes = partes_do_lugar(lugar)
-        if (
-            lugar in listados
-            or not (dele.nome or dele.fora)
-            or (dele.entrada is not None and dele.entrada in numerados)
-            or partes is None
-            or not partes[1]
-        ):
+    for lugar in documento.mapa.fora:
+        if lugar in listados:
             continue
         furo_do_lugar = next(
             (
@@ -2348,14 +2229,13 @@ def ler_o_mapa(
             _porta_do_mapa(
                 lugar,
                 numero=None,
-                nome=nome_que_vale(None, dele.nome),
-                rotulo=nome_que_vale(None, dele.nome)
-                or rotulo_da_entrada(lugar, maquina=documento, controladores=controladores),
+                nome=None,
+                rotulo=rotulo_da_entrada(lugar, maquina=documento, controladores=controladores),
                 face=None,
                 lugar=lugar,
-                caminho=medido.aparelho or dele.caminho or "",
+                caminho=medido.aparelho,
                 nos=nos_do_lugar,
-                fora=bool(dele.fora),
+                fora=True,
                 medido=medido,
             )
         )
@@ -2731,47 +2611,30 @@ def _gravar_a_porta(
 ) -> Gravacao:
     """A gravação da porta do fluxo único — pelo mesmo compositor do laço.
 
-    Sem lugar no gabinete (``face`` ``None``), só o nome vai ao disco. A porta
-    SEM número, com o buraco lido (os nós dela estão no ``/sys`` de agora), e
-    a porta da vez (o DualSense acabou de prová-la) passam pelo
+    A porta SEM número (com o buraco lido, ou o lugar do «Não alcanço») e a
+    porta da vez (o DualSense acabou de prová-la) passam pelo
     :func:`_gravar_as_portas` de sempre: o número que o lugar já tem (ou o
-    menor livre), a face, os nós, a amarra e o nome, juntos. A porta numerada
-    tocada PELA LISTA é revisita pura: a face e o nome, e nada do que a
-    primeira vez gravou sai — nem a testemunha do caminho, que o aparelho que
-    estiver nela agora (um pendrive no lado 3.x) trocaria.
+    menor livre), a face, o lugar, os nós e o nome, juntos. A porta numerada
+    tocada PELA LISTA é revisita pura: a face e o nome, e nada do buraco muda
+    — o aparelho que estiver nela agora (um pendrive no lado 3.x) não é quem
+    diz onde ela está.
+
+    SÓ O NOME, NUMA PORTA SEM NÚMERO (``face`` ``None``), faz a entrada nascer
+    com o número e o nome, fora de toda face: o produto não inventa face por
+    ela. Até 28/09/2026 esse nome ia para ``lugares[L].nome``, um segundo
+    registro (A-ENTRADA-TEM-UM-REGISTRO-SO-01).
     """
-    if face is None:
-        # SÓ O NOME, numa porta que ainda não tem lugar no gabinete (a porta
-        # da vez sem o «onde fica», ou a que perdeu a face): o nome vai para o
-        # lugar, e o produto não inventa face nem número por ela.
-        if nome is None:
-            raise ValueError("nada a gravar: nem nome nem lugar")
-        if porta.numero is not None:
-            so_o_nome = _o_nome_na_posicao(porta.numero, porta.lugar, nome)
-        elif porta.lugar:
-            so_o_nome = {"lugares": {porta.lugar: {"nome": nome.strip() or None}}}
-        else:
-            return Gravacao("", "", "", False, MOTIVO_SEM_LUGAR)
-        recibo = _gravar_no_mapa(gravar, so_o_nome, maquina=maquina)
-        if not recibo.gravou:
-            logger.warning("mapa_das_portas_nao_gravou", motivo=recibo.motivo)
-        return Gravacao(
-            porta.lugar,
-            porta.numero or "",
-            "",
-            recibo.gravou,
-            recibo.motivo,
-            (porta.numero,) if porta.numero else (),
-        )
+    if face is None and nome is None:
+        raise ValueError("nada a gravar: nem nome nem lugar")
     lidos = {e.no for e in lidas}
     no_sys = bool(porta.lugar and porta.nos and set(porta.nos) & lidos)
-    if no_sys and (porta.numero is None or da_vez):
-        # A testemunha é o caminho do lado 2.0, o mesmo de que sai o lugar
+    if porta.numero is None and (not porta.lugar or (face is not None and not no_sys)):
+        return Gravacao(porta.lugar, "", face or "", False, MOTIVO_SEM_LUGAR)
+    if porta.numero is None or (da_vez and no_sys and face is not None):
+        # O caminho é o do lado 2.0, o mesmo de que sai o lugar
         # (:func:`_lugar_do_furo`) e onde o DualSense enumera — nunca o de um
         # aparelho que só existe no lado 3.x.
-        caminho = _caminho_do_lado_20(porta.nos) or porta.aparelho
-        if not caminho:
-            return Gravacao(porta.lugar, "", face, False, MOTIVO_SEM_LUGAR)
+        caminho = caminho_do_lado_20(porta.nos) or porta.aparelho
         vista = PortaVista(lugar=porta.lugar, caminho=caminho)
         return _gravar_as_portas(
             [(vista, porta.nos)],
@@ -2781,29 +2644,26 @@ def _gravar_a_porta(
             controladores=controladores,
             nome=nome,
         )
-    if porta.numero is None:
-        return Gravacao(porta.lugar, "", face, False, MOTIVO_SEM_LUGAR)
+    numero = porta.numero
     declaracao: dict[str, Any] = {}
-    face_final = face
-    declarada = maquina.mapa.portas.get(porta.numero)
-    if declarada is None or declarada.filha_de is None:
+    face_final = face or ""
+    declarada = maquina.mapa.portas.get(numero)
+    if face is None:
+        face_final = _face_da_entrada(maquina.mapa, numero) or ""
+    elif declarada is None or declarada.filha_de is None:
         faces = [f.model_dump(mode="json") for f in maquina.mapa.faces]
-        _por_na_face(faces, face, porta.numero)
+        _por_na_face(faces, face, numero)
         declaracao["mapa"] = {"faces": faces}
     else:
-        face_final = _face_da_entrada(maquina.mapa, porta.numero) or face
+        face_final = _face_da_entrada(maquina.mapa, numero) or face
     if nome is not None:
-        declaracao = fundir_declaracao(
-            declaracao, _o_nome_na_posicao(porta.numero, porta.lugar, nome)
-        )
+        declaracao = fundir_declaracao(declaracao, _o_nome_na_posicao(numero, nome))
     if not declaracao:
-        return Gravacao(porta.lugar, porta.numero, face_final, True, "", (porta.numero,))
-    recibo = _gravar_no_mapa(gravar, declaracao, maquina=maquina)
+        return Gravacao(porta.lugar, numero, face_final, True, "", (numero,))
+    recibo = _gravar_no_mapa(gravar, declaracao)
     if not recibo.gravou:
         logger.warning("mapa_das_portas_nao_gravou", motivo=recibo.motivo)
-    return Gravacao(
-        porta.lugar, porta.numero, face_final, recibo.gravou, recibo.motivo, (porta.numero,)
-    )
+    return Gravacao(porta.lugar, numero, face_final, recibo.gravou, recibo.motivo, (numero,))
 
 
 def _o_nome_que_grava(numero: str, nome: str) -> str | None:
@@ -2818,14 +2678,9 @@ def _o_nome_que_grava(numero: str, nome: str) -> str | None:
     return nome_que_vale(numero, limpo)
 
 
-def _o_nome_na_posicao(numero: str, lugar: str, nome: str) -> dict[str, Any]:
-    """A declaração do nome de uma porta NUMERADA: na posição, e fora do lugar."""
-    declaracao: dict[str, Any] = {
-        "mapa": {"portas": {numero: {"nome": _o_nome_que_grava(numero, nome)}}}
-    }
-    if lugar:
-        declaracao["lugares"] = {lugar: {"nome": None}}
-    return declaracao
+def _o_nome_na_posicao(numero: str, nome: str) -> dict[str, Any]:
+    """A declaração do nome de uma porta NUMERADA — na posição."""
+    return {"mapa": {"portas": {numero: {"nome": _o_nome_que_grava(numero, nome)}}}}
 
 
 def _porta_do_mapa(
@@ -2894,34 +2749,20 @@ def _furo_da_entrada(
     buracos: Sequence[Furo],
     controladores: Mapping[int, str],
 ) -> Furo | None:
-    """O buraco de agora que é esta entrada — pela amarra, pelos nós, pelo caminho.
+    """O buraco de agora que é esta entrada — pelo lugar, ou pelos nós.
 
-    A mesma escada de :func:`_o_furo_e_conhecido`, do outro lado: a amarra
-    pelo lugar sobrevive ao boot; os nós e o caminho carregam o número do
-    barramento e valem só para a entrada que ainda não tem amarra.
+    A mesma escada de :func:`_o_furo_e_conhecido`, do outro lado: o lugar
+    sobrevive ao boot; os nós carregam o número do barramento e valem só para a
+    entrada que não guarda lugar.
     """
-    lugar = lugar_da_entrada(maquina, numero, controladores)
-    if lugar:
-        achado = next((f for f in buracos if _lugar_do_furo(f, controladores) == lugar), None)
-        if achado is not None:
-            return achado
     declarada = maquina.mapa.portas.get(numero)
     if declarada is None:
         return None
-    if declarada.nos and not lugar:
-        achado = next((f for f in buracos if set(f.nos) & set(declarada.nos)), None)
-        if achado is not None:
-            return achado
-    if declarada.caminho and not lugar:
-        return next(
-            (
-                f
-                for f in buracos
-                if f.aparelho == declarada.caminho
-                or declarada.caminho in {caminho_do_no(no) for no in f.nos}
-            ),
-            None,
-        )
+    lugar = lugar_da_entrada(maquina, numero)
+    if lugar:
+        return next((f for f in buracos if _lugar_do_furo(f, controladores) == lugar), None)
+    if declarada.nos:
+        return next((f for f in buracos if set(f.nos) & set(declarada.nos)), None)
     return None
 
 
@@ -2934,15 +2775,6 @@ def _buracos_com_dualsense(
         for furo in furos(lidas)
         if _o_dualsense_no_furo(furo, censo) is not None
     ]
-
-
-def _caminho_do_lado_20(nos: Sequence[str]) -> str:
-    """O caminho que um aparelho 2.0 teria neste buraco — o lado de barramento menor."""
-    caminhos = sorted(
-        (caminho_do_no(no) for no in nos if caminho_do_no(no)),
-        key=lambda caminho: int(caminho.partition("-")[0]),
-    )
-    return caminhos[0] if caminhos else ""
 
 
 def _storm_do_log() -> dict[str, int] | None:
@@ -3034,68 +2866,29 @@ def _nao_sei(censo: Censo) -> bool:
     return not any(aparelho.e_raiz for aparelho in censo.aparelhos)
 
 
-def _nome_declarado(
-    maquina: MaquinaConfig,
-    lugar: str,
-    numero: str | None = None,
-    controladores: Mapping[int, str] | None = None,
-) -> str | None:
-    """O nome desta porta: o da ENTRADA quando ela tem número (o dono é
-    :func:`nome_da_entrada`), e o do lugar quando ainda não tem."""
-    if numero is not None:
-        proprio = nome_da_entrada(numero, maquina=maquina, controladores=controladores)
-        if proprio is not None:
-            return proprio
-    declarado = maquina.lugares.get(lugar)
-    return None if declarado is None else nome_que_vale(numero, declarado.nome)
-
-
 def _entrada_do_caminho(
     maquina: MaquinaConfig,
     caminho: str,
-    lugar: str,
     controladores: Mapping[int, str] | None = None,
+    *,
+    sem_lugar: bool = False,
 ) -> str | None:
-    """O número que o desenho dá a este caminho — se ele não é de outro lugar.
+    """O número da entrada em que um aparelho com este caminho está — ``None`` se nenhuma.
 
-    É a ponte com o ``mapa`` que não migrou: a entrada que ela numerou na outra
-    janela vale para esta porta, a menos que já esteja amarrada a outro lugar
-    — aí o caminho gravado é de outro boot, e reaproveitar o número juntaria
-    dois buracos.
+    Pelos caminhos da entrada NESTE boot (``utils/maquina.caminhos_da_porta``):
+    a que guarda o lugar responde pelo lugar traduzido com os ``controladores``
+    de agora, e a que ela só desenhou, pelos nós. ``sem_lugar`` pergunta só a
+    estas — é a segunda pergunta de :func:`_numero_conhecido`, quando o lugar
+    não é de entrada nenhuma.
     """
     if not caminho:
         return None
     for numero, porta in sorted(maquina.mapa.portas.items()):
-        if porta.caminho != caminho:
+        if sem_lugar and porta.lugar:
             continue
-        dono = lugar_da_entrada(maquina, numero, controladores)
-        if dono == lugar or (
-            dono is None and not _outro_pode_ser_o_dono(maquina, numero, caminho, lugar)
-        ):
+        if caminho in caminhos_da_porta(porta, controladores):
             return numero
     return None
-
-
-def _outro_pode_ser_o_dono(
-    maquina: MaquinaConfig, numero: str, caminho: str, lugar: str
-) -> bool:
-    """Outro lugar diz ser este número, e nada prova que não é?
-
-    A amarra SEM testemunha que a tradução deste boot não confirma não vale
-    (``utils/maquina.entrada_do_lugar``), mas também não se desmente quando o
-    ``devpath`` bate: o caminho pode ser dela noutro boot, com os barramentos
-    na outra ordem. Aí o número é "não sei" para os dois — dar a este lugar
-    juntaria dois buracos. Com o ``devpath`` diferente, a amarra velha é de
-    outro buraco com certeza, e não segura nada.
-    """
-    devpath = caminho.partition("-")[2]
-    for outro, dele in maquina.lugares.items():
-        if outro == lugar or dele.entrada != numero or dele.caminho is not None:
-            continue
-        partes = partes_do_lugar(outro)
-        if partes is not None and partes[1] == devpath:
-            return True
-    return False
 
 
 def _menor_livre(usados: set[str]) -> str:

@@ -4,11 +4,14 @@ ENTRADA-A-ENTRADA-01 (23/09/2026) decidiu que há DUAS chaves de porta nesta
 casa e que a tradução entre elas mora num lugar só:
 
 * o **caminho de barramento** (``3-4.1.4``) — o nome do kernel, com o número
-  do barramento na frente. É o que o ``mapa`` do ``maquina.json`` grava e o que
-  a ponte root escreve no diário;
+  do barramento na frente. É o que o censo lê e o que a ponte root escreve no
+  diário. O ``mapa`` do ``maquina.json`` NÃO o guarda desde a
+  A-ENTRADA-TEM-UM-REGISTRO-SO-01 (28/09/2026): ele se calcula na leitura, do
+  lugar e dos controladores deste boot (:func:`caminhos_do_lugar`);
 * o **lugar** (``pci-0000:0c:00.3-usb-0:4.1.4``) — o controlador PCI mais a
   cadeia de portas, na grafia do ``ID_PATH`` do udev. É a chave do dono do
-  BlueZ e a que o «Mapear Entrada a Entrada» grava.
+  BlueZ e a identidade que cada entrada do ``mapa`` guarda
+  (``mapa.portas[N].lugar``).
 
 O número do barramento é a ORDEM em que os dois xHCI sobem (medido em 23/09:
 ``usb1``/``usb2`` = ``0000:02:00.0``, ``usb3``/``usb4`` = ``0000:0c:00.3``), e
@@ -46,7 +49,7 @@ publica.
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 
 #: O lugar, na grafia do ``ID_PATH`` do udev. ``pci-<controlador>`` sem portas
 #: é o adaptador que não pendura em USB nenhum.
@@ -148,14 +151,47 @@ def lugar_do_no(no: str, controladores: Mapping[int, str]) -> str:
     return lugar_do_caminho(caminho_do_no(no), controladores)
 
 
+def no_do_caminho(caminho: str) -> str:
+    """O nó de entrada em que o aparelho deste caminho está encaixado.
+
+    O inverso de :func:`caminho_do_no`: ``3-4`` → ``usb3-port4``; ``3-4.2`` →
+    ``3-4-port2``. É o que deixa uma entrada que só guardava o caminho do
+    aparelho (o rascunho do mapa e os arquivos de antes de 28/09/2026) guardar
+    o BURACO, que é o que responde com ele vazio. ``""`` quando o caminho não
+    tem a forma do kernel.
+    """
+    if not caminho or not FORMA_DO_CAMINHO.match(caminho):
+        return ""
+    hub, _, numero = caminho.rpartition(".")
+    if hub:
+        return f"{hub}-port{numero}"
+    busnum, _, porta = caminho.partition("-")
+    return f"usb{busnum}-port{porta}"
+
+
+def caminho_do_lado_20(nos: Sequence[str]) -> str:
+    """O caminho que um aparelho 2.0 teria neste buraco — o do barramento menor.
+
+    O xHCI registra a raiz 2.0 antes da 3.x, e o DualSense e os adaptadores
+    (todos 2.0) enumeram sempre ali. ``""`` sem nó de entrada nenhum.
+    """
+    caminhos = sorted(
+        (caminho_do_no(no) for no in nos if caminho_do_no(no)),
+        key=lambda caminho: int(caminho.partition("-")[0]),
+    )
+    return caminhos[0] if caminhos else ""
+
+
 __all__ = [
     "FORMA_DO_CAMINHO",
     "FORMA_DO_LUGAR",
     "FORMA_DO_NO",
+    "caminho_do_lado_20",
     "caminho_do_no",
     "caminhos_do_lugar",
     "lugar_de",
     "lugar_do_caminho",
     "lugar_do_no",
+    "no_do_caminho",
     "partes_do_lugar",
 ]
