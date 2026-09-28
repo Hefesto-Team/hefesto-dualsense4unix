@@ -35,4 +35,6 @@ seção daqui**: a aba deixou de estar em trabalho.
 - **28/09/2026** — O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01: a dica do
   «Corrigir Vulkan» diz o que ele tira do jogo e o preço (sai o «não cura
   engasgo» de 26/09), e a linha do exame diz o que chega ao jogo. Espera a
-  sessão dos desenhos.
+  sessão dos desenhos. Até publicar, a pílula já faz o ato novo (a escolha que
+  o lançador lê) e a linha do exame e o recibo já são os novos, porque vêm do
+  pacote; só a dica fica a de 26/09, que ainda fala do registro do Proton.
