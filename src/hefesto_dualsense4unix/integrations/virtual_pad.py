@@ -79,9 +79,19 @@ UHID_BIND_TIMEOUT_S = 0.5
 # bind em VID/PID da Sony"* (`_try_uhid`). Com outra máscara os dois caminhos
 # dão o mesmo aparelho, e o caminho escolhido fica guardado assim mesmo — a
 # falta do canal é dívida no mapa, nunca frase na tela (§D.2 da sprint).
+#
+# NO-MODO-XBOX-TUDO-FUNCIONA-01 (28/09/2026): o modo Xbox ESCOLHIDO veste todo
+# pad de Xbox 360 (:func:`mascara_no_jogo`). No canal comum, o Edge e o Pro não
+# têm hidraw, e sob o Proton o jogo não os usa: na sessão dela de 27/09 o
+# PRAGMATA segurou só o mouse e o teclado com quatro Edge `uinput`, e o Future
+# Knight abriu o Pro sem entendê-lo (`medidas/sessao/G1-…`, `G3-…`).
 CAMINHO_DUALSENSE = "dualsense"
 CAMINHO_XBOX = "xbox"
 CAMINHOS: tuple[str, ...] = (CAMINHO_DUALSENSE, CAMINHO_XBOX)
+
+#: O aparelho do canal comum: o Xbox 360 (`uinput_gamepad.FLAVORS["xbox"]`,
+#: `045e:028e`), o piso que todo jogo usa (`ponte_escada.ESCADA`, 2.º degrau).
+MASCARA_DO_CANAL_COMUM = "xbox"
 
 
 def normalizar_caminho(valor: object) -> str | None:
@@ -120,6 +130,39 @@ def quer_uhid(caminho: object, mascara: object) -> bool:
     (`external_mask.vpad_ficou_para_tras`) não a responderem cada um do seu jeito.
     """
     return mascara == "dualsense" and caminho_resolvido(caminho, mascara) == CAMINHO_DUALSENSE
+
+
+def mascara_no_jogo(caminho: object, mascara: str) -> str:
+    """O aparelho que o JOGO vê para este par (caminho, máscara).
+
+    A regra de NO-MODO-XBOX-TUDO-FUNCIONA-01, e o dono dela é este: com o modo
+    Xbox ESCOLHIDO, o jogo vê o Xbox 360 em qualquer máscara; nos outros casos,
+    vê a máscara. A combinação «modo Xbox + máscara DualSense ou Nintendo no
+    `uinput`, sem hidraw» não nasce, porque o jogo sob o Proton não a usa.
+
+    SÓ O CAMINHO ESCOLHIDO, nunca o resolvido: sem escolha, a máscara Nintendo
+    resolve para o caminho Xbox (:func:`caminho_resolvido`, o produto de antes
+    de 13/09) e continua sendo o Pro, que é o que a tela mostra com o modo de
+    fábrica aceso.
+    """
+    if normalizar_caminho(caminho) == CAMINHO_XBOX:
+        return MASCARA_DO_CANAL_COMUM
+    return mascara
+
+
+def mascara_no_jogo_do_vpad(vpad: object) -> str | None:
+    """O aparelho que ESTE vpad apresenta ao jogo — ``None`` sem vpad.
+
+    Pergunta ao pad o que a fábrica vestiu (`mascara_no_jogo` do `uinput`);
+    o pad que não diz (o `uhid`, dublês) apresenta a própria máscara.
+    """
+    if vpad is None:
+        return None
+    vestida = getattr(vpad, "mascara_no_jogo", None)
+    if isinstance(vestida, str) and vestida:
+        return vestida
+    flavor = getattr(vpad, "flavor", None)
+    return flavor if isinstance(flavor, str) and flavor else None
 
 
 def caminho_do_vpad(vpad: object) -> str | None:
@@ -170,6 +213,21 @@ def _pendurar_o_caminho(pad: object, caminho: str) -> None:
         logger.debug("vpad_sem_lugar_para_o_caminho", caminho=caminho)
 
 
+def _vestir_o_aparelho(pad: object, aparelho: str, *, mascara: str, player: int) -> None:
+    """Veste o pad ainda não criado com o aparelho que o jogo usa.
+
+    O `uinput` de verdade sabe (`UinputGamepad.vestir`). Um pad que não sabe
+    vestir (dublê de régua) fica como veio, e o diário diz.
+    """
+    vestir = getattr(pad, "vestir", None)
+    if not callable(vestir):
+        logger.debug("vpad_sem_como_vestir", aparelho=aparelho, player=player)
+        return
+    vestir(aparelho)
+    logger.info("vpad_vestido_pelo_modo", mascara=mascara, no_jogo=aparelho,
+                player=player)
+
+
 @runtime_checkable
 class VirtualPad(Protocol):
     """O que o daemon usa de um gamepad virtual, seja ele uinput ou uhid.
@@ -180,11 +238,16 @@ class VirtualPad(Protocol):
 
     @property
     def flavor(self) -> str:
-        """Máscara que o jogo vê: "dualsense", "xbox" ou "nintendo".
+        """A máscara deste pad: "dualsense", "xbox" ou "nintendo".
 
         A terceira entrou em 07/09/2026 e NÃO pediu linha nova aqui nem na
         factory: o gate do `_try_uhid` é *"não é dualsense, logo não é meu"*,
         então ela cai no uinput por si, como o xbox sempre caiu.
+
+        FATO SUBSTITUÍDO — 28/09/2026 (NO-MODO-XBOX-TUDO-FUNCIONA-01): aqui se
+        dizia *"máscara que o jogo vê"*. É a máscara do cartão, que os juízes de
+        recriação comparam; o que o jogo vê é :func:`mascara_no_jogo_do_vpad`,
+        e as duas só divergem no modo Xbox, que veste todo pad de Xbox 360.
         """
         ...
 
@@ -287,6 +350,14 @@ def make_virtual_pad(
     degradação — é a escolha dela. O pad devolvido carrega o caminho em que
     nasceu (`pad.caminho`), que é o que o laço do co-op compara.
 
+    NO-MODO-XBOX-TUDO-FUNCIONA-01 (28/09/2026): no caminho Xbox escolhido o
+    pad nasce Xbox 360 em toda máscara (:func:`mascara_no_jogo`), para o P1 e
+    para os secundários, no cabo e no rádio — esta fábrica não tem ramo de
+    jogador nem de transporte. O `flavor` do pad continua sendo a máscara do
+    cartão, que é o que os juízes de recriação comparam; como o aparelho é
+    função do par (caminho, máscara) e os dois já são comparados, nenhum juiz
+    recria em laço.
+
     Prefere o uhid quando tudo se alinha (máscara DualSense + /dev/uhid usável +
     permissão do chamador em `allow_uhid`); qualquer tropeço cai no
     `UinputGamepad`, que continua sendo o backend do Xbox 360 e o piso de
@@ -367,6 +438,9 @@ def make_virtual_pad(
         motivo = "uhid_vetado_pelo_chamador"
         logger.info("vpad_uhid_vetado_pelo_chamador_usando_uinput", player=player)
     pad = UinputGamepad.for_flavor(key, rumble_sink=rumble_sink)
+    aparelho = mascara_no_jogo(caminho, key)
+    if aparelho != key:
+        _vestir_o_aparelho(pad, aparelho, mascara=key, player=player)
     if motivo is not None:
         # VPAD-05 — fallback nunca silencioso: o PORQUÊ viaja com o vpad e o
         # `state_full` o expõe (`gamepad_emulation.degraded_motivo`) para a
@@ -455,11 +529,14 @@ __all__ = [
     "CAMINHOS",
     "CAMINHO_DUALSENSE",
     "CAMINHO_XBOX",
+    "MASCARA_DO_CANAL_COMUM",
     "UHID_BIND_TIMEOUT_S",
     "VirtualPad",
     "caminho_do_vpad",
     "caminho_resolvido",
     "make_virtual_pad",
+    "mascara_no_jogo",
+    "mascara_no_jogo_do_vpad",
     "motivo_da_degradacao",
     "normalizar_caminho",
     "quer_uhid",

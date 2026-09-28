@@ -656,6 +656,16 @@ class UinputGamepad:
     #: None = uinput por design (máscara xbox), não é degradação. Exposto no
     #: `state_full` (`gamepad_emulation.degraded_motivo`) para GUI/doctor.
     fallback_motivo: str | None = None
+    #: NO-MODO-XBOX-TUDO-FUNCIONA-01 (28/09/2026) — o aparelho que o JOGO vê,
+    #: quando não é o da máscara. ``None`` = o da máscara, como sempre foi.
+    #:
+    #: O `flavor` é o eixo da máscara (a escolha do cartão), e os juízes de
+    #: recriação do daemon o comparam com a máscara efetiva. O modo Xbox veste
+    #: todo pad de Xbox 360, porque no canal comum só ele é visto pelo jogo:
+    #: o Edge e o Pro no `uinput`, sem hidraw, somem sob o Proton (medido na
+    #: sessão dela, 27/09: `medidas/sessao/G1-…` e `G3-…`). Quem escreve este
+    #: campo é a fábrica (`virtual_pad.make_virtual_pad`), por :meth:`vestir`.
+    aparelho: str | None = None
 
     _device: Any = None
     #: Módulo `evdev.ecodes` (guardado no start p/ não reimportar por tick).
@@ -761,6 +771,31 @@ class UinputGamepad:
             rumble_sink=rumble_sink,
         )
 
+    @property
+    def mascara_no_jogo(self) -> str:
+        """O aparelho que o jogo vê: o `aparelho` vestido, ou a própria máscara.
+
+        É por ele, e não pelo `flavor`, que o nó nasce (nome, VID/PID e
+        capacidades) e que os botões e gatilhos saem: um Xbox 360 com a tabela
+        do Pro trocaria o X e o Y de lugar e mandaria o L2 como botão.
+        """
+        return self.aparelho or self.flavor
+
+    def vestir(self, aparelho: str) -> None:
+        """Veste este pad, ainda não criado, com o aparelho de outra máscara.
+
+        NO-MODO-XBOX-TUDO-FUNCIONA-01. O `flavor` fica: é a escolha do cartão,
+        que o daemon compara para decidir se recria. Muda o que o kernel
+        registra, e só antes do `start()`: um nó já de pé não troca de VID/PID.
+        """
+        if self._device is not None:
+            raise RuntimeError("o pad já nasceu; vestir é antes do start()")
+        spec = FLAVORS[aparelho]
+        self.aparelho = aparelho
+        self.name = spec["name"]
+        self.vendor = spec["vendor"]
+        self.product = spec["product"]
+
     def start(self) -> bool:
         """Cria o device. Retorna False se /dev/uinput indisponível.
 
@@ -789,6 +824,7 @@ class UinputGamepad:
         if self._ff_supported:
             self._iniciar_o_fio_da_vibracao()
         logger.info("uinput_device_created", name=self.name, flavor=self.flavor,
+                    no_jogo=self.mascara_no_jogo,
                     vendor=hex(self.vendor), product=hex(self.product),
                     ff=self._ff_supported)
         return True
@@ -802,7 +838,7 @@ class UinputGamepad:
         fio = threading.Thread(
             target=self._atender_a_vibracao,
             args=(self._device, fd, self._ff_pare),
-            name=f"hefesto-ff-{self.flavor}",
+            name=f"hefesto-ff-{self.mascara_no_jogo}",
             daemon=True,
         )
         self._ff_fio = fio
@@ -848,7 +884,7 @@ class UinputGamepad:
         fabrica = _uinput_sem_no_proprio(UInput) if isinstance(UInput, type) else UInput
         try:
             return fabrica(
-                _build_capabilities(with_ff=with_ff, flavor=self.flavor),
+                _build_capabilities(with_ff=with_ff, flavor=self.mascara_no_jogo),
                 name=self.name,
                 vendor=self.vendor,
                 product=self.product,
@@ -963,7 +999,7 @@ class UinputGamepad:
         if axes == last:
             return
         ec = self._ecodes
-        if self.flavor == "nintendo":
+        if self.mascara_no_jogo == "nintendo":
             self._forward_analog_procon(axes, last, ec)
             return
         codes = (ec.ABS_X, ec.ABS_Y, ec.ABS_RX, ec.ABS_RY, ec.ABS_Z, ec.ABS_RZ)
@@ -1045,7 +1081,7 @@ class UinputGamepad:
         self._last_buttons = frozenset(pressed)
 
     def _resolve_evdev(self, hefesto_name: str, ecodes_mod: Any) -> int | None:
-        tabela = BOTOES_POR_FLAVOR.get(self.flavor, BUTTON_TO_UINPUT)
+        tabela = BOTOES_POR_FLAVOR.get(self.mascara_no_jogo, BUTTON_TO_UINPUT)
         if hefesto_name in tabela:
             key = tabela[hefesto_name]
             code = getattr(ecodes_mod, key, None)
