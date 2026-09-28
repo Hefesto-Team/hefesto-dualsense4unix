@@ -59,7 +59,6 @@ from hefesto_dualsense4unix.integrations.virtual_pad import (
     CAMINHO_XBOX,
     make_virtual_pad,
     mascara_no_jogo,
-    mascara_no_jogo_do_vpad,
     motivo_da_degradacao,
 )
 from hefesto_dualsense4unix.testing.fake_controller import FakeController
@@ -218,7 +217,7 @@ class TestNoModoXboxOAparelhoEOXbox360:
                 "a SDL aplicaria o mapeamento do xpad a botões e eixos trocados"
             )
             assert pad.flavor == mascara, "o eixo da máscara (o cartão) não se perde"
-            assert mascara_no_jogo_do_vpad(pad) == "xbox"
+            assert pad.mascara_no_jogo == "xbox"
             assert pad.caminho == CAMINHO_XBOX
             assert motivo_da_degradacao(pad) is None, "o modo Xbox é escolha, não queda"
         finally:
@@ -254,7 +253,7 @@ class TestForaDoModoXboxNadaMuda:
         pad = _pad(mascara, caminho)
         try:
             assert _no_de(pad).vidpid[0] == vendor, (caminho, mascara)
-            assert mascara_no_jogo_do_vpad(pad) == mascara
+            assert pad.mascara_no_jogo == mascara
         finally:
             pad.stop()
 

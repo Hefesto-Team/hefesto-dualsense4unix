@@ -150,21 +150,6 @@ def mascara_no_jogo(caminho: object, mascara: str) -> str:
     return mascara
 
 
-def mascara_no_jogo_do_vpad(vpad: object) -> str | None:
-    """O aparelho que ESTE vpad apresenta ao jogo — ``None`` sem vpad.
-
-    Pergunta ao pad o que a fábrica vestiu (`mascara_no_jogo` do `uinput`);
-    o pad que não diz (o `uhid`, dublês) apresenta a própria máscara.
-    """
-    if vpad is None:
-        return None
-    vestida = getattr(vpad, "mascara_no_jogo", None)
-    if isinstance(vestida, str) and vestida:
-        return vestida
-    flavor = getattr(vpad, "flavor", None)
-    return flavor if isinstance(flavor, str) and flavor else None
-
-
 def caminho_do_vpad(vpad: object) -> str | None:
     """O caminho em que ESTE vpad nasceu — ``None`` quando ele não sabe dizer.
 
@@ -246,8 +231,9 @@ class VirtualPad(Protocol):
 
         FATO SUBSTITUÍDO — 28/09/2026 (NO-MODO-XBOX-TUDO-FUNCIONA-01): aqui se
         dizia *"máscara que o jogo vê"*. É a máscara do cartão, que os juízes de
-        recriação comparam; o que o jogo vê é :func:`mascara_no_jogo_do_vpad`,
-        e as duas só divergem no modo Xbox, que veste todo pad de Xbox 360.
+        recriação comparam; o que o jogo vê é a regra :func:`mascara_no_jogo`
+        (no `uinput`, a propriedade `UinputGamepad.mascara_no_jogo`), e as duas
+        só divergem no modo Xbox, que veste todo pad de Xbox 360.
         """
         ...
 
@@ -536,7 +522,6 @@ __all__ = [
     "caminho_resolvido",
     "make_virtual_pad",
     "mascara_no_jogo",
-    "mascara_no_jogo_do_vpad",
     "motivo_da_degradacao",
     "normalizar_caminho",
     "quer_uhid",
