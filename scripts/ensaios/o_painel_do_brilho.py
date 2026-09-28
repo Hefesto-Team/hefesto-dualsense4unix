@@ -26,7 +26,7 @@ age.
 A TELA É DELA, DE PROPÓSITO
 ----------------------------
 A guarda `tela_de_mentira` (TELA-DELA-02) desvia toda janela de `scripts/` para
-um `Xvfb`. Aqui o escape é declarado, como no `scripts/validar-mesa.sh`: este
+um `Xvfb`. Aqui o escape é declarado, como no `scripts/mesa-de-medicao.sh`: este
 painel só serve se ela o vir. `--oculta` devolve o comportamento de
 instrumento, para régua automática.
 

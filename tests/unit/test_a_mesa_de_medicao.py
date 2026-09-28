@@ -47,7 +47,7 @@ import monta
 
 CHROME = "/usr/bin/google-chrome"
 #: O lançador da mesa. Ele mora em `scripts/` e acha a raiz um nível acima.
-LANCADOR = RAIZ / "scripts" / "validar-mesa.sh"
+LANCADOR = RAIZ / "scripts" / "mesa-de-medicao.sh"
 
 #: O SUFIXO É INVENTADO, e o endereço só vira "forma de MAC" quando colado ao
 #: OUI real EM TEMPO DE EXECUÇÃO. Escrever o endereço inteiro num literal faria
