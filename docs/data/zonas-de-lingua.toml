@@ -303,11 +303,6 @@ zona = "CODIGO"
 razao = "configuração na raiz (pre-commit)."
 
 [[regra]]
-caminho = "*.txt"
-zona = "CODIGO"
-razao = "requirements na raiz."
-
-[[regra]]
 caminho = ".git*"
 zona = "CODIGO"
 razao = "configuração do próprio git (.gitignore, .gitattributes)."
