@@ -764,6 +764,37 @@ def test_o_caminho_repetido_noutra_entrada_fica_vazio(disco: Path) -> None:
     assert outra is None or outra.caminho is None, "a outra entrada ficou com o caminho"
 
 
+def test_o_lugar_em_duas_entradas_fica_numa_so_depois_do_mapear(disco: Path) -> None:
+    """Duas entradas guardando o mesmo lugar (o arquivo editado à mão) é «não
+    sei» — e o Mapear que passa por aquele buraco deixa UMA: as que o guardavam
+    ficam vazias, mesmo com nós de outro boot que não batem com os de agora.
+
+    MORDIDA: tire de ``_gravar_as_portas`` o esvaziar da entrada que guardava o
+    mesmo lugar — o lugar fica em três entradas, e ``entrada_do_lugar`` segue
+    «não sei» depois do Mapear.
+    """
+    lugar = f"pci-{PCI_B}-usb-0:4.2"
+    maquina.gravar_maquina(
+        {
+            "mapa": {
+                "faces": [{"nome": ee.FACE_FRENTE, "portas": ["3", "7"]}],
+                "portas": {"3": {"lugar": lugar, "nos": ["usb1-port9"]}, "7": {"lugar": lugar}},
+            },
+        }
+    )
+    assert maquina.entrada_do_lugar(carregar_maquina(), lugar) is None, "dois números: «não sei»"
+    feita = _gravar_direto(lugar, "3-4.2", ee.FACE_FRENTE)
+    assert feita.gravou, feita
+
+    documento = carregar_maquina()
+    assert maquina.entrada_do_lugar(documento, lugar) == feita.entrada, "o lugar ficou em duas"
+    for numero in {"3", "7"} - {feita.entrada}:
+        # vazia, a entrada sai do arquivo (``_podar``); o número fica na face
+        outra = documento.mapa.portas.get(numero)
+        assert outra is None or (outra.lugar is None and outra.nos == []), (
+            f"a {numero} ficou com o buraco: {outra}")
+
+
 def test_o_lugar_que_dizia_ser_esta_entrada_perde_a_amarra_e_guarda_o_nome(
     tmp_path: Path, disco: Path
 ) -> None:
