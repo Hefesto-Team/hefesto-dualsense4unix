@@ -155,6 +155,30 @@ def test_ligar_nao_mexe_no_registro(
     assert curou == []
 
 
+def test_a_escolha_que_nao_grava_recusa_e_nao_diz_pronto(
+        a09: Any, ctx: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pasta de configuração sem escrita: a tela diz que não pegou.
+
+    O recibo «Pronto» sobre um arquivo que não nasceu deixaria a pílula
+    apagada e o texto dizendo o contrário. MORDIDA: tire o `try/except
+    OSError` em volta do `gravar_camadas_da_steam_fora` de `corrigir_vulkan`.
+    """
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+
+    _mesa(a09, monkeypatch, ligado=False)
+
+    def sem_escrita(*_a: Any, **_k: Any) -> None:
+        raise PermissionError(13, "Permissão negada")
+
+    monkeypatch.setattr(cv, "gravar_camadas_da_steam_fora", sem_escrita)
+    a09._PAINEL[0] = None
+    with pytest.raises(RuntimeError) as recusa:
+        _clicar(a09.corrigir_vulkan, ctx)
+    assert "Não consegui guardar" in str(recusa.value)
+    assert a09._PAINEL[0] is None or "Pronto" not in a09._PAINEL[0]
+    assert cv.camadas_da_steam_fora() is False
+
+
 def test_a_lista_do_recibo_que_fica_e_curta_e_declarada() -> None:
     """A TELA-CALADA-03 continua valendo para os outros destrutivos.
 
