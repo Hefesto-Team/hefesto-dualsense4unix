@@ -12,9 +12,18 @@ endereço em lugar nenhum do produto:
 * `read_state()` só enxerga o PRIMÁRIO — numa mesa de quatro, três apertos
   ficariam sem dono.
 
-O que existe é a CONSEQUÊNCIA do aperto: o bit `STATUS_MIC_MUDO` de `status[1]`,
-que chega por um fd que é só daquele controle. **A identidade vem do fd, não do
-report** — e é isso que `backend.bordas_do_mic()` devolve.
+O que existe é o report cru que cada controle entrega pelo PRÓPRIO fd — e nele
+o bit do botão (`buttons[2]` bit 2) chega mesmo com o kernel consumindo a
+borda. **A identidade vem do fd, não do report** — e é isso que
+`backend.bordas_do_mic()` devolve.
+
+**O GESTO É O BOTÃO, E NÃO O BIT DE MUDO — O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01
+(28/09/2026).** Até então a borda era a virada do bit `STATUS_MIC_MUDO` de
+`status[1]`, a CONSEQUÊNCIA de um aperto — e esse bit vira com qualquer um que
+escreva o mudo no firmware. Na sessão dela de 28/09 o branco teve três bordas
+que ninguém deu, e cada uma elegeu o microfone da máquina e gravou o perfil
+dela (*«eu não apertei o botão do Mic»*). O porquê inteiro está em
+`core/backend_pydualsense._registrar_borda_do_mic`.
 
 AS DUAS GUARDAS SÃO REUSADAS, NÃO REINVENTADAS. O sossego
 (`hotkey.MIC_SOSSEGO_S`) e a carência pós-conexão (`lifecycle.INPUT_GRACE_SEC`)

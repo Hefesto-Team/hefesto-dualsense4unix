@@ -26,6 +26,11 @@ atravessar os dois pontos de entrada do estado sem levantar.
 A MORDIDA: apague `self._garantir_estado_da_borda_do_mic()` de
 `_registrar_borda_do_mic` e o primeiro teste reprova com o `AttributeError`
 exato que custou a manhã.
+
+28/09/2026 (O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01): o estado passou a contar o
+BOTÃO, e os dois campos de 10/09 (a fila das marcas e a virada armada) saíram
+com as guardas que eles serviam. Os campos novos nascem no mesmo dono, e a
+lista abaixo é a de hoje.
 """
 from __future__ import annotations
 
@@ -46,27 +51,22 @@ def _handle_cru() -> Any:
 
 
 def test_a_borda_atravessa_um_handle_sem_init() -> None:
-    """`_registrar_borda_do_mic` se vira sozinho."""
+    """`_registrar_borda_do_mic` se vira sozinho — e o aperto conta."""
     h = _handle_cru()
-    h._registrar_borda_do_mic(0x00)
-    h._registrar_borda_do_mic(STATUS_MIC_MUDO)
+    h._registrar_borda_do_mic(0x00, False)
+    h._registrar_borda_do_mic(STATUS_MIC_MUDO, True)
 
     assert h._mic_mudo is True
-    assert isinstance(h._mic_mudo_seq, int)
-    assert h._mudos_que_pedimos == []
+    assert h._mic_mudo_seq == 1
+    assert h._mic_mudo_pedido is False
 
 
-def test_a_marca_do_eco_atravessa_um_handle_sem_init() -> None:
-    """O outro ponto de entrada: quem ANOTA o que nós pedimos.
-
-    Sem a garantia aqui, `set_microphone_mute` num handle cru levantaria — e
-    é ele quem o daemon chama quando ela aperta o botão.
-    """
+def test_o_mudo_do_daemon_atravessa_um_handle_sem_init() -> None:
+    """O outro ponto de entrada: quem o daemon chama para escrever o mudo."""
     h = _handle_cru()
-    h._mic_mute_desejado = None
-    h._marcar_o_mudo_que_pedimos(True)
+    h.set_microphone_mute(True)
 
-    assert h._mudos_que_pedimos == [True]
+    assert h._mic_mute_desejado is True
 
 
 def test_zerar_e_idempotente_e_nao_apaga_o_status_lido() -> None:
@@ -83,8 +83,9 @@ def test_zerar_e_idempotente_e_nao_apaga_o_status_lido() -> None:
 
     assert h._audio_status == STATUS_MIC_MUDO
     assert h._mic_mudo is None
+    assert h._mic_botao is None
     assert h._mic_mudo_seq == 0
-    assert h._borda_armada is None
+    assert h._mic_mudo_pedido is None
 
 
 def test_a_garantia_nao_pisa_no_estado_de_quem_ja_tem() -> None:
@@ -95,20 +96,20 @@ def test_a_garantia_nao_pisa_no_estado_de_quem_ja_tem() -> None:
     `AttributeError` que ele cura.
     """
     h = _handle_cru()
-    h._registrar_borda_do_mic(0x00)
+    h._registrar_borda_do_mic(0x00, False)
     h._mic_mudo_seq = 7
-    h._mudos_que_pedimos = [True]
+    h._mic_mudo_pedido = True
 
     h._garantir_estado_da_borda_do_mic()
 
     assert h._mic_mudo_seq == 7, "a garantia zerou o contador de quem já tinha"
-    assert h._mudos_que_pedimos == [True]
+    assert h._mic_mudo_pedido is True
 
 
 @pytest.mark.parametrize(
     "campo",
-    ["_mic_mudo", "_mic_mudo_seq", "_mudos_que_pedimos", "_borda_armada",
-     "_mic_mudo_em"],
+    ["_mic_mudo", "_mic_botao", "_mic_mudo_seq", "_mic_mudo_pedido",
+     "_mic_mudo_em", "_mic_posse_solta_pela_mao"],
 )
 def test_todo_campo_do_estado_nasce_no_dono_unico(campo: str) -> None:
     """A lista COMPLETA vive num lugar só — e é esta régua que impede a volta.

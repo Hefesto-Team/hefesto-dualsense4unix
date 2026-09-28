@@ -174,6 +174,14 @@ MOTION_WINDOW_LEN = 25
 BUTTONS2_OFFSET = 9
 TOUCHPAD_CLICK_BIT = 0x02
 
+#: O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01 (28/09/2026) — o BOTÃO do microfone, no
+#: mesmo `buttons[2]`: bit 2 = `DS_BUTTONS2_MIC_MUTE` do hid-playstation.c.
+#: É o dedo dela, e não a consequência dele: o bit `MIC_MUTE` de `status[1]`
+#: muda com quem escrever o mudo no firmware (o kernel, o daemon, o que vier
+#: por outra ponte), e este só muda quando alguém aperta. Mesmo número do
+#: `"mic_btn": 0x04` do vpad (`integrations/uhid_gamepad.py`).
+MIC_BUTTON_BIT = 0x04
+
 #: JACK-QUE-NAO-LIGOU-01 — o byte de `status[1]` dentro do payload
 #: (`payload[53]`): fone plugado (bit 0), microfone presente (bit 1) e
 #: microfone mudo no firmware (bit 2). Mesmo número do `_STATUS1_OFFSET` do
@@ -591,6 +599,26 @@ def extract_jack_status(report: bytes) -> int | None:
     if len(report) <= idx:
         return None
     return int(report[idx])
+
+
+def extract_estado_do_mic(report: bytes) -> tuple[int, bool] | None:
+    """`(status[1], botão do microfone apertado)` de um report CRU, ou None.
+
+    O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01 (28/09/2026). Quem conta o gesto do
+    botão precisa das DUAS leituras do MESMO report: o botão diz que houve
+    aperto, e o `status[1]` diz o que o firmware segurava naquele instante
+    (o aperto pede o contrário). Uma base só, uma conferência de CRC só, e a
+    mesma disciplina de transporte do `extract_jack_status`: ``None`` é
+    *"este report não diz nada"* — nunca *"botão solto e microfone livre"*.
+    """
+    base = _struct_base(report)
+    if base is None:
+        return None
+    jack = _jack_com_base(report, base)
+    idx = base + BUTTONS2_OFFSET
+    if jack is None or len(report) <= idx:
+        return None
+    return jack, bool(report[idx] & MIC_BUTTON_BIT)
 
 
 def extract_battery_status(report: bytes) -> int | None:
@@ -1274,6 +1302,7 @@ __all__ = [
     "INPUT_REPORT_BT_SIZE",
     "INPUT_REPORT_USB",
     "JACK_STATUS_OFFSET",
+    "MIC_BUTTON_BIT",
     "MOTION_EMIT_MAX_HZ",
     "MOTION_WINDOW_LEN",
     "MOTION_WINDOW_OFFSET",
@@ -1282,6 +1311,7 @@ __all__ = [
     "decodificar_bateria",
     "eh_report_de_estado",
     "extract_battery_status",
+    "extract_estado_do_mic",
     "extract_jack_status",
     "extract_motion_window",
     "extract_touchpad_click",

@@ -16,7 +16,11 @@ Quatro perguntas, e cada uma nasceu de um caminho que estava aberto:
 
 3. **A borda é CONTADOR, não leitura de estado.** Um toque duplo entre duas
    amostragens devolveria o mesmo valor de estado e a segunda eleição sumiria.
-   Sumir uma borda é sumir uma eleição dela.
+   Sumir uma borda é sumir uma eleição dela. E desde 28/09/2026
+   (O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01) o contador conta o BOTÃO — o bit de
+   mudo vira com quem escrever o mudo, e virou três vezes no branco sem a mão
+   dela; as réguas do botão parado moram em
+   `test_o_botao_do_mic_so_obedece_a_mao.py`.
 
 4. **O tempo é parte da régua.** Uma régua que roda o tique uma vez mede um
    INSTANTE, não um comportamento — em 29/08 uma regressão só apareceu aos 181
@@ -32,10 +36,7 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.core import physical_report_reader as prr
-from hefesto_dualsense4unix.core.backend_pydualsense import (
-    SUSTENTACAO_DO_MUDO_S,
-    _PinnedPyDualSense,
-)
+from hefesto_dualsense4unix.core.backend_pydualsense import _PinnedPyDualSense
 from hefesto_dualsense4unix.integrations.dualsense_bt_audio import STATUS_MIC_MUDO
 
 _MAC_A = "aabbcc000001"
@@ -57,58 +58,38 @@ def _handle() -> Any:
     return h
 
 
-#: O laço de `mic_da_mesa` lê ~31 reports/s — é este o relógio real do
-#: caminho sob prova, e é ele que estes testes usam.
-_PERIODO_S = 1.0 / 31.0
-
-#: Quantos reports cobrem `SUSTENTACAO_DO_MUDO_S` com folga de um.
-_REPORTS_PARA_SUSTENTAR = int(SUSTENTACAO_DO_MUDO_S / _PERIODO_S) + 2
+#: Reports por valor: o laço de leitura entrega dezenas por segundo, e o dedo
+#: dela fica no botão por várias leituras.
+_REPORTS = 8
 
 
-@pytest.fixture(autouse=True)
-def _relogio(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O tempo anda UM report a cada leitura — e sem isso nada aqui mede nada.
-
-    A cura de 10/09/2026 (`SUSTENTACAO_DO_MUDO_S`) mudou o contrato: **uma
-    mudança de bit só vira borda depois de SUSTENTAR**, porque com o microfone
-    no ar o firmware oscilava o `MicMuted` a ~16,7 Hz e cada oscilação virava
-    "ela apertou o botão". Com o relógio parado, como este arquivo o deixava,
-    nenhuma mudança sustenta e o contador nunca sobe.
-
-    O alvo é `_relogio_da_borda`, o ponto de injeção do produto, e nunca
-    `time.monotonic` — trocar a stdlib congela o relógio da corrida inteira e
-    envenena o vizinho por ordem de teste.
-    """
-    from hefesto_dualsense4unix.core import backend_pydualsense as bp
-
-    marca = {"agora": 0.0}
-
-    def _andar() -> float:
-        marca["agora"] += _PERIODO_S
-        return marca["agora"]
-
-    monkeypatch.setattr(bp, "_relogio_da_borda", _andar)
-
-
-def _segurar(h: Any, status: int, reports: int = _REPORTS_PARA_SUSTENTAR) -> None:
-    """Repete o MESMO valor tempo bastante para ele sustentar.
-
-    É o que o dedo dela faz: o kernel trava o valor e ele fica. O gating do
-    firmware não faz isso — some antes — e é essa diferença que a cura mede.
-    """
+def _segurar(h: Any, status: int, reports: int = _REPORTS, *, botao: bool = False) -> None:
+    """Repete o MESMO report — o estado do firmware e o do botão — `reports` vezes."""
     for _ in range(reports):
-        h._captura_status_audio(_report_usb(status))
+        h._captura_status_audio(_report_usb(status, botao=botao))
 
 
-def _report_usb(status: int) -> bytes:
+def _apertar(h: Any, status: int) -> None:
+    """Um aperto do botão: o dedo desce com o firmware no valor de antes, o
+    kernel passa a segurar `status` (quando é dono do campo), e o dedo sobe."""
+    antes = h._audio_status if isinstance(h._audio_status, int) else 0x00
+    _segurar(h, antes, reports=1, botao=True)
+    _segurar(h, status, botao=True)
+    _segurar(h, status)
+
+
+def _report_usb(status: int, *, botao: bool = False) -> bytes:
     """Report `0x01` de USB com `status[1]` valendo `status`.
 
     `_USB_STRUCT_BASE` é 1 e `JACK_STATUS_OFFSET` é 53, logo o byte mora no
-    índice 54 — o mesmo que o caminho velho lia do `states`.
+    índice 54 — o mesmo que o caminho velho lia do `states`. O botão do
+    microfone é o bit 2 de `buttons[2]` (`BUTTONS2_OFFSET`).
     """
     corpo = bytearray(64)
     corpo[0] = prr.INPUT_REPORT_USB
     corpo[1 + prr.JACK_STATUS_OFFSET] = status
+    if botao:
+        corpo[1 + prr.BUTTONS2_OFFSET] |= prr.MIC_BUTTON_BIT
     return bytes(corpo)
 
 
@@ -191,6 +172,7 @@ def _backend(handles: dict[str, Any]) -> Any:
     b = PyDualSenseController.__new__(PyDualSenseController)
     b._handles = handles
     b._io_lock = _LockFalso()
+    b._mic_mute_by_uniq = {}
     return b
 
 
@@ -201,12 +183,12 @@ def test_a_borda_carrega_o_uniq_de_quem_apertou() -> None:
 
     for h in (a, b):
         _segurar(h, 0x00)
-    _segurar(b, STATUS_MIC_MUDO)
+    _apertar(b, STATUS_MIC_MUDO)
 
     bordas = backend.bordas_do_mic()
     assert bordas[_MAC_A][0] == 0, "o Jogador 1 não encostou no botão"
     assert bordas[_MAC_B][0] == 1
-    assert bordas[_MAC_B][1] is True, "o valor DEPOIS da virada"
+    assert bordas[_MAC_B][1] is True, "o que o aperto pede: o microfone estava livre"
 
 
 def test_toque_duplo_entre_duas_leituras_conta_duas_bordas() -> None:
@@ -220,11 +202,11 @@ def test_toque_duplo_entre_duas_leituras_conta_duas_bordas() -> None:
     _segurar(h, STATUS_MIC_MUDO)
     antes = backend.bordas_do_mic()[_MAC_A]
 
-    _segurar(h, 0x00)
-    _segurar(h, STATUS_MIC_MUDO)
+    _apertar(h, 0x00)
+    _apertar(h, STATUS_MIC_MUDO)
     depois = backend.bordas_do_mic()[_MAC_A]
 
-    assert depois[1] == antes[1], "o ESTADO voltou ao que era — este é o ponto"
+    assert bool(h._audio_status & STATUS_MIC_MUDO), "o ESTADO voltou ao que era"
     assert depois[0] - antes[0] == 2, "e o CONTADOR viu os dois apertos"
 
 
@@ -245,7 +227,7 @@ def test_handle_sem_uniq_resolvivel_fica_de_fora() -> None:
     h = _handle()
     backend = _backend({"/dev/hidraw3": h})
     _segurar(h, 0x00)
-    _segurar(h, STATUS_MIC_MUDO)
+    _apertar(h, STATUS_MIC_MUDO)
     assert backend.bordas_do_mic() == {}
 
 
@@ -268,35 +250,38 @@ def test_o_contador_sobrevive_a_uma_sessao_inteira(apertos: int) -> None:
     quando = {int(total * (i + 1) / (apertos + 1)) for i in range(apertos)}
     mudo = False
     h._captura_status_audio(_report_usb(0x00))
+    dedo = 0
     for i in range(total):
         if i in quando:
             mudo = not mudo
-        h._captura_status_audio(_report_usb(STATUS_MIC_MUDO if mudo else 0x00))
+            dedo = 3  # o dedo fica no botão por três leituras
+        h._captura_status_audio(
+            _report_usb(STATUS_MIC_MUDO if mudo else 0x00, botao=dedo > 0)
+        )
+        dedo = max(0, dedo - 1)
 
     assert backend.bordas_do_mic()[_MAC_A][0] == apertos, (
-        "cada aperto dela fica no lugar por segundos — os 60 estão espalhados "
-        "em 200 s, logo todos sustentam com folga"
+        "os apertos dela estão espalhados em 200 s de reports, e a conta tem "
+        "de fechar um a um"
     )
 
 
-def test_o_repique_que_NAO_sustenta_nao_e_aperto(  # noqa: N802
-) -> None:
-    """A METADE NOVA DO CONTRATO, e ela é a cura de 10/09/2026.
+def test_o_bit_que_oscila_com_o_botao_parado_nao_e_aperto() -> None:
+    """O gating do rádio: o bit vira e volta SESSENTA vezes, e o dedo não desceu.
 
-    Com o microfone no ar o firmware oscilava o `MicMuted` a ~16,7 Hz (~60 ms
-    por valor), e cada oscilação virava *"ela apertou o botão"* — o daemon
-    desligava o microfone sozinho aos 1,1 s. Aqui o bit vira e volta rápido
-    demais **sessenta vezes**, e o contador tem de ficar em ZERO.
+    Com o microfone no ar o `MicMuted` oscilava a ~16,7 Hz, e cada oscilação
+    virava *"ela apertou o botão"* — o daemon desligava o microfone sozinho aos
+    1,1 s (10/09/2026). A cura daquele dia exigia que a virada SUSTENTASSE; a de
+    28/09/2026 conta o botão, que o gating não alcança.
 
-    MORDIDA: ponha `SUSTENTACAO_DO_MUDO_S = 0.0` e este teste conta 60 apertos
-    que ninguém deu.
+    MORDIDA: volte `_registrar_borda_do_mic` a contar a virada do bit de estado
+    e este teste conta apertos que ninguém deu.
     """
     h = _handle()
     backend = _backend({_MAC_A: h})
     _segurar(h, 0x00)
     partida = backend.bordas_do_mic()[_MAC_A][0]
 
-    # ~60 ms por valor: dois reports a 31 Hz, bem abaixo dos 300 ms.
     for i in range(60):
         _segurar(h, STATUS_MIC_MUDO if i % 2 else 0x00, reports=2)
 
