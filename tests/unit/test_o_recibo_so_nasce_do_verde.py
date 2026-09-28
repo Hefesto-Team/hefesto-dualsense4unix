@@ -20,7 +20,9 @@ AS MORDIDAS:
 * tire o ``abrir`` do ``case`` da camada completa do ``portoes.sh`` e o
   ``--rapido`` passa a deixar recibo;
 * tire a guarda ``so_esta`` do ``rodar-a-suite.sh`` e uma parte só passa a
-  deixar o recibo da suíte inteira.
+  deixar o recibo da suíte inteira;
+* tire o ``PULADOS+=`` do ``portoes.sh`` e o portão pytest que pulou teste
+  sai do recibo como se tivesse medido tudo.
 """
 from __future__ import annotations
 
@@ -377,6 +379,30 @@ def test_o_portoes_com_nao_medido_deixa_recibo_que_o_nomeia(repo: Path) -> None:
     assert feito.returncode == 0, feito.stdout
     texto = (_pasta(repo) / f"{arvore}.portoes-completo").read_text(encoding="utf-8")
     assert "nao_medidos: sd" in texto and "contagem: 1 de 2 portões verdes" in texto, texto
+
+
+def test_o_portao_pytest_que_pulou_teste_sai_nomeado_no_recibo(repo: Path) -> None:
+    """Pulo não é verde: o pytest devolve 0 com teste pulado, e o portão sai `ok`.
+
+    O recibo da suíte já nomeia os pulados dela; o dos portões nomeia os de
+    cada portão de runner ``pytest``, pelo mesmo motivo (sem tela, os testes
+    de tela pulam calados).
+    """
+    _casa_com_portoes(repo, "completo|c|bash|scripts/verde.sh\n"
+                            "completo|pt|pytest|tests/unit/test_pula.py\n")
+    (repo / "tests" / "unit").mkdir(parents=True)
+    (repo / "tests" / "unit" / "test_pula.py").write_text(_PASSA + "\n\n" + _PULA,
+                                                         encoding="utf-8")
+    _git(repo, "add", "--", "tests")
+    arvore = _arvore_do_indice(repo)
+    feito = _portoes(repo)
+
+    assert feito.returncode == 0, feito.stdout + feito.stderr
+    assert "1 teste(s) pulado(s)" in feito.stdout, feito.stdout
+    texto = (_pasta(repo) / f"{arvore}.portoes-completo").read_text(encoding="utf-8")
+    assert "nao_medidos: pt: 1 teste(s) pulado(s)" in texto, (
+        "o portão pytest pulou teste e o recibo o escondeu:\n" + texto)
+    assert "contagem: 2 de 2 portões verdes" in texto, texto
 
 
 def _casa_com_suite(repo: Path, testes: dict[str, str]) -> None:

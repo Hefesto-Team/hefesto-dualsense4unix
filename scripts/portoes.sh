@@ -596,7 +596,9 @@ esac
 _sair() {
   local rc="$1" id bandeiras=()
   if [ -n "$RECIBO_DA_CORRIDA" ]; then
-    for id in ${NAO_MEDIDOS[@]+"${NAO_MEDIDOS[@]}"}; do bandeiras+=(--nao-medido "$id"); done
+    for id in ${NAO_MEDIDOS[@]+"${NAO_MEDIDOS[@]}"} ${PULADOS[@]+"${PULADOS[@]}"}; do
+      bandeiras+=(--nao-medido "$id")
+    done
     echo
     "$PY" "$RAIZ/scripts/recibo_da_medida.py" fechar portoes-completo "$rc" \
       --raiz "$RAIZ" --corrida "$RECIBO_DA_CORRIDA" \
@@ -610,6 +612,7 @@ _sair() {
 VERMELHOS=()
 AUSENTES=()
 NAO_MEDIDOS=()
+PULADOS=()
 TOTAL=0
 
 while IFS='|' read -r camada id runner argv; do
@@ -680,6 +683,18 @@ while IFS='|' read -r camada id runner argv; do
     NAO_MEDIDOS+=("$id")
   elif [ "$rc" -eq 0 ]; then
     printf '  %-22s ok      %6d ms\n' "$id" "$ms"
+    # PULO NÃO É VERDE. O pytest devolve 0 com teste pulado (sem tela, sem o
+    # dado), e o portão sai `ok`: a linha diz quantos, e o recibo também, como
+    # o recibo da suíte diz os dela.
+    if [ "$runner" = pytest ]; then
+      pulos="$(printf '%s\n' "$saida" \
+        | grep -E '^[= ]*[0-9]+ (passed|failed|skipped|xfailed|xpassed|errors?|deselected)' \
+        | tail -1 | grep -o '[0-9]\+ skipped' | grep -o '[0-9]\+' || true)"
+      if [ -n "$pulos" ]; then
+        printf '      %s teste(s) pulado(s)\n' "$pulos"
+        PULADOS+=("$id: $pulos teste(s) pulado(s)")
+      fi
+    fi
   else
     printf '  %-22s VERMELHO rc=%s %5d ms\n' "$id" "$rc" "$ms"
     printf '%s\n' "$saida" | sed 's/^/      /'
