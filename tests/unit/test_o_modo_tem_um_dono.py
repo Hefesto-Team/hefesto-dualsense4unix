@@ -672,7 +672,10 @@ def test_o_p1_e_a_carta_1_e_nao_quem_conectou_primeiro(
 
 
 @pytest.mark.usefixtures("config_isolado")
-def test_o_numero_que_ela_troca_na_tela_leva_o_posto(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("jogo", [False, True], ids=["sem-jogo", "com-jogo"])
+def test_o_numero_que_ela_troca_na_tela_leva_o_posto(
+    monkeypatch: pytest.MonkeyPatch, jogo: bool
+) -> None:
     """Ela dá o «1» ao vermelho na aba Controles: o posto vai com a lâmpada.
 
     Sem hotplug nenhum — o `connect()` só roda a cada ~30 s com a mesa parada —,
@@ -681,7 +684,7 @@ def test_o_numero_que_ela_troca_na_tela_leva_o_posto(monkeypatch: pytest.MonkeyP
     MORDE: tire o ramo da carta menor do `_quem_senta_no_posto` (o posto
     ocupado não se reelege) — o branco segue primário com a lâmpada dizendo 2.
     """
-    bancada = _a_mesa_do_boot(monkeypatch, (BRANCO, VERMELHO, ROXO, AZUL))
+    bancada = _a_mesa_do_boot(monkeypatch, (BRANCO, VERMELHO, ROXO, AZUL), jogo=jogo)
     for _ in range(3):
         bancada.tique()
     assert bancada.inst.primary_uniq == BRANCO
@@ -697,6 +700,15 @@ def test_o_numero_que_ela_troca_na_tela_leva_o_posto(monkeypatch: pytest.MonkeyP
         "o diário não disse que o posto seguiu a carta"
     )
     assert bancada.inst.seguir_a_carta() is False, "a segunda pergunta não muda nada"
+
+    # E a mesa se refaz sem ninguém perder o controle: o co-op recolhe o vpad
+    # que o vermelho tinha como secundário e dá um ao branco, sem EBUSY e sem
+    # dois vpads com o mesmo endereço (as invariantes da bancada, a cada tique).
+    for _ in range(4):
+        bancada.tique()
+    assert bancada.inst.primary_uniq == VERMELHO
+    assert bancada.dono_do_vpad_do_p1() == VERMELHO
+    bancada.o_jogo_segue_a_tela()
 
 
 class _ControleQueSegueACarta(FakeController):
