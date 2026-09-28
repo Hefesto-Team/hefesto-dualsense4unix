@@ -21,6 +21,11 @@ VID/PID e capacidades. Nenhum nó de kernel nasce. Os MACs são da faixa forjada
 MORDIDAS (cada classe diz a sua): tire a chamada de `_vestir_o_aparelho` da
 fábrica; troque `normalizar_caminho` por `caminho_resolvido` na regra; devolva
 ao `UinputGamepad` a tabela e as capacidades pelo `flavor`.
+
+A DÍVIDA QUE FICA, com dono e data: a troca de modo com o pad Nintendo de pé
+não o recria (os juízes comparam o canal, e não o aparelho). Ela está aqui em
+`xfail(strict=True)`, o molde da casa: o dia em que a cura entrar, o teste
+passa e o `strict` obriga a tirar a marca.
 """
 
 from __future__ import annotations
@@ -451,6 +456,104 @@ class TestNenhumJuizRecriaEmLaco:
             assert vpad_ficou_para_tras(
                 pad.flavor, MACS[0], "dualsense", vpad=pad, caminho=CAMINHO_DUALSENSE
             )
+        finally:
+            pad.stop()
+
+
+# ===========================================================================
+# 3b — a troca de modo com o pad de pé (o PS + R3, o lançamento que arma o modo)
+# ===========================================================================
+
+
+def _vidpid_do_p1(d: Any) -> tuple[int, int]:
+    return _no_de(d._gamepad_device).vidpid
+
+
+class TestATrocaDeModoComOPadDePe:
+    """O pad nasce certo; aqui, o que acontece quando o MODO muda com ele vivo.
+
+    É o caso do L4 (27/09): a mesa estava no modo DualSense antes do jogo, e o
+    lançamento do Future Knight armou o modo Xbox com os pads de pé.
+
+    MORDIDA do cartão DualSense: a da classe 1 (sem o vestir, o pad recriado no
+    modo Xbox volta a ser o Edge no `uinput`).
+    """
+
+    def test_o_cartao_dualsense_vai_ao_xbox_360_e_volta(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        registro_de_mascaras().set_mask(MACS[0], "dualsense")
+        d = _daemon_do_p1(monkeypatch)
+        try:
+            gp.start_gamepad_emulation_desfecho(
+                d, "dualsense", origin="profile", caminho=CAMINHO_DUALSENSE
+            )
+            assert _vidpid_do_p1(d)[0] == SONY_VENDOR, "premissa: o Edge (sem uhid aqui)"
+            assert (
+                gp.start_gamepad_emulation_desfecho(
+                    d, "dualsense", origin="profile", caminho=CAMINHO_XBOX
+                )
+                == gp.EMU_APLICADO
+            )
+            assert _vidpid_do_p1(d) == (XBOX360_VENDOR, XBOX360_PRODUCT), (
+                "o modo Xbox chegou com o pad de pé e o P1 ficou no Edge sem hidraw"
+            )
+            gp.start_gamepad_emulation_desfecho(
+                d, "dualsense", origin="profile", caminho=CAMINHO_DUALSENSE
+            )
+            assert _vidpid_do_p1(d)[0] == SONY_VENDOR, "a volta ao modo DualSense"
+        finally:
+            gp.stop_gamepad_emulation(d, persist=False)
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason=(
+            "DÍVIDA DA ONDA 3, com dono: os juízes de recriação (o `ja_estava` de "
+            "`gamepad.start_gamepad_emulation_desfecho` e "
+            "`external_mask.vpad_ficou_para_tras`) comparam o canal por "
+            "`quer_uhid`, que é sempre falso para a máscara Nintendo; a troca de "
+            "modo com o Pro de pé não o recria. A cura é um juiz pelo aparelho "
+            "(`virtual_pad.mascara_no_jogo`) nos dois, juntos. No dia em que ela "
+            "entrar, este teste passa e o `strict` obriga a tirar o xfail."
+        ),
+    )
+    def test_o_cartao_nintendo_vira_xbox_360_quando_o_modo_muda(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        registro_de_mascaras().set_mask(MACS[0], "nintendo")
+        d = _daemon_do_p1(monkeypatch)
+        try:
+            gp.start_gamepad_emulation_desfecho(
+                d, "dualsense", origin="profile", caminho=CAMINHO_DUALSENSE
+            )
+            assert _vidpid_do_p1(d)[0] == NINTENDO_VENDOR, "premissa: o Pro"
+            gp.start_gamepad_emulation_desfecho(
+                d, "dualsense", origin="profile", caminho=CAMINHO_XBOX
+            )
+            gp.reconciliar_as_mascaras(d)
+            assert _vidpid_do_p1(d) == (XBOX360_VENDOR, XBOX360_PRODUCT), (
+                "o modo Xbox chegou com o Pro de pé e ele ficou Pro no `uinput`, "
+                "sem hidraw: o P4 azul do G3"
+            )
+        finally:
+            gp.stop_gamepad_emulation(d, persist=False)
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason=(
+            "A MESMA DÍVIDA, no juiz dos jogadores 2 a 4 "
+            "(`external_mask.vpad_ficou_para_tras`): ele muda junto com o do P1, "
+            "na onda 3, ou o P1 entra em laço de recriação (ver a nota da sprint)."
+        ),
+    )
+    def test_o_juiz_do_coop_ve_o_pro_ficar_para_tras(self) -> None:
+        registro_de_mascaras().set_mask(MACS[1], "nintendo")
+        pad = _pad("dualsense", CAMINHO_DUALSENSE, identity=MACS[1], player=2)
+        try:
+            assert _no_de(pad).vidpid[0] == NINTENDO_VENDOR, "premissa: o Pro"
+            assert vpad_ficou_para_tras(
+                pad.flavor, MACS[1], "dualsense", vpad=pad, caminho=CAMINHO_XBOX
+            ), "o modo Xbox chegou e o juiz do co-op deixou o Pro de pé"
         finally:
             pad.stop()
 
