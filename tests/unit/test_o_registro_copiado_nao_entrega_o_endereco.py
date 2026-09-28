@@ -641,9 +641,9 @@ def _o_corpo_chama_o_dono(fonte: str, nome: str) -> tuple[bool, list[str]]:
     )
     chama = False
     contas: list[str] = []
-    for no in ast.walk(funcao):
-        if isinstance(no, ast.Call):
-            alvo = no.func
+    for filho in ast.walk(funcao):
+        if isinstance(filho, ast.Call):
+            alvo = filho.func
             if (
                 isinstance(alvo, ast.Attribute)
                 and isinstance(alvo.value, ast.Name)
@@ -653,11 +653,11 @@ def _o_corpo_chama_o_dono(fonte: str, nome: str) -> tuple[bool, list[str]]:
                 chama = True
             if isinstance(alvo, ast.Attribute) and alvo.attr == "split":
                 contas.append("split")
-        elif isinstance(no, ast.Name) and no.id == "re":
+        elif isinstance(filho, ast.Name) and filho.id == "re":
             contas.append("re")
-        elif isinstance(no, ast.Subscript) and isinstance(no.slice, ast.Slice):
+        elif isinstance(filho, ast.Subscript) and isinstance(filho.slice, ast.Slice):
             contas.append("fatia")
-        elif isinstance(no, ast.Constant) and no.value == "0123456789abcdef":
+        elif isinstance(filho, ast.Constant) and filho.value == "0123456789abcdef":
             contas.append("peneira")
     return chama, contas
 
@@ -763,6 +763,25 @@ def test_mordida_o_corpo_de_antes_do_sinal_da_barra_reprova() -> None:
     exec(compile(_O_CORPO_DE_ANTES, "<o corpo de antes>", "exec"), espaco)
     assert _doze_do_cru(espaco["mascarar"](_grafias()["colada"]))
     assert _janelas_que_sobram(espaco["mascarar"](_grafias()["hífen"])) != []
+
+
+@pytest.mark.parametrize("mascarador", ["mascarar", "mascarar_serial"])
+def test_o_ensaio_da_cor_mascara_pelo_dono(mascarador: str) -> None:
+    """Item 8: o serial tem um dono, e o `check_numero_de_serie` lê a máscara por aqui."""
+    fonte = (RAIZ / "scripts/ensaios/cor_do_plastico.py").read_text(encoding="utf-8")
+    chama, contas = _o_corpo_chama_o_dono(fonte, mascarador)
+    assert chama, f"cor_do_plastico.{mascarador} não chama o dono"
+    assert contas == [], contas
+
+
+def test_o_serial_que_o_dono_recusa_sai_todo_em_cerquilha(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.syspath_prepend(str(RAIZ / "scripts/ensaios"))
+    cor = _carregar(RAIZ / "scripts/ensaios/cor_do_plastico.py", "_cor_do_plastico_na_regua")
+    serial = _serial_forjado_na_forma_real()
+    publicos = dono.CARACTERES_PUBLICOS_DO_SERIAL
+    assert cor.mascarar_serial(serial) == serial[:publicos] + "#" * (len(serial) - publicos)
+    corrompido = serial[:publicos] + "\ufffd" + serial[publicos + 1:]
+    assert cor.mascarar_serial(corrompido) == "#" * len(corrompido)
 
 
 # --- régua 4: o diário nasce mascarado ------------------------------------------------------
@@ -921,7 +940,7 @@ def a09(monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
 
     exigir_gi_real("importa `gui.aba_sistema`, que carrega o GTK")
     monkeypatch.syspath_prepend(str(RAIZ / "src/hefesto_dualsense4unix/interface"))
-    from pacotes import a09_sistema as mod  # type: ignore[import-not-found]
+    from pacotes import a09_sistema as mod
 
     monkeypatch.setattr(mod, "_JANELA_ANTIGA", [_JanelaDeMentira()])
     mod._PAINEL[0] = None
@@ -952,16 +971,20 @@ def _o_painel_de_mentira(serial: str) -> str:
 
 def _copiar(a09: Any, monkeypatch: pytest.MonkeyPatch, serial: str) -> list[str]:
     """O «Copiar» de verdade, com o painel de mentira e um coletor no lugar da área."""
-    import pacotes  # type: ignore[import-not-found]
+    import pacotes
 
     from hefesto_dualsense4unix.utils import maquina
 
     coletado: list[str] = []
     painel = _o_painel_de_mentira(serial)
+
+    def coletar(texto: str) -> bool:
+        coletado.append(texto)
+        return True
+
     monkeypatch.setattr(a09, "_faixa_lenta",
                         lambda *a, **k: (None, None, None, "online_systemd", painel))
-    monkeypatch.setattr(a09, "_por_na_area_de_transferencia",
-                        lambda texto: coletado.append(texto) or True)
+    monkeypatch.setattr(a09, "_por_na_area_de_transferencia", coletar)
     declarada = maquina.MaquinaConfig(
         controles={"".join(_SO_DA_MAQUINA): maquina.ControleDeclarado()})
     monkeypatch.setattr(a09._maquina, "carregar_maquina", lambda: declarada)
@@ -1097,6 +1120,7 @@ def _carregar(caminho: Path, nome: str) -> Any:
     spec = importlib.util.spec_from_file_location(nome, caminho)
     assert spec is not None and spec.loader is not None
     modulo = importlib.util.module_from_spec(spec)
+    sys.modules[nome] = modulo  # o `dataclass` procura o módulo pelo nome
     spec.loader.exec_module(modulo)
     return modulo
 
