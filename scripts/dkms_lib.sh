@@ -94,9 +94,82 @@ _dkms_warn() {
 
 # PKG-1 (auditoria 21/07): com Secure Boot enforcing e a chave MOK do DKMS
 # não enrolada, o kernel RECUSA o .ko de updates/dkms no boot e NÃO cai no
-# in-tree (modules.dep aponta um caminho só) — a máquina ficaria sem
-# hid-nintendo/WiFi. Best-effort, idempotente (avisa 1x por execução), NUNCA
-# aborta o install. Só fala se mokutil existe e reporta SB habilitado.
+# in-tree (modules.dep aponta um caminho só) — o aparelho fica sem driver
+# nenhum. Para o `hid-playstation` isso é o DualSense sem luz, sem LED pelo
+# sysfs e sem o vpad `uhid` virar DualSense.
+#
+# O SECURE BOOT SE LÊ PELA EFIVARS, E NÃO PELO `mokutil` — O-PRODUTO-EM-QUALQUER-
+# MAQUINA-01, B4 (28/09/2026). O aviso de antes só falava se o `mokutil`
+# existisse, e numa máquina sem ele (a desta casa) nunca rodou. A efivars diz
+# o estado sem ferramenta nenhuma: o último byte da `SecureBoot-*` (os quatro
+# primeiros são os atributos da variável).
+#
+# E COM SECURE BOOT SEM A CHAVE O MÓDULO NÃO SE INSTALA (mesma sprint). Avisar
+# e instalar mesmo assim era trocar o driver de fábrica por NENHUM no próximo
+# boot; o `dkms_install_patched_module` pula, o driver de fábrica fica, e este
+# aviso diz o passo da MOK. Sem o 0003 carregado, o daemon não põe o microfone
+# no ar pelo rádio (`daemon/subsystems/bt_mic.py`), e diz o motivo.
+#
+# Raízes parametrizáveis pela mesma razão das de cima: costura de teste.
+_dkms_efivars_root() { printf '%s' "${HEFESTO_EFIVARS_ROOT:-/sys/firmware/efi/efivars}"; }
+_dkms_mok_pub() { printf '%s' "${HEFESTO_DKMS_MOK_PUB:-/var/lib/dkms/mok.pub}"; }
+# As listas de chaves MOK que o shim expõe ao sistema: a nova (a partir do 5.11)
+# e a da efivars. `HEFESTO_MOK_LISTAS` troca as duas numa linha só.
+_dkms_mok_listas() {
+    local _l
+    # shellcheck disable=SC2086  # a lista é separada por espaço, de propósito
+    for _l in ${HEFESTO_MOK_LISTAS:-/sys/firmware/efi/mok-variables/MokListRT /sys/firmware/efi/efivars/MokListRT-605dab50-e046-4300-abb6-3dd810dd8b23}; do
+        printf '%s\n' "${_l}"
+    done
+}
+
+# 0 sse o Secure Boot está LIGADO. Sem EFI, sem a variável ou ilegível: 1.
+dkms_secure_boot_ligado() {
+    local _var _ultimo
+    for _var in "$(_dkms_efivars_root)"/SecureBoot-*; do
+        [[ -r "${_var}" ]] || continue
+        _ultimo="$(od -An -tu1 "${_var}" 2>/dev/null | awk 'NF { v = $NF } END { print v }')"
+        [[ "${_ultimo}" == "1" ]]
+        return
+    done
+    return 1
+}
+
+# 0 sse a chave do DKMS (`mok.pub`) está inscrita no MOK. Pergunta ao
+# `mokutil` quando ele existe; sem ele, procura os bytes da chave (DER) na lista
+# que o shim expõe. Sem a chave gerada, não há o que estar inscrito.
+dkms_chave_mok_inscrita() {
+    local _pub _lista _resposta
+    _pub="$(_dkms_mok_pub)"
+    [[ -r "${_pub}" && -s "${_pub}" ]] || return 1
+    if command -v mokutil >/dev/null 2>&1; then
+        # Para variável, e não `| grep -q`: sob `pipefail` o cano devolve 141
+        # quando ACHA (ver `_dkms_status_texto`).
+        _resposta="$(mokutil --test-key "${_pub}" 2>&1 || true)"
+        [[ "${_resposta}" == *"already enrolled"* ]] && return 0
+    fi
+    while IFS= read -r _lista; do
+        [[ -r "${_lista}" ]] || continue
+        python3 - "${_pub}" "${_lista}" <<'PYEOF' && return 0
+import sys
+chave = open(sys.argv[1], "rb").read()
+lista = open(sys.argv[2], "rb").read()
+raise SystemExit(0 if chave and chave in lista else 1)
+PYEOF
+    done < <(_dkms_mok_listas)
+    return 1
+}
+
+# O passo da MOK, com as palavras de quem vai fazê-lo. Uma frase só, dita pelo
+# aviso abaixo e pelo reconhecimento do install.sh.
+dkms_passo_da_mok() {
+    local _pub; _pub="$(_dkms_mok_pub)"
+    if [[ ! -s "${_pub}" ]]; then
+        printf 'gere a chave (sudo dkms generate_mok), '
+    fi
+    printf 'inscreva-a com sudo mokutil --import %s (ele pede uma senha), reinicie, escolha «Enroll MOK» na tela azul que aparece antes do sistema, digite a mesma senha, e rode ./install.sh de novo' "${_pub}"
+}
+
 # `:=` e não `=`: o install.sh dá `source` NESTE arquivo DENTRO de cada função
 # (uma vez por módulo DKMS). Com atribuição direta, cada source zeraria o
 # marcador e o aviso sairia repetido — e, pior, o mesmo padrão zeraria a fila
@@ -104,11 +177,10 @@ _dkms_warn() {
 : "${_DKMS_SB_WARNED:=0}"
 dkms_warn_secureboot_once() {
     [[ "${_DKMS_SB_WARNED}" -eq 1 ]] && return 0
-    command -v mokutil >/dev/null 2>&1 || return 0
-    if mokutil --sb-state 2>/dev/null | grep -qi 'SecureBoot enabled'; then
-        _DKMS_SB_WARNED=1
-        _dkms_warn "Secure Boot ATIVO: o módulo DKMS só CARREGA se a chave MOK do dkms estiver enrolada (se não estiver, o kernel recusa o .ko no boot e NÃO volta ao in-tree sozinho). Se um controle Nintendo/WiFi sumir após o próximo boot, enrole a chave: sudo mokutil --import /var/lib/dkms/mok.pub (nvidia-DKMS funcionando indica que já está resolvido)."
-    fi
+    dkms_secure_boot_ligado || return 0
+    dkms_chave_mok_inscrita && return 0
+    _DKMS_SB_WARNED=1
+    _dkms_warn "Secure Boot ligado e a chave do DKMS não está inscrita: os módulos desta casa NÃO vão ser instalados, porque o kernel os recusaria no boot e o DualSense (e o controle Nintendo, e o Wi-Fi USB) ficaria sem driver nenhum. Os drivers de fábrica ficam: o DualSense funciona, sem as curas, e o microfone pelo rádio fica desligado. Para ganhar as curas: $(dkms_passo_da_mok)."
     return 0
 }
 
@@ -300,6 +372,14 @@ dkms_install_patched_module() {
     fi
     if [[ ! -f "${_src}/dkms.conf" ]]; then
         _dkms_warn "source DKMS incompleto em ${_src} (sem dkms.conf) — pulando ${_pkg}"
+        return 0
+    fi
+    # B4 (28/09/2026): com Secure Boot e sem a chave, instalar é trocar o
+    # driver de fábrica por NENHUM no próximo boot. O aviso com o passo da MOK
+    # é do `dkms_warn_secureboot_once`, uma vez por execução.
+    if dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita; then
+        dkms_warn_secureboot_once
+        _dkms_log "${_pkg} pulado: Secure Boot sem a chave do DKMS inscrita — o driver de fábrica continua"
         return 0
     fi
 

@@ -1618,15 +1618,19 @@ _reconhecimento() {
         fi
     fi
 
-    # 3. Secure Boot. É o único dos três que deixa a máquina PIOR que antes: o
-    # kernel recusa o .ko e NÃO volta ao módulo in-tree sozinho.
-    if command -v mokutil >/dev/null 2>&1 &&
-       mokutil --sb-state 2>/dev/null | grep -qi 'SecureBoot enabled'; then
-        warn "Secure Boot ATIVO — os módulos DKMS podem não carregar no próximo boot"
-        printf '      Sem a chave MOK enrolada, o kernel RECUSA o .ko e não volta ao driver\n'
-        printf '      in-tree sozinho: um controle Nintendo pode sumir depois de reiniciar.\n'
-        printf '      Se acontecer: sudo mokutil --import /var/lib/dkms/mok.pub\n'
-        printf '      (placa NVIDIA por DKMS funcionando indica que a chave já está enrolada.)\n'
+    # 3. Secure Boot. É o único dos três que deixaria a máquina PIOR que antes:
+    # o kernel recusa o .ko e NÃO volta ao módulo in-tree sozinho. Lido pela
+    # efivars, sem depender do `mokutil` (O-PRODUTO-EM-QUALQUER-MAQUINA-01, B4,
+    # 28/09/2026): antes o aviso só falava se o `mokutil` existisse. E sem a
+    # chave os módulos NÃO se instalam (`dkms_install_patched_module`).
+    # shellcheck source=scripts/dkms_lib.sh
+    source "${ROOT_DIR}/scripts/dkms_lib.sh"
+    if [[ "${NO_DKMS}" -eq 0 ]] && dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita; then
+        warn "Secure Boot ligado, e a chave do DKMS não está inscrita"
+        printf '      Os módulos desta casa não vão ser instalados: o kernel os recusaria\n'
+        printf '      no boot, e o DualSense ficaria sem driver nenhum. O driver de fábrica\n'
+        printf '      fica, o DualSense funciona sem as curas, e o microfone pelo rádio\n'
+        printf '      fica desligado. Para ganhar as curas: %s.\n' "$(dkms_passo_da_mok)"
         achou_algo=1
     fi
 
@@ -1670,8 +1674,10 @@ if [[ "${NO_DKMS}" -eq 0 ]] && [[ "$(_familia_pacotes)" != "nenhum" ]]; then
     if [[ "${#_dkms_faltando[@]}" -gt 0 ]]; then
         printf '\n      Os três módulos de kernel desta casa precisam compilar, e falta:\n'
         printf '        %s\n' "$(comando_manual_pkg "${_dkms_faltando[@]}")"
-        printf '      Sem eles, as curas NÃO entram: o controle da Nintendo pode não subir\n'
-        printf '      pelo rádio, e dois DualSense no mesmo adaptador podem virar um só.\n\n'
+        printf '      Sem eles, as curas NÃO entram: o microfone do DualSense pelo rádio\n'
+        printf '      fica desligado (o driver de fábrica o leria como botão e mexeria o\n'
+        printf '      cursor), dois DualSense no mesmo adaptador podem virar um só, e o\n'
+        printf '      controle da Nintendo pode não subir pelo rádio.\n\n'
         ask_yn "instalar agora com sudo?" "${AUTO_YES}"
         if [[ "${REPLY,,}" =~ ^y ]]; then
             if run_pkg "${_dkms_faltando[@]}"; then

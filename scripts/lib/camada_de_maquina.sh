@@ -978,7 +978,7 @@ install_dkms_hid_playstation_host() {
     # POR DESENHO (retorna 0 em TODOS os ramos) — o único juiz de "staged de
     # verdade" é o modinfo resolver p/ updates/dkms.
     if ! dkms_module_from_updates hid-playstation; then
-        warn "patch DKMS do hid-playstation NÃO ficou staged (veja avisos acima) — driver in-tree continua (fail-safe); a conf do modprobe.d é inerte com o in-tree ('unknown parameter ignored') e o 2º DualSense segue podendo se perder na probe"
+        warn "patch DKMS do hid-playstation NÃO ficou staged (veja avisos acima) — o driver de fábrica continua (fail-safe): o microfone do DualSense pelo rádio fica desligado, porque o de fábrica leria o áudio como botão e mexeria o cursor, e o 2º DualSense segue podendo se perder na probe; a conf do modprobe.d é inerte com ele ('unknown parameter ignored')"
         return 0
     fi
     # ATIVAÇÃO FAIL-SAFE — aqui a regra é MAIS dura que a do hid-nintendo:
