@@ -7,7 +7,7 @@ Executa Z6-02 (docs/process/sprints/2026-08-24-ONDA0-Z6-COMUNHAO-COM-O-SPECS-01�
 POR QUE GERADO, E NÃO LIDO EM RUNTIME
 --------------------------------------
 `docs/data/mapa-controles.csv` **não viaja no pacote** — medido em 24/08/2026:
-`pyproject.toml:83` só empacota `src/hefesto_dualsense4unix`, e nenhum dos
+`pyproject.toml:79` só empacota `src/hefesto_dualsense4unix`, e nenhum dos
 scripts de empacotamento (`packaging/`, `flatpak/`, `scripts/build_*.sh`)
 carrega `docs/data/`. Uma GUI que lesse o CSV em runtime funcionaria na máquina
 de quem desenvolve e quebraria na de quem instalou. Por isso o CSV é convertido
