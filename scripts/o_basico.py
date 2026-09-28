@@ -34,7 +34,7 @@ O QUE ELE NUNCA FAZ: abrir janela, jogo ou Steam; ``pkill``; pausar o daemon;
 Uso::
 
     o_basico.py retrato                  # só lê
-    o_basico.py sessao [--bpftrace]      # só lê (a sonda pede sudo)
+    o_basico.py sessao [--bpftrace]      # só lê (a sonda pede sudo)  # (noqa-acento: o nome do subcomando é o do protocolo)
     o_basico.py eixos [--trocar-modo dualsense|xbox]
     o_basico.py entrada | movimento      # só leem
     o_basico.py saidas | som | haptica   # ESCREVEM; exigem a bancada; devolvem
@@ -139,7 +139,7 @@ CAMPOS_DA_VOLTA: tuple[str, ...] = (
 )
 
 ORDEM: tuple[str, ...] = (
-    "retrato", "sessao", "eixos", "entrada", "saidas", "som", "haptica",
+    "retrato", "sessao", "eixos", "entrada", "saidas", "som", "haptica",  # (noqa-acento: o nome do subcomando é o do protocolo)
     "movimento", "tudo-junto",
 )
 #: O que precisa da bancada reservada: tudo o que escreve (01 §3.2).
@@ -496,7 +496,7 @@ def chave_mascarada(valor: object) -> str | None:
     doze = _hex12(valor)
     if doze is None:
         return None
-    return mascarar(":".join(doze[i : i + 2] for i in range(0, 12, 2)))
+    return str(mascarar(":".join(doze[i : i + 2] for i in range(0, 12, 2))))
 
 
 _ENDERECO_EM_TEXTO = re.compile(
@@ -780,7 +780,7 @@ class Maquina:
     def config_dela(self) -> Path:
         from hefesto_dualsense4unix.utils.xdg_paths import config_dir
 
-        return config_dir()
+        return Path(config_dir())
 
     # -- o servidor de som ------------------------------------------------------
 
@@ -789,7 +789,8 @@ class Maquina:
         from hefesto_dualsense4unix.integrations.retrato_do_som import ler_do_servidor
 
         try:
-            return ler_do_servidor(["pactl", *argv])
+            resposta = ler_do_servidor(["pactl", *argv])
+            return resposta if isinstance(resposta, str) else None
         except Exception:
             return None
 
@@ -816,6 +817,115 @@ class Maquina:
     def existe(self, programa: str) -> bool:
         return shutil.which(programa) is not None
 
+    def subir(self, argv: Sequence[str]) -> Any:
+        """Um processo em segundo plano (uma sonda, um tocador); ``colher`` o termina."""
+        return subprocess.Popen(
+            list(argv), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+            env={**os.environ, "LC_ALL": "C"},
+        )
+
+    def colher(self, processo: Any, teto_s: float) -> str:
+        try:
+            saida, _ = processo.communicate(timeout=teto_s)
+        except subprocess.TimeoutExpired:
+            processo.kill()
+            saida, _ = processo.communicate()
+        return saida or ""
+
+    def regra_do_input_remapper(self) -> bool:
+        return Path("/usr/lib/udev/rules.d/60-input-remapper-daemon.rules").exists()
+
+    # -- o aparelho: o que escreve ----------------------------------------------
+
+    def leitor_dos_fisicos(self) -> LeitorDosFisicos:
+        leitor = LeitorDosFisicos()
+        leitor.abrir()
+        return leitor
+
+    def hidraw_do_pad_uhid(self, jogador: int) -> str | None:
+        base = Path("/sys/class/hidraw")
+        with contextlib.suppress(OSError):
+            for no in sorted(base.iterdir()):
+                uevent = (no / "device" / "uevent").read_text(encoding="utf-8", errors="replace")
+                if f"(Hefesto P{jogador})" in uevent:
+                    return f"/dev/{no.name}"
+        return None
+
+    def escrever_no_pad(self, caminho: str, dados: bytes) -> bool:
+        """Um relatório de saída no hidraw do pad — o que um jogo mandaria."""
+        try:
+            fd = os.open(caminho, os.O_WRONLY)
+        except OSError:
+            return False
+        try:
+            os.write(fd, dados)
+        except OSError:
+            return False
+        finally:
+            os.close(fd)
+        return True
+
+    def pulso_de_ff(self, pad: PadNoKernel, segundos: float) -> bool:
+        """Um efeito FF_RUMBLE no evdev do pad, por ``segundos``, e o efeito apagado."""
+        evento = next((h for h in pad.handlers.split() if h.startswith("event")), None)
+        if evento is None:
+            return False
+        try:
+            import evdev
+            from evdev import ecodes, ff
+        except ImportError:
+            return False
+        try:
+            dispositivo = evdev.InputDevice(f"/dev/input/{evento}")
+        except OSError:
+            return False
+        try:
+            efeito = ff.Effect(
+                ecodes.FF_RUMBLE, -1, 0, ff.Trigger(0, 0), ff.Replay(int(segundos * 1000), 0),
+                ff.EffectType(ff_rumble_effect=ff.Rumble(strong_magnitude=0xC000, weak_magnitude=0xC000)),
+            )
+            numero = dispositivo.upload_effect(efeito)
+            dispositivo.write(ecodes.EV_FF, numero, 1)
+            time.sleep(segundos)
+            dispositivo.write(ecodes.EV_FF, numero, 0)
+            dispositivo.erase_effect(numero)
+            return True
+        except OSError:
+            return False
+        finally:
+            dispositivo.close()
+
+    def gravar_som(self, fonte: str, segundos: float) -> list[int]:
+        """Amostras mono de ``fonte``, com latência explícita (sem ela o gravador atrasa 2 s)."""
+        if not self.existe("parec"):
+            return []
+        try:
+            feito = subprocess.run(
+                ["timeout", f"{segundos:g}", "parec", f"--device={fonte}", "--latency-msec=50",
+                 "--format=s16le", "--rate=48000", "--channels=1", "--raw"],
+                capture_output=True, timeout=segundos + 5.0, check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return []
+        dado = feito.stdout
+        return [int.from_bytes(dado[i : i + 2], "little", signed=True) for i in range(0, len(dado) - 1, 2)]
+
+    def tocar(self, sink: str, wav: Path) -> Any:
+        if not self.existe("paplay"):
+            return None
+        return subprocess.Popen(
+            ["paplay", f"--device={sink}", "--latency-msec=50", str(wav)],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+
+    def esperar(self, processo: Any, teto_s: float) -> None:
+        if processo is None:
+            return
+        with contextlib.suppress(subprocess.TimeoutExpired):
+            processo.wait(timeout=teto_s)
+        if processo.poll() is None:
+            processo.terminate()
+
     # -- o relógio --------------------------------------------------------------
 
     def agora(self) -> float:
@@ -829,7 +939,7 @@ def pasta_privada() -> Path:
     """``${XDG_STATE_HOME:-~/.local/state}/hefesto-dualsense4unix/o-basico``."""
     from hefesto_dualsense4unix.utils.xdg_paths import state_dir
 
-    return state_dir() / "o-basico"
+    return Path(state_dir()) / "o-basico"
 
 
 def caminhos_que_ele_mesmo_abre() -> dict[str, Path]:
@@ -901,7 +1011,7 @@ class Sessao:
                         self.conhecidos.add(serial.strip())
 
     def mascarado(self, texto: str) -> str:
-        return mascarar(texto, sorted(self.conhecidos))
+        return str(mascarar(texto, sorted(self.conhecidos)))
 
     def dizer(self, texto: str) -> None:
         print(self.mascarado(texto), flush=True)
@@ -1313,7 +1423,7 @@ def _linha_dos_endpoints(s: Sessao, mesa: Sequence[Mapping[str, Any]]) -> None:
     try:
         from hefesto_dualsense4unix.integrations.endpoint_de_haptica import nome_do_endpoint
     except Exception:
-        nome_do_endpoint = None  # type: ignore[assignment]
+        nome_do_endpoint = None
     for c in mesa:
         jogador = f"P{c['player']}"
         if c.get("transport") != "bt":
@@ -1373,7 +1483,7 @@ def _linhas_da_maquina(s: Sessao) -> None:
         "compositor": _pid_do_compositor(s.maquina),
         "teclado_na_tela": f"de pé (pai: {pai})" if osk else "ausente",
         "steam": "aberta" if any(comm == "steam" for _p, comm in processos.values()) else "fechada",
-        "regra_60_do_input_remapper": Path("/usr/lib/udev/rules.d/60-input-remapper-daemon.rules").exists(),
+        "regra_60_do_input_remapper": s.maquina.regra_do_input_remapper(),
         "secure_boot": s.maquina.secure_boot(),
         "adaptadores": s.maquina.adaptadores(),
     }
@@ -1398,7 +1508,7 @@ def _linhas_da_maquina(s: Sessao) -> None:
 
 
 # ---------------------------------------------------------------------------
-# sessao (§4.2): só lê; o --boot e o --bpftrace são declarados
+# a sessão (§4.2): só lê; o --boot e o --bpftrace são declarados
 # ---------------------------------------------------------------------------
 
 
@@ -1409,7 +1519,7 @@ def sub_sessao(s: Sessao, a: argparse.Namespace) -> None:
     inicio = s.maquina.agora()
 
     if a.boot:
-        _reiniciar_o_daemon(s, "sessao --boot")
+        _reiniciar_o_daemon(s, "o --boot da sessão")
 
     sondas = _subir_as_sondas(s, a, ("trava-por-pad.bt", "uhid-raw-request.bt"), a.segundos)
     fim = inicio + (a.segundos if (a.bpftrace or a.boot) else 0.0)
@@ -1487,7 +1597,7 @@ def _reiniciar_o_daemon(s: Sessao, motivo: str) -> None:
 
 def _subir_as_sondas(
     s: Sessao, a: argparse.Namespace, nomes: Sequence[str], segundos: float
-) -> dict[str, subprocess.Popen[str] | str]:
+) -> dict[str, Any]:
     """Sobe as sondas pedidas com ``sudo -n`` (sem senha na tela). Sem sudo: «não medido»."""
     if not getattr(a, "bpftrace", False):
         return dict.fromkeys(nomes, "não medido (sem --bpftrace)")
@@ -1496,31 +1606,26 @@ def _subir_as_sondas(
     rc, _texto = s.maquina.rodar(["sudo", "-n", "true"], 10.0)
     if rc != 0:
         return dict.fromkeys(nomes, "não medido (sem sudo)")
-    fora: dict[str, subprocess.Popen[str] | str] = {}
-    for nome in nomes:
-        fora[nome] = subprocess.Popen(
-            ["sudo", "-n", "timeout", "-s", "INT", str(int(segundos)), "bpftrace", str(SONDAS / nome)],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+    return {
+        nome: s.maquina.subir(
+            ["sudo", "-n", "timeout", "-s", "INT", str(int(segundos)), "bpftrace", str(SONDAS / nome)]
         )
-    return fora
+        for nome in nomes
+    }
 
 
-def _colher_sonda(processo: subprocess.Popen[str] | str, segundos: float) -> str | None:
+def _colher_sonda(s: Sessao, processo: Any, segundos: float) -> str | None:
+    """A saída de uma sonda; None quando ela não subiu (a razão é o texto dela)."""
     if isinstance(processo, str):
         return None
-    try:
-        saida, _ = processo.communicate(timeout=segundos + 30.0)
-    except subprocess.TimeoutExpired:
-        processo.kill()
-        saida, _ = processo.communicate()
-    return saida or ""
+    return s.maquina.colher(processo, segundos + 30.0)
 
 
-def _ler_as_sondas_da_espera(s: Sessao, sondas: Mapping[str, subprocess.Popen[str] | str]) -> None:
+def _ler_as_sondas_da_espera(s: Sessao, sondas: Mapping[str, Any]) -> None:
     for nome, linha in (("trava-por-pad.bt", "a espera da vibração"),
                         ("uhid-raw-request.bt", "a espera do GET/SET no uhid")):
         processo = sondas.get(nome, "não medido (sem --bpftrace)")
-        texto = _colher_sonda(processo, 60.0)
+        texto = _colher_sonda(s, processo, 60.0)
         if texto is None:
             _passo(s, linha, "todos", "—", NAO_SEI, str(processo))
             continue
@@ -1849,7 +1954,7 @@ def sub_entrada(s: Sessao, a: argparse.Namespace) -> None:
         elif par is None:
             _passo(s, "a entrada por par (repouso)", jogador, transporte_de(c), NAO_SEI,
                    "o pad deste jogador não entrou no casamento")
-        elif not par.get("unico"):
+        elif not par.get("sem_empate"):
             _passo(s, "a entrada por par (repouso)", jogador, transporte_de(c), VERMELHO,
                    "o par saiu AMBÍGUO: duas unidades com o mesmo centro de stick")
         elif par.get("achatados"):
@@ -1891,7 +1996,7 @@ def sub_entrada(s: Sessao, a: argparse.Namespace) -> None:
            "o ensaio não tem --json; o resumo diz: " + _resumo_do_ensaio(s.mascarado(texto)))
 
     sondas = _subir_as_sondas(s, a, ("nucleo-por-processo.bt",), a.segundos)
-    texto_da_sonda = _colher_sonda(sondas["nucleo-por-processo.bt"], a.segundos)
+    texto_da_sonda = _colher_sonda(s, sondas["nucleo-por-processo.bt"], a.segundos)
     if texto_da_sonda is None:
         _passo(s, "os buracos por escritor", "todos", "—", NAO_SEI, str(sondas["nucleo-por-processo.bt"]))
     else:
@@ -2079,8 +2184,7 @@ def sub_saidas(s: Sessao, a: argparse.Namespace) -> None:
         raise Recusa("há jogo aberto: a vibração e o gatilho do protocolo disputariam o do jogo")
     s.reservar_a_bancada()
     sondas = _subir_as_sondas(s, a, ("nucleo-por-processo.bt",), 120.0)
-    leitor = LeitorDosFisicos()
-    leitor.abrir()
+    leitor = s.maquina.leitor_dos_fisicos()
     try:
         if leitor.problemas:
             s.dizer("  " + "; ".join(leitor.problemas))
@@ -2192,7 +2296,7 @@ def _vibracao_que_o_jogo_pede(s: Sessao, mesa: Sequence[Mapping[str, Any]], leit
         if c.get("vpad_backend") != "uhid":
             continue
         jogador = f"P{c['player']}"
-        caminho = _hidraw_do_pad_uhid(int(c["player"]))
+        caminho = s.maquina.hidraw_do_pad_uhid(int(c["player"]))
         if caminho is None:
             _passo(s, "3c, a vibração que o jogo pede", jogador, transporte_de(c), NAO_SEI,
                    "o hidraw do pad uhid não apareceu no sysfs")
@@ -2200,10 +2304,10 @@ def _vibracao_que_o_jogo_pede(s: Sessao, mesa: Sequence[Mapping[str, Any]], leit
         leitor.marcar(f"{jogador}:jogo:base")
         s.maquina.dormir(2.0)
         leitor.marcar(f"{jogador}:jogo:pedido")
-        escreveu = _escrever_motores(caminho, 200)
+        escreveu = s.maquina.escrever_no_pad(caminho, relatorio_dos_motores(200))
         s.maquina.dormir(1.5)
         leitor.marcar(f"{jogador}:jogo:fim")
-        _escrever_motores(caminho, 0)
+        s.maquina.escrever_no_pad(caminho, relatorio_dos_motores(0))
         s.declarar(f"3c: um 0x02 com os motores no pad de {jogador}", "motores 0", "motores 0")
         if not escreveu:
             _passo(s, "3c, a vibração que o jogo pede", jogador, transporte_de(c), NAO_SEI,
@@ -2222,7 +2326,7 @@ def _vibracao_que_o_jogo_pede(s: Sessao, mesa: Sequence[Mapping[str, Any]], leit
         leitor.marcar(f"{pad.handlers}:base")
         s.maquina.dormir(2.0)
         leitor.marcar(f"{pad.handlers}:pedido")
-        ok = _pulso_de_ff(pad, 1.0)
+        ok = s.maquina.pulso_de_ff(pad, 1.0)
         leitor.marcar(f"{pad.handlers}:fim")
         s.maquina.dormir(0.5)
         depois = _nao_nulos_por_jogador(s.maquina.estado() or {})
@@ -2257,65 +2361,14 @@ def _nao_nulos_por_jogador(estado: Mapping[str, Any]) -> dict[int, int]:
     }
 
 
-def _hidraw_do_pad_uhid(jogador: int) -> str | None:
-    base = Path("/sys/class/hidraw")
-    with contextlib.suppress(OSError):
-        for no in sorted(base.iterdir()):
-            uevent = (no / "device" / "uevent").read_text(encoding="utf-8", errors="replace")
-            if f"(Hefesto P{jogador})" in uevent:
-                return f"/dev/{no.name}"
-    return None
-
-
-def _escrever_motores(caminho: str, forca: int) -> bool:
+def relatorio_dos_motores(forca: int) -> bytes:
     """Um ``0x02`` USB com os dois motores em ``forca`` — o que um jogo mandaria ao pad."""
     from hefesto_dualsense4unix.core import ds_output_report as saida
 
     comum = bytearray(saida.COMMON_LEN)
     comum[0] = saida.VALID_FLAG0_COMPATIBLE_VIBRATION | saida.VALID_FLAG0_HAPTICS_SELECT
     comum[2] = comum[3] = max(0, min(255, forca))
-    try:
-        fd = os.open(caminho, os.O_WRONLY)
-    except OSError:
-        return False
-    try:
-        os.write(fd, bytes(saida.build_usb_report(comum)))
-    except OSError:
-        return False
-    finally:
-        os.close(fd)
-    return True
-
-
-def _pulso_de_ff(pad: PadNoKernel, segundos: float) -> bool:
-    """Um efeito FF_RUMBLE no evdev do pad, por ``segundos``, e o efeito apagado."""
-    evento = next((h for h in pad.handlers.split() if h.startswith("event")), None)
-    if evento is None:
-        return False
-    try:
-        import evdev
-        from evdev import ecodes, ff
-    except ImportError:
-        return False
-    try:
-        dispositivo = evdev.InputDevice(f"/dev/input/{evento}")
-    except OSError:
-        return False
-    try:
-        efeito = ff.Effect(
-            ecodes.FF_RUMBLE, -1, 0, ff.Trigger(0, 0), ff.Replay(int(segundos * 1000), 0),
-            ff.EffectType(ff_rumble_effect=ff.Rumble(strong_magnitude=0xC000, weak_magnitude=0xC000)),
-        )
-        numero = dispositivo.upload_effect(efeito)
-        dispositivo.write(ecodes.EV_FF, numero, 1)
-        time.sleep(segundos)
-        dispositivo.write(ecodes.EV_FF, numero, 0)
-        dispositivo.erase_effect(numero)
-        return True
-    except OSError:
-        return False
-    finally:
-        dispositivo.close()
+    return bytes(saida.build_usb_report(comum))
 
 
 def _o_gatilho(s: Sessao, mesa: Sequence[Mapping[str, Any]], leitor: LeitorDosFisicos) -> None:
@@ -2380,8 +2433,8 @@ def _a_bateria_em_tres_reguas(s: Sessao, mesa: Sequence[Mapping[str, Any]], leit
                f"o fio diz {do_fio}%, o kernel {do_kernel}%, o estado {do_estado}%")
 
 
-def _o_dono_de_cada_escrita(s: Sessao, sondas: Mapping[str, subprocess.Popen[str] | str]) -> None:
-    texto = _colher_sonda(sondas.get("nucleo-por-processo.bt", "não medido"), 120.0)
+def _o_dono_de_cada_escrita(s: Sessao, sondas: Mapping[str, Any]) -> None:
+    texto = _colher_sonda(s, sondas.get("nucleo-por-processo.bt", "não medido"), 120.0)
     if texto is None:
         _passo(s, "o dono de cada escrita", "todos", "—", NAO_SEI,
                str(sondas.get("nucleo-por-processo.bt", "não medido")))
@@ -2445,7 +2498,7 @@ def potencia_em(amostras: Sequence[int], frequencia: float, taxa: int = 48000) -
 
 
 def pico_em_db(amostras: Sequence[int], frequencia: float, taxa: int = 48000) -> float:
-    """Quantos dB o pico em ``frequencia`` fica acima da média de quatro vizinhas."""
+    """Quantos dB o pico na frequência pedida fica acima da média de quatro vizinhas."""
     alvo = potencia_em(amostras, frequencia, taxa)
     vizinhas = [potencia_em(amostras, frequencia + d, taxa) for d in (-150.0, -80.0, 80.0, 150.0)]
     ruido = max(sum(vizinhas) / len(vizinhas), 1e-9)
@@ -2465,7 +2518,7 @@ def sub_som(s: Sessao, a: argparse.Namespace) -> None:
     try:
         from hefesto_dualsense4unix.integrations.alto_falante_bt import nome_do_sink
     except Exception:
-        nome_do_sink = None  # type: ignore[assignment]
+        nome_do_sink = None
     for c in mesa:
         jogador = f"P{c['player']}"
         frequencia = FREQUENCIA_DO_JOGADOR.get(int(c["player"]), 1500.0)
@@ -2481,24 +2534,17 @@ def sub_som(s: Sessao, a: argparse.Namespace) -> None:
             _passo(s, linha, jogador, transporte_de(c), NAO_SEI, "o nó de saída deste controle não se achou")
             continue
         ouvido = next((o for o in ouvidos if o != no.get("fonte_fisica")), None)
-        tocador = subprocess.Popen(
-            ["paplay", f"--device={sink}", "--latency-msec=50", str(wav)],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        ) if s.maquina.existe("paplay") else None
+        tocador = s.maquina.tocar(sink, wav)
         s.declarar(f"4a: um tom de {frequencia:g} Hz em {jogador}", "silêncio", "silêncio")
         pontes: list[dict[int, Any]] = []
         amostras: list[int] = []
         if ouvido:
-            amostras = _gravar(s, str(ouvido), 1.5)
+            amostras = s.maquina.gravar_som(str(ouvido), 1.5)
         for _ in range(3):
             s.maquina.dormir(0.4)
             estado = s.maquina.estado() or {}
             pontes.append({int(x["player"]): x.get("ponte_do_radio") for x in controles_na_mesa(estado)})
-        if tocador is not None:
-            with contextlib.suppress(subprocess.TimeoutExpired):
-                tocador.wait(timeout=5.0)
-            if tocador.poll() is None:
-                tocador.terminate()
+        s.maquina.esperar(tocador, 5.0)
         if tocador is None:
             _passo(s, linha, jogador, transporte_de(c), NAO_SEI, "sem paplay nesta máquina")
             continue
@@ -2558,22 +2604,6 @@ def sub_som(s: Sessao, a: argparse.Namespace) -> None:
     else:
         _passo(s, "4a, o jogo acha o alto-falante (a Forja)", "todos", "—", NAO_SEI,
                "não medido (sem a Forja nesta máquina)")
-
-
-def _gravar(s: Sessao, fonte: str, segundos: float) -> list[int]:
-    """Amostras mono de ``fonte`` com latência explícita (o gravador sem latência atrasa 2 s)."""
-    if not s.maquina.existe("parec"):
-        return []
-    try:
-        feito = subprocess.run(
-            ["timeout", f"{segundos:g}", "parec", f"--device={fonte}", "--latency-msec=50",
-             "--format=s16le", "--rate=48000", "--channels=1", "--raw"],
-            capture_output=True, timeout=segundos + 5.0, check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return []
-    dado = feito.stdout
-    return [int.from_bytes(dado[i : i + 2], "little", signed=True) for i in range(0, len(dado) - 1, 2)]
 
 
 # ---------------------------------------------------------------------------
@@ -2651,7 +2681,7 @@ def _a_posse_do_jogo(s: Sessao, mesa: Sequence[Mapping[str, Any]], per_vpad: Map
         abertos.update(Path(alvo).name for alvo in s.maquina.fds_de(pid) if alvo.startswith("/dev/hidraw"))
     for c in mesa:
         jogador = f"P{c['player']}"
-        caminho = _hidraw_do_pad_uhid(int(c["player"]))
+        caminho = s.maquina.hidraw_do_pad_uhid(int(c["player"]))
         tem = caminho is not None and Path(caminho).name in abertos
         hz = float(_dict(per_vpad.get(int(c["player"]))).get("motion_hz") or 0.0)
         _passo(s, "o pad no Proton (a posse)", jogador, transporte_de(c),
@@ -2730,7 +2760,7 @@ def veredito(pasta: Path | None) -> int:
 
 SUBCOMANDOS: dict[str, Callable[[Sessao, argparse.Namespace], None]] = {
     "retrato": sub_retrato,
-    "sessao": sub_sessao,
+    "sessao": sub_sessao,  # (noqa-acento: o nome do subcomando é o do protocolo)
     "eixos": sub_eixos,
     "entrada": sub_entrada,
     "saidas": sub_saidas,
@@ -2747,11 +2777,12 @@ def analisador() -> argparse.ArgumentParser:
     ap.add_argument("--jogadores", default="todos", help="P1,P3 | todos")
     ap.add_argument("--esperado", help="ex.: 2cabo+2radio — o retrato recusa (rc=2) se a mesa não for essa")
     ap.add_argument("--seguir", action="store_true", help="não para no 1a vermelho (o veredito segue vermelho)")
-    ap.add_argument("--veredito", nargs="?", const="ultima", metavar="PASTA")
+    ap.add_argument("--veredito", nargs="?", const="*", metavar="PASTA",
+                    help="a sessão mais nova, ou toda sessão sob PASTA")
     sub = ap.add_subparsers(dest="sub")
     for nome in ORDEM:
         p = sub.add_parser(nome)
-        if nome == "sessao":
+        if nome == "sessao":  # (noqa-acento: o nome do subcomando é o do protocolo)
             p.add_argument("--segundos", type=float, default=60.0)
             p.add_argument("--boot", action="store_true", help="reinicia o daemon (mexe; nunca com jogo)")
             p.add_argument("--bpftrace", action="store_true", help="as sondas de scripts/sondas/ (sudo)")
@@ -2774,7 +2805,7 @@ def executar(argv: Sequence[str], maquina: Maquina | None = None) -> int:
     """O contrato inteiro de uma corrida. ``maquina`` é o dublê das réguas."""
     a = analisador().parse_args(list(argv))
     if a.veredito:
-        return veredito(None if a.veredito == "ultima" else Path(a.veredito))
+        return veredito(None if a.veredito == "*" else Path(a.veredito))
     nome = a.sub or "retrato"
     for chave, padrao in (("seguir", False), ("esperado", None), ("bpftrace", False),
                           ("boot", False), ("trocar_modo", None), ("segundos", 30.0), ("lib", None)):
