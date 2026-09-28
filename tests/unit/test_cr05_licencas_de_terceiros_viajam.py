@@ -208,6 +208,7 @@ def test_notice_tem_a_secao_de_escopo() -> None:
         ("assets/dkms/hid-nintendo/", "GPL-2.0-or-later"),
         ("assets/dkms/hid-playstation/", "GPL-2.0-or-later"),
         ("assets/dkms/rtw88-usb/", "GPL-2.0 OR BSD-3-Clause"),
+        ("assets/dkms/uhid/", "GPL-2.0-or-later"),
     ],
 )
 def test_notice_nomeia_cada_módulo_com_a_licença_dele(módulo: str, licença: str) -> None:
@@ -235,13 +236,27 @@ def test_notice_diz_que_o_spdx_nao_pode_ser_removido() -> None:
     )
 
 
-def test_notice_registra_a_mudanca_com_data_e_grau() -> None:
-    """Não se apaga decisão medida: a mudança de endereço ganha nota datada."""
-    texto = _texto(NOTICE)
-    assert "2026-08-07" in texto, "o NOTICE não tem a nota datada de 07/08/2026"
-    assert "DECISÃO DELA" in texto, (
-        "o NOTICE não declara o grau da mudança. Toda afirmação carrega grau, e "
-        "esta é DECISÃO DELA."
+#: O que não é atribuição de licença e não cabe no NOTICE: nota datada, grau
+#: de decisão, caminho do arquivo de processo, pessoa do projeto por pronome e
+#: identificador de tarefa interna. O histórico da ressalva mora no git.
+_DIARIO_NO_NOTICE = re.compile(
+    r"nota datada|decis[ãa]o dela|docs/process|\bdela\b|\bsprints?\b"
+    r"|\b[A-Z]{2,}(?:-[A-Z0-9]+)*-[0-9]{2}\b",
+    re.IGNORECASE,
+)
+
+
+def test_notice_so_carrega_a_atribuicao() -> None:
+    """O NOTICE é lido por quem redistribui: ele diz o que é de terceiros, de
+    onde veio e sob que licença, sem o diário de quando cada coisa mudou."""
+    achados = [
+        f"{numero}: {linha.strip()}"
+        for numero, linha in enumerate(_texto(NOTICE).splitlines(), start=1)
+        if _DIARIO_NO_NOTICE.search(linha)
+    ]
+    assert not achados, (
+        "o NOTICE voltou a carregar diário em vez de atribuição:\n  "
+        + "\n  ".join(achados)
     )
 
 

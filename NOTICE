@@ -1,208 +1,138 @@
-Hefesto
-=======
+Hefesto - DualSense4Unix
+========================
 
 Este produto inclui arquivos derivados de outros projetos de código aberto.
+Este arquivo diz quais são, de onde vieram e sob que licença.
 
 ESCOPO DESTE ARQUIVO
 --------------------
 
-O código próprio do Hefesto é MIT (ver LICENSE). A **árvore** não é toda MIT: ela
-carrega material de terceiros sob outras licenças, preservadas intactas. Este
-arquivo diz exatamente o quê, de onde, e sob que licença — para que um leitor
-externo reconstrua a cadeia de proveniência sem abrir o histórico do git.
+O código próprio do Hefesto é MIT (ver LICENSE). A árvore também carrega
+material de terceiros sob outras licenças, preservadas intactas.
 
-EXCEÇÃO, e é a que mais importa: os arquivos sob `assets/dkms/` NÃO são MIT. São
-módulos de kernel derivados do Linux, distribuídos como fonte separada e
-compilados no destino, cada um sob a licença declarada no seu próprio cabeçalho
-SPDX:
+A exceção principal: os arquivos sob assets/dkms/ NÃO são MIT. São módulos de
+kernel derivados do Linux, distribuídos como fonte separada e compilados no
+destino, cada um sob a licença declarada no próprio cabeçalho SPDX:
 
   - assets/dkms/hid-nintendo/     GPL-2.0-or-later
   - assets/dkms/hid-playstation/  GPL-2.0-or-later
   - assets/dkms/rtw88-usb/        GPL-2.0 OR BSD-3-Clause (licença dupla)
+  - assets/dkms/uhid/             GPL-2.0-or-later
 
-Os cabeçalhos SPDX desses arquivos são a licença que vale para eles e não podem
-ser removidos. A origem, os patches próprios e o porquê de as duas licenças
-conviverem sem contaminar uma à outra estão nas seções abaixo. Os textos
-completos das duas licenças de terceiros viajam em LICENSES/ (ver
-LICENSES/README.md), porque a GPL-2.0, seção 1, exige que a cópia da licença
-acompanhe o fonte.
+Os cabeçalhos SPDX desses arquivos são a licença que vale para eles e
+não podem ser removidos. Os textos completos das duas licenças de terceiros
+viajam em LICENSES/ (ver LICENSES/README.md), porque a GPL-2.0, seção 1, exige
+que a cópia da licença acompanhe o fonte:
 
-Nota datada de 2026-07-31: esta ressalva nasceu no topo do LICENSE, antes do
-texto MIT, pelo motivo de que ressalva depois do juridiquês é ressalva que
-ninguém lê.
-
-Nota datada de 2026-08-07 — grau: DECISÃO DELA. A ressalva SAIU do LICENSE e
-este arquivo passou a ser o dono dela. O motivo é medido e só aparece
-fora da máquina: um LICENSE com texto antes do MIT faz o detector de licença do
-GitHub rotular o repositório como "View license" em vez de "MIT". O LICENSE fica
-com o texto MIT canônico e nada antes dele; o que ele dizia está integralmente
-acima, palavra por palavra, mais o ponteiro para LICENSES/. Nada foi perdido na
-mudança — o que mudou foi o endereço. O registro da decisão está em
-docs/process/2026-08-07-DECISOES-DELA-as-onze-respostas-do-painel.md (resposta 4).
-
-Auditoria de 2026-07-31 (sprint CR-05). Cada afirmação abaixo tem arquivo e
-linha; quem revisar pode conferir uma a uma.
+  - LICENSES/GPL-2.0.txt
+  - LICENSES/BSD-3-Clause.txt
 
 ---
 
 assets/73-hefesto-ps5-controller.rules
 --------------------------------------
 
-Regras udev derivadas do projeto pydualsense (https://github.com/flok/pydualsense),
-licenciado sob MIT License. Adaptações: adição do DualSense Edge (VID/PID
-054c:0df2) e substituição de MODE=0666 por MODE=0660 + TAG+="uaccess" para
-integração com systemd-logind. Desde 20/09/2026 o nó do DualSense FÍSICO nasce
-fechado (MODE:="0600", TAG-="uaccess") e só o controle virtual do Hefesto fica
-com a ACL da sessão; até 25/09/2026 o arquivo se chamava 70-ps5-controller.rules.
-
-O arquivo aponta para cá na própria linha 2 ("Baseado em pydualsense (MIT) —
-ver NOTICE"). Nenhuma outra regra de assets/ é derivada: a varredura de
-2026-07-31 por marcas de atribuição em src/, scripts/ e assets/ não encontrou
-outra.
+Regras udev derivadas do projeto pydualsense
+(https://github.com/flok/pydualsense), sob a licença MIT. Adaptações próprias:
+o DualSense Edge (VID/PID 054c:0df2); o acesso pela sessão (TAG+="uaccess") no
+lugar de MODE=0666; e o nó do DualSense físico fechado (MODE:="0600",
+TAG-="uaccess"), para que só o controle virtual do Hefesto fique com o acesso
+da sessão. O arquivo aponta para cá na linha 2.
 
 ---
 
-assets/dkms/ — três módulos de kernel derivados do Linux (GPL)
---------------------------------------------------------------
-
-O Hefesto vendoriza três módulos de kernel com correções próprias aplicadas
-sobre o fonte original do Linux. São **código de terceiros sob licença própria**,
-e a licença de cada arquivo é a declarada no cabeçalho SPDX dele — não a do
-Hefesto. Os cabeçalhos estão intactos e é isso que torna o uso lícito; nenhum
-deles pode ser removido ou substituído pelo MIT.
-
-Origem comum dos três: árvore pop-os/linux, commit
-3af2f9de43174ce5063110f94b7b01226499ba13, base de kernel v7.0.11. O commit, o
-SHA-256 do fonte original, o SHA-256 do fonte com os patches e a ordem exata de
-aplicação estão registrados em assets/dkms/<módulo>/patch/BASELINE — é o que
-permite a qualquer pessoa reverter os patches e reproduzir o original byte a
-byte.
-
-  - assets/dkms/hid-nintendo/ — SPDX "GPL-2.0+" em hid-nintendo.c:1 e
-    "GPL-2.0-or-later" em hid-ids.h:1; MODULE_LICENSE("GPL") em
-    hid-nintendo.c:3299. Modificações próprias: quatro patches em patch/
-    (parar de transmitir após esgotar o limite de taxa; registrar os LEDs mesmo
-    quando a carga inicial falha; padding dos comandos USB e sobrevivência à
-    ausência de device info; parar de esperar por um controle que já sumiu).
-
-  - assets/dkms/hid-playstation/ — SPDX "GPL-2.0-or-later" em
-    hid-playstation.c:1 e em hid-ids.h:1; MODULE_LICENSE("GPL") em
-    hid-playstation.c:3132. Modificações próprias: dois patches em patch/
-    (repetir feature reports que expiram na probe; sobreviver a um relatório de
-    pareamento inválido de DualShock4).
-
-  - assets/dkms/rtw88-usb/ — SPDX "GPL-2.0 OR BSD-3-Clause" em usb.c:1 e nos
-    onze cabeçalhos vendorados; MODULE_LICENSE("Dual BSD/GPL") em usb.c:1504.
-    É licença **dupla**, não GPL pura: quem redistribui escolhe um dos dois
-    termos. Modificações próprias: dois patches em patch/ (vazamento de memória
-    em falha de escrita USB — retroportado do commit 6b964941bbfe do upstream;
-    e detecção de aparelho ausente com reset de porta enfileirado). Os dez
-    cabeçalhos além de usb.h são originais INTOCADOS — existem aqui só porque o
-    pacote linux-headers não os distribui e o usb.c os inclui.
-
-Os oito arquivos .patch de assets/dkms/**/patch/ não têm cabeçalho SPDX próprio:
-são diffs sobre os fontes acima e seguem a licença do arquivo que modificam.
-Isso foi conferido arquivo a arquivo em 2026-07-31.
-
-Por que MIT e GPL convivem aqui sem contaminar um ao outro
------------------------------------------------------------
-
-Os módulos **não são linkados** ao código Python do Hefesto. Eles são
-distribuídos como fonte separada, compilados no destino pelo DKMS, e carregados
-pelo kernel. O daemon fala com eles apenas pelas interfaces de espaço de usuário
-do próprio kernel — /dev/hidraw, udev e sysfs. São obras separadas distribuídas
-no mesmo meio, e cada uma mantém a sua licença.
-
-O vetor de redistribuição, medido — e uma correção
+assets/dkms/: módulos de kernel derivados do Linux
 ---------------------------------------------------
 
-A sprint CR-05 foi aberta com a hipótese de que nenhum pacote publicado
-carregaria os fontes GPL. **A medição de 2026-07-31 refutou isso**, e o registro
-fica aqui porque a hipótese chegou a ser escrita:
+Cada módulo guarda em assets/dkms/<módulo>/patch/BASELINE a origem do fonte
+original, o SHA-256 dele, o SHA-256 do fonte com os patches e a ordem de
+aplicação. Com isso qualquer pessoa reverte os patches e reproduz o original
+byte a byte.
 
-  - o sdist publicado (hefesto_dualsense4unix-<versão>.tar.gz) carrega os 36
-    arquivos de assets/dkms/ — medido pedindo ao próprio hatchling a lista de
-    arquivos incluídos;
-  - o tarball de fonte da tag v0.4.0 carrega os mesmos 36 (git archive v0.4.0);
-  - o .deb os copia em scripts/build_deb.sh:246-262, e o release.yml:155 constrói
-    esse .deb e o publica no release (release.yml:416-421);
-  - o bundle .flatpak os copia em flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml,
-    nos `cp -a assets/dkms/…` do módulo `hefesto` (que também leva o
-    diretório LICENSES/ para o mesmo destino);
-  - o PKGBUILD do Arch os copia em packaging/arch/PKGBUILD:156-169 (a linha 56,
-    com optdepends 'dkms', é sobre a FERRAMENTA dkms, não sobre os fontes);
-  - o .spec do Fedora os copia em
-    packaging/fedora/hefesto-dualsense4unix.spec:158-171.
+  - assets/dkms/hid-nintendo/: árvore pop-os/linux, commit
+    3af2f9de43174ce5063110f94b7b01226499ba13, base v7.0.11. SPDX "GPL-2.0+" em
+    hid-nintendo.c e "GPL-2.0-or-later" em hid-ids.h; MODULE_LICENSE("GPL").
+    Patches próprios, em patch/:
+      - parar de transmitir depois de esgotar o limite de taxa;
+      - registrar os LEDs mesmo quando a carga inicial falha;
+      - preencher os comandos USB até o tamanho esperado e sobreviver à falta
+        de informação do aparelho;
+      - parar de esperar por um controle que já saiu.
 
-Não carregam os fontes GPL: o wheel (o alvo tool.hatch.build.targets.wheel do
-pyproject empacota só src/ — medido, zero arquivos) e o AppImage
-(scripts/build_appimage.sh não menciona assets/dkms).
+  - assets/dkms/hid-playstation/: mesma árvore e mesmo commit. SPDX
+    "GPL-2.0-or-later" em hid-playstation.c e em hid-ids.h;
+    MODULE_LICENSE("GPL"). Patches próprios:
+      - repetir os feature reports que expiram na probe;
+      - sobreviver a um relatório de pareamento inválido de DualShock 4;
+      - não ler os quadros de áudio do microfone como estado do controle.
 
-O grep 'dkms' em .github/workflows/ sai vazio, e isso é um falso negativo: quem
-copia os fontes é o scripts/build_deb.sh chamado pelo workflow, não o workflow.
+  - assets/dkms/rtw88-usb/: mesma árvore e mesmo commit. SPDX
+    "GPL-2.0 OR BSD-3-Clause" em usb.c e nos cabeçalhos vendorados;
+    MODULE_LICENSE("Dual BSD/GPL"). É licença dupla: quem redistribui escolhe
+    um dos dois termos. Patches próprios:
+      - vazamento de memória em falha de escrita USB, retroportado do commit
+        6b964941bbfe do Linux;
+      - detecção de aparelho ausente, com reset de porta enfileirado.
+    Os outros cabeçalhos, inclusive os main.h de main-por-kernel/ (um por
+    kernel validado), são originais, sem modificação: estão aqui porque o
+    pacote linux-headers não os distribui e o usb.c os inclui.
 
-Redistribuir estes fontes é **permitido** — é exatamente o que a GPL-2.0
-autoriza. O que ela exige em troca é o que está feito acima: preservar os avisos
-de licença intactos e declarar a origem. Os fontes seguem exatamente como
-vieram, mais os patches, com o SPDX no lugar.
+  - assets/dkms/uhid/: árvore estável do Linux, tag v7.1.5. SPDX
+    "GPL-2.0-or-later" em uhid.c; MODULE_LICENSE("GPL"). Patch próprio:
+      - avisar quem escreve quando a fila de saída enche, atrás de um
+        parâmetro que nasce desligado.
 
-O texto das licenças viaja junto — a metade que faltava
---------------------------------------------------------
+Os arquivos .patch de assets/dkms/**/patch/ não têm cabeçalho SPDX próprio:
+são diferenças sobre os fontes acima e seguem a licença do arquivo que
+modificam.
 
-A GPL-2.0, na seção 1, pede que quem distribui o fonte *"dê a qualquer outro
-destinatário do Programa uma cópia desta Licença junto com o Programa"*. Em
-2026-07-31 a CR-05 mediu que **nenhuma cópia do texto acompanhava os fontes**:
-uma busca por COPYING ou *GPL* na árvore só achava resultado dentro do .venv,
-que não é distribuído. Os avisos SPDX estavam preservados, que é a outra metade
-da exigência; a cópia do texto, não.
+Por que MIT e GPL convivem sem contaminar um ao outro
+-----------------------------------------------------
 
-Fechado em 2026-08-07. Os textos moram em LICENSES/, sem modificação:
+Os módulos não são linkados ao código Python do Hefesto. Eles são distribuídos
+como fonte separada, compilados no destino pelo DKMS e carregados pelo kernel.
+O serviço fala com eles só pelas interfaces de espaço de usuário do próprio
+kernel (/dev/hidraw, udev e sysfs). São obras separadas distribuídas no mesmo
+meio, e cada uma mantém a sua licença.
 
-  - LICENSES/GPL-2.0.txt — cópia byte a byte de /usr/share/common-licenses/GPL-2
-    (pacote base-files), SHA-256
-    8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643;
-  - LICENSES/BSD-3-Clause.txt — a outra metade da licença dupla do rtw88-usb,
-    extraída literalmente da estrofe DEP-5 de /usr/share/doc/libbpf1/copyright.
-    Ela existe porque o rtw88-usb é GPL-2.0 **OR** BSD-3-Clause: enviar só o
-    texto da GPL deixaria metade da escolha sem o texto que a sustenta.
+Onde os fontes GPL viajam
+-------------------------
 
-A procedência de cada um, com o SHA-256 e o comando que confere, está em
-LICENSES/README.md. Os cinco alvos de empacotamento que carregam assets/dkms/
-carregam LICENSES/ junto, e quem cobra essa simetria é
-tests/unit/test_cr05_licencas_de_terceiros_viajam.py.
+  - no tarball de fonte de cada versão (os quatro módulos);
+  - nos pacotes .deb, Flatpak, Arch e Fedora, que levam hid-nintendo,
+    hid-playstation e rtw88-usb, sempre com LICENSES/ junto.
+
+O wheel, o sdist e o AppImage não carregam fonte de assets/dkms/.
+
+Redistribuir estes fontes é permitido pela GPL-2.0, desde que os avisos de
+licença sigam intactos e a origem esteja declarada, que é o que os cabeçalhos
+SPDX, os arquivos BASELINE e este arquivo fazem.
 
 ---
 
 Dependências Python
 -------------------
 
-Nenhuma delas é vendorada: o Hefesto as declara no pyproject.toml e quem as
-instala é o pip ou o gerenciador de pacotes da distribuição, cada uma com a sua
-própria licença e o seu próprio aviso. Ficam declaradas aqui porque a CR-05 pede
-a varredura completa, e porque duas delas não são permissivas.
+Nenhuma é vendorada: o Hefesto as declara no pyproject.toml, e quem as instala
+é o pip ou o gerenciador de pacotes da distribuição, cada uma com a própria
+licença e o próprio aviso. Licenças lidas dos metadados instalados:
 
-Licenças lidas dos metadados instalados em 2026-07-31 (importlib.metadata), não
-copiadas de memória:
-
-  - obrigatórias — pydualsense (MIT), textual (MIT), typer (MIT), pydantic
+  - obrigatórias: pydualsense (MIT), textual (MIT), typer (MIT), pydantic
     (MIT), evdev (BSD-3-Clause), structlog (MIT OR Apache-2.0), rich (MIT),
     platformdirs (MIT), filelock (MIT);
-  - obrigatória e copyleft fraco — python-xlib (LGPL-2.0-or-later);
-  - extra [emulation] e copyleft forte — python-uinput (GPL-3.0-or-later);
-  - extra [tray] e copyleft fraco — PyGObject (LGPL-2.0-or-later);
-  - extra [cosmic] — jeepney (MIT);
-  - extra [metrics] — prometheus-client; não estava instalada no ambiente da
-    auditoria, então a licença dela NÃO foi medida e não é afirmada aqui.
+  - obrigatória, copyleft fraco: python-xlib (LGPL-2.0-or-later);
+  - extra [emulation], copyleft forte: python-uinput (GPL-3.0-or-later);
+  - extra [tray], copyleft fraco: PyGObject (LGPL-2.0-or-later);
+  - extra [cosmic]: jeepney (MIT);
+  - extra [metrics]: prometheus-client, cuja licença não foi conferida nos
+    metadados.
 
-Uma ressalva que vale registrar em voz alta: o bundle Flatpak **embute** as
-dependências dentro de /app, incluindo python-uinput e python-xlib
-(as linhas `"python-uinput"` e `"python-xlib>=0.33"` do módulo
-`hefesto-deps`, em flatpak/io.github.hefesto_team.hefesto_dualsense4unix.yml). Ou seja, o artefato .flatpak
-publicado redistribui código LGPL e GPL-3.0 junto com o código MIT do Hefesto —
-o que as duas licenças permitem, desde que os avisos delas sigam junto, e é o
-caso: o pip instala cada pacote com o seu próprio dist-info e o seu texto de
-licença. As demais formas de distribuição (wheel, sdist, .deb, AppImage, Arch,
-Fedora) não embutem dependência Python nenhuma.
+O pacote Flatpak embute as dependências dentro de /app, inclusive
+python-uinput e python-xlib: o artefato .flatpak redistribui código LGPL e
+GPL-3.0 junto com o código MIT do Hefesto. As duas licenças permitem isso
+desde que os avisos sigam junto, e o pip instala cada pacote com o próprio
+dist-info e o texto da licença. As outras formas de distribuição não embutem
+dependência Python.
 
 ---
 
@@ -210,112 +140,63 @@ Fontes tipográficas e glifos
 ----------------------------
 
   - As duas fontes da identidade visual (Space Grotesk e JetBrains Mono, ambas
-    OFL 1.1) **não estão no repositório**. O diretório assets/fonts não existe.
-    O scripts/install_fonts.sh prefere o pacote da distribuição e, se não
-    houver, baixa do repositório oficial com commit pinado e conferência por
-    SHA-256. A decisão de não vendorizar, e o custo de mudar de ideia, estão
-    escritos no cabeçalho daquele script (linhas 18 a 37).
+    OFL 1.1) não estão no repositório. O scripts/install_fonts.sh prefere o
+    pacote da distribuição e, se não houver, baixa do repositório oficial com
+    commit fixo e conferência por SHA-256.
 
-  - Os 38 SVG de assets/glyphs/ são desenho próprio do projeto; os sufixados
-    com _active são gerados por scripts/generate_glyph_active.py a partir dos
-    demais. Não há binário de terceiro em assets/.
+  - Os SVG de assets/glyphs/ são desenho do próprio projeto; os que terminam em
+    _active são gerados por scripts/generate_glyph_active.py a partir dos
+    demais.
 
 ---
 
 Applet COSMIC
 -------------
 
-packaging/cosmic-applet/ é um crate Rust do próprio projeto, declarado MIT em
-Cargo.toml:17. Ele depende de libcosmic (pop-os/libcosmic) por referência git,
-resolvida no build de quem compilar — o crate não vendoriza aquele código, e o
-applet não é publicado em nenhum release (grep por 'cargo' em release.yml sai
-vazio).
+packaging/cosmic-applet/ é um crate Rust do próprio projeto, sob a licença
+MIT. Ele depende de libcosmic (pop-os/libcosmic) por referência git, resolvida
+no build: o crate não vendoriza aquele código.
 
 ---
 
-O QUE ESTE PROJETO DELIBERADAMENTE **NÃO** INCORPOROU
-=====================================================
-
-Esta seção registra material de terceiros que foi encontrado, avaliado e
-**recusado**. Ela existe porque a ausência de uma decisão é indistinguível de
-descuido: sem registro, um projeto que não copiou fica na posição impossível de
-ter que provar uma negativa.
+MATERIAL DE TERCEIROS QUE O PROJETO NÃO INCORPOROU
+==================================================
 
 Curvas de força dos modos "prontos" de gatilho do DSX
 -----------------------------------------------------
 
-**Status: NÃO incorporado. Decidido em 2026-07-25.**
-
 O protocolo do DualSenseX (DSX) define doze modos de gatilho identificados por
-nome — `Hard`, `Soft`, `Choppy`, `GameCube` e outros — cujo efeito depende de
-tabelas de bytes fixas, sem parâmetros. Elas foram localizadas transcritas no
-repositório `WujekFoliarz/DualSenseY-v2`, e copiá-las seria trabalho de minutos.
+nome (Hard, Soft, Choppy, GameCube e outros), cujo efeito depende de tabelas
+de bytes fixas. Essas tabelas estão transcritas no repositório
+WujekFoliarz/DualSenseY-v2, que não declara licença alguma. Obra publicada sem
+licença mantém todos os direitos reservados ao autor, e por isso as tabelas
+não foram copiadas.
 
-Não foram copiadas porque aquele repositório **não declara licença alguma**:
-`"license": null` na API do GitHub, sem arquivo LICENSE, sem menção no README.
-Obra publicada sem licença permanece com todos os direitos reservados ao autor
-— publicar em uma plataforma pública não concede permissão de cópia. Não há,
-portanto, caminho lícito a partir daquele material.
+O que o Hefesto usa do ecossistema DSX são fatos de interoperabilidade: os
+números do enum de instruções, necessários para que o servidor UDP entenda os
+pacotes de mods existentes (as divergências entre implementações estão em
+docs/protocol/udp-schema.md), e o formato do report de saída, que é do
+hardware da Sony. Nenhum dos dois é código de terceiro.
 
-O que o Hefesto **usa** do ecossistema DSX, e por que é diferente:
+Consequência: os doze modos "prontos" do DSX não funcionam no Hefesto, como
+diz docs/protocol/udp-schema.md. Um mod que chame Instruction.Hard() não
+produz efeito.
 
-  - os ORDINAIS do enum de instruções (`TriggerThreshold = 4` e demais) são
-    fatos de interoperabilidade, necessários para que o servidor UDP entenda
-    pacotes de mods existentes. Foram conferidos em quatro implementações
-    independentes justamente porque divergem entre si, e a divergência está
-    documentada em docs/protocol/udp-schema.md;
-  - o FORMATO do report de saída do controle é do hardware da Sony, não de
-    nenhum desses projetos.
+A licença das curvas próprias
+-----------------------------
 
-Nenhum dos dois é código de terceiro. As curvas, sim, seriam.
+MIT no código, CC0-1.0 nas curvas. O código do Hefesto é MIT, e é o que o
+LICENSE diz. Qualquer curva de gatilho que o projeto venha a medir sai sob
+CC0-1.0, separada da licença do código, para ser usável por qualquer projeto
+sem dúvida de atribuição.
 
-Consequência assumida: os doze modos "prontos" do DSX **não funcionam** no
-Hefesto. Isso está declarado no README e em docs/protocol/udp-schema.md, sem
-eufemismo. Um mod que chame `Instruction.Hard()` não produz efeito.
+Onde as curvas vivem:
 
-O caminho escolhido para fechar essa lacuna é a criação de efeitos **próprios**,
-medidos no hardware, sob processo de sala limpa descrito em
-docs/process/CLEAN-ROOM.md. Os efeitos resultantes têm nomes próprios e
-proveniência registrada em docs/protocol/curvas-proprias.md.
-
-A LICENÇA DAS CURVAS PRÓPRIAS — decidida antes de a primeira existir
-====================================================================
-
-**MIT no código, CC0-1.0 nas curvas.** Decidido em 2026-08-07, grau: DECISÃO
-DELA (resposta 2 em
-docs/process/2026-08-07-DECISOES-DELA-as-onze-respostas-do-painel.md).
-
-O código próprio do Hefesto continua MIT, e é o que o LICENSE diz. Qualquer curva
-de gatilho que o Hefesto venha a medir sai sob **CC0-1.0**, separada da licença
-do código.
-
-  NOTA DATADA — 29/08/2026. Este parágrafo dizia "as que a CR-04 vai criar e a
-  CR-06 vai publicar". As duas sprints SAÍRAM DO DISCO por decisão dela
-  (D-A-CORRENTE-DO-CLEAN-ROOM-SAI), junto com a CR-03; o manifesto está em
-  docs/process/sprints/2026-08-29-O-CORTE-DO-CLEAN-ROOM-o-que-saiu-e-por-que.md.
-  A DECISÃO DE LICENÇA CONTINUA VALENDO E NÃO MUDOU — o que caiu foi o plano de
-  produzir as curvas, não a regra sobre elas. Hoje não há caminho previsto para
-  medi-las, e por isso o parágrafo deixou de prometer quem as criaria.
-
-O motivo é o problema que abriu esta série inteira: as tabelas de curva com nome
-que existem hoje moram num repositório sem licença, e quem quer implementar
-gatilho adaptativo no Linux fica sem saída lícita. Publicar as nossas sob dado
-restritivo seria reproduzir a parede com outro tijolo. CC0 elimina qualquer
-dúvida sobre atribuição de dado factual — é o que faz a curva ser usável por
-qualquer projeto, sem advogado no meio.
-
-Onde as curvas vivem, e onde isso está escrito:
-
-  - docs/protocol/curvas-proprias.md — o registro de proveniência de cada valor
-    (quem mediu, em que controle, com que nota). Hoje sem nenhuma curva, por
-    construção;
-  - o catálogo em disco, no formato de src/hefesto_dualsense4unix/profiles/
-    curva_propria.py, que recusa efeito sem proveniência completa;
-  - o artefato publicado, SE algum dia houver — arquivo de dados independente do
-    nosso esquema de perfil, com a licença CC0-1.0 declarada DENTRO dele. Quando
-    esse artefato existir, o texto da CC0-1.0 entra em LICENSES/CC0-1.0.txt.
-    (Esta linha dizia "o artefato publicado da CR-06"; a sprint saiu do disco em
-    29/08/2026 — ver a nota acima. A regra sobrevive à sprint.)
-
-Enquanto não houver curva medida, não há o que licenciar: a decisão está tomada,
-o artefato é que ainda não existe.
+  - docs/protocol/curvas-proprias.md: o registro de proveniência de cada valor
+    (quem mediu, em que controle, com que nota). Hoje sem nenhuma curva;
+  - o catálogo em disco, no formato de
+    src/hefesto_dualsense4unix/profiles/curva_propria.py, que recusa efeito sem
+    proveniência completa;
+  - o artefato publicado, se um dia houver: um arquivo de dados independente
+    do esquema de perfil, com a licença CC0-1.0 declarada dentro dele e o texto
+    da CC0-1.0 em LICENSES/CC0-1.0.txt.
