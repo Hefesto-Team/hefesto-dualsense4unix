@@ -170,7 +170,7 @@ def test_o_bit_do_botao_e_o_do_kernel_e_o_do_vpad() -> None:
 
     from hefesto_dualsense4unix.integrations import uhid_gamepad
 
-    assert prr.MIC_BUTTON_BIT == uhid_gamepad._BUTTONS2_BITS["mic_btn"]
+    assert uhid_gamepad._BUTTONS2_BITS["mic_btn"] == prr.MIC_BUTTON_BIT
     assert prr.BUTTONS2_OFFSET == uhid_gamepad._BUTTONS2_OFFSET
     fonte = (
         Path(__file__).resolve().parents[2]
@@ -178,7 +178,7 @@ def test_o_bit_do_botao_e_o_do_kernel_e_o_do_vpad() -> None:
     ).read_text(encoding="utf-8")
     achado = re.search(r"#define DS_BUTTONS2_MIC_MUTE\s+BIT\((\d+)\)", fonte)
     assert achado is not None
-    assert prr.MIC_BUTTON_BIT == 1 << int(achado.group(1))
+    assert 1 << int(achado.group(1)) == prr.MIC_BUTTON_BIT
 
 
 # ---------------------------------------------------------------------------
