@@ -68,8 +68,23 @@ ELE NÃO ESCREVE NADA NO APARELHO
 Abre em `O_RDONLY` quando pode, lê, conta e fecha. Nenhum output report,
 nenhum `SET_FEATURE`, nenhuma mudança de cor, rumble ou gatilho.
 
+OS INTERVALOS DO PAD CONTRA OS DO FÍSICO (O-BASICO-MEDIDO-01, 28/09)
+----------------------------------------------------------------------
+A taxa média esconde o buraco: 250 Hz em média cabem com um vão de 80 ms no
+meio. Por isso cada quadro guarda a hora de chegada (relógio monotônico, o
+mesmo para os oito nós) e o `sensor_timestamp` do corpo. O pad `uhid` copia a
+janela do sensor do físico inteira, então o carimbo do sensor é o que casa o
+pad com o físico dele — pelo que o aparelho mandou, e não pela ordem de
+enumeração. Um vão do pad acima de 33 ms é NOVO quando o físico dele não teve
+vão nenhum que o cubra: o que o físico já não mandou o produto não inventa.
+
+O endereço sai pelo dono da máscara da casa
+(`core/formas_do_endereco.mascarar`), e o `--json` é o que o
+`o_basico.py entrada` lê.
+
 USO
     taxa_no_hidraw.py                                  # 20 s, os oito nós
+    taxa_no_hidraw.py --json                           # a forma do o_basico
     taxa_no_hidraw.py --segundos 60 --verificar-crc    # o E-3
     taxa_no_hidraw.py --csv /tmp/taxa-2-2.csv          # o E-2
 """
@@ -80,6 +95,8 @@ import argparse
 import contextlib
 import csv
 import fcntl
+import itertools
+import json
 import os
 import selectors
 import sys
@@ -103,6 +120,7 @@ from comum import (
     resumo,
     tabela,
 )
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 
 try:
     from hefesto_dualsense4unix.core.ds_output_report import (
@@ -130,17 +148,35 @@ SEM_TRAILER_CABO = "sem trailer (no cabo os 4 últimos bytes são payload)"
 SEM_TRAILER_VPAD = "sem trailer (o vpad não é transporte)"
 
 
+#: O vão que o `o_basico.py` chama de buraco: dois quadros de 60 Hz perdidos.
+LIMITE_DO_VAO_MS = 33.0
+
+#: Onde o `struct dualsense_input_report` começa em cada relatório de entrada:
+#: `data[1]` no cabo (e no pad `uhid`, que fala como cabo), `data[2]` no rádio.
+_CORPO_POR_ID = {0x01: 1, BT_REPORT_ID: 2}
+#: `sensor_timestamp`, `__le32`, no offset 27 do corpo.
+_CARIMBO_NO_CORPO = 27
+
+
 def mascarar_mac(mac: str) -> str:
-    """A máscara da casa: octetos 4 e 5 zerados (`OUI:00:00:NN`).
+    """A máscara da casa: octetos 4 e 5 zerados (`OUI:00:00:NN`), pelo dono.
 
     O OUI fica porque é público e é ele que explica o achado; o que identifica
-    o aparelho dela é o sufixo, e esse sai. Há portão que reprova MAC real em
-    arquivo versionado, e a saída bruta deste instrumento é versionada.
+    o aparelho dela é o sufixo, e esse sai. Quem mascara é o dono
+    (`core/formas_do_endereco.mascarar`), com o próprio endereço como conhecido.
     """
-    partes = mac.split(":")
-    if len(partes) != 6:
-        return mac
-    return ":".join([*partes[:3], "00", "00", partes[5]])
+    return mascarar(mac, (mac,)) if mac else mac
+
+
+def carimbo_do_sensor(dados: bytes) -> int | None:
+    """O `sensor_timestamp` do quadro, ou None se o quadro não é entrada."""
+    if not dados:
+        return None
+    inicio = _CORPO_POR_ID.get(dados[0])
+    if inicio is None or len(dados) < inicio + _CARIMBO_NO_CORPO + 4:
+        return None
+    base = inicio + _CARIMBO_NO_CORPO
+    return int.from_bytes(dados[base : base + 4], "little")
 
 
 def apelido_mascarado(aparelho: Aparelho) -> str:
@@ -193,6 +229,8 @@ class Medida:
         self.crc_difere = 0
         self.crc_sem_trailer = 0
         self.segundos = 0.0
+        #: (hora de chegada em ns monotônicos, sensor_timestamp) de cada quadro.
+        self.chegadas: list[tuple[int, int | None]] = []
 
     @property
     def hz(self) -> float:
@@ -202,8 +240,11 @@ class Medida:
     def e_radio(self) -> bool:
         return self.aparelho.transporte == RADIO
 
-    def registrar(self, dados: bytes, *, conferir_crc: bool) -> None:
+    def registrar(self, dados: bytes, *, conferir_crc: bool, agora_ns: int | None = None) -> None:
         self.relatorios += 1
+        self.chegadas.append(
+            (time.monotonic_ns() if agora_ns is None else agora_ns, carimbo_do_sensor(dados))
+        )
         tamanho = len(dados)
         if self.bytes_min == 0 or tamanho < self.bytes_min:
             self.bytes_min = tamanho
@@ -252,6 +293,81 @@ class Medida:
         if not self.ids:
             return "-"
         return " ".join(f"0x{i:02x}x{n}" for i, n in sorted(self.ids.items()))
+
+
+def vaos(chegadas: list[tuple[int, int | None]], limite_ms: float) -> list[tuple[int, int]]:
+    """Os vãos acima do limite, como (início, fim) em ns monotônicos."""
+    limite_ns = int(limite_ms * 1_000_000)
+    horas = [h for h, _ in chegadas]
+    return [(a, b) for a, b in itertools.pairwise(horas) if b - a > limite_ns]
+
+
+def casar_pelo_carimbo(
+    pads: list[Medida], fisicos: list[Medida], *, piso: int = 10
+) -> dict[int, tuple[int, int]]:
+    """Cada pad ao físico com quem ele divide mais carimbos do sensor.
+
+    Devolve ``{índice do pad: (índice do físico, carimbos em comum)}``. Um pad
+    cujo melhor e segundo melhor empatam, ou que divide menos de ``piso``
+    carimbos com todos, fica FORA: casar no chute é o defeito que a régua
+    existe para não cometer.
+    """
+    carimbos_f = [{c for _, c in f.chegadas if c} for f in fisicos]
+    pares: dict[int, tuple[int, int]] = {}
+    for i, pad in enumerate(pads):
+        meus = {c for _, c in pad.chegadas if c}
+        notas = sorted(
+            ((len(meus & cf), j) for j, cf in enumerate(carimbos_f)), reverse=True
+        )
+        if not notas or notas[0][0] < piso:
+            continue
+        if len(notas) > 1 and notas[1][0] == notas[0][0]:
+            continue
+        pares[i] = (notas[0][1], notas[0][0])
+    return pares
+
+
+def vaos_novos(
+    pad: Medida, fisico: Medida, limite_ms: float = LIMITE_DO_VAO_MS
+) -> tuple[list[tuple[int, int]], list[tuple[int, int]]]:
+    """Os vãos do pad separados em (NOVOS, HERDADOS do físico).
+
+    Um vão do pad é herdado quando algum vão do físico, no mesmo relógio, se
+    sobrepõe a ele: o físico não mandou, e o pad só repetiu o silêncio. Os
+    outros o produto criou.
+    """
+    do_fisico = vaos(fisico.chegadas, limite_ms)
+    novos, herdados = [], []
+    for a, b in vaos(pad.chegadas, limite_ms):
+        if any(max(a, fa) < min(b, fb) for fa, fb in do_fisico):
+            herdados.append((a, b))
+        else:
+            novos.append((a, b))
+    return novos, herdados
+
+
+def pares_json(medidas: list[Medida], limite_ms: float = LIMITE_DO_VAO_MS) -> tuple[list[dict[str, object]], list[str]]:
+    """Os pares pad↔físico com os vãos, e os pads que não casaram."""
+    pads = [m for m in medidas if m.aparelho.e_vpad and m.chegadas]
+    fisicos = [m for m in medidas if not m.aparelho.e_vpad and m.chegadas]
+    casados = casar_pelo_carimbo(pads, fisicos)
+    saida: list[dict[str, object]] = []
+    for i, (j, comuns) in sorted(casados.items()):
+        pad, fisico = pads[i], fisicos[j]
+        novos, herdados = vaos_novos(pad, fisico, limite_ms)
+        saida.append({
+            "vpad": pad.aparelho.rotulo,
+            "controle": apelido_mascarado(fisico.aparelho),
+            "transporte": fisico.aparelho.transporte,
+            "carimbos_em_comum": comuns,
+            "hz_pad": round(pad.hz, 1),
+            "hz_controle": round(fisico.hz, 1),
+            "intervalos_novos": len(novos),
+            "maior_novo_ms": round(max(((b - a) / 1e6 for a, b in novos), default=0.0), 1),
+            "intervalos_herdados": len(herdados),
+        })
+    sem_par = [pad.aparelho.rotulo for i, pad in enumerate(pads) if i not in casados]
+    return saida, sem_par
 
 
 def escolher_nos(argumentos: argparse.Namespace) -> tuple[list[Aparelho], list[str]]:
@@ -330,7 +446,7 @@ def _drenar(
         if not dados:
             return
         if contar:
-            medida.registrar(dados, conferir_crc=conferir_crc)
+            medida.registrar(dados, conferir_crc=conferir_crc, agora_ns=time.monotonic_ns())
 
 
 def medir(
@@ -512,7 +628,12 @@ def main() -> int:
     )
     analisador.add_argument("--so-fisicos", action="store_true", help="ignorar os vpads")
     analisador.add_argument("--so-vpads", action="store_true", help="ignorar os físicos")
+    analisador.add_argument(
+        "--json", action="store_true", help="só a forma que o o_basico.py lê, sem as tabelas"
+    )
     argumentos = analisador.parse_args()
+    if argumentos.json:
+        return main_json(argumentos)
 
     aparelhos = descobrir_aparelhos()
     escolhidos, recusas = escolher_nos(argumentos)
@@ -682,6 +803,55 @@ def main() -> int:
         )
     print(resumo(veredito))
     return 0
+
+
+def main_json(argumentos: argparse.Namespace) -> int:
+    """A medida inteira numa forma só, com todo endereço pelo dono da máscara."""
+    escolhidos, recusas = escolher_nos(argumentos)
+    conhecidos = [a.mac for a in escolhidos if a.mac]
+    medidas = [Medida(a) for a in escolhidos]
+    abrir(medidas)
+    abertos = [m for m in medidas if m.fd >= 0]
+    decorrido = 0.0
+    if abertos:
+        _t0, _t1, decorrido = medir(medidas, argumentos.segundos, conferir_crc=False)
+    for medida in medidas:
+        if medida.fd >= 0:
+            with contextlib.suppress(OSError):
+                os.close(medida.fd)
+    pares, sem_par = pares_json(medidas)
+    depois = {a.hidraw: a.mac for a in descobrir_aparelhos()}
+    mudou = [
+        m.aparelho.hidraw
+        for m in medidas
+        if depois.get(m.aparelho.hidraw, m.aparelho.mac) != m.aparelho.mac
+    ]
+    if not abertos:
+        veredito = "nenhum nó abriu — nada medido"
+    elif mudou:
+        veredito = "a ligação hidraw->aparelho mudou no meio da janela — não conclua nada"
+    else:
+        novos = sum(int(str(p["intervalos_novos"])) for p in pares)
+        veredito = f"{len(pares)} par(es) casado(s) pelo carimbo do sensor; {novos} vão(s) novo(s) no pad"
+    dado = {
+        "veredito": veredito,
+        "alvos_inicio": [apelido_mascarado(m.aparelho) for m in medidas],
+        "alvos_fim": [apelido_mascarado(m.aparelho) for m in medidas if m.aparelho.hidraw in depois],
+        "mexeu": [],
+        "medidas": {
+            "segundos": round(decorrido, 3),
+            "limite_ms": LIMITE_DO_VAO_MS,
+            "pares": pares,
+            "sem_par": sem_par,
+            "recusas": recusas,
+            "nao_abriram": [
+                {"no": m.aparelho.hidraw, "porque": m.erro} for m in medidas if m.fd < 0
+            ],
+            "ligacao_mudou": mudou,
+        },
+    }
+    print(mascarar(json.dumps(dado, ensure_ascii=False, indent=1), conhecidos))
+    return 0 if abertos and not mudou else 2
 
 
 if __name__ == "__main__":
