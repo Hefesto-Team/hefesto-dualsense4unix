@@ -603,11 +603,6 @@ def load_gamepad_caminho_com_origem() -> tuple[str | None, str | None]:
     return texto, None
 
 
-def load_gamepad_caminho() -> str | None:
-    """O caminho gravado, cru, ou ``None``. Quem valida é o daemon."""
-    return load_gamepad_caminho_com_origem()[0]
-
-
 def load_gamepad_emulation() -> tuple[bool, str | None]:
     """Retorna (ligado, flavor) do gamepad virtual da sessão anterior.
 
@@ -737,7 +732,6 @@ def migrate_coop_optout() -> bool:
 
 __all__ = [
     "load_autoswitch_locked",
-    "load_gamepad_caminho",
     "load_gamepad_caminho_com_origem",
     "load_gamepad_emulation",
     "load_gamepad_preference",

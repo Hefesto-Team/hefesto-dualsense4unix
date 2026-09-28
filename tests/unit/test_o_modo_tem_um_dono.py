@@ -365,7 +365,6 @@ def test_o_gesto_fora_do_jogo_grava_com_a_origem(_arquivo_do_caminho: Any) -> No
     gp._guardar_o_caminho(_DaemonDoGesto(), "xbox", origin="manual")  # type: ignore[arg-type]
 
     assert session.load_gamepad_caminho_com_origem() == ("xbox", "gesto_fora_do_jogo")
-    assert session.load_gamepad_caminho() == "xbox"
 
 
 def test_a_escolha_dela_com_origem_sobrevive_aos_boots(_arquivo_do_caminho: Any) -> None:
@@ -804,7 +803,7 @@ def test_o_p1_e_a_carta_1_e_nao_quem_conectou_primeiro(
 ) -> None:
     """Fila branco=1, vermelho=2, roxo=3, azul=4; o roxo conecta primeiro.
 
-    Nos três transportes (conferência de 28/09: a régua só media o rádio).
+    Nos três transportes (conferência de 28/09: a régua só sentava pelo rádio).
 
     MORDE: devolva o `_quem_senta_no_posto` à 1ª chave de inserção
     (`next(iter(self._handles))`) — o roxo senta no posto, e o co-op recria o

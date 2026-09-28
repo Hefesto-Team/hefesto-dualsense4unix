@@ -439,8 +439,8 @@ def test_o_state_full_publica_o_caminho_que_acende_o_chip() -> None:
 # ---------------------------------------------------------------------------
 # As três bancadas desta sprint trocam `session.save_gamepad_caminho` por um
 # dublê, e nenhuma régua lia a flag do caminho no boot. Medido: arrancar do
-# `Daemon.run` a leitura de `load_gamepad_caminho`, ou gravar o caminho dentro da
-# flag velha, passava com todas as réguas verdes.
+# `Daemon.run` a leitura de `load_gamepad_caminho_com_origem`, ou gravar o caminho
+# dentro da flag velha, passava com todas as réguas verdes.
 
 #: As escritas REAIS da sessão, guardadas no import — antes de o `_bancada`
 #: trocá-las pelos dublês.
@@ -461,9 +461,9 @@ def test_o_caminho_escolhido_volta_com_o_boot_e_a_flag_velha_nao_muda(
     `gamepad_emulation.flag` sai byte a byte igual; e o `Daemon.run` REAL devolve
     à config o caminho que ela escolheu.
 
-    MORDE: tirar do `run` a leitura de `load_gamepad_caminho` (o boot nasce sem o
-    caminho), gravar o caminho dentro do `gamepad_emulation.flag` (a flag velha
-    muda de formato) ou persistir fora do gesto manual.
+    MORDE: tirar do `run` a leitura de `load_gamepad_caminho_com_origem` (o boot
+    nasce sem o caminho), gravar o caminho dentro do `gamepad_emulation.flag` (a
+    flag velha muda de formato) ou persistir fora do gesto manual.
     """
     from hefesto_dualsense4unix.testing import FakeController
 
@@ -479,10 +479,14 @@ def test_o_caminho_escolhido_volta_com_o_boot_e_a_flag_velha_nao_muda(
 
         gp._guardar_o_caminho(d, "xbox", origin="profile")  # type: ignore[arg-type]
         assert d.config.gamepad_caminho == "xbox"
-        assert session.load_gamepad_caminho() is None, "um perfil persistiu o caminho dela"
+        assert session.load_gamepad_caminho_com_origem()[0] is None, (
+            "um perfil persistiu o caminho dela"
+        )
 
         gp._guardar_o_caminho(d, "xbox", origin="manual")  # type: ignore[arg-type]
-        assert session.load_gamepad_caminho() == "xbox", "o gesto dela não persistiu"
+        assert session.load_gamepad_caminho_com_origem()[0] == "xbox", (
+            "o gesto dela não persistiu"
+        )
         assert velha.read_bytes() == bytes_da_velha, "a flag velha mudou de formato"
         assert session.load_gamepad_emulation() == (True, "dualsense")
 
