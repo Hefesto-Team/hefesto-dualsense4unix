@@ -5,7 +5,7 @@ O DEFEITO QUE ESTE ARQUIVO GUARDA
 A migração v2 do mapa de canais desdobrou por transporte as colunas que antes
 eram únicas: `grau` virou o par por transporte (hoje
 `cabo_ate_onde_foi`/`radio_ate_onde_foi`), `ressalva` virou
-`cabo_ressalva`/`radio_ressalva`. A `bancada.py` continuou pedindo os nomes
+`cabo_ressalva`/`radio_ressalva`. A `bancada_do_mapa.py` continuou pedindo os nomes
 velhos, e o `df[vis]` da linha da grade passou a levantar
 
     KeyError: "['grau', 'ressalva'] not in index"
@@ -23,7 +23,7 @@ teste, o `ruff` do CI (`ruff check src/ tests/`) não alcança a raiz, e nada na
 árvore a importa. Uma renomeação de coluna quebrava a bancada em silêncio.
 
 Este arquivo é a rede que faltou. Ele não roda Streamlit — Streamlit não é
-dependência do produto, e o CI não o teria. Ele lê a `bancada.py` por AST,
+dependência do produto, e o CI não o teria. Ele lê a `bancada_do_mapa.py` por AST,
 colhe TODO nome de coluna que ela pronuncia, e cruza com o cabeçalho real dos
 dois CSV. Por ler o código em vez de uma lista copiada, ele pega a PRÓXIMA
 renomeação, não só esta.
@@ -34,13 +34,13 @@ Nomear a coluna certa não basta: o VALOR também tem de caber. As colunas de
 vocabulário da grade são `SelectboxColumn`, e um `SelectboxColumn` oferece
 apenas os seus `options`. As quatro estão em `EDITAVEIS`, e o botão "Gravar no
 CSV" regrava toda coluna editável de toda linha visível com o que voltou da
-grade (`bancada.py`, `base.loc[editado.index, col] = editado[col]`) — de modo
+grade (`bancada_do_mapa.py`, `base.loc[editado.index, col] = editado[col]`) — de modo
 que um valor que a lista não oferece não tem por onde sobreviver ao passeio.
 
 Era o caso de `estado_hoje`: das 293 linhas do mapa, duas a têm preenchida, com
 as prosas da dose-resposta do keepalive de 11/08/2026 — e a lista `ESTADOS` não
 continha NENHUMA das duas. A casa já tinha visto e curado este caso exato uma
-linha acima, em `provado_por`, e escrito a razão em `bancada.py`; ninguém a
+linha acima, em `provado_por`, e escrito a razão em `bancada_do_mapa.py`; ninguém a
 tinha aplicado a `ESTADOS`.
 
 Uma ressalva de honestidade, porque ela muda o tamanho do dano e não a cura: que
@@ -71,7 +71,7 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
-BANCADA = RAIZ / "bancada.py"
+BANCADA = RAIZ / "scripts" / "bancada_do_mapa.py"
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 ENSAIOS = RAIZ / "docs" / "data" / "ensaios.csv"
 
@@ -120,7 +120,7 @@ def _constantes_de_texto() -> dict[str, str]:
 
 
 def _importado_de_scripts(nome: str) -> list[str] | None:
-    """O valor de `nome`, quando o `bancada.py` o IMPORTA de `scripts/`.
+    """O valor de `nome`, quando o `bancada_do_mapa.py` o IMPORTA de `scripts/`.
 
     Devolve `None` quando o nome não vem de import — aí quem resolve é o leitor
     por AST, como sempre.
@@ -179,7 +179,7 @@ def _lista_literal(nome: str) -> list[str]:
                 colunas.append(constantes[item.id])
             else:
                 pytest.fail(
-                    f"`{nome}` em bancada.py deixou de ser uma lista de nomes "
+                    f"`{nome}` em bancada_do_mapa.py deixou de ser uma lista de nomes "
                     "literais; este teste não consegue mais lê-la por AST"
                 )
         return colunas
@@ -216,7 +216,7 @@ def _dict_do_column_config() -> ast.Dict:
         for kw in no.keywords:
             if kw.arg == "column_config" and isinstance(kw.value, ast.Dict):
                 return kw.value
-    pytest.fail("não achei o `column_config` do `st.data_editor` em bancada.py")
+    pytest.fail("não achei o `column_config` do `st.data_editor` em bancada_do_mapa.py")
 
 
 def _chaves_do_column_config() -> list[str]:
@@ -281,7 +281,7 @@ def _campos_do_ensaio() -> list[str]:
                 for c in no.value.keys
                 if isinstance(c, ast.Constant) and isinstance(c.value, str)
             ]
-    pytest.fail("não achei o dicionário `novo` do formulário de ensaio em bancada.py")
+    pytest.fail("não achei o dicionário `novo` do formulário de ensaio em bancada_do_mapa.py")
 
 
 def test_o_que_a_bancada_edita_existe_no_mapa_de_canais() -> None:
@@ -370,7 +370,7 @@ def test_todo_selectbox_da_grade_oferece_os_valores_que_o_mapa_ja_tem() -> None:
         "gravação regrava a coluna com o que voltou da grade — o que não está em "
         "`options` não tem como voltar:\n"
         + "\n".join(orfaos)
-        + f"\n\nsome cada valor à lista citada em bancada.py — como {MAPA.name} é "
+        + f"\n\nsome cada valor à lista citada em bancada_do_mapa.py — como {MAPA.name} é "
         "quem manda, é a lista que se ajusta ao dado, nunca o contrário"
     )
 

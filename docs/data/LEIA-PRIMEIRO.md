@@ -42,10 +42,10 @@ onde saiu em 25/08. Corrigir à mão seria pagar o mesmo preço de novo amanhã.
 | `html/specs.html` | <!--@bytes:html/specs.html-->2.311.124<!--/--> | **DERIVADO** do CSV + do caderno, por `scripts/gerar-mapa.py`. Filtra no navegador. Mudou da raiz para `html/` em 25/08/2026. | **IA: não abra.** Ele embute o CSV inteiro como JSON: custa ~2x a fonte pela mesma informação. É excelente para olho humano com navegador, e péssimo para leitura por texto. |
 | `docs/protocol/dualsense-referencia-canonica.md` | <!--@bytes:docs/protocol/dualsense-referencia-canonica.md-->122.647<!--/--> | **O PROTOCOLO.** O que o DualSense entende, byte a byte. | Quando a pergunta é "que report/offset/valor eu mando". Use a régua de conversão da seção 6. |
 | `docs/protocol/paridade-bluetooth-versus-cabo.md` | <!--@bytes:docs/protocol/paridade-bluetooth-versus-cabo.md-->18.732<!--/--> | Tabela cabo x rádio em prosa. Declara-se desempatador nas linhas `MEDIDO AO VIVO`. | Para visão geral. **Onde divergir do mapa fora das linhas `MEDIDO AO VIVO`, o mapa vence** — ele tem domínio fechado e portão; a tabela é prosa. |
-| `docs/method/METODO-DE-ISOLAMENTO.md` | <!--@bytes:docs/method/METODO-DE-ISOLAMENTO.md-->63.703<!--/--> | O ciclo de ensaio: perguntas de sanidade, oito passos, as armadilhas A-1..A-25. | Quando você vai **produzir** medição nova, não consumir. Cuidado: ele ainda ensina o nome de coluna `grau`, que o portão de hoje reprova (seção 6). |
+| `docs/method/METODO-DE-ISOLAMENTO.md` | <!--@bytes:docs/method/METODO-DE-ISOLAMENTO.md-->63.735<!--/--> | O ciclo de ensaio: perguntas de sanidade, oito passos, as armadilhas A-1..A-25. | Quando você vai **produzir** medição nova, não consumir. Cuidado: ele ainda ensina o nome de coluna `grau`, que o portão de hoje reprova (seção 6). |
 | `scripts/check_paridade_transporte.py` | <!--@bytes:scripts/check_paridade_transporte.py-->153.052<!--/--> | **O PORTÃO** do mapa, e a melhor explicação de método da casa — a docstring nomeia cada regra e o defeito real que a fez nascer. | Antes de escrever no CSV. Leia a docstring inteira — ela vai da linha 2 à <!--@ultima-linha-da-docstring-do-portao-->343<!--/-->. |
 | `scripts/eliminacao.py` | <!--@bytes:scripts/eliminacao.py-->11.675<!--/--> | **O JUIZ.** Lê o caderno e devolve um veredito por suspeito. | Seção 4. |
-| `bancada.py` | <!--@bytes:bancada.py-->27.271<!--/--> | O formulário que grava no mapa. **A escada de degraus não nasce aqui:** ele a importa do portão (`from check_paridade_transporte import VALORES_DA_ESCADA`) desde 19/08/2026 — há um dono só. | Quando for editar célula. |
+| `scripts/bancada_do_mapa.py` | <!--@bytes:scripts/bancada_do_mapa.py-->27.461<!--/--> | O formulário que grava no mapa. **A escada de degraus não nasce aqui:** ele a importa do portão (`from check_paridade_transporte import VALORES_DA_ESCADA`) desde 19/08/2026 — há um dono só. | Quando for editar célula. |
 
 **O que ainda é digitado à mão**, e por que não entrou nesta leva: o `existe`,
 as duas réguas por valor e as 20 casas do cruzamento (seções 2 e 3). Esses o
@@ -300,13 +300,13 @@ esteja o documento onde ele aparece.
 | Canônico | Onde é lei | Sinônimos e apelidos que apontam para ele |
 |---|---|---|
 | `de_onde_sei` | domínio em `scripts/check_paridade_transporte.py` | `confianca` (nome até 15/08/2026); "confiança" na prosa das notas |
-| `ate_onde_foi` | domínio no mesmo portão | `grau` (nome até 15/08/2026 — **o `METODO-DE-ISOLAMENTO.md` ainda ensina este, e o portão o reprova**); `degrau` (`bancada.py`) |
-| `MONTOU` / `SAIU NO FIO` / `O APARELHO OBEDECEU` | `scripts/check_paridade_transporte.ESCADA` (o `bancada.py` importa de lá desde 19/08/2026) e o domínio do portão | maiúsculas exatas, sem variação: um degrau com outra tipografia atravessa a regra 6 sem ser visto |
+| `ate_onde_foi` | domínio no mesmo portão | `grau` (nome até 15/08/2026 — **o `METODO-DE-ISOLAMENTO.md` ainda ensina este, e o portão o reprova**); `degrau` (`scripts/bancada_do_mapa.py`) |
+| `MONTOU` / `SAIU NO FIO` / `O APARELHO OBEDECEU` | `scripts/check_paridade_transporte.ESCADA` (a `scripts/bancada_do_mapa.py` importa de lá desde 19/08/2026) e o domínio do portão | maiúsculas exatas, sem variação: um degrau com outra tipografia atravessa a regra 6 sem ser visto |
 | `e-a-causa` / `nao-e-a-causa` | `scripts/eliminacao.py`, decisão datada de 10/08 | `culpado` / `inocentado` — **abandonados por decisão escrita**, mas ainda vivos no rodapé do `specs.html` e no `METODO-DE-ISOLAMENTO.md` |
 | **rádio** (prosa) · `radio_` (coluna) · `radio` (valor no caderno) | os três coexistem por construção | `Bluetooth`, `BT`. **Ao buscar por texto, procure sem acento** — `grep 'rádio'` não acha uma linha sequer do caderno |
 | `nao-tem` | `DOMINIO_EXISTE`, sem acento | `não-tem` aparece acentuado na prosa das notas; o portão rejeita o acentuado |
 | **mapa** = `docs/data/mapa-controles.csv` (fonte) | — | "specs", "mapa de canais", "CSV". **`specs.html` é o derivado** — editá-lo à mão é o defeito que o `--check` existe para pegar |
-| **caderno** = `docs/data/ensaios.csv` | — | "caderno de ensaios", "caderno de eliminação", "bancada" — mas *bancada* também designa `bancada.py` e a sessão de medição com hardware na mesa |
+| **caderno** = `docs/data/ensaios.csv` | — | "caderno de ensaios", "caderno de eliminação", "bancada" — mas *bancada* também designa `scripts/bancada_do_mapa.py` e a sessão de medição com hardware na mesa |
 | **alto-falante** | correção dela, 15/08 | "placa de som" foi usado por engano e ela mandou desfazer; "speaker" só no nome de constante |
 
 **Termos que ainda colidem — não invente a resposta, é decisão dela:**

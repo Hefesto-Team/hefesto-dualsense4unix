@@ -206,7 +206,7 @@ variável era a **janela**, não o report.
 ### Passo 6 · Registrar na hora
 
 ```bash
-.venv/bin/streamlit run bancada.py     # o formulário de ensaio
+.venv/bin/streamlit run scripts/bancada_do_mapa.py     # o formulário de ensaio
 ```
 
 Cada ensaio grava: suspeito, presente sim/não, resultado, quem observou, e a
@@ -927,7 +927,7 @@ folga e o portão para de morder.
 > `scripts/check_paridade_transporte.py`, que é o lugar dele — a leva que
 > escreveu a coluna não tinha `scripts/` no território. Duas consequências,
 > ambas abertas: o portão do mapa **não** confere o domínio desta coluna, e a
-> `bancada.py` não a oferece no formulário, de modo que a resposta só entra
+> `scripts/bancada_do_mapa.py` não a oferece no formulário, de modo que a resposta só entra
 > editando o CSV à mão.
 
 ---

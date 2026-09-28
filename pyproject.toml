@@ -94,6 +94,13 @@ metrics = [
 cosmic = [
     "jeepney>=0.8",
 ]
+# A bancada do mapa de canais (`scripts/bancada_do_mapa.py`): o formulário que
+# grava no `docs/data/mapa-controles.csv`. Não é dependência do produto nem de
+# portão; quem mede com o controle na mão instala com `pip install -e ".[bancada]"`.
+bancada = [
+    "streamlit>=1.30",
+    "pandas>=2.0",
+]
 
 [project.scripts]
 hefesto-dualsense4unix = "hefesto_dualsense4unix.cli.app:main"

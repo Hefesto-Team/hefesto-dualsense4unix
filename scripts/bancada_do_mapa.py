@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""bancada.py — a superfície de MEDIÇÃO do mapa de canais.
+"""bancada_do_mapa.py — a superfície de MEDIÇÃO do mapa de canais.
 
 O `specs.html` é o artefato: consulta, versiona, abre em qualquer lugar sem
 servidor. Esta bancada é o oposto — existe para o momento em que ela está com o
@@ -20,8 +20,8 @@ caderno de eliminação, porém, continua julgando os dois lados SEPARADAMENTE �
 juntá-los faria os sete ensaios da lightbar por rádio brigarem com o do cabo e
 o veredicto viraria "os ensaios se contradizem".
 
-    .venv/bin/pip install streamlit      # não é dependência do produto
-    .venv/bin/streamlit run bancada.py
+    .venv/bin/pip install -e ".[bancada]"   # não é dependência do produto
+    .venv/bin/streamlit run scripts/bancada_do_mapa.py
 """
 from __future__ import annotations
 
@@ -36,15 +36,18 @@ try:
 except ModuleNotFoundError as e:      # pragma: no cover - caminho de ajuda
     raise SystemExit(
         f"falta {e.name}. A bancada NÃO é dependência do produto — instale só nela:\n"
-        "    .venv/bin/pip install streamlit pandas\n"
-        "    .venv/bin/streamlit run bancada.py"
+        "    .venv/bin/pip install -e \".[bancada]\"\n"
+        "    .venv/bin/streamlit run scripts/bancada_do_mapa.py"
     ) from e
 
-RAIZ = Path(__file__).resolve().parent
+#: A bancada mora em `scripts/`, e a raiz da árvore é a pasta de cima. Os
+#: vizinhos (`eliminacao`, `check_paridade_transporte`) moram na própria pasta.
+AQUI = Path(__file__).resolve().parent
+RAIZ = Path(__file__).resolve().parents[1]
 CSV_ = RAIZ / "docs" / "data" / "mapa-controles.csv"
 ENSAIOS_ = RAIZ / "docs" / "data" / "ensaios.csv"
 
-sys.path.insert(0, str(RAIZ / "scripts"))
+sys.path.insert(0, str(AQUI))
 # O `src` entra no caminho pela mesma razão que o `scripts`: a bancada precisa
 # do vocabulário de PONTES, e o dono dele é `integrations/ponte_escada.py`.
 # Com o install editável do produto o import já funcionaria; sem ele (uma
@@ -53,7 +56,7 @@ sys.path.insert(0, str(RAIZ / "scripts"))
 # exatamente a segunda cópia do vocabulário que a nota ESCADA-COM-UM-DONO-SO,
 # logo abaixo, existe para não deixar acontecer de novo.
 sys.path.insert(0, str(RAIZ / "src"))
-import eliminacao  # noqa: E402
+import eliminacao
 
 #: Só estas colunas se escrevem daqui. As outras vieram da escavação e mudam
 #: por auditoria, não por digitação — é o que impede a bancada de virar um
@@ -75,7 +78,7 @@ EDITAVEIS = ["cabo_ate_onde_foi", "radio_ate_onde_foi", "provado_em", "provado_p
 # entraram só no portão — o resultado é que ele os ACEITAVA e o formulário não
 # os OFERECIA, então ninguém conseguia escrevê-los. Duas listas do mesmo
 # vocabulário divergem no dia em que alguém mexe numa; agora há um dono só.
-from check_paridade_transporte import VALORES_DA_ESCADA  # noqa: E402
+from check_paridade_transporte import VALORES_DA_ESCADA
 
 GRAUS = ["", *VALORES_DA_ESCADA]
 
@@ -84,7 +87,7 @@ GRAUS = ["", *VALORES_DA_ESCADA]
 # `integrations/ponte_escada.py`, que é quem decide qual ponte o produto tenta
 # e em que ordem — se um degrau novo entrar lá, ele aparece neste formulário no
 # mesmo instante, sem ninguém lembrar de vir aqui.
-from hefesto_dualsense4unix.integrations.ponte_escada import ESCADA  # noqa: E402
+from hefesto_dualsense4unix.integrations.ponte_escada import ESCADA
 
 #: O `""` na frente é o padrão, e ele quer dizer **"não declarou"** — NUNCA
 #: "serve para toda ponte". A distinção não é filosofia: os 177 ensaios do

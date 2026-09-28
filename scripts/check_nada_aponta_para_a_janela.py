@@ -92,7 +92,6 @@ ARQUIVOS_SOLTOS = (
     "uninstall.sh",
     "run.sh",
     "pyproject.toml",
-    "bancada.py",
 )
 EXTENSOES = {
     ".py",

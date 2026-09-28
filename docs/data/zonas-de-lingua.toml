@@ -273,11 +273,6 @@ razao = """regras de udev, units, módulos DKMS, ícones e as folhas de dado de
 estilo de jogo. O que deles aparece na tela é lido pelo produto, não copiado."""
 
 [[regra]]
-caminho = "*.py"
-zona = "CODIGO"
-razao = "script na raiz da árvore (bancada.py)."
-
-[[regra]]
 caminho = "*.sh"
 zona = "CODIGO"
 razao = "os lançadores e o install na raiz da árvore."
