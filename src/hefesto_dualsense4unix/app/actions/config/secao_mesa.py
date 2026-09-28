@@ -315,9 +315,10 @@ _PAINEL_DESCONHECIDO = "Não sei"
 # *"Eu não sei o que é altura da antena. nem linha de visada. sinceramente não
 # faço ideia."*
 #
-# O CONTEÚDO NÃO SAI — o `GUIA-RADIO-DA-SALA.md` §4.4 mede que subir 40 cm rende
-# mais que aproximar 5 m, e é isso que as duas perguntas colhem. O que muda é a
-# palavra: jargão que a pessoa teria de pesquisar é defeito, não precisão.
+# O CONTEÚDO NÃO SAI — subir o adaptador 40 cm costuma render mais que
+# aproximá-lo 5 m (a água do corpo absorve 2,4 GHz, e gente sentada no caminho é
+# obstáculo), e é isso que as duas perguntas colhem. O que muda é a palavra:
+# jargão que a pessoa teria de pesquisar é defeito, não precisão.
 #
 # **AS CHAVES E OS VALORES DO ESQUEMA NÃO MUDAM.** `MesaDeclarada` usa `Literal`
 # com `extra="forbid"`: trocar `"acima"` por `"sim"` faria o pydantic recusar o
@@ -1891,7 +1892,7 @@ _DICA_CALIBRAR = (
 #: O FATO, e ele nasce sempre que há hub em comum. Nunca acusa um adaptador de
 #: atrapalhar outro — é a contra-regra obrigatória de R3 da
 #: `ORDEM-DE-SERVICO-01`, e três adaptadores no mesmo hub é o arranjo que o
-#: próprio `GUIA-RADIO-DA-SALA.md` manda comprar.
+#: próprio `docs/usage/bluetooth-varios-adaptadores.md` §3.4 sugere.
 #: PROVISÓRIO — decisão dela.
 _HUB_EM_COMUM = (
     "Os {numero} adaptadores chegam ao computador por dentro do mesmo hub."
@@ -2003,7 +2004,8 @@ def _frase_do_hub_em_comum(
 
     **O conselho é a metade opcional, e a contra-regra R3 é quem o segura.**
     Três adaptadores no mesmo hub é o arranjo que o próprio
-    ``GUIA-RADIO-DA-SALA.md`` manda comprar: o fato sozinho não é queixa. O
+    ``docs/usage/bluetooth-varios-adaptadores.md`` §3.4 sugere: o fato sozinho
+    não é queixa. O
     conselho só nasce quando há para onde mandar — buraco livre, alcançável com
     a mão, numa controladora DIFERENTE. E nenhuma das três frases acusa um
     adaptador de atrapalhar outro; o que elas contam é que o caminho até o

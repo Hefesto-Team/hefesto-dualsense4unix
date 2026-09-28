@@ -110,7 +110,8 @@ e é POR CONTROLE, não por adaptador. Aqui só a metade (1), a do nome, que é 
 que sai sem privilégio nenhum.
 
 Não usa ``hciN`` como identidade em lugar nenhum. O índice inverte entre boots
-(``GUIA-RADIO-DA-SALA.md`` §6.1, e a cicatriz do ``bt_health_watchdog.sh``), e
+(``docs/usage/bluetooth-varios-adaptadores.md`` §3.1, e a cicatriz do
+``bt_health_watchdog.sh``), e
 por isso o caminho ``/org/bluez/hciN`` é resolvido a cada leitura a partir do
 BD Address, nunca guardado.
 
@@ -194,8 +195,8 @@ class Dongle:
     """Um adaptador Bluetooth pela ótica de quem quer dar nome a ele.
 
     ``endereco`` é o BD Address em MAIÚSCULAS com ``:`` — a identidade, a mesma
-    forma que o ``bluetoothctl list`` imprime e que o ``GUIA-RADIO-DA-SALA.md``
-    §6.2 manda anotar no papel colado no rack.
+    forma que o ``bluetoothctl list`` imprime e que o
+    ``docs/usage/bluetooth-varios-adaptadores.md`` §3.2 manda anotar.
 
     ``objeto`` é o ``/org/bluez/hciN`` de AGORA. Ele existe para que a escrita
     da mesma leitura não precise varrer a árvore de novo, e é a única coisa

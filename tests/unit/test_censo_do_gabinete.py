@@ -865,8 +865,8 @@ def test_o_hub_em_comum_so_vira_conselho_com_buraco_livre_em_outra_pci():
     """**A MORDIDA.** O fato nasce sempre; o conselho, só com para onde mandar.
 
     Três adaptadores no mesmo hub é o arranjo que o próprio
-    ``GUIA-RADIO-DA-SALA.md`` manda comprar — a contra-regra R3 da
-    ``ORDEM-DE-SERVICO-01``. Sem buraco livre em OUTRA controladora não há
+    ``docs/usage/bluetooth-varios-adaptadores.md`` §3.4 sugere — a contra-regra
+    R3 da ``ORDEM-DE-SERVICO-01``. Sem buraco livre em OUTRA controladora não há
     conselho a dar, e dar um seria mandar a pessoa se ajoelhar atrás do gabinete
     para nada.
 

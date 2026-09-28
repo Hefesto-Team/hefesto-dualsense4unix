@@ -82,7 +82,8 @@ O QUE NENHUMA ORDEM PODE DIZER
    "802.11ac NIC" não o torna Wi-Fi para o produto — adivinhar por texto é como
    se erra com confiança (``censo_do_barramento.py``, cabeçalho);
 3. que um dongle atrapalha OUTRO dongle. Três adaptadores no mesmo hub é o
-   arranjo que o próprio ``GUIA-RADIO-DA-SALA.md`` manda comprar;
+   arranjo que o próprio ``docs/usage/bluetooth-varios-adaptadores.md`` §3.4
+   sugere;
 4. qualquer número de milímetros, altura ou linha de visada — o guia é
    raciocínio, e ela já disse que não sabe o que essas palavras querem dizer;
 5. o serial ou o endereço de aparelho nenhum.
@@ -605,7 +606,8 @@ def dongle_atras_de_hub(leitura: Leitura) -> Ordem | None:
     """R3 — o adaptador Bluetooth chega ao computador por dentro do hub.
 
     **A contra-regra é obrigatória, e é metade da regra:** três adaptadores no
-    mesmo hub é o arranjo que o próprio ``GUIA-RADIO-DA-SALA.md`` manda comprar.
+    mesmo hub é o arranjo que o próprio
+    ``docs/usage/bluetooth-varios-adaptadores.md`` §3.4 sugere.
     R3 **nunca** acusa um dongle de atrapalhar outro; o que ela conta é que o
     caminho até o computador passa por um hub, e o hub tem uma velocidade só
     para tudo que estiver nele.

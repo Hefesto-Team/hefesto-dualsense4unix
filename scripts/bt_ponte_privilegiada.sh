@@ -10,8 +10,9 @@
 #   "a ideia é que usemos o sudo só na hora do install e isso vai valer sempre
 #    no nosso app. não tem como não usar se tratando de bt. zero problemas."
 #
-# O gesto de migrar um controle está no GUIA-RADIO-DA-SALA.md §6.3, e uma das
-# suas cinco linhas exige root:
+# O gesto de migrar um controle está no
+# docs/usage/bluetooth-varios-adaptadores.md §3.3, e uma das suas cinco linhas
+# exige root:
 #
 #     rm -f /var/lib/bluetooth/*/cache/<MAC_CONTROLE>
 #

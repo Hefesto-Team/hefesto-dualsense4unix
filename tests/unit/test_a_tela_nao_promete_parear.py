@@ -77,7 +77,7 @@ def test_o_texto_novo_diz_o_que_ha_hoje() -> None:
             f"{arquivo.name}: a promessa saiu mas nada entrou no lugar — a "
             "pessoa fica sem saber como mover o controle."
         )
-        assert "GUIA-RADIO-DA-SALA" in texto, (
+        assert "bluetooth-varios-adaptadores" in texto, (
             f"{arquivo.name}: o texto novo não diz ONDE está o passo a passo. "
             "Tirar a promessa e não apontar o caminho troca um defeito por outro."
         )

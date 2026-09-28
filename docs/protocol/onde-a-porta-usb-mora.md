@@ -322,8 +322,8 @@ dependa desta página tem de sobreviver a isso.
 
 - [dualsense-referencia-canonica.md](dualsense-referencia-canonica.md) — o que
   o aparelho entende, do outro lado do cabo que entra nesta porta.
-- [GUIA-RADIO-DA-SALA.md](../../GUIA-RADIO-DA-SALA.md) — por que a posição
-  física de um rádio 2,4 GHz importa. Esta página é o instrumento; aquela é o
-  motivo.
+- [bluetooth-varios-adaptadores.md](../usage/bluetooth-varios-adaptadores.md)
+  — quantos controles cabem num adaptador Bluetooth e como dividi-los entre
+  vários. Esta página é o instrumento; aquela é o motivo.
 - [PORTAS-DA-CASA-01](../process/sprints/arquivados/2026-08-27-A-FAXINA-o-que-saiu-e-por-que.md)
   — a leva que consome esta medição.

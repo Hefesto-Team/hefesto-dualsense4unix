@@ -20,7 +20,7 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
 USO = RAIZ / "docs" / "usage" / "bluetooth.md"
-GUIA = RAIZ / "GUIA-RADIO-DA-SALA.md"
+GUIA = RAIZ / "docs" / "usage" / "bluetooth-varios-adaptadores.md"
 PROTOCOLO = RAIZ / "docs" / "protocol" / "dualsense-plataforma-e-identidade.md"
 
 
@@ -70,9 +70,9 @@ def test_a_prosa_de_uso_traz_as_tres_ressalvas() -> None:
 def test_o_guia_do_radio_tambem_foi_corrigido() -> None:
     # Correção pela metade deixa as duas versões vivas — que é o defeito que a
     # regra existe para matar.
-    texto = GUIA.read_text(encoding="utf-8")
-    assert "NINGUÉM CONSTRUIU" in texto, (
-        "o §6.3 do guia ainda deixa o PS + Create sem razão — e é ele que quem "
+    texto = _corrido(GUIA)
+    assert "ninguém construiu a alternativa" in texto.lower(), (
+        "o §3.3 do guia ainda deixa o PS + Create sem razão — e é ele que quem "
         "move um controle entre adaptadores lê."
     )
     assert "0x0A" in texto

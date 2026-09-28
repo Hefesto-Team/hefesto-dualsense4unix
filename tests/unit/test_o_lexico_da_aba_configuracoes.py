@@ -873,8 +873,8 @@ def _declaracoes_montadas() -> tuple[Any, Any]:
 def test_as_duas_perguntas_de_radio_nao_falam_antena_nem_visada() -> None:
     """A redação da `D-REDACAO-DAS-DUAS-PERGUNTAS-DE-RADIO`, na tela.
 
-    O CONTEÚDO não sai — o `GUIA-RADIO-DA-SALA.md` §4.4 mede que subir 40 cm
-    rende mais que aproximar 5 m, e é isso que as duas perguntas colhem. O que
+    O CONTEÚDO não sai — subir o adaptador 40 cm costuma render mais que
+    aproximá-lo 5 m, e é isso que as duas perguntas colhem. O que
     sai é o jargão: palavra que a pessoa teria de pesquisar é defeito, não
     precisão.
 

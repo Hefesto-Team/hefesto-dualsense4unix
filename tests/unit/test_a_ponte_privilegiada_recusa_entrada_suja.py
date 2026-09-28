@@ -155,7 +155,8 @@ def arvore(tmp_path: Path) -> Path:
 
     Dois adaptadores; o controle tem bond no primeiro e entrada de cache nos
     DOIS — que é o caso real de quem já pareou o controle num dongle e escaneou
-    com o outro. O §6.3 do GUIA-RADIO-DA-SALA manda apagar o cache dos dois.
+    com o outro. O §3.3 do `docs/usage/bluetooth-varios-adaptadores.md` manda
+    apagar o cache dos dois.
     """
     raiz = tmp_path / "bluetooth"
     for adaptador in (ADAPTADOR.upper(), ADAPTADOR_2.upper()):

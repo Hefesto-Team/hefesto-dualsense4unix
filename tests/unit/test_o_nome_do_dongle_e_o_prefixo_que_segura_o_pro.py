@@ -521,8 +521,8 @@ def test_a_ordem_da_tabela_nao_muda_quando_o_hci_inverte() -> None:
     """A tabela é ordenada por endereço — o `hciN` inverte entre boots.
 
     Uma tabela que troca de ordem sozinha depois de reiniciar é uma tabela em
-    que ninguém confia, e o `GUIA-RADIO-DA-SALA.md` §6.1 registra que a inversão
-    acontece nesta máquina.
+    que ninguém confia, e o `docs/usage/bluetooth-varios-adaptadores.md` §3.1
+    registra que a inversão acontece.
     """
     antes = ler_os_dongles(**_mesa(BusDublado()))
     depois = ler_os_dongles(

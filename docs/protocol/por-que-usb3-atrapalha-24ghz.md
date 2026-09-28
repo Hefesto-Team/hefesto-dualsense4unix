@@ -56,7 +56,7 @@ afirmações estão a uma medição de distância, e a medição não foi feita:
 2. **não** se pode prometer ganho por afastar o aparelho. Por isso a terceira
    linha de R1 diz "não medi o ganho nesta máquina", e diz sempre;
 3. **não** se pode citar milímetro, altura de antena ou linha de visada. Esses
-   números são raciocínio do `GUIA-RADIO-DA-SALA.md`, não desta fonte.
+   números são conselho de montagem, não desta fonte.
 
 ## 4. Onde a afirmação aparece no produto
 

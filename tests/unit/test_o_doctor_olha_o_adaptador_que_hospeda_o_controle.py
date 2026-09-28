@@ -11,7 +11,7 @@ A cicatriz já estava escrita a vinte linhas de distância, em
 `scripts/bt_health_watchdog.sh:158` — *"Concatenar 'hci0' fazia a vigia virar
 no-op MUDO num adaptador hci1"* —, e não tinha sido generalizada. Numa máquina
 com UM adaptador só que enumerou como `hci1` (a numeração inverte entre boots,
-`GUIA-RADIO-DA-SALA.md` §6.1) os dois defeitos batem juntos.
+`docs/usage/bluetooth-varios-adaptadores.md` §3.1) os dois defeitos batem juntos.
 
 COMO ESTE TESTE MORDE: o controle FAKE mora em `hci1`, e é `hci1` que está em
 modo de busca. Com o `hci0` literal de volta no lugar, o aviso de Discovering

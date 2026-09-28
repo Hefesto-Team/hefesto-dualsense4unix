@@ -110,11 +110,6 @@ zona = "ENSINA"
 razao = "a porta de entrada de quem chega de fora."
 
 [[regra]]
-caminho = "GUIA-RADIO-DA-SALA.md"
-zona = "ENSINA"
-razao = "guia de uso, escrito para quem vai repetir o procedimento."
-
-[[regra]]
 caminho = ".github/**"
 zona = "ENSINA"
 razao = "CONTRIBUTING, modelos de issue e de PR: fala com quem contribui."

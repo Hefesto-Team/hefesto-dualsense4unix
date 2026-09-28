@@ -559,12 +559,12 @@ install_bt_resilience_host() {
 # e isso vai valer sempre no nosso app. não tem como não usar se tratando de bt.
 # zero problemas."
 #
-# O gesto de migrar um controle (GUIA-RADIO-DA-SALA.md §6.3) tem uma linha que
-# só root faz — `rm /var/lib/bluetooth/*/cache/<MAC>`, o SDP-CACHE-01 que o
-# `scripts/doctor.sh` documenta. Sem ela o pareamento novo nasce com SDP vazio,
-# o BlueZ recusa a reconexão como *unknown device*, e parece defeito do
-# controle. Sem esta função, o botão dessa migração teria de pedir senha a cada
-# clique — ou não existir.
+# O gesto de migrar um controle (docs/usage/bluetooth-varios-adaptadores.md
+# §3.3) tem uma linha que só root faz — `rm /var/lib/bluetooth/*/cache/<MAC>`,
+# o SDP-CACHE-01 que o `scripts/doctor.sh` documenta. Sem ela o pareamento novo
+# nasce com SDP vazio, o BlueZ recusa a reconexão como *unknown device*, e
+# parece defeito do controle. Sem esta função, o botão dessa migração teria de
+# pedir senha a cada clique — ou não existir.
 #
 # O RACIONAL DA ESCOLHA (sudoers.d contra polkit contra unit contra daemon) está
 # no cabeçalho de `scripts/bt_ponte_privilegiada.sh`, junto com as três

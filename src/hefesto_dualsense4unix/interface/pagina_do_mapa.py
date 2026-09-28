@@ -880,7 +880,7 @@ EDICOES: tuple[Edicao, ...] = (
         depois=(
             "              + '<br><span class=\"passo\">hoje isto é gesto de terminal: "
             "o passo a passo está no '\n"
-            "              + \"<b>GUIA-RADIO-DA-SALA</b>, §6.3 — e o controle precisa "
+            "              + \"<b>bluetooth-varios-adaptadores</b>, §3.3 — e o controle precisa "
             "estar na sua mão, em PS + Create.</span></li>\";"
         ),
         porque=(
@@ -1344,7 +1344,7 @@ EDICOES: tuple[Edicao, ...] = (
             'lo : "adaptador atual") + " → " + (para ? para.rotulo : "?")\n'
             '              + \'<br><span class="passo">hoje isto é gesto de te'
             "rminal: o passo a passo está no '\n"
-            '              + "<b>GUIA-RADIO-DA-SALA</b>, §6.3 — e o controle '
+            '              + "<b>bluetooth-varios-adaptadores</b>, §3.3 — e o controle '
             'precisa estar na sua mão, em PS + Create.</span></li>";\n'
             '          }).join("")\n'
             '        + "</ul></div>";\n'
