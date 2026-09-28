@@ -50,10 +50,20 @@ variam` no touchpad e quase virou acusação ao produto — com o gesto isolado,
 os bytes variavam normalmente. Por isso este instrumento pede um gesto por vez
 e diz qual.
 
+O PAR É DITO, NUNCA ADIVINHADO (O-BASICO-MEDIDO-01, 28/09)
+-----------------------------------------------------------
+Até 28/09, sem `--fisico` e `--vpad` ele pegava o PRIMEIRO físico e o PRIMEIRO
+vpad da enumeração — com quatro controles na mesa, isso compara o pad do P1
+com o físico do P3 e acusa perda que não existe. Agora ele RECUSA (rc=2) e
+lista os candidatos, com o endereço pelo dono da máscara da casa; quem casa o
+par é o `quem_e_quem.py` (ou o `o_basico.py entrada`, pelo carimbo do sensor).
+E um espelho que perde campo sai com rc=1: um "não é fiel" com rc=0 passava
+calado por quem só lê o código de saída.
+
 USO
-    espelho_fiel.py                      # descobre os nós sozinho
-    espelho_fiel.py --segundos 8
+    espelho_fiel.py                      # lista os candidatos e recusa
     espelho_fiel.py --fisico /dev/hidraw5 --vpad /dev/hidraw4
+    espelho_fiel.py --segundos 8 --fisico /dev/hidraw5 --vpad /dev/hidraw4
 """
 from __future__ import annotations
 
@@ -76,6 +86,7 @@ from comum import (
     tabela,
     vpads,
 )
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 
 #: Buffer folgado: um `read()` de hidraw devolve UM relatório, e o maior é o
 #: `0x31` do rádio com 78 bytes.
@@ -222,14 +233,14 @@ def main() -> int:
     caminho_fis, caminho_vp = args.fisico, args.vpad
     if not (caminho_fis and caminho_vp):
         aparelhos = descobrir_aparelhos()
-        fs = [x for x in (_hidraw_de(a) for a in fisicos(aparelhos)) if x]
-        vs = [x for x in (_hidraw_de(a) for a in vpads(aparelhos)) if x]
-        caminho_fis = caminho_fis or (fs[0] if fs else None)
-        caminho_vp = caminho_vp or (vs[0] if vs else None)
-    if not caminho_fis or not caminho_vp:
-        print("\n  não achei os dois nós. Passe --fisico e --vpad à mão.")
-        print(f"    físico: {caminho_fis or '(não achado)'}")
-        print(f"    vpad  : {caminho_vp or '(não achado)'}")
+        conhecidos = [a.mac for a in aparelhos if a.mac]
+        print("\n  RECUSADO: o par não foi dito. Com mais de um controle na mesa, o")
+        print("  primeiro físico e o primeiro vpad da enumeração não são o mesmo")
+        print("  jogador. Passe --fisico e --vpad (o quem_e_quem.py diz quem é quem).")
+        for a in fisicos(aparelhos):
+            print(mascarar(f"    físico: {_hidraw_de(a) or '?'}  {a.mac or a.hidraw}  {a.transporte}", conhecidos))
+        for a in vpads(aparelhos):
+            print(f"    vpad  : {_hidraw_de(a) or '?'}  {a.rotulo}")
         return 2
 
     print(f"\n  físico: {caminho_fis}    vpad: {caminho_vp}")
@@ -316,7 +327,7 @@ def main() -> int:
         "  giroscópio (girar o controle), touchpad (deslizar o dedo).\n"
         "  Um campo 'parado nos dois' só quer dizer que o gesto não o tocou."
     )
-    return 0
+    return 1 if perdidos else 0
 
 
 if __name__ == "__main__":
