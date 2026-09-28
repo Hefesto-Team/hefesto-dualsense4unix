@@ -167,20 +167,23 @@ class _EleitorDublado:
 class _BackendComOKernelDentro:
     """O backend dublado, e o que ele dubla é o `hid-playstation`.
 
-    **`apertar()` NÃO PUBLICA BORDA — ele faz o que o driver faz.** O kernel
-    guarda o PRÓPRIO estado (``ds->mic_muted``), que nasce ``False`` numa
-    struct zerada, e a cada borda do botão o inverte e manda o valor novo ao
-    firmware. A borda que o produto vê é a mudança do bit ``STATUS_MIC_MUDO``
-    no report de entrada — ou seja, a CONSEQUÊNCIA, não o aperto.
+    **`apertar()` NÃO PUBLICA BORDA À MÃO — ele faz o que o driver e o
+    backend fazem.** O kernel guarda o PRÓPRIO estado (``ds->mic_muted``), que
+    nasce ``False`` numa struct zerada, e a cada borda do botão o inverte e
+    manda o valor novo ao firmware. Desde 28/09/2026
+    (O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01) a borda que o produto vê é o APERTO
+    (o bit do botão, `buttons[2]` bit 2), e o ``mudo`` dela é o que o aperto
+    PEDE: o contrário do que o firmware segurava no report do aperto. A mão
+    devolve a posse do mudo ao kernel, então o valor do kernel é o que fica.
 
     Escrever a premissa (*"chega uma borda com mudo=True"*) direto no barramento
     seria digitar o defeito em vez de produzi-lo. Aqui ele nasce da mesma
     aritmética que o produz no aparelho dela.
 
     **A NOSSA ESCRITA NÃO CONTA BORDA**, e isso também é o produto: o backend
-    real marca o que pedimos (`_marcar_o_mudo_que_pedimos`) e engole o eco em
-    `_registrar_borda_do_mic`. Um dublê que contasse o eco faria o laço
-    processar o próprio ato duas vezes — o defeito de 10/09/2026.
+    real conta o botão (`_registrar_borda_do_mic`), e escrita nenhuma aperta
+    botão. Um dublê que contasse o eco faria o laço processar o próprio ato
+    duas vezes — o defeito de 10/09/2026.
     """
 
     def __init__(self, uniqs: tuple[str, ...] = (P1,)) -> None:
@@ -190,6 +193,8 @@ class _BackendComOKernelDentro:
         #: O bit `STATUS_MIC_MUDO` que o firmware publica no report.
         self._firmware_mudo = dict.fromkeys(uniqs, False)
         self._seq = dict.fromkeys(uniqs, 0)
+        #: O que o último aperto PEDE, por controle (o `mudo` da borda).
+        self._pedido: dict[str, bool] = {}
         self.leds: dict[str, bool] = {}
         #: Cada `set_microphone_mute` que chegou, com endereço.
         self.escritas_do_mudo: list[tuple[bool | None, str | None]] = []
@@ -197,25 +202,24 @@ class _BackendComOKernelDentro:
     # -- o lado do kernel ---------------------------------------------------
 
     def apertar(self, uniq: str) -> None:
-        """O dedo dela no botão. O driver alterna o estado dele e escreve."""
-        self._kernel_mudo[uniq] = not self._kernel_mudo[uniq]
-        self._escrever_no_firmware(uniq, self._kernel_mudo[uniq], conta_borda=True)
+        """O dedo dela no botão: o backend conta o aperto, o driver alterna e escreve.
 
-    def _escrever_no_firmware(
-        self, uniq: str, mudo: bool, *, conta_borda: bool
-    ) -> None:
-        if self._firmware_mudo[uniq] == mudo:
-            # Sem mudança no bit não há borda: é o report repetindo o mesmo
-            # valor, e o contador do backend real só sobe na TRANSIÇÃO.
-            return
-        self._firmware_mudo[uniq] = mudo
-        if conta_borda:
-            self._seq[uniq] += 1
+        Todo aperto é UMA borda, com ou sem o bit mudar — o kernel fora de
+        fase com o firmware (depois de uma escrita nossa) escreve o valor que
+        o firmware já tinha, e o aperto continua sendo dela.
+        """
+        self._pedido[uniq] = not self._firmware_mudo[uniq]
+        self._seq[uniq] += 1
+        self._kernel_mudo[uniq] = not self._kernel_mudo[uniq]
+        self._firmware_mudo[uniq] = self._kernel_mudo[uniq]
 
     # -- o que o produto chama ----------------------------------------------
 
     def bordas_do_mic(self) -> dict[str, tuple[int, bool, float | None]]:
-        return {u: (self._seq[u], self._firmware_mudo[u], None) for u in self.uniqs}
+        return {
+            u: (self._seq[u], self._pedido.get(u, self._firmware_mudo[u]), None)
+            for u in self.uniqs
+        }
 
     def audio_status_for(self, uniq: str | None = None) -> dict[str, bool] | None:
         alvo = uniq if uniq in self._firmware_mudo else None
@@ -236,7 +240,8 @@ class _BackendComOKernelDentro:
             # campo não muda de valor — ver `_PinnedPyDualSense.
             # set_microphone_mute`.
             return True
-        self._escrever_no_firmware(uniq, bool(muted), conta_borda=False)
+        # A nossa escrita move o firmware e não aperta botão: borda nenhuma.
+        self._firmware_mudo[uniq] = bool(muted)
         return True
 
     def set_mic_led(self, aceso: bool, *, uniq: str | None = None) -> None:

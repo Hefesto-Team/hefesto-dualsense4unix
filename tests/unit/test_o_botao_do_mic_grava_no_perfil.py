@@ -123,10 +123,12 @@ class _Kernel(FakeController):  # type: ignore[misc]
     """O `hid-playstation` por trás de um `FakeController` de verdade.
 
     O botão alterna o estado DO KERNEL (``ds->mic_muted``) e ele manda o valor
-    ao firmware; a borda que o produto vê é a mudança do bit no report — a
-    consequência, não o aperto. A NOSSA escrita (`set_microphone_mute`) move o
-    firmware sem contar borda, como o backend real, que engole o eco. O
-    firmware nasce ABERTO a cada conexão: é a premissa do replug.
+    ao firmware. A borda que o produto vê é o APERTO (desde 28/09/2026, o bit
+    do botão, O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01), e o ``mudo`` dela é o que o
+    aperto pede: o contrário do que o firmware segurava. A NOSSA escrita
+    (`set_microphone_mute`) move o firmware sem contar borda, como o backend
+    real, em que escrita nenhuma aperta botão. O firmware nasce ABERTO a cada
+    conexão: é a premissa do replug.
 
     É um `FakeController` de propósito: a troca de perfil desta régua é o
     `ProfileManager.activate` REAL, e ele fala com o backend inteiro.
@@ -142,17 +144,23 @@ class _Kernel(FakeController):  # type: ignore[misc]
         self._kernel_mudo = dict.fromkeys(uniqs, False)
         self._firmware_mudo = dict.fromkeys(uniqs, False)
         self._seq = dict.fromkeys(uniqs, 0)
+        #: O que o último aperto PEDE, por controle (o `mudo` da borda).
+        self._pedido: dict[str, bool] = {}
         #: Cada escrita do mudo que chegou ao aparelho, com endereço.
         self.escritas_do_mudo: list[tuple[bool | None, str | None]] = []
 
     def apertar(self, uniq: str) -> None:
+        """Todo aperto é UMA borda; a mão devolve a posse e o kernel escreve."""
+        self._pedido[uniq] = not self._firmware_mudo[uniq]
+        self._seq[uniq] += 1
         self._kernel_mudo[uniq] = not self._kernel_mudo[uniq]
-        if self._firmware_mudo[uniq] != self._kernel_mudo[uniq]:
-            self._firmware_mudo[uniq] = self._kernel_mudo[uniq]
-            self._seq[uniq] += 1
+        self._firmware_mudo[uniq] = self._kernel_mudo[uniq]
 
     def bordas_do_mic(self) -> dict[str, tuple[int, bool, float | None]]:
-        return {u: (self._seq[u], self._firmware_mudo[u], None) for u in self.uniqs}
+        return {
+            u: (self._seq[u], self._pedido.get(u, self._firmware_mudo[u]), None)
+            for u in self.uniqs
+        }
 
     def audio_status_for(self, uniq: str | None = None) -> dict[str, bool] | None:
         # O MAC casa NORMALIZADO, como o `_handle_for` do backend real: a tela
