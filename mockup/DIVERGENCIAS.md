@@ -21,20 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 08-conexoes.html
-- **28/09/2026** — o chip do «Procurando» não acende no clique quando o piloto
-  está no ar: quem acende é o rádio, pelo molde (A-CAIXA-FICA-ONDE-ELA-ABRIU-01).
-  Aceso no clique, o chip recusado ficava aceso sobre a busca que continuava
-  noutro adaptador. Nada muda no desenho: sem o piloto (o desenho aberto no
-  navegador), o chip acende no clique como antes. Até publicar, o produto
-  continua acendendo o chip no clique: com a busca de pé, o chip de outro
-  adaptador treme (a central recusa) e fica aceso até a próxima troca do
-  painel.
-
-## 09-sistema.html
-- **28/09/2026** — O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01: a dica do
-  «Corrigir Vulkan» diz o que ele tira do jogo e o preço (sai o «não cura
-  engasgo» de 26/09), e a linha do exame diz o que chega ao jogo. Espera a
-  sessão dos desenhos. Até publicar, a pílula já faz o ato novo (a escolha que
-  o lançador lê) e a linha do exame e o recibo já são os novos, porque vêm do
-  pacote; só a dica fica a de 26/09, que ainda fala do registro do Proton.
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
