@@ -621,7 +621,7 @@ jobs:
           # bloqueio também não.
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
       - name: Instalar Hefesto - DualSense4Unix em modo dev
-        run: pip install -e ".[dev]"
+        run: pip install -c constraints.txt -e ".[dev]"
       - name: Verificar tamanho de HID captures
         run: |
           OVERSIZE=$(find tests/fixtures -name "*.bin" -size +5M 2>/dev/null)
@@ -864,7 +864,7 @@ jobs:
         run: |
           /usr/bin/python3 -m venv --system-site-packages .venv
           .venv/bin/pip install --upgrade pip
-          .venv/bin/pip install -e ".[dev]"
+          .venv/bin/pip install -c constraints.txt -e ".[dev]"
       - name: Confirmar que o gi do sistema chegou ao venv
         run: |
           .venv/bin/python -c "
@@ -969,7 +969,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev
       - name: Instalar Hefesto - DualSense4Unix em modo dev
-        run: pip install -e ".[dev]"
+        run: pip install -c constraints.txt -e ".[dev]"
       - name: Mypy
         run: mypy src/hefesto_dualsense4unix
 
@@ -1002,12 +1002,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libhidapi-dev libhidapi-hidraw0 libudev-dev libxi-dev
       - name: Instalar Hefesto - DualSense4Unix em modo dev
-        run: pip install -e ".[dev]"
+        run: pip install -c constraints.txt -e ".[dev]"
       - name: Preparar venv esperado pelo run.sh
         run: |
           python -m venv .venv
           .venv/bin/pip install --upgrade pip
-          .venv/bin/pip install -e ".[dev]"
+          .venv/bin/pip install -c constraints.txt -e ".[dev]"
       - name: Configurar ambiente de DE mockado (CHORE-CI-COSMIC-MATRIX-01)
         run: |
           if [[ "$DESKTOP_ENV" == "cosmic" ]]; then
