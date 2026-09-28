@@ -143,8 +143,27 @@ def sono_lido():
     o desacordo das duas camadas escreve no cache e não espera thread nenhuma —
     uma régua que dependesse de um relógio seria uma corrida, e corrida na suíte
     é vermelho que aparece uma vez em dez"*.
+
+    ESCREVER NO CACHE NÃO BASTA: O RELÓGIO TAMBÉM É DA RÉGUA (27/09/2026).
+    `mod.pacote()` chama `_camada_1`, e com o relógio vencido (`_CAMADA_1_QUANDO`
+    zerado, ou mais de `CAMADA_1_S` desde a última volta) ela dispara a thread
+    `renovar`, que PUBLICA com `_SONO.clear()` — na suíte o `pactl` é o dublê
+    que responde rc=1, e o sono volta vazio. Medido num clone limpo com o GTK
+    real: este arquivo sozinho reprovava 10 em 10 no
+    `test_o_canal_parado_nao_desliga_o_selo` (o selo saía `NADA_A_DIZER`, e não
+    ATIVO); na suíte de 24 partes dependia de a volta da régua anterior ter
+    sido há menos de 2 s — verde em casa, vermelho no CI.
+
+    O relógio adiantado é o que impede a thread de nascer (a forma de
+    `test_a02_o_volume_do_microfone_tem_endereco.py`), e o selo que sobe
+    descarta a volta que já estava no ar quando a régua escreveu (a guarda
+    `_CAMADA_1_SELO` do próprio produto). Nenhuma função do produto é trocada.
     """
-    guardado = dict(mod._SONO), mod._REGRA_DO_SONO[0]
+    import time
+
+    guardado = dict(mod._SONO), mod._REGRA_DO_SONO[0], mod._CAMADA_1_QUANDO[0]
+    mod._CAMADA_1_SELO[0] += 1
+    mod._CAMADA_1_QUANDO[0] = time.monotonic() + 3600.0
 
     def por(estado: str, regra: bool | None = True) -> None:
         mod._SONO.clear()
@@ -154,6 +173,7 @@ def sono_lido():
     mod._SONO.clear()
     mod._SONO.update(guardado[0])
     mod._REGRA_DO_SONO[0] = guardado[1]
+    mod._CAMADA_1_QUANDO[0] = guardado[2]
 
 
 def _bancada() -> str:
