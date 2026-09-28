@@ -973,6 +973,39 @@ def test_o_uninstall_le_a_tabela_de_processos_do_lar(tmp_path: Path) -> None:
         f"com o jogo aberto o atalho da Steam fica, e o «limpa?» o acusa: {defeitos}")
 
 
+#: Só a Steam aberta NA TABELA DO LAR, sem jogo: o que o `pgrep -x
+#: steamwebhelper` do `steam_running` casaria.
+SO_A_STEAM: dict[int, str] = {
+    4244: "/lar/.local/share/Steam/ubuntu12_64/steamwebhelper --type=renderer",
+}
+
+
+def test_o_uninstall_ve_a_steam_aberta_na_tabela_do_lar(tmp_path: Path) -> None:
+    """O segundo leitor da tabela, o `steam_running`, também pergunta ao lar.
+
+    O teste de cima prova a varredura de `/proc` (o jogo). Este prova o outro
+    leitor: com a Steam aberta e sem jogo, o destravamento do Proton é ADIADO
+    e o jogo não é anunciado.
+
+    A MORDIDA: troque o `_steam_do_lar` da partida por `lambda: False` (a
+    partida antiga) e este teste reprova.
+    """
+    r, repo = _casa_de_mentira(tmp_path, xdg_fora=False)
+    _instalar_pelos_donos(r, repo, heroic_nativo=False, com_venv=True)
+
+    rodou, diario = _desinstalar(tmp_path, r, repo, UNINSTALL.read_text(encoding="utf-8"),
+                                 xdg_fora=False, processos=SO_A_STEAM)
+
+    assert rodou.returncode == 0, rodou.stdout[-3000:] + rodou.stderr[-3000:]
+    assert "RECUSADO" not in diario, (
+        "o uninstall do lar leu fora do lar:\n"
+        + "\n".join(x for x in diario.splitlines() if x.startswith("RECUSADO")))
+    assert "ADIADO: feche a Steam" in rodou.stdout, (
+        "a Steam aberta na tabela do lar não adiou o destravamento do Proton: o "
+        "`steam_running` não leu a tabela do lar\n" + rodou.stdout[-3000:])
+    assert "JOGO da Steam em execução" not in rodou.stdout, rodou.stdout[-3000:]
+
+
 def test_o_zumbi_sai_das_duas_casas_sem_purge(tmp_path: Path) -> None:
     """O daemon grava o `conexao-zumbi.json` pelo XDG do AMBIENTE DELE (a unit
     do usuário), que pode não ser o do terminal que desinstala: com o
