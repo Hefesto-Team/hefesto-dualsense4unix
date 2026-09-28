@@ -1007,17 +1007,9 @@ def _rodar(argv: list[str]) -> str | None:
     disso seria depender de um acidente — e esta casa já respondeu "nenhum
     controle com placa de áudio" sobre um sistema que tinha uma, em 15/08/2026,
     exatamente por ler saída traduzida.
-
-    A LEITURA PERGUNTA AO RETRATO ANTES (`integrations/retrato_do_som`): no
-    daemon é ele quem responde, e o «não sei» dele volta como ``None``.
     """
-    from hefesto_dualsense4unix.integrations import retrato_do_som
-
-    resposta = retrato_do_som.responder(argv)
-    if resposta is not None:
+    if (resposta := _pelo_retrato(argv)) is not None or shutil.which(argv[0]) is None:
         return resposta if isinstance(resposta, str) else None
-    if shutil.which(argv[0]) is None:
-        return None
     try:
         proc = subprocess.run(
             argv,
@@ -1032,11 +1024,9 @@ def _rodar(argv: list[str]) -> str | None:
         logger.debug("bt_mic_comando_falhou", argv=argv[0], err=str(exc))
         return None
     finally:
-        retrato_do_som.escreveu(argv)
+        _escreveu_no_retrato(argv)
     if proc.returncode != 0:
-        logger.debug(
-            "bt_mic_comando_rc", argv=argv[0], rc=proc.returncode, err=proc.stderr[:200]
-        )
+        logger.debug("bt_mic_comando_rc", argv=argv[0], rc=proc.returncode, err=proc.stderr[:200])
         return None
     return proc.stdout
 
@@ -2469,6 +2459,32 @@ def descarregar_modulo(
     if not module_id or shutil.which("pactl") is None or pactl_mudo():
         return False
     return _com_recuo(runner or _rodar)(["pactl", "unload-module", module_id]) is not None
+
+
+# ---------------------------------------------------------------------------
+# O `_rodar` pelo retrato do som — O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01 (28/09/2026)
+#
+# NO FIM DO MÓDULO de propósito: o mapa de canais cita linhas deste arquivo.
+# ---------------------------------------------------------------------------
+
+
+def _pelo_retrato(argv: list[str]) -> object:
+    """A LEITURA PERGUNTA AO RETRATO ANTES (`integrations/retrato_do_som`).
+
+    No daemon é ele quem responde: um `str` é a resposta, o «não sei» dele
+    volta do `_rodar` como ``None``, e ``None`` aqui (sem dono, ou uma
+    escrita) manda o `_rodar` perguntar ao servidor como sempre.
+    """
+    from hefesto_dualsense4unix.integrations import retrato_do_som
+
+    return retrato_do_som.responder(argv)
+
+
+def _escreveu_no_retrato(argv: list[str]) -> None:
+    """Uma escrita marca no retrato os tipos que ela mexe; a leitura seguinte relê."""
+    from hefesto_dualsense4unix.integrations import retrato_do_som
+
+    retrato_do_som.escreveu(argv)
 
 
 __all__ = [
