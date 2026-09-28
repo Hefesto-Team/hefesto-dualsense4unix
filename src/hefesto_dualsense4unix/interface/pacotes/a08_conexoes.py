@@ -6672,7 +6672,7 @@ def parear_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return _mover(p, alvo, str(_CENA_NA_TELA.get("destino_do_conectar") or ""))
 
 
-@gesto("08-conexoes.html", "escolher-adaptador")
+@gesto("08-conexoes.html", "escolher-adaptador", grava="radio.mover")
 def escolher_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O chip do «Conectar»: ABRE o adaptador escolhido, que é o destino.
 
