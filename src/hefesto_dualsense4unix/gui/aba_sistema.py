@@ -64,8 +64,8 @@ ENDERECOS: dict[str, str] = {
     "hefesto-autostart": "`systemctl --user is-enabled` da unidade normal",
     "proton-fixado": "o registro da trava do Proton "
     "(`proton_pin.default_lock_state_path`, as mesmas chaves que o destravar lê)",
-    "vulkan-corrigido": "`camadas_vulkan.ler_estado` cruzado com o censo — há "
-    "camada que NÓS desligamos",
+    "vulkan-corrigido": "`camadas_vulkan.camadas_da_steam_fora` — a escolha que "
+    "o lançador lê e entrega ao jogo",
     "bateria-perfil": "`app/actions/config/secao_orcamento.ROTULOS_DOS_PERFIS:125`",
     "exame-lista": "`integrations/storm_doctor.storm_report:755`",
     "registro-texto": "`systemctl status` + a identidade de fábrica + o diário "
@@ -95,9 +95,10 @@ GESTOS: dict[str, str] = {
     "fixar-proton": "`integrations.proton_pin.lock_proton_for_all_games` para "
     "ligar e `unlock_games_from_pinned_proton` para desligar — o registro da "
     "trava é a cópia que o destravar lê.",
-    "corrigir-vulkan": "`integrations.camadas_vulkan.curar_todos` — "
-    "`religar=False` para ligar, `religar=True` (o que a memória diz que NÓS "
-    "desligamos) para desligar.",
+    "corrigir-vulkan": "`integrations.camadas_vulkan.gravar_camadas_da_steam_fora` "
+    "— ligar grava a escolha que o lançador entrega ao jogo; desligar a apaga e "
+    "devolve pelo `curar_todos(religar=True)` o que a memória diz que NÓS "
+    "desligamos no registro.",
     "restaurar-de-fabrica": "`app/actions/footer_actions.on_restore_default:1477`, "
     "hoje no RODAPÉ (`main.glade:4272`, botão `btn_footer_restore_default`), "
     "com confirmação em `app/gui_dialogs.confirm_restore_default:696`.",
