@@ -824,14 +824,14 @@ ESCRITORES_DO_CADERNO = tuple(_escritores_do_caderno())
 
 
 def _listas_literais_de_colunas(fonte: Path) -> list[list[str]]:
-    """Toda lista literal de strings do arquivo que tenha cara de cabeçalho.
+    """Toda lista ou tupla literal de strings do arquivo com cara de cabeçalho.
 
     Por AST, não por texto: uma expressão regular acharia a lista dentro de um
     comentário ou de uma docstring e passaria a medir prosa.
     """
     achadas = []
     for no in ast.walk(ast.parse(fonte.read_text(encoding="utf-8"))):
-        if not isinstance(no, ast.List):
+        if not isinstance(no, (ast.List, ast.Tuple)):
             continue
         valores = [
             item.value for item in no.elts
