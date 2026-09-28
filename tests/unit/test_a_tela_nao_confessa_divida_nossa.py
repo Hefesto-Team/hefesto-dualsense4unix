@@ -498,3 +498,30 @@ def test_todo_recado_sem_letra_diz_de_quem_e_a_frase(portao) -> None:
             f"a chave {chave!r} não diz `arquivo:gesto ← expressão`")
         assert len(razao) > 20, (
             f"o recado {chave!r} não diz de quem é a frase")
+
+
+def test_a_chave_sem_letra_e_o_trecho_do_fonte_em_qualquer_python(portao) -> None:
+    """A chave de `SEM_LETRA` é o que está ESCRITO no arquivo — igual em todo Python.
+
+    27/09/2026, corrida 36354426805 do CI: a chave saía de `ast.unparse`, e ele
+    escolhe as aspas de uma f-string aninhada pela versão do interpretador. A
+    chave do `_systemctl` da aba 09 foi declarada no 3.12.3 da mesa dela e
+    reprovou no 3.12.14 do `lint-test`, com o mesmo fonte. Esta régua cobra a
+    propriedade que não depende de versão: a expressão de toda chave lida
+    está, letra por letra (com o espaço em branco normalizado), no arquivo que
+    ela nomeia.
+
+    **A MORDIDA:** devolva `ast.unparse(no.exc.args[0])` ao `_recados`. Em
+    qualquer Python esta régua reprova nas duas chaves do `" ".join(recados)`
+    da aba 06 — o `unparse` troca a aspa dupla do fonte pela simples.
+    """
+    _lidos, mudos = portao._recados()
+    assert mudos, "a régua não achou nenhum recado sem letra — o caminho mudou"
+    for chave, onde in mudos:
+        expressao = chave.split(" ← ", 1)[1]
+        arquivo = RAIZ / onde.rsplit(":", 1)[0]
+        fonte = " ".join(arquivo.read_text(encoding="utf-8").split())
+        assert expressao and expressao in fonte, (
+            f"a chave {chave!r} não é o que o fonte escreve em {onde} — ela "
+            "depende do interpretador que a montou, e a mesma declaração "
+            "passaria num job do CI e reprovaria no outro")

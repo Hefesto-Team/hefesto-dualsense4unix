@@ -445,13 +445,31 @@ def _falas() -> list[tuple[str, str]]:
 def _arvore(p: pathlib.Path) -> ast.Module | None:
     if p not in _ARVORES:
         try:
-            _ARVORES[p] = ast.parse(p.read_text(encoding="utf-8"))
+            texto = p.read_text(encoding="utf-8")
+            _ARVORES[p] = ast.parse(texto)
+            _TEXTOS[p] = texto
         except (SyntaxError, UnicodeDecodeError, OSError):
             _ARVORES[p] = None
     return _ARVORES[p]
 
 
+def _trecho(p: pathlib.Path, no: ast.AST) -> str:
+    """A expressão como está ESCRITA no fonte, numa linha só.
+
+    É a chave de :data:`SEM_LETRA`, e NÃO é `ast.unparse` — medido em
+    27/09/2026, na corrida 36354426805 do CI: o `unparse` escolhe as aspas de
+    uma f-string aninhada pela VERSÃO do interpretador. O 3.12.3 da mesa dela
+    (e do `gtk-real`) repetia a aspa simples por fora; o 3.10, o 3.11 e o
+    3.12.14 do `setup-python` (o `lint-test`) punham aspa dupla. A mesma chave
+    passava num job e reprovava no outro. O trecho do fonte é o mesmo em
+    qualquer Python, e é o que quem procura a linha acha com um `grep`.
+    """
+    trecho = ast.get_source_segment(_TEXTOS.get(p, ""), no) or ""
+    return " ".join(trecho.split())
+
+
 _ARVORES: dict[pathlib.Path, ast.Module | None] = {}
+_TEXTOS: dict[pathlib.Path, str] = {}
 _ESCOPOS: dict[pathlib.Path, tuple[dict, dict, dict]] = {}
 
 
@@ -704,7 +722,7 @@ def _recados() -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
                 if not inteiro and not texto.replace(VALOR_DE_EXECUCAO, "").strip():
                     mudos.append((
                         f"{nome_do_arquivo}:{fn.name} ← "
-                        f"{ast.unparse(no.exc.args[0])}", onde))
+                        f"{_trecho(p, no.exc.args[0])}", onde))
                 lidos.append((onde, texto))
     return lidos, mudos
 
@@ -761,12 +779,12 @@ SEM_LETRA: dict[str, str] = {
         "a recusa do `systemctl restart`, como o systemd a devolve",
     "a09_sistema.py:retomar ← motivo":
         "a recusa de retomar o serviço, idem",
-    "a09_sistema.py:_systemctl ← f'{recusa}{(f': {detalhe}' if detalhe else '.')}'":
+    "a09_sistema.py:_systemctl ← f\"{recusa}{f': {detalhe}' if detalhe else '.'}\"":
         "a recusa do systemd mais o detalhe que ele mesmo dá — as duas metades "
         "vêm de fora, e o `f''` só as costura",
-    "a06_navegacao.py:guardar_definicoes ← ' '.join(recados)":
+    'a06_navegacao.py:guardar_definicoes ← " ".join(recados)':
         "os recados juntados de várias gravações; cada um nasce no seu dono",
-    "a06_navegacao.py:guardar_ponto ← ' '.join(recados)":
+    'a06_navegacao.py:guardar_ponto ← " ".join(recados)':
         "idem, pelo Guardar do Estilo Point-and-click — os dois costuram as "
         "mesmas três frases (o atalho que para de valer, a linha sem "
         "atendente, o desenho congelado), e cada uma tem o seu dono",
@@ -784,7 +802,7 @@ SEM_LETRA: dict[str, str] = {
         "`app/actions/footer_actions.py:frase_do_preset_ausente`",
 
     # -- A TABELA DO PRÓPRIO ARQUIVO, lida por chave de execução ------------
-    "a01_jogar.py:_plano_do_chip ← BOTOES_SEM_DONO.get(f'modo-{chave}', 'sem dono no produto')":
+    'a01_jogar.py:_plano_do_chip ← BOTOES_SEM_DONO.get(f"modo-{chave}", "sem dono no produto")':
         "o valor sai de um dicionário pela chave do clique; as frases estão no "
         "próprio `a01_jogar.py`, e ler qual delas sai pediria saber a chave",
 }
