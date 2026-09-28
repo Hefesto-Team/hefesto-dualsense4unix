@@ -1,4 +1,4 @@
-"""O Salvar de uma aba não mexe na seção de outra — O-SALVAR-DA-VIBRACAO-01.
+"""O Salvar de uma aba não mexe no perfil, e o gesto de uma seção só mexe nela.
 
 MEDIDO NO DISCO DELA em 26/09/2026. Às 18:38:37 ela clicou em «Salvar Perfil»
 na aba Vibração com o PRAGMATA aberto, e o backup de antes e o de depois
@@ -7,34 +7,28 @@ diferem em duas linhas que não são da vibração::
     controllers.<…:03>.mic.muted:      True  -> False   (o microfone ligou)
     controllers.<…:03>.speaker.fonte:  'sfx' -> ausente (a fonte sumiu)
 
-AS DUAS CAUSAS, e as duas moram no dono da sobreposição
-(``pacotes/rodape._draft_do_ativo``):
+A causa era o Salvar pôr o estado do aparelho por cima do disco. Desde
+27/09 (`D-2709-O-SALVAR-LE-O-PERFIL`) o Salvar e o Aplicar leem o perfil do
+disco, e só ele, em toda aba — quem mede isso nas dez abas, com o aparelho
+divergindo em tudo, é `test_o_salvar_e_o_aplicar_leem_so_o_perfil.py`.
 
-1. o Salvar é um gesto só para as dez abas, e punha o VIVO por cima do disco
-   em TODAS as seções — o microfone ligado no aparelho virou a escolha dela;
-2. o alto-falante do vivo era remontado sem a ``fonte``.
-
-E o molde tinha um segundo chamador: os gestos do editor da aba Perfis
-(``a10_perfis._com_o_que_esta_valendo``). Mudar a prioridade fazia o mesmo.
+ESTE ARQUIVO GUARDA O CASO DELA E OS ESCRITORES POR SEÇÃO: o clique das
+18:38:37 com o estado daquela hora, e os gestos que gravam no clique (o
+editor da aba Perfis, a força da 05, o som da 02) mudando só o campo deles.
 
 A RÉGUA COMPARA CONTRA O DISCO LIDO ANTES DO GESTO, nunca contra a própria
 saída. Na parte GLOBAL do perfil a comparação é pelo esquema (o padrão que o
 ``save_profile`` escreve denso não é mudança); nos OVERRIDES é pelo JSON cru,
 porque lá o campo ausente herda do global, e escrever o padrão seria mudança.
 
-AS MORDIDAS, uma por cura (medidas na entrega):
+AS MORDIDAS:
 
-- faça ``salvar`` passar ``TODAS_AS_SECOES_DO_VIVO`` em vez da seção da aba e
-  :func:`test_o_salvar_da_aba_so_muda_a_secao_dela` reprova nas abas que não
-  são donas, e :func:`test_o_caso_das_18h38_da_vibracao` reprova com o
-  microfone e a fonte;
-- devolva o ``SpeakerDraft(volume, muted, rota)`` nu a ``_o_som_daquela_peca``
-  e :func:`test_o_salvar_da_02_guarda_a_fonte_e_a_rota` reprova com a fonte;
-- devolva o ``MicDraft(muted, volume)`` nu ao microfone da mesma função e
-  :func:`test_o_salvar_da_02_guarda_o_ganho_e_o_volume_do_microfone` reprova
-  com o ganho;
-- faça ``a10_perfis._com_o_que_esta_valendo`` pedir todas as seções e
-  :func:`test_o_editor_da_10_so_muda_o_campo_dele` reprova com o microfone.
+- devolva ao ``rodape.salvar`` o microfone do aparelho (o ``mic_mudo`` do
+  vivo no rascunho) e :func:`test_o_caso_das_18h38_da_vibracao` reprova com o
+  microfone do …:03;
+- monte o alto-falante do ``a02_controles._lembrar_do_som`` sobre um
+  ``SpeakerDraft`` nu, em vez do efetivo da peça, e
+  :func:`test_o_volume_da_02_guarda_a_fonte_e_a_rota` reprova com a fonte.
 """
 from __future__ import annotations
 
@@ -122,9 +116,8 @@ VIVO_DAS_18H38: dict[str, Any] = {
     "sensores": {"giroscopio_ligado": True, "acelerometro_ligado": True},
 }
 
-#: O MESMO CONTROLE COM O VIVO DIVERGINDO EM TODA SEÇÃO que a sobreposição
-#: alcança — a luz, o alto-falante, o microfone e os sensores. A cor viva é um
-#: dos tons da casa (o azul do número 1), para a inversão do brilho achá-la.
+#: O MESMO CONTROLE COM O VIVO DIVERGINDO EM TODA SEÇÃO que o daemon publica
+#: por peça — a luz, o alto-falante, o microfone e os sensores.
 VIVO_QUE_DIVERGE: dict[str, Any] = {
     **VIVO_DAS_18H38,
     "lightbar_rgb": [0, 0, 255],
@@ -133,8 +126,8 @@ VIVO_QUE_DIVERGE: dict[str, Any] = {
     "sensores": {"giroscopio_ligado": False, "acelerometro_ligado": True},
 }
 
-#: OS GLOBAIS QUE O DAEMON PUBLICA, divergindo do disco nas duas seções que a
-#: sobreposição lê da mesa inteira: a vibração e o mouse.
+#: OS GLOBAIS QUE O DAEMON PUBLICA, divergindo do disco na vibração e no
+#: mouse.
 MESA_QUE_DIVERGE: dict[str, Any] = {
     "rumble_policy": "max",
     "rumble_passthrough": False,
@@ -147,12 +140,6 @@ MESA_DAS_18H38: dict[str, Any] = {
     "rumble_passthrough": True,
     "rumble_policy_custom_mult": None,
 }
-
-AS_DEZ = ("01-jogar.html", "02-controles.html", "03-gatilhos.html",
-          "04-iluminacao.html", "05-vibracao.html", "06-navegacao.html",
-          "07-lancadores.html", "08-conexoes.html", "09-sistema.html",
-          "10-perfis.html")
-
 
 class PonteDeMentira:
     """O mínimo que os gestos que gravam e reaplicam chamam."""
@@ -238,95 +225,8 @@ def _fora_da_secao(mudou: dict[str, Any], secoes: frozenset[str]) -> dict[str, A
 
 
 # --------------------------------------------------------------------------
-# 1. o dono do mapa: cada seção viva tem UMA aba dona
+# 1. o Salvar do rodapé, com o estado dela das 18:38:37
 # --------------------------------------------------------------------------
-def test_cada_secao_viva_tem_uma_aba_dona_so() -> None:
-    """Duas abas donas da mesma seção fariam o Salvar de uma mexer na outra.
-
-    E uma seção sem dona seria sobreposição que nenhum Salvar faz — o que o
-    `TODAS_AS_SECOES_DO_VIVO` promete e ninguém cumpre.
-    """
-    donas: dict[str, list[str]] = {}
-    for aba in AS_DEZ:
-        for secao in rodape.secoes_do_vivo(aba):
-            donas.setdefault(secao, []).append(aba)
-    assert set(donas) == set(rodape.TODAS_AS_SECOES_DO_VIVO), donas
-    duplas = {s: p for s, p in donas.items() if len(p) > 1}
-    assert not duplas, f"seção viva com duas abas donas: {duplas}"
-    assert rodape.secoes_do_vivo("") == frozenset(), (
-        "o clique que não diz de que aba veio não é dono de seção nenhuma")
-
-
-#: AS TRÊS PORTAS DA SOBREPOSIÇÃO cujo padrão é TODAS as seções, e quantos
-#: argumentos posicionais cada uma recebe ANTES de `secoes`. A primeira só
-#: sobrepõe com o `ctx`; as outras duas sempre sobrepõem.
-_PORTAS_DO_VIVO: dict[str, int] = {
-    "_draft_do_ativo": 2,
-    "_o_som_daquela_peca": 3,
-    "_o_que_e_da_mesa_inteira": 2,
-}
-
-
-def test_todo_chamador_do_produto_diz_as_secoes() -> None:
-    """O padrão das portas do vivo é TODAS as seções, e ele é de quem mede.
-
-    Um gesto do produto que passe o `ctx` sem dizer as seções volta a pôr o
-    vivo por cima do perfil inteiro — o defeito das 18:38:37. A régua lê o
-    fonte do PACOTE inteiro (não só de `interface/`: a janela de `app/` já
-    citou este dono) e cobra as seções em toda chamada que sobrepõe, com o
-    `ctx` posicional ou por nome.
-
-    MORDIDA (conferência de 26/09): tire o `secoes` de uma das três chamadas
-    internas do `rodape` ou da do `a10_perfis` e esta régua aponta a linha.
-    """
-    import ast
-    import pathlib
-
-    raiz = pathlib.Path(rodape.__file__).resolve().parents[2]
-    sem_secoes: list[str] = []
-    for arq in sorted(raiz.rglob("*.py")):
-        texto = arq.read_text(encoding="utf-8")
-        if not any(porta in texto for porta in _PORTAS_DO_VIVO):
-            continue
-        for no in ast.walk(ast.parse(texto)):
-            if not isinstance(no, ast.Call):
-                continue
-            alvo = no.func
-            nome = alvo.attr if isinstance(alvo, ast.Attribute) else getattr(alvo, "id", "")
-            antes = _PORTAS_DO_VIVO.get(nome)
-            if antes is None:
-                continue
-            chaves = {k.arg for k in no.keywords}
-            if (nome == "_draft_do_ativo" and len(no.args) < 2
-                    and "ctx" not in chaves):
-                continue  # sem o ctx não há vivo a sobrepor (o «Aplicar»)
-            if len(no.args) <= antes and "secoes" not in chaves:
-                sem_secoes.append(f"{arq.relative_to(raiz)}:{no.lineno}")
-    assert not sem_secoes, (
-        f"chamada que sobrepõe o vivo sem dizer as seções: {sem_secoes}")
-
-
-# --------------------------------------------------------------------------
-# 2. o Salvar do rodapé, nas dez abas
-# --------------------------------------------------------------------------
-@pytest.mark.parametrize("aba", AS_DEZ)
-def test_o_salvar_da_aba_so_muda_a_secao_dela(aba: str) -> None:
-    """Com o vivo divergindo em TODA seção, o disco só muda nas da aba."""
-    antes = _o_disco()
-    rodape.salvar(_ctx(VIVO_QUE_DIVERGE, MESA_QUE_DIVERGE),
-                  _clique_do_salvar(aba), PonteDeMentira())
-    mudou = _o_que_mudou(antes, _o_disco())
-    donas = rodape.secoes_do_vivo(aba)
-    assert not _fora_da_secao(mudou, donas), (
-        f"o Salvar da {aba} mexeu fora das seções dela ({sorted(donas)}): "
-        f"{_fora_da_secao(mudou, donas)}")
-    # A SOBREPOSIÇÃO CONTINUA VALENDO NA ABA DONA — sem isto, uma «cura» que
-    # só grava o disco passaria verde e apagaria o que o 01/09 mediu.
-    faltou = sorted(s for s in donas if not any(_secao(k) == s for k in mudou))
-    assert not faltou, (
-        f"o vivo não chegou ao disco nas seções da própria {aba}: {faltou}")
-
-
 def test_o_caso_das_18h38_da_vibracao() -> None:
     """O clique dela, com o estado dela: o microfone e a fonte do …:03 ficam."""
     antes = _o_disco()
@@ -340,33 +240,31 @@ def test_o_caso_das_18h38_da_vibracao() -> None:
     assert not mudou, f"nada mudou no aparelho, e o disco mudou: {mudou}"
 
 
-def test_o_salvar_da_02_guarda_a_fonte_e_a_rota() -> None:
-    """Na aba dona do alto-falante, o vivo traz o volume e não apaga o resto.
+def test_o_volume_da_02_guarda_a_fonte_e_a_rota() -> None:
+    """O gesto do volume grava o volume, e a rota e a fonte da peça ficam.
 
-    O daemon publica o volume e o mudo; a rota e a fonte o Salvar herda do
-    que o perfil já dizia daquela peça.
+    Até 27/09 era o Salvar da 02 que levava o volume do aparelho ao disco; hoje
+    é o gesto, no clique (`a02_controles._lembrar_do_som`), e ele parte do
+    efetivo da peça: o `with_controller_speaker` troca a seção inteira.
     """
-    rodape.salvar(_ctx(VIVO_QUE_DIVERGE, MESA_QUE_DIVERGE),
-                  _clique_do_salvar("02-controles.html"), PonteDeMentira())
+    a02_controles._lembrar_do_som(_ctx(VIVO_QUE_DIVERGE, MESA_QUE_DIVERGE),
+                                  P3, speaker={"volume": 60})
     depois = _o_disco()
     assert depois[f"controllers.{P3}.speaker.volume"] == 60
     assert depois.get(f"controllers.{P3}.speaker.fonte") == "sfx", (
-        "o Salvar da 02 apagou a fonte do alto-falante — o `SpeakerDraft` foi "
+        "o volume da 02 apagou a fonte do alto-falante — o `SpeakerDraft` foi "
         "remontado sem ela")
     assert depois.get(f"controllers.{P3}.speaker.rota") == 2
 
 
 def test_o_salvar_da_02_guarda_o_ganho_e_o_volume_do_microfone() -> None:
-    """O microfone do vivo troca o que ele lê, e o resto da peça fica.
+    """O Salvar da 02 regrava o microfone da peça inteiro: o mudo, o volume e o ganho.
 
-    O MESMO MOLDE DA FONTE, na seção vizinha (conferência da
-    O-SALVAR-DA-VIBRACAO-01, 26/09/2026). O daemon publica o mudo e, quando o
-    laço do canal já perguntou ao PipeWire, o `volume_captura`; o GANHO da
-    placa ele não publica. O vivo era montado num `MicDraft(muted, volume)`
-    nu, e o `with_controller_mic` substitui a seção inteira da peça: o Salvar
-    da 02 apagava o `gain` sempre, e o `volume` quando o canal ainda não tinha
-    resposta. É a assinatura da escrita das 18:40:14 no Freestyle dela
-    (`mic.volume` 64 → ausente).
+    É a assinatura da escrita das 18:40:14 de 26/09 no Freestyle dela
+    (`mic.volume` 64 → ausente): o Salvar remontava o microfone com o que o
+    daemon publica, e o daemon não publica o ganho, nem o volume enquanto o
+    canal não responde. Desde 27/09 ele lê o disco, e o aparelho aberto aqui
+    (o `mic_mudo` falso) também não entra.
     """
     from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -378,6 +276,8 @@ def test_o_salvar_da_02_guarda_o_ganho_e_o_volume_do_microfone() -> None:
     rodape.salvar(_ctx(vivo, MESA_DAS_18H38),
                   _clique_do_salvar("02-controles.html"), PonteDeMentira())
     depois = _o_disco()
+    assert depois.get(f"controllers.{P3}.mic.muted") is True, (
+        "o Salvar da 02 gravou o microfone aberto do aparelho como escolha dela")
     assert depois.get(f"controllers.{P3}.mic.gain") == 40, (
         "o Salvar da 02 apagou o ganho do microfone do …:03 — o `MicDraft` "
         "foi remontado sem ele")
@@ -387,7 +287,7 @@ def test_o_salvar_da_02_guarda_o_ganho_e_o_volume_do_microfone() -> None:
 
 
 # --------------------------------------------------------------------------
-# 3. os outros escritores por seção: a 10, a 05 e a 02
+# 2. os escritores por seção: a 10, a 05 e a 02
 # --------------------------------------------------------------------------
 def test_o_editor_da_10_so_muda_o_campo_dele() -> None:
     """Mudar a prioridade grava a prioridade, e o microfone fica."""
