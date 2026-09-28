@@ -78,7 +78,7 @@ def arvore(tmp_path: Path) -> Path:
     # divergem publicariam uma página descrevendo um domínio que o portão não
     # aceita, e um `ImportError` grita, enquanto duas listas envelhecem caladas.
     # `paleta_da_casa.py` entrou nesta lista em 23/08/2026: a paleta saiu de
-    # dentro do `gerar-mapa.py` para ser DIVIDIDA com o `gerar-painel.py`, e sem
+    # dentro do `gerar-mapa.py` para ser DIVIDIDA com as outras páginas, e sem
     # ela a cópia do gerador morre com `ModuleNotFoundError` na árvore de teste.
     #
     # Esta lista é o preço de copiar scripts para um tmp em vez de rodá-los na

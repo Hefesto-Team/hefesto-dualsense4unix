@@ -84,7 +84,6 @@ PISO_DE_ESCAPES = 140
 #: MESMO commit.
 SEM_RAZAO_PINADOS: dict[str, int] = {
     ".github/workflows/ci.yml": 2,
-    "scripts/gerar-indice-html.py": 1,
     "scripts/gerar-mapa.py": 2,
     "scripts/generate_glyph_active.py": 1,
     "scripts/install_osk.sh": 2,

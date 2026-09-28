@@ -9,9 +9,9 @@ O QUE ISSO DEIXA DE CONTRATO, e é o que este arquivo cobra:
 
 1. o que uma régua LÊ mora em `docs/method/` e **viaja no git**;
 2. `docs/method/LEIA-PRIMEIRO.md` diz de cada um de onde veio e quem o lê;
-3. **nada em `src/`, `scripts/` ou `tests/` volta a ler a árvore real
-   `docs/process/`** — salvo as ferramentas de PROCESSO, declaradas aqui com
-   a razão de cada uma.
+3. **nada em `src/`, `scripts/` ou `tests/` que viaje no git volta a ler a
+   árvore real `docs/process/`** — salvo as ferramentas de PROCESSO,
+   declaradas aqui com a razão de cada uma.
 
 O PREÇO QUE PAGOU POR ESTA RÉGUA, e ele é de 20/09/2026: os dois donos do
 gesto das 199 células da mesa de medição foram arquivados junto com 732
@@ -49,9 +49,6 @@ PROCESSO = "docs/process"
 #: Quem entrar nesta lista entra com a razão escrita, e a razão é conferida
 #: pela régua (linha vazia reprova).
 LEITORES_DE_PROCESSO: dict[str, str] = {
-    "scripts/gerar-painel.py":
-        "o painel das sprints — ele É a leitura da pasta de processo, e sai "
-        "vazio sem ela",
     "scripts/mover-sprints-fechadas.py":
         "o movedor de sprints fechadas: o que ele move são as sprints, que "
         "são processo",
@@ -67,6 +64,9 @@ LEITORES_DE_PROCESSO: dict[str, str] = {
         "pasta não viaja",
     "tests/unit/test_o_dado_nao_mora_no_processo.py":
         "esta régua, que nomeia a pasta para proibi-la",
+    "tests/unit/test_toda_excecao_tem_sprint_que_a_tira.py":
+        "a régua das listas de exceção: ela pergunta a cada sprint citada se "
+        "ainda está aberta, e o estado de uma sprint é processo",
 }
 
 #: OS NOMES DE RAIZ. Uma expressão só é leitura da ÁRVORE REAL quando a
@@ -80,10 +80,29 @@ PASTAS_VARRIDAS = ("src", "scripts", "tests")
 
 
 def _modulos() -> list[pathlib.Path]:
+    """Os `.py` de `src/`, `scripts/` e `tests/` que VIAJAM no git.
+
+    O que o git ignora não viaja, e pode ler a pasta que também não viaja: é
+    ferramenta de processo por definição (o gerador do painel das sprints saiu
+    do git em 28/09/2026 e continua no disco, lendo `docs/process/`). Sem
+    `git`, a lista é o disco inteiro, que é o lado estrito.
+    """
+    nao_viajam = _ignorados_pelo_git()
     fora: list[pathlib.Path] = []
     for pasta in PASTAS_VARRIDAS:
-        fora.extend(sorted((RAIZ / pasta).rglob("*.py")))
+        fora.extend(m for m in sorted((RAIZ / pasta).rglob("*.py")) if m not in nao_viajam)
     return fora
+
+
+def _ignorados_pelo_git() -> set[pathlib.Path]:
+    """Os arquivos das pastas varridas que o git ignora nesta árvore."""
+    saida = subprocess.run(
+        ["git", "-C", str(RAIZ), "ls-files", "--others", "--ignored",
+         "--exclude-standard", "-z", "--", *PASTAS_VARRIDAS],
+        capture_output=True, text=True, check=False)
+    if saida.returncode != 0:
+        return set()
+    return {RAIZ / relativo for relativo in saida.stdout.split("\0") if relativo}
 
 
 def _rastreado(relativo: str) -> bool:

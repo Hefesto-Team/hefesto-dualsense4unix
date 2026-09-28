@@ -105,13 +105,6 @@ rapido|caducos|py|scripts/validar-caducos.py --all
 rapido|palavra-de-tela|py|scripts/validar-palavra-de-tela.py --all
 rapido|version-consistency|py|scripts/check_version_consistency.py
 rapido|curvas|py|scripts/gerar-tabela-de-curvas.py --check
-# 25/08/2026: a página das frases de tela é gerada de um JSON versionado.
-# Sem este portão, o HTML publicado e o dado divergiriam em silêncio — e o que
-# ela abre para decidir passaria a mostrar uma lista que já não é a do disco.
-rapido|frases-de-tela|py|scripts/gerar-frases-de-tela.py --check
-# 27/09/2026: o index.html de html/ só era conferido pelo gancho do pre-commit,
-# que não roda em casa, e o CI do dev reprovou por ele com os portões verdes.
-rapido|indice-html|py|scripts/gerar-indice-html.py --check
 rapido|paridade-transporte|py|scripts/check_paridade_transporte.py
 # 03/09/2026: O TERCEIRO NÚMERO. Os dois outros medem a interface nova contra
 # ela mesma (campos escritos; publicado × mockup) e nenhum responde "o que a GTK

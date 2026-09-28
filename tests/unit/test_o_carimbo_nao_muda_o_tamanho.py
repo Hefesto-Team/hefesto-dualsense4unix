@@ -399,8 +399,8 @@ def test_trocar_o_commit_nao_muda_o_tamanho_do_carimbo(brinquedo: Path) -> None:
     largura variável, como `git describe`.
 
     MORDIDA, medida em 20/09/2026: pendurar no carimbo o ASSUNTO do commit —
-    `_git("log", "-1", "--format=%s")`, que é o que o `scripts/gerar-painel.py`
-    já faz no corpo do painel — faz o carimbo ir de 274 a 253 bytes entre dois
+    `_git("log", "-1", "--format=%s")`, que é o que o painel local já faz no
+    corpo dele — faz o carimbo ir de 274 a 253 bytes entre dois
     commits do mesmo repositório.
 
     Medido e ANOTADO porque engana: trocar o hash curto por

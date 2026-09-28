@@ -153,12 +153,6 @@ projeto. Não é o produto: o produto renderiza interface/paginas/. O texto
 dele vem do docs/data/mapa-controles.csv, e é lá que se traduz."""
 
 [[regra]]
-caminho = "html/**"
-zona = "ENSINA"
-razao = """as páginas geradas que se LEEM para entender o projeto (specs, mapa,
-painel). Não são o produto: o produto renderiza interface/paginas/."""
-
-[[regra]]
 caminho = "mockup/*.md"
 zona = "ENSINA"
 razao = "LEIA-PRIMEIRO e DIVERGENCIAS explicam as duas pastas a quem chega."
