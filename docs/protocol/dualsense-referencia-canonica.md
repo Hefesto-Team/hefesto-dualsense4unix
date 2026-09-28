@@ -1043,10 +1043,15 @@ sintomas de uma vez.
 1. **A raiz** — `if (data[1] & DS_INPUT_BT_FLAG_AUDIO) return 0;` no ramo
    Bluetooth do parse (`patch/0003`, MIC-NAO-E-BOTAO-01). **INSTALADA E MEDIDA em 10/09/2026.** O módulo curado entrou pelo DKMS e foi carregado (o `srcversion` em memória foi de `E493EAD26536CF68977110C` para `CFB81A3D4C7FAA41489CCBD`), e os dois sintomas sumiram no mesmo instante.
    Ela entra pelo caminho normal do `install.sh` (passo 3k);
-2. **A defesa** — a borda do bit de mudo passa a exigir SUSTENTAÇÃO
-   (`SUSTENTACAO_DO_MUDO_S`, em `core/backend_pydualsense.py`): o dedo trava o
-   valor, o gating oscila, e são duas ordens de grandeza. Ela protege a máquina
-   enquanto o módulo não for recompilado.
+2. **A defesa** — do lado do daemon, o gesto do botão deixou de ser a virada
+   do bit `MIC_MUTE` de `status[1]` e passou a ser o próprio BOTÃO
+   (`buttons[2]` bit 2), lido do report de ESTADO que já passa pela recusa do
+   quadro de áudio (`core/backend_pydualsense.py`, `_registrar_borda_do_mic`,
+   28/09/2026). O gating do bit não aperta botão nenhum, com ou sem o módulo
+   recompilado. A sustentação de 300 ms que fazia esse papel desde 10/09 saiu
+   junto: ela olhava a virada do bit, e o bit virava também com a escrita de
+   quem quer que mande no mudo — três bordas que ela não deu, no branco, na
+   sessão de 28/09.
 
 **A METADE EM PYTHON JÁ FAZIA A GUARDA CERTA DESDE 16/08/2026** —
 `core/physical_report_reader.INPUT_FLAG_AUDIO`, do PS-PRESO-01. A casa sabia a
