@@ -58,10 +58,10 @@ from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalac
 
 console = Console()
 
-#: O LANÇADOR QUE O `install.sh` ESCREVE, e é o mesmo que o atalho do menu
-#: dela chama. Apontar para o `interface.sh` da árvore seria amarrar o tray a
-#: um caminho de desenvolvimento; apontar para o binário instalado é o que faz
-#: o «Abrir painel» funcionar em qualquer computador.
+#: O LANÇADOR QUE O `install.sh` ESCREVE, e abre a mesma janela que o atalho
+#: do menu dela. Apontar para o `run.sh` da árvore seria amarrar o tray a um
+#: caminho de desenvolvimento; apontar para o binário instalado é o que faz o
+#: «Abrir painel» funcionar em qualquer computador.
 LANCADOR_DO_PAINEL = "hefesto-dualsense4unix-gui"
 
 

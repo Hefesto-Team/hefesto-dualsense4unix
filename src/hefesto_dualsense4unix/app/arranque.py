@@ -17,8 +17,8 @@ errado.
 QUEM CHAMA ISTO HOJE: NINGUÉM EM PYTHON, e a razão está medida
 ---------------------------------------------------------------
 
-O caminho que ela clica é `packaging/*.desktop` → `interface.sh` → `run.sh
---gui` → `scripts/abrir_interface.py` → `interface/hefesto_vivo.py`, e o
+O caminho que ela clica é `packaging/*.desktop` → `run.sh --gui` →
+`scripts/abrir_interface.py` → `interface/hefesto_vivo.py`, e o
 `run.sh` já faz as DUAS curas **em shell, com critério grosso**, antes de o
 Python subir:
 

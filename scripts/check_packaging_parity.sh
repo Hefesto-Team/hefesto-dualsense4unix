@@ -204,7 +204,7 @@ done < <(find packaging -name '*.desktop' \
 # `app/main.py`, o entry point da janela GTK, apagado com ela
 # (`D-0609-GTK-LEVA-INTEIRA`). Quem veste o ícone no processo hoje é o
 # `scripts/abrir_interface.py`, que é o que o `.desktop` dela abre pelo
-# `interface.sh` -> `run.sh --gui`.
+# `run.sh --gui`.
 # Sem esse nome no tema, a bandeja cai no fallback "input-gaming" (joystick
 # genérico). Não havia ganho líquido: trocava um ícone quebrado por outro, e o que
 # quebrava era justamente o que ela vê rodando. Então os DOIS nomes são contrato,

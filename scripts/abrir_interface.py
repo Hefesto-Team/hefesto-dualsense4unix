@@ -88,13 +88,15 @@ from pathlib import Path
 # FATO ERRADO, SUBSTITUÍDO — 06/09/2026. Esta linha dizia *"o produto que ela
 # usa é o lançador instalado, e não passa por aqui"*, e foi com essa premissa
 # que a guarda entrou aqui em 04/09. O `.desktop` instalado aponta o `Exec=`
-# para `interface.sh`, que chama `run.sh --gui`, que chama ESTE arquivo: o
-# atalho dela PASSA por aqui, e passou desviado por dois dias — ela clicou, o
-# WebKit pintou as dez abas num `Xvfb` e a tela dela não recebeu nada.
+# para `run.sh --gui`, que chama ESTE arquivo: o atalho dela PASSA por aqui, e
+# passou desviado por dois dias — ela clicou, o WebKit pintou as dez abas num
+# `Xvfb` e a tela dela não recebeu nada.
 #
-# Quem declara o escape é o `interface.sh`, porque ele é a CARA que ela clica.
-# A guarda FICA aqui: os instrumentos que chamam este script sem passar pelo
-# lançador continuam sem tela. Há régua: `test_o_lancador_dela_nasce_na_tela_dela.py`.
+# Quem declara o escape é o que ela clica: o `Exec=` do `.desktop` e o
+# lançador de `~/.local/bin`, os dois escritos pelo `install.sh` com
+# `HEFESTO_NA_TELA=1`. O `run.sh` não o declara, e a guarda FICA aqui: os
+# instrumentos que chamam este script, ou o `run.sh --gui`, continuam sem tela.
+# Há régua: `test_o_lancador_dela_nasce_na_tela_dela.py`.
 import pathlib as _pathlib
 
 _RAIZ_TELA = str(_pathlib.Path(__file__).resolve().parents[1] / "src")

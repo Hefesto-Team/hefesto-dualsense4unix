@@ -91,7 +91,6 @@ ARQUIVOS_SOLTOS = (
     "install.sh",
     "uninstall.sh",
     "run.sh",
-    "interface.sh",
     "pyproject.toml",
     "bancada.py",
 )

@@ -44,8 +44,9 @@ A decisão ``D-A-INTERFACE-NOVA-E-O-MOCKUP-DENTRO-DE-UMA-JANELA-GTK`` (28/08)
 tirou a interface do ``Gtk.Notebook`` e a pôs num ``WebKit2.WebView``: o mockup
 **é** a interface. O produto que ela abre não entra mais só pelos
 ``console_scripts`` do ``pyproject.toml`` — entra também por
-``packaging/hefesto-dev-dualsense4unix.desktop`` (``Exec=@RAIZ@/interface.sh``) →
-``interface`` → ``scripts/abrir_interface.py`` → o piloto
+``packaging/hefesto-dualsense4unix.desktop``
+(``Exec=env HEFESTO_NA_TELA=1 @RAIZ@/run.sh --gui``) → ``run.sh --gui`` →
+``scripts/abrir_interface.py`` → o piloto
 ``src/hefesto_dualsense4unix/interface/controles_vivos.py``, que importa ``src/`` e o chama dez
 vezes por segundo.
 
@@ -401,26 +402,18 @@ _MODULO_DA_PONTE = _PASTA_DA_PONTE.removeprefix("src/").replace("/", ".")
 #:
 #: Por que a cadeia inteira, e não só o último elo: o ``abrir_interface.py``
 #: sozinho não prova que alguém o roda — ele é um envoltório. Quem o roda é o
-#: ``interface``, e quem roda o ``interface`` é o ``.desktop`` que o
+#: ``run.sh --gui``, e quem roda o ``run.sh --gui`` é o ``.desktop`` que o
 #: ``install.sh`` escreve em ``~/.local/share/applications``. Cortado
 #: qualquer elo, o piloto vira instrumento de bancada e a ponte inteira sai da
 #: produção — que é exatamente o que este portão tem de saber dizer.
 _CADEIA_DA_INTERFACE_NOVA: tuple[tuple[str, str, str], ...] = (
     (
         "packaging/hefesto-dualsense4unix.desktop",
-        "Exec=@RAIZ@/interface.sh",
+        "Exec=env HEFESTO_NA_TELA=1 @RAIZ@/run.sh --gui",
         "o `.desktop` do app — o `@RAIZ@` é substituído pelo caminho da "
-        "árvore pelo `install.sh`. É o ícone que ela clica.",
-    ),
-    (
-        "interface.sh",
-        'exec "$MOTOR" --gui',
-        "o lançador da raiz, pedido dela em 29/08/2026 (um `.sh` chamado "
-        "`interface` na raiz, para ela clicar). Ele é a CARA e não o cérebro: "
-        "entrega ao `run.sh --gui`, que é o mesmo caminho que o atalho "
-        "instalado usa. Duas rotas para a mesma janela é como uma fica para "
-        "trás — já aconteceu aqui, com este arquivo procurando o piloto numa "
-        "pasta que não existe.",
+        "árvore pelo `install.sh`. É o ícone que ela clica, e é ele que "
+        "declara a tela: o `run.sh` não a declara, e todo instrumento que o "
+        "chama continua desviado.",
     ),
     (
         "run.sh",
@@ -3456,7 +3449,7 @@ def _flags_de_bancada(arvore: ast.AST) -> frozenset[str]:
     o IDIOMA, não os nomes.
 
     POR QUE TODA FLAG É BANCADA, e não só as três mordidas: o ``.desktop`` roda
-    ``Exec=@RAIZ@/interface.sh`` **sem um único argumento**, e o lançador só
+    ``run.sh --gui`` **sem um único argumento a mais**, e o lançador só
     repassa o que receber. Logo o que ela abre é o piloto com todas as flags
     ausentes — e qualquer corpo que só roda COM flag é de quem está na bancada,
     não dela.

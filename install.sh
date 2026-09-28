@@ -3184,10 +3184,17 @@ fi
 
 # O QUE O ATALHO ABRE É A INTERFACE HTML — 01/09/2026, ordem dela: *"tudo tem
 # que apontar pro nosso lancher html e tudo tem que apontar pros arquivos na
-# nossa pasta"*. O `interface.sh` da raiz é a CARA (o que ela clica); ele
-# delega ao `run.sh --gui`, que ativa a venv desta árvore, cuida do XWayland e
-# do pixbuf, e chama `scripts/abrir_interface.py` — quem veste prgname,
-# WM_CLASS e ícone no processo antes da primeira janela nascer.
+# nossa pasta"*. O atalho chama o `run.sh --gui`, que ativa a venv desta
+# árvore, cuida do XWayland e do pixbuf, e chama `scripts/abrir_interface.py` —
+# quem veste prgname, WM_CLASS e ícone no processo antes da primeira janela
+# nascer.
+#
+# A TELA VIAJA COM O ATALHO. `HEFESTO_NA_TELA=1` é o escape da guarda
+# TELA-DELA-02 (`utils/tela_de_mentira.py`), e quem o declara é o que a pessoa
+# clica: o `Exec=` abaixo e o lançador de `~/.local/bin`. O `run.sh` NÃO o
+# declara, de propósito: todo instrumento que chama `run.sh --gui` continua
+# desviado para uma tela de mentira. Há régua:
+# `tests/unit/test_o_lancador_dela_nasce_na_tela_dela.py`.
 #
 # Aqui havia `Exec=${ROOT_DIR}/run.sh` quando o `run.sh` abria a janela GTK
 # velha. O motor GTK não sumiu (os 74 handlers de `app/actions/` são o que a
@@ -3199,10 +3206,10 @@ fi
 # perdia o tema do portal e o outro não, e ninguém tinha como saber qual janela
 # estava vendo. Com o XWayland fora do default, os dois passam a ser iguais.
 if [[ "${FORCE_XWAYLAND}" -eq 1 ]]; then
-    _EXEC_LINE="env GDK_BACKEND=x11 ${ROOT_DIR}/interface.sh"
+    _EXEC_LINE="env GDK_BACKEND=x11 HEFESTO_NA_TELA=1 ${ROOT_DIR}/run.sh --gui"
     printf '      .desktop com GDK_BACKEND=x11 (--force-xwayland)\n'
 else
-    _EXEC_LINE="${ROOT_DIR}/interface.sh"
+    _EXEC_LINE="env HEFESTO_NA_TELA=1 ${ROOT_DIR}/run.sh --gui"
 fi
 
 # O CABEÇALHO É O DO REPOSITÓRIO, e não um texto digitado aqui. O arquivo
@@ -3275,8 +3282,10 @@ cat > "${LAUNCHER}" <<LAUNCH
 # O console script do mesmo nome (pyproject.toml) abre a MESMA interface, por
 # interface.hefesto_vivo:main. Este arquivo o SOBRESCREVE de propósito: ele
 # desprende a janela do terminal (setsid+nohup) e passa pelo run.sh, que
-# cuida do XWayland e do pixbuf antes de o Python subir.
-setsid nohup "${ROOT_DIR}/interface.sh" "\$@" </dev/null >/dev/null 2>&1 &
+# cuida do XWayland e do pixbuf antes de o Python subir. HEFESTO_NA_TELA nasce
+# 1 (a janela vai para a tela de quem clicou); HEFESTO_NA_TELA=0 no ambiente
+# devolve a guarda, para quem chama este lançador sem tela.
+HEFESTO_NA_TELA="\${HEFESTO_NA_TELA:-1}" setsid nohup "${ROOT_DIR}/run.sh" --gui "\$@" </dev/null >/dev/null 2>&1 &
 disown 2>/dev/null || true
 LAUNCH
 chmod +x "${LAUNCHER}"

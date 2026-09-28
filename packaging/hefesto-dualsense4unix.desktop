@@ -5,9 +5,11 @@
 #
 # ELE ABRE A INTERFACE HTML, e é isso que ela pediu com todas as letras: *"tipo
 # tudo tem que apontar pro nosso lancher html e tudo tem que apontar pros
-# arquivos na nossa pasta"*. O `interface.sh` da raiz é esse lançador: ele veste
+# arquivos na nossa pasta"*. O `run.sh --gui` da raiz é esse lançador: ele veste
 # a identidade no processo (`scripts/abrir_interface.py`) e abre as dez abas
-# vivas no `WebKit2.WebView`.
+# vivas no `WebKit2.WebView`. O `HEFESTO_NA_TELA=1` do `Exec=` é o escape da
+# guarda TELA-DELA-02, e mora AQUI porque o atalho é o que se clica: o `run.sh`
+# não o declara, e todo instrumento que o chama continua sem tela.
 #
 # @RAIZ@ é substituído pelo caminho da árvore por quem instala (`install.sh`).
 # O arquivo versionado NÃO carrega caminho de máquina.
@@ -47,7 +49,7 @@ GenericName=DualSense Controller
 # (`interface/topo.html`, a linha `.sub` do cabeçalho) e o que os outros três
 # `.desktop` desta árvore já diziam — um dono, uma frase.
 Comment=Gerenciador DualSense para Linux
-Exec=@RAIZ@/interface.sh
+Exec=env HEFESTO_NA_TELA=1 @RAIZ@/run.sh --gui
 Icon=hefesto-dualsense4unix
 Categories=Settings;HardwareSettings;
 Terminal=false
