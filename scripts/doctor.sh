@@ -7674,15 +7674,24 @@ _check_dkms_kernel_drift() {
 # PKG-1: com Secure Boot enforcing e MOK não enrolado, o load do .ko de
 # updates/dkms FALHA e NÃO há fallback automático ao in-tree (modules.dep
 # aponta um caminho só) — a máquina ficaria sem hid-nintendo E/OU WiFi no
-# boot seguinte. Só avisa se mokutil existe, SB está ON e há .ko do hefesto.
+# boot seguinte. Avisa com o Secure Boot ligado, a chave do DKMS FORA do MOK e
+# um .ko nosso em updates/dkms.
+#
+# LIDO PELA EFIVARS DESDE 28/09/2026 (O-PRODUTO-EM-QUALQUER-MAQUINA-01, B4, na
+# conferência). Aqui o aviso só falava se o `mokutil` existisse, a mesma
+# cegueira que a B4 curou no `dkms_lib.sh` e no reconhecimento do install, e
+# mandava inscrever a `/var/lib/dkms/mok.pub`, que não é a chave com que o dkms
+# do Pop!_OS e do Ubuntu assina. A pergunta e o passo são os do `dkms_lib.sh`,
+# uma só para os três.
 _check_dkms_secureboot() {
     [[ "${_DKMS_SB_WARNED}" -eq 1 ]] && return
-    command -v mokutil >/dev/null 2>&1 || return
-    mokutil --sb-state 2>/dev/null | grep -qi 'SecureBoot enabled' || return
+    [[ -r "${ROOT_DIR}/scripts/dkms_lib.sh" ]] || return
+    ( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita ) \
+        || return
     local kver; kver="$(uname -r)"
-    if compgen -G "/lib/modules/${kver}/updates/dkms/*.ko*" >/dev/null 2>&1; then
+    if compgen -G "${HEFESTO_DKMS_MODULES_ROOT:-/lib/modules}/${kver}/updates/dkms/*.ko*" >/dev/null 2>&1; then
         _DKMS_SB_WARNED=1
-        warn "Secure Boot ATIVO + módulos DKMS em updates/dkms — se a chave MOK do DKMS não estiver enrolada, o kernel RECUSA o .ko no boot e NÃO cai no in-tree (máquina sem hid-nintendo/WiFi): enrole a chave (sudo mokutil --import /var/lib/dkms/mok.pub) ou assine os módulos; nvidia-DKMS funcionando é bom sinal de que já está resolvido"
+        warn "Secure Boot ligado, a chave do DKMS não está inscrita, e há módulos desta casa em updates/dkms — o kernel os RECUSA no boot e NÃO volta ao driver de fábrica (o DualSense, o controle Nintendo ou o Wi-Fi USB ficam sem driver): $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_mok )"
     fi
 }
 

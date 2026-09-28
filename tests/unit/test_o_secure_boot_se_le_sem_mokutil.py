@@ -9,8 +9,9 @@ Secure Boot e sem a chave do DKMS inscrita, o kernel recusa o ``.ko`` de
 driver. As frases falavam de «um controle Nintendo».
 
 A cura: a efivars diz o Secure Boot (o último byte da ``SecureBoot-*``); a
-chave se confere pelo ``mokutil`` quando ele existe e, sem ele, pelos bytes da
-``mok.pub`` na lista que o shim expõe; e sem a chave o
+chave (a que o ``dkms`` usa para assinar, resolvida como ele resolve) se
+confere pelo ``mokutil`` quando ele existe e, sem ele, pelos bytes dela na
+lista que o shim expõe; e sem a chave o
 ``dkms_install_patched_module`` NÃO instala — o de fábrica fica, e o aviso diz
 o passo da MOK com o DualSense no nome.
 
@@ -113,6 +114,88 @@ def test_a_chave_se_confere_sem_mokutil(
         _mok(tmp_path, gerada=gerada, inscrita=inscrita),
     )
     assert r.stdout.strip() == esperado, (r.stdout, r.stderr)
+
+
+# ---------------------------------------------------------------------------
+# 1b. A chave que se confere é a que o dkms USA para assinar
+# ---------------------------------------------------------------------------
+# A CONFERÊNCIA DE 28/09/2026: a primeira escrita desta cura conferia sempre o
+# `/var/lib/dkms/mok.pub`, e as réguas de cima passavam porque TODAS injetam o
+# caminho por `HEFESTO_DKMS_MOK_PUB` — o dublê era mais frouxo que o produto.
+# O dkms 3.0 do Pop!_OS e do Ubuntu 24.04 (`/usr/sbin/dkms`, a assinatura)
+# assina com a `MOK.der` do `update-secureboot-policy` quando o
+# `framework.conf` não diz outra chave: conferir a `mok.pub` ali tirava os
+# quatro módulos de quem tem Secure Boot com a chave CERTA inscrita.
+#
+# A MORDIDA, feita na conferência: devolver o `_dkms_mok_pub` fixo em
+# `/var/lib/dkms/mok.pub` faz os casos do Pop, do Ubuntu e do Mint reprovarem.
+
+_POP = 'NAME="Pop!_OS"\nID=pop\nID_LIKE="ubuntu debian"\n'
+_UBUNTU = "NAME=Ubuntu\nID=ubuntu\nID_LIKE=debian\n"
+_MINT = 'ID=linuxmint\nID_LIKE="ubuntu debian"\n'
+_DEBIAN = "ID=debian\n"
+_FEDORA = "ID=fedora\n"
+_ARCH = "ID=arch\n"
+_SO_COMENTADO = "# mok_signing_key=/var/lib/dkms/mok.key\n# mok_certificate=/var/lib/dkms/mok.pub\n"
+_CHAVE_PROPRIA = 'mok_signing_key="/root/chave.priv"\nmok_certificate="/root/chave.der"\n'
+_SO_A_CHAVE = "mok_signing_key=/root/chave.priv\n"
+
+
+@pytest.mark.parametrize(
+    ("os_release", "framework", "esperado"),
+    [
+        (_POP, _SO_COMENTADO, "/var/lib/shim-signed/mok/MOK.der"),
+        (_UBUNTU, _SO_COMENTADO, "/var/lib/shim-signed/mok/MOK.der"),
+        (_MINT, "", "/var/lib/shim-signed/mok/MOK.der"),
+        (_DEBIAN, _SO_COMENTADO, "/var/lib/dkms/mok.pub"),
+        (_FEDORA, "", "/var/lib/dkms/mok.pub"),
+        (_ARCH, "", "/var/lib/dkms/mok.pub"),
+        (_POP, _CHAVE_PROPRIA, "/root/chave.der"),
+        (_FEDORA, _CHAVE_PROPRIA, "/root/chave.der"),
+        # Chave própria sem certificado: o dkms cai no padrão dele, e não no
+        # do Ubuntu, mesmo numa família Ubuntu.
+        (_UBUNTU, _SO_A_CHAVE, "/var/lib/dkms/mok.pub"),
+    ],
+    ids=["pop", "ubuntu", "mint", "debian", "fedora", "arch", "pop-propria",
+         "fedora-propria", "ubuntu-so-a-chave"],
+)
+def test_a_chave_conferida_e_a_que_o_dkms_assina(
+    tmp_path: Path, os_release: str, framework: str, esperado: str
+) -> None:
+    (tmp_path / "os-release").write_text(os_release, encoding="utf-8")
+    conf = tmp_path / "framework.conf"
+    conf.write_text(framework, encoding="utf-8")
+    r = _lib(
+        tmp_path,
+        "_dkms_mok_pub",
+        {
+            "HEFESTO_OS_RELEASE": str(tmp_path / "os-release"),
+            "HEFESTO_DKMS_FRAMEWORK_CONFS": f"{conf} {tmp_path / 'conf.d-vazio'}/*.conf",
+        },
+    )
+    assert r.stdout == esperado, (r.stdout, r.stderr)
+
+
+def test_o_passo_da_mok_gera_a_chave_com_quem_o_dkms_usa(tmp_path: Path) -> None:
+    """No Pop!_OS o `dkms generate_mok` não existe (dkms 3.0): quem gera é o
+    `update-secureboot-policy`, e a chave que se inscreve é a `MOK.der`."""
+    (tmp_path / "os-release").write_text(_POP, encoding="utf-8")
+    conf = tmp_path / "framework.conf"
+    conf.write_text(_SO_COMENTADO, encoding="utf-8")
+    env = {
+        "HEFESTO_OS_RELEASE": str(tmp_path / "os-release"),
+        "HEFESTO_DKMS_FRAMEWORK_CONFS": str(conf),
+    }
+    (tmp_path / "pop").mkdir()
+    r = _lib(tmp_path / "pop", "dkms_passo_da_mok", env)
+    assert "update-secureboot-policy --new-key" in r.stdout, r.stdout
+    assert "generate_mok" not in r.stdout, r.stdout
+    assert "mokutil --import /var/lib/shim-signed/mok/MOK.der" in r.stdout, r.stdout
+    (tmp_path / "os-release").write_text(_FEDORA, encoding="utf-8")
+    (tmp_path / "fedora").mkdir()
+    r = _lib(tmp_path / "fedora", "dkms_passo_da_mok", env)
+    assert "sudo dkms generate_mok" in r.stdout, r.stdout
+    assert "mokutil --import /var/lib/dkms/mok.pub" in r.stdout, r.stdout
 
 
 # ---------------------------------------------------------------------------
@@ -223,3 +306,64 @@ def test_o_reconhecimento_avisa_sem_mokutil(tmp_path: Path) -> None:
 def test_o_reconhecimento_calado_sem_secure_boot(tmp_path: Path) -> None:
     saida = _rodar_reconhecimento(tmp_path, ligado=False)
     assert "Secure Boot" not in saida.replace("distro, bluez e Secure Boot", ""), saida
+
+
+# ---------------------------------------------------------------------------
+# 4. O doctor faz a mesma pergunta, sem o `mokutil` (a conferência de 28/09)
+# ---------------------------------------------------------------------------
+# O `_check_dkms_secureboot` do doctor era o terceiro chamador da mesma
+# pergunta, e ficou de fora da primeira escrita da B4: só falava com o
+# `mokutil` instalado, e mandava inscrever a `/var/lib/dkms/mok.pub`.
+#
+# A MORDIDA, feita na conferência: devolver o portão `command -v mokutil` ao
+# `_check_dkms_secureboot` faz `test_o_doctor_avisa_o_secure_boot_sem_mokutil`
+# reprovar.
+
+DOCTOR = RAIZ / "scripts" / "doctor.sh"
+
+
+def _doctor(tmp_path: Path, script: str, *, ligado: bool, inscrita: bool) -> str:
+    modulos = tmp_path / "lib-modules"
+    (modulos / "k" / "updates" / "dkms").mkdir(parents=True)
+    (modulos / "k" / "updates" / "dkms" / "hid-playstation.ko.zst").write_bytes(b"")
+    env = {
+        "PATH": f"{_bin(tmp_path)}:/usr/bin:/bin",
+        "HOME": str(tmp_path),
+        "LC_ALL": "C.UTF-8",
+        "HEFESTO_EFIVARS_ROOT": str(_efivars(tmp_path, ligado)),
+        "HEFESTO_DKMS_MODULES_ROOT": str(modulos),
+        **_mok(tmp_path, gerada=True, inscrita=inscrita),
+    }
+    r = subprocess.run(
+        [BASH, "-c", f"source '{DOCTOR}'\nuname() {{ echo k; }}\n{script}\n"],
+        capture_output=True, text=True, timeout=60, check=False, env=env,
+    )
+    return r.stdout + r.stderr
+
+
+def test_o_doctor_avisa_o_secure_boot_sem_mokutil(tmp_path: Path) -> None:
+    saida = _doctor(tmp_path, "_check_dkms_secureboot", ligado=True, inscrita=False)
+    assert "[WARN]" in saida and "Secure Boot ligado" in saida, saida
+    assert "DualSense" in saida and "mokutil --import" in saida, saida
+
+
+def test_o_doctor_calado_com_a_chave_inscrita(tmp_path: Path) -> None:
+    saida = _doctor(tmp_path, "_check_dkms_secureboot", ligado=True, inscrita=True)
+    assert "Secure Boot" not in saida, saida
+
+
+def test_o_check_do_dualsense_diz_o_passo_da_mok(tmp_path: Path) -> None:
+    """Carregado sem a guarda, nada staged, kernel conferido: a cura é a MOK."""
+    sys_module = tmp_path / "sys-module"
+    (sys_module / "hid_playstation").mkdir(parents=True)
+    (sys_module / "hid_playstation" / "srcversion").write_text(
+        "A74F93FE20FF36683AF7614\n", encoding="ascii"
+    )
+    saida = _doctor(
+        tmp_path,
+        f"HEFESTO_DOCTOR_SYS_MODULE='{sys_module}' HEFESTO_DOCTOR_KERNEL=7.1.5-76070105-generic"
+        " check_hefesto_hid_playstation_dkms",
+        ligado=True, inscrita=False,
+    )
+    assert "[WARN]" in saida and "Secure Boot ligado" in saida, saida
+    assert "mokutil --import" in saida, saida

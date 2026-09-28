@@ -112,7 +112,64 @@ _dkms_warn() {
 #
 # Raízes parametrizáveis pela mesma razão das de cima: costura de teste.
 _dkms_efivars_root() { printf '%s' "${HEFESTO_EFIVARS_ROOT:-/sys/firmware/efi/efivars}"; }
-_dkms_mok_pub() { printf '%s' "${HEFESTO_DKMS_MOK_PUB:-/var/lib/dkms/mok.pub}"; }
+
+# A família da distro como o `dkms` a lê (o `distro_version` dele): `ubuntu`
+# quando o ID é ubuntu; senão o `ID_LIKE` inteiro, quando existe; senão o ID.
+# O Pop!_OS (ID=pop, ID_LIKE="ubuntu debian") e o Mint caem em `ubuntu*`.
+_dkms_familia_da_distro() {
+    local _os="${HEFESTO_OS_RELEASE:-/etc/os-release}"
+    [[ -r "${_os}" ]] || return 0
+    (
+        ID="" ID_LIKE=""
+        # shellcheck disable=SC1090  # o os-release da máquina, como o dkms lê
+        . "${_os}" >/dev/null 2>&1 || true
+        if [[ "${ID}" == "ubuntu" ]]; then
+            printf '%s' "${ID}"
+        elif [[ -n "${ID_LIKE}" ]]; then
+            printf '%s' "${ID_LIKE}"
+        else
+            printf '%s' "${ID}"
+        fi
+    )
+}
+
+# O CERTIFICADO COM QUE O DKMS ASSINA OS MÓDULOS, resolvido como o próprio
+# `dkms` resolve (`/usr/sbin/dkms`, a função de assinatura do 3.0): o
+# `mok_certificate` dos `framework.conf`; sem chave configurada numa família
+# Ubuntu, o do `update-secureboot-policy`
+# (`/var/lib/shim-signed/mok/MOK.der`); e só então o `/var/lib/dkms/mok.pub`.
+#
+# FATO ERRADO, SUBSTITUÍDO NA CONFERÊNCIA DE 28/09/2026: aqui estava fixo o
+# `/var/lib/dkms/mok.pub`, que é o padrão do dkms FORA do Ubuntu. No Pop!_OS e
+# no Ubuntu o dkms 3.0 assina com a `MOK.der`, e a pergunta «a chave está
+# inscrita?» respondia sobre uma chave que ninguém usa: com Secure Boot e a
+# chave CERTA inscrita (a de quem já usa o driver da NVIDIA por DKMS), o
+# install deixava de instalar os quatro módulos desta casa.
+_dkms_mok_pub() {
+    if [[ -n "${HEFESTO_DKMS_MOK_PUB:-}" ]]; then
+        printf '%s' "${HEFESTO_DKMS_MOK_PUB}"
+        return 0
+    fi
+    local _conf _linha _chave="" _cert=""
+    # shellcheck disable=SC2086  # a lista é separada por espaço, de propósito
+    for _conf in ${HEFESTO_DKMS_FRAMEWORK_CONFS:-/etc/dkms/framework.conf /etc/dkms/framework.conf.d/*.conf}; do
+        [[ -r "${_conf}" ]] || continue
+        while IFS= read -r _linha || [[ -n "${_linha}" ]]; do
+            _linha="${_linha#"${_linha%%[![:space:]]*}"}"
+            case "${_linha}" in
+                mok_signing_key=*) _chave="${_linha#mok_signing_key=}" ;;
+                mok_certificate=*) _cert="${_linha#mok_certificate=}" ;;
+            esac
+        done < "${_conf}"
+    done
+    _chave="${_chave//[\"\']/}"
+    _cert="${_cert//[\"\']/}"
+    if [[ -z "${_chave}" && "$(_dkms_familia_da_distro)" == ubuntu* ]]; then
+        printf '%s' "/var/lib/shim-signed/mok/MOK.der"
+        return 0
+    fi
+    printf '%s' "${_cert:-/var/lib/dkms/mok.pub}"
+}
 # As listas de chaves MOK que o shim expõe ao sistema: a nova (a partir do 5.11)
 # e a da efivars. `HEFESTO_MOK_LISTAS` troca as duas numa linha só.
 _dkms_mok_listas() {
@@ -135,9 +192,10 @@ dkms_secure_boot_ligado() {
     return 1
 }
 
-# 0 sse a chave do DKMS (`mok.pub`) está inscrita no MOK. Pergunta ao
-# `mokutil` quando ele existe; sem ele, procura os bytes da chave (DER) na lista
-# que o shim expõe. Sem a chave gerada, não há o que estar inscrito.
+# 0 sse a chave do DKMS (o certificado de `_dkms_mok_pub`) está inscrita no
+# MOK. Pergunta ao `mokutil` quando ele existe; sem ele, procura os bytes da
+# chave (DER) na lista que o shim expõe. Sem a chave gerada, não há o que estar
+# inscrito.
 dkms_chave_mok_inscrita() {
     local _pub _lista _resposta
     _pub="$(_dkms_mok_pub)"
@@ -164,7 +222,12 @@ PYEOF
 # aviso abaixo e pelo reconhecimento do install.sh.
 dkms_passo_da_mok() {
     local _pub; _pub="$(_dkms_mok_pub)"
-    if [[ ! -s "${_pub}" ]]; then
+    # Quem gera é quem o dkms usa: o `update-secureboot-policy` na família
+    # Ubuntu (o `dkms generate_mok` não existe no dkms 3.0 do Pop!_OS e do
+    # Ubuntu 24.04), o `dkms generate_mok` no resto.
+    if [[ ! -s "${_pub}" && "${_pub}" == /var/lib/shim-signed/* ]]; then
+        printf 'gere a chave (sudo update-secureboot-policy --new-key), '
+    elif [[ ! -s "${_pub}" ]]; then
         printf 'gere a chave (sudo dkms generate_mok), '
     fi
     printf 'inscreva-a com sudo mokutil --import %s (ele pede uma senha), reinicie, escolha «Enroll MOK» na tela azul que aparece antes do sistema, digite a mesma senha, e rode ./install.sh de novo' "${_pub}"
