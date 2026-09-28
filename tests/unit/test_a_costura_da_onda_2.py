@@ -982,11 +982,11 @@ def test_a_frase_e_a_coluna_dizem_o_mesmo_nome_da_mesma_porta(
         interface="hci3", no="/mentira/3-4.1.4", vid="2357", pid="0604", busnum=3,
         devpath="4.1.4", controlador_pci=pci,
     )
-    # O nome é da entrada, e a entrada guarda o lugar (A-ENTRADA-TEM-UM-
-    # REGISTRO-SO-01, 28/09/2026: o nome morava em `lugares`).
     documento = maquina.MaquinaConfig(
-        mapa=maquina.MapaDaMesa(portas={"9": maquina.PortaDeclarada(
-            lugar=maquina.lugar_de(pci, "4.1.4"), nome="Extensor à esquerda")}),
+        mapa=maquina.MapaDaMesa(portas={"9": maquina.PortaDeclarada(caminho="3-4.1.4")}),
+        lugares={
+            maquina.lugar_de(pci, "4.1.4"): maquina.LugarDeclarado(nome="Extensor à esquerda")
+        },
     )
     # O disco dela e os barramentos deste boot, sem ler nada da máquina dela.
     monkeypatch.setattr(ee, "carregar_maquina", lambda: documento)
