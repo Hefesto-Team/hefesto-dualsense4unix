@@ -755,13 +755,26 @@ def _gravar_a_fila_dela() -> None:
     anterior.sync_connected(list(FILA_DELA))
 
 
+#: A matriz de transportes, na ordem da fila dela (branco, vermelho, roxo, azul).
+TRANSPORTES = {
+    "usb": ("usb", "usb", "usb", "usb"),
+    "bt": ("bt", "bt", "bt", "bt"),
+    "mista": ("usb", "bt", "usb", "bt"),
+}
+
+
 def _a_mesa_do_boot(
-    monkeypatch: pytest.MonkeyPatch, chegada: tuple[str, ...], *, jogo: bool = False
+    monkeypatch: pytest.MonkeyPatch,
+    chegada: tuple[str, ...],
+    *,
+    jogo: bool = False,
+    transporte: str = "bt",
 ) -> MesaDoJogo:
     """O daemon sobe com a fila gravada, e os controles entram na ordem `chegada`.
 
     O vpad do P1 já está de pé (o `_safe_start("gamepad")` vem antes do primeiro
-    `connect()`), e o provider de cor é o do produto.
+    `connect()`), e o provider de cor é o do produto. `transporte` escolhe a
+    linha de :data:`TRANSPORTES`: cada controle entra pelo da sua carta.
     """
     from hefesto_dualsense4unix.daemon.subsystems.identity import make_auto_output_provider
 
@@ -769,8 +782,9 @@ def _a_mesa_do_boot(
     bancada = MesaDoJogo(monkeypatch, relogio=(r := Relogio()), tempo=r, jogo=jogo)
     bancada.reg.load()
     bancada.inst.set_auto_output_provider(make_auto_output_provider(bancada.reg))
+    pelo = dict(zip(FILA_DELA, TRANSPORTES[transporte], strict=True))
     for uniq in chegada:
-        bancada.mesa.sentar(uniq, transporte="bt")
+        bancada.mesa.sentar(uniq, transporte=pelo[uniq])
     return bancada
 
 
@@ -783,17 +797,22 @@ def _recriacoes_do_p1(diario: list[dict[str, Any]]) -> list[Any]:
 
 
 @pytest.mark.usefixtures("config_isolado")
+@pytest.mark.parametrize("transporte", sorted(TRANSPORTES))
 @pytest.mark.parametrize("jogo", [False, True], ids=["sem-jogo", "com-jogo"])
 def test_o_p1_e_a_carta_1_e_nao_quem_conectou_primeiro(
-    monkeypatch: pytest.MonkeyPatch, jogo: bool
+    monkeypatch: pytest.MonkeyPatch, jogo: bool, transporte: str
 ) -> None:
     """Fila branco=1, vermelho=2, roxo=3, azul=4; o roxo conecta primeiro.
+
+    Nos três transportes (conferência de 28/09: a régua só media o rádio).
 
     MORDE: devolva o `_quem_senta_no_posto` à 1ª chave de inserção
     (`next(iter(self._handles))`) — o roxo senta no posto, e o co-op recria o
     vpad do P1 para pô-lo atrás das cartas 1 e 2.
     """
-    bancada = _a_mesa_do_boot(monkeypatch, (ROXO, BRANCO, VERMELHO, AZUL), jogo=jogo)
+    bancada = _a_mesa_do_boot(
+        monkeypatch, (ROXO, BRANCO, VERMELHO, AZUL), jogo=jogo, transporte=transporte
+    )
     vpad_do_p1 = bancada.vpad_do_p1
     with structlog.testing.capture_logs() as diario:
         for _ in range(4):
