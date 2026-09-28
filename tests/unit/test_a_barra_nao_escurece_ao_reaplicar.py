@@ -337,7 +337,7 @@ def test_o_salvar_nao_grava_a_luz_acesa_como_a_cor(mesa_de):
         assert depois[chave].leds == antes[chave].leds, (
             f"o Salvar mudou a luz do P{n} no disco: {antes[chave].leds} -> "
             f"{depois[chave].leds}")
-        cor, acesa = depois[chave].leds.lightbar, mesa.luz(n)
+        cor, acesa = depois[chave].leds.lightbar, _luz(mesa)[n - 1]
         assert cor is None or tuple(cor) != acesa, (
             f"o Salvar gravou a luz acesa {acesa} como a cor do P{n}")
 
