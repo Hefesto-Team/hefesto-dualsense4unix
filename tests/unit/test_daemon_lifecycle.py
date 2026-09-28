@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 
 import pytest
 
@@ -189,6 +190,71 @@ async def test_daemon_desconecta_no_shutdown():
     assert fc.is_connected() is False
 
 
+class _ControleQueCaiPeloProbe(FakeController):
+    """A queda pela porta do `is_connected()` — e SÓ por ela. E quem cai não volta.
+
+    DUAS COISAS O `FakeController` FAZIA QUE O APARELHO NÃO FAZ, medidas num
+    clone limpo em 27/09/2026:
+
+    * ele levanta quando lê desconectado. Com a leitura em voo no executor na
+      hora da queda, ela entrava pela OUTRA porta (a da leitura que levanta), e
+      esta régua acabava medindo a porta do sorteio. Aqui a leitura em voo
+      devolve a última, já com `connected=False`, como o `read_state` do
+      backend real, que não levanta por estar fora de linha;
+    * ele VOLTA no primeiro `connect()`. Sob carga, o boot do daemon ainda está
+      subindo os subsistemas quando a régua derruba o controle, e a primeira
+      sonda do `reconnect_loop` nasce DEPOIS da queda e o religa — 5 a 7 em 10
+      voltas com carga. Depois de `cair()`, o `connect()` não acha ninguém,
+      como o do backend real com a mesa vazia.
+
+    A outra porta tem a régua dela, logo abaixo.
+    """
+
+    caiu = False
+
+    def cair(self) -> None:
+        """A queda: nenhum controle na mesa a partir daqui."""
+        self.caiu = True
+        self.disconnect()
+
+    def connect(self) -> None:
+        if not self.caiu:
+            super().connect()
+
+    def read_state(self) -> ControllerState:
+        if not self._connected:
+            return dataclasses.replace(self._states[-1], connected=False)
+        return super().read_state()
+
+
+class _ControleQueSomeNaLeitura(FakeController):
+    """A queda pela porta da LEITURA — e SÓ por ela.
+
+    Um DualSense que sai da mesa de vez aparece primeiro como leitura que
+    levanta, com o handle ainda aberto (`poll_read_failed` antes do
+    `probe_offline`, ver `DiarioDaBateria.registrar_queda`). Depois de
+    `leituras` leituras boas, a próxima levanta como o hidraw que sumiu, e a
+    reconexão não acha ninguém — como o backend real, cujo `connect()` devolve
+    sem levantar e fica fora de linha.
+    """
+
+    def __init__(self, leituras: int) -> None:
+        super().__init__(transport="bt", states=_mk_states(leituras, "bt"))
+        self._restam = leituras
+        self.sumiu = False
+
+    def connect(self) -> None:
+        if not self.sumiu:
+            super().connect()
+
+    def read_state(self) -> ControllerState:
+        if self._restam <= 0:
+            self.sumiu = True
+            raise OSError(5, "Input/output error")
+        self._restam -= 1
+        return super().read_state()
+
+
 @pytest.mark.asyncio
 async def test_borda_de_queda_limpa_o_estado_publicado():
     """ONDA0-Z5/T1 — mordida.
@@ -201,7 +267,7 @@ async def test_borda_de_queda_limpa_o_estado_publicado():
     vez, para que `daemon.status` e `daemon.state_full` parem de repetir
     bt/75% para uma mesa vazia.
     """
-    fc = FakeController(transport="bt", states=_mk_states(30, "bt"))
+    fc = _ControleQueCaiPeloProbe(transport="bt", states=_mk_states(30, "bt"))
     bus = EventBus()
     store = StateStore()
     daemon = Daemon(
@@ -218,7 +284,7 @@ async def test_borda_de_queda_limpa_o_estado_publicado():
         lambda: store.snapshot().controller is not None and daemon._last_state is not None
     ), "o daemon não leu nada antes da queda"
 
-    fc.disconnect()  # a queda: nenhum controle na mesa a partir daqui
+    fc.cair()  # a queda: nenhum controle na mesa a partir daqui
     # o próximo tick percebe a borda; sem a limpeza, o prazo estoura
     await _ate(lambda: store.snapshot().controller is None and daemon._last_state is None)
 
@@ -234,6 +300,50 @@ async def test_borda_de_queda_limpa_o_estado_publicado():
         "_last_state sobreviveu à queda — daemon.state_full priorizaria "
         "essa carga estagnada sobre o store já limpo (CLUSTER-IPC-STATE-"
         "PROFILE-01)"
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("auto_reconnect", [False, True])
+async def test_a_queda_pela_leitura_tambem_limpa_o_estado_publicado(
+    auto_reconnect: bool,
+) -> None:
+    """A MESMA BORDA, PELA OUTRA PORTA (27/09/2026).
+
+    Até aqui só o `is_connected() == False` limpava o estado publicado. Pela
+    leitura que levanta, o `_poll_loop` saía (`break`) ou reconectava com
+    `was_connected` já em `False`, e nenhuma volta do laço apagava nada: o
+    daemon seguia dizendo bt/75% para uma mesa vazia — a mentira da ONDA0-Z5,
+    pela porta por onde um controle que some de vez sai primeiro.
+
+    MORDE: tire o `esquecer_a_leitura_publicada()` do `except` do `_poll_loop`
+    e as duas voltas reprovam no prazo, sem sorteio — aqui a queda só tem esta
+    porta.
+    """
+    fc = _ControleQueSomeNaLeitura(leituras=20)
+    store = StateStore()
+    daemon = Daemon(
+        controller=fc, bus=EventBus(), store=store,
+        config=DaemonConfig(
+            poll_hz=200, auto_reconnect=auto_reconnect, reconnect_backoff_sec=0.01,
+            ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False,
+        ),
+    )
+
+    run_task = asyncio.create_task(daemon.run())
+    try:
+        assert await _ate(lambda: fc.sumiu), "a leitura nunca levantou"
+        limpo = await _ate(
+            lambda: store.snapshot().controller is None and daemon._last_state is None
+        )
+    finally:
+        daemon.stop()
+        await run_task
+
+    assert store.counter("poll.tick") >= 1, "o daemon não leu nada antes da queda"
+    assert limpo, (
+        "a queda chegou pela leitura e o daemon seguiu publicando a última "
+        "leitura boa — a mentira da ONDA0-Z5 pela outra porta"
     )
 
 

@@ -5695,6 +5695,22 @@ class Daemon:
         # vira True na 1ª leitura bem-sucedida, quando armamos o grace.
         was_connected = False
 
+        def esquecer_a_leitura_publicada() -> None:
+            """A mesa vazia no store e no `_last_state` (ONDA0-Z5/T1).
+
+            UM DONO, DUAS PORTAS (27/09/2026). A queda chega a este laço pelo
+            `is_connected()` que vira `False` (probe/unplug) OU pela leitura que
+            levanta no meio do `read_state` — que é como um controle que some de
+            vez aparece primeiro (`DiarioDaBateria.registrar_queda`). Só a
+            primeira porta limpava: pela segunda, `was_connected` voltava a
+            `False` sem apagar nada, e o daemon seguia dizendo a última leitura
+            boa para uma mesa vazia. Medido no CI (corrida 36354426805) e num
+            clone limpo: `test_borda_de_queda_limpa_o_estado_publicado` caía
+            quando o `disconnect()` pousava com a leitura em voo no executor.
+            """
+            self.store.clear_controller_state()
+            self._last_state = None
+
         while not self._is_stopping():
             tick_started = loop.time()
             if tick_started >= identity_sync_next_at:
@@ -5792,10 +5808,10 @@ class Daemon:
                 # `controller.list`) discordavam entre si porque dois deles
                 # liam a última leitura boa e nunca souberam que ela caducou
                 # (ONDA0-Z5 §2.2-2.3, medido: `connected: true, bt, 75%` com
-                # zero controles na mesa).
+                # zero controles na mesa). Quem apaga é
+                # `esquecer_a_leitura_publicada`, o dono das duas portas.
                 if was_connected:
-                    self.store.clear_controller_state()
-                    self._last_state = None
+                    esquecer_a_leitura_publicada()
                 # BUG-DAEMON-CONNECT-GHOST-INPUT-01: desconexão detectada via
                 # is_connected() (probe/unplug). Zera o baseline e rearma a
                 # borda para que a próxima conexão refaça o settling.
@@ -5816,6 +5832,12 @@ class Daemon:
                 # em resposta — e este caminho (erro de leitura) é o irmão do
                 # `probe_offline` de `daemon/connection.py`.
                 registrar_queda_da_bateria(self, "poll_read_failed", tick_started)
+                # A MESMA BORDA, PELA OUTRA PORTA — ver `esquecer_a_leitura_publicada`.
+                # Antes do `break` e do `reconnect`: depois do primeiro o laço
+                # acabou, depois do segundo `was_connected` já é `False` — e o
+                # store repetia a última leitura boa até o controle voltar.
+                if was_connected:
+                    esquecer_a_leitura_publicada()
                 self.bus.publish(EventTopic.CONTROLLER_DISCONNECTED, {"reason": str(exc)})
                 if self.config.auto_reconnect:
                     from hefesto_dualsense4unix.daemon.connection import reconnect
