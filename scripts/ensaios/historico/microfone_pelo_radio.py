@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
 """microfone_pelo_radio.py — a voz sai do DualSense pelo rádio, ou não sai?
 
+HISTÓRICO DESDE 28/09/2026 (O-BASICO-MEDIDO-01) — ELE NÃO RODA MAIS
+--------------------------------------------------------------------
+Ele mede uma ponte PRÓPRIA, não a do produto: recusa todo controle cuja ponte
+o daemon já segura, e com o microfone por controle no ar (`bt_mic.uniqs` com
+os quatro) não sobra controle para medir. Fica aqui porque é a fonte das
+linhas `mic-radio-a-voz-sai-0907` e `mic-radio-negativo-do-mudo-0907` do
+caderno; quem mede o microfone pelo rádio hoje é o `o_basico.py som`, pela
+ponte do produto.
+
 A PERGUNTA QUE ELE RESPONDE
 ----------------------------
 O mapa dizia, com todas as letras, o que faltava para esta célula sair de
@@ -218,4 +227,10 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # Histórico desde 28/09/2026: o main fica para leitura, e não roda.
+    sys.stderr.write(
+        "RECUSADO: ensaio histórico (scripts/ensaios/README.md, «O histórico»).\n"
+        "a ponte do produto já segura o microfone de todo controle no rádio; este\n"
+        "ensaio mede uma ponte própria e não tem o que medir na mesa de hoje.\n"
+    )
+    raise SystemExit(2)

@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
 """a_haptica_pelo_radio.py — qual report faz o motor voice-coil vibrar por Bluetooth?
 
+HISTÓRICO DESDE 28/09/2026 (O-BASICO-MEDIDO-01) — ELE NÃO RODA MAIS
+--------------------------------------------------------------------
+Com o daemon vivo ele recusa, e com `--com-daemon` vira um SEGUNDO escritor do
+contador do `0x32`/`0x35` — a classe de defeito que travou o microfone em
+10/09. A ponte do produto (`integrations/haptica_bt.py`) nasceu da medida
+dele e já existe. Fica aqui como a prova de 18/09 (o bloco `0x11` que vibrou);
+quem mede a vibração pelo rádio é o `o_basico.py haptica`, pela ponte do
+produto — e ele diz «não medido» até a parte 1 da
+A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01.
+
 HAPTICA-POR-RADIO-01, passo P1. No cabo a vibração dos jogos da Sony viaja como
 áudio (os canais 3 e 4 da placa do controle, medido em 17/09/2026). Pelo rádio
 não há placa de áudio: a háptica tem de ir dentro de um report HID, num bloco
@@ -60,7 +70,7 @@ import subprocess
 import sys
 import time
 
-_AQUI = os.path.dirname(os.path.abspath(__file__))
+_AQUI = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _AQUI not in sys.path:
     sys.path.insert(0, _AQUI)
 _SRC = os.path.join(os.path.dirname(os.path.dirname(_AQUI)), "src")
@@ -398,4 +408,10 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # Histórico desde 28/09/2026: o main fica para leitura, e não roda.
+    sys.stderr.write(
+        "RECUSADO: ensaio histórico (scripts/ensaios/README.md, «O histórico»).\n"
+        "com o daemon vivo ele seria um segundo escritor do 0x32/0x35 (a classe que\n"
+        "travou o microfone em 10/09); a ponte do produto é a integrations/haptica_bt.py.\n"
+    )
+    raise SystemExit(2)

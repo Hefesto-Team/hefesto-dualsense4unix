@@ -39,6 +39,53 @@ próprio produto. Essa armadilha custou uma sessão em 11/08/2026.
 
 ---
 
+## O básico medido (28/09/2026)
+
+O `scripts/o_basico.py` (O-BASICO-MEDIDO-01) é o protocolo que chama estes
+instrumentos na ordem e dá o veredito por jogador. Ele os roda com a saída
+passando pelo dono da máscara (`core/formas_do_endereco.mascarar`), e lê a
+forma de máquina dos que a têm:
+
+| instrumento | `--json` | o que o `o_basico.py` lê |
+| --- | --- | --- |
+| `quem_e_quem.py` | sim | o LED aceso no sysfs, por controle — a segunda régua do «quem é quem» |
+| `os_endpoints_de_haptica.py` | sim | se cada endpoint de háptica do produto está completo |
+| `entrada_em_repouso.py` | sim | o par pad↔físico pelo repouso, o centro que o pad muda, e se houve mão na janela |
+| `taxa_no_hidraw.py` | sim | os vãos acima de 33 ms que o pad tem e o físico dele não teve, casados pelo `sensor_timestamp` |
+
+No mesmo dia, quatro instrumentos que mentiam na mesa de hoje mudaram:
+
+- **`o_endpoint_de_mentira.py` virou `os_endpoints_de_haptica.py`.** O nome
+  enganava: o `status` sempre listou os endpoints DO PRODUTO. Agora ele é a
+  leitura do produto, e só desmonta o que ele mesmo montou (a propriedade
+  `hefesto.origem=ensaio`); o `--marca` deixou de ter padrão.
+- **`espelho_fiel.py` recusa sem o par dito.** Sem `--fisico` e `--vpad` ele
+  comparava o primeiro físico com o primeiro vpad da enumeração — com quatro
+  controles, jogadores diferentes.
+- **`o_nome_do_vpad_e_o_numero_da_carta.py` saiu.** O `coop.mesa` do
+  `daemon.state_full` responde a mesma pergunta pelo dono; o ensaio usava a
+  API privada do `CoopManager`, um socket fixo em `/run/user/1000`, e no pad
+  `uinput` imprimia `Hefesto PNone` e contava divergência falsa.
+- **`quem_e_quem.py` passa pelo mascarador.** Ele imprimia o endereço cru.
+
+### O histórico
+
+`historico/` guarda dois instrumentos que mediram certo no dia deles e hoje
+seriam um segundo dono do aparelho. Eles ficam porque são a fonte de linhas
+do caderno, e RECUSAM rodar (rc=2):
+
+- **`historico/microfone_pelo_radio.py`** — mede uma ponte de microfone
+  PRÓPRIA e recusa todo controle cuja ponte o daemon já segura; com o
+  microfone por controle no ar, o daemon segura os quatro. É a fonte de
+  `mic-radio-a-voz-sai-0907` e `mic-radio-negativo-do-mudo-0907`. O
+  microfone pelo rádio se mede hoje pela ponte do produto (`o_basico.py som`).
+- **`historico/a_haptica_pelo_radio.py`** — com o daemon vivo, seria um
+  segundo escritor do contador do `0x32`/`0x35`, a classe que travou o
+  microfone em 10/09. A ponte do produto (`integrations/haptica_bt.py`)
+  nasceu da medida dele, em 18/09.
+
+---
+
 ## Os instrumentos documentados aqui
 
 **Os de 09/09/2026 — as decisões dela viraram instrumento antes de virarem
