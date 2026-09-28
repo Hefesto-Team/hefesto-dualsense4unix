@@ -48,7 +48,7 @@ from hefesto_dualsense4unix.integrations import bluez_dbus as bd
 from hefesto_dualsense4unix.integrations import central_do_radio as cr
 from hefesto_dualsense4unix.integrations import diario_do_radio
 from tests.unit import radio_de_mentira as rm
-from tests.unit.radio_de_mentira import AZUL, QUARTO, SALA, VARANDA, VERDE, VERMELHO
+from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VARANDA, VERDE, VERMELHO
 from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
     BuscaDePe,
     PonteQueVaiAoDaemon,
@@ -275,6 +275,38 @@ def test_voltar_ao_chip_da_busca_desfaz_o_pedido(diario: Path, fechar: list[Any]
     assert onde_buscou(mesa.mundo) == [rm.HCIS[QUARTO]], "a janela andou sem ela pedir"
 
 
+def test_o_pedido_que_a_busca_nao_atendeu_nao_vale_para_a_proxima(
+    diario: Path, fechar: list[Any],
+) -> None:
+    """Ela clica o chip do quarto, e no mesmo instante o roxo volta sozinho pelo
+    pareamento antigo: o «Conectar» acaba «chegou» ali, sem andar. O pedido do
+    quarto era daquela busca; o «Conectar» seguinte, na varanda, busca na
+    varanda.
+
+    MORDIDA: tire a limpeza do pedido do começo do movimento (``_comecar``) — o
+    «Conectar» seguinte vai para o quarto que ninguém pediu para ele.
+    """
+    mundo = mundo_da_madrugada()
+    mundo.pareado(VARANDA, ROXO, conectado=False)
+    mesa = Mesa(mundo)
+    fechar.append(mesa.fechar)
+    busca = BuscaDePe(mesa.relogio)
+    fechar.append(busca.soltar)
+    _o_conectar_no_gesto(mesa, busca, SALA)
+
+    assert mesa.chip(QUARTO)["status"] == "ok"
+    mundo.apertar_ps(ROXO)
+    busca.soltar()
+    (voltou,) = mesa.esperar()
+    assert (voltou.estado, voltou.motivo, voltou.aparelho) == (
+        cr.CHEGOU, cr.MOTIVO_PELO_PAREAMENTO_ANTIGO, ROXO), voltou
+
+    mesa.relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERDE))
+    fim = mesa.central.conectar(VARANDA)
+    assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, VARANDA), fim
+    assert onde_buscou(mundo) == [rm.HCIS[SALA], rm.HCIS[VARANDA]]
+
+
 # ---------------------------------------------------------------------------
 # 3. o chip leva o «Mover» dela, com o mesmo controle
 # ---------------------------------------------------------------------------
@@ -480,6 +512,41 @@ def test_o_nao_chegou_sem_a_trava_deve_a_meia_chave_e_ela_sai_na_faxina(
     assert mesa.mundo.objeto(SALA, VERMELHO) is not None
     assert mesa.mundo.objeto(SALA, AZUL) is not None
     assert mesa.central.tirar_as_meias_chaves() == (), "a mesma chave saiu duas vezes"
+
+
+class NomesEmMemoria:
+    """O ``GuardaDosNomes`` sem disco: a faxina também cuida dos nomes, e esta
+    régua não é sobre eles."""
+
+    def ler(self) -> dict[str, str]:
+        return {}
+
+    def gravar(self, aparelho: str, nome: str | None) -> bool:
+        return True
+
+
+def test_o_fio_da_faxina_paga_a_meia_chave_devida_sozinho(
+    diario: Path, fechar: list[Any],
+) -> None:
+    """No daemon ninguém chama a volta à mão: o fio da faxina tira a meia chave
+    devida no passo dele, sem esperar a faxina inteira nem um movimento novo.
+
+    MORDIDA: tire o ``tirar_as_meias_chaves`` do ``_faxinar_sempre`` — a chave
+    fica no adaptador até alguém mover um controle.
+    """
+    mesa = Mesa(mundo_da_madrugada(), prazo_da_trava_s=0.2, nomes=NomesEmMemoria())
+    fechar.append(mesa.fechar)
+    feito = _o_verde_pareou_e_nao_conectou(mesa, VARANDA)
+    mesa.relogio.agora = feito.comecou + cr.PRAZO_DO_PENDENTE_S
+    _sem_a_trava(mesa.central.vigiar)
+    assert mesa.mundo.objeto(VARANDA, VERDE) is not None
+
+    mesa.central.comecar_a_faxina(intervalo_s=60.0)
+    fim = time.monotonic() + 10.0
+    while mesa.mundo.objeto(VARANDA, VERDE) is not None and time.monotonic() < fim:
+        time.sleep(0.05)
+    assert mesa.mundo.objeto(VARANDA, VERDE) is None, "o fio da faxina não pagou a dívida"
+    assert mesa.mundo.lapides == [(VARANDA, VERDE)]
 
 
 @pytest.mark.parametrize("destino", TRES)
