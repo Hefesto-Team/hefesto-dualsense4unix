@@ -722,6 +722,18 @@ class TestODoctorPergunta:
         assert saida.count("[WARN]") == 4, saida
         assert "[FAIL]" not in saida
 
+    def test_o_diario_do_kernel_fora_de_alcance_e_uma_linha_so(self, lar: Path) -> None:
+        """Sem o grupo que lê o diário do kernel, nenhuma criação aparece: o aviso
+        diz por quê uma vez, e não cinco vezes «falta a criação dele»."""
+        _servir(_socket(lar), {"connected": True})
+        saida = _doctor(lar, "check_a_hora_do_pad", _bin(lar, [], BOOT_DAEMON))
+        avisos = [ln for ln in saida.splitlines() if ln.startswith("[WARN]")]
+        assert avisos == [
+            "[WARN] o diário do kernel não está ao alcance deste usuário (ele pede o "
+            "grupo systemd-journal ou adm) — a hora de nascer de 5 pad(s) não foi medida"
+        ], saida
+        assert "[ OK ]" not in saida
+
     def test_o_diario_do_daemon_vazio_nao_e_nenhum_pad(self, lar: Path) -> None:
         _servir(_socket(lar), {"connected": True})
         saida = _doctor(lar, "check_a_hora_do_pad", _bin(lar, BOOT_KERNEL, []))

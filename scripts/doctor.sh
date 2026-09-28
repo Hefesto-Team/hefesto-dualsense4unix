@@ -3400,6 +3400,13 @@ if len(medidas) != registrados:
     raise SystemExit(0)
 if not medidas:
     print("sem-pad")
+    raise SystemExit(0)
+if not any(linha.strip() for linha in kernel):
+    # Nenhuma criação de nó virtual no boot inteiro, com pads registrados:
+    # o diário do kernel não está ao alcance deste usuário. Uma linha só,
+    # que diz por quê, e não uma por pad dizendo que «falta a criação dele».
+    print(f"sem-kernel|{len(medidas)}")
+    raise SystemExit(0)
 for medida in medidas:
     print(f"{medida.veredito}|{medida.frase()}")
 PY
@@ -3419,6 +3426,9 @@ PY
             return ;;
         sem-pad)
             info "nenhum pad uinput nasceu desde que o daemon subiu — a hora do pad não tem o que medir"
+            return ;;
+        sem-kernel\|*)
+            warn "o diário do kernel não está ao alcance deste usuário (ele pede o grupo systemd-journal ou adm) — a hora de nascer de ${saida#sem-kernel|} pad(s) não foi medida"
             return ;;
     esac
     local veredito frase
