@@ -149,9 +149,12 @@ def diga(texto: object = "") -> None:
     O endereço é do dono no produto (`core/formas_do_endereco`); até 28/09/2026
     ele vinha de um módulo que o `.gitignore` tira do clone, e o ensaio morria
     com `ModuleNotFoundError` em toda máquina que não fosse a dela. O HOME é
-    deste ensaio: o dono só cuida de identidade de aparelho.
+    deste ensaio: o dono só cuida de identidade de aparelho. E ele sai ANTES
+    do dono: um nome de pessoa com `_` e seis letras hex (`joao_decade`) é a
+    forma do sufixo de nó, e mascarado primeiro ele deixaria de casar com o
+    HOME, que sairia inteiro.
     """
-    print(mascarar(str(texto)).replace(str(Path.home()), "~"))
+    print(mascarar(str(texto).replace(str(Path.home()), "~")))
 
 
 # ---------------------------------------------------------------------------

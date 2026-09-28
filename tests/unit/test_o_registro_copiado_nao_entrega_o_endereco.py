@@ -1106,6 +1106,23 @@ def test_mordida_o_import_do_modulo_ignorado_reprova() -> None:
     ]
 
 
+def test_o_ensaio_tira_o_home_antes_do_dono(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Um nome de pessoa com `_` e seis letras hex tem a forma do sufixo de nó.
+
+    MORDIDA (conferência de 28/09/2026): passe o dono antes do `replace` do HOME
+    no `diga` — o HOME mascarado deixa de casar e sai inteiro.
+    """
+    ensaio = _carregar(_ENSAIO_DO_TOUCHPAD, "_o_touchpad_na_regua")
+    monkeypatch.setenv("HOME", "/home/joao_decade")
+    ensaio.diga(f"/home/joao_decade/.config/azahar uniq={ENDERECO}")
+    impresso = capsys.readouterr().out
+    assert impresso.startswith("~/.config/azahar "), impresso
+    assert "joao" not in impresso
+    assert _janelas_que_sobram(impresso) == []
+
+
 # --- régua 7: as réguas de forma veem a invertida -------------------------------------------
 
 #: O endereço do lar de mentira: fora da faixa que a régua do dono chama de sintética
