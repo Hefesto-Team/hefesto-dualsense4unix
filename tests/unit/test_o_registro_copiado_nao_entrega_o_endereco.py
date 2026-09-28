@@ -1167,6 +1167,92 @@ def test_a_regua_do_dono_ve_o_despejo_invertido_pelo_arquivo(tmp_path: Path) -> 
     assert r.returncode == 0, r.stdout + r.stderr
 
 
+def test_a_regua_do_dono_le_cada_separador_pelo_arquivo(tmp_path: Path) -> None:
+    """O endereço com `:` `-` `_` `.`, pelo caminho inteiro da régua (o pré-filtro incluso).
+
+    MORDIDA (conferência de 28/09/2026): estreite o `_PODE_TER_PEDACO` da régua
+    a `[: ]` — a linha com hífen, sublinhado ou ponto é pulada antes das
+    janelas, e esta régua reprova. A do despejo invertido acima não via isso:
+    ela só escreve espaço e colado.
+    """
+    lar = _o_lar_de_mentira(tmp_path)
+    copiado = tmp_path / "copiado.txt"
+    linhas = [
+        "-".join(_DA_MAQUINA),
+        "/org/bluez/hci0/dev_" + "_".join(_DA_MAQUINA).upper(),
+        ".".join(_DA_MAQUINA),
+        ":".join(_DA_MAQUINA).upper(),
+    ]
+    copiado.write_text("\n".join(linhas) + "\n", encoding="utf-8")
+    r = _rodar_a_regua_do_dono(lar, copiado)
+    assert r.returncode == 1, r.stdout + r.stderr
+    for n in range(1, len(linhas) + 1):
+        assert f"copiado.txt:{n}: " in r.stdout, (n, r.stdout)
+    # O que vem depois do caminho nunca leva o 4.º e o 5.º, em grafia nenhuma.
+    depois_do_caminho = "\n".join(
+        linha.split("copiado.txt", 1)[-1] for linha in r.stdout.splitlines())
+    for separador in (":", "-", "_", ".", " ", ""):
+        assert separador.join(_DA_MAQUINA[3:5]) not in depois_do_caminho.lower(), separador
+
+
+def _o_virtual_com_a_mascara_da_casa() -> tuple[str, ...]:
+    """O virtual do endereço do lar, com o 4.º e o 5.º zerados: o 3.º e o 6.º são hash."""
+    from hefesto_dualsense4unix.integrations.uhid_gamepad import vpad_mac
+
+    o = tuple(vpad_mac(":".join(_DA_MAQUINA), 1).split(":"))
+    return (*o[:3], "00", "00", o[5])
+
+
+def test_a_regua_do_dono_ve_o_virtual_com_a_mascara_da_casa(tmp_path: Path) -> None:
+    """A máscara do diário de antes de 28/09 escrevia o virtual assim, e sobram uns dois candidatos.
+
+    MORDIDA (conferência de 28/09/2026): tire o `com_a_mascara` do
+    `pedacos_dos_virtuais` da régua — o virtual meio mascarado passa, com os
+    dois bytes do hash à mostra.
+    """
+    lar = _o_lar_de_mentira(tmp_path)
+    copiado = tmp_path / "copiado.txt"
+    meio = _o_virtual_com_a_mascara_da_casa()
+    copiado.write_text(
+        f"uhid_device_created mac={':'.join(meio)}\n"
+        f"0x09: 09 {' '.join(reversed(meio))} 08 25\n",
+        encoding="utf-8",
+    )
+    r = _rodar_a_regua_do_dono(lar, copiado)
+    assert r.returncode == 1, r.stdout + r.stderr
+    assert "copiado.txt:1: 1x o endereço V0 de E0" in r.stdout
+    assert "copiado.txt:2: 1x o endereço V0 de E0" in r.stdout
+    assert f"{meio[2]}:00:00:{meio[5]}" not in r.stdout
+
+
+def test_os_dois_bytes_do_hash_sem_o_prefixo_nao_sao_achado() -> None:
+    """Sem o prefixo, o 3.º e o 6.º do virtual casam por acaso com todo despejo da árvore.
+
+    É a razão medida para a régua ler o meio mascarado com os seis octetos
+    juntos: quem trocar por quatro (`<3.º> 00 00 <6.º>`) enche o portão de ruído.
+    """
+    regua = _carregar(_REGUA_DO_DONO, "_regua_do_dono_no_ruido")
+    meio = _o_virtual_com_a_mascara_da_casa()
+    pedacos = regua.pedacos_dos_virtuais(regua.virtuais_da_maquina({_DA_MAQUINA}))
+    assert regua.achados_dos_virtuais(f"0x31: 31 01 {meio[2]} 00 00 {meio[5]} 7f\n", pedacos) == []
+    assert regua.achados_dos_virtuais(f"mac={':'.join(meio)}\n", pedacos) == ["V0 de E0"]
+
+
+def test_a_regua_do_dono_le_todo_virtual_que_o_dono_dos_vivos_veste() -> None:
+    """O número de MACs por aparelho é do `uhid_gamepad`, não uma cópia na régua.
+
+    MORDIDA: corte a lista da régua (`itertools.islice(…, 3)`) — o quarto
+    virtual em diante some da busca.
+    """
+    from hefesto_dualsense4unix.integrations import uhid_gamepad
+
+    regua = _carregar(_REGUA_DO_DONO, "_regua_do_dono_na_conta")
+    virtuais = regua.virtuais_da_maquina({_DA_MAQUINA})
+    todos = list(uhid_gamepad.vpad_macs_do_aparelho(":".join(_DA_MAQUINA), 1))
+    assert len(virtuais) == len(todos) > 1
+    assert {":".join(o) for o in virtuais.values()} == set(todos)
+
+
 def test_o_portao_de_oui_ve_o_despejo_invertido() -> None:
     from tests.unit import test_docs_mac_anonimato as portao
 

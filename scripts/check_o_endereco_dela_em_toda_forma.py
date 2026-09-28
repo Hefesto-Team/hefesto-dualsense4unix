@@ -27,9 +27,11 @@ AS JANELAS SÃO DO DONO (O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-01,
 byte, com `:` `-` `_` `.`, espaço e colada. Até ali esta régua lia só `[:-]` e
 a ordem direta, e o despejo invertido com espaço de um ensaio de 15/08 passava
 por ela. E ela procura também os MACs dos virtuais de cada endereço
-(`uhid_gamepad.vpad_macs_do_aparelho`, sem copiar a conta): o virtual é o
-endereço disfarçado, e dois bytes do hash ao lado da máscara bastam para
-voltar a ele.
+(`uhid_gamepad.vpad_macs_do_aparelho`, sem copiar a conta nem o número): o
+virtual é o endereço disfarçado, e dois bytes do hash ao lado da máscara
+bastam para voltar a ele — por isso o virtual com a máscara da casa aplicada
+(`02:fe:<3.º>:00:00:<6.º>`, a forma que a máscara do diário de antes de
+28/09 escrevia) também é achado, lido com o prefixo.
 
 `--arquivo <caminho>` mede o que se colou FORA da árvore (um «Copiar», um
 relato), e `--lar <pasta>` troca a máquina inteira por um lar de mentira: lê
@@ -46,7 +48,6 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import itertools
 import os
 import pwd
 import re
@@ -59,10 +60,6 @@ if (RAIZ / "src").is_dir() and str(RAIZ / "src") not in sys.path:
     sys.path.insert(0, str(RAIZ / "src"))
 
 from hefesto_dualsense4unix.core.formas_do_endereco import formas_do_endereco
-
-#: Quantos MACs de virtual por endereço: o do aparelho e os seguintes do mesmo
-#: aparelho, que o dono dos vivos veste quando o anterior já está vestido.
-VIRTUAIS_POR_ENDERECO = 64
 
 EXCLUIR_SUFIXO = {
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf",
@@ -178,6 +175,10 @@ def janelas_coladas(reais: set[tuple[str, ...]]) -> dict[str, str]:
 def virtuais_da_maquina(reais: set[tuple[str, ...]]) -> dict[str, tuple[str, ...]]:
     """Rótulo (`V<k> de E<n>`) → os octetos de cada MAC de virtual de cada endereço.
 
+    Todos os que o dono dos vivos pode vestir, até o fim da lista dele: o
+    número de MACs por aparelho é do `uhid_gamepad`, e uma cópia dele aqui
+    envelheceria calada. O jogador não entra na conta de quem tem endereço.
+
     O rótulo não leva octeto nenhum do virtual: todos os quatro de baixo são
     hash do endereço.
     """
@@ -185,8 +186,7 @@ def virtuais_da_maquina(reais: set[tuple[str, ...]]) -> dict[str, tuple[str, ...
 
     virtuais: dict[str, tuple[str, ...]] = {}
     for n, o in enumerate(sorted(reais)):
-        macs = vpad_macs_do_aparelho(":".join(o), 1)
-        for k, mac in enumerate(itertools.islice(macs, VIRTUAIS_POR_ENDERECO)):
+        for k, mac in enumerate(vpad_macs_do_aparelho(":".join(o), 1)):
             virtuais[f"V{k} de E{n}"] = tuple(mac.lower().split(":"))
     return virtuais
 
@@ -204,10 +204,19 @@ def pedacos_dos_virtuais(virtuais: dict[str, tuple[str, ...]]) -> dict[str, str]
     dezenas de janelas casarem por acaso — o portão ficaria vermelho de ruído.
     Os quatro bytes juntos são o virtual inteiro menos o prefixo, e o acaso
     deles é desprezível.
+
+    E O VIRTUAL COM A MÁSCARA DA CASA (28/09/2026, conferência): zerar o 4.º e
+    o 5.º octetos do virtual deixa o 3.º e o 6.º, dois bytes do hash, e com a
+    máscara do endereço ao lado sobram uns dois candidatos (a medida da
+    sprint). Esses dois bytes sozinhos casariam por acaso com o ruído acima,
+    então eles se leem com o prefixo, os seis octetos juntos
+    (`02:fe:<3.º>:00:00:<6.º>`, nas duas ordens e em toda grafia): com o
+    prefixo, o acaso volta a ser desprezível.
     """
     pedacos: dict[str, str] = {}
     for rotulo, o in virtuais.items():
-        for ordem in (o[2:], o[2:][::-1]):
+        com_a_mascara = (*o[:3], "00", "00", o[5])
+        for ordem in (o[2:], o[2:][::-1], com_a_mascara, com_a_mascara[::-1]):
             for separador in _SEPARADORES:
                 pedacos[separador.join(ordem)] = rotulo
     return pedacos
@@ -221,7 +230,8 @@ _CORRIDA = re.compile(
 
 
 def achados_dos_virtuais(linha: str, pedacos: dict[str, str]) -> list[str]:
-    """Os rótulos dos virtuais cujos quatro bytes de hash estão na linha.
+    """Os rótulos dos virtuais cujos quatro bytes de hash (ou os seis octetos
+    com a máscara da casa) estão na linha.
 
     Por dicionário, e não por regex: são 64 virtuais por endereço, e uma regex
     por rótulo custaria 64 varreduras de cada linha da árvore. A corrida colada
@@ -235,10 +245,11 @@ def achados_dos_virtuais(linha: str, pedacos: dict[str, str]) -> list[str]:
         corrida = m.group(0).lower()
         octetos = (corrida.split(separador) if separador
                    else [corrida[i:i + 2] for i in range(0, len(corrida) - 1, 2)])
-        for i in range(len(octetos) - 3):
-            rotulo = pedacos.get(separador.join(octetos[i:i + 4]))
-            if rotulo:
-                rotulos.append(rotulo)
+        for largura in (4, 6):
+            for i in range(len(octetos) - largura + 1):
+                rotulo = pedacos.get(separador.join(octetos[i:i + largura]))
+                if rotulo:
+                    rotulos.append(rotulo)
     return rotulos
 
 
