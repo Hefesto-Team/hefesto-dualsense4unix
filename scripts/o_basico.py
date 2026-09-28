@@ -11,7 +11,7 @@ subcomando segue o MESMO contrato:
 
 1. **abre a sessão:** a pasta de saída, o ``daemon.state_full`` e a fotografia
    dos arquivos dela (``sha256`` e a cópia byte a byte numa pasta privada,
-   0700, fora da pasta de saída quando ela é outra);
+   0700, SEMPRE fora da pasta de saída — também quando ela é a padrão);
 2. **mira por ``uniq`` e fala por jogador:** a tela e os arquivos dizem ``P1`` a
    ``P4``, nunca o endereço;
 3. **declara o que mexe**, com o antes e o depois;
@@ -940,10 +940,21 @@ class Maquina:
 
 
 def pasta_privada() -> Path:
-    """``${XDG_STATE_HOME:-~/.local/state}/hefesto-dualsense4unix/o-basico``."""
+    """``${XDG_STATE_HOME:-~/.local/state}/hefesto-dualsense4unix/o-basico``: a saída padrão."""
     from hefesto_dualsense4unix.utils.xdg_paths import state_dir
 
     return Path(state_dir()) / "o-basico"
+
+
+def pasta_das_copias() -> Path:
+    """Onde mora a cópia CRUA dos arquivos dela: irmã da saída padrão, nunca dentro dela.
+
+    A cópia de restauração é byte a byte e carrega os endereços (os cartões por
+    controle são chaveados por eles). Dentro da saída padrão, o fecho da sprint
+    («o varre-enderecos.py com zero na pasta de saída») reprovaria toda corrida
+    feita sem ``--saida``.
+    """
+    return pasta_privada().with_name("o-basico-copias")
 
 
 def caminhos_que_ele_mesmo_abre() -> dict[str, Path]:
@@ -952,7 +963,10 @@ def caminhos_que_ele_mesmo_abre() -> dict[str, Path]:
     A régua 7 confere que nenhum fica sob a pasta de estudos (ignorada pelo
     git). O ``--saida`` é de quem chama, e não entra aqui.
     """
-    fora: dict[str, Path] = {"ensaios": ENSAIOS, "sondas": SONDAS, "saida_padrao": pasta_privada()}
+    fora: dict[str, Path] = {
+        "ensaios": ENSAIOS, "sondas": SONDAS, "saida_padrao": pasta_privada(),
+        "copias_cruas": pasta_das_copias(),
+    }
     for nome in SONDAS_DO_BASICO:
         fora[f"sonda:{nome}"] = SONDAS / nome
     for nome in ENSAIOS_CHAMADOS:
@@ -988,8 +1002,8 @@ class Sessao:
         self.sub = sub
         self.comando = comando
         self.carimbo = time.strftime("%Y-%m-%dT%H%M%S", time.localtime(maquina.agora()))
-        self.privada = _pasta_segura(pasta_privada() / self.carimbo)
-        self.saida = _pasta_segura(Path(saida)) if saida else self.privada
+        self.privada = _pasta_segura(pasta_das_copias() / self.carimbo)
+        self.saida = _pasta_segura(Path(saida) if saida else pasta_privada() / self.carimbo)
         self.jogadores = jogadores
         self.passos: list[Passo] = []
         self.recusas: list[str] = []
@@ -1059,9 +1073,9 @@ class Sessao:
         """O ``sha256`` dos arquivos dela; com ``copiar``, a cópia byte a byte na pasta privada.
 
         A cópia crua tem os endereços (os cartões por controle são chaveados
-        por eles): ela mora na pasta privada, 0700, e nunca na de saída quando
-        a de saída é outra (C11 da contraprova). Na de saída ficam o ``sha256``
-        e a cópia mascarada.
+        por eles): ela mora na pasta privada (:func:`pasta_das_copias`), 0700,
+        e nunca na de saída (C11 da contraprova). Na de saída ficam o
+        ``sha256`` e a cópia mascarada.
         """
         base = self.maquina.config_dela()
         achados: dict[str, str] = {}

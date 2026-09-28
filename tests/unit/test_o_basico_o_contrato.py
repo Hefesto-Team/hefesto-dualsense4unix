@@ -1067,3 +1067,31 @@ def test_a_entrada_nao_da_verde_sobre_par_parado_nem_sobre_ligacao_que_mudou(
         p["veredito"] for p in da_linha(saida, "os intervalos da entrada (pad contra o físico)")
     }
     assert taxa_por == {ob.NAO_SEI}
+
+
+def test_sem_saida_a_copia_crua_nao_mora_na_pasta_de_saida(ob: ModuleType, tmp_path: Path) -> None:
+    """Sem ``--saida`` a saída padrão ERA a pasta da cópia crua, e o fecho reprovava.
+
+    O fecho da sprint pede o ``varre-enderecos.py`` com zero na pasta de saída.
+    A cópia de restauração é byte a byte (os cartões por controle são chaveados
+    pelo endereço), e mora na irmã ``o-basico-copias``. Mordida: devolver a
+    cópia para dentro da saída padrão — o endereço cru aparece nela.
+    """
+    config = config_com_perfil(tmp_path, "Freestyle", "dualsense")
+    perfil = config / "profiles" / "freestyle.json"
+    dado = json.loads(perfil.read_text(encoding="utf-8"))
+    dado["controllers"] = {UNIQS[0]: {"mascara": "dualsense"}}
+    perfil.write_text(json.dumps(dado), encoding="utf-8")
+    estado = estado_da_mesa()
+    maquina = fazer_maquina(ob, estado, config, dispositivos=pads_uhid(4),
+                            ensaios={"quem_e_quem.py": quem_e_quem_json(ob, estado)})
+    ob.executar(["retrato"], maquina)
+
+    saida_padrao = ob.pasta_privada()
+    textos = [p.read_text(encoding="utf-8", errors="replace")
+              for p in saida_padrao.rglob("*") if p.is_file()]
+    assert textos, "a sessão não gravou nada na saída padrão"
+    assert not any(_janelas_que_vazam(t, UNIQS[0].split(":")) for t in textos)
+    copias = [p for p in ob.pasta_das_copias().rglob("freestyle.json") if p.is_file()]
+    assert len(copias) == 1 and copias[0].read_bytes() == perfil.read_bytes()
+    assert not copias[0].resolve().is_relative_to(saida_padrao.resolve())
