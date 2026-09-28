@@ -302,7 +302,8 @@ NAO_SAO_DIVIDA: dict[str, str] = {
         "o pacote que não existe com esse nome na família: ausência decidida"),
     "tests/unit/test_mic_em_todo_formato_01.py::_MODOS_FORA_DO_MIC": (
         "o modo que não é decisão sobre o microfone (o nó que não dorme)"),
-    "tests/unit/test_nativo_rumble_01_a_recusa_chega_na_tela.py::RESPOSTA_DE_ACEITE": _DADO_DE_TESTE,
+    "tests/unit/test_nativo_rumble_01_a_recusa_chega_na_tela.py::RESPOSTA_DE_ACEITE": (
+        _DADO_DE_TESTE),
     "tests/unit/test_nenhum_arquivo_manda_rodar_install_com_sudo.py::DISPENSAS": _A_PROPRIA_REGUA,
     "tests/unit/test_o_binding_do_webkit_entra_no_install.py::VAZIOS_ACEITOS_NO_CENSO": (
         "o pacote que não existe com esse nome na família: ausência decidida"),
@@ -315,7 +316,8 @@ NAO_SAO_DIVIDA: dict[str, str] = {
         "as cores fora da paleta de propósito (alto contraste e os tingidos do hover)"),
     "tests/unit/test_paridade_quente_dos_instaladores.py::EXCECAO_INSTALL_SH": (
         "o quirk tem um dono só (`install_snd_quirk.sh`), e o install o chama"),
-    "tests/unit/test_portao_connected_nao_se_escreve_a_mao.py::_HANDLERS_QUE_PODEM_ESCREVER_CONNECTED": (
+    ("tests/unit/test_portao_connected_nao_se_escreve_a_mao.py"
+     "::_HANDLERS_QUE_PODEM_ESCREVER_CONNECTED"): (
         "os três handlers auditados, cada um com a derivação certa da sua fonte"),
     "tests/unit/test_release_workflow_nomes_e_portoes.py::PUBLICADORES_DE_HOJE": (
         "o piso dos publicadores que o detector tem de reconhecer"),

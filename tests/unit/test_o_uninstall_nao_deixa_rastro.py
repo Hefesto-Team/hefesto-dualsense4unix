@@ -551,14 +551,16 @@ def _montar_o_path(raiz: Path, diario: Path,
         '        d.write(f"RECUSADO leu a tabela de processos da máquina: {caminho}\\n")\n'
         '    raise PermissionError(f"o lar de mentira não lê a tabela da máquina: {caminho}")\n'
         "_listdir, _scandir, _open = os.listdir, os.scandir, builtins.open\n"
+        "def _caminho(x):\n"
+        "    return os.fsdecode(x) if isinstance(x, (str, bytes, os.PathLike)) else ''\n"
         "def _e_proc(caminho):\n"
-        '    return isinstance(caminho, (str, bytes, os.PathLike)) and os.fsdecode(caminho).rstrip("/") == "/proc"\n'
+        '    return _caminho(caminho).rstrip("/") == "/proc"\n'
         "def _listdir_do_lar(caminho='.'):\n"
         "    return [str(p) for p in PROCESSOS] if _e_proc(caminho) else _listdir(caminho)\n"
         "def _scandir_do_lar(caminho='.'):\n"
         "    return _leu_a_maquina(caminho) if _e_proc(caminho) else _scandir(caminho)\n"
         "def _open_do_lar(arquivo, *a, **k):\n"
-        '    if isinstance(arquivo, (str, bytes, os.PathLike)) and re.match(r"/proc/\\d", os.fsdecode(arquivo)):\n'
+        '    if re.match(r"/proc/\\d", _caminho(arquivo)):\n'
         "        _leu_a_maquina(arquivo)\n"
         "    return _open(arquivo, *a, **k)\n"
         "os.listdir, os.scandir, builtins.open = _listdir_do_lar, _scandir_do_lar, _open_do_lar\n"
