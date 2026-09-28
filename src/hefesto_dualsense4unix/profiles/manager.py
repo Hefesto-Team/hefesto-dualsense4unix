@@ -151,9 +151,17 @@ _RESULTADO_PARA_RELATORIO: dict[str, str] = {
 # a recusa dentro do `activate` é o que garante que um caminho novo, que
 # esqueça de perguntar, também não passa por cima.
 #
-# O GESTO DELA É O ÚNICO QUE MUDA ISSO: ativar à mão o Freestyle o liga, e
-# ativar à mão outro perfil o desliga. O botão «Modo Freestyle» e o «Ativar» da
-# aba Perfis são o mesmo gesto.
+# O GESTO DELA É O ÚNICO QUE MUDA ISSO, e o gesto é a TROCA: ativar à mão o
+# Freestyle vindo de outro perfil o liga, e ativar à mão outro perfil o desliga.
+# O botão «Modo Freestyle» e o «Ativar» da aba Perfis são o mesmo gesto.
+#
+# REATIVAR O PERFIL QUE JÁ VALE NÃO MUDA O MODO (conferência de 28/09/2026). As
+# abas reativam o perfil ativo a cada clique que grava
+# (`interface/pacotes/perfil.gravar_e_reaplicar` → `profile.switch`, com a
+# origem `manual`): sem esta metade, o Freestyle desligado de fora do jogo — o
+# perfil que vale no desktop, desde o boot — se ligava sozinho no primeiro
+# ajuste dela numa aba, e todo jogo seguinte perdia o perfil dele. O botão liga
+# pelo `freestyle.set`, que diz o modo com todas as letras.
 
 
 class OFreestyleMandaError(RuntimeError):
@@ -405,6 +413,7 @@ class ProfileManager:
             raise OFreestyleMandaError(
                 f"o Modo Freestyle está ligado: {name!r} não entra por {origin!r}"
             )
+        vinha_do_freestyle = e_o_freestyle(getattr(self.store, "active_profile", None))
         profile = load_profile(name)
         # PERFIL-REESCRITO-NA-PARTIDA-01, item 4: o `relatorio` desce até o
         # `apply` para as categorias travadas na mão entrarem nele — ver lá.
@@ -425,9 +434,15 @@ class ProfileManager:
         if origin == "manual":
             from hefesto_dualsense4unix.utils.session import save_last_profile
             save_last_profile(profile.name)
-            # O gesto dela decide o Modo Freestyle: o «Ativar» do Freestyle o
-            # liga, o de qualquer outro perfil o desliga.
-            ligar_o_freestyle(self.store, e_o_freestyle(profile.name))
+            # O gesto dela decide o Modo Freestyle, e o gesto é a TROCA: o
+            # «Ativar» do Freestyle vindo de outro perfil o liga, o de qualquer
+            # outro perfil o desliga, e reativar o Freestyle que já vale (o
+            # gravar-e-reaplicar das abas) não mexe nele. Ver o bloco antes da
+            # classe.
+            if not e_o_freestyle(profile.name):
+                ligar_o_freestyle(self.store, False)
+            elif not vinha_do_freestyle:
+                ligar_o_freestyle(self.store, True)
         # FEAT-COSMIC-NOTIFICATIONS-01: opt-in via env var
         # `HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS=1`. Sem isso, no-op.
         try:

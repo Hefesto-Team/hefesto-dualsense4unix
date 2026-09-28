@@ -314,8 +314,14 @@ def test_com_o_modo_ligado_o_jogo_nao_entra_e_desligado_entra(
     store = StateStore()
     _boot(controle, store)
     gerente = ProfileManager(controller=controle, store=store)
+    from hefesto_dualsense4unix.profiles.manager import ligar_o_freestyle
+
+    # O botão, como o `freestyle.set` o faz: o Freestyle já vale desde o boot,
+    # então a ativação à mão é uma REATIVAÇÃO, que não muda o modo — quem o
+    # liga é o dono, com todas as letras (conferência de 28/09/2026).
     gerente.activate(loader.NOME_DO_PADRAO, origin="manual")
-    assert store.freestyle_ligado is True
+    assert store.freestyle_ligado is False
+    ligar_o_freestyle(store, True)
     vigia = AutoSwitcher(manager=gerente, window_reader=lambda: {}, store=store)
 
     for t in (0.0, 0.6, 30.0):
@@ -323,8 +329,6 @@ def test_com_o_modo_ligado_o_jogo_nao_entra_e_desligado_entra(
     for t in (31.0, 31.6, 60.0):
         vigia._tick({"wm_class": JANELA_DO_JOGO, "wm_name": "Sackboy"}, t)
     assert store.active_profile == loader.NOME_DO_PADRAO
-
-    from hefesto_dualsense4unix.profiles.manager import ligar_o_freestyle
 
     ligar_o_freestyle(store, False)
     for t in (61.0, 61.6):

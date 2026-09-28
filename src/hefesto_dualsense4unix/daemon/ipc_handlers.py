@@ -2803,9 +2803,10 @@ class IpcHandlersMixin:
         `ligado` opcional: ausente → inverte.
 
         **LIGAR É O «ATIVAR» DO FREESTYLE NA ABA PERFIS**, e é o mesmo caminho:
-        o `profile.switch` dele, com a ativação à mão — que é quem liga o modo
-        (`profiles.manager.ligar_o_freestyle`). Ligado, nenhum caminho
-        automático troca o perfil.
+        o `profile.switch` dele, com a ativação à mão, e o modo ligado pelo
+        dono (`profiles.manager.ligar_o_freestyle`) — explícito aqui, porque com
+        o Freestyle já valendo a ativação é uma reativação, e reativar não muda
+        o modo. Ligado, nenhum caminho automático troca o perfil.
 
         **DESLIGAR DEVOLVE O JOGO SEM REABRIR** (a prova 3 da sprint). O lock de
         30 s da troca à mão sai — desligar é ela devolvendo a escolha ao
@@ -2825,6 +2826,10 @@ class IpcHandlersMixin:
         novo = (not o_freestyle_manda(self.store)) if pedido is None else pedido
         if novo:
             resposta = await self._handle_profile_switch({"name": NOME_DO_PADRAO})
+            # Com o Freestyle JÁ valendo (o de fora do jogo), a ativação acima é
+            # uma reativação, e reativar não liga o modo (o gravar-e-reaplicar
+            # das abas passa pelo mesmo `profile.switch`). O botão diz o modo.
+            ligar_o_freestyle(self.store, True)
         else:
             ligar_o_freestyle(self.store, False)
             self.store.mark_manual_profile_lock(0.0)

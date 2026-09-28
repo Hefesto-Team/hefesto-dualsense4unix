@@ -15,7 +15,8 @@ régua mede cada caminho que podia passar por cima dele:
 2. **o `ProfileManager.activate`** recusa toda ativação automática de outro
    perfil — é a rede que pega o caminho que esquecer de perguntar;
 3. **o gesto dela decide**: o «Ativar» do Freestyle liga, o de outro desliga,
-   e apagar o Freestyle desliga;
+   apagar o Freestyle desliga, e reativar o que já vale (o gravar-e-reaplicar
+   das abas) não muda o modo;
 4. **o lançamento** não arma o perfil do jogo, e **a env antecipada** lê o
    Freestyle;
 5. **o restore do boot** e o **modo do primeiro pad** são os do Freestyle;
@@ -630,6 +631,67 @@ def test_ligar_pelo_botao_e_o_ativar_do_freestyle(semeadura_ligada: None) -> Non
     assert (resposta["freestyle_ligado"], store.active_profile) == (True, FREESTYLE)
     assert session.load_freestyle_ligado() is True
     assert asyncio.run(h._handle_freestyle_set({}))["freestyle_ligado"] is False
+
+
+def _o_freestyle_de_fora_do_jogo(store: StateStore) -> _Handlers:
+    """O estado de todo desktop desde o boot: o Freestyle valendo, com o modo desligado."""
+    gerente = _gerente(store)
+    gerente.activate(FREESTYLE, origin="system")
+    assert (store.active_profile, store.freestyle_ligado) == (FREESTYLE, False)
+    return _Handlers(store, gerente)
+
+
+@pytest.mark.parametrize("ligado", [False, True], ids=["desligado", "ligado"])
+def test_gravar_numa_aba_nao_muda_o_modo(semeadura_ligada: None, ligado: bool) -> None:
+    """O gravar-e-reaplicar das abas reativa o Freestyle, e reativar não muda o modo.
+
+    Conferência de 28/09/2026. Toda aba que grava passa pelo funil
+    `interface/pacotes/perfil.gravar_e_reaplicar`, que manda `profile.switch`
+    do perfil ativo — com a origem `manual`. Com o Freestyle de fora do jogo
+    valendo (o desktop de toda máquina, desde o boot), o primeiro ajuste dela
+    ligava o Modo Freestyle sozinho, e todo jogo seguinte perdia o perfil dele.
+    É o funil de verdade, com o handler de verdade.
+
+    MORDIDA: devolva ao ramo `origin == "manual"` do `activate` o
+    `ligar_o_freestyle(self.store, e_o_freestyle(profile.name))` e a célula
+    `desligado` reprova com o modo ligado.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import perfil as funil
+
+    loader.load_all_profiles()
+    store = StateStore()
+    h = _o_freestyle_de_fora_do_jogo(store)
+    if ligado:
+        asyncio.run(h._handle_freestyle_set({"ligado": True}))
+    ponte = SimpleNamespace(
+        profile_switch=lambda nome: asyncio.run(h._handle_profile_switch({"name": nome})),
+        chamar=lambda *a, **k: None,
+    )
+
+    funil.gravar_e_reaplicar(loader.load_profile(FREESTYLE),
+                             SimpleNamespace(state={"active_profile": FREESTYLE}), ponte)
+
+    assert (store.active_profile, store.freestyle_ligado,
+            session.load_freestyle_ligado()) == (FREESTYLE, ligado, ligado)
+
+
+def test_o_botao_liga_com_o_freestyle_ja_valendo(semeadura_ligada: None) -> None:
+    """O botão no desktop, com o Freestyle de fora do jogo valendo: o modo liga.
+
+    Ali a ativação do `freestyle.set` é uma reativação, e reativar não muda o
+    modo — quem liga é o próprio `freestyle.set`, dizendo o modo.
+
+    MORDIDA: tire o `ligar_o_freestyle(self.store, True)` do ramo de ligar do
+    `_handle_freestyle_set` e o botão responde desligado.
+    """
+    loader.load_all_profiles()
+    store = StateStore()
+    h = _o_freestyle_de_fora_do_jogo(store)
+
+    resposta = asyncio.run(h._handle_freestyle_set({"ligado": True}))
+
+    assert (resposta["freestyle_ligado"], store.freestyle_ligado,
+            session.load_freestyle_ligado()) == (True, True, True)
 
 
 def test_desligar_devolve_o_jogo_vivo_sem_reabrir(
