@@ -192,7 +192,7 @@ def fechar(nome: str, rc: str, corrida: Path, raiz: Path, contagem: str,
     linhas = [
         f"medida: {nome}",
         f"data: {datetime.now().astimezone().isoformat(timespec='seconds')}",
-        f"aberta: {aberta['aberto_em']}",
+        f"aberta: {aberta.get('aberto_em', '(sem registro)')}",
         f"arvore: {agora.arvore}",
         f"head: {agora.head or '(sem commit)'}",
         f"contagem: {contagem or '(não informada)'}",
