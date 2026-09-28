@@ -5,11 +5,11 @@ build-backend = "hatchling.build"
 [project]
 name = "hefesto-dualsense4unix"
 version = "0.9.4.5"
-description = "Hefesto - DualSense4Unix: Linux adaptive trigger daemon for DualSense controllers"
+description = "DualSense no Linux: gatilhos adaptativos, luz, vibração, sensores, áudio e co-op local"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
-keywords = ["dualsense", "ps5", "adaptive-triggers", "linux", "gamepad", "dualsense4unix"]
+keywords = ["dualsense", "ps5", "adaptive-triggers", "linux", "gamepad", "dualsense4unix", "accessibility"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
@@ -39,41 +39,15 @@ dev = [
     "pytest>=7.4",
     "pytest-asyncio>=0.23",
     "pytest-cov>=4.1",
-    # Pin do ruff: lint sem pin (ruff>=0.1) deixa cada release/CI refém da versão
-    # publicada no dia — ruff 0.15.x passou a flagar RUF100 de noqa de regra não
-    # habilitada e a reformatar blocos de import, quebrando o release v3.8.3 num
-    # código que estava limpo na versão anterior. Pin garante build determinístico
-    # (CHORE-CI-PIN-RUFF-01). Bump consciente do mantenedor ao subir o ruff.
+    # O ruff fica pinado: uma versão nova muda regras e reprova código que passava.
     "ruff==0.15.20",
     "mypy>=1.7",
     "types-python-xlib",
-    # PACOTE-COM-NOME-01: tests/unit/test_release_workflow_nomes_e_portões.py lê
-    # os workflows do GitHub com yaml.safe_load. Sem esta dep declarada, o
-    # `importorskip("yaml")` fazia os cinco testes SKIPAREM no CI (que instala
-    # com `pip install -e ".[dev]"`) e o portão existiria só na máquina da
-    # mantenedora — que é literalmente o defeito que a PORTÃO-VIVO-01 nomeia:
-    # portão que não roda no caminho do commit só avisa tarde.
+    # Os testes do workflow de release leem os YAML do GitHub; sem o PyYAML eles pulam no CI.
     "PyYAML>=6.0",
     "types-PyYAML",
-    # DIVIDA-DO-PLAYWRIGHT-01 (03/09/2026) — paga, e a dívida tinha nome desde
-    # 29/08. DOIS PORTÕES o importam, `scripts/check_pecas_do_dualsense.py` e
-    # `scripts/check_cores_do_dualsense.py`, e ele não estava declarado em
-    # extra nenhum: vivia na bancada de quem escreveu, por instalação à mão.
-    # O efeito medido é sempre o mesmo — toda árvore nova criada com
-    # `pip install -e ".[dev,emulation,cosmic]"` NASCE com dois portões
-    # vermelhos, e quem chega perde a manhã descobrindo que não é culpa dele.
-    #
-    # Vive no `[dev]`, e não numa dependência de runtime, porque é ferramenta
-    # de PORTÃO — o produto não a importa em lugar nenhum. E o `[dev]` é o que
-    # o `install.sh` instala por padrão (BUG-INSTALL-VENV-NO-DEV-01), então a
-    # dívida se paga sozinha na próxima instalação; `--no-dev` continua sendo a
-    # saída para máquina enxuta.
-    #
-    # NÃO PRECISA DE `playwright install`, e isto é o que impede alguém de
-    # acrescentar um download de 300 MB ao instalador: os dois portões abrem o
-    # navegador do SISTEMA, com `executable_path="/usr/bin/google-chrome"`. O
-    # pacote pip sozinho basta — o que falta numa máquina sem Chrome é o
-    # Chrome, e isso está anotado no cabeçalho dos dois portões, não aqui.
+    # Dois verificadores de desenho abrem o Chrome do sistema pelo Playwright; o pacote
+    # pip basta, sem `playwright install`.
     "playwright>=1.62",
 ]
 emulation = [
@@ -82,21 +56,15 @@ emulation = [
 tray = [
     "PyGObject>=3.44",
 ]
-# FEAT-METRICS-01 — opcional; text exposition manual não precisa desta dep.
-# Instalar se quiser usar prometheus_client diretamente (ex: dashboards avançados).
+# Opcional: as métricas funcionam sem ele; serve a quem quiser usar o prometheus_client direto.
 metrics = [
     "prometheus-client>=0.19",
 ]
-# BUG-COSMIC-WLR-BACKEND-REGRESSION-01 — backend Wayland via portal D-Bus
-# usa jeepney (puro Python, sem deps nativas). Sem essa dep, o portal
-# fica indisponível e o cascade cai direto em wlrctl. Recomendada para
-# qualquer compositor Wayland (COSMIC, GNOME, Sway, etc.).
+# Detecção de janela no Wayland pelo portal D-Bus (jeepney, Python puro); sem ele, cai no wlrctl.
 cosmic = [
     "jeepney>=0.8",
 ]
-# A bancada do mapa de canais (`scripts/bancada_do_mapa.py`): o formulário que
-# grava no `docs/data/mapa-controles.csv`. Não é dependência do produto nem de
-# portão; quem mede com o controle na mão instala com `pip install -e ".[bancada]"`.
+# O formulário do mapa de canais (`scripts/bancada_do_mapa.py`); não é dependência do produto.
 bancada = [
     "streamlit>=1.30",
     "pandas>=2.0",
@@ -104,91 +72,39 @@ bancada = [
 
 [project.scripts]
 hefesto-dualsense4unix = "hefesto_dualsense4unix.cli.app:main"
-# O `-gui` ABRE A INTERFACE NOVA — 01/09/2026, decisão dela: *"a versão antiga
-# não segue disponivel, vai gerar confusão nos agentes. So a nova esta
-# disponivel e deve ser integrada."*
-#
-# E A JANELA SAIU DO CODIGO EM 06/09/2026 (`GTK-3`, `D-0609-GTK-LEVA-INTEIRA`).
-# Esta linha dizia "`app/main:main` continua importavel" — deixou de ser
-# verdade: `app/main.py` e `app/app.py` foram apagados. O MOTOR ficou inteiro,
-# e e ele que a interface nova chama: os 74 handlers de `app/actions/`, o
-# `app/ipc_bridge.py` e as camadas de `app/telas/`.
+# O `-gui` abre a janela de dez abas.
 hefesto-dualsense4unix-gui = "hefesto_dualsense4unix.interface.hefesto_vivo:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hefesto_dualsense4unix"]
 include = [
-    # O `gui/*.glade` SAIU em 06/09/2026 (`GTK-3`): a janela GTK foi aposentada
-    # por decisão dela (D-0609-GTK-LEVA-INTEIRA) e não há mais `.glade` nesta
-    # árvore. `gui/assets/*.png` FICA — a logo do cabeçalho não é a janela, e
-    # `app/constants._resolve_icon_path` a procura ali primeiro no cenário
-    # .deb/flatpak/wheel.
+    # A logo do cabeçalho, que `app/constants._resolve_icon_path` procura aqui primeiro.
     "src/hefesto_dualsense4unix/gui/assets/*.png",
-    # A INTERFACE NOVA ENTRA NO WHEEL — 01/09/2026. Ate aqui as páginas viviam
-    # em `layout/`, fora do pacote, e quem instalasse o Hefesto NAO RECEBIA A
-    # INTERFACE: ela so existia na arvore de quem a desenvolvia. Foi o que a
-    # auditoria das dez ondas mediu, e o que ela mandou desfazer.
-    #
-    # As páginas são o que o `WebKit2.WebView` carrega; os assets são a logo e o
-    # que as páginas referenciam por caminho relativo.
+    # As páginas da janela e os arquivos que elas referenciam.
     "src/hefesto_dualsense4unix/interface/paginas/*.html",
     "src/hefesto_dualsense4unix/interface/assets/*",
-    # FEAT-I18N-CATALOGS-01 (v3.4.0): catalogos .mo embedded no wheel.
-    # Fallback de path #5 do utils/i18n.py — garante que pip install
-    # sem rodar install.sh ainda resolva traducoes.
+    # Os catálogos .mo, para quem instala só pelo pip achar as traduções.
     "src/hefesto_dualsense4unix/locale/*/LC_MESSAGES/*.mo",
 ]
 
-# O sdist declara o que ENTRA, e nada além disso. Sem esta lista ele leva tudo
-# o que o `.gitignore` não esconde, e não lê o `.git/info/exclude` nem o ignore
-# global: um `python -m build` rodado numa árvore de trabalho levaria junto
-# qualquer arquivo local que só esses dois escondem.
+# O sdist leva só o que está listado: sem a lista ele levaria arquivo local que só o
+# `.git/info/exclude` ou o ignore global escondem.
 [tool.hatch.build.targets.sdist]
 only-include = ["src", "tests", "pyproject.toml", "README.md", "LICENSE", "LICENSES", "NOTICE", "CHANGELOG.md"]
 
-# A INTERFACE ENTROU NO `src/` EM 01/09/2026, e com ela 33 módulos que nunca
-# tinham passado pelo lint do CI — 704 achados de uma vez, 437 deles E501.
-#
-# ELES SE CONCENTRAM NOS GERADORES (`abaNN.py`, `monta.py`, `mapa.py`) e nas
-# réguas, e a razao e da natureza deles: um gerador de HTML emite markup em
-# f-string, e quebrar essas linhas em 100 colunas torna o HTML gerado ILEGIVEL
-# no diff — que e o instrumento com que ela confere o desenho.
-#
-# O QUE NAO SE ISENTA: `pacotes/`, `hefesto_vivo.py`, `onde.py`, `mesa_viva.py`
-# e `casamento.py` — o código de PRODUTO da interface segue a regra da casa, e
-# passava nela antes de entrar aqui.
 [tool.ruff]
 line-length = 100
 target-version = "py310"
 exclude = ["tests/fixtures/**"]
-# O `exclude` acima só vale quando o ruff DESCOBRE os arquivos; o `pre-commit`
-# passa cada caminho explícito, e aí o ruff o ignorava. Na corrida 36119169814
-# o job `pre-commit` reprovou sete apontamentos dentro de `tests/fixtures/`, que
-# o `ruff check src/ tests/` do `lint-test` nunca vê. Com o `force-exclude` os
-# dois caminhos dão a mesma resposta (25/09/2026).
+# O pre-commit passa cada caminho explícito; `force-exclude` faz ele respeitar o `exclude`.
 force-exclude = true
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
 
-# GUARDA-GI-REAL-01: nos testes de interface, `exigir_gi_real()` PRECISA rodar
-# antes de qualquer `import gi` — senão o módulo derruba a coleta inteira no CI
-# headless em vez de pular. Isso põe uma chamada acima do bloco de imports, que
-# é exatamente o que E402 (import fora do topo) e I001 (ordem do bloco) proíbem.
-# A exceção vale só para os testes; em `src/` as duas regras seguem valendo.
 [tool.ruff.lint.per-file-ignores]
-# A BANCADA DA INTERFACE — os geradores de HTML, as réguas e as ferramentas de
-# conferência. Eles entraram no `src/` em 01/09/2026, com a interface, e
-# trouxeram 704 achados de um código que nunca passara pelo lint do CI.
-#
-# ISENTOS DE ESTILO, NÃO DE CORREÇÃO. Um gerador emite markup em f-string, e
-# quebrar essas linhas em 100 colunas torna ILEGÍVEL o diff do HTML gerado —
-# que e o instrumento com que ela confere o desenho. Os códigos aqui são todos
-# de forma; nada que aponte defeito foi desligado.
-#
-# O QUE **NÃO** ESTÁ AQUI, e e o código de PRODUTO da interface: `pacotes/`,
-# `hefesto_vivo.py`, `onde.py` e `casamento.py`. Eles seguem a regra da casa, e
-# ja seguiam antes de entrar no `src/`.
+# Os geradores de HTML e as ferramentas da janela emitem markup em f-string: ficam isentos só
+# de regras de forma, para o HTML gerado seguir legível no diff.
 "src/hefesto_dualsense4unix/interface/aba*.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
 "src/hefesto_dualsense4unix/interface/monta.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
 "src/hefesto_dualsense4unix/interface/mapa.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
@@ -205,22 +121,9 @@ select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
 "src/hefesto_dualsense4unix/interface/importar.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
 "src/hefesto_dualsense4unix/interface/regerar.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
 
+# Nos testes, a guarda de GTK real roda antes do `import gi`, acima do bloco de imports.
 "tests/**" = ["E402", "I001"]
-# CSS-EM-STRING-01 (13/08/2026): o `gerar-mapa.py` embute a folha de estilo do
-# `specs.html` como string literal, e regras CSS de uma linha passam de 100
-# colunas. Quebrar a regra piora a leitura de quem edita o estilo, e `# noqa`
-# NÃO funciona ali — dentro da string ele vira texto CSS e sai impresso na
-# página (tentado e revertido no mesmo dia). A exceção é do arquivo, não do
-# projeto: o limite continua valendo em todo o resto.
-# AS FERRAMENTAS DE BANCADA EM `scripts/` — os geradores, as réguas e os
-# portões. Elas nunca passaram pelo lint (o gancho do pre-commit só vê o que
-# entra no commit, e essas mudam pouco), e carregavam 50 achados em 01/09/2026.
-#
-# Os CATORZE códigos abaixo são os que aparecem lá, e são TODOS de forma:
-# comprimento de linha, ordem de import, ponto-e-vírgula, `%` em vez de f-string,
-# maiúscula em nome local, sinal de multiplicação no comentário. Nenhum `F`
-# (nome morto), nenhum `B` (armadilha de laço), nenhum `SIM` — esses seguem
-# valendo aqui, e são os que apontariam defeito de verdade.
+# As ferramentas de `scripts/`: isentas só de regras de forma; F, B e SIM seguem valendo.
 "scripts/**" = ["E401", "E402", "E501", "E701", "E702", "E741", "I001",
                 "N806", "N818", "UP009", "UP031", "RUF001", "RUF002", "RUF003"]
 
@@ -244,32 +147,8 @@ module = [
 ]
 ignore_missing_imports = true
 
-# ---------------------------------------------------------------------------
-# A BANCADA DE DESENHO — 01/09/2026, e ela é o único ponto de `src/` que não
-# passa em `strict`.
-#
-# O QUE ACONTECEU: a interface se mudou de `layout/` para dentro do pacote, para
-# entrar no wheel (*"preciso do produto completo"*). Junto com as páginas vieram
-# os dez GERADORES (`abaNN.py`) e as réguas de bancada — 1,4 MB de código que
-# escreve HTML e que nunca fora conferido pelo `mypy`, porque vivia fora do
-# `src/`. Medido no dia: 1153 erros, e **os 1153 em `interface/`**. Os outros
-# 285 arquivos do pacote passam em `strict` e continuam passando.
-#
-# POR QUE ISENTAR EM VEZ DE TIPAR: um gerador de mockup é uma função que recebe
-# `str` e devolve `str`, cem vezes. Anotar as 800 assinaturas não acha um único
-# defeito — e o custo real seria a próxima pessoa desistir do portão inteiro.
-# O CAMINHO DO PRODUTO (`hefesto_vivo`, `pacotes/*`, `onde`, `mesa_viva`,
-# `monta`) NÃO está aqui: ele é conferido como o resto do pacote.
-#
-# POR QUE UM A UM E NÃO `interface.*`: um curinga isentaria também o piloto e os
-# pacotes das abas, e isentaria de graça o arquivo que nascer amanhã. Esta lista
-# é a fronteira entre bancada e produto, dita — e mover um arquivo de lado
-# obriga a mexer aqui, que é o ponto.
-#
-# A DÍVIDA QUE ISTO REGISTRA: a bancada não devia estar dentro do wheel. Ela
-# entrou de carona quando as páginas entraram, e tirá-la é trabalho com dono —
-# `interface/onde.py` já separa BANCADA de PUBLICADO, e é por ele que a
-# separação de PASTA vai passar.
+# Os geradores de HTML e as ferramentas de conferência da janela não passam em `strict`;
+# o caminho do produto (`hefesto_vivo`, `pacotes/*`, `onde`, `mesa_viva`, `monta`) passa.
 [[tool.mypy.overrides]]
 module = [
     "hefesto_dualsense4unix.interface.aba01",
@@ -302,12 +181,7 @@ module = [
     "hefesto_dualsense4unix.interface.sistema_viva",
     "hefesto_dualsense4unix.interface.ver",
 ]
-# `ignore_errors` E NÃO UM PUNHADO DE FLAGS: relaxar só as de ANOTAÇÃO deixava
-# 60 queixas de outra espécie, e nenhuma era defeito — `re.search(...).group()`
-# onde quem escreveu sabe que casa, e `f(*lista[:2], x)` onde o `mypy` não conta
-# os dois itens da fatia (`aba03.py:559`, conferido à mão). Meia isenção aqui
-# seria o pior dos dois mundos: o portão continuaria vermelho e ninguém saberia
-# quais das queixas valem.
+# `ignore_errors`: relaxar só as flags de anotação deixaria queixas que não são defeito.
 ignore_errors = true
 
 [tool.pytest.ini_options]
