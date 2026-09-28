@@ -3541,8 +3541,13 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       // escolher dentro do painel: quem vem / para onde → a pergunta
       var ir = perto(ev, '#rd-painel [data-aparelho][data-destino]');
       if(ir){ fecharPainel(); perguntar(moldeDe(ir.dataset.aparelho, ir.dataset.destino)); return; }
+      // O CHIP ACESO É O DO RÁDIO (A-CAIXA-FICA-ONDE-ELA-ABRIU-01): com o
+      // piloto, o chip pede ao Python — e, com a busca de pé, à central — e o
+      // painel segue o molde quando a resposta chega. Aceso no clique, o chip
+      // recusado ficava aceso sobre a busca que continuava noutro adaptador.
       var chip = perto(ev, '#rd-painel .op');
       if(chip){
+        if(comPiloto()) return;
         todos('.op', chip.parentNode).forEach(function(o){ o.setAttribute('aria-pressed', 'false'); });
         chip.setAttribute('aria-pressed', 'true'); return;
       }

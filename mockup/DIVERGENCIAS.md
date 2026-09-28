@@ -21,4 +21,12 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 08-conexoes.html
+- **28/09/2026** — o chip do «Procurando» não acende no clique quando o piloto
+  está no ar: quem acende é o rádio, pelo molde (A-CAIXA-FICA-ONDE-ELA-ABRIU-01).
+  Aceso no clique, o chip recusado ficava aceso sobre a busca que continuava
+  noutro adaptador. Nada muda no desenho: sem o piloto (o desenho aberto no
+  navegador), o chip acende no clique como antes. Até publicar, o produto
+  continua acendendo o chip no clique: com a busca de pé, o chip de outro
+  adaptador treme (a central recusa) e fica aceso até a próxima troca do
+  painel.

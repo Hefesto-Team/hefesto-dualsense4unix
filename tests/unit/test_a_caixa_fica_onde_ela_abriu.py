@@ -389,3 +389,104 @@ def test_so_o_x_dela_esquece_um_pareamento_pela_tela() -> None:
     """
     assert _quem_chama("_esquecer_o_pareamento") == {("a08_conexoes.py", "confirmar_esquecer")}
     assert _quem_chama("esquecer_o_pareamento") == {("a08_conexoes.py", "_esquecer_o_pareamento")}
+
+
+# ---------------------------------------------------------------------------
+# 6. no motor: com o piloto, o chip não acende no clique (o desenho, na bancada)
+# ---------------------------------------------------------------------------
+
+#: O roteiro no WebKit: abre o «Procurando» pelo molde (o mesmo que o
+#: `abrirPainel('conectar')` da página põe no painel) e clica um chip apagado —
+#: primeiro SEM piloto (o desenho aberto no navegador), depois COM ele.
+ROTEIRO_DO_CHIP = r"""
+(function(){
+  function abrir(){
+    const m = document.querySelector('.radio template.painel-molde[data-painel="conectar"]');
+    const corpo = document.getElementById('rd-painel-corpo');
+    corpo.innerHTML = ''; corpo.appendChild(m.content.cloneNode(true));
+    document.getElementById('rd-painel').classList.add('aberto');
+  }
+  function acesos(){
+    return [...document.querySelectorAll('#rd-painel .op')]
+      .filter(c => c.getAttribute('aria-pressed') === 'true').map(c => c.dataset.alvo);
+  }
+  function apagado(){
+    return document.querySelector('#rd-painel .op[aria-pressed="false"]');
+  }
+  const fora = {};
+  abrir();
+  fora.no_molde = acesos();
+  let c = apagado(); fora.clicado_sem_piloto = c.dataset.alvo; c.click();
+  fora.sem_piloto = acesos();
+  window.__hef = window.__hef || {}; window.__hef.ouvindo = true;
+  abrir();
+  c = apagado(); fora.clicado_com_piloto = c.dataset.alvo;
+  try { c.click(); } catch (e) { fora.erro = String(e); }
+  fora.com_piloto = acesos();
+  return JSON.stringify(fora);
+})()
+"""
+
+
+@pytest.fixture(scope="module")
+def chip_no_webkit() -> dict[str, Any]:
+    """A bancada da 08 num WebKit offscreen — o motor que ela usa."""
+    import json
+
+    from hefesto_dualsense4unix.interface import onde
+
+    pagina = onde.pagina("08-conexoes.html")
+    if not pagina.is_file():
+        pytest.skip("a bancada da 08 não está no disco — rode o gerador")
+    gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
+    gi.require_version("Gtk", "3.0")
+    gi.require_version("WebKit2", "4.1")
+    from gi.repository import GLib, Gtk, WebKit2
+
+    if not Gtk.init_check(None)[0]:
+        pytest.skip("sem sessão gráfica — o WebKit não abre")
+    saiu: list[str] = []
+    # Offscreen: sob Xvfb não há gerenciador de janelas, e ela tem UMA tela.
+    janela = Gtk.OffscreenWindow()
+    view = WebKit2.WebView()
+    janela.add(view)
+    janela.show_all()
+
+    def guardou(v: Any, res: Any) -> None:
+        try:
+            saiu.append(v.evaluate_javascript_finish(res).to_string())
+        except Exception as e:  # pragma: no cover — só quando o roteiro quebra
+            saiu.append(f"ERRO {e}")
+        Gtk.main_quit()
+
+    def carregou(v: Any, evento: Any) -> None:
+        if evento == WebKit2.LoadEvent.FINISHED:
+            v.evaluate_javascript(ROTEIRO_DO_CHIP, -1, None, None, None, guardou)
+
+    view.connect("load-changed", carregou)
+    view.load_uri(pagina.as_uri())
+    guarda = GLib.timeout_add(30000, Gtk.main_quit)
+    try:
+        Gtk.main()
+    finally:
+        GLib.source_remove(guarda)
+        janela.destroy()
+    assert saiu, "o WebKit não respondeu em 30 s"
+    assert not saiu[0].startswith("ERRO"), saiu[0]
+    return dict(json.loads(saiu[0]))
+
+
+def test_no_motor_com_o_piloto_o_chip_nao_acende_no_clique(chip_no_webkit: dict[str, Any]) -> None:
+    """Com o piloto no ar, o chip clicado não acende na página: quem acende é o
+    molde, quando o rádio responde. Aceso no clique, o chip que a central
+    recusava ficava aceso sobre a busca de pé noutro adaptador (medido na prova
+    de tela, 28/09). Sem piloto — o desenho aberto no navegador —, ele acende
+    no clique, como no desenho aprovado.
+
+    MORDIDA: tire o ``if(comPiloto()) return;`` do clique do chip no ``aba08.py``
+    e regere a bancada — o chip acende com o piloto e esta régua reprova.
+    """
+    fora = chip_no_webkit
+    assert len(fora["no_molde"]) == 1
+    assert fora["sem_piloto"] == [fora["clicado_sem_piloto"]], "o desenho perdeu o clique"
+    assert fora["com_piloto"] == fora["no_molde"], "o chip acendeu antes do rádio responder"
