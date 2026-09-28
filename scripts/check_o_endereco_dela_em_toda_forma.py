@@ -272,6 +272,15 @@ def arquivos_versionados() -> list[Path]:
     ]
 
 
+#: O que uma linha tem de ter para carregar um pedaço: três octetos separados
+#: ou seis hex colados. Sem isto, nenhum pedaço cabe nela, e as regex por
+#: endereço nem rodam — medido em 28/09/2026, elas eram 44 dos 55 segundos
+#: da varredura com dez endereços, quase todos gastos em linha de prosa.
+_PODE_TER_PEDACO = re.compile(
+    r"(?i)[0-9a-f]{2}[:\-_. ][0-9a-f]{2}[:\-_. ][0-9a-f]{2}|[0-9a-f]{6}"
+)
+
+
 def _nome(p: Path) -> str:
     """O caminho relativo à árvore, ou o de fora como veio (o `--arquivo`)."""
     try:
@@ -293,7 +302,7 @@ def varrer(
         except (UnicodeDecodeError, OSError):
             continue
         for n, linha in enumerate(texto.splitlines(), 1):
-            if ISENCAO.search(linha):
+            if not _PODE_TER_PEDACO.search(linha) or ISENCAO.search(linha):
                 continue
             rotulos = [r for r, padrao in padroes.items() for _ in padrao.findall(linha)]
             rotulos += achados_dos_virtuais(linha, virtuais or {})
