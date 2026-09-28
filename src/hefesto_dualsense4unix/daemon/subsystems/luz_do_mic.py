@@ -386,7 +386,7 @@ def _mudo(backend: Any, uniq: str) -> bool | None:
     """O mudo do FIRMWARE daquele controle, ou `None` quando ele não disse.
 
     `audio_status_for` é a leitura direta do byte de estado que veio no report
-    de INPUT (`core/backend_pydualsense.py:5562`). **Não é `microphone_mute_for`
+    de INPUT (`core/backend_pydualsense.py:5485`). **Não é `microphone_mute_for`
     de propósito**: aquele diz quem MANDA (o valor que o Hefesto afirma), não o
     que está valendo no aparelho, e a §1.1 fala do firmware.
     """
@@ -408,7 +408,7 @@ def _baterias(backend: Any) -> dict[str, int]:
     """`{uniq: battery_pct}` dos controles conectados. Só quem reportou entra.
 
     `describe_controllers` já devolve a carga por controle
-    (`core/backend_pydualsense.py:7532`) e a leitura é `getattr` no objeto que
+    (`core/backend_pydualsense.py:7472`) e a leitura é `getattr` no objeto que
     a thread de report atualiza — sem HID I/O, e já há três consumidores do
     daemon pagando esse preço por tique.
 
