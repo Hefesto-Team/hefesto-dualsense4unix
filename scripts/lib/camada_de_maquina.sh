@@ -86,15 +86,19 @@ anotar_reinicio_pendente() {
 # O módulo CARREGADO não é o instalado em updates/dkms: o `srcversion` de
 # `/sys/module/<m>` difere do arquivo que o próximo carregamento usa. É a MESMA
 # pergunta do `_modulo_pede_reinicio` do doctor, e uma régua cobra as duas.
-# Módulo descarregado não pede reinício: o próximo plug já carrega o novo.
+# Módulo descarregado não pede reinício: o próximo plug já carrega o novo. E
+# sem os DOIS `srcversion` (um kernel sem `CONFIG_MODULE_SRCVERSION_ALL`, um
+# módulo embutido) não há o que comparar: não sei não é «reinicie» — a mesma
+# resposta do doctor (conferência de 28/09/2026: aqui um lado vazio contava
+# como diferença, e o install e o doctor divergiam).
 modulo_pede_reinicio() {
     local nome="$1" raiz="${HEFESTO_SYS_MODULE:-/sys/module}" carregado arquivo novo
-    [[ -d "${raiz}/${nome//-/_}" ]] || return 1
     carregado="$(cat "${raiz}/${nome//-/_}/srcversion" 2>/dev/null || true)"
+    [[ -n "${carregado}" ]] || return 1
     arquivo="$(modinfo -F filename "${nome}" 2>/dev/null || true)"
     [[ "${arquivo}" == */updates/dkms/* ]] || return 1
     novo="$(modinfo -F srcversion "${nome}" 2>/dev/null || true)"
-    [[ -n "${novo}${carregado}" && "${novo}" != "${carregado}" ]]
+    [[ -n "${novo}" && "${novo}" != "${carregado}" ]]
 }
 
 # O grupo `hefesto` vale no próximo login: a sessão de agora não o tem.

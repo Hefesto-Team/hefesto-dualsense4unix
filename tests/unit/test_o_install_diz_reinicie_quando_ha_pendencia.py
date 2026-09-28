@@ -62,7 +62,12 @@ def _sys_module(tmp_path: Path, carregado: str | None) -> Path:
     raiz.mkdir()
     if carregado is not None:
         (raiz / "hid_playstation").mkdir()
-        (raiz / "hid_playstation" / "srcversion").write_text(carregado + "\n", encoding="ascii")
+        # "" = carregado SEM `srcversion` (módulo embutido, ou um kernel sem
+        # `CONFIG_MODULE_SRCVERSION_ALL`): a pasta existe e o arquivo não.
+        if carregado:
+            (raiz / "hid_playstation" / "srcversion").write_text(
+                carregado + "\n", encoding="ascii"
+            )
     return raiz
 
 
@@ -72,6 +77,11 @@ _CASOS = [
     (NOVO, "/lib/modules/k/updates/dkms/hid-playstation.ko.zst", NOVO, False),
     (None, "/lib/modules/k/updates/dkms/hid-playstation.ko.zst", NOVO, False),
     (VELHO, "/lib/modules/k/kernel/drivers/hid/hid-playstation.ko.zst", NOVO, False),
+    # Sem um dos dois `srcversion` não há o que comparar, e não sei não é
+    # «reinicie» (a conferência de 28/09/2026: aqui o install e o doctor
+    # divergiam, e esta lista não tinha o caso).
+    ("", "/lib/modules/k/updates/dkms/hid-playstation.ko.zst", NOVO, False),
+    (VELHO, "/lib/modules/k/updates/dkms/hid-playstation.ko.zst", "", False),
 ]
 
 
