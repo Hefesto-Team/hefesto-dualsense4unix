@@ -118,7 +118,8 @@ ESCREVEM = {
     "trocar_as_entradas",      # o «Trocar com…»: o buraco de duas entradas troca
     "ensinar_a_entrada",       # o ensinar: o nó do aparelho fora do mapa vai à entrada
     # A ORDEM DAS CAIXAS DOS ADAPTADORES — A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01,
-    # 25/09/2026: vai para o `gui_preferences.json` dela.
+    # 25/09/2026: vai para o `maquina.json` dela, na `ordem` de cada adaptador
+    # (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026).
     "guardar_ordem_dos_adaptadores",
     "escrever_propriedade",    # grava o `Alias` de um aparelho no BlueZ dela
     # O X DA ABA 08 — O-RADIO-CONECTA-ONDE-ELA-MANDA-01, 26/09/2026: apaga a

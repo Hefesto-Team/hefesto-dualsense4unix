@@ -905,16 +905,12 @@ _SECAO_DO_CAMPO: dict[str, str] = {
 #: `ci.yml`. Sem o rótulo, `_rotulos_dos_descartados` cai no `rotulos.get(campo,
 #: campo)` e a barra de status dela mostraria a palavra crua `lancadores`.
 #:
-#: O `lugares` (ENTRADA-A-ENTRADA-01, 23/09/2026) também não tem seção: é
-#: escrito pelo «Mapear Entrada a Entrada» da aba Conexões. O que se perde é
-#: onde fica cada entrada no metal, e o nome que ela deu a cada uma. A palavra
-#: é «entrada», nunca «porta» (`D-A-PALAVRA-ENTRADA`): a primeira redação
-#: dizia «porta» e a conferência de 23/09 a trocou.
-#: PROVISÓRIO — decisão dela: a frase é nova e ainda não passou pelo olho dela.
+#: O campo `lugares` saiu do schema em 28/09/2026
+#: (A-ENTRADA-TEM-UM-REGISTRO-SO-01): o lugar de cada entrada mora agora na
+#: própria entrada do `mapa`, que já tem rótulo aqui.
 _ROTULOS_SEM_SECAO: dict[str, str] = {
     "mapa": "O desenho das entradas",
     "lancadores": "Onde estão os seus lançadores",
-    "lugares": "O lugar de cada entrada",
     # D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO (26/09/2026): o nome de cada adaptador,
     # escrito pelo campo do cartão em «Rádio e Adaptadores».
     "adaptadores": "O nome de cada adaptador Bluetooth",
