@@ -96,18 +96,6 @@ os.environ.pop("FORCE_COLOR", None)
 os.environ.setdefault("NO_COLOR", "1")
 
 # ---------------------------------------------------------------------------
-# O SEGFAULT DIZ ONDE (VERDE-NAO-E-PROVA-01, passo 4)
-# ---------------------------------------------------------------------------
-#
-# Em 26/09/2026 uma parte da suíte morreu com `rc=139` e ninguém tinha a pilha.
-# O pytest liga o `faulthandler` no próprio processo, mas os filhos que a suíte
-# dispara (o WebKit sob Xvfb, os pilotos, os scripts) não herdam isso. A
-# variável de ambiente herda: todo Python filho escreve no stderr a pilha de
-# todos os fios quando morre por sinal. A régua é
-# `tests/unit/test_o_segfault_da_suite_diz_onde.py`.
-os.environ.setdefault("PYTHONFAULTHANDLER", "1")
-
-# ---------------------------------------------------------------------------
 # TELA-DELA-01 — nenhuma janela de teste nasce na tela dela. NUNCA.
 # ---------------------------------------------------------------------------
 #
@@ -3795,3 +3783,17 @@ def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
         motivo = motivo_do_pulo(*relativos)
         if motivo is not None:
             item.add_marker(pytest.mark.skip(reason=motivo))
+
+
+# ---------------------------------------------------------------------------
+# O SEGFAULT DIZ ONDE (VERDE-NAO-E-PROVA-01, passo 4)
+# ---------------------------------------------------------------------------
+#
+# No fim do arquivo de propósito: um bloco novo lá em cima moveria as citações
+# `conftest.py:N` de `src/` e de `tests/`. Em 26/09/2026 uma parte da suíte
+# morreu com `rc=139` e ninguém tinha a pilha. O pytest liga o `faulthandler`
+# no próprio processo, mas os filhos Python que a suíte dispara (os pilotos, os
+# geradores, os scripts) não herdam isso; a variável de ambiente herda, menos
+# no filho lançado com `-I`. A régua é
+# `tests/unit/test_o_segfault_da_suite_diz_onde.py`.
+os.environ.setdefault("PYTHONFAULTHANDLER", "1")

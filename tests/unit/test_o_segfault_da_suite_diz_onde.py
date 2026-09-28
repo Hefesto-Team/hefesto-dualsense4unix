@@ -5,6 +5,9 @@ no lote) e nenhum log tinha a pilha. O `catchsegv` saiu da glibc na 2.35, e
 nesta máquina o `core_pattern` vai para o apport, sem `coredumpctl`. A pilha
 em Python vem do `faulthandler`: o pytest o liga no próprio processo, e o
 `tests/conftest.py` põe `PYTHONFAULTHANDLER=1` no ambiente para os filhos.
+O WebKit da suíte roda DENTRO do processo do pytest: ali a pilha Python já
+saía no log da parte, e o que falta é a nativa (pendente, com o processo
+próprio do `scripts/rodar-a-suite.sh`).
 
 Nenhum dos dois testes derruba processo: medir o `faulthandler` ligado basta,
 e um segfault de verdade acordaria o apport da máquina.
@@ -34,4 +37,4 @@ def test_o_python_filho_herda_o_faulthandler() -> None:
     assert filho.stdout.strip() == "True", (
         "o Python que a suíte dispara nasce sem o faulthandler: o conftest "
         "deixou de pôr `PYTHONFAULTHANDLER=1` no ambiente, e o próximo `rc=139` "
-        "de um filho (o WebKit sob Xvfb) morre sem dizer onde")
+        "de um filho Python morre sem dizer onde")
