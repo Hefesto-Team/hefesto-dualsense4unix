@@ -259,11 +259,14 @@ def _pactl(argv: list[str]) -> str | None:
     de ponta a ponta que voltou vazia.
 
     A leitura pergunta ao retrato do som antes (`integrations/retrato_do_som`);
-    o «não sei» dele volta como ``None``.
+    o «não sei» dele volta como ``None``. **Sem importar o pacote**, pela regra
+    stdlib deste módulo: o retrato só existe no processo que o carregou — o
+    daemon, pelo ouvinte do som. No curador que o gancho de lançamento roda com
+    o `python3` do sistema ele não está em `sys.modules`, e ali não há dono
+    nenhum a consultar.
     """
-    from hefesto_dualsense4unix.integrations import retrato_do_som
-
-    resposta = retrato_do_som.responder(argv)
+    retrato = sys.modules.get("hefesto_dualsense4unix.integrations.retrato_do_som")
+    resposta = retrato.responder(argv) if retrato is not None else None
     if resposta is not None:
         return resposta if isinstance(resposta, str) else None
     try:
@@ -279,7 +282,8 @@ def _pactl(argv: list[str]) -> str | None:
     except (OSError, subprocess.SubprocessError):
         return None
     finally:
-        retrato_do_som.escreveu(argv)
+        if retrato is not None:
+            retrato.escreveu(argv)
     return proc.stdout if proc.returncode == 0 else None
 
 
