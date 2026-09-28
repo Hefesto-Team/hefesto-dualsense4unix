@@ -86,17 +86,19 @@ def _pasta(lar: Path) -> Path:
 
 
 def test_preparar_e_devolver_deixam_a_opcao_como_era(lar: Path) -> None:
-    (lar / "tabela.json").write_text(json.dumps({"3357650": "VKD3D_CONFIG=no_upload_hvv %command%"}))
+    original = "VKD3D_CONFIG=no_upload_hvv %command%"
+    (lar / "tabela.json").write_text(json.dumps({"3357650": original}))
     r = _rodar(lar, "preparar", "3357650")
     assert r.returncode == 0, r.stderr
     opcao = _tabela(lar)["3357650"]
-    assert opcao.startswith("VKD3D_CONFIG=no_upload_hvv MANGOHUD=1 MANGOHUD_CONFIG=no_display=1,"), opcao
+    assert opcao.startswith(
+        "VKD3D_CONFIG=no_upload_hvv MANGOHUD=1 MANGOHUD_CONFIG=no_display=1,"), opcao
     assert f"output_folder={_pasta(lar) / 'mangohud'} %command%" in opcao, opcao
     assert opcao.count("%command%") == 1
 
     r = _rodar(lar, "devolver")
     assert r.returncode == 0, r.stderr
-    assert _tabela(lar) == {"3357650": "VKD3D_CONFIG=no_upload_hvv %command%"}
+    assert _tabela(lar) == {"3357650": original}
     assert not (_pasta(lar) / "antes.json").exists()
 
 
@@ -150,7 +152,8 @@ def test_o_resumo_conta_por_minuto_so_o_que_e_da_volta(lar: Path) -> None:
     amostras = [
         {"ts": t0 + 5, "vmstat": {"allocstall_normal": 10, "compact_stall": 3}, "ordem_7_a_10": 40},
         {"ts": t0 + 65, "vmstat": {"allocstall_normal": 12, "compact_stall": 3}, "ordem_7_a_10": 0},
-        {"ts": t0 + 119, "vmstat": {"allocstall_normal": 12, "compact_stall": 5}, "ordem_7_a_10": 7},
+        {"ts": t0 + 119, "vmstat": {"allocstall_normal": 12, "compact_stall": 5},
+         "ordem_7_a_10": 7},
     ]
     (volta / "memoria.jsonl").write_text("".join(json.dumps(a) + "\n" for a in amostras))
     # O jogo abriu 30 s antes da volta: os 30 primeiros segundos ficam fora.
