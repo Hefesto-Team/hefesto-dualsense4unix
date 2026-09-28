@@ -883,3 +883,38 @@ def test_o_comando_da_cli_passa_os_argumentos_e_o_rc_inteiros(
     assert argv[0] == sys.executable
     assert Path(argv[1]) == SCRIPTS / "o_basico.py"
     assert argv[2:] == ["eixos", "--trocar-modo", "xbox"]
+
+
+# ---------------------------------------------------------------------------
+# O que a conferência de 28/09 achou: o subcomando que cai não é vermelho
+# ---------------------------------------------------------------------------
+
+
+def test_o_subcomando_que_cai_no_meio_e_recusa_e_nunca_vermelho(
+    ob: ModuleType, tmp_path: Path
+) -> None:
+    """Um erro do IPC no meio da troca de modo saía como traceback e rc=1.
+
+    O rc=1 do Python se lê como «o aparelho reprovou», e o resumo e o caderno
+    nem saíam. Mordida: tirar o ``except Exception`` do ``executar`` — a
+    exceção atravessa e esta régua cai.
+    """
+    estado = estado_da_mesa(caminho="xbox", backend="uinput")
+    maquina = fazer_maquina(
+        ob, estado, tmp_path / "config", dispositivos=pads_uinput_xbox(ob),
+        ensaios={"quem_e_quem.py": quem_e_quem_json(ob, estado), "bancada.sh": ""},
+    )
+    original = maquina.chamar
+
+    def chamar(metodo: str, params: Any = None) -> Any:
+        if metodo == "gamepad.emulation.set":
+            raise RuntimeError("o daemon recusou o pedido")
+        return original(metodo, params)
+
+    maquina.chamar = chamar
+    saida = tmp_path / "saida"
+    rc = ob.executar(["--saida", str(saida), "eixos", "--trocar-modo", "dualsense"], maquina)
+
+    assert rc == ob.RC_RECUSADO
+    recusas = resumo(saida)["recusas"]
+    assert any("caiu no meio" in r and "RuntimeError" in r for r in recusas), recusas

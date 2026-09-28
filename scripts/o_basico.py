@@ -2827,17 +2827,29 @@ def executar(argv: Sequence[str], maquina: Maquina | None = None) -> int:
     maquina = maquina or Maquina()
     saida = a.saida / f"{time.strftime('%Y-%m-%dT%H%M%S', time.localtime(maquina.agora()))}-{nome}" if a.saida else None
     s = Sessao(maquina, nome, saida=saida, comando="o_basico.py " + " ".join(argv), jogadores=a.jogadores)
-    if not s.abrir():
+    try:
+        aberta = s.abrir()
+    except Exception as erro:  # o estado veio numa forma que a sessão não lê
+        s.recusar(f"a sessão não abriu: {type(erro).__name__}: {erro}")
+        return s.fechar()
+    if not aberta:
         return s.fechar()
     try:
         SUBCOMANDOS[nome](s, a)
     except Recusa as recusa:
         s.recusar(str(recusa))
+    except Exception as erro:
+        # Um subcomando que CAI não é vermelho: o rc=1 do Python se leria como
+        # «o aparelho reprovou», e o fecho (o resumo, o caderno) nem sairia.
+        s.recusar(f"o subcomando caiu no meio: {type(erro).__name__}: {erro}")
     finally:
         s.liberar_a_bancada()
-        s.relistar_e_conferir()
-        for diferenca in s.conferir_a_volta():
-            s.recusar(f"não voltou: {diferenca}")
+        try:
+            s.relistar_e_conferir()
+            for diferenca in s.conferir_a_volta():
+                s.recusar(f"não voltou: {diferenca}")
+        except Exception as erro:
+            s.recusar(f"a volta não se conferiu: {type(erro).__name__}: {erro}")
     return s.fechar()
 
 
