@@ -21,6 +21,7 @@ import importlib.util
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -101,7 +102,7 @@ class TestOEnvelope:
 '''
 
 
-def modulo_do_censo():
+def modulo_do_censo() -> Any:
     """Importa o script como módulo, para os testes que precisam da constante.
 
     O registro em `sys.modules` ANTES do `exec_module` não é enfeite: sem ele o
