@@ -60,7 +60,12 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
 from hefesto_dualsense4unix.integrations.censo_do_barramento import Censo
-from hefesto_dualsense4unix.utils.maquina import caminho_da_maquina, carregar_maquina, lugar_de
+from hefesto_dualsense4unix.utils.maquina import (
+    caminho_da_maquina,
+    carregar_maquina,
+    entrada_do_lugar,
+    lugar_de,
+)
 from tests.unit.test_entrada_a_entrada_02_as_telas_aprovadas import (
     BOOT_1,
     DUALSENSE,
@@ -238,11 +243,11 @@ def test_terminar_nao_espera_o_sys(gabinete: Gabinete, disco: Path, gesto: str) 
     assert fluxo.foto_sem_esperar()["estado"] == ee.PARADO, (
         "a leitura de antes do Terminar reabriu o fluxo")
     documento = carregar_maquina()
-    dela = documento.lugares.get(lugar_de(PCI_A, "5"))
+    dela = entrada_do_lugar(documento, lugar_de(PCI_A, "5"))
     if gesto == "gravar":
         # o nome é da POSIÇÃO (D-2609-O-NOME-E-DA-POSICAO): pergunta ao dono
-        assert dela is not None and dela.entrada is not None
-        assert ee.nome_da_entrada(dela.entrada, maquina=documento) == "Frente", (
+        assert dela is not None
+        assert ee.nome_da_entrada(dela, maquina=documento) == "Frente", (
             "o Salvar clicado antes do Terminar se perdeu — e nada se perde")
     else:
         assert dela is None, f"`{gesto}` gravou alguma coisa"
@@ -397,7 +402,7 @@ def test_o_salvar_vai_para_onde_o_controle_esta(gabinete: Gabinete, disco: Path)
     documento = carregar_maquina()
 
     def nome_de(lugar: str) -> str | None:
-        entrada = documento.lugares[lugar].entrada
+        entrada = entrada_do_lugar(documento, lugar)
         return None if entrada is None else ee.nome_da_entrada(entrada, maquina=documento)
 
     assert nome_de(lugar_de(PCI_A, "5")) == "Frente de baixo", (
@@ -577,10 +582,10 @@ def test_a_resposta_dada_antes_vale_para_a_pergunta_do_clique(
         fio.join(SONO_S)
     assert respostas and respostas[0].gravou, "a resposta dada antes se perdeu"
     documento = carregar_maquina()
-    teclado = documento.lugares.get(lugar_de(PCI_A, "3"))
-    mouse = documento.lugares.get(lugar_de(PCI_A, "4"))
-    assert teclado is not None and teclado.entrada, "a resposta não foi para o teclado"
-    assert mouse is None or not mouse.entrada, "a face dela foi para o mouse"
+    teclado = entrada_do_lugar(documento, lugar_de(PCI_A, "3"))
+    mouse = entrada_do_lugar(documento, lugar_de(PCI_A, "4"))
+    assert teclado, "a resposta não foi para o teclado"
+    assert not mouse, "a face dela foi para o mouse"
     if depois == "pular":
         foto = laco.foto_sem_esperar()
         assert foto["pergunta"]["caminho"] == "1-4", "o mouse saiu da fila sem resposta"

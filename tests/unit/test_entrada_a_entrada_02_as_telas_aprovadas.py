@@ -461,8 +461,8 @@ def test_a_fase_sentada_pergunta_o_que_esta_plugado_e_o_hub_leva_o_que_pende(
     assert documento.mapa.portas[hub].caminho == "3-4"
     assert documento.mapa.portas[hub].nos == ["usb3-port4", "usb4-port4"]
     assert documento.mapa.portas[mouse].caminho == "3-4.1"
-    assert documento.lugares[_lugar(PCI_B, "4")].entrada == hub
-    assert documento.lugares[_lugar(PCI_B, "4.1")].entrada == mouse
+    assert maquina.entrada_do_lugar(documento, _lugar(PCI_B, "4")) == hub
+    assert maquina.entrada_do_lugar(documento, _lugar(PCI_B, "4.1")) == mouse
     face_do_hub = next(f for f in documento.mapa.faces if f.nome == ee.FACE_HUB)
     assert face_do_hub.portas == [hub, mouse] and face_do_hub.alto is True
 
@@ -582,7 +582,7 @@ def test_a_fase_em_pe_conta_as_vazias_e_grava_atras_do_gabinete(
     documento = carregar_maquina()
     numero = ultima["entrada"]
     assert documento.mapa.portas[numero].nos == ["usb1-port2", "usb2-port2"]
-    assert documento.lugares[_lugar(PCI_A, "2")].entrada == numero
+    assert maquina.entrada_do_lugar(documento, _lugar(PCI_A, "2")) == numero
     assert [f.nome for f in documento.mapa.faces] == [ee.FACE_ATRAS]
 
     vazia.tirar(ds)
@@ -597,9 +597,9 @@ def test_a_entrada_aprendida_de_pe_e_conhecida_pelo_lugar_noutro_boot(
     (``usb1-port2``), continua vaga.
 
     MORDIDA: responder «já conhecido» só pelos nós gravados no ``mapa`` (tire
-    a amarra de ``_o_furo_e_conhecido``, ou deixe os nós valerem para a
-    entrada amarrada) — o DualSense na porta do B não é aprendido, ou o da
-    porta do A é aprendido de novo.
+    o lugar de ``_o_furo_e_conhecido``, ou deixe os nós valerem para a
+    entrada que guarda o lugar) — o DualSense na porta do B não é aprendido,
+    ou o da porta do A é aprendido de novo.
     """
     boot = Gabinete(tmp_path / "boot1", BOOT_1)
     laco = _em_pe(boot)
@@ -631,8 +631,8 @@ def test_nao_alcanco_tira_da_conta_de_vez(vazia: Gabinete, disco: Path) -> None:
     laco = _em_pe(vazia)
     foto = laco.nao_alcanco()
     assert (foto["passo"], foto["total"]) == (1, 11), foto
-    fora = carregar_maquina().lugares
-    assert fora[_lugar(PCI_B, "5")].fora is True, "saiu da conta um buraco de fora primeiro"
+    fora = carregar_maquina().mapa.fora
+    assert _lugar(PCI_B, "5") in fora, "saiu da conta um buraco de fora primeiro"
 
     amanha = _em_pe(vazia)
     assert amanha.estado()["total"] == 11, "o Hefesto voltou a perguntar"
@@ -640,8 +640,9 @@ def test_nao_alcanco_tira_da_conta_de_vez(vazia: Gabinete, disco: Path) -> None:
     vazia.plugar(3, "5", DUALSENSE)  # ela alcançou, afinal: a leitura vence
     foto = amanha.olhar()
     assert foto[ULTIMA]["gravou"], foto
-    declarado = carregar_maquina().lugares[_lugar(PCI_B, "5")]
-    assert declarado.fora is None and declarado.entrada == foto[ULTIMA]["entrada"]
+    documento = carregar_maquina()
+    assert _lugar(PCI_B, "5") not in documento.mapa.fora
+    assert maquina.entrada_do_lugar(documento, _lugar(PCI_B, "5")) == foto[ULTIMA]["entrada"]
 
 
 def test_o_buraco_usb3_da_raiz_que_numera_diferente_tem_o_lugar_do_lado_20(
@@ -675,7 +676,7 @@ def test_o_buraco_usb3_da_raiz_que_numera_diferente_tem_o_lugar_do_lado_20(
 
     foto = laco.nao_alcanco()  # o primeiro a sair: usb1-port3 + usb2-port1
     assert foto[ULTIMA]["gravou"], foto[ULTIMA]
-    assert carregar_maquina().lugares[_lugar(PCI_A, "3")].fora is True
+    assert _lugar(PCI_A, "3") in carregar_maquina().mapa.fora
     assert _em_pe(deslocada).estado()["total"] == total - 2, "o Hefesto voltou a perguntar"
 
 
@@ -906,18 +907,21 @@ def test_a_re_enumeracao_do_dongle_nao_vira_a_porta_que_ela_plugou(
 # ---------------------------------------------------------------------------
 
 
-def _documento(caminho_no_mapa: str, testemunha: str | None) -> MaquinaConfig:
+def _documento_de_antes(caminho_no_mapa: str, testemunha: str | None) -> MaquinaConfig:
+    """O arquivo de antes da A-ENTRADA-TEM-UM-REGISTRO-SO-01, migrado."""
     amarra: dict[str, Any] = {"entrada": "1"}
     if testemunha is not None:
         amarra["caminho"] = testemunha
     return MaquinaConfig.model_validate(
-        {
-            "mapa": {
-                "faces": [{"nome": ee.FACE_ATRAS, "portas": ["1"]}],
-                "portas": {"1": {"caminho": caminho_no_mapa}},
-            },
-            "lugares": {_lugar(PCI_B, "4"): amarra},
-        }
+        maquina.migrar_o_documento(
+            {
+                "mapa": {
+                    "faces": [{"nome": ee.FACE_ATRAS, "portas": ["1"]}],
+                    "portas": {"1": {"caminho": caminho_no_mapa}},
+                },
+                "lugares": {_lugar(PCI_B, "4"): amarra},
+            }
+        )
     )
 
 
@@ -928,23 +932,27 @@ def test_a_amarra_confere_o_id_path_inteiro_e_nao_so_o_devpath() -> None:
     outra janela, depois, pôs a Entrada 1 na porta 4 do A (``1-4``, o mesmo
     boot). A amarra do B tem de cair.
 
-    MORDIDA: devolva a comparação pelo ``devpath`` sozinho em
-    ``utils/maquina.entrada_do_lugar`` — a amarra do B sobrevive, e a porta 4
-    do B continua dizendo ser a Entrada 1 que o desenho pôs no A.
+    NOTA DATADA (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026): a conferência
+    da amarra saiu da leitura (``entrada_do_lugar``) para a migração, que a
+    faz uma vez; depois dela a entrada guarda o lugar, e o caminho de cada
+    boot sai dele.
+
+    MORDIDA: faça a migração aceitar a amarra pelo ``devpath`` sozinho — a
+    amarra do B sobrevive, e a porta 4 do B continua dizendo ser a Entrada 1
+    que o desenho pôs no A.
     """
     lugar = _lugar(PCI_B, "4")
-    movido = _documento("1-4", testemunha="3-4")
-    assert maquina.entrada_do_lugar(movido, lugar, BOOT_1) is None
-    assert maquina.entrada_do_lugar(movido, lugar) is None, "sem controladores, «não sei»"
+    movido = _documento_de_antes("1-4", testemunha="3-4")
+    assert maquina.entrada_do_lugar(movido, lugar) is None
+    sem_testemunha = _documento_de_antes("1-4", testemunha=None)
+    assert maquina.entrada_do_lugar(sem_testemunha, lugar) is None, "sem testemunha, «não sei»"
 
     # A testemunha: o desenho não mudou desde a amarra, em QUALQUER boot.
-    intacto = _documento("3-4", testemunha="3-4")
-    assert maquina.entrada_do_lugar(intacto, lugar, BOOT_2) == "1"
+    intacto = _documento_de_antes("3-4", testemunha="3-4")
     assert maquina.entrada_do_lugar(intacto, lugar) == "1"
-
-    # O desenho mudou num boot em que o B é o barramento 1: é a mesma porta.
-    redesenhado = _documento("1-4", testemunha="3-4")
-    assert maquina.entrada_do_lugar(redesenhado, lugar, BOOT_2) == "1"
+    porta = intacto.mapa.portas["1"]
+    assert maquina.caminho_da_porta(porta, BOOT_1) == "3-4"
+    assert maquina.caminho_da_porta(porta, BOOT_2) == "1-4", "no boot 2 o B é o barramento 1"
 
 
 def test_o_motor_grava_a_testemunha_e_o_nome_sobrevive_ao_boot_que_troca_os_barramentos(
@@ -953,8 +961,8 @@ def test_o_motor_grava_a_testemunha_e_o_nome_sobrevive_ao_boot_que_troca_os_barr
     """Mapeada no primeiro boot, a porta 4 do B continua a Entrada dela no
     segundo, quando o caminho gravado (``3-4``) virou o da porta 4 do A.
 
-    MORDIDA: não gravar ``caminho`` na amarra (``_gravar_as_portas``) — no
-    segundo boot a amarra só tem a tradução de agora, que diz A, e a porta
+    MORDIDA: não gravar o ``lugar`` na entrada (``_gravar_as_portas``) — no
+    segundo boot só os nós do primeiro respondem, que dizem A, e a porta
     perde o número.
     """
     boot = Gabinete(tmp_path / "boot1", BOOT_1)
@@ -962,7 +970,7 @@ def test_o_motor_grava_a_testemunha_e_o_nome_sobrevive_ao_boot_que_troca_os_barr
     laco = _laco(boot)
     laco.comecar()
     numero = laco.responder(ee.FACE_ATRAS).entrada
-    assert carregar_maquina().lugares[_lugar(PCI_B, "4")].caminho == "3-4"
+    assert carregar_maquina().mapa.portas[numero].lugar == _lugar(PCI_B, "4")
 
     depois = Gabinete(tmp_path / "boot2", BOOT_2)
     depois.plugar(1, "4", DUALSENSE)  # a porta 4 do B, agora no barramento 1
@@ -1083,16 +1091,16 @@ def test_o_nome_do_adaptador_mora_no_endereco_e_nao_toca_a_entrada(disco: Path) 
     """D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO: o nome da entrada e o do adaptador
     moram em chaves diferentes, e gravar um não mexe no outro.
 
-    MORDIDA: faça ``dar_nome_ao_adaptador`` gravar em ``lugares`` — a entrada
-    «15» perde o nome dela.
+    MORDIDA: faça ``dar_nome_ao_adaptador`` gravar na entrada — a entrada
+    «Sofá» perde o nome dela.
     """
     lugar = _lugar(PCI_A, "3")
-    maquina.gravar_maquina({"lugares": {lugar: {"nome": "15"}}})
+    maquina.gravar_maquina({"mapa": {"portas": {"15": {"lugar": lugar, "nome": "Sofá"}}}})
     feito = ee.dar_nome_ao_adaptador("AA:BB:CC:00:00:01", " Meio ")
     assert feito == ee.NomeDado("aabbcc000001", "Meio", True)
     documento = carregar_maquina()
     assert documento.adaptadores["aabbcc000001"].nome == "Meio"
-    assert documento.lugares[lugar].nome == "15"
+    assert documento.mapa.portas["15"].nome == "Sofá"
 
 
 # -- o script ----------------------------------------------------------------

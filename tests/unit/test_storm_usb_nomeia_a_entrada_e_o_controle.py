@@ -150,11 +150,13 @@ def _raiz_com_controlador(tmp_path: Path) -> Path:
 
 
 def test_o_nome_da_entrada_vem_do_dono(tmp_path: Path) -> None:
-    """O nome que ela deu ao lugar chega à frase, com o caminho do kernel junto."""
+    """O nome que ela deu à entrada chega à frase, com o caminho do kernel junto."""
     raiz = _raiz_com_controlador(tmp_path)
     _dualsense(raiz, "3-4.1.3", hid="com-driver")
     lugar = f"pci-{PCI}-usb-0:4.1.3"
-    maquina = MaquinaConfig.model_validate({"lugares": {lugar: {"nome": "Frente, a de baixo"}}})
+    maquina = MaquinaConfig.model_validate(
+        {"mapa": {"portas": {"1": {"lugar": lugar, "nome": "Frente, a de baixo"}}}}
+    )
     laudo = storm_por_porta(
         linhas=[_linha("usb 3-4.1.3: device descriptor read/all, error -71")],
         hoje=HOJE,
@@ -196,7 +198,9 @@ def test_o_retrato_de_outra_maquina_nao_usa_os_nomes_dela(tmp_path: Path) -> Non
     raiz = _raiz_com_controlador(tmp_path)
     _dualsense(raiz, "3-4.1.3", hid="com-driver")
     lugar = f"pci-{PCI}-usb-0:4.1.3"
-    assert gravar_maquina({"lugares": {lugar: {"nome": "Frente, a de baixo"}}})
+    assert gravar_maquina(
+        {"mapa": {"portas": {"1": {"lugar": lugar, "nome": "Frente, a de baixo"}}}}
+    )
     laudo = storm_por_porta(
         linhas=[_linha("usb 3-4.1.3: device descriptor read/all, error -71")],
         hoje=HOJE,

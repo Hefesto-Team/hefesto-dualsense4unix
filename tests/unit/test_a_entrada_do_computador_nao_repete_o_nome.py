@@ -73,7 +73,8 @@ def test_com_um_controlador_so_nada_muda() -> None:
 
 def test_o_nome_que_ela_deu_vence_o_desempate() -> None:
     maquina = MaquinaConfig.model_validate(
-        {"lugares": {f"pci-{PCI_DO_HUB}-usb-0:4": {"nome": "Frente, a de cima"}}}
+        {"mapa": {"portas": {"1": {"lugar": f"pci-{PCI_DO_HUB}-usb-0:4",
+                                   "nome": "Frente, a de cima"}}}}
     )
     assert ee.nome_da_porta("3-4", maquina=maquina, controladores=DOIS) == "Frente, a de cima"
 

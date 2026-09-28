@@ -35,15 +35,18 @@ from hefesto_dualsense4unix.integrations.censo_do_barramento import (
     Censo,
 )
 from hefesto_dualsense4unix.integrations.entradas_do_gabinete import NoDeEntrada
-from hefesto_dualsense4unix.integrations.lugar_declarado import declarar_a_maquina
 from hefesto_dualsense4unix.interface import arranjo_desta_maquina
 from hefesto_dualsense4unix.utils.maquina import (
     MaquinaConfig,
-    caminho_da_maquina,
+    PortaDeclarada,
     carregar_maquina,
+    migrar_o_documento,
 )
 from tests.unit.test_a_entrada_declarada_vence_o_firmware import _clicar, _na_pagina
-from tests.unit.test_o_nome_da_entrada_e_da_posicao import _a_maquina_dela
+from tests.unit.test_o_nome_da_entrada_e_da_posicao import (
+    _a_maquina_dela,
+    gravar_o_arquivo_de_antes,
+)
 
 #: A velocidade dos quatro barramentos: o ``usb2`` e o ``usb4`` são os rápidos.
 _BARRAMENTOS = {"usb1": 480.0, "usb2": 10000.0, "usb3": 480.0, "usb4": 10000.0}
@@ -110,9 +113,7 @@ def disco(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A máquina sintética no ``tmp_path``, e o barramento de mentira com o
     pendrive: o gesto relê a máquina depois de gravar, e lê os nós do ``/sys``
     — aqui, os de mentira."""
-    alvo = caminho_da_maquina()
-    assert alvo.is_relative_to(tmp_path), f"o maquina.json da régua não está desviado: {alvo}"
-    assert declarar_a_maquina(_a_maquina_dela()).gravou
+    alvo = gravar_o_arquivo_de_antes(tmp_path, _a_maquina_dela())
     documento = carregar_maquina()
     monkeypatch.setattr(censo_do_barramento, "ler_o_barramento",
                         lambda: _censo(_aparelho(_PENDRIVE)))
@@ -129,11 +130,9 @@ def test_o_pendrive_ensinado_na_2_e_lido_na_2(disco: Path) -> None:
     com_ele = _censo(_aparelho(_PENDRIVE))
     antes = _arranjo(com_ele)
     assert _pendente(antes), "o pendrive de fora do mapa não aparece pendente"
-    def amarras() -> dict[str, tuple[str | None, str | None]]:
-        # o NOME que morava no lugar muda de casa na primeira gravação (D1);
-        # a amarra (entrada e testemunha) é do Mapear e não se mexe
-        return {lugar: (dele.entrada, dele.caminho)
-                for lugar, dele in carregar_maquina().lugares.items()}
+    def amarras() -> dict[str, str | None]:
+        # o LUGAR de cada entrada é do Mapear, e o ensinar não o mexe
+        return {numero: porta.lugar for numero, porta in carregar_maquina().mapa.portas.items()}
 
     antes_das_amarras = amarras()
     documento = carregar_maquina()
@@ -141,7 +140,7 @@ def test_o_pendrive_ensinado_na_2_e_lido_na_2(disco: Path) -> None:
     porta = carregar_maquina().mapa.portas["2"]
     assert porta.nos == ["usb1-port3", "usb2-port3"], porta.nos
     assert porta.caminho == "1-3", "o caminho que a entrada já tinha mudou"
-    assert amarras() == antes_das_amarras, "o ensinar mexeu na amarra, que é do Mapear"
+    assert amarras() == antes_das_amarras, "o ensinar mexeu no lugar, que é do Mapear"
 
     depois = _arranjo(com_ele)
     assert not _pendente(depois), "ensinado, o pendrive continua fora do mapa"
@@ -153,14 +152,16 @@ def test_o_pendrive_ensinado_na_2_e_lido_na_2(disco: Path) -> None:
 
 def test_a_entrada_sem_caminho_ganha_o_do_lado_20() -> None:
     """Uma entrada do desenho sem nada gravado: o pendrive tem ``peer`` agora
-    (``usb1-port9``), os dois nós vão juntos, e o caminho é o do lado 2.0."""
+    (``usb1-port9``), os dois nós vão juntos, e o caminho é o do lado 2.0 —
+    calculado dos nós, porque o caminho não vai ao disco desde a
+    A-ENTRADA-TEM-UM-REGISTRO-SO-01 (28/09/2026)."""
     from dataclasses import replace
 
     from hefesto_dualsense4unix.integrations.lugar_declarado import Recibo
 
     dado = _a_maquina_dela()
     dado["mapa"]["faces"][1]["portas"].append("16")
-    documento = MaquinaConfig.model_validate(dado)
+    documento = MaquinaConfig.model_validate(migrar_o_documento(dado))
     gravado: list[dict[str, Any]] = []
 
     def gravar(declaracao: Any) -> Recibo:
@@ -179,7 +180,9 @@ def test_a_entrada_sem_caminho_ganha_o_do_lado_20() -> None:
                                 gravar=gravar).gravou
     campos = gravado[-1]["mapa"]["portas"]["16"]
     assert sorted(campos["nos"]) == ["usb1-port9", "usb2-port3"], "o peer não veio junto"
-    assert campos["caminho"] == "1-9", "sem caminho, a entrada ganha o do lado 2.0"
+    assert "caminho" not in campos, "o caminho foi ao disco"
+    assert PortaDeclarada(nos=campos["nos"]).caminho == "1-9", (
+        "sem caminho, a entrada ganha o do lado 2.0")
 
 
 @pytest.mark.parametrize(
@@ -206,7 +209,7 @@ def test_ligacoes_demais_recusa(disco: Path) -> None:
     dado = _a_maquina_dela()
     dado["mapa"]["portas"]["2"]["nos"] = ["usb1-port3", "usb1-port7", "usb1-port8",
                                           "usb1-port9"]
-    documento = MaquinaConfig.model_validate(dado)
+    documento = MaquinaConfig.model_validate(migrar_o_documento(dado))
     with pytest.raises(ValueError, match=ee.RECUSA_LIGACOES_DEMAIS):
         ee.ensinar_a_entrada("2", _PENDRIVE, maquina=documento, lidas=_lidas(documento),
                              gravar=lambda _d: pytest.fail("gravou além do teto"))

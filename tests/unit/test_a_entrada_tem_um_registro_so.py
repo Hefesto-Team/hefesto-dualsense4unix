@@ -61,7 +61,6 @@ from hefesto_dualsense4unix.utils import lugar as grafia
 from hefesto_dualsense4unix.utils.maquina import (
     MaquinaConfig,
     PortaDeclarada,
-    caminho_da_maquina,
     carregar_maquina,
     entrada_do_lugar,
     lugar_de,
@@ -81,6 +80,9 @@ from tests.unit.test_o_nome_da_entrada_e_da_posicao import (
     PCI_B,
     _a_maquina_dela,
 )
+from tests.unit.test_o_nome_da_entrada_e_da_posicao import (
+    gravar_o_arquivo_de_antes as _gravar_o_arquivo_de_antes,
+)
 
 RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
@@ -93,17 +95,6 @@ TROCAS = (("3", "4"), ("5", "6"), ("7", "8"))
 #: «Meio» (``adaptadores``, 26/09). Endereço da faixa sintética.
 LUGAR_DO_MEIO = lugar_de(PCI_B, "4.1.1")
 ADAPTADOR_DO_MEIO = "aa:bb:cc:00:00:11"
-
-
-def _gravar_o_arquivo_de_antes(tmp_path: Path, documento: dict[str, Any]) -> Path:
-    """O arquivo como o produto de antes o deixava — escrito CRU, sem migrar."""
-    alvo = caminho_da_maquina()
-    assert alvo.is_relative_to(tmp_path), f"o maquina.json da régua não está desviado: {alvo}"
-    corpo = {"version": 1, **documento}
-    alvo.write_text(
-        json.dumps(corpo, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8"
-    )
-    return alvo
 
 
 def _a_dela_com_os_nomes_dos_adaptadores() -> dict[str, Any]:

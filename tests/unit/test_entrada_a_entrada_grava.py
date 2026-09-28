@@ -250,7 +250,7 @@ def test_responder_grava_na_hora(boot_1: SysfsDeMentira, disco: Path) -> None:
     assert documento.mapa.faces[0].portas == ["1", "2"]
     assert documento.mapa.faces[0].perto is True, "a frente é a face perto (fato dela)"
     assert documento.mapa.portas["2"].caminho == "3-4.2"
-    assert documento.lugares[f"pci-{PCI_B}-usb-0:4.2"].entrada == "2"
+    assert maquina.entrada_do_lugar(documento, f"pci-{PCI_B}-usb-0:4.2") == "2"
     assert laco.estado()["estado"] == ee.FIM
     assert laco.estado()["feitas"] == 2
 
@@ -355,8 +355,10 @@ def test_o_nome_do_adaptador_vai_pelo_endereco_e_nao_pelo_hci() -> None:
     l2 = f"pci-{PCI_B}-usb-0:4.1.4"
     documento = MaquinaConfig.model_validate(
         {
-            "mapa": {"faces": [{"nome": ee.FACE_ATRAS, "portas": ["1", "2"]}]},
-            "lugares": {l1: {"entrada": "1"}, l2: {"entrada": "2", "nome": "Sofá"}},
+            "mapa": {
+                "faces": [{"nome": ee.FACE_ATRAS, "portas": ["1", "2"]}],
+                "portas": {"1": {"lugar": l1}, "2": {"lugar": l2, "nome": "Sofá"}},
+            },
             "adaptadores": {"aabbcc000002": {"nome": "Meio"}},
         }
     )
@@ -426,9 +428,8 @@ def test_o_adaptador_na_entrada_numerada_nao_herda_o_numero() -> None:
         {
             "mapa": {
                 "faces": [{"nome": "Hub da mesa", "portas": ["9"]}],
-                "portas": {"9": {"caminho": "3-4.1.4"}},
+                "portas": {"9": {"lugar": lugar, "nos": ["3-4.1-port4"], "nome": "9"}},
             },
-            "lugares": {lugar: {"entrada": "9", "nome": "9"}},
         }
     )
     # O «9» gravado como nome não é nome (D-2609-O-NOME-E-DA-POSICAO): a porta
@@ -453,10 +454,9 @@ def test_o_conselho_de_porta_do_vigia_diz_o_nome_dela() -> None:
         {
             "mapa": {
                 "faces": [{"nome": ee.FACE_ATRAS, "portas": ["3"]}],
-                "portas": {"3": {"caminho": "3-4.1.4"}},
-            },
-            "lugares": {
-                f"pci-{PCI_B}-usb-0:4.1.4": {"entrada": "3", "caminho": "3-4.1.4"}
+                "portas": {
+                    "3": {"lugar": f"pci-{PCI_B}-usb-0:4.1.4", "nos": ["3-4.1-port4"]}
+                },
             },
         }
     )
@@ -524,49 +524,49 @@ def test_o_estado_do_laco_e_o_que_o_piloto_pinta(boot_1: SysfsDeMentira, disco: 
 # ---------------------------------------------------------------------------
 
 
-def test_a_amarra_caduca_quando_o_desenho_muda_e_nao_quando_o_barramento_muda() -> None:
+def test_a_entrada_e_do_lugar_e_o_caminho_e_do_boot() -> None:
+    """A entrada guarda o lugar, e o caminho de cada boot sai dele.
+
+    NOTA DATADA (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026): aqui morava a
+    régua das três conferências da amarra em ``lugares`` (a entrada fora do
+    desenho, dois lugares para a mesma entrada, e o desenho que pôs outro
+    buraco na entrada). Com o lugar dentro da entrada não há dois registros
+    para discordar: sobra a entrada fora do desenho e o lugar em duas entradas.
+    """
     lugar = f"pci-{PCI_B}-usb-0:4.2"
     base = {
         "mapa": {
             "faces": [{"nome": ee.FACE_FRENTE, "portas": ["1"]}],
-            "portas": {"1": {"caminho": "3-4.2"}},
+            "portas": {"1": {"lugar": lugar, "nos": ["3-4-port2"]}},
         },
-        "lugares": {lugar: {"entrada": "1", "caminho": "3-4.2"}},
     }
-    assert maquina.entrada_do_lugar(MaquinaConfig.model_validate(base), lugar) == "1"
-    assert maquina.entrada_do_lugar(MaquinaConfig.model_validate(base), lugar, BOOT_2) == "1", (
-        "a testemunha vale em qualquer boot"
-    )
-
-    renumerado = json.loads(json.dumps(base))
-    renumerado["mapa"]["portas"]["1"]["caminho"] = "1-4.2"  # redesenhada noutro boot
-    doc = MaquinaConfig.model_validate(renumerado)
-    assert maquina.entrada_do_lugar(doc, lugar, BOOT_2) == "1", "no boot 2 o B é o barramento 1"
-    assert maquina.entrada_do_lugar(doc, lugar, BOOT_1) is None, "no boot 1 o 1-4.2 é o A"
-
-    movido = json.loads(json.dumps(base))
-    movido["mapa"]["portas"]["1"]["caminho"] = "3-5"  # a outra janela pôs outro ali
-    assert maquina.entrada_do_lugar(MaquinaConfig.model_validate(movido), lugar, BOOT_1) is None
+    documento = MaquinaConfig.model_validate(base)
+    assert maquina.entrada_do_lugar(documento, lugar) == "1"
+    porta = documento.mapa.portas["1"]
+    assert maquina.caminho_da_porta(porta, BOOT_1) == "3-4.2"
+    assert maquina.caminho_da_porta(porta, BOOT_2) == "1-4.2", "no boot 2 o B é o barramento 1"
+    assert maquina.caminho_da_porta(porta) == "3-4.2", "sem os controladores, os nós"
 
     fora = json.loads(json.dumps(base))
     fora["mapa"] = {}
     assert maquina.entrada_do_lugar(MaquinaConfig.model_validate(fora), lugar) is None
 
     dois = json.loads(json.dumps(base))
-    dois["lugares"][f"pci-{PCI_A}-usb-0:1"] = {"entrada": "1"}
+    dois["mapa"]["portas"]["2"] = {"lugar": lugar}
     assert maquina.entrada_do_lugar(MaquinaConfig.model_validate(dois), lugar) is None
 
 
 def test_o_esquema_do_lugar() -> None:
+    assert "lugares" not in MaquinaConfig.model_fields
     with pytest.raises(ValueError):
-        MaquinaConfig.model_validate({"lugares": {"3-4.1.4": {"entrada": "1"}}})
+        MaquinaConfig.model_validate({"lugares": {f"pci-{PCI_A}-usb-0:1": {"entrada": "1"}}})
     with pytest.raises(ValueError):
-        MaquinaConfig.model_validate({"lugares": {f"pci-{PCI_A}-usb-0:1": {"entrada": "um"}}})
+        maquina.PortaDeclarada(lugar="3-4.1.4")
     with pytest.raises(ValueError):
-        MaquinaConfig.model_validate({"lugares": {f"pci-{PCI_A}-usb-0:1": {"caminho": "usb3"}}})
-    esquecido = MaquinaConfig.model_validate({"lugares": {f"pci-{PCI_A}-usb-0:1": None}})
-    assert esquecido.lugares == {}
-    assert "lugares" in MaquinaConfig.model_fields
+        maquina.PortaDeclarada(lugar=f"pci-{PCI_A}")
+    with pytest.raises(ValueError):
+        maquina.MapaDaMesa(fora=["usb3"])
+    assert maquina.PortaDeclarada(lugar=f"pci-{PCI_A}-usb-0:1").lugar == f"pci-{PCI_A}-usb-0:1"
 
 
 def test_a_traducao_entre_as_duas_chaves() -> None:
@@ -627,8 +627,10 @@ def test_a_grafia_do_lugar_tem_um_dono_so() -> None:
 
 def test_os_leitores_perguntam_ao_dono(monkeypatch: pytest.MonkeyPatch) -> None:
     assert maquina.lugar_de is grafia.lugar_de, "o maquina.py deixou de reexportar o dono"
+    # O ``bluez_dbus`` IMPORTA o dono desde a A-ENTRADA-TEM-UM-REGISTRO-SO-01
+    # (28/09/2026), em vez de repassar a chamada por um ``def`` próprio.
+    assert bd.lugar_de is grafia.lugar_de, "o bluez_dbus tem um lugar_de que não é o do dono"
     monkeypatch.setattr(grafia, "lugar_de", lambda pci, devpath: f"DONO:{pci}:{devpath}")
-    assert bd.lugar_de(PCI_A, "1") == f"DONO:{PCI_A}:1"
     adaptador = mesa_de_radio.Adaptador("hci9", no="x", busnum=3, devpath="1",
                                         controlador_pci=PCI_A)
     assert adaptador.lugar == f"DONO:{PCI_A}:1"
@@ -747,9 +749,11 @@ def test_o_caminho_repetido_noutra_entrada_fica_vazio(disco: Path) -> None:
         {
             "mapa": {
                 "faces": [{"nome": ee.FACE_FRENTE, "portas": ["3", "7"]}],
-                "portas": {"3": {"caminho": "3-4.2"}, "7": {"caminho": "3-4.2"}},
+                "portas": {
+                    "3": {"nos": ["3-4-port2"]},
+                    "7": {"lugar": lugar, "nos": ["3-4-port2"]},
+                },
             },
-            "lugares": {lugar: {"entrada": "7", "caminho": "3-4.2"}},
         }
     )
     assert _gravar_direto(lugar, "3-4.2", ee.FACE_FRENTE).entrada == "7"
@@ -761,31 +765,42 @@ def test_o_caminho_repetido_noutra_entrada_fica_vazio(disco: Path) -> None:
 
 
 def test_o_lugar_que_dizia_ser_esta_entrada_perde_a_amarra_e_guarda_o_nome(
-    disco: Path,
+    tmp_path: Path, disco: Path
 ) -> None:
     """Um número é de UM lugar. A amarra velha de outro lugar (que já não vale:
-    o desenho pôs esta entrada noutro buraco) cai; o nome dele fica.
+    o desenho pôs esta entrada noutro buraco) não migra, e o Mapear amarra o
+    lugar novo à entrada.
 
-    MORDIDA: não tirar a amarra do outro — os dois lugares dizem «7», e a
-    amarra que ACABOU de ser gravada já nasce "não sei".
+    NOTA DATADA (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026): o nome do lugar
+    velho «ficava» nele, e a tela não o mostrava na entrada 7 (a amarra não
+    valia). Com um registro só, o nome de um lugar sem entrada que valha sai na
+    migração, como o do adaptador (a D3, revogada em 26/09), e o log o diz.
+
+    MORDIDA: faça a migração aceitar a amarra sem testemunha pela cadeia de
+    portas sozinha, ou pelo número — a 7 guarda o lugar velho, e o Mapear dá
+    ao lugar novo outro número.
     """
+    from tests.unit.test_o_nome_da_entrada_e_da_posicao import gravar_o_arquivo_de_antes
+
     novo = f"pci-{PCI_B}-usb-0:4.2"
     velho = f"pci-{PCI_A}-usb-0:9"
-    maquina.gravar_maquina(
+    gravar_o_arquivo_de_antes(
+        tmp_path,
         {
             "mapa": {
                 "faces": [{"nome": ee.FACE_ATRAS, "portas": ["7"]}],
                 "portas": {"7": {"caminho": "3-4.2"}},
             },
             "lugares": {velho: {"entrada": "7", "nome": "Velho"}},
-        }
+        },
     )
+    assert carregar_maquina().mapa.portas["7"].lugar is None, "a amarra velha migrou"
+    assert "Velho" not in disco.read_text(encoding="utf-8")
     assert _gravar_direto(novo, "3-4.2", ee.FACE_ATRAS).entrada == "7"
 
     documento = carregar_maquina()
     assert maquina.entrada_do_lugar(documento, novo) == "7", "a amarra nova nasceu «não sei»"
-    assert documento.lugares[velho].entrada is None
-    assert documento.lugares[velho].nome == "Velho", "o nome do outro lugar foi junto"
+    assert maquina.entrada_do_lugar(documento, velho) is None
 
 
 def test_dois_numeros_para_o_mesmo_lugar_e_nao_sei() -> None:
@@ -832,9 +847,11 @@ def test_a_extensao_fica_no_quadrado_de_quem_a_hospeda(disco: Path) -> None:
 
 
 def test_o_rotulo_do_rodape_diz_entrada_e_nunca_porta() -> None:
-    """O rótulo do campo ``lugares`` vai para a barra de status dela quando o
-    campo é descartado, e a tela diz «entrada», nunca «porta»
-    (``D-A-PALAVRA-ENTRADA``: «porta» colide com porta de rede).
+    """O rótulo de um campo vai para a barra de status dela quando o campo é
+    descartado, e a tela diz «entrada», nunca «porta»
+    (``D-A-PALAVRA-ENTRADA``: «porta» colide com porta de rede). O campo
+    ``lugares``, que nasceu com esta régua, saiu do esquema em 28/09/2026
+    (A-ENTRADA-TEM-UM-REGISTRO-SO-01).
 
     MORDIDA: devolva o rótulo «Qual entrada é cada porta» — reprova nomeando o
     campo.
@@ -846,5 +863,4 @@ def test_o_rotulo_do_rodape_diz_entrada_e_nunca_porta() -> None:
         for campo, rotulo in ipc_bridge._ROTULOS_SEM_SECAO.items()
         if re.search(r"\bportas?\b", rotulo, re.IGNORECASE)
     }
-    assert "lugares" in ipc_bridge._ROTULOS_SEM_SECAO
     assert not com_porta, f"rótulo de tela com a palavra «porta»: {com_porta}"

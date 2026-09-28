@@ -11,15 +11,19 @@ A MÁQUINA DAQUI É SINTÉTICA, NA FORMA DA DELA: 15 entradas, Frente [1, 2],
 Atrás [3…8] e uma face de hub [9…15] sob ``3-1``/``3-1.1``; os nomes «1»…
 «15» nos lugares, a 1 como «Meio», e três lugares órfãos (nome sem número).
 Controladores e endereços são da faixa sintética da casa (``0000:0a:00.0``,
-``0000:0b:00.0``, ``aa:bb:cc``).
+``0000:0b:00.0``, ``aa:bb:cc``). Ela é o arquivo de ANTES da
+A-ENTRADA-TEM-UM-REGISTRO-SO-01 (28/09/2026), com ``lugares``: a régua o
+escreve CRU (:func:`gravar_o_arquivo_de_antes`) e a primeira leitura o migra
+(``utils/maquina.migrar_o_documento``).
 
-AS MORDIDAS:
+NOTA DATADA (28/09/2026): a RESERVA que lia ``lugares[lugar_da_entrada(N)].nome``
+até a primeira gravação saiu com o ``lugares``. A migração leva o nome de
+verdade para a posição na primeira LEITURA, e a régua dela é a
+``test_a_entrada_tem_um_registro_so``.
 
-* tire a reserva do ``nome_da_entrada`` (a leitura de
-  ``lugares[lugar_da_entrada(N)].nome``): «Meio» some antes da primeira
-  gravação (``test_o_rotulo_pergunta_ao_dono_e_a_reserva_le_o_lugar``);
-* tire o ``nome_que_vale`` do ``nome_da_entrada``: volta «2»
-  (``test_o_rotulo_pergunta_ao_dono_e_a_reserva_le_o_lugar``).
+A MORDIDA: tire o ``nome_que_vale`` do ``nome_da_entrada`` — o «2» gravado
+na posição volta a ser nome
+(``test_o_rotulo_pergunta_ao_dono_e_o_nome_mora_na_posicao``).
 """
 
 from __future__ import annotations
@@ -38,6 +42,7 @@ from hefesto_dualsense4unix.utils.maquina import (
     caminho_da_maquina,
     carregar_maquina,
     lugar_de,
+    migrar_o_documento,
 )
 from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
     FRASE_DO_NOME_COMPRIDO,
@@ -102,22 +107,34 @@ def _a_maquina_dela() -> dict[str, Any]:
     }
 
 
-@pytest.fixture()
-def disco(tmp_path: Path) -> Path:
-    """A máquina sintética no ``maquina.json`` do ``tmp_path`` — conferido antes."""
+def gravar_o_arquivo_de_antes(tmp_path: Path, documento: dict[str, Any]) -> Path:
+    """O ``maquina.json`` como o produto de antes o deixava — escrito CRU, sem
+    migrar, no ``tmp_path`` (conferido antes)."""
     alvo = caminho_da_maquina()
     assert alvo.is_relative_to(tmp_path), f"o maquina.json da régua não está desviado: {alvo}"
-    assert declarar_a_maquina(_a_maquina_dela()).gravou
+    corpo = {"version": 1, **documento}
+    alvo.write_text(
+        json.dumps(corpo, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8"
+    )
     return alvo
 
 
-def test_o_rotulo_pergunta_ao_dono_e_a_reserva_le_o_lugar() -> None:
-    """Antes de qualquer gravação: a 1 é «Meio» (pela reserva) e a 2 é «Entrada 2».
+@pytest.fixture()
+def disco(tmp_path: Path) -> Path:
+    """A máquina sintética no ``maquina.json`` do ``tmp_path``, na forma de antes."""
+    return gravar_o_arquivo_de_antes(tmp_path, _a_maquina_dela())
 
-    O «2» gravado como nome não é nome; o «Meio» ainda mora no lugar, e a
-    reserva do dono o lê até a primeira gravação o mudar de casa.
-    """
-    documento = MaquinaConfig.model_validate(_a_maquina_dela())
+
+def _migrada() -> MaquinaConfig:
+    return MaquinaConfig.model_validate(migrar_o_documento(_a_maquina_dela()))
+
+
+def test_o_rotulo_pergunta_ao_dono_e_o_nome_mora_na_posicao() -> None:
+    """A 1 é «Meio» e a 2 é «Entrada 2»: o «Meio» veio para a posição, e o
+    número que o Mapear gravava como nome não é nome — nem o que ficou na
+    posição."""
+    documento = _migrada()
+    assert documento.mapa.portas["1"].nome == "Meio"
     assert ee.rotulo_do_numero("1", maquina=documento) == "Meio"
     assert ee.rotulo_do_numero("2", maquina=documento) == "Entrada 2"
     assert ee.rotulo_do_numero("15", maquina=documento) == "Entrada 15"
@@ -129,50 +146,60 @@ def test_o_rotulo_pergunta_ao_dono_e_a_reserva_le_o_lugar() -> None:
     assert list(rotulos) == [str(n) for n in range(1, 16)], "a ordem é a do desenho"
     assert not any(r["rotulo"].isdigit() for r in rotulos.values()), rotulos
 
+    com_o_numero = documento.model_copy(deep=True)
+    com_o_numero.mapa.portas["2"].nome = "2"
+    assert ee.nome_da_entrada("2", maquina=com_o_numero) is None
+    assert ee.rotulo_do_numero("2", maquina=com_o_numero) == "Entrada 2"
 
-def test_a_primeira_gravacao_muda_o_nome_de_casa(disco: Path) -> None:
-    """Uma gravação que já acontece (a velocidade da 4) leva o «Meio» para a
-    posição, apaga o «2»… «15» dos lugares, e deixa os órfãos e o adaptador.
 
-    Os rótulos antes e depois são IGUAIS: a mudança não se vê na tela.
-    """
-    antes = carregar_maquina()
-    rotulos_antes = ee.rotulos_das_entradas(antes)
-    assert ee.declarar_a_velocidade("4", 3).gravou
-
+def test_a_primeira_leitura_muda_o_nome_de_casa(disco: Path) -> None:
+    """A primeira leitura leva o «Meio» para a posição, cada lugar para a
+    entrada dele, e tira o «2»… «15» e os nomes dos lugares sem entrada; o
+    adaptador fica. Uma gravação depois não muda nada do que a leitura fez."""
     depois = carregar_maquina()
+    assert "lugares" not in json.loads(disco.read_text(encoding="utf-8"))
     assert depois.mapa.portas["1"].nome == "Meio"
-    assert depois.mapa.portas["4"].usb == 3, "a declaração explícita também foi"
     for numero, (pci, devpath, _caminho, _nos) in _ENTRADAS.items():
-        dele = depois.lugares[lugar_de(pci, devpath)]
-        assert dele.nome is None, f"o nome da entrada {numero} ficou no lugar: {dele.nome!r}"
-        assert dele.entrada == numero, "mudar o nome de casa mexeu na amarra"
+        assert depois.mapa.portas[numero].lugar == lugar_de(pci, devpath), numero
         if numero != "1":
             assert depois.mapa.portas[numero].nome is None, (
                 f"o «{numero}» virou nome da entrada {numero}")
-    for lugar, nome in _ORFAOS.items():
-        assert depois.lugares[lugar].nome == nome, "o lugar sem número foi tocado"
+    texto = disco.read_text(encoding="utf-8")
+    assert not any(f'"{nome}"' in texto for nome in _ORFAOS.values()), texto
     assert depois.adaptadores["aabbcc00001a"].nome == "Rádio da mesa"
-    assert ee.rotulos_das_entradas(depois) == rotulos_antes
 
-    assert ee._o_nome_que_sai_do_lugar(depois, {}) == {}, "a mudança não é idempotente"
     bytes_depois = disco.read_bytes()
     assert ee.declarar_a_velocidade("4", 3).gravou
-    assert json.loads(disco.read_bytes()) == json.loads(bytes_depois)
+    assert carregar_maquina().mapa.portas["4"].usb == 3
+    agora = json.loads(disco.read_bytes())
+    agora["mapa"]["portas"]["4"].pop("usb")
+    # a gravação escreve a forma do esquema (os padrões, como o ``alto`` das
+    # faces); a migração só leva o que mudou de casa
+    assert MaquinaConfig.model_validate(agora) == MaquinaConfig.model_validate(
+        json.loads(bytes_depois))
 
 
-def test_o_nome_de_mais_de_24_fica_no_lugar_e_a_reserva_o_le(disco: Path) -> None:
-    """O nome comprido demais não cabe na posição: não muda de casa, e a tela
-    continua o dizendo pela reserva."""
+def test_o_nome_de_mais_de_24_nao_se_perde_e_o_nome_dela_destrava(tmp_path: Path) -> None:
+    """O nome comprido demais não cabe na posição: aquele lugar fica no arquivo
+    como estava, a tela diz «Entrada 5», e o nome que ela der à posição
+    destrava a migração dele."""
     comprido = "A de trás, perto do cabo de rede"
     assert len(comprido) > 24
     lugar_5 = lugar_de(PCI_B, "3")
-    assert declarar_a_maquina({"lugares": {lugar_5: {"nome": comprido}}}).gravou
-    assert ee.declarar_a_velocidade("4", 2).gravou
+    documento = _a_maquina_dela()
+    documento["lugares"][lugar_5]["nome"] = comprido
+    disco = gravar_o_arquivo_de_antes(tmp_path, documento)
+
     depois = carregar_maquina()
-    assert depois.lugares[lugar_5].nome == comprido
-    assert depois.mapa.portas["5"].nome is None
-    assert ee.rotulo_do_numero("5", maquina=depois) == comprido
+    assert json.loads(disco.read_text(encoding="utf-8"))["lugares"][lugar_5]["nome"] == comprido
+    assert depois.mapa.portas["5"].nome is None and depois.mapa.portas["5"].lugar is None
+    assert ee.rotulo_do_numero("5", maquina=depois) == "Entrada 5"
+
+    assert ee.dar_nome_a_entrada("5", "Trás").gravou
+    destravada = carregar_maquina()
+    assert "lugares" not in json.loads(disco.read_text(encoding="utf-8"))
+    assert destravada.mapa.portas["5"].lugar == lugar_5
+    assert ee.rotulo_do_numero("5", maquina=destravada) == "Trás"
 
 
 def test_o_nome_grava_apaga_e_recusa_o_comprido(disco: Path) -> None:
@@ -182,7 +209,7 @@ def test_o_nome_grava_apaga_e_recusa_o_comprido(disco: Path) -> None:
     documento = carregar_maquina()
     assert documento.mapa.portas["3"].nome == "Hub da mesa"
     assert ee.rotulo_do_numero("3", maquina=documento) == "Hub da mesa"
-    assert documento.lugares[lugar_de(PCI_B, "1")].nome is None
+    assert documento.mapa.portas["3"].lugar == lugar_de(PCI_B, "1"), "o nome mexeu no lugar"
 
     assert ee.dar_nome_a_entrada("3", "Entrada 3").gravou
     assert ee.rotulo_do_numero("3", maquina=carregar_maquina()) == "Entrada 3"
@@ -202,9 +229,13 @@ def test_o_nome_grava_apaga_e_recusa_o_comprido(disco: Path) -> None:
 
 
 def test_o_mapear_grava_o_nome_na_posicao_e_o_no_mora_numa_entrada_so(disco: Path) -> None:
-    """O Mapear com número grava ``portas[N].nome``; e quando o caminho sai de
+    """O Mapear com número grava ``portas[N].nome``; e quando o buraco sai de
     outra entrada, os nós dela saem junto (o nó velho punha o mesmo aparelho em
-    duas entradas)."""
+    duas entradas).
+
+    O segundo gesto é o de uma entrada desenhada à mão (a 7, sem lugar, com o
+    nó ``usb1-port5``) e de outra que o Mapear já amarrou àquele lugar (a 2):
+    o Mapear grava a 2 e a 7 fica vazia."""
     documento = carregar_maquina()
     vista = ee.PortaVista(lugar=lugar_de(PCI_A, "4"), caminho="1-4")
     feita = ee._gravar_as_portas(
@@ -217,10 +248,16 @@ def test_o_mapear_grava_o_nome_na_posicao_e_o_no_mora_numa_entrada_so(disco: Pat
     assert feita.gravou and feita.entrada == "1"
     depois = carregar_maquina()
     assert depois.mapa.portas["1"].nome == "Frente de baixo"
-    assert depois.lugares[lugar_de(PCI_A, "4")].nome is None
+    assert depois.mapa.portas["1"].lugar == lugar_de(PCI_A, "4")
 
-    # a 2 passa a ser o buraco que era da 7: a 7 perde o caminho E os nós
-    vista = ee.PortaVista(lugar=lugar_de(PCI_A, "3"), caminho="1-5")
+    # a 2 passa a ser o buraco que era da 7: a 7 perde os nós
+    assert declarar_a_maquina({"mapa": {"portas": {
+        "2": {"lugar": lugar_de(PCI_A, "5"), "nos": []},
+        "7": {"lugar": None},
+    }}}).gravou
+    depois = carregar_maquina()
+    assert depois.mapa.portas["7"].nos == ["usb1-port5"] and depois.mapa.portas["7"].lugar is None
+    vista = ee.PortaVista(lugar=lugar_de(PCI_A, "5"), caminho="1-5")
     assert ee._gravar_as_portas(
         [(vista, ("usb1-port5",))],
         ee.FACE_FRENTE,
@@ -279,7 +316,7 @@ def test_o_numero_de_outra_entrada_tambem_nao_e_nome() -> None:
     A MORDIDA: devolva ao ``nome_que_vale`` só a comparação com o próprio
     número — as quatro reprovam com «3», «8» e «7».
     """
-    documento = MaquinaConfig.model_validate(_com_o_mapa_trocado_por_fora())
+    documento = MaquinaConfig.model_validate(migrar_o_documento(_com_o_mapa_trocado_por_fora()))
     controladores = {1: PCI_A, 3: PCI_B, 4: PCI_B}
     hub, mouse = lugar_de(PCI_B, "1"), lugar_de(PCI_A, "5")
     assert ee.nome_da_porta("3-1", maquina=documento, controladores=controladores) == (
@@ -291,8 +328,8 @@ def test_o_numero_de_outra_entrada_tambem_nao_e_nome() -> None:
     assert ee.nome_do_lugar(mouse, maquina=documento, controladores=controladores) == (
         "Entrada 8")
     # o «Já mapeadas» e o «O que o Hefesto mediu» leem o nome por aqui
-    assert ee._nome_declarado(documento, hub, "4", controladores) is None
-    assert ee._nome_declarado(documento, lugar_de(PCI_A, "6"), "7", controladores) is None
+    assert ee.nome_da_entrada("4", maquina=documento) is None
+    assert ee.nome_da_entrada("7", maquina=documento) is None
     # e o nome de verdade continua valendo, mesmo curto ou com número dentro
     assert ee.rotulo_do_numero("1", maquina=documento) == "Meio"
     for nome in ("Meio", "USB 3", "3ª de cima", "Hub 2"):

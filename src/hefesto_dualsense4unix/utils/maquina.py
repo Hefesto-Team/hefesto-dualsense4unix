@@ -1184,25 +1184,31 @@ def migrar_o_documento(bruto: Mapping[str, Any]) -> dict[str, Any]:
     Leva o que morava em ``lugares`` para dentro do ``mapa``, e o ``caminho``
     de cada entrada para os ``nos``:
 
-    1. A AMARRA: ``lugares[L].entrada = N`` vira ``mapa.portas[N].lugar = L``
-       quando o ``mapa`` concorda com ela — as conferências que a leitura fazia
-       a cada pergunta, feitas uma vez: a entrada está no desenho, nenhum outro
-       lugar diz ser ela, e o caminho dela é o da testemunha
-       (``lugares[L].caminho``). A testemunha que o ``mapa`` pôs noutra
-       entrada (o buraco andou sem a amarra, como na troca feita fora do
-       produto em 26/09) leva a amarra para ELA, que é o que o reparo à mão
-       fez. Sem testemunha, a amarra vale quando a cadeia de portas do caminho
-       é a do lugar.
-    2. O NOME de verdade vai para ``portas[N].nome``, se a posição ainda não
-       tem nome próprio (o nome é da posição, D-2609-O-NOME-E-DA-POSICAO). O
-       número usado como nome (``nome_que_vale`` = ``None``) não vai. Um nome
-       de mais de 24 caracteres BLOQUEIA a migração daquele lugar, que fica em
-       ``lugares`` como estava, e o log diz qual entrada: nada se trunca
-       calado.
-    3. O «NÃO ALCANÇO» (``fora``) vai para ``mapa.fora``.
-    4. O NOME DE UM LUGAR SEM ENTRADA sai: é o nome que o adaptador herdava da
-       porta (a D3, revogada em 26/09), e o dele mora em ``adaptadores``.
-    5. O ``caminho`` de cada entrada vira o nó do buraco
+    1. A AMARRA QUE VALE: ``lugares[L].entrada = N`` vira
+       ``mapa.portas[N].lugar = L`` quando o ``mapa`` concorda com ela — as
+       conferências que a leitura sem controladores fazia a cada pergunta
+       (``entrada_do_lugar`` até 28/09), feitas uma vez: a entrada está no
+       desenho, nenhum outro lugar diz ser ela, e a entrada não tem caminho ou
+       tem o da testemunha (``lugares[L].caminho``). Sem testemunha e com
+       caminho, "não sei": a cadeia de portas sozinha confunde duas
+       portas-raiz de mesmo número em controladores diferentes
+       (ENTRADA-A-ENTRADA-02), e o Mapear reaprende o lugar.
+    2. A AMARRA QUE ANDOU: a testemunha que o ``mapa`` pôs noutra entrada (o
+       buraco andou sem a amarra, como na troca feita fora do produto em
+       26/09) leva a amarra para ELA, que é o que o reparo à mão fez.
+    3. O NOME de verdade da amarra que vale vai para ``portas[N].nome``, se a
+       posição ainda não tem nome próprio (o nome é da posição,
+       D-2609-O-NOME-E-DA-POSICAO) — a mesma relação que a reserva da leitura
+       usava, então a tela não muda. O número usado como nome
+       (``nome_que_vale`` = ``None``) não vai. Um nome de mais de 24
+       caracteres BLOQUEIA a migração daquele lugar, que fica em ``lugares``
+       como estava, e o log diz qual entrada: nada se trunca calado.
+    4. O «NÃO ALCANÇO» (``fora``) vai para ``mapa.fora``.
+    5. O NOME DE UM LUGAR SEM ENTRADA QUE VALHA sai, e o log diz quais: é o
+       nome que o adaptador herdava da porta (a D3, revogada em 26/09; o dele
+       mora em ``adaptadores``), ou o de uma amarra caducada, que a tela já não
+       mostrava. A cópia de antes (``.com-os-lugares``) os guarda.
+    6. O ``caminho`` de cada entrada vira o nó do buraco
        (``utils/lugar.no_do_caminho``) e sai: ele se calcula na leitura.
 
     Sem ``lugares`` e sem ``caminho``, devolve uma cópia igual.
@@ -1223,7 +1229,7 @@ def migrar_o_documento(bruto: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _levar_os_lugares(documento: dict[str, Any], lugares: Mapping[Any, Any]) -> dict[str, Any]:
-    """Os passos 1 a 4 de :func:`migrar_o_documento`. Devolve os bloqueados."""
+    """Os passos 1 a 5 de :func:`migrar_o_documento`. Devolve os bloqueados."""
     mapa = documento.get("mapa")
     if not isinstance(mapa, dict):
         mapa = {}
@@ -1263,54 +1269,46 @@ def _levar_os_lugares(documento: dict[str, Any], lugares: Mapping[Any, Any]) -> 
     bloqueados: dict[str, Any] = {}
     fora = [x for x in mapa.get("fora") or [] if isinstance(x, str)] if isinstance(
         mapa.get("fora"), list) else []
-    nomes: dict[str, list[str]] = {}
+    nomes: dict[str, str] = {}
     em_casa: dict[str, str] = {}
     andaram: list[tuple[str, str]] = []
-    sem_entrada = 0
+    sem_entrada: list[str] = []
     for lugar, dele in dos_lugares.items():
         partes = partes_do_lugar(lugar)
         de_entrada = partes is not None and bool(partes[1])
         entrada = dele.get("entrada") if isinstance(dele.get("entrada"), str) else None
         nome = dele.get("nome") if isinstance(dele.get("nome"), str) else None
-        if not entrada:
-            if nome and nome.strip():
-                sem_entrada += 1
-            if dele.get("fora") is True and de_entrada and lugar not in fora:
-                fora.append(lugar)
-            continue
-        vale = nome_que_vale(entrada, nome)
-        if (
-            vale is not None
-            and len(vale) > MAXIMO_DO_NOME_DA_ENTRADA
-            and entrada in no_desenho
-            and nome_proprio(entrada) is None
-        ):
-            logger.warning(
-                "maquina_migracao_bloqueada_nome_comprido",
-                entrada=entrada,
-                caracteres=len(vale),
-                teto=MAXIMO_DO_NOME_DA_ENTRADA,
-            )
-            bloqueados[lugar] = _copia_funda(dict(dele))
-            continue
         if dele.get("fora") is True and de_entrada and lugar not in fora:
             fora.append(lugar)
-        if vale is not None and entrada in no_desenho:
-            nomes.setdefault(entrada, []).append(vale)
-        if not de_entrada:
+        if not entrada or not de_entrada:
+            if nome and nome.strip():
+                sem_entrada.append(nome.strip())
             continue
+        vale = nome_que_vale(entrada, nome)
         testemunha = dele.get("caminho") if isinstance(dele.get("caminho"), str) else None
         caminho = caminho_de(entrada)
-        so_ela = len(pretendentes.get(entrada, ())) == 1
-        if entrada in no_desenho and so_ela and (
-            caminho is None
-            or caminho == testemunha
-            or (testemunha is None and partes is not None
-                and caminho.partition("-")[2] == partes[1])
+        if not (
+            entrada in no_desenho
+            and len(pretendentes.get(entrada, ())) == 1
+            and (caminho is None or caminho == testemunha)
         ):
-            em_casa[entrada] = lugar
-        elif testemunha:
-            andaram.append((lugar, testemunha))
+            if vale is not None:
+                sem_entrada.append(vale)
+            if testemunha:
+                andaram.append((lugar, testemunha))
+            continue
+        if vale is not None and nome_proprio(entrada) is None:
+            if len(vale) > MAXIMO_DO_NOME_DA_ENTRADA:
+                logger.warning(
+                    "maquina_migracao_bloqueada_nome_comprido",
+                    entrada=entrada,
+                    caracteres=len(vale),
+                    teto=MAXIMO_DO_NOME_DA_ENTRADA,
+                )
+                bloqueados[lugar] = _copia_funda(dict(dele))
+                continue
+            nomes[entrada] = vale
+        em_casa[entrada] = lugar
 
     amarras: dict[str, list[str]] = {entrada: [lugar] for entrada, lugar in em_casa.items()}
     for lugar, testemunha in andaram:
@@ -1323,14 +1321,9 @@ def _levar_os_lugares(documento: dict[str, Any], lugares: Mapping[Any, Any]) -> 
         if len(dele_lugares) == 1 and isinstance(portas.setdefault(numero, {}), dict):
             portas[numero]["lugar"] = dele_lugares[0]
             mexeu = True
-    for numero, vales in nomes.items():
-        distintos = list(dict.fromkeys(vales))
-        if (
-            len(distintos) == 1
-            and nome_proprio(numero) is None
-            and isinstance(portas.setdefault(numero, {}), dict)
-        ):
-            portas[numero]["nome"] = distintos[0]
+    for numero, vale in nomes.items():
+        if isinstance(portas.setdefault(numero, {}), dict):
+            portas[numero]["nome"] = vale
             mexeu = True
     if fora:
         mapa["fora"] = fora
@@ -1339,7 +1332,11 @@ def _levar_os_lugares(documento: dict[str, Any], lugares: Mapping[Any, Any]) -> 
         mapa["portas"] = portas
         documento["mapa"] = mapa
     if sem_entrada:
-        logger.info("maquina_migracao_tirou_o_nome_de_lugar_sem_entrada", quantos=sem_entrada)
+        logger.info(
+            "maquina_migracao_tirou_o_nome_de_lugar_sem_entrada",
+            quantos=len(sem_entrada),
+            nomes=sorted(set(sem_entrada)),
+        )
     return bloqueados
 
 

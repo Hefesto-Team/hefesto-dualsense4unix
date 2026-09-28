@@ -529,7 +529,11 @@ def _a_placa_que_erra() -> dict[str, Any]:
     e ela diz 3.0. A 7 ganha o lado do ``usb2`` (a placa diz 3.0), e ela diz
     2.0; a 8 também ganha, e ela não diz nada. A 5 tem um aparelho a 5 Gbps
     no lado rápido, e ela diz 2.0: vence o aparelho.
+
+    A máquina de 15 entradas é a de antes da A-ENTRADA-TEM-UM-REGISTRO-SO-01,
+    com ``lugares``; aqui ela vai migrada (``utils/maquina.migrar_o_documento``).
     """
+    from hefesto_dualsense4unix.utils.maquina import migrar_o_documento
     from tests.unit.test_o_nome_da_entrada_e_da_posicao import _a_maquina_dela
 
     dado = _a_maquina_dela()
@@ -538,7 +542,7 @@ def _a_placa_que_erra() -> dict[str, Any]:
     portas["8"]["nos"] = ["usb1-port6", "usb2-port2"]
     for numero, usb in (("1", 3), ("2", 3), ("5", 2), ("7", 2)):
         portas[numero]["usb"] = usb
-    return dado
+    return migrar_o_documento(dado)
 
 
 def _o_censo_da_placa_que_erra() -> Censo:
