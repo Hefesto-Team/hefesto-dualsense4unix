@@ -3515,7 +3515,7 @@ def sala_altura(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"O dongle fica acima da cabeça de quem joga sentado?" — grava a resposta.
 
     É uma das duas coisas que barramento nenhum responde, e por isso ela é
-    DECLARADA: `MesaDeclarada.altura_da_antena` (`utils/maquina.py:306`), que só
+    DECLARADA: `MesaDeclarada.altura_da_antena` (`utils/maquina.py:302`), que só
     aceita `"acima"`, `"abaixo"` ou `None`.
 
     QUEM CONSOME: `exame_da_mesa.vizinhanca_das_portas` recebe
