@@ -2706,7 +2706,13 @@ class UhidDualSense:
             os.fstat(fd)
         except (OSError, TypeError, ValueError):
             return
-        leitura, escrita = os.pipe()
+        try:
+            leitura, escrita = os.pipe()
+        except OSError as exc:
+            # Sem descritor livre para o despertador: o virtual nasce assim
+            # mesmo, e o tique drena como antes.
+            logger.warning("uhid_fio_sem_despertador", err=str(exc), player=self.player)
+            return
         os.set_blocking(leitura, False)
         os.set_blocking(escrita, False)
         self._despertador = (leitura, escrita)
