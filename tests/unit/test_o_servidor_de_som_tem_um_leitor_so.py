@@ -1112,3 +1112,202 @@ def test_o_ouvinte_para_quando_mandam_mesmo_com_o_servidor_caido(
             await _parar(tarefa)
 
     _correr(cenario)
+
+
+# ---------------------------------------------------------------------------
+# A conferência de 28/09/2026 — o que as réguas de cima não mordiam
+# ---------------------------------------------------------------------------
+
+
+def test_o_padrao_nao_segura_o_laco_do_daemon(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A consulta ao retrato que RELÊ o servidor roda fora do laço do daemon.
+
+    Uma escrita deixou o `server` pendente: o padrão publicado relê o
+    servidor antes de responder, com `subprocess.run`. No laço, esse `pactl`
+    pararia o daemon inteiro pelo tempo dele — a leitura de antes da cura era
+    assíncrona justamente por isso.
+
+    MORDIDA: devolva o corpo de `ler_o_padrao` ao laço (sem o `to_thread`) e o
+    laço fica parado enquanto o retrato relê.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
+
+    r, _lidas = _retrato_de_mentira(_respostas())
+    assert r.carregar()
+    r.assumir()
+    rapido = r._ler_injetado
+    assert rapido is not None
+
+    def devagar(argv: Any) -> str | None:
+        time.sleep(0.3)
+        return rapido(argv)
+
+    r._ler_injetado = devagar
+    r.escreveu(["pactl", "set-default-sink", HDMI])
+    monkeypatch.setattr(rs, "RETRATO", r)
+
+    async def cenario() -> None:
+        voltas = [0]
+
+        async def girar() -> None:
+            while True:
+                voltas[0] += 1
+                await asyncio.sleep(0.01)
+
+        giro = asyncio.create_task(girar())
+        try:
+            await asyncio.sleep(0.03)
+            antes = voltas[0]
+            som = await ods.ler_o_padrao()
+            durante = voltas[0] - antes
+        finally:
+            giro.cancel()
+            await asyncio.gather(giro, return_exceptions=True)
+        assert som.saida == HDMI
+        assert durante >= 10, (
+            f"o laço do daemon deu {durante} voltas enquanto o retrato relia o servidor")
+
+    _correr(cenario)
+
+
+def test_a_rajada_que_acabou_nao_fica_guardada(servidor: Servidor) -> None:
+    """Cada rajada é uma tarefa; a que acabou sai da lista da volta.
+
+    Sem a poda, toda rajada ficava guardada até o `subscribe` cair — e ele não
+    cai numa sessão boa. Um jogo que mexe nos fluxos dá uma rajada por
+    segundo: dezenas de milhares por noite, no processo que fica de pé o dia
+    inteiro.
+
+    MORDIDA: tire a poda e a conta vira trinta.
+    """
+    import gc
+
+    from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
+
+    def rajadas_guardadas() -> int:
+        gc.collect()
+        return sum(1 for o in gc.get_objects()
+                   if isinstance(o, asyncio.Task) and o.done()
+                   and getattr(o.get_coro(), "__name__", "") == "descarregar")
+
+    async def cenario() -> None:
+        tarefa = asyncio.create_task(ods.ouvinte_do_som_loop(_Daemon()))
+        try:
+            await _ate(lambda: rs.RETRATO.vivo, "o retrato vivo")
+            await servidor.abrir_os_eventos()
+            servidor.zerar()
+            for i in range(30):
+                servidor.evento("Event 'change' on sink-input #901")
+                await _ate(lambda i=i: servidor.chamadas().count("list sink-inputs") == i + 1,
+                           "a rajada reler os fluxos")
+                await asyncio.sleep(ods.RAJADA_S * 2)
+            guardadas = rajadas_guardadas()
+            assert guardadas <= 1, f"{guardadas} rajadas que acabaram continuam guardadas"
+        finally:
+            await _parar(tarefa)
+
+    _correr(cenario)
+
+
+def test_o_evento_nao_encurta_o_prazo_de_quem_sai_do_ar(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O selo acompanha o evento; o «saiu do ar» segue o relógio de sempre.
+
+    `MicrofonesNoAr.LEITURAS_SEM_CANAL_ATE_SAIR` conta LEITURAS, e o tempo
+    delas vinha do laço, que dormia `CANAL_TTL_S`: duas faltas eram dois a
+    quatro segundos. Acordado pelo evento, o laço dá voltas em milissegundos —
+    a ponte do rádio que refaz o nó (a fonte sai, o monitor do alto-falante
+    sai, a fonte volta) contaria as duas faltas num piscar e tiraria do ar um
+    microfone que ela ligou, sem gesto nenhum.
+
+    E a volta pelo evento que pulou a conferência não a empurra um prazo
+    inteiro para a frente: a seguinte sai na hora devida.
+
+    MORDIDAS: devolva o `_conferir_quem_saiu_do_ar` direto ao laço e as cinco
+    voltas pelo evento conferem cinco vezes; tire o teto do prazo em
+    `_esperar_o_som_mudar` e a segunda conferência atrasa o que o último
+    evento atrasou.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import hotkey
+
+    voltas: list[str] = []
+    conferencias: list[float] = []
+
+    async def ler(_daemon: Any, uniq: str) -> dict[str, Any]:
+        voltas.append(uniq)
+        return {"fonte": None}
+
+    async def conferir(_daemon: Any, _uniqs: list[str]) -> list[str]:
+        conferencias.append(asyncio.get_running_loop().time())
+        return []
+
+    monkeypatch.setattr(hotkey, "_uniqs_conectados", lambda _d: [UNIQS[0]])
+    monkeypatch.setattr(hotkey, "_ler_o_canal_deste", ler)
+    monkeypatch.setattr(hotkey, "_conferir_quem_saiu_do_ar", conferir)
+    monkeypatch.setattr(hotkey, "_CANAL_POR_UNIQ", {})
+    monkeypatch.setattr(hotkey, "CANAL_TTL_S", 0.6)
+    monkeypatch.setattr(hotkey, "_MARCA_DO_CANAL", [None])
+
+    class _D:
+        parar = False
+
+        def _is_stopping(self) -> bool:
+            return self.parar
+
+    async def cenario() -> None:
+        daemon = _D()
+        tarefa = asyncio.create_task(hotkey.canal_do_microfone_loop(daemon))  # type: ignore[arg-type]
+        try:
+            await asyncio.sleep(0.02)
+            for n in range(1, 6):
+                rs.RETRATO._avisar({"sources"})
+                await _ate(lambda n=n: len(voltas) >= n, "a volta pelo evento", prazo=1.0)
+            assert len(voltas) == 5
+            assert len(conferencias) == 1, (
+                f"cinco voltas pelo evento conferiram {len(conferencias)} vezes quem saiu do ar")
+            # Um evento perto da hora devida: a volta dele pula a conferência,
+            # e a seguinte não pode esperar um prazo inteiro a partir dele.
+            laco = asyncio.get_running_loop()
+            await asyncio.sleep(max(0.0, conferencias[0] + 0.45 - laco.time()))
+            rs.RETRATO._avisar({"sources"})
+            await _ate(lambda: len(voltas) >= 6, "a volta pelo evento", prazo=1.0)
+            await _ate(lambda: len(conferencias) >= 2, "a conferência no prazo", prazo=2.0)
+            intervalo = conferencias[1] - conferencias[0]
+            assert 0.6 - 0.02 <= intervalo < 0.9, (
+                f"a segunda conferência saiu {intervalo:.2f} s depois da primeira, "
+                "e o prazo é 0,6 s")
+        finally:
+            daemon.parar = True
+            rs.RETRATO._avisar({"sources"})
+            await asyncio.wait_for(tarefa, 2.0)
+
+    _correr(cenario)
+
+
+def test_o_numero_do_cliente_no_info_nao_e_mudanca(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O `Client Index` do `pactl info` é o do PRÓPRIO `pactl` que perguntou.
+
+    Ele muda a cada pergunta, e contá-lo como mudança faria toda releitura do
+    servidor acordar o canal do microfone dos quatro controles — o servidor
+    de mentira de cima não o muda, e por isso não via.
+
+    MORDIDA: compare o `info` inteiro em `_reler_um`.
+    """
+    respostas = _respostas()
+    contador = [1]
+    base = respostas[("pactl", "info")]
+    assert base is not None and "Client Index: 1" in base
+
+    def ler(argv: Any) -> str | None:
+        if tuple(argv) == ("pactl", "info"):
+            contador[0] += 1
+            return base.replace("Client Index: 1", f"Client Index: {contador[0]}")
+        return respostas.get(tuple(argv))
+
+    r = rs.RetratoDoSom(ler=ler)
+    assert r.carregar()
+    r.assumir()
+    marca = r.marca(("server",))
+    assert r.reler({"server"}) == frozenset()
+    assert r.marca(("server",)) == marca, "o número do cliente acordou quem espera"
