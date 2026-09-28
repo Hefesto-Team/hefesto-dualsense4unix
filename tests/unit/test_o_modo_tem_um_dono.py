@@ -514,6 +514,53 @@ def test_sem_perfil_que_opine_o_boot_e_o_de_sempre(
     assert gp.caminho_da_sessao(daemon) is None
 
 
+def test_a_sessao_de_janela_nao_empresta_o_modo_ao_boot(
+    _lar_do_boot: list[Any],
+) -> None:
+    """O marker aponta um perfil de janela; o `session.json`, outro perfil em Xbox.
+
+    O restore pula o de janela e vai direto ao Freestyle (RESTORE-ESCOPO-01 e
+    O-MODO-FREESTYLE-03) — nunca tenta o `session.json`. O boot tem de ler o
+    mesmo perfil que o restore ativa: o pad nasce no modo do Freestyle (sem
+    opinião: DualSense), e não no Xbox de um perfil que ninguém ativou.
+
+    MORDE: faça o boot tentar o `session.json` depois do perfil de janela (a
+    lista de candidatos de antes da conferência de 28/09) — o P1 nasce Xbox com
+    a tela dizendo «Freestyle».
+    """
+    from hefesto_dualsense4unix.profiles.schema import MatchCriteria
+
+    loader.save_profile(Profile(name=loader.NOME_DO_PADRAO, match=MatchAny()), origem="teste")
+    loader.save_profile(
+        Profile(
+            name="Jogo de janela",
+            match=MatchCriteria(window_class=["jogo-de-janela"]),
+            mode=ProfileModeConfig(kind="gamepad", caminho="xbox"),
+        ),
+        origem="teste",
+    )
+    loader.save_profile(
+        Profile(
+            name="Outro",
+            match=MatchAny(),
+            mode=ProfileModeConfig(kind="gamepad", caminho="xbox"),
+        ),
+        origem="teste",
+    )
+    session.save_last_profile("Outro")
+    session.save_active_marker("Jogo de janela")
+    assert session.resolve_boot_profile() == "Jogo de janela", "premissa: o marker vence"
+
+    with structlog.testing.capture_logs() as diario:
+        daemon = asyncio.run(_o_boot(com_foco=False))
+
+    partidas = [r.get("caminho") for r in diario if r["event"] == "gamepad_emulation_started"]
+    assert partidas == ["dualsense"], (
+        f"o boot vestiu o modo de um perfil que o restore não ativou: {partidas}"
+    )
+    assert gp.caminho_da_sessao(daemon) is None
+
+
 # ---------------------------------------------------------------------------
 # Item 2 — o perfil que entra aplica o modo E a máscara, na mesma ativação
 # ---------------------------------------------------------------------------

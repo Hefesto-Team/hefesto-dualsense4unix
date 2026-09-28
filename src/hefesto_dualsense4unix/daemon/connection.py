@@ -669,7 +669,10 @@ def perfil_que_o_boot_restaura() -> Any | None:
 
     A mesma ordem do restore: a sessão (se não for de janela), o
     `session.json` quando o marker diverge, e o perfil de fora do jogo.
-    Nunca levanta: sem perfil legível, ``None`` e o boot de sempre.
+    Com a sessão num perfil de janela, o restore vai direto ao de fora do jogo
+    e NÃO tenta o `session.json` (conferência de 28/09: tentá-lo aqui punha o
+    pad no modo de um perfil que o restore não ativa, com a tela dizendo o
+    outro). Nunca levanta: sem perfil legível, ``None`` e o boot de sempre.
     """
     try:
         from hefesto_dualsense4unix.profiles.loader import (
@@ -681,7 +684,11 @@ def perfil_que_o_boot_restaura() -> Any | None:
             resolve_boot_profile,
         )
 
-        candidatos = [resolve_boot_profile(), load_last_profile(), o_perfil_de_fora_do_jogo()]
+        sessao = resolve_boot_profile()
+        candidatos: list[str | None] = []
+        if sessao and not _perfil_escopado_a_janela(sessao):
+            candidatos = [sessao, load_last_profile()]
+        candidatos.append(o_perfil_de_fora_do_jogo())
     except Exception:
         return None
     vistos: set[str] = set()
