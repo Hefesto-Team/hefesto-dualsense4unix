@@ -1516,6 +1516,7 @@ def _linha_dos_endpoints(s: Sessao, mesa: Sequence[Mapping[str, Any]]) -> None:
     rc, texto = s.rodar_ensaio("os_endpoints_de_haptica.py", "--json", teto_s=60.0)
     dado = _json_do_ensaio(texto)
     endpoints = _lista(_dict(dado).get("endpoints")) if isinstance(dado, Mapping) else []
+    nome_do_endpoint: Callable[[str], str] | None
     try:
         from hefesto_dualsense4unix.integrations.endpoint_de_haptica import nome_do_endpoint
     except Exception:
@@ -2718,6 +2719,7 @@ def sub_som(s: Sessao, a: argparse.Namespace) -> None:
     dado = _json_do_ensaio(texto)
     nos = _por_chave(_lista(dado), "mac") if isinstance(dado, list) else {}
     ouvidos = [n[0].get("fonte_fisica") for n in nos.values() if len(n) == 1 and n[0].get("fonte_fisica")]
+    nome_do_sink: Callable[[str], str] | None
     try:
         from hefesto_dualsense4unix.integrations.alto_falante_bt import nome_do_sink
     except Exception:
@@ -2728,7 +2730,7 @@ def sub_som(s: Sessao, a: argparse.Namespace) -> None:
         wav = _tom_em_wav(s.privada / f"tom-{jogador}.wav", frequencia)
         no = (nos.get(chave_mascarada(c.get("uniq")) or "") or [{}])[0]
         if c.get("transport") == "bt":
-            sink = nome_do_sink(str(c.get("uniq") or "")) if nome_do_sink else ""
+            sink = nome_do_sink(str(c.get("uniq") or "")) if nome_do_sink is not None else ""
             linha = "4a, o alto-falante no rádio"
         else:
             sink = str(no.get("sink_fisico") or "")
