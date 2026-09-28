@@ -23,6 +23,15 @@ bash scripts/rodar-a-suite.sh
 
 Se a mudança toca o serviço, rode `./run.sh --smoke`, que sobe o serviço por alguns segundos com um controle simulado no cabo (`./run.sh --smoke --bt` simula o Bluetooth). Se toca a janela, anexe um print de antes e de depois.
 
+## O que já se mediu
+
+Antes de mexer num tema, leia o que já se mediu sobre ele em `docs/research/`.
+O registro de 27 e 28/09/2026 está em
+[docs/research/2026-09-27-e-28/](../docs/research/2026-09-27-e-28/README.md):
+o modo e o pad virtual, o som, a háptica pelo rádio, as Conexões, o engasgo, o
+CI e a auditoria do produto. Cada documento diz o que se mediu, a causa, o que
+se decidiu e o que ficou aberto.
+
 ## Regras do projeto
 
 - Um teste tem de reprovar quando a correção que ele protege é arrancada. Antes de entregar, tire a correção, veja o teste falhar e devolva.
