@@ -47,14 +47,19 @@ import pytest
 from hefesto_dualsense4unix.integrations import bluez_dbus as bd
 from hefesto_dualsense4unix.integrations import central_do_radio as cr
 from hefesto_dualsense4unix.integrations import diario_do_radio
+from hefesto_dualsense4unix.integrations import gesto_de_pareamento as gp
 from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VARANDA, VERDE, VERMELHO
+from tests.unit.test_a_caixa_fica_onde_ela_abriu import CHIP, _cartao
 from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
+    Bancada,
     BuscaDePe,
     PonteQueVaiAoDaemon,
+    id_da_tela,
     mundo_da_madrugada,
     onde_buscou,
     onde_pareou,
+    preparar_a_tela,
     preparar_o_diario,
 )
 
@@ -71,6 +76,11 @@ FORA_DA_MAQUINA = "aa:bb:cc:00:00:d4"
 @pytest.fixture()
 def diario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return preparar_o_diario(tmp_path, monkeypatch)
+
+
+@pytest.fixture()
+def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
+    return preparar_a_tela(monkeypatch)
 
 
 class Mesa:
@@ -259,6 +269,100 @@ def test_o_ultimo_clique_dela_vence(
     assert onde_buscou(mesa.mundo) == [rm.HCIS[onde_busca], rm.HCIS[terceiro]]
 
 
+def test_o_chip_no_ultimo_instante_da_janela_ainda_leva_a_busca(
+    diario: Path, fechar: list[Any],
+) -> None:
+    """Ela clica o chip quando a janela de 30 s acaba: o pedido chegou antes
+    do fim, e o fim não vira «não chegou» — a busca vai para o chip, inteira.
+
+    MORDIDA: tire da saída do gesto (``_sair_do_gesto``) a pergunta pelo
+    pedido — a janela que acabou fecha «não chegou» no adaptador de antes.
+    """
+    mesa = Mesa(mundo_da_madrugada())
+    fechar.append(mesa.fechar)
+    busca = BuscaDePe(mesa.relogio)
+    fechar.append(busca.soltar)
+    antes = _o_conectar_no_gesto(mesa, busca, SALA)
+    mesa.relogio.agora = antes.comecou + gp.SEGUNDOS_DA_JANELA
+
+    assert mesa.chip(QUARTO)["status"] == "ok"
+    mesa.relogio.agendar(2.0, lambda: mesa.mundo.segurar_ps_create(VERDE))
+    busca.soltar()
+    (fim,) = mesa.esperar()
+    assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, QUARTO), fim
+    assert onde_buscou(mesa.mundo) == [rm.HCIS[SALA], rm.HCIS[QUARTO]]
+
+
+def test_o_controle_que_aparece_junto_com_o_chip_pareia_no_adaptador_do_chip(
+    diario: Path, fechar: list[Any],
+) -> None:
+    """O verde aparece na janela da sala no mesmo instante em que ela clica o
+    chip do quarto. O último que ela escolheu vence: nenhum ``Pair`` na sala, e
+    o verde chega no quarto.
+
+    MORDIDA: tire da saída do gesto (``_sair_do_gesto``) a pergunta pelo
+    pedido — o verde pareia na sala, que ela acabou de deixar.
+    """
+    mesa = Mesa(mundo_da_madrugada())
+    fechar.append(mesa.fechar)
+    busca = BuscaDePe(mesa.relogio)
+    fechar.append(busca.soltar)
+    _o_conectar_no_gesto(mesa, busca, SALA)
+
+    assert mesa.chip(QUARTO)["status"] == "ok"
+    mesa.mundo.segurar_ps_create(VERDE)
+    assert mesa.mundo.objeto(SALA, VERDE) is not None, "a janela da sala não o achou"
+    busca.soltar()
+    (fim,) = mesa.esperar()
+    assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, QUARTO), fim
+    assert onde_pareou(mesa.mundo) == [rm.HCIS[QUARTO]]
+
+
+class JanelaDePe:
+    """Uma janela que ainda está aberta — o que a espera do gesto deixa para trás
+    quando sai por um pedido, e não pelo fim."""
+
+    @property
+    def aberta(self) -> bool:
+        return True
+
+    def abrir_a_janela(self) -> str:
+        return ""
+
+    def candidatos(self) -> tuple[Any, ...]:
+        return ()
+
+    def parear(self, endereco: str) -> gp.Resultado:
+        raise AssertionError("esta régua não pareia")
+
+    def fechar(self) -> None:
+        return None
+
+
+def test_a_janela_que_um_pedido_desfeito_interrompeu_recomeca(
+    diario: Path, fechar: list[Any],
+) -> None:
+    """A espera do gesto sai porque ela pediu outro destino, e ela o desfaz no
+    mesmo instante (clicou de volta): a janela ainda estava de pé, e isso não é
+    «não chegou» — o movimento segue, e a janela recomeça onde estava. Acabada
+    a janela de verdade, aí sim.
+
+    MORDIDA: tire do ``_sem_gesto`` a pergunta pela janela — o clique de volta
+    fecha a busca «não chegou».
+    """
+    mesa = Mesa(mundo_da_madrugada())
+    fechar.append(mesa.fechar)
+    no_gesto = mesa.central._guardar(cr.Movimento(
+        cr.CONECTANDO, SALA, cr.ESPERANDO, cr.PASSO_GESTO, comecou=mesa.relogio()))
+    comeco = mesa.relogio()
+    assert mesa.central._sem_gesto(no_gesto, JanelaDePe(), comeco) is None
+    assert mesa.central.movimentos() == (no_gesto,)
+
+    mesa.relogio.agora = comeco + gp.SEGUNDOS_DA_JANELA
+    fim = mesa.central._sem_gesto(no_gesto, JanelaDePe(), comeco)
+    assert fim is not None and (fim.estado, fim.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_SEM_GESTO)
+
+
 def test_voltar_ao_chip_da_busca_desfaz_o_pedido(diario: Path, fechar: list[Any]) -> None:
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
@@ -305,6 +409,53 @@ def test_o_pedido_que_a_busca_nao_atendeu_nao_vale_para_a_proxima(
     fim = mesa.central.conectar(VARANDA)
     assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, VARANDA), fim
     assert onde_buscou(mundo) == [rm.HCIS[SALA], rm.HCIS[VARANDA]]
+
+
+@pytest.mark.parametrize(("onde_busca", "chip"), PARES)
+def test_a_tela_mostra_a_busca_no_adaptador_do_chip(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde_busca: str, chip: str,
+) -> None:
+    """O que ela vê, pela tela de verdade (o pacote da 08, o gesto do chip, o
+    tratador real e a central real): com a busca já no destino novo, o chip
+    aceso é o dela, o «Segure PS + Create» está no cartão daquele adaptador e
+    em nenhum outro, e os botões seguem apagados enquanto a busca espera.
+
+    MORDIDA: o ``ocupado`` de hoje (o ``_mudar_o_destino`` fora) — o gesto do
+    chip levanta, e o «Segure PS + Create» fica no cartão de antes.
+    """
+    mundo = mundo_da_madrugada()
+    relogio = rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    busca = BuscaDePe(relogio)
+    try:
+        bancada.cena()
+        bancada.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca))
+        bancada.cena()
+        assert bancada.gesto("conectar-aparelho") == {"armou": True}
+        assert busca.dentro.wait(5.0), "a central não abriu a janela"
+
+        bancada.cena()
+        assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(chip)) == {"armou": True}
+        assert bancada.ponte.chamadas[-1] == ("radio.mover", {"destino": id_da_tela(chip)})
+        # A busca anda e a janela nova fica de pé, esperando o gesto dela.
+        de_pe = BuscaDePe(relogio)
+        busca.soltar()
+        assert de_pe.dentro.wait(5.0), "a janela nova não abriu"
+        busca = de_pe
+        assert onde_buscou(mundo) == [rm.HCIS[onde_busca], rm.HCIS[chip]]
+
+        campos = bancada.tique()
+        cena = dict(a08._CENA_NA_TELA)
+        assert cena["ocupado"] is True
+        assert cena["aberto"] == cena["destino_do_conectar"] == id_da_tela(chip)
+        acesos = [lid for aceso, lid in CHIP.findall(campos["radio-moldes"]) if aceso == "true"]
+        assert acesos == [id_da_tela(chip)]
+        for adaptador in TRES:
+            cartao = _cartao(campos["radio-sala"], id_da_tela(adaptador))
+            assert ("Segure PS + Create" in cartao) == (adaptador == chip), adaptador
+    finally:
+        busca.soltar()
+        bancada.fechar()
 
 
 # ---------------------------------------------------------------------------

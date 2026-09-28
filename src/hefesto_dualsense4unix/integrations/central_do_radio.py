@@ -1073,7 +1073,7 @@ class CentralDoRadio:
         siga. Com o movimento em curso ainda ANTES do aparelho
         (:data:`PASSOS_EM_QUE_O_DESTINO_MUDA`), o destino muda: o fio dele fecha
         a janela onde estava e a abre no novo, com a janela e o prazo
-        recomeçando (:meth:`_ir_para`). O último pedido vence, e pedir o destino
+        recomeçando (:meth:`_tomar_o_destino_pedido`). O último pedido vence, e pedir o destino
         de agora desfaz um pedido que ainda não andou.
 
         Só o MESMO movimento muda de destino: o pedido sem aparelho (o chip, o
@@ -1110,11 +1110,35 @@ class CentralDoRadio:
                     de=mascarar(agora.destino), para=mascarar(novo))
         return replace(agora, destino=novo)
 
-    def _tomar_o_destino_pedido(self) -> str | None:
-        """O destino que ela pediu e o fio ainda não atendeu — e ele sai da fila."""
+    def _tomar_o_destino_pedido(
+        self, movimento: Movimento, *, recomecar: bool = False
+    ) -> Movimento | None:
+        """O fio atende o destino que ela pediu: o movimento vai para ele.
+
+        Tirar o pedido da fila e guardar o destino novo são UM passo, sob a
+        tranca do :meth:`_mudar_o_destino` — senão o clique de volta ao destino
+        de agora, no meio, desfaria um pedido que o fio já levou. A janela
+        recomeça inteira, e o prazo com ela: o ``comecou`` e o ``quando`` são de
+        agora (a tela conta o «Segure PS + Create» do ``quando``). O destino
+        novo deixa de ser origem. ``recomecar``: sem pedido, a janela recomeça
+        onde estava. ``None`` quando não há nada a atender.
+        """
         with self._tranca:
             novo, self._destino_pedido = self._destino_pedido, None
-        return novo
+            if novo is None or novo == movimento.destino:
+                if not recomecar:
+                    return None
+                novo = movimento.destino
+            feito = replace(
+                movimento, destino=novo, passo=PASSO_PREPARANDO,
+                origens=tuple(o for o in movimento.origens if o != novo),
+                comecou=self._relogio(), quando=time.time(),
+            )
+            self._movimentos[feito.aparelho] = feito
+        self._no_fio_atual.chave = feito.aparelho
+        logger.info("central_a_janela_foi_para_o_destino_pedido",
+                    aparelho=mascarar(feito.aparelho), adaptador=mascarar(novo))
+        return feito
 
     def _recusa_por_outro(self, chave: str, destino: str | None) -> Movimento:
         """A recusa do um por vez — a mesma forma da trava ocupada, e não guardada."""
@@ -1513,10 +1537,9 @@ class CentralDoRadio:
         pedido que ela desfez no mesmo instante recomeça onde estava."""
         fechou = False
         while True:
-            novo = self._tomar_o_destino_pedido()
-            if fechou or (novo is not None and novo != adaptador.endereco):
-                ida = self._ir_para(movimento, novo or adaptador.endereco, dono,
-                                    conectar=antes is not None)
+            pedido = self._tomar_o_destino_pedido(movimento, recomecar=fechou)
+            if pedido is not None:
+                ida = self._ir_para(pedido, dono, conectar=antes is not None)
                 if isinstance(ida, Movimento):
                     return ida
                 movimento, adaptador, antes_la = ida
@@ -1567,18 +1590,19 @@ class CentralDoRadio:
                 logger.warning("central_janela_nao_abriu", motivo=motivo[:200])
                 return self._sem_chegar_do_gesto(movimento, MOTIVO_SEM_JANELA)
             movimento = self._guardar(replace(movimento, passo=PASSO_GESTO))
+            comeco = self._relogio()
             if antes is not None:
                 achado = self._esperar_um_controle_novo(
-                    janela, antes, dono, ligados_antes, comeco=self._relogio()
+                    janela, antes, dono, ligados_antes, comeco=comeco
                 )
                 if achado is None:
-                    return self._sem_chegar_do_gesto(movimento, MOTIVO_SEM_GESTO)
+                    return self._sem_gesto(movimento, janela, comeco)
                 endereco, pelo_antigo = achado
                 if pelo_antigo:
                     return self._voltou_pelo_antigo(movimento, endereco, dono)
                 pareando = self._quem_chegou(movimento, endereco, dono)
-            elif not self._esperar_o_gesto(janela, movimento.aparelho, comeco=self._relogio()):
-                return self._sem_chegar_do_gesto(movimento, MOTIVO_SEM_GESTO)
+            elif not self._esperar_o_gesto(janela, movimento.aparelho, comeco=comeco):
+                return self._sem_gesto(movimento, janela, comeco)
             else:
                 pareando = self._sair_do_gesto(movimento, passo=PASSO_PAREANDO)
             if pareando is None:
@@ -1596,6 +1620,16 @@ class CentralDoRadio:
             janela.fechar()
             restaurar()
 
+    def _sem_gesto(self, movimento: Movimento, janela: Janela, comeco: float) -> Movimento | None:
+        """A espera do gesto voltou sem o aparelho. Se a janela ainda estava de
+        pé, quem a interrompeu foi um pedido de outro destino — e um pedido que
+        ela desfez no mesmo instante não é «não chegou»: ``None``, e a janela
+        recomeça. Acabada a janela, é o «não chegou» (ou o pedido, se veio)."""
+        if not (self._parar.is_set() or not janela.aberta
+                or self._relogio() >= comeco + self._segundos):
+            return None
+        return self._sem_chegar_do_gesto(movimento, MOTIVO_SEM_GESTO)
+
     def _sem_chegar_do_gesto(self, movimento: Movimento, motivo: str) -> Movimento | None:
         """O «não chegou» de uma janela sem gesto — ou ``None``, com o pedido de
         outro destino na fila: aí não acabou, a janela vai para lá."""
@@ -1605,14 +1639,9 @@ class CentralDoRadio:
         return feito
 
     def _ir_para(
-        self, movimento: Movimento, novo: str, dono: bluez_dbus.LeitorDoBluez, *, conectar: bool
+        self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez, *, conectar: bool
     ) -> Movimento | tuple[Movimento, bluez_dbus.AdaptadorDoBluez, frozenset[str]]:
-        """O movimento vai para o destino que ela pediu, antes de o aparelho aparecer.
-
-        A janela recomeça inteira, e o prazo com ela: o ``comecou`` e o
-        ``quando`` são de agora — a tela conta o «Segure PS + Create» do
-        ``quando``, e a busca que ela acabou de pedir tem os mesmos 30 s de
-        qualquer outra. O destino novo deixa de ser origem.
+        """O destino que ela pediu (:meth:`_tomar_o_destino_pedido`), antes da janela de lá.
 
         * No «Conectar», o que o destino novo já conhecia é o ``antes`` de lá.
         * No «Mover», o objeto velho do controle no destino novo sai como sai no
@@ -1622,13 +1651,7 @@ class CentralDoRadio:
         Devolve ``(movimento, adaptador, antes)``, ou o movimento acabado quando
         o destino saiu da máquina no meio (:data:`MOTIVO_SEM_DESTINO`).
         """
-        movimento = self._guardar(replace(
-            movimento, destino=novo, passo=PASSO_PREPARANDO,
-            origens=tuple(o for o in movimento.origens if o != novo),
-            comecou=self._relogio(), quando=time.time(),
-        ))
-        logger.info("central_a_janela_foi_para_o_destino_novo",
-                    aparelho=mascarar(movimento.aparelho), adaptador=mascarar(novo))
+        novo = movimento.destino
         adaptador = next((a for a in dono.adaptadores() or () if a.endereco == novo), None)
         if adaptador is None:
             return self._acabou(movimento, NAO_CHEGOU, MOTIVO_SEM_DESTINO)
