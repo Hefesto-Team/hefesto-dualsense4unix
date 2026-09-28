@@ -1138,8 +1138,9 @@ def start_mic_hotkey(daemon: DaemonProtocol) -> None:
     # A QUARTA FACE DO ESTADO (MICROFONE-UM-ATO-01): o que o PipeWire diz sobre
     # o canal deste controle. Laço próprio, e não leitura no tique: o
     # `state_full` roda a 20 Hz e só LÊ o que o laço já leu. O laço acorda pelo
-    # evento do servidor, e as respostas saem do retrato do som, sem `pactl`
-    # (O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01).
+    # evento do servidor de som, e as respostas saem do retrato do som, sem
+    # `pactl` nenhum (O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01; ver
+    # `_esperar_o_som_mudar`, no fim do módulo).
     tarefa_do_canal = asyncio.create_task(
         canal_do_microfone_loop(daemon), name="canal_do_microfone_loop"
     )
@@ -1147,21 +1148,11 @@ def start_mic_hotkey(daemon: DaemonProtocol) -> None:
     logger.info("mic_hotkey_iniciado")
 
 
-#: O prazo máximo entre duas releituras do canal de cada controle. O laço
-#: acorda ANTES, pelo evento do servidor de som (o retrato mudou), e o prazo
-#: sobra para o que não é som — um controle que entra ou sai da mesa.
-#:
-#: **O PREÇO MUDOU EM 28/09/2026** (O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01):
-#: este comentário dizia «dois subprocessos por controle»; medido, eram CINCO
-#: (`list sources short`, `list sources`, `get-default-source`,
-#: `get-source-volume`, `get-source-mute`) — 10 `pactl` por segundo com
-#: quatro controles. Com o retrato do som vivo, são zero.
+#: O prazo máximo entre duas releituras do canal de cada controle; o laço acorda
+#: antes, pelo evento do servidor de som. Cada releitura custava CINCO `pactl`
+#: por controle (medido em 28/09/2026 — aqui dizia dois); com o retrato do som
+#: vivo, custa zero. O prazo sobra para o controle que entra ou sai da mesa.
 CANAL_TTL_S: float = 2.0
-
-#: O que o canal lê no retrato do som: as fontes (a do controle, o mudo, o
-#: volume) e o servidor (quem é a entrada padrão). Um fluxo de saída que muda
-#: no meio do jogo não acorda este laço.
-_O_QUE_O_CANAL_LE: tuple[str, ...] = ("sources", "server")
 
 #: `{uniq: {fonte, canal_ativo, canal_mudo, volume_captura}}` — a última
 #: leitura do PipeWire por controle. Nasce VAZIO de propósito: até a primeira
@@ -1223,23 +1214,14 @@ def _fonte_esta_muda(fonte: str) -> bool | None:
 
     `None` NÃO é `False`: "não sei se está muda" e "não está muda" levam a
     telas diferentes, e colapsá-las é o hábito que faz o selo prometer o que
-    ninguém mediu.
-
-    A pergunta vai ao retrato do som antes (`integrations/retrato_do_som`): no
-    daemon é ele quem responde, e o «não sei» dele é `None`.
+    ninguém mediu. Pergunta ao retrato do som antes (`_mudo_pelo_retrato`).
     """
     import os
     import subprocess
 
-    from hefesto_dualsense4unix.integrations import retrato_do_som
-
-    pergunta = ["pactl", "get-source-mute", fonte]
-    resposta = retrato_do_som.responder(pergunta)
-    if resposta is not None:
-        return _mudo_da_saida(resposta) if isinstance(resposta, str) else None
     try:
-        r = subprocess.run(
-            pergunta,
+        r = _mudo_pelo_retrato(fonte) or subprocess.run(
+            ["pactl", "get-source-mute", fonte],
             capture_output=True,
             text=True,
             timeout=2.0,
@@ -1250,12 +1232,7 @@ def _fonte_esta_muda(fonte: str) -> bool | None:
         return None
     if r.returncode != 0:
         return None
-    return _mudo_da_saida(r.stdout or "")
-
-
-def _mudo_da_saida(bruto: str) -> bool | None:
-    """`Mute: yes` → True, `Mute: no` → False, o resto → `None` (não sei)."""
-    saida = bruto.strip().lower()
+    saida = (r.stdout or "").strip().lower()
     if saida.endswith("yes"):
         return True
     if saida.endswith("no"):
@@ -1264,25 +1241,16 @@ def _mudo_da_saida(bruto: str) -> bool | None:
 
 
 async def canal_do_microfone_loop(daemon: DaemonProtocol) -> None:
-    """Relê o canal de cada controle da mesa quando o som muda, ou a cada `CANAL_TTL_S`.
+    """Relê o canal de cada controle quando o som muda, ou a cada `CANAL_TTL_S`.
 
     **A ARMADILHA QUE ELE EVITA, medida em 04/09/2026:** leitura sob demanda
     mede ausência. Quem pergunta uma vez e lê na mesma linha recebe vazio
     sempre — vale para toda leitura sob demanda deste daemon, não só a do
     sensor. Aqui o laço já correu antes de alguém perguntar, e a primeira
     varredura acontece no primeiro ciclo, não no primeiro pedido.
-
-    **ELE ACORDA PELO EVENTO** (O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01,
-    28/09/2026): o retrato do som mudou — o microfone de um controle nasceu,
-    alguém calou uma fonte, o padrão trocou —, e o selo acompanha na hora, sem
-    esperar a volta. Sem retrato vivo (sem servidor de som), o prazo é o de
-    sempre.
     """
-    from hefesto_dualsense4unix.integrations.retrato_do_som import RETRATO
-
-    marca = RETRATO.marca(_O_QUE_O_CANAL_LE)
     while not daemon._is_stopping():
-        marca = await RETRATO.esperar_async(marca, CANAL_TTL_S, _O_QUE_O_CANAL_LE)
+        await _esperar_o_som_mudar(CANAL_TTL_S)
         uniqs = _uniqs_conectados(daemon)
         if not uniqs:
             _CANAL_POR_UNIQ.clear()
@@ -3472,6 +3440,59 @@ class HotkeySubsystem:
 
     def is_enabled(self, config: Any) -> bool:
         return True
+
+
+# ---------------------------------------------------------------------------
+# O CANAL DO MICROFONE PELO RETRATO DO SOM — O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01
+# (28/09/2026)
+#
+# NO FIM DO MÓDULO de propósito: o mapa e outros módulos citam linhas deste
+# arquivo, e código novo enfiado lá em cima envelhece as citações.
+# ---------------------------------------------------------------------------
+
+#: O que o canal lê no retrato do som: as fontes (a do controle, o mudo, o
+#: volume) e o servidor (quem é a entrada padrão). Um fluxo de SAÍDA que muda
+#: no meio do jogo não acorda o laço.
+_O_QUE_O_CANAL_LE: tuple[str, ...] = ("sources", "server")
+
+#: A marca do retrato que o laço do canal viu por último. `None` até a
+#: primeira espera, que parte da marca de agora.
+_MARCA_DO_CANAL: list[int | None] = [None]
+
+
+async def _esperar_o_som_mudar(prazo: float) -> None:
+    """Dorme até o retrato do som mudar nas fontes ou no padrão, ou até o prazo.
+
+    **O LAÇO ACORDA PELO EVENTO**: o microfone de um controle nasceu, alguém
+    calou uma fonte, o padrão trocou — e o selo acompanha na hora, sem esperar
+    a volta. Sem retrato vivo (fora do daemon, ou sem servidor de som), nada
+    muda nele, e a espera é o prazo de sempre.
+    """
+    from hefesto_dualsense4unix.integrations.retrato_do_som import RETRATO
+
+    vista = _MARCA_DO_CANAL[0]
+    if vista is None:
+        vista = RETRATO.marca(_O_QUE_O_CANAL_LE)
+    _MARCA_DO_CANAL[0] = await RETRATO.esperar_async(vista, prazo, _O_QUE_O_CANAL_LE)
+
+
+def _mudo_pelo_retrato(fonte: str) -> _sp.CompletedProcess[str] | None:
+    """A resposta do retrato do som ao `get-source-mute`, na forma do `subprocess`.
+
+    `None` = o retrato não responde neste processo (sem dono), e quem chama
+    pergunta ao servidor. O «não sei» do retrato volta como rc≠0 — a mesma
+    falha de um `pactl` que não respondeu, e o `_fonte_esta_muda` a lê como
+    `None`.
+    """
+    from hefesto_dualsense4unix.integrations import retrato_do_som
+
+    pergunta = ["pactl", "get-source-mute", fonte]
+    resposta = retrato_do_som.responder(pergunta)
+    if resposta is None:
+        return None
+    if isinstance(resposta, str):
+        return _sp.CompletedProcess(pergunta, 0, stdout=resposta, stderr="")
+    return _sp.CompletedProcess(pergunta, 1, stdout="", stderr="")
 
 
 __all__ = [

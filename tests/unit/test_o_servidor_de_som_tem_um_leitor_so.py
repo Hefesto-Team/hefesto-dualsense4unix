@@ -573,7 +573,8 @@ PORTAS: dict[tuple[str, str], str] = {
     ("app/audio_saida.py", "ler"): "audio_saida.rodar_leitura",
     ("app/audio_saida.py", "self._runner"): "audio_saida.rodar_leitura",
     ("app/mic_monitor.py", "self._runner"): "mic_monitor._rodar",
-    ("daemon/subsystems/hotkey.py", "_fonte_esta_muda"): "hotkey._fonte_esta_muda",
+    ("daemon/subsystems/hotkey.py", "subprocess.run"): "hotkey._fonte_esta_muda",
+    ("daemon/subsystems/hotkey.py", "_mudo_pelo_retrato"): "hotkey._fonte_esta_muda",
     ("daemon/subsystems/bt_mic.py", "subprocess.run"): "bt_mic.fonte_padrao_crua",
     ("integrations/alto_falante_bt.py", "correr"): "alto_falante_bt._rodar",
     ("integrations/alto_falante_bt.py", "self.runner"): "alto_falante_bt._rodar",
@@ -1005,6 +1006,7 @@ def test_o_canal_do_microfone_acorda_pelo_evento_das_fontes(
     monkeypatch.setattr(hotkey, "_conferir_quem_saiu_do_ar", conferir)
     monkeypatch.setattr(hotkey, "_CANAL_POR_UNIQ", {})
     monkeypatch.setattr(hotkey, "CANAL_TTL_S", 30.0)
+    monkeypatch.setattr(hotkey, "_MARCA_DO_CANAL", [None])
 
     class _D:
         parar = False
