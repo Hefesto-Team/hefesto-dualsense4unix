@@ -46,19 +46,15 @@ E o estrago passa do disco: ``_gravar`` reaplica o arquivo logo em seguida
 (``perfil.gravar_e_reaplicar`` → ``profile.switch``), então o gesto não só
 perdia a escolha dela no ``.json`` — ele a **desfazia no controle**.
 
-A cura é ``a10_perfis._com_o_que_esta_valendo``, que lê do DONO da sobreposição
-(``rodape._draft_do_ativo``, o mesmo que o «Salvar Perfil» usa desde 01/09) em
-vez de escrever uma segunda cópia dela aqui.
-
-**NOTA DE 26/09/2026 — A PREMISSA CADUCOU, e a §2 mede o contrário**
-(O-SALVAR-DA-VIBRACAO-01). A cor clicada na 04 vai ao disco no clique desde
-09/09 (``a04_iluminacao._guardar_a_cor_no_perfil``); a cor viva que difere do
-disco deixou de ser «a que ela acabou de clicar». E trazer o vivo por cima de
-tudo tinha preço medido: com o PRAGMATA dela em lar de mentira, mudar a
-PRIORIDADE ligava o microfone de um controle e apagava a fonte do
-alto-falante dele. A aba 10 não é dona de seção viva nenhuma
-(``rodape.secoes_do_vivo``): o gesto do editor grava o campo dele, e a cor
-fica a do disco.
+Em 06/09 a cura foi pôr o vivo por cima do disco nos gestos do editor (o
+mesmo molde do «Salvar Perfil»). A premissa caiu em 09/09, quando o clique na
+cor da 04 passou a gravar (``a04_iluminacao._guardar_a_cor_no_perfil``), e o
+preço de manter o vivo por cima foi medido em 26/09: com o PRAGMATA dela em
+lar de mentira, mudar a PRIORIDADE ligava o microfone de um controle e
+apagava a fonte do alto-falante dele. **Desde 27/09
+(`D-2709-O-SALVAR-LE-O-PERFIL`) todo gesto do editor lê o perfil do disco
+(``a10_perfis._o_perfil_no_disco``), muda o campo dela e grava**, e a §2 mede
+que a cor viva não entra.
 
 **A ARMADILHA QUE ESTA RÉGUA GUARDA, e ela quase virou o conserto que
 reintroduz o defeito que cura:** ``DraftConfig.to_profile`` tem um portão
@@ -68,8 +64,8 @@ reintroduz o defeito que cura:** ``DraftConfig.to_profile`` tem um portão
     to_profile("Pragmata")  → difere do original em NADA
     to_profile("Sackboy")   → perde match, mode e suppress_desktop_emulation
 
-Curar a cor pela rota ingênua teria apagado a regra que faz o perfil dela entrar
-no jogo. A §3 é a régua que impede a volta disso.
+Levar o gesto do editor pelo rascunho, com um nome novo, apaga a regra que faz
+o perfil dela entrar no jogo. A §3 é a régua que impede a volta disso.
 
 **O QUE ESTA RÉGUA NÃO MEDE:** o clique chegando pela ponte JS, e o aparelho.
 Ela mede o Python dos gestos com dublê de ponte e o disco desviado para memória.
@@ -101,9 +97,9 @@ NO_DISCO = (0, 255, 128)
 #: 26/09 no cabeçalho). Nenhum gesto desta aba a leva ao disco.
 VIVA = (255, 0, 255)
 
-#: UM CONTROLE NA MESA, com endereço MASCARADO (octetos 4 e 5 zerados).
-#: `lightbar_source` e `lightbar_on` não são enfeite: `rotulo_lightbar` devolve
-#: a cor base como `None` sem os dois, e a sobreposição não teria o que pôr.
+#: UM CONTROLE NA MESA, com endereço MASCARADO (octetos 4 e 5 zerados), e a
+#: barra ACESA na cor viva: é o estado em que um gesto que lesse o aparelho
+#: teria uma cor a levar ao disco.
 UNIQ = "aabbcc000001"
 MESA: list[dict[str, Any]] = [
     {"pref": "p1", "uniq": UNIQ, "jogador": 1, "via": "USB",
@@ -205,23 +201,6 @@ def disco(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     monkeypatch.setattr(loader, "delete_profile", _delete)
     a10_perfis._ESCOLHIDO = "Pragmata"
     return guardado
-
-
-@pytest.fixture
-def a_10_com_a_luz_viva(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A aba 10 DONA DA LUZ, só nesta régua — para as guardas serem alcançadas.
-
-    Desde 26/09/2026 (O-SALVAR-DA-VIBRACAO-01) a aba 10 não é dona de seção
-    viva nenhuma, e `_com_o_que_esta_valendo` devolve o disco antes de chegar
-    às três guardas do caminho do rascunho: a do perfil que está valendo, o
-    `try/except` e a volta pelo nome antigo. Medido na conferência do mesmo
-    dia: arrancadas as três, as doze réguas deste arquivo ficavam verdes. Dar
-    à 10 uma seção, aqui dentro, é o que faz cada guarda voltar a morder sem
-    mudar o produto.
-    """
-    from hefesto_dualsense4unix.interface.pacotes import rodape
-
-    monkeypatch.setitem(rodape.SECOES_DO_VIVO, PAGINA, frozenset({"leds"}))
 
 
 @pytest.fixture
@@ -356,10 +335,9 @@ def _prioridade(ctx: Contexto, ponte: Any) -> None:
 # Perfis e o gesto `a10_perfis.editor_modo` saiu com ele, porque clique nenhum
 # o alcançava mais.
 #
-# O QUE ESTE CASO PROVAVA CONTINUA PROVADO pelos outros quatro: a linha 370 é
-# sobre `_com_o_que_esta_valendo` — *todo* gesto que grava o perfil INTEIRO lê o
-# que está valendo em vez do `.json`. O funil é o mesmo (`_gravar`), e quatro
-# gestos o exercem. Um quinto que não existe não acrescenta cobertura; ele só
+# O QUE ESTE CASO PROVAVA CONTINUA PROVADO pelos outros quatro: *todo* gesto
+# que grava o perfil INTEIRO lê a mesma base (`_o_perfil_no_disco`), e o funil
+# é o mesmo (`_gravar`); quatro gestos o exercem. Um quinto que não existe não acrescenta cobertura; ele só
 # faria a régua morrer com um `AttributeError` que não é sobre o defeito.
 
 
@@ -392,12 +370,12 @@ def test_o_gesto_que_grava_nao_leva_o_vivo_ao_disco(
     """O gesto do editor grava o campo dele, e a cor fica a do disco.
 
     Em 06/09/2026 esta régua cobrava o CONTRÁRIO — a cor viva no disco —,
-    porque o clique da 04 ainda não gravava. A premissa caducou em 09/09 e o
-    preço de manter o vivo por cima foi medido em 26/09 (nota no cabeçalho):
-    a luz é seção da aba 04, e a aba 10 não é dona de seção viva nenhuma.
+    porque o clique da 04 ainda não gravava (nota no cabeçalho).
 
-    MORDIDA: faça `_com_o_que_esta_valendo` pedir `TODAS_AS_SECOES_DO_VIVO`
-    ao `rodape` e isto reprova com a cor viva no perfil.
+    MORDIDA: troque, nos gestos do editor, a base `_o_perfil_no_disco` por
+    uma que ponha a cor acesa do `ctx.conectados` no override (o molde de antes
+    de 27/09) e isto reprova com a cor viva, junto com os gestos do ambiente,
+    o daemon calado e o renomear.
     """
     gesto(_ctx(), PonteDeMentira())
 
@@ -433,61 +411,6 @@ def test_os_dois_gestos_do_ambiente_tambem_nao_levam_o_vivo(
         f"{nome_do_gesto} gravou {cor}, a cor viva, e a do perfil é {NO_DISCO}")
 
 
-def test_a_sobreposicao_so_vale_para_o_perfil_que_esta_valendo(
-    disco: dict[str, Any], a_10_com_a_luz_viva: None,
-) -> None:
-    """Sem perfil valendo, o disco é a verdade — e tem de continuar sendo.
-
-    O que o daemon publica é o estado dos controles SOB o perfil ativo. Despejá-
-    lo num perfil que ela edita sem ele estar valendo escreveria o estado de um
-    perfil dentro do arquivo de outro: uma perda de dado NOVA no lugar da que se
-    cura. É o mesmo cuidado que o `duplicar` cobra, e é por isso que a guarda é
-    por slug (R-10) e não por `==`.
-
-    MORDIDA: tire a guarda `mesmo_slug` de `_com_o_que_esta_valendo` e isto
-    reprova — a cor viva vaza para um perfil que não está valendo. Desde
-    26/09 a aba 10 não sobrepõe seção nenhuma no produto; a fixture
-    `a_10_com_a_luz_viva` lhe dá a luz aqui, e é ela que mantém a guarda
-    alcançável.
-    """
-    _prioridade(_ctx(valendo=None), PonteDeMentira())
-
-    assert disco["salvos"]
-    cor = _cor_gravada(disco["salvos"][-1])
-    assert cor == NO_DISCO, (
-        f"gravou {cor} sem perfil valendo — o estado vivo de NINGUÉM entrou no "
-        f"arquivo dela")
-
-
-def test_o_gesto_grava_mesmo_quando_a_sobreposicao_falha(
-    disco: dict[str, Any], monkeypatch: pytest.MonkeyPatch,
-    a_10_com_a_luz_viva: None,
-) -> None:
-    """A sobreposição é um GANHO, nunca uma condição para ela salvar.
-
-    Se o dono não souber montar o rascunho — o daemon publicando um estado que o
-    esquema recusa, que já aconteceu com o par `policy`/`custom_mult` —, a
-    resposta certa é o perfil do disco, que é o comportamento de ontem. Um gesto
-    dela não pode deixar de gravar o campo que ela mexeu por causa disso.
-
-    MORDIDA: tire o `try/except` de `_com_o_que_esta_valendo` e isto vira o
-    `RuntimeError` do dublê subindo pelo gesto — a tela recusaria um renomear
-    por causa de um campo do daemon (com a fixture `a_10_com_a_luz_viva`, que
-    é o que faz o dublê ser chamado desde 26/09).
-    """
-    from hefesto_dualsense4unix.interface.pacotes import rodape
-
-    def _explode(*a: Any, **kw: Any) -> Any:
-        raise RuntimeError("o daemon publicou um estado que o esquema recusa")
-
-    monkeypatch.setattr(rodape, "_draft_do_ativo", _explode)
-    _prioridade(_ctx(), PonteDeMentira())
-
-    assert disco["salvos"], "o gesto deixou de gravar porque o vivo falhou"
-    assert disco["salvos"][-1].priority == 137
-    assert _cor_gravada(disco["salvos"][-1]) == NO_DISCO
-
-
 def test_o_daemon_calado_nao_derruba_o_gesto(disco: dict[str, Any]) -> None:
     """O dublê que sabe RECUSAR: `profile_switch` devolve `False`.
 
@@ -517,9 +440,8 @@ def test_renomear_nao_perde_a_regra_nem_o_modo(disco: dict[str, Any]) -> None:
         to_profile("Pragmata")  → difere do original em NADA
         to_profile("Sackboy")   → perde match, mode e suppress
 
-    Desde 26/09 o produto devolve o disco antes do rascunho (a aba 10 não é
-    dona de seção viva), e quem mede a volta pelo nome antigo é a irmã de
-    baixo, que passa pelo rascunho.
+    Desde 27/09 nenhum gesto do editor passa pelo rascunho: a base é o disco
+    (`_o_perfil_no_disco`) e o renomear vem DEPOIS, por `model_copy`.
     """
     antes = disco["perfil"]
     _renomear(_ctx(), PonteDeMentira())
@@ -527,29 +449,9 @@ def test_renomear_nao_perde_a_regra_nem_o_modo(disco: dict[str, Any]) -> None:
     assert disco["salvos"]
     gravado = disco["salvos"][-1]
     _a_regra_e_o_modo_ficaram(antes, gravado)
-    # E A COR É A DO DISCO — a luz é seção da aba 04 (nota de 26/09 no
-    # cabeçalho); até essa data aqui se cobrava a viva.
+    # E A COR É A DO DISCO (nota no cabeçalho); até 26/09 aqui se cobrava a
+    # viva.
     assert _cor_gravada(gravado) == NO_DISCO
-
-
-def test_renomear_pelo_rascunho_nao_perde_a_regra_nem_o_modo(
-    disco: dict[str, Any], a_10_com_a_luz_viva: None,
-) -> None:
-    """A mesma armadilha, com o caminho do rascunho percorrido.
-
-    MORDIDA: faça `_com_o_que_esta_valendo` devolver
-    `draft.to_profile(nome_novo, ...)` e isto reprova em três campos de uma
-    vez. A cor VIVA no arquivo é a prova de que o rascunho foi montado: sem
-    ela, esta régua passaria pelo disco e não mediria a volta.
-    """
-    antes = disco["perfil"]
-    _renomear(_ctx(), PonteDeMentira())
-
-    assert disco["salvos"]
-    gravado = disco["salvos"][-1]
-    assert _cor_gravada(gravado) == VIVA, (
-        "o renomear não passou pelo rascunho — a régua não mediu a volta")
-    _a_regra_e_o_modo_ficaram(antes, gravado)
 
 
 def _a_regra_e_o_modo_ficaram(antes: Profile, gravado: Profile) -> None:
