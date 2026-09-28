@@ -1087,11 +1087,14 @@ responde `caminho: dualsense`.
 **A divergência é DESENHO, não defeito:** `_guardar_o_caminho`
 (`daemon/subsystems/gamepad.py`) só persiste com `origin == "manual"`, e a volta
 das 03:32 veio de `origin=launch` — *"um perfil trocando de caminho não vira a
-escolha dela em disco"*. A consequência, que é o que importa aqui, é que o
-**próximo boot do daemon** relê a flag (`daemon/lifecycle.py`, de
-`utils/session.load_gamepad_caminho`) e sobe o vpad no `uinput`: o giroscópio
-some sem que ninguém tenha mexido em nada, até um jogo com ponte confirmada em
-`gamepad/dualsense` reabrir o canal.
+escolha dela em disco"*. A consequência, até 27/09, era que o **próximo boot
+do daemon** relia a flag e subia o vpad no `uinput`: o giroscópio sumia sem que
+ninguém tivesse mexido em nada, até um jogo com ponte confirmada em
+`gamepad/dualsense` reabrir o canal. **Desde 28/09**
+(O-MODO-XBOX-NAO-E-QUEDA-02) a flag guarda a origem (`{caminho, origem,
+quando}`, lida por `utils/session.load_gamepad_caminho_com_origem`), o `xbox`
+legado sem origem é devolvido uma vez, e o boot aplica o modo do perfil que
+restaura antes do primeiro pad.
 
 ### 5-ter.7 O que o GE-Proton 11-6 faz por appid — e o que ele não faz aqui
 
