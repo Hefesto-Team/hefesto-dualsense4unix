@@ -918,3 +918,30 @@ def test_o_subcomando_que_cai_no_meio_e_recusa_e_nunca_vermelho(
     assert rc == ob.RC_RECUSADO
     recusas = resumo(saida)["recusas"]
     assert any("caiu no meio" in r and "RuntimeError" in r for r in recusas), recusas
+
+
+def test_a_queda_dita_explica_e_nao_absolve_o_modo_contra_o_ar(
+    ob: ModuleType, tmp_path: Path
+) -> None:
+    """O modo DualSense pedido, o P2 no ``uinput`` com ``vpad_motivo`` pendurado.
+
+    A tabela corrigida da sprint diz que verde é o pedido IGUAL ao do ar. O
+    motivo explica a queda e não devolve o giro a quem perdeu. Mordida:
+    devolver o ramo que dava verde a toda queda com motivo — o P2 sai verde.
+    """
+    estado = estado_da_mesa()
+    estado["controllers"][1]["vpad_backend"] = "uinput"
+    estado["controllers"][1]["vpad_motivo"] = "sem_uhid"
+    estado["rumble_ff"]["per_vpad"][1]["backend"] = "uinput"
+    maquina = fazer_maquina(
+        ob, estado, tmp_path / "config", dispositivos=pads_uhid(4),
+        ensaios={"quem_e_quem.py": quem_e_quem_json(ob, estado)},
+    )
+    saida = tmp_path / "saida"
+    rc = ob.executar(["--saida", str(saida), "eixos"], maquina)
+
+    por_jogador = {p["jogador"]: p for p in da_linha(saida, "o modo contra o ar")}
+    assert por_jogador["P2"]["veredito"] == ob.VERMELHO, por_jogador["P2"]
+    assert "sem_uhid" in por_jogador["P2"]["porque"]
+    assert {por_jogador[j]["veredito"] for j in ("P1", "P3", "P4")} == {ob.VERDE}
+    assert rc == ob.RC_VERMELHO

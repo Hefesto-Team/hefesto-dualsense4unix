@@ -1709,12 +1709,14 @@ def _medir_os_eixos(s: Sessao, estado: Mapping[str, Any], *, rotulo: str | None,
     # O modo pedido contra o do ar, por jogador (o dono é o do doctor).
     for linha in modo_contra_o_ar(estado):
         controle = por_numero.get(linha.jogador, {})
+        # A tabela corrigida da sprint: verde é o modo pedido IGUAL ao do ar. O
+        # motivo que o daemon pendura (a queda dita) explica a divergência e
+        # vai na frase; não a absolve — a interface dela é soberana, e perder
+        # o canal pedido é perder feature (NO-MODO-XBOX-TUDO-FUNCIONA-01).
         if linha.veredito == OK:
             veredito = VERDE
         elif linha.veredito == AVISO and linha.pedido is None:
             veredito = NAO_SEI
-        elif linha.veredito == AVISO and linha.motivo not in MOTIVOS_QUE_NAO_ABSOLVEM:
-            veredito = VERDE
         else:
             veredito = VERMELHO
         _passo(s, "o modo contra o ar" + sufixo, f"P{linha.jogador}", transporte_de(controle), veredito,
