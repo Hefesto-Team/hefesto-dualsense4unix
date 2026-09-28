@@ -229,8 +229,8 @@ def _a_acao_da_maquina(da_maquina: str, comando: Any) -> None:
 class _GestoDoPs:
     """O callback do PS solo: ``fazer`` no laço, a ação da máquina no ``fio``.
 
-    Chamável como a função que era; ``esperar`` é o que a parada e a régua
-    usam para saber que o toque em voo terminou.
+    Chamável como a função que era; ``esperar`` é o que as réguas usam para
+    saber que o toque em voo terminou (a parada não espera o que é dela).
     """
 
     fazer: Any

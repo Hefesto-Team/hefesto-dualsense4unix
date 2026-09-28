@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import ast
 import contextlib
+import functools
 import json
 import os
 import shutil
@@ -417,7 +418,8 @@ def gerenciador(
     monkeypatch.setattr(teclado, "_osk_candidatos", lambda: (_DUBLE,))
     monkeypatch.setattr(teclado, "_OSK_SPAWN_ARGS", {_DUBLE: [_DUBLE, "600"]})
     monkeypatch.setattr(
-        teclado.shutil, "which", lambda nome: f"/usr/bin/{nome}" if nome == _DUBLE else None
+        "hefesto_dualsense4unix.daemon.subsystems.keyboard.shutil.which",
+        lambda nome: f"/usr/bin/{nome}" if nome == _DUBLE else None,
     )
     monkeypatch.setattr(teclado, "_OSK_SONDA", [(float("-inf"), False)])
     monkeypatch.setattr(
@@ -429,7 +431,9 @@ def gerenciador(
     def _popen_proibido(*_a: Any, **_k: Any) -> Any:
         raise AssertionError("o teclado nasceu por Popen de dentro do serviço")
 
-    monkeypatch.setattr(teclado.subprocess, "Popen", _popen_proibido)
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.daemon.subsystems.keyboard.subprocess.Popen", _popen_proibido
+    )
     ger = _GerenciadorDeMentira(tmp_path / "cgroup")
     monkeypatch.setattr(fds, "RAIZ_DO_CGROUP", str(ger.raiz))
     monkeypatch.setattr(fds, "contexto_atual", lambda **_k: _DENTRO_DO_SERVICO)
@@ -630,7 +634,10 @@ def steam_lenta(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> _Gerenciador
     """A Steam fechada, e o gerenciador lento. Nada nasce."""
     ger = _GerenciadorDeMentira(tmp_path / "cgroup", nascer=False)
     ger.demora_s = _DEMORA_DO_GERENCIADOR_S
-    monkeypatch.setattr(steam_launcher.shutil, "which", lambda n: f"/usr/bin/{n}")
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.integrations.steam_launcher.shutil.which",
+        lambda n: f"/usr/bin/{n}",
+    )
     monkeypatch.setattr(
         steam_launcher, "_default_pgrep",
         lambda cmd: subprocess.CompletedProcess(cmd, 1, stdout="", stderr=""),
@@ -718,7 +725,7 @@ def test_a_fila_do_fio_guarda_a_ordem() -> None:
 
     assert fio.disparar(_primeiro)
     for i in (1, 2, 3):
-        assert fio.disparar(lambda i=i: ordem.append(i))
+        assert fio.disparar(functools.partial(ordem.append, i))
     assert not fio.disparar(lambda: ordem.append(9)), "a fila passou do tamanho"
     solta.set()
     assert fio.esperar(5.0)
