@@ -46,16 +46,12 @@ echo "════════════════════════�
 n=$(printf '%s\n' "$J" | grep "som_radio_ponte_de_pe" | grep -c "0x32" || true)
 q=$(printf '%s\n' "$J" | grep "som_radio_ponte_de_pe" | grep "0x32" \
     | grep -oE "uniq=[0-9a-f:]+" | sort -u | wc -l)
+echo "  entradas em háptica pelo rádio: $n"
 echo "  controles DO RÁDIO que entraram em háptica: $q"
 echo "  (o controle do CABO não passa por aqui — ele usa o endpoint REAL)"
-echo
-if [ "${q:-0}" -eq 0 ]; then
-  echo "NENHUM controle do rádio entrou em háptica."
-  echo "Num jogo de UM jogador com o controle no cabo, isto é o CERTO."
-elif [ "${q:-0}" -eq 1 ]; then
-  echo "UM controle do rádio entrou em háptica."
-  echo "Num jogo de UM jogador isto é DEFEITO: quem joga está no cabo."
-else
-  echo "$q controles do rádio entraram em háptica."
-  echo "Num jogo de UM jogador isto é PIOR que o defeito original."
-fi
+# 28/09/2026 (O-BASICO-MEDIDO-01): as frases de veredito que moravam aqui
+# liam a mesa de 20/09 (um jogo de um jogador, quem joga no cabo) e diziam
+# «certo» ou «defeito» só pela contagem. Numa mesa de quatro no rádio, ou num
+# jogo de quatro jogadores, a mesma contagem é o certo. O script fica com as
+# contagens; quem casa a contagem com o jogo e os jogadores é o
+# `o_basico.py saidas`.
