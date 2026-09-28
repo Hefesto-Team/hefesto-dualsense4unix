@@ -553,9 +553,29 @@ _BACKUP_FEITO=""
 # do temporário tinha `rm -f`, o do backup não.
 # Aqui o backup só existe se o `cp` sair 0 E o `cmp` confirmar byte a byte.
 # O que não passar é APAGADO e DITO, e o original não é tocado.
+#
+# UM ARQUIVO POR ESTADO — O-PRODUTO-EM-QUALQUER-MAQUINA-01, B7 (28/09/2026).
+# MEDIDO: o /etc/bluetooth dela tinha 51 backups do main.conf, um por `aplicar`
+# ou `remover` que mudou o arquivo — cada par uninstall + install deixava dois,
+# quase sempre dos MESMOS dois estados. Ela, ao ver: *«Importante apagarmos»*.
+# A poda à mão tirou 17 repetidos. A cura é na origem: se um backup nosso ao
+# lado já guarda estes bytes (`cmp`), o estado já está no disco, e o backup
+# novo seria uma cópia a mais — diz qual é e devolve ELE em `_BACKUP_FEITO`.
+# Assim a poda automática continua desnecessária (a nota de 06/08 acima): o
+# disco guarda um arquivo por estado, e os estados distintos são exatamente os
+# que aquela nota manda guardar. Backup vazio não conta (ver `_lista_backups`).
 _copia_de_seguranca() {
-    local origem="$1" rotulo="$2" backup
+    local origem="$1" rotulo="$2" backup ja
     _BACKUP_FEITO=""
+    while IFS= read -r ja; do
+        [[ -n "${ja}" ]] || continue
+        if _r cmp -s "${origem}" "${ja}" 2>/dev/null; then
+            _diz "este estado de $(basename "${origem}") já está guardado em ${ja} — sem backup novo"
+            _BACKUP_FEITO="${ja}"
+            return 0
+        fi
+    done < <(find "$(dirname "${origem}")" -maxdepth 1 -type f \
+                  -name "$(basename "${origem}").bak.hefesto-*" ! -empty 2>/dev/null | sort)
     if ! backup="$(_r mktemp "${origem}.bak.hefesto-${rotulo}$(date +%s)-XXXXXX" 2>/dev/null)"; then
         _erro "não consegui criar o arquivo de backup ao lado de ${origem} — NÃO mexi nele"
         return 1

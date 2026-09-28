@@ -1654,7 +1654,15 @@ def test_aplicar_e_remover_seguidos_nao_colidem(tmp_path: Path) -> None:
     """A reprodução do verificador, letra por letra: aplicar; remover; aplicar.
 
     É a sequência que o próprio doctor sugere, e ela acontece em muito menos de
-    um segundo. Três gravações reais = três backups, sempre.
+    um segundo. O que ela grava são DOIS estados (o original e o aplicado), e o
+    disco guarda os dois — nenhum nome colide e nenhum estado some.
+
+    FATO SUBSTITUÍDO em 28/09/2026 (O-PRODUTO-EM-QUALQUER-MAQUINA-01, B7): esta
+    régua cobrava «três gravações reais = três backups, sempre», e a terceira
+    era cópia byte a byte da primeira. Foi assim que o /etc/bluetooth dela
+    chegou a 51 backups. Um arquivo por ESTADO é a regra agora; a colisão de
+    nomes continua cobrada pela régua de cima, com dois estados distintos no
+    mesmo segundo.
     """
     etc = _etc(tmp_path, "[General]\nName = ESTADO-ORIGINAL\n")
     inicio = time.monotonic()
@@ -1663,9 +1671,9 @@ def test_aplicar_e_remover_seguidos_nao_colidem(tmp_path: Path) -> None:
     _rodar(etc, "aplicar")
     decorrido = time.monotonic() - inicio
 
-    assert len(_backups(etc)) == 3, (
+    assert len(_backups(etc)) == 2, (
         f"aplicar+remover+aplicar em {decorrido:.2f}s deixou "
-        f"{len(_backups(etc))} backup(s) em vez de 3"
+        f"{len(_backups(etc))} backup(s) em vez de 2 (um por estado)"
     )
     assert any(
         "ESTADO-ORIGINAL" in b.read_text(encoding="utf-8") for b in _backups(etc)
