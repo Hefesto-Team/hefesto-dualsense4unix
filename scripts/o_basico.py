@@ -2002,6 +2002,14 @@ def sub_entrada(s: Sessao, a: argparse.Namespace) -> None:
                    "o pad muda o centro de: " + (", ".join(_textos(par.get("muda"))) or "—")
                    + "; inventa valor em: " + (", ".join(_textos(par.get("inventa"))) or "—"),
                    medida=dict(par))
+        elif par.get("fluxo_vivo") is not True:
+            # 01 §4.4: o verde pede os carimbos andando. Um par parado casa pelo
+            # repouso e não prova que o pad entrega entrada nenhuma.
+            _passo(s, "a entrada por par (repouso)", jogador, transporte_de(c),
+                   VERMELHO if par.get("fluxo_vivo") is False else NAO_SEI,
+                   "os carimbos do par não andaram na janela: o pad não está entregando"
+                   if par.get("fluxo_vivo") is False else "o ensaio não disse se os carimbos andaram",
+                   medida=dict(par))
         else:
             _passo(s, "a entrada por par (repouso)", jogador, transporte_de(c), VERDE,
                    "o pad casou com o físico dele e repete o repouso byte a byte")
@@ -2010,6 +2018,9 @@ def sub_entrada(s: Sessao, a: argparse.Namespace) -> None:
                                teto_s=a.segundos + 90.0)
     dado = _json_do_ensaio(texto)
     pares = {str(p.get("vpad")): p for p in _lista(_dict(_dict(dado).get("medidas")).get("pares"))}
+    # O ensaio diz rc=2 e «não conclua nada» quando a ligação hidraw -> aparelho
+    # mudou no meio da janela: os pares que ele ainda imprime não valem.
+    ligacao_mudou = _textos(_dict(_dict(dado).get("medidas")).get("ligacao_mudou"))
     for c in mesa:
         jogador = f"P{c['player']}"
         if c in no_uinput:
@@ -2017,6 +2028,11 @@ def sub_entrada(s: Sessao, a: argparse.Namespace) -> None:
                    "o pad uinput não tem hidraw (01 A2)")
             continue
         par = pares.get(jogador)
+        if rc != 0 or ligacao_mudou:
+            _passo(s, "os intervalos da entrada (pad contra o físico)", jogador, transporte_de(c), NAO_SEI,
+                   f"o ensaio não concluiu (rc={rc}"
+                   + (", a ligação dos nós mudou no meio da janela)" if ligacao_mudou else ")"))
+            continue
         if not isinstance(dado, Mapping) or par is None:
             _passo(s, "os intervalos da entrada (pad contra o físico)", jogador, transporte_de(c), NAO_SEI,
                    f"o par não se casou pelo carimbo do sensor (rc={rc})")

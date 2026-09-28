@@ -1023,3 +1023,47 @@ def test_a_celula_da_matriz_mostra_o_pior_dos_passos_dela(
     assert ob.veredito(sessao) == ob.RC_VERMELHO
     (linha,) = [ln for ln in capsys.readouterr().out.splitlines() if "a hora do pad" in ln]
     assert linha.rstrip().endswith("VERMELHO"), linha
+
+
+def _par_do_repouso(n: int, *, fluxo_vivo: bool = True) -> dict[str, Any]:
+    return {"vpad": f"P{n}", "controle": "02:00:1a:00:00:0" + str(n), "sem_empate": True,
+            "muda": [], "inventa": [], "fluxo_vivo": fluxo_vivo}
+
+
+def _par_da_taxa(n: int) -> dict[str, Any]:
+    return {"vpad": f"P{n}", "intervalos_novos": 0, "maior_novo_ms": 0.0}
+
+
+def test_a_entrada_nao_da_verde_sobre_par_parado_nem_sobre_ligacao_que_mudou(
+    ob: ModuleType, tmp_path: Path
+) -> None:
+    """Duas respostas dos ensaios que o protocolo lia por cima.
+
+    * o repouso casou o par, mas os carimbos do P2 não andaram (01 §4.4 pede
+      os carimbos andando): o pad não entrega nada, e isso não é verde;
+    * a taxa disse que a ligação hidraw -> aparelho mudou no meio da janela
+      («não conclua nada»): os pares que ela ainda imprime não valem.
+
+    Mordidas: tirar o ramo do ``fluxo_vivo``, ou o da ``ligacao_mudou``.
+    """
+    repouso = {"veredito": "", "medidas": {"mao_na_janela": False, "pares": [
+        _par_do_repouso(n, fluxo_vivo=n != 2) for n in range(1, 5)
+    ]}}
+    taxa = {"veredito": "", "medidas": {"pares": [_par_da_taxa(n) for n in range(1, 5)],
+                                        "ligacao_mudou": ["hidraw3"]}}
+    maquina = fazer_maquina(
+        ob, estado_da_mesa(), tmp_path / "config", dispositivos=pads_uhid(4),
+        ensaios={"entrada_em_repouso.py": json.dumps(repouso),
+                 "taxa_no_hidraw.py": json.dumps(taxa)},
+    )
+    saida = tmp_path / "saida"
+    ob.executar(["--saida", str(saida), "entrada"], maquina)
+
+    repouso_por = {
+        p["jogador"]: p["veredito"] for p in da_linha(saida, "a entrada por par (repouso)")
+    }
+    assert repouso_por == {"P1": ob.VERDE, "P2": ob.VERMELHO, "P3": ob.VERDE, "P4": ob.VERDE}
+    taxa_por = {
+        p["veredito"] for p in da_linha(saida, "os intervalos da entrada (pad contra o físico)")
+    }
+    assert taxa_por == {ob.NAO_SEI}

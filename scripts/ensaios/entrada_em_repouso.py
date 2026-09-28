@@ -1094,6 +1094,10 @@ def resultado_json(coletas: dict[str, Coleta], segundos: float, conhecidos: list
             "bateria_confirma": (por_bat[par.vpad] == par.fisico) if par.vpad in por_bat else None,
             "muda": muda,
             "inventa": inventa,
+            # Os carimbos andam nos DOIS lados (o contador e o sensor_timestamp):
+            # um pad que repete o último quadro para sempre casa pelo repouso
+            # e não entrega nada.
+            "fluxo_vivo": v.fluxo_vivo and f.fluxo_vivo,
         })
     return {
         "veredito": nota,
