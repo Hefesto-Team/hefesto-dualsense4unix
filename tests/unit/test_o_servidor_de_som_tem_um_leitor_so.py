@@ -172,11 +172,11 @@ no() {  # $1 = arquivo longo, $2 = nó, $3 = campo
     }
     END { exit achou ? 0 : 1 }' "$F/$1"
 }
-padrao() { awk -v c="$1" 'index($0, c ": ") == 1 { print substr($0, length(c) + 3) }' "$F/info"; }
+do_info() { awk -v c="$1" 'index($0, c ": ") == 1 { print substr($0, length(c) + 3) }' "$F/info"; }
 alvo() {
   case "$1" in
-    @DEFAULT_SINK@) padrao "Default Sink";;
-    @DEFAULT_SOURCE@) padrao "Default Source";;
+    @DEFAULT_SINK@) do_info "Default Sink";;
+    @DEFAULT_SOURCE@) do_info "Default Source";;
     *) printf '%s\n' "$1";;
   esac
 }
@@ -191,8 +191,8 @@ case "$*" in
   "list source-outputs short"|"list short source-outputs") cat "$F/source-outputs.curto";;
   "list modules short"|"list short modules") cat "$F/modules.curto";;
   "info") cat "$F/info";;
-  "get-default-sink") padrao "Default Sink";;
-  "get-default-source") padrao "Default Source";;
+  "get-default-sink") do_info "Default Sink";;
+  "get-default-source") do_info "Default Source";;
   "get-sink-mute "*) no sinks.longo "$(alvo "$2")" Mute;;
   "get-source-mute "*) no sources.longo "$(alvo "$2")" Mute;;
   "get-sink-volume "*) no sinks.longo "$(alvo "$2")" Volume;;
@@ -340,7 +340,7 @@ def _uma_volta_dos_leitores() -> dict[str, Any]:
         # dualsense_bt_audio._talvez_seguir_a_source, por controle no rádio
         "radio": [dba._rodar(["pactl", "list", "sources", "short"]) for _ in UNIQS],
         # bt_mic, a fonte padrão crua
-        "padrao": bt_mic.fonte_padrao_crua(),
+        "padrão": bt_mic.fonte_padrao_crua(),
     }
 
 
@@ -540,7 +540,7 @@ def test_sem_servidor_o_retrato_diz_nao_sei_e_se_refaz(
             espiao.lidas.clear()
             volta = await asyncio.to_thread(_uma_volta_dos_leitores)
             assert volta["vigia"] is None, "servidor caído virou «ninguém toca»"
-            assert volta["padrao"] is None
+            assert volta["padrão"] is None
             assert all(c["fonte"] is None for c in volta["canal"])
             assert all(r is None for r in volta["radio"])
             assert rs.RETRATO.responder(["pactl", "list", "sinks"]) is rs.NAO_SEI
@@ -580,7 +580,7 @@ PORTAS: dict[tuple[str, str], str] = {
     ("integrations/alto_falante_bt.py", "self.runner"): "alto_falante_bt._rodar",
     ("integrations/alto_falante_bt.py", "ler"): "alto_falante_bt._rodar",
     ("integrations/alto_falante_bt.py", "_rodar"): "alto_falante_bt._rodar",
-    ("integrations/alto_falante_bt.py", "<modulo>"): "alto_falante_bt._rodar",
+    ("integrations/alto_falante_bt.py", "<módulo>"): "alto_falante_bt._rodar",
     ("integrations/audio_control.py", "_texto_do_pactl"): "audio_control._rodar_pelo_recuo",
     ("integrations/audio_control.py", "_rodar_pelo_recuo"): "audio_control._rodar_pelo_recuo",
     ("integrations/audio_control.py", "self._run"): "audio_control._rodar_pelo_recuo",
@@ -682,7 +682,7 @@ def _censo() -> list[tuple[str, int, str, list[str | None]]]:
                 if isinstance(pai, ast.Call) and no in pai.args:
                     porta = ast.unparse(pai.func)
                 else:
-                    porta = funcao.get(id(no), "<modulo>")
+                    porta = funcao.get(id(no), "<módulo>")
                 achados.append((relativo, no.lineno, porta, elementos))
             elif isinstance(no, ast.Call):
                 elementos = [a.value if isinstance(a, ast.Constant) and isinstance(a.value, str)
@@ -816,7 +816,7 @@ def test_o_fluxo_diz_de_quem_e_para_quem_o_pedir() -> None:
     (["pactl", "list", "short", "sink-inputs"], rs.Pergunta("sink-inputs", "curta")),
     (["pactl", "list", "sources"], rs.Pergunta("sources", "longa")),
     (["pactl", "list", "modules", "short"], rs.Pergunta("modules", "curta")),
-    (["/usr/bin/pactl", "get-default-source"], rs.Pergunta("server", "padrao", "source")),
+    (["/usr/bin/pactl", "get-default-source"], rs.Pergunta("server", "padrão", "source")),
     (["pactl", "get-sink-mute", "x"], rs.Pergunta("sinks", "mudo", "x")),
     (["pactl", "get-source-volume", "@DEFAULT_SOURCE@"],
      rs.Pergunta("sources", "volume", "@DEFAULT_SOURCE@")),

@@ -348,7 +348,7 @@ class Pergunta:
     """Uma leitura que o retrato sabe responder: de qual tipo, e em que forma."""
 
     tipo: str
-    forma: str  # "longa" | "curta" | "padrao" | "volume" | "mudo" | "info"
+    forma: str  # "longa" | "curta" | "padrão" | "volume" | "mudo" | "info"
     alvo: str = ""
 
 
@@ -385,7 +385,7 @@ def entender(argv: Sequence[object]) -> Pergunta | None:
     if verbo == "info" and not resto:
         return Pergunta("server", "info")
     if verbo in ("get-default-sink", "get-default-source") and not resto:
-        return Pergunta("server", "padrao", verbo.rsplit("-", 1)[-1])
+        return Pergunta("server", "padrão", verbo.rsplit("-", 1)[-1])
     for de, tipo in (("sink", "sinks"), ("source", "sources")):
         if len(resto) == 1 and verbo == f"get-{de}-volume":
             return Pergunta(tipo, "volume", resto[0])
@@ -783,7 +783,7 @@ class RetratoDoSom:
     def _responder(self, p: Pergunta) -> str | None:
         if p.forma == "info":
             return self._texto_em_dia("server")
-        if p.forma == "padrao":
+        if p.forma == "padrão":
             campos = self._servidor()
             if campos is None:
                 return None
