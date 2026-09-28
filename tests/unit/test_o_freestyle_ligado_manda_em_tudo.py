@@ -410,6 +410,76 @@ def test_a_mascara_antecipada_le_o_freestyle_ligado(
     assert f"perfil gamepad {esperado}" in linha, linha
 
 
+def _o_estado_do_arquivo(pasta: Path) -> str:
+    return next(linha for linha in (pasta / f"{JANELA}.env").read_text(
+        encoding="utf-8").splitlines() if linha.startswith("# estado:"))
+
+
+def test_o_vigia_ve_o_freestyle_trocar_sem_borda(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Quem liga ou desliga sem passar por borda que materializa: o vigia regrava.
+
+    Conferência de 28/09/2026. O ciclo do PS + D-pad ativa com a origem
+    `manual` e muda o modo sem regravar as envs; o jogo seguinte leria no
+    `exec` a máscara do modo de antes. O Modo Freestyle é o sexto campo da
+    assinatura da mesa, e o vigia de 1 Hz vê a troca como vê a de um vpad.
+
+    MORDIDA: tire o `_o_freestyle_na_assinatura(daemon)` da
+    `_assinatura_da_mesa` e do carimbo do `materialize_launch_env` e o vigia
+    não arma — o arquivo do PRAGMATA segue dizendo a máscara do Freestyle.
+    """
+    freestyle = _perfil_de_mentira(FREESTYLE, "xbox")
+    jogo = _perfil_de_mentira(JOGO, "dualsense")
+    monkeypatch.setattr(le, "launch_env_dir", lambda ensure=False: tmp_path)
+    monkeypatch.setattr(le, "steam_input_appids", lambda path=None: set())
+    monkeypatch.setattr(le, "_permite_uhid", lambda daemon: True)
+    monkeypatch.setattr(le, "_steam_profiles", lambda daemon: [(APPID, jogo)])
+    monkeypatch.setattr(le, "_load_profiles", lambda daemon: [freestyle, jogo])
+    store = SimpleNamespace(window_detect_current_class=None, freestyle_ligado=True)
+    daemon = SimpleNamespace(
+        is_native_mode=lambda: False,
+        config=SimpleNamespace(gamepad_emulation_enabled=True, gamepad_flavor="dualsense"),
+        _gamepad_device=SimpleNamespace(backend="uhid"),
+        _coop_manager=None,
+        controller=SimpleNamespace(),
+        store=store,
+    )
+    le.materialize_launch_env(daemon)  # type: ignore[arg-type]
+    assert "perfil gamepad xbox" in _o_estado_do_arquivo(tmp_path)
+
+    store.freestyle_ligado = False
+    le.vigiar_a_mesa(daemon, agora=100.0)
+    regravou = le.rematerializar_se_sossegou(
+        daemon, agora=100.0 + le.JANELA_DE_SOSSEGO_SEC)
+
+    assert regravou is True
+    assert "perfil gamepad dualsense" in _o_estado_do_arquivo(tmp_path)
+
+
+def test_desligar_sem_jogo_regrava_as_envs_do_lancamento(
+    semeadura_ligada: None, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O botão desligado sem jogo vivo não passa pelo `profile.switch`: regrava aqui.
+
+    MORDIDA: tire o `materialize_launch_env(self.daemon)` do ramo sem jogo de
+    `_o_jogo_vivo_volta` e a lista fica vazia.
+    """
+    import hefesto_dualsense4unix.profiles.autoswitch as autoswitch_mod
+
+    loader.load_all_profiles()
+    store = StateStore()
+    h = _Handlers(store, _liga(store))
+    h.daemon = SimpleNamespace()
+    regravadas: list[Any] = []
+    monkeypatch.setattr(le, "materialize_launch_env", regravadas.append)
+    monkeypatch.setattr(autoswitch_mod, "jogo_do_wrapper_vivo", lambda: None)
+
+    asyncio.run(h._handle_freestyle_set({"ligado": False}))
+
+    assert regravadas == [h.daemon]
+
+
 # =============================================================================
 # 5. O BOOT — o restore e o modo do primeiro pad
 # =============================================================================

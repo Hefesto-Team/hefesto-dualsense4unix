@@ -1720,21 +1720,41 @@ def _snapshot(daemon: DaemonProtocol) -> tuple[bool, bool, str, list[str], int]:
 
 
 #: Assinatura da mesa: tudo de que a decisão do IGNORE depende, e nada mais.
-#: `(native, emulação ligada, máscara, backends dos vpads, físicos na mesa)`.
-AssinaturaDaMesa = tuple[bool, bool, str, tuple[str, ...], int]
+#: `(native, emulação ligada, máscara, backends dos vpads, físicos na mesa,
+#: Modo Freestyle ligado)`.
+AssinaturaDaMesa = tuple[bool, bool, str, tuple[str, ...], int, bool]
+
+
+def _o_freestyle_na_assinatura(daemon: Any) -> bool:
+    """O Modo Freestyle ligado, pelo dono — o sexto campo da assinatura.
+
+    O-FREESTYLE-E-UMA-CAMADA-SO-01, conferência de 28/09/2026. Ligado, cada
+    `steam_app_<id>.env` diz a máscara do Freestyle (`_o_freestyle_que_manda`),
+    e quem liga ou desliga nem sempre passa por uma borda que materializa: o
+    ciclo do PS + D-pad ativa com a origem `manual`, e é a ativação à mão que
+    muda o modo. Com o campo na assinatura, o vigia vê a troca como vê a de um
+    vpad, e o próximo jogo não lê no `exec` a máscara do modo de antes.
+    """
+    from hefesto_dualsense4unix.profiles.manager import o_freestyle_manda
+
+    return o_freestyle_manda(getattr(daemon, "store", None))
 
 
 def _assinatura_da_mesa(daemon: DaemonProtocol) -> AssinaturaDaMesa:
     """O estado que decide a env, em forma comparável (hashable).
 
-    IGNORE-NO-FIM-DA-SEQUENCIA-01. O `_snapshot` já produz exatamente estes
-    cinco campos; aqui eles viram uma tupla para responder à única pergunta que
+    IGNORE-NO-FIM-DA-SEQUENCIA-01. O `_snapshot` já produz os cinco primeiros
+    campos, e o sexto é o Modo Freestyle (`_o_freestyle_na_assinatura`); aqui
+    eles viram uma tupla para responder à única pergunta que
     o vigia faz: **mudou alguma coisa desde a última materialização?** Sem esta
     comparação, "reavaliar quando sossega" viraria "regravar cinco arquivos a
     cada segundo para sempre", que é churn, não cura.
     """
     native, enabled, flavor, backends, fisicos = _snapshot(daemon)
-    return native, enabled, flavor, tuple(backends), fisicos
+    return (
+        native, enabled, flavor, tuple(backends), fisicos,
+        _o_freestyle_na_assinatura(daemon),
+    )
 
 
 def armar_rematerializacao(
@@ -2647,6 +2667,7 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
         with contextlib.suppress(Exception):
             daemon._launch_env_assinatura = (  # type: ignore[attr-defined]
                 native, enabled, flavor, tuple(backends), fisicos,
+                _o_freestyle_na_assinatura(daemon),
             )
         # **E AS OUTRAS ESTRADAS SÃO REESCRITAS AQUI — 21/09/2026,
         # LANCADOR-AGNOSTICO-01.** Ordem dela: *"O PROJETO E SUAS FEATURES

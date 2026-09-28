@@ -2852,6 +2852,18 @@ class IpcHandlersMixin:
             appid = jogo_do_wrapper_vivo()
             perfil = perfil_do_appid(appid) if appid is not None else None
         if perfil is None:
+            # Sem jogo vivo não há `profile.switch`, e é ele que regrava as
+            # envs do lançamento. Ligado, cada `steam_app_<id>.env` dizia a
+            # máscara do Freestyle (`launch_env._o_freestyle_que_manda`); sem
+            # regravar, o próximo jogo leria no `exec` a máscara de um modo que
+            # ela acabou de desligar (conferência de 28/09/2026).
+            if self.daemon is not None:
+                with contextlib.suppress(Exception):
+                    from hefesto_dualsense4unix.daemon.launch_env import (
+                        materialize_launch_env,
+                    )
+
+                    materialize_launch_env(self.daemon)
             return {"active_profile": self.store.active_profile}
         return await self._handle_profile_switch({"name": perfil.name})
 
