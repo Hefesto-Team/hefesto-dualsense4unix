@@ -1,8 +1,8 @@
 """O «Corrigir Vulkan» age onde a camada carrega — O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01.
 
 Ela, em 27/09: *«ou seja não resolveu e meteu uma placa falando que não
-presta.»* E a decisão dela: *«Nao sai. Passa a funcionar do jeito certo.»*
-<!-- noqa-acento: citação literal dela -->
+presta.»* E a decisão dela:
+*«Nao sai. Passa a funcionar do jeito certo.»* <!-- noqa-acento: citação literal dela -->
 
 Até 28/09 o botão e o gancho do lançador mexiam só no registro do prefixo
 Wine, que nenhum jogo desta máquina lê: o `vulkan-1` do Wine devolve zero

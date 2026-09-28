@@ -145,19 +145,19 @@ elif ato == "resumo":  # resumo <voltas>
                   f"NVRM={int(m['NVRM'])} fila_cheia={int(m['fila'])}")
 
 elif ato == "guardar":  # guardar <arquivo> <appid> <opção>
-    Path(args[0]).write_text(json.dumps({"appid": args[1], "opcao": args[2]}))
+    Path(args[0]).write_text(json.dumps({"appid": args[1], "opção": args[2]}))
 
 elif ato == "ler":  # ler <arquivo> <chave>
     print(json.loads(Path(args[0]).read_text())[args[1]])
 
-elif ato == "opcao":  # opcao <appid> <a tabela do dono, em JSON>
+elif ato == "opção":  # opção <appid> <a tabela do dono, em JSON>
     print(json.loads(args[1]).get(args[0], ""))
 PY
 }
 
 opcao_de() {  # a opção do jogo na tabela do dono, ou nada
     tabela=$("$PY" "$DONO" --json) || return 1
-    py opcao "$1" "$tabela"
+    py opção "$1" "$tabela"
 }
 
 aplicar() {  # a tabela ao vdf, pelo dono; 3 é a Steam aberta
@@ -169,7 +169,7 @@ aplicar() {  # a tabela ao vdf, pelo dono; 3 é a Steam aberta
 
 devolver_a_tabela() {
     appid=$(py ler "$ANTES" appid)
-    antes=$(py ler "$ANTES" opcao)
+    antes=$(py ler "$ANTES" opção)
     if [ -n "$antes" ]; then
         "$PY" "$DONO" --definir "$appid" "$antes" >/dev/null
     else
@@ -203,7 +203,7 @@ devolver() {
     devolver_a_tabela || morre "o dono não devolveu a opção"
     aplicar || morre "a opção de antes está na tabela, e a Steam ainda não a recebeu"
     appid=$(py ler "$ANTES" appid)
-    antes=$(py ler "$ANTES" opcao)
+    antes=$(py ler "$ANTES" opção)
     agora=$(opcao_de "$appid")
     [ "$agora" = "$antes" ] || { diz "DIFERENTE: a opção do jogo é '$agora', e era '$antes'" >&2; exit 1; }
     rm -f "$ANTES"

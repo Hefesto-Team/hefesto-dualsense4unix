@@ -48,8 +48,8 @@ ver e de tirar, e antes disto o produto não sabia nem enumerar. O que ele não
 pode fazer é prometer cura de engasgo — não há.
 
 **O BOTÃO AGE ONDE A CAMADA CARREGA — 28/09/2026,
-O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01.** Decisão dela, 27/09: *«Nao sai.
-Passa a funcionar do jeito certo.»* <!-- noqa-acento: citação literal dela -->
+O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01.** Decisão dela, 27/09:
+*«Nao sai. Passa a funcionar do jeito certo.»* <!-- noqa-acento: citação literal dela -->
 O Wine chama o carregador Vulkan do Linux, e as camadas que chegam ao jogo são
 as do lado Linux. As duas da Steam (a sobreposição e o gravador de shaders)
 saem pelo ambiente que o lançador entrega ao jogo
