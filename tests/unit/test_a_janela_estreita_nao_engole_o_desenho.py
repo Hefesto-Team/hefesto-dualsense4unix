@@ -550,16 +550,6 @@ ESPERADO_VERMELHO: dict[tuple[str, str], str] = {
 #: até a linha sair daqui, que é o `strict` desta tabela.
 #: sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
 CORTE_CONHECIDO_NO_DESENHO: dict[tuple[str, str], str] = {
-    ("09-sistema.html", "Sobreposição Vulkan:"): (
-        "DEFEITO VIVO que o desenho escondia até 26/09/2026 — a linha do Vulkan "
-        "do exame é a frase que o produto pinta desde 21/09 "
-        "(`camadas_vulkan.frase_do_estado`, ~70 caracteres), e a coluna do "
-        "exame corta 135 px dela a 1212 px; o `title` guarda a frase inteira. O "
-        "desenho mostrava no lugar «Nenhuma sobreposição picotando o jogo», que a "
-        "tela só mostrava antes da primeira pintura. CURA: uma frase que caiba na "
-        "coluna, escolha de texto que vai à sessão dos desenhos (o docstring de "
-        "`a09_sistema.linha_da_sobreposicao_vulkan` quer os três números na linha)"
-    ),
 }
 
 #: O MESMO REGISTRO, para o artigo 4 (os campos de escolha). Tabela separada

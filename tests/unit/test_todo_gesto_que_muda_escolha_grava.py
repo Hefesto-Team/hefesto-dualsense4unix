@@ -142,8 +142,6 @@ ATOS: dict[Chave, str] = {
     ("08-conexoes.html", "entrada-parar"): _LACO_DO_MAPEAR,
     ("08-conexoes.html", "entrada-pular"): _LACO_DO_MAPEAR,
     ("08-conexoes.html", "equilibrar-radio"): _PERGUNTA_DO_RADIO,
-    ("08-conexoes.html", "escolher-adaptador"):
-        "tela: o chip do «Conectar» abre o adaptador de destino",
     ("08-conexoes.html", "escolher-aparelho"):
         "tela: o primeiro tempo do mover, o aparelho na mão dela",
     ("08-conexoes.html", "esquecer-aparelho"): _PERGUNTA_DO_RADIO,

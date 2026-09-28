@@ -156,7 +156,7 @@ def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         coop_mod, "get_coop_manager", lambda d: SimpleNamespace(sync=lambda force=False: None)
     )
     monkeypatch.setattr(session, "save_gamepad_emulation", lambda ativo, flavor=None: None)
-    monkeypatch.setattr(session, "save_gamepad_caminho", lambda caminho: None)
+    monkeypatch.setattr(session, "save_gamepad_caminho", lambda caminho, *, origem=None: None)
     monkeypatch.setattr(hotkey, "PULSO_SEG", 0.0)
     em._zerar_registro_de_mascaras()
     (xdg_paths.config_dir(ensure=True) / "controller_masks.json").unlink(missing_ok=True)

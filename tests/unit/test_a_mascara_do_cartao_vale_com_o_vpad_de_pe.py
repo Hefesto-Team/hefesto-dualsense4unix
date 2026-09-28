@@ -182,7 +182,7 @@ def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         monkeypatch.setattr(gp, nome, valor)
     monkeypatch.setattr(coop_mod, "numero_do_nome_do_primario", lambda d, fallback=1: 1)
     monkeypatch.setattr(session, "save_gamepad_emulation", lambda ativo, flavor=None: None)
-    monkeypatch.setattr(session, "save_gamepad_caminho", lambda caminho: None)
+    monkeypatch.setattr(session, "save_gamepad_caminho", lambda caminho, *, origem=None: None)
     # O co-op REAL, sem /dev/input: as bordas do `test_mascara_por_controle_manda_no_vpad`.
     monkeypatch.setattr(
         "hefesto_dualsense4unix.core.evdev_reader.InputDirWatch.poll", lambda self: True

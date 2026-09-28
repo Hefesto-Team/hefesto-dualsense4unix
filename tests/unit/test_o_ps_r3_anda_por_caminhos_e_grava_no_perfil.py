@@ -152,7 +152,7 @@ def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         coop_mod, "get_coop_manager", lambda d: SimpleNamespace(sync=lambda force=False: None)
     )
     monkeypatch.setattr(session, "save_gamepad_emulation", lambda ativo, flavor=None: None)
-    monkeypatch.setattr(session, "save_gamepad_caminho", lambda caminho: None)
+    monkeypatch.setattr(session, "save_gamepad_caminho", lambda caminho, *, origem=None: None)
     # O gesto sem jogo e sem relógio: esta régua mede DECISÃO.
     monkeypatch.setattr(hotkey, "PULSO_SEG", 0.0)
     monkeypatch.setattr(hotkey, "_appid_do_jogo_do_wrapper", lambda: None)

@@ -169,20 +169,27 @@ def test_o_proton_fixado_le_o_registro_da_trava(monkeypatch, tmp_path, dado,
     assert a09.proton_fixado() is esperado
 
 
-def test_o_tique_acende_os_ligaveis_pelo_que_leu(a09, ctx, monkeypatch) -> None:
+def test_o_tique_acende_os_ligaveis_pelo_que_leu(
+    a09, ctx, monkeypatch, tmp_path
+) -> None:
     """A pílula mente se o pacote não escrever — e escreve o que LEU.
+
+    Desde 28/09 (O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01) o «Corrigir
+    Vulkan» é a escolha gravada em `camadas_da_steam_fora.env`, que o lançador
+    lê; a régua grava a escolha pelo dono, num `XDG_CONFIG_HOME` de mentira.
 
     MORDIDA: troque `fora["vulkan-corrigido"] = vulkan_corrigido()` por `True`.
     """
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     monkeypatch.setattr(a09, "_leituras_baratas", lambda: (1, "Wayland · X", False))
-    a09._VULKAN.clear()
-    a09._VULKAN.update(tiradas=0, postas=2, prefixos=3)
+    cv.gravar_camadas_da_steam_fora(False)
     fora = a09.pacote(ctx)
     assert fora["proton-fixado"] is False
     assert fora["vulkan-corrigido"] is False
-    a09._VULKAN.update(tiradas=1)
+    cv.gravar_camadas_da_steam_fora(True)
     assert a09.pacote(ctx)["vulkan-corrigido"] is True
-    a09._VULKAN.clear()
 
 
 def test_desligar_o_proton_destrava_pelo_dono(a09, ctx, monkeypatch, tmp_path) -> None:

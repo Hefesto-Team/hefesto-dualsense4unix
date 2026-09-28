@@ -1369,6 +1369,38 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "régua interna que confere que o lugar vazio não o traz) — é o dono do "
         "texto que o desenho escreve, e o gerador não é caminho do produto."
     ),
+    "core/o_modo_no_ar.py::modo_contra_o_ar": (
+        "28/09/2026, O-DOCTOR-PERGUNTA-O-MODO-E-A-HORA-DO-PAD-01 — FERRAMENTA "
+        "DE DIAGNÓSTICO. Quem a chama é o `check_o_modo_no_ar` de "
+        "`scripts/doctor.sh`, num heredoc Python, com o `daemon.state_full` do "
+        "socket; e o doctor roda no fim de todo install (a conferência final "
+        "do `install.sh`). A docstring do módulo diz o mesmo: «Quem lê é o "
+        "`doctor.sh`». A tela não a lê de propósito (a sprint, item 3: um aviso "
+        "novo na tela é desenho). Evidência: "
+        "`tests/unit/test_o_doctor_pergunta_o_modo_e_a_hora_do_pad.py::"
+        "TestODoctorPergunta` roda a checagem pelo doctor."
+    ),
+    "core/o_modo_no_ar.py::ModoDoJogador": (
+        "28/09/2026, O-DOCTOR-PERGUNTA-O-MODO-E-A-HORA-DO-PAD-01 — a linha que "
+        "`modo_contra_o_ar` devolve e que o `check_o_modo_no_ar` de "
+        "`scripts/doctor.sh` imprime pela `frase()`. Mesma razão da função: "
+        "ferramenta de diagnóstico, sem caminho na tela por decisão da sprint."
+    ),
+    "core/o_modo_no_ar.py::hora_do_pad": (
+        "28/09/2026, O-DOCTOR-PERGUNTA-O-MODO-E-A-HORA-DO-PAD-01 — FERRAMENTA "
+        "DE DIAGNÓSTICO. Quem a chama é o `check_a_hora_do_pad` de "
+        "`scripts/doctor.sh`, num heredoc Python, com o diário do kernel e o "
+        "da unit do daemon; o produto não lê diário. A docstring do módulo "
+        "diz: «Quem lê é o `doctor.sh`». Evidência: "
+        "`tests/unit/test_o_doctor_pergunta_o_modo_e_a_hora_do_pad.py::"
+        "TestAHoraDoPad` e o `test_a_noite_reprova_a_hora_no_doctor`."
+    ),
+    "core/o_modo_no_ar.py::HoraDoPad": (
+        "28/09/2026, O-DOCTOR-PERGUNTA-O-MODO-E-A-HORA-DO-PAD-01 — a medida que "
+        "`hora_do_pad` devolve e que o `check_a_hora_do_pad` de "
+        "`scripts/doctor.sh` imprime pela `frase()`. Mesma razão da função: "
+        "ferramenta de diagnóstico, e o produto não lê diário."
+    ),
 }
 
 #: As promessas públicas SEM CAMINHO de 12/08/2026 — a dívida, com endereço e

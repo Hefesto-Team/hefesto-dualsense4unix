@@ -233,7 +233,7 @@ DIVIDAS: dict[str, int] = {
     "scripts/validar-palavra-de-tela.py::DIVIDA_DA_PALAVRA_01_PY": 1,
     "scripts/validar-palavra-de-tela.py::DIVIDA_DO_RECIBO": 0,
     "tests/unit/test_a_costura_da_onda_2.py::_OS_QUE_PODEM": 10,
-    "tests/unit/test_a_janela_estreita_nao_engole_o_desenho.py::CORTE_CONHECIDO_NO_DESENHO": 1,
+    "tests/unit/test_a_janela_estreita_nao_engole_o_desenho.py::CORTE_CONHECIDO_NO_DESENHO": 0,
     "tests/unit/test_guarda_gi_falso_precisa_de_exigir_gi_real.py::DIVIDA_GI_FALSO": 11,
     "tests/unit/test_mic_volume_01_o_slider_que_faltava.py::_SEM_MIC_HOJE": 0,
     "tests/unit/test_o_pacote_cabe_na_pagina_publicada.py::EXCECOES_DATADAS": 0,
