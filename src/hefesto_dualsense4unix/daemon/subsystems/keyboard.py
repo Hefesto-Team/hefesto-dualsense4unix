@@ -34,6 +34,7 @@ import shutil
 import signal
 import subprocess
 import tempfile
+import threading
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -43,6 +44,7 @@ from hefesto_dualsense4unix.core.keyboard_mappings import (
     TOKEN_OPEN_OSK,
     TOKEN_TOGGLE_OSK,
 )
+from hefesto_dualsense4unix.integrations import fora_do_servico
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -124,6 +126,16 @@ _OSK_SESSAO_ARQUIVO = "teclado-na-tela.json"
 #: fosse ingênua. Compara-se sempre truncado dos DOIS lados.
 _COMM_MAX = 15
 
+#: Quantos toques do L3/R3 esperam atrás do que está em voo no fio do teclado
+#: na tela (TODO-PROGRAMA-DO-DAEMON-NASCE-FORA-DO-SERVICO-01). Alternar é ida e
+#: volta, e a ORDEM dos toques é a resposta: eles se enfileiram, e não se
+#: descartam. Quatro é mais que qualquer mão entre dois `systemd-run`.
+_OSK_GESTOS_NA_FILA = 4
+
+#: Quanto a parada espera o toque em voo antes de fechar: as duas formas do
+#: `systemd-run`, cada uma com o teto do dono, e a folga do aviso na tela.
+_OSK_ESPERA_DA_PARADA_S = 2 * fora_do_servico.ESPERA_DO_SYSTEMD_RUN_S + 1.0
+
 
 def _osk_candidatos() -> tuple[str, ...]:
     """Candidatos na ordem que FUNCIONA na sessão gráfica de agora.
@@ -188,8 +200,11 @@ def _sessao_do_teclado() -> Path:
     return runtime_dir(ensure=True) / _OSK_SESSAO_ARQUIVO
 
 
-def _gravar_sessao(pid: int, binario: str) -> None:
+def _gravar_sessao(pid: int, binario: str, unidade: str | None = None) -> None:
     """Anota quem abrimos: o PID e o NOME do binário que spawnamos.
+
+    E a unidade, quando o teclado nasceu numa (``fora_do_servico``): é o nome
+    que a ``systemd`` deu a ele, anotado para quem mede.
 
     Grava o nome que ESTE produto mandou abrir, e não o que o `/proc` diz — é a
     comparação entre os dois, na adoção, que separa o nosso teclado de um PID
@@ -198,7 +213,10 @@ def _gravar_sessao(pid: int, binario: str) -> None:
     """
     try:
         caminho = _sessao_do_teclado()
-        dados = json.dumps({"pid": int(pid), "comm": binario}, ensure_ascii=False)
+        registro: dict[str, object] = {"pid": int(pid), "comm": binario}
+        if unidade:
+            registro["unidade"] = unidade
+        dados = json.dumps(registro, ensure_ascii=False)
         fd, tmp = tempfile.mkstemp(dir=caminho.parent, prefix=".teclado_")
         try:
             os.write(fd, dados.encode())
@@ -308,6 +326,24 @@ def _adotar_orfao() -> int | None:
     return pid
 
 
+def _pid_na_unidade(unidade: str, binario: str) -> int | None:
+    """O PID do teclado na tela dentro da unidade que o abriu — pergunta à unidade.
+
+    O PID do ``systemd-run`` não é o do teclado: a unidade é que sabe quem roda
+    nela (``fora_do_servico.pids_da_unidade``). Das perguntas da adoção valem
+    as duas que o PID ainda precisa responder: o ``comm`` é o binário que
+    mandamos abrir, e o processo não é um defunto por colher.
+    """
+    for pid in fora_do_servico.pids_da_unidade(unidade):
+        comm = _comm_do_pid(pid)
+        if comm is None or comm[:_COMM_MAX] != binario[:_COMM_MAX]:
+            continue
+        if _pid_e_zumbi(pid):
+            continue
+        return pid
+    return None
+
+
 class _OSKController:
     """Gerencia o processo do teclado virtual (onboard/wvkbd-mobintl).
 
@@ -334,7 +370,18 @@ class _OSKController:
         self._resolved_checked: bool = False
         self._resolved_em: float = 0.0
         self._process: subprocess.Popen[bytes] | None = None
+        #: O teclado que nasceu numa unidade própria (``fora_do_servico``): o
+        #: nome dela e o binário que ela roda. Pelo ``Popen`` é o ``_process``.
+        self._unidade: str | None = None
+        self._binario_da_unidade: str = ""
         self._missing_warned: bool = False
+        #: O fio do L3/R3 (``dispatch_token``) e a parada mexem no mesmo estado.
+        self._tranca = threading.RLock()
+        self._fio = fora_do_servico.FioDeTrabalho(
+            "hefesto-teclado-na-tela",
+            espera=_OSK_GESTOS_NA_FILA,
+            ao_falhar=lambda erro: logger.warning("osk_gesto_falhou", err=str(erro)),
+        )
 
     def _resolve(self) -> str | None:
         """Primeiro binário de teclado na tela que existe, na ordem da sessão.
@@ -418,20 +465,28 @@ class _OSKController:
         "fechado" com o teclado dela na tela, e é dessa mentira que nascem o R3
         que não fecha nada e o L3 que empilha.
         """
-        return self._pid_vivo() is not None
+        with self._tranca:
+            return self._pid_vivo() is not None
 
     def _pid_vivo(self) -> int | None:
         """O PID do teclado na tela que ESTE produto abriu e ainda vive.
 
-        Duas fontes, nesta ordem: o processo deste daemon e, na falta dele, o
-        órfão que o daemon anterior deixou (`_adotar_orfao`, que só devolve o
-        que passa nas três perguntas). Devolve None quando não há nenhum.
+        Três fontes, nesta ordem: o processo deste daemon, a UNIDADE em que
+        ele nasceu fora do serviço (`_pid_na_unidade`: o PID do `systemd-run`
+        não é o do teclado) e, na falta dos dois, o órfão que o daemon anterior
+        deixou (`_adotar_orfao`, que só devolve o que passa nas três
+        perguntas). Devolve None quando não há nenhum.
         """
         proc = self._process
         if proc is not None:
             if proc.poll() is None:
                 return proc.pid
             self._process = None
+        if self._unidade is not None:
+            pid = _pid_na_unidade(self._unidade, self._binario_da_unidade)
+            if pid is not None:
+                return pid
+            self._unidade = None
         return _adotar_orfao()
 
     def toggle(self) -> None:
@@ -445,10 +500,11 @@ class _OSKController:
         certo — o aviso tem dedup próprio e o TTL do `_resolve` faz um pacote
         instalado com o daemon no ar passar a valer em até dez segundos.
         """
-        if self.aberto():
-            self.close()
-        else:
-            self.open()
+        with self._tranca:
+            if self._pid_vivo() is not None:
+                self._fechar()
+            else:
+                self._abrir()
 
     def open(self) -> None:
         """Abre o teclado na tela — no-op se JÁ há um aberto, deste daemon ou do anterior.
@@ -468,26 +524,55 @@ class _OSKController:
         dono e frase própria (`_avisar_ausencia`, e dois avisos no mesmo gesto
         seria ruído), e o `Popen` que estourou não abriu teclado nenhum — avisar
         ali seria a tela mentindo sobre o que existe.
+
+        E ELE NASCE FORA DO SERVIÇO (TODO-PROGRAMA-DO-DAEMON-NASCE-FORA-DO-SERVICO-01):
+        o teclado é programa dela, e pelo `Popen` de dentro do daemon herdava o
+        `nice 5` e o `oom 200` do serviço. Quem decide a forma é
+        `fora_do_servico.abrir`; pela unidade, o PID se pergunta a ela.
         """
+        with self._tranca:
+            self._abrir()
+
+    def _abrir(self) -> None:
         if self._pid_vivo() is not None:
             return
         resolved = self._resolve()
         if resolved is None:
             self._avisar_ausencia()
             return
+        from hefesto_dualsense4unix.integrations.ambiente_do_jogo import ambiente_limpo
+
         args = _OSK_SPAWN_ARGS[resolved]
         try:
-            self._process = subprocess.Popen(
+            abertura = fora_do_servico.abrir(
                 args,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                env=ambiente_limpo(os.environ),
+                aplicativo=resolved,
+                popen=subprocess.Popen,
             )
-            logger.info("osk_opened", binary=resolved, pid=self._process.pid)
         except Exception as exc:
             logger.warning("osk_open_failed", binary=resolved, err=str(exc))
             self._process = None
             return
-        _gravar_sessao(self._process.pid, resolved)
+        pid: int | None
+        if abertura.caminho == "unidade" and abertura.unidade:
+            self._process = None
+            self._unidade = abertura.unidade
+            self._binario_da_unidade = resolved
+            pid = _pid_na_unidade(abertura.unidade, resolved)
+        else:
+            self._process = abertura.processo
+            pid = getattr(abertura.processo, "pid", None)
+        logger.info(
+            "osk_opened",
+            binary=resolved,
+            pid=pid,
+            caminho=abertura.caminho,
+            unidade=abertura.unidade,
+            motivo=abertura.motivo,
+        )
+        if pid is not None:
+            _gravar_sessao(pid, resolved, abertura.unidade)
         self._avisar_abertura()
 
     def _avisar_abertura(self) -> None:
@@ -519,7 +604,18 @@ class _OSKController:
 
         O órfão morre por `SIGTERM` no PID adotado — nunca por nome. Ver
         `_adotar_orfao` para as três perguntas que decidem se o PID é nosso.
+
+        QUEM CHAMA DE FORA (a parada do daemon) ESPERA O FIO PRIMEIRO: um L3 na
+        fila abriria o teclado DEPOIS da parada, sem dono para fechá-lo. Os
+        toques que não começaram saem da fila, e o que está em voo termina.
         """
+        if not self._fio.no_fio():
+            self._fio.descartar()
+            self._fio.esperar(_OSK_ESPERA_DA_PARADA_S)
+        with self._tranca:
+            self._fechar()
+
+    def _fechar(self) -> None:
         proc = self._process
         if proc is not None:
             self._process = None
@@ -529,6 +625,18 @@ class _OSKController:
                     logger.info("osk_closed", pid=proc.pid)
                 except Exception as exc:
                     logger.warning("osk_close_failed", err=str(exc))
+                _esquecer_sessao()
+                return
+        unidade = self._unidade
+        if unidade is not None:
+            self._unidade = None
+            pid_da_unidade = _pid_na_unidade(unidade, self._binario_da_unidade)
+            if pid_da_unidade is not None:
+                try:
+                    os.kill(pid_da_unidade, signal.SIGTERM)
+                    logger.info("osk_closed", pid=pid_da_unidade, unidade=unidade)
+                except Exception as exc:
+                    logger.warning("osk_close_failed", err=str(exc), unidade=unidade)
                 _esquecer_sessao()
                 return
         pid = _adotar_orfao()
@@ -548,17 +656,36 @@ class _OSKController:
 
         Só atua em press (edge-triggered pull-to-focus). Release é no-op para
         evitar fechar no release de L3 logo após o press abrir.
+
+        O LAÇO SÓ DISPARA (TODO-PROGRAMA-DO-DAEMON-NASCE-FORA-DO-SERVICO-01):
+        este callback roda no laço que lê os quatro controles, e abrir o
+        teclado custa o `systemd-run` (6 a 20 ms, teto de 2 s por forma). O
+        toque vai para o fio do teclado, na ordem em que chegou.
         """
         if phase != "press":
             return
-        if token == TOKEN_TOGGLE_OSK:
-            self.toggle()
-        elif token == TOKEN_OPEN_OSK:
-            self.open()
-        elif token == TOKEN_CLOSE_OSK:
-            self.close()
-        else:
+        if token not in (TOKEN_TOGGLE_OSK, TOKEN_OPEN_OSK, TOKEN_CLOSE_OSK):
             logger.warning("osk_token_desconhecido", token=token)
+            return
+        if not self._fio.disparar(lambda: self._atender(token)):
+            logger.info("osk_toque_descartado", token=token)
+
+    def _atender(self, token: str) -> None:
+        """O toque, já no fio do teclado."""
+        with self._tranca:
+            if token == TOKEN_TOGGLE_OSK:
+                if self._pid_vivo() is not None:
+                    self._fechar()
+                else:
+                    self._abrir()
+            elif token == TOKEN_OPEN_OSK:
+                self._abrir()
+            else:
+                self._fechar()
+
+    def esperar_os_toques(self, teto: float | None = None) -> bool:
+        """Espera os toques do L3/R3 que estão no fio. True = nenhum ficou."""
+        return self._fio.esperar(teto)
 
 
 def start_keyboard_emulation(daemon: DaemonProtocol) -> bool:

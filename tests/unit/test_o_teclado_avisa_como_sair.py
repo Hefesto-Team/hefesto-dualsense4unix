@@ -209,6 +209,7 @@ def test_abrir_o_teclado_pelo_controle_avisa_na_tela(
     """
     controlador = _OSKController()
     controlador.dispatch_token(token, "press")
+    assert controlador.esperar_os_toques(5.0)
 
     assert mesa["nascidos"], (
         f"o dublê do teclado na tela nem chegou a nascer no press de {token} — "
@@ -234,6 +235,7 @@ def test_o_release_do_analogico_nao_repete_o_aviso(mesa: dict[str, Any]) -> None
     controlador = _OSKController()
     controlador.dispatch_token(TOKEN_TOGGLE_OSK, "press")
     controlador.dispatch_token(TOKEN_TOGGLE_OSK, "release")
+    assert controlador.esperar_os_toques(5.0)
 
     abertura = _avisos_de_abertura(mesa["emitidos"])
     assert len(abertura) == 1, (
@@ -257,6 +259,7 @@ def test_a_frase_ensina_o_gesto_de_saida(mesa: dict[str, Any]) -> None:
     """
     controlador = _OSKController()
     controlador.dispatch_token(TOKEN_TOGGLE_OSK, "press")
+    assert controlador.esperar_os_toques(5.0)
 
     abertura = _avisos_de_abertura(mesa["emitidos"])
     assert abertura, "nenhum aviso de abertura para conferir a frase"
@@ -281,6 +284,7 @@ def test_a_frase_e_a_que_ela_decidiu(mesa: dict[str, Any]) -> None:
     """
     controlador = _OSKController()
     controlador.dispatch_token(TOKEN_TOGGLE_OSK, "press")
+    assert controlador.esperar_os_toques(5.0)
 
     abertura = _avisos_de_abertura(mesa["emitidos"])
     assert abertura, "nenhum aviso de abertura para comparar com a decisão dela"
@@ -310,6 +314,7 @@ def test_o_teclado_ja_aberto_nao_ganha_um_segundo_aviso(mesa: dict[str, Any]) ->
     controlador = _OSKController()
     controlador.dispatch_token(TOKEN_OPEN_OSK, "press")
     controlador.dispatch_token(TOKEN_OPEN_OSK, "press")
+    assert controlador.esperar_os_toques(5.0)
 
     assert len(mesa["nascidos"]) == 1, (
         "o segundo `__OPEN_OSK__` abriu um SEGUNDO teclado — o caso não chega a "
@@ -343,6 +348,7 @@ def test_sem_programa_de_teclado_o_unico_aviso_e_o_da_ausencia(
 
     controlador = _OSKController()
     controlador.dispatch_token(TOKEN_TOGGLE_OSK, "press")
+    assert controlador.esperar_os_toques(5.0)
 
     assert not mesa["nascidos"], "sem binário nenhum processo pode nascer"
     assert not _avisos_de_abertura(mesa["emitidos"]), (
@@ -378,6 +384,7 @@ def test_o_spawn_que_estoura_nao_anuncia_teclado_nenhum(
 
     controlador = _OSKController()
     controlador.dispatch_token(TOKEN_TOGGLE_OSK, "press")
+    assert controlador.esperar_os_toques(5.0)
 
     assert not mesa["emitidos"], (
         "o `Popen` estourou e a tela anunciou um teclado aberto: "
@@ -407,6 +414,7 @@ def test_o_aviso_que_estoura_nao_derruba_o_teclado(
 
     controlador = _OSKController()
     controlador.dispatch_token(TOKEN_TOGGLE_OSK, "press")
+    assert controlador.esperar_os_toques(5.0)
 
     assert mesa["nascidos"], "o aviso que estourou levou o teclado junto"
     assert controlador.aberto() is True, (

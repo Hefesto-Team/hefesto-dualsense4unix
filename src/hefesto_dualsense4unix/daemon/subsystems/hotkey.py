@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.daemon.subsystems import recado_do_microfone
-from hefesto_dualsense4unix.integrations import ponte_tentativa
+from hefesto_dualsense4unix.integrations import fora_do_servico, ponte_tentativa
 from hefesto_dualsense4unix.integrations.eleicao_de_microfone import (
     EleitorDeMicrofone,
     ResultadoDaEleicao,
@@ -193,6 +193,56 @@ def _a_metade_da_maquina(cfg: Any, escolha: str | None) -> str:
     return da_maquina
 
 
+def _a_acao_da_maquina(da_maquina: str, comando: Any) -> None:
+    """A metade do PS que fala com o sistema: a Steam, ou o programa dela.
+
+    Corre no ``FioDeTrabalho`` do gesto, nunca no laço de leitura: o
+    ``pgrep`` e o ``wmctrl`` do ``open_or_focus_steam`` e o ``systemd-run``
+    do ``fora_do_servico.abrir`` esperam processos de fora (teto de 2 s cada).
+    """
+    if da_maquina == "steam":
+        from hefesto_dualsense4unix.integrations.steam_launcher import open_or_focus_steam
+
+        open_or_focus_steam()
+        return
+    # STEAM-FORA-DO-SERVICO-01: o programa dela nasce FORA do serviço do
+    # daemon, como a Steam — senão herda o nice e o oom dele e morre no
+    # restart da unit. O `Popen` de sempre é o fallback.
+    from hefesto_dualsense4unix.integrations.ambiente_do_jogo import ambiente_limpo
+
+    try:
+        abertura = fora_do_servico.abrir(
+            comando, env=ambiente_limpo(os.environ), popen=_sp.Popen
+        )
+    except Exception as exc:
+        logger.warning("hotkey_ps_solo_custom_falhou", err=str(exc))
+        return
+    logger.info(
+        "hotkey_ps_solo_custom_aberto",
+        caminho=abertura.caminho,
+        unidade=abertura.unidade,
+        motivo=abertura.motivo,
+    )
+
+
+@dataclass
+class _GestoDoPs:
+    """O callback do PS solo: ``fazer`` no laço, a ação da máquina no ``fio``.
+
+    Chamável como a função que era; ``esperar`` é o que a parada e a régua
+    usam para saber que o toque em voo terminou.
+    """
+
+    fazer: Any
+    fio: fora_do_servico.FioDeTrabalho
+
+    def __call__(self) -> None:
+        self.fazer()
+
+    def esperar(self, teto: float | None = None) -> bool:
+        return self.fio.esperar(teto)
+
+
 def build_ps_solo_callback(daemon: DaemonProtocol) -> Any:
     """Cria o callback on_ps_solo que lê self.config em runtime (REFACTOR-DAEMON-RELOAD-01).
 
@@ -210,7 +260,18 @@ def build_ps_solo_callback(daemon: DaemonProtocol) -> Any:
     (PS-TOQUE-CURTO-01) é anterior a tudo — ele mora em `hotkey_daemon.py` e
     decide antes de este callback existir, então segurar o PS para religar o
     controle no rádio continua não digitando.
+
+    O LAÇO SÓ DISPARA (TODO-PROGRAMA-DO-DAEMON-NASCE-FORA-DO-SERVICO-01): as
+    guardas e a tecla são memória e ficam aqui, na ordem de sempre; a Steam e
+    o programa dela vão para um fio próprio, um toque em voo por vez. Medido
+    em 27/09 (auditoria, 02 achado 9): cada toque segurava o laço dos quatro
+    controles por cerca de 11 ms, com teto de 2 s no ``pgrep`` e de 2 s por
+    forma no ``systemd-run``.
     """
+    fio = fora_do_servico.FioDeTrabalho(
+        "hefesto-acao-do-ps",
+        ao_falhar=lambda erro: logger.warning("hotkey_ps_solo_acao_falhou", err=str(erro)),
+    )
 
     def _on_ps_solo() -> None:
         cfg = daemon.config
@@ -240,38 +301,21 @@ def build_ps_solo_callback(daemon: DaemonProtocol) -> Any:
         # depois dela chega à Steam.
         if digita and escolha is not None:
             _digitar_o_ps(daemon, escolha)
-        if da_maquina == "steam":
-            from hefesto_dualsense4unix.integrations.steam_launcher import open_or_focus_steam
-
-            open_or_focus_steam()
-        elif da_maquina == "custom":
-            command = cfg.ps_button_command
-            if not command:
+        comando: Any = None
+        if da_maquina == "custom":
+            comando = cfg.ps_button_command
+            if not comando:
                 logger.warning("hotkey_ps_solo_custom_sem_comando")
                 return
-            # STEAM-FORA-DO-SERVICO-01: o programa dela nasce FORA do serviço
-            # do daemon, como a Steam — senão herda o nice e o oom dele e
-            # morre no restart da unit. O `Popen` de sempre é o fallback.
-            from hefesto_dualsense4unix.integrations import fora_do_servico
-            from hefesto_dualsense4unix.integrations.ambiente_do_jogo import (
-                ambiente_limpo,
-            )
+        elif da_maquina != "steam":
+            return
+        # O LAÇO SÓ DISPARA: a Steam e o programa dela esperam processos de
+        # fora, e quem espera é o fio. Um toque em voo por vez — o segundo,
+        # com o primeiro ainda abrindo, abriria outra Steam.
+        if not fio.disparar(lambda: _a_acao_da_maquina(da_maquina, comando)):
+            logger.info("hotkey_ps_solo_acao_em_voo", acao=da_maquina)
 
-            try:
-                abertura = fora_do_servico.abrir(
-                    command, env=ambiente_limpo(os.environ), popen=_sp.Popen
-                )
-            except Exception as exc:
-                logger.warning("hotkey_ps_solo_custom_falhou", err=str(exc))
-                return
-            logger.info(
-                "hotkey_ps_solo_custom_aberto",
-                caminho=abertura.caminho,
-                unidade=abertura.unidade,
-                motivo=abertura.motivo,
-            )
-
-    return _on_ps_solo
+    return _GestoDoPs(fazer=_on_ps_solo, fio=fio)
 
 
 def build_ps_long_press_callback(daemon: DaemonProtocol) -> Any:

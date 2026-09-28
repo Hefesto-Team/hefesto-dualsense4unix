@@ -157,7 +157,9 @@ class TestADoDaemonNasceFora:
             _keyboard_device=None,
         )
         hotkey.definir_acao_do_ps(daemon, None)
-        hotkey.build_ps_solo_callback(daemon)()
+        gesto = hotkey.build_ps_solo_callback(daemon)
+        gesto()
+        assert gesto.esperar(5.0)
         assert [c["argv"] for c in chamadas] == [["meu-programa", "--x"]]
         assert "VIRTUAL_ENV" not in chamadas[0]["env"]
 
@@ -386,11 +388,11 @@ class TestOPopenDeSempre:
     def test_a_espera_do_systemd_run_cabe_no_teto_do_mesmo_toque(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O botão PS chama o ``abrir`` INLINE no laço de leitura do daemon
-        (``hotkey.py``, REVIEW-M5-PGREP-BLOCK-01), depois do ``pgrep`` e do
-        ``wmctrl`` do mesmo toque. Um gerenciador que não responde segura a
-        entrada dos quatro controles pela espera inteira: ela não passa do
-        teto que aqueles dois já têm.
+        """O botão PS chama o ``abrir`` no fio do gesto (``hotkey.py``, desde a
+        TODO-PROGRAMA-DO-DAEMON-NASCE-FORA-DO-SERVICO-01), depois do ``pgrep``
+        e do ``wmctrl`` do mesmo toque. Um gerenciador que não responde segura
+        o fio, e o próximo toque é descartado pela espera inteira: ela não passa
+        do teto que aqueles dois já têm.
 
         MORDE: volte ``ESPERA_DO_SYSTEMD_RUN_S`` para os 10 s com que nasceu e
         a primeira comparação reprova; troque o ``timeout=`` do

@@ -70,26 +70,34 @@ def _patch_steam(monkeypatch) -> list[Any]:
 def test_ps_solo_abre_steam_no_desktop(monkeypatch):
     """Sem modo jogo e sem nativo → a ação roda (abre a Steam)."""
     opened = _patch_steam(monkeypatch)
-    hotkey.build_ps_solo_callback(_daemon())()
+    gesto = hotkey.build_ps_solo_callback(_daemon())
+    gesto()
+    assert gesto.esperar(5.0)
     assert opened == [True]
 
 
 def test_ps_solo_suprimido_em_modo_jogo(monkeypatch):
     """Emulação suprimida (modo jogo — inclui jogos NÃO-Steam) → suprime."""
     opened = _patch_steam(monkeypatch)
-    hotkey.build_ps_solo_callback(_daemon(suppressed=True))()
+    gesto = hotkey.build_ps_solo_callback(_daemon(suppressed=True))
+    gesto()
+    assert gesto.esperar(5.0)
     assert opened == []
 
 
 def test_ps_solo_suprimido_no_modo_nativo(monkeypatch):
     opened = _patch_steam(monkeypatch)
-    hotkey.build_ps_solo_callback(_daemon(native=True))()
+    gesto = hotkey.build_ps_solo_callback(_daemon(native=True))
+    gesto()
+    assert gesto.esperar(5.0)
     assert opened == []
 
 
 def test_ps_solo_none_nao_faz_nada(monkeypatch):
     opened = _patch_steam(monkeypatch)
-    hotkey.build_ps_solo_callback(_daemon(action="none"))()
+    gesto = hotkey.build_ps_solo_callback(_daemon(action="none"))
+    gesto()
+    assert gesto.esperar(5.0)
     assert opened == []
 
 

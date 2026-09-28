@@ -84,6 +84,8 @@ def test_reload_config_none_nao_abre_steam(monkeypatch):
     # Dispara on_ps_solo diretamente — não deve chamar Steam.
     assert daemon._hotkey_manager is not None
     daemon._hotkey_manager.on_ps_solo()
+    # A Steam corre no fio do gesto, e não no laço: a régua espera o fio.
+    assert daemon._hotkey_manager.on_ps_solo.esperar(5.0)
     assert chamadas == [], "Steam não deve ser chamado após reload para 'none'"
 
 
@@ -106,6 +108,8 @@ def test_reload_config_steam_chama_launcher(monkeypatch):
     daemon.reload_config(novo_cfg)
 
     daemon._hotkey_manager.on_ps_solo()
+    # A Steam corre no fio do gesto, e não no laço: a régua espera o fio.
+    assert daemon._hotkey_manager.on_ps_solo.esperar(5.0)
     assert chamadas == ["steam"]
 
 

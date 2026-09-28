@@ -140,8 +140,10 @@ def test_dispatch_token_open_close(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     ctrl = _OSKController()
     ctrl.dispatch_token(TOKEN_OPEN_OSK, "press")
+    assert ctrl.esperar_os_toques(5.0)
     assert popens == [["onboard"]]
     ctrl.dispatch_token(TOKEN_CLOSE_OSK, "press")
+    assert ctrl.esperar_os_toques(5.0)
     assert fake_proc.terminated is True
 
 
@@ -151,6 +153,7 @@ def test_dispatch_token_release_e_noop() -> None:
     # Sem mockar Popen: se release fosse abrir, subprocess real rodaria.
     ctrl.dispatch_token(TOKEN_OPEN_OSK, "release")
     ctrl.dispatch_token(TOKEN_CLOSE_OSK, "release")
+    assert ctrl.esperar_os_toques(5.0)
     assert ctrl._process is None
 
 
@@ -188,6 +191,7 @@ def test_sem_binario_notifica_a_usuaria(
     )
     ctrl = _OSKController()
     ctrl.dispatch_token(TOKEN_OPEN_OSK, "press")
+    assert ctrl.esperar_os_toques(5.0)
     assert len(_sem_notificacao_de_verdade) == 1, (
         "L3 sem binário voltou a falhar em silêncio: um aperto tem de virar "
         f"exatamente um aviso na tela, e vieram {_sem_notificacao_de_verdade!r}"

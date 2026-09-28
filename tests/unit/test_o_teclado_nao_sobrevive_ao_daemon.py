@@ -262,6 +262,7 @@ def test_o_daemon_novo_adota_o_orfao_e_o_r3_fecha(mesa: dict[str, Any]) -> None:
         "mentira que nascem o R3 que não fecha e o L3 que empilha")
 
     novo.dispatch_token(TOKEN_CLOSE_OSK, "press")
+    assert novo.esperar_os_toques(5.0)
 
     assert _esperar_morrer(pid), (
         f"o R3 do daemon novo não fechou o teclado órfão (pid={pid}) — defeito "
@@ -293,6 +294,7 @@ def test_o_l3_do_daemon_novo_nao_empilha_um_segundo_teclado(
 
     novo = _OSKController()
     novo.dispatch_token(TOKEN_TOGGLE_OSK, "press")
+    assert novo.esperar_os_toques(5.0)
 
     assert len(mesa["nascidos"]) == 1, (
         "o L3 do daemon novo ABRIU UM SEGUNDO teclado por cima do primeiro — "
@@ -301,6 +303,7 @@ def test_o_l3_do_daemon_novo_nao_empilha_um_segundo_teclado(
         "sobrepostas'): a promessa valia dentro de um daemon só")
     # E o alternador continua alternando: o toque seguinte FECHA o órfão.
     novo.dispatch_token(TOKEN_TOGGLE_OSK, "press")
+    assert novo.esperar_os_toques(5.0)
     assert _esperar_morrer(pid), (
         "o segundo toque do L3 no daemon novo não fechou o teclado adotado")
 
@@ -334,6 +337,7 @@ def test_pid_que_ja_morreu_nao_e_adotado_e_o_l3_abre_normal(
     assert novo.aberto() is False, (
         "adotou um PID que já morreu — o L3 nunca mais abriria teclado nenhum")
     novo.dispatch_token(TOKEN_TOGGLE_OSK, "press")
+    assert novo.esperar_os_toques(5.0)
     assert len(mesa["nascidos"]) == 2, (
         f"com o órfão morto, o L3 tinha de ABRIR: {mesa['nascidos']!r}")
     assert _vivo(mesa["nascidos"][1])
@@ -374,6 +378,7 @@ def test_o_defunto_por_colher_nao_conta_como_teclado_na_tela(
         "continuam lá, mas não há teclado na tela dela — e o L3 nunca mais "
         "abriria nenhum")
     novo.dispatch_token(TOKEN_TOGGLE_OSK, "press")
+    assert novo.esperar_os_toques(5.0)
     assert len(mesa["nascidos"]) == 2, (
         f"com o órfão defunto, o L3 tinha de ABRIR: {mesa['nascidos']!r}")
 
@@ -446,7 +451,11 @@ def test_o_r3_nao_mata_o_processo_alheio_do_pid_reciclado(
     """
     alheio = _pid_reciclado(mesa)
     try:
-        _OSKController().dispatch_token(TOKEN_CLOSE_OSK, "press")
+        controlador = _OSKController()
+        controlador.dispatch_token(TOKEN_CLOSE_OSK, "press")
+        # O R3 corre no fio do teclado: sem esperar, o `_vivo` abaixo mediria
+        # o instante ANTES do toque, e passaria com qualquer `close()`.
+        assert controlador.esperar_os_toques(5.0)
         assert _vivo(alheio.pid), (
             f"o R3 MATOU UM PROCESSO ALHEIO (pid={alheio.pid}) — é o estrago "
             "que a adoção conservadora existe para não cometer, e o mesmo que "

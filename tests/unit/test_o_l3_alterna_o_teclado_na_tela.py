@@ -100,6 +100,9 @@ def mesa(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     def apertar_l3() -> None:
         dev.dispatch(frozenset({"l3"}))
         dev.dispatch(frozenset())
+        # O toque sai do laço para o fio do teclado (o `systemd-run` não
+        # segura a leitura dos quatro controles): a régua espera o fio.
+        assert ctrl.esperar_os_toques(5.0)
 
     return {"ctrl": ctrl, "dev": dev, "abertos": abertos,
             "processos": processos, "apertar_l3": apertar_l3}
@@ -158,6 +161,7 @@ def test_o_release_nao_fecha_o_que_o_press_acabou_de_abrir(
     """
     mesa["dev"].dispatch(frozenset({"l3"}))
     mesa["dev"].dispatch(frozenset())
+    assert mesa["ctrl"].esperar_os_toques(5.0)
     assert mesa["processos"][0].terminado is False, (
         "o release fechou o teclado na tela — o L3 abriria e fecharia no mesmo "
         "aperto, e ela veria a janela piscar")
@@ -206,6 +210,7 @@ def test_sem_teclado_instalado_o_segundo_toque_continua_tentando(
     ctrl = _OSKController()
     ctrl.dispatch_token(TOKEN_TOGGLE_OSK, "press")
     ctrl.dispatch_token(TOKEN_TOGGLE_OSK, "press")
+    assert ctrl.esperar_os_toques(5.0)
 
     assert ctrl.aberto() is False
     assert len(avisos) == 2, (

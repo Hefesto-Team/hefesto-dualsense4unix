@@ -52,17 +52,32 @@ gerenciador pelo soquete ``$XDG_RUNTIME_DIR/systemd/private``, que nenhum
 barramento de mentira desvia: um teste que chegasse a ele abriria unidade na
 sessão de quem roda a suíte. Quem testa injeta ``executar``.
 
+**O PID DO APLICATIVO SE PERGUNTA À UNIDADE** (``pids_da_unidade``). Pelo
+``Popen`` quem chama fica com o processo; pela unidade fica com um nome, e o
+PID do ``systemd-run`` não é o do aplicativo. Quem precisa fechar o que abriu
+(o teclado na tela) lê o ``cgroup.procs`` da unidade: é o kernel dizendo quem
+está lá dentro.
+
+**E O LAÇO DE LEITURA NÃO ESPERA O GERENCIADOR** (``FioDeTrabalho``). O PS e o
+L3 chegam ao daemon no laço que lê os quatro controles, e o ``systemd-run``
+leva de 6 a 20 ms, com teto de 2 s por forma. Quem abre a partir dali
+dispara num fio próprio, e o laço segue lendo.
+
 Módulo 100% stdlib DE PROPÓSITO: ``steam_launch_options`` o importa, e o
 install/uninstall rodam aquele arquivo como script avulso.
 """
 from __future__ import annotations
 
+import contextlib
 import os
 import re
 import secrets
 import shutil
 import subprocess
 import sys
+import threading
+import time
+from collections import deque
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -127,9 +142,9 @@ PREFIXO_DA_UNIDADE = "app-hefesto-"
 
 #: Quanto se espera o ``systemd-run`` voltar. Medido em 26/09: 6 a 12 ms ele
 #: sozinho, 12 a 20 ms o ``abrir`` inteiro. O teto é o do ``pgrep`` e do
-#: ``wmctrl`` do mesmo toque (``steam_launcher``): o botão PS chama isto INLINE
-#: no laço de leitura do daemon, e um gerenciador que não responde seguraria a
-#: entrada dos quatro controles pelo tempo inteiro da espera.
+#: ``wmctrl`` do mesmo toque (``steam_launcher``). Quem espera é o
+#: ``FioDeTrabalho`` do PS e o do teclado na tela, não o laço de leitura; o
+#: teto segura só o próximo toque, que o fio descarta ou enfileira.
 ESPERA_DO_SYSTEMD_RUN_S = 2.0
 
 #: ``systemd-run`` recusa nome de variável fora disto (medido com
@@ -157,13 +172,19 @@ class Contexto:
 
 @dataclass(frozen=True)
 class Abertura:
-    """Como o aplicativo saiu. ``unidade`` só quando nasceu fora."""
+    """Como o aplicativo saiu. ``unidade`` só quando nasceu fora.
+
+    ``processo`` é o que o ``Popen`` devolveu, quando ele foi o caminho: quem
+    precisa fechar o aplicativo depois (o teclado na tela) guarda o processo;
+    pela unidade, pergunta a ela (``pids_da_unidade``).
+    """
 
     caminho: str  # "unidade" | "popen"
     motivo: str
     unidade: str | None = None
     tentativas: tuple[str, ...] = field(default_factory=tuple)
     variaveis_fora: tuple[str, ...] = field(default_factory=tuple)
+    processo: Any = field(default=None, compare=False, repr=False)
 
 
 def _ler(caminho: str | Path) -> str | None:
@@ -401,7 +422,7 @@ def abrir(
     abrir_direto = popen if popen is not None else subprocess.Popen
 
     def _pelo_popen(motivo: str, tentativas: tuple[str, ...] = ()) -> Abertura:
-        abrir_direto(
+        processo = abrir_direto(
             list(argv),
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
@@ -409,7 +430,9 @@ def abrir(
             start_new_session=True,
             env=dict(env),
         )
-        return Abertura(caminho="popen", motivo=motivo, tentativas=tentativas)
+        return Abertura(
+            caminho="popen", motivo=motivo, tentativas=tentativas, processo=processo
+        )
 
     if ctx.herdaria is None:
         return _pelo_popen("quem chama já é da pessoa")
@@ -451,12 +474,184 @@ def abrir(
     return _pelo_popen(f"o systemd-run recusou ({ctx.herdaria})", tuple(tentativas))
 
 
+#: Onde o kernel publica os processos de cada unidade. Módulo-nível para a
+#: régua apontar a uma árvore de mentira sem tocar no gerenciador de ninguém.
+RAIZ_DO_CGROUP = "/sys/fs/cgroup"
+RAIZ_DO_PROC = "/proc"
+
+
+def _base_do_gerenciador(raiz_proc: str) -> str:
+    """O cgroup do ``user@<uid>.service`` de quem chama, sem a barra inicial.
+
+    Lido do próprio cgroup (o daemon mora em
+    ``user.slice/user-<uid>.slice/user@<uid>.service/app.slice/…``); fora do
+    gerenciador (um terminal, no ``session-N.scope``), montado pelo uid.
+    """
+    proprio = _cgroup_de(_ler(f"{raiz_proc}/self/cgroup")) or ""
+    partes = proprio.strip("/").split("/")
+    for i, parte in enumerate(partes):
+        if re.fullmatch(r"user@\d+\.service", parte):
+            return "/".join(partes[: i + 1])
+    uid = os.getuid()
+    return f"user.slice/user-{uid}.slice/user@{uid}.service"
+
+
+def _pids_de(arquivo: str) -> tuple[int, ...] | None:
+    """Os PIDs de um ``cgroup.procs``, ou None quando a pasta não existe."""
+    texto = _ler(arquivo)
+    if texto is None:
+        return None
+    return tuple(int(linha) for linha in texto.split() if linha.isdigit())
+
+
+def pids_da_unidade(
+    unidade: str,
+    *,
+    raiz_cgroup: str | None = None,
+    raiz_proc: str | None = None,
+) -> tuple[int, ...]:
+    """Quem está de pé na unidade que ``abrir`` criou, pergunta feita ao kernel.
+
+    O PID do ``systemd-run`` não é o do aplicativo, e o nome da unidade é
+    tudo o que quem chamou tem. O gerenciador põe a unidade transitória em
+    ``app.slice`` (systemd 255, medido na máquina dela em 28/09/2026 com o
+    ``app-hefesto…tray@autostart.service`` ao lado do daemon); as outras
+    fatias do primeiro nível também são olhadas, e, se nenhuma pasta existe,
+    o ``/proc/<pid>/cgroup`` de cada processo responde, que vale para
+    qualquer arranjo de fatias. Unidade que saiu (``--collect`` recolhe a
+    pasta) é a resposta vazia.
+
+    Só nomes que ``nome_da_unidade`` escreve: um nome de fora não vira
+    caminho de arquivo.
+    """
+    if not unidade.startswith(PREFIXO_DA_UNIDADE) or "/" in unidade:
+        return ()
+    cgroup = RAIZ_DO_CGROUP if raiz_cgroup is None else raiz_cgroup
+    proc = RAIZ_DO_PROC if raiz_proc is None else raiz_proc
+    base = os.path.join(cgroup, _base_do_gerenciador(proc))
+    pastas = [os.path.join(base, "app.slice", unidade), os.path.join(base, unidade)]
+    try:
+        with os.scandir(base) as entradas:
+            pastas.extend(
+                os.path.join(e.path, unidade)
+                for e in entradas
+                if e.name.endswith(".slice") and e.name != "app.slice" and e.is_dir()
+            )
+    except OSError:
+        pass
+    for pasta in pastas:
+        pids = _pids_de(os.path.join(pasta, "cgroup.procs"))
+        if pids is not None:
+            return pids
+    achados: list[int] = []
+    try:
+        nomes = os.listdir(proc)
+    except OSError:
+        return ()
+    for nome in nomes:
+        if not nome.isdigit():
+            continue
+        caminho = _cgroup_de(_ler(f"{proc}/{nome}/cgroup")) or ""
+        if caminho.rstrip("/").rsplit("/", 1)[-1] == unidade:
+            achados.append(int(nome))
+    return tuple(sorted(achados))
+
+
+class FioDeTrabalho:
+    """O laço de leitura dispara, e quem espera o gerenciador é este fio.
+
+    O PS e o L3 chegam ao daemon no laço que lê os quatro controles
+    (``hotkey_daemon._fire_ps_solo`` e o ``virtual_token_callback`` do teclado
+    virtual). Abrir a Steam ou o teclado na tela dali custa o ``systemd-run``
+    (6 a 20 ms, teto de ``ESPERA_DO_SYSTEMD_RUN_S`` por forma), e antes dele o
+    ``pgrep`` do mesmo toque: a entrada dos quatro controles parava junto.
+
+    ``espera`` é quantos pedidos cabem atrás do que está em voo. ``0``
+    descarta o pedido que chega com outro em voo (o PS: dois toques seguidos
+    não abrem duas Steam); um número maior enfileira em ordem (o L3: alternar
+    é ida e volta, e a ordem dos toques é a resposta). Um pedido que levanta
+    não trava o fio: ``ao_falhar`` recebe a exceção, e o próximo pedido corre.
+    """
+
+    def __init__(
+        self,
+        nome: str,
+        *,
+        espera: int = 0,
+        ao_falhar: Callable[[BaseException], object] | None = None,
+    ) -> None:
+        self.nome = nome
+        self._espera = max(0, int(espera))
+        self._ao_falhar = ao_falhar
+        self._tranca = threading.Lock()
+        self._fila: deque[Callable[[], object]] = deque()
+        self._fio: threading.Thread | None = None
+
+    def disparar(self, alvo: Callable[[], object]) -> bool:
+        """Põe ``alvo`` no fio. False (e nada corre) quando não cabe."""
+        with self._tranca:
+            ocupado = self._fio is not None
+            if ocupado and len(self._fila) >= self._espera:
+                return False
+            self._fila.append(alvo)
+            if ocupado:
+                return True
+            fio = threading.Thread(target=self._drenar, name=self.nome, daemon=True)
+            self._fio = fio
+        fio.start()
+        return True
+
+    def _drenar(self) -> None:
+        while True:
+            with self._tranca:
+                if not self._fila:
+                    self._fio = None
+                    return
+                alvo = self._fila.popleft()
+            try:
+                alvo()
+            except Exception as erro:
+                if self._ao_falhar is not None:
+                    with contextlib.suppress(Exception):
+                        self._ao_falhar(erro)
+
+    def no_fio(self) -> bool:
+        """Quem pergunta é o próprio fio (e não pode esperar por si)."""
+        return threading.current_thread() is self._fio
+
+    def descartar(self) -> int:
+        """Tira da fila o que ainda não começou. Devolve quantos saíram."""
+        with self._tranca:
+            quantos = len(self._fila)
+            self._fila.clear()
+        return quantos
+
+    def esperar(self, teto: float | None = None) -> bool:
+        """Espera o fio esvaziar. True = nada em voo nem na fila.
+
+        Do próprio fio devolve False na hora: esperar por si é travar.
+        """
+        limite = None if teto is None else time.monotonic() + teto
+        while True:
+            with self._tranca:
+                fio = self._fio
+            if fio is None:
+                return True
+            if fio is threading.current_thread():
+                return False
+            resta = None if limite is None else limite - time.monotonic()
+            if resta is not None and resta <= 0:
+                return False
+            fio.join(resta)
+
+
 __all__ = [
     "FORMAS_DE_VIVER",
     "PREFIXO_DA_UNIDADE",
     "VARIAVEIS_DA_UNIDADE",
     "Abertura",
     "Contexto",
+    "FioDeTrabalho",
     "abrir",
     "ambiente_da_unidade",
     "argv_da_unidade",
@@ -464,4 +659,5 @@ __all__ = [
     "motivo_de_herdar",
     "nome_da_unidade",
     "oom_do_gerenciador",
+    "pids_da_unidade",
 ]

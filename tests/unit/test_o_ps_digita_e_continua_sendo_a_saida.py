@@ -380,7 +380,9 @@ def test_o_ps_digita_de_verdade_pelo_teclado_virtual(steam):
     """A tecla sai pelo device, press e release, com o `syn` de cada metade."""
     teclado, dev = _teclado()
     daemon = _daemon(teclado=teclado, escolha_do_perfil="KEY_F11")
-    hotkey.build_ps_solo_callback(daemon)()
+    gesto = hotkey.build_ps_solo_callback(daemon)
+    gesto()
+    assert gesto.esperar(5.0)
     assert dev.emitidos == [("KEY_F11", 1), ("KEY_F11", 0)], (
         f"o device recebeu {dev.emitidos!r} — o toque no PS tinha de emitir "
         f"F11 e soltá-lo.")
@@ -391,7 +393,9 @@ def test_o_ps_digita_combo(steam):
     """Um combo colado com `+` sai inteiro, e solta em ordem reversa."""
     teclado, dev = _teclado()
     daemon = _daemon(teclado=teclado, escolha_do_perfil="KEY_LEFTALT+KEY_TAB")
-    hotkey.build_ps_solo_callback(daemon)()
+    gesto = hotkey.build_ps_solo_callback(daemon)
+    gesto()
+    assert gesto.esperar(5.0)
     assert dev.emitidos == [
         ("KEY_LEFTALT", 1), ("KEY_TAB", 1), ("KEY_TAB", 0), ("KEY_LEFTALT", 0)]
 
@@ -409,7 +413,9 @@ def test_o_perfil_vence_a_maquina_calada(steam):
     teclado, dev = _teclado()
     daemon = _daemon(
         acao_da_maquina="none", teclado=teclado, escolha_do_perfil="KEY_F11")
-    hotkey.build_ps_solo_callback(daemon)()
+    gesto = hotkey.build_ps_solo_callback(daemon)
+    gesto()
+    assert gesto.esperar(5.0)
     assert dev.emitidos == [("KEY_F11", 1), ("KEY_F11", 0)], (
         "a máquina calada calou o perfil: a escolha dela na linha do PS não "
         "chegou ao teclado.")
@@ -420,7 +426,9 @@ def test_a_maquina_calada_continua_calando_o_ps_sem_perfil(steam):
     """O que já funcionava continua: `none` + perfil calado = nada."""
     teclado, dev = _teclado()
     daemon = _daemon(acao_da_maquina="none", teclado=teclado)
-    hotkey.build_ps_solo_callback(daemon)()
+    gesto = hotkey.build_ps_solo_callback(daemon)
+    gesto()
+    assert gesto.esperar(5.0)
     assert dev.emitidos == []
     assert steam == []
 
@@ -434,7 +442,9 @@ def test_o_nada_do_perfil_cala_as_duas_metades(steam):
     """
     teclado, dev = _teclado()
     daemon = _daemon(teclado=teclado, escolha_do_perfil=acoes.TOKEN_NADA)
-    hotkey.build_ps_solo_callback(daemon)()
+    gesto = hotkey.build_ps_solo_callback(daemon)
+    gesto()
+    assert gesto.esperar(5.0)
     assert dev.emitidos == []
     assert steam == []
 
@@ -442,7 +452,9 @@ def test_o_nada_do_perfil_cala_as_duas_metades(steam):
 def test_o_steam_do_perfil_vence_a_maquina_calada(steam):
     """E o contrário também: `Abrir a Steam` no perfil abre, com a máquina em `none`."""
     daemon = _daemon(acao_da_maquina="none", escolha_do_perfil=acoes.TOKEN_STEAM)
-    hotkey.build_ps_solo_callback(daemon)()
+    gesto = hotkey.build_ps_solo_callback(daemon)
+    gesto()
+    assert gesto.esperar(5.0)
     assert steam == ["steam"]
 
 
@@ -456,7 +468,9 @@ def test_a_escolha_sem_atendente_nao_digita_e_nao_cala_a_maquina(steam):
     """
     teclado, dev = _teclado()
     daemon = _daemon(teclado=teclado, escolha_do_perfil=acoes.TOKEN_PROGRAMA)
-    hotkey.build_ps_solo_callback(daemon)()
+    gesto = hotkey.build_ps_solo_callback(daemon)
+    gesto()
+    assert gesto.esperar(5.0)
     assert dev.emitidos == [], "`__PROGRAMA__` não é tecla e não pode ir ao device."
     assert steam == ["steam"], "e o degrau da máquina continua de pé."
 
@@ -469,7 +483,9 @@ def test_o_modo_jogo_pula_as_duas_metades(steam):
     """
     teclado, dev = _teclado()
     daemon = _daemon(teclado=teclado, escolha_do_perfil="KEY_F11", suprimido=True)
-    hotkey.build_ps_solo_callback(daemon)()
+    gesto = hotkey.build_ps_solo_callback(daemon)
+    gesto()
+    assert gesto.esperar(5.0)
     assert dev.emitidos == []
     assert steam == []
 
@@ -478,7 +494,9 @@ def test_o_modo_nativo_pula_as_duas_metades(steam):
     """A MORDIDA: apague a guarda do `native_mode_active`."""
     teclado, dev = _teclado()
     daemon = _daemon(teclado=teclado, escolha_do_perfil="KEY_F11", nativo=True)
-    hotkey.build_ps_solo_callback(daemon)()
+    gesto = hotkey.build_ps_solo_callback(daemon)
+    gesto()
+    assert gesto.esperar(5.0)
     assert dev.emitidos == []
     assert steam == []
 
@@ -493,13 +511,15 @@ def test_o_combo_continua_ganhando_do_solo(steam):
     teclado, dev = _teclado()
     daemon = _daemon(teclado=teclado, escolha_do_perfil="KEY_F11")
     trocou: list[str] = []
+    gesto = hotkey.build_ps_solo_callback(daemon)
     mgr = HotkeyManager(
         on_next=lambda: trocou.append("next"),
-        on_ps_solo=hotkey.build_ps_solo_callback(daemon),
+        on_ps_solo=gesto,
         config=HotkeyConfig(buffer_ms=0),
     )
     mgr.observe(list(DEFAULT_COMBO_NEXT), now=0.0)
     mgr.observe([], now=0.20)
+    assert gesto.esperar(5.0)
     assert trocou == ["next"], "o combo PS+↑ tinha de trocar de perfil."
     assert dev.emitidos == [], (
         "o PS+↑ DIGITOU: o combo passou a digitar a tecla do PS além de trocar "
@@ -515,12 +535,14 @@ def test_segurar_para_religar_continua_nao_digitando(steam):
     """
     teclado, dev = _teclado()
     daemon = _daemon(teclado=teclado, escolha_do_perfil="KEY_F11")
+    gesto = hotkey.build_ps_solo_callback(daemon)
     mgr = HotkeyManager(
-        on_ps_solo=hotkey.build_ps_solo_callback(daemon),
+        on_ps_solo=gesto,
         config=HotkeyConfig(buffer_ms=0, ps_toque_curto_teto_ms=1000),
     )
     mgr.observe(["ps"], now=0.0)
     mgr.observe([], now=5.0382)
+    assert gesto.esperar(5.0)
     assert dev.emitidos == []
     assert steam == []
 
@@ -528,7 +550,9 @@ def test_segurar_para_religar_continua_nao_digitando(steam):
 def test_sem_teclado_virtual_o_ps_nao_digita_e_a_steam_continua(steam):
     """"Sem device" não é "aplicou" nem "falhou" — e não pode custar a Steam."""
     daemon = _daemon(teclado=None, escolha_do_perfil="KEY_F11")
-    hotkey.build_ps_solo_callback(daemon)()
+    gesto = hotkey.build_ps_solo_callback(daemon)
+    gesto()
+    assert gesto.esperar(5.0)
     assert steam == ["steam"]
 
 
@@ -566,7 +590,9 @@ def test_a_tecla_sai_antes_da_steam(steam, monkeypatch):
         UinputKeyboardDevice, "_emit_sequence_release", lambda _self, b: None)
 
     daemon = _daemon(teclado=teclado, escolha_do_perfil="KEY_F11")
-    hotkey.build_ps_solo_callback(daemon)()
+    gesto = hotkey.build_ps_solo_callback(daemon)
+    gesto()
+    assert gesto.esperar(5.0)
     assert ordem == ["tecla", "steam"], (
         f"a ordem medida foi {ordem!r}: a Steam roubou o foco antes de a tecla "
         f"sair, e a tecla chegou à Steam em vez de chegar ao que estava na "
@@ -590,7 +616,9 @@ def test_o_toque_nao_solta_o_que_estava_segurado(steam):
     assert dev.emitidos == [("KEY_ENTER", 1)]
 
     daemon = _daemon(teclado=teclado, escolha_do_perfil="KEY_F11")
-    hotkey.build_ps_solo_callback(daemon)()
+    gesto = hotkey.build_ps_solo_callback(daemon)
+    gesto()
+    assert gesto.esperar(5.0)
 
     assert dev.emitidos == [
         ("KEY_ENTER", 1), ("KEY_F11", 1), ("KEY_F11", 0)], (
@@ -612,6 +640,8 @@ def test_o_binding_do_ps_nao_fica_no_device(steam):
     teclado, _dev = _teclado()
     antes = dict(teclado.bindings)
     daemon = _daemon(teclado=teclado, escolha_do_perfil="KEY_F11")
-    hotkey.build_ps_solo_callback(daemon)()
+    gesto = hotkey.build_ps_solo_callback(daemon)
+    gesto()
+    assert gesto.esperar(5.0)
     assert "ps" not in teclado.bindings
     assert teclado.bindings == antes

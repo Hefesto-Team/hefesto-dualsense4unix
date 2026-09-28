@@ -360,6 +360,7 @@ def _apertar_o_l3(monkeypatch: pytest.MonkeyPatch) -> list[list[str]]:
     teclado._uinput_mod = object()
     teclado.dispatch(frozenset({"l3"}))
     teclado.dispatch(frozenset())
+    assert controlador.esperar_os_toques(5.0)
     return abertos
 
 
