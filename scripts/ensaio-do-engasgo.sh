@@ -66,7 +66,15 @@ def inicio(volta: Path) -> float:
 
 
 def minuto(ts: float) -> str:
-    return datetime.fromtimestamp(ts).strftime("%H:%M")
+    # A data vai na chave para a volta que passa da meia-noite sair em ordem;
+    # a linha impressa mostra só a hora.
+    return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M")
+
+
+def cabe(n: float, sim: bool) -> str:
+    # O minuto que o instrumento não cobriu é «-», nunca zero: um zero ali se
+    # leria como «nenhum pico» sobre o que não foi medido.
+    return str(int(n)) if sim else "-"
 
 
 if ato == "amostrar":  # amostrar <saida.jsonl> <minutos>
@@ -98,6 +106,12 @@ elif ato == "resumo":  # resumo <voltas>
         comeco = inicio(volta)
         fim = amostras[-1]["ts"] if amostras else float("inf")
         linhas: dict = defaultdict(lambda: defaultdict(float))
+        # O QUE CADA INSTRUMENTO COBRIU, por minuto. Sem o CSV do MangoHud (ele
+        # não está instalado, ou a opção não chegou ao jogo) os quadros não
+        # foram medidos; o minuto sem par de amostras não tem `allocstall`; e
+        # sem acesso ao diário do kernel o NVRM não foi lido.
+        com_quadros: set = set()
+        com_memoria: set = set()
         for c in sorted(volta.glob("*.csv")):
             achado = NOME_DO_CSV.search(c.name)
             if not achado:
@@ -109,6 +123,7 @@ elif ato == "resumo":  # resumo <voltas>
             if cab is None:
                 continue
             col = {n: k for k, n in enumerate(rows[cab])}
+            vistos: list = []
             for r in rows[cab + 2:]:  # a primeira linha de dados é a partida
                 try:
                     ms, ns = float(r[col["frametime"]]), float(r[col["elapsed"]])
@@ -117,32 +132,55 @@ elif ato == "resumo":  # resumo <voltas>
                 ts = t0 + ns / 1e9
                 if not comeco <= ts <= fim:
                     continue
+                vistos.append(ts)
                 m = linhas[minuto(ts)]
                 m["quadros"] += 1
                 m[">33ms"] += ms > 33
                 m[">50ms"] += ms > 50
+            # Entre o primeiro e o último quadro deste arquivo o MangoHud estava
+            # gravando: ali, um minuto sem quadro é o jogo parado, e o zero vale.
+            if vistos:
+                passo = min(vistos)
+                while passo <= max(vistos):
+                    com_quadros.add(minuto(passo))
+                    passo += 60
+                com_quadros.add(minuto(max(vistos)))
         for a, b in zip(amostras, amostras[1:]):
             m = linhas[minuto(b["ts"])]
+            com_memoria.add(minuto(b["ts"]))
             for chave in ("allocstall", "compact_stall"):
                 m[chave] += sum(v - a["vmstat"].get(k, 0) for k, v in b["vmstat"].items()
                                 if k.startswith(chave))
-            m["ordem"] = min(m.get("ordem", b["ordem_7_a_10"]), b["ordem_7_a_10"])
+        for amostra_ in amostras:  # a ordem é retrato, não diferença: cada amostra vale
+            m = linhas[minuto(amostra_["ts"])]
+            m["ordem"] = min(m.get("ordem", amostra_["ordem_7_a_10"]),
+                             amostra_["ordem_7_a_10"])
+        for chave_ in com_quadros:
+            linhas[chave_]  # o minuto parado aparece, com o zero que ele mediu
         kernel = volta / "kernel.txt"
+        sem_kernel = (volta / "kernel-sem-acesso").exists()
         for linha in kernel.read_text().splitlines() if kernel.exists() else []:
             achado = HORA_DO_KERNEL.match(linha)
             if achado:
-                m = linhas[achado.group(1)[-5:]]
+                m = linhas[achado.group(1).replace("T", " ")]
                 m["NVRM"] += "NVRM" in linha
                 m["fila"] += "Output queue is full" in linha
-        aviso = " (sem acesso ao diário do kernel)" if (volta / "kernel-sem-acesso").exists() else ""
-        print(f"== {volta.name}{aviso}")
+        avisos = []
+        if not com_quadros:
+            avisos.append("sem quadros do MangoHud")
+        if sem_kernel:
+            avisos.append("sem acesso ao diário do kernel")
+        print(f"== {volta.name}" + (f" ({'; '.join(avisos)})" if avisos else ""))
         for hora in sorted(linhas):
             m = linhas[hora]
+            q, mem = hora in com_quadros, hora in com_memoria
             ordem = int(m["ordem"]) if "ordem" in m else "-"  # minuto sem amostra
-            print(f"{hora} quadros={int(m['quadros'])} >33ms={int(m['>33ms'])} "
-                  f">50ms={int(m['>50ms'])} allocstall={int(m['allocstall'])} "
-                  f"compact_stall={int(m['compact_stall'])} ordem7-10_min={ordem} "
-                  f"NVRM={int(m['NVRM'])} fila_cheia={int(m['fila'])}")
+            print(f"{hora[-5:]} quadros={cabe(m['quadros'], q)} "
+                  f">33ms={cabe(m['>33ms'], q)} >50ms={cabe(m['>50ms'], q)} "
+                  f"allocstall={cabe(m['allocstall'], mem)} "
+                  f"compact_stall={cabe(m['compact_stall'], mem)} ordem7-10_min={ordem} "
+                  f"NVRM={cabe(m['NVRM'], not sem_kernel)} "
+                  f"fila_cheia={cabe(m['fila'], not sem_kernel)}")
 
 elif ato == "guardar":  # guardar <arquivo> <appid> <opção>
     Path(args[0]).write_text(json.dumps({"appid": args[1], "opção": args[2]}))

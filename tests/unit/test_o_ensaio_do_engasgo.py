@@ -12,7 +12,8 @@ com a Steam de quem a roda.
 AS MORDIDAS: faça o `devolver` pular o `devolver_a_tabela` e
 `test_preparar_e_devolver_deixam_a_opcao_como_era` reprova; tire o filtro de
 hora do `resumo` e `test_o_resumo_conta_por_minuto_so_o_que_e_da_volta`
-reprova.
+reprova; faça o `cabe` do `resumo` imprimir o número sempre e
+`test_o_que_nao_foi_medido_sai_como_traco_e_nunca_como_zero` reprova.
 """
 from __future__ import annotations
 
@@ -170,14 +171,44 @@ def test_o_resumo_conta_por_minuto_so_o_que_e_da_volta(lar: Path) -> None:
     assert r.returncode == 0, r.stderr
     saida = r.stdout.splitlines()
     assert saida[0] == "== sackboy-ligado", saida
-    # 14:00: os quadros dos segundos 40, 50 e 70 (16,7, 40 e 60 ms), sem amostra
-    # de memória ainda; 14:01: o do segundo 95, duas amostras, e o kernel. O
-    # de 150 s passa da última amostra, e sai.
-    assert saida[1] == ("14:00 quadros=3 >33ms=2 >50ms=1 allocstall=0 compact_stall=0 "
-                        "ordem7-10_min=- NVRM=0 fila_cheia=0"), saida
+    # 14:00: os quadros dos segundos 40, 50 e 70 (16,7, 40 e 60 ms) e uma
+    # amostra só — a ordem é retrato e vale, a diferença do `allocstall` não
+    # existe ainda, e sai «-»; 14:01: o do segundo 95, duas amostras, e o
+    # kernel. O de 150 s passa da última amostra, e sai.
+    assert saida[1] == ("14:00 quadros=3 >33ms=2 >50ms=1 allocstall=- compact_stall=- "
+                        "ordem7-10_min=40 NVRM=0 fila_cheia=0"), saida
     assert saida[2] == ("14:01 quadros=1 >33ms=0 >50ms=0 allocstall=2 compact_stall=2 "
                         "ordem7-10_min=0 NVRM=1 fila_cheia=1"), saida
     assert len(saida) == 3, saida
+
+
+def test_o_que_nao_foi_medido_sai_como_traco_e_nunca_como_zero(lar: Path) -> None:
+    """Sem o CSV do MangoHud e sem o diário do kernel, a volta não tem pico medido.
+
+    O MangoHud pode não estar instalado, ou a opção pode não ter chegado ao
+    jogo; o diário do kernel pode estar fechado para quem roda. Um «>50ms=0»
+    ali se leria como a volta limpa — e o ensaio 1 decide o botão por essa
+    conta. MORDIDA: faça o `cabe` devolver sempre o número e esta régua reprova.
+    """
+    volta = _pasta(lar) / "voltas" / "sem-mangohud"
+    volta.mkdir(parents=True)
+    comeco = datetime(2026, 9, 28, 15, 0, 0)
+    (volta / "inicio").write_text(comeco.strftime("%Y-%m-%d %H:%M:%S") + "\n")
+    t0 = comeco.timestamp()
+    amostras = [
+        {"ts": t0 + 5, "vmstat": {"allocstall_normal": 1, "compact_stall": 0}, "ordem_7_a_10": 9},
+        {"ts": t0 + 15, "vmstat": {"allocstall_normal": 4, "compact_stall": 0}, "ordem_7_a_10": 8},
+    ]
+    (volta / "memoria.jsonl").write_text("".join(json.dumps(a) + "\n" for a in amostras))
+    (volta / "kernel.txt").write_text("")
+    (volta / "kernel-sem-acesso").touch()
+    r = _rodar(lar, "resumo")
+    assert r.returncode == 0, r.stderr
+    saida = r.stdout.splitlines()
+    assert saida[0] == (
+        "== sem-mangohud (sem quadros do MangoHud; sem acesso ao diário do kernel)"), saida
+    assert saida[1] == ("15:00 quadros=- >33ms=- >50ms=- allocstall=3 compact_stall=0 "
+                        "ordem7-10_min=8 NVRM=- fila_cheia=-"), saida
 
 
 def test_o_csv_que_o_jogo_fechou_depois_vai_para_a_volta_certa(lar: Path) -> None:
