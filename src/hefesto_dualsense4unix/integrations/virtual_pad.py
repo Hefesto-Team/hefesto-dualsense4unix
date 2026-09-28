@@ -77,7 +77,7 @@ UHID_BIND_TIMEOUT_S = 0.5
 #
 # O `uhid` só se constrói com máscara DualSense: *"o `hid_playstation` só faz
 # bind em VID/PID da Sony"* (`_try_uhid`). Com outra máscara os dois caminhos
-# dão o mesmo aparelho, e o caminho escolhido fica guardado assim mesmo — a
+# dão o mesmo canal, o `uinput`, e o caminho fica guardado assim mesmo — a
 # falta do canal é dívida no mapa, nunca frase na tela (§D.2 da sprint).
 #
 # NO-MODO-XBOX-TUDO-FUNCIONA-01 (28/09/2026): o modo Xbox ESCOLHIDO veste todo
