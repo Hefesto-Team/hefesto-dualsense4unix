@@ -597,8 +597,13 @@ def test_o_arme_com_o_modo_ja_de_pe_veste_a_mascara_do_jogo(
     ativação do lançamento e a conferência do aparelho. O caminho já confere
     (`convergiu`), e a máscara do jogo tem de chegar mesmo assim.
 
-    MORDE: devolva o `apply_controller_mascaras` para DEPOIS do `mode_applier`
-    em `ProfileManager.apply_emulation` — o arme volta com o P1 em DualSense.
+    Sem o jogo na autoridade, o segundo `apply_profile_mode` do arme (depois
+    da ativação) já veste a máscara — a ordem da ativação é medida pela régua de
+    cima. Com o jogo na autoridade antes do `exec`, a R-04 recusa a troca: é a
+    pendência que a sprint registra.
+
+    MORDE: tire do arme a ativação do perfil (`_ativar_o_perfil_do_lancamento`)
+    — o cartão do Freestyle fica no registro, e o P1 segue DualSense.
     """
     from hefesto_dualsense4unix.daemon import launch_env as le
 
