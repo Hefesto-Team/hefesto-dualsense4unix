@@ -281,7 +281,16 @@ def _ambiente_c() -> dict[str, str]:
 
 
 def _rodar(argv: list[str]) -> tuple[int, str]:
-    """Roda e devolve `(rc, stdout)`. Nunca levanta — ausência é resposta."""
+    """Roda e devolve `(rc, stdout)`. Nunca levanta — ausência é resposta.
+
+    A leitura de `pactl` pergunta ao retrato do som antes
+    (`integrations/retrato_do_som`); o «não sei» dele volta como `(127, "")`.
+    """
+    from hefesto_dualsense4unix.integrations import retrato_do_som
+
+    resposta = retrato_do_som.responder(argv)
+    if resposta is not None:
+        return (0, resposta.strip()) if isinstance(resposta, str) else (127, "")
     exe = shutil.which(argv[0])
     if exe is None:
         return (127, "")
@@ -296,6 +305,8 @@ def _rodar(argv: list[str]) -> tuple[int, str]:
         )
     except (OSError, subprocess.SubprocessError):
         return (127, "")
+    finally:
+        retrato_do_som.escreveu(argv)
     return (proc.returncode, proc.stdout.strip())
 
 

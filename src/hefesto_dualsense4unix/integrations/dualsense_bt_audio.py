@@ -1007,7 +1007,15 @@ def _rodar(argv: list[str]) -> str | None:
     disso seria depender de um acidente — e esta casa já respondeu "nenhum
     controle com placa de áudio" sobre um sistema que tinha uma, em 15/08/2026,
     exatamente por ler saída traduzida.
+
+    A LEITURA PERGUNTA AO RETRATO ANTES (`integrations/retrato_do_som`): no
+    daemon é ele quem responde, e o «não sei» dele volta como ``None``.
     """
+    from hefesto_dualsense4unix.integrations import retrato_do_som
+
+    resposta = retrato_do_som.responder(argv)
+    if resposta is not None:
+        return resposta if isinstance(resposta, str) else None
     if shutil.which(argv[0]) is None:
         return None
     try:
@@ -1023,6 +1031,8 @@ def _rodar(argv: list[str]) -> str | None:
         _anotar_o_prazo(exc)
         logger.debug("bt_mic_comando_falhou", argv=argv[0], err=str(exc))
         return None
+    finally:
+        retrato_do_som.escreveu(argv)
     if proc.returncode != 0:
         logger.debug(
             "bt_mic_comando_rc", argv=argv[0], rc=proc.returncode, err=proc.stderr[:200]

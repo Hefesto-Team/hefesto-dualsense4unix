@@ -93,14 +93,23 @@ def fonte_do_controle(uniq: str, *, saida_pactl: str = "") -> str | None:
     ``None`` é "não sei", e quem chama não deve tratá-lo como "não há
     microfone": sem o servidor de som, sem `pactl` ou sem o controle no ar, a
     pergunta simplesmente não tem resposta.
+
+    A lista pergunta ao retrato do som antes (`integrations/retrato_do_som`):
+    no daemon é ele quem responde; na janela, sem dono, a pergunta segue ao
+    servidor como antes.
     """
+    from hefesto_dualsense4unix.integrations import retrato_do_som
     from hefesto_dualsense4unix.integrations.fontes_de_captura import (
         escolher_fonte,
         fontes_dualsense,
     )
 
     saida = saida_pactl
-    if not saida:
+    lista = ["pactl", "list", "short", "sources"]
+    do_retrato = retrato_do_som.responder(lista) if not saida else None
+    if do_retrato is not None:
+        saida = do_retrato if isinstance(do_retrato, str) else ""
+    elif not saida:
         if shutil.which("pactl") is None:
             return None
         ambiente = dict(os.environ)
@@ -121,7 +130,7 @@ def fonte_do_controle(uniq: str, *, saida_pactl: str = "") -> str | None:
                 #
                 # Ela clicou o 🎙 e não ouviu nada: `[gesto falhou]
                 # 02-controles.html · mic-testar` no `interface.log`, às 01:36.
-                ["pactl", "list", "short", "sources"],
+                lista,
                 capture_output=True,
                 text=True,
                 timeout=5,

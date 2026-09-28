@@ -517,14 +517,22 @@ def _lancar_processo(argv: list[str]) -> Any:
 def _rodar_pactl(argv: list[str]) -> bool:
     """Um `pactl` curto, com teto. Isolado para a régua trocá-lo por um dublê:
     **nenhum teste desta casa pode falar com o PipeWire da máquina dela.**
+
+    Só ESCREVE (o mudo de fábrica do nó novo), e por isso avisa o retrato do
+    som (`integrations/retrato_do_som`): a próxima leitura das fontes relê.
     """
+    from hefesto_dualsense4unix.integrations import retrato_do_som
+
     # argv fixo e sem shell: `shell=True` é invariante proibido nesta casa.
-    return (
-        subprocess.run(
-            argv, capture_output=True, timeout=_TIMEOUT_PACTL_S, check=False
-        ).returncode
-        == 0
-    )
+    try:
+        return (
+            subprocess.run(
+                argv, capture_output=True, timeout=_TIMEOUT_PACTL_S, check=False
+            ).returncode
+            == 0
+        )
+    finally:
+        retrato_do_som.escreveu(argv)
 
 
 def desmutar(nome: str, *, rodar: Any = None) -> bool:

@@ -568,11 +568,25 @@ def _rodar_pelo_recuo(
 
     O ``PACTL`` é lido NA HORA, dentro da função: a régua troca o do módulo por
     um de relógio de mentira, e uma cópia no topo congelaria o de antes.
+
+    **A LEITURA PERGUNTA AO RETRATO ANTES** (O-SERVIDOR-DE-SOM-TEM-UM-LEITOR-SO-01,
+    28/09/2026): no daemon, quem responde é `integrations/retrato_do_som`, e o
+    servidor só é perguntado quando o retrato não tem dono. O «não sei» dele
+    chega a quem chama pela mesma porta do recuo.
     """
     if argv[:1] != ["pactl"]:
         return subprocess.run(
             argv, capture_output=capture_output, text=text, timeout=timeout,
             check=check, env=env,
+        )
+    from hefesto_dualsense4unix.integrations import retrato_do_som
+
+    resposta = retrato_do_som.responder(argv)
+    if isinstance(resposta, str):
+        return subprocess.CompletedProcess(list(argv), 0, stdout=resposta, stderr="")
+    if resposta is not None:
+        raise PactlEmRecuoError(
+            f"o retrato do servidor de som não sabe: {' '.join(argv[1:3])} não saiu"
         )
     from hefesto_dualsense4unix.integrations.dualsense_bt_audio import PACTL
 
@@ -588,6 +602,8 @@ def _rodar_pelo_recuo(
     except subprocess.TimeoutExpired:
         PACTL.estourou()
         raise
+    finally:
+        retrato_do_som.escreveu(argv)
     # `getattr` e não `.returncode`: dois dublês da suíte devolvem só `stdout`
     # (`test_mic_da_mesa_cheia_01.py`, `test_o_volume_do_mic_nao_cai_no_vizinho.py`),
     # e uma resposta sem rc continua sendo resposta — só um rc≠0 declarado não zera.

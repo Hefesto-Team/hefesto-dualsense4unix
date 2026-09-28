@@ -257,7 +257,15 @@ def _pactl(argv: list[str]) -> str | None:
     mesma armadilha que esta casa já pagou em 15/08/2026, do outro lado do
     mesmo comando (`alto_falante_bt._rodar`) — e a segunda vez custou uma prova
     de ponta a ponta que voltou vazia.
+
+    A leitura pergunta ao retrato do som antes (`integrations/retrato_do_som`);
+    o «não sei» dele volta como ``None``.
     """
+    from hefesto_dualsense4unix.integrations import retrato_do_som
+
+    resposta = retrato_do_som.responder(argv)
+    if resposta is not None:
+        return resposta if isinstance(resposta, str) else None
     try:
         # argv fixo e sem shell: o único argumento é literal.
         proc = subprocess.run(
@@ -270,6 +278,8 @@ def _pactl(argv: list[str]) -> str | None:
         )
     except (OSError, subprocess.SubprocessError):
         return None
+    finally:
+        retrato_do_som.escreveu(argv)
     return proc.stdout if proc.returncode == 0 else None
 
 

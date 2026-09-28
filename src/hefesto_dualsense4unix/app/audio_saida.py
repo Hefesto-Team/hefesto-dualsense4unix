@@ -1336,7 +1336,17 @@ def rodar_leitura(argv: list[str]) -> str:
     sempre com timeout, e a checagem de disponibilidade da ferramenta mora
     AQUI — assim um runner dublado no teste não depende do que está instalado
     na máquina que roda a suíte.
+
+    A leitura de `pactl` pergunta ao retrato do som antes
+    (`integrations/retrato_do_som`); o «não sei» dele volta como ``""``. É por
+    aqui que a aba 02 e o ganho do microfone leem — no processo da janela o
+    retrato não tem dono, e a pergunta segue ao servidor como antes.
     """
+    from hefesto_dualsense4unix.integrations import retrato_do_som
+
+    resposta = retrato_do_som.responder(argv)
+    if resposta is not None:
+        return resposta if isinstance(resposta, str) else ""
     if shutil.which(argv[0]) is None:
         return ""
     try:
@@ -1351,6 +1361,8 @@ def rodar_leitura(argv: list[str]) -> str:
     except Exception as exc:
         logger.debug("audio_saida_comando_falhou", argv=argv[0], err=str(exc))
         return ""
+    finally:
+        retrato_do_som.escreveu(argv)
     return proc.stdout or ""
 
 

@@ -485,6 +485,7 @@ class RetratoDoSom:
         self._duvida: dict[str, float] = {}
         self._analisado: dict[str, tuple[int, object]] = {}
         self._geracao = 0
+        self._geracao_do_tipo: dict[str, int] = dict.fromkeys(TIPOS, 0)
         self._esperas: set[tuple[asyncio.AbstractEventLoop, asyncio.Event]] = set()
 
     # -- quem lê -------------------------------------------------------------
@@ -531,7 +532,7 @@ class RetratoDoSom:
         mudaram = frozenset(t for t in dict.fromkeys(tipos) if t in _LEITURA_DO_TIPO
                             and self._reler_um(t))
         if mudaram:
-            self._avisar()
+            self._avisar(mudaram)
         return mudaram
 
     def carregar(self) -> bool:
@@ -596,11 +597,27 @@ class RetratoDoSom:
         with self._trava:
             return self._geracao
 
+    def marca(self, tipos: Iterable[str] | None = None) -> int:
+        """A geração dos tipos dados (todos, sem `tipos`). Só cresce.
+
+        Quem espera por UM assunto — o canal do microfone lê fontes e padrão;
+        o vigia do alto-falante, saídas e fluxos — não acorda pela mudança dos
+        outros: um jogo tocando muda os fluxos de saída e não tem por que
+        fazer o selo do microfone reler quatro controles.
+        """
+        with self._trava:
+            if tipos is None:
+                return self._geracao
+            return sum(self._geracao_do_tipo.get(t, 0) for t in tipos)
+
     # -- quem espera ---------------------------------------------------------
 
-    def _avisar(self) -> None:
+    def _avisar(self, tipos: Iterable[str] = TIPOS) -> None:
         with self._trava:
             self._geracao += 1
+            for tipo in tipos:
+                if tipo in self._geracao_do_tipo:
+                    self._geracao_do_tipo[tipo] += 1
             self._mudou.notify_all()
             esperas = list(self._esperas)
         for laco, evento in esperas:
@@ -612,29 +629,48 @@ class RetratoDoSom:
         with self._trava:
             self._mudou.notify_all()
 
-    def esperar(self, desde: int, prazo: float) -> int:
-        """Bloqueia até o retrato mudar desde `desde`, ou até o prazo. Devolve a geração."""
-        with self._mudou:
-            self._mudou.wait_for(lambda: self._geracao != desde, timeout=max(0.0, prazo))
-            return self._geracao
+    def esperar(
+        self, desde: int, prazo: float, tipos: Iterable[str] | None = None
+    ) -> int:
+        """Bloqueia até a :meth:`marca` dos `tipos` sair de `desde`, ou até o prazo.
 
-    async def esperar_async(self, desde: int, prazo: float) -> int:
+        Devolve a marca de agora, que pode ser a mesma: :meth:`acordar` e a
+        mudança de outro assunto também soltam quem espera — é assim que quem
+        vai parar não espera o prazo inteiro. Quem recebe a mesma marca só
+        olha de novo, e a olhada sai da foto.
+        """
+        assunto = None if tipos is None else tuple(tipos)
+        with self._mudou:
+            if self.marca(assunto) == desde:
+                self._mudou.wait(timeout=max(0.0, prazo))
+            return self.marca(assunto)
+
+    async def esperar_async(
+        self, desde: int, prazo: float, tipos: Iterable[str] | None = None
+    ) -> int:
         """Como :meth:`esperar`, sem segurar o laço de eventos."""
+        assunto = None if tipos is None else tuple(tipos)
         laco = asyncio.get_running_loop()
-        evento = asyncio.Event()
-        chave = (laco, evento)
-        with self._trava:
-            self._esperas.add(chave)
-            if self._geracao != desde:
-                self._esperas.discard(chave)
-                return self._geracao
-        try:
-            with contextlib.suppress(TimeoutError, asyncio.TimeoutError):
-                await asyncio.wait_for(evento.wait(), timeout=max(0.0, prazo))
-        finally:
+        limite = laco.time() + max(0.0, prazo)
+        while True:
+            evento = asyncio.Event()
+            chave = (laco, evento)
             with self._trava:
-                self._esperas.discard(chave)
-        return self.geracao
+                agora = self.marca(assunto)
+                if agora != desde:
+                    return agora
+                self._esperas.add(chave)
+            falta = limite - laco.time()
+            try:
+                if falta <= 0:
+                    return agora
+                with contextlib.suppress(TimeoutError, asyncio.TimeoutError):
+                    await asyncio.wait_for(evento.wait(), timeout=falta)
+            finally:
+                with self._trava:
+                    self._esperas.discard(chave)
+            if laco.time() >= limite:
+                return self.marca(assunto)
 
     # -- quem pergunta -------------------------------------------------------
 
@@ -654,7 +690,7 @@ class RetratoDoSom:
             if falhou is not None and time.monotonic() - falhou < INTERVALO_DA_DUVIDA_S:
                 return None
             if self._reler_um(tipo):
-                self._avisar()
+                self._avisar({tipo})
         with self._trava:
             # Uma escrita que chegou DURANTE a releitura deixa o tipo pendente
             # de novo; a resposta é a desta releitura, que já é posterior à

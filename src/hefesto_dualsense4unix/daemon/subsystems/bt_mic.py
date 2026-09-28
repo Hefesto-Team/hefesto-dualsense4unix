@@ -629,6 +629,9 @@ def fonte_padrao_crua(rodar: Any = None) -> str | None:
 
     `LC_ALL=C` obrigatório: sem ele o `pactl` desta casa traduz, e o leitor
     fica cego sobre aparelho de pé. Nunca levanta — ausência é resposta.
+
+    Sem dublê, pergunta ao retrato do som antes (`integrations/retrato_do_som`):
+    no daemon é ele quem responde, e o «não sei» dele volta como `None`.
     """
     if rodar is not None:
         try:
@@ -639,6 +642,11 @@ def fonte_padrao_crua(rodar: Any = None) -> str | None:
         # O dublê é `Any`, e o que sai daqui tem contrato. Um dublê que
         # devolva outra coisa vale como ausência, que é o lado seguro.
         return resposta if resposta is None or isinstance(resposta, str) else None
+    from hefesto_dualsense4unix.integrations import retrato_do_som
+
+    do_retrato = retrato_do_som.responder(["pactl", "get-default-source"])
+    if do_retrato is not None:
+        return do_retrato.strip() if isinstance(do_retrato, str) else None
     exe = shutil.which("pactl")
     if exe is None:
         return None
