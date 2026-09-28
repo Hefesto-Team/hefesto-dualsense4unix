@@ -495,7 +495,7 @@ def test_o_nome_espera_a_mesa_assentar(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.usefixtures("config_isolado")
-@pytest.mark.parametrize("quem", ["posto", "secundario"])
+@pytest.mark.parametrize("quem", ["posto", "secundário"])
 def test_com_o_jogo_segurando_nenhum_virtual_renasce_pelo_nome(
     monkeypatch: pytest.MonkeyPatch, quem: str
 ) -> None:
