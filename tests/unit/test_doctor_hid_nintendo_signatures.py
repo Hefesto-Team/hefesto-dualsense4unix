@@ -127,9 +127,21 @@ class TestCheckReadOnlyEDeteccao:
         assert "modinfo -F filename hid_nintendo" in corpo
         assert "*/updates/dkms/*" in corpo
         # Nos comentários a armadilha pode (e deve) ser citada — o proibido
-        # é o CÓDIGO consultar srcversion como critério.
-        assert "srcversion" not in _sem_comentarios(DOCTOR), (
-            "srcversion difere entre builds do MESMO source (armadilha do estudo)"
+        # é o CÓDIGO consultar srcversion como critério de proveniência.
+        #
+        # FATO SUBSTITUÍDO (28/09/2026, O-PRODUTO-EM-QUALQUER-MAQUINA-01): esta
+        # régua proibia o srcversion no doctor inteiro. A armadilha medida é
+        # in-tree contra out-of-tree (o BASELINE do hid-playstation repetiu o
+        # controle nos dois kernels); entre dois builds FORA da árvore do mesmo
+        # .c ele se repete (medido no mesmo dia). As duas funções abaixo
+        # perguntam exatamente isso — o módulo carregado é o que está em
+        # updates/dkms? é o 0003 de antes da marca? — e só elas podem citá-lo.
+        fora_das_duas = DOCTOR
+        for nome in ("_modulo_pede_reinicio", "_hid_playstation_carregado_guarda_o_audio"):
+            fora_das_duas = fora_das_duas.replace(_extrai_funcao_bash(DOCTOR, nome), "")
+        assert "srcversion" not in _sem_comentarios(fora_das_duas), (
+            "srcversion difere entre build in-tree e out-of-tree do MESMO source "
+            "(armadilha do estudo)"
         )
 
     def test_in_tree_carregado_avisa_vale_no_proximo_boot(self) -> None:
