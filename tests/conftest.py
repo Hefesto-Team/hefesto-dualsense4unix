@@ -96,6 +96,18 @@ os.environ.pop("FORCE_COLOR", None)
 os.environ.setdefault("NO_COLOR", "1")
 
 # ---------------------------------------------------------------------------
+# O SEGFAULT DIZ ONDE (VERDE-NAO-E-PROVA-01, passo 4)
+# ---------------------------------------------------------------------------
+#
+# Em 26/09/2026 uma parte da suíte morreu com `rc=139` e ninguém tinha a pilha.
+# O pytest liga o `faulthandler` no próprio processo, mas os filhos que a suíte
+# dispara (o WebKit sob Xvfb, os pilotos, os scripts) não herdam isso. A
+# variável de ambiente herda: todo Python filho escreve no stderr a pilha de
+# todos os fios quando morre por sinal. A régua é
+# `tests/unit/test_o_segfault_da_suite_diz_onde.py`.
+os.environ.setdefault("PYTHONFAULTHANDLER", "1")
+
+# ---------------------------------------------------------------------------
 # TELA-DELA-01 — nenhuma janela de teste nasce na tela dela. NUNCA.
 # ---------------------------------------------------------------------------
 #
@@ -3130,7 +3142,7 @@ def _nenhum_cabo_em_espera_vivo_na_suite(
 # código sob teste continua vindo do `PYTHONPATH`, nunca daqui.
 
 #: Ordem de busca, relativa a cada raiz candidata. `.venv` antes de `venv`
-#: porque é o nome que o `GUIA.md` e o CI usam.
+#: porque é o nome que o `install.sh` (`VENV_DIR`) e o CI usam.
 _NOMES_DE_VENV = (".venv", "venv")
 
 
