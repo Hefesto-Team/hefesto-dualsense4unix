@@ -115,7 +115,7 @@ A conferência achou que a cor do controle em economia perdia o número, porque 
 
 Régua: `tests/unit/test_o_aplicar_nao_solta_o_teto_do_controle.py`, 23 testes.
 
-**O inverso**, ligar a economia depois de um «Aplicar», deixava o P2 a 70% e no Médio. A rodada 3 o curou: só quem entra na economia solta, da camada de quem usa, a luz, o `player_led_brightness` e os dois gatilhos. Isso é feito por `_soltar_o_teto_de_quem_entra` (`src/hefesto_dualsense4unix/daemon/lifecycle.py`) com `clear_user_output_fields` (`src/hefesto_dualsense4unix/core/backend_pydualsense.py`). A conferência achou que o Modo Nativo escapava, porque a saída do nativo reaplicava por cima da camada. Por isso a soltura passou para antes do `if self._native_mode`, em `reaplicar_se_a_economia_mudou`.
+**O inverso**, ligar a economia depois de um «Aplicar», deixava o P2 a 70% e no Médio. A rodada 3 o curou: só quem entra na economia solta, da camada de quem usa, a luz, o `player_led_brightness` e os dois gatilhos. Quem solta é o `_soltar_o_teto_de_quem_entra` (`src/hefesto_dualsense4unix/daemon/lifecycle.py`) com `clear_user_output_fields` (`src/hefesto_dualsense4unix/core/backend_pydualsense.py`). A conferência achou que o Modo Nativo escapava, porque a saída do nativo reaplicava por cima da camada. Por isso a soltura passou para antes do `if self._native_mode`, em `reaplicar_se_a_economia_mudou`.
 
 ## 6. A Gestão de Controles publicada
 
