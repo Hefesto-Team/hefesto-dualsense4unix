@@ -220,6 +220,97 @@ def habilitado_por_env(ambiente: dict[str, str] | None = None) -> bool:
     return env.get(ENV_HABILITA, "").strip().lower() in _VALORES_LIGADOS
 
 
+# ---------------------------------------------------------------------------
+# O DRIVER TEM A GUARDA DO ÁUDIO? (O-PRODUTO-EM-QUALQUER-MAQUINA-01, B1, 28/09)
+# ---------------------------------------------------------------------------
+# Com o microfone no ar, o firmware manda os quadros de áudio no MESMO report
+# 0x31 do gamepad, e o `hid-playstation` de fábrica os lê como gamepad: o bit
+# do mudo oscila com o Opus e o driver DESLIGA o microfone sozinho, e os eixos
+# recebem áudio e MEXEM O CURSOR da pessoa (medido aqui em 10/09/2026, 1.231
+# bordas falsas; `assets/dkms/hid-playstation/patch/0003-*`). O `0003` desta
+# casa descarta esses quadros, e ele não está no Linux: numa máquina sem o
+# DKMS (sem `dkms`, `--no-dkms`, Secure Boot sem a chave, kernel fora do pino,
+# e sempre até o primeiro reinício depois do install), pôr o microfone no ar
+# pelo rádio é pôr o cursor dela para andar sozinho.
+#
+# A PERGUNTA É AO DRIVER, e por NÓ: o nó ligado ao driver `playstation` só
+# ganha ponte se o módulo carregado tiver a marca do `0003` (o parâmetro
+# `mic_frames_ignored`, só de leitura). Um nó que o `playstation` não lê (o
+# `hid-generic`, ou nenhum driver) não tem quem transforme áudio em gamepad, e
+# segue como antes. O `feature_retries` NÃO serve de marca: ele é do `0001`, e
+# um patchado de antes de 10/09 também o tem.
+#
+# O MÓDULO DE 10/09 A 28/09 tem a guarda e não tem a marca, e é o que está
+# carregado na máquina dela até o próximo boot. Ele se reconhece pelo
+# `srcversion`, que entre builds fora da árvore do mesmo `.c` se repete
+# (medido em 28/09/2026; a conta está no `patch/BASELINE`, que guarda a mesma
+# lista, e `test_o_hid_playstation_so_nos_kernels_conferidos.py` cobra os dois).
+#
+# SEM A GUARDA, a ponte do rádio não sobe e `BtMicSubsystem.motivo` diz
+# `MOTIVO_SEM_A_GUARDA`. A tela não confessa (regra de 07/09); quem diz a cura
+# é o doctor (`check_hefesto_hid_playstation_dkms`).
+
+#: O nome do driver HID do DualSense no sysfs (`.../drivers/playstation`).
+DRIVER_QUE_LE_O_DUALSENSE = "playstation"
+
+#: Onde o módulo carregado mostra os parâmetros e o `srcversion`. Resolvido na
+#: CHAMADA, nunca no `def`, pela razão que `nos_dualsense_bluetooth` escreve.
+RAIZ_DO_MODULO_DO_DRIVER = "/sys/module/hid_playstation"
+
+#: A marca do `0003` (`assets/dkms/hid-playstation/hid-playstation.c`).
+PARAMETRO_DA_MARCA = "mic_frames_ignored"
+
+#: O `0003` sem a marca (10/09 a 28/09/2026). A MESMA lista do
+#: `SRCVERSION_DO_0003_SEM_A_MARCA` do `patch/BASELINE`.
+SRCVERSION_DO_0003_SEM_A_MARCA: frozenset[str] = frozenset({"CFB81A3D4C7FAA41489CCBD"})
+
+#: O que o `state_full` e o log dizem quando a guarda falta.
+MOTIVO_SEM_A_GUARDA = "driver_sem_a_guarda_do_audio"
+
+
+def o_driver_le_este_no(caminho: str, raiz_hidraw: str | None = None) -> bool:
+    """O nó `/dev/hidrawN` está ligado ao driver `playstation`?
+
+    Lê o `device/driver` do nó no sysfs. A raiz padrão é a MESMA que a
+    varredura dos nós usa (`dualsense_bt_audio._SYSFS_HIDRAW`), lida na
+    chamada: a suíte a aponta para o vazio, e o nó de mentira de um teste
+    responde «não», que é o caminho de antes desta guarda.
+    """
+    if raiz_hidraw is None:
+        from hefesto_dualsense4unix.integrations import dualsense_bt_audio
+
+        raiz_hidraw = str(getattr(dualsense_bt_audio, "_SYSFS_HIDRAW", "/sys/class/hidraw"))
+    nome = os.path.basename(str(caminho or ""))
+    if not nome:
+        return False
+    try:
+        driver = os.readlink(os.path.join(raiz_hidraw, nome, "device", "driver"))
+    except OSError:
+        return False
+    return os.path.basename(driver) == DRIVER_QUE_LE_O_DUALSENSE
+
+
+def o_driver_guarda_o_audio(raiz_do_modulo: str | None = None) -> bool:
+    """O `hid-playstation` carregado descarta os quadros de áudio do microfone?
+
+    Sim quando a marca do `0003` diz `Y`, ou quando o módulo é o `0003` de
+    antes da marca (pelo `srcversion`). Módulo sem nenhuma das duas — o de
+    fábrica, ou um patchado anterior a 10/09 — é «não».
+    """
+    raiz = raiz_do_modulo if raiz_do_modulo is not None else RAIZ_DO_MODULO_DO_DRIVER
+    try:
+        with open(os.path.join(raiz, "parameters", PARAMETRO_DA_MARCA), encoding="ascii") as fh:
+            if fh.read().strip() in ("Y", "1"):
+                return True
+    except (OSError, UnicodeDecodeError):
+        pass
+    try:
+        with open(os.path.join(raiz, "srcversion"), encoding="ascii") as fh:
+            return fh.read().strip() in SRCVERSION_DO_0003_SEM_A_MARCA
+    except (OSError, UnicodeDecodeError):
+        return False
+
+
 class RegistroDePedidosDeCanal:
     """Quem PEDIU o canal de captura do próprio controle — o critério automático.
 
@@ -746,6 +837,20 @@ class BtMicSubsystem:
         #: aqui e ARRANCADA na mordida de 20/09: ela não mudava desfecho
         #: nenhum, e a justificativa que a acompanhava era falsa.)
         self._de_pe_antes: frozenset[str] = frozenset()
+        #: POR QUE a ponte do rádio não sobe, quando o motivo é do SISTEMA e
+        #: não dela — hoje só `MOTIVO_SEM_A_GUARDA` (ver `o_driver_guarda_o_audio`).
+        #: Vazio = nada do sistema segurando. Escrito a cada `alvos()`.
+        self._motivo = ""
+
+    @property
+    def motivo(self) -> str:
+        """O que do SISTEMA segura a ponte do rádio agora, ou `""`.
+
+        É a resposta que o `state_full` publica como `bt_mic.motivo`: a recusa
+        dela (o «Desligado» do card) não entra aqui, porque ela sabe o que
+        pediu; entra o que ela não tem como ver da tela.
+        """
+        return self._motivo
 
     # -- contrato Subsystem ----------------------------------------------
 
@@ -794,7 +899,12 @@ class BtMicSubsystem:
 
         Um nó sem `HID_UNIQ` legível continua NUNCA entrando: sem endereço não
         há como saber de quem é o microfone, nem como ela o desligaria depois.
+
+        **E O DRIVER TEM A PRIMEIRA PALAVRA (28/09/2026).** Um nó que o
+        `playstation` lê sem a guarda do áudio não entra, com ou sem a env e a
+        recusa: ver `o_driver_guarda_o_audio` e `motivo`.
         """
+        nos = self._os_que_o_driver_deixa(nos)
         if habilitado_por_env():
             return list(nos)
         negados = uniqs_negados(self._config)
@@ -804,6 +914,28 @@ class BtMicSubsystem:
             if (chave := norm_mac(str(getattr(no, "uniq", ""))) or "")
             and chave not in negados
         ]
+
+    def _os_que_o_driver_deixa(self, nos: list[Any]) -> list[Any]:
+        """Tira os nós cujo driver leria o áudio do microfone como gamepad.
+
+        ANTES da env e da recusa, e é de propósito: nenhuma das duas muda o
+        que o driver faz com o quadro de áudio. Ver `o_driver_guarda_o_audio`.
+        A pergunta ao módulo é UMA por volta, e só quando algum nó é lido pelo
+        `playstation`.
+        """
+        lidos = [no for no in nos if o_driver_le_este_no(str(getattr(no, "caminho", "")))]
+        if not lidos or o_driver_guarda_o_audio():
+            if self._motivo:
+                logger.info("bt_mic_driver_com_a_guarda")
+            self._motivo = ""
+            return list(nos)
+        if self._motivo != MOTIVO_SEM_A_GUARDA:
+            logger.warning(
+                "bt_mic_driver_sem_a_guarda_do_audio",
+                nos=[str(getattr(no, "caminho", "")) for no in lidos],
+            )
+        self._motivo = MOTIVO_SEM_A_GUARDA
+        return [no for no in nos if no not in lidos]
 
     def pedir_canal(self, uniq: str) -> bool:
         """Alguém quer o canal de captura DESTE controle. Porta pública.
