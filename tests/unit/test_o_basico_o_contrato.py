@@ -1019,15 +1019,15 @@ def test_a_celula_da_matriz_mostra_o_pior_dos_passos_dela(
     Mordida: voltar ao dicionário em que o último passo da célula vence — a
     matriz diz «verde» sobre o pad que levou 30 s.
     """
-    sessao = tmp_path / "sessao"
-    sessao.mkdir()
+    pasta = tmp_path / "corrida"
+    pasta.mkdir()
     comum = {"sub": SUB_DA_SESSAO, "linha": "a hora do pad", "jogador": "todos",
              "transporte": "—", "modo": "xbox"}
     linhas = [dict(comum, veredito=ob.VERMELHO), dict(comum, veredito=ob.VERDE)]
-    (sessao / "passos.jsonl").write_text(
+    (pasta / "passos.jsonl").write_text(
         "".join(json.dumps(p) + "\n" for p in linhas), encoding="utf-8"
     )
-    assert ob.veredito(sessao) == ob.RC_VERMELHO
+    assert ob.veredito(pasta) == ob.RC_VERMELHO
     (linha,) = [ln for ln in capsys.readouterr().out.splitlines() if "a hora do pad" in ln]
     assert linha.rstrip().endswith("VERMELHO"), linha
 
