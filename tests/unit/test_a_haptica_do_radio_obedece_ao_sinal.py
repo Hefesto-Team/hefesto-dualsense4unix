@@ -796,3 +796,107 @@ def test_os_tiros_com_o_adaptador_parado_derrubam_a_ponte() -> None:
     assert tentando >= af.TETO_DE_CEDER_S - 2 * quadro, (
         f"a ponte caiu com {tentando:.2f} s de tentativa, antes do teto"
     )
+
+
+# ---------------------------------------------------------------------------
+# 7. O start() liga o que as réguas acima ligam à mão
+# ---------------------------------------------------------------------------
+
+
+def test_o_start_liga_o_ouvinte_e_o_aviso_e_o_stop_desliga(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A cura escrita e nunca ligada é o defeito mais caro desta casa.
+
+    O ``start()`` do produto sobe o ouvinte do retrato (a thread
+    ``hefesto-som-fluxos``) e entrega à partida quem acordar no primeiro
+    toque; o ``stop()`` desfaz os dois. As réguas da volta ligam o aviso e o
+    ouvinte à mão, como o ``start()`` liga — sem esta, arrancá-los do
+    ``start()`` deixaria todas verdes, e o fluxo que nasce e o primeiro toque
+    voltariam a esperar o relógio de cinco segundos.
+
+    MORDIDA: tire do ``start()`` o ``self._ouvinte.start()``, ou a linha do
+    ``_ouvir_quem_entra_na_partida`` — esta régua reprova.
+    """
+    import asyncio
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
+    from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import quem_mexe_de
+
+    class _Gerenciador:
+        def reconciliar(self, *_a: Any, **_k: Any) -> None:
+            return None
+
+        def dormir(self, _s: float) -> bool:
+            return False
+
+        def parar(self) -> None:
+            return None
+
+    class _Governador:
+        ao_autorizar: Any = None
+
+        def iniciar(self) -> None:
+            return None
+
+        def parar(self, *_a: Any, **_k: Any) -> None:
+            return None
+
+    class _Ctx:
+        controller = None
+        store = None
+
+    # A volta não toca aparelho nem servidor: o que se mede é a fiação.
+    monkeypatch.setattr(mod.AltoFalanteSubsystem, "_reconciliar", lambda self, _g: None)
+    daemon = SimpleNamespace()
+    sub = mod.AltoFalanteSubsystem(
+        gerenciador=_Gerenciador(),
+        fonte_de_controles=lambda: [],
+        daemon=daemon,
+        governador=_Governador(),
+    )
+    try:
+        asyncio.run(sub.start(_Ctx()))
+        ouvinte = sub._ouvinte
+        assert ouvinte is not None and ouvinte.is_alive(), "o start não subiu o ouvinte"
+        assert ouvinte.name == "hefesto-som-fluxos"
+        marcas = quem_mexe_de(daemon)
+        assert marcas is not None
+        assert marcas.ao_marcar == sub._acordar_a_volta, (
+            "o start não entregou à partida quem acordar no primeiro toque"
+        )
+    finally:
+        asyncio.run(sub.stop())
+    assert not ouvinte.is_alive(), "o stop deixou o ouvinte de pé"
+    assert marcas.ao_marcar is None, "o stop deixou a partida acordando um subsystem parado"
+
+
+def test_a_volta_guarda_o_que_leu_e_a_espera_so_acorda_pela_mudanca(
+    mesa_de_quatro: Any,
+) -> None:
+    """A volta anota os fluxos que leu ao começar, e a espera compara com isso.
+
+    Sem a anotação, a espera compara a leitura de agora com o «não sei» e
+    acorda a volta a cada aviso do retrato do som, com a mesa parada: o fluxo
+    de qualquer programa da máquina, num nó que não é de controle, bastaria.
+
+    MORDIDA: tire do ``_reconciliar`` a linha que guarda ``_o_que_a_volta_viu``
+    — a mesa parada acorda a volta.
+    """
+
+    class _Gerenciador:
+        def reconciliar(self, *_a: Any, **_k: Any) -> None:
+            return None
+
+    mesa = mesa_de_quatro({})
+    mesa.sub._fonte = mesa.controles
+    mesa.sub._reconciliar(_Gerenciador())
+    assert sorted(mesa.sub._endpoints) == sorted(MESA), "a volta não publicou os endpoints"
+    assert mesa.sub._a_mesa_do_som_mudou() is False, "a mesa parada acordou a volta"
+    mesa.servidor.tocar("alsa_output.fone_dela", "77")
+    assert mesa.sub._a_mesa_do_som_mudou() is False, "o fluxo de fora da mesa acordou a volta"
+    mesa.o_jogo_abre()
+    assert mesa.sub._a_mesa_do_som_mudou() is True, "o fluxo do jogo não acordou a volta"
+    mesa.sub._reconciliar(_Gerenciador())
+    assert mesa.sub._a_mesa_do_som_mudou() is False, "a volta não anotou o que leu"
