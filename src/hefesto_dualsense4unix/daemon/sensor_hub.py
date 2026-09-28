@@ -500,7 +500,7 @@ class SensorHub:
         28/09/2026). Era o caso raro virando o de todo segundo: no diário de
         26/09, depois do reinício das 10h42, o controle com o acelerômetro
         desligado estava fora da mesa, e esta procura rodou a cada volta (1 s
-        mais a descoberta) por 66 minutos — 2.851 pedidos ao broker em cada nó
+        mais a descoberta) das 10h42 às 11h47 — 3.023 pedidos ao broker em cada nó
         de movimento dos outros dois, que a descoberta daquele dia abria.
 
         Import tardio pela mesma razão de todos os outros daqui.

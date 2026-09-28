@@ -2047,7 +2047,7 @@ def _discover_dualsense_por_nome(marcador: str) -> dict[str, Path]:
     nasce fechado — só para ler os quatro campos que o sysfs já publica. No
     diário de 26/09, com um controle fora da mesa, o leitor dele repetia esta
     volta a cada 5,30 s, e cada volta pedia ao broker o nó de movimento dos
-    OUTROS dois: 1.924 pedidos em cada nó das 7h52 às 10h42. O broker agora só
+    OUTROS dois: 1.933 pedidos em cada nó das 7h51 às 10h42. O broker agora só
     é chamado por quem vai LER o nó (`abrir_input_device`, no `_run`).
 
     Devices virtuais ficam de fora (`_is_virtual_evdev`): os vpads uhid do

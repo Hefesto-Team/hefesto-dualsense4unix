@@ -2,16 +2,16 @@
 
 O que o diário de 26/09 mediu (o `journalctl` do daemon, relido em 28/09):
 
-- das 7h52 às 10h42, com o controle de acelerômetro desligado (perfil
+- das 7h51 às 10h42, com o controle de acelerômetro desligado (perfil
   Freestyle) fora da mesa, o daemon pediu ao broker o nó de movimento dos
-  OUTROS dois controles a cada 5,30 s (mediana), 1.924 vezes em cada nó. É o
+  OUTROS dois controles a cada 5,30 s (mediana), 1.933 vezes em cada nó. É o
   leitor de movimento do ausente — que o hub mantém vivo por causa do
   sensor desligado — repetindo a descoberta no recuo que para em 5 s;
-- das 10h43 às 11h49, depois do reinício do daemon, os mesmos dois nós a cada
-  1,28 s (mediana), 2.851 vezes em cada um: não havia leitor do ausente, e o
+- das 10h42 às 11h47, depois do reinício do daemon, os mesmos dois nós a cada
+  1,28 s (mediana), 3.023 vezes em cada um: não havia leitor do ausente, e o
   hub repetia a descoberta a cada volta de manutenção (1 s mais a volta) para
   achar a peça com o sensor desligado. É a «rajada das 11h45» da sprint, e ela
-  começou às 10h43;
+  começou às 10h42;
 - das 16h16 às 18h23, o primeiro laço de novo, 1.444 vezes num dos nós.
 
 Cada descoberta abria cada nó auxiliar de cada controle, pelo broker, só para
