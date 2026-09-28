@@ -35,8 +35,8 @@ A MATRIZ, a regra dela: os três brilhos, P1 a P4, cabo e rádio.
 * tire o `_com_a_procedencia_da_mesma_cor` do `DraftConfig.with_controller_leds`
   e a varredura reprova no tom, na caixa e nas «Cores automáticas» (P2 e P4) e
   em todo gesto do P2, além do tom que vira fóssil;
-* tire a comparação das duas cores dela e a cor nova sai com o número da
-  antiga (`test_a_cor_que_mudou_nao_leva_o_numero_da_antiga`);
+* devolva ao «Salvar» a luz acesa no override e a cor que mudou só no
+  aparelho vai ao disco (`test_a_cor_que_mudou_so_no_aparelho_nao_vai_ao_disco`);
 * tire o `is None` do `rodape.aplicar` e o «Aplicar» pisca verde com o daemon
   calado (`test_sem_resposta_do_daemon_o_aplicar_recusa_dizendo`);
 * tire o `_com_o_teto_da_economia` do `DraftApplier.apply` e a seção 3
@@ -67,8 +67,7 @@ import pacotes
 from pacotes import a04_iluminacao, rodape
 
 #: O CLIQUE DOS BOTÕES DO RODAPÉ, como o piloto os manda — com a aba de onde
-#: veio, que todo clique carrega: o «Salvar» grava a seção DAQUELA aba, e a
-#: luz é da 04 (O-SALVAR-DA-VIBRACAO-01, 26/09/2026).
+#: veio, que todo clique carrega (o «Salvar» é o mesmo em toda aba desde 27/09).
 CLIQUE = {"tipo": "button", "evento": "click",
           "pagina": "04-iluminacao.html"}  # (noqa-acento: chave do clique)
 
@@ -363,33 +362,38 @@ def test_o_tom_regravado_pelo_salvar_nao_vira_fossil(mesa_de, via: str) -> None:
 
 
 @pytest.mark.parametrize("via", ["usb", "bt"])
-def test_a_cor_que_mudou_nao_leva_o_numero_da_antiga(mesa_de, via: str) -> None:
-    """A cor viva que difere do disco é gravada SEM o número da cor que ela substitui.
+def test_a_cor_que_mudou_so_no_aparelho_nao_vai_ao_disco(mesa_de, via: str) -> None:
+    """A cor que muda só no daemon fica fora do disco, e a dela fica com o número dela.
 
     O P4 escolhe o tom do número 2 (o disco guarda o número 4 com ele); depois
     a luz dele muda só no daemon — é a camada da mão que atravessa a troca
-    automática de perfil. O «Salvar» grava a cor viva, e o número 4 era da cor
-    antiga: colá-lo na nova afirmaria para qual número ela foi escolhida sem
-    ninguém saber.
+    automática de perfil. Até 27/09 o «Salvar» gravava a cor viva, e a régua
+    cobrava que ela fosse sem o número da antiga. Desde 27/09 o Salvar lê o
+    disco (`D-2709-O-SALVAR-LE-O-PERFIL`): a cor e o número que ficam são os
+    que o clique no tom gravou. A regra da procedência (a cor nova não leva o
+    número da antiga) continua medida no dono, o `with_controller_leds`
+    (`test_o_aplicar_nao_solta_o_teto_do_controle.py`, seção 4).
 
-    **A MORDIDA:** tire a comparação das duas cores de
-    `_a_procedencia_da_mesma_cor` e o disco sai com a cor nova e o número velho.
+    **A MORDIDA:** devolva ao «Salvar» a luz acesa no override e o disco sai
+    com o roxo.
     """
     from hefesto_dualsense4unix.core.led_control import player_slot_color
 
     from tests.unit.test_a_04_pergunta_ao_daemon_vivo import ROXO, _na
     from tests.unit.test_a_marca_da_cor_nao_some import BRILHO_GLOBAL
 
+    tom = player_slot_color(2)
     mesa = mesa_de("todos", via)
-    mesa.clicar_no_tom(4, player_slot_color(2))
+    mesa.clicar_no_tom(4, tom)
     assert mesa.disco(NOME, 4).lightbar_para_o_numero == 4, "a régua precisa do número no disco"
     mesa.ponte.led_set_detalhado(ROXO, BRILHO_GLOBAL, UNIQS[3])
     assert mesa.luz(4) == _na(ROXO, BRILHO_GLOBAL), "a régua precisa da luz nova no P4"
     _salvar(mesa)
     leds = mesa.disco(NOME, 4)
-    assert tuple(leds.lightbar) == ROXO, f"o «Salvar» não gravou a cor viva: {leds}"
-    assert leds.lightbar_para_o_numero is None, (
-        f"o «Salvar» colou o número da cor antiga na cor nova: {leds}")
+    assert tuple(leds.lightbar) == tom, (
+        f"o «Salvar» gravou a cor que mudou só no aparelho: {leds}")
+    assert leds.lightbar_para_o_numero == 4, (
+        f"o «Salvar» perdeu o número do tom que ela escolheu: {leds}")
 
 
 @pytest.mark.parametrize("via", ["usb", "bt"])
