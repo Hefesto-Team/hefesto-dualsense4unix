@@ -122,15 +122,19 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         No aparelho, o controle que some e volta tira e põe `eventN` na pasta,
         e é esse aviso que o leitor sem nó espera
         (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026). Uma bancada
-        em que o nó volta sem a pasta mudar seria mais frouxa que o kernel.
+        em que o nó volta sem a pasta mudar seria mais frouxa que o kernel, e
+        também a que acorda o leitor quando o nó SAI: o `InputDirWatch` diz
+        `nasceu` só quando a mudança trouxe um nó.
         """
 
         def __init__(self) -> None:
             self.visto = estado["no_atual"]
+            self.nasceu = False
 
         def poll(self) -> bool:
             mudou = estado["no_atual"] != self.visto
             self.visto = estado["no_atual"]
+            self.nasceu = bool(mudou and estado["no_atual"])
             return bool(mudou)
 
     monkeypatch.setattr(er_mod, "_novo_aviso_de_entrada", _AvisoDaBancada)
