@@ -752,7 +752,17 @@ jobs:
       # Sem o GTK real, o teste que precisa dele PULA com o motivo (a regra do
       # `tests/conftest.py`, 27/09/2026) e roda no `gtk-real`, que mede a suíte
       # inteira e a cobertura dela. Aqui fica a pergunta das três versões.
+      #
+      # O TETO (O-CI-DA-DEV-VOLTA-A-VERDE-01, 28/09/2026). Sem ele valia o do
+      # GitHub, 360 minutos, e um teste preso segurava o runner seis horas e
+      # saía «cancelled», que não se lê como defeito: quatro corridas do `dev`
+      # no 3.10, de 25 a 27/09, pararam assim num `Daemon.run()` cujo
+      # `shutdown` não voltava. O teto mora no PASSO, e não no job, porque o do
+      # job CANCELA e o do passo REPROVA. Medido nas corridas do `dev` de 25 a
+      # 27/09 que chegaram ao fim: este passo levou de 27 a 56 minutos. O teto
+      # é 80.
       - name: Pytest unit
+        timeout-minutes: 80
         run: |
           pytest tests/unit -v --continue-on-collection-errors
       # CI-TESTS-CORE-ORFAO-01: `tests/core` (12 testes) não era rodado por
@@ -901,7 +911,11 @@ jobs:
       # o resto da interface pulava no `lint-test` e não rodava em lugar nenhum.
       # Em 24 partes, pelo `scripts/rodar-a-suite.sh` (um processo só morre no
       # meio), e a cobertura se mede sobre a suíte inteira.
+      # O TETO, pela mesma razão do `Pytest unit` do lint-test: medido nas
+      # corridas do `dev` de 25 a 27/09 que chegaram ao fim, este passo levou
+      # de 52 a 66 minutos. O teto é 95.
       - name: A suíte inteira sob Xvfb, com o GTK real
+        timeout-minutes: 95
         env:
           HEFESTO_EXIGE_GTK_REAL: "1"
           GDK_BACKEND: x11
