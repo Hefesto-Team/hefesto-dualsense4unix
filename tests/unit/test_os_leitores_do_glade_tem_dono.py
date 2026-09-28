@@ -159,7 +159,14 @@ def test_a_aba_05_monta_com_o_glade_apagado(tmp_path: Path) -> None:
     A cópia leva `src/`, `docs/data` e `assets/` (o que o gerador lê) e a
     bancada vai para o `tmp_path` pelo `HEFESTO_BANCADA` — a árvore de quem
     roda não recebe um byte.
+
+    SEM O GTK REAL, PULA — 27/09/2026. O `aba05.py` chega ao GTK pela tela da
+    vibração (`app/telas/vibracao.py` → `app/actions/rumble_actions.py`), e no
+    `lint-test` do CI o filho morria com `No module named 'gi'` antes de olhar
+    para o glade: a régua acusava a GTK-3 de um defeito que era do runner.
     """
+    from tests.conftest import repassar_a_falta_do_gtk
+
     arvore = tmp_path / "descartavel"
     (arvore / "docs").mkdir(parents=True)
     ignorar = shutil.ignore_patterns("__pycache__")
@@ -182,6 +189,7 @@ def test_a_aba_05_monta_com_o_glade_apagado(tmp_path: Path) -> None:
              "PYTHONPATH": str(arvore / "src")},
         capture_output=True, text=True, timeout=180,
     )
+    repassar_a_falta_do_gtk(saida)
     assert saida.returncode == 0, (
         "a aba 05 NÃO monta com o `gui/main.glade` apagado — é este o defeito "
         f"que a GTK-3 encontraria no dia de apagar:\n{saida.stderr[-3000:]}")
