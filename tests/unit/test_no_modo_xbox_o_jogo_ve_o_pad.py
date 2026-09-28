@@ -29,7 +29,7 @@ import sys
 import types
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, NamedTuple
+from typing import Any, ClassVar, NamedTuple
 
 import pytest
 
@@ -109,7 +109,7 @@ EIXOS_DO_XBOX = frozenset({
 class _NoGravado:
     """O `evdev.UInput` sem kernel: guarda o que o kernel registraria e o que se escreve."""
 
-    criados: list[_NoGravado] = []
+    criados: ClassVar[list[_NoGravado]] = []
 
     def __init__(self, events: dict[int, list[Any]], **kwargs: Any) -> None:
         self.events = events
