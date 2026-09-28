@@ -1031,7 +1031,13 @@ jobs:
             echo "XDG_CURRENT_DESKTOP=GNOME" >> $GITHUB_ENV
             echo "DISPLAY=:0" >> $GITHUB_ENV
           fi
+      # O TETO, pela mesma razão do `Pytest unit`: este passo sobe o
+      # `Daemon.run()` de verdade e espera o `stop()` voltar pelo mesmo
+      # `shutdown` que prendeu o 3.10 do `lint-test` seis horas. Medido nas
+      # corridas do `dev` de 22/08, ele leva de 2 a 3 segundos. O teto é 5
+      # minutos.
       - name: Smoke runtime-real
+        timeout-minutes: 5
         env:
           HEFESTO_DUALSENSE4UNIX_FAKE: "1"
           HEFESTO_DUALSENSE4UNIX_FAKE_TRANSPORT: ${{ matrix.transport }}
