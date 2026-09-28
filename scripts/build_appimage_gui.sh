@@ -151,6 +151,34 @@ install -Dm755 -t "$APPDIR/usr/share/hefesto-dualsense4unix/scripts/" \
     "$HERE/scripts/fix_wireplumber_default_source.sh" \
     "$HERE/scripts/install_snd_quirk.sh"
 
+# O PROTOCOLO DO BÁSICO (O-BASICO-MEDIDO-01, 28/09/2026): o comando do básico
+# acha o `scripts/o_basico.py` pelas mesmas bases do doctor, e ele roda os
+# ensaios de `scripts/ensaios/` (e o que eles importam) e as sondas de
+# `scripts/sondas/`. Vale para ele a mesma metade que falta aos cinco acima:
+# levar é condição necessária, e o AppDir ainda não é uma das bases.
+install -Dm755 -t "$APPDIR/usr/share/hefesto-dualsense4unix/scripts/" \
+    "$HERE/scripts/o_basico.py" \
+    "$HERE/scripts/identidade_do_vpad.py"
+install -Dm755 -t "$APPDIR/usr/share/hefesto-dualsense4unix/scripts/ensaios/" \
+    "$HERE/scripts/ensaios/a_entrada_que_nasce_sozinha.py" \
+    "$HERE/scripts/ensaios/audio_por_transporte.py" \
+    "$HERE/scripts/ensaios/comum.py" \
+    "$HERE/scripts/ensaios/entrada_em_repouso.py" \
+    "$HERE/scripts/ensaios/escrita_pelo_broker.py" \
+    "$HERE/scripts/ensaios/giro_e_buraco.py" \
+    "$HERE/scripts/ensaios/imu_no_cabo.py" \
+    "$HERE/scripts/ensaios/microfone_no_cabo.py" \
+    "$HERE/scripts/ensaios/o_caminho_do_mic_no_cabo.py" \
+    "$HERE/scripts/ensaios/o_jogo_para_de_ver_o_giro.py" \
+    "$HERE/scripts/ensaios/os_endpoints_de_haptica.py" \
+    "$HERE/scripts/ensaios/os_nos_de_som_por_controle.py" \
+    "$HERE/scripts/ensaios/quem_e_quem.py" \
+    "$HERE/scripts/ensaios/taxa_no_hidraw.py"
+install -Dm644 -t "$APPDIR/usr/share/hefesto-dualsense4unix/scripts/sondas/" \
+    "$HERE/scripts/sondas/nucleo-por-processo.bt" \
+    "$HERE/scripts/sondas/trava-por-pad.bt" \
+    "$HERE/scripts/sondas/uhid-raw-request.bt"
+
 echo "[4/6] Criando AppRun (entrypoint da GUI)..."
 cat > "$APPDIR/AppRun" <<'APPRUN'
 #!/bin/bash

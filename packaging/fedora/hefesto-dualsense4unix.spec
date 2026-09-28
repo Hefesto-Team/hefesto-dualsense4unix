@@ -304,6 +304,34 @@ install -Dm755 -t %{buildroot}%{_datadir}/%{app_id}/scripts/ \
     scripts/fix_wireplumber_default_source.sh \
     scripts/install_snd_quirk.sh
 
+# O PROTOCOLO DO BASICO (O-BASICO-MEDIDO-01, 28/09/2026): o comando do basico
+# acha o scripts/o_basico.py pelas mesmas bases do doctor, e ele roda os
+# ensaios de scripts/ensaios/ (e o que eles importam) e as sondas de
+# scripts/sondas/. Um nome por linha, aqui e no %files: a regua 8 de
+# tests/unit/test_o_basico_o_contrato.py le cada um nos dois lugares.
+install -Dm755 -t %{buildroot}%{_datadir}/%{app_id}/scripts/ \
+    scripts/o_basico.py \
+    scripts/identidade_do_vpad.py
+install -Dm755 -t %{buildroot}%{_datadir}/%{app_id}/scripts/ensaios/ \
+    scripts/ensaios/a_entrada_que_nasce_sozinha.py \
+    scripts/ensaios/audio_por_transporte.py \
+    scripts/ensaios/comum.py \
+    scripts/ensaios/entrada_em_repouso.py \
+    scripts/ensaios/escrita_pelo_broker.py \
+    scripts/ensaios/giro_e_buraco.py \
+    scripts/ensaios/imu_no_cabo.py \
+    scripts/ensaios/microfone_no_cabo.py \
+    scripts/ensaios/o_caminho_do_mic_no_cabo.py \
+    scripts/ensaios/o_jogo_para_de_ver_o_giro.py \
+    scripts/ensaios/os_endpoints_de_haptica.py \
+    scripts/ensaios/os_nos_de_som_por_controle.py \
+    scripts/ensaios/quem_e_quem.py \
+    scripts/ensaios/taxa_no_hidraw.py
+install -Dm644 -t %{buildroot}%{_datadir}/%{app_id}/scripts/sondas/ \
+    scripts/sondas/nucleo-por-processo.bt \
+    scripts/sondas/trava-por-pad.bt \
+    scripts/sondas/uhid-raw-request.bt
+
 %post
 # A REGRA DO NO TROCOU DE NOME em 25/09/2026 (70-ps5-controller ->
 # 73-hefesto-ps5-controller). A copia em /etc e do install-host-udev.sh, fora
@@ -505,6 +533,26 @@ fi
 %{_datadir}/%{app_id}/scripts/disable_steam_input.sh
 %{_datadir}/%{app_id}/scripts/fix_wireplumber_default_source.sh
 %{_datadir}/%{app_id}/scripts/install_snd_quirk.sh
+# O protocolo do basico (O-BASICO-MEDIDO-01) — ver o bloco no %install.
+%{_datadir}/%{app_id}/scripts/o_basico.py
+%{_datadir}/%{app_id}/scripts/identidade_do_vpad.py
+%{_datadir}/%{app_id}/scripts/ensaios/a_entrada_que_nasce_sozinha.py
+%{_datadir}/%{app_id}/scripts/ensaios/audio_por_transporte.py
+%{_datadir}/%{app_id}/scripts/ensaios/comum.py
+%{_datadir}/%{app_id}/scripts/ensaios/entrada_em_repouso.py
+%{_datadir}/%{app_id}/scripts/ensaios/escrita_pelo_broker.py
+%{_datadir}/%{app_id}/scripts/ensaios/giro_e_buraco.py
+%{_datadir}/%{app_id}/scripts/ensaios/imu_no_cabo.py
+%{_datadir}/%{app_id}/scripts/ensaios/microfone_no_cabo.py
+%{_datadir}/%{app_id}/scripts/ensaios/o_caminho_do_mic_no_cabo.py
+%{_datadir}/%{app_id}/scripts/ensaios/o_jogo_para_de_ver_o_giro.py
+%{_datadir}/%{app_id}/scripts/ensaios/os_endpoints_de_haptica.py
+%{_datadir}/%{app_id}/scripts/ensaios/os_nos_de_som_por_controle.py
+%{_datadir}/%{app_id}/scripts/ensaios/quem_e_quem.py
+%{_datadir}/%{app_id}/scripts/ensaios/taxa_no_hidraw.py
+%{_datadir}/%{app_id}/scripts/sondas/nucleo-por-processo.bt
+%{_datadir}/%{app_id}/scripts/sondas/trava-por-pad.bt
+%{_datadir}/%{app_id}/scripts/sondas/uhid-raw-request.bt
 
 %changelog
 * Tue Aug 19 2026 Vitoria Maria <[REDACTED]> - 1:0.9.4.5-1

@@ -287,6 +287,34 @@ package() {
         scripts/fix_wireplumber_default_source.sh \
         scripts/install_snd_quirk.sh
 
+    # O PROTOCOLO DO BASICO (O-BASICO-MEDIDO-01, 28/09/2026): o
+    # `hefesto-dualsense4unix basico` acha o scripts/o_basico.py pelas mesmas
+    # bases do doctor, e ele roda os ensaios de scripts/ensaios/ (e o que
+    # eles importam) e as sondas de scripts/sondas/. Um nome por linha, sem
+    # laco: a regua 8 de tests/unit/test_o_basico_o_contrato.py le cada um.
+    install -Dm755 -t "$pkgdir/usr/share/hefesto-dualsense4unix/scripts/" \
+        scripts/o_basico.py \
+        scripts/identidade_do_vpad.py
+    install -Dm755 -t "$pkgdir/usr/share/hefesto-dualsense4unix/scripts/ensaios/" \
+        scripts/ensaios/a_entrada_que_nasce_sozinha.py \
+        scripts/ensaios/audio_por_transporte.py \
+        scripts/ensaios/comum.py \
+        scripts/ensaios/entrada_em_repouso.py \
+        scripts/ensaios/escrita_pelo_broker.py \
+        scripts/ensaios/giro_e_buraco.py \
+        scripts/ensaios/imu_no_cabo.py \
+        scripts/ensaios/microfone_no_cabo.py \
+        scripts/ensaios/o_caminho_do_mic_no_cabo.py \
+        scripts/ensaios/o_jogo_para_de_ver_o_giro.py \
+        scripts/ensaios/os_endpoints_de_haptica.py \
+        scripts/ensaios/os_nos_de_som_por_controle.py \
+        scripts/ensaios/quem_e_quem.py \
+        scripts/ensaios/taxa_no_hidraw.py
+    install -Dm644 -t "$pkgdir/usr/share/hefesto-dualsense4unix/scripts/sondas/" \
+        scripts/sondas/nucleo-por-processo.bt \
+        scripts/sondas/trava-por-pad.bt \
+        scripts/sondas/uhid-raw-request.bt
+
     # Catalogos i18n compilados em /usr/share/locale/<lang>/LC_MESSAGES/.
     if [ -d locale ]; then
         for lang_dir in locale/*/; do

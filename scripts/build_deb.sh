@@ -272,6 +272,48 @@ for _s in doctor.sh bluez_config.sh disable_steam_input.sh fix_wireplumber_defau
     [ -f "scripts/${_s}" ] && install -Dm755 "scripts/${_s}" \
         "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/${_s}"
 done
+# O PROTOCOLO DO BÁSICO (O-BASICO-MEDIDO-01, 28/09/2026): o comando do básico
+# (`hefesto-dualsense4unix basico`; noqa-acento: o nome do subcomando) acha o
+# `scripts/o_basico.py` pelas mesmas bases do doctor, e ele roda os ensaios de `scripts/ensaios/` (e o que eles importam)
+# e as sondas de `scripts/sondas/`. Um nome por linha, sem laço e sem guarda de
+# existência: a régua 8 de `tests/unit/test_o_basico_o_contrato.py` lê cada um,
+# e um arquivo que faltar no checkout tem de derrubar o build, não sumir calado.
+install -Dm755 scripts/o_basico.py "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/o_basico.py"
+install -Dm755 scripts/identidade_do_vpad.py "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/identidade_do_vpad.py"
+install -Dm755 scripts/ensaios/a_entrada_que_nasce_sozinha.py \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/ensaios/a_entrada_que_nasce_sozinha.py"
+install -Dm755 scripts/ensaios/audio_por_transporte.py \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/ensaios/audio_por_transporte.py"
+install -Dm755 scripts/ensaios/comum.py \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/ensaios/comum.py"
+install -Dm755 scripts/ensaios/entrada_em_repouso.py \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/ensaios/entrada_em_repouso.py"
+install -Dm755 scripts/ensaios/escrita_pelo_broker.py \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/ensaios/escrita_pelo_broker.py"
+install -Dm755 scripts/ensaios/giro_e_buraco.py \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/ensaios/giro_e_buraco.py"
+install -Dm755 scripts/ensaios/imu_no_cabo.py \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/ensaios/imu_no_cabo.py"
+install -Dm755 scripts/ensaios/microfone_no_cabo.py \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/ensaios/microfone_no_cabo.py"
+install -Dm755 scripts/ensaios/o_caminho_do_mic_no_cabo.py \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/ensaios/o_caminho_do_mic_no_cabo.py"
+install -Dm755 scripts/ensaios/o_jogo_para_de_ver_o_giro.py \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/ensaios/o_jogo_para_de_ver_o_giro.py"
+install -Dm755 scripts/ensaios/os_endpoints_de_haptica.py \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/ensaios/os_endpoints_de_haptica.py"
+install -Dm755 scripts/ensaios/os_nos_de_som_por_controle.py \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/ensaios/os_nos_de_som_por_controle.py"
+install -Dm755 scripts/ensaios/quem_e_quem.py \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/ensaios/quem_e_quem.py"
+install -Dm755 scripts/ensaios/taxa_no_hidraw.py \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/ensaios/taxa_no_hidraw.py"
+install -Dm644 scripts/sondas/nucleo-por-processo.bt \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/sondas/nucleo-por-processo.bt"
+install -Dm644 scripts/sondas/trava-por-pad.bt \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/sondas/trava-por-pad.bt"
+install -Dm644 scripts/sondas/uhid-raw-request.bt \
+    "${STAGING}/usr/share/hefesto-dualsense4unix/scripts/sondas/uhid-raw-request.bt"
 # (O launcher standalone "DualSense Fix (dsx)" e o dsx.sh foram REMOVIDOS — eram
 # baseados na teoria de HW já refutada; a cura de raiz do storm está integrada.)
 # Também copia o conf modules-load para o local que o helper procura
