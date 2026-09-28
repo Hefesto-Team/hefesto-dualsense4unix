@@ -61,6 +61,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -158,10 +159,18 @@ def mac_com_dois_pontos(uniq: str) -> str:
 
 
 def mascarar(uniq: str | None) -> str | None:
-    """A máscara da casa para o diário: os octetos 4 e 5 zerados."""
-    if not uniq or len(uniq) != 12:
+    """A máscara da casa para o diário: os octetos 4 e 5 zerados, sem os dois-pontos.
+
+    Quem mascara é o dono, ``core/formas_do_endereco``: um endereço em qualquer
+    grafia sai colado e minúsculo (a forma do backend); o que não é UM
+    endereço passa pela máscara do texto e volta. ``None`` só para o vazio.
+    """
+    if not uniq:
         return None
-    return uniq[:6] + "0000" + uniq[10:]
+    mascarado = _formas.mascarar_endereco(uniq)
+    if mascarado is None:
+        return _formas.mascarar(uniq)
+    return mascarado.replace(":", "")
 
 
 # --- as leituras (I/O; cada uma degrada para vazio, nunca levanta) ------------

@@ -60,6 +60,7 @@ import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
+from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 
 #: ``_IOR('H', 210..212, int)`` de ``include/net/bluetooth/hci_sock.h``.
@@ -605,11 +606,12 @@ def canais_evitados_pelo_adaptador(
 
 
 def _mascarar(endereco: str) -> str:
-    """A máscara da casa: octetos 4 e 5 zerados."""
-    partes = endereco.split(":")
-    if len(partes) != 6:
-        return endereco
-    return ":".join([*partes[:3], "00", "00", *partes[5:]])
+    """A máscara da casa: octetos 4 e 5 zerados, na grafia que chegou.
+
+    Quem mascara é o dono, ``core/formas_do_endereco``: até 28/09/2026 esta
+    função só lia dois-pontos e devolvia cru todo o resto.
+    """
+    return _formas.mascarar(endereco)
 
 
 def main(argv: list[str] | None = None) -> int:

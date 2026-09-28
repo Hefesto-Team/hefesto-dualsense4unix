@@ -73,6 +73,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
+from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 from hefesto_dualsense4unix.integrations import bluez_dbus
 from hefesto_dualsense4unix.integrations.bluez_dbus import RADIO_DE_VERDADE_NA_SUITE
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -148,16 +149,13 @@ class Resultado:
 def mascarar(mac: str) -> str:
     """Zera os octetos 4 e 5 — a máscara desta casa, e há portão que a cobra.
 
-    Aceita as duas formas que circulam no produto: ``aa:bb:cc:11:22:33`` (o
-    ``uniq`` do daemon) e ``aabbcc112233`` (a chave do ``maquina.json``). A
-    saída sai sempre com dois-pontos, que é como a pessoa lê um MAC.
+    Quem mascara é o dono, ``core/formas_do_endereco``. Um endereço em
+    qualquer grafia (o ``uniq`` do daemon, a chave do ``maquina.json``, o
+    caminho do BlueZ com sublinhado) sai com dois-pontos e minúsculo, que é
+    como a pessoa lê um MAC. O que não é UM endereço passa pela máscara do
+    texto e volta: até 28/09/2026 ele voltava cru.
     """
-    limpo = mac.replace(":", "").replace("-", "").strip().lower()
-    if len(limpo) != 12 or any(c not in "0123456789abcdef" for c in limpo):
-        return mac
-    octetos = [limpo[i : i + 2] for i in range(0, 12, 2)]
-    octetos[3] = octetos[4] = "00"
-    return ":".join(octetos)
+    return _formas.mascarar_endereco(mac) or _formas.mascarar(mac)
 
 
 def _normalizar(mac: str) -> str | None:

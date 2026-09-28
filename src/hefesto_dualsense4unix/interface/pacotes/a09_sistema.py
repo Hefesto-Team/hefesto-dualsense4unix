@@ -82,9 +82,15 @@ from hefesto_dualsense4unix.app.actions.config import secao_orcamento as _orcame
 # em duas línguas, fotografado no comentário de `_linha_de_identidade`. O import
 # no topo não custa nada aqui: este módulo já traz `gui.aba_sistema` logo abaixo.
 from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
+
+# O DONO DA MÁSCARA E O DO `maquina.json` — 28/09/2026, O-REGISTRO-COPIADO-NAO-
+# ENTREGA-O-ENDERECO-01: o diário e o «Copiar» passam pelo dono das formas do
+# endereço, e o «Copiar» leva como conhecidas as chaves que ela declarou.
+from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 from hefesto_dualsense4unix.gui import aba_sistema as _tela
 from hefesto_dualsense4unix.integrations import storm_doctor as _exame
 from hefesto_dualsense4unix.interface import onde as _onde
+from hefesto_dualsense4unix.utils import maquina as _maquina
 
 from . import (
     TRAVESSAO,
@@ -3508,24 +3514,17 @@ LINHAS_DO_DIARIO = 80
 #: 4 e 5 zerados. O painel existe para ser COPIADO num relato de defeito, e o
 #: relato vai para fora da máquina dela.
 #:
-#: TRÊS FORMAS, E AS TRÊS FORAM MEDIDAS NO DIÁRIO DE VERDADE (25/09/2026): o
-#: endereço separado (`aa:bb:cc:dd:ee:ff`), o COLADO que o daemon escreve no
-#: `uniq=` (doze letras, sem separador) e o SUFIXO de seis letras que nomeia a
-#: fonte do microfone (`hefesto_mic_<octetos 4, 5 e 6>`). Uma máscara só da
-#: primeira forma deixaria as outras duas saírem inteiras no «Copiar».
-_MAC_SEPARADO = re.compile(
-    r"\b([0-9A-Fa-f]{2})([:-])([0-9A-Fa-f]{2})\2([0-9A-Fa-f]{2})\2[0-9A-Fa-f]{2}\2"
-    r"[0-9A-Fa-f]{2}\2([0-9A-Fa-f]{2})\b")
-_MAC_COLADO = re.compile(r"(?<![0-9A-Za-z])([0-9A-Fa-f]{6})[0-9A-Fa-f]{4}([0-9A-Fa-f]{2})"
-                         r"(?![0-9A-Za-z])")
-_MAC_SUFIXO = re.compile(r"(?<=_)[0-9A-Fa-f]{4}([0-9A-Fa-f]{2})(?![0-9A-Za-z])")
+#: QUEM MASCARA É O DONO, `core/formas_do_endereco` — O-REGISTRO-COPIADO-NAO-
+#: ENTREGA-O-ENDERECO-01, 28/09/2026. Aqui moravam três formas medidas no
+#: diário de 25/09 (a separada, a colada do `uniq=` e o sufixo do nó de som), e
+#: o «Copiar» levava o endereço inteiro de volta pelo nome do endpoint da
+#: háptica (`HEFESTO<octetos 4, 5 e 6>`) escrito ao lado do `uniq=` mascarado.
+#: O dono conhece as seis formas, o virtual derivado e o serial.
 
 
 def mascarar_o_diario(texto: str) -> str:
-    """Os octetos 4 e 5 zerados, nas três formas em que o diário escreve um endereço."""
-    texto = _MAC_SEPARADO.sub(r"\1\2\3\2\4\g<2>00\g<2>00\2\5", texto)
-    texto = _MAC_COLADO.sub(r"\g<1>0000\2", texto)
-    return _MAC_SUFIXO.sub(r"0000\1", texto)
+    """O texto do diário na máscara da casa, pelo dono das formas do endereço."""
+    return _formas.mascarar(texto)
 
 
 def _diario() -> str:
@@ -3582,6 +3581,25 @@ def _por_na_area_de_transferencia(texto: str) -> bool:
     return True
 
 
+def _conhecidos_do_copiar(ctx: Contexto) -> list[str]:
+    """Os endereços e os seriais que o «Copiar» sabe que são de um aparelho.
+
+    Os `uniq` e os `serial` do `state_full` e da fita, e as chaves de controle
+    e de adaptador do `maquina.json`, pela API do dono dele
+    (`utils/maquina.carregar_maquina`, que nunca levanta). Um conhecido que não
+    é endereço nem serial o dono ignora.
+    """
+    conhecidos: list[str] = []
+    estado = ctx.state if isinstance(ctx.state, dict) else {}
+    for controle in [*(estado.get("controllers") or []), *(ctx.mesa or [])]:
+        if isinstance(controle, dict):
+            conhecidos += [str(controle[chave]) for chave in ("uniq", "serial")
+                           if controle.get(chave)]
+    maquina = _maquina.carregar_maquina()
+    conhecidos += [*(maquina.controles or {}), *(maquina.adaptadores or {})]
+    return conhecidos
+
+
 @gesto("09-sistema.html", "copiar-registro",
        grava="põe o registro na área de transferência dela")
 def copiar_registro(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
@@ -3590,10 +3608,18 @@ def copiar_registro(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     O TEXTO É O DO PAINEL, e não uma segunda leitura: o que ela copia é o que
     ela está vendo (o `systemctl status`, a identidade de fábrica e o diário),
     inclusive a parte que rolou para cima.
+
+    E ELE SAI PELO DONO DA MÁSCARA, com os conhecidos — 28/09/2026. O painel
+    mostra o serial de fábrica inteiro (é dela, é a máquina dela: resposta 13
+    da noite de 27/09), e o relato vai para fora da máquina: no «Copiar» o
+    serial sai com os seis públicos. Os conhecidos (:func:`_conhecidos_do_copiar`)
+    pegam o que a forma sozinha não pega — o despejo invertido com espaço, e
+    as linhas do journal de antes da cura e de outros processos.
     """
     texto = _no_painel(_faixa_lenta(ctx.state or None, ctx.mesa)[4])
     if not texto or texto == _tela.NAO_DEU:
         raise RuntimeError("O registro ainda está vazio — não há o que copiar.")
+    texto = _formas.mascarar(texto, _conhecidos_do_copiar(ctx))
     if not _por_na_area_de_transferencia(texto):
         raise RuntimeError("Não consegui usar a área de transferência.")
 

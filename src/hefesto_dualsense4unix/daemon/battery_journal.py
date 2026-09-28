@@ -83,6 +83,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -158,21 +159,16 @@ def faixa_de(pct: int | None) -> int | None:
 def mascarar_endereco(valor: str | None) -> str:
     """Endereço na máscara da casa: ``OUI:00:00:NN`` (octetos 4 e 5 zerados).
 
-    Aceita as duas grafias que circulam no produto — a colada, que é como o
-    endereço sai do ``controllers.json`` e do journal (``a0fa9c…``), e a com
-    separador. Qualquer coisa que não tenha 12 dígitos hex vira
+    Quem mascara é o dono, ``core/formas_do_endereco.mascarar_endereco``: a
+    colada, que é como o endereço sai do ``controllers.json`` e do journal, e a
+    separada, em qualquer caixa. O que não é um endereço vira
     :data:`SEM_ENDERECO`: é preferível uma linha sem identidade a uma linha com
-    um pseudo-endereço inventado a partir de um path.
+    um pseudo-endereço inventado a partir de um path — e por isso o dono
+    DESCARTA o valor com um caractere fora da forma, em vez de peneirar os
+    dígitos hex de qualquer texto, como esta função fazia até 28/09/2026.
     """
-    if not valor:
-        return SEM_ENDERECO
-    digitos = "".join(ch for ch in valor.lower() if ch in "0123456789abcdef")
-    if len(digitos) != 12:
-        return SEM_ENDERECO
-    octetos = [digitos[i : i + 2] for i in range(0, 12, 2)]
-    octetos[3] = "00"
-    octetos[4] = "00"
-    return ":".join(octetos)
+    mascarado = _formas.mascarar_endereco(valor)
+    return SEM_ENDERECO if mascarado is None else mascarado
 
 
 def _endereco_com_dois_pontos(uniq: str) -> str | None:

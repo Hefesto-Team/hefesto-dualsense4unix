@@ -69,6 +69,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 from hefesto_dualsense4unix.profiles.schema import (
     PRIORIDADE_MAXIMA,
     ControllerOverrides,
@@ -382,18 +383,24 @@ def _texto_do_ajuste(com_ajuste: int, total: int) -> str:
 
 
 def _id_visivel(uniq: str) -> str:
-    """``"aabbcc000001"`` → ``"AA:BB:CC:00:00:01"``, que é como o desenho mostra.
+    """``"aabbcc000001"`` → ``"AA:BB:CC:00:00:01"``, na máscara da casa.
 
     A chave do dado continua sendo o ``uniq`` cru — é ela que vai no
     ``data-hef-uniq``, porque é a chave de ``Profile.controllers``
     (``profiles/schema.py:1867``, canonizada em ``:2027``). Endereço que não é a
     chave do dado obriga a inventar uma tradução, e a tradução é onde nasce a
     segunda verdade.
+
+    O TEXTO DA COLUNA SAI MASCARADO desde 28/09/2026 (O-REGISTRO-COPIADO-NAO-
+    ENTREGA-O-ENDERECO-01): até ali a coluna «ID da peça» mostrava o endereço
+    inteiro, e a tela é o que se fotografa num relato. Quem mascara é o dono,
+    ``core/formas_do_endereco``; o que não é um endereço passa pela máscara do
+    texto e volta.
     """
-    cru = uniq.strip().replace(":", "").replace("-", "").lower()
-    if len(cru) != 12:
-        return uniq or "—"
-    return ":".join(cru[i : i + 2] for i in range(0, 12, 2)).upper()
+    mascarado = _formas.mascarar_endereco(uniq)
+    if mascarado is None:
+        return _formas.mascarar(uniq or "") or "—"
+    return mascarado.upper()
 
 
 def _ambiente_do_perfil(profile: Any) -> tuple[str | None, str]:

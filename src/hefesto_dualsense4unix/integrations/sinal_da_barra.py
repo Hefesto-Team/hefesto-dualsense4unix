@@ -118,6 +118,8 @@ import time
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 
+from hefesto_dualsense4unix.core import formas_do_endereco as _formas
+
 #: Onde o ``hid-playstation`` pendura as instâncias de conexão. O sufixo hexa
 #: (``0005:054C:0CE6.0033``) é um contador do HID core: ele NÃO se repete
 #: enquanto a máquina não reinicia, e por isso é a chave estável de "esta
@@ -192,15 +194,13 @@ _RE_ESCRITOR = re.compile(r"escritor_cru_detectado.*?nos=\[(?P<nos>[^\]]*)\]")
 def mascarar(mac: str) -> str:
     """Zera os octetos 4 e 5 — a máscara desta casa, e há portão que a cobra.
 
-    ``aa:bb:cc:11:22:33`` vira ``aa:bb:cc:00:00:33``. Serve para o relatório
-    poder nomear um controle sem que o endereço dela caia num PNG versionado
-    pelo caminho do retrato das abas.
+    ``aa:bb:cc:11:22:33`` vira ``aa:bb:cc:00:00:33``, na grafia que chegou.
+    Serve para o relatório poder nomear um controle sem que o endereço dela
+    caia num PNG versionado pelo caminho do retrato das abas. Quem mascara é o
+    dono, ``core/formas_do_endereco``: até 28/09/2026 esta função só lia
+    dois-pontos e devolvia cru todo o resto.
     """
-    partes = mac.split(":")
-    if len(partes) != 6:
-        return mac
-    partes[3] = partes[4] = "00"
-    return ":".join(partes)
+    return _formas.mascarar(mac)
 
 
 def endereco_normalizado(valor: object) -> str:
