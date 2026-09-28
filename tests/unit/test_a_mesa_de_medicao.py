@@ -23,14 +23,18 @@ AS MORDIDAS, uma por afirmação, e todas foram vistas reprovar antes de entrar:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import pathlib
 import re
+import select
 import shutil
+import signal
 import subprocess
 import sys
 import threading
+import time
 
 import pytest
 
@@ -42,6 +46,8 @@ import mesa_de_medicao as med
 import monta
 
 CHROME = "/usr/bin/google-chrome"
+#: O lançador da mesa. Ele mora em `scripts/` e acha a raiz um nível acima.
+LANCADOR = RAIZ / "scripts" / "validar-mesa.sh"
 
 #: O SUFIXO É INVENTADO, e o endereço só vira "forma de MAC" quando colado ao
 #: OUI real EM TEMPO DE EXECUÇÃO. Escrever o endereço inteiro num literal faria
@@ -556,7 +562,7 @@ def test_o_validar_sh_existe_e_tem_o_sem_abrir() -> None:
     faz nada; `restart` corta uma medição em curso. Então a régua deixa de
     caçar a palavra e passa a caçar o VERBO — que é o que morde.
     """
-    sh = RAIZ / "validar.sh"
+    sh = LANCADOR
     assert sh.exists() and os.access(sh, os.X_OK)
     fonte = sh.read_text(encoding="utf-8")
     assert "--sem-abrir" in fonte
@@ -580,11 +586,75 @@ def test_o_validar_sh_existe_e_tem_o_sem_abrir() -> None:
 
 @pytest.mark.skipif(not shutil.which("shellcheck"), reason="sem shellcheck")
 def test_o_lancador_passa_no_shellcheck() -> None:
-    """O `portoes.sh` varre `scripts/*.sh`; o `validar.sh` mora na RAIZ, e sem
-    esta linha ele ficaria fora de toda régua de shell da casa."""
-    r = subprocess.run(["shellcheck", "-S", "error", str(RAIZ / "validar.sh")],
+    """O lançador passa no `shellcheck` também na suíte, e não só no portão
+    que varre `scripts/*.sh` (que não roda em toda árvore)."""
+    r = subprocess.run(["shellcheck", "-S", "error", str(LANCADOR)],
                        capture_output=True, text=True)
     assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_o_lancador_sobe_a_mesa_sem_tela_e_sem_daemon(mentira, tmp_path) -> None:
+    """O lançador SOBE a mesa, e não só existe: a régua de texto acima e o
+    `shellcheck` passam com a raiz errada, porque o `mesa_de_medicao.py` que
+    ele chama só é procurado quando ele sobe.
+
+    Sem tela (`--sem-abrir`), sem daemon (`--sem-daemon`), pela mesa de mentira
+    da régua (nenhum aparelho é lido) e num lar de mentira: o socket do daemon
+    mora no `XDG_RUNTIME_DIR`, e o daqui não tem daemon nenhum. O servidor
+    morre pelo grupo do processo que esta régua criou, nunca por nome.
+
+    MORDIDA (medida em 28/09/2026): tire o `/..` da `RAIZ` do lançador e ele
+    morre sem imprimir endereço, na guarda do interpretador — o pacote passa a
+    resolver fora da `RAIZ` (`o python resolve para OUTRA árvore`).
+    """
+    lar = tmp_path / "lar"
+    for sub in (".config", ".local/state", ".local/share", ".cache", "run"):
+        (lar / sub).mkdir(parents=True)
+    ambiente = {k: v for k, v in os.environ.items()
+                if k not in ("DISPLAY", "WAYLAND_DISPLAY")}
+    ambiente.update({
+        "HOME": str(lar),
+        "XDG_CONFIG_HOME": str(lar / ".config"),
+        "XDG_STATE_HOME": str(lar / ".local/state"),
+        "XDG_DATA_HOME": str(lar / ".local/share"),
+        "XDG_CACHE_HOME": str(lar / ".cache"),
+        "XDG_RUNTIME_DIR": str(lar / "run"),
+        "TMPDIR": str(tmp_path),
+        med.PORTA_DA_REGUA: str(mentira),
+    })
+    proc = subprocess.Popen(
+        ["bash", str(LANCADOR), "--sem-abrir", "--sem-daemon", "--porta", "0"],
+        cwd=tmp_path, env=ambiente, stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT, text=True, start_new_session=True)
+    visto: list[str] = []
+    endereco = ""
+    try:
+        assert proc.stdout is not None
+        prazo = time.monotonic() + 60
+        while not endereco and time.monotonic() < prazo:
+            prontos, _, _ = select.select([proc.stdout], [], [], 1.0)
+            if not prontos:
+                if proc.poll() is not None:
+                    break
+                continue
+            linha = proc.stdout.readline()
+            if not linha:
+                break
+            visto.append(linha)
+            if linha.startswith("a mesa está em:"):
+                endereco = linha.split(":", 1)[1].strip()
+        assert endereco.startswith("http://127.0.0.1:"), (
+            "o lançador não imprimiu o endereço da mesa:\n" + "".join(visto))
+        corpo = _pega(endereco)
+        assert "window.__TESTES__" in corpo, "a página que subiu não é a mesa"
+    finally:
+        with contextlib.suppress(ProcessLookupError):
+            os.killpg(proc.pid, signal.SIGTERM)
+        try:
+            proc.wait(timeout=15)
+        except subprocess.TimeoutExpired:
+            os.killpg(proc.pid, signal.SIGKILL)
+            proc.wait(timeout=15)
 
 
 # ---------------------------------------------------------------------------

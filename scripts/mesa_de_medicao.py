@@ -44,7 +44,7 @@ Uso:
     scripts/mesa_de_medicao.py --censo             o retrato dos testes, rc=0, sem servir
     scripts/mesa_de_medicao.py --pagina /tmp/x.html  escreve a página e sai (para a régua)
 
-Quem sobe isto de verdade é o `validar.sh` da raiz.
+Quem sobe isto de verdade é o `scripts/validar-mesa.sh`.
 """
 
 from __future__ import annotations

@@ -26,9 +26,9 @@ age.
 A TELA É DELA, DE PROPÓSITO
 ----------------------------
 A guarda `tela_de_mentira` (TELA-DELA-02) desvia toda janela de `scripts/` para
-um `Xvfb`. Aqui o escape é declarado, como no `validar.sh`: este painel só serve
-se ela o vir. `--oculta` devolve o comportamento de instrumento, para régua
-automática.
+um `Xvfb`. Aqui o escape é declarado, como no `scripts/validar-mesa.sh`: este
+painel só serve se ela o vir. `--oculta` devolve o comportamento de
+instrumento, para régua automática.
 
 Porta: o broker (`escrita_pelo_broker.Escritor`), com o daemon VIVO.
 Escreve no aparelho? SIM — cor, `common[42]` e `flag2` bit0.

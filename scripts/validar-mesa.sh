@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# validar.sh — sobe A MESA DE MEDIÇÃO e a abre na tela dela.
+# validar-mesa.sh — sobe A MESA DE MEDIÇÃO e a abre na tela dela.
 #
 # A encomenda é dela, 06/09/2026:
 #
@@ -34,14 +34,14 @@
 # suíte que mexe na mesa dela sem ela pedir.
 #
 # Uso:
-#   ./validar.sh                 liga o daemon se preciso, sobe e abre na tela dela
-#   ./validar.sh --sem-abrir     sobe e só imprime o endereço (é o que a régua usa)
-#   ./validar.sh --sem-daemon    não liga o daemon, mesmo parado
-#   ./validar.sh --porta 8765    escolhe a porta (0 = a primeira livre)
-#   ./validar.sh --censo         o retrato dos testes, sem servir nada
+#   scripts/validar-mesa.sh                 liga o daemon se preciso, sobe e abre na tela dela
+#   scripts/validar-mesa.sh --sem-abrir     sobe e só imprime o endereço (é o que a régua usa)
+#   scripts/validar-mesa.sh --sem-daemon    não liga o daemon, mesmo parado
+#   scripts/validar-mesa.sh --porta 8765    escolhe a porta (0 = a primeira livre)
+#   scripts/validar-mesa.sh --censo         o retrato dos testes, sem servir nada
 set -uo pipefail
 
-RAIZ="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+RAIZ="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 ABRIR=1
 PORTA=0
 CENSO=0
@@ -55,7 +55,7 @@ while [ $# -gt 0 ]; do
     --censo)     CENSO=1 ;;
     --porta)     PORTA="${2:-0}"; shift ;;
     -h|--help)   sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
-    *) printf 'validar.sh: não conheço "%s". Use --help.\n' "$1" >&2; exit 2 ;;
+    *) printf 'validar-mesa.sh: não conheço "%s". Use --help.\n' "$1" >&2; exit 2 ;;
   esac
   shift
 done
@@ -84,7 +84,7 @@ escolher_python() {
 }
 
 PY="$(escolher_python)" || {
-  echo "validar.sh: nenhum python desta máquina importa o pacote desta árvore." >&2
+  echo "validar-mesa.sh: nenhum python desta máquina importa o pacote desta árvore." >&2
   echo "  tentei: $RAIZ/.venv/bin/python, a venv da árvore dela, e o python3 do PATH." >&2
   exit 1
 }
@@ -93,7 +93,7 @@ export PYTHONPATH="$RAIZ/src${PYTHONPATH:+:$PYTHONPATH}"
 RESOLVIDO="$("$PY" -c 'import hefesto_dualsense4unix as h; print(h.__file__)')"
 case "$RESOLVIDO" in
   "$RAIZ"/*) : ;;
-  *) echo "validar.sh: o python resolve para OUTRA árvore — $RESOLVIDO" >&2
+  *) echo "validar-mesa.sh: o python resolve para OUTRA árvore — $RESOLVIDO" >&2
      echo "  medir o src de outra árvore é a armadilha que já fez trabalho ENTREGUE" >&2
      echo "  ser diagnosticado como faltando. Pare aqui." >&2
      exit 1 ;;
