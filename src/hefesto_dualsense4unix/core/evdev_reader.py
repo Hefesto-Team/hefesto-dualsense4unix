@@ -561,10 +561,9 @@ class InputDirWatch:
     A enumeração dos gamepads (`discover_dualsense_evdevs`) abre cada nó de
     gamepad (open + ioctls + close; o do físico, pelo broker) — caro demais
     para rodar em timer de 2s no event loop (era o hitch rítmico do co-op). O
-    conjunto de nodes só
-    muda em hotplug/re-enumeração, e isso é observável por um `os.listdir`
-    (~µs). Cada consumidor tem a SUA instância (o "mudou?" é relativo ao último
-    `poll()` DESTE watch).
+    conjunto de nodes só muda em hotplug/re-enumeração, e isso é observável
+    por um `os.listdir` (~µs). Cada consumidor tem a SUA instância (o "mudou?"
+    é relativo ao último `poll()` DESTE watch).
 
     `nasceu` diz se a última mudança TROUXE algum nó (e não só levou): quem
     espera um controle voltar não tem o que procurar numa pasta que só
@@ -1159,7 +1158,7 @@ class _EvdevReconnectLoop:
     _TOLERANCIA_MUDO: ClassVar[int] = 2
 
     #: A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01: sem nó, o leitor dorme até
-    #: `/dev/input` mudar (`_esperar_o_no`). Este é o teto de SEGURANÇA dessa
+    #: nascer um nó em `/dev/input` (`_esperar_o_no`). Este é o teto de SEGURANÇA dessa
     #: espera, não o ritmo dela: um aviso perdido custa no máximo isto.
     _TETO_SEM_AVISO_S: ClassVar[float] = 60.0
 
@@ -2934,7 +2933,7 @@ def _o_no_que_voltou(leitor: _EvdevReconnectLoop, caminho: Path | None) -> Path 
 # 5 s para sempre), e cada procura era a descoberta inteira. O nó só volta
 # quando o kernel o recria, e isso muda a lista de `/dev/input` — que o
 # `InputDirWatch` enxerga com um `listdir`. Sem nó, o leitor procura UMA vez e
-# dorme até essa lista mudar (ou até o `_wake` do `refresh_device`, do
+# dorme até nascer um nó nessa lista (ou até o `_wake` do `refresh_device`, do
 # `retarget` e do `stop`), com o `_TETO_SEM_AVISO_S` só de segurança.
 
 
