@@ -151,6 +151,9 @@ class SensorHub:
         #: varrer `/dev/input` inteiro a cada segundo por causa do que falta.
         #: Só saem daqui quando `/dev/input` muda de verdade.
         self._sem_node: set[tuple[str, str]] = set()
+        #: O mesmo, para as peças com sensor desligado (`_sensores_desligados`):
+        #: as chaves já procuradas desde a última mudança de `/dev/input`.
+        self._desligados_procurados: set[str] = set()
         self._watch: Any = None
         self._parar = threading.Event()
         self._thread: threading.Thread | None = None
@@ -411,7 +414,10 @@ class SensorHub:
         thread.
         """
         agora = self._relogio()
-        desligados = self._sensores_desligados()
+        # Uma pergunta por volta, e ela vale para os dois que dependem dela: o
+        # `_sem_node` lá embaixo e a procura das peças com sensor desligado.
+        mudou = self._input_dir_mudou()
+        desligados = self._sensores_desligados(mudou)
         with self._lock:
             vivos_sensores = self._podar(self._demanda, agora)
             self._demanda = {
@@ -461,7 +467,7 @@ class SensorHub:
 
         # O que já foi dado como inexistente só volta à fila quando
         # `/dev/input` muda — replug, hotplug, re-enumeração pós-storm.
-        if self._input_dir_mudou():
+        if mudou:
             sem_node = set()
             with self._lock:
                 self._sem_node = set()
@@ -472,7 +478,7 @@ class SensorHub:
 
     # -- O BRAÇO EVDEV do interruptor de sensor (SENSOR-DE-VERDADE-01) -----
 
-    def _sensores_desligados(self) -> set[str]:
+    def _sensores_desligados(self, mudou: bool = False) -> set[str]:
         """Os `uniq` (na grafia da DESCOBERTA) com algum sensor desligado.
 
         Duas grafias da mesma peça convivem nesta casa: o `uniq` do evdev vem
@@ -484,8 +490,16 @@ class SensorHub:
 
         A DESCOBERTA SÓ É PAGA quando há sensor desligado de peça sem reader —
         o caso raro. No caso normal (dicionário vazio) o custo é um `if`, e
-        essa é a regra 1 deste módulo: a enumeração de `/dev/input` custa
-        10-40 ms e não pode entrar no ritmo de 1 s por precaução.
+        essa é a regra 1 deste módulo: a enumeração de `/dev/input` não pode
+        entrar no ritmo de 1 s por precaução.
+
+        **E a peça procurada e não achada só é procurada de novo quando
+        `/dev/input` muda** (`mudou`, A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01,
+        28/09/2026). Era o caso raro virando o de todo segundo: no diário de
+        26/09, depois do reinício das 10h42, o controle com o acelerômetro
+        desligado estava fora da mesa, e esta procura rodou a cada volta (1 s
+        mais a descoberta) por 66 minutos — 2.851 pedidos ao broker em cada nó
+        de movimento dos outros dois, que a descoberta daquele dia abria.
 
         Import tardio pela mesma razão de todos os outros daqui.
         """
@@ -501,10 +515,13 @@ class SensorHub:
             conhecidos = set(self._motion) | set(self._demanda)
         achados = {u for u in conhecidos if chave_de_sensor(u) in alvos}
         faltando = alvos - {chave_de_sensor(u) for u in achados}
-        if faltando:
+        if mudou:
+            self._desligados_procurados = set()
+        if faltando and not faltando <= self._desligados_procurados:
             for uniq in self._chamar_descobridor(self._descobrir_motion):
                 if chave_de_sensor(uniq) in faltando:
                     achados.add(uniq)
+            self._desligados_procurados |= faltando
         return achados
 
     def _reconciliar_grabs(self, desligados: set[str]) -> None:

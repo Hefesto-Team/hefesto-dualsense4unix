@@ -30,8 +30,11 @@ fechados como o `0600 root` e o socket do broker de pé):
 """
 from __future__ import annotations
 
+import contextlib
 import errno
 import os
+import time
+from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -230,3 +233,312 @@ def test_o_controle_que_saiu_nao_aparece(mesa: Mesa) -> None:
     achados = er.discover_dualsense_motion_evdevs()
     assert set(achados) == {"aabbcc000001", "aabbcc000003", "aabbcc000004"}
     assert mesa.aberturas == []
+
+
+# ---------------------------------------------------------------------------
+# 2. O leitor de um controle ausente espera o aviso, e não o relógio
+# ---------------------------------------------------------------------------
+#: O passo da espera nos testes. Em produção é o `_SELECT_TIMEOUT_S` (0,5 s):
+#: uma volta do aviso por passo, e 60 voltas são 30 s de produção.
+PASSO = 0.01
+VOLTAS_EM_30_S = int(30 / 0.5)
+
+
+class _NoDoLeitor:
+    """O nó que o leitor abre: um pipe, para o `select` de verdade ter um fd."""
+
+    def __init__(self, caminho: str) -> None:
+        self.path = caminho
+        self.r, self.w = os.pipe()
+        self.fd = self.r
+        self.name = "dublê"
+
+    def read(self) -> Any:
+        os.read(self.r, 64)
+        raise OSError(errno.ENODEV, "No such device")  # o controle saiu
+
+    def absinfo(self, _codigo: int) -> Any:
+        raise OSError(errno.EINVAL, "sem absinfo")
+
+    def close(self) -> None:
+        for fd in (self.r, self.w):
+            with contextlib.suppress(OSError):
+                os.close(fd)
+
+
+class _AvisoContado:
+    """O `InputDirWatch` DE VERDADE, sobre o `/dev/input` de mentira, contando as voltas."""
+
+    def __init__(self, pasta: Path) -> None:
+        self.real = er.InputDirWatch(str(pasta))
+        self.voltas = 0
+
+    def poll(self) -> bool:
+        self.voltas += 1
+        return self.real.poll()
+
+
+def _esperar(condicao: Callable[[], bool], prazo: float = 5.0) -> bool:
+    limite = time.monotonic() + prazo
+    while not condicao():
+        if time.monotonic() > limite:
+            return False
+        time.sleep(0.005)
+    return True
+
+
+LEITORES = {
+    "Motion Sensors": (er.MotionSensorReader, "discover_dualsense_motion_evdevs"),
+    "Touchpad": (er.TouchpadReader, "discover_dualsense_touchpad_evdevs"),
+}
+
+
+class _Cena:
+    """Um leitor aberto no nó do P4, que a régua tira e devolve à mesa."""
+
+    AUSENTE = "aa:bb:cc:00:00:04"
+
+    def __init__(self, mesa: Mesa, monkeypatch: pytest.MonkeyPatch, marcador: str) -> None:
+        self.mesa = mesa
+        self.marcador = marcador
+        self.buscas: list[float] = []
+        self.abertos: list[_NoDoLeitor] = []
+        self.avisos: list[_AvisoContado] = []
+        classe, descobridor = LEITORES[marcador]
+        original = getattr(er, descobridor)
+
+        def contar() -> dict[str, Path]:
+            self.buscas.append(time.monotonic())
+            return original()
+
+        def abrir(caminho: Any, **_kw: Any) -> _NoDoLeitor:
+            no = _NoDoLeitor(str(caminho))
+            self.abertos.append(no)
+            return no
+
+        def aviso() -> _AvisoContado:
+            self.avisos.append(_AvisoContado(mesa.dev))
+            return self.avisos[-1]
+
+        monkeypatch.setattr(er, descobridor, contar)
+        monkeypatch.setattr(er, "abrir_input_device", abrir)
+        monkeypatch.setattr(er, "_novo_aviso_de_entrada", aviso)
+        self.no = next(
+            c for c, (n, u, _b) in mesa.nos.items()
+            if u == self.AUSENTE and n == NOMES[marcador]
+        )
+        self.leitor = classe(device_path=Path(self.no), target_uniq=self.AUSENTE.replace(":", ""))
+        self.leitor._SELECT_TIMEOUT_S = PASSO  # type: ignore[misc]
+
+    def abrir_e_perder(self) -> None:
+        """Abre o nó, e o controle sai da mesa: os nós somem e a leitura cai."""
+        assert self.leitor.start()
+        assert _esperar(lambda: len(self.abertos) == 1), "o leitor nem abriu o nó"
+        self.mesa.remover(self.AUSENTE)
+        os.write(self.abertos[0].w, b"x")
+        assert _esperar(lambda: len(self.buscas) >= 1), "o leitor não procurou o nó"
+
+    def devolver(self, *, fechado: bool = True) -> str:
+        """O controle volta: o kernel recria o nó, e a pasta muda."""
+        caminho = self.mesa.acrescentar(
+            "event9201", NOMES[self.marcador], self.AUSENTE, 0x05
+        )
+        if not fechado:
+            Path(caminho).chmod(0o660)
+        return caminho
+
+    def parar(self) -> None:
+        self.leitor.stop()
+        for no in self.abertos:
+            no.close()
+
+
+@pytest.fixture(params=sorted(LEITORES))
+def cena(mesa: Mesa, monkeypatch: pytest.MonkeyPatch, request: Any) -> Any:
+    c = _Cena(mesa, monkeypatch, request.param)
+    try:
+        yield c
+    finally:
+        c.parar()
+
+
+def test_sem_aviso_o_leitor_procura_uma_vez_em_30_s(cena: _Cena) -> None:
+    """Com `/dev/input` parado, UMA descoberta em 30 s (60 passos de 0,5 s).
+
+    **A MORDIDA:** troque o `_esperar_o_no(self)` do `_run` pelo recuo de
+    antes (`_esperar_o_backoff(self, backoff)` e o `backoff` que dobra) e o
+    leitor procura de novo a cada volta — 0,5, 1, 2, 4 e 5 s para sempre.
+    """
+    cena.abrir_e_perder()
+
+    def trinta_segundos_ou_outra_busca() -> bool:
+        voltas = cena.avisos[-1].voltas if cena.avisos else 0
+        return voltas >= 1 + VOLTAS_EM_30_S or len(cena.buscas) > 1
+
+    assert _esperar(trinta_segundos_ou_outra_busca, prazo=20.0)
+    assert len(cena.buscas) == 1, (
+        f"{len(cena.buscas)} descobertas em 30 s com o controle fora da mesa "
+        "e `/dev/input` parado"
+    )
+
+
+def test_com_o_aviso_o_leitor_descobre_e_abre_na_hora(cena: _Cena) -> None:
+    """O controle volta e a pasta muda: a descoberta é na volta seguinte."""
+    cena.abrir_e_perder()
+    assert _esperar(lambda: bool(cena.avisos)), "o leitor não armou o aviso"
+    aviso = cena.avisos[-1]
+    voltas = aviso.voltas
+    caminho = cena.devolver()
+    assert _esperar(lambda: len(cena.abertos) == 2, prazo=5.0), "o leitor não reabriu"
+    assert cena.abertos[1].path == caminho
+    assert len(cena.buscas) == 2
+    assert aviso.voltas - voltas <= 3, (
+        f"o leitor levou {aviso.voltas - voltas} voltas para ver o nó que voltou"
+    )
+
+
+def test_o_no_que_nasce_sem_permissao_e_achado_no_relogio(
+    cena: _Cena, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Sem broker, o nó nasce fechado e o udev o abre DEPOIS, sem mudar a pasta.
+
+    É o que o recuo no relógio cobria antes e o aviso sozinho não cobre: a
+    troca de dono e permissão não muda a lista de `/dev/input`. Depois de cada
+    aviso, o leitor procura mais três vezes no relógio (0,5 → 1 → 2 s).
+
+    **A MORDIDA:** ponha `_BUSCAS_DEPOIS_DO_AVISO = 0` e o leitor dorme até o
+    teto de 60 s com o nó já aberto na pasta.
+    """
+    monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(tmp_path / "nao-ha.sock"))
+    cena.abrir_e_perder()
+    caminho = cena.devolver()  # nasce 0000: sem broker, a lista não o traz
+    assert _esperar(lambda: len(cena.buscas) >= 2, prazo=5.0), "o aviso não chegou"
+    assert len(cena.abertos) == 1
+    Path(caminho).chmod(0o660)  # o udev deu dono e permissão
+    assert _esperar(lambda: len(cena.abertos) == 2, prazo=5.0), (
+        "o nó ficou aberto na pasta e o leitor não o achou — ele esperava um "
+        "aviso que a troca de permissão não dá"
+    )
+
+
+def test_o_teto_acorda_o_leitor_sem_aviso(cena: _Cena) -> None:
+    """O teto é de segurança: um aviso perdido custa no máximo ele."""
+    cena.leitor._TETO_SEM_AVISO_S = 20 * PASSO  # type: ignore[misc]
+    cena.abrir_e_perder()
+    assert _esperar(lambda: len(cena.buscas) >= 2, prazo=5.0), "o teto não acordou o leitor"
+
+
+def test_o_stop_acorda_o_leitor_que_espera(cena: _Cena) -> None:
+    cena.leitor._SELECT_TIMEOUT_S = 5.0  # type: ignore[misc]
+    cena.abrir_e_perder()
+    inicio = time.monotonic()
+    cena.leitor.stop()
+    assert time.monotonic() - inicio < 1.0, "o stop esperou o passo inteiro"
+
+
+# ---------------------------------------------------------------------------
+# 3. O hub não procura de novo a peça desligada que não está na mesa
+# ---------------------------------------------------------------------------
+class _AvisoDoHub:
+    def __init__(self) -> None:
+        self.mudou = False
+
+    def poll(self) -> bool:
+        mudou, self.mudou = self.mudou, False
+        return mudou
+
+
+@pytest.fixture
+def registro() -> Any:
+    from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
+
+    REGISTRO.limpar()
+    yield REGISTRO
+    REGISTRO.limpar()
+
+
+def _hub(descobrir: Callable[[], dict[str, Any]]) -> Any:
+    from hefesto_dualsense4unix.daemon.sensor_hub import SensorHub
+
+    class _Leitor:
+        grab_state = "off"
+
+        def start(self) -> bool:
+            return True
+
+        def stop(self) -> None:
+            pass
+
+        def set_grab(self, grab: bool) -> bool:
+            self.grab_state = "held" if grab else "off"
+            return True
+
+    hub = SensorHub(
+        motion_factory=lambda _u, _n: _Leitor(),
+        touch_factory=lambda _u, _n: _Leitor(),
+        gamepad_factory=lambda _u, _n: _Leitor(),
+        descobrir_motion=descobrir,
+        descobrir_touch=dict,
+        descobrir_gamepad=dict,
+        auto_manutencao=False,
+    )
+    hub._watch = _AvisoDoHub()
+    return hub
+
+
+def test_o_hub_procura_a_peca_desligada_fora_da_mesa_uma_vez(registro: Any) -> None:
+    """A «rajada» de 26/09: uma descoberta por volta de manutenção, por 66 min.
+
+    **A MORDIDA:** tire o `not faltando <= self._desligados_procurados` e as
+    dez voltas pagam dez descobertas.
+    """
+    chamadas: list[int] = []
+
+    def descobrir() -> dict[str, Any]:
+        chamadas.append(1)
+        return {"aa:bb:cc:00:00:01": "/dev/input/event9102"}
+
+    hub = _hub(descobrir)
+    registro.definir("aa:bb:cc:00:00:04", acelerometro=False)
+    for _ in range(10):
+        hub.reconciliar()
+    assert len(chamadas) == 1, f"{len(chamadas)} descobertas em dez voltas sem mudança"
+
+
+def test_o_hub_procura_de_novo_quando_a_pasta_muda_e_acha(registro: Any) -> None:
+    mesa_viva: dict[str, Any] = {"aa:bb:cc:00:00:01": "/dev/input/event9102"}
+    chamadas: list[int] = []
+
+    def descobrir() -> dict[str, Any]:
+        chamadas.append(1)
+        return dict(mesa_viva)
+
+    hub = _hub(descobrir)
+    registro.definir("aa:bb:cc:00:00:04", acelerometro=False)
+    hub.reconciliar()
+    hub.reconciliar()
+    assert len(chamadas) == 1
+
+    mesa_viva["aa:bb:cc:00:00:04"] = "/dev/input/event9111"  # o controle voltou
+    hub._watch.mudou = True
+    hub.reconciliar()
+
+    assert hub.grab_do_movimento("aa:bb:cc:00:00:04") == "held", (
+        "a peça voltou com o sensor desligado e o nó dela não ficou exclusivo"
+    )
+
+
+def test_o_hub_procura_a_peca_que_ela_acabou_de_desligar(registro: Any) -> None:
+    """Sensor desligado AGORA é pergunta nova, mesmo sem a pasta mudar."""
+    chamadas: list[int] = []
+
+    def descobrir() -> dict[str, Any]:
+        chamadas.append(1)
+        return {}
+
+    hub = _hub(descobrir)
+    registro.definir("aa:bb:cc:00:00:04", acelerometro=False)
+    hub.reconciliar()
+    registro.definir("aa:bb:cc:00:00:03", giroscopio=False)
+    hub.reconciliar()
+    assert len(chamadas) == 2
