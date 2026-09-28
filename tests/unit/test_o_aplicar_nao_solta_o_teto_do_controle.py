@@ -28,8 +28,9 @@ A CURA, e cada régua abaixo mede uma parte:
   preso depois de a economia desligar;
 * o «Todos» das luzes só vai cru a todos quando ninguém termina noutro
   degrau (`DraftApplier._o_todos_das_luzes`): nenhum quadro intermediário;
-* o «Salvar» grava o brilho do disco, e não o aceso, no controle em economia
-  (`rodape._quem_esta_em_economia`);
+* o «Salvar» grava o brilho do disco, e não o aceso, no controle em economia:
+  desde 27/09 ele não lê o aparelho em controle nenhum
+  (`D-2709-O-SALVAR-LE-O-PERFIL`);
 * a procedência da cor mora no `DraftConfig` (`_com_a_procedencia_da_mesma_cor`).
 
 **AS MORDIDAS**, arrancadas e devolvidas (o relato da sprint diz o que caiu):
@@ -38,8 +39,8 @@ A CURA, e cada régua abaixo mede uma parte:
   reprovam no «Aplicar»;
 * troque o `reset_profile_overrides` de `_publicar_a_economia` pelo
   `apply_output_for` (a camada dela) → a seção 1 reprova ao desligar a economia;
-* tire o `na_economia(uniq)` do `rodape._draft_do_ativo` → a seção 1 e a 2
-  reprovam no disco depois do «Salvar»;
+* devolva ao `rodape.salvar` a luz acesa (a cor e o brilho do aparelho no
+  override) → a seção 1 e a 2 reprovam no disco depois do «Salvar»;
 * faça o `_o_todos_das_luzes` devolver sempre o degrau → a seção 1 acusa o
   quadro intermediário;
 * tire o `player_led_brightness` de `_controllers_to_ipc` → a seção 3 reprova,

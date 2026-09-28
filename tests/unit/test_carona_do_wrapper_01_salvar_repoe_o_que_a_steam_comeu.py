@@ -837,9 +837,9 @@ def test_a_interface_nova_tambem_pega_a_carona() -> None:
 def _ctx_do_rodape() -> Any:
     """Um `Contexto` com o perfil ativo e a mesa vazia.
 
-    MESA VAZIA DE PROPÓSITO: o que se mede aqui é a carona, e a lista de
-    conectados só alimenta o `_draft_do_ativo`, que tem régua própria. Um
-    controle de mentira aqui misturaria dois assuntos num teste só.
+    MESA VAZIA DE PROPÓSITO: o que se mede aqui é a carona. O Salvar e o
+    Aplicar não leem a mesa desde 27/09 (`D-2709-O-SALVAR-LE-O-PERFIL`), e
+    quem mede isso é `test_o_salvar_e_o_aplicar_leem_so_o_perfil.py`.
     """
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
