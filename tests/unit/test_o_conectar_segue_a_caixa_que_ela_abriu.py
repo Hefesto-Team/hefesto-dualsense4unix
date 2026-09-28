@@ -55,6 +55,7 @@ from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
     Bancada,
     BuscaDePe,
     PonteQueVaiAoDaemon,
+    ela_segura_ps_create,
     id_da_tela,
     mundo_da_madrugada,
     onde_buscou,
@@ -942,3 +943,53 @@ def test_o_conectar_que_muda_de_destino_ignora_o_que_o_destino_novo_ja_conhecia(
     (fim,) = mesa.esperar()
     assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, VARANDA), fim
     assert [bd.endereco_do_aparelho(c) for c, _a in mundo.metodos("Pair")] == [VERDE]
+
+
+@pytest.mark.parametrize(("onde_busca", "chip"), PARES)
+def test_o_clique_de_volta_pela_tela_desfaz_o_pedido_que_a_busca_ainda_nao_levou(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde_busca: str, chip: str,
+) -> None:
+    """O último clique dela vence também pela TELA. Entre o chip aceito e o fio
+    da busca levar o pedido (meio segundo no gesto; segundos no «Mover» que
+    ainda desliga), o tique da tela lê onde a busca está. Se o publicado
+    dissesse o destino de antes, o chip de volta seria só «abrir a caixa» (a
+    tela não pede ao rádio o adaptador em que a busca já está), e a busca iria
+    para o chip que ela desfez.
+
+    MORDIDA: publique o movimento sem o destino pedido (o ``publicar`` com o
+    ``movimentos()`` cru) — o clique de volta não chega ao rádio, e o verde
+    pareia no chip que ela deixou.
+    """
+    mundo = mundo_da_madrugada()
+    relogio = rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    busca = BuscaDePe(relogio)
+    try:
+        bancada.cena()
+        bancada.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca))
+        bancada.cena()
+        assert bancada.gesto("conectar-aparelho") == {"armou": True}
+        assert busca.dentro.wait(5.0), "a central não abriu a janela"
+        bancada.cena()
+        assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(chip)) == {"armou": True}
+
+        # O fio ainda não levou o pedido (a espera está presa): o tique da tela
+        # já diz a busca indo para o chip, e só nele.
+        campos = bancada.tique()
+        for adaptador in TRES:
+            cartao = _cartao(campos["radio-sala"], id_da_tela(adaptador))
+            assert ("Segure PS + Create" in cartao) == (adaptador == chip), adaptador
+
+        assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca)) == {
+            "armou": True}
+        assert bancada.ponte.chamadas[-1] == (
+            "radio.mover", {"destino": id_da_tela(onde_busca)}), "o clique de volta não chegou"
+        ela_segura_ps_create(mundo, relogio, VERDE)
+        busca.soltar()
+        bancada.esperar_a_central()
+        assert onde_buscou(mundo) == [rm.HCIS[onde_busca]], "a busca foi para o chip desfeito"
+        assert onde_pareou(mundo) == [rm.HCIS[onde_busca]]
+        assert bancada.cena()["aberto"] == id_da_tela(onde_busca)
+    finally:
+        busca.soltar()
+        bancada.fechar()

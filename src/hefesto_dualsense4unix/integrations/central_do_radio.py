@@ -857,10 +857,35 @@ class CentralDoRadio:
                 ordem = self.propor(ar=ar, esperar=False)
                 proposta = ordem.publicar() if ordem is not None else None
         return {
-            "movimentos": [m.publicar() for m in self.movimentos()],
+            "movimentos": [m.publicar() for m in self._movimentos_publicados()],
             "em_curso": self.em_curso,
             "proposta": proposta,
         }
+
+    def _movimentos_publicados(self) -> tuple[Movimento, ...]:
+        """Os movimentos como a tela os lê: o destino que ela pediu, e que o fio
+        ainda não levou, JÁ é o destino (:meth:`_com_o_destino_pedido`).
+
+        A conferência da O-CONECTAR-SEGUE-A-CAIXA-QUE-ELA-ABRIU-01 (28/09/2026):
+        entre o chip aceito e o fio atender (meio segundo no gesto; segundos no
+        «Mover» que ainda desliga), o publicado dizia o destino de antes. A tela
+        lê dali onde a busca está, e o chip desse adaptador só abre a caixa, sem
+        pedir nada ao rádio: o clique de volta dela não desfazia o pedido, e a
+        busca ia para o chip que ela deixou.
+        """
+        with self._tranca:
+            pedido = self._destino_pedido
+            return tuple(self._com_o_destino_pedido(m, pedido) for m in self._movimentos.values())
+
+    @staticmethod
+    def _com_o_destino_pedido(movimento: Movimento, pedido: str | None) -> Movimento:
+        """O movimento no destino pedido — se ainda é um que muda de destino, e
+        com o destino fora das ``origens``, como o fio o deixará."""
+        if (pedido is None or not movimento.em_curso
+                or movimento.passo not in PASSOS_EM_QUE_O_DESTINO_MUDA):
+            return movimento
+        return replace(movimento, destino=pedido,
+                       origens=tuple(o for o in movimento.origens if o != pedido))
 
     # -- DECIDIR: a D8 e o «Equilibrar» ----------------------------------------
 
@@ -1108,7 +1133,7 @@ class CentralDoRadio:
             self._destino_pedido = None if novo == agora.destino else novo
         logger.info("central_o_destino_segue_a_caixa", aparelho=mascarar(agora.aparelho),
                     de=mascarar(agora.destino), para=mascarar(novo))
-        return replace(agora, destino=novo)
+        return self._com_o_destino_pedido(agora, novo)
 
     def _tomar_o_destino_pedido(
         self, movimento: Movimento, *, recomecar: bool = False
