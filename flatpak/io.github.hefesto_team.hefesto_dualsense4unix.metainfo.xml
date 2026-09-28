@@ -1,15 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- AppStream metadata — Hefesto - DualSense4Unix -->
-<!-- Valide com: appstreamcli validate (opcao no-net) flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml -->
+<!-- Valide com: appstreamcli validate (opção no-net) flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml -->
 <component type="desktop-application">
   <id>io.github.hefesto_team.hefesto_dualsense4unix</id>
 
-  <!-- IDENTIDADE-01 (25/08/2026): o id anterior, do tempo em que o
-       repositório vivia numa conta pessoal. Declará-lo aqui é o que faz a
-       loja de aplicativos entender que este componente SUBSTITUI aquele,
-       em vez de mostrar dois Hefestos lado a lado. Não é a mesma coisa que
-       o Flatpak migrar o id — ele não migra, e por isso o `install.sh`
-       avisa e o produto lê a configuração da casa antiga. -->
+  <!-- O id anterior do aplicativo: a loja entende que este componente o substitui. -->
   <replaces>
     <id>br.andrefarias.Hefesto</id>
   </replaces>
@@ -20,329 +15,130 @@
   <!-- Metadados de lançamento -->
   <launchable type="desktop-id">io.github.hefesto_team.hefesto_dualsense4unix.desktop</launchable>
 
-  <!-- Versão atual.
-       METAINFO-VERSAO-RANCOSA-01 (30/07): a entrada mais recente aqui era a
-       3.13.3 de 14/07 e não havia NENHUMA 0.x — a loja anunciava uma versão
-       duas semanas mais velha que o pacote. A PRIMEIRA <release> deste bloco é
-       agora alvo do scripts/check_version_consistency.py, então o portão de
-       release reprova se ela ficar atrás do pyproject.toml.
-
-       METAINFO-DATA-DA-RELEASE-01 (31/07): a entrada da 0.4.0 era a da 0.3.0
-       com o número trocado — mesma data, mesmo texto — e a 0.3.0 sumia da
-       série. O portão conferia só o NÚMERO, então trocar o número na entrada
-       que já existia era a menor edição que o deixava verde. A data da
-       primeira <release> é agora conferida contra a seção correspondente do
-       CHANGELOG.md, que é a fonte de verdade das notas de versão. -->
+  <!-- A primeira <release> é a versão atual, e a data confere com o CHANGELOG.md.
+       A numeração recomeçou em 0.1.0: as versões anteriores ficam de fora porque o
+       AppStream compara versões e a loja nunca ofereceria uma 0.x depois de uma 3.x. -->
   <releases>
     <release version="0.9.4.5" date="2026-08-20">
       <description>
-        <p>A leva da portabilidade: quatro defeitos que só apareciam fora da máquina onde o código nasceu. O install morria com código 2 e sem mensagem, o Proton não extraía sob Python 3.10, o agente de pareamento morria em loop pelo seccomp do systemd 249, e a janela nascia maior que a tela, com o rodapé por baixo da borda. O ícone da bandeja voltou à barra, e o backport do BlueZ 5.86 saiu pelo tarball onde o pacote não podia entrar.</p>
+        <p>PS + R3 troca de modo sem sair do jogo, os controles piscam na cor do modo novo, e o Hefesto lembra o modo que funcionou em cada jogo. O instalador passou a funcionar em mais distribuições, e o giroscópio deixou de perder amostras a caminho do jogo.</p>
+      </description>
+    </release>
+    <release version="0.9.4.4" date="2026-08-19">
+      <description>
+        <p>Travar o Proton passou a respeitar a versão escolhida para cada jogo, e a lista de exceções liga o Steam Input nos jogos que só funcionam com ele.</p>
+      </description>
+    </release>
+    <release version="0.9.4.3" date="2026-08-18">
+      <description>
+        <p>O instalador, o Proton e o serviço de pareamento passaram a funcionar em sistemas mais antigos, como o Pop!_OS 22.04 com Python 3.10. A janela deixou de abrir maior que a tela, e o ícone da bandeja voltou à barra.</p>
       </description>
     </release>
     <release version="0.9.4.2" date="2026-08-13">
       <description>
-        <p>Os instrumentos de medição desta casa passaram a morder: a guarda que confundia bytecode com produto, a bancada que não abria, o --check que comparava relógio em vez de conteúdo, e o portão do mapa que não ligava afirmação a ensaio. Quatro portões novos e três curas de produto — o LED do botão de mudo deixou de mentir sobre o microfone.</p>
+        <p>Por Bluetooth, a cor e o número de jogador passaram a funcionar com a Steam aberta. A luz do botão do microfone deixou de apagar sem desmutar, e o serviço ficou mais leve.</p>
       </description>
     </release>
     <release version="0.9.4" date="2026-08-12">
       <description>
-        <p>
-          A vibracao que um jogo manda parava quase na hora: o proprio Hefesto
-          escrevia por cima meio segundo depois e apagava o motor. Agora ele so
-          reconfirma o que pediu, e a vibracao do jogo sobrevive.
-        </p>
-        <p>
-          A barra de luz nao pegava a cor por Bluetooth quando a Steam estava
-          aberta. O Hefesto passa a escrever a cor e o numero de jogador depois
-          que os controles terminam de conectar, em vez de no meio.
-        </p>
-        <p>
-          A intensidade da vibracao passou a fazer o que o nome diz: Balanceado
-          entrega o que o jogo pediu, Maximo amplifica, e a tela avisa quando a
-          escolha nao esta chegando a jogo nenhum.
-        </p>
+        <p>A vibração que o jogo manda deixou de parar quase na hora, e a barra de luz passou a pegar a cor por Bluetooth com a Steam aberta. A intensidade da vibração faz o que o nome diz.</p>
       </description>
     </release>
     <release version="0.9.3" date="2026-08-10">
       <description>
-        <p>
-          O Hefesto podia ficar fora dos dois modos de jogo — nem Conexao
-          Nativa, nem "Jogar pelo Hefesto" — por causa de um desligamento feito
-          numa sessao anterior, e nada na tela dizia isso. Sem controle virtual,
-          o giroscopio nao chega ao jogo.
-        </p>
-        <p>
-          A aba Inicio passa a avisar quando esta nesse estado, com as duas
-          saidas nomeadas, e o aviso some assim que o modo muda. A escolha
-          anterior continua sendo respeitada: ela so deixou de ser invisivel.
-        </p>
+        <p>A aba Início avisa quando um desligamento de uma sessão anterior deixou o Hefesto fora dos dois modos de jogo, e mostra as duas saídas.</p>
       </description>
     </release>
     <release version="0.9.2" date="2026-08-10">
       <description>
-        <p>
-          O botao verde "Aplicar" nunca aplicava o alto-falante do controle: o
-          volume so mudava na proxima troca de perfil. Agora vai na hora, e
-          continua calado quando o Aplicar parte de outra aba.
-        </p>
-        <p>
-          O editor avancado abria com os campos da regra vazios, e salvar assim
-          transformava o perfil em "so manual" — ele deixava de entrar no jogo
-          para sempre, sem aviso. Agora a regra aparece, e o rebaixamento
-          pergunta antes.
-        </p>
-        <p>
-          E um portao novo confere, a cada teste, que toda configuracao de toda
-          aba tem caminho ate o arquivo do perfil e de volta — para que a
-          proxima feature nao nasca solta.
-        </p>
+        <p>O botão Aplicar passou a aplicar o alto-falante, e o editor avançado deixou de abrir com a regra do perfil vazia.</p>
       </description>
     </release>
     <release version="0.9.1" date="2026-08-10">
       <description>
-        <p>
-          O jogador 2 do co-op deixa de perder o input quando o controle do
-          jogador 1 sai da mesa: cada secundario tem o seu controle e o seu
-          gamepad virtual, e nenhum dos dois depende do primario.
-        </p>
-        <p>
-          O ajuste do microfone passa a valer em todos os formatos de
-          instalacao, e nao so no nativo. Sem ele a entrada do controle nasce
-          sem prioridade e o eco da saida vence a voz.
-        </p>
-        <p>
-          O applet do COSMIC parou de dizer "Ligado" sobre um microfone que
-          perde para o eco.
-        </p>
+        <p>O jogador 2 deixa de perder o controle quando o do jogador 1 sai, e o ajuste do microfone vale em todos os formatos de instalação.</p>
       </description>
     </release>
     <release version="0.9.0" date="2026-08-10">
       <description>
-        <p>
-          O touchpad voltou a ser o touchpad do sistema em todos os modos. Uma
-          regra udev nossa, com curinga, o apagava para o desktop inteiro; agora
-          so o controle virtual fica fora do libinput, que era quem dobrava o
-          toque. O giroscopio e o touchpad tambem ganharam acesso aos nos de
-          entrada, que faltava desde sempre.
-        </p>
-        <p>
-          O teclado na tela que o L3 do controle abre passou a ser instalado. O
-          produto oferecia o gesto e nao instalava nada, e a escolha agora e
-          medida: wvkbd em Wayland, onboard em X11 — o segundo digita por XTEST
-          e, numa sessao Wayland, abre e nao digita.
-        </p>
-        <p>
-          A aba "No jogo" responde, recurso por recurso, o que esta chegando ao
-          jogo agora: giroscopio, vibracao, gatilho, luz, toque e som do
-          controle. E diz quando o perfil que voce escreveu para aquele jogo nao
-          entrou, com o que ele exigiu e o que o Hefesto viu.
-        </p>
-        <p>
-          O jogo via TRES controles com o Steam Input ligado: o Steam faz um
-          espelho de cada controle que enxerga, inclusive do virtual do Hefesto,
-          e os espelhos nao estavam sendo escondidos. Agora estao.
-        </p>
-        <p>
-          O botao "Ligar" do microfone apagava a propria cura que faz a sua voz
-          vencer o eco da saida — e a tela dizia "Ligado". O volume, o mudo e o
-          canal do alto-falante voltaram a chegar ao perfil, e a bateria do
-          controle chega ao jogo em vez de ficar em 5% para sempre.
-        </p>
+        <p>A aba «No jogo» mostra o que chega ao jogo, recurso por recurso. O touchpad voltou a ser o do sistema, o teclado na tela passou a ser instalado, e uma correção de segurança do Bluetooth chegou ao instalador.</p>
       </description>
     </release>
     <release version="0.8.0" date="2026-08-02">
       <description>
-        <p>
-          Sete presets de gatilho nao faziam nada, e ela mediu pelo tato:
-          "rigido e desligado sem diferenca". Tres deles mandavam o modo que
-          vale OFF no firmware. Os seis que ela aprovou nao mudaram um byte.
-        </p>
-        <p>
-          A aba Status passou a dizer o que CHEGA ao jogo, e nao so o que
-          existe: cada recurso carimba quando aconteceu pela ultima vez, e o
-          card mostra numa linha o que esta chegando agora. Com mascara Xbox
-          ela explica em vez de parecer quebrada.
-        </p>
-        <p>
-          O "tremendo sem parar" ganhou cura, e nao so mitigacao: o report de
-          parada do SDL vem com todos os flags zerados, e era descartado.
-        </p>
-        <p>
-          O alto-falante ganhou o pre-amplificador e a rota de saida — os 60%
-          do controle deslizante que estavam inertes. E o botao do microfone
-          parou de mutar o microfone de outro aparelho no Bluetooth.
-        </p>
+        <p>Sete predefinições de gatilho que não faziam nada voltaram a funcionar, e o controle parou de tremer sem parar. A aba Status mostra o que chega ao jogo.</p>
       </description>
     </release>
     <release version="0.7.0" date="2026-08-01">
       <description>
-        <p>
-          A aba Status alinhada: as duas linhas do card passam a dividir o
-          mesmo desenho, o frame Estado cai de cinco para tres linhas e a
-          bateria ocupa a largura inteira com o numero ao lado da barra, e
-          nao mais boiando no meio dela.
-        </p>
-        <p>
-          O botao que manda o som para o controle mudou para o bloco
-          Alto-falante do card. Os rotulos "sem dado" sairam dos botoes de
-          microfone e alto-falante: um botao diz o que o clique faz, e nasce
-          cinza quando ainda nao ha leitura.
-        </p>
-        <p>
-          A mascara Xbox passa a dizer o que custa: nela o jogo nao recebe
-          giroscopio nem touchpad, porque o controle de Xbox nao tem esses
-          dois. Vibracao, microfone e alto-falante continuam funcionando.
-        </p>
-        <p>
-          As metricas Prometheus ganharam chave de usuario, cumprindo a
-          decisao registrada na ADR-016. E o quadrado vermelho ao lado dos
-          interruptores da janela — um icone quebrado do GTK — sumiu.
-        </p>
+        <p>A aba Status foi reorganizada, a máscara Xbox avisa o que o jogo deixa de receber, e as métricas Prometheus ganharam uma variável para ligar.</p>
       </description>
     </release>
     <release version="0.6.0" date="2026-08-01">
       <description>
-        <p>A leva do alto-falante. O volume do controle tem tres camadas e a
-           janela so alcancava a do meio — justamente a unica sem leitura e com
-           preco. Agora o bloco Alto-falante tem controle deslizante, botao de
-           mudo e devolucao da posse, com o preco escrito na propria interface:
-           a partir do primeiro clique o Hefesto manda o volume em todo report,
-           e o DualSense nao devolve esse valor. O botao de mudo nasce
-           insensivel enquanto nao ha volume conhecido, porque um mudo como
-           primeira escrita trancaria o alto-falante em zero sem o proprio botao
-           poder solta-lo. Um selo avisa quando quem esta mudo e o sistema, e
-           nao o registrador do controle — sao duas verdades diferentes, e a que
-           decide se sai som e a do PipeWire. O perfil ganhou secao propria de
-           alto-falante, que fica de fora do arquivo quando nao ha opiniao. O
-           clique do touchpad passou a chegar ao jogo: o leitor tinha o byte na
-           mao e o descartava. E o emblema de testes deixou de declarar uma
-           contagem exata que envelhecia a cada leva.</p>
+        <p>O alto-falante do controle ganhou volume, mudo e seção própria no perfil, e o clique do touchpad passou a chegar ao jogo.</p>
       </description>
     </release>
     <release version="0.5.0" date="2026-07-31">
       <description>
-        <p>A leva da auditoria: treze agentes mediram o projeto inteiro e um
-           verificador independente reenquadrou tres dos oito achados graves. O
-           instalador voltou a rearmar as curas de modulo — quatro portoes
-           testavam permissao de escrita num arquivo de root, davam sempre falso
-           e o ciclo de desinstalar e instalar desligava seis curas em silencio
-           ate o proximo boot. Os desenhos da aba Status passaram a ocupar o vao
-           lateral que o teto elastico devolveu, e o teto chegou as seis abas que
-           faltavam. A janela parou de perder a reconciliacao quando o daemon
-           engasga, o botao Restaurar Padrao deixou de morrer em instalacao
-           empacotada, e salvar perfil passou a comparar por identidade de disco
-           em vez de texto digitado. O NOTICE parou de mentir por omissao: os
-           tres drivers de kernel GPL-2.0 embarcados agora estao declarados.</p>
+        <p>Desinstalar e instalar de novo deixou de desligar as correções dos módulos de kernel, e a janela ficou estável quando o serviço demora a responder. O NOTICE passou a declarar os módulos GPL-2.0.</p>
       </description>
     </release>
     <release version="0.4.0" date="2026-07-30">
       <description>
-        <p>A leva conduzida por agentes com arquivos particionados e um
-           verificador independente com poder de reprovar. O R1 parou de trocar
-           de aplicativo dentro do jogo: a emulação de teclado não tinha
-           interruptor — nascia ligada, sem persistência e sem chave na janela —
-           e a exclusão mútua lia a suspensão do controle virtual pelo Steam
-           Input como permissão para a emulação de desktop entrar, deixando o
-           Alt esquerdo preso. Agora o teclado emulado tem interruptor próprio,
-           o predicado só estreita o portão, e a borda de episódio solta a tecla
-           presa na hora. O perfil passou a guardar as outras abas: modo,
-           máscara, co-op e "modo jogo" iam só para o estado vivo do daemon e o
-           Salvar reemitia a fotografia do boot por cima. O microfone voltou a
-           gravar a voz e não o monitor da saída do próprio controle. No
-           empacotamento, o caminho de ativação do .deb estava morto, o módulo
-           de kernel sobrevivia ao apt remove, e o comando que constrói o pacote
-           Flatpak usava uma opção que não existe — a release inteira teria
-           falhado.</p>
+        <p>O R1 deixou de trocar de aplicativo dentro do jogo, o perfil passou a guardar modo e máscara, e o microfone voltou a gravar a voz. Os pacotes .deb e Flatpak foram corrigidos.</p>
       </description>
     </release>
     <release version="0.3.0" date="2026-07-28">
       <description>
-        <p>A leva do que desfazia o trabalho dela. O tema é a janela parar de
-           afirmar o que não aconteceu: o desempate entre perfis deixou de ser a
-           ordem alfabética do nome do arquivo (em empate vence o perfil que já
-           está ativo); salvar um perfil pela janela parou de rebaixá-lo a
-           catch-all com prioridade zero; o teto da escala de prioridade subiu de
-           100 para 200, porque não existia número escolhível pela janela capaz
-           de vencer um catch-all em 100; e aplicar um rascunho de perfil parou
-           de responder sucesso com seções falhando — o rodapé nomeia o que não
-           entrou. O microfone voltou para a faixa com botão que funciona, o
-           diagnóstico dele parou de reprovar por causa do alto-falante mudo, e o
-           instalador passou a chamar a cura que existia e nunca era chamada. O
-           detector de janela pode adoecer e voltar (a marca de saúde era um
-           trinco de mão única). A aba Status foi reorganizada olhando a tela.</p>
+        <p>Os perfis passaram a desempatar e a salvar do jeito esperado, e a janela diz o que não foi aplicado. O microfone voltou à faixa, com um botão que funciona.</p>
       </description>
     </release>
     <release version="0.2.0" date="2026-07-26">
       <description>
-        <p>Checkpoint validado em hardware real: quatro controles em co-op num
-           jogo, numerados 1-2-3-4, sobrevivendo a reinício do daemon. O co-op
-           passou a existir pela janela (a funcionalidade central do projeto só
-           existia por linha de comando), o microfone ganhou um dono único para o
-           byte de mudo, a máscara de gamepad deixou de responder diferente
-           conforme fosse pela janela ou pelo terminal, e "modo jogo" — que eram
-           seis conceitos com o mesmo nome — foi separado.</p>
+        <p>Co-op pela janela, com quatro controles numerados de 1 a 4, número de jogador editável e um teto de segurança contra vibração presa.</p>
       </description>
     </release>
     <release version="0.1.1" date="2026-07-25">
       <description>
-        <p>A leva das causas-raiz: quatorze queixas de uso viraram defeito
-           medido. Entre elas, o initramfs servindo um módulo DKMS velho depois
-           do reboot (o instalador agora atualiza o initramfs), o microfone do
-           DualSense por Bluetooth (Opus tunelado em HID) e o controle 8BitDo em
-           modo PS4 subindo por Bluetooth de primeira.</p>
+        <p>Os botões «Deixar tudo pronto» e «Este jogo não funciona», e correções no microfone, na troca automática de perfil e na numeração dos controles.</p>
       </description>
     </release>
     <release version="0.1.0" date="2026-07-24">
       <description>
-        <p>Reinício da numeração em 0.x: o projeto assumiu publicamente que ainda
-           não é 1.0. Redesenho da interface entregue e a causa-raiz das
-           desconexões de Bluetooth identificada — o bluetoothd travava e comia
-           os pareamentos.</p>
+        <p>Primeiro lançamento público, em alfa: sensores na aba Status, identidade visual nova e a aba Navegação.</p>
       </description>
     </release>
-    <!-- METAINFO-ORDEM-DAS-RELEASES-01 (30/07): as entradas de 3.13.3 a 1.1.0
-         foram RETIRADAS daqui. Duas razões, e a segunda é a que morde:
-         (1) o `appstreamcli validate` (portão do
-         .github/workflows/flatpak.yml) reprova com
-         `releases-not-in-order 0.1.0 << 3.13.3` — a numeração voltou para 0.x
-         em 24/07 e as duas linhas não convivem numa lista ordenada; medido:
-         com as 3.x aqui o portão saía com 3, sem elas sai com 0;
-         (2) o AppStream COMPARA versões: com a 3.13.3 na lista, uma loja
-         entende que o mais novo do projeto é 3.13.3 e nunca oferece a 0.3.0
-         como atualização. Manter a história aqui era o mesmo defeito que este
-         sprint cura, por outro caminho.
-         A história completa (3.x, 4.0.0 e as 0.x) está no CHANGELOG.md, que é
-         a fonte de verdade das notas de versão. -->
   </releases>
 
   <!-- Descrição PT-BR (principal) -->
   <description>
-    <p>O Hefesto - DualSense4Unix é um daemon Linux para configuração avançada do controle DualSense (PS5).
-       Permite ajustar gatilhos adaptativos, vibração, barra de luz e emulação de mouse
-       diretamente no Linux, sem necessidade de Wine ou emuladores.</p>
+    <p>O Hefesto - DualSense4Unix faz o controle DualSense, do PS5, funcionar por inteiro no Linux:
+       gatilhos adaptativos, barra de luz, vibração, giroscópio, touchpad, microfone e alto-falante,
+       por cabo ou por Bluetooth, com até quatro jogadores.</p>
     <p>Funcionalidades principais:</p>
     <ul>
-      <li>Gatilhos adaptativos com múltiplos modos (resistência, disparo, arco)</li>
-      <li>Perfis de configuração por jogo ou aplicação</li>
-      <li>Emulação de mouse com o analógico direito</li>
-      <li>Barra de luz configurável (cor e brilho)</li>
-      <li>Troca automática de perfil ao detectar janela ativa</li>
-      <li>Interface TUI para terminal e GUI GTK3</li>
-      <li>Suporte a USB e Bluetooth</li>
+      <li>Gatilhos adaptativos com os efeitos do DualSense, ajustados por controle</li>
+      <li>Cor da barra de luz e luz de jogador em cada controle</li>
+      <li>Vibração com força por controle e por motor</li>
+      <li>Mira Virtual: o giroscópio leva a mira ao analógico direito</li>
+      <li>O controle como mouse e teclado, com teclado na tela</li>
+      <li>Perfis por jogo, que entram sozinhos quando o jogo abre</li>
+      <li>Janela com dez abas, ícone na bandeja, interface de terminal e linha de comando</li>
     </ul>
     <!-- Descrição EN (para lojas internacionais) -->
-    <p xml:lang="en">Hefesto - DualSense4Unix is a Linux daemon for advanced DualSense (PS5) controller
-       configuration. It lets you adjust adaptive triggers, rumble, lightbar and mouse
-       emulation natively on Linux.</p>
+    <p xml:lang="en">Hefesto - DualSense4Unix makes the PS5 DualSense controller work in full on Linux:
+       adaptive triggers, lightbar, rumble, gyroscope, touchpad, microphone and speaker, over USB or
+       Bluetooth, for up to four players.</p>
     <p xml:lang="en">Main features:</p>
     <ul xml:lang="en">
-      <li>Adaptive triggers with multiple modes (resistance, trigger, bow)</li>
-      <li>Per-game/app profile switching</li>
-      <li>Mouse emulation via right analog stick</li>
-      <li>Configurable lightbar (color and brightness)</li>
-      <li>Automatic profile switching by active window</li>
-      <li>TUI and GTK3 GUI interfaces</li>
-      <li>USB and Bluetooth support</li>
+      <li>Adaptive triggers with the DualSense effects, set per controller</li>
+      <li>Lightbar color and player light on each controller</li>
+      <li>Rumble strength per controller and per motor</li>
+      <li>Virtual Aim: the gyroscope drives the right analog stick</li>
+      <li>The controller as mouse and keyboard, with an on-screen keyboard</li>
+      <li>Per-game profiles that switch on when the game opens</li>
+      <li>Ten-tab window, tray icon, terminal interface and command line</li>
     </ul>
   </description>
 
@@ -362,20 +158,21 @@
     <keyword>haptic</keyword>
     <keyword>daemon</keyword>
     <keyword>linux</keyword>
+    <keyword>acessibilidade</keyword>
   </keywords>
 
-  <!-- Capturas de tela (URLs placeholder — substituir por URLs reais ao publicar) -->
+  <!-- Capturas de tela: as fotos das abas que acompanham a documentação -->
   <screenshots>
     <screenshot type="default">
-      <caption>Interface principal — painel de gatilhos adaptativos</caption>
+      <caption>Aba Jogar: como o controle chega ao jogo</caption>
       <image type="source">
-        https://raw.githubusercontent.com/Hefesto-Team/hefesto-dualsense4unix/main/docs/screenshots/gui-triggers.png
+        https://raw.githubusercontent.com/Hefesto-Team/hefesto-dualsense4unix/dev/docs/usage/assets/aba-01-jogar.png
       </image>
     </screenshot>
     <screenshot>
-      <caption>Gerenciamento de perfis por aplicação</caption>
+      <caption>Aba Gatilhos: os efeitos de cada controle</caption>
       <image type="source">
-        https://raw.githubusercontent.com/Hefesto-Team/hefesto-dualsense4unix/main/docs/screenshots/gui-profiles.png
+        https://raw.githubusercontent.com/Hefesto-Team/hefesto-dualsense4unix/dev/docs/usage/assets/aba-03-gatilhos.png
       </image>
     </screenshot>
   </screenshots>
