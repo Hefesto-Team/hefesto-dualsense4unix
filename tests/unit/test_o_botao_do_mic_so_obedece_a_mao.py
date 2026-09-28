@@ -154,6 +154,34 @@ _TRANSPORTES = pytest.mark.parametrize("transporte", ["cabo", "radio"])
 
 
 # ---------------------------------------------------------------------------
+# 0. O bit do botão é UM número, nos três lugares que o conhecem
+# ---------------------------------------------------------------------------
+
+
+def test_o_bit_do_botao_e_o_do_kernel_e_o_do_vpad() -> None:
+    """O leitor, o vpad e o `hid-playstation` falam do MESMO bit de `buttons[2]`.
+
+    O vpad escreve `mic_btn` no report que o jogo lê; o leitor o conta como o
+    dedo dela; o kernel o consome. Três cópias digitadas separadamente é a
+    família de defeito desta casa — aqui elas ficam presas umas às outras.
+    """
+    import re
+    from pathlib import Path
+
+    from hefesto_dualsense4unix.integrations import uhid_gamepad
+
+    assert prr.MIC_BUTTON_BIT == uhid_gamepad._BUTTONS2_BITS["mic_btn"]
+    assert prr.BUTTONS2_OFFSET == uhid_gamepad._BUTTONS2_OFFSET
+    fonte = (
+        Path(__file__).resolve().parents[2]
+        / "assets/dkms/hid-playstation/hid-playstation.c"
+    ).read_text(encoding="utf-8")
+    achado = re.search(r"#define DS_BUTTONS2_MIC_MUTE\s+BIT\((\d+)\)", fonte)
+    assert achado is not None
+    assert prr.MIC_BUTTON_BIT == 1 << int(achado.group(1))
+
+
+# ---------------------------------------------------------------------------
 # 1. O toque fantasma: o bit de estado mudando não é a mão
 # ---------------------------------------------------------------------------
 
