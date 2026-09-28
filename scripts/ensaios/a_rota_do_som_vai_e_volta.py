@@ -47,8 +47,18 @@ A MORDIDA
 REPROVAR, dizendo que a saída padrão não voltou. Uma régua de ida e volta que
 passa com a volta arrancada não mede a volta.
 
+O RÁDIO TEM SAÍDA (O-BASICO-MEDIDO-01, 28/09/2026)
+--------------------------------------------------
+Até 28/09 ele recusava todo controle no rádio com rc=2, afirmando que ali não
+havia para onde mandar o som. Isso é falso desde 10/09:
+no rádio a saída do controle é o `hefesto_som_<6hex>` que o produto publica, e
+o `audio_saida.sink_do_controle` o reconhece. A frase de transporte saiu; sem
+`--uniq` ele escolhe o primeiro controle que TEM saída agora (e não o primeiro
+da lista, que com quatro no rádio sempre recusava), e a recusa que sobra
+descreve só o estado. Todo endereço impresso passa pelo dono da máscara.
+
     scripts/ensaios/a_rota_do_som_vai_e_volta.py
-    scripts/ensaios/a_rota_do_som_vai_e_volta.py --uniq d4:2f:…
+    scripts/ensaios/a_rota_do_som_vai_e_volta.py --uniq aa:bb:cc:…
     scripts/ensaios/a_rota_do_som_vai_e_volta.py --sem-volta   # a mordida
 """
 
@@ -123,28 +133,27 @@ def main() -> int:
     args = p.parse_args()
 
     from hefesto_dualsense4unix.app import audio_saida
+    from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 
     ligados = [c for c in _controles() if c.get("connected")]
     if not ligados:
         print("SEM APARELHO — nenhum controle na mesa. Nada foi medido.")
         return 2
-    escolhido = args.uniq or next(
-        (c["uniq"] for c in ligados if c.get("transport") == "usb"),
-        ligados[0]["uniq"],
-    )
     na_mesa = [str(c.get("uniq") or "") for c in ligados if c.get("uniq")]
+    saidas = {u: audio_saida.sink_do_controle(u, na_mesa) for u in na_mesa}
+    escolhido = args.uniq or next((u for u in na_mesa if saidas.get(u)), na_mesa[0] if na_mesa else "")
+
+    def dizer(texto: str) -> None:
+        print(mascarar(texto, na_mesa))
 
     antes = _pactl("get-default-sink")
-    placa = audio_saida.sink_do_controle(escolhido, na_mesa)
-    print(f"controle    : {escolhido}")
-    print(f"saída ANTES : {antes or '(ilegível)'}")
-    print(f"placa dele  : {placa or '(nenhuma — é o RÁDIO)'}")
+    placa = saidas.get(escolhido) or audio_saida.sink_do_controle(escolhido, na_mesa)
+    dizer(f"controle    : {escolhido}")
+    dizer(f"saída ANTES : {antes or '(ilegível)'}")
+    dizer(f"saída dele  : {placa or '(nenhuma achada agora)'}")
     if not placa:
-        print(
-            "\nSEM PLACA — pelo rádio o DualSense não publica placa de som, e "
-            "'Todo o som do PC' não tem para onde mandar. A recusa é honesta e "
-            "está medida no `mapa-controles.csv` (audio.alto_falante, "
-            "radio_aciona=não). Nada foi tocado."
+        dizer(
+            "\nSEM SAÍDA — " + audio_saida.MOTIVO_ROTA_SEM_SINK + " Nada foi tocado."
         )
         return 2
 
@@ -154,7 +163,7 @@ def main() -> int:
         # A CAMADA 1 PRIMEIRO, e a ordem é a do produto: "a camada 1 vence a
         # camada 2 — volume e rota perfeitos num sink mudo é trabalho invisível".
         desfecho = audio_saida.mandar_o_som_do_pc(escolhido, na_mesa)
-        print(f"\nIDA camada 1: ok={desfecho.ok} sink={desfecho.sink or '—'} "
+        dizer(f"\nIDA camada 1: ok={desfecho.ok} sink={desfecho.sink or '—'} "
               f"{desfecho.motivo}")
         if not desfecho.ok:
             falhas.append(f"a camada 1 recusou: {desfecho.motivo}")
@@ -164,7 +173,7 @@ def main() -> int:
                 {"rota": audio_saida.BYTE_TODO_O_SOM_DO_PC, "uniq": escolhido},
             )
         )
-        print(f"IDA camada 2: {resposta}")
+        dizer(f"IDA camada 2: {resposta}")
         time.sleep(ASSENTAR_S)
 
         # ------------------------------------------------------------- A VOLTA
@@ -177,7 +186,7 @@ def main() -> int:
             sink_padrao=padrao,
         )
         print(f"\nLEITURA byte : {byte!r}")
-        print(f"LEITURA sink : {padrao}")
+        dizer(f"LEITURA sink : {padrao}")
         print(f"botão aceso  : {leitura.botao_aceso!r}  (esperado 'pc')")
         print(f"concordam    : {leitura.concordam}")
         if leitura.recado:
@@ -206,7 +215,7 @@ def main() -> int:
             time.sleep(ASSENTAR_S)
             depois = _pactl("get-default-sink")
             print(f"\nVOLTA camada 1: ok={devolvido.ok} {devolvido.motivo}")
-            print(f"saída DEPOIS  : {depois or '(ilegível)'}")
+            dizer(f"saída DEPOIS  : {depois or '(ilegível)'}")
             if depois != antes:
                 falhas.append(
                     f"a saída padrão NÃO voltou: era {antes!r}, ficou {depois!r}"
@@ -220,7 +229,7 @@ def main() -> int:
     print()
     if falhas:
         for f in falhas:
-            print(f"REPROVOU: {f}")
+            dizer(f"REPROVOU: {f}")
         return 1
     print("PASSOU — as duas camadas foram escritas, lidas de volta e devolvidas.")
     return 0
