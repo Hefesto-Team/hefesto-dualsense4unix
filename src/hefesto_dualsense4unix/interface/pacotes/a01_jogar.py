@@ -368,7 +368,7 @@ def lugares_da_mesa() -> int:
 #: O QUE FOI MEDIDO, e decide a forma desta cura: `gamepad.mask.set` grava
 #: SEMPRE (`ipc_handlers.py:6812`, sem gate de modo), `set_mask` persiste em
 #: `controller_masks.json` e `mascara_efetiva` é consultada na criação de todo
-#: gamepad virtual (`gamepad.py:2177`, `uinput_gamepad.py:419`). **Logo a
+#: gamepad virtual (`gamepad.py:2469`, `uinput_gamepad.py:419`). **Logo a
 #: escolha dela JÁ vale sempre que pode valer** — o que faltava não era motor,
 #: era a tela dizer que a escolha ficou guardada.
 #:
@@ -1650,7 +1650,7 @@ def _ressalva_da_mascara(state: dict[str, Any]) -> str:
 
     O QUE ELA SENTE, medido: fora do modo `gamepad` **não existe gamepad
     virtual**, e `mascara_efetiva` só é lida na criação de um
-    (`gamepad.py:2177`). O clique é aceito, gravado no disco e não muda nada que
+    (`gamepad.py:2469`). O clique é aceito, gravado no disco e não muda nada que
     se veja. A janela GTK escondia a caixa inteira fora do modo `gamepad`
     (`home_actions.py:2889`, `set_visible(modo_exibido == "gamepad")`); esta
     tela deixava clicar e ficava calada — que é
