@@ -43,16 +43,28 @@ Bluetooth ele sobe, no cabo ele morre.
 
 ## Proveniência
 
-- `hid-playstation.c` = **vanilla v7.0.11** (baixado de `pop-os/linux` no
-  commit registrado em `patch/BASELINE`) **+ os `patch/000N-*.patch` aplicados
-  NA ORDEM**. Invariante verificável: revertendo na ordem INVERSA reproduz
-  exatamente o `SHA256_VANILLA_C`. Comando pronto na seção **Upstream**.
-- `hid-ids.h` = header local intocado do MESMO commit. Ele bateu **byte a
-  byte** com o `hid-ids.h` já vendorado em `assets/dkms/hid-nintendo/`
-  (mesmo `SHA256_HID_IDS_H` nos dois pacotes) — é essa coincidência que prova
-  que o commit baixado é o certo. É vendorado porque `drivers/hid/hid-ids.h`
-  é header PRIVADO do subsistema: não é exportado e **não vem** no
-  `linux-headers`, então um build out-of-tree não o alcança.
+- `hid-playstation.c` = **o de fábrica do stable v7.1.5** (o mesmo arquivo do
+  `pop-os/linux` no commit registrado em `patch/BASELINE`, que é o do kernel
+  `7.1.5-76070105`) **+ os `patch/000N-*.patch` aplicados NA ORDEM**.
+  Invariante verificável: revertendo na ordem INVERSA reproduz exatamente o
+  `SHA256_VANILLA_C`. Comando pronto na seção **Upstream**. Até 28/09/2026 a
+  base era o v7.0.11, e o módulo rodava no 7.1.5 desfazendo duas verificações
+  do DualShock 4 que o stable acrescentou; a conta está no `patch/BASELINE`.
+- **Só nos kernels conferidos.** O `dkms.conf` tem `BUILD_EXCLUSIVE_KERNEL`, e
+  a lista é a mesma do `KERNELS_VALIDADOS` do `patch/BASELINE`. Fora dela o
+  DKMS pula e o de fábrica assume.
+- `hid-ids.h` = header local intocado do commit `POP_LINUX_COMMIT_HID_IDS_H`
+  (o do v7.0.11). Ele bate **byte a byte** com o `hid-ids.h` já vendorado em
+  `assets/dkms/hid-nintendo/` (mesmo `SHA256_HID_IDS_H` nos dois pacotes). O
+  do v7.1.5 difere, e em nenhum dos seis nomes que o `hid-playstation.c` usa
+  (medido em 28/09/2026). É vendorado porque `drivers/hid/hid-ids.h` é header
+  PRIVADO do subsistema: não é exportado e **não vem** no `linux-headers`,
+  então um build out-of-tree não o alcança.
+- **A marca do 0003** (28/09/2026): o parâmetro `mic_frames_ignored`, só de
+  leitura e sempre `Y`. Nada mais no sysfs separa um driver que descarta os
+  quadros de áudio do microfone de um que os lê como gamepad, e é por ele que
+  o daemon decide se põe o microfone no ar pelo rádio
+  (`daemon/subsystems/bt_mic.py`).
 - Código C em inglês (convenção do subsistema HID, visando o upstream).
 
 >  **`srcversion` NÃO serve para conferir proveniência.** Ele não é
@@ -534,11 +546,13 @@ echo 0 | sudo tee /sys/module/hid_playstation/parameters/feature_retries
 
 ## Rebase (kernel novo)
 
-`patch/BASELINE` guarda kernel base, commit, os sha256 e a **ordem** da série
-(uma linha `PATCH=` por patch). Rota: baixar o vanilla novo, aplicar
-`0001` e depois `0002` com `patch -p3`, resolver fuzz, atualizar BASELINE, e
-re-provar o build. O `patch/` não entra no build (o helper DKMS o exclui do
-source copiado).
+`patch/BASELINE` guarda kernel base, commit, os sha256, a **ordem** da série
+(uma linha `PATCH=` por patch) e o ritual para acrescentar um kernel ao pino.
+Rota: baixar o de fábrica do stable do kernel novo, aplicar `0001`, `0002` e
+`0003` com `patch -p3`, resolver fuzz, atualizar BASELINE, o
+`BUILD_EXCLUSIVE_KERNEL` e o `KERNELS_VALIDADOS`, e re-provar o build com o
+`parm: mic_frames_ignored` no `.ko`. O `patch/` não entra no build (o helper
+DKMS o exclui do source copiado).
 
 ## Upstream
 

@@ -37,15 +37,42 @@ about a hundred lines per second while the microphone is on.
 Note this only affects the driver's own parsing. hidraw consumers still receive
 the full report, so userspace bridges that decode the microphone keep working.
 
+Also expose a read-only module parameter, mic_frames_ignored, that is always
+Y. Userspace that streams the microphone over Bluetooth has no other way to
+tell a driver with this guard from one without it, and turning the
+microphone on over a driver without it is exactly what moves the user's
+pointer. The guard itself never reads the parameter.
+
 Signed-off-by: Hefesto DualSense4Unix Project <hefesto-dualsense4unix@users.noreply.github.com>
 ---
- drivers/hid/hid-playstation.c | 36 ++++++++++++++++++++++++++++++
- 1 file changed, 36 insertions(+)
+ drivers/hid/hid-playstation.c | 52 ++++++++++++++++++++++++++++++
+ 1 file changed, 52 insertions(+)
 
 diff --git a/drivers/hid/hid-playstation.c b/drivers/hid/hid-playstation.c
 --- a/drivers/hid/hid-playstation.c
 +++ b/drivers/hid/hid-playstation.c
-@@ -141,6 +141,13 @@
+@@ -80,6 +80,20 @@
+ MODULE_PARM_DESC(ds4_synthetic_mac,
+ 		 "When no address at all can be read from a DualShock4 over USB, build one in the locally administered range from the IDs the kernel already knows, instead of failing probe; it describes the model and the bus, never the individual device (default N = fail probe, same as before)");
+ 
++/*
++ * Read-only mark for the guard in dualsense_parse_report() that drops the
++ * microphone audio frames instead of parsing them as gamepad state. Without
++ * that guard the audio payload flips the mute button and moves the pointer on
++ * its own, and nothing else in sysfs tells a build that has it from one that
++ * does not, so userspace that streams the microphone over bluetooth asks this
++ * first. The guard never reads it: the only thing a wrong value at load time
++ * can do is make userspace keep the microphone off, which is the safe side.
++ */
++static bool mic_frames_ignored = true;
++module_param(mic_frames_ignored, bool, 0444);
++MODULE_PARM_DESC(mic_frames_ignored,
++		 "Read-only mark: this build drops DualSense bluetooth microphone audio frames instead of parsing them as gamepad input (always Y)");
++
+ /* List of connected playstation devices. */
+ static DEFINE_MUTEX(ps_devices_lock);
+ static LIST_HEAD(ps_devices_list);
+@@ -141,6 +155,13 @@
  #define DS_INPUT_REPORT_USB_SIZE		64
  #define DS_INPUT_REPORT_BT			0x31
  #define DS_INPUT_REPORT_BT_SIZE			78
@@ -59,7 +86,7 @@ diff --git a/drivers/hid/hid-playstation.c b/drivers/hid/hid-playstation.c
  #define DS_OUTPUT_REPORT_USB			0x02
  #define DS_OUTPUT_REPORT_USB_SIZE		63
  #define DS_OUTPUT_REPORT_BT			0x31
-@@ -1589,6 +1596,37 @@
+@@ -1589,6 +1610,37 @@
  			return -EILSEQ;
  		}
  

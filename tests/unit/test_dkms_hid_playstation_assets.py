@@ -496,20 +496,26 @@ class TestCloneDs4NoCaboOptIn:
 class TestBaselineEParidadeDoPatch:
     def test_baseline_tem_todas_as_chaves(self) -> None:
         dados = _baseline()
-        assert dados.get("KERNEL_BASE") == "v7.0.11"
-        assert dados.get("KERNEL_TESTED") == "7.0.11-76070011-generic"
-        assert re.fullmatch(r"[0-9a-f]{40}", dados.get("POP_LINUX_COMMIT", "")), (
-            "POP_LINUX_COMMIT precisa ser o sha do repo pop-os/linux"
-        )
+        # 28/09/2026 (O-PRODUTO-EM-QUALQUER-MAQUINA-01, L6): a base passou do
+        # v7.0.11 ao stable v7.1.5, o kernel que a máquina roda; o pino e o
+        # ritual moram em `test_o_hid_playstation_so_nos_kernels_conferidos.py`.
+        assert dados.get("KERNEL_BASE") == "v7.1.5"
+        assert dados.get("KERNEL_TESTED") == "7.1.5-76070105-generic"
+        for chave in ("POP_LINUX_COMMIT", "POP_LINUX_COMMIT_HID_IDS_H"):
+            assert re.fullmatch(r"[0-9a-f]{40}", dados.get(chave, "")), (
+                f"{chave} precisa ser o sha do repo pop-os/linux"
+            )
         for chave in ("SHA256_VANILLA_C", "SHA256_PATCHED_C", "SHA256_HID_IDS_H"):
             assert re.fullmatch(r"[0-9a-f]{64}", dados.get(chave, "")), f"{chave} inválido"
         assert _baseline_patches() == [p.name for p in PATCH_PATHS]
 
     def test_mesmo_commit_do_pacote_hid_nintendo(self) -> None:
-        # Os dois pacotes vendoram do MESMO kernel; divergir aqui significa
-        # que um dos dois rebaseou sozinho e a série vai quebrar no próximo.
+        # O `hid-ids.h` dos dois pacotes vem do MESMO commit; divergir aqui
+        # significa que um dos dois trocou o header sozinho. O `.c` do
+        # hid-playstation rebaseou de propósito em 28/09/2026 (a base é o
+        # stable do kernel pinado) e por isso tem a chave própria.
         nintendo_baseline = _read(NINTENDO_ASSET_DIR / "patch" / "BASELINE")
-        alvo = _baseline()["POP_LINUX_COMMIT"]
+        alvo = _baseline()["POP_LINUX_COMMIT_HID_IDS_H"]
         assert f"POP_LINUX_COMMIT={alvo}" in nintendo_baseline
 
     def test_sha_do_c_shipping_bate_com_o_baseline(self) -> None:
@@ -534,7 +540,7 @@ class TestBaselineEParidadeDoPatch:
             f"patch -R não aplicou limpo: {resultado.stdout}{resultado.stderr}"
         )
         assert _sha256(alvo) == _baseline()["SHA256_VANILLA_C"], (
-            "reverter a série não reproduz o vanilla v7.0.11 — o .c e o "
+            "reverter a série não reproduz o de fábrica da base — o .c e o "
             ".patch divergiram (edite sempre os DOIS juntos)"
         )
 

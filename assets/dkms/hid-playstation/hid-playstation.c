@@ -80,6 +80,20 @@ module_param(ds4_synthetic_mac, bool, 0644);
 MODULE_PARM_DESC(ds4_synthetic_mac,
 		 "When no address at all can be read from a DualShock4 over USB, build one in the locally administered range from the IDs the kernel already knows, instead of failing probe; it describes the model and the bus, never the individual device (default N = fail probe, same as before)");
 
+/*
+ * Read-only mark for the guard in dualsense_parse_report() that drops the
+ * microphone audio frames instead of parsing them as gamepad state. Without
+ * that guard the audio payload flips the mute button and moves the pointer on
+ * its own, and nothing else in sysfs tells a build that has it from one that
+ * does not, so userspace that streams the microphone over bluetooth asks this
+ * first. The guard never reads it: the only thing a wrong value at load time
+ * can do is make userspace keep the microphone off, which is the safe side.
+ */
+static bool mic_frames_ignored = true;
+module_param(mic_frames_ignored, bool, 0444);
+MODULE_PARM_DESC(mic_frames_ignored,
+		 "Read-only mark: this build drops DualSense bluetooth microphone audio frames instead of parsing them as gamepad input (always Y)");
+
 /* List of connected playstation devices. */
 static DEFINE_MUTEX(ps_devices_lock);
 static LIST_HEAD(ps_devices_list);
@@ -2639,6 +2653,12 @@ static int dualshock4_parse_report(struct ps_device *ps_dev, struct hid_report *
 		struct dualshock4_input_report_usb *usb =
 			(struct dualshock4_input_report_usb *)data;
 
+		if (usb->num_touch_reports > ARRAY_SIZE(usb->touch_reports)) {
+			hid_err(hdev, "DualShock4 USB input report has invalid num_touch_reports=%d\n",
+				usb->num_touch_reports);
+			return -EINVAL;
+		}
+
 		ds4_report = &usb->common;
 		num_touch_reports = min_t(u8, usb->num_touch_reports,
 					  ARRAY_SIZE(usb->touch_reports));
@@ -2652,6 +2672,12 @@ static int dualshock4_parse_report(struct ps_device *ps_dev, struct hid_report *
 		if (!ps_check_crc32(PS_INPUT_CRC32_SEED, data, size - 4, report_crc)) {
 			hid_err(hdev, "DualShock4 input CRC's check failed\n");
 			return -EILSEQ;
+		}
+
+		if (bt->num_touch_reports > ARRAY_SIZE(bt->touch_reports)) {
+			hid_err(hdev, "DualShock4 BT input report has invalid num_touch_reports=%d\n",
+				bt->num_touch_reports);
+			return -EINVAL;
 		}
 
 		ds4_report = &bt->common;

@@ -1,36 +1,81 @@
 # Baseline do módulo DKMS hefesto-hid-playstation (contenção BT 25/07 +
-# clone DualShock4 no cabo 25/07 + microfone que não é botão 10/09)
-# O hid-playstation.c deste diretório == vanilla v7.0.11 + patches aplicados
-# NA ORDEM da lista PATCH abaixo.
+# clone DualShock4 no cabo 25/07 + microfone que não é botão 10/09 + a marca
+# da guarda do microfone 28/09)
+# O hid-playstation.c deste diretório == o de fábrica do STABLE v7.1.5 +
+# patches aplicados NA ORDEM da lista PATCH abaixo.
 # Paridade verificável (reverte na ordem INVERSA):
 #   patch -R -p3 hid-playstation.c < patch/0003-*.patch
 #   patch -R -p3 hid-playstation.c < patch/0002-*.patch
 #   patch -R -p3 hid-playstation.c < patch/0001-*.patch
 # deve reproduzir exatamente SHA256_VANILLA_C.
 #
-# Proveniência do vanilla: baixado de
+# Proveniência do de fábrica, e ela é conferível pelos dois lados:
 #   raw.githubusercontent.com/pop-os/linux/<POP_LINUX_COMMIT>/drivers/hid/hid-playstation.c
-# O MESMO commit forneceu o hid-ids.h, que bateu byte a byte com o já
-# vendorado em assets/dkms/hid-nintendo/ (SHA256_HID_IDS_H idêntico nos dois
-# pacotes) — é essa coincidência que prova que o commit é o certo.
+#   git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/plain/drivers/hid/hid-playstation.c?h=v7.1.5
+# Os dois dão o mesmo SHA256_VANILLA_C (medido em 28/09/2026). O commit do Pop
+# é o que o pacote do kernel desta máquina nomeia: `apt-cache policy
+# linux-image-7.1.5-76070105-generic` termina em `~38a419f`.
+#
+# FATO ERRADO, SUBSTITUÍDO EM 28/09/2026 (O-PRODUTO-EM-QUALQUER-MAQUINA-01, L6).
+# A base era o v7.0.11, e o módulo rodava no 7.1.5-76070105 sem pino nenhum:
+# o `dkms.conf` construía para qualquer kernel. O de fábrica do 7.1.5 NÃO é o
+# do v7.0.11: o stable acrescentou duas verificações de `num_touch_reports` do
+# DualShock 4 (USB e BT, `-EINVAL` num relatório inválido), e o módulo daqui as
+# DESFAZIA em silêncio. É o defeito que o pino do `uhid` existe para impedir. A
+# série (0001, 0002, 0003) aplicou sem deslocamento sobre o v7.1.5, porque as
+# duas verificações ficam depois de todos os pedaços dela.
+#
+# O hid-ids.h NÃO mudou de commit: é o do POP_LINUX_COMMIT_HID_IDS_H (o mesmo
+# do pacote hid-nintendo, byte a byte). O do v7.1.5 difere em 51 linhas, e
+# nenhuma nos seis nomes que o hid-playstation.c usa (USB_VENDOR_ID_SONY e os
+# cinco USB_DEVICE_ID_SONY_PS4/PS5_CONTROLLER*): medido em 28/09/2026 com os
+# `#define` desses nomes nos dois arquivos, idênticos.
 #
 # NÃO use `srcversion` para conferir proveniência: ele NÃO é reprodutível
 # entre build in-tree e build out-of-tree. Controle feito em 25/07 — o
 # hid-nintendo vanilla, revertido dos patches e com sha256 batendo o
 # SHA256_VANILLA_C do pacote vizinho, compilou para srcversion
 # E510116794E5943C26F761D contra 098AB755D743D99788D82ED do in-tree do Pop.
-# O juiz de identidade do fonte é o sha256 do .c, e só ele.
-KERNEL_BASE=v7.0.11
-KERNEL_TESTED=7.0.11-76070011-generic
-POP_LINUX_COMMIT=3af2f9de43174ce5063110f94b7b01226499ba13
-SHA256_VANILLA_C=bdb6ed1d1e0dc27f10a7e25ec758c1cc45eaf0ef00f026fe733aafc6f0f09db2
-# SHA256_PATCHED_C mudou em 10/09/2026 com o 0003 (era
-# 3729dd2e25650d5162463b408cd26727a46c41c481ee7212ef3e9ae2adaf55fb, a série de
-# dois patches). Editar o .c sem mexer AQUI quebra a proveniência do módulo que
-# roda na máquina dela, e três testes desta série reprovam — foi o que
-# aconteceu quando o 0003 entrou.
-SHA256_PATCHED_C=4e7b30c62692a6149088c7e97a5bdb302ebcbbe8633f68aa8e171bd0753af318
+# REPETIDO em 28/09/2026 para este pacote, nos dois kernels: o v7.0.11 de
+# fábrica compilado fora da árvore dá 47974DB407B9FDE5DF7F8BA, e o in-tree do
+# 7.0.11-76070011 é 30AB15023997E11620142CB; o v7.1.5 dá
+# FC2A598F053F1CEE8320C68, e o in-tree do 7.1.5-76070105 é
+# A74F93FE20FF36683AF7614. O juiz de identidade do fonte é o sha256 do .c, e
+# só ele. (No `uhid` o srcversion bateu, e é por isso que o pino de lá o usa;
+# aqui não bate, e o pino se apoia no commit do Pop e no stable.)
+#
+# O QUE O srcversion DIZ, e é outra pergunta: entre dois builds FORA da árvore
+# do MESMO .c ele se repete. Medido em 28/09/2026: o .c de 10/09 (SHA256
+# 4e7b30c6…, sem a marca) compilado aqui dá CFB81A3D4C7FAA41489CCBD, o mesmo do
+# módulo carregado na máquina dela. É por isso que SRCVERSION_DO_0003_SEM_A_MARCA
+# existe: o módulo de 10/09 a 28/09 TEM a guarda do áudio e não tem a marca, e o
+# daemon o reconhece por ele até o próximo boot carregar o novo (o
+# `daemon/subsystems/bt_mic.py` guarda a mesma lista, e uma régua cobra os dois).
+#
+# O RITUAL PARA ACRESCENTAR UM KERNEL ao BUILD_EXCLUSIVE_KERNEL do dkms.conf,
+# e nenhum passo é opcional:
+#   1. o hid-playstation.c de fábrica daquele kernel (o do commit do Pop que o
+#      pacote dele nomeia) tem de ser o SHA256_VANILLA_C desta base. Se NÃO
+#      for, a série é refeita sobre o stable daquele kernel e este BASELINE
+#      muda inteiro — nunca se acrescenta o kernel com o arquivo de outro;
+#   2. o patchado compila contra os headers dele, com o `parm:
+#      mic_frames_ignored` no `.ko`;
+#   3. só então o build entra na regex e em KERNELS_VALIDADOS — a mesma lista
+#      nos dois lugares, e uma régua cobra os dois sentidos.
+KERNEL_BASE=v7.1.5
+KERNEL_TESTED=7.1.5-76070105-generic
+KERNELS_VALIDADOS=7.1.5-76070105
+POP_LINUX_COMMIT=38a419fc95c5eae36afa2f13e459a7fc4f4a68f5
+POP_LINUX_COMMIT_HID_IDS_H=3af2f9de43174ce5063110f94b7b01226499ba13
+SHA256_VANILLA_C=9e8266ab8e5e4298d32097b3730f1fc03dbf6a9e57abdce627cd26ffc59883f0
+# SHA256_PATCHED_C mudou em 28/09/2026 com a marca do 0003 e a base v7.1.5
+# (era 4e7b30c62692a6149088c7e97a5bdb302ebcbbe8633f68aa8e171bd0753af318, a
+# série de três sobre o v7.0.11). Editar o .c sem mexer AQUI quebra a
+# proveniência do módulo que roda na máquina dela, e três testes desta série
+# reprovam.
+SHA256_PATCHED_C=3b22fd83a95bcc3bdccc158fbf6eb0c6b4fc9036ef4a72d59aec3c1357e58af6
 SHA256_HID_IDS_H=a88d22bed0835d0b12d2ade286e9f562fcdb2dcebe2db380ab6b3c3ea8ad7838
+SRCVERSION_DO_0003_SEM_A_MARCA=CFB81A3D4C7FAA41489CCBD
 PATCH=0001-HID-playstation-retry-feature-reports-that-time-out-o.patch
 PATCH=0002-HID-playstation-survive-a-DualShock4-pairing-info-rep.patch
 PATCH=0003-HID-playstation-do-not-parse-microphone-audio-frames-.patch
