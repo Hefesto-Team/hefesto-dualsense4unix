@@ -2222,6 +2222,11 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """
     if not os.environ.get("HEFESTO_DUALSENSE4UNIX_FAKE"):
         monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_FAKE", "1")
+    # O `dkms_lib.sh` lê o Secure Boot pela efivars. Sem este desvio, toda régua
+    # que herda o `os.environ` num subprocesso media a máquina de quem roda: verde
+    # aqui, vermelho num runner com Secure Boot ligado. Quem mede o Secure Boot
+    # monta a própria efivars por cima.
+    monkeypatch.setenv("HEFESTO_EFIVARS_ROOT", str(tmp_path / ".efivars-sem-secure-boot"))
     # XDG_RUNTIME_DIR NÃO é isolado de propósito: os testes de single_instance
     # dependem da semântica real do runtime dir (pid/socket, permissões 0700) e
     # quebram sob um tmp. O socket IPC já é isolável por nome via
