@@ -97,13 +97,15 @@ class StateStore:
         # para reescrever a cor que a aba Lightbar acabara de aplicar); jogo com
         # perfil próprio (steam_app_*) limpa tudo ao ativar (F2, ver
         # AutoSwitcher._activate).
-        # FEAT-AUTOSWITCH-LOCK-01 (pedido da mantenedora, 23/07): cadeado
-        # explícito da troca automática de perfil. Diferente do lock manual de
-        # 30 s acima (que expira) e do pause do daemon (que para toda a
-        # emulação): enquanto True, o AutoSwitcher NÃO troca de perfil por foco
-        # de janela — a escolha DELA fica —, mas gamepad/co-op/rumble seguem
-        # vivos. Persistido no disco pelo handler IPC (sobrevive a reboot).
-        self._autoswitch_locked: bool = False
+        # O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026): o MODO FREESTYLE ligado.
+        # Substitui o cadeado da troca automática (FEAT-AUTOSWITCH-LOCK-01, de
+        # 23/07), que cedia a todo perfil de jogo (LOCK-CEDE-01). Ligado, o
+        # Freestyle é o perfil ativo e nenhum caminho automático passa por cima
+        # dele — autoswitch, lançamento, restore, máscara antecipada —, nos
+        # quatro controles e nos dois transportes
+        # (`D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA`). Quem escreve é um dono
+        # só, `profiles.manager.ligar_o_freestyle`, que grava o disco junto.
+        self._freestyle_ligado: bool = False
         # CLUSTER-IPC-STATE-PROFILE-01 (Bug C): timestamp absoluto
         # (`time.monotonic`) até quando o autoswitch deve suspender por
         # escolha manual de perfil. 0.0 → lock inativo. Setado pelo handler
@@ -618,15 +620,15 @@ class StateStore:
             return self._last_battery_pct
 
     @property
-    def autoswitch_locked(self) -> bool:
-        """True quando a troca automática de perfil está congelada (FEAT-AUTOSWITCH-LOCK-01)."""
+    def freestyle_ligado(self) -> bool:
+        """True quando o Modo Freestyle está ligado: o Freestyle manda em tudo."""
         with self._lock:
-            return self._autoswitch_locked
+            return self._freestyle_ligado
 
-    def set_autoswitch_locked(self, locked: bool) -> None:
-        """Liga/desliga o cadeado da troca automática de perfil."""
+    def set_freestyle_ligado(self, ligado: bool) -> None:
+        """Só a memória. O escritor é `profiles.manager.ligar_o_freestyle`."""
         with self._lock:
-            self._autoswitch_locked = bool(locked)
+            self._freestyle_ligado = bool(ligado)
 
     @property
     def native_mode_active(self) -> bool:

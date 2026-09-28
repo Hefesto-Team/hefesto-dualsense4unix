@@ -33,6 +33,7 @@ Nunca propaga exceção: falha silenciosa em ambos os sentidos.
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import tempfile
@@ -187,30 +188,59 @@ def load_paused_state() -> bool:
         return False
 
 
-_AUTOSWITCH_LOCK_FLAG_FILE = "autoswitch_locked.flag"
+_FREESTYLE_LIGADO_FLAG_FILE = "freestyle_ligado.flag"
+#: O arquivo do cadeado de 23/07 (FEAT-AUTOSWITCH-LOCK-01). Só a migração o lê.
+_FLAG_DO_CADEADO_ANTIGO = "autoswitch_locked.flag"
 
 
-def save_autoswitch_locked(locked: bool) -> None:
-    """Persiste o cadeado da troca automática de perfil (FEAT-AUTOSWITCH-LOCK-01).
+def save_freestyle_ligado(ligado: bool) -> None:
+    """Persiste o Modo Freestyle (O-FREESTYLE-E-UMA-CAMADA-SO-01, 28/09/2026).
 
-    Arquivo-flag em config_dir (existe = congelado), no mesmo idioma do
-    `paused.flag`. Best-effort: nunca propaga exceção.
+    Arquivo-flag em config_dir (existe = ligado), no mesmo idioma do
+    `paused.flag`. Best-effort: nunca propaga exceção. Quem chama é o dono
+    único, `profiles.manager.ligar_o_freestyle`, que grava a memória junto.
     """
     try:
-        flag = config_dir(ensure=True) / _AUTOSWITCH_LOCK_FLAG_FILE
-        if locked:
+        flag = config_dir(ensure=True) / _FREESTYLE_LIGADO_FLAG_FILE
+        if ligado:
             flag.write_text("1\n", encoding="utf-8")
         else:
             flag.unlink(missing_ok=True)
-        logger.debug("autoswitch_locked_saved", locked=locked)
+        logger.debug("freestyle_ligado_salvo", ligado=ligado)
     except Exception as exc:
-        logger.debug("autoswitch_locked_save_failed", err=str(exc))
+        logger.debug("freestyle_ligado_nao_salvou", err=str(exc))
 
 
-def load_autoswitch_locked() -> bool:
-    """True se a troca automática foi deixada congelada na sessão anterior."""
+def _o_cadeado_antigo_vira_freestyle(base: Path) -> None:
+    """One-shot: o `autoswitch_locked.flag` LIGADO vira `freestyle_ligado.flag`.
+
+    Item 5 da O-FREESTYLE-E-UMA-CAMADA-SO-01: o botão «Modo Freestyle» era o
+    cadeado de 23/07, e quem o deixou ligado continua com ele ligado. O
+    arquivo novo nasce ANTES de o antigo sair — uma queda no meio deixa os dois,
+    e a próxima leitura termina o serviço. Idempotente: sem o antigo, nada.
+    """
+    antigo = base / _FLAG_DO_CADEADO_ANTIGO
+    if not antigo.exists():
+        return
+    novo = base / _FREESTYLE_LIGADO_FLAG_FILE
+    if not novo.exists():
+        novo.write_text("1\n", encoding="utf-8")
+    antigo.unlink(missing_ok=True)
+    logger.info("cadeado_antigo_virou_freestyle_ligado")
+
+
+def load_freestyle_ligado() -> bool:
+    """True se o Modo Freestyle foi deixado ligado na sessão anterior.
+
+    Faz a migração do cadeado antigo na mesma leitura (ver
+    `_o_cadeado_antigo_vira_freestyle`): quem lê é o boot do daemon, e é a
+    primeira coisa que o produto novo faz no disco dela.
+    """
     try:
-        return (config_dir() / _AUTOSWITCH_LOCK_FLAG_FILE).exists()
+        base = config_dir()
+        with contextlib.suppress(OSError):
+            _o_cadeado_antigo_vira_freestyle(base)
+        return (base / _FREESTYLE_LIGADO_FLAG_FILE).exists()
     except Exception:
         return False
 
@@ -731,7 +761,7 @@ def migrate_coop_optout() -> bool:
 
 
 __all__ = [
-    "load_autoswitch_locked",
+    "load_freestyle_ligado",
     "load_gamepad_caminho_com_origem",
     "load_gamepad_emulation",
     "load_gamepad_preference",
@@ -743,8 +773,8 @@ __all__ = [
     "read_active_marker",
     "resolve_boot_profile",
     "save_active_marker",
-    "save_autoswitch_locked",
     "save_coop_enabled",
+    "save_freestyle_ligado",
     "save_gamepad_caminho",
     "save_gamepad_emulation",
     "save_keyboard_emulation",

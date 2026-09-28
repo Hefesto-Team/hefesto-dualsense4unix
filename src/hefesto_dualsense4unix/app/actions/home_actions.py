@@ -294,15 +294,15 @@ _BTN_LABEL_OFFLINE = "Ligar o Hefesto"
 
 
 def autoswitch_lock_text(state: dict[str, Any] | None) -> str:
-    """Frase do cadeado da troca de perfil — função PURA (UX-05).
+    """Frase do Modo Freestyle ligado — função PURA (UX-05).
 
-    Vazia quando destravado (nada a explicar: é o comportamento normal). Com o
-    cadeado ligado, diz as duas metades da política LOCK-CEDE-01, porque as
-    duas surpreendem quem só vê o efeito:
+    Vazia quando desligado (nada a explicar: é o comportamento normal). Ligado,
+    diz o que vale: o perfil ativo, em todo jogo.
 
-    1. o que ela pediu — o perfil escolhido FICA, nada troca por janela;
-    2. o que continua valendo — o jogo que TEM perfil próprio ainda entra
-       (senão "o modo jogo não ativa" volta a ser um mistério sem causa).
+    FATO SUBSTITUÍDO — 28/09/2026 (O-FREESTYLE-E-UMA-CAMADA-SO-01). A frase
+    dizia *"Jogos com perfil próprio ainda entram"*, a metade da LOCK-CEDE-01.
+    A decisão dela (`D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA`) a revogou:
+    ligado, nenhum jogo entra por cima. A frase dizia o contrário do produto.
 
     O nome do perfil ativo entra quando ALGUÉM sabe dizer qual é: "o perfil não
     troca sozinho" sem dizer QUAL perfil ficou é meia informação.
@@ -318,7 +318,7 @@ def autoswitch_lock_text(state: dict[str, Any] | None) -> str:
     **Import adiado de propósito:** `profiles_actions` importa deste módulo
     (`texto_do_custo_da_mascara`), então um import no topo fecharia o ciclo.
     """
-    if not state or not state.get("autoswitch_locked"):
+    if not state or not state.get("freestyle_ligado"):
         return ""
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
         perfil_que_esta_valendo,
@@ -326,10 +326,7 @@ def autoswitch_lock_text(state: dict[str, Any] | None) -> str:
 
     ativo = perfil_que_esta_valendo(state).nome
     alvo = f" — vale o perfil “{ativo}”" if ativo else ""
-    return (
-        f"Cadeado ligado: o perfil não troca sozinho{alvo}. "
-        "Jogos com perfil próprio ainda entram; qualquer outra janela é ignorada."
-    )
+    return f"Modo Freestyle ligado: o perfil não troca sozinho{alvo}, nem no jogo."
 
 
 #: O que o botão «Modo Freestyle» NÃO vai fazer
@@ -2782,7 +2779,7 @@ class HomeActionsMixin(WidgetAccessMixin):
             _lock = getattr(self, "_home_autoswitch_lock", None)
             if _lock is not None:
                 _lock.set_sensitive(True)
-                _lock.set_active(bool(state.get("autoswitch_locked", False)))
+                _lock.set_active(bool(state.get("freestyle_ligado", False)))
             # UX-05: a CAUSA fica visível junto do efeito, em texto.
             _lock_hint = getattr(self, "_home_autoswitch_lock_hint", None)
             if _lock_hint is not None:
@@ -3345,15 +3342,15 @@ class HomeActionsMixin(WidgetAccessMixin):
             else:
                 self._status_toast(
                     "home",
-                    "Troca automática de perfil CONGELADA — o perfil que você "
-                    "escolheu fica." if resultado else
-                    "Troca automática de perfil LIBERADA — o Hefesto volta a "
-                    "escolher o perfil ao abrir cada jogo.",
+                    "Modo Freestyle ligado — o Freestyle vale em todo jogo."
+                    if resultado else
+                    "Modo Freestyle desligado — o Hefesto volta a escolher o "
+                    "perfil ao abrir cada jogo.",
                 )
             return False
 
         ipc_bridge.run_in_thread(
-            lambda: ipc_bridge.autoswitch_lock_set(desejado), on_success=_fim
+            lambda: ipc_bridge.freestyle_set(desejado), on_success=_fim
         )
 
     def _on_home_reconciliar_clicked(self, _button: object) -> None:

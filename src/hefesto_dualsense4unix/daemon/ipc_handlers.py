@@ -2497,8 +2497,8 @@ class IpcHandlersMixin:
             "battery_pct": controller.battery_pct if controller else None,
             # FEAT-DAEMON-PAUSE-RESUME-01: distingue pausado (vivo, sem input) de parado.
             "paused": bool(self.daemon is not None and self.daemon.is_paused()),
-            # FEAT-AUTOSWITCH-LOCK-01: a GUI reflete o cadeado da troca de perfil.
-            "autoswitch_locked": bool(self.store.autoswitch_locked),
+            # O-FREESTYLE-E-UMA-CAMADA-SO-01: o botão «Modo Freestyle» reflete isto.
+            "freestyle_ligado": bool(self.store.freestyle_ligado),
             "native_mode": bool(
                 self.daemon is not None and self.daemon.is_native_mode()
             ),
@@ -2792,25 +2792,68 @@ class IpcHandlersMixin:
         self.daemon.resume()
         return {"status": "ok", "paused": False}
 
-    async def _handle_autoswitch_lock(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Congela/descongela a troca AUTOMÁTICA de perfil (FEAT-AUTOSWITCH-LOCK-01).
+    async def _handle_freestyle_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Liga/desliga o Modo Freestyle — o botão «Modo Freestyle» da aba Jogar.
 
-        Pedido da mantenedora (23/07): poder dizer "usa o que eu escolhi, não
-        troca sozinho" — para qualquer jogo. É o
-        oposto de aplicar o perfil do jogo por foco de janela.
+        O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026), no lugar do `autoswitch.lock`
+        (o cadeado de 23/07, que cedia a todo perfil de jogo). A palavra dela:
+        *«Aperto o botão do freestyle e o jogo que eu tiver jogando vai ter essa
+        config independente do perfil do jogo.»*  (noqa-acento: citação dela)
 
-        `locked` opcional: ausente → toggle. Persiste em disco (sobrevive a
-        reboot) e vale no tick seguinte do autoswitch — não mexe em gamepad/
-        co-op/rumble, só na DECISÃO de perfil.
+        `ligado` opcional: ausente → inverte.
+
+        **LIGAR É O «ATIVAR» DO FREESTYLE NA ABA PERFIS**, e é o mesmo caminho:
+        o `profile.switch` dele, com a ativação à mão — que é quem liga o modo
+        (`profiles.manager.ligar_o_freestyle`). Ligado, nenhum caminho
+        automático troca o perfil.
+
+        **DESLIGAR DEVOLVE O JOGO SEM REABRIR** (a prova 3 da sprint). O lock de
+        30 s da troca à mão sai — desligar é ela devolvendo a escolha ao
+        Hefesto —, e o jogo vivo do lançamento volta com o perfil dele, ativado
+        como o «Ativar» o ativaria. Sem jogo vivo, o autoswitch decide pela
+        janela no tique seguinte.
         """
-        from hefesto_dualsense4unix.utils.session import save_autoswitch_locked
+        from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
+        from hefesto_dualsense4unix.profiles.manager import (
+            ligar_o_freestyle,
+            o_freestyle_manda,
+        )
 
-        pedido = params.get("locked")
-        novo = not self.store.autoswitch_locked if pedido is None else bool(pedido)
-        self.store.set_autoswitch_locked(novo)
-        save_autoswitch_locked(novo)
-        logger.info("autoswitch_lock_set", locked=novo)
-        return {"status": "ok", "autoswitch_locked": novo}
+        pedido = params.get("ligado")
+        if pedido is not None and not isinstance(pedido, bool):
+            raise ValueError("freestyle.set: 'ligado' precisa ser boolean")
+        novo = (not o_freestyle_manda(self.store)) if pedido is None else pedido
+        if novo:
+            resposta = await self._handle_profile_switch({"name": NOME_DO_PADRAO})
+        else:
+            ligar_o_freestyle(self.store, False)
+            self.store.mark_manual_profile_lock(0.0)
+            resposta = await self._o_jogo_vivo_volta()
+        resposta["status"] = "ok"
+        resposta["freestyle_ligado"] = o_freestyle_manda(self.store)
+        logger.info("freestyle_set", ligado=resposta["freestyle_ligado"])
+        return resposta
+
+    async def _o_jogo_vivo_volta(self) -> dict[str, Any]:
+        """O jogo do lançamento que ainda roda volta com o perfil dele.
+
+        Quem responde "que jogo está vivo" é o dono do lançamento
+        (`autoswitch.jogo_do_wrapper_vivo`, o marker do wrapper com o `AppId=`
+        conferido na linha de comando), e "qual é o perfil dele" é a leitura
+        única (`manager.perfil_do_appid`). A janela em foco não entra: com o jogo
+        em outra tela, ela não diria nada — é o caso da
+        `D-2709-O-PERFIL-DO-JOGO-ENTRA-NO-LANCAMENTO`.
+        """
+        from hefesto_dualsense4unix.profiles.autoswitch import jogo_do_wrapper_vivo
+        from hefesto_dualsense4unix.profiles.manager import perfil_do_appid
+
+        perfil = None
+        with contextlib.suppress(Exception):
+            appid = jogo_do_wrapper_vivo()
+            perfil = perfil_do_appid(appid) if appid is not None else None
+        if perfil is None:
+            return {"active_profile": self.store.active_profile}
+        return await self._handle_profile_switch({"name": perfil.name})
 
     async def _handle_native_mode_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """Liga/desliga o Modo Nativo — "release total" do controle (FEAT-NATIVE-MODE-01).
@@ -2910,8 +2953,8 @@ class IpcHandlersMixin:
             "counters": snap.counters,
             # FEAT-DAEMON-PAUSE-RESUME-01: applet/GUI distinguem pausado de parado.
             "paused": bool(self.daemon is not None and self.daemon.is_paused()),
-            # FEAT-AUTOSWITCH-LOCK-01: applet/GUI refletem o cadeado da troca de perfil.
-            "autoswitch_locked": bool(self.store.autoswitch_locked),
+            # O-FREESTYLE-E-UMA-CAMADA-SO-01: o botão «Modo Freestyle» reflete isto.
+            "freestyle_ligado": bool(self.store.freestyle_ligado),
             "native_mode": bool(
                 self.daemon is not None and self.daemon.is_native_mode()
             ),
@@ -7186,11 +7229,24 @@ class IpcHandlersMixin:
 
         # O `caminho` só vai quando veio: quem não o manda (a CLI, o applet)
         # continua chamando o setter com a assinatura de sempre.
+        modo: dict[str, Any] = {"caminho": caminho} if caminho is not None else {}
+        # O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026), a porta que a conferência
+        # da O-MODO-XBOX-NAO-E-QUEDA-02 achou: LIGAR SEM CAMINHO PERGUNTA O MODO
+        # AO DONO. O chip «Jogar pelo Hefesto», saindo da Conexão Nativa, liga o
+        # pad sem dizer o modo, e o start sem opinião não herda de lugar nenhum
+        # (CAMINHO-CONTAGIO-01): subia DualSense com o perfil ativo em Xbox — o
+        # Freestyle dela entre eles. O dono do modo é o perfil ativo. Não é
+        # escolha nova dela, e por isso não vai para o arquivo global dela
+        # (`caminho_e_escolha=False`).
+        if enabled and caminho is None:
+            do_dono = self._caminho_do_perfil_ativo()
+            if do_dono is not None:
+                modo = {"caminho": do_dono, "caminho_e_escolha": False}
         ok = self.daemon.set_gamepad_emulation(
             enabled=enabled,
             flavor=flavor,
             origin=origem_do_pedido(params),
-            **({"caminho": caminho} if caminho is not None else {}),
+            **modo,
         )
         active_flavor = getattr(self.daemon.config, "gamepad_flavor", None)
         resposta: dict[str, Any] = {
@@ -7203,6 +7259,29 @@ class IpcHandlersMixin:
         if caminho is not None:
             resposta["caminho"] = _caminho_publicado(self.daemon)
         return resposta
+
+    def _caminho_do_perfil_ativo(self) -> str | None:
+        """O MODO que o perfil ativo declara (`dualsense`/`xbox`), ou ``None``.
+
+        O dono é a seção `mode` do perfil que está valendo, a mesma que o
+        lançamento, o autoswitch e o boot aplicam
+        (O-MODO-XBOX-NAO-E-QUEDA-02). Só o `kind="gamepad"` tem modo: a
+        Navegação e o Nativo não dizem por qual canal o pad sobe, e ali vale o
+        padrão da máquina, como antes. Nunca levanta: perfil que não se lê é
+        "não sei", e "não sei" é o comportamento de sempre.
+        """
+        from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
+
+        nome = getattr(self.store, "active_profile", None)
+        if not isinstance(nome, str) or not nome:
+            return None
+        try:
+            mode = self.profile_manager.get(nome).mode
+        except Exception:
+            return None
+        if getattr(mode, "kind", None) != "gamepad":
+            return None
+        return normalizar_caminho(getattr(mode, "caminho", None))
 
     async def _handle_coop_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """Liga o co-op local; RECUSA desligar (FEAT-DSX-COOP-LOCAL-01).

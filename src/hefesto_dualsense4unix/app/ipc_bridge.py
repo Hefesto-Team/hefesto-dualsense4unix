@@ -195,18 +195,18 @@ def daemon_state_full() -> dict[str, Any] | None:
     return None
 
 
-def autoswitch_lock_set(locked: bool | None = None) -> bool | None:
-    """Congela/descongela a troca automática de perfil (FEAT-AUTOSWITCH-LOCK-01).
+def freestyle_set(ligado: bool | None = None) -> bool | None:
+    """Liga/desliga o Modo Freestyle (O-FREESTYLE-E-UMA-CAMADA-SO-01).
 
-    `locked=None` faz toggle no daemon. Devolve o estado resultante
-    (True=congelado), ou None se o daemon está offline.
+    `ligado=None` inverte no daemon. Devolve o estado que FICOU valendo
+    (True = ligado), ou None se o daemon não respondeu.
     """
     params: dict[str, Any] = {}
-    if locked is not None:
-        params["locked"] = bool(locked)
-    ok, result = _safe_call("autoswitch.lock", params)
+    if ligado is not None:
+        params["ligado"] = bool(ligado)
+    ok, result = _safe_call("freestyle.set", params)
     if ok and isinstance(result, dict):
-        estado = result.get("autoswitch_locked")
+        estado = result.get("freestyle_ligado")
         return bool(estado) if isinstance(estado, bool) else None
     return None
 
@@ -1678,13 +1678,13 @@ __all__ = [
     "alvo_honrado",
     "aplicacao_confirmada",
     "apply_draft_detalhado",
-    "autoswitch_lock_set",
     "call_async",
     "daemon_state_full",
     "daemon_status_basic",
     "destinos_da_aplicacao",
     "frase_do_ato_do_microfone",
     "frase_do_interruptor_de_sensor",
+    "freestyle_set",
     "identity_number_set",
     "led_set",
     "led_set_detalhado",

@@ -124,7 +124,7 @@ mira_set_detalhado = _b.mira_set_detalhado
 profile_list = _b.profile_list
 profile_switch = _b.profile_switch
 apply_draft_detalhado = _b.apply_draft_detalhado
-autoswitch_lock_set = _b.autoswitch_lock_set
+freestyle_set = _b.freestyle_set
 machine_declare = _b.machine_declare
 
 daemon_state_full = _b.daemon_state_full

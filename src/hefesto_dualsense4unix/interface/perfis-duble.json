@@ -99,7 +99,7 @@
  ],
  "state": {
   "active_profile": "Pragmata",
-  "autoswitch_locked": false,
+  "freestyle_ligado": false,
   "battery_pct": 100,
   "bt_mic": {
    "enabled": false,

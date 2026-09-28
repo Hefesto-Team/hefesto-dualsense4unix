@@ -178,7 +178,9 @@ def _caminho_do_dono(daemon: Any, motivo: str) -> str | None:
     return nomear_o_restart(daemon, motivo)
 
 
-def _o_modo_do_perfil_do_boot() -> tuple[str | None, str | None, str | None]:
+def _o_modo_do_perfil_do_boot(
+    store: Any = None,
+) -> tuple[str | None, str | None, str | None]:
     """``(caminho, máscara, nome)`` do perfil que o boot restaura, ou vazios.
 
     O-MODO-XBOX-NAO-E-QUEDA-02, item 3. Só a seção `mode` de `kind="gamepad"`
@@ -190,7 +192,7 @@ def _o_modo_do_perfil_do_boot() -> tuple[str | None, str | None, str | None]:
     from hefesto_dualsense4unix.integrations.uinput_gamepad import resolver_flavor
 
     try:
-        perfil = perfil_que_o_boot_restaura()
+        perfil = perfil_que_o_boot_restaura(store)
     except Exception:
         return None, None, None
     if perfil is None:
@@ -1141,10 +1143,12 @@ class Daemon:
         # terminou pausada (o poll loop nasce respeitando _paused).
         from hefesto_dualsense4unix.utils.session import load_paused_state
         self._paused = load_paused_state()
-        # FEAT-AUTOSWITCH-LOCK-01: retoma congelada se a sessão anterior terminou
-        # assim (a escolha DELA de "não troca de perfil sozinho" atravessa reboot).
-        from hefesto_dualsense4unix.utils.session import load_autoswitch_locked
-        self.store.set_autoswitch_locked(load_autoswitch_locked())
+        # O-FREESTYLE-E-UMA-CAMADA-SO-01: o Modo Freestyle atravessa o reboot
+        # (a prova 5 da sprint). A leitura migra, uma vez, o cadeado de 23/07.
+        # É memória carregada do disco, e não escrita: por isso o setter cru, e
+        # não o `ligar_o_freestyle`, que regravaria o que acabou de ler.
+        from hefesto_dualsense4unix.utils.session import load_freestyle_ligado
+        self.store.set_freestyle_ligado(load_freestyle_ligado())
         # FEAT-NATIVE-MODE-01: se a sessão anterior terminou em Modo Nativo, sobe
         # SOLTO — o controle fica com o jogo. Implica pausado e NÃO restaura
         # emulação nem re-aplica perfil (os `not self._native_mode` abaixo e o
@@ -1266,7 +1270,9 @@ class Daemon:
         # qualquer jeito. Sem perfil que opine, o slot nasce vazio, como antes.
         self._caminho_do_boot: str | None = None
         if not self._native_mode:
-            caminho_do_boot, mascara_do_boot, perfil_do_boot = _o_modo_do_perfil_do_boot()
+            caminho_do_boot, mascara_do_boot, perfil_do_boot = _o_modo_do_perfil_do_boot(
+                self.store
+            )
             self._caminho_do_boot = caminho_do_boot
             if mascara_do_boot is not None and self.config.gamepad_emulation_enabled:
                 self.config.gamepad_flavor = mascara_do_boot
@@ -1727,10 +1733,19 @@ class Daemon:
         ativação vai com `origin="system"`: sair do nativo não é escolha nova
         de perfil e NÃO regrava a intenção manual.
         """
-        from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
+        from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
+        from hefesto_dualsense4unix.profiles.manager import (
+            gerente_do_daemon,
+            o_freestyle_manda,
+        )
         from hefesto_dualsense4unix.utils.session import load_last_profile
 
-        name = self.store.active_profile or load_last_profile()
+        # O-FREESTYLE-E-UMA-CAMADA-SO-01: com o Modo Freestyle ligado, é ele
+        # que volta — o `session.json` pode apontar um perfil de jogo que o
+        # `activate` recusaria, e a saída do Nativo ficaria sem perfil nenhum.
+        name = (
+            NOME_DO_PADRAO if o_freestyle_manda(self.store) else None
+        ) or self.store.active_profile or load_last_profile()
         if not name:
             return
         # A-FÁBRICA-COM-UM-CLIENTE-01/E1 (26/08/2026): esta rota montava o
@@ -2281,12 +2296,17 @@ class Daemon:
         *,
         origin: OrigemEmulacao,
         caminho: str | None = None,
+        caminho_e_escolha: bool = True,
     ) -> bool:
         """Liga/desliga o gamepad virtual e define a máscara. Usado pelo IPC.
 
         MODO-DE-CONEXAO-01 (13/09/2026): `caminho` é o MODO de conexão, e é o
         que o chip da aba Jogar e o PS + R3 mandam. Quem não o manda (a CLI, com
         o `--flavor` que continua sendo máscara) não mexe no caminho.
+
+        `caminho_e_escolha=False` (O-FREESTYLE-E-UMA-CAMADA-SO-01, 28/09/2026):
+        o `caminho` veio do perfil ativo, perguntado pelo `gamepad.emulation.set`
+        sem caminho — vale para o pad e nunca chega ao arquivo global dela.
 
         Fachada de `set_gamepad_emulation_desfecho` — o bool diz **ativo (ou
         parado) ao final**, nunca "aplicou o pedido". VERDADE-01 (18/08): era
@@ -2318,7 +2338,8 @@ class Daemon:
         )
 
         desfecho = self.set_gamepad_emulation_desfecho(
-            enabled, flavor, origin=origin, caminho=caminho
+            enabled, flavor, origin=origin, caminho=caminho,
+            caminho_e_escolha=caminho_e_escolha,
         )
         if enabled:
             return desfecho in DESFECHOS_EMULACAO_ATIVA
@@ -3497,11 +3518,11 @@ class Daemon:
            vencer); deliberadamente NÃO usa a pendência `ModoAdiado`, que é o
            canal do modo de um PERFIL e morre quando o perfil ativo muda.
 
-        O cadeado de autoswitch (`autoswitch_locked`) não é consultado — nem
-        aqui nem no chamador — e isso é a decisão, não um esquecimento: ele
-        congela a decisão de PERFIL ("não trocar de perfil sozinho ao abrir um
-        jogo"), e ela o mantém ligado justamente para o perfil dela ficar de pé.
-        Modo é outro eixo.
+        NOTA DATADA — 28/09/2026 (O-FREESTYLE-E-UMA-CAMADA-SO-01). Aqui dizia
+        que o cadeado de autoswitch não era consultado, porque congelava só o
+        PERFIL e o modo é outro eixo. O cadeado saiu; o Modo Freestyle que o
+        substitui manda também no modo, e quem o respeita é o chamador — o
+        `AutoSwitcher` para o tique inteiro, antes de pedir o modo jogo padrão.
 
         Retorno: o vocabulário de `APLICADO`/`ADIADO_LOCK_MANUAL`/`IGNORADO_*`.
         """

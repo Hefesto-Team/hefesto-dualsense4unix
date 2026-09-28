@@ -202,11 +202,14 @@ class DaemonProtocol(Protocol):
         *,
         origin: Literal["manual", "profile"],
         caminho: str | None = None,
+        caminho_e_escolha: bool = True,
     ) -> bool:
         """Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01).
 
         `caminho` (MODO-DE-CONEXAO-01, 13/09/2026) é o MODO de conexão —
         `"dualsense"` ou `"xbox"` —, separado da máscara; `None` não mexe nele.
+        `caminho_e_escolha=False`: o caminho veio do perfil ativo, e não é
+        escolha nova dela (O-FREESTYLE-E-UMA-CAMADA-SO-01).
         """
         ...
 

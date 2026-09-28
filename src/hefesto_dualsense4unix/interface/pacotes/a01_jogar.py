@@ -433,9 +433,11 @@ ESPERA_DICA = (
 #:
 #: **A PALAVRA MUDOU EM 23/09/2026, e é dela** (D-2309-O-MODO-FREESTYLE):
 #: *"o botão Trava o perfil Ativo na aba jogar. Vira Modo Freestyle o botão."*
-#: O que o botão FAZ não mudou — é o mesmo `autoswitch.lock`, e a dica abaixo
-#: continua a razão dele. O que mudou foi o nome, a letra e a altura, e os três
-#: estão no DESENHO (`aba01.py`), publicado em 24/09/2026 por delegação dela.
+#: O que o botão FAZ mudou em 28/09/2026 (O-FREESTYLE-E-UMA-CAMADA-SO-01): era o
+#: cadeado de 23/07, que cedia a todo perfil de jogo; é o `freestyle.set`, que
+#: ativa o Freestyle e o põe na frente de todo jogo. A dica abaixo continua
+#: verdadeira — o perfil ativo, o Freestyle, continua valendo quando outro jogo
+#: abre. O nome, a letra e a altura estão no DESENHO (`aba01.py`).
 CADEADO_ROTULO = "Modo Freestyle"
 #: «Desmarque» virou «Desligue» em 24/09/2026 (O-MODO-FREESTYLE-02): a caixa
 #: virou pílula em 19/09, e pílula se liga e se desliga. A gêmea da GTK foi junto.
@@ -447,7 +449,7 @@ CADEADO_DICA = (
 #: O QUE A TELA DIZ QUANDO O SERVIÇO NÃO CONFIRMOU O CADEADO — e a frase é da
 #: janela antiga, palavra por palavra, como as duas acima.
 #:
-#: `ipc_bridge.autoswitch_lock_set` responde TRÊS coisas, e é a terceira que
+#: `ipc_bridge.freestyle_set` responde TRÊS coisas, e é a terceira que
 #: obriga esta frase a existir: `True` e `False` são o estado que ficou valendo,
 #: e `None` quer dizer *não houve resposta* — serviço parado, socket recusado,
 #: o teto do `_safe_call` estourando. O `_on_home_autoswitch_lock_toggled` da
@@ -495,7 +497,7 @@ def _cadeado(state: dict[str, Any]) -> str:
     `texto_da_pausa`: chave ausente (daemon antigo) ou valor de outro tipo
     **não** acendem — caem no travessão, que é o "não sei" honesto.
     """
-    lido = state.get("autoswitch_locked")
+    lido = state.get("freestyle_ligado")
     if lido is True:
         return CADEADO_LIGADO
     if lido is False:
@@ -3767,7 +3769,7 @@ def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
     return recado
 
 
-@gesto("01-jogar.html", "cadeado", grava="autoswitch_lock_set")
+@gesto("01-jogar.html", "cadeado", grava="freestyle_set")
 def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O botão «Modo Freestyle» — até 23/09/2026, a caixa «Trava o perfil ativo».
 
@@ -3781,10 +3783,11 @@ def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     posição em que a frase que explica e o botão que resolve ficam na mesma
     tela.
 
-    O ESCRITOR JÁ EXISTIA: `ponte.autoswitch_lock_set` expõe o
-    `app/ipc_bridge.autoswitch_lock_set`, que é o mesmo que o
+    O ESCRITOR JÁ EXISTIA: `ponte.freestyle_set` expõe o
+    `app/ipc_bridge.freestyle_set`, que é o mesmo que o
     `_on_home_autoswitch_lock_toggled` da janela antiga aciona. Zero regra
-    reescrita.
+    reescrita. Desde 28/09/2026 (O-FREESTYLE-E-UMA-CAMADA-SO-01) ligar é o
+    «Ativar» do Freestyle na aba Perfis, e ele manda em todo jogo.
 
     **O VALOR VAI ABSOLUTO, NUNCA COMO TOGGLE, e é a metade que decide.** A
     ponte aceita `locked=None` e o daemon inverte sozinho; usar isso aqui seria
@@ -3801,21 +3804,21 @@ def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
        que ela não viu.
 
     E O `evento` FILTRA A SEGUNDA ENTREGA, para o disco dela receber UMA
-    escrita por clique: `save_autoswitch_locked` grava (`ipc_handlers.py:2536`).
+    escrita por clique: `profiles.manager.ligar_o_freestyle` grava.
     O `change` é o escolhido porque é o único que só dispara quando a caixa de
     fato MUDOU — clique em rótulo, tecla de espaço e `el.click()` sintético
     passam pelos três caminhos. Um clique sem `evento` (a régua dos botões, que
     monta o recado à mão) continua valendo: o padrão é `change`.
 
     A VERDADE VOLTA DO DAEMON, não deste gesto: o alvo `marcado` repinta a caixa
-    a cada tique a partir de `autoswitch_locked`. Se a escrita não pegar, a
+    a cada tique a partir de `freestyle_ligado`. Se a escrita não pegar, a
     caixa **volta sozinha** — que é o oposto de uma tela que finge ter guardado.
 
     RELATO FECHADO — 06/09/2026, pela `ONDA3-GESTO-DECLARA-01`. Aqui estava
     escrito que este gesto pertencia a `hefesto_vivo.PERIGOSOS` e que a linha
     não podia ser escrita *"porque os dois arquivos são de outro dono"*. Esse
     é exatamente o defeito que a sprint matou: a declaração passou a morar no
-    PRÓPRIO decorador (`grava="autoswitch_lock_set"`), e `PERIGOSOS` é derivada
+    PRÓPRIO decorador (`grava="freestyle_set"`), e `PERIGOSOS` é derivada
     dela. Quem escreve o gesto fecha o próprio contrato.
 
     **FATO SUBSTITUÍDO — 06/09/2026, e a conclusão dele fica de pé por outro
@@ -3825,8 +3828,8 @@ def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     produto renderiza (`onde.PUBLICADO`), e a régua
     `test_o_cadeado_esta_publicado` mede isso LENDO o arquivo — não este
     parágrafo. **A conclusão continua certa, e a razão é `PERIGOSOS`:** clicar
-    esta caixa GRAVA no disco dela (`utils/session.save_autoswitch_locked`, pelo
-    `autoswitch.lock`), e uma régua de clique que mudasse uma preferência dela
+    esta caixa GRAVA no disco dela (`utils/session.save_freestyle_ligado`, pelo
+    `freestyle.set`), e uma régua de clique que mudasse uma preferência dela
     para provar que sabe clicar seria pior que a cobertura que ela compra.
 
     **O VERDE É O RECIBO, e ele só acende quando o serviço confirmou** —
@@ -3845,16 +3848,16 @@ def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     inventar aqui, e endereço nenhum a criar.
 
     **O QUE FALTAVA ERA O DIREITO DE PEDI-LO: a resposta da ponte ia para o
-    lixo.** `ipc_bridge.autoswitch_lock_set` devolve o estado que FICOU valendo,
+    lixo.** `ipc_bridge.freestyle_set` devolve o estado que FICOU valendo,
     e `None` quando não houve resposta. Sem ler isso, um clique com o serviço
     parado piscava VERDE e a caixa desmarcava no tique seguinte (`_cadeado` sem
-    `autoswitch_locked` devolve `""`): a tela dizia *guardei* e *não está
+    `freestyle_ligado` devolve `""`): a tela dizia *guardei* e *não está
     guardado* com 100 ms entre as duas. É a metade que separa **o produto
     confirmou** de **a tela pintou sozinha**.
 
     A GUARDA É `is None` E NÃO UMA COMPARAÇÃO, e a medição diz por quê:
-    `_handle_autoswitch_lock` (`daemon/ipc_handlers.py`) faz `novo = bool(pedido)`
-    quando o `locked` vem no pedido — o toggle é só para quem NÃO manda valor, e
+    `_handle_freestyle_set` (`daemon/ipc_handlers.py`) usa o `ligado`
+    quando ele vem no pedido — o toggle é só para quem NÃO manda valor, e
     este gesto sempre manda. Um bool que discordasse do pedido é ramo que este
     daemon não tem como produzir, e escrevê-lo seria inventar um desfecho para
     poder tratá-lo.
@@ -3873,7 +3876,7 @@ def cadeado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if str(o.get("evento") or "click") != "click":
         return
     pedido = _cadeado(ctx.state) != CADEADO_LIGADO
-    if p.autoswitch_lock_set(locked=pedido) is None:
+    if p.freestyle_set(ligado=pedido) is None:
         raise RuntimeError(CADEADO_RECUSA)
 
 
@@ -4070,12 +4073,12 @@ OS_DOIS_DA_LISTA_DOS_DEZESSEIS: dict[str, str] = {
 #: AS FUNÇÕES DA PONTE QUE ESTA ABA USA. Uma só, e o `chamar` é o degrau 3: os
 #: quatro métodos abaixo não têm invólucro no `app/ipc_bridge.py` — conferido nas
 #: 36 funções que ele expõe.
-#: `autoswitch_lock_set` É DEGRAU 2 — 04/09/2026. Ele TEM invólucro no
-#: `app/ipc_bridge.py` (o mesmo que a janela antiga aciona no `toggled` do
-#: checkbox), e por isso não desce ao `chamar` cru: o degrau 3 é só para o que
-#: não tem função em lugar nenhum. Chamá-lo por `chamar("autoswitch.lock", …)`
-#: seria a segunda rota para um ato que já tem uma, e a de cá não saberia ler o
-#: `autoswitch_locked` que o handler devolve.
+#: `freestyle_set` É DEGRAU 2 — 04/09/2026 (o nome é de 28/09). Ele TEM
+#: invólucro no `app/ipc_bridge.py` (o mesmo que a janela antiga aciona no
+#: `toggled` do checkbox), e por isso não desce ao `chamar` cru: o degrau 3 é só
+#: para o que não tem função em lugar nenhum. Chamá-lo por
+#: `chamar("freestyle.set", …)` seria a segunda rota para um ato que já tem uma,
+#: e a de cá não saberia ler o `freestyle_ligado` que o handler devolve.
 #: `resultado` É DEGRAU 3 TAMBÉM, e entrou em 06/09/2026 com o recibo do
 #: "Reconectar Controles". Ela é o `chamar` que **não joga o corpo fora**: os
 #: dois métodos do botão respondem `{status, players, active}` e
@@ -4087,7 +4090,7 @@ OS_DOIS_DA_LISTA_DOS_DEZESSEIS: dict[str, str] = {
 #: dele porque `gamepad.mask.set` responde `{"gravado": false, "motivo": …}`
 #: dentro de uma resposta bem-sucedida: com `chamar` a tela piscava verde
 #: sobre um perfil que não mudou.
-PONTE = {"chamar", "chamar_detalhado", "autoswitch_lock_set", "resultado"}
+PONTE = {"chamar", "chamar_detalhado", "freestyle_set", "resultado"}
 #: OS MÉTODOS CRUS. A régua confere um a um contra o `ipc_server.py`, e um nome
 #: inventado reprova AQUI, não na mão de quem clica.
 #: OS CINCO DA TROCA DE MODO — os que `ponte.TETOS` cobre com os 2,0 s do
@@ -4232,16 +4235,16 @@ PROVAS = [
      "clique": {"uniq": "aa:bb:cc:00:00:01", "mascara": "Xbox 360"},
      "chama": [("chamar_detalhado", ["gamepad.mask.set"],
                 {"uniq": "aa:bb:cc:00:00:01", "flavor": "xbox"})]},
-    # O CADEADO — 04/09/2026. Ele NÃO passa pelo `chamar`: `autoswitch_lock_set`
+    # O CADEADO — 04/09/2026. Ele NÃO passa pelo `chamar`: `freestyle_set`
     # é função da ponte (degrau 2), a mesma que a janela antiga aciona.
     #
-    # O `locked` VAI POR NOME e vai ABSOLUTO, e a régua mede as duas coisas: um
-    # `locked=None` daria toggle no daemon e a prova passaria com `kw` vazio,
+    # O `ligado` VAI POR NOME e vai ABSOLUTO, e a régua mede as duas coisas: um
+    # `ligado=None` daria toggle no daemon e a prova passaria com `kw` vazio,
     # que é exatamente o defeito que este gesto não pode ter (um clique chega
     # DUAS vezes ao ouvinte único — `click` e `change` — e dois toggles são um
-    # no-op). O `ctx` da régua tem `autoswitch_locked` ausente, logo o cadeado
-    # está DESTRAVADO e o clique pede `True`.
+    # no-op). O `ctx` da régua tem `freestyle_ligado` ausente, logo o Freestyle
+    # está DESLIGADO e o clique pede `True`.
     {"pagina": PAGINA,  # (noqa-acento) chave do contrato
      "gesto": "cadeado", "clique": {"evento": "click"},
-     "chama": [("autoswitch_lock_set", [], {"locked": True})]},
+     "chama": [("freestyle_set", [], {"ligado": True})]},
 ]

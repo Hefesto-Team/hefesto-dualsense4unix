@@ -656,7 +656,7 @@ def _perfil_escopado_a_janela(nome: str) -> bool:
     return False
 
 
-def perfil_que_o_boot_restaura() -> Any | None:
+def perfil_que_o_boot_restaura(store: Any = None) -> Any | None:
     """O perfil que o `restore_last_profile` vai ativar, lido sem ativar nada.
 
     O-MODO-XBOX-NAO-E-QUEDA-02 (28/09/2026), item 3 da cura consolidada. O
@@ -673,17 +673,29 @@ def perfil_que_o_boot_restaura() -> Any | None:
     e NÃO tenta o `session.json` (conferência de 28/09: tentá-lo aqui punha o
     pad no modo de um perfil que o restore não ativa, com a tela dizendo o
     outro). Nunca levanta: sem perfil legível, ``None`` e o boot de sempre.
+
+    O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026): com o Modo Freestyle ligado, o
+    boot restaura o Freestyle, e o primeiro pad nasce no modo DELE (a prova 5 da
+    sprint). A pergunta é a do dono (`o_freestyle_manda`) quando há `store`, e a
+    do disco quando o boot pergunta antes de haver memória.
     """
     try:
         from hefesto_dualsense4unix.profiles.loader import (
             load_profile,
             o_perfil_de_fora_do_jogo,
         )
+        from hefesto_dualsense4unix.profiles.manager import o_freestyle_manda
         from hefesto_dualsense4unix.utils.session import (
+            load_freestyle_ligado,
             load_last_profile,
             resolve_boot_profile,
         )
 
+        manda = o_freestyle_manda(store) if store is not None else load_freestyle_ligado()
+        if manda:
+            freestyle = o_perfil_de_fora_do_jogo()
+            if freestyle:
+                return load_profile(freestyle)
         sessao = resolve_boot_profile()
         candidatos: list[str | None] = []
         if sessao and not _perfil_escopado_a_janela(sessao):
@@ -736,7 +748,12 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
     from functools import partial
 
     from hefesto_dualsense4unix.profiles.loader import o_perfil_de_fora_do_jogo
-    from hefesto_dualsense4unix.profiles.manager import ProfileManager, _canal_do_ps
+    from hefesto_dualsense4unix.profiles.manager import (
+        ProfileManager,
+        _canal_do_ps,
+        ligar_o_freestyle,
+        o_freestyle_manda,
+    )
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
     from hefesto_dualsense4unix.utils.session import (
         load_last_profile,
@@ -747,7 +764,16 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
     # perfil de fora do jogo — o boot não fica sem perfil até o primeiro jogo.
     fora_do_jogo = o_perfil_de_fora_do_jogo()
     sessao = resolve_boot_profile()
-    name = sessao or fora_do_jogo
+    # O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026): com o Modo Freestyle ligado
+    # o restore não passa por cima dele — nem a sessão, nem a regra de janela.
+    manda = o_freestyle_manda(getattr(daemon, "store", None))
+    if manda and not fora_do_jogo:
+        # Ligado e sem o arquivo: seguraria o boot sem perfil nenhum, para
+        # sempre. Desliga, diz, e o restore segue o caminho de sempre.
+        logger.warning("freestyle_ligado_sem_o_perfil", acao="desligado")
+        ligar_o_freestyle(getattr(daemon, "store", None), False)
+        manda = False
+    name = fora_do_jogo if manda else (sessao or fora_do_jogo)
     if not name:
         return
     # FEAT-NATIVE-MODE-01: em Modo Nativo o controle fica SOLTO para o jogo — não
@@ -784,7 +810,7 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
     # dele é "só tem valor enquanto `active_profile` é None". Com o Freestyle
     # valendo não há `None` a explicar; sem ele no disco, a espera fica, e o
     # estado diz a mesma coisa que dizia antes desta sprint.
-    pulado = _escopado_a_janela(name)
+    pulado = not manda and _escopado_a_janela(name)
     if pulado:
         logger.info("last_profile_restore_pulado_perfil_de_janela", name=name)
         _registrar_espera(name)
@@ -873,9 +899,11 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
         a barra e cala a paleta com o jogo fechado. O que muda é o que vale
         ENQUANTO o jogo não abre — o «Freestyle», o mesmo que o boot restaura
         com a sessão vazia desde a O-MODO-FREESTYLE-02, e que nesse caso entra
-        por AQUI também (`tentados` vazio). O jogo, quando abrir,
-        entra por cima pelo autoswitch, com o Modo Freestyle ligado ou não
-        (`D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA`).
+        por AQUI também (`tentados` vazio). O jogo, quando abrir, entra por
+        cima — com o Modo Freestyle DESLIGADO. Ligado, o restore nem chega
+        aqui: ativa o Freestyle direto
+        (`D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA`, que revogou a
+        `D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA`).
 
         Não vale quando o próprio Freestyle já foi tentado (a sessão o
         apontava), quando ela o apagou, ou quando ELA pôs nele uma regra de
@@ -903,6 +931,9 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
         )
         await _ativar(fora_do_jogo)
 
+    if manda:
+        await _ativar(name)
+        return
     if pulado:
         await _o_de_fora_do_jogo_enquanto_espera([name], "perfil_de_janela")
         return

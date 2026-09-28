@@ -133,6 +133,68 @@ _RESULTADO_PARA_RELATORIO: dict[str, str] = {
 }
 
 
+# --- O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026) — quem decide qual perfil vale
+# A palavra dela, 27/09 à tarde: *«O freestyle nao deveria se comportar como
+# qualquer outro perfil na interface? So que quando ele tivesse ativado ele
+# subiria a prioridade em tudo?»* — e à noite: *«Aperto o botão do freestyle e o
+# jogo que eu tiver jogando vai ter essa config independente do perfil do
+# jogo.»*  (noqa-acento: citação literal dela)
+#
+# `D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA`, que revoga a
+# `D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA` (o cadeado que cedia a todo
+# perfil de jogo, LOCK-CEDE-01).
+#
+# UM LUGAR SÓ DECIDE, e é este bloco. Ligado, o Freestyle é o perfil ativo, e
+# `ProfileManager.activate` RECUSA qualquer outro pedido que não venha da mão
+# dela — autoswitch, lançamento, restore do boot, saída do Modo Nativo. Os
+# chamadores perguntam antes (`o_freestyle_manda`) para não gastar a ativação;
+# a recusa dentro do `activate` é o que garante que um caminho novo, que
+# esqueça de perguntar, também não passa por cima.
+#
+# O GESTO DELA É O ÚNICO QUE MUDA ISSO: ativar à mão o Freestyle o liga, e
+# ativar à mão outro perfil o desliga. O botão «Modo Freestyle» e o «Ativar» da
+# aba Perfis são o mesmo gesto.
+
+
+class OFreestyleMandaError(RuntimeError):
+    """Um caminho automático pediu outro perfil com o Freestyle ligado."""
+
+
+def e_o_freestyle(nome: object) -> bool:
+    """O nome aponta o Freestyle? Pelo slug, que é a identidade do arquivo."""
+    from hefesto_dualsense4unix.profiles.loader import SLUG_DO_PADRAO
+    from hefesto_dualsense4unix.profiles.slug import mesmo_slug
+
+    return isinstance(nome, str) and mesmo_slug(nome, SLUG_DO_PADRAO)
+
+
+def o_freestyle_manda(store: object | None) -> bool:
+    """O Modo Freestyle está ligado agora? Só o `True` literal do store conta.
+
+    A memória é carregada do disco no boot (`lifecycle.Daemon.run`) e todo
+    escritor passa por `ligar_o_freestyle`, que grava as duas juntas. Um dublê
+    sem o atributo responde `False`: sem evidência, o comportamento de sempre.
+    """
+    return getattr(store, "freestyle_ligado", False) is True
+
+
+def ligar_o_freestyle(store: object | None, ligado: bool) -> None:
+    """O ÚNICO escritor do Modo Freestyle: a memória e o disco, juntos.
+
+    Nunca levanta — quem chama é a ativação de um perfil, e o disco cheio não
+    pode desfazer o perfil que ela escolheu.
+    """
+    from hefesto_dualsense4unix.utils.session import save_freestyle_ligado
+
+    antes = o_freestyle_manda(store)
+    setter = getattr(store, "set_freestyle_ligado", None)
+    if callable(setter):
+        setter(bool(ligado))
+    save_freestyle_ligado(bool(ligado))
+    if antes != bool(ligado):
+        logger.info("freestyle_ligado" if ligado else "freestyle_desligado")
+
+
 @dataclass
 class ProfileManager:
     controller: IController
@@ -276,6 +338,10 @@ class ProfileManager:
         # Normalizamos AMBOS via slugify antes de comparar.
         if active is not None and self._refers_same_profile(active, name):
             self.store.set_active_profile(None)
+        # Sem o arquivo, o Modo Freestyle ligado seguraria o produto sem perfil
+        # nenhum: toda ativação automática seria recusada, para sempre.
+        if e_o_freestyle(name):
+            ligar_o_freestyle(self.store, False)
         logger.info("profile_deleted", name=name)
 
     @staticmethod
@@ -332,6 +398,13 @@ class ProfileManager:
         resultado de uma ativação disparada pela hotkey (thread do executor)
         poderia ser lido como se fosse o de outra.
         """
+        # O-FREESTYLE-E-UMA-CAMADA-SO-01: com o Freestyle ligado, só a mão dela
+        # troca de perfil. Ver o bloco antes desta classe.
+        if origin != "manual" and o_freestyle_manda(self.store) and not e_o_freestyle(name):
+            logger.info("perfil_recusado_o_freestyle_manda", pedido=name, origin=origin)
+            raise OFreestyleMandaError(
+                f"o Modo Freestyle está ligado: {name!r} não entra por {origin!r}"
+            )
         profile = load_profile(name)
         # PERFIL-REESCRITO-NA-PARTIDA-01, item 4: o `relatorio` desce até o
         # `apply` para as categorias travadas na mão entrarem nele — ver lá.
@@ -352,6 +425,9 @@ class ProfileManager:
         if origin == "manual":
             from hefesto_dualsense4unix.utils.session import save_last_profile
             save_last_profile(profile.name)
+            # O gesto dela decide o Modo Freestyle: o «Ativar» do Freestyle o
+            # liga, o de qualquer outro perfil o desliga.
+            ligar_o_freestyle(self.store, e_o_freestyle(profile.name))
         # FEAT-COSMIC-NOTIFICATIONS-01: opt-in via env var
         # `HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS=1`. Sem isso, no-op.
         try:
@@ -3590,6 +3666,7 @@ __all__ = [
     "MOTIVO_SELECIONADO",
     "MOTIVO_SEM_CANDIDATO",
     "SECAO_DO_APPLIER",
+    "OFreestyleMandaError",
     "ProfileManager",
     "_controllers_to_led_scales",
     "_controllers_to_procedencias",
@@ -3597,6 +3674,9 @@ __all__ = [
     "_estado_da_secao",
     "_to_key_bindings",
     "_to_led_settings",
+    "e_o_freestyle",
     "gerente_do_daemon",
+    "ligar_o_freestyle",
+    "o_freestyle_manda",
     "resolve_key_bindings",
 ]

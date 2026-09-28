@@ -1217,6 +1217,17 @@ def arm_launch_profile(
         return None
     daemon._launch_armed_for = (appid, epoch)  # type: ignore[attr-defined]
 
+    # O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026): com o Modo Freestyle ligado
+    # o jogo que abre usa o Freestyle, que já é o perfil ativo — nem a ativação,
+    # nem a supressão, nem o modo, nem a escada do perfil do jogo. A máscara
+    # que o jogo lê no `exec` também é a do Freestyle
+    # (`materialize_launch_env`, `_o_freestyle_que_manda`).
+    from hefesto_dualsense4unix.profiles.manager import o_freestyle_manda
+
+    if o_freestyle_manda(getattr(daemon, "store", None)):
+        logger.info("launch_arm_pulado_freestyle_ligado", appid=appid)
+        return {"appid": appid, "armado": False, "motivo": "freestyle_ligado"}
+
     na_allowlist = appid in steam_input_appids()
 
     profile = None
@@ -1877,6 +1888,25 @@ def _load_profiles(daemon: DaemonProtocol) -> list[Any]:
         return []
 
 
+def _o_freestyle_que_manda(daemon: DaemonProtocol) -> Any | None:
+    """O perfil Freestyle quando o Modo Freestyle está ligado; ``None`` quando não.
+
+    O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026), item 4: *"a máscara
+    antecipada no lançamento (`mascara_do_perfil_antecipada`, que hoje lê o
+    perfil do jogo)"* passa a ler o Freestyle ligado. O jogo lê a env UMA vez,
+    no `exec`: com a máscara do perfil do jogo ali, o pad que o Freestyle põe
+    de pé seria o errado para o jogo desde o primeiro frame.
+    """
+    from hefesto_dualsense4unix.profiles.manager import e_o_freestyle, o_freestyle_manda
+
+    if not o_freestyle_manda(getattr(daemon, "store", None)):
+        return None
+    for profile in _load_profiles(daemon):
+        if e_o_freestyle(getattr(profile, "name", None)):
+            return profile
+    return None
+
+
 def _steam_profiles(daemon: DaemonProtocol) -> list[tuple[int, Any]]:
     """(appid, Profile) para cada perfil com `steam_app_<appid>` no match."""
     out: list[tuple[int, Any]] = []
@@ -2515,7 +2545,10 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
         desired = {"default.env"}
         em_cena = appids_em_cena(daemon)
         divergencias: list[dict[str, Any]] = []
-        for appid, profile in _steam_profiles(daemon):
+        # O-FREESTYLE-E-UMA-CAMADA-SO-01: ligado, é o modo DELE que cada jogo lê.
+        freestyle = _o_freestyle_que_manda(daemon)
+        for appid, do_jogo in _steam_profiles(daemon):
+            profile = freestyle if freestyle is not None else do_jogo
             modo = _modo_antecipado(
                 profile,
                 flavor_atual=flavor,

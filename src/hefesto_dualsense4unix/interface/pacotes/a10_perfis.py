@@ -5,9 +5,8 @@ ESTA ABA JÁ ESTAVA MARCADA, e não por mim: o outro agente pôs **77 endereços
 (`data-hef`) e 11 gestos nela em 31/08, com um esquema de nomes próprio. Os dois
 convivem — o nome do atributo não é o contrato; o contrato é este despachante.
 
-O QUE TEM DONO: o perfil em vigor (`active_profile`) e o travamento do
-autoswitch (`autoswitch_locked`), que é o que diz se a troca automática está
-segurada.
+O QUE TEM DONO: o perfil em vigor (`active_profile`) e o Modo Freestyle
+(`freestyle_ligado`), que é o que diz se o Freestyle manda em todo jogo.
 
 OS DEZ PRIMEIROS A GANHAR DONO — 01/09/2026, em duas levas:
 
@@ -766,7 +765,7 @@ SEM_ENDERECO = {
     # tirar emissão é decisão de quem tem a aba inteira na mão; declarado, ele
     # aparece nesta lista para quem for tomá-la.
     "quantos": "a contagem que a tela mostra é `perfis.conta`, e essa tem endereço",
-    # `autoswitch_locked` é estado do daemon, e o desenho desta aba não o
+    # `freestyle_ligado` é estado do daemon, e o desenho desta aba não o
     # mostra em lugar nenhum. Quem tem endereço para a troca automática é a aba
     # Sistema (`data-campo="hefesto-troca-de-perfil"`, em `09-sistema.html`).
     "travado": "a trava da troca automática não é desenhada nesta aba",
@@ -2071,7 +2070,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # `tests/unit/test_a_aba_perfis_manda_para_um_endereco_que_existe.py`,
         # que agora cobra endereço de TODA chave emitida por esta aba.
         "quantos": len(lista),
-        "travado": bool(ctx.state.get("autoswitch_locked")),
+        "travado": bool(ctx.state.get("freestyle_ligado")),
         "sem_dono": {},
     }
     # O SEPARADOR É O PONTO, e não o hífen: a página endereça
