@@ -166,6 +166,18 @@ def _caminho_vivo(daemon: Any) -> str | None:
     )
 
 
+def _caminho_do_dono(daemon: Any, motivo: str) -> str | None:
+    """O modo da sessão para um restart que não escolhe modo, e o nome dele.
+
+    O-MODO-XBOX-NAO-E-QUEDA-02 (28/09/2026): fachada de
+    `gamepad.nomear_o_restart`, o dono único. Função de módulo pela razão das
+    vizinhas: as réguas exercem os métodos sobre daemons dublados.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import nomear_o_restart
+
+    return nomear_o_restart(daemon, motivo)
+
+
 def _mascara_da_maquina() -> str:
     """A máscara que ELA escolheu para a máquina, ou a de fábrica da sessão.
 
@@ -525,7 +537,9 @@ def _a_mascara_dela_sem_o_vazamento(do_disco: object) -> str | None:
     return "dualsense"
 
 
-def _a_escolha_dela_sem_o_vazamento(do_disco: object) -> str | None:
+def _a_escolha_dela_sem_o_vazamento(
+    do_disco: object, origem: str | None = None
+) -> str | None:
     """A escolha dela lida do disco, com o `xbox` do vazamento devolvido.
 
     CAMINHO-CONTAGIO-01, ponto 3 do escopo de 19/09/2026.
@@ -549,6 +563,11 @@ def _a_escolha_dela_sem_o_vazamento(do_disco: object) -> str | None:
     volta seguinte lia `dualsense` e não fazia nada, e isso só valia enquanto
     ela não escolhesse Xbox: com a escolha (o PS + R3 fora do jogo), cada boot
     a desfazia.
+
+    **E SÓ O VALOR SEM ORIGEM** (28/09/2026): o gesto fora do jogo grava
+    `origem=gesto_fora_do_jogo` desde esta sprint, e esse `xbox` é a escolha
+    dela, nunca o vazamento. O arquivo antigo, só com o caminho, é o legado de
+    18/09, e só ele é devolvido.
     """
     from hefesto_dualsense4unix.integrations.virtual_pad import (
         CAMINHO_DUALSENSE,
@@ -557,16 +576,19 @@ def _a_escolha_dela_sem_o_vazamento(do_disco: object) -> str | None:
     )
     from hefesto_dualsense4unix.utils.session import (
         MARCA_DO_CAMINHO_DEVOLVIDO,
+        ORIGEM_DA_MIGRACAO_UNICA,
         migracao_ainda_nao_feita,
     )
 
     lido = normalizar_caminho(do_disco)
+    if origem is not None:
+        return lido
     if not migracao_ainda_nao_feita(MARCA_DO_CAMINHO_DEVOLVIDO) or lido != CAMINHO_XBOX:
         return lido
     with contextlib.suppress(Exception):
         from hefesto_dualsense4unix.utils.session import save_gamepad_caminho
 
-        save_gamepad_caminho(CAMINHO_DUALSENSE)
+        save_gamepad_caminho(CAMINHO_DUALSENSE, origem=ORIGEM_DA_MIGRACAO_UNICA)
     logger.info(
         "caminho_global_devolvido_ao_default",
         era=lido,
@@ -1200,13 +1222,15 @@ class Daemon:
         # do arquivo ao lado da flag (o formato da flag não mudou). A
         # normalização mora em `_a_escolha_dela_sem_o_vazamento` desde 19/09,
         # junto com a devolução do `xbox` que o gesto no jogo carimbava.
-        from hefesto_dualsense4unix.utils.session import load_gamepad_caminho
+        from hefesto_dualsense4unix.utils.session import (
+            load_gamepad_caminho_com_origem,
+        )
 
         # O-CAMINHO-NAO-VAZA-01: a flag é a ESCOLHA DELA, e vai para o slot da
         # escolha. O `gamepad_caminho` (o canal VIVO) acompanha junto porque no
         # boot, antes de qualquer perfil, os dois são a mesma coisa — e a tela
         # tem de ter o que dizer antes de o primeiro vpad nascer.
-        escolha_dela = _a_escolha_dela_sem_o_vazamento(load_gamepad_caminho())
+        escolha_dela = _a_escolha_dela_sem_o_vazamento(*load_gamepad_caminho_com_origem())
         self.config.gamepad_caminho_global = escolha_dela
         self.config.gamepad_caminho = escolha_dela
         # EMULACAO-NO-JOGO-01: restaura a PREFERÊNCIA de teclado emulado. Ao lado
@@ -1758,7 +1782,14 @@ class Daemon:
         m = stash.get("mouse") or [False, None, None]
         if g[0]:
             with contextlib.suppress(Exception):
-                self.set_gamepad_emulation(True, g[1], origin="profile")
+                # O modo é o do dono da sessão (O-MODO-XBOX-NAO-E-QUEDA-02): a
+                # volta do Modo Nativo não escolhe caminho.
+                self.set_gamepad_emulation(
+                    True,
+                    g[1],
+                    origin="profile",
+                    caminho=_caminho_do_dono(self, "saida_do_modo_nativo"),
+                )
         elif m[0]:
             with contextlib.suppress(Exception):
                 self.set_mouse_emulation(
@@ -2260,8 +2291,12 @@ class Daemon:
         *,
         origin: OrigemEmulacao,
         caminho: str | None = None,
+        caminho_e_escolha: bool = True,
     ) -> str:
         """O mesmo pedido de `set_gamepad_emulation`, dizendo o que ACONTECEU.
+
+        `caminho_e_escolha=False`: o `caminho` é o do dono da sessão, e não uma
+        escolha dela (ver `gamepad.start_gamepad_emulation_desfecho`).
 
         VERDADE-01 (18/08). Devolve o vocabulário `EMU_*` de
         `daemon.subsystems.gamepad`: `"aplicado"`, `"ja_estava"`,
@@ -2325,7 +2360,11 @@ class Daemon:
                 # a cada força — ruído de escrita sem mudança nenhuma).
                 device_antes = self._gamepad_device
                 desfecho = start_gamepad_emulation_desfecho(
-                    self, flavor=flavor, origin=origin, caminho=caminho
+                    self,
+                    flavor=flavor,
+                    origin=origin,
+                    caminho=caminho,
+                    caminho_e_escolha=caminho_e_escolha,
                 )
                 ok = desfecho in (EMU_APLICADO, EMU_JA_ESTAVA)
                 # SPRINT-GAME-RUMBLE-01: repropaga a máscara recém-aplicada aos
@@ -2390,7 +2429,16 @@ class Daemon:
         ):
             return ""
         if mesma_identidade(uniq, primary_identity(self)):
-            return self.set_gamepad_emulation_desfecho(True, origin="manual")
+            # O cartão escolhe MÁSCARA, e o modo segue o do dono da sessão
+            # (O-MODO-XBOX-NAO-E-QUEDA-02, 28/09/2026): até aqui o start sem
+            # caminho limpava o slot, e o Xbox da sessão voltava DualSense com
+            # um clique no cartão.
+            return self.set_gamepad_emulation_desfecho(
+                True,
+                origin="manual",
+                caminho=_caminho_do_dono(self, "mascara_do_cartao"),
+                caminho_e_escolha=False,
+            )
         from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
 
         with contextlib.suppress(Exception):
@@ -2553,7 +2601,11 @@ class Daemon:
             return self._log_gamepad_multi(
                 IGNORADO_UM_CONTROLE_SO, "menos_de_dois_controles", controles
             )
-        ok = self.set_gamepad_emulation(True, origin="profile")
+        ok = self.set_gamepad_emulation(
+            True,
+            origin="profile",
+            caminho=_caminho_do_dono(self, "dois_controles_na_mesa"),
+        )
         if not ok:
             return self._log_gamepad_multi(FALHOU, "start_recusou", controles)
         self._gamepad_multi_log = APLICADO

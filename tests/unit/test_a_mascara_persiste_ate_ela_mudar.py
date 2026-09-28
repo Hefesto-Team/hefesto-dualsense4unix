@@ -364,7 +364,11 @@ def test_a_mascara_do_perfil_atravessa_o_modo_nativo(
     pedidos: list[tuple[bool, str | None]] = []
 
     def _voltou(
-        enabled: bool, flavor: str | None = None, *, origin: str = "manual"
+        enabled: bool,
+        flavor: str | None = None,
+        *,
+        origin: str = "manual",
+        caminho: str | None = None,
     ) -> bool:
         pedidos.append((enabled, flavor))
         return enabled

@@ -418,8 +418,14 @@ class TestDevolucaoDoVpad:
         self, monkeypatch: pytest.MonkeyPatch, _broker_falso: None, _sem_disco: list[Any]
     ) -> None:
         """O-MODO-XBOX-NAO-E-QUEDA-02: sem o caminho o start não opina, e o Xbox
-        do perfil voltava DualSense. Mordida: tire o `caminho=` da devolução."""
+        do perfil voltava DualSense. Mordida: tire o `caminho=` da devolução.
+
+        NOTA DATADA — 28/09/2026: o caminho da devolução é o do DONO da sessão
+        (`gamepad.caminho_da_sessao`), e não mais a foto da suspensão; a foto só
+        vai ao diário quando discorda dele (a régua de que a foto perde para o
+        dono é a `test_o_modo_tem_um_dono.py`)."""
         daemon = self._suspenso(flavor="dualsense")
+        daemon.config.gamepad_caminho = "xbox"
         daemon._steam_input_caminho_suspenso = "xbox"
         partidas: list[dict[str, Any]] = []
         monkeypatch.setattr(

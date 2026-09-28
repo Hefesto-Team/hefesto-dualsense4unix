@@ -534,26 +534,45 @@ def load_gamepad_preference() -> tuple[bool | None, str | None]:
 #: boot antigo lendo `dualsense\nxbox` como máscara. Ausente = ninguém escolheu.
 _GAMEPAD_CAMINHO_FLAG_FILE = "gamepad_caminho.flag"
 
+#: O-MODO-XBOX-NAO-E-QUEDA-02 (28/09/2026): as origens que o arquivo guarda.
+#: `gesto_fora_do_jogo` é o PS + R3 ou o chip de modo com o desktop na frente
+#: (o único escritor da escolha dela); `migracao_unica` é a devolução do `xbox`
+#: de 18/09, que roda uma vez. O arquivo antigo, só com o caminho, não tem
+#: origem, e é só ele que a migração devolve.
+ORIGEM_DO_GESTO_FORA_DO_JOGO = "gesto_fora_do_jogo"
+ORIGEM_DA_MIGRACAO_UNICA = "migracao_unica"
 
-def save_gamepad_caminho(caminho: str | None) -> None:
-    """Persiste o caminho escolhido; vazio apaga o arquivo. Best-effort.
+
+def save_gamepad_caminho(caminho: str | None, *, origem: str | None = None) -> None:
+    """Persiste o caminho escolhido, com a origem e a hora; vazio apaga. Best-effort.
 
     Só gesto manual chega aqui (`gamepad._guardar_o_caminho`, a mesma R-07 do
     liga/desliga): um perfil trocando de caminho não vira a escolha dela.
+
+    O formato é `{caminho, origem, quando}` desde a O-MODO-XBOX-NAO-E-QUEDA-02
+    (28/09/2026): o boot distingue o `xbox` que ela escolheu fora do jogo do
+    `xbox` sem origem que o vazamento de 18/09 deixou no disco.
     """
     try:
         alvo = config_dir(ensure=True) / _GAMEPAD_CAMINHO_FLAG_FILE
         if caminho and caminho.strip():
-            alvo.write_text(f"{caminho.strip()}\n", encoding="utf-8")
+            from datetime import datetime
+
+            dado = {
+                "caminho": caminho.strip(),
+                "origem": origem,
+                "quando": datetime.now().astimezone().isoformat(timespec="seconds"),
+            }
+            alvo.write_text(json.dumps(dado, ensure_ascii=False) + "\n", encoding="utf-8")
         else:
             alvo.unlink(missing_ok=True)
-        logger.debug("gamepad_caminho_salvo", caminho=caminho)
+        logger.debug("gamepad_caminho_salvo", caminho=caminho, origem=origem)
     except Exception as exc:
         logger.debug("gamepad_caminho_save_failed", err=str(exc))
 
 
-def load_gamepad_caminho() -> str | None:
-    """O caminho gravado, cru, ou ``None``. Quem valida é o daemon.
+def load_gamepad_caminho_com_origem() -> tuple[str | None, str | None]:
+    """``(caminho, origem)`` gravados, crus. O arquivo antigo tem origem ``None``.
 
     Cru de propósito: a lista dos caminhos tem dono
     (`integrations/virtual_pad.normalizar_caminho`), e este módulo de utilidades
@@ -562,10 +581,31 @@ def load_gamepad_caminho() -> str | None:
     try:
         alvo = config_dir() / _GAMEPAD_CAMINHO_FLAG_FILE
         if not alvo.exists():
-            return None
-        return alvo.read_text(encoding="utf-8").strip() or None
+            return None, None
+        texto = alvo.read_text(encoding="utf-8").strip()
     except Exception:
-        return None
+        return None, None
+    if not texto:
+        return None, None
+    if texto.startswith("{"):
+        try:
+            dado = json.loads(texto)
+        except ValueError:
+            return None, None
+        if not isinstance(dado, dict):
+            return None, None
+        caminho = dado.get("caminho")
+        origem = dado.get("origem")
+        return (
+            caminho if isinstance(caminho, str) and caminho else None,
+            origem if isinstance(origem, str) and origem else None,
+        )
+    return texto, None
+
+
+def load_gamepad_caminho() -> str | None:
+    """O caminho gravado, cru, ou ``None``. Quem valida é o daemon."""
+    return load_gamepad_caminho_com_origem()[0]
 
 
 def load_gamepad_emulation() -> tuple[bool, str | None]:
@@ -697,6 +737,8 @@ def migrate_coop_optout() -> bool:
 
 __all__ = [
     "load_autoswitch_locked",
+    "load_gamepad_caminho",
+    "load_gamepad_caminho_com_origem",
     "load_gamepad_emulation",
     "load_gamepad_preference",
     "load_keyboard_preference",
@@ -709,6 +751,7 @@ __all__ = [
     "save_active_marker",
     "save_autoswitch_locked",
     "save_coop_enabled",
+    "save_gamepad_caminho",
     "save_gamepad_emulation",
     "save_keyboard_emulation",
     "save_last_profile",

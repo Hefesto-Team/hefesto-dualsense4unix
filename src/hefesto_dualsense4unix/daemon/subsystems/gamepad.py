@@ -1023,8 +1023,20 @@ def resume_vpads_after_steam_input(daemon: DaemonProtocol) -> bool:
             store.bump("gamepad.steam_input.vpad_retomado")
     # `_emu_lock` pelo mesmo motivo da suspensão: criar device é operação
     # serializada com as outras superfícies (IPC/GUI/hotplug).
+    # O MODO É O DO DONO (O-MODO-XBOX-NAO-E-QUEDA-02, 28/09/2026): a foto que a
+    # suspensão tirou só vai ao diário quando discorda dele — um perfil que
+    # entrou no meio escreveu o modo novo no dono, e a foto é do de antes.
+    caminho_do_dono = nomear_o_restart(daemon, "volta_do_steam_input")
+    if caminho is not None and caminho != caminho_do_dono:
+        logger.info(
+            "volta_do_steam_input_segue_o_dono",
+            caminho_da_suspensao=caminho,
+            caminho=caminho_do_dono,
+        )
     with getattr(daemon, "_emu_lock", contextlib.nullcontext()):
-        start_gamepad_emulation(daemon, flavor=flavor, origin="profile", caminho=caminho)
+        start_gamepad_emulation(
+            daemon, flavor=flavor, origin="profile", caminho=caminho_do_dono
+        )
         # O conjunto de jogadores foi a zero na suspensão; o ciclo normal do
         # co-op (~2 s no poll loop) recria os secundários sozinho, mas
         # `force=True` faz o P2+ voltar no mesmo instante que o P1 em vez de
@@ -1799,10 +1811,7 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
         UhidDualSense,
         uhid_available,
     )
-    from hefesto_dualsense4unix.integrations.virtual_pad import (
-        caminho_do_vpad,
-        motivo_da_degradacao,
-    )
+    from hefesto_dualsense4unix.integrations.virtual_pad import motivo_da_degradacao
 
     device = getattr(daemon, "_gamepad_device", None)
     if isinstance(device, UhidDualSense):
@@ -1832,12 +1841,12 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
             flavor=getattr(daemon.config, "gamepad_flavor", None),
         )
         # ORIGEM-QUE-MENTE-01: revive pós-falha é rede de segurança, não gesto.
-        # O caminho é o da sessão (O-MODO-XBOX-NAO-E-QUEDA-02): sem ele o start
-        # não opina, e o modo que o perfil escolheu voltava ao DualSense.
+        # O caminho é o do dono da sessão (O-MODO-XBOX-NAO-E-QUEDA-02): sem ele
+        # o start não opina, e o modo que o perfil escolheu voltava ao DualSense.
         return start_gamepad_emulation(
             daemon,
             origin="profile",
-            caminho=getattr(daemon.config, "gamepad_caminho", None),
+            caminho=nomear_o_restart(daemon, "revive_pos_falha_total"),
         )
     # O uinput do modo Xbox é escolha dela, não queda (O-MODO-XBOX-NAO-E-QUEDA-02):
     # a pergunta tem um dono só, e ele lê a máscara, o canal e o caminho.
@@ -1884,10 +1893,12 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
     # devolve a escolha do aparelho para o vpad — que é o uhid que esta função
     # veio buscar. O gate lá em cima já garantiu que a efetiva é dualsense.
     #
-    # E o caminho é o do pad que caiu, pelo mesmo motivo: sem ele o start não
-    # opina, e o modo da sessão (o do perfil em foco) voltava ao default.
+    # E o caminho é o do dono da sessão, pelo mesmo motivo: sem ele o start não
+    # opina, e o modo da sessão (o do perfil em foco) voltava ao default. Até
+    # 28/09 era o do pad que caiu, uma segunda fonte que só coincidia com o
+    # dono enquanto ninguém mudava de modo (O-MODO-XBOX-NAO-E-QUEDA-02).
     return start_gamepad_emulation(
-        daemon, origin="profile", caminho=caminho_do_vpad(device)
+        daemon, origin="profile", caminho=nomear_o_restart(daemon, "promocao_uhid")
     )
 
 
@@ -2282,9 +2293,62 @@ def _guardar_o_caminho(
         return
     daemon.config.gamepad_caminho_global = escolhido
     with contextlib.suppress(Exception):
-        from hefesto_dualsense4unix.utils.session import save_gamepad_caminho
+        from hefesto_dualsense4unix.utils.session import (
+            ORIGEM_DO_GESTO_FORA_DO_JOGO,
+            save_gamepad_caminho,
+        )
 
-        save_gamepad_caminho(escolhido)
+        # A ORIGEM VAI JUNTO (O-MODO-XBOX-NAO-E-QUEDA-02, item (a)): é ela que
+        # separa, no boot, a escolha dela do `xbox` sem origem de 18/09.
+        save_gamepad_caminho(escolhido, origem=ORIGEM_DO_GESTO_FORA_DO_JOGO)
+
+
+def caminho_da_sessao(daemon: Any) -> str | None:
+    """O MODO que vale nesta sessão — o dono único que todo restart lê.
+
+    O-MODO-XBOX-NAO-E-QUEDA-02 (28/09/2026), item 1 da cura consolidada. O
+    slot da sessão (`config.gamepad_caminho`) é escrito por quem ESCOLHE o
+    modo: o perfil ativado (o lançamento, o autoswitch, o boot) e o gesto dela.
+    Quem só RECRIA o pad (a ordem do co-op, o revive, a volta do Steam Input, a
+    promoção, o juiz das máscaras, o cartão, a saída do Modo Nativo, a
+    automação de dois controles) lê daqui e não escolhe nada.
+
+    Medido na sessão dela de 27/09 às 21h07 e às 23h28: o lançamento do
+    PRAGMATA pôs o pad em DualSense e, segundos depois, um restart o devolveu
+    ao Xbox sem que o diário dissesse quem pediu. Cada restart tinha a sua
+    fonte (a foto da suspensão, o caminho do pad velho, nenhuma).
+    """
+    from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
+
+    return normalizar_caminho(getattr(getattr(daemon, "config", None), "gamepad_caminho", None))
+
+
+def nomear_o_restart(daemon: Any, motivo: str) -> str | None:
+    """O restart diz quem o pediu, e devolve o caminho do dono.
+
+    Todo restart do pad do P1 passa por aqui antes do start: o diário ganha
+    `p1_reerguido motivo=<quem>`, e é a resposta que faltou em 27/09
+    («nenhum evento diz quem pediu», L2 do PRAGMATA).
+    """
+    caminho = caminho_da_sessao(daemon)
+    logger.info("p1_reerguido", motivo=motivo, caminho=caminho)
+    return caminho
+
+
+def reerguer_o_p1(daemon: Any, *, motivo: str, flavor: str | None = None) -> str:
+    """Recria o pad do P1 no modo da sessão e devolve o desfecho `EMU_*`.
+
+    O dono dos restarts de manutenção: `origin="profile"` (não é gesto dela,
+    ORIGEM-QUE-MENTE-01), a máscara da sessão quando `flavor` é ``None``, e o
+    caminho do dono (:func:`caminho_da_sessao`), que não é escolha e não vai
+    para o arquivo dela.
+    """
+    return start_gamepad_emulation_desfecho(
+        daemon,
+        flavor,
+        origin="profile",
+        caminho=nomear_o_restart(daemon, motivo),
+    )
 
 
 def start_gamepad_emulation(
@@ -2320,8 +2384,14 @@ def start_gamepad_emulation_desfecho(
     *,
     origin: OrigemEmulacao,
     caminho: str | None = None,
+    caminho_e_escolha: bool = True,
 ) -> str:
     """Cria o gamepad virtual com a máscara `flavor` e DIZ o que aconteceu.
+
+    `caminho_e_escolha=False` (O-MODO-XBOX-NAO-E-QUEDA-02, 28/09/2026): o
+    `caminho` veio do dono da sessão (:func:`caminho_da_sessao`) e não de uma
+    escolha, então vale para o pad e para o slot e nunca chega ao arquivo dela,
+    nem com `origin="manual"` (o gesto do cartão escolhe máscara, não modo).
 
     MODO-DE-CONEXAO-01 (13/09/2026): `caminho` é o MODO de conexão
     (`virtual_pad.CAMINHO_DUALSENSE` · `CAMINHO_XBOX`), e ele NÃO é a máscara.
@@ -2463,7 +2533,10 @@ def start_gamepad_emulation_desfecho(
             # opinou OU, sem opinião, a escolha dela — e ``None`` quando não há
             # nem uma nem outra, o que LIMPA o slot (O-CAMINHO-NAO-VAZA-01).
             _guardar_o_caminho(
-                daemon, caminho, origin=origin, da_sessao=caminho_pedido
+                daemon,
+                caminho if caminho_e_escolha else None,
+                origin=origin,
+                da_sessao=caminho_pedido,
             )
             # A-MASCARA-SEGUE-O-ESTADO-01 (25/09/2026): o boneco do P1 já veste
             # a máscara certa (o cartão dele venceu), mas a da SESSÃO é a que os
@@ -2579,7 +2652,12 @@ def start_gamepad_emulation_desfecho(
     daemon.config.gamepad_flavor = key
     # MODO-DE-CONEXAO-01: o caminho, e não a máscara do chip. `key` segue sendo a
     # máscara da sessão — o chip de modo não a manda mais.
-    _guardar_o_caminho(daemon, caminho, origin=origin, da_sessao=caminho_pedido)
+    _guardar_o_caminho(
+        daemon,
+        caminho if caminho_e_escolha else None,
+        origin=origin,
+        da_sessao=caminho_pedido,
+    )
     _set_controller_grab(daemon, True)
     # R-07 (auditoria 23/07): SÓ gesto manual persiste a preferência em disco.
     # A regra já estava escrita em dois lugares deste mesmo módulo/eixo —
@@ -2675,7 +2753,6 @@ def reconciliar_as_mascaras(daemon: Any) -> str | None:
         mascara_efetiva,
         vpad_ficou_para_tras,
     )
-    from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
 
     cfg = getattr(daemon, "config", None)
     if not getattr(cfg, "gamepad_emulation_enabled", False):
@@ -2685,7 +2762,7 @@ def reconciliar_as_mascaras(daemon: Any) -> str | None:
     if _autoridade_do_jogo(daemon):
         return None
     flavor_do_jogo = getattr(cfg, "gamepad_flavor", None)
-    caminho = normalizar_caminho(getattr(cfg, "gamepad_caminho", None))
+    caminho = caminho_da_sessao(daemon)
     desfecho: str | None = None
     vpad = getattr(daemon, "_gamepad_device", None)
     identity = primary_identity(daemon)
@@ -2706,9 +2783,7 @@ def reconciliar_as_mascaras(daemon: Any) -> str | None:
             veste=mascara_efetiva(identity, flavor_do_jogo),
         )
         with getattr(daemon, "_emu_lock", contextlib.nullcontext()):
-            desfecho = start_gamepad_emulation_desfecho(
-                daemon, origin="profile", caminho=caminho
-            )
+            desfecho = reerguer_o_p1(daemon, motivo="mascara_reconciliada")
     coop = getattr(daemon, "_coop_manager", None)
     atrasado = getattr(coop, "algum_boneco_ficou_para_tras", None)
     if coop is not None and callable(atrasado) and atrasado():

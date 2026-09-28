@@ -95,7 +95,10 @@ def test_native_restaura_gamepad_do_stash(
     daemon.set_gamepad_emulation.reset_mock()  # type: ignore[attr-defined]
     daemon.set_native_mode(False, origin="manual")
     # Restaurou o gamepad (precedência sobre mouse).
-    daemon.set_gamepad_emulation.assert_called_with(True, "xbox", origin="profile")  # type: ignore[attr-defined]
+    # O-MODO-XBOX-NAO-E-QUEDA-02: o modo é o do dono da sessão (aqui, nenhum).
+    daemon.set_gamepad_emulation.assert_called_with(  # type: ignore[attr-defined]
+        True, "xbox", origin="profile", caminho=None
+    )
 
 
 def test_native_flag_stash_roundtrip_e_legado(tmp_config: Any) -> None:

@@ -124,7 +124,11 @@ class _EspiaoDeEmulacao:
         d = self._daemon
 
         def _fake(
-            enabled: bool, flavor: str | None = None, *, origin: str = "manual"
+            enabled: bool,
+            flavor: str | None = None,
+            *,
+            origin: str = "manual",
+            caminho: str | None = None,
         ) -> bool:
             self.chamadas.append((enabled, flavor, origin))
             d.config.gamepad_emulation_enabled = enabled

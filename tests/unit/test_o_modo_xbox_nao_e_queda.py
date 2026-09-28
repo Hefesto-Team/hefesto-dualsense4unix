@@ -45,6 +45,9 @@ from hefesto_dualsense4unix.integrations.virtual_pad import (
     make_virtual_pad,
     motivo_da_degradacao,
 )
+from hefesto_dualsense4unix.integrations.virtual_pad import (
+    caminho_do_vpad as vp_caminho_do_vpad,
+)
 from tests.unit.test_vpad_ff_passthrough import _EC, _AbsInfo
 
 #: Faixa sintética da casa (a IEEE nunca dá `aa:bb:cc` a fabricante).
@@ -216,10 +219,16 @@ def _connect(pad: Any, monkeypatch: pytest.MonkeyPatch) -> tuple[bool, list[Any]
         lambda _d, flavor=None, **kw: partidas.append(("start", kw)) or True,
     )
     monkeypatch.setattr(uhid_gamepad, "uhid_available", lambda: True)
+    # O caminho da promoção é o do DONO da sessão (O-MODO-XBOX-NAO-E-QUEDA-02,
+    # 28/09): o do pad, que é o que o dono diz enquanto ninguém muda de modo.
     daemon = SimpleNamespace(
         _gamepad_device=pad,
         controller=SimpleNamespace(hidraw_path=lambda uniq=None: None),
-        config=SimpleNamespace(gamepad_flavor="dualsense", gamepad_emulation_enabled=True),
+        config=SimpleNamespace(
+            gamepad_flavor="dualsense",
+            gamepad_emulation_enabled=True,
+            gamepad_caminho=vp_caminho_do_vpad(pad),
+        ),
     )
     return gamepad.upgrade_primary_vpad_to_uhid(daemon), partidas  # type: ignore[arg-type]
 

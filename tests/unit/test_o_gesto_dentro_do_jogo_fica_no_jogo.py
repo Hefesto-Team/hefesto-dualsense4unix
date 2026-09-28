@@ -122,7 +122,7 @@ def test_o_xbox_do_vazamento_e_devolvido(monkeypatch: pytest.MonkeyPatch) -> Non
     escritos: list[str | None] = []
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.save_gamepad_caminho",
-        lambda c: escritos.append(c),
+        lambda c, **_k: escritos.append(c),
     )
     assert lifecycle._a_escolha_dela_sem_o_vazamento("xbox") == "dualsense"
     assert escritos == ["dualsense"], "a devolução tem de chegar ao DISCO"
@@ -136,7 +136,7 @@ def test_o_que_nao_e_o_xbox_do_vazamento_passa_intacto(
     escritos: list[str | None] = []
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.save_gamepad_caminho",
-        lambda c: escritos.append(c),
+        lambda c, **_k: escritos.append(c),
     )
     antes = lifecycle._a_escolha_dela_sem_o_vazamento(valor)
     assert antes != "dualsense" or valor == "dualsense"
