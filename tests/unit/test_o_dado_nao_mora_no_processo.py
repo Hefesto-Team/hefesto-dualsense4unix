@@ -223,14 +223,36 @@ def test_nenhum_modulo_le_a_arvore_real_do_processo() -> None:
         "declare o módulo em `LEITORES_DE_PROCESSO` com a razão.")
 
 
-def test_toda_isencao_traz_a_razao_e_o_arquivo_existe() -> None:
-    """Isenção sem razão apodrece; isenção de arquivo morto engana."""
+def test_toda_isencao_traz_a_razao() -> None:
+    """Isenção sem razão apodrece — e a razão viaja no git, então se cobra em toda árvore."""
     for relativo, razao in LEITORES_DE_PROCESSO.items():
-        assert (RAIZ / relativo).is_file(), (
-            f"`{relativo}` está isento de ler `{PROCESSO}/` e não existe "
-            "mais — a isenção virou letra morta e esconde o próximo caso")
         assert len(razao.strip()) >= 30, (
             f"a isenção de `{relativo}` não diz por quê: {razao!r}")
+
+
+@pytest.mark.parametrize("relativo", [
+    pytest.param(relativo, id=relativo, marks=pytest.mark.insumo_fora_do_git(relativo))
+    for relativo in LEITORES_DE_PROCESSO
+])
+def test_todo_arquivo_isento_existe(relativo: str) -> None:
+    """Isenção de arquivo morto engana.
+
+    O ISENTO PODE SER UM ARQUIVO QUE O GIT NÃO CARREGA (27/09/2026, corrida
+    36354426805 do CI): `scripts/check_colisao_de_sprints.py` saiu do
+    repositório com o despacho de leva, e num clone limpo — o `lint-test`, o
+    `gtk-real`, o `release.yml` — ele não existe. O `insumo_fora_do_git` pula
+    SÓ esse caso, com a linha do `.gitignore` que o explica; um isento
+    versionado que suma continua reprovando aqui, porque o `.gitignore` não
+    explica a ausência dele. Onde o arquivo mora — a mesa dela e a árvore de
+    integração, que recebe os scripts ignorados antes de medir — a régua roda
+    inteira, no `scripts/rodar-a-suite.sh` de quem coordena.
+
+    **A MORDIDA:** tire o `marks=` do `pytest.param` e rode num clone limpo:
+    reprova em `scripts/check_colisao_de_sprints.py`, como no CI.
+    """
+    assert (RAIZ / relativo).is_file(), (
+        f"`{relativo}` está isento de ler `{PROCESSO}/` e não existe "
+        "mais — a isenção virou letra morta e esconde o próximo caso")
 
 
 # ---------------------------------------------------------------------------
