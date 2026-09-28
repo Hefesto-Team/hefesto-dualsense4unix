@@ -221,6 +221,15 @@ def test_o_conhecido_colado_dentro_de_uma_corrida_hex_maior() -> None:
     assert saida == "bruto=3109" + "".join(reversed(MASCARADO)) + "0825"
 
 
+def test_o_conhecido_colado_numa_corrida_impar_se_le_nas_duas_paridades() -> None:
+    """Corrida ímpar não diz onde começa o octeto: o endereço fica na paridade ímpar aqui."""
+    corrida = "a" + "".join(reversed(OCTETOS)) + "08"
+    assert len(corrida) % 2 == 1
+    saida = dono.mascarar(f"bruto={corrida}", conhecidos=[ENDERECO])
+    assert saida == "bruto=a" + "".join(reversed(MASCARADO)) + "08"
+    assert _janelas_que_sobram(saida) == []
+
+
 def test_o_conhecido_solto_vale_como_um() -> None:
     """``str`` é ``Iterable[str]``: iterado, o endereço solto viraria letras e a camada calaria."""
     linha, esperada = _formas()["5 a invertida com espaço"]
