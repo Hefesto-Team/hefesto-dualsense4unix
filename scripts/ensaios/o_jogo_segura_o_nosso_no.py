@@ -89,17 +89,24 @@ Discordância entre as duas — inode diferente, caminho que a outra não vê �
 ONDE A RÉGUA B É FRACA, E ISSO SAI IMPRESSO
 --------------------------------------------
 No backend **uinput** o vpad não tem `uniq` nem device HID pai: não há carimbo
-nenhum no kernel, e a única marca que sobra é o NOME — `XBOX360_NAME`, lido do
-fonte do produto. Duas consequências, e as duas viajam no relatório:
+nenhum no kernel, e a única marca que sobra é o NOME — um dos nomes das
+máscaras do produto (`uinput_gamepad.FLAVORS`: a Xbox, a DualSense Edge e a
+Nintendo), lidos do fonte. Três consequências, e as três viajam no relatório:
 
 1. a régua compartilhada `e_vpad_do_hefesto` **não reconhece** o vpad de
-   uinput: ela procura `(Hefesto P` no nome, e o nome do uinput é
-   `Microsoft X-Box 360 pad (Hefesto - Dualsense4Unix virtual)`. Por isso o
-   ramo do nome existe aqui, à parte e declarado;
-2. o casamento é por nome **EXATO**. O Steam Input publica um espelho Xbox de
+   uinput: ela procura `(Hefesto P` no nome, e o nome do uinput é o da
+   máscara. Por isso o ramo do uinput existe à parte e declarado, e mora na
+   mesma régua compartilhada (`identidade_do_vpad.e_pad_uinput_do_hefesto`);
+2. o casamento é por nome **EXATO** e pela morada do uinput
+   (`/devices/virtual/input/inputN`). O Steam Input publica um espelho Xbox de
    CADA controle que vê, o nosso vpad inclusive, e esses espelhos se chamam
    `Microsoft X-Box 360 pad 0`, `... 1`. Um casamento por prefixo abraçaria o
-   espelho do Steam e mediria o aparelho errado.
+   espelho do Steam e mediria o aparelho errado;
+3. até 28/09/2026 só a máscara Xbox entrava. Com a máscara DualSense no
+   `uinput`, o L2 da noite de 27/09 saiu «NÃO SONDADO» sobre um jogo que
+   segurava o nosso pad (O-BASICO-MEDIDO-01). Até a marca `phys` da
+   A-ENTRADA, a régua do `uinput` é esta: a posse direta (o inode que a árvore
+   do jogo segura) de um nó cujo nome, lido do `/sys`, é o de uma máscara.
 
 O QUE ELE NÃO FAZ
 ------------------
@@ -180,7 +187,9 @@ from comum import (
 from identidade_do_vpad import (
     VPAD_HID_PHYS,
     campos_do_uevent,
+    e_pad_uinput_do_hefesto,
     e_vpad_do_hefesto,
+    nomes_do_pad_uinput,
 )
 from quem_o_jogo_abre import arvore_do_jogo
 
@@ -194,12 +203,17 @@ try:
     from hefesto_dualsense4unix.integrations.uhid_gamepad import (
         VPAD_HID_PHYS as PHYS_DO_PRODUTO,
     )
-    from hefesto_dualsense4unix.integrations.uinput_gamepad import XBOX360_NAME
+    from hefesto_dualsense4unix.integrations.uinput_gamepad import (  # noqa: F401 - as réguas leem daqui
+        XBOX360_NAME,
+    )
     from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
 
     PRODUTO_IMPORTAVEL = ""
 except ImportError as _erro:  # pragma: no cover - só fora do venv do projeto
     PRODUTO_IMPORTAVEL = str(_erro)
+
+#: Os nomes das máscaras do pad `uinput`, do fonte do produto (vazio sem ele).
+NOMES_DO_UINPUT = nomes_do_pad_uinput()
 
 VERSAO = "2026-08-20"
 
@@ -490,11 +504,12 @@ def vpads_do_sysfs(raiz: str | None = None) -> list[NoDeEntrada]:
     O ramo do NOME é o buraco declarado, e ele fica à parte de propósito. No
     backend uinput não há `uniq`, não há device HID pai e não há carimbo
     nenhum: o `e_vpad_do_hefesto` responde `False`, com razão, porque procura
-    `(Hefesto P` e o nome do uinput não tem essa marca. O que sobra é o
-    `XBOX360_NAME` lido do FONTE do produto — o que torna esta metade da régua
-    independente do daemon VIVO, mas não do código. Casamento **exato**: o
-    espelho Xbox que o Steam Input publica de cada controle se chama
-    `Microsoft X-Box 360 pad 0`, e um prefixo o abraçaria.
+    `(Hefesto P` e o nome do uinput não tem essa marca. O que sobra são os
+    nomes das máscaras (`uinput_gamepad.FLAVORS`) lidos do FONTE do produto,
+    com a morada do uinput — o que torna esta metade da régua independente do
+    daemon VIVO, mas não do código. Casamento **exato**: o espelho Xbox que o
+    Steam Input publica de cada controle se chama `Microsoft X-Box 360 pad 0`,
+    e um prefixo o abraçaria.
     """
     raiz = RAIZ_CLASS_INPUT if raiz is None else raiz
     achados: list[NoDeEntrada] = []
@@ -517,8 +532,10 @@ def vpads_do_sysfs(raiz: str | None = None) -> list[NoDeEntrada]:
                 )
                 else "carimbo do produto (uniq/nome)"
             )
-        elif not PRODUTO_IMPORTAVEL and nome == XBOX360_NAME:
-            marca = "nome EXATO do uinput (régua fraca — ver docstring)"
+        elif not PRODUTO_IMPORTAVEL and e_pad_uinput_do_hefesto(
+            nome, dir_device, NOMES_DO_UINPUT
+        ):
+            marca = "nome EXATO de uma máscara do uinput (régua fraca — ver docstring)"
         else:
             continue
         achados.append(

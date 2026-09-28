@@ -62,7 +62,8 @@ por definição não colide com endereço de fábrica.
 from __future__ import annotations
 
 import os
-from collections.abc import Mapping
+import re
+from collections.abc import Iterable, Mapping
 
 #: `phys` do `UHID_CREATE2`, republicado pelo kernel como `HID_PHYS`. É a marca
 #: MAIS forte: não é endereço nem nome de aparelho, é uma palavra que só este
@@ -152,6 +153,56 @@ def e_vpad_do_hefesto(
     if uniq_do_no.strip().lower().startswith(VPAD_UNIQ_PREFIXO):
         return True
     return VPAD_MARCA_NO_NOME in (nome or campos.get("HID_NAME", ""))
+
+
+#: O PAD `uinput` (O-BASICO-MEDIDO-01, 28/09/2026). Ele é evdev puro: nasce
+#: por `/dev/uinput`, sem device HID pai, sem `uniq` e sem `HID_PHYS` — nenhum
+#: dos três carimbos acima existe nele, e o `e_vpad_do_hefesto` responde
+#: `False` com razão. Na noite de 27/09 isso fez o `o_jogo_segura_o_nosso_no`
+#: dizer «NÃO SONDADO» sobre um jogo que segurava o nosso pad `uinput` com a
+#: máscara DualSense. Até a marca `phys` que a A-ENTRADA vai carimbar, a régua
+#: dele é a posse direta: o nó que a árvore do jogo segura, com o nome lido do
+#: `/sys` igual, byte a byte, a um dos nomes que o produto pede ao kernel
+#: (`uinput_gamepad.FLAVORS`), E morando onde o uinput mora. O espelho que o
+#: Steam Input publica tem outro nome (`Microsoft X-Box 360 pad 0`), e um
+#: DualSense Edge de verdade tem device HID pai — os dois ficam fora.
+_MORADA_DO_UINPUT = re.compile(r"/devices/virtual/input/input\d+/?$")
+
+
+def nomes_do_pad_uinput() -> frozenset[str]:
+    """Os nomes que o produto pede ao kernel para o pad `uinput`, do FONTE dele.
+
+    Vazio quando o pacote não se importa (o `python3` do sistema): sem o dono
+    dos nomes não há régua, e inventar uma lista aqui seria a segunda régua
+    que envelhece calada.
+    """
+    try:
+        from hefesto_dualsense4unix.integrations.uinput_gamepad import FLAVORS
+    except Exception:  # sem o pacote (ou sem o evdev) no interpretador
+        return frozenset()
+    return frozenset(str(dados["name"]) for dados in FLAVORS.values())
+
+
+def e_pad_uinput_do_hefesto(
+    nome: str, dir_device: str, nomes: Iterable[str] | None = None
+) -> bool:
+    """True quando o nó de entrada em `dir_device` é o pad `uinput` DESTE produto.
+
+    `dir_device` é o `/sys/class/input/eventN/device` (o link é resolvido
+    aqui). As duas condições valem juntas: o nome EXATO de uma máscara do
+    produto, e a morada do uinput (`/devices/virtual/input/inputN`, sem device
+    HID acima). Nenhuma das duas sozinha basta — o nome sozinho abraçaria um
+    Edge de verdade com o nome de fábrica, e a morada sozinha abraçaria todo
+    espelho do Steam Input.
+    """
+    permitidos = nomes_do_pad_uinput() if nomes is None else frozenset(nomes)
+    if not nome or nome not in permitidos:
+        return False
+    try:
+        real = os.path.realpath(dir_device)
+    except OSError:
+        return False
+    return bool(_MORADA_DO_UINPUT.search(real))
 
 
 def uniq_do_no_de_entrada(dir_device: str) -> str:
