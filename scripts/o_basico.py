@@ -1547,7 +1547,11 @@ def sub_sessao(s: Sessao, a: argparse.Namespace) -> None:
         _reiniciar_o_daemon(s, "o --boot da sessão")
 
     sondas = _subir_as_sondas(s, a, ("trava-por-pad.bt", "uhid-raw-request.bt"), a.segundos)
-    fim = inicio + (a.segundos if (a.bpftrace or a.boot) else 0.0)
+    # A janela é SEMPRE observada (01 §4.2, ~60 s): o compositor a cada 5 s, e
+    # o pânico e a fila cheia contados no diário desde o começo. Sem ela, as
+    # duas contagens leriam uma janela de zero segundo e dariam zero — o
+    # compositor sairia verde sobre nada.
+    fim = s.maquina.agora() + a.segundos
     pids_do_compositor = {compositor_antes}
     while s.maquina.agora() < fim:
         s.maquina.dormir(min(5.0, max(0.0, fim - s.maquina.agora())))

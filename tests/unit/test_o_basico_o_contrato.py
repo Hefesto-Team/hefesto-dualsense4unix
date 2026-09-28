@@ -1112,3 +1112,29 @@ def test_um_pad_sem_jogador_no_meio_da_recriacao_nao_derruba_a_abertura(
     ob.executar(["--saida", str(saida), "retrato"], maquina)
     assert not any("não abriu" in r for r in resumo(saida)["recusas"])
     assert da_linha(saida, "o LED contra o jogador")
+
+
+def test_a_sessao_observa_a_janela_e_ve_o_panico_que_chega_nela(
+    ob: ModuleType, tmp_path: Path
+) -> None:
+    """Sem ``--bpftrace`` a sessão não esperava: o pânico e a fila eram contados numa janela de 0 s.
+
+    Aqui o compositor entra em pânico aos 30 s da janela. Mordida: voltar a
+    esperar só com ``--bpftrace`` — a contagem sai zero e o compositor, verde.
+    """
+    estado = estado_da_mesa()
+    maquina = fazer_maquina(ob, estado, tmp_path / "config", dispositivos=pads_uhid(4),
+                            processos={4000: (1, "cosmic-comp")})
+    inicio = maquina.relogio
+
+    def diario_do_sistema_desde(epoca: float) -> list[str]:
+        if maquina.relogio - inicio >= 30.0:
+            return ["cosmic-comp[4000]: thread panicked: encoded >= 0xf001"]
+        return []
+
+    maquina.diario_do_sistema_desde = diario_do_sistema_desde
+    saida = tmp_path / "saida"
+    ob.executar(["--saida", str(saida), SUB_DA_SESSAO], maquina)
+    (linha,) = da_linha(saida, "o compositor")
+    assert linha["veredito"] == ob.VERMELHO, linha
+    assert "1 pânico" in linha["porque"]
