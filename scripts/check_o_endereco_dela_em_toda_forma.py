@@ -235,7 +235,8 @@ def achados_dos_virtuais(linha: str, pedacos: dict[str, str]) -> list[str]:
 
     Por dicionário, e não por regex: são 64 virtuais por endereço, e uma regex
     por rótulo custaria 64 varreduras de cada linha da árvore. A corrida colada
-    se alinha pelo começo dela, como a do dono.
+    se lê como a do dono: a par, alinhada pelo começo; a ímpar não diz onde
+    começa o octeto, e as duas paridades são lidas.
     """
     if not pedacos:
         return []
@@ -243,13 +244,16 @@ def achados_dos_virtuais(linha: str, pedacos: dict[str, str]) -> list[str]:
     for m in _CORRIDA.finditer(linha):
         separador = m.group(1) or ""
         corrida = m.group(0).lower()
-        octetos = (corrida.split(separador) if separador
-                   else [corrida[i:i + 2] for i in range(0, len(corrida) - 1, 2)])
-        for largura in (4, 6):
-            for i in range(len(octetos) - largura + 1):
-                rotulo = pedacos.get(separador.join(octetos[i:i + largura]))
-                if rotulo:
-                    rotulos.append(rotulo)
+        leituras = ([corrida.split(separador)] if separador else [
+            [corrida[i:i + 2] for i in range(paridade, len(corrida) - 1, 2)]
+            for paridade in ((0, 1) if len(corrida) % 2 else (0,))
+        ])
+        for octetos in leituras:
+            for largura in (4, 6):
+                for i in range(len(octetos) - largura + 1):
+                    rotulo = pedacos.get(separador.join(octetos[i:i + largura]))
+                    if rotulo:
+                        rotulos.append(rotulo)
     return rotulos
 
 

@@ -1255,6 +1255,27 @@ def test_os_dois_bytes_do_hash_sem_o_prefixo_nao_sao_achado() -> None:
     assert regua.achados_dos_virtuais(f"mac={':'.join(meio)}\n", pedacos) == ["V0 de E0"]
 
 
+def test_as_reguas_leem_a_corrida_impar_nas_duas_paridades() -> None:
+    """Um algarismo solto na frente desalinha a corrida colada, e o dono lê as duas paridades.
+
+    MORDIDA (conferência de 28/09/2026): leia só a paridade do começo nas duas
+    réguas de forma — o endereço colado atrás de um algarismo passa pelas duas.
+    """
+    from hefesto_dualsense4unix.integrations.uhid_gamepad import vpad_mac
+
+    forma = _carregar(RAIZ / "scripts/check_endereco_de_radio.py", "_regua_de_forma_impar")
+    acusado = ("06", "1b", "44", "11", "3a", "b7")
+    pedacos = forma.pedacos_dos_acusados([acusado])
+    assert forma.acusa_pedaco(f"id=f{''.join(acusado)}", pedacos) != []
+    mascarado = (*acusado[:3], "00", "00", acusado[5])
+    assert forma.acusa_pedaco(f"id=f{''.join(mascarado)}", pedacos) == []
+
+    regua = _carregar(_REGUA_DO_DONO, "_regua_do_dono_impar")
+    virtual = vpad_mac(":".join(_DA_MAQUINA), 1).replace(":", "")
+    pedacos_v = regua.pedacos_dos_virtuais(regua.virtuais_da_maquina({_DA_MAQUINA}))
+    assert regua.achados_dos_virtuais(f"id=f{virtual}", pedacos_v) == ["V0 de E0"]
+
+
 def test_a_regua_do_dono_le_todo_virtual_que_o_dono_dos_vivos_veste() -> None:
     """O número de MACs por aparelho é do `uhid_gamepad`, não uma cópia na régua.
 

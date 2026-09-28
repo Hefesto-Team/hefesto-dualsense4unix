@@ -269,19 +269,27 @@ def pedacos_dos_acusados(acusados: list[tuple[str, ...]]) -> dict[str, str]:
 def acusa_pedaco(linha: str, pedacos: dict[str, str]) -> list[str]:
     """Os rótulos dos acusados que têm uma janela nesta linha.
 
-    A corrida colada se alinha pelo começo dela, como a do dono.
+    A corrida colada se lê como a do dono: a par, alinhada pelo começo; a
+    ímpar não diz onde começa o octeto, e as duas paridades são lidas.
     """
     rotulos = []
     for m in _CORRIDA.finditer(linha):
         separador = m.group(1) or ""
         corrida = m.group(0).lower()
-        octetos = (corrida.split(separador) if separador
-                   else [corrida[i:i + 2] for i in range(0, len(corrida) - 1, 2)])
-        for i in range(len(octetos) - 2):
-            rotulo = pedacos.get(separador.join(octetos[i:i + 3]))
-            if rotulo:
-                rotulos.append(rotulo)
+        for octetos in _leituras_da_corrida(corrida, separador):
+            for i in range(len(octetos) - 2):
+                rotulo = pedacos.get(separador.join(octetos[i:i + 3]))
+                if rotulo:
+                    rotulos.append(rotulo)
     return rotulos
+
+
+def _leituras_da_corrida(corrida: str, separador: str) -> list[list[str]]:
+    """Os octetos da corrida: um jeito com separador, e um ou dois colada."""
+    if separador:
+        return [corrida.split(separador)]
+    return [[corrida[i:i + 2] for i in range(paridade, len(corrida) - 1, 2)]
+            for paridade in ((0, 1) if len(corrida) % 2 else (0,))]
 
 
 def arquivos_versionados() -> list[Path]:
