@@ -852,6 +852,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
 #: Interruptores de feature que NADA liga hoje, com o endereço da lacuna e o
 #: que a fecharia. Quem entregar a cura APAGA a entrada, e é essa a única
 #: manutenção.
+#: sai com: OS-INTERRUPTORES-QUE-NINGUEM-LIGA-01
 _SEM_MAO_HOJE: dict[str, str] = {
     "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED": (
         "MEDIDO em 12/08/2026, e este é o achado mais desconfortável da lista, "
@@ -1452,6 +1453,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # lápides diziam dos BOTÕES continua valendo: o gesto da tela é da
     # TRANSPLANTE-DA-SECAO-01. A do `segundos_ate` fica: a conta da janela é da
     # tela, e a tela ainda não a chama.
+    # sai com: A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01
     "integrations/gesto_de_pareamento.py::segundos_ate":
         "PONTE-SEM-CHAMADOR-01, 20/09/2026. O módulo nasceu para fechar "
         "a lacuna mais cara desta casa: "
@@ -1483,11 +1485,13 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "função e pinte o `diario` do arquivo, que é a terceira camada da "
         "sprint (VER, CURAR, DIZER). O dado já está no disco desde "
         "18/09/2026; falta quem o leia na tela.",
+    # sai com: A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01
     "integrations/haptica_bt.py::bloco_de_silencio":
         "Irmã da entrada acima, mesma sprint e mesma lacuna: o bloco zerado é "
         "o que a ponte manda quando o jogo cala, e é a MORDIDA da bancada — "
         "com ele o controle parou, e foi isso que separou o voice-coil do "
         "rumble clássico em 18/09/2026.",
+    # sai com: OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01
     "integrations/cura_por_estrada.py::tem_estrada":
         "O BOTÃO «Consertar» DOS CARTÕES SEM CENSO SAIU EM 10/09/2026 "
         "(LANCADOR-LOCALIZAR-01), por palavra dela — 'se tenho tudo "
@@ -1559,6 +1563,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # underscore: `coluna_de_atencao` é a porta por onde a próxima frente pega o
     # canal pronto. Sem ela, quem for dar casa às dez reescreve de zero as onze
     # chamadas, os quatro `try` próprios e a escada de gravidade.
+    # sai com: A-TELA-PERGUNTA-AO-DONO-01
     "interface/pacotes/a01_jogar.py::coluna_de_atencao":
         "07/09/2026 — o canal dos avisos ficou sem tela por ordem dela, e as "
         "dez fontes que só ele publicava estão caladas no produto. O caminho se "
@@ -1595,6 +1600,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "havendo campo a folha teria como vesti-lo). Fecha-se acrescentando o "
         "campo à carga e o alvo ao gerador — trabalho de tela, com o navegador "
         "aberto, que é a regra desta casa.",
+    # sai com: O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01
     'integrations/alto_falante_bt.py::fonte_com_ritmo': (
         "A BOMBA, 07/09/2026 — dá RITMO a uma fonte que não tem, com prazo absoluto "
         "por quadro em vez de sono fixo (sono fixo soma o tempo de codificar e "
@@ -1700,6 +1706,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # metades da mesma cura, e o portão da cor as cobra juntas: sem a folha
     # inteira o alvo de atributo escreve um colorway que nenhuma regra casa e o
     # desenho cai nos `fill` crus (medido: `rgb(58, 63, 75)`).
+    # sai com: A-TELA-PERGUNTA-AO-DONO-01
     "interface/monta.py::folha_das_cores": (
         "A-VALIDACAO-DOS-QUATRO-01, 06/09/2026 — a folha dos 28 modelos, para "
         "quem põe mais de um desenho na página. ONDE O CAMINHO SE PERDE: "
@@ -1758,6 +1765,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # `alimentando` FICA por isso mesmo — ela é o estado do alimentador, e o
     # rádio não usa alimentador nenhum (o fifo é enchido pelo decodificador
     # Opus, não por um `parec`).
+    # sai com: O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01
     "integrations/canal_do_microfone.py::alimentando": (
         "ONDA5-MIC-VIRTUAL-01, 06/09/2026, Passo 2 — `{uniq: nó de onde o áudio "
         "vem}`, o estado que separa 'o canal existe' de 'o microfone está "
@@ -1836,6 +1844,8 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # a lápide dizia não existir passou a existir, e foi este portão que avisou.
     # `e_stream_do_medidor` FICA: quem o chama é a PEÇA A, e só pelo import
     # dinâmico que o texto abaixo descreve.
+    # fica: o chamador existe, pela luz do microfone, com import dinâmico
+    # de propósito; a régua estática não o vê
     "integrations/nivel_do_microfone.py::e_stream_do_medidor": (
         "A PEÇA B da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
         "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
@@ -1885,6 +1895,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # já lê `vpad_backend`, passar a mostrar o porquê"*. A decisão [07] dela
     # mandou mostrar (*"uma marca na palavra e o motivo no hover"*), e o
     # `mascara-degradou` da aba 02 é o chamador que faltava.
+    # sai com: A-TELA-PERGUNTA-AO-DONO-01
     "app/actions/jogar/painel.py::chips_sem_degrau": (
         "Os chips que nomeiam uma ponte que a `ESCADA` não tem "
         "(app/actions/jogar/painel.py:534) — a tela prometendo o que o produto não "
@@ -1913,6 +1924,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # que declara `depois_de: [O-ALTO-FALANTE-VIRTUAL-01]` e cujo `nao_toca:` é
     # justamente `app/audio_saida.py`. As duas se encontram sem que nenhuma abra
     # o arquivo da outra — e é por isso que a promessa existe antes do caminho.
+    # sai com: O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01
     "app/audio_saida.py::no_do_controle": (
         "O alto-falante virtual de UMA entrada de `state_full.controllers` "
         "(app/audio_saida.py:1623). É a porta da seção: `plano_de_publicacao` só "
@@ -1947,6 +1959,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "índice do módulo não há o que retirar. FECHA com ela, na mesma sprint e "
         "no mesmo dono. MEDIDO em 06/09/2026."
     ),
+    # sai com: A-TELA-PERGUNTA-AO-DONO-01
     "app/audio_saida.py::estado_do_sono": (
         "A leitura completa numa frase só, e ela BLOQUEIA — o docstring manda rodar "
         "em worker (app/audio_saida.py:1077). O sono da placa de áudio é a causa "
@@ -1974,6 +1987,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "motor, que o pacote `a05_vibracao` refaz por dentro. Duas verdades sobre o "
         "mesmo endereço. Fecha quando o gesto delegar. MEDIDO em 01/09/2026."
     ),
+    # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
     "core/led_control.py::apply_led_settings": (
         "Aplica settings no controle (core/led_control.py:167) — o caminho DIRETO, "
         "sem passar pelo daemon. O produto de hoje escreve pela IPC (`led.set`), "
@@ -1988,6 +2002,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "Nenhum caminho do daemon a chama. Fecha quando a allowlist de jogo passar "
         "a acioná-la. MEDIDO em 01/09/2026."
     ),
+    # sai com: A-TELA-PERGUNTA-AO-DONO-01
     "gui/aba_sistema.py::perfil_do_rotulo": (
         "O caminho de volta: o que a página mandou vira a chave do produto "
         "(gui/aba_sistema.py:445). O gesto `perfil-da-mesa` de `a09_sistema.py` faz "
@@ -2102,6 +2117,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "chamador. Fecha quando a aba Iluminação montar o padrão por aqui. MEDIDO "
         "em 01/09/2026."
     ),
+    # sai com: A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01
     "integrations/hidraw_broker_client.py::estado_do_grab": (
         "Devolve se o `EVIOCGRAB` de um nó evdev está livre ou outro processo o "
         "segura (integrations/hidraw_broker_client.py:689). São as quatro frases "
@@ -2173,6 +2189,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "daqui."
     ),
     # --- 25/08/2026: `core/physical_report_reader.py` nasceu nesta madrugada, e ainda não tem tela
+    # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
     "core/physical_report_reader.py::extract_motion_window": (
         "MEDIDO em 25/08/2026, na DAEMON-ACORDADO-01. Faz parte da "
         "investigação dos **15,2% de um núcleo com ninguém jogando** (6.393 "
@@ -2197,6 +2214,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # de `src/` é quebrado em PALAVRAS — a palavra num rótulo de tela satisfazia
     # o símbolo. Fica registrado porque é o tipo de perdão que este portão dá
     # calado, e quem ler a contagem precisa saber que uma das 37 caiu por isso.
+    # sai com: A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01
     "integrations/arranjo_da_mesa.py::adaptadores_da_mesa": (
         "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
         "do motor que rodava só dentro do mockup "
@@ -2453,6 +2471,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     #     `entradas_do_gabinete::furo_declarado`, que a janela chama (`:694`).
     #     A sexta ficou, e a razão dela já dizia por quê: quem tem de perguntar
     #     por ela é o DESPACHO do daemon, não a janela.
+    # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
     "app/widgets/calibrar_entradas.py::botoes_para_o_jogo": (
         "MEDIDO em 26/08/2026, e esta é a lápide que MENOS depende da L2-E: a "
         "peneira que a posse arma, e quem tem de perguntar por ela é o "
@@ -2476,6 +2495,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # chamá-lo. A razão antiga dizia "as abas continuam formatando número à
     # mão"; era exatamente isso, e é isso que deixou de valer. Não se guarda a
     # entrada velha ao lado da nova.
+    # sai com: A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01
     "app/fala_do_mapa.py::Numero": (
         "MEDIDO em 25/08/2026, e REMEDIDO em 26/08 — quando a irmã dele "
         "(`formata_pt_br`) GANHOU CAMINHO e saiu daqui, e ele NÃO caiu junto. "
@@ -2518,6 +2538,8 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "decisão a mais na fila dela. DONO: a frente do léxico, ou quem "
         "coordenar a leva que fizer a prova de tela desta linha."
     ),
+    # fica: a decisão D-COSTURA-BLUEZ (25/08) deixa o script dono do alias,
+    # e dar chamador a esta função é regressão
     "integrations/apelido_do_dongle.py::costurar_a_mesa": (
         "MEDIDO em 22/08/2026, RECONFERIDO em 23/08 e DECIDIDO em 25/08: é "
         "promessa ao produto e o caminho está DELIBERADAMENTE fechado — a "
@@ -2552,6 +2574,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # na tela continua sendo palavra dela — mas isso é prova de tela, não
     # dívida de caminho, e não é aqui que se registra.
     # --- a família mais numerosa: o desligar que ninguém chama --------------
+    # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
     "daemon/subsystems/ipc.py::stop_ipc": (
         "REMEDIDO em 26/08/2026, e a razão de 12/08 estava ERRADA. Ela dizia "
         "que o `shutdown` não derrubava o servidor de IPC e mandava a próxima "
@@ -2656,6 +2679,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # no mesmo dia") caducou. Não se guarda a lápide ao lado da cura: ela
     # mandaria a próxima pessoa procurar um chamador que já existe.
     # --- as duas metades das notificações ----------------------------------
+    # sai com: OS-INTERRUPTORES-QUE-NINGUEM-LIGA-01
     "integrations/desktop_notifications.py::notify_battery_low": (
         "MEDIDO em 12/08/2026: só `tests/` a chama; em `src/` só existe a "
         "citação do exemplo em comentário (linha 220). É a outra ponta da "
@@ -2709,6 +2733,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # ZERO. Um processo Rust não importa função Python.
     #
     # RESTAM TRÊS, abaixo: as duas da Lightbar e o mic da mesa cheia.
+    # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
     "app/actions/external_controllers.py::short_button_label": (
         "MEDIDO em 12/08/2026: só `tests/` a chama. O docstring descreve uma "
         "superfície concreta que não existe: `Rótulo curto para o botão do "
@@ -2859,6 +2884,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # `interface/pacotes/a09_sistema._leitura` passou a chamar a função para
     # preencher `Leitura.ambiente`. O caminho é
     # `hefesto_vivo` -> `pacotes` -> `a09_sistema` -> `ambiente_na_tela`.
+    # sai com: A-TELA-PERGUNTA-AO-DONO-01
     "app/actions/ambiente_na_tela.py::descrever_steam_encontrada": (
         "ENTREGUE em 24/08/2026 (T-12, ONDA0-Z7). Lê `steam_layout_achado` — "
         "chave que NENHUMA frente desta sprint publica ainda em `state_full` "
@@ -2962,6 +2988,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # `prgname` — ele já é quem prepara o processo antes da primeira janela.
     # Não foi feito aqui porque é mudança de COMPORTAMENTO do lançador dela, e a
     # `GTK-3` mudou o endereço, não o produto.
+    # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
     "app/arranque.py::x11_alcancavel": (
         "06/09/2026 — o caminho se perde entre `run.sh` (que força XWayland sem "
         "conferir) e `scripts/abrir_interface.py` (que não confere nada). "

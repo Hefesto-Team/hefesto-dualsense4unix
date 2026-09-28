@@ -140,6 +140,7 @@ _TERRITORIO = "daemon"
 #: atributo; a razão cita a medição que a sustenta, porque "confie em mim" não
 #: é razão. Uma entrada que deixa de ser verdade REPROVA — ver
 #: `test_nenhuma_declaracao_ficou_obsoleta`.
+#: sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
 _PAR_ACEITO: dict[str, str] = {
     "_steam_input_vpad_suspenso": (
         "MEDIDO em 25/08/2026 (VPAD-SUSPENSO-MORTO-01/E1). O armador "
@@ -845,6 +846,7 @@ _JANELA = 3
 #:    que o comentário registra (as quatro listas de bases em
 #:    `utils/repo_files.py`, mortas pela BG-BASES-01). Não há número novo para
 #:    escrever: o conserto é a prosa dizer que o endereço é de antes da cura.
+#: sai com: O-CODIGO-SEM-NARRADOR-01
 _CITACOES_PENDENTES: frozenset[str] = frozenset({
     # AS TRÊS DA FRASES-E-DICAS-01 SAÍRAM DAQUI NA COSTURA (13/09/2026): quem
     # coordena reapontou `aba02.py` e os dois docstrings de `a10_perfis.py` pelo
