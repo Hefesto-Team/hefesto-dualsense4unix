@@ -210,3 +210,39 @@ def test_os_dois_fechos_dizem_o_reinicio() -> None:
     """O nativo e o dos formatos de pacote: os módulos de kernel são os mesmos."""
     assert INSTALL.count("\ndizer_o_reinicio_pendente\n") == 1
     assert INSTALL.count("\n    dizer_o_reinicio_pendente\n") == 1
+
+
+def _o_grupo(tmp_path: Path, grupos_da_sessao: str) -> str:
+    """`dizer_o_reinicio_pendente` com o grupo `hefesto` recém-ganho (ou não)."""
+    bin_ = tmp_path / "bin-grupo"
+    bin_.mkdir()
+    (bin_ / "getent").write_text(
+        "#!/bin/sh\necho 'hefesto:x:990:outra,jogadora'\n", encoding="utf-8"
+    )
+    (bin_ / "id").write_text(
+        f'#!/bin/sh\ncase "$1" in -nG) echo "{grupos_da_sessao}";; *) echo jogadora;; esac\n',
+        encoding="utf-8",
+    )
+    for nome in ("getent", "id"):
+        (bin_ / nome).chmod(0o755)
+    r = subprocess.run(
+        [BASH, "-c", f"ROOT_DIR='{RAIZ}'\nsource /dev/stdin\ndizer_o_reinicio_pendente"],
+        input=CAMADA, capture_output=True, text=True, timeout=60, check=False,
+        env={"PATH": f"{bin_}:/usr/bin:/bin", "HOME": str(tmp_path), "USER": "jogadora"},
+    )
+    assert r.returncode == 0, r.stderr
+    return r.stdout
+
+
+def test_o_grupo_ganho_agora_entra_no_reinicie(tmp_path: Path) -> None:
+    """A conferência de 28/09/2026: o grupo `hefesto` entrou no fecho sem régua.
+
+    A MORDIDA: tirar o `grupo_pede_novo_login` do `dizer_o_reinicio_pendente`
+    faz este teste reprovar.
+    """
+    saida = _o_grupo(tmp_path, "jogadora adm")
+    assert "Reinicie o computador" in saida and "o grupo hefesto" in saida, saida
+
+
+def test_o_grupo_que_a_sessao_ja_tem_nao_pede_nada(tmp_path: Path) -> None:
+    assert _o_grupo(tmp_path, "jogadora adm hefesto") == ""
