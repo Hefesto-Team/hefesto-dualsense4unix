@@ -93,8 +93,18 @@ def _rodar(nome: str, destino: pathlib.Path) -> subprocess.CompletedProcess[str]
 
 @pytest.mark.parametrize("nome", GERADORES)
 def test_o_gerador_roda(nome: str, bancada_de_prova: pathlib.Path) -> None:
-    """Ele termina sem exceção. É o degrau que os dez perderam em 01/09/2026."""
+    """Ele termina sem exceção. É o degrau que os dez perderam em 01/09/2026.
+
+    SEM O GTK REAL, PULA — 27/09/2026. O gerador chega ao GTK pelos pacotes
+    (`pacotes` → `a02_controles` → `app/actions/base.py`), e no `lint-test` do
+    CI os dez morriam com `No module named 'gi'` no filho: a régua reprovava o
+    runner, não o gerador. O repasse devolve a falta ao pai, e a regra do
+    `tests/conftest.py` pula com o motivo; no `gtk-real` os dez rodam.
+    """
+    from tests.conftest import repassar_a_falta_do_gtk
+
     r = _rodar(nome, bancada_de_prova)
+    repassar_a_falta_do_gtk(r)
     assert r.returncode == 0, (
         f"`{nome}` não roda:\n{r.stderr.strip()[-1200:]}\n\n"
         f"A BANCADA É A FONTE DO DESENHO. Um gerador que não roda congela a aba "
