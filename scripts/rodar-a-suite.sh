@@ -40,7 +40,14 @@ mkdir -p "$SAIDA"
 # shellcheck disable=SC2012  # os nomes desta casa são ASCII; `ls|sort` é a
 # forma que o GUIA.md documenta há semanas, e trocá-la por `find` mudaria a
 # ORDEM — que é o que decide a divisão em partes.
-ls tests/unit/test_*.py | sort > "$SAIDA/todos.txt"
+#
+# E A ORDEM É A MESMA EM TODA MÁQUINA, pelo `LC_ALL=C` (27/09/2026). O `sort`
+# segue o idioma de quem roda: em pt_BR ele ignora o `_` e a divisão sai outra
+# que a do runner (C.UTF-8) — medido na corrida 36354426805, a
+# `test_o_gesto_de_pareamento.py` rodava na parte 14 do CI e na 15 em casa, com
+# outros vizinhos no mesmo processo. Vermelho de ordem só se reproduz com as
+# mesmas partes.
+ls tests/unit/test_*.py | LC_ALL=C sort > "$SAIDA/todos.txt"
 total=$(wc -l < "$SAIDA/todos.txt")
 [ "$total" -gt 0 ] || { echo "ERRO: nenhum arquivo de teste em tests/unit/."; exit 2; }
 split -n "l/$PARTES" -d "$SAIDA/todos.txt" "$SAIDA/parte-"
