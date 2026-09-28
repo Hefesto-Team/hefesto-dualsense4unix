@@ -1002,3 +1002,24 @@ def test_o_1b_com_menos_pads_que_jogadores_e_nao_sei_e_nunca_vermelho(
     ob.executar(["--saida", str(saida), SUB_DA_SESSAO], maquina)
     (linha,) = da_linha(saida, "1b, os pads no boot")
     assert linha["veredito"] == ob.NAO_SEI, linha
+
+
+def test_a_celula_da_matriz_mostra_o_pior_dos_passos_dela(
+    ob: ModuleType, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A hora de cada pad cai na MESMA célula («todos»): um vermelho no meio sumia da matriz.
+
+    Mordida: voltar ao dicionário em que o último passo da célula vence — a
+    matriz diz «verde» sobre o pad que levou 30 s.
+    """
+    sessao = tmp_path / "sessao"
+    sessao.mkdir()
+    comum = {"sub": SUB_DA_SESSAO, "linha": "a hora do pad", "jogador": "todos",
+             "transporte": "—", "modo": "xbox"}
+    linhas = [dict(comum, veredito=ob.VERMELHO), dict(comum, veredito=ob.VERDE)]
+    (sessao / "passos.jsonl").write_text(
+        "".join(json.dumps(p) + "\n" for p in linhas), encoding="utf-8"
+    )
+    assert ob.veredito(sessao) == ob.RC_VERMELHO
+    (linha,) = [ln for ln in capsys.readouterr().out.splitlines() if "a hora do pad" in ln]
+    assert linha.rstrip().endswith("VERMELHO"), linha

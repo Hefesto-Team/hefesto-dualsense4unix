@@ -2746,6 +2746,10 @@ def _a_posse_do_jogo(s: Sessao, mesa: Sequence[Mapping[str, Any]], per_vpad: Map
 # ---------------------------------------------------------------------------
 
 
+#: A ordem em que uma célula da matriz mostra o pior dos passos dela.
+_GRAVIDADE = {NAO_COBERTO: 0, NAO_SE_APLICA: 0, REGISTRO: 1, VERDE: 2, NAO_SEI: 3, VERMELHO: 4}
+
+
 def sessoes_em(pasta: Path) -> list[Path]:
     """As pastas de sessão (as que têm ``passos.jsonl``) sob ``pasta``, em ordem."""
     if (pasta / "passos.jsonl").is_file():
@@ -2781,7 +2785,14 @@ def veredito(pasta: Path | None) -> int:
             mexeu += [dict(m, sub=resumo.get("sub")) for m in resumo.get("mexeu") or []]
     colunas = sorted({(p["jogador"], p["transporte"], p["modo"]) for p in passos})
     linhas = sorted({(p["sub"], p["linha"]) for p in passos}, key=lambda x: (ORDEM.index(x[0]) if x[0] in ORDEM else 99, x[1]))
-    celula = {(p["sub"], p["linha"], p["jogador"], p["transporte"], p["modo"]): p["veredito"] for p in passos}
+    # Uma célula pode ter vários passos (a hora de cada pad, o 3c por pulso):
+    # ela mostra o PIOR deles. Guardar o último escondia um vermelho da matriz
+    # enquanto o rc o contava.
+    celula: dict[tuple[str, ...], str] = {}
+    for p in passos:
+        chave = (p["sub"], p["linha"], p["jogador"], p["transporte"], p["modo"])
+        if _GRAVIDADE.get(p["veredito"], 0) >= _GRAVIDADE.get(celula.get(chave, ""), -1):
+            celula[chave] = p["veredito"]
     curto = {VERDE: "verde", VERMELHO: "VERMELHO", NAO_SEI: "não sei", REGISTRO: "reg.",
              NAO_SE_APLICA: "n/a", NAO_COBERTO: "não coberto"}
     print("A MATRIZ — subcomando · linha × jogador · transporte · modo")
