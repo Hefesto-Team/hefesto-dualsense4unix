@@ -32,6 +32,7 @@ Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
 from __future__ import annotations
 
 import asyncio
+import threading
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -199,6 +200,29 @@ def ela_segura_ps_create(mundo: rm.RadioDeMentira, relogio: rm.Relogio, aparelho
     relogio.agendar(2.0, lambda: mundo.segurar_ps_create(aparelho))
 
 
+class BuscaDePe:
+    """Segura o fio da central DENTRO da janela, esperando o gesto dela.
+
+    O relógio de mentira anda meio segundo a cada volta da espera; sem isto a
+    janela de 30 s passaria num piscar e a busca acabaria antes do clique dela.
+    Só o fio do movimento fica preso — o tique da tela não dorme neste relógio.
+    """
+
+    def __init__(self, relogio: rm.Relogio) -> None:
+        self.portao = threading.Event()
+        self.dentro = threading.Event()
+        relogio.durante = self._segurar
+
+    def _segurar(self) -> None:
+        if self.portao.is_set() or threading.current_thread().name != "hefesto-central-mover":
+            return
+        self.dentro.set()
+        self.portao.wait(30.0)
+
+    def soltar(self) -> None:
+        self.portao.set()
+
+
 def onde_buscou(mundo: rm.RadioDeMentira) -> list[str]:
     return [c for c, _a in mundo.metodos("StartDiscovery")]
 
@@ -305,22 +329,31 @@ def test_sem_nenhum_aberto_vale_a_escolha_da_central(
 def test_com_a_janela_aberta_o_chip_de_outro_adaptador_treme(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A janela não muda de adaptador no meio: com a busca de pé no quarto, o chip
-    da varanda recusa (o botão treme), e o destino continua o quarto."""
-    import time as relogio_de_parede
+    """Com a busca de pé no quarto, o chip da varanda PEDE ao rádio a busca
+    para lá, e quem recusa é a central (a de hoje não muda a janela de
+    adaptador no meio): o botão treme, e o destino continua o quarto.
 
+    A CENTRAL ESTÁ OCUPADA DE VERDADE (A-CAIXA-FICA-ONDE-ELA-ABRIU-01): até
+    28/09 esta régua publicava um movimento de mentira com a central real
+    parada, e o chip recusava pela tela. Com o chip perguntando à central,
+    aquele dublê era mais frouxo que o rádio — a central parada aceitaria.
+    """
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    busca = BuscaDePe(relogio)
     try:
-        esperando = {"movimentos": [{"aparelho": "", "destino": QUARTO, "estado": "esperando",
-                                     "passo": "gesto", "quando": relogio_de_parede.time()}]}
-        monkeypatch.setattr(bancada, "estado", lambda: {"controllers": [],
-                                                        "radio_central": esperando})
+        bancada.cena()
+        bancada.gesto("escolher-adaptador", alvo=id_da_tela(QUARTO))
+        bancada.cena()
+        bancada.gesto("conectar-aparelho")
+        assert busca.dentro.wait(5.0), "a central não abriu a janela"
         cena = bancada.cena()
         assert cena["ocupado"] and cena["destino_do_conectar"] == id_da_tela(QUARTO)
         with pytest.raises(RuntimeError):
             bancada.gesto("escolher-adaptador", alvo=id_da_tela(VARANDA))
+        assert bancada.ponte.chamadas[-1] == ("radio.mover", {"destino": id_da_tela(VARANDA)})
         assert a08._CENA_NA_TELA["destino_do_conectar"] == id_da_tela(QUARTO)
+        assert onde_buscou(mundo) == [rm.HCIS[QUARTO]]
     finally:
+        busca.soltar()
         bancada.fechar()
-

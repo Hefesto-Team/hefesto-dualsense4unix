@@ -5201,8 +5201,11 @@ def _moldes_de_painel(cena: dict[str, Any]) -> str:
         moldes.append(f'<template class="painel-molde" data-painel="o-que-e" '
                       f'data-alvo="{_x(viz["id"])}" data-titulo="O que é este rádio?">'
                       f'{_botoes(itens)}</template>')
-    # CONECTAR: o destino vem escolhido pela D8, e o que está perto.
-    destino = cena.get("destino_do_conectar") or (lugares[0]["id"] if lugares else "")
+    # CONECTAR: o destino vem escolhido pela D8, e o que está perto. Com a
+    # busca de pé, o chip aceso é o do adaptador em que ela ESTÁ — a caixa que
+    # ela abriu pode ser outra (:func:`_o_aberto`), e o chip diz o rádio.
+    destino = (_onde_espera(lugares, list(cena.get("aparelhos") or ()))
+               or cena.get("destino_do_conectar") or (lugares[0]["id"] if lugares else ""))
     chips = "".join(
         f'<button class="op" aria-pressed="{str(lug["id"] == destino).lower()}" '
         f'title="Com som: {len(_pontes(cena, str(lug["id"])))} de {PONTES_POR_ADAPTADOR}" '
@@ -5950,8 +5953,19 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         "perto": _perto(aparelhos_bz, adaptadores_bz, aparelhos),
     }
     cena["destino_da_central"] = _destino_da_central(cena, st)
-    cena["destino_do_conectar"] = _destino_do_conectar(cena, st)
+    cena["destino_do_conectar"] = _destino_do_conectar(cena)
     return cena
+
+
+def _onde_espera(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]]) -> str | None:
+    """O adaptador em que um movimento espera o gesto dela — onde a busca ESTÁ.
+
+    É a pergunta ao rádio, e não à tela: a linha que espera PS + Create (o
+    aparelho já conhecido) ou o «Conectar» que ainda não sabe quem vem. A
+    central só segura um movimento por vez, então há um lugar só, ou nenhum.
+    """
+    return next((str(a["lugar"]) for a in aparelhos if a.get("esperando") and a.get("lugar")),
+                None) or next((str(lug["id"]) for lug in lugares if lug.get("conectando")), None)
 
 
 def _o_aberto(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]],
@@ -5962,8 +5976,17 @@ def _o_aberto(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]],
     dela, 25/09/2026: *«Essa área se só tiver um conector ela tá sempre
     aberta.»* Não há outra para abrir no lugar, e fechar a única esconderia os
     controles atrás de um clique a mais. Com mais de um, o que ela abriu; sem
-    escolha dela, o que mais passou do limite; e sem esse, o da lâmpada.
-    <!-- noqa-acento: citação literal dela -->
+    escolha dela, o da busca, o de quem não conectou, o que mais passou do
+    limite, e sem esses o da lâmpada. <!-- noqa-acento: citação literal dela -->
+
+    UM DONO PARA «QUAL CAIXA ESTÁ ABERTA»: O CLIQUE DELA (a foto 34, 26/09,
+    A-CAIXA-FICA-ONDE-ELA-ABRIU-01): *«toda hora mesmo selecionando meio o
+    negocio vai pra outra aba da direita»* <!-- noqa-acento: citação literal dela -->
+    A busca que esperava na Direita vencia o clique dela no Meio a cada tique,
+    por até ``PRAZO_DO_PENDENTE_S``. Agora nada abre por cima da escolha dela,
+    nem depois de ela fechar todas: a espera aparece no cabeçalho do adaptador
+    em que está (:func:`_marcas_de_onde`), aberto ou fechado. A escolha de um
+    adaptador que saiu da máquina não é escolha sobre as caixas de agora.
 
     A CAIXA DA LÂMPADA ABRE QUANDO NENHUMA OUTRA ABRIRIA (o conferente da
     A-CONEXOES-O-QUE-A-LISTA-DELA-ACHOU-01, 25/09/2026). A lâmpada mora no
@@ -5977,24 +6000,20 @@ def _o_aberto(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]],
     """
     if len(lugares) == 1:
         return str(lugares[0]["id"])
-    # A CAIXA QUE ESPERA O GESTO ABRE SOZINHA (25/09/2026, a prova de tela
-    # desta sprint): o «Segure PS + Create» mora na linha que espera, DENTRO da
-    # caixa do destino, e com ela fechada o que ela precisa fazer custava um
-    # clique — a regra de 07/09 desta casa. Enquanto a janela está aberta, a
-    # caixa dela vence a escolha; quando o movimento acaba, volta a de antes.
-    espera = next((str(a["lugar"]) for a in aparelhos if a.get("esperando") and a.get("lugar")),
-                  None) or next((str(lug["id"]) for lug in lugares if lug.get("conectando")), None)
+    escolhido = _ABERTO.get("lugar", "")
+    if escolhido is None or escolhido in {str(lug["id"]) for lug in lugares}:
+        return str(escolhido) if escolhido else None
+    # SEM ESCOLHA DELA, A CAIXA QUE ESPERA O GESTO ABRE (25/09/2026): o «Segure
+    # PS + Create» mora na linha que espera, DENTRO da caixa do destino — a
+    # regra de 07/09 desta casa, o que ela precisa fazer não custa um clique.
+    espera = _onde_espera(lugares, aparelhos)
     if espera:
         return espera
     # O «NÃO CONECTOU» MORA DENTRO DA CAIXA (26/09/2026), com o «Tentar de Novo»
-    # e o X: sem escolha dela, a caixa de quem não chegou abre. Com escolha, a
-    # dela vence — e a do «Conectar» já é a que ela abriu.
+    # e o X: sem escolha dela, a caixa de quem não chegou abre.
     falhou = next((str(lug["id"]) for lug in lugares if lug.get("nao_conectou")), None)
-    if falhou and "lugar" not in _ABERTO:
+    if falhou:
         return falhou
-    if "lugar" in _ABERTO:
-        escolhido = _ABERTO["lugar"]
-        return str(escolhido) if escolhido else None
     lampada = str((proposta or {}).get("destino") or "")
     return _o_mais_cheio(lugares, aparelhos) or next(
         (str(lug["id"]) for lug in lugares if str(lug["id"]) == lampada), None)
@@ -6380,7 +6399,7 @@ def _perto(aparelhos_bz: tuple[Any, ...], adaptadores_bz: tuple[Any, ...],
     return sorted(vistos.values(), key=lambda a: -(a["forca"] or -999))
 
 
-def _destino_do_conectar(cena: dict[str, Any], st: dict[str, Any]) -> str:
+def _destino_do_conectar(cena: dict[str, Any]) -> str:
     """O destino do «Conectar»: o adaptador ABERTO na lista, e nenhum outro.
 
     UM DESTINO, DITO DE UM JEITO SÓ — decisão dela, 26/09/2026, 04h: *«No
@@ -6392,20 +6411,16 @@ def _destino_do_conectar(cena: dict[str, Any], st: dict[str, Any]) -> str:
     aberto (o ``radio-diario.jsonl``, 03h30 a 03h45). O chip agora abre o mesmo
     adaptador (:func:`escolher_adaptador`), e os dois dizem a mesma coisa.
 
-    A ordem: o destino de um movimento que ESPERA (a janela já está aberta
-    nele, e não muda de adaptador no meio); o adaptador aberto; sem nenhum
-    aberto, a escolha da central (a D8, em ``destino_da_central``). O endereço
-    é o do adaptador — nunca a posição na lista, nunca o número do jogador.
+    A ordem: o adaptador aberto; sem nenhum aberto, a escolha da central (a D8,
+    em ``destino_da_central``). O movimento que espera NÃO vence o aberto
+    (A-CAIXA-FICA-ONDE-ELA-ABRIU-01, 28/09/2026): sem escolha dela o aberto já
+    é o da busca (:func:`_o_aberto`), e o clique dela noutro chip pede ao rádio
+    que a busca vá junto. O endereço é o do adaptador — nunca a posição na
+    lista, nunca o número do jogador.
     """
     if not cena["lugares"]:
         return ""
     ids = {lug["id"] for lug in cena["lugares"]}
-    agora = time.time()
-    for m in (_dicionario(st.get("radio_central")).get("movimentos") or ()):
-        if isinstance(m, dict) and _ainda_espera(m, agora) and m.get("destino"):
-            aberto = _mac(str(m.get("destino")))
-            if aberto in ids:
-                return aberto
     if cena.get("aberto") in ids:
         return str(cena["aberto"])
     return str(cena.get("destino_da_central") or cena["lugares"][0]["id"])
@@ -6441,12 +6456,11 @@ _ABERTO: dict[str, Any] = {}
 
 def _abrir_na_tela(lid: str | None) -> None:
     """Abre ``lid`` (ou fecha todos, com ``None``) e move o destino junto, na
-    hora: o «Conectar» clicado antes do próximo tique já vai para onde ela vê.
-    Com uma janela aberta, o destino é o dela e não muda (:func:`_destino_do_conectar`)."""
+    hora: o «Conectar» clicado antes do próximo tique já vai para onde ela vê —
+    a mesma conta do tique (:func:`_destino_do_conectar`)."""
     _ABERTO["lugar"] = lid
     _CENA_NA_TELA["aberto"] = lid
-    if not _CENA_NA_TELA.get("ocupado"):
-        _CENA_NA_TELA["destino_do_conectar"] = lid or _CENA_NA_TELA.get("destino_da_central", "")
+    _CENA_NA_TELA["destino_do_conectar"] = lid or _CENA_NA_TELA.get("destino_da_central", "")
 
 
 def _laco() -> Any:
@@ -6636,6 +6650,11 @@ def _mover(p: Any, aparelho: str | None, destino: str) -> dict[str, Any]:
     """`radio.mover` pelo dono (a central) — SEMPRE com o destino que a tela mostrou."""
     if _CENA_NA_TELA.get("ocupado"):
         raise RuntimeError("outro movimento está esperando PS + Create")
+    return _pedir_ao_radio(p, aparelho, destino)
+
+
+def _pedir_ao_radio(p: Any, aparelho: str | None, destino: str) -> dict[str, Any]:
+    """O pedido do `radio.mover`, sem a trava da tela: a resposta é da central."""
     parametros: dict[str, Any] = {"destino": destino}
     if aparelho:
         parametros["aparelho"] = aparelho
@@ -6702,14 +6721,22 @@ def escolher_adaptador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
     UM DESTINO SÓ (26/09/2026): o chip e o adaptador aberto na lista dizem a
     mesma coisa, e o chip não guarda uma escolha à parte — ele abre a caixa.
 
-    COM A JANELA ABERTA NOUTRO ADAPTADOR, O CHIP RECUSA (25/09/2026): a janela
-    não muda de adaptador no meio, e um chip que acende sem mudar onde a busca
-    acontece diria uma coisa e o rádio faria outra. A recusa pisca, sem recado.
+    COM A BUSCA DE PÉ NOUTRO ADAPTADOR, O CHIP PEDE AO RÁDIO QUE ELA VÁ JUNTO
+    (A-CAIXA-FICA-ONDE-ELA-ABRIU-01, 28/09/2026): o mesmo `radio.mover` do
+    «Conectar», para o adaptador do chip. Quem diz se a busca muda de adaptador
+    é a central, a dona do movimento; a tela não recusa por conta própria (era
+    a recusa calada da foto 34). Aceito, a caixa e o destino vão para o chip;
+    recusado, o chip treme e nada muda — um chip que acendesse sem a busca ir
+    junto diria uma coisa e o rádio faria outra.
     """
     lug = _lugar_na_tela(o)
-    if _CENA_NA_TELA.get("ocupado") and lug["id"] != _CENA_NA_TELA.get("destino_do_conectar"):
-        raise RuntimeError("a busca já está aberta noutro adaptador")
-    _abrir_na_tela(str(lug["id"]))
+    lid = str(lug["id"])
+    busca = _onde_espera(_CENA_NA_TELA.get("lugares") or [], _CENA_NA_TELA.get("aparelhos") or [])
+    if busca and busca != lid:
+        feito = _pedir_ao_radio(p, None, lid)
+        _abrir_na_tela(lid)
+        return feito
+    _abrir_na_tela(lid)
     return {"armou": True}
 
 

@@ -869,11 +869,12 @@ def test_com_a_janela_aberta_o_chip_e_o_da_janela_e_o_outro_recusa(
 ) -> None:
     """O adaptador em que a janela abriu passa a VARRER, e a D8 manda quem varre
     para o fim — o chip pulava para outro adaptador com a janela aberta no
-    primeiro. Enquanto o movimento espera, o chip é o da janela, e o chip de
-    outro adaptador recusa (a janela não muda de adaptador no meio).
+    primeiro. Enquanto o movimento espera, sem escolha dela, a caixa e o chip
+    são os da janela; o chip de outro adaptador pede ao rádio a busca para lá
+    (A-CAIXA-FICA-ONDE-ELA-ABRIU-01), e a central ocupada recusa.
 
-    MORDIDA: tire o laço dos movimentos do ``_destino_do_conectar`` — com o
-    Centro varrendo, o chip pula para a Esquerda.
+    MORDIDA: tire o ``espera`` do ``_o_aberto`` — com o Centro varrendo, o chip
+    pula para a Esquerda.
     """
     from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez
 
@@ -890,9 +891,25 @@ def test_com_a_janela_aberta_o_chip_e_o_da_janela_e_o_outro_recusa(
                               central={"movimentos": [janela], "proposta": None}))
     assert cena["destino_do_conectar"] == _id(centro)
     assert cena["aberto"] == _id(centro), "a caixa da janela abre sozinha"
+    ponte = _PonteDaCentralOcupada()
     with pytest.raises(RuntimeError):
-        a08.escolher_adaptador(None, {"alvo": _id(ADAPTADORES_DA_TELA[0])}, None)
-    a08.escolher_adaptador(None, {"alvo": _id(centro)}, None)
+        a08.escolher_adaptador(None, {"alvo": _id(ADAPTADORES_DA_TELA[0])}, ponte)
+    assert ponte.pedidos == [{"destino": _id(ADAPTADORES_DA_TELA[0])}]
+    a08.escolher_adaptador(None, {"alvo": _id(centro)}, ponte)
+    assert len(ponte.pedidos) == 1, "o chip da janela não pergunta nada ao rádio"
+
+
+class _PonteDaCentralOcupada:
+    """O `radio.mover` com a central ocupada: o que o tratador real responde
+    (``status: ocupado``) quando outro movimento está em curso."""
+
+    def __init__(self) -> None:
+        self.pedidos: list[dict[str, Any]] = []
+
+    def resultado(self, metodo: str, timeout: float | None = None, **params: Any) -> Any:
+        assert metodo == "radio.mover"
+        self.pedidos.append(dict(params))
+        return {"status": "ocupado", "movimento": {"estado": "nao_chegou", "motivo": "ocupado"}}
 
 
 @pytest.mark.parametrize("destino", [0, 1, 2])

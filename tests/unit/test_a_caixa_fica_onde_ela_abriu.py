@@ -1,0 +1,349 @@
+"""A caixa fica onde ela abriu — A-CAIXA-FICA-ONDE-ELA-ABRIU-01 (item 2 da auditoria de 26/09).
+
+A foto 34 dela, 26/09/2026:
+
+    *«toda hora mesmo selecionando meio o negocio vai pra outra aba da direita
+    mesmo comigo tentando sincroniZar o controle.»* <!-- noqa-acento: citação literal dela -->
+
+MEDIDO antes da cura (28/09, com o pacote e a central reais): com o «Conectar»
+esperando PS + Create na Direita e o clique dela no Meio, o ``_o_aberto``
+devolvia a Direita em 30 de 30 tiques; o chip do Meio recusava sem perguntar a
+ninguém; e o ``radio.mover`` para o Meio, pelo tratador real do daemon até a
+``CentralDoRadio`` real, responde ``ocupado`` — a central de hoje não muda a
+busca de adaptador no meio (a metade dela é pendência da central).
+
+O que esta régua segura, com o rádio de mentira, o ``DonoVivo`` real por cima
+dele, o tratador real do daemon e a central real, e a busca DE PÉ (a central
+segura a janela aberta, esperando o gesto):
+
+1. um dono para «qual caixa está aberta»: o clique dela, em 30 tiques, com a
+   busca em qualquer um dos outros adaptadores, em qualquer ordem da lista e
+   com qualquer número de jogador;
+2. sem escolha dela, a caixa da busca abre (a regra de 25/09 continua);
+3. ela fecha todas: nada abre sozinho, e o cabeçalho do adaptador da busca
+   mostra a espera;
+4. o chip de outro adaptador pede ao rádio (``radio.mover`` para ele) e não
+   recusa por conta própria; a central decide, e o chip aceso diz onde a busca
+   está.
+
+MORDIDA: devolva a espera para antes do ``_ABERTO`` no ``_o_aberto`` — o caso 1
+reprova em todos os pares.
+
+Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
+"""
+
+from __future__ import annotations
+
+import re
+import time
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from hefesto_dualsense4unix.integrations import central_do_radio as cr
+from tests.unit import radio_de_mentira as rm
+from tests.unit.radio_de_mentira import QUARTO, SALA, VARANDA, VERDE, VERMELHO
+from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
+    JOGADORES,
+    Bancada,
+    BuscaDePe,
+    id_da_tela,
+    onde_buscou,
+    preparar_a_tela,
+    preparar_o_diario,
+)
+
+#: O chip do «Procurando» no molde do painel: (aceso, adaptador).
+CHIP = re.compile(r'<button class="op" aria-pressed="(true|false)"[^>]*'
+                  r'data-gesto="escolher-adaptador" data-alvo="([0-9A-F]{12})"')
+TRES = (SALA, QUARTO, VARANDA)
+#: Todo par (onde a busca está, a caixa que ela abre), nos três adaptadores.
+PARES = [(busca, dela) for busca in TRES for dela in TRES if busca != dela]
+TIQUES = 30
+
+
+@pytest.fixture()
+def diario(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    return preparar_o_diario(tmp_path, monkeypatch)
+
+
+@pytest.fixture()
+def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
+    return preparar_a_tela(monkeypatch)
+
+
+def mundo_com(adaptadores: tuple[str, ...]) -> rm.RadioDeMentira:
+    """O vermelho no ar no primeiro adaptador, e o verde novo na mão dela."""
+    mundo = rm.RadioDeMentira(adaptadores=adaptadores)
+    mundo.pareado(adaptadores[0], VERMELHO)
+    mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
+    return mundo
+
+
+def _a_busca_abre_em(bancada: Bancada, busca: BuscaDePe, destino: str) -> None:
+    """O caminho dela: o chip do destino, e o «Conectar» — a janela abre ali."""
+    bancada.cena()
+    bancada.gesto("escolher-adaptador", alvo=id_da_tela(destino))
+    bancada.cena()
+    assert bancada.gesto("conectar-aparelho") == {"armou": True}
+    assert busca.dentro.wait(5.0), "a central não abriu a janela"
+    (movimento,) = bancada.central.movimentos()
+    assert (movimento.estado, movimento.passo, movimento.destino) == (
+        cr.ESPERANDO, cr.PASSO_GESTO, destino)
+
+
+#: O começo de um cartão de adaptador (e não do `lugar-topo` de dentro dele).
+CARTAO = re.compile(r'<div class="lugar[" ]')
+
+
+def _cartao(sala: str, lid: str) -> str:
+    """O cartão inteiro de um adaptador no HTML da sala."""
+    comecos = [m.start() for m in CARTAO.finditer(sala)]
+    inicio = max(c for c in comecos if c < sala.index(f'data-id="{lid}"'))
+    fim = next((c for c in comecos if c > inicio), len(sala))
+    return sala[inicio:fim]
+
+
+# ---------------------------------------------------------------------------
+# 1. o clique dela é o dono da caixa aberta
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("jogadores", sorted(JOGADORES))
+@pytest.mark.parametrize(("onde_busca", "onde_ela_abre"), PARES)
+def test_a_caixa_que_ela_abriu_fica_com_a_busca_noutro_adaptador(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
+    onde_busca: str, onde_ela_abre: str, jogadores: str,
+) -> None:
+    """A cena da foto 34: a busca de pé num adaptador, e o clique dela no ▶ de
+    outro. A caixa dela fica aberta nos 30 tiques seguintes (mais que o prazo de
+    60 s não cabe numa régua; 30 voltas cobrem a regra de nível que se
+    reavaliava a cada uma), e a busca continua onde estava."""
+    mundo, relogio = mundo_com(TRES), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio, ordem=TRES,
+                      jogadores=JOGADORES[jogadores])
+    busca = BuscaDePe(relogio)
+    try:
+        _a_busca_abre_em(bancada, busca, onde_busca)
+        bancada.gesto("abrir-adaptador", alvo=id_da_tela(onde_ela_abre))
+        abertos = [bancada.cena()["aberto"] for _ in range(TIQUES)]
+        assert abertos == [id_da_tela(onde_ela_abre)] * TIQUES, "o tique desfez o clique dela"
+        sala = bancada.tique()["radio-sala"]
+        assert 'class="lugar aberto"' in _cartao(sala, id_da_tela(onde_ela_abre))
+        assert onde_buscou(mundo) == [rm.HCIS[onde_busca]], "a busca saiu do lugar"
+    finally:
+        busca.soltar()
+        bancada.fechar()
+
+
+@pytest.mark.parametrize("ordem", [TRES, (VARANDA, SALA, QUARTO), (QUARTO, VARANDA, SALA)])
+def test_a_ordem_da_lista_nao_muda_o_dono(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, ordem: tuple[str, ...],
+) -> None:
+    """O dono é o clique, e não a posição: a busca no primeiro da lista e o
+    clique no último, em três ordens."""
+    mundo, relogio = mundo_com(TRES), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio, ordem=ordem)
+    busca = BuscaDePe(relogio)
+    try:
+        _a_busca_abre_em(bancada, busca, ordem[0])
+        bancada.gesto("abrir-adaptador", alvo=id_da_tela(ordem[-1]))
+        for _ in range(TIQUES):
+            assert bancada.cena()["aberto"] == id_da_tela(ordem[-1])
+    finally:
+        busca.soltar()
+        bancada.fechar()
+
+
+# ---------------------------------------------------------------------------
+# 2. sem escolha dela, a caixa da busca abre (a regra de 25/09)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("onde_busca", TRES)
+def test_sem_escolha_dela_a_caixa_da_busca_abre(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde_busca: str,
+) -> None:
+    """A busca que não nasceu de um clique na tela (o ``_ABERTO`` vazio): a
+    caixa dela abre sozinha, com o «Segure PS + Create» à vista — o que ela
+    precisa fazer não custa um clique."""
+    mundo, relogio = mundo_com(TRES), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    busca = BuscaDePe(relogio)
+    try:
+        bancada.central.comecar_a_conectar(onde_busca)
+        assert busca.dentro.wait(5.0)
+        assert "lugar" not in a08._ABERTO
+        for _ in range(TIQUES):
+            assert bancada.cena()["aberto"] == id_da_tela(onde_busca)
+        cartao = _cartao(bancada.tique()["radio-sala"], id_da_tela(onde_busca))
+        assert "aberto" in cartao.split('"', 2)[1] and "Segure PS + Create" in cartao
+    finally:
+        busca.soltar()
+        bancada.fechar()
+
+
+# ---------------------------------------------------------------------------
+# 3. ela fecha todas: nada abre por cima da escolha dela
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("onde_busca", TRES)
+def test_ela_fecha_a_caixa_da_busca_e_a_espera_fica_no_cabecalho(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde_busca: str,
+) -> None:
+    """Fechar a caixa da busca é escolha dela («nenhuma aberta»): nenhuma abre
+    nos 30 tiques, e o cabeçalho daquele adaptador — que aparece fechado —
+    mostra a espera, piscando, como já mostra o «varrendo»."""
+    mundo, relogio = mundo_com(TRES), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    busca = BuscaDePe(relogio)
+    try:
+        _a_busca_abre_em(bancada, busca, onde_busca)
+        bancada.gesto("abrir-adaptador", alvo=id_da_tela(onde_busca))
+        for _ in range(TIQUES):
+            assert bancada.cena()["aberto"] is None, "a caixa da busca abriu por cima dela"
+        cartao = _cartao(bancada.tique()["radio-sala"], id_da_tela(onde_busca))
+        classes = cartao.split('"', 2)[1].split()
+        assert "aberto" not in classes and "esperando" in classes
+        topo = cartao[:cartao.index('<div class="aparelhos"')]
+        assert '<span class="espera"' in topo and "Segure PS + Create" in topo
+    finally:
+        busca.soltar()
+        bancada.fechar()
+
+
+@pytest.mark.parametrize("quantos", [2, 3])
+def test_com_dois_ou_tres_adaptadores_o_clique_dela_fica(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, quantos: int,
+) -> None:
+    """Com dois ou três adaptadores o dono é o mesmo; com UM, a caixa única fica
+    aberta com a busca dentro (a decisão dela de 25/09), e o ▶ não a fecha."""
+    adaptadores = TRES[:quantos]
+    mundo, relogio = mundo_com(adaptadores), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio, ordem=adaptadores)
+    busca = BuscaDePe(relogio)
+    try:
+        _a_busca_abre_em(bancada, busca, adaptadores[-1])
+        bancada.gesto("abrir-adaptador", alvo=id_da_tela(adaptadores[0]))
+        for _ in range(TIQUES):
+            assert bancada.cena()["aberto"] == id_da_tela(adaptadores[0])
+    finally:
+        busca.soltar()
+        bancada.fechar()
+
+
+def test_com_um_adaptador_so_a_caixa_da_busca_fica_aberta(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mundo, relogio = mundo_com((SALA,)), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio, ordem=(SALA,))
+    busca = BuscaDePe(relogio)
+    try:
+        _a_busca_abre_em(bancada, busca, SALA)
+        bancada.gesto("abrir-adaptador", alvo=id_da_tela(SALA))
+        for _ in range(TIQUES):
+            assert bancada.cena()["aberto"] == id_da_tela(SALA)
+    finally:
+        busca.soltar()
+        bancada.fechar()
+
+
+# ---------------------------------------------------------------------------
+# 4. o chip de outro adaptador pergunta ao rádio
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(("onde_busca", "chip"), PARES)
+def test_o_chip_de_outro_adaptador_pede_a_busca_ao_radio(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde_busca: str, chip: str,
+) -> None:
+    """Com a busca de pé, o chip de outro adaptador manda o ``radio.mover`` para
+    ELE — o mesmo pedido do «Conectar» —, e quem responde é a central. A de hoje
+    responde ``ocupado`` (MEDIDO): o chip treme, a busca fica onde estava, e a
+    caixa aberta continua a dela. O chip do adaptador da busca só abre a caixa,
+    sem pedido nenhum."""
+    mundo, relogio = mundo_com(TRES), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    busca = BuscaDePe(relogio)
+    try:
+        _a_busca_abre_em(bancada, busca, onde_busca)
+        bancada.cena()
+        with pytest.raises(RuntimeError, match="ocupado"):
+            bancada.gesto("escolher-adaptador", alvo=id_da_tela(chip))
+        assert bancada.ponte.chamadas == [
+            ("radio.mover", {"destino": id_da_tela(onde_busca)}),
+            ("radio.mover", {"destino": id_da_tela(chip)}),
+        ], "o chip recusou sem perguntar ao rádio"
+        assert a08._ABERTO["lugar"] == id_da_tela(onde_busca)
+        assert onde_buscou(mundo) == [rm.HCIS[onde_busca]]
+
+        assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca)) == {
+            "armou": True}
+        assert len(bancada.ponte.chamadas) == 2
+    finally:
+        busca.soltar()
+        bancada.fechar()
+
+
+class PonteQueAceita:
+    """A resposta da central que MUDA a busca de adaptador — o ``ok`` do
+    tratador real, com o movimento novo esperando no destino pedido. A central
+    de hoje não a dá com a busca de pé (a metade dela está pendente); esta é a
+    régua do lado da tela, para quando der."""
+
+    def __init__(self) -> None:
+        self.chamadas: list[tuple[str, dict[str, Any]]] = []
+
+    def resultado(self, metodo: str, timeout: float | None = None, **params: Any) -> Any:
+        self.chamadas.append((metodo, dict(params)))
+        movimento = cr.Movimento(cr.CONECTANDO, str(params["destino"]), cr.ESPERANDO,
+                                 cr.PASSO_PREPARANDO, quando=time.time())
+        return {"status": "ok", "movimento": movimento.publicar()}
+
+
+@pytest.mark.parametrize(("onde_busca", "chip"), PARES)
+def test_aceito_pela_central_o_chip_leva_a_caixa_e_o_destino(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde_busca: str, chip: str,
+) -> None:
+    """Quando a central aceita, o chip é um gesto só, sem recusa: a caixa e o
+    destino do «Conectar» vão para o adaptador do chip na hora."""
+    mundo, relogio = mundo_com(TRES), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    busca = BuscaDePe(relogio)
+    try:
+        _a_busca_abre_em(bancada, busca, onde_busca)
+        bancada.cena()
+        bancada.ponte = PonteQueAceita()  # type: ignore[assignment]
+        assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(chip)) == {"armou": True}
+        assert bancada.ponte.chamadas == [("radio.mover", {"destino": id_da_tela(chip)})]
+        assert a08._ABERTO["lugar"] == id_da_tela(chip)
+        assert a08._CENA_NA_TELA["aberto"] == id_da_tela(chip)
+        assert a08._CENA_NA_TELA["destino_do_conectar"] == id_da_tela(chip)
+    finally:
+        busca.soltar()
+        bancada.fechar()
+
+
+@pytest.mark.parametrize(("onde_busca", "onde_ela_abre"), PARES)
+def test_o_chip_aceso_diz_onde_a_busca_esta(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
+    onde_busca: str, onde_ela_abre: str,
+) -> None:
+    """A caixa aberta é dela, e o chip aceso do «Procurando» é do rádio: com a
+    busca de pé na Direita e o Meio aberto, o chip aceso é o da Direita. Acabada
+    a busca, o chip volta ao destino do «Conectar», que é a caixa dela."""
+    mundo, relogio = mundo_com(TRES), rm.Relogio()
+    bancada = Bancada(a08, monkeypatch, mundo, relogio)
+    busca = BuscaDePe(relogio)
+    try:
+        _a_busca_abre_em(bancada, busca, onde_busca)
+        bancada.gesto("abrir-adaptador", alvo=id_da_tela(onde_ela_abre))
+        chips = CHIP.findall(bancada.tique()["radio-moldes"])
+        assert sorted(lid for _, lid in chips) == sorted(map(id_da_tela, TRES))
+        assert [lid for aceso, lid in chips if aceso == "true"] == [id_da_tela(onde_busca)]
+        assert bancada.cena()["destino_do_conectar"] == id_da_tela(onde_ela_abre)
+    finally:
+        busca.soltar()
+        bancada.fechar()
