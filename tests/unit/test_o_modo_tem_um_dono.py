@@ -583,6 +583,48 @@ def test_o_perfil_que_entra_veste_o_p1_na_mesma_ativacao(
     assert vp.caminho_do_vpad(daemon._gamepad_device) == "xbox"
 
 
+#: O appid da régua: um jogo qualquer da biblioteca, só o número do marcador.
+APPID_DO_G3 = 1599660
+
+
+@pytest.mark.usefixtures("_bancada")
+def test_o_arme_com_o_modo_ja_de_pe_veste_a_mascara_do_jogo(
+    _lar: Any, tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O ARME do Future Knight com o Xbox já de pé e o cartão do Freestyle no P1.
+
+    É o caminho do G3 inteiro: o marcador do wrapper, o `arm_launch_profile`, a
+    ativação do lançamento e a conferência do aparelho. O caminho já confere
+    (`convergiu`), e a máscara do jogo tem de chegar mesmo assim.
+
+    MORDE: devolva o `apply_controller_mascaras` para DEPOIS do `mode_applier`
+    em `ProfileManager.apply_emulation` — o arme volta com o P1 em DualSense.
+    """
+    from hefesto_dualsense4unix.daemon import launch_env as le
+
+    _perfis_do_g3()
+    daemon, gerente = _daemon_do_g3()
+    gerente.activate("Freestyle", origin="autoswitch")
+    assert daemon._gamepad_device is not None
+    assert daemon._gamepad_device.flavor == "dualsense", "premissa: o cartão do Freestyle"
+    perfil = loader.load_profile("Future Knight")
+    (tmp_path / "last_run").write_text(
+        f"appid={APPID_DO_G3}\nepoch=1000\npid=1\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(le, "_steam_profiles", lambda d: [(APPID_DO_G3, perfil)])
+    monkeypatch.setattr(le, "steam_input_appids", lambda: set())
+    monkeypatch.setattr(le, "materialize_launch_env", lambda d: None)
+
+    resultado = le.arm_launch_profile(daemon, base_dir=tmp_path, now=1001.0)
+
+    assert resultado is not None and resultado["armado"] is True, resultado
+    assert daemon._gamepad_device.flavor == "xbox", (
+        f"o arme não vestiu a máscara do jogo no P1 (resultado: {resultado})"
+    )
+    assert vp.caminho_do_vpad(daemon._gamepad_device) == "xbox"
+    assert resultado["convergiu"] is True
+
+
 # ---------------------------------------------------------------------------
 # Item 4 — o P1 é o controle da carta 1 (a lâmpada que acende o «1»)
 # ---------------------------------------------------------------------------
@@ -593,7 +635,7 @@ def test_o_perfil_que_entra_veste_o_p1_na_mesma_ativacao(
 # queda (backend, co-op e registro de identidade REAIS), com o provider de cor
 # fiado como o `lifecycle._wire_identity_registry` fia.
 
-from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (  # noqa: E402
+from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (
     UNIQS,
     MesaDoJogo,
     Relogio,
@@ -737,3 +779,120 @@ def test_o_tique_lento_pergunta_a_carta(_lar_do_boot: list[Any]) -> None:
     controle = _ControleQueSegueACarta(transport="usb", states=[estado])
     asyncio.run(_o_boot(com_foco=False, controle=controle))
     assert controle.perguntas >= 1, "o tique lento não perguntou a carta ao backend"
+
+
+# ---------------------------------------------------------------------------
+# Item 6 — o número do jogador é da pessoa: quem sai não renumera os outros
+# ---------------------------------------------------------------------------
+# G6 (27/09, 23h42, `medidas/sessao/G6-o-branco-no-cabo-e-a-volta/`): o branco
+# foi para o cabo, e no meio da troca o daemon pintou um 5 no azul e um 4 no
+# branco; quando a mesa voltou a 1, 2, 3 e 4, ninguém repintou as lâmpadas de
+# jogador. Duas causas: a numeração do co-op deixava o `fallback` de quem estava
+# FORA (na troca) tomar o número da carta de quem estava na mesa, e a camada do
+# co-op só se republicava num ciclo com hotplug — o número que muda sem mexer em
+# `/dev/input` (a lâmpada liberada depois, o número trocado na tela) ficava
+# pintado com o de antes.
+
+
+def _numero_aceso(bancada: MesaDoJogo, uniq: str) -> int | None:
+    """O número que o backend escreveria na barra de jogador de `uniq`, com o co-op."""
+    from hefesto_dualsense4unix.core.led_control import player_led_pattern
+
+    with bancada.inst._io_lock:
+        bits = bancada.inst._merged_desired_for_key(uniq, incluir_coop=True).player_leds
+    return next((n for n in range(1, 9) if player_led_pattern(n) == bits), None)
+
+
+def _nome_do_microfone(bancada: MesaDoJogo, uniq: str) -> int | None:
+    """O «Controle N» do nó de som, pela mesma função que o `bt_mic` usa."""
+    from hefesto_dualsense4unix.daemon.subsystems.base import numero_do_assento_na_mesa
+
+    conectados = [c for c in bancada.inst.describe_controllers() if c.get("connected")]
+    return numero_do_assento_na_mesa(conectados, uniq, daemon=bancada.daemon)
+
+
+@pytest.mark.usefixtures("config_isolado")
+@pytest.mark.parametrize("jogo", [False, True], ids=["sem-jogo", "com-jogo"])
+def test_a_carta_1_sai_e_os_outros_seguem_2_3_4(
+    monkeypatch: pytest.MonkeyPatch, jogo: bool
+) -> None:
+    """O branco sai: o vermelho, o roxo e o azul seguem 2, 3 e 4 na lâmpada e no microfone.
+
+    MORDE: faça o `slot_de_sessao` (`subsystems/base.py`) não responder — o nome
+    do microfone cai na contagem de quem está conectado, e diz 1, 2 e 3.
+    """
+    bancada = _a_mesa_do_boot(monkeypatch, FILA_DELA, jogo=jogo)
+    for _ in range(3):
+        bancada.tique()
+    ficaram = FILA_DELA[1:]
+    assert {u: _numero_aceso(bancada, u) for u in FILA_DELA} == {
+        u: n + 1 for n, u in enumerate(FILA_DELA)
+    }, "premissa: a mesa acende 1, 2, 3 e 4"
+
+    bancada.mesa.levantar(BRANCO)
+    for _ in range(5):
+        bancada.tique()
+        assert {u: _numero_aceso(bancada, u) for u in ficaram} == {
+            VERMELHO: 2, ROXO: 3, AZUL: 4
+        }, "a lâmpada de quem ficou mudou de número"
+        assert {u: _nome_do_microfone(bancada, u) for u in ficaram} == {
+            VERMELHO: 2, ROXO: 3, AZUL: 4
+        }, "o nome do microfone de quem ficou mudou de número"
+
+
+def test_quem_esta_fora_na_troca_nao_toma_o_numero_de_quem_esta_na_mesa() -> None:
+    """A tabela que o G6 deixou: o roxo trocando de transporte, fora da mesa.
+
+    O `player_index` de cada jogador é o índice de ALOCAÇÃO do vpad, e depois de
+    quedas e voltas ele não é a carta (no G6, o branco era secundário com o 2).
+    O roxo fora não tem lâmpada; o `fallback` dele não pode tirar o 4 do azul.
+
+    MORDE: volte `numeros_de_jogador` à passada única — o azul acende 3.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager, _SecondaryPlayer
+    from hefesto_dualsense4unix.daemon.subsystems.identity import ControllerIdentityRegistry
+
+    registro = ControllerIdentityRegistry(clock=(relogio := Relogio()))
+    registro.sync_connected(list(FILA_DELA))
+    relogio.avancar(2.0)
+    registro.sync_connected([BRANCO, VERMELHO, AZUL])  # o roxo saiu: o lugar fica guardado
+    daemon = SimpleNamespace(
+        config=lifecycle.DaemonConfig(coop_enabled=True),
+        controller=SimpleNamespace(primary_uniq=BRANCO),
+        identity_registry=registro,
+    )
+    coop = CoopManager(daemon)  # type: ignore[arg-type]
+    for uniq, indice in ((ROXO, 4), (VERMELHO, 3), (AZUL, 2)):
+        coop._players[uniq] = _SecondaryPlayer(
+            identity=uniq, evdev_path="/dev/input/event90", reader=None,  # type: ignore[arg-type]
+            player_index=indice,
+        )
+
+    assert coop.numeros_de_jogador() == {BRANCO: 1, ROXO: 3, VERMELHO: 2, AZUL: 4}
+
+
+@pytest.mark.usefixtures("config_isolado")
+@pytest.mark.parametrize("jogo", [False, True], ids=["sem-jogo", "com-jogo"])
+def test_o_numero_novo_repinta_a_lampada_sem_hotplug(
+    monkeypatch: pytest.MonkeyPatch, jogo: bool
+) -> None:
+    """Ela troca o 2 e o 3 na tela: as lâmpadas se repintam sem ninguém mexer em /dev/input.
+
+    MORDE: tire a republicação do tique quieto do `CoopManager.sync` — o
+    vermelho e o roxo ficam com o número de antes aceso.
+    """
+    bancada = _a_mesa_do_boot(monkeypatch, FILA_DELA, jogo=jogo)
+    for _ in range(3):
+        bancada.tique()
+    # Daqui em diante /dev/input não muda: o ciclo cheio do co-op não roda.
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.core.evdev_reader.InputDirWatch.poll", lambda _self: False
+    )
+    bancada.reg.escolha_da_mao({BRANCO: 1, ROXO: 2, VERMELHO: 3, AZUL: 4})
+    bancada.reg.liberar_as_lampadas()
+    for _ in range(3):
+        bancada.tique()
+
+    assert {u: _numero_aceso(bancada, u) for u in FILA_DELA} == {
+        BRANCO: 1, ROXO: 2, VERMELHO: 3, AZUL: 4
+    }, "a lâmpada ficou com o número de antes"

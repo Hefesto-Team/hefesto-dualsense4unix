@@ -744,8 +744,8 @@ class CoopManager:
             or retry_needed
             or force
         ):
+            self._repintar_se_o_numero_mudou()  # G6: o número muda sem hotplug
             return
-
         from hefesto_dualsense4unix.core.evdev_reader import discover_dualsense_evdevs
         from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
             mascara_efetiva,
@@ -1929,13 +1929,13 @@ class CoopManager:
         cai no seu `fallback` histórico — primário 1, secundários pelo
         `player_index` —, então nada muda para quem não tem fila.
         """
-        numeros: dict[str, int] = {}
-        usados: set[int] = set()
-        for mac, fallback in self._alvos_de_numeracao():
-            numero = self._numero_exibido(mac, fallback, usados)
-            usados.add(numero)
-            numeros[mac] = numero
-        return numeros
+        # G6 (27/09, a troca de cabo do branco: um 5 no azul, um 4 no branco).
+        # A passada única deixava o `fallback` de quem estava FORA da mesa (na
+        # troca de transporte, sem lâmpada) tomar a carta de quem estava nela.
+        # Agora são duas: quem tem carta fica com ela, e só depois quem não tem
+        # — O-MODO-XBOX-NAO-E-QUEDA-02, item 6, em `_numeros_em_duas_passadas`
+        # (no fim da classe: o mapa de canais cita esta por linha).
+        return self._numeros_em_duas_passadas()
 
     def _numero_exibido(self, identity: str, fallback: int, usados: set[int]) -> int:
         """Número que este controle ACENDE na barra de player (R-24).
@@ -2765,6 +2765,96 @@ class CoopManager:
             if mac and not identidade.startswith("path:"):
                 alimenta[mac.lower()] = identidade
         return alimenta
+
+    # -- o número é da pessoa (O-MODO-XBOX-NAO-E-QUEDA-02, item 6) -------
+    # No fim da classe pela razão de sempre: o mapa de canais cita os métodos
+    # desta classe por número de linha.
+
+    def _numeros_em_duas_passadas(self) -> dict[str, int]:
+        """O corpo de `numeros_de_jogador`: quem tem carta fica com ela, os outros depois.
+
+        **1ª passada — a CARTA** (`_numero_da_carta`, a lâmpada do registro):
+        cada controle na mesa acende o número dele. Nenhum `fallback` entra
+        antes, então nenhum toma o número de quem está na mesa.
+
+        **2ª passada — quem não tem lâmpada.** É quem está FORA da mesa com o
+        jogador de pé no co-op (a troca de transporte segura o vpad), e o
+        primário ausente com o posto vago. Primeiro o ASSENTO que o registro
+        guarda para ele (`slot_for(assign=False)`, o mesmo que o nome do
+        microfone lê: com o lugar guardado, é o número dele), e só sem assento
+        livre o `fallback` histórico (o primário 1, o secundário o
+        `player_index`). Um número já tomado nunca acende duas vezes.
+
+        Sem registro (Fake, backend legado, dublê), a 1ª passada não acha carta
+        nenhuma e tudo cai no `fallback`, como sempre foi.
+        """
+        alvos = self._alvos_de_numeracao()
+        cartas = {mac: self._numero_da_carta(mac) for mac, _fallback in alvos}
+        numeros: dict[str, int] = {}
+        usados: set[int] = set()
+        for mac, _fallback in alvos:
+            carta = cartas[mac]
+            if carta is not None and carta not in usados:
+                numeros[mac] = carta
+                usados.add(carta)
+        for mac, fallback in alvos:
+            if mac in numeros:
+                continue
+            numero = self._assento_guardado(mac)
+            if numero is None or numero in usados:
+                numero = fallback
+            while numero in usados:
+                numero += 1
+            numeros[mac] = numero
+            usados.add(numero)
+        return {mac: numeros[mac] for mac, _fallback in alvos}
+
+    def _assento_guardado(self, identity: str) -> int | None:
+        """O número do assento de `identity` na mesa do registro — ou None.
+
+        A leitura pura que o nome do microfone também faz
+        (`subsystems/base.slot_de_sessao`): com o lugar guardado, é o número
+        dele; fora do prazo, é a colocação que ele teria, e a 2ª passada só a
+        usa se ela estiver livre.
+        """
+        registry = getattr(self._daemon, "identity_registry", None)
+        slot_for = getattr(registry, "slot_for", None) if registry is not None else None
+        if not callable(slot_for):
+            return None
+        bruto: Any = None
+        with contextlib.suppress(Exception):
+            bruto = slot_for(identity, assign=False)
+        if isinstance(bruto, int) and not isinstance(bruto, bool) and bruto >= 1:
+            return bruto
+        return None
+
+    def _repintar_se_o_numero_mudou(self) -> None:
+        """A barra de jogador segue o número mesmo sem hotplug (G6).
+
+        O `sync` só republica a camada do co-op no ciclo cheio, que roda quando
+        `/dev/input` muda. O número muda sem mexer lá: a lâmpada que o registro
+        libera depois da volta (o G6: a mesa voltou a 1, 2, 3 e 4, e o azul
+        ficou com o 5), e o número que ela troca na aba Controles. Aqui, a cada
+        tique quieto, a mesa é conferida — e só PUBLICA se mudou
+        (`_publicar_camada_coop` compara antes). Só pela camada: backend sem
+        ela (Fake, legado) fica com o ciclo cheio, que é quem sabe o sysfs cru.
+        """
+        if not self._players:
+            return
+        ctrl = getattr(self._daemon, "controller", None)
+        if not callable(getattr(ctrl, "set_coop_outputs", None)):
+            return
+        numeros = self.numeros_de_jogador()
+        padroes = {mac: player_led_pattern(numero) for mac, numero in numeros.items()}
+        if padroes == self._camada_coop:
+            return
+        from hefesto_dualsense4unix.daemon.battery_journal import mascarar_endereco
+
+        logger.info(
+            "coop_numero_repintado",
+            numeros={mascarar_endereco(m): n for m, n in numeros.items()},
+        )
+        self._publicar_camada_coop(padroes)
 
 
 # F1-REMAPEAR (13/09/2026): o import da troca de botões mora AQUI, depois da
