@@ -505,6 +505,30 @@ def test_o_r3_fecha_o_teclado_da_unidade(gerenciador: _GerenciadorDeMentira) -> 
     assert not teclado._sessao_do_teclado().exists()
 
 
+def test_o_r3_fecha_o_teclado_e_nao_o_vizinho_da_unidade(
+    gerenciador: _GerenciadorDeMentira,
+) -> None:
+    """Na unidade pode haver mais de um processo; o R3 fecha o que tem o nome
+    do teclado, e não o primeiro da lista.
+
+    MORDE: tire a pergunta do ``comm`` de ``_pid_na_unidade`` e o SIGTERM vai
+    para o vizinho — o teclado fica de pé na tela dela.
+    """
+    ctrl = teclado._OSKController()
+    ctrl.open()
+    teclado_de_pe = gerenciador.nascidos[0]
+    vizinho = _POPEN_DE_VERDADE(
+        ["tail", "-f", "/dev/null"], stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
+    )
+    gerenciador.nascidos.append(vizinho)
+    procs = gerenciador.pasta(_unidade_de(gerenciador.chamadas[0])) / "cgroup.procs"
+    procs.write_text(f"{vizinho.pid}\n{teclado_de_pe.pid}\n", encoding="utf-8")
+    ctrl.close()
+    assert _morreu(teclado_de_pe), "o R3 não fechou o teclado da unidade"
+    assert vizinho.poll() is None, "o R3 fechou o vizinho no lugar do teclado"
+
+
 def test_o_teclado_fechado_por_fora_faz_o_l3_abrir_de_novo(
     gerenciador: _GerenciadorDeMentira,
 ) -> None:
