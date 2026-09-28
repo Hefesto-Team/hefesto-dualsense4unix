@@ -128,8 +128,9 @@ _CAMINHOS_MORTOS: list[tuple[str, str]] = []
 #: lançador dela abre. Cada um com a razão de estar aqui — uma lista de
 #: caminhos sem razão envelhece e ninguém sabe se um que falta é esquecimento.
 #: **A `compact_window.py` SAIU DESTA LISTA — 19/09/2026, `ORFAOS-DA-MIGRACAO-01`.**
-#: Ela foi para `arquivados/src/app/`, e este portão era uma das duas bocas que
-#: a mantinham artificialmente viva. A sprint escreve a regra que isso deixa:
+#: Ela foi para o código aposentado (no histórico), e este portão era uma das
+#: duas bocas que a mantinham artificialmente viva. A sprint escreve a regra
+#: que isso deixa:
 #: *quem CHAMA para trabalhar conta como vida; quem MEDE não* — vigia de
 #: defunto é uso aparente, e foi por ele que o censo de 17/09 a contou viva.
 A_MOLDURA: dict[str, str] = {

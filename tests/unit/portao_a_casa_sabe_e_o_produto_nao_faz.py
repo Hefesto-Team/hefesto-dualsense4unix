@@ -550,10 +550,11 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "feature nenhuma. MEDIDO em 12/08/2026."
     ),
     # A CHAVE `…_COMPACT_WINDOW` SAIU EM 19/09/2026, com o arquivo que a
-    # lia (`arquivados/src/app/compact_window.py`). A régua acima é que
-    # mandou: *"estas chaves estão classificadas e `src/` não as lê mais"*.
-    # A classificação é do que EXISTE — e a razão de ela ter existido está
-    # no `arquivados/LEIA-PRIMEIRO.md`, com a medição das três fontes.
+    # lia (`compact_window.py`, hoje o código aposentado, no histórico). A
+    # régua acima é que mandou: *"estas chaves estão classificadas e `src/`
+    # não as lê mais"*. A classificação é do que EXISTE — e a razão de ela
+    # ter existido está no código aposentado (no histórico), com a medição
+    # das três fontes.
     "HEFESTO_DUALSENSE4UNIX_FAKE": (
         "Sobe o daemon com controle de mentira (daemon/main.py:18 e :113). É a "
         "chave que permite a suíte inteira rodar sem aparelho na mesa. Ligá-la "
@@ -1304,12 +1305,12 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "src/hefesto_dualsense4unix/interface/`."
     ),
     # A LÁPIDE DA `CompactWindow` SAIU DAQUI EM 19/09/2026, e ela não foi
-    # apagada: o ARQUIVO inteiro foi para `arquivados/src/app/`, pela
-    # `ORFAOS-DA-MIGRACAO-01`, e a razão dela está escrita lá com a medição
-    # das três fontes. Uma lápide para um arquivo que saiu do caminho é o
-    # próprio defeito que esta sprint nomeia — *vigia de defunto conta como
-    # uso e não é uso*. Se a `compact_window.py` voltar para `src/`, a lápide
-    # volta com ela.
+    # apagada: o ARQUIVO inteiro foi para o código aposentado (no
+    # histórico), pela `ORFAOS-DA-MIGRACAO-01`, e a razão dela está escrita
+    # lá com a medição das três fontes. Uma lápide para um arquivo que saiu
+    # do caminho é o próprio defeito que esta sprint nomeia — *vigia de
+    # defunto conta como uso e não é uso*. Se a `compact_window.py` voltar
+    # para `src/`, a lápide volta com ela.
     "integrations/tray.py::TrayController": (
         "19/09/2026 — LÁPIDE, e ela é o efeito direto da `TRAY-ORFAO-01`. Este "
         "era o tray POBRE: clicar no ícone abria a TUI no terminal, a lista de "
@@ -1321,7 +1322,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "mesmo mas melhor\"*. "
         "`probe_gi_availability`, do MESMO arquivo, continua vivo e é chamado "
         "pelo `app/tray.py:38` — por isso a classe ganha lápide em vez de o "
-        "arquivo ir para `arquivados/`."
+        "arquivo ir para o código aposentado."
     ),
     "app/gui_dialogs.py::presentar_dialogos_em_curso": (
         "06/09/2026 — LÁPIDE. Ela trazia para a frente os diálogos abertos "

@@ -207,11 +207,6 @@ zona = "REGISTRA"
 razao = "é história de versão; corrigir o passado apagaria o que aconteceu."
 
 [[regra]]
-caminho = "arquivados/**"
-zona = "REGISTRA"
-razao = "o que saiu do produto e ficou guardado com a razão."
-
-[[regra]]
 caminho = "captures/**"
 zona = "REGISTRA"
 razao = "capturas de HID: prova bruta, e prova não se edita."
