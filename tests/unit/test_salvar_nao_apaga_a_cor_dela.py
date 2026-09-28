@@ -6,22 +6,21 @@ não estava marcado como o mais grave por ninguém:
     "Desligar" a barra de luz e depois "Salvar Perfil" apaga a cor escolhida
     por ela, para sempre, em silêncio.
 
-A CAUSA ERA DE VOCABULÁRIO. ``_draft_do_ativo`` lia ``lightbar_rgb`` cru do
-estado do daemon e o gravava como override daquele controle. Com a barra
-apagada esse campo é ``(0, 0, 0)`` — e o ``LedsDraft`` **não tem campo de
-aceso/apagado**, só a cor. Gravar o preto não guarda "estava apagada": guarda
-PRETO por cima da escolha dela, e o caminho de volta não existe.
+A CAUSA ERA DE VOCABULÁRIO: o Salvar lia ``lightbar_rgb`` cru do estado do
+daemon e o gravava como override daquele controle. Com a barra apagada esse
+campo é ``(0, 0, 0)``, e o esquema **não tem campo de aceso/apagado**, só a
+cor: gravar o preto não guarda "estava apagada", guarda PRETO por cima da
+escolha dela.
 
-A CURA É REUSO, e não regra nova: :func:`controller_card.rotulo_lightbar` já é o
-dono desta leitura na GUI estável, e devolve a cor base como ``None`` exatamente
-nos dois estados em que não há cor a afirmar — *cor desconhecida* e *apagada*.
-Reler os campos crus aqui seria uma segunda verdade, e a aba 04 já pagou o preço
-dessa: o ``c.get("lightbar_on", True)`` que morava lá tinha o padrão INVERTIDO e
-afirmava ACESA na ausência do campo.
+DESDE 27/09 (`D-2709-O-SALVAR-LE-O-PERFIL`) o Salvar não lê a luz do aparelho
+em estado nenhum: apagada, desconhecida ou acesa noutra cor, o que sai é a
+cor do disco. A cor que ela ESCOLHE vai ao disco no clique do tom
+(`a04_iluminacao._guardar_a_cor_no_perfil`), e o «Desligar» grava o brilho
+em 0% e deixa a cor (`D-2509-O-DESLIGAR-E-O-BRILHO-EM-ZERO`).
 
-A MORDIDA: troque o ``rotulo_lightbar`` de volta por ``c.get("lightbar_rgb")``
-em ``rodape._draft_do_ativo`` e :func:`test_barra_apagada_nao_grava_cor`
-reprova — o preto volta a viajar para o disco.
+A MORDIDA: devolva ao ``rodape.salvar`` a cor que o aparelho publica
+(``lightbar_rgb`` cru no override de cada controle) e
+:func:`test_barra_apagada_nao_grava_cor` reprova com o preto no disco.
 """
 
 from __future__ import annotations
@@ -51,33 +50,36 @@ UNIQ = "aabbcc0000ff"
 
 
 class _Ctx:
-    """O mínimo de ``Contexto`` que ``_draft_do_ativo`` lê."""
+    """O mínimo de ``Contexto`` que o «Salvar» do rodapé recebe."""
 
-    def __init__(self, conectados: list[dict[str, Any]],
-                 state: dict[str, Any] | None = None) -> None:
+    def __init__(self, conectados: list[dict[str, Any]], perfil: str) -> None:
         self.conectados = conectados
-        self.state = state or {}
+        self.mesa = conectados
+        self.state = {"active_profile": perfil}
 
 
 def _controle(rgb: tuple[int, int, int] | None, *, acesa: bool,
-              fonte: str = "sysfs") -> dict[str, Any]:
+              fonte: str = "sysfs", uniq: str = UNIQ) -> dict[str, Any]:
     """Um controle do estado do daemon, no vocabulário que ele publica."""
-    return {"uniq": UNIQ, "lightbar_rgb": list(rgb) if rgb else None,
+    return {"uniq": uniq, "lightbar_rgb": list(rgb) if rgb else None,
             "lightbar_on": acesa, "lightbar_source": fonte}
 
 
-def _cor_gravada(draft: Any) -> tuple[int, int, int] | None:
-    """A cor que o rascunho levaria ao disco PARA ESTE controle, ou ``None``.
+def _salvar(perfil: str, *conectados: dict[str, Any]) -> Any:
+    """O «Salvar Perfil» do rodapé, e o perfil que ficou no disco."""
+    from hefesto_dualsense4unix.profiles.loader import load_profile
 
-    Ler o override e não o global é o ponto inteiro: a cor viva vira override
-    daquele aparelho (``ControllerOverrides.leds``), e é lá que o estrago
-    aconteceria.
-    """
-    dono = draft.controller_override(UNIQ)
-    if dono is None or getattr(dono, "leds", None) is None:
-        return None
-    cor = dono.leds.lightbar
-    return None if cor is None else tuple(cor)
+    rodape.salvar(_Ctx(list(conectados), perfil), {"gesto": "salvar"}, None)
+    return load_profile(perfil)
+
+
+def _cor_do_controle(prof: Any, uniq: str = UNIQ) -> tuple[int, int, int] | None:
+    """A cor que o disco dá a ESTE controle: a do override, ou a global que ele herda."""
+    dono = (prof.controllers or {}).get(uniq)
+    leds = getattr(dono, "leds", None)
+    if leds is not None and "lightbar" in leds.model_fields_set:
+        return tuple(leds.lightbar)
+    return tuple(prof.leds.lightbar)
 
 
 @pytest.fixture
@@ -95,8 +97,7 @@ def perfil_com_a_cor_dela(monkeypatch: pytest.MonkeyPatch) -> str:
     # suíte usa quando a regra de casamento não é o que se está medindo.
     p = Profile(name=nome, match=MatchAny(), priority=100)
     # O ESQUEMA DO DISCO CHAMA O CAMPO DE `lightbar`; o rascunho da GUI o
-    # chama de `lightbar_rgb`. São o mesmo dado com dois nomes, e este
-    # teste atravessa a fronteira entre os dois — por isso os dois aparecem.
+    # chama de `lightbar_rgb`. São o mesmo dado com dois nomes.
     p.leds.lightbar = COR_DELA
     save_profile(p, origem="teste")
     assert tuple(load_profile(nome).leds.lightbar) == COR_DELA
@@ -104,61 +105,44 @@ def perfil_com_a_cor_dela(monkeypatch: pytest.MonkeyPatch) -> str:
 
 
 def test_barra_apagada_nao_grava_cor(perfil_com_a_cor_dela: str) -> None:
-    """Com a barra desligada, o rascunho não carrega cor para aquele controle.
-
-    Não gravar é o certo: o esquema só sabe dizer QUAL cor, não SE está acesa,
-    e o que está no disco é a cor para quando acender.
-    """
-    ctx = _Ctx([_controle((0, 0, 0), acesa=False)])
-    draft = rodape._draft_do_ativo(perfil_com_a_cor_dela, ctx)
-    assert draft is not None
-    assert _cor_gravada(draft) is None, (
-        "a barra apagada virou um override de cor — é o preto viajando por "
-        "cima da escolha dela")
+    """Com a barra desligada, a cor do disco fica: é a cor para quando acender."""
+    salvo = _salvar(perfil_com_a_cor_dela, _controle((0, 0, 0), acesa=False))
+    assert _cor_do_controle(salvo) == COR_DELA, (
+        "a barra apagada virou cor no disco — é o preto viajando por cima da "
+        "escolha dela")
 
 
 def test_cor_desconhecida_tambem_nao_grava(perfil_com_a_cor_dela: str) -> None:
-    """Sem fonte, não há cor a afirmar — e afirmar seria inventar.
-
-    O ``(0,0,0)`` de um sysfs que ninguém escreveu pode ser o azul-kernel
-    brilhando neste exato momento; é a mesma refutação que a GUI estável
-    carrega em ``rotulo_lightbar``.
-    """
-    ctx = _Ctx([_controle(None, acesa=True, fonte="desconhecida")])
-    draft = rodape._draft_do_ativo(perfil_com_a_cor_dela, ctx)
-    assert draft is not None
-    assert _cor_gravada(draft) is None
+    """Sem fonte, não há cor a afirmar — e o disco não muda."""
+    salvo = _salvar(perfil_com_a_cor_dela,
+                    _controle(None, acesa=True, fonte="desconhecida"))
+    assert _cor_do_controle(salvo) == COR_DELA
 
 
-def test_barra_acesa_continua_gravando(perfil_com_a_cor_dela: str) -> None:
-    """A cura não pode ter matado o que a função existe para fazer.
-
-    Uma guarda que recusasse tudo passaria os dois testes de cima e deixaria o
-    Salvar sem gravar cor nenhuma — o oposto do pedido dela, que é a interface
-    nova ser de ação imediata.
-    """
-    viva = (126, 184, 212)
-    ctx = _Ctx([_controle(viva, acesa=True)])
-    draft = rodape._draft_do_ativo(perfil_com_a_cor_dela, ctx)
-    assert draft is not None
-    assert _cor_gravada(draft) == viva
-
-
-def test_um_controle_apagado_nao_derruba_o_aceso(
+def test_barra_acesa_noutra_cor_tambem_nao_grava(
         perfil_com_a_cor_dela: str) -> None:
-    """Na mesa de dois, o apagado é pulado e o aceso continua gravando.
+    """Acesa noutra cor (a camada da mão, o automático, a luz pós-brilho): o disco fica.
+
+    Até 27/09 esta régua cobrava o contrário — a cor acesa no disco —, porque
+    em 03/09 o clique no tom ainda não gravava. Quem leva a escolha dela ao
+    disco hoje é o clique (`test_a_cor_escolhida_vai_ao_disco_e_o_trilho_nao_reescala.py`).
+    """
+    salvo = _salvar(perfil_com_a_cor_dela,
+                    _controle((126, 184, 212), acesa=True))
+    assert _cor_do_controle(salvo) == COR_DELA
+
+
+def test_dois_controles_um_apagado_e_um_aceso(
+        perfil_com_a_cor_dela: str) -> None:
+    """Na mesa de dois, nenhum dos dois leva a luz do aparelho ao disco.
 
     É a forma que a fita da luz já pagou uma vez nesta casa: um controle sem
-    cor apagava a tira INTEIRA. A guarda tem de ser por controle, nunca pela
-    mesa.
+    cor apagava a tira INTEIRA. Aqui nenhum dos dois ganha override.
     """
-    viva = (255, 0, 0)
     outro = "aabbcc0000ee"
-    apagado = _controle((0, 0, 0), acesa=False)
-    aceso = dict(_controle(viva, acesa=True), uniq=outro)
-    draft = rodape._draft_do_ativo(perfil_com_a_cor_dela, _Ctx([apagado, aceso]))
-    assert draft is not None
-    assert _cor_gravada(draft) is None, "o apagado gravou cor"
-    dono = draft.controller_override(outro)
-    assert dono is not None and tuple(dono.leds.lightbar) == viva, (
-        "o controle aceso perdeu o override porque o vizinho estava apagado")
+    salvo = _salvar(perfil_com_a_cor_dela,
+                    _controle((0, 0, 0), acesa=False),
+                    _controle((255, 0, 0), acesa=True, uniq=outro))
+    assert _cor_do_controle(salvo) == COR_DELA, "o apagado gravou cor"
+    assert _cor_do_controle(salvo, outro) == COR_DELA, (
+        "o controle aceso levou a luz do aparelho ao disco")
