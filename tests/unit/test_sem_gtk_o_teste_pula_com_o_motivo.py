@@ -88,3 +88,72 @@ def test_o_erro_que_nao_e_do_gtk_continua_reprovando(tmp_path: Path) -> None:
     assert "1 failed" in saida, (
         f"só a falta do GTK vira pulo; qualquer outro import quebrado reprova.\n{saida[-800:]}"
     )
+
+
+# ---------------------------------------------------------------------------
+# O FILHO QUE MORRE PELA FALTA DO GTK (27/09/2026)
+# ---------------------------------------------------------------------------
+#: O gerador de uma aba, o `aba05.py` sem o glade e o visor rodam num processo
+#: filho. O neto herda o bloqueio pelo `PYTHONPATH`, como o python do runner.
+_FILHO_PRECISA_DO_GTK = '''
+import subprocess
+import sys
+
+from tests.conftest import repassar_a_falta_do_gtk
+
+
+def test_o_filho_precisa_do_gtk():
+    filho = subprocess.run(
+        [sys.executable, "-c", "import gi"], capture_output=True, text=True, check=False)
+    repassar_a_falta_do_gtk(filho)
+    assert filho.returncode == 0, filho.stderr
+'''
+
+_FILHO_COM_OUTRO_ERRO = '''
+import subprocess
+import sys
+
+from tests.conftest import repassar_a_falta_do_gtk
+
+
+def test_o_filho_morre_por_outro_motivo():
+    filho = subprocess.run(
+        [sys.executable, "-c", "import modulo_que_nao_existe_em_lugar_nenhum"],
+        capture_output=True, text=True, check=False)
+    repassar_a_falta_do_gtk(filho)
+    assert filho.returncode == 0, filho.stderr
+'''
+
+
+@pytest.mark.parametrize("exige", [False, True], ids=["sem-exigencia", "com-exigencia"])
+def test_o_filho_sem_o_gtk_pula_so_quando_ninguem_o_exige(tmp_path: Path, exige: bool) -> None:
+    """A falta do GTK no processo FILHO segue a mesma regra da falta no pai.
+
+    A mordida: faça `repassar_a_falta_do_gtk` voltar sem levantar e o caso
+    sem exigência reprova — é o `lint-test` de 27/09 com os dez geradores, o
+    `aba05.py` e o visor vermelhos por ambiente.
+    """
+    saida = _rodar(tmp_path, _FILHO_PRECISA_DO_GTK, exige=exige)
+    if exige:
+        assert "1 failed" in saida and "no processo filho" in saida, (
+            "com HEFESTO_EXIGE_GTK_REAL=1 o filho sem o GTK tem de reprovar, e "
+            f"dizendo que a falta foi no filho.\n{saida[-800:]}"
+        )
+    else:
+        assert "1 skipped" in saida and "GUARDA-GI-REAL-01" in saida, (
+            "sem o GTK real, a régua cujo processo filho morreu pela falta dele "
+            f"pula com o motivo, como a do processo da suíte.\n{saida[-800:]}"
+        )
+
+
+def test_o_filho_que_morre_por_outro_motivo_continua_reprovando(tmp_path: Path) -> None:
+    """Só a falta do GTK no filho vira pulo; o resto chega à asserção da régua.
+
+    A mordida: faça o repasse dar ao `ModuleNotFoundError` o nome `"gi"` em
+    vez do módulo que o filho não achou, e este caso pula calado.
+    """
+    saida = _rodar(tmp_path, _FILHO_COM_OUTRO_ERRO, exige=False)
+    assert "1 failed" in saida and "modulo_que_nao_existe_em_lugar_nenhum" in saida, (
+        "o filho que morre por outro import tem de reprovar a régua, com o "
+        f"stderr dele na cara.\n{saida[-800:]}"
+    )

@@ -2438,6 +2438,64 @@ def _nenhum_leitor_fisico_atravessa() -> Iterator[None]:
 
 
 # ---------------------------------------------------------------------------
+# GUARDA-GI-REAL-01 FORA DO PROCESSO DA SUÍTE (27/09/2026)
+# ---------------------------------------------------------------------------
+#
+# A regra do `pytest_runtest_makereport`, lá em cima, lê a exceção que sobe
+# NESTE processo. Há dois caminhos por onde a falta do GTK chega a um teste sem
+# subir exceção nenhuma aqui, e os dois reprovavam o `lint-test` do CI por
+# ambiente: o processo FILHO (o gerador de uma aba, o `aba05.py` sem o glade, o
+# visor) e a fixture EMPRESTADA de um arquivo que pulou. Este bloco fica aqui,
+# longe do `_falta_o_gtk`, de propósito: acima dele há citações `conftest.py:N`
+# em `src/` e em `tests/`, e um bloco novo lá em cima as moveria todas.
+
+#: O fim do traceback que o processo filho escreve no stderr, e a exceção que
+#: ele vira no pai. São os três tipos que o `_falta_o_gtk` sabe ler.
+_EXCECOES_DO_FILHO: dict[str, type[BaseException]] = {
+    "ModuleNotFoundError": ModuleNotFoundError,
+    "ImportError": ImportError,
+    "AttributeError": AttributeError,
+}
+
+
+def repassar_a_falta_do_gtk(filho: Any) -> None:
+    """O processo filho que morreu pela falta do GTK devolve a mesma exceção ao pai.
+
+    O gerador de uma aba, o `aba05.py` sem o glade e o visor rodam num
+    `subprocess`, morrem com `No module named 'gi'` no stderr do filho, e o pai
+    só via um `returncode` — a régua reprovava o runner, não o produto. Aqui a
+    última linha do traceback do filho vira a exceção equivalente no pai, e
+    quem decide é o mesmo `_falta_o_gtk`: pula com o motivo sem o GTK real, e
+    reprova no `gtk-real` (ou na máquina com o GTK real), onde o filho sem `gi`
+    é defeito de ambiente, não ausência.
+
+    Chame ANTES da asserção sobre o `returncode`. Qualquer outro fim de
+    traceback (outro módulo, outra exceção, saída sem traceback) volta sem
+    fazer nada, e a asserção da régua reprova como sempre.
+    """
+    if filho.returncode == 0:
+        return
+    saida = filho.stderr
+    if isinstance(saida, bytes):
+        saida = saida.decode("utf-8", "replace")
+    linhas = [linha for linha in (saida or "").splitlines() if linha.strip()]
+    if not linhas:
+        return
+    tipo, _, mensagem = linhas[-1].partition(": ")
+    classe = _EXCECOES_DO_FILHO.get(tipo)
+    if classe is None:
+        return
+    texto = f"{mensagem} (no processo filho)"
+    if classe is ModuleNotFoundError:
+        nome = mensagem.removeprefix("No module named ").strip("'\"")
+        erro: BaseException = ModuleNotFoundError(texto, name=nome)
+    else:
+        erro = classe(texto)
+    if _falta_o_gtk(erro):
+        raise erro
+
+
+# ---------------------------------------------------------------------------
 # PARIDADE-BYTE-01 — o transporte vira DIMENSÃO do caso, não rótulo num dict
 # ---------------------------------------------------------------------------
 #
