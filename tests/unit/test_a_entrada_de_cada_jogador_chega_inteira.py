@@ -47,6 +47,7 @@ from collections.abc import Iterator
 from typing import Any
 
 import pytest
+import structlog
 
 from hefesto_dualsense4unix.daemon.subsystems.identity import prazo_do_lugar_guardado
 from hefesto_dualsense4unix.integrations import uhid_gamepad
@@ -602,3 +603,33 @@ def test_com_o_jogo_segurando_nenhum_virtual_renasce_pelo_nome(
         bancada.tique()
     assert not alvo.vivo, "o jogo soltou e o vpad seguiu com o nome velho"
     assert _nomes_errados(bancada) == []
+
+
+@pytest.mark.usefixtures("config_isolado")
+def test_cada_episodio_do_nome_velho_vai_ao_diario(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A carta 1 sai duas vezes na mesma vida do daemon: o diário diz as duas.
+
+    A prova no aparelho conta as linhas `coop_nome_do_virtual_renasce` do
+    diário; uma segunda saída calada leria «nada renasceu» sobre dois
+    virtuais que renasceram.
+
+    MORDE: tire o `self._nomes_velhos_ditos = None` do `_com_os_nomes_velhos`
+    — a segunda saída, com os mesmos números, não vai ao diário.
+    """
+    bancada = _a_mesa_do_boot(monkeypatch, FILA_DELA, jogo=False)
+    for _ in range(6):
+        bancada.tique()
+    por_saida: list[int] = []
+    for _volta in range(2):
+        with structlog.testing.capture_logs() as diario:
+            bancada.mesa.levantar(FILA_DELA[0])
+            for _ in range(_PASSA_O_PRAZO):
+                bancada.tique()
+        por_saida.append(
+            sum(1 for r in diario if r["event"] == "coop_nome_do_virtual_renasce")
+        )
+        assert _nomes_errados(bancada) == []
+        bancada.mesa.sentar(FILA_DELA[0])
+        for _ in range(6):
+            bancada.tique()
+    assert por_saida == [1, 1], f"linhas do diário por saída da carta 1: {por_saida}"

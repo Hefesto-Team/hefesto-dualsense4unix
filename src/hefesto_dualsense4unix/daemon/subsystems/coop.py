@@ -2864,6 +2864,10 @@ class CoopManager:
     # No fim da classe pela razão de sempre: o mapa de canais cita os métodos
     # desta classe por número de linha.
 
+    #: Os nomes velhos que o diário já disse neste episódio. Default de
+    #: CLASSE, como o `_ordem_pendente`: a suíte monta gerente por `__new__`.
+    _nomes_velhos_ditos: list[tuple[int, int]] | None = None
+
     def _nomes_que_ficaram_para_tras(self, cartas: Mapping[str, int]) -> dict[str, tuple[int, int]]:
         """Chave da mesa do jogo -> (o número no nome do vpad, o número de agora).
 
@@ -2970,12 +2974,17 @@ class CoopManager:
             return recriar
         velhos = self._nomes_que_ficaram_para_tras(cartas)
         if not velhos:
+            # O episódio acabou: o próximo, mesmo com os mesmos números, é
+            # outro, e o diário o diz. Sem isto a segunda saída da carta 1 na
+            # mesma vida do daemon renascia calada, e a prova que conta as
+            # linhas do diário lia «nada renasceu».
+            self._nomes_velhos_ditos = None
             return recriar
         piso = min(cartas[chave] for chave in velhos)
         sentados = [chave for _lugar, chave in sorted(self._mesa_do_jogo.items())]
         juntos = [c for c in sentados if c in recriar or cartas.get(c, 0) >= piso]
         nomes = sorted(velhos.values())
-        if nomes != getattr(self, "_nomes_velhos_ditos", None):
+        if nomes != self._nomes_velhos_ditos:
             # Uma linha por episódio: se a ordem não convergir, a trava do
             # `_ordenar` para as recriações e o diário não repete a cada `sync`.
             self._nomes_velhos_ditos = nomes
