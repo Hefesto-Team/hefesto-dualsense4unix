@@ -47,6 +47,16 @@ terceiro registrada no prefixo do jogo é coisa que quem usa tem o direito de
 ver e de tirar, e antes disto o produto não sabia nem enumerar. O que ele não
 pode fazer é prometer cura de engasgo — não há.
 
+**O BOTÃO AGE ONDE A CAMADA CARREGA — 28/09/2026,
+O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01.** Decisão dela, 27/09: *«Nao sai.
+Passa a funcionar do jeito certo.»* <!-- noqa-acento: citação literal dela -->
+O Wine chama o carregador Vulkan do Linux, e as camadas que chegam ao jogo são
+as do lado Linux. As duas da Steam (a sobreposição e o gravador de shaders)
+saem pelo ambiente que o lançador entrega ao jogo
+(`AMBIENTE_SEM_AS_CAMADAS_DA_STEAM`), e é isso que o «Corrigir Vulkan» liga. O
+registro do prefixo só se mexe no jogo que traz o carregador oficial da Khronos
+(`traz_o_carregador_da_khronos`), o único caminho em que a chave tem leitor.
+
 Pedido dela, textual: *"faz uma cura universal e coloca isso naqueles botões do
 emulação tipo travar próton e coloca essa cura contra o vulcan em todos os
 jogos"*. Universal é requisito, não estilo: a regra dela de 14/08/2026 é que
@@ -119,9 +129,11 @@ A escrita é no `system.reg`, com backup ao lado (`.bak.hefesto-camadas-<ts>`) e
 troca atômica (tmp + `os.replace`). O Wine mantém o registro em MEMÓRIA
 enquanto o prefixo está vivo e o regrava ao sair — por isso:
 
-- a interface RECUSA com jogo da Steam aberto (mesmo portão do `proton_pin`);
+- a interface RECUSA devolver com jogo da Steam aberto (mesmo portão do
+  `proton_pin`);
 - o gancho de lançamento escreve ANTES de o Proton subir o `wineserver`
-  daquele prefixo, que é o instante certo;
+  daquele prefixo, que é o instante certo — e, desde 28/09/2026, só com o
+  botão ligado e só no jogo que traz o `vulkan-1.dll`;
 - se ainda assim um `wineserver` sobrescrever, a mudança se perde e o próximo
   lançamento a REFAZ. A cura é idempotente de propósito para que o pior caso
   seja "não pegou desta vez", nunca um prefixo pela metade.
@@ -140,7 +152,11 @@ era curado.
 Decisão dela, 16/09/2026, textual: *"Refazer sempre no lançamento; só o botão
 devolver é permanente. O botão vira a única voz de escolha e o wineserver
 perde o voto."* A regra 2 caducou — o que sobrou dela está em
-`_e_escolha_dela`, que é quem lê o estado antigo sem obedecer a ele.
+`_e_escolha_dela`, que é quem lê o estado antigo sem obedecer a ele. Desde
+28/09/2026 o botão é um ligável, e a voz dele é o arquivo da escolha
+(`caminho_da_escolha`): com ele ligado o gancho FORÇA, porque desligar já tira
+o gancho do caminho. O `manter` só vale para quem chama `curar_um_prefixo` sem
+forçar.
 
 Este módulo é **100% stdlib de propósito** (mesmo padrão de `proton_pin` e
 `steam_launch_options`): o `install.sh` o materializa em
@@ -708,23 +724,164 @@ def censo(home: Path | None = None, *, com_nomes: bool = True) -> list[PrefixoDe
     return saida
 
 
-def frase_do_estado(tiradas: int, postas: int, prefixos: int) -> str:
-    """*"Sobreposição Vulkan: tirada em N jogo · posta em M · P prefixos vistos"*.
+# --------------------------------------------------------------------------
+# O que chega ao jogo — O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01, 28/09/2026
+# --------------------------------------------------------------------------
+
+#: As duas camadas da Steam que o carregador do LADO LINUX põe no jogo, pelo
+#: `disable_environment` dos manifestos que a Steam instala em
+#: `~/.local/share/vulkan/implicit_layer.d/` (`steamoverlay_*.json` e
+#: `steamfossilize_*.json`, lidos em 28/09). A Steam as liga com
+#: `ENABLE_…_1=1` no ambiente do jogo (medido no `environ` do PRAGMATA em
+#: 28/09), e o carregador obedece ao `DISABLE_…_1=1` por cima do `ENABLE`:
+#: medido em 28/09 com o carregador desta máquina (1.3.280), com as duas
+#: variáveis ele não pede nenhuma das duas camadas, e só com o `ENABLE` pede as
+#: duas. O lançador (`assets/hefesto-launch.sh`) as recebe daqui, pelo arquivo
+#: da escolha.
+AMBIENTE_SEM_AS_CAMADAS_DA_STEAM: tuple[str, ...] = (
+    "DISABLE_VK_LAYER_VALVE_steam_overlay_1=1",
+    "DISABLE_VK_LAYER_VALVE_steam_fossilize_1=1",
+)
+
+#: A escolha do «Corrigir Vulkan», ao lado das outras escolhas dela no
+#: `XDG_CONFIG_HOME`. Ligado é o arquivo com as linhas de
+#: `AMBIENTE_SEM_AS_CAMADAS_DA_STEAM`; desligado é o arquivo ausente, que é
+#: também o jeito de todo computador novo. O lançador lê este mesmo arquivo, em
+#: shell puro, e só passa ao jogo as linhas que ele próprio conhece.
+ESCOLHA_RELPATH = "hefesto-dualsense4unix/camadas_da_steam_fora.env"
+
+#: O carregador Vulkan oficial do Windows, da Khronos. É o ÚNICO leitor das
+#: chaves `ImplicitLayers` do registro do prefixo; o `vulkan-1` do Wine devolve
+#: zero camadas (`estudos/2026-09-26-o-engasgo-do-sackboy/a-conferencia.md`
+#: §1.3). Só o jogo que o traz na própria pasta tem o registro mexido.
+CARREGADOR_DA_KHRONOS = "vulkan-1.dll"
+
+#: Até onde se procura o carregador na pasta do jogo: o motor Unreal o põe em
+#: `<Jogo>/Binaries/Win64/`, três níveis abaixo da raiz. O teto de entradas
+#: segura a busca num jogo de cem mil arquivos; ela roda no lançamento, e só
+#: quando o registro tem camada ligada.
+_FUNDO_DA_BUSCA = 4
+_TETO_DA_BUSCA = 20_000
+
+
+def caminho_da_escolha(config_home: Path | None = None) -> Path:
+    """``$XDG_CONFIG_HOME/hefesto-dualsense4unix/camadas_da_steam_fora.env``."""
+    if config_home is None:
+        xdg = os.environ.get("XDG_CONFIG_HOME", "").strip()
+        config_home = Path(xdg) if xdg else Path.home() / ".config"
+    return config_home / ESCOLHA_RELPATH
+
+
+def camadas_da_steam_fora(config_home: Path | None = None) -> bool:
+    """O «Corrigir Vulkan» está ligado? A pergunta que o lançador também faz.
+
+    Ligado só com TODAS as linhas no arquivo: um arquivo pela metade entregaria
+    ao jogo uma camada só, e a pílula acesa diria as duas.
+    """
+    try:
+        linhas = caminho_da_escolha(config_home).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return False
+    presentes = {linha.strip() for linha in linhas}
+    return all(linha in presentes for linha in AMBIENTE_SEM_AS_CAMADAS_DA_STEAM)
+
+
+def gravar_camadas_da_steam_fora(fora: bool, config_home: Path | None = None) -> None:
+    """Liga (as linhas, com tmp e `os.replace`) ou desliga (o arquivo sai).
+
+    LEVANTA `OSError` quando não consegue: é o clique dela, e a tela tem de
+    dizer que não pegou em vez de acender a pílula sobre nada.
+    """
+    alvo = caminho_da_escolha(config_home)
+    if not fora:
+        alvo.unlink(missing_ok=True)
+        return
+    alvo.parent.mkdir(parents=True, exist_ok=True)
+    tmp = alvo.with_name(f"{alvo.name}.tmp")
+    tmp.write_text(
+        "# O «Corrigir Vulkan» da aba Sistema: o lançador entrega estas linhas ao\n"
+        "# jogo. Sem este arquivo, a Steam decide.\n"
+        + "".join(f"{linha}\n" for linha in AMBIENTE_SEM_AS_CAMADAS_DA_STEAM),
+        encoding="utf-8",
+    )
+    os.replace(tmp, alvo)
+
+
+def traz_o_carregador_da_khronos(pasta_do_jogo: Path) -> bool:
+    """A pasta do jogo traz o `vulkan-1.dll` da Khronos? Read-only, nunca levanta.
+
+    Busca em largura até `_FUNDO_DA_BUSCA` níveis e `_TETO_DA_BUSCA` entradas,
+    sem seguir link de pasta (um link para `/` não pode virar a busca do disco
+    inteiro). Pasta ausente é `False`: sem saber, o registro não se mexe.
+    """
+    alvo = CARREGADOR_DA_KHRONOS.lower()
+    fila: list[tuple[Path, int]] = [(pasta_do_jogo, 0)]
+    vistas = 0
+    while fila:
+        pasta, fundo = fila.pop(0)
+        try:
+            entradas = list(os.scandir(pasta))
+        except OSError:
+            continue
+        for entrada in entradas:
+            vistas += 1
+            if vistas > _TETO_DA_BUSCA:
+                return False
+            try:
+                if entrada.is_file() and entrada.name.lower() == alvo:
+                    return True
+                if fundo + 1 < _FUNDO_DA_BUSCA and entrada.is_dir(follow_symlinks=False):
+                    fila.append((Path(entrada.path), fundo + 1))
+            except OSError:
+                continue
+    return False
+
+
+def frase_do_estado(fora: bool) -> str:
+    """*"Sobreposição Vulkan: a da Steam fica fora dos jogos"*, ou a Steam decide.
 
     A linha que o exame da aba Sistema pinta
     (`a09_sistema.linha_da_sobreposicao_vulkan`) e a que o desenho da aba
     (`interface/aba09.py`) mostra na cena. UM dono para os dois — 26/09/2026:
-    o desenho digitava a sua própria linha, «Nenhuma sobreposição picotando o
-    jogo», que a tela viva só mostrava antes da primeira pintura e que
-    prometia o que o A/B de 23/08 derrubou. Pura e stdlib, porque o gerador do desenho não sobe GTK.
+    o desenho digitava a sua própria linha, que prometia o que o A/B de 23/08
+    derrubou. Pura e stdlib, porque o gerador do desenho não sobe GTK.
+
+    **28/09/2026: a linha diz o que chega ao jogo.** Os três números de antes
+    (tirada, posta, prefixos vistos) contavam o registro do prefixo, que nenhum
+    jogo desta máquina lê; com o botão ligado ela dizia «nenhuma tirada», e a
+    tela contradizia o próprio botão.
     """
-    jogo_ou_jogos = "jogo" if tiradas == 1 else "jogos"
-    partes = [
-        f"tirada em {tiradas} {jogo_ou_jogos}" if tiradas else "nenhuma tirada",
-        f"posta em {postas}" if postas else "nenhuma posta",
-        f"{prefixos} prefixos vistos",
-    ]
-    return f"Sobreposição Vulkan: {' · '.join(partes)}"
+    if fora:
+        return "Sobreposição Vulkan: a da Steam fica fora dos jogos"
+    return "Sobreposição Vulkan: a Steam decide"
+
+
+def frase_do_ato(fora: bool) -> str:
+    """O recibo do clique no «Corrigir Vulkan» — o ato não se vê na hora.
+
+    As camadas saem do jogo que ABRIR depois do clique: o que está aberto já
+    carregou as dele, e a frase diz isso em vez de deixar ela procurar a mudança
+    no jogo da frente.
+    """
+    if fora:
+        return ("Pronto: a sobreposição e o gravador de shaders da Steam ficam fora "
+                "dos jogos, a partir do próximo que abrir.")
+    return ("Pronto: a Steam volta a decidir a sobreposição e o gravador de "
+            "shaders, a partir do próximo jogo que abrir.")
+
+
+def ha_o_que_devolver(home: Path | None = None) -> bool:
+    """O estado diz que NÓS desligamos alguma camada de algum prefixo?
+
+    É o que decide se desligar o botão mexe no registro. Lê só o nosso arquivo
+    de estado: o censo dos prefixos custa um segundo, e quem confere camada a
+    camada é o `religar` de `aplicar_no_prefixo`.
+    """
+    return any(
+        registro.get("feito") == "desligada"
+        for camadas in ler_estado(home).values()
+        for registro in camadas.values()
+    )
 
 
 # --------------------------------------------------------------------------
@@ -1056,18 +1213,24 @@ def curar_todos(
 
 
 def curar_um_prefixo(
-    raiz: Path, *, appid: str | None = None, home: Path | None = None
+    raiz: Path,
+    *,
+    appid: str | None = None,
+    home: Path | None = None,
+    forcar: bool = False,
 ) -> Resultado:
-    """A entrada do gancho de lançamento: um prefixo, sem enumerar nada.
+    """Um prefixo, sem enumerar nada — o motor do gancho de lançamento.
 
-    Nunca força — a escolha dela sobrevive ao próximo lançamento (regra 2 de
-    `aplicar_no_prefixo`). `home` existe só para o teste poder montar uma casa
-    inteira em `tmp_path`; em produção fica `None` e o estado sai do XDG.
+    Sem `forcar`, o `manter` do estado vence (regra 1 de `aplicar_no_prefixo`).
+    O gancho força desde 28/09/2026: ele só chega aqui com o «Corrigir Vulkan»
+    ligado, e a escolha ligada é a voz dela (`main`, modo `--prefixo`). `home`
+    existe só para o teste poder montar uma casa inteira em `tmp_path`; em
+    produção fica `None` e o estado sai do XDG.
     """
     prefixo = prefixo_de_jogo(raiz, appid=appid)
     if not prefixo.sobras:
         return Resultado(appid=prefixo.appid)
-    return aplicar_no_prefixo(prefixo, forcar=False, home=home)
+    return aplicar_no_prefixo(prefixo, forcar=forcar, home=home)
 
 
 # --------------------------------------------------------------------------
@@ -1105,18 +1268,32 @@ def main(argv: list[str] | None = None) -> int:
     grupo.add_argument(
         "--prefixo",
         metavar="CAMINHO",
-        help="cura UM compatdata/<appid> (usado pelo gancho de lançamento)",
+        help="cura UM compatdata/<appid> do jogo que traz o vulkan-1.dll "
+        "(usado pelo gancho de lançamento, com --jogo)",
     )
     parser.add_argument(
         "--appid", default=None, help="appid, quando o caminho não o revelar"
     )
+    parser.add_argument(
+        "--jogo",
+        metavar="PASTA",
+        default="",
+        help="a pasta do jogo (STEAM_COMPAT_INSTALL_PATH); sem o vulkan-1.dll "
+        "da Khronos nela, o --prefixo não mexe no registro",
+    )
     args = parser.parse_args(argv)
 
     if args.prefixo:
+        # O REGISTRO SÓ SE MEXE NO JOGO QUE TRAZ O CARREGADOR DA KHRONOS — 28/09.
+        # Sem a pasta do jogo não há como saber, e a resposta é não mexer: o
+        # gancho que editava todo prefixo em todo lançamento saiu.
+        if not args.jogo or not traz_o_carregador_da_khronos(Path(args.jogo)):
+            return 0
         # `--appid ""` chega assim do gancho de lançamento quando a Steam não
         # exportou `SteamAppId`; vazio vira `None` para o nome do diretório
         # valer, em vez de gravar o estado sob uma chave em branco.
-        resultado = curar_um_prefixo(Path(args.prefixo), appid=args.appid or None)
+        resultado = curar_um_prefixo(
+            Path(args.prefixo), appid=args.appid or None, forcar=True)
         if resultado.erro:
             print(f"erro: {resultado.erro}", file=sys.stderr)
             return 1

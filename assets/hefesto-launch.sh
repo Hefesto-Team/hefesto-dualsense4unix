@@ -340,47 +340,66 @@ enter_game_mode() {
     return 0
 }
 
-# --- Camadas Vulkan implícitas do prefixo (ENGASGO-VULKAN-01) ---------------
-# Uma camada Vulkan IMPLÍCITA registrada dentro do prefixo Wine. Ela nasceu
-# como hipótese do engasgo do Sackboy dela (23/08/2026), e a hipótese caiu: o
-# A/B mediu a camada desligada PIOR, e o `vulkan-1` do Wine nem a lê (26/09).
-# Tirá-la não cura engasgo. O gancho existe para alcançar todo jogo, inclusive
-# o instalado amanhã (regra dela de 14/08), e para refazer o que o Wine regrava
-# ao sair (16/09). Os números estão em `integrations/camadas_vulkan.py`.
+# --- O que chega ao jogo: as camadas Vulkan (O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01)
+# O «Corrigir Vulkan» da aba Sistema age aqui, onde a camada carrega (28/09).
+# O Wine chama o carregador Vulkan do Linux, e ele carrega as camadas
+# implícitas do Linux. A Steam liga as duas dela (a sobreposição e o gravador
+# de shaders) pondo `ENABLE_…_1=1` no ambiente do jogo, e o `DISABLE_…_1=1`
+# vence: medido em 28/09 com o carregador desta máquina (1.3.280). As envs do
+# dedup, mais abaixo, provam que o ambiente do exec chega ao jogo.
 #
-# Por que AQUI e não por variável de ambiente: camada Vulkan é lida de DENTRO do
-# prefixo, e é lá que ela tem de ser desarmada. Medido nesta mesma madrugada —
-# `MANGOHUD=1` exportado por este wrapper NÃO aparece no `environ` do processo
-# do jogo; só funciona quando a Steam INTEIRA nasce com a variável.
+# A escolha é o arquivo que o dono grava (`integrations/camadas_vulkan.py`,
+# `ESCOLHA_RELPATH`): presente com as duas linhas, o botão está ligado. Só as
+# duas linhas que este script conhece passam, e só as duas juntas — um arquivo
+# adulterado não exporta outra coisa, e um pela metade não entrega ao jogo
+# metade do que a pílula diz. Independe do daemon: é escolha dela sobre o jogo,
+# não estado do controle. SÓ SHELL PURO, como `jogo_excluido`.
+camadas_da_steam_fora() {
+    cs_envs=""
+    cs_base="${XDG_CONFIG_HOME:-}"
+    if [ -z "$cs_base" ]; then
+        [ -n "${HOME:-}" ] || return 0
+        cs_base="$HOME/.config"
+    fi
+    cs_arquivo="$cs_base/hefesto-dualsense4unix/camadas_da_steam_fora.env"
+    [ -f "$cs_arquivo" ] || return 0
+    cs_sobreposicao=""
+    cs_gravador=""
+    while IFS= read -r cs_linha || [ -n "$cs_linha" ]; do
+        case "$cs_linha" in
+            DISABLE_VK_LAYER_VALVE_steam_overlay_1=1) cs_sobreposicao="$cs_linha" ;;
+            DISABLE_VK_LAYER_VALVE_steam_fossilize_1=1) cs_gravador="$cs_linha" ;;
+        esac
+    done < "$cs_arquivo"
+    [ -n "$cs_sobreposicao" ] && [ -n "$cs_gravador" ] || return 0
+    cs_envs="$cs_sobreposicao
+$cs_gravador"
+    return 0
+}
+
+# O REGISTRO DO PREFIXO, e só no jogo que o lê. Uma camada Vulkan registrada no
+# prefixo Wine só é lida pelo carregador oficial da Khronos (`vulkan-1.dll`),
+# num jogo que o traga: o `vulkan-1` do Wine devolve zero camadas (26/09). Até
+# 28/09 este gancho editava o registro de todo prefixo em todo lançamento, e
+# nenhum jogo desta máquina lia a chave. Agora ele só roda com o botão ligado
+# (`cs_envs`), e o curador só escreve quando a pasta do jogo
+# (`STEAM_COMPAT_INSTALL_PATH`) traz o carregador. Escreve ANTES do exec,
+# porque o `wineserver` deste prefixo só sobe depois — e é ele quem regrava o
+# registro ao sair.
 #
-# CORREÇÃO 23/08/2026: este comentário dizia que o pressure-vessel "FILTRA o
-# ambiente" e que "cura por env não serve". Generalização falsa, tirada de UMA
-# variável. As envs do dedup logo acima (SDL_GAMECONTROLLER_IGNORE_DEVICES,
-# PROTON_DISABLE_HIDRAW) atravessam e funcionam — se não atravessassem, o jogo
-# não leria os vpads. O defeito real continua sendo o que a linha 66 já declara:
-# ninguém confere se o jogo HERDOU a env.
+# CUSTO MEDIDO (23/08/2026, os 28 `system.reg` REAIS dela): o portão do `grep`
+# custa ~2 ms por lançamento, e só com camada LIGADA no registro o python3 roda
+# (0,13 a 0,6 s de ponta a ponta, contando a busca do carregador).
 #
-# Por que no gancho e não só num botão: regra dela de 14/08/2026 — *receita por
-# appid deixa todo jogo novo desprotegido*. O botão conserta os prefixos de
-# hoje; isto aqui pega o jogo que ela instalar amanhã, no primeiro lançamento.
-#
-# CUSTO MEDIDO (23/08/2026, na máquina dela, os 28 `system.reg` REAIS dos dois
-# discos — três repetições por prefixo, não uma amostra):
-#   - portão em TODO lançamento: média de 2,1 ms (2 ms no maior, de 5,4 MB;
-#     1 ms num de 4,1 MB). 27 dos 28 param aqui e nunca chamam o python3;
-#   - só quando há camada LIGADA para desligar, o curador em python3, UMA vez:
-#     ~120 ms de trabalho no registro de 5,4 MB do Sackboy — 44 ms de leitura e
-#     ~75 ms de escrita mais o backup —, e de 0,13 a 0,6 s de ponta a ponta
-#     contando o interpretador e a variação do disco;
-#   - DEPOIS de curado o portão passa batido (medido no mesmo registro): o
-#     lançamento seguinte volta aos 2 ms.
-#
-# À PROVA DE FALHA, como o `enter_game_mode || true` logo abaixo: sem
-# STEAM_COMPAT_DATA_PATH (jogo nativo, sem prefixo) não há nada a fazer; sem o
-# curador instalado, sem python3, ou com qualquer erro, o jogo abre igual.
+# À PROVA DE FALHA, como o `enter_game_mode || true` logo abaixo: sem o botão,
+# sem prefixo (jogo nativo), sem a pasta do jogo, sem o curador instalado, sem
+# python3, ou com qualquer erro, o jogo abre igual.
 curar_camadas_vulkan() {
+    [ -n "${cs_envs:-}" ] || return 0
     prefixo="${STEAM_COMPAT_DATA_PATH:-}"
     [ -n "$prefixo" ] || return 0
+    cv_jogo="${STEAM_COMPAT_INSTALL_PATH:-}"
+    [ -n "$cv_jogo" ] || return 0
     reg="$prefixo/pfx/system.reg"
     [ -f "$reg" ] || return 0
 
@@ -389,10 +408,6 @@ curar_camadas_vulkan() {
     # então só há trabalho quando existe entrada em zero DENTRO da seção de
     # camadas implícitas. `-F` porque o alvo tem barras invertidas literais —
     # `Vulkan\\ImplicitLayers` é como o registro do Wine as escreve.
-    #
-    # Sem o portão preciso, todo lançamento de um prefixo JÁ CURADO pagava de
-    # novo os 0,1 a 0,6 s do interpretador mais a leitura do registro inteiro
-    # (medido). Com ele: 2 ms, e o python3 só roda quando há o que desligar.
     #
     # O resultado do grep entra numa VARIÁVEL, não num pipe para `grep -q`:
     # CORRIDA-DO-PIPEFAIL-01 (13/08/2026) — `grep -q` sai no primeiro
@@ -422,7 +437,7 @@ curar_camadas_vulkan() {
     # As vars do loader ficam limpas SÓ para o helper (mesmo cuidado do gate de
     # vida em `decide_envs`): o env do jogo não muda.
     LD_LIBRARY_PATH= LD_PRELOAD= PYTHONPATH= PYTHONHOME= \
-        $cv_run python3 "$curador" --prefixo "$prefixo" \
+        $cv_run python3 "$curador" --prefixo "$prefixo" --jogo "$cv_jogo" \
         --appid "${SteamAppId:-}" >/dev/null 2>&1
     return 0
 }
@@ -734,9 +749,19 @@ $hefesto_envs
 HEFESTO_EOF
 fi
 
-# As camadas Vulkan implícitas do prefixo (ENGASGO-VULKAN-01): antes do exec,
-# porque o `wineserver` deste prefixo só sobe DEPOIS — e é ele quem lê o
-# registro. À prova de falha, mesma disciplina do Game Mode.
+# O «Corrigir Vulkan» (O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01): as duas
+# camadas da Steam saem pelo ambiente do exec, com o daemon vivo ou não, e o
+# registro do prefixo só se mexe no jogo que traz o carregador da Khronos —
+# antes do exec, porque o `wineserver` deste prefixo só sobe DEPOIS. À prova de
+# falha, mesma disciplina do Game Mode.
+camadas_da_steam_fora || cs_envs=""
+if [ -n "$cs_envs" ]; then
+    while IFS= read -r kv; do
+        [ -n "$kv" ] && set -- "$kv" "$@"
+    done <<HEFESTO_CS_EOF
+$cs_envs
+HEFESTO_CS_EOF
+fi
 curar_camadas_vulkan || true
 
 # O device de áudio KS do DualSense (HAPTICA-NATIVA-01): também antes do exec,
