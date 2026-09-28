@@ -67,8 +67,16 @@ dos vpads. Logo:
 PRECISA DO DAEMON PARADO? Não para a tabela (é tudo sysfs). Para `--apertar`,
 leia o parágrafo acima: os dois modos valem, e medem coisas diferentes.
 
+O ENDEREÇO NUNCA SAI CRU (O-BASICO-MEDIDO-01, 28/09/2026). A coluna «MAC»
+imprimia o `HID_UNIQ` inteiro, e o MAC forjado do vpad é derivado do endereço
+do controle. Toda linha passa pelo dono da máscara da casa
+(`core/formas_do_endereco.mascarar`), com os endereços desta mesa como
+conhecidos. O `--json` é a forma que o `o_basico.py` lê: o LED aceso, a cor
+do sysfs e o transporte de cada físico, com o endereço mascarado.
+
 USO
     quem_e_quem.py
+    quem_e_quem.py --json
     quem_e_quem.py --apertar
 """
 
@@ -96,6 +104,16 @@ from comum import (
     tabela,
     vpads,
 )
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
+
+#: Os endereços desta mesa, lidos no começo: o dono da máscara os usa como
+#: conhecidos e pega até a forma que só quem sabe o valor enxerga.
+CONHECIDOS: list[str] = []
+
+
+def dizer(texto: str = "") -> None:
+    """Toda linha que sai daqui passa pelo dono da máscara."""
+    print(mascarar(texto, CONHECIDOS))
 
 # Importado no topo de propósito: o cabeçalho declara de QUAL ARQUIVO veio cada
 # biblioteca, e um import preguiçoso lá dentro faria essa linha mentir
@@ -182,6 +200,51 @@ def _player_led(aparelho: Aparelho) -> tuple[str, str]:
     return desenho, (f"P{jogador}" if jogador else "padrão inválido")
 
 
+def _luz_do_sysfs(aparelho: Aparelho) -> tuple[list[int] | None, int | None]:
+    """A cor que o kernel publica na barra (``multi_intensity``) e o brilho."""
+    dir_leds = os.path.join(aparelho.dir_device, "leds")
+    if not os.path.isdir(dir_leds):
+        return None, None
+    for entrada in sorted(os.listdir(dir_leds)):
+        if not entrada.endswith(":rgb:indicator"):
+            continue
+        cor = ler_texto(os.path.join(dir_leds, entrada, "multi_intensity")).split()
+        brilho = ler_texto(os.path.join(dir_leds, entrada, "brightness")).strip()
+        rgb = [int(x) for x in cor] if len(cor) == 3 and all(x.isdigit() for x in cor) else None
+        return rgb, int(brilho) if brilho.isdigit() else None
+    return None, None
+
+
+def retrato_json(alvos: list[Aparelho], saidas: list[Aparelho]) -> dict[str, object]:
+    """A forma que o `o_basico.py` lê: um físico por linha, o endereço mascarado."""
+    fisicos_json = []
+    for aparelho in alvos:
+        desenho, jogador = _player_led(aparelho)
+        rgb, brilho = _luz_do_sysfs(aparelho)
+        fisicos_json.append({
+            "uniq": mascarar(aparelho.mac, CONHECIDOS) if aparelho.mac else None,
+            "transporte": aparelho.transporte,
+            "hidraw": aparelho.hidraw,
+            "led_desenho": desenho,
+            "led_jogador": int(jogador[1:]) if jogador.startswith("P") and jogador[1:].isdigit() else None,
+            "luz_rgb": rgb,
+            "luz_brilho": brilho,
+            "bateria": _bateria(aparelho),
+        })
+    numeros = [f["led_jogador"] for f in fisicos_json if f["led_jogador"] is not None]
+    repetidos = sorted({n for n in numeros if numeros.count(n) > 1})
+    return {
+        "veredito": (f"o mesmo número aceso em dois controles: {repetidos}" if repetidos
+                     else f"{len(numeros)} de {len(fisicos_json)} físico(s) com o LED legível"),
+        "alvos_inicio": [f["uniq"] for f in fisicos_json],
+        "alvos_fim": [f["uniq"] for f in fisicos_json],
+        "mexeu": [],
+        "medidas": {"fisicos": len(fisicos_json), "vpads": len(saidas), "repetidos": repetidos},
+        "fisicos": fisicos_json,
+        "vpads": [{"rotulo": v.rotulo, "hidraw": v.hidraw} for v in saidas],
+    }
+
+
 def _bateria(aparelho: Aparelho) -> str:
     dir_ps = os.path.join(aparelho.dir_device, "power_supply")
     if not os.path.isdir(dir_ps):
@@ -215,12 +278,14 @@ def tabela_dos_fisicos(alvos: list[Aparelho]) -> list[str]:
         nos = _nos_de_entrada(aparelho)
         desenho, jogador = _player_led(aparelho)
         if jogador.startswith("P"):
-            vistos.setdefault(jogador, []).append(aparelho.mac)
+            vistos.setdefault(jogador, []).append(mascarar(aparelho.mac, CONHECIDOS))
         elif desenho != "-":
-            avisos.append(f"{aparelho.mac}: LED em {desenho}, que não é desenho de jogador nenhum")
+            avisos.append(
+                f"{mascarar(aparelho.mac, CONHECIDOS)}: LED em {desenho}, que não é desenho de jogador nenhum"
+            )
         linhas.append(
             [
-                aparelho.mac or "?",
+                mascarar(aparelho.mac, CONHECIDOS) if aparelho.mac else "?",
                 aparelho.transporte,
                 aparelho.hidraw,
                 nos.get("principal", "-"),
@@ -233,10 +298,10 @@ def tabela_dos_fisicos(alvos: list[Aparelho]) -> list[str]:
                 _bateria(aparelho),
             ]
         )
-    print()
-    print("  OS CONTROLES FÍSICOS")
-    print()
-    print(tabela(cabecalho, linhas))
+    dizer()
+    dizer("  OS CONTROLES FÍSICOS")
+    dizer()
+    dizer(tabela(cabecalho, linhas))
 
     for jogador, macs in sorted(vistos.items()):
         if len(macs) > 1:
@@ -252,36 +317,36 @@ def tabela_dos_vpads(saidas: list[Aparelho]) -> None:
             v.rotulo,
             v.hidraw,
             _nos_de_entrada(v).get("principal", "-"),
-            v.mac or "?",
+            mascarar(v.mac, CONHECIDOS) if v.mac else "?",
         ]
         for v in saidas
     ]
-    print()
-    print("  OS VPADS — a saída do produto, o que o jogo enxerga")
-    print()
-    print(tabela(cabecalho, linhas))
+    dizer()
+    dizer("  OS VPADS — a saída do produto, o que o jogo enxerga")
+    dizer()
+    dizer(tabela(cabecalho, linhas))
 
 
 def ensaio_de_aperto(aparelhos: list[Aparelho], segundos: float) -> None:
     """Resolve, apertando botão, o que o sysfs não liga."""
     if evdev is None:
-        print("\n  python-evdev ausente — rode com .venv/bin/python para usar --apertar.")
+        dizer("\n  python-evdev ausente — rode com .venv/bin/python para usar --apertar.")
         return
 
     daemon = estado_do_daemon()
-    print()
-    print("  ENSAIO DO APERTO — o que o sysfs não resolve")
-    print()
+    dizer()
+    dizer("  ENSAIO DO APERTO — o que o sysfs não resolve")
+    dizer()
     if daemon.rodando:
-        print("  O daemon está RODANDO: os nós FÍSICOS estão sob EVIOCGRAB e não")
-        print("  falam com este instrumento. O que este ensaio resolve, então, é")
-        print("  FÍSICO(que você identifica com os olhos) ↔ VPAD.")
+        dizer("  O daemon está RODANDO: os nós FÍSICOS estão sob EVIOCGRAB e não")
+        dizer("  falam com este instrumento. O que este ensaio resolve, então, é")
+        dizer("  FÍSICO(que você identifica com os olhos) ↔ VPAD.")
     else:
-        print("  O daemon está PARADO: os nós físicos falam. Este ensaio resolve")
-        print("  MAC ↔ VPAD sem depender de você saber qual controle pegou.")
-    print()
-    print(f"  >> APERTE O BOTÃO X num controle. Esperando {segundos:.0f} s…")
-    print()
+        dizer("  O daemon está PARADO: os nós físicos falam. Este ensaio resolve")
+        dizer("  MAC ↔ VPAD sem depender de você saber qual controle pegou.")
+    dizer()
+    dizer(f"  >> APERTE O BOTÃO X num controle. Esperando {segundos:.0f} s…")
+    dizer()
 
     seletor = selectors.DefaultSelector()
     dono_do_fd: dict[int, tuple[Aparelho, str]] = {}
@@ -297,7 +362,7 @@ def ensaio_de_aperto(aparelhos: list[Aparelho], segundos: float) -> None:
         dono_do_fd[dispositivo.fd] = (aparelho, caminho)
 
     if not dono_do_fd:
-        print("  Nenhum nó principal abriu. Nada a medir.")
+        dizer("  Nenhum nó principal abriu. Nada a medir.")
         return
 
     acertos: list[tuple[Aparelho, str]] = []
@@ -318,32 +383,32 @@ def ensaio_de_aperto(aparelhos: list[Aparelho], segundos: float) -> None:
                 if pressionou_x and (aparelho, caminho) not in acertos:
                     acertos.append((aparelho, caminho))
                     marca = "vpad " + aparelho.rotulo if aparelho.e_vpad else aparelho.mac
-                    print(f"    X em {marca:<20} ({caminho}, {aparelho.transporte})")
+                    dizer(f"    X em {marca:<20} ({caminho}, {aparelho.transporte})")
 
     for chave in list(seletor.get_map().values()):
         with contextlib.suppress(OSError):
             chave.fileobj.close()
     seletor.close()
 
-    print()
+    dizer()
     if not acertos:
-        print("  Nenhum X apertado — nada resolvido. Repita e aperte durante a janela.")
+        dizer("  Nenhum X apertado — nada resolvido. Repita e aperte durante a janela.")
         return
     dos_vpads = [a for a, _ in acertos if a.e_vpad]
     dos_fisicos = [a for a, _ in acertos if not a.e_vpad]
     if dos_vpads and dos_fisicos:
-        print("  RESOLVIDO: o mesmo aperto saiu do físico e do vpad abaixo —")
+        dizer("  RESOLVIDO: o mesmo aperto saiu do físico e do vpad abaixo —")
         for aparelho in dos_fisicos:
-            print(f"    físico {aparelho.mac}")
+            dizer(f"    físico {aparelho.mac}")
         for aparelho in dos_vpads:
-            print(f"    vpad   {aparelho.rotulo}")
-        print("  Estes são o mesmo controle.")
+            dizer(f"    vpad   {aparelho.rotulo}")
+        dizer("  Estes são o mesmo controle.")
     elif dos_vpads:
-        print(f"  Só vpad(s) responderam: {', '.join(v.rotulo for v in dos_vpads)}.")
-        print("  O controle que você apertou alimenta esse vpad. O MAC dele NÃO foi")
-        print("  resolvido por aqui — para isso, pare o daemon e repita.")
+        dizer(f"  Só vpad(s) responderam: {', '.join(v.rotulo for v in dos_vpads)}.")
+        dizer("  O controle que você apertou alimenta esse vpad. O MAC dele NÃO foi")
+        dizer("  resolvido por aqui — para isso, pare o daemon e repita.")
     else:
-        print(f"  Só físico(s) responderam: {', '.join(a.mac for a in dos_fisicos)}.")
+        dizer(f"  Só físico(s) responderam: {', '.join(a.mac for a in dos_fisicos)}.")
 
 
 def main() -> int:
@@ -356,9 +421,21 @@ def main() -> int:
         help="ensaio interativo que resolve o que o sysfs não liga",
     )
     analisador.add_argument("--segundos", type=float, default=15.0, help="janela do --apertar")
+    analisador.add_argument("--json", action="store_true", help="a forma que o o_basico.py lê")
     argumentos = analisador.parse_args()
 
-    print(
+    aparelhos = descobrir_aparelhos()
+    CONHECIDOS.extend(a.mac for a in aparelhos if a.mac)
+    if argumentos.json:
+        import json
+
+        dado = retrato_json(fisicos(aparelhos), vpads(aparelhos))
+        dizer(json.dumps(dado, ensure_ascii=False, indent=1))
+        medidas = dado.get("medidas")
+        repetidos = medidas.get("repetidos") if isinstance(medidas, dict) else None
+        return 1 if (not aparelhos or repetidos) else 0
+
+    dizer(
         cabecalho_do_instrumento(
             "quem_e_quem.py",
             "qual controle físico é qual jogador, e o que só se resolve apertando botão?",
@@ -368,31 +445,30 @@ def main() -> int:
         )
     )
 
-    aparelhos = descobrir_aparelhos()
     alvos = fisicos(aparelhos)
     saidas = vpads(aparelhos)
-    print(f"\n  {censo_da_mesa(aparelhos)}")
+    dizer(f"\n  {censo_da_mesa(aparelhos)}")
     if not aparelhos:
-        print(resumo("nenhum DualSense na mesa — nada a resolver."))
+        dizer(resumo("nenhum DualSense na mesa — nada a resolver."))
         return 1
 
     avisos = tabela_dos_fisicos(alvos) if alvos else []
     if saidas:
         tabela_dos_vpads(saidas)
 
-    print()
-    print("  O QUE ESTA TABELA NÃO RESOLVE POR SYSFS, e é honesto dizer:")
-    print("    - qual vpad é alimentado por qual MAC. Nenhum arquivo de /sys carrega")
-    print("      essa ligação. Quem a carrega é o daemon, desde 15/08/2026:")
-    print("      `hefesto coop status --json` traz `coop.jogadores` (MAC do físico +")
-    print("      `vpad_uniq`). Aqui, use --apertar — ou compare com aquela lista.")
+    dizer()
+    dizer("  O QUE ESTA TABELA NÃO RESOLVE POR SYSFS, e é honesto dizer:")
+    dizer("    - qual vpad é alimentado por qual MAC. Nenhum arquivo de /sys carrega")
+    dizer("      essa ligação. Quem a carrega é o daemon, desde 15/08/2026:")
+    dizer("      `hefesto coop status --json` traz `coop.jogadores` (MAC do físico +")
+    dizer("      `vpad_uniq`). Aqui, use --apertar — ou compare com aquela lista.")
 
     if avisos:
-        print()
-        print("  DIVERGÊNCIAS VISTAS NO DESENHO DO PLAYER LED:")
+        dizer()
+        dizer("  DIVERGÊNCIAS VISTAS NO DESENHO DO PLAYER LED:")
         for aviso in avisos:
-            print(f"    - {aviso}")
-        print("    (defeito ABERTO, sob cura de outro agente em src/. Aqui só se observa.)")
+            dizer(f"    - {aviso}")
+        dizer("    (defeito ABERTO, sob cura de outro agente em src/. Aqui só se observa.)")
 
     if argumentos.apertar:
         ensaio_de_aperto(aparelhos, argumentos.segundos)
@@ -407,8 +483,8 @@ def main() -> int:
         "A ligação vpad↔MAC não sai do sysfs: use --apertar, ou "
         "`hefesto coop status --json` (`coop.jogadores`, desde 15/08/2026)."
     )
-    print(resumo(veredito))
-    return 0
+    dizer(resumo(veredito))
+    return 1 if avisos else 0
 
 
 if __name__ == "__main__":
