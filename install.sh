@@ -1871,7 +1871,11 @@ if [[ "${FORMAT}" != "native" ]]; then
     printf ' passos de plataforma (Proton pinado, BT no máximo, cmdline) só\n'
     printf ' valem no formato "native" (padrão).\n'
     printf ' Desinstalar: ./uninstall.sh\n'
-    printf '─────────────────────────────────────────\n\n'
+    printf '─────────────────────────────────────────\n'
+    # B5: os módulos de kernel são os mesmos em todo formato, e o reinício
+    # que eles pedem também.
+    dizer_o_reinicio_pendente
+    printf '\n'
     exit 0
 fi
 
@@ -2088,15 +2092,22 @@ fi
 # só o essencial e avisa, em vez de abortar o install inteiro.
 _extras="emulation,cosmic"
 [[ "${NO_DEV}" -eq 0 ]] && _extras="${_extras},dev"
+# AS VERSÕES QUE A CASA MEDIU (O-PRODUTO-EM-QUALQUER-MAQUINA-01, B3,
+# 28/09/2026): o `constraints.txt` trava o `evdev`, o `hidapi-usb`, o `pydantic`
+# e o `pydualsense` nas versões que rodaram com os controles na mesa. Sem ele o
+# pip de uma máquina nova entregava o `evdev` 2.0.0, que nenhum aparelho desta
+# casa rodou. As duas linhas de `pip install -e` abaixo usam o mesmo arquivo.
+_travas=()
+[[ -r "${ROOT_DIR}/constraints.txt" ]] && _travas=(-c "${ROOT_DIR}/constraints.txt")
 if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _faria "atualizar pip e packaging dentro de ${VENV_DIR}"
-    _faria "instalar o pacote em modo editável no venv: pip install -e '${ROOT_DIR}[${_extras}]'"
+    _faria "instalar o pacote em modo editável no venv: pip install ${_travas[*]} -e '${ROOT_DIR}[${_extras}]'"
 elif ! "${VENV_DIR}/bin/pip" install \
-        --quiet --disable-pip-version-check -e "${ROOT_DIR}[${_extras}]" 2>/dev/null; then
+        --quiet --disable-pip-version-check "${_travas[@]}" -e "${ROOT_DIR}[${_extras}]" 2>/dev/null; then
     if [[ "${NO_DEV}" -eq 0 ]]; then
         warn "pip install com [dev] falhou — tentando só o essencial (ruff/mypy/pytest ficam de fora)"
         "${VENV_DIR}/bin/pip" install \
-            --quiet --disable-pip-version-check -e "${ROOT_DIR}[emulation,cosmic]" 2>/dev/null \
+            --quiet --disable-pip-version-check "${_travas[@]}" -e "${ROOT_DIR}[emulation,cosmic]" 2>/dev/null \
             || die "pip install do pacote falhou — verifique a conexão e reexecute"
     else
         die "pip install do pacote falhou — verifique a conexão e reexecute"
@@ -2566,6 +2577,12 @@ PYEOF
             esac
         done <<<"${_cmdline_plan}"
         [[ "${_cmdline_changed}" -eq 0 ]] && printf '      nada a mudar no cmdline (estado já garantido; donos em %s)\n' "${CMDLINE_OWNERS_FILE}"
+        # B5 (O-PRODUTO-EM-QUALQUER-MAQUINA-01): o cmdline novo só vale no
+        # boot, e o fecho diz «reinicie». `if`, e não `[[ ]] &&`: sob `set -e`
+        # a lista falsa mataria o install aqui.
+        if [[ "${_cmdline_changed}" -eq 1 ]]; then
+            anotar_reinicio_pendente "${_PENDENTE_DO_CMDLINE}"
+        fi
     fi
 fi
 
@@ -4781,25 +4798,37 @@ if command -v flatpak >/dev/null 2>&1 \
     printf '─────────────────────────────────────────\n'
 fi
 
-# BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01: recomendação (apenas print) para quem usa
-# o microfone do DualSense. O quirk de áudio USB (usbcore.quirks=054c:0ce6:gn) é
-# o que segura o storm -71 COM o mic ligado; ligar o mic sem ele pode reabrir o
-# storm. NÃO aplicamos nem tocamos no cmdline (gerido pela toolchain pessoal
-# Aurora) — só avisamos. Mesma detecção do doctor.sh (ativo/agendado/runtime).
+# BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01: o quirk de áudio USB
+# (usbcore.quirks=054c:0ce6:gn) é o que segura o storm -71 COM o microfone do
+# DualSense ligado no cabo. Mesma detecção do doctor.sh (ativo/agendado/runtime).
+#
+# FATO ERRADO, SUBSTITUÍDO EM 28/09/2026 (O-PRODUTO-EM-QUALQUER-MAQUINA-01, B5,
+# a C18 da contraprova): aqui estava escrito que o install não mexia no cmdline,
+# por ser da configuração pessoal da máquina dela. O passo 3e ESCREVE o cmdline
+# (kernelstub), e o produto não depende da bancada de ninguém. O que o fecho faz
+# agora: ativo, nada a dizer; AGENDADO (no bootloader e ainda não no kernel que
+# roda), é mais um item do «reinicie» abaixo; ausente em todo lugar (o 3e não
+# achou kernelstub), o comando à mão continua sendo dito.
 QUIRK_MARKER="054c:0ce6:gn"
-quirk_present=0
-if grep -q "${QUIRK_MARKER}" /proc/cmdline 2>/dev/null; then quirk_present=1; fi
-if [[ -r /etc/kernelstub/configuration ]] && grep -q "${QUIRK_MARKER}" /etc/kernelstub/configuration 2>/dev/null; then quirk_present=1; fi
-if [[ -r /etc/default/grub ]] && grep -q "${QUIRK_MARKER}" /etc/default/grub 2>/dev/null; then quirk_present=1; fi
-if [[ -r /sys/module/usbcore/parameters/quirks ]] && grep -q "${QUIRK_MARKER}" /sys/module/usbcore/parameters/quirks 2>/dev/null; then quirk_present=1; fi
-if [[ "${quirk_present}" -eq 0 ]]; then
+quirk_ativo=0
+quirk_agendado=0
+if grep -q "${QUIRK_MARKER}" /proc/cmdline 2>/dev/null; then quirk_ativo=1; fi
+if [[ -r /sys/module/usbcore/parameters/quirks ]] && grep -q "${QUIRK_MARKER}" /sys/module/usbcore/parameters/quirks 2>/dev/null; then quirk_ativo=1; fi
+if [[ -r /etc/kernelstub/configuration ]] && grep -q "${QUIRK_MARKER}" /etc/kernelstub/configuration 2>/dev/null; then quirk_agendado=1; fi
+if [[ -r /etc/default/grub ]] && grep -q "${QUIRK_MARKER}" /etc/default/grub 2>/dev/null; then quirk_agendado=1; fi
+if [[ "${quirk_ativo}" -eq 0 && "${quirk_agendado}" -eq 1 ]]; then
+    anotar_reinicio_pendente "${_PENDENTE_DO_CMDLINE}"
+elif [[ "${quirk_ativo}" -eq 0 ]]; then
     printf '\n'
-    printf ' Vai usar o MICROFONE do DualSense?\n'
-    printf '   O quirk de áudio USB segura o storm -71 com o mic ligado.\n'
-    printf '   Para aplicá-lo (vale no próximo boot, NÃO mexe no cmdline agora):\n'
+    printf ' Vai usar o MICROFONE do DualSense no cabo?\n'
+    printf '   O quirk de áudio USB segura o storm -71 com o mic ligado, e o\n'
+    printf '   passo 3e não achou onde escrevê-lo. Para aplicá-lo (vale no\n'
+    printf '   próximo boot):\n'
     printf '     bash scripts/install_usb_quirk.sh\n'
     printf '─────────────────────────────────────────\n'
 fi
+# B5: o fecho diz «reinicie» só quando algum passo deixou algo para o boot.
+dizer_o_reinicio_pendente
 printf '\n'
 
 # "O que fazes com paz de espírito, isso sim dura." — Marco Aurélio

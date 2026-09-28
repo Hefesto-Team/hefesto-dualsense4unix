@@ -36,6 +36,11 @@ import pytest
 from hefesto_dualsense4unix.daemon.subsystems import bt_mic
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt
 
+#: O `subprocess` de verdade, guardado ANTES da fixture que recusa processo: só
+#: o doctor (bash, sem aparelho, com o sysfs de mentira) roda por ele, na seção 3.
+_RUN_DE_VERDADE = subprocess.run
+_POPEN_DE_VERDADE = subprocess.Popen
+
 UM = "aa:bb:cc:00:00:a1"
 DOIS = "aa:bb:cc:00:00:b7"
 
@@ -253,3 +258,81 @@ def test_no_que_o_playstation_nao_le_segue_como_antes(
     no = _no("hidraw5", UM)
     assert sub.alvos([no]) == [no]
     assert sub.motivo == ""
+
+
+# ---------------------------------------------------------------------------
+# 3. O doctor faz a mesma pergunta, com a cura na frente
+# ---------------------------------------------------------------------------
+
+DOCTOR = Path(__file__).resolve().parents[2] / "scripts" / "doctor.sh"
+KERNEL_CONFERIDO = "7.1.5-76070105-generic"
+
+
+def _doctor_hidp(
+    tmp_path: Path, *, modulo: Path | None, staged: bool, kernel: str = KERNEL_CONFERIDO
+) -> str:
+    bin_ = tmp_path / "bin-doctor"
+    bin_.mkdir()
+    arquivo = (
+        "/lib/modules/k/updates/dkms/hid-playstation.ko.zst" if staged
+        else "/lib/modules/k/kernel/drivers/hid/hid-playstation.ko.zst"
+    )
+    (bin_ / "modinfo").write_text(f'#!/bin/sh\necho "{arquivo}"\n', encoding="utf-8")
+    (bin_ / "modinfo").chmod(0o755)
+    raiz = tmp_path / "sys-module-doctor"
+    raiz.mkdir()
+    if modulo is not None:
+        os.symlink(modulo, raiz / "hid_playstation")
+    efivars = tmp_path / "efivars-vazia"
+    efivars.mkdir()
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(subprocess, "run", _RUN_DE_VERDADE)
+        mp.setattr(subprocess, "Popen", _POPEN_DE_VERDADE)
+        r = subprocess.run(
+            ["bash", "-c", f'source "{DOCTOR}"; check_hefesto_hid_playstation_dkms'],
+            env={
+                "PATH": f"{bin_}:/usr/bin:/bin",
+                "HOME": str(tmp_path),
+                "HEFESTO_DOCTOR_KERNEL": kernel,
+                "HEFESTO_DOCTOR_SYS_MODULE": str(raiz),
+                "HEFESTO_EFIVARS_ROOT": str(efivars),
+            },
+            capture_output=True, text=True, timeout=30, check=False,
+        )
+    return r.stdout + r.stderr
+
+
+class TestODoctorPerguntaAoDriver:
+    """A MORDIDA: trocar o `pass` da guarda por `warn` (ou tirar o reconhecimento
+    do `srcversion`) reprova os dois primeiros; tirar o ramo do «staged» leva o
+    terceiro ao conselho de instalar, e ele reprova."""
+
+    def test_com_a_marca_passa(self, tmp_path: Path) -> None:
+        saida = _doctor_hidp(tmp_path, modulo=_sys_do_modulo(tmp_path, marca="Y"), staged=True)
+        assert "[ OK ]" in saida and "descarta o áudio do microfone" in saida, saida
+
+    def test_o_0003_de_antes_da_marca_passa(self, tmp_path: Path) -> None:
+        (antigo,) = bt_mic.SRCVERSION_DO_0003_SEM_A_MARCA
+        modulo = _sys_do_modulo(tmp_path, parametros=("feature_retries",), srcversion=antigo)
+        saida = _doctor_hidp(tmp_path, modulo=modulo, staged=True)
+        assert "[ OK ]" in saida, saida
+
+    def test_o_de_fabrica_com_o_desta_casa_instalado_manda_reiniciar(self, tmp_path: Path) -> None:
+        modulo = _sys_do_modulo(tmp_path, srcversion="A74F93FE20FF36683AF7614")
+        saida = _doctor_hidp(tmp_path, modulo=modulo, staged=True)
+        assert "[WARN]" in saida and "microfone do DualSense pelo rádio" in saida, saida
+        assert "PRÓXIMO BOOT" in saida and "reinicie o computador" in saida, saida
+
+    def test_kernel_fora_do_pino_diz_por_que(self, tmp_path: Path) -> None:
+        modulo = _sys_do_modulo(tmp_path, srcversion="A74F93FE20FF36683AF7614")
+        saida = _doctor_hidp(tmp_path, modulo=modulo, staged=False, kernel="6.17.9-1-generic")
+        assert "[WARN]" in saida and "não está entre os conferidos" in saida, saida
+
+    def test_sem_driver_carregado_so_informa(self, tmp_path: Path) -> None:
+        saida = _doctor_hidp(tmp_path, modulo=None, staged=True)
+        assert "[WARN]" not in saida and "não está carregado agora" in saida, saida
+
+    def test_o_main_pergunta(self) -> None:
+        texto = DOCTOR.read_text(encoding="utf-8")
+        assert "\n    check_hefesto_hid_playstation_dkms\n" in texto
+        assert "\n    check_reinicio_pendente\n" in texto

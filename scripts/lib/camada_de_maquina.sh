@@ -62,6 +62,65 @@ declare -F step >/dev/null 2>&1 || step() { printf '\n[%s] %s\n' "$1" "$2"; }
 : "${NO_WIFI_USB:=0}"
 : "${AUTO_YES:=0}"
 
+# ---------------------------------------------------------------------------
+# O REINÍCIO PENDENTE — O-PRODUTO-EM-QUALQUER-MAQUINA-01, B5 (28/09/2026)
+# ---------------------------------------------------------------------------
+# «vale no próximo boot» estava escrito em 26 lugares, espalhados entre os
+# passos, e o fecho dizia só «instalado · Abrir · Desinstalar». Numa máquina
+# nova a primeira sessão depois do install roda o driver de fábrica do
+# DualSense, e com ele o microfone pelo rádio fica desligado — sem que a
+# pessoa saiba que um reinício resolve. Cada passo que deixa algo para o boot
+# ANOTA aqui, e o fecho diz «reinicie» só quando há o que esperar
+# (`dizer_o_reinicio_pendente`). Nada aqui reinicia nada.
+declare -p _REINICIO_PENDENTE >/dev/null 2>&1 || _REINICIO_PENDENTE=()
+
+anotar_reinicio_pendente() {
+    local o
+    for o in "${_REINICIO_PENDENTE[@]}"; do
+        [[ "${o}" == "$1" ]] && return 0
+    done
+    _REINICIO_PENDENTE+=("$1")
+    return 0
+}
+
+# O módulo CARREGADO não é o instalado em updates/dkms: o `srcversion` de
+# `/sys/module/<m>` difere do arquivo que o próximo carregamento usa. É a MESMA
+# pergunta do `_modulo_pede_reinicio` do doctor, e uma régua cobra as duas.
+# Módulo descarregado não pede reinício: o próximo plug já carrega o novo.
+modulo_pede_reinicio() {
+    local nome="$1" raiz="${HEFESTO_SYS_MODULE:-/sys/module}" carregado arquivo novo
+    [[ -d "${raiz}/${nome//-/_}" ]] || return 1
+    carregado="$(cat "${raiz}/${nome//-/_}/srcversion" 2>/dev/null || true)"
+    arquivo="$(modinfo -F filename "${nome}" 2>/dev/null || true)"
+    [[ "${arquivo}" == */updates/dkms/* ]] || return 1
+    novo="$(modinfo -F srcversion "${nome}" 2>/dev/null || true)"
+    [[ -n "${novo}${carregado}" && "${novo}" != "${carregado}" ]]
+}
+
+# O grupo `hefesto` vale no próximo login: a sessão de agora não o tem.
+grupo_pede_novo_login() {
+    local membros
+    membros="$(getent group hefesto 2>/dev/null | cut -d: -f4 || true)"
+    [[ ",${membros}," == *",${USER:-$(id -un)},"* ]] || return 1
+    [[ " $(id -nG 2>/dev/null) " != *" hefesto "* ]]
+}
+
+#: A frase do cmdline, uma só: o passo 3e e o fecho a anotam, e a lista não a
+#: repete.
+_PENDENTE_DO_CMDLINE="a linha de comando do kernel (usbcore: o microfone do DualSense no cabo e o autosuspend)"
+
+dizer_o_reinicio_pendente() {
+    if grupo_pede_novo_login; then
+        anotar_reinicio_pendente "o grupo hefesto (o acesso ao controle virtual)"
+    fi
+    [[ "${#_REINICIO_PENDENTE[@]}" -gt 0 ]] || return 0
+    printf '\n'
+    printf ' Reinicie o computador para terminar a instalação. Esperam o reinício:\n'
+    printf '   - %s\n' "${_REINICIO_PENDENTE[@]}"
+    printf '─────────────────────────────────────────\n'
+    return 0
+}
+
 # O QUE A CONF DO MODPROBE.D MANDA (OS-TEXTOS-QUE-A-6E-1-DEIXOU-VELHOS-01,
 # 25/09/2026). As confs de `assets/modprobe.d/` são as DONAS das opções dos
 # módulos: a fala de cada passo, o rótulo do ensaio e o parâmetro escrito a
@@ -808,6 +867,10 @@ install_dkms_hid_nintendo_host() {
         warn "patch DKMS do hid-nintendo NÃO ficou staged (veja avisos acima) — driver in-tree continua (fail-safe); a conf do modprobe.d é inerte com o in-tree ('unknown parameter ignored')"
         return 0
     fi
+    # B5: o carregado não é o instalado? O fecho diz «reinicie».
+    if modulo_pede_reinicio hid-nintendo; then
+        anotar_reinicio_pendente "o driver dos controles Nintendo (hid-nintendo)"
+    fi
     # ATIVAÇÃO FAIL-SAFE (mesmo princípio do btusb/broker acima): NUNCA
     # recarregamos um módulo em uso — a mantenedora joga com Pro Controller e
     # 8BitDo conectados AGORA, e substituir o módulo carregado os derrubaria.
@@ -905,6 +968,10 @@ install_dkms_uhid_host() {
         warn "uhid patchado NÃO ficou staged (veja avisos acima) — o de fábrica continua (fail-safe), e a conf do modprobe.d seria inerte nele"
         return 0
     fi
+    # B5: o carregado não é o instalado? O fecho diz «reinicie».
+    if modulo_pede_reinicio uhid; then
+        anotar_reinicio_pendente "o uhid com contrapressão"
+    fi
     if sudo install -Dm644 "${ROOT_DIR}/assets/modprobe.d/hefesto-uhid.conf" \
             /etc/modprobe.d/hefesto-uhid.conf 2>/dev/null; then
         printf '      contrapressão pedida em /etc/modprobe.d/hefesto-uhid.conf\n'
@@ -980,6 +1047,10 @@ install_dkms_hid_playstation_host() {
     if ! dkms_module_from_updates hid-playstation; then
         warn "patch DKMS do hid-playstation NÃO ficou staged (veja avisos acima) — o driver de fábrica continua (fail-safe): o microfone do DualSense pelo rádio fica desligado, porque o de fábrica leria o áudio como botão e mexeria o cursor, e o 2º DualSense segue podendo se perder na probe; a conf do modprobe.d é inerte com ele ('unknown parameter ignored')"
         return 0
+    fi
+    # B5: o carregado não é o instalado? O fecho diz «reinicie».
+    if modulo_pede_reinicio hid-playstation; then
+        anotar_reinicio_pendente "o driver do DualSense (hid-playstation)"
     fi
     # ATIVAÇÃO FAIL-SAFE — aqui a regra é MAIS dura que a do hid-nintendo:
     # recarregar o hid_playstation derruba TODOS os DualSense, e os por
@@ -1099,6 +1170,10 @@ install_dkms_rtw88_usb_host() {
     if ! dkms_module_from_updates rtw88_usb; then
         warn "patch DKMS do rtw88_usb NÃO ficou staged (veja avisos acima) — driver in-tree continua (fail-safe); sem device-gone/port-reset, o fantasma USB do dongle (device retido após disconnect perdido) segue possível"
         return 0
+    fi
+    # B5: o carregado não é o instalado? O fecho diz «reinicie».
+    if modulo_pede_reinicio rtw88_usb; then
+        anotar_reinicio_pendente "o driver do Wi-Fi USB (rtw88_usb)"
     fi
     # ATIVAÇÃO FAIL-SAFE (mesmo princípio do hid-nintendo acima): NUNCA
     # recarregamos um módulo em uso — a mantenedora depende do WiFi AGORA, e

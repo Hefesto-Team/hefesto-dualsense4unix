@@ -7857,6 +7857,114 @@ check_hefesto_rtw88_usb_dkms() {
     fi
 }
 
+# ---------------------------------------------------------------------------
+# O DKMS do hid-playstation e a guarda do microfone pelo rádio —
+# O-PRODUTO-EM-QUALQUER-MAQUINA-01, B1 (28/09/2026). Irmão dos dois de cima.
+# ---------------------------------------------------------------------------
+# Sem o `0003` desta casa, o driver de fábrica lê o quadro de áudio do microfone
+# pelo rádio como gamepad: desliga o microfone sozinho e mexe o cursor. O daemon
+# pergunta ao driver antes de pôr o microfone no ar (`bt_mic.o_driver_guarda_o_
+# audio`), e esta é a mesma pergunta, com a cura na frente: o kernel está na
+# BASELINE? o patchado está instalado para ele? o CARREGADO é o patchado? A
+# marca é o parâmetro `mic_frames_ignored`; o 0003 de antes dela se reconhece
+# pelo `SRCVERSION_DO_0003_SEM_A_MARCA` da BASELINE (a mesma lista do daemon).
+# O `check_hid_playstation` de cima só pergunta se ALGUM driver carregou.
+#
+# Ganchos `HEFESTO_DOCTOR_KERNEL`, `HEFESTO_DOCTOR_SYS_MODULE` e o `modinfo`
+# do PATH: a régua não depende do driver de quem a roda.
+readonly HEFESTO_DKMS_HID_PLAYSTATION_BASELINE="assets/dkms/hid-playstation/patch/BASELINE"
+
+_hid_playstation_baseline() {
+    local c
+    for c in "${ROOT_DIR}/${HEFESTO_DKMS_HID_PLAYSTATION_BASELINE}" \
+             "/usr/share/hefesto-dualsense4unix/dkms/hid-playstation/patch/BASELINE"; do
+        [[ -r "${c}" ]] && { printf '%s\n' "${c}"; return 0; }
+    done
+    return 1
+}
+
+# 0 sse o módulo carregado descarta os quadros de áudio (a marca, ou o 0003
+# de antes dela pelo srcversion lido da BASELINE).
+_hid_playstation_carregado_guarda_o_audio() {
+    local modulo="$1" baseline="$2" marca src
+    marca="$(cat "${modulo}/parameters/mic_frames_ignored" 2>/dev/null || true)"
+    [[ "${marca}" == "Y" || "${marca}" == "1" ]] && return 0
+    src="$(cat "${modulo}/srcversion" 2>/dev/null || true)"
+    [[ -n "${src}" && -n "${baseline}" ]] || return 1
+    [[ " $(sed -n 's/^SRCVERSION_DO_0003_SEM_A_MARCA=//p' "${baseline}" | head -1) " == *" ${src} "* ]]
+}
+
+check_hefesto_hid_playstation_dkms() {
+    local kver="${HEFESTO_DOCTOR_KERNEL:-$(uname -r)}"
+    local modulo="${HEFESTO_DOCTOR_SYS_MODULE:-/sys/module}/hid_playstation"
+    local baseline validados="" um na_lista=0 modpath staged=0
+    baseline="$(_hid_playstation_baseline || true)"
+    if [[ -n "${baseline}" ]]; then
+        validados="$(sed -n 's/^KERNELS_VALIDADOS=//p' "${baseline}" | head -1 | tr ',' ' ')"
+        for um in ${validados}; do
+            [[ "${kver}" == "${um}" || "${kver}" == "${um}"-* ]] && na_lista=1
+        done
+    fi
+    modpath="$(modinfo -k "${kver}" -F filename hid_playstation 2>/dev/null || true)"
+    [[ "${modpath}" == */updates/dkms/* ]] && staged=1
+
+    if [[ -d "${modulo}" ]] && _hid_playstation_carregado_guarda_o_audio "${modulo}" "${baseline}"; then
+        pass "o driver do DualSense carregado descarta o áudio do microfone (o hid-playstation desta casa): o microfone pelo rádio pode subir"
+        return
+    fi
+    if [[ ! -d "${modulo}" ]]; then
+        if [[ "${staged}" -eq 1 ]]; then
+            info "o driver do DualSense não está carregado agora (sem DualSense ligado?) — o desta casa entra na próxima conexão (${modpath})"
+        else
+            info "o driver do DualSense não está carregado agora (sem DualSense ligado?)"
+        fi
+        return
+    fi
+    # Carregado SEM a guarda: o microfone pelo rádio fica desligado. A cura
+    # depende de por que o desta casa não está ali.
+    local efeito="o microfone do DualSense pelo rádio fica desligado, porque o driver carregado leria o áudio como botão e mexeria o cursor"
+    if [[ "${staged}" -eq 1 ]]; then
+        warn "${efeito} — o driver desta casa já está instalado para este kernel e entra no PRÓXIMO BOOT: reinicie o computador"
+    elif [[ -n "${baseline}" && "${na_lista}" -eq 0 ]]; then
+        warn "${efeito} — o kernel ${kver} não está entre os conferidos (${validados:-nenhum}), e o driver desta casa não se constrói nele de propósito (patch/BASELINE); o de fábrica segue"
+    elif [[ -r "${ROOT_DIR}/scripts/dkms_lib.sh" ]] \
+         && ( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita ); then
+        warn "${efeito} — Secure Boot ligado e a chave do DKMS não está inscrita, e sem ela o driver desta casa não se instala: $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_mok )"
+    elif ! command -v dkms >/dev/null 2>&1; then
+        warn "${efeito} — falta o dkms (e os headers do kernel) para construir o driver desta casa: instale os dois e $(conselho_de_instalacao)"
+    else
+        warn "${efeito} — o driver desta casa não está instalado para o kernel ${kver}: $(conselho_de_instalacao)"
+    fi
+}
+
+# O REINÍCIO PENDENTE — O-PRODUTO-EM-QUALQUER-MAQUINA-01, B5 (28/09/2026).
+# O módulo CARREGADO não é o que está instalado em updates/dkms: o `srcversion`
+# de `/sys/module/<m>` difere do `modinfo -F srcversion` do arquivo que o
+# próximo carregamento usa. Aqui o `srcversion` serve, e não é a armadilha do
+# estudo da Onda T: a pergunta não é «de onde veio o módulo» (proveniência),
+# é «o carregado é ESTE arquivo?» — e dois arquivos diferentes nunca dão o
+# mesmo. A MESMA pergunta do fecho do install (`modulo_pede_reinicio`, na
+# `scripts/lib/camada_de_maquina.sh`), e uma régua cobra as duas respostas.
+_modulo_pede_reinicio() {
+    local nome="$1" raiz="${HEFESTO_DOCTOR_SYS_MODULE:-/sys/module}" carregado arquivo novo
+    carregado="$(cat "${raiz}/${nome//-/_}/srcversion" 2>/dev/null || true)"
+    [[ -n "${carregado}" ]] || return 1
+    arquivo="$(modinfo -F filename "${nome}" 2>/dev/null || true)"
+    [[ "${arquivo}" == */updates/dkms/* ]] || return 1
+    novo="$(modinfo -F srcversion "${nome}" 2>/dev/null || true)"
+    [[ -n "${novo}" && "${novo}" != "${carregado}" ]]
+}
+
+check_reinicio_pendente() {
+    local nome pendentes=()
+    for nome in hid-playstation hid-nintendo rtw88_usb uhid; do
+        _modulo_pede_reinicio "${nome}" && pendentes+=("${nome}")
+    done
+    if [[ "${#pendentes[@]}" -gt 0 ]]; then
+        warn "reinício pendente: o módulo carregado não é o instalado (${pendentes[*]}) — o instalado entra no próximo boot; reinicie o computador"
+    fi
+}
+
 # Assinatura do fantasma USB (W1, medido 20/07: 13h de device retido após um
 # port-status-change perdido no xHCI). Read-only, três ângulos independentes
 # — cada um vira warn com a cura; journal do BOOT ATUAL só (mesma disciplina
@@ -8575,11 +8683,15 @@ main() {
     check_hid_nintendo_bt_cascade
     hdr "DKMS hid-nintendo (Onda T — cura de raiz do probe BT)"
     check_hefesto_hid_nintendo_dkms
+    hdr "DKMS hid-playstation (a guarda do microfone pelo rádio)"
+    check_hefesto_hid_playstation_dkms
     hdr "DKMS rtw88_usb / WiFi (Onda W — fantasma USB + powersave)"
     check_hefesto_rtw88_usb_dkms
     check_usb_fantasma
     check_wifi_powersave
     check_wifi_usb
+    hdr "reinício pendente"
+    check_reinicio_pendente
     hdr "USB / dropout"
     check_usb_dropout
 
