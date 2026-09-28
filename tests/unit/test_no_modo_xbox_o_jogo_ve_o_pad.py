@@ -413,7 +413,7 @@ class TestNenhumJuizRecriaEmLaco:
             controller=SimpleNamespace(hidraw_path=lambda uniq=None: None),
             bus=SimpleNamespace(publish=lambda _t, _d: None),
         )
-        manager = CoopManager(daemon)  # type: ignore[arg-type]
+        manager = CoopManager(daemon)
         daemon._coop_manager = manager
         for numero, mac in enumerate(MACS[1:], start=2):
             leitor = SimpleNamespace(
