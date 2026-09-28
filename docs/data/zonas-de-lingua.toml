@@ -289,6 +289,11 @@ zona = "CODIGO"
 razao = "configuração na raiz (pre-commit)."
 
 [[regra]]
+caminho = "constraints.txt"
+zona = "CODIGO"
+razao = "as versões que o pip instala, as que a casa mediu (O-PRODUTO-EM-QUALQUER-MAQUINA-01, B3)."
+
+[[regra]]
 caminho = ".git*"
 zona = "CODIGO"
 razao = "configuração do próprio git (.gitignore, .gitattributes)."
