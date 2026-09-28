@@ -72,7 +72,11 @@ from hefesto_dualsense4unix.integrations.entradas_do_gabinete import (
     VELOCIDADE_SUPERSPEED_MBPS,
 )
 from hefesto_dualsense4unix.integrations.mesa_de_radio import Adaptador
-from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
+from hefesto_dualsense4unix.utils.maquina import (
+    MapaDaMesa,
+    caminho_da_porta,
+    caminhos_da_porta,
+)
 
 #: Doze hex, que é a forma em que o serial USB de um TP-Link UB500 carrega o
 #: endereço Bluetooth do aparelho. Qualquer outra forma — o ``123456`` do
@@ -120,12 +124,34 @@ class Resumo:
         return self.faces == 0 and self.entradas == 0
 
 
-def porta_de(mapa: MapaDaMesa, caminho: str) -> str | None:
-    """O número da entrada em que este caminho de barramento está declarado.
+def controladores_do_censo(censo: Censo) -> dict[int, str]:
+    """``{busnum: controlador PCI}`` pelos hubs-raiz do censo que já está na mão.
 
-    ``None`` quando ela não declarou este caminho — que é a resposta certa e a
-    mais comum: quem nunca desenhou a mesa não tem número nenhum, e a tela
-    volta a falar o caminho do sistema em vez de inventar um número.
+    A mesma resposta de ``mesa_de_radio.controladores_dos_barramentos``, sem
+    uma segunda leitura do ``/sys``: é o que traduz o LUGAR que cada entrada
+    guarda no caminho deste boot (``utils/maquina.caminho_da_porta``).
+    """
+    return {
+        aparelho.busnum: aparelho.controlador_pci
+        for aparelho in censo.aparelhos
+        if aparelho.e_raiz and aparelho.controlador_pci
+    }
+
+
+def porta_de(
+    mapa: MapaDaMesa, caminho: str, controladores: Mapping[int, str] | None = None
+) -> str | None:
+    """O número da entrada em que este caminho de barramento está.
+
+    ``None`` quando nenhuma entrada dela está neste caminho — que é a resposta
+    certa e a mais comum: quem nunca desenhou a mesa não tem número nenhum, e a
+    tela volta a falar o caminho do sistema em vez de inventar um número.
+
+    Pelo caminho do lado 2.0 de cada entrada primeiro, e depois pelos dois
+    lados do buraco: o aparelho 3.0 enumera no nó SuperSpeed (``4-1.1.4``), e
+    a entrada tem o lado 2.0 (``3-1.1.4``) — sem isto o Wi-Fi dela saía sem
+    entrada na Sugestão (26/09/2026). Com os ``controladores`` deste boot, a
+    entrada responde pelo LUGAR que guarda (A-ENTRADA-TEM-UM-REGISTRO-SO-01).
 
     Caminho vazio (o adaptador embutido, que não pendura em USB nenhum) nunca
     casa com nada: ele não está em entrada alguma.
@@ -133,23 +159,22 @@ def porta_de(mapa: MapaDaMesa, caminho: str) -> str | None:
     if not caminho:
         return None
     for numero, porta in sorted(mapa.portas.items()):
-        if porta.caminho == caminho:
+        if caminho_da_porta(porta, controladores) == caminho:
             return numero
-    # O LADO USB 3 DO BURACO (26/09/2026): o aparelho 3.0 enumera no nó
-    # SuperSpeed (``4-1.1.4``), e a entrada declara o caminho do lado 2.0
-    # (``3-1.1.4``). Sem isto o Wi-Fi dela saía sem entrada na Sugestão.
-    from hefesto_dualsense4unix.utils.lugar import caminho_do_no
-
     for numero, porta in sorted(mapa.portas.items()):
-        if any(caminho_do_no(no) == caminho for no in porta.nos):
+        if caminho in caminhos_da_porta(porta, controladores):
             return numero
     return None
 
 
-def caminho_de(mapa: MapaDaMesa, porta: str) -> str | None:
-    """O caminho de barramento declarado para esta entrada, ou ``None``."""
+def caminho_de(
+    mapa: MapaDaMesa, porta: str, controladores: Mapping[int, str] | None = None
+) -> str | None:
+    """O caminho do lado 2.0 desta entrada, ou ``None`` — calculado, nunca guardado."""
     declarada = mapa.portas.get(porta)
-    return None if declarada is None else declarada.caminho
+    if declarada is None:
+        return None
+    return caminho_da_porta(declarada, controladores) or None
 
 
 def filhas_de(mapa: MapaDaMesa, porta: str) -> tuple[str, ...]:
@@ -239,10 +264,11 @@ def resumo_do_mapa(mapa: MapaDaMesa, censo: Censo) -> Resumo:
     """Quantas faces, quantas entradas e quantos aparelhos colocados."""
     entradas = {numero for face in mapa.faces for numero in face.portas}
     presentes = _caminhos_do_censo(censo)
+    controladores = controladores_do_censo(censo)
     colocados = sum(
         1
         for declarada in mapa.portas.values()
-        if declarada.caminho and declarada.caminho in presentes
+        if caminho_da_porta(declarada, controladores) in presentes
     )
     return Resumo(faces=len(mapa.faces), entradas=len(entradas), colocados=colocados)
 
@@ -257,11 +283,12 @@ def portas_livres(mapa: MapaDaMesa, censo: Censo) -> tuple[str, ...]:
     extensão dela.
     """
     presentes = _caminhos_do_censo(censo)
+    controladores = controladores_do_censo(censo)
     livres: list[str] = []
     for numero in _entradas_da_fileira(mapa):
         if filhas_de(mapa, numero):
             continue
-        if _caminho_presente(mapa, numero, presentes):
+        if _caminho_presente(mapa, numero, presentes, controladores):
             continue
         livres.append(numero)
     return tuple(livres)
@@ -274,19 +301,23 @@ def ocupante_de(mapa: MapaDaMesa, numero: str, censo: Censo) -> str:
     entrada declara o lado 2.0 (``3-1.1.4``): perguntar só pelo declarado dava
     a entrada do Wi-Fi como vazia, e a Sugestão mandava o adaptador para ela.
     """
-    return (_caminho_presente(mapa, numero, _caminhos_do_censo(censo))
-            or caminho_de(mapa, numero) or "")
+    controladores = controladores_do_censo(censo)
+    return (_caminho_presente(mapa, numero, _caminhos_do_censo(censo), controladores)
+            or caminho_de(mapa, numero, controladores) or "")
 
 
-def _caminho_presente(mapa: MapaDaMesa, numero: str, presentes: frozenset[str]) -> str:
+def _caminho_presente(
+    mapa: MapaDaMesa,
+    numero: str,
+    presentes: frozenset[str],
+    controladores: Mapping[int, str] | None = None,
+) -> str:
     """O caminho, dos dois lados do buraco, em que há aparelho agora — ``""`` se nenhum."""
-    from hefesto_dualsense4unix.utils.lugar import caminho_do_no
-
     porta = mapa.portas.get(numero)
     if porta is None:
         return ""
-    for caminho in (porta.caminho, *(caminho_do_no(no) for no in porta.nos)):
-        if caminho and caminho in presentes:
+    for caminho in caminhos_da_porta(porta, controladores):
+        if caminho in presentes:
             return caminho
     return ""
 
@@ -312,9 +343,10 @@ def vizinhas_de_verdade(
     aparelho que não existe não atrapalha ninguém.
     """
     presentes = _caminhos_do_censo(censo)
+    controladores = controladores_do_censo(censo)
 
     def ocupada(numero: str) -> bool:
-        return bool(_caminho_presente(mapa, numero, presentes))
+        return bool(_caminho_presente(mapa, numero, presentes, controladores))
 
     pares: list[tuple[str, str]] = []
     vistos: set[tuple[str, str]] = set()
@@ -355,11 +387,12 @@ def incoerencias(mapa: MapaDaMesa, censo: Censo) -> tuple[Incoerencia, ...]:
     """
     por_caminho = {a.no: a for a in censo.aparelhos}
     caminho_por_nome = {a.nome_do_kernel: a.no for a in censo.aparelhos}
+    controladores = controladores_do_censo(censo)
     achadas: list[Incoerencia] = []
     for face in mapa.faces:
         numeros = _entradas_da_face(mapa, face.portas)
         cadeias = {
-            numero: _cadeia(censo, caminho_por_nome, caminho_de(mapa, numero))
+            numero: _cadeia(censo, caminho_por_nome, caminho_de(mapa, numero, controladores))
             for numero in numeros
         }
         ancora = _ancora_da_face(cadeias.values())
@@ -368,7 +401,7 @@ def incoerencias(mapa: MapaDaMesa, censo: Censo) -> tuple[Incoerencia, ...]:
         for numero in numeros:
             cadeia = cadeias[numero]
             if not cadeia:
-                caminho = caminho_de(mapa, numero)
+                caminho = caminho_de(mapa, numero, controladores)
                 if not caminho or caminho not in caminho_por_nome:
                     # Entrada vazia, ou aparelho que saiu da mesa: não há o que
                     # acusar. O mapa continua valendo para quando ele voltar.
@@ -381,7 +414,7 @@ def incoerencias(mapa: MapaDaMesa, censo: Censo) -> tuple[Incoerencia, ...]:
                 Incoerencia(
                     face=face.nome,
                     porta=numero,
-                    caminho=caminho_de(mapa, numero) or "",
+                    caminho=caminho_de(mapa, numero, controladores) or "",
                     ancora=_nome_do_kernel(por_caminho, ancora),
                 )
             )
@@ -540,15 +573,16 @@ def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
     do hub e o gêmeo 3.0 do hub saem da lista de aparelhos — não são coisa que
     ela plugou.
     """
-    leitura, fora = _leitura_pelas_entradas(mapa, censo.conectados())
+    controladores = controladores_do_censo(censo)
+    leitura, fora = _leitura_pelas_entradas(mapa, censo.conectados(), controladores)
     aparelhos = tuple(
         _aparelho_do_motor(a) for a in censo.conectados() if a.nome_do_kernel not in fora
     )
     leitura = {aparelho.id: leitura[aparelho.id] for aparelho in aparelhos}
     declarado = {
-        numero: porta.caminho
+        numero: caminho
         for numero, porta in sorted(mapa.portas.items())
-        if porta.caminho
+        if (caminho := caminho_da_porta(porta, controladores))
     }
 
     # O esboço existe para uma pergunta só: qual é o caminho do hub externo.
@@ -651,28 +685,34 @@ def mesa_do_motor(mapa: MapaDaMesa, censo: Censo) -> Bancada:
 
 
 def _leitura_pelas_entradas(
-    mapa: MapaDaMesa, conectados: Sequence[Aparelho]
+    mapa: MapaDaMesa,
+    conectados: Sequence[Aparelho],
+    controladores: Mapping[int, str] | None = None,
 ) -> tuple[dict[str, str], frozenset[str]]:
     """``(aparelho -> caminho em que o mapa o lê, os hubs que não são aparelho)``.
 
-    O caminho é o da entrada cujo NÓ o aparelho ocupa, dos dois lados do buraco
-    (``utils/lugar.caminho_do_no``), ou o dele mesmo quando nenhuma entrada o
-    declara. Um hub sai da lista em dois casos, e os dois são o mesmo plástico:
+    O caminho é o da entrada cujo buraco o aparelho ocupa, dos dois lados, ou o
+    dele mesmo quando nenhuma entrada o declara. Um hub sai da lista em dois
+    casos, e os dois são o mesmo plástico:
 
     * o CHIP DE DENTRO — ele hospeda entradas declaradas e não está em entrada
       nenhuma (``3-1.1`` e ``4-1.1``, no hub de dois chips desta bancada);
     * o GÊMEO 3.0 — ele cai no caminho de outro hub já lido (``4-1`` é o lado
       SuperSpeed do ``3-1``, na mesma entrada).
-    """
-    from hefesto_dualsense4unix.utils.lugar import caminho_do_no
 
+    Os caminhos de cada entrada são os deste boot
+    (``utils/maquina.caminhos_da_porta``): pelo lugar que ela guarda, traduzido
+    com os ``controladores`` de agora.
+    """
     da_entrada: dict[str, str] = {}
     anfitrioes: set[str] = set()
     for _numero, porta in sorted(mapa.portas.items()):
+        principal = caminho_da_porta(porta, controladores)
         for no in porta.nos:
             anfitrioes.add(no.rpartition(_SUFIXO_DO_NO)[0])
-            if porta.caminho and caminho_do_no(no):
-                da_entrada.setdefault(caminho_do_no(no), porta.caminho)
+        for caminho in caminhos_da_porta(porta, controladores):
+            if principal:
+                da_entrada.setdefault(caminho, principal)
     leitura: dict[str, str] = {}
     fora: set[str] = set()
     lidos_de_hub: set[str] = set()
@@ -865,10 +905,12 @@ def velocidade_da_entrada(
 ) -> tuple[bool | None, str]:
     """``(é USB 3?, de onde veio)`` — o dono ÚNICO da precedência.
 
-    A resposta dela de 26/09/2026, olhando a cor do plástico: a frente é azul
-    (USB 3.0) e as 7 e 8 de trás são pretas (USB 2.0) — e o ``maquina.json``
-    dizia o contrário da frente, porque o ``peer`` do ``/sys`` vem da tabela
-    ACPI da placa, e a placa erra. Por isso:
+    O ``peer`` do ``/sys`` diz o que o FIRMWARE anuncia, e não o conector.
+    MEDIDO na mesa em que isto nasceu (26/09/2026, com ela olhando o gabinete):
+    as duas USB 2.0 pretas de trás têm ``peer`` — o controlador tem as vias
+    SuperSpeed, e a placa só ligou o conector 2.0 —, e a frente, que o gabinete
+    chama de 3.0, está num conector 2.0 da placa (sem ``peer``: ali o firmware
+    acerta). Quem erra é o par que o firmware publica, e por isso:
 
     1. ``aparelho_usb3`` — um aparelho enumerado a 5000M+ na entrada é
        medição, e nada o contradiz;

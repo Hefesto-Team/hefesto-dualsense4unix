@@ -9,8 +9,10 @@ Os dois pedidos dela que isto atende:
 
 * *«ao clicar em um desses usb mapeados eu pudesse setar que tem tal coisa lá.
   no caso o hub ou afins»* — «O que tem aqui»: Direto, Hub ou Extensor;
-* a velocidade da entrada, porque o firmware da placa erra (a frente dela é
-  USB 3.0 e a tabela ACPI a dava como 2.0) — «Velocidade»: USB 3.0 ou 2.0.
+* a velocidade da entrada, porque o par SuperSpeed que o firmware da placa
+  publica (``peer``) não prova o conector: na mesa em que isto nasceu, as duas
+  USB 2.0 pretas de trás têm o par, e a frente que o gabinete chama de 3.0
+  está num conector 2.0 da placa — «Velocidade»: USB 3.0 ou 2.0.
 
 <!-- noqa-acento: citação literal dela -->
 

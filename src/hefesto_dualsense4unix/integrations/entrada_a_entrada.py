@@ -1548,8 +1548,8 @@ def dar_nome_ao_adaptador(
 #
 # O editor do mapa das conexões, 26/09/2026. Pedido dela: *«ao clicar em um
 # desses usb mapeados eu pudesse setar que tem tal coisa lá. no caso o hub ou
-# afins»*; e a velocidade, porque o firmware da placa erra (ver
-# ``mapa_das_portas.velocidade_da_entrada``). As duas vão ao ``maquina.json``
+# afins»*; e a velocidade, porque o par SuperSpeed que o firmware publica não
+# prova o conector (ver ``mapa_das_portas.velocidade_da_entrada``). As duas vão ao ``maquina.json``
 # dela, ao lado do caminho e dos nós da entrada, pelo gravador único deste
 # módulo. <!-- noqa-acento: citação literal dela -->
 
@@ -2846,14 +2846,12 @@ def o_mapa() -> MapearAsPortas:
 def _controladores(censo: Censo) -> dict[int, str]:
     """``{busnum: controlador PCI}`` pelos hubs-raiz do censo que já está na mão.
 
-    A mesma resposta de ``mesa_de_radio.controladores_dos_barramentos``, sem
-    uma segunda leitura do ``/sys`` no mesmo tique.
+    O dono é ``mapa_das_portas.controladores_do_censo`` (a junção do mapa com o
+    censo), e o import é tardio como os outros daquele módulo aqui.
     """
-    return {
-        aparelho.busnum: aparelho.controlador_pci
-        for aparelho in censo.aparelhos
-        if aparelho.e_raiz and aparelho.controlador_pci
-    }
+    from hefesto_dualsense4unix.integrations.mapa_das_portas import controladores_do_censo
+
+    return controladores_do_censo(censo)
 
 
 def _nao_sei(censo: Censo) -> bool:

@@ -1,11 +1,12 @@
 """A entrada declarada vence o firmware — e o editor do mapa grava no disco dela.
 
-O-MAPA-DAS-CONEXOES-NO-PRODUTO-01, 26/09/2026. A resposta dela, olhando a cor
-do plástico: as duas entradas da frente são azuis (USB 3.0) e as 7 e 8 de trás
-são pretas (USB 2.0). O ``maquina.json`` dizia USB 2.0 na frente, porque a
-velocidade vinha do par SuperSpeed (``peer``) que a tabela ACPI da placa liga
-a cada entrada — e a placa erra. A cura: o que ela declara no editor da entrada
-vence o ``peer``, e um aparelho USB 3 enumerado na entrada vence os dois.
+O-MAPA-DAS-CONEXOES-NO-PRODUTO-01, 26/09/2026. A velocidade vinha só do par
+SuperSpeed (``peer``) que o firmware da placa publica para cada entrada, e o
+``peer`` não prova o conector: MEDIDO na mesa em que isto nasceu (26/09/2026,
+com ela olhando o gabinete), as duas USB 2.0 pretas de trás têm ``peer``, e a
+frente que o gabinete chama de 3.0 está num conector 2.0 da placa. A cura: o
+que ela declara no editor da entrada vence o ``peer``, e um aparelho USB 3
+enumerado na entrada vence os dois.
 
 TUDO AQUI É DE MENTIRA E DE NINGUÉM: barramentos ``usb9``/``usb10``, caminhos
 ``9-*``/``10-*``, e o ``maquina.json`` no ``tmp_path`` que o ``conftest``

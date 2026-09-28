@@ -59,6 +59,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
+# O LUGAR de um adaptador (D3) — o controlador PCI e as portas do USB, na grafia
+# do ``ID_PATH`` do udev — tem UM dono, ``utils/lugar.lugar_de``, e este módulo
+# o IMPORTA (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026: aqui morava uma
+# segunda definição que só repassava a chamada). Aquele módulo é SÓ biblioteca
+# padrão, e é isso que deixa o import vivo pelo ``python3`` do sistema: o
+# doctor chega aqui pelo ``exame_da_mesa``, e ali o pydantic é 1.10. Pedir a
+# grafia ao ``utils/maquina`` (pydantic 2) levantava ``ImportError``, e todo
+# adaptador ficava sem lugar, calado (ENTRADA-A-ENTRADA-02, medido em 23/09).
+from hefesto_dualsense4unix.utils.lugar import lugar_de
+
 # ---------------------------------------------------------------------------
 # Os nomes — escritos UMA vez, aqui. A régua de dono reprova a segunda grafia.
 # ---------------------------------------------------------------------------
@@ -484,26 +494,6 @@ def enderecos_pelo_kernel(leitor: Any = None) -> dict[str, str] | None:
         return achados
     except Exception:
         return None
-
-
-def lugar_de(controlador_pci: str, devpath: str) -> str:
-    """O LUGAR de um adaptador (D3): o controlador PCI e as portas do USB.
-
-    A grafia é a do ``ID_PATH`` do udev (``pci-0000:0c:00.3-usb-0:1.1.4``):
-    sem o número do barramento, que é ordem de enumeração, e com a cadeia de
-    portas, que é o metal. ``""`` quando não há controlador — "não sei onde".
-
-    A GRAFIA MORA EM ``utils/lugar.lugar_de`` (ENTRADA-A-ENTRADA-01 e -02): o
-    «Mapear Entrada a Entrada» grava por esta chave, e a tradução entre ela e
-    o caminho de barramento é de lá. Aquele módulo é SÓ biblioteca padrão, e
-    é isso que deixa esta chamada viva pelo ``python3`` do sistema: o doctor
-    chega aqui pelo ``exame_da_mesa``, e ali o pydantic é 1.10. Pedir a grafia
-    ao ``utils/maquina`` (pydantic 2) levantava ``ImportError`` NA CHAMADA, e
-    todo adaptador ficava sem lugar, calado (medido em 23/09).
-    """
-    from hefesto_dualsense4unix.utils.lugar import lugar_de as _grafia
-
-    return _grafia(controlador_pci, devpath)
 
 
 def lugares_dos_adaptadores() -> dict[str, str]:
