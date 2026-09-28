@@ -794,3 +794,151 @@ def test_a_chave_devida_de_quem_conectou_depois_nao_sai(
     assert mesa.mundo.onde_esta(rm.uniq(VERDE)) == QUARTO
     assert mesa.central.tirar_as_meias_chaves() == ()
     assert mesa.mundo.objeto(QUARTO, VERDE) is not None and mesa.mundo.lapides == []
+
+
+# ---------------------------------------------------------------------------
+# a conferência (28/09/2026): o que a cura dizia fazer e régua nenhuma segurava
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("quem", ["conectar", "mover"])
+def test_a_janela_de_antes_fecha_no_pedido_sem_esperar_o_gesto(
+    diario: Path, fechar: list[Any], quem: str,
+) -> None:
+    """O chip não espera a janela de antes acabar nem ela segurar PS + Create:
+    a espera do gesto sai no pedido, a janela de antes fecha, e a do adaptador
+    do chip já está aberta — no «Conectar» e no «Mover».
+
+    MORDIDA: tire da espera do gesto (``_esperar_o_gesto`` ou
+    ``_esperar_um_controle_novo``) a saída pelo pedido — a busca fica no
+    adaptador de antes até a janela dele acabar.
+    """
+    mesa = Mesa(mundo_da_madrugada())
+    fechar.append(mesa.fechar)
+    busca = BuscaDePe(mesa.relogio)
+    fechar.append(busca.soltar)
+    if quem == "conectar":
+        _o_conectar_no_gesto(mesa, busca, QUARTO)
+    else:
+        _o_mover_no_gesto(mesa, busca, QUARTO)
+
+    assert mesa.chip(VARANDA)["status"] == "ok"
+    de_pe = BuscaDePe(mesa.relogio)
+    fechar.append(de_pe.soltar)
+    busca.soltar()
+    assert de_pe.dentro.wait(5.0), "a janela nova não abriu"
+    assert onde_buscou(mesa.mundo) == [rm.HCIS[QUARTO], rm.HCIS[VARANDA]]
+    assert mesa.mundo.propriedade_do_adaptador(QUARTO, "Discovering") is False
+    assert mesa.mundo.propriedade_do_adaptador(VARANDA, "Discovering") is True
+    assert mesa.no_gesto().destino == VARANDA
+
+
+class PonteQueSegura:
+    """O verbo ``esquecer`` da ponte que SEGURA o fio do movimento quando esquece
+    em ``onde`` — o «Mover» parado no passo em que tira a chave dali."""
+
+    def __init__(self, mundo: rm.RadioDeMentira, onde: str) -> None:
+        self.mundo, self.onde = mundo, onde
+        self.dentro, self.portao = threading.Event(), threading.Event()
+
+    def __call__(self, adaptador: str, aparelho: str) -> tuple[bool, str]:
+        if adaptador == self.onde and not self.portao.is_set():
+            self.dentro.set()
+            self.portao.wait(30.0)
+        return self.mundo.esquecer_na_ponte(adaptador, aparelho)
+
+    def soltar(self) -> None:
+        self.portao.set()
+
+
+@pytest.mark.parametrize(("passo", "segura_em"), [
+    (cr.PASSO_PREPARANDO, QUARTO),  # a R6: o bond velho dele no destino sai
+    (cr.PASSO_DESLIGANDO, SALA),  # a R1: a origem sai antes do gesto
+])
+def test_o_chip_antes_da_janela_leva_o_mover_sem_buscar_no_destino_de_antes(
+    diario: Path, fechar: list[Any], passo: str, segura_em: str,
+) -> None:
+    """O «Mover» muda de destino também ANTES da janela — preparando (a R6
+    tirando o bond velho dele do destino) e desligando (a R1 esquecendo a
+    origem): nada foi pareado ainda. A busca abre só no adaptador do chip, e
+    nunca no de antes.
+
+    MORDIDA: tire o passo de ``PASSOS_EM_QUE_O_DESTINO_MUDA`` — o chip treme
+    (``ocupado``) e a busca abre no destino de antes.
+    """
+    mundo = mundo_da_madrugada()
+    mundo.pareado(QUARTO, VERMELHO, conectado=False, host=False)
+    mesa = Mesa(mundo)
+    fechar.append(mesa.fechar)
+    ponte = PonteQueSegura(mundo, segura_em)
+    fechar.append(ponte.soltar)
+    mesa.central._esquecer_na_ponte = ponte
+    assert mesa.central.comecar_a_mover(VERMELHO, QUARTO).estado == cr.ESPERANDO
+    assert ponte.dentro.wait(5.0), "o «Mover» não chegou ao passo"
+    assert mesa.de(VERMELHO).passo == passo
+
+    resposta = mesa.chip(VARANDA)
+    assert resposta["status"] == "ok", resposta
+    mesa.relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERMELHO))
+    ponte.soltar()
+    (fim,) = mesa.esperar()
+    assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERMELHO, VARANDA), fim
+    assert onde_buscou(mundo) == [rm.HCIS[VARANDA]], "a busca abriu no destino de antes"
+    assert onde_pareou(mundo) == [rm.HCIS[VARANDA]]
+    assert mundo.objeto(QUARTO, VERMELHO) is None and mundo.objeto(SALA, VERMELHO) is None
+
+
+def test_o_mover_que_muda_de_destino_tira_a_sobra_dele_no_destino_novo(
+    diario: Path, fechar: list[Any],
+) -> None:
+    """A R6 vale no destino novo também: o objeto velho do vermelho na varanda
+    (a sobra de uma busca antiga, sem chave) sai antes de a janela de lá abrir
+    — senão a espera do gesto o leria como ela segurando PS + Create, e o
+    ``Pair`` iria a um controle que não está pareando.
+
+    MORDIDA: tire a R6 do ``_ir_para`` — o «Mover» acaba «não chegou»
+    (``nao_pareou``) antes de ela apertar.
+    """
+    mundo = mundo_da_madrugada()
+    # A física do rádio de mentira: a varanda achou o vermelho numa busca antiga.
+    mundo._achar(VARANDA, mundo.fisicos[VERMELHO])
+    mesa = Mesa(mundo)
+    fechar.append(mesa.fechar)
+    busca = BuscaDePe(mesa.relogio)
+    fechar.append(busca.soltar)
+    _o_mover_no_gesto(mesa, busca, QUARTO)
+
+    assert mesa.chip(VARANDA)["status"] == "ok"
+    mesa.relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERMELHO))
+    busca.soltar()
+    (fim,) = mesa.esperar()
+    assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERMELHO, VARANDA), fim
+    assert onde_pareou(mundo) == [rm.HCIS[VARANDA]]
+
+
+def test_o_conectar_que_muda_de_destino_ignora_o_que_o_destino_novo_ja_conhecia(
+    diario: Path, fechar: list[Any],
+) -> None:
+    """O ``antes`` é o do destino de lá: o roxo que a varanda já tinha visto
+    numa busca antiga (sem chave) não é quem ela está segurando, e o verde é.
+
+    MORDIDA: deixe no ``_ir_para`` o ``antes`` do destino de antes — a janela
+    da varanda pega o roxo, e o ``Pair`` vai a um controle que não está
+    pareando.
+    """
+    mundo = mundo_da_madrugada()
+    mundo.fisicos[ROXO] = rm.Fisico(ROXO, rm.CLASSE_DE_CONTROLE)
+    # A física do rádio de mentira: a varanda achou o roxo numa busca antiga.
+    mundo._achar(VARANDA, mundo.fisicos[ROXO])
+    mesa = Mesa(mundo)
+    fechar.append(mesa.fechar)
+    busca = BuscaDePe(mesa.relogio)
+    fechar.append(busca.soltar)
+    _o_conectar_no_gesto(mesa, busca, QUARTO)
+
+    assert mesa.chip(VARANDA)["status"] == "ok"
+    mesa.relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERDE))
+    busca.soltar()
+    (fim,) = mesa.esperar()
+    assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, VARANDA), fim
+    assert [bd.endereco_do_aparelho(c) for c, _a in mundo.metodos("Pair")] == [VERDE]
