@@ -129,7 +129,7 @@ rc=1
 if [ -n "$recibo_da_corrida" ]; then
   # Pulo não é verde: o teste pulado sai no recibo como NÃO MEDIDO.
   nao_medidos=()
-  [ "$pulados" -eq 0 ] || nao_medidos=(--nao-medido "$pulados testes pulados")
+  [ "$pulados" -eq 0 ] || nao_medidos=(--nao-medido "testes pulados: $pulados")
   echo
   "$PY" "$RAIZ/scripts/recibo_da_medida.py" fechar suite "$rc" \
     --raiz "$RAIZ" --corrida "$recibo_da_corrida" \
