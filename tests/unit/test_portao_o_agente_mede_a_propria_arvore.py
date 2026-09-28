@@ -49,6 +49,18 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 DESPACHANTE = RAIZ / "scripts" / "despachar-agente.sh"
 
+#: O DESPACHANTE NÃO VIAJA NO GIT (27/09/2026, corrida 36354426805 do CI). Ele
+#: saiu do repositório com o despacho de leva (o `.gitignore` o nomeia), e esta
+#: régua continuou versionada: num clone limpo as três que o leem morriam com
+#: `FileNotFoundError`, que se lê como defeito do produto. O marcador pula SÓ
+#: essas três, com a linha do `.gitignore` que explica a ausência; se o
+#: despachante sumir de uma árvore sem que o `.gitignore` o explique, elas rodam
+#: e reprovam no claro. Onde ele mora — a mesa dela e a integração, que recebe
+#: os scripts ignorados antes de medir — elas rodam no `scripts/rodar-a-suite.sh`
+#: de quem coordena. As outras duas deste arquivo não leem o despachante e
+#: rodam em qualquer árvore.
+LE_O_DESPACHANTE = pytest.mark.insumo_fora_do_git("scripts/despachar-agente.sh")
+
 _IMPRIME = "import hefesto_dualsense4unix as m; print(m.__file__)"
 
 
@@ -108,6 +120,7 @@ def _importa(wt: Path, env_extra: dict[str, str]) -> subprocess.CompletedProcess
 # ---------------------------------------------------------------------------
 
 
+@LE_O_DESPACHANTE
 def test_com_o_envrc_do_despachante_o_import_cai_dentro_da_arvore_do_agente(
     worktree: Path,
 ) -> None:
@@ -134,6 +147,7 @@ def test_com_o_envrc_do_despachante_o_import_cai_dentro_da_arvore_do_agente(
         )
 
 
+@LE_O_DESPACHANTE
 def test_o_pythonpath_aponta_para_o_src_do_proprio_worktree(worktree: Path) -> None:
     variaveis = env_do_despachante(worktree)
     assert variaveis["PYTHONPATH"] == str(worktree / "src"), (
@@ -164,14 +178,24 @@ def test_sem_a_variavel_o_import_escapa_da_arvore(worktree: Path) -> None:
     )
 
 
-def test_o_envrc_nao_e_versionado_e_nao_viaja_no_merge() -> None:
-    """Ele guarda o caminho ABSOLUTO da máquina; versioná-lo o levaria ao merge."""
+@LE_O_DESPACHANTE
+def test_o_despachante_ignora_o_envrc_pelo_exclude_local() -> None:
+    """O `.envrc-voo` guarda o caminho ABSOLUTO da máquina: ele não pode sujar o `git status`."""
     texto = DESPACHANTE.read_text(encoding="utf-8")
     assert "info/exclude" in texto, (
         "o despachante não ignora o .envrc-voo pelo exclude LOCAL do worktree. "
         "Sem isso, ou ele suja todo `git status` de agente, ou um `git add -A` o "
         "commita com o caminho da máquina dela dentro."
     )
+
+
+def test_o_envrc_nao_e_versionado_e_nao_viaja_no_merge() -> None:
+    """Ele guarda o caminho ABSOLUTO da máquina; versioná-lo o levaria ao merge.
+
+    Esta metade pergunta ao git, e não ao despachante — por isso ela roda em
+    toda árvore, inclusive no clone limpo do CI, onde um `.envrc-voo`
+    versionado apareceria primeiro.
+    """
     versionados = subprocess.run(
         ["git", "ls-files", ".envrc-voo"], cwd=RAIZ, capture_output=True, text=True, check=True
     ).stdout.strip()
