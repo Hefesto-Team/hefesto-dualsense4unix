@@ -39,7 +39,7 @@ from hefesto_dualsense4unix.app.widgets.calibrar_entradas import (
     LogicaDaCalibracao,
 )
 from hefesto_dualsense4unix.integrations.censo_do_barramento import Censo
-from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
+from hefesto_dualsense4unix.utils.maquina import CALCULADOS_DA_ENTRADA, MapaDaMesa
 from tests.unit.test_a_fase_sentada_resolve_o_hub import GravadorDeMentira
 from tests.unit.test_entradas_do_gabinete import _entradas
 
@@ -186,7 +186,7 @@ def test_a_entrada_aprendida_guarda_os_nos_do_buraco() -> None:
     mapa = MapaDaMesa.model_validate(logica.como_documento())
     assert mapa.portas[numero].nos == list(furo.nos)
     assert mapa.portas[numero].caminho == caminho_do_lado_20(furo.nos)
-    assert "caminho" not in mapa.model_dump(exclude_computed_fields=True)["portas"][numero], (
+    assert "caminho" not in mapa.portas[numero].model_dump(exclude=set(CALCULADOS_DA_ENTRADA)), (
         "uma entrada vazia não guarda aparelho, e inventar um seria mentir"
     )
 

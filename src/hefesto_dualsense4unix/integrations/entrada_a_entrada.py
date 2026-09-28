@@ -140,6 +140,7 @@ from hefesto_dualsense4unix.utils.lugar import (
     no_do_caminho,
 )
 from hefesto_dualsense4unix.utils.maquina import (
+    CALCULADOS_DA_ENTRADA,
     MapaDaMesa,
     MaquinaConfig,
     PortaDeclarada,
@@ -1731,7 +1732,7 @@ def _a_ponta_inteira(ponta: PortaDeclarada | None, filha_de: str) -> dict[str, A
     if ponta is None:
         return {"lugar": None, "nos": [], "liga": None, "usb": None,
                 "filha_de": None, "nome": None}
-    corpo: dict[str, Any] = ponta.model_dump(mode="json", exclude_computed_fields=True)
+    corpo: dict[str, Any] = ponta.model_dump(mode="json", exclude=set(CALCULADOS_DA_ENTRADA))
     corpo["filha_de"] = filha_de
     corpo.setdefault("nos", [])
     return corpo

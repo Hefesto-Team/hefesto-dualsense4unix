@@ -134,7 +134,7 @@ def test_o_caminho_nao_vai_ao_disco(tmp_path: Path) -> None:
     """O caminho é da LEITURA: nenhuma gravação o escreve, e quem ainda o
     declara (o rascunho do mapa) é entendido — o caminho vira o nó do buraco.
 
-    MORDIDA: grave com o ``model_dump`` sem ``exclude_computed_fields`` — o
+    MORDIDA: grave com o ``model_dump`` sem o ``exclude`` dos calculados — o
     arquivo ganha a chave ``caminho`` e esta régua reprova.
     """
     alvo = _gravar_o_arquivo_de_antes(tmp_path, _a_maquina_dela())
@@ -150,6 +150,46 @@ def test_o_caminho_nao_vai_ao_disco(tmp_path: Path) -> None:
     assert declarar_a_maquina({"mapa": {"portas": {"7": {"caminho": None}}}}).gravou
     sete = carregar_maquina().mapa.portas["7"]
     assert (sete.nos, sete.lugar) == ([], lugar_de(PCI_A, "5"))
+    assert '"caminho"' not in alvo.read_text(encoding="utf-8")
+
+
+def test_a_gravacao_serve_ao_pydantic_que_o_pacote_pede(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O ``pyproject.toml`` e os pacotes (Fedora, Nix) pedem ``pydantic>=2.0``,
+    e o ``exclude_computed_fields`` do ``model_dump`` só nasceu no 2.12: com
+    ele, numa máquina com o 2.11, toda gravação do ``maquina.json`` levantava
+    ``TypeError`` — o Mapear, o nome, a troca, a ordem das caixas.
+
+    A régua dá ao ``model_dump`` a assinatura do 2.11 (o argumento novo
+    levanta, como lá) e grava pelos gestos que tiram os calculados: a
+    velocidade (a gravação do documento) e a troca com a ponta do extensor
+    (``_a_ponta_inteira``).
+
+    MORDIDA: devolva o ``exclude_computed_fields=True`` a uma das duas — a
+    gravação levanta ``TypeError`` e esta régua reprova.
+    """
+    from pydantic import BaseModel
+
+    from tests.unit.test_trocar_duas_entradas_move_o_buraco import _com_o_que_ela_disse
+
+    do_2_12 = BaseModel.model_dump
+
+    def model_dump_do_2_11(self: BaseModel, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        if "exclude_computed_fields" in kwargs:
+            raise TypeError(
+                "model_dump() got an unexpected keyword argument 'exclude_computed_fields'"
+            )
+        return do_2_12(self, *args, **kwargs)
+
+    monkeypatch.setattr(BaseModel, "model_dump", model_dump_do_2_11)
+    alvo = _gravar_o_arquivo_de_antes(tmp_path, _com_o_que_ela_disse())
+    carregar_maquina()
+    assert ee.declarar_a_velocidade("3", 3).gravou
+    assert ee.trocar_as_entradas("7", "8").gravou
+    documento = carregar_maquina()
+    assert documento.mapa.portas["3"].usb == 3
+    assert documento.mapa.portas["7a"].nome == "Ponta do cabo", "a ponta não foi com o buraco"
     assert '"caminho"' not in alvo.read_text(encoding="utf-8")
 
 

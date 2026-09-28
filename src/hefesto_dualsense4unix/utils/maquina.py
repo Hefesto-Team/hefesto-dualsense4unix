@@ -605,6 +605,20 @@ class PortaDeclarada(BaseModel):
         return valor
 
 
+#: Os campos CALCULADOS de uma entrada (:attr:`PortaDeclarada.caminho`): são da
+#: leitura, e nenhuma gravação os escreve. Quem grava os tira pelo ``exclude``
+#: do ``model_dump``, que todo pydantic 2 entende. O ``exclude_computed_fields``
+#: só nasceu no pydantic 2.12, e o ``pyproject.toml`` e os pacotes (Fedora,
+#: Nix) pedem ``pydantic>=2.0``: com ele, numa máquina com o 2.11, toda
+#: gravação do ``maquina.json`` levantava ``TypeError``.
+CALCULADOS_DA_ENTRADA: frozenset[str] = frozenset(PortaDeclarada.model_computed_fields)
+
+#: O mesmo, para o documento inteiro: os calculados de cada entrada do mapa.
+_SEM_OS_CALCULADOS: dict[str, Any] = {
+    "mapa": {"portas": {"__all__": set(CALCULADOS_DA_ENTRADA)}}
+}
+
+
 class MapaDaMesa(BaseModel):
     """O gabinete dela, desenhado por ela — o que ``/sys`` não tem como saber.
 
@@ -1545,10 +1559,11 @@ def gravar_maquina_com_descartes(declaracao: Mapping[str, Any]) -> ResultadoDaGr
             )
         # SEM OS CAMPOS CALCULADOS (``PortaDeclarada.caminho``): eles são da
         # leitura, e um calculado que voltasse pela fusão seria lido como uma
-        # declaração — e iria ao disco.
+        # declaração — e iria ao disco. (Pelo ``exclude``: ver
+        # :data:`CALCULADOS_DA_ENTRADA`.)
         fundido = MaquinaConfig.model_validate(
             fundir_declaracao(
-                atual.model_dump(mode="json", exclude_computed_fields=True), declaracao
+                atual.model_dump(mode="json", exclude=_SEM_OS_CALCULADOS), declaracao
             )
         )
         documento = {
@@ -1557,7 +1572,7 @@ def gravar_maquina_com_descartes(declaracao: Mapping[str, Any]) -> ResultadoDaGr
             if campo not in MaquinaConfig.model_fields
         }
         documento.update(
-            _podar(fundido.model_dump(mode="json", exclude_computed_fields=True))
+            _podar(fundido.model_dump(mode="json", exclude=_SEM_OS_CALCULADOS))
         )
         documento[VERSION_FIELD] = MAQUINA_SCHEMA_VERSION
         _escrever(documento)

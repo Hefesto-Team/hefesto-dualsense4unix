@@ -53,6 +53,7 @@ from hefesto_dualsense4unix.integrations.mapa_das_portas import (
     vizinhas_de_verdade,
 )
 from hefesto_dualsense4unix.utils.maquina import (
+    CALCULADOS_DA_ENTRADA,
     MapaDaMesa,
     carregar_maquina,
     gravar_maquina,
@@ -153,7 +154,7 @@ def test_a_entrada_vazia_existe_no_esquema_sem_caminho_nenhum() -> None:
     vazia = mapa.portas["7"]
     assert vazia.nos == ["usb1-port7", "usb2-port3"]
     assert vazia.caminho == "1-7", "o caminho do buraco é o do lado 2.0 dos nós"
-    assert "caminho" not in vazia.model_dump(exclude_computed_fields=True)
+    assert "caminho" not in vazia.model_dump(exclude=set(CALCULADOS_DA_ENTRADA))
 
 
 @pytest.mark.parametrize(
