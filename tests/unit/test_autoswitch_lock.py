@@ -6,7 +6,7 @@ madjack também é o mesmo lance"*. Nasceu como um cadeado da troca AUTOMÁTICA 
 perfil: enquanto ligado, o AutoSwitcher não troca de perfil por foco de janela,
 mas gamepad/co-op/rumble seguem vivos (é o oposto do pause do daemon).
 
-NOTA DATADA — 28/09/2026, O-FREESTYLE-E-UMA-CAMADA-SO-01. Este arquivo media a
+NOTA DATADA — 28/09/2026, O-FREESTYLE-E-UMA-CAMADA-SO-01. Este arquivo cobria a
 LOCK-CEDE-01 (24/07): o cadeado cedia à regra própria de todo jogo, e por isso
 o Freestyle nunca valia em jogo. A decisão dela
 (`D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA`) a revogou: ligado, o Freestyle

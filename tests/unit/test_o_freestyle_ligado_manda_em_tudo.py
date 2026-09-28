@@ -367,9 +367,9 @@ async def _bloqueante(fn: Any, *args: Any) -> Any:
     return fn(*args)
 
 
-@pytest.mark.parametrize("sessao", ["o-jogo", "outro-de-sempre"])
+@pytest.mark.parametrize("gravado", ["o-jogo", "outro-de-sempre"])
 def test_o_restore_com_o_freestyle_ligado_restaura_o_freestyle(
-    semeadura_ligada: None, sessao: str,
+    semeadura_ligada: None, gravado: str,
 ) -> None:
     """Ligado, o boot volta ao Freestyle — nem a sessão, nem a regra de janela.
 
@@ -377,13 +377,13 @@ def test_o_restore_com_o_freestyle_ligado_restaura_o_freestyle(
     restore o ativava por cima do Freestyle ligado.
 
     MORDIDA: troque o `name = fora_do_jogo if manda else (...)` de
-    `restore_last_profile` por `name = sessao or fora_do_jogo` e a célula
+    `restore_last_profile` pelo nome da sessão antes do de fora do jogo e a célula
     `outro-de-sempre` reprova (a recusa do `activate` deixa o boot sem perfil).
     """
     loader.load_all_profiles()
     _o_jogo()
     loader.save_profile(Profile(name="Leitura", match=MatchAny(), priority=0))
-    nome = JOGO if sessao == "o-jogo" else "Leitura"
+    nome = JOGO if gravado == "o-jogo" else "Leitura"
     session.save_last_profile(nome)
     session.save_active_marker(nome)
     store = StateStore()

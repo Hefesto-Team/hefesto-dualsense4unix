@@ -105,13 +105,13 @@ def test_o_freestyle_de_um_lar_vazio_nasce_no_ultra(monkeypatch: pytest.MonkeyPa
     assert _o_que_falta(loader.load_profile(loader.NOME_DO_PADRAO)) == []
 
 
-@pytest.mark.parametrize("versao", range(6))
-def test_nenhuma_fabrica_de_antes_era_o_decidido(versao: int) -> None:
+@pytest.mark.parametrize("n", range(6))
+def test_nenhuma_fabrica_de_antes_era_o_decidido(n: int) -> None:
     """A mordida sem mexer no disco: a régua reprova cada fábrica de antes.
 
     Se uma delas passasse, a régua acima não distinguiria o asset de hoje da
     versão que ele substitui — mediria o arranjo fácil.
     """
-    antiga: dict[str, Any] = loader._FABRICAS_ANTERIORES_DO_FREESTYLE[versao]
+    antiga: dict[str, Any] = loader._FABRICAS_ANTERIORES_DO_FREESTYLE[n]
 
     assert _o_que_falta(Profile.model_validate(antiga)) != []

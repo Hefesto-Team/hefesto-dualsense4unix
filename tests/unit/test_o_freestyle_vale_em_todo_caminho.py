@@ -298,7 +298,7 @@ def test_com_o_modo_ligado_o_jogo_nao_entra_e_desligado_entra(
 ) -> None:
     """A cena inteira: o boot deixa o Freestyle; ligado, nada o troca; desligado, o jogo entra.
 
-    NOTA DATADA — 28/09/2026. Esta régua media a
+    NOTA DATADA — 28/09/2026. Esta régua cobria a
     `D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA` (LOCK-CEDE-01): com o Modo
     Freestyle ligado, a janela do jogo com perfil próprio trocava o perfil. A
     `D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA` a revogou: ligado, o Freestyle

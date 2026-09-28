@@ -653,7 +653,7 @@ def test_com_o_modo_freestyle_ligado_o_jogo_nao_entra(
 ) -> None:
     """Ligado, o Freestyle vale no desktop, no jogo e na volta.
 
-    NOTA DATADA — 28/09/2026, O-FREESTYLE-E-UMA-CAMADA-SO-01. Esta régua media
+    NOTA DATADA — 28/09/2026, O-FREESTYLE-E-UMA-CAMADA-SO-01. Esta régua cobria
     `D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA` (o perfil do jogo entrava e
     ficava até ela desligar o modo). A decisão dela
     `D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA` a revogou: com o Modo Freestyle

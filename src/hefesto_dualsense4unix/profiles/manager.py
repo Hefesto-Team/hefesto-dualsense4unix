@@ -134,7 +134,7 @@ _RESULTADO_PARA_RELATORIO: dict[str, str] = {
 
 
 # --- O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026) — quem decide qual perfil vale
-# A palavra dela, 27/09 à tarde: *«O freestyle nao deveria se comportar como
+# Ela, 27/09 à tarde: *«O freestyle nao deveria se comportar como  (noqa-acento: citação)
 # qualquer outro perfil na interface? So que quando ele tivesse ativado ele
 # subiria a prioridade em tudo?»* — e à noite: *«Aperto o botão do freestyle e o
 # jogo que eu tiver jogando vai ter essa config independente do perfil do
