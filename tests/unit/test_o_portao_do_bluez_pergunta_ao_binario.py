@@ -290,7 +290,14 @@ def test_o_doctor_sem_marca_no_baseline_diz_que_nao_sabe(tmp_path: Path) -> None
 
 def test_o_doctor_sem_dpkg_nao_manda_rodar_o_install(tmp_path: Path) -> None:
     """Numa distro sem dpkg o 3f não existe: mandar rodar o install é mandar
-    repetir o que não entrega. MORDIDA: tirar a guarda do dpkg volta o WARN."""
+    repetir o que não entrega. MORDIDA: tirar a guarda do dpkg volta o WARN
+    que manda rodar o install.
+
+    28/09/2026 (O-PRODUTO-EM-QUALQUER-MAQUINA-01, B2): o aviso sem dpkg deixou
+    de ser `info` — o defeito é o mesmo fora do Debian, e o silêncio o
+    escondia. O que esta régua guarda continua: ele não manda rodar o install.
+    A régua do aviso é `test_o_bluez_fora_do_dpkg_avisa.py`.
+    """
     saida = _doctor(tmp_path, ["hefesto-0001"], HEFESTO_DOCTOR_DPKG="dpkg-que-nao-existe")
-    assert "[WARN]" not in saida, saida
-    assert "sem dpkg nesta distro" in saida, saida
+    assert "install.sh" not in saida and "3f" not in saida, saida
+    assert "esta distro não tem dpkg" in saida, saida

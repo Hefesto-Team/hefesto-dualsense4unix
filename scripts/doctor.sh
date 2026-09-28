@@ -4911,13 +4911,6 @@ check_bluez_curas_do_backport() {
         info "não achei o bluetoothd que o systemd executa — pulo a conferência das curas do backport"
         return
     fi
-    # O BACKPORT DESTA CASA É .deb (conferência da INSTALL-E-UNINSTALL-DO-
-    # RADIO-01): o passo 3f só existe onde há dpkg. Numa distro sem ele, o
-    # aviso de baixo mandaria rodar um install que não entrega nada ali.
-    if ! command -v "${HEFESTO_DOCTOR_DPKG:-dpkg}" >/dev/null 2>&1; then
-        info "sem dpkg nesta distro — o backport do BlueZ desta casa é .deb (Debian/Ubuntu), e não há o que conferir aqui"
-        return
-    fi
     while IFS=$'\t' read -r nome marca; do
         [[ -n "${marca}" ]] || continue
         if grep -a -q -F -- "${marca}" "${vivo}" 2>/dev/null; then
@@ -4928,6 +4921,16 @@ check_bluez_curas_do_backport() {
     done < <(sed -n 's/^MARCA_\([^=]*\)=\(.*\)$/\1\t\2/p' "${baseline}" 2>/dev/null)
     if [[ "${#faltam[@]}" -eq 0 && "${#tem[@]}" -gt 0 ]]; then
         pass "o bluetoothd em execução traz as curas do backport desta casa (${tem[*]})"
+    elif [[ "${#faltam[@]}" -gt 0 ]] \
+         && ! command -v "${HEFESTO_DOCTOR_DPKG:-dpkg}" >/dev/null 2>&1; then
+        # FORA DO DPKG O DEFEITO É O MESMO, e ele não tem cura empacotada
+        # (O-PRODUTO-EM-QUALQUER-MAQUINA-01, B2, 28/09/2026). Aqui estava um
+        # `info` «não há o que conferir aqui», ANTES de perguntar ao binário:
+        # no Fedora COSMIC e no Arch o bluetoothd é o 5.8x sem os patches, e a
+        # sessão dos controles cai do mesmo jeito, calada. O backport desta
+        # casa é .deb, então o aviso diz o EFEITO e onde estão os patches — e
+        # não manda rodar um install que não entrega nada ali.
+        warn "o bluetoothd em execução (${vivo}) não traz ${faltam[*]} — com três ou mais controles pelo rádio, a sessão cai no EAGAIN (o rádio cheio derruba os controles por Bluetooth). O backport desta casa é .deb e esta distro não tem dpkg: os patches estão em assets/bluez-backport/patches, para o BlueZ da sua distro"
     elif [[ "${#faltam[@]}" -gt 0 ]]; then
         warn "o bluetoothd em execução (${vivo}) não traz ${faltam[*]} — sem o hefesto-0002, o rádio cheio (EAGAIN) derruba a sessão dos controles por Bluetooth: $(conselho_de_instalacao)$(so_no_checkout "(o passo 3f instala o backport que estiver no cache; sem ele: scripts/construir_bluez_backport.sh)")"
     else
