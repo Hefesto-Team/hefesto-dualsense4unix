@@ -22,6 +22,7 @@ AS MORDIDAS:
 """
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 from pathlib import Path
@@ -154,6 +155,40 @@ def test_o_arquivo_adulterado_nao_exporta_outra_coisa(lar: Path) -> None:
     assert cv.camadas_da_steam_fora(_config(lar)) is False
 
 
+_SOBREPOSICAO, _GRAVADOR = cv.AMBIENTE_SEM_AS_CAMADAS_DA_STEAM
+
+
+@pytest.mark.parametrize("escrito", [
+    f"{_SOBREPOSICAO}\n{_GRAVADOR}\n",
+    f"# comentário\n{_GRAVADOR}\n{_SOBREPOSICAO}",       # sem a quebra no fim
+    f"{_SOBREPOSICAO} \n{_GRAVADOR}\n",                 # espaço no fim da linha
+    f" {_SOBREPOSICAO}\n{_GRAVADOR}\n",                 # espaço no começo
+    f"{_SOBREPOSICAO}\r\n{_GRAVADOR}\r\n",              # salvo com \r\n
+    f"{_SOBREPOSICAO}\n{_GRAVADOR}\n".encode() + b"\xff\xfe\n",  # byte fora do UTF-8
+], ids=["exato", "sem-quebra-no-fim", "espaco-no-fim", "espaco-no-comeco", "crlf",
+        "byte-torto"])
+def test_a_pilula_e_o_lancador_leem_o_mesmo_arquivo_do_mesmo_jeito(
+        lar: Path, escrito: str | bytes) -> None:
+    """A pílula acende se, e só se, o jogo recebe as duas.
+
+    Há DOIS leitores do mesmo arquivo — o dono em Python (a pílula e a linha do
+    exame) e o lançador em shell puro (o jogo). Se discordam, a tela diz «sem a
+    da Steam» sobre um jogo que nasceu com ela. MORDIDA: devolva o `strip()` ao
+    `camadas_da_steam_fora` do dono e o caso do espaço reprova.
+    """
+    arquivo = cv.caminho_da_escolha(_config(lar))
+    arquivo.parent.mkdir(parents=True)
+    if isinstance(escrito, bytes):
+        arquivo.write_bytes(escrito)
+    else:
+        arquivo.write_bytes(escrito.encode("utf-8"))
+    o_jogo_recebeu = _as_da_steam(_lancar(lar, SteamAppId="1599660")) == set(
+        cv.AMBIENTE_SEM_AS_CAMADAS_DA_STEAM)
+    assert cv.camadas_da_steam_fora(_config(lar)) is o_jogo_recebeu, (
+        f"a pílula diz {'acesa' if not o_jogo_recebeu else 'apagada'} e o jogo "
+        f"{'recebeu' if o_jogo_recebeu else 'não recebeu'} as duas: {escrito!r}")
+
+
 def test_o_jogo_da_lista_de_exclusao_abre_sem_nada(
         lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """O jogo que ela tirou do Hefesto abre como se ele não estivesse instalado.
@@ -214,6 +249,33 @@ def test_o_registro_se_mexe_no_jogo_que_traz_o_carregador(lar: Path) -> None:
     texto = (prefixo / "pfx" / "system.reg").read_text(encoding="utf-8")
     assert 'EOSOverlayVkLayer-Win64.json"=dword:00000001' in texto
     assert DRIVER in texto, "o driver do Wine não pode sair da posição de ligado"
+
+
+def test_religado_depois_de_devolver_o_gancho_volta_a_tirar(lar: Path) -> None:
+    """Desligar devolve e grava `manter`; ligar de novo é a voz dela por cima.
+
+    O botão é um ligável desde 25/09 e a escolha é o arquivo que o lançador lê:
+    desligar apaga a escolha E devolve (o `religar` grava `escolha: manter`).
+    Quando ela liga de novo, o gancho do jogo que traz o carregador tem de
+    voltar a tirar — é o `forcar=True` do modo `--prefixo`. Sem ele, o `manter`
+    de ontem venceria o clique de hoje, e a pílula acesa mentiria sobre esse
+    jogo. MORDIDA: troque o `forcar=True` do `main` por `forcar=False`.
+    """
+    _instalar_o_curador(lar)
+    prefixo, jogo, _ = _prefixo_e_jogo(lar, com_carregador=True)
+    marca = cv.chave_de_estado(r"Software\Khronos\Vulkan\ImplicitLayers", EPIC)
+    estado = lar / "estado" / "hefesto-dualsense4unix" / cv.ESTADO_BASENAME
+    estado.parent.mkdir(parents=True)
+    estado.write_text(json.dumps({"prefixos": {"1599660": {
+        marca: {"feito": "religada", "escolha": "manter", "quando": "2026-09-28T01:00:00"},
+    }}}), encoding="utf-8")
+    cv.gravar_camadas_da_steam_fora(True, config_home=_config(lar))
+    _lancar(lar, SteamAppId="1599660", STEAM_COMPAT_DATA_PATH=str(prefixo),
+            STEAM_COMPAT_INSTALL_PATH=str(jogo))
+    texto = (prefixo / "pfx" / "system.reg").read_text(encoding="utf-8")
+    assert 'EOSOverlayVkLayer-Win64.json"=dword:00000001' in texto, (
+        "a pílula está acesa e o `manter` de antes segurou a camada no jogo "
+        "que a lê")
 
 
 def test_com_o_botao_desligado_o_registro_nao_se_mexe(lar: Path) -> None:

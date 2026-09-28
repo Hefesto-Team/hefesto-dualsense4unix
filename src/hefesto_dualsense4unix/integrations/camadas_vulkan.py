@@ -777,12 +777,19 @@ def camadas_da_steam_fora(config_home: Path | None = None) -> bool:
 
     Ligado só com TODAS as linhas no arquivo: um arquivo pela metade entregaria
     ao jogo uma camada só, e a pílula acesa diria as duas.
+
+    A LEITURA É A DO LANÇADOR, byte a byte (`camadas_da_steam_fora` em
+    `assets/hefesto-launch.sh`: `read -r` com `IFS=` vazio e `case` exato).
+    Linha partida só no `\\n`, sem aparar espaço e sem traduzir o `\\r\\n`: uma
+    linha com espaço no fim ou um arquivo salvo com `\\r\\n` não passa no
+    lançador, e a pílula não pode acender sobre o que o jogo não recebe. Byte
+    fora do UTF-8 noutra linha não muda nada no lançador, e aqui também não.
     """
     try:
-        linhas = caminho_da_escolha(config_home).read_text(encoding="utf-8").splitlines()
+        bruto = caminho_da_escolha(config_home).read_bytes()
     except OSError:
         return False
-    presentes = {linha.strip() for linha in linhas}
+    presentes = set(bruto.decode("utf-8", errors="replace").split("\n"))
     return all(linha in presentes for linha in AMBIENTE_SEM_AS_CAMADAS_DA_STEAM)
 
 
