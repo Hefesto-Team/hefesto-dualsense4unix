@@ -763,7 +763,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
 > | campo | onde é escrito | grau |
 > |---|---|---|
 > | volume, `common[5]` | o laço dos quatro bytes de áudio — `_AUDIO_COMMON_OFFSETS` em `core/backend_pydualsense.py:323-325` | **ALTA** — lido no código |
-> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1866-1873`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1870-1872`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:197` | **ALTA** — lido no código |
+> | pré-amp, `common[37]` | `core/backend_pydualsense.py:1866-1873`, com o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` em `:1793-1795`; o valor padrão `0x2` é o `SP_PREAMP_GAIN_PADRAO` em `core/ds_output_report.py:197` | **ALTA** — lido no código |
 <!-- ENDEREÇOS REAPONTADOS em 20/09/2026: a O-NO-NASCE-FECHADO-01 acrescentou a
      exposição do nó sob pedido ao `backend_pydualsense.py` e ao `lifecycle.py`
      (o `hidapi` não aceita fd, e com o nó nascendo `0600 root` o handle de
@@ -1628,9 +1628,9 @@ ATENÇÃO: **O gamepad virtual deste projeto nunca escreve o byte 53** — ele s
 >
 > | etapa | onde | grau |
 > |---|---|---|
-> | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:573` (`extract_jack_status`), offset em `:150` | **ALTA** — lido no código |
-> | entrega ao vpad na borda | `core/physical_report_reader.py:1101-1136` (`_observe_jack`) | **ALTA** |
-> | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1929` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:539` | **ALTA** |
+> | lê o byte 53 do report cru do físico | `core/physical_report_reader.py:581` (`extract_jack_status`), offset em `:150` | **ALTA** — lido no código |
+> | entrega ao vpad na borda | `core/physical_report_reader.py:1129-1164` (`_observe_jack`) | **ALTA** |
+> | o vpad espelha, mascarado nos três bits conhecidos | `integrations/uhid_gamepad.py:1965` (`forward_jack`), com `_STATUS1_BITS_CONHECIDOS = 0x07` em `:539` | **ALTA** |
 > | o byte sai no report do vpad | `integrations/uhid_gamepad.py:1759`, offset `_STATUS1_OFFSET = 53` em `:526` | **ALTA** |
 >
 > **(2) A conclusão estava INVERTIDA — e este é o erro mais perigoso dos
