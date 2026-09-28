@@ -518,6 +518,62 @@ def test_o_restore_com_o_freestyle_ligado_restaura_o_freestyle(
     assert (store.active_profile, store.perfil_adiado_por_janela) == (FREESTYLE, None)
 
 
+def test_ligado_sem_o_arquivo_o_boot_desliga_o_modo(semeadura_ligada: None) -> None:
+    """Ligado e sem o `freestyle.json` (ela o apagou): o boot desliga e segue.
+
+    Sem isto, o modo ligado seguraria o produto sem perfil nenhum, para sempre:
+    toda ativação automática seria recusada, e o restore não teria o que ativar.
+
+    MORDIDA: tire o bloco `if manda and not fora_do_jogo:` de
+    `restore_last_profile` e o boot termina sem perfil, com o modo ainda ligado.
+    """
+    loader.load_all_profiles()
+    loader.save_profile(Profile(name="Leitura", match=MatchAny(), priority=0))
+    (profiles_dir() / loader.ARQUIVO_DO_PADRAO).unlink()
+    session.save_last_profile("Leitura")
+    session.save_active_marker("Leitura")
+    store = StateStore()
+    ligar_o_freestyle(store, True)
+    controle = FakeController()
+    controle.connect()
+
+    asyncio.run(connection.restore_last_profile(SimpleNamespace(  # type: ignore[arg-type]
+        controller=controle, store=store, _run_blocking=_bloqueante, _native_mode=False)))
+
+    assert (store.freestyle_ligado, session.load_freestyle_ligado(),
+            store.active_profile) == (False, False, "Leitura")
+
+
+def test_sair_do_nativo_com_ele_ligado_volta_ao_freestyle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A saída do Modo Nativo reativa o Freestyle, e não o `session.json`.
+
+    Com o Nativo no boot não há restore, e `active_profile` fica vazio; a
+    sessão pode apontar um perfil que o `activate` recusaria (`origin="system"`),
+    e a saída do Nativo terminaria sem perfil.
+
+    MORDIDA: devolva a `_reapply_last_profile` o `name = active_profile or
+    load_last_profile()` de antes e o pedido sai com a Leitura.
+    """
+    import hefesto_dualsense4unix.profiles.manager as manager_mod
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon
+
+    session.save_last_profile("Leitura")
+    store = StateStore()
+    store.set_freestyle_ligado(True)
+    pedidos: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        manager_mod, "gerente_do_daemon",
+        lambda daemon, **kw: SimpleNamespace(
+            activate=lambda nome, *, origin: pedidos.append((nome, origin))),
+    )
+
+    Daemon._reapply_last_profile(SimpleNamespace(store=store))  # type: ignore[arg-type]
+
+    assert pedidos == [(FREESTYLE, "system")]
+
+
 def test_o_primeiro_pad_nasce_no_modo_do_freestyle(semeadura_ligada: None) -> None:
     """A prova 5, no código: com ele ligado, o boot sobe o pad no modo DELE.
 

@@ -115,3 +115,38 @@ def test_nenhuma_fabrica_de_antes_era_o_decidido(n: int) -> None:
     antiga: dict[str, Any] = loader._FABRICAS_ANTERIORES_DO_FREESTYLE[n]
 
     assert _o_que_falta(Profile.model_validate(antiga)) != []
+
+
+def test_a_maquina_que_ja_levou_a_fabrica_de_24_09_recebe_o_decidido_uma_vez(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O disco de quem já atualizou: a cópia de fábrica de 24/09 e a marca `done`.
+
+    É o caminho de toda máquina que já rodou a O-MODO-FREESTYLE-03: a marca
+    dizia só `done`, e com ela a migração não rodava mais — a cópia de 24/09
+    ficaria para sempre, e quem nunca mexeu no Freestyle não receberia o
+    decidido. A marca passou a guardar a impressão do asset que levou; a de
+    antes não é impressão nenhuma, e a migração roda UMA vez para o asset novo.
+
+    MORDIDA: troque, em `o_freestyle_de_fabrica_nasce_ligado`, as duas
+    perguntas `_a_marca_ja_levou(...)` por `marker.exists()` e o
+    arquivo de 24/09 fica no disco.
+    """
+    from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
+
+    monkeypatch.delenv(loader.SEED_SKIP_ENV_VAR, raising=False)
+    monkeypatch.setattr(loader, "_seed_attempted", False)
+    monkeypatch.setattr(loader, "_DEFAULT_SEED_SOURCE_DIRS", (FABRICA,))
+    monkeypatch.setattr(loader, "_talvez_semear_jogos", lambda: None)
+    pasta = profiles_dir(ensure=True)
+    de_24_09 = json.dumps(loader._FABRICAS_ANTERIORES_DO_FREESTYLE[5], indent=2)
+    (pasta / loader.ARQUIVO_DO_PADRAO).write_text(de_24_09, encoding="utf-8")
+    (pasta / loader.SEED_MARKER_NAME).write_text("freestyle.json\n", encoding="utf-8")
+    marca = pasta / loader._FREESTYLE_DE_FABRICA_NASCE_LIGADO_MARKER
+    marca.write_text("done\n", encoding="utf-8")
+
+    loader.load_all_profiles()
+
+    assert (pasta / loader.ARQUIVO_DO_PADRAO).read_bytes() == ASSET.read_bytes()
+    assert marca.read_text(encoding="utf-8").strip() not in ("", "done")
+    assert loader.o_freestyle_de_fabrica_nasce_ligado() is None, "não é one-shot"
