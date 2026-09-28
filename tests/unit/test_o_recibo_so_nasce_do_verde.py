@@ -47,8 +47,13 @@ COMPARACAO_DA_ARVORE = 'agora.arvore != aberta["arvore"]'
 
 
 def _ambiente() -> dict[str, str]:
-    """O ambiente do teste, sem nenhum ``GIT_*`` herdado de um gancho."""
-    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    """O ambiente do teste, sem nenhum ``GIT_*`` herdado de um gancho.
+
+    Nem as opções do pytest de quem chama: a suíte e o portão de brinquedo rodam
+    um pytest próprio, e um ``PYTEST_ADDOPTS`` de fora mudaria o que eles medem.
+    """
+    env = {k: v for k, v in os.environ.items()
+           if not k.startswith("GIT_") and k not in {"PYTEST_ADDOPTS", "SUITE_PYTEST_ARGS"}}
     env.update({
         "GIT_CONFIG_GLOBAL": "/dev/null",
         "GIT_CONFIG_NOSYSTEM": "1",
