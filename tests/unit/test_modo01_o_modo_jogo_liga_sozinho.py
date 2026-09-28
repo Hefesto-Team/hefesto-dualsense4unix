@@ -28,6 +28,13 @@ O que este arquivo trava, por entrega da sprint:
 
 Invariante que NÃO pode cair junto: gesto manual dela cria trava de 30 s e
 nada — nem o modo jogo padrão — mexe no modo nesse período.
+
+NOTA DATADA — 28/09/2026, O-FREESTYLE-E-UMA-CAMADA-SO-01. O cadeado virou o
+Modo Freestyle, e a decisão dela (`D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA`)
+revogou as duas metades que o B3 e o B2 davam a ele: ligado, o Freestyle manda
+também no modo (o modo jogo padrão não entra por cima dele) e nenhum perfil
+de jogo entra — nem o que se declara de jogo. As réguas daqui passaram a medir
+isso; com o Freestyle desligado, o B3 e o B2 valem como antes.
 """
 from __future__ import annotations
 
@@ -546,14 +553,13 @@ def _switcher(store: StateStore, espiao: _DaemonEspiao | None = None) -> AutoSwi
 
 
 class TestAutoswitchPedeOModoJogoPadrao:
-    def test_com_o_cadeado_ligado_o_modo_liga_e_o_perfil_nao_troca(
+    def test_nenhum_perfil_para_o_jogo_o_modo_liga_e_o_perfil_nao_troca(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """O cenário exato da validação: cadeado ligado (mtime 24/07 20:42) e
-        nenhum perfil para o jogo. O modo jogo liga; o perfil NÃO troca."""
+        """O cenário da validação: nenhum perfil para o jogo. O modo jogo liga;
+        o perfil (um catch-all) NÃO troca."""
         save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
         store = StateStore()
-        store.set_autoswitch_locked(True)
         espiao = _DaemonEspiao()
         sw = _switcher(store, espiao)
 
@@ -563,6 +569,28 @@ class TestAutoswitchPedeOModoJogoPadrao:
         assert espiao.aplicados == [WM_MMJ] * 3
         assert sw._current_profile is None
         assert store.active_profile is None
+
+    def test_com_o_freestyle_ligado_o_modo_jogo_padrao_nao_entra(
+        self, isolated_profiles_dir: Path
+    ) -> None:
+        """Ligado, o Freestyle manda no modo também (28/09/2026).
+
+        Era o avesso: *"o cadeado congela perfil, não modo"*, e o modo jogo
+        padrão ligava por cima do perfil que ela deixou. MORDIDA: devolva ao
+        `_tick` a sincronização do modo jogo padrão ANTES da parada pelo
+        Freestyle e o espião registra o jogo três vezes.
+        """
+        save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+        store = StateStore()
+        store.set_freestyle_ligado(True)
+        espiao = _DaemonEspiao()
+        sw = _switcher(store, espiao)
+
+        for t in (0.0, 0.6, 60.0):
+            sw._tick({"wm_class": WM_MMJ, "wm_name": "Mullet Mad Jack"}, t)
+
+        assert espiao.aplicados == []
+        assert sw._current_profile is None
 
     def test_janela_fora_do_jogo_solta_o_modo(
         self, isolated_profiles_dir: Path
@@ -670,16 +698,22 @@ class TestAutoswitchPedeOModoJogoPadrao:
 
 # ---------------------------------------------------------------------------
 # B2 — o cadeado congelava mais do que prometia
+#
+# NOTA DATADA — 28/09/2026, O-FREESTYLE-E-UMA-CAMADA-SO-01. O B2 fazia o
+# cadeado CEDER ao perfil que se declara de jogo. A decisão dela
+# (`D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA`) revogou a cessão: com o Modo
+# Freestyle ligado, nenhum perfil de jogo entra. As duas primeiras réguas
+# passaram a medir que eles NÃO entram; o predicado `perfil_declara_modo_de_jogo`
+# ficou, e hoje responde à guarda do jogo vivo (`_recusa_a_troca_com_o_jogo_vivo`).
 # ---------------------------------------------------------------------------
 
 
-class TestCadeadoCedeAPerfilQueSeDeclaraDeJogo:
-    def test_coop_local_casa_por_titulo_e_deixa_de_ser_congelado(
+class TestOFreestyleLigadoNaoCedeNemAoPerfilQueSeDeclaraDeJogo:
+    def test_coop_local_casa_por_titulo_e_nao_entra(
         self, isolated_profiles_dir: Path
     ) -> None:
         """O preset TEM `mode: gamepad` e casa por TÍTULO (Sackboy, Overcooked,
-        It Takes Two, Cuphead) — o cadeado o congelava por não ser `steam_app_*`
-        em `window_class`."""
+        It Takes Two, Cuphead) — com o Freestyle ligado, ele não entra."""
         save_profile(
             Profile.model_validate(
                 {
@@ -694,19 +728,19 @@ class TestCadeadoCedeAPerfilQueSeDeclaraDeJogo:
             )
         )
         store = StateStore()
-        store.set_autoswitch_locked(True)
+        store.set_freestyle_ligado(True)
         sw = _switcher(store)
 
         janela = {"wm_class": "steam_app_1599660", "wm_name": "Sackboy"}
         sw._tick(janela, 0.0)
         sw._tick(janela, 0.6)
 
-        assert sw._current_profile == "coop_local"
+        assert sw._current_profile is None
 
-    def test_jogo_fora_da_steam_com_perfil_proprio_tambem_cede(
+    def test_jogo_fora_da_steam_com_perfil_proprio_tambem_nao_entra(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """GOG/Heroic/itch/nativo: sem `steam_app_*` não havia como ceder."""
+        """GOG/Heroic/itch/nativo: o Freestyle ligado vale fora da Steam também."""
         save_profile(
             Profile.model_validate(
                 {
@@ -717,14 +751,14 @@ class TestCadeadoCedeAPerfilQueSeDeclaraDeJogo:
             )
         )
         store = StateStore()
-        store.set_autoswitch_locked(True)
+        store.set_freestyle_ligado(True)
         sw = _switcher(store)
 
         janela = {"wm_class": "cyberpunk", "exe_basename": "Cyberpunk2077"}
         sw._tick(janela, 0.0)
         sw._tick(janela, 0.6)
 
-        assert sw._current_profile == "cyberpunk_gog"
+        assert sw._current_profile is None
 
     def test_perfil_de_desktop_continua_congelado(
         self, isolated_profiles_dir: Path
@@ -738,7 +772,7 @@ class TestCadeadoCedeAPerfilQueSeDeclaraDeJogo:
             )
         )
         store = StateStore()
-        store.set_autoswitch_locked(True)
+        store.set_freestyle_ligado(True)
         sw = _switcher(store)
 
         for t in (0.0, 0.6, 30.0):

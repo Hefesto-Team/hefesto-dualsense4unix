@@ -1,25 +1,20 @@
-"""FEAT-AUTOSWITCH-LOCK-01 + LOCK-CEDE-01 — o cadeado da troca de perfil.
+"""FEAT-AUTOSWITCH-LOCK-01 → O-FREESTYLE-E-UMA-CAMADA-SO-01 — o Modo Freestyle.
 
 Pedido original da mantenedora (23/07): *"no sackboy a ideia era ficar a seleção
 que eu marquei na interface... deixar na interface a opção de escolha"*, e *"o
-madjack também é o mesmo lance"*. Um cadeado explícito da troca AUTOMÁTICA de
-perfil: enquanto ligado, o AutoSwitcher não troca de perfil por foco de janela —
-a escolha dela fica —, mas gamepad/co-op/rumble seguem vivos (é o oposto do
-pause do daemon).
+madjack também é o mesmo lance"*. Nasceu como um cadeado da troca AUTOMÁTICA de
+perfil: enquanto ligado, o AutoSwitcher não troca de perfil por foco de janela,
+mas gamepad/co-op/rumble seguem vivos (é o oposto do pause do daemon).
 
-LOCK-CEDE-01 (decisão da mantenedora, 24/07): o cadeado **cede para regra de
-jogo**. O `if self.travado(): return` era a PRIMEIRA linha do `_tick` e matava
-tudo — inclusive a regra própria do jogo. Na máquina dela a flag estava ligada
-(mtime 24/07 20:42) e o resultado medido foi zero `profile_autoswitch` em 90 min
-com o "modo jogo" nunca ligando. A política nova mantém o que ela pediu (nenhuma
-janela comum de desktop troca o perfil) e devolve o que ela também quer (o jogo
-com perfil PRÓPRIO entra). O predicado que decide é o mesmo do override manual
-(`perfil_e_regra_de_jogo`, R-01) — um genérico de desktop NUNCA fura.
-
-Cobre também as rotas que IGNORAM o cadeado de propósito (decisão desta sprint,
-documentada em `TestRotasQueIgnoramOCadeado`): restore de boot, ciclo por
-PS+D-pad e dreno da pendência de modo. Nenhuma delas é "trocar sozinho por
-janela" — que é a única coisa que o cadeado promete congelar.
+NOTA DATADA — 28/09/2026, O-FREESTYLE-E-UMA-CAMADA-SO-01. Este arquivo media a
+LOCK-CEDE-01 (24/07): o cadeado cedia à regra própria de todo jogo, e por isso
+o Freestyle nunca valia em jogo. A decisão dela
+(`D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA`) a revogou: ligado, o Freestyle
+manda em tudo, e nenhum caminho automático passa por cima. A chave passou de
+`autoswitch_locked` a `freestyle_ligado`, e o arquivo de `autoswitch_locked.flag`
+a `freestyle_ligado.flag` (com a migração). As réguas do lançamento, do boot,
+do botão e dos quatro controles moram em `test_o_freestyle_ligado_manda_em_tudo.py`;
+aqui fica o que é do autoswitch, do run-loop, do disco e do boot.
 """
 
 from __future__ import annotations
@@ -68,9 +63,8 @@ def _switcher(store: StateStore) -> tuple[AutoSwitcher, MagicMock]:
 
 
 def _switcher_real(store: StateStore) -> AutoSwitcher:
-    """AutoSwitcher com ProfileManager REAL — o cadeado só é testável de
-    verdade contra o `select_for_window` de verdade (é ele que diz se o
-    candidato é a regra do jogo ou um genérico de desktop)."""
+    """AutoSwitcher com ProfileManager REAL — o `select_for_window` de verdade
+    é quem diz se o candidato é a regra do jogo ou um genérico de desktop."""
     fc = FakeController()
     fc.connect()
     return AutoSwitcher(
@@ -88,37 +82,39 @@ def _perfil_do_jogo() -> Profile:
     )
 
 
+def _navegacao() -> Profile:
+    return Profile(
+        name="Navegação",
+        match=MatchCriteria(window_class=["steam"]),
+        priority=50,
+    )
+
+
 class TestStore:
-    def test_default_destravado(self) -> None:
-        assert StateStore().autoswitch_locked is False
+    def test_default_desligado(self) -> None:
+        assert StateStore().freestyle_ligado is False
 
     def test_liga_e_desliga(self) -> None:
         s = StateStore()
-        s.set_autoswitch_locked(True)
-        assert s.autoswitch_locked is True
-        s.set_autoswitch_locked(False)
-        assert s.autoswitch_locked is False
+        s.set_freestyle_ligado(True)
+        assert s.freestyle_ligado is True
+        s.set_freestyle_ligado(False)
+        assert s.freestyle_ligado is False
 
 
-class TestAutoswitchRespeitaOCadeado:
-    def test_travado_nao_troca_por_janela_comum(
+class TestAutoswitchRespeitaOFreestyle:
+    def test_ligado_nao_troca_por_janela_comum(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """O que ela pediu: nenhuma janela de desktop troca o perfil.
+        """Nenhuma janela de desktop troca o perfil.
 
         `Navegação` casa a janela `steam` e é justamente metade do ping-pong do
-        journal de 22-23/07 — com o cadeado ligado, ela não entra por mais
+        journal de 22-23/07 — com o Freestyle ligado, ela não entra por mais
         estável que o foco fique.
         """
-        save_profile(
-            Profile(
-                name="Navegação",
-                match=MatchCriteria(window_class=["steam"]),
-                priority=50,
-            )
-        )
+        save_profile(_navegacao())
         store = StateStore()
-        store.set_autoswitch_locked(True)
+        store.set_freestyle_ligado(True)
         sw = _switcher_real(store)
 
         for t in (0.0, 0.6, 30.0, 300.0):
@@ -127,110 +123,59 @@ class TestAutoswitchRespeitaOCadeado:
         assert sw._current_profile is None
         assert store.active_profile is None
 
-    def test_travado_cede_a_regra_propria_do_jogo(
+    def test_ligado_nem_a_regra_propria_do_jogo_entra(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """LOCK-CEDE-01: o jogo com perfil PRÓPRIO entra mesmo travado — é o
-        que faz o modo jogo voltar a ligar sem ela abrir mão do cadeado."""
+        """A LOCK-CEDE-01 revogada: o jogo com perfil PRÓPRIO não entra.
+
+        MORDIDA: devolva ao `_tick` a exceção da regra de jogo (o bloco que
+        deixava `perfil_e_regra_de_jogo` passar com o cadeado) e o `madjack`
+        entra aos 0,6 s.
+        """
         save_profile(_perfil_do_jogo())
         save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
         store = StateStore()
-        store.set_autoswitch_locked(True)
-        sw = _switcher_real(store)
-
-        sw._tick({"wm_class": WM_MMJ, "wm_name": "Mullet Mad Jack"}, 0.0)
-        sw._tick({"wm_class": WM_MMJ, "wm_name": "Mullet Mad Jack"}, 0.6)
-
-        assert sw._current_profile == "madjack"
-        assert store.active_profile == "madjack"
-
-    def test_travado_nao_cede_a_catch_all_em_janela_de_jogo(
-        self, isolated_profiles_dir: Path
-    ) -> None:
-        """A exceção é para a REGRA do jogo, não para "há um jogo em foco".
-
-        Sem perfil para o Mullet Mad Jack, quem casaria é o `vitoria` (MatchAny,
-        genérico de desktop) — exatamente o buraco que o R-01 fechou no override
-        manual. Aqui ele fica fechado também no cadeado.
-        """
-        save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-        store = StateStore()
-        store.set_autoswitch_locked(True)
+        store.set_freestyle_ligado(True)
         sw = _switcher_real(store)
 
         for t in (0.0, 0.6, 60.0):
             sw._tick({"wm_class": WM_MMJ, "wm_name": "Mullet Mad Jack"}, t)
 
         assert sw._current_profile is None
+        assert store.active_profile is None
 
-    def test_destravado_volta_a_decidir(self) -> None:
+    def test_desligado_volta_a_decidir(self) -> None:
         store = StateStore()
-        store.set_autoswitch_locked(False)
+        store.set_freestyle_ligado(False)
         sw, manager = _switcher(store)
         manager.select_for_window.return_value = None
         sw._tick({"wm_class": "firefox", "wm_name": "Mozilla"}, 999.0)
         manager.select_for_window.assert_called()
 
-    def test_destravar_nao_ativa_no_mesmo_tick(
-        self, isolated_profiles_dir: Path
-    ) -> None:
-        """Enquanto o cadeado segura, o relógio do debounce NÃO acumula.
-
-        Sem zerar o candidato no caminho travado, destravar depois de horas na
-        mesma janela ativaria o perfil no MESMO tick — a armadilha 1 da UX-01
-        (buraco-do-debounce) por outra porta.
-        """
-        save_profile(
-            Profile(
-                name="Navegação",
-                match=MatchCriteria(window_class=["steam"]),
-                priority=50,
-            )
-        )
-        store = StateStore()
-        store.set_autoswitch_locked(True)
-        sw = _switcher_real(store)
-
-        for t in (0.0, 100.0, 1000.0):
-            sw._tick({"wm_class": "steam"}, t)
-
-        store.set_autoswitch_locked(False)
-        sw._tick({"wm_class": "steam"}, 1000.5)
-        assert sw._current_profile is None  # o tempo travado não conta
-
-        sw._tick({"wm_class": "steam"}, 1001.2)  # estabilidade REAL
-        assert sw._current_profile == "Navegação"
-
-    def test_travado_e_metodo_publico_concordam(self) -> None:
+    def test_o_metodo_publico_e_o_store_concordam(self) -> None:
         store = StateStore()
         sw, _ = _switcher(store)
-        assert sw.travado() is False
-        store.set_autoswitch_locked(True)
-        assert sw.travado() is True
+        assert sw.freestyle_ligado() is False
+        store.set_freestyle_ligado(True)
+        assert sw.freestyle_ligado() is True
 
-    def test_sem_store_nunca_travado(self) -> None:
+    def test_sem_store_nunca_ligado(self) -> None:
         sw = AutoSwitcher(manager=MagicMock(), window_reader=lambda: {})
-        assert sw.travado() is False
+        assert sw.freestyle_ligado() is False
 
-    def test_log_do_cadeado_uma_vez_por_episodio(
+    def test_log_da_parada_uma_vez_por_episodio(
         self, isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """O cadeado é avaliado a 2 Hz e ficou ligado 90 min na máquina dela —
-        sem dedup seriam ~650 mil linhas no journal."""
+        """A pergunta é feita a 2 Hz e o Freestyle fica ligado por horas —
+        sem dedup seriam centenas de milhares de linhas no journal."""
         from hefesto_dualsense4unix.profiles import autoswitch as autoswitch_mod
 
         spy = MagicMock()
         monkeypatch.setattr(autoswitch_mod, "logger", spy)
 
-        save_profile(
-            Profile(
-                name="Navegação",
-                match=MatchCriteria(window_class=["steam"]),
-                priority=50,
-            )
-        )
+        save_profile(_navegacao())
         store = StateStore()
-        store.set_autoswitch_locked(True)
+        store.set_freestyle_ligado(True)
         sw = _switcher_real(store)
 
         for t in (0.0, 0.5, 1.0, 1.5, 2.0):
@@ -239,28 +184,22 @@ class TestAutoswitchRespeitaOCadeado:
         eventos = [
             c
             for c in spy.info.call_args_list
-            if c[0][0] == "autoswitch_congelado_pelo_cadeado"
+            if c[0][0] == "autoswitch_parado_pelo_freestyle"
         ]
         assert len(eventos) == 1
 
 
-class TestCadeadoNoRunLoop:
+class TestFreestyleNoRunLoop:
     """O `run()` REAL — a auditoria apontou que a cobertura parava no `_tick`
     dirigido na mão, e é o run-loop que roda na máquina dela."""
 
     @pytest.mark.asyncio
-    async def test_run_travado_nao_troca_por_janela_comum(
+    async def test_run_ligado_nao_troca_por_janela_comum(
         self, isolated_profiles_dir: Path
     ) -> None:
-        save_profile(
-            Profile(
-                name="Navegação",
-                match=MatchCriteria(window_class=["steam"]),
-                priority=50,
-            )
-        )
+        save_profile(_navegacao())
         store = StateStore()
-        store.set_autoswitch_locked(True)
+        store.set_freestyle_ligado(True)
         fc = FakeController()
         fc.connect()
         manager = ProfileManager(controller=fc, store=store)
@@ -280,12 +219,12 @@ class TestCadeadoNoRunLoop:
         assert manager.store.counter("profile.activated") == 0
 
     @pytest.mark.asyncio
-    async def test_run_travado_cede_ao_perfil_do_jogo(
+    async def test_run_ligado_nao_cede_ao_perfil_do_jogo(
         self, isolated_profiles_dir: Path
     ) -> None:
         save_profile(_perfil_do_jogo())
         store = StateStore()
-        store.set_autoswitch_locked(True)
+        store.set_freestyle_ligado(True)
         fc = FakeController()
         fc.connect()
         manager = ProfileManager(controller=fc, store=store)
@@ -301,23 +240,16 @@ class TestCadeadoNoRunLoop:
         sw.stop()
         await sw._task  # type: ignore[union-attr]
 
-        assert sw._current_profile == "madjack"
-        # E UMA vez só: ceder não pode virar reaplicação a 2 Hz.
-        assert manager.store.counter("profile.activated") == 1
+        assert sw._current_profile is None
+        assert manager.store.counter("profile.activated") == 0
 
     @pytest.mark.asyncio
-    async def test_travar_em_runtime_congela_no_tick_seguinte(
+    async def test_ligar_em_runtime_para_no_tique_seguinte(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """Ligar o cadeado vale na hora (o `_tick` relê o store) — sem reiniciar
-        o daemon nem reabrir a GUI."""
-        save_profile(
-            Profile(
-                name="Navegação",
-                match=MatchCriteria(window_class=["steam"]),
-                priority=50,
-            )
-        )
+        """Ligar vale na hora (o `_tick` relê o store) — sem reiniciar o daemon
+        nem reabrir a janela."""
+        save_profile(_navegacao())
         save_profile(
             Profile(
                 name="leitura",
@@ -341,7 +273,7 @@ class TestCadeadoNoRunLoop:
         await asyncio.sleep(0.15)
         assert sw._current_profile == "Navegação"
 
-        store.set_autoswitch_locked(True)
+        store.set_freestyle_ligado(True)
         janela["wm_class"] = "firefox"
         await asyncio.sleep(0.2)
         sw.stop()
@@ -355,21 +287,28 @@ class TestPersistencia:
         from hefesto_dualsense4unix.utils import session as sess
 
         monkeypatch.setattr(sess, "config_dir", lambda ensure=False: tmp_path)
-        assert sess.load_autoswitch_locked() is False
-        sess.save_autoswitch_locked(True)
-        assert sess.load_autoswitch_locked() is True
-        sess.save_autoswitch_locked(False)
-        assert sess.load_autoswitch_locked() is False
+        assert sess.load_freestyle_ligado() is False
+        sess.save_freestyle_ligado(True)
+        assert sess.load_freestyle_ligado() is True
+        sess.save_freestyle_ligado(False)
+        assert sess.load_freestyle_ligado() is False
 
     @pytest.mark.asyncio
-    async def test_boot_retoma_o_cadeado_da_sessao_anterior(
-        self, monkeypatch: pytest.MonkeyPatch
+    async def test_boot_retoma_o_freestyle_da_sessao_anterior(
+        self, isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """`lifecycle.run` carrega a flag no boot — a escolha dela atravessa
-        reboot. Era o elo NÃO coberto: a flag existia no disco desde 24/07 e
-        nenhum teste provava que o daemon a lê ao subir."""
+        reboot, e o perfil que vale ao subir é o Freestyle.
+
+        O Freestyle tem de estar no disco: ligado sem o arquivo, o restauro o
+        desliga (`freestyle_ligado_sem_o_perfil`), porque não há o que mandar.
+        """
         from hefesto_dualsense4unix.core.controller import ControllerState
         from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
+
+        save_profile(
+            Profile(name=loader_module.NOME_DO_PADRAO, match=MatchAny(), priority=0)
+        )
 
         monkeypatch.setattr(
             "hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.02
@@ -381,7 +320,7 @@ class TestPersistencia:
             "hefesto_dualsense4unix.utils.session.save_paused_state", lambda _p: None
         )
         monkeypatch.setattr(
-            "hefesto_dualsense4unix.utils.session.load_autoswitch_locked",
+            "hefesto_dualsense4unix.utils.session.load_freestyle_ligado",
             lambda: True,
         )
 
@@ -411,115 +350,39 @@ class TestPersistencia:
         task = asyncio.create_task(daemon.run())
         await asyncio.sleep(0.06)
         try:
-            assert daemon.store.autoswitch_locked is True
+            assert daemon.store.freestyle_ligado is True
+            assert daemon.store.active_profile == loader_module.NOME_DO_PADRAO
         finally:
             daemon.stop()
             await task
 
 
-class TestHandlerIPC:
-    def test_toggle_e_persiste(self, tmp_path: Any, monkeypatch: Any) -> None:
-        from hefesto_dualsense4unix.utils import session as sess
+class TestRotasQueNaoConsultamOFreestyle:
+    """Duas rotas que NÃO consultam o `freestyle_ligado`, de propósito.
 
-        monkeypatch.setattr(sess, "config_dir", lambda ensure=False: tmp_path)
-
-        class _H:
-            from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
-
-            _handle_autoswitch_lock = IpcHandlersMixin._handle_autoswitch_lock
-
-            def __init__(self) -> None:
-                self.store = StateStore()
-
-        h = _H()
-        r1 = asyncio.run(h._handle_autoswitch_lock({}))
-        assert r1["autoswitch_locked"] is True
-        assert sess.load_autoswitch_locked() is True
-        r2 = asyncio.run(h._handle_autoswitch_lock({}))
-        assert r2["autoswitch_locked"] is False
-
-    def test_explicito_vence_o_toggle(self, tmp_path: Any, monkeypatch: Any) -> None:
-        from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
-        from hefesto_dualsense4unix.utils import session as sess
-
-        monkeypatch.setattr(sess, "config_dir", lambda ensure=False: tmp_path)
-
-        class _H:
-            _handle_autoswitch_lock = IpcHandlersMixin._handle_autoswitch_lock
-
-            def __init__(self) -> None:
-                self.store = StateStore()
-
-        h = _H()
-        assert asyncio.run(h._handle_autoswitch_lock({"locked": True}))["autoswitch_locked"] is True
-        assert asyncio.run(h._handle_autoswitch_lock({"locked": True}))["autoswitch_locked"] is True
-
-
-class TestRotasQueIgnoramOCadeado:
-    """DECISÃO desta sprint: estas três rotas NÃO consultam o cadeado.
-
-    O cadeado promete uma coisa só — *"não troca de perfil sozinho"*. Nenhuma
-    das três troca sozinho:
-
-    - `restore_last_profile` (boot/reconexão) REPÕE o perfil que ela deixou, e
-      o RESTORE-ESCOPO-01 já o limita a perfis MatchAny ("sempre"). Fazê-lo
-      respeitar o cadeado deixaria o boot sem perfil nenhum, que é o oposto de
-      "o que eu escolhi fica";
-    - o ciclo por PS+D-pad é o GESTO dela, no controle, agora — a mesma
-      autoridade do `profile.switch` da GUI (que também não consulta o cadeado);
+    - o ciclo por PS+D-pad é o GESTO dela, no controle, agora: ele ativa com a
+      origem `manual`, e é a ativação à mão que liga ou desliga o modo
+      (`profiles.manager.ligar_o_freestyle`) — o gesto decide, sem um segundo
+      dono no `hotkey`;
     - `_drenar_modo_pendente` não escolhe perfil: reaplica UMA seção do perfil
       JÁ ativo que o lock de gesto manual (R-03, outro lock) adiou.
 
-    Os testes abaixo travam a decisão para que ninguém a "conserte" depois.
+    Os testes abaixo travam a decisão para que ninguém enfie um segundo dono
+    da pergunta nessas rotas sem reabri-la.
     """
 
-    @pytest.mark.asyncio
-    async def test_restore_de_boot_ignora_o_cadeado(
-        self, isolated_profiles_dir: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        from hefesto_dualsense4unix.daemon import connection as conn_mod
-
-        save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
-        monkeypatch.setattr(
-            "hefesto_dualsense4unix.utils.session.resolve_boot_profile",
-            lambda: "vitoria",
-        )
-        store = StateStore()
-        store.set_autoswitch_locked(True)
-        fc = FakeController()
-        fc.connect()
-
-        async def _run_blocking(fn: Any, *a: Any) -> Any:
-            return fn(*a)
-
-        daemon = MagicMock()
-        daemon.controller = fc
-        daemon.store = store
-        daemon._native_mode = False
-        daemon._run_blocking = _run_blocking
-
-        await conn_mod.restore_last_profile(daemon)
-
-        assert store.active_profile == "vitoria"
-
-    def test_ciclo_por_hotkey_nao_consulta_o_cadeado(self) -> None:
-        """Contrato de código: o gesto no controle não passa pelo cadeado.
-
-        Asserção estrutural de propósito — montar o daemon inteiro para provar
-        uma AUSÊNCIA custaria mais do que vale; o que precisa ficar travado é
-        que ninguém enfie o gate aqui sem reabrir esta decisão.
-        """
+    def test_ciclo_por_hotkey_nao_consulta_o_freestyle(self) -> None:
         import inspect
 
         from hefesto_dualsense4unix.daemon.subsystems import hotkey as hotkey_mod
 
         fonte = inspect.getsource(hotkey_mod)
-        assert "autoswitch_locked" not in fonte
+        assert "freestyle_ligado" not in fonte
 
-    def test_dreno_de_modo_pendente_nao_consulta_o_cadeado(self) -> None:
+    def test_dreno_de_modo_pendente_nao_consulta_o_freestyle(self) -> None:
         import inspect
 
         from hefesto_dualsense4unix.daemon.lifecycle import Daemon
 
         fonte = inspect.getsource(Daemon._drenar_modo_pendente)
-        assert "autoswitch_locked" not in fonte
+        assert "freestyle_ligado" not in fonte

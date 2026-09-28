@@ -220,7 +220,7 @@ def test_a_janela_do_cliente_steam_nao_troca_o_perfil_com_o_jogo_vivo(
     """MORDIDA nº 1: o defeito de 18/08, reduzido a dez segundos de tique.
 
     Arranque a guarda do `_tick` (o bloco
-    `_recusa_a_janela_do_cliente_steam`) e o perfil troca para `navegacao` —
+    `_recusa_a_troca_com_o_jogo_vivo`) e o perfil troca para `navegacao` —
     exatamente as treze linhas do journal dela.
     """
     manager, store = _bancada(_os_dois_perfis())
@@ -305,18 +305,26 @@ def test_o_jogo_morre_e_a_guarda_solta(perfis_isolados: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 3) A guarda é SÓ para a Steam
+# 3) A guarda vale para toda janela que não é de outro jogo
+#
+# NOTA DATADA — 28/09/2026, O-FREESTYLE-E-UMA-CAMADA-SO-01. Esta seção se
+# chamava «A guarda é SÓ para a Steam», e a régua abaixo provava o contrário do
+# que prova hoje: com o jogo vivo, o Firefox trocava o perfil (a política de
+# 23/07 e o ensaio E-5). A decisão dela de 27/09 à noite,
+# `D-2709-O-PERFIL-DO-JOGO-ENTRA-NO-LANCAMENTO`, trocou a política: o perfil do
+# jogo entra no lançamento, e o foco só confirma — com a janela do jogo em
+# outra tela, o perfil dele tem de valer enquanto ele vive. Outro JOGO em foco
+# continua trocando (`test_o_freestyle_ligado_manda_em_tudo`, a régua da janela
+# de outro jogo), e o jogo que morre solta a guarda (a seção 2).
 # ---------------------------------------------------------------------------
 
 
-def test_janela_de_outro_app_troca_o_perfil_mesmo_com_o_jogo_vivo(
+def test_janela_de_outro_app_nao_tira_o_perfil_com_o_jogo_vivo(
     perfis_isolados: Path,
 ) -> None:
-    """MORDIDA nº 3: alargue a guarda para qualquer janela e isto reprova.
+    """MORDIDA nº 3: estreite a guarda de volta à janela da Steam e isto reprova.
 
-    É a política de 23/07 (o irmão de
-    `test_perfil_especifico_fora_de_jogo_reverte_normalmente`) e o ensaio E-5:
-    ela abre o Firefox com o jogo vivo, e o perfil de desktop entra.
+    Ela abre o Firefox com o jogo vivo (o ensaio E-5), e o perfil do jogo fica.
     """
     manager, store = _bancada([*_os_dois_perfis(), _perfil("web", janela="firefox")])
     sw = _switcher(manager, store, jogo_vivo=lambda: APPID)
@@ -325,7 +333,7 @@ def test_janela_de_outro_app_troca_o_perfil_mesmo_com_o_jogo_vivo(
     for i in range(6):
         sw._tick({"wm_class": "firefox", "wm_name": "Mozilla Firefox"}, agora + 0.5 * i)
 
-    assert store.active_profile == "web"
+    assert store.active_profile == "dont_scream"
 
 
 def test_a_guarda_so_vale_para_o_jogo_do_perfil_corrente(
@@ -533,7 +541,7 @@ def test_a_recusa_loga_uma_vez_por_episodio(perfis_isolados: Path) -> None:
         _focar_a_steam(sw, agora, tiques=40)
 
     recusas = [
-        r for r in registros if r["event"] == "autoswitch_recusou_a_janela_da_steam"
+        r for r in registros if r["event"] == "autoswitch_recusou_a_troca_com_o_jogo_vivo"
     ]
     assert len(recusas) == 1, f"{len(recusas)} linhas em 40 tiques"
     assert recusas[0]["candidato"] == "navegacao"
@@ -560,7 +568,7 @@ def test_um_episodio_novo_volta_a_aparecer_no_journal(perfis_isolados: Path) -> 
         _focar_a_steam(sw, agora + 6.0, tiques=6)
 
     recusas = [
-        r for r in registros if r["event"] == "autoswitch_recusou_a_janela_da_steam"
+        r for r in registros if r["event"] == "autoswitch_recusou_a_troca_com_o_jogo_vivo"
     ]
     assert len(recusas) == 2
 

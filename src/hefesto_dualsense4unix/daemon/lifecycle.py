@@ -3649,7 +3649,7 @@ class Daemon:
 
         O pedido chega a 2 Hz (poll do autoswitch); só a MUDANÇA de estado vira
         linha no journal. Mesmo padrão — e mesma razão — do
-        `AutoSwitcher._log_cadeado_uma_vez` e do veto R-21 no `ProfileManager`.
+        `AutoSwitcher._log_freestyle_uma_vez` e do veto R-21 no `ProfileManager`.
         """
         if self._modo_jogo_padrao_log != estado:
             self._modo_jogo_padrao_log = estado
