@@ -2113,6 +2113,34 @@ async def _wait_or_stop(daemon: DaemonProtocol, timeout: float) -> None:
         await asyncio.wait_for(stop_event.wait(), timeout=timeout)
 
 
+#: Quanto o ``shutdown`` espera cada tarefa do daemon antes de seguir sem ela.
+_TETO_DA_TAREFA_S = 5.0
+
+
+async def _esperar_a_tarefa_cair(task: asyncio.Future[Any]) -> None:
+    """Espera a tarefa cancelada terminar, cancelando de novo a cada 0,5 s.
+
+    O-CI-DA-DEV-VOLTA-A-VERDE-01 (28/09/2026): cancelar uma vez e esperar sem
+    teto prendia o ``shutdown`` para sempre quando uma tarefa engolia o
+    cancelamento — o ouvinte do som fazia isso, e o CI ficou seis horas parado.
+    A cura é aqui, e não em cada tarefa, porque cobre toda tarefa que engolir o
+    cancelamento. Depois do teto o ``shutdown`` segue e o diário diz qual ficou.
+    """
+    relogio = asyncio.get_running_loop()
+    prazo = relogio.time() + _TETO_DA_TAREFA_S
+    while not task.done():
+        if relogio.time() >= prazo:
+            nome = getattr(task, "get_name", lambda: repr(task))()
+            logger.warning("shutdown_tarefa_nao_caiu", tarefa=nome)
+            return
+        await asyncio.wait({task}, timeout=0.5)
+        if not task.done():
+            task.cancel()
+    if not task.cancelled():
+        with contextlib.suppress(BaseException):
+            task.exception()
+
+
 async def shutdown(daemon: DaemonProtocol) -> None:
     """Encerra todos os recursos do daemon de forma limpa."""
     logger.info("daemon_shutting_down")
@@ -2255,8 +2283,7 @@ async def shutdown(daemon: DaemonProtocol) -> None:
     for task in daemon._tasks:
         task.cancel()
     for task in daemon._tasks:
-        with contextlib.suppress(asyncio.CancelledError, Exception):
-            await task
+        await _esperar_a_tarefa_cair(task)
     # BUG-DAEMON-NO-DEVICE-FATAL-01: reconnect_task é parte de `_tasks`,
     # já cancelada acima — só zera a referência nomeada.
     daemon._reconnect_task = None

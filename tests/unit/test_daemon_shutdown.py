@@ -148,3 +148,76 @@ async def test_shutdown_eh_idempotente(tmp_path, monkeypatch) -> None:
     assert daemon._executor is None
     assert daemon._tasks == []
     assert daemon._ipc_server is None
+
+
+@pytest.mark.asyncio
+async def test_shutdown_nao_fica_preso_na_tarefa_que_engole_o_cancelamento(
+    tmp_path, monkeypatch
+) -> None:
+    """Uma tarefa que engole o primeiro cancelamento não prende o ``shutdown``.
+
+    O-CI-DA-DEV-VOLTA-A-VERDE-01 (28/09/2026): o ouvinte do som engolia o
+    cancelamento de fora, e o ``shutdown`` que cancelava uma vez e esperava sem
+    teto prendeu o CI por seis horas.
+
+    MORDIDA: volte o laço do ``shutdown`` a um ``cancel()`` e um ``await task``
+    — o ``wait_for`` de 5 s estoura.
+    """
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    daemon = _mk_daemon(ipc_enabled=False)
+    cancelamentos: list[int] = []
+
+    async def _engole_o_primeiro() -> None:
+        while True:
+            try:
+                await asyncio.sleep(3600)
+            except asyncio.CancelledError:
+                cancelamentos.append(1)
+                if len(cancelamentos) >= 2:
+                    raise
+
+    tarefa = asyncio.create_task(_engole_o_primeiro())
+    await asyncio.sleep(0)
+    daemon._tasks.append(tarefa)
+
+    await asyncio.wait_for(shutdown(daemon), timeout=5.0)
+
+    assert tarefa.done()
+    assert len(cancelamentos) >= 2, "o shutdown não cancelou de novo"
+    assert daemon._tasks == []
+
+
+@pytest.mark.asyncio
+async def test_shutdown_segue_depois_do_teto_da_tarefa_que_nunca_cai(
+    tmp_path, monkeypatch
+) -> None:
+    """A tarefa que engole todo cancelamento fica para trás, e o ``shutdown`` volta.
+
+    MORDIDA: tire o ``return`` do prazo em ``_esperar_a_tarefa_cair`` — o
+    ``wait_for`` estoura.
+    """
+    from hefesto_dualsense4unix.daemon import connection
+
+    monkeypatch.setattr(connection, "_TETO_DA_TAREFA_S", 0.6)
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    daemon = _mk_daemon(ipc_enabled=False)
+    solta = asyncio.Event()
+
+    async def _nunca_cai() -> None:
+        while not solta.is_set():
+            try:
+                await asyncio.sleep(3600)
+            except asyncio.CancelledError:
+                continue
+
+    tarefa = asyncio.create_task(_nunca_cai())
+    await asyncio.sleep(0)
+    daemon._tasks.append(tarefa)
+    try:
+        await asyncio.wait_for(shutdown(daemon), timeout=5.0)
+        assert not tarefa.done()
+        assert daemon._tasks == []
+    finally:
+        solta.set()
+        tarefa.cancel()
+        await asyncio.wait({tarefa}, timeout=1.0)
