@@ -362,6 +362,11 @@ def _guardados(texto: str) -> list[tuple[int, int]]:
 
 def mascarar(texto: str, conhecidos: Iterable[str] = ()) -> str:
     """O texto com toda identidade de aparelho na máscara da casa."""
+    if isinstance(conhecidos, str):
+        # Um endereço solto é UM conhecido. Iterado, ele viraria letras soltas,
+        # nenhuma delas endereço, e a camada calaria sem aviso: o tipo aceita
+        # ``str`` como ``Iterable[str]``, e nada reprovaria o chamador.
+        conhecidos = (conhecidos,)
     chave = _chave(conhecidos)
     if chave:
         texto = _pelos_conhecidos(texto, _o_que_se_conhece(chave))

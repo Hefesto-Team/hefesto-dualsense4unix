@@ -221,6 +221,12 @@ def test_o_conhecido_colado_dentro_de_uma_corrida_hex_maior() -> None:
     assert saida == "bruto=3109" + "".join(reversed(MASCARADO)) + "0825"
 
 
+def test_o_conhecido_solto_vale_como_um() -> None:
+    """``str`` é ``Iterable[str]``: iterado, o endereço solto viraria letras e a camada calaria."""
+    linha, esperada = _formas()["5 a invertida com espaço"]
+    assert dono.mascarar(linha, conhecidos=ENDERECO) == esperada
+
+
 def test_conhecido_que_nao_e_endereco_nem_serial_e_ignorado() -> None:
     linha, _esperada = _formas()["5 a invertida com espaço"]
     lixo = cast(list[str], [None, 42, "", "dev:0005:054C:0CE6.0003", "path:/dev/hidraw3"])
