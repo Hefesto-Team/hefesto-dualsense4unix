@@ -40,6 +40,9 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import pacotes
+# O PILOTO REGISTRA UM GESTO SÓ AO SER IMPORTADO (`*·escolher-na-fita`). Sem
+# esta linha o registro depende da ordem dos arquivos no lote.
+from hefesto_dualsense4unix.interface import hefesto_vivo  # noqa: F401
 from tests.unit import test_todo_gesto_que_grava_esta_protegido as protegido
 
 Chave = tuple[str, str]
@@ -84,6 +87,9 @@ ATOS: dict[Chave, str] = {
     ("*", "exportar"):
         "ato: copia o arquivo do perfil para FORA, onde ela escolhe; nenhum "
         "perfil nem aparelho dela muda",
+    ("*", "escolher-na-fita"):
+        "tela: o chip do «Selecionar:» só escolhe qual controle a aba mira "
+        "(`hefesto_vivo.ESCOLHA_DA_FITA`); nada de perfil, nada de daemon",
     ("01-jogar.html", "reconectar"):
         "ato: os jogadores voltam e a numeração se ajeita (`coop.sync`); o que "
         "sobra é o estado da mesa, não um campo de perfil",
