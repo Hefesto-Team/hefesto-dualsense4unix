@@ -1133,20 +1133,38 @@ if sudo -n true 2>/dev/null; then
     if [[ "${#_hcis[@]}" -eq 0 ]] && command -v hciconfig >/dev/null 2>&1; then
         mapfile -t _hcis < <(hciconfig 2>/dev/null | awk -F: '/^hci/{print $1}' || true)
     fi
-    # Os nomes de lugar que o Hefesto projeta no Alias, lidos do `maquina.json`
-    # desta casa pelo `python3` isolado — a mesma leitura do `bt_active_mode.sh`.
+    # Os nomes que o Hefesto projeta ou projetou no Alias, lidos do
+    # `maquina.json` desta casa pelo `python3` isolado. São QUATRO lugares, e
+    # ler só um deixava o nome dela no rádio (A-ENTRADA-TEM-UM-REGISTRO-SO-01,
+    # 28/09/2026 — até ali só se lia o `lugares`):
+    #   - `adaptadores[<endereço>].nome` — o que o `bt_active_mode.sh` projeta
+    #     desde 26/09 (D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO);
+    #   - `mapa.portas[N].nome` — o nome da entrada, que na D3 o adaptador
+    #     plugado nela herdava, e que a migração trouxe do `lugares`;
+    #   - `lugares[<lugar>].nome` — o arquivo que ainda não migrou;
+    #   - o `lugares` da cópia de antes da migração
+    #     (`maquina.json.com-os-lugares`): os nomes que o adaptador herdava da
+    #     porta e que a migração tirou do arquivo (o «Centro» da D3).
     _nomes_do_hefesto=()
     _maquina_json="${XDG_CONFIG_HOME:-${HOME}/.config}/hefesto-dualsense4unix/maquina.json"
     if [[ -f "${_maquina_json}" ]] && command -v python3 >/dev/null 2>&1; then
         mapfile -t _nomes_do_hefesto < <(python3 -I -c '
 import json, sys
-try:
-    with open(sys.argv[1], encoding="utf-8") as fh:
-        doc = json.load(fh)
-except (OSError, ValueError):
-    sys.exit(0)
-lugares = doc.get("lugares") if isinstance(doc, dict) else None
-for dele in (lugares.values() if isinstance(lugares, dict) else ()):
+def ler(caminho):
+    try:
+        with open(caminho, encoding="utf-8") as fh:
+            doc = json.load(fh)
+    except (OSError, ValueError):
+        return {}
+    return doc if isinstance(doc, dict) else {}
+def de(registro):
+    return list(registro.values()) if isinstance(registro, dict) else []
+doc = ler(sys.argv[1])
+copia = ler(sys.argv[1] + ".com-os-lugares")
+mapa = doc.get("mapa") if isinstance(doc.get("mapa"), dict) else {}
+registros = de(doc.get("adaptadores")) + de(mapa.get("portas"))
+registros += de(doc.get("lugares")) + de(copia.get("lugares"))
+for dele in registros:
     nome = dele.get("nome") if isinstance(dele, dict) else None
     if isinstance(nome, str) and nome.strip() and "\n" not in nome:
         print(nome.strip())

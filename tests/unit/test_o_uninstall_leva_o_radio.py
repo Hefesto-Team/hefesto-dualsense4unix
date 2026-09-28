@@ -30,6 +30,7 @@ import shutil
 import stat
 import subprocess
 from pathlib import Path
+from typing import Any
 
 from tests.unit.busctl_de_verdade import escrever_impressor
 
@@ -82,7 +83,17 @@ exec python3 '{impressor}' "$(cat "$f")" "$@"
     )
 
 
-def _mesa(tmp_path: Path, adaptadores: dict[str, tuple[str, str]], lugares: list[str]):
+def _mesa(
+    tmp_path: Path,
+    adaptadores: dict[str, tuple[str, str]],
+    lugares: list[str],
+    *,
+    documento: dict[str, Any] | None = None,
+    copia: dict[str, Any] | None = None,
+):
+    """A mesa de mentira. ``documento`` é o ``maquina.json`` inteiro (sem ele,
+    o de antes de 28/09, com os nomes em ``lugares``); ``copia``, a
+    ``maquina.json.com-os-lugares`` que a migração deixa ao lado."""
     fakes = tmp_path / "fakes"
     sysfs = tmp_path / "sysfs"
     props = tmp_path / "props"
@@ -95,18 +106,16 @@ def _mesa(tmp_path: Path, adaptadores: dict[str, tuple[str, str]], lugares: list
         (props / f"{hci}.Name").write_text(nome, encoding="utf-8")
     config = casa / ".config" / "hefesto-dualsense4unix"
     config.mkdir(parents=True)
-    (config / "maquina.json").write_text(
-        json.dumps(
-            {
-                "version": 1,
-                "lugares": {
-                    f"pci-0000:00:14.0-usb-0:{i}:1.0": {"nome": n}
-                    for i, n in enumerate(lugares)
-                },
-            }
-        ),
-        encoding="utf-8",
-    )
+    if documento is None:
+        documento = {
+            "version": 1,
+            "lugares": {
+                f"pci-0000:00:14.0-usb-0:{i}:1.0": {"nome": n} for i, n in enumerate(lugares)
+            },
+        }
+    (config / "maquina.json").write_text(json.dumps(documento), encoding="utf-8")
+    if copia is not None:
+        (config / "maquina.json.com-os-lugares").write_text(json.dumps(copia), encoding="utf-8")
     _fake(fakes, "sudo", 'printf "SUDO:%s\\n" "$(printf "[%s]" "$@")"\nexit 0\n')
     _busctl_como_o_de_verdade(fakes / "busctl", props)
     # Sem `hciconfig`: a metade da link policy não é o que esta régua mede.
@@ -161,6 +170,43 @@ def test_o_nome_do_lugar_volta_ao_padrao_em_todo_adaptador(tmp_path: Path) -> No
     )
     assert "hci4" not in escritas, "um nome de terceiro, sem o prefixo, não é tocado"
     assert "devolvido ao padrão do sistema" in r.stdout
+
+
+def test_os_nomes_do_arquivo_migrado_voltam_ao_padrao(tmp_path: Path) -> None:
+    """Depois da migração (A-ENTRADA-TEM-UM-REGISTRO-SO-01, 28/09/2026) o
+    ``maquina.json`` não tem mais ``lugares``: o nome do adaptador mora em
+    ``adaptadores`` (é o que o ``bt_active_mode.sh`` projeta desde 26/09), o da
+    entrada em ``mapa.portas``, e o nome que o adaptador herdava da porta (a
+    D3) só na cópia de antes. O uninstall lia só o ``lugares``, e depois da
+    migração deixaria os três no rádio.
+
+    MORDIDA: volte a ler só o ``lugares`` do arquivo — os três nomes ficam no
+    rádio e esta régua reprova.
+    """
+    migrado = {
+        "version": 1,
+        "adaptadores": {"aabbcc000011": {"nome": "Meio", "ordem": 0}},
+        "mapa": {"portas": {"1": {"lugar": "pci-0000:00:14.0-usb-0:1", "nome": "Sofá"}}},
+    }
+    antes = {"version": 1, "lugares": {"pci-0000:00:14.0-usb-0:4.1.1": {"nome": "Centro"}}}
+    r = _mesa(
+        tmp_path,
+        {
+            "hci0": ("Nintendo Meio", "meu-pc"),
+            "hci1": ("Sofá", "meu-pc"),
+            "hci2": ("Centro", "meu-pc"),
+            "hci3": ("Outro Nome", "meu-pc"),
+        },
+        [],
+        documento=migrado,
+        copia=antes,
+    )
+    assert r.returncode == 0, r.stderr
+    escritas = _escritas(r.stdout)
+    assert escritas.get("hci0") == "", "o nome do adaptador (adaptadores) ficou:\n" + r.stdout
+    assert escritas.get("hci1") == "", "o nome da entrada (mapa.portas) ficou:\n" + r.stdout
+    assert escritas.get("hci2") == "", "o nome da D3 (a cópia de antes) ficou:\n" + r.stdout
+    assert "hci3" not in escritas, "um nome de terceiro, sem o prefixo, não é tocado"
 
 
 def test_o_nome_de_fabrica_do_bluez_com_numero_volta_ao_padrao(tmp_path: Path) -> None:
