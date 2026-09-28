@@ -130,12 +130,27 @@ CAMPOS_DA_VOLTA: tuple[str, ...] = (
     "gamepad_emulation.caminho",
     "gamepad_emulation.por_aparelho",
     "controllers[].lightbar_rgb",
+    "controllers[].lightbar_disputada",
     "controllers[].brilho_da_barra",
     "controllers[].speaker.rota",
     "controllers[].speaker.volume",
     "controllers[].audio.canal_ativo",
     "controllers[].audio.mic_mudo",
     "controllers[].camada_da_usuaria",
+    "mic_da_mesa.eleito",
+)
+#: A volta que o sha256 da config do Hefesto não vê (C12 da contraprova, e o
+#: ``03-roteiro/volta.sh`` da noite de 27/09): a fonte e a saída padrão do
+#: sistema, o wrapper e o Proton de cada jogo da Steam, e o ``GamesConfig`` do
+#: Heroic. A Steam apaga o wrapper sozinha, o vigia do Hefesto reescreve o
+#: ``localconfig.vdf``, e o daemon elege a fonte a cada boot: se algo disso
+#: mudar no meio da medida, o fecho tem de ver.
+VOLTA_FORA_DA_CONFIG: tuple[str, ...] = (
+    "som.saida_padrao",
+    "som.fonte_padrao",
+    "steam.wrapper.*",
+    "steam.proton.*",
+    "heroic.GamesConfig/*.json",
 )
 
 ORDEM: tuple[str, ...] = (
@@ -614,6 +629,7 @@ def campos_da_volta(estado: Mapping[str, Any]) -> dict[str, Any]:
     for c in controles_na_mesa(estado):
         p = f"P{c['player']}"
         fora[f"{p}.lightbar_rgb"] = c.get("lightbar_rgb")
+        fora[f"{p}.lightbar_disputada"] = c.get("lightbar_disputada")
         fora[f"{p}.brilho_da_barra"] = c.get("brilho_da_barra")
         fora[f"{p}.speaker.rota"] = _dict(c.get("speaker")).get("rota")
         fora[f"{p}.speaker.volume"] = _dict(c.get("speaker")).get("volume")
@@ -621,6 +637,9 @@ def campos_da_volta(estado: Mapping[str, Any]) -> dict[str, Any]:
         fora[f"{p}.audio.mic_mudo"] = _dict(c.get("audio")).get("mic_mudo")
         if "camada_da_usuaria" in c:
             fora[f"{p}.camada_da_usuaria"] = c.get("camada_da_usuaria")
+    eleito = _dict(estado.get("mic_da_mesa")).get("eleito")
+    if eleito is not None:
+        fora["mic_da_mesa.eleito"] = eleito
     return fora
 
 
@@ -837,6 +856,53 @@ class Maquina:
             processo.kill()
             saida, _ = processo.communicate()
         return saida or ""
+
+    def steam_no_disco(self) -> dict[str, Any]:
+        """O wrapper e o Proton de cada jogo, pelos relatórios SÓ DE LEITURA do produto (C12).
+
+        O censo do wrapper (``sentinela_do_wrapper --censo``, sem anotar) e o
+        relatório do pino (``proton_pin --report``). O sha do
+        ``localconfig.vdf`` não serve: a Steam o regrava a cada sessão (o tempo
+        de jogo). Sem a Steam instalada, os dois somem das duas pontas e nada
+        difere.
+        """
+        ambiente = {"PYTHONPATH": str(_SRC)} if (_SRC / "hefesto_dualsense4unix").is_dir() else {}
+        fora: dict[str, Any] = {}
+        rc, texto = self.rodar(
+            [sys.executable, "-m", "hefesto_dualsense4unix.integrations.sentinela_do_wrapper",
+             "--censo"], 60.0, ambiente,
+        )
+        censo = _json_do_ensaio(texto) if rc == 0 else None
+        if isinstance(censo, Mapping):
+            fora["steam.wrapper.com"] = sorted(str(x) for x in censo.get("com_wrapper") or [])
+            fora["steam.wrapper.faltantes"] = sorted(
+                str(_dict(j).get("appid")) for j in censo.get("faltantes") or []
+            )
+            fora["steam.wrapper.recusados"] = sorted(str(x) for x in censo.get("recusados") or [])
+        rc, texto = self.rodar(
+            [sys.executable, "-m", "hefesto_dualsense4unix.integrations.proton_pin", "--report"],
+            60.0, ambiente,
+        )
+        relatorio = _json_do_ensaio(texto) if rc == 0 else None
+        if isinstance(relatorio, Mapping):
+            fora["steam.proton.global"] = relatorio.get("global_tool")
+            fora["steam.proton.por_jogo"] = json.dumps(relatorio.get("mapping"), sort_keys=True, default=str)
+        return fora
+
+    def games_config_do_heroic(self) -> dict[str, str]:
+        """``{arquivo: sha256}`` do ``GamesConfig`` do Heroic, nativo e Flatpak (só se existir)."""
+        fora: dict[str, str] = {}
+        casa = Path.home()
+        for rotulo, base in (
+            ("nativo", casa / ".config/heroic/GamesConfig"),
+            ("flatpak", casa / ".var/app/com.heroicgameslauncher.hgl/config/heroic/GamesConfig"),
+        ):
+            with contextlib.suppress(OSError):
+                for arquivo in sorted(base.glob("*.json")):
+                    fora[f"heroic.{rotulo}.GamesConfig/{arquivo.name}"] = hashlib.sha256(
+                        arquivo.read_bytes()
+                    ).hexdigest()
+        return fora
 
     def regra_do_input_remapper(self) -> bool:
         return Path("/usr/lib/udev/rules.d/60-input-remapper-daemon.rules").exists()
@@ -1102,9 +1168,12 @@ class Sessao:
         return achados
 
     def campos_da_volta_agora(self, estado: Mapping[str, Any]) -> dict[str, Any]:
+        """Os :data:`CAMPOS_DA_VOLTA` do estado e a :data:`VOLTA_FORA_DA_CONFIG`."""
         fora = campos_da_volta(estado)
         fora["som.saida_padrao"] = (self.maquina.pactl("get-default-sink") or "").strip() or None
         fora["som.fonte_padrao"] = (self.maquina.pactl("get-default-source") or "").strip() or None
+        fora.update(self.maquina.steam_no_disco())
+        fora.update(self.maquina.games_config_do_heroic())
         return fora
 
     # -- o fecho: a relistagem e a volta ----------------------------------------

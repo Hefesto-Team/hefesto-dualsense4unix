@@ -121,6 +121,7 @@ def fazer_maquina(ob: ModuleType, estado: dict[str, Any], config: Path, **extra:
             self.processos_de_mentira: dict[int, tuple[int, str]] = dict(extra.get("processos", {}))
             self.jogo: list[int] = list(extra.get("jogo", ()))
             self.ao_rodar: Callable[[Sequence[str], Any], None] | None = extra.get("ao_rodar")
+            self.steam: dict[str, Any] = dict(extra.get("steam", {}))
             self.chamados: list[tuple[str, Any]] = []
             self.rodados: list[list[str]] = []
             self.relogio = 1_790_000_000.0
@@ -198,6 +199,12 @@ def fazer_maquina(ob: ModuleType, estado: dict[str, Any], config: Path, **extra:
 
         def regra_do_input_remapper(self) -> bool:
             return False
+
+        def steam_no_disco(self) -> dict[str, Any]:
+            return dict(self.steam)
+
+        def games_config_do_heroic(self) -> dict[str, str]:
+            return {}
 
         def leitor_dos_fisicos(self) -> Any:
             raise AssertionError("a régua não abre o hidraw de ninguém")
@@ -1195,3 +1202,30 @@ def test_o_reinicio_assenta_quando_a_mesa_do_comeco_volta_em_todo_modo(
     recusas = resumo(saida)["recusas"]
     assert not any("assentou" in r for r in recusas), recusas
     assert ["systemctl", "--user", "restart", "hefesto-dualsense4unix"] in maquina.rodados
+
+
+def _a_steam_apaga_o_wrapper(argv: Sequence[str], maquina: Any) -> None:
+    if len(argv) > 1 and Path(argv[1]).name == "quem_e_quem.py":
+        maquina.steam["steam.wrapper.com"] = ["1599660"]
+        maquina.steam["steam.wrapper.faltantes"] = ["3357650"]
+
+
+def test_a_volta_ve_o_wrapper_que_a_steam_apagou_no_meio(ob: ModuleType, tmp_path: Path) -> None:
+    """C12: o sha256 da config do Hefesto não vê a Steam apagar o wrapper de um jogo.
+
+    A lista da volta da noite de 27/09 (``03-roteiro/volta.sh``) leva o wrapper
+    e o Proton de cada jogo, a fonte e a saída padrão, e o ``GamesConfig`` do
+    Heroic. Mordida: tirar o ``steam_no_disco`` da volta — o jogo que perdeu o
+    wrapper passa calado.
+    """
+    estado = estado_da_mesa()
+    maquina = fazer_maquina(
+        ob, estado, tmp_path / "config", dispositivos=pads_uhid(4),
+        ensaios={"quem_e_quem.py": quem_e_quem_json(ob, estado)},
+        steam={"steam.wrapper.com": ["1599660", "3357650"], "steam.wrapper.faltantes": []},
+        ao_rodar=_a_steam_apaga_o_wrapper,
+    )
+    saida = tmp_path / "saida"
+    assert ob.executar(["--saida", str(saida), "retrato"], maquina) == ob.RC_RECUSADO
+    recusas = resumo(saida)["recusas"]
+    assert any("steam.wrapper.faltantes" in r for r in recusas), recusas
