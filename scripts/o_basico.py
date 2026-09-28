@@ -574,7 +574,9 @@ def mesa_de(estado: Mapping[str, Any], dispositivos: str) -> dict[str, Any]:
         if c.get("uniq")
     }
     per_vpad = _lista(_dict(estado.get("rumble_ff")).get("per_vpad"))
-    pads = sorted([p.get("player"), p.get("backend")] for p in per_vpad)
+    # Em texto: o `player` ou o `backend` podem vir None (um pad no meio da
+    # recriação), e ordenar None contra int derrubava a sessão na abertura.
+    pads = sorted([str(p.get("player")), str(p.get("backend"))] for p in per_vpad)
     no_kernel = sorted(p.backend for p in pads_do_produto(dispositivos))
     return {"controles": controles, "pads": pads, "pads_no_kernel": no_kernel}
 
@@ -1016,6 +1018,7 @@ class Sessao:
         self.volta_antes: dict[str, Any] = {}
         self.bancada_reservada = False
         self.reiniciar_o_daemon_no_fim = False
+        self.corridas: dict[str, int] = {}
 
     # -- o mascarador: UM, na saída de tudo ------------------------------------
 
@@ -1180,7 +1183,11 @@ class Sessao:
             )
         rc, texto = self.maquina.rodar([sys.executable, str(ENSAIOS / nome), *args], teto_s, ambiente)
         base = nome.removesuffix(".py")
-        self.gravar(f"ensaios/{base}.txt", f"$ {nome} {' '.join(args)}\nrc={rc}\n{texto}")
+        # O mesmo ensaio roda mais de uma vez numa sessão (o quem_e_quem antes e
+        # depois da troca de modo): cada corrida guarda o próprio arquivo.
+        self.corridas[base] = self.corridas.get(base, 0) + 1
+        rel = f"ensaios/{base}.txt" if self.corridas[base] == 1 else f"ensaios/{base}-{self.corridas[base]}.txt"
+        self.gravar(rel, f"$ {nome} {' '.join(args)}\nrc={rc}\n{texto}")
         return rc, texto
 
     # -- a bancada ------------------------------------------------------------------

@@ -1095,3 +1095,20 @@ def test_sem_saida_a_copia_crua_nao_mora_na_pasta_de_saida(ob: ModuleType, tmp_p
     copias = [p for p in ob.pasta_das_copias().rglob("freestyle.json") if p.is_file()]
     assert len(copias) == 1 and copias[0].read_bytes() == perfil.read_bytes()
     assert not copias[0].resolve().is_relative_to(saida_padrao.resolve())
+
+
+def test_um_pad_sem_jogador_no_meio_da_recriacao_nao_derruba_a_abertura(
+    ob: ModuleType, tmp_path: Path
+) -> None:
+    """``per_vpad`` com ``player`` None (um pad no meio da recriação): ordenar None contra int caía.
+
+    Mordida: voltar a ordenar a lista crua — a sessão não abre (TypeError).
+    """
+    estado = estado_da_mesa()
+    estado["rumble_ff"]["per_vpad"].append({"player": None, "backend": None})
+    maquina = fazer_maquina(ob, estado, tmp_path / "config", dispositivos=pads_uhid(4),
+                            ensaios={"quem_e_quem.py": quem_e_quem_json(ob, estado)})
+    saida = tmp_path / "saida"
+    ob.executar(["--saida", str(saida), "retrato"], maquina)
+    assert not any("não abriu" in r for r in resumo(saida)["recusas"])
+    assert da_linha(saida, "o LED contra o jogador")
