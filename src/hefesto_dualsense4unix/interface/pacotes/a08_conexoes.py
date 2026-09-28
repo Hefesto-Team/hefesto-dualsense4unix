@@ -6017,34 +6017,69 @@ def _o_aberto(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]],
         (str(lug["id"]) for lug in lugares if str(lug["id"]) == lampada), None)
 
 
-def _chave_da_ordem(lug: dict[str, Any]) -> str:
-    """A chave do adaptador na ordem gravada: o LUGAR (a porta, D3), que é o que
-    o nome dela segue; o adaptador sem porta (o da placa-mãe), pelo endereço."""
-    return str(lug.get("lugar") or lug.get("id") or "")
+def _chave_da_ordem(endereco: object) -> str:
+    """A chave do adaptador na ordem gravada: o ENDEREÇO, a chave dele em
+    ``adaptadores`` no ``maquina.json`` — o mesmo dono do nome dele.
+
+    Até 28/09/2026 era o LUGAR (a porta, a D3), e a ordem ficava para trás
+    quando o adaptador mudava de porta (A-ENTRADA-TEM-UM-REGISTRO-SO-01).
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.utils.maquina import chave_do_adaptador
+
+    return chave_do_adaptador(endereco) or ""
 
 
 def _na_ordem_dela(lugares: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Os adaptadores na ORDEM QUE ELA ARRASTOU — decisão dela, 25/09/2026:
     *«segurar a área do conector e arrastar ela pra mudar de ordem entre
-    eles»*, e a ordem fica gravada (``gui_prefs``, o dono do que ela arrasta
-    na janela). Quem ela nunca arrastou vem depois, na ordem de sempre.
-    <!-- noqa-acento: citação literal dela -->
+    eles»*, e a ordem fica gravada no adaptador, pelo endereço
+    (``utils/maquina.AdaptadorDeclarado.ordem``). Quem ela nunca arrastou vem
+    depois, na ordem de sempre. <!-- noqa-acento: citação literal dela -->
+
+    A ordem que ela arrastou antes de 28/09/2026 morava no ``gui_prefs``, pela
+    chave do lugar; ela vale, traduzida pelos adaptadores da tela, até ela
+    arrastar de novo (:func:`_a_ordem_de_antes`).
     """
-    ordem = _ordem_gravada()
+    try:
+        ordem = [_chave_da_ordem(chave) for chave in _ordem_gravada()]
+        ordem = [chave for chave in ordem if chave] or _a_ordem_de_antes(lugares)
+    except Exception:  # a ordem nunca derruba a sala: sem ela, a de sempre
+        ordem = []
     if not ordem:
         return lugares
     posicao = {chave: i for i, chave in enumerate(ordem)}
-    return sorted(lugares, key=lambda lug: posicao.get(_chave_da_ordem(lug), len(posicao)))
+    return sorted(
+        lugares, key=lambda lug: posicao.get(_chave_da_ordem(lug.get("id")), len(posicao)))
 
 
 def _ordem_gravada() -> list[str]:
-    try:
-        perfil._com_o_src()
-        from hefesto_dualsense4unix.app.gui_prefs import ordem_dos_adaptadores
+    """A ordem do dono, lida NA HORA: o arrastar reordena a sala no tique
+    seguinte, sem esperar a leitura de fundo do ``maquina.json``."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.utils.maquina import carregar_maquina, ordem_dos_adaptadores
 
-        return list(ordem_dos_adaptadores())
-    except Exception:
+    return ordem_dos_adaptadores(carregar_maquina())
+
+
+def _a_ordem_de_antes(lugares: list[dict[str, Any]]) -> list[str]:
+    """A lista do ``gui_prefs`` de antes de 28/09/2026 — pelo LUGAR de cada
+    adaptador (ou pelo endereço do que não tem porta) —, traduzida para o
+    endereço de quem está na tela. Só leitura: quem a leva ao dono é o
+    arrastar (:func:`adaptador_reordenar`)."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.gui_prefs import a_ordem_dos_adaptadores_de_antes
+
+    de_antes = a_ordem_dos_adaptadores_de_antes()
+    if not de_antes:
         return []
+    por_chave: dict[str, str] = {}
+    for lug in lugares:
+        chave = _chave_da_ordem(lug.get("id"))
+        for antiga in (str(lug.get("lugar") or ""), str(lug.get("id") or "")):
+            if antiga and chave:
+                por_chave.setdefault(antiga, chave)
+    return list(dict.fromkeys(por_chave[c] for c in de_antes if c in por_chave))
 
 
 def _o_mais_cheio(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]]) -> str | None:
@@ -6509,19 +6544,24 @@ def adaptador_reordenar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     Decisão dela, 25/09/2026: *«segurar a área do conector e arrastar ela pra
     mudar de ordem entre eles»*. O roteiro da página solta a caixa no lugar e
     manda a ordem NOVA, de cima para baixo, pelos ``data-id`` das caixas (o
-    endereço de cada adaptador); aqui ela vira a chave de cada um — o lugar,
-    que é o que o nome dela segue — e vai para o ``gui_prefs``, o dono do que
-    ela arrasta na janela. Um id que não está na tela recusa: a ordem nunca
-    inventa um adaptador. <!-- noqa-acento: citação literal dela -->
+    endereço de cada adaptador), e ela vai para o adaptador, pelo endereço —
+    o mesmo dono do nome dele (``utils/maquina.guardar_ordem_dos_adaptadores``,
+    desde 28/09/2026; antes ia para o ``gui_prefs``, pelo lugar, e a lista de
+    lá sai aqui). Um id que não está na tela recusa: a ordem nunca inventa um
+    adaptador. <!-- noqa-acento: citação literal dela -->
     """
     ids = str(o.get("valor") or "").split()
     na_tela = {str(lug["id"]): lug for lug in _CENA_NA_TELA.get("lugares") or ()}
     if not ids or any(i not in na_tela for i in ids):
         raise ValueError(f"a ordem não disse os adaptadores da tela ({ids!r})")
     perfil._com_o_src()
-    from hefesto_dualsense4unix.app.gui_prefs import guardar_ordem_dos_adaptadores
+    from hefesto_dualsense4unix.app.gui_prefs import esquecer_a_ordem_dos_adaptadores_de_antes
+    from hefesto_dualsense4unix.utils.maquina import guardar_ordem_dos_adaptadores
 
-    guardar_ordem_dos_adaptadores([_chave_da_ordem(na_tela[i]) for i in ids])
+    if not guardar_ordem_dos_adaptadores(ids):
+        raise RuntimeError("a ordem das caixas não foi gravada")
+    esquecer_a_ordem_dos_adaptadores_de_antes()
+    _esquecer("maquina")
     _CENA_NA_TELA["lugares"] = [na_tela[i] for i in ids] + [
         lug for i, lug in na_tela.items() if i not in ids]
 

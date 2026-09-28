@@ -456,8 +456,11 @@ def _montar(a08: Any, monkeypatch: pytest.MonkeyPatch, *, adaptadores: int = 3,
         for i in range(adaptadores))
     monkeypatch.setattr(a08, "_FUNDO", {})  # a leitura de antes não vale para a mesa nova
     monkeypatch.setattr(a08, "_ler_o_bluez", lambda: (lidos, aparelhos))
-    maquina = MaquinaConfig(lugares={LUGARES_DA_TELA[i]: {"nome": NOMES_DA_TELA[i]}
-                                     for i in range(adaptadores)})
+    # O nome de cada adaptador é dele, pelo endereço (D-2609-O-ADAPTADOR-TEM-
+    # NOME-PROPRIO); até 28/09/2026 esta mesa o punha em `lugares`, pela porta.
+    maquina = MaquinaConfig(adaptadores={_id(ADAPTADORES_DA_TELA[i]).lower():
+                                         {"nome": NOMES_DA_TELA[i]}
+                                         for i in range(adaptadores)})
     monkeypatch.setattr(a08, "_ler_a_maquina", lambda: (maquina, {3: PCI}))
 
 
@@ -798,13 +801,14 @@ def test_com_um_adaptador_so_a_caixa_nasce_e_fica_aberta(
 
 def test_a_ordem_que_ela_arrasta_fica_gravada(a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """*«segurar a área do conector e arrastar ela pra mudar de ordem entre
-    eles»*: o gesto grava a ordem pela chave do LUGAR, e a sala nasce nela.
-    <!-- noqa-acento: citação literal dela -->
+    eles»*: o gesto grava a ordem no adaptador, pelo ENDEREÇO (o dono do nome
+    dele, desde 28/09/2026 — antes era o ``gui_prefs``, pelo lugar), e a sala
+    nasce nela. <!-- noqa-acento: citação literal dela -->
 
     MORDIDA: tire o ``_na_ordem_dela`` do ``cena_do_radio`` — a sala volta à
     ordem do BlueZ e esta régua reprova.
     """
-    from hefesto_dualsense4unix.app import gui_prefs
+    from hefesto_dualsense4unix.utils.maquina import carregar_maquina, ordem_dos_adaptadores
 
     _montar(a08, monkeypatch)
     cena = _cena(a08, _estado({VERMELHO: 0}))
@@ -814,13 +818,41 @@ def test_a_ordem_que_ela_arrasta_fica_gravada(a08: Any, monkeypatch: pytest.Monk
     nova = [ids[2], ids[0], ids[1]]
     a08.adaptador_reordenar(None, {"valor": " ".join(nova)}, None)
 
-    assert gui_prefs.ordem_dos_adaptadores() == [LUGARES_DA_TELA[2], LUGARES_DA_TELA[0],
-                                                 LUGARES_DA_TELA[1]]
+    assert ordem_dos_adaptadores(carregar_maquina()) == [
+        _id(ADAPTADORES_DA_TELA[i]).lower() for i in (2, 0, 1)]
     depois = _cena(a08, _estado({VERMELHO: 0}))
     assert [lug["id"] for lug in depois["lugares"]] == nova
     # A ordem que não diz os adaptadores da tela recusa.
     with pytest.raises(ValueError):
         a08.adaptador_reordenar(None, {"valor": "AABBCC0000FF"}, None)
+
+
+def test_a_ordem_de_antes_vale_ate_ela_arrastar_de_novo(
+    a08: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A ordem que ela arrastou antes de 28/09/2026 morava no ``gui_prefs``,
+    pela chave do LUGAR (A-ENTRADA-TEM-UM-REGISTRO-SO-01). Ela vale, traduzida
+    pelos adaptadores da tela, sem ninguém escrever na leitura; o arrastar
+    seguinte a leva ao adaptador, pelo endereço, e a lista de lá sai.
+
+    MORDIDA: tire o ``_a_ordem_de_antes`` do ``_na_ordem_dela`` — a sala nasce
+    na ordem do BlueZ, e a arrumação dela se perde na atualização.
+    """
+    from hefesto_dualsense4unix.app import gui_prefs
+    from hefesto_dualsense4unix.utils.maquina import carregar_maquina, ordem_dos_adaptadores
+
+    gui_prefs.set_pref("adaptadores", [LUGARES_DA_TELA[1], LUGARES_DA_TELA[2]])
+    _montar(a08, monkeypatch)
+    cena = _cena(a08, _estado({VERMELHO: 0}))
+    assert [lug["id"] for lug in cena["lugares"]] == [
+        _id(ADAPTADORES_DA_TELA[i]) for i in (1, 2, 0)]
+    assert ordem_dos_adaptadores(carregar_maquina()) == [], "a leitura escreveu"
+
+    nova = [_id(ADAPTADORES_DA_TELA[i]) for i in (0, 1, 2)]
+    a08.adaptador_reordenar(None, {"valor": " ".join(nova)}, None)
+    assert ordem_dos_adaptadores(carregar_maquina()) == [n.lower() for n in nova]
+    assert gui_prefs.a_ordem_dos_adaptadores_de_antes() == [], "a lista de antes ficou"
+    assert "adaptadores" not in gui_prefs.load_gui_prefs()
 
 
 def test_a_caixa_unica_nao_tem_seta_e_as_varias_se_arrastam(

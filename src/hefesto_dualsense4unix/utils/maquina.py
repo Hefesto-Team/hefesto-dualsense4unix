@@ -77,7 +77,7 @@ import os
 import re
 import tempfile
 import threading
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any, Literal, NamedTuple
 
@@ -686,6 +686,11 @@ class MapaDaMesa(BaseModel):
         return self
 
 
+#: Quantos adaptadores a ordem que ela arrasta alcança — um teto de sanidade,
+#: muito acima de qualquer mesa (a dela tem três).
+_TETO_DA_ORDEM_DOS_ADAPTADORES = 63
+
+
 class AdaptadorDeclarado(BaseModel):
     """Um adaptador Bluetooth pelo ENDEREÇO: o nome que ela deu a ele.
 
@@ -701,11 +706,21 @@ class AdaptadorDeclarado(BaseModel):
     (28/09/2026): os nomes que o adaptador herdava da porta (a D3) ainda
     moravam em ``lugares`` («Centro», «Esquerda», «Direita», contra o «Meio»
     daqui), e saíram na migração (:func:`migrar_o_documento`).
+
+    E A ORDEM DA CAIXA DELE também mora aqui desde então: a posição em que
+    ela o arrastou na Conexões (25/09/2026, *«segurar a área do conector e
+    arrastar ela pra mudar de ordem entre eles»*). Ela morava no
+    ``gui_preferences.json``, pela chave do LUGAR (a D3): o terceiro registro
+    do mesmo adaptador, e uma chave que mudava quando ele mudava de porta.
+    <!-- noqa-acento: citação literal dela -->
     """
 
     model_config = ConfigDict(extra="forbid")
 
     nome: str | None = None
+    #: A posição da caixa dele, de cima para baixo (0 é a de cima); ``None`` =
+    #: ela nunca o arrastou, e ele vem depois dos que ela arrastou.
+    ordem: int | None = Field(default=None, ge=0, le=_TETO_DA_ORDEM_DOS_ADAPTADORES)
 
 
 class ControleDeclarado(BaseModel):
@@ -1599,6 +1614,51 @@ def nome_dado_ao_adaptador(maquina: MaquinaConfig | None, endereco: object) -> s
         return ""
     declarado = (maquina.adaptadores or {}).get(chave)
     return str(getattr(declarado, "nome", "") or "")
+
+
+def ordem_dos_adaptadores(maquina: MaquinaConfig | None) -> list[str]:
+    """As chaves dos adaptadores na ordem que ela arrastou, de cima para baixo.
+
+    Vazio = ela nunca arrastou (ou o documento ainda não foi lido). Quem não
+    está na lista vem depois, na ordem de sempre — é a tela quem decide.
+    """
+    if maquina is None:
+        return []
+    postos = [
+        (declarado.ordem, chave)
+        for chave, declarado in (maquina.adaptadores or {}).items()
+        if declarado.ordem is not None
+    ]
+    return [chave for _ordem, chave in sorted(postos)]
+
+
+def guardar_ordem_dos_adaptadores(enderecos: Sequence[str]) -> list[str]:
+    """Grava a ordem que ela arrastou, pelo ENDEREÇO de cada adaptador.
+
+    Devolve a ordem que ficou (as chaves, sem repetidas), ou ``[]`` quando o
+    disco recusou. Quem não veio na lista nova mas estava na velha (um
+    adaptador fora da máquina agora) fica no fim, na ordem de antes: tirar o
+    dongle não apaga o lugar dele na fila. O nome de cada um fica como estava
+    (a fusão de :func:`gravar_maquina` desce no dicionário).
+    """
+    novas: list[str] = []
+    for endereco in enderecos:
+        chave = chave_do_adaptador(endereco)
+        if chave is not None and chave not in novas:
+            novas.append(chave)
+    for chave in ordem_dos_adaptadores(carregar_maquina()):
+        if chave not in novas:
+            novas.append(chave)
+    novas = novas[: _TETO_DA_ORDEM_DOS_ADAPTADORES + 1]
+    if not novas:
+        return []
+    declaracao = {"adaptadores": {chave: {"ordem": i} for i, chave in enumerate(novas)}}
+    try:
+        gravou = gravar_maquina(declaracao)
+    except (ValueError, OSError) as exc:
+        logger.warning("maquina_ordem_dos_adaptadores_nao_gravou", err=str(exc)[:200])
+        return []
+    return novas if gravou else []
 
 
 def nomes_dos_controles(maquina: MaquinaConfig) -> dict[str, str]:
