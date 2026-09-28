@@ -1842,18 +1842,14 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # `Fluxo` e `abrir_fluxo` ESTATICAMENTE, e por eles a varredura alcança
     # `argv_do_medidor`, `propriedades_do_medidor` e `Histerese`. O caminho que
     # a lápide dizia não existir passou a existir, e foi este portão que avisou.
-    # `e_stream_do_medidor` FICA: quem o chama é a PEÇA A, e só pelo import
-    # dinâmico que o texto abaixo descreve.
-    # fica: o chamador existe, pela luz do microfone, com import dinâmico
-    # de propósito; a régua estática não o vê
+    # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
     "integrations/nivel_do_microfone.py::e_stream_do_medidor": (
-        "A PEÇA B da LUZ-DO-MIC-01 (03/09/2026). Ela TEM chamador em produção — o "
-        "`daemon/subsystems/luz_do_mic.py`, que sobe do `lifecycle.py:922` —, mas o import é "
-        "DINÂMICO (`importlib.import_module`, :333) e a varredura estática não o enxerga. O "
-        "import é dinâmico por uma razão escrita no próprio arquivo: uma peça irmã que exista "
-        "mas quebre ao importar não pode derrubar o subsistema da luz. FECHA quando alguém "
-        "provar que o import estático é seguro aqui — e essa prova exige medir o que acontece "
-        "com o daemon se o `pactl` sumir da máquina."
+        "A PEÇA B da LUZ-DO-MIC-01 (03/09/2026), REMEDIDA em 28/09/2026: não tem "
+        "chamador, nem pelo import dinâmico. O `luz_do_mic.py` resolve por `importlib` só "
+        "`NivelDoMicrofone` e `quem_ouve_agora`, e a PEÇA A reconhece o medidor com um crivo "
+        "próprio (`quem_ouve_o_microfone.e_stream_do_hefesto`), sem importar a PEÇA B: são "
+        "dois crivos para a mesma pergunta. FECHA quando a PEÇA A chamar este, ou quando ele "
+        "sair junto com a frase do cabeçalho de `nivel_do_microfone.py` que manda usá-lo."
     ),
     # ROTA-A + ROTA-C (02/09/2026) — OS TRÊS DONOS DE FATO. Eles nasceram sem
     # chamador de propósito: quem os chama são os dez `interface/pacotes/aNN_*.py`,
