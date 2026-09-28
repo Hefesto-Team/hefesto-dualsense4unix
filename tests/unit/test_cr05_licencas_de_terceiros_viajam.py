@@ -80,8 +80,8 @@ LICENSES = REPO / "LICENSES"
 SHA256_GPL2 = "8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643"
 
 #: Os alvos de empacotamento que copiam ``assets/dkms/`` e por isso TÊM de
-#: copiar ``LICENSES/`` junto. O sdist não está aqui porque nele a inclusão é
-#: automática — tem teste próprio, mais abaixo.
+#: copiar ``LICENSES/`` junto. O sdist não está aqui: quem diz o que ele leva é
+#: o ``only-include`` do pyproject, e ele tem teste próprio, mais abaixo.
 ALVOS_QUE_COPIAM_DKMS = [
     "scripts/build_deb.sh",
     "packaging/arch/PKGBUILD",
@@ -227,6 +227,62 @@ def test_notice_nomeia_cada_módulo_com_a_licença_dele(módulo: str, licença: 
     )
 
 
+#: A primeira linha de um fonte C do kernel: `// SPDX-License-Identifier: <expr>`.
+_SPDX_DO_FONTE = re.compile(r"SPDX-License-Identifier:\s*(.+?)\s*(?:\*/)?\s*$")
+
+
+def _spdx_normalizado(expressao: str) -> str:
+    """`GPL-2.0+` é a grafia antiga de `GPL-2.0-or-later`; o NOTICE usa a nova."""
+    return re.sub(r"\bGPL-2\.0\+", "GPL-2.0-or-later", expressao.strip())
+
+
+def _modulos_de_assets_dkms() -> dict[str, set[str]]:
+    """Cada diretório de `assets/dkms/`, com as licenças SPDX dos `.c` dele."""
+    modulos: dict[str, set[str]] = {}
+    for pasta in sorted((REPO / "assets" / "dkms").iterdir()):
+        if not pasta.is_dir():
+            continue
+        licencas = set()
+        for fonte in sorted(pasta.glob("*.c")):
+            primeira = fonte.read_text(encoding="utf-8").splitlines()[0]
+            achado = _SPDX_DO_FONTE.search(primeira)
+            if achado:
+                licencas.add(_spdx_normalizado(achado.group(1)))
+        modulos[pasta.name] = licencas
+    return modulos
+
+
+def test_notice_e_o_readme_declaram_todo_modulo_de_assets_dkms() -> None:
+    """A lista sai do disco, e não de uma tabela digitada: um módulo novo em
+    `assets/dkms/` reprova aqui até o NOTICE o nomear com a licença SPDX do
+    próprio fonte, e a seção de licença do README o nomear também."""
+    modulos = _modulos_de_assets_dkms()
+    assert len(modulos) >= 4 and all(modulos.values()), (
+        f"a leitura de assets/dkms/ parou de achar módulos ou SPDX: {modulos}"
+    )
+    notice = _texto(NOTICE)
+    readme = _texto(REPO / "README.md")
+    assert "## Licença" in readme, "o README perdeu a seção de licença"
+    licenca_do_readme = readme.split("## Licença", 1)[1]
+
+    faltas = []
+    for nome, licencas in modulos.items():
+        endereco = f"assets/dkms/{nome}/"
+        if endereco not in notice:
+            faltas.append(f"o NOTICE não nomeia {endereco}")
+        else:
+            inicio = notice.index(endereco)
+            janela = notice[inicio : inicio + 200]
+            faltas += [
+                f"o NOTICE nomeia {endereco} sem a licença {licenca!r} do fonte"
+                for licenca in sorted(licencas)
+                if licenca not in janela
+            ]
+        if f"`{nome}`" not in licenca_do_readme:
+            faltas.append(f"a seção Licença do README não nomeia `{nome}`")
+    assert not faltas, "\n".join(faltas)
+
+
 def test_notice_diz_que_o_spdx_nao_pode_ser_removido() -> None:
     """A frase que sustenta a licitude do uso não pode ter ficado para trás."""
     texto = _texto(NOTICE)
@@ -368,27 +424,67 @@ def test_alvo_que_copia_dkms_copia_licenses_junto(alvo: str) -> None:
         )
 
 
-def test_sdist_carrega_licenses_sem_precisar_de_linha() -> None:
-    """No sdist a inclusão é automática — mas só enquanto ninguém a restringir.
-
-    O ``hatchling`` inclui no sdist tudo o que está versionado, e não há
-    ``[tool.hatch.build.targets.sdist]`` no ``pyproject.toml``. Este teste
-    guarda as DUAS pernas dessa afirmação: se alguém acrescentar a seção sem
-    nomear ``LICENSES``, o sdist passa a distribuir fonte GPL sem licença e
-    ninguém perceberia.
-    """
+def _o_que_o_sdist_leva() -> list[str] | None:
+    """As entradas do `only-include` do sdist, ou None sem a lista (o hatchling
+    leva então tudo o que o `.gitignore` não esconde)."""
     pyproject = _texto(REPO / "pyproject.toml")
-    if "[tool.hatch.build.targets.sdist]" in pyproject:
-        secao = pyproject.split("[tool.hatch.build.targets.sdist]", 1)[1]
-        secao = secao.split("\n[", 1)[0]
-        assert "LICENSES" in secao, (
-            "o pyproject.toml passou a configurar o alvo sdist e não nomeia "
-            "LICENSES/. O sdist carrega os 36 arquivos de assets/dkms/ (medido em "
-            "31/07), então tem de carregar o texto das licenças também."
+    marca = "[tool.hatch.build.targets.sdist]"
+    if marca not in pyproject:
+        return None
+    secao = pyproject.split(marca, 1)[1].split("\n[", 1)[0]
+    lista = re.search(r"only-include\s*=\s*\[([^\]]*)\]", secao)
+    return re.findall(r'"([^"]+)"', lista.group(1)) if lista else None
+
+
+def _o_sdist_leva_assets_dkms() -> bool:
+    entradas = _o_que_o_sdist_leva()
+    if entradas is None:
+        return True
+    return any("assets/dkms/".startswith(e.rstrip("/") + "/") for e in entradas)
+
+
+def test_sdist_carrega_licenses_sem_precisar_de_linha() -> None:
+    """O sdist que levar os fontes GPL de `assets/dkms/` leva `LICENSES/` junto.
+
+    O `only-include` do sdist diz o que entra. Se ele passar a levar `assets/`
+    (ou sumir, e o hatchling voltar a levar tudo), o sdist distribui fonte GPL,
+    e aí a lista tem de nomear `LICENSES`.
+    """
+    entradas = _o_que_o_sdist_leva()
+    if _o_sdist_leva_assets_dkms():
+        assert entradas is None or "LICENSES" in entradas, (
+            "o sdist leva assets/dkms/ e o only-include não nomeia LICENSES/: "
+            "o fonte GPL viajaria sem o texto da licença."
         )
     for arquivo in ("GPL-2.0.txt", "BSD-3-Clause.txt", "README.md"):
         assert (LICENSES / arquivo).is_file(), (
             f"LICENSES/{arquivo} não existe — o sdist não tem o que incluir"
+        )
+
+
+def test_o_notice_diz_se_o_sdist_leva_os_fontes_gpl() -> None:
+    """O NOTICE afirma quais artefatos não levam `assets/dkms/`, e o dono do
+    sdist é o `only-include` do pyproject: a frase segue o que ele leva."""
+    frase = next(
+        (
+            paragrafo
+            for paragrafo in _texto(NOTICE).split("\n\n")
+            if "não carregam fonte de assets/dkms/" in paragrafo
+        ),
+        None,
+    )
+    assert frase is not None, (
+        "o NOTICE perdeu a frase que diz quais artefatos não levam assets/dkms/"
+    )
+    if _o_sdist_leva_assets_dkms():
+        assert "sdist" not in frase, (
+            "o sdist leva assets/dkms/ (o only-include do pyproject) e o NOTICE "
+            f"diz que não: {frase.strip()!r}"
+        )
+    else:
+        assert "sdist" in frase, (
+            "o only-include do pyproject deixa assets/dkms/ fora do sdist, e o "
+            f"NOTICE não diz: {frase.strip()!r}"
         )
 
 
