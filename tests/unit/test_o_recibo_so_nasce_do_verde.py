@@ -171,6 +171,48 @@ def test_a_mudanca_rastreada_fora_do_indice_nao_deixa_recibo(repo: Path, quando:
     assert "a.txt" in fecho.stdout, "a recusa não nomeou o arquivo mudado:\n" + fecho.stdout
 
 
+def test_a_mudanca_de_antes_da_abertura_desfeita_no_meio_nao_deixa_recibo(repo: Path) -> None:
+    """Os primeiros portões mediram o arquivo mudado; no fecho ele já voltou ao do índice.
+
+    O fecho sozinho vê a árvore limpa e a mesma árvore do começo: só a
+    abertura sabe que a medida começou sobre outro conteúdo.
+    """
+    original = (repo / "a.txt").read_text(encoding="utf-8")
+    (repo / "a.txt").write_text("mudou\n", encoding="utf-8")
+    _recibo(repo, "abrir", "suite")
+    (repo / "a.txt").write_text(original, encoding="utf-8")
+    fecho = _recibo(repo, "fechar", "suite", "0")
+
+    assert _recibos(repo) == set(), "a medida começou sobre um arquivo mudado e deixou recibo"
+    assert "no começo" in fecho.stdout and "a.txt" in fecho.stdout, fecho.stdout
+
+
+def test_a_corrida_aberta_numa_arvore_nao_fecha_em_outra(repo: Path, tmp_path: Path) -> None:
+    """Outra árvore com o MESMO conteúdo: o que foi medido não foi ela."""
+    outra = tmp_path / "outra"
+    _git(tmp_path, "clone", "-q", str(repo), str(outra))
+    assert _arvore_do_indice(outra) == _arvore_do_indice(repo)
+    _recibo(repo, "abrir", "portoes-completo")
+    corrida = repo.parent / "corrida.json"
+    fecho = subprocess.run([sys.executable, str(SCRIPT), "fechar", "portoes-completo", "0",
+                            "--corrida", str(corrida), "--raiz", str(outra)],
+                           cwd=outra, env=_ambiente(), capture_output=True, text=True, check=False)
+
+    assert fecho.returncode != 0, fecho.stdout
+    assert _recibos(repo) == set() and _recibos(outra) == set(), fecho.stdout
+
+
+def test_o_arquivo_ignorado_nao_impede_o_recibo(repo: Path) -> None:
+    """O ``docs/process`` e o ``GUIA.md`` são ignorados e estão em toda árvore de integração."""
+    (repo / "__pycache__").mkdir()
+    (repo / "__pycache__" / "x.pyc").write_bytes(b"\0")
+    arvore = _arvore_do_indice(repo)
+    abertura = _recibo(repo, "abrir", "portoes-completo")
+    assert "não vai deixar recibo" not in abertura.stdout, abertura.stdout
+    assert _recibo(repo, "fechar", "portoes-completo", "0").returncode == 0
+    assert _recibos(repo) == {f"{arvore}.portoes-completo"}
+
+
 def test_o_arquivo_fora_do_git_no_comeco_impede_o_recibo(repo: Path) -> None:
     """A medida lê o disco: o arquivo esquecido fora do ``git add`` entra nela e não na árvore."""
     (repo / "tests_novos.py").write_text("x = 1\n", encoding="utf-8")
