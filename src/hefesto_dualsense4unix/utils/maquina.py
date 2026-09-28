@@ -1252,7 +1252,8 @@ def _levar_os_lugares(documento: dict[str, Any], lugares: Mapping[Any, Any]) -> 
     portas = mapa.get("portas")
     if not isinstance(portas, dict):
         portas = {}
-    faces = mapa.get("faces") if isinstance(mapa.get("faces"), list) else []
+    bruto_das_faces = mapa.get("faces")
+    faces: list[Any] = bruto_das_faces if isinstance(bruto_das_faces, list) else []
     no_desenho = {n for n in portas if isinstance(n, str)} | {
         n
         for face in faces
