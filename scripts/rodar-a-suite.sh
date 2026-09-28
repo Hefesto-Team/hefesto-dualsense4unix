@@ -126,8 +126,10 @@ rodar_pytest() {  # $1 = o log; o resto, os arquivos
   rc_do_processo=$?
   linha=$(tail -1 "$log")
   # SILÊNCIO DE PYTEST NÃO É VERDE. Sem linha de sumário, o processo morreu.
+  # O arquivo que pula inteiro (sem o GTK) diz só `N skipped`, com rc=5: é
+  # sumário, e o pulo vai ao recibo como não medido.
   case "$linha" in
-    *passed*|*failed*|*error*|*deselected*|*"no tests ran"*) ;;
+    *passed*|*failed*|*error*|*skipped*|*deselected*|*"no tests ran"*) ;;
     *) linha="SEM SUMÁRIO — o processo morreu no meio"; ;;
   esac
   # O WebKit também morre DEPOIS do sumário, ao sair: o rc diz o sinal.

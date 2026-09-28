@@ -109,6 +109,9 @@ def test_o_arquivo_do_webkit_morre_sozinho_e_diz_onde(tmp_path: Path) -> None:
     (raiz / "tests" / "unit" / "test_b_morre.py").write_text(
         "# a régua do WebKit2 de mentira\n\n\ndef test_morre():\n"
         + "".join(f"    {linha}\n" for linha in _MORRE.splitlines()), encoding="utf-8")
+    (raiz / "tests" / "unit" / "test_d_pula.py").write_text(
+        "import pytest\n\n# WebKit2 ausente nesta máquina\npytest.skip('sem o WebKit', "
+        "allow_module_level=True)\n", encoding="utf-8")
     (raiz / "tests" / "unit" / "test_c_piloto.py").write_text(
         "def test_so_cita():\n    if False:\n        from pacote import piloto  # noqa: F401\n",
         encoding="utf-8")
@@ -123,11 +126,14 @@ def test_o_arquivo_do_webkit_morre_sozinho_e_diz_onde(tmp_path: Path) -> None:
 
     assert feito.returncode == 1, texto
     linhas = {linha.strip().split(":", 1)[0]: linha for linha in feito.stdout.splitlines()}
-    assert "1 passed" in linhas.get("parte-00 (3 arq)", ""), (
+    assert "1 passed" in linhas.get("parte-00 (4 arq)", ""), (
         "o arquivo comum não sobreviveu ao sinal do vizinho:\n" + texto)
     assert "MORREU PELO SINAL 11" in linhas.get("test_b_morre, em processo próprio", ""), texto
     assert "1 passed" in linhas.get("test_c_piloto, em processo próprio", ""), (
         "o arquivo que importa um módulo do WebKit não rodou sozinho:\n" + texto)
+    pulo = linhas.get("test_d_pula, em processo próprio", "")
+    assert "1 skipped" in pulo and "SEM SUMÁRIO" not in pulo, (
+        "o arquivo que pula inteiro (rc=5) foi lido como processo morto:\n" + texto)
     log = (saida / "parte-00-test_b_morre.log").read_text(encoding="utf-8")
     assert "Fatal Python error: Segmentation fault" in log, log
     assert "pilha nativa: a linha que recebeu o sinal" in log, (
