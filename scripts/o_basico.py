@@ -2080,6 +2080,11 @@ def sub_entrada(s: Sessao, a: argparse.Namespace) -> None:
     mesa = controles_na_mesa(e)
     segundos = f"{a.segundos:g}"
     no_uinput = [c for c in mesa if c.get("vpad_backend") == "uinput"]
+    # A sonda dos buracos por escritor sobe ANTES dos ensaios e cobre as quatro
+    # janelas: medida numa janela à parte, depois deles, ela não dizia nada
+    # sobre os pares que a taxa acabou de medir.
+    janela_da_sonda = 4 * a.segundos + 60.0
+    sondas = _subir_as_sondas(s, a, ("nucleo-por-processo.bt",), janela_da_sonda)
 
     rc, texto = s.rodar_ensaio("entrada_em_repouso.py", "--segundos", segundos, "--json",
                                teto_s=a.segundos + 90.0)
@@ -2161,8 +2166,7 @@ def sub_entrada(s: Sessao, a: argparse.Namespace) -> None:
     _passo(s, "o controle negativo (ninguém mexe)", "todos", "—", NAO_SEI,
            "o ensaio não tem --json; o resumo diz: " + _resumo_do_ensaio(s.mascarado(texto)))
 
-    sondas = _subir_as_sondas(s, a, ("nucleo-por-processo.bt",), a.segundos)
-    texto_da_sonda = _colher_sonda(s, sondas["nucleo-por-processo.bt"], a.segundos)
+    texto_da_sonda = _colher_sonda(s, sondas["nucleo-por-processo.bt"], janela_da_sonda)
     if texto_da_sonda is None:
         _passo(s, "os buracos por escritor", "todos", "—", NAO_SEI, str(sondas["nucleo-por-processo.bt"]))
     else:
