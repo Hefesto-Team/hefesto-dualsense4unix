@@ -763,7 +763,7 @@ def test_pids_da_unidade_pelo_proc_quando_a_fatia_e_outra(tmp_path: Path) -> Non
     (proc / "self" / "cgroup").write_text(
         "0::/user.slice/user-1000.slice/user@1000.service/app.slice/"
         "hefesto-dualsense4unix.service\n", encoding="utf-8")
-    unidade = "app-hefesto-wvkbd_mobintl-aa00bb11cc22.service"
+    unidade = fds.nome_da_unidade("wvkbd-mobintl", "de-mentira")
     for pid, caminho in ((4321, f"outra.slice/{unidade}"), (4322, "app.slice/x.service")):
         (proc / str(pid)).mkdir()
         (proc / str(pid) / "cgroup").write_text(
@@ -787,7 +787,7 @@ def test_pids_da_unidade_no_cgroup_v1(tmp_path: Path) -> None:
     (proc / "self" / "cgroup").write_text(
         "4:memory:/user.slice/user-1000.slice/user@1000.service\n"
         f"1:name=systemd:{fatia}/hefesto-dualsense4unix.service\n", encoding="utf-8")
-    unidade = "app-hefesto-wvkbd_mobintl-aa00bb11cc22.service"
+    unidade = fds.nome_da_unidade("wvkbd-mobintl", "de-mentira")
     for pid, ultimo in ((4321, unidade), (4322, "x.service")):
         (proc / str(pid)).mkdir()
         (proc / str(pid) / "cgroup").write_text(
