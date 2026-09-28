@@ -459,9 +459,20 @@ def test_a_recusa_chama_o_botao_pelo_nome_que_ela_le(disco):
 
     A mordida: faça `_nome_do_botao` devolver o argumento — este teste reprova
     dizendo que a frase voltou a falar em `l2`.
+
+    O NOME É DO MOTOR, E O MOTOR PUXA O GTK — 27/09/2026. `input_actions`
+    importa o `gi` no topo, e `_nome_do_botao` cai de pé no id cru quando ele
+    falta (é de propósito, e está escrito lá). Sem o GTK real esta régua
+    mediria a QUEDA, não o nome: foi o `lint-test` de 27/09, onde o `pacotes`
+    só importou porque sete arquivos deixaram `app/actions/*` no cache contra
+    um `gi` falso. Importar o dono aqui declara a dependência: sem o GTK real a
+    regra do `tests/conftest.py` pula com o motivo, e no `gtk-real` a régua
+    mede o que ela lê.
     """
     import pacotes
     from pacotes import a06_navegacao
+
+    from hefesto_dualsense4unix.app.actions import input_actions
 
     estado, _ = disco
     estado["regua"] = _PerfilDeMentira("regua")
@@ -471,6 +482,8 @@ def test_a_recusa_chama_o_botao_pelo_nome_que_ela_le(disco):
         a06_navegacao.guardar_definicoes(
             ctx, {"forma": _forma_de_fabrica(cross="Esc")}, _PonteMuda())
     frase = str(caiu.value)
+    assert input_actions.humanize_button("l2") == "L2 (gatilho esquerdo)", (
+        "o motor mudou o nome do L2; a frase abaixo cobra o que ela lê na GTK")
     assert "L2 (gatilho esquerdo)" in frase, (
         f"a recusa saiu {frase!r} — o nome do botão tem de ser o que ela lê.")
     assert not re.search(r"\bl2\b", frase), (
