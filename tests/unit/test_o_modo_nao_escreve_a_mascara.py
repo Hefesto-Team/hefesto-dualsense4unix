@@ -172,7 +172,9 @@ def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
         coop_mod, "get_coop_manager", lambda d: SimpleNamespace(sync=lambda force=False: None)
     )
     monkeypatch.setattr(session, "save_gamepad_emulation", lambda ativo, flavor=None: None)
-    monkeypatch.setattr(session, "save_gamepad_caminho", lambda caminho: None)
+    # A assinatura do real (`caminho, *, origem`), desde 28/09: um dublê mais
+    # estreito levantava TypeError, que o `suppress` do produto engolia.
+    monkeypatch.setattr(session, "save_gamepad_caminho", lambda caminho, **_k: None)
     em._zerar_registro_de_mascaras()
     (xdg_paths.config_dir(ensure=True) / "controller_masks.json").unlink(missing_ok=True)
     aba._ESCOLHA.clear()
