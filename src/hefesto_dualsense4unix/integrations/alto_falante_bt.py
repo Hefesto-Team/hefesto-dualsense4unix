@@ -2951,8 +2951,10 @@ def clientes_conectados(
     É por aqui que a partida sabe se o jogo que abriu o fluxo ainda vive,
     sem PID e sem ``/proc``: a coluna 1 de ``pactl list short clients``. O
     retrato do som não fotografa os clientes — cada ``pactl`` é um —, então
-    esta leitura sai pela porta dele e custa UM ``pactl``, só quando um dono
-    de fluxo some ou muda.
+    esta leitura sai pela porta dele e custa UM ``pactl`` por volta, e só
+    quando chega um dono novo ou quando a partida está aberta sem fluxo nos
+    endpoints (o jogo que fechou o fluxo, ou fechou). Com o fluxo do jogo de
+    pé, nenhum.
     """
     correr: Any = runner or rodar_pactl
     saida = correr(["pactl", "list", "short", "clients"])
