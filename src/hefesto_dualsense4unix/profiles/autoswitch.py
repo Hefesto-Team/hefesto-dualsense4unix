@@ -753,13 +753,13 @@ class AutoSwitcher:
         Um arquivo por tique, e só com o Freestyle ligado — o tique desligado
         lê todos os perfis (`select_for_window_ex`). Ler a cada tique, e não
         guardar, é o que faz o modo que ela gravar nele valer no tique seguinte.
+        Pelo `perfil_em_disco`, que é o leitor de caminho quente: um arquivo,
+        sem semear e sem varrer, e nunca levanta.
         """
-        from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO, load_profile
+        from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO, perfil_em_disco
 
-        try:
-            return load_profile(NOME_DO_PADRAO).mode is not None
-        except Exception:
-            return False
+        freestyle = perfil_em_disco(NOME_DO_PADRAO)
+        return freestyle is not None and freestyle.mode is not None
 
     def _saida_para_catch_all(self, profile: Profile | None) -> bool:
         """True quando a troca é SAÍDA de um perfil específico rumo a um genérico.
