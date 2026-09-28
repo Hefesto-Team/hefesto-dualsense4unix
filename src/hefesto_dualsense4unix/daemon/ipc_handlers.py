@@ -7272,7 +7272,7 @@ class IpcHandlersMixin:
         """
         from hefesto_dualsense4unix.integrations.virtual_pad import normalizar_caminho
 
-        nome = getattr(self.store, "active_profile", None)
+        nome = getattr(getattr(self, "store", None), "active_profile", None)
         if not isinstance(nome, str) or not nome:
             return None
         try:
