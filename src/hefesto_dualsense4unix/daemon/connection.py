@@ -624,6 +624,80 @@ async def vigiar_o_cabo_em_espera(
     return passaram
 
 
+def _perfil_escopado_a_janela(nome: str) -> bool:
+    """True quando o perfil só faz sentido com a janela/processo dele vivo.
+
+    RESTORE-ESCOPO-01 (22/07): o restore de boot reativava QUALQUER nome
+    persistido — um perfil de jogo/regex (caso medido: "FPS", marker de
+    19/07) voltava a cada boot/reconexão, pintava a lightbar e suprimia a
+    paleta automática sem NENHUMA janela correspondente aberta (e, com a
+    detecção de janela morta, ficava preso para sempre — o autoswitch não
+    tem caminho de reversão, por design UX-01). Perfil com match por
+    janela/título/processo pertence ao AUTOSWITCH, que o ativa quando a
+    janela existir; o restore de boot fica só com os perfis "sempre"
+    (MatchAny). Falha de leitura = não-escopado (comportamento antigo).
+
+    De módulo desde a O-MODO-XBOX-NAO-E-QUEDA-02 (28/09/2026): o boot faz a
+    mesma pergunta antes do primeiro pad (:func:`perfil_que_o_boot_restaura`).
+    """
+    try:
+        from hefesto_dualsense4unix.profiles.loader import load_profile
+        from hefesto_dualsense4unix.profiles.schema import MatchCriteria
+
+        match = load_profile(nome).match
+    except Exception:
+        return False
+    if isinstance(match, MatchCriteria):
+        return bool(
+            match.window_class
+            or match.window_title_regex
+            or match.process_name
+        )
+    return False
+
+
+def perfil_que_o_boot_restaura() -> Any | None:
+    """O perfil que o `restore_last_profile` vai ativar, lido sem ativar nada.
+
+    O-MODO-XBOX-NAO-E-QUEDA-02 (28/09/2026), item 3 da cura consolidada. O
+    boot sobe o pad do P1 ANTES do `controller.connect()` e do restore
+    (VPAD-03/BT-01), e o restore não aplica o modo
+    (BUG-BOOT-RESTORE-FLIPS-EMULATION-01). Medido nos três boots de 27/09 às
+    21h: com foco X o autoswitch ativava o Freestyle e recriava o pad em Xbox;
+    sem foco o modo ficava DualSense e a tela dizia «Freestyle». Quem pergunta
+    aqui é o boot, para o primeiro pad nascer no modo do perfil que vai valer.
+
+    A mesma ordem do restore: a sessão (se não for de janela), o
+    `session.json` quando o marker diverge, e o perfil de fora do jogo.
+    Nunca levanta: sem perfil legível, ``None`` e o boot de sempre.
+    """
+    try:
+        from hefesto_dualsense4unix.profiles.loader import (
+            load_profile,
+            o_perfil_de_fora_do_jogo,
+        )
+        from hefesto_dualsense4unix.utils.session import (
+            load_last_profile,
+            resolve_boot_profile,
+        )
+
+        candidatos = [resolve_boot_profile(), load_last_profile(), o_perfil_de_fora_do_jogo()]
+    except Exception:
+        return None
+    vistos: set[str] = set()
+    for nome in candidatos:
+        if not nome or nome in vistos:
+            continue
+        vistos.add(nome)
+        if _perfil_escopado_a_janela(nome):
+            continue
+        try:
+            return load_profile(nome)
+        except Exception:
+            continue
+    return None
+
+
 async def restore_last_profile(daemon: DaemonProtocol) -> None:
     """Reativa o último perfil salvo pelo usuário (FEAT-PERSIST-SESSION-01).
 
@@ -675,33 +749,7 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
         logger.info("last_profile_restore_skipped_native_mode", name=name)
         return
 
-    def _escopado_a_janela(nome: str) -> bool:
-        """True quando o perfil só faz sentido com a janela/processo dele vivo.
-
-        RESTORE-ESCOPO-01 (22/07): o restore de boot reativava QUALQUER nome
-        persistido — um perfil de jogo/regex (caso medido: "FPS", marker de
-        19/07) voltava a cada boot/reconexão, pintava a lightbar e suprimia a
-        paleta automática sem NENHUMA janela correspondente aberta (e, com a
-        detecção de janela morta, ficava preso para sempre — o autoswitch não
-        tem caminho de reversão, por design UX-01). Perfil com match por
-        janela/título/processo pertence ao AUTOSWITCH, que o ativa quando a
-        janela existir; o restore de boot fica só com os perfis "sempre"
-        (MatchAny). Falha de leitura = não-escopado (comportamento antigo).
-        """
-        try:
-            from hefesto_dualsense4unix.profiles.loader import load_profile
-            from hefesto_dualsense4unix.profiles.schema import MatchCriteria
-
-            match = load_profile(nome).match
-        except Exception:
-            return False
-        if isinstance(match, MatchCriteria):
-            return bool(
-                match.window_class
-                or match.window_title_regex
-                or match.process_name
-            )
-        return False
+    _escopado_a_janela = _perfil_escopado_a_janela
 
     def _registrar_espera(nome: str) -> None:
         """Deixa a recusa VISÍVEL no estado, não só no journal.

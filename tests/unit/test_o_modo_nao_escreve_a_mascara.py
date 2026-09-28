@@ -498,20 +498,26 @@ def test_o_caminho_escolhido_volta_com_o_boot_e_a_flag_velha_nao_muda(
                 if pool is not None:
                     pool.shutdown(wait=False)
         # NOTA DATADA — 19/09/2026, CAMINHO-CONTAGIO-01, ponto 3. Esta linha
-        # exigia `"xbox"`, e agora o boot DEVOLVE esse valor ao default: o
+        # exigia `"xbox"`, e o boot passou a DEVOLVER esse valor ao default: o
         # `gamepad_caminho.flag` da máquina dela dizia `xbox` desde 18/09 às
         # 11:18 porque o PS + R3 dentro do DON'T SCREAM gravava nos dois
         # lugares, e não por escolha dela para todos os jogos.
         #
-        # O que este teste promete no NOME continua medido, e melhor: o boot
-        # LEU o arquivo — se não tivesse lido, `gamepad_caminho` teria ficado
-        # em `None`, o default da config, e não em `dualsense`. A devolução só
-        # acontece para quem leu `xbox`.
-        assert daemon.config.gamepad_caminho == "dualsense", (
-            "o boot não leu o caminho dela — sem leitura o slot fica em None"
+        # NOTA DATADA — 28/09/2026, O-MODO-XBOX-NAO-E-QUEDA-02, itens (a) e 3.
+        # O gesto fora do jogo grava COM A ORIGEM, e o boot devolve só o valor
+        # sem origem (o legado de 18/09, medido em `test_o_modo_tem_um_dono.py`):
+        # o `xbox` que o gesto acima gravou é a escolha dela e fica, no arquivo
+        # e em `gamepad_caminho_global`. O slot da SESSÃO nasce com o modo do
+        # perfil que o boot restaura — o Freestyle de fábrica não opina, então
+        # ele nasce vazio: ninguém nasce do arquivo global.
+        assert daemon.config.gamepad_caminho_global == "xbox", (
+            "o boot não leu o caminho dela, ou desfez a escolha com origem"
         )
-        assert session.load_gamepad_caminho() == "dualsense", (
-            "a devolução não chegou ao disco: o boot seguinte leria `xbox` de novo"
+        assert session.load_gamepad_caminho_com_origem() == (
+            "xbox", session.ORIGEM_DO_GESTO_FORA_DO_JOGO
+        ), "o boot mexeu no arquivo da escolha dela"
+        assert daemon.config.gamepad_caminho is None, (
+            "o slot da sessão nasceu do arquivo global — CAMINHO-CONTAGIO-01"
         )
         if not daemon._native_mode:
             assert (daemon.config.gamepad_emulation_enabled, daemon.config.gamepad_flavor) == (

@@ -13,7 +13,10 @@ A cura consolidada (a sprint, «A cura, consolidada para quem implementa»):
 1. o caminho vive num lugar só, o slot da sessão (`gamepad.caminho_da_sessao`),
    e todo restart lê dele e diz quem pediu (`p1_reerguido motivo=…`);
    (a) o arquivo da escolha dela guarda a origem, e a migração de 18/09 devolve
-   só o valor sem origem.
+   só o valor sem origem;
+3. o boot aplica o modo do perfil que restaura, uma vez, antes do primeiro pad,
+   com ou sem foco X (os três boots de 27/09 às 21h: com foco, Xbox; sem foco,
+   DualSense com a tela dizendo «Freestyle»).
 
 As réguas fazem o pad nascer pelos métodos REAIS do daemon e do subsistema; só
 a borda é dublada (a fábrica publica o que a real publica: a máscara efetiva, o
@@ -22,6 +25,7 @@ canal de `quer_uhid` e o caminho pendurado).
 
 from __future__ import annotations
 
+import asyncio
 import functools
 import threading
 from collections.abc import Iterator
@@ -31,12 +35,23 @@ from typing import Any
 import pytest
 import structlog
 
+from hefesto_dualsense4unix.core.controller import ControllerState
+from hefesto_dualsense4unix.core.events import EventBus
 from hefesto_dualsense4unix.daemon import lifecycle
+from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.daemon.subsystems import coop as coop_mod
 from hefesto_dualsense4unix.daemon.subsystems import external_mask as em
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.integrations import virtual_pad as vp
+from hefesto_dualsense4unix.profiles import loader
+from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile, ProfileModeConfig
+from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils import session, xdg_paths
+
+#: As escritas e leituras REAIS da sessão, guardadas no import — antes de a
+#: bancada as trocar pelos dublês.
+_SALVAR_EMULACAO_REAL = session.save_gamepad_emulation
+_PREFERENCIA_REAL = session.load_gamepad_preference
 
 #: A faixa sintética da casa — nenhum endereço real em arquivo versionado.
 P1 = "aabbcc000001"
@@ -124,11 +139,15 @@ class _Daemon:
         return 2
 
 
-@pytest.fixture(autouse=True)
-def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    """A borda dublada; o registro de máscaras zerado."""
-    monkeypatch.setattr(vp, "make_virtual_pad", _fabrica)
-    monkeypatch.setattr(gp, "stop_gamepad_emulation", _parar)
+def _dublar_a_borda(monkeypatch: pytest.MonkeyPatch, nascidos: list[Any]) -> None:
+    """A borda do pad: a fábrica dublada (que conta quem nasce) e o que toca aparelho."""
+
+    def _fabrica_que_conta(flavor: Any, **kw: Any) -> _Vpad:
+        pad = _fabrica(flavor, **kw)
+        nascidos.append(pad)
+        return pad
+
+    monkeypatch.setattr(vp, "make_virtual_pad", _fabrica_que_conta)
     dubles: dict[str, Any] = {
         "_set_controller_grab": lambda d, g: None,
         "_materialize_launch_env": lambda d: None,
@@ -142,6 +161,13 @@ def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     }
     for nome, valor in dubles.items():
         monkeypatch.setattr(gp, nome, valor)
+
+
+@pytest.fixture
+def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """A borda dublada; o registro de máscaras zerado."""
+    _dublar_a_borda(monkeypatch, [])
+    monkeypatch.setattr(gp, "stop_gamepad_emulation", _parar)
     monkeypatch.setattr(coop_mod, "numero_do_nome_do_primario", lambda d, fallback=1: 1)
     monkeypatch.setattr(
         coop_mod, "get_coop_manager", lambda d: SimpleNamespace(sync=lambda force=False: None)
@@ -232,6 +258,7 @@ RESTARTS: dict[str, tuple[Any, str | None]] = {
 }
 
 
+@pytest.mark.usefixtures("_bancada")
 @pytest.mark.parametrize("motivo", sorted(RESTARTS))
 def test_todo_restart_renasce_no_modo_do_dono(motivo: str) -> None:
     """Com o modo Xbox de pé, nenhum restart devolve o pad ao DualSense.
@@ -258,6 +285,7 @@ def test_todo_restart_renasce_no_modo_do_dono(motivo: str) -> None:
     )
 
 
+@pytest.mark.usefixtures("_bancada")
 def test_o_cartao_nao_vira_a_escolha_dela(monkeypatch: pytest.MonkeyPatch) -> None:
     """O gesto do cartão é `manual`, e o modo que ele repassa não é escolha.
 
@@ -272,6 +300,7 @@ def test_o_cartao_nao_vira_a_escolha_dela(monkeypatch: pytest.MonkeyPatch) -> No
     assert d.config.gamepad_caminho_global is None
 
 
+@pytest.mark.usefixtures("_bancada")
 def test_a_promocao_segue_o_dono_e_nao_o_pad_velho() -> None:
     """O pad degradado renasce no modo do dono (a promoção é um restart)."""
     d = _Daemon()
@@ -359,3 +388,122 @@ def test_o_legado_sem_origem_volta_uma_vez(_arquivo_do_caminho: Any) -> None:
 def test_arquivo_ilegivel_e_ninguem_escolheu(_arquivo_do_caminho: Any) -> None:
     _arquivo_do_caminho.write_text("{quebrado", encoding="utf-8")
     assert session.load_gamepad_caminho_com_origem() == (None, None)
+
+
+# ---------------------------------------------------------------------------
+# Item 3 — o boot aplica o modo do perfil que restaura, uma vez, com ou sem foco
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def _lar_do_boot(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> Iterator[list[Any]]:
+    """Um lar de mentira com o Freestyle em Xbox e a emulação ligada no disco.
+
+    A guarda sai se o `config_dir()` não for o do lar de mentira: o boot lê e
+    grava os arquivos de sessão.
+    """
+    for var, sub in (("XDG_CONFIG_HOME", "config"), ("XDG_STATE_HOME", "state")):
+        monkeypatch.setenv(var, str(tmp_path / sub))
+    casa = xdg_paths.config_dir(ensure=True)
+    if not str(casa).startswith(str(tmp_path)):
+        pytest.exit(f"o boot da régua ia ler o config_dir de verdade: {casa}", returncode=3)
+    monkeypatch.setattr(session, "load_gamepad_preference", _PREFERENCIA_REAL)
+    _SALVAR_EMULACAO_REAL(True, "dualsense")
+    loader.save_profile(
+        Profile(
+            name=loader.NOME_DO_PADRAO,
+            match=MatchAny(),
+            mode=ProfileModeConfig(kind="gamepad", caminho="xbox"),
+        ),
+        origem="teste",
+    )
+    nascidos: list[Any] = []
+    _dublar_a_borda(monkeypatch, nascidos)
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.daemon.launch_env.materialize_launch_env",
+        lambda daemon: None,
+    )
+    em._zerar_registro_de_mascaras()
+    yield nascidos
+    em._zerar_registro_de_mascaras()
+
+
+def _config_do_boot() -> lifecycle.DaemonConfig:
+    return lifecycle.DaemonConfig(  # type: ignore[arg-type]
+        poll_hz=200, auto_reconnect=False, ipc_enabled=False, udp_enabled=False,
+        autoswitch_enabled=False, mouse_emulation_enabled=False,
+        keyboard_emulation_enabled=False, ps_button_action="none",
+        mic_button_toggles_system=False,
+    )
+
+
+async def _o_boot(*, com_foco: bool) -> lifecycle.Daemon:
+    """Sobe o `Daemon` REAL até o restore, e (com foco) ativa o Freestyle como o
+    autoswitch ativa: com o `apply_profile_mode` do daemon como applier."""
+    store = StateStore()
+    estado = ControllerState(
+        battery_pct=80, l2_raw=0, r2_raw=0, connected=True,
+        transport="usb", buttons_pressed=frozenset(),
+    )
+    daemon = lifecycle.Daemon(
+        controller=FakeController(transport="usb", states=[estado]),
+        bus=EventBus(), store=store, config=_config_do_boot(),
+    )
+    corrida = asyncio.create_task(daemon.run())
+    try:
+        for _ in range(600):
+            if store.active_profile == loader.NOME_DO_PADRAO and store.counter("poll.tick"):
+                break
+            await asyncio.sleep(0.01)
+        assert store.active_profile == loader.NOME_DO_PADRAO, "o boot não restaurou o Freestyle"
+        if com_foco:
+            from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
+
+            gerente_do_daemon(daemon, store=store).activate(
+                loader.NOME_DO_PADRAO, origin="autoswitch"
+            )
+    finally:
+        daemon.stop()
+        await corrida
+    return daemon
+
+
+@pytest.mark.parametrize("com_foco", [False, True], ids=["sem-foco", "com-foco"])
+def test_o_boot_nasce_no_modo_do_perfil_uma_vez(
+    com_foco: bool, _lar_do_boot: list[Any]
+) -> None:
+    """Freestyle em Xbox: o pad do P1 nasce em Xbox no boot, e nasce UMA vez.
+
+    MORDE: tire do boot o caminho do perfil (o `_start_gamepad_emulation` volta
+    a subir sem caminho) — sem foco o modo fica DualSense, e com foco o
+    autoswitch recria o pad (dois `gamepad_emulation_started`).
+    """
+    with structlog.testing.capture_logs() as diario:
+        daemon = asyncio.run(_o_boot(com_foco=com_foco))
+
+    partidas = [r for r in diario if r["event"] == "gamepad_emulation_started"]
+    assert [r.get("caminho") for r in partidas] == ["xbox"], (
+        f"o boot subiu {len(partidas)} pad(s) do P1: {[r.get('caminho') for r in partidas]}"
+    )
+    assert len(_lar_do_boot) == 1, "o P1 nasceu mais de uma vez"
+    assert vp.caminho_do_vpad(_lar_do_boot[0]) == "xbox"
+    assert gp.caminho_da_sessao(daemon) == "xbox", "o dono da sessão não diz o modo do perfil"
+    assert {"event": "modo_do_boot_pelo_perfil", "perfil": "Freestyle", "caminho": "xbox"} in [
+        {k: r.get(k) for k in ("event", "perfil", "caminho")} for r in diario
+    ]
+
+
+def test_sem_perfil_que_opine_o_boot_e_o_de_sempre(
+    _lar_do_boot: list[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O Freestyle sem `mode`: o pad nasce pela máscara (DualSense), e o slot vazio."""
+    loader.save_profile(
+        Profile(name=loader.NOME_DO_PADRAO, match=MatchAny()), origem="teste"
+    )
+    with structlog.testing.capture_logs() as diario:
+        daemon = asyncio.run(_o_boot(com_foco=False))
+    partidas = [r.get("caminho") for r in diario if r["event"] == "gamepad_emulation_started"]
+    assert partidas == ["dualsense"]
+    assert gp.caminho_da_sessao(daemon) is None

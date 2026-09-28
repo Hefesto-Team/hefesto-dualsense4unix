@@ -189,9 +189,13 @@ class GamepadSubsystem:
         if not getattr(cfg, "gamepad_emulation_enabled", False):
             _materialize_launch_env(daemon)
             return
-        # ORIGEM-QUE-MENTE-01: boot de subsistema NUNCA é gesto dela.
+        # ORIGEM-QUE-MENTE-01: boot de subsistema NUNCA é gesto dela. E o modo é
+        # o do perfil que o boot restaura (O-MODO-XBOX-NAO-E-QUEDA-02, item 3).
         start_gamepad_emulation(
-            daemon, flavor=getattr(cfg, "gamepad_flavor", None), origin="profile"
+            daemon,
+            flavor=getattr(cfg, "gamepad_flavor", None),
+            origin="profile",
+            caminho=getattr(daemon, "_caminho_do_boot", None),
         )
 
     async def stop(self) -> None:  # pragma: no cover - simetria de protocolo

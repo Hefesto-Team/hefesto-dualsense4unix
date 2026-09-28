@@ -178,6 +178,32 @@ def _caminho_do_dono(daemon: Any, motivo: str) -> str | None:
     return nomear_o_restart(daemon, motivo)
 
 
+def _o_modo_do_perfil_do_boot() -> tuple[str | None, str | None, str | None]:
+    """``(caminho, máscara, nome)`` do perfil que o boot restaura, ou vazios.
+
+    O-MODO-XBOX-NAO-E-QUEDA-02, item 3. Só a seção `mode` de `kind="gamepad"`
+    opina (é o ramo do `apply_profile_mode` que liga o pad); `native`/`desktop`
+    continuam com os flags do boot (BUG-BOOT-RESTORE-FLIPS-EMULATION-01).
+    Nunca levanta.
+    """
+    from hefesto_dualsense4unix.daemon.connection import perfil_que_o_boot_restaura
+    from hefesto_dualsense4unix.integrations.uinput_gamepad import resolver_flavor
+
+    try:
+        perfil = perfil_que_o_boot_restaura()
+    except Exception:
+        return None, None, None
+    if perfil is None:
+        return None, None, None
+    nome = getattr(perfil, "name", None)
+    mode = getattr(perfil, "mode", None)
+    if getattr(mode, "kind", None) != "gamepad":
+        return None, None, nome
+    bruta = getattr(mode, "gamepad_flavor", None)
+    mascara = resolver_flavor(bruta) if bruta else None
+    return _caminho_da_secao(mode), mascara, nome
+
+
 def _mascara_da_maquina() -> str:
     """A máscara que ELA escolheu para a máquina, ou a de fábrica da sessão.
 
@@ -1232,7 +1258,26 @@ class Daemon:
         # tem de ter o que dizer antes de o primeiro vpad nascer.
         escolha_dela = _a_escolha_dela_sem_o_vazamento(*load_gamepad_caminho_com_origem())
         self.config.gamepad_caminho_global = escolha_dela
-        self.config.gamepad_caminho = escolha_dela
+        # O-MODO-XBOX-NAO-E-QUEDA-02, item 3 (28/09/2026): o boot aplica o modo
+        # do perfil que o restore vai ativar, UMA vez, antes do primeiro pad —
+        # com ou sem foco X. O slot da sessão (o dono) nasce com o modo desse
+        # perfil, e não com a escolha dela de fora do jogo: ninguém nasce do
+        # arquivo global (CAMINHO-CONTAGIO-01), e o start do boot o limparia de
+        # qualquer jeito. Sem perfil que opine, o slot nasce vazio, como antes.
+        self._caminho_do_boot: str | None = None
+        if not self._native_mode:
+            caminho_do_boot, mascara_do_boot, perfil_do_boot = _o_modo_do_perfil_do_boot()
+            self._caminho_do_boot = caminho_do_boot
+            if mascara_do_boot is not None and self.config.gamepad_emulation_enabled:
+                self.config.gamepad_flavor = mascara_do_boot
+            if perfil_do_boot is not None:
+                logger.info(
+                    "modo_do_boot_pelo_perfil",
+                    perfil=perfil_do_boot,
+                    caminho=caminho_do_boot,
+                    mascara=mascara_do_boot,
+                )
+        self.config.gamepad_caminho = self._caminho_do_boot
         # EMULACAO-NO-JOGO-01: restaura a PREFERÊNCIA de teclado emulado. Ao lado
         # do mouse e do gamepad de propósito — é a superfície que faltava (o
         # teclado era o único dos três sem flag em disco, e por isso o único que
@@ -4502,8 +4547,14 @@ class Daemon:
         """
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import start_gamepad_emulation
 
+        # O-MODO-XBOX-NAO-E-QUEDA-02, item 3: o primeiro pad nasce no modo do
+        # perfil que o boot restaura (`run`), e não precisa renascer quando o
+        # autoswitch ou o restore o ativarem.
         return start_gamepad_emulation(
-            self, flavor=self.config.gamepad_flavor, origin="profile"
+            self,
+            flavor=self.config.gamepad_flavor,
+            origin="profile",
+            caminho=getattr(self, "_caminho_do_boot", None),
         )
 
     def _stop_gamepad_emulation(self) -> None:
