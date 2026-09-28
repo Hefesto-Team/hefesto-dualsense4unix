@@ -1856,6 +1856,10 @@ class ContagemDaBomba:
     hapticos_mudos: int = 0
     #: O maior valor absoluto que já foi para um motor, em int8 (0..127).
     pico_haptico: int = 0
+    #: Reports LIDOS e não mandados: silêncio exato nos canais que o arranjo
+    #: leva (A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01). É o número do
+    #: rádio livre — no menu de um jogo, ele cresce e os montados não.
+    reports_calados: int = 0
 
     @property
     def reports_por_segundo(self) -> float:
@@ -1878,6 +1882,7 @@ class ContagemDaBomba:
             f" ({self.hapticos_mudos} mudos, pico {self.pico_haptico}/127)",
             f"  reports montados ........... {self.reports_montados}"
             f"  ({self.reports_por_segundo:.1f}/s)",
+            f"  calados por silêncio ....... {self.reports_calados}",
             f"  escritas ACEITAS PELO KERNEL {self.escritas_aceitas_pelo_kernel}",
             f"  escritas recusadas ......... {self.escritas_recusadas}",
             f"  bytes no fio ............... {self.bytes_escritos} B"
@@ -1933,6 +1938,7 @@ class BombaDeSomPeloRadio:
         conversor: Any = None,
         vaga: Any = None,
         relogio: Callable[[], float] | None = None,
+        so_com_sinal: bool = False,
     ) -> None:
         # O `common` É OBRIGATÓRIO PARA O CORPO QUE O PRESERVA — 08/09/2026.
         #
@@ -2006,6 +2012,17 @@ class BombaDeSomPeloRadio:
         #: montada e nunca rodada não precisa dele.
         self._conversor = conversor
         self._blocos: list[bytes] = []
+        #: O RÁDIO SÓ LEVA O QUE TEM SINAL — A-HAPTICA-DO-RADIO-OBEDECE-AO-
+        #: SINAL-DO-JOGO-01, 28/09/2026. Ligado, o report de silêncio exato nos
+        #: canais que o arranjo leva não é montado nem escrito; depois do
+        #: último com sinal vai UM de silêncio, e o rádio fica livre. Quem liga
+        #: é a :class:`PonteDeSomPorRadio` do produto; a bomba nasce desligada
+        #: porque o ensaio de bancada manda exatamente o que pediu, silêncio
+        #: inclusive. Ver :meth:`_vale_mandar`.
+        self.so_com_sinal = bool(so_com_sinal)
+        #: O último report MANDADO levou sinal? É o que faz o silêncio seguinte
+        #: ir ao rádio uma vez, e só uma.
+        self._mandou_sinal = False
         self.contagem = ContagemDaBomba()
 
     # -- a conta ----------------------------------------------------------
@@ -2079,6 +2096,11 @@ class BombaDeSomPeloRadio:
         if len(pcm) < pedido:
             self.contagem.pcm_curto += 1
             pcm = pcm + b"\x00" * (pedido - len(pcm))
+        if self.so_com_sinal and not self._vale_mandar(haptico, pcm):
+            # Nada é montado: sem Opus, sem CRC, e a sequência e o contador de
+            # quadros não andam — para o firmware, o fluxo só PAUSOU.
+            self.contagem.reports_calados += 1
+            return b""
         quadros: list[bytes] = []
         for i in range(self.arranjo.quadros_de_audio):
             pedaco = pcm[i * BYTES_DE_PCM_POR_QUADRO : (i + 1) * BYTES_DE_PCM_POR_QUADRO]
@@ -2108,6 +2130,41 @@ class BombaDeSomPeloRadio:
         self._quadros_mandados += self.arranjo.quadros_de_audio or 1
         self.contagem.reports_montados += 1
         return report
+
+    def _vale_mandar(self, haptico: bytes, pcm: bytes) -> bool:
+        """Este report vai ao rádio? Sinal, ou o silêncio que fecha o último sinal.
+
+        A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01, 28/09/2026. **O
+        CRITÉRIO É O DO ARRANJO**: o sinal se procura nos canais que ESTE
+        report leva, e não num canal fixo. No arranjo da háptica
+        (:data:`ARRANJO_HAPTICA_032`) é o bloco que :mod:`haptica_bt` montou
+        dos canais 3-4 do endpoint, os motores; no do alto-falante
+        (:data:`ARRANJO_035`) é o PCM do nó de som, os canais 1-2. Um critério
+        fixo nos motores calaria o alto-falante de todo controle em modo som.
+
+        **SILÊNCIO É ZERO EXATO**, e isso é medido: o PRAGMATA no menu manda
+        RMS e pico 0 nos quatro canais dos quatro endpoints (27/09). Um bloco
+        háptico que a conversão para int8 arredonda para zero também não mexe
+        o motor, e também não vai.
+
+        **DEPOIS DO ÚLTIMO SINAL VAI UM SILÊNCIO** — os dados já são zero, e o
+        report montado deles é o :func:`haptica_bt.bloco_de_silencio` no
+        motor e o quadro mudo no alto-falante: o motor para no zero em vez de
+        ficar no último valor, e o rádio volta a ficar livre.
+        """
+        if haptico.count(0) < len(haptico) or pcm.count(0) < len(pcm):
+            self._mandou_sinal = True
+            return True
+        if self._mandou_sinal:
+            self._mandou_sinal = False
+            return True
+        # O SILÊNCIO SOLTA A FILA: sem escrita não há fila cheia, e o relógio
+        # do teto de ceder (:data:`TETO_DE_CEDER_S`) não pode contar a pausa
+        # do jogo como o adaptador parado — o primeiro tiro depois de uma cena
+        # quieta derrubaria a ponte.
+        self._cedendo = False
+        self._cedendo_desde = None
+        return False
 
     @property
     def bytes_de_pcm_da_haptica(self) -> int:
@@ -2944,8 +3001,16 @@ class PonteDeSomPorRadio:
         fonte_de_haptica: Callable[[int], bytes] | None = None,
         gravador_da_haptica: Any | None = None,
         vaga: Any = None,
+        so_com_sinal: bool = True,
     ) -> None:
         self.uniq = uniq
+        #: A PONTE DO PRODUTO SÓ ESCREVE O QUE TEM SINAL — A-HAPTICA-DO-RADIO-
+        #: OBEDECE-AO-SINAL-DO-JOGO-01, 28/09/2026. Ela escuta o monitor o
+        #: tempo todo (ler é local e não gasta rádio), e o silêncio do jogo não
+        #: vai ao ar: foi a ponte de pé em silêncio, a 93,75 reports por
+        #: segundo, que afogou o rádio em 22/09. Ver
+        #: :meth:`BombaDeSomPeloRadio._vale_mandar`.
+        self.so_com_sinal = bool(so_com_sinal)
         #: A VAGA que o governador deu a esta ponte (GOVERNADOR-DO-RADIO-01).
         #: A ponte diz a ele quando SUBIU e quando DESCEU — é o que o diário
         #: conta por adaptador —, e a bomba a consulta a cada quadro. `None` =
@@ -3046,6 +3111,7 @@ class PonteDeSomPorRadio:
             com_microfone=self.com_microfone,
             fonte_haptica=self._fonte_da_haptica,
             vaga=self._vaga,
+            so_com_sinal=self.so_com_sinal,
         )
         # O fd e o sinal VÃO COM A THREAD, e é isso que impede a corrida velha
         # de escrever (ou de fechar) o descritor da corrida nova.

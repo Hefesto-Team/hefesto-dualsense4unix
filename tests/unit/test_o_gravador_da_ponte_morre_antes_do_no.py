@@ -93,11 +93,17 @@ MARCA = "hefesto-regua-som-trava-na-queda"
 
 #: O `pw-record` medido: TERM bloqueado (o signalfd), SIGPIPE no padrão, e o
 #: `write` bloqueante até o cano encher.
+#:
+#: **OS DUBLÊS LEVAM SINAL, e não silêncio** (A-HAPTICA-DO-RADIO-OBEDECE-AO-
+#: SINAL-DO-JOGO-01, 28/09/2026): a ponte do produto não escreve silêncio, e a
+#: queda que estas réguas medem é a escrita recusada de quem ESTÁ tocando. Com
+#: zeros, o laço nunca escreveria no hidraw que caiu, e a régua mediria outra
+#: cena. A amostra `1` é o menor sinal que existe.
 DUBLE_PW_RECORD = r"""
 import os, signal
 signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
 signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-bloco = b"\0" * 1920
+bloco = b"\1\0" * 960
 while True:
     os.write(1, bloco)
 """
@@ -107,7 +113,7 @@ DUBLE_TEIMOSO = r"""
 import os, signal, time
 signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM})
 signal.signal(signal.SIGPIPE, signal.SIG_IGN)
-bloco = b"\0" * 1920
+bloco = b"\1\0" * 960
 while True:
     try:
         os.write(1, bloco)
@@ -119,7 +125,7 @@ while True:
 #: que não está preso (medido no estudo: 1 ms).
 DUBLE_SAO = r"""
 import os
-bloco = b"\0" * 1920
+bloco = b"\1\0" * 960
 while True:
     os.write(1, bloco)
 """

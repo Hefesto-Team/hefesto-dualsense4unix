@@ -507,7 +507,12 @@ def test_o_escritor_que_so_devolve_eagain_derruba_a_ponte_em_dois_segundos(
         ponte = af.PonteDeSomPorRadio(
             uniq=CONTROLE_1,
             abrir_hidraw=lambda: escrita,
-            fonte_de_pcm=af.fonte_com_ritmo(lambda n: b"\x00" * n, ms_por_report=10),
+            # COM SINAL (A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01): a
+            # ponte do produto não escreve silêncio, e a fila só enche com o
+            # jogo tocando.
+            fonte_de_pcm=af.fonte_com_ritmo(
+                lambda n: (b"\x01\x00" * n)[:n], ms_por_report=10
+            ),
             vaga=vaga,
         )
         inicio = time.monotonic()
