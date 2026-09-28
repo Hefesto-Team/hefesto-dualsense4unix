@@ -2446,7 +2446,14 @@ def _o_dono_de_cada_escrita(s: Sessao, sondas: Mapping[str, Any]) -> None:
                str(sondas.get("nucleo-por-processo.bt", "não medido")))
         return
     s.gravar("saidas/nucleo.txt", texto)
-    ordem = ordem_da_chave_do_hw((SONDAS / "nucleo-por-processo.bt").read_text(encoding="utf-8"))
+    try:
+        ordem = ordem_da_chave_do_hw((SONDAS / "nucleo-por-processo.bt").read_text(encoding="utf-8"))
+    except OSError:
+        ordem = []
+    if "pid" not in ordem:
+        _passo(s, "o dono de cada escrita", "todos", "—", NAO_SEI,
+               "a sonda desta instalação não traz o pid na chave do @hw: o jogo e a Steam não se separam")
+        return
     estado = s.maquina.estado() or {}
     appid = _dict(estado.get("jogo_steam")).get("appid")
     processos = s.maquina.processos()
