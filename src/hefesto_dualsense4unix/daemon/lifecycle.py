@@ -3682,7 +3682,7 @@ class Daemon:
             True,
             flavor,
             origin=origem_emulacao,
-            **({"caminho": caminho} if caminho is not None else {}),
+            **cast("dict[str, Any]", {"caminho": caminho} if caminho is not None else {}),
         )
         if desfecho != EMU_BLOQUEADO_POR_JOGO:
             # **A CHAMADA A `_gravar_mascara_do_perfil` SAIU — MASCARA-CONTAGIO-01,
