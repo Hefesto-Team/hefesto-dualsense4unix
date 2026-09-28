@@ -470,8 +470,8 @@ class PortaDeclarada(BaseModel):
 
     #: O LUGAR DO BURACO (``pci-…-usb-0:4.1.4``) — a identidade que sobrevive
     #: ao boot. ``None`` = nenhum Mapear passou por ela ainda (a entrada que ela
-    #: desenhou e não mostrou com o controle); aí o lugar sai dos ``nos``, com
-    #: os controladores deste boot (:func:`lugar_da_porta`).
+    #: desenhou e não mostrou com o controle); aí quem acha o buraco dela são
+    #: os ``nos``, que valem só neste boot.
     lugar: str | None = None
     filha_de: str | None = None
     nos: list[str] = Field(default_factory=list)
@@ -1131,21 +1131,6 @@ def lugar_da_entrada(maquina: MaquinaConfig, numero: str) -> str | None:
     if porta is None or not porta.lugar:
         return None
     return porta.lugar if entrada_do_lugar(maquina, porta.lugar) == numero else None
-
-
-def lugar_da_porta(
-    porta: PortaDeclarada, controladores: Mapping[int, str] | None = None
-) -> str:
-    """O lugar do buraco desta entrada — ``""`` quando não se sabe.
-
-    O que ela guarda; e, na entrada que nenhum Mapear amarrou (a que ela só
-    desenhou), o do nó do lado 2.0 traduzido com os controladores deste boot.
-    """
-    if porta.lugar:
-        return porta.lugar
-    if not controladores:
-        return ""
-    return lugar_do_caminho(caminho_do_lado_20(porta.nos), controladores)
 
 
 def caminho_da_porta(
