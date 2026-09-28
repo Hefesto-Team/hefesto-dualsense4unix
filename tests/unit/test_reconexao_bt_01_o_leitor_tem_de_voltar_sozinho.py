@@ -115,6 +115,25 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         lambda: Path(estado["no_atual"]) if estado["no_atual"] else None,
     )
     monkeypatch.setattr(er_mod, "discover_dualsense_evdevs", lambda: {})
+
+    class _AvisoDaBancada:
+        """O `/dev/input` desta bancada: muda quando o nó vigente muda.
+
+        No aparelho, o controle que some e volta tira e põe `eventN` na pasta,
+        e é esse aviso que o leitor sem nó espera
+        (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026). Uma bancada
+        em que o nó volta sem a pasta mudar seria mais frouxa que o kernel.
+        """
+
+        def __init__(self) -> None:
+            self.visto = estado["no_atual"]
+
+        def poll(self) -> bool:
+            mudou = estado["no_atual"] != self.visto
+            self.visto = estado["no_atual"]
+            return bool(mudou)
+
+    monkeypatch.setattr(er_mod, "_novo_aviso_de_entrada", _AvisoDaBancada)
     return estado
 
 

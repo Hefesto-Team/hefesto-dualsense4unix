@@ -1002,9 +1002,11 @@ class TestOP1QueVoltaJogaNaHora:
             assert aberturas, "o leitor nem abriu o primeiro nó"
             leitor.no = None
             os.write(nos[0].w, b"x")
-            # Três buscas sem nó: o leitor entrou na espera de 2 s do backoff.
-            for _ in range(3):
-                assert sem_no.acquire(timeout=10)
+            # Uma busca sem nó, e o leitor dorme até `/dev/input` mudar
+            # (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026: o recuo
+            # no relógio, que dava três buscas até a espera de 2 s, saiu). A
+            # pasta de verdade não muda aqui: quem acorda o leitor é o wake.
+            assert sem_no.acquire(timeout=10)
             leitor.no = Path("/dev/input/event-dubl")
             volta = time.monotonic()
             # O que o `_recompute_primary` faz quando o P1 retoma o posto.

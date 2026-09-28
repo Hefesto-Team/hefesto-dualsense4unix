@@ -1106,6 +1106,8 @@ class _EvdevReconnectLoop:
     _active_dev: Any = None
     # Watch barato de /dev/input para o is_stale (lazy; PERF-MULTI-CONTROLLER-01).
     _stale_watch: Any = None
+    # A espera sem nó (`_esperar_o_no`, no fim do módulo); nasce na 1ª procura.
+    _espera_sem_no: Any = None
     _THREAD_NAME: ClassVar[str] = "hefesto-evdev-base"
     #: HANG-01: teto de latência do select por iteração do loop de leitura —
     #: sem isto, `_stop_flag`/`_reopen_flag` só seriam vistos quando o
@@ -1139,6 +1141,17 @@ class _EvdevReconnectLoop:
     #: 1 LSB que todo stick tem em repouso — as quatro unidades da mesa de
     #: 15/08 chiam nessa ordem de grandeza.
     _TOLERANCIA_MUDO: ClassVar[int] = 2
+
+    #: A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01: sem nó, o leitor dorme até
+    #: `/dev/input` mudar (`_esperar_o_no`). Este é o teto de SEGURANÇA dessa
+    #: espera, não o ritmo dela: um aviso perdido custa no máximo isto.
+    _TETO_SEM_AVISO_S: ClassVar[float] = 60.0
+
+    #: Buscas no relógio (0,5 → 1 → 2 s) depois de cada aviso que não achou o
+    #: nó. O nó nasce no `/dev/input` antes de o udev lhe dar dono e permissão,
+    #: e essa troca não muda a lista da pasta — sem estas buscas, o controle
+    #: que volta numa máquina sem broker esperaria o teto.
+    _BUSCAS_DEPOIS_DO_AVISO: ClassVar[int] = 3
 
     def __init__(self) -> None:
         """Self-pipe de wake (HANG-01, padrão GYRO-FD-01/PhysicalReportReader).
@@ -1511,13 +1524,12 @@ class _EvdevReconnectLoop:
             # do select em `_read_until_signaled` (mesmo padrão do
             # `PhysicalReportReader._run`).
             self._reopen_flag.clear()
-            path = self._device_path or self._find_device()
+            path = self._device_path or _procurar_o_no(self)
             if path is None:
                 if prefix == "evdev":
                     logger.debug("evdev_device_not_found_retry", backoff=backoff)
-                if _esperar_o_backoff(self, backoff):
+                if _esperar_o_no(self):
                     break
-                backoff = min(backoff * 2, 5.0)
                 continue
             try:
                 # HIDE-SO-O-HIDRAW-02: o nó do físico nasce fechado, e a porta
@@ -2896,6 +2908,98 @@ def _o_no_que_voltou(leitor: _EvdevReconnectLoop, caminho: Path | None) -> Path 
         with contextlib.suppress(AttributeError):  # dublê sem self-pipe
             leitor._wake()
     return caminho
+
+
+# A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01 (28/09/2026) — o leitor de um
+# controle AUSENTE espera o aviso de `/dev/input`, e não o relógio.
+#
+# O defeito, medido no diário de 26/09: com o controle fora da mesa, o leitor
+# dele procurava o nó a cada volta do recuo (0,5 → 1 → 2 → 4 → 5 s, e depois
+# 5 s para sempre), e cada procura era a descoberta inteira. O nó só volta
+# quando o kernel o recria, e isso muda a lista de `/dev/input` — que o
+# `InputDirWatch` enxerga com um `listdir`. Sem nó, o leitor procura UMA vez e
+# dorme até essa lista mudar (ou até o `_wake` do `refresh_device`, do
+# `retarget` e do `stop`), com o `_TETO_SEM_AVISO_S` só de segurança.
+
+
+def _novo_aviso_de_entrada() -> InputDirWatch:
+    """O aviso de que `/dev/input` mudou, um por leitor (o «mudou?» é de cada um)."""
+    return InputDirWatch(DEV_INPUT_DIR)
+
+
+@dataclass
+class _EsperaSemNo:
+    """O estado da espera de UM leitor sem nó. Nasce na primeira procura."""
+
+    aviso: Any
+    #: Buscas no relógio que ainda restam depois do último aviso.
+    acomodacao: int = 0
+    backoff: float = 0.5
+
+
+def _a_espera_de(leitor: _EvdevReconnectLoop) -> _EsperaSemNo:
+    espera = getattr(leitor, "_espera_sem_no", None)
+    if espera is None:
+        espera = _EsperaSemNo(aviso=_novo_aviso_de_entrada())
+        leitor._espera_sem_no = espera
+    return espera
+
+
+def _procurar_o_no(leitor: _EvdevReconnectLoop) -> Path | None:
+    """Procura o nó do leitor, com a linha de base do aviso tirada ANTES.
+
+    A ordem é o que impede o aviso de se perder: o nó que nascer durante a
+    procura muda a pasta depois da linha de base, e a primeira volta da
+    espera o enxerga.
+    """
+    espera = _a_espera_de(leitor)
+    espera.aviso.poll()
+    caminho = leitor._find_device()
+    if caminho is not None:
+        espera.acomodacao = 0
+        espera.backoff = 0.5
+    return caminho
+
+
+def _esperar_o_no(leitor: _EvdevReconnectLoop) -> bool:
+    """Espera o nó voltar depois de uma procura vazia. Devolve se é para PARAR."""
+    espera = _a_espera_de(leitor)
+    if espera.acomodacao > 0:
+        espera.acomodacao -= 1
+        segundos = espera.backoff
+        espera.backoff = min(espera.backoff * 2, 5.0)
+        return _esperar_o_backoff(leitor, segundos)
+    parar = _esperar_o_aviso(leitor, espera.aviso)
+    espera.acomodacao = leitor._BUSCAS_DEPOIS_DO_AVISO
+    espera.backoff = 0.5
+    return parar
+
+
+def _esperar_o_aviso(leitor: _EvdevReconnectLoop, aviso: Any) -> bool:
+    """Dorme até `/dev/input` mudar, até o `_wake`, ou até o teto.
+
+    Um passo é o `select` no self-pipe com o `_SELECT_TIMEOUT_S` do leitor, e
+    entre dois passos um `listdir` — microssegundos, contra a descoberta
+    inteira que o recuo repetia. Devolve se é para PARAR.
+    """
+    passo = leitor._SELECT_TIMEOUT_S
+    esperado = 0.0
+    while esperado < leitor._TETO_SEM_AVISO_S:
+        try:
+            pronto = prontos_para_ler([getattr(leitor, "_wake_r", -1)], passo)
+        except (OSError, ValueError):
+            if leitor._stop_flag.wait(passo):
+                return True
+            pronto = []
+        if pronto:
+            leitor._drain_wake()
+            return leitor._stop_flag.is_set()
+        if leitor._stop_flag.is_set():
+            return True
+        if aviso.poll():
+            return False
+        esperado += passo
+    return leitor._stop_flag.is_set()
 
 
 __all__ = [
