@@ -3518,13 +3518,11 @@ class Daemon:
            vencer); deliberadamente NÃO usa a pendência `ModoAdiado`, que é o
            canal do modo de um PERFIL e morre quando o perfil ativo muda.
 
-        NOTA DATADA — 28/09/2026 (O-FREESTYLE-E-UMA-CAMADA-SO-01). Aqui dizia
-        que o cadeado de autoswitch não era consultado, porque congelava só o
-        PERFIL e o modo é outro eixo. O cadeado saiu; o Modo Freestyle que o
-        substitui manda também no modo QUANDO o Freestyle diz o modo, e quem o
-        respeita é o chamador — o `AutoSwitcher` só pede o modo jogo padrão, com
-        ele ligado, se o Freestyle não tem a seção `mode`
-        (`_modo_jogo_padrao_sob_o_freestyle`).
+        NOTA DATADA — 28/09/2026 (O-FREESTYLE-E-UMA-CAMADA-SO-01). O cadeado,
+        que congelava só o PERFIL, não era consultado. Saiu; o Modo Freestyle
+        manda também no modo quando TEM a seção `mode`, e quem respeita é o
+        chamador: ligado, o `AutoSwitcher` só pede este modo se o Freestyle não
+        diz o modo (`_modo_jogo_padrao_sob_o_freestyle`).
 
         Retorno: o vocabulário de `APLICADO`/`ADIADO_LOCK_MANUAL`/`IGNORADO_*`.
         """
