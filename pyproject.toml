@@ -139,6 +139,13 @@ include = [
     "src/hefesto_dualsense4unix/locale/*/LC_MESSAGES/*.mo",
 ]
 
+# O sdist declara o que ENTRA, e nada além disso. Sem esta lista ele leva tudo
+# o que o `.gitignore` não esconde, e não lê o `.git/info/exclude` nem o ignore
+# global: um `python -m build` rodado numa árvore de trabalho levaria junto
+# qualquer arquivo local que só esses dois escondem.
+[tool.hatch.build.targets.sdist]
+only-include = ["src", "tests", "pyproject.toml", "README.md", "LICENSE", "LICENSES", "NOTICE", "CHANGELOG.md"]
+
 # A INTERFACE ENTROU NO `src/` EM 01/09/2026, e com ela 33 módulos que nunca
 # tinham passado pelo lint do CI — 704 achados de uma vez, 437 deles E501.
 #
