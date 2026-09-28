@@ -39,14 +39,20 @@ AVISO = "aviso"
 FALHA = "falha"
 
 #: Acima disto o pad nasceu preso. Os da noite de 27/09 deram de +28,7 a
-#: +30,3 s; sem o `cosmic-osk`, de +0,1 a +0,7 s; depois da cura, menos de
-#: 1 ms. O número de corte é hipótese pelos números da noite, e a prova no
-#: aparelho o confirma.
+#: +30,3 s; sem o `cosmic-osk`, de +0,1 a +0,7 s; depois da cura (151 pads,
+#: de 13h07 de 27/09 a 03h27 de 28/09), menos de 4 ms. O número de corte é
+#: hipótese pelos números da noite, e a prova no aparelho o confirma.
 LIMITE_DO_NASCIMENTO_S = 2.0
 
 #: A linha do kernel chega ao diário pelo journald, que a carimba quando a
-#: recebe. Medido no boot de 28/09: até 1,1 ms DEPOIS do registro do daemon.
-#: Esta folga deixa a criação casar com o registro que veio antes dela.
+#: RECEBE, não quando o kernel a escreveu. Medido nos 162 pads `uinput` do boot
+#: de 27 a 28/09: no normal ela chega menos de 2 ms depois do registro do
+#: daemon; duas vezes chegou 0,11 s e 1,85 s depois, com o journald parado, e
+#: nas duas a linha do PRÓPRIO registro do daemon chegou no mesmo instante.
+#: Esta folga deixa a criação casar com o registro que veio antes dela; a
+#: parada do journald se resolve pela chegada da linha do daemon (ver
+#: :func:`hora_do_pad`), nunca alargando esta folga, porque na noite de 27/09
+#: o pad seguinte nasceu de 0,3 a 0,9 s depois do registro do lento.
 FOLGA_DO_DIARIO_S = 0.1
 
 _BACKENDS = ("uhid", "uinput")
@@ -58,6 +64,8 @@ _NOME_DO_MODO = {
     "nativo": "Conexão Nativa",
     "desligado": "emulação desligada",
 }
+#: A concordância do «pedido» com o nome do modo.
+_PEDIDO = {"nativo": "pedida", "desligado": "pedida"}
 
 _NOME_DA_MASCARA = {"dualsense": "DualSense", "xbox": "Xbox", "nintendo": "Nintendo"}
 
@@ -88,7 +96,8 @@ class ModoDoJogador:
             return f"P{self.jogador}: {modo}, {pad}"
         if self.veredito == AVISO:
             return f"P{self.jogador}: {modo}, {pad} (queda dita: {self.motivo})"
-        return f"P{self.jogador}: {modo} pedido, {pad} no ar, sem queda dita"
+        pedido = _PEDIDO.get(self.pedido, "pedido")
+        return f"P{self.jogador}: {modo} {pedido}, {pad} no ar, sem queda dita"
 
 
 def _dict(valor: object) -> Mapping[str, Any]:
@@ -298,17 +307,22 @@ def _segundos(depois: datetime, antes: datetime) -> float:
 @dataclass(frozen=True)
 class _Registro:
     evento: str
+    #: O carimbo do structlog: o instante do registro.
     quando: datetime
     nome: str | None
     mascara: str | None
+    #: O carimbo do journald (a chegada da linha ao diário), quando a linha o traz.
+    recebido: datetime | None = None
 
 
 def _registro_do_daemon(linha: str) -> _Registro | None:
     """O evento, a hora e o pad de uma linha do diário do daemon.
 
     O carimbo que vale é o do structlog (o instante do registro), e não o do
-    journald, que chega depois quando a saída vai em bloco. Lê os dois
-    formatos do daemon, console e JSON.
+    journald, que chega depois quando o journald para. O do journald, quando a
+    linha o traz na frente (``journalctl -o short-iso-precise``), vai junto em
+    ``recebido``: é ele que resolve a linha do kernel que chegou atrasada. Lê
+    os dois formatos do daemon, console e JSON.
     """
     inicio = linha.find('{"')
     if inicio >= 0:
@@ -325,6 +339,7 @@ def _registro_do_daemon(linha: str) -> _Registro | None:
                 _instante(achado),
                 _texto(dado.get("name")),
                 _texto(dado.get("flavor")),
+                _chegada(linha[:inicio]),
             )
     achado = _CONSOLE.search(linha)
     if achado is None:
@@ -337,7 +352,14 @@ def _registro_do_daemon(linha: str) -> _Registro | None:
         _instante(achado),
         nome.group("nome") if nome else None,
         mascara.group("mascara") if mascara else None,
+        _chegada(linha[: achado.start()]),
     )
+
+
+def _chegada(prefixo: str) -> datetime | None:
+    """O carimbo do journald na frente da linha, se houver."""
+    achado = _ISO.search(prefixo)
+    return _instante(achado) if achado is not None else None
 
 
 def _criacao_no_kernel(linha: str) -> tuple[datetime, str] | None:
@@ -386,6 +408,16 @@ def hora_do_pad(
     `daemon_starting` e o registro (mais a :data:`FOLGA_DO_DIARIO_S`). Acima de
     :data:`LIMITE_DO_NASCIMENTO_S` é FALHA; sem a linha do kernel, AVISO («não
     medido»), nunca OK.
+
+    O JOURNALD PARADO. Sem criação livre antes do registro, vale a que chegou
+    ao diário JUNTO com a linha do próprio registro (até a folga depois dela ou
+    até :data:`LIMITE_DO_NASCIMENTO_S` antes, e nunca mais de
+    :data:`LIMITE_DO_NASCIMENTO_S` depois do registro): as duas ficaram presas
+    no mesmo journald, e o atraso é a distância entre as duas chegadas, no
+    mesmo relógio. Fora disso as duas chegadas não contam a mesma parada, e o
+    pad sai «não medido». Medido no boot de 27 a 28/09 (a nota de
+    :data:`FOLGA_DO_DIARIO_S`): sem isto, dois pads de 162, sãos, saíam
+    «não medido».
     """
     registros = [r for r in map(_registro_do_daemon, linhas_do_daemon) if r is not None]
     partidas = [i for i, r in enumerate(registros) if r.evento == "daemon_starting"]
@@ -401,21 +433,39 @@ def hora_do_pad(
     livres = list(range(len(criacoes)))
     medidas: list[HoraDoPad] = []
     for pad in pads:
+        do_nome = [i for i in livres if criacoes[i][1] == pad.nome]
         casados = [
-            i
-            for i in livres
-            if criacoes[i][1] == pad.nome
-            and _segundos(criacoes[i][0], pad.quando) <= FOLGA_DO_DIARIO_S
+            i for i in do_nome if _segundos(criacoes[i][0], pad.quando) <= FOLGA_DO_DIARIO_S
         ]
-        if not casados:
+        chegou = pad.recebido
+        juntos = (
+            [
+                i
+                for i in do_nome
+                if -LIMITE_DO_NASCIMENTO_S
+                <= _segundos(criacoes[i][0], chegou)
+                <= FOLGA_DO_DIARIO_S
+                and _segundos(criacoes[i][0], pad.quando) <= LIMITE_DO_NASCIMENTO_S
+            ]
+            if chegou is not None
+            else []
+        )
+        if casados:
+            escolhido = max(casados, key=lambda i: _segundos(criacoes[i][0], pad.quando))
+            nasceu = criacoes[escolhido][0]
+            atraso = max(0.0, _segundos(pad.quando, nasceu))
+        elif juntos and chegou is not None:
+            # A hora do kernel chegou presa com a do registro: o nascimento é o
+            # registro menos a distância entre as duas chegadas.
+            escolhido = min(juntos, key=lambda i: _segundos(criacoes[i][0], chegou))
+            atraso = max(0.0, _segundos(chegou, criacoes[escolhido][0]))
+            nasceu = pad.quando - timedelta(seconds=atraso)
+        else:
             medidas.append(
                 HoraDoPad(pad.mascara, pad.quando.strftime("%H:%M:%S"), None, AVISO)
             )
             continue
-        escolhido = max(casados, key=lambda i: _segundos(criacoes[i][0], pad.quando))
         livres.remove(escolhido)
-        nasceu = criacoes[escolhido][0]
-        atraso = max(0.0, _segundos(pad.quando, nasceu))
         medidas.append(
             HoraDoPad(
                 pad.mascara,

@@ -159,6 +159,7 @@ async def _estado(
     jogadores: list[Jogador],
     *,
     nativo: bool = False,
+    controlar_o_pc: bool = False,
 ) -> dict[str, Any]:
     """O `daemon.state_full` da mesa, pelo handler de verdade."""
     daemon = Daemon(controller=FakeController(transport="usb"))
@@ -188,6 +189,12 @@ async def _estado(
         daemon.config.gamepad_emulation_enabled = False
         daemon.config.coop_enabled = False
         return await _Handlers(daemon)._handle_daemon_state_full({})
+    if controlar_o_pc:
+        # «Controlar o PC»: o controle mexe no PC, sem pad e sem jogador.
+        daemon.config.gamepad_emulation_enabled = False
+        daemon.config.coop_enabled = True
+        estado = await _Handlers(daemon)._handle_daemon_state_full({})
+        return json.loads(json.dumps(estado))
     daemon.config.gamepad_emulation_enabled = True
     daemon.config.coop_enabled = True
     daemon._gamepad_device = _pad(jogadores[0], UNIQS[0], 1, caminho)
@@ -304,6 +311,20 @@ class TestOModoContraOAr:
             AVISO,
         )
 
+    async def test_controlar_o_pc_nao_tem_jogador_nem_pad(self) -> None:
+        """O modo mouse e teclado: nenhum jogador numerado e nenhum pad no ar."""
+        estado = await _estado(None, [Jogador(), Jogador()], controlar_o_pc=True)
+        assert estado["native_mode"] is False
+        assert estado["gamepad_emulation"]["enabled"] is False
+        assert modo_contra_o_ar(estado) == []
+
+    async def test_a_nativa_com_pad_no_ar_e_falha_e_concorda(self) -> None:
+        estado = await _estado("xbox", [Jogador()])
+        estado["native_mode"] = True
+        (linha,) = modo_contra_o_ar(estado)
+        assert linha.veredito == FALHA
+        assert linha.frase() == "P1: Conexão Nativa pedida, pad uinput no ar, sem queda dita"
+
     async def test_a_frase_diz_so_jogador_modo_e_backend(self) -> None:
         estado = await _estado(
             "dualsense",
@@ -328,9 +349,22 @@ def _k(hora: str, nome: str, n: int, dia: str = "2026-09-27") -> str:
     return f"{dia}T{hora}-03:00 maquina kernel: input: {nome} as /devices/virtual/input/input{n}"
 
 
-def _d(hora: str, evento: str, nome: str | None = None, dia: str = "2026-09-27") -> str:
+def _d(
+    hora: str,
+    evento: str,
+    nome: str | None = None,
+    dia: str = "2026-09-27",
+    *,
+    chegou: str | None = None,
+) -> str:
+    """Uma linha do daemon no `journalctl -o short-iso-precise`.
+
+    ``chegou`` é o carimbo do journald (a chegada ao diário); sem ele, o mesmo
+    instante do registro.
+    """
     carimbo = f"{dia}T{hora}"
-    prefixo = f"{carimbo[:26]}-03:00 maquina hefesto-dualsense4unix[4242]: {carimbo} [info     ] "
+    recebido = f"{dia}T{chegou}" if chegou else carimbo[:26]
+    prefixo = f"{recebido}-03:00 maquina hefesto-dualsense4unix[4242]: {carimbo} [info     ] "
     if evento == "daemon_starting":
         return prefixo + "daemon_starting                paused=False poll_hz=60"
     mascara, produto, fornecedor = (
@@ -382,7 +416,7 @@ NOITE_DAEMON_DEPOIS = [
 ]
 
 #: O boot de 28/09, depois da cura: o journald carimba o kernel até 1,1 ms
-#: DEPOIS do registro do daemon.
+#: DEPOIS do registro do daemon, dentro da folga.
 BOOT = "2026-09-28"
 BOOT_KERNEL = [
     _k("03:01:35.422250", _XBOX, 625, BOOT),
@@ -398,6 +432,22 @@ BOOT_DAEMON = [
     _d("03:27:19.951382", "uinput_device_created", _EDGE, BOOT),
     _d("03:27:20.490557", "uinput_device_created", _EDGE, BOOT),
     _d("03:27:21.492428", "uinput_device_created", _XBOX, BOOT),
+]
+
+
+#: O journald parado, na noite de 27/09 (linhas reais, nome e PID trocados). O
+#: Xbox das 23:46:18 chegou ao diário 1,85 s depois do registro, e a linha do
+#: próprio registro chegou junto com a do kernel.
+PARADA_DAEMON = [
+    _d("23:37:39.482631", "daemon_starting"),
+    _d("23:42:37.803397", "uinput_device_created", _XBOX, chegou="23:42:37.803458"),
+    _d("23:46:14.581312", "uinput_device_created", _EDGE, chegou="23:46:14.581687"),
+    _d("23:46:18.957654", "uinput_device_created", _XBOX, chegou="23:46:20.805317"),
+]
+PARADA_KERNEL = [
+    _k("23:42:37.804161", _XBOX, 483),
+    _k("23:46:14.581168", _EDGE, 491),
+    _k("23:46:20.804240", _XBOX, 494),
 ]
 
 
@@ -443,6 +493,31 @@ class TestAHoraDoPad:
         medidas = hora_do_pad(BOOT_KERNEL, BOOT_DAEMON)
         assert [m.veredito for m in medidas] == [OK] * 5
         assert all(m.atraso_s is not None and m.atraso_s < 0.01 for m in medidas)
+
+    def test_o_journald_parado_nao_vira_nao_medido(self) -> None:
+        """As duas chegadas presas no mesmo journald: o atraso é entre elas."""
+        medidas = hora_do_pad(PARADA_KERNEL, PARADA_DAEMON)
+        assert [m.veredito for m in medidas] == [OK, OK, OK]
+        assert medidas[2].hora == "23:46:18"
+        assert medidas[2].atraso_s is not None and medidas[2].atraso_s < 0.01
+
+    def test_a_parada_so_na_linha_do_kernel_e_nao_medido(self) -> None:
+        """A linha do daemon chegou na hora e a do kernel 1,85 s depois: não é a
+        mesma parada, e o pad sai «não medido», nunca OK."""
+        daemon = [
+            *PARADA_DAEMON[:3],
+            _d("23:46:18.957654", "uinput_device_created", _XBOX, chegou="23:46:18.957700"),
+        ]
+        assert [m.veredito for m in hora_do_pad(PARADA_KERNEL, daemon)] == [OK, OK, AVISO]
+
+    def test_as_duas_chegadas_longe_demais_e_nao_medido(self) -> None:
+        """A linha do kernel chegou 5,5 s antes da do daemon, e depois do registro:
+        as duas não contam a mesma parada, e nada ali mede o nascimento."""
+        daemon = [
+            *PARADA_DAEMON[:3],
+            _d("23:46:18.957654", "uinput_device_created", _XBOX, chegou="23:46:26.304240"),
+        ]
+        assert [m.veredito for m in hora_do_pad(PARADA_KERNEL, daemon)] == [OK, OK, AVISO]
 
     def test_pad_sem_linha_do_kernel_e_aviso_nunca_ok(self) -> None:
         (medida,) = hora_do_pad([], BOOT_DAEMON[:2])
@@ -499,7 +574,9 @@ def lar() -> Iterator[Path]:
         shutil.rmtree(d, ignore_errors=True)
 
 
-def _servir(sock_path: Path, result: dict[str, Any]) -> threading.Thread:
+def _servir(sock_path: Path, result: dict[str, Any] | list[dict[str, Any]]) -> threading.Thread:
+    """Serve o `state_full`; uma lista serve um estado por leitura, e repete o último."""
+    fila = list(result) if isinstance(result, list) else [result]
     srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     srv.bind(str(sock_path))
     srv.listen(4)
@@ -523,7 +600,8 @@ def _servir(sock_path: Path, result: dict[str, Any]) -> threading.Thread:
                     pedido = json.loads(buf or b"{}")
                     if pedido.get("method") != "daemon.state_full":
                         continue
-                    resposta = {"jsonrpc": "2.0", "id": pedido.get("id"), "result": result}
+                    atual = fila.pop(0) if len(fila) > 1 else fila[0]
+                    resposta = {"jsonrpc": "2.0", "id": pedido.get("id"), "result": atual}
                     conn.sendall(json.dumps(resposta).encode("utf-8") + b"\n")
         finally:
             srv.close()
@@ -604,6 +682,21 @@ class TestODoctorPergunta:
         assert not _NO_OU_ENDERECO.search(saida), saida
         fio.join(timeout=0.1)
 
+    async def test_a_falha_de_um_instante_nao_reprova(self, lar: Path) -> None:
+        """A recriação do pad no meio da leitura: a segunda leitura já vê o certo."""
+        no_meio = await _estado("xbox", [Jogador("sem_caminho"), Jogador()])
+        de_pe = await _estado("xbox", [Jogador(), Jogador()])
+        _servir(_socket(lar), [no_meio, de_pe])
+        saida = _doctor(lar, "check_o_modo_no_ar", _bin(lar, [], []))
+        assert "[FAIL]" not in saida, saida
+        assert "[ OK ] P1: modo Xbox, pad uinput" in saida.splitlines()
+
+    async def test_controlar_o_pc_no_doctor_nao_e_ipc_mudo(self, lar: Path) -> None:
+        _servir(_socket(lar), await _estado(None, [Jogador(), Jogador()], controlar_o_pc=True))
+        saida = _doctor(lar, "check_o_modo_no_ar", _bin(lar, [], []))
+        assert "[WARN]" not in saida and "[FAIL]" not in saida, saida
+        assert "[ OK ] emulação desligada: nenhum jogador com pad e nenhum pad no ar" in saida
+
     async def test_a_queda_com_motivo_e_aviso_no_doctor(
         self, lar: Path, fabrica: dict[str, bool]
     ) -> None:
@@ -628,6 +721,25 @@ class TestODoctorPergunta:
         assert "[ OK ] o pad Xbox das 03:01:35 nasceu em 0,0 s" in saida
         assert saida.count("[WARN]") == 4, saida
         assert "[FAIL]" not in saida
+
+    def test_o_diario_do_daemon_vazio_nao_e_nenhum_pad(self, lar: Path) -> None:
+        _servir(_socket(lar), {"connected": True})
+        saida = _doctor(lar, "check_a_hora_do_pad", _bin(lar, BOOT_KERNEL, []))
+        assert "o diário do daemon não tem a subida dele" in saida, saida
+        assert "nenhum pad uinput nasceu" not in saida
+
+    def test_a_linha_que_a_funcao_nao_le_avisa(self, lar: Path) -> None:
+        """O formato do daemon mudou (aqui, com cor): o que sobra não é «nenhum pad»."""
+        colorida = (
+            "2026-09-28T03:01:35.426089-03:00 maquina hefesto-dualsense4unix[4242]: "
+            "\x1b[2m2026-09-28T03:01:35.426089\x1b[0m [\x1b[32m\x1b[1minfo     \x1b[0m] "
+            f"\x1b[1muinput_device_created\x1b[0m flavor=xbox name='{_XBOX}'"
+        )
+        _servir(_socket(lar), {"connected": True})
+        binario = _bin(lar, BOOT_KERNEL, [BOOT_DAEMON[0], colorida])
+        saida = _doctor(lar, "check_a_hora_do_pad", binario)
+        assert "[WARN] a medida da hora de cada pad quebrou" in saida, saida
+        assert "nenhum pad uinput nasceu" not in saida
 
     def test_as_duas_estao_no_main_e_leem_o_kernel_sem_o_k(self) -> None:
         texto = DOCTOR.read_text(encoding="utf-8")

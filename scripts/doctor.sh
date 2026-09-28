@@ -3228,6 +3228,13 @@ PYEOF
 # fecho com o Freestyle dela no modo Xbox; o `degraded` e o `dedup_ok` diziam
 # íntegro, porque perguntam outra coisa. Esta checagem compara o canal que o
 # modo pedido dá com o pad no ar, por jogador.
+#
+# A FALHA SE CONFIRMA NUMA SEGUNDA LEITURA, 1,5 s depois: a troca de modo
+# derruba e recria o pad, e no boot o P1 nasce mais de uma vez enquanto os
+# controles chegam (a O-MODO-XBOX-NAO-E-QUEDA-02, o (c)). Uma leitura só no meio
+# dessa recriação acusaria o instante, não o estado. Sem jogador nenhum (Controlar
+# o PC, a Conexão Nativa sem controle), a saída diz o modo e que não há pad, e
+# não «o IPC não respondeu»: ele respondeu.
 _saida_do_modo_no_ar() {
     local sock="$1" py="$2"
     HEFESTO_SRC="${ROOT_DIR}/src" "${py}" - "${sock}" <<'PY' 2>/dev/null
@@ -3235,40 +3242,68 @@ import json
 import os
 import socket
 import sys
+import time
 
 src = os.environ.get("HEFESTO_SRC", "")
 if src and os.path.isdir(src):
     sys.path.insert(0, src)
 try:
-    from hefesto_dualsense4unix.core.o_modo_no_ar import modo_contra_o_ar
+    from hefesto_dualsense4unix.core.o_modo_no_ar import FALHA, modo_contra_o_ar
 except Exception:  # noqa: BLE001 - qualquer falha de import é "não sei"
     print("sem-produto")
     raise SystemExit(0)
-try:
+
+
+def _estado():
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     s.settimeout(2.0)
-    s.connect(sys.argv[1])
-    s.sendall(
-        json.dumps({"jsonrpc": "2.0", "id": 1, "method": "daemon.state_full", "params": {}}).encode(
-            "utf-8"
+    try:
+        s.connect(sys.argv[1])
+        s.sendall(
+            json.dumps(
+                {"jsonrpc": "2.0", "id": 1, "method": "daemon.state_full", "params": {}}
+            ).encode("utf-8")
+            + b"\n"
         )
-        + b"\n"
-    )
-    buf = b""
-    while not buf.endswith(b"\n"):
-        chunk = s.recv(65536)
-        if not chunk:
-            break
-        buf += chunk
-    estado = json.loads(buf.decode("utf-8")).get("result") or {}
+        buf = b""
+        while not buf.endswith(b"\n"):
+            chunk = s.recv(65536)
+            if not chunk:
+                break
+            buf += chunk
+    finally:
+        s.close()
+    resultado = json.loads(buf.decode("utf-8")).get("result")
+    if not isinstance(resultado, dict) or not resultado:
+        raise ValueError("sem estado")
+    return resultado
+
+
+try:
+    estado = _estado()
 except Exception:  # noqa: BLE001 - daemon travado ou resposta ilegível
     print("sem-ipc")
     raise SystemExit(0)
 try:
     linhas = modo_contra_o_ar(estado)
-except Exception:  # noqa: BLE001 - o pacote sem as dependências do dono do canal
+    if any(linha.veredito == FALHA for linha in linhas):
+        time.sleep(1.5)
+        try:
+            estado = _estado()
+        except Exception:  # noqa: BLE001 - a segunda leitura não veio: vale a primeira
+            pass
+        else:
+            linhas = modo_contra_o_ar(estado)
+except ImportError:
+    # o dono do canal (`virtual_pad`) importa o structlog: sem ele, "não sei"
     print("sem-produto")
     raise SystemExit(0)
+except Exception as erro:  # noqa: BLE001 - defeito da conferência, nunca "não sei" calado
+    print(f"erro|{type(erro).__name__}")
+    raise SystemExit(0)
+if not linhas:
+    modo = "Conexão Nativa" if estado.get("native_mode") is True else "emulação desligada"
+    print(f"sem-jogador|{modo}")
 for linha in linhas:
     print(f"{linha.veredito}|{linha.frase()}")
 PY
@@ -3290,6 +3325,12 @@ check_o_modo_no_ar() {
             return ;;
         sem-ipc|"")
             warn "IPC não respondeu — o modo de cada jogador não foi conferido (daemon travado?)"
+            return ;;
+        erro\|*)
+            warn "a conferência do modo de cada jogador quebrou (${saida#erro|}) — o modo não foi conferido"
+            return ;;
+        sem-jogador\|*)
+            pass "${saida#sem-jogador|}: nenhum jogador com pad e nenhum pad no ar"
             return ;;
     esac
     local veredito frase
@@ -3319,6 +3360,9 @@ check_a_hora_do_pad() {
     command -v journalctl >/dev/null 2>&1 || { info "journalctl ausente — a hora de nascer de cada pad não se mede"; return; }
     py="$(_python_do_produto)"
     [[ -n "${py}" ]] || { info "sem python para medir a hora de nascer de cada pad"; return; }
+    # O diário do daemon vazio não é «nenhum pad nasceu»: é «não sei» (a unit
+    # de outro nome, o daemon subido à mão, o diário girado). O `sem-diario`
+    # separa os dois.
     saida="$(HEFESTO_SRC="${ROOT_DIR}/src" "${py}" - \
         <(journalctl -b _TRANSPORT=kernel -o short-iso-precise --no-pager 2>/dev/null \
             | grep -E ' as /devices/virtual/input/input[0-9]+$') \
@@ -3339,7 +3383,21 @@ with open(sys.argv[1], encoding="utf-8", errors="replace") as fh:
     kernel = fh.read().splitlines()
 with open(sys.argv[2], encoding="utf-8", errors="replace") as fh:
     daemon = fh.read().splitlines()
-medidas = hora_do_pad(kernel, daemon)
+partidas = [i for i, linha in enumerate(daemon) if "daemon_starting" in linha]
+if not partidas:
+    print("sem-diario")
+    raise SystemExit(0)
+registrados = sum("uinput_device_created" in linha for linha in daemon[partidas[-1] + 1 :])
+try:
+    medidas = hora_do_pad(kernel, daemon)
+except Exception as erro:  # noqa: BLE001 - defeito da conferência, nunca "não sei" calado
+    print(f"erro|{type(erro).__name__}")
+    raise SystemExit(0)
+if len(medidas) != registrados:
+    # uma linha do daemon que a função não leu: o formato mudou, e o que
+    # sobrasse seria lido como «nenhum pad nasceu»
+    print(f"erro|pads no diário: {registrados}, lidos: {len(medidas)}")
+    raise SystemExit(0)
 if not medidas:
     print("sem-pad")
 for medida in medidas:
@@ -3350,7 +3408,13 @@ PY
         sem-produto)
             info "a hora de nascer de cada pad não foi medida (o pacote não está ao alcance do python ${py})"
             return ;;
-        sem-pad|"")
+        sem-diario|"")
+            info "o diário do daemon não tem a subida dele — a hora de nascer de cada pad não foi medida"
+            return ;;
+        erro\|*)
+            warn "a medida da hora de cada pad quebrou (${saida#erro|}) — a hora não foi medida"
+            return ;;
+        sem-pad)
             info "nenhum pad uinput nasceu desde que o daemon subiu — a hora do pad não tem o que medir"
             return ;;
     esac
