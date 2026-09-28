@@ -72,7 +72,9 @@ def _mok(tmp_path: Path, *, gerada: bool, inscrita: bool) -> dict[str, str]:
     return {"HEFESTO_DKMS_MOK_PUB": str(pub), "HEFESTO_MOK_LISTAS": str(lista)}
 
 
-def _lib(tmp_path: Path, script: str, env_extra: dict[str, str]) -> subprocess.CompletedProcess[str]:
+def _lib(
+    tmp_path: Path, script: str, env_extra: dict[str, str]
+) -> subprocess.CompletedProcess[str]:
     env = {"PATH": str(_bin(tmp_path)), "HOME": str(tmp_path), "LC_ALL": "C.UTF-8"}
     env.update(env_extra)
     return subprocess.run(
@@ -86,13 +88,13 @@ def _lib(tmp_path: Path, script: str, env_extra: dict[str, str]) -> subprocess.C
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize(("ligado", "esperado"), [(True, "sim"), (False, "nao"), (None, "nao")])
+@pytest.mark.parametrize(("ligado", "esperado"), [(True, "sim"), (False, "não"), (None, "não")])
 def test_o_secure_boot_se_le_pela_efivars(
     tmp_path: Path, ligado: bool | None, esperado: str
 ) -> None:
     r = _lib(
         tmp_path,
-        "if dkms_secure_boot_ligado; then echo sim; else echo nao; fi",
+        "if dkms_secure_boot_ligado; then echo sim; else echo não; fi",
         {"HEFESTO_EFIVARS_ROOT": str(_efivars(tmp_path, ligado))},
     )
     assert r.stdout.strip() == esperado, (r.stdout, r.stderr)
@@ -100,14 +102,14 @@ def test_o_secure_boot_se_le_pela_efivars(
 
 @pytest.mark.parametrize(
     ("gerada", "inscrita", "esperado"),
-    [(True, True, "sim"), (True, False, "nao"), (False, False, "nao")],
+    [(True, True, "sim"), (True, False, "não"), (False, False, "não")],
 )
 def test_a_chave_se_confere_sem_mokutil(
     tmp_path: Path, gerada: bool, inscrita: bool, esperado: str
 ) -> None:
     r = _lib(
         tmp_path,
-        "if dkms_chave_mok_inscrita; then echo sim; else echo nao; fi",
+        "if dkms_chave_mok_inscrita; then echo sim; else echo não; fi",
         _mok(tmp_path, gerada=gerada, inscrita=inscrita),
     )
     assert r.stdout.strip() == esperado, (r.stdout, r.stderr)
