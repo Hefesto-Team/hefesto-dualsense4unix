@@ -8,33 +8,21 @@ e um DualSense no cabo. O clique sintético em «Salvar Perfil» devolveu::
       Value error, custom_mult só é válido com policy='custom'
       (policy='balanceado')
 
-Não é tarja cosmética: o gesto LEVANTA, e um `RuntimeError`/`ValueError` de
-gesto vira **tarja de recusa** no cartão (`hefesto_vivo._recusou_dizendo`). O
-perfil dela **não é gravado**. Todo o resto do Salvar — cor, som, sensores,
-mouse — morre junto, e o que o rodapé escreveria no disco não chega lá.
+O daemon publica o teto de vibração como MEMÓRIA (`rumble_policy_custom_mult`
+= 0,7, de quando o degrau era "custom") ao lado do degrau de hoje
+(`balanceado`), e o Salvar copiava os dois soltos para o rascunho: o esquema
+recusa o par, com razão (*"o valor seria silenciosamente ignorado pelo
+daemon"*), e o perfil dela não era gravado.
 
-A CAUSA, MEDIDA NO DAEMON DELA
-------------------------------
-O daemon publica os três campos de vibração SEMPRE, e o teto é uma MEMÓRIA::
+DESDE 27/09 (`D-2709-O-SALVAR-LE-O-PERFIL`) o Salvar não lê a vibração do
+aparelho: o teto lembrado não tem como chegar ao rascunho (§1). O teto É
+escolha dela quando ela arrasta a barra «Personalizado» da coluna de um
+controle, e quem o grava, junto com o degrau, é o gesto da aba Vibração
+(`a05_vibracao._gravar_a_forca`), no clique (§2).
 
-    rumble_policy             = 'balanceado'
-    rumble_passthrough        = True
-    rumble_policy_custom_mult = 0.7      <- o teto que ela usou quando o degrau
-                                            era "custom"; continua publicado
-
-`rodape._o_que_e_da_mesa_inteira` copiava os três para o rascunho sem
-perguntar, e o `to_profile` monta um `RumbleConfig(policy='balanceado',
-custom_mult=0.7)` — que o esquema recusa **de propósito**, e a razão dele está
-certa (`profiles/schema.py`): *"custom_mult fora de policy='custom' é erro
-semântico (o valor seria silenciosamente ignorado pelo daemon)"*.
-
-**Quem estava errado era o rodapé**, não o esquema: o teto só existe sob
-`custom`, e é a aba Vibração — a dona do par — que já escreve os dois JUNTOS
-(`a05_vibracao.py:1287`). O rodapé lia os dois SOLTOS.
-
-A MORDIDA: devolva a linha `mudancas["custom_mult"] = float(mult)` incondicional
-a `_o_que_e_da_mesa_inteira` e o primeiro teste reprova com a mesma
-`ValidationError` que a tela mostrou.
+A MORDIDA: devolva ao ``rodape.salvar`` o degrau e o teto do daemon, soltos
+(``policy`` e ``custom_mult`` do estado no rascunho), e o primeiro teste
+reprova com a mesma `ValidationError` que a tela mostrou.
 """
 from __future__ import annotations
 
@@ -45,14 +33,16 @@ import pytest
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
 #: O ESTADO DELA, medido no daemon vivo em 06/09/2026 às 04h42. O `0.7` é o
-#: teto lembrado de quando o degrau era "custom" — e é o que fazia o Salvar
-#: recusar com o degrau em "Balanceado".
+#: teto lembrado de quando o degrau era "custom".
 ESTADO_DELA = {
     "active_profile": "Personalizado",
     "rumble_policy": "balanceado",
     "rumble_passthrough": True,
     "rumble_policy_custom_mult": 0.7,
 }
+
+#: Um controle com endereço FORJADO, na grafia do mapa `controllers`.
+UNIQ = "aabbcc0000c1"
 
 
 @pytest.fixture
@@ -75,51 +65,47 @@ def _ctx(estado: dict[str, Any]) -> Any:
     return Contexto(state=estado)
 
 
+def _salvar(estado: dict[str, Any]) -> Profile:
+    from hefesto_dualsense4unix.interface.pacotes import rodape
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
+    rodape.salvar(_ctx(estado), {"gesto": "salvar"}, None)
+    return load_profile("Personalizado")
+
+
+class _Ponte:
+    """O que o gesto da Vibração chama para reaplicar o perfil."""
+
+    def profile_switch(self, nome: str) -> bool:
+        return True
+
+    def chamar(self, metodo: str, *a: Any, **kw: Any) -> Any:
+        return True
+
+    def resultado(self, metodo: str, *a: Any, **kw: Any) -> Any:
+        return {}
+
+
+# --------------------------------------------------------------------------
+# 1. o teto lembrado pelo daemon não chega ao Salvar
+# --------------------------------------------------------------------------
 def test_o_teto_lembrado_nao_derruba_o_salvar(disco: Any) -> None:
     """O caso EXATO da máquina dela: degrau "Balanceado", teto lembrado 0,7."""
-    from hefesto_dualsense4unix.interface.pacotes import rodape
-
-    draft = rodape._draft_do_ativo("Personalizado", _ctx(ESTADO_DELA))
-    assert draft is not None
-
-    # Sem a cura, esta linha levanta `ValidationError` — que é o que a tela
-    # dela mostrou como tarja de recusa.
-    prof = draft.to_profile("Personalizado", priority=10)
-
-    assert prof.rumble.policy == "balanceado"
+    prof = _salvar(ESTADO_DELA)
+    assert prof.rumble.policy is None, (
+        f"o Salvar gravou a política do aparelho ({prof.rumble.policy!r}) num "
+        "perfil sem opinião sobre ela")
     assert prof.rumble.custom_mult is None
-    assert prof.rumble.passthrough is True
 
 
-def test_sob_custom_o_teto_continua_indo_para_o_perfil(disco: Any) -> None:
-    """A cura não pode virar "o rodapé nunca grava o teto".
-
-    Com o degrau em "custom" o número É o ajuste dela, e perdê-lo seria trocar
-    uma recusa barulhenta por uma perda calada — a família de defeito que o
-    item 13 de 05/09 nomeou.
-    """
-    from hefesto_dualsense4unix.interface.pacotes import rodape
-
-    estado = {**ESTADO_DELA, "rumble_policy": "custom"}
-    draft = rodape._draft_do_ativo("Personalizado", _ctx(estado))
-    assert draft is not None
-
-    prof = draft.to_profile("Personalizado", priority=10)
-    assert prof.rumble.policy == "custom"
-    assert prof.rumble.custom_mult == pytest.approx(0.7)
+def test_sob_custom_no_aparelho_o_salvar_nao_inventa_o_teto(disco: Any) -> None:
+    """Nem sob "custom" o teto do aparelho vira escolha dela pelo Salvar."""
+    prof = _salvar({**ESTADO_DELA, "rumble_policy": "custom"})
+    assert (prof.rumble.policy, prof.rumble.custom_mult) == (None, None)
 
 
-def test_o_teto_do_perfil_sai_quando_o_degrau_deixa_de_ser_custom(
-    disco: Any, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """O teto do DISCO também tem de sair, e este é o caminho que sobrava.
-
-    Um perfil salvo sob "custom" carrega `custom_mult` no JSON. Se ela mudar o
-    degrau para "Balanceado" e mandar Salvar, o rascunho traz a política NOVA
-    do daemon e o teto VELHO do disco — o mesmo par proibido, por outra porta.
-    Ler só o que o daemon publica deixaria esta metade viva.
-    """
-    from hefesto_dualsense4unix.interface.pacotes import rodape
+def test_o_teto_do_disco_sobrevive_ao_salvar(disco: Any) -> None:
+    """Daemon dizendo outra coisa: o perfil sai com o par que o disco tinha."""
     from hefesto_dualsense4unix.profiles.loader import save_profile
     from hefesto_dualsense4unix.profiles.schema import RumbleConfig
 
@@ -127,33 +113,25 @@ def test_o_teto_do_perfil_sai_quando_o_degrau_deixa_de_ser_custom(
         name="Personalizado", match=MatchAny(), priority=10,
         rumble=RumbleConfig(policy="custom", custom_mult=1.4),
     ))
-    # O daemon diz "balanceado" e NÃO publica teto nenhum.
-    estado = {"active_profile": "Personalizado", "rumble_policy": "balanceado"}
-    draft = rodape._draft_do_ativo("Personalizado", _ctx(estado))
-    assert draft is not None
-
-    prof = draft.to_profile("Personalizado", priority=10)
-    assert prof.rumble.policy == "balanceado"
-    assert prof.rumble.custom_mult is None
-
-
-def test_sem_vibracao_no_estado_o_rodape_nao_inventa(disco: Any) -> None:
-    """Daemon calado sobre vibração: o rascunho fica com o que o perfil tinha.
-
-    É o que impede a cura de virar "o Salvar zera o teto de quem não perguntou".
-    """
-    from hefesto_dualsense4unix.interface.pacotes import rodape
-    from hefesto_dualsense4unix.profiles.loader import save_profile
-    from hefesto_dualsense4unix.profiles.schema import RumbleConfig
-
-    save_profile(Profile(
-        name="Personalizado", match=MatchAny(), priority=10,
-        rumble=RumbleConfig(policy="custom", custom_mult=1.4),
-    ))
-    draft = rodape._draft_do_ativo(
-        "Personalizado", _ctx({"active_profile": "Personalizado"}))
-    assert draft is not None
-
-    prof = draft.to_profile("Personalizado", priority=10)
+    prof = _salvar({"active_profile": "Personalizado", "rumble_policy": "balanceado"})
     assert prof.rumble.policy == "custom"
     assert prof.rumble.custom_mult == pytest.approx(1.4)
+
+
+# --------------------------------------------------------------------------
+# 2. o teto é escolha dela no gesto da Vibração, e vai junto com o degrau
+# --------------------------------------------------------------------------
+def test_a_barra_personalizada_grava_o_teto_com_o_degrau(disco: Any) -> None:
+    """Arrastar a barra grava `custom` e o número; outro degrau tira o número."""
+    from hefesto_dualsense4unix.interface.pacotes import a05_vibracao
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
+    ctx = _ctx({"active_profile": "Personalizado"})
+    a05_vibracao._gravar_a_forca(ctx, _Ponte(), UNIQ, "custom", custom=0.7)
+    dele = load_profile("Personalizado").controllers[UNIQ].rumble
+    assert (dele.policy, dele.custom_mult) == ("custom", pytest.approx(0.7))
+
+    a05_vibracao._gravar_a_forca(ctx, _Ponte(), UNIQ, "max")
+    dele = load_profile("Personalizado").controllers[UNIQ].rumble
+    assert dele.policy == "max" and dele.custom_mult is None, (
+        f"o degrau novo levou o teto do antigo: {dele}")
