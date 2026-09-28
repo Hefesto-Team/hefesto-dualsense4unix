@@ -14,7 +14,8 @@ de `make_auto_output_provider`), com o perfil a 82%:
    brilho dele. Quem tinha cor gravada não escurecia porque o manager não lhe
    publicava fator — a guarda estava na ponta errada. Pelo Salvar do rodapé o
    brilho também entrava duas vezes: ele gravava a luz ACESA como a cor
-   escolhida, e a troca de perfil seguinte a escurecia de novo;
+   escolhida, e a troca de perfil seguinte a escurecia de novo. Desde 27/09
+   o Salvar não lê a luz do aparelho (`D-2709-O-SALVAR-LE-O-PERFIL`);
 2. **sem a paleta, o fóssil ia para o tom de outra peça.** O do P3 saía no
    azul cheio `(0,0,255)`, ao lado do P1 azul a 82%, `(0,0,209)`: o byte
    estava livre, a cor não, e o brilho do P3 sumia.
@@ -26,7 +27,7 @@ mesmo byte que a primeira.
 
 AS MORDIDAS, arrancadas e devolvidas com md5 (a lista está no relatório da
 sprint): o `_scaled_led` de volta sobre a cor resolvida; o `rodape` gravando a
-luz acesa; o `_scaled_led` pela razão em vez do `reescalar`; o
+luz acesa (desde 27/09, a luz acesa de volta no Salvar); o `_scaled_led` pela razão em vez do `reescalar`; o
 `_controllers_to_led_scales` pulando quem tem cor; o `_primeiro_tom_livre` com
 o tom cheio e comparando bytes; o manager sem publicar o brilho do perfil; e o
 `_brilho_da_peca_locked` sem o arredondamento.
@@ -62,7 +63,7 @@ from tests.unit.test_a_marca_da_cor_nao_some import (
 PALETA = tuple(player_slot_color(n) for n in range(1, 9))
 
 #: O «Salvar» CLICADO NA ABA ILUMINAÇÃO, como o piloto o manda: todo clique
-#: carrega a aba de onde veio, e o Salvar grava a seção dela — a luz é da 04
+#: carrega a aba de onde veio (e o Salvar é o mesmo em toda aba desde 27/09)
 #: (O-SALVAR-DA-VIBRACAO-01, 26/09/2026).
 CLIQUE_DA_04 = {"tipo": "button", "evento": "click",
                 "pagina": "04-iluminacao.html"}  # (noqa-acento: chave do clique)
@@ -309,16 +310,17 @@ def test_sem_no_o_produto_decide_a_mesma_luz(mesa_de):
             assert decidida == esperada, caminho
 
 
-def test_o_salvar_grava_a_cor_pedida_e_nao_a_acesa(mesa_de):
-    """O Salvar do rodapé guarda a cor de cada controle ANTES do brilho.
+def test_o_salvar_nao_grava_a_luz_acesa_como_a_cor(mesa_de):
+    """O Salvar do rodapé regrava a cor de cada controle como o disco a tem.
 
     A luz publicada é pós-brilho (D8). Gravada como a cor escolhida, ao lado
     do brilho do controle, ela era escalada de novo na aplicação seguinte: o
     P1 a 60% ia ao disco como `#000099`, e o trilho seguinte a 40% acendia
-    `#00003D`.
+    `#00003D`. O trilho grava o brilho, e só ele; o Salvar, depois, não
+    acrescenta cor nenhuma.
 
-    **A MORDIDA:** devolva o `rgb = list(base)` cru ao `rodape._draft_do_ativo`
-    e esta reprova com o `(0, 0, 153)` no disco.
+    **A MORDIDA:** devolva ao Salvar a luz acesa no override (o
+    `lightbar_rgb` publicado) e esta reprova com o `(0, 0, 153)` no disco.
     """
     from hefesto_dualsense4unix.profiles.loader import load_profile
     from pacotes import a04_iluminacao, rodape
@@ -326,12 +328,17 @@ def test_o_salvar_grava_a_cor_pedida_e_nao_a_acesa(mesa_de):
     mesa = mesa_de()
     mesa.soltar(1, 60)
     mesa.soltar(2, 50)
+    antes = load_profile(NOME).controllers
     rodape.salvar(mesa.ctx(), CLIQUE_DA_04, None)
-    disco = load_profile(NOME).controllers
-    for n, cor in ((1, COR_DELE[1]), (2, COR_DELE[2])):
-        leds = disco[a04_iluminacao.chave_do_override(UNIQS[n - 1])].leds
-        assert tuple(leds.lightbar) == cor, (
-            f"o Salvar gravou {tuple(leds.lightbar)} como a cor do P{n}, e ela é {cor}")
+    depois = load_profile(NOME).controllers
+    for n in (1, 2):
+        chave = a04_iluminacao.chave_do_override(UNIQS[n - 1])
+        assert depois[chave].leds == antes[chave].leds, (
+            f"o Salvar mudou a luz do P{n} no disco: {antes[chave].leds} -> "
+            f"{depois[chave].leds}")
+        cor, acesa = depois[chave].leds.lightbar, mesa.luz(n)
+        assert cor is None or tuple(cor) != acesa, (
+            f"o Salvar gravou a luz acesa {acesa} como a cor do P{n}")
 
 
 def test_sem_a_paleta_o_salvar_grava_o_global_e_nao_a_luz(mesa_de):
@@ -339,11 +346,11 @@ def test_sem_a_paleta_o_salvar_grava_o_global_e_nao_a_luz(mesa_de):
 
     A inversão pelos tons da casa não o acha, e a luz ia ao disco como a cor
     do P4: a 82%, `(32,65,147)` no lugar de `(40,80,180)`, e cada Salvar
-    seguido de troca de perfil escurecia mais. A cor que o disco já dá a ele,
-    no brilho dele, é exatamente a luz — e é ela que vai.
+    seguido de troca de perfil escurecia mais. Desde 27/09 o Salvar regrava
+    a cor que o disco já dá a ele.
 
-    **A MORDIDA:** tire o degrau da cor do disco de `rodape._draft_do_ativo`
-    e esta reprova com o `(32, 65, 147)`.
+    **A MORDIDA:** devolva ao Salvar a luz acesa no override e esta reprova
+    com o `(32, 65, 147)`.
     """
     from hefesto_dualsense4unix.profiles.loader import load_profile
     from pacotes import a04_iluminacao, rodape
