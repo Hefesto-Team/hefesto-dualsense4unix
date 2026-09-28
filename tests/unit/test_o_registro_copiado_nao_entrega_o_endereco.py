@@ -234,7 +234,12 @@ def test_conhecido_que_nao_e_endereco_nem_serial_e_ignorado() -> None:
 
 
 def _linhas_que_nao_sao_endereco() -> dict[str, str]:
-    """As cinco da contraprova, mais o `dev:` e o caminho de /sys. Montadas, nunca literais."""
+    """As cinco da contraprova, o `dev:`, o caminho de /sys e as duas do diário de 27/09.
+
+    Montadas, nunca literais. As duas do diário (o appid da Steam e o carimbo de
+    versão do perfil) têm seis algarismos depois do ``_``: a forma 3 as lia como
+    sufixo de nó.
+    """
     uuid = "-".join(("1f0e2d3c", "4b5a", "6978", "8796", "a5b4c3" + "d2e1f0"))
     par = OCTETOS[3], OCTETOS[4]
     return {
@@ -252,6 +257,13 @@ def _linhas_que_nao_sao_endereco() -> dict[str, str]:
         "o caminho de /sys": (
             "/sys/devices/pci0000:00/0000:00:08.1/0000:0b:00.3/usb3/3-2/3-2:1.3/"
             "0003:054C:0CE6.0007/hidraw/hidraw4"
+        ),
+        "o appid da Steam de seis algarismos": (
+            f"autoswitch_janela_excluida wm_class=steam_app_{par[0]}{par[1]}00"
+        ),
+        "o carimbo de versão do perfil": (
+            "perfil_versionado arquivo=/home/x/.config/perfis/.historico/jogo/"
+            f"20260928T031530_{par[0]}{par[1]}12.json"
         ),
     }
 
@@ -527,6 +539,31 @@ def test_mordida_sem_a_guarda_do_uuid_ele_se_corrompe(monkeypatch: pytest.Monkey
     monkeypatch.setattr(dono, "_UUID", _nunca())
     linha = _linhas_que_nao_sao_endereco()["o UUID"]
     assert dono.mascarar(linha) != linha
+
+
+@pytest.mark.parametrize(
+    ("guarda", "nome"),
+    [
+        ("_APPID_DA_STEAM", "o appid da Steam de seis algarismos"),
+        ("_CARIMBO_DE_VERSAO", "o carimbo de versão do perfil"),
+    ],
+)
+def test_mordida_sem_a_guarda_a_forma_do_no_corrompe_o_diario(
+    monkeypatch: pytest.MonkeyPatch, guarda: str, nome: str
+) -> None:
+    linha = _linhas_que_nao_sao_endereco()[nome]
+    assert dono.mascarar(linha) == linha
+    monkeypatch.setattr(dono, guarda, _nunca())
+    assert dono.mascarar(linha) != linha
+
+
+def test_o_guardado_nao_esconde_o_endereco_ao_lado() -> None:
+    linhas = _linhas_que_nao_sao_endereco()
+    for nome in ("o appid da Steam de seis algarismos", "o carimbo de versão do perfil"):
+        linha, esperada = _formas()["3 o sufixo do nó"]
+        junto = f"{linhas[nome]} {linha} uniq={ENDERECO}"
+        saida = dono.mascarar(junto)
+        assert saida == f"{linhas[nome]} {esperada} uniq={':'.join(MASCARADO)}"
 
 
 def test_mordida_a_peneira_inventa_endereco(monkeypatch: pytest.MonkeyPatch) -> None:

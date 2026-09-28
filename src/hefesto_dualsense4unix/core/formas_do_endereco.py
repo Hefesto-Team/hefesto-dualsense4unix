@@ -16,7 +16,7 @@ uma linha mascarada, pelo nome do endpoint da háptica ao lado do ``uniq=``.
    octeto 4 ou o 5, nas duas ordens de byte, com ``:`` ``-`` ``_`` ``.``,
    espaço ou colado. É a única camada que pega o despejo invertido com
    espaço, que é a forma em que o ensaio de 15/08 publicou um endereço;
-2. **a forma**, sempre, fora dos UUID:
+2. **a forma**, sempre, fora dos guardados (abaixo):
 
    1. a separada, com o MESMO separador (``:`` ``-`` ``_`` ``.``) nos cinco —
       o caminho ``dev_`` do BlueZ entra aqui;
@@ -35,9 +35,15 @@ uma linha mascarada, pelo nome do endpoint da háptica ao lado do ``uniq=``.
 §2.1.2): seis bytes soltos por espaço são todo despejo de report e toda linha
 do ``btmon``, e a forma genérica com espaço corrompia o carimbo, o PID, o UUID
 e o despejo. Um endereço de verdade em bytes soltos é da camada dos conhecidos,
-que sabe o valor. **O UUID fica guardado** antes da forma: o último grupo dele
-tem doze hex. **Um SHA de doze hex sai mascarado**, e é escolha medida: um SHA
-truncado se relê, um endereço vazado não se apaga.
+que sabe o valor. **Três formas que não são endereço ficam guardadas** antes da
+forma: o UUID (o último grupo dele tem doze hex), o appid da Steam na classe da
+janela (``steam_app_<N>``) e o carimbo de versão do perfil
+(``profiles/loader._carimbo_de_versao``, ``<data>T<hora>_<microssegundos>``).
+As duas últimas foram medidas no diário da sessão de 27/09: com seis
+algarismos depois do ``_``, a forma 3 as lia como sufixo de nó, e o diário
+passava a nomear um jogo errado e um arquivo do histórico que não existe.
+**Um SHA de doze hex sai mascarado**, e é escolha medida: um SHA truncado se
+relê, um endereço vazado não se apaga.
 
 Este módulo importa só a biblioteca padrão no topo: o ``logging_config`` vai
 chamá-lo em toda linha do diário, e o ``uhid_gamepad`` (que diz o prefixo e o
@@ -91,6 +97,10 @@ _UUID = re.compile(
     r"(?<![0-9A-Fa-f])[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}"
     r"-[0-9A-Fa-f]{12}(?![0-9A-Fa-f])"
 )
+#: O appid da Steam na classe da janela: só algarismos, nunca endereço.
+_APPID_DA_STEAM = re.compile(r"steam_app_[0-9]+(?![0-9A-Za-z])")
+#: O carimbo de versão do perfil (``20260805T031500_123456``): só algarismos.
+_CARIMBO_DE_VERSAO = re.compile(r"(?<![0-9])[0-9]{8}T[0-9]{6}_[0-9]{6}(?![0-9A-Za-z])")
 
 #: Forma 1: seis octetos com o mesmo separador nos cinco.
 _SEPARADA = re.compile(
@@ -325,13 +335,29 @@ def _colada(achado: re.Match[str]) -> str:
 
 
 def _pela_forma(trecho: str) -> str:
-    """A segunda camada, num trecho sem UUID."""
+    """A segunda camada, num trecho sem guardado."""
     trecho = _SEPARADA.sub(_separada, trecho)
     trecho = _COLADA.sub(_colada, trecho)
     trecho = _SUFIXO_DO_NO.sub(r"0000\1", trecho)
     trecho = _NOME_DO_ENDPOINT.sub(r"\g<1>0000\g<2>", trecho)
     trecho = _ROTULO_DO_GRAVADOR.sub(r"\g<1>0000\g<2>", trecho)
     return _SERIAL.sub(lambda m: _serial_mascarado(m.group(0)), trecho)
+
+
+def _guardados(texto: str) -> list[tuple[int, int]]:
+    """Os trechos que a forma não toca, em ordem e sem sobreposição."""
+    trechos = sorted(
+        achado.span()
+        for padrao in (_UUID, _APPID_DA_STEAM, _CARIMBO_DE_VERSAO)
+        for achado in padrao.finditer(texto)
+    )
+    unidos: list[tuple[int, int]] = []
+    for inicio, fim in trechos:
+        if unidos and inicio < unidos[-1][1]:
+            unidos[-1] = (unidos[-1][0], max(fim, unidos[-1][1]))
+        else:
+            unidos.append((inicio, fim))
+    return unidos
 
 
 def mascarar(texto: str, conhecidos: Iterable[str] = ()) -> str:
@@ -341,10 +367,10 @@ def mascarar(texto: str, conhecidos: Iterable[str] = ()) -> str:
         texto = _pelos_conhecidos(texto, _o_que_se_conhece(chave))
     partes: list[str] = []
     fim = 0
-    for uuid in _UUID.finditer(texto):
-        partes.append(_pela_forma(texto[fim : uuid.start()]))
-        partes.append(uuid.group(0))
-        fim = uuid.end()
+    for inicio, final in _guardados(texto):
+        partes.append(_pela_forma(texto[fim:inicio]))
+        partes.append(texto[inicio:final])
+        fim = final
     partes.append(_pela_forma(texto[fim:]))
     return "".join(partes)
 
