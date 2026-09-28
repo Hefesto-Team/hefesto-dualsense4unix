@@ -133,7 +133,6 @@ include = [
     # que as páginas referenciam por caminho relativo.
     "src/hefesto_dualsense4unix/interface/paginas/*.html",
     "src/hefesto_dualsense4unix/interface/assets/*",
-    "src/hefesto_dualsense4unix/interface/uploads/*",
     # FEAT-I18N-CATALOGS-01 (v3.4.0): catalogos .mo embedded no wheel.
     # Fallback de path #5 do utils/i18n.py — garante que pip install
     # sem rodar install.sh ainda resolva traducoes.
