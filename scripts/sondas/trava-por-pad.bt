@@ -1,0 +1,34 @@
+// trava-por-pad.bt — a espera de cada pedido de vibração, por pad `uinput`.
+//
+// O-BASICO-MEDIDO-01 (28/09/2026). É a sonda da noite de 27/09 que o protocolo
+// do básico usa na linha «a espera da vibração» do `o_basico.py sessao
+// --bpftrace`, versionada aqui porque a pasta do estudo não viaja com o git
+// (e o pacote não a leva). Duas saídas:
+//
+//   * por pad e por processo: o histograma, a maior espera e a contagem;
+//   * TODA espera acima de 5 ms sai numa linha `ESPERA`, com a hora, o pid e o
+//     pad — é o que casa a cauda com o diário do daemon
+//     (`uinput_device_created`).
+//
+// Os números que a régua usa: 5 ms é o prazo da cura
+// (O-PAD-VIRTUAL-ATENDE-A-VIBRACAO-DESDE-QUE-NASCE-01); 50 ms é o teto da prova
+// no aparelho; a queda da sessão é aos 30 s. Na noite de 27/09 a maior espera
+// foi 56,7 ms no boot (os pads recriados) e 3,06 ms no repouso.
+//
+// Só lê (kprobes). Pede `sudo`; sem ele o `o_basico.py` diz «não medido».
+BEGIN { printf("sondas prontas\n"); }
+kprobe:uinput_request_submit {
+  @t[tid] = nsecs;
+  @nome[tid] = str(((struct uinput_device *)arg0)->dev->name);
+}
+kretprobe:uinput_request_submit /@t[tid]/ {
+  $us = (nsecs - @t[tid]) / 1000;
+  @espera_us[@nome[tid], comm] = hist($us);
+  @maior_us[@nome[tid], comm] = max($us);
+  @n[@nome[tid], comm] = count();
+  if ($us > 5000) {
+    printf("ESPERA %s us=%lld desde_o_inicio_ms=%lld pid=%d comm=%s pad=%s\n",
+           strftime("%H:%M:%S", nsecs), $us, elapsed / 1000000, pid, comm, @nome[tid]);
+  }
+  delete(@t[tid]); delete(@nome[tid]);
+}

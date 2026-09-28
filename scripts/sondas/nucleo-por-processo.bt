@@ -1,0 +1,43 @@
+// nucleo-por-processo.bt — quem escreve em cada nó, por PROCESSO.
+//
+// O-BASICO-MEDIDO-01 (28/09/2026), a C2 da contraprova de 27/09: o fio do
+// jogo nunca se chama como o jogo (`HIDAPI Rumble`, `wine_sechost_se`,
+// `winedevice.exe`), e o cliente Steam tem um fio de MESMO nome. Chavear pelo
+// `comm` sozinho mistura o jogo com a Steam. Por isso o `pid` (o processo, no
+// bpftrace) vai em TODA chave, e o `o_basico.py` casa o pid com a árvore do
+// jogo, a Steam, o daemon e o teclado na tela.
+//
+// A régua `tests/unit/test_o_basico_o_contrato.py` lê a chave do `@hw` DESTE
+// arquivo: tirar o `pid` dela reprova.
+//
+// Chaves: [arquivo,] pid, comm[, minor, bytes|cmd]. Só lê (kprobes).
+kprobe:uhid_char_write
+{
+  $f = arg0;
+  if (@ult[$f]) {
+    $g = (nsecs - @ult[$f]) / 1000;
+    @n[$f, pid, comm] = count();
+    if ($g > 16000) { @acima16[$f, pid, comm] = count(); }
+    if ($g > 33000) { @acima33[$f, pid, comm] = count(); printf("BURACO %lld %d %s %p %lld\n", elapsed / 1000000, pid, comm, $f, $g); }
+    if ($g > @max[$f, pid, comm]) { @max[$f, pid, comm] = $g; }
+  }
+  @ult[$f] = nsecs;
+}
+kprobe:uhid_queue { @fila[pid, comm] = count(); }
+kprobe:dualsense_play_effect { @play[pid, comm] = count(); }
+kprobe:uinput_request_submit { @ui[tid] = nsecs; @ui_n[pid, comm] = count(); }
+kretprobe:uinput_request_submit /@ui[tid]/ { @ui_us[pid, comm] = hist((nsecs - @ui[tid]) / 1000); delete(@ui[tid]); }
+kprobe:hidraw_write { $file = (struct file *)arg0; @hw[pid, comm, $file->f_inode->i_rdev & 0xfffff, arg2] = count(); }
+kprobe:hidraw_ioctl { $file = (struct file *)arg0; @hi[pid, comm, $file->f_inode->i_rdev & 0xfffff, arg1] = count(); }
+kprobe:uhid_char_read { @drena[pid, comm] = count(); }
+interval:s:30
+{
+  printf("=== %lld s\n", elapsed / 1000000000);
+  print(@n); print(@acima16); print(@acima33); print(@max);
+  print(@fila); print(@play); print(@ui_n); print(@ui_us);
+  print(@hw); print(@hi); print(@drena);
+  clear(@n); clear(@acima16); clear(@acima33); clear(@max);
+  clear(@fila); clear(@play); clear(@ui_n); clear(@ui_us);
+  clear(@hw); clear(@hi); clear(@drena);
+}
+END { clear(@ult); clear(@ui); }

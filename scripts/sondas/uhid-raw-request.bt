@@ -1,0 +1,29 @@
+// uhid-raw-request.bt — quanto um GET/SET_REPORT espera no pad `uhid`.
+//
+// O-BASICO-MEDIDO-01 (28/09/2026), a A9 do protocolo do básico: o pedido de
+// feature que um jogo faz ao pad `uhid` passa pelo daemon, que responde por
+// `UHID_GET_REPORT_REPLY`. Uma espera longa aqui é a mesma classe da trava do
+// `uinput` (o dono do pad segura quem pediu).
+//
+// POR QUE `uhid_hid_raw_request`, e não `uhid_hid_get_report`: neste kernel o
+// segundo aparece em `/proc/kallsyms` como `uhid_hid_get_report.isra.0`, e um
+// `kprobe` pelo nome limpo não se prende. O `uhid_hid_raw_request` existe com
+// o nome limpo e é quem despacha o GET e o SET.
+//
+// Toda espera acima de 5 ms sai numa linha `ESPERA_UHID` com a hora, o pid e o
+// processo. Só lê (kprobes). Pede `sudo`; sem ele o `o_basico.py` diz
+// «não medido».
+BEGIN { printf("sondas prontas\n"); }
+kprobe:uhid_hid_raw_request { @t[tid] = nsecs; }
+kretprobe:uhid_hid_raw_request /@t[tid]/ {
+  $us = (nsecs - @t[tid]) / 1000;
+  @espera_us[pid, comm] = hist($us);
+  @maior_us[pid, comm] = max($us);
+  @n[pid, comm] = count();
+  if ($us > 5000) {
+    printf("ESPERA_UHID %s us=%lld desde_o_inicio_ms=%lld pid=%d comm=%s\n",
+           strftime("%H:%M:%S", nsecs), $us, elapsed / 1000000, pid, comm);
+  }
+  delete(@t[tid]);
+}
+END { clear(@t); }
