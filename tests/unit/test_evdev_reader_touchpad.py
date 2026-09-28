@@ -46,78 +46,61 @@ class TestFindDualsenseTouchpadEvdev:
             lambda _path: False,
         )
 
-    def test_encontra_device_com_touchpad_no_nome(self) -> None:
-        paths = ["/dev/input/event20", "/dev/input/event21", "/dev/input/event22"]
-        devices = {
-            "/dev/input/event20": _fake_input_device(
-                "DualSense Wireless Controller",
-                DUALSENSE_VENDOR,
-                next(iter(DUALSENSE_PIDS)),
-                "/dev/input/event20",
-            ),
-            "/dev/input/event21": _fake_input_device(
-                "DualSense Wireless Controller Motion Sensors",
-                DUALSENSE_VENDOR,
-                next(iter(DUALSENSE_PIDS)),
-                "/dev/input/event21",
-            ),
-            "/dev/input/event22": _fake_input_device(
-                "DualSense Wireless Controller Touchpad",
-                DUALSENSE_VENDOR,
-                next(iter(DUALSENSE_PIDS)),
-                "/dev/input/event22",
-            ),
-        }
+    @staticmethod
+    def _descobrir(nos: dict[str, tuple[str, int, int]]) -> Path | None:
+        """Publica os nós no sysfs de mentira e chama a descoberta.
 
-        with patch(
-            "evdev.list_devices", return_value=paths
-        ), patch(
-            "evdev.InputDevice", side_effect=lambda p: devices[p]
+        A descoberta lê vendor, product e nome no sysfs e não abre nó
+        nenhum (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026): o
+        `evdev.InputDevice` que reprova no primeiro `open` é a outra metade
+        da régua.
+        """
+        from hefesto_dualsense4unix.core import evdev_reader as er
+        from tests.unit.sysfs_de_entrada_de_mentira import publicar_no
+
+        for caminho, (nome, vendor, product) in nos.items():
+            publicar_no(er.SYS_CLASS_INPUT, caminho, nome=nome, vendor=vendor,
+                        product=product, uniq="")
+
+        def _sem_open(caminho: str) -> None:
+            raise AssertionError(f"a descoberta abriu {caminho}")
+
+        with patch("evdev.list_devices", return_value=list(nos)), patch(
+            "evdev.InputDevice", side_effect=_sem_open
         ):
-            result = find_dualsense_touchpad_evdev()
+            return find_dualsense_touchpad_evdev()
 
+    def test_encontra_device_com_touchpad_no_nome(self) -> None:
+        pid = next(iter(DUALSENSE_PIDS))
+        result = self._descobrir({
+            "/dev/input/event20": ("DualSense Wireless Controller", DUALSENSE_VENDOR, pid),
+            "/dev/input/event21": (
+                "DualSense Wireless Controller Motion Sensors", DUALSENSE_VENDOR, pid
+            ),
+            "/dev/input/event22": (
+                "DualSense Wireless Controller Touchpad", DUALSENSE_VENDOR, pid
+            ),
+        })
         assert result == Path("/dev/input/event22")
 
     def test_ignora_gamepad_principal(self) -> None:
         """Device com vendor/product Sony mas sem 'Touchpad' no nome é ignorado."""
-        paths = ["/dev/input/event20"]
-        devices = {
-            "/dev/input/event20": _fake_input_device(
-                "DualSense Wireless Controller",
-                DUALSENSE_VENDOR,
-                next(iter(DUALSENSE_PIDS)),
-                "/dev/input/event20",
+        result = self._descobrir({
+            "/dev/input/event20": (
+                "DualSense Wireless Controller", DUALSENSE_VENDOR, next(iter(DUALSENSE_PIDS))
             ),
-        }
-
-        with patch(
-            "evdev.list_devices", return_value=paths
-        ), patch(
-            "evdev.InputDevice", side_effect=lambda p: devices[p]
-        ):
-            result = find_dualsense_touchpad_evdev()
-
+        })
         assert result is None
 
     def test_ignora_outro_vendor(self) -> None:
-        """Outro touchpad (ex: laptop) com 'Touchpad' no nome não casa por vendor."""
-        paths = ["/dev/input/event5"]
-        devices = {
-            "/dev/input/event5": _fake_input_device(
-                "SynPS/2 Synaptics TouchPad",
-                0x06CB,
-                0x1234,
-                "/dev/input/event5",
-            ),
-        }
+        """Outro touchpad (ex: laptop) com 'Touchpad' no nome não casa por vendor.
 
-        with patch(
-            "evdev.list_devices", return_value=paths
-        ), patch(
-            "evdev.InputDevice", side_effect=lambda p: devices[p]
-        ):
-            result = find_dualsense_touchpad_evdev()
-
+        O nome casa de propósito (é o de um touchpad de notebook, com a mesma
+        palavra): quem recusa aqui é o vendor, e só ele.
+        """
+        result = self._descobrir({
+            "/dev/input/event5": ("ELAN0501:00 04F3:3060 Touchpad", 0x04F3, 0x3060),
+        })
         assert result is None
 
 

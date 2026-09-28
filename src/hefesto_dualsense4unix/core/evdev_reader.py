@@ -446,12 +446,6 @@ def _nos_de_evento(list_devices: Any) -> list[str]:
     return abertos + fechados
 
 
-def _nome_no_sysfs(caminho: str) -> str:
-    """O `name` do input device de um nó, pelo sysfs ("" se ilegível)."""
-    base = os.path.basename(caminho)
-    return _read_input_attr(f"{SYS_CLASS_INPUT}/{base}/device", "name")
-
-
 #: BTN_GAMEPAD == BTN_SOUTH == 0x130, o botão que separa o nó do gamepad dos
 #: nós auxiliares (touchpad, movimento, fone) na descoberta.
 _BTN_GAMEPAD = 0x130
@@ -1996,20 +1990,47 @@ class EvdevReader(_EvdevReconnectLoop):
         return EvdevSnapshot(**values)
 
 
+def _identidade_no_sysfs(caminho: str) -> tuple[int, int, str, str] | None:
+    """`(vendor, product, nome, uniq)` do nó de entrada, lidos no sysfs.
+
+    São os mesmos quatro campos que o `open` + ioctls devolvem
+    (`EVIOCGID`, `EVIOCGNAME`, `EVIOCGUNIQ`): o kernel publica o mesmo
+    `input_dev` nos dois lugares. Aqui nada é aberto. Sem `vendor`/`product`
+    legíveis, `None` — o nó sumiu no meio da volta, ou não é de entrada.
+    """
+    base = os.path.basename(caminho)
+    raiz = f"{SYS_CLASS_INPUT}/{base}/device"
+    try:
+        with open(f"{raiz}/id/vendor", encoding="ascii") as fh:
+            vendor = int(fh.read().strip(), 16)
+        with open(f"{raiz}/id/product", encoding="ascii") as fh:
+            product = int(fh.read().strip(), 16)
+    except (OSError, ValueError):
+        return None
+    return vendor, product, _read_input_attr(raiz, "name"), _read_input_attr(raiz, "uniq")
+
+
 def _discover_dualsense_por_nome(marcador: str) -> dict[str, Path]:
     """MAC normalizado -> node evdev dos DualSense cujo nome contém `marcador`.
 
-    Mesma mecânica de `discover_dualsense_evdevs` (que casa por CAPS de
-    gamepad), mas para os nodes AUXILIARES que o `hid_playstation` cria com
-    o mesmo vendor/product e um sufixo no nome: "… Touchpad" e "… Motion
-    Sensors". Chave por MAC (`uniq`) porque `eventN` é volátil — o mesmo
-    contrato de identidade do resto do projeto (FEAT-DSX-CONTROLLER-IDENTITY-01);
-    node sem `uniq` legível cai em "path:<caminho>", que nunca colide com MAC.
+    Para os nodes AUXILIARES que o `hid_playstation` cria com o mesmo
+    vendor/product e um sufixo no nome: "… Touchpad" e "… Motion Sensors".
+    Chave por MAC (`uniq`) porque `eventN` é volátil — o mesmo contrato de
+    identidade do resto do projeto (FEAT-DSX-CONTROLLER-IDENTITY-01); node sem
+    `uniq` legível cai em "path:<caminho>", que nunca colide com MAC.
+
+    **Decide tudo pelo sysfs e não abre nó nenhum**
+    (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026). Até aqui ela
+    abria cada nó auxiliar de cada controle — pelo broker, porque o do físico
+    nasce fechado — só para ler os quatro campos que o sysfs já publica. No
+    diário de 26/09, com um controle fora da mesa, o leitor dele repetia esta
+    volta a cada 5,30 s, e cada volta pedia ao broker o nó de movimento dos
+    OUTROS dois: 1.924 pedidos em cada nó das 7h52 às 10h42. O broker agora só
+    é chamado por quem vai LER o nó (`abrir_input_device`, no `_run`).
 
     Devices virtuais ficam de fora (`_is_virtual_evdev`): os vpads uhid do
-    daemon publicam nodes com ESTES MESMOS nomes ("Hefesto Virtual DualSense
-    P1 Motion Sensors"), e adotar um deles seria o daemon lendo a própria
-    saída.
+    daemon publicam nodes com ESTES MESMOS nomes, e adotar um deles seria o
+    daemon lendo a própria saída.
     """
     try:
         from evdev import list_devices
@@ -2019,28 +2040,17 @@ def _discover_dualsense_por_nome(marcador: str) -> dict[str, Path]:
 
     found: dict[str, Path] = {}
     # HIDE-SO-O-HIDRAW-02: `_nos_de_evento`, pelo mesmo motivo da descoberta
-    # do gamepad — o touchpad e os sensores do físico nascem fechados.
+    # do gamepad — o touchpad e os sensores do físico nascem fechados, e a
+    # lista só traz o nó fechado quando há broker para abri-lo depois.
     for path in sorted(_nos_de_evento(list_devices), key=lambda p: _event_num(Path(p))):
         if _is_virtual_evdev(path):
             continue
-        try:
-            # HIDE-SO-O-HIDRAW-02: ao broker só vai o nó cujo nome já diz o
-            # que se procura — o touchpad, ou os sensores de movimento.
-            dev = abrir_input_device(
-                path, pede_ao_broker=lambda c: marcador in _nome_no_sysfs(c)
-            )
-            try:
-                if (
-                    dev.info.vendor == DUALSENSE_VENDOR
-                    and dev.info.product in DUALSENSE_PIDS
-                    and marcador in dev.name
-                ):
-                    key = norm_mac(getattr(dev, "uniq", None)) or f"path:{path}"
-                    found.setdefault(key, Path(path))
-            finally:
-                dev.close()
-        except Exception:
+        lido = _identidade_no_sysfs(path)
+        if lido is None:
             continue
+        vendor, product, nome, uniq = lido
+        if vendor == DUALSENSE_VENDOR and product in DUALSENSE_PIDS and marcador in nome:
+            found.setdefault(norm_mac(uniq) or f"path:{path}", Path(path))
     return found
 
 

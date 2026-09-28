@@ -34,19 +34,18 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
+from hefesto_dualsense4unix.core import evdev_reader
 from hefesto_dualsense4unix.core.evdev_reader import (
-    DUALSENSE_PIDS,
-    DUALSENSE_VENDOR,
     MotionSensorReader,
     discover_dualsense_motion_evdevs,
     discover_dualsense_touchpad_evdevs,
 )
+from tests.unit.sysfs_de_entrada_de_mentira import publicar_no
 
 RAIZ = Path(__file__).resolve().parents[2]
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
@@ -76,34 +75,33 @@ NOME_TOUCH_USB = (
 NOME_TOUCH_BT = "DualSense Wireless Controller Touchpad"
 
 
-def _no(nome: str, uniq: str, bus: int, path: str) -> SimpleNamespace:
-    """Um objeto que quackeia como `evdev.InputDevice`, COM barramento.
+def _no(nome: str, uniq: str, bus: int, path: str) -> str:
+    """Publica o nó no sysfs de mentira, COM barramento, e devolve o caminho.
 
-    O `bustype` vai junto de propósito: sem ele, um porteiro de barramento
-    introduzido no produto explodiria com `AttributeError` em vez de reprovar,
-    e a régua estaria medindo o dublê, não a cura.
+    A descoberta lê vendor, product, nome e endereço no sysfs, sem abrir o nó
+    (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026). O `id/bustype`
+    vai junto de propósito, como vai no aparelho: um porteiro de barramento
+    introduzido no produto tem o que ler, e a régua reprova pela cura, não
+    por um arquivo que faltou.
     """
-    dev = SimpleNamespace()
-    dev.name = nome
-    dev.uniq = uniq
-    dev.info = SimpleNamespace(
-        vendor=DUALSENSE_VENDOR, product=next(iter(DUALSENSE_PIDS)), bustype=bus
-    )
-    dev.path = path
-    dev.close = MagicMock()
-    return dev
+    publicar_no(evdev_reader.SYS_CLASS_INPUT, path, nome=nome, uniq=uniq, bus=bus)
+    return path
 
 
-def _mesa_de_dois(marcador: str) -> dict[str, SimpleNamespace]:
+def _mesa_de_dois(marcador: str) -> list[str]:
     """A mesa dela: um controle no cabo e um no rádio, com o nó `marcador`."""
     if marcador == "Motion Sensors":
         usb, bt = NOME_MOTION_USB, NOME_MOTION_BT
     else:
         usb, bt = NOME_TOUCH_USB, NOME_TOUCH_BT
-    return {
-        "/dev/input/event28": _no(usb, MAC_CABO, BUS_USB, "/dev/input/event28"),
-        "/dev/input/event256": _no(bt, MAC_RADIO, BUS_BLUETOOTH, "/dev/input/event256"),
-    }
+    return [
+        _no(usb, MAC_CABO, BUS_USB, "/dev/input/event28"),
+        _no(bt, MAC_RADIO, BUS_BLUETOOTH, "/dev/input/event256"),
+    ]
+
+
+def _sem_open(caminho: Any) -> Any:
+    raise AssertionError(f"a descoberta abriu {caminho}: ela lê o sysfs e não abre o nó")
 
 
 def _com_a_mesa(marcador: str) -> Any:
@@ -130,8 +128,8 @@ def _com_a_mesa(marcador: str) -> Any:
     """
     nos = _mesa_de_dois(marcador)
     return (
-        patch("evdev.list_devices", return_value=list(nos)),
-        patch("evdev.InputDevice", side_effect=lambda p: nos[p]),
+        patch("evdev.list_devices", return_value=nos),
+        patch("evdev.InputDevice", side_effect=_sem_open),
         patch(
             "hefesto_dualsense4unix.core.evdev_reader._is_virtual_evdev",
             return_value=False,
@@ -151,11 +149,10 @@ def test_a_descoberta_do_no_acha_o_do_radio_igual_ao_do_cabo(
 ) -> None:
     """Os DOIS nós saem da descoberta — o do cabo e o do rádio.
 
-    MORDIDA PROVADA em 03/09/2026, com `src/` copiado para fora da árvore e o
-    `PYTHONPATH` apontado para a cópia (a árvore de trabalho nunca foi mutada):
-    acrescentado `and dev.info.bustype == 0x03` ao casamento de
-    `_discover_dualsense_por_nome`, reprovam os quatro casos deste arquivo que
-    dependem do nó de rádio.
+    MORDIDA PROVADA em 03/09/2026 (`and dev.info.bustype == 0x03` no
+    casamento de `_discover_dualsense_por_nome`) e de novo em 28/09/2026, com a
+    descoberta lendo o sysfs: um porteiro que leia o `id/bustype` e só aceite
+    `0003` reprova os quatro casos deste arquivo que dependem do nó de rádio.
     """
     lista, dispositivo, nao_virtual = _com_a_mesa(marcador)
     with lista, dispositivo, nao_virtual:
@@ -182,11 +179,9 @@ def test_o_nome_do_no_do_radio_vem_sem_o_prefixo_do_fabricante() -> None:
     assert NOME_MOTION_BT != NOME_MOTION_USB
     assert NOME_MOTION_BT in NOME_MOTION_USB
 
-    nos = {"/dev/input/event256": _no(
-        NOME_MOTION_BT, MAC_RADIO, BUS_BLUETOOTH, "/dev/input/event256"
-    )}
-    with patch("evdev.list_devices", return_value=list(nos)), patch(
-        "evdev.InputDevice", side_effect=lambda p: nos[p]
+    nos = [_no(NOME_MOTION_BT, MAC_RADIO, BUS_BLUETOOTH, "/dev/input/event256")]
+    with patch("evdev.list_devices", return_value=nos), patch(
+        "evdev.InputDevice", side_effect=_sem_open
     ), patch(
         # O TERCEIRO DUBLÊ — a razão inteira está em `_com_a_mesa`: sem ele,
         # `_is_virtual_evdev` lê o `/sys` desta máquina, não acha o caminho
@@ -212,8 +207,8 @@ def test_o_leitor_de_movimento_resolve_o_alvo_do_radio() -> None:
     """
     nos = _mesa_de_dois("Motion Sensors")
     leitor = MotionSensorReader(target_uniq="aabbcc000002")
-    with patch("evdev.list_devices", return_value=list(nos)), patch(
-        "evdev.InputDevice", side_effect=lambda p: nos[p]
+    with patch("evdev.list_devices", return_value=nos), patch(
+        "evdev.InputDevice", side_effect=_sem_open
     ), patch(
         # O TERCEIRO DUBLÊ — a razão inteira está em `_com_a_mesa`: sem ele,
         # `_is_virtual_evdev` lê o `/sys` desta máquina, não acha o caminho

@@ -46,6 +46,19 @@ def _evento(tipo: int, codigo: int, valor: int) -> bytes:
     return struct.pack(_FORMATO_DO_EVENTO, 0, 0, tipo, codigo, valor)
 
 
+def _uniq_do_no(no: str) -> str:
+    """O endereço do aparelho de cada nó — o mesmo no sysfs e no ioctl.
+
+    O do NO_TOUCHPAD é o `…:07` que as réguas conferem; os outros ganham o
+    final do próprio número. Um dono só para os dois lados: o sysfs de mentira
+    e o `ioctl_devinfo` de mentira publicam o que o kernel publica, e o kernel
+    publica o MESMO `uniq` nos dois.
+    """
+    base = Path(no).name
+    final = "07" if base == Path(NO_TOUCHPAD).name else f"{int(base[5:]) % 100:02d}"
+    return f"e8:47:3a:00:00:{final}"
+
+
 def _sysfs(raiz: Path, no: str, *, vendor: str, product: str, nome: str, teclas: str) -> None:
     base = Path(no).name
     dev = raiz / base / "device"
@@ -53,6 +66,7 @@ def _sysfs(raiz: Path, no: str, *, vendor: str, product: str, nome: str, teclas:
     (dev / "id" / "vendor").write_text(vendor + "\n", encoding="ascii")
     (dev / "id" / "product").write_text(product + "\n", encoding="ascii")
     (dev / "name").write_text(nome + "\n", encoding="utf-8")
+    (dev / "uniq").write_text(_uniq_do_no(no) + "\n", encoding="ascii")
     (dev / "capabilities").mkdir()
     (dev / "capabilities" / "key").write_text(teclas + "\n", encoding="ascii")
 
@@ -123,12 +137,9 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Any:
     from evdev import _input
 
     def _devinfo(fd: int) -> tuple[Any, ...]:
-        # O `uniq` é o do aparelho do nó: o do NO_TOUCHPAD é o `…:07` que as
-        # réguas conferem; os outros ganham o final do próprio número.
-        base = Path(broker.caminho_do_fd.get(fd, NO_TOUCHPAD)).name
-        final = "07" if base == Path(NO_TOUCHPAD).name else f"{int(base[5:]) % 100:02d}"
+        # O `uniq` é o do aparelho do nó (`_uniq_do_no`, o mesmo do sysfs).
         return (0x0005, 0x054C, 0x0CE6, 0x8111, "DualSense Wireless Controller Touchpad",
-                "", f"e8:47:3a:00:00:{final}")
+                "", _uniq_do_no(broker.caminho_do_fd.get(fd, NO_TOUCHPAD)))
 
     monkeypatch.setattr(_input, "ioctl_devinfo", _devinfo)
     monkeypatch.setattr(_input, "ioctl_EVIOCGVERSION", lambda fd: 0x010001)
@@ -240,12 +251,17 @@ class TestADescobertaAchaOFisicoFechado:
         """Antes, o `except Exception: continue` engolia o EACCES e o
         controle saía do mapa «sem touchpad». A MORDIDA (conferência): faça o
         `_nos_de_evento` devolver só o `list_devices()` da biblioteca e o mapa
-        sai vazio — o nó fechado nem chega ao `abrir_input_device`."""
-        broker, _ = mesa
+        sai vazio — o nó fechado nem entra na volta.
+
+        E a descoberta NÃO pede nada ao broker
+        (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026): ela lê o
+        sysfs. Quem pede o fd é o leitor, ao abrir o nó que vai ler — a régua
+        `test_o_leitor_le_o_dedo_pelo_fd_do_broker`, logo abaixo."""
+        broker, recusa = mesa
         mapa = er.discover_dualsense_touchpad_evdevs()
         assert list(mapa.values()) == [Path(dev_input[NO_TOUCHPAD])]
-        # Ao broker foi SÓ o nó cujo nome é de touchpad.
-        assert broker.pedidos == [dev_input[NO_TOUCHPAD]]
+        assert broker.pedidos == []
+        assert recusa.tentativas == [], "a descoberta tentou abrir um nó"
 
     def test_o_gamepad_fechado_entra_na_descoberta(
         self, mesa: Any, dev_input: dict[str, str], monkeypatch: pytest.MonkeyPatch
@@ -282,6 +298,7 @@ class TestADescobertaAchaOFisicoFechado:
             "e8473a000007": Path(dev_input[NO_TOUCHPAD]),
             "e8473a000031": Path(str(arquivo)),
         }
+        assert broker.pedidos == [], "a descoberta pediu ao broker o nó de outro controle"
 
     def test_sem_broker_o_no_fechado_fica_de_fora(
         self, mesa: Any, dev_input: dict[str, str], monkeypatch: pytest.MonkeyPatch,
