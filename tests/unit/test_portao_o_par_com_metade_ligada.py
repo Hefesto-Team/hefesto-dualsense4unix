@@ -1030,17 +1030,34 @@ def _resolver_alvo(alvo: str, raiz: Path) -> Path | None:
     return achados[0] if len(achados) == 1 else None
 
 
+#: O que é prosa para o `tokenize`, EM QUALQUER PYTHON. Até o 3.11 uma f-string
+#: é um token STRING só; do 3.12 em diante (PEP 701) ela se parte em
+#: FSTRING_START/FSTRING_MIDDLE/FSTRING_END, e o texto dela deixa de ser STRING.
+#: Sem o FSTRING_MIDDLE, esta régua ficava CEGA no 3.12 às citações escritas
+#: dentro de f-string — medido em 27/09/2026 (corrida 36354426805 do CI): 613
+#: citações lidas no 3.10 e no 3.11, 595 no 3.12. Duas delas tinham envelhecido
+#: (`aba06.py` → `coop.py:2057`, `aba10.py` → `aba03.py:502`), e a régua
+#: reprovava só nas pernas 3.10 e 3.11 do `lint-test`, verde na mesa dela e no
+#: `gtk-real` (3.12.3), que liam 18 citações a menos.
+_TOKENS_DE_PROSA: tuple[int, ...] = tuple(
+    tipo
+    for tipo in (tokenize.COMMENT, tokenize.STRING, getattr(tokenize, "FSTRING_MIDDLE", None))
+    if tipo is not None
+)
+
+
 def _prosa_de(modulo: Path) -> dict[int, str]:
     """As linhas do módulo que são COMENTÁRIO ou STRING, pela numeração real.
 
     `tokenize` e não regex: é o que separa `# ver foo.py:12` de um `foo.py:12`
     que por acaso aparecesse em código. Linha multi-token vira uma entrada só.
+    O texto de f-string conta como STRING em todo Python — ver `_TOKENS_DE_PROSA`.
     """
     linhas: dict[int, str] = {}
     with modulo.open("rb") as fh:
         try:
             for tok in tokenize.tokenize(fh.readline):
-                if tok.type not in (tokenize.COMMENT, tokenize.STRING):
+                if tok.type not in _TOKENS_DE_PROSA:
                     continue
                 for offset, texto in enumerate(tok.string.splitlines()):
                     linhas.setdefault(tok.start[0] + offset, "")
@@ -1280,6 +1297,38 @@ class TestTodaCitacaoDeLinhaConfere:
         queixa = queixas[chave]
         assert "linha 2" in queixa and "linha 4" in queixa, (
             f"a queixa não nomeia OS DOIS números: {queixa!r}"
+        )
+
+    def test_a_regua_le_a_citacao_dentro_de_f_string_em_qualquer_python(
+        self, tmp_path: Path
+    ) -> None:
+        """A citação escrita dentro de uma f-string é prosa em todo Python.
+
+        27/09/2026, corrida 36354426805 do CI: no 3.12 (PEP 701) o `tokenize`
+        parte a f-string em FSTRING_START/MIDDLE/END, e o texto dela deixou de
+        ser STRING. A régua lia 19 citações a menos na mesa dela e no
+        `gtk-real` (3.12.3), duas delas envelhecidas, e reprovava só nas pernas
+        3.10 e 3.11 do `lint-test`. O plantio é o de `test_a_regua_sabe_reprovar`,
+        agora dentro de uma f-string com um campo no meio do texto.
+
+        **A MORDIDA:** tire o `FSTRING_MIDDLE` de `_TOKENS_DE_PROSA` e este caso
+        reprova no 3.12 — a mesa dela, o `gtk-real` e a perna 3.12 do `lint-test`.
+        """
+        copia = _copia_de_src(tmp_path)
+        (copia / "utils" / "_alvo_da_mordida.py").write_text(
+            _ALVO_PLANTADO, encoding="utf-8"
+        )
+        (copia / "utils" / "_citante_da_mordida.py").write_text(
+            'NOME = "x"\n'
+            'TEXTO = f"""<p>O {NOME} mora em\n'
+            '`ancora_plantada` (<code>utils/_alvo_da_mordida.py:2</code>).</p>"""\n',
+            encoding="utf-8",
+        )
+        queixas = enderecos_envelhecidos(copia)
+        chave = "utils/_citante_da_mordida.py::utils/_alvo_da_mordida.py:2"
+        assert chave in queixas, (
+            "a régua não viu um endereço envelhecido escrito dentro de uma "
+            f"f-string. Ela achou: {sorted(k for k in queixas if '_da_mordida' in k)}"
         )
 
     def test_a_regua_nao_acusa_o_endereco_certo(self, tmp_path: Path) -> None:

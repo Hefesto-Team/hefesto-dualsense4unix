@@ -1980,7 +1980,7 @@ MIOLO = f'''
                    invisível: `textContent` num campo de texto não aparece, então a
                    tela seguia mostrando o jogo do desenho qualquer que fosse o perfil.
                    É a mesma cura que a aba Gatilhos já tinha aplicado nos seus cinco
-                   `<select>` (`aba03.py:502`).
+                   `<select>` (`aba03.py:906`).
 
                    E É O QUE TORNA OS GESTOS HONESTOS: sem isto, ligar o campo Nome
                    faria ela renomear um perfil olhando para o nome de outro. -->
