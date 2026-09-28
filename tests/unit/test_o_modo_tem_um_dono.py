@@ -301,21 +301,37 @@ def test_o_cartao_nao_vira_a_escolha_dela(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 @pytest.mark.usefixtures("_bancada")
-def test_a_promocao_segue_o_dono_e_nao_o_pad_velho() -> None:
-    """O pad degradado renasce no modo do dono (a promoção é um restart)."""
+@pytest.mark.parametrize(
+    ("dono", "backend"), [("dualsense", "uhid"), ("xbox", "uinput")], ids=["dualsense", "xbox"]
+)
+def test_a_promocao_segue_o_dono_e_nao_o_pad_velho(dono: str, backend: str) -> None:
+    """O pad degradado renasce no modo do dono (a promoção é um restart), e diz quem pediu.
+
+    O caso `xbox` é o que separa o dono do pad velho: o pad caiu no caminho
+    DualSense e o dono já diz Xbox. Conferência de 28/09: com o dono igual ao
+    pad, a régua passava com qualquer uma das duas fontes, e sem o diário.
+
+    MORDE: devolva à promoção o caminho do pad que caiu (`caminho_do_vpad`) — o
+    caso `xbox` renasce DualSense; ou tire o `nomear_o_restart` — o diário não
+    diz `motivo=promocao_uhid`.
+    """
     d = _Daemon()
     d.config.gamepad_emulation_enabled = True
-    d.config.gamepad_caminho = "dualsense"
+    d.config.gamepad_caminho = dono
     velho = _Vpad("dualsense", P1, "dualsense")
     velho.backend = "uinput"
     d._gamepad_device = velho
     from hefesto_dualsense4unix.integrations import uhid_gamepad
 
-    with pytest.MonkeyPatch.context() as mp:
+    assert vp.motivo_da_degradacao(velho) is not None, "premissa: o pad velho é queda"
+    with pytest.MonkeyPatch.context() as mp, structlog.testing.capture_logs() as diario:
         mp.setattr(uhid_gamepad, "uhid_available", lambda: True)
         assert gp.upgrade_primary_vpad_to_uhid(d) is True  # type: ignore[arg-type]
-    assert d._gamepad_device.backend == "uhid"
-    assert vp.caminho_do_vpad(d._gamepad_device) == "dualsense"
+    assert d._gamepad_device.backend == backend
+    assert vp.caminho_do_vpad(d._gamepad_device) == dono
+    assert {"event": "p1_reerguido", "motivo": "promocao_uhid", "caminho": dono} in [
+        {k: r.get(k) for k in ("event", "motivo", "caminho")} for r in diario
+    ], "a promoção não disse quem pediu"
 
 
 # ---------------------------------------------------------------------------
@@ -512,6 +528,38 @@ def test_sem_perfil_que_opine_o_boot_e_o_de_sempre(
     partidas = [r.get("caminho") for r in diario if r["event"] == "gamepad_emulation_started"]
     assert partidas == ["dualsense"]
     assert gp.caminho_da_sessao(daemon) is None
+
+
+@pytest.mark.parametrize("com_foco", [False, True], ids=["sem-foco", "com-foco"])
+def test_o_boot_veste_a_mascara_do_perfil_uma_vez(
+    com_foco: bool, _lar_do_boot: list[Any]
+) -> None:
+    """Freestyle em Xbox COM a máscara Xbox: o P1 nasce vestido, e nasce uma vez.
+
+    O modo do perfil é o caminho E a máscara (`mode.gamepad_flavor`). Conferência
+    de 28/09: nenhuma régua olhava a máscara do boot.
+
+    MORDE: tire do boot a máscara do perfil (`config.gamepad_flavor =
+    mascara_do_boot`) — sem foco o P1 fica DualSense com o perfil dizendo Xbox,
+    e com foco o autoswitch o recria (dois `gamepad_emulation_started`).
+    """
+    loader.save_profile(
+        Profile(
+            name=loader.NOME_DO_PADRAO,
+            match=MatchAny(),
+            mode=ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox", caminho="xbox"),
+        ),
+        origem="teste",
+    )
+    with structlog.testing.capture_logs() as diario:
+        asyncio.run(_o_boot(com_foco=com_foco))
+
+    partidas = [r for r in diario if r["event"] == "gamepad_emulation_started"]
+    assert [(r.get("caminho"), r.get("flavor")) for r in partidas] == [("xbox", "xbox")], (
+        f"o boot subiu {len(partidas)} pad(s) do P1: "
+        f"{[(r.get('caminho'), r.get('flavor')) for r in partidas]}"
+    )
+    assert len(_lar_do_boot) == 1 and _lar_do_boot[0].flavor == "xbox"
 
 
 def test_a_sessao_de_janela_nao_empresta_o_modo_ao_boot(
