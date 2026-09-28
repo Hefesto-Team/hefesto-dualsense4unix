@@ -551,6 +551,11 @@ class RetratoDoSom:
         with self._trava:
             return all(t in self._textos for t in TIPOS) and not self._duvida
 
+    def algum_em_dia(self) -> bool:
+        """Algum tipo foi lido e não está em dúvida — o servidor respondeu algo."""
+        with self._trava:
+            return any(t in self._textos and t not in self._duvida for t in TIPOS)
+
     # -- o dono --------------------------------------------------------------
 
     def assumir(self, laco: asyncio.AbstractEventLoop | None = None) -> None:

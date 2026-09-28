@@ -220,10 +220,11 @@ async def ouvinte_do_som_loop(daemon: Any) -> None:
 async def _carregar_o_retrato(retrato: retrato_do_som.RetratoDoSom) -> bool:
     """A leitura inteira, fora do laço de eventos. True = o retrato assumiu."""
     completo = await asyncio.to_thread(retrato.carregar)
-    if completo or retrato.dono:
+    if completo or (retrato.dono and retrato.algum_em_dia()):
         # DONO DE ANTES QUE RELIGOU volta a responder já, mesmo que um tipo
         # tenha falhado: o tipo em dúvida diz "não sei" sozinho, e os outros
-        # não precisam esperar por ele.
+        # não precisam esperar por ele. Se NADA respondeu, o servidor não
+        # voltou, e o retrato continua sem servidor.
         retrato.assumir(asyncio.get_running_loop())
         return True
     return False
