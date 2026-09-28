@@ -51,8 +51,7 @@ IDS = ["P1", "P2", "P3", "P4"]
 ROXO = player_slot_color(8)
 
 #: O CLIQUE DO RODAPÉ NA ABA ILUMINAÇÃO, como o piloto o manda: todo clique
-#: carrega a aba de onde veio, e o «Salvar» grava a seção dela — a luz é da 04
-#: (O-SALVAR-DA-VIBRACAO-01, 26/09/2026).
+#: carrega a aba de onde veio (o «Salvar» é o mesmo em toda aba desde 27/09).
 CLIQUE_DA_04 = {"tipo": "button", "evento": "click",
                 "pagina": "04-iluminacao.html"}  # (noqa-acento: chave do clique)
 
@@ -436,22 +435,33 @@ def test_um_tom_numa_barra_apagada_a_acende_no_brilho_do_perfil(mesa_de, n):
 # ---------------------------------------------------------------------------
 # 6. Os outros dois chamadores do brilho: o Salvar e o Aplicar do rodapé
 # ---------------------------------------------------------------------------
-def test_o_salvar_depois_do_autoswitch_grava_o_que_esta_aceso(mesa_de):
-    """O P1 a 60% atravessou o autoswitch; o Salvar grava o azul a 60% no perfil B.
+def test_o_salvar_depois_do_autoswitch_nao_leva_a_camada_dela_ao_outro_perfil(mesa_de):
+    """O P1 a 60% atravessou o autoswitch; o Salvar do B grava o B como estava.
 
-    **A MORDIDA:** devolva `brilho_do_controle` ao Salvar do rodapé e ele grava
-    a luz escura `(0,0,153)` como a cor do P1, que o perfil reaplicado escurece.
+    O trilho gravou os 60% no perfil A no clique, e é lá que a escolha dela
+    mora. A camada da mão atravessa a troca automática (é estado de sessão),
+    e o Salvar lê o disco, e só ele (`D-2709-O-SALVAR-LE-O-PERFIL`): até 27/09
+    ele gravava a luz acesa no B, e a escolha de um perfil ia parar noutro.
+
+    **A MORDIDA:** devolva ao Salvar do rodapé a luz acesa (a cor e o brilho
+    do aparelho no override) e o B ganha o P1 a 60%.
     """
     from pacotes import rodape
 
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
     mesa = mesa_de()
     mesa.soltar(1, 60)
+    assert mesa.disco(NOME, 1).lightbar_brightness == pytest.approx(0.60), (
+        "a régua precisa dos 60% no perfil A")
     mesa.trocar(NOME_B, "autoswitch")
+    antes = load_profile(NOME_B).model_dump(mode="json")
     rodape.salvar(mesa.ctx(), CLIQUE_DA_04, None)
-    leds = mesa.disco(NOME_B, 1)
-    assert (tuple(leds.lightbar), leds.lightbar_brightness) == (COR_DELE[1], 0.60), leds
-    mesa.trocar(NOME_B, "manual")
-    assert mesa.luz(1) == _na(COR_DELE[1], 0.60)
+    depois = load_profile(NOME_B).model_dump(mode="json")
+    assert depois == antes, (
+        f"o Salvar do B gravou a camada da mão: {antes.get('controllers')} -> "
+        f"{depois.get('controllers')}")
+    assert mesa.disco(NOME, 1).lightbar_brightness == pytest.approx(0.60)
 
 
 def test_o_aplicar_carimba_o_brilho_da_cor(mesa_de):
