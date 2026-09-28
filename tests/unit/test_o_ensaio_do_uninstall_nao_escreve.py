@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -42,7 +43,7 @@ SO_ESCREVEM = [
     *("touch", "tee", "find", "pkill", "killall", "pip", "pip3", "apt", "apt-get"),
     *("dnf", "pacman", "kernelstub", "update-desktop-database", "gtk-update-icon-cache"),
     *("update-initramfs", "gpasswd", "groupdel", "usermod", "depmod", "modprobe"),
-    *("rmmod", "gsettings", "dconf", "gnome-extensions", "sysctl", "bluetoothctl", "btmgmt"),
+    *("rmmod", "gsettings", "dconf", "gnome-extensions", "sysctl", "bluetoothctl"),
 ]
 
 # Leem e escrevem: o dublê repassa a leitura (o verbo na lista) ao real.
@@ -54,10 +55,16 @@ VERBOS_QUE_SO_LEEM = {
     "dkms": "status",
     "udevadm": "info",
     "dpkg": "-l -s -L -S --list --status",
+    # O terceiro degrau da escada dos adaptadores do uninstall (sysfs, D-Bus,
+    # `btmgmt info`, `hciconfig`). Na máquina dela o sysfs responde antes; no
+    # runner do CI, sem adaptador e sem bluez, a escada desce até aqui.
+    "btmgmt": "info",
 }
 
 
-def _dublar(pasta: Path, diario: Path) -> None:
+def _dublar(pasta: Path, diario: Path, sistema: str = PATH_DO_SISTEMA) -> None:
+    """Os dublês do PATH; `sistema` é onde moram os binários a que as leituras
+    são repassadas — um teste pode pôr ali uma máquina de mentira."""
     pasta.mkdir()
     for nome in SO_ESCREVEM:
         (pasta / nome).write_text(
@@ -65,7 +72,7 @@ def _dublar(pasta: Path, diario: Path) -> None:
             encoding="utf-8",
         )
     for nome, verbos in VERBOS_QUE_SO_LEEM.items():
-        real = shutil.which(nome, path=PATH_DO_SISTEMA)
+        real = shutil.which(nome, path=sistema)
         if real is None:
             continue  # ausente na máquina: um esquecido dá «command not found», não escreve
         casos = "|".join(verbos.split())
@@ -91,7 +98,7 @@ def _dublar(pasta: Path, diario: Path) -> None:
         f'printf "%s\\n" "python3 $*" >> "{diario}"\nexit 0\n',
         encoding="utf-8",
     )
-    real_hci = shutil.which("hciconfig", path=PATH_DO_SISTEMA)
+    real_hci = shutil.which("hciconfig", path=sistema)
     if real_hci is not None:
         (pasta / "hciconfig").write_text(
             "#!/bin/sh\n"
@@ -145,7 +152,12 @@ def _retrato(raiz: Path) -> dict[str, tuple[str, int, str]]:
     return retrato
 
 
-def _ensaiar(tmp_path: Path, *flags: str) -> tuple[subprocess.CompletedProcess[str], str, bool]:
+def _ensaiar(
+    tmp_path: Path,
+    *flags: str,
+    sistema: str = PATH_DO_SISTEMA,
+    env_extra: dict[str, str] | None = None,
+) -> tuple[subprocess.CompletedProcess[str], str, bool]:
     lar = tmp_path / "lar"
     xdg = {
         "XDG_CONFIG_HOME": lar / "config",
@@ -164,13 +176,14 @@ def _ensaiar(tmp_path: Path, *flags: str) -> tuple[subprocess.CompletedProcess[s
     xdg["XDG_RUNTIME_DIR"].chmod(0o700)
     _semear(casa, xdg["XDG_STATE_HOME"])
     diario = tmp_path / "dubles-chamados.log"
-    _dublar(tmp_path / "dubles", diario)
+    _dublar(tmp_path / "dubles", diario, sistema)
     env = {
         "HOME": str(casa),
-        "PATH": f"{tmp_path / 'dubles'}:{PATH_DO_SISTEMA}",
+        "PATH": f"{tmp_path / 'dubles'}:{sistema}",
         "LANG": "C.UTF-8",
         "TMPDIR": str(temporarios),
         **{k: str(v) for k, v in xdg.items()},
+        **(env_extra or {}),
     }
     assert not env["HOME"].startswith("/home/"), "o lar de mentira caiu numa casa de verdade"
     # O `flatpak list` de verdade cria o repositório do usuário na primeira
@@ -205,6 +218,44 @@ def test_o_ensaio_nao_chama_binario_que_escreve(tmp_path: Path, flags: tuple[str
     assert chamados == "", (
         "o ensaio chamou binário que escreve — falta um dublê em uninstall.sh "
         "(«O ENSAIO»):\n" + chamados
+    )
+
+
+def test_sem_adaptador_no_sysfs_nem_no_barramento_o_ensaio_pergunta_ao_btmgmt(
+    tmp_path: Path,
+) -> None:
+    """O `btmgmt info` é leitura, e o ensaio o faz de verdade.
+
+    Na máquina dela o sysfs responde primeiro e a escada nunca chegava ao
+    `btmgmt`; no runner do CI (corrida 36354426805), sem adaptador e sem bluez,
+    chegava, e o dublê o anotava como escrita. A máquina de mentira daqui é a
+    mesma em toda máquina e não toca rádio nenhum: sysfs vazio, barramento sem
+    o `org.bluez`, um `hciconfig` que não lista nada e um `btmgmt` que conhece
+    o `hci7` — o único degrau que pode pôr esse nome no plano.
+
+    A MORDIDA: devolver o `btmgmt` a `SO_ESCREVEM` reprova aqui, em qualquer
+    máquina.
+    """
+    sistema = tmp_path / "sistema"
+    sistema.mkdir()
+    (sistema / "btmgmt").write_text(
+        '#!/bin/sh\n[ "$1" = "info" ] && printf "hci7:\\tPrimary controller\\n"\nexit 0\n',
+        encoding="utf-8",
+    )
+    (sistema / "busctl").write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+    (sistema / "hciconfig").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    for arq in sistema.iterdir():
+        arq.chmod(0o755)
+    (tmp_path / "sys-bluetooth").mkdir()
+    r, chamados, _ = _ensaiar(
+        tmp_path,
+        sistema=f"{sistema}:{PATH_DO_SISTEMA}",
+        env_extra={"HEFESTO_SYSFS_BLUETOOTH": str(tmp_path / "sys-bluetooth")},
+    )
+    assert r.returncode == 0, r.stdout[-3000:] + r.stderr[-3000:]
+    assert chamados == "", "o ensaio chamou binário que escreve:\n" + chamados
+    assert re.search(r"FARIA: .*hci7", r.stdout), (
+        "o adaptador que só o `btmgmt info` conhece não chegou ao plano:\n" + r.stdout[-3000:]
     )
 
 
