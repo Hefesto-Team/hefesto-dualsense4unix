@@ -234,7 +234,7 @@ class _DaemonDeLaco(_DaemonDeSonda):
         self._restantes -= 1
         return self._restantes < 0
 
-    # OS STUBS NÃO SÃO DECORAÇÃO — são os SETE métodos que o `_poll_loop` de
+    # OS STUBS NÃO SÃO DECORAÇÃO — são os OITO métodos que o `_poll_loop` de
     # PRODUÇÃO chama no caminho que este dublê percorre. Apagar um derruba os
     # dois testes do laço aqui embaixo com `AttributeError`, e acrescentar uma
     # chamada nova ao laço sem o irmão aqui derruba os mesmos dois — foi o que
@@ -251,6 +251,7 @@ class _DaemonDeLaco(_DaemonDeSonda):
     # `test_o_duble_do_poll_loop_acompanha_o_produto.py`, que lê o laço por AST
     # e reprova NOMEANDO o que falta.
     def _sync_identity_registry(self) -> None: ...
+    def _seguir_a_carta(self) -> None: ...
     def aplicar_gamepad_para_multiplos_controles(self) -> None: ...
     def _amostrar_bateria(self, _agora: float) -> None: ...
     def _schedule_external_tick(self) -> None: ...
