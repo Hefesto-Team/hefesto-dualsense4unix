@@ -622,29 +622,44 @@ def test_o_lancador_sobe_a_mesa_sem_tela_e_sem_daemon(mentira, tmp_path) -> None
         "TMPDIR": str(tmp_path),
         med.PORTA_DA_REGUA: str(mentira),
     })
+    # A SAÍDA SE LÊ PELO DESCRITOR, em bytes, e não por `readline()`: o
+    # `select()` só enxerga o que ainda está no cano. Um `readline()` que chega
+    # atrasado (máquina carregada) puxa o endereço junto com as linhas de
+    # antes para o buffer do Python, o cano esvazia — o lançador fica calado no
+    # `wait` — e o laço espera o prazo inteiro sobre um endereço já lido.
+    # Medido em 28/09/2026 com o leitor atrasado 1,5 s: o laço por
+    # `readline()` saía sem endereço aos 8 s; este acha na hora.
     proc = subprocess.Popen(
         ["bash", str(LANCADOR), "--sem-abrir", "--sem-daemon", "--porta", "0"],
         cwd=tmp_path, env=ambiente, stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT, text=True, start_new_session=True)
+        stderr=subprocess.STDOUT, start_new_session=True)
     visto: list[str] = []
     endereco = ""
     try:
         assert proc.stdout is not None
+        fd = proc.stdout.fileno()
+        resto = b""
         prazo = time.monotonic() + 60
         while not endereco and time.monotonic() < prazo:
-            prontos, _, _ = select.select([proc.stdout], [], [], 1.0)
+            prontos, _, _ = select.select([fd], [], [], 1.0)
             if not prontos:
                 if proc.poll() is not None:
                     break
                 continue
-            linha = proc.stdout.readline()
-            if not linha:
+            pedaco = os.read(fd, 65536)
+            if not pedaco:
                 break
-            visto.append(linha)
-            if linha.startswith("a mesa está em:"):
-                endereco = linha.split(":", 1)[1].strip()
+            resto += pedaco
+            *linhas, resto = resto.split(b"\n")
+            for crua in linhas:
+                linha = crua.decode("utf-8", "replace")
+                visto.append(linha + "\n")
+                if linha.startswith("a mesa está em:"):
+                    endereco = linha.split(":", 1)[1].strip()
+                    break
         assert endereco.startswith("http://127.0.0.1:"), (
-            "o lançador não imprimiu o endereço da mesa:\n" + "".join(visto))
+            "o lançador não imprimiu o endereço da mesa:\n" + "".join(visto)
+            + resto.decode("utf-8", "replace"))
         corpo = _pega(endereco)
         assert "window.__TESTES__" in corpo, "a página que subiu não é a mesa"
     finally:
