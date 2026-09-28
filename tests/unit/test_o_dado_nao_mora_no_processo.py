@@ -64,6 +64,9 @@ LEITORES_DE_PROCESSO: dict[str, str] = {
         "pasta não viaja",
     "tests/unit/test_o_dado_nao_mora_no_processo.py":
         "esta régua, que nomeia a pasta para proibi-la",
+    "tests/unit/test_o_basico_o_contrato.py":
+        "a régua 7 do básico, que nomeia a pasta para proibi-la: afirma que "
+        "nenhum caminho do protocolo mora ali, e nunca lê o que há dentro",
     "tests/unit/test_toda_excecao_tem_sprint_que_a_tira.py":
         "a régua das listas de exceção: ela pergunta a cada sprint citada se "
         "ainda está aberta, e o estado de uma sprint é processo",
