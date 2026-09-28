@@ -10,10 +10,15 @@ morre de propósito se declara não despejável antes do sinal: o apport dorme.
 AS MORDIDAS: tire o `PYTHONFAULTHANDLER` do conftest, e a régua do filho
 reprova; troque a `saida` da `pilha_nativa.c` pelo `STDERR_FILENO`, e as duas
 da pilha reprovam (a captura do pytest engole o texto); tire o `LD_PRELOAD` ou
-o processo próprio do `rodar-a-suite.sh`, e a da suíte de brinquedo reprova.
+o processo próprio do `rodar-a-suite.sh`, e a da suíte de brinquedo reprova;
+tire o dígito da classe do nome ou o fecho dos imports, e a da árvore de
+verdade reprova (o pacote é `hefesto_dualsense4unix`, e o brinquedo também
+tem dígito); leia o sumário pela última linha do log, e o que morre ao sair
+vira «SEM SUMÁRIO».
 """
 from __future__ import annotations
 
+import ast
 import faulthandler
 import os
 import shutil
@@ -95,15 +100,19 @@ def test_a_pilha_nativa_sai_mesmo_com_o_stderr_desviado(tmp_path: Path) -> None:
 
 
 def test_o_arquivo_do_webkit_morre_sozinho_e_diz_onde(tmp_path: Path) -> None:
-    """A suíte de brinquedo: um arquivo comum, um do WebKit que morre, um que importa o piloto."""
+    """A suíte de brinquedo: um arquivo comum, dois do WebKit que morrem (um no
+    meio, um ao sair), um que pula inteiro e dois que só importam o piloto, um
+    direto e um pela ponte. O pacote tem dígito no nome, como o de verdade."""
     _compilada(tmp_path)
     raiz = tmp_path / "arvore"
-    for pasta in ("scripts", "tests/unit", "src/pacote"):
+    for pasta in ("scripts", "tests/unit", "src/pacote4unix"):
         (raiz / pasta).mkdir(parents=True)
     shutil.copy(SUITE, raiz / "scripts" / SUITE.name)
     shutil.copy(FONTE, raiz / "scripts" / FONTE.name)
-    (raiz / "src" / "pacote" / "piloto.py").write_text(
+    (raiz / "src" / "pacote4unix" / "piloto.py").write_text(
         'import gi\ngi.require_version("WebKit2", "4.1")\n', encoding="utf-8")
+    (raiz / "src" / "pacote4unix" / "ponte.py").write_text(
+        "from pacote4unix import piloto  # noqa: F401\n", encoding="utf-8")
     (raiz / "tests" / "unit" / "test_a_comum.py").write_text(
         "def test_passa():\n    assert True\n", encoding="utf-8")
     (raiz / "tests" / "unit" / "test_b_morre.py").write_text(
@@ -113,7 +122,15 @@ def test_o_arquivo_do_webkit_morre_sozinho_e_diz_onde(tmp_path: Path) -> None:
         "import pytest\n\n# WebKit2 ausente nesta máquina\npytest.skip('sem o WebKit', "
         "allow_module_level=True)\n", encoding="utf-8")
     (raiz / "tests" / "unit" / "test_c_piloto.py").write_text(
-        "def test_so_cita():\n    if False:\n        from pacote import piloto  # noqa: F401\n",
+        "def test_so_cita():\n    if False:\n"
+        "        from pacote4unix import piloto  # noqa: F401\n", encoding="utf-8")
+    (raiz / "tests" / "unit" / "test_e_ponte.py").write_text(
+        "def test_so_cita_a_ponte():\n    if False:\n"
+        "        from pacote4unix import ponte  # noqa: F401\n", encoding="utf-8")
+    (raiz / "tests" / "unit" / "test_f_morre_ao_sair.py").write_text(
+        "# o WebKit2 de mentira, que morre depois do sumário\nimport atexit\n\n\n"
+        "def _morrer():\n" + "".join(f"    {linha}\n" for linha in _MORRE.splitlines())
+        + "\n\ndef test_passa_e_morre_ao_sair():\n    atexit.register(_morrer)\n",
         encoding="utf-8")
     saida = tmp_path / "saida"
 
@@ -126,15 +143,96 @@ def test_o_arquivo_do_webkit_morre_sozinho_e_diz_onde(tmp_path: Path) -> None:
 
     assert feito.returncode == 1, texto
     linhas = {linha.strip().split(":", 1)[0]: linha for linha in feito.stdout.splitlines()}
-    assert "1 passed" in linhas.get("parte-00 (4 arq)", ""), (
+    assert "1 passed" in linhas.get("parte-00 (6 arq)", ""), (
         "o arquivo comum não sobreviveu ao sinal do vizinho:\n" + texto)
     assert "MORREU PELO SINAL 11" in linhas.get("test_b_morre, em processo próprio", ""), texto
     assert "1 passed" in linhas.get("test_c_piloto, em processo próprio", ""), (
         "o arquivo que importa um módulo do WebKit não rodou sozinho:\n" + texto)
+    assert "1 passed" in linhas.get("test_e_ponte, em processo próprio", ""), (
+        "o arquivo que carrega o WebKit por um módulo do meio não rodou sozinho:\n" + texto)
     pulo = linhas.get("test_d_pula, em processo próprio", "")
     assert "1 skipped" in pulo and "SEM SUMÁRIO" not in pulo, (
         "o arquivo que pula inteiro (rc=5) foi lido como processo morto:\n" + texto)
+    ao_sair = linhas.get("test_f_morre_ao_sair, em processo próprio", "")
+    assert "1 passed" in ao_sair and "MORREU PELO SINAL 11" in ao_sair, (
+        "o arquivo que morre depois do sumário perdeu o sumário ou o sinal:\n" + texto)
     log = (saida / "parte-00-test_b_morre.log").read_text(encoding="utf-8")
     assert "Fatal Python error: Segmentation fault" in log, log
     assert "pilha nativa: a linha que recebeu o sinal" in log, (
         "o log de quem morreu não tem a pilha nativa:\n" + log)
+
+
+def _topo(arvore: ast.Module) -> list[ast.stmt]:
+    """Os comandos que rodam ao importar: o corpo, descendo em `if` e `try`."""
+    fila, topo = list(arvore.body), []
+    while fila:
+        no = fila.pop()
+        topo.append(no)
+        if isinstance(no, (ast.If, ast.Try)):
+            fila += no.body + no.orelse
+        if isinstance(no, ast.Try):
+            fila += no.finalbody + [c for h in no.handlers for c in h.body]
+    return topo
+
+
+def _importados(nos: list[ast.stmt] | list[ast.AST], modulo: str = "") -> set[str]:
+    nomes: set[str] = set()
+    for no in nos:
+        if isinstance(no, ast.Import):
+            nomes |= {a.name for a in no.names}
+        elif isinstance(no, ast.ImportFrom):
+            base = no.module or ""
+            if no.level:
+                pai = modulo.split(".")[: -no.level]
+                base = ".".join(pai + ([base] if base else []))
+            nomes |= {base} | {f"{base}.{a.name}" for a in no.names}
+    return nomes
+
+
+def _carregam_o_webkit() -> set[str]:
+    """Os arquivos de teste que importam um módulo que carrega o WebKit ao ser
+    importado, pelo AST: o método é outro que o do runner, de propósito."""
+    modulos: dict[str, ast.Module] = {}
+    for caminho in sorted((RAIZ / "src").rglob("*.py")) + sorted((RAIZ / "scripts").rglob("*.py")):
+        partes = list(caminho.relative_to(RAIZ / "src").with_suffix("").parts
+                      if caminho.is_relative_to(RAIZ / "src") else [caminho.stem])
+        if partes[-1] == "__init__":
+            partes.pop()
+        try:
+            modulos[".".join(partes)] = ast.parse(caminho.read_text(encoding="utf-8"))
+        except SyntaxError:
+            continue
+    fecho = {m for m, a in modulos.items() if any(
+        isinstance(n, ast.ImportFrom) and n.module == "gi.repository"
+        and any(x.name == "WebKit2" for x in n.names) for n in _topo(a))}
+    importa = {m: _importados(_topo(a), m) for m, a in modulos.items()}
+
+    def alcanca(nomes: set[str]) -> bool:
+        prefixos = {".".join(n.split(".")[:k]) for n in nomes for k in range(1, n.count(".") + 2)}
+        return bool(prefixos & fecho)
+
+    while novos := {m for m in modulos if m not in fecho and alcanca(importa[m] | {m})}:
+        fecho |= novos
+    folhas = {m.rsplit(".", 1)[-1] for m in fecho}
+    achados = set()
+    for teste in (RAIZ / "tests" / "unit").glob("test_*.py"):
+        nomes = _importados(list(ast.walk(ast.parse(teste.read_text(encoding="utf-8")))))
+        if alcanca(nomes) or nomes & folhas:
+            achados.add(teste.relative_to(RAIZ).as_posix())
+    return achados
+
+
+def test_todo_arquivo_que_carrega_o_webkit_roda_sozinho(tmp_path: Path) -> None:
+    """A árvore de verdade: o runner diz quem roda em processo próprio, e o AST confere."""
+    feito = subprocess.run(
+        ["bash", str(SUITE)], cwd=RAIZ, capture_output=True, text=True, timeout=300,
+        check=False, env=_ambiente(PY=sys.executable, SAIDA=str(tmp_path / "saida"),
+                                   LISTAR_O_WEBKIT="1"),
+    )
+    assert feito.returncode == 0, feito.stdout + feito.stderr
+    sozinhos = set(feito.stdout.split())
+    esperados = _carregam_o_webkit()
+    assert len(esperados) >= 20, f"o AST achou só {len(esperados)}: a régua ficou cega"
+    faltam = sorted(esperados - sozinhos)
+    assert not faltam, (
+        "carregam o WebKit e rodariam no processo da parte:\n  " + "\n  ".join(faltam))
