@@ -316,8 +316,3 @@ razao = "configuração do próprio git (.gitignore, .gitattributes)."
 caminho = ".mailmap"
 zona = "CODIGO"
 razao = "mapa de autoria do git."
-
-[[regra]]
-caminho = ".code-review-graphignore"
-zona = "CODIGO"
-razao = "configuração de ferramenta de leitura de código."
