@@ -1551,7 +1551,7 @@ def folha_de_realce(var: str = "--realce", padrao: str = REALCE_PADRAO) -> str:
     desde que nasceu, **e nenhuma folha desta casa jamais teve regra para essa
     classe**: o parâmetro montava o HTML certo e não acendia nada. A única
     `.marcada` do repositório vivia em `scripts/gerar-mapa.py`, e valia só para
-    o `html/specs.html`.
+    o `docs/specs.html`.
 
     A REGRA É UMA SÓ, e não uma por peça. O `mapa.py` precisa de uma regra por
     peça porque o gatilho dele mora FORA do desenho (`:has(.item-N:hover)`, a

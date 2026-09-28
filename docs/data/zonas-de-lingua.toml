@@ -146,6 +146,13 @@ zona = "ENSINA"
 razao = "o glossário da casa e o que mais vier à raiz de docs/ como prosa."
 
 [[regra]]
+caminho = "docs/*.html"
+zona = "ENSINA"
+razao = """o mapa de canais gerado (docs/specs.html), que se LÊ para entender o
+projeto. Não é o produto: o produto renderiza interface/paginas/. O texto
+dele vem do docs/data/mapa-controles.csv, e é lá que se traduz."""
+
+[[regra]]
 caminho = "html/**"
 zona = "ENSINA"
 razao = """as páginas geradas que se LEEM para entender o projeto (specs, mapa,

@@ -34,6 +34,9 @@ from pathlib import Path
 
 import pytest
 
+# O caminho do `specs.html` tem um dono só; esta folha o pede ao irmão.
+from tests.unit.test_check_paridade_transporte import _specs_de
+
 RAIZ_REAL = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ_REAL / "scripts" / "check_paridade_transporte.py"
 
@@ -89,9 +92,7 @@ def monta_arvore(tmp_path: Path, fonte_do_teste: str, alvo: str) -> Path:
         escritor.writeheader()
         escritor.writerow({coluna: linha.get(coluna, "") for coluna in CABECALHO})
 
-    pasta_html = tmp_path / "html"
-    pasta_html.mkdir(parents=True, exist_ok=True)
-    (pasta_html / "specs.html").write_text(
+    _specs_de(tmp_path).write_text(
         f"<html><body>{ID_DA_LINHA}</body></html>", encoding="utf-8"
     )
     return caminho_csv

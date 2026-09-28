@@ -35,6 +35,7 @@ publica um índice que descreve as páginas anteriores.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from html import escape
@@ -45,6 +46,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from carimbo_da_casa import CSS as CARIMBO_CSS
 from carimbo_da_casa import MARCA, carimbo, sem_carimbo
 from carimbo_da_casa import PASTA as PASTA_HTML
+from check_paridade_transporte import SPECS_RELATIVO
 from paleta_da_casa import TOKENS
 
 RAIZ = Path(__file__).resolve().parents[1]
@@ -57,9 +59,13 @@ SAIDA = PASTA / "index.html"
 #: **Esta tupla é a fonte do índice.** Um cartão a menos aqui é um instrumento
 #: que ela não acha; o teste `tests/unit/test_indice_html_leva_aos_tres.py`
 #: reprova nomeando qual sumiu.
+#:
+#: `arquivo` é o caminho a partir da raiz. Desde 28/09/2026 o mapa de canais mora
+#: em `docs/` e viaja no repositório (o caminho é do portão, `SPECS_RELATIVO`);
+#: os outros dois moram aqui ao lado, em `html/`, fora do git.
 INSTRUMENTOS = (
     {
-        "arquivo": "specs.html",
+        "arquivo": SPECS_RELATIVO,
         "titulo": "Mapa de canais",
         "responde": "O que o aparelho entende, e por qual canal — cabo ou rádio.",
         "quando": "Antes de afirmar que uma feature funciona num transporte. "
@@ -69,7 +75,7 @@ INSTRUMENTOS = (
         "fonte": "docs/data/mapa-controles.csv + os três desenhos SVG",
     },
     {
-        "arquivo": "painel.html",
+        "arquivo": f"{PASTA_HTML}/painel.html",
         "titulo": "Painel do projeto",
         "responde": "Onde o projeto está: portões, sprints, a fila da bancada.",
         "quando": "Ao chegar numa sessão, para saber o que está verde, o que "
@@ -79,7 +85,7 @@ INSTRUMENTOS = (
         "fonte": "as sprints, docs/data/decisoes-dela.csv e o cache dos portões",
     },
     {
-        "arquivo": "frases-de-tela.html",
+        "arquivo": f"{PASTA_HTML}/frases-de-tela.html",
         "titulo": "Frases de tela",
         "responde": "Que frases da interface mudaram e ainda não passaram por ela.",
         "quando": "Quando houver texto de tela esperando o olho dela. Cada "
@@ -180,7 +186,8 @@ def _cartao(inst: dict[str, str], selo: dict[str, str]) -> str:
         )
         classe = "cartao ausente"
     else:
-        titulo = f'<h2><a href="{escape(nome)}">{escape(inst["titulo"])}</a></h2>'
+        alvo = os.path.relpath(RAIZ / nome, PASTA)
+        titulo = f'<h2><a href="{escape(alvo)}">{escape(inst["titulo"])}</a></h2>'
         quando = escape(selo["quando"]) if selo["quando"] else "carimbo não encontrado"
         commit = escape(selo["commit"]) if selo["commit"] else "?"
         ficha = (
@@ -236,7 +243,7 @@ def _concordancia(selos: list[dict[str, str]]) -> str:
 
 
 def monta() -> str:
-    selos = [le_carimbo(PASTA / i["arquivo"]) for i in INSTRUMENTOS]
+    selos = [le_carimbo(RAIZ / i["arquivo"]) for i in INSTRUMENTOS]
     cartoes = "".join(_cartao(i, s) for i, s in zip(INSTRUMENTOS, selos, strict=True))
     return f"""<!doctype html>
 <html lang="pt-BR">
@@ -306,7 +313,7 @@ def main() -> int:
 
     PASTA.mkdir(parents=True, exist_ok=True)
     SAIDA.write_text(pagina, encoding="utf-8")
-    achados = sum(1 for i in INSTRUMENTOS if (PASTA / i["arquivo"]).is_file())
+    achados = sum(1 for i in INSTRUMENTOS if (RAIZ / i["arquivo"]).is_file())
     print(f"{SAIDA.relative_to(RAIZ)}: {len(INSTRUMENTOS)} cartões, "
           f"{achados} página(s) no disco, sem rede e sem CDN.")
     return 0

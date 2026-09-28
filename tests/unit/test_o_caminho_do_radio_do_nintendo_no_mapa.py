@@ -13,7 +13,7 @@ a razão de existir:
    como "ninguém respondeu" — que é exatamente o estado de onde ela saiu.
 2. **mudou o fonte, reprova.** Cada célula afirma um GATE DE BARRAMENTO do
    driver. Se alguém tirar o gate (por exemplo, deixar ``joycon_may_degrade``
-   valer no rádio), a célula vira mentira publicada no ``html/specs.html`` — e
+   valer no rádio), a célula vira mentira publicada no ``docs/specs.html`` — e
    o teste manda atualizar o mapa no mesmo gesto.
 
 **Nada aqui mede o aparelho.** Todo o conteúdo é leitura de fonte, e é por isso
@@ -121,7 +121,7 @@ class TestOFonteAindaSustentaOQueOMapaAfirma:
             f"o gate `{gate}` sumiu de {DRIVER.name}, e a linha "
             f"`{identificador}` do mapa ainda o descreve. Se o gate caiu de "
             "propósito, ATUALIZE a célula de rádio no mesmo gesto — senão o "
-            "html/specs.html publica como fato um caminho que o fonte não tem "
+            "docs/specs.html publica como fato um caminho que o fonte não tem "
             "mais."
         )
 

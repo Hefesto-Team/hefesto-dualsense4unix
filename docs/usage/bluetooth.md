@@ -241,6 +241,6 @@ maior, por nove passadas — em vez do `0x35`.
 microfone a decodifica, o alto-falante a codifica. O `install.sh` já a instala.
 
 Linha por linha, com a procedência de cada célula, no
-[mapa de canais](../../html/specs.html) — `audio.microfone@dualsense`,
+[mapa de canais](../specs.html) — `audio.microfone@dualsense`,
 `audio.saida_dedicada@dualsense` e
 `audio.saida_dedicada.payload_do_degrau@dualsense`.

@@ -22,7 +22,6 @@ import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
-SPECS = RAIZ / "html" / "specs.html"
 
 
 def _gerador():
@@ -57,7 +56,7 @@ def test_o_numero_publicado_no_specs_e_o_numero_de_agora():
     """A régua LÊ os dois lados. Digitar 201 aqui seria a mentira que ela mata."""
     mod = _gerador()
     conta = mod.procedencia_do_inferido(mod.le_csv())
-    pagina = SPECS.read_text(encoding="utf-8")
+    pagina = mod.SAIDA.read_text(encoding="utf-8")
     trecho = re.search(
         r"E <em>inferido-do-codigo</em> não é um grau só.*?</p>", pagina, re.S
     )

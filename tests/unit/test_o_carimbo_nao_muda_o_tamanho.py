@@ -4,15 +4,14 @@ Sprint `O-TAMANHO-QUE-DEPENDE-DA-ARVORE-01` (20/09/2026).
 
 O DEFEITO QUE ESTA RÉGUA EXISTE PARA PEGAR
 ------------------------------------------
-De 25/08 a 20/09/2026 o rodapé dos quatro instrumentos HTML trazia
+De 25/08 a 20/09/2026 o rodapé das páginas HTML geradas trazia
 `· árvore com N mudança(s) não commitada(s)`. Essa frase **muda de comprimento
 com N** — «2» e «13» não ocupam o mesmo espaço — e **some inteira** quando a
 árvore está limpa. O `git status` de quem gerou virava bytes do produto.
 
-O sintoma chegou como um vermelho que se lia como outra coisa:
-
-    FALHA numero-caduco: `bytes:html/specs.html` publica 2.280.044
-                         e a medição de agora diz 2.280.091
+O sintoma chegou como um vermelho que se lia como outra coisa: o
+`numero-caduco` do `LEIA-PRIMEIRO` dizia que o mapa de canais publicava
+2.280.044 bytes e que a medição de agora dizia 2.280.091.
 
 Os 47 bytes de diferença são exatamente o carimbo de uma árvore suja menos o de
 uma limpa. Rodar a cura que o próprio erro imprime gravava um TERCEIRO número,
@@ -32,9 +31,8 @@ contagem provou isso nela mesma: regerou as quatro páginas na worktree
 A própria sprint fecha o argumento: *"se a casa quiser manter a contagem, então
 o `LEIA-PRIMEIRO` não pode publicar o TAMANHO desse arquivo"*. A casa manteve o
 tamanho publicado; logo nada de largura variável cabe no carimbo — nem a
-contagem, nem a branch. Quem lia o nome da branch era só o
-`scripts/gerar-indice-html.py`, e o que ele mostra de divergência entre as
-irmãs sempre foi POR COMMIT.
+contagem, nem a branch. A divergência entre páginas irmãs sempre se leu POR
+COMMIT, e o nome da branch não fazia falta a ninguém.
 
 O QUE A MORDIDA ARRANCA
 -----------------------
@@ -47,7 +45,7 @@ Devolver a `procedencia()` a chave `sujos` e ao `carimbo()` o trecho
     test_o_carimbo_nao_pergunta_o_estado_da_arvore ... `git status --porcelain`
     test_a_procedencia_declara_so_a_fonte ........... a chave, nomeada
     test_o_carimbo_nao_muda_com_o_nome_da_branch .... 223 → 246 bytes
-    test_a_pagina_publicada_...(as quatro páginas) .. 5 campos onde cabem 4,
+    test_a_pagina_publicada_... ..................... 5 campos onde cabiam 4,
                                                       e a palavra `branch`
 
 Devolvida a cura, as nove passam. Cada teste diz, no próprio docstring, a
@@ -71,14 +69,9 @@ dá 196/196/196/**201**/**201** bytes pelos cinco estados e a segunda
     `diff-index` não casava com `"diff"` nem `--modified` com `-m`. Hoje o
     casamento é por FAMÍLIA (`_pergunta_o_estado`).
 
-O QUE ESTA RÉGUA NÃO COBRE, E ESTÁ DECLARADO
---------------------------------------------
-`scripts/gerar-painel.py` escreve, no CORPO do painel, um parágrafo próprio
-«Árvore: N arquivo(s) com mudança não commitada em <commit>», e um selo com o
-nome da branch. Nenhum dos dois é o carimbo: são cartões de um painel que existe
-para relatar o estado do projeto, os dois já saem do `--check` por
-`_recorta_selo`, e nenhum número publicado mede `html/painel.html`. Fica de fora
-por decisão, não por esquecimento.
+A página que o repositório carrega é uma só, o mapa de canais, e o caminho
+dela vem do dono (`SPECS_RELATIVO`, no portão). As outras páginas geradas não
+se versionam, e nenhum número publicado as mede.
 """
 from __future__ import annotations
 
@@ -91,10 +84,12 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
-PASTA = RAIZ / "html"
 
 sys.path.insert(0, str(RAIZ / "scripts"))
 import carimbo_da_casa  # depende da linha acima: `scripts/` não é pacote
+from check_paridade_transporte import SPECS_RELATIVO  # o dono do caminho do mapa
+
+PUBLICADA = RAIZ / SPECS_RELATIVO
 
 #: A marca da linha do carimbo, escrita À MÃO de propósito: importá-la do módulo
 #: faria esta régua concordar com ele por construção, que é a tautologia de que
@@ -102,24 +97,20 @@ import carimbo_da_casa  # depende da linha acima: `scripts/` não é pacote
 MARCA = "data-carimbo"
 
 #: QUANTOS CAMPOS a linha tem, separados por `·`. Escritos à mão pela mesma
-#: razão. Hoje: «gerado em …», «commit …», «por …» e, nas três que não são o
-#: índice, «índice dos instrumentos». Um campo a mais é um dado a mais viajando
-#: dentro do produto — foi assim que a sujeira da árvore entrou.
-CAMPOS_ESPERADOS = {
-    "index.html": 3,
-    "specs.html": 4,
-    "painel.html": 4,
-    "frases-de-tela.html": 4,
-}
+#: razão: «gerado em …», «commit …» e «por …». O link «índice dos instrumentos»
+#: não entra no mapa publicado, porque o índice não viaja com ele. Um campo a
+#: mais é um dado a mais viajando dentro do produto — foi assim que a sujeira
+#: da árvore entrou.
+CAMPOS_ESPERADOS = 3
 
 #: As palavras com que a MESA de quem gerou chega a uma linha de rodapé. A
 #: contagem de campos acima é a régua contra um campo NOVO; esta lista é a régua
 #: contra a mesma coisa COLADA num campo que já existe — «por <gerador> (árvore
-#: suja)» tem quatro campos e carrega o estado do mesmo jeito.
+#: suja)» tem os mesmos campos e carrega o estado do mesmo jeito.
 #:
 #: `branch` está na lista desde 20/09/2026: o nome da branch saiu do carimbo por
 #: ter largura variável, e ele voltaria DENTRO do campo do commit, sem mexer na
-#: contagem (medido: 92 bytes em `html/index.html` entre `dev` e uma worktree de
+#: contagem (medido: até 92 bytes por página entre `dev` e uma worktree de
 #: agente).
 PALAVRAS_DE_ESTADO = (
     "commitada", "commitado", "sujo", "suja", "staged", "modificad", "branch",
@@ -385,7 +376,7 @@ def test_a_procedencia_declara_so_a_fonte(brinquedo: Path) -> None:
     p = carimbo_da_casa.procedencia(raiz=brinquedo)
     assert set(p) == {"commit"}, (
         f"`procedencia()` devolve {sorted(p)}; esperado ['commit'].\n"
-        "Toda chave a mais aqui vira texto no rodapé das quatro páginas. Se ela "
+        "Toda chave a mais aqui vira texto no rodapé das páginas geradas. Se ela "
         "descrever a MESA de quem gerou — o estado da árvore, o nome da branch "
         "— o tamanho do arquivo passa a depender de onde alguém apertou o botão "
         "(ver o docstring de `procedencia()`)."
@@ -453,10 +444,10 @@ def test_o_carimbo_nao_muda_com_o_nome_da_branch(brinquedo: Path) -> None:
     MEDIDO NA CONFERÊNCIA, 20/09/2026, na leva que curou a contagem de sujos e
     regerou as quatro páginas numa worktree de agente:
 
-        html/index.html ......... +92 bytes contra `dev`
-        html/painel.html ........ +46
-        html/specs.html ......... +23
-        html/frases-de-tela.html  +23
+        o índice ................ +92 bytes contra `dev`
+        o painel ................ +46
+        o mapa de canais ........ +23
+        as frases de tela ....... +23
 
     e o `docs/data/LEIA-PRIMEIRO.md` passou a publicar 2.280.067 onde `dev` mede
     2.280.044 — o número que o documento já trazia CERTO antes da leva.
@@ -481,67 +472,81 @@ def test_o_carimbo_nao_muda_com_o_nome_da_branch(brinquedo: Path) -> None:
         "o carimbo muda com o NOME DA BRANCH de quem gerou "
         f"({len(em_dev.encode())} → {len(na_worktree.encode())} bytes).\n"
         f"  em `dev`:      {em_dev}\n  na worktree:   {na_worktree}\n"
-        "O tamanho de `html/specs.html` é publicado em "
+        f"O tamanho de `{SPECS_RELATIVO}` é publicado em "
         "`docs/data/LEIA-PRIMEIRO.md` e tem portão: toda página regerada fora "
         "de `dev` grava um número que reprova assim que o merge acontece."
     )
 
 
 # --------------------------------------------------------------------------
-# O produto: as quatro páginas publicadas
+# O produto: o mapa de canais publicado
 # --------------------------------------------------------------------------
-@pytest.mark.parametrize("nome", sorted(CAMPOS_ESPERADOS))
-def test_a_pagina_publicada_nao_carrega_a_sujeira_de_quem_gerou(nome: str) -> None:
-    """O carimbo de cada página publicada tem os campos de hoje, e só eles.
-
-    SÃO DUAS RÉGUAS INDEPENDENTES, e é de propósito. A contagem de campos pega
-    um campo NOVO com qualquer redação. As PALAVRAS pegam a mesma coisa colada
-    dentro de um campo que já existe — «por <gerador> (árvore suja)» tem quatro
-    campos e carrega o estado do mesmo jeito, e foi assim que uma mutação da
-    conferência atravessou esta régua quando ela era só a contagem.
-
-    MORDIDA, as duas medidas em 20/09/2026:
-      - o `html/specs.html` de antes da leva trazia «árvore com 5 mudança(s)
-        não commitada(s)» — 5 campos onde cabem 4;
-      - o de antes da conferência trazia «na branch
-        <code>worktree-wf_7917c453-7ab-2</code>» — 4 campos, e a palavra
-        `branch` é quem o denuncia.
-    """
-    caminho = PASTA / nome
-    if not caminho.is_file():
+def _linha_do_carimbo() -> str:
+    if not PUBLICADA.is_file():
         pytest.fail(
-            f"html/{nome} não está no disco — regere as quatro:\n"
-            "  python3 scripts/gerar-mapa.py && python3 scripts/gerar-painel.py "
-            "&& python3 scripts/gerar-frases-de-tela.py "
-            "&& python3 scripts/gerar-indice-html.py"
+            f"{SPECS_RELATIVO} não está no disco — regere:\n"
+            "  python3 scripts/gerar-mapa.py"
         )
     linhas = [
-        ln for ln in caminho.read_text(encoding="utf-8", errors="replace").splitlines()
+        ln for ln in PUBLICADA.read_text(encoding="utf-8", errors="replace").splitlines()
         if MARCA in ln
     ]
     assert len(linhas) == 1, (
-        f"html/{nome} tem {len(linhas)} linha(s) com `{MARCA}`; esperado 1."
+        f"{SPECS_RELATIVO} tem {len(linhas)} linha(s) com `{MARCA}`; esperado 1."
     )
-    linha = linhas[0]
+    return linhas[0]
 
+
+def test_a_pagina_publicada_nao_carrega_a_sujeira_de_quem_gerou() -> None:
+    """O carimbo do mapa publicado tem os campos de hoje, e só eles.
+
+    SÃO DUAS RÉGUAS INDEPENDENTES, e é de propósito. A contagem de campos pega
+    um campo NOVO com qualquer redação. As PALAVRAS pegam a mesma coisa colada
+    dentro de um campo que já existe — «por <gerador> (árvore suja)» tem os
+    mesmos campos e carrega o estado do mesmo jeito, e foi assim que uma
+    mutação da conferência atravessou esta régua quando ela era só a contagem.
+
+    MORDIDA, as duas medidas em 20/09/2026:
+      - o mapa publicado de antes da leva trazia «árvore com 5 mudança(s)
+        não commitada(s)» — um campo a mais;
+      - o de antes da conferência trazia «na branch
+        <code>worktree-wf_7917c453-7ab-2</code>» — os mesmos campos, e a
+        palavra `branch` é quem o denuncia.
+    """
+    linha = _linha_do_carimbo()
     miolo = re.sub(r"<[^>]+>", "", linha)
     campos = [pedaco.strip() for pedaco in miolo.split("·") if pedaco.strip()]
     nomeadas = [p for p in PALAVRAS_DE_ESTADO if p in linha.lower()]
     assert not nomeadas, (
-        f"o carimbo de html/{nome} carrega a MESA de quem gerou — as palavras "
-        f"{nomeadas} estão na linha:\n  {linha}\n"
-        "Nada de largura variável cabe aqui: o tamanho de `html/specs.html` é "
-        "publicado em `docs/data/LEIA-PRIMEIRO.md` e tem portão.\n"
+        f"o carimbo de {SPECS_RELATIVO} carrega a MESA de quem gerou — as "
+        f"palavras {nomeadas} estão na linha:\n  {linha}\n"
+        "Nada de largura variável cabe aqui: o tamanho do mapa é publicado em "
+        "`docs/data/LEIA-PRIMEIRO.md` e tem portão.\n"
         "Regere a página depois de curar o `scripts/carimbo_da_casa.py`."
     )
-    assert len(campos) == CAMPOS_ESPERADOS[nome], (
-        f"o carimbo de html/{nome} tem {len(campos)} campo(s); esperado "
-        f"{CAMPOS_ESPERADOS[nome]}.\n  {linha}\n"
-        + (
-            f"As palavras {nomeadas} dizem o que voltou: o ESTADO da árvore de "
-            "quem gerou. Ele muda de comprimento e muda o tamanho do arquivo "
-            "publicado.\n"
-            if nomeadas else ""
-        )
-        + "Regere a página depois de curar o `scripts/carimbo_da_casa.py`."
+    assert len(campos) == CAMPOS_ESPERADOS, (
+        f"o carimbo de {SPECS_RELATIVO} tem {len(campos)} campo(s); esperado "
+        f"{CAMPOS_ESPERADOS}.\n  {linha}\n"
+        "Regere a página depois de curar o `scripts/carimbo_da_casa.py`."
+    )
+
+
+def test_o_mapa_publicado_nao_liga_para_o_que_nao_viaja() -> None:
+    """O rodapé do mapa não aponta para o índice das páginas locais.
+
+    O `docs/specs.html` viaja no repositório; o índice mora numa pasta que não
+    se versiona. Um link para ele é um link quebrado para quem clona — e o
+    carimbo o emite por padrão, então quem o tira é o gerador
+    (`carimbo(..., indice=False)`).
+
+    MORDIDA, medida em 28/09/2026: devolver o `indice=False` ao padrão no
+    `scripts/gerar-mapa.py` e regerar faz esta régua reprovar com o link na
+    mensagem.
+    """
+    pagina = PUBLICADA.read_text(encoding="utf-8", errors="replace")
+    achados = [ln.strip()[:200] for ln in pagina.splitlines() if "index.html" in ln]
+    assert not achados, (
+        f"{SPECS_RELATIVO} liga para o índice, que não viaja com ele:\n  "
+        + "\n  ".join(achados)
+        + "\nChame o carimbo com `indice=False` no `scripts/gerar-mapa.py` e regere."
     )

@@ -15,21 +15,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-def _specs_de(raiz: Path) -> Path:
-    """O caminho do `specs.html` numa árvore de brinquedo, com a pasta criada.
-
-    A página mudou da raiz para `html/` em 25/08/2026, e as árvores de teste
-    passaram a precisar da pasta ANTES do `write_text` — senão o erro é um
-    `FileNotFoundError` de diretório, que não diz nada sobre o que se testa.
-
-    Existe como função, e não como duas linhas repetidas em cada caso, pelo
-    motivo de sempre nesta casa: no dia em que o caminho mudar de novo, muda
-    num lugar só.
-    """
-    pasta = raiz / "html"
-    pasta.mkdir(parents=True, exist_ok=True)
-    return pasta / "specs.html"
-
+# O caminho do `specs.html` tem um dono só; esta folha o pede ao irmão.
+from tests.unit.test_check_paridade_transporte import _specs_de
 
 RAIZ_REAL = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ_REAL / "scripts" / "check_paridade_transporte.py"

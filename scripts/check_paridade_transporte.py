@@ -405,12 +405,12 @@ OLHO_DELA_REPROVA = False
 
 CSV_RELATIVO = "docs/data/mapa-controles.csv"
 ENSAIOS_RELATIVO = "docs/data/ensaios.csv"
-#: 25/08/2026: a página mudou para `html/`, e este caminho não a seguiu.
-#: O efeito foi o pior possível — o portão continuou VERDE e imprimiu
-#: "regra DESLIGADA neste ambiente: mapa-nao-publicado". A regra 5 parou de
-#: medir e NADA reprovava por isso. Portão que desliga uma regra e segue
-#: verde é a família do "a casa sabe e o produto não faz", com verde por cima.
-SPECS_RELATIVO = "html/specs.html"
+#: O ÚNICO lugar onde o caminho do mapa publicado se escreve: o gerador, o
+#: gancho e as réguas o leem daqui. Quando a página mudou de pasta e este
+#: caminho não a seguiu, o portão continuou VERDE e imprimiu "regra DESLIGADA
+#: neste ambiente: mapa-nao-publicado" — a regra 5 parou de medir e nada
+#: reprovava. Portão que desliga uma regra e segue verde é a mesma família.
+SPECS_RELATIVO = "docs/specs.html"
 PASTA_DE_TESTES = "tests"
 
 #: O dono executável da lista de pontes. Este portão NÃO o importa, e a razão

@@ -20,7 +20,7 @@ A mordida tem duas metades, e é essa a razão de o arquivo existir:
    "ninguém respondeu" — que é o estado de onde ela saiu.
 2. **mudou o fonte, reprova.** Cada célula afirma um gate, uma linha de conf ou
    uma escrita do produto. Se o fonte mudar, a célula vira mentira publicada no
-   ``html/specs.html``, e o teste manda atualizar o mapa no mesmo gesto.
+   ``docs/specs.html``, e o teste manda atualizar o mapa no mesmo gesto.
 
 **NADA AQUI MEDE O APARELHO.** Não havia Pro na mesa em 03/09/2026 — o
 inventário vivo de ``/sys/class/input`` trazia DualSense e receptores 2.4G,
@@ -383,7 +383,7 @@ class TestOFonteAindaSustentaOQueOMapaAfirma:
         assert agulha in _texto(caminho), (
             f"{rotulo}: {caminho.relative_to(REPO_ROOT)} não tem mais "
             f"{agulha!r}. A célula do mapa que afirma isto virou mentira "
-            "publicada no html/specs.html — atualize as duas no mesmo gesto."
+            "publicada no docs/specs.html — atualize as duas no mesmo gesto."
         )
 
     @pytest.mark.parametrize("entrada", ENTRADAS_DA_TABELA)

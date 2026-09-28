@@ -761,7 +761,7 @@ def test_a_escada_tem_um_dono_so(tmp_path: Path) -> None:
     # A legenda publicada sai da escada, e o método a define em prosa. Os dois
     # têm de nomear os CINCO degraus, ou a página e a régua contam histórias
     # diferentes.
-    publicado = (RAIZ_REAL / "html" / "specs.html").read_text(encoding="utf-8")
+    publicado = (RAIZ_REAL / censo.SPECS_RELATIVO).read_text(encoding="utf-8")
     metodo = (RAIZ_REAL / "docs" / "method" / "METODO-DE-ISOLAMENTO.md").read_text(
         encoding="utf-8"
     )

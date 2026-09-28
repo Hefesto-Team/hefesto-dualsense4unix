@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import ast
 import csv
+import functools
 import importlib.util
 import subprocess
 import sys
@@ -26,17 +27,21 @@ import pytest
 def _specs_de(raiz: Path) -> Path:
     """O caminho do `specs.html` numa árvore de brinquedo, com a pasta criada.
 
-    A página mudou da raiz para `html/` em 25/08/2026, e as árvores de teste
-    passaram a precisar da pasta ANTES do `write_text` — senão o erro é um
-    `FileNotFoundError` de diretório, que não diz nada sobre o que se testa.
-
-    Existe como função, e não como duas linhas repetidas em cada caso, pelo
-    motivo de sempre nesta casa: no dia em que o caminho mudar de novo, muda
-    num lugar só.
+    O caminho é o do dono, `SPECS_RELATIVO` no portão — lido, nunca digitado: a
+    página já mudou de pasta duas vezes, e cada mudança digitada em cinco
+    folhas era cinco lugares para esquecer um. A pasta nasce ANTES do
+    `write_text`, senão o erro é um `FileNotFoundError` de diretório, que não
+    diz nada sobre o que se testa. As outras folhas do mapa importam daqui.
     """
-    pasta = raiz / "html"
-    pasta.mkdir(parents=True, exist_ok=True)
-    return pasta / "specs.html"
+    caminho = raiz / _specs_relativo()
+    caminho.parent.mkdir(parents=True, exist_ok=True)
+    return caminho
+
+
+@functools.cache
+def _specs_relativo() -> str:
+    """O `SPECS_RELATIVO` do portão, lido uma vez por sessão."""
+    return str(modulo_do_censo().SPECS_RELATIVO)
 
 
 RAIZ_REAL = Path(__file__).resolve().parents[2]

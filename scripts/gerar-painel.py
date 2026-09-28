@@ -37,6 +37,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import re
 import subprocess
 import sys
@@ -50,10 +51,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from carimbo_da_casa import CSS as CARIMBO_CSS
 from carimbo_da_casa import PASTA as PASTA_HTML
 from carimbo_da_casa import carimbo, sem_carimbo
+from check_paridade_transporte import SPECS_RELATIVO
 from paleta_da_casa import TOKENS
 
 RAIZ = Path(__file__).resolve().parent.parent
 SAIDA = RAIZ / PASTA_HTML / "painel.html"
+#: O mapa de canais mora em `docs/` desde 28/09/2026, e o painel liga para ele
+#: pelo caminho do dono, relativo à pasta do painel.
+LINK_DO_MAPA = os.path.relpath(RAIZ / SPECS_RELATIVO, SAIDA.parent)
 CACHE = RAIZ / "docs" / "data" / "painel-cache.json"
 SPRINTS = RAIZ / "docs" / "process" / "sprints"
 DECISOES = RAIZ / "docs" / "data" / "decisoes-dela.csv"
@@ -701,7 +706,7 @@ def monta(rapido: dict, cache: dict) -> str:
 
   <p class="selo">gerado em {agora} · {escape(git['head'])}</p>
   <h1><b>Hefesto</b> · painel do projeto</h1>
-  <p class="lede">O irmão do <a href="specs.html">mapa de canais</a>. Aquele responde
+  <p class="lede">O irmão do <a href="{LINK_DO_MAPA}">mapa de canais</a>. Aquele responde
      <em>o que o aparelho entende</em>; este responde <em>onde o projeto está</em>.
      Os números do mapa aqui não são recontados — vêm do mesmo gerador, para os dois
      não terem como discordar.</p>
@@ -754,7 +759,7 @@ def monta(rapido: dict, cache: dict) -> str:
   <p class="lede" style="font-size:var(--text-sm)">Enquanto a última coluna não
      zerar, o mapa mede o que a casa <em>acredita</em>, não o que ela
      <em>garante</em>: se aquela feature quebrar naquele transporte, a suíte
-     inteira continua verde. Os detalhes estão no <a href="specs.html">specs.html</a>.</p>
+     inteira continua verde. Os detalhes estão no <a href="{LINK_DO_MAPA}">specs.html</a>.</p>
 
   <footer>
     <p>Gerado por <code>scripts/gerar-painel.py</code>. Autocontido de propósito —

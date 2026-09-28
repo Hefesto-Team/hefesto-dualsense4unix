@@ -32,14 +32,16 @@ RAIZ = Path(__file__).resolve().parents[2]
 PASTA = RAIZ / "html"
 INDICE = PASTA / "index.html"
 
-#: Os três instrumentos, escritos aqui À MÃO de propósito. Importar a tupla do
-#: gerador faria o teste concordar com ele por construção — e o defeito que se
-#: quer pegar é justamente um cartão sumir de lá.
-OS_TRES = ("specs.html", "painel.html", "frases-de-tela.html")
+#: Os três instrumentos, pelo caminho a partir da raiz, escritos aqui À MÃO de
+#: propósito. Importar a tupla do gerador faria o teste concordar com ele por
+#: construção — e o defeito que se quer pegar é justamente um cartão sumir de
+#: lá. O mapa de canais mora em `docs/` desde 28/09/2026 (viaja no git); os
+#: outros dois, aqui em `html/`, fora dele.
+OS_TRES = ("docs/specs.html", "html/painel.html", "html/frases-de-tela.html")
 
 #: A quarta página é o próprio índice; junto com as três, é o conjunto que tem
 #: de carimbar (HTML-2).
-OS_QUATRO = ("index.html", *OS_TRES)
+OS_QUATRO = ("html/index.html", *OS_TRES)
 
 HREF = re.compile(r'href="([^"]+)"')
 
@@ -66,13 +68,18 @@ def _links(pagina: str) -> list[str]:
     ]
 
 
+def _a_partir_da_raiz(alvo: str) -> str:
+    """O link do índice (relativo a `html/`) como caminho a partir da raiz."""
+    return (PASTA / alvo).resolve().relative_to(RAIZ.resolve()).as_posix()
+
+
 def test_o_indice_leva_aos_tres(indice: str) -> None:
     """Cada um dos três é um LINK do índice, não só um nome citado na prosa.
 
     Citar sem linkar não serve: o índice existe para ela abrir a página, e um
     nome escrito no meio de um parágrafo não abre nada.
     """
-    alvos = set(_links(indice))
+    alvos = {_a_partir_da_raiz(alvo) for alvo in _links(indice)}
     faltando = [nome for nome in OS_TRES if nome not in alvos]
     assert not faltando, (
         "o índice de html/ não leva a: " + ", ".join(faltando) + ".\n"
@@ -84,10 +91,10 @@ def test_o_indice_leva_aos_tres(indice: str) -> None:
 
 
 def test_nenhum_link_do_indice_aponta_para_o_vazio(indice: str) -> None:
-    """Todo alvo do índice está no disco, ao lado dele."""
+    """Todo alvo do índice está no disco, no caminho relativo que ele escreve."""
     quebrados = sorted({alvo for alvo in _links(indice) if not (PASTA / alvo).is_file()})
     assert not quebrados, (
-        "link(s) do índice apontando para arquivo que não existe em html/: "
+        "link(s) do índice apontando para arquivo que não existe: "
         + ", ".join(quebrados)
         + ".\nQuem abrir vai ver o erro do navegador em vez do instrumento."
     )
@@ -114,17 +121,17 @@ def test_os_quatro_carimbam_a_procedencia(nome: str) -> None:
     Sem ele, duas páginas geradas de commits diferentes parecem iguais, e a
     divergência só aparece quando alguém acredita num número velho.
     """
-    caminho = PASTA / nome
+    caminho = RAIZ / nome
     if not caminho.is_file():
         pytest.fail(
-            f"html/{nome} não está no disco — regere os quatro:\n"
+            f"{nome} não está no disco — regere os quatro:\n"
             "  python3 scripts/gerar-mapa.py && python3 scripts/gerar-painel.py "
             "&& python3 scripts/gerar-frases-de-tela.py "
             "&& python3 scripts/gerar-indice-html.py"
         )
     texto = caminho.read_text(encoding="utf-8", errors="replace")
     assert MARCA_DO_CARIMBO in texto, (
-        f"html/{nome} não traz o carimbo da casa "
+        f"{nome} não traz o carimbo da casa "
         f"(`{MARCA_DO_CARIMBO}`, scripts/carimbo_da_casa.py).\n"
         "Sem ele ninguém sabe de qual commit essa página nasceu, e o índice não "
         "consegue mostrar quando ela foi gerada."
@@ -132,14 +139,14 @@ def test_os_quatro_carimbam_a_procedencia(nome: str) -> None:
 
 
 def test_a_raiz_nao_guarda_mais_os_tres() -> None:
-    """Os três moram em `html/`, e em UM lugar só.
+    """Os três moram cada um em UM lugar só, nunca na raiz.
 
     Duas cópias do mesmo instrumento divergem no dia em que alguém regera uma
     delas — e a que ela abrir é a que estiver no marcador do navegador dela.
     """
-    sobrando = [nome for nome in OS_TRES if (RAIZ / nome).is_file()]
+    sobrando = [nome for nome in OS_TRES if (RAIZ / Path(nome).name).is_file()]
     assert not sobrando, (
         "ainda há cópia na raiz de: " + ", ".join(sobrando) + ".\n"
-        "Desde 25/08/2026 os instrumentos moram em html/. Duas cópias divergem "
+        "Desde 25/08/2026 os instrumentos saíram da raiz. Duas cópias divergem "
         "na primeira vez que alguém regerar só uma."
     )

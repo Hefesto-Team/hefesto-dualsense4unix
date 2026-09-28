@@ -51,7 +51,7 @@ geração no selo do rodapé, e o carimbo da casa (`scripts/carimbo_da_casa.py`,
 do dado.
 
 Uso:
-    python3 scripts/gerar-mapa.py            # escreve html/specs.html
+    python3 scripts/gerar-mapa.py            # escreve docs/specs.html
     python3 scripts/gerar-mapa.py --check    # o publicado bate com as fontes?
 """
 from __future__ import annotations
@@ -69,7 +69,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import eliminacao  # o caderno de eliminação de suspeitos
 from carimbo_da_casa import CSS as CARIMBO_CSS
-from carimbo_da_casa import PASTA as PASTA_HTML
 from carimbo_da_casa import carimbo, sem_carimbo
 
 # A escada de `ate_onde_foi` NÃO se redigita aqui. Até 19/08/2026 a legenda
@@ -77,16 +76,18 @@ from carimbo_da_casa import carimbo, sem_carimbo
 # num `frozenset` — duas listas do mesmo vocabulário, que é a doença que este
 # mapa existe para não ter. Quem manda é `check_paridade_transporte.ESCADA`,
 # porque é ele que REPROVA: régua e legenda divergirem quer dizer publicar uma
-# página que descreve um domínio diferente do que o portão aceita.
+# página que descreve um domínio diferente do que o portão aceita. O caminho
+# da página publicada também é do portão (`SPECS_RELATIVO`), pela mesma razão.
 from check_paridade_transporte import (
     DIRECAO_ENTRADA,
     DIRECAO_SAIDA,
     ESCADA,
+    SPECS_RELATIVO,
 )
 
 RAIZ = Path(__file__).resolve().parent.parent
 CSV = RAIZ / "docs" / "data" / "mapa-controles.csv"
-SAIDA = RAIZ / PASTA_HTML / "specs.html"
+SAIDA = RAIZ / SPECS_RELATIVO
 SVGS = {
     "dualsense": RAIZ / "assets" / "control-svg" / "dualsense.svg",
     "pro": RAIZ / "assets" / "control-svg" / "nintendo-pro.svg",
@@ -280,10 +281,9 @@ def assimetrias(linhas: list[dict]) -> int:
     return n
 
 
-#: A paleta mora em `scripts/paleta_da_casa.py` desde 23/08/2026, porque o
-#: `painel.html` passou a dividi-la com esta página. Duas cópias do mesmo
-#: hexadecimal divergem no dia em que alguém corrige uma delas — e o pedido
-#: dela era justamente que os dois artefatos ficassem sincronizados.
+#: A paleta mora em `scripts/paleta_da_casa.py` desde 23/08/2026, dividida com
+#: as outras páginas geradas. Duas cópias do mesmo hexadecimal divergem no dia
+#: em que alguém corrige uma delas.
 #: O `--check` desta página compara CONTEÚDO, então mexer lá deixa esta
 #: vermelha, que é o comportamento certo.
 from paleta_da_casa import TOKENS
@@ -814,8 +814,7 @@ def _bloco_fila_no_specs() -> str:
     `teste_que_morde`: a lista invertida `id` → onde a `Fala` aparece na
     tela, que a PAREAMENTO-01 pediu em vez de uma coluna nova no CSV
     (`"A decisão que reconcilia as duas frentes"`). Importa
-    `validar-fala-de-tela.py` em vez de reimplementar a descoberta — a
-    mesma disciplina de `numeros_do_mapa()` em `gerar-painel.py`.
+    `validar-fala-de-tela.py` em vez de reimplementar a descoberta.
     """
     try:
         import importlib.util
@@ -826,8 +825,8 @@ def _bloco_fila_no_specs() -> str:
         if spec is None or spec.loader is None:
             return '<p class="quieto">fila indisponível: não consegui carregar o portão.</p>'
         mod = importlib.util.module_from_spec(spec)
-        # ver o comentário equivalente em gerar-painel.py: sem registrar em
-        # sys.modules ANTES do exec_module, o @dataclass do módulo estoura.
+        # Sem registrar em sys.modules ANTES do exec_module, o @dataclass do
+        # módulo estoura ao resolver a anotação em string.
         sys.modules[spec.name] = mod
         spec.loader.exec_module(mod)
         falas = mod.descobre_falas(RAIZ / mod.APP_RELATIVO, RAIZ)
@@ -1099,7 +1098,7 @@ def monta() -> str:
     {bloco_fila}
   </footer>
 
-  {carimbo("scripts/gerar-mapa.py")}
+  {carimbo("scripts/gerar-mapa.py", indice=False)}
 
 </div>
 <script>window.__MAPA__ = {dados};</script>
@@ -1154,7 +1153,7 @@ def divergencias(publicado: str, regerado: str) -> list[str]:
     """As linhas em que a página publicada difere da que as fontes produzem."""
     return list(difflib.unified_diff(
         normaliza(publicado), normaliza(regerado),
-        fromfile="html/specs.html publicado", tofile="o que as fontes produzem hoje",
+        fromfile=f"{SPECS_RELATIVO} publicado", tofile="o que as fontes produzem hoje",
         lineterm="", n=0,
     ))
 
@@ -1162,7 +1161,7 @@ def divergencias(publicado: str, regerado: str) -> list[str]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--check", action="store_true",
-                    help="reprova se html/specs.html não for a página que as fontes produzem")
+                    help=f"reprova se {SPECS_RELATIVO} não for a página que as fontes produzem")
     args = ap.parse_args()
 
     if args.check:
@@ -1173,11 +1172,11 @@ def main() -> int:
         if reprova_por_orfas(pecas_orfas(le_csv())):
             return 1
         if not SAIDA.exists():
-            print("html/specs.html: NAO EXISTE — rode scripts/gerar-mapa.py", file=sys.stderr)
+            print(f"{SPECS_RELATIVO}: NAO EXISTE — rode scripts/gerar-mapa.py", file=sys.stderr)
             return 1
         difs = divergencias(SAIDA.read_text(encoding="utf-8"), monta())
         if difs:
-            print("html/specs.html: DESATUALIZADO — a página publicada não é a que estas "
+            print(f"{SPECS_RELATIVO}: DESATUALIZADO — a página publicada não é a que estas "
                   "fontes produzem", file=sys.stderr)
             for linha in difs[:LIMITE_DIFF]:
                 print(f"  {recorta(linha)}", file=sys.stderr)
@@ -1188,7 +1187,7 @@ def main() -> int:
                   file=sys.stderr)
             print("rode: python3 scripts/gerar-mapa.py", file=sys.stderr)
             return 1
-        print("html/specs.html: atualizado (confere com o CSV, com o caderno de ensaios "
+        print(f"{SPECS_RELATIVO}: atualizado (confere com o CSV, com o caderno de ensaios "
               "e com os três desenhos)")
         return 0
 
@@ -1199,8 +1198,7 @@ def main() -> int:
     # `gerar-mapa.py`, e um arquivo que nunca fica limpo ensina a próxima pessoa
     # a ignorar o `git status` inteiro. Os SVGs interpolados são a fonte das
     # caudas; apará-las aqui é mais barato que caçá-las nos três desenhos.
-    # A pasta de saída é do GERADOR — 25/08/2026: as páginas mudaram
-    # para `html/`, e a árvore de brinquedo dos testes não a tem.
+    # A pasta de saída é do GERADOR: a árvore de brinquedo dos testes não a tem.
     SAIDA.parent.mkdir(parents=True, exist_ok=True)
     SAIDA.write_text(
         "\n".join(linha.rstrip() for linha in monta().split("\n")), encoding="utf-8"

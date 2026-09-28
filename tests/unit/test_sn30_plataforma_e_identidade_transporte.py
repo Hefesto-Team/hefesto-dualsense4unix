@@ -23,7 +23,7 @@ Morde nos DOIS sentidos:
 2. **mudou o fonte, reprova** — cada célula cita um fato do driver ou do
    produto (uma linha que só existe como `#define`, uma ausência de bytes, um
    comentário de código). Se o fato mudar, a célula publicada no
-   `html/specs.html` vira mentira, e o teste manda atualizar o mapa no mesmo
+   `docs/specs.html` vira mentira, e o teste manda atualizar o mapa no mesmo
    gesto.
 """
 

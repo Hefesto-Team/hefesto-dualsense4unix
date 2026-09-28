@@ -1,22 +1,19 @@
-"""carimbo_da_casa.py — o MESMO rodapé nos quatro instrumentos HTML desta casa.
+"""carimbo_da_casa.py — o MESMO rodapé nas páginas HTML geradas desta casa.
 
 Este módulo nasceu em 25/08/2026, irmão do ``paleta_da_casa.py`` e pelo mesmo
-motivo: o que os quatro artefatos dividem precisa ter **um dono**. A paleta dá a
-eles a mesma cara; o carimbo dá a eles a mesma **procedência**.
+motivo: o que as páginas geradas dividem precisa ter **um dono**. A paleta dá a
+elas a mesma cara; o carimbo dá a elas a mesma **procedência**.
 
-O defeito que ele cura (HTML-2 da sprint ``A-CASA-ARRUMADA-01``): três páginas
-que se dizem irmãs não tinham como dizer se estavam em dia **ao mesmo tempo**.
+O defeito que ele cura (HTML-2 da sprint ``A-CASA-ARRUMADA-01``): páginas que
+se dizem irmãs não tinham como dizer se estavam em dia **ao mesmo tempo**.
 Uma gerada hoje e outra de três commits atrás pareciam iguais, e a diferença só
 aparecia quando alguém acreditasse num número velho. Com o carimbo, duas páginas
 que discordam **declaram isso no próprio rodapé**, lado a lado, em vez de a
 divergência ser descoberta por acidente.
 
-Quem lê daqui:
-
-  - ``scripts/gerar-mapa.py``           → ``html/specs.html``
-  - ``scripts/gerar-painel.py``         → ``html/painel.html``
-  - ``scripts/gerar-frases-de-tela.py`` → ``html/frases-de-tela.html``
-  - ``scripts/gerar-indice-html.py``    → ``html/index.html``
+Quem lê daqui: ``scripts/gerar-mapa.py``, que escreve ``docs/specs.html`` (a
+única página gerada que o repositório carrega), e os geradores locais que
+escrevem em ``PASTA``, fora do git.
 
 **A REGRA DOS IRMÃOS VALE AQUI TAMBÉM: nada de rede.** O carimbo sai de ``git``
 local; se o ``git`` não responder, ele diz ``?`` em vez de inventar — ausência
@@ -27,8 +24,8 @@ O CARIMBO NÃO CARREGA O ESTADO DA ÁRVORE DE QUEM GEROU — 20/09/2026
 De 25/08 a 20/09/2026 ele trouxe a contagem de arquivos com mudança não
 commitada. Essa frase **muda de comprimento com a contagem**, e o tamanho da
 página passava a depender de como estava a mesa de quem apertou o botão: o
-``docs/data/LEIA-PRIMEIRO.md`` publicava 2.280.044 bytes para o
-``html/specs.html`` enquanto o disco dizia 2.280.091, sem que uma vírgula do
+``docs/data/LEIA-PRIMEIRO.md`` publicava 2.280.044 bytes para o mapa de
+canais enquanto o disco dizia 2.280.091, sem que uma vírgula do
 dado tivesse mudado. A medição inteira está em ``procedencia()``, e quem trava
 isto é ``tests/unit/test_o_carimbo_nao_muda_o_tamanho.py``.
 
@@ -37,19 +34,16 @@ mandou tirar só a contagem de sujos e escreveu *"o commit e a branch FICAM:
 eles dizem de que fonte o arquivo saiu, e o hash tem comprimento fixo"* — a
 razão é sobre o HASH, e a branch veio junto na mesma frase. O nome da branch
 **não** tem largura fixa, e a primeira leva que curou a contagem provou isso
-nela mesma: regerada na worktree ``worktree-wf_7917c453-7ab-2``, a
-``html/index.html`` ficou **92 bytes** maior que em ``dev``, a
-``html/painel.html`` 46, a ``html/specs.html`` e a ``html/frases-de-tela.html``
-23 cada — e o ``docs/data/LEIA-PRIMEIRO.md`` passou a publicar **2.280.067**
+nela mesma: regeradas na worktree ``worktree-wf_7917c453-7ab-2``, as páginas
+ficaram de **23 a 92 bytes** maiores que em ``dev`` (o mapa de canais, 23) — e
+o ``docs/data/LEIA-PRIMEIRO.md`` passou a publicar **2.280.067**
 onde ``dev`` mede 2.280.044, que era o número que o documento já trazia certo.
 
 A branch também não é FONTE: a página nasce de um commit e é publicada em
 ``dev``; dizer que ela saiu de ``worktree-wf_7917c453-7ab-2`` é declarar a mesa
 de quem passou por ali, que é exatamente o que a sprint mandou tirar. O commit
-identifica a fonte sozinho, e quem lê o rodapé do índice continua vendo as
-páginas irmãs concordarem ou discordarem POR COMMIT
-(``scripts/gerar-indice-html.py::_concordancia``), que é a razão de o carimbo
-existir.
+identifica a fonte sozinho, e quem compara as páginas irmãs continua vendo-as
+concordarem ou discordarem POR COMMIT, que é a razão de o carimbo existir.
 
 A própria sprint fecha o argumento sem precisar de mais nada: ela escreveu que,
 *"se a casa quiser manter a contagem, então o ``LEIA-PRIMEIRO`` não pode
@@ -61,7 +55,7 @@ O CARIMBO NÃO ENTRA NO ``--check``, E ISSO É DE PROPÓSITO
 O commit e a hora mudam a cada geração. Se o comparador de conteúdo os visse,
 todo ``--check`` reprovaria pelo relógio — que é exatamente o defeito de onde o
 ``gerar-mapa.py`` já saiu uma vez (ver o ``SELO`` de lá). Por isso a linha
-carrega a marca ``data-carimbo``, e ``sem_carimbo()`` é o que os quatro
+carrega a marca ``data-carimbo``, e ``sem_carimbo()`` é o que os
 ``--check`` usam para tirá-la antes de comparar.
 """
 from __future__ import annotations
@@ -73,12 +67,13 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 
-#: A pasta única dos instrumentos, relativa à raiz do repositório.
+#: A pasta das páginas geradas que NÃO se versionam, relativa à raiz. O mapa
+#: de canais não mora aqui: o caminho dele é ``SPECS_RELATIVO``, do portão.
 PASTA = "html"
 
-#: A marca que identifica a linha do carimbo em qualquer uma das quatro páginas.
-#: É por ela que ``sem_carimbo()`` acha o que tirar, e é por ela que o teste da
-#: sprint confere que os quatro carimbaram.
+#: A marca que identifica a linha do carimbo em qualquer página gerada. É por
+#: ela que ``sem_carimbo()`` acha o que tirar, e é por ela que as réguas
+#: conferem que a página carimbou.
 MARCA = "data-carimbo"
 
 
@@ -105,7 +100,7 @@ def procedencia(raiz: Path = RAIZ) -> dict[str, str]:
     carimbo de 223 bytes, 2 davam 270 e 13 davam 271.**
 
     Os 47 bytes entre a árvore limpa e a suja são exatamente o que separava o
-    ``bytes:html/specs.html`` publicado no ``docs/data/LEIA-PRIMEIRO.md``
+    tamanho do mapa publicado no ``docs/data/LEIA-PRIMEIRO.md``
     (2.280.044) do tamanho do arquivo em disco (2.280.091): o ``git status`` de
     quem gerou virava bytes do produto, e o número publicado caducava sem que o
     dado tivesse mudado.
@@ -124,22 +119,22 @@ def agora() -> str:
 
 
 def carimbo(gerador: str, *, indice: bool = True, raiz: Path = RAIZ) -> str:
-    """A linha de rodapé, IDÊNTICA nas quatro páginas.
+    """A linha de rodapé, IDÊNTICA em toda página gerada.
 
     ``gerador`` é o caminho do script que escreveu a página, para quem olhar o
-    rodapé saber onde ficar reclamando. ``indice=False`` no próprio
-    ``index.html``, que não precisa de um link para si mesmo.
+    rodapé saber onde ficar reclamando. ``indice=False`` onde o link para o
+    ``index.html`` de ``PASTA`` não teria alvo: no ``docs/specs.html``, que
+    viaja sem a pasta, e no próprio índice.
 
     O QUE ESTA LINHA NÃO PODE CARREGAR: nada de LARGURA VARIÁVEL, porque o
-    ``docs/data/LEIA-PRIMEIRO.md`` publica o TAMANHO de ``html/specs.html`` e há
+    ``docs/data/LEIA-PRIMEIRO.md`` publica o TAMANHO de ``docs/specs.html`` e há
     portão que confere esse número. O commit e a hora mudam a cada geração, mas
     não mudam de comprimento, e ``sem_carimbo()`` os tira antes de qualquer
     comparação de conteúdo. Já caíram daqui duas coisas que mudavam:
 
       - a contagem de arquivos sujos (20/09/2026, ver ``procedencia()``);
-      - o nome da branch (20/09/2026, ver o topo do módulo) — 23 bytes em
-        ``html/specs.html`` e 92 em ``html/index.html`` entre ``dev`` e uma
-        worktree de agente.
+      - o nome da branch (20/09/2026, ver o topo do módulo) — de 23 a 92
+        bytes por página entre ``dev`` e uma worktree de agente.
 
     Ambas descreviam a MESA de quem apertou o botão, não a fonte da página.
     """

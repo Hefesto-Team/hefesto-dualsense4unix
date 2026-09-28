@@ -8,7 +8,7 @@ O PEDIDO DELA, 03/09/2026, e é o que esta régua guarda::
 
 O mecanismo depende de uma coisa só: **o endereço escrito no mapa tem de ser o
 endereço de verdade.** Um offset inventado é pior que uma célula muda — o
-``html/specs.html`` o publica como fato, ``app/fatos_do_mapa.py`` o lê, e a
+``docs/specs.html`` o publica como fato, ``app/fatos_do_mapa.py`` o lê, e a
 próxima pessoa constrói em cima dele.
 
 O QUE ESTE ARQUIVO NÃO FAZ, e é a lição das onze réguas de 26/08/2026 que
