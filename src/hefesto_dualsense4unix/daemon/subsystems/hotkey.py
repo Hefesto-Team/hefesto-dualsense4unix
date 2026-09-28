@@ -1250,7 +1250,7 @@ async def canal_do_microfone_loop(daemon: DaemonProtocol) -> None:
     varredura acontece no primeiro ciclo, não no primeiro pedido.
     """
     while not daemon._is_stopping():
-        await _esperar_o_som_mudar(CANAL_TTL_S)
+        await _esperar_o_som_mudar(CANAL_TTL_S, daemon)
         uniqs = _uniqs_conectados(daemon)
         if not uniqs:
             _CANAL_POR_UNIQ.clear()
@@ -1265,7 +1265,7 @@ async def canal_do_microfone_loop(daemon: DaemonProtocol) -> None:
         # fora da mesa.
         for fora in [u for u in _CANAL_POR_UNIQ if u not in uniqs]:
             _CANAL_POR_UNIQ.pop(fora, None)
-        await _conferir_quem_saiu_do_ar(daemon, uniqs)
+        await _conferir_no_prazo(daemon, uniqs)
 
 
 async def mic_button_loop(daemon: DaemonProtocol) -> None:
@@ -3460,20 +3460,52 @@ _O_QUE_O_CANAL_LE: tuple[str, ...] = ("sources", "server")
 _MARCA_DO_CANAL: list[int | None] = [None]
 
 
-async def _esperar_o_som_mudar(prazo: float) -> None:
+async def _esperar_o_som_mudar(prazo: float, daemon: Any = None) -> None:
     """Dorme até o retrato do som mudar nas fontes ou no padrão, ou até o prazo.
 
     **O LAÇO ACORDA PELO EVENTO**: o microfone de um controle nasceu, alguém
     calou uma fonte, o padrão trocou — e o selo acompanha na hora, sem esperar
     a volta. Sem retrato vivo (fora do daemon, ou sem servidor de som), nada
     muda nele, e a espera é o prazo de sempre.
+
+    E não dorme além da hora da próxima conferência de quem saiu do ar
+    (:func:`_conferir_no_prazo`): a volta pelo evento que a pulou não a empurra
+    um prazo inteiro para a frente.
     """
     from hefesto_dualsense4unix.integrations.retrato_do_som import RETRATO
 
+    conferido = getattr(daemon, "_canal_conferido_em", None)
+    if isinstance(conferido, float):
+        falta = conferido + CANAL_TTL_S - asyncio.get_running_loop().time()
+        prazo = min(prazo, max(0.0, falta))
     vista = _MARCA_DO_CANAL[0]
     if vista is None:
         vista = RETRATO.marca(_O_QUE_O_CANAL_LE)
     _MARCA_DO_CANAL[0] = await RETRATO.esperar_async(vista, prazo, _O_QUE_O_CANAL_LE)
+
+
+async def _conferir_no_prazo(daemon: Any, uniqs: list[str]) -> list[str]:
+    """A conferência de quem saiu do ar, no máximo uma vez por `CANAL_TTL_S`.
+
+    **A CONTA DE `MicrofonesNoAr.LEITURAS_SEM_CANAL_ATE_SAIR` É DE LEITURAS, e
+    o tempo dela vinha do laço**: duas faltas seguidas eram dois a quatro
+    segundos quando o laço dormia `CANAL_TTL_S` inteiro. Acordado pelo evento
+    do servidor de som, o laço dá voltas em milissegundos — a ponte do rádio
+    que refaz o nó (a fonte sai, o monitor do alto-falante sai, a fonte volta)
+    contaria as duas faltas num piscar e tiraria do ar um microfone que ela
+    ligou, sem gesto nenhum dela. O selo acompanha o evento; o «saiu do ar»
+    segue o relógio de sempre.
+
+    A hora fica no daemon, como o `_microfones_no_ar` (`_no_ar_da_sessao`): é
+    estado da sessão, e não do módulo.
+    """
+    agora = asyncio.get_running_loop().time()
+    conferido = getattr(daemon, "_canal_conferido_em", None)
+    if isinstance(conferido, float) and agora - conferido < CANAL_TTL_S:
+        return []
+    with contextlib.suppress(Exception):  # daemon de mentira sem atributo livre
+        daemon._canal_conferido_em = agora
+    return await _conferir_quem_saiu_do_ar(daemon, uniqs)
 
 
 def _mudo_pelo_retrato(fonte: str) -> _sp.CompletedProcess[str] | None:
