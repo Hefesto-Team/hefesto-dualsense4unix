@@ -238,6 +238,23 @@ def test_o_gancho_de_lancamento_chama_o_curador() -> None:
     assert "hefesto-camadas" in texto
 
 
+def _path_sem_game_mode(base: Path) -> str:
+    """O PATH do sistema com o Game Mode mudo na frente.
+
+    O lançador pede o perfil de energia a `system76-power`, `busctl` ou
+    `dbus-send`, o que responder primeiro. Com o `/usr/bin` cru, esta régua
+    conversava com o daemon de energia da máquina de quem a rodava — e podia
+    pô-lo em Performance.
+    """
+    mudos = base / "game-mode-mudo"
+    mudos.mkdir(exist_ok=True)
+    for nome in ("system76-power", "busctl", "dbus-send"):
+        falso = mudos / nome
+        falso.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+        falso.chmod(0o755)
+    return f"{mudos}:/usr/bin:/bin"
+
+
 def test_o_gancho_e_a_prova_de_falha_e_nao_atrasa_jogo_nativo(tmp_path: Path) -> None:
     """Sem prefixo Proton o gancho sai na primeira linha — e o jogo abre.
 
@@ -251,7 +268,7 @@ def test_o_gancho_e_a_prova_de_falha_e_nao_atrasa_jogo_nativo(tmp_path: Path) ->
         ["/bin/sh", str(RAIZ / "assets" / "hefesto-launch.sh"), "/bin/echo", "ABRIU"],
         env={
             "HOME": str(home),
-            "PATH": "/usr/bin:/bin",
+            "PATH": _path_sem_game_mode(tmp_path),
             "XDG_STATE_HOME": str(tmp_path / "state"),
         },
         capture_output=True,
@@ -268,8 +285,16 @@ def test_o_gancho_cura_de_verdade_um_prefixo_e_o_jogo_abre(tmp_path: Path) -> No
 
     Reproduz o que o `install.sh` monta: o curador em
     `~/.local/share/hefesto-dualsense4unix/bin/hefesto-camadas`, executável.
+    Desde 28/09/2026 o registro só se mexe com o «Corrigir Vulkan» ligado e no
+    jogo que traz o carregador da Khronos (`vulkan-1.dll`) — o único leitor da
+    chave; a régua do caso sem ele é `test_o_que_chega_ao_jogo.py`.
     """
     home = tmp_path / "home"
+    config = home / ".config"
+    cv.gravar_camadas_da_steam_fora(True, config_home=config)
+    jogo = tmp_path / "common" / "Jogo"
+    jogo.mkdir(parents=True)
+    (jogo / "vulkan-1.dll").write_bytes(b"MZ")
     binario = home / ".local" / "share" / "hefesto-dualsense4unix" / "bin"
     binario.mkdir(parents=True)
     alvo = binario / "hefesto-camadas"
@@ -288,10 +313,12 @@ def test_o_gancho_cura_de_verdade_um_prefixo_e_o_jogo_abre(tmp_path: Path) -> No
         ["/bin/sh", str(RAIZ / "assets" / "hefesto-launch.sh"), "/bin/echo", "ABRIU"],
         env={
             "HOME": str(home),
-            "PATH": "/usr/bin:/bin",
+            "PATH": _path_sem_game_mode(tmp_path),
+            "XDG_CONFIG_HOME": str(config),
             "XDG_STATE_HOME": str(tmp_path / "state"),
             "SteamAppId": "222",
             "STEAM_COMPAT_DATA_PATH": str(prefixo),
+            "STEAM_COMPAT_INSTALL_PATH": str(jogo),
         },
         capture_output=True,
         text=True,

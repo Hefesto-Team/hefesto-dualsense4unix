@@ -109,7 +109,6 @@ def _limpar(mod: Any) -> None:
     mod._ARMADO.clear()
     mod._PAINEL[0] = None
     mod._PERGUNTA.clear()
-    mod._VULKAN.clear()
     mod._ANTES_DO_CONSERTO.clear()
 
 

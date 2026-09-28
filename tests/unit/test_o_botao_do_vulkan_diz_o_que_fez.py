@@ -25,6 +25,12 @@ Os dois defeitos que este arquivo prende:
 camada que nós tiramos, e o clique desliga devolvendo. O defeito 1 (o verbo
 longe do dedo) perdeu o objeto — o ligável não tem segundo tempo —; o defeito 2
 (o ato que não deixa rastro) continua preso aqui.
+
+**28/09/2026 — O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01.** Ligar grava a
+escolha que o lançador lê, e o jogo que abrir depois nasce sem as duas camadas
+da Steam; desligar apaga a escolha e devolve o que o registro guarda de nós. A
+pílula lê a escolha, e o ato continua invisível na hora — vale no próximo jogo
+—, por isso o recibo fica.
 """
 
 from __future__ import annotations
@@ -36,32 +42,31 @@ import pytest
 pytest_plugins = ["tests.unit.test_a_09_sistema_fecha_a_paridade"]
 
 
-def _censo(a09: Any, monkeypatch: pytest.MonkeyPatch, *,
-           tem_tirar: bool, tem_devolver: bool,
-           curou: list[Any] | None = None) -> None:
-    """O censo injetado, com o que ele achou — e o `curar_todos` espionado.
+def _mesa(a09: Any, monkeypatch: pytest.MonkeyPatch, *, ligado: bool,
+          com_registro: bool = False, curou: list[Any] | None = None) -> None:
+    """A escolha e o estado PELO DONO, e o `curar_todos` espionado.
 
-    `tem_devolver` é o estado da PÍLULA (há camada que nós tiramos), e é por
-    ele que o ligável decide o verbo; `tem_tirar` é o censo ter sobra.
+    `ligado` é a escolha gravada (a pílula); `com_registro` é o estado dizer
+    que NÓS desligamos uma camada de um prefixo — o que dá à devolução o que
+    fazer. O XDG é o do lar de mentira do `conftest`.
     """
     from types import SimpleNamespace
 
     from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
     from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
 
-    monkeypatch.setattr(
-        cv, "censo",
-        lambda *a, **k: [SimpleNamespace(sobras=["uma"] if tem_tirar else [])])
+    cv.gravar_camadas_da_steam_fora(ligado)
+    cv.gravar_estado(
+        {"222": {"x": {"feito": "desligada", "valor_antes": "00000000"}}}
+        if com_registro else {})
     monkeypatch.setattr(
         cv, "curar_todos",
-        lambda *a, **k: (curou.append(k) if curou is not None else None) or [])
+        lambda *a, **k: (curou.append(k) if curou is not None else None)
+        or [SimpleNamespace(mexeu=True, erro="")])
     monkeypatch.setattr(
         a09._emulacao, "frase_do_resultado",
-        lambda r, devolver=False: "religuei duas camadas" if devolver
-        else "desliguei duas camadas")
+        lambda r, devolver=False: "Devolvi em 1 jogo: x." if devolver else "?")
     monkeypatch.setattr(rl, "jogo_aberto", lambda: False)
-    a09._VULKAN.clear()
-    a09._VULKAN.update(tiradas=1 if tem_devolver else 0, postas=0, prefixos=3)
 
 
 def _clicar(gesto: Any, ctx: Any, texto: str = "") -> Any:
@@ -71,17 +76,31 @@ def _clicar(gesto: Any, ctx: Any, texto: str = "") -> Any:
 
 
 # ---------------------------------------------------------------------------
-# 1 — O VERBO NO BOTÃO: SAIU (o ligável não tem segundo tempo)
+# 1 — A PÍLULA LÊ O QUE O LANÇADOR LÊ
 # ---------------------------------------------------------------------------
-def test_a_pilula_segue_o_que_nos_tiramos(a09: Any) -> None:
-    """Aceso é «há camada que NÓS desligamos»; sem censo ainda, não se afirma nada."""
-    a09._VULKAN.clear()
-    assert a09.vulkan_corrigido() is None
-    a09._VULKAN.update(tiradas=2, postas=0, prefixos=3)
-    assert a09.vulkan_corrigido() is True
-    a09._VULKAN.update(tiradas=0)
+def test_a_pilula_segue_a_escolha_que_o_lancador_le(a09: Any) -> None:
+    """Acesa é «o jogo nasce sem as camadas da Steam», e nada mais.
+
+    MORDE: faça `vulkan_corrigido` voltar a olhar o registro do prefixo.
+    """
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+
+    cv.gravar_camadas_da_steam_fora(False)
     assert a09.vulkan_corrigido() is False
-    a09._VULKAN.clear()
+    cv.gravar_camadas_da_steam_fora(True)
+    assert a09.vulkan_corrigido() is True
+
+
+def test_o_clique_liga_e_desliga_pela_escolha(
+        a09: Any, ctx: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Um clique liga, o seguinte desliga — e a pílula segue o disco."""
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+
+    _mesa(a09, monkeypatch, ligado=False)
+    _clicar(a09.corrigir_vulkan, ctx)
+    assert cv.camadas_da_steam_fora() is True
+    _clicar(a09.corrigir_vulkan, ctx)
+    assert cv.camadas_da_steam_fora() is False
 
 
 # ---------------------------------------------------------------------------
@@ -94,39 +113,45 @@ def test_o_clique_escreve_o_recibo_na_tela(
     MORDE: tire `"corrigir-vulkan"` de `RECIBO_QUE_FICA_NA_TELA` e a régua
     reprova com o painel vazio.
     """
-    curou: list[Any] = []
-    _censo(a09, monkeypatch, tem_tirar=False, tem_devolver=True, curou=curou)
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
 
+    _mesa(a09, monkeypatch, ligado=False)
     _clicar(a09.corrigir_vulkan, ctx)
-
-    assert curou and curou[0]["religar"] is True, curou
-    assert a09._PAINEL[0] == "religuei duas camadas", (
+    assert a09._PAINEL[0] == cv.frase_do_ato(True), (
         f"o clique não deixou rastro na tela: {a09._PAINEL[0]!r}")
 
 
 def test_o_recibo_diz_o_ato_que_aconteceu(
         a09: Any, ctx: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Tirar e devolver não podem produzir o mesmo recibo."""
+    """Ligar e desligar não produzem o mesmo recibo, e a devolução se conta."""
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+
     curou: list[Any] = []
-    _censo(a09, monkeypatch, tem_tirar=True, tem_devolver=False, curou=curou)
-
+    _mesa(a09, monkeypatch, ligado=True, com_registro=True, curou=curou)
     _clicar(a09.corrigir_vulkan, ctx)
+    assert curou and curou[0]["religar"] is True and curou[0]["forcar"] is True
+    assert a09._PAINEL[0] == f"{cv.frase_do_ato(False)} Devolvi em 1 jogo: x."
+    assert cv.frase_do_ato(True) != cv.frase_do_ato(False)
 
-    assert curou and curou[0]["religar"] is False and curou[0]["forcar"] is True
-    assert a09._PAINEL[0] == "desliguei duas camadas"
 
-
-def test_sem_nada_a_tirar_o_ligavel_recusa_e_nao_acende(
+def test_desligar_sem_nada_nosso_no_registro_nao_mexe_nele(
         a09: Any, ctx: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Um ligável que acende sem ter feito nada mentiria sobre o jogo.
+    """O registro dela só se abre quando há o que devolver.
 
-    MORDE: tire a pergunta ao censo de `corrigir_vulkan`.
+    MORDE: tire o `cv.ha_o_que_devolver()` de `corrigir_vulkan`.
     """
     curou: list[Any] = []
-    _censo(a09, monkeypatch, tem_tirar=False, tem_devolver=False, curou=curou)
-    with pytest.raises(RuntimeError) as recusa:
-        _clicar(a09.corrigir_vulkan, ctx)
-    assert "Nenhum jogo" in str(recusa.value)
+    _mesa(a09, monkeypatch, ligado=True, com_registro=False, curou=curou)
+    _clicar(a09.corrigir_vulkan, ctx)
+    assert curou == []
+
+
+def test_ligar_nao_mexe_no_registro(
+        a09: Any, ctx: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ligar é a escolha que o lançador lê; o registro só se mexe no lançamento."""
+    curou: list[Any] = []
+    _mesa(a09, monkeypatch, ligado=False, com_registro=True, curou=curou)
+    _clicar(a09.corrigir_vulkan, ctx)
     assert curou == []
 
 
@@ -161,12 +186,13 @@ def test_a_recusa_pergunta_ao_dono_que_invalida_a_foto(
     MORDE: volte a chamar `slo.steam_game_running()` aqui e a régua reprova,
     porque ninguém invalida a varredura antes.
     """
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
     from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 
     de_verdade = rl.jogo_aberto
     curou: list[Any] = []
-    _censo(a09, monkeypatch, tem_tirar=True, tem_devolver=False, curou=curou)
+    _mesa(a09, monkeypatch, ligado=True, com_registro=True, curou=curou)
     monkeypatch.setattr(rl, "jogo_aberto", de_verdade)
 
     passos: list[str] = []
@@ -181,3 +207,4 @@ def test_a_recusa_pergunta_ao_dono_que_invalida_a_foto(
     assert passos == ["invalidou", "perguntou"], passos
     assert not curou
     assert "jogo aberto" in str(erro.value).lower()
+    assert cv.camadas_da_steam_fora() is True, "a recusa desligou a pílula pela metade"

@@ -98,33 +98,23 @@ def test_a_raiz_gigante_nao_custa_o_censo(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# E2 — a linha permanente, e os três números
+# E2 — a linha permanente: o que chega ao jogo (28/09/2026)
 # ---------------------------------------------------------------------------
+# Os três números de 21/09 (tirada, posta, prefixos vistos) contavam o registro
+# do prefixo, que nenhum jogo desta máquina lê; com o botão ligado a linha dizia
+# «nenhuma tirada». Desde a O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01 ela diz
+# o que o lançador entrega a todo jogo — que é a resposta à segunda pergunta
+# dela, «pra todos os jogos?».
 
 
-class _Jogo:
-    def __init__(self, appid: str, camadas: tuple[Any, ...]) -> None:
-        self.appid = appid
-        self.camadas = camadas
-
-    @property
-    def sobras(self) -> tuple[Any, ...]:
-        return tuple(c for c in self.camadas if c.ligada)
+def _a_steam_instalou(casa: Path) -> None:
+    """O manifesto que a Steam instala na pasta de camadas do usuário."""
+    pasta = casa / "vulkan" / "implicit_layer.d"
+    pasta.mkdir(parents=True, exist_ok=True)
+    (pasta / "steamoverlay_x86_64.json").write_text("{}", encoding="utf-8")
 
 
-class _Camada:
-    def __init__(self, chave: str, caminho: str, *, ligada: bool) -> None:
-        self.chave = chave
-        self.caminho_windows = caminho
-        self.ligada = ligada
-
-
-def _montar(monkeypatch: pytest.MonkeyPatch, *, prefixos: int,
-            jogos: list[_Jogo], estado: dict[str, Any]) -> str | None:
-    monkeypatch.setattr(cv, "raizes_de_prefixo",
-                        lambda home=None: [Path(f"/p/{n}") for n in range(prefixos)])
-    monkeypatch.setattr(cv, "censo", lambda home=None, com_nomes=True: jogos)
-    monkeypatch.setattr(cv, "ler_estado", lambda home=None: estado)
+def _texto() -> str | None:
     linha = linha_da_sobreposicao_vulkan()
     if linha is None:
         return None
@@ -135,46 +125,22 @@ def _montar(monkeypatch: pytest.MonkeyPatch, *, prefixos: int,
     return texto
 
 
-def test_a_linha_diz_quantos_prefixos_foram_vistos(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o terceiro número e este teste reprova.
+def test_a_linha_diz_a_escolha_que_chega_ao_jogo(tmp_path: Path) -> None:
+    """ARRANQUE o `vulkan_corrigido()` da linha e este teste reprova."""
+    import os
 
-    Sem ele, «tirada em 1 jogo» não diz se o produto olhou 33 prefixos ou 3 —
-    que é LITERALMENTE a primeira pergunta dela.
-    """
-    camada = _Camada("K", r"C:\a\EOS.json", ligada=False)
-    estado = {"1599660": {cv.chave_de_estado("K", r"C:\a\EOS.json"): {"feito": "desligada"}}}
-    texto = _montar(monkeypatch, prefixos=33,
-                    jogos=[_Jogo("1599660", (camada,))], estado=estado)
-    assert texto is not None and "33 prefixos vistos" in texto, texto
-    assert "tirada em 1 jogo" in texto, texto
+    _a_steam_instalou(Path(os.environ["XDG_DATA_HOME"]))
+    cv.gravar_camadas_da_steam_fora(False)
+    assert _texto() == cv.frase_do_estado(False)
+    cv.gravar_camadas_da_steam_fora(True)
+    assert _texto() == cv.frase_do_estado(True)
+    assert cv.frase_do_estado(True) != cv.frase_do_estado(False)
 
 
-def test_sem_nenhuma_camada_a_linha_continua_saindo(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o ramo do zero e este teste reprova.
-
-    «nenhuma tirada · nenhuma posta · 33 prefixos vistos» é informação: ela diz
-    que o produto OLHOU. A ausência da linha se leria como «ele não olhou».
-    """
-    texto = _montar(monkeypatch, prefixos=33, jogos=[], estado={})
-    assert texto is not None
-    assert "nenhuma tirada" in texto and "nenhuma posta" in texto, texto
-    assert "33 prefixos vistos" in texto, texto
-
-
-def test_camada_que_nunca_foi_nossa_nao_conta_como_trabalho_feito(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE a consulta ao estado e este teste reprova.
-
-    Uma camada que o próprio jogo nunca ligou é `ligada=False` sem nós termos
-    tocado nela. Contá-la como «tirada» seria o número virar elogio a quem não
-    fez nada — a forma exata do instrumento que responde sobre outra coisa.
-    """
-    nunca_nossa = _Camada("K", r"C:\b\Outra.json", ligada=False)
-    texto = _montar(monkeypatch, prefixos=5,
-                    jogos=[_Jogo("42", (nunca_nossa,))], estado={})
-    assert texto is not None and "nenhuma tirada" in texto, texto
+def test_sem_as_camadas_da_steam_a_linha_nao_sai() -> None:
+    """Sem a Steam neste computador, o botão não tem o que tirar — nada a dizer."""
+    assert cv.a_steam_instalou_as_camadas() is False
+    assert _texto() is None
 
 
 def test_a_frase_da_linha_tem_um_dono_so(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -182,33 +148,22 @@ def test_a_frase_da_linha_tem_um_dono_so(monkeypatch: pytest.MonkeyPatch) -> Non
 
     O desenho da aba (`interface/aba09.py`) monta a cena com a mesma função.
     Uma segunda montagem aqui deixaria o desenho e a tela viva dizendo coisas
-    diferentes sobre o mesmo censo — foi assim que o desenho mostrou, por um
-    mês, uma linha que a tela só mostrava antes da primeira pintura
-    (26/09/2026).
+    diferentes — foi assim que o desenho mostrou, por um mês, uma linha que a
+    tela só mostrava antes da primeira pintura (26/09/2026).
     """
-    monkeypatch.setattr(cv, "frase_do_estado", lambda t, p, n: f"DONO {t}/{p}/{n}")
-    texto = _montar(monkeypatch, prefixos=7,
-                    jogos=[_Jogo("42", (_Camada("K", r"C:\c\X.json", ligada=True),))],
-                    estado={})
-    assert texto == "DONO 0/1/7", texto
-
-
-def test_a_sobra_aparece_como_posta(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A segunda metade da pergunta: o que o botão AINDA faria."""
-    texto = _montar(monkeypatch, prefixos=7,
-                    jogos=[_Jogo("42", (_Camada("K", r"C:\c\X.json", ligada=True),))],
-                    estado={})
-    assert texto is not None and "posta em 1" in texto, texto
+    monkeypatch.setattr(cv, "a_steam_instalou_as_camadas", lambda home=None: True)
+    monkeypatch.setattr(cv, "frase_do_estado", lambda fora: f"DONO {fora}")
+    assert _texto() == "DONO False"
 
 
 def test_o_exame_nao_cai_por_causa_de_um_vulkan(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o `try/except` e este teste reprova: um `system.reg` torto
-    apagaria as SEIS linhas do exame que já estavam prontas."""
+    """ARRANQUE o `try/except` e este teste reprova: um disco hostil
+    apagaria as linhas do exame que já estavam prontas."""
     def explode(*a: Any, **k: Any) -> Any:
         raise OSError("disco hostil")
 
-    monkeypatch.setattr(cv, "raizes_de_prefixo", explode)
+    monkeypatch.setattr(cv, "a_steam_instalou_as_camadas", explode)
     assert linha_da_sobreposicao_vulkan() is None
 
 

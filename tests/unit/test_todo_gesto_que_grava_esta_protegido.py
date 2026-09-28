@@ -169,6 +169,7 @@ ESCREVEM = {
     "restaurar_do_historico",  # troca o perfil pelo backup de ontem
     "_systemctl",              # liga, para e reinicia o serviço na máquina dela
     "curar_todos",             # tira ou devolve as camadas Vulkan dos prefixos dela
+    "gravar_camadas_da_steam_fora",  # a escolha que o lançador entrega a todo jogo dela
     # A LISTA DE EXCLUSÃO — OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01,
     # 21/09/2026. `adicionar` e `tirar` são a API do dono
     # (`integrations/lista_de_exclusao`), e escrevem a lista E as duas listas

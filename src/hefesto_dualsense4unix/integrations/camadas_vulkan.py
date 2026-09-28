@@ -807,6 +807,29 @@ def gravar_camadas_da_steam_fora(fora: bool, config_home: Path | None = None) ->
     os.replace(tmp, alvo)
 
 
+def a_steam_instalou_as_camadas(home: Path | None = None) -> bool:
+    """A Steam pôs as camadas dela neste computador? Read-only, nunca levanta.
+
+    É o que dá sentido à linha do exame: sem os manifestos
+    (`steamoverlay_*.json`, `steamfossilize_*.json`) na pasta de camadas do
+    usuário, não há camada da Steam para o botão tirar, e a linha seria ruído.
+    Olha o `XDG_DATA_HOME` e o `~/.local/share`, as duas pastas que o
+    carregador lê.
+    """
+    lar = Path.home() if home is None else home
+    pastas = [lar / ".local" / "share"]
+    xdg = os.environ.get("XDG_DATA_HOME", "").strip()
+    if xdg and home is None:
+        pastas.insert(0, Path(xdg))
+    for pasta in pastas:
+        try:
+            if any((pasta / "vulkan" / "implicit_layer.d").glob("steam*.json")):
+                return True
+        except OSError:
+            continue
+    return False
+
+
 def traz_o_carregador_da_khronos(pasta_do_jogo: Path) -> bool:
     """A pasta do jogo traz o `vulkan-1.dll` da Khronos? Read-only, nunca levanta.
 
@@ -838,7 +861,7 @@ def traz_o_carregador_da_khronos(pasta_do_jogo: Path) -> bool:
 
 
 def frase_do_estado(fora: bool) -> str:
-    """*"Sobreposição Vulkan: a da Steam fica fora dos jogos"*, ou a Steam decide.
+    """*"Sobreposição Vulkan: a da Steam sai dos jogos"*, ou a Steam decide.
 
     A linha que o exame da aba Sistema pinta
     (`a09_sistema.linha_da_sobreposicao_vulkan`) e a que o desenho da aba
@@ -852,7 +875,7 @@ def frase_do_estado(fora: bool) -> str:
     tela contradizia o próprio botão.
     """
     if fora:
-        return "Sobreposição Vulkan: a da Steam fica fora dos jogos"
+        return "Sobreposição Vulkan: a da Steam sai dos jogos"
     return "Sobreposição Vulkan: a Steam decide"
 
 

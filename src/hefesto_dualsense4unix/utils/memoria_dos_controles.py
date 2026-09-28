@@ -576,6 +576,7 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "hefesto-dualsense4unix/jogos_fora_do_pino.txt": (CASA, "os jogos fora do Proton pinado"),
     "hefesto-dualsense4unix/jogos_sem_wrapper.txt": (CASA, "os jogos sem o atalho"),
     "hefesto-dualsense4unix/lista_de_exclusao.json": (CASA, "a lista de exclusão"),
+    "hefesto-dualsense4unix/camadas_da_steam_fora.env": (CASA, "a escolha do «Corrigir Vulkan»"),
     "hefesto-dualsense4unix/opcoes_por_jogo.txt": (CASA, "as opções por jogo dela"),
     _ALLOWLIST_DA_STEAM: (CASA, "os jogos com o Steam Input"),
     "freestyle.json": (CASA, "um perfil semeado"),

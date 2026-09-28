@@ -404,6 +404,9 @@ def _limpar_o_painel() -> None:
 #: essa a queixa dela em 21/09/2026: *"Clico em confirma e não aparece nada.
 #: Os logs não falam nada que preste também."*
 #: <!-- noqa-acento: citação literal dela -->
+#: Desde 28/09/2026 o ligável tira as camadas da Steam do jogo que ABRIR
+#: depois do clique: o efeito continua fora da tela na hora, e o recibo diz
+#: quando ele vale.
 #:
 #: A REGRA QUE ISSO DEIXA, e ela é a que cabe nas duas: **recibo de status
 #: sai; recibo de ato que não se vê FICA.** Um gesto novo só entra aqui se o
@@ -674,84 +677,50 @@ def linha_do_som_do_sistema(
     return (SELO_INFORMATIVO, f"Som do sistema: {', '.join(partes)}")
 
 
-#: O que o último censo das sobreposições contou: `tiradas`, `postas`,
-#: `prefixos`. Vazio = ainda não contou. Quem lê é o ligável «Corrigir Vulkan».
-_VULKAN: dict[str, int] = {}
+def vulkan_corrigido() -> bool:
+    """A pílula «Corrigir Vulkan»: acesa quando o lançador tira as camadas da Steam.
 
-
-def vulkan_corrigido() -> bool | None:
-    """A pílula «Corrigir Vulkan»: ligada quando há camada que NÓS desligamos.
-
-    É a mesma pergunta que o botão de desligar responde: devolver é religar o
-    que a memória (`camadas_vulkan.ler_estado`) diz ser trabalho nosso. Sem
-    censo ainda, `None` — a pílula fica apagada, e o clique mede de novo.
+    **28/09/2026 — O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01.** Até aqui ela
+    acendia com «há camada que NÓS desligamos» no registro do prefixo, que
+    nenhum jogo desta máquina lê. Agora ela lê a MESMA escolha que o lançador
+    lê (`camadas_vulkan.camadas_da_steam_fora`): o que a tela diz é o que o jogo
+    recebe. É um arquivo de duas linhas, e a leitura cabe no tique.
     """
-    if "tiradas" not in _VULKAN:
-        return None
-    return _VULKAN["tiradas"] > 0
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+
+    try:
+        return cv.camadas_da_steam_fora()
+    except Exception:
+        return False
 
 
 def linha_da_sobreposicao_vulkan() -> tuple[str, str] | None:
-    """*"Sobreposição Vulkan: tirada em N · posta em M · P prefixos vistos"*.
+    """*"Sobreposição Vulkan: a da Steam sai dos jogos"*, ou a Steam decide.
 
     **AS DUAS PERGUNTAS DELA, 21/09/2026:** *"o botão vulcan ele identifica
     todos os jogos que contenham isso? E vamos ter o estado de ativado e
-    desativado sobre o funcionamento dele? Pra todos os jogos?"*
+    desativado sobre o funcionamento dele? Pra todos os jogos?"* Esta linha é o
+    estado no lugar onde ela já olha, e vale para todo jogo pelo mecanismo: o
+    lançador entrega a escolha a cada jogo que abre.
 
-    O estado existia em disco desde sempre
-    (`camadas_vulkan.caminho_do_estado()`), mas **só chegava à tela depois do
-    clique**: o censo é o corpo do diálogo do clique 1 e some quando ele fecha.
-    Esta linha é o estado no lugar onde ela já olha.
-
-    **OS TRÊS NÚMEROS, e cada um responde a uma metade:**
-
-    | número | o que ele diz |
-    | --- | --- |
-    | tirada em N | o que o botão JÁ fez — camada registrada e desligada |
-    | posta em M | o que o botão ainda faria — as `sobras` do censo |
-    | P prefixos vistos | o ALCANCE, e é ele que responde à primeira pergunta |
-
-    O TERCEIRO FICA NA LINHA MESMO SENDO O MENOS INTERESSANTE: sem ele,
-    *"tirada em 1 jogo"* não diz se o produto olhou 33 prefixos ou 3 — que é
-    literalmente o que ela perguntou.
+    **28/09/2026: a linha diz o que chega ao jogo.** Os três números de antes
+    (tirada, posta, prefixos vistos) contavam o registro do prefixo; com o botão
+    ligado ela dizia «nenhuma tirada», e a tela contradizia o próprio botão.
 
     **`INFO` E NÃO UM BOTÃO** (D-2109-O-ESTADO-DO-VULKAN-E-INFORMATIVO): a linha
-    não pede ação e não muda de cor. Um «atualizar» seria trabalho dela para
-    ver o que o produto conta sozinho; e pintar de vermelho uma sobreposição
-    POSTA seria a tela confessando dívida nossa, que ela proibiu em 07/09.
-
-    NUNCA LEVANTA: disco hostil, `system.reg` torto ou HOME sem nada devolvem
-    `None`, e o exame inteiro não pode cair por causa de um Vulkan.
+    não pede ação e não muda de cor. Sem as camadas da Steam instaladas neste
+    computador ela não sai: não há o que o botão tire. NUNCA LEVANTA: o exame
+    inteiro não pode cair por causa de um Vulkan.
     """
     try:
         from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
 
-        prefixos = len(cv.raizes_de_prefixo())
-        if not prefixos:
+        if not cv.a_steam_instalou_as_camadas():
             return None
-        jogos = cv.censo(com_nomes=False)
-        postas = sum(1 for j in jogos if j.sobras)
-        # TIRADA = camada DESLIGADA que está no NOSSO estado. A segunda metade
-        # é o que separa "nós desligamos" de "nasceu desligada": sem consultar
-        # o estado, uma camada que o próprio jogo nunca ligou contaria como
-        # trabalho nosso, e o número viraria elogio a quem não fez nada.
-        estado = cv.ler_estado()
-        tiradas = 0
-        for jogo in jogos:
-            registro = estado.get(jogo.appid) or {}
-            if any(
-                not c.ligada and cv.chave_de_estado(c.chave, c.caminho_windows) in registro
-                for c in jogo.camadas
-            ):
-                tiradas += 1
+        # A FRASE TEM UM DONO SÓ, e o desenho da aba lê o mesmo (26/09/2026).
+        return (SELO_INFORMATIVO, cv.frase_do_estado(vulkan_corrigido()))
     except Exception:
         return None
-    # O LIGÁVEL «Corrigir Vulkan» LÊ ESTA MESMA CONTA — 25/09/2026. O censo
-    # custa um segundo e já roda aqui, na faixa lenta; uma segunda varredura
-    # para a pílula seria a segunda resposta sobre o mesmo disco.
-    _VULKAN.update(tiradas=tiradas, postas=postas, prefixos=prefixos)
-    # A FRASE TEM UM DONO SÓ, e o desenho da aba lê o mesmo (26/09/2026).
-    return (SELO_INFORMATIVO, cv.frase_do_estado(tiradas, postas, prefixos))
 
 
 #: O PRONTUÁRIO DOS JOGOS LEVA 7,1 SEGUNDOS — medido na máquina dela em
@@ -3526,8 +3495,8 @@ def refazer_consertos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
 
 # O «Tirar a sobreposição Vulkan» (dois cliques, com o censo no painel) SAIU
 # em 25/09/2026 — A-09-SISTEMA-EM-TRES-SECOES-01: virou o ligável «Corrigir
-# Vulkan» (:func:`corrigir_vulkan`). O motor é o mesmo (`curar_todos`, com
-# `forcar=True` e a lista de exclusão), e desligar é o `religar` de antes.
+# Vulkan» (:func:`corrigir_vulkan`). Desde 28/09/2026 ele liga a escolha que o
+# lançador lê, e desligar é o `religar` de antes (`curar_todos`).
 
 
 #: QUANTAS LINHAS DO DIÁRIO O PAINEL MOSTRA. É o número do antigo «Ver
@@ -3675,36 +3644,49 @@ def fixar_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("09-sistema.html", "corrigir-vulkan", grava="curar_todos")
 def corrigir_vulkan(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O ligável «Corrigir Vulkan»: liga tirando a sobreposição, desliga devolvendo.
+    """O ligável «Corrigir Vulkan»: liga tirando as camadas da Steam do jogo.
 
-    O MOTOR É O DO «Tirar a sobreposição Vulkan» (`camadas_vulkan.curar_todos`,
-    com `forcar=True`, a regra dela de 09/08/2026), e desligar é o `religar`
-    que ele já tinha: devolve SÓ o que a memória diz que nós desligamos.
+    **28/09/2026 — O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01.** Decisão dela:
+    *«Nao sai. Passa a funcionar do jeito certo.»* <!-- noqa-acento: citação literal dela -->
+    Ligar grava a escolha que o lançador lê
+    (`camadas_vulkan.gravar_camadas_da_steam_fora`), e o jogo que abrir depois
+    nasce sem a sobreposição e o gravador de shaders da Steam. Até aqui o
+    clique mexia só no registro do prefixo, que nenhum jogo desta máquina lê.
+
+    Desligar apaga a escolha e DEVOLVE o que o registro guarda de nós
+    (`curar_todos(religar=True)`, só o que a memória diz que nós desligamos).
+    Só a devolução recusa com jogo aberto, porque o Wine regrava o registro
+    ao sair; ligar não mexe em registro nenhum e vale no próximo jogo.
 
     UM CLIQUE, SEM PERGUNTA, pela mesma razão do Proton: o ato se desfaz no
-    clique seguinte. Recusa com jogo aberto (o Wine regrava o registro ao
-    sair) e recusa quando não há o que tirar — um ligável que acende sem ter
-    feito nada mentiria sobre o jogo.
+    clique seguinte.
     """
     from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
     from hefesto_dualsense4unix.integrations import lista_de_exclusao
     from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
 
     _ARMADO.clear()  # um clique noutro botão desfaz a pergunta que estava no ar
-    if rl.jogo_aberto():
+    ligar = not vulkan_corrigido()
+    resultados: list[Any] = []
+    if not ligar and cv.ha_o_que_devolver():
+        if rl.jogo_aberto():
+            raise RuntimeError(
+                "Tem jogo aberto — feche-o e clique de novo. Com o jogo vivo o "
+                "Windows do Proton regrava esse ajuste ao sair, e a mudança seria "
+                "perdida.")
+        resultados = cv.curar_todos(
+            religar=True, forcar=True, excluir=lista_de_exclusao.appids())
+    try:
+        cv.gravar_camadas_da_steam_fora(ligar)
+    except OSError as erro:
         raise RuntimeError(
-            "Tem jogo aberto — feche-o e clique de novo. Com o jogo vivo o "
-            "Windows do Proton regrava esse ajuste ao sair, e a mudança seria "
-            "perdida.")
-    devolver = bool(vulkan_corrigido())
-    if not devolver and not any(j.sobras for j in cv.censo(com_nomes=False)):
-        raise RuntimeError("Nenhum jogo tem sobreposição Vulkan para tirar.")
-    resultados = cv.curar_todos(
-        religar=devolver, forcar=True, excluir=lista_de_exclusao.appids())
-    _VULKAN.clear()
+            "Não consegui guardar a escolha do Vulkan na pasta de configuração: "
+            f"{erro.strerror or erro}.") from erro
     _LENTO.clear()
-    _relatar_o_recibo("corrigir-vulkan",
-                      _emulacao.frase_do_resultado(resultados, devolver=devolver))
+    frase = cv.frase_do_ato(ligar)
+    if any(r.mexeu or r.erro for r in resultados):
+        frase = f"{frase} {_emulacao.frase_do_resultado(resultados, devolver=True)}"
+    _relatar_o_recibo("corrigir-vulkan", frase)
 
 
 PONTE = {"chamar", "chamar_detalhado", "machine_declare", "profile_switch"}

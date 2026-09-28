@@ -371,4 +371,7 @@ def test_a_interface_nao_ganhou_gesto_novo_por_causa_disto() -> None:
     assert re.search(r"\bforcar=True\b", chamada.group(1)), (
         "o botão parou de forçar; a regra dela de 09/08/2026 caiu junto"
     )
-    assert re.search(r"\breligar=devolver\b", chamada.group(1)), chamada.group(1)
+    # DESDE 28/09/2026 O BOTÃO SÓ DEVOLVE PELO REGISTRO — ligar é a escolha que
+    # o lançador lê (O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01), e o tirar do
+    # registro mora no gancho, só no jogo que traz o carregador da Khronos.
+    assert re.search(r"\breligar=True\b", chamada.group(1)), chamada.group(1)

@@ -684,17 +684,36 @@ def test_o_conserto_procura_os_scripts_pelo_localizador_do_produto(a09):
 def test_as_camadas_recusam_com_jogo_aberto(a09, ctx, monkeypatch):
     """O Wine regrava o registro do prefixo ao sair: escrever agora é perder calado.
 
+    Desde 28/09/2026 só a DEVOLUÇÃO mexe no registro (desligar, com camada que
+    nós tiramos), e só ela recusa; a escolha fica ligada, sem meio-termo.
+
     MORDIDA: tire o `if rl.jogo_aberto()` de `corrigir_vulkan`.
     """
     from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
     from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
 
+    cv.gravar_camadas_da_steam_fora(True)
+    cv.gravar_estado({"222": {"x": {"feito": "desligada", "valor_antes": "00000000"}}})
     curou: list[object] = []
     monkeypatch.setattr(rl, "jogo_aberto", lambda: True)
     monkeypatch.setattr(cv, "curar_todos", lambda **k: curou.append(k) or [])
     with pytest.raises(RuntimeError) as recusa:
         a09.corrigir_vulkan(ctx, {}, None)
     assert "jogo aberto" in str(recusa.value)
+    assert curou == []
+    assert cv.camadas_da_steam_fora() is True
+
+
+def test_ligar_as_camadas_com_jogo_aberto_nao_recusa(a09, ctx, monkeypatch):
+    """Ligar não mexe em registro nenhum: vale no próximo jogo, e não espera."""
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+    from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
+
+    curou: list[object] = []
+    monkeypatch.setattr(rl, "jogo_aberto", lambda: True)
+    monkeypatch.setattr(cv, "curar_todos", lambda **k: curou.append(k) or [])
+    a09.corrigir_vulkan(ctx, {}, None)
+    assert cv.camadas_da_steam_fora() is True
     assert curou == []
 
 
