@@ -23,6 +23,7 @@ nenhum servidor de som. Endereços da faixa forjada ``aa:bb:cc``.
 
 from __future__ import annotations
 
+import errno
 import os
 import struct
 from typing import Any
@@ -717,3 +718,81 @@ class TestAVoltaAcordaPeloAviso:
 
         assert mesa.sub._esperar_a_mesa_do_som(_Ger()) is False
         assert len(olhadas) == 1, f"a falha prendeu a volta: {len(olhadas)} olhadas"
+
+
+# ---------------------------------------------------------------------------
+# 6. O teto de ceder mede as tentativas: a pausa do jogo não conta, e não o zera
+# ---------------------------------------------------------------------------
+
+
+def _fila_cheia(_report: bytes) -> int:
+    """O ``bluetoothd`` sem drenar: toda escrita volta com a fila cheia."""
+    raise OSError(errno.EAGAIN, "fila cheia")
+
+
+def _bomba_de_relogio(blocos: list[bytes], agora: list[float]) -> Any:
+    return af.BombaDeSomPeloRadio(
+        arranjo=af.ARRANJO_HAPTICA_032,
+        fonte=lambda _n: b"",
+        fonte_haptica=_fonte(blocos),
+        escritor=_fila_cheia,
+        seco=False,
+        relogio=lambda: agora[0],
+        so_com_sinal=True,
+    )
+
+
+def test_a_pausa_do_jogo_nao_conta_no_teto_de_ceder() -> None:
+    """Um tiro com a fila cheia, dez segundos de cena quieta e outro tiro: a ponte segue.
+
+    O teto (``TETO_DE_CEDER_S``) é o tempo TENTANDO escrever sem uma escrita
+    aceita. Na cena quieta nada se tenta, e o relógio para: contá-la derrubaria
+    a ponte no primeiro tiro depois dela.
+
+    MORDIDA: tire o desconto da pausa de ``escrever`` — o tiro depois da cena
+    quieta derruba a ponte com a fila «parada».
+    """
+    agora = [0.0]
+    bomba = _bomba_de_relogio([MOTOR, SILENCIO, SILENCIO, SILENCIO, MOTOR], agora)
+    for _ in range(2):  # o tiro e o silêncio que o fecha, cedidos à fila cheia
+        report = bomba.um_report()
+        assert report and bomba.escrever(report) is True
+        agora[0] += 0.01
+    assert bomba.um_report() == b"" and bomba.um_report() == b""
+    agora[0] = 10.0
+    report = bomba.um_report()
+    assert report
+    assert bomba.escrever(report) is True, "a pausa do jogo contou como adaptador parado"
+    assert bomba.fila_parada is False
+
+
+def test_os_tiros_com_o_adaptador_parado_derrubam_a_ponte() -> None:
+    """Tiros curtos com respiros entre eles, e a fila cheia o tempo todo: a ponte cai.
+
+    É o jogo de verdade (o tiro, o silêncio, o tiro) com o ``bluetoothd`` sem
+    drenar. Cada respiro PARA o relógio do teto, e não o zera: zerado a cada
+    respiro, ele nunca chegaria aos dois segundos, e a ponte ficaria de pé e
+    muda, sem dizer por quê. E o respiro também não conta: a ponte só cai
+    depois de dois segundos TENTANDO.
+
+    MORDIDA: troque o desconto da pausa por zerar o relógio no silêncio
+    (``self._cedendo = False`` no ramo calado de ``_vale_mandar``) — a ponte
+    nunca cai. Ou tire o desconto — ela cai com meio segundo de tentativa.
+    """
+    quadro = 512 / 48000
+    agora = [0.0]
+    bomba = _bomba_de_relogio(([MOTOR] * 10 + [SILENCIO] * 30) * 40, agora)
+    tentando = 0.0
+    while True:
+        agora[0] += quadro
+        report = bomba.um_report()
+        assert report is not None, "a fila parada nunca derrubou a ponte"
+        if not report:
+            continue
+        if not bomba.escrever(report):
+            break
+        tentando += quadro
+    assert bomba.fila_parada is True
+    assert tentando >= af.TETO_DE_CEDER_S - 2 * quadro, (
+        f"a ponte caiu com {tentando:.2f} s de tentativa, antes do teto"
+    )

@@ -2023,6 +2023,10 @@ class BombaDeSomPeloRadio:
         #: O último report MANDADO levou sinal? É o que faz o silêncio seguinte
         #: ir ao rádio uma vez, e só uma.
         self._mandou_sinal = False
+        #: Desde quando o rádio está calado por silêncio COM a fila cedendo:
+        #: o relógio do :data:`TETO_DE_CEDER_S` para aí e volta a andar na
+        #: próxima tentativa (:meth:`escrever`). `None` fora de uma pausa.
+        self._calado_desde: float | None = None
         self.contagem = ContagemDaBomba()
 
     # -- a conta ----------------------------------------------------------
@@ -2158,12 +2162,14 @@ class BombaDeSomPeloRadio:
         if self._mandou_sinal:
             self._mandou_sinal = False
             return True
-        # O SILÊNCIO SOLTA A FILA: sem escrita não há fila cheia, e o relógio
-        # do teto de ceder (:data:`TETO_DE_CEDER_S`) não pode contar a pausa
-        # do jogo como o adaptador parado — o primeiro tiro depois de uma cena
-        # quieta derrubaria a ponte.
-        self._cedendo = False
-        self._cedendo_desde = None
+        # A PAUSA PARA O RELÓGIO DO TETO, E NÃO O ZERA. O teto de ceder
+        # (:data:`TETO_DE_CEDER_S`) mede o tempo TENTANDO escrever sem uma
+        # escrita aceita: contar a cena quieta derrubaria a ponte no primeiro
+        # tiro depois dela, e zerar o relógio a cada respiro entre dois tiros
+        # deixaria o adaptador parado passar por vivo para sempre — a ponte
+        # de pé e muda, que é o que o teto existe para derrubar.
+        if self._cedendo and self._calado_desde is None:
+            self._calado_desde = self._relogio()
         return False
 
     @property
@@ -2261,6 +2267,12 @@ class BombaDeSomPeloRadio:
                 # é cedido NA FONTE, antes de encher a fila do kernel.
                 self.contagem.quadros_cedidos_ao_governador += 1
                 return True
+        # A PAUSA DO JOGO NÃO CONTA NO TETO (ver :meth:`_vale_mandar`): o
+        # começo da contagem anda o que a cena quieta durou, e a pausa fica
+        # fora dela.
+        calado_desde, self._calado_desde = self._calado_desde, None
+        if calado_desde is not None and self._cedendo_desde is not None:
+            self._cedendo_desde += max(0.0, self._relogio() - calado_desde)
         try:
             escritos = int(self.escritor(report))
         except OSError as erro:
