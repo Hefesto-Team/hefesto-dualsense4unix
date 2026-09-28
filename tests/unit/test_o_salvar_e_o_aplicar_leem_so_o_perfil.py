@@ -29,7 +29,10 @@ A MORDIDA (medida na entrega): devolva a sobreposição a uma aba só — no
 `rodape.salvar`, com o clique da 02, ponha o `mic_mudo` do vivo no rascunho
 (`draft.with_controller_mic`) — e
 :func:`test_o_salvar_de_qualquer_aba_grava_o_disco_como_estava` reprova na 02,
-com o microfone do P3.
+com o microfone do P3. E as duas da conferência de 28/09: faça o Salvar
+gravar os overrides de luz densos (o padrão do esquema explícito) e a mesma
+régua reprova no `controllers`; desligue o `save_profile` do Salvar e
+:func:`test_o_salvar_regrava_o_arquivo_na_forma_de_hoje` reprova.
 """
 from __future__ import annotations
 
@@ -196,8 +199,18 @@ def _o_arquivo() -> bytes:
 
 
 def _o_perfil() -> dict[str, Any]:
-    """O perfil no disco, pelo esquema: a comparação semântica."""
-    return Profile.model_validate(json.loads(_o_arquivo())).model_dump(mode="json")
+    """O perfil no disco: a parte global pelo esquema, os overrides crus.
+
+    Na parte GLOBAL o padrão que o `save_profile` escreve denso não é mudança.
+    Nos OVERRIDES o campo ausente herda do global, e escrever o padrão É
+    mudança: pelo esquema, um override que ganhasse o brilho 1,0 explícito
+    sairia igual ao que o herdava. É a regra de
+    `test_o_salvar_de_uma_aba_nao_mexe_na_outra.py`.
+    """
+    cru = json.loads(_o_arquivo())
+    perfil = Profile.model_validate(cru).model_dump(mode="json")
+    perfil["controllers"] = cru.get("controllers")
+    return perfil
 
 
 def _do_disco() -> dict[str, Any]:
@@ -249,6 +262,36 @@ def test_as_tres_fontes_que_nao_sao_dela_ficam_fora_do_disco(aba: str) -> None:
         f"o «Salvar» da {aba} gravou a política viva `max` no perfil")
     assert dele[P3]["speaker"].get("fonte") == "sfx", (
         f"o «Salvar» da {aba} apagou a fonte do alto-falante do P3")
+
+
+def test_o_salvar_regrava_o_arquivo_na_forma_de_hoje() -> None:
+    """O Salvar ESCREVE: o arquivo na forma de ontem sai na de hoje, igual.
+
+    É o que sobra ao Salvar (validar, migrar e gravar na forma de hoje). Sem
+    esta régua, um Salvar que não gravasse nada passaria em todas as outras
+    deste arquivo, porque o disco «como estava» é também o disco de quem não
+    fez nada. Medido na conferência de 28/09: com o `save_profile` do
+    `rodape.salvar` desligado, a régua e as doze da posse davam 464 verdes.
+
+    A FORMA DE ONTEM: o arquivo numa linha só e as seções opcionais com `null`
+    explícito, que o `save_profile` de hoje omite (um binário antigo recusa a
+    chave que não conhece).
+    """
+    arquivo = loader.arquivo_do_perfil(NOME)
+    assert arquivo is not None
+    velho = {**json.loads(arquivo.read_bytes()),
+             "key_bindings": None, "speaker": None, "mic": None}
+    arquivo.write_text(json.dumps(velho, ensure_ascii=False), encoding="utf-8")
+    antes = _o_perfil()
+    _salvar("07-lancadores.html")
+    depois = json.loads(_o_arquivo())
+    assert not {"key_bindings", "speaker", "mic"} & set(depois), (
+        "o «Salvar» não regravou o arquivo na forma de hoje: as seções sem "
+        f"opinião continuam com `null` ({sorted(set(velho) & set(depois))})")
+    assert _o_arquivo().count(b"\n") > 1, "o «Salvar» deixou o arquivo numa linha"
+    mudou = _o_que_mudou(antes, _o_perfil())
+    assert not mudou, (
+        "o «Salvar» mudou o perfil ao normalizar:\n  " + "\n  ".join(mudou))
 
 
 def test_salvar_duas_vezes_grava_o_mesmo_arquivo_nas_dez_abas() -> None:
