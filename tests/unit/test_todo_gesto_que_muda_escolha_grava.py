@@ -35,6 +35,8 @@ from __future__ import annotations
 import ast
 import pathlib
 
+import pytest
+
 from tests.conftest import exigir_gi_real
 
 exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
@@ -214,13 +216,26 @@ def test_toda_entrada_aponta_um_gesto_e_nao_cruza() -> None:
             assert not nos_dois, f"gesto(s) em «{a}» e em «{b}» ao mesmo tempo: {nos_dois}"
 
 
-def test_o_ato_nao_grava() -> None:
+#: AS PORTAS QUE GRAVAM DO OUTRO LADO DO IPC e que o `ESCREVEM` da régua irmã
+#: não lista: lá, listá-las exigiria o `grava=` do gesto que as chama, e o
+#: sensor grava sem declarar (:data:`GRAVAM_SEM_DECLARAR`). Aqui elas contam:
+#: um ato que chame o `sensor.set` grava no perfil dela pelo daemon.
+ESCREVEM_PELO_DAEMON = frozenset({"sensor_set_detalhado"})
+
+
+def test_o_ato_nao_grava(monkeypatch: pytest.MonkeyPatch) -> None:
     """A árvore de cada ato não alcança porta de escrita nenhuma.
 
     As portas são as de `test_todo_gesto_que_grava_esta_protegido.ESCREVEM`,
-    e a descida é a mesma dele: um nome aqui que grave é um gesto que muda a
-    máquina dela e se diz ato.
+    mais :data:`ESCREVEM_PELO_DAEMON`, e a descida é a mesma dele: um nome
+    aqui que grave é um gesto que muda a máquina dela e se diz ato.
+
+    MORDIDA (conferência de 28/09): mova o `02-controles.html·sensor` para
+    :data:`ATOS` e esta reprova pelo `sensor_set_detalhado`; sem as portas
+    do daemon, passava.
     """
+    monkeypatch.setattr(protegido, "ESCREVEM",
+                        set(protegido.ESCREVEM) | ESCREVEM_PELO_DAEMON)
     gravam = sorted(f"{p}·{n} (por `{sorted(portas)[0]}`)"
                     for (p, n) in ATOS
                     if (portas := protegido._portas(pacotes.GESTOS[(p, n)])))
