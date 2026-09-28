@@ -41,7 +41,7 @@ except ModuleNotFoundError as e:      # pragma: no cover - caminho de ajuda
     ) from e
 
 #: A bancada mora em `scripts/`, e a raiz da árvore é a pasta de cima. Os
-#: vizinhos (`eliminacao`, `check_paridade_transporte`) moram na própria pasta.
+#: módulos vizinhos que ela importa moram na própria pasta.
 AQUI = Path(__file__).resolve().parent
 RAIZ = Path(__file__).resolve().parents[1]
 CSV_ = RAIZ / "docs" / "data" / "mapa-controles.csv"
