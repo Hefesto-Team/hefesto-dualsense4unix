@@ -508,15 +508,16 @@ def _fabrica_antiga(
     brilho: float,
     *,
     com_teclas: bool,
+    gatilho: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """Uma versão que a fábrica JÁ ENTREGOU para o lugar do padrão, com o nome de hoje."""
+    lado = gatilho if gatilho is not None else {"mode": "Off", "params": []}
     dados: dict[str, object] = {
         "name": NOME_DO_PADRAO,
         "version": 1,
         "match": {"type": "any"},
         "priority": prioridade,
-        "triggers": {"left": {"mode": "Off", "params": []},
-                     "right": {"mode": "Off", "params": []}},
+        "triggers": {"left": dict(lado), "right": dict(lado)},
         "leds": {"lightbar": barra, "player_leds": lampadas,
                  "lightbar_brightness": brilho},
         "rumble": {"passthrough": True},
@@ -528,16 +529,18 @@ def _fabrica_antiga(
 
 #: O-MODO-FREESTYLE-03 (24/09/2026) — AS FÁBRICAS DE ANTES, fechadas e datadas.
 #:
-#: São as cinco versões que o asset do padrão teve no git
+#: São as versões que o asset do padrão teve no git
 #: (`assets/profiles_default/meu_perfil.json` de 22/04 a 05/09,
-#: `personalizado.json` de 05/09 a 24/09, `freestyle.json` de 24/09 até esta
-#: sprint), com o `name` de hoje: as duas renomeações do slot
+#: `personalizado.json` de 05/09 a 24/09, `freestyle.json` de 24/09 em diante),
+#: com o `name` de hoje: as duas renomeações do slot
 #: (`migrate_default_profile_name` e `o_personalizado_vira_freestyle`) trocam o
 #: nome — e a regra da nossa janela, que a fábrica nunca teve — e mais nada.
 #: Um `freestyle.json` igual a uma delas é uma cópia de fábrica que ninguém
 #: mexeu, e é SÓ ele que a fábrica nova alcança
-#: (`o_freestyle_de_fabrica_nasce_ligado`). As cinco nasceram com os gatilhos em
-#: `Off`, contra a ordem dela de 17/09.
+#: (`o_freestyle_de_fabrica_nasce_ligado`). As cinco primeiras nasceram com os
+#: gatilhos em `Off`, contra a ordem dela de 17/09; a sexta é a de 24/09, com
+#: os gatilhos ligados e o resto sem o «ultra» da
+#: `D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA` (O-FREESTYLE-E-UMA-CAMADA-SO-01).
 #:
 #: LISTA FECHADA: o asset de hoje não entra nela (a régua
 #: `test_o_freestyle_vale_em_todo_caminho.py` cobra), e quem mudar o asset de
@@ -558,6 +561,10 @@ _FABRICAS_ANTERIORES_DO_FREESTYLE: tuple[dict[str, object], ...] = (
     # 20/07/2026 (4a9bb696e) — a mesma de 05/09 e de 24/09, só com outro nome
     _fabrica_antiga(1, [40, 80, 180], [False, False, True, False, False], 1.0,
                     com_teclas=True),
+    # 24/09/2026 (O-MODO-FREESTYLE-03) — os gatilhos de nascimento, sem o ultra
+    _fabrica_antiga(1, [40, 80, 180], [False, False, True, False, False], 1.0,
+                    com_teclas=True,
+                    gatilho={"mode": "Rigid", "params": [5, 200]}),
 )
 
 
@@ -768,7 +775,34 @@ def o_perfil_de_fora_do_jogo() -> str | None:
 # Mesmo desenho da O-MODO-FREESTYLE-02: os bytes antigos vão ao `.historico`
 # ANTES da escrita (`restaurar_do_historico("freestyle")` os devolve), e a marca
 # faz a segunda corrida não fazer nada.
+#
+# A MARCA GUARDA QUAL FÁBRICA ELA LEVOU — O-FREESTYLE-E-UMA-CAMADA-SO-01,
+# 28/09/2026. Ela dizia só `done`, e por isso a SEGUNDA mudança do asset (o
+# «ultra» da `D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA`) não chegaria nunca a
+# quem já tinha corrido a primeira: a cópia de fábrica de 24/09 ficaria para
+# sempre. Com a impressão do asset na marca, a migração roda de novo UMA vez
+# por asset novo, e só a cópia de fábrica é alcançada, como sempre.
 _FREESTYLE_DE_FABRICA_NASCE_LIGADO_MARKER = ".freestyle_de_fabrica_nasce_ligado"
+
+
+def _impressao_do_asset(asset: Path) -> str | None:
+    """A impressão do asset lido como JSON — um empacotador que reformate não a muda."""
+    import hashlib
+
+    try:
+        dados = json.loads(asset.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    canonico = json.dumps(dados, sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(canonico.encode("utf-8")).hexdigest()
+
+
+def _a_marca_ja_levou(marker: Path, impressao: str | None) -> bool:
+    """A marca diz que ESTE asset já foi levado? Marca de antes (`done`) diz que não."""
+    try:
+        return marker.read_text(encoding="utf-8").strip() == impressao
+    except OSError:
+        return False
 
 
 def _levar_a_fabrica_nova(
@@ -808,19 +842,23 @@ def o_freestyle_de_fabrica_nasce_ligado(dest_dir: Path | None = None) -> Path | 
     - o arquivo não é uma das fábricas de antes — é dela, ou já é o de hoje;
     - sem o asset de hoje não há para onde levar: nada muda e a marca não
       nasce, e a próxima carga tenta de novo — como sem a cópia.
+
+    One-shot POR ASSET: a marca guarda a impressão do asset que levou (ver o
+    bloco acima), e um asset novo a faz rodar mais uma vez.
     """
     directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
     marker = directory / _FREESTYLE_DE_FABRICA_NASCE_LIGADO_MARKER
-    if marker.exists():
-        return None
     asset = _seed_source_file(ARQUIVO_DO_PADRAO)
     if asset is None:
+        return None
+    impressao = _impressao_do_asset(asset)
+    if _a_marca_ja_levou(marker, impressao):
         return None
     alvo = directory / ARQUIVO_DO_PADRAO
     copia: Path | None = None
     desfecho = "sem_freestyle"
     with FileLock(str(_lock_path(marker))):
-        if marker.exists():
+        if _a_marca_ja_levou(marker, impressao):
             return None
         if alvo.is_file():
             # O LOCK DO ARQUIVO, o mesmo que o `save_profile` toma: um processo
@@ -829,7 +867,7 @@ def o_freestyle_de_fabrica_nasce_ligado(dest_dir: Path | None = None) -> Path | 
                 desfecho, copia = _levar_a_fabrica_nova(alvo, asset, directory)
         if desfecho != "sem_copia":
             with contextlib.suppress(Exception):
-                marker.write_text("done\n", encoding="utf-8")
+                marker.write_text(f"{impressao}\n", encoding="utf-8")
     logger.info(
         "freestyle_de_fabrica_nasce_ligado",
         desfecho=desfecho,

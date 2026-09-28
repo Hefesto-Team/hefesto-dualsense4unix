@@ -10,8 +10,11 @@
   "leds": {
     "lightbar": [40, 80, 180],
     "player_leds": [false, false, true, false, false],
-    "lightbar_brightness": 1.0
+    "lightbar_brightness": 1.0,
+    "player_led_brightness": "forte"
   },
-  "rumble": {"passthrough": true},
+  "rumble": {"passthrough": true, "policy": "max"},
+  "mic": {"button_toggles_system": true, "muted": false, "volume": 100, "gain": 100},
+  "speaker": {"volume": 102, "muted": false},
   "key_bindings": null
 }

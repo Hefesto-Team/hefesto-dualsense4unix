@@ -182,8 +182,10 @@ def test_o_boot_deixa_o_freestyle_valendo_nos_quatro_com_os_gatilhos_ligados(
     """Em cada caminho da sessão, o Freestyle vale, e o gatilho chega RÍGIDO aos quatro.
 
     O caminho do perfil de janela é o achado 1: o boot o pula de propósito e,
-    até esta sprint, ficava sem perfil até o jogo abrir — com o Modo Freestyle
-    ligado (a trava da cena), sem troca nenhuma por janela comum.
+    até esta sprint, ficava sem perfil até o jogo abrir. Com o Modo Freestyle
+    DESLIGADO, que é o caminho que esta régua mede: ligado, o restore ativa o
+    Freestyle direto (`test_o_freestyle_ligado_manda_em_tudo.py`), e a mordida
+    abaixo não morderia.
 
     MORDIDAS:
     - tire o `_o_de_fora_do_jogo_enquanto_espera` do ramo `if pulado:` de
@@ -195,7 +197,6 @@ def test_o_boot_deixa_o_freestyle_valendo_nos_quatro_com_os_gatilhos_ligados(
     _prepara_a_sessao(caminho)
     controle, pecas = _mesa_de_quatro(fabrica_de_bancada)
     store = StateStore()
-    store.set_autoswitch_locked(True)
 
     _boot(controle, store)
 
@@ -292,31 +293,41 @@ def test_a_espera_do_perfil_de_janela_segue_o_contrato_dela(
     assert _o_estado_do_boot(store) == (None, JOGO)
 
 
-def test_o_jogo_entra_por_cima_do_freestyle_com_o_modo_ligado(
+def test_com_o_modo_ligado_o_jogo_nao_entra_e_desligado_entra(
     semeadura_ligada: None, fabrica_de_bancada: Any,
 ) -> None:
-    """A cena inteira: o boot deixa o Freestyle, e o jogo que abre entra por cima.
+    """A cena inteira: o boot deixa o Freestyle; ligado, nada o troca; desligado, o jogo entra.
 
+    NOTA DATADA — 28/09/2026. Esta régua media a
     `D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA` (LOCK-CEDE-01): com o Modo
-    Freestyle ligado, a janela comum não troca o perfil — e a do jogo com perfil
-    próprio troca. É o autoswitch real, com o `ProfileManager` real.
+    Freestyle ligado, a janela do jogo com perfil próprio trocava o perfil. A
+    `D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA` a revogou: ligado, o Freestyle
+    manda em tudo, e o jogo só entra com ele desligado. É o autoswitch real, com
+    o `ProfileManager` real.
 
-    MORDIDA: a mesma da primeira célula da matriz — sem o Freestyle no boot, a
-    janela comum não tem perfil nenhum a segurar.
+    MORDIDA: devolva ao `_tick` do autoswitch o cadeado que cedia à regra do
+    jogo, e tire a recusa do `ProfileManager.activate` — a primeira metade
+    reprova com o Sackboy valendo.
     """
     _prepara_a_sessao("sessao-com-perfil-de-janela")
     controle, _ = _mesa_de_quatro(fabrica_de_bancada)
     store = StateStore()
-    store.set_autoswitch_locked(True)
     _boot(controle, store)
-    vigia = AutoSwitcher(manager=ProfileManager(controller=controle, store=store),
-                         window_reader=lambda: {}, store=store)
+    gerente = ProfileManager(controller=controle, store=store)
+    gerente.activate(loader.NOME_DO_PADRAO, origin="manual")
+    assert store.freestyle_ligado is True
+    vigia = AutoSwitcher(manager=gerente, window_reader=lambda: {}, store=store)
 
     for t in (0.0, 0.6, 30.0):
         vigia._tick({"wm_class": "firefox", "wm_name": "Mozilla Firefox"}, t)
+    for t in (31.0, 31.6, 60.0):
+        vigia._tick({"wm_class": JANELA_DO_JOGO, "wm_name": "Sackboy"}, t)
     assert store.active_profile == loader.NOME_DO_PADRAO
 
-    for t in (31.0, 31.6):
+    from hefesto_dualsense4unix.profiles.manager import ligar_o_freestyle
+
+    ligar_o_freestyle(store, False)
+    for t in (61.0, 61.6):
         vigia._tick({"wm_class": JANELA_DO_JOGO, "wm_name": "Sackboy"}, t)
     assert _o_estado_do_boot(store) == (JOGO, None)
 
@@ -515,7 +526,11 @@ def test_a_fabrica_do_freestyle_nasce_com_o_gatilho_de_nascimento_do_produto() -
 
 
 def test_a_lista_das_fabricas_de_antes_e_fechada() -> None:
-    """Cinco versões, todas com os gatilhos em Off, e o asset de hoje fora dela.
+    """Seis versões, e o asset de hoje fora dela.
+
+    As cinco primeiras nasceram com os gatilhos em Off; a sexta é a de 24/09
+    (O-MODO-FREESTYLE-03), com o gatilho de nascimento e sem o «ultra» de
+    28/09 (O-FREESTYLE-E-UMA-CAMADA-SO-01).
 
     Com o asset de hoje dentro, a migração o trocaria por ele mesmo a cada
     disco novo e guardaria no histórico um arquivo que ninguém escreveu.
@@ -523,12 +538,14 @@ def test_a_lista_das_fabricas_de_antes_e_fechada() -> None:
     antigas = loader._FABRICAS_ANTERIORES_DO_FREESTYLE
     hoje = json.loads(ASSET.read_text(encoding="utf-8"))
     assert hoje not in antigas
-    assert len({json.dumps(v, sort_keys=True) for v in antigas}) == len(antigas) == 5
+    assert len({json.dumps(v, sort_keys=True) for v in antigas}) == len(antigas) == 6
+    nascimento = esquema.MODO_DE_NASCIMENTO_DO_GATILHO
+    modos = [{lado: g["mode"] for lado, g in _gatilhos(v).items()} for v in antigas]
+    assert modos == [{"left": "Off", "right": "Off"}] * 5 + [
+        {"left": nascimento, "right": nascimento}]
     for versao in antigas:
         assert versao["name"] == loader.NOME_DO_PADRAO
         assert versao["match"] == {"type": "any"}
-        assert {lado: g["mode"] for lado, g in _gatilhos(versao).items()} == {
-            "left": "Off", "right": "Off"}
         Profile.model_validate(versao)
 
 
@@ -544,9 +561,9 @@ def _copias(pasta: Path) -> list[bytes]:
     return [c.read_bytes() for c in sorted(historico.glob("*.json"))]
 
 
-@pytest.mark.parametrize("versao", range(5), ids=[  # (noqa-acento): nome de parâmetro
+@pytest.mark.parametrize("versao", range(6), ids=[  # (noqa-acento): nome de parâmetro
     "22-04-974c55869", "22-04-c2bd10f8e", "23-04-099e4f839",
-    "28-06-00eb5eeb9", "20-07-4a9bb696e"])
+    "28-06-00eb5eeb9", "20-07-4a9bb696e", "24-09-o-modo-freestyle-03"])
 def test_a_copia_de_fabrica_antiga_vira_a_de_hoje_e_tem_volta(
     semeadura_ligada: None, versao: int,
 ) -> None:
@@ -556,7 +573,7 @@ def test_a_copia_de_fabrica_antiga_vira_a_de_hoje_e_tem_volta(
     histórico» os devolve; a marca faz a segunda carga não fazer nada.
 
     MORDIDA: tire a chamada `o_freestyle_de_fabrica_nasce_ligado()` de
-    `_maybe_seed_presets` e as cinco células reprovam com os gatilhos em Off.
+    `_maybe_seed_presets` e as seis células reprovam, com o arquivo de antes.
     """
     pasta = profiles_dir(ensure=True)
     bruto = _grava(pasta, loader._FABRICAS_ANTERIORES_DO_FREESTYLE[versao])
