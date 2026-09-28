@@ -3,8 +3,9 @@
 O dono é ``core/formas_do_endereco.py``. Esta régua mede o que ELE faz: as
 seis formas, as duas ordens de byte, os separadores, o virtual derivado, o
 serial, e o que não pode ser corrompido (o carimbo, o PID, o UUID, o despejo).
-Os seis mascaradores do produto, o diário, o «Copiar» e as três réguas de
-forma chamam o dono na onda 2, e as partes deles entram aqui com eles.
+E mede os que o chamam (onda 2): os seis mascaradores do produto e o
+``_id_visivel`` (régua 3), o diário (4), o «Copiar» (5), o ensaio do touchpad
+num clone limpo (6) e as três réguas de forma (7).
 
 **Nenhum endereço aparece literal aqui**: os portões de anonimato varrem
 ``tests/``. O endereço é montado em tempo de execução, na faixa das fixtures
@@ -19,16 +20,20 @@ uma parte do dono e confere que a régua reprova.
 from __future__ import annotations
 
 import ast
+import io
 import itertools
+import logging
 import os
 import re
 import subprocess
 import sys
-from collections.abc import Iterator
+import textwrap
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any, cast
 
 import pytest
+import structlog
 
 from hefesto_dualsense4unix.core import formas_do_endereco as dono
 from hefesto_dualsense4unix.integrations.uhid_gamepad import vpad_mac, vpad_macs_do_aparelho
@@ -588,3 +593,306 @@ def test_mordida_a_peneira_inventa_endereco(monkeypatch: pytest.MonkeyPatch) -> 
 
     monkeypatch.setattr(dono, "_octetos_de", peneira)
     assert dono.mascarar_endereco("x" + "".join(OCTETOS)) is not None
+
+
+# --- régua 3: um dono -----------------------------------------------------------------------
+#
+# Os seis mascaradores do produto e o `_id_visivel` da aba Perfis chamam o dono. Cada um
+# guarda a grafia que devolvia; nenhum devolve o cru.
+
+_OS_QUE_CHAMAM_O_DONO = {
+    "battery_journal.mascarar_endereco": (
+        "src/hefesto_dualsense4unix/daemon/battery_journal.py", "mascarar_endereco"),
+    "gesto_de_reconexao.mascarar": (
+        "src/hefesto_dualsense4unix/integrations/gesto_de_reconexao.py", "mascarar"),
+    "sinal_da_barra.mascarar": (
+        "src/hefesto_dualsense4unix/integrations/sinal_da_barra.py", "mascarar"),
+    "o_cabo_em_espera.mascarar": (
+        "src/hefesto_dualsense4unix/integrations/o_cabo_em_espera.py", "mascarar"),
+    "ar_do_adaptador._mascarar": (
+        "src/hefesto_dualsense4unix/integrations/ar_do_adaptador.py", "_mascarar"),
+    "a09_sistema.mascarar_o_diario": (
+        "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py", "mascarar_o_diario"),
+    "perfis_web._id_visivel": (
+        "src/hefesto_dualsense4unix/app/actions/perfis_web.py", "_id_visivel"),
+}
+
+_MODULO_DO_DONO = "hefesto_dualsense4unix.core.formas_do_endereco"
+_API_DO_DONO = {"mascarar", "mascarar_endereco"}
+
+
+def _o_corpo_chama_o_dono(fonte: str, nome: str) -> tuple[bool, list[str]]:
+    """(o corpo de ``nome`` chama o dono?, as contas próprias que ele ainda tem).
+
+    Conta própria é o que a máscara de antes fazia à mão: ``re``, ``split``, a
+    fatia de octeto e a peneira dos dígitos hex.
+    """
+    arvore = ast.parse(fonte)
+    apelidos: set[str] = set()
+    nomes: set[str] = set()
+    for no in arvore.body:
+        if isinstance(no, ast.ImportFrom) and no.module == "hefesto_dualsense4unix.core":
+            apelidos |= {a.asname or a.name for a in no.names if a.name == "formas_do_endereco"}
+        elif isinstance(no, ast.ImportFrom) and no.module == _MODULO_DO_DONO:
+            nomes |= {a.asname or a.name for a in no.names if a.name in _API_DO_DONO}
+    funcao = next(
+        no for no in ast.walk(arvore)
+        if isinstance(no, ast.FunctionDef | ast.AsyncFunctionDef) and no.name == nome
+    )
+    chama = False
+    contas: list[str] = []
+    for no in ast.walk(funcao):
+        if isinstance(no, ast.Call):
+            alvo = no.func
+            if (
+                isinstance(alvo, ast.Attribute)
+                and isinstance(alvo.value, ast.Name)
+                and alvo.value.id in apelidos
+                and alvo.attr in _API_DO_DONO
+            ) or (isinstance(alvo, ast.Name) and alvo.id in nomes):
+                chama = True
+            if isinstance(alvo, ast.Attribute) and alvo.attr == "split":
+                contas.append("split")
+        elif isinstance(no, ast.Name) and no.id == "re":
+            contas.append("re")
+        elif isinstance(no, ast.Subscript) and isinstance(no.slice, ast.Slice):
+            contas.append("fatia")
+        elif isinstance(no, ast.Constant) and no.value == "0123456789abcdef":
+            contas.append("peneira")
+    return chama, contas
+
+
+@pytest.mark.parametrize("nome", sorted(_OS_QUE_CHAMAM_O_DONO))
+def test_o_corpo_de_cada_um_chama_o_dono_e_nao_tem_conta_propria(nome: str) -> None:
+    caminho, funcao = _OS_QUE_CHAMAM_O_DONO[nome]
+    chama, contas = _o_corpo_chama_o_dono((RAIZ / caminho).read_text(encoding="utf-8"), funcao)
+    assert chama, f"{nome} não chama o dono"
+    assert contas == [], f"{nome} ainda faz conta própria: {contas}"
+
+
+def _grafias() -> dict[str, str]:
+    return {
+        "dois-pontos": ENDERECO,
+        "hífen": "-".join(OCTETOS),
+        "sublinhado": "_".join(OCTETOS),
+        "colada": "".join(OCTETOS),
+        "maiúsculas": ENDERECO.upper(),
+    }
+
+
+def _valores_que_nao_sao_um_endereco() -> dict[str, str]:
+    """Textos com um endereço dentro, numa forma que o dono reconhece."""
+    return {
+        "o caminho do BlueZ": f"/org/bluez/hci0/dev_{'_'.join(OCTETOS).upper()}",
+        "a linha do diário": f"uniq={ENDERECO} rota=2",
+        "o nó de som": f"hefesto_som_{SUFIXO}",
+        "o endereço com a barra": f"{ENDERECO}/sep1",
+    }
+
+
+def _importar(caminho: str, funcao: str) -> Callable[[Any], Any]:
+    import importlib
+
+    modulo = caminho.removeprefix("src/").removesuffix(".py").replace("/", ".")
+    return cast(Callable[[Any], Any], getattr(importlib.import_module(modulo), funcao))
+
+
+def _sem_o_diario() -> list[str]:
+    """Os que se importam sem o GTK; o do diário da 09 tem a régua dele abaixo."""
+    return sorted(n for n in _OS_QUE_CHAMAM_O_DONO if not n.startswith("a09_sistema"))
+
+
+#: A grafia que cada um devolvia, e que guarda: o que sai de um endereço de entrada.
+_A_GRAFIA_DE_CADA_UM: dict[str, Callable[[str], str]] = {
+    "battery_journal.mascarar_endereco": lambda _grafia: ":".join(MASCARADO),
+    "gesto_de_reconexao.mascarar": lambda _grafia: ":".join(MASCARADO),
+    "sinal_da_barra.mascarar": lambda grafia: dono.mascarar(grafia),
+    "o_cabo_em_espera.mascarar": lambda _grafia: "".join(MASCARADO),
+    "ar_do_adaptador._mascarar": lambda grafia: dono.mascarar(grafia),
+    "perfis_web._id_visivel": lambda _grafia: ":".join(MASCARADO).upper(),
+}
+
+
+def _doze_do_cru(saida: object) -> bool:
+    """A saída carrega os doze hex do endereço cru, em qualquer separador?"""
+    return "".join(OCTETOS) in re.sub(r"[:\-_. ]", "", str(saida).lower())
+
+
+@pytest.mark.parametrize("grafia", sorted(_grafias()))
+@pytest.mark.parametrize("nome", _sem_o_diario())
+def test_cada_um_mascara_o_endereco_em_toda_grafia(nome: str, grafia: str) -> None:
+    mascarar = _importar(*_OS_QUE_CHAMAM_O_DONO[nome])
+    valor = _grafias()[grafia]
+    saida = mascarar(valor)
+    assert saida == _A_GRAFIA_DE_CADA_UM[nome](valor), (nome, grafia)
+    assert _janelas_que_sobram(str(saida)) == []
+
+
+@pytest.mark.parametrize("valor", sorted(_valores_que_nao_sao_um_endereco()))
+@pytest.mark.parametrize("nome", _sem_o_diario())
+def test_o_que_nao_e_um_endereco_nunca_volta_cru(nome: str, valor: str) -> None:
+    mascarar = _importar(*_OS_QUE_CHAMAM_O_DONO[nome])
+    saida = mascarar(_valores_que_nao_sao_um_endereco()[valor])
+    assert saida is not None, nome
+    assert not _doze_do_cru(saida), (nome, valor)
+    assert _janelas_que_sobram(str(saida)) == []
+
+
+@pytest.mark.parametrize("nome", _sem_o_diario())
+def test_cada_um_tira_o_hash_do_virtual(nome: str) -> None:
+    mascarar = _importar(*_OS_QUE_CHAMAM_O_DONO[nome])
+    for virtual in _virtuais():
+        assert _hash_que_sobra(str(mascarar(virtual)), virtual) == [], nome
+
+
+#: O corpo do `sinal_da_barra.mascarar` até 28/09/2026: só dois-pontos, e o resto cru.
+_O_CORPO_DE_ANTES = textwrap.dedent('''
+    def mascarar(mac: str) -> str:
+        partes = mac.split(":")
+        if len(partes) != 6:
+            return mac
+        partes[3] = partes[4] = "00"
+        return ":".join(partes)
+''')
+
+
+def test_mordida_o_corpo_de_antes_do_sinal_da_barra_reprova() -> None:
+    chama, contas = _o_corpo_chama_o_dono(_O_CORPO_DE_ANTES, "mascarar")
+    assert not chama and "split" in contas
+    espaco: dict[str, Any] = {}
+    exec(compile(_O_CORPO_DE_ANTES, "<o corpo de antes>", "exec"), espaco)
+    assert _doze_do_cru(espaco["mascarar"](_grafias()["colada"]))
+    assert _janelas_que_sobram(espaco["mascarar"](_grafias()["hífen"])) != []
+
+
+# --- régua 4: o diário nasce mascarado ------------------------------------------------------
+
+
+class _TerminalDeMentira(io.StringIO):
+    """Um buffer que se diz terminal: o `ConsoleRenderer` põe as cores."""
+
+    def isatty(self) -> bool:
+        return True
+
+
+def _a_linha_de_prova(log: Any) -> None:
+    virtual = _virtuais()[0]
+    log.info(
+        "haptica_endpoint_criado",
+        uniq=ENDERECO,
+        sink=f"alsa_output.usb-Sony_DualSense_Wireless_Controller_HEFESTO{SUFIXO}-00.HiFi",
+        rotulo=f"hefesto-ponte-{SUFIXO}-sink",
+        mac=virtual,
+        chave="".join(OCTETOS),
+        nos=[f"hefesto_som_{SUFIXO}", {"mic": f"hefesto_mic_{SUFIXO}"}],
+    )
+
+
+def _o_logger_do_produto(
+    fmt: str, buf: io.StringIO, processadores: list[Any] | None = None
+) -> Any:
+    """Um logger embrulhado num buffer, com a cadeia do produto. Nada do global muda."""
+    from hefesto_dualsense4unix.utils import logging_config
+
+    return structlog.wrap_logger(
+        structlog.PrintLogger(file=buf),
+        processors=processadores or logging_config.cadeia_do_diario(fmt, buf),
+        wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
+        context_class=dict,
+    )
+
+
+def _o_que_sobra_no_diario(saida: str) -> list[str]:
+    sobra = _janelas_que_sobram(saida)
+    for virtual in _virtuais()[:1]:
+        sobra += [f"hash {i}" for i in _hash_que_sobra(saida, virtual)]
+    return sobra
+
+
+@pytest.mark.parametrize("fmt", ["console", "console colorido", "json"])
+def test_a_linha_do_structlog_sai_sem_janela(fmt: str) -> None:
+    buf: io.StringIO = _TerminalDeMentira() if fmt == "console colorido" else io.StringIO()
+    _a_linha_de_prova(_o_logger_do_produto(fmt.split()[0], buf))
+    saida = buf.getvalue()
+    assert "haptica_endpoint_criado" in saida
+    if fmt == "console colorido":
+        assert "\x1b[" in saida, "a prova das cores precisa das cores"
+    assert _o_que_sobra_no_diario(saida) == [], fmt
+    assert "HEFESTO" + SUFIXO_MASCARADO in saida
+
+
+def _o_logger_de_biblioteca(buf: io.StringIO, com_o_filtro: bool = True) -> logging.Logger:
+    from hefesto_dualsense4unix.utils import logging_config
+
+    logger = logging.Logger("biblioteca-de-mentira")
+    manipulador = logging.StreamHandler(buf)
+    if com_o_filtro:
+        manipulador.addFilter(logging_config.MascaraDoDiario())
+    logger.addHandler(manipulador)
+    return logger
+
+
+def _a_linha_de_biblioteca(logger: logging.Logger) -> None:
+    caminho = f"/org/bluez/hci0/dev_{'_'.join(OCTETOS).upper()}"
+    logger.warning("aparelho %s caiu em %s", ENDERECO, caminho)
+    try:
+        raise RuntimeError(f"org.bluez.Error.Failed em {caminho} ({''.join(OCTETOS)})")
+    except RuntimeError:
+        logger.exception("o rádio levantou sobre %s", ENDERECO.upper())
+
+
+def test_a_linha_do_logging_sai_sem_janela_pelo_filtro() -> None:
+    buf = io.StringIO()
+    _a_linha_de_biblioteca(_o_logger_de_biblioteca(buf))
+    saida = buf.getvalue()
+    assert "Traceback" in saida and "caiu em" in saida
+    assert _janelas_que_sobram(saida) == []
+
+
+def test_o_configure_logging_do_produto_fia_a_cadeia_e_o_filtro() -> None:
+    """Num processo limpo: o `configure_logging` de verdade, nos dois caminhos."""
+    codigo = textwrap.dedent(f'''
+        import logging, sys
+        from hefesto_dualsense4unix.utils import logging_config
+        logging_config.configure_logging(stream=sys.stdout, fmt=sys.argv[1])
+        log = logging_config.get_logger("prova")
+        log.info("prova", uniq={ENDERECO!r}, sink="HEFESTO" + {SUFIXO!r})
+        logging.getLogger("biblioteca").warning("caiu %s", {"_".join(OCTETOS)!r})
+    ''')
+    for fmt in ("console", "json"):
+        saida = subprocess.run(
+            [sys.executable, "-c", codigo, fmt], capture_output=True, text=True,
+            timeout=60, env=os.environ.copy(), check=True,
+        ).stdout
+        assert "prova" in saida and "caiu" in saida, saida
+        assert _janelas_que_sobram(saida) == [], fmt
+
+
+def test_mordida_sem_o_dono_na_cadeia_a_linha_vaza() -> None:
+    from hefesto_dualsense4unix.utils import logging_config
+
+    buf = io.StringIO()
+    sem_o_dono = logging_config.cadeia_do_diario("console", buf)[:-1]
+    _a_linha_de_prova(_o_logger_do_produto("console", buf, sem_o_dono))
+    assert _o_que_sobra_no_diario(buf.getvalue()) != []
+
+
+def test_mordida_sem_o_filtro_a_linha_de_biblioteca_vaza() -> None:
+    buf = io.StringIO()
+    _a_linha_de_biblioteca(_o_logger_de_biblioteca(buf, com_o_filtro=False))
+    assert _janelas_que_sobram(buf.getvalue()) != []
+
+
+def test_um_defeito_no_dono_nao_derruba_o_log(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O dono levanta: a linha sai com o nome do erro, sem o endereço, e ninguém cai."""
+
+    def quebrado(texto: str, conhecidos: Any = ()) -> str:
+        raise ValueError("defeito de mentira")
+
+    monkeypatch.setattr(dono, "mascarar", quebrado)
+    buf = io.StringIO()
+    _a_linha_de_prova(_o_logger_do_produto("console", buf))
+    _a_linha_de_biblioteca(_o_logger_de_biblioteca(buf))
+    saida = buf.getvalue()
+    assert saida.count("mascara_do_diario_falhou erro=ValueError") >= 3, saida
+    assert _janelas_que_sobram(saida) == []

@@ -11,15 +11,28 @@ Uso:
     configure_logging()
     logger = get_logger(__name__)
     logger.info("daemon_start", transport="usb", profile="shooter")
+
+O DIÁRIO NASCE MASCARADO (O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-01,
+28/09/2026). O journal é o que se copia num relato de defeito, e até aqui ele
+guardava o endereço dos controles cru. O dono da máscara
+(``core/formas_do_endereco.mascarar``) é o último passo da cadeia do structlog,
+sobre o texto JÁ RENDERIZADO — mascarar valor a valor deixaria de fora a lista
+``nos=[…]`` e os dicionários aninhados —, e um ``logging.Filter`` no
+manipulador do ``basicConfig`` faz o mesmo com a linha de biblioteca, que não
+passa pela cadeia. Um defeito no dono não derruba o log: a linha sai com o
+nome do erro no lugar do texto (:func:`mascarar_a_linha`).
 """
 from __future__ import annotations
 
 import logging
 import os
+import re
 import sys
 from typing import TYPE_CHECKING, Any
 
 import structlog
+
+from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 
 if TYPE_CHECKING:
     from structlog.typing import Processor
@@ -43,6 +56,88 @@ else:
 
 _configured = False
 
+#: As cores do terminal que o ``ConsoleRenderer`` põe em volta de cada valor.
+#: O dono lê a borda de uma forma pelo vizinho (a colada exige um vizinho que
+#: não seja letra nem algarismo), e o ``m`` que fecha a cor encosta no valor:
+#: a linha colorida se mascara pedaço a pedaço, entre as cores.
+_COR_DO_TERMINAL = re.compile(r"(\x1b\[[0-9;]*m)")
+
+
+def mascarar_a_linha(texto: str) -> str:
+    """A linha do diário na máscara da casa. Nunca levanta.
+
+    Se o dono levantar, a linha sai com o nome do erro e o tamanho do texto no
+    lugar dele: o log não cai (uma exceção aqui subiria até quem chamou
+    ``logger.info``) e o endereço não sai cru — um endereço vazado não se
+    apaga, e a linha perdida se reconta pelo erro.
+    """
+    try:
+        if "\x1b[" not in texto:
+            return _formas.mascarar(texto)
+        partes = _COR_DO_TERMINAL.split(texto)
+        return "".join(
+            parte if i % 2 else _formas.mascarar(parte) for i, parte in enumerate(partes)
+        )
+    except Exception as erro:
+        return f"mascara_do_diario_falhou erro={type(erro).__name__} caracteres={len(texto)}"
+
+
+def _mascarar_o_renderizado(_logger: Any, _metodo: str, renderizado: Any) -> Any:
+    """O último processador da cadeia: o texto já renderizado, pelo dono."""
+    if isinstance(renderizado, str):
+        return mascarar_a_linha(renderizado)
+    return renderizado
+
+
+class MascaraDoDiario(logging.Filter):
+    """A linha de biblioteca (a que sai pelo ``logging``) pelo mesmo dono.
+
+    Ela não passa pela cadeia do structlog. O filtro troca a mensagem já
+    formatada pela mascarada, e mascara também o traceback e a pilha, que o
+    formatador emenda depois. Nunca levanta e nunca descarta a linha.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            texto = record.getMessage()
+        except Exception as erro:
+            texto = f"mensagem_ilegivel erro={type(erro).__name__}"
+        record.msg, record.args = mascarar_a_linha(texto), None
+        if record.exc_info and not record.exc_text:
+            try:
+                record.exc_text = logging.Formatter().formatException(record.exc_info)
+            except Exception as erro:
+                record.exc_text = f"traceback_ilegivel erro={type(erro).__name__}"
+        if record.exc_text:
+            record.exc_text = mascarar_a_linha(record.exc_text)
+        if record.stack_info:
+            record.stack_info = mascarar_a_linha(record.stack_info)
+        return True
+
+
+def cadeia_do_diario(fmt: str = "console", stream: Any = None) -> list[Processor]:
+    """Os processadores do structlog do produto, na ordem, com o dono no fim.
+
+    Uma função, e não uma lista escrita dentro de :func:`configure_logging`: a
+    régua mede a cadeia do produto num logger próprio, sem reconfigurar o
+    structlog global (trocar a lista global desliga o ``capture_logs`` dos
+    outros testes, que a mexe no lugar).
+    """
+    shared_processors: list[Processor] = [
+        structlog.contextvars.merge_contextvars,
+        structlog.processors.add_log_level,
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.TimeStamper(fmt="iso", utc=False),
+    ]
+
+    if fmt == "json":
+        renderer: Processor = structlog.processors.JSONRenderer()
+    else:
+        colors = stream.isatty() if hasattr(stream, "isatty") else False
+        renderer = structlog.dev.ConsoleRenderer(colors=colors)
+
+    return [*shared_processors, renderer, _mascarar_o_renderizado]
+
 
 def configure_logging(
     *,
@@ -60,27 +155,22 @@ def configure_logging(
     stream = stream or sys.stderr
 
     log_level = getattr(logging, level_name, logging.INFO)
+    raiz = logging.getLogger()
+    antes = list(raiz.handlers)
     logging.basicConfig(
         format="%(message)s",
         stream=stream,
         level=log_level,
     )
-
-    shared_processors: list[Processor] = [
-        structlog.contextvars.merge_contextvars,
-        structlog.processors.add_log_level,
-        structlog.processors.StackInfoRenderer(),
-        structlog.processors.TimeStamper(fmt="iso", utc=False),
-    ]
-
-    if log_fmt == "json":
-        renderer: Processor = structlog.processors.JSONRenderer()
-    else:
-        colors = stream.isatty() if hasattr(stream, "isatty") else False
-        renderer = structlog.dev.ConsoleRenderer(colors=colors)
+    # SÓ o manipulador que o `basicConfig` criou ganha o filtro: se a raiz já
+    # tinha dono (o `caplog` de uma régua), o `basicConfig` não faz nada, e o
+    # filtro não entra num manipulador que não é do produto.
+    for manipulador in raiz.handlers:
+        if manipulador not in antes:
+            manipulador.addFilter(MascaraDoDiario())
 
     structlog.configure(
-        processors=[*shared_processors, renderer],
+        processors=cadeia_do_diario(log_fmt, stream),
         wrapper_class=structlog.make_filtering_bound_logger(log_level),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(file=stream),
@@ -104,4 +194,11 @@ def reset_for_tests() -> None:
     structlog.reset_defaults()
 
 
-__all__ = ["configure_logging", "get_logger", "reset_for_tests"]
+__all__ = [
+    "MascaraDoDiario",
+    "cadeia_do_diario",
+    "configure_logging",
+    "get_logger",
+    "mascarar_a_linha",
+    "reset_for_tests",
+]
