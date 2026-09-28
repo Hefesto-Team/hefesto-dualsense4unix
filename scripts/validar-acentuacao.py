@@ -415,9 +415,6 @@ WHITELIST_PATTERNS: list[str] = [
     # implementações sobre textos que TÊM de estar errados para haver o que
     # comparar. Sem esta linha o portão acusa a própria régua que o mede.
     r"^tests/unit/test_acentuacao_uma_passada_so\.py$",
-    # Registro histórico: são as mensagens de tag como foram escritas na época.
-    # Reescrevê-las falsificaria o histórico — o arquivo é arquivo, não texto vivo.
-    r"^docs/tags-arquivo-pre-1\.0\.txt$",
     r"\.json$",
     r"\.lock$",
     r"^\.git/.*",
