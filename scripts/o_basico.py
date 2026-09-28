@@ -1554,9 +1554,20 @@ def sub_sessao(s: Sessao, a: argparse.Namespace) -> None:
         _passo(s, "1b, os pads no boot", "todos", "—", NAO_SEI,
                "o diário deste boot não tem o daemon_starting")
     else:
-        _passo(s, "1b, os pads no boot", "todos", "—",
-               VERDE if no_boot == jogadores else VERMELHO,
-               f"{no_boot} pad(s) criados no boot para {jogadores} jogador(es)",
+        # O vermelho do 1b é o MULTIPLICADOR (mais pads que jogadores, 01 §4.2).
+        # Menos pads que os jogadores de agora é um controle que chegou depois
+        # da janela do boot: o boot não responde por ele, e isso não é verde.
+        if no_boot > jogadores:
+            veredito, porque = VERMELHO, f"{no_boot} pad(s) criados no boot para {jogadores} jogador(es)"
+        elif no_boot == 0 and _sem_pad_por_desenho(e):
+            veredito, porque = NAO_SE_APLICA, f"o modo ({modo_de(e)}) não cria pad"
+        elif no_boot == jogadores:
+            veredito, porque = VERDE, f"{no_boot} pad(s) criados no boot para {jogadores} jogador(es)"
+        else:
+            veredito, porque = NAO_SEI, (
+                f"{no_boot} pad(s) no boot para {jogadores} jogador(es) agora: quem chegou depois"
+                f" dos {JANELA_DO_BOOT_S:g} s do boot não passou por ele")
+        _passo(s, "1b, os pads no boot", "todos", "—", veredito, porque,
                comando="journalctl --user -u hefesto-dualsense4unix -b",
                medida={"pads_no_boot": no_boot, "jogadores": jogadores})
 
@@ -1785,6 +1796,10 @@ def _linha_da_mascara_contra_o_pad(s: Sessao, estado: Mapping[str, Any], pads: S
     casa-se o MULTICONJUNTO — tantos pads daquela máscara quantos jogadores a
     pedem —, e o jogador que falta sai vermelho.
     """
+    if _sem_pad_por_desenho(estado):
+        _passo(s, "a máscara contra o pad" + sufixo, "todos", "—", NAO_SE_APLICA,
+               f"o modo ({modo}) não cria pad: a máscara não chega ao jogo", modo=modo)
+        return
     nomes_uinput = _nomes_dos_pads_uinput()
     emulacao = _dict(estado.get("gamepad_emulation"))
     por_aparelho = _dict(emulacao.get("por_aparelho"))
@@ -1814,10 +1829,29 @@ def _linha_da_mascara_contra_o_pad(s: Sessao, estado: Mapping[str, Any], pads: S
                modo=modo, comando="/proc/bus/input/devices × state_full")
 
 
+def _sem_pad_por_desenho(estado: Mapping[str, Any]) -> bool:
+    """Conexão Nativa ou emulação desligada (a Navegação): o jogo lê o físico, e não há pad.
+
+    É o mesmo recorte do dono do modo (``o_modo_no_ar.modo_contra_o_ar``):
+    ali, sem pad nesses modos é OK. Toda linha que conta pad tem de valer em
+    todo modo, e não só nos dois que criam pad.
+    """
+    return modo_de(estado) in ("nativo", "desligado")
+
+
 def _linha_1a(s: Sessao, estado: Mapping[str, Any], pads: Sequence[PadNoKernel], sufixo: str, modo: str) -> None:
     """1a, um pad por jogador AGORA: a contagem e o dono de cada um (01 A11)."""
     jogadores = len(controles_na_mesa(estado))
     per_vpad = _lista(_dict(estado.get("rumble_ff")).get("per_vpad"))
+    if _sem_pad_por_desenho(estado):
+        sobrando = len(pads) or len(per_vpad)
+        _passo(s, "1a, um pad por jogador agora" + sufixo, "todos", "—",
+               VERMELHO if sobrando else NAO_SE_APLICA,
+               f"{len(pads)} pad(s) no kernel e {len(per_vpad)} no daemon, e o modo ({modo}) não cria pad"
+               if sobrando else f"o modo ({modo}) não cria pad: o jogo lê o físico",
+               modo=modo, comando="/proc/bus/input/devices × per_vpad[]",
+               medida={"pads": len(pads), "per_vpad": len(per_vpad)})
+        return
     if len(pads) != jogadores or len(per_vpad) != jogadores:
         veredito = VERMELHO
         porque = f"{len(pads)} pad(s) no kernel e {len(per_vpad)} no daemon para {jogadores} jogador(es)"
@@ -2670,7 +2704,10 @@ def sub_movimento(s: Sessao, a: argparse.Namespace) -> None:
     for c in mesa:
         jogador = f"P{c['player']}"
         pad = per_vpad.get(int(c["player"]), {})
-        if c.get("vpad_backend") == "uhid":
+        if _sem_pad_por_desenho(e):
+            _passo(s, "o movimento chega ao pad", jogador, transporte_de(c), NAO_SE_APLICA,
+                   f"o modo ({modo_de(e)}) não cria pad: o jogo lê o físico, e o físico é a linha acima")
+        elif c.get("vpad_backend") == "uhid":
             hz = float(pad.get("motion_hz") or 0.0)
             _passo(s, "o movimento chega ao pad", jogador, transporte_de(c),
                    VERDE if pad.get("motion_streaming") and hz >= 200 else VERMELHO,

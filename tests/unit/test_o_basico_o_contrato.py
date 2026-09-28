@@ -945,3 +945,60 @@ def test_a_queda_dita_explica_e_nao_absolve_o_modo_contra_o_ar(
     assert "sem_uhid" in por_jogador["P2"]["porque"]
     assert {por_jogador[j]["veredito"] for j in ("P1", "P3", "P4")} == {ob.VERDE}
     assert rc == ob.RC_VERMELHO
+
+
+def _estado_sem_pad(modo: str) -> dict[str, Any]:
+    """A mesa na Conexão Nativa (``nativo``) ou na Navegação (``desligado``): nenhum pad."""
+    estado = estado_da_mesa()
+    estado["native_mode"] = modo == "nativo"
+    estado["gamepad_emulation"]["enabled"] = False
+    estado["rumble_ff"]["per_vpad"] = []
+    for c in estado["controllers"]:
+        c["vpad_backend"] = None
+    return estado
+
+
+@pytest.mark.parametrize("modo", ["nativo", "desligado"])
+def test_o_modo_sem_pad_nao_sai_vermelho_por_nao_ter_pad(
+    ob: ModuleType, tmp_path: Path, modo: str
+) -> None:
+    """Toda linha que conta pad vale em todo modo, não só nos dois que criam pad.
+
+    Na Conexão Nativa e na Navegação o jogo lê o físico: zero pad é o certo, e
+    o dono do modo (``modo_contra_o_ar``) já diz OK. O ``eixos`` dava o 1a
+    vermelho, a máscara «não sei», o ``movimento`` vermelho em todo jogador e o
+    1b vermelho. Mordida: tirar o ``_sem_pad_por_desenho`` de uma das linhas.
+    """
+    estado = _estado_sem_pad(modo)
+    diario = [linha_do_diario(1.0, "daemon_starting")]
+    maquina = fazer_maquina(
+        ob, estado, tmp_path / "config", diario=diario, dispositivos="",
+        ensaios={"quem_e_quem.py": quem_e_quem_json(ob, estado)},
+    )
+    saida = tmp_path / "saida"
+    assert ob.executar(["--saida", str(saida / "e"), "eixos"], maquina) == ob.RC_VERDE
+    assert [p["linha"] for p in passos(saida / "e") if p["veredito"] == ob.VERMELHO] == []
+    (um_a,) = da_linha(saida / "e", "1a, um pad por jogador agora")
+    assert um_a["veredito"] == ob.NAO_SE_APLICA
+
+    ob.executar(["--saida", str(saida / "s"), SUB_DA_SESSAO], maquina)
+    (um_b,) = da_linha(saida / "s", "1b, os pads no boot")
+    assert um_b["veredito"] == ob.NAO_SE_APLICA
+
+    ob.executar(["--saida", str(saida / "m"), "movimento"], maquina)
+    movimento = da_linha(saida / "m", "o movimento chega ao pad")
+    assert {p["veredito"] for p in movimento} == {ob.NAO_SE_APLICA}
+
+
+def test_o_1b_com_menos_pads_que_jogadores_e_nao_sei_e_nunca_vermelho(
+    ob: ModuleType, tmp_path: Path
+) -> None:
+    """O vermelho do 1b é o multiplicador. Um controle que chegou depois do boot é «não sei»."""
+    diario = [linha_do_diario(1.0, "daemon_starting")]
+    diario += [linha_do_diario(2.0 + i, "uhid_device_created") for i in range(3)]
+    maquina = fazer_maquina(ob, estado_da_mesa(), tmp_path / "config", diario=diario,
+                            dispositivos=pads_uhid(4))
+    saida = tmp_path / "saida"
+    ob.executar(["--saida", str(saida), SUB_DA_SESSAO], maquina)
+    (linha,) = da_linha(saida, "1b, os pads no boot")
+    assert linha["veredito"] == ob.NAO_SEI, linha
