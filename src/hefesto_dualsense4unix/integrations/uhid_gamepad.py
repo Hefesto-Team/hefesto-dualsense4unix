@@ -64,6 +64,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.core.rumble import pedido_mais_forte
+from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -247,6 +248,11 @@ _LUZ_FLAGS = 0x14
 
 #: Cap de eventos drenados por tick — o jogo pode mandar output em rajada.
 _MAX_EVENTS_PER_PUMP = 64
+
+#: A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01: de quanto em quanto o fio do
+#: uhid acorda sem evento. O `stop()` o acorda pelo despertador na hora; o
+#: prazo é só a rede de quem ficou sem ser acordado.
+_UHID_FIO_ACORDA_S = 1.0
 
 #: QUEM ESCREVEU-01 — quantos reports de vibração o anel guarda. Oito bastam
 #: para ver o padrão (start/stop, escada de fade-out, o zero solto do
@@ -1121,6 +1127,23 @@ class UhidDualSense:
     #: Contador de sequência do report (0-255, wrap). O hid_playstation o usa
     #: para detectar perda de pacote, então só anda quando um report SAI.
     _seq: int = 0
+    # --- A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01 (28/09/2026) -------------
+    #: O fio que lê o fd do uhid por prontidão, desde a linha seguinte à
+    #: criação (ver `_iniciar_o_fio_do_uhid`, no fim da classe). None = sem fd
+    #: de verdade (os dublês da suíte): o tique drena, como antes.
+    _fio_do_uhid: threading.Thread | None = None
+    #: Pedido de saída do fio, e o pipe que o acorda na hora do `stop()`.
+    _pare_o_fio: threading.Event | None = None
+    _despertador: tuple[int, int] | None = None
+    #: Guarda o estado da saída entre o fio (que atende) e o tique (que
+    #: entrega ao físico). Outra trava que não a `_lock` da entrada: o report
+    #: do controle não espera a saída. Quem a usa pergunta ao dono,
+    #: `_a_trava_da_saida`, que a garante sozinho.
+    _trava_da_saida: threading.RLock = field(default_factory=threading.RLock)
+    #: O que o fio atendeu e só o tique entrega: o último par de vibração e o
+    #: fim da sessão do jogo.
+    _rumble_a_entregar: tuple[int, int] | None = None
+    _fim_de_sessao_a_entregar: bool = False
 
     @classmethod
     def for_flavor(
@@ -1525,6 +1548,7 @@ class UhidDualSense:
         with self._lock:
             self._features = features
             self._fd = fd
+        self._iniciar_o_fio_do_uhid(fd)
         logger.info("uhid_device_created", name=self.name, mac=self.mac,
                     player=self.player)
         return True
@@ -1574,14 +1598,21 @@ class UhidDualSense:
         return features
 
     def _destruir_o_device(self) -> None:
+        # A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01: o fio do uhid sai ANTES
+        # de o fd fechar (um poll num fd reaproveitado atenderia outro
+        # aparelho), e fora das travas: ele pode estar esperando a da saída.
+        self._parar_o_fio_do_uhid()
         # Sob o lock: o poll loop pode estar em send_report/pump_ff nesta hora, e
         # fechar o fd por baixo dele faria o write cair num fd já RECICLADO por
         # outra thread (escrita de 4 KB num destino aleatório).
-        with self._lock:
+        with self._a_trava_da_saida(), self._lock:
             fd = self._fd
             if fd is None:
                 return
             self._fd = None
+            # O que o fio atendeu e o tique ainda não entregou vai antes da
+            # parada: um «pare» pendente sem entrega deixaria o motor girando.
+            self._entregar_o_pendente()
             self._silence_rumble()
             # REPLICA-03: o vpad some — a posse do output volta ao perfil
             # ANTES do device morrer (mesma razão do _silence_rumble).
@@ -1653,8 +1684,13 @@ class UhidDualSense:
         self._rumble_visto_em = None
         if self._last_sent == (0, 0) or self.rumble_sink is None:
             return
-        with contextlib.suppress(Exception):
-            self.rumble_sink(0, 0)
+        if self._no_fio_do_uhid():
+            # A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01: o CLOSE chegou pelo
+            # fio; a parada vai ao físico no tique, como toda entrega.
+            self._rumble_a_entregar = (0, 0)
+        else:
+            with contextlib.suppress(Exception):
+                self.rumble_sink(0, 0)
         self._last_sent = (0, 0)
 
     def _create2_event(self, descriptor: bytes) -> bytes:
@@ -2122,6 +2158,12 @@ class UhidDualSense:
         Mesmo contrato do `UinputGamepad.pump_ff`: chamado a cada tick do poll
         loop, nunca bloqueia, e responde os GET/SET_REPORT do probe (sem isso o
         `hid_playstation` não registra o controle).
+
+        A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01 (28/09/2026): com o fio do
+        uhid de pé, quem LÊ o fd é ele, na hora (`_atender_o_uhid`); o tique só
+        entrega ao controle físico o que o fio atendeu, com o rate-limit e o
+        dedup de sempre. Sem o fio (os dublês, ou o fio que caiu), o tique
+        drena como antes.
         """
         # Lê o fd UMA vez: `stop()` concorrente (o poll loop bombeia enquanto a GUI
         # troca de modo) zerava self._fd no meio do laço e o os.read(None) levantava
@@ -2129,26 +2171,31 @@ class UhidDualSense:
         fd = self._fd
         if fd is None:
             return
-        # REPLICA-03: entrega o que o rate-limit reteve no tick anterior —
-        # o pump roda a cada tick do poll loop, então a latência é ~1 tick.
-        self._flush_replicas()
-        # RUMBLE-PRESO-01: antes de drenar, cobra o teto de silêncio do rumble
-        # que já está em vigor. Vem aqui (e não no fim) para que um motor preso
-        # pare mesmo num tique em que o jogo não mandou evento nenhum.
-        self._expirar_rumble_preso()
-        for _ in range(_MAX_EVENTS_PER_PUMP):
-            try:
-                data = os.read(fd, UHID_EVENT_SIZE)
-            except BlockingIOError:
+        with self._a_trava_da_saida():
+            self._entregar_o_pendente()
+            # REPLICA-03: entrega o que o rate-limit reteve no tick anterior —
+            # o pump roda a cada tick do poll loop, então a latência é ~1 tick.
+            self._flush_replicas()
+            # RUMBLE-PRESO-01: antes de drenar, cobra o teto de silêncio do
+            # rumble que já está em vigor. Vem aqui (e não no fim) para que um
+            # motor preso pare mesmo num tique em que o jogo não mandou evento.
+            self._expirar_rumble_preso()
+            fio = self._fio_do_uhid
+            if fio is not None and fio.is_alive():
                 return
-            except OSError as exc:
-                # EBADF esperado quando o stop() fechou o fd entre o topo e aqui.
-                if exc.errno != errno.EBADF:
-                    logger.warning("uhid_read_failed", err=str(exc), player=self.player)
-                return
-            if len(data) < 4:
-                return
-            self._handle_event(data)
+            for _ in range(_MAX_EVENTS_PER_PUMP):
+                try:
+                    data = os.read(fd, UHID_EVENT_SIZE)
+                except BlockingIOError:
+                    return
+                except OSError as exc:
+                    # EBADF esperado quando o stop() fechou o fd entre o topo e aqui.
+                    if exc.errno != errno.EBADF:
+                        logger.warning("uhid_read_failed", err=str(exc), player=self.player)
+                    return
+                if len(data) < 4:
+                    return
+                self._handle_event(data)
 
     def _handle_event(self, data: bytes) -> None:
         event_type = struct.unpack("<I", data[:4])[0]
@@ -2384,6 +2431,11 @@ class UhidDualSense:
         self._emit_rumble(0, 0)
 
     def _emit_rumble(self, weak: int, strong: int) -> None:
+        if self._no_fio_do_uhid():
+            # A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01: o fio atende e anota
+            # o último par; quem fala com o controle físico é o tique.
+            self._rumble_a_entregar = (weak, strong)
+            return
         if self.rumble_sink is None:
             return
         try:
@@ -2438,7 +2490,9 @@ class UhidDualSense:
                     body[_LIGHTBAR_RGB_OFFSET + 2],
                 ),
             )
-        self._flush_replicas()
+        if not self._no_fio_do_uhid():
+            # A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01: no fio, o tique entrega.
+            self._flush_replicas()
 
     def _queue_replica(self, categoria: str, valor: Any) -> None:
         """Dedup por valor: igual ao último ENTREGUE (e sem pendência) = drop."""
@@ -2535,6 +2589,11 @@ class UhidDualSense:
         logger.info("uhid_game_session_end", player=self.player)
         if self.session_end_sink is None:
             return
+        if self._no_fio_do_uhid():
+            # A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01: o perfil volta ao
+            # físico no tique, antes das réplicas da sessão seguinte.
+            self._fim_de_sessao_a_entregar = True
+            return
         try:
             self.session_end_sink()
         except Exception as exc:
@@ -2595,6 +2654,151 @@ class UhidDualSense:
         """
         self._destruir_o_device()
         _MACS_DOS_VPADS_VIVOS.despir(self)
+
+    # -- o fio do uhid: A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01 (28/09/2026) --
+    #
+    # O DEFEITO, medido em 27/09: `Output queue is full` 47.020 vezes numa hora
+    # com o PRAGMATA aberto. É a fila de 32 eventos do `uhid.c` de cada virtual;
+    # o que não cabe, o kernel descarta (vibração, gatilho e luz que o jogo
+    # pediu). Quem lia o fd era só o `pump_ff`, no tique do repasse da entrada:
+    # um tique atrasado, ou um virtual cujo físico não está sendo lido (o
+    # `dispatch_gamepad` só roda com o primário conectado), e a fila enchia. O
+    # `cosmic-osk` de toda sessão do COSMIC manda um efeito a cada 50 ms a cada
+    # virtual; um jogo com gatilho adaptativo manda muito mais.
+    #
+    # A CURA, na origem e irmã da do pad `uinput`
+    # (O-PAD-VIRTUAL-ATENDE-A-VIBRACAO-DESDE-QUE-NASCE-01): um fio por virtual
+    # lê o fd por prontidão e atende cada evento na hora (o bind, o pedido de
+    # feature, que deixa o jogo parado até a resposta, e a saída). O que vai ao
+    # controle FÍSICO continua no tique, com o rate-limit e o dedup da
+    # REPLICA-03: os sinks seguem numa thread só, a do laço.
+    #
+    # No fim da classe pela razão do `start` e do `stop` acima.
+
+    def _a_trava_da_saida(self) -> threading.RLock:
+        """A trava da saída, garantida pelo dono: nasce no `__init__` e, se não nasceu, aqui.
+
+        As bancadas da suíte que montam o virtual sem o `__init__` do
+        dataclass (para usar um pipe como fd) listam à mão o estado de que
+        precisam, e campo novo quebraria todas elas com um `AttributeError`
+        que não aponta a causa (memória `duble-por-new-fica-mais-pobre-que-o-
+        produto`). O `setdefault` é atômico sob o GIL: dois chamadores nunca
+        ficam com travas diferentes.
+        """
+        trava: threading.RLock | None = self.__dict__.get("_trava_da_saida")
+        if trava is None:
+            trava = self.__dict__.setdefault("_trava_da_saida", threading.RLock())
+        assert trava is not None
+        return trava
+
+    def _no_fio_do_uhid(self) -> bool:
+        """Esta chamada vem do fio do uhid? (Lá, a entrega ao físico fica anotada.)"""
+        fio = self._fio_do_uhid
+        return fio is not None and threading.current_thread() is fio
+
+    def _iniciar_o_fio_do_uhid(self, fd: int) -> None:
+        """Sobe o fio que atende o fd do uhid por prontidão (só com fd de verdade).
+
+        Os dublês da suíte entregam um inteiro que não é descritor aberto
+        (`os.fstat` recusa): ali o tique drena, como sempre drenou.
+        """
+        try:
+            os.fstat(fd)
+        except (OSError, TypeError, ValueError):
+            return
+        leitura, escrita = os.pipe()
+        os.set_blocking(leitura, False)
+        os.set_blocking(escrita, False)
+        self._despertador = (leitura, escrita)
+        pare = threading.Event()
+        self._pare_o_fio = pare
+        fio = threading.Thread(
+            target=self._atender_o_uhid,
+            args=(fd, leitura, pare),
+            name=f"hefesto-uhid-p{self.player}",
+            daemon=True,
+        )
+        # Antes do `start()`: o primeiro evento já chega com o fio no ar, e
+        # `_no_fio_do_uhid` tem de reconhecê-lo desde ele.
+        self._fio_do_uhid = fio
+        fio.start()
+
+    def _atender_o_uhid(self, fd: int, despertador: int, pare: threading.Event) -> None:
+        """O laço do fio: acorda quando o fd tem evento e o atende na hora.
+
+        Drena até a fila do kernel esvaziar, um evento por `read`, cada um sob
+        a trava da saída (o tique entrega sob a mesma). O despertador é o pipe
+        que o `stop()` escreve: o fio sai na hora, sem esperar prazo.
+        """
+        while not pare.is_set():
+            try:
+                prontos = prontos_para_ler([fd, despertador], _UHID_FIO_ACORDA_S)
+            except (OSError, ValueError):
+                return  # fd fechado: o tique volta a drenar
+            if pare.is_set():
+                return
+            if fd not in prontos:
+                continue
+            while not pare.is_set():
+                try:
+                    data = os.read(fd, UHID_EVENT_SIZE)
+                except BlockingIOError:
+                    break
+                except OSError as exc:
+                    if exc.errno != errno.EBADF:
+                        logger.warning("uhid_read_failed", err=str(exc), player=self.player)
+                    return
+                if len(data) < 4:
+                    return  # fim de linha: o fd morreu, e o tique retoma
+                with self._a_trava_da_saida():
+                    try:
+                        self._handle_event(data)
+                    except Exception as exc:  # o fio não cai por um evento
+                        logger.warning("uhid_evento_falhou", err=str(exc),
+                                       player=self.player)
+
+    def _parar_o_fio_do_uhid(self) -> None:
+        """Acorda o fio, espera ele sair e fecha o despertador. Idempotente."""
+        fio = self._fio_do_uhid
+        if fio is None:
+            return
+        if self._pare_o_fio is not None:
+            self._pare_o_fio.set()
+        despertador = self._despertador
+        if despertador is not None:
+            with contextlib.suppress(OSError):
+                os.write(despertador[1], b"x")
+        if fio is not threading.current_thread():
+            fio.join(timeout=_UHID_FIO_ACORDA_S + 0.5)
+            if fio.is_alive():
+                logger.warning("uhid_fio_nao_saiu", player=self.player)
+        self._fio_do_uhid = None
+        self._despertador = None
+        if despertador is not None:
+            for ponta in despertador:
+                with contextlib.suppress(OSError):
+                    os.close(ponta)
+
+    def _entregar_o_pendente(self) -> None:
+        """Entrega ao controle físico o que o fio atendeu: o fim da sessão e a vibração.
+
+        Chamado pelo tique (`pump_ff`) e pelo `stop()`, sob a trava da saída.
+        O fim da sessão vem antes: as réplicas pendentes já são da sessão
+        seguinte (o CLOSE as limpou no fio).
+        """
+        if self._fim_de_sessao_a_entregar:
+            self._fim_de_sessao_a_entregar = False
+            if self.session_end_sink is not None:
+                try:
+                    self.session_end_sink()
+                except Exception as exc:
+                    logger.warning(
+                        "uhid_session_end_sink_failed", err=str(exc), player=self.player
+                    )
+        par = self._rumble_a_entregar
+        if par is not None:
+            self._rumble_a_entregar = None
+            self._emit_rumble(*par)
 
 
 # ---------------------------------------------------------------------------
