@@ -289,25 +289,6 @@ def speaker(
     speaker_cmd(action, value=value, uniq=uniq or None)
 
 
-@app.command(
-    "basico",  # (noqa-acento: o nome do subcomando é o do protocolo)
-    context_settings={
-        "allow_extra_args": True,
-        "ignore_unknown_options": True,
-        "help_option_names": [],
-    },
-)
-def basico(ctx: typer.Context) -> None:
-    """O protocolo do básico, medido: retrato, sessão, eixos, entrada, saídas, som.
-
-    Os argumentos vão inteiros para `scripts/o_basico.py` (inclusive o
-    `--help`). Sai 0 verde, 1 vermelho, 2 recusado e 3 «não sei».
-    """
-    from hefesto_dualsense4unix.cli.cmd_basico import basico_cmd
-
-    raise typer.Exit(basico_cmd(list(ctx.args)))
-
-
 @app.command("esquecer-controles")
 def esquecer_controles(
     restaurar: bool = typer.Option(
@@ -484,6 +465,28 @@ def daemon_enable() -> None:
 
     ServiceInstaller().enable()
     typer.echo("auto-start habilitado e daemon iniciado")
+
+
+# O comando do básico mora no FIM do arquivo de propósito: comentários de
+# outras posses citam linhas daqui (`cli/app.py:<n>`), e um bloco novo no meio
+# as envelheceria todas de uma vez.
+@app.command(
+    "basico",  # (noqa-acento: o nome do subcomando é o do protocolo)
+    context_settings={
+        "allow_extra_args": True,
+        "ignore_unknown_options": True,
+        "help_option_names": [],
+    },
+)
+def basico(ctx: typer.Context) -> None:
+    """O protocolo do básico, medido: retrato, sessão, eixos, entrada, saídas, som.
+
+    Os argumentos vão inteiros para `scripts/o_basico.py` (inclusive o
+    `--help`). Sai 0 verde, 1 vermelho, 2 recusado e 3 «não sei».
+    """
+    from hefesto_dualsense4unix.cli.cmd_basico import basico_cmd
+
+    raise typer.Exit(basico_cmd(list(ctx.args)))
 
 
 def main() -> None:
