@@ -56,6 +56,13 @@ def _roda(
 ) -> subprocess.CompletedProcess[str]:
     env = dict(os.environ)
     env["PATH"] = path
+    # A MÁQUINA DE MENTIRA NÃO TEM SECURE BOOT, e isso é dito aqui: desde a
+    # B4 da O-PRODUTO-EM-QUALQUER-MAQUINA-01 (28/09/2026) o
+    # `dkms_install_patched_module` lê a efivars e, com Secure Boot sem a
+    # chave, não instala. Herdando o `os.environ`, esta régua lia a efivars
+    # de quem a roda, e numa máquina (ou num runner do CI) com Secure Boot
+    # ligado reprovava sem defeito nenhum (medido na conferência).
+    env["HEFESTO_EFIVARS_ROOT"] = "/nao-existe/efivars-sem-secure-boot"
     env.update(env_extra or {})
     completo = f"source '{LIB_PATH}'\n{script}\n"
     return subprocess.run(
