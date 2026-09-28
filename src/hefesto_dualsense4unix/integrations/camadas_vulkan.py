@@ -861,7 +861,7 @@ def traz_o_carregador_da_khronos(pasta_do_jogo: Path) -> bool:
 
 
 def frase_do_estado(fora: bool) -> str:
-    """*"Sobreposição Vulkan: a da Steam sai dos jogos"*, ou a Steam decide.
+    """*"Sobreposição Vulkan: sem a da Steam"*, ou a Steam decide.
 
     A linha que o exame da aba Sistema pinta
     (`a09_sistema.linha_da_sobreposicao_vulkan`) e a que o desenho da aba
@@ -875,7 +875,7 @@ def frase_do_estado(fora: bool) -> str:
     tela contradizia o próprio botão.
     """
     if fora:
-        return "Sobreposição Vulkan: a da Steam sai dos jogos"
+        return "Sobreposição Vulkan: sem a da Steam"
     return "Sobreposição Vulkan: a Steam decide"
 
 

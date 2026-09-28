@@ -695,7 +695,7 @@ def vulkan_corrigido() -> bool:
 
 
 def linha_da_sobreposicao_vulkan() -> tuple[str, str] | None:
-    """*"Sobreposição Vulkan: a da Steam sai dos jogos"*, ou a Steam decide.
+    """*"Sobreposição Vulkan: sem a da Steam"*, ou a Steam decide.
 
     **AS DUAS PERGUNTAS DELA, 21/09/2026:** *"o botão vulcan ele identifica
     todos os jogos que contenham isso? E vamos ter o estado de ativado e
