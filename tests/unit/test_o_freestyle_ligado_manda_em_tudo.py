@@ -10,7 +10,8 @@ regra própria de todo jogo (LOCK-CEDE-01): em jogo, ele nunca valia. A cura mor
 num lugar só (`profiles/manager.py`, o bloco antes do `ProfileManager`), e esta
 régua mede cada caminho que podia passar por cima dele:
 
-1. **o autoswitch** para antes de casar a janela, e o modo jogo padrão também;
+1. **o autoswitch** para antes de casar a janela; o modo jogo padrão só entra
+   quando o Freestyle não diz o modo (o de fábrica não diz);
 2. **o `ProfileManager.activate`** recusa toda ativação automática de outro
    perfil — é a rede que pega o caminho que esquecer de perguntar;
 3. **o gesto dela decide**: o «Ativar» do Freestyle liga, o de outro desliga,
@@ -180,13 +181,29 @@ def test_ligado_o_autoswitch_nem_pergunta_a_janela(semeadura_ligada: None) -> No
     assert chamadas == []
 
 
-def test_ligado_o_modo_jogo_padrao_nao_entra(semeadura_ligada: None) -> None:
-    """O Freestyle manda também no modo: o jogo sem perfil próprio não liga o padrão.
+def _o_freestyle_diz(mode: dict[str, Any] | None) -> None:
+    """Grava a seção `mode` no Freestyle do disco (None = sem a seção, o de fábrica)."""
+    arquivo = profiles_dir() / loader.ARQUIVO_DO_PADRAO
+    dela = json.loads(arquivo.read_text(encoding="utf-8"))
+    dela.pop("mode", None)
+    if mode is not None:
+        dela["mode"] = mode
+    arquivo.write_text(json.dumps(dela), encoding="utf-8")
 
-    MORDIDA: devolva o `_sincronizar_modo_jogo_padrao` para ANTES da parada
-    pelo Freestyle (onde ele morava, antes do cadeado) e o espião é chamado.
+
+@pytest.mark.parametrize("janela", [JANELA, "steam_app_2111190"],
+                         ids=["jogo-com-perfil-proprio", "jogo-sem-perfil"])
+def test_ligado_e_dizendo_o_modo_o_modo_jogo_padrao_nao_entra(
+    semeadura_ligada: None, janela: str,
+) -> None:
+    """O Freestyle que TEM a seção `mode` manda no modo: o padrão não entra.
+
+    MORDIDA: faça `AutoSwitcher._o_freestyle_diz_o_modo` responder `False` e as
+    duas células reprovam com o espião chamado.
     """
     loader.load_all_profiles()
+    _o_jogo()
+    _o_freestyle_diz({"kind": "gamepad", "caminho": "xbox"})
     store = StateStore()
     pedidos: list[str] = []
     vigia = AutoSwitcher(
@@ -195,9 +212,43 @@ def test_ligado_o_modo_jogo_padrao_nao_entra(semeadura_ligada: None) -> None:
         modo_jogo_padrao_reverter=lambda *, wm_class: "aplicado",
     )
     for t in (0.0, 0.6, 30.0):
-        vigia._tick({"wm_class": "steam_app_2111190", "wm_name": "Mullet Mad Jack"}, t)
+        vigia._tick({"wm_class": janela}, t)
 
     assert pedidos == []
+    assert store.active_profile == FREESTYLE
+
+
+@pytest.mark.parametrize("janela", [JANELA, "steam_app_2111190"],
+                         ids=["jogo-com-perfil-proprio", "jogo-sem-perfil"])
+def test_ligado_sem_dizer_o_modo_o_jogo_liga_o_modo_padrao(
+    semeadura_ligada: None, janela: str,
+) -> None:
+    """O Freestyle de fábrica não diz o modo: o jogo liga o modo padrão da máquina.
+
+    Conferência de 28/09/2026. Sem a seção `mode` o Freestyle não opina (R-02),
+    e o modo num jogo é o da máquina — o modo jogo padrão, com ou sem perfil
+    próprio do jogo, que não entra. Fora do jogo, o par solta. O perfil não
+    troca em momento nenhum.
+
+    MORDIDA: tire a chamada `_modo_jogo_padrao_sob_o_freestyle` da parada pelo
+    Freestyle no `_tick` e as duas células reprovam sem pedido nenhum.
+    """
+    loader.load_all_profiles()
+    _o_jogo()
+    store = StateStore()
+    pedidos: list[str] = []
+    soltos: list[str] = []
+    vigia = AutoSwitcher(
+        manager=_liga(store), window_reader=lambda: {}, store=store,
+        modo_jogo_padrao_applier=lambda *, wm_class: pedidos.append(wm_class) or "aplicado",
+        modo_jogo_padrao_reverter=lambda *, wm_class: soltos.append(wm_class) or "aplicado",
+    )
+    for t in (0.0, 0.6, 30.0):
+        vigia._tick({"wm_class": janela}, t)
+    vigia._tick({"wm_class": "firefox", "wm_name": "Mozilla Firefox"}, 31.0)
+
+    assert (pedidos, soltos) == ([janela] * 3, ["firefox"])
+    assert store.active_profile == FREESTYLE
 
 
 def test_desligar_nao_ativa_no_mesmo_tique(semeadura_ligada: None) -> None:

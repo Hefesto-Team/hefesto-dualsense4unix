@@ -50,6 +50,7 @@ from hefesto_dualsense4unix.profiles.manager import (
 )
 from hefesto_dualsense4unix.profiles.schema import (
     Profile,
+    e_endereco_de_jogo,
     perfil_declara_modo_de_jogo,
     perfil_e_regra_de_jogo,
 )
@@ -508,12 +509,15 @@ class AutoSwitcher:
             return
 
         # O-FREESTYLE-E-UMA-CAMADA-SO-01: com o Freestyle ligado o tique para
-        # ANTES de casar a janela. Nem perfil de jogo, nem modo jogo padrão: o
-        # Freestyle manda em tudo, modo e máscara incluídos. Zera o candidato
-        # pela razão do buraco-do-debounce da UX-01: desligar depois de horas
-        # na mesma janela não pode ativar o perfil no mesmo tique.
+        # ANTES de casar a janela. Nenhum perfil de jogo entra: o Freestyle
+        # manda em tudo, modo e máscara incluídos. O modo jogo padrão só entra
+        # quando o Freestyle NÃO diz o modo — ver `_modo_jogo_padrao_sob_o_
+        # freestyle`. Zera o candidato pela razão do buraco-do-debounce da
+        # UX-01: desligar depois de horas na mesma janela não pode ativar o
+        # perfil no mesmo tique.
         if self.freestyle_ligado():
             self._log_freestyle_uma_vez(info)
+            self._modo_jogo_padrao_sob_o_freestyle(info)
             self._last_candidate = None
             if not self._suppression_active():
                 self._suppress_log_key = None
@@ -714,6 +718,48 @@ class AutoSwitcher:
         except Exception as exc:
             self._estado_modo_jogo_padrao = "falhou"
             logger.warning("modo_jogo_padrao_revert_falhou", err=str(exc))
+
+    def _modo_jogo_padrao_sob_o_freestyle(self, info: dict[str, Any]) -> None:
+        """O modo jogo padrão com o Freestyle ligado: só quando ele não diz o modo.
+
+        O-FREESTYLE-E-UMA-CAMADA-SO-01, conferência de 28/09/2026. Ligado, o
+        Freestyle manda no modo — mas só quando TEM opinião sobre ele (a seção
+        `mode`). O Freestyle de fábrica não tem, de propósito (o asset nasce sem
+        `mode`), e perfil sem a seção é ausência de opinião (R-02), não ordem
+        de deixar o jogo sem controle. Parar o modo jogo padrão junto com a troca
+        de perfil devolvia o sintoma que criou a MODO-01: com a flag do botão
+        ligada desde 24/07, o modo jogo não ligava.
+
+        Sem opinião do Freestyle, TODA janela de jogo é "jogo e ninguém opina"
+        — o perfil próprio do jogo não entra, então não opina —, e a pergunta
+        "é janela de jogo?" é a do dono que decide o
+        `MOTIVO_JOGO_SEM_PERFIL_PROPRIO` (`schema.e_endereco_de_jogo`). Fora do
+        jogo, o par solta o que ligou, como sem o Freestyle. Com opinião, nada
+        aqui: o modo é o dele.
+        """
+        if self._o_freestyle_diz_o_modo():
+            return
+        motivo = (
+            MOTIVO_JOGO_SEM_PERFIL_PROPRIO
+            if e_endereco_de_jogo(info.get("wm_class"))
+            else MOTIVO_SEM_CANDIDATO
+        )
+        self._sincronizar_modo_jogo_padrao(motivo, info)
+
+    @staticmethod
+    def _o_freestyle_diz_o_modo() -> bool:
+        """O Freestyle do disco tem a seção `mode`? Sem o arquivo, não diz.
+
+        Um arquivo por tique, e só com o Freestyle ligado — o tique desligado
+        lê todos os perfis (`select_for_window_ex`). Ler a cada tique, e não
+        guardar, é o que faz o modo que ela gravar nele valer no tique seguinte.
+        """
+        from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO, load_profile
+
+        try:
+            return load_profile(NOME_DO_PADRAO).mode is not None
+        except Exception:
+            return False
 
     def _saida_para_catch_all(self, profile: Profile | None) -> bool:
         """True quando a troca é SAÍDA de um perfil específico rumo a um genérico.

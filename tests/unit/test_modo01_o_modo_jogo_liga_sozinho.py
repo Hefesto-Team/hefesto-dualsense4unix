@@ -32,9 +32,11 @@ nada — nem o modo jogo padrão — mexe no modo nesse período.
 NOTA DATADA — 28/09/2026, O-FREESTYLE-E-UMA-CAMADA-SO-01. O cadeado virou o
 Modo Freestyle, e a decisão dela (`D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA`)
 revogou as duas metades que o B3 e o B2 davam a ele: ligado, o Freestyle manda
-também no modo (o modo jogo padrão não entra por cima dele) e nenhum perfil
-de jogo entra — nem o que se declara de jogo. As réguas daqui passaram a medir
-isso; com o Freestyle desligado, o B3 e o B2 valem como antes.
+também no modo quando TEM a seção `mode` (o modo jogo padrão não entra por cima
+dele) e nenhum perfil de jogo entra — nem o que se declara de jogo. Sem a seção
+(o Freestyle de fábrica), o modo jogo padrão segue entrando no jogo: é o B3 com
+o Freestyle ligado. As réguas daqui passaram a medir isso; com o Freestyle
+desligado, o B3 e o B2 valem como antes.
 """
 from __future__ import annotations
 
@@ -71,6 +73,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     MatchAny,
     MatchCriteria,
     Profile,
+    ProfileModeConfig,
     perfil_declara_modo_de_jogo,
     perfil_e_regra_de_jogo,
 )
@@ -570,17 +573,18 @@ class TestAutoswitchPedeOModoJogoPadrao:
         assert sw._current_profile is None
         assert store.active_profile is None
 
-    def test_com_o_freestyle_ligado_o_modo_jogo_padrao_nao_entra(
+    def test_com_o_freestyle_ligado_e_dizendo_o_modo_o_padrao_nao_entra(
         self, isolated_profiles_dir: Path
     ) -> None:
-        """Ligado, o Freestyle manda no modo também (28/09/2026).
+        """Ligado e COM a seção `mode`, o Freestyle manda no modo (28/09/2026).
 
         Era o avesso: *"o cadeado congela perfil, não modo"*, e o modo jogo
         padrão ligava por cima do perfil que ela deixou. MORDIDA: devolva ao
         `_tick` a sincronização do modo jogo padrão ANTES da parada pelo
         Freestyle e o espião registra o jogo três vezes.
         """
-        save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+        save_profile(Profile(name="Freestyle", match=MatchAny(), priority=1,
+                             mode=ProfileModeConfig(kind="gamepad", caminho="xbox")))
         store = StateStore()
         store.set_freestyle_ligado(True)
         espiao = _DaemonEspiao()
@@ -590,6 +594,32 @@ class TestAutoswitchPedeOModoJogoPadrao:
             sw._tick({"wm_class": WM_MMJ, "wm_name": "Mullet Mad Jack"}, t)
 
         assert espiao.aplicados == []
+        assert sw._current_profile is None
+
+    def test_com_o_freestyle_ligado_sem_dizer_o_modo_o_padrao_entra(
+        self, isolated_profiles_dir: Path
+    ) -> None:
+        """Ligado e SEM a seção `mode` (o de fábrica), o jogo liga o modo sozinho.
+
+        Conferência de 28/09/2026: sem opinião do Freestyle o modo é o da
+        máquina, e o da máquina num jogo é o padrão — é o sintoma que criou esta
+        régua, com a flag do botão ligada desde 24/07. O perfil não troca.
+
+        MORDIDA: tire a chamada `_modo_jogo_padrao_sob_o_freestyle` da parada
+        pelo Freestyle no `_tick` e o espião fica vazio.
+        """
+        save_profile(Profile(name="Freestyle", match=MatchAny(), priority=1))
+        store = StateStore()
+        store.set_freestyle_ligado(True)
+        espiao = _DaemonEspiao()
+        sw = _switcher(store, espiao)
+
+        for t in (0.0, 0.6, 60.0):
+            sw._tick({"wm_class": WM_MMJ, "wm_name": "Mullet Mad Jack"}, t)
+        sw._tick({"wm_class": "firefox", "wm_name": "Mozilla Firefox"}, 61.0)
+
+        assert espiao.aplicados == [WM_MMJ] * 3
+        assert espiao.revertidos == ["firefox"]
         assert sw._current_profile is None
 
     def test_janela_fora_do_jogo_solta_o_modo(

@@ -3521,8 +3521,10 @@ class Daemon:
         NOTA DATADA — 28/09/2026 (O-FREESTYLE-E-UMA-CAMADA-SO-01). Aqui dizia
         que o cadeado de autoswitch não era consultado, porque congelava só o
         PERFIL e o modo é outro eixo. O cadeado saiu; o Modo Freestyle que o
-        substitui manda também no modo, e quem o respeita é o chamador — o
-        `AutoSwitcher` para o tique inteiro, antes de pedir o modo jogo padrão.
+        substitui manda também no modo QUANDO o Freestyle diz o modo, e quem o
+        respeita é o chamador — o `AutoSwitcher` só pede o modo jogo padrão, com
+        ele ligado, se o Freestyle não tem a seção `mode`
+        (`_modo_jogo_padrao_sob_o_freestyle`).
 
         Retorno: o vocabulário de `APLICADO`/`ADIADO_LOCK_MANUAL`/`IGNORADO_*`.
         """
