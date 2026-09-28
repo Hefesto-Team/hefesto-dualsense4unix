@@ -518,8 +518,8 @@ def pids_da_unidade(
     ``app-hefesto…tray@autostart.service`` ao lado do daemon); as outras
     fatias do primeiro nível também são olhadas, e, se nenhuma pasta existe,
     o ``/proc/<pid>/cgroup`` de cada processo responde, que vale para
-    qualquer arranjo de fatias. Unidade que saiu (``--collect`` recolhe a
-    pasta) é a resposta vazia.
+    qualquer arranjo de fatias e para o cgroup v1 (``_esta_na_unidade``).
+    Unidade que saiu (``--collect`` recolhe a pasta) é a resposta vazia.
 
     Só nomes que ``nome_da_unidade`` escreve: um nome de fora não vira
     caminho de arquivo.
@@ -549,12 +549,24 @@ def pids_da_unidade(
     except OSError:
         return ()
     for nome in nomes:
-        if not nome.isdigit():
-            continue
-        caminho = _cgroup_de(_ler(f"{proc}/{nome}/cgroup")) or ""
-        if caminho.rstrip("/").rsplit("/", 1)[-1] == unidade:
+        if nome.isdigit() and _esta_na_unidade(_ler(f"{proc}/{nome}/cgroup"), unidade):
             achados.append(int(nome))
     return tuple(sorted(achados))
+
+
+def _esta_na_unidade(texto: str | None, unidade: str) -> bool:
+    """Alguma hierarquia de um ``/proc/<pid>/cgroup`` termina na unidade.
+
+    No cgroup v2 é a linha ``0::``. Numa máquina só com o cgroup v1 não há
+    ``0::``, e quem diz a unidade é a linha ``1:name=systemd:/…``: ler só a
+    ``0::`` deixaria o teclado na tela sem PID ali, e cada L3 abriria outro
+    por cima do primeiro.
+    """
+    for linha in (texto or "").splitlines():
+        caminho = linha.split(":", 2)[-1].strip().rstrip("/")
+        if caminho and caminho.rsplit("/", 1)[-1] == unidade:
+            return True
+    return False
 
 
 class FioDeTrabalho:

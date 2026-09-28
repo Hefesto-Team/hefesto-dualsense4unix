@@ -705,7 +705,50 @@ def test_pids_da_unidade_pelo_proc_quando_a_fatia_e_outra(tmp_path: Path) -> Non
     assert fds.pids_da_unidade(unidade, raiz_cgroup=str(vazio), raiz_proc=str(proc)) == (4321,)
 
 
+def test_pids_da_unidade_no_cgroup_v1(tmp_path: Path) -> None:
+    """Numa máquina só com o cgroup v1 não há linha ``0::``: quem diz a
+    unidade é a da ``systemd`` (``1:name=systemd:/…``).
+
+    MORDE: leia só a linha ``0::`` no ``/proc`` de cada processo e o teclado
+    na tela fica sem PID ali — cada L3 abriria outro por cima do primeiro.
+    """
+    proc = tmp_path / "proc"
+    (proc / "self").mkdir(parents=True)
+    fatia = "/user.slice/user-1000.slice/user@1000.service/app.slice"
+    (proc / "self" / "cgroup").write_text(
+        "4:memory:/user.slice/user-1000.slice/user@1000.service\n"
+        f"1:name=systemd:{fatia}/hefesto-dualsense4unix.service\n", encoding="utf-8")
+    unidade = "app-hefesto-wvkbd_mobintl-aa00bb11cc22.service"
+    for pid, ultimo in ((4321, unidade), (4322, "x.service")):
+        (proc / str(pid)).mkdir()
+        (proc / str(pid) / "cgroup").write_text(
+            "4:memory:/user.slice/user-1000.slice/user@1000.service\n"
+            f"1:name=systemd:{fatia}/{ultimo}\n", encoding="utf-8")
+    vazio = tmp_path / "cgroup"
+    vazio.mkdir()
+    assert fds.pids_da_unidade(unidade, raiz_cgroup=str(vazio), raiz_proc=str(proc)) == (4321,)
+
+
 def test_pids_da_unidade_so_para_nome_nosso(tmp_path: Path) -> None:
-    """Um nome que não é de ``nome_da_unidade`` não vira caminho de arquivo."""
+    """Um nome que não é de ``nome_da_unidade`` não vira caminho de arquivo, nem
+    pergunta ao ``/proc``.
+
+    O ``/proc`` é de mentira, e nele o serviço do daemon está de pé: a régua
+    não depende de a máquina que roda a suíte ter o daemon no ar.
+
+    MORDE: tire a guarda do nome e o PID do daemon volta como se fosse o
+    teclado — o R3 mandaria SIGTERM no próprio daemon.
+    """
+    proc = tmp_path / "proc"
+    (proc / "self").mkdir(parents=True)
+    servico = (
+        "0::/user.slice/user-1000.slice/user@1000.service/app.slice/"
+        "hefesto-dualsense4unix.service\n"
+    )
+    (proc / "self" / "cgroup").write_text(servico, encoding="utf-8")
+    (proc / "4321").mkdir()
+    (proc / "4321" / "cgroup").write_text(servico, encoding="utf-8")
+    vazio = tmp_path / "cgroup"
+    vazio.mkdir()
     for nome in ("hefesto-dualsense4unix.service", "app-hefesto-../../etc", ""):
-        assert fds.pids_da_unidade(nome, raiz_cgroup=str(tmp_path)) == ()
+        assert fds.pids_da_unidade(nome, raiz_cgroup=str(vazio), raiz_proc=str(proc)) == ()
