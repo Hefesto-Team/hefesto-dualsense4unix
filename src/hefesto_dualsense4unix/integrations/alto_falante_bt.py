@@ -724,6 +724,33 @@ BUFFER_QUE_TOCOU = bytes((0x00, 0x00, 0x00, 0x00, 0xFF))
 #: o aparelho consome 93,75 quadros/s, e 20 ms alimentam 100.
 INTERVALO_DE_ENVIO_035 = 512 / 48_000
 
+#: A TAXA DA FONTE DO SOM: 45 000 Hz, derivada e não digitada. Cada report do
+#: `0x35` lê 480 amostras da fonte, e o aparelho as toca em 10,667 ms; a fonte
+#: que entrega 480 amostras nesse tempo anda a 45 000 Hz. O PipeWire faz o
+#: 512→480 no fluxo do gravador, e a ponte, que não dorme, sai a 93,75/s no
+#: relógio do jogo. O Opus continua a 48 kHz (:data:`TAXA_DO_ENCODER`).
+#:
+#: A-PONTE-DO-SOM-ANDA-NO-RITMO-DO-CONTROLE-01, 29/09/2026: com a fonte a
+#: 48 kHz a ponte mandava 100 reports/s (medido: 100,3/s no `acl_tx` do
+#: adaptador e 100,0/s no kprobe de 27/09) a um aparelho que consome 93,75, e
+#: o som no alto-falante cortava a cada ~3 s. A prova 0 (29/09, 06h52) ouviu o
+#: tom de 1300 Hz sair em 1219,4 Hz: o aparelho toca 480 amostras em 10,667 ms.
+TAXA_DA_FONTE_DO_SOM = round(AMOSTRAS_POR_QUADRO / INTERVALO_DE_ENVIO_035)
+
+#: A taxa de cada fonte da ponte, pelo PAPEL. A regra é uma só: taxa da fonte x
+#: 512/48000 = o que o report lê dela. O som alimenta o quadro Opus de 480
+#: amostras; a háptica alimenta o bloco de 512 quadros
+#: (:data:`QUADROS_POR_BLOCO_HAPTICO`), que a 48 kHz já anda a 93,75/s.
+TAXA_DA_FONTE_POR_PAPEL: dict[str, int] = {
+    "som": TAXA_DA_FONTE_DO_SOM,
+    "haptica": TAXA_DO_ENCODER,
+}
+
+
+def taxa_da_fonte(papel: str) -> int:
+    """A taxa em que a fonte deste ``papel`` tem de entregar. 48 kHz se o papel é outro."""
+    return TAXA_DA_FONTE_POR_PAPEL.get(papel, TAXA_DO_ENCODER)
+
 
 def controle_de_audio_035(
     *,
@@ -1473,9 +1500,11 @@ MS_POR_QUADRO = 10
 VOLTA_DA_SEQUENCIA = 16
 
 #: Tocadores de leitura crua do monitor de um nó, na ordem de preferência, com
-#: o modelo de argumentos. Os dois entregam **s16le, estéreo, 48 kHz** em
-#: `stdout`, que é exatamente o que :class:`CodificadorOpus` come — nenhuma
-#: conversão nossa no meio, e por isso nenhuma segunda régua de formato.
+#: o modelo de argumentos. Os dois entregam **s16le** em `stdout`, na taxa e
+#: nos canais que o chamador pede (`--rate`, `--channels`): o PipeWire converte
+#: no próprio fluxo, e nenhuma conversão nossa fica no meio. A taxa é a do
+#: PAPEL (:func:`taxa_da_fonte`): 45 000 Hz para o som, que o aparelho toca a
+#: 480 amostras por 10,667 ms, e 48 kHz para a háptica.
 #:
 #: `pw-record` primeiro por ser o nativo do PipeWire (o `parec` passa pela
 #: camada de compatibilidade Pulse e já mordeu esta casa uma vez, no
@@ -2041,6 +2070,28 @@ class BombaDeSomPeloRadio:
         """Quantos milissegundos de som um report deste arranjo carrega."""
         return MS_POR_QUADRO * self.arranjo.quadros_de_audio
 
+    @property
+    def relogio(self) -> Callable[[], float]:
+        """O relógio desta bomba: o do teto de ceder e o da linha de saída da ponte."""
+        return self._relogio
+
+    @property
+    def taxa_da_fonte_hz(self) -> int:
+        """A taxa em que a fonte tem de entregar para andar no ritmo deste arranjo.
+
+        A regra da ponte (:data:`TAXA_DA_FONTE_POR_PAPEL`), vista do arranjo:
+        o que um report lê da fonte, dividido pelo intervalo em que o aparelho
+        o toca. No `0x35` são 480 amostras em 10,667 ms, 45 000 Hz; num arranjo
+        sem cadência medida, o nominal dá 48 kHz; no da háptica, 512 quadros
+        em 10,667 ms, 48 kHz. Quem sintetiza som para esta bomba (o ensaio de
+        bancada) o sintetiza nesta taxa, ou o tom sai 6,25% grave.
+        """
+        amostras = (
+            self.bytes_de_pcm_por_report // (2 * CANAIS_DO_ENCODER)
+            or QUADROS_POR_BLOCO_HAPTICO
+        )
+        return round(amostras / self.intervalo_de_envio_s)
+
     def _codificar(self, pcm: bytes) -> bytes | None:
         """O quadro Opus, ou None se a libopus recusou. Encoder preguiçoso.
 
@@ -2203,10 +2254,16 @@ class BombaDeSomPeloRadio:
         """O intervalo entre reports, em segundos — o MEDIDO quando existe.
 
         **O nominal está errado para o `0x35`, e essa é a razão deste caminho.**
-        Um quadro Opus carrega 10 ms de som, mas o aparelho o consome a cada
-        10,667 ms (512/48000): alimentá-lo pelo nominal daria 100 quadros/s num
-        aparelho que come 93,75, que é a taxa de estouro pela qual esta casa
-        passou nove vezes.
+        Um quadro Opus carrega 480 amostras, e o aparelho as toca em 10,667 ms
+        (512/48000): alimentá-lo a 10 ms daria 100 quadros/s num aparelho que
+        come 93,75, que é a taxa de estouro pela qual esta casa passou nove
+        vezes.
+
+        **Quem a lê é só o** :meth:`rodar`, pelo ``dormir`` da fonte sem ritmo,
+        e o ensaio de bancada que dá ritmo ao timbre. A ponte do produto não
+        dorme: quem dá a cadência a ela é a TAXA da fonte
+        (:data:`TAXA_DA_FONTE_DO_SOM`), e esta propriedade é a mesma conta
+        vista do outro lado.
         """
         medido = self.arranjo.intervalo_de_envio_s
         if medido is not None:
@@ -2308,11 +2365,13 @@ class BombaDeSomPeloRadio:
         """O laço, por `segundos` de relógio. Devolve a contagem.
 
         **O ritmo é o da FONTE, e não um `sleep` nosso.** `pw-record` entrega
-        no tempo real do nó: pedir 1920 bytes bloqueia até haver 10 ms de som.
-        Um `sleep` por cima disso somaria dois relógios e produziria
-        subcorrida — a mesma classe de defeito do lado da entrada. O `dormir`
-        existe só para a fonte que NÃO tem ritmo próprio (um arquivo, um
-        dublê), e por omissão ele não é chamado.
+        no tempo real do nó: pedir os 1920 bytes de um report bloqueia até o nó
+        ter tocado 480 amostras na taxa da fonte — 10,667 ms a
+        :data:`TAXA_DA_FONTE_DO_SOM`, 10 ms a 48 kHz. Um `sleep` por cima disso
+        somaria dois relógios e produziria subcorrida — a mesma classe de
+        defeito do lado da entrada. O `dormir` existe só para a fonte que NÃO
+        tem ritmo próprio (um arquivo, um dublê), e por omissão ele não é
+        chamado.
         """
         relogio = agora or time.monotonic
         comeco = relogio()
@@ -2359,7 +2418,7 @@ def fonte_de_arquivo(fd: int) -> Callable[[int], bytes]:
 def fonte_com_ritmo(
     fonte: Callable[[int], bytes],
     *,
-    ms_por_report: int,
+    ms_por_report: float,
     agora: Callable[[], float] | None = None,
     dormir: Callable[[float], None] | None = None,
 ) -> Callable[[int], bytes]:
@@ -2971,7 +3030,7 @@ def fonte_do_monitor_do_no(
     uniq: str,
     papel: str = "som",
     abrir: Callable[[list[str]], Any] | None = None,
-    taxa: int = TAXA_DO_ENCODER,
+    taxa: int | None = None,
     canais: int = CANAIS_DO_ENCODER,
 ) -> tuple[Callable[[int], bytes] | None, Any, str]:
     """`(fonte de PCM, processo, motivo)` lendo o monitor do nó DAQUELE controle.
@@ -2980,6 +3039,14 @@ def fonte_do_monitor_do_no(
     publica — ou seja, **o que o jogo mandou para aquele controle**, e nada
     mais. Um `--target` vazio cairia na saída padrão do sistema e o controle
     tocaria o som da máquina inteira; `argv_do_gravador` recusa isso.
+
+    **A TAXA VEM DO PAPEL quando o chamador não a dá** —
+    A-PONTE-DO-SOM-ANDA-NO-RITMO-DO-CONTROLE-01, 29/09/2026. A ponte não
+    dorme: quem lhe dá a cadência é o gravador, e a cadência tem de ser a do
+    aparelho. O papel «som» lê o monitor a :data:`TAXA_DA_FONTE_DO_SOM`
+    (45 000 Hz, 93,75 reports/s); o «haptica», a 48 kHz, que já anda a 93,75
+    com o bloco de 512 quadros. Ver :func:`taxa_da_fonte`. A 48 kHz o som ia a
+    100 reports/s, e o alto-falante do controle cortava a cada ~3 s.
 
     O processo volta junto porque quem sobe tem de poder derrubar: um
     `pw-record` órfão continua lendo o monitor depois de a ponte cair.
@@ -3001,7 +3068,12 @@ def fonte_do_monitor_do_no(
     rotulo = rotulo_do_gravador(uniq=uniq, papel=papel)
     if not rotulo:
         return None, None, "sem `uniq` não há rótulo único para o gravador"
-    argv = argv_do_gravador(f"{id_do_no}.monitor", rotulo=rotulo, taxa=taxa, canais=canais)
+    argv = argv_do_gravador(
+        f"{id_do_no}.monitor",
+        rotulo=rotulo,
+        taxa=taxa_da_fonte(papel) if taxa is None else taxa,
+        canais=canais,
+    )
     if not argv:
         return None, None, "nem `pw-record` nem `parec` nesta máquina"
     lancar = abrir or lancar_leitor
@@ -3089,15 +3161,20 @@ class PonteDeSomPorRadio:
         gravador_da_haptica: Any | None = None,
         vaga: Any = None,
         so_com_sinal: bool = True,
+        relogio: Callable[[], float] | None = None,
     ) -> None:
         self.uniq = uniq
         #: A PONTE DO PRODUTO SÓ ESCREVE O QUE TEM SINAL — A-HAPTICA-DO-RADIO-
         #: OBEDECE-AO-SINAL-DO-JOGO-01, 28/09/2026. Ela escuta o monitor o
         #: tempo todo (ler é local e não gasta rádio), e o silêncio do jogo não
-        #: vai ao ar: foi a ponte de pé em silêncio, a 93,75 reports por
-        #: segundo, que afogou o rádio em 22/09. Ver
+        #: vai ao ar: foi a ponte de pé em silêncio, a 100 reports por segundo
+        #: (a fonte a 48 kHz), que afogou o rádio em 22/09. Ver
         #: :meth:`BombaDeSomPeloRadio._vale_mandar`.
         self.so_com_sinal = bool(so_com_sinal)
+        #: O relógio da bomba, repassado a ela. É por ele que o laço conta o
+        #: tempo de pé e as leituras por segundo da linha de saída; `None` é o
+        #: `time.monotonic`. Existe para a régua dar o tempo sem esperar por ele.
+        self._relogio = relogio
         #: A VAGA que o governador deu a esta ponte (GOVERNADOR-DO-RADIO-01).
         #: A ponte diz a ele quando SUBIU e quando DESCEU — é o que o diário
         #: conta por adaptador —, e a bomba a consulta a cada quadro. `None` =
@@ -3199,6 +3276,7 @@ class PonteDeSomPorRadio:
             fonte_haptica=self._fonte_da_haptica,
             vaga=self._vaga,
             so_com_sinal=self.so_com_sinal,
+            relogio=self._relogio,
         )
         # O fd e o sinal VÃO COM A THREAD, e é isso que impede a corrida velha
         # de escrever (ou de fechar) o descritor da corrida nova.
@@ -3214,20 +3292,31 @@ class PonteDeSomPorRadio:
             self._vaga.subiu(
                 "vibracao" if self.arranjo is ARRANJO_HAPTICA_032 else "som"
             )
+        # A SUBIDA NÃO DIZ CADÊNCIA — 29/09/2026. Esta linha imprimia
+        # `reports_por_segundo=93.75`, que era a constante do arranjo e não o
+        # que a ponte fazia: em 27/09 ela disse 93,75 sobre uma ponte a 100/s,
+        # e ninguém viu. O número medido sai na linha de saída do `_laco`.
         logger.info(
             "som_radio_ponte_de_pe",
             uniq=self.uniq,
             arranjo=self.arranjo.nome,
-            reports_por_segundo=round(1.0 / self._bomba.intervalo_de_envio_s, 2),
         )
         return True
 
     def _laco(self, fd: int, parar: threading.Event) -> None:
         """O laço da bomba, até mandarem parar ou a fonte secar.
 
-        **O ritmo é o da FONTE**, como em :meth:`BombaDeSomPeloRadio.rodar`: o
-        monitor do nó entrega no tempo real. O `dormir` só entra para fonte sem
-        ritmo próprio, e aí ele usa a cadência MEDIDA do arranjo.
+        **O ritmo é o da FONTE, e o laço não dorme**: o monitor do nó entrega
+        no tempo real, e pedir um report bloqueia até o nó ter tocado as
+        amostras dele na taxa do gravador. É a taxa que põe a ponte na cadência
+        do aparelho (:data:`TAXA_DA_FONTE_DO_SOM`, 93,75 reports/s); um
+        `sleep` aqui somaria um segundo relógio ao do jogo.
+
+        **AO SAIR, ELE DIZ O QUE FEZ** (`som_radio_ponte_saiu`): os segundos
+        de pé, as leituras da fonte por segundo (os reports calados inclusive:
+        é o ritmo que a fonte impôs), as escritas que o kernel aceitou e os
+        quadros cedidos. É o número que a próxima bancada lê, contado pelo
+        relógio da bomba.
         """
         bomba = self._bomba
         if bomba is None:
@@ -3235,6 +3324,9 @@ class PonteDeSomPorRadio:
             self._soltar_a_vaga("a ponte não montou a bomba")
             return
         por_que = "a ponte desceu"
+        relogio = bomba.relogio
+        comeco = relogio()
+        leituras = 0
         try:
             while not parar.is_set():
                 report = bomba.um_report()
@@ -3242,6 +3334,7 @@ class PonteDeSomPorRadio:
                     logger.info("som_radio_fonte_secou", uniq=self.uniq)
                     por_que = "a fonte do som secou"
                     break
+                leituras += 1
                 if report and not bomba.escrever(report):
                     if bomba.fila_parada:
                         # O TETO DE CEDER (GOVERNADOR-DO-RADIO-01): não é o
@@ -3262,9 +3355,35 @@ class PonteDeSomPorRadio:
                 os.close(fd)
             except OSError:
                 logger.debug("som_radio_fd_ja_fechado", uniq=self.uniq)
+            self._dizer_o_que_fez(bomba, por_que, relogio() - comeco, leituras)
             # A VAGA SAI COM A CORRIDA, e só com ela: enquanto a thread
             # respira, a ponte ainda pode pôr bytes no ar.
             self._soltar_a_vaga(por_que)
+
+    def _dizer_o_que_fez(
+        self, bomba: BombaDeSomPeloRadio, por_que: str, segundos: float, leituras: int
+    ) -> None:
+        """A linha de saída da ponte, com o que se contou. Nunca levanta."""
+        try:
+            contagem = bomba.contagem
+            contagem.segundos = segundos
+            logger.info(
+                "som_radio_ponte_saiu",
+                uniq=self.uniq,
+                arranjo=self.arranjo.nome,
+                por_que=por_que,
+                segundos_de_pe=round(segundos, 3),
+                leituras=leituras,
+                leituras_por_segundo=round(leituras / segundos, 2) if segundos > 0 else 0.0,
+                escritas_aceitas=contagem.escritas_aceitas_pelo_kernel,
+                calados=contagem.reports_calados,
+                cedidos=(
+                    contagem.quadros_cedidos_por_fila_cheia
+                    + contagem.quadros_cedidos_ao_governador
+                ),
+            )
+        except Exception:  # o diário nunca derruba a ponte
+            logger.debug("som_radio_saida_nao_contada", uniq=self.uniq, exc_info=True)
 
     def _soltar_a_vaga(self, por_que: str) -> None:
         """Devolve a vaga ao governador. Idempotente, nunca levanta."""
@@ -4004,6 +4123,8 @@ __all__ = [
     "PREFIXO_SINK_DO_SOM",
     "PRIORIDADE_SESSAO_DO_SOM",
     "TAMANHO_DO_DEGRAU",
+    "TAXA_DA_FONTE_DO_SOM",
+    "TAXA_DA_FONTE_POR_PAPEL",
     "TAXA_DO_ENCODER",
     "TETO_DE_CEDER_S",
     "TRANSPORTE_CABO",
@@ -4052,5 +4173,6 @@ __all__ = [
     "so_hex",
     "sufixo_do_sink_do_som",
     "tag_tlv",
+    "taxa_da_fonte",
     "versao_libopus",
 ]

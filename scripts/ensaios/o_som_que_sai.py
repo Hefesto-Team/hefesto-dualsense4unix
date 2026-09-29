@@ -175,8 +175,15 @@ BANCADA_HZ = 1300.0
 BANCADA_PULSOS_HZ = 2.0
 
 
-def pcm_pulsado() -> Callable[[int], bytes]:
-    """Uma fonte de PCM infinita com o timbre da bancada. `s16le` estéreo 48k.
+def pcm_pulsado(taxa: int = af.TAXA_DO_ENCODER) -> Callable[[int], bytes]:
+    """Uma fonte de PCM infinita com o timbre da bancada. `s16le` estéreo, à `taxa`.
+
+    **A TAXA É A DA BOMBA QUE VAI TOCÁ-LO** (``bomba.taxa_da_fonte_hz``) —
+    29/09/2026, A-PONTE-DO-SOM-ANDA-NO-RITMO-DO-CONTROLE-01. O aparelho toca
+    as 480 amostras de um report do `0x35` em 10,667 ms, que é tocá-las a
+    45 000 Hz: um timbre sintetizado a 48 kHz sairia 6,25% grave, o «1300 Hz
+    pulsado a 2 Hz» em 1218,75 Hz pulsado a 1,875 Hz. É a regra da ponte do
+    produto: taxa da fonte x 512/48000 = o que o report lê.
 
     Fonte SINTÉTICA de propósito: ela não passa pelo servidor de som, não
     depende de nó publicado e não pode ser confundida com som que já estava
@@ -190,7 +197,7 @@ def pcm_pulsado() -> Callable[[int], bytes]:
         amostras: list[int] = []
         for _ in range(quantos // 4):
             f = next(fase)
-            t = f / af.TAXA_DO_ENCODER
+            t = f / taxa
             porta = 1.0 if math.sin(2 * math.pi * BANCADA_PULSOS_HZ * t) >= 0 else 0.0
             valor = int(AMPLITUDE * porta * math.sin(2 * math.pi * BANCADA_HZ * t))
             amostras.extend((valor, valor))
@@ -529,21 +536,31 @@ def escrever_no_aparelho(argumentos: argparse.Namespace) -> int:
         # 2.660 reports/s num degrau que pede 50/s — 53 vezes o necessário, num
         # rádio que carrega os outros três controles dela. Isso não é ensaio, é
         # inundação, e ela mediria a fila do kernel.
+        #
+        # O RITMO E O TIMBRE TÊM O MESMO DONO, a bomba (29/09/2026): a cadência
+        # é a do arranjo (`intervalo_de_envio_s`, 93,75/s no `0x35`, e não os
+        # 10 ms do quadro), e o timbre é sintetizado na taxa em que o aparelho
+        # o toca (`taxa_da_fonte_hz`). Os 10 ms davam 100/s, e o timbre a
+        # 48 kHz saía 6,25% grave.
         molde = af.BombaDeSomPeloRadio(
             arranjo=arranjo, fonte=pcm_pulsado(), common=common
         )
         bomba = af.BombaDeSomPeloRadio(
             arranjo=arranjo,
             fonte=af.fonte_com_ritmo(
-                pcm_pulsado(), ms_por_report=molde.ms_por_report
+                pcm_pulsado(taxa=molde.taxa_da_fonte_hz),
+                ms_por_report=1000 * molde.intervalo_de_envio_s,
             ),
             escritor=af.escritor_de_hidraw(fd),
             tag_audio=argumentos.tag,
             seco=False,
             common=common,
         )
-        print(f"  PCM por report {bomba.bytes_de_pcm_por_report} B / {bomba.ms_por_report} ms")
-        print(f"  cadência       {1000 / bomba.ms_por_report:.0f} reports/s")
+        print(
+            f"  PCM por report {bomba.bytes_de_pcm_por_report} B, tocados em "
+            f"{1000 * bomba.intervalo_de_envio_s:.3f} ms (timbre a {bomba.taxa_da_fonte_hz} Hz)"
+        )
+        print(f"  cadência       {1 / bomba.intervalo_de_envio_s:.2f} reports/s")
         contagem = bomba.rodar(segundos=segundos)
     finally:
         os.close(fd)

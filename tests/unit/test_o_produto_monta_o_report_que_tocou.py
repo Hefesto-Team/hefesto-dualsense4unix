@@ -18,7 +18,7 @@ O QUE CADA TESTE MORDE
 * trocar `ARRANJO_PADRAO` de volta para um dos candidatos do `0x39` reprova
   `test_o_padrao_do_produto_e_o_que_tocou`;
 * apagar `intervalo_de_envio_s` do `ARRANJO_035` reprova
-  `test_a_cadencia_e_a_medida_e_nao_a_nominal` — a bomba volta a 100/s;
+  `test_a_cadencia_e_a_medida_e_nao_a_nominal` — o `rodar()` volta a 100/s;
 * apagar a guarda `if self.len_haptico:` de `Arranjo.montar` reprova
   `test_o_arranjo_sem_haptico_nao_estraga_o_byte_de_id` — o byte de id vira
   `0xD2` e o firmware descarta calado, que é o silêncio de sempre;
@@ -120,7 +120,14 @@ def test_o_padrao_do_produto_e_o_que_tocou() -> None:
 
 
 def test_a_cadencia_e_a_medida_e_nao_a_nominal() -> None:
-    """512/48000, e não 10 ms — o aparelho come 93,75 quadros/s, não 100."""
+    """512/48000, e não 10 ms — o aparelho come 93,75 quadros/s, não 100.
+
+    Ela mede a CADÊNCIA DECLARADA no arranjo, que o ``rodar()`` e o ensaio de
+    bancada usam. O que a ponte do produto manda é outra medida: a ponte não
+    dorme, e quem lhe dá o ritmo é a taxa da fonte
+    (``test_a_ponte_do_som_anda_no_ritmo_do_controle.py``). Até 29/09/2026 a
+    frase desta régua dizia «esta bomba manda» enquanto a ponte mandava 100/s.
+    """
     bomba = af.BombaDeSomPeloRadio(
         arranjo=af.ARRANJO_035, fonte=lambda n: b"\x00" * n
     )
@@ -128,7 +135,7 @@ def test_a_cadencia_e_a_medida_e_nao_a_nominal() -> None:
     reports_por_segundo = 1.0 / bomba.intervalo_de_envio_s
     assert reports_por_segundo == pytest.approx(93.75), (
         "alimentar a 100/s é a taxa de ESTOURO que segurou esta casa por nove "
-        f"passadas; esta bomba manda {reports_por_segundo:.2f}/s"
+        f"passadas; o arranjo declara {reports_por_segundo:.2f}/s"
     )
 
 
