@@ -33,11 +33,22 @@ from hefesto_dualsense4unix.core.physical_report_reader import (
     INPUT_REPORT_BT_SIZE,
     MOTION_WINDOW_LEN,
     PhysicalReportReader,
-    extract_motion_window,
 )
 
 #: Janela padrão reconhecível (25 bytes 0x01..0x19).
 _WINDOW = bytes(range(1, MOTION_WINDOW_LEN + 1))
+
+
+def _janela_do_laco(report: bytes) -> bytes | None:
+    """A janela de motion como o laço vivo a lê (`physical_report_reader`).
+
+    A base uma vez (`_struct_base`, que valida o CRC do BT e recusa o report de
+    áudio) e a fatia com ela (`_janela_com_base`) — o par que o `_run` usa. O
+    `extract_motion_window`, que fazia os dois passos numa função só e só a
+    suíte chamava, saiu em 28/09/2026; estas réguas passaram ao dono.
+    """
+    base = prr._struct_base(report)
+    return None if base is None else prr._janela_com_base(report, base)
 
 
 def _usb_report(window: bytes = _WINDOW) -> bytes:
@@ -63,33 +74,33 @@ def _bt_report(window: bytes = _WINDOW, *, corrupt: bool = False) -> bytes:
     return bytes(raw)
 
 
-class TestExtractMotionWindow:
+class TestAJanelaComoOLacoALe:
     def test_usb_extrai_a_janela_verbatim(self) -> None:
-        assert extract_motion_window(_usb_report()) == _WINDOW
+        assert _janela_do_laco(_usb_report()) == _WINDOW
 
     def test_usb_e_fatia_exata_do_buffer(self) -> None:
         raw = bytes(range(64))  # cada byte = seu offset
-        window = extract_motion_window(bytes([0x01]) + raw[1:])
+        window = _janela_do_laco(bytes([0x01]) + raw[1:])
         assert window is not None
         assert window[0] == 16 and window[-1] == 40  # raw[16:41]
 
     def test_usb_curto_demais_e_descartado(self) -> None:
-        assert extract_motion_window(_usb_report()[:40]) is None
+        assert _janela_do_laco(_usb_report()[:40]) is None
 
     def test_bt_extrai_a_janela_com_crc_valido(self) -> None:
-        assert extract_motion_window(_bt_report()) == _WINDOW
+        assert _janela_do_laco(_bt_report()) == _WINDOW
 
     def test_bt_com_crc_corrompido_e_descartado(self) -> None:
-        assert extract_motion_window(_bt_report(corrupt=True)) is None
+        assert _janela_do_laco(_bt_report(corrupt=True)) is None
 
     def test_bt_com_tamanho_errado_e_descartado(self) -> None:
-        assert extract_motion_window(_bt_report()[:64]) is None
+        assert _janela_do_laco(_bt_report()[:64]) is None
 
     def test_report_de_outro_id_e_descartado(self) -> None:
-        assert extract_motion_window(bytes([0x05]) + bytes(63)) is None
+        assert _janela_do_laco(bytes([0x05]) + bytes(63)) is None
 
     def test_report_vazio_e_descartado(self) -> None:
-        assert extract_motion_window(b"") is None
+        assert _janela_do_laco(b"") is None
 
     def test_crc_de_input_bate_com_o_vetor_conhecido(self) -> None:
         # ps_check_crc32(0xA1, "0x31 + 73 zeros") — precomputado e fossilizado:
@@ -100,7 +111,7 @@ class TestExtractMotionWindow:
     def test_janela_bt_e_usb_sao_a_mesma_fatia_do_struct(self) -> None:
         # base 1 (USB) vs base 2 (BT): o MESMO conteúdo de struct tem de sair
         # igual dos dois transportes.
-        assert extract_motion_window(_usb_report()) == extract_motion_window(
+        assert _janela_do_laco(_usb_report()) == _janela_do_laco(
             _bt_report()
         )
 

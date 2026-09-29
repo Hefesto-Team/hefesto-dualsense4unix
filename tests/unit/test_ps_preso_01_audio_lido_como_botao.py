@@ -53,8 +53,8 @@ from hefesto_dualsense4unix.core.physical_report_reader import (
     INPUT_REPORT_BT,
     INPUT_REPORT_BT_SIZE,
     INPUT_REPORT_USB,
+    _janela_com_base,
     _struct_base,
-    extract_motion_window,
 )
 from hefesto_dualsense4unix.core.ds_output_report import BT_INPUT_CRC_SEED, bt_crc32
 
@@ -114,8 +114,12 @@ class TestOReportDeAudioNaoEInput:
         Se o motion tivesse um caminho próprio, o giroscópio passaria a receber
         Opus e a mira giraria sozinha.
         """
-        assert extract_motion_window(_report_bt(com_audio=True)) is None
-        assert extract_motion_window(_report_bt(com_audio=False)) is not None
+        # O laço lê a janela pelo mesmo portão da base (`_struct_base`, e só
+        # depois `_janela_com_base`): o report de áudio para no portão.
+        assert _struct_base(_report_bt(com_audio=True)) is None
+        base = _struct_base(_report_bt(com_audio=False))
+        assert base is not None
+        assert _janela_com_base(_report_bt(com_audio=False), base) is not None
 
     def test_crc_ruim_continua_recusado(self) -> None:
         """A defesa velha não pode ter sido perdida no caminho."""

@@ -277,12 +277,16 @@ class TestOsQuatroCamposContinuamChegando:
 
 
 class TestAPortaDeQuemSoTemUmReport:
-    """Os extratores públicos continuam existindo e continuam corretos.
+    """Os extratores públicos que ficam continuam corretos.
 
-    Eles são a porta de quem tem UM report na mão (a CLI, um dump, a suíte) e
-    não têm base para receber. A equivalência com o caminho quente é o que
+    Eles são a porta de quem tem UM report na mão (um ensaio, um dump, a suíte)
+    e não têm base para receber. A equivalência com o caminho quente é o que
     impede as duas metades de divergirem em silêncio — o defeito que a casa
     persegue desde a regra "fato errado sai de TODOS os lugares".
+
+    O da janela de motion (`extract_motion_window`) SAIU em 28/09/2026: só a
+    suíte o chamava, e a janela ficou com um dono só, o par `_struct_base` +
+    `_janela_com_base` do laço.
     """
 
     @pytest.mark.parametrize("fabricar", [_usb, _bt], ids=["cabo", "rádio"])
@@ -291,7 +295,7 @@ class TestAPortaDeQuemSoTemUmReport:
         base = prr._struct_base(report)
         assert base is not None
 
-        assert prr._janela_com_base(report, base) == prr.extract_motion_window(report)
+        assert prr._janela_com_base(report, base) == _janela(7)
         assert prr._clique_com_base(report, base) == prr.extract_touchpad_click(report)
         assert prr._jack_com_base(report, base) == prr.extract_jack_status(report)
         assert prr._bateria_com_base(report, base) == prr.extract_battery_status(report)
@@ -303,7 +307,7 @@ class TestAPortaDeQuemSoTemUmReport:
         contador = _Contador(monkeypatch)
         report = _bt(marca=3)
 
-        assert prr.extract_motion_window(report) == _janela(3)
+        assert prr.extract_touchpad_click(report) is False
 
         assert contador.base == 1
         assert contador.crc == 1
@@ -361,13 +365,17 @@ class TestODubleDeLeitorEHonesto:
 
 
 def test_o_modulo_nao_ficou_com_extrator_orfao() -> None:
-    """Os quatro públicos seguem exportados — arrancá-los quebraria a CLI.
+    """Os três públicos que ficam seguem exportados, e o da janela não volta.
 
     A sprint ENTREGA-QUE-NAO-LIGOU-01 desta casa nasceu do inverso (função sem
-    chamador); esta guarda o outro lado: chamador sem função.
+    chamador); esta guarda o outro lado: chamador sem função. O
+    `extract_jack_status` tem chamador fora da suíte
+    (`scripts/ensaios/a_captura_armada_do_som_no_radio.py`). O
+    `extract_motion_window` saiu em 28/09/2026, e a janela tem um dono só.
     """
+    assert not hasattr(prr, "extract_motion_window")
+    assert "extract_motion_window" not in prr.__all__
     for nome in (
-        "extract_motion_window",
         "extract_touchpad_click",
         "extract_jack_status",
         "extract_battery_status",

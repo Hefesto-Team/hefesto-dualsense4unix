@@ -512,13 +512,21 @@ def eh_report_de_estado(report: bytes) -> bool:
 # CONTA as validações por report em vez de cronometrar — número estável em
 # máquina de CI.
 #
-# Os quatro extratores públicos continuam existindo e continuam calculando a
-# base sozinhos: eles são a porta de quem tem UM report na mão (testes, CLI,
-# quem lê um dump). Quem está no caminho quente usa as funções `_..._com_base`.
+# Os extratores públicos do clique, do jack e da bateria continuam existindo e
+# calculando a base sozinhos: são a porta de quem tem UM report na mão (a
+# suíte, um ensaio, quem lê um dump). Quem está no caminho quente usa as funções
+# `_..._com_base`. O da janela de motion, `extract_motion_window`, SAIU em
+# 28/09/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01): só a suíte o chamava, e a
+# janela tem um dono só, o par `_struct_base` + `_janela_com_base` que o laço
+# usa. As réguas dele passaram a esse par.
 
 
 def _janela_com_base(report: bytes, base: int) -> bytes | None:
-    """Janela de motion (25 B) a partir da base já resolvida."""
+    """Janela de motion (25 B) a partir da base já resolvida.
+
+    Com a base do `_struct_base`: ``0x01`` (USB) dá ``report[16:41]`` e ``0x31``
+    (BT, só com CRC válido) dá ``report[17:42]``. Report curto demais → None.
+    """
     start = base + MOTION_WINDOW_OFFSET
     end = start + MOTION_WINDOW_LEN
     if len(report) < end:
@@ -548,19 +556,6 @@ def _bateria_com_base(report: bytes, base: int) -> int | None:
     if len(report) <= idx:
         return None
     return int(report[idx])
-
-
-def extract_motion_window(report: bytes) -> bytes | None:
-    """Janela de motion (25 B) de um report CRU do físico, ou None.
-
-    - ``0x01`` (USB): janela = ``report[16:41]``.
-    - ``0x31`` (BT): janela = ``report[17:42]``, só com CRC válido.
-    - Qualquer outro id/tamanho → None. Report curto demais → None.
-    """
-    base = _struct_base(report)
-    if base is None:
-        return None
-    return _janela_com_base(report, base)
 
 
 def extract_touchpad_click(report: bytes) -> bool | None:
@@ -1313,7 +1308,6 @@ __all__ = [
     "extract_battery_status",
     "extract_estado_do_mic",
     "extract_jack_status",
-    "extract_motion_window",
     "extract_touchpad_click",
     "uniq_do_hidraw",
 ]
