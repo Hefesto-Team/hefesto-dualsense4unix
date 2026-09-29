@@ -1090,16 +1090,12 @@ def avisos_do_estado(state: dict[str, Any] | None) -> list[dict[str, str]]:
     return fora
 
 
-def texto_da_conta(quantos: int) -> str:
-    """``"1 aviso"`` / ``"3 avisos"`` / ``"nenhum aviso"`` — o canto da coluna.
-
-    O desenho tem ``"1 aviso"`` chumbado; zero avisos é o estado normal de uma
-    máquina saudável e o desenho não o tem, então a palavra é escrita aqui e não
-    lá.
-    """
-    if quantos == 0:
-        return "nenhum aviso"
-    return f"{quantos} aviso" + ("s" if quantos != 1 else "")
+# `texto_da_conta` SAIU — A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026. Era o canto
+# da coluna Atenção («nenhum aviso», «3 avisos»), e a coluna saiu da Jogar por
+# ordem dela; os avisos foram para a lista do exame da 09, que não conta linhas
+# desde 25/09 (*«Remove esse 8 linhas deixa o espaço vazio»*). O último a
+# chamá-la era o piloto de bancada da Jogar, pintando um endereço que a página
+# não tem mais.
 
 
 # `nome_do_perfil` SAIU — A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026. Ela lia só o
@@ -1142,5 +1138,4 @@ __all__ = [
     "plano_do_modo",
     "porque_nao_aplica",
     "recibo_do_reconectar",
-    "texto_da_conta",
 ]

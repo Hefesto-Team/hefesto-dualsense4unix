@@ -409,7 +409,6 @@ window.HEF = (function(){
       n += cls(s,'on', s.dataset.degrau===p.degrau);
       n += inerte(s, !!p.degraus_travados[s.dataset.degrau], p.degraus_travados[s.dataset.degrau]);
     }
-    n += txt(q('[data-campo="atencao-conta"]'), p.atencao_conta);
     // A PENDÊNCIA. O espaço dela é RESERVADO no desenho (a legenda o diz), então
     // o que muda é a visibilidade, nunca o `display` — tirá-la do fluxo faria a
     // tela pular, que é o defeito que o espaço reservado existe para não ter.
@@ -924,7 +923,6 @@ class Janela:
         """O que a página recebe numa pintura. UMA chamada, sempre."""
         conta, conta_b = mesa_viva.texto_da_contagem(mesa)
         modo = self.eco_modo or painel.modo_vivo(state)
-        avisos = painel.avisos_do_estado(state) if state is not None else []
         baterias = self._baterias(conectados)
         cartoes = {}
         for c in mesa:
@@ -970,7 +968,6 @@ class Janela:
             # lia o carimbo por jogo e saiu em 28/09/2026: aqui ele era chamado
             # com `pontes=None` e devolvia sempre `None`.
             "degrau": self.eco_degrau or (_a01()._chip_do_caminho(state) if state else ""),
-            "atencao_conta": painel.texto_da_conta(len(avisos)),
             "pendente": self.pendente,
             "cartoes": cartoes,
         }
