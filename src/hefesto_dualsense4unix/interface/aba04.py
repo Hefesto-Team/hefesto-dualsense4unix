@@ -848,8 +848,12 @@ CSS = """
      palavra não depende de contraste.
 
      O `--dono` SAIU DO X e virou a tinta da linha embaixo da casa (29/09/2026,
-     a regra de cima). */
-  .guia .tom.tomado{cursor:not-allowed}
+     a regra de cima).
+
+     A CASA DIVIDIDA TAMBÉM NÃO OFERECE O CLIQUE (29/09/2026): ela fica `on`,
+     sem X e sem gesto, com o `aria-disabled`; com a mão de clique por cima ela
+     prometeria o gesto que não tem. */
+  .guia .tom.tomado,.guia .tom[aria-disabled="true"]{cursor:not-allowed}
   /* O CONTORNO BRANCO É `filter:drop-shadow`, e não um segundo X por baixo:
      o `drop-shadow` segue a FORMA alfa do gradiente, então ele contorna as
      duas hastes de verdade. Quatro sombras de 1px (uma por diagonal) fecham

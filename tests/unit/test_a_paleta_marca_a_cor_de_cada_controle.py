@@ -152,10 +152,16 @@ CENAS = {
 def _pintar(monkeypatch: pytest.MonkeyPatch, cena: str
             ) -> tuple[Any, dict[str, dict[str, Any]]]:
     """O contexto da cena e as colunas que o pacote da aba emite para ela."""
+    pecas, perfil = CENAS[cena]()
+    return _pintar_as_pecas(monkeypatch, pecas, perfil)
+
+
+def _pintar_as_pecas(monkeypatch: pytest.MonkeyPatch, pecas: list[dict[str, Any]],
+                     perfil: dict[str, Any]) -> tuple[Any, dict[str, dict[str, Any]]]:
+    """Como `_pintar`, com as peças na ordem em que chegam ao `conectados`."""
     from hefesto_dualsense4unix.interface import pacotes
     from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
-    pecas, perfil = CENAS[cena]()
     monkeypatch.setattr(a04.perfil, "ativo", lambda _nome: perfil)
     ctx = _contexto(pecas)
     pacote = pacotes.pacote_da_pagina(PAGINA, ctx) or {}
@@ -380,6 +386,40 @@ class TestDuasPecasNoMesmoTom:
         assert marcas[3]["on"] == {VERMELHO} and marcas[3]["x"] == {AMARELO}
         assert marcas[4]["on"] == {AMARELO} and marcas[4]["x"] == {VERMELHO}
 
+    def test_a_ordem_e_a_do_numero_e_nao_a_da_chegada(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O `conectados` na ordem inversa: a casa dividida segue na ordem do número.
+
+        As outras cenas chegam já na ordem do número, e nelas a ordem da
+        chegada e a do número não se separam. MORDIDA: `as_casas_da_mesa` sem o
+        `sorted` pelo número — a linha verde sai do P4 ao P1, o `title` também,
+        e a recusa nomeia o último.
+        """
+        from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
+
+        pecas, perfil = _a_cena_do_todos()
+        _ctx, colunas = _pintar_as_pecas(monkeypatch, pecas[::-1], perfil)
+        modelos = {p["n"]: p["modelo"] for p in pecas}
+        quer = [_o_plastico_do_dono(modelos[n]).lower() for n in (1, 2, 3, 4)]
+        for n, uniq in enumerate(UNIQS, start=1):
+            verde = _casas(colunas[uniq]["tons"])[VERDE]
+            tinta = re.search(r'--dono:([^"]+)"', verde["html"])
+            assert tinta, verde["html"]
+            achadas = [c.lower() for c in
+                       re.findall(r"linear-gradient\((#[0-9a-fA-F]{6}),", tinta.group(1))]
+            assert achadas == quer, f"P{n}: a linha verde sai em {achadas}"
+            outros = [k for k in (1, 2, 3, 4) if k != n]
+            posicoes = [verde["titulo"].find(f"P{k} (") for k in outros]
+            assert all(p >= 0 for p in posicoes) and posicoes == sorted(posicoes), (
+                f"P{n}: {verde['titulo']}")
+
+        pecas, perfil = _a_cena_do_global((0, 255, 255))
+        ctx, _colunas = _pintar_as_pecas(monkeypatch, pecas[::-1], perfil)
+        with pytest.raises(RuntimeError) as erro:
+            a04._sem_repetir_a_cor_do_vizinho(ctx, UNIQS[3], (0, 255, 255))
+        assert "P1 (Cosmic Red)" in str(erro.value), str(erro.value)
+
 
 # ---------------------------------------------------------------------------
 # Régua 4 — o gesto é o que a recusa aceita
@@ -484,6 +524,7 @@ MEDIDA_DA_LINHA = r"""
           classes: el.className,
           casa: [r.left, r.top, r.width, r.height],
           borda: s.borderTopColor,
+          cursor: s.cursor,
           content: b.content,
           linha: [x0 + px(b.left), y0 + px(b.top), px(b.width), px(b.height)],
           cor: b.backgroundColor,
@@ -753,6 +794,26 @@ def test_a_casa_propria_nao_tem_mais_borda(na_tela, vista: str) -> None:
         assert len(proprias) == 1, f"P{n}: {len(proprias)} casas próprias"
         assert proprias[0]["borda"].replace(" ", "") in ("rgba(0,0,0,0)", "transparent"), (
             f"P{n}: a casa própria ainda tem borda {proprias[0]['borda']}")
+
+
+@pytest.mark.parametrize("vista", ["janela", "dela"])
+def test_so_a_casa_com_gesto_tem_a_mao_de_clique(na_tela, vista: str) -> None:
+    """O cursor diz o que o gesto faz: a mão só onde há `data-gesto`.
+
+    A casa que ele divide (o «Todos») fica `on`, sem X e sem gesto; com a mão
+    de clique ela prometeria o que não faz. MORDIDA: tire o
+    `[aria-disabled="true"]` da regra do `not-allowed` (regere a 04) — a casa
+    verde volta à mão nas quatro colunas.
+    """
+    erradas = []
+    for cena in ("a foto", "o Todos"):
+        for n, fileira in _as_casas_na_tela(na_tela[(cena, vista)]).items():
+            for tom, casa in fileira.items():
+                travada = "tomado" in casa["classes"] or (cena == "o Todos" and tom == VERDE)
+                quer = "not-allowed" if travada else "pointer"
+                if casa["cursor"] != quer:
+                    erradas.append(f"{cena} P{n} {tom}: cursor {casa['cursor']}, quer {quer}")
+    assert not erradas, "\n".join(erradas)
 
 
 def test_a_regua_mede_as_vistas_que_pediu(na_tela) -> None:
