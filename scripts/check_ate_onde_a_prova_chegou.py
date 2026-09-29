@@ -210,6 +210,17 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "grava e relê o arranjo por controle; falta o dedo dela mover o cursor e "
         "apertar o direcional, o L1 e o L2 num jogo aberto, que é a prova da sprint",
     ),
+    # O GANHO DA HÁPTICA POR ÁUDIO (O-GANHO-DA-HAPTICA-TEM-DONO-01, publicada na
+    # 05 em 29/09): o ganho grava e chega à placa (cabo) e ao conversor da ponte
+    # (rádio) com régua que morde; o aparelho obedecer é a mão dela.
+    "haptica": (
+        "médio",
+        "2026-09-29-O-GANHO-DA-HAPTICA-TEM-DONO-01.md",
+        "o ganho de 0 a 200% por controle chega aos traseiros da placa daquele "
+        "controle no cabo e ao conversor da ponte antes do int8 no rádio, com as "
+        "réguas da sprint mordendo nos dois transportes; falta o passo 0 da sprint "
+        "(o tremor pelo nível) e a mão dela nos Caminhos da Forja a 100, 150 e 200",
+    ),
     "ganho-mic": (
         "médio",
         "2026-09-20-O-GANHO-DO-MIC-TEM-DONO-01.md",
