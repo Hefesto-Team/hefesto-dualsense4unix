@@ -436,7 +436,11 @@ def armar_o_ato_do_daemon(
     # MUDA-01 (29/09/2026): o gesto lhe diz a porta, e ele grava depois do
     # aparelho. Aqui ele só anota o que gravaria, com a assinatura do real.
     def _gravar_o_modo_escolhido(
-        kind: str, *, caminho: str | None = None, porta: str
+        kind: str,
+        *,
+        caminho: str | None = None,
+        porta: str,
+        mouse_ligado: bool | None = None,
     ) -> str | None:
         anotado.gravado.append((kind, caminho, porta))
         return None

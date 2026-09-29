@@ -16,8 +16,8 @@ a supressão.
 O QUE ESTA RÉGUA LÊ é o que o **daemon RECEBEU**, nunca o que a tela pediu. O
 dublê é SUBCLASSE do `Daemon` real — herda as assinaturas, e por isso um dublê
 mais frouxo que o produto não pode nascer aqui (*foi assim que a máscara nunca
-gravou um byte*). Toda a política medida é a do produto: `apply_profile_mouse`,
-`resolver_teclado_emulado` e o recuo rodam de verdade.
+gravou um byte*). Toda a política medida é a do produto: o setter do mouse,
+`resolver_teclado_emulado` e o recuo às velocidades da flag rodam de verdade.
 
 OS TRÊS NÚMEROS SÃO 11, 3 E 6 DE PROPÓSITO, e escolhê-los é o que faz esta
 régua medir:
@@ -201,8 +201,8 @@ def test_o_terceiro_passo_do_modo_le_o_perfil_e_nao_a_sessao() -> None:
     ], f"a definição do modo desktop se moveu: {metodos}"
     assert passos[-1][1] == {"origin": "manual"}, (
         "o arranjo tem de DECLARAR que é gesto dela — o silêncio é lido como "
-        "reconciliação (ORIGEM-QUE-MENTE-01) e não fura o lock de 30 s do "
-        f"`apply_profile_mouse`: {passos[-1][1]}"
+        "reconciliação (ORIGEM-QUE-MENTE-01), e o daemon não grava o modo "
+        f"`desktop` no perfil ativo: {passos[-1][1]}"
     )
     assert "mouse.emulation.restore" not in metodos, (
         "o passo que lê a FLAG DE SESSÃO voltou ao plano. Ele não abre perfil "
@@ -239,10 +239,15 @@ def test_o_arranjo_liga_o_mouse_com_as_velocidades_do_perfil() -> None:
 def test_o_recuo_e_a_flag_de_sessao_e_nunca_um_segundo_default() -> None:
     """Perfil SEM a seção `mouse` recua para a flag — 3, e não 6.
 
-    *Nenhum perfil existente muda de comportamento no dia da cura*: quem não
-    opina continua governado pela preferência da máquina. Se aqui saísse 6, o
-    recuo teria virado um segundo default digitado no meio do caminho — o
+    Quem não opina usa as VELOCIDADES da preferência da máquina. Se aqui saísse
+    6, o recuo teria virado um segundo default digitado no meio do caminho — o
     defeito com outra roupa.
+
+    FATO SUBSTITUÍDO — 29/09/2026 (O-MOUSE-SEGUE-A-NAVEGACAO-01,
+    D-2909-A-NAVEGACAO-LIGA-O-MOUSE): até ali o recuo era
+    `restore_mouse_preference`, e a flag decidia também o liga/desliga. Agora a
+    entrada liga o mouse sempre, e da flag saem só as velocidades
+    (`lifecycle._velocidades_ou_as_da_sessao`).
     """
     _gravar_flag_do_mouse(FLAG_DA_SESSAO)
     sem_mouse = {k: v for k, v in PERFIL_DA_NAVEGACAO.items() if k != "mouse"}
