@@ -542,6 +542,14 @@ def _clique_com_base(report: bytes, base: int) -> bool | None:
     return bool(report[idx] & TOUCHPAD_CLICK_BIT)
 
 
+def _botao_do_mic_com_base(report: bytes, base: int) -> bool | None:
+    """Botão do microfone a partir da base já resolvida (mesmo byte do clique)."""
+    idx = base + BUTTONS2_OFFSET
+    if len(report) <= idx:
+        return None
+    return bool(report[idx] & MIC_BUTTON_BIT)
+
+
 def _jack_com_base(report: bytes, base: int) -> int | None:
     """Byte de fone/microfone a partir da base já resolvida."""
     idx = base + JACK_STATUS_OFFSET
@@ -748,6 +756,12 @@ class PhysicalReportReader:
         # esquecer junto ou a pressionada não voltaria a ser entregue).
         self._touchpad_click: bool | None = None
         self._touchpad_clicks = 0
+        # O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01: último estado do botão do
+        # microfone ENTREGUE ao vpad, pelo contrato do clique acima (`None` =
+        # nada entregue nesta abertura do fd; o vpad solta o botão no
+        # fail-safe e o cache esquece junto).
+        self._mic_button: bool | None = None
+        self._mic_button_forwards = 0
         # JACK-QUE-NAO-LIGOU-01: último byte de fone/mic ENTREGUE ao vpad.
         # `None` = nada entregue nesta abertura do fd, e é o que faz o primeiro
         # report depois de reabrir re-sincronizar o jack — o vpad zera o byte no
@@ -793,6 +807,11 @@ class PhysicalReportReader:
     def touchpad_clicks(self) -> int:
         """Nº de PRESSIONADAS do touchpad entregues ao vpad (TOUCH-CLICK-01)."""
         return self._touchpad_clicks
+
+    @property
+    def mic_button_forwards(self) -> int:
+        """Nº de APERTOS do botão do microfone entregues ao vpad."""
+        return self._mic_button_forwards
 
     @property
     def jack_forwards(self) -> int:
@@ -864,6 +883,7 @@ class PhysicalReportReader:
         # fantasma anunciado ao jogo (JACK-QUE-NAO-LIGOU-01), nem com a bateria
         # de um controle que já foi embora (BATERIA-QUE-NAO-CHEGOU-01).
         self._reset_touchpad_click()
+        self._reset_mic_button()
         self._reset_jack()
         self._reset_battery()
         with contextlib.suppress(Exception):
@@ -960,6 +980,7 @@ class PhysicalReportReader:
                 # com 8% no cache deixaria o jogo alertando bateria fraca para
                 # um controle que nem está mais lá.
                 self._reset_touchpad_click()
+                self._reset_mic_button()
                 self._reset_jack()
                 self._reset_battery()
                 with contextlib.suppress(Exception):
@@ -1051,6 +1072,11 @@ class PhysicalReportReader:
             # hora; o custo é 2 writes extras por clique, contra os 250/s que
             # o throttle já governa.
             self._observe_touchpad_click(data, base)
+            # O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01: o botão do microfone
+            # mora no MESMO byte do clique, e o `hid-playstation` o consome
+            # (o evdev não o traz). Sem esta carona o jogo nunca o via, no
+            # cabo e no rádio, P1 a P4; o Hefesto segue vendo pelo backend.
+            self._observe_mic_button(data, base)
             # JACK-QUE-NAO-LIGOU-01: o fone/microfone sai pelo mesmo caminho e
             # pelo mesmo motivo do clique — mora fora da janela de motion, e o
             # `_maybe_emit` dedupa e capa POR JANELA. Um controle parado na
@@ -1118,6 +1144,43 @@ class PhysicalReportReader:
         reentregaria a pressionada — clique morto até soltar e apertar de novo.
         """
         self._touchpad_click = None
+
+    # -- botão do microfone (O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01) ------
+
+    def _observe_mic_button(self, report: bytes, base: int | None = None) -> None:
+        """Entrega ao vpad a BORDA do botão do microfone deste report cru.
+
+        Quarto irmão do `_observe_touchpad_click`, com as três defesas dele:
+        só borda; ``None`` (id estranho, curto, CRC ruim do rádio, report de
+        áudio) é "não sei" e não solta um botão apertado; vpad sem o método
+        (uinput, dublês) degrada calado. O ato do mudo não passa por aqui: ele
+        é do Hefesto, pelo backend; isto só deixa o JOGO ver o aperto.
+        """
+        if base is None:
+            base = _struct_base(report)
+            if base is None:
+                return
+        pressed = _botao_do_mic_com_base(report, base)
+        if pressed is None or pressed == self._mic_button:
+            return
+        forward = getattr(self._vpad, "forward_mic_button", None)
+        if forward is None:
+            return
+        self._mic_button = pressed
+        try:
+            forward(pressed)
+            if pressed:
+                self._mic_button_forwards += 1
+        except Exception as exc:
+            logger.warning("motion_reader_mic_button_failed", err=str(exc))
+
+    def _reset_mic_button(self) -> None:
+        """Esquece o botão ao perder o fd: o vpad já o soltou no fail-safe.
+
+        Sem isto, um dedo no botão no instante do hotplug ficaria `True` no
+        cache e a reabertura nunca reentregaria o aperto seguinte à soltura.
+        """
+        self._mic_button = None
 
     # -- fone e microfone do controle (JACK-QUE-NAO-LIGOU-01) -------------
 

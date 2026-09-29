@@ -1116,6 +1116,14 @@ class UhidDualSense:
     _touchpad_click: bool = False
     #: Nº de PRESSIONADAS entregues ao jogo (telemetria/teste: "o clique flui?").
     _touchpad_click_count: int = 0
+    #: O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01 — o botão do microfone vindo do
+    #: report CRU do físico, pelo mesmo motivo do clique: o `hid-playstation`
+    #: o consome e o evdev não o traz, então o `forward_buttons` do tique
+    #: nunca tem `mic_btn`. Campo PRÓPRIO: gravado em `_buttons`, o tique
+    #: seguinte o apagaria.
+    _mic_button: bool = False
+    #: Nº de APERTOS do botão do microfone que saíram no report ao jogo.
+    _mic_button_count: int = 0
     #: Anti-flood: janela de tamanho errado loga warning UMA vez por instância
     #: (o reader roda a até ~797 Hz no pico da rajada de BT, medido
     #: 11/08/2026 — um bug de chamador viraria flood).
@@ -1793,6 +1801,35 @@ class UhidDualSense:
                 self._touchpad_click_count += 1
                 self._carimbar(ATIVIDADE_TOUCHPAD_CLICK)
 
+    def forward_mic_button(self, pressed: bool) -> None:
+        """Espelha o BOTÃO do microfone do físico no report do vpad.
+
+        O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01 — irmão exato do
+        `forward_touchpad_click`: mesmo chamador (o `PhysicalReportReader`),
+        mesmo byte (`buttons[2]`, bit 0x04 = `DS_BUTTONS2_MIC_MUTE`), por
+        BORDA e na hora. O ato do mudo continua do Hefesto; isto só deixa o
+        jogo ver o aperto, como vê qualquer DualSense no PC.
+        """
+        if self._fd is None:
+            return
+        with self._lock:
+            alvo = bool(pressed)
+            if alvo == self._mic_button:
+                return
+            self._mic_button = alvo
+            if self._emit_if_changed(from_reader=True) and alvo:
+                self._mic_button_count += 1
+
+    @property
+    def mic_button(self) -> bool:
+        """True enquanto o botão do microfone espelhado do físico está apertado."""
+        return self._mic_button
+
+    @property
+    def mic_button_count(self) -> int:
+        """Nº de APERTOS do botão do microfone que chegaram ao jogo."""
+        return self._mic_button_count
+
     @property
     def touchpad_click(self) -> bool:
         """True enquanto o clique espelhado do físico está pressionado."""
@@ -1841,6 +1878,7 @@ class UhidDualSense:
             if not alvo:
                 self._motion_window = _MOTION_NEUTRAL
                 self._touchpad_click = False
+                self._mic_button = False
                 self._status1_byte = _STATUS1_NEUTRO
                 self._status_byte = _STATUS_DESCONHECIDO
                 self._emit_if_changed()
@@ -1959,6 +1997,10 @@ class UhidDualSense:
         # conjunto de botões (remap/teste). OU lógico, nunca substituição.
         if self._touchpad_click or (pressed & _TOUCHPAD_BUTTONS):
             buttons2 |= _TOUCHPAD_BIT
+        # O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01: o botão do microfone, pelo
+        # mesmo arranjo (OU com o `mic_btn` do conjunto, nunca substituição).
+        if self._mic_button:
+            buttons2 |= _BUTTONS2_BITS["mic_btn"]
         body[_BUTTONS2_OFFSET] = buttons2
         return body
 
