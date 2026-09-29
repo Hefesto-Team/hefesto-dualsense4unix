@@ -146,7 +146,7 @@ def mascarar(uniq: str) -> str:
 
 def nos_de_entrada() -> list[tuple[str, str, str]]:
     """`(caminho, nome, uniq mascarado)` de todo nó que interessa."""
-    fora = []
+    fora: list[tuple[str, str, str]] = []
     try:
         with open("/proc/bus/input/devices", encoding="utf-8") as arq:
             blocos = arq.read().split("\n\n")

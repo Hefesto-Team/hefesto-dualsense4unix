@@ -166,13 +166,13 @@ def _montar(mod: Any, alvos: list[tuple[str, str, dict[str, str] | None]]) -> li
     def _recusa(caminho: str) -> Any:
         raise PermissionError(errno.EACCES, "sem permissão", caminho)
 
-    return mod.montar_os_nos(
+    return list(mod.montar_os_nos(
         [(caminho, nome, "—") for caminho, nome, _p in alvos],
         ec,
         abrir=_recusa,
         propriedades=props.get,
         acesso=lambda _c, _m: False,
-    )
+    ))
 
 
 def test_a_classe_vem_do_udev_e_nao_do_nome(mod: Any) -> None:
@@ -351,8 +351,8 @@ def test_o_eixo_que_salta_e_pego(mod: Any, comum: Any) -> None:
 
     Mordida: tire o pad da pergunta, e o fantasma passa com rc 0."""
     pad = _pad(mod, comum, "/x/event30", ABS_RX=131)
-    _alimentar(mod, pad, _chiado("ABS_RX", 131, 132, 10)
-               + [_ev(ec.EV_ABS, ec.ABS_RX, 250), _syn()])
+    _alimentar(mod, pad, [*_chiado("ABS_RX", 131, 132, 10),
+                          _ev(ec.EV_ABS, ec.ABS_RX, 250), _syn()])
     rc, frase = mod.veredito([pad])
     assert rc == 1, frase
     assert "/x/event30" in frase

@@ -25,7 +25,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterator
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -167,17 +167,17 @@ def test_os_jogadores_2_a_4_entregam_cada_um_o_seu_chiado(
     monkeypatch.setattr(co.CoopManager, "_recolher_os_cedidos", lambda self: None)
     monkeypatch.setattr(co.CoopManager, "_promote_pending", lambda self: None)
     gerente = CoopManager.__new__(CoopManager)
-    gerente._daemon = _daemon(None, arranjo)  # type: ignore[attr-defined]
-    gerente._players = {}  # type: ignore[attr-defined]
+    gerente._daemon = _daemon(None, arranjo)
+    gerente._players = {}
     pads: dict[str, _Pad] = {}
     for n, (uniq, (eixo, valores)) in enumerate(sorted(_CHIADO_POR_JOGADOR.items()), start=2):
         pads[uniq] = _Pad()
-        gerente._players[uniq] = _SecondaryPlayer(  # type: ignore[attr-defined]
+        gerente._players[uniq] = _SecondaryPlayer(
             identity=uniq,
             evdev_path=f"/dev/input/event{n}",
-            reader=_LeitorQueTroca(eixo, valores),
+            reader=cast(Any, _LeitorQueTroca(eixo, valores)),
             player_index=n,
-            vpad=pads[uniq],
+            vpad=cast(Any, pads[uniq]),
         )
     for _ in range(8):
         gerente.forward_all()
