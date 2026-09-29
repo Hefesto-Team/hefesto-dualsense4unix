@@ -485,3 +485,95 @@ def test_o_cartao_do_controle_que_esperou_recebe_a_contagem_e_depois_nada(
     depois = (a08.pacote(ctx).get("colunas") or {}).get(UNIQ, {}).get("luz-espera")
     assert depois == a08._sem_valor(), (
         f"a espera acabou e o cartão continuou dizendo alguma coisa: {depois!r}")
+
+
+# ---------------------------------------------------------------------------
+# O EXAME PERGUNTA A COERÊNCIA DOS PERFIS AO DONO — A-TELA-PERGUNTA-AO-DONO-01
+# ---------------------------------------------------------------------------
+def _achado_grave():
+    from hefesto_dualsense4unix.profiles.sanidade import Achado
+
+    return Achado(regra="catch_all_vence_especifico", gravidade="erro",
+                  mensagem="'Desktop' vale para QUALQUER janela",
+                  cura="baixe a prioridade de 'Desktop' para 0",
+                  perfis=("Desktop",))
+
+
+@pytest.fixture
+def perfis(monkeypatch, tmp_path):
+    """A pasta dos perfis de mentira e o dono dublado, que conta as perguntas."""
+    from hefesto_dualsense4unix.profiles import sanidade
+    from hefesto_dualsense4unix.utils import xdg_paths
+
+    pasta = tmp_path / "profiles"
+    pasta.mkdir()
+    (pasta / "desktop.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(xdg_paths, "profiles_dir", lambda ensure=False: pasta)
+    estado: dict[str, Any] = {"achados": [_achado_grave()], "perguntas": 0}
+
+    def dono():
+        estado["perguntas"] += 1
+        if isinstance(estado["achados"], BaseException):
+            raise estado["achados"]
+        return list(estado["achados"])
+
+    monkeypatch.setattr(sanidade, "verificar_perfis_do_disco", dono)
+    a09._PERFIS.clear()
+    yield estado
+    a09._PERFIS.clear()
+
+
+def test_o_exame_leva_a_coerencia_dos_perfis(perfis, monkeypatch) -> None:
+    """O achado grave dos perfis entra no exame, com o selo AVISO.
+
+    A MORDIDA: tire o `linhas.extend(linhas_dos_perfis(...))` de `_achados` e o
+    primeiro `assert` reprova; tire a chave `FAIL` de
+    `gui/aba_sistema._SELO_DO_VEREDITO` e o segundo reprova (o achado grave
+    sairia como NOTA).
+    """
+    monkeypatch.setattr(a09._exame, "storm_report", lambda **k: [("[ OK ]", "base")])
+    monkeypatch.setattr(a09._exame, "controles_no_cabo", lambda s: 0)
+    monkeypatch.setattr(a09._daemon, "medir_guarda_do_steam_input", lambda: None)
+    monkeypatch.setattr(a09, "_prontuario", lambda pode=True: None)
+    monkeypatch.setattr(a09, "linha_do_som_do_sistema", lambda s: None)
+    monkeypatch.setattr(a09, "linha_da_sobreposicao_vulkan", lambda: None)
+
+    linhas = a09._achados({}) or []
+    frases = [f for _, f in linhas]
+    assert any("'Desktop' vale para QUALQUER janela" in f for f in frases), linhas
+    selos = {a["txt"]: a["selo"] for a in a09._tela.exame(linhas)["linhas"]}
+    grave = next(t for t in selos if "QUALQUER janela" in t)
+    assert selos[grave] == "AVISO", selos
+
+
+def test_perfis_coerentes_nao_ganham_linha(perfis) -> None:
+    """Só fala quando há problema, como o vigia e o prontuário."""
+    perfis["achados"] = []
+    assert a09.linhas_dos_perfis() == []
+
+
+def test_a_leitura_que_falha_vira_linha_e_nao_derruba_o_exame(perfis) -> None:
+    """O `OSError` é do lado de quem chama, como no `doctor`."""
+    perfis["achados"] = PermissionError(13, "Permissão negada")
+    assert a09.linhas_dos_perfis() == [
+        ("[WARN]", "não deu para ler os perfis (Permissão negada)")]
+
+
+def test_a_pasta_parada_nao_e_relida(perfis, tmp_path) -> None:
+    """A faixa lenta relê a cada 2 s; o disco só é lido quando a pasta muda.
+
+    A MORDIDA: tire a comparação da assinatura e a segunda leitura pergunta de
+    novo ao dono.
+    """
+    primeira = a09.linhas_dos_perfis()
+    segunda = a09.linhas_dos_perfis()
+    assert primeira == segunda and perfis["perguntas"] == 1, perfis
+    (tmp_path / "profiles" / "jogo.json").write_text("{}", encoding="utf-8")
+    a09.linhas_dos_perfis()
+    assert perfis["perguntas"] == 2, "um perfil novo na pasta não foi conferido"
+
+
+def test_a_primeira_leitura_no_laco_nao_le_o_disco(perfis) -> None:
+    """`pode_perguntar=False` é a leitura dentro do laço do GTK: sai o guardado."""
+    assert a09.linhas_dos_perfis(pode_perguntar=False) == []
+    assert perfis["perguntas"] == 0

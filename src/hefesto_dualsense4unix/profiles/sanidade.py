@@ -461,6 +461,13 @@ def verificar_perfis_do_disco() -> list[Achado]:
     `test_regra_nao_se_perde_02_o_nome_novo_nascia_sem_regra.py:319` a usa) — e
     quem precisar da corrente em produção usa as duas metades separadas, como o
     doctor usa.
+
+    NOTA DATADA — 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01): o que caducou é o
+    "não deve ganhar chamador de produção". A razão era o traceback no lugar da
+    linha do doctor, e ela vale para um chamador SEM guarda. O exame da aba
+    Sistema (`interface/pacotes/a09_sistema.linhas_dos_perfis`) a chama com o
+    `except OSError` do lado de quem chama, como o doctor faz com as duas
+    metades, e a frase de leitura que falhou continua sendo uma linha do exame.
     """
     from hefesto_dualsense4unix.profiles.loader import load_all_profiles
 

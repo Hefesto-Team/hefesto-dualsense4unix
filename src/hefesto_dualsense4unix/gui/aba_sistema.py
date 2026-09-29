@@ -474,19 +474,11 @@ def rotulo_do_perfil(perfil: str | None) -> str | None:
     return None if perfil is None else ROTULOS_DOS_PERFIS.get(perfil)
 
 
-def perfil_do_rotulo(rotulo: str) -> str | None:
-    """O caminho de volta: o que a página mandou vira a chave do produto.
-
-    É o que fecha o gesto ``perfil-da-mesa``. Sem ele, o Python receberia
-    "Bateria longa" e teria de adivinhar a chave — e adivinhar é o que faz uma
-    escolha dela cair no perfil errado.
-    """
-    from hefesto_dualsense4unix.app.actions.config.secao_orcamento import ROTULOS_DOS_PERFIS
-
-    for chave, nome in ROTULOS_DOS_PERFIS.items():
-        if nome == rotulo:
-            return chave
-    return None
+# `perfil_do_rotulo` SAIU — 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01). Ela
+# traduzia o RÓTULO do botão ("Bateria longa") de volta para a chave do
+# produto, e nenhum gesto precisou dela: os três botões do Perfil de Bateria
+# mandam a CHAVE no `data-v` (`a09_sistema.perfil_da_mesa`), e a tradução que
+# o gesto faz é outra, chave → teto em disco (`secao_orcamento.TETO_POR_PERFIL`).
 
 
 def frase_do_teto() -> str:
@@ -680,9 +672,16 @@ def linhas_do_status(leitura: Leitura) -> list[dict[str, str]]:
 #: dentro, porque a origem é a coluna alinhada do ``doctor`` no terminal. Uma
 #: tabela com a chave ``"OK"`` casaria com NADA e a tela inteira sairia como
 #: NOTA, calada.
+#:
+#: **O `[FAIL]` CAI EM AVISO — 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01).** A
+#: conferência dos perfis (`profiles/sanidade.linhas_de_relatorio`) escreve
+#: `[FAIL]` para o achado grave, e o exame desta aba passou a mostrá-la. Sem a
+#: chave ele sairia como NOTA, o selo mais brando para o achado mais grave; o
+#: selo vermelho não existe no desenho, e AVISO é o mais forte que há.
 _SELO_DO_VEREDITO: dict[str, tuple[str, str, str]] = {
     "OK": ("OK", "ok", "✓"),
     "WARN": ("AVISO", "aviso", "!"),
+    "FAIL": ("AVISO", "aviso", "!"),
     "INFO": ("NOTA", "nt", "i"),
     "NOTE": ("NOTA", "nt", "i"),
 }
@@ -841,7 +840,6 @@ __all__ = [
     "linha_do_vale_para",
     "linhas_do_status",
     "pacote",
-    "perfil_do_rotulo",
     "quantos_controles",
     "rotulo_do_perfil",
     "sem_markup",

@@ -608,6 +608,9 @@ def _achados(state: dict[str, Any] | None,
     devolvem `None`: o exame continua com seis linhas, e é assim que a GTK
     também se comporta hoje. A diferença aparece no dia do problema, que é
     justamente o dia em que ela precisa ver.
+
+    E A COERÊNCIA DOS PERFIS, desde 28/09/2026 — ver :func:`linhas_dos_perfis`.
+    Ela também só fala quando há problema, e é o bloco que o `doctor` já tinha.
     """
     try:
         linhas = _exame.storm_report(controles_no_cabo=_exame.controles_no_cabo(state))
@@ -631,6 +634,8 @@ def _achados(state: dict[str, Any] | None,
     vulkan = linha_da_sobreposicao_vulkan()
     if vulkan:
         linhas.append(vulkan)
+    with contextlib.suppress(Exception):
+        linhas.extend(linhas_dos_perfis(pode_perguntar))
     return linhas
 
 
@@ -771,6 +776,58 @@ def linha_da_sobreposicao_vulkan() -> tuple[str, str] | None:
 #: varredura dos executáveis, e o único campo que esta tela lê do censo não
 #: encosta nela.
 #:
+#: A ÚLTIMA LEITURA DA COERÊNCIA DOS PERFIS, e a assinatura da pasta que a
+#: produziu: `{"assinatura": (...), "linhas": [...]}`. Ver :func:`linhas_dos_perfis`.
+_PERFIS: dict[str, Any] = {}
+
+
+def linhas_dos_perfis(pode_perguntar: bool = True) -> list[tuple[str, str]]:
+    """A coerência dos perfis entre si, no exame — e só quando há o que dizer.
+
+    A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026. O `doctor` confere os perfis do
+    disco desde a PERFIL-NASCE-CERTO-01 (`cli/cmd_doctor._linhas_perfis`), e o
+    exame desta aba, que responde a mesma pergunta que ele na tela, não
+    conferia: um perfil sem alvo vencendo o do jogo (a forma da queixa *"o
+    perfil não carrega"*) só aparecia no terminal. O dono é
+    `profiles/sanidade.verificar_perfis_do_disco`, e a guarda do `OSError` mora
+    aqui, do lado de quem chama, como no `doctor`.
+
+    SÓ FALA QUANDO HÁ PROBLEMA, como o vigia do Steam Input e o prontuário
+    (decisão dela de 22/08/2026): perfis coerentes não ganham linha.
+
+    LÊ O DISCO SÓ QUANDO A PASTA MUDA. A assinatura (nome e `mtime` de cada
+    `.json`) custa 0,3 ms com 41 perfis; a conferência inteira custa 8,8 ms
+    (medido em 28/09/2026, num lar de mentira). A faixa lenta relê a cada 2 s,
+    e sem a assinatura pagaria os 8,8 ms toda vez.
+
+    `pode_perguntar=False` é a primeira leitura da faixa lenta, a única que roda
+    dentro do laço do GTK (ver :func:`_prontuario`): ali sai a última resposta
+    guardada, e a leitura do disco fica para a primeira releitura, já em thread.
+    """
+    if not pode_perguntar:
+        return list(_PERFIS.get("linhas") or [])
+    from hefesto_dualsense4unix.profiles import sanidade
+    from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
+
+    try:
+        pasta = profiles_dir()
+        assinatura: tuple[Any, ...] | None = (str(pasta), *(
+            (arq.name, arq.stat().st_mtime_ns) for arq in sorted(pasta.glob("*.json"))))
+    except OSError:
+        assinatura = None
+    if assinatura is not None and _PERFIS.get("assinatura") == assinatura:
+        return list(_PERFIS.get("linhas") or [])
+    try:
+        achados = sanidade.verificar_perfis_do_disco()
+    except OSError as erro:
+        motivo = erro.strerror or type(erro).__name__
+        linhas = [("[WARN]", f"não deu para ler os perfis ({motivo})")]
+    else:
+        linhas = sanidade.linhas_de_relatorio(achados) if achados else []
+    _PERFIS.update(assinatura=assinatura, linhas=linhas)
+    return list(linhas)
+
+
 #: `{"achado": (veredito, frase) | None, "quando": monotonic}`. Vazio = nunca
 #: perguntado, e aí a primeira visita só DISPARA a pergunta.
 _PRONTUARIO: dict[str, Any] = {}
