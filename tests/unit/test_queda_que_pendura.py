@@ -18,17 +18,28 @@ A cadeia, conferida no código do upstream e no nosso:
             -> shutdown()
               -> systemd: 90 s e SIGKILL
 
-Estes testes travam as três coisas que a cura precisa fazer, e nenhuma a mais:
-o join tem teto, o fd fecha **de todo jeito**, e uma thread que não morre não
-impede o processo de morrer — que é a mesma doutrina que o `HANG-01` já
-aplicava aos dois executores do `shutdown` (`wait=False`).
+Estes testes travam o que a cura precisa fazer: o join tem teto, o sinal
+baixa antes de tudo, e uma thread que não sai não segura o `close()`.
+
+**FATO SUBSTITUÍDO em 29/09/2026** (A-REPORT-THREAD-SAI-ANTES-DO-HANDLE-FECHAR-01).
+Esta régua cravava que o fd fecha "de todo jeito" e que fechar o fd desbloqueia
+o `read`. Não desbloqueia (medido neste kernel, com um pipe: a thread só sai
+quando chega o próximo dado), e fechar com a thread dentro é o `free(dev)`
+debaixo de quem lê: quando o kernel a solta, o wrapper chama
+`hid_error(None)`, que é o `TypeError` da parada de 29/09. O dublê daqui era
+mais frouxo que o produto — o `close()` dele soltava o `read` —, e cravava como
+cura a ordem que fazia o defeito. Agora ele tem a semântica do `hidapi.py` e
+do `hid.c`, e a thread é a do produto (`sendReport`).
 """
 from __future__ import annotations
 
 import threading
 import time
+import types
+from collections.abc import Iterator
 from typing import Any
 
+import hidapi
 import pytest
 
 from hefesto_dualsense4unix.core.backend_pydualsense import (
@@ -37,46 +48,99 @@ from hefesto_dualsense4unix.core.backend_pydualsense import (
 )
 
 
+class _HidDevice:
+    """O ponteiro C do handle: só o modo do `hid_read` (nasce bloqueante)."""
+
+    def __init__(self) -> None:
+        self.bloqueante = True
+
+
+def _trocar_o_modo(dev: _HidDevice, nonblock: int) -> int:
+    dev.bloqueante = not nonblock
+    return 0
+
+
 class _DeviceMorto:
-    """Um `hidapi.Device` cujo `read` nunca volta — o controle que sumiu."""
+    """Um `hidapi.Device` cujo `read` não volta até o kernel tirar o nó.
 
-    def __init__(self, solto: threading.Event) -> None:
-        self._solto = solto
+    É o controle calado com o nó de pé. A semântica é a do wrapper instalado e
+    do `hid.c`: `read` e `close` conferem o `_device`; o `read` fica no C até o
+    «kernel» soltar, e o `close()` NÃO solta ninguém; um `close()` com leitor
+    dentro fica registrado; e o caminho de erro do `read` consulta o `_device`
+    DEPOIS de voltar (`_get_last_error_string` → `hid_error(self._device)`).
+    """
+
+    def __init__(self) -> None:
+        self._device: _HidDevice | None = _HidDevice()
+        self.kernel = threading.Event()
+        self.dentro = threading.Event()
+        self.leitores = 0
         self.fechado = False
+        self.liberado_com_leitor_dentro = False
 
-    def read(self, _n: int) -> bytes:
-        # Espera o `close()` de verdade, sem prazo — é o `read` pendurado.
-        self._solto.wait()
-        raise OSError("fd fechado")
+    def _conferir(self) -> None:
+        if self._device is None:
+            raise OSError("Trying to perform action on closed device.")
+
+    def read(self, _n: int, timeout_ms: int = 0, blocking: bool = False) -> bytes:
+        self._conferir()
+        self.leitores += 1
+        self.dentro.set()
+        self.kernel.wait()  # só o kernel solta: o nó saiu
+        self.leitores -= 1
+        if self._device is None:
+            # `hid_error(None)`: a mensagem do cffi, a da parada de 29/09.
+            raise TypeError(
+                "initializer for ctype 'hid_device *' must be a cdata pointer, "
+                "not NoneType"
+            )
+        raise OSError("Failed to read from HID device")
+
+    def write(self, data: bytes) -> None:
+        self._conferir()
 
     def close(self) -> None:
+        self._conferir()
+        if self.leitores:
+            self.liberado_com_leitor_dentro = True  # `free(dev)` com `hid_read` em curso
         self.fechado = True
-        self._solto.set()  # é FECHAR o fd que desbloqueia o read
+        self._device = None
+
+
+_CRIADOS: list[tuple[_DeviceMorto, threading.Thread]] = []
+
+
+@pytest.fixture(autouse=True)
+def _o_c_do_hidapi(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """O lado C do `hidapi` no modo do handle; e, no fim, o kernel solta todos."""
+    monkeypatch.setattr(
+        hidapi, "hidapi", types.SimpleNamespace(hid_set_nonblocking=_trocar_o_modo)
+    )
+    try:
+        yield
+    finally:
+        for device, thread in _CRIADOS:
+            device.kernel.set()
+            thread.join(timeout=2.0)
+        _CRIADOS.clear()
 
 
 def _handle_com_thread_pendurada() -> tuple[Any, _DeviceMorto, threading.Thread]:
-    """Monta o mínimo de `_PinnedPyDualSense` para exercitar só o `close()`."""
+    """Um `_PinnedPyDualSense` com a `report_thread` DE PRODUÇÃO presa no `read`."""
     ds = _PinnedPyDualSense.__new__(_PinnedPyDualSense)
-    solto = threading.Event()
-    device = _DeviceMorto(solto)
+    device = _DeviceMorto()
     ds.device = device
+    ds.input_report_length = 78
+    ds._output_muted = True
+    ds._throttle_sec = 0.0
+    ds._pinned_path = b"/dev/hidraw-da-queda"
     ds.ds_thread = True
-
-    def _laco() -> None:
-        while ds.ds_thread:
-            try:
-                device.read(64)
-            except OSError:
-                break
-
-    thread = threading.Thread(target=_laco, daemon=True)
-    thread.start()
+    ds.connected = True
+    thread = threading.Thread(target=ds.sendReport, daemon=True)
     ds.report_thread = thread
-    # Garante que a thread JÁ está dentro do read antes de fechar.
-    for _ in range(200):
-        if solto.is_set() or thread.is_alive():
-            break
-        time.sleep(0.005)
+    _CRIADOS.append((device, thread))
+    thread.start()
+    assert device.dentro.wait(2.0), "a thread não chegou ao read"
     return ds, device, thread
 
 
@@ -97,18 +161,24 @@ class TestOCloseNaoPendura:
             f"o close levou {gasto:.2f}s — o join voltou a ser sem teto"
         )
 
-    def test_o_fd_fecha_mesmo_que_a_thread_nao_saia(self) -> None:
-        """Fechar o fd é o que desbloqueia o `read` — não é opcional.
+    def test_o_fd_nao_fecha_com_a_thread_dentro_e_fecha_quando_ela_sai(self) -> None:
+        """O `hid_device` fecha com quem sai do C por último, nunca por cima dele.
 
-        O upstream fecha DEPOIS do join, então com o join travado o fd nunca
-        fechava. Invertida a ordem, o fd fecha e a thread sai sozinha pelo
-        `except OSError` que o laço já tinha.
+        Era o contrário até 29/09: o fd fechava de todo jeito, pela premissa de
+        que isso soltava o `read`. Não solta; libera a estrutura debaixo de
+        quem lê, e o nó que sai depois vira `TypeError` na thread.
+
+        Mordida: o `close()` de antes (fecha de todo jeito) registra o
+        `liberado_com_leitor_dentro`.
         """
         ds, device, thread = _handle_com_thread_pendurada()
         ds.close()
-        assert device.fechado, "o fd ficou aberto — a thread nunca se solta"
+        assert device.fechado is False, "o fd fechou com a thread dentro do read"
+        device.kernel.set()  # o nó sai do kernel
         thread.join(timeout=2.0)
         assert not thread.is_alive(), "o OSError não encerrou o laço"
+        assert device.fechado is True, "a thread saiu e não fechou"
+        assert device.liberado_com_leitor_dentro is False
 
     def test_o_ds_thread_e_baixado_antes_de_tudo(self) -> None:
         """O sinal cooperativo continua sendo a via NORMAL de encerrar.
@@ -134,7 +204,7 @@ class TestOTetoEHonesto:
     def test_close_sem_thread_nao_explode(self) -> None:
         """Handle que nunca chegou a subir a thread (falha no init) fecha igual."""
         ds = _PinnedPyDualSense.__new__(_PinnedPyDualSense)
-        device = _DeviceMorto(threading.Event())
+        device = _DeviceMorto()
         ds.device = device
         ds.ds_thread = True
         ds.report_thread = None
@@ -164,8 +234,11 @@ def test_varios_handles_mortos_somam_um_teto_cada_e_nao_noventa(vivos: int) -> N
     """Quatro controles na mesa que caem juntos ainda cabem no desligamento.
 
     É o caso dela: os quatro no rádio, o cabo sai, os outros três caem na
-    sequência. Quatro `close()` pendurados eram 4 x infinito; agora são
-    4 x meio segundo, e o `TimeoutStopSec` do systemd nem chega perto.
+    sequência. Quatro `close()` pendurados eram 4 x infinito; um por um, são
+    4 x meio segundo, e o `TimeoutStopSec` do systemd nem chega perto (o
+    `disconnect()` e o hotplug pagam um teto só para todos:
+    `test_a_report_thread_sai_antes_do_handle_fechar.py`). E cada `hid_device`
+    fecha quando a thread dele sai, nunca por cima dela.
     """
     handles = [_handle_com_thread_pendurada() for _ in range(vivos)]
     inicio = time.monotonic()
@@ -173,5 +246,8 @@ def test_varios_handles_mortos_somam_um_teto_cada_e_nao_noventa(vivos: int) -> N
         ds.close()
     gasto = time.monotonic() - inicio
     assert gasto < CLOSE_JOIN_TIMEOUT_SEC * 4 * vivos
-    for _ds, device, _thread in handles:
+    for _ds, device, thread in handles:
+        device.kernel.set()
+        thread.join(timeout=2.0)
         assert device.fechado
+        assert device.liberado_com_leitor_dentro is False

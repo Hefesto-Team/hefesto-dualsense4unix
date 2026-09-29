@@ -125,25 +125,23 @@ class _DeviceQueResponde:
 
 
 def _handle_cru(resposta: Any) -> Any:
-    """Um objeto mínimo com o `writeReport` DO PRODUTO emprestado.
+    """O handle DO PRODUTO por `__new__`, sem aparelho.
 
     O método exercitado é o do produto, como manda o método do
     `test_lightbar_medir_o_0x08.py`: um dublê que reimplementasse a regra
-    mediria o dublê.
+    mediria o dublê. Até 29/09/2026 este era um objeto vazio com o
+    `writeReport` e o `_escrever_conferindo` emprestados um a um; o
+    `writeReport` passou a contar a entrega ao C (`_no_c`,
+    A-REPORT-THREAD-SAI-ANTES-DO-HANDLE-FECHAR-01), e o objeto emprestado
+    ficava mais pobre que o produto a cada método novo. Por `__new__`, o
+    handle traz todos, com os defaults de classe.
     """
     from hefesto_dualsense4unix.core.backend_pydualsense import _PinnedPyDualSense
 
-    class _Handle:
-        pass
-
-    inst = _Handle()
-    inst.device = _DeviceQueResponde(resposta)  # type: ignore[attr-defined]
-    inst._write_lock = threading.RLock()  # type: ignore[attr-defined]
-    inst._bt_seq = 0  # type: ignore[attr-defined]
-    inst.writeReport = _PinnedPyDualSense.writeReport.__get__(inst)  # type: ignore[attr-defined]
-    inst._escrever_conferindo = (  # type: ignore[attr-defined]
-        _PinnedPyDualSense._escrever_conferindo.__get__(inst)
-    )
+    inst = _PinnedPyDualSense.__new__(_PinnedPyDualSense)
+    inst.device = _DeviceQueResponde(resposta)
+    inst._write_lock = threading.RLock()  # type: ignore[assignment]
+    inst._bt_seq = 0
     return inst
 
 
