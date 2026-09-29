@@ -589,7 +589,7 @@ def julgar(
 
 
 def _colher(
-    abertos: dict[Any, Testemunha],
+    abertos: list[tuple[Any, Testemunha]],
     segundos: float,
     tique_s: float,
     ler: Any,
@@ -597,15 +597,21 @@ def _colher(
     ler_a_tela_de: Any,
     relogio: Any,
     novo_seletor: Any,
-) -> tuple[list[Aperto], list[Leitura], dict[Any, int], float]:
-    """O laço: o pad pela hora do kernel, a tela a cada tique."""
+) -> tuple[list[Aperto], list[Leitura], set[Testemunha], float]:
+    """O laço: o pad pela hora do kernel, a tela a cada tique.
+
+    O `evdev.InputDevice` não é hashable (ele define `__eq__`): o nó aberto
+    se acha pela identidade, nunca como chave de dicionário.
+    """
     seletor = novo_seletor()
-    for dispositivo in abertos:
+    dono_do_no: dict[int, Testemunha] = {}
+    for dispositivo, testemunha in abertos:
         seletor.register(dispositivo, selectors.EVENT_READ)
+        dono_do_no[id(dispositivo)] = testemunha
     apertos: list[Aperto] = []
     leituras: list[Leitura] = []
     descidas: dict[tuple[int, int], Aperto] = {}
-    eventos: dict[Any, int] = dict.fromkeys(abertos, 0)
+    falaram: set[Testemunha] = set()
     inicio = relogio()
     fim = inicio + segundos
     proxima = inicio
@@ -636,8 +642,9 @@ def _colher(
                         continue
                     chave_do_botao = (id(dispositivo), evento.code)
                     if evento.value == 1:
-                        eventos[dispositivo] += 1
-                        aperto = Aperto(abertos[dispositivo], evento.code,
+                        testemunha = dono_do_no[id(dispositivo)]
+                        falaram.add(testemunha)
+                        aperto = Aperto(testemunha, evento.code,
                                         _nome_do_botao(evento.code), evento.timestamp())
                         apertos.append(aperto)
                         descidas[chave_do_botao] = aperto
@@ -648,7 +655,7 @@ def _colher(
             with contextlib.suppress(OSError):
                 chave.fileobj.close()
         seletor.close()
-    return apertos, leituras, eventos, fim
+    return apertos, leituras, falaram, fim
 
 
 def ensaio_de_aperto(
@@ -693,30 +700,30 @@ def ensaio_de_aperto(
     dizer("  ele não sabe se a aba está na tela.")
     dizer()
 
-    abertos: dict[Any, Testemunha] = {}
+    abertos: list[tuple[Any, Testemunha]] = []
     for testemunha in testemunhas:
         try:
             dispositivo = evdev_reader.abrir_input_device(testemunha.caminho)
         except OSError as erro:
             dizer(f"    {testemunha.marca} ({testemunha.caminho}) não abriu: {erro}")
             continue
-        abertos[dispositivo] = testemunha
+        abertos.append((dispositivo, testemunha))
 
     apertos: list[Aperto] = []
     leituras: list[Leitura] = []
-    eventos: dict[Any, int] = {}
+    falaram: set[Testemunha] = set()
     fim = relogio()
     if abertos:
         dizer(f"  >> APERTE um botão em cada controle, um de cada vez. Esperando {segundos:.0f} s…")
         dizer()
-        apertos, leituras, eventos, fim = _colher(
+        apertos, leituras, falaram, fim = _colher(
             abertos, segundos, tique_s, mesa_viva.estado_do_daemon, mesa_viva.DaemonMudo,
             lambda estado, hora: ler_a_tela(estado, leitura_viva, mesa_do_estado, hora),
             relogio, novo_seletor)
 
     # O NÓ QUE NÃO FALOU sai pelo dono do zero: «o controle não emitiu» e «eu
     # não posso ler» não podem sair iguais. Perguntado depois de fechar os nós.
-    calados = [t for t in testemunhas if t not in {abertos[d] for d, n in eventos.items() if n}]
+    calados = [t for t in testemunhas if t not in falaram]
     for testemunha in calados:
         estado_grab = hidraw_broker_client.estado_do_grab(testemunha.caminho)
         dizer(f"    {testemunha.marca} ({testemunha.caminho}): "
