@@ -131,7 +131,13 @@ class TestARegua:
 
 
 class _Espiao(_PinnedPyDualSense):
-    """Um handle que só registra o que passou pelos dois consumidores."""
+    """Um handle que só registra o que passou pelos dois consumidores.
+
+    Desde 29/09/2026 (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01) o `_captura_status_audio`
+    É a guarda: ele devolve se o report era estado, e cada report paga uma
+    conferência de CRC só. O espião chama o de produção e registra o que ele
+    ACEITOU; um espião que aceitasse tudo seria mais frouxo que o produto.
+    """
 
     def __new__(cls):  # o dublê nasce sem `__init__` de propósito
         return object.__new__(cls)
@@ -143,8 +149,11 @@ class _Espiao(_PinnedPyDualSense):
     def readInput(self, r) -> None:  # noqa: N802 — nome da pydualsense
         self.viu_readinput.append(bytes(r))
 
-    def _captura_status_audio(self, r) -> None:
-        self.viu_audio.append(bytes(r))
+    def _captura_status_audio(self, r) -> bool:
+        aceito = super()._captura_status_audio(r)
+        if aceito:
+            self.viu_audio.append(bytes(r))
+        return aceito
 
 
 class TestAGuardaNoLaco:
@@ -237,8 +246,13 @@ class TestACuraEstaLIGADA:
         NUA no laço.
         """
         fonte = self._fonte()
-        assert "self._consumir_report(in_report)" in fonte, (
+        #: A volta esvazia a fila e entrega o LOTE à guarda; a porta de UM
+        #: report é o lote de um (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01, 29/09/2026).
+        assert "self._consumir_lote(lidos)" in fonte, (
             "o laço não passa mais pela guarda — a voz dela volta a ser bateria"
+        )
+        assert "self._consumir_lote((in_report,))" in fonte, (
+            "a porta de UM report não passa mais pela guarda do lote"
         )
         #: A chamada nua tinha esta forma exata, com a captura de áudio ao lado.
         assert (
@@ -247,7 +261,7 @@ class TestACuraEstaLIGADA:
         ) not in fonte, "a chamada NUA voltou ao laço"
 
     def test_o_readinput_so_e_chamado_de_dentro_da_guarda(self) -> None:
-        """Um único chamador executável, e ele é o `_consumir_report`.
+        """Um único chamador executável, e ele é o `_consumir_lote`.
 
         É o que torna esta cura completa: cobrir aqui cobre TODOS os campos que
         o `readInput` escreve — bateria, `micBtn`, botões, eixos, IMU.
@@ -260,8 +274,11 @@ class TestACuraEstaLIGADA:
         assert len(chamadas) == 1, f"o readInput ganhou outro chamador: {chamadas}"
         alvo = fonte.index(chamadas[0])
         antes = fonte[:alvo]
-        assert antes.rindex("def _consumir_report") > antes.rindex("def sendReport"), (
-            "a única chamada do readInput não está dentro do `_consumir_report`"
+        assert antes.rindex("def _consumir_lote") > antes.rindex("def sendReport"), (
+            "a única chamada do readInput não está dentro do `_consumir_lote`"
+        )
+        assert antes.rindex("def _consumir_lote") > antes.rindex("def _esvaziar_a_fila"), (
+            "a única chamada do readInput não está dentro do `_consumir_lote`"
         )
 
     def test_a_captura_de_audio_tambem_passa_pela_guarda(self) -> None:
@@ -281,12 +298,13 @@ class TestACuraEstaLIGADA:
         de pé ser anunciado como «entrada muda» — trocaria um defeito por outro.
 
         MORDIDA: mover o `_registrar_leitura_viva()` para dentro do
-        `_consumir_report`.
+        `_consumir_lote`. Desde 29/09/2026 ela conta na drenagem, report a
+        report, antes de o lote chegar à guarda (`_esvaziar_a_fila`).
         """
         fonte = self._fonte()
         marca = (
             "self._registrar_leitura_viva()\n"
-            "                    self._consumir_report"
+            "            lidos.append(in_report)"
         )
         i_viva = fonte.index(marca)
         assert i_viva > 0, (

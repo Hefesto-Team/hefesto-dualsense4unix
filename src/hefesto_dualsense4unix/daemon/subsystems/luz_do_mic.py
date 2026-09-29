@@ -127,9 +127,9 @@ ato tomar a posse do mudo (`microphone_mute_for` deixa de ser `None`) ou até
 pode ter pintado por cima.
 
 Até 29/09/2026 o laço ESQUECIA o que escreveu e relia o bit de mudo no tique
-seguinte — e esse bit ainda era o de antes do aperto: o `readInput` lia uma
-fila de 63 reports, e na bancada de 29/09 a luz repintou o estado velho por
-cima da eleição por ~2,3 s, com os quatro no rádio
+seguinte — e esse bit ainda era o de antes do aperto: a volta do handle lia UM
+report de uma fila de 63, e na bancada de 29/09 a luz repintou o estado velho
+por cima da eleição por ~2,3 s, com os quatro no rádio
 (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01). A leitura fresca não basta sozinha: o
 `mudo` da borda não é o que o ato faz (`hotkey._o_que_a_borda_pede` troca o
 calar por LIGAR no primeiro aperto depois de conectar), então a luz espera o
@@ -417,6 +417,34 @@ def _posse_do_mudo(backend: Any, uniq: str) -> bool | None:
         logger.warning("luz_do_mic_posse_falhou", uniq=uniq, err=str(exc))
         return None
     return valor if isinstance(valor, bool) else None
+
+
+def _segura_a_borda(
+    backend: Any, uniq: str, segura_desde: dict[str, float], agora: float
+) -> bool:
+    """A borda deste controle ainda é da ELEIÇÃO? `True` = não decida nem escreva.
+
+    O-BOTAO-DO-MIC-CHEGA-NA-HORA-01 (29/09/2026). Na borda, quem pinta a luz é
+    o `set_mic_led` da eleição, com o resultado do ato
+    (`hotkey._eleger_ou_devolver`). O `mudo` que a borda traz não é o que o ato
+    faz — `hotkey._o_que_a_borda_pede` troca o calar por LIGAR no primeiro
+    aperto depois de conectar —, e o bit do firmware ainda pode ser o de antes
+    do aperto. Decidir por qualquer um dos dois antes do ato é repintar o
+    estado velho (ou o pedido cru) por cima dele.
+
+    A espera acaba quando o ato toma a posse do mudo (`microphone_mute_for`
+    deixa de ser `None`: é o que o firmware vai dizer na volta seguinte) ou no
+    teto, `SEGURA_A_BORDA_S` — o ato que não escreve (o firmware já estava como
+    ele pede) não deixa posse, e aí quem responde, passado o teto, é o bit
+    fresco.
+    """
+    desde = segura_desde.get(uniq)
+    if desde is None:
+        return False
+    if _posse_do_mudo(backend, uniq) is None and (agora - desde) < SEGURA_A_BORDA_S:
+        return True
+    segura_desde.pop(uniq, None)
+    return False
 
 
 def _mudo(backend: Any, uniq: str) -> bool | None:
@@ -799,9 +827,13 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
     * ``posse``   — de quem o bit `0x01` do flag1 é, no nosso entender.
 
     Os dois são separados porque a eleição também escreve neste byte: quando
-    uma borda chega, esquecemos o VALOR (para reescrever o nosso no tique
-    seguinte) mas continuamos sabendo que a POSSE é nossa (a eleição a tomou
-    ao escrever).
+    uma borda chega, esquecemos o VALOR (para reescrever o nosso uma vez,
+    depois da eleição) mas continuamos sabendo que a POSSE é nossa (a eleição
+    a tomou ao escrever).
+
+    * ``segura_desde`` — a borda que ainda é da eleição, por `uniq` (ver
+      `_segura_a_borda`): até o ato deixar a posse do mudo, ou até o teto, o
+      laço não decide nem escreve aquele controle.
 
     **Controle que sai da mesa perde a memória inteira**, e não é higiene: na
     reconexão o handle é NOVO e não tem lembrança do que escrevemos no velho.
@@ -814,6 +846,7 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
     marca_vista: int | None = None
     escrito: dict[str, int] = {}
     posse: set[str] = set()
+    segura_desde: dict[str, float] = {}
     sem_resposta_desde: dict[str, float] = {}
     cache_das_pecas: dict[str, Any] = {}
     ouvintes_por_uniq: dict[str, Any] | None = None
@@ -834,9 +867,12 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                 continue
             agora = relogio()
 
-            # A BORDA INVALIDA O QUE ACHAMOS TER ESCRITO. A eleição acabou de
-            # pôr um valor no byte por outro caminho; se guardássemos o nosso,
-            # nunca o reescreveríamos e o valor dela ficaria de pé.
+            # A BORDA INVALIDA O QUE ACHAMOS TER ESCRITO, E É SEGURADA. A
+            # eleição põe um valor no byte por outro caminho; se guardássemos o
+            # nosso, nunca o reescreveríamos e o valor dela ficaria de pé. Mas
+            # reescrever já no tique seguinte, pelo bit de antes do aperto, é
+            # pintar o estado velho por cima do ato: a borda espera o ato
+            # (`_segura_a_borda`).
             if fila is not None:
                 while True:
                     try:
@@ -849,6 +885,7 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                     if isinstance(alvo, str) and alvo:
                         escrito.pop(alvo, None)
                         posse.add(alvo)
+                        segura_desde[alvo] = agora
 
             mesa = mesa_de_agora(daemon)
             if mesa is None:
@@ -863,6 +900,7 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                 _lembrar_o_estado(uniq, None)
                 _lembrar_quem_ouve(uniq, None)
                 posse.discard(uniq)
+                segura_desde.pop(uniq, None)
                 sem_resposta_desde.pop(uniq, None)
 
             marca = RETRATO.marca(_O_QUE_A_LUZ_LE)
@@ -893,6 +931,10 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                     ouvintes = list(bruto) if isinstance(bruto, (list, tuple)) else None
                 # A TELA LÊ DAQUI, e não pergunta de novo — ver `_OUVINTES`.
                 _lembrar_quem_ouve(uniq, ouvintes)
+                if _segura_a_borda(backend, uniq, segura_desde, agora):
+                    # A BORDA AINDA É DA ELEIÇÃO: ela pinta com o resultado do
+                    # ato, e o `_DECIDIDO` fica com o último que decidimos.
+                    continue
                 captando = None
                 if captando_por_uniq is not None:
                     bruto_b = captando_por_uniq.get(uniq)
@@ -1000,6 +1042,7 @@ __all__ = [
     "NOME_DO_MEDIDOR",
     "PISCANDO",
     "PISCANDO_LENTO",
+    "SEGURA_A_BORDA_S",
     "SEM_RESPOSTA_ATE_SOLTAR_S",
     "decidir",
     "luz_do_mic_loop",

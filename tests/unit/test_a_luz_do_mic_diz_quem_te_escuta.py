@@ -70,8 +70,13 @@ class _Controle:
         self.mudo: dict[str, bool | None] = mudo or {}
         self.bateria: dict[str, int] = bateria or {}
         self.conectados: set[str] = set(uniqs)
+        #: a posse do mudo (`microphone_mute_for`): `None` é a do kernel, que é
+        #: o estado de fora de um ato do microfone.
+        self.posse: dict[str, bool | None] = {}
         #: `set_microphone_led` — o caminho CERTO, o único que carrega o nível.
         self.escritas: list[tuple[str | None, int | None]] = []
+        #: em que volta cada escrita saiu (a régua da borda segurada).
+        self.escritas_na_volta: list[int] = []
         #: `set_mic_led` — o caminho que ESMAGA em bool. Tem de ficar vazio.
         self.escritas_esmagadas: list[Any] = []
         #: `set_microphone_mute` — o `common[9]`. Tem de ficar vazio.
@@ -81,7 +86,11 @@ class _Controle:
 
     def set_microphone_led(self, aceso: bool | int | None, *, uniq: str | None = None) -> bool:
         self.escritas.append((uniq, aceso))
+        self.escritas_na_volta.append(self.voltas)
         return True
+
+    def microphone_mute_for(self, uniq: str | None = None) -> bool | None:
+        return self.posse.get(uniq if uniq is not None else "")
 
     def set_mic_led(self, aceso: Any, *, uniq: str | None = None) -> bool:
         self.escritas_esmagadas.append((uniq, aceso))
@@ -770,40 +779,57 @@ async def test_um_backend_sem_a_porta_do_led_nao_derruba_o_laco() -> None:
 
 
 @pytest.mark.asyncio
-async def test_a_borda_do_botao_faz_o_laco_esquecer_o_que_escreveu(
+async def test_a_borda_do_botao_e_segurada_ate_o_ato_e_o_laco_reescreve_uma_vez(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A eleição escreve no MESMO byte; o laço tem de reescrever depois dela.
+    """A eleição escreve no MESMO byte; o laço espera o ato e reescreve UMA vez.
 
     `hotkey._eleger_ou_devolver` chama `set_mic_led(aceso, uniq=)` na borda do
     botão. Se o laço confiasse na memória do que ELE escreveu, o valor posto
-    pela eleição ficaria de pé para sempre — nós nunca reescrevemos o que
-    achamos já estar lá. Assinar `EventTopic.MIC_DA_MESA` limita a briga a um
-    tique.
+    pela eleição ficaria de pé para sempre. E se ele reescrevesse já no tique
+    seguinte à borda, pintaria pelo bit de antes do aperto, por cima do ato
+    (a bancada de 29/09: ~2,3 s de estado velho com os quatro no rádio).
+
+    Desde 29/09/2026 (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01) a borda é SEGURADA: o
+    laço não escreve aquele controle até o ato tomar a posse do mudo, e então
+    reescreve o que decidiu pela posse, uma vez. As réguas dos três casos (o
+    aperto que cala, o que liga e a reancoragem) estão em
+    `test_o_botao_do_mic_chega_na_hora.py`.
+
+    MORDIDA: sem o `_segura_a_borda`, a reescrita sai no tique seguinte à
+    borda, antes da posse.
     """
+    monkeypatch.setattr(mod, "SEGURA_A_BORDA_S", 30.0)
     controle = _Controle(uniqs=[UM], mudo={UM: False}, bateria={UM: 90})
     _pecas(monkeypatch, ouvintes=lambda _u: {UM: ["chrome"]}, captando=lambda _u: {UM: False})
     daemon = _Daemon(controle)
 
-    # LIMIAR COM TRAVA, e não `voltas == 100`. O amostrador de `_rodar` lê o
+    # LIMIARES COM TRAVA, e não `voltas == 100`. O amostrador de `_rodar` lê o
     # contador a cada 2 ms enquanto o laço gira a cada 1 ms: ele enxerga a
     # série aos saltos (medido: passos de 2 e 4), e um valor exato pode nunca
     # aparecer. Uma régua que depende de acertar o número em cheio reprova por
-    # escalonamento, não por defeito — foi o que aconteceu aqui.
-    ja_bateu = {"sim": False}
+    # escalonamento, não por defeito.
+    marcas: dict[str, int] = {}
 
     def bater_no_botao(voltas: int) -> None:
-        if voltas >= 100 and not ja_bateu["sim"]:
-            ja_bateu["sim"] = True
+        if voltas >= 100 and "borda" not in marcas:
+            marcas["borda"] = voltas
             daemon.bus.publish(
                 str(EventTopic.MIC_DA_MESA), {"uniq": UM, "mudo": False, "seq": 7}
             )
+        if voltas >= 200 and "ato" not in marcas:
+            marcas["ato"] = voltas
+            controle.posse[UM] = False  # o ato ligou: a posse do mudo é nossa
 
     em_voo = await _rodar(daemon, voltas=300, entre=bater_no_botao)
 
     escritas_do_laco = [e for e in em_voo if e[1] is not None]
     assert escritas_do_laco == [(UM, mod.ACESA), (UM, mod.ACESA)], (
         "depois da borda o laço tem de repor o valor dele — exatamente uma vez"
+    )
+    reescrita = controle.escritas_na_volta[1]
+    assert reescrita >= marcas["ato"], (
+        f"a reescrita saiu na volta {reescrita}, antes do ato (volta {marcas['ato']})"
     )
 
 

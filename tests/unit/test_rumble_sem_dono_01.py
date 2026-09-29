@@ -44,6 +44,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 
+import hidapi
 import pytest
 from pydualsense.enums import ConnectionType
 from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
@@ -69,10 +70,31 @@ _PASSO_SEG = bp.OUT_REPORT_KEEPALIVE_SEC + 0.01
 _CICLOS = 12
 
 
-class _DispositivoFalso:
-    """hidraw dublado: entrega leitura vazia e guarda tudo que foi escrito."""
+class _HidDevice:
+    """O `hid_device` do C: só o modo do `hid_read` (nasce bloqueante)."""
 
     def __init__(self) -> None:
+        self.bloqueante = True
+
+
+def _trocar_o_modo(dev: _HidDevice, nonblock: int) -> int:
+    dev.bloqueante = not nonblock
+    return 0
+
+
+@pytest.fixture(autouse=True)
+def _o_c_do_hidapi(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O lado C do `hidapi`: o laço troca o modo do handle na primeira volta
+    (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01, 29/09/2026)."""
+    monkeypatch.setattr(hidapi, "hidapi", SimpleNamespace(hid_set_nonblocking=_trocar_o_modo))
+
+
+class _DispositivoFalso:
+    """hidraw dublado: todo `read` traz um report que não é estado (id 0), e
+    guarda tudo que foi escrito."""
+
+    def __init__(self) -> None:
+        self._device = _HidDevice()
         self.escritos: list[bytes] = []
 
     def read(self, tamanho: int) -> bytes:
@@ -116,10 +138,6 @@ def _handle(*, transporte: str, dono: bool = False) -> Any:
 def _rodar(inst: Any, monkeypatch: pytest.MonkeyPatch, ciclos: int = _CICLOS) -> None:
     """Gira o `sendReport` por N ciclos com relógio e sono falsos."""
     monkeypatch.setattr(inst, "readInput", lambda _r: None)
-    # MIC-DA-MESA-ELEICAO-01: a captura passou a receber o report CRU
-    # (`extract_jack_status`, com CRC de BT e recusa do report de ÁUDIO)
-    # em vez de ler `self.states[54]` sem disciplina nenhuma.
-    monkeypatch.setattr(inst, "_captura_status_audio", lambda _report: None)
 
     agora = {"t": 1000.0}
     voltas = {"n": 0}

@@ -9,19 +9,27 @@ lightbar vindas do IPC e do poll loop). Duas threads podiam carimbar o MESMO
 `seq`: o firmware descarta o quadro fora de sequência e o nosso log diz
 "escrito". É defeito só do rádio — o `0x02` do cabo não tem `seq` nem CRC.
 
-**Defeito B — a leitura vazia matando a thread de saída.** O handle é
-não-bloqueante, então `hidapi.Device.read` devolve `None` quando não há dado; o
-`readInput` do upstream começa com `list(inReport)` e levanta `TypeError`, que o
-laço não capturava. A thread morria e o controle ficava SEM SAÍDA — sem rumble,
-sem lightbar, sem gatilho — sem uma linha estruturada no journal e sem
+**Defeito B — a leitura vazia matando a thread de saída.** Com a leitura sem
+espera, `hidapi.Device.read` devolve `None` quando não há dado; o `readInput` do
+upstream começa com `list(inReport)` e levanta `TypeError`, que o laço não
+capturava. A thread morria e o controle ficava SEM SAÍDA — sem rumble, sem
+lightbar, sem gatilho — sem uma linha estruturada no journal e sem
 `connected = False`.
+
+(Nota de 29/09/2026, O-BOTAO-DO-MIC-CHEGA-NA-HORA-01: esta docstring dizia que
+o handle já nascia não-bloqueante. Não nascia: `hidapi.Device(path=...)` nasce
+com `blocking=True`, e o `hid_read` bloqueante nunca devolve vazio. A leitura
+sem espera nasceu em 29/09, na primeira volta do laço (`_hid_set_nonblocking`),
+e os dublês daqui passaram a ter o modo: um `read` só volta `None` depois dela.)
 """
 from __future__ import annotations
 
 import threading
 import time
+import types
 from typing import Any
 
+import hidapi
 import pytest
 
 from hefesto_dualsense4unix.core import backend_pydualsense as bp
@@ -195,6 +203,52 @@ def test_o_cabo_tambem_passa_pelo_lock_e_sai_sem_carimbo() -> None:
 # --------------------------------------------------------------------------
 
 
+class _HidDevice:
+    """O `hid_device` do C, só no que o laço toca: o modo do `hid_read`.
+
+    O-BOTAO-DO-MIC-CHEGA-NA-HORA-01 (29/09/2026). `hidapi.Device(path=...)`
+    nasce BLOQUEANTE, e o laço troca o modo na primeira volta
+    (`_hid_set_nonblocking`); antes disso, uma leitura sem dado não volta.
+    """
+
+    def __init__(self) -> None:
+        self.bloqueante = True
+
+
+class _DispositivoDoLaco:
+    """A base dos dispositivos de mentira do laço: o `_device` do wrapper.
+
+    Devolver `None` com o handle no modo bloqueante é o que o aparelho nunca
+    faz: ali o `hid_read` espera o próximo report. O dublê recusa.
+    """
+
+    def __init__(self) -> None:
+        self._device = _HidDevice()
+
+    def _vazio(self) -> None:
+        assert not self._device.bloqueante, (
+            "leitura vazia com o handle bloqueante: no aparelho ela não voltaria"
+        )
+
+
+def _trocar_o_modo(dev: _HidDevice, nonblock: int) -> int:
+    dev.bloqueante = not nonblock
+    return 0
+
+
+@pytest.fixture(autouse=True)
+def _o_c_do_hidapi(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O lado C do `hidapi`, no único ponto que o laço toca além do `read`."""
+    monkeypatch.setattr(
+        hidapi, "hidapi", types.SimpleNamespace(hid_set_nonblocking=_trocar_o_modo)
+    )
+
+
+def _estado_do_cabo() -> bytes:
+    """Um report de ESTADO do cabo (`0x01`, 64 bytes): passa pela porta."""
+    return bytes([0x01]) + bytes(63)
+
+
 def _handle_do_laco() -> bp._PinnedPyDualSense:
     """Um handle com o que o `sendReport` usa (mesmo molde do throttle)."""
     inst = bp._PinnedPyDualSense.__new__(bp._PinnedPyDualSense)
@@ -235,22 +289,34 @@ def test_leitura_vazia_nao_mata_a_thread_e_a_saida_continua(
     inst = _handle_do_laco()
     inst.conType = None
 
-    contas = {"read": 0, "write": 0, "sleep": 0}
-    # Ciclos 1 e 2 mudos; 3 e 4 com dado.
-    respostas: list[bytes | None] = [None, None, bytes(64), bytes(64)]
+    contas = {"read": 0, "write": 0, "sleep": 0, "parse": 0}
+    # Ciclos 1 e 2 mudos; 3 e 4 com UM report cada. A volta esvazia a fila
+    # (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01): depois do report, o `None` de «não
+    # há mais» fecha a volta.
+    respostas: list[bytes | None] = [
+        None,
+        None,
+        _estado_do_cabo(),
+        None,
+        _estado_do_cabo(),
+        None,
+    ]
 
-    class _DispositivoDeMentira:
+    class _DispositivoDeMentira(_DispositivoDoLaco):
         def read(self, _n: int) -> bytes | None:
             resposta = respostas[min(contas["read"], len(respostas) - 1)]
             contas["read"] += 1
+            if resposta is None:
+                self._vazio()
             return resposta
 
     inst.device = _DispositivoDeMentira()
-    monkeypatch.setattr(inst, "readInput", _read_input_do_upstream)
-    # MIC-DA-MESA-ELEICAO-01: a captura passou a receber o report CRU
-    # (`extract_jack_status`, com CRC de BT e recusa do report de ÁUDIO)
-    # em vez de ler `self.states[54]` sem disciplina nenhuma.
-    monkeypatch.setattr(inst, "_captura_status_audio", lambda _report: None)
+
+    def _parse(in_report: Any) -> None:
+        contas["parse"] += 1
+        _read_input_do_upstream(in_report)
+
+    monkeypatch.setattr(inst, "readInput", _parse)
     # Report SEMPRE diferente: cada ciclo é um write, então contar writes é
     # contar ciclos que chegaram à metade de saída.
     monkeypatch.setattr(
@@ -274,6 +340,7 @@ def test_leitura_vazia_nao_mata_a_thread_e_a_saida_continua(
     assert contas["sleep"] == 4, "a thread não chegou ao fim dos ciclos"
     assert inst.connected is True, "leitura vazia não é desconexão"
     assert contas["write"] == 4, "os ciclos mudos ficaram sem SAÍDA"
+    assert contas["parse"] == 2, "os ciclos com dado não chegaram ao `readInput`"
 
 
 def test_o_silencio_da_entrada_deixa_rastro_no_journal(
@@ -300,17 +367,17 @@ def test_o_silencio_da_entrada_deixa_rastro_no_journal(
     # com dado — a volta.
     mudos = 6
 
-    class _DispositivoDeMentira:
+    class _DispositivoDeMentira(_DispositivoDoLaco):
         def read(self, _n: int) -> bytes | None:
             contas["read"] += 1
-            return None if contas["read"] <= mudos else bytes(64)
+            # Seis voltas mudas, e na sétima UM report (e o «não há mais»).
+            if contas["read"] == mudos + 1:
+                return _estado_do_cabo()
+            self._vazio()
+            return None
 
     inst.device = _DispositivoDeMentira()
     monkeypatch.setattr(inst, "readInput", _read_input_do_upstream)
-    # MIC-DA-MESA-ELEICAO-01: a captura passou a receber o report CRU
-    # (`extract_jack_status`, com CRC de BT e recusa do report de ÁUDIO)
-    # em vez de ler `self.states[54]` sem disciplina nenhuma.
-    monkeypatch.setattr(inst, "_captura_status_audio", lambda _report: None)
     monkeypatch.setattr(inst, "prepareReport", lambda: [0] * 64)
     monkeypatch.setattr(inst, "writeReport", lambda _r: None)
     monkeypatch.setattr(bp.time, "monotonic", lambda: relogio["t"])
@@ -345,17 +412,17 @@ def test_silencio_curto_nao_polui_o_journal(monkeypatch: pytest.MonkeyPatch) -> 
     relogio = {"t": 500.0}
     contas = {"read": 0, "sleep": 0}
 
-    class _DispositivoDeMentira:
+    class _DispositivoDeMentira(_DispositivoDoLaco):
         def read(self, _n: int) -> bytes | None:
             contas["read"] += 1
-            return None if contas["read"] == 1 else bytes(64)
+            # Uma volta muda, e depois um report por volta.
+            if contas["read"] == 1 or contas["read"] % 2 == 1:
+                self._vazio()
+                return None
+            return _estado_do_cabo()
 
     inst.device = _DispositivoDeMentira()
     monkeypatch.setattr(inst, "readInput", _read_input_do_upstream)
-    # MIC-DA-MESA-ELEICAO-01: a captura passou a receber o report CRU
-    # (`extract_jack_status`, com CRC de BT e recusa do report de ÁUDIO)
-    # em vez de ler `self.states[54]` sem disciplina nenhuma.
-    monkeypatch.setattr(inst, "_captura_status_audio", lambda _report: None)
     monkeypatch.setattr(inst, "prepareReport", lambda: [0] * 64)
     monkeypatch.setattr(inst, "writeReport", lambda _r: None)
     monkeypatch.setattr(bp.time, "monotonic", lambda: relogio["t"])
@@ -389,7 +456,7 @@ def test_excecao_inesperada_no_laco_deixa_linha_antes_de_morrer(
     registro = _LoggerDeMentira()
     monkeypatch.setattr(bp, "logger", registro)
 
-    class _DispositivoDeMentira:
+    class _DispositivoDeMentira(_DispositivoDoLaco):
         def read(self, _n: int) -> bytes:
             raise ValueError("algo que ninguém previu")
 

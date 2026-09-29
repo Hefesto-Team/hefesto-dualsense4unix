@@ -887,8 +887,10 @@ def _hid_set_nonblocking(dispositivo: Any) -> None:
     única leitura que descobre o transporte (`determineConnectionType`). Por
     isso o modo muda aqui, uma vez, na thread do handle, depois do `init()`.
 
-    No hidraw o modo é só um campo da estrutura (`dev->blocking`, `hid.c:1277`):
-    o `read` passa a fazer `poll` com prazo 0 e devolve `None` com a fila vazia.
+    No hidraw o modo é só um campo da estrutura (`dev->blocking`,
+    `hid.c:1277-1283`, lido na cópia do hidapi do SDL 3.4.14): o `hid_read`
+    passa prazo 0 ao `hid_read_timeout` (`:1274`), o `poll` volta na hora, e o
+    wrapper devolve `None` com a fila vazia.
 
     Um dono só para o toque no C que o wrapper não expõe, e é também a costura
     que o dublê da régua troca: o dublê do `hidapi.Device` tem o mesmo modo.
@@ -1175,8 +1177,8 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         report de uma fila de 63 que o aparelho enche a centenas por segundo, e
         o kernel descarta o report NOVO com a fila cheia: cada report lido tinha
         63 voltas de idade. Na bancada de 29/09, com os quatro no rádio, isso
-        deu 2,1 s do dedo à borda (63 × 33 ms); com um no cabo, os 547 ms de
-        04/09 (63 × 8,7 ms). Agora a volta lê até a fila ficar vazia
+        deu 2,1 s do dedo à borda (63 x 33 ms); com um no cabo, os 547 ms de
+        04/09 (63 x 8,7 ms). Agora a volta lê até a fila ficar vazia
         (`_esvaziar_a_fila`), conta o botão e o `status[1]` em cada report, na
         ordem em que chegaram, e entrega à pydualsense só o mais novo
         (`_consumir_lote`). A metade da saída não mudou: o mesmo throttle, um
@@ -1383,11 +1385,10 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     #     self.report_thread.join()     <- SEM TETO
     #     self.device.close()
     #
-    # (Nota de 29/09/2026, O-BOTAO-DO-MIC-CHEGA-NA-HORA-01: o `read` da volta
-    # não espera mais — ele tem prazo zero desde a primeira volta, ver
-    # `sendReport` —, e o teto do `join` fica.)
-    #
-    # e o topo do laço acima era `self.device.read(...)`, que BLOQUEAVA. Enquanto
+    # e o topo do laço acima era `self.device.read(...)`, que BLOQUEAVA (nota
+    # de 29/09/2026, O-BOTAO-DO-MIC-CHEGA-NA-HORA-01: o `read` da volta não
+    # espera mais — a leitura é sem espera desde a primeira volta, ver
+    # `sendReport` —, e o teto do `join` fica). Enquanto
     # o controle responde, o `ds_thread = False` é visto no ciclo seguinte e o
     # join volta em milissegundos. **Quando o controle some do rádio sem
     # despedida** — 8BitDo que se desliga sozinho, link Bluetooth que cai —
@@ -1602,7 +1603,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         que NÓS pedimos (o eco da própria escrita virava gesto) e a
         sustentação de 300 ms (o gating do rádio virava gesto) — deixam de ter
         objeto: nem o eco nem o gating apertam o botão, e o quadro de áudio do
-        rádio nem chega aqui (`_consumir_report`). As duas tinham furo medido:
+        rádio nem chega aqui (`_consumir_lote`). As duas tinham furo medido:
         uma escrita que não ecoava deixava a marca viva e engolia o aperto
         seguinte dela, e um aperto com o bit parado (a posse do mudo nossa)
         sumia calado.

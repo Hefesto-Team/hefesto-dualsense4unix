@@ -3,16 +3,60 @@ roda sem pausa (na taxa do controle), e com 2+ controles as threads saturam o
 controlador USB compartilhado, degradando o link Bluetooth (CRC fails → output do
 BT morre). `_PinnedPyDualSense` sobrescreve sendReport para throttlar o ciclo
 read+write a ~125Hz (REPORT_THREAD_THROTTLE_SEC), o que basta para o output e
-elimina a contenção. Como o INPUT vem do evdev, throttlar não custa nada.
+elimina a contenção.
+
+O throttle marca a SAÍDA. A entrada (o botão do microfone e o bit de mudo, que
+só chegam por este laço) não envelhece com ele porque a volta esvazia a fila do
+hidraw (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01, 29/09/2026; a régua da idade é
+`test_o_botao_do_mic_chega_na_hora.py`). Esta linha dizia que a entrada vinha do
+evdev e que throttlar não custava nada: com UMA leitura por volta, custava 63
+voltas de idade (2,1 s com os quatro no rádio).
 
 Estes testes garantem que o throttle não regrida (o flush de output continua
 acontecendo, o sleep usa a constante, e o loop encerra ao baixar ds_thread).
 """
 from __future__ import annotations
 
+import types
+
+import hidapi
 import pytest
 
 from hefesto_dualsense4unix.core import backend_pydualsense as bp
+
+
+class _HidDevice:
+    """O `hid_device` do C: só o modo do `hid_read` (nasce bloqueante)."""
+
+    def __init__(self) -> None:
+        self.bloqueante = True
+
+
+def _trocar_o_modo(dev: _HidDevice, nonblock: int) -> int:
+    dev.bloqueante = not nonblock
+    return 0
+
+
+@pytest.fixture(autouse=True)
+def _o_c_do_hidapi(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O lado C do `hidapi`: o laço troca o modo do handle na primeira volta."""
+    monkeypatch.setattr(
+        hidapi, "hidapi", types.SimpleNamespace(hid_set_nonblocking=_trocar_o_modo)
+    )
+
+
+class _DevComFila:
+    """Um `hidapi.Device` com a fila sempre cheia: todo `read` tem report.
+
+    Ele nunca fica vazio, então o modo do handle não muda a resposta; o
+    `_device` existe porque o laço troca o modo antes de ler.
+    """
+
+    def __init__(self) -> None:
+        self._device = _HidDevice()
+
+    def read(self, _n: int) -> bytes:
+        return bytes(_n)
 
 
 def test_throttle_default_positivo() -> None:
@@ -61,7 +105,7 @@ def test_sendreport_throttla_e_escreve_so_quando_muda(
     calls = {"read": 0, "write": 0, "sleep": 0}
     reports = [[0] * 64, [0] * 64, [1] + [0] * 63]  # muda só no 3º ciclo
 
-    class _FakeDev:
+    class _FakeDev(_DevComFila):
         def read(self, _n: int) -> bytes:
             calls["read"] += 1
             return bytes(_n)
@@ -106,11 +150,7 @@ def test_sendreport_keepalive_reescreve_report_identico(
     calls = {"write": 0, "sleep": 0}
     now = {"t": 100.0}
 
-    class _FakeDev:
-        def read(self, _n: int) -> bytes:
-            return bytes(_n)
-
-    inst.device = _FakeDev()
+    inst.device = _DevComFila()
     monkeypatch.setattr(inst, "readInput", lambda _r: None)
     monkeypatch.setattr(inst, "prepareReport", lambda: [0] * 64)
     def _count_write(_r: object) -> None:
@@ -143,11 +183,7 @@ def test_sendreport_mutado_nao_escreve_nem_keepalive(
     calls = {"write": 0, "sleep": 0}
     now = {"t": 100.0}
 
-    class _FakeDev:
-        def read(self, _n: int) -> bytes:
-            return bytes(_n)
-
-    inst.device = _FakeDev()
+    inst.device = _DevComFila()
     monkeypatch.setattr(inst, "readInput", lambda _r: None)
     monkeypatch.setattr(inst, "prepareReport", lambda: [0] * 64)
 
@@ -201,7 +237,7 @@ def test_sendreport_encerra_em_oserror(monkeypatch: pytest.MonkeyPatch) -> None:
     inst.connected = True
     inst.ds_thread = True
 
-    class _BoomDev:
+    class _BoomDev(_DevComFila):
         def read(self, _n: int) -> bytes:
             raise OSError("device foi embora")
 
@@ -209,3 +245,4 @@ def test_sendreport_encerra_em_oserror(monkeypatch: pytest.MonkeyPatch) -> None:
     inst.sendReport()
 
     assert inst.connected is False
+    assert inst.device._device.bloqueante is False, "saiu antes de chegar ao `read`"
