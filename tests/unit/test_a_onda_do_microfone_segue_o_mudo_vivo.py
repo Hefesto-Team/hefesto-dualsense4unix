@@ -275,6 +275,7 @@ _JS_DA_COR = r"""
     d.style.background = raiz.getPropertyValue(v).trim(); document.body.appendChild(d);
     const c = getComputedStyle(d).backgroundColor; d.remove(); return c; };
   return JSON.stringify({fundo: getComputedStyle(barra).backgroundColor,
+    opacidade: getComputedStyle(barra).opacity,
     altura: barra.getBoundingClientRect().height,
     caixa: onda.getBoundingClientRect().height,
     cinza: tinta('--border-forte'), ciano: tinta('--cyan')});
@@ -311,6 +312,11 @@ def test_o_webkit_pinta_a_onda_pelo_endereco_do_mudo() -> None:
         calada = medir("sim", False)
         aberta = medir("", False)
         sem_leitura = medir("", True)
+        # O «NÃO SEI» MANDA SOBRE O MUDO (conferência de 29/09/2026): a regra
+        # do mudo tem três classes e venceria a do `sem-leitura` pela
+        # especificidade, e a onda sem leitura de um microfone calado saía
+        # com a opacidade do mudo. Mordida: tire o `:not(.sem-leitura)`.
+        calada_sem_leitura = medir("sim", True)
     transparente = "rgba(0, 0, 0, 0)"
     assert transparente not in {calada["cinza"], calada["ciano"]}, calada
     assert calada["cinza"] != calada["ciano"], calada
@@ -319,3 +325,5 @@ def test_o_webkit_pinta_a_onda_pelo_endereco_do_mudo() -> None:
     assert aberta["fundo"] == aberta["ciano"], aberta
     assert sem_leitura["fundo"] == sem_leitura["cinza"], sem_leitura
     assert sem_leitura["altura"] <= sem_leitura["caixa"] * 0.2, sem_leitura
+    assert calada_sem_leitura == sem_leitura, (calada_sem_leitura, sem_leitura)
+    assert calada["opacidade"] != sem_leitura["opacidade"], (calada, sem_leitura)
