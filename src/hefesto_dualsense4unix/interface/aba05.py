@@ -70,6 +70,7 @@ from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
 from hefesto_dualsense4unix.app.telas.vibracao import (  # noqa: E402
     DICA_DO_TETO_DA_MESA,
     DICA_DOS_VALORES_QUE_PASSAM,
+    degraus_da_forca,
     html_do_estado,
     textos_do_estado,
 )
@@ -208,12 +209,16 @@ ESQ, DIR = MOTORES
 FORCA = [("Economia", "economia"), ("Balanceado", "balanceado"),
          ("Máximo", "max")]
 
-if set(RUMBLE_POLICY_MULT) != {chave for _, chave in FORCA}:
+# O DONO DOS DEGRAUS DA TELA É O PRODUTO — 28/09/2026: `degraus_da_forca()`
+# (`app/telas/vibracao`), o mesmo que o pacote da aba pergunta para escrever a
+# recusa do clique sem degrau. A conferência passou a cobrar a ORDEM também: a
+# fileira desenhada e a frase da recusa listam os degraus na mesma sequência.
+if tuple(chave for _, chave in FORCA) != degraus_da_forca():
     raise SystemExit(
-        f"ERRO: os degraus desta aba são {sorted(c for _, c in FORCA)} e o "
-        f"produto tem {sorted(RUMBLE_POLICY_MULT)} (daemon/subsystems/rumble.py). O "
-        "`data-forca` é o endereço por onde a pintura acha o botão — divergir "
-        "aqui faz a tela acender o degrau errado, em silêncio.")
+        f"ERRO: os degraus desta aba são {[c for _, c in FORCA]} e o "
+        f"produto tem {list(degraus_da_forca())} (app/telas/vibracao."
+        "degraus_da_forca). O `data-forca` é o endereço por onde a pintura acha "
+        "o botão — divergir aqui faz a tela acender o degrau errado, em silêncio.")
 
 #: O TETO DA BARRA "Personalizado", em pontos percentuais. **200 — decisão dela,
 #: 03/09/2026:** *"0 a 200%, e grava na hora."*
@@ -778,6 +783,8 @@ CSS = """
   /* os dois botões de ação, um sobre o outro e da MESMA largura */
   .acoes-col{display:grid;grid-template-columns:1fr;gap:6px}
   .acoes-col .btn{width:100%;justify-content:center;padding:0 6px;font-size:11.5px}
+  /* o Testar aceso é o teste ligado naquela coluna: a mesma cor do lado que treme */
+  .acoes-col .btn.on{border-color:var(--orange);background:rgba(255,184,108,.1);color:var(--orange)}
 
   /* O LADO QUE TREME — e onde entra a cor do plástico (D-O-SVG-VIBRA-POR-LADO,
      palavra dela: "Parte esquerda vibra mostrando a cor do motor esquerdo").
@@ -1761,14 +1768,19 @@ def _coluna(c, e=None, conectado=None):
                    escolhe quando termina. E desde 07/09/2026 o gesto também não
                    tem duração: o Testar fica ligado até o Parar
                    (`a05_vibracao._EM_TESTE`). -->
-              <!-- `data-hef-rotulo` NOS DOIS: o texto de um botão é RÓTULO
-                   (categoria dela, 03/09/2026), e este par foi decidido por ela
-                   justamente para NÃO mudar — quem começa escolhe quando termina.
-                   O que estes botões fazem é gesto, e o gesto tem dono escrito
-                   (`app/telas/vibracao.DONOS_DOS_GESTOS`), com desfecho relatado
-                   pelo piloto. Nada de dado passa pelo texto deles. -->
-              <button class="btn" data-papel="testar"
-                      data-hef-rotulo="o texto do botão">Testar</button>
+              <!-- O texto dos dois é RÓTULO (categoria dela, 03/09/2026), e
+                   este par foi decidido por ela justamente para NÃO mudar —
+                   quem começa escolhe quando termina. O que estes botões fazem
+                   é gesto, e o gesto tem dono no pacote da aba
+                   (`interface/pacotes/a05_vibracao`, `testar` e `parar`).
+                   O TESTAR ACENDE ENQUANTO O TESTE DAQUELA COLUNA ESTÁ LIGADO —
+                   28/09/2026: o estado é `a05_vibracao.em_teste()`, pintado pelo
+                   alvo `classe` (`em-teste`), com o `aria-pressed` junto para
+                   quem não vê a cor. Como os degraus, ele não leva a marca de
+                   rótulo: o que a régua mede aqui é o ESTADO. -->
+              <button class="btn" data-papel="testar" data-campo="em-teste"
+                      data-hef-alvo="classe" data-hef-atributo="aria-pressed"
+                      aria-pressed="false">Testar</button>
               <button class="btn vermelho" data-papel="parar"
                       data-hef-rotulo="o texto do botão">Parar</button>
             </div>

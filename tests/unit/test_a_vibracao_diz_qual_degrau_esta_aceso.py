@@ -434,3 +434,83 @@ def test_os_dois_motores_tem_o_mesmo_destino(pacote) -> None:
         assert col["motor-e-pct"] == col["motor-d-pct"], (
             "sem pedido de vibração fresco os dois lados respondem igual — "
             f"e saíram {col['motor-e-pct']!r} e {col['motor-d-pct']!r}")
+
+
+# --------------------------------------------------------------------------
+# 6. o Testar aceso e os degraus do dono — A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026
+# --------------------------------------------------------------------------
+def test_o_testar_de_cada_lugar_tem_endereco_de_estado(bancada) -> None:
+    """O "Testar" acende pelo alvo `classe`, e diz o mesmo pelo `aria-pressed`.
+
+    Desde 07/09 o "Testar" é ESTADO (`a05_vibracao._EM_TESTE`) e a tela não o
+    mostrava. O endereço é `em-teste`, um por lugar da mesa, e ele não leva a
+    marca de rótulo: com o alvo `classe`, o que a régua do mockup mede no
+    elemento é o estado, como nos degraus.
+    """
+    lugares = bancada.count('data-controle="p')
+    tags = re.findall(r'<button class="btn" data-papel="testar"[^>]*>', bancada)
+    assert len(tags) == lugares, (
+        f"a bancada tem {len(tags)} botões Testar para {lugares} lugares")
+    for tag in tags:
+        assert 'data-campo="em-teste"' in tag, tag
+        assert 'data-hef-alvo="classe"' in tag, tag
+        assert 'data-hef-atributo="aria-pressed"' in tag, (
+            f"o Testar acende sem dizer a quem não vê a cor: {tag}")
+        assert "data-hef-rotulo" not in tag, (
+            f"o Testar voltou a ser só rótulo, e o estado dele some da régua: {tag}")
+    assert ".acoes-col .btn.on{" in bancada, (
+        "o Testar aceso não tem cor na folha da aba: a classe acende e nada muda")
+
+
+def test_o_testar_acende_so_na_coluna_em_teste() -> None:
+    """O campo `em-teste` vale `"1"` na coluna do teste ligado, e só nela.
+
+    A MORDIDA: troque o valor por `""` no `a05_vibracao.pacote` e o primeiro
+    `assert` reprova; troque a comparação por `bool(em_teste())` e o P1 acende
+    junto com o P2.
+    """
+    import pacotes
+    from pacotes import a05_vibracao as a05
+
+    try:
+        a05._EM_TESTE[0] = UNIQS[1]
+        colunas = pacotes.pacote_da_pagina(PAGINA, _ctx())["colunas"]
+        assert {u: colunas[u].get("em-teste") for u in UNIQS} == {
+            UNIQS[0]: "", UNIQS[1]: "1"}, colunas
+        a05.parar_o_teste()
+        colunas = pacotes.pacote_da_pagina(PAGINA, _ctx())["colunas"]
+        assert {u: colunas[u].get("em-teste") for u in UNIQS} == {
+            UNIQS[0]: "", UNIQS[1]: ""}, (
+            "o Parar apagou a marca e a tela continuou acesa")
+    finally:
+        a05.parar_o_teste()
+
+
+def test_a_recusa_do_clique_sem_degrau_pergunta_ao_dono(monkeypatch) -> None:
+    """A frase que lista os degraus sai de `degraus_da_forca`, e não da escada.
+
+    Até 28/09 `_degraus_que_a_tela_oferece` lia `RUMBLE_POLICY_MULT` por conta
+    própria. Os dois têm hoje as mesmas três chaves, então comparar valores
+    não separa a cura do defeito: a régua troca o dono e vê a frase seguir.
+    A MORDIDA: devolva o laço a `RUMBLE_POLICY_MULT` e ela reprova.
+    """
+    from hefesto_dualsense4unix.app.telas import vibracao as tela
+    from pacotes import a05_vibracao as a05
+
+    assert a05._degraus_que_a_tela_oferece() == "Economia, Balanceado ou Máximo"
+    monkeypatch.setattr(tela, "degraus_da_forca", lambda: ("max",))
+    assert a05._degraus_que_a_tela_oferece() == "Máximo", (
+        "a recusa do clique sem degrau deixou de perguntar ao dono dos degraus")
+
+
+def test_os_degraus_do_dono_sao_os_botoes_da_tela() -> None:
+    """`degraus_da_forca` devolve os três botões, na ordem da fileira desenhada.
+
+    O `Auto` saiu da tela em 05/09 e a função continuava devolvendo quatro,
+    sem ninguém que a perguntasse. A fileira do gerador (`aba05.FORCA`) é a
+    segunda testemunha: o gerador reprova a si mesmo se ela divergir.
+    """
+    from hefesto_dualsense4unix.app.telas import vibracao as tela
+
+    assert tela.degraus_da_forca() == tuple(c for _, c in _aba05.FORCA)
+    assert tela.FORCA_SEM_MULTIPLICADOR not in tela.degraus_da_forca()

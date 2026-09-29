@@ -263,15 +263,17 @@ def test_o_multiplicador_pedido_vem_da_tabela_do_produto():
     """
     escada = _ra._POLICY_MULT
     degraus = _tela.degraus_da_forca()
-    assert set(escada) == set(degraus), (
-        "os quatro degraus da tela deixaram de ser os quatro da escada")
-    # A ORDEM É DERIVADA, não digitada: do mais fraco ao mais forte, com o
-    # `auto` no fim. Ele empata em 1,0 com o `balanceado`, e ordenar só pelo
-    # valor deixaria a posição dos botões na mão da ordem de inserção do
-    # `dict` — que muda sem aviso e sem ninguém ver.
-    assert degraus[-1] == _tela.FORCA_SEM_MULTIPLICADOR, (
-        f"o degrau sem multiplicador medido saiu do fim: {degraus}")
-    com_valor = [escada[k] for k in degraus[:-1]]
+    # OS DEGRAUS DA TELA SÃO TRÊS — 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01).
+    # Esta régua cobrava os QUATRO da escada, com o `auto` no fim, e a tela
+    # tem três botões desde 05/09 (o `Auto` saiu pela palavra dela). A escada
+    # continua com o `auto`, e o pedido dele continua sendo medido abaixo: a
+    # mesa em `Auto` é estado que o produto ainda sabe dizer.
+    assert set(escada) - {_tela.FORCA_SEM_MULTIPLICADOR} == set(degraus), (
+        "os degraus da tela deixaram de ser os da escada sem o `auto`")
+    assert _tela.FORCA_SEM_MULTIPLICADOR not in degraus, (
+        f"o degrau que saiu da tela voltou à lista dos botões: {degraus}")
+    # A ORDEM É DERIVADA, não digitada: do mais fraco ao mais forte.
+    com_valor = [escada[k] for k in degraus]
     assert com_valor == sorted(com_valor), (
         f"os degraus com valor deixaram de subir: {degraus} -> {com_valor}")
     for chave, mult in escada.items():
@@ -477,3 +479,44 @@ def test_a_bancada_tem_o_bloco():
     assert 'id="vib-estado"></div>' in doc, (
         "a faixa não nasce vazia no desenho — o que estiver ali é prosa "
         "cravada, e ela chega à página que ELA olha")
+
+
+#: AS PEÇAS QUE A VIBRAÇÃO E OS GATILHOS ACIONAM, pela chave do mapa de canais.
+CHAVES_DAS_DUAS_ABAS = (
+    "vibracao.rumble.esquerdo",
+    "vibracao.rumble.direito",
+    "vibracao.rumble.passthrough",
+    "gatilho.esquerdo.adaptativo",
+    "gatilho.direito.adaptativo",
+)
+
+
+@pytest.mark.parametrize("chave", CHAVES_DAS_DUAS_ABAS)
+def test_as_duas_abas_nao_tem_o_que_apagar_por_transporte(chave):
+    """Cabo e rádio acionam o mesmo: a coluna não tem o que apagar por transporte.
+
+    A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026. O `pacotes/mapa.py` nasceu em 01/09
+    para a Vibração e os Gatilhos apagarem o que o transporte de agora não
+    aciona, e nenhuma aba o chamou. Medido no mapa: para o DualSense, que é o
+    único controle que estas duas abas mostram (o daemon numera os externos e
+    não os adota), cada peça que elas acionam responde `sim` no cabo e no rádio.
+    Apagar por transporte não mudaria um pixel, e o módulo saiu.
+
+    ESTA RÉGUA GUARDA A PREMISSA, e pergunta ao leitor que o produto usa
+    (`mesa_viva.aciona`). No dia em que o mapa disser que um transporte não
+    aciona uma destas peças, ela reprova nomeando a peça: é a hora de a aba
+    perguntar a `mesa_viva.aciona` por coluna, como a cor e o giroscópio já
+    perguntam.
+
+    A MORDIDA: troque o `radio_aciona` da linha `vibracao.rumble.esquerdo` do
+    DualSense por `não` no CSV, e ela reprova.
+    """
+    import mesa_viva
+
+    no_cabo = mesa_viva.aciona(chave, "usb")
+    no_radio = mesa_viva.aciona(chave, "bt")
+    assert no_cabo == no_radio == "sim", (
+        f"o mapa diz que `{chave}` aciona {no_cabo!r} no cabo e {no_radio!r} no "
+        "rádio. A coluna da aba mostra a peça igual nos dois transportes: ela "
+        "tem de perguntar a `mesa_viva.aciona` por coluna e apagar o que o "
+        "transporte de agora não aciona.")

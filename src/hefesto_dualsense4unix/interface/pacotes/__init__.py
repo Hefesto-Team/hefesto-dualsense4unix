@@ -35,8 +35,11 @@ sem abrir janela.
 DE ONDE VEM O ENDEREÇO DE CADA VALOR, e é a parte que ela apontou: o
 `docs/data/mapa-controles.csv` (308 linhas, o mesmo que gera o `specs.html`) diz,
 para cada peça do controle, o canal, o `report_id` e o comando **por transporte**
-— e se ela ACIONA no cabo e no rádio. Um valor de tela sem linha lá é um valor
-sem dono, e o `pacotes/mapa.py` recusa inventar.
+— e se ela ACIONA no cabo e no rádio. Quem o pergunta em tempo de execução é
+`mesa_viva.aciona(chave, transporte)`, o leitor que o produto usa para a cor, o
+giroscópio e o alto-falante. O segundo leitor (`pacotes/mapa.py`) saiu em
+28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01): nasceu em 01/09, nenhuma aba o chamou,
+e ele respondia a primeira linha da chave sem olhar o controle.
 """
 from __future__ import annotations
 

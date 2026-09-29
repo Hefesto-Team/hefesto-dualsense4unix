@@ -551,11 +551,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     """DELEGA para `app/telas/vibracao.pacote_da_mesa` — a camada do PRODUTO.
 
     ELA JÁ EXISTIA E NUNCA TINHA SIDO LIGADA, e é o `casa-sabe` que a denunciou:
-    `app/telas/vibracao.py` tem oito funções públicas — `pacote_da_mesa`,
-    `pacote_da_coluna`, `estado_da_coluna`, `degraus_da_forca`,
-    `motores_do_controle`, `teto_da_barra`, `gesto_do_clique` — e **nenhuma
-    tinha chamador em produção**. O portão as listava como promessa sem caminho
-    desde 31/08/2026.
+    `app/telas/vibracao.py` tinha funções públicas — `pacote_da_mesa`,
+    `pacote_da_coluna`, `degraus_da_forca`, `motores_do_controle`,
+    `teto_da_barra` — e **nenhuma tinha chamador em produção**. O portão as
+    listava como promessa sem caminho desde 31/08/2026. As duas que só serviam
+    à remontagem e ao eco do clique (`estado_da_coluna`, `gesto_do_clique`)
+    saíram em 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01).
 
     Ela é MAIS COMPLETA que o que este pacote tinha: devolve a largura da barra
     já em `%` (`pct.w`), o número formatado, o `sabe` que distingue "zero" de
@@ -769,6 +770,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # O `Máx` AO LADO DO NÚMERO — decisão 11 dela. Booleano: o alvo
             # `classe` sem `data-hef-quando` acende por si.
             "mult-teto": _no_teto(pct),
+            # O TESTAR ACESO — 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01). Desde
+            # 07/09 o "Testar" é ESTADO (:data:`_EM_TESTE`, pedido dela: *"o
+            # botão Testar tem que ficar em estado de ligado"*), e a tela não o
+            # mostrava: o botão ficava igual ligado ou não, e só a mão dela
+            # sabia. Booleano, o mesmo vocabulário do `mult-teto`; o gerador
+            # põe o `aria-pressed` junto (`aba05._coluna`).
+            "em-teste": "1" if uniq and uniq == em_teste() else "",
         }
         for lado, m in (col.get("motores") or {}).items():
             # OS DOIS VELHOS SÃO A PONTE DE PUBLICAÇÃO, e não redundância: a
@@ -952,7 +960,7 @@ def _sem_marcacao(texto: str) -> str:
 # ---------------------------------------------------------------------------
 # O QUE ESTA ABA TEM DE DIFERENTE DAS OUTRAS NOVE, e muda todo gesto daqui:
 # **os métodos de vibração não recebem `uniq`.** Medido no censo do daemon em
-# 01/09/2026 (`pacotes/daemon.parametros`):
+# 01/09/2026 (`tests/unit/inventario_do_daemon.parametros`):
 #
 #     rumble.set          ('weak', 'strong')      ← nenhum endereço
 #     rumble.stop         ()                      ← nenhum endereço
@@ -1822,23 +1830,22 @@ def _degraus_que_a_tela_oferece() -> str:
     volta a envelhecer no dia seguinte, e foi exatamente assim que "quatro"
     sobreviveu à saída do quarto botão.
 
-    QUAIS SÃO TAMBÉM NÃO SE DIGITAM. O conjunto é `RUMBLE_POLICY_MULT`
-    (`daemon/subsystems/rumble.py`) — o produto —, e o gerador do desenho
-    reprova a si mesmo se os botões da tela divergirem dele
-    (`aba05.py`, o `SystemExit` logo abaixo de `FORCA`). Os nomes saem de
-    :func:`_nome_do_degrau`, que os pede a `rumble_actions.ROTULOS_DO_ORCAMENTO`
-    — a mesma cópia pública que a janela estável usa nos toasts desta aba.
+    QUAIS SÃO TAMBÉM NÃO SE DIGITAM, e o dono é o produto:
+    `app/telas/vibracao.degraus_da_forca()`, na ordem da tela. Até 28/09/2026
+    esta função lia `RUMBLE_POLICY_MULT` (`daemon/subsystems/rumble.py`) por
+    conta própria, ao lado de um dono que ninguém perguntava
+    (A-TELA-PERGUNTA-AO-DONO-01). O gerador do desenho reprova a si mesmo se os
+    botões da tela divergirem do mesmo dono (`aba05.py`, o `SystemExit` logo
+    abaixo de `FORCA`). Os nomes saem de :func:`_nome_do_degrau`, que os pede a
+    `rumble_actions.ROTULOS_DO_ORCAMENTO` — a mesma cópia pública que a janela
+    estável usa nos toasts desta aba.
 
     **NÃO SE IMPORTA O `aba05` PARA ISTO**, pela razão medida em
     :func:`_nome_do_degrau`: o gerador roda `_conferir()` no corpo do módulo, e
     importá-lo aqui faria toda carga do pacote ler o desenho da bancada e, num
     desenho em trabalho, levantar `SystemExit` no meio da aba.
     """
-    from hefesto_dualsense4unix.daemon.subsystems.rumble import (
-        RUMBLE_POLICY_MULT,
-    )
-
-    nomes = [_nome_do_degrau(chave) for chave in RUMBLE_POLICY_MULT]
+    nomes = [_nome_do_degrau(chave) for chave in _tela.degraus_da_forca()]
     if len(nomes) < 2:
         return "".join(nomes)
     return f"{', '.join(nomes[:-1])} ou {nomes[-1]}"

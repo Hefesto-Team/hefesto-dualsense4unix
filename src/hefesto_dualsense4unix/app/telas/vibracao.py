@@ -4,11 +4,12 @@ A página é ``src/hefesto_dualsense4unix/interface/paginas/05-vibracao.html``, 
 elogio literal
 (``_ferramentas/CORRECOES-DELA.md:39``). Este módulo é o outro lado dela: pega o
 ``daemon.state_full`` e devolve **um pacote por tique** — nunca uma chamada por
-valor —, e traduz de volta o gesto que a página mandar.
+valor. O gesto que a página manda é do pacote da aba
+(``interface/pacotes/a05_vibracao``), que usa as duas traduções daqui
+(:data:`LADO_PARA_MOTOR` e :data:`MOTOR_PARA_BARRA`).
 
 Ele não abre janela, não importa ``gi`` e não fala IPC. Quem faz isso é quem
-chama (hoje o piloto ``src/hefesto_dualsense4unix/interface/vibracao_viva.py``; amanhã o
-enxerto da ``MIGRA-VIBRACAO-01``).
+chama: o pacote da aba, dentro do piloto único (``interface/hefesto_vivo.py``).
 
 O QUE ESTA ABA TEM DE FONTE, E O QUE NÃO TEM
 --------------------------------------------
@@ -74,8 +75,11 @@ MOTOR_PARA_BARRA: dict[str, str] = {"strong": "forte_pct", "weak": "fraco_pct"}
 #: :func:`_escada` não é um degrau medido: é o TETO dele, onde o deslizador
 #: para — a palavra é do comentário de ``rumble_actions._POLICY_MULT:67-69``.
 #:
-#: FICA ESCRITO porque a ordem dos quatro na tela não sai de um ``dict``: ele é
-#: o último, e é o único cuja posição não vem do valor.
+#: FICA ESCRITO porque ele é o degrau da escada que NÃO é botão da tela: o
+#: ``Auto`` saiu da aba em 05/09/2026, pela palavra dela (*"segue os três modos
+#: sempre"*), e :func:`degraus_da_forca` o deixa de fora por este nome. A
+#: escada continua com ele — a mesa em ``Auto`` é estado que o produto ainda
+#: sabe dizer (:func:`_pedido_da_politica`).
 FORCA_SEM_MULTIPLICADOR = "auto"
 
 
@@ -122,16 +126,22 @@ def teto_da_barra() -> int:
 
 
 def degraus_da_forca() -> tuple[str, ...]:
-    """As chaves dos quatro degraus, na ordem da tela — do produto, não daqui.
+    """As chaves dos degraus que a tela oferece, na ordem dela — do produto.
 
-    A ordem é a do desenho: do mais fraco ao mais forte, e o
-    :data:`FORCA_SEM_MULTIPLICADOR` por último. O ``auto`` **não** entra pelo
-    valor — o 1,0 dele empataria com o ``balanceado`` e a ordem dos botões
-    passaria a depender de qual chave o ``dict`` devolvesse primeiro.
+    A ordem é a do desenho: do mais fraco ao mais forte, pelo multiplicador da
+    :func:`_escada`. O :data:`FORCA_SEM_MULTIPLICADOR` fica de fora: ele saiu
+    da tela em 05/09/2026, e o 1,0 dele empataria com o ``balanceado``.
+
+    FATO SUBSTITUÍDO — 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01): esta função
+    devolvia QUATRO degraus, com o ``auto`` no fim, e ninguém a perguntava. O
+    pacote da aba (``a05_vibracao._degraus_que_a_tela_oferece``) lia a escada
+    do daemon por conta própria para escrever a recusa do clique sem degrau.
+    Agora ele pergunta aqui, e a conta dos botões da tela tem um dono só.
     """
     escada = _escada()
     return tuple(sorted(
-        escada, key=lambda k: (k == FORCA_SEM_MULTIPLICADOR, escada[k])
+        (k for k in escada if k != FORCA_SEM_MULTIPLICADOR),
+        key=lambda k: escada[k],
     ))
 
 
@@ -198,57 +208,12 @@ SEM_FONTE: dict[str, str] = {
     "Fecha: MIGRA-VIBRACAO-08.",
 }
 
-#: O DONO REAL DE CADA GESTO, num lugar só. Enquanto a aba está sendo avaliada
-#: por ela, nenhum é chamado: o clique chega, é registrado e ECOA. Um gesto que
-#: grave sem ela mandar é dano, e um que mande byte ao aparelho é pior.
-DONOS_DOS_GESTOS: dict[str, str] = {
-    "forca": "rumble.policy_set {policy} pela ponte `app/ipc_bridge."
-    "rumble_policy_set_checked` — a ÚNICA porta desde 26/08/2026. É GLOBAL: o "
-    "handler não aceita `uniq` (`daemon/ipc_handlers.py:5585`). E `auto` por "
-    "unidade é RECUSADO pelo esquema, com validador e mensagem dedicados "
-    "(`profiles/schema.py:1260-1269`): ele escala pela bateria do controle "
-    "PRIMÁRIO, então guardá-lo por peça faria duas escalarem pela bateria da "
-    "mesma.",
-    "barra:forca": "rumble.policy_custom {mult} pela ponte `app/ipc_bridge."
-    "rumble_policy_custom`. Global, e o teto do esquema é "
-    "`RUMBLE_CUSTOM_MULT_MAX` = 2,0 (`profiles/schema.py:90`) — maior que os "
-    "150% que esta barra desenha, e baixá-lo para 1,5 é decisão dela.",
-    "barra:motor": "rumble.set {weak, strong} pela ponte `app/ipc_bridge."
-    "rumble_set_checked`. O par é da MESA, e os dois valores viajam JUNTOS: não "
-    "há como mandar um lado só.",
-    "lado": "rumble.motores.set {weak|strong} pela ponte `app/ipc_bridge."
-    "rumble_motores_set` — o MESMO método da barra ao lado, e é isso que o "
-    "faz nascer sem campo próprio: desligar escreve 0 naquele motor e ligar "
-    "devolve 100. Por CONTROLE (leva `uniq`), ao contrário do `barra:motor` "
-    "logo acima. Aceso é a leitura da barra, nunca um estado guardado à parte "
-    "(14/09/2026, ordem dela).",
-    "testar": "rumble.set {weak, strong} e, meio segundo depois, rumble.stop — é "
-    "o que o `rumble_test_500ms` do produto faz hoje. Global.",
-    # FATO SUBSTITUÍDO EM 03/09/2026, e quem o derrubou foi ELA, em uma linha:
-    # *"O parar é sobre o teste."* Esta célula dizia "sem antídoto nesta tela",
-    # e a frase mandou-me concluir que o Parar deixava o controle mudo no jogo
-    # sem caminho de volta — cheguei a apresentar isso a ela como armadilha de
-    # mão única. NÃO É, e não é desde a cura que juntou os dois passos:
-    # `a05_vibracao.parar` chama `rumble_stop_checked()` E `rumble_passthrough
-    # (True)` na mesma função. O que na janela estável são DOIS botões, aqui é
-    # um só — e a dica publicada já dizia isso com todas as letras: *"Parar
-    # corta a vibração dele agora e devolve a mão ao jogo"*.
-    #
-    # A NOTA VELHA CUSTOU CARO justamente por descrever um estado que a cura já
-    # tinha desfeito: eu li a prosa, não o ato. É a forma que esta casa
-    # persegue, aparecendo do lado de dentro de uma tabela de donos.
-    "parar": "rumble.stop pela ponte `app/ipc_bridge.rumble_stop_checked` E "
-    "`rumble_passthrough(True)` na sequência — os DOIS passos que a janela "
-    "estável separa em dois botões. Corta a vibração daquele controle agora e "
-    "devolve a mão ao jogo, que é o que a dica publicada promete. Global no "
-    "primeiro passo; o alvo é mirado antes por `_mirar`.",
-}
-
-#: O que se diz de um gesto sem linha na tabela. Era um `KeyError` no piloto da
-#: Controles e derrubava a janela inteira — derrubar a tela dela para relatar um
-#: dono desconhecido é o pior dos dois males.
-SEM_DONO = ("SEM LINHA na tabela de donos — este gesto chegou de um endereço que "
-            "o gerador não escreve. Nada foi aplicado.")
+# A TABELA DOS DONOS DOS GESTOS E O `SEM_DONO` SAÍRAM — 28/09/2026
+# (A-TELA-PERGUNTA-AO-DONO-01), com `gesto_do_clique`, a única que os lia.
+# Eles descreviam a aba em AVALIAÇÃO, quando o clique chegava, era registrado e
+# ECOAVA sem aplicar nada. Os seis gestos têm dono desde 03/09 no pacote da aba
+# (`interface/pacotes/a05_vibracao`, um `@gesto` por gesto, e cada um diz a
+# própria recusa), e a tabela ficou descrevendo um estado que a cura desfez.
 
 #: O traço do valor que não se sabe. Nunca um zero: zero é um valor que ela pode
 #: ter escolhido, e confundir os dois é o defeito que a `MIGRA-VIBRACAO-01`
@@ -662,37 +627,11 @@ def html_do_estado(linhas: list[tuple[str, str]]) -> str:
     )
 
 
-def estado_da_coluna(entrada: dict[str, Any], state: dict[str, Any]) -> dict[str, Any]:
-    """O estado no formato que ``aba05._coluna`` desenha, para a REMONTAGEM.
-
-    A remontagem monta o HTML da coluna pelo gerador do mockup — nunca por HTML
-    escrito aqui. O gerador fala ``{"forca", "pct", "esq", "dir"}``, e esta é a
-    tradução; sem ela a coluna viva nasceria da cena estática do mockup e a
-    primeira pintura teria de corrigir tudo.
-
-    Os interruptores nascem LIGADOS porque não há o que os desligue: o produto
-    não tem lado desligável (:data:`SEM_FONTE`), e desenhá-los apagados seria
-    afirmar um estado que ninguém mediu.
-    """
-    politica = str(state.get("rumble_policy") or "")
-    aplicado = state.get("rumble_mult_applied")
-    pct = 0 if not isinstance(aplicado, (int, float)) else round(float(aplicado) * 100)
-    motores = motores_do_controle(entrada, state)
-    return {
-        "forca": politica,
-        "pct": pct,
-        "esq": (True, motores["e"] or 0),
-        "dir": (True, motores["d"] or 0),
-    }
-
-
-def gesto_do_clique(gesto: dict[str, Any]) -> tuple[str, str]:
-    """``(chave, dono)`` de um gesto que a página mandou.
-
-    A chave é o que a tabela :data:`DONOS_DOS_GESTOS` indexa; o dono é a frase
-    que diz o que aconteceria se este gesto fosse aplicado — e enquanto ele não
-    é, é a frase que impede alguém de achar que já é.
-    """
-    nome = str(gesto.get("gesto") or "")
-    chave = f'barra:{gesto.get("papel") or "?"}' if nome == "barra" else nome
-    return chave, DONOS_DOS_GESTOS.get(chave, SEM_DONO)
+# A REMONTAGEM DA COLUNA E A TRADUÇÃO DO CLIQUE SAÍRAM — 28/09/2026
+# (A-TELA-PERGUNTA-AO-DONO-01). `estado_da_coluna` traduzia o estado para o
+# gerador remontar a coluna inteira, e a aba viva nunca remonta: ela pinta
+# campo a campo, e o lugar vazio tem o molde próprio
+# (`interface/pacotes.LUGAR_SEM_DONO`). Ela ainda dizia que os interruptores
+# de lado nasciam ligados porque o produto não os desligava, e isso caiu em
+# 14/09. `gesto_do_clique` devolvia a frase da tabela dos donos, que saiu
+# junto (ver a nota acima de `NAO_SEI`).

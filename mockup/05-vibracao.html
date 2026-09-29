@@ -1451,6 +1451,8 @@
   /* os dois botões de ação, um sobre o outro e da MESMA largura */
   .acoes-col{display:grid;grid-template-columns:1fr;gap:6px}
   .acoes-col .btn{width:100%;justify-content:center;padding:0 6px;font-size:11.5px}
+  /* o Testar aceso é o teste ligado naquela coluna: a mesma cor do lado que treme */
+  .acoes-col .btn.on{border-color:var(--orange);background:rgba(255,184,108,.1);color:var(--orange)}
 
   /* O LADO QUE TREME — e onde entra a cor do plástico (D-O-SVG-VIBRA-POR-LADO,
      palavra dela: "Parte esquerda vibra mostrando a cor do motor esquerdo").
@@ -2598,14 +2600,19 @@
                    escolhe quando termina. E desde 07/09/2026 o gesto também não
                    tem duração: o Testar fica ligado até o Parar
                    (`a05_vibracao._EM_TESTE`). -->
-              <!-- `data-hef-rotulo` NOS DOIS: o texto de um botão é RÓTULO
-                   (categoria dela, 03/09/2026), e este par foi decidido por ela
-                   justamente para NÃO mudar — quem começa escolhe quando termina.
-                   O que estes botões fazem é gesto, e o gesto tem dono escrito
-                   (`app/telas/vibracao.DONOS_DOS_GESTOS`), com desfecho relatado
-                   pelo piloto. Nada de dado passa pelo texto deles. -->
-              <button class="btn" data-papel="testar"
-                      data-hef-rotulo="o texto do botão">Testar</button>
+              <!-- O texto dos dois é RÓTULO (categoria dela, 03/09/2026), e
+                   este par foi decidido por ela justamente para NÃO mudar —
+                   quem começa escolhe quando termina. O que estes botões fazem
+                   é gesto, e o gesto tem dono no pacote da aba
+                   (`interface/pacotes/a05_vibracao`, `testar` e `parar`).
+                   O TESTAR ACENDE ENQUANTO O TESTE DAQUELA COLUNA ESTÁ LIGADO —
+                   28/09/2026: o estado é `a05_vibracao.em_teste()`, pintado pelo
+                   alvo `classe` (`em-teste`), com o `aria-pressed` junto para
+                   quem não vê a cor. Como os degraus, ele não leva a marca de
+                   rótulo: o que a régua mede aqui é o ESTADO. -->
+              <button class="btn" data-papel="testar" data-campo="em-teste"
+                      data-hef-alvo="classe" data-hef-atributo="aria-pressed"
+                      aria-pressed="false">Testar</button>
               <button class="btn vermelho" data-papel="parar"
                       data-hef-rotulo="o texto do botão">Parar</button>
             </div>
@@ -2941,14 +2948,19 @@
                    escolhe quando termina. E desde 07/09/2026 o gesto também não
                    tem duração: o Testar fica ligado até o Parar
                    (`a05_vibracao._EM_TESTE`). -->
-              <!-- `data-hef-rotulo` NOS DOIS: o texto de um botão é RÓTULO
-                   (categoria dela, 03/09/2026), e este par foi decidido por ela
-                   justamente para NÃO mudar — quem começa escolhe quando termina.
-                   O que estes botões fazem é gesto, e o gesto tem dono escrito
-                   (`app/telas/vibracao.DONOS_DOS_GESTOS`), com desfecho relatado
-                   pelo piloto. Nada de dado passa pelo texto deles. -->
-              <button class="btn" data-papel="testar"
-                      data-hef-rotulo="o texto do botão">Testar</button>
+              <!-- O texto dos dois é RÓTULO (categoria dela, 03/09/2026), e
+                   este par foi decidido por ela justamente para NÃO mudar —
+                   quem começa escolhe quando termina. O que estes botões fazem
+                   é gesto, e o gesto tem dono no pacote da aba
+                   (`interface/pacotes/a05_vibracao`, `testar` e `parar`).
+                   O TESTAR ACENDE ENQUANTO O TESTE DAQUELA COLUNA ESTÁ LIGADO —
+                   28/09/2026: o estado é `a05_vibracao.em_teste()`, pintado pelo
+                   alvo `classe` (`em-teste`), com o `aria-pressed` junto para
+                   quem não vê a cor. Como os degraus, ele não leva a marca de
+                   rótulo: o que a régua mede aqui é o ESTADO. -->
+              <button class="btn" data-papel="testar" data-campo="em-teste"
+                      data-hef-alvo="classe" data-hef-atributo="aria-pressed"
+                      aria-pressed="false">Testar</button>
               <button class="btn vermelho" data-papel="parar"
                       data-hef-rotulo="o texto do botão">Parar</button>
             </div>
@@ -3283,14 +3295,19 @@
                    escolhe quando termina. E desde 07/09/2026 o gesto também não
                    tem duração: o Testar fica ligado até o Parar
                    (`a05_vibracao._EM_TESTE`). -->
-              <!-- `data-hef-rotulo` NOS DOIS: o texto de um botão é RÓTULO
-                   (categoria dela, 03/09/2026), e este par foi decidido por ela
-                   justamente para NÃO mudar — quem começa escolhe quando termina.
-                   O que estes botões fazem é gesto, e o gesto tem dono escrito
-                   (`app/telas/vibracao.DONOS_DOS_GESTOS`), com desfecho relatado
-                   pelo piloto. Nada de dado passa pelo texto deles. -->
-              <button class="btn" data-papel="testar"
-                      data-hef-rotulo="o texto do botão">Testar</button>
+              <!-- O texto dos dois é RÓTULO (categoria dela, 03/09/2026), e
+                   este par foi decidido por ela justamente para NÃO mudar —
+                   quem começa escolhe quando termina. O que estes botões fazem
+                   é gesto, e o gesto tem dono no pacote da aba
+                   (`interface/pacotes/a05_vibracao`, `testar` e `parar`).
+                   O TESTAR ACENDE ENQUANTO O TESTE DAQUELA COLUNA ESTÁ LIGADO —
+                   28/09/2026: o estado é `a05_vibracao.em_teste()`, pintado pelo
+                   alvo `classe` (`em-teste`), com o `aria-pressed` junto para
+                   quem não vê a cor. Como os degraus, ele não leva a marca de
+                   rótulo: o que a régua mede aqui é o ESTADO. -->
+              <button class="btn" data-papel="testar" data-campo="em-teste"
+                      data-hef-alvo="classe" data-hef-atributo="aria-pressed"
+                      aria-pressed="false">Testar</button>
               <button class="btn vermelho" data-papel="parar"
                       data-hef-rotulo="o texto do botão">Parar</button>
             </div>
@@ -3625,14 +3642,19 @@
                    escolhe quando termina. E desde 07/09/2026 o gesto também não
                    tem duração: o Testar fica ligado até o Parar
                    (`a05_vibracao._EM_TESTE`). -->
-              <!-- `data-hef-rotulo` NOS DOIS: o texto de um botão é RÓTULO
-                   (categoria dela, 03/09/2026), e este par foi decidido por ela
-                   justamente para NÃO mudar — quem começa escolhe quando termina.
-                   O que estes botões fazem é gesto, e o gesto tem dono escrito
-                   (`app/telas/vibracao.DONOS_DOS_GESTOS`), com desfecho relatado
-                   pelo piloto. Nada de dado passa pelo texto deles. -->
-              <button class="btn" data-papel="testar"
-                      data-hef-rotulo="o texto do botão">Testar</button>
+              <!-- O texto dos dois é RÓTULO (categoria dela, 03/09/2026), e
+                   este par foi decidido por ela justamente para NÃO mudar —
+                   quem começa escolhe quando termina. O que estes botões fazem
+                   é gesto, e o gesto tem dono no pacote da aba
+                   (`interface/pacotes/a05_vibracao`, `testar` e `parar`).
+                   O TESTAR ACENDE ENQUANTO O TESTE DAQUELA COLUNA ESTÁ LIGADO —
+                   28/09/2026: o estado é `a05_vibracao.em_teste()`, pintado pelo
+                   alvo `classe` (`em-teste`), com o `aria-pressed` junto para
+                   quem não vê a cor. Como os degraus, ele não leva a marca de
+                   rótulo: o que a régua mede aqui é o ESTADO. -->
+              <button class="btn" data-papel="testar" data-campo="em-teste"
+                      data-hef-alvo="classe" data-hef-atributo="aria-pressed"
+                      aria-pressed="false">Testar</button>
               <button class="btn vermelho" data-papel="parar"
                       data-hef-rotulo="o texto do botão">Parar</button>
             </div>
