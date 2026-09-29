@@ -159,8 +159,9 @@ def test_no_nativo_o_chip_recusa_sem_pedir(
 ) -> None:
     """No Nativo o chip é cinza e o clique não chega à ponte.
 
-    MORDIDA: tire o `if _nativo(ctx)` do `_alternar_o_chip` e a ponte é
-    chamada.
+    MORDIDA: tire o `if _nativo(ctx)` de um dos dois gestos (`inclinacao`,
+    `toque`) e a ponte é chamada; tire a leitura do `status: nativo` depois
+    da ponte e a segunda metade reprova.
     """
     import pacotes.a02_controles as a02
 
