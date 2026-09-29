@@ -27,115 +27,25 @@ from hefesto_dualsense4unix.integrations.mapa_das_portas import (
     caminho_de,
     filhas_de,
     porta_de,
-    porta_do_adaptador,
     portas_livres,
     resumo_do_mapa,
     vizinhas_de_verdade,
 )
-from hefesto_dualsense4unix.integrations.mesa_de_radio import Adaptador
 from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
 from tests.unit.test_mapa_a_bancada_de_mentira import (
-    ENDERECO_DO_BT_DA_EXTENSAO,
-    ENDERECO_DO_BT_DO_HUB,
-    NOS,
     bancada_de_agora,
     mapa_dela,
 )
 
 
 # --- 1. A pergunta "onde ele está" -------------------------------------------
-
-
-def test_dois_adaptadores_de_mesmo_vid_pid_recebem_entradas_distintas() -> None:
-    """Os dois ``2357:0604`` desta mesa respondem entradas DIFERENTES.
-
-    A sprint pedia três adaptadores, que é quantos a mesa tinha em 24/08. A
-    leitura de 25/08 às 02h30 tem DOIS: o terceiro virou o DualSense no cabo,
-    em ``3-1.2``. A propriedade medida é a mesma e a mordida também — o que
-    colapsa sob a chave ``vid:pid`` colapsa com dois tanto quanto com três.
-
-    Mordida exercida em 25/08/2026: troquei o ``porta_de(mapa,
-    adaptador.caminho)`` por um ``porta_de(mapa, f"{a.vid}:{a.pid}")``, que é a
-    chave de hoje. As duas respostas colapsaram em ZERO entradas — nenhuma
-    entrada é declarada por ``vid:pid`` — e o teste reprovou dizendo que o
-    dicionário voltou vazio.
-    """
-    bancada = bancada_de_agora()
-    mapa = mapa_dela()
-
-    achados = porta_do_adaptador(
-        mapa,
-        bancada.adaptadores(),
-        [ENDERECO_DO_BT_DO_HUB, ENDERECO_DO_BT_DA_EXTENSAO],
-        ler_serial=bancada.serial,
-    )
-
-    assert set(achados.values()) == {"13", "15a"}, (
-        "os dois adaptadores idênticos deixaram de receber entradas distintas: "
-        f"{achados}. É a aba inteira perdendo a capacidade de distinguir os "
-        "aparelhos que ela existe para distinguir"
-    )
-    assert len(achados) == 2, f"um adaptador ficou sem entrada: {achados}"
-
-
-def test_serial_que_nao_e_endereco_nao_casa() -> None:
-    """O Archer T3U responde ``123456``, e a resposta certa é a AUSÊNCIA.
-
-    Serial-é-endereço está medido em três TP-Link e tem um contraexemplo no
-    mesmo barramento. Sem esta guarda o produto passaria a afirmar "o Jogador 2
-    está na entrada 7" a partir de seis dígitos decimais que não são endereço
-    de coisa nenhuma — a classe de erro do
-    ``O-AGENTE-AFIRMA-COM-CONFIANCA-O-QUE-NAO-EXISTE``.
-
-    Mordida: tirar o ``if not _DOZE_HEX.match(limpo): return ""``. O ``123456``
-    vira um endereço qualquer, e este teste reprova mostrando a entrada
-    inventada.
-    """
-    bancada = bancada_de_agora()
-    mapa = mapa_dela()
-    # Um adaptador hipotético no nó do Wi-Fi: o que se mede aqui é o SERIAL,
-    # e o `123456` é o único serial desta bancada que não é endereço.
-    intruso = Adaptador(interface="hci2", no=NOS["4-4"], busnum=4, devpath="4")
-
-    achados = porta_do_adaptador(
-        mapa,
-        [intruso],
-        [ENDERECO_DO_BT_DO_HUB, ENDERECO_DO_BT_DA_EXTENSAO, "123456"],
-        ler_serial=bancada.serial,
-    )
-
-    assert achados == {}, (
-        f"o produto inventou uma entrada a partir de um serial que não é "
-        f"endereço: {achados}"
-    )
-
-
-def test_adaptador_com_endereco_que_o_bluez_nao_reportou_nao_casa() -> None:
-    """Casar exige os DOIS lados. Um lado só é palpite.
-
-    Mordida: aceitar o serial sem conferir contra a lista do BlueZ. Um dongle
-    de outro fabricante cujo serial por acaso tenha doze hex passaria a receber
-    entrada, e o produto afirmaria onde ele está sem ninguém ter confirmado.
-    """
-    bancada = bancada_de_agora()
-
-    achados = porta_do_adaptador(
-        mapa_dela(), bancada.adaptadores(), [], ler_serial=bancada.serial
-    )
-
-    assert achados == {}, f"casou sem o BlueZ ter reportado nada: {achados}"
-
-
-def test_o_embutido_nao_recebe_entrada() -> None:
-    """Rádio dentro da máquina não está em entrada nenhuma, e isso é resposta."""
-    achados = porta_do_adaptador(
-        mapa_dela(),
-        [Adaptador(interface="hci0")],
-        [ENDERECO_DO_BT_DO_HUB],
-        ler_serial=lambda _no: "aabbcc0000a1",
-    )
-
-    assert achados == {}, f"o adaptador embutido ganhou uma entrada: {achados}"
+#
+# O CASAMENTO PELO SERIAL SAIU EM 28/09/2026 (A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-
+# MEDE-01). `mapa_das_portas.porta_do_adaptador` casava o adaptador com a
+# entrada pelo serial USB, que só nos TP-Link é o endereço Bluetooth, e nunca
+# teve chamador. A mesma pergunta o produto responde pelo lugar do adaptador no
+# sysfs (`bluez_dbus.lugares_dos_adaptadores`), que vale para qualquer máquina.
+# As quatro réguas daqui mediam o casamento, e saíram com ele.
 
 
 # --- 2. As duas traduções -----------------------------------------------------

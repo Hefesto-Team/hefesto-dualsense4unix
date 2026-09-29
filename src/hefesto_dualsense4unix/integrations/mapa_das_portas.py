@@ -35,75 +35,52 @@ O QUE ELE NÃO FAZ
 **Não escreve frase de tela.** Ele entrega o número; quem escreve a frase é a
 aba (o texto desta aba tem dono único, e não é este módulo).
 
-**Não vai buscar endereço de Bluetooth.** :func:`porta_do_adaptador` RECEBE os
-endereços que o BlueZ já reportou, em vez de abrir D-Bus: quem fala com o
-barramento de sistema é o ``bluez_dbus``, e só ele (o dono do BlueZ,
-BLUEZ-UM-DONO-01).
+**Não vai buscar endereço de Bluetooth.** Quem fala com o barramento de
+sistema é o ``bluez_dbus``, e só ele (o dono do BlueZ, BLUEZ-UM-DONO-01).
 
-**Não guarda serial em lugar nenhum.** O serial USB dos adaptadores TP-Link
-desta bancada É o endereço Bluetooth deles (medido em 24/08/2026, três
-aparelhos), e é essa coincidência que casa as duas leituras. Mas serial
-identifica a unidade dela tão bem quanto o MAC (``scripts/check_anonymity.sh``):
-ele é lido dentro de :func:`porta_do_adaptador`, usado para casar, e some. Nunca
-vai para a tela, nunca para o ``maquina.json``, nunca para um PNG.
+**Não guarda serial em lugar nenhum.** Serial identifica a unidade dela tão bem
+quanto o MAC (``scripts/check_anonymity.sh``): :func:`serial_do_no` o lê para a
+identidade do aparelho no mapa das conexões, que o resume com sal antes de
+qualquer coisa. Nunca vai para a tela, nunca para o ``maquina.json``, nunca para
+um PNG.
 
-**NÃO VERIFICADO:** que serial-é-endereço valha fora destes TP-Link. O Wi-Fi
-desta mesma bancada responde ``123456``, o que já prova que não é regra
-universal. Por isso a regra é casar **quando o serial tem doze hex E bate com um
-endereço que o BlueZ já reportou**; nos outros casos a resposta é a ausência —
-"não sei em qual entrada" —, nunca um palpite.
+DUAS JUNÇÕES SAÍRAM EM 28/09/2026 (A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01), as
+duas sem chamador desde 25/08:
+
+* ``porta_do_adaptador`` casava o adaptador com a entrada pelo serial USB — que
+  É o endereço Bluetooth nos TP-Link desta bancada e não é regra universal (o
+  Wi-Fi dela responde ``123456``). O produto responde a mesma pergunta pelo
+  lugar do adaptador no sysfs (``bluez_dbus.lugares_dos_adaptadores`` →
+  ``utils/lugar.lugar_de``), que vale para qualquer máquina, e a aba 08 diz a
+  entrada de cada adaptador por ali;
+* ``incoerencias`` acusava a entrada declarada numa face que não pende do hub
+  da face. O desenho aprovado não tem onde dizer isso sem um recado, e recado
+  não entra (as decisões de 23/09).
 """
 
 from __future__ import annotations
 
 import itertools
 import os
-import re
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 
 from hefesto_dualsense4unix.integrations import arranjo_da_mesa as motor
 from hefesto_dualsense4unix.integrations.censo_do_barramento import (
     Aparelho,
     Censo,
-    cadeia_de_hubs,
 )
 from hefesto_dualsense4unix.integrations.entradas_do_gabinete import (
     VELOCIDADE_SUPERSPEED_MBPS,
 )
-from hefesto_dualsense4unix.integrations.mesa_de_radio import Adaptador
 from hefesto_dualsense4unix.utils.maquina import (
     MapaDaMesa,
     caminho_da_porta,
     caminhos_da_porta,
 )
 
-#: Doze hex, que é a forma em que o serial USB de um TP-Link UB500 carrega o
-#: endereço Bluetooth do aparelho. Qualquer outra forma — o ``123456`` do
-#: Archer T3U desta bancada, por exemplo — não casa com endereço nenhum, e a
-#: resposta é a ausência.
-_DOZE_HEX = re.compile(r"^[0-9a-f]{12}$")
-
 #: Onde mora o serial de um nó USB, relativo ao caminho do nó.
 _ARQUIVO_DO_SERIAL = "serial"
-
-@dataclass(frozen=True)
-class Incoerencia:
-    """Uma entrada declarada numa face que não pendura onde a face pendura.
-
-    É o cálculo, e só ele: a FRASE que a tela mostra é de quem escreve a ordem
-    de serviço. Aqui ficam os quatro fatos de que aquela frase precisa.
-
-    ``ancora`` é o hub de que a maioria das entradas daquela face pendura — o
-    que o desenho chama de "o cabo da face". Ele não é declarado: sai da
-    leitura, contando de que hub as entradas da face penduram.
-    """
-
-    face: str
-    porta: str
-    caminho: str
-    ancora: str
-
 
 @dataclass(frozen=True)
 class Resumo:
@@ -366,103 +343,6 @@ def vizinhas_de_verdade(
             vistos.add((primeira, segunda))
             pares.append((primeira, segunda))
     return tuple(pares)
-
-
-def incoerencias(mapa: MapaDaMesa, censo: Censo) -> tuple[Incoerencia, ...]:
-    """As entradas que a face diz hospedar e o barramento diz que não.
-
-    A âncora de uma face é o hub de que a MAIORIA das entradas dela pendura —
-    o cabo daquela face, deduzido em vez de declarado. Uma face cujas entradas
-    penduram direto na placa (a frente e a traseira de um gabinete) não tem
-    âncora, e uma face sem âncora nunca acusa ninguém.
-
-    **A EXCEÇÃO DO HUB DE DOIS BARRAMENTOS, e ela é o motivo desta função ter
-    tarefa própria.** O hub desta bancada é UM plástico com DOIS chips: o lado
-    USB 2.0 enumera em ``3-1``/``3-1.1`` e o lado USB 3.0 em ``4-1``/``4-1.1``.
-    Um aparelho no buraco azul pendura em ``4-1.1`` enquanto os vizinhos dele
-    penduram em ``3-1`` — e a comparação de prefixo crua acusaria a mesa dela
-    de estar errada, que é uma acusação FALSA contra quem declarou certo. Dois
-    caminhos que diferem apenas no barramento, cujos barramentos pendem do
-    mesmo controlador PCI, são o mesmo plástico.
-    """
-    por_caminho = {a.no: a for a in censo.aparelhos}
-    caminho_por_nome = {a.nome_do_kernel: a.no for a in censo.aparelhos}
-    controladores = controladores_do_censo(censo)
-    achadas: list[Incoerencia] = []
-    for face in mapa.faces:
-        numeros = _entradas_da_face(mapa, face.portas)
-        cadeias = {
-            numero: _cadeia(censo, caminho_por_nome, caminho_de(mapa, numero, controladores))
-            for numero in numeros
-        }
-        ancora = _ancora_da_face(cadeias.values())
-        if not ancora:
-            continue
-        for numero in numeros:
-            cadeia = cadeias[numero]
-            if not cadeia:
-                caminho = caminho_de(mapa, numero, controladores)
-                if not caminho or caminho not in caminho_por_nome:
-                    # Entrada vazia, ou aparelho que saiu da mesa: não há o que
-                    # acusar. O mapa continua valendo para quando ele voltar.
-                    continue
-            if ancora in cadeia:
-                continue
-            if _mesmo_plastico_em_dois_barramentos(ancora, cadeia, por_caminho):
-                continue
-            achadas.append(
-                Incoerencia(
-                    face=face.nome,
-                    porta=numero,
-                    caminho=caminho_de(mapa, numero, controladores) or "",
-                    ancora=_nome_do_kernel(por_caminho, ancora),
-                )
-            )
-    return tuple(achadas)
-
-
-def porta_do_adaptador(
-    mapa: MapaDaMesa,
-    adaptadores: Sequence[Adaptador],
-    enderecos_do_bluez: Iterable[str],
-    *,
-    ler_serial: Callable[[str], str] | None = None,
-) -> dict[str, str]:
-    """``{endereço do adaptador: número da entrada}`` — o casamento do serial.
-
-    É a ponte que faltava entre ``radio_da_mesa``, que chaveia por **endereço
-    do adaptador**, e ``mesa_de_radio``, que sabe **onde o adaptador está** e
-    não sabe o endereço (medido: ``/sys/class/bluetooth/hci0/`` não tem arquivo
-    ``address``). Com ela, e sem root, sem ``busctl``, sem D-Bus de sistema e
-    sem o Flatpak reclamar, o produto passa a poder dizer em qual entrada o
-    Jogador 2 está.
-
-    O casamento é conservador de propósito: só entra no resultado o adaptador
-    cujo serial tem doze hex **E** bate com um endereço que o BlueZ já
-    reportou **E** cujo caminho ela declarou no mapa. Falhou qualquer um dos
-    três, a resposta é a ausência — "não sei em qual entrada" —, que é o que a
-    tela tem de dizer em vez de chutar.
-
-    O serial não sobrevive a esta função: é lido, comparado e descartado.
-    """
-    leitor = _serial_do_no if ler_serial is None else ler_serial
-    conhecidos = {
-        _endereco_normalizado(endereco)
-        for endereco in enderecos_do_bluez
-        if _endereco_normalizado(endereco)
-    }
-    achados: dict[str, str] = {}
-    for adaptador in adaptadores:
-        if not adaptador.no or not adaptador.caminho:
-            continue
-        endereco = _endereco_do_serial(leitor(adaptador.no))
-        if not endereco or endereco not in conhecidos:
-            continue
-        numero = porta_de(mapa, adaptador.caminho)
-        if numero is None:
-            continue
-        achados[endereco] = numero
-    return achados
 
 
 # ---------------------------------------------------------------------------
@@ -986,89 +866,6 @@ def _entradas_da_face(mapa: MapaDaMesa, numeros: Sequence[str]) -> tuple[str, ..
     return tuple(achadas)
 
 
-def _cadeia(
-    censo: Censo, caminho_por_nome: dict[str, str], caminho: str | None
-) -> tuple[str, ...]:
-    """Os hubs acima do caminho declarado, do mais perto ao mais longe."""
-    if not caminho:
-        return ()
-    no = caminho_por_nome.get(caminho)
-    if no is None:
-        return ()
-    return cadeia_de_hubs(censo, no)
-
-
-def _ancora_da_face(cadeias: Iterable[tuple[str, ...]]) -> str:
-    """O hub de que a MAIORIA das entradas da face pendura — ``""`` se nenhum.
-
-    O empate se resolve pelo hub mais EXTERNO, o que está mais longe dos
-    aparelhos: uma face é um plástico inteiro, não um dos chips dele. Sem esse
-    critério, o hub de dois chips desta bancada faria a âncora oscilar entre
-    ``3-1`` e ``3-1.1`` conforme quantos aparelhos estivessem em cada chip.
-    """
-    contagem: dict[str, int] = {}
-    profundidade: dict[str, int] = {}
-    for cadeia in cadeias:
-        for altura, hub in enumerate(cadeia):
-            contagem[hub] = contagem.get(hub, 0) + 1
-            profundidade[hub] = max(profundidade.get(hub, 0), altura)
-    if not contagem:
-        return ""
-    return max(contagem, key=lambda hub: (contagem[hub], profundidade[hub], hub))
-
-
-def _mesmo_plastico_em_dois_barramentos(
-    ancora: str,
-    cadeia: Sequence[str],
-    por_caminho: dict[str, Aparelho],
-) -> bool:
-    """A âncora e algum hub desta cadeia são os dois lados do MESMO hub?
-
-    A assinatura, medida nesta bancada: mesmo ``devpath``, ``busnum``
-    diferente, e o mesmo controlador PCI nos dois. O hub USB 2.1/3.1 dela
-    enumera ``3-1`` no lado 2.0 e ``4-1`` no lado 3.0, e os dois barramentos
-    pendem de ``0000:0c:00.3``.
-    """
-    de_la = por_caminho.get(ancora)
-    if de_la is None:
-        return False
-    for hub in cadeia:
-        deste = por_caminho.get(hub)
-        if deste is None:
-            continue
-        if deste.devpath != de_la.devpath:
-            continue
-        if deste.busnum == de_la.busnum:
-            continue
-        if deste.controlador_pci and deste.controlador_pci == de_la.controlador_pci:
-            return True
-    return False
-
-
-def _nome_do_kernel(por_caminho: dict[str, Aparelho], no: str) -> str:
-    aparelho = por_caminho.get(no)
-    return "" if aparelho is None else aparelho.nome_do_kernel
-
-
-def _endereco_do_serial(serial: str) -> str:
-    """Os doze hex do serial USB virando endereço — ``""`` quando não é um.
-
-    MEDIDO em 24/08/2026 nos três TP-Link desta bancada: os doze hex do serial
-    USB são os seis octetos do endereço Bluetooth do adaptador. E medido o
-    contraexemplo no mesmo barramento: o Archer T3U responde ``123456``, que
-    não é endereço de nada.
-    """
-    limpo = serial.strip().replace(":", "").replace("-", "").lower()
-    if not _DOZE_HEX.match(limpo):
-        return ""
-    return ":".join(limpo[posicao : posicao + 2] for posicao in range(0, 12, 2))
-
-
-def _endereco_normalizado(endereco: str) -> str:
-    """O endereço do BlueZ em minúsculas com dois-pontos — ``""`` se não for um."""
-    return _endereco_do_serial(endereco)
-
-
 # ---------------------------------------------------------------------------
 # O QUE O METAL DE UMA PORTA É — A-08-UM-MAPEAR-SO-01 (25/09/2026)
 # ---------------------------------------------------------------------------
@@ -1279,8 +1076,7 @@ def _serial_do_no(no: str) -> str:
     """O ``serial`` de um nó USB; ``""`` em qualquer erro — sysfs some sob a mão.
 
     É o único leitor de arquivo deste módulo, e ele existe para ser trocado por
-    um dublê em teste. O valor que ele devolve **não sai** de
-    :func:`porta_do_adaptador`.
+    um dublê em teste.
     """
     try:
         with open(
@@ -1317,17 +1113,14 @@ __all__ = [
     "USB_PELO_APARELHO",
     "Bancada",
     "FatosDoBuraco",
-    "Incoerencia",
     "Resumo",
     "aparelho_usb3_na_entrada",
     "caminho_de",
     "fatos_do_buraco",
     "filhas_de",
-    "incoerencias",
     "irmas_de",
     "mesa_do_motor",
     "porta_de",
-    "porta_do_adaptador",
     "portas_livres",
     "resumo_do_mapa",
     "serial_do_no",

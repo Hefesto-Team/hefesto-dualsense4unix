@@ -344,7 +344,7 @@ class Bancada:
         return self.reais.get(caminho, caminho)
 
     def serial(self, no: str) -> str:
-        """O leitor de serial que :func:`porta_do_adaptador` recebe."""
+        """O ``serial`` do nó, na forma de ``mapa_das_portas.serial_do_no``."""
         return self.ler(os.path.join(no, "serial"))
 
     def fontes(self) -> dict[str, Any]:
