@@ -152,8 +152,8 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "(daemon/state_store.py:701). O TÍTULO é que não é publicado. Quem quiser o "
     "título espera a ONDA-PERFIS-03.",
     "voltar-a-de-ontem": "O MOTOR EXISTE E NUNCA TEVE TELA: "
-    "profiles/loader.restaurar_do_historico:3083 e listar_historico:2802, com "
-    "HISTORICO_MAX_VERSOES = 10 (loader.py:2769). Os únicos chamadores estão na "
+    "profiles/loader.restaurar_do_historico:3090 e listar_historico:2809, com "
+    "HISTORICO_MAX_VERSOES = 10 (loader.py:2776). Os únicos chamadores estão na "
     "CLI (cli/cmd_profile.py). Quem lhe dá tela é a ONDA-PERFIS-05.",
     # FATO SUBSTITUÍDO — 03/09/2026. Aqui estava escrito que o Estilo de Jogo
     # *"NÃO EXISTE EM LUGAR NENHUM"* e que *"quem lhe dá motor é a
