@@ -307,6 +307,28 @@ async def _ate(condicao: Callable[[], bool], motivo: str, prazo: float = 8.0) ->
         await asyncio.sleep(0.01)
 
 
+async def _o_ouvinte_subiu(
+    daemon: _Daemon, desde: int = 0, motivo: str = "o ouvinte subiu", prazo: float = 8.0
+) -> None:
+    """A barreira de toda volta do ouvinte: o retrato vivo E o padrão dele publicado.
+
+    O retrato fica vivo no `assumir` do `_carregar_o_retrato`, e a leitura do padrão
+    (numa thread) e a publicação vêm DEPOIS. Esperar só o `RETRATO.vivo` media um
+    instante antes do fato cobrado: no runner do CI a thread passa da volta do laço
+    (a corrida 36503520655, no 3.12). A publicação sai em toda volta, com o servidor
+    de pé ou não, por isso a barreira pede o VALOR que o retrato diz, e não só a
+    contagem; e `desde` separa uma volta da anterior (a do servidor que voltou).
+    """
+
+    def subiu() -> bool:
+        if not rs.RETRATO.vivo:
+            return False
+        publicadas = {p.get("saida") for p in daemon.publicados[desde:]} - {None, ""}
+        return bool(publicadas) and rs.RETRATO.padrao("sink") in publicadas
+
+    await _ate(subiu, motivo, prazo=prazo)
+
+
 def _de_quem_mais(servidor: Servidor, espiao: _Espiao) -> Counter[str]:
     """As perguntas que chegaram ao servidor SEM ser do retrato nem do `subscribe`."""
     fora = Counter(servidor.chamadas())
@@ -399,9 +421,10 @@ def test_cem_tiques_sem_evento_nao_perguntam_nada_e_respondem_igual(
     servidor.zerar()
 
     async def cenario() -> None:
-        tarefa = asyncio.create_task(ods.ouvinte_do_som_loop(_Daemon()))
+        daemon = _Daemon()
+        tarefa = asyncio.create_task(ods.ouvinte_do_som_loop(daemon))
         try:
-            await _ate(lambda: rs.RETRATO.vivo, "o retrato vivo")
+            await _o_ouvinte_subiu(daemon)
             await servidor.abrir_os_eventos()
             assert sorted(espiao.lidas) == sorted(
                 " ".join(a[1:]) for a in rs._LEITURA_DO_TIPO.values()), (
@@ -450,9 +473,10 @@ def test_um_evento_rele_so_o_tipo_que_mudou(
     monkeypatch.setattr(rs.RETRATO, "_ler_injetado", espiao)
 
     async def cenario() -> None:
-        tarefa = asyncio.create_task(ods.ouvinte_do_som_loop(_Daemon()))
+        daemon = _Daemon()
+        tarefa = asyncio.create_task(ods.ouvinte_do_som_loop(daemon))
         try:
-            await _ate(lambda: rs.RETRATO.vivo, "o retrato vivo")
+            await _o_ouvinte_subiu(daemon)
             await servidor.abrir_os_eventos()
             antes = await asyncio.to_thread(hotkey._ler_o_canal, UNIQS[2])
             assert antes["canal_mudo"] is False
@@ -490,9 +514,10 @@ def test_a_rajada_de_eventos_rele_uma_vez(
     monkeypatch.setattr(rs.RETRATO, "_ler_injetado", espiao)
 
     async def cenario() -> None:
-        tarefa = asyncio.create_task(ods.ouvinte_do_som_loop(_Daemon()))
+        daemon = _Daemon()
+        tarefa = asyncio.create_task(ods.ouvinte_do_som_loop(daemon))
         try:
-            await _ate(lambda: rs.RETRATO.vivo, "o retrato vivo")
+            await _o_ouvinte_subiu(daemon)
             await servidor.abrir_os_eventos()
             servidor.zerar()
             marca = rs.RETRATO.geracao
@@ -529,9 +554,10 @@ def test_sem_servidor_o_retrato_diz_nao_sei_e_se_refaz(
     monkeypatch.setattr(ods, "ESPERA_PARA_RELIGAR_S", 0.05)
 
     async def cenario() -> None:
-        tarefa = asyncio.create_task(ods.ouvinte_do_som_loop(_Daemon()))
+        daemon = _Daemon()
+        tarefa = asyncio.create_task(ods.ouvinte_do_som_loop(daemon))
         try:
-            await _ate(lambda: rs.RETRATO.vivo, "o retrato vivo")
+            await _o_ouvinte_subiu(daemon)
             await servidor.abrir_os_eventos()
             servidor.cair()
             await _ate(lambda: not rs.RETRATO.vivo,
@@ -548,8 +574,9 @@ def test_sem_servidor_o_retrato_diz_nao_sei_e_se_refaz(
             fora = _de_quem_mais(servidor, espiao)
             assert not fora, f"com o servidor caído, leitores perguntaram por conta própria: {fora}"
 
+            desde = len(daemon.publicados)
             servidor.voltar()
-            await _ate(lambda: rs.RETRATO.vivo, "o retrato vivo")
+            await _o_ouvinte_subiu(daemon, desde, "o ouvinte subiu de novo com o servidor")
             await servidor.abrir_os_eventos()
             assert afb.sinks_que_tocam([ENDPOINT.format(h=HEX[0])]) == {ENDPOINT.format(h=HEX[0])}
         finally:
@@ -1203,9 +1230,10 @@ def test_a_rajada_que_acabou_nao_fica_guardada(servidor: Servidor) -> None:
                    and getattr(o.get_coro(), "__name__", "") == "descarregar")
 
     async def cenario() -> None:
-        tarefa = asyncio.create_task(ods.ouvinte_do_som_loop(_Daemon()))
+        daemon = _Daemon()
+        tarefa = asyncio.create_task(ods.ouvinte_do_som_loop(daemon))
         try:
-            await _ate(lambda: rs.RETRATO.vivo, "o retrato vivo")
+            await _o_ouvinte_subiu(daemon)
             await servidor.abrir_os_eventos()
             servidor.zerar()
             for i in range(30):
@@ -1325,8 +1353,9 @@ def test_o_numero_do_cliente_no_info_nao_e_mudanca(monkeypatch: pytest.MonkeyPat
     assert r.marca(("server",)) == marca, "o número do cliente acordou quem espera"
 
 
+@pytest.mark.parametrize("thread_lenta", [False, True], ids=["no-ritmo-da-casa", "thread-lenta"])
 def test_um_tipo_que_nao_le_nao_cala_os_outros(
-    servidor: Servidor, monkeypatch: pytest.MonkeyPatch
+    servidor: Servidor, monkeypatch: pytest.MonkeyPatch, thread_lenta: bool
 ) -> None:
     """Um tipo que o servidor não responde não segura o retrato inteiro.
 
@@ -1339,9 +1368,22 @@ def test_um_tipo_que_nao_le_nao_cala_os_outros(
     MORDIDAS: exija a leitura inteira para o primeiro dono assumir (o retrato
     nunca fica vivo); releia todos os tipos na insistência (as saídas voltam a
     ser perguntadas sem evento).
+
+    A THREAD LENTA (O-CI-DA-DEV-VOLTA-A-VERDE-02): o `_o_padrao_do_retrato` com 50 ms
+    de atraso é o runner do CI, em que a leitura do padrão (depois de o retrato ficar
+    vivo e antes da publicação) passa da volta do laço. MORDIDA: volte a barreira
+    para o `RETRATO.vivo` e este caso reprova com «o padrão não foi publicado».
     """
     from hefesto_dualsense4unix.daemon.subsystems import ouvinte_do_som as ods
 
+    if thread_lenta:
+        original = ods._o_padrao_do_retrato
+
+        def _lento() -> Any:
+            time.sleep(0.05)
+            return original()
+
+        monkeypatch.setattr(ods, "_o_padrao_do_retrato", _lento)
     espiao = _Espiao()
     monkeypatch.setattr(rs.RETRATO, "_ler_injetado", espiao)
     monkeypatch.setattr(ods, "ESPERA_PARA_RELIGAR_S", 0.1)
@@ -1351,7 +1393,8 @@ def test_um_tipo_que_nao_le_nao_cala_os_outros(
     async def cenario() -> None:
         tarefa = asyncio.create_task(ods.ouvinte_do_som_loop(daemon))
         try:
-            await _ate(lambda: rs.RETRATO.vivo, "o retrato vivo sem os módulos", prazo=3.0)
+            await _o_ouvinte_subiu(
+                daemon, motivo="o retrato vivo sem os módulos, e o padrão publicado", prazo=3.0)
             await servidor.abrir_os_eventos()
             assert rs.RETRATO.padrao("sink") == HDMI
             assert any(p.get("saida") == HDMI for p in daemon.publicados), (
