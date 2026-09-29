@@ -1959,6 +1959,7 @@ class BombaDeSomPeloRadio:
         vaga: Any = None,
         relogio: Callable[[], float] | None = None,
         so_com_sinal: bool = False,
+        ganho_da_haptica: float | Callable[[], float] = 1.0,
     ) -> None:
         # O `common` É OBRIGATÓRIO PARA O CORPO QUE O PRESERVA — 08/09/2026.
         #
@@ -2031,6 +2032,10 @@ class BombaDeSomPeloRadio:
         #: O conversor 48 kHz/4 canais → bloco de 64 B. Preguiçoso: uma bomba
         #: montada e nunca rodada não precisa dele.
         self._conversor = conversor
+        #: O GANHO DA HÁPTICA DESTE CONTROLE (O-GANHO-DA-HAPTICA-TEM-DONO-01),
+        #: em fator linear, aplicado no conversor antes do int8. Um chamável é
+        #: perguntado a cada bloco, como o microfone: o arraste dela vale já.
+        self.ganho_da_haptica = ganho_da_haptica
         self._blocos: list[bytes] = []
         #: O RÁDIO SÓ LEVA O QUE TEM SINAL — A-HAPTICA-DO-RADIO-OBEDECE-AO-
         #: SINAL-DO-JOGO-01, 28/09/2026. Ligado, o report de silêncio exato nos
@@ -2237,6 +2242,9 @@ class BombaDeSomPeloRadio:
             pcm = self.fonte_haptica(self.bytes_de_pcm_da_haptica)
             if not pcm:
                 return None
+            ganho = self.ganho_da_haptica
+            with contextlib.suppress(Exception):
+                self._conversor.ganho = float(ganho() if callable(ganho) else ganho)
             self._blocos.extend(self._conversor.alimentar(pcm))
         bloco = self._blocos.pop(0)
         self.contagem.blocos_hapticos += 1
@@ -3328,8 +3336,12 @@ class PonteDeSomPorRadio:
         relogio: Callable[[], float] | None = None,
         no_do_som: str = "",
         no_da_haptica: str = "",
+        ganho_da_haptica: float | Callable[[], float] = 1.0,
     ) -> None:
         self.uniq = uniq
+        #: O ganho da háptica deste controle, repassado VIVO à bomba (o dono é
+        #: `daemon.ganho_da_haptica`).
+        self.ganho_da_haptica = ganho_da_haptica
         #: OS DOIS NÓS QUE ESTA PONTE ESCUTA — A-HAPTICA-POR-AUDIO-E-O-ALTO-
         #: FALANTE-CHEGAM-AO-RADIO-01, 29/09/2026. Cada bloco lido de um deles
         #: vai ao :data:`OUVIDO`, e é por ele que o subsystem escolhe o modo pelo
@@ -3465,6 +3477,7 @@ class PonteDeSomPorRadio:
             vaga=self._vaga,
             so_com_sinal=self.so_com_sinal,
             relogio=self._relogio,
+            ganho_da_haptica=self.ganho_da_haptica,
         )
         # O fd e o sinal VÃO COM A THREAD, e é isso que impede a corrida velha
         # de escrever (ou de fechar) o descritor da corrida nova.

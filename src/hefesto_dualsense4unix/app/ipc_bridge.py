@@ -719,6 +719,7 @@ def rumble_motores_set(
     forte_pct: int | None = None,
     fraco_pct: int | None = None,
     uniq: str | None = None,
+    haptica_pct: int | None = None,
 ) -> tuple[bool, dict[str, Any] | None]:
     """A BARRA de cada motor, no perfil, POR PEÇA (VIBRACAO-POR-MOTOR-01).
 
@@ -739,12 +740,18 @@ def rumble_motores_set(
     **A tela NÃO deve digitar a faixa nem o padrão:** quem recusa fora de 0-100
     é a borda do esquema, com a frase que explica, e o 100 do "sem opinião"
     chega no `state_full` como `rumble_motor_pct_padrao`.
+
+    ``haptica_pct`` (0-200) é o ganho da háptica por áudio desta peça
+    (O-GANHO-DA-HAPTICA-TEM-DONO-01), no mesmo pedido e com o mesmo contrato;
+    o padrão chega no `state_full` como `haptica_pct_padrao`.
     """
     params: dict[str, Any] = {}
     if forte_pct is not None:
         params["forte_pct"] = int(forte_pct)
     if fraco_pct is not None:
         params["fraco_pct"] = int(fraco_pct)
+    if haptica_pct is not None:
+        params["haptica_pct"] = int(haptica_pct)
     if uniq:
         params["uniq"] = uniq
     corpo = _corpo_do_daemon("rumble.motores.set", params)

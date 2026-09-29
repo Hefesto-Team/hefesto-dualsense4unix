@@ -1145,6 +1145,43 @@ MOTOR_PCT_PADRAO = 100
 #: para o mesmo estouro — que é o defeito HARM-19 pela outra porta.
 MOTOR_PCT_MAX = 100
 
+#: O GANHO DA HÁPTICA POR ÁUDIO quando ninguém o arrastou. 150 % (+3,5 dB),
+#: por delegação, a validar por ela (O-GANHO-DA-HAPTICA-TEM-DONO-01, 29/09): a
+#: medida diz que do jogo à placa tudo já está em 0 dB e ela sentiu fraco, então
+#: nascer em 100 não mudaria nada do que ela sentiu.
+HAPTICA_PCT_PADRAO = 150
+
+#: Teto da barra da háptica. Passa de 100, ao contrário das barras dos motores,
+#: porque no PCM do jogo a Força não alcança: esta barra é o PRIMEIRO e único
+#: fator. 200 % é +6 dB, o que leva a textura mais fraca medida (0,45) a 0,9
+#: sem cortar; acima disso é só corte. É o mesmo teto do ``custom_mult``.
+HAPTICA_PCT_MAX = 200
+
+
+def pct_da_haptica(rumble: ControllerRumbleOverride | None) -> int:
+    """O ganho da háptica por áudio desta peça, em % — o padrão sem opinião.
+
+    O ÚNICO lugar que resolve o «não escrito» da barra da háptica, irmão de
+    ``pcts_dos_motores``: quem escala (o dono do ganho, no subsystem do som) lê
+    daqui e nunca repete o padrão.
+    """
+    if rumble is None or rumble.haptica_pct is None:
+        return HAPTICA_PCT_PADRAO
+    return int(rumble.haptica_pct)
+
+
+def pcts_da_haptica_dos_controles(
+    controllers: dict[str, ControllerOverrides] | None,
+) -> dict[str, int]:
+    """``{uniq: haptica_pct}`` de toda peça do perfil que ESCREVEU o campo."""
+    fora: dict[str, int] = {}
+    for uniq, cfg in (controllers or {}).items():
+        rumble = getattr(cfg, "rumble", None)
+        if rumble is None or "haptica_pct" not in rumble.model_fields_set:
+            continue
+        fora[uniq] = pct_da_haptica(rumble)
+    return fora
+
 
 def pcts_dos_motores(rumble: ControllerRumbleOverride | None) -> tuple[int, int]:
     """``(forte_pct, fraco_pct)`` desta peça — ``(100, 100)`` sem opinião.
@@ -1262,6 +1299,26 @@ class ControllerRumbleOverride(BaseModel):
     #: 50% então será 150 em um e 75% no outro"*. <!-- noqa-acento: citação literal dela -->
     motor_fraco_pct: int | None = None
 
+    #: O GANHO DA HÁPTICA POR ÁUDIO desta peça, 0-200 (O-GANHO-DA-HAPTICA-TEM-
+    #: DONO-01, 29/09). ``None`` = sem opinião, que vale ``HAPTICA_PCT_PADRAO``
+    #: pelo leitor ``pct_da_haptica``. ``0`` desliga a háptica desta peça.
+    haptica_pct: int | None = None
+
+    @model_serializer(mode="wrap")
+    def _o_ganho_da_haptica_sem_opiniao_nao_vai_ao_disco(
+        self, handler: SerializerFunctionWrapHandler
+    ) -> Any:
+        """O ``haptica_pct`` só vai ao arquivo quando alguém o escreveu.
+
+        A mesma cura do ``toque``/``acelerometro``: com ``extra="forbid"`` um
+        Hefesto antigo recusa o perfil inteiro ao ver chave que não conhece, e
+        o ``load → save`` de um perfil de ontem não pode ganhar a chave.
+        """
+        dados = handler(self)
+        if isinstance(dados, dict) and "haptica_pct" not in self.model_fields_set:
+            dados.pop("haptica_pct", None)
+        return dados
+
     @model_validator(mode="before")
     @classmethod
     def _auto_nao_e_por_unidade(cls, data: Any) -> Any:
@@ -1319,6 +1376,17 @@ class ControllerRumbleOverride(BaseModel):
                     f"{MOTOR_PCT_MAX} daria à mesma peça duas portas para o "
                     f"mesmo estouro."
                 )
+        return self
+
+    @model_validator(mode="after")
+    def _validate_haptica_pct(self) -> ControllerRumbleOverride:
+        """A faixa da háptica é 0-``HAPTICA_PCT_MAX``, recusada na borda."""
+        valor = self.haptica_pct
+        if valor is not None and not (0 <= valor <= HAPTICA_PCT_MAX):
+            raise ValueError(
+                f"controllers[...].rumble.haptica_pct fora de [0, "
+                f"{HAPTICA_PCT_MAX}]: {valor}"
+            )
         return self
 
 
@@ -3183,6 +3251,12 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     ),
     "ControllerRumbleOverride.motor_fraco_pct": Nascimento(
         E_CONTRATO, "Ver `ControllerRumbleOverride.policy`."
+    ),
+    "ControllerRumbleOverride.haptica_pct": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` vale `HAPTICA_PCT_PADRAO` (150): a háptica por áudio nasce "
+        "ligada, pela palavra dela de 17/09.",
+        dono="hefesto_dualsense4unix.profiles.schema:pct_da_haptica",
     ),
     "ControllerMicOverride.muted": Nascimento(
         E_CONTRATO,

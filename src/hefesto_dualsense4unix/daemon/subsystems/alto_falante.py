@@ -114,6 +114,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO, placas_do_piso
 from hefesto_dualsense4unix.daemon.subsystems.base import numero_do_assento_na_mesa
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -1656,6 +1657,22 @@ class AltoFalanteSubsystem:
             )
         self._o_cabo().casar(rotas, abertos)
 
+    def _o_ganho_nas_placas(self, controles: list[Any], placas: list[str]) -> set[str]:
+        """Relê o ganho do perfil e o escreve na placa de cada controle no cabo.
+
+        Devolve as placas com dono (:mod:`daemon.ganho_da_haptica`).
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import e_radio
+
+        GANHO.ler_do_daemon(getattr(self, "_daemon", None))
+        na_mesa = [u for u in (str(getattr(c, "uniq", "") or "") for c in controles) if u]
+        no_cabo = [
+            str(getattr(c, "uniq", "") or "")
+            for c in controles
+            if not e_radio(str(getattr(c, "transporte", "") or ""))
+        ]
+        return GANHO.escrever_nas_placas(no_cabo, na_mesa, placas)
+
     def _avisar_ancoras_que_faltam(self, faltam: int, lugares: int) -> None:
         """O lugar sem âncora USB fica sem endpoint — e diz isso.
 
@@ -2079,7 +2096,11 @@ class AltoFalanteSubsystem:
 
             lidos = list(sinks_com_motores(_perguntar))
             motores = lidos if all(respostas) else None
-            for sink_com_motor in lidos:
+            # O GANHO DA HÁPTICA TEM DONO (O-GANHO-DA-HAPTICA-TEM-DONO-01): a
+            # placa de um controle no cabo recebe o ganho dele, e o piso de
+            # 100 % fica só para quem não tem dono.
+            com_dono = self._o_ganho_nas_placas(controles, lidos)
+            for sink_com_motor in placas_do_piso(lidos, com_dono):
                 garantir_motores_audiveis(sink_com_motor)
 
         # QUEM O JOGO ESTÁ LENDO — QUEM-JOGA-E-QUEM-VIBRA-01, 20/09/2026.
@@ -2399,6 +2420,7 @@ class AltoFalanteSubsystem:
                     endpoint.nome
                     if (modo == "haptica" and endpoint is not None) else ouvir_a_haptica
                 ),
+                ganho_da_haptica=functools.partial(GANHO.fator, uniq),
             )
             if ponte.subir():
                 self._pontes[uniq] = ponte
@@ -2687,6 +2709,9 @@ class AltoFalanteSubsystem:
         if cabo is not None:
             with contextlib.suppress(Exception):
                 await asyncio.to_thread(cabo.parar)
+        # O GANHO NÃO SOBREVIVE AO HEFESTO: os traseiros das placas voltam a 1,0.
+        with contextlib.suppress(Exception):
+            await asyncio.to_thread(GANHO.devolver_as_placas)
         # O governador para DEPOIS das pontes: elas devolvem a vaga ao descer.
         governador, self.governador = self.governador, None
         if governador is not None:

@@ -37,6 +37,7 @@ from hefesto_dualsense4unix.integrations.no_do_vpad import (
     resolver_no_do_vpad,
 )
 from hefesto_dualsense4unix.profiles.schema import (
+    HAPTICA_PCT_PADRAO,
     MOTOR_PCT_PADRAO,
     RUMBLE_CUSTOM_MULT_MAX,
 )
@@ -3457,6 +3458,7 @@ class IpcHandlersMixin:
             # lado para a tela não digitar o 100.
             result["rumble_motores"] = {}
             result["rumble_motor_pct_padrao"] = MOTOR_PCT_PADRAO
+            result["haptica_pct_padrao"] = HAPTICA_PCT_PADRAO
             with contextlib.suppress(Exception):
                 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
                     _motores_do_perfil_ativo,
@@ -5853,32 +5855,39 @@ class IpcHandlersMixin:
         assim que `rumble.policy_custom` e o esquema divergiram em 0,0-1,0 contra
         0,0-2,0, com a usuária levando erro de validação a partir de 101 %.
         """
+        from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO
         from hefesto_dualsense4unix.profiles.loader import (
             load_profile,
             save_profile,
         )
         from hefesto_dualsense4unix.profiles.schema import (
+            HAPTICA_PCT_MAX,
+            MOTOR_PCT_MAX,
             ControllerOverrides,
             ControllerRumbleOverride,
+            pct_da_haptica,
         )
 
         pedidos: dict[str, int] = {}
-        for campo, chave_ipc in (
-            ("motor_forte_pct", "forte_pct"),
-            ("motor_fraco_pct", "fraco_pct"),
+        # O GANHO DA HÁPTICA (O-GANHO-DA-HAPTICA-TEM-DONO-01) vai no MESMO
+        # pedido, com o mesmo contrato: omitido não mexe. A faixa é a dele.
+        for campo, chave_ipc, teto in (
+            ("motor_forte_pct", "forte_pct", MOTOR_PCT_MAX),
+            ("motor_fraco_pct", "fraco_pct", MOTOR_PCT_MAX),
+            ("haptica_pct", "haptica_pct", HAPTICA_PCT_MAX),
         ):
             if chave_ipc not in params:
                 continue
             valor = params.get(chave_ipc)
             if not isinstance(valor, int) or isinstance(valor, bool):
                 raise ValueError(
-                    f"rumble.motores.set: '{chave_ipc}' precisa ser inteiro 0-100"
+                    f"rumble.motores.set: '{chave_ipc}' precisa ser inteiro 0-{teto}"
                 )
             pedidos[campo] = valor
         if not pedidos:
             raise ValueError(
-                "rumble.motores.set exige ao menos um de 'forte_pct' ou "
-                "'fraco_pct' — campo omitido NÃO mexe naquela barra"
+                "rumble.motores.set exige ao menos um de 'forte_pct', "
+                "'fraco_pct' ou 'haptica_pct' — campo omitido NÃO mexe naquela barra"
             )
         uniq = params.get("uniq")
         if uniq is not None and not isinstance(uniq, str):
@@ -5931,8 +5940,9 @@ class IpcHandlersMixin:
         # de "não escreveu", e é ele que o `exclude_unset` do save lê.
         campos = dict(antes.model_dump(exclude_unset=True)) if antes is not None else {}
         for campo, valor in pedidos.items():
-            if valor == MOTOR_PCT_PADRAO:
-                campos.pop(campo, None)  # 100 = sem opinião: a chave sai
+            padrao = HAPTICA_PCT_PADRAO if campo == "haptica_pct" else MOTOR_PCT_PADRAO
+            if valor == padrao:
+                campos.pop(campo, None)  # o padrão = sem opinião: a chave sai
             else:
                 campos[campo] = valor
         novo = ControllerRumbleOverride.model_validate(campos) if campos else None
@@ -5941,6 +5951,7 @@ class IpcHandlersMixin:
         )
         depois_campos = dict(campos) if campos else None
         efetivos = self._pcts_efetivos(novo)
+        haptica = pct_da_haptica(novo)
         if antes_campos == depois_campos:
             logger.info("rumble_motores_sem_mudanca", uniq=chave, perfil=nome)
             return {
@@ -5950,6 +5961,7 @@ class IpcHandlersMixin:
                 "gravado": False,
                 "forte_pct": efetivos[0],
                 "fraco_pct": efetivos[1],
+                "haptica_pct": haptica,
             }
         atuais[chave] = dele.model_copy(update={"rumble": novo})
         save_profile(perfil.model_copy(update={"controllers": atuais}))
@@ -5967,12 +5979,16 @@ class IpcHandlersMixin:
             )
 
             esquecer_motores_do_perfil(self.daemon)
+        # O dono do ganho relê no MESMO ato: a ponte do rádio o pergunta a cada
+        # bloco, e a placa do cabo o recebe na próxima volta do som.
+        GANHO.ler_do_daemon(self.daemon)
         logger.info(
             "rumble_motores_gravados",
             uniq=chave,
             perfil=nome,
             forte_pct=efetivos[0],
             fraco_pct=efetivos[1],
+            haptica_pct=haptica,
         )
         return {
             "status": "ok",
@@ -5981,6 +5997,7 @@ class IpcHandlersMixin:
             "gravado": True,
             "forte_pct": efetivos[0],
             "fraco_pct": efetivos[1],
+            "haptica_pct": haptica,
         }
 
     async def _handle_sensor_set(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -7801,6 +7818,13 @@ class IpcHandlersMixin:
             with contextlib.suppress(Exception):
                 pontes = {chave(u): m for u, m in dict(pontes_fn()).items() if chave(u)}
         perguntar_hz = getattr(hub, "hz_do_movimento", None)
+        from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO
+
+        nativo = False
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.daemon.subsystems import rumble
+
+            nativo = bool(rumble.modo_nativo_manda_nos_motores(self.daemon))
         for entry in entries:
             uniq = entry.get("uniq") if isinstance(entry.get("uniq"), str) else None
             radio = entry.get("transport") == "bt"
@@ -7818,6 +7842,11 @@ class IpcHandlersMixin:
             entry["hz_voz"] = self._hz_ou_none(hz_voz)
             modo = pontes.get(chave(uniq)) if radio and uniq else None
             entry["ponte_do_radio"] = modo if modo in ("som", "haptica") else None
+            # O GANHO DA HÁPTICA, do dono (O-GANHO-DA-HAPTICA-TEM-DONO-01), e
+            # se o Hefesto está no caminho: no Nativo pelo rádio sem a ponte, o
+            # jogo escreve no hidraw e o ganho não alcança.
+            entry["haptica_pct"] = GANHO.pct(uniq)
+            entry["haptica_alcanca"] = not (radio and nativo and modo is None)
 
     def _adaptadores_do_radio(self, uniqs: list[str]) -> dict[str, str]:
         """``{uniq: endereço do adaptador | ""}``, relido no máximo a cada 2 s."""
