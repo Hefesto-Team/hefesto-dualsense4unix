@@ -365,3 +365,55 @@ class TestDocumentacaoHonesta:
     def test_curas_de_bluetooth_default_estao_nomeadas(self) -> None:
         for termo in ("5.86", "bt-agent", "hefesto-bt-health-watchdog.timer", "bt-bonds"):
             assert termo in DOC, f"cura de BT default ausente da página: {termo}"
+
+
+# ---------------------------------------------------------------------------
+# O QUE O INSTALADOR IMPRIME FALA COM QUEM INSTALA (28/09/2026)
+#
+# O título de cada passo, os avisos, o que o ensaio «faria», o log do
+# desinstalador e a frase de cada dependência da tabela chegam a quem instala.
+# O ID da tarefa que fez cada mudança, a «Onda» e «esta casa» não dizem nada a
+# essa pessoa: o `git log` já os guarda. Os comentários ficam de fora; a frase
+# que só o `--help` imprime é conferida pelo cabeçalho. O «dela» não entra
+# aqui porque a Steam também é «ela» nas mensagens, e «casa» sozinha também não,
+# porque é o verbo («se XDG_CURRENT_DESKTOP casa»).
+#
+# A MORDIDA: devolver o `(LUZ-DO-MIC-01)` à frase do `pactl` na tabela de
+# dependências, ou o `(Onda T)` ao log do desinstalador, reprova aqui.
+# ---------------------------------------------------------------------------
+
+_O_QUE_IMPRIME = re.compile(
+    r"""^\s*(?:step|warn|die|info|ok|log|_faria|_faria_root|_nao_faria|printf|echo)\b
+      | ^\s*"[a-z0-9_.+-]+\|(?:obrigatoria|importante|opcional)\|""",
+    re.VERBOSE,
+)
+_VOCABULARIO_DE_QUEM_CONSTROI = re.compile(
+    r"\b[A-Z]{2,}(?:-[A-Z0-9]+)*-[0-9]{2}\b|\b(?:d|n)?esta casa\b|\bOnda [A-Z]\b|docs/process"
+)
+
+
+@pytest.mark.parametrize("nome", ["install.sh", "uninstall.sh"])
+def test_o_que_o_instalador_imprime_nao_tem_id(nome: str) -> None:
+    achados = [
+        f"{nome}:{n}: {linha.strip()[:120]}"
+        for n, linha in enumerate(
+            (REPO_ROOT / nome).read_text(encoding="utf-8").splitlines(), 1
+        )
+        if _O_QUE_IMPRIME.search(linha) and _VOCABULARIO_DE_QUEM_CONSTROI.search(linha)
+    ]
+    assert not achados, (
+        "mensagem do instalador com o vocabulário de quem constrói (ID, «Onda», "
+        "«esta casa», docs/process); diga o que o passo faz:\n" + "\n".join(achados)
+    )
+
+
+def test_o_help_nao_tem_id() -> None:
+    cabecalho = []
+    for linha in INSTALL.splitlines()[1:]:
+        if not linha.startswith("#"):
+            break
+        cabecalho.append(linha)
+    achados = [
+        linha for linha in cabecalho if _VOCABULARIO_DE_QUEM_CONSTROI.search(linha)
+    ]
+    assert not achados, "o --help imprime:\n" + "\n".join(achados)

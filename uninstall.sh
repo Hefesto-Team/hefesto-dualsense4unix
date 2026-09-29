@@ -1483,7 +1483,7 @@ fi
 if command -v dkms >/dev/null 2>&1 \
         && [[ -n "$(dkms status hefesto-hid-nintendo 2>/dev/null)" ]]; then
     if sudo -n true 2>/dev/null; then
-        log "removendo patch DKMS do hid-nintendo (Onda T): dkms remove --all"
+        log "removendo o módulo hid-nintendo corrigido (DKMS): dkms remove --all"
         # shellcheck source=scripts/dkms_lib.sh
         source "${ROOT_DIR}/scripts/dkms_lib.sh"
         # PKG-3: versão do dkms.conf (fonte da verdade), não literal.
@@ -1540,7 +1540,7 @@ fi
 if command -v dkms >/dev/null 2>&1 \
         && [[ -n "$(dkms status hefesto-rtw88-usb 2>/dev/null)" ]]; then
     if sudo -n true 2>/dev/null; then
-        log "removendo patch DKMS do rtw88_usb (Onda W): dkms remove --all"
+        log "removendo o módulo rtw88_usb corrigido (DKMS): dkms remove --all"
         # shellcheck source=scripts/dkms_lib.sh
         source "${ROOT_DIR}/scripts/dkms_lib.sh"
         # PKG-3: versão do dkms.conf (fonte da verdade), não literal.

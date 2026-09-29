@@ -822,7 +822,7 @@ _DEPS_DE_SISTEMA=(
     # que morre é UMA função, e ela morre calada: a luz simplesmente fica
     # apagada, que é um estado válido do contrato. Morrer o install por causa
     # disso cobraria o preço errado.
-    "pactl|importante|cmd:pactl,parec|a luz do microfone do controle fica apagada para sempre: sem o pactl ninguém sabe QUEM está ouvindo, sem o parec ninguém sabe se está entrando som (LUZ-DO-MIC-01) — e o microfone por Bluetooth também não sobe"
+    "pactl|importante|cmd:pactl,parec|a luz do microfone do controle fica apagada para sempre: sem o pactl ninguém sabe QUEM está ouvindo, sem o parec ninguém sabe se está entrando som — e o microfone por Bluetooth também não sobe"
     # HAPTICA-NATIVA-01 (INSTALL-UNIVERSAL, 18/09/2026). O passo 3c-bis grava o
     # gancho UCM do DualSense em `conf.d/USB-Audio/`, e quem o LÊ é o
     # `ucm.conf` do pacote. No apt ele chega como `Recommends` do
