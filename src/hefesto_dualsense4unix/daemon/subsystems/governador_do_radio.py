@@ -262,7 +262,10 @@ POR_QUE_NAO_SEI_SE_HA_VAGA = "não sei se há vaga em outro adaptador"
 #: O peso da janela nova na média do que uma ponte escreve por janela
 #: (:meth:`GovernadorDoRadio._a_vez`). A contagem de uma janela oscila de um
 #: quadro (23 ou 24 a 93,75 por segundo), e a conta de quantas cabem não pode
-#: oscilar junto.
+#: oscilar junto. A média só vale para BAIXO: na rajada (a vibração do jogo), a
+#: janela que escreve mais que a média manda na conta — a média sozinha ficava
+#: atrás da rajada e deixava a fila do host passar do que o ceder de antes
+#: deixava.
 PESO_DA_JANELA_NA_MEDIA = 0.25
 
 #: O que o medidor diz quando o adaptador não pode receber ponte — não é
@@ -573,9 +576,9 @@ class _JanelaMedida:
     com_escrita: list[Any]
     #: Pacotes que o adaptador pôs no ar na janela (a saída vezes a janela).
     no_ar: float
-    #: Quanto a fila do host cresceu na janela (negativo = escoou).
-    cresceu: float
     janela_s: float
+    #: O que cada ponte com escrita escreveu nesta janela, em média.
+    por_ponte_na_janela: float = 0.0
 
 
 @dataclass
@@ -1326,10 +1329,9 @@ class GovernadorDoRadio:
             estado.deficit_medido = False
             return False
         estado.deficit_medido = True
-        fila_antes = estado.fila
         estado.fila = max(0.0, estado.fila + escritas - float(saida) * janela)
+        media = escritas / len(com_escrita) if com_escrita else 0.0
         if com_escrita:
-            media = escritas / len(com_escrita)
             estado.por_ponte = (
                 media
                 if estado.por_ponte is None
@@ -1338,8 +1340,8 @@ class GovernadorDoRadio:
         janela_medida = _JanelaMedida(
             com_escrita=com_escrita,
             no_ar=float(saida) * janela,
-            cresceu=estado.fila - fila_antes,
             janela_s=janela,
+            por_ponte_na_janela=media,
         )
         self._as_bordas(estado, vagas, janela_medida, endereco, agora, bordas)
         return (
@@ -1352,11 +1354,13 @@ class GovernadorDoRadio:
         """Cede só quem não cabe, e cada um na sua vez. Chamado com a trava.
 
         O-GOVERNADOR-COM-UM-ADAPTADOR-SO-01. Quantas CABEM é a saída medida da
-        janela dividida pelo que uma ponte com escrita escreve (a média de
-        :attr:`_Estado.por_ponte`, arredondada: a contagem de uma janela oscila
-        de um quadro). Se a fila cresceu mais que um quadro por ponte com as que
-        escreveram, cabe uma a menos que elas — a conta nunca deixa a fila
-        crescer duas janelas seguidas.
+        janela dividida pelo que uma ponte com escrita escreve: a média de
+        :attr:`_Estado.por_ponte` (a contagem de uma janela oscila de um
+        quadro), ou a desta janela quando ela escreveu mais. Na rajada a média
+        fica atrás, e a conta por ela deixava a fila do host passar do que o
+        ceder do adaptador inteiro deixava (conferência de 29/09/2026: pico de
+        106 pacotes contra 73, no dublê que escoa duas). Com o maior dos dois,
+        as que cabem nunca escrevem mais que a saída da janela.
 
         Entram na vez as pontes COM ESCRITA na janela e as que estavam
         cedendo (quem cede não escreve, e segue querendo). A ponte sem escrita
@@ -1373,10 +1377,8 @@ class GovernadorDoRadio:
         """
         com_escrita = janela.com_escrita
         na_vez = [v for v in vagas if v.cedendo or any(v is e for e in com_escrita)]
-        por_ponte = estado.por_ponte or 0.0
+        por_ponte = max(estado.por_ponte or 0.0, janela.por_ponte_na_janela)
         cabem = int(janela.no_ar / por_ponte) if por_ponte > 0 else 0
-        if janela.cresceu > len(com_escrita):
-            cabem = min(cabem, len(com_escrita) - 1)
         if cabem <= 0 or not na_vez:
             estado.inteiro = True
             for vaga in vagas:

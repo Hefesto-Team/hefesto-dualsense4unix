@@ -332,10 +332,10 @@ def test_a_ponte_sem_escrita_nao_toma_a_vez() -> None:
     """Três com escrita e uma de pé sem escrever: as três seguem com 60%, e
     com a MESMA parte que teriam sem a quarta de pé.
 
-    MORDIDA: conte e gire por toda vaga de pé. Medido em 28/09: a conta da
-    fila compensa em parte (a vez da calada é uma a menos cedendo, a fila
-    cresce e cabe uma a menos na janela seguinte), e as três caem de 66,8%
-    para 63%; a comparação com as três sozinhas é o que reprova.
+    MORDIDA: conte e gire por toda vaga de pé. Medido em 29/09: a vez da
+    calada é uma a menos cedendo, o episódio seguinte vem mais cedo, e as três
+    caem de 66,5% para 62,7%, e não para 50%; a comparação com as três
+    sozinhas é o que reprova.
     """
     ordem = (CONTROLE_1, CONTROLE_4, CONTROLE_2, CONTROLE_3)
     partes, _v, _g, _r = _partes(ordem, sem_escrita=(CONTROLE_4,))
@@ -466,3 +466,47 @@ def test_a_vaga_que_nasce_no_episodio_e_sobe_depois_dele_volta_a_escrever() -> N
     relogio.agora += gov.PERIODO_S
     governador.tique()
     assert segunda.cedendo is False, "a ponte que subiu depois do episódio ficou cedendo"
+
+
+# ---------------------------------------------------------------------------
+# 9. a rajada
+# ---------------------------------------------------------------------------
+def test_na_rajada_a_fila_nao_passa_do_que_o_ceder_de_antes_deixava() -> None:
+    """A vibração do jogo vem em rajada: três pontes que escrevem 5 quadros
+    por janela e, de repente, 40, num adaptador que escoa duas. A conta de
+    quantas cabem não pode ficar atrás da rajada: a fila do host (a do dublê,
+    que é a de verdade) não passa de 80 pacotes, quatro vezes o limiar.
+
+    Medido na conferência de 29/09/2026: com o ceder do adaptador inteiro, o
+    pico era 73; com a conta pela média sozinha, 106; com o maior entre a
+    média e a janela, 73, e cada ponte põe no ar mais do que punha antes.
+
+    MORDIDA: divida só pela média (tire a janela do ``max`` em ``_a_vez``) e
+    o pico passa de 100.
+    """
+    relogio, registro = _Relogio(), _Diario()
+    medidor = _AdaptadorQueEscoaDuas()
+    governador = _governador(medidor, relogio, registro)
+    governador.tique()
+    vagas = []
+    for uniq in (CONTROLE_1, CONTROLE_2, CONTROLE_3):
+        vaga = governador.pedir_vaga(uniq, "vibracao")
+        assert isinstance(vaga, gov.Vaga)
+        vaga.subiu("vibracao")
+        vagas.append(vaga)
+    pico = 0
+    for janela in range(CINCO_MINUTOS):
+        por_ponte = 40 if (janela // 8) % 2 else 5
+        escritas = 0
+        for vaga in vagas:
+            if vaga.cedendo:
+                continue
+            for _ in range(por_ponte):
+                vaga.contar_escrita()
+            escritas += por_ponte
+        medidor.janela(escritas)
+        relogio.agora += gov.PERIODO_S
+        governador.tique()
+        pico = max(pico, medidor.fila)
+    assert pico <= 4 * gov.LIMIAR_DO_DEFICIT, f"a rajada levou a fila do host a {pico} pacotes"
+    assert not any(v.derrubar for v in vagas), "a rajada virou queda"
