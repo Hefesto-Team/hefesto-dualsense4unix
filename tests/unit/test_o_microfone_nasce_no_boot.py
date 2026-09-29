@@ -346,7 +346,7 @@ async def test_a_partida_com_o_connect_lento_nasce_cada_controle_no_ar(
 
     async def _nascer_devagar(daemon: Any, uniq: str) -> bool:
         await asyncio.sleep(0.3)
-        return await nascer(daemon, uniq)
+        return bool(await nascer(daemon, uniq))
 
     monkeypatch.setattr(hotkey, "nascer_no_ar", _nascer_devagar)
     # A emulação de vários controles não é desta régua (o mesmo motivo do caso de dois).
