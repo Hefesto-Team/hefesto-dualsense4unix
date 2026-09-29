@@ -231,9 +231,10 @@ def test_o_reiniciar_chega_aos_dois_atos_so_pelo_duble(
     with ato_de_proposito(*ATOS_DO_REINICIAR):
         acao(ctx, {}, None)
         linhas = _esperar_linhas(len(ATOS_DO_REINICIAR))
+        # o espião primeiro: é ele que diz o CAMINHO que ia rodar
+        assert not olho.recusados, (
+            f"um lançador saiu do dublê e ia rodar de verdade: {olho.recusados}")
 
-    assert not olho.recusados, (
-        f"um lançador saiu do dublê e ia rodar de verdade: {olho.recusados}")
     assert not (tmp_path / "fora.log").exists(), "o `steam` de fora da sessão rodou"
     assert olho.executados and all(
         os.path.dirname(c) == str(duble) for c in olho.executados
@@ -387,7 +388,7 @@ def test_o_path_explicito_e_o_caminho_absoluto_caem_no_duble(
             except PermissionError:
                 continue  # o espião recusou: a asserção de baixo diz qual
             assert feito.returncode == 1, "o dublê de um ato sai com rc=1"
-    assert not olho.recusados, f"o `steam` de fora da sessão ia rodar: {olho.recusados}"
+        assert not olho.recusados, f"o `steam` de fora da sessão ia rodar: {olho.recusados}"
     assert not (tmp_path / "fora.log").exists(), "o `steam` de fora da sessão rodou"
 
 
