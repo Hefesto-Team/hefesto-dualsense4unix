@@ -473,11 +473,11 @@ def eh_report_de_estado(report: bytes) -> bool:
     `_struct_base` (id, tamanho, o bit `INPUT_FLAG_AUDIO` e o CRC-32 do BT) com
     uma porta para quem precisa só do SIM/NÃO e de campo nenhum.
 
-    Quem precisa é o laço de leitura do `core/backend_pydualsense`, que entrega
-    o report ao `readInput` da pydualsense — e o `readInput` **não confere
-    nada**: nem id, nem tamanho, nem CRC, nem o bit de áudio. Escrever a
-    conferência lá seria a SEGUNDA cópia desta régua, e duas cópias que podem
-    divergir é a família de defeito que esta casa nomeia.
+    Quem a chamava era o laço de leitura do `core/backend_pydualsense`, antes
+    de entregar o report ao `readInput`, que **não confere nada**. Desde
+    29/09/2026 (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01) o laço usa como guarda o
+    `extract_estado_do_mic`, que roda o mesmo `_struct_base`, e esta porta
+    ficou só com as réguas: é lápide da casa-sabe, e sai ou ganha chamador.
     """
     return _struct_base(report) is not None
 

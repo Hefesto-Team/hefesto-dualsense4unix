@@ -1887,6 +1887,18 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "O QUE A FECHA: uma linha no despacho, subtraindo o que esta função "
         "devolve. DONO: a Onda do daemon, ou quem coordena a leva seguinte."
     ),
+    # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
+    "core/physical_report_reader.py::eh_report_de_estado": (
+        "MEDIDO em 29/09/2026: a porta pública do `_struct_base` (BATERIA-QUE-PULA-01) "
+        "perdeu o único chamador de produção com a O-BOTAO-DO-MIC-CHEGA-NA-HORA-01. "
+        "O `_consumir_lote` do `core/backend_pydualsense` usa como guarda a resposta "
+        "do `_captura_status_audio`, que roda o `extract_estado_do_mic` — o MESMO "
+        "`_struct_base` —, e cada report paga uma conferência de CRC, e não duas. "
+        "Só as réguas a chamam (`test_bateria_que_pula_01_a_voz_dela_nao_e_a_carga.py` "
+        "e `test_o_botao_do_mic_chega_na_hora.py`). O QUE A FECHA: ela sai, com as "
+        "réguas passando ao dono que o laço chama (a forma que a sprint dá ao "
+        "`extract_motion_window`), ou o laço volta a chamá-la."
+    ),
     # `formata_pt_br` SAIU daqui em 26/08/2026, na edição que o ligou (BG-03):
     # ele virou o DONO ÚNICO da conversão `260.4` → `260,4`, e as duas cópias
     # que a árvore mantinha — `app/actions/config/secao_controles.py::_numero` e
