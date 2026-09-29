@@ -337,9 +337,9 @@ def adaptador_por_uniq(
     ``HID_UNIQ`` segue sendo a chave e a resposta é o ``HID_PHYS``.
 
     Por que o ``HID_PHYS`` responde à pergunta "qual adaptador": o próprio
-    broker decide por ele. ``broker/hidraw_broker.py:316`` recusa o nó cujo
+    broker decide por ele. ``broker/hidraw_broker.py:394`` recusa o nó cujo
     ``HID_PHYS`` não é MAC, com o comentário literal *"BT real tem HID_PHYS =
-    MAC do adaptador"*, e o belt de ``:282-284`` só confirma quando o sysfs de
+    MAC do adaptador"*, e o belt de ``:395-397`` só confirma quando o sysfs de
     Bluetooth está legível.
 
     **A regra de honestidade, e ela tem controle negativo medido nesta bancada

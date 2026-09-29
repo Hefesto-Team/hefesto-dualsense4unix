@@ -83,7 +83,7 @@ from hefesto_dualsense4unix.profiles.simple_match import (  # noqa: E402
 #
 # `Profile.controllers` é um mapa `{ID da peça: ControllerOverrides}`
 # (`profiles/schema.py:1867`), e a classe tem OITO campos hoje
-# (`profiles/schema.py:1707-1751`), que a coluna desenha todos
+# (`profiles/schema.py:1718-1762`), que a coluna desenha todos
 # (`a10_perfis.SECOES_DA_COLUNA`):
 #
 #     leds · triggers · rumble · speaker · mic · sensores · mascara · movimento

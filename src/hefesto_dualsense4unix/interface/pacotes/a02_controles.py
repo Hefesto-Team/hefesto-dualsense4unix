@@ -4474,7 +4474,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         #
         # O QUE O DAEMON DESTA ÁRVORE RESPONDE, medido em 06/09/2026: o corpo
         # de `mic.canal.set` NÃO traz `por_uniq` — quem o traz é o
-        # `mic.volume.set` (`daemon/ipc_handlers.py:6859`). O ato do microfone
+        # `mic.volume.set` (`daemon/ipc_handlers.py:6962`). O ato do microfone
         # monta a resposta em `AtoDoMicrofone.como_corpo`
         # (`daemon/subsystems/hotkey.py:1611`), e lá o campo não existe. Então
         # `alvo_honrado` devolve `None` aqui, esta linha fica CALADA contra o
@@ -4611,7 +4611,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     *"o speaker do controle faz os barulhos da espada do Link enquanto na tela
     tem o som normal do jogo"*. É o `OUTPUT_PATH_SEL` = 2: canal esquerdo para o
     fone/TV, direito para o alto-falante do controle. O `speaker.set` leva a
-    `rota` (`ipc_handlers.py:6240`) e a GUI estável manda exatamente isto
+    `rota` (`ipc_handlers.py:6289`) e a GUI estável manda exatamente isto
     (`controller_card.py:4430`).
 
     "TODO O SOM DO PC" SÃO DUAS CAMADAS, E A SEGUNDA NÃO É IPC. O
@@ -4820,7 +4820,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 #: O QUE O 🎙 E O ♪ ACEITAM DE VOLUME. O mic é 0-100 por contrato do daemon
-#: (`mic.volume.set`, `ipc_handlers.py:6801-6807`); o alto-falante também sai
+#: (`mic.volume.set`, `ipc_handlers.py:6872-6878`); o alto-falante também sai
 #: daqui em 0-100 e quem converte para o registrador 0-255 é o dono da curva
 #: (`core/speaker_scale.volume_do_percentual`), a MESMA que pinta o `alto-num`.
 #: Digitar 255 aqui seria a segunda escala.

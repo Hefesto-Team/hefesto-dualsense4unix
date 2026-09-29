@@ -438,7 +438,7 @@ class Vibracao:
         peça é RELATIVO a ele (`profiles/manager.py:2943`), e não à política que
         multiplica. Sem opinião, o produto assume ``balanceado``.
     :param a_viva: ``state['rumble_policy']`` — **o que MULTIPLICA**, e é o único
-        "global" que o motor sente (`daemon/ipc_handlers.py:2923` publica o
+        "global" que o motor sente (`daemon/ipc_handlers.py:3439` publica o
         ``DaemonConfig.rumble_policy`` que `core.rumble._effective_mult` lê).
         ``None`` = o serviço não disse, e aí a tela não afirma número nenhum.
     :param orcamento: a chave do ``maquina.json`` — o teto por CIMA da viva,

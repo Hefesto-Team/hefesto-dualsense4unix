@@ -2924,7 +2924,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     #   perfil.rumble.policy   o DENOMINADOR do fator por peça
     #                          (`profiles/manager.py:2943`)
     #   state['rumble_policy'] o que MULTIPLICA no funil do motor
-    #                          (`daemon/ipc_handlers.py:2923` → `_effective_mult`)
+    #                          (`daemon/ipc_handlers.py:3439` → `_effective_mult`)
     #   maquina.json           o teto por CIMA da viva, com `min`
     #
     # As três são lidas UMA vez para as quatro linhas — ler dentro do laço
