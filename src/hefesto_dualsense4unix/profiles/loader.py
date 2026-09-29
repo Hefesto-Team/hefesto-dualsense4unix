@@ -2595,6 +2595,16 @@ HISTORICO_DIR_NAME = ".historico"
 #: de ajuste fino na janela (que grava a cada confirmação) sem virar depósito.
 HISTORICO_MAX_VERSOES = 10
 
+#: Além das dez mais novas, fica a PRIMEIRA versão de cada um destes últimos
+#: dias com gravação. O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01, item 4 (28/09/2026):
+#: entre 00:18 e 00:50 o daemon gravou o perfil do DON'T SCREAM quinze vezes, a
+#: maioria por bordas do microfone, e a versão de antes da sessão saiu do
+#: histórico — a única que diria quem escreveu o «calado». A primeira do dia é
+#: essa versão: o carimbo é a hora em que ela foi SUBSTITUÍDA, então o arquivo
+#: guarda o perfil como estava quando o dia começou a gravar. Duas semanas
+#: cobrem quem nota o defeito dias depois, e o teto impede o depósito.
+HISTORICO_DIAS = 14
+
 
 def historico_dir(slug: str, *, ensure: bool = False) -> Path:
     """Diretório do histórico de UM perfil: ``profiles/.historico/<slug>/``.
@@ -2646,11 +2656,37 @@ def _slug_para_historico(identifier: str) -> str:
         return identifier
 
 
-def _podar_historico(destino: Path, manter: int) -> list[Path]:
-    """Apaga as versões mais antigas além de `manter`. Devolve as apagadas."""
+def _as_primeiras_de_cada_dia(versoes: list[Path], dias: int) -> set[Path]:
+    """A primeira versão de cada um dos `dias` mais novos que têm gravação.
+
+    O dia é o prefixo ``AAAAMMDD`` do carimbo (`_carimbo_de_versao`), na hora
+    local, que é a da pessoa. Um arquivo sem esse prefixo não tem dia e fica só
+    com a regra das mais novas.
+    """
+    primeiras: dict[str, Path] = {}
+    for versao in versoes:  # já em ordem cronológica: a primeira vista fica
+        dia = versao.name[:8]
+        if dia.isdigit() and len(dia) == 8:
+            primeiras.setdefault(dia, versao)
+    return {primeiras[dia] for dia in sorted(primeiras)[-dias:]} if dias > 0 else set()
+
+
+def _podar_historico(
+    destino: Path, manter: int, *, dias: int = HISTORICO_DIAS
+) -> list[Path]:
+    """Apaga as versões além das `manter` mais novas. Devolve as apagadas.
+
+    A primeira versão de cada um dos `dias` mais novos com gravação fica
+    (`_as_primeiras_de_cada_dia`): dez gravações em segundos não levam embora a
+    versão de antes delas.
+    """
     versoes = sorted(destino.glob("*.json"))
+    ficam = set(versoes[-manter:]) if manter > 0 else set()
+    ficam |= _as_primeiras_de_cada_dia(versoes, dias)
     apagadas: list[Path] = []
-    for velha in versoes[: max(0, len(versoes) - manter)]:
+    for velha in versoes:
+        if velha in ficam:
+            continue
         with contextlib.suppress(OSError):
             velha.unlink()
             apagadas.append(velha)
@@ -3029,6 +3065,7 @@ __all__ = [
     "ARQUIVOS_DOS_ESTILOS_DE_JOGO",
     "CHAVES_DO_PERFIL_DE_JOGO",
     "ESTILOS_DE_JOGO_DIR_NAME",
+    "HISTORICO_DIAS",
     "HISTORICO_DIR_NAME",
     "HISTORICO_MAX_VERSOES",
     "INTERVALO_MINIMO_DA_VARREDURA_S",

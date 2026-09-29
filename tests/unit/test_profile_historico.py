@@ -12,6 +12,7 @@ arrancada (as mordidas estão anotadas em cada docstring).
 from __future__ import annotations
 
 import json
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -109,7 +110,7 @@ def test_historico_vive_fora_do_alcance_das_varreduras(dir_perfis: Path) -> None
 
 
 def test_historico_retem_apenas_as_ultimas_n(dir_perfis: Path) -> None:
-    """A poda mantém `HISTORICO_MAX_VERSOES`, e mantém as mais RECENTES.
+    """A poda mantém `HISTORICO_MAX_VERSOES` recentes, mais a primeira do dia.
 
     MORDIDA: arrancar `_podar_historico` faz a contagem estourar o limite.
     """
@@ -118,11 +119,11 @@ def test_historico_retem_apenas_as_ultimas_n(dir_perfis: Path) -> None:
         save_profile(_perfil(priority=prioridade))
 
     versoes = listar_historico("pragmata")
-    assert len(versoes) == HISTORICO_MAX_VERSOES
+    assert len(versoes) == HISTORICO_MAX_VERSOES + 1
     prioridades = [json.loads(v.read_text(encoding="utf-8"))["priority"] for v in versoes]
     # Guardadas são as versões ANTERIORES; a última gravada (total-1) está no
-    # perfil, não no histórico.
-    assert prioridades == list(range(total - HISTORICO_MAX_VERSOES - 1, total - 1))
+    # perfil, não no histórico. A primeira do dia (a 0) fica na frente das dez.
+    assert prioridades == [0, *range(total - HISTORICO_MAX_VERSOES - 1, total - 1)]
 
 
 def test_restore_devolve_a_versao_byte_a_byte(dir_perfis: Path) -> None:
@@ -258,6 +259,107 @@ def test_nome_acentuado_encontra_o_proprio_historico(dir_perfis: Path) -> None:
 
     assert len(listar_historico("Ação Rápida")) == 1
     assert len(listar_historico("acao_rapida")) == 1
+
+
+# ---------------------------------------------------------------------------
+# 1b. O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01, item 4 (28/09/2026): a versão dela
+# ---------------------------------------------------------------------------
+# Medido na sessão de 28/09: entre 00:18 e 00:50 o daemon gravou o perfil do
+# DON'T SCREAM quinze vezes, a maioria por bordas do microfone, e a versão de
+# antes da sessão saiu do histórico. Com dez gravações em segundos, a poda por
+# contagem apaga justamente a única versão que responde «quem escreveu isto».
+
+
+class _Relogio:
+    """Carimbos na ordem, com o dia que o teste escolhe (o do produto é o agora)."""
+
+    def __init__(self) -> None:
+        self.dia = "20260927"
+        self._n = 0
+
+    def __call__(self) -> str:
+        self._n += 1
+        return f"{self.dia}T{self._n // 3600:02d}{self._n // 60 % 60:02d}{self._n % 60:02d}_000000"
+
+
+@pytest.fixture
+def relogio(monkeypatch: pytest.MonkeyPatch) -> _Relogio:
+    relogio = _Relogio()
+    monkeypatch.setattr(loader_module, "_carimbo_de_versao", relogio)
+    return relogio
+
+
+def _prioridades(nome: str = "pragmata") -> list[int]:
+    return [
+        json.loads(v.read_text(encoding="utf-8"))["priority"]
+        for v in listar_historico(nome)
+    ]
+
+
+def test_doze_gravacoes_seguidas_deixam_a_versao_de_antes_delas(
+    dir_perfis: Path, relogio: _Relogio
+) -> None:
+    """A régua da sprint: doze gravações seguidas, e a versão dela fica no disco.
+
+    A versão dela é a que estava no arquivo quando a rajada começou (aqui, a
+    prioridade 7, escrita na véspera). As doze gravações do dia seguinte a
+    arquivam na primeira e a empurram para fora das dez mais novas na
+    décima primeira.
+
+    MORDIDA: devolver a poda por contagem pura (o `_podar_historico` de antes)
+    apaga a 7 e esta régua reprova.
+    """
+    save_profile(_perfil(priority=7))
+    relogio.dia = "20260928"
+    for prioridade in range(100, 112):
+        save_profile(_perfil(priority=prioridade))
+
+    guardadas = _prioridades()
+    assert 7 in guardadas, f"a versão de antes da rajada sumiu: {guardadas}"
+    assert guardadas[0] == 7
+    # As dez mais novas continuam lá, e a de uso (111) está no perfil.
+    assert guardadas[-HISTORICO_MAX_VERSOES:] == list(range(101, 111))
+    assert load_profile("pragmata").priority == 111
+
+
+def test_a_primeira_de_cada_dia_sobrevive_as_rajadas_dos_dias_seguintes(
+    dir_perfis: Path, relogio: _Relogio
+) -> None:
+    """Uma rajada por dia, três dias: a versão de antes de cada uma fica.
+
+    Quem nota o defeito no dia seguinte ainda acha a versão da véspera. E a
+    lista não vira depósito: são as dez mais novas mais uma por dia.
+
+    MORDIDA: guardar só a primeira do dia MAIS NOVO (o dia de hoje) apaga a
+    de 27 e a de 28 quando a rajada de 29 chega.
+    """
+    save_profile(_perfil(priority=1))
+    for dia, base in (("20260927", 2700), ("20260928", 2800), ("20260929", 2900)):
+        relogio.dia = dia
+        for passo in range(12):
+            save_profile(_perfil(priority=base + passo))
+
+    # A primeira de 27 é a 1 (a de antes de tudo); a de 28 é a 2711, a última
+    # de 27, que a primeira gravação de 28 arquivou; a de 29, a 2811.
+    assert _prioridades() == [1, 2711, 2811, *range(2901, 2911)]
+
+
+def test_os_dias_guardados_tem_teto(dir_perfis: Path, relogio: _Relogio) -> None:
+    """Uma gravação por dia, por mais dias que o teto: o dia mais velho sai.
+
+    MORDIDA: guardar a primeira de TODO dia, sem teto, deixa o histórico
+    crescer um arquivo por dia, para sempre.
+    """
+    teto = max(HISTORICO_MAX_VERSOES, loader_module.HISTORICO_DIAS)
+    save_profile(_perfil(priority=0))
+    primeiro = date(2026, 10, 1)
+    for n in range(1, teto + 6):
+        relogio.dia = (primeiro + timedelta(days=n)).strftime("%Y%m%d")
+        save_profile(_perfil(priority=n))
+
+    # Cada dia guardou uma versão só (a anterior àquela gravação): as `teto`
+    # mais novas ficam, e as cinco mais velhas saem.
+    assert _prioridades() == list(range(5, teto + 5))
 
 
 # ---------------------------------------------------------------------------
