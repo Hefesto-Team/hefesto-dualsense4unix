@@ -1,4 +1,14 @@
-"""OS-ATALHOS-NA-ESPERA-01 — na espera do lugar guardado, o próximo da fila segura os atalhos do PS.
+"""OS-ATALHOS-NA-ESPERA-01 — na espera do lugar guardado, os atalhos do PS seguem vivos.
+
+**REVISTO EM 28/09/2026** pela O-MODO-XBOX-NAO-E-QUEDA-02, item 5 (a decisão
+dela de 27/09, ``D-2709-O-PS-R3-EM-QUALQUER-CONTROLE``): o PS e as combinações
+valem em QUALQUER um dos quatro controles, dentro e fora da espera. O que esta
+régua media como «só o próximo da fila segura» (as testemunhas mudas, o P2 mudo
+com o P1 na mesa, o diário da troca de mão) caducou com a decisão; o que fica é
+a espera: o P1 fora dentro do prazo não cala os atalhos de ninguém, o vpad
+parado dele não recebe nada, e a pergunta «de quem é o gesto» nunca responde o
+P1 ausente. A régua de qualquer controle com o P1 na mesa é
+``test_o_ps_vale_em_qualquer_controle.py``.
 
 **A decisão é dela** (24/09/2026, 19h, ``D-2409-OS-ATALHOS-NA-ESPERA-FICAM-COM-
 O-P2``, escolhida em opções, com a foto do dia): *«O P2 segura os atalhos
@@ -12,12 +22,13 @@ com o jogo aberto e o P1 fora dentro do prazo, o posto de P1 fica VAGO
 do P2 não disparavam nada — aos 2 s e aos 20 s, com 2, 3 e 4 controles, USB, BT
 e a mesa mista. Com o P1 na mesa, só o PS + R3 dele disparava; de volta, também.
 
-**A cura mora no dono** (``poll.botoes_dos_atalhos``): na vaga, os atalhos
-leem o próximo da fila que está na mesa — o menor número da lâmpada entre os
-jogadores sentados no co-op, com o vpad de pé ou renascendo —, e o vpad do P1
-continua recebendo só os botões do posto. O laço de produção entrega os botões
-por ``poll.observar_os_atalhos``, e o PS + L3 anda o cartão de quem segura os
-atalhos (``poll.quem_segura_os_atalhos``), nunca o do P1 ausente.
+**A cura mora no dono** (``poll.botoes_de_cada_controle``): os atalhos leem
+os botões de cada controle na mesa, e o vpad do P1 continua recebendo só os
+botões do posto. O laço de produção entrega os botões por
+``poll.observar_os_atalhos``, e o PS + L3 anda o cartão de quem faz o gesto
+(``poll.quem_segura_os_atalhos``); fora de um gesto, na vaga, a resposta é o
+próximo da fila — o menor número da lâmpada entre os jogadores sentados no
+co-op —, nunca o P1 ausente.
 
 **A bancada é a honesta** (:class:`MesaHonesta`, da O-VPAD-DO-P1-NAO-REPETE-O-
 MAC-01): os vpads da fábrica REAL contra o kernel de mentira que recusa MAC
@@ -36,13 +47,14 @@ laço seguindo (:func:`_gesto_com_o_laco`): o PS + R3 do P2 troca o modo na
 espera, do disparo até o vpad do posto renascido no caminho novo
 (:class:`TestOPsR3DoP2TrocaOModo`).
 
-AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
+AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido; revistas em
+28/09/2026 com a O-MODO-XBOX-NAO-E-QUEDA-02):
 
-- ``botoes_dos_atalhos`` devolvendo sempre os botões do posto (o produto de
-  antes) reprova a matriz do P2, o próximo da fila, os três caminhos e o
-  diário: o silêncio dos 30 s volta;
-- o próximo da fila pelo MAIOR número reprova os que medem quem segura com
-  três ou quatro na mesa, e as testemunhas;
+- ``botoes_de_cada_controle`` devolvendo só os botões do posto (o produto de
+  antes da OS-ATALHOS) reprova a matriz do P2, o próximo da fila e os três
+  caminhos: o silêncio dos 30 s volta;
+- o próximo da fila pelo MAIOR número reprova os que medem a resposta do
+  posto com três ou quatro na mesa;
 - a vaga perguntada ao ``primary_uniq`` fora da mesa (em vez do
   ``_posto_vago_de`` do backend) não passa pela régua do próprio dono:
   reprova ``test_a_vaga_e_a_do_backend``;
@@ -55,7 +67,8 @@ AS MORDIDAS (24/09/2026, cada uma devolvida com o md5 conferido):
   reprova o P2 que não volta; o ciclo partindo da máscara do P1 reprova o ciclo
   do P2; a mão presa a quem tem vpad de pé reprova o tique do renascer; o
   diário e a pergunta «de quem é o gesto» caindo no posto na vaga vazia
-  reprovam a vaga sem ninguém sentado.
+  reprovam a vaga sem ninguém sentado;
+- (28/09) o laço voltando a ler só o posto reprova :class:`TestOLacoDeProducao`.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
@@ -83,7 +96,7 @@ from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
     start_hotkey_manager,
 )
 from hefesto_dualsense4unix.daemon.subsystems.poll import (
-    botoes_dos_atalhos,
+    botoes_de_cada_controle,
     evdev_buttons_once,
     observar_os_atalhos,
     quem_segura_os_atalhos,
@@ -472,25 +485,30 @@ class TestOP2SeguraOsAtalhosNaEspera:
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
         botoes: tuple[str, ...], gesto: str,
     ) -> None:
+        """Antes e durante a espera: o P2 é dono dos atalhos DELE (item 5, 28/09)."""
         bancada = montar_atalhos(monkeypatch, kernel, 3)
-        assert bancada.apertar(P2, *botoes) == [], "com o P1 na mesa, o P2 já segurava"
+        assert bancada.apertar(P2, *botoes) == [gesto], "com o P1 na mesa, o P2 ficou mudo"
         _fora_dentro_do_prazo(bancada, P1)
         assert bancada.apertar(P2, *botoes) == [gesto]
 
     @MATRIZ
-    def test_as_testemunhas_nao_seguram_nada(
+    def test_quem_vem_atras_tambem_tem_os_atalhos(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
         quantos: int, transporte: str,
     ) -> None:
-        """Os atalhos são de UM controle só: o próximo da fila, e não quem vier atrás."""
+        """Na espera, os atalhos são de todos os que estão na mesa (item 5, 28/09).
+
+        Até 28/09 esta régua pedia o contrário (as «testemunhas» mudas): os
+        atalhos eram de um controle só. A decisão dela de 27/09 revogou isso.
+        """
         bancada = montar_atalhos(monkeypatch, kernel, quantos, transporte)
         _fora_dentro_do_prazo(bancada, P1)
         for uniq in UNIQS[2:quantos]:
-            assert bancada.apertar(uniq, "ps", "r3") == [], f"{uniq} disparou o atalho"
-            assert bancada.apertar(uniq, "ps") == [], f"{uniq} disparou o PS"
+            assert bancada.apertar(uniq, "ps", "r3") == ["ponte"], f"{uniq} ficou mudo"
+            assert bancada.apertar(uniq, "ps") == ["ps_solo"], f"{uniq} não abriu a Steam"
 
     @MATRIZ
-    def test_quando_o_p1_volta_os_atalhos_voltam_para_ele(
+    def test_quando_o_p1_volta_os_dois_tem_os_atalhos(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
         quantos: int, transporte: str,
     ) -> None:
@@ -502,7 +520,7 @@ class TestOP2SeguraOsAtalhosNaEspera:
         bancada.mesa.sentar(P1, transporte=via)
         bancada.tique()
         assert not bancada.vaga() and bancada.dono_do_vpad_do_p1() == P1
-        assert bancada.apertar(P2, "ps", "r3") == [], "o P1 voltou e o P2 seguiu com os atalhos"
+        assert bancada.apertar(P2, "ps", "r3") == ["ponte"], "o P1 voltou e o P2 ficou mudo"
         assert bancada.apertar(P1, "ps", "r3") == ["ponte"], "o P1 voltou sem os atalhos"
 
     @pytest.mark.parametrize(
@@ -519,23 +537,23 @@ class TestOP2SeguraOsAtalhosNaEspera:
         bancada.tique()
         assert bancada.inst.get_transport() == para
         assert bancada.apertar(P1, "ps", "r3") == ["ponte"]
-        assert bancada.apertar(P2, "ps", "r3") == []
+        assert bancada.apertar(P2, "ps", "r3") == ["ponte"]
 
-    def test_o_diario_diz_a_troca_de_mao_uma_vez_por_episodio(
+    def test_o_diario_diz_de_quem_e_o_gesto(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
     ) -> None:
+        """Não há mais troca de mão a contar (28/09): o diário diz quem fez cada gesto."""
         bancada = montar_atalhos(monkeypatch, kernel, 3)
+        _fora_dentro_do_prazo(bancada, P1)
         with structlog.testing.capture_logs() as registros:
-            _fora_dentro_do_prazo(bancada, P1)
-            for _ in range(4):
-                bancada.tique()
-            bancada.mesa.sentar(P1)
-            bancada.tique()
-            bancada.tique()
-        com_o_proximo = [r for r in registros if r["event"] == "atalhos_com_o_proximo_da_fila"]
-        de_volta = [r for r in registros if r["event"] == "atalhos_voltam_ao_posto"]
-        assert [r["uniq"] for r in com_o_proximo] == [P2]
-        assert [r["de"] for r in de_volta] == [P2]
+            bancada.apertar(P2, "ps", "r3")
+            bancada.apertar(P3, "ps")
+        disparos = [
+            (r["event"], r.get("combo"), r.get("de"))
+            for r in registros
+            if r["event"] in ("hotkey_fired", "ps_solo_released")
+        ]
+        assert disparos == [("hotkey_fired", "ponte", P2), ("ps_solo_released", None, P3)]
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -559,7 +577,7 @@ class TestOProximoDaFila:
         assert bancada.apertar(segura, "ps", "r3") == ["ponte"]
         for uniq in UNIQS[:4]:
             if uniq not in fora and uniq != segura:
-                assert bancada.apertar(uniq, "ps", "r3") == [], f"{uniq} não segura e disparou"
+                assert bancada.apertar(uniq, "ps", "r3") == ["ponte"], f"{uniq} ficou mudo"
         # E ninguém trocou de número por isso.
         assert bancada.a_tela() == {u: UNIQS.index(u) + 1 for u in UNIQS[:4] if u not in fora}
 
@@ -576,7 +594,7 @@ class TestOProximoDaFila:
         bancada.tique()
         assert bancada.vaga() and quem_segura_os_atalhos(bancada.daemon) == P2
         assert bancada.apertar(P2, "ps", "r3") == ["ponte"]
-        assert bancada.apertar(P3, "ps", "r3") == []
+        assert bancada.apertar(P3, "ps", "r3") == ["ponte"]
 
     @pytest.mark.parametrize(
         "posto", [0, 1, 2, 3], ids=["posto-p1", "posto-p2", "posto-p3", "posto-p4"]
@@ -594,11 +612,11 @@ class TestOProximoDaFila:
         assert bancada.vaga() and bancada.inst.primary_uniq == dono
         assert bancada.apertar(proximo, "ps", "r3") == ["ponte"]
         for uniq in atras:
-            assert bancada.apertar(uniq, "ps", "r3") == []
+            assert bancada.apertar(uniq, "ps", "r3") == ["ponte"]
         bancada.mesa.sentar(dono)
         bancada.tique()
         assert bancada.apertar(dono, "ps", "r3") == ["ponte"]
-        assert bancada.apertar(proximo, "ps", "r3") == []
+        assert bancada.apertar(proximo, "ps", "r3") == ["ponte"]
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -618,7 +636,7 @@ class TestOsTresCaminhos:
         assert bancada.vaga()
         assert bancada.apertar(P2, "ps", "r3") == ["ponte"]
         assert bancada.apertar(P2, "ps", "l3") == ["mascara"]
-        assert bancada.apertar(P3, "ps", "r3") == []
+        assert bancada.apertar(P3, "ps", "r3") == ["ponte"]
 
     @pytest.mark.parametrize("transporte", list(TRANSPORTES))
     def test_no_nativo_nao_ha_espera_e_nada_muda(
@@ -631,22 +649,23 @@ class TestOsTresCaminhos:
         assert bancada.inst.primary_uniq == P2
         assert quem_segura_os_atalhos(bancada.daemon) == P2
         do_posto = frozenset({"ps", "r3"})
-        assert botoes_dos_atalhos(bancada.daemon, do_posto) is do_posto
+        assert botoes_de_cada_controle(bancada.daemon, do_posto)[P2] is do_posto
 
 
 @pytest.mark.usefixtures("config_isolado")
 class TestForaDaEsperaNadaMuda:
-    """Sem a espera, os atalhos são do primário — do jeito que sempre foram."""
+    """Sem a espera, os botões do posto são os do primário, e a resposta do posto é ele."""
 
     @MATRIZ
-    def test_com_todos_na_mesa_so_o_p1_segura(
+    def test_com_todos_na_mesa_todos_tem_os_atalhos(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
         quantos: int, transporte: str,
     ) -> None:
+        """Até 28/09, «só o P1 segura»; o item 5 da O-MODO-XBOX-NAO-E-QUEDA-02 o revogou."""
         bancada = montar_atalhos(monkeypatch, kernel, quantos, transporte)
         assert bancada.apertar(P1, "ps", "r3") == ["ponte"]
         for uniq in UNIQS[1:quantos]:
-            assert bancada.apertar(uniq, "ps", "r3") == []
+            assert bancada.apertar(uniq, "ps", "r3") == ["ponte"], f"{uniq} ficou mudo"
         assert quem_segura_os_atalhos(bancada.daemon) == P1
 
     @pytest.mark.parametrize(
@@ -670,7 +689,7 @@ class TestForaDaEsperaNadaMuda:
         assert quem_segura_os_atalhos(bancada.daemon) == P2
         assert bancada.apertar(P2, "ps", "r3") == ["ponte"]
         do_posto = frozenset({"cross"})
-        assert botoes_dos_atalhos(bancada.daemon, do_posto) is do_posto
+        assert botoes_de_cada_controle(bancada.daemon, do_posto)[P2] is do_posto
 
     def test_depois_do_prazo_os_atalhos_sao_do_novo_primario(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
@@ -682,7 +701,7 @@ class TestForaDaEsperaNadaMuda:
             bancada.tique()
         assert bancada.inst.primary_uniq == P2 and bancada.dono_do_vpad_do_p1() == P2
         assert bancada.apertar(P2, "ps", "r3") == ["ponte"]
-        assert bancada.apertar(P3, "ps", "r3") == []
+        assert bancada.apertar(P3, "ps", "r3") == ["ponte"]
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -713,7 +732,7 @@ class TestAVagaEDoBackend:
         assert bancada.inst.primary_uniq == P1 and not bancada.vaga()
         assert quem_segura_os_atalhos(bancada.daemon) == P1
         do_posto = frozenset({"ps"})
-        assert botoes_dos_atalhos(bancada.daemon, do_posto) is do_posto
+        assert botoes_de_cada_controle(bancada.daemon, do_posto)[P1] is do_posto
 
 
 # ---------------------------------------------------------------------------
@@ -881,11 +900,10 @@ class TestOPsR3DoP2TrocaOModo:
         assert hotkey.ponte_atual(bancada.daemon) == hotkey.PONTE_DUALSENSE
         posto = bancada.daemon._gamepad_device
 
-        with structlog.testing.capture_logs() as registros:
-            assert bancada.apertar(P2, "ps", "r3") == ["ponte"]
-            _gesto_com_o_laco(bancada, build_next_bridge_callback(bancada.daemon))  # type: ignore[arg-type]
-            for _ in range(3):
-                bancada.tique(0.0)
+        assert bancada.apertar(P2, "ps", "r3") == ["ponte"]
+        _gesto_com_o_laco(bancada, build_next_bridge_callback(bancada.daemon))  # type: ignore[arg-type]
+        for _ in range(3):
+            bancada.tique(0.0)
 
         # O modo trocou, e o aparelho concorda: o posto renasceu no caminho novo.
         assert hotkey.ponte_atual(bancada.daemon) == hotkey.PONTE_XBOX
@@ -902,9 +920,6 @@ class TestOPsR3DoP2TrocaOModo:
         assert bancada.dono_do_vpad_do_p1() is None, "o P2 passou a dirigir o boneco 1"
         bancada.o_jogo_segue_a_tela()
         assert quem_segura_os_atalhos(bancada.daemon) == P2
-        assert not [r for r in registros if r["event"] == "atalhos_voltam_ao_posto"], (
-            "o diário disse que os atalhos voltaram ao posto com o P1 ainda fora"
-        )
 
         # O P1 volta e dirige o vpad do posto, que renasceu à espera dele.
         bancada.mesa.sentar(P1, transporte=via)
@@ -913,13 +928,13 @@ class TestOPsR3DoP2TrocaOModo:
         assert not bancada.vaga() and bancada.dono_do_vpad_do_p1() == P1
         bancada.o_jogo_segue_a_tela()
         assert bancada.apertar(P1, "ps", "r3") == ["ponte"]
-        assert bancada.apertar(P2, "ps", "r3") == []
+        assert bancada.apertar(P2, "ps", "r3") == ["ponte"]
 
     @pytest.mark.parametrize("quantos", [2, 3, 4])
     @pytest.mark.parametrize(
         "gesto", [build_next_bridge_callback, build_next_mask_callback], ids=["ps-r3", "ps-l3"]
     )
-    def test_a_mao_nao_pisca_enquanto_o_vpad_de_quem_segura_renasce(
+    def test_a_resposta_do_posto_nao_pisca_enquanto_o_vpad_do_p2_renasce(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
         quantos: int, gesto: Any,
     ) -> None:
@@ -929,28 +944,20 @@ class TestOPsR3DoP2TrocaOModo:
         do co-op, e o do PS + L3 do P2 recria o dele; cada um volta a sentar
         com o grab pendente e só ganha vpad no ``forward_all`` de um tique
         seguinte. Com os atalhos presos a quem tem vpad de pé, nesse tique a
-        mão ia para o P3 — ou, sem ninguém de pé, para o posto: o diário dizia
-        ``atalhos_voltam_ao_posto`` com o P1 ainda fora (a linha que se procura
-        no diário, depois do install, para saber que ele voltou), e a pergunta
-        «de quem é o gesto» respondia o P1 ausente.
+        mão ia para o P3 — ou, sem ninguém de pé, para o posto: a pergunta «de
+        quem é o gesto», fora de um gesto, respondia o P1 ausente.
         """
         bancada = montar_atalhos(monkeypatch, kernel, quantos)
         armar_o_ato_do_daemon(bancada, monkeypatch)
         _fora_dentro_do_prazo(bancada, P1)
         # O tique do daemon que roda antes de a thread do leitor abrir o device.
         monkeypatch.setattr(hotkey, "_ESPERA_DO_VPAD_DO_COOP_S", 0.0)
-        with structlog.testing.capture_logs() as registros:
-            asyncio.run(gesto(bancada.daemon)())
-            assert em.mascara_vestida(bancada.daemon, P2) is None, "premissa: o P2 renasce"
-            observar_os_atalhos(bancada.daemon, evdev_buttons_once(bancada.daemon), now=0.0)
-            segura = quem_segura_os_atalhos(bancada.daemon)
-            bancada.tique(0.0)
-        assert segura == P2, f"no tique do renascer, quem segurava era {segura}"
-        trocas = [
-            r for r in registros
-            if r["event"] in ("atalhos_com_o_proximo_da_fila", "atalhos_voltam_ao_posto")
-        ]
-        assert trocas == [], f"o diário disse troca de mão sem troca nenhuma: {trocas}"
+        asyncio.run(gesto(bancada.daemon)())
+        assert em.mascara_vestida(bancada.daemon, P2) is None, "premissa: o P2 renasce"
+        observar_os_atalhos(bancada.daemon, evdev_buttons_once(bancada.daemon), now=0.0)
+        segura = quem_segura_os_atalhos(bancada.daemon)
+        bancada.tique(0.0)
+        assert segura == P2, f"no tique do renascer, a resposta do posto era {segura}"
         assert bancada.vaga() and quem_segura_os_atalhos(bancada.daemon) == P2
 
     def test_na_vaga_sem_ninguem_sentado_ninguem_segura(
@@ -959,23 +966,18 @@ class TestOPsR3DoP2TrocaOModo:
         """O P2 está na mesa, mas o co-op não consegue sentá-lo: ninguém segura.
 
         Outro leitor exclusivo segura o controle do P2 (o grab é recusado), e o
-        posto segue vago. Os atalhos leem o posto vazio, a pergunta «de quem é
-        o gesto» não responde o P1 ausente, e o diário não diz que os atalhos
-        voltaram ao posto.
+        posto segue vago. Os botões do P2 não chegam a leitor nenhum do
+        Hefesto, e a pergunta «de quem é o gesto» não responde o P1 ausente.
         """
         bancada = montar_atalhos(monkeypatch, kernel, 2)
         _fora_dentro_do_prazo(bancada, P1)
-        with structlog.testing.capture_logs() as registros:
-            bancada.mesa.grab_recusado.add(P2)  # type: ignore[attr-defined]
-            bancada.coop._teardown_player(P2)
-            bancada.tique(0.0)
-            bancada.tique(0.0)
+        bancada.mesa.grab_recusado.add(P2)  # type: ignore[attr-defined]
+        bancada.coop._teardown_player(P2)
+        bancada.tique(0.0)
+        bancada.tique(0.0)
         assert bancada.vaga() and bancada.coop.live_snapshots() == {}
         assert quem_segura_os_atalhos(bancada.daemon) is None
         assert bancada.apertar(P2, "ps", "r3") == []
-        assert not [r for r in registros if r["event"] == "atalhos_voltam_ao_posto"], (
-            "o diário disse que os atalhos voltaram ao posto com o P1 ainda fora"
-        )
 
     @pytest.mark.xfail(
         strict=True,
@@ -1034,7 +1036,7 @@ class TestOPsR3DoP2TrocaOModo:
 
 
 class _CoopDaEspera:
-    """O co-op como o laço o vê na espera: o P2 e o P3 na mesa, cada um apertando um botão.
+    """O co-op como o laço o vê: o P2 e o P3 na mesa, cada um apertando um botão.
 
     Dublê SÓ do que o laço chama por tique e do que os atalhos perguntam; o
     comportamento do co-op de verdade é o da bancada honesta, lá em cima.
@@ -1079,7 +1081,7 @@ def _estados(n: int) -> list[ControllerState]:
 
 
 class TestOLacoDeProducao:
-    """O `_poll_loop` de verdade entrega aos atalhos os botões de quem segura.
+    """O `_poll_loop` de verdade entrega aos atalhos os botões de cada controle.
 
     A bancada honesta chama o dono direto; esta é a régua de que o LAÇO chama
     o dono, com o ``Daemon.run`` de verdade e o ``FakeController`` — nenhum
@@ -1087,14 +1089,16 @@ class TestOLacoDeProducao:
     """
 
     @staticmethod
-    async def _rodar(monkeypatch: pytest.MonkeyPatch, *, vaga: bool) -> list[frozenset[str]]:
+    async def _rodar(
+        monkeypatch: pytest.MonkeyPatch, *, vaga: bool
+    ) -> list[tuple[Any, frozenset[str]]]:
         monkeypatch.setattr("hefesto_dualsense4unix.daemon.lifecycle.INPUT_GRACE_SEC", 0.0)
-        observados: list[frozenset[str]] = []
+        observados: list[tuple[Any, frozenset[str]]] = []
         original = HotkeyManager.observe
 
-        def _espiao(self: Any, pressed: Any, *, now: Any = None) -> Any:
-            observados.append(frozenset(pressed))
-            return original(self, pressed, now=now)
+        def _espiao(self: Any, pressed: Any, *, now: Any = None, de: Any = None) -> Any:
+            observados.append((de, frozenset(pressed)))
+            return original(self, pressed, now=now, de=de)
 
         monkeypatch.setattr(HotkeyManager, "observe", _espiao)
         fc = FakeController(transport="usb", states=_estados(400))
@@ -1124,19 +1128,24 @@ class TestOLacoDeProducao:
         return observados
 
     @pytest.mark.asyncio
-    async def test_na_vaga_o_laco_entrega_os_botoes_do_p2(
+    async def test_na_vaga_o_laco_entrega_os_botoes_do_p2_e_do_p3(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         observados = await self._rodar(monkeypatch, vaga=True)
         assert observados, "o laço não chamou os atalhos"
-        assert set(observados) == {frozenset({"triangle"})}, (
-            f"o laço entregou aos atalhos {sorted(set(observados), key=sorted)} — "
-            "os do posto vago, e não os do P2"
-        )
+        assert set(observados) == {
+            (P1, frozenset()),
+            (P2, frozenset({"triangle"})),
+            (P3, frozenset({"square"})),
+        }, f"o laço entregou aos atalhos {sorted(set(observados), key=str)}"
 
     @pytest.mark.asyncio
-    async def test_fora_da_vaga_o_laco_entrega_os_do_posto(
+    async def test_fora_da_vaga_o_laco_entrega_o_posto_e_os_outros(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         observados = await self._rodar(monkeypatch, vaga=False)
-        assert observados and set(observados) == {frozenset({"cross"})}
+        assert observados and set(observados) == {
+            (P1, frozenset({"cross"})),
+            (P2, frozenset({"triangle"})),
+            (P3, frozenset({"square"})),
+        }, f"o laço entregou aos atalhos {sorted(set(observados), key=str)}"
