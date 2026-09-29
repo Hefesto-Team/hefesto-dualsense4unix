@@ -114,7 +114,7 @@ def botoes_de_cada_controle(
     """Os botões que os atalhos do PS leem neste tique, por controle: `{MAC: botões}`.
 
     Três fontes, e cada controle lê de uma só — a mesma ordem do `inputs` do
-    `state_full` (`IpcServer._controllers_enriquecidos`), que já resolve a
+    `state_full` (`_enrich_controllers_per_controller` do IPC), que já resolve a
     pergunta «o que este controle aperta agora» sem ler um nó duas vezes:
 
     1. **o dono do posto de P1** (`primary_uniq`): `botoes_do_posto`, o que o
