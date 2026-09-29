@@ -191,11 +191,15 @@ class DraftApplier:
         except (TypeError, ValueError):
             brightness = 1.0
         brightness = max(0.0, min(1.0, brightness))
-        return (
-            max(0, min(255, int(rgb_raw[0] * brightness))),
-            max(0, min(255, int(rgb_raw[1] * brightness))),
-            max(0, min(255, int(rgb_raw[2] * brightness))),
-        )
+        # A CONTA É DO DONO DA ESCALA (`LedSettings.apply_brightness`), com o
+        # piso de D-2909-O-BRILHO-TEM-PISO (29/09/2026): por conta própria, o
+        # «Aplicar» acendia abaixo do piso e o perfil reaplicado, acima dele.
+        from hefesto_dualsense4unix.core.led_control import LedSettings
+
+        cru = tuple(max(0, min(255, int(canal))) for canal in rgb_raw)
+        return LedSettings(lightbar=(cru[0], cru[1], cru[2])).apply_brightness(
+            brightness
+        ).lightbar
 
     @staticmethod
     def _player_bits_from(

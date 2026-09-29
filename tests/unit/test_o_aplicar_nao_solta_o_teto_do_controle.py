@@ -71,7 +71,7 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("importa as réguas da aba 04, que carregam o GTK")
 
-from hefesto_dualsense4unix.core.led_control import BRILHOS_DAS_LUZES
+from hefesto_dualsense4unix.core.led_control import BRILHOS_DAS_LUZES, fator_do_brilho
 from tests.unit import test_a_04_pergunta_ao_daemon_vivo as viva
 from tests.unit import test_a_marca_da_cor_nao_some as marca
 from tests.unit import test_o_brilho_das_luzes_sobrevive_ao_aplicar_e_ao_salvar as regua_do_brilho
@@ -433,7 +433,7 @@ def test_na_bateria_longa_quem_herda_o_global_fica_no_teto_depois_do_aplicar(
     esperado = _mesa_inteira(mesa)
     for n in (1, 3):
         assert esperado[n]["luzes"] == (FRACO, FRACO), (n, esperado[n])
-        assert max(esperado[n]["luz"]) <= 255 * 0.3, (n, esperado[n])
+        assert max(esperado[n]["luz"]) <= 255 * fator_do_brilho(0.3), (n, esperado[n])
     _o_aplicar_nao_mexe_e_nao_pisca(mesa, esperado, f"herda/{via}")
 
 
