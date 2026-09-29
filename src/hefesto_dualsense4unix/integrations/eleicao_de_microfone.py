@@ -83,7 +83,6 @@ from hefesto_dualsense4unix.integrations.fontes_de_captura import (
     escolher_fonte,
     fontes_dualsense,
     fontes_nativas,
-    so_hex,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -914,6 +913,10 @@ class EleitorDeMicrofone:
         if calou is None:
             logger.info("eleicao_mic_padrao_fica", ativo=ativo, motivo=volta.motivo)
             return ResultadoDaEleicao(ok=False, ativo=ativo, motivo=volta.motivo)
+        # Import PREGUIÇOSO, pela razão de `_script_do_wireplumber`: o mapa de
+        # canais cita linhas do topo deste arquivo por número.
+        from hefesto_dualsense4unix.integrations.fontes_de_captura import so_hex
+
         quem = so_hex(calou)
         if quem and self.eleito is not None and so_hex(self.eleito) == quem:
             self.eleito = None
