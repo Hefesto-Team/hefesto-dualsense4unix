@@ -707,3 +707,87 @@ class TestOSonameTemDeAbrir:
             "nome sem `.so` funcionava só enquanto a régua era `grep` na saída "
             "do `ldconfig`, e reprovaria a dependência em TODA máquina"
         )
+
+
+# ---------------------------------------------------------------------------
+# O P3 DA MÁQUINA LIMPA NO CI (28/09/2026, O-PRODUTO-EM-QUALQUER-MAQUINA-01)
+#
+# O `install-multi-distro` passou a rodar o install no Pop sem a parte gráfica
+# (o ubuntu:24.04 com o repositório do Pop por cima) e no fedora:42, e a
+# compilar cada módulo DKMS contra os headers da distro. O `smoke-multi-distro`
+# é o espelho: a mesma promessa medida por outra pergunta.
+#
+# A MORDIDA: tire a entrada do Pop de uma das duas matrizes (reprova o
+# espelho e a do Pop), tire o passo do `--so-dkms` (reprova a do dkms), ou
+# troque a impressão digital no script (reprova a da chave).
+# ---------------------------------------------------------------------------
+
+CI_YML = RAIZ / ".github" / "workflows" / "ci.yml"
+INSTALAR_COMO_USUARIA = RAIZ / "scripts" / "ci" / "instalar_como_usuaria.sh"
+
+#: A impressão digital da chave que assina o repositório do Pop!_OS, digitada
+#: aqui e não lida do script: a régua tem de ser independente do que ela mede.
+_CHAVE_DO_POP = "63C46DF0140D738961429F4E204DD8AEC33A7AFF"
+
+
+def _matriz(job: str) -> list[dict[str, object]]:
+    yaml = pytest.importorskip("yaml")
+    dados = yaml.safe_load(CI_YML.read_text(encoding="utf-8"))
+    return list(dados["jobs"][job]["strategy"]["matrix"]["include"])
+
+
+def _passos(job: str) -> list[dict[str, object]]:
+    yaml = pytest.importorskip("yaml")
+    dados = yaml.safe_load(CI_YML.read_text(encoding="utf-8"))
+    return list(dados["jobs"][job]["steps"])
+
+
+def test_as_duas_matrizes_sao_espelho() -> None:
+    def chaves(job: str) -> list[tuple[object, object, object]]:
+        return sorted(
+            (e["distro"], e["image"], e.get("fontes")) for e in _matriz(job)
+        )
+
+    assert chaves("install-multi-distro") == chaves("smoke-multi-distro"), (
+        "o install-multi-distro e o smoke-multi-distro são a mesma promessa "
+        "medida por duas perguntas; a matriz de um mudou sem a do outro"
+    )
+
+
+def test_o_pop_e_o_fedora_42_estao_na_matriz() -> None:
+    por_imagem = {(e["image"], e.get("fontes")) for e in _matriz("install-multi-distro")}
+    assert ("ubuntu:24.04", "pop") in por_imagem, (
+        "o Pop sem a parte gráfica (ubuntu:24.04 com --fontes pop) saiu do CI"
+    )
+    assert ("fedora:42", None) in por_imagem, "o fedora:42 saiu do CI"
+    assert ("debian:12", None) in por_imagem, "o debian:12, o portão duro, saiu do CI"
+    duro = [e["distro"] for e in _matriz("install-multi-distro") if not e.get("experimental")]
+    assert duro == ["debian-12"], f"o portão duro mudou sem decisão: {duro}"
+
+
+def test_as_fontes_vem_antes_das_deps_nos_dois_jobs() -> None:
+    for job in ("install-multi-distro", "smoke-multi-distro"):
+        rodam = [str(p.get("run", "")) for p in _passos(job)]
+        fontes = next(i for i, r in enumerate(rodam) if "--so-fontes" in r)
+        deps = next(i for i, r in enumerate(rodam) if "matrix.install_cmd" in r)
+        assert fontes < deps, f"{job}: as fontes do Pop entram depois das dependências"
+
+
+def test_o_install_multi_distro_compila_cada_modulo() -> None:
+    passos = [p for p in _passos("install-multi-distro") if "--so-dkms" in str(p.get("run", ""))]
+    assert len(passos) == 1, "o passo do dkms build -k saiu do install-multi-distro"
+    texto = INSTALAR_COMO_USUARIA.read_text(encoding="utf-8")
+    assert "assets/dkms/*/dkms.conf" in texto, "o passo não percorre todos os módulos"
+    assert re.search(r"^\s*77\)", texto, re.M), (
+        "o rc 77 (o pino de kernel recusando, de propósito) deixou de ser aceito"
+    )
+    assert 'dkms build -m "${nome}" -v "${ver}" -k "${k}"' in texto
+
+
+def test_a_chave_do_pop_e_conferida_pela_impressao_digital() -> None:
+    texto = INSTALAR_COMO_USUARIA.read_text(encoding="utf-8")
+    assert f'POP_CHAVE="{_CHAVE_DO_POP}"' in texto
+    assert "^fpr:::::::::${POP_CHAVE}:" in texto, (
+        "a chave baixada do servidor de chaves deixou de ser conferida pela "
+        "impressão digital antes de entrar no apt"
+    )

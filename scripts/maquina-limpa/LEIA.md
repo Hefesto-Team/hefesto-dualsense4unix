@@ -56,12 +56,14 @@ alguém; a frase do estado vazio; zero `Traceback` no log da interface do lar.
 ## P3 — `p3-conteiner.sh`
 
 O `scripts/ci/instalar_como_usuaria.sh` — o mesmo instrumento do job
-`install-multi-distro` do CI — em quatro imagens: `ubuntu:24.04` com as fontes
-do Pop desta máquina (o Pop sem a parte gráfica), `fedora:42`,
-`archlinux:latest` e `debian:12`. Com `--dkms`, mede o `dkms build -k` e o
-`make` direto do `hid-playstation` contra os headers da distro (a L6: o rc 77
-é o pino, de propósito, e o `make` direto diz se o fonte compila ali). Com
-`--bluez`, roda a receita do backport do BlueZ no Pop (a L2).
+`install-multi-distro` do CI — nas mesmas quatro imagens do CI:
+`ubuntu:24.04` com o repositório do Pop por cima (o Pop sem a parte gráfica,
+pelo `--fontes pop`, com a chave conferida pela impressão digital),
+`fedora:42`, `archlinux:latest` e `debian:12`. Com `--dkms`, roda o mesmo
+`--so-dkms` do CI (o `dkms build -k` de cada módulo contra os headers da
+distro; o rc 77 de um módulo é o pino, de propósito) e o `make` direto do
+`hid-playstation`, que diz se o fonte compila ali (a L6). Com `--bluez`, roda
+a receita do backport do BlueZ no Pop (a L2).
 
 **As travas:** a árvore nunca é montada (o roteiro do CI faz `chown -R` da
 raiz), entra por tarball só de leitura; nada de `--privileged` nem `--device`.
@@ -72,8 +74,10 @@ raiz), entra por tarball só de leitura; nada de `--privileged` nem `--device`.
 sem controle; e a sobra do uninstall, que se confere contra o que o produto
 declara deixar.
 
-O job `install-multi-distro` do CI ganha as mesmas imagens e o passo do
-`dkms build -k` na onda em que o `ci.yml` volta a esta sprint.
+O job `install-multi-distro` do CI roda as mesmas quatro imagens e o mesmo
+passo do dkms, e o `smoke-multi-distro` espelha a matriz. O Pop e o Fedora
+entram experimentais, e o passo do dkms informativo, até haver corridas
+medidas: o `debian:12` continua sendo o portão duro.
 
 ## P4 — `p4-vm.sh`
 

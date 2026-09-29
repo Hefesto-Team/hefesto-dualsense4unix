@@ -1125,11 +1125,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - distro: fedora-40
-            image: fedora:40
+          - distro: fedora-42
+            image: fedora:42
             experimental: true
             # evdev compila do sdist: precisa de gcc + Python.h (python3-devel) +
-            # linux/input.h (kernel-headers). pydantic-core tem wheel p/ o 3.12.
+            # linux/input.h (kernel-headers). pydantic-core tem wheel p/ o 3.13.
             install_cmd: dnf install -y python3 python3-pip python3-gobject gtk3 hidapi libnotify gcc python3-devel kernel-headers git
           - distro: archlinux
             image: archlinux:latest
@@ -1140,10 +1140,22 @@ jobs:
           - distro: debian-12
             image: debian:12
             install_cmd: apt-get update && apt-get install -y python3 python3-pip python3-gi gir1.2-gtk-3.0 libhidapi-hidraw0 libnotify-bin git
+          # O Pop!_OS sem a parte gráfica: o ubuntu:24.04 com o repositório do
+          # Pop por cima, que é onde o produto é medido com os controles.
+          # Experimental enquanto não houver corridas verdes dele: depende do
+          # servidor de chaves e do repositório do Pop, dois terceiros.
+          - distro: ubuntu-24.04-pop
+            image: ubuntu:24.04
+            experimental: true
+            fontes: pop
+            install_cmd: apt-get update && apt-get install -y python3 python3-pip python3-gi gir1.2-gtk-3.0 libhidapi-hidraw0 libnotify-bin git
     container:
       image: ${{ matrix.image }}
     steps:
       - uses: actions/checkout@v4
+      - name: Fontes da distro (${{ matrix.distro }})
+        if: matrix.fontes
+        run: bash scripts/ci/instalar_como_usuaria.sh --fontes ${{ matrix.fontes }} --so-fontes
       - name: Instalar deps do sistema (${{ matrix.distro }})
         run: ${{ matrix.install_cmd }}
       - uses: actions/download-artifact@v4
@@ -1230,7 +1242,7 @@ jobs:
   # ("estas três famílias") medida por duas perguntas diferentes ("o wheel
   # roda?" e "o instalador instala?").
   #
-  # PATH: só o Debian 12 reproduz o bloqueante — no Fedora 40 e no Arch o
+  # PATH: só o Debian 12 reproduz o bloqueante — no Fedora e no Arch o
   # `/usr/sbin` está no PATH de todo mundo (medido, e o script imprime qual é o
   # caso em cada corrida). É mais uma razão para o `debian-12` seguir sendo o
   # gate duro e os outros dois, informativos, como no job irmão.
@@ -1243,8 +1255,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - distro: fedora-40
-            image: fedora:40
+          - distro: fedora-42
+            image: fedora:42
             experimental: true
             install_cmd: dnf install -y python3 python3-pip python3-gobject gtk3 hidapi libnotify gcc python3-devel kernel-headers git
             presentes: --presente hidapi --presente toolchain-c
@@ -1257,10 +1269,19 @@ jobs:
             image: debian:12
             install_cmd: apt-get update && apt-get install -y python3 python3-pip python3-gi gir1.2-gtk-3.0 libhidapi-hidraw0 libnotify-bin git
             presentes: --presente hidapi
+          - distro: ubuntu-24.04-pop
+            image: ubuntu:24.04
+            experimental: true
+            fontes: pop
+            install_cmd: apt-get update && apt-get install -y python3 python3-pip python3-gi gir1.2-gtk-3.0 libhidapi-hidraw0 libnotify-bin git
+            presentes: --presente hidapi
     container:
       image: ${{ matrix.image }}
     steps:
       - uses: actions/checkout@v4
+      - name: Fontes da distro (${{ matrix.distro }})
+        if: matrix.fontes
+        run: bash scripts/ci/instalar_como_usuaria.sh --fontes ${{ matrix.fontes }} --so-fontes
       - name: Instalar deps do sistema (${{ matrix.distro }})
         run: ${{ matrix.install_cmd }}
       # O `sudo` e a usuária são criados pelo script, que é quem sabe a família.
@@ -1269,6 +1290,14 @@ jobs:
       # resposta na prova.
       - name: Executar o install.sh como usuária comum
         run: bash scripts/ci/instalar_como_usuaria.sh ${{ matrix.presentes }}
+      # O P3 DA MÁQUINA LIMPA (28/09/2026): cada módulo de assets/dkms/ contra
+      # os headers mais novos da distro. rc 0 compila; rc 77 é o pino de kernel
+      # recusando o que não foi conferido, de propósito. Informativo até haver
+      # corridas medidas em cada imagem: o hid-nintendo não tem pino, e ninguém
+      # mediu ainda o fonte dele contra o kernel do Debian 12 e do Fedora 42.
+      - name: O dkms build -k de cada módulo contra os headers da distro
+        continue-on-error: true
+        run: bash scripts/ci/instalar_como_usuaria.sh --so-dkms
       - name: Upload do log do install
         if: always()
         uses: actions/upload-artifact@v4

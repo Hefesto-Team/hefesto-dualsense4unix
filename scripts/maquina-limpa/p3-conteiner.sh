@@ -4,11 +4,11 @@
 #
 # O-PRODUTO-EM-QUALQUER-MAQUINA-01 (28/09/2026), a Parte A. É o mesmo
 # instrumento do job `install-multi-distro` do CI
-# (`scripts/ci/instalar_como_usuaria.sh`), rodado aqui com as imagens que o CI
-# ainda não tem (o Pop sem a parte gráfica e o fedora:42) e com três medidas a
-# mais: as versões que o pip entregou (L4), o `dkms build -k` contra os headers
-# da distro (L6) e o que o uninstall deixa (M4 do relatório 09). Não nasce
-# instrumento novo: o que roda lá dentro é o do CI.
+# (`scripts/ci/instalar_como_usuaria.sh`), com as mesmas imagens (o Pop sem a
+# parte gráfica, o fedora:42, o archlinux e o debian:12), o mesmo
+# `--fontes pop` e o mesmo `--so-dkms`, e com duas medidas a mais: as versões
+# que o pip entregou (L4) e o que o uninstall deixa (M4 do relatório 09). Não
+# nasce instrumento novo: o que roda lá dentro é o do CI.
 #
 # O que este degrau alcança: pacotes e pip reais de outra distro, o install
 # sem privilégio, o doctor sem aparelho, a compilação do módulo contra outro
@@ -27,11 +27,13 @@
 #   bash scripts/maquina-limpa/p3-conteiner.sh [--imagem IMG]... [--saida DIR]
 #        [--dkms] [--bluez] [--ref REF]
 #
-#   --imagem   repetível; sem ela, as quatro: ubuntu:24.04 (com as fontes do
-#              Pop desta máquina, quando existem), fedora:42, archlinux:latest
-#              e debian:12
-#   --dkms     depois do install, instala dkms e os headers da distro e mede
-#              `dkms build -k` e o `make` direto do hid-playstation (L6)
+#   --imagem   repetível; sem ela, as quatro: ubuntu:24.04 (com o repositório
+#              do Pop por cima, pelo `--fontes pop` do CI), fedora:42,
+#              archlinux:latest e debian:12
+#   --dkms     depois do install, o `--so-dkms` do CI: o `dkms build -k` de
+#              cada módulo contra os headers da distro (L6), e o `make` direto
+#              do hid-playstation, que diz se o fonte compila ali mesmo fora
+#              do pino
 #   --bluez    só no ubuntu:24.04: roda a receita do backport do BlueZ como a
 #              usuária (L2)
 #
@@ -73,12 +75,12 @@ cat > "${DENTRO}" <<'EOF'
 #!/bin/bash
 # Roda DENTRO do contêiner, como root; quem instala é a usuária comum.
 set -u
-COM_DKMS="$1"; COM_BLUEZ="$2"
+COM_DKMS="$1"; COM_BLUEZ="$2"; FONTES="$3"
 mkdir -p /opt/hefesto && tar -xzf /arvore.tgz -C /opt/hefesto
 . /etc/os-release
+[ -n "${FONTES}" ] && bash /opt/hefesto/scripts/ci/instalar_como_usuaria.sh --fontes "${FONTES}" --so-fontes
 case " ${ID} ${ID_LIKE:-} " in
   *" debian "*|*" ubuntu "*)
-    [ -f /etc/apt/sources.list.d/pop-os-release.sources ] && rm -f /etc/apt/sources.list.d/ubuntu.sources
     apt-get update -qq && apt-get install -y -qq python3 python3-venv git sudo bash >/dev/null ;;
   *" fedora "*) dnf install -y -q python3 git sudo >/dev/null ;;
   *" arch "*) pacman -Sy --noconfirm --needed python git sudo >/dev/null ;;
@@ -95,21 +97,10 @@ echo "--- doctor sem aparelho:"
 su - jogadora -c 'bash /opt/hefesto/scripts/doctor.sh 2>&1' | grep -E '^\[(FAIL|WARN)\]' || true
 find / -xdev -newer /arvore.tgz -not -path '/proc/*' 2>/dev/null | sort > /tmp/pos-install.txt
 if [ "${COM_DKMS}" = 1 ]; then
-  echo "--- o hid-playstation contra os headers desta distro (L6):"
-  case " ${ID} ${ID_LIKE:-} " in
-    *" debian "*|*" ubuntu "*)
-      v="$(apt-cache search --names-only '^linux-headers-[0-9].*-generic$' | awk '{print $1}' | sort -V | tail -1)"
-      apt-get install -y -qq dkms build-essential "${v}" >/dev/null; k="${v#linux-headers-}" ;;
-    *" fedora "*)
-      dnf install -y -q dkms kernel-devel make gcc >/dev/null; k="$(ls /usr/src/kernels | sort -V | tail -1)" ;;
-    *" arch "*)
-      pacman -S --noconfirm --needed dkms linux-headers base-devel >/dev/null; k="$(ls /usr/lib/modules | sort -V | tail -1)" ;;
-  esac
-  echo "kernel dos headers: ${k}"
-  cp -a /opt/hefesto/assets/dkms/hid-playstation /usr/src/hefesto-hid-playstation-1.0.0
-  dkms add hefesto-hid-playstation/1.0.0 >/dev/null 2>&1
-  dkms build hefesto-hid-playstation/1.0.0 -k "${k}" >/tmp/dkms-build.txt 2>&1
-  echo "rc_dkms_build=$? (77 = fora do BUILD_EXCLUSIVE_KERNEL, de propósito)"
+  echo "--- cada módulo contra os headers desta distro (L6), o mesmo passo do CI:"
+  bash /opt/hefesto/scripts/ci/instalar_como_usuaria.sh --so-dkms
+  echo "rc_dkms_build=$? (1 = algum módulo não compila; o rc 77 de um módulo é o pino, de propósito)"
+  k="$(ls /lib/modules | sort -V | tail -1)"
   b=/tmp/make-direto; rm -rf "$b"; cp -a /opt/hefesto/assets/dkms/hid-playstation "$b"
   make -C "/lib/modules/${k}/build" M="$b" modules >/tmp/make-direto.txt 2>&1 \
     || make -C "/usr/src/kernels/${k}" M="$b" modules >>/tmp/make-direto.txt 2>&1
@@ -134,20 +125,17 @@ rc_geral=0
 for img in "${IMAGENS[@]}"; do
     nome="${img%%:*}"
     montagens=(-v "${TARBALL}:/arvore.tgz:ro" -v "${DENTRO}:/p3.sh:ro")
-    # O Pop sem a parte gráfica: as fontes e as chaves desta máquina, só de
-    # leitura, e só quando existem aqui.
-    if [[ "${img}" == ubuntu:24.04 && -f /etc/apt/sources.list.d/pop-os-release.sources ]]; then
-        for f in /etc/apt/sources.list.d/system.sources /etc/apt/sources.list.d/pop-os-release.sources \
-                 /etc/apt/trusted.gpg.d/pop-keyring-2017-archive.gpg \
-                 /etc/apt/trusted.gpg.d/ubuntu-keyring-2018-archive.gpg; do
-            [[ -r "${f}" ]] && montagens+=(-v "${f}:${f}:ro")
-        done
+    # O Pop sem a parte gráfica: o repositório do Pop por cima do ubuntu:24.04,
+    # pelo mesmo `--fontes pop` do CI (nada desta máquina entra no contêiner).
+    fontes=""
+    if [[ "${img}" == ubuntu:24.04 ]]; then
+        fontes="pop"
         nome="pop"
     fi
     bluez=0
     [[ "${COM_BLUEZ}" -eq 1 && "${img}" == ubuntu:24.04 ]] && bluez=1
     printf 'P3 %s …\n' "${img}"
-    docker run --rm "${montagens[@]}" "${img}" bash /p3.sh "${COM_DKMS}" "${bluez}" \
+    docker run --rm "${montagens[@]}" "${img}" bash /p3.sh "${COM_DKMS}" "${bluez}" "${fontes}" \
         > "${SAIDA}/p3-${nome}.txt" 2>&1 || rc_geral=1
     printf '   %s\n' "$(grep -E '^rc_(install|uninstall)=' "${SAIDA}/p3-${nome}.txt" | tr '\n' ' ')"
     grep -q '^rc_install=0$' "${SAIDA}/p3-${nome}.txt" || rc_geral=1

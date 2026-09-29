@@ -30,6 +30,18 @@
 #
 # Uso (dentro do contêiner, como root):
 #     scripts/ci/instalar_como_usuaria.sh --presente hidapi
+#     scripts/ci/instalar_como_usuaria.sh --fontes pop --so-fontes
+#     scripts/ci/instalar_como_usuaria.sh --so-dkms
+#
+#   --fontes pop  antes de tudo, põe o repositório do Pop!_OS sobre o
+#                 ubuntu:24.04, com a chave conferida pela impressão digital:
+#                 é o Pop sem a parte gráfica, a distro onde o produto é medido
+#   --so-fontes   só prepara as fontes e sai (o smoke do wheel usa)
+#   --so-dkms     não instala nada do produto: instala o dkms e os headers mais
+#                 novos da distro e roda o `dkms build -k` de cada módulo de
+#                 assets/dkms/. Código 77 é o BUILD_EXCLUSIVE_KERNEL recusando
+#                 um kernel fora do pino, de propósito; qualquer outro código
+#                 diferente de 0 reprova
 #
 # Variáveis:
 #     HEFESTO_CI_USUARIA   nome da usuária criada (default: jogadora)
@@ -51,6 +63,14 @@ RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # JÁ instalou antes desta chamada. Se o instalador disser que falta um deles, a
 # régua dele está cega — é o bloqueante voltando.
 PRESENTES=()
+FONTES=""
+SO_FONTES=0
+SO_DKMS=0
+
+# A chave que assina o repositório do Pop!_OS (Pop OS ISO Signing Key). A
+# impressão digital é a da chave instalada num Pop!_OS 24.04, conferida em
+# 28/09/2026; a chave baixada que não bater com ela reprova.
+POP_CHAVE="63C46DF0140D738961429F4E204DD8AEC33A7AFF"
 
 # Sentinela do vazamento de ambiente: se esta variável aparecer dentro da
 # sessão de login, o `su -` deixou de trocar o ambiente e o PATH que medimos é
@@ -62,7 +82,10 @@ while (( $# )); do
     case "$1" in
         --presente)  PRESENTES+=("$2"); shift 2 ;;
         --presente=*) PRESENTES+=("${1#*=}"); shift ;;
-        -h|--help)   sed -n '2,40p' "${BASH_SOURCE[0]}"; exit 0 ;;
+        --fontes)    FONTES="$2"; shift 2 ;;
+        --so-fontes) SO_FONTES=1; shift ;;
+        --so-dkms)   SO_DKMS=1; shift ;;
+        -h|--help)   sed -n '2,53p' "${BASH_SOURCE[0]}"; exit 0 ;;
         *) printf 'ERRO: argumento desconhecido: %s\n' "$1" >&2; exit 2 ;;
     esac
 done
@@ -88,6 +111,113 @@ fi
 [[ "${familia}" != "nenhum" ]] || falha "não reconheço o gerenciador de pacotes desta imagem (ID=${ID:-?})"
 
 titulo "contêiner: ${PRETTY_NAME:-?} (família ${familia})"
+
+# ---------------------------------------------------------------------------
+# 1b. As fontes do Pop!_OS, quando pedidas
+#
+# O repositório `release` do Pop por cima do ubuntu:24.04: traz o kernel, os
+# headers e os pacotes que o Pop troca. A chave vem do servidor de chaves do
+# Ubuntu e só vale se a impressão digital for a de POP_CHAVE.
+# ---------------------------------------------------------------------------
+preparar_fontes_do_pop() {
+    [[ "${familia}" == apt && "${ID:-}" == ubuntu ]] \
+        || falha "--fontes pop só vale sobre uma imagem do Ubuntu (ID=${ID:-?})"
+    titulo "fontes do Pop!_OS sobre o ${PRETTY_NAME:-?}"
+    apt-get update -qq && apt-get install -y -qq ca-certificates curl gnupg >/dev/null
+    local chave=/usr/share/keyrings/pop-os-release.gpg
+    curl -fsSL --retry 3 \
+        "https://keyserver.ubuntu.com/pks/lookup?op=get&options=mr&search=0x${POP_CHAVE}" \
+        | gpg --dearmor > "${chave}"
+    gpg --show-keys --with-colons "${chave}" | grep -q "^fpr:::::::::${POP_CHAVE}:" \
+        || falha "a chave baixada não tem a impressão digital do Pop (${POP_CHAVE})"
+    cat > /etc/apt/sources.list.d/pop-os-release.sources <<FONTES
+Types: deb
+URIs: http://apt.pop-os.org/release
+Suites: ${VERSION_CODENAME:-noble}
+Components: main
+Signed-By: ${chave}
+FONTES
+    apt-get update -qq
+    printf 'repositório do Pop ligado (chave %s)\n' "${POP_CHAVE}"
+}
+
+case "${FONTES}" in
+    "") ;;
+    pop) preparar_fontes_do_pop ;;
+    *) falha "--fontes só conhece «pop» (pediram «${FONTES}»)" ;;
+esac
+(( SO_FONTES == 0 )) || exit 0
+
+# ---------------------------------------------------------------------------
+# 1c. O `dkms build -k` de cada módulo contra os headers desta distro
+#
+# Responde a uma pergunta que o install no contêiner não alcança: o fonte de
+# cada módulo compila contra o kernel desta distro, e o pino de kernel recusa o
+# que não foi conferido? O kernel é o dos headers mais novos que a distro
+# oferece (o do contêiner é o do runner, que não interessa).
+# ---------------------------------------------------------------------------
+dkms_contra_os_headers() {
+    titulo "o dkms build -k de cada módulo contra os headers da distro"
+    case "${familia}" in
+        apt)
+            apt-get update -qq
+            local pacote=linux-headers-amd64
+            if [[ "${ID:-}" != debian ]]; then
+                pacote="$(apt-cache search --names-only '^linux-headers-[0-9].*-generic$' \
+                    | awk '{print $1}' | sort -V | tail -1)"
+            fi
+            [[ -n "${pacote}" ]] || falha "a distro não oferece headers de kernel"
+            apt-get install -y -qq dkms build-essential "${pacote}" >/dev/null ;;
+        dnf)
+            dnf install -y -q dkms kernel-devel make gcc elfutils-libelf-devel >/dev/null ;;
+        pacman)
+            pacman -Sy --noconfirm --needed dkms linux-headers base-devel >/dev/null ;;
+    esac
+    local k=""
+    if [[ -d /usr/src/kernels ]]; then
+        # O kernel-devel do Fedora não traz o /lib/modules/<k>/build: é o
+        # kernel-core que o traz, e ele não entra num contêiner.
+        k="$(ls /usr/src/kernels | sort -V | tail -1)"
+        [[ -n "${k}" ]] && mkdir -p "/lib/modules/${k}" \
+            && ln -sfn "/usr/src/kernels/${k}" "/lib/modules/${k}/build"
+    else
+        k="$(ls /lib/modules | sort -V | tail -1)"
+    fi
+    [[ -n "${k}" && -e "/lib/modules/${k}/build/Makefile" ]] \
+        || falha "os headers instalados não deixaram um /lib/modules/<k>/build"
+    printf 'kernel dos headers: %s\n' "${k}"
+    local conf dir nome ver rc reprovados=()
+    for conf in "${RAIZ}"/assets/dkms/*/dkms.conf; do
+        dir="$(dirname "${conf}")"
+        nome="$(sed -n 's/^PACKAGE_NAME="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "${conf}")"
+        ver="$(sed -n 's/^PACKAGE_VERSION="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "${conf}")"
+        rm -rf "/usr/src/${nome}-${ver}"
+        cp -a "${dir}" "/usr/src/${nome}-${ver}"
+        dkms add -m "${nome}" -v "${ver}" >/dev/null 2>&1 || true
+        set +e
+        dkms build -m "${nome}" -v "${ver}" -k "${k}" > "/tmp/dkms-${nome}.log" 2>&1
+        rc=$?
+        set -e
+        case "${rc}" in
+            0)  printf '  %-26s compila (rc 0)\n' "${nome}" ;;
+            77) printf '  %-26s fora do pino de kernel, de propósito (rc 77)\n' "${nome}" ;;
+            *)  printf '  %-26s NÃO compila (rc %s); o fim do log:\n' "${nome}" "${rc}"
+                tail -15 "/tmp/dkms-${nome}.log" | sed 's/^/      /'
+                reprovados+=("${nome}") ;;
+        esac
+        if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+            printf -- '- `%s` contra `%s`: rc %s\n' "${nome}" "${k}" "${rc}" >> "${GITHUB_STEP_SUMMARY}"
+        fi
+    done
+    (( ${#reprovados[@]} == 0 )) \
+        || falha "módulo(s) que não compilam contra ${k}: ${reprovados[*]}"
+    titulo "APROVADO: todo módulo compila ou é recusado pelo pino em ${k}"
+}
+
+if (( SO_DKMS )); then
+    dkms_contra_os_headers
+    exit 0
+fi
 
 # ---------------------------------------------------------------------------
 # 2. O mínimo para EXISTIR uma usuária comum com sudo
