@@ -21,13 +21,6 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 05-vibracao.html
-- **28/09/2026** — A-TELA-PERGUNTA-AO-DONO-01: o «Testar» da coluna que está
-  vibrando acende (`data-campo="em-teste"`, com o `aria-pressed`), e quem
-  responde é o `em_teste()` do dono; o «Parar» apaga. Espera a sessão dos
-  desenhos. Até publicar, o pacote já manda o `em-teste` e a página publicada
-  não tem onde pintá-lo: o botão fica como é hoje, sem aceso.
-
 ## 10-perfis.html
 - **28/09/2026** — a coluna do `movimento` passa a se chamar «comandos virtuais» na dica do cabeçalho: ela guarda a Mira Virtual, a Inclinação e o Cursor ou os Botões do touchpad (NO-MODO-XBOX-TUDO-FUNCIONA-01). Até publicar, a dica da tela dela diz «mira virtual», e a coluna acende igual com qualquer um dos três.
 
