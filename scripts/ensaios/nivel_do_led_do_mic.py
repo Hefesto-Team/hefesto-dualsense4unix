@@ -46,9 +46,10 @@ POR QUE PELO DAEMON, E NÃO POR UM `open()` DO HIDRAW
 -----------------------------------------------------
 O daemon reafirma o report de saída continuamente. Uma escrita crua feita por
 fora seria sobrescrita em milissegundos pelo report seguinte — a luz piscaria e
-o instrumento imprimiria "aplicado" sem ter aplicado. É a armadilha nº 3 do
-`GUIA.md`, e o caminho certo é o do produto: quem segura o valor entre um
-report e o próximo é o `_mic_led_desejado`, dentro do daemon.
+o instrumento imprimiria "aplicado" sem ter aplicado. É a armadilha do
+instrumento que briga com o produto (`docs/method/COMO-OLHAR-A-TELA.md`), e o
+caminho certo é o do produto: quem segura o valor entre um report e o próximo
+é o `_mic_led_desejado`, dentro do daemon.
 
 COMO SE LÊ O RESULTADO
 ----------------------

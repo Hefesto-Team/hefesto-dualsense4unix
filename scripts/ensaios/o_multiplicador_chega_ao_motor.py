@@ -27,11 +27,11 @@ com um daemon sintético carregando os números dela), nunca de um `150` e um
 
 O par é entregue pelo `rumble.set` do daemon VIVO, que é a porta de escrita
 desta casa — nada de `os.write` cru disputando o hidraw com quem já o segura
-(a armadilha número 3 do `GUIA.md`: *"o instrumento pode estar brigando com o
-produto"*). O `rumble.set` aplica o degrau global POR CIMA do par, e isso não
-atrapalha: **um fator comum aos dois motores não muda a razão entre eles**, e a
-razão é a assinatura da barra. O degrau vigente sai impresso no cabeçalho, como
-manda a casa.
+(a armadilha de `docs/method/COMO-OLHAR-A-TELA.md`: *"o instrumento pode estar
+brigando com o produto"*). O `rumble.set` aplica o degrau global POR CIMA do
+par, e isso não atrapalha: **um fator comum aos dois motores não muda a razão
+entre eles**, e a razão é a assinatura da barra. O degrau vigente sai impresso
+no cabeçalho, como manda a casa.
 
 Os passos, e cada um é uma pergunta para a mão dela::
 
@@ -256,8 +256,8 @@ def main() -> int:
     # `rumble_active=(0,0)`. E com o rumble FIXADO o `apply_game_rumble`
     # descarta o FF do jogo (primeira linha dele) — ou seja, o instrumento
     # saía deixando a máquina dela SEM vibração em jogo nenhum, em silêncio.
-    # É a armadilha 3 do `GUIA.md` na forma mais cara: o instrumento
-    # brigando com o produto e ninguém vendo.
+    # É a armadilha de `docs/method/COMO-OLHAR-A-TELA.md` na forma mais cara:
+    # o instrumento brigando com o produto e ninguém vendo.
     if antes is None:
         ipc_bridge.rumble_passthrough(True)
     else:

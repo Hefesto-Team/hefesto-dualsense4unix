@@ -32,8 +32,8 @@
 #
 # É biblioteca de DEFINIÇÕES: sourceá-la não instala nada. Quem chama, decide.
 # O `install-dev.sh` NUNCA executa o `install.sh` — sourcear esta lib é o que
-# torna isso possível, e a regra do `GUIA.md` ("nunca rode install.sh na
-# árvore de dev") continua de pé, literal.
+# torna isso possível, e a regra "nunca rode install.sh na árvore de dev"
+# continua de pé, literal.
 #
 # O QUE NÃO MUDA AO LER DAQUI
 # ---------------------------

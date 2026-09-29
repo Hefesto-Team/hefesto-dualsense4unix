@@ -23,8 +23,8 @@ POR QUE ELE MORA EM ``scripts/`` E NÃO EM ``src/hefesto_dualsense4unix/interfac
 ----------------------------------------------------------------------
 ``layout/`` é ``.gitignore:108``. Logo tudo que mora lá **não é versionado
 e não viaja em worktree** — ``git worktree add`` não copia arquivo ignorado. É a
-mesma cicatriz estrutural do ``GUIA.md`` (``.gitignore:90``) que fez o
-``scripts/portoes.sh`` existir, e ela já cobrou aqui: o lançador ``interface``
+mesma cicatriz estrutural que fez o ``scripts/portoes.sh`` existir (a lista de
+portões morava num arquivo ignorado), e ela já cobrou aqui: o lançador ``interface``
 carrega um caminho absoluto da máquina dela justamente para achar o piloto de
 volta. Um instrumento permanente — que o hook cita e que toda árvore de agente
 precisa ter — tem de ser versionado. Este é.

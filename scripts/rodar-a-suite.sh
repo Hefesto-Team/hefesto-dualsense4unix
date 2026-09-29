@@ -43,9 +43,9 @@ PY="${PY:-$RAIZ/.venv/bin/python}"
 
 mkdir -p "$SAIDA"
 # A LISTA NASCE DESTA ÁRVORE. Ver a armadilha 3 no cabeçalho.
-# shellcheck disable=SC2012  # os nomes desta casa são ASCII; `ls|sort` é a
-# forma que o GUIA.md documenta há semanas, e trocá-la por `find` mudaria a
-# ORDEM — que é o que decide a divisão em partes.
+# shellcheck disable=SC2012  # os nomes desta casa são ASCII; a lista é
+# `ls tests/unit/test_*.py | sort`, e trocá-la por `find` mudaria a ORDEM —
+# que é o que decide a divisão em partes.
 #
 # E A ORDEM É A MESMA EM TODA MÁQUINA, pelo `LC_ALL=C` (27/09/2026). O `sort`
 # segue o idioma de quem roda: em pt_BR ele ignora o `_` e a divisão sai outra

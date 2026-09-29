@@ -9,8 +9,9 @@ para 1, 6, 7 e 8. `grep -rl aabbcc tests/ | wc -l` achou 91 arquivos de teste
 usando a faixa; algum deles escreveu no disco dela em vez de num diretório
 isolado (T-06 também rastreia a CAUSA — ver `docs/process/agentes/` da leva).
 
-As faixas sintéticas da casa (GUIA.md, `scripts/check_test_data.sh`),
-verificadas nas duas grafias — com `:` e sem:
+As faixas sintéticas da casa (o dono é `core/faixa_sintetica.py`, e o
+`scripts/check_test_data.sh` as repete), verificadas nas duas grafias — com
+`:` e sem:
 
   aabbcc  / aa:bb:cc
   02fe00  / 02:fe:00
@@ -18,7 +19,7 @@ verificadas nas duas grafias — com `:` e sem:
 
 OS CHAMADORES, e por que são TRÊS lugares diferentes (LUZ-CEGA-01/E8,
 25/08/2026 — até aqui este portão não tinha chamador NENHUM: nem CI, nem
-gancho, nem lista do ``GUIA.md``. Portão que ninguém chama é o defeito
+gancho, nem lista de portões. Portão que ninguém chama é o defeito
 `A-CASA-SABE-E-O-PRODUTO-NÃO-FAZ`):
 
 * ``--arvore`` (o DEFAULT, e o que roda no CI) varre a **árvore versionada**

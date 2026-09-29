@@ -7,8 +7,7 @@ POR QUE ELE NASCEU, e o que ele NÃO é
 docstring dizia que era.** O autoritativo é
 ``tests/unit/test_docs_mac_anonimato.py``, de **15/08/2026**, que já cobria as
 três formas — separada, colada e **binária**, nas duas ordens de byte. O erro
-de diagnóstico foi olhar só os scripts do bloco "Antes de fechar qualquer leva"
-do ``GUIA.md`` e não ver o teste.
+de diagnóstico foi olhar só os scripts da lista de portões e não ver o teste.
 
 **Então por que este existe.** As réguas são diferentes, e a diferença foi
 medida em 25/08/2026. O irmão só entra em contrato quando os **três primeiros

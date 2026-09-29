@@ -19,7 +19,8 @@ decisões, que moram aqui para não nascerem três vezes:
    medição diferente.
 3. **A porta.** `comum.abrir_no_hidraw` — o broker — com o daemon VIVO. Não há
    `os.open` direto: na mesa com o co-op ligado ele mede `EACCES`, não o
-   aparelho (armadilha 3 do `GUIA.md`).
+   aparelho (a armadilha do instrumento que briga com o produto, em
+   `docs/method/COMO-OLHAR-A-TELA.md`).
 4. **O martelo.** O daemon reescreve alguns desses bytes a cada report dele:
    `_build_common` manda `flag2` com o bit do brilho e `common[42] = 0` sempre
    que é dono das luzes, e manda fone e alto-falante juntos sempre que é dono
