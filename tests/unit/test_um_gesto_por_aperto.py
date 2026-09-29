@@ -12,7 +12,7 @@ a 60 Hz (`lifecycle`), e cada disparo desses recria o vpad e grava o perfil no
 meio da partida. `{ps, dpad_up, r3}` fazia o mesmo desde antes de a máscara
 existir.
 
-MORDE: devolver `if self._last_fired == combo` ao laço de `observe`.
+MORDE: devolver `if aperto.last_fired == combo` ao laço de `_observe_o_aperto`.
 """
 from __future__ import annotations
 

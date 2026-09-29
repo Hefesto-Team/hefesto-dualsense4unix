@@ -499,7 +499,9 @@ class TestOP2SeguraOsAtalhosNaEspera:
         """Na espera, os atalhos são de todos os que estão na mesa (item 5, 28/09).
 
         Até 28/09 esta régua pedia o contrário (as «testemunhas» mudas): os
-        atalhos eram de um controle só. A decisão dela de 27/09 revogou isso.
+        atalhos eram de um controle só. A decisão dela de 27/09 (resposta 11,
+        D-2709-O-PS-R3-EM-QUALQUER-CONTROLE) revogou isso para o PS + R3, e o
+        item 5 da O-MODO-XBOX-NAO-E-QUEDA-02 estende ao PS sozinho.
         """
         bancada = montar_atalhos(monkeypatch, kernel, quantos, transporte)
         _fora_dentro_do_prazo(bancada, P1)

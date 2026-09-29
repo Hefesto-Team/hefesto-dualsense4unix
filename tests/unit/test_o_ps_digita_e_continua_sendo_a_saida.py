@@ -506,7 +506,7 @@ def test_o_combo_continua_ganhando_do_solo(steam):
 
     Aqui não há dublê de `HotkeyManager`: é o detector de verdade, com o combo
     de fábrica (`DEFAULT_COMBO_NEXT`), porque quem suprime o solo é ele
-    (`_ps_combo_fired`) e não o callback.
+    (o `ps_combo_fired` do aperto do controle) e não o callback.
     """
     teclado, dev = _teclado()
     daemon = _daemon(teclado=teclado, escolha_do_perfil="KEY_F11")
