@@ -158,11 +158,11 @@ def uhid(monkeypatch: pytest.MonkeyPatch) -> _UhidPorFd:
             return
         real_set_blocking(fd, blocking)
 
-    monkeypatch.setattr(uhid_gamepad.os, "open", _open)
-    monkeypatch.setattr(uhid_gamepad.os, "close", _close)
-    monkeypatch.setattr(uhid_gamepad.os, "set_blocking", _set_blocking)
-    monkeypatch.setattr(uhid_gamepad.os, "write", _write)
-    monkeypatch.setattr(uhid_gamepad.os, "read", _read)
+    monkeypatch.setattr(os, "open", _open)
+    monkeypatch.setattr(os, "close", _close)
+    monkeypatch.setattr(os, "set_blocking", _set_blocking)
+    monkeypatch.setattr(os, "write", _write)
+    monkeypatch.setattr(os, "read", _read)
     return fake
 
 
