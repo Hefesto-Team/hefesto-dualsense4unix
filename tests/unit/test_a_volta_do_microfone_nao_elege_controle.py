@@ -634,10 +634,17 @@ async def test_o_no_que_morre_passa_o_padrao_a_quem_esta_no_ar(
       `passar_o_padrao` em `hotkey.passar_o_padrao_do_no_morto`): o azul não
       herda;
     - sem o desfecho novo (`_e_canal_de_controle` em `a_heranca_do_no_morto`):
-      o veredicto sai «nenhum», e o vermelho calado fica com o padrão.
+      o veredicto sai «nenhum», e o vermelho calado fica com o padrão;
+    - sem o filtro da mesa em `hotkey._quem_herda_o_padrao`: o roxo, que saiu,
+      é o primeiro da ordem, e a porta pede o canal dele.
     """
     cena = await _cena_do_no(mesa, monkeypatch, no_ar=(AZUL, ROXO))
     assert _eleitor(cena.m).eleito == ROXO
+    # O pedidor espião: a fixture devolve o de antes da régua na saída.
+    pedidos: list[str] = []
+    elm.registrar_pedidor_de_canal(
+        lambda uniq: pedidos.append(_n(uniq)) or cena.m.sub.pedir_canal(uniq)
+    )
     _o_roxo_morre(
         cena,
         {
@@ -653,6 +660,7 @@ async def test_o_no_que_morre_passa_o_padrao_a_quem_esta_no_ar(
     assert cena.m.pw.escritas == [_canal(AZUL)], cena.m.pw.escritas
     assert cena.m.pw.ativo == _canal(AZUL)
     assert _eleitor(cena.m).eleito == AZUL
+    assert _n(ROXO) not in pedidos, "a porta pediu o canal de quem saiu da mesa"
     denuncias = [c for ev, c in cena.avisos if ev == "bt_mic_heranca_do_no_morto"]
     assert len(denuncias) == 1 and denuncias[0]["curado"] is True, cena.avisos
 
