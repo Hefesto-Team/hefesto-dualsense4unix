@@ -1,29 +1,26 @@
 #!/usr/bin/env python3
 """conexoes_vivas — a aba 08 (Conexões) viva, pelo molde da Controles.
 
-O mockup `08-conexoes.html` num `WebKit2.WebView` dentro de uma janela GTK3, com
-o Python pintando e ouvindo. **Este arquivo é fino de propósito**: a janela, as
-duas pontes e a guarda de carga são de `gui/ponte_da_tela.py`, e os valores e os
-endereços são de `gui/aba_conexoes.py`. O que sobra aqui é o que só o piloto tem:
-o laço do tique, o dublê e a régua de custo.
+A página publicada `08-conexoes.html` num `WebKit2.WebView` dentro de uma janela
+GTK3, com o Python OUVINDO. **Este arquivo é fino de propósito**: a janela, as
+duas pontes e a guarda de carga são de `gui/ponte_da_tela.py`, e quem PINTA a
+aba é o pacote `interface/pacotes/a08_conexoes.py`, pelo piloto das dez abas
+(`hefesto_vivo.py`). O que sobra aqui é o que só esta bancada tem: a prova do
+gesto, a foto e a régua de custo da leitura do estado.
 
-    ./conexoes_vivas.py --oculta --duble mesa.json --segundos 20 --foto /tmp/a.png
+    ./conexoes_vivas.py --oculta --duble estado.json --segundos 20 --foto <pasta>/a.png
 
-POR QUE ELE MORA EM `src/hefesto_dualsense4unix/interface/` E NÃO É ENTREGÁVEL
-------------------------------------------------------------------
-`layout/` é `.gitignore:108`. Este arquivo NÃO viaja em worktree e NÃO é
-commitável — é o mesmo estatuto do `controles_vivos.py`, e é por isso que tudo
-que vale para as dez abas saiu daqui para `src/`. Quem quiser rodá-lo na árvore
-dela copia-o para lá; quem quiser MEDIR o que ele faz não precisa dele: a régua
-(`tests/unit/test_regua_de_tela_a_aba_conexoes.py`) chama `gui/aba_conexoes.py`
-direto, que é onde mora o que se prova.
+A PINTURA DESTA BANCADA SAIU EM 28/09/2026. Ela pintava na gramática
+`data-v`/`data-g` de 26/08 (`gui/aba_conexoes.pintura`), que a página aprovada
+não fala mais: nenhum endereço dela existia na página, e a remontagem trocava o
+`innerHTML` do acordeão e das colunas do exame pelo HTML velho. A tela pintada
+se olha pelo piloto — `hefesto_vivo.py --oculta --abre 08-conexoes.html` —,
+sempre no lar de mentira.
 
 O DAEMON PODE ESTAR DESLIGADO, E ISSO NÃO IMPEDE NADA
 -----------------------------------------------------
-`--duble` lê um `state_full` de arquivo e `--mesa-duble` lê a mesa de rádio (os
-adaptadores, os vizinhos, o exame) de outro. Foi assim que esta aba se ligou
-inteira com o `hefesto-chave estavel` desligado: nenhum byte foi ao aparelho,
-nenhum `/sys` foi lido, e nenhum perfil dela foi escrito.
+`--duble` lê um `state_full` de arquivo em vez de perguntar ao daemon: nenhum
+byte vai ao aparelho, nenhum `/sys` é lido, e nenhum perfil dela é escrito.
 """
 from __future__ import annotations
 
@@ -45,16 +42,15 @@ gi.require_version("WebKit2", "4.1")
 
 from gi.repository import GLib, Gtk  # noqa: E402
 
-from hefesto_dualsense4unix.gui import aba_conexoes  # noqa: E402
 from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402
 
 PAGINA = RAIZ_DEV / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "08-conexoes.html"  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
 TITULO_ESPERADO = "aba CONEXÕES"
 TIQUE_MS = 100
 
-#: O OUVINTE DOS GESTOS, e ele é separado da pintura de propósito: o
+#: O OUVINTE DOS GESTOS, e ele se instala sozinho de propósito: o
 #: ``--prova-gesto`` roda com ``--sem-ponte`` (o gesto real mexe no rádio dela),
-#: e sem a pintura o ouvinte tinha de continuar lá — antes, ``--sem-ponte``
+#: e sem o tique o ouvinte tinha de continuar lá — antes, ``--sem-ponte``
 #: saía antes de instalar qualquer coisa e a prova nunca rodava.
 #:
 #: O ENDEREÇO É ``data-gesto`` — 23/09/2026, TRANSPLANTE-DA-SECAO-01. O ouvinte
@@ -144,120 +140,14 @@ PROVA_DO_GESTO = r"""
 })()
 """
 
-#: O bootstrap da aba. As três escritas DEVOLVEM quantos valores escreveram — 0
-#: quando o endereço não existe —, e é isso que faz a conta do fim ser uma RÉGUA
-#: e não um enfeite: com `n++` cego, arrancar um endereço não mudava o número e a
-#: régua aprovava uma pintura que não pintava nada.
-BOOTSTRAP = r"""
-window.HEF = (function(){
-  const qa = (s,r)=>Array.from((r||document).querySelectorAll(s));
-  const q  = (s,r)=>(r||document).querySelector(s);
-  function manda(o){
-    try { window.webkit.messageHandlers.hefesto.postMessage(JSON.stringify(o)); }
-    catch(e){}
-  }
-
-  // Escreve TEXTO, e só em folha. Escrever textContent num container APAGA os
-  // filhos — foi assim que uma régua desta casa mediu 43 ms contra 0,66.
-  function txt(el, valor){
-    if(!el) return 0;
-    if(el.textContent !== valor) el.textContent = valor;
-    return 1;
-  }
-  // TRAVAR É ESCRITA, e conta na régua: um botão que a tela oferece e o produto
-  // recusa é mentira. O `disabled` é o "não dá" dito no lugar certo.
-  function trava(el, off){
-    if(!el) return 0;
-    if(el.disabled !== !!off) el.disabled = !!off;
-    return 1;
-  }
-
-  // ONDE CADA BLOCO MORA. O Python manda NOMES; os seletores da folha dela
-  // ficam deste lado, num lugar só.
-  // CADA REMONTA DEVOLVE QUANTOS ENDEREÇOS INSTALOU, não 1. Devolver 1 por
-  // bloco era a régua mentindo por baixo: a primeira versão desta aba relatou
-  // "26 valores" enquanto escrevia 60, e uma pintura que perdesse metade dos
-  // endereços continuaria devolvendo 6. Conta-se o que ficou no DOM.
-  const contar = el => el ? qa('[data-v]', el).length : 0;
-  const dentro = (sel, html) => {
-    const c = q(sel); if(!c) return 0;
-    c.innerHTML = html; return contar(c);
-  };
-  const ONDE = {
-    controles:   html => dentro('.gc', html),
-    exame:       html => dentro('.col-exame', html),
-    ordem:       html => dentro('.col-ordem', html),
-    vizinhos:    html => dentro('.vizinhos', html),
-    // A TABELA GUARDA O CABEÇALHO. Trocar o innerHTML da <table> levaria o
-    // <tr><th> junto, e a coluna perderia o nome — o navegador ainda insere um
-    // <tbody> que ninguém escreveu, então mexer por tbody também não serve.
-    adaptadores: html => {
-      const tab = q('table.tab'); if(!tab) return 0;
-      for(const tr of qa('tr', tab)) if(!q('th', tr)) tr.remove();
-      const cab = q('tr', tab); if(!cab) return 0;
-      cab.insertAdjacentHTML('afterend', html);
-      return contar(tab);
-    },
-    // AS PISTAS ENTRAM ANTES DO EIXO, sem embrulho novo: `.sub-secao` é bloco
-    // simples e um <div> a mais mudaria o desenho dela para não mudar nada que
-    // se veja.
-    pistas: html => {
-      const sub = q('.sub-secao'); if(!sub) return 0;
-      const eixo = q('.eixo', sub); if(!eixo) return 0;
-      for(const p of qa('.pista', sub)) p.remove();
-      eixo.insertAdjacentHTML('beforebegin', html);
-      return qa('.pista [data-v]', sub).length;
-    }
-  };
-
-  function pinta(pacote){
-    let n = 0;
-    for(const nome in (pacote.remonta||{})){
-      const por = ONDE[nome];
-      n += por ? por(pacote.remonta[nome]) : 0;
-    }
-    for(const end in (pacote.valores||{})){
-      n += txt(q('[data-v="'+end+'"]'), pacote.valores[end]);
-    }
-    // A TRAVA TEM ENDEREÇO PRÓPRIO (`data-trava`), como o valor tem o dele.
-    // Achá-la por classe + alvo era um seletor que a folha DELA podia quebrar
-    // sem ninguém notar: o botão continuaria desenhado e a trava sumiria.
-    for(const end in (pacote.travas||{})){
-      n += trava(q('[data-trava="'+end+'"]'), pacote.travas[end]);
-    }
-    if(n !== window.__hefN){ window.__hefN = n; manda({gesto:'pintou', n:n}); }
-    return n;
-  }
-
-  window.__hefN = -1;
-  return {pinta: pinta,
-          quem: function(){ return document.title + '|' + qa('.gc-item').length; }};
-})();
-'HEF-PRONTO'
-"""
-BOOTSTRAP = OUVINTE + BOOTSTRAP
+#: O bootstrap da aba: o ouvinte, e o sinal de que a página o recebeu.
+BOOTSTRAP = OUVINTE + "\n'HEF-PRONTO'\n"
 
 
 def _ler_json(caminho: str | None) -> Any:
     if not caminho:
         return None
     return json.loads(pathlib.Path(caminho).read_text(encoding="utf-8"))
-
-
-class _Anonimo:
-    """Um objeto de atributos a partir de um dicionário — o dublê da mesa.
-
-    Os `Adaptador`/`RadioUsb`/`Item`/`Ordem` do produto são dataclasses frozen; o
-    dublê precisa da mesma FORMA, não da mesma classe. Construir os reais aqui
-    obrigaria o piloto a importar cinco módulos para inventar dado de mentira.
-    """
-
-    def __init__(self, bruto: dict[str, Any]) -> None:
-        for chave, valor in bruto.items():
-            setattr(self, chave, _Anonimo(valor) if isinstance(valor, dict) else valor)
-
-    def __getattr__(self, _nome: str) -> Any:
-        return ""
 
 
 def _dono_do_gesto(nome: str) -> str | None:
@@ -283,28 +173,14 @@ class Janela:
         self.pronto = False
         self.voltas = 0
         self.custos: list[float] = []
-        self.custos_ipc: list[float] = []
-        self.custos_tela: list[float] = []
-        self.valores: list[int] = []
         self.gestos: list[dict[str, Any]] = []
         self.sem_dono: list[str] = []
         self.erros_js: list[str] = []
         self.prova_nomes: list[str] = []
         self.prova_cinzas: list[str] = []
         self.prova_moldes: list[str] = []
-        self.remontagens = 0
-        self.chave: tuple[Any, ...] = ()
         self.rss: list[int] = []
         self._t0 = 0.0
-
-        mesa = _ler_json(args.mesa_duble) or {}
-        self.adaptadores = [_Anonimo(a) for a in mesa.get("adaptadores", [])]
-        self.radios = [_Anonimo(r) for r in mesa.get("radios", [])]
-        self.itens = [_Anonimo(i) for i in mesa.get("exame", [])]
-        self.ordem = _Anonimo(mesa["ordem"]) if mesa.get("ordem") else None
-        self.ocupacoes = {c: _Anonimo(o) for c, o in (mesa.get("ocupacoes") or {}).items()}
-        self.apelidos = mesa.get("apelidos") or {}
-        self.declarados = mesa.get("declarados") or {}
 
         self.tela = JanelaDaAba(
             arquivo=PAGINA,
@@ -321,7 +197,7 @@ class Janela:
     # -- carga -------------------------------------------------------------
     def _saiu_da_aba(self, titulo: str) -> None:
         self.pronto = False
-        print(f"[fora da Conexões] {titulo} — o mockup estático; a pintura pausou.")
+        print(f"[fora da Conexões] {titulo} — o mockup estático; o tique pausou.")
 
     def _instalar(self) -> None:
         if self.args.secao:
@@ -334,8 +210,8 @@ class Janela:
             print("MORDIDA: a ponte está DESLIGADA — a tela fica na cena fixa do mockup.")
             self.pronto = True
             if self.args.prova_gesto:
-                # Sem pintura, mas COM o ouvinte: a prova do gesto mede o
-                # caminho tela → Python, e ele não passa pela pintura.
+                # Sem o tique, mas COM o ouvinte: a prova do gesto mede o
+                # caminho tela → Python, e ele não passa pelo tique.
                 self.ponte.rodar(OUVINTE)
                 self._marcar_gestos_de_mentira()
             self._agendar_saida()
@@ -350,22 +226,6 @@ class Janela:
             self._t0 = time.monotonic()
             self._tique()
             GLib.timeout_add(TIQUE_MS, self._tique)
-            if self.args.arranca_enderecos:
-                # A MORDIDA DO ENDEREÇO: arranca os `data-v` e vê a pintura
-                # DESABAR. Um endereço a menos não levanta erro nenhum no
-                # WebKit — o `querySelector` devolve `null` e o valor
-                # simplesmente não é escrito. Se a conta não cair, os endereços
-                # não estavam sendo usados.
-                GLib.timeout_add(
-                    2000,
-                    lambda: (
-                        self.ponte.rodar(
-                            "for(const e of document.querySelectorAll('[data-v]'))"
-                            " delete e.dataset.v; window.__hefN=-1;"
-                        ),
-                        False,
-                    )[1],
-                )
             if self.args.prova_gesto:
                 self._marcar_gestos_de_mentira()
             self._agendar_saida()
@@ -405,43 +265,17 @@ class Janela:
             return None
 
     def _tique(self) -> bool:
+        """Uma volta: a leitura do estado, com o custo dela.
+
+        A pintura é do pacote `a08_conexoes`, pelo piloto; aqui se mede o que
+        cada volta custa para perguntar ao daemon (ou ler o dublê).
+        """
         if not self.pronto:
             return True
         t0 = time.perf_counter()
-        estado = self._estado()
+        self._estado()
         t_ipc = (time.perf_counter() - t0) * 1000
-        if estado is None:
-            estado = {"controllers": []}
-
-        controles = aba_conexoes.controles_do_estado(estado)
-        chave = aba_conexoes.chave_da_mesa(controles, self.adaptadores, self.radios)
-        remontar = chave != self.chave
-
-        t1 = time.perf_counter()
-        p = aba_conexoes.pintura(
-            estado,
-            controles=controles,
-            itens_do_exame=self.itens,
-            ordem=self.ordem,
-            adaptadores=self.adaptadores,
-            radios=self.radios,
-            ocupacoes=self.ocupacoes,
-            apelidos=self.apelidos,
-            declarados=self.declarados,
-            remontar=remontar,
-        )
-        self.ponte.dizer("HEF.pinta", p.como_dicionario())
-        t_tela = (time.perf_counter() - t1) * 1000
-
-        if remontar:
-            self.chave = chave
-            self.remontagens += 1
-            sobra = aba_conexoes.sobraram(controles)
-            if sobra:
-                print(f"AVISO: {sobra} controle(s) ligados NÃO cabem no acordeão de 4 fatias.")
-        self.custos_ipc.append(t_ipc)
-        self.custos_tela.append(t_tela)
-        self.custos.append(t_ipc + t_tela)
+        self.custos.append(t_ipc)
         self.voltas += 1
         if self.voltas % 50 == 0:
             self._medir_memoria()
@@ -450,10 +284,9 @@ class Janela:
     def _medir_memoria(self) -> None:
         """Um vazamento não aparece no relógio — aparece na memória.
 
-        A remontagem troca o `innerHTML` de seis blocos, e um ouvinte não
-        removido por remontagem seria invisível numa régua de tempo. Aqui não há
-        ouvinte por elemento (a delegação é no documento), e esta conta é o que
-        prova que continua assim.
+        A página fica aberta pelo tempo pedido, e um ouvinte que se acumulasse
+        seria invisível numa régua de tempo. Aqui não há ouvinte por elemento (a
+        delegação é no documento), e esta conta é o que prova que continua assim.
         """
         try:
             with open("/proc/self/status", encoding="utf-8") as arq:
@@ -467,9 +300,6 @@ class Janela:
     # -- os gestos ---------------------------------------------------------
     def _gesto(self, objeto: dict[str, Any]) -> None:
         nome = str(objeto.get("gesto") or "")
-        if nome == "pintou":
-            self.valores.append(int(objeto.get("n") or 0))
-            return
         if nome == "erro-js":
             self.erros_js.append(str(objeto.get("texto") or ""))
             print(f"ERRO DE JS: {objeto.get('texto')}", file=sys.stderr)
@@ -529,12 +359,8 @@ class Janela:
             )
 
         linhas = [
-            f"voltas: {self.voltas} · remontagens: {self.remontagens} · "
-            f"gestos: {len(self.gestos)}",
-            f"valores escritos por pintura: {sorted(set(self.valores)) or 'NENHUM'}",
-            resumo("IPC ", self.custos_ipc),
-            resumo("tela", self.custos_tela),
-            resumo("volta", self.custos),
+            f"voltas: {self.voltas} · gestos: {len(self.gestos)}",
+            resumo("IPC ", self.custos),
         ]
         if self.custos:
             s = sorted(self.custos)
@@ -567,14 +393,11 @@ def main() -> int:
     p.add_argument("--oculta", action="store_true", help="Gtk.OffscreenWindow")
     p.add_argument("--foto", help="salva um PNG e sai (pede --oculta)")
     p.add_argument("--segundos", type=float, default=0.0, help="sai depois de N s")
-    p.add_argument("--sem-ponte", action="store_true", help="a MORDIDA: sem pintura nenhuma")
-    p.add_argument("--arranca-enderecos", action="store_true",
-                   help="MORDIDA: apaga os data-v e prova que a pintura desaba")
+    p.add_argument("--sem-ponte", action="store_true", help="a MORDIDA: sem o tique")
     p.add_argument("--prova-gesto", action="store_true",
                    help="cliques sintéticos, e prova que o gesto chega ao Python")
     p.add_argument("--secao", help="abre esta seção antes da foto (ex.: cx8-3)")
     p.add_argument("--duble", help="JSON com um state_full — em vez do daemon")
-    p.add_argument("--mesa-duble", help="JSON com a mesa de rádio, o exame e a ordem")
     args = p.parse_args()
 
     if not PAGINA.exists():
@@ -596,7 +419,7 @@ def main() -> int:
     # na costura da ONDA C. O defeito que ela cobra é o de rc=0 sobre janela
     # vazia; aqui a página existe, e a guarda é o que impede o dia em que ela
     # deixar de existir de passar calado. O `--sem-ponte` é a exceção e é a
-    # MORDIDA: ele desliga a pintura de propósito.
+    # MORDIDA: ele desliga o tique de propósito.
     if j.voltas == 0 and not args.sem_ponte:
         print("ERRO: a bancada não deu uma volta — nada foi medido.", file=sys.stderr)
         return 1

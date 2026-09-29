@@ -37,9 +37,9 @@ para matar:
   fantasma" voltando pela porta dos atributos. :func:`endereco_por_posicao`
   existe para uma régua poder reprovar isso.
 
-**O endereço nasce na mesma f-string do valor** (:func:`html_das_linhas` e
-irmãs), e é por isso que ele não pode divergir dele: não há uma tabela de
-endereços de um lado e uma pintura do outro.
+**O endereço nasce na mesma f-string do valor** (:func:`html_da_ordem`), e é
+por isso que ele não pode divergir dele: não há uma tabela de endereços de um
+lado e uma pintura do outro.
 
 O QUE ESTA ABA MOSTRA E O PRODUTO NÃO SABE
 ------------------------------------------
@@ -50,8 +50,8 @@ pintado como :data:`TRACO` e a régua exige que continue assim.
 from __future__ import annotations
 
 import html
-from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import Any
 
 #: O que se escreve onde não há dado. Um traço é uma resposta; um número
@@ -275,41 +275,6 @@ class Controle:
         return f"{estado}, pelo {NOME_DO_TRANSPORTE['usb']} • Placa do controle"
 
 
-def controles_do_estado(
-    estado: Mapping[str, Any],
-    cores: Mapping[str, tuple[str, str]] | None = None,
-) -> list[Controle]:
-    """Os controles LIGADOS do ``daemon.state_full``, na ordem em que a tela os põe.
-
-    ``cores`` é ``{uniq: (hexa, nome)}`` — o que o leitor de cor já respondeu.
-    Ausência é resposta: sem entrada, a borda fica neutra e o nome sai sem a cor.
-    """
-    conhecidas = dict(cores or {})
-    linhas: list[Controle] = []
-    for bruto in estado.get("controllers") or []:
-        if not isinstance(bruto, Mapping) or not bruto.get("connected"):
-            continue
-        uniq = str(bruto.get("uniq") or "")
-        if not uniq:
-            # Sem uniq não há endereço, e um endereço por índice seria o
-            # jogador fantasma. Uma linha a menos é melhor que uma linha que
-            # troca de dono quando a mesa muda de ordem.
-            continue
-        hexa, nome = conhecidas.get(uniq, ("", ""))
-        bateria = bruto.get("battery_pct")
-        linhas.append(
-            Controle(
-                uniq=uniq,
-                jogador=int(bruto.get("player") or bruto.get("index", 0) + 1),
-                via=str(bruto.get("transport") or ""),
-                bateria=int(bateria) if isinstance(bateria, int | float) else None,
-                plastico=hexa,
-                cor_nome=nome,
-            )
-        )
-    return linhas
-
-
 def texto_da_contagem(controles: Sequence[Controle]) -> str:
     """``4 controles • 2 USB • 2 BT`` — o canto do quadro 1.
 
@@ -337,39 +302,6 @@ def texto_da_contagem(controles: Sequence[Controle]) -> str:
         pedacos.append(f"{radio} {NOME_DO_TRANSPORTE['bt']}")
     return " • ".join(pedacos)
 
-
-def mascara_da_maquina(estado: Mapping[str, Any]) -> str:
-    """A máscara que o jogo vê — UMA, da máquina inteira.
-
-    A tela mostra uma por controle e o produto tem uma só: está em
-    :data:`SEM_FONTE`. Enquanto a contradição não se fecha, as quatro linhas
-    dizem a MESMA verdade — que é o que o produto sabe — em vez de quatro
-    máscaras diferentes que ninguém guarda.
-    """
-    emulacao = estado.get("gamepad_emulation")
-    sabor = ""
-    if isinstance(emulacao, Mapping):
-        sabor = str(emulacao.get("flavor") or "")
-    return NOME_DA_MASCARA.get(sabor, TRACO)
-
-
-def html_das_linhas(controles: Sequence[Controle], mascara: str) -> str:
-    """As linhas do quadro 1, com o endereço nascendo na f-string do valor.
-
-    A remontagem é a mesma disciplina do produto e do piloto: o corpo se
-    reconstrói quando a CHAVE da mesa muda (quem está, com que cor, por onde), e
-    no resto do tempo a pintura faz diff. Sem isso a cor que chega três segundos
-    depois — é uma pergunta ao aparelho, em thread — nunca apareceria.
-    """
-    return "".join(
-        _html_de_uma_linha(c, mascara, posicao) for posicao, c in enumerate(controles, 1)
-    )
-
-
-#: Quantas fatias o acordeão do mockup tem. A CSS dela nomeia `gc-p1..gc-p4` uma
-#: a uma, então a quinta linha não teria como abrir: a mesa mostra as quatro
-#: primeiras e :func:`sobraram` diz quantas ficaram de fora, em voz alta.
-FATIAS_DO_ACORDEAO = 4
 
 #: A opção que NÃO grava nada. O merge do perfil é POR CAMPO
 #: (`profiles/manager._controllers_to_rumble_scales:1864-1866` pula quem não tem
@@ -646,67 +578,6 @@ def dica_do_teto(v: Vibracao) -> str:
             f"recurso com teto real hoje.")
 
 
-def _html_de_uma_linha(c: Controle, mascara: str, posicao: int) -> str:
-    """Uma linha do acordeão. **A CLASSE É POSIÇÃO; O ENDEREÇO É IDENTIDADE.**
-
-    As duas convivem de propósito, e a distinção é o coração da gramática:
-
-    * ``class="gc-item gc-p2"`` e ``<label for="gc-p2">`` são o gancho da CSS
-      DELA — o acordeão do mockup é CSS pura (``#gc-p2:checked ~ .gc .gc-p2``), e
-      "a segunda fatia do acordeão" é posicional por natureza. Trocar isso por
-      JavaScript seria reescrever o desenho aprovado para não mudar nada que se
-      veja.
-    * ``data-controle``, ``data-v`` e ``data-g`` são o ``uniq``, sempre. É por
-      eles que o Python pinta e ouve, e é o que impede o "jogador 3 fantasma":
-      quando um controle sai da mesa, a fatia 2 passa a ser outro aparelho e
-      **nenhum endereço muda de dono**, porque nenhum endereço fala de fatia.
-    """
-    borda = f"--plastico:{_e(c.plastico)}" if c.plastico else ""
-    fatia = f"gc-p{posicao}"
-    # A PRIMEIRA É A ESCOLHIDA porque é a que não grava nada: sem override no
-    # perfil, este controle segue o global. Quem pinta o estado de disco por
-    # cima é o pacote da interface nova (`a08_conexoes.pacote`); esta janela
-    # ainda não lê o perfil aqui, e mostrar o padrão é o honesto até que leia.
-    opcoes_teto = "".join(
-        f'<option{" selected" if i == 0 else ""}>{_e(o)}</option>'
-        for i, o in enumerate(opcoes_do_teto())
-    )
-    return (
-        f'<div class="gc-item {fatia}" data-controle="{_e(c.uniq)}" style="{borda}">'
-        f'<div class="gc-cabeca">'
-        f'<label class="gc-abre" for="{fatia}" data-g="{g("controle.abrir")}" '
-        f'data-alvo="{_e(c.uniq)}">'
-        f'<span class="gc-nome" data-v="{v("controle", c.uniq, "nome")}">{_e(c.nome)}</span>'
-        f'<span class="gc-resumo">'
-        f'<span>Vê como <b data-v="{v("controle", c.uniq, "mascara")}">{_e(mascara)}</b></span>'
-        f'<span data-v="{v("controle", c.uniq, "mic")}">{_e(c.texto_do_microfone)}</span>'
-        f'<span>Bateria <b data-v="{v("controle", c.uniq, "bateria")}">'
-        f"{_e(c.texto_da_bateria)}</b></span>"
-        f"</span></label>"
-        f'<label class="gc-seta abre" for="{fatia}">▾</label>'
-        f'<label class="gc-seta so" for="{fatia}">só este</label>'
-        f'<label class="gc-seta fecha" for="gc-todos">▴</label></div>'
-        f'<div class="gc-corpo">'
-        f'<span class="gc-bloco">'
-        f'<select class="pronto" data-g="{g("controle.mic.existe")}" '
-        f'data-alvo="{_e(c.uniq)}">'
-        f'<option{" selected" if c.mic_ligado else ""}>Ligado</option>'
-        f'<option{"" if c.mic_ligado else " selected"}>Desligado</option></select>'
-        f'<select class="pronto" data-g="{g("controle.mic.escopo")}" '
-        f'data-alvo="{_e(c.uniq)}">'
-        f"<option selected>Só este controle</option>"
-        f"<option>O computador inteiro</option></select></span>"
-        f'<span class="gc-bloco barra">'
-        f'<select class="pronto" data-g="{g("controle.vibracao.teto")}" '
-        f'data-alvo="{_e(c.uniq)}">{opcoes_teto}</select></span>'
-        f'<button class="btn apagado" data-g="{g("controle.luz.nao-acende")}" '
-        f'data-trava="{v("controle", c.uniq, "luz")}" '
-        f'data-alvo="{_e(c.uniq)}"{"" if c.pelo_radio else " disabled"}>'
-        f"A luz não acende</button>"
-        f"</div></div>"
-    )
-
-
 # ---------------------------------------------------------------------------
 # Quadro 2 — Está tudo certo?
 # ---------------------------------------------------------------------------
@@ -719,25 +590,6 @@ SELO_DO_ESTADO = {
     "problema": ("warn", "AJUSTAR"),
     "nao_sei": ("info", "NOTA"),
 }
-
-
-def html_do_exame(itens: Iterable[Any]) -> str:
-    """As linhas conferidas, uma por :class:`Item` do ``exame_da_mesa``.
-
-    O texto é o ``porque`` — a MEDIÇÃO em uma frase —, nunca o rótulo: a tela
-    aprovada mostra o que se achou, não o nome do que se conferiu.
-    """
-    linhas = []
-    for item in itens:
-        classe, palavra = SELO_DO_ESTADO.get(str(item.estado), ("info", "NOTA"))
-        chave = str(item.chave)
-        linhas.append(
-            f'<div class="exame">'
-            f'<span class="selo {classe}" data-v="{v("exame", chave, "selo")}">{_e(palavra)}</span>'
-            f'<span class="txt" data-v="{v("exame", chave, "txt")}">{_e(item.porque)}</span>'
-            f"</div>"
-        )
-    return "".join(linhas)
 
 
 def html_da_ordem(ordem: Any | None) -> str:
@@ -775,45 +627,6 @@ def html_da_ordem(ordem: Any | None) -> str:
 # ---------------------------------------------------------------------------
 # Quadro 3 — Rádio e adaptadores
 # ---------------------------------------------------------------------------
-def html_dos_adaptadores(
-    adaptadores: Sequence[Any], apelidos: Mapping[str, str] | None = None
-) -> str:
-    """A tabela dos adaptadores Bluetooth: nome, modelo, onde está.
-
-    **O ``hciN`` nunca entra.** Ele inverte entre boots, e a decisão M1 desta
-    casa o proíbe na tela; o que endereça a linha é o ``caminho`` de barramento
-    (``3-1.1.4``), que é a palavra comum entre este módulo, o censo e o mapa.
-
-    O «Onde está» é do DONO do nome da porta (``entrada_a_entrada``): o nome
-    que ela deu, o número do mapa, ou «Entrada 4.1.4». Esta coluna escrevia
-    «Entrada <painel do kernel>» — «Entrada back» — e era o quarto compositor
-    do nome (A-COSTURA-DA-ONDA-2-01; curado na TRANSPLANTE-DA-SECAO-01).
-    """
-    from hefesto_dualsense4unix.integrations.entrada_a_entrada import nome_da_porta
-
-    nomes = dict(apelidos or {})
-    linhas = []
-    for a in adaptadores:
-        caminho = str(a.caminho) or str(a.interface)
-        apelido = nomes.get(caminho, "")
-        try:
-            porta = nome_da_porta(str(a.caminho)) if a.caminho else None
-        except Exception:  # o nome nunca derruba a tabela: sem ele, o traço
-            porta = None
-        onde = porta or ("Interno" if not a.caminho else TRACO)
-        modelo = f"{a.vid}:{a.pid}" if a.vid else TRACO
-        mudo = "" if apelido else ' class="mudo"'
-        linhas.append(
-            f'<tr data-adaptador="{_e(caminho)}">'
-            f'<td data-v="{v("adaptador", caminho, "nome")}"{mudo}>'
-            f'{_e(apelido or "Sem nome")}</td>'
-            f'<td class="mudo" data-v="{v("adaptador", caminho, "modelo")}">{_e(modelo)}</td>'
-            f'<td data-v="{v("adaptador", caminho, "onde")}">{_e(onde)}</td>'
-            f'<td style="text-align:right"><span class="acao" '
-            f'data-g="{g("adaptador.renomear")}" data-alvo="{_e(caminho)}">Renomear</span></td>'
-            f"</tr>"
-        )
-    return "".join(linhas)
 
 
 #: As respostas do "— O que é? —". A primeira é a pergunta em si: enquanto ela
@@ -830,193 +643,18 @@ RESPOSTAS_DO_VIZINHO = (
 )
 
 
-def html_dos_vizinhos(radios: Sequence[Any], declarados: Mapping[str, str] | None = None) -> str:
-    """Os outros rádios na faixa de 2,4 GHz, com o que ela declarou de cada um.
-
-    Sem declaração o ``<select>`` fica na pergunta — e é honesto: o produto sabe
-    o ``vid:pid`` e mais nada. Adivinhar "Wi-Fi" a partir de um vid seria
-    exatamente o número plausível e falso que esta aba não escreve.
-    """
-    conhecidos = dict(declarados or {})
-    blocos = []
-    for r in radios:
-        caminho = str(r.caminho)
-        chave = f"{r.vid}:{r.pid}"
-        qual = conhecidos.get(chave, "")
-        escolhida = qual or RESPOSTAS_DO_VIZINHO[0]
-        opcoes = "".join(
-            f'<option{" selected" if o == escolhida else ""}>{_e(o)}</option>'
-            for o in RESPOSTAS_DO_VIZINHO
-        )
-        blocos.append(
-            f'<div class="viz" data-vizinho="{_e(caminho)}">'
-            f'<span class="qual" data-v="{v("vizinho", caminho, "qual")}">{_e(chave)}</span>'
-            f'<select class="pronto{"" if qual else " pergunta"}" '
-            f'data-g="{g("vizinho.oque")}" data-alvo="{_e(caminho)}">{opcoes}</select></div>'
-        )
-    return "".join(blocos)
-
-
-def html_das_pistas(
-    adaptadores: Sequence[Any],
-    ocupacoes: Mapping[str, Any],
-    apelidos: Mapping[str, str] | None = None,
-) -> str:
-    """A régua de Desempenho: o rádio de cada adaptador, em turnos.
-
-    O teto e os turnos vêm de ``integrations/radio_da_mesa`` — ``SLOTS_POR_SEGUNDO``
-    e as frações CRUAS. Passar de 1,0 é resultado legítimo e a barra precisa
-    saber dizê-lo, então nada aqui satura a largura em 100%.
-    """
-    nomes = dict(apelidos or {})
-    linhas = []
-    for a in adaptadores:
-        caminho = str(a.caminho) or str(a.interface)
-        quem = nomes.get(caminho, "") or "Sem nome"
-        oc = ocupacoes.get(caminho)
-        if oc is None or not oc.controles:
-            trilho = '<span class="vazio">Nenhum controle neste rádio</span>'
-            numero = f"0 <i>de {_turnos(None)}</i>"
-        else:
-            largura = oc.fracao_input * 100
-            trilho = (
-                f'<span class="bloco usa" style="width:{largura:.2f}%">'
-                f"{oc.controles} de {oc.slots_input / max(oc.controles, 1):.1f}</span>"
-            )
-            if oc.slots_audio:
-                trilho += (
-                    f'<span class="bloco mic" style="width:{oc.fracao_audio * 100:.2f}%"></span>'
-                )
-            numero = f"{oc.slots_total:.1f} <i>de {_turnos(oc)}</i>"
-        linhas.append(
-            f'<div class="pista" data-pista="{_e(caminho)}">'
-            f'<span class="quem" data-v="{v("pista", caminho, "quem")}">{_e(quem)}</span>'
-            f'<span class="trilho" data-v="{v("pista", caminho, "trilho")}">{trilho}</span>'
-            f'<span class="num" data-v="{v("pista", caminho, "num")}">{numero}</span></div>'
-        )
-    return "".join(linhas)
-
-
-def _turnos(ocupacao: Any | None) -> str:
-    """O teto, sempre lido do produto — nunca digitado aqui."""
-    from hefesto_dualsense4unix.integrations.radio_da_mesa import SLOTS_POR_SEGUNDO
-
-    teto = SLOTS_POR_SEGUNDO if ocupacao is None else ocupacao.slots_teto
-    return f"{teto:,}".replace(",", ".")
-
-
 # ---------------------------------------------------------------------------
-# O pacote de um tique
+# O pacote de um tique — SAIU EM 28/09/2026
 # ---------------------------------------------------------------------------
-@dataclass
-class Pintura:
-    """O que UMA pintura escreve. É o argumento de ``HEF.pinta``.
-
-    ``remonta`` traz o HTML dos blocos cuja LISTA mudou (quem está na mesa, quais
-    adaptadores, quais vizinhos); ``valores`` traz o resto, por endereço. A
-    separação é o que faz a pintura custar um diff em vez de um ``innerHTML`` a
-    cada 100 ms.
-    """
-
-    valores: dict[str, str] = field(default_factory=dict)
-    remonta: dict[str, str] = field(default_factory=dict)
-    travas: dict[str, bool] = field(default_factory=dict)
-
-    def como_dicionario(self) -> dict[str, Any]:
-        return {"valores": self.valores, "remonta": self.remonta, "travas": self.travas}
-
-    def __len__(self) -> int:
-        """Quantos valores esta pintura escreve — a régua do orçamento do tique."""
-        return len(self.valores) + len(self.remonta) + len(self.travas)
-
-
-def pintura(
-    estado: Mapping[str, Any],
-    *,
-    controles: Sequence[Controle] | None = None,
-    itens_do_exame: Sequence[Any] = (),
-    ordem: Any | None = None,
-    adaptadores: Sequence[Any] = (),
-    radios: Sequence[Any] = (),
-    ocupacoes: Mapping[str, Any] | None = None,
-    apelidos: Mapping[str, str] | None = None,
-    declarados: Mapping[str, str] | None = None,
-    remontar: bool = True,
-) -> Pintura:
-    """Um ``state_full`` e as leituras da mesa viram UMA pintura.
-
-    **Uma chamada por TIQUE, não por valor.** Com 50 valores e quatro controles,
-    uma chamada por valor seriam centenas de travessias de fronteira por segundo;
-    quem monta o pacote é aqui e quem o distribui é a página.
-    """
-    linhas = list(controles) if controles is not None else controles_do_estado(estado)
-    mascara = mascara_da_maquina(estado)
-    p = Pintura()
-
-    p.valores[v("mesa", "conta")] = texto_da_contagem(linhas)
-    p.valores[v("rodape", "recibo")] = str(estado.get("active_profile") or TRACO)
-    p.valores[v("exame", "quando")] = TRACO  # SEM_FONTE: o exame não se carimba
-
-    for c in linhas:
-        p.valores[v("controle", c.uniq, "nome")] = c.nome
-        p.valores[v("controle", c.uniq, "mascara")] = mascara
-        p.valores[v("controle", c.uniq, "mic")] = c.texto_do_microfone
-        p.valores[v("controle", c.uniq, "bateria")] = c.texto_da_bateria
-        # TRAVAR É ESCRITA, e por isso conta: um botão que a tela oferece e o
-        # produto recusa é mentira. "A luz não acende" só existe no rádio — a
-        # cura dele é derrubar a conexão Bluetooth para ela apertar PS.
-        p.travas[v("controle", c.uniq, "luz")] = not c.pelo_radio
-
-    if remontar:
-        # AS CHAVES SÃO NOMES, NÃO SELETORES CSS. Quem sabe onde cada bloco mora
-        # é a página (`HEF.remonta`), e a razão é de dono: o seletor é da folha
-        # DELA, e um Python que os escrevesse passaria a ser o segundo dono do
-        # desenho — a cada classe renomeada no mockup, uma pintura muda calada.
-        # Com nomes, renomear uma classe quebra em UM lugar, e ruidosamente.
-        p.remonta["controles"] = html_das_linhas(linhas[:FATIAS_DO_ACORDEAO], mascara)
-        p.remonta["exame"] = html_do_exame(itens_do_exame)
-        p.remonta["ordem"] = html_da_ordem(ordem)
-        p.remonta["adaptadores"] = html_dos_adaptadores(adaptadores, apelidos)
-        p.remonta["vizinhos"] = html_dos_vizinhos(radios, declarados)
-        p.remonta["pistas"] = html_das_pistas(adaptadores, ocupacoes or {}, apelidos)
-    return p
-
-
-def sobraram(controles: Sequence[Controle]) -> int:
-    """Quantos controles a mesa tem além das :data:`FATIAS_DO_ACORDEAO`.
-
-    Zero é o caso normal — a mesa dela tem quatro. Um número maior é uma tela
-    que está ESCONDENDO controle ligado, e quem chama tem de dizê-lo: calar
-    seria o defeito de 22/08, a ausência de notícia lida como sucesso.
-    """
-    return max(0, len(controles) - FATIAS_DO_ACORDEAO)
-
-
-def chave_da_mesa(
-    controles: Sequence[Controle],
-    adaptadores: Sequence[Any] = (),
-    radios: Sequence[Any] = (),
-) -> tuple[Any, ...]:
-    """A assinatura que decide REMONTAR ou fazer diff.
-
-    Entram a cor, o nome, o transporte e o jogador porque os quatro estão
-    ASSADOS no HTML da linha: sem eles, a cor que chega depois — é uma pergunta
-    ao aparelho, em thread — nunca apareceria na tela.
-    """
-    return (
-        tuple((c.uniq, c.plastico, c.cor_nome, c.via, c.jogador) for c in controles),
-        tuple(str(a.caminho) for a in adaptadores),
-        tuple(str(r.caminho) for r in radios),
-    )
-
-
-def gesto_valido(objeto: Mapping[str, Any]) -> bool:
-    """O gesto que chegou da tela é um dos declarados?
-
-    A ponte já recusa o que não é objeto JSON; o que falta é o nome. Despachar
-    por nome vindo de fora sem esta peneira é o buraco que esta casa não abre.
-    """
-    return str(objeto.get("gesto", "")) in GESTOS
+# `Pintura`, `pintura`, `sobraram`, `chave_da_mesa` e `gesto_valido` montavam o
+# tique da bancada `interface/conexoes_vivas.py` na gramática `data-v`/`data-g`
+# de 26/08. A página aprovada da aba 08 fala a língua das dez abas
+# (`data-campo`/`data-gesto`), quem a pinta é o pacote
+# `interface/pacotes/a08_conexoes.py`, e quem recusa gesto sem dono é o
+# registro `interface/pacotes`. Medido na página publicada de 28/09: nenhum
+# `data-v` da pintura existe mais nela, e os blocos `.gc`, `.col-exame` e
+# `.col-ordem`, sim — a remontagem trocava o `innerHTML` deles pelo HTML velho.
+# Era um segundo pintor da mesma tela.
 
 
 # ---------------------------------------------------------------------------

@@ -1844,7 +1844,7 @@ def exame(estado, txt, dica, linha=0):
     tela:** o pacote emite `"exame": itens`, uma lista de DICIONÁRIOS, e o
     `normalizar` a descarta antes do JS com a razão escrita — *"ela é estrutura,
     e escrever `[object Object]` numa caixa é pior que nada"*. A chave `"exame"`
-    do pacote NÃO sai: ela tem leitor em `interface/conexoes_vivas.py`.
+    do pacote NÃO sai: ela segue emitida, e é o `normalizar` que a descarta.
 
     **NADA DE `display:none`.** A linha ocupa a fatia dela — é o que a decisão
     dela diz com todas as letras, e é a diferença entre uma tela que APAGA e uma

@@ -781,8 +781,8 @@ def _itens_da_tela() -> list[Any]:
     return sorted(conferidas, key=lambda i: getattr(i, "ordem", None) is None)
 
 
-#: O QUE SOBRA QUANDO O ESTADO NÃO ESTÁ NO MAPA — a mesma reserva que
-#: `gui.aba_conexoes.html_do_exame` usa na sua linha (`("info", "NOTA")`).
+#: O QUE SOBRA QUANDO O ESTADO NÃO ESTÁ NO MAPA — `("info", "NOTA")`, a
+#: reserva que a linha do exame da camada de tela usava até 28/09/2026.
 #: "NOTA" é a palavra que não afirma: um estado que esta tela não conhece não
 #: pode virar nem um verde nem um alarme.
 _SELO_DESCONHECIDO = ("info", "NOTA")
@@ -981,8 +981,7 @@ def _selo_do_estado(estado: str) -> tuple[str, str]:
     podia estar melhor"*. **A COR já saiu** (ver `selo-estado`, na
     :func:`pacote`, e a regra `.selo.grave` do gerador); a PALAVRA é dela, e
     trocá-la aqui seria escolher no lugar dela. Quando ela disser, quem muda é
-    `gui.aba_conexoes.SELO_DO_ESTADO` — e ali a mudança alcança a janela GTK
-    junto, porque a linha dela lê o mesmo mapa (`html_do_exame`).
+    `gui.aba_conexoes.SELO_DO_ESTADO`, e o mapa é um só.
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.gui.aba_conexoes import SELO_DO_ESTADO
@@ -1126,8 +1125,9 @@ def _dono_sabe_desenhar_a_ordem() -> bool:
 
     `ordens_da_mesa.Identidade` tem `vid`, `pid`, `caminho` e `ambigua` — e
     nunca teve `onde`. A função **jamais correu com uma ordem**: o único
-    chamador era `aba_conexoes.pintura:935`, e `pintura(ordem=None)` é o padrão,
-    então todas as chamadas caíam no ramo do `None`, que funciona. É a forma de
+    chamador era `aba_conexoes.pintura` (saiu em 28/09/2026, com a pintura da
+    bancada), e o padrão dela era `ordem=None`, então todas as chamadas caíam
+    no ramo do `None`, que funciona. É a forma de
     defeito que esta casa chama de *ramo morto por construção* — e ela só
     apareceu quando alguém foi usar a função para o que ela existe.
 
@@ -1351,9 +1351,9 @@ def _monta() -> Any:
 #: A FRASE DO `+N`, e ela tem UM dono nesta casa — este.
 #:
 #: **PROCUREI O DONO ANTES DE ESCREVER, e ele não existe.** A dívida do "+N"
-#: está escrita em quatro lugares desta árvore apontando para
-#: `gui.aba_conexoes.sobraram` como se ele fosse a frase; medido em 04/09/2026,
-#: `sobraram(controles)` devolve um **int** e fala do ACORDEÃO, não do exame.
+#: apontava para `gui.aba_conexoes.sobraram` como se ele fosse a frase; medido
+#: em 04/09/2026, `sobraram(controles)` devolvia um **int** e falava do
+#: ACORDEÃO, não do exame (ele saiu em 28/09/2026, com a pintura da bancada).
 #: Chamá-lo aqui teria posto na tela a conta de outra lista — a armadilha que
 #: esta casa chama de *perguntar no lugar errado*.
 #:
@@ -1402,9 +1402,9 @@ def _o_que_nao_coube(itens: list[Any]) -> dict[str, str]:
 
     **CADA UM CONTA A PRÓPRIA LISTA, e as duas chegam juntas por isso:** o
     `+N` do exame conta os itens da tira e o dos vizinhos conta os rádios. É a
-    régua do erro que esta aba já cometeu — `gui.aba_conexoes.sobraram` está
-    citado em quatro lugares desta árvore como se fosse o dono desta frase, e
-    ele devolve um `int` sobre o ACORDEÃO. Perguntar no lugar errado produz
+    régua do erro que esta aba já cometeu — `gui.aba_conexoes.sobraram` foi
+    citado como se fosse o dono desta frase, e devolvia um `int` sobre o
+    ACORDEÃO. Perguntar no lugar errado produz
     não-achado convincente.
 
     **O `monta.NADA_A_DIZER` NO LUGAR DO VAZIO, e ele é obrigatório:** o
@@ -1863,8 +1863,9 @@ def _html_dos_externos(ctx: Contexto) -> str:
     return "".join(fora)
 
 
-#: A PALAVRA DA COLUNA "Nome" QUANDO ELA NÃO DEU NOME, e ela tem UM dono: é a
-#: mesma que `gui.aba_conexoes.html_dos_adaptadores` escreve. O gerador a lia da
+#: A PALAVRA DA COLUNA "Nome" QUANDO ELA NÃO DEU NOME, e ela tem UM dono: este
+#: (a `gui.aba_conexoes.html_dos_adaptadores` escrevia a mesma, e saiu em
+#: 28/09/2026 com a pintura da bancada). O gerador a lia da
 #: própria cópia até 04/09/2026 — duas grafias da mesma célula, e a tabela
 #: passou a ser pintada por este arquivo, que é onde a terceira nasceria.
 SEM_NOME = "Sem nome"
@@ -3134,10 +3135,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # encontra o endereço e escreve zero — e é o que faz a cor nascer certa
         # no minuto em que ela publicar.
         **_selos_por_estado(itens),
-        # O `porque`, E NÃO O `rotulo` — corrigido em 02/09/2026, e a regra é do
-        # produto: `gui.aba_conexoes.html_do_exame` diz, no docstring, *"O texto
-        # é o `porque` — a MEDIÇÃO em uma frase —, nunca o rótulo: a tela
-        # aprovada mostra o que se achou, não o nome do que se conferiu."*
+        # O `porque`, E NÃO O `rotulo` — corrigido em 02/09/2026, e a regra é
+        # do produto. Ela nasceu no docstring de `gui.aba_conexoes.html_do_exame`
+        # (que saiu em 28/09/2026 com a pintura da bancada) e mora aqui desde
+        # então: *"O texto é o `porque` — a MEDIÇÃO em uma frase —, nunca o
+        # rótulo: a tela aprovada mostra o que se achou, não o nome do que se
+        # conferiu."*
         #
         # A tela desta aba estava mostrando o rótulo, e o rótulo é o NOME da
         # conferência. Fotografado com dois controles na mesa: as três linhas

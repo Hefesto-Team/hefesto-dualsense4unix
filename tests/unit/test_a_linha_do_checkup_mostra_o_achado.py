@@ -14,9 +14,10 @@ com dois controles na mesa::
     CERTO  Suporte ao controle                  ← o nome do exame
 
 onde o desenho dela promete um achado. A regra é do produto e está escrita no
-docstring de ``gui.aba_conexoes.html_do_exame``: *"O texto é o ``porque`` — a
-MEDIÇÃO em uma frase —, nunca o rótulo: a tela aprovada mostra o que se achou,
-não o nome do que se conferiu."* Os mesmos três itens, pelo ``porque``::
+pacote da aba (``interface/pacotes/a08_conexoes.py``, na chave ``achado``):
+*"O texto é o ``porque`` — a MEDIÇÃO em uma frase —, nunca o rótulo: a tela
+aprovada mostra o que se achou, não o nome do que se conferiu."* Os mesmos três
+itens, pelo ``porque``::
 
     O sistema está proibido de desligar o rádio dos controles.
     Conferido agora: nenhuma das 16 portas USB está em economia de energia.
@@ -122,7 +123,7 @@ def test_o_pacote_emite_o_porque_na_chave_achado():
     assert re.search(r'"achado":\s*\[i\["porque"\] for i in itens\]', fonte), (
         "a chave `achado` do pacote deixou de emitir o `porque` do exame — a "
         "linha do Check-up volta a mostrar o NOME da conferência no lugar do "
-        "que ela achou (`gui.aba_conexoes.html_do_exame` diz por quê)"
+        "que ela achou (o comentário da chave `achado` no pacote diz por quê)"
     )
 
 

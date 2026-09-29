@@ -1164,9 +1164,8 @@ def test_a_camada_de_tela_desta_aba_continua_sem_gtk() -> None:
     O `fala_do_teto` da leva importava `SEM_TETO` de
     `app/actions/config/secao_orcamento.py`, que puxa `gi` + `gi.repository.Gtk`
     no import (pelo `app.widgets.segmented_selector`). O import era tardio, mas
-    isso muda QUANDO falha, não SE falha: quem chamasse `opcoes_do_teto()` ou
-    `html_das_linhas()` — que é o que a janela renderiza — trazia a janela GTK
-    inteira para dentro do processo. E `app/actions/` é justamente a camada que
+    isso muda QUANDO falha, não SE falha: quem chamasse `opcoes_do_teto()`
+    trazia a janela GTK inteira para dentro do processo. E `app/actions/` é justamente a camada que
     a regra desta casa manda NÃO reusar. A cura foi `SEM_TETO` mudar de casa
     para `core.rumble`, ao lado do `teto_do_orcamento` cujo `None` ela traduz.
 
@@ -1188,7 +1187,7 @@ def test_a_camada_de_tela_desta_aba_continua_sem_gtk() -> None:
         "c = t.Controle(uniq='aa:bb:cc:00:00:01', jogador=1, via='usb', bateria=50,\n"
         "               plastico='#fff', cor_nome='Branco', fabricante='Sony',\n"
         "               mic_ligado=False)\n"
-        "t.html_das_linhas([c], 'aa:bb:cc:**:**:01')\n"
+        "t.texto_da_contagem([c])\n"
         "print('gi.repository.Gtk' in sys.modules)\n"
     )
     saida = subprocess.run(

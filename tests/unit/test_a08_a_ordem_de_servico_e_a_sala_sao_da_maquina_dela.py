@@ -210,8 +210,9 @@ def test_o_dono_ainda_nao_desenha_a_ordem_da_mesa() -> None:
     `gui.aba_conexoes.html_da_ordem` lê `ordem.alvo.onde`, e
     `ordens_da_mesa.Identidade` nunca teve `onde` — tem `vid`, `pid`, `caminho`
     e `ambigua`. A função **jamais correu com uma `Ordem`**: o único chamador
-    era `aba_conexoes.pintura:935`, e `pintura(ordem=None)` é o padrão. Ramo
-    morto por construção, achado em 03/09/2026 ao ligá-la ao produto.
+    era `aba_conexoes.pintura` (saiu em 28/09/2026), e o padrão dela era
+    `ordem=None`. Ramo morto por construção, achado em 03/09/2026 ao ligá-la ao
+    produto.
 
     Enquanto for assim, `a08_conexoes._card_da_ordem` desenha aqui. No dia em
     que alguém curar o dono — `gui/aba_conexoes.py` é de outro — este teste
@@ -408,14 +409,11 @@ def test_a_contagem_e_do_dono() -> None:
     escrevendo a frase para quem a mostra."""
     from hefesto_dualsense4unix.gui import aba_conexoes as tela
 
-    estado = {"controllers": [
-        {"connected": True, "uniq": "aa:bb:cc:00:00:01", "transport": "usb",
-         "player": 1, "battery_pct": 88},
-        {"connected": True, "uniq": "aa:bb:cc:00:00:02", "transport": "bt",
-         "player": 2, "battery_pct": None},
-        {"connected": True, "uniq": "aa:bb:cc:00:00:03", "transport": "bt",
-         "player": 3, "battery_pct": 10}]}
-    frase = tela.texto_da_contagem(tela.controles_do_estado(estado))
+    controles = [
+        tela.Controle(uniq="aa:bb:cc:00:00:01", jogador=1, via="usb", bateria=88),
+        tela.Controle(uniq="aa:bb:cc:00:00:02", jogador=2, via="bt", bateria=None),
+        tela.Controle(uniq="aa:bb:cc:00:00:03", jogador=3, via="bt", bateria=10)]
+    frase = tela.texto_da_contagem(controles)
     # A PALAVRA DO TRANSPORTE SE PERGUNTA AO DONO, nunca se digita — 24/09/2026,
     # AS-FRASES-QUE-A-BANCADA-ACHOU-01. Esta linha digitava «no cabo»/«no
     # rádio», e foi ela que teria de mudar de novo na próxima troca de palavra.
