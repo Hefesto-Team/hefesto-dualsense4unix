@@ -1306,8 +1306,10 @@ class TestAEnumeracaoPrefereOCabo:
         # O barramento sai do `uevent` de uma árvore de mentira, pela raiz do
         # backend (O-BACKEND-NAO-LE-O-HIDRAW-DA-MAQUINA-NA-SUITE-01): o
         # `_hidraw_uevent` e o `_is_virtual_hidraw` de verdade leem o que ela diz.
+        # Nós com número que nenhuma máquina tem: com o caminho fixo de volta, o
+        # `hidraw1` da máquina (USB na dela) dava o cabo por sorte e não mordia.
         raiz = tmp_path / "class-hidraw"
-        for no, barramento in (("hidraw10", "0005"), ("hidraw1", "0003")):
+        for no, barramento in (("hidraw910", "0005"), ("hidraw911", "0003")):
             pai = tmp_path / "devices" / "pci0000:00" / no
             pai.mkdir(parents=True)
             (pai / "uevent").write_text(
@@ -1317,13 +1319,13 @@ class TestAEnumeracaoPrefereOCabo:
             (raiz / no).mkdir(parents=True)
             (raiz / no / "device").symlink_to(pai)
         monkeypatch.setattr(backend_mod, "RAIZ_CLASS_HIDRAW", str(raiz))
-        radio = SimpleNamespace(product_id=0x0CE6, path=b"/dev/hidraw10", serial_number=MACS[0])
-        cabo = SimpleNamespace(product_id=0x0CE6, path=b"/dev/hidraw1", serial_number=MACS[0])
+        radio = SimpleNamespace(product_id=0x0CE6, path=b"/dev/hidraw910", serial_number=MACS[0])
+        cabo = SimpleNamespace(product_id=0x0CE6, path=b"/dev/hidraw911", serial_number=MACS[0])
         vistos = [radio, cabo] if ordem == "radio-primeiro" else [cabo, radio]
         fake_hidapi = SimpleNamespace(enumerate=lambda vendor_id: list(vistos))
         monkeypatch.setitem(sys.modules, "hidapi", fake_hidapi)
         assert PyDualSenseController._enumerate_device_keys() == [
-            (MACS[0], b"/dev/hidraw1", False)
+            (MACS[0], b"/dev/hidraw911", False)
         ]
 
 
