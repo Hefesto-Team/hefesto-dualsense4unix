@@ -615,12 +615,20 @@ def test_no_radio_o_rumble_sobe_a_ponte_da_haptica_de_quem_recebe(
     assert [p.uniq for p in _PonteDeMentira.criadas] == [uniq], "outro controle ganhou ponte"
 
 
-def test_pelo_radio_o_alto_falante_tocando_fica_com_o_radio(mundo: _Mundo) -> None:
+def test_pelo_radio_o_alto_falante_tocando_fica_com_o_radio(
+    mundo: _Mundo, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Som e vibração pelo rádio são exclusivos: o alto-falante tocando fica, e o HID leva.
+
+    TOCANDO É TER SINAL (A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-CHEGAM-AO-RADIO-01,
+    29/09/2026): o fluxo aberto não basta, e o ouvido do produto
+    (``af.fonte_que_ouve``) lê o som do monitor do nó. O caso do fluxo aberto e
+    mudo está em ``test_a_haptica_por_audio_e_o_alto_falante_chegam_ao_radio.py``.
 
     MORDIDA: no laço das pontes, tire a pergunta ao alto-falante antes do
     ``pelo_rumble`` — a ponte troca o som pela háptica do rumble.
     """
+    monkeypatch.setattr(af, "OUVIDO", af.OuvidoDosNos())
     controles = _no_radio_os_quatro(mundo)
     mundo.mesa.volta(*controles)
     mundo.rumble(_P1, 0, 180)
@@ -630,6 +638,8 @@ def test_pelo_radio_o_alto_falante_tocando_fica_com_o_radio(mundo: _Mundo) -> No
     som = af.nome_do_sink(_P1)
     mundo.mesa.servidor.placa(som, "/devices/virtual/som")
     mundo.mesa.servidor.jogo_em.add(som)
+    voz = b"\x28\x23\xd8\xdc" * af.AMOSTRAS_POR_QUADRO
+    af.fonte_que_ouve(lambda _n: voz, som)(len(voz))
     mundo.mesa.volta(*controles)
     ponte = mundo.sub._pontes[_P1]
     assert ponte.arranjo is None, "a háptica do rumble tirou o alto-falante dela"

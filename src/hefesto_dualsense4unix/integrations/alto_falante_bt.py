@@ -2767,6 +2767,158 @@ def sink_esta_tocando(
     return nome in tocando
 
 
+#: O SINAL DURA ISTO DEPOIS DO ÚLTIMO BLOCO QUE O TROUXE — é a histerese da
+#: A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-CHEGAM-AO-RADIO-01 (29/09/2026). Trocar
+#: o modo da ponte custa 255 ms (medido em 22/09); sem esta janela, uma cena com
+#: tiro e fala trocaria a ponte a cada bloco. Um segundo cobre a pausa entre
+#: duas frases e devolve a vibração logo depois da última.
+JANELA_DO_SINAL_S = 1.0
+
+#: Sem bloco lido há mais que isto, ninguém escuta o nó: a resposta é «não
+#: sei» (``None``), e não «mudo». Uma ponte que troca de modo fica ~255 ms sem
+#: gravador; o gravador a 93,75 leituras por segundo entrega um bloco a cada
+#: 10,7 ms.
+SURDO_S = 0.5
+
+
+def tem_sinal_no_pcm(pcm: bytes, *, canais: int = CANAIS_DO_ENCODER) -> bool:
+    """O bloco de PCM s16le tem sinal nos canais que o controle toca?
+
+    **SILÊNCIO É ZERO EXATO**, a regra de :meth:`BombaDeSomPeloRadio._vale_mandar`.
+    No nó do som (dois canais) vale qualquer amostra. No endpoint de quatro
+    canais valem só os TRASEIROS (3-4, os motores): é o que a ponte em háptica
+    leva ao rádio (:mod:`haptica_bt`), e som nos canais da frente não vibra
+    nada.
+    """
+    if canais != CANAIS_DA_HAPTICA:
+        return pcm.count(0) < len(pcm)
+    quadro = 2 * CANAIS_DA_HAPTICA
+    inteiro = len(pcm) - len(pcm) % quadro
+    if inteiro <= 0:
+        return False
+    amostras = memoryview(pcm)[:inteiro].cast("h")
+    traseiros = amostras[2::4].tobytes() + amostras[3::4].tobytes()
+    return traseiros.count(0) < len(traseiros)
+
+
+class OuvidoDosNos:
+    """O DONO de «este nó tem sinal agora?» — um só, para todo chamador.
+
+    A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-CHEGAM-AO-RADIO-01, 29/09/2026. O
+    modo da ponte do rádio era escolhido pelo FLUXO ABERTO
+    (:func:`sink_esta_tocando`): um jogo que abre o alto-falante e a háptica do
+    controle e toca só no alto-falante (a Forja, em toda sala) deixava a ponte
+    em háptica, e o alto-falante mudo pelo rádio. *Tocando é ter sinal, e não
+    ter fluxo* — a tese da A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01, que
+    curou o envio e deixou a escolha no fluxo.
+
+    **QUEM ESCUTA É A PONTE**: ela lê o monitor dos dois nós do controle (um
+    para o rádio, o outro só para ouvir) e cada bloco lido passa por
+    :meth:`ouvir` (:func:`fonte_que_ouve`). Ler é local e não gasta fatia de
+    rádio. A resposta tem três valores: ``True`` (sinal há menos de
+    :data:`JANELA_DO_SINAL_S`), ``False`` (escutado e mudo) e ``None`` (ninguém
+    escuta o nó há mais de :data:`SURDO_S`: não se sabe).
+
+    **A TROCA ACORDA A VOLTA**: quem se inscreve em :meth:`escutar` é avisado
+    quando um nó passa de mudo a sinal ou de sinal a mudo, no fio de quem leu.
+    O subsystem se inscreve pelo método, com referência fraca: um subsystem
+    que morreu sai da lista sozinho.
+    """
+
+    def __init__(self, relogio: Callable[[], float] | None = None) -> None:
+        self._relogio = relogio or time.monotonic
+        self._trava = threading.Lock()
+        #: ``{nó: quando o último bloco com sinal foi lido}``.
+        self._ultimo_sinal: dict[str, float] = {}
+        #: ``{nó: quando o último bloco foi lido}``, com ou sem sinal.
+        self._ultima_leitura: dict[str, float] = {}
+        #: ``{nó: o estado avisado da última vez}`` — a borda é o que acorda.
+        self._estado: dict[str, bool] = {}
+        self._quem_ouve: list[Any] = []
+
+    def escutar(self, aviso: Callable[[str], Any]) -> None:
+        """Inscreve ``aviso(nó)`` para a troca de sinal. Método entra por referência fraca."""
+        import weakref
+
+        ref: Any
+        try:
+            ref = weakref.WeakMethod(aviso)
+        except TypeError:
+
+            def ref() -> Callable[[str], Any]:  # a função solta fica viva
+                return aviso
+
+        with self._trava:
+            self._quem_ouve.append(ref)
+
+    def ouvir(self, no: str, com_sinal: bool) -> None:
+        """Um bloco do monitor de ``no`` foi lido. Nunca levanta."""
+        if not no:
+            return
+        agora = self._relogio()
+        with self._trava:
+            self._ultima_leitura[no] = agora
+            if com_sinal:
+                self._ultimo_sinal[no] = agora
+            ultimo = self._ultimo_sinal.get(no)
+            estado = ultimo is not None and agora - ultimo < JANELA_DO_SINAL_S
+            mudou = self._estado.get(no, False) != estado
+            self._estado[no] = estado
+            avisos = list(self._quem_ouve) if mudou else []
+        vivos = []
+        for ref in avisos:
+            aviso = ref()
+            if aviso is None:
+                continue
+            vivos.append(ref)
+            try:
+                aviso(no)
+            except Exception:  # quem é avisado nunca derruba quem lê
+                logger.debug("sinal_aviso_falhou", no=no, exc_info=True)
+        if mudou:
+            logger.debug("sinal_do_no_mudou", no=no, com_sinal=estado)
+            with self._trava:
+                self._quem_ouve = [r for r in self._quem_ouve if r() is not None]
+
+    def tem_sinal(self, no: str) -> bool | None:
+        """``True`` com sinal agora, ``False`` escutado e mudo, ``None`` ninguém escuta."""
+        if not no:
+            return None
+        agora = self._relogio()
+        with self._trava:
+            lido = self._ultima_leitura.get(no)
+            ultimo = self._ultimo_sinal.get(no)
+        if ultimo is not None and agora - ultimo < JANELA_DO_SINAL_S:
+            return True
+        if lido is None or agora - lido > SURDO_S:
+            return None
+        return False
+
+
+#: O ouvido do processo: as pontes escrevem, o subsystem pergunta.
+OUVIDO = OuvidoDosNos()
+
+
+def fonte_que_ouve(
+    fonte: Callable[[int], bytes], no: str, *, canais: int = CANAIS_DO_ENCODER
+) -> Callable[[int], bytes]:
+    """A mesma fonte, e cada bloco que ela entrega passa pelo :data:`OUVIDO`.
+
+    Sem ``no`` a fonte volta intacta: o ensaio de bancada e as réguas antigas
+    montam a ponte sem nome de nó, e nada muda para elas.
+    """
+    if not no:
+        return fonte
+
+    def _ler(quantos: int) -> bytes:
+        pcm = fonte(quantos)
+        if pcm:
+            OUVIDO.ouvir(no, tem_sinal_no_pcm(pcm, canais=canais))
+        return pcm
+
+    return _ler
+
+
 #: O PISO DOS MOTORES no sink de 4 canais do DualSense — HAPTICA-CABO-VOLUME-01
 #: (Z2), medido no aparelho dela em 19/09/2026 com o controle NO CABO:
 #:
@@ -3162,8 +3314,19 @@ class PonteDeSomPorRadio:
         vaga: Any = None,
         so_com_sinal: bool = True,
         relogio: Callable[[], float] | None = None,
+        no_do_som: str = "",
+        no_da_haptica: str = "",
     ) -> None:
         self.uniq = uniq
+        #: OS DOIS NÓS QUE ESTA PONTE ESCUTA — A-HAPTICA-POR-AUDIO-E-O-ALTO-
+        #: FALANTE-CHEGAM-AO-RADIO-01, 29/09/2026. Cada bloco lido de um deles
+        #: vai ao :data:`OUVIDO`, e é por ele que o subsystem escolhe o modo pelo
+        #: SINAL. A fonte que o arranjo não leva ao rádio é lida por um fio
+        #: próprio (:meth:`_escutar`) só para ouvir. Vazio = não se escuta.
+        self._no_do_som = no_do_som
+        self._no_da_haptica = no_da_haptica
+        #: O fio que lê a fonte que o arranjo não leva — o ouvido do outro nó.
+        self._ouvinte: threading.Thread | None = None
         #: A PONTE DO PRODUTO SÓ ESCREVE O QUE TEM SINAL — A-HAPTICA-DO-RADIO-
         #: OBEDECE-AO-SINAL-DO-JOGO-01, 28/09/2026. Ela escuta o monitor o
         #: tempo todo (ler é local e não gasta rádio), e o silêncio do jogo não
@@ -3266,14 +3429,27 @@ class PonteDeSomPorRadio:
             return False
         parar = threading.Event()
         self._parar = parar
+        # AS DUAS FONTES PASSAM PELO OUVIDO — A-HAPTICA-POR-AUDIO-E-O-ALTO-
+        # FALANTE-CHEGAM-AO-RADIO-01. A que o arranjo leva ao rádio é lida pela
+        # bomba; a outra, por um fio só de escuta (:meth:`_escutar`), que também
+        # esvazia o cano do gravador que ninguém lia no modo da háptica.
+        fonte_do_som = fonte_que_ouve(self._fonte, self._no_do_som)
+        fonte_da_haptica = (
+            fonte_que_ouve(
+                self._fonte_da_haptica, self._no_da_haptica, canais=CANAIS_DA_HAPTICA
+            )
+            if self._fonte_da_haptica is not None
+            else None
+        )
+        haptica_no_ar = bool(self.arranjo.len_haptico)
         self._bomba = BombaDeSomPeloRadio(
             arranjo=self.arranjo,
-            fonte=self._fonte,
+            fonte=fonte_do_som,
             escritor=escritor_de_hidraw(fd),
             tag_audio=self.rota,
             seco=self._seco,
             com_microfone=self.com_microfone,
-            fonte_haptica=self._fonte_da_haptica,
+            fonte_haptica=fonte_da_haptica if haptica_no_ar else None,
             vaga=self._vaga,
             so_com_sinal=self.so_com_sinal,
             relogio=self._relogio,
@@ -3287,6 +3463,23 @@ class PonteDeSomPorRadio:
             daemon=True,
         )
         self._thread.start()
+        so_ouvir, tamanho = (
+            (fonte_do_som if self._no_do_som else None, BYTES_DE_PCM_POR_QUADRO)
+            if haptica_no_ar
+            else (
+                fonte_da_haptica if self._no_da_haptica else None,
+                QUADROS_POR_BLOCO_HAPTICO * 2 * CANAIS_DA_HAPTICA,
+            )
+        )
+        self._ouvinte = None
+        if so_ouvir is not None:
+            self._ouvinte = threading.Thread(
+                target=self._escutar,
+                args=(so_ouvir, tamanho, parar),
+                name=f"som-ouvido-{self.uniq[:6]}",
+                daemon=True,
+            )
+            self._ouvinte.start()
         self.motivo = ""
         if self._vaga is not None:
             self._vaga.subiu(
@@ -3359,6 +3552,22 @@ class PonteDeSomPorRadio:
             # A VAGA SAI COM A CORRIDA, e só com ela: enquanto a thread
             # respira, a ponte ainda pode pôr bytes no ar.
             self._soltar_a_vaga(por_que)
+
+    def _escutar(
+        self, fonte: Callable[[int], bytes], tamanho: int, parar: threading.Event
+    ) -> None:
+        """Lê a fonte que o arranjo não leva ao rádio, só para o :data:`OUVIDO`.
+
+        Nada vai ao fio: o escritor do controle continua sendo UM, o laço da
+        bomba. Sai quando mandam parar ou quando a fonte seca (o gravador foi
+        colhido no :meth:`descer`).
+        """
+        try:
+            while not parar.is_set():
+                if not fonte(tamanho):
+                    break
+        except Exception:  # o ouvido nunca derruba a ponte
+            logger.debug("som_radio_ouvido_caiu", uniq=self.uniq, exc_info=True)
 
     def _dizer_o_que_fez(
         self, bomba: BombaDeSomPeloRadio, por_que: str, comeco: float, leituras: int
@@ -3457,13 +3666,25 @@ class PonteDeSomPorRadio:
         # o próximo `subir()` acharia a fonte já consumida. Ele é colhido
         # ANTES, porque quem segura a thread é a leitura bloqueante — e no
         # arranjo da háptica a fonte que bloqueia é esta.
+        #
+        # O GRAVADOR QUE SÓ SE ESCUTA (A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-
+        # CHEGAM-AO-RADIO-01) tem por leitor o fio do ouvido, e não o laço: o
+        # `stdout` dele só fecha com o ouvido parado, pela regra do passo 3 do
+        # `filho_de_som` — um fd fechado sob uma leitura viva pode renascer
+        # como o cano de outra ponte.
+        ouvinte = self._ouvinte
+        haptica_no_ar = bool(self.arranjo.len_haptico)
         haptico, self._gravador_da_haptica = self._gravador_da_haptica, None
         if haptico is not None:
-            derrubar_leitor_de_pipe(haptico, junta_s=esperar_s)
+            derrubar_leitor_de_pipe(
+                haptico, leitor=None if haptica_no_ar else ouvinte, junta_s=esperar_s
+            )
             logger.info("haptica_radio_gravador_colhido", uniq=self.uniq)
         thread = self._thread
         if gravador is not None:
-            como = derrubar_leitor_de_pipe(gravador, leitor=thread, junta_s=esperar_s)
+            como = derrubar_leitor_de_pipe(
+                gravador, leitor=ouvinte if haptica_no_ar else thread, junta_s=esperar_s
+            )
             self.como_morreu_o_gravador = como
             logger.info(
                 "som_radio_gravador_colhido",
@@ -3479,7 +3700,7 @@ class PonteDeSomPorRadio:
             # soltaria não existe.
             self._soltar_a_vaga("a ponte não subiu")
             return True
-        if thread.is_alive() and gravador is None:
+        if thread.is_alive() and (gravador is None or haptica_no_ar):
             thread.join(timeout=esperar_s)
         if thread.is_alive():
             logger.info(
@@ -4113,6 +4334,7 @@ __all__ = [
     "GRAVADORES_DO_MONITOR",
     "HEX_DO_SUFIXO",
     "INTERVALO_DE_ENVIO_035",
+    "JANELA_DO_SINAL_S",
     "LATENCIA_DO_GRAVADOR_MS",
     "MOTIVO_FILA_PARADA",
     "MOTIVO_NO_SEM_ASSENTO",
@@ -4124,10 +4346,12 @@ __all__ = [
     "OFFSET_APOS_O_COMMON",
     "OFFSET_DO_COMMON",
     "ORCAMENTO_DO_DEGRAU",
+    "OUVIDO",
     "POR_CABO",
     "POR_RADIO",
     "PREFIXO_SINK_DO_SOM",
     "PRIORIDADE_SESSAO_DO_SOM",
+    "SURDO_S",
     "TAMANHO_DO_DEGRAU",
     "TAXA_DA_FONTE_DO_SOM",
     "TAXA_DA_FONTE_POR_PAPEL",
@@ -4142,6 +4366,7 @@ __all__ = [
     "CodificadorOpus",
     "ContagemDaBomba",
     "Diagnostico",
+    "OuvidoDosNos",
     "PonteDeSomPorRadio",
     "RotaDoNo",
     "SinkVirtualPipeWire",
@@ -4162,6 +4387,7 @@ __all__ = [
     "fonte_com_ritmo",
     "fonte_de_arquivo",
     "fonte_do_monitor_do_no",
+    "fonte_que_ouve",
     "ha_gravador_de_monitor",
     "monitor_da_saida_padrao",
     "montar_com_o_common_preservado",
@@ -4180,5 +4406,6 @@ __all__ = [
     "sufixo_do_sink_do_som",
     "tag_tlv",
     "taxa_da_fonte",
+    "tem_sinal_no_pcm",
     "versao_libopus",
 ]

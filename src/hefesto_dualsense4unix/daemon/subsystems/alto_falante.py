@@ -829,6 +829,13 @@ class AltoFalanteSubsystem:
     #: lendo o endpoint do lugar de antes, e o controle vibrava pelo jogador
     #: que se sentou ali. Imutável no corpo da classe, como o ``_lugar_de``.
     _endpoint_da_ponte: Mapping[str, str] = MappingProxyType({})
+    #: ``{uniq: nome do endpoint}`` que a ponte de cada controle ESCUTA: o que
+    #: ela leva ao rádio no modo háptica, e o que ela só ouve no modo som
+    #: (``""`` quando não ouve nenhum). A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-
+    #: CHEGAM-AO-RADIO-01: a ponte do som que não escuta o endpoint aberto do
+    #: lugar sobe de novo com o ouvido (:meth:`_casar_as_pontes`). Ponte sem
+    #: registro (dublê) não tem a resposta, e fica como está.
+    _ouvido_da_ponte: Mapping[str, str] = MappingProxyType({})
     #: Os laços do cabo (``integrations/haptica_do_cabo.HapticaDoCabo``). Nasce
     #: na primeira volta que precisa dele (:meth:`_o_cabo`) — dublê montado por
     #: ``__new__`` também o ganha.
@@ -927,6 +934,15 @@ class AltoFalanteSubsystem:
         self._acordar = threading.Event()
         #: A thread que escuta o retrato do som e acorda o laço.
         self._ouvinte: threading.Thread | None = None
+        # A TROCA DE SINAL ACORDA A VOLTA — A-HAPTICA-POR-AUDIO-E-O-ALTO-
+        # FALANTE-CHEGAM-AO-RADIO-01. O retrato do som só avisa quando um FLUXO
+        # nasce ou morre; o sinal que passa do endpoint ao alto-falante com os
+        # dois fluxos abertos não mudava entrada nenhuma da volta, e o modo
+        # certo só chegava na volta seguinte por outro motivo. Referência
+        # fraca: o subsystem que morre sai da lista sozinho.
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import OUVIDO
+
+        OUVIDO.escutar(self._acordar_a_volta)
 
     # -- contrato Subsystem ----------------------------------------------
 
@@ -1626,9 +1642,16 @@ class AltoFalanteSubsystem:
             este_joga = _abre(uniq)
             if este_joga:
                 abertos.add(lugar)
+            # O PORTÃO PERGUNTA AO OUVIDO (A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-
+            # CHEGAM-AO-RADIO-01): no cabo ninguém escuta o endpoint (o laço
+            # soma na placa, sem ponte), e o «não sei» do ouvido cai no fluxo,
+            # como antes.
+            sinal = self._o_no_tem_sinal(str(endpoint.nome))
             self._vigiar_o_portao(
                 uniq,
-                fechado=sink_esta_tocando(str(endpoint.nome)) and not este_joga,
+                fechado=(
+                    sink_esta_tocando(str(endpoint.nome)) if sinal is None else sinal
+                ) and not este_joga,
                 controles=controles,
             )
         self._o_cabo().casar(rotas, abertos)
@@ -2136,21 +2159,38 @@ class AltoFalanteSubsystem:
             # só escreve o bloco que tem sinal nos motores. No menu, com o
             # fluxo aberto e mudo, o rádio fica livre.
             este_joga = uniq.lower() in jogando
+            # QUEM FICA COM O RÁDIO É QUEM TEM SINAL, e não quem tem fluxo —
+            # A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-CHEGAM-AO-RADIO-01, 29/09/2026.
+            # A Forja abre o alto-falante e a háptica de cada jogador em toda
+            # sala e toca só num deles: pelo fluxo, a ponte ia à háptica e o
+            # canto de O Canto saía mudo pelo rádio (e tocava no cabo). Quem
+            # responde é o OUVIDO (:meth:`_o_no_tem_sinal`), com o que a ponte
+            # leu dos dois monitores.
+            som_toca = self._o_no_tem_sinal(nome_do_sink(uniq)) is True
             # O RUMBLE CONVERTIDO É O TERCEIRO LADO (NO-MODO-XBOX-TUDO-FUNCIONA-01,
             # 29/09/2026): o jogo que só manda rumble já disse de quem é. Mas
             # pelo rádio som e vibração são exclusivos, e a háptica fina não
-            # tira o alto-falante de ninguém: com ele tocando, o HID leva.
+            # tira o alto-falante de ninguém: com ele TOCANDO (com sinal, e não
+            # só com o fluxo aberto e mudo), o HID leva.
             pelo_rumble = False
             if not este_joga and self._recebe_o_rumble(uniq):
-                if sink_esta_tocando(nome_do_sink(uniq), na_duvida=True):
+                if som_toca:
                     com_som.add(uniq)
                 else:
                     pelo_rumble = True
-            endpoint_toca = endpoint is not None and sink_esta_tocando(endpoint.nome)
-            modo = "haptica" if (endpoint_toca and (este_joga or pelo_rumble)) else "som"
+            endpoint_aberto = endpoint is not None and sink_esta_tocando(endpoint.nome)
+            candidata = endpoint_aberto and (este_joga or pelo_rumble)
+            modo = self._modo_pelo_sinal(
+                uniq,
+                candidata=candidata,
+                som_toca=som_toca,
+                haptica_toca=(
+                    self._o_no_tem_sinal(endpoint.nome) if endpoint is not None else None
+                ),
+            )
             self._vigiar_o_portao(
                 uniq,
-                fechado=endpoint_toca and not este_joga and not pelo_rumble
+                fechado=endpoint_aberto and not este_joga and not pelo_rumble
                 and uniq not in com_som,
                 controles=controles,
             )
@@ -2185,7 +2225,9 @@ class AltoFalanteSubsystem:
             ):
                 self._descer_ponte_ociosa(uniq)
                 continue
-            if modo == "som":
+            # COM SOM É O ALTO-FALANTE TOCANDO, com sinal: a ponte do som de pé
+            # sobre um fluxo mudo não tira o rumble convertido de ninguém.
+            if modo == "som" and som_toca:
                 com_som.add(uniq)
             # O LUGAR QUE ANDA TROCA A PONTE (conferência de 28/09/2026): a
             # ponte em modo háptica lê o endpoint do lugar de QUANDO subiu. Se
@@ -2194,13 +2236,32 @@ class AltoFalanteSubsystem:
             # de antes. Ponte sem registro (dublê, ou de antes desta volta
             # saber) é «não sei», e «não sei» não derruba ponte.
             lendo = endpoint.nome if (modo == "haptica" and endpoint is not None) else ""
+            # O OUVIDO DA HÁPTICA NO MODO SOM: com o endpoint do lugar aberto,
+            # a ponte do som escuta ele também, senão o sinal que o jogo põe
+            # nele nunca seria ouvido e a ponte ficaria no som para sempre. A
+            # ponte do som que subiu sem ele (o endpoint abriu depois) sobe de
+            # novo com ele — só com o alto-falante mudo, quando o respiro de
+            # 255 ms não corta nada.
+            ouvir_a_haptica = (
+                endpoint.nome if (modo == "som" and endpoint_aberto and endpoint is not None)
+                else ""
+            )
             if uniq in self._pontes:
                 lia = self._endpoint_da_ponte.get(uniq)
-                if self._modo_da_ponte.get(uniq) == modo and lia in (None, lendo):
+                sem_ouvido = (
+                    bool(ouvir_a_haptica) and not som_toca
+                    and self._ouvido_da_ponte.get(uniq, ouvir_a_haptica) != ouvir_a_haptica
+                )
+                if (
+                    self._modo_da_ponte.get(uniq) == modo and lia in (None, lendo)
+                    and not sem_ouvido
+                ):
                     continue
                 anterior = self._pontes.pop(uniq)
                 anterior.descer()
-                if self._modo_da_ponte.get(uniq) == modo:
+                if sem_ouvido and self._modo_da_ponte.get(uniq) == modo:
+                    logger.info("som_ponte_ganha_o_ouvido", uniq=uniq)
+                elif self._modo_da_ponte.get(uniq) == modo:
                     logger.info("som_ponte_troca_de_lugar", uniq=uniq, modo=modo)
                 else:
                     logger.info("som_ponte_troca_de_modo", uniq=uniq, modo=modo)
@@ -2298,6 +2359,22 @@ class AltoFalanteSubsystem:
                             vaga.soltar("a vibração não teve fonte")
                         self._descer_ponte_ociosa(uniq)
                         continue
+            elif ouvir_a_haptica:
+                # O OUVIDO DA HÁPTICA NO MODO SOM: o mesmo gravador do modo da
+                # háptica, lido só para o OUVIDO. Sem ele a ponte sobe como
+                # sempre subiu, e o modo segue pelo que se sabe.
+                fonte_h, gravador_h, motivo_h = fonte_do_monitor_do_no(
+                    ouvir_a_haptica,
+                    uniq=uniq,
+                    papel="haptica",
+                    canais=CANAIS_DA_HAPTICA,
+                )
+                if fonte_h is None:
+                    if gravador_h is not None:
+                        derrubar_leitor_de_pipe(gravador_h)
+                    gravador_h = None
+                    ouvir_a_haptica = ""
+                    logger.info("haptica_sem_ouvido", uniq=uniq, motivo=motivo_h)
             ponte = PonteDeSomPorRadio(
                 uniq=uniq,
                 abrir_hidraw=functools.partial(self._abrir_hidraw, caminho),
@@ -2308,6 +2385,11 @@ class AltoFalanteSubsystem:
                 fonte_de_haptica=fonte_h,
                 gravador_da_haptica=gravador_h,
                 vaga=vaga,
+                no_do_som=nome_do_sink(uniq),
+                no_da_haptica=(
+                    endpoint.nome
+                    if (modo == "haptica" and endpoint is not None) else ouvir_a_haptica
+                ),
             )
             if ponte.subir():
                 self._pontes[uniq] = ponte
@@ -2315,6 +2397,11 @@ class AltoFalanteSubsystem:
                 self._endpoint_da_ponte = MappingProxyType({
                     **self._endpoint_da_ponte,
                     uniq: endpoint.nome if (modo == "haptica" and endpoint is not None) else "",
+                })
+                self._ouvido_da_ponte = MappingProxyType({
+                    **self._ouvido_da_ponte,
+                    uniq: endpoint.nome
+                    if (modo == "haptica" and endpoint is not None) else ouvir_a_haptica,
                 })
                 # SUBIU: o caminho está provado, e a recusa velha não vale mais.
                 self._ponte_recusada.pop(uniq, None)
@@ -2361,6 +2448,63 @@ class AltoFalanteSubsystem:
         acordar = getattr(self, "_acordar", None)
         if acordar is not None:
             acordar.set()
+
+    def _o_no_tem_sinal(self, nome: str) -> bool | None:
+        """O nó tem sinal agora? ``None`` = ninguém o escuta. Nunca levanta.
+
+        A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-CHEGAM-AO-RADIO-01, 29/09/2026.
+        O dono da resposta é o :data:`~hefesto_dualsense4unix.integrations.
+        alto_falante_bt.OUVIDO`, com o que as pontes leram dos monitores; este
+        método é a única porta do subsystem para ele. Os que decidem se o NÓ
+        fica de pé (a reancoragem e :meth:`_lugares_de_pe`) seguem no fluxo de
+        propósito: nó que some quebra o jogo que o escolheu, e ali o fluxo
+        aberto é a pergunta. E a ponte ociosa desce pelo fluxo, e não pelo
+        sinal: a ponte é o ouvido do nó, e derrubá-la pelo silêncio deixaria o
+        nó sem quem o escute.
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import OUVIDO
+
+        try:
+            return OUVIDO.tem_sinal(nome)
+        except Exception:  # o ouvido nunca derruba a volta
+            logger.debug("som_ouvido_ilegivel", no=nome, exc_info=True)
+            return None
+
+    def _modo_pelo_sinal(
+        self, uniq: str, *, candidata: bool, som_toca: bool, haptica_toca: bool | None
+    ) -> str:
+        """O modo da ponte de ``uniq``: quem tem SINAL fica com o rádio.
+
+        A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-CHEGAM-AO-RADIO-01, 29/09/2026.
+        ``candidata`` é o portão de sempre (o jogo abriu o endpoint do lugar E
+        este controle joga, ou o rumble convertido é dele): sem ele, som.
+
+        * só o alto-falante com sinal: som (``0x35``), mesmo com o fluxo da
+          háptica aberto e mudo — a Forja em O Canto;
+        * só a háptica com sinal: háptica (``0x32`` com o bloco ``0x11``);
+        * os dois com sinal: o alto-falante ganha — a D-2909-NO-RADIO-O-ALTO-
+          FALANTE-GANHA estendida ao fluxo de háptica do jogo, por delegação;
+        * nenhum com sinal, com a háptica ESCUTADA e muda (``False``) e a
+          ponte no som: ela fica no som — é O Canto entre dois cantos;
+        * a háptica que ninguém escuta (``None``): a háptica, no mesmo tempo
+          de hoje. A ponte da háptica escuta os dois e só manda o que tem
+          sinal, e o som que começar a tocar a devolve ao alto-falante.
+
+        A janela do sinal (:data:`~hefesto_dualsense4unix.integrations.
+        alto_falante_bt.JANELA_DO_SINAL_S`) é a histerese: uma cena com tiro e
+        fala tem sinal nos dois, e a ponte fica no som, sem alternar.
+        """
+        if not candidata or som_toca:
+            return "som"
+        if haptica_toca is True:
+            return "haptica"
+        if (
+            haptica_toca is False
+            and uniq in self._pontes
+            and self._modo_da_ponte.get(uniq) == "som"
+        ):
+            return "som"
+        return "haptica"
 
     def _descer_ponte_ociosa(self, uniq: str) -> None:
         """A ponte de quem não tem o que tocar desce. Idempotente.
