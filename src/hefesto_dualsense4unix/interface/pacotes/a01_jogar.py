@@ -899,8 +899,8 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
     **E FORAM — 28/09/2026, A-TELA-PERGUNTA-AO-DONO-01.** O pacote da 09
     (`a09_sistema.pacote`) pergunta a :func:`coluna_de_atencao` e acrescenta as
     linhas ao exame, com o selo de aviso do exame. Vão as fontes SEM outra casa
-    (:func:`_avisos_sem_outra_casa`); as quatro que a tela já mostra em outro
-    lugar ficam no canal e fora da 09.
+    (:func:`_avisos_sem_outra_casa`); as que a tela já mostra em outro lugar
+    ficam no canal e fora da 09 (:func:`_avisos_com_outra_casa`).
 
     **NADA SE ESCREVE AQUI.** As fontes já existiam, e todas fora deste
     arquivo — o que faltava era o produto novo CHAMÁ-LAS. Medido em
