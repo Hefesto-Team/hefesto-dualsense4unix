@@ -248,8 +248,10 @@ def test_o_endpoint_de_haptica_declara_a_ancora() -> None:
         syspath="/devices/pci0000:00/0000:00:14.0/usb3/3-4",
         declarado="/devices/pci0000:00/0000:00:14.0/usb3/3-4/3-4:1.0",
     )
+    # O endpoint é do LUGAR desde 28/09/2026 (A-HAPTICA-CHEGA-A-QUEM-ENTRA-
+    # DEPOIS-01): o primeiro argumento é o lugar, e não o `uniq`.
     props = _como_o_servidor_le(
-        haptica.propriedades_do_endpoint(_UNIQ, ancora), "sink_properties"
+        haptica.propriedades_do_endpoint(1, ancora), "sink_properties"
     )
     assert props["device.bus"] == "usb"
     assert props["device.vendor.id"] == "054c"
