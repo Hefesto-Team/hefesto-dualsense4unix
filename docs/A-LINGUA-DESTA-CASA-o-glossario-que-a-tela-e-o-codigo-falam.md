@@ -108,4 +108,9 @@ e por isso ficam de fora da conta.
   procurar a próxima é `interface/olhar.py --palavra <palavra>`. **O nome
   interno não se toca** — a borda ignora o que está colado a `-`, `_` ou `.`, e
   o que está dentro de `<code>` é identificador, não palavra de tela;
+* o que a tela CITA de outro programa é identificador, como o `<code>`: o
+  registro do serviço da aba Sistema traz as linhas do daemon com as chaves
+  dele (`mac=`, `uniq=`), e quem o mostra o registra como citação
+  (`frases_que_ela_baniu.citar`), que o funil do piloto não lê (28/09/2026). A
+  frase do produto no mesmo campo continua lida;
 * o portão `acentuacao` vale aqui como em todo lugar.

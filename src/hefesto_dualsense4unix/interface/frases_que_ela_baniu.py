@@ -80,6 +80,7 @@ por causa desta lista faria estrago, não cura.
 from __future__ import annotations
 
 import re
+import threading
 from functools import cache
 
 #: Trechos proibidos em qualquer texto que chegue à tela. A comparação é por
@@ -459,3 +460,84 @@ def palavra_banida_em(texto: str) -> str | None:
 def primeiro_trecho_banido(texto: str) -> str | None:
     """As DUAS listas numa consulta só — a frase primeiro, a palavra depois."""
     return frase_banida_em(texto) or palavra_banida_em(texto)
+
+
+def sem_o_trecho(texto: str, trecho: str) -> str:
+    """``texto`` sem as ocorrências de ``trecho``, lido como a régua o lê.
+
+    A FRASE sai por substring, como :func:`frase_banida_em` a acha; a PALAVRA
+    sai pela borda de :func:`_borda`, como :func:`palavra_banida_em` a acha. No
+    lugar fica um espaço, para que o que sobra dos dois lados não se cole numa
+    palavra nova. É o que deixa o funil achar o SEGUNDO trecho do mesmo valor:
+    sem tirar o primeiro, :func:`primeiro_trecho_banido` o devolveria de novo.
+    """
+    if trecho in FRASES_BANIDAS:
+        return texto.replace(trecho, " ")
+    return _borda(trecho).sub(" ", texto)
+
+
+# ---------------------------------------------------------------------------
+# A CITAÇÃO — O-FUNIL-DIZ-O-CAMPO-E-O-DIARIO-E-CITACAO-01, 28/09/2026
+# ---------------------------------------------------------------------------
+# O QUE A TELA CITA DE OUTRO PROGRAMA NÃO É FRASE DA TELA. É a regra do
+# `<code>` do glossário (§5: o que está dentro dele é identificador, não
+# palavra de tela) levada ao funil de execução, que não vê marcação nenhuma:
+# ele lê valores.
+#
+# O CASO QUE A FEZ NASCER é o painel «Registro do serviço» da aba 09. Ela o
+# quer sempre à vista, para copiar e colar num relato de defeito (25/09), e as
+# linhas são do daemon: `uhid_device_created mac=…`, `backend_conectado
+# uniq=…`. O funil acusava `'MAC'` e `'uniq'` a cada abertura da aba, sem
+# dizer de onde, e ninguém podia curar: a palavra é a chave do registro, e o
+# relato de defeito precisa dela.
+#
+# A MARCA NÃO MUDA UM BYTE. Uma subclasse de `str` não sobreviveria ao
+# caminho (o `str(repouso)` de `a09_sistema._no_painel` e o `"\n".join` do
+# painel a perdem), então o dono REGISTRA o trecho citado e o funil o tira da
+# leitura antes de procurar a palavra. O resto do valor segue lido: a frase do
+# produto no mesmo campo continua na régua.
+#
+# O REGISTRO SE LÊ POR CÓPIA, sob trava: quem cita é a faixa lenta da 09, numa
+# thread, e quem lê é o tique. Um `RuntimeError` de dicionário mudando no meio
+# da leitura, dentro do tique, congelaria a janela.
+
+#: QUANTAS CITAÇÕES O REGISTRO GUARDA. A faixa lenta relê o diário a cada 2 s,
+#: e o painel mostra a mais nova; as de antes só servem enquanto um tique ainda
+#: carrega o texto velho. A mais antiga sai primeiro.
+CITACOES_QUE_O_FUNIL_LEMBRA = 16
+
+_CITADOS: dict[str, None] = {}
+_TRAVA_DOS_CITADOS = threading.Lock()
+
+
+def citar(texto: str) -> str:
+    """Registra ``texto`` como CITAÇÃO de outro programa e o devolve igual.
+
+    Devolve o MESMO objeto: quem cita escreve ``return citar(texto)`` e a tela
+    recebe exatamente o que receberia sem a marca.
+    """
+    if texto:
+        with _TRAVA_DOS_CITADOS:
+            _CITADOS.pop(texto, None)
+            _CITADOS[texto] = None
+            while len(_CITADOS) > CITACOES_QUE_O_FUNIL_LEMBRA:
+                _CITADOS.pop(next(iter(_CITADOS)))
+    return texto
+
+
+def citados() -> tuple[str, ...]:
+    """Uma CÓPIA do registro das citações, lida sob a trava."""
+    with _TRAVA_DOS_CITADOS:
+        return tuple(_CITADOS)
+
+
+def sem_o_citado(texto: str) -> str:
+    """O que o funil lê de ``texto``: tudo, menos os trechos citados.
+
+    O trecho citado sai inteiro, e fica uma quebra de linha no lugar dele —
+    as palavras de antes e de depois não se colam.
+    """
+    for citado in citados():
+        if citado in texto:
+            texto = texto.replace(citado, "\n")
+    return texto

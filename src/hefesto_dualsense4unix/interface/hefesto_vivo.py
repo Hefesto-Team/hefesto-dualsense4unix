@@ -3429,7 +3429,7 @@ class Piloto:
         # A GUARDA `window.__hef &&` é a mesma da pintura, e pela mesma razão:
         # entre a tecla e a volta da thread a página pode ter trocado.
         _esquecer_a_pintura(self)
-        self._js(f"window.__hef && window.__hef.pintar({_json(resposta)})")
+        self._js(f"window.__hef && window.__hef.pintar({_json(resposta, pagina=pagina)})")
         return False
 
     def _gesto(self, o: dict[str, Any]) -> None:
@@ -3645,7 +3645,8 @@ class Piloto:
         # botão: a carga seguinte vai inteira.
         _esquecer_a_pintura(self)
         self._js(
-            f"window.__hef && window.__hef.voltouDoVoo({_json(voo)}, {_json(certo)})"
+            f"window.__hef && window.__hef.voltouDoVoo("
+            f"{_json(voo, pagina=self.pagina)}, {_json(certo, pagina=self.pagina)})"
         )
         return False
 
@@ -3671,7 +3672,7 @@ class Piloto:
             # razão: entre o clique e a volta da thread a página pode ter
             # trocado, e o `__hef` morre com o documento.
             _esquecer_a_pintura(self)
-            self._js(f"window.__hef && window.__hef.pintar({_json(resposta)})")
+            self._js(f"window.__hef && window.__hef.pintar({_json(resposta, pagina=pagina)})")
             print(f"[gesto] {pagina} · {nome} → aplicado, e a resposta foi para a tela")
             return False
         print(f"[gesto] {pagina} · {nome} → aplicado")
@@ -4516,7 +4517,7 @@ class Piloto:
         # `pintar` já trata a chave ausente como «não mexe» em toda seção.
         enviar = self._o_que_mandar(carga)
         if enviar:
-            pedido = PEDIR_A_PINTURA.replace("CARGA", _json(enviar))
+            pedido = PEDIR_A_PINTURA.replace("CARGA", _json(enviar, pagina=self.pagina))
             self._pintura_no_ar = True
             self.ponte.perguntar(pedido, contou)
         else:
@@ -5036,7 +5037,8 @@ class Piloto:
             self._onde_clicou[nome] = (
                 f"o clique falhou: {erro}" if erro is not None else str(valor))
 
-        self.ponte.perguntar(CLIQUE_COM_ALVO % (_json(nome), _json(prefs)), anotou)
+        self.ponte.perguntar(CLIQUE_COM_ALVO % (_json(nome, pagina=self.pagina),
+                                                _json(prefs, pagina=self.pagina)), anotou)
         # A ESPERA É OBRIGATÓRIA e não é folga: o daemon escreve no aparelho e
         # só então republica o estado. Medir na hora leria o valor VELHO e diria
         # "sem efeito" sobre um botão que funcionou.
@@ -5430,7 +5432,7 @@ def _soltar_as_ondas() -> None:
         ondas_de_som.o_de_sempre().seguir({})
 
 
-def _json(obj: Any) -> str:
+def _json(obj: Any, pagina: str = "") -> str:
     """Serializa para o WebView — e DENUNCIA o que ela mandou tirar da tela.
 
     Este é o funil: **todo** valor que chega ao `WebKit2.WebView` passa aqui, a
@@ -5446,6 +5448,20 @@ def _json(obj: Any) -> str:
     defeito do dono da frase; a janela congelada é defeito da casa inteira.
     Quem impede a frase de EXISTIR continua sendo a guarda de fonte e a de
     página (`test_a_frase_que_ela_baniu_nao_chega_a_tela`).
+
+    A DENÚNCIA DIZ DE ONDE VEIO — O-FUNIL-DIZ-O-CAMPO-E-O-DIARIO-E-CITACAO-01,
+    28/09/2026. Ela era `[texto banido] 'MAC' foi para a tela`, sem página nem
+    campo, e o diário da janela dela juntou 28 `'uinput'` e 4 `'MAC'` que
+    ninguém soube atribuir. Agora sai `[texto banido] 'MAC' em
+    09-sistema.html · registro-texto`: a página vem de quem chama (todo
+    chamador do `Piloto` a passa) e o campo é a chave em que o valor mora.
+    Ela nomeia TODO trecho do valor, e não só o primeiro da lista; e lembra
+    por palavra, página e campo, para que o primeiro dono de uma palavra não
+    esconda o segundo pela sessão inteira.
+
+    O QUE A TELA CITA DE OUTRO PROGRAMA NÃO É LIDO: o dono registra o trecho
+    (`frases_que_ela_baniu.citar`, hoje o diário do serviço na 09), e o funil
+    o tira da leitura antes de procurar. O texto que vai à tela não muda.
     """
     import json
 
@@ -5467,7 +5483,11 @@ def _json(obj: Any) -> str:
     # consulta as duas listas — a das frases que ela baniu e a das palavras —, e
     # é uma linha, como a sprint mediu.
     from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
+        FRASES_BANIDAS,
+        PALAVRAS_BANIDAS,
         primeiro_trecho_banido,
+        sem_o_citado,
+        sem_o_trecho,
     )
 
     saida = json.dumps(obj, ensure_ascii=False, default=str)
@@ -5481,53 +5501,90 @@ def _json(obj: Any) -> str:
     # fatiado. Cru, um valor que É a palavra sozinha cairia na exceção
     # `texto.strip() == palavra` de `palavra_banida_em` e passaria calado:
     # `"Mesa"` cru dá `None`, e serializado dá a palavra.
-    for folha in _textos_da_carga(obj):
+    #
+    # TODO TRECHO, E NÃO SÓ O PRIMEIRO — 28/09/2026. `primeiro_trecho_banido`
+    # devolve o primeiro NA ORDEM DA LISTA, e `MAC` vem antes de `uniq`: no
+    # mesmo valor, o primeiro escondia o segundo. O laço tira o trecho achado
+    # (`sem_o_trecho`) e pergunta de novo, até não sobrar nenhum; o teto é o
+    # tamanho das duas listas, e um trecho que não saísse não prenderia o tique.
+    teto = len(FRASES_BANIDAS) + len(PALAVRAS_BANIDAS) + 1
+    for campo, folha in _folhas_da_carga(obj):
         if isinstance(folha, str) and folha in _TEXTOS_LIDOS_PELO_FUNIL:
-            banida = _TEXTOS_LIDOS_PELO_FUNIL[folha]
+            banidas = _TEXTOS_LIDOS_PELO_FUNIL[folha]
         else:
-            banida = primeiro_trecho_banido(
-                json.dumps(folha, ensure_ascii=False, default=str))
+            lido = sem_o_citado(folha) if isinstance(folha, str) else folha
+            resto = json.dumps(lido, ensure_ascii=False, default=str)
+            achadas: list[str] = []
+            for _ in range(teto):
+                banida = primeiro_trecho_banido(resto)
+                if banida is None:
+                    break
+                achadas.append(banida)
+                resto = sem_o_trecho(resto, banida)
+            banidas = tuple(achadas)
             if isinstance(folha, str):
                 if len(_TEXTOS_LIDOS_PELO_FUNIL) >= TEXTOS_QUE_O_FUNIL_LEMBRA:
                     _TEXTOS_LIDOS_PELO_FUNIL.pop(next(iter(_TEXTOS_LIDOS_PELO_FUNIL)))
-                _TEXTOS_LIDOS_PELO_FUNIL[folha] = banida
-        if banida is not None and banida not in _BANIDAS_JA_DENUNCIADAS:
-            _BANIDAS_JA_DENUNCIADAS.add(banida)
-            print(f"[texto banido] {banida!r} foi para a tela. A frase é defeito do "
-                  "dono dela — ver `interface/frases_que_ela_baniu.py`.",
+                _TEXTOS_LIDOS_PELO_FUNIL[folha] = banidas
+        for banida in banidas:
+            dono = (banida, pagina, campo)
+            if dono in _BANIDAS_JA_DENUNCIADAS:
+                continue
+            _BANIDAS_JA_DENUNCIADAS.add(dono)
+            print(f"[texto banido] {banida!r} em {_onde_foi(pagina, campo)}. A frase "
+                  "é defeito do dono dela — ver `interface/frases_que_ela_baniu.py`.",
                   file=sys.stderr)
     return saida
 
 
-def _textos_da_carga(obj: Any) -> Iterable[Any]:
-    """Os VALORES de uma carga que podem ter letra — as chaves ficam de fora.
+def _onde_foi(pagina: str, campo: str) -> str:
+    """`09-sistema.html · registro-texto` — a página e o campo da denúncia.
+
+    O que faltar diz que falta, em vez de sumir: uma denúncia sem página é a
+    que ninguém soube atribuir, e é isso que ela precisa dizer.
+    """
+    return f"{pagina or 'página sem nome'} · {campo or 'campo sem nome'}"
+
+
+def _folhas_da_carga(obj: Any, campo: str = "") -> Iterable[tuple[str, Any]]:
+    """`(campo, valor)` de cada valor que pode ter letra — o campo é a chave.
+
+    O CAMPO É A ÚLTIMA CHAVE acima do valor: `registro-texto` em
+    `{"mesa": {"registro-texto": …}}`, `aviso-texto` em
+    `{"colunas": {"p1": {"aviso-texto": […]}}}`. Um item de lista herda o
+    campo da lista. É o endereço que a página usa (`data-campo`), e é por ele
+    que se acha o dono da frase.
 
     Número, booleano e `None` não têm como carregar palavra nenhuma. O que não
     é texto nem contêiner (o `default=str` do `json.dumps`) sai como está, para
-    o funil serializá-lo do mesmo jeito que a carga.
+    o funil serializá-lo do mesmo jeito que a carga. As CHAVES nunca vão à tela,
+    e por isso só nomeiam — o funil não as lê. Era `_textos_da_carga` até
+    28/09/2026, que devolvia o valor e jogava a chave fora.
     """
     if isinstance(obj, dict):
-        for valor in obj.values():
-            yield from _textos_da_carga(valor)
+        for chave, valor in obj.items():
+            yield from _folhas_da_carga(valor, str(chave))
     elif isinstance(obj, (list, tuple)):
         for valor in obj:
-            yield from _textos_da_carga(valor)
+            yield from _folhas_da_carga(valor, campo)
     elif obj is None or isinstance(obj, (bool, int, float)):
         return
     else:
-        yield obj
+        yield campo, obj
 
 
-#: As palavras que o funil já denunciou nesta janela. Uma linha por palavra, e
-#: não uma por tique: o diário da janela não pode virar dez linhas por segundo.
-_BANIDAS_JA_DENUNCIADAS: set[str] = set()
+#: O que o funil já denunciou nesta janela: `(trecho, página, campo)`. Uma
+#: linha por dono, e não uma por tique: o diário da janela não pode virar dez
+#: linhas por segundo. Era por PALAVRA até 28/09/2026, e o primeiro dono de
+#: `'MAC'` escondia qualquer outro pela sessão inteira.
+_BANIDAS_JA_DENUNCIADAS: set[tuple[str, str, str]] = set()
 
 #: QUANTOS TEXTOS O FUNIL LEMBRA, com a resposta de cada um. Sem a memória,
 #: ler valor por valor não ganha nada (3,76 ms por tique contra 3,46 ms da carga
 #: inteira, medido numa carga de 10,6 KB); com ela, 0,30 ms. O mais velho sai
 #: primeiro quando a memória enche.
 TEXTOS_QUE_O_FUNIL_LEMBRA = 4096
-_TEXTOS_LIDOS_PELO_FUNIL: dict[str, str | None] = {}
+_TEXTOS_LIDOS_PELO_FUNIL: dict[str, tuple[str, ...]] = {}
 
 
 def main() -> None:

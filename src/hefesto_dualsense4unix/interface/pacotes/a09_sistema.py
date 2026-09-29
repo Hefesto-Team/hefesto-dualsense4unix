@@ -3649,9 +3649,18 @@ def _diario() -> str:
     NÃO É IPC, E NÃO PRECISA SER: o registro do serviço é o journal da unit do
     USUÁRIO — `journalctl --user` o lê sem sudo. Era o corpo do «Ver detalhes»
     até 25/09/2026; agora é o repouso do painel, relido pela faixa lenta.
+
+    O QUE O `journalctl` DEVOLVE É CITAÇÃO — O-FUNIL-DIZ-O-CAMPO-E-O-DIARIO-E-
+    CITACAO-01, 28/09/2026. As linhas são do daemon, com as chaves dele
+    (`mac=`, `uniq=`), e o funil do piloto acusava `'MAC'` a cada abertura da
+    aba. A saída (a de fora e a de erro, já mascaradas) vai registrada como
+    citação (`frases_que_ela_baniu.citar`), e o funil a tira da leitura; a tela
+    e o «Copiar» recebem o mesmo texto de antes. As duas frases do produto
+    («Não consegui ler…» e «…está vazio.») não são citação e seguem lidas.
     """
     import subprocess
 
+    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import citar
     from hefesto_dualsense4unix.utils import identidade
 
     unidade = identidade.atual().unit_daemon
@@ -3668,10 +3677,10 @@ def _diario() -> str:
             capture_output=True, text=True, timeout=8)
     except Exception as erro:  # a frase de tela precisa do motivo, e ele vem do erro
         return f"Não consegui ler o registro de {unidade}: {erro}"
-    texto = (saida.stdout or "").strip()
+    texto = (saida.stdout or "").strip() or (saida.stderr or "").strip()
     if not texto:
-        texto = (saida.stderr or "").strip() or f"O registro de {unidade} está vazio."
-    return mascarar_o_diario(texto)
+        return f"O registro de {unidade} está vazio."
+    return citar(mascarar_o_diario(texto))
 
 
 def _por_na_area_de_transferencia(texto: str) -> bool:
