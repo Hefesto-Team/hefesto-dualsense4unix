@@ -197,8 +197,9 @@ async def reapply_mic_after_connect(
     ouvida sem saber. O firmware nasce com o mic ABERTO, então não escrever não
     é neutro: é abrir.
 
-    Toda a política mora em `ProfileManager.reapply_mic_on_connect`, e a
-    assimetria que concilia a MIC-GRAVACAO-01 com a proteção do LED vermelho
+    Toda a política mora em `ProfileManager.reapply_mic_on_connect`, que lê o
+    mudo do DONO (o `maquina.json`, O-MUDO-E-DO-CONTROLE-01) e não o do perfil,
+    e a assimetria que protege o LED vermelho (só o calar atravessa o replug)
     está em `apply_mic`, em cópia única — aqui não há regra nenhuma a repetir.
 
     Best-effort de ponta a ponta, como a irmã: daemon enxuto sem
@@ -864,9 +865,10 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
         speaker_applier=getattr(daemon, "apply_profile_speaker", None),
         # PERFIL-GUARDA-O-MIC-01 (18/08/2026): o volume do microfone no restauro de boot, pela
         # MESMA razão do alto-falante — ele não tem flag persistido próprio e o
-        # perfil é a única fonte para restaurá-lo. O `muted` NÃO entra por aqui:
-        # o restauro vai com `origin="system"`, e a exceção MIC-GRAVACAO-01 só
-        # deixa o mudo do firmware passar em troca EXPLÍCITA de perfil.
+        # perfil é a única fonte para restaurá-lo. O mudo NÃO entra por aqui:
+        # ele é do controle e mora no `maquina.json` (O-MUDO-E-DO-CONTROLE-01),
+        # nenhuma ativação de perfil o escreve, e quem o devolve ao aparelho é
+        # o replug (`reapply_mic_after_connect`).
         mic_applier=getattr(daemon, "apply_profile_mic", None),
         # F1-REMAPEAR-02 (13/09/2026): o canal do PS vai no boot, o MESMO `_canal_do_ps` que
         # `gerente_do_daemon` passa às outras rotas. Sem ele a escolha do perfil para o PS só

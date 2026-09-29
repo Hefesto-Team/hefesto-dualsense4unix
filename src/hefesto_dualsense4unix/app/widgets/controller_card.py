@@ -3702,10 +3702,12 @@ if _GTK_DISPONIVEL:
             valor MANDADO como se fosse leitura é justamente o hábito que fez a
             tela parecer mentirosa quando ela nunca mentiu.
 
-            **NOTA DATADA — 18/08/2026 (PERFIL-GUARDA-O-MIC-01).** O callback
-            deixou de ser vazio: ele ANOTA no rascunho o mudo que ficou de pé,
-            para o "Salvar Perfil" o persistir. Continua não pintando nada —
-            registrar não é pintar, e registrar é DEPOIS da confirmação.
+            **O MUDO NÃO VAI AO RASCUNHO — O-MUDO-E-DO-CONTROLE-01.** Ele é do
+            controle e mora no ``maquina.json``, e o escritor dele é o ato do
+            microfone no daemon (``hotkey.ligar_o_microfone``), nunca o
+            «Salvar Perfil». O callback ainda entrega ``muted``/``soltar_mudo``
+            a ``registrar_microfone_no_rascunho``, e ``DraftConfig.with_mic``
+            os descarta. Continua não pintando nada.
             """
             acao = self._mic_acao
             if acao is None or not acao.sensivel or self._som_sem_alvo():
@@ -3717,9 +3719,9 @@ if _GTK_DISPONIVEL:
                 return ipc_bridge.mic_set(valor, uniq)
 
             # `valor is None` é o "Liberar": ela devolveu a posse do mudo ao
-            # `hid-playstation`. No rascunho isso é APAGAR a opinião, não
-            # gravar um valor — daí o `soltar_mudo` em vez de `muted=None`,
-            # que significaria "este gesto não fala do mudo".
+            # `hid-playstation`. O rascunho não guarda o mudo (ele é do
+            # controle, O-MUDO-E-DO-CONTROLE-01), e o `soltar_mudo` segue só
+            # porque a assinatura do registro ainda o aceita.
             ipc_bridge.run_in_thread(
                 _pedir,
                 self._mic_confirmado_pelo_daemon(

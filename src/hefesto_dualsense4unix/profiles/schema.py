@@ -699,23 +699,28 @@ class ProfileMicConfig(BaseModel):
     ao caso, até pq na época não tinhamos microfone dentro do sistema de
     perfis."* Quem aplica é `ProfileManager.apply_mic`.
 
-    **A EXCEÇÃO NOMEADA, MIC-GRAVACAO-01.** Os dois campos NÃO custam a mesma
-    coisa, e por isso não atravessam pelos mesmos caminhos:
+    **O MUDO NÃO É DO PERFIL — O-MUDO-E-DO-CONTROLE-01.** Os dois campos NÃO
+    custam a mesma coisa, e por isso não atravessam pelos mesmos caminhos:
 
     - `volume` aplica em TODA ativação (respeitada a trava manual de áudio):
       ele é o ganho da fonte no PipeWire e não apaga luz nenhuma;
-    - `muted` só aplica em troca EXPLÍCITA de perfil (`origin="manual"` — ela
-      escolhendo na GUI/CLI ou no PS+D-pad). Ele é o mudo do FIRMWARE, o mesmo
-      que apaga o LED vermelho, e há decisão medida proibindo o perfil de
-      apagá-lo como COLATERAL (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01). Sem
-      essa separação, abrir um jogo durante uma gravação roubaria o mudo dela:
-      o perfil do jogo limpa a trava manual ao entrar.
+    - `muted` não aplica em ativação NENHUMA — nem na troca automática, nem na
+      explícita, nem no boot. O mudo é do CONTROLE e mora no `maquina.json`
+      (`controles[k].microfone_mudo`, `utils/maquina.py`); a migração
+      `loader.o_mudo_do_microfone_vai_para_o_controle` o tira de todo perfil,
+      e `ProfileManager.apply_mic` ignora o que um arquivo ainda carregue. O
+      campo fica no esquema para esse arquivo carregar, e só.
+
+    Nota datada: a exceção MIC-GRAVACAO-01 (o `muted` atravessava só a troca
+    explícita de perfil) foi revogada em 29/09/2026 pela
+    O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01, na metade O-MUDO-E-DO-CONTROLE-01.
 
     **`volume` é do CAMINHO, não do firmware.** Ele é o volume da fonte de
     captura no sistema (o source do PipeWire), e por isso funciona igual no cabo
     e no rádio — que é exatamente o "independente de saber se tá via bt ou via
     cabo" do pedido dela. O DualSense não expõe um registrador de ganho de
-    microfone; o que existe no firmware é o MUDO, e é o `muted` que fala com ele.
+    microfone; o que existe no firmware é o MUDO, e ele é do controle (ver o
+    bloco acima).
 
     A faixa é 0-100 (por cento), diferente do `volume` do alto-falante, que é
     0-255 porque escreve um byte do report. Aqui o número é de sistema, e usar a
@@ -728,10 +733,9 @@ class ProfileMicConfig(BaseModel):
     #: Volume da captura, em por cento. `None` = o perfil não tem opinião e
     #: ativá-lo não toca no volume do microfone; com número, ativar APLICA.
     volume: int | None = Field(default=None, ge=0, le=100)
-    #: Mudo do microfone. `None` = sem opinião. Ver o bloco acima: quem
-    #: responde por ele é o mudo do FIRMWARE, o mesmo que apaga o LED vermelho
-    #: — e por isso ele só atravessa a troca EXPLÍCITA de perfil
-    #: (MIC-GRAVACAO-01).
+    #: Mudo do microfone, que NÃO é do perfil: ver o bloco acima. O mudo mora
+    #: no `maquina.json` (O-MUDO-E-DO-CONTROLE-01); o campo só deixa carregar o
+    #: arquivo que ainda o traga, e ativação nenhuma o aplica.
     muted: bool | None = None
     #: **O GANHO DE ENTRADA, EM POR CENTO — 21/09/2026, ordem dela.** *"OS DOIS
     #: SLICERS REFLETEM TANTO LÁ QUANTO NO JOGO E ISSO DEVE SER SALVO."* Os dois
@@ -1343,11 +1347,14 @@ class ControllerMicOverride(BaseModel):
     (``core/backend_pydualsense.py:6277``). O alvo está no parâmetro em todo
     degrau, e é o que separa *"guardei"* de *"chegou ao aparelho"*.
 
-    Vale para ele a MESMA exceção MIC-GRAVACAO-01 do campo global: o ``muted``
-    é o mudo do FIRMWARE, o mesmo que apaga o LED vermelho, e por isso só
-    atravessa a troca EXPLÍCITA de perfil (``origin="manual"``). Quem aplica a
-    guarda é ``ProfileManager.apply_mic``, reusado VERBATIM — não há segunda
-    cópia da regra aqui.
+    **DESDE A O-MUDO-E-DO-CONTROLE-01 O PERFIL NÃO LEVA O MUDO**, nem o da
+    peça: ele é do controle e mora no ``maquina.json``
+    (``controles[k].microfone_mudo``). A escada acima, de ``apply_mic`` para
+    baixo, continua sendo o caminho, mas quem a sobe com o mudo é só o replug
+    (``ProfileManager.reapply_mic_on_connect``), com o valor do DONO no lugar
+    deste campo; ativação de perfil nenhuma o aplica, e a guarda mora em
+    ``ProfileManager.apply_mic``, reusado VERBATIM — não há segunda cópia da
+    regra aqui.
 
     O SEGUNDO QUE ENTROU — ``volume``, e ele tem DOIS DEGRAUS
     ---------------------------------------------------------
@@ -1391,8 +1398,9 @@ class ControllerMicOverride(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    #: Mudo do microfone DESTA peça. `None` = sem opinião. Só atravessa a troca
-    #: EXPLÍCITA de perfil (MIC-GRAVACAO-01) — a guarda mora em
+    #: Mudo do microfone DESTA peça, que NÃO é do perfil: mora no
+    #: `maquina.json` (O-MUDO-E-DO-CONTROLE-01). O campo só deixa carregar o
+    #: arquivo que ainda o traga; ativação nenhuma o aplica, e a guarda mora em
     #: `ProfileManager.apply_mic`.
     muted: bool | None = None
 
@@ -2364,8 +2372,7 @@ def resolver_teclado_emulado(profile: Profile | None, flag_global: bool) -> bool
     caso a flag global (``utils.session.load_keyboard_preference`` hoje) segue
     mandando, o comportamento de sempre. Quando o perfil TEM opinião
     (``True``/``False``), ele vence — mesma regra do ``mouse``/``mic``/
-    ``speaker`` desta classe (contrato ``None`` = sem opinião), e a MESMA
-    proteção do ``mic.muted`` (MIC-GRAVACAO-01, ``schema.py``): perfil SEM
+    ``speaker`` desta classe (contrato ``None`` = sem opinião): perfil SEM
     opinião nunca pode apagar o que a flag diz.
 
     NÃO É CHAMADA por nenhum caminho de ativação real ainda — ver a nota

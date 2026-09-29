@@ -1764,8 +1764,9 @@ class Daemon:
         # - PERFIL-REESCRITO-NA-PARTIDA-01 (05/08/2026), item 6: máscara do
         #   vpad, política de rumble e volume do alto-falante — as três seções
         #   que esta rota já perdeu uma vez, e que a fábrica agora garante;
-        # - PERFIL-GUARDA-O-MIC-01 (18/08/2026): o `origin="system"` faz o
-        #   volume do microfone voltar e o mudo NÃO (MIC-GRAVACAO-01).
+        # - PERFIL-GUARDA-O-MIC-01 (18/08/2026): o volume do microfone volta
+        #   com o perfil, e o mudo NÃO — ele é do controle, e ativação de
+        #   perfil nenhuma o escreve (O-MUDO-E-DO-CONTROLE-01).
         #
         # O `mode_applier` vai EMBRULHADO, e o embrulho é a nota datada da
         # decisão que estava aqui: a FEAT-PROFILE-MODE-01 tirou o applier
@@ -4314,10 +4315,12 @@ class Daemon:
         PERFIL-GUARDA-O-MIC-01. Injetado como `mic_applier` do `ProfileManager`
         e consumido por `ProfileManager.apply_mic`, que já decidiu, ANTES de
         chegar aqui: que há opinião a aplicar (perfil sem a seção não chama
-        este método), que a trava manual de áudio não está armada, e — pela
-        exceção MIC-GRAVACAO-01 — se o `muted` atravessa esta ativação. Aqui
-        `muted=None` significa **não mexer no mudo**, e é o caso normal de toda
-        ativação que não seja gesto explícito dela.
+        este método), que a trava manual de áudio não está armada, e se o
+        `muted` atravessa. Desde a O-MUDO-E-DO-CONTROLE-01 o mudo é do controle
+        e mora no `maquina.json`: ativação de perfil nenhuma o leva, e o único
+        `muted` que chega aqui é o `True` do dono, pelo replug
+        (`reapply_mic_on_connect`, `origin="replug"`). Aqui `muted=None`
+        significa **não mexer no mudo**, e é o caso de toda ativação de perfil.
 
         DUAS CAMADAS, e por isso duas escritas separadas (a mesma separação que
         `mic.set` e `mic.volume.set` mantêm no IPC — juntá-las faria o produto

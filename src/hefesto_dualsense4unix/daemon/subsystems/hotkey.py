@@ -2663,10 +2663,11 @@ def _no_ar_da_sessao(daemon: Any) -> MicrofonesNoAr:
 # 🎙 vira o único caminho — TODA VEZ, porque o registro morre com a saída do
 # controle (`bt_mic.esquecer_ausentes`) e com o daemon.
 #
-# POR QUE AQUI, E NÃO NO PERFIL. Os perfis dela JÁ trazem `mic.muted: false` e
-# não adianta: `apply_mic` zera o `muted` em todo `origin` que não seja um
-# clique, e o journal prova (jogo aberto às 10:45:02, `origin=launch`, só o
-# volume passou). E mesmo que atravessasse, `mic.muted` fala com o `common[9]`
+# POR QUE AQUI, E NÃO NO PERFIL. O perfil não leva o mudo: `apply_mic` zera o
+# `muted` em toda ativação de perfil, e o journal prova (jogo aberto às
+# 10:45:02, `origin=launch`, só o volume passou); desde a
+# O-MUDO-E-DO-CONTROLE-01 o mudo nem mora mais no perfil, e sim no
+# `maquina.json`. E mesmo que atravessasse, o mudo fala com o `common[9]`
 # do FIRMWARE — a camada que já nasce aberta. O ponto UNIVERSAL é a conexão do
 # controle: vale para o 1º e para o 4º, no cabo e no rádio, no boot e no
 # hotplug. É a mesma razão escrita em

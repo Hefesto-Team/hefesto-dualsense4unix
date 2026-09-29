@@ -2168,12 +2168,10 @@ def registrar_microfone_no_rascunho(
     o rascunho descreve o que ficou de pé, não a intenção. Um pedido recusado
     pelo daemon (ou uma fonte de captura que não existe) não registra nada.
 
-    ``volume``/``muted`` a ``None`` significam **este gesto não tem opinião
-    sobre este campo** e preservam o que já estava anotado (ver ``with_mic``).
-    Os dois gestos são separados na tela e têm de continuar separados aqui.
-    ``soltar_mudo`` é o "Liberar" do botão — ela devolveu a posse do mudo ao
-    kernel, e o perfil tem de parar de carregar um valor que a ativação
-    seguinte retomaria.
+    ``volume=None`` significa **este gesto não tem opinião sobre o volume** e
+    preserva o que já estava anotado (ver ``with_mic``). ``muted`` e
+    ``soltar_mudo`` ficam na assinatura e não anotam nada: o mudo é do
+    controle e mora no ``maquina.json`` (O-MUDO-E-DO-CONTROLE-01).
 
     NÃO há alvo por ``uniq``, e a ausência é deliberada: ``ControllerOverrides``
     não tem seção ``mic`` (decisão de POR-UNIDADE-01), e o volume da captura é

@@ -234,9 +234,9 @@ class AutoswitchSubsystem:
         # A-FÁBRICA-COM-UM-CLIENTE-01 (22/08/2026): a lista de appliers vem da
         # FÁBRICA. O que protege o ajuste manual dela na troca de janela NÃO é
         # a ausência de applier — é a categoria travada, consultada a cada tick
-        # por `ProfileManager.apply_speaker`/`apply_mic`; o `mic.muted`, em
-        # particular, só atravessa em `origin="manual"` (MIC-GRAVACAO-01), e a
-        # troca por janela é `autoswitch`. `controller`/`store` vêm por fora
+        # por `ProfileManager.apply_speaker`/`apply_mic`; o mudo do microfone,
+        # em particular, é do controle e ativação de perfil nenhuma o escreve
+        # (O-MUDO-E-DO-CONTROLE-01). `controller`/`store` vêm por fora
         # porque esta rota sobe pelo `DaemonContext`, e `daemon` pode ser `None`.
         manager = gerente_do_daemon(daemon, controller=ctx.controller, store=ctx.store)
         # FEAT-WINDOW-DETECT-DIAG-01: reader instrumentado — grava backend/
