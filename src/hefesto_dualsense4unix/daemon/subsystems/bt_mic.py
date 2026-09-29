@@ -638,12 +638,20 @@ _SUFIXO_DE_MONITOR = ".monitor"
 #: resto da casa: servidor que não atende é ausência, e ausência é resposta.
 _TIMEOUT_DO_PACTL_S = 3.0
 
-#: Os cinco desfechos de :func:`a_heranca_do_no_morto`. `nenhum` é o caso bom.
+#: Os seis desfechos de :func:`a_heranca_do_no_morto`. `nenhum` é o caso bom.
 BURACO_NENHUM = "nenhum"
 BURACO_MONITOR = "monitor"
 BURACO_FANTASMA = "fantasma"
 BURACO_VAZIO = "vazio"
 BURACO_NAO_SEI = "nao_sei"
+#: O herdeiro é o CANAL DE UM CONTROLE — A-VOLTA-DO-MICROFONE-NAO-ELEGE-
+#: CONTROLE-01 (29/09/2026). Os canais nascem todos com a mesma prioridade no
+#: WirePlumber (`integrations/dualsense_bt_audio`), acima de qualquer monitor, e
+#: quando o nó do padrão morre ele dá o padrão sozinho a um deles, pela ordem
+#: dele — calado ou não. A porta abre, e quem responde se o dono do canal está
+#: no ar é o LAÇO do daemon (`hotkey.passar_o_padrao_do_no_morto`): o no ar não
+#: se lê no fio.
+BURACO_CANAL_DE_CONTROLE = "canal_de_controle"
 
 
 @dataclass(frozen=True)
@@ -661,8 +669,17 @@ class HerancaDoNoMorto:
 
     @property
     def aberto(self) -> bool:
-        """Há o que devolver? `nao_sei` NUNCA conta como buraco."""
-        return self.buraco in (BURACO_MONITOR, BURACO_FANTASMA, BURACO_VAZIO)
+        """A porta abre? `nao_sei` NUNCA conta como buraco.
+
+        O `canal_de_controle` abre a porta e não é buraco por si: o laço
+        confere se o dono do canal está no ar, e o de quem está no ar fica.
+        """
+        return self.buraco in (
+            BURACO_MONITOR,
+            BURACO_FANTASMA,
+            BURACO_VAZIO,
+            BURACO_CANAL_DE_CONTROLE,
+        )
 
 
 def a_heranca_do_no_morto(
@@ -706,7 +723,30 @@ def a_heranca_do_no_morto(
         return HerancaDoNoMorto(
             BURACO_FANTASMA, nome, f"{nome} morreu e a escolha gravada ainda o pede"
         )
+    if _e_canal_de_controle(nome):
+        return HerancaDoNoMorto(
+            BURACO_CANAL_DE_CONTROLE,
+            nome,
+            f"{nome} é o canal de um controle — o padrão só fica nele se o "
+            "dono estiver no ar",
+        )
     return HerancaDoNoMorto(BURACO_NENHUM, nome, "")
+
+
+def _e_canal_de_controle(nome: str) -> bool:
+    """O nó é a fonte de captura de um DualSense — o nosso canal ou a do kernel?
+
+    Pelos donos de `integrations/fontes_de_captura`: a identidade no nome (o
+    `hefesto_mic_<hex6>`) ou os marcadores do DualSense (a fonte do kernel no
+    cabo). É a mesma leitura de `hotkey._a_escolha_gravada_e_de_outro_controle`.
+    """
+    from hefesto_dualsense4unix.integrations.fontes_de_captura import (
+        MARCADORES_DUALSENSE,
+        identidade_no_nome,
+    )
+
+    baixa = nome.lower()
+    return bool(identidade_no_nome(nome)) or any(m in baixa for m in MARCADORES_DUALSENSE)
 
 
 def fonte_padrao_crua(rodar: Any = None) -> str | None:
@@ -842,6 +882,14 @@ class BtMicSubsystem:
         #: não dela — hoje só `MOTIVO_SEM_A_GUARDA` (ver `o_driver_guarda_o_audio`).
         #: Vazio = nada do sistema segurando. Escrito a cada `alvos()`.
         self._motivo = ""
+        #: O LAÇO do daemon, guardado no `start()`. É por ele que a porta do nó
+        #: que morre leva a pergunta da fonte padrão ao laço
+        #: (`call_soon_threadsafe`): o `MicrofonesNoAr` é do laço e não tem
+        #: lock, e o fio deste subsystem não o lê nem o escreve.
+        self._laco: asyncio.AbstractEventLoop | None = None
+        #: As heranças em voo no laço. O `create_task` devolve referência
+        #: FRACA no coletor: sem guardá-las, uma pode ser colhida no meio.
+        self._herancas_em_voo: set[asyncio.Task[None]] = set()
 
     @property
     def motivo(self) -> str:
@@ -1259,6 +1307,7 @@ class BtMicSubsystem:
         """
         self._config = getattr(ctx, "config", None)
         self._backend = getattr(ctx, "controller", None)
+        self._laco = asyncio.get_running_loop()
         if self._thread is not None and self._thread.is_alive():
             return
         from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
@@ -1356,6 +1405,7 @@ class BtMicSubsystem:
                 await asyncio.to_thread(thread.join, 2.0)
         self._gerenciador = None
         self._backend = None
+        self._laco = None
         # Os suspeitos de órfão são desta sessão: a próxima começa a contar do zero.
         self._varredor = self._varredor_injetado
         # OS CANAIS DO CABO MORREM COM A SESSÃO, e pela mesma razão que os
@@ -1832,18 +1882,29 @@ class BtMicSubsystem:
         servidor a cada cinco segundos pagaria o preço de um defeito que só
         existe no instante em que o nó cai.
 
-        **A ESCOLHA NÃO É DAQUI.** Quem elege é o eleitor da sessão, com as
-        réguas dele: a fonte tem de se sustentar, a escrita é conferida pela
-        RELEITURA do ativo (ADR-019), e `melhor_fonte_elegivel` nunca devolve
-        um `.monitor`. Este método não digita nome de alvo nenhum — é o que
-        impede um caminho nosso de terminar num monitor.
+        **A ESCOLHA NÃO É DAQUI.** Quem escolhe é o eleitor da sessão
+        (`EleitorDeMicrofone.passar_o_padrao`), a mesma pergunta do botão do
+        microfone: quem está no ar, depois a captura da máquina que não é
+        controle nenhum (`outra_captura_elegivel`, que nunca devolve um
+        `.monitor`), e sem as duas o padrão fica. Este método não digita nome de
+        alvo nenhum — é o que impede um caminho nosso de terminar num monitor.
 
-        **E QUANDO NÃO HÁ PARA ONDE VOLTAR, a recusa vira frase.** Foi o caso
-        medido nesta bancada: o único microfone dela é o do DualSense, e com o
-        controle fora da mesa não sobra fonte de captura com porta usável. Aí o
-        eleitor recusa, nada é escrito, e o que fica no journal é o NOME do nó
-        que herdou a eleição — porque uma denúncia sem o nome obriga a próxima
-        pessoa a remedir o que já foi medido.
+        **A PERGUNTA VAI AO LAÇO** (A-VOLTA-DO-MICROFONE-NAO-ELEGE-CONTROLE-01,
+        29/09/2026). Este método roda no fio do `bt_mic`, e a ordem de quem está
+        no ar é do `MicrofonesNoAr`, que só o laço do daemon toca e não tem
+        lock. O fio classifica a herança (pura) e entrega o resto pela ponte
+        fio→laço da casa (`call_soon_threadsafe`); até 29/09 ele chamava a
+        volta à máquina direto e pulava quem estava no ar. E a porta abre
+        também com o `canal_de_controle` (o herdeiro calado que o WirePlumber
+        escolhe): antes ela só abria com monitor, fantasma ou vazio, e o canal
+        de um calado herdava o padrão sem a pergunta ser feita.
+
+        **E QUANDO NÃO HÁ PARA ONDE VOLTAR, a recusa vai para o diário.** Foi o
+        caso medido nesta bancada: o único microfone dela é o do DualSense, e
+        com o controle fora da mesa e ninguém mais no ar não sobra captura com
+        porta usável que não seja controle. Aí nada é escrito, e o que fica no
+        journal é o NOME do nó que herdou a eleição — porque uma denúncia sem o
+        nome obriga a próxima pessoa a remedir o que já foi medido.
 
         Devolve o veredicto (`None` quando não houve óbito), para a régua.
         """
@@ -1862,8 +1923,41 @@ class BtMicSubsystem:
                 morreram=sorted(morreram),
             )
             return heranca
+        laco = self._laco
+        if laco is None or laco.is_closed():
+            logger.warning(
+                "bt_mic_heranca_sem_laco",
+                buraco=heranca.buraco,
+                eleito=heranca.eleito,
+                morreram=sorted(morreram),
+                motivo=heranca.motivo,
+            )
+            return heranca
+        try:
+            laco.call_soon_threadsafe(self._agendar_a_heranca, heranca, morreram, eleitor)
+        except RuntimeError as exc:
+            # Laço fechado entre a pergunta e a entrega (desligamento).
+            logger.warning("bt_mic_heranca_nao_agendada", err=str(exc))
+        return heranca
+
+    def _agendar_a_heranca(
+        self, heranca: HerancaDoNoMorto, morreram: frozenset[str], eleitor: Any
+    ) -> None:
+        """No LAÇO: põe a herança numa tarefa própria, guardada até terminar."""
+        tarefa = asyncio.get_running_loop().create_task(
+            self._herdar_no_laco(heranca, morreram, eleitor),
+            name="bt_mic_heranca_do_no_morto",
+        )
+        self._herancas_em_voo.add(tarefa)
+        tarefa.add_done_callback(self._herancas_em_voo.discard)
+
+    async def _herdar_no_laco(
+        self, heranca: HerancaDoNoMorto, morreram: frozenset[str], eleitor: Any
+    ) -> None:
+        """No LAÇO: pergunta ao dono para onde vai o padrão, e anota o desfecho."""
+        daemon = self._daemon
         dono = eleitor if eleitor is not None else self._eleitor_da_sessao()
-        if dono is None:
+        if daemon is None or dono is None:
             logger.warning(
                 "bt_mic_heranca_sem_eleitor",
                 buraco=heranca.buraco,
@@ -1871,12 +1965,32 @@ class BtMicSubsystem:
                 morreram=sorted(morreram),
                 motivo=heranca.motivo,
             )
-            return heranca
+            return
+        from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
+            passar_o_padrao_do_no_morto,
+        )
+
         resultado: Any = None
         try:
-            resultado = dono.devolver_o_microfone()
-        except Exception:  # best-effort: a devolução nunca derruba o laço
+            resultado = await passar_o_padrao_do_no_morto(
+                daemon,
+                dono,
+                heranca.eleito,
+                herdeiro_e_de_controle=heranca.buraco == BURACO_CANAL_DE_CONTROLE,
+            )
+        except Exception:  # best-effort: a volta nunca derruba o laço do daemon
             logger.warning("bt_mic_heranca_devolucao_falhou", exc_info=True)
+            resultado = False
+        if resultado is None:
+            # O herdeiro é o canal de quem está no ar (ou não dá para saber de
+            # quem é): o padrão fica onde o WirePlumber o pôs.
+            logger.debug(
+                "bt_mic_heranca_sem_buraco",
+                buraco=heranca.buraco,
+                eleito=heranca.eleito,
+                morreram=sorted(morreram),
+            )
+            return
         logger.warning(
             "bt_mic_heranca_do_no_morto",
             buraco=heranca.buraco,
@@ -1887,7 +2001,6 @@ class BtMicSubsystem:
             alvo=getattr(resultado, "alvo", None),
             recusa=getattr(resultado, "motivo", ""),
         )
-        return heranca
 
 
 class VarredorDeCanaisOrfaos:

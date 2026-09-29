@@ -1010,10 +1010,11 @@ promote_source_dualsense() {
 #
 # `--status` é o único de fora: ele é leitura, e leitura não escreve.
 ACORDADO_MUDOU=1
-# MIC-DA-MESA-ELEICAO-01: `fonte-se-sustenta` e `melhor-fonte-elegivel` são
-# CONSULTA. O gesto do botão do mic passa por aqui e não pode escrever drop-in
-# nenhum na máquina dela a cada aperto — ver o bloco `melhor-fonte-elegivel`
-# no `case` abaixo.
+# MIC-DA-MESA-ELEICAO-01: `fonte-se-sustenta`, `melhor-fonte-elegivel` e
+# `outra-captura-elegivel` são CONSULTA. O gesto do botão do mic passa por
+# `fonte-se-sustenta` e `outra-captura-elegivel` a cada aperto, e não pode
+# escrever drop-in nenhum na máquina dela — ver o bloco `outra-captura-elegivel`
+# no `case` abaixo. A `melhor-fonte-elegivel` é a pergunta do install.
 if [[ "${MODE}" != "status" && "${MODE}" != "marcar-gesto" \
    && "${MODE}" != "apagar-gesto" && "${MODE}" != "fonte-se-sustenta" \
    && "${MODE}" != "melhor-fonte-elegivel" \
@@ -1040,10 +1041,32 @@ case "${MODE}" in
         exit "${rc_consulta}"
         ;;
     melhor-fonte-elegivel)
-        # MIC-DA-MESA-ELEICAO-01 — O CAMINHO DE VOLTA, e a DECISÃO ESCRITA NO
-        # CÓDIGO: o gesto do botão do mic **não** toca em drop-in, **não** chama
-        # `doctor --fix-mic` e **não** reinicia o WirePlumber. Ele consulta aqui
-        # e escreve com `pactl set-default-source`, e nada mais.
+        # A PERGUNTA DO INSTALL (`install.sh`, o veredito do microfone): a
+        # melhor captura com porta usável, e o canal por controle
+        # (`hefesto_mic_…`) ENTRA — é o §D.2 da MIC-PADRAO-NO-CABO-01, pelo
+        # rádio o eleito do install é o microfone virtual do controle. Consulta
+        # pura, como as irmãs.
+        #
+        # FATO SUBSTITUÍDO (29/09/2026, A-VOLTA-DO-MICROFONE-NAO-ELEGE-
+        # CONTROLE-01): este bloco se dizia «O CAMINHO DE VOLTA» do botão do
+        # mic. A volta perguntava isto, e a resposta era o canal do controle
+        # cujo nó nasceu primeiro no PipeWire — calado, ou o próprio que
+        # calava. A volta passou a perguntar `outra-captura-elegivel`, e a
+        # decisão que morava aqui foi junto.
+        rc_consulta=0
+        pick_target_source_name || rc_consulta=$?
+        exit "${rc_consulta}"
+        ;;
+    outra-captura-elegivel)
+        # Consulta pura, irmã da de cima: nada de drop-in, restart ou `pactl`
+        # que escreva. Ver `outra_captura_elegivel`. Quem pergunta é o daemon:
+        # o nascimento do microfone e O CAMINHO DE VOLTA do botão do mic (e do
+        # nó que morre), sem ninguém mais no ar.
+        #
+        # MIC-DA-MESA-ELEICAO-01 — a DECISÃO ESCRITA NO CÓDIGO: o gesto do botão
+        # do mic **não** toca em drop-in, **não** chama `doctor --fix-mic` e
+        # **não** reinicia o WirePlumber. Ele consulta aqui e escreve com
+        # `pactl set-default-source`, e nada mais.
         #
         # POR QUE, e o "por quê" é o `promote_source_dualsense` logo acima:
         # aquele gesto APAGA o drop-in 51, delega as camadas 1 e 2 ao doctor e
@@ -1059,13 +1082,6 @@ case "${MODE}" in
         # qualquer captura real (2009) — logo **plugar a webcam desfaz a
         # escolha dela**, e o LED tem de apagar quando isso acontecer, porque
         # ele é pintado da RELEITURA do ativo, nunca do que mandamos.
-        rc_consulta=0
-        pick_target_source_name || rc_consulta=$?
-        exit "${rc_consulta}"
-        ;;
-    outra-captura-elegivel)
-        # Consulta pura, irmã da de cima: nada de drop-in, restart ou `pactl`
-        # que escreva. Ver `outra_captura_elegivel`.
         rc_consulta=0
         outra_captura_elegivel || rc_consulta=$?
         exit "${rc_consulta}"

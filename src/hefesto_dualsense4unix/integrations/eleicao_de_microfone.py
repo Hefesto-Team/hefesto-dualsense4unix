@@ -83,6 +83,7 @@ from hefesto_dualsense4unix.integrations.fontes_de_captura import (
     escolher_fonte,
     fontes_dualsense,
     fontes_nativas,
+    so_hex,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -419,26 +420,6 @@ def fonte_se_sustenta(nome: str) -> bool | None:
     return saida.strip() == nome
 
 
-def melhor_fonte_elegivel() -> str | None:
-    """A melhor fonte de captura que NÃO é o controle, ou `None`.
-
-    `None` aqui quer dizer *"não há para onde voltar"* — e isso é uma resposta,
-    não uma falha: medido nesta bancada em 01/09/2026, com a webcam
-    desconectada e as três portas analógicas da placa-mãe `not available`, o
-    dono do critério devolve VAZIO. O certo nesse caso é **não eleger nada** e
-    dizer isso na tela; cair no `.monitor` do sink é o defeito
-    MONITOR-QUE-VENCE-01 inteiro (gravar o áudio de SAÍDA em vez da voz dela).
-    """
-    script = _script_do_wireplumber()
-    if script is None or not _script_conhece(script, "--melhor-fonte-elegivel"):
-        return None
-    rc, saida = _rodar(["bash", str(script), "--melhor-fonte-elegivel"])
-    if rc != 0:
-        return None
-    nome = saida.strip().splitlines()[-1].strip() if saida.strip() else ""
-    return nome or None
-
-
 class ConsultaIndisponivelError(RuntimeError):
     """Não deu para PERGUNTAR ao dono do critério — e isso não é a resposta.
 
@@ -454,14 +435,20 @@ class ConsultaIndisponivelError(RuntimeError):
 def outra_captura_elegivel() -> str | None:
     """A melhor captura com porta usável que não é CONTROLE NENHUM, ou `None`.
 
-    Irmã de :func:`melhor_fonte_elegivel`, e a diferença é o canal por controle
-    (``hefesto_mic_<hex6>``): lá ele entra de propósito — é o §D.2 da
-    MIC-PADRAO-NO-CABO-01, em que pelo rádio o eleito do install é o microfone
-    virtual do controle —, e aqui ele é controle. Quem pergunta é o nascimento
-    do microfone (`daemon/subsystems/hotkey._microfone_que_ja_e_da_maquina`):
-    *"esta máquina tem um microfone que a pessoa usa e que não é um DualSense?"*.
-    Com a pergunta de lá, o canal do primeiro controle da mesa passaria por
-    headset e o segundo nunca elegeria na máquina que só tem os controles.
+    Irmã da pergunta do INSTALL (`--melhor-fonte-elegivel` do script), e a
+    diferença é o canal por controle (``hefesto_mic_<hex6>``): lá ele entra de
+    propósito — é o §D.2 da MIC-PADRAO-NO-CABO-01, em que pelo rádio o eleito
+    do install é o microfone virtual do controle —, e aqui ele é controle.
+
+    **QUEM PERGUNTA SÃO DOIS**, e a pergunta é a mesma: *"esta máquina tem um
+    microfone que a pessoa usa e que não é um DualSense?"*. O nascimento do
+    microfone (`daemon/subsystems/hotkey._microfone_que_ja_e_da_maquina`),
+    desde 18/09/2026; e a volta do microfone
+    (:meth:`EleitorDeMicrofone.devolver_o_microfone`), desde 29/09/2026
+    (A-VOLTA-DO-MICROFONE-NAO-ELEGE-CONTROLE-01). Com a pergunta do install, o
+    canal do controle cujo nó nasceu primeiro no PipeWire passa por microfone
+    da máquina: no nascimento, o segundo controle nunca elegeria na máquina que
+    só tem os controles; na volta, calar o único no ar elegia um calado.
 
     **TRÊS RESPOSTAS, E A TERCEIRA LEVANTA** (18/09/2026): um nome, `None`
     (consultei e não há) ou :class:`ConsultaIndisponivelError` (não deu para
@@ -545,13 +532,23 @@ class EleitorDeMicrofone:
     _guardou: bool = field(default=False, repr=False)
 
     #: O `uniq` do controle que está com o microfone da mesa AGORA. `None` =
-    #: ninguém elegeu (ou já devolveu, e a devolução foi CONFERIDA).
+    #: ninguém elegeu, ou o eleito saiu do ar.
     #:
-    #: **Ele só muda com a releitura do ATIVO, nos dois sentidos.** Eleição que
-    #: o WirePlumber desfaz não anota dono; devolução que não conseguiu
-    #: devolver não tira o dono, porque o padrão do sistema continua sendo o
-    #: canal dele. É o mesmo *"a pós-condição canônica é o ATIVO relido"* do
-    #: topo do módulo, aplicado à posse.
+    #: **Ele muda por duas provas, e só por elas.** A releitura do ATIVO, nos
+    #: dois sentidos: eleição que o WirePlumber desfaz não anota dono, e a
+    #: volta que escreveu e deixou o canal com ele não tira o dono. E o ATO DE
+    #: CALAR DO ELEITO QUE FICA SEM DESTINO (:meth:`passar_o_padrao`): ela
+    #: calou, não há outro no ar nem microfone da máquina, e o padrão fica no
+    #: canal que ela calou, gravando silêncio por escolha dela. Ali o controle
+    #: saiu do ar pela palavra dela, e a posse cai com ele.
+    #:
+    #: FATO SUBSTITUÍDO (29/09/2026, A-VOLTA-DO-MICROFONE-NAO-ELEGE-CONTROLE-01).
+    #: Aqui estava *"devolução que não conseguiu devolver não tira o dono,
+    #: porque o padrão do sistema continua sendo o canal dele"*, e a premissa
+    #: era *"o padrão é o canal dele, logo o microfone está no ar"*. Ela caiu
+    #: com a palavra dela na ponte (08/09) e com a decisão dela de 19/09 (a luz
+    #: é o estado do microfone dela; mudo é apagada). As falhas de
+    #: `_eleger_nome` seguem como estavam, na tabela de `_o_eleito_saiu_do_ar`.
     #:
     #: ACHADO DA AUDITORIA DE 02/09/2026, e é sobre a mesa de quatro que ela
     #: nomeou (*"com 4 pessoas com controle na mão localmente isso é
@@ -711,6 +708,10 @@ class EleitorDeMicrofone:
         canal, deixam o dono de pé. Soltar a posse ali seria declarar que o
         microfone saiu do ar por não termos conseguido perguntar — o
         *"silêncio não é sucesso"* com o sinal trocado.
+
+        A tabela é de `_eleger_nome`, que ESCREVEU ou tentou escrever. Um
+        caminho da posse não passa por aqui: o ato de calar do eleito que fica
+        sem destino, em que nada se escreve — ver :meth:`passar_o_padrao`.
         """
         if resultado.ok:
             return True
@@ -849,100 +850,145 @@ class EleitorDeMicrofone:
 
     # -- o caminho de volta (item 6 dela) ---------------------------------
 
-    def devolver_o_microfone(self) -> ResultadoDaEleicao:
-        """O controle eleito saiu do ar: elege a melhor fonte que NÃO é ele.
+    def passar_o_padrao(
+        self,
+        no_ar: list[str],
+        conectados: list[str],
+        calou: str | None = None,
+    ) -> ResultadoDaEleicao:
+        """Para onde vai a fonte padrão quando quem falava saiu do ar.
 
-        **QUEM CHAMA, MEDIDO (20/09/2026):** DOIS. O ramo do botão do microfone
-        em `daemon/subsystems/hotkey._eleger_ou_devolver`, quando o ELEITO vai
-        a mudo; e `daemon/subsystems/bt_mic._devolver_a_fonte_padrao`, quando
-        um nó nosso MORRE e a fonte padrão fica num monitor, num fantasma ou em
-        nada (SOM-PAINEL-01). Este docstring dizia *"quando o controle eleito
-        passa a MUDO, cai do rádio/cabo, ou a ponte de microfone dele cai"*, e
-        as duas últimas eram falsas na época: as TRÊS escritas de
-        `self.eleito` neste módulo saem da MESMA releitura do ATIVO — duas em
-        `eleger_por_uniq` (anota o dono quando o ativo relido é o canal dele;
-        SOLTA o dono anterior quando o ativo relido prova que o canal deixou de
-        ser dele) e uma neste método, pela mesma prova. As três passam por
-        `_o_eleito_saiu_do_ar` ou pelo `ok` que ele já cobre. (Eram duas até a
-        segunda auditoria de 02/09, que achou o caminho de IDA sem a pergunta;
-        e antes disso a condição daqui era `resultado.ok`, que confundia os
-        três desfechos de recusa, até a auditoria da manhã separar o
-        `eleicao_mic_nao_pegou`.)
-        **O GANCHO DE HOTPLUG-OUT EXISTE DESDE 20/09/2026** (SOM-PAINEL-01), e
-        a linha aqui dizia o contrário: *"não há gancho de hotplug-out"*. Quem
-        o segura é o laço do `bt_mic`, que compara os nós que este processo
-        segurava na volta anterior com os de agora — o que sumiu MORREU, e é
-        aí que a pergunta é feita. A posse, essa, continua de pé quando o
-        controle cai: quem publica o estado tem de dizer que o dono saiu da
-        mesa em vez de nomeá-lo — é o `eleito_na_mesa` de
-        `daemon/subsystems/recado_do_microfone.publicar`, que é remendo do
-        RELATO e não cura da posse.
+        A-VOLTA-DO-MICROFONE-NAO-ELEGE-CONTROLE-01 (29/09/2026). É UMA pergunta
+        só, e este método é o dono dela. As duas portas que a fazem o chamam: o
+        botão do microfone do eleito
+        (`daemon/subsystems/hotkey._passar_o_padrao_ou_devolver`, o plástico e
+        o 🎙 da tela) e o nó que morre
+        (`daemon/subsystems/bt_mic._devolver_a_fonte_padrao`, pelo laço do
+        daemon). A resposta, em ordem:
 
-        POR QUE ISTO NÃO É OPCIONAL. Sem este caminho, o desfecho padrão de ela
-        desconectar o controle é o `.monitor` do sink ou o `auto_null`: *"ela
-        desconecta o controle e o sistema passa a gravar o áudio de saída"*,
-        que é FONTE-PADRÃO-01/MONITOR-QUE-VENCE-01 inteiro. O parágrafo aqui
-        dizia também que não havia *"observador da fonte padrão, restaurador,
-        nem memória do que era antes"* — a memória é o
-        :meth:`guardar_anterior` deste módulo, e o observador nasceu no
-        `bt_mic`. **O que ainda NÃO existe é o uso da memória:** este método
-        escolhe por :func:`melhor_fonte_elegivel`, não por `self.anterior`.
-        Numa máquina com um microfone real só dá no mesmo; com dois, a volta
-        pode não ser para o que ela usava.
+        (a) **quem está no ar**, na ordem que `no_ar` traz (do mais novo ao
+            mais velho, só quem está na mesa), pela `eleger_o_controle` de
+            sempre, com a releitura do ativo e as recusas dela;
+        (b) **sem ninguém no ar, a volta à máquina**, por
+            :meth:`devolver_o_microfone`, que pergunta
+            :func:`outra_captura_elegivel`;
+        (c) **sem as duas, o padrão fica onde está.** Nada se escreve.
 
-        **RESPOSTA VAZIA NÃO VIRA `.monitor`.** Quando não há fonte que se
-        sustente — o estado desta bancada hoje, com a webcam fora e as três
-        portas analógicas `not available` —, não se elege NADA, o motivo vai
-        para a tela, **e a posse não cai**: sem escrita, o padrão do sistema
-        continua sendo o canal deste controle.
+        Um canal de controle vira o padrão só por (a), pela ida
+        (`eleger_o_controle`) e pelo nascimento no ar. A ordem do no ar é lida
+        por quem chama, no laço do daemon: aqui chega uma lista, e o
+        `MicrofonesNoAr` segue no `hotkey.py`.
+
+        **O «FICA» É UM SÓ, E CADA PORTA O LÊ PELO QUE ELA É.** `calou` é o
+        `uniq` de quem apertou para se calar, e só o botão o passa:
+
+        * no botão, o ato é de calar e a palavra dela já foi dita. O padrão
+          fica no canal que ela calou, que grava silêncio por escolha dela; a
+          posse do eleito cai aqui, e o ato está FEITO (``ok=True``, sem
+          frase, com o ativo relido). É a decisão dela de 19/09
+          (A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01): a luz é o estado do microfone
+          dela, e mudo é apagada;
+        * no nó que morre (sem `calou`), o buraco continua: ``ok=False`` com o
+          motivo, que vai para o diário. Sem candidato real, eleger outra fonte
+          não é a cura (a correção de rumo da SOM-PAINEL-01, 17/09/2026).
+
+        **O QUE A CURA NÃO PROMETE:** com todos os controles calados e nenhum
+        outro microfone, o único padrão que não é monitor é um canal calado. O
+        que se garante é que é o que ela calou, e nunca um que ninguém escolheu.
         """
-        nome = melhor_fonte_elegivel()
+        for candidato in no_ar:
+            passado = self.eleger_o_controle(candidato, list(conectados))
+            logger.info(
+                "mic_da_mesa_padrao_passado",
+                de=calou,
+                para=candidato,
+                ok=bool(passado.ok),
+                motivo=passado.motivo,
+            )
+            if passado.ok:
+                return passado
+        volta = self.devolver_o_microfone()
+        if volta.ok or volta.alvo is not None:
+            return volta
+        ativo = fonte_ativa()
+        if calou is None:
+            logger.info("eleicao_mic_padrao_fica", ativo=ativo, motivo=volta.motivo)
+            return ResultadoDaEleicao(ok=False, ativo=ativo, motivo=volta.motivo)
+        quem = so_hex(calou)
+        if quem and self.eleito is not None and so_hex(self.eleito) == quem:
+            self.eleito = None
+            self.fonte_do_eleito = None
+        logger.info(
+            "eleicao_mic_padrao_fica", calou=calou, ativo=ativo, motivo=volta.motivo
+        )
+        return ResultadoDaEleicao(ok=True, ativo=ativo)
+
+    def devolver_o_microfone(self) -> ResultadoDaEleicao:
+        """A VOLTA À MÁQUINA: o padrão vai a uma captura que não é controle nenhum.
+
+        É o passo (b) de :meth:`passar_o_padrao`, e só ele: sem ninguém no ar,
+        o padrão volta a um microfone de verdade da máquina (headset, webcam,
+        a entrada da placa com porta usável), e nunca ao `.monitor` da saída —
+        sem este caminho, desligar o controle deixava o sistema gravando o som
+        que SAI (FONTE-PADRÃO-01/MONITOR-QUE-VENCE-01).
+
+        **A PERGUNTA É :func:`outra_captura_elegivel` DESDE 29/09/2026**
+        (A-VOLTA-DO-MICROFONE-NAO-ELEGE-CONTROLE-01). Era a pergunta do
+        INSTALL (`melhor_fonte_elegivel`, que saiu com a cura), cuja lista
+        deixa o canal por controle entrar de propósito — e a resposta era o
+        canal do controle cujo nó nasceu primeiro no PipeWire. Medido na
+        bancada de 29/09 (B1.3): com os quatro pelo rádio e só o roxo no ar,
+        calar o roxo elegeu três vezes o vermelho, calado, e o rádio do
+        vermelho acordou para entregar silêncio; em 28/09 (G8) a volta
+        escreveu o próprio canal de quem calava. Até 06/09 o canal de cada
+        controle tinha «dualsense» no nome e a lista o tirava; o
+        `hefesto_mic_<hex6>` não tem marcador nenhum.
+
+        **TRÊS DESFECHOS, E O `alvo` OS SEPARA:**
+
+        * a volta foi escrita: o resultado de `_eleger_nome`, com o ``alvo``,
+          e a posse cai pela régua de sempre (`_o_eleito_saiu_do_ar`);
+        * não há para onde voltar: ``ok=False``, ``alvo=None``, nada escrito;
+        * não deu para perguntar (:class:`ConsultaIndisponivelError`):
+          ``ok=False``, ``alvo=None``, nada escrito. O «não sei» nunca escreve.
+
+        Nos dois últimos a posse não se mexe aqui: quem sabe se foi um ato de
+        calar é :meth:`passar_o_padrao`.
+
+        **A MEMÓRIA `anterior` CONTINUA SEM USO** (:meth:`guardar_anterior`):
+        a volta escolhe pela pergunta, não pelo que ela usava. Numa máquina com
+        um microfone real só dá no mesmo; com dois, a volta pode não ir para o
+        que ela usava.
+        """
+        try:
+            nome = outra_captura_elegivel()
+        except ConsultaIndisponivelError as exc:
+            return ResultadoDaEleicao(ok=False, motivo=str(exc))
         if nome is None:
             return ResultadoDaEleicao(
                 ok=False,
                 motivo=(
                     "não há microfone para onde voltar: nenhuma fonte de "
-                    "captura com porta usável nesta máquina. Deixo o padrão "
-                    "como está em vez de eleger o monitor da saída, que "
+                    "captura com porta usável que não seja um controle. Deixo o "
+                    "padrão como está em vez de eleger o monitor da saída, que "
                     "gravaria o som do sistema no lugar da voz"
                 ),
             )
         resultado = self._eleger_nome(nome)
-        # A POSSE SÓ CAI QUANDO A DEVOLUÇÃO É CONFERIDA — a mesma régua de
-        # `eleger_por_uniq`, e agora nos dois sentidos.
+        # A POSSE SÓ CAI QUANDO A VOLTA ESCRITA É CONFERIDA pela releitura do
+        # ativo (`_o_eleito_saiu_do_ar`): a escrita aceita com o ativo relido
+        # virando um terceiro também tira o canal dele, e a que o WirePlumber
+        # devolveu ao canal dele não tira (a auditoria de 02/09/2026 separou as
+        # três recusas de `_eleger_nome`).
         #
-        # FATO SUBSTITUÍDO (02/09/2026). Estas duas escritas eram
-        # incondicionais, com o comentário *"A POSSE CAI MESMO SEM DESTINO — o
-        # controle saiu do ar"*. A premissa era falsa: quando a devolução
-        # falha, **nada foi escrito** — sem fonte elegível, sem fonte que se
-        # sustente, ou com o `pactl` recusando, o `set-default-source` nunca
-        # roda — e o padrão do sistema continua sendo o canal DESTE controle.
-        # Dizer que a posse caiu era declarar sucesso pela intenção, que é o
-        # *"silêncio não é sucesso"* na forma mais cara que ele tem aqui.
-        #
-        # Consequência medida no `state_full`: depois de uma devolução recusada
-        # o bloco publicava `eleito: null` com o canal ainda no controle — a
-        # tela dizendo que ninguém está no ar enquanto o sistema grava por ele.
-        #
-        # É o que a decisão dela de 02/09 exige por baixo do LED: *"quando a
-        # devolução é recusada, o canal continua sendo daquele controle, logo o
-        # microfone está no ar, logo a luz fica acesa"*. Luz acesa com posse
-        # caída seria o plástico e a tela dando vereditos opostos.
-        #
-        # E o que a premissa velha temia continua certo, só que ao contrário:
-        # a próxima borda deste controle SER lida como "o eleito devolvendo de
-        # novo" é o comportamento correto — ele ainda tem o canal e está
-        # tentando outra vez; e a borda de outro jogador SER recusa também é,
-        # porque o canal de fato não é dele.
-        #
-        # E A RECUSA NÃO É UMA SÓ — auditoria de 02/09/2026. Esta linha era
-        # `if resultado.ok`, e com ela os TRÊS desfechos de `ok=False` ficavam
-        # iguais. Dois estão certos (nada foi escrito, o canal continua dele);
-        # o TERCEIRO é o `eleicao_mic_nao_pegou`: a escrita foi ACEITA e o
-        # ativo relido é um terceiro. Aí o canal não é mais dele, e manter a
-        # posse é a mentira de segunda geração no caminho de volta. Quem separa
-        # os três é `_o_eleito_saiu_do_ar`, que compara o ativo relido com o
-        # NOME do canal dele — e é por isso que `fonte_do_eleito` existe.
+        # FATO SUBSTITUÍDO (29/09/2026). Este bloco dizia que, sem destino,
+        # *"a posse não cai"*, e que isso era *"o que a decisão dela de 02/09
+        # exige por baixo do LED"*. Essa decisão não tem linha no
+        # `docs/data/decisoes-dela.csv`: era a regra de 02/09, que aplicava o
+        # contrato de 01/09 (*"aceso = este mic está no ar"*) sobre a premissa
+        # *"o padrão é o canal dele, logo o microfone está no ar"*. A premissa
+        # caiu com a palavra dela na ponte (08/09) e com a decisão dela de
+        # 19/09. Sem destino, quem decide a posse é `passar_o_padrao`.
         if self._o_eleito_saiu_do_ar(resultado):
             self.eleito = None
             self.fonte_do_eleito = None
@@ -1164,7 +1210,6 @@ __all__ = [
     "fonte_ativa",
     "fonte_se_sustenta",
     "fontes_de_captura_agora",
-    "melhor_fonte_elegivel",
     "outra_captura_elegivel",
     "palavra_no_ar",
     "pedir_canal",
