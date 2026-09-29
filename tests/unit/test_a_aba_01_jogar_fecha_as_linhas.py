@@ -1042,27 +1042,47 @@ def test_a_escrita_no_perfil_nunca_levanta(monkeypatch) -> None:
         "aparelho já aplicou")
 
 
-def test_sem_perfil_ativo_nao_se_inventa_um(tmp_path, monkeypatch) -> None:
-    """Sem perfil valendo, não há onde gravar — e não se cria um.
+def test_sem_perfil_ativo_nao_se_inventa_um() -> None:
+    """Sem perfil valendo, não há onde gravar — e não se escolhe um.
 
     Sem o nome no daemon e sem o perfil do boot no disco, o dono
     (`manager.nome_do_perfil_que_grava`) responde `None`, e nenhum `.json`
-    nasce.
+    muda nem nasce.
 
-    A MORDIDA: faça `gravar_o_modo_no_perfil_ativo` cair num nome padrão e esta
-    régua reprova.
+    O FREESTYLE ESTÁ NO DISCO DE PROPÓSITO: é o nome padrão que um escritor
+    que «cai num nome» escolheria. A régua lê a pasta que o `loader` usa (a do
+    lar de mentira do conftest), e não uma pasta que nenhum escritor alcança.
+    Até 29/09 ela olhava um `tmp_path` que o `loader` nunca via (ele importa
+    `profiles_dir` por nome, e o desvio no módulo de origem não o alcança), e
+    passava com o escritor gravando no Freestyle.
+
+    A MORDIDA: faça `Daemon.gravar_o_modo_escolhido` cair num nome padrão
+    (`nome_do_perfil_que_grava(...) or "Freestyle"`) e esta régua reprova com
+    o Freestyle regravado.
     """
+    import hashlib
+
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon
     from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+    from hefesto_dualsense4unix.utils.session import resolve_boot_profile
 
-    monkeypatch.setattr("hefesto_dualsense4unix.utils.xdg_paths.profiles_dir",
-                        lambda: tmp_path)
-    monkeypatch.setattr(loader, "_profiles_dir", lambda: tmp_path, raising=False)
+    loader.save_profile(Profile(name=loader.NOME_DO_PADRAO, match=MatchAny()),
+                        origem="régua")
+    assert resolve_boot_profile() is None, "premissa: nenhum perfil do boot no disco"
+    pasta = loader.profiles_dir()
+
+    def _retrato() -> dict[str, str]:
+        return {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+                for p in sorted(pasta.glob("*.json"))}
+
+    antes = _retrato()
+    assert antes, "premissa: o Freestyle da régua está na pasta que o loader lê"
     assert Daemon.gravar_o_modo_escolhido(
         _daemon_que_grava(None), "gamepad", caminho="xbox", porta="ipc"
     ) is None
-    assert list(tmp_path.glob("*.json")) == [], (
-        "o escritor inventou um perfil para receber o modo")
+    assert _retrato() == antes, (
+        "o escritor escolheu um perfil para receber o modo sem ninguém valendo")
 
 
 def test_a_secao_do_modo_e_a_regra_do_dono() -> None:
