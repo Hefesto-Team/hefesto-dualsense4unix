@@ -26,6 +26,7 @@ próprio teste subiu.
 from __future__ import annotations
 
 import ast
+import fcntl
 import importlib
 import os
 import shutil
@@ -33,6 +34,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from collections.abc import Iterator
 from pathlib import Path
@@ -50,6 +52,7 @@ ESPERA_PELO_FILHO_SEC = 20.0
 #: piloto que segura o laço do GLib por 20 s. ``arranque``: toma a vez e
 #: DORME antes de armar a escuta (o pedido chega aí, como um segundo clique no
 #: meio do arranque), depois arma e roda o laço por 3 s e sai sozinho.
+#: ``travada``: toma a vez e nunca arma a escuta — o laço do GTK parado.
 _FILHO = """
 import os, sys, time, pathlib
 sys.path.insert(0, sys.argv[1])
@@ -60,6 +63,9 @@ if sys.argv[2] == "glib":
     sys.exit(ai.main([]))
 nome = ai.tomar_a_vez([])
 print("vez:" + repr(nome), flush=True)
+if sys.argv[2] == "travada":
+    time.sleep(30)
+    sys.exit(0)
 time.sleep(2.5)
 import gi
 gi.require_version("Gtk", "3.0")
@@ -261,6 +267,24 @@ class TestQuemNaoTomaAVez:
         assert "/" not in ai.nome_da_vez()
 
 
+def _pedir_em_paralelo(si: ModuleType, nome: str) -> tuple[threading.Thread, list[bool]]:
+    """``pedir_a_frente`` numa thread: ele espera a resposta que só a leitura dá."""
+    atendido: list[bool] = []
+    fio = threading.Thread(target=lambda: atendido.append(si.pedir_a_frente(nome, 4242)))
+    fio.start()
+    return fio, atendido
+
+
+def _ler_quando_chegar(si: ModuleType, porta: object) -> str | None | bool:
+    limite = time.monotonic() + 5.0
+    while time.monotonic() < limite:
+        pedido = si.ler_o_pedido(porta)
+        if pedido is not False:
+            return pedido
+        time.sleep(0.02)
+    return False
+
+
 class TestAPortaDeFrente:
     def test_o_pedido_leva_o_token_e_serve_uma_vez(
         self, berco: Path, monkeypatch: pytest.MonkeyPatch
@@ -269,23 +293,37 @@ class TestAPortaDeFrente:
 
         porta = single_instance.abrir_a_porta_de_frente("gui-t")
         monkeypatch.setenv("XDG_ACTIVATION_TOKEN", "token-x")
-        single_instance.pedir_a_frente("gui-t", 4242)
+        fio, atendido = _pedir_em_paralelo(single_instance, "gui-t")
 
-        assert single_instance.ler_o_pedido(porta) == "token-x"
+        assert _ler_quando_chegar(single_instance, porta) == "token-x"
+        fio.join(timeout=5)
+        assert atendido == [True], "a janela leu o pedido e não respondeu"
         assert single_instance.ler_o_pedido(porta) is False, "a fila tinha um pedido só"
 
     def test_sem_token_o_pedido_segue(self, berco: Path) -> None:
         from hefesto_dualsense4unix.utils import single_instance
 
         porta = single_instance.abrir_a_porta_de_frente("gui-t")
-        single_instance.pedir_a_frente("gui-t", 4242)
-        assert single_instance.ler_o_pedido(porta) is None
+        fio, atendido = _pedir_em_paralelo(single_instance, "gui-t")
+        assert _ler_quando_chegar(single_instance, porta) is None
+        fio.join(timeout=5)
+        assert atendido == [True]
 
     def test_porta_fechada_nao_levanta(self, berco: Path) -> None:
-        """Sem porta, o pedido só se registra: a janela do outro segue de pé."""
+        """Sem porta, o pedido só se registra e diz que ninguém atendeu."""
         from hefesto_dualsense4unix.utils import single_instance
 
-        single_instance.pedir_a_frente("gui-sem-porta", 4242)
+        assert single_instance.pedir_a_frente("gui-sem-porta", 4242) is False
+
+    def test_porta_que_ninguem_le_nao_conta_como_atendida(
+        self, berco: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O kernel aceita a conexão de um laço parado; só a resposta prova a janela."""
+        from hefesto_dualsense4unix.utils import single_instance
+
+        monkeypatch.setattr(single_instance, "ESPERA_PELA_RESPOSTA_SEC", 0.3)
+        single_instance.abrir_a_porta_de_frente("gui-t")
+        assert single_instance.pedir_a_frente("gui-t", 4242) is False
 
     def test_a_porta_velha_de_um_dono_morto_e_trocada(self, berco: Path) -> None:
         from hefesto_dualsense4unix.utils import single_instance
@@ -293,8 +331,85 @@ class TestAPortaDeFrente:
         velha = single_instance.abrir_a_porta_de_frente("gui-t")
         velha.close()
         nova = single_instance.abrir_a_porta_de_frente("gui-t")
-        single_instance.pedir_a_frente("gui-t", 4242)
-        assert single_instance.ler_o_pedido(nova) is None
+        fio, atendido = _pedir_em_paralelo(single_instance, "gui-t")
+        assert _ler_quando_chegar(single_instance, nova) is None
+        fio.join(timeout=5)
+        assert atendido == [True]
+
+
+class TestAInstanciaUnicaNuncaImpedeAJanela:
+    """O lock é conforto; a janela é o produto. Toda falha dele abre a janela."""
+
+    def test_a_janela_travada_nao_segura_o_clique(
+        self, berco: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        ai = _carregar_o_lancador()
+        from hefesto_dualsense4unix.utils import single_instance
+
+        monkeypatch.setattr(single_instance, "_is_hefesto_dualsense4unix_process", lambda _p: True)
+        monkeypatch.setattr(single_instance, "ESPERA_PELA_RESPOSTA_SEC", 0.5)
+        travada = _subir_o_primeiro("travada", berco)
+        try:
+            vez = ai.tomar_a_vez([])
+            viva = travada.poll() is None
+        finally:
+            _enterrar(travada)
+
+        assert vez == "", (
+            "a janela aberta não respondeu e o clique ficou sem janela nenhuma"
+        )
+        assert viva, "o pedido derrubou a janela travada"
+        assert ai.nome_da_vez() not in single_instance._HELD_LOCKS
+
+    def test_a_porta_que_nao_abre_solta_o_lock(
+        self, berco: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Lock sem porta seria pior que nenhum: os cliques seguintes não abririam nada."""
+        ai = _carregar_o_lancador()
+        from hefesto_dualsense4unix.utils import single_instance
+
+        def _sem_porta(_nome: str) -> object:
+            raise OSError("runtime sem escrita (dublê)")
+
+        monkeypatch.setattr(single_instance, "abrir_a_porta_de_frente", _sem_porta)
+        assert ai.tomar_a_vez([]) == ""
+        assert ai.nome_da_vez() not in single_instance._HELD_LOCKS
+
+    def test_o_lock_preso_sem_pid_abre_a_janela_em_vez_de_quebrar(
+        self, berco: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Um duplo clique no mesmo milissegundo: o vizinho tem o lock e ainda não o PID."""
+        ai = _carregar_o_lancador()
+        from hefesto_dualsense4unix.utils import single_instance
+
+        monkeypatch.setattr(single_instance, "SIGTERM_GRACE_SEC", 0.1)
+        pid_file = single_instance._pid_file(ai.nome_da_vez())
+        vizinho = os.open(str(pid_file), os.O_CREAT | os.O_RDWR, 0o600)
+        try:
+            fcntl.flock(vizinho, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            assert ai.tomar_a_vez([]) == ""
+        finally:
+            os.close(vizinho)
+
+    def test_a_segunda_volta_acha_o_vizinho(
+        self, berco: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Na segunda volta o PID já está escrito, e o pedido vai a ele."""
+        ai = _carregar_o_lancador()
+        from hefesto_dualsense4unix.utils import single_instance
+
+        voltas: list[int] = []
+        real = single_instance.acquire_or_bring_to_front
+
+        def _primeira_presa(nome: str, cb: object) -> int | None:
+            voltas.append(1)
+            if len(voltas) == 1:
+                raise RuntimeError("lock preso pelo vizinho (dublê)")
+            return real(nome, cb)  # type: ignore[arg-type]
+
+        monkeypatch.setattr(single_instance, "acquire_or_bring_to_front", _primeira_presa)
+        assert ai.tomar_a_vez([]) == ai.nome_da_vez()
+        assert len(voltas) == 2
 
 
 class TestOsLoadersDoGdkPixbuf:
@@ -334,9 +449,6 @@ class TestOsLoadersDoGdkPixbuf:
     def test_cache_que_so_le_png_sai(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # O nome do teste não leva a palavra do formato: o `tmp_path` o repete, e
-        # o crivo do produto procura a palavra no TEXTO do cache, caminhos
-        # inclusive.
         from hefesto_dualsense4unix.app import arranque
 
         modulo = tmp_path / "libpixbufloader-png.so"
@@ -344,6 +456,22 @@ class TestOsLoadersDoGdkPixbuf:
         cache = self._cache(tmp_path, str(modulo), svg=False)
         monkeypatch.setenv("GDK_PIXBUF_MODULE_FILE", str(cache))
         assert arranque.sanear_loaders_do_gdk_pixbuf() is True
+
+    def test_o_caminho_com_o_nome_do_formato_nao_engana_o_crivo(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Um cache só de PNG numa pasta cujo nome traz o formato vetorial sai."""
+        from hefesto_dualsense4unix.app import arranque
+
+        pasta = tmp_path / "icones-svg"
+        pasta.mkdir()
+        modulo = pasta / "libpixbufloader-png.so"
+        modulo.write_bytes(b"")
+        cache = self._cache(pasta, str(modulo), svg=False)
+        cache.write_text(f"# LoaderDir = {pasta}\n" + cache.read_text(), encoding="utf-8")
+        monkeypatch.setenv("GDK_PIXBUF_MODULE_FILE", str(cache))
+        assert arranque.sanear_loaders_do_gdk_pixbuf() is True
+        assert "GDK_PIXBUF_MODULE_FILE" not in os.environ
 
     def test_dentro_do_proprio_snap_o_cache_serve(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from hefesto_dualsense4unix.app import arranque

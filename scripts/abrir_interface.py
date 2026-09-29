@@ -76,8 +76,10 @@ janela GTK antiga usava (``utils/single_instance.acquire_or_bring_to_front``, o
 modelo *primeira vence*) ficou sem chamador quando ela saiu, em 06/09. Ele volta
 aqui (``tomar_a_vez``): a janela que já está aberta recebe o pedido pela porta
 dela (um socket no runtime, NUNCA um sinal: o WebKit toma o ``SIGUSR1``, e o
-pedido por sinal derrubou a janela na bancada de 28/09) e vem para a frente; o
-segundo processo sai com ``rc=0`` antes de importar o GTK.
+pedido por sinal derrubou a janela na bancada de 28/09), vem para a frente e
+responde; o segundo processo sai com ``rc=0`` antes de importar o GTK. A janela
+que não responde (laço do GTK parado, ou já saindo) não segura o clique: o
+segundo processo abre a dele, como antes de 28/09.
 
 O lock é POR TELA (``nome_da_vez``): a janela que nasce num ``Xvfb`` de
 instrumento nunca pede nada à janela da tela dela. E ele só vale quando a
@@ -240,22 +242,56 @@ def tomar_a_vez(args: list[str]) -> str | None:
     Devolve o nome do lock quando este processo é a janela (e aí quem chama
     arma ``armar_a_volta_a_frente`` depois do GTK), ``""`` quando não há lock a
     tomar (instrumento, janela oculta), e ``None`` quando uma janela já aberta
-    recebeu o pedido e veio para a frente: quem chama sai com ``rc=0``.
+    ATENDEU o pedido e veio para a frente: quem chama sai com ``rc=0``.
 
     A PORTA ABRE LOGO DEPOIS DO LOCK, antes do GTK: um segundo clique no meio do
     arranque fica na fila do kernel e é atendido quando o laço da janela
     escutar. Nada aqui mexe em sinal do processo.
+
+    A INSTÂNCIA ÚNICA NUNCA IMPEDE A JANELA DE ABRIR. É conforto: o produto é a
+    janela. Por isso as três saídas abaixo caem em ``""`` (abrir como antes de
+    28/09, sem lock) em vez de em ``None``:
+
+    * a janela aberta não respondeu (``pedir_a_frente`` devolveu ``False``): o
+      dono está vivo com o laço do GTK parado, ou já saindo. Sair com ``rc=0``
+      aí deixaria o clique dela sem janela nenhuma;
+    * o lock ou a porta falharam (runtime sem escrita, disco cheio): sem porta,
+      o lock seria pior que nenhum, porque os cliques seguintes não teriam a
+      quem pedir e nenhum abriria nada — então ele se solta;
+    * o lock estava preso por um vizinho que ainda não escreveu o PID (os dois
+      cliques de um duplo no mesmo milissegundo): uma segunda volta já acha o
+      PID e pede a ele, e só se ela também falhar a janela abre sem lock.
     """
     if not a_janela_vai_para_a_tela(args):
         return ""
     from hefesto_dualsense4unix.utils import single_instance as si
 
     nome = nome_da_vez()
-    pid = si.acquire_or_bring_to_front(nome, lambda anterior: si.pedir_a_frente(nome, anterior))
-    if pid is None:
-        return None
-    si.abrir_a_porta_de_frente(nome)
-    return nome
+    atendidos: list[bool] = []
+
+    def _pedir(anterior: int) -> None:
+        atendidos.append(si.pedir_a_frente(nome, anterior))
+
+    for _volta in range(2):
+        atendidos.clear()
+        try:
+            pid = si.acquire_or_bring_to_front(nome, _pedir)
+        except (OSError, RuntimeError) as erro:
+            print(f"  sem instância única nesta abertura ({erro})")
+            continue
+        if pid is None:
+            if atendidos and atendidos[-1]:
+                return None
+            print("  a janela aberta nesta tela não respondeu: abro outra")
+            return ""
+        try:
+            si.abrir_a_porta_de_frente(nome)
+        except OSError as erro:
+            si.release(nome)
+            print(f"  sem instância única nesta abertura ({erro})")
+            return ""
+        return nome
+    return ""
 
 
 def janelas_de_frente(janelas: list[Any]) -> list[Any]:

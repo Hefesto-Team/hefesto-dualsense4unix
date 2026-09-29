@@ -29,6 +29,11 @@ BUG-TRAY-SINGLE-FLASH-01: modelo "primeira vence" (`acquire_or_bring_to_front`).
   recurso do processo inteiro, e a interface nova divide o processo com o
   WebKit; o socket é só nosso, e um pedido perdido nele custa no máximo a
   janela não vir à frente — nunca a janela.
+
+  A JANELA RESPONDE, e quem pediu espera a resposta (``pedir_a_frente`` devolve
+  ``True`` só com ela). Dono vivo não quer dizer janela viva: um laço do GTK
+  parado aceita a conexão pelo kernel e nunca a atende. Sem resposta, o
+  lançador abre a janela dele em vez de deixar o clique sem janela nenhuma.
 """
 from __future__ import annotations
 
@@ -391,6 +396,16 @@ _VARIAVEIS_DO_TOKEN: tuple[str, ...] = ("XDG_ACTIVATION_TOKEN", "DESKTOP_STARTUP
 #: O teto de um pedido, em bytes: um token é uma linha curta.
 _TETO_DO_PEDIDO = 4096
 
+#: A resposta da janela que atendeu o pedido. Ela sai do laço do GLib da
+#: janela, e é a única prova de que esse laço está girando.
+_ATENDIDO = b"ok\n"
+
+#: Quanto quem pede espera pela resposta, em segundos. Largo de propósito: um
+#: segundo clique no meio do arranque espera a janela chegar ao laço do GTK
+#: (o WebKit leva segundos para subir numa máquina lenta), e só uma janela que
+#: passa disso sem responder conta como travada.
+ESPERA_PELA_RESPOSTA_SEC = 10.0
+
 #: As portas abertas por este processo, pelo mesmo motivo de ``_HELD_LOCKS``.
 _PORTAS: dict[str, socket.socket] = {}
 
@@ -425,14 +440,19 @@ def porta_de_frente(name: str) -> socket.socket | None:
     return _PORTAS.get(name)
 
 
-def pedir_a_frente(name: str, pid: int) -> None:
-    """Pede ao dono da janela (``pid``) que a traga para a frente.
+def pedir_a_frente(name: str, pid: int) -> bool:
+    """Pede ao dono da janela (``pid``) que a traga para a frente; ``True`` se ela atendeu.
 
-    É o ``bring_to_front_cb`` do lançador. Conecta na porta de ``name`` e manda
+    É o ``bring_to_front_cb`` do lançador. Conecta na porta de ``name``, manda
     uma linha com o token de ativação deste processo (vazia se o ambiente não
-    deu um). Porta que não responde só é registrada: o dono está vivo (é o que
-    ``acquire_or_bring_to_front`` confere), a janela dele continua de pé, e o
-    pior que acontece é ela não vir à frente.
+    deu um) e espera a resposta, que sai do laço do GLib da janela
+    (``ler_o_pedido``). Porta fechada, recusa ou silêncio viram ``False`` e só
+    se registram: quem chama decide o que fazer com uma janela que não
+    responde, e nunca a derruba.
+
+    O ``False`` é o que separa a janela TRAVADA da janela que atendeu: o dono
+    pode estar vivo (é o que ``acquire_or_bring_to_front`` confere) com o laço
+    da janela parado, e aí não há o que trazer à frente.
     """
     token = next(
         (os.environ[v] for v in _VARIAVEIS_DO_TOKEN if os.environ.get(v)), ""
@@ -442,8 +462,20 @@ def pedir_a_frente(name: str, pid: int) -> None:
             conexao.settimeout(1.0)
             conexao.connect(str(_caminho_da_porta(name)))
             conexao.sendall(token.encode("utf-8", errors="replace")[:_TETO_DO_PEDIDO - 1] + b"\n")
+            conexao.settimeout(ESPERA_PELA_RESPOSTA_SEC)
+            resposta = b""
+            while not resposta.endswith(b"\n") and len(resposta) < len(_ATENDIDO):
+                bloco = conexao.recv(len(_ATENDIDO))
+                if not bloco:
+                    break
+                resposta += bloco
     except OSError as exc:
         logger.warning("single_instance_pedido_nao_chegou", name=name, pid=pid, err=str(exc))
+        return False
+    if resposta != _ATENDIDO:
+        logger.warning("single_instance_janela_nao_respondeu", name=name, pid=pid)
+        return False
+    return True
 
 
 def ler_o_pedido(porta: socket.socket) -> str | None | bool:
@@ -451,7 +483,8 @@ def ler_o_pedido(porta: socket.socket) -> str | None | bool:
 
     ``False`` quer dizer que não havia conexão esperando (a fila já foi
     esvaziada). Uma conexão que não manda a linha em meio segundo conta como
-    pedido sem token: a janela vem à frente do mesmo jeito.
+    pedido sem token: a janela vem à frente do mesmo jeito. Lido o pedido, a
+    resposta volta a quem pediu (``pedir_a_frente`` espera por ela).
     """
     try:
         conexao, _ = porta.accept()
@@ -466,6 +499,8 @@ def ler_o_pedido(porta: socket.socket) -> str | None | bool:
                 if not bloco:
                     break
                 dados += bloco
+        with contextlib.suppress(OSError):
+            conexao.sendall(_ATENDIDO)
     token = dados.split(b"\n", 1)[0].decode("utf-8", errors="replace").strip()
     return token or None
 
