@@ -506,3 +506,206 @@ class TestOAdaptadorPelaGeracaoDoHidraw:
         finally:
             dono.desarmar()
             rm._esquecer_o_mapa()
+
+
+# ---------------------------------------------------------------------------
+# Régua 3 — a descoberta pela geração, na origem
+# ---------------------------------------------------------------------------
+
+#: O bitmap `capabilities/key` do nó de gamepad (BTN_SOUTH..BTN_THUMBR).
+_TECLAS_DE_GAMEPAD = "7fdb000000000000 0 0 0 0"
+_EXTERNO = (0x2DC8, 0x6012)  # vendor/product forjados de um externo
+
+
+class _MesaDeEntrada:
+    """`/dev/input` e o sysfs de mentira, com o dono armado na pasta.
+
+    Os quatro DualSense (dois no cabo, dois no rádio) têm o nó de gamepad
+    fechado, como o `0600 root` do físico: a descoberta os classifica pelo
+    sysfs, sem abrir. O externo abre pelo caminho, pelo dublê do
+    `abrir_input_device`, que publica o que o real publica.
+    """
+
+    def __init__(self, raiz: Path, entradas: Path) -> None:
+        from tests.unit.sysfs_de_entrada_de_mentira import publicar_no
+
+        self._publicar = publicar_no
+        self.sys = raiz / "sys-class-input"
+        self.sys.mkdir()
+        self.dev = entradas
+        self.aberturas: list[str] = []
+        self.listagens = 0
+        self.falhar_uma_vez: set[str] = set()
+        self.externos: dict[str, str] = {}
+        numero = 9301
+        for i, bus in enumerate((0x03, 0x03, 0x05, 0x05)):
+            self.dualsense(f"event{numero}", f"aa:bb:cc:00:00:0{i + 1}", bus)
+            numero += 1
+
+    def dualsense(self, evento: str, uniq: str, bus: int) -> str:
+        caminho = str(self.dev / evento)
+        self._publicar(
+            self.sys,
+            caminho,
+            nome="DualSense Wireless Controller",
+            uniq=uniq,
+            bus=bus,
+            teclas=_TECLAS_DE_GAMEPAD,
+        )
+        Path(caminho).write_text("")
+        os.chmod(caminho, 0o000)
+        return caminho
+
+    def externo(self, evento: str, uniq: str, *, modo: int = 0o644) -> str:
+        caminho = str(self.dev / evento)
+        self._publicar(
+            self.sys,
+            caminho,
+            nome="8BitDo Pro 2",
+            uniq=uniq,
+            vendor=_EXTERNO[0],
+            product=_EXTERNO[1],
+            bus=0x03,
+            teclas=_TECLAS_DE_GAMEPAD,
+        )
+        Path(caminho).write_text("")
+        os.chmod(caminho, modo)
+        self.externos[caminho] = uniq
+        return caminho
+
+    def listar(self, *_a: Any) -> list[str]:
+        """O `list_devices` da biblioteca: só o nó que o processo abre."""
+        self.listagens += 1
+        return [
+            str(c)
+            for c in sorted(self.dev.glob("event*"))
+            if os.access(c, os.R_OK | os.W_OK)
+        ]
+
+    def abrir(self, caminho: Any, **_kw: Any) -> Any:
+        from evdev import ecodes
+
+        caminho = str(caminho)
+        self.aberturas.append(caminho)
+        if caminho in self.falhar_uma_vez:
+            self.falhar_uma_vez.discard(caminho)
+            raise OSError(5, "Input/output error", caminho)
+        uniq = self.externos[caminho]
+        caps = {ecodes.EV_KEY: [ecodes.BTN_SOUTH, ecodes.BTN_EAST], ecodes.EV_ABS: []}
+        return SimpleNamespace(
+            info=SimpleNamespace(vendor=_EXTERNO[0], product=_EXTERNO[1], bustype=0x03),
+            name="8BitDo Pro 2",
+            uniq=uniq,
+            path=caminho,
+            capabilities=lambda **_kw: caps,
+            close=lambda: None,
+        )
+
+
+@pytest.fixture
+def mesa_de_entrada(
+    raizes: tuple[Path, Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> _MesaDeEntrada:
+    pytest.importorskip("evdev")
+    if os.geteuid() == 0:  # pragma: no cover - como root o 0000 não fecha nada
+        pytest.skip("como root todo nó abre")
+    from hefesto_dualsense4unix.core import evdev_reader as er
+
+    entradas, _nos = raizes
+    mesa = _MesaDeEntrada(tmp_path, entradas)
+    monkeypatch.setattr(er, "SYS_CLASS_INPUT", str(mesa.sys))
+    monkeypatch.setattr(er, "DEV_INPUT_DIR", str(entradas))
+    socket_do_broker = tmp_path / "broker.sock"
+    socket_do_broker.write_text("")
+    monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(socket_do_broker))
+    monkeypatch.setattr("evdev.list_devices", mesa.listar)
+    monkeypatch.setattr(er, "abrir_input_device", mesa.abrir)
+    er._esquecer_o_inventario()
+    return mesa
+
+
+class TestADescobertaPelaGeracao:
+    def test_trinta_chamadas_pelas_tres_portas_uma_volta_por_chave(
+        self, mesa_de_entrada: _MesaDeEntrada
+    ) -> None:
+        from hefesto_dualsense4unix.core import evdev_reader as er
+
+        mesa_de_entrada.externo("event9401", "aa:bb:cc:00:02:01")
+        with contando() as conta:
+            for _ in range(10):
+                externos = er.discover_external_gamepads()
+                dualsense = er.discover_dualsense_evdevs()
+                primeiro = er.find_dualsense_evdev()
+        # Duas chaves: (com_sysfs, externos) e (sem sysfs, as duas espécies).
+        assert mesa_de_entrada.listagens == 2, (
+            f"{mesa_de_entrada.listagens} descobertas em 30 chamadas sem evento"
+        )
+        assert len(mesa_de_entrada.aberturas) == 2  # o externo, uma vez por chave
+        leituras_de_id = [c for c in _sob(conta, mesa_de_entrada.sys, "open") if "/id/" in c]
+        assert leituras_de_id, "a primeira volta tem de ler o sysfs"
+        assert [e["uniq"] for e in externos] == ["aa:bb:cc:00:02:01"]
+        assert len(dualsense) == 4
+        assert primeiro is not None
+
+    def test_um_no_que_nasce_descobre_de_novo_e_acha(
+        self, mesa_de_entrada: _MesaDeEntrada
+    ) -> None:
+        from hefesto_dualsense4unix.core import evdev_reader as er
+
+        assert len(er.discover_dualsense_evdevs()) == 4
+        mesa_de_entrada.dualsense("event9305", "aa:bb:cc:00:00:05", 0x05)
+        assert len(er.discover_dualsense_evdevs()) == 5
+
+    def test_um_no_que_ganha_permissao_sem_nascer_e_achado(
+        self, mesa_de_entrada: _MesaDeEntrada
+    ) -> None:
+        """O udev põe a permissão DEPOIS de o nó nascer: o `IN_ATTRIB` conta."""
+        from hefesto_dualsense4unix.core import evdev_reader as er
+
+        caminho = mesa_de_entrada.externo("event9402", "aa:bb:cc:00:02:02", modo=0o000)
+        assert er.discover_external_gamepads() == []
+        os.chmod(caminho, 0o644)
+        assert [e["uniq"] for e in er.discover_external_gamepads()] == ["aa:bb:cc:00:02:02"]
+
+    def test_o_externo_que_falhou_ao_abrir_volta_na_chamada_seguinte(
+        self, mesa_de_entrada: _MesaDeEntrada
+    ) -> None:
+        from hefesto_dualsense4unix.core import evdev_reader as er
+
+        caminho = mesa_de_entrada.externo("event9403", "aa:bb:cc:00:02:03")
+        mesa_de_entrada.falhar_uma_vez.add(caminho)
+        assert er.discover_external_gamepads() == []
+        assert [e["uniq"] for e in er.discover_external_gamepads()] == ["aa:bb:cc:00:02:03"], (
+            "o externo que falhou uma vez sumiu até o próximo evento"
+        )
+
+    def test_quem_muda_o_inventario_nao_muda_o_seguinte(
+        self, mesa_de_entrada: _MesaDeEntrada
+    ) -> None:
+        from hefesto_dualsense4unix.core import evdev_reader as er
+
+        mesa_de_entrada.externo("event9404", "aa:bb:cc:00:02:04")
+        primeira = er.discover_external_gamepads()
+        primeira[0]["holders"] = ["steam"]
+        primeira.clear()
+        segunda = er.discover_external_gamepads()
+        assert len(segunda) == 1 and "holders" not in segunda[0]
+
+        er.discover_gamepads(com_sysfs=False)  # a volta que guarda
+        gps = er.discover_gamepads(com_sysfs=False)  # a que devolve o guardado
+        gps[0].eixos[0] = er.EixoAbsoluto(minimo=1, maximo=2)
+        gps.clear()
+        de_novo = er.discover_gamepads(com_sysfs=False)
+        assert len(de_novo) == 5
+        assert all(0 not in gp.eixos for gp in de_novo)
+
+    def test_desarmado_cada_chamada_descobre_como_hoje(
+        self, mesa_de_entrada: _MesaDeEntrada
+    ) -> None:
+        from hefesto_dualsense4unix.core import evdev_reader as er
+
+        while ode.armado():
+            ode.desarmar()
+        for _ in range(10):
+            er.discover_dualsense_evdevs()
+        assert mesa_de_entrada.listagens == 10

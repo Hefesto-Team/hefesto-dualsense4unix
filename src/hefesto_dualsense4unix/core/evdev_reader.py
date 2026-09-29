@@ -16,7 +16,7 @@ import contextlib
 import os
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -958,6 +958,52 @@ def _int_ou(valor: Any, reserva: int) -> int:
         return reserva
 
 
+#: O-REPOUSO-ESPERA-O-EVENTO-01, família 3 (29/09/2026): o inventário de cada
+#: `(com_sysfs, especie)`, preso às gerações de `/dev/input` (nomes e
+#: permissões) do dono do evento — e, com `com_sysfs`, à de nomes dos `hidraw*`
+#: de `/dev`, porque o hidraw irmão pode nascer depois do nó de entrada. Medido
+#: na sonda S.4 (60 s, os quatro no rádio, parados): ~109 descobertas por
+#: minuto, 1.305 leituras de `id/vendor` e outras tantas de `id/product`, sem
+#: nenhum nó ter nascido ou sumido. `chave -> (ficha, inventário)`.
+_INVENTARIO_PELA_GERACAO: dict[
+    tuple[bool, str | None], tuple[tuple[int, ...], tuple[GamepadDescoberto, ...]]
+] = {}
+_INVENTARIO_TRAVA = threading.Lock()
+
+
+def _esquecer_o_inventario() -> None:
+    """O dono desarmou: o inventário guardado não tem mais quem o invalide."""
+    with _INVENTARIO_TRAVA:
+        _INVENTARIO_PELA_GERACAO.clear()
+
+
+_ode.ao_desarmar(_esquecer_o_inventario)
+
+
+def _ficha_da_descoberta(com_sysfs: bool) -> tuple[int, ...] | None:
+    """A ficha do dono que prende o inventário; None = não se guarda nada.
+
+    Só com o dono armado olhando a MESMA pasta que a descoberta percorre
+    (`DEV_INPUT_DIR`): a suíte desvia a pasta, e um inventário preso à pasta
+    real não responde por ela.
+    """
+    dono = _ode.dono_armado()
+    if dono is None or os.path.normpath(DEV_INPUT_DIR) != dono.raiz_das_entradas:
+        return None
+    pedidos = [
+        (dono.raiz_das_entradas, _ode.NOMES),
+        (dono.raiz_das_entradas, _ode.PERMISSOES),
+    ]
+    if com_sysfs:
+        pedidos.append((dono.raiz_dos_nos, _ode.NOMES))
+    return dono.ficha(*pedidos)
+
+
+def _copia_do_descoberto(gp: GamepadDescoberto) -> GamepadDescoberto:
+    """Uma cópia que quem chama pode mudar sem mudar o inventário guardado."""
+    return replace(gp, eixos=dict(gp.eixos))
+
+
 def discover_gamepads(
     *, com_sysfs: bool = True, especie: str | None = None
 ) -> list[GamepadDescoberto]:
@@ -1019,6 +1065,13 @@ def discover_gamepads(
     curto-circuitava antes) — alguns ioctls a mais por node, num caminho que já
     é gated pelo `InputDirWatch` e só roda em hotplug. Não foi medido com
     aparelho na mesa.
+
+    **Com o dono do evento armado** (O-REPOUSO-ESPERA-O-EVENTO-01, 29/09/2026),
+    o inventário de cada `(com_sysfs, especie)` fica guardado até `/dev/input`
+    mudar, e cobre as sete portas desta função (o tique dos externos, o
+    `controller.list`, o co-op, o `sensor_hub`, o `_locate` do leitor e o
+    reencontro por identidade). Cada chamada devolve cópias: os consumidores
+    mutam o que recebem. A volta em que um nó falhou ao abrir não se guarda.
     """
     if especie not in (None, ESPECIE_DUALSENSE, ESPECIE_EXTERNAL):
         raise ValueError(f"discover_gamepads: espécie desconhecida {especie!r}")
@@ -1027,6 +1080,23 @@ def discover_gamepads(
     except ImportError:
         return []
     from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    # O-REPOUSO-ESPERA-O-EVENTO-01, família 3: com o dono do evento armado, a
+    # volta só roda quando `/dev/input` mudou (um nó nasceu, sumiu ou ganhou
+    # permissão). A ficha é anotada ANTES da volta: o evento que chega durante
+    # ela muda a ficha, e a pergunta seguinte refaz. Sem o dono, como sempre.
+    chave = (com_sysfs, especie)
+    ficha = _ficha_da_descoberta(com_sysfs)
+    if ficha is not None:
+        with _INVENTARIO_TRAVA:
+            guardado = _INVENTARIO_PELA_GERACAO.get(chave)
+        if guardado is not None and guardado[0] == ficha:
+            return [_copia_do_descoberto(gp) for gp in guardado[1]]
+    # Um nó que falhou ao abrir some da volta em silêncio (o `except` do fim do
+    # laço). Um inventário assim não se guarda: o externo que falhou uma vez
+    # não pode sumir até o próximo evento, e o `VOLATILE_ABSENCE_LIMIT` do
+    # tique dos externos conta com a volta seguinte.
+    houve_falha = False
 
     encontrados: dict[tuple[str, str], GamepadDescoberto] = {}
     # HIDE-SO-O-HIDRAW-02: `_nos_de_evento`, e não o `list_devices()` cru — a
@@ -1132,7 +1202,14 @@ def discover_gamepads(
             finally:
                 dev.close()
         except Exception:
+            houve_falha = True
             continue
+    if ficha is not None and not houve_falha:
+        with _INVENTARIO_TRAVA:
+            _INVENTARIO_PELA_GERACAO[chave] = (
+                ficha,
+                tuple(_copia_do_descoberto(gp) for gp in encontrados.values()),
+            )
     return list(encontrados.values())
 
 
