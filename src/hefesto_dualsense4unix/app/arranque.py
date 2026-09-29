@@ -89,7 +89,15 @@ def sanear_loaders_do_gdk_pixbuf() -> bool:
     if modulos and all(not os.path.exists(m) or de_outro_confinamento(m) for m in modulos):
         del os.environ["GDK_PIXBUF_MODULE_FILE"]
         return True
-    if "svg" not in cache:
+    # O FORMATO SE LÊ NAS LINHAS DE FORMATO, não no arquivo inteiro: a linha do
+    # módulo e o comentário `# LoaderDir = …` são CAMINHOS, e um caminho que
+    # passe por uma pasta com "svg" no nome faria um cache só de PNG passar por
+    # bom — com os 38 glifos de botão caindo do mesmo jeito.
+    formatos = [
+        linha for linha in cache.splitlines()
+        if linha.strip() and not linha.lstrip().startswith(('"/', "#"))
+    ]
+    if not any("svg" in linha for linha in formatos):
         del os.environ["GDK_PIXBUF_MODULE_FILE"]
         return True
     return False
