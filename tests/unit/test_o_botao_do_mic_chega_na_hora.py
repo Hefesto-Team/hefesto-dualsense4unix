@@ -54,13 +54,13 @@ _VAGAS_DA_FILA = 63
 #: bancada de 29/09, e o cabo entrega 250/s.
 _TAXA = {"radio": 688.0, "cabo": 250.0}
 
-#: Os quatro da mesa, na faixa forjada da suíte.
+#: O controle das réguas da luz, na faixa forjada da suíte.
 UM = "aabbcc0000c1"
 
 
 def _throttle(n: int) -> float:
     """O throttle de uma mesa de `n`, pela conta do `connect` do backend."""
-    return min(bp.REPORT_THREAD_THROTTLE_SEC * n, bp.REPORT_THREAD_THROTTLE_MAX_SEC)
+    return float(min(bp.REPORT_THREAD_THROTTLE_SEC * n, bp.REPORT_THREAD_THROTTLE_MAX_SEC))
 
 
 # ---------------------------------------------------------------------------
@@ -498,20 +498,19 @@ def test_um_parse_por_volta_com_o_report_de_estado_mais_novo(
 
     monkeypatch.setattr(h, "readInput", _conta)
     #: as voltas que tiraram da fila ao menos um report de ESTADO
-    com_estado = {"n": 0, "visto": None}
+    com_estado: list[tuple[int, int] | None] = [None]
 
     def _conta_volta() -> None:
-        if aparelho.ultimo_estado_lido != com_estado["visto"]:
-            com_estado["visto"] = aparelho.ultimo_estado_lido
-            com_estado["n"] += 1
+        if aparelho.ultimo_estado_lido != com_estado[-1]:
+            com_estado.append(aparelho.ultimo_estado_lido)
 
     bancada.depois_de_cada_volta(_conta_volta)
     bancada.rodar(h, segundos=2.0)
 
-    assert com_estado["n"] > 50
-    assert len(parses) == com_estado["n"], (
-        f"{len(parses)} parses em {com_estado['n']} voltas com estado: o parse caro "
-        "é um por volta"
+    voltas = len(com_estado) - 1
+    assert voltas > 50
+    assert len(parses) == voltas, (
+        f"{len(parses)} parses em {voltas} voltas com estado: o parse caro é um por volta"
     )
     audio_lido = sum(1 for i in range(aparelho.gerados) if i % 3 == 1) - sum(
         1 for i, _t, _q in aparelho.fila if i % 3 == 1
