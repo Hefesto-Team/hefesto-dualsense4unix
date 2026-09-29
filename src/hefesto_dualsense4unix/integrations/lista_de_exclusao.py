@@ -65,8 +65,10 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
 from hefesto_dualsense4unix.integrations import proton_pin
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+from hefesto_dualsense4unix.utils.leitura_pela_assinatura import LeituraPelaAssinatura
 
 #: O arquivo, ao lado das outras listas, no ``XDG_CONFIG_HOME``.
 RELPATH = "hefesto-dualsense4unix/lista_de_exclusao.json"
@@ -177,6 +179,26 @@ def _gravar(destino: Path, entradas: list[Entrada]) -> None:
         raise
 
 
+#: O-REPOUSO-ESPERA-O-EVENTO-01, família 6 (29/09/2026): a lista que o
+#: autoswitch pergunta a 2 Hz, guardada pela assinatura do `stat`. Medido na
+#: sonda S.4: 117 `open` por minuto num arquivo que nem existia. Só com o dono
+#: do evento armado; desarmar esquece.
+_LISTA_PELA_ASSINATURA: LeituraPelaAssinatura[list[Entrada]] = LeituraPelaAssinatura(
+    _ler_cru, copiar=list
+)
+_ode.ao_desarmar(_LISTA_PELA_ASSINATURA.esquecer)
+
+
+def _ler_para_o_tique(config_home: Path | None = None) -> list[Entrada]:
+    """A lista que o `contem` consulta: pela assinatura com o dono armado."""
+    if not _ode.armado():
+        return ler(config_home)
+    try:
+        return _LISTA_PELA_ASSINATURA.ler(caminho(config_home))
+    except (_ArquivoTortoError, OSError):
+        return []
+
+
 def ler(config_home: Path | None = None) -> list[Entrada]:
     """Os jogos excluídos. Arquivo ausente ou torto = lista vazia. Nunca levanta."""
     try:
@@ -205,7 +227,7 @@ def contem(chave: str, config_home: Path | None = None) -> bool:
     dobrado = alvo.casefold()
     return any(
         e.chave == alvo or any(j.casefold() == dobrado for j in e.janelas)
-        for e in ler(config_home)
+        for e in _ler_para_o_tique(config_home)
     )
 
 

@@ -709,3 +709,205 @@ class TestADescobertaPelaGeracao:
         for _ in range(10):
             er.discover_dualsense_evdevs()
         assert mesa_de_entrada.listagens == 10
+
+
+# ---------------------------------------------------------------------------
+# Régua 7 — os arquivos da casa pela assinatura do stat
+# ---------------------------------------------------------------------------
+
+
+def _envelhecer(caminho: Path, segundos: float = 100.0) -> None:
+    """O arquivo gravado há `segundos`: fora da janela do recém-gravado."""
+    import time
+
+    quando = time.time() - segundos
+    os.utime(caminho, (quando, quando))
+
+
+class TestALeituraPelaAssinatura:
+    """As duas regras finas, com o relógio de parede injetado."""
+
+    def _leitor(self, relogio: list[float]) -> Any:
+        from hefesto_dualsense4unix.utils.leitura_pela_assinatura import (
+            LeituraPelaAssinatura,
+        )
+
+        lidos: list[str] = []
+
+        def decodificar(caminho: Path) -> str:
+            lidos.append(str(caminho))
+            return caminho.read_text()
+
+        leitor = LeituraPelaAssinatura(decodificar, relogio=lambda: relogio[0])
+        leitor.lidos = lidos  # type: ignore[attr-defined]
+        return leitor
+
+    def test_a_gravacao_no_mesmo_segundo_e_vista(self, tmp_path: Path) -> None:
+        """O `mtime` em nanossegundos: a segunda gravação no mesmo segundo muda a assinatura."""
+        base = 1_900_000_000
+        relogio = [float(base + 100)]  # a leitura é bem depois: nada é recém-gravado
+        arquivo = tmp_path / "perfil.json"
+        leitor = self._leitor(relogio)
+        arquivo.write_text("AAAA")
+        os.utime(arquivo, ns=(base * 10**9 + 100_000_000, base * 10**9 + 100_000_000))
+        assert leitor.ler(arquivo) == "AAAA"
+        assert leitor.ler(arquivo) == "AAAA"
+        assert len(leitor.lidos) == 1
+        with arquivo.open("r+") as fh:  # no lugar: o mesmo inode
+            fh.write("BBBB")
+        os.utime(arquivo, ns=(base * 10**9 + 500_000_000, base * 10**9 + 500_000_000))
+        assert leitor.ler(arquivo) == "BBBB", "a gravação no mesmo segundo não foi vista"
+
+    def test_o_arquivo_recem_gravado_se_rele_ate_envelhecer(self, tmp_path: Path) -> None:
+        """Duas gravações do mesmo tamanho com o MESMO `mtime_ns`: a regra do «racy»."""
+        base = 1_900_000_000
+        mtime = base * 10**9
+        relogio = [float(base) + 0.5]  # lida meio segundo depois de gravada
+        arquivo = tmp_path / "last_run"
+        leitor = self._leitor(relogio)
+        arquivo.write_text("appid=1\n")
+        os.utime(arquivo, ns=(mtime, mtime))
+        assert leitor.ler(arquivo) == "appid=1\n"
+        with arquivo.open("r+") as fh:
+            fh.write("appid=2\n")
+        os.utime(arquivo, ns=(mtime, mtime))  # a mesma assinatura, byte a byte
+        assert leitor.ler(arquivo) == "appid=2\n", "a segunda gravação do mesmo tamanho sumiu"
+        relogio[0] = float(base) + 10.0
+        leitor.ler(arquivo)  # esta leitura já é confiável
+        antes = len(leitor.lidos)
+        for _ in range(10):
+            assert leitor.ler(arquivo) == "appid=2\n"
+        assert len(leitor.lidos) == antes
+
+    def test_o_ausente_guarda_ausente_ate_o_stat_achar(self, tmp_path: Path) -> None:
+        from hefesto_dualsense4unix.utils.leitura_pela_assinatura import (
+            LeituraPelaAssinatura,
+        )
+
+        arquivo = tmp_path / "nao-ha.json"
+        leituras: list[int] = []
+
+        def decodificar(caminho: Path) -> str:
+            leituras.append(1)
+            try:
+                return caminho.read_text()
+            except FileNotFoundError:
+                return ""
+
+        leitor = LeituraPelaAssinatura(decodificar)
+        for _ in range(10):
+            assert leitor.ler(arquivo) == ""
+        assert len(leituras) == 1
+        arquivo.write_text("x")
+        assert leitor.ler(arquivo) == "x"
+
+
+@pytest.fixture
+def perfis(
+    raizes: tuple[Path, Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    """Doze perfis gravados há 100 s, numa pasta de mentira, com o dono armado."""
+    from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
+
+    pasta = tmp_path / "profiles"
+    pasta.mkdir()
+    monkeypatch.setattr(loader, "profiles_dir", lambda ensure=False: pasta)
+    monkeypatch.setenv(loader.SEED_SKIP_ENV_VAR, "1")
+    loader._PERFIS_PELA_ASSINATURA.esquecer()
+    for i in range(12):
+        loader.save_profile(
+            Profile(name=f"perfil{i:02d}", match=MatchCriteria(window_class=[f"jogo{i:02d}"]))
+        )
+    for arquivo in pasta.glob("*.json"):
+        _envelhecer(arquivo)
+    return pasta
+
+
+def _classes(perfil: Any) -> list[str]:
+    """As classes de janela do `match` do perfil (o de mentira é sempre `MatchCriteria`)."""
+    from hefesto_dualsense4unix.profiles.schema import MatchCriteria
+
+    assert isinstance(perfil.match, MatchCriteria)
+    return perfil.match.window_class
+
+
+def _jsons(conta: list[tuple[str, str]], pasta: Path) -> list[str]:
+    return [c for c in _sob(conta, pasta, "open") if c.endswith(".json")]
+
+
+class TestOsArquivosDaCasa:
+    def test_dez_cargas_sem_mudanca_leem_os_perfis_uma_vez(self, perfis: Path) -> None:
+        from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+
+        with contando() as conta:
+            cargas = [load_all_profiles() for _ in range(10)]
+        assert len(_jsons(conta, perfis)) == 12, "os perfis foram relidos sem mudar"
+        travas = [c for c in _sob(conta, perfis, "open") if c.endswith(".lock")]
+        assert len(travas) == 12, "o FileLock abriu sem haver leitura"
+        assert len(_sob(conta, perfis, "os.scandir", "os.listdir")) == 10  # uma por carga
+        assert all([p.name for p in c] == [p.name for p in cargas[0]] for c in cargas)
+
+    def test_so_os_perfis_gravados_sao_relidos(self, perfis: Path) -> None:
+        from hefesto_dualsense4unix.profiles.loader import load_all_profiles, save_profile
+
+        antes = {p.name: p for p in load_all_profiles()}
+        mudado = antes["perfil03"].model_copy(update={"priority": 7})
+        save_profile(mudado)  # a gravação atômica, `os.replace`
+        no_lugar = perfis / "perfil07.json"
+        texto = no_lugar.read_text().replace('"jogo07"', '"jogo77"')
+        no_lugar.write_text(texto)  # a gravação no lugar, mesmo inode
+        with contando() as conta:
+            depois = {p.name: p for p in load_all_profiles()}
+        relidos = sorted(Path(c).name for c in _jsons(conta, perfis))
+        assert relidos == ["perfil03.json", "perfil07.json"]
+        assert depois["perfil03"].priority == 7
+        assert _classes(depois["perfil07"]) == ["jogo77"]
+
+    def test_quem_muda_o_perfil_devolvido_nao_muda_a_carga_seguinte(self, perfis: Path) -> None:
+        from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+
+        primeira = load_all_profiles()
+        _classes(primeira[0]).append("intrusa")
+        segunda = load_all_profiles()
+        _classes(segunda[0]).append("outra")
+        assert _classes(load_all_profiles()[0]) == ["jogo00"]
+
+    def test_desarmado_cada_carga_le_tudo_como_hoje(self, perfis: Path) -> None:
+        from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+
+        while ode.armado():
+            ode.desarmar()
+        with contando() as conta:
+            for _ in range(3):
+                load_all_profiles()
+        assert len(_jsons(conta, perfis)) == 36
+
+    def test_a_lista_de_exclusao_ausente_nao_abre_depois_da_primeira(
+        self, raizes: tuple[Path, Path], tmp_path: Path
+    ) -> None:
+        from hefesto_dualsense4unix.integrations import lista_de_exclusao as lde
+
+        lde._LISTA_PELA_ASSINATURA.esquecer()
+        casa = tmp_path / "config"
+        with contando() as conta:
+            for _ in range(20):
+                assert lde.contem("steam_app_1", config_home=casa) is False
+        assert len(_sob(conta, casa, "open")) == 1
+
+    def test_o_marcador_do_lancamento_pela_assinatura(
+        self, raizes: tuple[Path, Path], tmp_path: Path
+    ) -> None:
+        from hefesto_dualsense4unix.daemon import launch_env
+
+        launch_env._MARCADORES_PELA_ASSINATURA.esquecer()
+        marcador = tmp_path / "last_run"
+        marcador.write_text("appid=1599660\nepoch=1900000000\npid=4242\n")
+        _envelhecer(marcador)
+        with contando() as conta:
+            for _ in range(20):
+                assert launch_env.read_last_run_marker(tmp_path) == (1599660, 1900000000)
+                assert launch_env.read_last_run_pid(tmp_path) == 4242
+        assert len(_sob(conta, marcador, "open")) == 1
+        marcador.write_text("appid=2497900\nepoch=1900000100\npid=4343\n")
+        assert launch_env.read_last_run_marker(tmp_path) == (2497900, 1900000100)

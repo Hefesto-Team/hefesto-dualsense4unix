@@ -25,18 +25,21 @@ import time
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from filelock import FileLock
 from pydantic import ValidationError
 
+from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
 from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 from hefesto_dualsense4unix.profiles.slug import slugify
 from hefesto_dualsense4unix.profiles.steam_app import (
     e_janela_do_cliente_steam,
     steam_appid_from_wm_class,
 )
+from hefesto_dualsense4unix.utils.leitura_pela_assinatura import LeituraPelaAssinatura
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
@@ -2607,19 +2610,55 @@ def perfil_em_disco(identifier: str) -> Profile | None:
         return None
 
 
+def _trava_do_perfil(path: Path) -> FileLock:
+    """O `FileLock` do perfil, o mesmo da leitura de sempre."""
+    return FileLock(str(_lock_path(path)))
+
+
+def _decodificar_o_perfil(path: Path) -> Profile:
+    """O perfil do arquivo, lido e validado (a exceção de decodificação sobe)."""
+    return Profile.model_validate(json.loads(path.read_text(encoding="utf-8")))
+
+
+#: O-REPOUSO-ESPERA-O-EVENTO-01, família 6 (29/09/2026): os perfis guardados
+#: pela assinatura do `stat`. Medido na sonda S.4 (60 s, a mesa parada): 118
+#: `open` por perfil por minuto, o `FileLock` e a leitura de cada um a cada
+#: carga — a bandeja pede a lista a cada 3 s, e o autoswitch e os outros
+#: chamadores pedem o resto. Só com o dono do evento armado; desarmar esquece.
+_PERFIS_PELA_ASSINATURA: LeituraPelaAssinatura[Profile] = LeituraPelaAssinatura(
+    _decodificar_o_perfil, copiar=lambda perfil: perfil.model_copy(deep=True)
+)
+_ode.ao_desarmar(_PERFIS_PELA_ASSINATURA.esquecer)
+
+
 def load_all_profiles() -> list[Profile]:
     """Lê todos os perfis JSON do diretório, pulando os inválidos com warning.
 
     PROFILE-LOADER-UX-01: um perfil corrompido não deve impedir o carregamento
     dos demais. Emite `WARN profile_invalid path=... err=...` para cada arquivo
     que falhar a decodificação ou validação Pydantic.
+
+    O-REPOUSO-ESPERA-O-EVENTO-01, família 6 (29/09/2026): com o dono do evento
+    armado, uma listagem da pasta por carga, e só o perfil cuja assinatura do
+    `stat` mudou é relido e revalidado, com o `FileLock` só nele
+    (`utils/leitura_pela_assinatura.py`). Cada perfil devolvido é uma cópia:
+    quem muda o objeto não muda a carga seguinte. O inválido não se guarda, e o
+    aviso sai a cada carga, como antes. Sem o dono, a leitura de sempre.
     """
     _maybe_seed_presets()
     _talvez_semear_jogos()
     directory = profiles_dir(ensure=True)
     profiles: list[Profile] = []
+    pela_assinatura = _ode.armado()
+    vistos: list[str] = []
     for path in sorted(directory.glob("*.json")):
         try:
+            if pela_assinatura:
+                vistos.append(str(path))
+                profiles.append(
+                    _PERFIS_PELA_ASSINATURA.ler(path, trava=partial(_trava_do_perfil, path))
+                )
+                continue
             with FileLock(str(_lock_path(path))):
                 raw = json.loads(path.read_text(encoding="utf-8"))
             profiles.append(Profile.model_validate(raw))
@@ -2631,6 +2670,8 @@ def load_all_profiles() -> list[Profile]:
                 err_type=type(exc).__name__,
             )
             continue
+    if pela_assinatura:
+        _PERFIS_PELA_ASSINATURA.manter_so(vistos)
     return profiles
 
 

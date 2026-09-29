@@ -65,8 +65,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
 from hefesto_dualsense4unix.integrations import ponte_escada, ponte_tentativa
 from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
+from hefesto_dualsense4unix.utils.leitura_pela_assinatura import (
+    Assinatura,
+    LeituraPelaAssinatura,
+    assinatura,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.xdg_paths import launch_env_dir
 
@@ -414,7 +420,26 @@ def _read_kv_int_fields(path: Path) -> dict[str, int]:
     `read_last_exit_marker`: linhas desconhecidas ou com valor não-dígito
     são ignoradas silenciosamente (marker corrompido/adulterado não quebra
     o parse dos campos válidos). Arquivo ausente/ilegível devolve `{}`.
+
+    O-REPOUSO-ESPERA-O-EVENTO-01, família 6 (29/09/2026): com o dono do evento
+    armado, o marker é relido só quando a assinatura do `stat` muda
+    (`utils/leitura_pela_assinatura.py`). Medido na sonda S.4: 291 `open` por
+    minuto no `launch_env` com a mesa parada — o autoswitch a 2 Hz, a camada 1
+    da varredura de `/proc` e o `state_full`. O ilegível não se guarda.
     """
+    if _ode.armado():
+        try:
+            return _MARCADORES_PELA_ASSINATURA.ler(path)
+        except OSError:
+            return {}
+        except Exception:  # defensivo: leitura de marker jamais derruba o IPC
+            logger.debug("wrapper_marker_read_falhou", exc_info=True)
+            return {}
+    return _read_kv_int_fields_do_disco(path)
+
+
+def _read_kv_int_fields_do_disco(path: Path) -> dict[str, int]:
+    """A leitura de sempre do marker; ausente é `{}`, ilegível também."""
     try:
         text = path.read_text(encoding="utf-8")
     except OSError:
@@ -422,6 +447,20 @@ def _read_kv_int_fields(path: Path) -> dict[str, int]:
     except Exception:  # defensivo: leitura de marker jamais derruba o IPC
         logger.debug("wrapper_marker_read_falhou", exc_info=True)
         return {}
+    return _campos_do_marker(text)
+
+
+def _decodificar_o_marker(path: Path) -> dict[str, int]:
+    """A decodificação guardada pela assinatura: ausente é `{}`, ilegível sobe."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return {}
+    return _campos_do_marker(text)
+
+
+def _campos_do_marker(text: str) -> dict[str, int]:
+    """Os campos `chave=<dígitos>` do texto; o resto se ignora."""
     out: dict[str, int] = {}
     for line in text.splitlines():
         key, _, value = line.partition("=")
@@ -429,6 +468,24 @@ def _read_kv_int_fields(path: Path) -> dict[str, int]:
         if value.isdigit():
             out[key] = int(value)
     return out
+
+
+#: Os marcadores do lançamento guardados pela assinatura (família 6 da
+#: O-REPOUSO-ESPERA-O-EVENTO-01). Desarmar o dono do evento os esquece.
+_MARCADORES_PELA_ASSINATURA: LeituraPelaAssinatura[dict[str, int]] = LeituraPelaAssinatura(
+    _decodificar_o_marker, copiar=dict
+)
+_ode.ao_desarmar(_MARCADORES_PELA_ASSINATURA.esquecer)
+
+
+def assinatura_do_ultimo_lancamento(base_dir: Path | None = None) -> Assinatura | None:
+    """A assinatura do `stat` do marker `last_run`, sem abri-lo; None = ausente.
+
+    É o que a varredura de `/proc` compara para saber que um lançamento novo
+    aconteceu desde o «não há jogo» que ela guardou (O-REPOUSO-ESPERA-O-EVENTO-01,
+    família 4): o wrapper regrava o `last_run` em todo lançamento.
+    """
+    return assinatura((base_dir if base_dir is not None else launch_env_dir()) / "last_run")
 
 
 def read_last_run_marker(base_dir: Path | None = None) -> tuple[int, int] | None:
