@@ -284,6 +284,12 @@ class TestPlayerPorControle:
         # `brilho_da_barra` e `brilho_das_luzes`: o que o merge acende, para a
         # aba Iluminação perguntar ao daemon vivo e não ao disco. `None` nos
         # dois é o «não sei» do FakeController, que não tem as leituras.
+        #
+        # NOTA DATADA — 28/09/2026 (NO-MODO-XBOX-TUDO-FUNCIONA-01). Entraram
+        # `toque` e `inclinacao` no bloco `mira`: os dois arranjos da resposta
+        # dela das ~16h50 (o touchpad no cursor ou nas zonas, e o analógico que
+        # a inclinação move), lidos de volta pela aba Controles. Nascem
+        # `nenhum`, como no esquema: arranjo não se liga sem o gesto dela.
         assert result["controllers"] == [
             {"index": 0, "connected": True, "transport": "usb",
              "is_primary": True, "uniq": "aabbcc001100", "player": None,
@@ -297,6 +303,7 @@ class TestPlayerPorControle:
              "adaptador": None, "hz_movimento": None, "hz_voz": None,
              "ponte_do_radio": None,
              "mira": {"ligada": False, "destino": "nenhum",
+                      "toque": "nenhum", "inclinacao": "nenhum",
                       "sensibilidade": 6, "zona_morta_graus_s": 3.0,
                       "gatilho": None, "inverter_horizontal": False,
                       "inverter_vertical": False}},
