@@ -499,7 +499,7 @@ def test_o_gatilho_solto_nao_move(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_o_gatilho_le_o_botao_original(monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE `botoes=buttons_pressed` e ponha os botões traduzidos: este
+    """ARRANQUE `botoes=da_mao` e ponha os botões traduzidos: este
     teste reprova.
 
     Com o remapeamento `{l2: r2}` ativo, o JOGO vê R2 quando ela aperta L2. A
@@ -987,8 +987,8 @@ def test_o_interruptor_de_sensor_e_por_controle_tambem_no_coop(
 
 
 def test_o_gatilho_e_por_controle_no_coop(monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE `botoes=snap.buttons_pressed` e este teste reprova: o gatilho
-    de um jogador ligaria a mira do outro."""
+    """ARRANQUE `botoes=botoes` (a mão deste jogador) e este teste reprova: o
+    gatilho de um jogador ligaria a mira do outro."""
     vpads = _mesa_de_quatro(
         monkeypatch, arranjo=_arranjo(sensibilidade=12, gatilho="l2"),
         giro_por_uniq={_P2: (0.0, 200.0, 0.0), _P3: (0.0, 200.0, 0.0)},

@@ -270,8 +270,8 @@ class TestONeutroEODedo:
         mao = _inclinado(30.0)
         assert rot.neutro_da_inclinacao(store, _P2, mao, 10.1) == _DEITADO
         assert rot.neutro_da_inclinacao(store, _P2, mao, 20.0) == mao, (
-            "depois de um silêncio o neutro seguiu o de antes — o jogo que abriu "
-            "com o controle na mesa andaria para sempre"
+            "depois de um silêncio o neutro seguiu o de antes — o controle que "
+            "voltou, ou o aperto novo do «Só enquanto eu segurar», não recentrou"
         )
 
     def test_cada_peca_tem_o_seu(self) -> None:

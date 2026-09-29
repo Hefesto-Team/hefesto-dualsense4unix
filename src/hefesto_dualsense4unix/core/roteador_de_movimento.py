@@ -870,6 +870,12 @@ def neutro_da_inclinacao(
     «Só enquanto eu segurar», o botão solto é silêncio, então cada aperto
     recentra. Sem `dono` (o `store` que não há) o neutro é a própria leitura, e
     a inclinação não move nada.
+
+    O LIMITE, escrito (conferência de 28/09): o tique lê a peça a cada volta, e
+    o controle parado na mesa não é silêncio. Se a rota ligou com ele deitado,
+    a mesa é o neutro, e pegá-lo na mão anda até o próximo silêncio — o
+    «Só enquanto eu segurar», o controle que volta, o chip apagado e aceso. É a
+    prova da mão dela que decide se falta um gesto de recentrar.
     """
     if dono is None:
         return acel
