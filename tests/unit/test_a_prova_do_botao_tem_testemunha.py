@@ -399,6 +399,28 @@ def test_regua_3_a_mordida_o_cartao_de_outro_jogador(qq: ModuleType, mundo: Mund
     assert "FALHA — acendeu o cartão P3, que é de outro jogador (o nó é do P2)" in linha
 
 
+def test_regua_3_o_no_que_falou_nao_sai_como_zero(qq: ModuleType, mundo: Mundo, tmp_path: Path,
+                                                   capsys: pytest.CaptureFixture[str]) -> None:
+    """O pad do P2, que apertou, não ganha a frase do dono do zero; os três calados ganham.
+
+    MORDIDA: sem anotar quem falou, o P2 sai também como «0 (o controle não
+    emitiu)» logo acima da linha em que ele acendeu o cartão: o nó que emitiu,
+    dito mudo pelo próprio ensaio.
+    """
+    aparelhos = _o_x_do_p2(qq, mundo, tmp_path, acende=(2,))
+    rc = rodar(qq, mundo, aparelhos)
+    saida = capsys.readouterr().out
+    assert rc is None
+    assert len(mundo.abertos) == 4
+    p1, p2, p3, p4 = mundo.abertos
+    assert p2 not in mundo.grabs_perguntados
+    assert not linhas_do(saida, f"({p2}):")
+    for calado in (p1, p3, p4):
+        assert calado in mundo.grabs_perguntados
+        (linha,) = linhas_do(saida, f"({calado}):")
+        assert linha.endswith("0 (o controle não emitiu)")
+
+
 def test_regua_4_um_cartao_so(qq: ModuleType, mundo: Mundo, tmp_path: Path,
                                capsys: pytest.CaptureFixture[str]) -> None:
     """O mesmo aperto com `cross` no P2 e no P3: FALHA.
