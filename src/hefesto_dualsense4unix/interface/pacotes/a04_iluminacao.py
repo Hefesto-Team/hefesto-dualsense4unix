@@ -719,6 +719,48 @@ def _os_nomes(donos: list[dict[str, Any]]) -> str:
     return f"{', '.join(nomes[:-1])} e {nomes[-1]}"
 
 
+#: A LINHA DE QUEM NÃO SE SABE A COR — a gramática do `ANEL_INCERTO`: o
+#: plástico ainda não chegou (o primeiro tique de toda sessão), ou o modelo não
+#: tem amostra. Tracejada em `--comment`, nunca uma cor inventada.
+LINHA_INCERTA = ("repeating-linear-gradient(90deg,var(--comment) 0 3px,"
+                 "transparent 3px 5px)")
+
+
+def plastico_da_linha(slug: str) -> str:
+    """A tinta do plástico que a linha do dono veste, ou `""` se não se sabe.
+
+    UM DONO, DOIS CHAMADORES: o pacote (`_as_pecas_da_mesa`) e a bancada do
+    `aba04.py`. É o casco pelo `cor_de_css` (`_cor_do_plastico`) passado pelo
+    piso de contraste do card (`tom_para_a_borda`), o mesmo que a borda da 02
+    usa: a linha mora no painel escuro, e o Midnight Black cru sumiria nele.
+    """
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import tom_para_a_borda
+
+    return tom_para_a_borda(_cor_do_plastico(slug))
+
+
+def tinta_da_linha(donos: list[dict[str, Any]]) -> str:
+    """O valor de `--dono`: a linha embaixo da casa, em partes iguais por dono.
+
+    D-2909-A-LINHA-DA-COR-DO-DONO. Um dono com plástico sabido: a cor pura. Um
+    dono sem: `LINHA_INCERTA`. Vários (o «Todos», o global num tom): uma camada
+    por dono, na ordem do número, cada uma com `1/n` da largura, lado a lado.
+    A posição de uma camada de largura `1/n` em `p%` cai em `p × (1 − 1/n)` da
+    casa, então a `i`-ésima vai a `i/(n − 1)`.
+    """
+    def tinta(d: dict[str, Any]) -> str:
+        cor = str(d.get("plastico") or "")
+        return f"linear-gradient({cor},{cor})" if cor else LINHA_INCERTA
+
+    if len(donos) == 1:
+        cor = str(donos[0].get("plastico") or "")
+        return cor or LINHA_INCERTA
+    n = len(donos)
+    return ",".join(
+        f"{tinta(d)} {100 * i / (n - 1):.4g}% 0/{100 / n:.4g}% 100% no-repeat"
+        for i, d in enumerate(donos))
+
+
 def fileira_de_tons(meu: str, casas: dict[str, list[dict[str, Any]]],
                     recuo: str = "", *, ligado: bool = True) -> str:
     """Os onze tons de uma coluna, em HTML — o miolo da `.guia`.
@@ -727,6 +769,15 @@ def fileira_de_tons(meu: str, casas: dict[str, list[dict[str, Any]]],
     volta dela fica a borda da cor do plastico do controle e um X na cor
     selecionada por mim de forma que me impeça de setar alguma cor de um
     coleguinha"* <!-- noqa-acento: citação literal dela -->
+
+    A BORDA VIROU LINHA — D-2909-A-LINHA-DA-COR-DO-DONO, 29/09/2026, pedido
+    dela na bancada (*«talvez uma linha abaixo do quadradinho de cada cor
+    contendo a cor do plástico daquele controle»*): <!-- noqa-acento: citação literal dela -->
+    toda casa com dono ganha, embaixo, a linha do plástico de quem a usa, nas
+    quatro colunas. A tinta vai na própria casa (`--dono`, ver
+    `tinta_da_linha`). A borda da escolhida saiu: ela era a cor de texto do
+    `<button>` (quase preta, igual nos quatro), e na cor certa ainda sumia no
+    Starlight Blue sobre a casa azul e no White sobre a casa branca.
 
     POR QUE A FILEIRA INTEIRA, e não um endereço por botão — é a mesma razão
     de `fileira_de_players`, um degrau mais funda: **o alvo `classe` do pintor
@@ -748,7 +799,9 @@ def fileira_de_tons(meu: str, casas: dict[str, list[dict[str, Any]]],
       sem X e sem gesto, com o `aria-disabled`: a coluna do último dono
       oferecia esse clique, e o botão piscava a recusa;
     * o `title` da casa com dono alheio nomeia os donos: um X mudo obriga ela a
-      adivinhar qual dos outros controles está naquele tom.
+      adivinhar qual dos outros controles está naquele tom;
+    * a linha: toda casa com dono, a dele também. A casa dele é a que tem a
+      linha da cor da moldura e não tem X.
 
     :param meu: quem é esta coluna — o `uniq` no produto, o lugar na bancada.
     :param casas: a mesa das casas (`as_casas_da_mesa`), com este controle.
@@ -769,9 +822,11 @@ def fileira_de_tons(meu: str, casas: dict[str, list[dict[str, Any]]],
             classes += " on"
         if alheia:
             classes += " tomado"
+        if donos:
+            classes += " com-dono"
         estilo = f"background:{monta.tom_da_casa(cru)}"
-        if alheia:
-            estilo += f";--dono:{outros[0].get('plastico') or 'var(--comment)'}"
+        if donos:
+            estilo += f";--dono:{tinta_da_linha(donos)}"
         # A DICA DO TOM TOMADO DIZ SÓ DE QUEM ELE É — 13/09/2026,
         # FRASES-E-DICAS-01, §I.5. Ela dizia «<dono> já está neste tom — duas
         # peças nunca ficam da mesma cor.», e a regra colada é aviso: saiu.
@@ -3172,11 +3227,9 @@ def _as_pecas_da_mesa(ctx: Contexto, cru: dict[str, Any]
 
     UM DONO, DOIS CHAMADORES: a pintura de cada tique e a recusa de cada
     clique. A cor é `_a_cor_de_agora` (a escada inteira), o nome é o `_quem_e`
-    e o plástico é o tom que a borda do card usa (`tom_para_a_borda`), vazio
-    quando ninguém sabe.
+    e o plástico é a tinta da linha (`plastico_da_linha`), vazia quando
+    ninguém sabe.
     """
-    from hefesto_dualsense4unix.integrations.cor_do_plastico import tom_para_a_borda
-
     pecas = []
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
@@ -3186,7 +3239,7 @@ def _as_pecas_da_mesa(ctx: Contexto, cru: dict[str, Any]
             "cor": _a_cor_de_agora(ctx, cru, c),
             "nome": _quem_e(ctx, c),
             "numero": _numero(ctx, c),
-            "plastico": tom_para_a_borda(_cor_do_plastico(str(casa.get("cor") or ""))),
+            "plastico": plastico_da_linha(str(casa.get("cor") or "")),
         })
     return pecas
 

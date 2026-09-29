@@ -1568,21 +1568,38 @@
      sobrando": um retângulo de 1px em volta de um retângulo CHEIO da cor que
      ele mostra. São oito por controle, trinta e dois na tela, e nenhum deles
      separava coisa nenhuma — o `gap:4px` já separa, e o conteúdo é a própria
-     cor. A borda continua existindo em `transparent`: é ela que o `.on` pinta,
-     e sem ela o tom escolhido mudaria de tamanho ao ser escolhido. */
+     cor. A borda continua em `transparent`: a casa não muda de tamanho quando
+     muda de estado. */
   .guia .tom{flex:1;height:26px;border-radius:6px;border:1px solid transparent;
-             cursor:pointer;padding:0;display:block;min-width:0}
-  /* o tom escolhido engrossa POR DENTRO, com sombra, e não com `border-width:2`:
-     os nove são `flex:1` e a borda de 2px conta no piso do item — o escolhido
-     ficava 2px mais largo que os outros oito, na fileira que ela mede a olho. */
-  /* A BORDA DA ESCOLHIDA É O PLÁSTICO DO CONTROLE — 09/09/2026, decisão dela.
-     `currentColor` é o `color` que o pintor escreve na `.guia` pelo
-     `data-campo="plastico"`; sem controle no lugar, o campo não é pintado e o
-     `color` herdado do cartão devolve a borda neutra de antes. Dois pixels em
-     vez de um: a cor do plástico pode ser escura (Midnight Black) e uma borda
-     de um pixel some contra o tom da casa. */
-  .guia .tom.on{border-color:currentColor;border-width:2px;
-                box-shadow:inset 0 0 0 1px currentColor}
+             cursor:pointer;padding:0;display:block;min-width:0;position:relative}
+  /* A LINHA DO DONO — 29/09/2026, D-2909-A-LINHA-DA-COR-DO-DONO, pedido dela
+     na bancada: *«talvez uma linha abaixo do quadradinho de cada cor contendo
+     a cor do plástico daquele controle.»* <!-- noqa-acento: citação literal dela -->
+     Toda casa com dono ganha a linha, nas quatro colunas: a linha diz de quem
+     é, e o X diz que não é sua. A casa deste controle é a que tem a linha da
+     cor da moldura e não tem X.
+
+     A TINTA É `--dono`, que o pacote escreve na própria casa: a cor do
+     plástico, partes iguais por dono na ordem do número quando a casa é de
+     vários, ou tracejada em `--comment` quando o plástico não chegou (a
+     gramática do anel incerto da linha Jogador). NUNCA `currentColor`: a casa
+     é um `<button>`, e o `<button>` não herda `color`.
+
+     A BORDA DA ESCOLHIDA SAIU com esta linha. Ela pedia `currentColor` à
+     `.guia`, e saía na cor de texto de botão do motor, quase preta nas quatro
+     colunas desde 09/09. Na cor certa ainda sumiria onde o plástico e a casa
+     são o mesmo tom (o Starlight Blue na casa azul, o White na branca); a
+     linha fica no painel escuro, onde o White aparece.
+
+     O LUGAR É O VÃO ENTRE A CASA E A CAIXA `#RRGGBB`: 2 px abaixo da casa e 2
+     px de altura, sem crescer a linha Cor. O vão de cima é o que separa a
+     linha da casa: colada, a do Starlight Blue embaixo da casa azul se leria
+     como a casa mais alta. O `-1px` dos lados alcança a borda da casa, porque
+     o `left` conta da caixa por dentro dela. */
+  .guia .tom.com-dono::before{
+    content:"";position:absolute;left:-1px;right:-1px;
+    top:calc(100% + 3px);height:2px;border-radius:1px;background:var(--dono);
+  }
   /* O X DA COR DO VIZINHO — COR-X-01, 09/09/2026, decisão dela: "um X na cor
      selecionada por mim de forma que me impeça de setar alguma cor de um
      coleguinha". <!-- noqa-acento: citação literal dela -->
@@ -1611,9 +1628,9 @@
      identidade não se perdeu — mudou de canal, do desenho para a palavra, e a
      palavra não depende de contraste.
 
-     O `--dono` SAIU DO CSS mas continua sendo escrito pelo pacote: ele veste a
-     BORDA do tom escolhido, que é outro uso e continua valendo. */
-  .guia .tom.tomado{cursor:not-allowed;position:relative}
+     O `--dono` SAIU DO X e virou a tinta da linha embaixo da casa (29/09/2026,
+     a regra de cima). */
+  .guia .tom.tomado{cursor:not-allowed}
   /* O CONTORNO BRANCO É `filter:drop-shadow`, e não um segundo X por baixo:
      o `drop-shadow` segue a FORMA alfa do gradiente, então ele contorna as
      duas hastes de verdade. Quatro sombras de 1px (uma por diagonal) fecham
@@ -1690,7 +1707,7 @@
      aceitaria clique sem nunca dizer que aceita.
 
      A BORDA JÁ NASCE (transparente) para o hover não mexer no tamanho — a
-     mesma lição que `.guia .tom.on` pagou nesta folha, quatro regras acima. */
+     mesma lição que a `.guia .tom` pagou nesta folha, algumas regras acima. */
   .hex.reenvia{cursor:pointer;border:1px solid transparent;border-radius:5px;
             padding:0 4px;align-self:center}
   .hex.reenvia:hover{border-color:var(--purple);color:var(--purple)}
@@ -2943,10 +2960,10 @@
           </div>
           <div class="ctrl-rot" data-campo="identidade">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</div>
           <div class="cel-cor">
-            <span class="guia" data-campo="plastico" data-hef-alvo="cor" style="color:#ae335a">
+            <span class="guia">
               <span class="tons" data-campo="tons" data-hef-alvo="html">
-            <button class="tom on" style="background:#7EB8D4" data-gesto="cor" data-hex="#0000FF" title="Cor do Player 1. Pinta a barra, não muda o número."></button>
-            <button class="tom tomado" style="background:#FF5555;--dono:var(--comment)" aria-disabled="true" title="P2"></button>
+            <button class="tom on com-dono" style="background:#7EB8D4;--dono:#ae335a" data-gesto="cor" data-hex="#0000FF" title="Cor do Player 1. Pinta a barra, não muda o número."></button>
+            <button class="tom tomado com-dono" style="background:#FF5555;--dono:#7eb8d4" aria-disabled="true" title="P2"></button>
             <button class="tom" style="background:#50FA7B" data-gesto="cor" data-hex="#00FF00" title="Cor do Player 3. Pinta a barra, não muda o número."></button>
             <button class="tom" style="background:#FF79C6" data-gesto="cor" data-hex="#FF0080" title="Cor do Player 4. Pinta a barra, não muda o número."></button>
             <button class="tom" style="background:#F1FA8C" data-gesto="cor" data-hex="#FFFF00" title="Cor do Player 5. Pinta a barra, não muda o número."></button>
@@ -3341,10 +3358,10 @@
           </div>
           <div class="ctrl-rot" data-campo="identidade">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</div>
           <div class="cel-cor">
-            <span class="guia" data-campo="plastico" data-hef-alvo="cor" style="color:#7eb8d4">
+            <span class="guia">
               <span class="tons" data-campo="tons" data-hef-alvo="html">
-            <button class="tom tomado" style="background:#7EB8D4;--dono:var(--comment)" aria-disabled="true" title="P1"></button>
-            <button class="tom on" style="background:#FF5555" data-gesto="cor" data-hex="#FF0000" title="Cor do Player 2. Pinta a barra, não muda o número."></button>
+            <button class="tom tomado com-dono" style="background:#7EB8D4;--dono:#ae335a" aria-disabled="true" title="P1"></button>
+            <button class="tom on com-dono" style="background:#FF5555;--dono:#7eb8d4" data-gesto="cor" data-hex="#FF0000" title="Cor do Player 2. Pinta a barra, não muda o número."></button>
             <button class="tom" style="background:#50FA7B" data-gesto="cor" data-hex="#00FF00" title="Cor do Player 3. Pinta a barra, não muda o número."></button>
             <button class="tom" style="background:#FF79C6" data-gesto="cor" data-hex="#FF0080" title="Cor do Player 4. Pinta a barra, não muda o número."></button>
             <button class="tom" style="background:#F1FA8C" data-gesto="cor" data-hex="#FFFF00" title="Cor do Player 5. Pinta a barra, não muda o número."></button>
@@ -3723,7 +3740,7 @@
           </div>
           <div class="ctrl-rot" data-campo="identidade">P3 <span class="pt">•</span> Desconectado</div>
           <div class="cel-cor">
-            <span class="guia" data-campo="plastico" data-hef-alvo="cor">
+            <span class="guia">
               <span class="tons" data-campo="tons" data-hef-alvo="html">
             <button class="tom" style="background:#7EB8D4" data-gesto="cor" data-hex="#0000FF" title="Cor do Player 1. Pinta a barra, não muda o número."></button>
             <button class="tom" style="background:#FF5555" data-gesto="cor" data-hex="#FF0000" title="Cor do Player 2. Pinta a barra, não muda o número."></button>
@@ -4098,7 +4115,7 @@
           </div>
           <div class="ctrl-rot" data-campo="identidade">P4 <span class="pt">•</span> Desconectado</div>
           <div class="cel-cor">
-            <span class="guia" data-campo="plastico" data-hef-alvo="cor">
+            <span class="guia">
               <span class="tons" data-campo="tons" data-hef-alvo="html">
             <button class="tom" style="background:#7EB8D4" data-gesto="cor" data-hex="#0000FF" title="Cor do Player 1. Pinta a barra, não muda o número."></button>
             <button class="tom" style="background:#FF5555" data-gesto="cor" data-hex="#FF0000" title="Cor do Player 2. Pinta a barra, não muda o número."></button>

@@ -787,21 +787,38 @@ CSS = """
      sobrando": um retângulo de 1px em volta de um retângulo CHEIO da cor que
      ele mostra. São oito por controle, trinta e dois na tela, e nenhum deles
      separava coisa nenhuma — o `gap:4px` já separa, e o conteúdo é a própria
-     cor. A borda continua existindo em `transparent`: é ela que o `.on` pinta,
-     e sem ela o tom escolhido mudaria de tamanho ao ser escolhido. */
+     cor. A borda continua em `transparent`: a casa não muda de tamanho quando
+     muda de estado. */
   .guia .tom{flex:1;height:26px;border-radius:6px;border:1px solid transparent;
-             cursor:pointer;padding:0;display:block;min-width:0}
-  /* o tom escolhido engrossa POR DENTRO, com sombra, e não com `border-width:2`:
-     os nove são `flex:1` e a borda de 2px conta no piso do item — o escolhido
-     ficava 2px mais largo que os outros oito, na fileira que ela mede a olho. */
-  /* A BORDA DA ESCOLHIDA É O PLÁSTICO DO CONTROLE — 09/09/2026, decisão dela.
-     `currentColor` é o `color` que o pintor escreve na `.guia` pelo
-     `data-campo="plastico"`; sem controle no lugar, o campo não é pintado e o
-     `color` herdado do cartão devolve a borda neutra de antes. Dois pixels em
-     vez de um: a cor do plástico pode ser escura (Midnight Black) e uma borda
-     de um pixel some contra o tom da casa. */
-  .guia .tom.on{border-color:currentColor;border-width:2px;
-                box-shadow:inset 0 0 0 1px currentColor}
+             cursor:pointer;padding:0;display:block;min-width:0;position:relative}
+  /* A LINHA DO DONO — 29/09/2026, D-2909-A-LINHA-DA-COR-DO-DONO, pedido dela
+     na bancada: *«talvez uma linha abaixo do quadradinho de cada cor contendo
+     a cor do plástico daquele controle.»* <!-- noqa-acento: citação literal dela -->
+     Toda casa com dono ganha a linha, nas quatro colunas: a linha diz de quem
+     é, e o X diz que não é sua. A casa deste controle é a que tem a linha da
+     cor da moldura e não tem X.
+
+     A TINTA É `--dono`, que o pacote escreve na própria casa: a cor do
+     plástico, partes iguais por dono na ordem do número quando a casa é de
+     vários, ou tracejada em `--comment` quando o plástico não chegou (a
+     gramática do anel incerto da linha Jogador). NUNCA `currentColor`: a casa
+     é um `<button>`, e o `<button>` não herda `color`.
+
+     A BORDA DA ESCOLHIDA SAIU com esta linha. Ela pedia `currentColor` à
+     `.guia`, e saía na cor de texto de botão do motor, quase preta nas quatro
+     colunas desde 09/09. Na cor certa ainda sumiria onde o plástico e a casa
+     são o mesmo tom (o Starlight Blue na casa azul, o White na branca); a
+     linha fica no painel escuro, onde o White aparece.
+
+     O LUGAR É O VÃO ENTRE A CASA E A CAIXA `#RRGGBB`: 2 px abaixo da casa e 2
+     px de altura, sem crescer a linha Cor. O vão de cima é o que separa a
+     linha da casa: colada, a do Starlight Blue embaixo da casa azul se leria
+     como a casa mais alta. O `-1px` dos lados alcança a borda da casa, porque
+     o `left` conta da caixa por dentro dela. */
+  .guia .tom.com-dono::before{
+    content:"";position:absolute;left:-1px;right:-1px;
+    top:calc(100% + 3px);height:2px;border-radius:1px;background:var(--dono);
+  }
   /* O X DA COR DO VIZINHO — COR-X-01, 09/09/2026, decisão dela: "um X na cor
      selecionada por mim de forma que me impeça de setar alguma cor de um
      coleguinha". <!-- noqa-acento: citação literal dela -->
@@ -830,9 +847,9 @@ CSS = """
      identidade não se perdeu — mudou de canal, do desenho para a palavra, e a
      palavra não depende de contraste.
 
-     O `--dono` SAIU DO CSS mas continua sendo escrito pelo pacote: ele veste a
-     BORDA do tom escolhido, que é outro uso e continua valendo. */
-  .guia .tom.tomado{cursor:not-allowed;position:relative}
+     O `--dono` SAIU DO X e virou a tinta da linha embaixo da casa (29/09/2026,
+     a regra de cima). */
+  .guia .tom.tomado{cursor:not-allowed}
   /* O CONTORNO BRANCO É `filter:drop-shadow`, e não um segundo X por baixo:
      o `drop-shadow` segue a FORMA alfa do gradiente, então ele contorna as
      duas hastes de verdade. Quatro sombras de 1px (uma por diagonal) fecham
@@ -909,7 +926,7 @@ CSS = """
      aceitaria clique sem nunca dizer que aceita.
 
      A BORDA JÁ NASCE (transparente) para o hover não mexer no tamanho — a
-     mesma lição que `.guia .tom.on` pagou nesta folha, quatro regras acima. */
+     mesma lição que a `.guia .tom` pagou nesta folha, algumas regras acima. */
   .hex.reenvia{cursor:pointer;border:1px solid transparent;border-radius:5px;
             padding:0 4px;align-self:center}
   .hex.reenvia:hover{border-color:var(--purple);color:var(--purple)}
@@ -1350,16 +1367,18 @@ def coluna(c):
     # dica diz só o número — a forma curta do `_quem_e` do pacote. O nome do
     # plástico ficaria congelado no `title` até a primeira pintura, e dica que
     # nomeia controle do desenho é o que
-    # `test_nenhuma_dica_congelada_do_miolo_nomeia_um_controle` reprova. O
-    # plástico vai vazio pela mesma razão: o X é preto desde 09/09, e cor de
-    # aparelho cravada na bancada é o que `check_a_cor_vem_do_aparelho` reprova.
+    # `test_nenhuma_dica_congelada_do_miolo_nomeia_um_controle` reprova.
     #
     # A MESA DAS CASAS É A DO PACOTE — 29/09/2026, A-PALETA-MARCA-A-COR-DE-CADA-
-    # CONTROLE-01: as mesmas duas funções (`as_casas_da_mesa` e
-    # `fileira_de_tons`), com a cena do desenho, cada peça pelo LUGAR.
+    # CONTROLE-01: as mesmas funções (`as_casas_da_mesa`, `fileira_de_tons` e
+    # `plastico_da_linha`), com a cena do desenho, cada peça pelo LUGAR. O
+    # plástico da linha é o do modelo da cena: o miolo tem endereço e alvo
+    # `html`, que `check_a_cor_vem_do_aparelho` isenta, e o pacote o reescreve
+    # na primeira pintura.
     casas = _pacote04.as_casas_da_mesa(
         {"quem": d["pref"], "cor": player_slot_color(d["jogador"]),
-         "nome": f'P{d["jogador"]}', "numero": d["jogador"], "plastico": ""}
+         "nome": f'P{d["jogador"]}', "numero": d["jogador"],
+         "plastico": _pacote04.plastico_da_linha(d["cor"])}
         for d in DONOS_NA_MESA.values())
     tons = _pacote04.fileira_de_tons(p, casas, "            ", ligado=ligado)
 
@@ -1424,36 +1443,19 @@ def coluna(c):
     # do fim da fileira, que nascia preto no lugar vazio; ele saiu inteiro com
     # a poda de `FORA_DA_GUIA`, e a régua §4 que cobrava o preto saiu junto —
     # exigir que um widget morto nasça neutro é régua medindo fantasma.
-    # A GUIA VESTE O PLÁSTICO — 09/09/2026, decisão dela: *"onde eu escolher uma
-    # cor, em volta dela fica a borda da cor do plastico do controle"*.
+    # A GUIA NÃO VESTE MAIS O PLÁSTICO — 29/09/2026, D-2909-A-LINHA-DA-COR-DO-
+    # DONO. Ela carregava o `data-campo="plastico"` (alvo `cor`) só para dar
+    # `color` à borda da casa escolhida pelo `currentColor`, e a casa é um
+    # `<button>`, que não herda `color`: a borda saiu quase preta nas quatro
+    # colunas desde 09/09. A borda saiu, e o plástico chega à fileira pela
+    # linha embaixo de cada casa com dono, que o pacote pinta no miolo (a
+    # tinta vai em cada casa). A moldura segue com o endereço dela.
     #
-    # NÃO HÁ ENDEREÇO NOVO: o `data-campo="plastico"` já existe na moldura do
-    # desenho, e o pintor escreve o mesmo valor em TODO elemento que carregue
-    # aquele campo (é o mesmo desenho dos onze botões que dividem o `hex`).
-    # Pondo o par aqui, a `.guia` passa a ter `color` = a cor do plástico.
-    #
-    # FATO ERRADO, SUBSTITUÍDO (29/09/2026, A-PALETA-MARCA-A-COR-DE-CADA-
-    # CONTROLE-01): esta linha dizia que o `.tom.on` herdava essa cor pelo
-    # `currentColor`. Não herda: a casa é um `<button>`, e o `<button>` não
-    # herda `color` — o `currentColor` é a cor de texto de botão do motor, e a
-    # borda saiu quase preta nas quatro colunas desde 09/09 (a foto da bancada
-    # de 29/09).
-    #
-    # A ALTERNATIVA ERA UM SEGUNDO CAMPO com o mesmo valor — e dois endereços
-    # para o mesmo fato é o que esta casa persegue o oposto de fazer: eles podem
-    # divergir na tela.
-    # DOIS ENDEREÇOS, DOIS ELEMENTOS — e não dois no mesmo. O vocabulário do
-    # pintor é UM `data-campo` com UM `data-hef-alvo` por elemento
-    # (`hefesto_vivo.escrever`); um segundo par no mesmo `<span>` seria um
-    # endereço inventado, que o piloto ignora em silêncio.
-    #
-    # Então a `.guia` continua com o `plastico` (alvo `cor`, que é o
-    # `currentColor` da borda) e ganha DENTRO um `<span class="tons">` que
-    # carrega o miolo (alvo `html`). O `display:contents` da folha faz os onze
-    # botões continuarem sendo itens do flex do avô — sem ele o `flex:1` de
-    # cada um passaria a dividir a largura do wrapper em vez da largura da
-    # célula.
-    guia = f'''<span class="guia" data-campo="plastico" data-hef-alvo="cor"{plastico_de_partida}>
+    # O MIOLO É UM `<span class="tons">` (alvo `html`), e o `display:contents`
+    # da folha faz os onze botões continuarem sendo itens do flex da `.guia`:
+    # sem ele o `flex:1` de cada um dividiria a largura do wrapper em vez da
+    # largura da célula.
+    guia = f'''<span class="guia">
               <span class="tons" data-campo="tons" data-hef-alvo="html">
 {tons}
               </span>
@@ -2062,10 +2064,13 @@ def _conferir(doc):
     exigir("Voltar ao automático" not in corpo,
            "o rótulo longo que ela mandou encurtar em 31/08 voltou à tela")
 
-    # 6. A COR ESCOLHIDA APARECE MARCADA, e a marca é o `.on` — *"a cor
+    # 6. A COR ESCOLHIDA APARECE MARCADA, e o estado é o `.on` — *"a cor
     #    selecionada precisa ter uma borda."* Ele já existia no CSS e casava
-    #    ZERO botões, porque a comparação era entre duas escalas.
-    exigir(corpo.count('class="tom on"') == len(monta_.CONECTADOS),
+    #    ZERO botões, porque a comparação era entre duas escalas. Desde
+    #    29/09/2026 a marca que se vê é a linha do dono (`com-dono`), e a casa
+    #    dele é a que tem a linha e não tem X.
+    exigir(len(re.findall(r'class="tom on com-dono"', corpo))
+           == len(monta_.CONECTADOS),
            "a cor escolhida não está marcada em todos os controles ligados")
 
     # 7. A GUIA E O LIGHTBAR ACENDEM A MESMA TINTA — *"e precisa refletir no
