@@ -1,12 +1,13 @@
 """README-DKMS-SUDO-01 — nenhum arquivo versionado manda rodar o `install.sh` com sudo.
 
-A regra desta casa está no `GUIA.md` e nasceu de dano medido: **`install.sh`
-nunca com `sudo`**. Com `sudo`, o `HOME` vira `/root` — o `.venv` nasce
-root-owned, os symlinks vão para `/root/.local/bin` e as units de usuário para
-`/root/.config/systemd/user`. É uma instalação que imprime sucesso e **não
-existe** para o usuário que vai jogar. O estudo de 29/07/2026 mediu isso e
-registrou que o `install.sh` **não tem guarda** contra o caso: o `acquire_sudo`
-devolve 0 na hora quando `EUID==0`, sem um aviso sequer.
+A regra está no `.github/CONTRIBUTING.md` («Regras do projeto») e nasceu de
+dano medido: **`install.sh` nunca com `sudo`**. Com `sudo`, o `HOME` vira
+`/root` — o `.venv` nasce root-owned, os symlinks vão para `/root/.local/bin`
+e as units de usuário para `/root/.config/systemd/user`. É uma instalação que
+imprime sucesso e **não existe** para o usuário que vai jogar. O estudo de
+29/07/2026 mediu isso e registrou que o `install.sh` **não tem guarda** contra
+o caso: o `acquire_sudo` devolve 0 na hora quando `EUID==0`, sem um aviso
+sequer.
 
 E o texto errado sobreviveu **seis versões** dentro de
 `assets/dkms/hid-nintendo/README.md` — o pior lugar possível para ele estar,

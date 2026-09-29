@@ -142,8 +142,8 @@ def test_esta_aba_nao_tem_cartao_por_controle():
 
     # A PROSA NÃO CONTA, e esta linha nasceu de cair nela: o comentário que
     # EXPLICA por que esta aba não tem `data-controle` escreve a palavra, e uma
-    # busca crua no fonte se reprova a si mesma. É a armadilha que o `GUIA.md`
-    # registra três vezes em três dias — *um comentário que descreve o padrão
+    # busca crua no fonte se reprova a si mesma. É a armadilha registrada três
+    # vezes em três dias — *um comentário que descreve o padrão
     # proibido vira a primeira ocorrência dele*. Só os COMENTÁRIOS saem: o que
     # sobra é código, e uma string com `data-controle` aí dentro é emissão de
     # verdade, que é o que se quer pegar.

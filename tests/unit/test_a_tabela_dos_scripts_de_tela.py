@@ -1,7 +1,7 @@
 """A tabela de `COMO-OLHAR-A-TELA.md` envelheceu calada — CINCO-SCRIPTS-01.
 
-`docs/method/COMO-OLHAR-A-TELA.md` é o arquivo que o `GUIA.md` manda ler
-**primeiro** quando o trabalho toca a tela. Ele trazia uma seção chamada
+`docs/method/COMO-OLHAR-A-TELA.md` é o arquivo que se lê **primeiro** quando o
+trabalho toca a tela. Ele trazia uma seção chamada
 "Os três scripts desta pasta, e qual usar", com uma tabela de três linhas —
 enquanto `ls scripts/gui-captura/` devolvia **cinco** arquivos.
 
@@ -109,8 +109,8 @@ def test_a_tabela_nao_nomeia_caminho_que_nao_existe() -> None:
 
     assert not fantasmas, (
         f"a tabela de `docs/method/COMO-OLHAR-A-TELA.md` cita {', '.join(fantasmas)}, "
-        "que não existe nesta árvore. Este é o arquivo que o `GUIA.md` manda "
-        "ler PRIMEIRO quando o trabalho toca a tela: um caminho morto ali manda "
+        "que não existe nesta árvore. Este é o arquivo que se lê PRIMEIRO "
+        "quando o trabalho toca a tela: um caminho morto ali manda "
         "a próxima pessoa rodar um comando que não roda, e ela conclui que a "
         "casa não tem a ferramenta."
     )

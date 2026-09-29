@@ -13,8 +13,8 @@ name 'BYTE_SONS_DO_JOGO'` e `AttributeError: ... has no attribute '_ECO_DO_ATO'`
 — exatamente o que se veria se o agente que criou esses símbolos não tivesse
 terminado. Passei a diagnosticar trabalho entregue como trabalho faltando.
 
-`GUIA.md` já descrevia o risco (§2, "o daemon vivo é da árvore DELA") e o
-`portoes.sh` já AVISAVA. Nenhum dos dois curava: aviso no cabeçalho de um
+A documentação da casa já descrevia o risco ("o daemon vivo é da árvore DELA")
+e o `portoes.sh` já AVISAVA. Nenhum dos dois curava: aviso no cabeçalho de um
 comando que termina verde é aviso que ninguém lê.
 
 As duas curas desta régua:

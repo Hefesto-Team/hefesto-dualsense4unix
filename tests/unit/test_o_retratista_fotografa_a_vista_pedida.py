@@ -6,7 +6,7 @@ PRINTS-DAS-DEZ-01 entregou o `--vista`, o `VISTA_DELA`, a pasta
 recibo, e o `passa_da_dobra` deixando de comparar com um `1080` digitado.
 **Nada disso tinha régua.** As três mordidas foram feitas à mão e ficaram
 escritas no texto da entrega — que é onde régua nenhuma vive, e a próxima
-pessoa não as tem. É o padrão que o `GUIA.md` nomeia com todas as letras:
+pessoa não as tem. É o padrão que a casa nomeia com todas as letras:
 *instrumento que sabe do próprio risco RESOLVE, não avisa.*
 
 O QUE CADA CASO GUARDA
@@ -210,9 +210,9 @@ def test_as_dez_fotos_da_vista_nasceram_na_vista_dela() -> None:
 def test_a_foto_da_vista_nao_cai_por_cima_da_do_readme(tmp_path: pathlib.Path) -> None:
     """A MORDIDA da pasta própria: os dois destinos têm de ser DIFERENTES.
 
-    O `GUIA.md` manda todo mundo rodar `--todas --publicado --doc` antes de
-    commitar. Com o mesmo nome de arquivo, essa execução apagaria a foto da
-    vista **calada** — sem erro, sem recibo divergente, sem nada a ver depois.
+    O `--todas --publicado --doc` roda antes de cada commit. Com o mesmo nome
+    de arquivo, essa execução apagaria a foto da vista **calada** — sem erro,
+    sem recibo divergente, sem nada a ver depois.
     """
     del tmp_path
     retrato = _retrato()

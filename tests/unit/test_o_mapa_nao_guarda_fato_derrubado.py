@@ -93,7 +93,7 @@ MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 #:
 #: `CORRIGID` entrou em 02/09/2026, na segunda rodada de curadoria: o mapa já
 #: usava as duas palavras como sinônimas para o mesmo gesto — `CORREÇÃO DE
-#: FATO` é o vocabulário do próprio `GUIA.md` —, e metade das células que a
+#: FATO` é o vocabulário da casa —, e metade das células que a
 #: rodada enterrou tinha sido escrita com ela. Ampliar a lista é o oposto de
 #: afrouxar o portão: sem `CORRIGID` ele reprovaria a célula CURADA e
 #: continuaria cego à podre.

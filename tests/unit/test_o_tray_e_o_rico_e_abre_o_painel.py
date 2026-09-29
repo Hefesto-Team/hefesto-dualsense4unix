@@ -8,7 +8,7 @@
 `integrations.tray.TrayController`, que é estritamente mais pobre — ele abre a
 **TUI** no terminal, não o painel que ela usa.
 
-**O FATO DO `GUIA.md` QUE CAIU JUNTO:** estava escrito que em COSMIC o
+**O FATO QUE CAIU JUNTO:** estava escrito que em COSMIC o
 `org.kde.StatusNotifierWatcher` *"não existe, então o tray clássico fica
 oculto"* — premissa que fez a janela compacta nascer como surrogate. Medido em
 19/09 na sessão dela: **existe**, servido pelo `cosmic-applet-status-area`. O

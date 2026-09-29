@@ -104,7 +104,7 @@ except regua_de_tela.MockupAusente as _erro:
 #: A PASTA SE DERIVA DA PÁGINA, e não se soletra: o `achar_a_aba` pode devolver
 #: a cópia de OUTRA árvore (é ele quem decide, pela mais nova), e as ferramentas
 #: têm de ser as daquela mesma árvore — medir o HTML de uma e o gerador de outra
-#: é a armadilha do `PYTHONPATH` que o `GUIA.md` descreve. A página mora em
+#: é a armadilha do `PYTHONPATH` (`test_a_suite_mede_esta_arvore.py`). A página mora em
 #: `<árvore>/mockup/` ou em `<árvore>/src/…/interface/paginas/`; nos dois casos
 #: a raiz é o primeiro ancestral que tem `src/hefesto_dualsense4unix/interface`.
 def _ferramentas_da_pagina(pagina: pathlib.Path) -> pathlib.Path:

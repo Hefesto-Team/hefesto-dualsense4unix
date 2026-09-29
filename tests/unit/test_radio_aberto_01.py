@@ -96,7 +96,7 @@ def test_os_assets_declaram_confirm(asset: Path) -> None:
 def test_a_justificativa_do_always_ficou_registrada() -> None:
     """A decisão anterior era MEDIDA e não se apaga: ganha nota datada.
 
-    Regra da casa (GUIA.md): *"Não se apaga decisão medida. Ela ganha uma nota
+    Regra da casa: *"Não se apaga decisão medida. Ela ganha uma nota
     datada com o que caducou."* O `always` nasceu para curar a migração do
     backport da ONDA-R — e o que caducou foi o REGIME PERMANENTE, não a
     observação original.

@@ -492,7 +492,7 @@ class TestRegra84SabeDizerNaoSei:
 
 class TestNenhumCaminhoDeCasaNaArvore:
     def test_o_retrato_deduz_a_raiz_do_proprio_arquivo(self) -> None:
-        """Quem clonar o repo e seguir o GUIA.md tem de conseguir rodar.
+        """Quem clonar o repo tem de conseguir rodar.
 
         Antes de 22/08/2026 o default era o `$HOME` da mantenedora, e só
         resolvia aqui por causa de um symlink; fora desta máquina o script

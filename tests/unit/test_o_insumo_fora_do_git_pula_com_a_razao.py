@@ -93,8 +93,8 @@ def test_a_razao_diz_o_que_fazer_a_respeito(tmp_path: Path) -> None:
     """A razão não é só diagnóstico: ela diz o que fazer, nos dois cenários.
 
     Num clone limpo a ausência é esperada e não há nada a fazer; numa árvore de
-    agente ela é a armadilha que o `GUIA.md` descreve, e o conserto é copiar
-    os ignorados ANTES de medir. As duas leituras saem na mesma frase.
+    trabalho ela é uma armadilha conhecida, e o conserto é copiar os ignorados
+    ANTES de medir. As duas leituras saem na mesma frase.
     """
     raiz = _arvore_de_mentira(tmp_path, "docs/process/\n")
     motivo = motivo_do_pulo("docs/process/sprints", raiz=raiz)

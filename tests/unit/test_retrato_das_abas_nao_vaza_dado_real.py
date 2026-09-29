@@ -26,8 +26,8 @@ três testes ficavam vermelhos — que é o pior estado possível para um portã
 vazamento, porque vermelho constante se lê como ruído e se desliga.
 
 **O fato não caducou; o dono mudou.** Quem grava em `docs/usage/assets/` hoje é
-`src/hefesto_dualsense4unix/interface/olhar.py --todas --publicado --doc`, e o
-`GUIA.md` já manda rodá-lo antes de commitar. Ele fotografa PÁGINA HTML num
+`src/hefesto_dualsense4unix/interface/olhar.py --todas --publicado --doc`, que
+roda antes de cada commit. Ele fotografa PÁGINA HTML num
 Chrome headless, e é por isso que a garantia continua valendo — e continua
 podendo ser quebrada pelo mesmo gesto tentador de sempre: ligar o retratista ao
 daemon vivo para "deixar a foto mais real", e publicar o MAC dela junto.
@@ -105,7 +105,7 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: QUEM GRAVA EM `docs/usage/assets/` HOJE. O caminho está no `GUIA.md` e no
+#: QUEM GRAVA EM `docs/usage/assets/` HOJE. O caminho está no
 #: `test_as_fotos_acompanham_a_versao`, que cobra o gesto de rodá-lo.
 SCRIPT = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "olhar.py"
 

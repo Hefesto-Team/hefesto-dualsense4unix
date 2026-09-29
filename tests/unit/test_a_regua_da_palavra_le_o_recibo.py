@@ -124,7 +124,7 @@ def recibo_plantado(tmp_path: Path) -> Path:
 
     ELE NASCEU DENTRO DE `app/` DE VERDADE, e voltou para o `tmp_path` em
     26/08/2026, na volta da conferência. A razão é o desenho documentado da
-    suíte desta casa: ela MORRE no meio, em ponto variável (`GUIA.md`), e um
+    suíte desta casa: ela MORRE no meio, em ponto variável (`scripts/rodar-a-suite.sh`), e um
     arquivo escrito em `src/` sobrevive ao `finally` que nunca roda. O que
     sobra depois disso é `validar-palavra-de-tela.py --all` vermelho para todo
     mundo, por um módulo misterioso que ninguém escreveu — e o `git add -A` dos

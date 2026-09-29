@@ -60,7 +60,7 @@ import pytest
 from hefesto_dualsense4unix.app.actions import rumble_actions
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
-#: A peça escolhida no seletor. Faixa sintética `02:fe:00` (GUIA.md), fora da
+#: A peça escolhida no seletor. Faixa sintética `02:fe:00` (`core/faixa_sintetica.py`), fora da
 #: `aabbcc` que vazou para a mesa de produção dela em 23/08.
 PECA = "02:fe:00:00:00:02"
 

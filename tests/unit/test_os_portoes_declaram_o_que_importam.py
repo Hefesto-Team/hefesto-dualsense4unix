@@ -7,7 +7,7 @@ O DEFEITO, com nome e data. Dois portões desta casa importam `playwright`:
 
 e o `pyproject.toml` não o declarava em extra nenhum. Ele vivia na bancada de
 quem escreveu os portões, por instalação à mão. O efeito é o mesmo toda vez, e
-o `GUIA.md` da casa já o descrevia em 29/08/2026: uma árvore criada com
+a casa já o descrevia em 29/08/2026: uma árvore criada com
 `pip install -e ".[dev,emulation,cosmic]"` NASCE com dois portões vermelhos, e
 quem chega gasta a manhã concluindo que quebrou alguma coisa.
 
@@ -194,7 +194,7 @@ def test_o_playwright_esta_declarado() -> None:
         "o `playwright` saiu do `pyproject.toml`. Os portões "
         "`check_pecas_do_dualsense` e `check_cores_do_dualsense` o importam, e "
         "sem a declaração toda árvore de trabalho nova nasce com os dois "
-        "vermelhos — o defeito que o `GUIA.md` já descrevia em 29/08/2026"
+        "vermelhos — o defeito que a casa já descrevia em 29/08/2026"
     )
 
 

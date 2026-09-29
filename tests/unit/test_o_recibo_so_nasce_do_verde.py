@@ -210,7 +210,7 @@ def test_a_corrida_aberta_numa_arvore_nao_fecha_em_outra(repo: Path, tmp_path: P
 
 
 def test_o_arquivo_ignorado_nao_impede_o_recibo(repo: Path) -> None:
-    """O ``docs/process`` e o ``GUIA.md`` são ignorados e estão em toda árvore de integração."""
+    """O ``docs/process`` e os outros ignorados estão em toda árvore de integração."""
     (repo / "__pycache__").mkdir()
     (repo / "__pycache__" / "x.pyc").write_bytes(b"\0")
     arvore = _arvore_do_indice(repo)
