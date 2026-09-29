@@ -941,8 +941,7 @@ desenho foi mostrado, foi *"perfeito"*.
 ## Recursos
 
 - [README principal](../../README.md) — instalação e uso
-- [Quickstart](quickstart.md) — primeiros passos
-- [A janela, aba por aba](interface.md) — o que cada aba faz
+- [As dez abas](AS-DEZ-ABAS-o-que-cada-uma-faz.md) — o que cada aba faz
 - [8BitDo SN30 Pro](troubleshooting-8bitdo.md) — modos, identificação e qual usar
   por Bluetooth (DirectInput/PS4) contra qual usar no cabo (Switch). Controle não
   gerenciado pelo hefesto.

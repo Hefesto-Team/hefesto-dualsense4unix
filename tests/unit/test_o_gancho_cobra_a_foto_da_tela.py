@@ -52,7 +52,7 @@ UMA_ABA = "src/hefesto_dualsense4unix/app/widgets/controller_card.py"
 #: do `theme.css`, que é a fonte das cores da casa.
 UMA_PAGINA = "src/hefesto_dualsense4unix/interface/paginas/09-sistema.html"
 O_RETRATO = "src/hefesto_dualsense4unix/interface/olhar.py"
-UMA_FOTO = "docs/usage/assets/readme_inicio.png"
+UMA_FOTO = "docs/usage/assets/aba-01-jogar.png"
 O_RECIBO = "docs/usage/assets/PROVA-DA-FOTO.txt"
 
 #: A SEGUNDA FAMÍLIA — 11/09/2026. `docs/usage/assets/maximizada/` guarda as
@@ -382,7 +382,7 @@ def _repo_de_mentira(tmp_path: Path) -> Path:
         ["git", "config", "core.hooksPath", str(sem_hooks)], cwd=str(raiz), check=True
     )
     (raiz / "docs" / "usage" / "assets").mkdir(parents=True)
-    (raiz / "docs" / "usage" / "assets" / "readme_inicio.png").write_text("a foto")
+    (raiz / "docs" / "usage" / "assets" / "aba-01-jogar.png").write_text("a foto")
     subprocess.run(["git", "add", "-A"], cwd=str(raiz), check=True)
     subprocess.run(["git", "commit", "-q", "-m", "a foto"], cwd=str(raiz), check=True)
     return raiz

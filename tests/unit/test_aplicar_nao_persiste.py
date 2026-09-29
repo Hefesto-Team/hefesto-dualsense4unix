@@ -21,9 +21,11 @@ O que estes testes travam:
 - **os outros três continuam gravando**, e pelo funil único
   (`GRAVA-POR-UM-FUNIL-01`): a tabela promete "sim" para eles;
 - **a tabela do documento não volta a prometer persistência no Aplicar.**
+  O `interface.md` saiu com a janela antiga; a tabela dos botões mora hoje na
+  página das dez abas (`AS-DEZ-ABAS-o-que-cada-uma-faz.md`), e é ela que se lê.
 
 A mordida: colando uma gravação dentro do `on_apply_draft` — ou devolvendo a
-frase antiga ao `interface.md` — os testes reprovam nomeando o que quebrou.
+frase antiga à página das abas — os testes reprovam nomeando o que quebrou.
 
 Nada aqui abre GTK, socket ou controle: é leitura do fonte com `ast` e do
 documento.
@@ -48,7 +50,7 @@ from functools import lru_cache
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-INTERFACE_MD = REPO_ROOT / "docs" / "usage" / "interface.md"
+PAGINA_DAS_ABAS = REPO_ROOT / "docs" / "usage" / "AS-DEZ-ABAS-o-que-cada-uma-faz.md"
 FOOTER_ACTIONS_PY = (
     REPO_ROOT / "src" / "hefesto_dualsense4unix" / "app" / "actions" / "footer_actions.py"
 )
@@ -109,9 +111,9 @@ def test_aplicar_nao_escreve_em_disco() -> None:
         fonte = _fonte(nome)
         for padrao in GRAVACOES:
             assert not re.search(padrao, fonte), (
-                f"`{nome}` passou a gravar ({padrao!r}) — a seção 'O rodapé' de "
-                "docs/usage/interface.md afirma que o Aplicar NÃO persiste, e é por "
-                "essa linha que ela decide se pode fechar a janela"
+                f"`{nome}` passou a gravar ({padrao!r}) — a tabela dos botões de "
+                "docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md afirma que o Aplicar "
+                "NÃO persiste, e é por essa linha que se decide fechar a janela"
             )
 
 
@@ -142,7 +144,7 @@ def test_os_outros_tres_gravam_pelo_funil() -> None:
     for nome, degrau in QUEM_GRAVA_E_POR_ONDE.items():
         assert re.search(rf"\b{degrau}\s*\(", _fonte(nome)), (
             f"`{nome}` deixou de chamar `{degrau}` — a tabela de "
-            "docs/usage/interface.md promete 'sim' para ele"
+            "docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md promete 'sim' para ele"
         )
         if degrau == FUNIL:
             continue  # este já É o funil
@@ -152,16 +154,16 @@ def test_os_outros_tres_gravam_pelo_funil() -> None:
 
 
 def test_o_documento_nao_promete_persistencia_no_aplicar() -> None:
-    texto = INTERFACE_MD.read_text(encoding="utf-8")
+    texto = PAGINA_DAS_ABAS.read_text(encoding="utf-8")
     assert not re.search(
         r"\*\*Aplicar\*\*.{0,120}persistem o que está editado",
         texto,
         re.DOTALL,
     ), (
-        "a seção 'O rodapé' voltou a dizer que o Aplicar persiste — ele despacha "
+        "a tabela dos botões voltou a dizer que o Aplicar persiste — ele despacha "
         "`profile.apply_draft` pelo IPC e não abre arquivo nenhum"
     )
     assert "**Salvar Perfil**" in texto, (
         "o documento tem de nomear quem realmente salva; dizer só o que o Aplicar "
-        "NÃO faz deixa a pergunta dela sem resposta"
+        "NÃO faz deixa a pergunta sem resposta"
     )

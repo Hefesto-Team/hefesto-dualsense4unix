@@ -3,7 +3,7 @@
 Esta é a referência canônica da CLI `hefesto-dualsense4unix` (Typer). Cobre os
 subcomandos disponíveis após a sprint **FEAT-CLI-PARITY-01** (paridade
 CLI-GUI). Para roteiros de uso (primeiros passos, criar perfil,
-integrar mods), veja `quickstart.md`, `creating-profiles.md` e
+integrar mods), veja `creating-profiles.md` e
 `integrating-mods.md`.
 
 Complemento de scripts: tab-completion funciona em zsh e bash via

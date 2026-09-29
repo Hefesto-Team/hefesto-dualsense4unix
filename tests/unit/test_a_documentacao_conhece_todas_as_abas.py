@@ -17,8 +17,9 @@ ele mede o produto de hoje contra os documentos que o publicam:
 | as DEZ de hoje | `interface/monta.py:ABAS` | `README.md` + `AS-DEZ-ABAS-o-que-cada-uma-faz.md` |
 
 E a foto da janela velha deixou de ser cobrada no `README.md` no mesmo dia: a
-vitrine passou a mostrar as dez do produto, e as `readme_*.png` continuam
-publicadas no `interface.md`, onde viraram história.
+vitrine passou a mostrar as dez do produto. A página da janela
+(`interface.md`), as `readme_*.png` e os diálogos saíram do repositório
+depois: a janela só existe na v0.9.4.5.
 
 **A LISTA DE ABAS É DERIVADA DO PRÓPRIO FONTE**, e essa é a decisão que faz o
 portão valer alguma coisa. Uma lista escrita à mão aqui envelheceria junto com a
@@ -70,10 +71,10 @@ AS MORDIDAS (aplicadas uma a uma em 22/08/2026, todas reprovaram)
 AS MORDIDAS DE 08/09/2026, das duas réguas que trocaram de dono (aplicadas,
 as duas reprovaram):
 
-3. **Apagar `docs/usage/assets/readme_status.png` do disco, deixando o
-   `interface.md` citando-a:** `test_toda_imagem_que_a_documentacao_publica_existe`
-   reprova nomeando `interface.md -> assets/readme_status.png`. É o defeito de
-   05/09 exatamente, medido do lado do documento.
+3. **Apagar `docs/usage/assets/aba-01-jogar.png` do disco, deixando o
+   `README.md` citando-a:** `test_toda_imagem_que_a_documentacao_publica_existe`
+   reprova nomeando `README.md -> docs/usage/assets/aba-01-jogar.png`. É o
+   defeito de 05/09 exatamente, medido do lado do documento.
 4. **Trocar o recorte na moldura por uma foto do viewport** (`so_a_janela=para_a_doc`
    por `so_a_janela=False`): `test_a_foto_da_doc_mostra_a_aba_inteira` reprova.
    Sem o recorte na moldura, uma aba mais alta que a dobra volta a ser
@@ -90,7 +91,6 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
-INTERFACE = RAIZ / "docs/usage/interface.md"
 README = RAIZ / "README.md"
 ASSETS = RAIZ / "docs/usage/assets"
 
@@ -103,26 +103,22 @@ RETRATO = RAIZ / "src/hefesto_dualsense4unix/interface/olhar.py"
 #: escrita à mão aqui envelheceria junto com a documentação que deveria vigiar.
 MONTA = RAIZ / "src/hefesto_dualsense4unix/interface/monta.py"
 
-#: A página que descreve as dez. O `interface.md` continua descrevendo as onze
-#: da janela, com a nota datada que o declara registro.
+#: A página que descreve as dez.
 AS_DEZ = RAIZ / "docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md"
 
 
 #: OS DOCUMENTOS QUE PUBLICAM IMAGEM, e o que cada caminho é relativo A.
-#: `README.md` mora na raiz e escreve `docs/usage/assets/...`; os dois de
-#: `docs/usage/` escrevem `assets/...`. Resolver contra a pasta do próprio
+#: `README.md` mora na raiz e escreve `docs/usage/assets/...`; o de
+#: `docs/usage/` escreve `assets/...`. Resolver contra a pasta do próprio
 #: documento é o que faz as duas formas caírem no mesmo lugar.
 _DOCUMENTOS_COM_IMAGEM = (
     "README.md",
-    "docs/usage/interface.md",
     "docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md",
 )
 
 #: `![alt](caminho)`, `[texto](caminho)` e `<img src="caminho">`. O link comum
-#: entra de propósito: a foto da aba mais alta da janela é publicada como LINK
-#: no `interface.md` (`readme_configuracoes_inteira.png`), não como imagem, e
-#: um leitor que clica num link quebrado perde a mesma coisa que num `<img>`
-#: quebrado.
+#: entra de propósito: uma foto publicada como LINK, e não como imagem, perde o
+#: leitor que clica nele do mesmo jeito que um `<img>` quebrado.
 _REFERENCIA = re.compile(r"!?\[[^\]]*\]\(([^)\s]+)\)|<img[^>]+src=\"([^\"]+)\"")
 
 #: Marcador de prosa, não referência — um NOME DE FORMA, do tipo
@@ -203,10 +199,9 @@ def test_toda_imagem_que_a_documentacao_publica_existe() -> None:
     publicada?"* — que só alcançava as fotos de um programa, e morreu com ele —
     ela pergunta *"toda imagem publicada existe?"*, que é o defeito medido.
 
-    A lista sai dos documentos, então ela cobre as três famílias de uma vez: as
-    dez `aba-*.png` que o `olhar.py` grava hoje, as `readme_*.png` da janela
-    aposentada e os cinco diálogos — nenhuma delas depende de um instrumento
-    vivo para ser cobrada.
+    A lista sai dos documentos, então ela cobre qualquer imagem publicada, e
+    não só as dez `aba-*.png` que o `olhar.py` grava hoje: nenhuma depende de
+    um instrumento vivo para ser cobrada.
     """
     achados = _imagens_publicadas()
     assert achados, (
@@ -271,9 +266,8 @@ def test_a_foto_da_doc_mostra_a_aba_inteira() -> None:
 # ---------------------------------------------------------------------------
 # AS DEZ DE HOJE — 05/09/2026
 #
-# Tudo acima mede a janela GTK, que continua viva e continua documentada em
-# `interface.md`. O que segue mede o produto que o lançador abre, e a lista vem
-# do mesmo lugar que o piloto lê: `monta.ABAS`.
+# O que segue mede o produto que o lançador abre, e a lista vem do mesmo
+# lugar que o piloto lê: `monta.ABAS`.
 # ---------------------------------------------------------------------------
 
 

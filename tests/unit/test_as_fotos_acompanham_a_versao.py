@@ -1,7 +1,7 @@
 """As fotos da documentação defasaram em silêncio — FOTOS-DA-VERSAO-01.
 
-O `GUIA.md` manda, com todas as letras: *"Antes de gerar release, rode de
-novo: as imagens acompanham a versão"*. Não havia portão nenhum segurando isso,
+A regra é que as imagens da documentação acompanham a versão: antes de gerar
+release, o retratista roda de novo. Não havia portão nenhum segurando isso,
 e o resultado, medido em 13/08/2026 sobre a tag `v0.9.4.2`:
 
 * último commit que tocou `docs/usage/assets/`: `0c4164e`, 12/08 00:38:35;
@@ -385,7 +385,7 @@ def _sem_historico(raiz: Path) -> bool:
 
 
 def test_as_fotos_nao_ficam_atras_do_codigo_da_tela() -> None:
-    """As imagens do README acompanham a versão — a regra escrita no `GUIA.md`."""
+    """As imagens do README acompanham a versão: foto conferida depois do código da tela."""
     if _sem_historico(RAIZ):
         pytest.skip("sem histórico git completo (clone raso ou pasta sem git)")
 
@@ -409,8 +409,8 @@ def test_as_fotos_nao_ficam_atras_do_codigo_da_tela() -> None:
         f"a interface mudou em {commit_do_codigo[:7]} e as fotos de "
         f"`{'`, `'.join(atrasadas)}` "
         f"são de {commit_das_fotos}, que veio ANTES. As imagens do `README.md` "
-        "e do `docs/usage/interface.md` documentam uma tela que pode não "
-        "existir mais.\n\n"
+        "e do `docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md` documentam uma "
+        "tela que pode não existir mais.\n\n"
         f"{COMANDOS_DE_CURA}\n\n"
         "Uma execução, nenhum clique. Se as imagens saírem DIFERENTES, olhe-as "
         "antes de commitar: mudança de DESENHO é palavra dela "
@@ -461,10 +461,10 @@ def _repo_de_mentira(tmp_path: Path, fotos_por_ultimo: bool) -> Path:
     primeiro = (
         (f"{CODIGO_DA_TELA[0]}/home_actions.py", "a aba mudou")
         if fotos_por_ultimo
-        else (f"{FOTOS}/readme_inicio.png", "a foto")
+        else (f"{FOTOS}/aba-01-jogar.png", "a foto")
     )
     segundo = (
-        (f"{FOTOS}/readme_inicio.png", "a foto nova")
+        (f"{FOTOS}/aba-01-jogar.png", "a foto nova")
         if fotos_por_ultimo
         else (f"{CODIGO_DA_TELA[0]}/home_actions.py", "a aba mudou depois")
     )
@@ -531,7 +531,7 @@ def test_o_portao_acusa_retrato_mexido_depois_da_foto(tmp_path: Path) -> None:
             ["git", "commit", "-q", "-m", mensagem], cwd=str(raiz), check=True
         )
 
-    _commitar(f"{FOTOS}/readme_inicio.png", "a foto", "primeiro")
+    _commitar(f"{FOTOS}/aba-01-jogar.png", "a foto", "primeiro")
     _commitar(
         "src/hefesto_dualsense4unix/interface/olhar.py",
         "o retratista das dez, mexido",

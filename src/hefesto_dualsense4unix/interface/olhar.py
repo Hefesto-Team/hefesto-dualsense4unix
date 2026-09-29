@@ -16,8 +16,8 @@ ELE É O RETRATISTA DA INTERFACE NOVA — 05/09/2026
 --------------------------------------------------
 
 **ELE É O ÚNICO — desde 06/09/2026.** Quem fotografava a JANELA GTK era
-`scripts/gui-captura/retratar_abas.py`, e era ele que o `GUIA.md` mandava
-rodar antes de commitar. A janela tinha ONZE abas e o produto tem DEZ páginas
+`scripts/gui-captura/retratar_abas.py`, e era ele que se rodava antes de
+commitar. A janela tinha ONZE abas e o produto tem DEZ páginas
 HTML — as fotos do README mostravam uma tela que não é mais a que abre. A
 janela saiu inteira (`D-0609-GTK-LEVA-INTEIRA`) e o retratista dela saiu junto;
 **este arquivo é o retratista desta casa, e não há outro.** Queixa dela que
@@ -127,9 +127,9 @@ DESTINO_DOC = onde.RAIZ / "docs" / "usage" / "assets"
 #: miniatura do README (*"como é a aba?"*) e a vista é a tela dela maximizada
 #: (*"como fica na TV dela?"*). Gravar as duas com o MESMO NOME repetiria, num
 #: nível acima, a armadilha que o recibo existe para desfazer — e teria uma
-#: consequência medida: o `GUIA.md` manda todo mundo rodar
-#: `--todas --publicado --doc` antes de commitar, e a execução seguinte
-#: apagaria calada a foto da vista. Pasta própria, recibo próprio.
+#: consequência medida: `--todas --publicado --doc` roda antes de todo commit
+#: que toca a tela, e a execução seguinte apagaria calada a foto da vista.
+#: Pasta própria, recibo próprio.
 SUBPASTA_DA_VISTA = "maximizada"
 
 #: O NOME DAS FOTOS NÃO SE INVENTOU — 05/09/2026. O
@@ -138,12 +138,9 @@ SUBPASTA_DA_VISTA = "maximizada"
 #: documento publicava dez imagens quebradas desde que foi escrito. O prefixo é
 #: o que ele já cita, e o `--doc` passa a preencher exatamente esses dez nomes.
 #:
-#: As `readme_*.png` são da janela GTK. **A janela morreu em 06/09/2026 e elas
-#: FICARAM**, que era a condição escrita aqui antes: apagá-las deixaria o
-#: `docs/usage/interface.md` com furo, e o histórico de uma tela que existiu não
-#: é fato errado a substituir — é decisão medida, e leva data. Nenhum
-#: instrumento vivo as refaz, e é por isso que o recibo abaixo só soma o que
-#: começa com este prefixo.
+#: O recibo abaixo só soma o que começa com este prefixo: outra imagem que
+#: more na mesma pasta não foi feita por este retratista, e somá-la afirmaria
+#: ter refeito o que ele não refez.
 PREFIXO_NOVO = "aba-"
 
 #: Só as DEZ abas. As avulsas (`mapa-do-controle`, `calibrar-sensores`,
@@ -398,8 +395,8 @@ def destino_das_fotos(para_a_doc: bool, vista: tuple[int, int] | None) -> pathli
     uma pergunta de uma linha:
     `destino_das_fotos(True, VISTA_DELA) != destino_das_fotos(True, None)`.
 
-    **E essa desigualdade é o contrato inteiro:** o `GUIA.md` manda todo
-    mundo rodar `--todas --publicado --doc` antes de commitar, e se as duas
+    **E essa desigualdade é o contrato inteiro:** `--todas --publicado --doc`
+    roda antes de todo commit que toca a tela, e se as duas
     famílias tivessem o mesmo nome a execução seguinte apagaria a foto da vista
     **calada** — sem erro, sem recibo divergente, sem nada a ver depois.
     """

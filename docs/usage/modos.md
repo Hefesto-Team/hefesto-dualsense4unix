@@ -70,8 +70,7 @@ modo nativo ou dualsense"*.
 Nada disso é o **mouse emulado**, que é outra coisa e mora na aba Navegação: o
 mouse emulado move o cursor pelo **analógico esquerdo**, só existe no modo
 "Controlar o PC" e tem interruptor próprio. Os dois podem estar de pé ao mesmo
-tempo — dois caminhos até o mesmo cursor, cada um com o seu gesto. Ver
-[`interface.md`](interface.md#navegação).
+tempo — dois caminhos até o mesmo cursor, cada um com o seu gesto.
 
 > **Mudou de nome em 06/08/2026.** O terceiro modo se chamava
 > **"Jogar direto (Sony)"**. O nome caducou por decisão dela — *"Jogar direto é

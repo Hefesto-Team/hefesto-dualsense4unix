@@ -13,8 +13,7 @@ foi lido das páginas que a janela renderiza —
 
 > **Se você conhece a janela antiga, de onze abas** (Início, Status, No jogo,
 > Gatilhos, Lightbar, Rumble, Perfis, Sistema, Emulação, Navegação,
-> Configurações), o de‑para está em
-> [A janela antiga — o que mudou de lugar](A-JANELA-ANTIGA-o-que-mudou-de-lugar.md).
+> Configurações), ela só existe na v0.9.4.5.
 > A aba **Emulação** não existe mais; o conteúdo dela se espalhou por cinco
 > abas, e aquele documento diz para onde cada pedaço foi.
 
@@ -464,8 +463,6 @@ o `fallback` com o `meu_perfil` viraram o **Universal**.
 
 ## Onde continuar
 
-- **O de‑para da janela antiga:**
-  [A-JANELA-ANTIGA-o-que-mudou-de-lugar.md](A-JANELA-ANTIGA-o-que-mudou-de-lugar.md)
 - **Os três modos, por dentro:** [modos.md](modos.md)
 - **Escrever um perfil à mão:** [creating-profiles.md](creating-profiles.md)
 - **Atalhos no próprio controle:** [hotkeys.md](hotkeys.md)

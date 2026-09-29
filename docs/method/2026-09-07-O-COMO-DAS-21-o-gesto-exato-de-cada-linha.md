@@ -32,7 +32,7 @@ serve a quem o escreveu e a mais ninguém.
 
 ## O que este arquivo é, e por que ele é UM arquivo
 
-O roteiro (`docs/usage/roteiro-da-bancada-de-quatro.md`) diz **o que** se testa, em uma
+O roteiro (`scripts/roteiro-da-bancada-de-quatro.md`) diz **o que** se testa, em uma
 linha por teste. Este diz **como** se faz, e não cabe numa linha: onde olhar na
 tela, o gesto exato na ordem, o que muda em cada um dos quatro, e a armadilha
 que faz o teste dar falso verde.

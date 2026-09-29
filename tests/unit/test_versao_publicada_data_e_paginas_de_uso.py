@@ -10,7 +10,7 @@ régua que deixou passar:
     o NÚMERO e só. Era a menor edição possível que deixava o portão verde.
   - `docs/usage/instalacao.md` — a página canônica, para onde o README aponta
     duas vezes — mandava `git checkout v0.3.0` com a 0.4.0 publicada.
-  - `README.md` e as três páginas de uso traziam o literal `[REDACTED]` DENTRO
+  - `README.md` e as páginas de uso traziam o literal `[REDACTED]` DENTRO
     da URL do fork: badge de CI com imagem quebrada e `git clone` impossível de
     copiar.
 
@@ -22,7 +22,7 @@ Mordidas deste arquivo, uma por uma:
     em 30/07;
   - apagar a entrada da 0.3.0 do metainfo derruba
     `test_toda_secao_datada_0x_do_changelog_tem_release_no_metainfo`;
-  - devolver `v0.3.0` a qualquer uma das três páginas de uso derruba
+  - devolver `v0.3.0` a qualquer uma das páginas de uso derruba
     `test_paginas_de_uso_clonam_a_tag_da_versao_canonica`;
   - devolver o marcador a qualquer URL derruba
     `test_nenhum_marcador_de_redacao_dentro_de_url`, que é ESTREITO de
@@ -46,7 +46,7 @@ GATE_REL = "scripts/check_version_consistency.py"
 METAINFO_REL = "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml"
 CHANGELOG_REL = "CHANGELOG.md"
 INSTALACAO_REL = "docs/usage/instalacao.md"
-PAGINAS_DE_USO = (INSTALACAO_REL, "docs/usage/quickstart.md", "docs/usage/flatpak.md")
+PAGINAS_DE_USO = (INSTALACAO_REL, "docs/usage/flatpak.md")
 
 #: Os arquivos que trazem a URL do fork de release e por isso passam pela
 #: peneira do sanitizador global.

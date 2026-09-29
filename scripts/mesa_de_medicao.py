@@ -20,7 +20,7 @@ NADA SE DIGITA AQUI. Os testes SAEM DOS ARQUIVOS, e cada arquivo é o dono de
 uma coisa:
 
     docs/data/mapa-controles.csv    as células que faltam medir, e o COMO de cada uma
-    docs/process/sprints/…MESA-DE-QUATRO-01…  as 21 linhas do roteiro, que são a aceitação
+    scripts/roteiro-da-bancada-de-quatro.md   as 21 linhas do roteiro, que são a aceitação
     docs/data/pecas-do-dualsense.csv          o nome e o id de cada peça do desenho
     docs/data/cores-do-dualsense.csv          28 modelos × 10 zonas, a cor do plástico
     interface/ds_limpo.svg (via `monta`)      o desenho, e o realce por peça
@@ -87,7 +87,7 @@ import paleta_da_casa
 MAPA = RAIZ / "docs/data/mapa-controles.csv"
 PECAS = RAIZ / "docs/data/pecas-do-dualsense.csv"
 CORES = RAIZ / "docs/data/cores-do-dualsense.csv"
-ROTEIRO = RAIZ / "docs/usage"
+ROTEIRO = RAIZ / "scripts"
 
 #: O nome do arquivo do roteiro é um PADRÃO, não um caminho cravado: o índice de
 #: sprints renomeia arquivo, e um caminho literal morreria calado no dia da
@@ -323,12 +323,9 @@ def linhas_do_mapa() -> list[dict[str, str]]:
 def arquivo_do_roteiro() -> pathlib.Path:
     """O arquivo do roteiro da bancada, achado pelo padrão.
 
-    ELE MUDOU DE CASA EM 15/09/2026. Morava numa sprint de
-    `docs/process/`, e `docs/process/` saiu do repositório por ordem
-    dela — os arquivos de estudo e de metalinguagem ficam no disco
-    dela e do André, fora do git. As 21 linhas são ACEITAÇÃO DO
-    PRODUTO, não processo: vieram para `docs/usage/`, onde quem for
-    medir a mesa as encontra com o repositório recém-clonado.
+    Ele mora em `scripts/`, ao lado desta mesa, que é quem o lê: é roteiro
+    de teste de quem desenvolve, e não página de uso. Versionado, quem for
+    medir a mesa o encontra com o repositório recém-clonado.
     """
     achados = sorted(ROTEIRO.glob(ROTEIRO_PADRAO))
     if not achados:
@@ -2513,8 +2510,8 @@ function verificar() {
     //
     // E ESTE COMENTÁRIO NÃO ESCREVE O PADRÃO QUE ELA PROCURA, de propósito:
     // a primeira versão dele o citava, virou a primeira ocorrência do arquivo
-    // e a régua reprovou de novo — pelo AVISO, não pelo defeito. É a mesma
-    // armadilha que o `GUIA.md` registra de 05/09/2026, e ela pega igual.
+    // e a régua reprovou de novo — pelo AVISO, não pelo defeito: o comentário
+    // que descreve o padrão proibido vira a primeira ocorrência dele.
     const laudo = par[0], frase = par[1];
     if (!resposta) semResposta++;
     else if (laudo === 'bate') bate++;

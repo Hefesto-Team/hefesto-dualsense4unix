@@ -107,15 +107,15 @@ def _bancada_com_fotos(tmp_path: Path, retrato: Any) -> Path:
     """Uma pasta com dois PNGs de mentira — o suficiente para gravar recibo.
 
     Os nomes seguem `PREFIXO_NOVO` porque é por ele que o retratista acha o que
-    somar: um recibo que somasse qualquer `*.png` da pasta acabaria somando as
-    `readme_*.png` da janela aposentada, que nenhum instrumento vivo refaz.
+    somar: um recibo que somasse qualquer `*.png` da pasta acabaria somando
+    imagem que ele não fez.
     """
     saida = tmp_path / "bancada"
     saida.mkdir()
     (saida / f"{retrato.PREFIXO_NOVO}01-jogar.png").write_bytes(b"\x89PNG-de-mentira-1")
     (saida / f"{retrato.PREFIXO_NOVO}02-controles.png").write_bytes(b"\x89PNG-de-mentira-2")
-    # Uma foto da JANELA na mesma pasta: ela não pode entrar na conta.
-    (saida / "readme_inicio.png").write_bytes(b"\x89PNG-da-janela-aposentada")
+    # Uma imagem de outra família na mesma pasta: ela não pode entrar na conta.
+    (saida / "outra-imagem.png").write_bytes(b"\x89PNG-de-outra-familia")
     return saida
 
 
@@ -152,10 +152,10 @@ def test_o_recibo_do_publicado_declara_o_produto(tmp_path: Path) -> None:
 def test_o_recibo_conta_so_as_fotos_deste_retratista(tmp_path: Path) -> None:
     """A soma é das DEZ, não de tudo o que houver na pasta.
 
-    `docs/usage/assets/` guarda três famílias — as `aba-*.png` de hoje, as
-    `readme_*.png` da janela e os cinco diálogos. Um recibo que somasse todas
-    afirmaria ter refeito o que nenhum instrumento vivo refaz, e a próxima
-    pessoa leria a data do ensaio como data das dezesseis.
+    `docs/usage/assets/` pode guardar outra imagem além das `aba-*.png` (a
+    foto social do repositório, por exemplo). Um recibo que somasse todas
+    afirmaria ter refeito o que este retratista não refez, e a próxima pessoa
+    leria a data do ensaio como data de todas.
     """
     retrato = _retrato()
     saida = _bancada_com_fotos(tmp_path, retrato)
@@ -164,9 +164,9 @@ def test_o_recibo_conta_so_as_fotos_deste_retratista(tmp_path: Path) -> None:
 
     texto = (saida / retrato.NOME_DA_PROVA).read_text(encoding="utf-8")
     assert "abas:    2" in texto, f"a conta não bate com as fotos deste retratista:\n{texto}"
-    assert "readme_inicio.png" not in texto, (
-        "o recibo somou uma foto da janela aposentada. Ele afirmaria ter "
-        f"refeito o que nenhum instrumento vivo refaz. Texto:\n{texto}"
+    assert "outra-imagem.png" not in texto, (
+        "o recibo somou uma imagem de outra família. Ele afirmaria ter "
+        f"refeito o que este retratista não refez. Texto:\n{texto}"
     )
 
 

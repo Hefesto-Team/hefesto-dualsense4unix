@@ -334,7 +334,7 @@ Corrida, Esportes, FPS) nunca ativaram, nenhuma vez.
 avançado** da aba Perfis — a janela **não** o apaga sozinha, porque apagar em
 silêncio o que você escreveu seria mudança que você não pediu.
 
-**Como perceber isso sem ler journal:** a aba [**No jogo**](interface.md#no-jogo)
+**Como perceber isso sem ler journal:** a aba **Jogar**
 diz, com o jogo na frente, qual perfil daquele jogo não entrou e o que ele
 exigiu, lado a lado com o que a máquina vê.
 
