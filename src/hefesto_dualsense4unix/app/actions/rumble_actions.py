@@ -122,7 +122,7 @@ ROTULOS_DO_ORCAMENTO: dict[str, str] = dict(_POLICY_LABEL)
 #: jogo controlar a vibração"``, em nenhuma.
 #:
 #: O nome da constante FICA — três arquivos a citam pelo nome em prosa
-#: (``interface/aba05.py:272``, ``app/telas/vibracao.py:140``,
+#: (``interface/aba05.py:285``, ``app/telas/vibracao.py:157``,
 #: ``tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py``), e trocá-lo
 #: quebraria citações sem curar defeito nenhum. O que estava errado era o
 #: VALOR: um rótulo é a promessa de um botão, e este apontava para um botão
