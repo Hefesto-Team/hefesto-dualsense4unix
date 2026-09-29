@@ -592,6 +592,14 @@ class UinputMouseDevice:
 #: nó `*Hefesto*Touchpad`, e este é o ponteiro que o computador tem de ler.
 NOME_DO_CURSOR_DO_TOQUE = "Hefesto - DualSense4Unix Touch Cursor"
 
+#: O CLIQUE DE QUEM PAROU DE DAR NOTÍCIA SOLTA, em segundos. O tique renova o
+#: clique de cada peça que segura a cada volta; a peça que saiu do laço (o
+#: controle que desligou no meio de um arrasto) não diz «soltei», e o botão
+#: esquerdo do computador ficaria apertado até o controle virtual cair. Meio
+#: segundo é o silêncio que o resto do roteador já usa
+#: (`roteador_de_movimento.SILENCIO_DA_DRENAGEM_S`).
+CLIQUE_SEM_NOTICIA_S = 0.5
+
 
 @dataclass
 class CursorDoToque:
@@ -607,7 +615,8 @@ class CursorDoToque:
     daqui, como no `emit_gyro_move`.
 
     O CLIQUE É DA MESA: duas peças no cursor dividem o mesmo botão, e ele fica
-    apertado enquanto qualquer uma o segurar.
+    apertado enquanto qualquer uma o segurar — e der notícia
+    (:data:`CLIQUE_SEM_NOTICIA_S`, :meth:`conferir`).
     """
 
     name: str = NOME_DO_CURSOR_DO_TOQUE
@@ -615,7 +624,7 @@ class CursorDoToque:
     _uinput_mod: Any = None
     _carry_x: float = 0.0
     _carry_y: float = 0.0
-    _clicando: set[str] = field(default_factory=set)
+    _clicando: dict[str, float] = field(default_factory=dict)
     _botao: bool = False
 
     def start(self) -> bool:
@@ -651,7 +660,7 @@ class CursorDoToque:
         self._uinput_mod = None
         self._carry_x = 0.0
         self._carry_y = 0.0
-        self._clicando = set()
+        self._clicando = {}
         self._botao = False
 
     def mover(self, px_x: float, px_y: float) -> None:
@@ -673,12 +682,26 @@ class CursorDoToque:
             self._device.emit(u.REL_Y, iy, syn=False)
         self._device.syn()
 
-    def clicar(self, peca: str, apertado: bool) -> None:
+    def clicar(self, peca: str, apertado: bool, agora: float | None = None) -> None:
         """O clique do touchpad da `peca`; o botão só muda na borda da mesa."""
+        agora = time.monotonic() if agora is None else agora
         if apertado:
-            self._clicando.add(peca)
+            self._clicando[peca] = agora
         else:
-            self._clicando.discard(peca)
+            self._clicando.pop(peca, None)
+        self.conferir(agora)
+
+    def conferir(self, agora: float | None = None) -> None:
+        """Solta o clique de quem parou de dar notícia, e acerta o botão.
+
+        Chamado pelo tique do P1 enquanto o nó existe
+        (`gamepad._conferir_o_cursor_do_toque`) e por :meth:`clicar`.
+        """
+        agora = time.monotonic() if agora is None else agora
+        if self._clicando:
+            self._clicando = {
+                p: t for p, t in self._clicando.items() if agora - t <= CLIQUE_SEM_NOTICIA_S
+            }
         querido = bool(self._clicando)
         if querido == self._botao:
             return
@@ -689,6 +712,7 @@ class CursorDoToque:
 
 __all__ = [
     "BUTTON_TO_UINPUT",
+    "CLIQUE_SEM_NOTICIA_S",
     "DEFAULT_MOUSE_SPEED",
     "DEFAULT_POLL_HZ",
     "DEFAULT_SCROLL_SPEED",

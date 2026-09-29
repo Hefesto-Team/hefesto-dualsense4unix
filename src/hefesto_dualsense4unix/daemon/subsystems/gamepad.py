@@ -3121,8 +3121,8 @@ def dispatch_gamepad(
         uniq = primary_identity(daemon) if arranjo is not None else None
         if arranjo is not None:
             botoes, l2 = aplicar_o_toque(daemon, arranjo, uniq=uniq, botoes=botoes, l2=l2)
-        elif getattr(daemon, "_cursor_do_toque", None):
-            soltar_o_cursor_do_toque(daemon)
+        if getattr(daemon, "_cursor_do_toque", None):
+            _conferir_o_cursor_do_toque(daemon, store)
         da_mao = botoes
         # F1-REMAPEAR (13/09/2026): a troca botão a botão do perfil entra AQUI,
         # logo antes do `forward_buttons`, e só muda o que o JOGO vê. O PS, os
@@ -3259,6 +3259,9 @@ def aplicar_o_toque(
 
         store = getattr(daemon, "store", None)
         peca = roteador.da_peca(store, uniq, arranjo)
+        if peca is None or peca.toque != roteador.TOQUE_CURSOR:
+            # A peça que saiu do cursor com o dedo apertado solta o botão.
+            _largar_o_clique(daemon, uniq)
         if peca is None or not peca.toca:
             return botoes, l2
         garantir = getattr(daemon, "_garantir_sensor_hub", None)
@@ -3267,6 +3270,8 @@ def aplicar_o_toque(
         perguntar = getattr(garantir(), "toque_da_peca", None)
         leitura = perguntar(uniq) if callable(perguntar) else None
         if leitura is None:
+            # O leitor sumiu (o controle caiu): o clique dele não fica preso.
+            _largar_o_clique(daemon, uniq)
             return botoes, l2
         estado, clicado = leitura
         dedos = _dedos_do_toque(estado)
@@ -3296,11 +3301,46 @@ def aplicar_o_toque(
         return botoes, l2
 
 
+def _largar_o_clique(daemon: Any, uniq: str) -> None:
+    """O clique da peça `uniq` sai do botão do cursor, se o nó existe. Nunca levanta.
+
+    Conferência de 28/09: o clique só soltava quando a MESMA peça dizia
+    «soltei», e o nó do cursor é um ponteiro do computador — o botão preso
+    arrasta tudo o que ela tocar depois, com o mouse de verdade também.
+    """
+    cursor = getattr(daemon, "_cursor_do_toque", None)
+    if not cursor:
+        return
+    with contextlib.suppress(Exception):
+        cursor.clicar(uniq, False)
+
+
+def _conferir_o_cursor_do_toque(daemon: Any, store: Any) -> None:
+    """O nó do cursor só fica de pé enquanto alguma peça o quer. Nunca levanta.
+
+    Chamado pelo tique do P1 enquanto o nó existe: sem peça nenhuma no cursor
+    (`roteador.quer_cursor`), ele sai; com dono, o clique de quem parou de dar
+    notícia solta (`CursorDoToque.conferir`) — o jogador que saiu do laço no
+    meio de um arrasto não volta para dizer «soltei».
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as roteador
+
+    try:
+        if not roteador.quer_cursor(store):
+            soltar_o_cursor_do_toque(daemon)
+            return
+        conferir = getattr(getattr(daemon, "_cursor_do_toque", None), "conferir", None)
+        if callable(conferir):
+            conferir()
+    except Exception as exc:
+        logger.warning("cursor_do_toque_conferir_falhou", err=str(exc))
+
+
 def soltar_o_cursor_do_toque(daemon: Any) -> None:
     """Destrói o cursor do toque da sessão, se houver. Idempotente.
 
     Chamado quando o controle virtual sai (`stop_gamepad_emulation`) e quando
-    nenhuma peça leva mais o toque ao cursor (`dispatch_gamepad`): um ponteiro
+    nenhuma peça leva mais o toque ao cursor (`_conferir_o_cursor_do_toque`): um ponteiro
     sem dono não fica de pé.
     """
     cursor = getattr(daemon, "_cursor_do_toque", None)

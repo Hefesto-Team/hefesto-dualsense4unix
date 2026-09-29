@@ -1142,3 +1142,120 @@ class TestOCursorDoToque:
         cursor.stop()
         assert [v for e, v in no.emitidos if e == "BTN_LEFT"] == [1, 0]
         assert no.destruido, "o nó do cursor ficou de pé depois do stop"
+
+
+# ===========================================================================
+# 10 — o clique do cursor não prende (conferência de 28/09)
+# ===========================================================================
+#
+# O nó do cursor é um ponteiro do COMPUTADOR: um botão esquerdo que fica
+# apertado arrasta tudo o que ela tocar depois, com o mouse de verdade também.
+# O clique só soltava quando a MESMA peça dizia «soltei»; a peça que saía do
+# cursor, cujo leitor sumia ou que deixava o laço (o controle que desligou no
+# meio de um arrasto) deixava o botão preso até o controle virtual cair.
+
+
+def _daemon_do_cursor(
+    store: Any, hub: Any, cursor: Any, gamepad_device: Any = None
+) -> SimpleNamespace:
+    daemon = SimpleNamespace(
+        _ipc_server=SimpleNamespace(_garantir_sensor_hub=lambda: hub), store=store,
+        _gamepad_device=gamepad_device, _mouse_device=None, _cursor_do_toque=cursor,
+    )
+    daemon._garantir_sensor_hub = MethodType(Daemon._garantir_sensor_hub, daemon)
+    daemon._garantir_cursor_do_toque = MethodType(Daemon._garantir_cursor_do_toque, daemon)
+    return daemon
+
+
+class TestOCliqueNaoPrende:
+    """MORDIDA: tire o `_largar_o_clique` de `aplicar_o_toque` e as duas
+    primeiras reprovam; tire a validade do clique de `CursorDoToque.conferir`
+    e a do jogador que sumiu reprova; devolva ao `dispatch_gamepad` o «só solta
+    sem arranjo nenhum» e a do nó sem dono reprova."""
+
+    def _cursor(self) -> Any:
+        from hefesto_dualsense4unix.integrations.uinput_mouse import CursorDoToque
+
+        cursor = CursorDoToque()
+        assert cursor.start()
+        return cursor
+
+    def _botao(self, cursor: Any) -> list[int]:
+        return [v for e, v in cursor._device.emitidos if e == "BTN_LEFT"]
+
+    def test_o_leitor_que_some_solta_o_clique(
+        self, _uinput_que_grava: types.ModuleType
+    ) -> None:
+        leituras: list[Any] = [(_toque((500, 500)), True), None]
+
+        class _Hub:
+            def toque_da_peca(self, uniq: str) -> Any:
+                return leituras.pop(0)
+
+        store = SimpleNamespace()
+        rot.definir_ativo(store, rot.montar(ProfileMovimentoConfig(toque="cursor")))
+        cursor = self._cursor()
+        daemon = _daemon_do_cursor(store, _Hub(), cursor)
+        arranjo = rot.ativo(store)
+        gp.aplicar_o_toque(daemon, arranjo, uniq=_P2, botoes=frozenset(), l2=0)
+        gp.aplicar_o_toque(daemon, arranjo, uniq=_P2, botoes=frozenset(), l2=0)
+        assert self._botao(cursor) == [1, 0], (
+            "o controle caiu no meio do arrasto e o botão esquerdo ficou apertado")
+
+    def test_a_peca_que_sai_do_cursor_solta_o_clique(
+        self, _uinput_que_grava: types.ModuleType
+    ) -> None:
+        class _Hub:
+            def toque_da_peca(self, uniq: str) -> Any:
+                return _toque((500, 500)), True
+
+        store = SimpleNamespace()
+        rot.definir_ativo(store, rot.montar(ProfileMovimentoConfig(toque="cursor")))
+        cursor = self._cursor()
+        daemon = _daemon_do_cursor(store, _Hub(), cursor)
+        gp.aplicar_o_toque(daemon, rot.ativo(store), uniq=_P2, botoes=frozenset(), l2=0)
+        rot.definir_ativo(store, rot.montar(ProfileMovimentoConfig(toque="zonas")))
+        gp.aplicar_o_toque(daemon, rot.ativo(store), uniq=_P2, botoes=frozenset(), l2=0)
+        assert self._botao(cursor) == [1, 0], (
+            "a peça trocou o cursor pelas zonas com o dedo apertado e o botão ficou")
+
+    def test_o_jogador_que_sumiu_do_laco_solta_o_clique(
+        self, _uinput_que_grava: types.ModuleType
+    ) -> None:
+        from hefesto_dualsense4unix.integrations import uinput_mouse
+
+        cursor = self._cursor()
+        cursor.clicar(_P2, True, 10.0)
+        cursor.clicar(_P3, True, 10.0)
+        cursor.clicar(_P3, True, 10.0 + uinput_mouse.CLIQUE_SEM_NOTICIA_S)
+        cursor.conferir(10.0 + uinput_mouse.CLIQUE_SEM_NOTICIA_S + 0.1)
+        assert self._botao(cursor) == [1], "o P3 segue apertando e o botão soltou"
+        cursor.conferir(10.0 + 2 * uinput_mouse.CLIQUE_SEM_NOTICIA_S + 0.2)
+        assert self._botao(cursor) == [1, 0], (
+            "o P2 e o P3 pararam de dar notícia e o botão ficou apertado")
+
+    def test_o_no_sem_dono_sai_e_o_que_tem_dono_confere(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(gp, "_reconciliar_launch", lambda d: None)
+        monkeypatch.setattr(gp, "_avisar_troca_de_modo", lambda d: None)
+        monkeypatch.setattr(gp, "primary_identity", lambda d: _P1)
+
+        class _Hub:
+            def toque_da_peca(self, uniq: str) -> Any:
+                return _toque(), False
+
+        conferidos: list[str] = []
+        cursor = _CursorDeMentira()
+        cursor.conferir = lambda: conferidos.append("sim")  # type: ignore[attr-defined]
+        store = SimpleNamespace(udp_trigger_thresholds=(0, 0))
+        rot.definir_ativo(store, rot.montar(ProfileMovimentoConfig(toque="cursor")))
+        daemon = _daemon_do_cursor(store, _Hub(), cursor, _VpadDoJogador())
+        estado = SimpleNamespace(
+            raw_lx=128, raw_ly=128, raw_rx=128, raw_ry=128, l2_raw=0, r2_raw=0)
+        gp.dispatch_gamepad(daemon, estado, frozenset())
+        assert conferidos and not cursor.parado
+        rot.definir_ativo(store, rot.montar(ProfileMovimentoConfig(toque="zonas")))
+        gp.dispatch_gamepad(daemon, estado, frozenset())
+        assert cursor.parado, "ninguém mais leva o toque ao cursor e o nó ficou de pé"
+        assert daemon._cursor_do_toque is None
