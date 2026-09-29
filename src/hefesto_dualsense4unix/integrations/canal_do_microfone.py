@@ -145,7 +145,6 @@ lido do dono, e quem reconhece continua sendo aquela peça.
 
 from __future__ import annotations
 
-import functools
 import logging
 import subprocess
 import threading
@@ -642,14 +641,14 @@ def abrir(
         ja = _DE_PE.get(uniq)
         if ja is not None:
             return ja
-        # O LUGAR do canal (`hefesto.lugar`), lido do dono do assento no
-        # mesmo instante do rótulo — A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-
-        # CHEGAM-AO-RADIO-01. A fábrica da régua troca o mecanismo inteiro.
-        construir = fabrica or functools.partial(
-            SourceVirtualPipeWire, lugar=numero_do_assento(uniq)
-        )
+        construir = fabrica or SourceVirtualPipeWire
         try:
             source = construir(nome=nome, descricao=descricao)
+            # O LUGAR do canal (`hefesto.lugar`), lido do dono do assento no
+            # mesmo instante do rótulo, antes do `iniciar` que o publica —
+            # A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-CHEGAM-AO-RADIO-01. Quem o
+            # sabe é o canal: o nó só conhece o nome, e não o controle.
+            source.lugar = numero_do_assento(uniq)
             if not source.iniciar():
                 return None
         except Exception:  # o gesto dela não vira traceback
