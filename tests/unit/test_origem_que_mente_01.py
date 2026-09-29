@@ -243,12 +243,12 @@ def test_o_restore_do_mouse_nao_finge_ser_gesto() -> None:
     "tudo é gesto dela", que é exatamente o defeito de origem, agora escrito de
     propósito.
 
-    ONDE ELE MORA HOJE — POINT-AND-CLICK-01, 17/09/2026. Ele saiu do
-    `plan_mode_transition` (o terceiro passo do modo desktop passou a ser o
-    `desktop.arranjo.apply`, que lê o PERFIL) e virou o RECUO dentro do daemon,
-    para o perfil que não opina sobre o mouse. A régua foi atrás dele: o
-    chamador agora é `Daemon.restore_mouse_preference`, e a pergunta é a mesma —
-    aquele caminho continua carimbando `origin="profile"`.
+    ONDE ELE MORA HOJE. Em 17/09/2026 (POINT-AND-CLICK-01) ele saiu do plano
+    da transição, que passou a chamar o `desktop.arranjo.apply` (lê o PERFIL);
+    em 29/09 (O-MOUSE-SEGUE-A-NAVEGACAO-01) o arranjo parou de recuar para ele
+    e lê só as velocidades da flag de sessão. Sobrou o método IPC, cujo corpo é
+    `Daemon.restore_mouse_preference`, e a pergunta é a mesma — aquele caminho
+    continua carimbando `origin="profile"`.
     """
     texto = (
         RAIZ / "src" / "hefesto_dualsense4unix" / "daemon/lifecycle.py"
@@ -256,8 +256,8 @@ def test_o_restore_do_mouse_nao_finge_ser_gesto() -> None:
     # O RECORTE É O MÉTODO, e só ele: a fronteira é o próximo `def` no mesmo
     # nível de indentação. Ancorar no NOME do método seguinte deixaria a régua
     # refém da ordem do arquivo — foi assim que este recorte passou a engolir
-    # `aplicar_o_arranjo_do_desktop`, que usa `origin="manual"` de propósito no
-    # socorro do PS + R3.
+    # `aplicar_o_arranjo_do_desktop`, que carimba `origin="manual"` quando o
+    # pedido declara o gesto dela.
     inicio = texto.index("def restore_mouse_preference")
     bloco = texto[inicio : texto.index("\n    def ", inicio)]
     assert 'origin="profile"' in bloco, (
@@ -276,8 +276,8 @@ def test_o_arranjo_do_desktop_declara_a_origem() -> None:
     ORIGEM-QUE-MENTE-01 é assimétrico de propósito: **"manual" só quando o
     cliente DIZ que é manual**. O `desktop.arranjo.apply` é o clique dela no
     chip Navegação, e sem a declaração o daemon o lê como reconciliação — o
-    lock de 30 s de `apply_profile_mouse` não é furado e o perfil que ela
-    acabou de pedir é adiado sem nada na tela dizer por quê.
+    mouse liga sem o carimbo do lock manual de 30 s, e o modo `desktop` não
+    vai ao perfil ativo (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01): a escolha se perde.
     """
     texto = (
         RAIZ / "src" / "hefesto_dualsense4unix" / "app/actions/mode_transition.py"
