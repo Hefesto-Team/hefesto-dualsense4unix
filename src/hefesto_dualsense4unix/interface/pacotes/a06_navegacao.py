@@ -14,9 +14,9 @@ troca.
 FATO SUBSTITUÍDO (06/09/2026): esta linha dizia que o `ps_button_action` da
 config é *"o único pedaço ajustável"* e que *"método de IPC nenhum escreve"*.
 As duas metades caíram. **Escreve** — `daemon.reload` aceita `config_overrides`
-com qualquer campo do `DaemonConfig` (`ipc_handlers.py:6197`, a leitura dos
+com qualquer campo do `DaemonConfig` (`ipc_handlers.py:6228`, a leitura dos
 overrides) e aplica com `replace(config, **overrides)` + `reload_config`
-(`:6209-6210`); o que ele NÃO faz é gravar em disco, então a escolha morre no
+(`:6240-6241`); o que ele NÃO faz é gravar em disco, então a escolha morre no
 próximo start do daemon. E **deixou de ser o único ajustável**: desde a
 ONDA5-06-01 o toque solo no PS tem dono no PERFIL
 (`Profile.button_actions["ps"]`), que VENCE o degrau da máquina — a precedência
@@ -4023,7 +4023,7 @@ def padrao_remapeamento(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
 #:
 #: 1. o handler diz o lugar dele com todas as letras — *"entra na transição de
 #:    modo (`app/actions/mode_transition.py`), **nunca em um botão solto**"*
-#:    (`daemon/ipc_handlers.py:5041`);
+#:    (`daemon/ipc_handlers.py:7095-7096`);
 #: 2. ele devolve a preferência PERSISTIDA — não "o de fábrica" nem "o que a
 #:    tela mostra" —, então pendurá-lo num "Voltar ao padrão" faria o botão
 #:    prometer uma coisa e fazer outra;
@@ -4058,9 +4058,9 @@ SEM_GESTO = {
     # FATO AFINADO (terceira leva, 01/09/2026): esta entrada dizia que "método
     # de IPC nenhum escreve" o `ps_button_action`. Escreve — `daemon.reload`
     # aceita `config_overrides` com qualquer campo do `DaemonConfig`
-    # (`ipc_handlers.py:6197`). O que ele NÃO faz é gravar: o handler roda
+    # (`ipc_handlers.py:6228`). O que ele NÃO faz é gravar: o handler roda
     # `replace(config, **overrides)` e `reload_config(...)` e para aí
-    # (`:6209-6210`), então a escolha morre no próximo start do daemon. E o
+    # (`:6240-6241`), então a escolha morre no próximo start do daemon. E o
     # `ps_button_action` é do PS SOLO, não dos combos — a tabela desta tela é dos
     # cinco COMBOS.
     #

@@ -3637,8 +3637,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #
 # O QUE TEM DONO, medido nos 39 métodos do `ipc_server` em 01/09/2026:
 #
-#   🎙  data-mudo="microfone"      `mic.set`      (ipc_handlers.py:6319)
-#   ♪   data-mudo="alto-falante"   `speaker.set`  (ipc_handlers.py:5997)
+#   🎙  data-mudo="microfone"      `mic.set`      (ipc_handlers.py:6529)
+#   ♪   data-mudo="alto-falante"   `speaker.set`  (ipc_handlers.py:6275)
 #   Sons do jogo  data-rota="jogo" `speaker.set`  com `rota`, o mesmo :4589
 #   Virtual / Nativo  data-mic-modo  `machine.declare` (ipc_handlers.py:7182)
 #
@@ -4397,16 +4397,16 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     o desenho não tem.
 
     **São métodos diferentes, e não é detalhe.** O `mic.set` é o MUDO NO
-    FIRMWARE (camada 3, `ipc_handlers.py:6319`): é o único que apaga a luz
+    FIRMWARE (camada 3, `ipc_handlers.py:6529`): é o único que apaga a luz
     vermelha do plástico, e a partir dele o botão físico do controle deixa de
     valer — é o que o `title` do desenho já promete. O `speaker.set` manda ZERO
-    ao alto-falante guardando o volume preferido (`ipc_handlers.py:5997`).
+    ao alto-falante guardando o volume preferido (`ipc_handlers.py:6275`).
     Trocar um pelo outro calaria a coisa errada.
 
     ALTERNAR EXIGE LER O ESTADO, e ele vem do daemon, nunca de memória nossa:
     `audio.mic_mudo` é LEITURA do byte que vem em todo report de input, e
     `speaker.muted` é o que nós mandamos (o aparelho não devolve). Guardar o
-    valor enviado como se fosse leitura é o hábito que o `ipc_bridge.py:1141`
+    valor enviado como se fosse leitura é o hábito que o `ipc_bridge.py:1235-1236`
     nomeia como o que *"fez a tela parecer mentirosa quando ela nunca mentiu"*.
 
     `mic_set(False)` NÃO devolve a posse ao `hid-playstation` — isso é
@@ -4501,7 +4501,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         #
         # A FRASE É DO PRODUTO, e nenhuma nasce aqui: `frase_do_alvo_do_mic`
         # (`app/widgets/controller_card.py:2346`) é a dona dos três estados, e
-        # `alvo_honrado` (`app/ipc_bridge.py:1190`) é quem os lê do corpo. Os
+        # `alvo_honrado` (`app/ipc_bridge.py:1193`) é quem os lê do corpo. Os
         # dois devolvem "nada a dizer" para `True` e para `None` de propósito —
         # *"não sei" não é "não honrei"*, e inventar a confissão por ausência de
         # notícia acusaria o produto de um erro que ninguém mediu.
