@@ -121,3 +121,33 @@ def test_a_declaracao_isenta_so_a_linha_dela_e_a_velha_reprova(tmp_path: Path) -
 def test_a_arvore_de_hoje_passa() -> None:
     r = _rodar(RAIZ)
     assert r.returncode == 0, r.stdout
+
+
+def test_o_que_a_lista_promete_varrer_existe(tmp_path: Path) -> None:
+    """Um arquivo da lista que muda de nome não sai da varredura calado.
+
+    Na árvore de mentira vazia, os quatro arquivos e as duas pastas faltam; na
+    do projeto, nada falta. Mordida: tirar o `ausentes` do `main` deixa o caso
+    de baixo verde com um nome que não existe na lista.
+    """
+    modulo = _modulo()
+    assert sorted(modulo.ausentes(tmp_path)) == sorted(
+        [
+            "README.md",
+            "NOTICE",
+            "CHANGELOG.md",
+            "flatpak/io.github.hefesto_team.hefesto_dualsense4unix.metainfo.xml",
+            "docs/usage",
+            ".github",
+        ]
+    )
+    assert modulo.ausentes(RAIZ) == []
+
+
+def test_um_nome_da_lista_que_sumiu_reprova_na_arvore_do_projeto(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    modulo = _modulo()
+    monkeypatch.setattr(modulo, "ARQUIVOS", (*modulo.ARQUIVOS, "NAO-EXISTE.md"))
+    assert modulo.main([]) == 1
+    assert "NAO-EXISTE.md: está na lista do que se varre e não existe" in capsys.readouterr().out

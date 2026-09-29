@@ -129,6 +129,19 @@ def arquivos_varridos(raiz: Path) -> list[Path]:
     return [c for c in achados if c.relative_to(raiz).as_posix() not in EXCLUIDOS]
 
 
+def ausentes(raiz: Path) -> list[str]:
+    """O que a lista promete varrer e não está no disco.
+
+    Um arquivo renomeado (o metainfo muda de nome junto com o id do Flatpak,
+    por exemplo) sairia da varredura calado, e o portão seguiria verde sobre um
+    texto que ele não lê mais. Na árvore do projeto isso reprova; na árvore de
+    mentira da mordida, não, porque ela só monta o que o caso pede.
+    """
+    faltam = [r for r in ARQUIVOS if not (raiz / r).is_file()]
+    faltam += [p for p, _ in PASTAS if not (raiz / p).is_dir()]
+    return faltam
+
+
 def medir(
     raiz: Path,
     declarados: dict[tuple[str, str], str] | None = None,
@@ -157,11 +170,20 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     parser.add_argument("--raiz", type=Path, default=RAIZ_PADRAO)
     args = parser.parse_args(argv)
-    achados, velhas = medir(args.raiz.resolve())
+    raiz = args.raiz.resolve()
+    achados, velhas = medir(raiz)
+    faltam = ausentes(raiz) if raiz == RAIZ_PADRAO else []
     for achado in achados:
         print(achado)
     for arquivo, linha in velhas:
         print(f"{arquivo}: declaração que não casa mais nada: {linha[:120]}")
+    for relativo in faltam:
+        print(
+            f"{relativo}: está na lista do que se varre e não existe; se mudou de "
+            "nome, corrija ARQUIVOS ou PASTAS neste script"
+        )
+    if faltam and not (achados or velhas):
+        return 1
     if achados or velhas:
         print(
             f"\n{len(achados)} trecho(s) do texto público com o vocabulário de quem "
