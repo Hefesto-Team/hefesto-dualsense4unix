@@ -23,7 +23,7 @@
 # DualShock 4 (USB e BT, `-EINVAL` num relatório inválido), e o módulo daqui as
 # DESFAZIA em silêncio. É o defeito que o pino do `uhid` existe para impedir. A
 # série (0001, 0002, 0003) aplicou sem deslocamento sobre o v7.1.5, porque as
-# duas verificações ficam depois de todos os pedaços dela.
+# duas verificações ficam depois de todos os pedaços da série.
 #
 # O hid-ids.h NÃO mudou de commit: é o do POP_LINUX_COMMIT_HID_IDS_H (o mesmo
 # do pacote hid-nintendo, byte a byte). O do v7.1.5 difere em 51 linhas, e
@@ -47,7 +47,7 @@
 # O QUE O srcversion DIZ, e é outra pergunta: entre dois builds FORA da árvore
 # do MESMO .c ele se repete. Medido em 28/09/2026: o .c de 10/09 (SHA256
 # 4e7b30c6…, sem a marca) compilado aqui dá CFB81A3D4C7FAA41489CCBD, o mesmo do
-# módulo carregado na máquina dela. É por isso que SRCVERSION_DO_0003_SEM_A_MARCA
+# módulo carregado na máquina de referência. É por isso que SRCVERSION_DO_0003_SEM_A_MARCA
 # existe: o módulo de 10/09 a 28/09 TEM a guarda do áudio e não tem a marca, e o
 # daemon o reconhece por ele até o próximo boot carregar o novo (o
 # `daemon/subsystems/bt_mic.py` guarda a mesma lista, e uma régua cobra os dois).

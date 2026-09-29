@@ -23,7 +23,7 @@ mas o PID do DualShock 4, e por isso continua externo.
 
 ### O que o modo DirectInput/PS4 custa
 
-- **Não há luz de jogador**: o DualShock 4 usa a barra de luz no lugar da luz de jogador.
+- **Não há luz de jogador**: o DualShock 4 só tem a barra de luz.
 - **O endereço Bluetooth muda com o modo.** Cada modo é um pareamento, e o
   Hefesto vê os dois como controles diferentes. Se os números saírem trocados,
   use **Reconectar Controles**, na aba Jogar.
