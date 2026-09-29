@@ -1228,8 +1228,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #
 # NENHUM DELES FALA COM O DAEMON, e isto os separa de todos os outros gestos
 # desta casa: o wrapper vive no `localconfig.vdf` da Steam e na lista
-# `jogos_sem_wrapper.txt`, dois arquivos em disco. `pacotes.daemon.metodos()`
-# não traz UM método que os toque — por isso `PONTE` e `METODOS` ficam vazios, e
+# `jogos_sem_wrapper.txt`, dois arquivos em disco. O inventário do daemon
+# (`tests/unit/inventario_do_daemon.metodos()`) não traz UM método que os toque — por isso `PONTE` e `METODOS` ficam vazios, e
 # a prova destes botões é a régua da aba, que cobra o efeito NO ARQUIVO.
 # ---------------------------------------------------------------------------
 from . import gesto  # noqa: E402
@@ -1530,7 +1530,8 @@ def abrir_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     O FATO QUE CAIU, e ele estava escrito no próprio arquivo:
     `SEM_DONO["abrir-lancador"]` dizia *"o daemon não tem método para isso"*.
     É verdade e é a **pergunta errada**. Medido em 03/09/2026:
-    `pacotes.daemon.metodos()` tem **40 métodos**, e o único cujo nome sequer
+    o inventário do daemon (hoje `tests/unit/inventario_do_daemon.metodos()`)
+    tinha **40 métodos**, e o único cujo nome sequer
     sugere abrir algo é `launch_env.refresh` — que regrava o arquivo de
     ambiente de inicialização e não abre janela nenhuma. O IPC de fato não sabe
     abrir a Steam; **o produto sabe**, desde 23/08 e por outro caminho:

@@ -3747,8 +3747,8 @@
         <!-- A COLUNA ATENÇÃO SAIU DAQUI — 07/09/2026, ordem dela: *"em jogar
              remover essa seção do atenção, nenhum aviso esse — deixar só o
              reconectar controles."* Era a `.col-atencao`: o cabeçalho laranja,
-             as `AVISOS_VIVOS` linhas de `aviso-vivo`/`aviso-selo`/`aviso-texto`
-             e a conta `atencao-conta`.
+             as linhas de `aviso-vivo`/`aviso-selo`/`aviso-texto` e a conta
+             `atencao-conta`.
 
              OS QUATRO ENDEREÇOS SAÍRAM DO PACOTE JUNTO, e isso é obrigatório:
              endereço emitido sem elemento onde pousar é órfão, e o
@@ -3896,7 +3896,7 @@
       nome da <b>máscara</b>, numa fileira em que os outros também são o Hefesto.</li>
     <li><b>O Xbox chegou à tela pela primeira vez</b> — <code>Ponte(gamepad, xbox)</code> é o
       <b>segundo</b> degrau que o produto tenta, e nenhum chip o nomeava. Era exatamente o que
-      <code>painel.degraus_sem_chip()</code> denunciava: <span class="marca">"um degrau real não
+      a conferência dos degraus denunciava: <span class="marca">"um degrau real não
       tem chip na tela"</span>. Agora tem.</li>
     <li><b>Os algarismos saíram, e é decisão dela de 31/08</b> — a tela escrevia
       <b>③ Steam Input</b>, o produto o tenta em <b>quarto</b>
@@ -3915,16 +3915,16 @@
     <li><b>Nenhum aviso do que se perde</b> — não há "você perde giro", "perde touchpad"
       nem "perde microfone" em máscara nenhuma. A dica diz o que muda de verdade: a máscara
       muda <b>o que o jogo vê</b>, e por isso os botões que ele desenha. O controle na sua
-      mão continua o mesmo — a luz, o gatilho e o giroscópio seguem por conta do Hefesto
-      em qualquer máscara (<code>docs/usage/modos.md</code>). O microfone segue o
+      mão continua o mesmo (<code>docs/usage/modos.md</code>) — a luz, o gatilho e o
+      giroscópio seguem por conta do Hefesto em qualquer máscara. O microfone segue o
       <b>transporte</b>, não a máscara.</li>
     <li><b>"Automático" saiu da máscara</b> — substitui a <code>D-A-MASCARA-GANHA-O-AUTOMATICO</code>
       de 26/08, que o queria como terceira opção ligada. A heurística que o moveria
       (<code>api_de_entrada.py</code>) errou em <b>13 dos 14</b> jogos do seu censo.</li>
     <li><b>"Automático" saiu também do Modo de conexão</b> — sua palavra, 31/08:
       <span class="marca">"na aba jogar o Botão Automático não existe"</span>. E não existe
-      mesmo: ele não tinha <b>leitor</b> (<code>painel.CHIPS_DA_ESCADA</code> o declara com
-      <code>ponte=None</code>, e <code>degrau_vivo</code> só acende comparando pontes — nenhum
+      mesmo: ele não tinha <b>leitor</b> (<code>painel.CHIPS_DA_ESCADA</code> o declarava com
+      <code>ponte=None</code>, e o chip só acendia comparando pontes — nenhum
       estado do produto podia acendê-lo) nem <b>escritor</b> (não há método de IPC que fixe um
       degrau). <b>O mecanismo ficou</b>: tentar na ordem e parar quando acerta é o que o produto
       já faz sozinho, e está dito na dica.</li>

@@ -286,9 +286,10 @@ class TestACorNaAbaSegueOMapa:
         gerado (`canal`, `aciona`, `existe`, `cabo`, `radio`…) ao alcance da
         régua PLANA do portão `casa-sabe` — que conta literal de texto de
         módulo alcançado como referência. Medido: com o import em
-        `secao_controles`, `interface/pacotes/mapa.py::canal` passou a contar
-        como ALCANÇADA sem ter ganhado um chamador, e o portão reprovou pedindo
-        para apagar uma lápide verdadeira.
+        `secao_controles`, `interface/pacotes/mapa.py::canal` (o leitor do mapa
+        que saiu em 29/09/2026) passou a contar como ALCANÇADA sem ter ganhado
+        um chamador, e o portão reprovou pedindo para apagar uma lápide
+        verdadeira.
 
         Não é proibição eterna: é um preço que quem decidir pagar tem de pagar
         de olho aberto, e com o dono do `casa-sabe` na conversa.

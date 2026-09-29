@@ -23,7 +23,7 @@ aba 01 arma por :func:`armar`: armar uma desarma a outra.
 Steam com relógio próprio.
 
 **NÃO É UM PACOTE DE ABA**: ele não tem ``@registrar`` nem ``@gesto``. É um
-ajudante compartilhado, como ``pacotes/perfil.py`` e ``pacotes/mapa.py``.
+ajudante compartilhado, como ``pacotes/perfil.py``.
 """
 from __future__ import annotations
 
