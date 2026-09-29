@@ -4,19 +4,23 @@ Cobre:
 - Cada preset retorna mult correto.
 - Modo Auto respeita battery thresholds (mock battery_pct 80/40/10).
 - Debounce 5s evita flapping em modo auto.
-- rumble.set(100, 200) com policy "economia" aplica (30, 60).
-- RumbleEngine aplica mult via _apply_with_policy.
+- rumble.set(100, 200) com policy "economia" aplica (30, 60), pelo funil VIVO
+  (`daemon.ipc_rumble_policy.apply_rumble_policy`).
 - _handle_rumble_policy_set e _handle_rumble_policy_custom do IPC.
 """
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto_dualsense4unix.core.rumble import RumbleEngine, _effective_mult
+from hefesto_dualsense4unix.core.controller import ControllerState
+from hefesto_dualsense4unix.core.rumble import _effective_mult
+from hefesto_dualsense4unix.daemon.ipc_rumble_policy import apply_rumble_policy
 from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
+from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
 
 # 11/08/2026: os degraus eram números escritos à mão aqui (0.7 para o
@@ -224,22 +228,33 @@ class TestAutoDebounce:
 # ---------------------------------------------------------------------------
 
 class TestRumbleSetComPolitica:
-    """rumble.set(100, 200) com policy 'economia' aplica (30, 60)."""
+    """rumble.set(100, 200) com policy 'economia' aplica (30, 60).
+
+    PELO FUNIL VIVO desde 28/09/2026. Estes seis casos rodavam sobre o
+    ``RumbleEngine``, uma classe que o daemon nunca construiu; ela saiu da
+    árvore (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01), e as réguas passaram ao dono:
+    ``apply_rumble_policy``, a rota do ``rumble.set`` e do "Aplicar". O daemon
+    aqui é o mínimo que ela lê, com o ``StateStore`` DE VERDADE no lugar do
+    estado do controle, para a bateria chegar pelo mesmo caminho do produto.
+    """
+
+    @staticmethod
+    def _daemon(cfg: DaemonConfig | None, bateria: int | None = None) -> SimpleNamespace:
+        store = StateStore()
+        if bateria is not None:
+            store.update_controller_state(
+                ControllerState(
+                    battery_pct=bateria, l2_raw=0, r2_raw=0, connected=True,
+                    transport="usb",
+                )
+            )
+        return SimpleNamespace(config=cfg, store=store)
 
     def test_economia_aplica_mult_30(self) -> None:
-        controller = MagicMock()
-        engine = RumbleEngine(controller, time_fn=lambda: 1.0)
-        cfg = _config("economia")
-
-        # Injeta referência ao config (sem state_ref — fallback para battery 50).
-        engine.link(cfg, None)
-
-        engine.set(100, 200)
-        applied = engine.tick()
-
-        assert applied is not None
+        # Sem controle no estado: a bateria cai no neutro de 50.
+        daemon = self._daemon(_config("economia"))
         # 100 * 0.3 = 30, 200 * 0.3 = 60
-        controller.set_rumble.assert_called_once_with(weak=30, strong=60)
+        assert apply_rumble_policy(daemon, 100, 200) == (30, 60)
 
     def test_balanceado_entrega_o_que_o_jogo_pediu(self) -> None:
         """Era `test_balanceado_aplica_mult_70`, com o 0.7 no NOME.
@@ -248,78 +263,41 @@ class TestRumbleSetComPolitica:
         teste passou a mentir antes mesmo do corpo. O que ele prova agora é
         a promessa do tooltip: "sem aumentar nem diminuir".
         """
-        controller = MagicMock()
-        engine = RumbleEngine(controller, time_fn=lambda: 1.0)
-        cfg = _config("balanceado")
-        engine.link(cfg, None)
-
-        engine.set(100, 100)
-        engine.tick()
-
+        daemon = self._daemon(_config("balanceado"))
         esperado = round(100 * RUMBLE_POLICY_MULT["balanceado"])
-        controller.set_rumble.assert_called_once_with(
-            weak=esperado, strong=esperado
-        )
+        assert apply_rumble_policy(daemon, 100, 100) == (esperado, esperado)
 
     def test_max_amplifica(self) -> None:
         """Era `test_max_sem_alteracao`, e o nome contava a história certa
         do produto de então: o "Máximo" valia 1,0 e não alterava NADA. Em
         11/08/2026 ele passou a amplificar, e o nome virou o oposto do que
-        o botão faz. Satura em 255 — é o que o `_clamp` garante."""
-        controller = MagicMock()
-        engine = RumbleEngine(controller, time_fn=lambda: 1.0)
-        cfg = _config("max")
-        engine.link(cfg, None)
-
-        engine.set(100, 200)
-        engine.tick()
-
+        o botão faz. Satura em 255."""
+        daemon = self._daemon(_config("max"))
         mult = RUMBLE_POLICY_MULT["max"]
-        controller.set_rumble.assert_called_once_with(
-            weak=min(255, round(100 * mult)), strong=min(255, round(200 * mult))
+        assert apply_rumble_policy(daemon, 100, 200) == (
+            min(255, round(100 * mult)), min(255, round(200 * mult))
         )
         assert mult > 1.0, 'um botão chamado "Máximo" tem de aumentar'
 
     def test_clamp_resultado(self) -> None:
-        """Resultado é clampado em [0, 255]."""
-        controller = MagicMock()
-        engine = RumbleEngine(controller, time_fn=lambda: 1.0)
-        cfg = _config("max")
-        engine.link(cfg, None)
+        """Resultado é recortado em [0, 255]."""
+        daemon = self._daemon(_config("max"))
+        assert apply_rumble_policy(daemon, 255, 255) == (255, 255)
 
-        engine.set(255, 255)
-        engine.tick()
-
-        controller.set_rumble.assert_called_once_with(weak=255, strong=255)
-
-    def test_sem_link_usa_mult_1(self) -> None:
-        """Sem link(), engine aplica mult 1.0 (modo legacy)."""
-        controller = MagicMock()
-        engine = RumbleEngine(controller, time_fn=lambda: 1.0)
-
-        engine.set(100, 200)
-        engine.tick()
-
-        controller.set_rumble.assert_called_once_with(weak=100, strong=200)
+    def test_sem_config_entrega_o_pedido_intocado(self) -> None:
+        """Daemon sem config: o funil devolve o que o jogo pediu."""
+        assert apply_rumble_policy(self._daemon(None), 100, 200) == (100, 200)
 
     def test_auto_com_bateria_baixa(self) -> None:
-        """Modo auto + battery 10% -> mult 0.3."""
-        controller = MagicMock()
-        engine = RumbleEngine(controller, time_fn=lambda: 1.0)
-        cfg = _config("auto")
-
-        state_ref = MagicMock()
-        state_ref.battery_pct = 10
-        engine.link(cfg, state_ref)
-        # Inicializa debounce como primeira mudança (last_change_at == 0.0).
-        engine._last_auto_change_at = 0.0
-        engine._last_auto_mult = 0.7
-
-        engine.set(100, 200)
-        engine.tick()
+        """Modo auto + battery 10% -> mult 0.3, e a memória do debounce anda."""
+        daemon = self._daemon(_config("auto"), bateria=10)
+        # O primeiro tique: nenhuma mudança anterior (last_change_at == 0.0).
+        daemon._last_auto_change_at = 0.0
+        daemon._last_auto_mult = 0.7
 
         # 100 * 0.3 = 30, 200 * 0.3 = 60
-        controller.set_rumble.assert_called_once_with(weak=30, strong=60)
+        assert apply_rumble_policy(daemon, 100, 200) == (30, 60)
+        assert daemon._last_auto_mult == pytest.approx(0.3)
 
 
 # ---------------------------------------------------------------------------
@@ -443,50 +421,3 @@ class TestIpcHandlers:
         assert "rumble_policy_custom_mult" in result
         assert "rumble_mult_applied" in result
         assert result["rumble_mult_applied"] == pytest.approx(0.3)
-
-
-# ---------------------------------------------------------------------------
-# Encapsulamento: RumbleEngine.update_auto_state
-# ---------------------------------------------------------------------------
-
-class TestUpdateAutoState:
-    """AUDIT-FINDING-RUMBLE-POLICY-DEDUP-01 — método público substitui
-    writeback direto de campos privados por chamadores externos.
-    """
-
-    def test_atualiza_campos_auto_e_mult_applied_default(self) -> None:
-        """Sem mult_applied explícito, usa auto_mult nos três campos."""
-        controller = MagicMock()
-        engine = RumbleEngine(controller)
-        engine.update_auto_state(0.3, 123.0)
-        assert engine._last_auto_mult == pytest.approx(0.3)
-        assert engine._last_auto_change_at == pytest.approx(123.0)
-        assert engine.last_mult_applied == pytest.approx(0.3)
-
-    def test_mult_applied_explicito_difere_de_auto_mult(self) -> None:
-        """Policies fixas: mult efetivo aplicado difere do auto debounce state."""
-        controller = MagicMock()
-        engine = RumbleEngine(controller)
-        # Simula auto debounce em 0.7 mas policy fixa 'economia' aplicando 0.3.
-        engine.update_auto_state(0.7, 200.0, mult_applied=0.3)
-        assert engine._last_auto_mult == pytest.approx(0.7)
-        assert engine._last_auto_change_at == pytest.approx(200.0)
-        assert engine.last_mult_applied == pytest.approx(0.3)
-
-    def test_substitui_writeback_direto(self) -> None:
-        """Prova funcional: mesmo efeito que o writeback direto antigo."""
-        controller = MagicMock()
-        engine_a = RumbleEngine(controller)
-        engine_b = RumbleEngine(controller)
-
-        # Método público (novo).
-        engine_a.update_auto_state(1.0, 42.5, mult_applied=0.55)
-
-        # Writeback direto (antigo — agora proibido fora de core/rumble.py).
-        engine_b._last_auto_mult = 1.0
-        engine_b._last_auto_change_at = 42.5
-        engine_b._last_mult_applied = 0.55
-
-        assert engine_a._last_auto_mult == engine_b._last_auto_mult
-        assert engine_a._last_auto_change_at == engine_b._last_auto_change_at
-        assert engine_a.last_mult_applied == engine_b.last_mult_applied

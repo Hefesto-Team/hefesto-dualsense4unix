@@ -22,9 +22,10 @@ os DOIS defeitos. Por isso o primeiro bloco deste arquivo mede as duas coisas
 separadamente: que alguém chama, e que o report SAI.
 
 A vibração é o caso diferente dos quatro: ``RumbleEngine.last_applied`` não
-tinha chamador porque a **classe inteira** não é instanciada pelo daemon real
+tinha chamador porque a **classe inteira** não era instanciada pelo daemon real
 (o próprio ``ipc_handlers`` já registrava isso: *"o antigo `_rumble_engine` NÃO
-é instanciado no daemon real"*). Fiá-la seria fiar um objeto morto. O que
+é instanciado no daemon real"*), e ela saiu da árvore em 28/09/2026. Fiá-la
+seria fiar um objeto morto. O que
 respondia à pergunta dela — *"a vibração saiu do nosso lado?"* — passou a ser
 medido no caminho VIVO (``apply_game_rumble``), e é isso que o bloco 5 tranca.
 

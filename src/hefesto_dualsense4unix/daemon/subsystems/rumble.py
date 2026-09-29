@@ -64,7 +64,7 @@ TETO_DO_RUMBLE_FIXADO_S = 3.0
 #: todos com o mesmo recorte — ``reassert_rumble`` logo abaixo (rumble fixado),
 #: ``daemon.ipc_rumble_policy.apply_rumble_policy`` (o ``rumble.set`` da aba e o
 #: "Aplicar" do rodapé) e ``daemon.subsystems.gamepad.apply_game_rumble`` (o
-#: rumble do JOGO). ``core.rumble._clamp`` faz o mesmo no ``RumbleEngine``.
+#: rumble do JOGO).
 #:
 #: **O 2,0 FOI CONSIDERADO E DESCARTADO POR ELA**, no mesmo 11/08, e o motivo é
 #: a medição da nota SATURA-01 — que não caducou: ela VENCEU EM PARTE. Rodando

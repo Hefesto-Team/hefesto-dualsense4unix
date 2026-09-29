@@ -30,11 +30,13 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto_dualsense4unix.core.rumble import RumbleEngine, _effective_mult
+from hefesto_dualsense4unix.core.rumble import _effective_mult
+from hefesto_dualsense4unix.daemon.ipc_rumble_policy import apply_rumble_policy
 from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 from hefesto_dualsense4unix.daemon.subsystems.rumble import (
     RUMBLE_POLICY_MULT,
@@ -102,23 +104,15 @@ def test_balanceado_entrega_exatamente_o_que_o_jogo_pediu() -> None:
     mult, _, _ = _effective_mult(_config("balanceado"), 80, 1.0, 1.0, 0.0)
     assert mult == pytest.approx(1.0)
 
-    controller = MagicMock()
-    engine = RumbleEngine(controller, time_fn=lambda: 1.0)
-    engine.link(_config("balanceado"), None)
-    engine.set(200, 137)
-    engine.tick()
-    controller.set_rumble.assert_called_once_with(weak=200, strong=137)
+    daemon = SimpleNamespace(config=_config("balanceado"), store=None)
+    assert apply_rumble_policy(daemon, 200, 137) == (200, 137)
 
 
 def test_maximo_amplifica_acima_do_que_o_jogo_pediu() -> None:
-    controller = MagicMock()
-    engine = RumbleEngine(controller, time_fn=lambda: 1.0)
-    engine.link(_config("max"), None)
-    engine.set(100, 60)
-    engine.tick()
+    daemon = SimpleNamespace(config=_config("max"), store=None)
     mult = RUMBLE_POLICY_MULT["max"]
-    controller.set_rumble.assert_called_once_with(
-        weak=round(100 * mult), strong=round(60 * mult)
+    assert apply_rumble_policy(daemon, 100, 60) == (
+        round(100 * mult), round(60 * mult)
     )
 
 
@@ -139,14 +133,8 @@ def test_amplificar_satura_em_255_e_nunca_da_a_volta(bruto: int) -> None:
         "o bruto escolhido tem de estourar o teto, senão o teste não fala de "
         "saturação nenhuma"
     )
-    controller = MagicMock()
-    engine = RumbleEngine(controller, time_fn=lambda: 1.0)
-    engine.link(_config("max"), None)
-    engine.set(bruto, bruto)
-    engine.tick()
-
-    kwargs = controller.set_rumble.call_args.kwargs
-    for valor in (kwargs["weak"], kwargs["strong"]):
+    daemon = SimpleNamespace(config=_config("max"), store=None)
+    for valor in apply_rumble_policy(daemon, bruto, bruto):
         assert valor == 255, "acima do teto, o motor tem de ficar NO teto"
         assert 0 <= valor <= 255, "o valor tem de caber num byte de motor"
 
@@ -157,7 +145,7 @@ def test_o_caminho_do_rumble_fixado_tambem_satura() -> None:
     Duas conclusões numa: a intensidade vale também para a vibração fixada
     (o rodapé da aba diz isso, e é ele quem tem razão — `docs/usage/modos.md`
     dizia o contrário até 11/08/2026), e o recorte existe nos dois caminhos,
-    não só no `RumbleEngine`.
+    não só no `apply_rumble_policy` do `rumble.set`.
     """
     daemon = MagicMock()
     daemon.config = _config("max")

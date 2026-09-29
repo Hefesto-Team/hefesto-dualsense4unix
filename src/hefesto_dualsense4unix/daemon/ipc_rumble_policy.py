@@ -10,12 +10,11 @@ rodapé), o tique de 200 ms do poll loop (`subsystems/rumble.reassert_rumble`) e
 o force-feedback do jogo (`subsystems/gamepad._game_rumble_mult`).
 
 **FATO ERRADO, SUBSTITUÍDO em 26/08/2026:** estas linhas diziam depender de
-`RumbleEngine.update_auto_state` (AUDIT-FINDING-RUMBLE-POLICY-DEDUP-01). O
-`daemon._rumble_engine` **nunca é instanciado no daemon real** — a irmã desta
-frase em `ipc_handlers.py` já registrava isso desde então. Consequência medida:
-a leitura caía sempre em 0,7/0,0 e o writeback era jogado fora pelo
-`if rumble_engine is not None`, então esta rota tinha uma SEGUNDA conta do mesmo
-número. A intensidade que ela sente pulava conforme qual rota mexeu por último.
+um `daemon._rumble_engine` que **nunca foi instanciado no daemon real**.
+Consequência medida: a leitura caía sempre em 0,7/0,0 e o writeback era jogado
+fora, então esta rota tinha uma SEGUNDA conta do mesmo número. A intensidade
+que ela sente pulava conforme qual rota mexeu por último. A classe daquele
+atributo (`core.rumble.RumbleEngine`) saiu da árvore em 28/09/2026.
 """
 from __future__ import annotations
 

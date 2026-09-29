@@ -1,52 +1,32 @@
-"""Motor de rumble com throttle anti-spam e política de intensidade.
-
-Rumble passado do jogo (via UDP ou passthrough) pode chegar a centenas de
-Hz. Aplicar cada atualização esgota a bateria, satura o motor HID e
-deteriora os motors pequenos do DualSense. `RumbleEngine` agrupa os
-comandos recebidos numa janela curta e aplica só o último a cada tick
-de saída.
+"""A política de intensidade da vibração: o funil por onde passa todo pedido.
 
 FEAT-RUMBLE-POLICY-01: política de intensidade global (economia/balanceado/
 max/auto/custom) aplica multiplicador sobre weak e strong antes de enviar ao
 hardware. O multiplicador do modo "auto" usa a bateria do estado mais recente
 com debounce de 5s para evitar oscilação em limiar de threshold.
 
-Uso:
-    engine = RumbleEngine(controller, min_interval_sec=0.02)
-    engine.set(weak=80, strong=150)    # pode ser chamado 1000x/s
-    # tick() é chamado pelo poll loop do daemon e aplica se janela
-    # estourou. Também aplica automaticamente quando weak+strong cai
-    # para 0 (garantir desligamento imediato).
+O funil é `_effective_mult`, e as três rotas de vibração o chamam:
+`daemon.ipc_rumble_policy.apply_rumble_policy` (o `rumble.set` e o "Aplicar"),
+`daemon.subsystems.rumble.reassert_rumble` (o rumble fixado, no tique) e
+`daemon.subsystems.gamepad._game_rumble_mult` (o force-feedback do jogo). A
+memória do debounce do "auto" é a do daemon (`_last_auto_mult` /
+`_last_auto_change_at`).
+
+O `RumbleEngine` (throttle de 50 Hz com `link()` e `tick()`) SAIU em 28/09/2026
+(O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01): o daemon nunca o construiu, e o funil
+acima o substituiu. As réguas que ele carregava passaram ao funil vivo.
 """
 from __future__ import annotations
 
 import contextlib
-import time
-from collections.abc import Callable
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from hefesto_dualsense4unix.core.controller import IController
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 
 logger = get_logger(__name__)
-
-DEFAULT_MIN_INTERVAL_SEC = 0.02  # 50Hz ceiling para motores HID
-RUMBLE_MIN = 0
-RUMBLE_MAX = 255
-
-
-@dataclass
-class RumbleCommand:
-    weak: int
-    strong: int
-
-    def is_stop(self) -> bool:
-        return self.weak == 0 and self.strong == 0
-
 
 #: CONFIG-05 (22/08/2026): a única chave de orçamento da mesa que IMPÕE teto
 #: hoje. As outras três não impõem nenhum, e por dois motivos diferentes:
@@ -318,173 +298,6 @@ def _effective_mult(
     return fallback, fallback, last_auto_change_at
 
 
-class RumbleEngine:
-    """Throttle com política de intensidade (FEAT-RUMBLE-POLICY-01).
-
-    Guarda o último comando pedido; `tick(now)` aplica se o intervalo
-    estourou OU se o comando é stop (0,0). Em stop o throttle é ignorado
-    para garantir desligamento imediato quando o jogo solta o gatilho.
-
-    A política de rumble é aplicada pelo método `_apply_with_policy` antes
-    de enviar ao hardware. Requer `link(config, state_ref)` para funcionar
-    em modo não-default.
-
-    **ESTA CLASSE NÃO É INSTANCIADA EM `src/`** (medido em 12/08/2026, remedido
-    em 26/08). Ela tem lápide própria em
-    `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`. As duas frases que
-    afirmavam o contrário — em `daemon/ipc_handlers.py` e em
-    `daemon/ipc_rumble_policy.py` — foram substituídas pela informação certa
-    (24/08 e 26/08). Quem for ligar a política de vibração NÃO começa por aqui:
-    o funil vivo é `_effective_mult`, logo acima, e as três rotas que o chamam.
-    """
-
-    def __init__(
-        self,
-        controller: IController,
-        min_interval_sec: float = DEFAULT_MIN_INTERVAL_SEC,
-        *,
-        time_fn: Callable[[], float] | None = None,
-    ) -> None:
-        self._controller = controller
-        self._min_interval = min_interval_sec
-        self._time = time_fn or time.monotonic
-        self._pending: RumbleCommand | None = None
-        self._last_applied: RumbleCommand | None = None
-        self._last_applied_at: float = 0.0
-        # Referências injetadas via link() para aplicar política.
-        self._config: Any | None = None
-        self._state_ref: Any | None = None
-        # Debounce do modo "auto".
-        self._last_auto_mult: float = 0.7
-        self._last_auto_change_at: float = 0.0
-        # Último mult efetivo para exposição via IPC (daemon.state_full).
-        self._last_mult_applied: float = 1.0
-
-    def link(self, config: DaemonConfig, state_ref: Any) -> None:
-        """Injeta referência ao DaemonConfig e ao estado do controle.
-
-        `state_ref` deve ter atributo `battery_pct: int`; pode ser o objeto
-        ControllerState mais recente guardado pelo poll loop, ou qualquer
-        objeto com duck-typing compatível.
-        """
-        self._config = config
-        self._state_ref = state_ref
-
-    def set(self, weak: int, strong: int) -> None:
-        weak = _clamp(weak)
-        strong = _clamp(strong)
-        self._pending = RumbleCommand(weak=weak, strong=strong)
-
-    def tick(self) -> RumbleCommand | None:
-        """Aplica `pending` se tempo permitir. Retorna o comando aplicado ou None."""
-        if self._pending is None:
-            return None
-
-        now = self._time()
-        cmd = self._pending
-
-        if cmd.is_stop():
-            return self._apply(cmd, now)
-
-        if self._last_applied is None:
-            return self._apply(cmd, now)
-
-        interval = now - self._last_applied_at
-        if interval >= self._min_interval:
-            return self._apply(cmd, now)
-        return None
-
-    def stop(self) -> None:
-        """Forçar desligamento imediato dos motores."""
-        self.set(0, 0)
-        self.tick()
-
-    @property
-    def last_applied(self) -> RumbleCommand | None:
-        return self._last_applied
-
-    @property
-    def last_mult_applied(self) -> float:
-        """Último multiplicador efetivo usado (para daemon.state_full)."""
-        return self._last_mult_applied
-
-    def update_auto_state(
-        self,
-        auto_mult: float,
-        change_at: float,
-        *,
-        mult_applied: float | None = None,
-    ) -> None:
-        """Atualiza o estado de debounce do modo "auto" e o mult efetivo aplicado.
-
-        Encapsula a escrita dos campos privados `_last_auto_mult`,
-        `_last_auto_change_at` e `_last_mult_applied` para quem precise propagar
-        o resultado de `_effective_mult` de volta ao engine sem tocar atributos
-        privados diretamente.
-
-        **FATO ERRADO, SUBSTITUÍDO em 26/08/2026:** estas linhas nomeavam
-        `_apply_rumble_policy` (`daemon/ipc_server.py` → hoje
-        `daemon/ipc_rumble_policy.py`) como o chamador externo. Ele NUNCA
-        chegava aqui: o `daemon._rumble_engine` de que ele dependia não é
-        instanciado em lugar nenhum de `src/`, então a chamada morria no
-        `if rumble_engine is not None`. Aquela rota passou a ler e escrever a
-        memória viva do daemon (`_last_auto_mult` / `_last_auto_change_at`), que
-        é a mesma do poll loop e do rumble do jogo. **Hoje este método não tem
-        chamador em `src/`** — só os testes do encapsulamento o exercitam.
-
-        Args:
-            auto_mult: novo valor do debounce state de auto (último mult alvo
-                confirmado pelo debounce). Para policies fixas, é o mesmo
-                valor que entrou.
-            change_at: timestamp da última mudança de debounce.
-            mult_applied: (opcional) mult efetivo aplicado no hardware nesse
-                ciclo. Para policy "auto", normalmente == auto_mult. Para
-                policies fixas (economia/balanceado/max/custom), difere —
-                nesse caso o chamador passa o mult efetivo aqui; se None,
-                assume `auto_mult`.
-
-        AUDIT-FINDING-RUMBLE-POLICY-DEDUP-01: substitui writeback direto em
-        `rumble_engine._last_auto_*` / `._last_mult_applied` por método público.
-        """
-        self._last_auto_mult = auto_mult
-        self._last_auto_change_at = change_at
-        self._last_mult_applied = mult_applied if mult_applied is not None else auto_mult
-
-    def _compute_mult(self, now: float) -> float:
-        """Calcula multiplicador atual conforme política do config."""
-        if self._config is None:
-            return 1.0
-        battery_pct = 50  # fallback neutro se estado indisponível
-        if self._state_ref is not None:
-            with contextlib.suppress(AttributeError, TypeError, ValueError):
-                battery_pct = int(self._state_ref.battery_pct)
-
-        mult, self._last_auto_mult, self._last_auto_change_at = _effective_mult(
-            config=self._config,
-            battery_pct=battery_pct,
-            now=now,
-            last_auto_mult=self._last_auto_mult,
-            last_auto_change_at=self._last_auto_change_at,
-        )
-        return mult
-
-    def _apply(self, cmd: RumbleCommand, now: float) -> RumbleCommand:
-        mult = self._compute_mult(now)
-        self._last_mult_applied = mult
-        effective_weak = _clamp(round(cmd.weak * mult))
-        effective_strong = _clamp(round(cmd.strong * mult))
-        self._controller.set_rumble(weak=effective_weak, strong=effective_strong)
-        self._last_applied = cmd
-        self._last_applied_at = now
-        self._pending = None
-        return cmd
-
-    @property
-    def mult_applied(self) -> float:
-        """Alias de last_mult_applied — conveniente para testes."""
-        return self._last_mult_applied
-
-
 def pedido_mais_forte(
     atual: tuple[int, int], novo: tuple[int, int]
 ) -> tuple[int, int]:
@@ -514,20 +327,7 @@ def pedido_mais_forte(
     return atual
 
 
-def _clamp(value: int) -> int:
-    if value < RUMBLE_MIN:
-        return RUMBLE_MIN
-    if value > RUMBLE_MAX:
-        return RUMBLE_MAX
-    return value
-
-
 __all__ = [
-    "DEFAULT_MIN_INTERVAL_SEC",
-    "RUMBLE_MAX",
-    "RUMBLE_MIN",
-    "RumbleCommand",
-    "RumbleEngine",
     "_effective_mult",
     "pedido_mais_forte",
     "teto_do_orcamento",
