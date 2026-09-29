@@ -10,10 +10,10 @@ joga fora ~170 ms de uma vez.
 
 A PROVA 0 (29/09, 06h52, sem a orelha dela): um tom de 1300 Hz a 48 kHz pela
 ponte saiu em **1219,35 · 1219,48 · 1219,39 Hz** no microfone de outro
-controle — 1300 × 480/512. É o consumo de 93,75 quadros/s, medido.
+controle — 1300 x 480/512. É o consumo de 93,75 quadros/s, medido.
 
 A CURA, na origem: a fonte do som entrega no ritmo do aparelho, 45 000 Hz, e o
-PipeWire faz o 512→480 no fluxo. A regra é uma só: **taxa da fonte × 512/48000
+PipeWire faz o 512→480 no fluxo. A regra é uma só: **taxa da fonte x 512/48000
 = o que o report lê dela** — 480 para o som, 512 para a háptica.
 
 A REFERÊNCIA DESTA RÉGUA É O FATO MEDIDO, e não a constante do produto: o
@@ -35,7 +35,9 @@ AS MORDIDAS (cada uma feita e devolvida na entrega, com o md5 conferido)
 from __future__ import annotations
 
 import argparse
+import contextlib
 import importlib.util
+import itertools
 import math
 import os
 import stat
@@ -94,10 +96,8 @@ class _Abertura:
 
     def fechar(self) -> None:
         for fd in self._fds:
-            try:
+            with contextlib.suppress(OSError):
                 os.close(fd)
-            except OSError:
-                pass
 
 
 @pytest.fixture
@@ -150,7 +150,7 @@ def _amostras_que_a_fonte_entrega_por_report(taxa: int) -> Fraction:
 
 def _amostras_que_o_som_le_por_report() -> int:
     bomba = af.BombaDeSomPeloRadio(arranjo=af.ARRANJO_PADRAO, fonte=lambda n: bytes(n))
-    return bomba.bytes_de_pcm_por_report // (2 * af.CANAIS_DO_ENCODER)
+    return int(bomba.bytes_de_pcm_por_report // (2 * af.CANAIS_DO_ENCODER))
 
 
 def _fonte_do_som(abertura: _Abertura, **kw: Any) -> list[str]:
@@ -171,7 +171,7 @@ def _fonte_do_som(abertura: _Abertura, **kw: Any) -> list[str]:
 def test_1_a_fonte_do_som_pede_o_ritmo_do_aparelho(
     gravador: str, gravadores: _Abertura, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Taxa da fonte × 512/48000 = as 480 amostras que o report do `0x35` lê.
+    """Taxa da fonte x 512/48000 = as 480 amostras que o report do `0x35` lê.
 
     MORDIDA: a taxa do papel «som» de volta a 48 000 dá 512 ≠ 480.
     """
@@ -300,7 +300,8 @@ def test_3_a_ponte_do_subsystem_sobe_com_o_ritmo_do_aparelho(
     def _embrulhada(id_do_no: str, **kw: Any) -> tuple[Any, Any, str]:
         kw.pop("abrir", None)
         papeis.append(str(kw.get("papel", "som")))
-        return real(id_do_no, abrir=gravadores, **kw)
+        fonte, proc, motivo = real(id_do_no, abrir=gravadores, **kw)
+        return fonte, proc, str(motivo)
 
     class _No:
         def __init__(self, caminho: str) -> None:
@@ -347,7 +348,7 @@ class _CodificadorDeMentira:
     def codificar(self, pcm: bytes) -> bytes | None:
         if len(pcm) != af.BYTES_DE_PCM_POR_QUADRO:
             return None
-        return b"\x01" * af.BYTES_POR_QUADRO_OPUS
+        return bytes(b"\x01" * int(af.BYTES_POR_QUADRO_OPUS))
 
 
 class _Diario:
@@ -377,7 +378,7 @@ SEGUNDOS_DE_RELOGIO = 180.0
 
 
 def _fonte_no_relogio(relogio: _Relogio, taxa: int) -> Any:
-    """Uma fonte com sinal que anda o relógio pelo que entrega: n ÷ (4 × taxa) s.
+    """Uma fonte com sinal que anda o relógio pelo que entrega: n ÷ (4 x taxa) s.
 
     É o que o monitor do nó faz: pedir n bytes estéreo s16 bloqueia até o nó
     ter tocado n ÷ 4 amostras à taxa pedida. Seca em 180 s de relógio.
@@ -432,7 +433,7 @@ def _taxa_da_regua_1(gravadores: _Abertura, monkeypatch: pytest.MonkeyPatch) -> 
 def test_4_no_tempo_a_ponte_manda_93_75_por_segundo(
     gravadores: _Abertura, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """180 s de relógio: 93,75 ± 0,05 reports/s, o `[10]` anda um por report, e o diário diz o mesmo.
+    """180 s de relógio: 93,75 ± 0,05 reports/s, o `[10]` anda um por report, e o diário o diz.
 
     O N da fonte é o do argv da régua 1 — a montagem mede a ponte com a taxa
     que o produto pede, não com um número digitado.
@@ -540,7 +541,7 @@ def _frequencia_tocada(pcms: list[bytes]) -> float:
         zeros = []
         com_som.append(a)
     sinais = [a > 0 for a in com_som if a != 0]
-    trocas = sum(1 for a, b in zip(sinais, sinais[1:]) if a != b)
+    trocas = sum(1 for a, b in itertools.pairwise(sinais) if a != b)
     segundos_por_amostra = float(SEGUNDOS_POR_REPORT_MEDIDO) / 480
     return trocas / 2 / (len(com_som) * segundos_por_amostra)
 
