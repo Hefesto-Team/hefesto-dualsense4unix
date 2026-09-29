@@ -14,7 +14,8 @@ instrumento, e as réguas abaixo prendem a cura de cada um:
 6. o zero de quem não foi lido sai com a frase do dono, e o grab do nó aberto
    pelo broker se pergunta no fd dele;
 7. os donos são os objetos da casa, e não cópias com o mesmo nome;
-8. o veredito zero diz «ZERO no que mexe na tela», que a folha da bancada lê;
+8. o veredito zero diz «ZERO no que mexe na tela», que a folha da bancada lê, e
+   o rc que o processo devolve é o do veredito;
 9. o cabeçalho diz de onde veio a biblioteca, porque o `import` vem antes.
 
 Todas puras: nada de `/dev/input`, de `/run/udev` ou de broker de verdade. O
@@ -601,6 +602,88 @@ def test_sem_nenhum_no_o_rc_e_nao_sei(
     monkeypatch.setattr(mod, "nos_de_entrada", list)
     assert mod.main(["--segundos", "0"]) == 3
     assert "RESUMO: NÃO SEI" in capsys.readouterr().out
+
+
+class _AparelhoQueEmite(_Aparelho):
+    """O aparelho que entrega os eventos numa leitura só, e depois silencia."""
+
+    def __init__(self, fd: int, eventos: list[Any], repouso: dict[int, int] | None = None) -> None:
+        super().__init__(fd, repouso)
+        self._eventos = eventos
+
+    def read(self) -> list[Any]:
+        eventos, self._eventos = self._eventos, []
+        return eventos
+
+
+def _a_mesa_do_main(caso: str) -> dict[str, tuple[str, dict[str, str], list[Any] | None]]:
+    """`caminho -> (nome, propriedades, eventos)`; eventos None = o nó não abre."""
+    teclado = ("Hefesto - Dualsense4Unix Virtual Keyboard", _TECLADO_VIRTUAL)
+    pad = (_NOME_DO_PAD, _GAMEPAD_DO_PAD)
+    touchpad = ("DualSense Wireless Controller Touchpad", _TOUCHPAD_FISICO)
+    chiado = _chiado("ABS_RX", 131, 132, 40) + _eco(30)
+    if caso == "alarme":
+        return {
+            "/x/event21": (*pad, chiado),
+            "/x/event22": (*teclado, [_ev(ec.EV_KEY, ec.KEY_A, 1), _syn()]),
+        }
+    if caso == "zero":
+        return {"/x/event21": (*pad, chiado), "/x/event22": (*teclado, [])}
+    return {"/x/event21": (*pad, chiado), "/x/event256": (*touchpad, None)}
+
+
+@pytest.mark.parametrize(("caso", "rc_esperado", "no_resumo"), [
+    ("alarme", 1, "/x/event22"),
+    ("zero", 0, "RESUMO: ZERO no que mexe na tela"),
+    ("nao-lido", 3, "/x/event256"),
+])
+def test_o_rc_do_main_e_o_do_veredito(
+    mod: Any, comum: Any, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+    caso: str, rc_esperado: int, no_resumo: str,
+) -> None:
+    """A corrida inteira pelo `main`, com o aparelho injetado: o rc que sai do
+    processo é o do veredito. Em 29/09 o alarme saiu com `rc 0`, e o
+    `o_basico.py` passará a ler o rc.
+
+    Mordida: devolva 0 no fim do `main`, e o alarme e o «não sei» passam."""
+    import itertools
+
+    mesa = _a_mesa_do_main(caso)
+
+    def _abrir(caminho: str) -> Any:
+        _nome, _props, eventos = mesa[caminho]
+        if eventos is None:
+            raise PermissionError(errno.EACCES, "sem permissão", caminho)
+        return _AparelhoQueEmite(list(mesa).index(caminho) + 100, eventos, _repouso(ABS_RX=131))
+
+    def _grab(_caminho: str, fd: int | None = None, **_k: Any) -> str:
+        return str(comum.GRAB_LIVRE if fd is not None else comum.GRAB_SEM_PERMISSAO)
+
+    medir_de_verdade = mod.medir
+
+    def _medir(nos: list[Any], segundos: float, ecodes: Any) -> None:
+        relogio = itertools.chain([0.0, 0.0], itertools.repeat(float(segundos) + 1))
+        medir_de_verdade(
+            nos, segundos, ecodes,
+            relogio=lambda: next(relogio),
+            selecionar=lambda fds, *_a: (fds, [], []),
+        )
+
+    monkeypatch.setattr(comum, "estado_do_daemon", lambda: comum.EstadoDoDaemon())
+    monkeypatch.setattr(comum, "porta_provavel", lambda *_a, **_k: (comum.PORTA_DIRETA, "dublê"))
+    alvos = [(caminho, nome, "—") for caminho, (nome, _p, _e) in mesa.items()]
+    monkeypatch.setattr(mod, "nos_de_entrada", lambda: alvos)
+    monkeypatch.setattr(mod, "propriedades_do_udev", lambda c: mesa[c][1] if c in mesa else None)
+    monkeypatch.setattr(mod, "abrir_input_device", _abrir)
+    monkeypatch.setattr(mod, "ler_o_grab", _grab)
+    monkeypatch.setattr(mod, "medir", _medir)
+
+    rc = mod.main(["--segundos", "1"])
+
+    saida = capsys.readouterr().out
+    resumo = saida[saida.rindex("RESUMO:"):]
+    assert rc == rc_esperado, resumo
+    assert no_resumo in resumo
 
 
 def test_o_modulo_evdev_falso_nao_vaza(mod: Any) -> None:
