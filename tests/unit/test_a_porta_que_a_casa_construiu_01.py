@@ -646,3 +646,36 @@ def test_a_linha_da_leitura_entra_no_check_up_e_nao_na_aba_jogar(
     monkeypatch.setattr(a08_conexoes, "_EXTRAS", (leitura,))
     assert leitura in a08_conexoes._itens_da_tela()
     assert all(i.get("porque") != "y." for i in a08_conexoes._exame())
+
+
+def test_o_exame_completo_pergunta_pela_leitura(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O «Examinar» (e a entrada na aba) corre o exame completo, e é ele que
+    acrescenta a linha da leitura com o estado do último tique. As leituras da
+    máquina saem por dublê: nenhum nó, nenhum `/sys`, nenhum `busctl`.
+
+    MORDIDA: troque, em `_correr_o_exame_completo`, a chamada da conferência
+    por `None` — a linha some da tira e esta régua reprova.
+    """
+    from hefesto_dualsense4unix.integrations import exame_da_mesa
+    from hefesto_dualsense4unix.integrations import hidraw_broker_client as broker
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
+
+    for nome in ("_reler_a_declaracao", "_dispensadas_do_disco", "_mesa_do_radio",
+                 "_dongles", "_entradas", "_gabinete", "_leitura_das_ordens_da_maquina"):
+        monkeypatch.setattr(a08_conexoes, nome, lambda *_a, **_k: None)
+    monkeypatch.setattr(a08_conexoes, "_mesa_declarada", lambda _d: {})
+    outra = exame_da_mesa.Item(chave="energia_do_radio", rotulo="r", estado="certo",
+                               porque="p.")
+    monkeypatch.setattr(exame_da_mesa, "exame", lambda **_k: [outra])
+    monkeypatch.setattr(a08_conexoes, "_nos_dos_controles", lambda: {})
+    monkeypatch.setattr(broker, "porta_provavel",
+                        lambda: (PORTA_DIRETA, "não há socket de broker aqui"))
+    monkeypatch.setattr(a08_conexoes, "_EXTRAS", ())
+    monkeypatch.setattr(a08_conexoes, "_ULTIMO_ESTADO", _estado_do_daemon("failed"))
+    a08_conexoes._correr_o_exame_completo()
+    chaves = [i.chave for i in a08_conexoes._EXTRAS]
+    assert chaves == ["energia_do_radio", a08_conexoes.CHAVE_DA_LEITURA]
+
+    monkeypatch.setattr(a08_conexoes, "_ULTIMO_ESTADO", _estado_do_daemon("held"))
+    a08_conexoes._correr_o_exame_completo()
+    assert [i.chave for i in a08_conexoes._EXTRAS] == ["energia_do_radio"]
