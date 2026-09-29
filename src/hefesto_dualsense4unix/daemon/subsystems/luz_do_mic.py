@@ -41,9 +41,10 @@ voltou a ser dele.
   separado, e as três recusas medidas (BT-E-VPAD-01, MIC-BT-DONO-01,
   MIC-DOIS-DONOS-01) são todas sobre ele. Aqui só se chama
   `set_microphone_led`, que mexe em `common[8]` e no bit `0x01` do flag1;
-* **não abre o hidraw** — escrever cru por fora é a armadilha nº 3 do
-  `GUIA.md`: o daemon reafirma o report de saída e a escrita crua morre em
-  milissegundos. Tudo passa pelo backend;
+* **não abre o hidraw** — escrever cru por fora é a armadilha do instrumento
+  que briga com o produto (`docs/method/COMO-OLHAR-A-TELA.md`): o daemon
+  reafirma o report de saída e a escrita crua morre em milissegundos. Tudo
+  passa pelo backend;
 * **não rouba o botão físico dela** — o gesto continua sendo do
   `hid-playstation` (que alterna `ds->mic_muted`) e do `mic_da_mesa`/`hotkey`
   (que elege). Este laço só LÊ o mudo e pinta;

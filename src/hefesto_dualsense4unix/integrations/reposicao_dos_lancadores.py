@@ -20,9 +20,9 @@ mataria"*. Este módulo aplica a MESMA regra a todos os lançadores, e é o úni
 caso em que "automático" não fecha nada: o recibo diz por quê, e o reinício
 vale a partir do próximo lançamento.
 
-**O AMBIENTE É LIMPO EM TODA ABERTURA**, e é lição paga: um lançador aberto do
-shell de quem chamou herda `ferramenta`, `VIRTUAL_ENV` e o `PATH` da venv, e
-contamina TODO jogo que ele abrir depois. `ambiente_do_jogo.ambiente_limpo` é o
+**O AMBIENTE É LIMPO EM TODA ABERTURA**, e é lição paga: um lançador aberto de
+um terminal herda o ambiente do terminal que o abriu (a venv e o `PATH` dela),
+e contamina TODO jogo que ele abrir depois. `ambiente_do_jogo.ambiente_limpo` é o
 dono disso.
 
 **NADA AQUI MATA POR PADRÃO DE LINHA DE COMANDO.** Os pids vêm de `pgrep -x`

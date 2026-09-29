@@ -27,8 +27,8 @@ Funciona no cabo, quebra no rádio, e SÓ o jogo não enxerga.
 
 A cura (`integrations/sentinela_do_wrapper`) foi entregue às 04h com 19 testes
 — e ninguém a chamava. `grep sentinela_do_wrapper app/` devolvia ZERO. É o
-defeito que o `GUIA.md` nomeia como o mais caro desta casa: *a cura escrita e
-nunca ligada*. Este módulo é o fio que faltava.
+defeito que `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py` existe para
+acusar: *a cura escrita e nunca ligada*. Este módulo é o fio que faltava.
 
 O CENSO DOS GESTOS, e por que estes cinco
 -----------------------------------------
@@ -106,9 +106,9 @@ opções estavam na mesa e a escolhida é a terceira:
     e zero escritas**. Só o dia em que a Steam comer uma linha custa mais.
 
 E reparar TAMBÉM os jogos que nunca tiveram o wrapper (motivo ``novo``, e não
-só a ``regressao``) não é excesso: é a regra da casa escrita em duas linhas do
-`GUIA.md` — *universal, nada por appid cravado, jogo instalado amanhã nasce
-coberto*. É exatamente o que o passo sem flag do `install.sh` já faz.
+só a ``regressao``) não é excesso: é a regra da casa — *universal, nada por
+appid cravado, jogo instalado amanhã nasce coberto*. É exatamente o que o
+passo sem flag do `install.sh` já faz.
 
 A STEAM ABERTA, que é a restrição dura
 --------------------------------------

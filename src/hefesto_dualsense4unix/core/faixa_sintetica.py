@@ -31,8 +31,8 @@ LOCAL são, por construção, de aparelho nenhum — ver
 
 from __future__ import annotations
 
-#: As três faixas sintéticas da casa (``GUIA.md``,
-#: ``scripts/check_test_data.sh``). Cada uma é o prefixo de três octetos, em
+#: As três faixas sintéticas da casa. Este módulo é o dono delas, e o
+#: ``scripts/check_test_data.sh`` as repete. Cada uma é o prefixo de três octetos, em
 #: 6 hex minúsculos e sem separador — a forma canônica do ``norm_mac``.
 #:
 #: * ``aabbcc`` — a faixa das fixtures da suíte (91 arquivos de teste a usam);

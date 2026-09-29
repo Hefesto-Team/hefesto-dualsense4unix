@@ -23,7 +23,7 @@ O `AppTray` era **órfão** desde 06/09, quando a janela GTK saiu do disco
 (`app/app.py:1794`). O censo de 19/09 o encontrou com zero chamadores de
 produção — e a cura não é arquivá-lo, é **dar-lhe o dono que faltava**.
 
-## O FATO QUE CAIU, e ele é do `GUIA.md`
+## O FATO QUE CAIU
 
 Estava escrito que em Pop!_OS COSMIC *"o `org.kde.StatusNotifierWatcher` D-Bus
 que o libayatana usa não existe, então o tray clássico fica oculto"* — foi essa

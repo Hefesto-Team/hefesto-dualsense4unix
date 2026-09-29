@@ -15,8 +15,9 @@ tinham dono**, e o dono era o perfil:
     mouse.speed / scroll_speed     a velocidade do cursor         1/33 perfis
     key_bindings                   os gestos                      1/33 perfis
 
-O ERRO TEVE UMA FORMA SÓ, e é a que o `GUIA.md` já nomeia — *a casa sabe e o
-produto não faz*: **perguntei só ao `state_full` do daemon.** Ele não publica
+O ERRO TEVE UMA FORMA SÓ, e é a que o portão
+`tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py` nomeia — *a casa sabe e
+o produto não faz*: **perguntei só ao `state_full` do daemon.** Ele não publica
 gatilho nem brilho; concluí "não tem dono" e escrevi o travessão. O dado estava
 no disco dela o tempo todo, e a `gui/aba_*.py` que ela usa hoje já o lê.
 
@@ -61,8 +62,8 @@ def _com_o_src() -> Any:
 
     O `sys.path.insert(0, ...)` é a segunda trava do `.envrc-voo`: sem ele, um
     python chamado por hábito importaria o `hefesto_dualsense4unix` da árvore
-    DELA — o defeito que o `GUIA.md` mede na seção 2, cujo sintoma é a
-    AUSÊNCIA de dado e se lê como "a mudança não pegou".
+    DELA — o defeito que `tests/unit/test_a_suite_mede_esta_arvore.py` mede,
+    cujo sintoma é a AUSÊNCIA de dado e se lê como "a mudança não pegou".
     """
     src = str(RAIZ / "src")
     if src not in sys.path:

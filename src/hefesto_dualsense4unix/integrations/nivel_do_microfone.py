@@ -30,7 +30,8 @@ mastigados**. Do nosso lado sobra um ``struct.unpack`` de quatro bytes.
 MESMO pacote que o ``pactl`` (``pulseaudio-utils``), que o ``install.sh:504``
 já declara para as três famílias. Do lado Python é só a biblioteca padrão —
 o ``numpy`` NÃO está no ``pyproject.toml`` (vive no ``~/.local`` dela), e
-importá-lo aqui repetiria a dívida do ``playwright`` que o `GUIA.md` cobra.
+importá-lo aqui repetiria a dívida do ``playwright``, que
+``tests/unit/test_o_install_entrega_a_luz_do_mic.py`` cobra.
 
 **O modo de pico entrega o pico VERDADEIRO, e isto é medida, não confiança.**
 20 s com DOIS fluxos abertos na MESMA fonte do DualSense ao mesmo tempo: o
