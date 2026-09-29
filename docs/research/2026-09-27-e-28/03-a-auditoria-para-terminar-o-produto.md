@@ -257,7 +257,7 @@ trancando a frase errada. E 50 das 114 linhas do DualSense em
 Outros médios: o par modo Xbox + máscara DualSense nunca foi medido num jogo;
 o PID por jogo para o giroscópio nas libScePad antigas tem a pré-condição
 cumprida (o físico escondido desde 24/09) e a sprint nunca foi escrita; com um
-adaptador só, `governador_do_radio.py:821-828` concede a terceira ponte além
+adaptador só, `governador_do_radio.py:957-965` concede a terceira ponte além
 do teto que derrubou os controles em 22/09. Baixos: testar a vibração de um
 controle cala o rumble do jogo nos quatro (`gamepad.py:1345`); os mods DSX só
 endereçam o índice 0 (`daemon/udp_server.py:472-489`).
