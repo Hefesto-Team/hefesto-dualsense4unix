@@ -3453,10 +3453,28 @@ def _declarar(p: Any, mesa: dict[str, Any]) -> None:
     disco sob lock (`ipc_handlers._handle_machine_declare:5254`), então mandar
     `{"mesa": {"altura_da_antena": …}}` não apaga `linha_de_visada`, nem os
     rádios, nem o mapa do gabinete.
+
+    COM O HEFESTO DESLIGADO, A RESPOSTA DESCE AO DISCO — 28/09/2026. A ponte
+    devolve `(False, None)` quando o serviço não respondeu, e até aqui o gesto
+    recusava: a altura da antena, a visada e o nome de um vizinho se perdiam
+    com o serviço parado, sobre um arquivo que não depende dele. Quem grava sem
+    serviço é `lugar_declarado.declarar_a_mesa`, a porta da seção `mesa`, com o
+    mesmo lock e a mesma fusão do daemon (`gravar_rascunho_da_mesa`), e ele lê
+    o arquivo ao ligar. O mesmo desvio do «Aplicar» do rodapé
+    (`footer_actions._gravar_declaracao_de_maquina`): só quando o serviço NÃO
+    respondeu. Um serviço que respondeu e recusou continua recusando — gravar
+    por trás dele deixaria a memória dele divergindo do arquivo.
     """
     ok, motivo = _resposta(p.machine_declare({"mesa": mesa}))
-    if not ok:
-        raise RuntimeError(motivo or "não consegui gravar o que você declarou")
+    if ok:
+        return
+    if not motivo:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.integrations.lugar_declarado import declarar_a_mesa
+
+        if declarar_a_mesa(mesa).gravou:
+            return
+    raise RuntimeError(motivo or "não consegui gravar o que você declarou")
 
 
 @gesto("08-conexoes.html", "alvo")
