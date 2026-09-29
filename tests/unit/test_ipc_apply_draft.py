@@ -17,6 +17,7 @@ import pytest
 from hefesto_dualsense4unix.core.trigger_effects import rigid
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient
 from hefesto_dualsense4unix.core.controller import ControllerState
+from hefesto_dualsense4unix.core.led_control import fator_do_brilho
 from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles import loader as loader_module
@@ -157,7 +158,11 @@ async def test_apply_draft_leds_aplica_lightbar(server_and_controller) -> None:
 
 @pytest.mark.asyncio
 async def test_apply_draft_leds_brightness_aplicada(server_and_controller) -> None:
-    """brightness 0.5 deve dimmar a cor (128, 0, 0) -> (64, 0, 0)."""
+    """brightness 0.5 dimma a cor (128, 0, 0) pela curva do piso.
+
+    A conta pergunta ao dono (`fator_do_brilho`, D-2909-O-BRILHO-TEM-PISO): o
+    número digitado aqui era o 64 da conta linear, que o «Aplicar» deixou.
+    """
     _server, socket_path, fc, _ = server_and_controller
     async with IpcClient.connect(socket_path) as client:
         await client.call(
@@ -166,7 +171,7 @@ async def test_apply_draft_leds_brightness_aplicada(server_and_controller) -> No
         )
     led_cmds = [c for c in fc.commands if c.kind == "set_led"]
     r, g, b = led_cmds[-1].payload
-    assert r == 64
+    assert r == int(128 * fator_do_brilho(0.5))
     assert g == 0
     assert b == 0
 
@@ -439,7 +444,9 @@ def test_apply_controllers_aplica_por_uniq_com_brilho_escalado() -> None:
     assert len(ctrl.calls) == 1
     uniq, spec = ctrl.calls[0]
     assert uniq == _UNIQ_2
-    assert spec.led == (0, 50, 127)  # escalado por 0.5 (mesmo caminho)
+    # escalado pelo brilho 0.5 na curva do piso, o mesmo caminho da seção global
+    fator = fator_do_brilho(0.5)
+    assert spec.led == (0, int(100 * fator), int(255 * fator))
     assert spec.player_leds == (True, False, False, False, False)
     assert spec.trigger_right is not None
     assert spec.trigger_left is None  # lado sem opinião não viaja
