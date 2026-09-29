@@ -625,7 +625,9 @@ def test_o_no_herdado_com_o_nome_de_antes_cai_uma_vez(mesa: _Mesa) -> None:
         ])
     mesa.volta()
     assert len(mesa.servidor.quedas) == 2, "o endpoint de antes do install ficou de pé"
-    assert [d for d in mesa.servidor.saidas() if d.startswith("DualSense ")] == []
+    # As placas dos dois controles no cabo também começam por «DualSense»:
+    # o que não pode sobrar é o rótulo de antes, «DualSense <rabo> (háptica)».
+    assert [d for d in mesa.servidor.saidas() if d.endswith("(háptica)")] == []
     for lugar in eh.LUGARES:
         assert mesa.rotulo(lugar) == f"{_HAPTICA} {lugar}{_SONY}"
     cargas = len(mesa.servidor.cargas)
