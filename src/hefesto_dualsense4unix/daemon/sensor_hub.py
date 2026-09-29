@@ -144,6 +144,9 @@ class SensorHub:
         #: pediria um reader de gamepad inútil para cada um deles. Aqui só
         #: entra quem ficaria mudo sem ele.
         self._demanda_entradas: dict[str, float] = {}
+        #: As peças cujo TOUCHPAD o tique está levando ao cursor ou às zonas
+        #: (NO-MODO-XBOX-TUDO-FUNCIONA-01) — ver :meth:`toque_da_peca`.
+        self._demanda_do_toque: dict[str, float] = {}
         self._motion: dict[str, Any] = {}
         self._touch: dict[str, Any] = {}
         self._gamepad: dict[str, Any] = {}
@@ -377,6 +380,7 @@ class SensorHub:
             self._gamepad.clear()
             self._demanda.clear()
             self._demanda_entradas.clear()
+            self._demanda_do_toque.clear()
         for reader in readers:
             with contextlib.suppress(Exception):
                 reader.stop()
@@ -477,6 +481,7 @@ class SensorHub:
         if novos:
             self._abrir_readers(novos)
         self._reconciliar_grabs(desligados)
+        self._reconciliar_grabs_do_toque(agora)
 
     # -- O BRAÇO EVDEV do interruptor de sensor (SENSOR-DE-VERDADE-01) -----
 
@@ -755,6 +760,101 @@ class SensorHub:
         from hefesto_dualsense4unix.core.evdev_reader import discover_dualsense_evdevs
 
         return dict(discover_dualsense_evdevs())
+
+    # -- O TOQUE E A INCLINAÇÃO COMO FONTE (NO-MODO-XBOX-TUDO-FUNCIONA-01) ----
+    #
+    # A resposta dela de 28/09 (~16h50): o touchpad move o cursor ou vira
+    # botões em zonas, e a inclinação vira analógico, por perfil de jogo. Quem
+    # decide é o `roteador_de_movimento`; quem pergunta é o tique
+    # (`gamepad.aplicar_o_toque` e `gamepad.aplicar_o_movimento`); aqui só se
+    # lê o que os leitores de cada peça já leem, e se segura o nó do toque.
+
+    #: Quanto tempo o nó do toque fica GRABADO depois do último pedido do
+    #: tique. O tique pergunta a 60 Hz; um segundo e meio cobre a volta de
+    #: manutenção (1 s) e solta o nó logo que o controle virtual sai.
+    _TOQUE_ROTEADO_TTL_S: ClassVar[float] = 1.5
+
+    def aceleracao_do_movimento(self, uniq: str) -> tuple[float, float, float] | None:
+        """O acelerômetro de `uniq` AGORA, em g; `None` sem leitor.
+
+        A irmã magra da `velocidade_do_movimento`, pelo mesmo leitor e pelo
+        mesmo nó (`MotionSensorReader.accel_snapshot`, como está): o tique da
+        inclinação a chama a 60 Hz por controle, e ela registra a demanda que
+        mantém o leitor vivo enquanto a rota anda.
+        """
+        agora = self._relogio()
+        with self._lock:
+            self._demanda[uniq] = agora
+            motion = self._motion.get(uniq)
+        self._garantir_manutencao()
+        if motion is None:
+            return None
+        try:
+            acel = motion.accel_snapshot()
+            return (float(acel.x), float(acel.y), float(acel.z))
+        except Exception:
+            return None
+
+    def toque_da_peca(self, uniq: str) -> tuple[Any, bool] | None:
+        """O dedo de `uniq` AGORA e o clique: `(TouchState, clicado)`; `None` sem leitor.
+
+        O leitor é o observador de sempre (`TouchpadReader`, sem acumular
+        movimento, como está), e o clique é o `regions_pressed` dele, que acende
+        com o `BTN_LEFT` do nó em qualquer região. Registra DUAS demandas: a do
+        leitor (o TTL de sempre) e a do toque roteado, que faz a manutenção
+        GRABAR o nó do touchpad desta peça (:meth:`_reconciliar_grabs_do_toque`).
+
+        O GRAB É O QUE TORNA A ROTA VERDADEIRA: sem ele, o dedo que aperta o
+        direcional numa zona ou move o cursor pelo Hefesto também moveria o
+        ponteiro do computador pelo libinput — dois donos para um dedo, o
+        engasgo de 26/06. O nó é só o do touchpad: os botões e os analógicos
+        vêm do outro nó, e o jogo não perde nada. E ele solta sozinho: o tique
+        que parou de perguntar (a rota apagada, o controle virtual que saiu)
+        deixa a demanda vencer, e o ponteiro volta ao computador.
+        """
+        agora = self._relogio()
+        with self._lock:
+            self._demanda[uniq] = agora
+            self._demanda_do_toque[uniq] = agora
+            touch = self._touch.get(uniq)
+        self._garantir_manutencao()
+        if touch is None:
+            return None
+        try:
+            estado = touch.touch_state()
+        except Exception:
+            return None
+        clicado = False
+        with contextlib.suppress(Exception):
+            clicado = bool(touch.regions_pressed())
+        return estado, clicado
+
+    def _reconciliar_grabs_do_toque(self, agora: float) -> None:
+        """O nó do touchpad fica GRABADO enquanto o tique leva o toque da peça.
+
+        A mesma máquina do `_reconciliar_grabs` do movimento, com o sinal da
+        demanda: quem o tique pediu há menos de :data:`_TOQUE_ROTEADO_TTL_S`
+        segura o nó; os outros o soltam. Leitor sem `set_grab` (dublê) passa.
+        """
+        with self._lock:
+            leitores = dict(self._touch)
+            vistos = dict(self._demanda_do_toque)
+            self._demanda_do_toque = {
+                u: t for u, t in vistos.items() if agora - t <= self._TOQUE_ROTEADO_TTL_S
+            }
+        for uniq, leitor in leitores.items():
+            visto = vistos.get(uniq)
+            querido = visto is not None and agora - visto <= self._TOQUE_ROTEADO_TTL_S
+            aplicar = getattr(leitor, "set_grab", None)
+            if not callable(aplicar):
+                continue
+            estado = getattr(leitor, "grab_state", "off")
+            if querido and estado == "held":
+                continue
+            if not querido and estado in ("off", "failed"):
+                continue
+            with contextlib.suppress(Exception):
+                aplicar(querido)
 
 
 __all__ = ["SensorHub"]
