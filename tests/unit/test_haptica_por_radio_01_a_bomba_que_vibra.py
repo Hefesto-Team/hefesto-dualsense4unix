@@ -1,7 +1,7 @@
 """HAPTICA-POR-RADIO-01 (P4) — a bomba que leva a háptica ao fio, um escritor só.
 
 O report destas réguas é o que VIBROU na mão dela em 18/09/2026: primeiro com
-senoide (``scripts/ensaios/a_haptica_pelo_radio.py``), depois com o PCM do
+senoide (``scripts/ensaios/historico/a_haptica_pelo_radio.py``), depois com o PCM do
 PRAGMATA saindo do endpoint de quatro canais — *"se eu atirei x vezes vibrou x
 vezes"*, 2161 reports, zero recusas.
 

@@ -5,7 +5,7 @@ controle com quatro canais e toca os canais 3 e 4, que são os dois motores
 voice-coil. Pelo rádio não há placa de áudio, e o mesmo sinal tem de ir dentro de
 um report HID, num bloco de 64 bytes a cada 10,667 ms.
 
-**MEDIDO EM 18/09/2026, com a mão dela** (`scripts/ensaios/a_haptica_pelo_radio.py`):
+**MEDIDO EM 18/09/2026, com a mão dela** (`scripts/ensaios/historico/a_haptica_pelo_radio.py`):
 o motor vibra quando o report `0x32` (ou o `0x35`, o do alto-falante) leva o bloco
 `0x91` de AudioControl e, depois dele, o bloco `0x92` com 64 bytes de PCM int8
 estéreo a 3 kHz. Sem o `0x91` não vibra; com as amostras zeradas, cala.

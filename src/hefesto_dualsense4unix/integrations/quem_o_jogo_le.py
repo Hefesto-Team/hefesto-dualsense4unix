@@ -11,10 +11,10 @@ de háptica, perguntado ao servidor de som; :func:`pids_de_jogo`, que lê o
 auxiliar do GE-Proton, com ``STEAM_COMPAT_DATA_PATH`` e sem jogo nenhum,
 abria e fechava a partida. O :class:`RetratoDoJogo` e o conjunto de
 :func:`quem_o_jogo_le` vão só à linha ``haptica_portao_fechado`` como pista
-(``evdev_le_este``), e só quando ela sai. :func:`pids_de_jogo` segue também na
-guarda do rótulo da háptica (``_ha_jogo_aberto``), que precisa ver o jogo
-ANTES de ele abrir o primeiro fluxo. O texto abaixo é o registro de 20 e
-25/09, quando o evdev votava.
+(``evdev_le_este``), e só quando ela sai. A guarda do rótulo da háptica, que
+também perguntava a :func:`pids_de_jogo` (``_ha_jogo_aberto``), saiu em
+28/09/2026 com o endpoint por lugar, cujo rótulo não muda. O texto abaixo é o
+registro de 20 e 25/09, quando o evdev votava.
 
 **A CORREÇÃO É DELA, 20/09/2026, e derrubou a premissa de uma sprint inteira:**
 
