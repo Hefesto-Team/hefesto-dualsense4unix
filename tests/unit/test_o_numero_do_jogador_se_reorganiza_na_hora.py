@@ -37,15 +37,24 @@ saída do produto.
 
 AS MORDIDAS (29/09/2026, cada uma devolvida com o md5 conferido):
 
-- a chamada da fatia arrancada: a régua 1 espera o teto (300 s) e reprova, e a
-  régua 7 também (as lâmpadas não se liberam e o P4 segue no boneco 4);
-- ``armar_gatilho_da_cor_por_numeracao`` armando sem comparar: a régua 2
-  reprova (o gatilho arma em toda fatia com a mesa parada);
-- o contador da régua 3 enxerga um provedor de externos que lê arquivo (a
-  prova positiva mora em ``test_o_contador_enxerga_quem_le_arquivo``);
-- ``_congelar_locked`` com os guardados na conta: a régua 4 reprova;
-- a guarda da R-04 arrancada do ``coop._ordenar`` (``fixos`` vazio com o jogo
-  na autoridade): a régua 7 reprova no caso em que o P1 sai.
+- a chamada da fatia arrancada: 34 de 44 reprovam — as 28 da régua 1 (a
+  espera chega ao teto de 300 s sem armar), a 3 e a 4 que passam pelo
+  vencimento, e as três da régua 7 (as lâmpadas não se liberam e o P4 segue
+  no boneco 4);
+- ``armar_gatilho_da_cor_por_numeracao`` armando sem comparar: as nove da
+  régua 2 reprovam (o gatilho arma em toda fatia com a mesa parada);
+- o contador da régua 3 enxerga um provedor de externos que lê arquivo: é a
+  prova positiva, ``test_o_contador_enxerga_quem_le_arquivo``;
+- ``_congelar_locked`` com os guardados na conta: a régua 4 reprova.
+
+**A mordida da R-04 que a sprint previa NÃO morde aqui, e está medido:** com
+``fixos`` vazio no ``coop._ordenar``, as três da régua 7 passam. Nos
+vencimentos que a cura antecipa, o vpad do P1 nunca fica fora do boneco: o
+primário é a carta 1 (O-MODO-XBOX-NAO-E-QUEDA-02, item 4), e com o posto vago
+a carta dele é a do lugar em que espera. A guarda morde em
+``test_o_buraco_de_quem_saiu_se_fecha_no_jogo.py`` (a volta tardia do P1 e o
+diário da vaga). A régua 7 prova o DESFECHO da R-04 (o vpad do P1 é o mesmo
+objeto, vivo) com a cura acordando o co-op mais cedo.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
@@ -697,3 +706,39 @@ class TestComOJogoNaAutoridade:
         )
         assert bancada.dono_do_vpad_do_p1() == P2
         bancada.o_jogo_segue_a_tela()
+
+    def test_o_prazo_de_outro_vence_com_o_p1_fora_e_o_vpad_dele_espera(
+        self, jogo_aberto: Callable[[tuple[str, ...]], Any], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O P2 sai, o P1 sai dez segundos depois, e o prazo do P2 vence primeiro.
+
+        É onde a R-04 trabalha: o posto do P1 está vago dentro do prazo DELE, e
+        a fatia que renumera no vencimento do P2 acorda o co-op com o vpad do P1
+        parado à espera. Os secundários descem; o vpad do P1 não renasce.
+        """
+        bancada, escritores = jogo_aberto((P2,))
+        vpad_do_p1 = bancada.vpad_do_p1
+        for _ in range(5):
+            bancada.tique()  # dez segundos com o P2 fora
+        bancada.mesa.levantar(P1)
+        bancada.tique()
+        _a_volta(bancada.daemon)
+        faltam = PRAZO - 6 * TIQUE_LENTO  # para o prazo do P2
+        espera = _Espera(
+            monkeypatch,
+            bancada.daemon,
+            bancada.tempo,
+            ate=faltam + 3 * FATIA,
+            tique=lambda: _tique_lento(bancada),
+        )
+        espera.rodar(_WatchParado())
+
+        assert espera.armou_por_numeracao(), "o prazo do P2 venceu e a fatia não armou"
+        assert escritores.numeros() == {P3: 2, P4: 3}
+        assert bancada.daemon._gamepad_device is vpad_do_p1 and vpad_do_p1.vivo, (
+            "a R-04: o vpad do P1 não se recria com o jogo na autoridade"
+        )
+        assert bancada.dono_do_vpad_do_p1() is None, "o posto do P1 ainda espera por ele"
+        assert bancada.o_jogo_ve() == {1: None, 2: P3, 3: P4}, (
+            f"o jogo não vê a mesa de agora: {bancada.o_jogo_ve()}"
+        )
