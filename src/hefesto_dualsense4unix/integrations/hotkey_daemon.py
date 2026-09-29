@@ -30,11 +30,16 @@ Política (V2-4 + V3-2 + FEAT-HOTKEY-STEAM-01):
 Vocabulário completo dos gestos:
     PS sozinho          abre/foca a Steam (toque de até 700 ms)
     PS + cima / baixo   perfil seguinte / anterior
-    PS + L3             próxima máscara (a do cartão de quem segura os atalhos)
+    PS + L3             próxima máscara (a do cartão de quem faz o gesto)
     PS + R3             próximo modo
     PS + Options        modo jogo
     PS segurado         desligado por padrão (disparava modo-jogo acidental)
 `dpad_left` e `dpad_right` seguem livres.
+
+Todos valem em QUALQUER um dos quatro controles (`D-2709-O-PS-R3-EM-QUALQUER-
+CONTROLE`, O-MODO-XBOX-NAO-E-QUEDA-02, item 5): cada controle tem o aperto dele
+(`observe(..., de=<MAC>)`), e o ato pergunta de quem é o gesto por
+`quem_faz_o_gesto`.
 
 Sem hardware físico nesta sprint: manager consome payload genérico
 `{"buttons": set[str]}` oriundo do event bus, facilitando testes.
@@ -46,6 +51,7 @@ import contextlib
 import os
 import time
 from collections.abc import Iterable
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -148,6 +154,53 @@ DEFAULT_COMBO_PONTE = ("ps", "r3")
 DEFAULT_COMBO_MASCARA = ("ps", "l3")
 
 
+#: DE QUEM É O GESTO que dispara agora — O-MODO-XBOX-NAO-E-QUEDA-02, item 5.
+#:
+#: O `observe(..., de=<MAC>)` põe aqui o controle cujos botões ele está lendo,
+#: e só durante a leitura. Um ato que é corrotina nasce como tarefa DENTRO do
+#: `observe` (`_fire` → `create_task`), e a tarefa leva uma cópia do contexto
+#: do instante em que nasceu: quando ela roda, um tique depois, a pergunta
+#: «de quem é o gesto» ainda responde o controle que o fez, mesmo que outro
+#: tenha feito outro gesto no meio. `None` = fora de um gesto, ou um controle
+#: sem MAC (o `FakeController`).
+_QUEM_FAZ_O_GESTO: ContextVar[str | None] = ContextVar(
+    "hefesto_quem_faz_o_gesto", default=None
+)
+
+
+def quem_faz_o_gesto() -> str | None:
+    """O MAC do controle que fez o gesto em curso, ou None fora de um gesto."""
+    return _QUEM_FAZ_O_GESTO.get()
+
+
+def _de(uniq: str | None) -> dict[str, str]:
+    """O campo `de` do diário: o controle do gesto, quando se sabe qual."""
+    return {"de": uniq} if uniq else {}
+
+
+@dataclass
+class _Aperto:
+    """O aperto de UM controle: os combos em formação e o ciclo do PS dele.
+
+    O-MODO-XBOX-NAO-E-QUEDA-02, item 5 (`D-2709-O-PS-R3-EM-QUALQUER-CONTROLE`):
+    o PS e as combinações valem em qualquer um dos quatro controles, e cada um
+    aperta os DELE. Um estado só para todos juntaria o PS de um ao R3 de outro
+    num PS + R3 que ninguém fez, e o PS solto de um soltaria o do outro.
+    """
+
+    # Quando cada combo apareceu inteiro neste controle (o `buffer_ms`).
+    first_seen_at: dict[frozenset[str], float] = field(default_factory=dict)
+    # O combo que disparou e segue apertado (UM GESTO POR APERTO).
+    last_fired: frozenset[str] | None = None
+    # Estado do PS solo (FEAT-HOTKEY-STEAM-01): quando o PS apareceu, e se um
+    # combo com PS já disparou neste ciclo de aperto.
+    ps_pressed_at: float | None = None
+    ps_combo_fired: bool = False
+    # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: se o long-press do PS já disparou
+    # neste ciclo de hold (evita repetir e suprime o PS solo no release).
+    ps_long_press_fired: bool = False
+
+
 @dataclass
 class HotkeyConfig:
     buffer_ms: int = DEFAULT_BUFFER_MS
@@ -179,22 +232,15 @@ class HotkeyManager:
     on_next_mask: Any | None = None
     config: HotkeyConfig = field(default_factory=HotkeyConfig)
 
-    _first_seen_at: dict[frozenset[str], float] = field(default_factory=dict)
-    _last_fired: frozenset[str] | None = None
+    # O aperto de cada controle, pelo MAC que o `observe` recebe em `de`
+    # (O-MODO-XBOX-NAO-E-QUEDA-02, item 5). A chave None é a de quem chama sem
+    # dizer de quem são os botões — o controle sem MAC, e todo chamador de antes.
+    _apertos: dict[str | None, _Aperto] = field(default_factory=dict)
     # FEAT-HOTKEY-COMBO-NO-LEAK-02 (latch): membros de um combo PS+X ficam
     # bloqueados da emulação até serem TODOS soltos — não só enquanto o PS
     # estiver pressionado. Fecha o leak de Meta na ordem de release (soltar o
     # PS antes do Options ao alternar o modo-jogo virava um tap de Meta).
     _combo_latch: set[str] = field(default_factory=set)
-
-    # Estado do PS solo (FEAT-HOTKEY-STEAM-01):
-    # _ps_pressed_at: timestamp do primeiro observe em que PS apareceu.
-    # _ps_combo_fired: se um combo com PS ja disparou neste ciclo de press.
-    _ps_pressed_at: float | None = None
-    _ps_combo_fired: bool = False
-    # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: se o long-press do PS ja disparou
-    # neste ciclo de hold (evita repetir e suprime o PS solo no release).
-    _ps_long_press_fired: bool = False
 
     def _combos_configurados(self) -> dict[str, frozenset[str]]:
         """Mapa nome→botões dos combos LIGADOS. Tupla vazia = combo desligado.
@@ -232,31 +278,62 @@ class HotkeyManager:
         pressed: Iterable[str],
         *,
         now: float | None = None,
+        de: str | None = None,
     ) -> str | None:
         """Processa snapshot de botões. Retorna nome do evento disparado.
 
         Valores possíveis: `"next"`, `"prev"`, `"gamemode"`, `"ponte"`,
         `"mascara"`, `"ps_solo"`, `"ps_long_press"` ou `None`.
+
+        `de` é o MAC do controle cujos botões são estes (O-MODO-XBOX-NAO-E-
+        QUEDA-02, item 5): cada controle tem o aperto DELE (:class:`_Aperto`),
+        e o ato que o gesto dispara pergunta de quem ele é por
+        :func:`quem_faz_o_gesto`. Sem `de`, o aperto é o da chave None — o
+        chamador de um controle só, como sempre foi.
         """
         t = now if now is not None else time.monotonic()
+        aperto = self._apertos.get(de)
+        if aperto is None:
+            aperto = self._apertos[de] = _Aperto()
+        marca = _QUEM_FAZ_O_GESTO.set(de)
+        try:
+            return self._observe_o_aperto(aperto, pressed, t=t, de=de)
+        finally:
+            _QUEM_FAZ_O_GESTO.reset(marca)
+
+    def soltar_quem_saiu(self, ficam: Iterable[str | None]) -> None:
+        """Esquece o aperto de quem não foi lido neste tique.
+
+        Um controle que saiu da mesa (ou que não tem de quem ler) deixa de ser
+        lido; o aperto dele, parado no meio, dispararia um PS solto no dia em
+        que ele voltasse. Quem volta começa um aperto novo.
+        """
+        manter = set(ficam)
+        for chave in [c for c in self._apertos if c not in manter]:
+            del self._apertos[chave]
+
+    def _observe_o_aperto(
+        self, aperto: _Aperto, pressed: Iterable[str], *, t: float, de: str | None
+    ) -> str | None:
+        """O corpo do :meth:`observe`, sobre o aperto de um controle."""
         buttons = frozenset(str(b).lower() for b in pressed)
         ps_now = PS_BUTTON in buttons
 
         combos = self._combos_configurados()
 
         # Esquece registros cujo combo não esta mais pressionado
-        stale = [key for key in self._first_seen_at if not key.issubset(buttons)]
+        stale = [key for key in aperto.first_seen_at if not key.issubset(buttons)]
         for key in stale:
-            del self._first_seen_at[key]
-        if self._last_fired is not None and not self._last_fired.issubset(buttons):
-            self._last_fired = None
+            del aperto.first_seen_at[key]
+        if aperto.last_fired is not None and not aperto.last_fired.issubset(buttons):
+            aperto.last_fired = None
 
         combo_fired: str | None = None
         for name, combo in combos.items():
             if not combo.issubset(buttons):
                 continue
-            self._first_seen_at.setdefault(combo, t)
-            held_for = (t - self._first_seen_at[combo]) * 1000
+            aperto.first_seen_at.setdefault(combo, t)
+            held_for = (t - aperto.first_seen_at[combo]) * 1000
             if held_for < self.config.buffer_ms:
                 continue
             # UM GESTO POR APERTO — TROCA-DENTRO-DO-JOGO-01, 14/09/2026.
@@ -272,12 +349,12 @@ class HotkeyManager:
             # valia para `{ps, dpad_up, r3}` desde antes da máscara existir.
             #
             # Enquanto o combo que disparou continuar no aperto, nenhum outro
-            # dispara. Soltar um botão dele destrava (o `_last_fired` some lá em
+            # dispara. Soltar um botão dele destrava (o `last_fired` some lá em
             # cima), e o PS + cima repetido a cada toque continua funcionando.
-            if self._last_fired is not None:
+            if aperto.last_fired is not None:
                 continue
-            self._fire(name, combo)
-            self._last_fired = combo
+            self._fire(name, combo, de=de)
+            aperto.last_fired = combo
             combo_fired = name
             break
 
@@ -285,21 +362,23 @@ class HotkeyManager:
         # Se o PS esta pressionado junto com outro botao (combo potencial) e o
         # combo disparou, marca `_ps_combo_fired` para suprimir o solo no release.
         if combo_fired is not None and PS_BUTTON in combos[combo_fired]:
-            self._ps_combo_fired = True
+            aperto.ps_combo_fired = True
 
         ps_event = self._observe_ps_solo(
-            ps_now=ps_now, buttons=buttons, t=t, combo_fired=combo_fired
+            aperto, ps_now=ps_now, buttons=buttons, t=t, combo_fired=combo_fired, de=de
         )
 
         return combo_fired or ps_event
 
     def _observe_ps_solo(
         self,
+        aperto: _Aperto,
         *,
         ps_now: bool,
         buttons: frozenset[str],
         t: float,
         combo_fired: str | None,
+        de: str | None = None,
     ) -> str | None:
         """Detecta o pattern press-then-release do PS sem combo.
 
@@ -314,39 +393,39 @@ class HotkeyManager:
             CURTO-01, o gesto de religar o controle no rádio).
         """
         if ps_now:
-            if self._ps_pressed_at is None:
-                self._ps_pressed_at = t
+            if aperto.ps_pressed_at is None:
+                aperto.ps_pressed_at = t
             elif (
                 self.config.ps_long_press_ms > 0
-                and not self._ps_long_press_fired
-                and not self._ps_combo_fired
-                and (t - self._ps_pressed_at) * 1000 >= self.config.ps_long_press_ms
+                and not aperto.ps_long_press_fired
+                and not aperto.ps_combo_fired
+                and (t - aperto.ps_pressed_at) * 1000 >= self.config.ps_long_press_ms
             ):
                 # FEAT-EMULATION-GAMEMODE-LONGPRESS-01: PS segurado alem do
                 # threshold sem combo — dispara o long-press uma vez (toggle do
                 # modo jogo). Marca para suprimir o PS solo no release seguinte.
-                self._ps_long_press_fired = True
+                aperto.ps_long_press_fired = True
                 logger.info(
                     "ps_long_press_fired",
-                    held_ms=round((t - self._ps_pressed_at) * 1000, 1),
+                    held_ms=round((t - aperto.ps_pressed_at) * 1000, 1),
                 )
                 self._fire_ps_long_press()
                 return "ps_long_press"
             return None
 
         # PS não esta mais pressionado. Verifica se houve release.
-        if self._ps_pressed_at is None:
+        if aperto.ps_pressed_at is None:
             # Não estava registrado: reset e sai.
-            self._ps_combo_fired = False
-            self._ps_long_press_fired = False
+            aperto.ps_combo_fired = False
+            aperto.ps_long_press_fired = False
             return None
 
-        pressed_at = self._ps_pressed_at
-        fired_during = self._ps_combo_fired
-        long_press_fired = self._ps_long_press_fired
-        self._ps_pressed_at = None
-        self._ps_combo_fired = False
-        self._ps_long_press_fired = False
+        pressed_at = aperto.ps_pressed_at
+        fired_during = aperto.ps_combo_fired
+        long_press_fired = aperto.ps_long_press_fired
+        aperto.ps_pressed_at = None
+        aperto.ps_combo_fired = False
+        aperto.ps_long_press_fired = False
 
         if fired_during:
             logger.debug(
@@ -379,7 +458,7 @@ class HotkeyManager:
             )
             return None
 
-        logger.info("ps_solo_released", held_ms=round(held_ms, 1))
+        logger.info("ps_solo_released", held_ms=round(held_ms, 1), **_de(de))
         self._fire_ps_solo()
         return "ps_solo"
 
@@ -450,8 +529,11 @@ class HotkeyManager:
             return False, None
         return True, despacho[name]
 
-    def _fire(self, name: str, combo: frozenset[str]) -> None:
-        logger.info("hotkey_fired", combo=name, buttons=sorted(combo))
+    def _fire(self, name: str, combo: frozenset[str], *, de: str | None = None) -> None:
+        # `de` só entra no diário quando há de quem: é por ele que a bancada
+        # confere que o gesto veio do controle que o fez (item 5 da O-MODO-XBOX-
+        # NAO-E-QUEDA-02), e não do primário.
+        logger.info("hotkey_fired", combo=name, buttons=sorted(combo), **_de(de))
         conhecido, cb = self._callback_do_combo(name)
         if not conhecido:
             logger.warning("hotkey_combo_sem_despacho", combo=name)
@@ -502,4 +584,5 @@ __all__ = [
     "PS_BUTTON",
     "HotkeyConfig",
     "HotkeyManager",
+    "quem_faz_o_gesto",
 ]
