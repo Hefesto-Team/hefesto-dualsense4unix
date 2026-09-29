@@ -6029,9 +6029,35 @@ _veredito_do_hide() {
         info "  confira se a emulação está ligada para ele na aba Emulação; se estiver, o broker não pegou o nó: sudo systemctl restart hefesto-hidraw-broker.service"
         return
     fi
+    # O CONJUNTO MEDIDO é o hide ∩ o censo (29/09/2026). A bancada daquele
+    # dia: o broker guardava por NOME a lease de um controle que saiu, o
+    # kernel deu o nome ao pad do jogador seguinte, e medir por nome acusava
+    # de FÍSICO os nós que o jogo tem de ver. Quem diz o que é físico é o
+    # censo, que separa o pad pelo barramento e pela marca, nunca pelo nome.
+    # O resto do hide sai numa linha `info`, e nunca `warn`: nele não há
+    # físico alcançável. Censo vazio segue «não sei», e mede o hide inteiro.
+    local contados="${hidden_count}" _do_censo sobra=""
+    local -a no_censo=()
+    if [[ -n "${censo}" ]]; then
+        for _escondido in "$@"; do
+            _visto=0
+            for _do_censo in ${censo}; do
+                [[ "${_do_censo}" == "${_escondido}" ]] && { _visto=1; break; }
+            done
+            if [[ "${_visto}" -eq 1 ]]; then
+                no_censo+=("${_escondido}")
+            else
+                sobra="${sobra} ${_escondido}"
+            fi
+        done
+        sobra="${sobra# }"
+        contados="${#no_censo[@]}"
+        [[ -n "${sobra}" ]] && info "fora deste veredito: ${sobra} — o broker ainda conta esse(s) nome(s) como escondido(s), e o censo não o(s) reconhece hoje como DualSense físico"
+        set -- "${no_censo[@]}"
+    fi
     _tres_superficies_medir "$@"
     if [[ "${TRES_SUP_CONTROLES}" -eq 0 || "${TRES_SUP_SEM_MAPA}" -eq "${TRES_SUP_CONTROLES}" ]]; then
-        pass "broker escondendo ${hidden_count} nó(s) hidraw físico(s) (giroscópio sobrevive via fd-injection)"
+        pass "broker escondendo ${contados} nó(s) hidraw físico(s) (giroscópio sobrevive via fd-injection)"
         info "as superfícies evdev/joydev desses nós não estão legíveis no sysfs agora — este check NÃO afirma que o jogo só vê o vpad"
         return
     fi
@@ -6054,10 +6080,10 @@ _veredito_do_hide() {
     # curar: a régua mentindo sobre a própria cura.
     local medidos=$((TRES_SUP_CONTROLES - TRES_SUP_SEM_MAPA))
     if [[ "${TRES_SUP_SEM_MAPA}" -gt 0 ]]; then
-        pass "broker escondendo ${hidden_count} nó(s) físico(s), e as TRÊS superfícies dos ${medidos} controle(s) MEDIDO(S) fechadas (hidraw + evdev + joydev). NÃO afirmo nada sobre ${TRES_SUP_SEM_MAPA} outro(s), que o sysfs não soube mapear (giroscópio sobrevive via fd-injection)"
+        pass "broker escondendo ${contados} nó(s) físico(s), e as TRÊS superfícies dos ${medidos} controle(s) MEDIDO(S) fechadas (hidraw + evdev + joydev). NÃO afirmo nada sobre ${TRES_SUP_SEM_MAPA} outro(s), que o sysfs não soube mapear (giroscópio sobrevive via fd-injection)"
         return
     fi
-    pass "broker escondendo ${hidden_count} nó(s) físico(s), e as TRÊS superfícies dos ${medidos} controle(s) fechadas (hidraw + evdev + joydev) — o jogo só vê o vpad (giroscópio sobrevive via fd-injection)"
+    pass "broker escondendo ${contados} nó(s) físico(s), e as TRÊS superfícies dos ${medidos} controle(s) fechadas (hidraw + evdev + joydev) — o jogo só vê o vpad (giroscópio sobrevive via fd-injection)"
 }
 
 #: O GESTO que reinicia o broker SEM abrir o físico (HIDE-SO-O-HIDRAW-02). O
