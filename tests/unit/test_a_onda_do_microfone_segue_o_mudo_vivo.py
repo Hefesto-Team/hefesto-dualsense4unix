@@ -69,9 +69,9 @@ PAGINAS_COM_CARTAO = (
     "calibrar-sensores.html",
 )
 
-#: O publicado da 02 ainda tem o `mudo` cravado: ele só sai no `--publicar 02`,
-#: que é da costura. Quem publica tira esta marca (o `xpass` reprova).
-AINDA_NAO_PUBLICADAS = frozenset({"02-controles.html"})
+#: Vazia desde o `--publicar 02` de 29/09/2026: a página que ainda não foi
+#: publicada entra aqui com o `xfail` estrito (o `xpass` reprova quem esquece).
+AINDA_NAO_PUBLICADAS: frozenset[str] = frozenset()
 
 _VAZIOS = frozenset({
     "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",

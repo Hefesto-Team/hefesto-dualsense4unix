@@ -21,9 +21,6 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 02-controles.html
-- **28/09/2026** — a «Inclinação» embaixo do nome de cada analógico e o «Cursor | Botões» no pé da superfície do touchpad (NO-MODO-XBOX-TUDO-FUNCIONA-01, a resposta dela das ~16h50 de 28/09): esperam a sessão dos desenhos, e o gesto e a pintura no pacote da aba. Até publicar, a tela dela mostra o cartão de hoje, e o toque e a inclinação andam pelo perfil do jogo.
-
 ## 05-vibracao.html
 - **28/09/2026** — A-TELA-PERGUNTA-AO-DONO-01: o «Testar» da coluna que está
   vibrando acende (`data-campo="em-teste"`, com o `aria-pressed`), e quem
