@@ -1023,3 +1023,66 @@ def test_um_perfil_com_o_toque_por_peca_chega_ao_tique() -> None:
     assert rot.da_peca(store, _P2, mesa).toque == "zonas"  # type: ignore[union-attr]
     assert rot.da_peca(store, _P3, mesa) is None
     assert REGISTRO.toque_roteado(_P2) and not REGISTRO.toque_roteado(_P3)
+
+
+# ===========================================================================
+# 9 — o nó do cursor: o resto sub-pixel e o clique da mesa
+# ===========================================================================
+
+
+class _DispositivoDeMentira:
+    """O `uinput.Device` sem kernel: guarda o que o nó emitiria."""
+
+    def __init__(self, eventos: list[Any], name: str = "") -> None:
+        self.eventos_declarados = eventos
+        self.name = name
+        self.emitidos: list[tuple[Any, int]] = []
+        self.destruido = False
+
+    def emit(self, evento: Any, valor: int, syn: bool = True) -> None:
+        self.emitidos.append((evento, valor))
+
+    def syn(self) -> None:
+        return
+
+    def destroy(self) -> None:
+        self.destruido = True
+
+
+@pytest.fixture
+def _uinput_que_grava(monkeypatch: pytest.MonkeyPatch) -> types.ModuleType:
+    mod = types.ModuleType("uinput")
+    mod.REL_X, mod.REL_Y, mod.BTN_LEFT = "REL_X", "REL_Y", "BTN_LEFT"  # type: ignore[attr-defined]
+    mod.Device = _DispositivoDeMentira  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "uinput", mod)
+    return mod
+
+
+class TestOCursorDoToque:
+    """MORDIDA: tire o resto sub-pixel de `CursorDoToque.mover` (trunque cada
+    passo) e `test_o_dedo_devagar_ainda_anda` reprova — o dedo lento nunca
+    moveria o cursor."""
+
+    def test_o_dedo_devagar_ainda_anda(self, _uinput_que_grava: types.ModuleType) -> None:
+        from hefesto_dualsense4unix.integrations.uinput_mouse import CursorDoToque
+
+        cursor = CursorDoToque()
+        assert cursor.start()
+        for _ in range(5):
+            cursor.mover(0.4, 0.0)
+        assert [v for e, v in cursor._device.emitidos if e == "REL_X"] == [1, 1]
+
+    def test_o_clique_e_da_mesa(self, _uinput_que_grava: types.ModuleType) -> None:
+        from hefesto_dualsense4unix.integrations.uinput_mouse import CursorDoToque
+
+        cursor = CursorDoToque()
+        cursor.start()
+        cursor.clicar(_P2, True)
+        cursor.clicar(_P3, True)
+        cursor.clicar(_P2, False)
+        cliques = [v for e, v in cursor._device.emitidos if e == "BTN_LEFT"]
+        assert cliques == [1], "o botão soltou com a outra peça ainda segurando"
+        no = cursor._device
+        cursor.stop()
+        assert [v for e, v in no.emitidos if e == "BTN_LEFT"] == [1, 0]
+        assert no.destruido, "o nó do cursor ficou de pé depois do stop"
