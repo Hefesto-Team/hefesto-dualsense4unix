@@ -4164,7 +4164,8 @@ def _conferencia_da_leitura(state: dict[str, Any] | None, *,
         print(f"[relato] {PAGINA} · examinar-portas: "
               f"{broker.linha_do_grab('o nó do controle principal', broker.GRAB_SEM_NO)}",
               file=sys.stderr)
-    return Item(chave=CHAVE_DA_LEITURA, rotulo=ROTULO_DA_LEITURA, estado="atencao",
+    return Item(chave=CHAVE_DA_LEITURA, rotulo=ROTULO_DA_LEITURA,
+                estado="atencao",  # (noqa-acento): chave de máquina do exame
                 porque=f"{linha}.")
 
 

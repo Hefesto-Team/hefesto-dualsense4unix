@@ -597,7 +597,8 @@ def test_o_exame_da_08_diz_a_causa_do_controle_que_o_hefesto_nao_segura(
     item = a08_conexoes._conferencia_da_leitura(_estado_do_daemon("failed"), **dubles)
     assert item is not None
     assert item.chave == a08_conexoes.CHAVE_DA_LEITURA
-    assert item.estado == "atencao" and item.porque == f"{AVISO_DE_GRAB_LINHA}."
+    assert item.estado == "atencao"  # (noqa-acento): chave de máquina do exame
+    assert item.porque == f"{AVISO_DE_GRAB_LINHA}."
     assert feitas["porta"] and feitas["grab"] == [("/dev/input/event-de-mentira", True)]
     diario = capsys.readouterr().err
     assert linha_da_porta(PORTA_BROKER, "o broker responde em /run/de-mentira.sock") in diario
@@ -638,7 +639,8 @@ def test_a_linha_da_leitura_entra_no_check_up_e_nao_na_aba_jogar(
     from hefesto_dualsense4unix.integrations.exame_da_mesa import Item
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 
-    leitura = Item(chave=a08_conexoes.CHAVE_DA_LEITURA, rotulo="x", estado="atencao",
+    leitura = Item(chave=a08_conexoes.CHAVE_DA_LEITURA, rotulo="x",
+                   estado="atencao",  # (noqa-acento): chave de máquina do exame
                    porque="y.")
     monkeypatch.setattr(a08_conexoes, "_conferencias", lambda: [])
     monkeypatch.setattr(a08_conexoes, "_EXTRAS", (leitura,))
