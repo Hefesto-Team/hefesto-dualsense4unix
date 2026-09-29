@@ -393,6 +393,111 @@ def test_o_degrau_4_da_tela_diz_o_mesmo_que_o_provider(registro: Any) -> None:
 
 
 # ===========================================================================
+# 6b. A escolha não cede à vizinhança do plástico; a automática cede
+#     (conferência de 29/09/2026)
+# ===========================================================================
+#: Os tons de luz dos plásticos da mesa dela, pela regra do dono
+#: (`cor_do_plastico.tom_da_luz`), lidos e não digitados.
+def _tom(nome: str) -> RGB:
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import tom_da_luz_do_nome
+
+    tom = tom_da_luz_do_nome(nome)
+    assert tom is not None, nome
+    return tom
+
+
+ROXO_DA_PALETA: RGB = player_slot_color(8)
+
+
+def _automatica(uniq: str, numero: int, plastico: str | None,
+                brilho: float = 1.0) -> PecaDaMesa:
+    """A peça sem escolha: acende o plástico (ou o número), como o backend a monta."""
+    do_numero = _na_escala(player_slot_color(numero), brilho)
+    do_plastico = None if plastico is None else _na_escala(_tom(plastico), brilho)
+    pedida = do_plastico if do_plastico is not None else do_numero
+    return PecaDaMesa(uniq=uniq, pedida=pedida, do_numero=do_numero,
+                      procedencia=DA_PALETA, numero=numero, brilho=brilho,
+                      do_plastico=do_plastico)
+
+
+def _escolhida(uniq: str, numero: int, cor: RGB, plastico: str | None,
+               brilho: float = 1.0) -> PecaDaMesa:
+    """A peça com a cor escolhida para o número de hoje (não é fóssil)."""
+    base = _automatica(uniq, numero, plastico, brilho)
+    return replace(base, pedida=_na_escala(cor, brilho), procedencia=numero)
+
+
+@pytest.mark.parametrize("via", ["usb", "bt"])
+@pytest.mark.parametrize("k", [1, 2, 3, 4], ids=["P1", "P2", "P3", "P4"])
+@pytest.mark.parametrize(("plastico", "escolha"), [
+    ("Galactic Purple", ROXO_DA_PALETA),  # a 0,8° do roxo da paleta
+    ("Cosmic Red", ROSA),                  # a 10,7° do rosa
+    ("White", (252, 252, 252)),           # a casa do branco da fileira
+], ids=["roxo-ao-lado-do-galactic", "rosa-ao-lado-do-cosmic", "branco-ao-lado-do-white"])
+def test_a_escolha_ao_lado_de_um_plastico_vizinho_fica(plastico: str, escolha: RGB,
+                                                        k: int, via: str) -> None:
+    """A cor que ela escolheu fica, e o plástico vizinho de outro controle cede ao número.
+
+    A tela recusa com o X só a casa EXATA (`_sem_repetir_a_cor_do_vizinho`): o
+    roxo da paleta ao lado do Galactic Purple aceso não tem X, e o daemon não
+    pode deslocá-lo calado (D-0909-A-COR-DE-OUTRO-CONTROLE-SE-RECUSA-COM-X,
+    *«nada se desloca sozinho»*). Vale para o plástico em qualquer número,
+    antes ou depois da escolha na ordem; `via` não muda a mesa (a cor chega
+    pelo mesmo RGB nos dois transportes) e fica para a matriz dizer os dois.
+
+    **A MORDIDA:** tire de `_repetida` a volta que faz o plástico ceder à
+    escolha de quem vem depois (`escolhas_que_ficam`): o Galactic Purple no P1
+    fica no roxo dele ao lado do roxo escolhido pelo P2, duas luzes iguais na
+    mão. Tirando também o `vizinhanca=False` da escolha (o código de antes da
+    conferência), o roxo do P2 sai deslocado, calado.
+    """
+    del via
+    numeros = [1, 2, 3, 4]
+    quem_escolhe = numeros[(k % 4)]  # o vizinho de número do plástico
+    mesa = []
+    for n in numeros:
+        uniq = UNIQS[n - 1]
+        if n == k:
+            mesa.append(_automatica(uniq, n, plastico))
+        elif n == quem_escolhe:
+            mesa.append(_escolhida(uniq, n, escolha, "Starlight Blue"))
+        else:
+            mesa.append(_automatica(uniq, n, None))
+    saida = cores_sem_colisao(mesa)
+    assert saida[UNIQS[quem_escolhe - 1]] == escolha, saida
+    assert not lc._mesmo_tom(saida[UNIQS[k - 1]], escolha), saida
+    luzes = list(saida.values())
+    for i, a in enumerate(luzes):
+        for b in luzes[i + 1:]:
+            assert not lc._mesmo_tom(a, b), saida
+
+
+def test_na_mesa_das_0230_cada_plastico_acende_a_luz_da_prova() -> None:
+    """A prova da sprint na função pura: a mesa das 02:30 com os plásticos lidos.
+
+    O Cosmic Red fica no vermelho legado (a escolha antiga, que não é a
+    automática de ninguém), o White volta do amarelo fóssil ao branco do
+    plástico no piso do brilho dele, e o Starlight Blue e o Galactic Purple
+    ficam nas escolhas das 02:01.
+    """
+    mesa = [
+        replace(_automatica(UNIQS[0], 1, "Cosmic Red"), pedida=VERMELHO,
+                procedencia=LEGADO),
+        replace(_automatica(UNIQS[1], 2, "White", 0.08),
+                pedida=_na_escala(AMARELO, 0.08), procedencia=1),
+        _escolhida(UNIQS[2], 3, LARANJA, "Starlight Blue"),
+        _escolhida(UNIQS[3], 4, VERDE_AGUA, "Galactic Purple", 0.99),
+    ]
+    saida = cores_sem_colisao(mesa)
+    assert saida == {
+        UNIQS[0]: VERMELHO,
+        UNIQS[1]: _na_escala(BRANCO, 0.08),
+        UNIQS[2]: LARANJA,
+        UNIQS[3]: _na_escala(VERDE_AGUA, 0.99),
+    }, saida
+
+
+# ===========================================================================
 # 7. O daemon sabe o plástico sem a janela
 # ===========================================================================
 def test_o_tique_de_presenca_pergunta_o_plastico_sem_state_full(registro: Any) -> None:

@@ -381,10 +381,14 @@ def _e_fossil(peca: PecaDaMesa, numeros: set[RGB]) -> bool:
         return peca.numero is None or peca.procedencia != peca.numero
     if peca.procedencia is not LEGADO or peca.pedida is None:
         return False
+    # O TOM EXATO, e não a vizinhança: o legado prova fóssil pela FORMA (a
+    # cor é a automática de outro), e uma escolha de verdade ao lado de um
+    # tom automático não é esse tom congelado.
     proprias = (peca.do_plastico, peca.do_numero)
-    if any(p is not None and _mesmo_tom(peca.pedida, p) for p in proprias):
+    if any(p is not None and _mesmo_tom(peca.pedida, p, vizinhanca=False)
+           for p in proprias):
         return False
-    return any(_mesmo_tom(peca.pedida, numero) for numero in numeros)
+    return any(_mesmo_tom(peca.pedida, numero, vizinhanca=False) for numero in numeros)
 
 
 def _acende_o_tom(acesa: RGB, tom: RGB) -> bool:
@@ -419,7 +423,7 @@ def _acende_o_tom(acesa: RGB, tom: RGB) -> bool:
     return _escala_crua(tom, (baixo + alto) / 2) == acesa
 
 
-def _mesmo_tom(a: RGB, b: RGB) -> bool:
+def _mesmo_tom(a: RGB, b: RGB, *, vizinhanca: bool = True) -> bool:
     """As duas luzes são o MESMO TOM, cada uma no seu brilho? — o dono único.
 
     A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01, 29/09/2026. O resolvedor fazia três
@@ -437,6 +441,14 @@ def _mesmo_tom(a: RGB, b: RGB) -> bool:
     e o laranja acendem o mesmo `(1, 0, 0)` (`reescalar` já recusa escolher
     entre eles), e ela só é «a mesma» que o próprio byte. Sem esta guarda, um
     controle a 0,5% deslocava o vizinho rosa (`test_a_marca_da_cor_nao_some`).
+
+    `vizinhanca=False` é o TOM EXATO: sem a vizinhança de matiz. É a pergunta
+    de toda cor que alguém ESCOLHEU (o legado, a escolha por número, a mão, o
+    «Todos»): a tela recusa com o X só a casa exata
+    (`a04_iluminacao._sem_repetir_a_cor_do_vizinho`), e o daemon não pode
+    deslocar por vizinhança uma escolha que a tela aceitou
+    (D-0909-A-COR-DE-OUTRO-CONTROLE-SE-RECUSA-COM-X: *«nada se desloca
+    sozinho»*). A vizinhança vale para a cor AUTOMÁTICA e para o tom livre.
     """
     if a == b:
         return True
@@ -449,6 +461,8 @@ def _mesmo_tom(a: RGB, b: RGB) -> bool:
         return tons_a == tons_b
     if _acende_o_tom(a, b) or _acende_o_tom(b, a):
         return True
+    if not vizinhanca:
+        return False
     # E O «MESMO» É POR VIZINHANÇA desde a cor do plástico
     # (D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO): os tons do plástico caem ao
     # lado dos da paleta — o Galactic Purple `(131, 0, 255)` e o roxo
@@ -489,9 +503,9 @@ def _tons_da_paleta(luz: RGB) -> tuple[RGB, ...]:
     return tuple(t for t in _PLAYER_SLOT_COLORS.values() if _acende_o_tom(luz, t))
 
 
-def _ja_acesa(luz: RGB, acesas: Iterable[RGB]) -> bool:
+def _ja_acesa(luz: RGB, acesas: Iterable[RGB], *, vizinhanca: bool = True) -> bool:
     """`luz` é o tom de alguma das `acesas`? — a pergunta de `in`, pelo tom."""
-    return any(_mesmo_tom(luz, outra) for outra in acesas)
+    return any(_mesmo_tom(luz, outra, vizinhanca=vizinhanca) for outra in acesas)
 
 
 def _automaticas(mesa: list[PecaDaMesa]) -> set[RGB]:
@@ -654,6 +668,34 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
             for tom in tons
         )
 
+    # A ESCOLHA NÃO CEDE À VIZINHANÇA, E A AUTOMÁTICA CEDE — conferência da
+    # A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01, 29/09/2026. Com a vizinhança em
+    # toda pergunta, o roxo da paleta escolhido para o P2 saía branco ao lado
+    # do Galactic Purple P1 automático `(131, 0, 255)`: a tela não o recusa (a
+    # casa do roxo não é a do plástico), e o daemon o deslocava calado. A cor
+    # que alguém escolheu só cede ao TOM EXATO já tomado, que é o que o X da
+    # tela recusa; a cor AUTOMÁTICA cede por vizinhança, e a do plástico cede
+    # também à escolha de quem vem depois na ordem, porque a escolha fica.
+    escolhas_que_ficam: list[tuple[str, RGB]] = [
+        (peca.uniq, peca.pedida) for peca in mesa
+        if peca.pedida is not None and peca.pedida != _APAGADA
+        and peca.procedencia is not DA_PALETA and peca.procedencia is not DO_GLOBAL
+        and not _e_fossil(peca, numeros)
+    ]
+
+    def _repetida(peca: PecaDaMesa) -> bool:
+        assert peca.pedida is not None
+        if peca.procedencia is not DA_PALETA:
+            return _ja_acesa(peca.pedida, tomadas, vizinhanca=False)
+        if _ja_acesa(peca.pedida, tomadas):
+            return True
+        if peca.do_plastico is None:
+            return False
+        return _ja_acesa(
+            peca.pedida,
+            (luz for dono, luz in escolhas_que_ficam if dono != peca.uniq),
+        )
+
     def _primeiro_tom_livre(peca: PecaDaMesa) -> RGB | None:
         # A COR DO NÚMERO já chega no brilho da peça (é a automática, pela
         # mesma escala da saída); os tons da paleta chegam cheios e são
@@ -699,7 +741,7 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
             # tomada, porque estar tomada é justamente o que ele pediu.
             tomadas.setdefault(peca.pedida, peca.uniq)
             continue
-        if _e_fossil(peca, numeros) or _ja_acesa(peca.pedida, tomadas):
+        if _e_fossil(peca, numeros) or _repetida(peca):
             _acomodar(peca, peca.pedida)
             continue
         tomadas.setdefault(peca.pedida, peca.uniq)
