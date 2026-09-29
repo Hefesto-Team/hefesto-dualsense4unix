@@ -6,7 +6,8 @@ sem largar o controle.
 **O PS e as combinações valem em qualquer um dos quatro controles.** O gesto
 que muda um cartão da aba Jogar muda o de quem o fez: o PS + L3 no controle do
 jogador 3 troca a máscara do jogador 3. O cursor do PC continua um só, e o
-mouse e o teclado do controle saem do jogador 1.
+mouse e o teclado do controle saem do controle marcado «Navega o PC» na aba
+Navegação, que é o do jogador 1.
 
 ## Os gestos
 
