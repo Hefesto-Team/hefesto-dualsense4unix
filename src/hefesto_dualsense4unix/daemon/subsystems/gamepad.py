@@ -1315,12 +1315,54 @@ def _mults_por_motor(
     return (degrau * fraco_pct / 100.0, degrau * forte_pct / 100.0)
 
 
+def _levar_a_haptica_fina(
+    daemon: Any,
+    vpad: Any,
+    target_uniq: str | None,
+    weak: int,
+    strong: int,
+    *,
+    reaplicar: Callable[[], object] | None = None,
+) -> bool:
+    """O rumble do pad SEM háptica vai à háptica fina do lugar. True = ela leva.
+
+    NO-MODO-XBOX-TUDO-FUNCIONA-01, parte 4, 29/09/2026. Só o pad ``uinput``
+    converte: ele é o pad de todo cartão no modo Xbox (o Xbox 360 vestido), e
+    o do cartão Xbox ou Nintendo no modo DualSense — o jogo não tem canal de
+    háptica nenhum ali, só os dois motores. O pad ``uhid`` é um DualSense para
+    o jogo, e o jogo escolhe sozinho entre o rumble e a háptica dele.
+
+    O pad que não converte manda ZERO ao dono: o tocador que tocava o rumble
+    daquele controle (o pad que acabou de sair do ``uinput``, o rumble fixado
+    pela tela) cala. Sem endereço não há lugar, e nada se pergunta.
+    """
+    if not isinstance(target_uniq, str) or not target_uniq:
+        return False
+    alto_falante = getattr(daemon, "_alto_falante_subsystem", None)
+    levar = getattr(alto_falante, "levar_o_rumble", None)
+    if not callable(levar):
+        return False
+    converte = getattr(vpad, "backend", None) == "uinput"
+    try:
+        leva = levar(
+            target_uniq,
+            weak if converte else 0,
+            strong if converte else 0,
+            reaplicar=reaplicar if converte else None,
+        )
+    except Exception as exc:  # a háptica fina nunca derruba o rumble do jogo
+        logger.debug("haptica_fina_do_rumble_falhou", err=str(exc))
+        return False
+    return converte and leva is True
+
+
 def apply_game_rumble(
     daemon: DaemonProtocol,
     weak: int,
     strong: int,
     *,
     target_uniq: str | None = None,
+    vpad: Any = None,
 ) -> tuple[int, int] | None:
     """Aplica no controle FÍSICO o rumble vindo do jogo (FF do vpad).
 
@@ -1366,13 +1408,34 @@ def apply_game_rumble(
         backend sem `primary_uniq` (ex.: `FakeController`) ou uma mesa de um
         controle só nunca pediu endereço, e ali broadcast e mira são a mesma
         coisa. A recusa vale só quando um endereço FOI pedido e não casou.
+      - NO-MODO-XBOX-TUDO-FUNCIONA-01, parte 4 (29/09/2026): com ``vpad`` o
+        pad ``uinput`` (o que só tem os dois motores para o jogo), o par
+        efetivo vai também à háptica fina do lugar (:func:`_levar_a_haptica_fina`).
+        Quando ela o leva até o controle, os motores do HID ficam em ZERO —
+        o bit que pede rumble ao firmware cala a háptica por áudio — e o par
+        devolvido é o que chegou pela háptica. Sem ``vpad`` (os chamadores de
+        antes) nada muda.
     """
     if daemon.config.rumble_active is not None:
-        return None  # rumble fixado manual vence o FF do jogo
+        # Rumble fixado manual vence o FF do jogo — e a háptica fina dele.
+        _levar_a_haptica_fina(daemon, vpad, target_uniq, 0, 0)
+        return None
     controller = daemon.controller
     mult_fraco, mult_forte = _mults_por_motor(daemon, time.monotonic(), target_uniq)
     weak_eff = max(0, min(255, round(weak * mult_fraco)))
     strong_eff = max(0, min(255, round(strong * mult_forte)))
+    motores = (weak_eff, strong_eff)
+    if _levar_a_haptica_fina(
+        daemon,
+        vpad,
+        target_uniq,
+        weak_eff,
+        strong_eff,
+        reaplicar=lambda: apply_game_rumble(
+            daemon, weak, strong, target_uniq=target_uniq, vpad=vpad
+        ),
+    ):
+        motores = (0, 0)
 
     # Any: o targeting por-uniq é opcional no backend (só o PyDualSense o
     # tem; IController/FakeController não) — o gate é o callable() abaixo.
@@ -1382,7 +1445,7 @@ def apply_game_rumble(
         # (BROADCAST-PROIBIDO-01). É a mesma decisão dos três irmãos.
         if callable(rumble_for):
             try:
-                if rumble_for(target_uniq, weak_eff, strong_eff):
+                if rumble_for(target_uniq, *motores):
                     return (weak_eff, strong_eff)
             except Exception as exc:
                 logger.warning("game_rumble_target_failed", err=str(exc), target=target_uniq)
@@ -2052,13 +2115,15 @@ def make_primary_rumble_sink(daemon: DaemonProtocol) -> Callable[[int, int], Non
 
     def _sink(weak: int, strong: int) -> None:
         uniq = getattr(daemon.controller, "primary_uniq", None)
+        vpad = getattr(daemon, "_gamepad_device", None)
         efetivo = apply_game_rumble(
             daemon,
             weak,
             strong,
             target_uniq=uniq if isinstance(uniq, str) and uniq else None,
+            vpad=vpad,
         )
-        anotar_rumble_no_vpad(getattr(daemon, "_gamepad_device", None), efetivo)
+        anotar_rumble_no_vpad(vpad, efetivo)
 
     return _sink
 

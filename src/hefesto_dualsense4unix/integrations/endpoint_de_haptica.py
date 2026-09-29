@@ -92,18 +92,47 @@ ponte, e nunca o endpoint.
 A MARCA DO LUGAR NÃO TEM A FORMA DE SEIS HEX (:data:`MOLDE_DA_MARCA_DO_LUGAR`):
 as réguas de forma leem ``HEFESTO<6 hex>`` como o rabo de um endereço
 (``scripts/check_endereco_de_radio.py``, ``core/formas_do_endereco.py``).
+
+O RUMBLE DO PAD SEM HÁPTICA TOCA NO LUGAR — 29/09/2026
+------------------------------------------------------
+NO-MODO-XBOX-TUDO-FUNCIONA-01, parte 4. No modo Xbox o jogo vê um pad de
+Xbox 360 no ``uinput`` e só manda rumble (dois motores, 0 a 255); o áudio de
+háptica que ele toca num DualSense não existe ali. :class:`TocadorDoRumble`
+toca esse rumble como háptica nos canais traseiros do endpoint do lugar, e o
+laço do cabo e a ponte do rádio o levam ao controle como levam o do jogo.
+
+**O ALVO É O ``object.serial``, COM O RECUO PROIBIDO** (:func:`argv_do_tocador`):
+um fluxo de reprodução cujo alvo não resolve cai na saída PADRÃO sem erro — a
+TV ou a caixa de som dela, tocando um zumbido de 60 Hz. O fluxo pede
+``node.dont-fallback`` e ``node.dont-reconnect``, e o destino é conferido no
+grafo (:func:`conferir_o_destino_do_tocador`): ligado a outro nó, morre.
 """
 
 from __future__ import annotations
 
+import contextlib
+import fcntl
+import json
+import math
+import os
+import select
+import shutil
+import subprocess
+import sys
+import threading
+import time
+from array import array
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     CANAIS_DA_HAPTICA,
     HEX_DO_SUFIXO,
+    o_servidor_e_o_pipewire,
     rodar_pactl,
+    serial_do_no,
     so_hex,
 )
 from hefesto_dualsense4unix.integrations.vestido_de_dualsense import (
@@ -744,24 +773,558 @@ class EndpointDeHaptica:
         self.parar()
 
 
+# ---------------------------------------------------------------------------
+# O rumble do pad sem háptica, tocado no lugar — NO-MODO-XBOX-TUDO-FUNCIONA-01
+# ---------------------------------------------------------------------------
+
+#: O motor GRANDE e lento do pad de Xbox (o ``strong``) vira um seno de 60 Hz no
+#: atuador da ESQUERDA (o canal traseiro esquerdo, o ``motor_left`` do report);
+#: o PEQUENO e rápido (o ``weak``), um de 160 Hz no da direita. É o arranjo dos
+#: dois motores de um pad de Xbox, e é escolha, não medida: a frequência que o
+#: firmware usa na própria emulação ninguém publicou
+#: (``docs/protocol/dualsense-energia-e-vibracao.md``, §5). Os dois fecham um
+#: número inteiro de voltas em :data:`QUADROS_DO_CICLO`, e o bloco não estala.
+FREQUENCIA_DO_FORTE_HZ = 60
+FREQUENCIA_DO_FRACO_HZ = 160
+
+#: 10 ms a 48 kHz: o nível do rumble é relido a cada bloco.
+QUADROS_POR_BLOCO = 480
+
+#: 50 ms: 3 voltas de 60 Hz e 8 de 160 Hz. O seno vem de uma tabela deste
+#: tamanho, e a fase anda em múltiplos do bloco.
+QUADROS_DO_CICLO = 2400
+
+#: Quanto silêncio o tocador aguenta de pé antes de sair do endpoint. De pé, o
+#: endpoint «toca» e a ponte do rádio fica no modo háptica (que só escreve o
+#: bloco com sinal); fora dele, o próximo rumble custa subir o tocador de novo,
+#: e até lá quem leva é o HID. Três segundos cobrem a pausa entre dois tiros.
+FOLGA_DO_TOCADOR_S = 3.0
+
+#: A latência que se pede ao tocador — explícita, pela regra da casa: sem ela
+#: o servidor escolhe um buffer generoso e a vibração chega atrasada.
+LATENCIA_DO_TOCADOR_MS = 20
+
+#: Um tocador que falhou (sem binário, morreu, parou de ler, ligou-se ao nó
+#: errado) não é relançado a cada rumble: o HID leva, e ele tenta de novo depois.
+RECUSA_DO_TOCADOR_S = 60.0
+
+#: Quanto tempo a escrita espera o tocador ler antes de o dar por parado. Um
+#: fluxo sem destino (o recuo proibido) não consome nada, e a escrita ficaria
+#: presa para sempre.
+PRAZO_DA_ESCRITA_S = 1.0
+
+#: O cano entre o daemon e o tocador, em bytes: 4 KiB são 5 ms de áudio de
+#: quatro canais. O padrão do kernel (64 KiB, 85 ms) seria atraso puro.
+CANO_DO_TOCADOR = 4096
+
+#: Quando conferir o destino no grafo, contados da primeira escrita.
+ESPERAS_DA_CONFERENCIA_S: tuple[float, ...] = (0.3, 0.7, 1.0)
+
+#: O começo do nome do NOSSO fluxo no endpoint. É por ele que a partida sabe
+#: que o fluxo não é de jogo nenhum (``fluxos_nos_lugares``).
+MARCA_DO_TOCADOR = "hefesto-haptica-do-rumble-"
+
+_TAXA = TAXA_DO_ENDPOINT
+_BYTES_POR_QUADRO = 4 * CANAIS_DA_HAPTICA
+
+
+def _seno(frequencia: int) -> array[float]:
+    return array(
+        "f",
+        (math.sin(2.0 * math.pi * frequencia * i / _TAXA) for i in range(QUADROS_DO_CICLO)),
+    )
+
+
+_SENO_DO_FORTE = _seno(FREQUENCIA_DO_FORTE_HZ)
+_SENO_DO_FRACO = _seno(FREQUENCIA_DO_FRACO_HZ)
+_BLOCO_MUDO = bytes(QUADROS_POR_BLOCO * _BYTES_POR_QUADRO)
+
+
+def rotulo_do_tocador(lugar: int) -> str:
+    """O ``node.name`` do tocador do lugar. Sem endereço: o lugar é o dono."""
+    return f"{MARCA_DO_TOCADOR}lugar{int(lugar)}"
+
+
+def _amplitude(nivel: int) -> float:
+    return max(0, min(255, int(nivel))) / 255.0
+
+
+def bloco_da_haptica(
+    fraco: int,
+    forte: int,
+    *,
+    fase: int = 0,
+    antes: tuple[int, int] | None = None,
+) -> bytes:
+    """Um bloco de :data:`QUADROS_POR_BLOCO` quadros, ``float32le``, FL FR RL RR.
+
+    A frente (o alto-falante) sai em silêncio; o traseiro esquerdo leva o
+    ``forte`` a :data:`FREQUENCIA_DO_FORTE_HZ` e o direito o ``fraco`` a
+    :data:`FREQUENCIA_DO_FRACO_HZ`, com amplitude ``nível / 255``. ``antes`` é o
+    par do bloco anterior: a amplitude anda em rampa de um ao outro dentro do
+    bloco, e a mudança de nível não vira um estalo no atuador. ``fase`` é o
+    quadro do ciclo em que o bloco começa.
+    """
+    fraco0, forte0 = antes if antes is not None else (fraco, forte)
+    a0, a1 = _amplitude(forte0), _amplitude(forte)
+    b0, b1 = _amplitude(fraco0), _amplitude(fraco)
+    if not (a0 or a1 or b0 or b1):
+        return _BLOCO_MUDO
+    n = QUADROS_POR_BLOCO
+    inicio = int(fase) % QUADROS_DO_CICLO
+    indices = [(inicio + i) % QUADROS_DO_CICLO for i in range(n)]
+    passo_a, passo_b = (a1 - a0) / n, (b1 - b0) / n
+    quadros = array("f", _BLOCO_MUDO)
+    forte_ = _SENO_DO_FORTE
+    fraco_ = _SENO_DO_FRACO
+    quadros[2::4] = array("f", [(a0 + passo_a * i) * forte_[k] for i, k in enumerate(indices)])
+    quadros[3::4] = array("f", [(b0 + passo_b * i) * fraco_[k] for i, k in enumerate(indices)])
+    if sys.byteorder != "little":  # pragma: no cover — o formato é little-endian
+        quadros.byteswap()
+    return quadros.tobytes()
+
+
+def argv_do_tocador(
+    sink: str,
+    rotulo: str,
+    runner: Callable[[list[str]], str | None] | None = None,
+) -> list[str]:
+    """O comando que toca PCM cru no endpoint ``sink``. ``[]`` = não há como.
+
+    O ``pw-cat`` vai SÓ pelo ``object.serial`` (o índice do ``pactl`` no
+    ``pipewire-pulse``, :func:`alto_falante_bt.o_servidor_e_o_pipewire`): pelo
+    nome, um nó que não resolve manda o fluxo à saída padrão. Sem serial, o
+    ``pacat`` acerta pelo nome. Os dois pedem as mesmas três coisas: não
+    recuar para a saída padrão, não se religar a outro nó quando o endpoint
+    sai, e não herdar um alvo nem um volume guardados para o programa.
+    """
+    if not sink or not rotulo:
+        return []
+    recuo_proibido = (
+        "node.dont-fallback=true",
+        "node.dont-reconnect=true",
+        "state.restore-target=false",
+        "state.restore-props=false",
+    )
+    if shutil.which("pw-cat") is not None:
+        serial = serial_do_no(sink) if o_servidor_e_o_pipewire(runner) else None
+        if serial is not None:
+            return [
+                "pw-cat", "--playback", "--raw",
+                f"--target={serial}",
+                f"--rate={_TAXA}", f"--channels={CANAIS_DA_HAPTICA}", "--format=f32",
+                "--channel-map=FL,FR,RL,RR", f"--latency={LATENCIA_DO_TOCADOR_MS}ms",
+                "--volume=1.0",
+                "-P", " ".join((f"node.name={rotulo}", f"media.name={rotulo}", *recuo_proibido)),
+                "-",
+            ]
+    if shutil.which("pacat") is not None:
+        return [
+            "pacat", "--playback", "--raw", f"--device={sink}",
+            f"--rate={_TAXA}", f"--channels={CANAIS_DA_HAPTICA}", "--format=float32le",
+            "--channel-map=front-left,front-right,rear-left,rear-right",
+            f"--latency-msec={LATENCIA_DO_TOCADOR_MS}", "--volume=65536",
+            f"--client-name={rotulo}", f"--stream-name={rotulo}",
+            f"--property=node.name={rotulo}",
+            *(f"--property={p}" for p in recuo_proibido),
+        ]
+    return []
+
+
+def conferir_o_destino_do_tocador(rotulo: str) -> str | None:
+    """O ``node.name`` do nó a que o tocador chamado ``rotulo`` se ligou. ``None`` = não sei.
+
+    É o espelho, do lado da reprodução, de
+    ``alto_falante_bt.conferir_o_alvo_do_gravador``: lá o nosso nó é a ENTRADA
+    do ``Link`` e a resposta é a origem; aqui ele é a SAÍDA e a resposta é o
+    destino. ``None`` nunca quer dizer «está certo» (sem ``pw-dump``, com a
+    saída ilegível, ou ainda sem ``Link``).
+    """
+    if not rotulo or shutil.which("pw-dump") is None:
+        return None
+    try:
+        proc = subprocess.run(
+            ["pw-dump"], capture_output=True, text=True, timeout=3.0, check=False
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if proc.returncode != 0:
+        return None
+    try:
+        objetos = json.loads(proc.stdout or "[]")
+    except (ValueError, TypeError):
+        return None
+    nomes: dict[int, str] = {}
+    meus: set[int] = set()
+    for o in objetos if isinstance(objetos, list) else ():
+        if not isinstance(o, dict) or o.get("type") != "PipeWire:Interface:Node":
+            continue
+        ident = o.get("id")
+        props = (o.get("info") or {}).get("props") or {}
+        if not isinstance(ident, int):
+            continue
+        nome = str(props.get("node.name") or "")
+        nomes[ident] = nome
+        if nome == rotulo:
+            meus.add(ident)
+    if not meus:
+        return None
+    for o in objetos:
+        if not isinstance(o, dict) or o.get("type") != "PipeWire:Interface:Link":
+            continue
+        info = o.get("info") or {}
+        if info.get("output-node-id") in meus:
+            destino = info.get("input-node-id")
+            if isinstance(destino, int):
+                return nomes.get(destino) or None
+    return None
+
+
+def fluxos_nos_lugares(
+    nomes: Iterable[str],
+    runner: Callable[[list[str]], str | None] | None = None,
+) -> tuple[frozenset[str], frozenset[str]] | None:
+    """``(clientes dos nossos tocadores, endpoints com fluxo de outro)``. ``None`` = não sei.
+
+    Uma passada pela listagem LONGA dos fluxos (a curta não diz o nome do
+    fluxo): o nosso se reconhece pelo ``node.name`` ou pelo ``media.name`` que
+    :func:`argv_do_tocador` lhe dá (:data:`MARCA_DO_TOCADOR`). O fluxo sem
+    cliente (um módulo do próprio servidor) não é de jogo.
+    """
+    alvos = {n for n in nomes if n}
+    if not alvos:
+        return frozenset(), frozenset()
+    correr: Any = runner or rodar_pactl
+    sinks = correr(["pactl", "list", "short", "sinks"])
+    if sinks is None:
+        return None
+    por_indice: dict[str, str] = {}
+    for linha in sinks.splitlines():
+        campos = linha.split("\t")
+        if len(campos) > 1 and campos[1] in alvos:
+            por_indice[campos[0].strip()] = campos[1]
+    if not por_indice:
+        return frozenset(), frozenset()
+    texto = correr(["pactl", "list", "sink-inputs"])
+    if texto is None:
+        return None
+    nossos: set[str] = set()
+    com_outro: set[str] = set()
+    for bloco in texto.split("Sink Input #")[1:]:
+        cliente = sink = ""
+        nosso = False
+        for linha in bloco.splitlines():
+            chave, _, valor = linha.strip().partition(":")
+            if chave == "Client" and not cliente:
+                cliente = valor.strip()
+            elif chave == "Sink" and not sink:
+                sink = valor.strip()
+            elif linha.strip().startswith(("node.name", "media.name")):
+                nosso = nosso or MARCA_DO_TOCADOR in linha
+        alvo = por_indice.get(sink)
+        if alvo is None:
+            continue
+        sem_cliente = cliente in ("", "n/a", "-")
+        if nosso:
+            if not sem_cliente:
+                nossos.add(cliente)
+        elif not sem_cliente:
+            com_outro.add(alvo)
+    return frozenset(nossos), frozenset(com_outro)
+
+
+class TocadorDoRumble:
+    """O rumble do jogo tocado como háptica no endpoint de UM lugar.
+
+    :meth:`levar` só guarda o nível e acorda o fio — quem chama é o fio da
+    vibração do pad, que não pode esperar um processo subir. O fio do tocador
+    sobe o processo no primeiro nível não nulo, escreve um bloco a cada 10 ms
+    com o nível de agora e sai depois de :data:`FOLGA_DO_TOCADOR_S` de
+    silêncio. ``ao_mudar`` é avisado quando o tocador fica de pé e quando sai:
+    é a volta do alto-falante, que abre ou fecha o caminho até o controle.
+    """
+
+    def __init__(
+        self,
+        lugar: int,
+        *,
+        ao_mudar: Callable[[], object] | None = None,
+        argv_de: Callable[[str, str], list[str]] | None = None,
+        lancar: Callable[..., Any] | None = None,
+        conferir: Callable[[str], str | None] | None = None,
+        folga_s: float = FOLGA_DO_TOCADOR_S,
+        relogio: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self.lugar = int(lugar)
+        self.rotulo = rotulo_do_tocador(lugar)
+        self._ao_mudar = ao_mudar
+        self._argv_de = argv_de or argv_do_tocador
+        self._lancar: Callable[..., Any] = lancar or subprocess.Popen
+        self._conferir = conferir or conferir_o_destino_do_tocador
+        self._folga_s = float(folga_s)
+        self._relogio = relogio
+        self._trava = threading.Lock()
+        self._nivel: tuple[int, int] = (0, 0)
+        self._sink = ""
+        self._dono = ""
+        self._proc: Any = None
+        self._vivo = False
+        self._recusado_ate = 0.0
+        self._acordar = threading.Event()
+        self._fim = threading.Event()
+        self._fio: threading.Thread | None = None
+        #: ``((fraco, forte, fase), bloco)`` do nível parado: o rumble fica
+        #: constante por muitos blocos, e o seno não se recalcula à toa.
+        self._memoria: dict[tuple[int, int, int], bytes] = {}
+
+    # -- o que se lê de fora ----------------------------------------------
+
+    @property
+    def nivel(self) -> tuple[int, int]:
+        """O par ``(fraco, forte)`` que o tocador está tocando agora."""
+        return self._nivel
+
+    @property
+    def dono(self) -> str:
+        """O ``uniq`` de quem pediu o nível de agora."""
+        return self._dono
+
+    @property
+    def sink(self) -> str:
+        return self._sink
+
+    @property
+    def vivo(self) -> bool:
+        """De pé e escrevendo no endpoint — o processo, e não a lembrança."""
+        proc = self._proc
+        return bool(self._vivo and proc is not None and proc.poll() is None)
+
+    # -- o que se pede ------------------------------------------------------
+
+    def levar(self, fraco: int, forte: int, *, sink: str, dono: str) -> None:
+        """O nível de agora. Nunca espera, nunca levanta."""
+        par = (max(0, min(255, int(fraco))), max(0, min(255, int(forte))))
+        with self._trava:
+            self._nivel = par
+            self._sink = str(sink or "")
+            self._dono = str(dono or "")
+            if any(par) and not self._fim.is_set() and (
+                self._fio is None or not self._fio.is_alive()
+            ):
+                self._fio = threading.Thread(
+                    target=self._correr, name=f"hefesto-{self.rotulo}", daemon=True
+                )
+                self._fio.start()
+        self._acordar.set()
+
+    def calar(self) -> None:
+        """Nível zero: o tocador fica a folga de pé e sai."""
+        with self._trava:
+            self._nivel = (0, 0)
+        self._acordar.set()
+
+    def parar(self) -> None:
+        """Derruba o processo e o fio. Idempotente."""
+        self._fim.set()
+        self._acordar.set()
+        self._matar(self._proc)
+        fio = self._fio
+        if fio is not None and fio is not threading.current_thread():
+            fio.join(timeout=2.0)
+
+    # -- o fio ---------------------------------------------------------------
+
+    def _avisar(self) -> None:
+        aviso = self._ao_mudar
+        if aviso is None:
+            return
+        try:
+            aviso()
+        except Exception as exc:  # o tocador não cai por um aviso
+            logger.debug("haptica_fina_aviso_falhou", lugar=self.lugar, err=str(exc))
+
+    def _recusar(self, motivo: str) -> None:
+        self._recusado_ate = self._relogio() + RECUSA_DO_TOCADOR_S
+        logger.info("haptica_fina_recusada", lugar=self.lugar, motivo=motivo)
+
+    def _correr(self) -> None:
+        while not self._fim.is_set():
+            self._acordar.wait(timeout=1.0)
+            self._acordar.clear()
+            if self._fim.is_set():
+                return
+            with self._trava:
+                nivel, sink = self._nivel, self._sink
+            if not any(nivel) or not sink or self._relogio() < self._recusado_ate:
+                continue
+            self._tocar(sink)
+
+    def _tocar(self, sink: str) -> None:
+        argv = self._argv_de(sink, self.rotulo)
+        if not argv:
+            self._recusar("sem_tocador")
+            return
+        try:
+            proc = self._lancar(
+                argv, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            logger.debug("haptica_fina_nao_subiu", lugar=self.lugar, err=str(exc))
+            self._recusar("nao_subiu")
+            return
+        self._proc = proc
+        motivo = "silencio"
+        try:
+            fd = proc.stdin.fileno()
+            with contextlib.suppress(OSError):
+                fcntl.fcntl(fd, getattr(fcntl, "F_SETPIPE_SZ", 1031), CANO_DO_TOCADOR)
+            os.set_blocking(fd, False)
+            motivo = self._escrever_enquanto_toca(proc, fd, sink, os.path.basename(argv[0]))
+        except Exception as exc:  # o fio nunca cai por um processo de fora
+            logger.debug("haptica_fina_falhou", lugar=self.lugar, err=str(exc))
+            motivo = "falhou"
+        finally:
+            estava_vivo = self._vivo
+            self._vivo = False
+            self._matar(proc)
+            self._proc = None
+            if motivo not in ("silencio", "trocou_de_endpoint", "parado"):
+                self._recusar(motivo)
+            logger.info("haptica_fina_saiu", lugar=self.lugar, motivo=motivo)
+            if estava_vivo:
+                self._avisar()
+
+    def _escrever_enquanto_toca(self, proc: Any, fd: int, sink: str, binario: str) -> str:
+        fase = 0
+        antes = (0, 0)
+        silencio_desde: float | None = None
+        while not self._fim.is_set():
+            with self._trava:
+                nivel, sink_agora = self._nivel, self._sink
+            if sink_agora != sink:
+                return "trocou_de_endpoint"
+            if proc.poll() is not None:
+                return "morreu"
+            agora = self._relogio()
+            if any(nivel):
+                silencio_desde = None
+            elif silencio_desde is None:
+                silencio_desde = agora
+            elif agora - silencio_desde >= self._folga_s:
+                return "silencio"
+            if not self._escrever(fd, self._bloco(nivel, antes, fase)):
+                return "parou_de_ler"
+            if not self._vivo:
+                self._vivo = True
+                logger.info("haptica_fina_de_pe", lugar=self.lugar, tocador=binario)
+                threading.Thread(
+                    target=self._conferir_o_destino, args=(proc, sink), daemon=True,
+                    name=f"hefesto-{self.rotulo}-conferencia",
+                ).start()
+                self._avisar()
+            antes = nivel
+            fase = (fase + QUADROS_POR_BLOCO) % QUADROS_DO_CICLO
+        return "parado"
+
+    def _bloco(self, nivel: tuple[int, int], antes: tuple[int, int], fase: int) -> bytes:
+        if nivel != antes:
+            self._memoria = {}
+            return bloco_da_haptica(nivel[0], nivel[1], fase=fase, antes=antes)
+        chave = (nivel[0], nivel[1], fase)
+        bloco = self._memoria.get(chave)
+        if bloco is None:
+            bloco = bloco_da_haptica(nivel[0], nivel[1], fase=fase)
+            self._memoria[chave] = bloco
+        return bloco
+
+    def _escrever(self, fd: int, dados: bytes) -> bool:
+        """Escreve o bloco inteiro; ``False`` = o tocador parou de ler ou morreu."""
+        vista = memoryview(dados)
+        parado_desde: float | None = None
+        while vista and not self._fim.is_set():
+            try:
+                _, prontos, _ = select.select([], [fd], [], 0.1)
+            except (OSError, ValueError):
+                return False
+            if not prontos:
+                agora = self._relogio()
+                parado_desde = agora if parado_desde is None else parado_desde
+                if agora - parado_desde >= PRAZO_DA_ESCRITA_S:
+                    return False
+                continue
+            parado_desde = None
+            try:
+                escritos = os.write(fd, vista)
+            except BlockingIOError:
+                continue
+            except OSError:
+                return False
+            vista = vista[escritos:]
+        return not vista
+
+    def _conferir_o_destino(self, proc: Any, sink: str) -> None:
+        """Ligado a outro nó que não o endpoint, o tocador morre — nunca na TV dela."""
+        for espera in ESPERAS_DA_CONFERENCIA_S:
+            if self._fim.wait(espera) or proc.poll() is not None:
+                return
+            try:
+                destino = self._conferir(self.rotulo)
+            except Exception as exc:
+                logger.debug("haptica_fina_conferencia_falhou", lugar=self.lugar, err=str(exc))
+                destino = None
+            if destino is None:
+                continue
+            if destino == sink:
+                return
+            # O nome do nó errado não vai ao diário: pode ser a saída dela.
+            logger.warning("haptica_fina_ligada_a_outro_no", lugar=self.lugar)
+            self._recusado_ate = self._relogio() + RECUSA_DO_TOCADOR_S
+            self._matar(proc)
+            return
+        logger.debug("haptica_fina_nao_conferida", lugar=self.lugar)
+
+    @staticmethod
+    def _matar(proc: Any) -> None:
+        if proc is None:
+            return
+        with contextlib.suppress(Exception):
+            proc.stdin.close()
+        with contextlib.suppress(Exception):
+            proc.kill()
+        with contextlib.suppress(Exception):
+            proc.wait(timeout=2)
+
+
 __all__ = [
     "AGULHAS",
+    "FOLGA_DO_TOCADOR_S",
+    "FREQUENCIA_DO_FORTE_HZ",
+    "FREQUENCIA_DO_FRACO_HZ",
     "LUGARES",
     "MARCA_DO_ENSAIO",
+    "MARCA_DO_TOCADOR",
     "MOLDE_DA_MARCA_DO_LUGAR",
     "MOLDE_DO_NOME",
     "NOME_DA_HAPTICA_DO_CONTROLE",
     "PID_DUALSENSE",
+    "QUADROS_POR_BLOCO",
     "VID_SONY",
     "Ancora",
     "EndpointDeHaptica",
+    "TocadorDoRumble",
     "ancoras",
+    "argv_do_tocador",
+    "bloco_da_haptica",
+    "conferir_o_destino_do_tocador",
     "distribuir_ancoras",
     "endpoints_de_pe",
+    "fluxos_nos_lugares",
     "marca_do_controle",
     "marca_do_lugar",
     "nome_do_endpoint",
     "propriedades_do_endpoint",
     "rotulo_da_haptica",
+    "rotulo_do_tocador",
     "varrer_endpoints_orfaos",
 ]

@@ -108,7 +108,7 @@ import contextlib
 import functools
 import threading
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
@@ -122,6 +122,16 @@ if TYPE_CHECKING:
     from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
 
 logger = get_logger(__name__)
+
+
+def _mesmo_controle(a: object, b: object) -> bool:
+    """Os dois endereços são o mesmo controle, pelos dígitos (``norm_mac``, o dono da chave)."""
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    if not a or not b:
+        return False
+    return (norm_mac(str(a)) or str(a).lower()) == (norm_mac(str(b)) or str(b).lower())
+
 
 #: Cadência da varredura de hotplug (sysfs). Não é polling de áudio: é só
 #: *"apareceu/sumiu controle?"*. O mesmo número da metade de entrada.
@@ -823,6 +833,26 @@ class AltoFalanteSubsystem:
     #: na primeira volta que precisa dele (:meth:`_o_cabo`) — dublê montado por
     #: ``__new__`` também o ganha.
     _cabo: Any = None
+    #: A HÁPTICA FINA DO RUMBLE — NO-MODO-XBOX-TUDO-FUNCIONA-01, parte 4
+    #: (29/09/2026). ``{lugar: TocadorDoRumble}``: o rumble do pad sem háptica
+    #: (o ``uinput``), tocado no endpoint do lugar de quem recebe. Nasce no
+    #: primeiro rumble que o pede (:meth:`_tocador_do_lugar`). Como o resto do
+    #: estado novo, mora no corpo da classe e troca inteiro.
+    _tocadores: Mapping[int, Any] = MappingProxyType({})
+    #: ``{uniq: (reaplicar, lugar, a háptica leva)}`` de quem tem rumble não
+    #: nulo agora, como o fio da vibração o deixou. A volta compara com o que
+    #: vê e, quando o caminho abre ou fecha, reaplica (:meth:`_conferir_o_rumble`).
+    _rumble_vivo: Mapping[str, tuple[Any, int | None, bool]] = MappingProxyType({})
+    #: Os clientes do servidor de som que são os NOSSOS tocadores: um tocador
+    #: não é jogo, e a partida não o conta (:meth:`_donos_dos_fluxos`).
+    _clientes_do_rumble: frozenset[str] = frozenset()
+    #: Os lugares cujo endpoint tem fluxo de JOGO: ali a háptica é a do jogo, e
+    #: o rumble segue pelos motores (o «ou» da sprint).
+    _lugares_com_jogo: frozenset[int] = frozenset()
+    #: Os controles do rádio com o alto-falante tocando: pelo rádio som e
+    #: vibração são exclusivos, e a háptica fina não tira o som de ninguém.
+    _radio_com_som: frozenset[str] = frozenset()
+    _trava_do_rumble = threading.Lock()
 
     #: O GOVERNADOR DO RÁDIO (GOVERNADOR-DO-RADIO-01, 23/09/2026): quem dá a
     #: vaga de cada ponte, por adaptador, e manda ceder na fonte quando o
@@ -1287,6 +1317,219 @@ class AltoFalanteSubsystem:
             self._cabo = HapticaDoCabo()
         return self._cabo
 
+    # -- a háptica fina do rumble (NO-MODO-XBOX-TUDO-FUNCIONA-01, parte 4) --
+
+    def levar_o_rumble(
+        self,
+        uniq: str,
+        fraco: int,
+        forte: int,
+        *,
+        reaplicar: Callable[[], object] | None = None,
+    ) -> bool:
+        """O rumble de um pad sem háptica vira háptica no endpoint do lugar de ``uniq``.
+
+        NO-MODO-XBOX-TUDO-FUNCIONA-01, parte 4, 29/09/2026. Quem chama é o
+        ``rumble_sink`` do pad ``uinput`` (``gamepad.apply_game_rumble``), no
+        fio da vibração dele: aqui nada espera. O par já vem com o degrau e a
+        barra de cada motor aplicados.
+
+        Devolve ``True`` quando a háptica LEVA o rumble até o controle — o
+        tocador do lugar de pé, e o laço do cabo com os motores abertos ou a
+        ponte do rádio lendo aquele endpoint. Aí quem chama deixa os motores do
+        HID em zero: o bit que pede rumble ao firmware cala a háptica por áudio
+        (``docs/protocol/dualsense-referencia-canonica.md``, «O bit que MATA os
+        haptics»). ``False`` = o HID segue levando, como sempre levou; o tocador
+        sobe mesmo assim, e a volta reaplica quando o caminho abrir
+        (:meth:`_conferir_o_rumble`). Nada se perde na troca.
+
+        Não converte (e cala o tocador de quem pediu) quando o lugar não tem
+        endpoint, quando o JOGO toca naquele endpoint (a háptica é a dele) e,
+        pelo rádio, quando o alto-falante do controle está tocando.
+        """
+        if not self._tocadores and not (fraco or forte):
+            return False
+        chave = self._chave_do_rumble(uniq)
+        quer = chave is not None and self._quer_a_haptica_fina(chave)
+        lugar = self._lugar_de.get(chave) if chave is not None else None
+        for outro, tocador in list(self._tocadores.items()):
+            if any(tocador.nivel) and _mesmo_controle(tocador.dono, uniq) and (
+                not quer or outro != lugar
+            ):
+                tocador.calar()
+        if not quer or chave is None or lugar is None:
+            self._esquecer_o_rumble(uniq)
+            return False
+        endpoint = self._endpoints.get(lugar)
+        self._tocador_do_lugar(lugar).levar(
+            fraco, forte, sink=str(getattr(endpoint, "nome", "") or ""), dono=chave
+        )
+        leva = self._a_haptica_leva(chave)
+        with self._trava_do_rumble:
+            vivos = {u: v for u, v in self._rumble_vivo.items() if u != chave}
+            if fraco or forte:
+                vivos[chave] = (reaplicar, lugar, leva)
+            self._rumble_vivo = MappingProxyType(vivos)
+        return leva
+
+    def _esquecer_o_rumble(self, uniq: str) -> None:
+        with self._trava_do_rumble:
+            if any(_mesmo_controle(u, uniq) for u in self._rumble_vivo):
+                self._rumble_vivo = MappingProxyType({
+                    u: v for u, v in self._rumble_vivo.items() if not _mesmo_controle(u, uniq)
+                })
+
+    def _chave_do_rumble(self, uniq: str) -> str | None:
+        """O ``uniq`` na grafia da mesa (a chave de :attr:`_lugar_de`), pelos dígitos."""
+        if uniq in self._lugar_de:
+            return uniq
+        for chave in list(self._lugar_de):
+            if _mesmo_controle(chave, uniq):
+                return chave
+        return None
+
+    def _tocador_do_lugar(self, lugar: int) -> Any:
+        """O tocador do lugar, criado no primeiro rumble que o pede."""
+        tocador = self._tocadores.get(lugar)
+        if tocador is not None:
+            return tocador
+        from hefesto_dualsense4unix.integrations import endpoint_de_haptica
+
+        with self._trava_do_rumble:
+            tocador = self._tocadores.get(lugar)
+            if tocador is None:
+                tocador = endpoint_de_haptica.TocadorDoRumble(
+                    lugar, ao_mudar=self._acordar_a_volta
+                )
+                self._tocadores = MappingProxyType({**self._tocadores, lugar: tocador})
+        return tocador
+
+    def _parar_o_tocador(self, lugar: int) -> None:
+        """O tocador sai ANTES do endpoint do lugar, como o laço e a ponte."""
+        tocador = self._tocadores.get(lugar)
+        if tocador is None:
+            return
+        with self._trava_do_rumble:
+            self._tocadores = MappingProxyType(
+                {n: t for n, t in self._tocadores.items() if n != lugar}
+            )
+        tocador.parar()
+
+    def _quer_a_haptica_fina(self, chave: str) -> bool:
+        """O lugar deste controle tem endpoint, e ninguém mais o usa agora."""
+        lugar = self._lugar_de.get(chave)
+        if lugar is None or lugar in self._lugares_com_jogo or chave in self._radio_com_som:
+            return False
+        endpoint = self._endpoints.get(lugar)
+        return bool(
+            endpoint is not None
+            and getattr(endpoint, "module_id", None) is not None
+            and getattr(endpoint, "nome", "")
+        )
+
+    def _recebe_o_rumble(self, uniq: str) -> bool:
+        """O tocador do lugar deste controle está de pé tocando o rumble DELE.
+
+        É o terceiro lado do portão (o laço do cabo e a ponte do rádio): o jogo
+        que só manda rumble já disse a quem ele vai — o pad daquele jogador —,
+        e a escolha (b) dela vale para o áudio que o jogo ESPELHA nos quatro.
+        """
+        if not self._tocadores:
+            return False
+        chave = self._chave_do_rumble(uniq)
+        if chave is None or not self._quer_a_haptica_fina(chave):
+            return False
+        lugar = self._lugar_de.get(chave)
+        tocador = self._tocadores.get(lugar) if lugar is not None else None
+        return bool(tocador is not None and tocador.vivo and tocador.dono == chave)
+
+    def _a_haptica_leva(self, chave: str) -> bool:
+        """O caminho do tocador ao controle está de pé AGORA, e é o deste controle."""
+        if not self._recebe_o_rumble(chave):
+            return False
+        lugar = self._lugar_de.get(chave)
+        cabo = self._cabo
+        if cabo is not None and lugar is not None:
+            rota = cabo.lugares().get(lugar)
+            if rota is not None and getattr(rota, "dono", "") == chave:
+                return cabo.portao(lugar) is True
+        ponte = self._pontes.get(chave)
+        endpoint = self._endpoints.get(lugar) if lugar is not None else None
+        if ponte is None or endpoint is None:
+            return False
+        if self._modo_da_ponte.get(chave) != "haptica":
+            return False
+        if self._endpoint_da_ponte.get(chave) != getattr(endpoint, "nome", None):
+            return False
+        de_pe = getattr(ponte, "esta_de_pe", None)
+        try:
+            return bool(de_pe()) if callable(de_pe) else False
+        except Exception:
+            return False
+
+    def _ver_quem_toca_nos_lugares(self) -> None:
+        """Quem toca nos endpoints além dos nossos tocadores — só com tocador na mesa.
+
+        Sem tocador nenhum, nada se pergunta: é o caminho de todo modo que não
+        é o do pad sem háptica, e ele não paga nada por esta cura.
+        """
+        if not self._tocadores:
+            self._clientes_do_rumble = frozenset()
+            return
+        from hefesto_dualsense4unix.integrations.endpoint_de_haptica import (
+            fluxos_nos_lugares,
+        )
+
+        nomes = {
+            lugar: str(getattr(ep, "nome", "") or "")
+            for lugar, ep in list(self._endpoints.items())
+        }
+        try:
+            lido = fluxos_nos_lugares([n for n in nomes.values() if n])
+        except Exception as exc:  # a pergunta nunca derruba a volta
+            logger.debug("haptica_fina_fluxos_ilegiveis", err=str(exc))
+            lido = None
+        if lido is None:
+            return
+        nossos, com_outro = lido
+        self._clientes_do_rumble = nossos
+        self._lugares_com_jogo = frozenset(
+            lugar for lugar, nome in nomes.items() if nome and nome in com_outro
+        )
+
+    def _conferir_os_tocadores(self, lugar_de: Mapping[str, int]) -> None:
+        """O tocador cujo dono saiu do lugar cala: ele vibraria quem se sentou ali."""
+        for lugar, tocador in list(self._tocadores.items()):
+            dono = tocador.dono
+            if dono and any(tocador.nivel) and lugar_de.get(dono) != lugar:
+                tocador.calar()
+
+    def _conferir_o_rumble(self) -> None:
+        """Quem tem rumble vivo e viu o caminho abrir, fechar ou trocar de lugar reaplica.
+
+        O ``rumble_sink`` só é chamado quando o JOGO muda o pedido; o caminho da
+        háptica abre DEPOIS (o tocador sobe, a volta abre o portão). Sem isto o
+        rumble que já estava tocando seguiria pelo HID até o jogo mudar de
+        ideia — e, ao contrário, o que ia pela háptica ficaria mudo quando o
+        caminho caísse.
+        """
+        from hefesto_dualsense4unix.daemon.battery_journal import mascarar_endereco
+
+        for chave, (reaplicar, lugar, levava) in dict(self._rumble_vivo).items():
+            agora = (self._a_haptica_leva(chave), self._lugar_de.get(chave))
+            if agora == (levava, lugar) or not callable(reaplicar):
+                continue
+            logger.info(
+                "haptica_fina_do_rumble_mudou",
+                uniq=mascarar_endereco(chave),
+                leva=agora[0],
+                lugar=agora[1],
+            )
+            try:
+                reaplicar()
+            except Exception as exc:  # a volta nunca cai por um reaplicar
+                logger.debug("haptica_fina_reaplicar_falhou", err=str(exc))
+
     def _casar_o_cabo(
         self,
         controles: list[Any],
@@ -1331,7 +1574,7 @@ class AltoFalanteSubsystem:
         o_jogo_manda = rumble.modo_nativo_manda_nos_motores(getattr(self, "_daemon", None))
 
         def _abre(uniq: str) -> bool:
-            return o_jogo_manda or uniq.lower() in jogando
+            return o_jogo_manda or uniq.lower() in jogando or self._recebe_o_rumble(uniq)
 
         na_mesa = [str(getattr(c, "uniq", "") or "") for c in controles]
         na_mesa = [u for u in na_mesa if u]
@@ -1483,10 +1726,16 @@ class AltoFalanteSubsystem:
         if not nomes:
             return frozenset()
         try:
-            return donos_dos_fluxos(nomes)
+            donos = donos_dos_fluxos(nomes)
         except Exception as erro:  # a pergunta nunca derruba a volta
             logger.debug("haptica_donos_ilegiveis", err=str(erro))
             return None
+        # O TOCADOR DO RUMBLE NÃO É JOGO (NO-MODO-XBOX-TUDO-FUNCIONA-01): quem o
+        # separa é :meth:`_ver_quem_toca_nos_lugares`, na mesma volta.
+        nossos = self._clientes_do_rumble
+        if donos is not None and nossos:
+            donos = frozenset(d for d in donos if d not in nossos)
+        return donos
 
     def _clientes_vivos(self, donos: frozenset[Any]) -> frozenset[Any] | None:
         """Dos donos de fluxo de antes, os que seguem conectados ao servidor de som.
@@ -1666,6 +1915,7 @@ class AltoFalanteSubsystem:
         lugar_de = self._lugares_da_mesa(controles)
         lugares_vivos = self._lugares_de_pe(bool(lugar_de))
         ocupante = {lugar: uniq for uniq, lugar in lugar_de.items()}
+        self._conferir_os_tocadores(lugar_de)
 
         # O ENDPOINT DO LUGAR CAI DEPOIS DA PONTE E DO LAÇO, nunca antes: os
         # dois leem o monitor dele, e derrubar o nó primeiro deixaria a leitura
@@ -1673,6 +1923,7 @@ class AltoFalanteSubsystem:
         # (SOM-ECO-02). As pontes de quem saiu já desceram acima.
         for lugar in [n for n in self._endpoints if n not in lugares_vivos]:
             self._o_cabo().soltar(lugar)
+            self._parar_o_tocador(lugar)
             endpoint = self._endpoints.pop(lugar, None)
             if endpoint is not None:
                 endpoint.parar()
@@ -1744,6 +1995,7 @@ class AltoFalanteSubsystem:
                 ) or atual.nome in lido or sink_esta_tocando(atual.nome, na_duvida=True):
                     continue
                 self._o_cabo().soltar(lugar)
+                self._parar_o_tocador(lugar)
                 self._endpoints.pop(lugar, None)
                 atual.parar()
                 logger.info("haptica_endpoint_reancorado", lugar=lugar, ancora=posta.syspath)
@@ -1820,6 +2072,10 @@ class AltoFalanteSubsystem:
         # partida é o cliente que toca nos endpoints, perguntado ao servidor de
         # som (`_quem_mexeu_na_partida`); o evdev é pista, e só se pergunta
         # quando a linha do portão fechado sai.
+        # O NOSSO TOCADOR NÃO É JOGO (NO-MODO-XBOX-TUDO-FUNCIONA-01, 29/09/2026):
+        # antes de a partida perguntar quem toca, a volta separa o fluxo do
+        # rumble convertido do fluxo do jogo.
+        self._ver_quem_toca_nos_lugares()
         jogando = self._quem_mexeu_na_partida(controles)
 
         # Quem saiu da mesa sai da memória do portão: se voltar no mesmo
@@ -1839,6 +2095,7 @@ class AltoFalanteSubsystem:
 
         governador = self.governador
         esperando: set[tuple[str, str]] = set()
+        com_som: set[str] = set()
         for uniq, caminho in vivos.items():
             # A PONTE QUE TERMINOU SOZINHA SAI DA LISTA — GOVERNADOR-DO-RADIO-01.
             # A fonte secou, a escrita foi recusada, ou o teto de ceder a
@@ -1870,10 +2127,23 @@ class AltoFalanteSubsystem:
             # só escreve o bloco que tem sinal nos motores. No menu, com o
             # fluxo aberto e mudo, o rádio fica livre.
             este_joga = uniq.lower() in jogando
+            # O RUMBLE CONVERTIDO É O TERCEIRO LADO (NO-MODO-XBOX-TUDO-FUNCIONA-01,
+            # 29/09/2026): o jogo que só manda rumble já disse de quem é. Mas
+            # pelo rádio som e vibração são exclusivos, e a háptica fina não
+            # tira o alto-falante de ninguém: com ele tocando, o HID leva.
+            pelo_rumble = False
+            if not este_joga and self._recebe_o_rumble(uniq):
+                if sink_esta_tocando(nome_do_sink(uniq), na_duvida=True):
+                    com_som.add(uniq)
+                else:
+                    pelo_rumble = True
             endpoint_toca = endpoint is not None and sink_esta_tocando(endpoint.nome)
-            modo = "haptica" if (endpoint_toca and este_joga) else "som"
+            modo = "haptica" if (endpoint_toca and (este_joga or pelo_rumble)) else "som"
             self._vigiar_o_portao(
-                uniq, fechado=endpoint_toca and not este_joga, controles=controles
+                uniq,
+                fechado=endpoint_toca and not este_joga and not pelo_rumble
+                and uniq not in com_som,
+                controles=controles,
             )
             # A PONTE DO SOM SÓ EXISTE ENQUANTO HÁ SOM — RADIO-AFOGADO-01,
             # 22/09/2026, e é o defeito que tirou três dos quatro controles
@@ -1906,6 +2176,8 @@ class AltoFalanteSubsystem:
             ):
                 self._descer_ponte_ociosa(uniq)
                 continue
+            if modo == "som":
+                com_som.add(uniq)
             # O LUGAR QUE ANDA TROCA A PONTE (conferência de 28/09/2026): a
             # ponte em modo háptica lê o endpoint do lugar de QUANDO subiu. Se
             # o controle mudou de lugar, ela desce e sobe lendo o do lugar de
@@ -2045,6 +2317,8 @@ class AltoFalanteSubsystem:
                 self._ponte_recusada[uniq] = time.monotonic()
                 logger.info("som_ponte_nao_subiu", uniq=uniq, motivo=ponte.motivo)
         self._esperando_vaga = frozenset(esperando)
+        self._radio_com_som = frozenset(com_som)
+        self._conferir_o_rumble()
 
     def _esquecer_a_espera(self, uniq: str) -> None:
         """Ela respondeu «Ligar aqui»: quem esperava vaga deixa de esperar.
@@ -2235,6 +2509,15 @@ class AltoFalanteSubsystem:
             )
         for uniq, _ponte in pontes:
             self._pontes.pop(uniq, None)
+        # OS TOCADORES DO RUMBLE MORREM COM O SUBSYSTEM, e antes dos laços que
+        # os levam: cada um é um processo tocando num endpoint.
+        tocadores = list(self._tocadores.values())
+        self._tocadores = MappingProxyType({})
+        self._rumble_vivo = MappingProxyType({})
+        if tocadores:
+            await asyncio.gather(
+                *(asyncio.to_thread(t.parar) for t in tocadores), return_exceptions=True
+            )
         # OS LAÇOS DO CABO MORREM COM O SUBSYSTEM, como as pontes: cada um é um
         # `pw-loopback` lendo o endpoint de um lugar. O endpoint FICA (o
         # restart o adota), e o laço volta na primeira volta do próximo start.

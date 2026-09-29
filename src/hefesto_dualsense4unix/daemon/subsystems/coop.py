@@ -1224,13 +1224,16 @@ class CoopManager:
             )
 
             target = None if identity.startswith("path:") else identity
-            efetivo = apply_game_rumble(daemon, weak, strong, target_uniq=target)
             # MOTOR-QUE-NAO-SE-VE-01: o jogador é procurado AQUI, na hora do
             # rumble. O sink nasce antes do vpad (é argumento do construtor
             # dele) e o `_players[identity]` é recriado a cada respawn — uma
             # referência capturada apontaria para o vpad de uma vida anterior.
+            # E o vpad vai junto ao rumble (NO-MODO-XBOX-TUDO-FUNCIONA-01): o
+            # pad `uinput` deste jogador leva a háptica fina ao lugar DELE.
             jogador = self._players.get(identity)
-            anotar_rumble_no_vpad(getattr(jogador, "vpad", None), efetivo)
+            vpad = getattr(jogador, "vpad", None)
+            efetivo = apply_game_rumble(daemon, weak, strong, target_uniq=target, vpad=vpad)
+            anotar_rumble_no_vpad(vpad, efetivo)
 
         return _sink
 
