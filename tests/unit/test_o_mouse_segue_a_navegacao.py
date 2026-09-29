@@ -795,3 +795,61 @@ def test_a_janela_nao_escreve_o_liga_desliga() -> None:
     assert not achados, (
         "a janela voltou a escrever o liga/desliga do «Status do Modo» — quem "
         "grava é o daemon, depois do aparelho:\n  " + "\n  ".join(achados))
+
+
+def test_o_clique_no_interruptor_chega_ao_disco_pelo_daemon(bancada: _Bancada) -> None:
+    """A volta inteira, em processo: o gesto `modo` da aba → o handler → o daemon → o disco.
+
+    A ponte da régua entrega o `desktop.status.set` ao handler REAL
+    (`_handle_desktop_status_set`) de um daemon SUBCLASSE do real, como o
+    socket entregaria. O clique parte do estado de um tique com a Navegação de
+    pé (mouse e teclado ligados), e o perfil relido diz os dois desligados.
+
+    MORDIDA: tire a gravação de `Daemon.definir_o_status_da_navegacao` e o
+    disco segue dizendo ligado, com o gesto verde.
+    """
+    import asyncio
+    import sys
+    from pathlib import Path
+
+    interface = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "interface"
+    if str(interface) not in sys.path:
+        sys.path.insert(0, str(interface))
+    import pacotes
+    from pacotes import a06_navegacao
+
+    d = _daemon()
+    _perfil(PERFIL, mode={"kind": "desktop"},
+            mouse={"enabled": True, "speed": 11, "scroll_speed": 4}, teclado=True)
+    _ativo(d, PERFIL)
+    _navegacao_de_pe_com_o_teclado(d)
+    h = _Handlers(d)
+
+    class _PonteDoSocket:
+        def __init__(self) -> None:
+            self.metodos: list[str] = []
+
+        def resultado(self, metodo: str, **params: Any) -> dict[str, Any]:
+            self.metodos.append(metodo)
+            assert metodo == "desktop.status.set", metodo
+            return asyncio.run(h._handle_desktop_status_set(dict(params)))
+
+    estado = {
+        "active_profile": PERFIL,
+        "mouse_emulation": {"enabled": True, "speed": 11, "scroll_speed": 4},
+        "keyboard_emulation": {"enabled": True},
+    }
+    ctx = pacotes.Contexto(state=estado, mesa=[], conectados=[], estados={})
+    a06_navegacao._PEDIDO.clear()
+    ponte = _PonteDoSocket()
+    try:
+        volta = a06_navegacao.modo(ctx, {}, ponte)
+    finally:
+        a06_navegacao._PEDIDO.clear()
+
+    assert ponte.metodos == ["desktop.status.set"]
+    assert volta is None, volta
+    assert not d.mouse_de_pe() and d._keyboard_device is None
+    relido = loader.load_profile(PERFIL)
+    assert relido.mouse is not None and relido.mouse.enabled is False
+    assert relido.teclado_emulado is False
