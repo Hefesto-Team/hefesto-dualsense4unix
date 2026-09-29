@@ -4126,18 +4126,21 @@ class IpcHandlersMixin:
         # tem de sabê-lo sem a janela: o tique de presença pergunta a quem
         # chega, e este `state_full` lê o MESMO cache, sem uma segunda
         # pergunta ao aparelho. Sem registro armado (o mixin montado à mão, a
-        # CLI) vale o caminho de sempre, logo abaixo.
+        # CLI) vale o caminho de sempre, logo abaixo. O `is True` e os
+        # `isinstance` são a porta: um dono dublado responde qualquer atributo
+        # com um objeto verdadeiro, e ele iria parar no JSON do `state_full`.
         dono = getattr(self, "daemon", None)
         registro: Any = getattr(dono, "identity_registry", None) if dono else None
-        if registro is not None and getattr(registro, "pergunta_de_fabrica_armada", False):
+        if getattr(registro, "pergunta_de_fabrica_armada", False) is True:
             achado = registro.identidade_de_fabrica(uniq)
             if achado is None:
                 registro.agendar_a_pergunta_de_fabrica(uniq)
                 return dict(vazio)
-            cor = getattr(achado, "cor", None)
+            serial = getattr(achado, "serial", None)
+            nome = getattr(getattr(achado, "cor", None), "nome", None)
             return {
-                "serial": getattr(achado, "serial", None),
-                "modelo": None if cor is None else cor.nome,
+                "serial": serial if isinstance(serial, str) else None,
+                "modelo": nome if isinstance(nome, str) else None,
             }
         if self._agenda_de_identidade().reservar(uniq):
             try:
