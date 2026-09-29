@@ -1090,7 +1090,7 @@
        deixa estranho essa área da primeira coluna."* */
     grid-template-columns:var(--larg-rot) repeat(4,1fr);
     gap:var(--gap-col);
-    --r-des:124px;--r-nome:17px;--r-forca:79px;--r-barra:26px;--r-motor:36px;
+    --r-des:78px;--r-nome:17px;--r-forca:79px;--r-barra:26px;--r-motor:36px;
     --r-acoes:74px;
     --r-ar:5px;--r-passo:calc(var(--r-ar) * 2);
   }
@@ -1112,8 +1112,19 @@
   .vib > div{
     display:grid;row-gap:var(--r-passo);
     grid-template-rows:var(--r-des) var(--r-nome) var(--r-forca) var(--r-barra)
-                       var(--r-motor) var(--r-motor) var(--r-acoes);
+                       var(--r-motor) var(--r-motor) var(--r-motor) var(--r-acoes);
   }
+  /* A LINHA DA HÁPTICA POR ÁUDIO — 29/09/2026 (A-LINHA-DA-HAPTICA-POR-AUDIO-NA-
+     VIBRACAO-01). Custa `--r-motor` mais dois `--r-ar` (46px), e o preço saiu
+     de `--r-des`, como o censo acima prescreve: o desenho foi de 124 para 78.
+     O risco no meio do trilho marca 100%, o jogo como ele mandou. Onde o
+     Hefesto não está no caminho do controle, a linha fica cinza e inerte. */
+  .motor.haptica .trilho.arrasta{
+    background:linear-gradient(to right,transparent calc(50% - 1px),
+      var(--comment) calc(50% - 1px),var(--comment) calc(50% + 1px),
+      transparent calc(50% + 1px)),var(--border-forte)}
+  .motor.haptica.fora{opacity:.45}
+  .motor.haptica.fora .trilho.arrasta,.motor.haptica.fora .lado{pointer-events:none}
   /* a barra vertical entre blocos irmãos — pedido dela */
   /* O PADDING SAIU DA COLUNA E FOI PARA AS CÉLULAS — 30/08/2026.
      A borda separadora mora na CÉLULA (`> div > *`), e padding na coluna
@@ -2225,6 +2236,14 @@
               <span class="ajuda">?<span class="dica">
                 <b>Motor do punho direito</b>: contrapeso menor, som fino.
               </span></span></span></div>
+            <div><span class="sec-rot">Háptica por áudio
+              <span class="ajuda">?<span class="dica">
+                <b>A vibração fina</b> que o jogo manda como som, no cabo e no BT.<br><br>
+                O risco no meio é 100%: o jogo como ele mandou. Acima disso ela
+                fica mais forte; em 0, ela para.<br><br>
+                Cinza quando o jogo fala direto com o controle, sem passar pelo
+                Hefesto.
+              </span></span></span></div>
             <!-- A DICA DESTE `?` ABRE PARA A DIREITA, e o número é medido — 06/09/2026.
                  Ela carregava `style="left:auto;right:22px"`, que é o arranjo das
                  dicas que moram do lado DIREITO da página (`.at-col:last-child` na
@@ -2593,6 +2612,13 @@
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="100" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-d-pct">100</span><span class="teto">%</span></div>
+            <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="lado on" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+
+  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
+        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="150" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="num" data-campo="barra-h-pct">150</span><span class="teto">%</span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -2941,6 +2967,13 @@
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="100" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-d-pct">100</span><span class="teto">%</span></div>
+            <div class="motor mult haptica" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="lado on" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+
+  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
+        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="180" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="num" data-campo="barra-h-pct">180</span><span class="teto">%</span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -3288,6 +3321,13 @@
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-d-pct">—</span><span class="teto">%</span></div>
+            <div class="motor mult haptica off" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="lado" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+
+  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
+        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="0" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="num" data-campo="barra-h-pct">—</span><span class="teto">%</span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -3635,6 +3675,13 @@
   <path d="M7,10 q-3,6 0,12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <path d="M3,7 q-4,9 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg></button><input class="trilho arrasta" type="range" min="0" max="100" step="1" value="0" data-papel="motor" data-campo="barra-d" data-hef-alvo="valor" data-lado="d" title="Quanto da vibração chega a este punho — 0 a 100% do degrau da coluna. Em 0, este motor fica mudo. Grava na hora, só para este controle."><span class="num" data-campo="barra-d-pct">—</span><span class="teto">%</span></div>
+            <div class="motor mult haptica off" data-campo="haptica-fora" data-hef-alvo="classe" data-hef-classe="fora"><button class="lado" data-gesto="haptica" data-campo="lado-h" data-hef-alvo="classe" data-hef-quando="1" title="Háptica por áudio — a vibração fina que o jogo manda como som."><svg class="gl" width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Motor de vibração esquerdo</title>
+
+  <path d="M20,4 h-6 q-3,0 -4,3 l-3,10 q-2,7 2,11 q4,4 8,1 q3,-2 3,-7 z"
+        fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M25,9 q4,7 0,14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M29,5 q6,11 0,22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg></button><input class="trilho arrasta" type="range" min="0" max="200" step="1" value="0" data-papel="haptica" data-campo="barra-h" data-hef-alvo="valor" title="A força da háptica por áudio neste controle — 0 a 200%. 100% é o jogo como ele mandou. Grava na hora, só para ele."><span class="num" data-campo="barra-h-pct">—</span><span class="teto">%</span></div>
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.

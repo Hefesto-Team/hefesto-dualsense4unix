@@ -227,6 +227,34 @@ def _chave_no_perfil(uniq: str) -> str:
     return norm_mac(str(uniq or "").strip()) or ""
 
 
+def _haptica_do_controle(state: dict[str, Any], uniq: str) -> tuple[int, bool]:
+    """``(haptica_pct, alcança)`` deste controle, do `state_full`.
+
+    A-LINHA-DA-HAPTICA-POR-AUDIO-NA-VIBRACAO-01, 29/09/2026. O número é o do
+    dono do ganho (`daemon.ganho_da_haptica`), que o daemon publica por
+    controle; sem ele vale o `haptica_pct_padrao` publicado ao lado, e só o
+    daemon velho, que não publica nenhum dos dois, cai no padrão do esquema.
+    ``alcança`` é falso onde o Hefesto não está no caminho do controle.
+    """
+    padrao = state.get("haptica_pct_padrao")
+    if not isinstance(padrao, int) or isinstance(padrao, bool):
+        from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
+
+        padrao = HAPTICA_PCT_PADRAO
+    chave = _chave_no_perfil(uniq)
+    for c in state.get("controllers") or ():
+        if not isinstance(c, dict):
+            continue
+        dele = str(c.get("uniq") or "")
+        if not dele or (dele != uniq and _chave_no_perfil(dele) != chave):
+            continue
+        valor = c.get("haptica_pct")
+        pct = (int(valor) if isinstance(valor, int) and not isinstance(valor, bool)
+               else int(padrao))
+        return pct, c.get("haptica_alcanca") is not False
+    return int(padrao), True
+
+
 def _perfil_ativo(ctx: Contexto) -> dict[str, Any]:
     """O perfil ATIVO inteiro, cru do disco. `{}` quando não há.
 
@@ -839,6 +867,14 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # nesta aba (o `treme-*` logo abaixo e o `mult-teto`), e o `""`
             # atravessa como o travessão: APAGA a classe.
             plano[f"lado-{lado}"] = "1" if barras[lado] > 0 else ""
+        # A HÁPTICA POR ÁUDIO — a mesma trinca das linhas dos motores (a barra,
+        # o número e o interruptor aceso acima de zero), mais o `fora` que deixa
+        # a linha cinza onde o Hefesto não está no caminho deste controle.
+        haptica, alcanca = _haptica_do_controle(ctx.state, uniq)
+        plano["barra-h"] = str(haptica)
+        plano["barra-h-pct"] = str(haptica)
+        plano["lado-h"] = "1" if haptica > 0 else ""
+        plano["haptica-fora"] = "" if alcanca else "1"
         # O PUNHO QUE TREME — 03/09/2026, e era um FIO SOLTO com as duas pontas
         # já prontas. `app/telas/vibracao.pacote_da_coluna` calcula `treme` por
         # lado desde que nasceu, o CSS que acende o punho existe
@@ -2172,6 +2208,10 @@ def motor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #: exatamente onde ele já estaria.
 BARRA_CHEIA = 100
 
+#: O CAMPO QUE A LINHA «Háptica por áudio» GRAVA no mesmo `rumble.motores.set`
+#: das barras dos motores (A-LINHA-DA-HAPTICA-POR-AUDIO-NA-VIBRACAO-01).
+CAMPO_DA_HAPTICA = "haptica_pct"
+
 
 @gesto("05-vibracao.html", "lado", grava="rumble_motores_set")
 def lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
@@ -2238,6 +2278,53 @@ def lado(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # ela está com o "Testar" de pé, o que a mão sente tem de ser o que acabou de
     # ser gravado — e o `ctx` deste gesto ainda traz a barra velha.
     _refrescar_o_teste(ctx, p, uniq, acabou_de_gravar=(sigla, pontos))
+
+
+@gesto("05-vibracao.html", "haptica", grava="rumble_motores_set")
+def haptica(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """A linha «Háptica por áudio»: o trilho grava o ganho, o interruptor liga e desliga.
+
+    UM GESTO para as duas peças da linha, e o que as separa é o `valor`: o
+    trilho manda o número dela (0 a 200); o interruptor é um botão, e chega sem
+    número. É o par das linhas dos motores, sem campo booleano à parte:
+    desligar grava 0, ligar devolve o padrão do dono (`haptica_pct_padrao`, do
+    `state_full`), e o aceso é a leitura da barra acima de zero.
+
+    Um gesto próprio, e não o `motor`/`lado` com uma terceira sigla: as réguas
+    das barras dos motores contam dois por lugar, com teto 100, e a háptica tem
+    teto 200. A faixa quem recusa é a borda do esquema (`HAPTICA_PCT_MAX`).
+    """
+    uniq = _uniq(o)
+    if not uniq:
+        raise RuntimeError(
+            "Use a barra dentro da coluna do controle que você quer mudar.")
+    bruto = str(o.get("valor") or "").strip()
+    if bruto:
+        try:
+            pontos = round(float(bruto))
+        except ValueError as erro:
+            raise RuntimeError(
+                f"a barra mandou {bruto!r}, que não é um número de porcentagem"
+            ) from erro
+    else:
+        # O ESTADO DE AGORA sai do mesmo lugar que a tela lê, e não do que o
+        # clique afirma — a mesma regra do interruptor dos punhos.
+        atual, _alcanca = _haptica_do_controle(ctx.state, uniq)
+        padrao = ctx.state.get("haptica_pct_padrao")
+        if not isinstance(padrao, int) or isinstance(padrao, bool):
+            from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
+
+            padrao = HAPTICA_PCT_PADRAO
+        pontos = 0 if atual > 0 else int(padrao)
+    ok, corpo = p.rumble_motores_set(**{CAMPO_DA_HAPTICA: pontos}, uniq=uniq)
+    if not ok:
+        raise RuntimeError(
+            "o Hefesto não está rodando — ligue na aba Sistema")
+    resposta = corpo if isinstance(corpo, dict) else {}
+    if str(resposta.get("status") or "") != "ok":
+        raise RuntimeError(
+            str(resposta.get("motivo")
+                or "o Hefesto não gravou esta barra. Tente de novo."))
 
 
 @gesto("05-vibracao.html", "testar")

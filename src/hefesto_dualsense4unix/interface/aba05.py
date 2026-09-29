@@ -46,6 +46,8 @@ from hefesto_dualsense4unix.daemon.subsystems.rumble import (  # noqa: E402
 # irmão global). Digitar `200` aqui seria a segunda verdade que a régua desta
 # casa persegue — e o `150` que estava nesta linha já era exatamente isso.
 from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
+    HAPTICA_PCT_MAX,
+    HAPTICA_PCT_PADRAO,
     MOTOR_PCT_MAX,
     MOTOR_PCT_PADRAO,
     RUMBLE_CUSTOM_MULT_MAX,
@@ -259,6 +261,12 @@ PASSO = math.gcd(*(round(m * 100) for m in RUMBLE_POLICY_MULT.values()), TETO)
 #: RECUSA o que passa dele é a borda do esquema, e a frase da recusa é dela.
 TETO_DO_MOTOR = MOTOR_PCT_MAX
 
+#: O TETO DA BARRA DA HÁPTICA POR ÁUDIO — lido do esquema (`HAPTICA_PCT_MAX`,
+#: 200), e nunca digitado. Ela passa de 100 ao contrário das dos motores: no PCM
+#: do jogo a Força não alcança, e esta barra é o único fator
+#: (O-GANHO-DA-HAPTICA-TEM-DONO-01). O passo é 1, como o dos motores.
+TETO_DA_HAPTICA = HAPTICA_PCT_MAX
+
 #: O PASSO DA BARRA DE MOTOR, e ele é DERIVADO como o irmão :data:`PASSO`: a
 #: regra é que a barra tenha uma parada em cima de **todo valor que a borda
 #: aceita**. O esquema aceita `int` de 0 a 100 (`motor_forte_pct`), logo o passo
@@ -339,13 +347,17 @@ SEM_A_FAIXA_DE_ESTADO = True
 #: "herdado", porque o `Auto` era esse degrau especial e ele não existe mais.
 ESTADO = {
     "p1": {"forca": "max",        "pct": 150, "propria": True,  # (noqa-acento) chave
-           "esq": (True, 50),   "dir": (True, 100)},
+           "esq": (True, 50),   "dir": (True, 100),
+           "hap": (True, HAPTICA_PCT_PADRAO)},
     "p2": {"forca": "balanceado", "pct": 100, "propria": False,  # (noqa-acento) chave
-           "esq": (False, 0),   "dir": (True, 100)},
+           "esq": (False, 0),   "dir": (True, 100),
+           "hap": (True, 180)},
     "p3": {"forca": "economia",   "pct": 30,  "propria": True,  # (noqa-acento) chave
-           "esq": (True, 100),  "dir": (True, 100)},
+           "esq": (True, 100),  "dir": (True, 100),
+           "hap": (True, HAPTICA_PCT_PADRAO)},
     "p4": {"forca": "balanceado", "pct": 100, "propria": True,  # (noqa-acento) chave
-           "esq": (True, 100),  "dir": (False, 0)},
+           "esq": (True, 100),  "dir": (False, 0),
+           "hap": (False, 0)},
 }
 
 CSS = """
@@ -422,7 +434,7 @@ CSS = """
        deixa estranho essa área da primeira coluna."* */
     grid-template-columns:var(--larg-rot) repeat(4,1fr);
     gap:var(--gap-col);
-    --r-des:124px;--r-nome:17px;--r-forca:79px;--r-barra:26px;--r-motor:36px;
+    --r-des:78px;--r-nome:17px;--r-forca:79px;--r-barra:26px;--r-motor:36px;
     --r-acoes:74px;
     --r-ar:5px;--r-passo:calc(var(--r-ar) * 2);
   }
@@ -444,8 +456,19 @@ CSS = """
   .vib > div{
     display:grid;row-gap:var(--r-passo);
     grid-template-rows:var(--r-des) var(--r-nome) var(--r-forca) var(--r-barra)
-                       var(--r-motor) var(--r-motor) var(--r-acoes);
+                       var(--r-motor) var(--r-motor) var(--r-motor) var(--r-acoes);
   }
+  /* A LINHA DA HÁPTICA POR ÁUDIO — 29/09/2026 (A-LINHA-DA-HAPTICA-POR-AUDIO-NA-
+     VIBRACAO-01). Custa `--r-motor` mais dois `--r-ar` (46px), e o preço saiu
+     de `--r-des`, como o censo acima prescreve: o desenho foi de 124 para 78.
+     O risco no meio do trilho marca 100%, o jogo como ele mandou. Onde o
+     Hefesto não está no caminho do controle, a linha fica cinza e inerte. */
+  .motor.haptica .trilho.arrasta{
+    background:linear-gradient(to right,transparent calc(50% - 1px),
+      var(--comment) calc(50% - 1px),var(--comment) calc(50% + 1px),
+      transparent calc(50% + 1px)),var(--border-forte)}
+  .motor.haptica.fora{opacity:.45}
+  .motor.haptica.fora .trilho.arrasta,.motor.haptica.fora .lado{pointer-events:none}
   /* a barra vertical entre blocos irmãos — pedido dela */
   /* O PADDING SAIU DA COLUNA E FOI PARA AS CÉLULAS — 30/08/2026.
      A borda separadora mora na CÉLULA (`> div > *`), e padding na coluna
@@ -1049,7 +1072,7 @@ CSS = """
 #: em 05/09 com ela. Palavra dela: *"não é pra ter mesa em nada da interface (…)
 #: segue os três modos sempre"*. Ver :data:`FORCA`.
 PAPEIS_QUE_SAO_GESTO = ("forca", "testar", "parar",
-                        "intensidade", "motor")
+                        "intensidade", "motor", "haptica")
 
 
 def _endereco_de_pintura(nome, extra=""):
@@ -1297,6 +1320,36 @@ def _barra_de_motor(valor, sigla, m, ligado, botao, vazio=False):
             f'<span class="teto">%</span></div>')
 
 
+def _linha_da_haptica(valor, ligado, vazio=False):
+    """A linha «Háptica por áudio»: interruptor · trilho de 0 a 200 · número · `%`.
+
+    O mesmo desenho das linhas dos motores, com gesto próprio (`haptica`,
+    porque o teto é outro), e o mesmo par: o
+    interruptor é a barra acima de zero (desligar grava 0, ligar devolve o
+    padrão do dono), sem campo booleano à parte. O teto é lido do esquema
+    (:data:`TETO_DA_HAPTICA`). Onde o Hefesto não está no caminho do controle
+    (o Nativo pelo rádio sem a ponte), o pacote acende `fora` e a linha fica
+    cinza — e o porquê fica no `?` do rótulo, e não na tela aberta.
+    """
+    botao = (f'<button class="lado{" on" if ligado else ""}" '
+             f'data-gesto="haptica" '
+             f'data-campo="lado-h" data-hef-alvo="classe" '
+             f'data-hef-quando="1" '
+             f'title="Háptica por áudio — a vibração fina que o jogo manda como som.">'
+             f'{glifo(ESQ["glifo"], ativo=ligado, tam=18)}</button>')
+    titulo = (f'A força da háptica por áudio neste controle — 0 a {TETO_DA_HAPTICA}%.'
+              f' 100% é o jogo como ele mandou. Grava na hora, só para ele.')
+    trilho = _trilho(valor, TETO_DA_HAPTICA, PASSO_DO_MOTOR, "barra-h", "haptica",
+                     titulo)
+    return (f'<div class="motor mult haptica{"" if ligado else " off"}"'
+            f' data-campo="haptica-fora" data-hef-alvo="classe"'
+            f' data-hef-classe="fora">'
+            f'{botao}{trilho}'
+            f'<span class="num" data-campo="barra-h-pct">'
+            f'{VAZIO if vazio else valor}</span>'
+            f'<span class="teto">%</span></div>')
+
+
 def _teto_do_multiplicador(no_teto):
     """A célula do `Máx` — a palavra SEMPRE no HTML, acesa por classe.
 
@@ -1515,7 +1568,7 @@ def _endereca_a_cor(desenho, pref, cor, com_dono=True):
 #: botão acende de qualquer jeito, e uma chave real aqui seria o desenho
 #: escolhendo uma política para quem não tem nenhuma.
 ESTADO_DO_LUGAR_VAZIO = {"forca": "", "pct": 0, "propria": False,  # (noqa-acento) chave
-                         "esq": (False, 0), "dir": (False, 0)}
+                         "esq": (False, 0), "dir": (False, 0), "hap": (False, 0)}
 
 
 def _coluna(c, e=None, conectado=None):
@@ -1759,6 +1812,7 @@ def _coluna(c, e=None, conectado=None):
                     vazio=not conectado)}
             {linhas[0]}
             {linhas[1]}
+            {_linha_da_haptica(e["hap"][1], e["hap"][0], vazio=not conectado)}
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -1862,6 +1916,14 @@ MIOLO = f'''
             <div><span class="sec-rot">{DIR["rot"]}
               <span class="ajuda">?<span class="dica">
                 <b>Motor do punho direito</b>: contrapeso menor, som fino.
+              </span></span></span></div>
+            <div><span class="sec-rot">Háptica por áudio
+              <span class="ajuda">?<span class="dica">
+                <b>A vibração fina</b> que o jogo manda como som, no cabo e no BT.<br><br>
+                O risco no meio é 100%: o jogo como ele mandou. Acima disso ela
+                fica mais forte; em 0, ela para.<br><br>
+                Cinza quando o jogo fala direto com o controle, sem passar pelo
+                Hefesto.
               </span></span></span></div>
             <!-- A DICA DESTE `?` ABRE PARA A DIREITA, e o número é medido — 06/09/2026.
                  Ela carregava `style="left:auto;right:22px"`, que é o arranjo das
@@ -2106,7 +2168,7 @@ def _conferir(doc):
            "aba — ela separa o lugar que NASCE vazio do que esvazia ao vivo, e "
            "duas caras para o mesmo estado na mesma tela é o que esta aba mais "
            "persegue")
-    exigir(corpo.count('class="trilho arrasta"') == len(MESA) * (1 + len(LADOS)),
+    exigir(corpo.count('class="trilho arrasta"') == len(MESA) * (1 + len(LADOS) + 1),
            "os trilhos arrastáveis não são os mesmos nos quatro lugares")
     # 4. O RESPIRO — a divisória no meio do vão, e o passo como o dobro do ar.
     exigir("--r-passo:calc(var(--r-ar) * 2)" in doc, "o passo deixou de ser o dobro do ar")
@@ -2301,7 +2363,17 @@ def _conferir(doc):
     #        `motor-e` — que na página PUBLICADA é o número de 0 a 255 que o
     #        jogo pediu — faria o produto escrever um multiplicador dentro de
     #        uma barra de outra escala.
+    # A HÁPTICA POR ÁUDIO (29/09/2026) tem gesto e teto próprios: o
+    # `HAPTICA_PCT_MAX` do esquema, e não o dos motores.
+    da_haptica = por_papel.get("haptica", [])
     de_motor = por_papel.get("motor", [])
+    exigir(len(da_haptica) == len(MESA),
+           f"a barra da háptica por áudio não está nos {len(MESA)} lugares "
+           f"(achei {len(da_haptica)})")
+    for tag in da_haptica:
+        exigir(f'max="{TETO_DA_HAPTICA}"' in tag and 'data-campo="barra-h"' in tag,
+               f"a barra da háptica não para em {TETO_DA_HAPTICA}% ou perdeu o "
+               f"endereço `barra-h` — o teto é o `HAPTICA_PCT_MAX` do esquema")
     exigir(len(de_motor) == len(LADOS) * len(MESA),
            f"as barras de motor arrastáveis não são {len(LADOS) * len(MESA)} "
            f"(achei {len(de_motor)}) — cada LUGAR tem UMA por punho, e é "
@@ -2346,7 +2418,7 @@ def _conferir(doc):
            "`--r-estado` voltou à folha da aba 05 — a faixa cuja altura ele "
            "reservava saiu em 05/09/2026, e altura guardada para linha que não "
            "existe é rolagem paga por nada")
-    exigir(doc.count("var(--r-motor) var(--r-motor) var(--r-acoes);") == 1,
+    exigir(doc.count("var(--r-motor) var(--r-motor) var(--r-motor) var(--r-acoes);") == 1,
            "a grade da aba 05 deixou de terminar no `--r-acoes` — a oitava "
            "faixa saiu em 05/09/2026 e a `grid-template-rows` foi junto")
     # 16. A NOTA DO TESTAR MORA NA DICA — 05-Q2 dela, 05/09/2026: *"As duas na
