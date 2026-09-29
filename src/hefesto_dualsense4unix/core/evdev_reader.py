@@ -451,12 +451,11 @@ def _nos_de_evento(list_devices: Any) -> list[str]:
 _BTN_GAMEPAD = 0x130
 
 
-def _sysfs_tem_tecla(caminho: str, tecla: int) -> bool:
-    """O bitmap `capabilities/key` do sysfs tem o bit `tecla`?
+def _tecla_no_sysfs(caminho: str, tecla: int) -> bool | None:
+    """O bitmap `capabilities/key` do sysfs tem o bit `tecla`? None = ilegível.
 
     O kernel imprime o bitmap como palavras `unsigned long` em hexadecimal, da
-    mais alta para a mais baixa, sem zeros à esquerda. Ilegível é True: na
-    dúvida, quem decide é a leitura das capacidades pelo fd, como sempre.
+    mais alta para a mais baixa, sem zeros à esquerda.
     """
     import struct
 
@@ -467,7 +466,7 @@ def _sysfs_tem_tecla(caminho: str, tecla: int) -> bool:
         ) as fh:
             palavras = fh.read().split()
     except OSError:
-        return True
+        return None
     bits = struct.calcsize("l") * 8
     indice, deslocamento = divmod(tecla, bits)
     palavras = list(reversed(palavras))
@@ -476,7 +475,51 @@ def _sysfs_tem_tecla(caminho: str, tecla: int) -> bool:
     try:
         return bool((int(palavras[indice], 16) >> deslocamento) & 1)
     except ValueError:
-        return True
+        return None
+
+
+def _sysfs_tem_tecla(caminho: str, tecla: int) -> bool:
+    """O bitmap do sysfs tem o bit `tecla`? Ilegível é True: na dúvida, quem
+    decide é a leitura das capacidades pelo fd, como sempre."""
+    return _tecla_no_sysfs(caminho, tecla) is not False
+
+
+def _gamepad_do_dualsense_no_sysfs(
+    caminho: str,
+) -> tuple[int, int, int, str, str] | None:
+    """`(vendor, product, bustype, nome, uniq)` do nó de GAMEPAD de um DualSense,
+    lidos no sysfs, sem abrir o nó (O-NO-DO-DUALSENSE-SE-CLASSIFICA-PELO-SYSFS-01).
+
+    É o que a descoberta pedia ao `open` + ioctls (`EVIOCGID`, `EVIOCGNAME`,
+    `EVIOCGUNIQ`, `EVIOCGBIT`): o kernel publica o mesmo `input_dev` nos dois
+    lugares. None quando o nó não é de DualSense, não tem o botão de gamepad,
+    ou quando o sysfs não responde o que classifica (`id/vendor`,
+    `id/product`, `uniq` e `capabilities/key`): aí o nó segue pelo caminho de
+    sempre, que o abre. O nome e o barramento não classificam nada e são lidos
+    com a mesma tolerância da leitura pelo fd (ilegível, campo em branco).
+    """
+    lido = _identidade_no_sysfs(caminho)
+    if lido is None:
+        return None
+    vendor, product, nome, _uniq = lido
+    if vendor != DUALSENSE_VENDOR or product not in DUALSENSE_PIDS:
+        return None
+    if _tecla_no_sysfs(caminho, _BTN_GAMEPAD) is not True:
+        return None
+    raiz = f"{SYS_CLASS_INPUT}/{os.path.basename(caminho)}/device"
+    try:
+        # O `uniq` é a identidade: vazio é resposta (o fd diria o mesmo),
+        # ilegível não é, e o `_read_input_attr` não separa os dois.
+        with open(f"{raiz}/uniq", encoding="utf-8", errors="replace") as fh:
+            uniq = fh.read().strip()
+    except OSError:
+        return None
+    try:
+        with open(f"{raiz}/id/bustype", encoding="ascii") as fh:
+            bustype = int(fh.read().strip(), 16)
+    except (OSError, ValueError):
+        bustype = 0
+    return vendor, product, bustype, nome, uniq
 
 
 def _input_device_do_fd(fd: int, caminho: str) -> Any:
@@ -968,6 +1011,33 @@ def discover_gamepads(
         # da volta ANTES de abrir — o filtro de caps abaixo o descartaria de
         # qualquer jeito. O ilegível segue para a abertura, como antes.
         if not _sysfs_tem_tecla(path, _BTN_GAMEPAD):
+            continue
+        # O-NO-DO-DUALSENSE-SE-CLASSIFICA-PELO-SYSFS-01: o nó de gamepad do
+        # DualSense se classifica pelo sysfs, sem abrir e sem pedido ao
+        # broker (quem pede os externos já saiu acima, pelo mesmo sysfs). O
+        # ilegível segue para a abertura, como antes.
+        lido = _gamepad_do_dualsense_no_sysfs(path)
+        if lido is not None:
+            vendor, product, bustype, nome, uniq_raw = lido
+            identidade = norm_mac(uniq_raw) or f"path:{path}"
+            driver, hidraw = (
+                _external_device_sysfs(path) if com_sysfs else (None, None)
+            )
+            encontrados.setdefault(
+                (ESPECIE_DUALSENSE, identidade),
+                GamepadDescoberto(
+                    especie=ESPECIE_DUALSENSE,
+                    identidade=identidade,
+                    evdev_path=str(path),
+                    name=nome,
+                    vid=f"{vendor:04x}",
+                    pid=f"{product:04x}",
+                    bus=_bus_name(bustype),
+                    uniq=uniq_raw or None,
+                    driver=driver,
+                    hidraw=hidraw,
+                ),
+            )
             continue
         try:
             # HIDE-SO-O-HIDRAW-02: o nó do físico está FECHADO; ao broker vai
