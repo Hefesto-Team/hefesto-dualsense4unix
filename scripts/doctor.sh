@@ -4258,7 +4258,7 @@ check_bt_clone_ds4() {
             #    caso deste laço, o conselho manda para o modo que a casa mediu
             #    como PIOR: Switch por rádio é "PROVADO instável" e
             #    DirectInput/PS4 (que é justamente este 054C:05C4) é o
-            #    RECOMENDADO por rádio (docs/usage/troubleshooting-8bitdo.md:35-37).
+            #    RECOMENDADO por rádio (docs/usage/troubleshooting-8bitdo.md:12-16).
             #
             # O que sobrou é verdadeiro e medido: o firmware não calcula a
             # verificação de integridade e enche o diário do kernel de erros.
@@ -4829,7 +4829,7 @@ check_cmdline_platform() {
 # doctor.md). Tudo READ-ONLY; fecha o ciclo do que a Onda R instala (backport
 # bluez 5.85 + hefesto-bt-agent.service) com visibilidade pro leigo. A causa
 # medida do bond "meio-salvo" (Paired: yes / Bonded: no) é "No agent available
-# for request type 2" (estudo receita-backport-bluez.md §4):
+# for request type 2" (§4 de docs/history/2026-07-19-o-estudo-do-bluetoothd-5.72-e-o-plano-do-backport.md):
 # nenhum agente D-Bus respondeu no momento do pareamento. O check 6 do sprint
 # ("autoridade de exibição unknown presa") JÁ existe (NUMA-05/
 # check_display_authority, mais abaixo) — não duplicado aqui.
@@ -4837,8 +4837,8 @@ check_cmdline_platform() {
 
 # A faixa de bluez que esta casa aceita tem DOIS limites, não um.
 #
-# PISO 5.79 — abaixo dele, crashes crônicos de input/HIDP (estudo da Onda R,
-#   receita-backport-bluez.md).
+# PISO 5.79 — abaixo dele, crashes crônicos de input/HIDP (o estudo de 19/07,
+#   docs/history/2026-07-19-o-estudo-do-bluetoothd-5.72-e-o-plano-do-backport.md).
 #
 # TETO 5.87 — a MENOR versão REJEITADA conhecida. Motivo medido (estudo
 #   docs/process/estudos/2026-08-07-o-defeito-do-bluez-que-ela-lembrou-e-os-
