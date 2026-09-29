@@ -212,7 +212,9 @@ class TestInstallStep3hContrato:
         assert match is not None, "extração do --help não encontrada"
         end_line = int(match.group(1))
         header = "\n".join(INSTALL.splitlines()[:end_line])
-        assert "BROKER-01" in header
+        # Pelo texto do bullet, e não pelo ID: o --help fala com quem instala,
+        # e o ID da tarefa saiu dele em 28/09/2026.
+        assert "(DEFAULT) broker root hide-hidraw" in header
 
 
 class TestUninstallSimetriaContrato:

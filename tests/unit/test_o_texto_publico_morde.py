@@ -101,6 +101,8 @@ def _modulo():
     spec = importlib.util.spec_from_file_location("check_texto_publico", PORTAO)
     assert spec and spec.loader
     modulo = importlib.util.module_from_spec(spec)
+    # O @dataclass procura o módulo em sys.modules pelo nome.
+    sys.modules[spec.name] = modulo
     spec.loader.exec_module(modulo)
     return modulo
 
