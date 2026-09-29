@@ -1332,7 +1332,9 @@ class AltoFalanteSubsystem:
             captura, destino = alvo_do_no(str(endpoint.nome)), alvo_do_no(placa)
             if not captura or not destino:
                 continue
-            rotas[lugar] = RotaDoCabo(captura=captura, destino=destino)
+            rotas[lugar] = RotaDoCabo(
+                captura=captura, destino=destino, origem=str(endpoint.nome)
+            )
             este_joga = uniq.lower() in jogando
             if este_joga:
                 abertos.add(lugar)

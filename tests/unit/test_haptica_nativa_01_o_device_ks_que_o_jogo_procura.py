@@ -740,7 +740,7 @@ def test_a_pergunta_do_curador_e_em_c_e_sem_o_loader_da_steam(tmp_path: Path) ->
     no LD_LIBRARY_PATH. O dublê só responde quando as três condições valem — e o
     jogo, no fim, tem de receber o LD_LIBRARY_PATH e o LD_PRELOAD intactos.
 
-    **ALVO NOVO, 28/09/2026:** a régua media a sonda do gancho, que caiu (a
+    **ALVO NOVO, 28/09/2026:** a régua conferia a sonda do gancho, que caiu (a
     guarda pergunta pelo controle no `sysfs`). O `pactl` que sobrou no
     lançamento é o do curador, que lê o nó do LUGAR para achar a âncora; é ele
     que tem de perguntar em C e sem o loader.

@@ -18,6 +18,7 @@ depois, e o atraso do laço na mão, são a prova no aparelho, e são dela.
 
 from __future__ import annotations
 
+import itertools
 import re
 import shlex
 import shutil
@@ -38,6 +39,7 @@ from hefesto_dualsense4unix.integrations.haptica_do_cabo import (
     MAPA,
     HapticaDoCabo,
     chave_do_lugar,
+    no_de_captura,
 )
 from tests.unit.test_haptica_nativa_01_o_device_ks_que_o_jogo_procura import (
     _DaemonQueResponde,
@@ -358,7 +360,8 @@ def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> _Mesa:
     lacos = _Lacos(servidor)
     sysfs = _sysfs(tmp_path, ancoras=4)
     sub = mod.AltoFalanteSubsystem(gerenciador=None, fonte_de_controles=list)
-    sub._cabo = HapticaDoCabo(lacos=lacos)
+    # A conferência do grafo diz «não sei» aqui: as réguas dela estão no fim.
+    sub._cabo = HapticaDoCabo(lacos=lacos, conferir=lambda _no: None)
     m = _Mesa(sub=sub, servidor=servidor, lacos=lacos, sysfs=sysfs)
     monkeypatch.setattr(af, "_rodar", servidor)
     monkeypatch.setattr(eh, "RAIZ_DO_SYSFS", sysfs)
@@ -466,6 +469,54 @@ def test_o_p4_que_entra_com_o_jogo_aberto_le_o_endpoint_que_ja_existia(mesa: _Me
     assert (eh.nome_do_endpoint(4), "haptica") in mesa.lidos
     (ponte_do_p4,) = [p for p in _PonteDeMentira.criadas if p.uniq == _P4]
     assert ponte_do_p4.arranjo is af.ARRANJO_HAPTICA_032
+
+
+# ---------------------------------------------------------------------------
+# Por controle: as 24 ordens de conexão, cabo e BT misturados
+# ---------------------------------------------------------------------------
+
+#: O lugar de cada um, e o aparelho dos dois que chegam pelo cabo.
+_LUGAR = {_P1: 1, _P2: 2, _P3: 3, _P4: 4}
+_NO_CABO = {_P1: ("3-8", 28), _P2: ("3-7", 29)}
+_ORDENS = list(itertools.permutations((_P1, _P2, _P3, _P4)))
+
+
+@pytest.mark.parametrize(
+    "ordem", _ORDENS, ids=["".join(u[-1] for u in o) for o in _ORDENS]
+)
+def test_em_qualquer_ordem_quem_chega_cai_no_lugar_que_ja_existia(
+    mesa: _Mesa, ordem: tuple[str, ...]
+) -> None:
+    """O critério «por controle» da sprint: os quatro lugares, nas 24 ordens.
+
+    P1 e P2 chegam pelo cabo, P3 e P4 pelo rádio, em cada uma das 24 ordens.
+    Depois da primeira chegada, ninguém faz nascer nó, nenhum nó cai, e a
+    lista que o registro grava não muda — é a mesma do lançamento, com quem
+    chegar depois. No fim, os dois do cabo têm laço, e só eles.
+
+    MORDIDA: a da régua 1 (só os lugares ocupados de pé) — cada chegada passa
+    a carregar o nó do lugar, e o registro muda a cada uma.
+    """
+    chegaram: list[_Controle] = []
+    cargas: list[Any] | None = None
+    blocos: set[str] | None = None
+    for uniq in ordem:
+        if uniq in _NO_CABO:
+            aparelho, devnum = _NO_CABO[uniq]
+            chegaram.append(_no_cabo(mesa, uniq, _LUGAR[uniq], aparelho, devnum))
+        else:
+            mesa.assentos[uniq] = _LUGAR[uniq]
+            chegaram.append(_Controle(uniq, "bt", f"/dev/hidraw{_LUGAR[uniq]}"))
+        mesa.volta(*chegaram)
+        assert mesa.servidor.nossos() == sorted(eh.nome_do_endpoint(n) for n in eh.LUGARES)
+        agora = _instancias(mesa.registro())
+        if cargas is None or blocos is None:
+            cargas, blocos = list(mesa.servidor.cargas), agora
+        assert mesa.servidor.cargas == cargas, f"a chegada de {uniq} fez nascer um nó"
+        assert agora == blocos, f"a lista do registro mudou quando {uniq} chegou"
+    assert len(blocos or ()) == 4
+    assert mesa.servidor.quedas == []
+    assert set(mesa.lacos.vivos) == {chave_do_lugar(1), chave_do_lugar(2)}
 
 
 # ---------------------------------------------------------------------------
@@ -820,3 +871,56 @@ def test_o_servidor_mudo_cala_a_segunda_pergunta(tmp_path: Path) -> None:
     lista = ks.controles_do_registro(sysfs, tmp_path / "udev", mudo)
     assert [(c.bus, c.dev) for c in lista] == [(3, 28)], "o cabo tem de seguir pela placa"
     assert perguntas == [("pactl", "list", "sinks")]
+
+
+# ---------------------------------------------------------------------------
+# A outra metade da SOM-ECO-02: o laço que pediu o endpoint e caiu noutro nó
+# ---------------------------------------------------------------------------
+
+
+def _com_a_conferencia(mesa: _Mesa, responde: str | None) -> list[str]:
+    olhados: list[str] = []
+
+    def conferir(no: str) -> str | None:
+        olhados.append(no)
+        return responde
+
+    mesa.sub._cabo = HapticaDoCabo(lacos=mesa.lacos, conferir=conferir)
+    return olhados
+
+
+def test_o_laco_ligado_a_outro_no_cai_e_nao_se_religa(mesa: _Mesa) -> None:
+    """Pedido pelo serial e ligado à fonte padrão: o laço sai, e a rota não volta.
+
+    A fonte padrão desta máquina é o microfone do controle; um laço ligado a
+    ela mandaria a voz dela ao alto-falante da placa. Sem o laço, o registro
+    devolve ao controle o bloco da placa, que é o caminho que já vibrava.
+
+    MORDIDA: em ``HapticaDoCabo._conferir``, tire o ``self.soltar(lugar)`` do
+    ramo do nó errado — o laço fica de pé, lendo a fonte errada.
+    """
+    olhados = _com_a_conferencia(mesa, "alsa_input.a_fonte_padrao")
+    p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
+    mesa.volta(p1)
+    assert chave_do_lugar(1) in mesa.lacos.vivos
+    assert olhados == [], "conferiu na mesma volta que ligou, antes de o grafo ligar"
+    mesa.volta(p1)
+    assert olhados == [no_de_captura(1)]
+    assert chave_do_lugar(1) not in mesa.lacos.vivos, "o laço ficou na fonte errada"
+    mesa.volta(p1)
+    assert chave_do_lugar(1) not in mesa.lacos.vivos, "a rota que caiu noutro nó se religou"
+    assert _do_aparelho(mesa.sysfs, "3-8") in _instancias(mesa.registro())
+
+
+def test_o_laco_no_endpoint_do_lugar_se_confere_uma_vez(mesa: _Mesa) -> None:
+    """Ligado ao endpoint certo, o laço fica, e o grafo não se lê a cada volta.
+
+    MORDIDA: tire o ``self._conferidos.add(lugar)`` — a conferência passa a
+    ler o grafo inteiro a cada volta do daemon.
+    """
+    olhados = _com_a_conferencia(mesa, eh.nome_do_endpoint(1))
+    p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
+    for _ in range(4):
+        mesa.volta(p1)
+    assert olhados == [no_de_captura(1)]
+    assert chave_do_lugar(1) in mesa.lacos.vivos

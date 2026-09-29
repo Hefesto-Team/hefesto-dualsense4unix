@@ -31,6 +31,14 @@ que a ponte do rádio mandou a voz dela ao alto-falante (SOM-ECO-02, medido em
 derruba o endpoint de um lugar solta o laço dele ANTES (:meth:`soltar`): um
 laço cujo alvo some pode ser religado à fonte padrão.
 
+E PEDIR SEM CONFERIR É A FORMA DO DEFEITO (a outra metade da SOM-ECO-02): na
+volta seguinte à que ligou o laço, o lado de captura dele é conferido no grafo
+(``alto_falante_bt.conferir_o_alvo_do_gravador``). Ligado a outro nó que não o
+endpoint do lugar, o laço cai e aquela rota não se religa — a voz dela nunca
+vai à placa do controle. Sem conseguir olhar, o laço fica e a volta seguinte
+olha de novo: derrubar por não ter olhado trocaria um defeito raro por um mudo
+garantido.
+
 **O que não se mediu aqui:** o atraso do laço no controle na mão (o critério
 de pronto pede dentro dos 50 ms do dono dos laços) e a vibração com o jogo
 aberto. As duas são a prova no aparelho, e são dela.
@@ -67,6 +75,17 @@ VOLUME_FECHADO = "0%"
 _LACOS = Lacos(FAMILIA_DO_LACO_DO_CABO)
 
 
+def no_de_captura(lugar: int) -> str:
+    """O ``node.name`` do lado de captura do laço do lugar.
+
+    O ``module-loopback`` do PipeWire chama os dois lados do laço de
+    ``input.<nome>`` e ``output.<nome>`` quando só o ``--name`` é dado. **Não
+    medido nesta máquina:** se o nome for outro, a conferência não acha o nó e
+    responde «não sei» — o laço fica, e o diário diz que não se conferiu.
+    """
+    return f"input.{MARCA_DO_LACO_DO_CABO}{chave_do_lugar(lugar)}"
+
+
 def chave_do_lugar(lugar: int) -> str:
     """A chave do laço no dono dos laços: ``lugar<n>``.
 
@@ -86,6 +105,9 @@ class RotaDoCabo:
     captura: str
     #: A placa do controle sentado no lugar.
     destino: str
+    #: O ``node.name`` do endpoint do lugar: é a ele que o lado de captura do
+    #: laço tem de estar ligado. Vazio = não se confere.
+    origem: str = ""
 
 
 def alvo_do_no(nome: str) -> str:
@@ -122,13 +144,19 @@ class HapticaDoCabo:
         *,
         indice_do_fluxo: Callable[[str], str | None] | None = None,
         pactl: Callable[[list[str]], str | None] | None = None,
+        conferir: Callable[[str], str | None] | None = None,
     ) -> None:
         self._lacos: Any = lacos if lacos is not None else _LACOS
         self._indice_do_fluxo = indice_do_fluxo
         self._pactl = pactl
+        self._conferir_alvo = conferir
         self._rotas: dict[int, RotaDoCabo] = {}
         #: lugar -> o portão que JÁ se aplicou (``True`` = motores abertos).
         self._portao: dict[int, bool] = {}
+        #: Os lugares cujo laço já se viu ligado ao endpoint certo.
+        self._conferidos: set[int] = set()
+        #: lugar -> a rota que se ligou a outro nó: ela não se religa.
+        self._recusadas: dict[int, RotaDoCabo] = {}
 
     def lugares(self) -> dict[int, RotaDoCabo]:
         """Os lugares com laço pedido, e a rota de cada um. Leitura."""
@@ -150,7 +178,13 @@ class HapticaDoCabo:
             self.soltar(lugar)
         for lugar, rota in rotas.items():
             chave = chave_do_lugar(lugar)
-            if self._rotas.get(lugar) != rota or not self._lacos.esta_ligado(chave):
+            if self._recusadas.get(lugar) == rota:
+                continue
+            self._recusadas.pop(lugar, None)
+            ja_estava = self._rotas.get(lugar) == rota and self._lacos.esta_ligado(chave)
+            if ja_estava and lugar not in self._conferidos and not self._conferir(lugar, rota):
+                continue
+            if not ja_estava:
                 self.soltar(lugar)
                 if not self._lacos.ligar(
                     chave, captura=rota.captura, destino=rota.destino, canais=CANAIS, mapa=MAPA
@@ -162,6 +196,37 @@ class HapticaDoCabo:
             aberto = lugar in querem_abrir
             if self._portao.get(lugar) is not aberto and self._aplicar_o_portao(lugar, aberto):
                 self._portao[lugar] = aberto
+
+    def _conferir(self, lugar: int, rota: RotaDoCabo) -> bool:
+        """O lado de captura do laço está no endpoint do lugar? ``False`` = caiu.
+
+        Chamado só na volta SEGUINTE à que ligou o laço: a ligação no grafo não
+        é instantânea, e olhar cedo demais leria «não sei» à toa.
+        """
+        if not rota.origem:
+            return True
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+            conferir_o_alvo_do_gravador,
+        )
+
+        olhar = self._conferir_alvo or conferir_o_alvo_do_gravador
+        try:
+            ligado = olhar(no_de_captura(lugar))
+        except Exception as exc:  # nunca derruba a volta
+            logger.debug("haptica_do_cabo_conferencia_falhou", lugar=lugar, err=str(exc))
+            ligado = None
+        if ligado is None:
+            logger.debug("haptica_do_cabo_nao_conferido", lugar=lugar)
+            return True
+        if ligado == rota.origem:
+            self._conferidos.add(lugar)
+            return True
+        # O nome do nó errado não vai ao diário: pode ser o microfone dela,
+        # que carrega o rabo do endereço do controle.
+        logger.warning("haptica_do_cabo_ligado_a_outro_no", lugar=lugar)
+        self.soltar(lugar)
+        self._recusadas[lugar] = rota
+        return False
 
     def _aplicar_o_portao(self, lugar: int, aberto: bool) -> bool:
         """O volume do fluxo do laço na placa: a frente cheia, os motores pelo portão.
@@ -201,6 +266,7 @@ class HapticaDoCabo:
         if self._rotas.pop(lugar, None) is not None:
             logger.info("haptica_do_cabo_laco_solto", lugar=lugar)
         self._portao.pop(lugar, None)
+        self._conferidos.discard(lugar)
 
     def parar(self) -> None:
         """Todos os laços caem (o ``stop`` do subsystem)."""
@@ -217,4 +283,5 @@ __all__ = [
     "RotaDoCabo",
     "alvo_do_no",
     "chave_do_lugar",
+    "no_de_captura",
 ]
