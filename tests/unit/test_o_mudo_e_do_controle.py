@@ -423,6 +423,30 @@ class TestAMigracao:
         monkeypatch.setattr(maquina, "gravar_o_mudo_do_microfone", real)
         assert loader.o_mudo_do_microfone_vai_para_o_controle(ativo="Freestyle")
 
+    def test_a_copia_de_fabrica_fica_como_veio(self, pasta: Path) -> None:
+        """O Freestyle recém-semeado não é reescrito, e o `muted` dele não vai ao dono.
+
+        O asset traz `"muted": false`, que não é escolha dela. Reescrevê-lo
+        faria a fábrica deixar de ser fábrica em TODA máquina nova — a
+        `o_freestyle_de_fabrica_nasce_ligado` e o install comparam os bytes.
+
+        MORDIDAS: tirar o `_e_copia_de_fabrica` do laço dos perfis (o arquivo
+        muda), ou do perfil ativo (o P3 ganha uma opinião que ela não deu).
+        """
+        asset = loader._seed_source_file(loader.ARQUIVO_DO_PADRAO)
+        assert asset is not None
+        bruto = asset.read_bytes()
+        assert "muted" in json.loads(bruto)["mic"], (
+            "o asset perdeu o `muted`: esta régua perdeu o objeto e pode sair")
+        (pasta / loader.ARQUIVO_DO_PADRAO).write_bytes(bruto)
+        assert maquina.gravar_o_nome_do_controle(P3, "Controle da sala")
+
+        assert loader.o_mudo_do_microfone_vai_para_o_controle(ativo="Freestyle") == {}
+
+        assert (pasta / loader.ARQUIVO_DO_PADRAO).read_bytes() == bruto
+        assert maquina.mudo_do_microfone(P3) is None
+        assert loader.listar_historico("Freestyle") == []
+
     def test_o_ativo_e_o_que_o_boot_restaura(self, pasta: Path) -> None:
         """Sem `ativo`, a migração pergunta ao boot (`resolve_boot_profile`)."""
         from hefesto_dualsense4unix.utils.session import save_last_profile

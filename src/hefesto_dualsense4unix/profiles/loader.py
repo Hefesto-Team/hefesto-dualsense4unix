@@ -1356,7 +1356,11 @@ def enxugar_perfis_de_jogo(dest_dir: Path | None = None) -> list[str]:
 #     (`mic_mudo_saiu_dos_perfis`). Nenhum outro campo muda: a edição é no
 #     JSON cru, e um arquivo que não valida depois dela não é escrito;
 #   * sem gravar no dono, nada sai dos perfis e não há marca: a próxima subida
-#     tenta de novo, e o silêncio dela não se perde no meio do caminho.
+#     tenta de novo, e o silêncio dela não se perde no meio do caminho;
+#   * a CÓPIA DE FÁBRICA intocada fica como veio (`_e_copia_de_fabrica`): o
+#     `muted: false` do asset não é escolha dela, o dono não o lê, e reescrever
+#     o arquivo faria o Freestyle recém-semeado deixar de ser a fábrica — a
+#     `o_freestyle_de_fabrica_nasce_ligado` e o install contam com os bytes.
 _MUDO_FOI_PARA_O_CONTROLE_MARKER = ".mudo_do_microfone_foi_para_o_controle"
 
 
@@ -1379,6 +1383,22 @@ def _mudos_do_perfil(dados: dict[str, object], conhecidos: set[str]) -> dict[str
         for chave in sorted(conhecidos):
             mudos.setdefault(chave, valor_global)
     return mudos
+
+
+def _e_copia_de_fabrica(path: Path, dados: dict[str, object]) -> bool:
+    """O perfil cru é o asset do mesmo nome, sem nenhum ajuste dela?
+
+    Compara o JSON, não os bytes, como `_e_o_de_fabrica_intocado`. Sem asset
+    instalado, responde `False` — e a migração segue, que é o lado que leva o
+    mudo ao dono.
+    """
+    asset = _seed_source_file(path.name)
+    if asset is None:
+        return False
+    try:
+        return bool(dados == json.loads(asset.read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        return False
 
 
 def _sem_o_mudo_do_microfone(dados: dict[str, object]) -> dict[str, object]:
@@ -1438,6 +1458,8 @@ def o_mudo_do_microfone_vai_para_o_controle(
         if ativo:
             caminho = arquivo_do_perfil(ativo, directory)
             dados_do_ativo = _dados_crus_do_perfil(caminho) if caminho else None
+            if caminho and dados_do_ativo and _e_copia_de_fabrica(caminho, dados_do_ativo):
+                dados_do_ativo = None
         conhecidos = set(declarado.controles or {})
         pecas_do_ativo = (dados_do_ativo or {}).get("controllers")
         if isinstance(pecas_do_ativo, dict):
@@ -1457,7 +1479,7 @@ def o_mudo_do_microfone_vai_para_o_controle(
         tirados: list[str] = []
         for path in sorted(directory.glob("*.json")):
             dados = _dados_crus_do_perfil(path)
-            if dados is None:
+            if dados is None or _e_copia_de_fabrica(path, dados):
                 continue
             novo = _sem_o_mudo_do_microfone(dados)
             if novo == dados:
