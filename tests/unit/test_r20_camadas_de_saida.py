@@ -24,7 +24,7 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.core.controller import OutputSpec
-from hefesto_dualsense4unix.core.led_control import player_slot_color
+from hefesto_dualsense4unix.core.led_control import LedSettings, player_slot_color
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.daemon.subsystems import identity
 from hefesto_dualsense4unix.daemon.subsystems.identity import make_auto_output_provider
@@ -248,8 +248,8 @@ def test_brilho_only_nao_materializa_cor_global(
 
         # O Controle 2 fica com a COR DO SLOT (vermelho), escalada a 0.5 — NÃO
         # com o roxo global. É o merge (auto) escalado depois, não materializado.
-        r, g, b = player_slot_color(2)
-        esperado = (r // 2, g // 2, b // 2)
+        # A conta é do dono da escala, com o piso de D-2909-O-BRILHO-TEM-PISO.
+        esperado = LedSettings(lightbar=player_slot_color(2)).apply_brightness(0.5).lightbar
         assert n2.colors[-1] == esperado
         # E o override NÃO ganhou o campo `led` (não materializou cor nenhuma).
         residual = inst._desired_by_uniq.get(UNIQ_2)
@@ -286,8 +286,10 @@ def test_escala_de_brilho_convive_com_override_de_cor(
         )
 
         assert n1.colors[-1] == (200, 200, 200)  # override de cor explícito
-        r, g, b = player_slot_color(2)
-        assert n2.colors[-1] == (r // 2, g // 2, b // 2)  # slot escalado
+        # o slot escalado pelo dono da escala (D-2909-O-BRILHO-TEM-PISO)
+        assert n2.colors[-1] == (
+            LedSettings(lightbar=player_slot_color(2)).apply_brightness(0.5).lightbar
+        )
     finally:
         identity.reset_identity_registry()
 

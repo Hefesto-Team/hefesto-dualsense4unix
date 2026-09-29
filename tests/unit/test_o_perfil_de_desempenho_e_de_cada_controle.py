@@ -45,6 +45,7 @@ from tests.unit import test_a_marca_da_cor_nao_some as marca
 from tests.unit import test_o_aplicar_nao_solta_o_teto_do_controle as regua_do_aplicar
 from tests.unit import test_o_brilho_das_luzes_sobrevive_ao_aplicar_e_ao_salvar as regua_do_brilho
 from tests.unit.test_a_marca_da_cor_nao_some import NOME, UNIQS
+from tests.unit.test_a_barra_nao_escurece_ao_reaplicar import O_APLICAR_SEM_O_PISO
 
 # O caminho de `pacotes` é posto pela mesa da A-MARCA, importada acima.
 import pacotes
@@ -345,6 +346,7 @@ def _donos_da_luz(mesa: Any) -> dict[int, str | None]:
                 .get("player_led_brightness") for n in (1, 2, 3, 4)}
 
 
+@O_APLICAR_SEM_O_PISO
 @pytest.mark.parametrize("via", ["usb", "bt"])
 @pytest.mark.parametrize("k", [1, 2, 3, 4], ids=["P1", "P2", "P3", "P4"])
 def test_a_bateria_longa_depois_do_aplicar_poe_o_teto_so_nele(
@@ -395,6 +397,7 @@ def test_a_bateria_longa_da_sistema_depois_do_aplicar_poe_o_teto_nos_quatro(
         assert estado["barra"] is not None and estado["barra"] <= 0.3, (n, estado)
 
 
+@O_APLICAR_SEM_O_PISO
 @pytest.mark.parametrize("via", ["usb", "bt"])
 @pytest.mark.parametrize("k", [1, 2, 3, 4], ids=["P1", "P2", "P3", "P4"])
 def test_a_bateria_longa_no_modo_nativo_poe_o_teto_na_saida_do_jogo(
