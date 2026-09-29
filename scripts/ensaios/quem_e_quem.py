@@ -45,27 +45,45 @@ divergência entre o número que o daemon diz e o desenho que ele de fato
 escreve — o defeito medido em 15/08/2026, que outro agente está curando em
 `src/`. Aqui ele só é OBSERVADO; este instrumento não conserta nada.
 
-O QUE SÓ SE RESOLVE APERTANDO BOTÃO — e por quê
-------------------------------------------------
-**A ligação vpad ↔ MAC, por SYSFS.** Nenhum arquivo de `/sys` a carrega: o vpad
-é criado pelo produto via `/dev/uhid` e não guarda ponteiro para o controle que
-o alimenta. (Quem a carrega agora é o daemon, em `coop.jogadores` — ver acima;
-o que segue vale para conferir o daemon por fora, ou com ele parado.)
+O ENSAIO DO APERTO: FÍSICO ↔ PAD ↔ CARTÃO (`--apertar`)
+--------------------------------------------------------
+Nenhum arquivo de `/sys` liga o pad ao controle que o alimenta (o vpad nasce
+por `/dev/uhid` ou `/dev/uinput` sem ponteiro para o físico; quem carrega a
+ligação é o daemon, em `coop.jogadores`). O `--apertar` a mede por fora, e
+mede junto a pergunta que a bancada de 29/09/2026 fez: *o botão apertado
+naquele controle acende o cartão dele na aba Controles?*
 
-E há um agravante medido: com o co-op ativo, o daemon faz `EVIOCGRAB`
-nos nós FÍSICOS, então um leitor externo não vê botão nenhum vindo deles — só
-dos vpads. Logo:
+Ele lê DUAS fontes, e quem diz «houve aperto» nunca sai do estado:
 
-  - com o daemon RODANDO: aperte X num controle que você identifica com os
-    olhos; o vpad que acender é o dele. Resolve **físico(humano) ↔ vpad**, que
-    é o que interessa na prática;
-  - com o daemon PARADO: os físicos voltam a falar, e o mesmo aperto resolve
-    **MAC ↔ vpad** sem depender de você saber qual controle pegou.
+  a testemunha ... o nó que o JOGO lê, com a hora do kernel: o pad uhid (modo
+                   DualSense, e o nó diz o jogador), o pad uinput (modo Xbox,
+                   achado pelo dono, `identidade_do_vpad.e_pad_uinput_do_hefesto`;
+                   o nó não diz o jogador) ou, sem pad nenhum (Nativo), o
+                   físico, aberto pela porta da casa (`abrir_input_device`). O
+                   nó que não falou sai pelo dono do zero (`leitura_de_zero`):
+                   «o controle não emitiu» e «eu não posso ler» não saem iguais;
+  a tela ......... o `state_full`, lido a cada `hefesto_vivo.TIQUE_MS`, com o
+                   aceso de cada cartão pela conta da aba Controles
+                   (`a02_controles.leitura_viva`). Nenhuma regra de «aceso»
+                   mora aqui.
 
-`--apertar` faz esse ensaio e diz, na saída, qual dos dois mundos mediu.
+Cada aperto testemunhado dá uma linha: «acendeu só o cartão Pn» (e, onde o nó
+diz o jogador, o Pn tem de ser o dele), ou FALHA («não acendeu cartão nenhum»,
+«acendeu mais de um cartão», «o de outro jogador»), ou «curto demais para o
+tique da tela», que não é FALHA e também não é medida. A linha diz o nome que o
+jogo viu e o que a tela acendeu: com uma troca de botão ligada, os dois diferem.
 
-PRECISA DO DAEMON PARADO? Não para a tabela (é tudo sysfs). Para `--apertar`,
-leia o parágrafo acima: os dois modos valem, e medem coisas diferentes.
+O LIMITE, dito também na saída: o ensaio prova o canal que a grade lê, não a
+pintura. Ele não sabe se a aba 02 está na tela; quem prova a pintura são as
+réguas da aba e o olho dela.
+
+O RC do `--apertar`: 2 com uma FALHA, 3 com nada medido (sem aperto
+testemunhado, só apertos curtos, a tela que não respondeu, ou a tela que não
+se lê aqui). Quando todo aperto medido acendeu o cartão dele, vale o rc da
+tabela, com o aviso do LED de jogador. A interface é importada SÓ no
+`--apertar`: a tabela e o `--json`, que o `o_basico.py` lê, não dependem do Gtk.
+
+PRECISA DO DAEMON PARADO? Não. A tabela é sysfs, e o `--apertar` lê o daemon.
 
 O ENDEREÇO NUNCA SAI CRU (O-BASICO-MEDIDO-01, 28/09/2026). A coluna «MAC»
 imprimia o `HID_UNIQ` inteiro, e o MAC forjado do vpad é derivado do endereço
@@ -88,6 +106,8 @@ import os
 import selectors
 import sys
 import time
+from dataclasses import dataclass, field
+from typing import Any
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -97,13 +117,14 @@ from comum import (
     cabecalho_do_instrumento,
     censo_da_mesa,
     descobrir_aparelhos,
-    estado_do_daemon,
     fisicos,
     ler_texto,
     resumo,
     tabela,
     vpads,
 )
+from identidade_do_vpad import e_pad_uinput_do_hefesto
+
 from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 
 #: Os endereços desta mesa, lidos no começo: o dono da máscara os usa como
@@ -327,102 +348,394 @@ def tabela_dos_vpads(saidas: list[Aparelho]) -> None:
     dizer(tabela(cabecalho, linhas))
 
 
-def ensaio_de_aperto(aparelhos: list[Aparelho], segundos: float) -> None:
-    """Resolve, apertando botão, o que o sysfs não liga."""
-    if evdev is None:
-        dizer("\n  python-evdev ausente — rode com .venv/bin/python para usar --apertar.")
-        return
+# ---------------------------------------------------------------------------
+# O ENSAIO DO APERTO — físico ↔ pad ↔ cartão (A-PROVA-DO-BOTAO-TEM-TESTEMUNHA-01)
+# ---------------------------------------------------------------------------
+#
+# Em 29/09/2026 um laço de 0,1 s leu 1.767 vezes o `state_full` com os botões
+# vazios nos quatro cartões, e o vazio foi lido como «a tela não viu». Não
+# havia aperto nenhum dentro daquele laço: a aba Controles estava fora da
+# tela e o primeiro da ordem não apertou nada. O defeito era da prova — um
+# zero sem aperto testemunhado. Este ensaio lê DUAS fontes juntas, e a que diz
+# «houve aperto» nunca sai do estado: é o pad que o jogo lê.
 
-    daemon = estado_do_daemon()
-    dizer()
-    dizer("  ENSAIO DO APERTO — o que o sysfs não resolve")
-    dizer()
-    if daemon.rodando:
-        dizer("  O daemon está RODANDO: os nós FÍSICOS estão sob EVIOCGRAB e não")
-        dizer("  falam com este instrumento. O que este ensaio resolve, então, é")
-        dizer("  FÍSICO(que você identifica com os olhos) ↔ VPAD.")
-    else:
-        dizer("  O daemon está PARADO: os nós físicos falam. Este ensaio resolve")
-        dizer("  MAC ↔ VPAD sem depender de você saber qual controle pegou.")
-    dizer()
-    dizer(f"  >> APERTE O BOTÃO X num controle. Esperando {segundos:.0f} s…")
-    dizer()
+#: O que um aperto testemunhado pode dar. Só o `ACENDEU` e a `FALHA` contam
+#: como medida; os outros dois dizem por que aquele aperto não mede nada.
+ACENDEU = "acendeu"
+FALHA = "falha"
+CURTO = "curto"
+SEM_TELA = "sem_tela"
 
-    seletor = selectors.DefaultSelector()
-    dono_do_fd: dict[int, tuple[Aparelho, str]] = {}
-    for aparelho in aparelhos:
-        caminho = _nos_de_entrada(aparelho).get("principal")
-        if not caminho:
+#: O rc do `--apertar` quando ele vence o da tabela.
+RC_FALHA = 2
+RC_NADA_MEDIDO = 3
+
+PAD_UHID = "pad uhid"
+PAD_UINPUT = "pad uinput"
+FISICO = "físico"
+
+
+@dataclass(frozen=True)
+class Testemunha:
+    """Um nó evdev que diz, com a hora do kernel, que um botão desceu."""
+
+    caminho: str
+    tipo: str
+    #: «P2» quando o próprio nó diz o jogador (o pad uhid), «» quando não diz.
+    jogador: str = ""
+    #: O endereço do físico (a testemunha do Nativo); «» nos pads.
+    uniq: str = ""
+
+    @property
+    def marca(self) -> str:
+        if self.jogador:
+            return f"{self.tipo} {self.jogador}"
+        if self.uniq:
+            return f"{self.tipo} {self.uniq}"
+        return f"{self.tipo} {self.caminho}"
+
+
+@dataclass
+class Aperto:
+    testemunha: Testemunha
+    codigo: int
+    #: O nome que o jogo viu, pelo dono do nome (`EvdevReader.BUTTON_MAP`).
+    nome: str
+    descida: float
+    subida: float | None = None
+
+
+@dataclass(frozen=True)
+class Leitura:
+    """Uma pergunta ao `state_full`, com a hora em que a resposta chegou."""
+
+    hora: float
+    #: {número do cartão: glifos acesos}; `None` quando a tela não respondeu.
+    acesos: dict[int, frozenset[str]] | None
+    #: {número do cartão: endereço do controle}, para a testemunha do Nativo.
+    enderecos: dict[int, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class Veredito:
+    tipo: str
+    texto: str
+
+
+def _nome_do_botao(codigo: int) -> str:
+    """O nome que o jogo vê, pelo dono (o mesmo mapa do leitor do daemon)."""
+    from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
+
+    for nome_evdev, nome in EvdevReader.BUTTON_MAP.items():
+        if ecodes.ecodes.get(nome_evdev) == codigo:
+            return str(nome)
+    cru: object = ecodes.BTN.get(codigo) or ecodes.KEY.get(codigo) or str(codigo)
+    return str(cru[0]) if isinstance(cru, (list, tuple)) else str(cru)
+
+
+def testemunhas_da_mesa(aparelhos: list[Aparelho], raiz_sys: str = "/sys") -> list[Testemunha]:
+    """Os nós que o JOGO lê, em todo modo; o físico só quando não há pad.
+
+    - uhid (DualSense): o nó principal de cada vpad, e o vpad diz o jogador;
+    - uinput (Xbox): os nós que o dono já reconhece
+      (`identidade_do_vpad.e_pad_uinput_do_hefesto`), achados em
+      `/sys/class/input`. O nó não diz o jogador;
+    - Nativo (sem pad): o nó principal de cada físico, e o endereço dele
+      diz de quem é o cartão.
+    """
+    achadas: list[Testemunha] = []
+    for vpad in vpads(aparelhos):
+        caminho = _nos_de_entrada(vpad).get("principal")
+        if caminho:
+            jogador = vpad.rotulo if vpad.rotulo.startswith("P") else ""
+            achadas.append(Testemunha(caminho, PAD_UHID, jogador=jogador))
+    raiz = os.path.join(raiz_sys, "class", "input")
+    try:
+        entradas = sorted(os.listdir(raiz), key=lambda n: int(n.removeprefix("event") or 0)
+                          if n.removeprefix("event").isdigit() else -1)
+    except OSError:
+        entradas = []
+    for entrada in entradas:
+        if not entrada.startswith("event"):
             continue
-        try:
-            dispositivo = evdev.InputDevice(caminho)
-        except OSError:
+        dir_device = os.path.join(raiz, entrada, "device")
+        nome = ler_texto(os.path.join(dir_device, "name")).strip()
+        if e_pad_uinput_do_hefesto(nome, dir_device):
+            achadas.append(Testemunha(f"/dev/input/{entrada}", PAD_UINPUT))
+    if achadas:
+        return achadas
+    for fisico in fisicos(aparelhos):
+        caminho = _nos_de_entrada(fisico).get("principal")
+        if caminho:
+            achadas.append(Testemunha(caminho, FISICO, uniq=fisico.mac))
+    return achadas
+
+
+def _a_tela() -> tuple[Any, Any, Any, int]:
+    """Os donos da leitura da tela, importados SÓ no `--apertar`.
+
+    O `hefesto_vivo` sobe o Gtk e o WebKit no import, e este ensaio vai no
+    pacote e roda com `--json` pelo `o_basico.py`: a tabela e o `--json` não
+    podem depender da interface. Devolve (`mesa_viva`, `leitura_viva`,
+    `mesa_do_estado`, `TIQUE_MS`), ou levanta `ImportError`.
+    """
+    import hefesto_dualsense4unix
+
+    interface = os.path.join(os.path.dirname(hefesto_dualsense4unix.__file__), "interface")
+    if os.path.isdir(interface) and interface not in sys.path:
+        sys.path.insert(0, interface)
+    from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva
+    from hefesto_dualsense4unix.interface.pacotes import a02_controles
+
+    return mesa_viva, a02_controles.leitura_viva, mesa_viva.mesa_do_estado, int(hefesto_vivo.TIQUE_MS)
+
+
+def ler_a_tela(estado: dict[str, Any], leitura_viva: Any, mesa_do_estado: Any,
+               hora: float) -> Leitura:
+    """Os glifos acesos de cada cartão, pela conta que a aba Controles faz.
+
+    O cartão é o item da mesa (`mesa_viva.mesa_do_estado`, o número que o
+    cabeçalho do cartão imprime), e o aceso é o `leitura_viva` da aba 02 sobre
+    a entrada do controle com o mesmo endereço. Nenhuma regra de «aceso» mora
+    aqui: seria uma segunda régua, que envelhece calada.
+    """
+    numero_do_uniq = {
+        str(item.get("uniq") or ""): int(item.get("jogador") or 0)
+        for item in mesa_do_estado(estado, {})
+    }
+    acesos: dict[int, frozenset[str]] = {}
+    enderecos: dict[int, str] = {}
+    for entrada in estado.get("controllers") or []:
+        if not isinstance(entrada, dict):
             continue
+        uniq = str(entrada.get("uniq") or "")
+        numero = numero_do_uniq.get(uniq)
+        if not numero:
+            continue
+        campos = leitura_viva(entrada)
+        acesos[numero] = frozenset(
+            chave.removeprefix("glifo-") for chave, valor in campos.items()
+            if chave.startswith("glifo-") and valor
+        )
+        enderecos[numero] = uniq.lower()
+    return Leitura(hora, acesos, enderecos)
+
+
+def julgar(aperto: Aperto, leituras: list[Leitura], tique_s: float, fim: float) -> Veredito:
+    """O veredito de UM aperto testemunhado.
+
+    A janela vai da descida à subida, mais um tique da tela e a volta do laço
+    deste ensaio (outro tique). O aperto que durou menos que um tique e não
+    acendeu nada é curto demais para a tela a 10 Hz, que também não o mostra:
+    não é FALHA, e também não é medida.
+    """
+    subida = aperto.subida if aperto.subida is not None else fim
+    duracao = subida - aperto.descida
+    janela = [x for x in leituras if aperto.descida <= x.hora <= subida + 2 * tique_s]
+    respondidas = [x for x in janela if x.acesos is not None]
+    curto = duracao <= tique_s
+    if not respondidas:
+        if curto:
+            return Veredito(CURTO, "curto demais para o tique da tela")
+        return Veredito(SEM_TELA, "a tela não respondeu durante o aperto — nada medido")
+    cartoes: dict[int, set[str]] = {}
+    enderecos: dict[int, str] = {}
+    for leitura in respondidas:
+        enderecos.update(leitura.enderecos)
+        for numero, glifos in (leitura.acesos or {}).items():
+            if glifos:
+                cartoes.setdefault(numero, set()).update(glifos)
+    if not cartoes:
+        if curto:
+            return Veredito(CURTO, "curto demais para o tique da tela")
+        return Veredito(FALHA, "não acendeu cartão nenhum")
+    acesos = ", ".join(f"P{n} ({', '.join(sorted(g))})" for n, g in sorted(cartoes.items()))
+    if len(cartoes) > 1:
+        return Veredito(FALHA, f"acendeu mais de um cartão: {acesos}")
+    ((numero, acesos_do_cartao),) = cartoes.items()
+    esperado = aperto.testemunha.jogador
+    if not esperado and aperto.testemunha.uniq:
+        dono = [n for n, u in enderecos.items() if u and u == aperto.testemunha.uniq.lower()]
+        esperado = f"P{dono[0]}" if len(dono) == 1 else ""
+    tela = ", ".join(sorted(acesos_do_cartao))
+    if esperado and esperado != f"P{numero}":
+        return Veredito(FALHA, f"acendeu o cartão P{numero}, que é de outro jogador "
+                               f"(o nó é do {esperado}); a tela acendeu {tela}")
+    return Veredito(ACENDEU, f"acendeu só o cartão P{numero}; a tela acendeu {tela}")
+
+
+def _colher(
+    abertos: dict[Any, Testemunha],
+    segundos: float,
+    tique_s: float,
+    ler: Any,
+    mudo: type[Exception],
+    ler_a_tela_de: Any,
+    relogio: Any,
+    novo_seletor: Any,
+) -> tuple[list[Aperto], list[Leitura], dict[Any, int], float]:
+    """O laço: o pad pela hora do kernel, a tela a cada tique."""
+    seletor = novo_seletor()
+    for dispositivo in abertos:
         seletor.register(dispositivo, selectors.EVENT_READ)
-        dono_do_fd[dispositivo.fd] = (aparelho, caminho)
-
-    if not dono_do_fd:
-        dizer("  Nenhum nó principal abriu. Nada a medir.")
-        return
-
-    acertos: list[tuple[Aparelho, str]] = []
-    fim = time.monotonic() + segundos
-    while time.monotonic() < fim:
-        for chave, _ in seletor.select(0.25):
-            aparelho, caminho = dono_do_fd[chave.fileobj.fd]
-            try:
-                eventos = list(chave.fileobj.read())
-            except OSError:
+    apertos: list[Aperto] = []
+    leituras: list[Leitura] = []
+    descidas: dict[tuple[int, int], Aperto] = {}
+    eventos: dict[Any, int] = dict.fromkeys(abertos, 0)
+    inicio = relogio()
+    fim = inicio + segundos
+    proxima = inicio
+    try:
+        while True:
+            agora = relogio()
+            if agora >= fim:
+                break
+            if agora >= proxima:
+                try:
+                    estado = ler()
+                except mudo:
+                    leituras.append(Leitura(relogio(), None))
+                else:
+                    leituras.append(ler_a_tela_de(estado, relogio()))
+                # O daemon que demora não empilha perguntas: a próxima fica
+                # a um tique da resposta.
+                proxima = max(proxima + tique_s, relogio() + tique_s / 2)
                 continue
-            for evento in eventos:
-                pressionou_x = (
-                    evento.type == ecodes.EV_KEY
-                    and evento.code == ecodes.BTN_SOUTH
-                    and evento.value == 1
-                )
-                if pressionou_x and (aparelho, caminho) not in acertos:
-                    acertos.append((aparelho, caminho))
-                    marca = "vpad " + aparelho.rotulo if aparelho.e_vpad else aparelho.mac
-                    dizer(f"    X em {marca:<20} ({caminho}, {aparelho.transporte})")
+            for chave, _ in seletor.select(max(0.0, min(proxima, fim) - agora)):
+                dispositivo = chave.fileobj
+                try:
+                    lidos = list(dispositivo.read())
+                except OSError:
+                    continue
+                for evento in lidos:
+                    if evento.type != ecodes.EV_KEY or evento.value not in (0, 1):
+                        continue
+                    chave_do_botao = (id(dispositivo), evento.code)
+                    if evento.value == 1:
+                        eventos[dispositivo] += 1
+                        aperto = Aperto(abertos[dispositivo], evento.code,
+                                        _nome_do_botao(evento.code), evento.timestamp())
+                        apertos.append(aperto)
+                        descidas[chave_do_botao] = aperto
+                    elif chave_do_botao in descidas:
+                        descidas.pop(chave_do_botao).subida = evento.timestamp()
+    finally:
+        for chave in list(seletor.get_map().values()):
+            with contextlib.suppress(OSError):
+                chave.fileobj.close()
+        seletor.close()
+    return apertos, leituras, eventos, fim
 
-    for chave in list(seletor.get_map().values()):
-        with contextlib.suppress(OSError):
-            chave.fileobj.close()
-    seletor.close()
+
+def ensaio_de_aperto(
+    aparelhos: list[Aparelho],
+    segundos: float,
+    *,
+    raiz_sys: str = "/sys",
+    relogio: Any = time.time,
+    novo_seletor: Any = selectors.DefaultSelector,
+) -> int | None:
+    """Físico ↔ pad ↔ cartão: cada aperto testemunhado pelo pad, e o cartão
+    que a tela acendeu nele.
+
+    Devolve o rc que vence o da tabela (2 com uma FALHA, 3 com nada medido),
+    ou `None` quando todo aperto medido acendeu o cartão dele — e então vale o
+    rc da tabela, com o aviso do LED de jogador.
+
+    O relógio é o `time.time()`: o nó evdev carimba no `CLOCK_REALTIME`
+    enquanto ninguém o troca, e este ensaio não o troca.
+    """
+    dizer()
+    dizer("  ENSAIO DO APERTO — físico ↔ pad ↔ cartão")
+    dizer()
+    if evdev is None:
+        dizer("  python-evdev ausente — rode com .venv/bin/python. Nada medido.")
+        return RC_NADA_MEDIDO
+    try:
+        mesa_viva, leitura_viva, mesa_do_estado, tique_ms = _a_tela()
+    except Exception as erro:  # sem o pacote da interface (ou sem o Gtk dele)
+        dizer(f"  A tela não se lê aqui ({type(erro).__name__}: {erro}) — nada medido.")
+        return RC_NADA_MEDIDO
+    from hefesto_dualsense4unix.core import evdev_reader
+    from hefesto_dualsense4unix.integrations import hidraw_broker_client
+
+    tique_s = tique_ms / 1000.0
+    testemunhas = testemunhas_da_mesa(aparelhos, raiz_sys)
+    tipos = sorted({t.tipo for t in testemunhas})
+    dizer("  A testemunha é o nó que o jogo lê, com a hora do kernel: "
+          + (", ".join(tipos) if tipos else "nenhum nó achado") + ".")
+    dizer(f"  A tela é o `state_full`, lido a cada {tique_ms} ms e aceso pela conta da")
+    dizer("  aba Controles. O ensaio prova o canal que a grade lê, não a pintura:")
+    dizer("  ele não sabe se a aba está na tela.")
+    dizer()
+
+    abertos: dict[Any, Testemunha] = {}
+    for testemunha in testemunhas:
+        try:
+            dispositivo = evdev_reader.abrir_input_device(testemunha.caminho)
+        except OSError as erro:
+            dizer(f"    {testemunha.marca} ({testemunha.caminho}) não abriu: {erro}")
+            continue
+        abertos[dispositivo] = testemunha
+
+    apertos: list[Aperto] = []
+    leituras: list[Leitura] = []
+    eventos: dict[Any, int] = {}
+    fim = relogio()
+    if abertos:
+        dizer(f"  >> APERTE um botão em cada controle, um de cada vez. Esperando {segundos:.0f} s…")
+        dizer()
+        apertos, leituras, eventos, fim = _colher(
+            abertos, segundos, tique_s, mesa_viva.estado_do_daemon, mesa_viva.DaemonMudo,
+            lambda estado, hora: ler_a_tela(estado, leitura_viva, mesa_do_estado, hora),
+            relogio, novo_seletor)
+
+    # O NÓ QUE NÃO FALOU sai pelo dono do zero: «o controle não emitiu» e «eu
+    # não posso ler» não podem sair iguais. Perguntado depois de fechar os nós.
+    calados = [t for t in testemunhas if t not in {abertos[d] for d, n in eventos.items() if n}]
+    for testemunha in calados:
+        estado_grab = hidraw_broker_client.estado_do_grab(testemunha.caminho)
+        dizer(f"    {testemunha.marca} ({testemunha.caminho}): "
+              f"{hidraw_broker_client.leitura_de_zero(estado_grab)}")
+
+    vereditos = [(a, julgar(a, leituras, tique_s, fim)) for a in apertos]
+    for aperto, veredito in vereditos:
+        marca = "FALHA — " if veredito.tipo == FALHA else ""
+        dizer(f"    {aperto.nome} no {aperto.testemunha.marca}: {marca}{veredito.texto}")
 
     dizer()
-    if not acertos:
-        dizer("  Nenhum X apertado — nada resolvido. Repita e aperte durante a janela.")
-        return
-    dos_vpads = [a for a, _ in acertos if a.e_vpad]
-    dos_fisicos = [a for a, _ in acertos if not a.e_vpad]
-    if dos_vpads and dos_fisicos:
-        dizer("  RESOLVIDO: o mesmo aperto saiu do físico e do vpad abaixo —")
-        for aparelho in dos_fisicos:
-            dizer(f"    físico {aparelho.mac}")
-        for aparelho in dos_vpads:
-            dizer(f"    vpad   {aparelho.rotulo}")
-        dizer("  Estes são o mesmo controle.")
-    elif dos_vpads:
-        dizer(f"  Só vpad(s) responderam: {', '.join(v.rotulo for v in dos_vpads)}.")
-        dizer("  O controle que você apertou alimenta esse vpad. O MAC dele NÃO foi")
-        dizer("  resolvido por aqui — para isso, pare o daemon e repita.")
-    else:
-        dizer(f"  Só físico(s) responderam: {', '.join(a.mac for a in dos_fisicos)}.")
+    falhas = [v for _, v in vereditos if v.tipo == FALHA]
+    medidos = [v for _, v in vereditos if v.tipo in (ACENDEU, FALHA)]
+    if falhas:
+        dizer(f"  {len(falhas)} de {len(medidos)} aperto(s) medido(s) sem o cartão dele.")
+        return RC_FALHA
+    if leituras and all(x.acesos is None for x in leituras):
+        dizer("  A tela não respondeu — nada medido.")
+        return RC_NADA_MEDIDO
+    if not abertos:
+        dizer("  Nenhum nó de testemunha abriu — nada medido.")
+        return RC_NADA_MEDIDO
+    if not medidos:
+        dizer("  Nenhum aperto medido na janela — nada medido. Aperte durante a janela,")
+        dizer("  e segure o botão mais que um tique da tela.")
+        return RC_NADA_MEDIDO
+    dizer(f"  {len(medidos)} aperto(s) medido(s), cada um com o cartão dele.")
+    return None
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     analisador = argparse.ArgumentParser(
         description="Quem é quem: MAC, hidraw, evdev, vpad e placa ALSA na mesma tabela.",
     )
     analisador.add_argument(
         "--apertar",
         action="store_true",
-        help="ensaio interativo que resolve o que o sysfs não liga",
+        help="ensaio interativo: físico ↔ pad ↔ cartão, com o pad como testemunha "
+             "(rc 2 com uma falha, 3 com nada medido)",
     )
     analisador.add_argument("--segundos", type=float, default=15.0, help="janela do --apertar")
     analisador.add_argument("--json", action="store_true", help="a forma que o o_basico.py lê")
-    argumentos = analisador.parse_args()
+    argumentos = analisador.parse_args(argv)
 
     aparelhos = descobrir_aparelhos()
     CONHECIDOS.extend(a.mac for a in aparelhos if a.mac)
@@ -461,7 +774,8 @@ def main() -> int:
     dizer("    - qual vpad é alimentado por qual MAC. Nenhum arquivo de /sys carrega")
     dizer("      essa ligação. Quem a carrega é o daemon, desde 15/08/2026:")
     dizer("      `hefesto coop status --json` traz `coop.jogadores` (MAC do físico +")
-    dizer("      `vpad_uniq`). Aqui, use --apertar — ou compare com aquela lista.")
+    dizer("      `vpad_uniq`). Aqui, use --apertar (físico ↔ pad ↔ cartão), ou compare")
+    dizer("      com aquela lista.")
 
     if avisos:
         dizer()
@@ -470,8 +784,7 @@ def main() -> int:
             dizer(f"    - {aviso}")
         dizer("    (defeito ABERTO, sob cura de outro agente em src/. Aqui só se observa.)")
 
-    if argumentos.apertar:
-        ensaio_de_aperto(aparelhos, argumentos.segundos)
+    rc_do_aperto = ensaio_de_aperto(aparelhos, argumentos.segundos) if argumentos.apertar else None
 
     leds = [_player_led(a)[1] for a in alvos]
     validos = [x for x in leds if x.startswith("P")]
@@ -480,10 +793,14 @@ def main() -> int:
         f"{len(alvos)} físico(s) e {len(saidas)} vpad(s) resolvidos por sysfs; "
         f"LED lido em {len(validos)}/{len(alvos)} ({', '.join(sorted(validos)) or '-'}) "
         f"contra vpads {', '.join(numeros_dos_vpads) or '-'}. "
-        "A ligação vpad↔MAC não sai do sysfs: use --apertar, ou "
+        "A ligação vpad↔MAC não sai do sysfs: use --apertar (físico ↔ pad ↔ cartão), ou "
         "`hefesto coop status --json` (`coop.jogadores`, desde 15/08/2026)."
     )
     dizer(resumo(veredito))
+    # O aperto que falhou ou não mediu nada vence; o que passou não apaga o
+    # aviso do LED de jogador, que é o rc da tabela.
+    if rc_do_aperto is not None:
+        return rc_do_aperto
     return 1 if avisos else 0
 
 
