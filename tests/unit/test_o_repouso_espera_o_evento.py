@@ -793,6 +793,31 @@ class TestALeituraPelaAssinatura:
             assert leitor.ler(arquivo) == "appid=2\n"
         assert len(leitor.lidos) == antes
 
+    def test_a_gravacao_durante_a_leitura_nao_se_guarda(self, tmp_path: Path) -> None:
+        """O wrapper grava o marker sem trava: a troca no meio da leitura não gruda."""
+        from hefesto_dualsense4unix.utils.leitura_pela_assinatura import (
+            LeituraPelaAssinatura,
+        )
+
+        arquivo = tmp_path / "last_run"
+        arquivo.write_text("appid=1\n")
+        _envelhecer(arquivo)
+        trocar = [True]
+
+        def decodificar(caminho: Path) -> str:
+            texto = caminho.read_text()
+            if trocar[0]:  # o lançamento regrava o marker logo depois da leitura
+                trocar[0] = False
+                novo = tmp_path / "last_run.novo"
+                novo.write_text("appid=2\n")
+                _envelhecer(novo)
+                os.replace(novo, caminho)
+            return texto
+
+        leitor = LeituraPelaAssinatura(decodificar)
+        assert leitor.ler(arquivo) == "appid=1\n"
+        assert leitor.ler(arquivo) == "appid=2\n", "a leitura de antes grudou na assinatura nova"
+
     def test_o_ausente_guarda_ausente_ate_o_stat_achar(self, tmp_path: Path) -> None:
         from hefesto_dualsense4unix.utils.leitura_pela_assinatura import (
             LeituraPelaAssinatura,

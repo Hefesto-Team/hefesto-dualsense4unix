@@ -17,8 +17,10 @@ muda: um ``stat``, nenhum ``open``. As regras, cada uma com o seu porquê:
   tamanho dentro do mesmo tique do relógio do sistema de arquivos dão a mesma
   assinatura — o mesmo cuidado do índice do git com o arquivo «racy»;
 - **a assinatura guardada é a do ``stat`` feito DEPOIS da leitura**, sob a trava
-  do dono do arquivo quando ele usa uma (o ``FileLock`` dos perfis): a gravação
-  que acontece entre o ``stat`` de antes e a leitura não fica escondida;
+  do dono do arquivo quando ele usa uma (o ``FileLock`` dos perfis); e quando
+  ela difere da do ``stat`` de antes, alguém gravou durante a leitura (o
+  wrapper grava o marker sem trava nenhuma): a leitura não se guarda, e a
+  pergunta seguinte relê;
 - **quem chama recebe uma cópia** (``copiar``): quem muda o objeto devolvido
   não muda a leitura seguinte;
 - **leitura que falha não se guarda**: a exceção sobe para quem chama, como
@@ -118,7 +120,9 @@ class LeituraPelaAssinatura(Generic[T]):
             valor = self._decodificar(Path(chave))
             depois = assinatura(chave)
         lido_em = self._relogio()
-        confiavel = depois is None or (lido_em - depois[1] / 1e9) >= self._recem_gravado_s
+        confiavel = depois == agora and (
+            depois is None or (lido_em - depois[1] / 1e9) >= self._recem_gravado_s
+        )
         with self._trava:
             self._guardados[chave] = _Guardado(depois, valor, confiavel)
         return self._copiar(valor)
