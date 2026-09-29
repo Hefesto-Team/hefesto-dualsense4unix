@@ -699,6 +699,20 @@ class TestADescobertaPelaGeracao:
         assert len(de_novo) == 5
         assert all(0 not in gp.eixos for gp in de_novo)
 
+    def test_o_broker_que_volta_poe_o_fisico_fechado_na_volta(
+        self, mesa_de_entrada: _MesaDeEntrada, tmp_path: Path
+    ) -> None:
+        """O socket do broker que some e volta não é evento de `/dev/input`."""
+        from hefesto_dualsense4unix.core import evdev_reader as er
+
+        socket_do_broker = tmp_path / "broker.sock"
+        socket_do_broker.unlink()
+        assert er.discover_dualsense_evdevs() == {}, "sem broker, o nó fechado não tem porta"
+        socket_do_broker.write_text("")
+        assert len(er.discover_dualsense_evdevs()) == 4, (
+            "o broker voltou e o inventário guardado sem ele seguiu respondendo"
+        )
+
     def test_desarmado_cada_chamada_descobre_como_hoje(
         self, mesa_de_entrada: _MesaDeEntrada
     ) -> None:

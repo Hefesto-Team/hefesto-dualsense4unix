@@ -964,9 +964,12 @@ def _int_ou(valor: Any, reserva: int) -> int:
 #: de `/dev`, porque o hidraw irmão pode nascer depois do nó de entrada. Medido
 #: na sonda S.4 (60 s, os quatro no rádio, parados): ~109 descobertas por
 #: minuto, 1.305 leituras de `id/vendor` e outras tantas de `id/product`, sem
-#: nenhum nó ter nascido ou sumido. `chave -> (ficha, inventário)`.
+#: nenhum nó ter nascido ou sumido. `chave -> (ficha, inventário)`; a chave
+#: leva também se há broker a quem pedir, porque é isso que põe os nós do
+#: físico fechado na volta (`_nos_de_evento`), e o socket que volta não é
+#: evento de `/dev/input`.
 _INVENTARIO_PELA_GERACAO: dict[
-    tuple[bool, str | None], tuple[tuple[int, ...], tuple[GamepadDescoberto, ...]]
+    tuple[bool, str | None, bool], tuple[tuple[int, ...], tuple[GamepadDescoberto, ...]]
 ] = {}
 _INVENTARIO_TRAVA = threading.Lock()
 
@@ -1085,8 +1088,8 @@ def discover_gamepads(
     # volta só roda quando `/dev/input` mudou (um nó nasceu, sumiu ou ganhou
     # permissão). A ficha é anotada ANTES da volta: o evento que chega durante
     # ela muda a ficha, e a pergunta seguinte refaz. Sem o dono, como sempre.
-    chave = (com_sysfs, especie)
     ficha = _ficha_da_descoberta(com_sysfs)
+    chave = (com_sysfs, especie, ficha is not None and _ha_broker_para_pedir())
     if ficha is not None:
         with _INVENTARIO_TRAVA:
             guardado = _INVENTARIO_PELA_GERACAO.get(chave)
