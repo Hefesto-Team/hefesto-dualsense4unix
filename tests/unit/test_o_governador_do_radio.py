@@ -279,6 +279,9 @@ def test_tres_pontes_que_alternam_nao_enchem_o_diario() -> None:
         medidor=medidor, adaptador_de=lambda _u: ADAPTADOR_A,
         registrar=registro, relogio=relogio,
     )
+    # A primeira janela: sem ela a terceira espera a medida (O-GOVERNADOR-COM-
+    # UM-ADAPTADOR-SO-01), e com ela o A é o único adaptador medido — a R4.
+    governador.tique()
     vagas = []
     for uniq in (CONTROLE_1, CONTROLE_2, CONTROLE_3):
         vaga = governador.pedir_vaga(uniq, "som")

@@ -22,17 +22,37 @@ não é recusada calada:
   «Ligar aqui» (:meth:`GovernadorDoRadio.ligar_aqui`) e a ponte sobe marcada
   «além do limite»;
 * não há vaga em adaptador nenhum → a ponte sobe marcada «além do limite» e o
-  diário diz o fato (R4: degrada e avisa). Nada é desligado.
+  diário diz o fato (R4: degrada e avisa). Nada é desligado;
+* NÃO SEI se há vaga em outro adaptador (O-GOVERNADOR-COM-UM-ADAPTADOR-SO-01,
+  28/09/2026) → :class:`Recusa` com :data:`MOTIVO_SEM_MEDIDA`, sem pedido
+  publicado: a tela não pergunta nada, e a ponte espera a primeira janela do
+  medidor, que acorda a volta do som (:attr:`GovernadorDoRadio.ao_autorizar`).
+  «Não sei» é o daemon que acabou de subir (o medidor ainda sem amostra), o
+  medidor que falhou, ou outro adaptador cuja leitura falhou. Passado
+  :data:`TETO_DO_NAO_SEI_S` sem medida, vale a R4, e o diário diz «não sei se
+  há vaga em outro adaptador» — nunca «não há», que seria um fato que ninguém
+  mediu. Sem medidor (o modo falso) não há medida a esperar.
 
 O TEMPO REAL, a cada :data:`PERIODO_S`
 =====================================
 O déficit é a FILA DO HOST crescendo: as escritas nossas aceitas pelo kernel
 menos o que o adaptador pôs no ar (o Δ``acl_tx`` do ``ar_do_adaptador``, que só
 sobe DEPOIS de haver crédito do controlador). Acima de :data:`LIMIAR_DO_DEFICIT`
-pacotes, as pontes daquele adaptador cedem os quadros NA FONTE, antes da fila
-do kernel; abaixo de :data:`FOLGA_PARA_VOLTAR`, voltam a escrever. O diário
-registra só a BORDA — e no máximo um episódio por adaptador a cada
+pacotes começa um episódio de ceder NA FONTE, antes da fila do kernel; abaixo
+de :data:`FOLGA_PARA_VOLTAR`, todas voltam a escrever. O diário registra só a
+BORDA do episódio — e no máximo um por adaptador a cada
 :data:`INTERVALO_DAS_BORDAS_NO_DIARIO_S`, com os calados contados.
+
+CEDE SÓ QUEM NÃO CABE, E CADA UM NA SUA VEZ (O-GOVERNADOR-COM-UM-ADAPTADOR-SO-01,
+28/09/2026). No episódio, a cada janela medida, o governador conta quantas
+pontes COM ESCRITA cabem na saída da janela (a saída vezes a janela, dividida
+pelo que uma ponte escreve — :meth:`GovernadorDoRadio._a_vez`) e cede o resto;
+a vez de ceder gira pela ORDEM DA VAGA, nunca pelo número do jogador. Três
+pontes num adaptador que escoa duas cediam e voltavam juntas, e cada uma
+ficava com metade; agora cada uma fica com dois terços. A ponte sem escrita na
+janela (a bomba não escreve o silêncio) e que não estava cedendo fica fora da
+vez. Quando não cabe nenhuma (o adaptador parado, o 2B), cede o adaptador
+inteiro, como antes, e só essas janelas andam o relógio do teto.
 
 **«NÃO SEI» NUNCA É ZERO.** ``saida_por_s`` ``None`` é o medidor dizendo que a
 janela não deu taxa (o contador parado com enlace de pé, o adaptador que
@@ -222,6 +242,26 @@ MOTIVO_DO_REINICIO = "o daemon reiniciou"
 #: Os motivos de uma :class:`Recusa`.
 MOTIVO_CHEIO = "cheio"
 MOTIVO_PARADO = "parado"
+#: O adaptador está cheio e o governador ainda não sabe se há vaga em outro:
+#: a ponte espera a medida, e a tela não pergunta nada.
+MOTIVO_SEM_MEDIDA = "sem medida"
+
+#: Quanto a ponte espera a medida que diz se há vaga em outro adaptador antes de
+#: valer a R4. Oito janelas do medidor: a primeira amostra chega no primeiro
+#: tique (250 ms depois do arranque), e o teto cobre um arranque lento sem
+#: deixar o som de quem joga mudo por mais que isso quando o medidor não
+#: responde nunca.
+TETO_DO_NAO_SEI_S = 8 * PERIODO_S
+
+#: O ``por_que`` do ``PONTE_SUBIU`` da R4 — medida e sem medida.
+POR_QUE_NAO_HA_VAGA = "não há vaga em outro adaptador"
+POR_QUE_NAO_SEI_SE_HA_VAGA = "não sei se há vaga em outro adaptador"
+
+#: O peso da janela nova na média do que uma ponte escreve por janela
+#: (:meth:`GovernadorDoRadio._a_vez`). A contagem de uma janela oscila de um
+#: quadro (23 ou 24 a 93,75 por segundo), e a conta de quantas cabem não pode
+#: oscilar junto.
+PESO_DA_JANELA_NA_MEDIA = 0.25
 
 #: O que o medidor diz quando o adaptador não pode receber ponte — não é
 #: «vaga», por mais que ele não tenha ponte nenhuma.
@@ -391,6 +431,9 @@ class Vaga:
     #: porque não havia vaga em outro adaptador (R4 sozinha). O diário não
     #: pode atribuir a ela uma escolha que ela não fez.
     por_escolha_dela: bool = False
+    #: «Além do limite» porque o teto do «não sei» passou sem medida
+    #: (:data:`TETO_DO_NAO_SEI_S`): o diário diz «não sei», nunca «não há».
+    sem_medida: bool = False
     pedida_em: float = 0.0
     #: Escritas aceitas pelo kernel — o lado «nosso» do déficit.
     escritas: int = 0
@@ -482,6 +525,9 @@ class Recusa:
         nome = self.nome_de(self.adaptador)
         sujeito = _o_lugar(nome, maiuscula=True) if nome else "Este adaptador"
         cheio = f"{sujeito} já tem {self.n_max} controles com som ou vibração."
+        if self.motivo == MOTIVO_SEM_MEDIDA:
+            # Sem medida não se afirma vaga nem falta dela.
+            return cheio
         onde = [_o_lugar(n, com_em=True) for n in dict.fromkeys(map(self.nome_de, self.vagas)) if n]
         if onde:
             juntos = onde[0] if len(onde) == 1 else f"{', '.join(onde[:-1])} e {onde[-1]}"
@@ -506,6 +552,12 @@ class _Estado:
     episodio_escrito: bool = False
     ultimo_ar: Any = None
     deficit_medido: bool = False
+    #: A média do que UMA ponte com escrita escreve numa janela — o divisor da
+    #: conta de quantas cabem. ``None`` = nenhuma janela com escrita ainda.
+    por_ponte: float | None = None
+    #: De quem é a vez de ceder: a posição na ordem da vaga. Fica entre os
+    #: episódios, para a mesma ponte não abrir todos.
+    vez: int = 0
 
 
 @dataclass
@@ -526,6 +578,15 @@ class _Pedido:
     adaptador: str
     vagas: tuple[str, ...]
     renovado_em: float
+
+
+@dataclass
+class _EsperaDaMedida:
+    """Uma ponte que ouviu :data:`MOTIVO_SEM_MEDIDA` e espera a medida."""
+
+    uniq: str
+    adaptador: str
+    renovada_em: float
 
 
 @dataclass
@@ -605,6 +666,16 @@ class GovernadorDoRadio:
         self._episodios: dict[str, _EpisodioDaFila] = {}
         self._bordas_no_diario: dict[str, _BordasNoDiario] = {}
         self._amostra: dict[str, Any] | None = None
+        #: O kernel listou os adaptadores na última amostra? ``False`` quando o
+        #: medidor disse :data:`~hefesto_dualsense4unix.integrations.
+        #: ar_do_adaptador.SEM_BLUETOOTH` — a lista é «não sei», não vazia.
+        self._lista_lida = True
+        #: Desde quando a admissão precisa da medida e não a tem — o relógio do
+        #: :data:`TETO_DO_NAO_SEI_S`. Volta a ``None`` quando a medida chega.
+        self._nao_sei_desde: float | None = None
+        #: Quem ouviu :data:`MOTIVO_SEM_MEDIDA`, pela chave do controle: o tique
+        #: acorda a volta quando a medida chega ou o teto passa.
+        self._esperando_medida: dict[str, _EsperaDaMedida] = {}
         self._thread: threading.Thread | None = None
         self._parar = threading.Event()
         #: Quem quer saber que ela respondeu «Ligar aqui» — o subsystem do
@@ -743,6 +814,30 @@ class GovernadorDoRadio:
         ]
         return self._na_ordem_da_d8(livres, exceto)
 
+    def _nao_sei_se_ha_vaga(self, exceto: str) -> bool:
+        """«Não sei» se há vaga em outro adaptador. Chamado com a trava.
+
+        O-GOVERNADOR-COM-UM-ADAPTADOR-SO-01: o :meth:`_adaptadores_com_vaga`
+        só conhece os adaptadores das vagas e da última amostra do medidor, e
+        a lista vazia de quem não mediu se lia como «não há». É «não sei»:
+
+        * o medidor existe e ainda não deu amostra (o daemon que acabou de
+          subir, o medidor que falha desde o arranque);
+        * a última amostra não listou os adaptadores (``SEM_BLUETOOTH``);
+        * outro adaptador está na amostra com a leitura falhada
+          (``IOCTL_FALHOU``): ele existe, e se tem vaga ninguém sabe.
+
+        Sem medidor (o modo falso) nada se mede, e nada se espera.
+        """
+        if self._medidor is None:
+            return False
+        if self._amostra is None or not self._lista_lida:
+            return True
+        return any(
+            endereco != exceto and str(getattr(ar, "motivo", "") or "") == IOCTL_FALHOU
+            for endereco, ar in self._amostra.items()
+        )
+
     def _na_ordem_da_d8(self, livres: list[str], exceto: str) -> tuple[str, ...]:
         """As vagas na ordem de ``plano_de_radio.ordem_dos_destinos`` — a D8 dela.
 
@@ -817,15 +912,37 @@ class GovernadorDoRadio:
             ]
             if len(ocupadas) < self.n_max:
                 self._pedidos.pop(chave, None)
+                self._esperando_medida.pop(chave, None)
                 return self._conceder(uniq, adaptador, tipo, alem=False, agora=agora)
             vagas = self._adaptadores_com_vaga(exceto=adaptador)
             autorizado = (chave, adaptador) in self._autorizados
+            sem_medida = False
+            if not autorizado and not vagas and self._nao_sei_se_ha_vaga(adaptador):
+                # «NÃO SEI» NÃO É «NÃO HÁ»: a ponte espera a medida, calada e
+                # sem pergunta na tela, até o teto. O relógio do teto é da
+                # FALTA DE MEDIDA, e não do pedido: a ponte do som sob demanda
+                # que desce e sobe de novo não espera outra vez.
+                if self._nao_sei_desde is None:
+                    self._nao_sei_desde = agora
+                if agora - self._nao_sei_desde < TETO_DO_NAO_SEI_S:
+                    self._pedidos.pop(chave, None)
+                    self._esperando_medida[chave] = _EsperaDaMedida(uniq, adaptador, agora)
+                    logger.debug("governador_espera_a_medida", adaptador=adaptador, uniq=uniq)
+                    return Recusa(
+                        uniq, adaptador, tipo, MOTIVO_SEM_MEDIDA, n_max=self.n_max,
+                        nomear=self._nomear,
+                    )
+                sem_medida = True
             if autorizado or not vagas:
-                # R4: ela escolheu «Ligar aqui», ou não há para onde mover.
+                # R4: ela escolheu «Ligar aqui», ou não há para onde mover —
+                # medido, ou dito «não sei» depois do teto.
                 self._pedidos.pop(chave, None)
+                self._esperando_medida.pop(chave, None)
                 vaga = self._conceder(uniq, adaptador, tipo, alem=True, agora=agora)
                 vaga.por_escolha_dela = autorizado
+                vaga.sem_medida = sem_medida
                 return vaga
+            self._esperando_medida.pop(chave, None)
             recusa = Recusa(
                 uniq, adaptador, tipo, MOTIVO_CHEIO, vagas, n_max=self.n_max, nomear=self._nomear
             )
@@ -977,8 +1094,10 @@ class GovernadorDoRadio:
             por_que = "há som para mandar"
         elif vaga.por_escolha_dela:
             por_que = "ela ligou além do limite"
+        elif vaga.sem_medida:
+            por_que = POR_QUE_NAO_SEI_SE_HA_VAGA
         else:
-            por_que = "não há vaga em outro adaptador"
+            por_que = POR_QUE_NAO_HA_VAGA
         self._escrever(
             diario.PONTE_SUBIU,
             por_que,
@@ -1045,15 +1164,44 @@ class GovernadorDoRadio:
             c for c, p in self._pedidos.items() if agora - p.renovado_em > VALIDADE_DO_PEDIDO_S
         ]:
             self._pedidos.pop(chave, None)
+        for chave in [
+            c
+            for c, e in self._esperando_medida.items()
+            if agora - e.renovada_em > VALIDADE_DO_PEDIDO_S
+        ]:
+            self._esperando_medida.pop(chave, None)
+
+    def _quem_a_medida_acorda(self, agora: float) -> list[str]:
+        """As pontes que esperavam a medida e já têm resposta. Chamado com a trava.
+
+        A resposta é a medida que chegou (o «não sei» deixou de valer para o
+        adaptador dela) ou o teto que passou. Cada uma sai da espera e é
+        acordada UMA vez: o próximo ``pedir_vaga`` dela decide.
+        """
+        teto_passou = (
+            self._nao_sei_desde is not None
+            and agora - self._nao_sei_desde >= TETO_DO_NAO_SEI_S
+        )
+        prontas = [
+            chave
+            for chave, espera in self._esperando_medida.items()
+            if teto_passou or not self._nao_sei_se_ha_vaga(espera.adaptador)
+        ]
+        return [self._esperando_medida.pop(chave).uniq for chave in prontas]
 
     # -- o tempo real --------------------------------------------------------
 
     def tique(self) -> None:
         """Uma janela: amostra o ar e decide, por adaptador, ceder ou escrever."""
         amostra: dict[str, Any] | None = None
+        lista_lida = True
         if self._medidor is not None:
             try:
-                amostra = {e: a for e, a in dict(self._medidor.amostrar()).items() if e}
+                crua = dict(self._medidor.amostrar())
+                lista_lida = not any(
+                    str(getattr(a, "motivo", "") or "") == SEM_BLUETOOTH for a in crua.values()
+                )
+                amostra = {e: a for e, a in crua.items() if e}
             except Exception:  # medidor que falhou é «não sei», não zero
                 logger.debug("governador_medidor_falhou", exc_info=True)
         agora = self._relogio()
@@ -1063,7 +1211,14 @@ class GovernadorDoRadio:
         with self._trava:
             if amostra is not None:
                 self._amostra = amostra
+                self._lista_lida = lista_lida
+                if lista_lida and not any(
+                    str(getattr(a, "motivo", "") or "") == IOCTL_FALHOU for a in amostra.values()
+                ):
+                    # A medida chegou inteira: o próximo «não sei» conta do zero.
+                    self._nao_sei_desde = None
             self._recolher(agora)
+            acordar = self._quem_a_medida_acorda(agora)
             por_adaptador: dict[str, list[Vaga]] = {}
             for vaga in self._vagas:
                 if vaga.adaptador and vaga.subiu_em is not None:
@@ -1081,6 +1236,15 @@ class GovernadorDoRadio:
                     paradas.append((endereco, list(vagas), estado.cedendo_medido_s))
         for o_que, dados in bordas:
             self._escrever(o_que, **dados)
+        avisar = self.ao_autorizar
+        for uniq in acordar:
+            # O MESMO GANCHO DO «LIGAR AQUI»: quem esperava sai da espera e a
+            # volta do som acorda, em vez de esperar o ``RECONCILIA_S`` dela.
+            if avisar is not None:
+                try:
+                    avisar(uniq)
+                except Exception:  # quem escuta nunca derruba o tique
+                    logger.debug("governador_aviso_da_medida_falhou", uniq=uniq, exc_info=True)
         for endereco in andaram:
             self._a_fila_andou(endereco)
         for endereco, vagas, cedendo_s in paradas:
@@ -1389,10 +1553,14 @@ __all__ = [
     "MOTIVO_CHEIO",
     "MOTIVO_DO_REINICIO",
     "MOTIVO_PARADO",
+    "MOTIVO_SEM_MEDIDA",
     "PERIODO_S",
+    "POR_QUE_NAO_HA_VAGA",
+    "POR_QUE_NAO_SEI_SE_HA_VAGA",
     "PRAZO_PARA_SUBIR_S",
     "QUEM",
     "TETO_DA_ESPERA_DA_FILA_S",
+    "TETO_DO_NAO_SEI_S",
     "TIPO_SOM",
     "TIPO_VIBRACAO",
     "VALIDADE_DO_PEDIDO_S",
