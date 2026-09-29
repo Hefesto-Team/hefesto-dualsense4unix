@@ -23,8 +23,16 @@ A leitura é toda de :mod:`~hefesto_dualsense4unix.integrations.entradas_do_gabi
 que já lê ``state``, ``connect_type``, ``peer``, ``device`` e
 ``over_current_count`` de cada nó de entrada — inclusive dos VAZIOS, que é o
 caso que nenhuma outra leitura alcança. Aqui só mora a DERIVAÇÃO que ela não
-faz: agrupar os hubs que são o mesmo plástico, e responder às três perguntas de
-topologia que o catálogo de ordens precisa fazer.
+faz: agrupar os hubs que são o mesmo plástico (quem pergunta é o catálogo de
+ordens, ``ordens_da_mesa.mesmo_hub_fisico``) e contar os buracos livres que a
+mão alcança (quem pergunta é a seção da mesa, ``secao_mesa``).
+
+AS TRÊS PERGUNTAS DE PAR SAÍRAM EM 28/09/2026 (A-CONEXOES-DIZ-O-QUE-O-PRODUTO-
+JA-MEDE-01): ``mesmo_hub_fisico``, ``mesmo_soquete_fisico`` e ``livres_fora_de``
+nasceram em 25/08 para o catálogo de ordens, e o catálogo fez as dele —
+``ordens_da_mesa.mesmo_hub_fisico``, pelo mesmo ``hubs_do_mesmo_plastico``, e
+``_livres_fora_da_controladora``. As daqui ficaram sem chamador nenhum, nem de
+teste; duas réguas para a mesma pergunta divergiriam na primeira mudança.
 
 **Duas réguas independentes para "buraco livre" seriam
 `PORTÕES-EM-SÉRIE-ENGANAM` esperando acontecer** — é o C5 da própria sprint que
@@ -35,23 +43,20 @@ O QUE UM HUB-RAIZ NÃO É
 ------------------------
 
 ``usb1``/``usb3`` são hubs-raiz do controlador xHCI, não aparelho de bancada.
-:func:`mesmo_hub_fisico` os ignora de propósito: dois aparelhos encaixados
-direto na placa-mãe não estão "no mesmo hub" em nenhum sentido que interesse a
-uma ordem de serviço — e a ordem que R1 dá é justamente *mova para uma entrada
-do próprio computador*. Contá-los faria a regra acusar o destino que ela
-recomenda.
+:func:`hubs_do_mesmo_plastico` os ignora de propósito: dois aparelhos
+encaixados direto na placa-mãe não estão "no mesmo hub" em nenhum sentido que
+interesse a uma ordem de serviço — e a ordem que R1 dá é justamente *mova para
+uma entrada do próprio computador*. Contá-los faria a regra acusar o destino
+que ela recomenda.
 """
 from __future__ import annotations
 
-import os
 import re
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 
 from hefesto_dualsense4unix.integrations.entradas_do_gabinete import (
-    RAIZ_USB_PADRAO,
     Furo,
     NoDeEntrada,
-    entrada_de,
     furos,
     vazias,
 )
@@ -101,88 +106,6 @@ def hubs_do_mesmo_plastico(
     return {hub: frozenset(juntos) for hub, juntos in classes.items()}
 
 
-def hubs_de(
-    caminho: str,
-    entradas: Sequence[NoDeEntrada],
-    *,
-    raiz_usb: str = RAIZ_USB_PADRAO,
-    real: Callable[[str], str] = os.path.realpath,
-) -> frozenset[str]:
-    """Os hubs que hospedam o buraco onde este aparelho está — ``frozenset()``.
-
-    ``caminho`` é o nome de kernel do aparelho (``3-1.1.4``), a mesma palavra de
-    ``censo_do_barramento.Aparelho.nome_do_kernel``.
-
-    ``raiz_usb`` e ``real`` existem porque ``entradas_do_gabinete.entrada_de``
-    atravessa o symlink ``<aparelho>/port`` antes de cair no índice invertido —
-    e um default de módulo tocaria o ``/sys`` desta máquina de dentro de uma
-    bateria (``CANARIO-FS-01``, ``tests/conftest.py``). Quem chama passa os
-    MESMOS valores que passou a ``listar_entradas``; medir com duas raízes
-    diferentes é medir duas máquinas.
-
-    Vazio quando o aparelho não foi achado, quando ele pendura direto num
-    hub-raiz, ou quando o ``/sys`` não publicou o nó da entrada. Os três casos
-    dão a mesma resposta honesta, e nenhum deles vira palpite.
-    """
-    furo = entrada_de(caminho, entradas, raiz_usb=raiz_usb, real=real)
-    if furo is None:
-        return frozenset()
-    classes = hubs_do_mesmo_plastico(entradas)
-    achados: set[str] = set()
-    for entrada in furo.entradas:
-        if not entrada.hub or _HUB_RAIZ.match(entrada.hub):
-            continue
-        achados |= classes.get(entrada.hub, {entrada.hub})
-    return frozenset(achados)
-
-
-def mesmo_hub_fisico(
-    um: str,
-    outro: str,
-    entradas: Sequence[NoDeEntrada],
-    *,
-    raiz_usb: str = RAIZ_USB_PADRAO,
-    real: Callable[[str], str] = os.path.realpath,
-) -> bool:
-    """Os dois aparelhos estão pendurados no mesmo pedaço de plástico?
-
-    É a função que faz R1 enxergar através do ``busnum``. Um aparelho no lado
-    3.0 (``4-1.1.2``) e outro no lado 2.0 (``3-1.1.4``) do mesmo hub respondem
-    ``True`` aqui, e respondem ``False`` em qualquer comparação que use o número
-    do barramento.
-
-    ``False`` quando qualquer um dos dois não tem hub conhecido: não saber onde
-    o aparelho está NÃO é o mesmo que saber que ele está longe, e a ordem que
-    sai daqui manda uma pessoa se ajoelhar atrás do gabinete.
-    """
-    if um == outro:
-        return False
-    daqui = hubs_de(um, entradas, raiz_usb=raiz_usb, real=real)
-    dali = hubs_de(outro, entradas, raiz_usb=raiz_usb, real=real)
-    return bool(daqui and dali and daqui & dali)
-
-
-def mesmo_soquete_fisico(
-    um: str,
-    outro: str,
-    entradas: Sequence[NoDeEntrada],
-    *,
-    raiz_usb: str = RAIZ_USB_PADRAO,
-    real: Callable[[str], str] = os.path.realpath,
-) -> bool:
-    """Os dois aparelhos estão no MESMO buraco? (Só por extensão ou hub.)
-
-    Dois aparelhos no mesmo buraco físico só acontecem com um cabo de extensão
-    ou um hub no meio — e é o caso em que "mude um dos dois de entrada" é a
-    ordem errada, porque não há dois buracos para separar.
-    """
-    if um == outro:
-        return False
-    daqui = entrada_de(um, entradas, raiz_usb=raiz_usb, real=real)
-    dali = entrada_de(outro, entradas, raiz_usb=raiz_usb, real=real)
-    return daqui is not None and dali is not None and daqui.nos == dali.nos
-
-
 def livres(entradas: Sequence[NoDeEntrada]) -> tuple[Furo, ...]:
     """Os buracos VAZIOS que uma pessoa alcança — buraco, nunca nó.
 
@@ -200,33 +123,8 @@ def livres(entradas: Sequence[NoDeEntrada]) -> tuple[Furo, ...]:
     )
 
 
-def livres_fora_de(
-    hubs: frozenset[str], entradas: Sequence[NoDeEntrada]
-) -> tuple[Furo, ...]:
-    """Os buracos livres e alcançáveis que NÃO ficam nestes hubs.
-
-    É a contra-regra de R3 virada em função: *"há entrada livre no próprio
-    computador"* só é verdade se a entrada livre não estiver dentro do mesmo hub
-    de onde a ordem manda tirar o aparelho. Sem isto, a ordem mandaria mudar o
-    dongle de buraco dentro do hub e chamaria isso de conserto.
-    """
-    proibidos = set(hubs)
-    classes = hubs_do_mesmo_plastico(entradas)
-    for hub in list(proibidos):
-        proibidos |= classes.get(hub, set())
-    return tuple(
-        furo
-        for furo in livres(entradas)
-        if not any(entrada.hub in proibidos for entrada in furo.entradas)
-    )
-
-
 __all__ = [
     "ENCAIXE_ALCANCAVEL",
-    "hubs_de",
     "hubs_do_mesmo_plastico",
     "livres",
-    "livres_fora_de",
-    "mesmo_hub_fisico",
-    "mesmo_soquete_fisico",
 ]
