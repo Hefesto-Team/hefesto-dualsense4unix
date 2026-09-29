@@ -237,8 +237,9 @@ class IpcServer(IpcHandlersMixin):
             # modo Navegação. Ele SUBSTITUI o `mouse.emulation.restore` no
             # plano — aquele lia a flag de sessão da máquina; este lê o PERFIL
             # ATIVO, que é onde a aba Navegação grava. O método velho continua
-            # de pé: ele é o RECUO para o perfil que não opina, e quem o chama
-            # é o próprio arranjo.
+            # de pé no socket; o arranjo deixou de recuar para ele em 29/09/2026
+            # (O-MOUSE-SEGUE-A-NAVEGACAO-01): sem a seção `mouse`, a entrada
+            # liga o mouse com as velocidades da flag de sessão.
             "desktop.arranjo.apply": self._handle_desktop_arranjo_apply,
             # EMULACAO-NO-JOGO-01: o interruptor que o teclado emulado nunca
             # teve. Sem ele, "desliguei o modo mouse teclado" desligava só o
