@@ -16,9 +16,10 @@ inteiro deste arquivo:
   e gesto sem clique é o "campo morto com nome de promessa";
 * `Profile.mode` **fica**: no esquema, no disco e no `ativar`. Um perfil que já
   diz «Jogar pelo Hefesto» continua dizendo;
-* quem EDITA passa a ser só a aba Jogar, pelo dono compartilhado
-  (`interface/pacotes/perfil.secao_do_modo` e `gravar_o_modo_no_ativo`), que
-  nunca foi da aba 10 e continua de pé.
+* quem EDITA passa a ser só a aba Jogar, e quem GRAVA o que ela escolhe lá é
+  o daemon, depois do aparelho (`Daemon.gravar_o_modo_escolhido`, desde a
+  O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026), pela regra do dono
+  (`manager.secao_do_modo_com_o_caminho`), que nunca foi da aba 10.
 
 **O RISCO REAL DE UMA RETIRADA DE TELA É O DADO MORRER JUNTO**, em silêncio: os
 gestos que sobraram no editor gravam o perfil **INTEIRO**, e um deles que
@@ -49,8 +50,9 @@ exigir_gi_real("importa `app.actions.perfis_web`, que carrega o GTK")
 from hefesto_dualsense4unix.app.actions import perfis_web
 from hefesto_dualsense4unix.app.actions.profiles_actions import _MODE_KIND_ITEMS
 from hefesto_dualsense4unix.interface import pacotes
-from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis, perfil
+from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
 from hefesto_dualsense4unix.profiles import loader
+from hefesto_dualsense4unix.profiles.manager import secao_do_modo_com_o_caminho
 from hefesto_dualsense4unix.profiles.schema import (
     MatchAny,
     Profile,
@@ -312,11 +314,11 @@ def test_o_perfil_novo_nasce_sem_opiniao_de_modo(disco: dict[str, Any]) -> None:
 
 
 # --------------------------------------------------------------------------
-# 4. O DONO DA REGRA CONTINUA DE PÉ — é por ele que a aba Jogar escreve
+# 4. O DONO DA REGRA CONTINUA DE PÉ — é por ele que o daemon grava a escolha da Jogar
 # --------------------------------------------------------------------------
 
 def test_o_perfil_sem_opiniao_e_o_primeiro_par_do_dono() -> None:
-    """`MODO_SEM_OPINIAO` é o id que REMOVE a seção, e ele tem de casar com o dono.
+    """`MODO_SEM_OPINIAO` é o id do perfil sem seção `mode`, e ele casa com o dono.
 
     **ESTA RÉGUA MUDOU DE ALVO EM 11/09/2026, na conferência.** Ela perguntava a
     `perfis_web.MODO_DO_PERFIL` — uma cópia dos quatro rótulos que existia para
@@ -325,30 +327,36 @@ def test_o_perfil_sem_opiniao_e_o_primeiro_par_do_dono() -> None:
     asserções. Uma régua cujo alvo só existe para ela medir não mede o produto,
     então a cópia morreu e a pergunta passou ao DONO.
 
-    O QUE ELA GUARDA é o que `interface/pacotes/perfil.secao_do_modo` depende:
-    "none" é o primeiro par de `profiles_actions._MODE_KIND_ITEMS` — «Não mexer
-    no modo» —, e é o valor com que a seção é REMOVIDA do perfil.
+    O QUE ELA GUARDA: "none" é o primeiro par de
+    `profiles_actions._MODE_KIND_ITEMS` — «Não mexer no modo» —, e é o id que
+    `perfis_web._pacote_do_editor` publica para o perfil sem seção `mode`.
+
+    FATO SUBSTITUÍDO — O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026: a segunda
+    asserção cobrava que `interface/pacotes/perfil.secao_do_modo` REMOVIA a
+    seção com esse id. A função saiu com o escritor da janela, e nenhum gesto
+    do produto passava o `"none"`; o dono que ficou
+    (`manager.secao_do_modo_com_o_caminho`) não tem esse par.
 
     MORDIDA: mova `("none", "Não mexer no modo")` para o fim de
-    `_MODE_KIND_ITEMS` e isto reprova, com o id de remoção apontando para um
-    modo que LIGA alguma coisa.
+    `_MODE_KIND_ITEMS` e isto reprova, com o id do perfil sem opinião
+    apontando para um modo que LIGA alguma coisa.
     """
     primeiro = next(iter(dict(_MODE_KIND_ITEMS)))
     assert primeiro == perfis_web.MODO_SEM_OPINIAO, (
         "«Não mexer no modo» deixou de ser o primeiro par do dono — é o que a "
-        "MAIORIA dos perfis é, e é o id com que a seção `mode` é removida")
-    assert perfil.secao_do_modo(None, primeiro) is None, (
-        "o primeiro par do dono deixou de REMOVER a seção — o rótulo promete "
-        "que ativar não mexe, e o arquivo diria o contrário")
+        "MAIORIA dos perfis é, e é o id do perfil sem seção `mode`")
 
 
 def test_a_regra_do_modo_ficou_no_dono_compartilhado() -> None:
-    """`pacotes/perfil.secao_do_modo` é quem aplica, e nunca foi da aba 10.
+    """`manager.secao_do_modo_com_o_caminho` é quem aplica, e nunca foi da aba 10.
 
-    Ela existe desde 06/09 justamente porque a seção tem UM dono e DUAS telas.
-    Uma das duas saiu; a regra fica — e continua fazendo as três coisas que a
-    janela estável faz: «none» remove, a máscara só vale no modo jogo, e nada de
-    máscara inventada (ESCOLHA-DELA-VENCE-01/E1).
+    É o dono da seção `mode` que o daemon grava quando ela escolhe o modo
+    (`Daemon.gravar_o_modo_escolhido`, O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01,
+    29/09/2026). Até ali quem a aplicava pela janela era
+    `interface/pacotes/perfil.secao_do_modo`, que saiu com o escritor da
+    janela; as duas regras que ela cobrava passam a ser cobradas do dono: a
+    máscara não é do modo, e nada de máscara inventada
+    (ESCOLHA-DELA-VENCE-01/E1).
 
     AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026 (na validação). ANTES
     a segunda asserção cobrava a poda: fora do modo jogo o `gamepad_flavor` era
@@ -357,17 +365,15 @@ def test_a_regra_do_modo_ficou_no_dono_compartilhado() -> None:
     pela Navegação apagava a máscara padrão do perfil em silêncio, medido.
 
     MORDIDA: devolva a poda (`campos["gamepad_flavor"] = None` no ramo que não é
-    gamepad de `manager.secao_do_modo_com_o_caminho`) e a segunda asserção reprova.
+    gamepad de `manager.secao_do_modo_com_o_caminho`) e a primeira asserção
+    reprova.
     """
-    assert perfil.secao_do_modo(None, perfis_web.MODO_SEM_OPINIAO) is None, (
-        "«Não mexer no modo» deixou de remover a seção — o rótulo promete que "
-        "ativar não mexe, e o arquivo diria o contrário")
     atual = ProfileModeConfig(kind="gamepad", gamepad_flavor="dualsense")
-    virou = perfil.secao_do_modo(atual, "native")
-    assert virou is not None and virou.kind == "native"
+    virou = secao_do_modo_com_o_caminho(atual, kind="native")
+    assert virou.kind == "native"
     assert virou.gamepad_flavor == "dualsense", (
         "o modo apagou a máscara padrão do perfil — a máscara não é do modo, e "
         "a volta do PS + R3 pela Navegação a perdia a cada ciclo")
-    do_zero = perfil.secao_do_modo(None, "gamepad")
-    assert do_zero is not None and do_zero.gamepad_flavor is None, (
+    do_zero = secao_do_modo_com_o_caminho(None, kind="gamepad")
+    assert do_zero.gamepad_flavor is None, (
         "a regra inventou uma máscara — `None` quer dizer «mantém a atual»")

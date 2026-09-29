@@ -22,8 +22,16 @@ MORDE, e são duas curas independentes:
 
 * `ponte_atual` lendo `device.flavor` — o primeiro aperto não sobe (`efetiva`
   continua `dualsense`), a luz dá os pulsos vermelhos e o ciclo trava;
-* tirar a chamada `_gravar_o_modo_do_gesto` do callback — o aparelho troca, e
-  o perfil ativo fica como estava.
+* tirar a chamada de `gravar_o_modo_escolhido` do setter do daemon
+  (`Daemon.set_gamepad_emulation_desfecho`) ou do arranjo — o aparelho troca,
+  e o perfil ativo fica como estava.
+
+O ESCRITOR MUDOU DE LUGAR em 29/09/2026 (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01): o
+`_gravar_o_modo_do_gesto` do callback saiu, e quem grava é o setter do daemon,
+com a porta que o gesto lhe diz (`grava_o_modo="controle"`). Por isso o daemon
+desta bancada ganhou os três métodos REAIS do caminho da gravação
+(`gravar_o_modo_escolhido`, `aplicar_o_arranjo_do_desktop` e
+`_perfil_do_arranjo`): a régua segue lendo o disco, e não um dublê do escritor.
 """
 from __future__ import annotations
 
@@ -107,6 +115,15 @@ class _Daemon:
         )
         self.set_gamepad_emulation_desfecho = functools.partial(
             lifecycle.Daemon.set_gamepad_emulation_desfecho, self
+        )
+        self.gravar_o_modo_escolhido = functools.partial(
+            lifecycle.Daemon.gravar_o_modo_escolhido, self
+        )
+        self.aplicar_o_arranjo_do_desktop = functools.partial(
+            lifecycle.Daemon.aplicar_o_arranjo_do_desktop, self
+        )
+        self._perfil_do_arranjo = functools.partial(
+            lifecycle.Daemon._perfil_do_arranjo, self
         )
 
     def set_native_mode(self, enabled: bool, **_kw: Any) -> bool:

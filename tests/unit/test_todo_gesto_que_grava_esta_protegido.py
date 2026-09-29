@@ -91,13 +91,11 @@ ESCREVEM = {
     "_gravar",                 # o helper das abas que grava a seção
     "_gravar_a_forca",         # idem, na Vibração
     "_gravar_so_o_gatilho",    # grava o perfil dela SEM reaplicá-lo
-    # A SEÇÃO `mode` DO PERFIL ATIVO, escrita de FORA da aba Perfis —
-    # JOGAR-O-QUE-FALTA-01, 06/09/2026. O interruptor e os chips da aba Jogar
-    # passaram a levar a escolha dela para o `.json`, pelo dono compartilhado
-    # (`interface/pacotes/perfil.gravar_o_modo_no_ativo`). Sem este nome aqui, a
-    # régua de clique trocaria o que ATIVAR o perfil dela liga — quatro botões,
-    # numa aba que ela deixa aberta — para provar que sabe clicar.
-    "gravar_o_modo_no_ativo",
+    # `gravar_o_modo_no_ativo` SAIU DAQUI em 29/09/2026
+    # (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01), com a função: a seção `mode` do perfil
+    # ativo deixou de ser escrita pela janela. Quem a grava é o daemon, depois
+    # do aparelho, e os quatro gestos da aba Jogar que a alcançam declaram por
+    # FRASE a porta do daemon (ver `FORA_DA_ARVORE`).
     "salvar_perfil",
     "machine_declare",         # grava `MesaDeclarada` no `maquina.json`
     "set_mask",                # grava a máscara daquele aparelho
@@ -275,12 +273,29 @@ FORA_DA_ARVORE: dict[tuple[str, str], str] = {
         "A-08-UM-MAPEAR-SO-01): é método de um objeto devolvido por função, e a "
         "árvore só desce por ajudante chamado pelo nome",
     ("01-jogar.html", "modo-navegacao"):
-        "liga o mouse emulado pela preferência persistida (`mouse.emulation."
-        "restore`); o perigo é o CURSOR andando na tela dela, e cursor não é "
-        "chamada de função. Desde 06/09/2026 ele também GRAVA (a seção `mode` "
-        "do perfil ativo, por `gravar_o_modo_no_ativo`) — a árvore acharia essa "
-        "porta, e a declaração continua por frase porque o cursor é o perigo "
-        "MAIOR e o único que só a frase alcança",
+        "liga o mouse emulado pelo arranjo do perfil ativo (`desktop.arranjo."
+        "apply`); o perigo é o CURSOR andando na tela dela, e cursor não é "
+        "chamada de função. E ele GRAVA a seção `mode` do perfil ativo: desde "
+        "29/09/2026 (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01) quem grava é o daemon, "
+        "pelo `desktop.arranjo.apply` à mão, e o método sai da tabela do plano "
+        "(`_plano_do_chip`), onde a árvore não o vê pelo nome",
+    # OS TRÊS QUE GRAVAVAM PELA JANELA — O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01,
+    # 29/09/2026. Até ali o interruptor e os chips «Sony DualSense» e «Xbox»
+    # declaravam `gravar_o_modo_no_ativo`, o escritor da janela, chamado depois
+    # da resposta. Com quatro controles a resposta passava do teto e a escolha
+    # não chegava ao perfil. Quem grava agora é o setter do daemon, pela porta
+    # do plano, e é ela que a frase nomeia.
+    ("01-jogar.html", "hefesto"):
+        "grava a seção `mode` do perfil ativo pelo daemon: o `native.mode.set` "
+        "e o `gamepad.emulation.set` à mão saem da tabela do plano "
+        "(`_plano`/`plano_do_modo`), onde a árvore não os vê pelo nome",
+    ("01-jogar.html", "modo-dualsense"):
+        "grava o caminho na seção `mode` do perfil ativo pelo daemon: o "
+        "`gamepad.emulation.set` à mão sai da tabela do plano "
+        "(`_plano_do_chip`), onde a árvore não o vê pelo nome",
+    ("01-jogar.html", "modo-xbox"):
+        "grava o caminho `xbox` na seção `mode` do perfil ativo pelo daemon, "
+        "pela mesma porta do «Sony DualSense», fora da vista da árvore",
     ("07-lancadores.html", "abrir-lancador"):
         "`reopen_steam` abre a janela da Steam DESANEXADA: ela não nasce oculta "
         "e não some quando a prova termina. Decisão 17 dela, 03/09/2026 — o "

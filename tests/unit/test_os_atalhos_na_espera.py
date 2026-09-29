@@ -432,9 +432,16 @@ def armar_o_ato_do_daemon(
         lambda _d, _cor, *, modo: anotado.luz.append(("piscada", modo)) or True,
     )
     monkeypatch.setattr(hotkey, "_appid_do_jogo_do_wrapper", lambda: None)
-    monkeypatch.setattr(
-        hotkey, "_gravar_o_modo_do_gesto", lambda _d, ponte: anotado.gravado.append(ponte)
-    )
+    # O ESCRITOR DO MODO É O SETTER DO DAEMON desde a O-MODO-SE-GRAVA-ONDE-ELE-
+    # MUDA-01 (29/09/2026): o gesto lhe diz a porta, e ele grava depois do
+    # aparelho. Aqui ele só anota o que gravaria, com a assinatura do real.
+    def _gravar_o_modo_escolhido(
+        kind: str, *, caminho: str | None = None, porta: str
+    ) -> str | None:
+        anotado.gravado.append((kind, caminho, porta))
+        return None
+
+    d.gravar_o_modo_escolhido = _gravar_o_modo_escolhido
     # A espera da prova do PS + L3 cede o laço a cada volta, e quem anda é a
     # bancada (`_gesto_com_o_laco`): um tique por volta, sem relógio de parede.
     monkeypatch.setattr(hotkey, "_PASSO_DA_ESPERA_DO_VPAD_S", 0.0)
@@ -911,7 +918,8 @@ class TestOPsR3DoP2TrocaOModo:
         assert hotkey.ponte_atual(bancada.daemon) == hotkey.PONTE_XBOX
         assert bancada.daemon._gamepad_device is not posto
         assert getattr(bancada.daemon._gamepad_device, "backend", None) == "uinput"
-        assert anotado.gravado == [hotkey.PONTE_XBOX], "o modo não foi ao perfil ativo"
+        assert anotado.gravado == [("gamepad", hotkey.PONTE_XBOX, "controle")], (
+            f"o modo não foi ao perfil ativo pela porta do controle: {anotado.gravado}")
         assert anotado.luz == [("pulsos", 4)], (
             f"a luz disse {anotado.luz}: os dois pulsos de risco antes, e nada de falha"
         )

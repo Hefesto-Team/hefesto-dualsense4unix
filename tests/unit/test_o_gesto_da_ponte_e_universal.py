@@ -99,7 +99,11 @@ class _Daemon:
         *,
         origin: str = "manual",
         caminho: str | None = None,
+        grava_o_modo: Any = False,
     ) -> bool:
+        # `grava_o_modo`: a porta que o gesto diz ao setter, e é o setter do
+        # daemon que grava o modo no perfil ativo (O-MODO-SE-GRAVA-ONDE-ELE-
+        # MUDA-01, 29/09/2026). Este dublê mede a escada, não o perfil.
         self.pedidos.append((enabled, flavor, origin, caminho))
         if enabled:
             self.config.gamepad_caminho = caminho or self.config.gamepad_caminho

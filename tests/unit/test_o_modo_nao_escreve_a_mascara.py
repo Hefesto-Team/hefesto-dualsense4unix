@@ -99,7 +99,10 @@ class _Daemon:
         self._gamepad_device: Any = None
         self._mouse_device = None
         self._coop_manager = None
-        self.store = None
+        # O PERFIL ATIVO QUE O DAEMON SABE — desde a O-MODO-SE-GRAVA-ONDE-ELE-
+        # MUDA-01 (29/09/2026) quem grava o modo do chip é o daemon, e o perfil
+        # que recebe é o `store.active_profile` dele (o da janela saiu).
+        self.store = SimpleNamespace(active_profile=PERFIL)
         self._emu_lock = threading.Lock()
         self._native_mode = False
         self._emu_manual_ts = 0.0
@@ -110,6 +113,9 @@ class _Daemon:
         )
         self.set_gamepad_emulation_desfecho = functools.partial(
             lifecycle.Daemon.set_gamepad_emulation_desfecho, self
+        )
+        self.gravar_o_modo_escolhido = functools.partial(
+            lifecycle.Daemon.gravar_o_modo_escolhido, self
         )
 
     def set_native_mode(self, enabled: bool, **_kw: Any) -> bool:

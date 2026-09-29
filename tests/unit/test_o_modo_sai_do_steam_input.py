@@ -150,18 +150,18 @@ class DaemonDeMentira:
 
 
 @pytest.fixture(autouse=True)
-def _sem_pendencia_e_sem_perfil(monkeypatch):
-    """A pendência é de MÓDULO, e o perfil ativo não entra na régua.
+def _sem_pendencia():
+    """A pendência é de MÓDULO: cada régua começa e termina sem ela.
 
-    O escritor do perfil é trocado por um que ANOTA: é assim que a seção 3 mede
-    que um pedido não confirmado não vai para o disco dela.
+    O perfil ativo não entra nesta régua. Quem grava o modo é o daemon, depois
+    do aparelho (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026), e a janela não
+    tem escritor do modo a dublar: quem prova que ela não grava é a régua 7 de
+    `test_o_modo_se_grava_onde_ele_muda.py`, e quem prova que o daemon grava é
+    a régua 1 de lá.
     """
     aba._ESCOLHA.clear()
     aba._ROTULO.clear()
-    gravados: list[str] = []
-    monkeypatch.setattr(aba, "_gravar_o_modo_do_chip",
-                        lambda ctx, chave: gravados.append(chave) or "")
-    yield gravados
+    yield
     aba._ESCOLHA.clear()
     aba._ROTULO.clear()
 
@@ -714,12 +714,12 @@ def test_o_sony_dualsense_alcanca_o_jogo_fechado(vdf, jogo_fechado) -> None:
 # ---------------------------------------------------------------------------
 # 4. O PRAZO ESTOURADO DIZ A FALHA
 # ---------------------------------------------------------------------------
-def test_o_xbox_sem_resposta_do_daemon_diz_a_falha(
-        vdf, _sem_pendencia_e_sem_perfil) -> None:
+def test_o_xbox_sem_resposta_do_daemon_diz_a_falha(vdf) -> None:
     """`[daemon mudo] timed out` não pisca mais verde.
 
     A pendência é anotada ANTES da recusa — ela some sozinha se o daemon
-    alcançar tarde — e o perfil NÃO é gravado sobre um pedido não confirmado.
+    alcançar tarde. O perfil não é da janela: quem grava o modo é o daemon,
+    que o aplicou (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026).
 
     A MORDIDA: faça `_aplicar` devolver `True` sempre e o gesto volta sem
     levantar; a primeira asserção reprova.
@@ -732,8 +732,6 @@ def test_o_xbox_sem_resposta_do_daemon_diz_a_falha(
     assert str(erro.value) == aba.MODO_SEM_CONFIRMACAO
     assert aba._ESCOLHA.get("caminho") == "xbox", (
         f"a pendência não foi anotada: {aba._ESCOLHA}")
-    assert _sem_pendencia_e_sem_perfil == [], (
-        "o perfil gravou um caminho que o daemon não confirmou")
 
 
 def test_o_interruptor_sem_resposta_do_daemon_diz_a_falha() -> None:

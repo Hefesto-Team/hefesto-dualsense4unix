@@ -944,23 +944,48 @@ def test_nenhuma_das_frases_novas_fala_de_maquina() -> None:
             f"dela, 06/09: o termo sai da tela e entra o simples")
 
 
+def _daemon_que_grava(ativo: str | None) -> Any:
+    """O escritor REAL do daemon, sobre um objeto que só sabe o perfil ativo.
+
+    `Daemon.gravar_o_modo_escolhido` lê do daemon só o `store.active_profile`;
+    o resto (o perfil que recebe e a regra da seção) é do dono, em
+    `profiles.manager`. Subir um `Daemon` inteiro aqui mediria o co-op e o
+    vpad, e esta régua mede o CAMINHO da escolha até a outra tela.
+    """
+    from types import SimpleNamespace
+
+    return SimpleNamespace(store=SimpleNamespace(active_profile=ativo))
+
+
 def test_o_modo_clicado_entra_no_perfil_ativo(tmp_path, monkeypatch) -> None:
-    """Passo 1 — a máscara clicada na 01 é o que a aba 10 lê. UM dono, duas telas.
+    """Passo 1 — o caminho clicado na 01 é o que a aba 10 lê. UM dono, duas telas.
 
     Linha 5 do CSV: *"nada. `_ESCOLHA`/`_ROTULO` são dicionários de módulo lidos
     só dentro do próprio arquivo"*, e a consequência: *"ela escolhe 'Xbox' na 01,
     clica em 'Salvar Perfil' na 10, e o perfil grava a máscara que estava no
     disco — a escolha dela não entra."*
 
-    **A LEITURA DE VOLTA É PELO CAMINHO DA ABA 10**, e é o que faz esta régua
-    valer: `perfis_web._pacote_do_editor` é o que o quadro «Modo» daquela aba
-    mostra (PERFIL-MODO-01). Ler o `.json` direto provaria só que alguém gravou
-    um arquivo; ler por aqui prova que **a outra tela vê**.
+    **QUEM GRAVA É O DAEMON** desde a O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01
+    (29/09/2026): a janela gravava depois da resposta, e com quatro controles a
+    troca passava do teto dela. As duas metades da estrada, medidas aqui:
 
-    A MORDIDA: arranque a chamada de `_gravar_o_modo_do_chip` do gesto
-    `modo_xbox` e esta régua reprova dizendo que a aba 10 continua sem modo.
+    1. o chip «Xbox» pede o caminho à porta que grava — `gamepad.emulation.set`
+       com `origin: "manual"`, que o handler traduz em `grava_o_modo="ipc"`;
+    2. o escritor do daemon, `Daemon.gravar_o_modo_escolhido`, põe o caminho na
+       seção `mode` do perfil ativo, e a aba 10 o LÊ por
+       `perfis_web._pacote_do_editor`, que é o que o quadro «Modo» daquela aba
+       mostrava. Ler o `.json` direto provaria só que alguém gravou um arquivo;
+       ler por aqui prova que **a outra tela vê**.
+
+    A MORDIDA: tire o `origin: "manual"` do passo `gamepad.emulation.set` do
+    plano (`mode_transition.plan_mode_transition`) e a primeira metade
+    reprova; faça o escritor do daemon gravar em outro perfil
+    (`nome_do_perfil_que_grava(None)`) e a segunda reprova, com a aba 10 sem
+    modo. A régua 1 de `test_o_modo_se_grava_onde_ele_muda.py` mede o setter
+    chamando o escritor depois do aparelho.
     """
     from hefesto_dualsense4unix.app.actions import perfis_web
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
@@ -970,96 +995,111 @@ def test_o_modo_clicado_entra_no_perfil_ativo(tmp_path, monkeypatch) -> None:
     nome = "Régua do Modo"
     loader.save_profile(Profile(name=nome, match=MatchAny(), priority=40),
                         origem="régua")
-
-    ctx = _ctx([], active_profile=nome)
     assert perfis_web._pacote_do_editor(loader.load_profile(nome))["modo"] == (
         perfis_web.MODO_SEM_OPINIAO), "o perfil da régua já nasceu com modo"
 
-    class _Ponte:
-        def chamar(self, *a: Any, **kw: Any) -> bool:
-            return True
+    passos = dict(aba._plano_do_chip("xbox"))
+    pedido = passos.get("gamepad.emulation.set")
+    assert pedido == {"enabled": True, "origin": "manual", "caminho": "xbox"}, (
+        f"o chip «Xbox» não pede o caminho à porta que grava: {passos}")
 
-    aba.modo_xbox(ctx, {"texto": "Xbox"}, _Ponte())
+    Daemon.gravar_o_modo_escolhido(
+        _daemon_que_grava(nome), "gamepad", caminho="xbox", porta="ipc")
 
     lido = perfis_web._pacote_do_editor(loader.load_profile(nome))["modo"]
     assert lido == "gamepad", (
-        f"a aba 10 continua vendo {lido!r} depois de o chip Xbox ser clicado na "
-        f"01 — a escolha dela não atravessou as duas telas")
-    # AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026. ANTES conferia que
-    # o chip «Xbox» gravava a MÁSCARA (`mode.gamepad_flavor == "xbox"`), e era
-    # essa a metade do defeito: o perfil ativo dizia `xbox` com o jogo recebendo
-    # o DualSense. AGORA confere o CAMINHO, e que a máscara ficou intocada — o
-    # modo não escreve a máscara (§D.1 da sprint).
+        f"a aba 10 continua vendo {lido!r} depois de o daemon gravar o «Xbox» — "
+        f"a escolha dela não atravessou as duas telas")
+    # O CAMINHO, e a máscara intocada — MODO-DE-CONEXAO-01, 13/09/2026: o modo
+    # não escreve a máscara (§D.1 daquela sprint).
     modo = loader.load_profile(nome).mode
     assert modo is not None and modo.caminho == "xbox", (
         f"o caminho não entrou na seção `mode`: {modo!r}")
     assert modo.gamepad_flavor is None, (
-        f"o chip de modo escreveu a máscara do perfil: {modo!r}")
+        f"o escritor do modo escreveu a máscara do perfil: {modo!r}")
 
 
 def test_a_escrita_no_perfil_nunca_levanta(monkeypatch) -> None:
-    """Ela é efeito colateral de um gesto que já foi ao daemon — e não pode falhar.
+    """Ela vem DEPOIS de o aparelho trocar — e não pode falhar.
 
-    Uma exceção aqui transformaria uma troca de modo bem-sucedida em tarja de
-    recusa. É a mesma política de `perfil.com_a_carona`.
+    Uma exceção aqui transformaria uma troca de modo bem-sucedida em recusa:
+    o setter do daemon devolveria erro sobre um vpad que já trocou.
 
-    A MORDIDA: tire o `try` de `perfil.gravar_o_modo_no_ativo` e esta régua
+    A MORDIDA: tire o `try` de `Daemon.gravar_o_modo_escolhido` e esta régua
     reprova com o `OSError` do dublê.
     """
-    from hefesto_dualsense4unix.interface.pacotes import perfil as _perfil
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon
+    from hefesto_dualsense4unix.profiles import manager
 
     def _explode(*_a: Any, **_kw: Any) -> Any:
         raise OSError("o disco recusou")
 
-    monkeypatch.setattr(_perfil, "nome_do_ativo", lambda *_a: "Qualquer")
-    monkeypatch.setattr(_perfil, "_com_o_src", _explode)
-    assert _perfil.gravar_o_modo_no_ativo({}, "gamepad", "xbox") == "", (
-        "a gravação levantou — o gesto viraria tarja de recusa sobre um modo "
-        "que o daemon já aplicou")
+    monkeypatch.setattr(manager, "gravar_o_modo_no_perfil_ativo", _explode)
+    assert Daemon.gravar_o_modo_escolhido(
+        _daemon_que_grava("Qualquer"), "gamepad", caminho="xbox", porta="ipc"
+    ) is None, (
+        "a gravação levantou — o setter devolveria recusa sobre um modo que o "
+        "aparelho já aplicou")
 
 
-def test_sem_perfil_ativo_nao_se_inventa_um(monkeypatch) -> None:
+def test_sem_perfil_ativo_nao_se_inventa_um(tmp_path, monkeypatch) -> None:
     """Sem perfil valendo, não há onde gravar — e não se cria um.
 
-    A MORDIDA: faça `gravar_o_modo_no_ativo` cair num nome padrão e esta régua
-    reprova.
-    """
-    from hefesto_dualsense4unix.interface.pacotes import perfil as _perfil
+    Sem o nome no daemon e sem o perfil do boot no disco, o dono
+    (`manager.nome_do_perfil_que_grava`) responde `None`, e nenhum `.json`
+    nasce.
 
-    monkeypatch.setattr(_perfil, "nome_do_ativo", lambda *_a: "")
-    assert _perfil.gravar_o_modo_no_ativo({}, "gamepad", "xbox") == ""
+    A MORDIDA: faça `gravar_o_modo_no_perfil_ativo` cair num nome padrão e esta
+    régua reprova.
+    """
+    from hefesto_dualsense4unix.daemon.lifecycle import Daemon
+    from hefesto_dualsense4unix.profiles import loader
+
+    monkeypatch.setattr("hefesto_dualsense4unix.utils.xdg_paths.profiles_dir",
+                        lambda: tmp_path)
+    monkeypatch.setattr(loader, "_profiles_dir", lambda: tmp_path, raising=False)
+    assert Daemon.gravar_o_modo_escolhido(
+        _daemon_que_grava(None), "gamepad", caminho="xbox", porta="ipc"
+    ) is None
+    assert list(tmp_path.glob("*.json")) == [], (
+        "o escritor inventou um perfil para receber o modo")
 
 
 def test_a_secao_do_modo_e_a_regra_do_dono() -> None:
-    """"none" REMOVE a seção, e a máscara não é inventada fora do modo jogo.
+    """A máscara não é do modo, e não é inventada fora dele.
 
-    A regra é a de `profiles_actions._mode_section_from_editor`, e a cicatriz é
-    ESCOLHA-DELA-VENCE-01/E1: havia um ``or "xbox"`` no Salvar da janela
-    estável, e bastava salvar um perfil para ele passar a EXIGIR Xbox.
+    O dono é `manager.secao_do_modo_com_o_caminho`, o mesmo que o escritor do
+    daemon usa. A cicatriz é ESCOLHA-DELA-VENCE-01/E1: havia um ``or "xbox"`` no
+    Salvar da janela estável, e bastava salvar um perfil para ele passar a
+    EXIGIR Xbox.
 
-    A MORDIDA: troque o `elif flavor:` por um `campos["gamepad_flavor"] = flavor`
-    incondicional e a terceira afirmação reprova.
+    O `"none"` que removia a seção saiu com `perfil.secao_do_modo`
+    (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026): nenhum gesto do produto o
+    passava, e o dono não tem esse par.
+
+    A MORDIDA: devolva a poda (`campos["gamepad_flavor"] = None` no ramo que
+    não é gamepad do dono) e a primeira afirmação reprova.
     """
-    from hefesto_dualsense4unix.interface.pacotes import perfil as _perfil
+    from hefesto_dualsense4unix.profiles.manager import secao_do_modo_com_o_caminho
     from hefesto_dualsense4unix.profiles.schema import ProfileModeConfig
 
-    assert _perfil.secao_do_modo(None, "none") is None
     antes = ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox")
-    assert _perfil.secao_do_modo(antes, "none") is None
-
     # AJUSTADA À REGRA DELA — MODO-DE-CONEXAO-01, 13/09/2026 (na validação).
     # ANTES: fora do modo jogo a máscara era zerada ("JSON limpo, sem sobras").
     # AGORA: a máscara não é do modo — com o PS + R3 gravando a cada aperto, a
     # volta pela Navegação apagava a máscara padrão do perfil em silêncio.
-    fora = _perfil.secao_do_modo(antes, "native")
-    assert fora is not None and fora.gamepad_flavor == "xbox", (
+    fora = secao_do_modo_com_o_caminho(antes, kind="native")
+    assert fora.kind == "native" and fora.gamepad_flavor == "xbox", (
         "o modo apagou a máscara padrão do perfil — a máscara não é do modo")
 
     # E DENTRO DELE, SEM ESCOLHA, O DISCO É PRESERVADO.
-    fica = _perfil.secao_do_modo(antes, "gamepad")
-    assert fica is not None and fica.gamepad_flavor == "xbox", (
+    fica = secao_do_modo_com_o_caminho(antes, kind="gamepad")
+    assert fica.gamepad_flavor == "xbox", (
         "a máscara do disco foi apagada por um clique que não a escolheu — é a "
         "cicatriz do `or \"xbox\"` pelo avesso")
+    do_zero = secao_do_modo_com_o_caminho(None, kind="gamepad", caminho="xbox")
+    assert do_zero.gamepad_flavor is None, (
+        "a regra inventou uma máscara — `None` quer dizer «mantém a atual»")
 
 
 def _painel_do_produto() -> Any:

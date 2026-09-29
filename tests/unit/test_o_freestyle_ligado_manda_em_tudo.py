@@ -898,9 +898,11 @@ class _DaemonDoChip:
     def set_gamepad_emulation(
         self, enabled: bool, flavor: str | None = None, *, origin: str,
         caminho: str | None = None, caminho_e_escolha: bool = True,
+        grava_o_modo: Any = False,
     ) -> bool:
         self.pedidos.append({"enabled": enabled, "caminho": caminho,
-                             "caminho_e_escolha": caminho_e_escolha})
+                             "caminho_e_escolha": caminho_e_escolha,
+                             "grava_o_modo": grava_o_modo})
         return True
 
 
@@ -951,5 +953,9 @@ def test_o_caminho_que_ela_manda_vence_o_do_perfil(semeadura_ligada: None) -> No
     asyncio.run(h._handle_gamepad_emulation_set(
         {"enabled": True, "origin": "manual", "caminho": "xbox"}))
 
+    # E A PORTA VAI JUNTO (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026): o
+    # pedido à mão diz `grava_o_modo="ipc"`, e o setter grava o modo no perfil
+    # ativo depois do aparelho.
     assert daemon.pedidos[-1] == {"enabled": True, "caminho": "xbox",
-                                  "caminho_e_escolha": True}
+                                  "caminho_e_escolha": True,
+                                  "grava_o_modo": "ipc"}

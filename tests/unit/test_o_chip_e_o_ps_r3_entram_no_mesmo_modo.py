@@ -53,21 +53,28 @@ class _DaemonDoGesto:
         *,
         origin: Literal["manual", "profile"],
         caminho: str | None = None,
+        grava_o_modo: Literal[False, "ipc", "controle"] = False,
     ) -> bool:
         # SEM DEFAULT em `origin`, como no `DaemonProtocol`. O protocolo exige o
         # parâmetro justamente para ninguém trocar de ponte "por engano" no meio
         # da partida: um dublê com default aceitaria a chamada que o daemon real
         # recusa, e a régua daria verde sobre uma ponte que não subiu.
         self.recebeu.append(
-            ("gamepad", {"enabled": enabled, "origin": origin, "caminho": caminho})
+            ("gamepad", {"enabled": enabled, "origin": origin, "caminho": caminho,
+                         "grava_o_modo": grava_o_modo})
         )
         return True
 
     def aplicar_o_arranjo_do_desktop(
-        self, *, origin: str = "manual", forcar_mouse: bool = False
+        self,
+        *,
+        origin: str = "manual",
+        forcar_mouse: bool = False,
+        grava_o_modo: Literal[False, "ipc", "controle"] = False,
     ) -> dict[str, str]:
         self.recebeu.append(
-            ("arranjo", {"origin": origin, "forcar_mouse": forcar_mouse})
+            ("arranjo", {"origin": origin, "forcar_mouse": forcar_mouse,
+                         "grava_o_modo": grava_o_modo})
         )
         return {"mouse": "aplicado"}
 

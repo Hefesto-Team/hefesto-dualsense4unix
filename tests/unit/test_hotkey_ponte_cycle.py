@@ -192,6 +192,10 @@ class _FakeDaemon:
         self.teclado: list[bool] = []
         self.supressao: list[bool | None] = []
         self.arranjo: list[dict[str, Any]] = []
+        #: A porta que o setter recebeu em cada pedido — O-MODO-SE-GRAVA-ONDE-
+        #: ELE-MUDA-01 (29/09/2026): o gesto diz `grava_o_modo="controle"`, e é
+        #: o setter do daemon que grava o modo no perfil ativo.
+        self.grava_o_modo: list[Any] = []
         # MODO-DE-CONEXAO-01 (13/09/2026): o caminho vivo mora na config, escrito
         # só DEPOIS de o vpad alcançar o pedido — é o que `ponte_atual` lê.
         self.config = SimpleNamespace(gamepad_caminho=None)
@@ -206,11 +210,13 @@ class _FakeDaemon:
         *,
         origin: str = "manual",
         caminho: str | None = None,
+        grava_o_modo: Any = False,
     ) -> bool:
         # A TRILHA GANHOU O CAMINHO — MODO-DE-CONEXAO-01. Antes a 3ª posição era
         # o alvo do gesto, e ele ia como MÁSCARA; agora a máscara vai `None` (o
         # gesto não a troca) e o alvo vai na 5ª, como caminho.
         self.trilha.append(("gamepad", enabled, flavor, origin, caminho))
+        self.grava_o_modo.append(grava_o_modo)
         if not self._aplica:
             return False
         if not enabled:
@@ -242,13 +248,18 @@ class _FakeDaemon:
         return bool(value)
 
     def aplicar_o_arranjo_do_desktop(
-        self, *, origin: str = "manual", forcar_mouse: bool = False
+        self,
+        *,
+        origin: str = "manual",
+        forcar_mouse: bool = False,
+        grava_o_modo: Any = False,
     ) -> dict[str, str]:
         # POINT-AND-CLICK-01 (17/09/2026): o gesto parou de escrever a própria
         # sequência de quatro chamadas e passou pela porta única do clique. O
         # dublê tem de ter o método, senão o produto cai no ramo do "daemon
         # enxuto" e o teste vira verde sobre um gesto que não carregou nada.
-        self.arranjo.append({"origin": origin, "forcar_mouse": forcar_mouse})
+        self.arranjo.append({"origin": origin, "forcar_mouse": forcar_mouse,
+                             "grava_o_modo": grava_o_modo})
         return {"mouse": "aplicado"}
 
 
@@ -287,6 +298,10 @@ async def test_gesto_troca_a_mascara_com_origin_manual() -> None:
     chamadas = [t for t in d.trilha if t[0] == "gamepad"]
     assert chamadas == [("gamepad", True, None, "manual", PONTE_XBOX)]
     assert d._gamepad_device.flavor == PONTE_DUALSENSE, "o gesto trocou a máscara"
+    # A PORTA VAI JUNTO — O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01 (29/09/2026): é por
+    # ela que o setter do daemon grava o modo no perfil ativo.
+    assert d.grava_o_modo == ["controle"], (
+        f"o gesto não disse a porta ao setter: {d.grava_o_modo}")
 
 
 @pytest.mark.asyncio
@@ -338,7 +353,8 @@ async def test_ponte_mouse_teclado_derruba_o_vpad_e_carrega_o_arranjo() -> None:
     d = _FakeDaemon(flavor=PONTE_XBOX)
     await build_next_bridge_callback(d)()  # type: ignore[arg-type]
     assert ("gamepad", False, None, "manual", None) in d.trilha
-    assert d.arranjo == [{"origin": "manual", "forcar_mouse": True}], (
+    assert d.arranjo == [{"origin": "manual", "forcar_mouse": True,
+                          "grava_o_modo": "controle"}], (
         "o gesto não pediu o arranjo do desktop, ou pediu sem o socorro. O "
         "PS + R3 é uma das duas saídas de emergência quando o jogo não "
         f"responde: sem `forcar_mouse` um perfil que desliga o mouse deixa "
