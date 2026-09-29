@@ -839,10 +839,11 @@ class AltoFalanteSubsystem:
     #: primeiro rumble que o pede (:meth:`_tocador_do_lugar`). Como o resto do
     #: estado novo, mora no corpo da classe e troca inteiro.
     _tocadores: Mapping[int, Any] = MappingProxyType({})
-    #: ``{uniq: (reaplicar, lugar, a háptica leva)}`` de quem tem rumble não
-    #: nulo agora, como o fio da vibração o deixou. A volta compara com o que
-    #: vê e, quando o caminho abre ou fecha, reaplica (:meth:`_conferir_o_rumble`).
-    _rumble_vivo: Mapping[str, tuple[Any, int | None, bool]] = MappingProxyType({})
+    #: ``{uniq: (reaplicar, (lugar, quer, leva))}`` de quem tem rumble não nulo
+    #: agora, com o retrato que o fio da vibração viu (:meth:`_retrato_do_rumble`).
+    #: A volta compara com o de agora e, quando muda, reaplica
+    #: (:meth:`_conferir_o_rumble`).
+    _rumble_vivo: Mapping[str, tuple[Any, tuple[int | None, bool, bool]]] = MappingProxyType({})
     #: Os clientes do servidor de som que são os NOSSOS tocadores: um tocador
     #: não é jogo, e a partida não o conta (:meth:`_donos_dos_fluxos`).
     _clientes_do_rumble: frozenset[str] = frozenset()
@@ -1364,13 +1365,21 @@ class AltoFalanteSubsystem:
         self._tocador_do_lugar(lugar).levar(
             fraco, forte, sink=str(getattr(endpoint, "nome", "") or ""), dono=chave
         )
-        leva = self._a_haptica_leva(chave)
+        retrato = self._retrato_do_rumble(chave)
         with self._trava_do_rumble:
             vivos = {u: v for u, v in self._rumble_vivo.items() if u != chave}
             if fraco or forte:
-                vivos[chave] = (reaplicar, lugar, leva)
+                vivos[chave] = (reaplicar, retrato)
             self._rumble_vivo = MappingProxyType(vivos)
-        return leva
+        return retrato[2]
+
+    def _retrato_do_rumble(self, chave: str) -> tuple[int | None, bool, bool]:
+        """``(lugar, quer a háptica fina, a háptica leva)`` deste controle agora."""
+        return (
+            self._lugar_de.get(chave),
+            self._quer_a_haptica_fina(chave),
+            self._a_haptica_leva(chave),
+        )
 
     def _esquecer_o_rumble(self, uniq: str) -> None:
         with self._trava_do_rumble:
@@ -1515,15 +1524,15 @@ class AltoFalanteSubsystem:
         """
         from hefesto_dualsense4unix.daemon.battery_journal import mascarar_endereco
 
-        for chave, (reaplicar, lugar, levava) in dict(self._rumble_vivo).items():
-            agora = (self._a_haptica_leva(chave), self._lugar_de.get(chave))
-            if agora == (levava, lugar) or not callable(reaplicar):
+        for chave, (reaplicar, antes) in dict(self._rumble_vivo).items():
+            agora = self._retrato_do_rumble(chave)
+            if agora == antes or not callable(reaplicar):
                 continue
             logger.info(
                 "haptica_fina_do_rumble_mudou",
                 uniq=mascarar_endereco(chave),
-                leva=agora[0],
-                lugar=agora[1],
+                lugar=agora[0],
+                leva=agora[2],
             )
             try:
                 reaplicar()
