@@ -345,7 +345,7 @@ def test_a_ponte_sem_escrita_nao_toma_a_vez() -> None:
     sozinhas, _v, _g, _r = _partes((CONTROLE_1, CONTROLE_2, CONTROLE_3))
     for uniq, parte in partes.items():
         assert abs(parte - sozinhas[uniq]) <= 0.01, (
-            f"a ponte sem escrita mudou a parte de {uniq}: {parte:.3f} × {sozinhas[uniq]:.3f}"
+            f"a ponte sem escrita mudou a parte de {uniq}: {parte:.3f} contra {sozinhas[uniq]:.3f}"
         )
 
 
@@ -368,7 +368,7 @@ def test_a_ordem_de_chegada_nao_escolhe_quem_perde(ordem: tuple[str, ...]) -> No
 def test_o_adaptador_parado_segue_cedendo_inteiro() -> None:
     """Quando não cabe nenhuma (o 2B), cede o adaptador inteiro, como antes, e
     o teto derruba as pontes."""
-    partes, vagas, _g, registro = _partes(
+    _p, vagas, _g, registro = _partes(
         (CONTROLE_1, CONTROLE_2, CONTROLE_3), medidor=_AdaptadorQueEscoaDuas(capacidade=0)
     )
     assert all(v.derrubar for v in vagas), "o adaptador parado não caiu no teto"
