@@ -2658,7 +2658,7 @@ class PyDualSenseController(IController):
         passaria só quando o primeiro byte de payload por acaso fosse 0x05).
         O ioctl devolve o report EXATO do kernel, id incluído — byte-compatível
         com o `CANONICAL_FEATURE_0X05` do blueprint. Fd próprio e efêmero: zero
-        contenção com o read bloqueante do report_thread no handle da hidapi.
+        contenção com o read do report_thread no handle da hidapi.
 
         Fail-safe por contrato: qualquer falha devolve None e o chamador fica
         no 0x05 canônico (vpad sempre nasce; drift leve tolerável). Modos de
