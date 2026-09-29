@@ -43,6 +43,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
     pct_da_haptica,
 )
+from tests.unit import test_no_modo_xbox_a_haptica_fina as xbox
 from tests.unit.test_cada_motor_tem_o_seu_multiplicador import (
     BRANCO,
     PRETO,
@@ -513,3 +514,63 @@ class TestALeituraDoPerfil:
         assert dono.pct(BRANCO) == 60 and cargas == ["Estilo"]
         dono.ler_do_daemon(daemon, forcar=True)
         assert cargas == ["Estilo", "Estilo"]
+
+
+# ---------------------------------------------------------------------------
+# 6. Desligada no Xbox: o rumble volta aos motores do HID (critério da sprint)
+# ---------------------------------------------------------------------------
+
+
+def _haptica_do_p1_em(pct: int, monkeypatch: pytest.MonkeyPatch, uniq: str) -> None:
+    """O perfil diz ``pct`` para ``uniq``; a volta relê o mesmo (sem disco)."""
+    from hefesto_dualsense4unix.daemon import ganho_da_haptica
+
+    dono = ganho_da_haptica.GANHO
+    perfil = {uniq: ControllerOverrides(rumble=ControllerRumbleOverride(haptica_pct=pct))}
+    monkeypatch.setattr(dono, "ler_do_daemon", lambda *_a, **_k: dono.ler_do_perfil(perfil))
+    dono.ler_do_perfil(perfil)
+
+
+#: O mundo do rumble convertido é o de `test_no_modo_xbox_a_haptica_fina`, com
+#: as fixtures dele (o `mesa` e o `mundo`).
+mesa = xbox.mesa
+mundo = xbox.mundo
+
+
+@pytest.fixture
+def xbox_mundo(mundo: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
+    """O mundo do Xbox com o dono do ganho zerado, sem vazar de outra régua."""
+    from hefesto_dualsense4unix.daemon import ganho_da_haptica
+
+    monkeypatch.setattr(ganho_da_haptica.GANHO, "_escritos", {})
+    return mundo
+
+
+@pytest.mark.parametrize("transporte", ["cabo", "radio"])
+def test_no_xbox_a_haptica_em_zero_devolve_o_rumble_ao_hid(
+    xbox_mundo: Any, monkeypatch: pytest.MonkeyPatch, transporte: str
+) -> None:
+    """Com a háptica do P1 em 0, o rumble do pad Xbox volta aos motores do HID.
+
+    Sem isto, o interruptor da linha «Háptica por áudio» desligado no modo
+    Xbox tirava TODA a vibração do controle: o rumble seguia convertido para a
+    háptica, e a placa (ou a ponte) o multiplicava por zero.
+
+    MORDIDA: tirar o ``GANHO.pct(chave) > 0`` de ``_quer_a_haptica_fina`` →
+    os motores do HID ficam em (0, 0) e reprova, nos dois transportes.
+    """
+    m = xbox_mundo
+    p1 = xbox._QUATRO[0]
+    controles = (
+        xbox._no_cabo_os_quatro(m) if transporte == "cabo" else xbox._no_radio_os_quatro(m)
+    )
+    m.mesa.volta(*controles)
+    m.rumble(p1, 100, 200)
+    m.mesa.volta(*controles)
+    assert m.backend.do(p1)[-1] == (0, 0), "o caminho da háptica não abriu"
+    _haptica_do_p1_em(0, monkeypatch, p1)
+    m.mesa.volta(*controles)
+    assert m.backend.do(p1)[-1] == (100, 200), "com a háptica em 0 o HID não voltou a levar"
+    assert m.rumble(p1, 40, 90) == (40, 90)
+    assert m.backend.do(p1)[-1] == (40, 90)
+    assert m.tocador(1).nivel == (0, 0), "o tocador segue somando com a háptica em 0"

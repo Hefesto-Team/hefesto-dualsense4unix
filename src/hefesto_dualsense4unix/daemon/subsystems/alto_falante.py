@@ -1442,13 +1442,13 @@ class AltoFalanteSubsystem:
         tocador.parar()
 
     def _quer_a_haptica_fina(self, chave: str) -> bool:
-        """O lugar deste controle tem endpoint, e ninguém mais o usa agora."""
+        """O lugar tem endpoint, ninguém mais o usa, e a háptica dele não está em 0."""
         lugar = self._lugar_de.get(chave)
         if lugar is None or lugar in self._lugares_com_jogo or chave in self._radio_com_som:
             return False
         endpoint = self._endpoints.get(lugar)
         return bool(
-            endpoint is not None
+            endpoint is not None and GANHO.pct(chave) > 0  # em 0, o HID leva o rumble
             and getattr(endpoint, "module_id", None) is not None
             and getattr(endpoint, "nome", "")
         )
