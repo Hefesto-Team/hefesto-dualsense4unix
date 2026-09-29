@@ -53,12 +53,12 @@ voltou a ser dele.
 
 **POR QUE `set_microphone_led` E NÃO `set_mic_led`, e isto não é preferência.**
 Medido nesta árvore em 03/09/2026: `set_mic_led` coage a `bool` DUAS VEZES em
-série (`core/backend_pydualsense.py:5825`, `flag = bool(aceso)`, e `:470`,
+série (`core/backend_pydualsense.py:5836`, `flag = bool(aceso)`, e `:479`,
 `tomar(bool(aceso))`), então `2` e `3` viram `1` sem erro e sem log — luz acesa
 fixa onde devia piscar, que se lê como *"a PEÇA B não está detectando som"*. O
 único caminho de produção que carrega o nível é
 `PyDualSenseController.set_microphone_led(aceso, *, uniq=)`
-(`core/backend_pydualsense.py:6066`), medido: `0->0, 1->1, 2->2, 3->3`.
+(`core/backend_pydualsense.py:6450`), medido: `0->0, 1->1, 2->2, 3->3`.
 
 **DUAS CADÊNCIAS NUM LAÇO SÓ, e o número tem razão.** A decisão roda a
 `INTERVALO_S` (4 Hz) porque o `2` é atividade de voz e a 1 Hz a luz acompanha o
@@ -485,7 +485,7 @@ def _baterias(backend: Any) -> dict[str, int]:
     """`{uniq: battery_pct}` dos controles conectados. Só quem reportou entra.
 
     `describe_controllers` já devolve a carga por controle
-    (`core/backend_pydualsense.py:7885`) e a leitura é `getattr` no objeto que
+    (`core/backend_pydualsense.py:7896`) e a leitura é `getattr` no objeto que
     a thread de report atualiza — sem HID I/O, e já há três consumidores do
     daemon pagando esse preço por tique.
 
@@ -733,7 +733,7 @@ def _escrever(backend: Any, uniq: str, valor: int | None) -> bool:
 
     **NÃO É `set_mic_led`.** Aquele esmaga em `bool` duas vezes em série e faz
     o `2` e o `3` virarem `1` sem erro e sem log (medido em 03/09/2026,
-    `core/backend_pydualsense.py:5825` e `:470`).
+    `core/backend_pydualsense.py:5836` e `:479`).
 
     `valor is None` é a DEVOLUÇÃO DA POSSE (o bit `0x01` do flag1 cai e o
     kernel volta a escrever a luz na borda do botão); `0` é uma ORDEM
@@ -741,7 +741,7 @@ def _escrever(backend: Any, uniq: str, valor: int | None) -> bool:
     `3d9bb7e` no byte vizinho.
 
     A escrita **não é HID I/O**: `_PinnedPyDualSense.set_microphone_led` só
-    guarda `_mic_led_desejado` (`core/backend_pydualsense.py:1586`), e quem
+    guarda `_mic_led_desejado` (`core/backend_pydualsense.py:1957`), e quem
     manda o report é a thread do handle. É por isso que ela pode ser chamada
     direto no `finally` do desligamento, quando não há executor garantido.
     """
