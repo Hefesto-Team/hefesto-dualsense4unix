@@ -5116,25 +5116,34 @@ def _o_que_a_tela_oferece(todos: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(d for d in todos if d != rot.DESTINO_NENHUM)
 
 
-def _alternar_o_chip(ctx: Contexto, o: dict[str, Any], p: Any, *, nome: str,
-                     chave: str, pedido: str, todos: tuple[str, ...],
-                     cinza: str) -> None:
-    """O corpo comum dos dois chips: o clique no apagado acende, no aceso apaga.
+def _o_clique_do_chip(o: dict[str, Any], nome: str, pedido: str,
+                      todos: tuple[str, ...]) -> str:
+    """O `uniq` do cartão clicado, depois de conferir o destino que o botão diz.
 
-    `chave` é a do bloco `mira` do `state_full` e o nome do campo do `mira.set`
-    (os dois são `inclinacao` e `toque`); `pedido` é o destino que o botão
-    clicado diz (`data-destino`, `data-toque`). O grupo é um só por controle: acender
-    o Cursor com os Botões acesos troca, não soma.
+    `pedido` é o `data-destino` ou o `data-toque` do botão; o `nenhum` não é
+    chip (é o clique no chip aceso), e destino que a tela não tem não vira
+    pedido.
     """
-    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
-
     uniq = _uniq(o)
     if not uniq:
         raise ValueError(f"{nome}: o clique não disse em qual controle")
     if pedido not in _o_que_a_tela_oferece(todos):
         raise ValueError(f"{nome}: não conheço o destino {pedido!r}")
-    if _nativo(ctx):
-        raise RuntimeError(cinza)
+    return uniq
+
+
+def _alternar_o_chip(ctx: Contexto, p: Any, uniq: str, chave: str,
+                     pedido: str) -> str:
+    """O corpo comum dos dois chips: o clique no apagado acende, no aceso apaga.
+
+    `chave` é a do bloco `mira` do `state_full` e o nome do campo do `mira.set`
+    (os dois são `inclinacao` e `toque`). O grupo é um só por controle: acender
+    o Cursor com os Botões acesos troca, não soma. Devolve o `status` do daemon
+    quando ele é `ok` ou `nativo` (a recusa do Nativo tem a frase de cada chip,
+    e quem a levanta é o gesto); o resto levanta aqui.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
     agora = _destino_da_mira(ctx.por_uniq(uniq), chave)
     if agora is None:
         raise RuntimeError(SEM_LEITURA_DO_CHIP)
@@ -5144,10 +5153,10 @@ def _alternar_o_chip(ctx: Contexto, o: dict[str, Any], p: Any, *, nome: str,
         raise RuntimeError(
             "o Hefesto não confirmou o botão: ou ele parou, ou este controle "
             "se desligou")
-    if corpo.get("status") == "nativo":
-        raise RuntimeError(cinza)
-    if corpo.get("status") != "ok":
+    status = corpo.get("status")
+    if status not in ("ok", "nativo"):
         raise RuntimeError(CHIP_SEM_O_CONTROLE)
+    return str(status)
 
 
 @gesto("02-controles.html", "inclinacao", grava="mira_set_detalhado")
@@ -5157,14 +5166,17 @@ def inclinacao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     O botão diz qual dos dois (`data-destino`); clicar no aceso apaga
     (`nenhum`), e clicar no do outro analógico leva a inclinação para ele. Grava
     em `ControllerOverrides.movimento.acelerometro` DESTE controle, pelo
-    `mira.set`, e vale no tique no mesmo pedido.
+    `mira.set`, e vale no tique no mesmo pedido. No Nativo recusa antes da
+    ponte, e a recusa do daemon (o tique de antes) diz a mesma frase.
     """
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
-    _alternar_o_chip(ctx, o, p, nome="inclinacao", chave="inclinacao",
-                     pedido=str(o.get("destino") or ""),
-                     todos=rot.DESTINOS_DA_INCLINACAO,
-                     cinza=INCLINACAO_CINZA_NO_NATIVO)
+    pedido = str(o.get("destino") or "")
+    uniq = _o_clique_do_chip(o, "inclinacao", pedido, rot.DESTINOS_DA_INCLINACAO)
+    if _nativo(ctx):
+        raise RuntimeError(INCLINACAO_CINZA_NO_NATIVO)
+    if _alternar_o_chip(ctx, p, uniq, "inclinacao", pedido) == "nativo":
+        raise RuntimeError(INCLINACAO_CINZA_NO_NATIVO)
 
 
 @gesto("02-controles.html", "toque", grava="mira_set_detalhado")
@@ -5173,13 +5185,16 @@ def toque(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     O botão diz qual dos dois (`data-toque`); clicar no aceso devolve o touchpad
     ao computador (`nenhum`). Grava em `ControllerOverrides.movimento.toque`
-    DESTE controle, pelo `mira.set`.
+    DESTE controle, pelo `mira.set`. No Nativo recusa como a Inclinação.
     """
     from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 
-    _alternar_o_chip(ctx, o, p, nome="toque", chave="toque",
-                     pedido=str(o.get("toque") or ""), todos=rot.TOQUES,
-                     cinza=TOQUE_CINZA_NO_NATIVO)
+    pedido = str(o.get("toque") or "")
+    uniq = _o_clique_do_chip(o, "toque", pedido, rot.TOQUES)
+    if _nativo(ctx):
+        raise RuntimeError(TOQUE_CINZA_NO_NATIVO)
+    if _alternar_o_chip(ctx, p, uniq, "toque", pedido) == "nativo":
+        raise RuntimeError(TOQUE_CINZA_NO_NATIVO)
 
 
 @gesto("02-controles.html", "ganho-mic", grava="save_profile")
