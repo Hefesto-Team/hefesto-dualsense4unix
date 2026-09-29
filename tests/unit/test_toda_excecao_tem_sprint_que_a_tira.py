@@ -232,7 +232,7 @@ DIVIDAS: dict[str, int] = {
     "scripts/validar-palavra-de-tela.py::DIVIDA_DA_PALAVRA_01": 0,
     "scripts/validar-palavra-de-tela.py::DIVIDA_DA_PALAVRA_01_PY": 1,
     "scripts/validar-palavra-de-tela.py::DIVIDA_DO_RECIBO": 0,
-    "tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py::_SEM_CAMINHO_HOJE": 89,
+    "tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py::_SEM_CAMINHO_HOJE": 16,
     "tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py::_SEM_MAO_HOJE": 5,
     "tests/unit/test_a_costura_da_onda_2.py::_OS_QUE_PODEM": 10,
     "tests/unit/test_a_janela_estreita_nao_engole_o_desenho.py::CORTE_CONHECIDO_NO_DESENHO": 0,

@@ -115,8 +115,8 @@ Três razões, e a terceira é medida:
    (``_SEM_ESCRITOR_HOJE``, em ``test_perfil_salva_tudo_cobertura_das_secoes``)
    é um teste;
 2. quem precisa vê-lo reprovar é quem ACABOU de escrever um símbolo público
-   novo. Essa pessoa roda a suíte; ela não roda, uma a uma, as onze linhas de
-   portão do ``GUIA.md``;
+   novo. Essa pessoa roda a suíte; ela não roda, um a um, os portões de
+   ``scripts/portoes.sh``;
 3. um portão em ``scripts/`` precisa de um job no CI **e** de um hook no
    pre-commit para existir, e os dois podem ser desligados sem tocar no portão
    — foi por isso que a ``PORTÃO-VIVO-01`` teve de nascer. O caso medido está
@@ -365,7 +365,14 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
 #: de comando do kernel. A varredura só olhava ``*.py`` (``_modulos``) e por
 #: isso acusava de órfã a ``strip_quirks_token``, que o desinstalar chama.
 #: MEDIDO em 13/08/2026.
-_ROTEIROS_DE_PRODUCAO = ("install.sh", "uninstall.sh")
+#:
+#: A CAMADA DE MÁQUINA ENTROU EM 29/09/2026, pela mesma razão: o ``install.sh``
+#: a carrega com ``source`` (as dez curas de HOST moram lá desde 31/08), e o
+#: heredoc dela chama ``censo_do_gabinete.ler_o_gabinete`` e
+#: ``preservar_o_que_ela_disse`` (``scripts/lib/camada_de_maquina.sh``:808-809).
+#: Sem ela na lista, as duas eram lápides de «sem chamador» sobre um caminho que
+#: roda em todo install (A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01).
+_ROTEIROS_DE_PRODUCAO = ("install.sh", "uninstall.sh", "scripts/lib/camada_de_maquina.sh")
 
 #: A BOCA DA INTERFACE NOVA — o piloto que o ``.desktop`` dela abre.
 #:
@@ -419,8 +426,10 @@ _CADEIA_DA_INTERFACE_NOVA: tuple[tuple[str, str, str], ...] = (
         "run.sh",
         'exec python3 "${HERE}/scripts/abrir_interface.py"',
         "o motor: ativa a venv desta árvore, desarma o pixbuf de terminal "
-        "empacotado, força XWayland no COSMIC e entrega ao envoltório de "
-        "identidade. Aqui havia `python3 -m …app.main`, a janela GTK velha.",
+        "empacotado e entrega ao envoltório de identidade. O XWayland só vem "
+        "com o opt-in (`HEFESTO_DUALSENSE4UNIX_XWAYLAND=1` ou "
+        "`--force-xwayland`), desde a ordem dela de 19/09/2026. Aqui havia "
+        "`python3 -m …app.main`, a janela GTK velha.",
     ),
     (
         "scripts/abrir_interface.py",
@@ -429,6 +438,12 @@ _CADEIA_DA_INTERFACE_NOVA: tuple[tuple[str, str, str], ...] = (
         "PROCESSO e só então carrega o piloto com `runpy`, sem mudar uma linha "
         "dele.",
     ),
+)
+
+#: O Python da cadeia que roda de FORA de `src/`: o último elo `.py` antes do
+#: piloto. Sai da própria cadeia, para ter um dono só.
+_LANCADORES: tuple[str, ...] = tuple(
+    fonte for fonte, _agulha, _razao in _CADEIA_DA_INTERFACE_NOVA if fonte.endswith(".py")
 )
 
 #: Abertura de heredoc alimentando um interpretador Python — ``python3 - <<'EOF'``,
@@ -608,12 +623,6 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "profiles/autoswitch.py:150). Existe para o teste do autoswitch não "
         "depender de um compositor vivo, e para a CLI poder rodar num shell sem "
         "sessão gráfica. MEDIDO em 12/08/2026."
-    ),
-    "HEFESTO_DUALSENSE4UNIX_NO_XWAYLAND": (
-        "Faz a janela não tentar XWayland (app/main.py:30). Contorno de "
-        "ambiente para rodar sob Xvfb e sob compositor sem XWayland — é a "
-        "armadilha 2 do COMO-OLHAR-A-TELA, não uma escolha dela. MEDIDO em "
-        "12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_PLUGINS_DIR": (
         "Onde procurar plugins (daemon/subsystems/plugins.py:157). Aponta o "
@@ -1008,26 +1017,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`innerText` do Chrome, e o `test_o_stripper_nao_engole_a_dica_nem_"
         "inventa_tamanho` a morde."
     ),
-    "utils/tela_de_mentira.py::garantir_tela_de_mentira": (
-        "04/09/2026 — INSTRUMENTO, e o docstring do módulo diz isso na "
-        "primeira linha: `A janela de instrumento não nasce na tela dela`. "
-        "Quem chama é `tests/conftest.py` e os 21 scripts de `scripts/` que "
-        "abrem `Gtk.Window` — os dois mundos que o portão não conta, e com "
-        "razão. O PRODUTO nunca deve chamá-la: a janela dele é para ser vista. "
-        "Ela vive em `src/` por um motivo único e mecânico — é o único lugar "
-        "importável tanto de `tests/` quanto de `scripts/`, e duas cópias "
-        "divergiriam (a primeira versão TINHA duas, e a segunda subia um Xvfb "
-        "por cima do primeiro; a régua de cobertura pegou ao nascer). "
-        "Evidência: `tests/unit/test_o_instrumento_nao_abre_na_tela_dela.py`."
-    ),
-    "utils/tela_de_mentira.py::derrubar_tela_de_mentira": (
-        "04/09/2026 — o par de `garantir_tela_de_mentira`, e pela mesma razão. "
-        "Ela não é chamada por nome nem pelos instrumentos: quem a chama é o "
-        "`atexit` que a própria guarda registra, para o Xvfb morrer com o "
-        "processo que o subiu — e morrer PELO PID, nunca por padrão de linha "
-        "de comando. É pública para a régua poder conferir o par, o que "
-        "`test_a_guarda_desvia_e_se_anuncia` faz."
-    ),
     "core/acoes_de_botao.py::por_grupo": (
         "A lista agrupada como a tela a desenha "
         "(core/acoes_de_botao.py). Quem a chama e o GERADOR da aba Navegacao, "
@@ -1352,15 +1341,16 @@ _NAO_E_PROMESSA: dict[str, str] = {
     # O QUE A LÁPIDE ACERTOU FICA REGISTRADO: `TRAY_ICON_NAME` continua sendo
     # contrato de empacotamento, com portão próprio em
     # `scripts/check_packaging_parity.sh`.
-    "interface/monta.py::svg": (
-        "06/09/2026 — FERRAMENTA DE GERAÇÃO, e a entrada nasce de uma medição "
-        "que corrigiu a premissa: ela parecia alcançada, e o que a alcançava era "
-        "um nome PLANO num dos quatro módulos que saíram com a janela. Quem a "
-        "chama de verdade são os GERADORES — `interface/aba01.py:67`, "
-        "`aba04.py:5`, `aba06.py:42` e `interface/calibrar.py::_svg` —, que se "
-        "rodam à mão para PUBLICAR as páginas e não são carregados pelo piloto. "
-        "É o mesmo estatuto de `scripts/`: constrói o produto, não é o produto."
-    ),
+    #
+    # TRÊS SAÍRAM EM 29/09/2026, quando o lançador passou a contar como produção
+    # (`_LANCADORES`, elo 3 de `_CADEIA_DA_INTERFACE_NOVA`). As duas de
+    # `utils/tela_de_mentira.py` diziam *"o PRODUTO nunca deve chamá-la"*, e o
+    # `scripts/abrir_interface.py` a chama desde 04/09/2026 como guarda
+    # (TELA-DELA-02): o atalho dela passa com `HEFESTO_NA_TELA=1`, e a guarda
+    # deixa. A de `interface/monta.py::svg` (ferramenta dos geradores) saiu
+    # pela régua do nome PLANO: o `"svg"` literal do
+    # `app/arranque.sanear_loaders_do_gdk_pixbuf`, que o lançador chama, a
+    # alcança. Se esse literal sair, o portão pede a lápide de volta.
     "utils/memoria_dos_controles.py::conferir_a_casa": (
         "25/09/2026, ESQUECER-OS-CONTROLES-01 — é o «a máquina está limpa?» da "
         "rotina de controle de qualidade, e quem o chama é "
@@ -1412,6 +1402,165 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`scripts/doctor.sh` imprime pela `frase()`. Mesma razão da função: "
         "ferramenta de diagnóstico, e o produto não lê diário."
     ),
+    # AS QUATORZE QUE MUDARAM DE GAVETA EM 29/09/2026, na costura das levas 1 a 3
+    # da onda 3: moravam em `_SEM_CAMINHO_HOJE`, e as sprints que as tirariam
+    # fecharam sem que fossem dívida — são bancada, ensaio, ou a régua cuja
+    # escolha espera a palavra dela.
+    "interface/monta.py::folha_das_cores": (
+        "29/09/2026, A-TELA-PERGUNTA-AO-DONO-01 — a folha inteira dos 28 modelos "
+        "é da BANCADA, não promessa ao produto: quem a chama são os geradores das "
+        "abas 05 e 06 (`aba05.FOLHA_DOS_28`, `aba06`) e a mesa de medição "
+        "(`scripts/mesa_de_medicao.py`), e nem `interface/abaNN.py` nem "
+        "`scripts/` contam para este portão. A página publicada leva a folha "
+        "podada de cada desenho (`monta._so_o_colorway`)."
+    ),
+    "interface/monta.py::folha_de_realce": (
+        "29/09/2026, A-TELA-PERGUNTA-AO-DONO-01 — a regra CSS do `apertados=` de "
+        "`monta.svg` é do INSTRUMENTO: quem a chama é a mesa de medição "
+        "(`scripts/mesa_de_medicao.py`), e nenhuma aba aponta uma peça do "
+        "desenho. A primeira aba que precisar apontar uma peça publica esta folha "
+        "e passa `apertados=`; até lá, `scripts/` não conta para este portão."
+    ),
+    "integrations/alto_falante_bt.py::common_de_audio": (
+        "29/09/2026, O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01 — INSTRUMENTO, não "
+        "promessa, e a nota de 28/09/2026 no docstring o diz: o `0x35` da ponte "
+        "não leva `common` (`ARRANJO_035`). Quem chama são os ensaios do rádio "
+        "(`scripts/ensaios/o_som_que_sai.py` e os irmãos) e as réguas da bomba e "
+        "do governador, que o importam deste módulo com nome e assinatura fixos."
+    ),
+    "integrations/alto_falante_bt.py::fonte_com_ritmo": (
+        "29/09/2026, O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01 — INSTRUMENTO, não "
+        "promessa, e a nota de 28/09/2026 no docstring o diz: a ponte lê o "
+        "monitor do nó por `pw-record`, que já entrega no tempo real "
+        "(`fonte_do_monitor_do_no`). Quem chama é o ensaio de bancada "
+        "(`scripts/ensaios/o_som_que_sai.py`) e as réguas da bomba e do "
+        "governador."
+    ),
+    "integrations/alto_falante_bt.py::diagnosticar": (
+        "29/09/2026, O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01 — DIAGNÓSTICO DE "
+        "BANCADA, e a nota de 28/09/2026 no docstring o diz: quem chama é o "
+        "ensaio `scripts/ensaios/o_som_que_sai.py --sink`. O produto pergunta o "
+        "que precisa a `a_ponte_do_radio_pode_subir` e a "
+        "`ha_gravador_de_monitor`; o laudo fica no módulo porque a frase da "
+        "libopus dele tem régua própria."
+    ),
+    "integrations/arranjo_da_mesa.py::adaptadores_da_mesa": (
+        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
+        "ao produto: `adaptadores_da_mesa` é parte da gêmea Python do motor do "
+        "arranjo que nasceu em JavaScript no mockup "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
+        "testes de equivalência "
+        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
+        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
+        "divergência medida na mão "
+        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
+        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
+        "decidiria por ela, e ligá-la também."
+    ),
+    "integrations/arranjo_da_mesa.py::candidatas": (
+        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
+        "ao produto: `candidatas` é parte da gêmea Python do motor do arranjo que "
+        "nasceu em JavaScript no mockup "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
+        "testes de equivalência "
+        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
+        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
+        "divergência medida na mão "
+        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
+        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
+        "decidiria por ela, e ligá-la também."
+    ),
+    "integrations/arranjo_da_mesa.py::consequencias": (
+        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
+        "ao produto: `consequencias` é parte da gêmea Python do motor do arranjo "
+        "que nasceu em JavaScript no mockup "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
+        "testes de equivalência "
+        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
+        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
+        "divergência medida na mão "
+        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
+        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
+        "decidiria por ela, e ligá-la também."
+    ),
+    "integrations/arranjo_da_mesa.py::plano_dos_controles": (
+        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
+        "ao produto: `plano_dos_controles` é parte da gêmea Python do motor do "
+        "arranjo que nasceu em JavaScript no mockup "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
+        "testes de equivalência "
+        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
+        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
+        "divergência medida na mão "
+        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
+        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
+        "decidiria por ela, e ligá-la também."
+    ),
+    "integrations/arranjo_da_mesa.py::qualidade": (
+        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
+        "ao produto: `qualidade` é parte da gêmea Python do motor do arranjo que "
+        "nasceu em JavaScript no mockup "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
+        "testes de equivalência "
+        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
+        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
+        "divergência medida na mão "
+        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
+        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
+        "decidiria por ela, e ligá-la também."
+    ),
+    "integrations/arranjo_da_mesa.py::receita": (
+        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
+        "ao produto: `receita` é parte da gêmea Python do motor do arranjo que "
+        "nasceu em JavaScript no mockup "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
+        "testes de equivalência "
+        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
+        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
+        "divergência medida na mão "
+        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
+        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
+        "decidiria por ela, e ligá-la também."
+    ),
+    "integrations/arranjo_da_mesa.py::reexame": (
+        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
+        "ao produto: `reexame` é parte da gêmea Python do motor do arranjo que "
+        "nasceu em JavaScript no mockup "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
+        "testes de equivalência "
+        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
+        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
+        "divergência medida na mão "
+        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
+        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
+        "decidiria por ela, e ligá-la também."
+    ),
+    "integrations/arranjo_da_mesa.py::sem_entrada": (
+        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
+        "ao produto: `sem_entrada` é parte da gêmea Python do motor do arranjo "
+        "que nasceu em JavaScript no mockup "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
+        "testes de equivalência "
+        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
+        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
+        "divergência medida na mão "
+        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
+        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
+        "decidiria por ela, e ligá-la também."
+    ),
+    "integrations/arranjo_da_mesa.py::variante_por_id": (
+        "29/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01 — não é promessa "
+        "ao produto: `variante_por_id` é parte da gêmea Python do motor do "
+        "arranjo que nasceu em JavaScript no mockup "
+        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, presa a ele pelos "
+        "testes de equivalência "
+        "(`tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py`). A escolha "
+        "entre esta régua e a do `plano_de_radio` é palavra DELA, com a "
+        "divergência medida na mão "
+        "(D-A-REGUA-DO-ARRANJO-SE-DECIDE-COM-A-DIVERGENCIA-NA-MAO, "
+        "`tests/unit/test_as_duas_reguas_do_arranjo_divergem_onde.py`): apagá-la "
+        "decidiria por ela, e ligá-la também."
+    ),
 }
 
 #: As promessas públicas SEM CAMINHO de 12/08/2026 — a dívida, com endereço e
@@ -1429,40 +1578,8 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # MOVER-UM-POR-VEZ-01 (`integrations/central_do_radio.py`, que o daemon sobe
     # em `_start_central_do_radio` e a tela chama por `radio.mover`). O que as
     # lápides diziam dos BOTÕES continua valendo: o gesto da tela é da
-    # TRANSPLANTE-DA-SECAO-01. A do `segundos_ate` fica: a conta da janela é da
-    # tela, e a tela ainda não a chama.
-    # sai com: A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01
-    "integrations/gesto_de_pareamento.py::segundos_ate":
-        "PONTE-SEM-CHAMADOR-01, 20/09/2026. O módulo nasceu para fechar "
-        "a lacuna mais cara desta casa: "
-        "`scripts/bt_ponte_privilegiada.sh` está instalado como root, o "
-        "`/etc/sudoers.d/49-hefesto-bt-ponte` dá `NOPASSWD` aos verbos "
-        "`descobrir` e `parear`, o `hefesto-bt-agent.service` está "
-        "ativo — e nenhum Python os chamava. ONDE O CAMINHO SE PERDE, e "
-        "é UM ponto só: os BOTÕES. A sprint diz, com todas as letras, "
-        "«deixando os botões para depois do OK» dela, porque parear "
-        "ESCREVE no rádio dela com quatro controles vivos em cima, e "
-        "porque o gesto de PS + Create não se automatiza — o botão vira "
-        "um passo a passo com estado, não um clique que aplica. O QUE O "
-        "FECHARIA: os dois botões em "
-        "`src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py`, "
-        "chamando a `JanelaDeBusca` do fio próprio que "
-        "`_pedir_o_exame_de_entrada` já abre nessa mesma aba, depois da "
-        "palavra dela. Esta é a conta da janela que a tela mostra "
-        "enquanto a busca corre, com o relógio por argumento para a "
-        "régua não precisar dormir.",
-    "daemon/subsystems/conexoes.py::ler_o_diario":
-        "A boca do DIZER da CONEXAO-ZUMBI-01. O vigia GRAVA o que aconteceu "
-        "(`_gravar_o_diario`, chamado a cada volta), e esta é a leitura do "
-        "outro lado — a que a aba Conexões usa para mostrar o recado com o "
-        "gesto, em vez de uma recusa seca. ONDE O CAMINHO SE PERDE: a aba "
-        "(`interface/pacotes/a08_conexoes.py`) está FORA da posse desta "
-        "sprint, cuja posse são três arquivos — `scripts/"
-        "bt_ponte_privilegiada.sh`, `integrations/conexao_zumbi.py` e este "
-        "subsystem. O QUE O FECHARIA: uma linha na aba que chame esta "
-        "função e pinte o `diario` do arquivo, que é a terceira camada da "
-        "sprint (VER, CURAR, DIZER). O dado já está no disco desde "
-        "18/09/2026; falta quem o leia na tela.",
+    # TRANSPLANTE-DA-SECAO-01. A do `segundos_ate` saiu com a função em
+    # 29/09/2026: o Conectar aprovado não conta para baixo.
     # sai com: A-HAPTICA-DO-RADIO-OBEDECE-AO-SINAL-DO-JOGO-01
     "integrations/haptica_bt.py::bloco_de_silencio":
         "Irmã da entrada acima, mesma sprint e mesma lacuna: o bloco zerado é "
@@ -1522,189 +1639,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # os três endereços e a receita de três metades. Apagar aqui é o que o
     # contrato deste portão manda quando a acusação some — manter a entrada
     # seria a lápide que ele existe para não deixar envelhecer.
-    #
-    # A COLUNA ATENÇÃO PERDEU A TELA E AS FONTES FICARAM — 07/09/2026.
-    #
-    # Ordem dela: *"em jogar remover essa seção do atenção, nenhum aviso esse —
-    # deixar só o reconectar controles."* A faixa saiu da aba Jogar, e com ela
-    # os quatro endereços (`atencao-conta`, `aviso-selo`, `aviso-texto`,
-    # `aviso-vivo`) saíram de `a01_jogar.DA_PAGINA` — endereço emitido sem
-    # elemento onde pousar é o órfão que o `casamento.py` acusa.
-    #
-    # O QUE ELA NÃO MANDOU SAIR SÃO AS ONZE FONTES. Medido antes de apagar: das
-    # onze de `a01_jogar._avisos`, **só uma** tem segunda casa publicada — o
-    # exame da mesa, que vem da aba Conexões. As outras DEZ chegavam à tela só
-    # por essa faixa, e na máquina dela havia UMA acesa no instante da medição
-    # (`home_actions.texto_do_cadeado_cego`).
-    #
-    # ESTA É A DÍVIDA, e ela está declarada em vez de escondida atrás de um
-    # underscore: `coluna_de_atencao` é a porta por onde a próxima frente pega o
-    # canal pronto. Sem ela, quem for dar casa às dez reescreve de zero as onze
-    # chamadas, os quatro `try` próprios e a escada de gravidade.
-    # sai com: A-TELA-PERGUNTA-AO-DONO-01
-    "interface/pacotes/a01_jogar.py::coluna_de_atencao":
-        "07/09/2026 — o canal dos avisos ficou sem tela por ordem dela, e as "
-        "dez fontes que só ele publicava estão caladas no produto. O caminho se "
-        "perde em UM ponto: nenhuma das dez páginas tem hoje um `data-campo` "
-        "onde a linha pouse. O destino proposto é a aba 09, Sistema — é o que a "
-        "própria frase viva manda ('A aba Sistema diz por quê'), e a página já "
-        "publica uma lista de achados com selo, glifo e frase (`exame-lista`, "
-        "de `a09_sistema`), onde as dez cabem sem peça de tela "
-        "nova. Fecha-se chamando esta função de `a09_sistema.pacote` e "
-        "acrescentando as linhas à lista — `aba09.py` e `a09_sistema.py` são de "
-        "outra posse, e por isso a proposta não virou entrega no mesmo dia.",
-    # O TESTAR VIROU ESTADO E A TELA AINDA NÃO O LÊ — 07/09/2026.
-    #
-    # Pedido dela, com os quatro na bancada: *"o botão Testar tem que ficar em
-    # estado de ligado e ir refletindo os slicers ao vivo comigo"*. As DUAS
-    # metades entraram: o gesto fica ligado (`_EM_TESTE`) e as barras
-    # refrescam o tremor. A que falta é a TERCEIRA — o botão ACESO na tela.
-    #
-    # ONDE O CAMINHO SE PERDE: quem desenha o botão é `interface/aba05.py`, e
-    # quem publica campo por controle é `pacotes/__init__.py:normalizar`.
-    # Nenhum dos dois conhece o teste em curso, porque até hoje não havia
-    # "curso" nenhum — o gesto era um pulso de meio segundo. Fechar isto é
-    # acrescentar o campo ao pacote e o alvo `classe` ao botão, e é trabalho
-    # de tela: pede o navegador aberto, que é a regra desta casa.
-    #
-    # `parar_o_teste` NÃO ESTÁ AQUI de propósito: o gesto `parar` a chama, e
-    # ela tem caminho de produção. Só a LEITURA está órfã.
-    "interface/pacotes/a05_vibracao.py::em_teste":
-        "07/09/2026 — o botão 'Testar' aceso ainda não é publicado à tela. O "
-        "caminho se perde em dois pontos medidos: "
-        "`interface/pacotes/__init__.py:439` (a carga marca lugar VAZIO e "
-        "OCUPADO, e não tem campo para 'em teste') e "
-        "`interface/aba05.py:582` (o botão sai sem alvo `classe`, então nem "
-        "havendo campo a folha teria como vesti-lo). Fecha-se acrescentando o "
-        "campo à carga e o alvo ao gerador — trabalho de tela, com o navegador "
-        "aberto, que é a regra desta casa.",
-    # sai com: O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01
-    'integrations/alto_falante_bt.py::fonte_com_ritmo': (
-        "A BOMBA, 07/09/2026 — dá RITMO a uma fonte que não tem, com prazo absoluto "
-        "por quadro em vez de sono fixo (sono fixo soma o tempo de codificar e "
-        "escrever, e a deriva cresce sem teto). MEDIDO antes de qualquer escrita: "
-        "sem ela, a fonte sintética do ensaio jogaria 2.660 reports/s num degrau "
-        "que pede 50/s — 53 vezes o necessário, num rádio que carrega os outros "
-        "três controles dela. Não seria ensaio, seria inundação. ONDE O CAMINHO SE "
-        "PERDE: o produto não pode chamar isto sem ESCOLHER um arranjo, e a escolha "
-        "é DELA — as duas fontes publicadas divergem sobre onde o áudio mora dentro "
-        "do `0x39` e uma cita a outra. O `AltoFalanteSubsystem` também continua "
-        "fora do `run()` de `daemon/lifecycle.py` e da lista de "
-        "`daemon/subsystems/__init__.py`. O QUE FECHA: o ensaio 1 da "
-        "MESA-DE-QUATRO-01 rodando com a orelha dela "
-        "(`scripts/ensaios/o_som_que_sai.py --escrever --eu-estou-ouvindo`), o "
-        "veredito dela no `docs/data/ensaios.csv`, e só então o arranjo vencedor "
-        "vira caminho de produção. 07/09/2026."
-    ),
-    'integrations/alto_falante_bt.py::common_de_audio': (
-        "O ENVELOPE DE [3..49] DO ENSAIO, 08/09/2026 — os 47 B que PEDEM rota, "
-        "volume e pré-amp, com os três bits de validação ligados. Ele nasceu de "
-        "um defeito MEDIDO: o `--arranjo common-preservado` ia ao fio com 47 "
-        "ZEROS ali, porque `BombaDeSomPeloRadio.um_report` chamava "
-        "`Arranjo.montar` sem `common` e o ramo caía no valor omitido. Um "
-        "`common` zerado tem os bits de validação apagados: não pede nada — e o "
-        "mapa diz que por rádio o kernel não escreve nenhum dos três campos "
-        "(`hid-playstation.c`, gatilho USB-only). Nenhum offset e nenhum bit é "
-        "digitado aqui: os cinco saem de `core/ds_output_report`, o dono deles. "
-        "Alcançado pelo ensaio `scripts/ensaios/o_som_que_sai.py --arranjo "
-        "common-preservado`. ONDE O CAMINHO SE PERDE: o mesmo dos irmãos — o "
-        "produto não pode chamar isto sem ESCOLHER um arranjo, e a escolha é "
-        "DELA, pela orelha, no ensaio de bancada. O QUE FECHA: a passada "
-        "com/sem, e depois dela o `AltoFalanteSubsystem` registrado nos DOIS "
-        "lugares. 08/09/2026."
-    ),
-    'integrations/alto_falante_bt.py::montar_pelos_dois_arranjos': (
-        "SOM-QUE-SAI-01, 06/09/2026 — manda o MESMO PCM pelos DOIS arranjos, que "
-        "é o que a rota corrigida da sprint pede. O chamador em produção só "
-        "existe depois de a orelha dela escolher um (ensaio 1 da "
-        "MESA-DE-QUATRO-01). ONDE O CAMINHO SE PERDE: o `AltoFalanteSubsystem` "
-        "não está no `run()` de `daemon/lifecycle.py` nem na lista de "
-        "`daemon/subsystems/__init__.py`, e os dois estão FORA da posse desta "
-        "sprint (o frontmatter dá três arquivos). O QUE FECHA: registrar o "
-        "subsystem nos DOIS lugares — o próprio `subsystems/__init__.py` avisa "
-        "que acrescentar à lista NÃO liga nada, e foi assim que o "
-        "`BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
-    ),
-    'integrations/alto_falante_bt.py::degrau_para_payload': (
-        "SOM-QUE-SAI-01, 06/09/2026 — o MENOR degrau da escada cujo orçamento "
-        "comporta o payload, lido de TABELA e nunca de aritmética (a fórmula `78 "
-        "+ 64 * (id - 0x31)` dá 590 no `0x39` contra 547). Quem o chamaria é o "
-        "empacotador do D5, que só se escreve depois do D4. ONDE O CAMINHO SE "
-        "PERDE: o `AltoFalanteSubsystem` não está no `run()` de "
-        "`daemon/lifecycle.py` nem na lista de `daemon/subsystems/__init__.py`, e "
-        "os dois estão FORA da posse desta sprint (o frontmatter dá três "
-        "arquivos). O QUE FECHA: registrar o subsystem nos DOIS lugares — o "
-        "próprio `subsystems/__init__.py` avisa que acrescentar à lista NÃO liga "
-        "nada, e foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. "
-        "06/09/2026."
-    ),
-    'integrations/alto_falante_bt.py::sufixo_do_sink_do_som': (
-        "SOM-QUE-SAI-01, 06/09/2026 — o lado LEITOR do nome do nó. O caminho dele "
-        "se perde num segundo lugar, além do subsystem: "
-        "`integrations/fontes_de_captura.py::sinks_dualsense` casa por "
-        "`MARCADORES_DUALSENSE` e nunca devolve `hefesto_som_<hex6>`, e a regra 0 "
-        "de `escolher_fonte` conhece só o prefixo do microfone. O QUE FECHA: o "
-        "leitor aprender o nó de saída, e então o dono do prefixo descer para "
-        "`fontes_de_captura.py` (a regra da casa: o nome mora com quem o LÊ). "
-        "Aquele arquivo está fora da posse desta sprint. ONDE O CAMINHO SE PERDE: "
-        "o `AltoFalanteSubsystem` não está no `run()` de `daemon/lifecycle.py` "
-        "nem na lista de `daemon/subsystems/__init__.py`, e os dois estão FORA da "
-        "posse desta sprint (o frontmatter dá três arquivos). O QUE FECHA: "
-        "registrar o subsystem nos DOIS lugares — o próprio "
-        "`subsystems/__init__.py` avisa que acrescentar à lista NÃO liga nada, e "
-        "foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. 06/09/2026."
-    ),
-    'integrations/alto_falante_bt.py::diagnosticar': (
-        "SOM-QUE-SAI-01, 06/09/2026 — fotografa as pré-condições do nó sem mexer "
-        "em nada (só leitura). O chamador natural é o `doctor` e a tela de "
-        "estado, e nenhum dos dois está na posse desta sprint. ONDE O CAMINHO SE "
-        "PERDE: o `AltoFalanteSubsystem` não está no `run()` de "
-        "`daemon/lifecycle.py` nem na lista de `daemon/subsystems/__init__.py`, e "
-        "os dois estão FORA da posse desta sprint (o frontmatter dá três "
-        "arquivos). O QUE FECHA: registrar o subsystem nos DOIS lugares — o "
-        "próprio `subsystems/__init__.py` avisa que acrescentar à lista NÃO liga "
-        "nada, e foi assim que o `BtMicSubsystem` nasceu órfão em 25/07/2026. "
-        "06/09/2026."
-    ),
-    # AS DUAS DA MESA DE MEDIÇÃO — 06/09/2026, A-VALIDACAO-DOS-QUATRO-01. Elas
-    # nascem declaradas em vez de nascerem esquecidas, e a lápide diz onde o
-    # caminho se perde E o que o fecha, que é o contrato desta lista.
-    #
-    # ONDE O CAMINHO SE PERDE: quem as chamaria é o pacote de cada aba, e hoje
-    # nenhuma aba publica a folha inteira — `monta.svg` PODA a folha das cores
-    # para o modelo pedido (`_so_o_colorway`), e é exatamente essa poda que
-    # `scripts/check_a_cor_vem_do_aparelho.py` conta como dívida da família
-    # `zona` (ver `_fechar_folha` lá: uma folha com os 28 É a tabela dela; uma
-    # folha podada é uma escolha cravada). Hoje quem as chama é o instrumento
-    # `scripts/mesa_de_medicao.py`, e `scripts/` não conta aqui, com razão.
-    #
-    # O QUE FECHA: a aba publicar `folha_das_cores()` UMA vez na página e trocar
-    # os quatro `svg(...)` dela para `folha=False`, com o `data-colorway` de
-    # cada desenho tendo endereço e `data-hef-alvo="atributo"`. São as duas
-    # metades da mesma cura, e o portão da cor as cobra juntas: sem a folha
-    # inteira o alvo de atributo escreve um colorway que nenhuma regra casa e o
-    # desenho cai nos `fill` crus (medido: `rgb(58, 63, 75)`).
-    # sai com: A-TELA-PERGUNTA-AO-DONO-01
-    "interface/monta.py::folha_das_cores": (
-        "A-VALIDACAO-DOS-QUATRO-01, 06/09/2026 — a folha dos 28 modelos, para "
-        "quem põe mais de um desenho na página. ONDE O CAMINHO SE PERDE: "
-        "nenhuma aba publica a folha inteira hoje; todas usam a podada de "
-        "`_so_o_colorway`. O QUE FECHA: a aba publicar esta folha uma vez e "
-        "chamar `svg(..., folha=False)` nos desenhos — é a cura da família "
-        "`zona` de `scripts/check_a_cor_vem_do_aparelho.py`, hoje em 358 no "
-        "publicado, e ela é ATO DELA (`--publicar`)."
-    ),
-    "interface/monta.py::folha_de_realce": (
-        "A-VALIDACAO-DOS-QUATRO-01, 06/09/2026 — a regra CSS que faltava para o "
-        "`apertados=` de `svg()`, órfão desde que nasceu: ele escrevia "
-        "`class=\"marcada\"` e não havia regra `.marcada` em folha nenhuma das "
-        "dez abas. ONDE O CAMINHO SE PERDE: nenhuma aba chama `apertados=` "
-        "ainda — quem o chama é a mesa de medição, em `scripts/`. O QUE FECHA: "
-        "a primeira aba que precisar apontar UMA peça do desenho (a 03 dos "
-        "gatilhos e a 06 da navegação são as candidatas) publicar esta folha e "
-        "passar `apertados=`; a partir daí o realce por peça deixa de ser só do "
-        "instrumento."
-    ),
     # A LÁPIDE DE `primeiro_trecho_banido` SAIU EM 06/09/2026, na costura da
     # ONDA E, e ela previu o próprio fim com o endereço de cada passo: dizia que
     # o chamador natural era o funil `interface/hefesto_vivo.py::_json`, que ele
@@ -1740,18 +1674,8 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # quem chegou primeiro foi o RÁDIO. O cabo continua devendo o gesto, e a
     # razão está no relatório da MIC-VIRTUAL-02: no rádio a ponte é dona do
     # ciclo de vida e sabe FECHAR o canal; no cabo ainda não há quem feche.
-    # `alimentando` FICA por isso mesmo — ela é o estado do alimentador, e o
-    # rádio não usa alimentador nenhum (o fifo é enchido pelo decodificador
-    # Opus, não por um `parec`).
-    # sai com: O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01
-    "integrations/canal_do_microfone.py::alimentando": (
-        "ONDA5-MIC-VIRTUAL-01, 06/09/2026, Passo 2 — `{uniq: nó de onde o áudio "
-        "vem}`, o estado que separa 'o canal existe' de 'o microfone está "
-        "entrando'. ONDE O CAMINHO SE PERDE e O QUE O FECHA: ver a razão de "
-        "`integrations/canal_do_microfone.py::abrir`, que é a porta do módulo — "
-        "esta função só é alcançada depois dela, e cai junto enquanto ela não "
-        "for fiada."
-    ),
+    # `alimentando` ficou por isso até 28/09/2026, e saiu com o plano da janela
+    # (O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01): o alto-falante tem um caminho só.
     # AS TRÊS DA ONDA1-D1 MORRERAM — 04/09/2026, e elas previram o próprio fim.
     # `mic_canal_set`, `frase_do_ato_do_microfone` e `ler_as_duas_camadas`
     # nasceram declaradas AQUI porque a metade de tela era de outra frente da
@@ -1870,96 +1794,12 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # mandou mostrar (*"uma marca na palavra e o motivo no hover"*), e o
     # `mascara-degradou` da aba 02 é o chamador que faltava.
     # sai com: A-TELA-PERGUNTA-AO-DONO-01
-    "app/actions/jogar/painel.py::chips_sem_degrau": (
-        "Os chips que nomeiam uma ponte que a `ESCADA` não tem "
-        "(app/actions/jogar/painel.py:534) — a tela prometendo o que o produto não "
-        "faz, medido de dentro. Ninguém a chama, então a divergência não aparece em "
-        "lugar nenhum. Fecha virando régua da suíte ou linha da aba Sistema. MEDIDO "
-        "em 01/09/2026."
-    ),
-    "app/actions/jogar/painel.py::degraus_sem_chip": (
-        "Os degraus da `ESCADA` que a tela NÃO mostra em lugar nenhum — o código "
-        "devendo à tela, e a frase é do autor (app/actions/jogar/painel.py:566). É "
-        "o outro sentido da `chips_sem_degrau`, e a escada de conexão ganhou dois "
-        "níveis em 31/08 sem que nada conferisse os dois lados. Fecha com ela. "
-        "MEDIDO em 01/09/2026."
-    ),
-    "app/actions/jogar/painel.py::escritor_do_modo": (
-        "Quem APLICA aquele botão, ou o porquê de ninguém aplicar "
-        "(app/actions/jogar/painel.py:274). É a fonte da frase de recusa que a "
-        "regra da casa exige — botão sem dono recusa dizendo. Hoje as recusas da "
-        "aba Jogar são escritas no gesto. Fecha quando o gesto perguntar a ela. "
-        "MEDIDO em 01/09/2026."
-    ),
-    # AS TRÊS DO ALTO-FALANTE VIRTUAL (O-ALTO-FALANTE-VIRTUAL-01, 06/09/2026).
-    # Elas nascem declaradas de propósito, e a dívida tem ENDEREÇO: a sprint
-    # entrega a SUPERFÍCIE (o nome do nó, o id, a rota e o plano de comandos) e
-    # o `nao_toca:` dela cobre o motor; quem executa o plano é a SOM-QUE-SAI-01,
-    # que declara `depois_de: [O-ALTO-FALANTE-VIRTUAL-01]` e cujo `nao_toca:` é
-    # justamente `app/audio_saida.py`. As duas se encontram sem que nenhuma abra
-    # o arquivo da outra — e é por isso que a promessa existe antes do caminho.
-    # sai com: O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01
-    "app/audio_saida.py::no_do_controle": (
-        "O alto-falante virtual de UMA entrada de `state_full.controllers` "
-        "(app/audio_saida.py:1623). É a porta da seção: `plano_de_publicacao` só "
-        "recebe o que sai daqui. "
-        "FATO SUBSTITUÍDO em 09/09/2026 pela SOM-POR-CONTROLE-01: esta entrada "
-        "dizia que o nó se chamava `Alto-falante · P1`…`P4` e citava a linha "
-        "1548, que era esta função e hoje é outra coisa. O nó chama-se "
-        "«Alto-falante do Controle N» (decisão dela, 09/09) e o nome interno "
-        "segue o APARELHO (`hefesto_som_<hex6>`), não o assento — a mesma "
-        "gramática do `hefesto_mic_<hex6>` da MIC-OS-QUATRO-01. "
-        "ONDE O CAMINHO SE PERDE, e a razão encolheu: o nó já sabe do "
-        "transporte e já sobe com loopback, mas as TRÊS linhas de registro do "
-        "daemon (`daemon/subsystems/__init__.py`, `daemon/lifecycle.py`, "
-        "`daemon/connection.py`) ficaram de fora da posse daquela sprint. Até "
-        "elas, `os_nos_de_som_por_controle.py` devolve rc=1 na mesa dela — e "
-        "esse rc=1 é o retrato honesto."
-    ),
-    "app/audio_saida.py::plano_de_publicacao": (
-        "Os comandos `pactl` que põem o nó de pé, ou `argv=()` com a frase de por "
-        "que não há rota (app/audio_saida.py:1758). Ela NÃO executa nada de "
-        "propósito: carregar `module-null-sink` põe um nó na lista de saída dela, "
-        "na sessão viva, e o aceite pela orelha é o ensaio 1 da MESA-DE-QUATRO-01. "
-        "ONDE O CAMINHO SE PERDE: falta o dono do ciclo de vida — quem decide "
-        "quando o nó nasce, quando morre e onde se guarda o índice do módulo "
-        "carregado. FECHA na SOM-QUE-SAI-01, que cria "
-        "`daemon/subsystems/alto_falante.py` para isso. MEDIDO em 06/09/2026."
-    ),
-    "app/audio_saida.py::argv_para_retirar_o_no": (
-        "O `pactl unload-module` que tira da lista de saída um módulo que nós "
-        "publicamos (app/audio_saida.py:1690). Ela é a metade do desfazer, e cai "
-        "junto com `plano_de_publicacao` pelo mesmo motivo: sem alguém guardando o "
-        "índice do módulo não há o que retirar. FECHA com ela, na mesma sprint e "
-        "no mesmo dono. MEDIDO em 06/09/2026."
-    ),
-    # sai com: A-TELA-PERGUNTA-AO-DONO-01
     "app/audio_saida.py::estado_do_sono": (
         "A leitura completa numa frase só, e ela BLOQUEIA — o docstring manda rodar "
         "em worker (app/audio_saida.py:1077). O sono da placa de áudio é a causa "
         "histórica de o alto-falante do controle não funcionar, e a frase existe "
         "para a tela dizer isso. Nenhuma aba a mostra. Fecha quando a Conexões ou a "
         "Sistema a pedirem, em thread. MEDIDO em 01/09/2026."
-    ),
-    "app/telas/vibracao.py::degraus_da_forca": (
-        "As chaves dos quatro degraus, na ordem da tela, lidas do produto "
-        "(app/telas/vibracao.py:77). A aba Vibração já foi ligada e chama três "
-        "funções desta camada; esta ficou de fora — o pacote `a05_vibracao` deriva "
-        "os degraus por conta própria. Fecha quando ele perguntar em vez de "
-        "derivar. MEDIDO em 01/09/2026."
-    ),
-    "app/telas/vibracao.py::estado_da_coluna": (
-        "O estado no formato que `aba05._coluna` desenha, para a REMONTAGEM "
-        "(app/telas/vibracao.py:266). A remontagem de coluna é o caminho que troca "
-        "o bloco inteiro quando a mesa muda; a aba viva pinta campo a campo e nunca "
-        "remonta. Fecha quando a Vibração passar a trocar a coluna. MEDIDO em "
-        "01/09/2026."
-    ),
-    "app/telas/vibracao.py::gesto_do_clique": (
-        "O par (chave, dono) de um gesto que a página mandou "
-        "(app/telas/vibracao.py:290) — a tradução `data-papel`+`data-lado` para "
-        "motor, que o pacote `a05_vibracao` refaz por dentro. Duas verdades sobre o "
-        "mesmo endereço. Fecha quando o gesto delegar. MEDIDO em 01/09/2026."
     ),
     # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
     "core/led_control.py::apply_led_settings": (
@@ -1977,14 +1817,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "a acioná-la. MEDIDO em 01/09/2026."
     ),
     # sai com: A-TELA-PERGUNTA-AO-DONO-01
-    "gui/aba_sistema.py::perfil_do_rotulo": (
-        "O caminho de volta: o que a página mandou vira a chave do produto "
-        "(gui/aba_sistema.py:445). O gesto `perfil-da-mesa` de `a09_sistema.py` faz "
-        "essa tradução por conta própria, com `_teto_do_perfil` — logo há DUAS "
-        "traduções da mesma coisa, e esta é a do produto. Fecha quando o gesto "
-        "delegar a ela, como já delega a pintura para `aba_sistema.pacote`. MEDIDO "
-        "em 01/09/2026."
-    ),
     "interface/mesa_viva.py::estado_do_card": (
         "O estado de UM card da mesa — mic, volume, canal, rota "
         "(interface/mesa_viva.py:431). O único chamador é o `controles_vivos.py`, o "
@@ -1993,68 +1825,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "do card por outro caminho, e são duas verdades sobre o mesmo dado. Fecha "
         "quando o pacote da aba Controles delegar a ela, como o da Sistema já "
         "delega a `gui/aba_sistema.pacote`. MEDIDO em 01/09/2026."
-    ),
-    "interface/pacotes/daemon.py::confere": (
-        "Os métodos citados que o daemon NÃO atende "
-        "(interface/pacotes/daemon.py:76). É a porta que o produto usaria para "
-        "dizer na tela que aquele botão não tem quem atenda; hoje quem a usa é a "
-        "régua dos botões. Fecha no mesmo lugar que a irmã do inventário. "
-        "MEDIDO em 01/09/2026."
-    ),
-    "interface/pacotes/daemon.py::metodos": (  # (noqa-acento) nome de função
-        "O inventário do que o daemon atende, lido do `ipc_server.py` "
-        "(interface/pacotes/daemon.py:39). Hoje só a RÉGUA o consulta "
-        "(`tests/unit/test_os_botoes_tem_dono.py`), e régua não conta. Fecha quando "
-        "o despachante recusar em tempo de execução o gesto que cita método "
-        "inexistente, em vez de deixar o clique morrer no timeout do socket. MEDIDO "
-        "em 01/09/2026."
-    ),
-    "interface/pacotes/daemon.py::parametros": (
-        "Os `params.get()` que o handler daquele método lê, na ordem "
-        "(interface/pacotes/daemon.py:49). Irmã do inventário, e com o mesmo "
-        "caminho faltando: só a régua a chama. Fecha junto com ela, na recusa em "
-        "tempo de execução. MEDIDO em 01/09/2026."
-    ),
-    # `mapa.py::canal` VOLTOU EM 07/09/2026, pela porta da frente, e o dia que
-    # a nota de 06/09 marcava chegou exatamente como ela previa.
-    #
-    # A NOTA DIZIA: *"volta para esta lista no dia em que alguém tirar o
-    # `fatos_do_mapa` do fecho da interface"*. A entrada saíra por um PONTO CEGO,
-    # não por cura — a aba Controles importava `app/fatos_do_mapa.py`, 308
-    # entradas com a chave `'canal'` em cada uma, e o literal de texto casava com
-    # QUALQUER símbolo de mesmo nome pela referência PLANA. A lápide passou a
-    # "ter caminho" sem uma linha de chamada.
-    #
-    # O QUE MUDOU: a janela GTK saiu inteira em 06/09 e levou junto
-    # `app/actions/config/secao_controles.py` para fora do alcance dos
-    # `_PONTOS_DE_ENTRADA`. Sem ele, o literal sumiu do fecho e a régua voltou a
-    # enxergar o que sempre foi verdade — NINGUÉM CHAMA `mapa.canal`.
-    #
-    # A LACUNA NUNCA FECHOU, e é a mesma de 01/09: a Vibração e os Gatilhos ainda
-    # não apagam o que o transporte de agora não aciona. Fecha com a `confere` e
-    # a `da_familia`, abaixo, que são as outras duas metades do mesmo gesto.
-    "interface/pacotes/mapa.py::canal": (
-        "O que o mapa de canais diz sobre uma peça naquele transporte "
-        "(interface/pacotes/mapa.py:48) — a fonte de endereço que impede o valor "
-        "de tela inventado. Existe para a tela PERGUNTAR, e nenhuma aba pergunta "
-        "ainda. Fecha quando a Vibração e os Gatilhos apagarem o que o transporte "
-        "de agora não aciona. MEDIDO em 01/09/2026; a saída de 06/09 foi ponto "
-        "cego da referência plana, não cura — ver a nota acima."
-    ),
-    "interface/pacotes/mapa.py::confere": (
-        "As chaves que NÃO existem no mapa (interface/pacotes/mapa.py:90) — a "
-        "recusa a inventar valor de tela sem linha no CSV, que o docstring do "
-        "despachante nomeia como regra: um valor de tela sem linha lá é um valor "
-        "sem dono. Só a régua a chama. Fecha quando a Vibração e os Gatilhos "
-        "passarem a apagar o que o transporte de agora não aciona — que era a "
-        "condição da `canal`, e continua aberta (ver a nota acima). MEDIDO em "
-        "01/09/2026."
-    ),
-    "interface/pacotes/mapa.py::da_familia": (
-        "As chaves de uma família do mapa de canais — `luz`, `gatilho`, `vibracao`, "
-        "`audio` (interface/pacotes/mapa.py:71). Mesma lacuna que a `canal` "
-        "descrevia: existe para a tela perguntar, e nenhuma aba pergunta. Fecha "
-        "com a `confere`. MEDIDO em 01/09/2026."
     ),
     # `ponte.py::chamar_detalhado` MORAVA AQUI e SAIU em 06/09/2026, pela
     # `ONDA5-09-02`. A lápide dizia *"nenhum dos 50 gestos a usa… fecha quando
@@ -2065,12 +1835,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # sobre zero byte. Medido do outro lado do IPC, com o socket de mentira.
     # A lápide sai INTEIRA em vez de virar nota: ela descrevia uma ausência que
     # acabou — não uma decisão que caducou.
-    "profiles/sanidade.py::verificar_perfis_do_disco": (
-        "Carrega o diretório de perfis do XDG e verifica "
-        "(profiles/sanidade.py:366). A verificação de sanidade dos perfis existe e "
-        "nada no produto a roda — nem o `doctor`, nem a aba Perfis. Fecha quando o "
-        "exame da aba Sistema ou o `doctor` a chamarem. MEDIDO em 01/09/2026."
-    ),
     # `painel.py::hefesto_ligado` e `painel.py::modo_lembrado` MORAVAM AQUI e
     # SAÍRAM em 03/09/2026, pelo mesmo motivo das duas de `jogar_vivo`: o
     # caminho nasceu e a lápide ficou. Quem as alcança é
@@ -2079,325 +1843,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # lançadores abrem. A cura de `hefesto_ligado` é literalmente a que a lápide
     # pedia (*"fecha quando alguém perguntar a ela — é a dona do terceiro
     # estado"*); a de `modo_lembrado` é a lembrança do opt-out chegando à tela.
-    "app/actions/jogar/painel.py::indice_do_chip": (
-        "A posição de um chip na `ponte_escada.ESCADA` "
-        "(app/actions/jogar/painel.py:524). É a peça das duas conferências abaixo "
-        "(`chips_sem_degrau`, `degraus_sem_chip`), e sai da dívida junto com elas. "
-        "MEDIDO em 01/09/2026."
-    ),
-    "core/led_control.py::player_bitmask": (
-        "Converte as cinco lâmpadas em bitmask 0-31 (core/led_control.py:83). O "
-        "produto manda `bits` por `led.player_set`, e quem os monta hoje é cada "
-        "chamador. Fecha quando a aba Iluminação montar o padrão por aqui. MEDIDO "
-        "em 01/09/2026."
-    ),
-    # sai com: A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01
-    "integrations/hidraw_broker_client.py::estado_do_grab": (
-        "Devolve se o `EVIOCGRAB` de um nó evdev está livre ou outro processo o "
-        "segura (integrations/hidraw_broker_client.py:689). São as quatro frases "
-        "que explicam POR QUE um controle não responde — a diferença entre 'não "
-        "funciona' e 'outro processo está segurando este nó'. Nenhuma tela as "
-        "mostra: a aba Conexões diz o resultado e não a causa. Fecha quando o exame "
-        "da Conexões passar a perguntar por elas. MEDIDO em 01/09/2026."
-    ),
-    "integrations/hidraw_broker_client.py::leitura_de_zero": (
-        "Devolve o que escrever numa célula que contou ZERO — e isso DEPENDE do "
-        "grab (integrations/hidraw_broker_client.py:744). São as quatro frases que "
-        "explicam POR QUE um controle não responde — a diferença entre 'não "
-        "funciona' e 'outro processo está segurando este nó'. Nenhuma tela as "
-        "mostra: a aba Conexões diz o resultado e não a causa. Fecha quando o exame "
-        "da Conexões passar a perguntar por elas. MEDIDO em 01/09/2026."
-    ),
-    "integrations/hidraw_broker_client.py::linha_do_grab": (
-        "Devolve a linha de cabeçalho do grab, no mesmo formato da porta "
-        "(integrations/hidraw_broker_client.py:739). São as quatro frases que "
-        "explicam POR QUE um controle não responde — a diferença entre 'não "
-        "funciona' e 'outro processo está segurando este nó'. Nenhuma tela as "
-        "mostra: a aba Conexões diz o resultado e não a causa. Fecha quando o exame "
-        "da Conexões passar a perguntar por elas. MEDIDO em 01/09/2026."
-    ),
-    "integrations/hidraw_broker_client.py::porta_provavel": (
-        "Devolve `(porta, motivo)` ANTES de abrir nada, para o cabeçalho do "
-        "relatório (integrations/hidraw_broker_client.py:661). São as quatro frases "
-        "que explicam POR QUE um controle não responde — a diferença entre 'não "
-        "funciona' e 'outro processo está segurando este nó'. Nenhuma tela as "
-        "mostra: a aba Conexões diz o resultado e não a causa. Fecha quando o exame "
-        "da Conexões passar a perguntar por elas. MEDIDO em 01/09/2026."
-    ),
-    "gui/aba_conexoes.py::chave_da_mesa": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`gui/aba_conexoes.py` — a função que a interface nova chama, ou chamará."
-        "Ainda NÃO tem chamador: a aba que a usaria não foi ligada. É dívida com"
-        "dono — a próxima leva que ligar essa aba a apaga daqui."
-    ),
-    "gui/aba_conexoes.py::gesto_valido": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`gui/aba_conexoes.py` — a função que a interface nova chama, ou chamará."
-        "Ainda NÃO tem chamador: a aba que a usaria não foi ligada. É dívida com"
-        "dono — a próxima leva que ligar essa aba a apaga daqui."
-    ),
-    "gui/aba_conexoes.py::pintura": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`gui/aba_conexoes.py` — a função que a interface nova chama, ou chamará."
-        "Ainda NÃO tem chamador: a aba que a usaria não foi ligada. É dívida com"
-        "dono — a próxima leva que ligar essa aba a apaga daqui."
-    ),
-    "gui/aba_conexoes.py::sobraram": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`gui/aba_conexoes.py` — a função que a interface nova chama, ou chamará."
-        "Ainda NÃO tem chamador: a aba que a usaria não foi ligada. É dívida com"
-        "dono — a próxima leva que ligar essa aba a apaga daqui."
-    ),
-    "integrations/censo_do_gabinete.py::ler_o_gabinete": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`integrations/censo_do_gabinete.py` — a função que a interface nova"
-        "chama, ou chamará. Ainda NÃO tem chamador: a aba que a usaria não foi"
-        "ligada. É dívida com dono — a próxima leva que ligar essa aba a apaga"
-        "daqui."
-    ),
-    "integrations/censo_do_gabinete.py::preservar_o_que_ela_disse": (
-        "MEDIDO em 01/09/2026. É a PORTA da camada de tela de"
-        "`integrations/censo_do_gabinete.py` — a função que a interface nova"
-        "chama, ou chamará. Ainda NÃO tem chamador: a aba que a usaria não foi"
-        "ligada. É dívida com dono — a próxima leva que ligar essa aba a apaga"
-        "daqui."
-    ),
-    # --- 25/08/2026: `core/physical_report_reader.py` nasceu nesta madrugada, e ainda não tem tela
-    # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
-    "core/physical_report_reader.py::extract_motion_window": (
-        "MEDIDO em 25/08/2026, na DAEMON-ACORDADO-01. Faz parte da "
-        "investigação dos **15,2% de um núcleo com ninguém jogando** (6.393 "
-        "chamadas `read` por segundo com quatro controles parados). ONDE O "
-        "CAMINHO SE PERDE: a função foi extraída para poder ser MEDIDA sem "
-        "aparelho — o laço vivo ainda usa o caminho antigo. O QUE A FECHA: a "
-        "troca do laço pelo caminho medido, que precisa da bancada dela para "
-        "confirmar que a conta baixou no processo vivo. "
-    ),
-    # --- `integrations/arranjo_da_mesa.py`: o motor GANHOU TELA em 26/08/2026,
-    # e destas 37 lápides sobraram NOVE. A janela do mapa
-    # (`app/widgets/mapa_da_mesa.py`) passou a montar a `Mesa` por
-    # `mapa_das_portas.mesa_do_motor` e a chamar `julgar` em cada quadrado; com o
-    # módulo alcançado, todo símbolo que ele usa por dentro ganhou chamador de
-    # produção junto. As nove que ficam são as que NADA alcança, nem de fora nem
-    # de dentro: a RECEITA (o que mover para onde), as VARIANTES, o reexame e a
-    # conta de slots. A razão de cada uma está corrigida abaixo.
-    #
-    # A `::Entrada` já havia saído antes, por um motivo do INSTRUMENTO e não do
-    # produto: `app/widgets/calibrar_entradas.py` tem `PALAVRA_DA_ENTRADA =
-    # "Entrada"`, e pela armadilha 1 do topo deste arquivo todo literal de texto
-    # de `src/` é quebrado em PALAVRAS — a palavra num rótulo de tela satisfazia
-    # o símbolo. Fica registrado porque é o tipo de perdão que este portão dá
-    # calado, e quem ler a contagem precisa saber que uma das 37 caiu por isso.
-    # sai com: A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01
-    "integrations/arranjo_da_mesa.py::adaptadores_da_mesa": (
-        "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
-        "do motor que rodava só dentro do mockup "
-        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, com 114 testes "
-        "de equivalência que rodam o original em `node`. "
-        "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
-        "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
-        "a `Mesa` por `mapa_das_portas.mesa_do_motor` e chama `julgar` em cada "
-        "quadrado, e 28 lápides deste registro caíram junto. "
-        "ONDE O CAMINHO SE PERDE: o que a janela ligou é o JUÍZO POR ENTRADA "
-        "(aqui serve, aqui não, e por quê). A RECEITA — o que mover para onde "
-        "—, as VARIANTES, o reexame e a conta de slots continuam sem tela, e "
-        "não é descuido: a `D-QUAL-REGUA-MANDA-NO-ARRANJO` diz que a escolha "
-        "entre as duas réguas do arranjo é palavra DELA, a medição que ela "
-        "pediu está em `tests/unit/test_as_duas_reguas_do_arranjo_divergem_"
-        "onde.py`, e ela ainda não escolheu. "
-        "O QUE O FECHA: a ordem de serviço da aba Conexões, depois da palavra "
-        "dela sobre qual régua vence. "
-    ),
-    "integrations/arranjo_da_mesa.py::candidatas": (
-        "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
-        "do motor que rodava só dentro do mockup "
-        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, com 114 testes "
-        "de equivalência que rodam o original em `node`. "
-        "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
-        "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
-        "a `Mesa` por `mapa_das_portas.mesa_do_motor` e chama `julgar` em cada "
-        "quadrado, e 28 lápides deste registro caíram junto. "
-        "ONDE O CAMINHO SE PERDE: o que a janela ligou é o JUÍZO POR ENTRADA "
-        "(aqui serve, aqui não, e por quê). A RECEITA — o que mover para onde "
-        "—, as VARIANTES, o reexame e a conta de slots continuam sem tela, e "
-        "não é descuido: a `D-QUAL-REGUA-MANDA-NO-ARRANJO` diz que a escolha "
-        "entre as duas réguas do arranjo é palavra DELA, a medição que ela "
-        "pediu está em `tests/unit/test_as_duas_reguas_do_arranjo_divergem_"
-        "onde.py`, e ela ainda não escolheu. "
-        "O QUE O FECHA: a ordem de serviço da aba Conexões, depois da palavra "
-        "dela sobre qual régua vence. "
-    ),
-    "integrations/arranjo_da_mesa.py::consequencias": (
-        "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
-        "do motor que rodava só dentro do mockup "
-        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, com 114 testes "
-        "de equivalência que rodam o original em `node`. "
-        "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
-        "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
-        "a `Mesa` por `mapa_das_portas.mesa_do_motor` e chama `julgar` em cada "
-        "quadrado, e 28 lápides deste registro caíram junto. "
-        "ONDE O CAMINHO SE PERDE: o que a janela ligou é o JUÍZO POR ENTRADA "
-        "(aqui serve, aqui não, e por quê). A RECEITA — o que mover para onde "
-        "—, as VARIANTES, o reexame e a conta de slots continuam sem tela, e "
-        "não é descuido: a `D-QUAL-REGUA-MANDA-NO-ARRANJO` diz que a escolha "
-        "entre as duas réguas do arranjo é palavra DELA, a medição que ela "
-        "pediu está em `tests/unit/test_as_duas_reguas_do_arranjo_divergem_"
-        "onde.py`, e ela ainda não escolheu. "
-        "O QUE O FECHA: a ordem de serviço da aba Conexões, depois da palavra "
-        "dela sobre qual régua vence. "
-    ),
-    "integrations/arranjo_da_mesa.py::plano_dos_controles": (
-        "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
-        "do motor que rodava só dentro do mockup "
-        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, com 114 testes "
-        "de equivalência que rodam o original em `node`. "
-        "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
-        "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
-        "a `Mesa` por `mapa_das_portas.mesa_do_motor` e chama `julgar` em cada "
-        "quadrado, e 28 lápides deste registro caíram junto. "
-        "ONDE O CAMINHO SE PERDE: o que a janela ligou é o JUÍZO POR ENTRADA "
-        "(aqui serve, aqui não, e por quê). A RECEITA — o que mover para onde "
-        "—, as VARIANTES, o reexame e a conta de slots continuam sem tela, e "
-        "não é descuido: a `D-QUAL-REGUA-MANDA-NO-ARRANJO` diz que a escolha "
-        "entre as duas réguas do arranjo é palavra DELA, a medição que ela "
-        "pediu está em `tests/unit/test_as_duas_reguas_do_arranjo_divergem_"
-        "onde.py`, e ela ainda não escolheu. "
-        "O QUE O FECHA: a ordem de serviço da aba Conexões, depois da palavra "
-        "dela sobre qual régua vence. "
-    ),
-    "integrations/arranjo_da_mesa.py::qualidade": (
-        "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
-        "do motor que rodava só dentro do mockup "
-        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, com 114 testes "
-        "de equivalência que rodam o original em `node`. "
-        "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
-        "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
-        "a `Mesa` por `mapa_das_portas.mesa_do_motor` e chama `julgar` em cada "
-        "quadrado, e 28 lápides deste registro caíram junto. "
-        "ONDE O CAMINHO SE PERDE: o que a janela ligou é o JUÍZO POR ENTRADA "
-        "(aqui serve, aqui não, e por quê). A RECEITA — o que mover para onde "
-        "—, as VARIANTES, o reexame e a conta de slots continuam sem tela, e "
-        "não é descuido: a `D-QUAL-REGUA-MANDA-NO-ARRANJO` diz que a escolha "
-        "entre as duas réguas do arranjo é palavra DELA, a medição que ela "
-        "pediu está em `tests/unit/test_as_duas_reguas_do_arranjo_divergem_"
-        "onde.py`, e ela ainda não escolheu. "
-        "O QUE O FECHA: a ordem de serviço da aba Conexões, depois da palavra "
-        "dela sobre qual régua vence. "
-    ),
-    "integrations/arranjo_da_mesa.py::receita": (
-        "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
-        "do motor que rodava só dentro do mockup "
-        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, com 114 testes "
-        "de equivalência que rodam o original em `node`. "
-        "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
-        "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
-        "a `Mesa` por `mapa_das_portas.mesa_do_motor` e chama `julgar` em cada "
-        "quadrado, e 28 lápides deste registro caíram junto. "
-        "ONDE O CAMINHO SE PERDE: o que a janela ligou é o JUÍZO POR ENTRADA "
-        "(aqui serve, aqui não, e por quê). A RECEITA — o que mover para onde "
-        "—, as VARIANTES, o reexame e a conta de slots continuam sem tela, e "
-        "não é descuido: a `D-QUAL-REGUA-MANDA-NO-ARRANJO` diz que a escolha "
-        "entre as duas réguas do arranjo é palavra DELA, a medição que ela "
-        "pediu está em `tests/unit/test_as_duas_reguas_do_arranjo_divergem_"
-        "onde.py`, e ela ainda não escolheu. "
-        "O QUE O FECHA: a ordem de serviço da aba Conexões, depois da palavra "
-        "dela sobre qual régua vence. "
-    ),
-    "integrations/arranjo_da_mesa.py::reexame": (
-        "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
-        "do motor que rodava só dentro do mockup "
-        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, com 114 testes "
-        "de equivalência que rodam o original em `node`. "
-        "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
-        "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
-        "a `Mesa` por `mapa_das_portas.mesa_do_motor` e chama `julgar` em cada "
-        "quadrado, e 28 lápides deste registro caíram junto. "
-        "ONDE O CAMINHO SE PERDE: o que a janela ligou é o JUÍZO POR ENTRADA "
-        "(aqui serve, aqui não, e por quê). A RECEITA — o que mover para onde "
-        "—, as VARIANTES, o reexame e a conta de slots continuam sem tela, e "
-        "não é descuido: a `D-QUAL-REGUA-MANDA-NO-ARRANJO` diz que a escolha "
-        "entre as duas réguas do arranjo é palavra DELA, a medição que ela "
-        "pediu está em `tests/unit/test_as_duas_reguas_do_arranjo_divergem_"
-        "onde.py`, e ela ainda não escolheu. "
-        "O QUE O FECHA: a ordem de serviço da aba Conexões, depois da palavra "
-        "dela sobre qual régua vence. "
-    ),
-    "integrations/arranjo_da_mesa.py::sem_entrada": (
-        "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
-        "do motor que rodava só dentro do mockup "
-        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, com 114 testes "
-        "de equivalência que rodam o original em `node`. "
-        "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
-        "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
-        "a `Mesa` por `mapa_das_portas.mesa_do_motor` e chama `julgar` em cada "
-        "quadrado, e 28 lápides deste registro caíram junto. "
-        "ONDE O CAMINHO SE PERDE: o que a janela ligou é o JUÍZO POR ENTRADA "
-        "(aqui serve, aqui não, e por quê). A RECEITA — o que mover para onde "
-        "—, as VARIANTES, o reexame e a conta de slots continuam sem tela, e "
-        "não é descuido: a `D-QUAL-REGUA-MANDA-NO-ARRANJO` diz que a escolha "
-        "entre as duas réguas do arranjo é palavra DELA, a medição que ela "
-        "pediu está em `tests/unit/test_as_duas_reguas_do_arranjo_divergem_"
-        "onde.py`, e ela ainda não escolheu. "
-        "O QUE O FECHA: a ordem de serviço da aba Conexões, depois da palavra "
-        "dela sobre qual régua vence. "
-    ),
-    "integrations/arranjo_da_mesa.py::variante_por_id": (
-        "MEDIDO em 25/08/2026, CORRIGIDO em 26/08/2026: portado byte a byte "
-        "do motor que rodava só dentro do mockup "
-        "`mockup/congelados/2026-08-24-mapa-das-portas.html`, com 114 testes "
-        "de equivalência que rodam o original em `node`. "
-        "O FATO ERRADO QUE SAIU: esta razão dizia *nenhuma tela o consome "
-        "ainda*, e isso deixou de ser verdade em 26/08 — a janela do mapa monta "
-        "a `Mesa` por `mapa_das_portas.mesa_do_motor` e chama `julgar` em cada "
-        "quadrado, e 28 lápides deste registro caíram junto. "
-        "ONDE O CAMINHO SE PERDE: o que a janela ligou é o JUÍZO POR ENTRADA "
-        "(aqui serve, aqui não, e por quê). A RECEITA — o que mover para onde "
-        "—, as VARIANTES, o reexame e a conta de slots continuam sem tela, e "
-        "não é descuido: a `D-QUAL-REGUA-MANDA-NO-ARRANJO` diz que a escolha "
-        "entre as duas réguas do arranjo é palavra DELA, a medição que ela "
-        "pediu está em `tests/unit/test_as_duas_reguas_do_arranjo_divergem_"
-        "onde.py`, e ela ainda não escolheu. "
-        "O QUE O FECHA: a ordem de serviço da aba Conexões, depois da palavra "
-        "dela sobre qual régua vence. "
-    ),
-    # --- 25/08/2026: `integrations/entradas_do_gabinete.py` nasceu nesta
-    #     madrugada, e ainda não tem tela que o consuma
-    # --- 25/08/2026: `integrations/lugar_declarado.py` nasceu nesta madrugada, e ainda não tem tela
-    "integrations/lugar_declarado.py::declarar_a_mesa": (
-        "MEDIDO em 25/08/2026: a CAL-2 da calibração. Existe para curar um "
-        "defeito nomeado: hoje o ÚNICO escritor do `maquina.json` é o IPC "
-        "`machine.declare`, logo **com o daemon parado nada do que ela "
-        "declara chega ao disco** — o rodapé responde 'O Hefesto está "
-        "desligado, não gravei o que você declarou'. Este módulo liga o "
-        "`gravar_rascunho_da_mesa`, que estava escrito desde 24/08 e nunca "
-        "teve chamador. ONDE O CAMINHO SE PERDE: quem o chamaria é a janela "
-        "de calibração, que é da leva seguinte. O QUE O FECHA: a CAL-3. "
-    ),
-    # --- 25/08/2026: `integrations/mapa_das_portas.py` nasceu nesta madrugada, e ainda não tem tela
-    "integrations/mapa_das_portas.py::incoerencias": (
-        "MEDIDO em 25/08/2026: as quatro funções de junção da CONEXOES- "
-        "MAPA-2D-01 (`portas_livres`, `vizinhas_de_verdade`, `incoerencias`, "
-        "`porta_do_adaptador`). Prontas e testadas. ONDE O CAMINHO SE PERDE: "
-        "quem as consome é a ORDEM-DE-SERVICO-01, que rodou na MESMA "
-        "madrugada, e as tarefas de tela dela pararam no olho dela (D3). O "
-        "QUE O FECHA: as frases da ordem de serviço na aba Conexões. A sprint "
-        "do mapa manda explicitamente que a Frente B consuma "
-        "`vizinhas_de_verdade` em vez de mexer em "
-        "`mesa_de_radio.vizinhancas_apertadas`, porque a porta-filha (o "
-        "extensor) muda o cálculo de vizinhança. "
-    ),
-    "integrations/mapa_das_portas.py::porta_do_adaptador": (
-        "MEDIDO em 25/08/2026: as quatro funções de junção da CONEXOES- "
-        "MAPA-2D-01 (`portas_livres`, `vizinhas_de_verdade`, `incoerencias`, "
-        "`porta_do_adaptador`). Prontas e testadas. ONDE O CAMINHO SE PERDE: "
-        "quem as consome é a ORDEM-DE-SERVICO-01, que rodou na MESMA "
-        "madrugada, e as tarefas de tela dela pararam no olho dela (D3). O "
-        "QUE O FECHA: as frases da ordem de serviço na aba Conexões. A sprint "
-        "do mapa manda explicitamente que a Frente B consuma "
-        "`vizinhas_de_verdade` em vez de mexer em "
-        "`mesa_de_radio.vizinhancas_apertadas`, porque a porta-filha (o "
-        "extensor) muda o cálculo de vizinhança. "
-    ),
     # --- 26/08/2026: AS CINCO LÁPIDES DO CATÁLOGO DE ORDENS CAÍRAM.
     # A ORDEM-5 e a ORDEM-6 fecharam na leva 2
     # (`app/actions/config/secao_exame.py`): o card de ordem ganhou
@@ -2407,25 +1852,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # adaptadores de mesmo `vid:pid` pelo serial para que o produto não
     # diga "Confirmei" sem saber qual dos dois ela moveu.
     # A mordida está em `test_a_dispensa_volta_quando_o_arranjo_muda.py`.
-    # `portas_do_barramento.py` é a camada de sysfs que `ordens_da_mesa`
-    # consome. Ela tem chamador de produção (`mesmo_hub_fisico` importa
-    # `hubs_do_mesmo_plastico` desde 25/08), mas esse chamador é o próprio
-    # catálogo — que também não chega à tela. Cai tudo junto, e pela mesma
-    # ORDEM-4/ORDEM-5.
-    "integrations/portas_do_barramento.py::mesmo_hub_fisico": (
-        "MEDIDO em 25/08/2026: a pergunta de plástico em forma de par de "
-        "caminhos. Cai junto com o catálogo de ordens, que é quem a consumiria "
-        "até a tela."
-    ),
-    "integrations/portas_do_barramento.py::mesmo_soquete_fisico": (
-        "MEDIDO em 25/08/2026: o caso em que 'mude um dos dois de entrada' é a "
-        "ordem errada. Cai junto com o catálogo de ordens, que é quem a "
-        "consumiria até a tela."
-    ),
-    "integrations/portas_do_barramento.py::livres_fora_de": (
-        "MEDIDO em 25/08/2026: a contra-regra de R3 virada em função. Cai junto "
-        "com o catálogo de ordens, que é quem a consumiria até a tela."
-    ),
     # --- 25/08/2026: TRÊS CURAS DA ONDA 0 NASCERAM SEM CHAMADOR
     # Achado por quem coordena a leva de 25/08, ao consertar duas lápides
     # caducas e ver o portão apontar outros quatro símbolos. Cada um destes é
@@ -2469,21 +1895,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # chamá-lo. A razão antiga dizia "as abas continuam formatando número à
     # mão"; era exatamente isso, e é isso que deixou de valer. Não se guarda a
     # entrada velha ao lado da nova.
-    # sai com: A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01
-    "app/fala_do_mapa.py::Numero": (
-        "MEDIDO em 25/08/2026, e REMEDIDO em 26/08 — quando a irmã dele "
-        "(`formata_pt_br`) GANHOU CAMINHO e saiu daqui, e ele NÃO caiu junto. "
-        "A razão antiga dizia 'cai junto com ela'; era um palpite, e a medição "
-        "o derrubou. Ele é o tipo que amarra uma constante Python medida a uma "
-        "célula em prosa do mapa (`fala_do_mapa.py`:200-222). "
-        "ONDE O CAMINHO SE PERDE: quem publica os números medidos é a tupla "
-        "crua `NUMEROS_MEDIDOS_NO_MAPA` de `integrations/radio_da_mesa.py`:153-157, "
-        "com os mesmos quatro campos e nenhum construtor que os valide — o "
-        "`__post_init__` do `Numero` nunca roda sobre ela. "
-        "O QUE A FECHA: aquela tupla virar uma tupla de `Numero`. NÃO fiz na "
-        "L3-F porque `integrations/radio_da_mesa.py` não é posse dela (regra "
-        "R-A da leva de 26/08). DONO: quem tocar o medidor de rádio."
-    ),
     # `resolver_teclado_emulado` SAIU DAQUI em 17/09/2026 — POINT-AND-CLICK-01.
     # A lápide dizia "nenhum caminho de produção a executa", e era verdade por
     # 24 dias: a T14 entregou o campo e a régua, não o fio. O fio é
@@ -2497,21 +1908,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # chama e publica a linha do hub em comum. A razão antiga dizia "NÃO fiz
     # porque é texto novo na tela"; o texto entrou marcado `PROVISÓRIO — decisão
     # dela`, que é o caminho que a R-E da leva abriu para não travar a frente.
-    "integrations/censo_do_barramento.py::filhos_de": (
-        "MEDIDO em 23/08/2026, e REMEDIDO em 26/08: continua sem chamador de "
-        "produção. Ela responde 'quem pendura DIRETAMENTE neste nó, em ordem "
-        "de porta', que é a pergunta de baixo da linha do hub em comum — o que "
-        "separa 'três adaptadores num hub sobrando' de 'três adaptadores num "
-        "hub com webcam e HD externo'. "
-        "ONDE O CAMINHO SE PERDE: a linha do hub que a L2-E plantou em 26/08 "
-        "conta os ADAPTADORES e o destino, e não diz o que MAIS divide o hub; "
-        "a seção continua sem widget onde uma lista de vizinhos caberia. "
-        "O QUE A FECHA: uma segunda frase nessa mesma linha, dizendo quem mais "
-        "está no hub. NÃO fiz na L2-E porque é frase nova de tela além da que "
-        "a ordem daquela frente pediu, e cada frase provisória a mais é uma "
-        "decisão a mais na fila dela. DONO: a frente do léxico, ou quem "
-        "coordenar a leva que fizer a prova de tela desta linha."
-    ),
     # fica: a decisão D-COSTURA-BLUEZ (25/08) deixa o script dono do alias,
     # e dar chamador a esta função é regressão
     "integrations/apelido_do_dongle.py::costurar_a_mesa": (
@@ -2549,45 +1945,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # dívida de caminho, e não é aqui que se registra.
     # --- a família mais numerosa: o desligar que ninguém chama --------------
     # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
-    "daemon/subsystems/ipc.py::stop_ipc": (
-        "REMEDIDO em 26/08/2026, e a razão de 12/08 estava ERRADA. Ela dizia "
-        "que o `shutdown` não derrubava o servidor de IPC e mandava a próxima "
-        "pessoa caçar um defeito vivo; o endereço que citava "
-        "(connection.py:824-903) nem existe mais. O `shutdown` está em "
-        "`daemon/connection.py:1406` e derruba o IPC ele mesmo, em linha: "
-        "`await asyncio.wait_for(daemon._ipc_server.stop(), timeout=2.0)` "
-        "(`:1364`) e `daemon._ipc_server = None` (`:1365`). "
-        "ONDE O CAMINHO SE PERDE: não há caminho perdido — há DUPLICAÇÃO. "
-        "Esta utilitária faz exatamente o que aquelas duas linhas fazem, e só "
-        "`tests/` a chama. "
-        "O QUE A FECHA: a mesma decisão de desenho de sempre, agora com o "
-        "preço certo na mesa — ou o `shutdown` passa a delegar às três "
-        "utilitárias (e ganha o teto de 2 s num lugar só), ou as três somem e "
-        "o `shutdown` segue dono único do desligar. Não é urgência: nada fica "
-        "de pé hoje por causa disto."
-    ),
-    "daemon/subsystems/udp.py::stop_udp": (
-        "REMEDIDO em 26/08/2026, junto com `stop_ipc`, e pelo mesmo motivo: a "
-        "razão de 12/08 apontava um `shutdown` que não derruba o UDP, e o "
-        "`shutdown` (`daemon/connection.py:1406`) derruba — "
-        "`await asyncio.wait_for(daemon._udp_server.stop(), timeout=2.0)` "
-        "(`:1368`), `daemon._udp_server = None` (`:1369`). "
-        "ONDE O CAMINHO SE PERDE: em lugar nenhum; o que sobra é DUPLICAÇÃO "
-        "de duas linhas, com só `tests/` chamando a utilitária. "
-        "O QUE A FECHA: a decisão de desenho descrita na entrada de "
-        "`stop_ipc` — as três se fecham juntas ou nenhuma."
-    ),
-    "daemon/subsystems/autoswitch.py::stop_autoswitch": (
-        "REMEDIDO em 26/08/2026. A razão de 12/08 dizia que 'a thread do "
-        "autoswitch é derrubada pelo fim do processo em vez de por um caminho "
-        "de parada' — e isso é FALSO: o `shutdown` "
-        "(`daemon/connection.py:1406`) chama `daemon._autoswitch.stop()` "
-        "(`:1372`) e descarta a referência (`:1373`). O autoswitch toca disco, "
-        "então a razão velha mandava caçar uma perda de dado que não existe. "
-        "ONDE O CAMINHO SE PERDE: em lugar nenhum — DUPLICAÇÃO, como nas duas "
-        "irmãs, com só `tests/` chamando a utilitária. "
-        "O QUE A FECHA: a mesma decisão de desenho da entrada de `stop_ipc`."
-    ),
     # --- subsystems e motores que nada instancia ---------------------------
     "daemon/subsystems/hotkey.py::HotkeySubsystem": (
         "MEDIDO em 12/08/2026: a classe existe, tem `name = 'hotkey'` e um "
@@ -2600,29 +1957,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "`SUBSYSTEM_REGISTRY` confessa no docstring do módulo (linha 13) que "
         "`não é iterado por ninguém em produção`, fechar isto de verdade é "
         "fechar o registro inteiro — trabalho de desenho, não de uma linha."
-    ),
-    "core/rumble.py::RumbleEngine": (
-        "MEDIDO em 12/08/2026, e REMEDIDO em 26/08/2026: nenhuma instanciação "
-        "em `src/`, e agora nenhum resto de leitura também. A pergunta que esta "
-        "entrada abriu — 'foi SUBSTITUÍDO ou nunca foi ligado?' — está "
-        "RESPONDIDA: foi SUBSTITUÍDO. O funil vivo da política de vibração é "
-        "`core/rumble.py::_effective_mult`, e as três rotas que o chamam "
-        "(`daemon/ipc_rumble_policy.apply_rumble_policy`, "
-        "`daemon/subsystems/rumble.reassert_rumble` e "
-        "`daemon/subsystems/gamepad._game_rumble_mult`) guardam o debounce na "
-        "memória do daemon (`_last_auto_mult` / `_last_auto_change_at`). As "
-        "DUAS frases que afirmavam o contrário foram substituídas pela "
-        "informação certa: a de `daemon/ipc_handlers.py` em 24/08 e a de "
-        "`daemon/ipc_rumble_policy.py` na L3-F, em 26/08 — junto com o "
-        "`getattr(daemon, '_rumble_engine')` que a sustentava. "
-        "ONDE O CAMINHO SE PERDE: a classe segue na árvore, com throttle e "
-        "`link()`, sem ninguém que a construa. "
-        "O QUE A FECHA: **apagá-la**, que é o que 'é resto' quer dizer. NÃO "
-        "fiz na L3-F porque os chamadores restantes são TESTES fora da posse "
-        "dela (`test_rumble_policy.py`, `test_led_and_rumble.py`, "
-        "`test_politica_de_vibracao_a_escada_que_amplifica.py`) e a regra R-A "
-        "da leva de 26/08 manda relatar, não escrever em arquivo alheio. "
-        "DONO: quem coordenar a leva seguinte, num commit só com os três testes."
     ),
     # `daemon/subsystems/external_mask.py::ExternalMaskRegistry` MOROU AQUI e
     # foi APAGADA em 15/08/2026, pelo motivo que a própria entrada mandava:
@@ -2708,15 +2042,6 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     #
     # RESTAM TRÊS, abaixo: as duas da Lightbar e o mic da mesa cheia.
     # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
-    "app/actions/external_controllers.py::short_button_label": (
-        "MEDIDO em 12/08/2026: só `tests/` a chama. O docstring descreve uma "
-        "superfície concreta que não existe: `Rótulo curto para o botão do "
-        "seletor no topo (cabe ao lado dos DualSense)`, com exemplos "
-        "`8BitDo · cabo`. A função irmã `brand_of`, do mesmo arquivo, é usada. "
-        "O QUE A FECHA: a tela do seletor de topo, se ela for nascer. É "
-        "DECISÃO DELA se esse seletor entra — e enquanto não entrar, o rótulo é "
-        "desenho pronto esperando a superfície, não defeito."
-    ),
     # --- preferências de sessão que a janela não lê -------------------------
     # AS TRÊS ENTRADAS QUE MORAVAM AQUI — `utils/session.py`:
     # `::save_mouse_emulation_enabled`, `::load_mouse_emulation_enabled` e
@@ -2858,14 +2183,16 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # `interface/pacotes/a09_sistema._leitura` passou a chamar a função para
     # preencher `Leitura.ambiente`. O caminho é
     # `hefesto_vivo` -> `pacotes` -> `a09_sistema` -> `ambiente_na_tela`.
-    # sai com: A-TELA-PERGUNTA-AO-DONO-01
+    # sai com: OS-INTERRUPTORES-QUE-NINGUEM-LIGA-01
     "app/actions/ambiente_na_tela.py::descrever_steam_encontrada": (
         "ENTREGUE em 24/08/2026 (T-12, ONDA0-Z7). Lê `steam_layout_achado` — "
         "chave que NENHUMA frente desta sprint publica ainda em `state_full` "
         "(Z7-C não toca `daemon/ipc_handlers.py`, por posse declarada em §5). "
         "ONDE O CAMINHO SE PERDE: falta o publicador da chave, além do leitor "
         "de tela. O QUE FECHA: a Onda 11 · Sistema, ou quem publicar a chave "
-        "primeiro (§10 da sprint)."
+        "primeiro (§10 da sprint). 29/09/2026: a A-TELA-PERGUNTA-AO-DONO-01 a "
+        "deixou à OS-INTERRUPTORES-QUE-NINGUEM-LIGA-01, que a liga ou a tira "
+        "junto com o publicador do `steam_layout_achado`."
     ),
     # AS TRÊS LÁPIDES DE `gui/ponte_da_tela.py` MORARAM AQUI e SAÍRAM em
     # 31/08/2026 — `PonteDaTela`, `JanelaDaAba` e `literal_js`. Não foi
@@ -2881,131 +2208,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # `evaluate_javascript` + `register_script_message_handler`, e o valor
     # atravessa a fronteira como DADO e nunca como texto) continua escrita, com
     # a data, no docstring do próprio `gui/ponte_da_tela.py`.
-    # --- 31/08/2026: a aba JOGAR viva existe e NENHUM lançador a abre --------
-    # As cinco abaixo são a MESMA dívida, com o mesmo endereço e a mesma cura, e
-    # ela é de UMA LINHA. O piloto que ela abre (`controles_vivos.py`) instala a
-    # ponte de gesto em qualquer página que tenha `[data-modo]` — por isso o
-    # INTERRUPTOR da aba Jogar já é produto e não está nesta lista. O resto da
-    # página (cartões, coluna Atenção, chips da escada) é pintado por
-    # `src/hefesto_dualsense4unix/interface/jogar_vivo.py`, que é aba viva completa, mede-se
-    # sozinha e **nada roda**: nem o `.desktop`, nem o `interface`, nem o
-    # `abrir_interface.py` a nomeiam. O próprio piloto escreve isso em
-    # `controles_vivos.py`:71 — *"Quando a MIGRA-JOGAR enxertar o
-    # `jogar_vivo.py` no lugar do mockup estático, o interruptor sai daqui sem
-    # reescrever regra nenhuma"*. Enquanto o enxerto não acontece, o que a
-    # usuária vê na aba Jogar, fora o interruptor, é o mockup ESTÁTICO: os
-    # quatro controles do desenho e o "1 aviso" chumbado.
-    # O QUE FECHA AS CINCO DE UMA VEZ: a MIGRA-JOGAR, enxertando o
-    # `jogar_vivo.py` no piloto (ou declarando-o em `_CADEIA_DA_INTERFACE_NOVA`
-    # se ele ganhar lançador próprio). No dia em que isso acontecer estas cinco
-    # entradas viram lápides caducas e `test_nenhuma_lapide_sobreviveu_a_propria`
-    # `_cura` cobra o apagamento — que é como esta lista deve encolher.
-    #
-    # E ENCOLHEU: DUAS DAS CINCO SAÍRAM EM 03/09/2026 — `avisos_do_estado` e
-    # `texto_da_conta`. Não pelo enxerto que este bloco esperava: o caminho veio
-    # pelo OUTRO lado, `interface/pacotes/a01_jogar.py` (`7c69be86`, *"a aba
-    # parou de afirmar"*), que é pacote de aba PUBLICADA e roda. As TRÊS que
-    # ficam (`chips_sem_dono`, `degrau_vivo`, `nome_do_perfil`) continuam com o
-    # chamador só em `jogar_vivo.py`, e para elas o bloco acima vale inteiro.
-    #
-    # A LIÇÃO, e ela custou um portão VERMELHO no `dev`: `test_nenhuma_lapide_`
-    # `sobreviveu_a_propria_cura` cobrou o apagamento das QUATRO no mesmo dia em
-    # que os caminhos nasceram (estas duas, mais `hefesto_ligado` e
-    # `modo_lembrado`, que fecharam por `controles_vivos.py`) — e ninguém releu.
-    # O portão fica vermelho para TODA a casa enquanto uma lápide caduca fica de
-    # pé, e um portão que vive vermelho é um portão que se aprende a ignorar.
-    "app/actions/jogar/painel.py::chips_sem_dono": (
-        "MEDIDO em 31/08/2026. É a régua que a TELA usa para marcar um chip como "
-        "inerte — sem degrau na `ESCADA` E sem modo em `mode_transition`. Hoje "
-        "devolve um só, o Point And Click, que está na fileira por ordem dela "
-        "(*manter*) e precisa dizer que ninguém o atende, senão a tela promete o "
-        "que não cumpre. Chamador: `src/hefesto_dualsense4unix/interface/jogar_vivo.py`:835, que "
-        "monta os `degraus_travados` do pacote de pintura. ONDE O CAMINHO SE "
-        "PERDE: no enxerto da aba, ver o bloco acima."
-    ),
-    "app/actions/jogar/painel.py::degrau_vivo": (
-        "MEDIDO em 31/08/2026. Diz qual chip da escada está aceso, lendo o "
-        "carimbo POR JOGO que `integrations/prontuario_dos_jogos.pontes"
-        "_confirmadas` guarda nos perfis do disco — e devolve `None` sem jogo "
-        "aberto, que é o caso comum e a resposta honesta. Chamador: "
-        "`src/hefesto_dualsense4unix/interface/jogar_vivo.py`:843. ONDE O CAMINHO SE PERDE: no "
-        "enxerto da aba, ver o bloco acima. ATENÇÃO ao fechar: o `pontes` entra "
-        "por argumento de propósito, para a régua entregar um dicionário próprio "
-        "em vez de mexer nos perfis dela."
-    ),
-    "app/actions/jogar/painel.py::nome_do_perfil": (
-        "MEDIDO em 31/08/2026. UM leitor do perfil ativo para os DOIS lugares "
-        "que o mostram — o crachá do topo e o recibo do rodapé. Nasceu de um "
-        "defeito visto na aba Controles em 29/08: com dois leitores, o topo "
-        "dizia o perfil vivo e o rodapé continuava dizendo `Mortal Kombat`, que "
-        "é o do mockup. Chamador: `src/hefesto_dualsense4unix/interface/jogar_vivo.py`:814. ONDE "
-        "O CAMINHO SE PERDE: no enxerto da aba, ver o bloco acima."
-    ),
 
-    # ------------------------------------------------------------------
-    # O ARRANQUE DO PROCESSO — 06/09/2026, sprint `GTK-3`
-    # ------------------------------------------------------------------
-    # As quatro vieram do topo de `app/main.py` para `app/arranque.py` porque
-    # NENHUMA delas monta janela: elas acertam variável de ambiente de PROCESSO,
-    # e o processo da interface nova é uma `Gtk.Window` com um `WebKit2.WebView`
-    # dentro — tem exatamente os dois problemas que elas curam.
-    #
-    # ONDE O CAMINHO SE PERDE: o `run.sh:63-68` e `:77-82` já fazem as duas
-    # curas em SHELL, com critério grosso, antes de o Python subir. O que estas
-    # têm a mais é o critério FINO, e é ele que está sem caminho:
-    # `forcar_xwayland_no_cosmic` RECUSA quando o `DISPLAY` existe e está morto
-    # (T-02, ONDA0-Z7 — o caso em que forçar faz a janela não abrir), e
-    # `sanear_loaders_do_gdk_pixbuf` também descarta o cache cujos `.so` são de
-    # outro confinamento, que é o caso em que o GTK ABORTA o processo.
-    #
-    # O QUE FECHARIA: `scripts/abrir_interface.py` chamá-las antes de vestir o
-    # `prgname` — ele já é quem prepara o processo antes da primeira janela.
-    # Não foi feito aqui porque é mudança de COMPORTAMENTO do lançador dela, e a
-    # `GTK-3` mudou o endereço, não o produto.
-    # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
-    "app/arranque.py::x11_alcancavel": (
-        "06/09/2026 — o caminho se perde entre `run.sh` (que força XWayland sem "
-        "conferir) e `scripts/abrir_interface.py` (que não confere nada). "
-        "Fecha quando o lançador chamar `forcar_xwayland_no_cosmic`, que é "
-        "quem a usa. Régua viva: "
-        "`tests/unit/test_ambiente_presumido_01_o_display_que_nao_existe.py`."
-    ),
-    "app/arranque.py::forcar_xwayland_no_cosmic": (
-        "06/09/2026 — mesmo caminho perdido. Fecha com uma chamada em "
-        "`scripts/abrir_interface.py`, antes de `GLib.set_prgname`. Régua viva: "
-        "`tests/unit/test_ambiente_presumido_01_o_display_que_nao_existe.py`."
-    ),
-    "app/arranque.py::sanear_loaders_do_gdk_pixbuf": (
-        "06/09/2026 — o `run.sh:63-68` faz a versão GROSSA (só desarma quando "
-        "TODOS os módulos do cache moram em /snap). A fina, que também pega o "
-        "cache cujos `.so` são de outro confinamento — o caso em que o GTK "
-        "aborta o processo —, não tem chamador. Fecha em "
-        "`scripts/abrir_interface.py`, antes de qualquer import de "
-        "`gi.repository`."
-    ),
-    "app/arranque.py::de_outro_confinamento": (
-        "06/09/2026 — o caminho se perde no mesmo lugar da irmã: a única "
-        "chamadora é `app/arranque.sanear_loaders_do_gdk_pixbuf`, e essa não "
-        "tem chamador em produção. FECHA no mesmo commit, quando "
-        "`scripts/abrir_interface.py` chamar `sanear_loaders_do_gdk_pixbuf` "
-        "antes de qualquer import de `gi.repository` — depois disso o "
-        "GdkPixbuf já leu o cache e a correção chega tarde."
-    ),
-    "utils/single_instance.py::acquire_or_bring_to_front": (
-        "06/09/2026 — PROMESSA REAL SEM CAMINHO, e ela custou uma capacidade. "
-        "O único chamador era `app/app.py:218`: abrir o Hefesto com uma janela "
-        "já aberta TRAZIA A JANELA PARA A FRENTE em vez de subir uma segunda "
-        "(BUG-TRAY-SINGLE-FLASH-01, o modelo *primeira vence* que o docstring "
-        "do módulo descreve). A interface nova não tem esse caminho: "
-        "`interface/hefesto_vivo.py` e `scripts/abrir_interface.py` não citam "
-        "`single_instance`, e o `_kill_previous_instances` que MATAVA a "
-        "anterior morreu com `app/main.py`. Hoje, clicar duas vezes no ícone "
-        "dela abre duas janelas. O irmão `acquire_or_takeover` continua vivo e "
-        "é o do daemon (`daemon/main.py:99`). FECHA quando o piloto chamar "
-        "`acquire_or_bring_to_front(\"gui\", cb)` com um callback que "
-        "`present()` a janela dele — o que exige decidir o que ela quer que "
-        "aconteça no segundo clique, e por isso não foi feito aqui."
-    ),
     # AS SEIS LÁPIDES DA LEVA DE 23/09 QUE A TRANSPLANTE-DA-SECAO-01 CUROU saíram
     # daqui no mesmo commit que as fiou: `storm_doctor.historico_do_radio`,
     # `quedas` e `o_fato_da_queda` (o sino de cada adaptador), e
@@ -3718,6 +2921,20 @@ def _fontes_externas(
                 saida.append((f"{roteiro}#heredoc{indice}", ast.parse(trecho)))
             except SyntaxError:  # pragma: no cover — heredoc quebrado é do roteiro
                 continue
+    # O LANÇADOR É PRODUÇÃO — 29/09/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01).
+    # É o elo 3 de `_CADEIA_DA_INTERFACE_NOVA`: o `.desktop` roda o `run.sh
+    # --gui`, e o `run.sh` roda este arquivo, que prepara o processo (o cache
+    # de loaders do GdkPixbuf, a instância única por tela) antes de carregar o
+    # piloto. Até aqui só a boca contava, e o que o lançador chama aparecia
+    # como promessa sem caminho.
+    for fonte in _LANCADORES:
+        caminho = raiz_do_projeto / fonte
+        if not caminho.is_file():
+            continue
+        try:
+            saida.append((fonte, _arvore(caminho)))
+        except (OSError, SyntaxError):  # pragma: no cover — lançador quebrado é dele
+            continue
     for nome, caminho in sorted(pontes_vivas(raiz_do_projeto).items()):
         try:
             arvore = _arvore(caminho)
@@ -4669,9 +3886,10 @@ def _copia_de_src(destino: Path, *, sem_a_ponte: bool = False) -> Path:
     # mediria uma árvore onde o `uninstall.sh` não existe. A mordida do heredoc
     # passaria por AUSÊNCIA em vez de por medição — o modo mais silencioso de um
     # teste deixar de morder.
-    for roteiro in _ROTEIROS_DE_PRODUCAO:
+    for roteiro in (*_ROTEIROS_DE_PRODUCAO, *_LANCADORES):
         origem = _RAIZ / roteiro
         if origem.is_file():
+            (destino / roteiro).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(origem, destino / roteiro)
     # `scripts/` ia junto entre 15/08 e 22/08/2026, quando ele era
     # `_TERRITORIOS_DE_PRODUCAO`. Parou de ir porque parou de ser porta: a
@@ -5038,10 +4256,13 @@ class TestOPortaoMorde:
         # mesmo commit) — esta linha reprovou, que é exatamente o que ela
         # promete fazer. Hoje é `app/fala_do_mapa.py::Numero`, irmão dele no
         # mesmo módulo, que a medição de 26/08 mostrou NÃO ter caído junto.
-        # Enquanto estiver declarado em `_SEM_CAMINHO_HOJE`, serve. No dia em
-        # que alguém o fiar, o conserto é trocar o canário de novo, não
-        # silenciar.
-        assert "app/fala_do_mapa.py::Numero" in soltas, (
+        # E o `Numero` ganhou caminho em 29/09/2026: a aba Conexões o usa
+        # (A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01), e esta linha reprovou de
+        # novo. Hoje é `apelido_do_dongle.costurar_a_mesa`, que fica sem
+        # chamador por DECISÃO (D-COSTURA-BLUEZ): o canário não depende de uma
+        # dívida que alguém vai pagar. No dia em que ele cair, o conserto é
+        # trocar o canário de novo, não silenciar.
+        assert "integrations/apelido_do_dongle.py::costurar_a_mesa" in soltas, (
             "sem o ponto de entrada a varredura devolveu algo inesperado — a "
             "medição de controle caiu junto e este caso não prova nada"
         )
