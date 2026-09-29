@@ -1609,6 +1609,8 @@ def mira_set_detalhado(
     gatilho: str | None = None,
     inverter_horizontal: bool | None = None,
     inverter_vertical: bool | None = None,
+    inclinacao: str | None = None,
+    toque: str | None = None,
 ) -> dict[str, Any] | None:
     """``mira.set`` com a RESPOSTA inteira — o chip «Mira Virtual» e a Calibrar.
 
@@ -1624,6 +1626,12 @@ def mira_set_detalhado(
     A-MIRA-POR-MOVIMENTO-NA-TELA-02. **O ``gatilho`` vazio (``""``) É ENVIADO**,
     como ``null``: é a opção «Sempre» da lista, e é a única forma de a peça
     voltar a mirar sem botão — ``None`` continua sendo *"não mexe"*.
+
+    A ``inclinacao`` e o ``toque`` entraram na NO-MODO-XBOX-TUDO-FUNCIONA-01
+    (29/09/2026), com os chips «Inclinação» de cada analógico e o «Cursor |
+    Botões» do touchpad na aba Controles: o destino vai como texto (``nenhum``,
+    ``analogico_esquerdo``, ``analogico_direito``; ``nenhum``, ``cursor``,
+    ``zonas``), e quem recusa o que não conhece é o daemon.
     """
     payload: dict[str, Any] = {}
     if ligada is not None:
@@ -1638,6 +1646,10 @@ def mira_set_detalhado(
         payload["inverter_horizontal"] = bool(inverter_horizontal)
     if inverter_vertical is not None:
         payload["inverter_vertical"] = bool(inverter_vertical)
+    if inclinacao is not None:
+        payload["inclinacao"] = str(inclinacao)
+    if toque is not None:
+        payload["toque"] = str(toque)
     if not payload:
         return None
     if uniq:

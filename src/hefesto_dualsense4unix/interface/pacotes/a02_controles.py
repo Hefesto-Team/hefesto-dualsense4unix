@@ -3346,6 +3346,17 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # página publicada tiver o endereço (`_so_se_a_pagina_tiver`).
                 "giro-dica": dica_do_giro(c, _nativo(ctx), _na_navegacao(ctx)),
                 "mira-fora": mira_fora(_nativo(ctx)),
+                # OS CHIPS DO TOQUE E DA INCLINAÇÃO — 29/09/2026, NO-MODO-XBOX-
+                # TUDO-FUNCIONA-01. O valor é o destino que o daemon publica no
+                # bloco `mira` deste controle, e o `data-hef-quando` de cada
+                # chip diz qual deles acende: o do analógico que recebe a
+                # inclinação, o Cursor ou os Botões. `nenhum` apaga os dois do
+                # grupo; sem leitura, o travessão também não acende nenhum. O
+                # cinza do Nativo é o `mira-fora` de cima, no próprio botão.
+                **_so_se_a_pagina_tiver({
+                    "inclinacao-destino": _chip_da_mira(c, "inclinacao"),
+                    "toque-modo": _chip_da_mira(c, "toque"),
+                }),
                 # O RETÂNGULO DA BARRA DE LUZ — o desenho que CONTRADIZ o campo
                 # ao lado dele. Fotografado em 02/09/2026 às 19h: o `luz-hex`
                 # dizia `#0000FF` (a cor viva do P1) e o retângulo logo abaixo
@@ -3800,6 +3811,29 @@ def _mira_ligada(dele: dict[str, Any]) -> bool | None:
         return None
     valor = bloco.get("ligada")
     return valor if isinstance(valor, bool) else None
+
+
+def _destino_da_mira(dele: dict[str, Any], chave: str) -> str | None:
+    """O destino da `inclinacao` ou do `toque` deste controle; `None` = ninguém leu.
+
+    O dono é o daemon (`ipc_handlers._merge_mira`, desde 28/09/2026): o que o
+    tique desta peça usa AGORA, a mesma conta de `roteador_de_movimento.da_peca`.
+    Pela razão do `_mira_ligada`, a falta do bloco não é `nenhum`: é falta de
+    leitura, e o gesto recusa em vez de chutar.
+    """
+    bloco = dele.get("mira")
+    if not isinstance(bloco, dict):
+        return None
+    valor = bloco.get(chave)
+    return valor if isinstance(valor, str) and valor else None
+
+
+def _chip_da_mira(dele: dict[str, Any], chave: str) -> str:
+    """O valor pintado no grupo de chips: o destino, ou o travessão sem leitura."""
+    import mesa_viva
+
+    destino = _destino_da_mira(dele, chave)
+    return destino if destino is not None else str(mesa_viva.SEM_LEITOR)
 
 
 # ---------------------------------------------------------------------------
@@ -5036,6 +5070,118 @@ def mira(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(MIRA_SEM_O_CONTROLE)
 
 
+# ---------------------------------------------------------------------------
+# OS CHIPS DO TOQUE E DA INCLINAÇÃO — NO-MODO-XBOX-TUDO-FUNCIONA-01, 29/09/2026
+# ---------------------------------------------------------------------------
+# A resposta dela de 28/09 (~16h50): o touchpad move o cursor ou vira botões em
+# zonas, e a inclinação move um analógico, um chip por controle, como a Mira
+# Virtual, e por perfil de jogo. A página publicada ganhou os chips em 29/09
+# (a «Inclinação» embaixo de cada analógico e o «Cursor | Botões» no pé do
+# touchpad); estes dois gestos são o que o clique faz neles. A ordem é a do
+# chip da Mira: lê o que o daemon diz, recusa no Nativo antes da ponte, e manda
+# UM campo só ao `mira.set`.
+
+#: No Modo Nativo o jogo lê o controle físico e não há controle virtual onde a
+#: inclinação ou o toque escrevam: o chip está cinza, e o clique volta sem pedir
+#: nada ao daemon (a mesma regra da Mira, `D-2409-NO-NATIVO-A-MIRA-FICA-CINZA`).
+INCLINACAO_CINZA_NO_NATIVO = (
+    "Em Modo Nativo o jogo lê este controle direto, e a Inclinação não grava."
+)
+TOQUE_CINZA_NO_NATIVO = (
+    "Em Modo Nativo o jogo lê este controle direto, e o Cursor e os Botões do "
+    "touchpad não gravam."
+)
+
+#: Sem o bloco `mira` do daemon o chip não sabe se está aceso: alternar seria
+#: chutar. A mesma disciplina do `SEM_LEITURA_DA_MIRA`.
+SEM_LEITURA_DO_CHIP = (
+    "a leitura ainda não chegou deste controle, e o botão não sabe se apaga "
+    "ou acende."
+)
+
+#: `mira.set` respondeu sem `ok`: o controle saiu, ou a peça não tem endereço.
+CHIP_SEM_O_CONTROLE = (
+    "este controle não respondeu: conecte-o de novo e tente outra vez."
+)
+
+
+def _o_que_a_tela_oferece(todos: tuple[str, ...]) -> tuple[str, ...]:
+    """Os destinos que um chip pode pedir: os do daemon, menos o `nenhum`.
+
+    O `nenhum` não é chip: é o clique no chip aceso. O dono da lista é o
+    `core.roteador_de_movimento`, que é também quem o `mira.set` consulta.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+    return tuple(d for d in todos if d != rot.DESTINO_NENHUM)
+
+
+def _alternar_o_chip(ctx: Contexto, o: dict[str, Any], p: Any, *, nome: str,
+                     chave: str, pedido: str, todos: tuple[str, ...],
+                     cinza: str) -> None:
+    """O corpo comum dos dois chips: o clique no apagado acende, no aceso apaga.
+
+    `chave` é a do bloco `mira` do `state_full` e o nome do campo do `mira.set`
+    (os dois são `inclinacao` e `toque`); `pedido` é o destino que o botão
+    clicado diz (`data-destino`, `data-toque`). O grupo é um só por controle: acender
+    o Cursor com os Botões acesos troca, não soma.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+    uniq = _uniq(o)
+    if not uniq:
+        raise ValueError(f"{nome}: o clique não disse em qual controle")
+    if pedido not in _o_que_a_tela_oferece(todos):
+        raise ValueError(f"{nome}: não conheço o destino {pedido!r}")
+    if _nativo(ctx):
+        raise RuntimeError(cinza)
+    agora = _destino_da_mira(ctx.por_uniq(uniq), chave)
+    if agora is None:
+        raise RuntimeError(SEM_LEITURA_DO_CHIP)
+    novo = rot.DESTINO_NENHUM if agora == pedido else pedido
+    corpo = _corpo(p.mira_set_detalhado(**{chave: novo}, uniq=uniq))
+    if corpo is None:
+        raise RuntimeError(
+            "o Hefesto não confirmou o botão: ou ele parou, ou este controle "
+            "se desligou")
+    if corpo.get("status") == "nativo":
+        raise RuntimeError(cinza)
+    if corpo.get("status") != "ok":
+        raise RuntimeError(CHIP_SEM_O_CONTROLE)
+
+
+@gesto("02-controles.html", "inclinacao", grava="mira_set_detalhado")
+def inclinacao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O chip «Inclinação» de um analógico: inclinar o controle move aquele analógico.
+
+    O botão diz qual dos dois (`data-destino`); clicar no aceso apaga
+    (`nenhum`), e clicar no do outro analógico leva a inclinação para ele. Grava
+    em `ControllerOverrides.movimento.acelerometro` DESTE controle, pelo
+    `mira.set`, e vale no tique no mesmo pedido.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+    _alternar_o_chip(ctx, o, p, nome="inclinacao", chave="inclinacao",
+                     pedido=str(o.get("destino") or ""),
+                     todos=rot.DESTINOS_DA_INCLINACAO,
+                     cinza=INCLINACAO_CINZA_NO_NATIVO)
+
+
+@gesto("02-controles.html", "toque", grava="mira_set_detalhado")
+def toque(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O «Cursor | Botões» do touchpad: o dedo move o cursor, ou toca em zonas.
+
+    O botão diz qual dos dois (`data-toque`); clicar no aceso devolve o touchpad
+    ao computador (`nenhum`). Grava em `ControllerOverrides.movimento.toque`
+    DESTE controle, pelo `mira.set`.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+    _alternar_o_chip(ctx, o, p, nome="toque", chave="toque",
+                     pedido=str(o.get("toque") or ""), todos=rot.TOQUES,
+                     cinza=TOQUE_CINZA_NO_NATIVO)
+
+
 @gesto("02-controles.html", "ganho-mic", grava="save_profile")
 def ganho_mic(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O deslizante do ganho de entrada — **o ato que faltava ao número**.
@@ -5484,7 +5630,10 @@ SEM_ECO = ("mic-modo",)
 #:
 #: **SEIS DESDE 24/09/2026:** entrou a `mira`, o chip «Mira Virtual» de cada
 #: controle (A-MIRA-POR-MOVIMENTO-NA-TELA-01).
-PISO_DA_ABA = 6
+#:
+#: **OITO DESDE 29/09/2026:** entraram a `inclinacao` e o `toque`, os chips do
+#: toque e da inclinação de cada controle (NO-MODO-XBOX-TUDO-FUNCIONA-01).
+PISO_DA_ABA = 8
 #: OS DOIS BOTÕES DE CALAR SAÍRAM DESTA LISTA EM 02/09/2026, e a razão é da
 #: FIXTURE, não deles. O controle da régua compartilhada é
 #: `test_os_botoes_tem_dono.FALSO`, e ele traz `audio: {}` e `speaker: {}` — um
@@ -5576,4 +5725,8 @@ PROVAS = [
 #: **A `mira` ENTROU AQUI PELA MESMA RAZÃO — 24/09/2026.** O `FALSO` não traz o
 #: bloco `mira`, e sem ele o gesto recusa (`SEM_LEITURA_DA_MIRA`); as duas pernas
 #: moram em `tests/unit/test_a_mira_por_movimento_na_tela.py`.
-SEM_CHAMADA = ("sensor", "mira")
+#:
+#: **A `inclinacao` E O `toque` TAMBÉM — 29/09/2026**, pela mesma razão: sem o
+#: bloco `mira` o gesto recusa (`SEM_LEITURA_DO_CHIP`). As duas pernas moram em
+#: `tests/unit/test_no_modo_xbox_os_chips_do_toque_na_02.py`.
+SEM_CHAMADA = ("sensor", "mira", "inclinacao", "toque")
