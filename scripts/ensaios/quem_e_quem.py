@@ -70,8 +70,10 @@ Ele lê DUAS fontes, e quem diz «houve aperto» nunca sai do estado:
 Cada aperto testemunhado dá uma linha: «acendeu só o cartão Pn» (e, onde o nó
 diz o jogador, o Pn tem de ser o dele), ou FALHA («não acendeu cartão nenhum»,
 «acendeu mais de um cartão», «o de outro jogador»), ou «curto demais para o
-tique da tela», que não é FALHA e também não é medida. A linha diz o nome que o
-jogo viu e o que a tela acendeu: com uma troca de botão ligada, os dois diferem.
+tique da tela», que não é FALHA e também não é medida; o botão que a grade não
+desenha (o L3, o R3: quem diz é o `leitura_viva`) e não acendeu nada também
+não é medida. A linha diz o nome que o jogo viu e o que a tela acendeu: com uma
+troca de botão ligada, os dois diferem.
 
 O LIMITE, dito também na saída: o ensaio prova o canal que a grade lê, não a
 pintura. Ele não sabe se a aba 02 está na tela; quem prova a pintura são as
@@ -365,6 +367,7 @@ ACENDEU = "acendeu"
 FALHA = "falha"
 CURTO = "curto"
 SEM_TELA = "sem_tela"
+SEM_GLIFO = "sem_glifo"
 
 #: O rc do `--apertar` quando ele vence o da tabela.
 RC_FALHA = 2
@@ -521,13 +524,32 @@ def ler_a_tela(estado: dict[str, Any], leitura_viva: Any, mesa_do_estado: Any,
     return Leitura(hora, acesos, enderecos)
 
 
-def julgar(aperto: Aperto, leituras: list[Leitura], tique_s: float, fim: float) -> Veredito:
+def acende_algum_glifo(leitura_viva: Any, nome: str) -> bool:
+    """A grade tem glifo para este nome? Perguntado ao dono do aceso.
+
+    A grade tem dezesseis glifos, e o L3, o R3 e o botão do microfone não estão
+    entre eles; o L2 e o R2 acendem pelo gatilho, não pelo botão. Em vez de uma
+    lista escrita aqui, o `leitura_viva` recebe o nome apertado e diz se algum
+    glifo acende (o `create` acende o `share`, por exemplo).
+    """
+    campos = leitura_viva({"inputs": {"buttons": [nome]}})
+    return any(valor for chave, valor in campos.items() if chave.startswith("glifo-"))
+
+
+def julgar(
+    aperto: Aperto,
+    leituras: list[Leitura],
+    tique_s: float,
+    fim: float,
+    tem_glifo: Any = None,
+) -> Veredito:
     """O veredito de UM aperto testemunhado.
 
     A janela vai da descida à subida, mais um tique da tela e a volta do laço
     deste ensaio (outro tique). O aperto que durou menos que um tique e não
     acendeu nada é curto demais para a tela a 10 Hz, que também não o mostra:
-    não é FALHA, e também não é medida.
+    não é FALHA, e também não é medida. O botão que a grade não desenha
+    (`tem_glifo` diz que não) e não acendeu nada também não é medida.
     """
     subida = aperto.subida if aperto.subida is not None else fim
     duracao = subida - aperto.descida
@@ -548,6 +570,8 @@ def julgar(aperto: Aperto, leituras: list[Leitura], tique_s: float, fim: float) 
     if not cartoes:
         if curto:
             return Veredito(CURTO, "curto demais para o tique da tela")
+        if tem_glifo is not None and not tem_glifo(aperto.nome):
+            return Veredito(SEM_GLIFO, f"a grade não tem glifo para {aperto.nome} — nada medido")
         return Veredito(FALHA, "não acendeu cartão nenhum")
     acesos = ", ".join(f"P{n} ({', '.join(sorted(g))})" for n, g in sorted(cartoes.items()))
     if len(cartoes) > 1:
@@ -698,7 +722,10 @@ def ensaio_de_aperto(
         dizer(f"    {testemunha.marca} ({testemunha.caminho}): "
               f"{hidraw_broker_client.leitura_de_zero(estado_grab)}")
 
-    vereditos = [(a, julgar(a, leituras, tique_s, fim)) for a in apertos]
+    def tem_glifo(nome: str) -> bool:
+        return acende_algum_glifo(leitura_viva, nome)
+
+    vereditos = [(a, julgar(a, leituras, tique_s, fim, tem_glifo)) for a in apertos]
     for aperto, veredito in vereditos:
         marca = "FALHA — " if veredito.tipo == FALHA else ""
         dizer(f"    {aperto.nome} no {aperto.testemunha.marca}: {marca}{veredito.texto}")
