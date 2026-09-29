@@ -133,13 +133,17 @@ class TestOEndereco:
         assert '<span class="sec-rot">Háptica por áudio' in html
 
     def test_o_teto_e_lido_do_esquema(self) -> None:
-        """Régua 4: o `max` do trilho é o `HAPTICA_PCT_MAX`. MORDIDA: digitar 100."""
-        html = MOCKUP.read_text(encoding="utf-8")
-        trilhos = [t for t in re.findall(r'<input class="trilho arrasta"[^>]*>', html)
-                   if 'data-campo="barra-h"' in t]
-        assert len(trilhos) == 4
-        for tag in trilhos:
-            assert f'max="{HAPTICA_PCT_MAX}"' in tag and 'data-papel="haptica"' in tag
+        """Régua 4: o `max` do trilho é o `HAPTICA_PCT_MAX`. MORDIDA: digitar 100.
+
+        No que o gerador escreve agora E no mockup que ele escreveu.
+        """
+        for html in ("".join(aba05._coluna(c) for c in aba05.MESA),
+                     MOCKUP.read_text(encoding="utf-8")):
+            trilhos = [t for t in re.findall(r'<input class="trilho arrasta"[^>]*>', html)
+                       if 'data-campo="barra-h"' in t]
+            assert len(trilhos) == 4
+            for tag in trilhos:
+                assert f'max="{HAPTICA_PCT_MAX}"' in tag and 'data-papel="haptica"' in tag
 
     def test_a_grade_paga_a_linha_com_o_desenho(self) -> None:
         """Os 46 px saem de `--r-des` (124 → 78), e a grade ganha a terceira faixa."""
