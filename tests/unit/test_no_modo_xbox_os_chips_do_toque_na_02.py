@@ -447,7 +447,7 @@ def test_o_clique_chega_ao_disco_e_a_tela_le_de_volta(
 
     _o_gesto(gesto)(_ctx(*_lidos(servidor, transporte)), {"uniq": _P3, atributo: um},
                     ponte)
-    dele = load_profile("Bancada").controllers["aabbcc000003"].movimento
+    dele = (load_profile("Bancada").controllers or {})["aabbcc000003"].movimento
     assert dele is not None and getattr(dele, schema) == um
     cards = list(_cards(*_lidos(servidor, transporte)).values())
     assert [c[pintura] for c in cards] == [
@@ -455,7 +455,7 @@ def test_o_clique_chega_ao_disco_e_a_tela_le_de_volta(
 
     _o_gesto(gesto)(_ctx(*_lidos(servidor, transporte)), {"uniq": _P3, atributo: um},
                     ponte)
-    dele = load_profile("Bancada").controllers["aabbcc000003"].movimento
+    dele = (load_profile("Bancada").controllers or {})["aabbcc000003"].movimento
     assert dele is not None and getattr(dele, schema) == rot.DESTINO_NENHUM
     cards = list(_cards(*_lidos(servidor, transporte)).values())
     assert all(c[pintura] == rot.DESTINO_NENHUM for c in cards)
