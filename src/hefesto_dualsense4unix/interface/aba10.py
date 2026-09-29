@@ -161,6 +161,11 @@ from hefesto_dualsense4unix.profiles.simple_match import (  # noqa: E402
 # que a mira move — a dica do chip diz *"(analógico R)"*. A coluna está no
 # DESENHO e espera a sessão dela: até a aba 10 ser publicada, o produto não a
 # distribui (`perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA`).
+#
+# E ELA GUARDA O TOQUE E A INCLINAÇÃO DESDE 28/09/2026 (NO-MODO-XBOX-TUDO-
+# FUNCIONA-01): `toque` e `acelerometro` são campos do MESMO `movimento`, e a
+# coluna acende com qualquer um deles. O glifo continua o do analógico direito:
+# a peça que a Mira move é a que a coluna já ensinou.
 SECOES = [
     ("leds", ("lightbar", "led-jogador")),
     ("triggers", ("l2", "r2")),
@@ -188,8 +193,11 @@ NOME_DA_SECAO = {
     # "máscara" é a palavra que a aba Jogar já usa no chip de cada cartão
     # (`data-gesto="mascara"`) — não é vocabulário novo de tela.
     "mascara": "máscara",
-    # O nome do chip que ela pediu, em minúscula no meio da frase.
-    "movimento": "mira virtual",
+    # «comandos virtuais» DESDE 28/09/2026 (NO-MODO-XBOX-TUDO-FUNCIONA-01): a
+    # seção guarda os quatro chips do cartão — a Mira, a Direção, o Cursor e os
+    # Botões Virtuais — e «mira virtual» diria um dos quatro sobre um controle
+    # que só guardou o toque. Era o nome do chip que ela pediu em 24/09.
+    "movimento": "comandos virtuais",
 }
 
 

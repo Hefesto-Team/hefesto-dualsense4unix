@@ -2307,8 +2307,8 @@
   }
   .sensores-peca .sw .p{width:6px;height:6px;border-radius:50%;background:var(--green);
                         box-shadow:0 0 6px var(--green)}
-  .sensores-peca .sw.off,.sensores-peca .chip-da-mira.off>.sw{border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
-  .sensores-peca .sw.off .p,.sensores-peca .chip-da-mira.off>.sw .p{background:var(--border-forte);box-shadow:none}
+  .sensores-peca .sw.off,.sensores-peca .chip-da-mira.off>.sw,.sensores-peca .chip-virtual.off>.sw{border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
+  .sensores-peca .sw.off .p,.sensores-peca .chip-da-mira.off>.sw .p,.sensores-peca .chip-virtual.off>.sw .p{background:var(--border-forte);box-shadow:none}
   /* A DICA DO GIROSCÓPIO MORA NUM INVÓLUCRO SEM CAIXA — 24/09/2026,
      A-MIRA-POR-MOVIMENTO-NA-TELA-02. `display:contents` tira o invólucro da
      grade: quem ocupa a coluna continua sendo o botão, e a largura dos três
@@ -2318,17 +2318,20 @@
      `aria-disabled` só vale no próprio botão, e um elemento aceita UM alvo: o
      aceso da Mira desceu para este invólucro sem caixa, e o botão ficou com o
      cinza (`mira-fora`) e o `aria-disabled` que o piloto deriva dele. */
-  .sensores-peca .chip-da-mira{display:contents}
+  .sensores-peca .chip-da-mira,.sensores-peca .chip-virtual{display:contents}
   /* NO MODO NATIVO O CHIP DA MIRA FICA CINZA — decisão dela, 24/09/2026:
      *"fica cinza no Nativo, sem gravar"*. A cara é a do cinza da casa
      (`.btn.apagado`, `monta.py`): a borda sutil, o texto mudo e o cursor que
      recusa — e ela vence o aceso e o apagado do chip, porque no Nativo nenhum
      dos dois vale. Cor explícita, nada de `opacity`. */
   .sensores-peca.sem-mira .sw[data-gesto="mira"],
-  .sensores-peca.sem-mira .sw[data-gesto="mira"]:hover{
+  .sensores-peca.sem-mira .sw[data-gesto="mira"]:hover,
+  .sensores-peca.sem-mira .chip-virtual>.sw,
+  .sensores-peca.sem-mira .chip-virtual>.sw:hover{
     border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo);
     cursor:not-allowed}
-  .sensores-peca.sem-mira .sw[data-gesto="mira"] .p{
+  .sensores-peca.sem-mira .sw[data-gesto="mira"] .p,
+  .sensores-peca.sem-mira .chip-virtual>.sw .p{
     background:var(--border-sutil);box-shadow:none}
 
   .bat .carga-i[data-carga="Carregando"] .g-raio{display:block;color:var(--green)}
@@ -2823,6 +2826,9 @@
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
             <span class="chip-da-mira off" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como mira (analógico R), para pessoas com deficiência motora."><span class="p"></span>Mira Virtual</button></span>
+            <span class="chip-virtual off" data-campo="inclinacao-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="inclinacao" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar a inclinação do controle como direção (analógico L), para pessoas com deficiência motora."><span class="p"></span>Direção Virtual</button></span>
+            <span class="chip-virtual off" data-campo="toque-cursor" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="toque" data-toque="cursor" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad do controle como mouse no jogo; o clique dele é o botão esquerdo."><span class="p"></span>Cursor Virtual</button></span>
+            <span class="chip-virtual off" data-campo="toque-zonas" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="toque" data-toque="zonas" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad como botões: os dois terços da esquerda são o direcional; à direita, em cima o L1 e embaixo o L2."><span class="p"></span>Botões Virtuais</button></span>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -3385,6 +3391,9 @@
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
             <span class="chip-da-mira off" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como mira (analógico R), para pessoas com deficiência motora."><span class="p"></span>Mira Virtual</button></span>
+            <span class="chip-virtual off" data-campo="inclinacao-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="inclinacao" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar a inclinação do controle como direção (analógico L), para pessoas com deficiência motora."><span class="p"></span>Direção Virtual</button></span>
+            <span class="chip-virtual off" data-campo="toque-cursor" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="toque" data-toque="cursor" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad do controle como mouse no jogo; o clique dele é o botão esquerdo."><span class="p"></span>Cursor Virtual</button></span>
+            <span class="chip-virtual off" data-campo="toque-zonas" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="toque" data-toque="zonas" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad como botões: os dois terços da esquerda são o direcional; à direita, em cima o L1 e embaixo o L2."><span class="p"></span>Botões Virtuais</button></span>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -3947,6 +3956,9 @@
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
             <span class="chip-da-mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como mira (analógico R), para pessoas com deficiência motora."><span class="p"></span>Mira Virtual</button></span>
+            <span class="chip-virtual" data-campo="inclinacao-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="inclinacao" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar a inclinação do controle como direção (analógico L), para pessoas com deficiência motora."><span class="p"></span>Direção Virtual</button></span>
+            <span class="chip-virtual" data-campo="toque-cursor" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="toque" data-toque="cursor" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad do controle como mouse no jogo; o clique dele é o botão esquerdo."><span class="p"></span>Cursor Virtual</button></span>
+            <span class="chip-virtual" data-campo="toque-zonas" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="toque" data-toque="zonas" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad como botões: os dois terços da esquerda são o direcional; à direita, em cima o L1 e embaixo o L2."><span class="p"></span>Botões Virtuais</button></span>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -4509,6 +4521,9 @@
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
             <span class="chip-da-mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como mira (analógico R), para pessoas com deficiência motora."><span class="p"></span>Mira Virtual</button></span>
+            <span class="chip-virtual" data-campo="inclinacao-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="inclinacao" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar a inclinação do controle como direção (analógico L), para pessoas com deficiência motora."><span class="p"></span>Direção Virtual</button></span>
+            <span class="chip-virtual" data-campo="toque-cursor" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="toque" data-toque="cursor" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad do controle como mouse no jogo; o clique dele é o botão esquerdo."><span class="p"></span>Cursor Virtual</button></span>
+            <span class="chip-virtual" data-campo="toque-zonas" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="toque" data-toque="zonas" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad como botões: os dois terços da esquerda são o direcional; à direita, em cima o L1 e embaixo o L2."><span class="p"></span>Botões Virtuais</button></span>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
