@@ -9,8 +9,8 @@ para 1, 6, 7 e 8. `grep -rl aabbcc tests/ | wc -l` achou 91 arquivos de teste
 usando a faixa; algum deles escreveu no disco dela em vez de num diretório
 isolado (T-06 também rastreia a CAUSA — ver `docs/process/agentes/` da leva).
 
-As faixas sintéticas da casa (o dono é `core/faixa_sintetica.py`, e o
-`scripts/check_test_data.sh` as repete), verificadas nas duas grafias — com
+As faixas sintéticas da casa (o dono é `core/faixa_sintetica.py`; o
+`scripts/check_test_data.sh` repete duas), verificadas nas duas grafias — com
 `:` e sem:
 
   aabbcc  / aa:bb:cc
