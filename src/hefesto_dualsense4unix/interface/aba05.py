@@ -1331,7 +1331,9 @@ def _linha_da_haptica(valor, ligado, vazio=False):
     (o Nativo pelo rádio sem a ponte), o pacote acende `fora` e a linha fica
     cinza — e o porquê fica no `?` do rótulo, e não na tela aberta.
     """
-    botao = (f'<button class="lado{" on" if ligado else ""}" '
+    # A CLASSE NÃO COMEÇA POR `lado`: os oito interruptores de PUNHO são contados
+    # por ela (dois por lugar), e este não é um punho; o desenho é o mesmo.
+    botao = (f'<button class="haptica-lado lado{" on" if ligado else ""}" '
              f'data-gesto="haptica" '
              f'data-campo="lado-h" data-hef-alvo="classe" '
              f'data-hef-quando="1" '
@@ -1341,7 +1343,10 @@ def _linha_da_haptica(valor, ligado, vazio=False):
               f' 100% é o jogo como ele mandou. Grava na hora, só para ele.')
     trilho = _trilho(valor, TETO_DA_HAPTICA, PASSO_DO_MOTOR, "barra-h", "haptica",
                      titulo)
-    return (f'<div class="motor mult haptica{"" if ligado else " off"}"'
+    # SEM O `off` DA CENA: a classe de fora do endereço é a mesma em todo
+    # lugar (o pintor só acende e apaga o `fora`); desligada, quem diz é o
+    # interruptor apagado e o trilho no zero.
+    return (f'<div class="motor mult haptica"'
             f' data-campo="haptica-fora" data-hef-alvo="classe"'
             f' data-hef-classe="fora">'
             f'{botao}{trilho}'
