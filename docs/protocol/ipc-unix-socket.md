@@ -592,7 +592,7 @@ Acelerômetro, no cartão de cada controle — o movimento do controle vira o
 
 | Método     | Parâmetros                                                                 | Retorno                                                                                    |
 |------------|----------------------------------------------------------------------------|--------------------------------------------------------------------------------------------|
-| `mira.set` | `{uniq?: str, ligada?: bool, sensibilidade?: 1-12, zona_morta_graus_s?: 0-60, gatilho?: str \| null, inverter_horizontal?: bool, inverter_vertical?: bool, inclinacao?: bool, toque?: "nenhum" \| "cursor" \| "zonas"}` | `{status, uniq, perfil, gravado, ligada, sensibilidade, zona_morta_graus_s, gatilho, inverter_horizontal, inverter_vertical, toque, inclinacao, alcance, ressalva}` |
+| `mira.set` | `{uniq?: str, ligada?: bool, sensibilidade?: 1-12, zona_morta_graus_s?: 0-60, gatilho?: str \| null, inverter_horizontal?: bool, inverter_vertical?: bool, inclinacao?: "nenhum" \| "analogico_esquerdo" \| "analogico_direito", toque?: "nenhum" \| "cursor" \| "zonas"}` | `{status, uniq, perfil, gravado, ligada, sensibilidade, zona_morta_graus_s, gatilho, inverter_horizontal, inverter_vertical, toque, inclinacao, alcance, ressalva}` |
 
 `ligada: true` grava o destino `analogico_direito` na peça, e `false` grava
 `nenhum` — com opinião: a peça que apagou o chip não mira nem pela mira do
@@ -602,9 +602,10 @@ Calibrar sensores («O quanto um gesto anda» e «Ignorar tremor até»); `gatil
 andar sempre — o PS é recusado), e `inverter_horizontal`/`inverter_vertical`
 são os dois «Inverter» (A-MIRA-POR-MOVIMENTO-NA-TELA-02). `inclinacao` e
 `toque` são os dois arranjos da resposta dela de 28/09/2026
-(NO-MODO-XBOX-TUDO-FUNCIONA-01): `inclinacao: true` grava
-`acelerometro: "analogico_esquerdo"` (a inclinação do controle move o analógico
-esquerdo; `false` grava `nenhum`), e `toque` grava o destino do touchpad —
+(NO-MODO-XBOX-TUDO-FUNCIONA-01): `inclinacao` grava o `acelerometro` da peça —
+o analógico que a inclinação do controle move, `"analogico_esquerdo"` ou
+`"analogico_direito"` (o chip embaixo de cada um), ou `"nenhum"` —, e `toque`
+grava o destino do touchpad —
 `"cursor"` (o dedo move o cursor pelo Hefesto, e o clique é o botão esquerdo),
 `"zonas"` (o dedo apoiado aperta o direcional nos dois terços da esquerda, o L1
 em cima e o L2 embaixo no terço da direita) ou `"nenhum"` (o touchpad do
@@ -630,7 +631,8 @@ modo voltar. `status` pode ser `"ok"`, `"nativo"`, `"sem_controle"` ou
 **A leitura de volta é o `state_full`**: cada controle traz `mira: {ligada,
 destino, toque, inclinacao, sensibilidade, zona_morta_graus_s, gatilho,
 inverter_horizontal, inverter_vertical}` — o que vale AGORA para aquela peça
-(`ligada` e `destino` são o giro; `toque` e `inclinacao`, os outros dois),
+(`ligada` e `destino` são o giro; `toque` e `inclinacao`, os outros dois, e
+`inclinacao` diz o analógico que ela move, como no pedido),
 pela mesma pergunta que o tique faz (`roteador_de_movimento.da_peca`), e os
 números mesmo com a mira apagada.
 

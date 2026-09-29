@@ -678,6 +678,32 @@ class TestOP1NoModoXbox:
         finally:
             daemon._gamepad_device.stop()
 
+    def test_a_inclinacao_no_analogico_direito(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, _evdev_que_grava: None
+    ) -> None:
+        """O chip embaixo do analógico DIREITO move o direito, e só ele.
+
+        MORDIDA: faça `_a_inclinacao` somar sempre ao esquerdo e este teste
+        reprova (conferência de 28/09: o destino direito não tinha régua).
+        """
+        movimento = _LeitorDeMovimento(_DEITADO)
+        hub = _hub({_P1: movimento}, {})
+        perfil = Profile(
+            name="Inclinar", match=MatchAny(type="any"),
+            movimento=ProfileMovimentoConfig(acelerometro="analogico_direito"),
+        )
+        daemon, _ = _mesa_de_verdade(tmp_path, hub, perfil)
+        no = self._tiques(monkeypatch, daemon, hub)
+        try:
+            movimento.acel = _inclinado(0.0, 25.0)
+            gp.dispatch_gamepad(daemon, _estado(), frozenset())
+            assert (no.ultimo(_EC.EV_ABS, _EC.ABS_RX) or 128) > 128, (
+                "inclinar para a direita não moveu o analógico direito")
+            assert no.ultimo(_EC.EV_ABS, _EC.ABS_X) in (None, 128), (
+                "a inclinação do direito andou o analógico esquerdo")
+        finally:
+            daemon._gamepad_device.stop()
+
     def test_o_cursor_do_toque_nasce_e_sai_com_o_controle_virtual(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, _evdev_que_grava: None
     ) -> None:
@@ -964,8 +990,8 @@ class TestOIpc:
         from hefesto_dualsense4unix.profiles.loader import load_profile
 
         servidor = _servidor(tmp_path)
-        corpo = _mira_set(servidor, uniq=_P3, inclinacao=True)
-        assert corpo["status"] == "ok" and corpo["inclinacao"] is True
+        corpo = _mira_set(servidor, uniq=_P3, inclinacao="analogico_esquerdo")
+        assert corpo["status"] == "ok" and corpo["inclinacao"] == "analogico_esquerdo"
         assert corpo["ligada"] is False, "a inclinação acendeu a Mira"
         corpo = _mira_set(servidor, uniq=_P3, toque="zonas")
         assert corpo["toque"] == "zonas"
@@ -977,10 +1003,38 @@ class TestOIpc:
         entradas: list[dict[str, Any]] = [{"uniq": _P2}, {"uniq": _P3}]
         servidor._merge_mira(entradas)
         assert entradas[1]["mira"]["toque"] == "zonas"
-        assert entradas[1]["mira"]["inclinacao"] is True
+        assert entradas[1]["mira"]["inclinacao"] == "analogico_esquerdo"
+        assert entradas[0]["mira"]["inclinacao"] == "nenhum"
         assert entradas[1]["mira"]["ligada"] is False
         assert entradas[0]["mira"]["toque"] == "nenhum"
         assert REGISTRO.toque_roteado(_P3) and not REGISTRO.toque_roteado(_P2)
+
+    def test_o_chip_de_cada_analogico_grava_o_seu(self, perfis: Path, tmp_path: Path) -> None:
+        """A tela tem uma «Inclinação» embaixo de CADA analógico, e o pedido diz qual.
+
+        Conferência de 28/09: o `mira.set` nasceu com `inclinacao: bool`, que só
+        sabia o esquerdo, e o `state_full` publicava um booleano — o chip do
+        analógico direito não tinha como gravar nem como acender. MORDIDA: faça
+        o `mira.set` gravar sempre o esquerdo e este teste reprova.
+        """
+        from hefesto_dualsense4unix.profiles.loader import load_profile
+
+        servidor = _servidor(tmp_path)
+        corpo = _mira_set(servidor, uniq=_P2, inclinacao="analogico_direito")
+        assert corpo["inclinacao"] == "analogico_direito"
+        dele = load_profile("Bancada").controllers["aabbcc000002"].movimento
+        assert dele is not None and dele.acelerometro == "analogico_direito"
+        entradas: list[dict[str, Any]] = [{"uniq": _P2}]
+        servidor._merge_mira(entradas)
+        assert entradas[0]["mira"]["inclinacao"] == "analogico_direito", (
+            "a tela não teria como acender o chip do analógico direito")
+        corpo = _mira_set(servidor, uniq=_P2, inclinacao="nenhum")
+        assert corpo["inclinacao"] == "nenhum"
+        servidor._merge_mira(entradas)
+        assert entradas[0]["mira"]["inclinacao"] == "nenhum"
+        dele = load_profile("Bancada").controllers["aabbcc000002"].movimento
+        assert dele is not None and "acelerometro" in dele.model_fields_set, (
+            "a peça que apagou a inclinação perdeu a opinião no disco")
 
     def test_o_toque_desconhecido_e_recusado(self, perfis: Path, tmp_path: Path) -> None:
         servidor = _servidor(tmp_path)
@@ -988,6 +1042,8 @@ class TestOIpc:
             _mira_set(servidor, uniq=_P3, toque="gestos")
         with pytest.raises(ValueError, match="inclinacao"):
             _mira_set(servidor, uniq=_P3, inclinacao="sim")
+        with pytest.raises(ValueError, match="inclinacao"):
+            _mira_set(servidor, uniq=_P3, inclinacao=True)
 
     def test_no_nativo_os_chips_nao_gravam(
         self, perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -996,7 +1052,7 @@ class TestOIpc:
 
         servidor = _servidor(tmp_path)
         monkeypatch.setattr(servidor.daemon, "is_native_mode", lambda: True)
-        for pedido in ({"toque": "cursor"}, {"inclinacao": True}):
+        for pedido in ({"toque": "cursor"}, {"inclinacao": "analogico_direito"}):
             corpo = _mira_set(servidor, uniq=_P3, **pedido)
             assert corpo["status"] == "nativo"
         assert not (load_profile("Bancada").controllers or {})

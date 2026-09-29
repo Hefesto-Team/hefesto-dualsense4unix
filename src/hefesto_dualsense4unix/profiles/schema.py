@@ -539,9 +539,9 @@ class ProfileMovimentoConfig(BaseModel):
     #: quem não os alcança. `nenhum` = sem opinião: o touchpad é o do computador
     #: (TOUCHPAD-DO-SISTEMA-01). Vale onde há controle virtual, P1 a P4.
     toque: Literal["nenhum", "cursor", "zonas"] = "nenhum"
-    #: A INCLINAÇÃO — o acelerômetro vira analógico (mesma resposta). O chip da
-    #: tela a manda ao analógico esquerdo, que é o que falta a quem só alcança o
-    #: lado direito; o direito fica no esquema para quem escrever o perfil.
+    #: A INCLINAÇÃO — o acelerômetro vira analógico (mesma resposta). A tela tem
+    #: um chip «Inclinação» embaixo de cada analógico, e ele escolhe qual dos
+    #: dois ela move; os dois apagados são o `nenhum`.
     acelerometro: Literal["nenhum", "analogico_esquerdo", "analogico_direito"] = (
         "nenhum"
     )

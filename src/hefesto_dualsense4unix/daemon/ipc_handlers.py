@@ -7922,7 +7922,7 @@ class IpcHandlersMixin:
                 "ligada": mira is not None,
                 "destino": mira.destino if mira is not None else rot.DESTINO_NENHUM,
                 "toque": vale.toque if vale is not None else rot.DESTINO_NENHUM,
-                "inclinacao": vale is not None and vale.inclina,
+                "inclinacao": vale.acelerometro if vale is not None else rot.DESTINO_NENHUM,
                 "sensibilidade": numeros.sensibilidade,
                 "zona_morta_graus_s": numeros.zona_morta_graus_s,
                 "gatilho": numeros.gatilho,
@@ -7936,10 +7936,10 @@ class IpcHandlersMixin:
         Params: ``{uniq?: str, ligada?: bool, sensibilidade?: 1-12,
         zona_morta_graus_s?: 0-60, gatilho?: str | null,
         inverter_horizontal?: bool, inverter_vertical?: bool,
-        inclinacao?: bool, toque?: "nenhum" | "cursor" | "zonas"}``. Os dois
-        últimos são de 28/09 (NO-MODO-XBOX-TUDO-FUNCIONA-01): o chip da
-        inclinação (o acelerômetro no analógico esquerdo) e o do touchpad (o do
-        computador, o cursor ou as zonas). `uniq` omitido
+        inclinacao?: "nenhum" | "analogico_esquerdo" | "analogico_direito",
+        toque?: "nenhum" | "cursor" | "zonas"}``. Os dois últimos são de 28/09
+        (NO-MODO-XBOX-TUDO-FUNCIONA-01): o chip da inclinação de cada analógico
+        e o do touchpad (o do computador, o cursor ou as zonas). `uniq` omitido
         = o alvo de saída, e sem ele o primário (`_uniq_do_primario`); campo
         omitido = **não mexe naquele campo**. A palavra dela, 23/09/2026:
         *"Usar os movimentos do controle como mira (analógico R), pra pessoas
@@ -8028,19 +8028,18 @@ class IpcHandlersMixin:
                     raise ValueError(f"mira.set: '{lado}' precisa ser boolean")
                 pedidos[lado] = valor
         # O TOQUE E A INCLINAÇÃO — NO-MODO-XBOX-TUDO-FUNCIONA-01 (28/09/2026), a
-        # resposta dela de ~16h50: o chip da inclinação manda o acelerômetro ao
-        # analógico ESQUERDO (o que falta a quem só alcança o lado direito), e o
-        # do toque escolhe entre o computador, o cursor e as zonas.
+        # resposta dela de ~16h50. A tela tem um chip «Inclinação» embaixo de
+        # CADA analógico: o pedido diz qual dos dois ela move (`nenhum` apaga),
+        # e o do toque escolhe entre o computador, o cursor e as zonas.
         if "inclinacao" in params:
             valor = params["inclinacao"]
-            if not isinstance(valor, bool):
+            if not isinstance(valor, str) or valor not in rot.DESTINOS_DA_INCLINACAO:
                 raise ValueError(
-                    "mira.set: 'inclinacao' precisa ser boolean — true manda a "
-                    "inclinação ao analógico esquerdo, false a apaga"
+                    "mira.set: 'inclinacao' é um de "
+                    f"{', '.join(rot.DESTINOS_DA_INCLINACAO)} — o analógico que a "
+                    "inclinação move, ou nenhum"
                 )
-            pedidos["acelerometro"] = (
-                rot.DESTINO_ANALOGICO_ESQUERDO if valor else rot.DESTINO_NENHUM
-            )
+            pedidos["acelerometro"] = valor
         if "toque" in params:
             valor = params["toque"]
             if valor not in rot.TOQUES:
@@ -8172,7 +8171,7 @@ class IpcHandlersMixin:
             "inverter_horizontal": arranjo.inverter_horizontal,
             "inverter_vertical": arranjo.inverter_vertical,
             "toque": arranjo.toque,
-            "inclinacao": arranjo.inclina,
+            "inclinacao": arranjo.acelerometro,
             "alcance": {"tique": "nao_se_aplica" if nativo else "aplicado"},
             "ressalva": ressalva,
         }
