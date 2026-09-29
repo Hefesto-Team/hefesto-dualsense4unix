@@ -216,7 +216,7 @@ def test_o_reiniciar_chega_aos_dois_atos_so_pelo_duble(
     from hefesto_dualsense4unix.integrations import steam_launch_options as slo
     from tests.unit.test_a_09_sistema_sai_do_desenho import ESTADO, JanelaDeMentira
 
-    janela = JanelaDeMentira()
+    janela = JanelaDeMentira()  # type: ignore[no-untyped-call]
     monkeypatch.setattr(mod, "_JANELA_ANTIGA", [janela])
     monkeypatch.setattr(mod, "_autostart", lambda: "enabled")
     monkeypatch.setattr(rl, "jogo_aberto", lambda: False)
@@ -225,8 +225,9 @@ def test_o_reiniciar_chega_aos_dois_atos_so_pelo_duble(
     monkeypatch.setattr(slo, "steam_running", _steam_aberta_ate_o_kill)
     olho = espiao()
 
+    estado: dict[str, Any] = ESTADO
     ctx = pacotes.Contexto(
-        state=ESTADO, mesa=[], conectados=list(ESTADO["controllers"]), estados={})
+        state=estado, mesa=[], conectados=list(estado["controllers"]), estados={})
     acao = pacotes.gesto_da_pagina("09-sistema.html", "reiniciar")
     with ato_de_proposito(*ATOS_DO_REINICIAR):
         acao(ctx, {}, None)
@@ -263,6 +264,11 @@ def test_chama_o_steam():
 def test_chama_o_steam_sem_o_ambiente():
     # o `env` explícito apaga o $PYTEST_CURRENT_TEST do filho
     subprocess.run(["steam", "-shutdown"], env={{"PATH": PATH_DE_FORA}}, check=False)
+
+
+def test_abre_sem_esperar():
+    # como o `fora_do_servico.abrir`: o `Popen` sai sem esperar o filho
+    subprocess.Popen(["xdg-open", "steam://open/main"], env={{"PATH": PATH_DE_FORA}})
 '''
 
 _NINHO_DO_FIO = '''
@@ -317,20 +323,24 @@ def _rodar_o_ninho(tmp_path: Path, nome: str, corpo: str) -> subprocess.Complete
 
 
 def test_o_teste_que_chega_a_um_ato_reprova_alto(tmp_path: Path) -> None:
-    """Os dois testes de dentro terminam FAILED, cada um com a sigla, o argv
-    e o próprio nodeid — inclusive o que apagou o ambiente do filho.
+    """Os três testes de dentro terminam FAILED, cada um com a sigla, o argv
+    e o próprio nodeid — inclusive o que apagou o ambiente do filho e o que
+    abriu sem esperar (o dublê escreve depois de o corpo do teste acabar).
 
     MORDIDA 1: tire os três `pytest_runtest_*_do_lancador`. O ninho fecha com
     rc=0.
     MORDIDA 2: atribua pelo `$PYTEST_CURRENT_TEST` da linha em vez do livro
     (em `_fechar_a_fase`, só reprove a linha cujo `quem` é o teste). O
-    segundo passa, e esta régua exige os dois.
+    segundo passa, e esta régua exige os três.
+    MORDIDA 3: tire o `_esperar_os_filhos_no_duble()` de `_fechar_a_fase`. O
+    ato do terceiro chega depois da fase e vira «fora de teste».
     """
     _duble()
     saida = _rodar_o_ninho(tmp_path, "ninho", _NINHO_DOIS_TESTES)
     texto = saida.stdout + saida.stderr
     assert saida.returncode == 1, f"rc={saida.returncode}\n{texto[-3000:]}"
-    for teste in ("test_chama_o_steam", "test_chama_o_steam_sem_o_ambiente"):
+    for teste in ("test_chama_o_steam", "test_chama_o_steam_sem_o_ambiente",
+                  "test_abre_sem_esperar"):
         nodeid = f"test_ninho.py::{teste}"
         assert re.search(rf"^FAILED {re.escape(nodeid)}\b", texto, re.M), (
             f"{nodeid} não reprovou:\n{texto[-3000:]}")

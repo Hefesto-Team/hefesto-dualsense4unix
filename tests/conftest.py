@@ -3917,6 +3917,13 @@ _LIVRO_LIDO: list[int] = [0]
 _ATOS_FORA_DE_FASE: list[str] = []
 _ATOS_DE_PROPOSITO: set[int] = set()
 
+#: Os filhos que o `Popen` da sessão mandou a um dublê de lançador. O produto
+#: abre o lançador sem esperar (`fora_do_servico.abrir`), e o dublê escreve no
+#: livro quando RODA: o fim da fase espera por eles, senão o ato de um teste
+#: cairia na fase seguinte, ou fora de qualquer uma.
+_FILHOS_NO_DUBLE: list[Any] = []
+_ESPERA_DOS_FILHOS_S = 5.0
+
 #: O SOM ligou a tabela dele no embrulho? (a mordida da régua do som tira o
 #: `_instalar_popen_sem_som()` do arme do som, e o embrulho continua de pé
 #: pelos lançadores; sem esta marca, a mordida dele deixaria de morder).
@@ -4152,8 +4159,10 @@ def _lancador_no_lugar_de(programa: Any, caminho: str, duble: Path) -> str | Non
     resolvido = texto if os.path.dirname(texto) else shutil.which(texto, path=caminho)
     if resolvido is not None:
         pasta = os.path.realpath(os.path.dirname(resolvido) or os.curdir)
-        if pasta == os.path.realpath(duble) or _e_temporario_da_sessao(pasta):
+        if pasta != os.path.realpath(duble) and _e_temporario_da_sessao(pasta):
             return None
+    # o que já resolvia no dublê ganha o caminho inteiro também: é por ele que
+    # o fim da fase reconhece o filho que tem de esperar
     return str(duble / nome)
 
 
@@ -4227,11 +4236,40 @@ def _instalar_popen_da_sessao() -> None:
                     _desviar_para_o_duble(amarrado.arguments, som)
                 if lancador is not None:
                     _desviar_para_o_lancador(amarrado.arguments, lancador)
-                return _POPEN_INIT_REAL[0](*amarrado.args, **amarrado.kwargs)
+                _POPEN_INIT_REAL[0](*amarrado.args, **amarrado.kwargs)
+                if lancador is not None and _vai_ao_duble(amarrado.arguments, lancador):
+                    _FILHOS_NO_DUBLE.append(self)
+                return None
         return _POPEN_INIT_REAL[0](self, *args, **kwargs)
 
     _POPEN_INIT_REAL.append(real)
     subprocess.Popen.__init__ = _init_da_sessao  # type: ignore[method-assign]
+
+
+def _vai_ao_duble(argumentos: dict[str, Any], duble: Path) -> bool:
+    """O programa deste `Popen` é um dublê de lançador?"""
+    programa: Any = argumentos.get("executable")
+    if programa is None:
+        bruto = argumentos.get("args")
+        programa = bruto[0] if isinstance(bruto, (list, tuple)) and bruto else bruto
+    try:
+        return os.path.dirname(os.fsdecode(programa)) == str(duble)
+    except (TypeError, ValueError):
+        return False
+
+
+def _esperar_os_filhos_no_duble() -> None:
+    """Espera (com teto) os dublês que ainda estão rodando escreverem no livro."""
+    import time
+
+    limite = time.monotonic() + _ESPERA_DOS_FILHOS_S
+    while _FILHOS_NO_DUBLE:
+        filho = _FILHOS_NO_DUBLE[0]
+        with contextlib.suppress(Exception):
+            if filho.poll() is None and time.monotonic() < limite:
+                time.sleep(0.01)
+                continue
+        _FILHOS_NO_DUBLE.pop(0)
 
 
 # O VEREDITO POR TESTE. A atribuição é pelo LIVRO, e não pelo ambiente do
@@ -4251,6 +4289,7 @@ def _abrir_a_fase() -> None:
 
 def _fechar_a_fase(item: Any, fase: str) -> None:
     """Reprova a fase que chamou um ato, com o argv e o nodeid."""
+    _esperar_os_filhos_no_duble()
     linhas, ate = _ler_o_livro(_LIVRO_LIDO[0])
     _LIVRO_LIDO[0] = ate
     atos = [linha for inicio, linha in linhas if inicio not in _ATOS_DE_PROPOSITO]
@@ -4321,6 +4360,7 @@ def ato_de_proposito() -> Callable[..., contextlib.AbstractContextManager[None]]
         _, desde = _ler_o_livro(_LIVRO_LIDO[0])
         # o que já estava no livro antes do bloco é da fase, não do bloco
         yield
+        _esperar_os_filhos_no_duble()
         linhas, _ = _ler_o_livro(desde)
         chegaram = [_partir_a_linha(linha)[0] for _, linha in linhas]
         assert chegaram == list(esperados), (
