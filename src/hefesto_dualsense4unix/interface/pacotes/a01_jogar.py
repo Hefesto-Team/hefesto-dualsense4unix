@@ -966,20 +966,49 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
     return fora
 
 
+#: AS FONTES DO `painel` QUE A TELA JÁ DIZ EM OUTRO LUGAR, pelo nome da fonte
+#: (`painel.Aviso.nome`), com a casa de cada uma — conferência de 28/09/2026.
+#: Na lista do exame da 09 elas saíam no MESMO quadro Status que já dizia o
+#: mesmo fato duas linhas acima («Serviço · PAUSADO» e o aviso da pausa;
+#: «Troca de perfil ao abrir o jogo · SEM VER» e o do detector cego, que ainda
+#: manda ler «a aba Sistema» de dentro dela), e o Freestyle ligado virava um
+#: AVISO fixo sobre uma escolha dela, que a pílula da Jogar já acende.
+FONTES_DO_PAINEL_COM_OUTRA_CASA: dict[str, str] = {
+    "home_actions.texto_da_pausa":
+        "a linha «Serviço» do Status da 09 diz PAUSADO",
+    "home_actions.texto_do_cadeado_cego":
+        "a linha «Troca de perfil ao abrir o jogo» do Status da 09 diz SEM VER",
+    "home_actions.autoswitch_lock_text":
+        "a pílula «Modo Freestyle» da Jogar acende",
+}
+
+
+def _do_painel(ctx: Contexto, com_outra_casa: bool) -> list[dict[str, str]]:
+    """As fontes de `painel.AVISOS_DA_TELA`, de um lado ou do outro da 09.
+
+    Uma leitura do dono (`painel.avisos_do_estado`), cortada pelo nome da fonte
+    em :data:`FONTES_DO_PAINEL_COM_OUTRA_CASA`. A linha de ``ERRO`` de uma fonte
+    que levantou vai para o mesmo lado da fonte.
+    """
+    return [a for a in _painel().avisos_do_estado(ctx.state)
+            if (a.get("fonte") in FONTES_DO_PAINEL_COM_OUTRA_CASA) is com_outra_casa]
+
+
 def _avisos_sem_outra_casa(ctx: Contexto) -> list[dict[str, str]]:
     """As fontes que SÓ a coluna Atenção publicava — as que vão à aba Sistema.
 
     SEPARADAS DAS OUTRAS em 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01), quando a
     lista do exame da 09 passou a recebê-las (:func:`coluna_de_atencao`). As
-    quatro que ficam de fora já têm casa na tela, e levá-las à 09 poria a mesma
+    que ficam de fora já têm casa na tela, e levá-las à 09 poria a mesma
     notícia duas vezes: o serviço calado (o Status da 09 diz o estado do
     serviço), a ponte com o jogo (a fileira da Jogar acende o caminho vivo),
     a cura do travamento do USB (o exame da 09 a lê pelo mesmo dono,
-    `storm_doctor.check_snd_quirk`, dentro do `storm_report`) e os achados do
-    exame dos controles (a aba Conexões, de onde eles vêm).
+    `storm_doctor.check_snd_quirk`, dentro do `storm_report`), os achados do
+    exame dos controles (a aba Conexões, de onde eles vêm) e as três do
+    `painel` de :data:`FONTES_DO_PAINEL_COM_OUTRA_CASA`.
     """
     painel = _painel()
-    fora: list[dict[str, str]] = list(painel.avisos_do_estado(ctx.state))
+    fora: list[dict[str, str]] = _do_painel(ctx, com_outra_casa=False)
 
     try:
         from hefesto_dualsense4unix.app.actions import home_actions
@@ -1016,7 +1045,7 @@ def _avisos_sem_outra_casa(ctx: Contexto) -> list[dict[str, str]]:
 
 
 def _avisos_com_outra_casa(ctx: Contexto) -> list[dict[str, str]]:
-    """As três fontes do canal que a tela já mostra em outro lugar.
+    """As fontes do canal que a tela já mostra em outro lugar.
 
     Ver :func:`_avisos_sem_outra_casa`: a cura do travamento chega ao exame da
     aba Sistema pelo `storm_report`, e os achados graves do exame dos controles
@@ -1031,8 +1060,10 @@ def _avisos_com_outra_casa(ctx: Contexto) -> list[dict[str, str]]:
     fileira da Jogar já acende, e o «de pé, e vazia» é a mesa sem controle, que
     a Jogar e o topo já dizem. Na 09 ela virava um AVISO fixo para quem escolheu
     a Navegação, com uma dica que manda clicar num botão que a tela não tem.
+    E as três do `painel` que o Status da 09 e a Jogar já dizem
+    (:data:`FONTES_DO_PAINEL_COM_OUTRA_CASA`).
     """
-    fora: list[dict[str, str]] = []
+    fora: list[dict[str, str]] = _do_painel(ctx, com_outra_casa=True)
     ponte = _aviso_da_ponte(ctx.state)
     if ponte:
         fora.append(ponte)
@@ -1348,9 +1379,10 @@ def coluna_de_atencao(ctx: Contexto) -> list[dict[str, str]]:
     com a frase do dono dele, na ordem da gravidade.
 
     SÓ AS FONTES SEM OUTRA CASA (:func:`_avisos_sem_outra_casa`). O serviço
-    calado, a ponte com o jogo, a cura do travamento do USB e os achados do
-    exame dos controles já têm lugar na tela, e a mesma notícia duas vezes
-    seria duas verdades para divergir.
+    calado, a ponte com o jogo, a cura do travamento do USB, os achados do
+    exame dos controles e as três de :data:`FONTES_DO_PAINEL_COM_OUTRA_CASA`
+    já têm lugar na tela, e a mesma notícia duas vezes seria duas verdades
+    para divergir.
     """
     return _em_ordem(_avisos_sem_outra_casa(ctx))
 

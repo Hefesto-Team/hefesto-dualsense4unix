@@ -244,6 +244,38 @@ def test_as_fontes_com_outra_casa_nao_vao_a_09(monkeypatch: Any) -> None:
         f"{aba.coluna_de_atencao(vazio)!r}")
 
 
+def test_o_que_o_status_da_09_ja_diz_nao_se_repete_no_exame() -> None:
+    """Pausa, detector cego e Freestyle: no canal, e fora da lista da 09.
+
+    Conferência de 28/09/2026. Na 09 elas saíam no MESMO quadro Status que já
+    dizia o fato duas linhas acima — «Serviço · PAUSADO», «Troca de perfil ao
+    abrir o jogo · SEM VER» (e a frase do detector cego ainda manda ler «a aba
+    Sistema», de dentro dela) — e o Freestyle ligado, escolha dela, virava um
+    AVISO fixo que a pílula «Modo Freestyle» da Jogar já diz. As fontes são as
+    REAIS do `painel`; a régua também confere que a outra casa existe, e
+    reprova no dia em que o Status da 09 deixar de dizer a pausa ou a cegueira.
+
+    A MORDIDA: tire uma das três de `a01_jogar.FONTES_DO_PAINEL_COM_OUTRA_CASA`
+    e esta reprova nomeando a fonte que voltou à 09.
+    """
+    from hefesto_dualsense4unix.gui import aba_sistema
+
+    estado = {**VIVO_NAVEGACAO, "paused": True, "freestyle_ligado": True,
+              "window_detect_backend": "x11", "window_detect_seeing": False,
+              "window_detect_reason": "sem_conexao_x"}
+    ctx = _ctx(estado)
+    # AS TRÊS SÃO ESCRITAS AQUI, e não lidas da tabela do produto: uma régua
+    # que lê a própria tabela que confere passa com a linha arrancada dela.
+    tres = {"home_actions.texto_da_pausa", "home_actions.texto_do_cadeado_cego",
+            "home_actions.autoswitch_lock_text"}
+    no_canal = {a["fonte"] for a in aba._avisos(ctx)}
+    assert tres <= no_canal, f"o canal perdeu uma das três: {sorted(tres - no_canal)}"
+    na_09 = {a["fonte"] for a in aba.coluna_de_atencao(ctx)} & tres
+    assert not na_09, f"voltou à lista da 09, ao lado da linha que já diz o mesmo: {na_09}"
+    assert aba_sistema.status_do_servico("online_systemd", estado)["selo"] == "PAUSADO"
+    assert aba_sistema.status_da_troca(estado)["selo"] == "SEM VER"
+
+
 # ---------------------------------------------------------------------------
 # 4. A CURA DO TRAVAMENTO DO USB — a fonte que faltava (ONDA5-01-01, 06/09/2026)
 #
