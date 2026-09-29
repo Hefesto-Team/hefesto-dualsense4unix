@@ -823,7 +823,15 @@ def linhas_dos_perfis(pode_perguntar: bool = True) -> list[tuple[str, str]]:
         motivo = erro.strerror or type(erro).__name__
         linhas = [("[WARN]", f"não deu para ler os perfis ({motivo})")]
     else:
-        linhas = sanidade.linhas_de_relatorio(achados) if achados else []
+        # A CURA É DO TERMINAL, e não chega à tela — conferência de 28/09/2026.
+        # A linha do dono é «mensagem — Cura: …» (`sanidade.Achado.linha`), e a
+        # cura manda editar JSON, rodar comando e cita sprint pelo nome. Esta
+        # aba já decidiu isso para o `doctor` (SISTEMA-BOTOES-01, ver
+        # :func:`_linha_do_exame`): a instrução não vai nem ao texto nem ao
+        # `title`. O selo continua sendo o do dono; a frase é a `mensagem`.
+        linhas = [(tag, achado.mensagem) for (tag, _), achado in zip(
+            sanidade.linhas_de_relatorio(achados), achados, strict=True)
+        ] if achados else []
     _PERFIS.update(assinatura=assinatura, linhas=linhas)
     return list(linhas)
 

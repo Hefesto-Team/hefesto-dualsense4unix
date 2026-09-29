@@ -552,6 +552,20 @@ def test_perfis_coerentes_nao_ganham_linha(perfis) -> None:
     assert a09.linhas_dos_perfis() == []
 
 
+def test_a_cura_do_terminal_nao_chega_a_tela_dos_perfis(perfis) -> None:
+    """A linha do perfil na 09 é o fato, sem o «— Cura: …» do `doctor`.
+
+    A cura da `sanidade` manda editar JSON, rodar comando e cita sprint pelo
+    nome; a 09 já decidiu que a instrução do `doctor` não vai nem ao texto nem
+    ao `title` da linha (SISTEMA-BOTOES-01, `a09_sistema._linha_do_exame`).
+
+    A MORDIDA: devolva `sanidade.linhas_de_relatorio(achados)` inteiro em
+    `linhas_dos_perfis` e esta reprova com o «Cura:» na linha.
+    """
+    linhas = a09.linhas_dos_perfis()
+    assert linhas == [("[FAIL]", "'Desktop' vale para QUALQUER janela")], linhas
+
+
 def test_a_leitura_que_falha_vira_linha_e_nao_derruba_o_exame(perfis) -> None:
     """O `OSError` é do lado de quem chama, como no `doctor`."""
     perfis["achados"] = PermissionError(13, "Permissão negada")
