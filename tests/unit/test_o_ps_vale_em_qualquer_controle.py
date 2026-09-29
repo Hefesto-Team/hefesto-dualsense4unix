@@ -36,7 +36,9 @@ AS MORDIDAS (28/09/2026, cada uma devolvida com o md5 conferido):
   que não se misturam: o PS de um e o R3 de outro viram um PS + R3;
 - a pergunta «de quem é o gesto» respondendo o posto (sem o contexto do ato)
   reprova o PS + L3 do P3: o cartão do P1 anda;
-- sem o leitor passivo do hub, os modos sem co-op ficam mudos fora do posto.
+- sem o leitor passivo do hub, os modos sem co-op ficam mudos fora do posto;
+- quem renasce no co-op (o grab pendente) contado como «sem leitor» ganha um
+  leitor passivo sobre o nó que o co-op segura.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
@@ -305,12 +307,17 @@ class MesaSemCoop(MesaDosAtalhos):
 def montar_sem_coop(
     monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation, modo: str, transporte: str
 ) -> MesaSemCoop:
-    """Três controles na mesa, com o co-op desligado ou no Nativo (sem vpad do P1)."""
+    """Três controles na mesa, com o co-op desligado ou em mouse e teclado (sem vpad do P1).
+
+    Mouse e teclado é a ponte sem vpad nenhum: o co-op se desmonta e o laço
+    segue chamando os atalhos. O Modo Nativo não entra aqui: nele o
+    ``_poll_loop`` congela o tique antes dos atalhos, para todos os controles.
+    """
     bancada = MesaSemCoop(
         monkeypatch,
         kernel=kernel,
         relogio=Relogio(),
-        caminho=CAMINHO_NATIVO if modo == "nativo" else CAMINHO_VIRTUAL,
+        caminho=CAMINHO_NATIVO if modo == "mouse-e-teclado" else CAMINHO_VIRTUAL,
         coop=modo != "co-op-desligado",
     )
     for uniq, via in zip(UNIQS[:3], TRANSPORTES[transporte][:3], strict=True):
@@ -324,10 +331,10 @@ def montar_sem_coop(
 
 @pytest.mark.usefixtures("config_isolado")
 class TestSemOCoop:
-    """No Nativo e com o co-op desligado, os outros controles também têm os atalhos."""
+    """Em mouse e teclado e com o co-op desligado, os outros controles também têm os atalhos."""
 
     @pytest.mark.parametrize("transporte", list(TRANSPORTES))
-    @pytest.mark.parametrize("modo", ["nativo", "co-op-desligado"])
+    @pytest.mark.parametrize("modo", ["mouse-e-teclado", "co-op-desligado"])
     def test_os_outros_alcancam_o_ps_pelo_leitor_passivo(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
         modo: str, transporte: str,
@@ -345,6 +352,29 @@ class TestSemOCoop:
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
     ) -> None:
         """O posto já tem leitor: o hub só abre leitor para quem não tem outra fonte."""
-        bancada = montar_sem_coop(monkeypatch, kernel, "nativo", "mista")
+        bancada = montar_sem_coop(monkeypatch, kernel, "mouse-e-teclado", "mista")
         bancada.tique()
         assert set(bancada.hub._gamepad) == {P2, P3}
+
+
+@pytest.mark.usefixtures("config_isolado")
+class TestQuemRenasceNaoGanhaLeitorPassivo:
+    """O co-op segura o nó de quem renasce: o hub não abre um segundo leitor ali."""
+
+    def test_o_grab_pendente_nao_pede_o_leitor_do_hub(
+        self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
+    ) -> None:
+        bancada = MesaSemCoop(monkeypatch, kernel=kernel, relogio=Relogio())
+        for uniq, via in zip(UNIQS[:3], TRANSPORTES["mista"][:3], strict=True):
+            bancada.mesa.sentar(uniq, transporte=via)
+        for _ in range(3):
+            bancada.tique()
+        assert set(bancada.coop.live_snapshots()) == {P2, P3}, "premissa: o co-op de pé"
+        assert bancada.hub._demanda_entradas == {}, "o co-op de pé já tem leitor"
+        bancada.coop._teardown_player(P2)
+        bancada.tique()
+        jogador = bancada.coop._players.get(P2)
+        assert jogador is not None and jogador.vpad is None, "premissa: o P2 renasce"
+        assert P2 not in bancada.hub._demanda_entradas, (
+            "o hub abriu um leitor passivo sobre o nó que o co-op segura"
+        )
