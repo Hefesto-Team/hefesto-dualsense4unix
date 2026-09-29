@@ -16,12 +16,12 @@
 #                        usbcore.quirks=054c:0ce6:gn,054c:0df2:gn do cmdline
 #                        (kernelstub/grub) via scripts/install_usb_quirk.sh --remove.
 #                        Por default NÃO remove: cmdline é sensível e pode ser
-#                        mantido por toolchain externa do usuário (ex.: Aurora).
+#                        mantido por outra ferramenta do usuário.
 #   --so-o-applet        remove SÓ o applet COSMIC aposentado (binário, .desktop
 #                        e ícones) e SAI. Não toca em daemon, udev, Steam,
-#                        config nem perfis. O applet saiu do instalador em
-#                        19/09/2026 por ordem dela — o tray faz o mesmo, e esta
-#                        flag existe para o resto não custar um wipe inteiro.
+#                        config nem perfis. O applet saiu do instalador (o
+#                        ícone da bandeja faz o mesmo), e esta flag existe para
+#                        o resto não custar um wipe inteiro.
 #   --purge-config       APAGA a config do usuário (com backup antes) e as cópias de
 #                        pareamento do Bluetooth, inclusive as de uninstalls anteriores.
 #                        Default: preserva.
@@ -53,7 +53,7 @@
 #     (proton_pin.py --unlock); o Proton EXTRAÍDO fica (dado do usuário).
 #   - cmdline: reverte SÓ os params registrados como "hefesto" no estado local
 #     (cmdline-owners.conf); token usbcore.quirks "compartilhado" perde só os
-#     IDs nossos (merge inverso). Params de terceiro (Aurora) NUNCA são tocados.
+#     IDs nossos (merge inverso). Params de terceiro NUNCA são tocados.
 #
 # BUG-UNINSTALL-UDEV-DEFAULT-01 (fix): install.sh aplica as 5 udev rules + modules-
 # load por default (--no-udev é o opt-out). Symmetric, o uninstall.sh deve REMOVER
@@ -79,7 +79,7 @@
 #     unit de terceiros.
 #
 # Onda R (2026-07-19, bluetoothd 5.72 crasha crônico — ver estudo
-# docs/usage/receita-backport-bluez.md):
+# docs/history/2026-07-19-o-estudo-do-bluetoothd-5.72-e-o-plano-do-backport.md):
 #   --restore-bluez      DEVOLVE as versões originais do noble (VERSOES-ANTERIORES.txt
 #                        do cache). Nasceu como o padrão, com --keep-bluez para
 #                        preservar; desde 02/08 o padrão PRESERVA e o --keep-bluez é
@@ -1761,7 +1761,7 @@ done
 
 # Quirk de boot do áudio USB (usbcore.quirks). NÃO removido por default: é
 # cmdline do kernel (sensível) e pode ser mantido por toolchain externa do
-# usuário (ex.: Ritual da Aurora, dona dos kernel params). Só sai com a flag
+# usuário (outra ferramenta que cuide dos kernel params). Só sai com a flag
 # explícita --remove-usb-quirk. install_usb_quirk.sh --remove é idempotente
 # (no-op se o token já estiver ausente).
 if [[ "${REMOVE_USB_QUIRK}" -eq 1 ]]; then
@@ -1779,7 +1779,7 @@ fi
 
 # ---------------------------------------------------------------------------
 # Cmdline gerenciado (PLAT-03) — reverte SÓ o que o install registrou como
-# NOSSO no estado local (cmdline-owners.conf). "terceiro" (Aurora/manual)
+# NOSSO no estado local (cmdline-owners.conf). "terceiro" (outra ferramenta/manual)
 # NUNCA é tocado; "compartilhado" (token usbcore.quirks fundido) perde SÓ os
 # IDs do hefesto (strip_quirks_token do módulo puro) e o restante é re-adicionado.
 # Sem registro = install nunca escreveu cmdline = nada a reverter.
@@ -2039,7 +2039,7 @@ log "       — remova manualmente se quiser wipe absoluto do user-site"
 # de outras toolchains ao hefesto.
 log ""
 log "fora do escopo (não removido — não é do hefesto):"
-log "  /etc/udev/rules.d/99-usb-*.rules         — toolchain de power-mgmt do user (ex: Aurora self-heal)"
+log "  /etc/udev/rules.d/99-usb-*.rules         — de outra ferramenta de energia do usuário"
 log "  /etc/udev/rules.d/99-storage-no-link-pm.rules — idem (storage PM)"
 log "  /etc/udev/rules.d/50-system76-power.rules    — polkit pra system76-power (Pop_OS)"
 log "  kernel cmdline de TERCEIRO (pcie_aspm, mitigations, etc.) — só os params"

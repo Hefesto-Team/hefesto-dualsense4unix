@@ -52,8 +52,8 @@
 #                         USB em /usr/share/alsa/ucm2, sem tocar o alsa-ucm-conf.
 #                         Sem ele o GE-Proton não acha a vibração dos jogos da
 #                         Sony pelo cabo. --no-udev também pula este passo.
-#   --no-fechar-o-no      OPT-OUT do nó que nasce FECHADO (DEFAULT ON, decisão
-#                         dela de 20/09/2026). Por default o hidraw do DualSense
+#   --no-fechar-o-no      OPT-OUT do nó que nasce FECHADO (DEFAULT ON). Por
+#                         default o hidraw do DualSense
 #                         físico nasce 0600 root (TAG-="uaccess") e o broker o
 #                         abre sob pedido — é o que impede a Steam de pegá-lo no
 #                         instante da conexão e deixar a barra de luz apagada.
@@ -83,7 +83,7 @@
 #                         (SEM restart do bluetoothd) e cmdline gerenciado
 #                         (usbcore.autosuspend/usbcore.quirks com MERGE e
 #                         registro de dono). --no-udev pula os que tocam /etc.
-#   (DEFAULT) broker root hide-hidraw (BROKER-01/Onda S — fd-injection): passo
+#   (DEFAULT) broker root hide-hidraw (fd-injection): passo
 #                         3h — esconde o hidraw FÍSICO do DualSense do JOGO
 #                         (cura de raiz do controle duplicado) via broker de
 #                         SISTEMA socket-activated; serve fd O_RDWR ao daemon
@@ -93,9 +93,9 @@
 #                         flag de opt-out ainda (broker ausente/recusado
 #                         degrada para o comportamento de hoje — duplicado,
 #                         nunca zero controles). Vale para TODO formato
-#                         (native/flatpak/appimage/deb — achado Onda S #7).
+#                         (native/flatpak/appimage/deb).
 #                         --no-udev pula (mesmo gate dos passos de plataforma).
-#   (DEFAULT) DKMS hid-nintendo patchado (Onda T — cura de raiz do probe BT
+#   (DEFAULT) DKMS hid-nintendo corrigido (cura de raiz do probe BT
 #                         que mata o Pro Controller/8BitDo em silêncio, sem
 #                         re-probar): módulo out-of-tree via DKMS
 #                         (assets/dkms/hid-nintendo/) que substitui o in-tree
@@ -112,7 +112,7 @@
 #                         formato. Opt-out: --no-dkms (CI/sem hardware/kernel
 #                         sem headers, como --no-udev; desliga AMBOS os
 #                         módulos DKMS — hid-nintendo e rtw88_usb, abaixo).
-#   (DEFAULT) DKMS rtw88_usb patchado (Onda W — cura de raiz do fantasma USB
+#   (DEFAULT) DKMS rtw88_usb corrigido (cura de raiz do fantasma USB
 #                         do dongle WiFi/RTL8822BU: quando um port-status-change
 #                         se perde no xHCI, o driver in-tree nunca detecta que o
 #                         device sumiu e segue tentando I/O contra hardware
@@ -134,8 +134,7 @@
 #                         WiFi ao vivo) — vale no próximo boot/replug do
 #                         dongle. Vale para TODO formato. Opt-out: --no-dkms
 #                         (mesma flag do hid-nintendo, acima).
-#   (DEFAULT) vigia do dongle Wi-Fi USB (O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01,
-#                         23/09/2026 — morava no zsh dela): o scan de fundo do
+#   (DEFAULT) vigia do dongle Wi-Fi USB: o scan de fundo do
 #                         wpa_supplicant sai a cada associação (derrubava o
 #                         dongle de 300 em 300 s) e um vigia de minuto em
 #                         minuto reinicia a porta USB quando o rádio trava
@@ -160,9 +159,9 @@
 #                         nada é copiado, nada é habilitado, nada sobe.
 #   --no-hotplug-gui      pula a cópia da unit hotplug-gui.
 #   --enable-autostart    habilita auto-start do daemon no boot (pula prompt).
-#   --enable-hotplug-gui  habilita GUI auto-abrir ao plugar DualSense (pula prompt).
+#   --enable-hotplug-gui  abre a janela no início da sessão gráfica (pula prompt).
 #   --enable-cosmic-applet  compila+instala o applet COSMIC nativo (Rust).
-#                         APOSENTADO em 19/09/2026 por ordem dela — o tray faz
+#                         APOSENTADO: o ícone da bandeja faz
 #                         o mesmo, aparece sozinho e tem menu mais rico. Sem
 #                         esta flag o applet NÃO é instalado em máquina alguma.
 #                         (a 1a build do libcosmic e longa, >10 min; requer
@@ -1057,7 +1056,7 @@ require() { command -v "$1" >/dev/null 2>&1 || die "dependência ausente: $1"; }
 
 # Registro de dono dos params de cmdline (PLAT-03): estado local que diz quem
 # garante cada parâmetro — "hefesto" (nosso; o uninstall reverte), "terceiro"
-# (Aurora/manual; o uninstall NUNCA toca) ou "compartilhado" (token
+# (outra ferramenta/manual; o uninstall NUNCA toca) ou "compartilhado" (token
 # usbcore.quirks fundido; o uninstall remove SÓ os IDs nossos). Regra da
 # preservação: "hefesto"/"compartilhado" de um install PASSADO vence o
 # "terceiro" do plano novo (o plano novo vê o token presente e não sabe que
@@ -1226,8 +1225,8 @@ acquire_sudo
 #
 # A cura NÃO foi duplicar: foi dar às dez uma casa que os DOIS instaladores
 # possam sourcear. O `install-dev.sh` NUNCA executa este arquivo — sourcear a
-# lib é o que torna isso possível, e a regra do `GUIA.md` ("nunca rode
-# install.sh na árvore de dev") continua de pé, literal.
+# lib é o que torna isso possível, e a regra de nunca rodar o install.sh numa
+# árvore de desenvolvimento continua de pé, literal.
 #
 # Nada mudou de comportamento: as funções são as mesmas, byte por byte, e
 # continuam sendo CHAMADAS daqui, dos dois lados da cerca. O portão
@@ -1588,7 +1587,7 @@ _reconhecimento() {
     elif [[ "${_fam}" != "apt" ]]; then
         warn "distro fora da família Debian/Ubuntu — o install usa ${_fam}"
         printf '      As dependências de sistema são instaladas pelo %s, com os nomes que\n' "${_fam}"
-        printf '      esta casa já declara no empacotamento da sua família. O que ainda não\n'
+        printf '      o Hefesto já declara no empacotamento da sua família. O que ainda não\n'
         printf '      foi validado em hardware é a distro, não o instalador.\n'
         achou_algo=1
     fi
@@ -1610,7 +1609,7 @@ _reconhecimento() {
     if [[ -n "${_bz}" ]]; then
         # Compara só major.minor; o formato do bluetoothctl é "bluetoothctl: 5.86".
         if [[ "$(printf '%s\n5.79\n' "${_bz}" | sort -V | head -1)" != "5.79" ]]; then
-            warn "bluez ${_bz} — abaixo de 5.79, a faixa que esta casa validou"
+            warn "bluez ${_bz} — abaixo de 5.79, a faixa que o Hefesto validou"
             printf '      Abaixo de 5.79 há crashes crônicos de input/HIDP (medidos: 6 em 5 dias).\n'
             printf '      A conferência final vai REPROVAR por isto. A cura é um backport, e a\n'
             printf '      receita está em docs/usage/receita-backport-bluez.md\n'
@@ -1627,7 +1626,7 @@ _reconhecimento() {
     source "${ROOT_DIR}/scripts/dkms_lib.sh"
     if [[ "${NO_DKMS}" -eq 0 ]] && dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita; then
         warn "Secure Boot ligado, e a chave do DKMS não está inscrita"
-        printf '      Os módulos desta casa não vão ser instalados: o kernel os recusaria\n'
+        printf '      Os módulos do Hefesto não vão ser instalados: o kernel os recusaria\n'
         printf '      no boot, e o DualSense ficaria sem driver nenhum. O driver de fábrica\n'
         printf '      fica, o DualSense funciona sem as curas, e o microfone pelo rádio\n'
         printf '      fica desligado. Para ganhar as curas: %s.\n' "$(dkms_passo_da_mok)"
@@ -1672,7 +1671,7 @@ if [[ "${NO_DKMS}" -eq 0 ]] && [[ "$(_familia_pacotes)" != "nenhum" ]]; then
     [[ -d "/lib/modules/$(uname -r)/build" ]] || _dkms_faltando+=("kernel-headers")
 
     if [[ "${#_dkms_faltando[@]}" -gt 0 ]]; then
-        printf '\n      Os três módulos de kernel desta casa precisam compilar, e falta:\n'
+        printf '\n      Os três módulos de kernel do Hefesto precisam compilar, e falta:\n'
         printf '        %s\n' "$(comando_manual_pkg "${_dkms_faltando[@]}")"
         printf '      Sem eles, as curas NÃO entram: o microfone do DualSense pelo rádio\n'
         printf '      fica desligado (o driver de fábrica o leria como botão e mexeria o\n'
@@ -1684,7 +1683,7 @@ if [[ "${NO_DKMS}" -eq 0 ]] && [[ "$(_familia_pacotes)" != "nenhum" ]]; then
                 printf '      pronto para compilar os módulos\n'
             else
                 warn "não consegui instalar ${_dkms_faltando[*]} — os módulos DKMS vão ser pulados"
-                printf '      O produto funciona com os drivers in-tree, sem as curas desta casa.\n'
+                printf '      O produto funciona com os drivers in-tree, sem as curas do Hefesto.\n'
                 printf '      A conferência final no fim vai dizer quais faltaram.\n'
             fi
         else
@@ -1729,13 +1728,13 @@ if [[ "${FORMAT}" != "native" ]]; then
     # HAPTICA-NATIVA-01: a vibração dos jogos da Sony pelo cabo depende do
     # perfil UCM da placa do controle, e a placa é do HOST — mesma função do
     # passo 3c-bis do fluxo native. Opt-out: --no-ucm.
-    step "ucm" "perfil UCM do DualSense (HAPTICA-NATIVA-01 — DEFAULT em todo formato)"
+    step "ucm" "perfil UCM do DualSense: a vibração dos jogos da Sony pelo cabo (DEFAULT em todo formato)"
     install_ucm_dualsense_host
     # BROKER-01 (Onda S — achado #7): o broker hide-hidraw é DEFAULT em TODO
     # formato (regra da casa: install SEM FLAGS). Antes, flatpak/appimage/deb
     # saíam daqui sem o broker e sem nenhum aviso — o P2 duplicado voltava em
     # qualquer jogo sem wrapper. Mesmo passo 3h do fluxo native.
-    step "broker" "broker root hide-hidraw (BROKER-01 — DEFAULT em todo formato)"
+    step "broker" "o controle físico escondido dos jogos, entregue ao Hefesto (DEFAULT em todo formato)"
     install_broker_host
     # ONDA-R2 (22/08/2026): mesmo achado do broker, na camada do Bluetooth. Os
     # formatos de pacote levavam as regras udev 82 e 83 — que existem SÓ para
@@ -1748,7 +1747,7 @@ if [[ "${FORMAT}" != "native" ]]; then
     # trava — o porquê está em `install_trava_do_radio_host`.
     step "trava" "a trava comum do rádio (DEFAULT em todo formato)"
     install_trava_do_radio_host
-    step "bt-res" "ONDA-R2: resiliência do bluetoothd (DEFAULT em todo formato)"
+    step "bt-res" "Bluetooth mais resistente a quedas (DEFAULT em todo formato)"
     install_bt_resilience_host
     # ONDA-R (31/08/2026): o agente de pareamento persistente era código de topo
     # do lado NATIVE e ficava de fora daqui — flatpak/appimage/deb saíam sem
@@ -1756,30 +1755,30 @@ if [[ "${FORMAT}" != "native" ]]; then
     # sumia. Escapou anos ao portão das curas de host por não ter nome: o
     # portão ancora no sufixo `_host`, e um bloco solto não tem. Virou função,
     # e o portão acusou a falta no mesmo minuto.
-    step "bt-agent" "ONDA-R: agente de pareamento BT persistente (DEFAULT em todo formato)"
+    step "bt-agent" "agente de pareamento Bluetooth sempre de pé (DEFAULT em todo formato)"
     install_bt_agent_host
     # PONTE-PRIVILEGIADA-01: mesma razão da linha acima, uma camada adiante —
     # é mudança de SISTEMA (helper em /usr/local/lib + regra em /etc/sudoers.d),
     # ortogonal ao formato do aplicativo. Sem esta chamada, quem instala por
     # flatpak/appimage/deb sairia com a aba de rádio pedindo senha a cada gesto.
-    step "bt-ponte" "PONTE-PRIVILEGIADA-01: a ponte de root do Bluetooth (DEFAULT em todo formato)"
+    step "bt-ponte" "mover controle entre adaptadores Bluetooth sem pedir senha (DEFAULT em todo formato)"
     install_bt_ponte_privilegiada_host
     # MOTOR-7: mesma razão das duas linhas acima. Ler a tabela SMBIOS é trabalho
     # de HOST — quem tem a tabela é a placa, não o formato do aplicativo. Sem
     # esta chamada, quem instala por flatpak/appimage/deb sairia pelo `exit 0`
     # abaixo com a aba Conexões pedindo os três números à mão, e sem nem saber
     # que a BIOS tinha uma resposta a dar.
-    step "gabinete" "MOTOR-7: censo do gabinete pelo firmware (DEFAULT em todo formato)"
+    step "gabinete" "as entradas USB do gabinete, lidas do firmware (DEFAULT em todo formato)"
     install_censo_do_gabinete_host
     # Onda T (achado equivalente ao #7 do broker): DKMS é mudança de
     # SISTEMA/kernel, ortogonal ao formato do app — mesma função do passo 3i
     # do fluxo native. Opt-out: --no-dkms.
-    step "dkms" "DKMS hid-nintendo patchado (Onda T — DEFAULT em todo formato)"
+    step "dkms" "módulo hid-nintendo corrigido (DKMS; DEFAULT em todo formato)"
     install_dkms_hid_nintendo_host
     # Onda W (mesmo achado equivalente ao #7 do broker): rtw88_usb patchado é
     # a 2ª instância da mesma mudança de SISTEMA/kernel — mesma função do
     # passo 3j do fluxo native. Opt-out compartilhado: --no-dkms.
-    step "dkms-w" "DKMS rtw88_usb patchado (Onda W — DEFAULT em todo formato)"
+    step "dkms-w" "módulo rtw88_usb corrigido (DKMS; DEFAULT em todo formato)"
     install_dkms_rtw88_usb_host
     # O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01: a outra metade do dongle Wi-Fi USB — o
     # scan de fundo e o travamento mudo, que moravam no zsh dela. Mudança de
@@ -1788,7 +1787,7 @@ if [[ "${FORMAT}" != "native" ]]; then
     install_wifi_usb_host
     # 3ª instância da mesma mudança de SISTEMA/kernel — mesma função do passo
     # 3k do fluxo native. Opt-out compartilhado: --no-dkms.
-    step "dkms-p" "DKMS hid-playstation patchado (contenção BT — DEFAULT em todo formato)"
+    step "dkms-p" "módulo hid-playstation corrigido (DKMS; DEFAULT em todo formato)"
     install_dkms_hid_playstation_host
     # RADIO-AFOGADO-02: o uhid com contrapressão é mudança de KERNEL, ortogonal
     # ao formato do aplicativo, e o opt-in dela (`--uhid-contrapressao`) vale
@@ -1799,13 +1798,13 @@ if [[ "${FORMAT}" != "native" ]]; then
     # INITRAMFS-01: um flush só, DEPOIS de todos os DKMS (regenerar por módulo
     # custaria dezenas de segundos e ~140 MB de escrita cada). No-op se nenhum
     # módulo ficou staged.
-    step "dkms-i" "regenerar initramfs se algum módulo DKMS mudou (INITRAMFS-01)"
+    step "dkms-i" "regenerar o initramfs se algum módulo DKMS mudou"
     flush_initramfs_host
     # TECLADO-QUE-NAO-DIGITA-01: mesmo achado do broker (#7 da Onda S) numa
     # camada nova — o teclado na tela é pacote do SISTEMA, ortogonal ao formato
     # do app. Sem esta chamada, `--flatpak`/`--appimage`/`--deb` sairiam pelo
     # `exit 0` logo abaixo sem o único caminho do produto para digitar texto.
-    step "osk" "teclado na tela do L3 (TECLADO-QUE-NAO-DIGITA-01 — DEFAULT em todo formato)"
+    step "osk" "teclado na tela do L3 (DEFAULT em todo formato)"
     install_osk_host
     # MIC-EM-TODO-FORMATO-01 (10/08/2026): a voz dela também é ortogonal ao
     # formato do app, e ficava para trás por acidente de posição.
@@ -1832,7 +1831,7 @@ if [[ "${FORMAT}" != "native" ]]; then
     # é o SFX importante sumindo. Nenhuma das flags de mic
     # (`--keep-dualsense-mic`, `--with-wireplumber-disable-mic`) diz nada sobre o
     # sono do ALTO-FALANTE, então nenhuma delas pode decidir isto.
-    step "som" "áudio: o alto-falante do controle nunca dorme (SOM-QUE-NAO-DORME-01)"
+    step "som" "áudio: o alto-falante do controle nunca dorme"
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     _ensaio_wireplumber nunca-dorme
     else
@@ -1848,7 +1847,7 @@ if [[ "${FORMAT}" != "native" ]]; then
             || warn "disable-source falhou — rode: bash scripts/fix_wireplumber_default_source.sh --disable-source"
         fi
     elif [[ "${WITH_WIREPLUMBER_FIX}" -eq 1 ]]; then
-        step "mic" "áudio: a voz do controle acima do eco da saída (MIC-EM-TODO-FORMATO-01)"
+        step "mic" "áudio: a voz do controle acima do eco da saída"
         # O `-ne 1` e não o `||`: rc 2 (o DualSense é a única fonte) e rc 3 (a
         # fonte padrão ainda não é um microfone) NÃO são falha do gesto — são o
         # estado da máquina, e o script já os explica na tela. Tratá-los como
@@ -2346,7 +2345,7 @@ if [[ "${SKIP_UDEV}" -eq 1 ]]; then
         bash "${ROOT_DIR}/scripts/bluez_config.sh" verificar 2>/dev/null \
         | sed -n 's/^JustWorksRepairing: //p' || true)"
     if [[ "${_bt_estado}" == "always" ]]; then
-        warn "  e ATENÇÃO: o disco está com JustWorksRepairing=always AGORA — com --no-udev este install NÃO corrigiu isso (RADIO-ABERTO-01)"
+        warn "  e ATENÇÃO: o disco está com JustWorksRepairing=always AGORA — com --no-udev este install NÃO corrigiu isso (o valor seguro é confirm)"
     elif [[ -n "${_bt_estado}" && "${_bt_estado}" != "confirm" && "${_bt_estado}" != "ausente" ]]; then
         warn "  e o disco está com JustWorksRepairing=${_bt_estado} AGORA — este install NÃO tocou nesse valor"
     fi
@@ -2448,11 +2447,11 @@ fi
 # cmdline do PRÓXIMO boot, com as regras provadas no estudo 2026-07-18:
 #   - o kernel respeita SÓ UM token usbcore.quirks= → o passo faz MERGE no
 #     token existente (delete + add do fundido), NUNCA adiciona um segundo;
-#   - já presente (Aurora/manual) = registra "terceiro" e NÃO toca — na
+#   - já presente (outra ferramenta/manual) = registra "terceiro" e NÃO toca — na
 #     máquina de referência o passo é no-op com atribuição registrada;
 #   - ausente = aplica e registra "hefesto" — o uninstall reverte SÓ o nosso;
 #   - NUNCA reintroduz 054c:0ce6:k / processor.max_cstate / threadirqs
-#     (removidos de propósito pela Aurora v3.24 — guarda no módulo).
+#     (removidos de propósito na máquina de referência — guarda no módulo).
 # Quem DECIDE é o módulo puro integrations/kernel_cmdline.py (100% stdlib,
 # testável); aqui só traduzimos o plano em kernelstub --delete/--add-options.
 if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v python3 >/dev/null 2>&1; then
@@ -2603,7 +2602,7 @@ install_trava_do_radio_host
 # A POSIÇÃO AQUI É QUE IMPORTA: antes do 3f, porque o postinst do backport do
 # BlueZ reinicia o bluetoothd, e o drop-in precisa existir para armar nesse
 # restart.
-step "3e-bis" "ONDA-R2: resiliência do bluetoothd (watchdog + snapshot de bonds)"
+step "3e-bis" "Bluetooth mais resistente a quedas (vigia do bluetoothd + cópia dos pareamentos)"
 install_bt_resilience_host
 
 # ---------------------------------------------------------------------------
@@ -2613,7 +2612,7 @@ install_bt_resilience_host
 # formato, e o outro lado da cerca a chama também — o racional inteiro está lá.
 # A posição aqui é indiferente (não depende do bluetoothd nem do backport);
 # fica colada na resiliência porque é a mesma camada de Bluetooth.
-step "3e-ter" "PONTE-PRIVILEGIADA-01: mover controle entre dongles sem pedir senha"
+step "3e-ter" "mover controle entre adaptadores Bluetooth sem pedir senha"
 install_bt_ponte_privilegiada_host
 
 # ---------------------------------------------------------------------------
@@ -2625,13 +2624,13 @@ install_bt_ponte_privilegiada_host
 # `sudo -n` desta execução já foi exercitado, e ANTES de qualquer passo que
 # demore — o censo custa um `dmidecode` e uma varredura de `/sys` de 6,87 ms, e
 # não faz sentido a pessoa esperar um DKMS para o gabinete dela aparecer.
-step "3e-quater" "MOTOR-7: censo do gabinete (tabela SMBIOS 8 + barramento)"
+step "3e-quater" "as entradas USB do gabinete (tabela SMBIOS 8 + barramento)"
 install_censo_do_gabinete_host
 
 # ---------------------------------------------------------------------------
 # 3f. ONDA-R: BlueZ resiliente (backport local — alvo 5.86) — DEFAULT
 # ---------------------------------------------------------------------------
-# Estudo docs/usage/receita-backport-bluez.md: o
+# Estudo docs/history/2026-07-19-o-estudo-do-bluetoothd-5.72-e-o-plano-do-backport.md: o
 # bluez 5.72-0ubuntu5.5 do noble crashou 6x em 5 dias (heap corruption/SEGV em
 # hidp_add_connection/control_connect_cb — sempre em sessão com controles BT
 # ativos); o 6º crash CHEGOU A COMER um bond recém-pareado. Nenhum SRU do
@@ -2746,7 +2745,7 @@ _bz_maior_do_archive() {
 
 if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
    && command -v dpkg >/dev/null 2>&1 && command -v sudo >/dev/null 2>&1; then
-    step "3f" "ONDA-R: BlueZ resiliente (backport 5.86 — crashes crônicos, o laço de reconexão e o EAGAIN que derrubava a sessão)"
+    step "3f" "BlueZ corrigido (5.86: sem os travamentos, o laço de reconexão e a queda por buffer cheio)"
     # Alvo do backport (sprint 2026-07-21-sprint-pesquisa-bluez-estabilidade.md):
     # 5.86 traz o retry-limit + backoff em loops de reconexão (upstream
     # 17a227b7). 5.87 foi descartado (UAF novo em dev_disconnected, fix só em
@@ -2886,7 +2885,7 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v dpkg-query >/dev/null 2>&1 \
     esac
 fi
 
-step "3g" "ONDA-R: agente de pareamento BT persistente (cura o bond meio-salvo)"
+step "3g" "agente de pareamento Bluetooth sempre de pé (evita o pareamento pela metade)"
 install_bt_agent_host
 
 # ---------------------------------------------------------------------------
@@ -2901,7 +2900,7 @@ install_bt_agent_host
 # §7.1. Sem flag de opt-out: broker ausente/recusado degrada para o
 # comportamento de hoje (duplicado, nunca zero controles — invariante sagrado).
 if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
-    step "3h" "broker root hide-hidraw (cura de raiz do P2 duplicado — BROKER-01)"
+    step "3h" "o controle físico escondido dos jogos, entregue ao Hefesto (sem jogador duplicado)"
     # Achado Onda S #7: o corpo virou a função compartilhada
     # `install_broker_host` — o MESMO caminho roda nos formatos
     # flatpak/appimage/deb (que saem com `exit 0` antes deste passo).
@@ -2920,7 +2919,7 @@ fi
 # docs/process/estudos/2026-07-20-desenho-onda-t-patch-dkms.md.
 # Contrato fail-safe: dkms/headers ausentes ou build falho = aviso honesto,
 # o in-tree segue valendo, o install NUNCA aborta por causa disto.
-step "3i" "Onda T: hid-nintendo patchado via DKMS (probe BT resiliente + module params)"
+step "3i" "módulo hid-nintendo corrigido (DKMS: conexão Bluetooth mais resistente)"
 install_dkms_hid_nintendo_host
 
 # ---------------------------------------------------------------------------
@@ -2939,7 +2938,7 @@ install_dkms_hid_nintendo_host
 # Contrato fail-safe: dkms/headers ausentes, kernel fora do pino
 # BUILD_EXCLUSIVE_KERNEL (ABI privada do rtw88) ou build falho = aviso
 # honesto, o in-tree segue valendo, o install NUNCA aborta por causa disto.
-step "3j" "Onda W: rtw88_usb patchado via DKMS (fantasma USB + teardown limpo)"
+step "3j" "módulo rtw88_usb corrigido (DKMS: o adaptador Wi-Fi USB sem aparelho fantasma)"
 install_dkms_rtw88_usb_host
 
 # ---------------------------------------------------------------------------
@@ -2977,7 +2976,7 @@ install_wifi_usb_host
 # caminho normal. **O PACKAGE_VERSION continua 1.0.0** — bumpar deixaria a
 # versão antiga registrada e instalada em updates/dkms, dois `.ko` candidatos
 # para o mesmo módulo; a razão está escrita no próprio `dkms.conf`.
-step "3k" "contenção BT + microfone: hid-playstation patchado via DKMS"
+step "3k" "módulo hid-playstation corrigido (DKMS: o microfone pelo Bluetooth e vários controles no mesmo adaptador)"
 install_dkms_hid_playstation_host
 
 # ---------------------------------------------------------------------------
@@ -3007,7 +3006,7 @@ install_dkms_uhid_host
 # e como os params do patch novo não existiam nele o kernel descartava o
 # /etc/modprobe.d/hefesto-hid-nintendo.conf INTEIRO ("unknown parameter"),
 # levando junto curas que já funcionavam. Roda UMA vez para todos os módulos.
-step "3l" "INITRAMFS-01: regenerar o initramfs se algum módulo DKMS mudou"
+step "3l" "regenerar o initramfs se algum módulo DKMS mudou"
 flush_initramfs_host
 
 # ---------------------------------------------------------------------------
@@ -3997,7 +3996,7 @@ fi
 # opt-in por acidente de posição (foi o que MIC-EM-TODO-FORMATO-01 pagou em
 # 10/08). Separado também mantém o bloco do 10/11 do tamanho que o portão
 # `test_o_instalador_que_aprovou_o_monitor` lê.
-step "som" "áudio: o alto-falante do controle nunca dorme (SOM-QUE-NAO-DORME-01)"
+step "som" "áudio: o alto-falante do controle nunca dorme"
 # O `if bash …` de baixo fica INTEIRO, e o ensaio entra por fora, e não por um
 # `elif`. A razão é medida: `test_o_alto_falante_nunca_dorme_01` procura a
 # chamada com `^\s*(?:if\s+)?bash …` e um `elif` a esconde — o portão passou a
@@ -4480,7 +4479,7 @@ if [[ -f "${LAUNCH_MIGRATE_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     # como segunda tentativa para quando aquela janela não conseguiu.
     printf '      (com um jogo aberto, a migração é adiada e nada é fechado.)\n'
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-        _faria "trocar as Opções de Inicialização VENENOSAS de ondas antigas (IGNORE_DEVICES fixo) pela chamada do wrapper, jogo por jogo — o que VOCÊ escreveu na linha é preservado"
+        _faria "trocar as Opções de Inicialização antigas que escondiam o controle com um IGNORE_DEVICES fixo (e deixavam o jogo sem controle nenhum quando o virtual caía) pela chamada do wrapper, jogo por jogo — o que VOCÊ escreveu na linha é preservado"
         _faria "guardar um backup .bak.hefesto-launch-<carimbo> ao lado de cada vdf tocado"
         _faria "FECHAR a Steam, se ela estiver aberta, e reabri-la ao terminar (ela regrava o vdf ao sair, e sem isso a edição seria engolida). Com um JOGO aberto, nada é fechado e a migração é adiada."
     elif python3 "${LAUNCH_MIGRATE_PY}" --migrate --stop-steam; then
@@ -4758,7 +4757,7 @@ if [[ "${RUN_DOCTOR}" -eq 1 ]]; then
             warn "e tente a cura automática com:"
             warn "  bash scripts/doctor.sh --fix"
         else
-            printf '      nenhuma FALHA — as curas desta casa estão armadas\n'
+            printf '      nenhuma FALHA — as curas do Hefesto estão armadas\n'
         fi
     fi
 fi
