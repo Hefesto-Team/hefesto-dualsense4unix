@@ -354,20 +354,30 @@ def _mesmo_tom(a: RGB, b: RGB) -> bool:
     dela das 02:30: com o White a 99% o Cosmic Red ficava vermelho, e a 100%
     virava azul e o White, vermelho. As três passam a perguntar aqui.
 
-    Duas luzes são o mesmo tom quando uma acende a outra num brilho
-    (`_acende_o_tom`, nos dois sentidos) ou as duas acendem o mesmo tom da
-    paleta. O preto é ausência de cor: só é «o mesmo» que o próprio preto.
+    Duas luzes são o mesmo tom quando acendem o mesmo tom da paleta, ou
+    quando uma acende a outra num brilho (`_acende_o_tom`, nos dois
+    sentidos). O preto é ausência de cor: só é «o mesmo» que o próprio preto.
+
+    A LUZ AMBÍGUA NÃO TOMA O TOM DE NINGUÉM: abaixo de 1% o vermelho, o rosa
+    e o laranja acendem o mesmo `(1, 0, 0)` (`reescalar` já recusa escolher
+    entre eles), e ela só é «a mesma» que o próprio byte. Sem esta guarda, um
+    controle a 0,5% deslocava o vizinho rosa (`test_a_marca_da_cor_nao_some`).
     """
     if a == b:
         return True
     if a == _APAGADA or b == _APAGADA:
         return False
-    if _acende_o_tom(a, b) or _acende_o_tom(b, a):
-        return True
-    return any(
-        _acende_o_tom(a, tom) and _acende_o_tom(b, tom)
-        for tom in _PLAYER_SLOT_COLORS.values()
-    )
+    tons_a, tons_b = _tons_da_paleta(a), _tons_da_paleta(b)
+    if len(tons_a) > 1 or len(tons_b) > 1:
+        return False
+    if tons_a and tons_b:
+        return tons_a == tons_b
+    return _acende_o_tom(a, b) or _acende_o_tom(b, a)
+
+
+def _tons_da_paleta(luz: RGB) -> tuple[RGB, ...]:
+    """Os tons da paleta que `luz` acende em algum brilho."""
+    return tuple(t for t in _PLAYER_SLOT_COLORS.values() if _acende_o_tom(luz, t))
 
 
 def _ja_acesa(luz: RGB, acesas: Iterable[RGB]) -> bool:
