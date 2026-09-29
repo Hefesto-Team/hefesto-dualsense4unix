@@ -590,7 +590,7 @@ class UinputMouseDevice:
 #: O nome do nó. NÃO termina em «Touchpad», de propósito: a regra
 #: `assets/76-dualsense-touchpad-libinput-ignore.rules` tira do libinput todo
 #: nó `*Hefesto*Touchpad`, e este é o ponteiro que o computador tem de ler.
-NOME_DO_CURSOR_DO_TOQUE = "Hefesto - Dualsense4Unix Touch Cursor"
+NOME_DO_CURSOR_DO_TOQUE = "Hefesto - DualSense4Unix Touch Cursor"
 
 
 @dataclass
