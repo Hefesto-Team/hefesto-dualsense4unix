@@ -813,6 +813,12 @@ class AltoFalanteSubsystem:
     #: fica onde estava, e é para isso que a volta o lembra. Imutável no corpo
     #: da classe; cada volta troca o dicionário inteiro.
     _lugar_de: Mapping[str, int] = MappingProxyType({})
+    #: ``{uniq: nome do endpoint}`` que a ponte de cada controle lê no modo
+    #: háptica (``""`` no modo som), escrito quando a ponte sobe. O lugar que
+    #: anda troca a ponte (:meth:`_casar_as_pontes`): sem isto a ponte seguia
+    #: lendo o endpoint do lugar de antes, e o controle vibrava pelo jogador
+    #: que se sentou ali. Imutável no corpo da classe, como o ``_lugar_de``.
+    _endpoint_da_ponte: Mapping[str, str] = MappingProxyType({})
     #: Os laços do cabo (``integrations/haptica_do_cabo.HapticaDoCabo``). Nasce
     #: na primeira volta que precisa dele (:meth:`_o_cabo`) — dublê montado por
     #: ``__new__`` também o ganha.
@@ -1285,7 +1291,7 @@ class AltoFalanteSubsystem:
         self,
         controles: list[Any],
         jogando: set[str],
-        motores: list[str],
+        motores: list[str] | None,
     ) -> None:
         """Um laço por DualSense no cabo, do endpoint do lugar à placa dele.
 
@@ -1296,6 +1302,11 @@ class AltoFalanteSubsystem:
         quatro canais que não é nossa (``motores``, a leitura da volta): sem
         ela o controle segue pela placa, sem laço, e o registro lhe dá o bloco
         pelo ``BUSNUM-DEVNUM`` (``audio_ks_dualsense.controles_do_registro``).
+
+        ``motores`` ``None`` é o servidor que não respondeu: o laço de quem
+        segue no cabo, no mesmo lugar, FICA como está — ele é um processo do
+        PipeWire, e não depende do ``pipewire-pulse`` que travou. Só cai o de
+        quem saiu do cabo, que o ``/sys`` diz sem perguntar ao servidor.
         """
         from hefesto_dualsense4unix.integrations.alto_falante_bt import (
             e_radio,
@@ -1318,9 +1329,20 @@ class AltoFalanteSubsystem:
         cabo = self._cabo
         if not [u for u in no_cabo if u] and (cabo is None or not cabo.lugares()):
             return
-        placas = set(motores)
         rotas: dict[int, Any] = {}
         abertos: set[int] = set()
+        if motores is None:
+            antes = cabo.lugares() if cabo is not None else {}
+            for lugar, rota in antes.items():
+                dono = str(getattr(rota, "dono", "") or "")
+                if dono in no_cabo and self._lugar_de.get(dono) == lugar:
+                    rotas[lugar] = rota
+                    if dono.lower() in jogando:
+                        abertos.add(lugar)
+            logger.debug("haptica_do_cabo_servidor_mudo", ficam=sorted(rotas))
+            self._o_cabo().casar(rotas, abertos)
+            return
+        placas = set(motores)
         for uniq in no_cabo:
             lugar = self._lugar_de.get(uniq)
             endpoint = self._endpoint_de(uniq)
@@ -1333,7 +1355,7 @@ class AltoFalanteSubsystem:
             if not captura or not destino:
                 continue
             rotas[lugar] = RotaDoCabo(
-                captura=captura, destino=destino, origem=str(endpoint.nome)
+                captura=captura, destino=destino, origem=str(endpoint.nome), dono=uniq
             )
             este_joga = uniq.lower() in jogando
             if este_joga:
@@ -1588,6 +1610,7 @@ class AltoFalanteSubsystem:
             fonte_do_monitor_do_no,
             garantir_motores_audiveis,
             nome_do_sink,
+            rodar_pactl,
             sink_esta_tocando,
             sinks_com_motores,
         )
@@ -1668,6 +1691,7 @@ class AltoFalanteSubsystem:
         postas = distribuir_ancoras(
             lugares_vivos, ancoras(), de_pe,
             ja_postas={n: e.ancora for n, e in self._endpoints.items()},
+            ocupados=set(lugar_de.values()),
         )
         for lugar in lugares_vivos:
             posta = postas.get(lugar)
@@ -1696,10 +1720,14 @@ class AltoFalanteSubsystem:
                 # ContainerId que não casa mais. A janela é estreita; se a
                 # bancada mostrar o caso, a guarda passa a ser "nenhum
                 # processo Wine/Proton vivo".
+                # E QUEM LÊ O NÓ É A PONTE QUE O LÊ, e não só quem se sentou
+                # no lugar agora: o controle que acabou de mudar de lugar ainda
+                # tem a ponte no endpoint de antes até a troca, mais abaixo.
                 quem = ocupante.get(lugar, "")
+                lido = {self._endpoint_da_ponte.get(u) for u in self._pontes}
                 if (
                     quem in self._pontes and self._modo_da_ponte.get(quem) == "haptica"
-                ) or sink_esta_tocando(atual.nome, na_duvida=True):
+                ) or atual.nome in lido or sink_esta_tocando(atual.nome, na_duvida=True):
                     continue
                 self._o_cabo().soltar(lugar)
                 self._endpoints.pop(lugar, None)
@@ -1734,10 +1762,26 @@ class AltoFalanteSubsystem:
         # têm motores vêm de duas origens diferentes (o ALSA, no cabo; e o
         # `EndpointDeHaptica`, para o Wine) e nenhum dos dois nomes se deriva do
         # `uniq`.
-        motores: list[str] = []
+        #
+        # E O «NÃO SEI» DO SERVIDOR NÃO É «NÃO HÁ PLACA» (conferência de
+        # 28/09/2026): `sinks_com_motores` devolve a lista vazia nos dois
+        # casos, e o laço do cabo lia a vazia como «a placa saiu» e caía no meio
+        # da partida — com o `pipewire-pulse` travado (a queda de um controle
+        # pelo rádio já o deixou horas sem responder), o cabo perdia a vibração
+        # que não depende dele. Quem pergunta anota se houve resposta; sem
+        # resposta, `motores` é ``None`` e o laço fica (:meth:`_casar_o_cabo`).
+        motores: list[str] | None = None
         with contextlib.suppress(Exception):
-            motores = list(sinks_com_motores())
-            for sink_com_motor in motores:
+            respostas: list[bool] = []
+
+            def _perguntar(argv: list[str]) -> str | None:
+                saida = rodar_pactl(argv)
+                respostas.append(saida is not None)
+                return saida
+
+            lidos = list(sinks_com_motores(_perguntar))
+            motores = lidos if all(respostas) else None
+            for sink_com_motor in lidos:
                 garantir_motores_audiveis(sink_com_motor)
 
         # QUEM O JOGO ESTÁ LENDO — QUEM-JOGA-E-QUEM-VIBRA-01, 20/09/2026.
@@ -1847,12 +1891,23 @@ class AltoFalanteSubsystem:
             ):
                 self._descer_ponte_ociosa(uniq)
                 continue
+            # O LUGAR QUE ANDA TROCA A PONTE (conferência de 28/09/2026): a
+            # ponte em modo háptica lê o endpoint do lugar de QUANDO subiu. Se
+            # o controle mudou de lugar, ela desce e sobe lendo o do lugar de
+            # agora — senão ele vibraria pelo jogador que se sentou no lugar
+            # de antes. Ponte sem registro (dublê, ou de antes desta volta
+            # saber) é «não sei», e «não sei» não derruba ponte.
+            lendo = endpoint.nome if (modo == "haptica" and endpoint is not None) else ""
             if uniq in self._pontes:
-                if self._modo_da_ponte.get(uniq) == modo:
+                lia = self._endpoint_da_ponte.get(uniq)
+                if self._modo_da_ponte.get(uniq) == modo and lia in (None, lendo):
                     continue
                 anterior = self._pontes.pop(uniq)
                 anterior.descer()
-                logger.info("som_ponte_troca_de_modo", uniq=uniq, modo=modo)
+                if self._modo_da_ponte.get(uniq) == modo:
+                    logger.info("som_ponte_troca_de_lugar", uniq=uniq, modo=modo)
+                else:
+                    logger.info("som_ponte_troca_de_modo", uniq=uniq, modo=modo)
             if not caminho:
                 continue
             # A VAGA VEM ANTES DO GRAVADOR — GOVERNADOR-DO-RADIO-01. Até 2
@@ -1961,6 +2016,10 @@ class AltoFalanteSubsystem:
             if ponte.subir():
                 self._pontes[uniq] = ponte
                 self._modo_da_ponte[uniq] = modo
+                self._endpoint_da_ponte = MappingProxyType({
+                    **self._endpoint_da_ponte,
+                    uniq: endpoint.nome if (modo == "haptica" and endpoint is not None) else "",
+                })
                 # SUBIU: o caminho está provado, e a recusa velha não vale mais.
                 self._ponte_recusada.pop(uniq, None)
             else:

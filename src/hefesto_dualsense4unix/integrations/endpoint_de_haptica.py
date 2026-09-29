@@ -272,6 +272,7 @@ def distribuir_ancoras(
     de_pe: Mapping[str, Sequence[tuple[str, str]]] | None = None,
     *,
     ja_postas: Mapping[int, Ancora] | None = None,
+    ocupados: Iterable[int] = (),
 ) -> dict[int, Ancora]:
     """Uma âncora por LUGAR, e NUNCA a mesma para dois. Função pura.
 
@@ -282,7 +283,13 @@ def distribuir_ancoras(
     **POR LUGAR DESDE 28/09/2026** (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01): as
     chaves eram os ``uniq`` dos controles no rádio, e passaram a ser os lugares
     (:data:`LUGARES`). A posse é a mesma, nos mesmos três passos; faltando
-    âncora, fica de fora o lugar de número MAIOR.
+    âncora, fica de fora o lugar VAZIO de número maior.
+
+    **QUEM ESTÁ SENTADO VEM PRIMEIRO NAS LIVRES** (``ocupados``, conferência de
+    28/09/2026). Pela ordem pura, com menos âncoras que lugares, o lugar 1
+    vazio levava a âncora e o controle sozinho no lugar 2 ficava sem vibração
+    pelo rádio — num notebook com uma âncora, bastava ele não ser o «Controle
+    1». A posse não muda: só o passo 3 serve os lugares ocupados antes.
 
     **A DISTRIBUIÇÃO ERA POR ORDEM, E A ORDEM REPETIA ÂNCORA — 18/09/2026.** Ela
     ordenava TODOS os controles vivos e dava a i-ésima âncora ao i-ésimo; quem
@@ -300,7 +307,8 @@ def distribuir_ancoras(
        adota o ``sysfs.path`` que o nó já declara. Sem isso a ordenação voltava
        a mandar depois de cada restart e :meth:`EndpointDeHaptica.iniciar`
        derrubava e recarregava um nó vivo — com o jogo talvez aberto nele;
-    3. os que sobram, em ordem, recebem as âncoras ainda LIVRES.
+    3. os que sobram recebem as âncoras ainda LIVRES: primeiro os
+       ``ocupados``, depois os vazios, cada grupo em ordem de lugar.
 
     A identidade de uma âncora é o ``syspath`` do aparelho, não a interface
     declarada: o Wine sobe ao pai do caminho, então duas interfaces do mesmo
@@ -334,7 +342,8 @@ def distribuir_ancoras(
             if tomar(lugar, por_declarado.get(caminho)):
                 break
     livres = (a for a in lista if a.syspath not in tomadas)
-    for lugar in ordem:
+    sentados = {int(n) for n in ocupados}
+    for lugar in [n for n in ordem if n in sentados] + [n for n in ordem if n not in sentados]:
         if lugar in postas:
             continue
         for ancora in livres:

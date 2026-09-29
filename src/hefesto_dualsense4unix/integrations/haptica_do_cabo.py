@@ -108,6 +108,10 @@ class RotaDoCabo:
     #: O ``node.name`` do endpoint do lugar: é a ele que o lado de captura do
     #: laço tem de estar ligado. Vazio = não se confere.
     origem: str = ""
+    #: O ``uniq`` do controle sentado no lugar quando a rota se montou. É por
+    #: ele que a volta sem resposta do servidor sabe que o laço ainda é de
+    #: quem está no cabo (``AltoFalanteSubsystem._casar_o_cabo``).
+    dono: str = ""
 
 
 def alvo_do_no(nome: str) -> str:

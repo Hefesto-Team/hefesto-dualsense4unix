@@ -924,3 +924,271 @@ def test_o_laco_no_endpoint_do_lugar_se_confere_uma_vez(mesa: _Mesa) -> None:
         mesa.volta(p1)
     assert olhados == [no_de_captura(1)]
     assert chave_do_lugar(1) in mesa.lacos.vivos
+
+
+# ---------------------------------------------------------------------------
+# A conferência de 28/09: o lugar que anda troca a ponte, o «não sei» do
+# servidor não derruba o laço, e quem está sentado vem primeiro nas âncoras
+# ---------------------------------------------------------------------------
+
+
+def _quem_le(monkeypatch: pytest.MonkeyPatch) -> list[tuple[str, str, str]]:
+    """``(uniq, nó lido, papel)`` de cada gravador que a ponte pede."""
+    lidos: list[tuple[str, str, str]] = []
+
+    def _fonte(no: str, **kw: Any) -> tuple[Any, Any, str]:
+        lidos.append((str(kw.get("uniq", "")), no, str(kw.get("papel", ""))))
+        return (lambda _n: b""), f"gravador:{no}", ""
+
+    monkeypatch.setattr(af, "fonte_do_monitor_do_no", _fonte)
+    return lidos
+
+
+def test_o_lugar_que_anda_troca_a_ponte_de_endpoint(
+    mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """P1 e P2 no rádio trocam de lugar com o jogo aberto: cada ponte passa a ler o do lugar novo.
+
+    É a metade do «o número que anda troca o laço ou a ponte» que o cabo já
+    fazia (a rota do laço muda com o endpoint) e a ponte não: ela só descia
+    quando o MODO mudava, e seguia lendo o endpoint do lugar de antes — o
+    controle vibrava pelo jogador que se sentou ali.
+
+    MORDIDA: em ``_casar_as_pontes``, volte a comparar só o modo
+    (``if self._modo_da_ponte.get(uniq) == modo: continue``) — as duas pontes
+    ficam de pé lendo o endpoint trocado.
+    """
+    lidos = _quem_le(monkeypatch)
+    um, dois = _Controle(_P1, "bt", "/dev/hidraw1"), _Controle(_P2, "bt", "/dev/hidraw2")
+    mesa.assentos.update({_P1: 1, _P2: 2})
+    mesa.servidor.jogo_em.update({eh.nome_do_endpoint(1), eh.nome_do_endpoint(2)})
+    mesa.jogando.update({_P1, _P2})
+    mesa.volta(um, dois)
+    assert (_P1, eh.nome_do_endpoint(1), "haptica") in lidos
+    assert (_P2, eh.nome_do_endpoint(2), "haptica") in lidos
+    lidos.clear()
+    mesa.assentos.update({_P1: 2, _P2: 1})
+    mesa.volta(um, dois)
+    assert (_P1, eh.nome_do_endpoint(2), "haptica") in lidos, "o P1 segue lendo o lugar de antes"
+    assert (_P2, eh.nome_do_endpoint(1), "haptica") in lidos, "o P2 segue lendo o lugar de antes"
+    assert mesa.servidor.quedas == [], "o lugar que anda derrubou um endpoint"
+    lidos.clear()
+    mesa.volta(um, dois)
+    assert lidos == [], "a ponte que já lê o lugar certo desceu e subiu à toa"
+
+
+def test_o_no_que_a_ponte_ainda_le_nao_se_reancora_antes_da_troca(
+    mesa: _Mesa, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """O controle mudou de lugar e a âncora do lugar de antes saiu, na mesma volta.
+
+    A reancoragem roda antes da troca de ponte: se ela derrubasse o endpoint
+    que a ponte ainda lê, o gravador cairia na fonte padrão (SOM-ECO-02). A
+    ponte desce primeiro; o nó se reancora na volta seguinte.
+
+    MORDIDA: tire o ``atual.nome in lido`` da guarda da reancoragem — o nó do
+    lugar 1 cai com a ponte do P1 ainda lendo.
+    """
+    cinco = _sysfs(tmp_path / "cinco", ancoras=5)
+    monkeypatch.setattr(eh, "RAIZ_DO_SYSFS", cinco)
+    mesa.sysfs = cinco
+    ordem: list[str] = []
+    descer = _PonteDeMentira.descer
+
+    def _descer(self: Any, **kw: Any) -> bool:
+        ordem.append(f"ponte:{self.uniq}")
+        return descer(self, **kw)
+
+    monkeypatch.setattr(_PonteDeMentira, "descer", _descer)
+    um = _Controle(_P1, "bt", "/dev/hidraw1")
+    mesa.assentos[_P1] = 1
+    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(1))
+    mesa.jogando.add(_P1)
+    mesa.volta(um)
+    ancora_de_antes = _ancora_do_lugar(mesa.servidor, 1)
+    servidor = mesa.servidor
+    nome_do_1 = eh.nome_do_endpoint(1)
+
+    def _pactl(argv: list[str]) -> str | None:
+        if argv[:2] == ["pactl", "unload-module"]:
+            saem = [s["nome"] for s in servidor.sinks.values() if s["mid"] == argv[2]]
+            ordem.extend(f"endpoint:{n}" for n in saem)
+        return servidor(argv)
+
+    monkeypatch.setattr(af, "_rodar", _pactl)
+    # O jogo fecha o fluxo, o P1 vai para o lugar 2 e o aparelho da âncora do 1 sai.
+    servidor.jogo_em.clear()
+    (cinco / "bus" / "usb" / "devices" / "3-1").unlink()
+    mesa.assentos[_P1] = 2
+    mesa.volta(um)
+    mesa.volta(um)
+    assert f"endpoint:{nome_do_1}" in ordem, "o nó da âncora que saiu não se reancorou"
+    assert f"ponte:{_P1}" in ordem
+    assert ordem.index(f"ponte:{_P1}") < ordem.index(f"endpoint:{nome_do_1}"), ordem
+    assert _ancora_do_lugar(mesa.servidor, 1) != ancora_de_antes
+
+
+def test_o_servidor_mudo_nao_derruba_o_laco_do_cabo(
+    mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O ``pipewire-pulse`` que não responde não é «a placa saiu».
+
+    O laço é um processo do PipeWire, e não depende do ``pactl``: com o
+    servidor mudo (a queda de um controle pelo rádio já o deixou horas assim),
+    o cabo seguia vibrando antes desta leva, e tem de seguir. Quem sai do cabo
+    leva o laço mesmo assim — isso o ``/sys`` diz sem o servidor.
+
+    MORDIDA: em ``_casar_as_pontes``, devolva ``motores = lidos`` sem olhar se
+    houve resposta — a lista vazia do servidor mudo derruba o laço.
+    """
+    p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
+    mesa.volta(p1)
+    assert chave_do_lugar(1) in mesa.lacos.vivos
+    monkeypatch.setattr(af, "_rodar", lambda _argv: None)
+    mesa.volta(p1)
+    mesa.volta(p1)
+    assert chave_do_lugar(1) in mesa.lacos.vivos, "o laço caiu porque o servidor não respondeu"
+    mesa.volta()
+    assert chave_do_lugar(1) not in mesa.lacos.vivos, "o laço de quem saiu do cabo ficou"
+
+
+def test_com_uma_ancora_o_controle_sozinho_no_lugar_2_fica_com_ela(
+    mesa: _Mesa, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Um notebook com uma âncora e um DualSense só, que é o «Controle 2».
+
+    Antes desta leva o endpoint era do controle, e a âncora era dele. Por
+    lugar, na ordem pura, ela ia ao lugar 1 vazio e o controle ficava sem
+    vibração pelo rádio.
+
+    MORDIDA: em ``distribuir_ancoras``, sirva as livres só em ordem de lugar
+    (sem os ``ocupados`` primeiro).
+    """
+    uma = _sysfs(tmp_path / "uma", ancoras=1)
+    monkeypatch.setattr(eh, "RAIZ_DO_SYSFS", uma)
+    mesa.sysfs = uma
+    lidos = _quem_le(monkeypatch)
+    mesa.assentos[_P2] = 2
+    mesa.servidor.jogo_em.add(eh.nome_do_endpoint(2))
+    mesa.jogando.add(_P2)
+    mesa.volta(_Controle(_P2, "bt", "/dev/hidraw2"))
+    assert mesa.servidor.nossos() == [eh.nome_do_endpoint(2)]
+    assert (_P2, eh.nome_do_endpoint(2), "haptica") in lidos
+
+
+def test_as_livres_vao_primeiro_a_quem_esta_sentado() -> None:
+    """A conta pura: duas âncoras, o lugar 3 ocupado — o 3 e depois o 1."""
+    duas = [eh.Ancora(syspath=f"/d/{i}", declarado=f"/d/{i}/i:1.0") for i in range(2)]
+    postas = eh.distribuir_ancoras(eh.LUGARES, duas, ocupados={3})
+    assert {n: a.syspath for n, a in postas.items()} == {3: "/d/0", 1: "/d/1"}
+    # A posse não muda: quem já tem âncora fica com ela, ocupado ou não.
+    postas = eh.distribuir_ancoras(eh.LUGARES, duas, ja_postas={1: duas[0]}, ocupados={3})
+    assert {n: a.syspath for n, a in postas.items()} == {1: "/d/0", 3: "/d/1"}
+
+
+def test_a_reancoragem_solta_o_laco_antes_do_endpoint(
+    mesa: _Mesa, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A âncora do lugar do P1 saiu: o laço cai ANTES de o endpoint cair.
+
+    O laço cujo alvo some pode ser religado à fonte padrão (SOM-ECO-02), e a
+    reancoragem derruba o endpoint do lugar como a saída da mesa derruba.
+
+    MORDIDA: tire o ``self._o_cabo().soltar(lugar)`` do ramo da reancoragem.
+    """
+    cinco = _sysfs(tmp_path / "cinco", ancoras=5)
+    monkeypatch.setattr(eh, "RAIZ_DO_SYSFS", cinco)
+    mesa.sysfs = cinco
+    p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
+    mesa.volta(p1)
+    assert chave_do_lugar(1) in mesa.lacos.vivos
+    ordem: list[str] = []
+    desligar = mesa.lacos.desligar
+    servidor = mesa.servidor
+
+    def _desligar(chave: str) -> bool:
+        caiu = desligar(chave)
+        if caiu:
+            ordem.append(f"laço:{chave}")
+        return caiu
+
+    def _pactl(argv: list[str]) -> str | None:
+        if argv[:2] == ["pactl", "unload-module"]:
+            ordem.append("endpoint")
+        return servidor(argv)
+
+    monkeypatch.setattr(mesa.lacos, "desligar", _desligar)
+    monkeypatch.setattr(af, "_rodar", _pactl)
+    (cinco / "bus" / "usb" / "devices" / "3-1").unlink()
+    mesa.volta(p1)
+    assert "endpoint" in ordem, "o endpoint da âncora que saiu não se reancorou"
+    assert ordem[:1] == [f"laço:{chave_do_lugar(1)}"], ordem
+    assert chave_do_lugar(1) in mesa.lacos.vivos, "o laço não voltou no endpoint reancorado"
+
+
+def test_o_stop_solta_os_lacos_do_cabo(mesa: _Mesa) -> None:
+    """Os laços morrem com o subsystem, como as pontes.
+
+    MORDIDA: tire o ``cabo.parar`` do ``stop()`` — o ``pw-loopback`` fica de pé
+    depois do subsystem parado, e o próximo ``start()`` abriria outro.
+    """
+    import asyncio
+
+    mesa.volta(_no_cabo(mesa, _P1, 1, "3-8", 28))
+    assert chave_do_lugar(1) in mesa.lacos.vivos
+    asyncio.run(mesa.sub.stop())
+    assert mesa.lacos.vivos == {}
+
+
+def test_a_placa_sem_os_quatro_canais_nao_ganha_laco(mesa: _Mesa) -> None:
+    """Placa de dois canais (o perfil estéreo do ALSA): nada de laço de quatro.
+
+    Um laço de quatro canais numa placa de dois faria o PipeWire misturar os
+    motores no alto-falante. O controle segue pela placa, com o bloco dele.
+
+    MORDIDA: tire o ``placa not in placas`` de ``_casar_o_cabo``.
+    """
+    p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
+    mesa.servidor.sinks[mesa.servidor.indice(mesa.placas[_P1])]["canais"] = 2
+    mesa.volta(p1)
+    assert mesa.lacos.vivos == {}
+    assert _do_aparelho(mesa.sysfs, "3-8") in _instancias(mesa.registro())
+
+
+def test_o_endpoint_nosso_nunca_e_a_placa_do_laco(mesa: _Mesa) -> None:
+    """Se a placa que o dono responde for um endpoint desta casa, não há laço.
+
+    MORDIDA: tire o ``MARCA_DO_NOME in placa`` de ``_casar_o_cabo`` — o lugar
+    1 passa a tocar no endpoint do lugar 2.
+    """
+    p1 = _no_cabo(mesa, _P1, 1, "3-8", 28)
+    mesa.placas[_P1] = eh.nome_do_endpoint(2)
+    mesa.volta(p1)
+    assert mesa.lacos.vivos == {}
+
+
+def test_quem_o_dono_nao_numera_fica_no_lugar_de_antes(mesa: _Mesa) -> None:
+    """O numerador pisca (sem daemon por um instante): o controle não pula de lugar.
+
+    MORDIDA: tire o segundo passo de ``_lugares_da_mesa`` (o lugar da volta
+    anterior) — o P3 cai no primeiro lugar livre, o 2.
+    """
+    um, tres = _Controle(_P1, "bt", "/dev/hidraw1"), _Controle(_P3, "bt", "/dev/hidraw3")
+    mesa.assentos.update({_P1: 1, _P3: 3})
+    mesa.volta(um, tres)
+    mesa.assentos[_P3] = None  # type: ignore[assignment]
+    mesa.volta(um, tres)
+    assert mesa.sub._endpoint_de(_P3).nome == eh.nome_do_endpoint(3)
+
+
+def test_dois_com_o_mesmo_numero_nao_dividem_o_lugar(mesa: _Mesa) -> None:
+    """O dono responde o mesmo número para dois: um fica com ele, o outro vai ao livre.
+
+    MORDIDA: tire o ``numero not in tomados`` do primeiro passo de
+    ``_lugares_da_mesa`` — os dois leem o mesmo endpoint.
+    """
+    um, dois = _Controle(_P1, "bt", "/dev/hidraw1"), _Controle(_P2, "bt", "/dev/hidraw2")
+    mesa.assentos.update({_P1: 1, _P2: 1})
+    mesa.volta(um, dois)
+    assert mesa.sub._endpoint_de(_P1).nome == eh.nome_do_endpoint(1)
+    assert mesa.sub._endpoint_de(_P2).nome == eh.nome_do_endpoint(2)
