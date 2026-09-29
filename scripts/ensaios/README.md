@@ -165,9 +165,28 @@ Isso transforma *"olhar o controle e contar as luzinhas"* numa **medição** —
 é assim que ele enxerga sozinho a divergência entre o número que o daemon diz e
 o desenho que ele de fato escreve.
 
-**O que ele NÃO resolve, e diz isso em voz alta:** a ligação **vpad ↔ MAC**.
+**O que a tabela NÃO resolve, e diz isso em voz alta:** a ligação **vpad ↔ MAC**.
 Nenhum arquivo de `/sys` a carrega, e o `state_full` publica `coop.players` como
-um NÚMERO, não como lista. `--apertar` resolve à mão.
+um NÚMERO, não como lista.
+
+**`--apertar` mede físico ↔ pad ↔ cartão** (29/09/2026): *o botão apertado
+naquele controle acende o cartão dele na aba Controles?* Ele lê duas fontes
+juntas, e quem diz «houve aperto» nunca sai do estado. **A testemunha** é o nó
+que o jogo lê, com a hora do kernel: o pad uhid no modo DualSense (o nó diz o
+jogador), o pad uinput no Xbox (achado por
+`identidade_do_vpad.e_pad_uinput_do_hefesto`; o nó não diz o jogador) ou, sem
+pad, o físico pela porta da casa (`abrir_input_device`); o nó calado sai pelo
+dono do zero (`leitura_de_zero`). **A tela** é o `state_full`, lido a cada
+`hefesto_vivo.TIQUE_MS` e aceso pela conta da aba 02
+(`a02_controles.leitura_viva`). Cada aperto dá «acendeu só o cartão Pn», FALHA
+(nenhum cartão, mais de um, ou o de outro jogador), «curto demais para o tique
+da tela» ou «a grade não tem glifo» (os dois últimos não contam como medida).
+O **rc**: 2 com uma FALHA, 3 com nada medido (sem aperto testemunhado, a tela
+que não respondeu ou que não se lê aqui); quando todo aperto medido acendeu o
+cartão dele, vale o rc da tabela, com o aviso do LED de jogador. O ensaio prova
+o canal que a grade lê, não a pintura: ele não sabe se a aba 02 está na tela.
+A interface só é importada no `--apertar`; a tabela e o `--json` não dependem
+do Gtk.
 
 **O que muda com a resposta:** se a tabela e o LED discordam, o defeito é do
 desenho do LED; se discordam o vpad e o físico, o defeito é do roteamento —
