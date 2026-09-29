@@ -1973,8 +1973,8 @@ def _steam_input_da_tela(state: dict[str, Any]) -> str:
     não some da tela — ela vai para a faixa, com a frase curta dela, e o
     guarda do vdf completa quando a Steam fechar.
 
-    E O QUARTO NÃO É BURACO: é a mesma honestidade de `painel.degrau_vivo`,
-    *"acender um chip por padrão seria afirmar uma escolha que ninguém fez."*
+    E O QUARTO NÃO É BURACO: acender um chip por padrão seria afirmar uma
+    escolha que ninguém fez.
 
     A ESCOLHA É **POR JOGO**, e é ordem dela: *"setar o jogo pra funcionar
     usando os controladores da própria steam"*. A chave da Steam é indexada por
@@ -2695,7 +2695,7 @@ BOTOES_SEM_DONO: dict[str, str] = {}
 #: `external_mask` guarda a escolha por APARELHO desde 15/08, e o gesto
 #: `mascara_do_controle` existe e é `@gesto`. Um botão listado como SEM DONO com
 #: o dono declarado no mesmo arquivo manda a próxima pessoa construir o que já
-#: está construído — e é como a régua `chips_sem_dono` acusaria falso.
+#: está construído — e é como a régua dos chips sem dono acusaria falso.
 #:
 #: NOTA DATADA — 07/09/2026: este texto dizia que *"o 'Nintendo Pro' continua não
 #: sendo máscara do produto"* e que ele ficava cinza com a razão na dica. A
@@ -3106,8 +3106,8 @@ def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None
     """"Xbox": o canal comum, o do controle de Xbox — o SEGUNDO que o Hefesto tenta.
 
     ESTE CHIP NASCEU EM 31/08/2026 E É UMA DÍVIDA PAGA: `Ponte(gamepad, xbox)` é
-    degrau da `ESCADA` desde 19/08 e **nenhum chip o nomeava** — era o que
-    `painel.degraus_sem_chip()` denunciava. A escada automática passava por ele
+    degrau da `ESCADA` desde 19/08 e **nenhum chip o nomeava** — era o que a
+    conferência da escada contra a tela denunciava. A escada automática passava por ele
     e a tela não tinha onde mostrá-lo.
 
     É o CAMINHO `uinput` (MODO-DE-CONEXAO-01, 13/09/2026), e ele NÃO escolhe a
@@ -3734,8 +3734,7 @@ def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
     **não é degrau da `ESCADA`** (`KIND_DESKTOP` existe como constante e
     `indice_do_degrau` devolve -1) e **tem escritor**:
     `apply_mode('desktop')` funciona hoje. Confundir as duas
-    perguntas pintaria "sem dono" sobre um botão que dá — é a diferença entre
-    `chips_sem_degrau()` e `chips_sem_dono()`.
+    perguntas pintaria "sem dono" sobre um botão que dá.
 
     SÃO TRÊS IPCs, e o terceiro é o que faz a diferença entre entrar no modo e
     entrar num modo sem função. Sem ele, o modo desktop desligava os outros dois
@@ -3759,7 +3758,7 @@ def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
     FATO SUBSTITUÍDO NO PARÁGRAFO ACIMA: dizia-se aqui que *"o PS+R3 não para
     aqui"*. Ele para desde 13/09/2026 (`hotkey.CICLO_DE_PONTES`), e desde 17/09
     entra pela MESMA porta deste clique. O que a Navegação não tem é degrau na
-    `ESCADA` automática — que é outra pergunta, e é a de `chips_sem_degrau()`.
+    `ESCADA` automática — que é outra pergunta.
 
     E TIRA O JOGO DA VEZ DO STEAM INPUT, como o «Xbox» — a linha dela em
     :func:`o_que_o_chip_faz`, e o clique é :func:`_o_clique_da_fileira`.

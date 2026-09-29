@@ -4,7 +4,7 @@ O defeito que esta régua fecha: `painel.CHIPS_DA_ESCADA` tinha CINCO linhas e a
 página publicada tem QUATRO `data-degrau`. A quinta — `pointclick` — saiu do
 desenho em 31/08/2026 por ordem dela (*"nos mockups tira o point and click e
 deixa só o navegação."*) e ficou dezessete dias viva na tabela, envenenando
-`chips_sem_dono()`, que devolvia um chip que a tela não mostra.
+a conta dos chips sem dono, que devolvia um chip que a tela não mostra.
 
 SÃO DUAS PERGUNTAS, e confundi-las é o defeito inteiro:
 
@@ -57,8 +57,8 @@ def test_todo_chip_da_tabela_tem_lugar_na_fileira_publicada() -> None:
     fantasmas = [chave for chave in da_tabela if chave not in da_pagina]
     assert not fantasmas, (
         f"a tabela `painel.CHIPS_DA_ESCADA` tem {fantasmas} e a página "
-        f"publicada não. Uma linha que a tela não mostra envenena "
-        "`chips_sem_dono()`, que passa a responder sobre a TABELA quando a "
+        f"publicada não. Uma linha que a tela não mostra envenena a conta "
+        "dos chips sem dono, que passa a responder sobre a TABELA quando a "
         f"pergunta é sobre a TELA. A fileira publicada é {da_pagina}."
     )
 
@@ -66,8 +66,8 @@ def test_todo_chip_da_tabela_tem_lugar_na_fileira_publicada() -> None:
 def test_todo_degrau_da_fileira_esta_na_tabela() -> None:
     """A pergunta 2: nenhum chip na tela sem linha que o descreva.
 
-    É o lado que `degraus_sem_chip()` não cobre: aquela pergunta sobre a ESCADA
-    do produto, esta sobre o HTML publicado.
+    É o lado que a conferência da escada não cobre: aquela pergunta sobre a
+    ESCADA do produto, esta sobre o HTML publicado.
     """
     from hefesto_dualsense4unix.app.actions.jogar import painel
 
@@ -84,16 +84,23 @@ def test_a_regua_dos_chips_sem_dono_devolve_vazio() -> None:
     """O efeito medido da linha fantasma ter saído.
 
     Não é redundância com a pergunta 1: aquela compara duas listas, esta cobra
-    o VALOR que a tela usa para pintar. Se um chip novo entrar sem ponte e sem
-    modo, a pergunta 1 continua verde e esta reprova.
+    o DONO de cada chip. Se um chip novo entrar sem ponte e sem modo, a
+    pergunta 1 continua verde e esta reprova.
+
+    A CONTA MORA AQUI desde 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01). Ela era
+    `painel.chips_sem_dono()`, e nenhuma tela a perguntava: marcar um chip como
+    "ainda não tem quem o atenda" seria a tela confessando dívida nossa. Um chip
+    sem degrau na escada e sem modo com escritor é dívida, e a dívida reprova
+    aqui, antes de chegar à tela.
     """
     from hefesto_dualsense4unix.app.actions.jogar import painel
 
-    sem_dono = [c.chave for c in painel.chips_sem_dono()]
+    sem_dono = [c.chave for c in painel.CHIPS_DA_ESCADA
+                if c.indice < 0 and (c.modo or "") not in painel.ESCRITOR_DOS_MODOS]
     assert sem_dono == [], (
-        f"`chips_sem_dono()` devolve {sem_dono}. Se o chip está na tela e não "
-        "tem quem o atenda, a marca é legítima e esta régua precisa de nota "
-        "datada; se ele NÃO está na tela, é linha fantasma e sai da tabela."
+        f"os chips {sem_dono} não são degrau da escada nem têm modo com "
+        "escritor. Se o chip está na tela, falta a ele quem o atenda; se NÃO "
+        "está, é linha fantasma e sai da tabela."
     )
 
 

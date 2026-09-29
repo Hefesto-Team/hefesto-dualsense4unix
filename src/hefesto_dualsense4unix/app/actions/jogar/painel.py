@@ -48,8 +48,10 @@ Ligado/Desligado**, com os cinco modos abrindo do lado Ligado.
 2. **A escada tinha cinco chips no desenho e quatro degraus no código**, e um
    degrau REAL — ``Ponte(gamepad, xbox)``, o segundo que o produto tenta —
    nunca tinha chegado à tela. **FECHADO:** o Xbox entrou na fileira e o Nativo
-   virou o interruptor, e :func:`degraus_sem_chip` devolve ``()`` **pela
-   primeira vez**.
+   virou o interruptor, e nenhum degrau da escada ficou sem lugar na tela. Quem
+   confere isso é a régua da suíte
+   (``tests/unit/test_o_botao_de_ligar_funciona_e_se_lembra.py``), e não uma
+   função daqui: a pergunta é de quem desenvolve, e a tela nunca a fez.
 
 3. **O "Automático" da escada não tinha leitor nem escritor.** **FECHADO por
    palavra dela**, 31/08: *"na aba jogar o Botão Automático não existe"*. O
@@ -67,12 +69,13 @@ O QUE CONTINUA EM ABERTO, e é honesto dizer
   chamado **Navegação**, gesto no terceiro degrau do PS + R3 e uma aba inteira
   configurando-o. **O que faltava era o fio** entre o que ela configura e o que
   o chip ativa, e no lugar dele havia uma flag global de sessão. A linha
-  fantasma da tabela saiu, e :func:`chips_sem_dono` devolve ``()``.
+  fantasma da tabela saiu, e nenhum chip ficou sem quem o atenda (a régua é
+  ``tests/unit/test_a_fileira_nao_tem_linha_fantasma.py``).
 * **Navegação tem escritor e não é degrau** — ``apply_mode('desktop')``
   funciona hoje, e desde 17/09 ele CARREGA O PERFIL
   (``Daemon.aplicar_o_arranjo_do_desktop``). O que ela não tem é degrau na
-  ``ESCADA`` automática, e por isso ela é o único item de
-  :func:`chips_sem_degrau` — que por isso **não serve** para pintar "sem dono".
+  ``ESCADA`` automática: "não é degrau" e "não tem dono" são perguntas
+  diferentes, e a Navegação responde sim à primeira e não à segunda.
   O **PS + R3** para nela desde 13/09 (``hotkey.CICLO_DE_PONTES``), que é outro
   objeto e não a ``ESCADA``.
 * **Steam Input não se fixa pela tela**: não há método de IPC que o ligue, e o
@@ -294,8 +297,7 @@ def caminho_vivo(state: dict[str, Any] | None) -> str | None:
 #: hoje os três coincidirem não as junta: o "Automático" da escada tinha leitor
 #: nenhum e escritor nenhum, e a **Navegação** é o caso do meio ao contrário —
 #: ela tem escritor aqui (``apply_mode('desktop')``) e **não** é degrau da
-#: ``ESCADA``, que é justamente o que faz :func:`chips_sem_degrau` ser a régua
-#: errada para pintar "sem dono" (ver :func:`chips_sem_dono`).
+#: ``ESCADA``: "não é degrau" não é "não tem dono".
 ESCRITOR_DOS_MODOS: dict[str, str] = {
     MODE_DESKTOP: "`mode_transition.apply_mode('desktop')` — três IPCs em ordem "
     "(`native.mode.set` off, `gamepad.emulation.set` off, "
@@ -337,22 +339,21 @@ def escritor_do_modo(chave: str) -> str:
 
 
 def porque_nao_aplica(chave: str) -> str:
-    """Vazio quando o botão TEM escritor; o motivo, em português, quando não tem.
+    """Vazio quando o botão TEM escritor; a recusa do dono, quando não tem.
 
-    É o texto do ``disabled`` na tela nova. Botão cinza sem explicação manda a
-    pessoa procurar defeito onde não há; botão vivo que ninguém atende dispara
-    trabalho que não acontece e a tela confirma. Os dois males têm a mesma cura.
+    É a frase com que o gesto recusa. Botão vivo que ninguém atende dispara
+    trabalho que não acontece e a tela confirma; a recusa dita é a cura, e
+    quem a diz é :func:`escritor_do_modo`, o dono da pergunta "quem aplica".
     """
     if chave in ESCRITOR_DOS_MODOS:
         return ""
-    for modo in MODOS_DA_TELA:
-        if modo.chave == chave:
-            return (
-                f"O botão “{modo.rotulo}” ainda não tem quem o atenda no "
-                "Hefesto. Ele está no desenho e a decisão é dela "
-                "(MIGRA-JOGAR-06)."
-            )
-    return "Este botão não existe na fileira de modos."
+    # A RECUSA É DO DONO — A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026. Aqui havia
+    # uma segunda frase para o mesmo fato (*"O botão … ainda não tem quem o
+    # atenda no Hefesto. Ele está no desenho e a decisão é dela"*), escrita ao
+    # lado da que :func:`escritor_do_modo` já dizia. O gesto da aba Jogar
+    # (`a01_jogar._plano`) recusa com ESTA, e ela vai ao diário da janela, não à
+    # tela: o botão só pisca a recusa.
+    return escritor_do_modo(chave)
 
 
 def plano_do_modo(
@@ -499,7 +500,7 @@ class Chip(NamedTuple):
 #:
 #: **A tradução é declarada aqui e o ALGARISMO é calculado** — nunca digitado
 #: (:attr:`Chip.algarismo`). Acrescentar ou tirar um degrau da ``ESCADA`` muda
-#: esta tela sozinho, e :func:`degraus_sem_chip` denuncia quem ficar sem chip.
+#: esta tela sozinho, e a régua da suíte denuncia quem ficar sem chip.
 #:
 #: O QUE MUDOU EM 31/08/2026, contra a fileira plana de quatro:
 #:
@@ -508,7 +509,7 @@ class Chip(NamedTuple):
 #:     da máscara, numa fileira em que os outros também são o Hefesto;
 #:   * **Xbox** entrou: ``Ponte(gamepad, xbox)`` é o SEGUNDO degrau que o
 #:     produto tenta, e nenhum chip o nomeava — era o que
-#:     :func:`degraus_sem_chip` denunciava desde 29/08;
+#:     a conferência da escada contra a tela denunciava desde 29/08;
 #:   * **"Sony (nativo)"** saiu: ele é a posição **Desligado** do interruptor
 #:     (ver :data:`PONTES_DO_INTERRUPTOR`);
 #:   * **"Teclado + Mouse"** virou **Navegação**, e ganhou o ``modo``:
@@ -551,7 +552,7 @@ CHIPS_DA_ESCADA: tuple[Chip, ...] = (
     # que a ordem dela mandou tirar é o mesmo defeito que a entrada `"mascara"`
     # já registrou neste arquivo.
     #
-    # E ELA ENVENENAVA UMA RÉGUA: `chips_sem_dono()` devolvia `['pointclick']`
+    # E ELA ENVENENAVA UMA RÉGUA: a conta dos chips sem dono devolvia `['pointclick']`
     # sobre um chip que a tela não mostra. A régua existe para marcar um botão
     # inerte **na tela**; medindo uma linha que não chega lá, ela responde
     # sobre outra coisa que não o produto — a assinatura dos instrumentos
@@ -585,7 +586,7 @@ DEGRAUS_DA_TELA = CHIPS_DA_ESCADA
 #: AS PONTES QUE TÊM LUGAR NA TELA **FORA** DA FILEIRA. Hoje é uma só, e é a do
 #: interruptor: ``Ponte(KIND_NATIVE)`` é a posição **Desligado**.
 #:
-#: Sem esta linha :func:`degraus_sem_chip` acusaria o Nativo de não ter lugar na
+#: Sem esta linha a régua da escada acusaria o Nativo de não ter lugar na
 #: tela — e seria **acusação falsa**, do tipo mais caro: a régua reprovando a
 #: melhora em vez do defeito. Ela pergunta "este degrau tem onde aparecer?", e a
 #: resposta para o Nativo é sim; o que ele não tem é chip na fileira, que é
@@ -595,118 +596,26 @@ PONTES_DO_INTERRUPTOR: frozenset[ponte_escada.Ponte] = frozenset(
 )
 
 
-def indice_do_chip(chip: Chip) -> int:
-    """Posição do chip na ``ponte_escada.ESCADA``, ou ``-1`` se ele não é degrau.
-
-    ``-1`` não é erro: é o valor honesto para o "Point And Click" (que não
-    nomeia ponte nenhuma) e para a "Navegação" (que nomeia uma ponte que a
-    escada não sobe).
-    """
-    return chip.indice
-
-
-def chips_sem_degrau() -> tuple[Chip, ...]:
-    """Os chips que nomeiam uma ponte que a ``ESCADA`` não tem.
-
-    Hoje: só a **Navegação**, e é o valor honesto — a ``ESCADA`` não tem
-    degrau ``KIND_DESKTOP``, então ``indice_do_degrau`` devolve -1.
-
-    FATO SUBSTITUÍDO — POINT-AND-CLICK-01, 17/09/2026. Aqui se dizia que *"o
-    que falta a ela é o PS + R3 parar ali"*, e a frase confundia dois objetos
-    de nomes parecidos: a escada AUTOMÁTICA (``ponte_escada.ESCADA``, quatro
-    degraus, nenhum ``KIND_DESKTOP`` — isso é verdade) e o ciclo do GESTO
-    (``hotkey.CICLO_DE_PONTES``, que é ``dualsense → xbox → mouse_teclado``).
-    **O PS + R3 para lá desde o MODO-DE-CONEXAO-01, 13/09/2026** — os mesmos
-    três chips da aba Jogar —, e desde 17/09 ele entra pela mesma porta do
-    clique (``Daemon.aplicar_o_arranjo_do_desktop``).
-
-    **ISTO NÃO É "SEM DONO", E CONFUNDIR OS DOIS PINTA A TELA ERRADA.** A
-    Navegação tem escritor (``ESCRITOR_DOS_MODOS[desktop]`` →
-    ``apply_mode('desktop')``) e funciona hoje; marcá-la como órfã seria a tela
-    dizendo "não dá" sobre um botão que dá. Quem responde pela marca é
-    :func:`chips_sem_dono`.
-    """
-    return tuple(c for c in CHIPS_DA_ESCADA if c.ponte is not None and c.indice < 0)
-
-
-def chips_sem_dono() -> tuple[Chip, ...]:
-    """Os chips que **ninguém atende**: nem degrau da ``ESCADA``, nem modo do
-    produto.
-
-    É a régua que a tela usa para marcar um chip como inerte, e ela é a
-    conjunção de duas perguntas que :func:`chips_sem_degrau` sozinha não
-    responde — a Navegação reprova a primeira e passa na segunda.
-
-    **HOJE DEVOLVE ``()``** — POINT-AND-CLICK-01, 17/09/2026. Ela devolvia *"um
-    só, o Point And Click"*, sobre uma linha que a tela não mostrava desde
-    31/08: a régua respondia sobre a TABELA quando a pergunta é sobre a TELA.
-    A linha fantasma saiu de :data:`CHIPS_DA_ESCADA` e a régua voltou a medir o
-    produto. A regra CSS ``.degrau.sem-dono`` e o campo do dicionário ficam de
-    pé de propósito — são a gramática desta casa para *"botão que aparece e diz
-    que ainda não tem quem o atenda"*, e a próxima fileira que precisar deles
-    não vai ter de reinventá-los.
-    """
-    return tuple(
-        c
-        for c in CHIPS_DA_ESCADA
-        if c.indice < 0 and (c.modo or "") not in ESCRITOR_DOS_MODOS
-    )
-
-
-def degraus_sem_chip() -> tuple[ponte_escada.Degrau, ...]:
-    """Os degraus da ``ESCADA`` que a tela NÃO mostra em lugar nenhum — o código
-    devendo à tela.
-
-    Desde 31/08/2026 devolve ``()``, **pela primeira vez**. Os quatro degraus
-    têm onde aparecer: três são chip da fileira e o Nativo é a posição Desligado
-    do interruptor (:data:`PONTES_DO_INTERRUPTOR`).
-
-    O que ela denunciava até 30/08, e o desenho de 31/08 pagou: o segundo
-    degrau, ``gamepad`` com a máscara ``xbox`` — *"o piso mais largo que
-    existe"*, diz o ``porque`` dele. A escada automática passava por ele e a
-    tela não tinha onde mostrá-lo.
-    """
-    nomeadas = {c.ponte for c in CHIPS_DA_ESCADA if c.ponte is not None}
-    nomeadas |= set(PONTES_DO_INTERRUPTOR)
-    return tuple(d for d in ponte_escada.ESCADA if d.ponte not in nomeadas)
-
-
-def degrau_vivo(
-    state: dict[str, Any] | None,
-    pontes: dict[str, Any] | None,
-) -> str | None:
-    """A ``chave`` do chip aceso, ou ``None`` — e ``None`` é o caso comum.
-
-    A ÚNICA memória viva da escada é **por jogo**: o carimbo que
-    ``integrations/prontuario_dos_jogos.pontes_confirmadas`` lê dos perfis do
-    disco (``{appid: Ponte}``). Sem jogo aberto — ``state_full.jogo_steam.appid``
-    ausente — não há o que acender, e acender um chip por padrão seria afirmar
-    uma escolha que ninguém fez.
-
-    **O Nativo não acende chip nenhum aqui, de propósito:** a ponte
-    ``Ponte(KIND_NATIVE)`` carimbada num perfil é a posição *Desligado* do
-    interruptor, e quem responde por ela é :func:`hefesto_ligado`. Procurá-la
-    entre os chips devolve ``None``, que é a resposta certa — a fileira do lado
-    Ligado não tem onde acendê-la.
-
-    ``pontes`` entra por argumento de propósito: quem lê o disco dela é o
-    chamador, e a régua entrega um dicionário próprio em vez de mexer nos
-    perfis dela.
-    """
-    if not isinstance(state, dict) or not pontes:
-        return None
-    jogo = state.get("jogo_steam")
-    appid = jogo.get("appid") if isinstance(jogo, dict) else None
-    if appid is None:
-        return None
-    carimbo = pontes.get(str(appid))
-    ponte = ponte_escada.ponte_do_carimbo(carimbo)
-    if ponte is None:
-        return None
-    for chip in CHIPS_DA_ESCADA:
-        if chip.ponte == ponte:
-            return chip.chave
-    return None
+# AS QUATRO CONFERÊNCIAS E O LEITOR POR JOGO SAÍRAM — A-TELA-PERGUNTA-AO-DONO-01,
+# 28/09/2026. `indice_do_chip`, `chips_sem_degrau`, `chips_sem_dono`,
+# `degraus_sem_chip` e `degrau_vivo` moravam aqui, e nenhuma tela as perguntava:
+# o `casa-sabe` as listava como promessa sem caminho desde 01/09.
+#
+# AS QUATRO PRIMEIRAS ERAM RÉGUA, e régua mora na suíte. Elas conferiam a
+# tabela desta aba contra a escada do produto (todo degrau tem onde aparecer;
+# todo chip tem quem o atenda), e as respostas eram sempre as mesmas: `()`.
+# Pedir isso na tela seria o chip cinza com a frase "ainda não tem quem o
+# atenda", que é a tela confessando dívida nossa. As conferências estão em
+# `tests/unit/test_o_botao_de_ligar_funciona_e_se_lembra.py` e em
+# `tests/unit/test_a_fileira_nao_tem_linha_fantasma.py`, com a mesma mordida
+# do interruptor (:data:`PONTES_DO_INTERRUPTOR`). A posição na escada continua
+# sendo :attr:`Chip.indice`.
+#
+# `degrau_vivo` ERA UM SEGUNDO LEITOR DO CHIP ACESO, e o que ela lia caducou:
+# o carimbo por jogo do prontuário. Desde a MODO-DE-CONEXAO-01 (13/09/2026) o
+# chip acende pelo CAMINHO que o daemon publica — :func:`caminho_vivo` e
+# :func:`modo_vivo`, lidos pelo pacote da aba (`a01_jogar._chip_do_caminho`).
+# Duas regras para o mesmo chip aceso divergem no primeiro jogo carimbado.
 
 
 # ---------------------------------------------------------------------------
@@ -1194,19 +1103,11 @@ def texto_da_conta(quantos: int) -> str:
     return f"{quantos} aviso" + ("s" if quantos != 1 else "")
 
 
-# ---------------------------------------------------------------------------
-# O cabeçalho e o rodapé
-# ---------------------------------------------------------------------------
-def nome_do_perfil(state: dict[str, Any] | None) -> str:
-    """O perfil ativo, para o crachá do topo E para o recibo do rodapé.
-
-    UM leitor para os dois lugares: a aba Controles mostrou em 29/08 o que
-    acontece quando são dois — o topo dizia o perfil vivo e o rodapé continuava
-    dizendo "Mortal Kombat", que é o do mockup.
-    """
-    if not isinstance(state, dict):
-        return SEM_LEITOR
-    return str(state.get("active_profile") or SEM_LEITOR)
+# `nome_do_perfil` SAIU — A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026. Ela lia só o
+# `active_profile` do daemon, e o crachá das dez abas pergunta ao dono das duas
+# pernas (daemon, depois o marcador em disco): `interface/pacotes/perfil.
+# nome_do_ativo`, que `pacotes.topo()` já chama. Dois leitores do perfil ativo
+# era o defeito que ela dizia evitar.
 
 
 __all__ = [
@@ -1234,17 +1135,11 @@ __all__ = [
     "aviso_do_modo_nativo",
     "avisos_do_estado",
     "caminho_vivo",
-    "chips_sem_degrau",
-    "chips_sem_dono",
-    "degrau_vivo",
-    "degraus_sem_chip",
     "escritor_do_modo",
     "hefesto_ligado",
-    "indice_do_chip",
     "ligado_por_modo",
     "modo_lembrado",
     "modo_vivo",
-    "nome_do_perfil",
     "plano_do_modo",
     "porque_nao_aplica",
     "recibo_do_reconectar",

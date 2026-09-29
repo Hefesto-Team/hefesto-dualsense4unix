@@ -82,6 +82,17 @@ def _a01():  # noqa: ANN202
     from pacotes import a01_jogar
 
     return a01_jogar
+
+
+def _perfil_ativo(state: dict | None) -> str:
+    """O perfil ativo pelo DONO das duas pernas (`pacotes.perfil.nome_do_ativo`).
+
+    Importado tarde pela mesma razão do :func:`_a01`. Sem perfil, o travessão
+    do desenho — o mesmo que o crachá das dez abas escreve.
+    """
+    from pacotes import perfil
+
+    return perfil.nome_do_ativo(state) or "—"
 import monta  # noqa: E402  (o gerador do mockup, usado como BIBLIOTECA)
 import onde  # noqa: E402  (o DONO do caminho das páginas publicadas)
 
@@ -151,8 +162,8 @@ DONOS_DOS_GESTOS = {
     "degrau": "integrations/ponte_escada + ponte_tentativa — a escada existe e "
     "SOBE sozinha, mas ninguém a fixa pela tela: não há método de IPC que diga "
     "'use este degrau'. Dos QUATRO chips, nenhum está sem dono desde 17/09/2026 "
-    "(`painel.chips_sem_dono` devolve `()`); a Navegação tem escritor sem ser "
-    "degrau da escada (`painel.chips_sem_degrau`), e o PS + R3 para nela pelo "
+    "(a régua é `tests/unit/test_a_fileira_nao_tem_linha_fantasma.py`); a "
+    "Navegação tem escritor sem ser degrau da escada, e o PS + R3 para nela pelo "
     "`hotkey.CICLO_DE_PONTES`, que é outro objeto. MIGRA-JOGAR-07.",
     "mascara": "gamepad.emulation.set (daemon/ipc_handlers.py) pela ponte "
     "app/ipc_bridge — MAS ele NÃO aceita `uniq`: a máscara viva é uma só para a "
@@ -715,7 +726,7 @@ class Janela:
         endereço não existe mais e que clicá-lo levantaria `TypeError` dentro do
         WebKit. **O aviso tinha virado o defeito que descrevia.** O chip saiu do
         desenho em 31/08 e a linha fantasma saiu de `painel.CHIPS_DA_ESCADA` em
-        17/09: `chips_sem_dono()` devolve `()` e não há chip inerte a clicar.
+        17/09: nenhum chip ficou sem dono, e não há chip inerte a clicar.
         A lição que o roteiro guarda continua valendo, e é a de 29/08: régua que
         não clica o botão novo dá verde sobre botão morto.
 
@@ -930,7 +941,11 @@ class Janela:
             "conta_b": conta_b if mesa else "—",
             "conta_cor": "var(--green)" if mesa else "var(--orange)",
             "bolinha": "●" if mesa else "○",
-            "perfil": painel.nome_do_perfil(state),
+            # O PERFIL SE PERGUNTA AO DONO DAS DUAS PERNAS (daemon, depois o
+            # marcador em disco) — o mesmo que o crachá das dez abas lê em
+            # `pacotes.topo()`. O `painel.nome_do_perfil` lia só a primeira e
+            # saiu em 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01).
+            "perfil": _perfil_ativo(state),
             "modo": modo or "",
             # OS TRAVADOS SÃO CALCULADOS, NÃO DIGITADOS: `painel` deriva os dois
             # conjuntos do próprio produto (`mode_transition.MODES` e
@@ -938,32 +953,23 @@ class Janela:
             # desktop, o chip destrava sozinho.
             "modos_travados": {m.chave: m.porque_nao for m in painel.MODOS_DA_TELA
                                if not m.tem_leitor},
-            # O SEM DONO NÃO É O SEM DEGRAU, e pintar um pelo outro mente na
-            # tela. `chips_sem_degrau()` devolve a **Navegação**, que TEM
-            # escritor (`apply_mode('desktop')`) e funciona hoje — marcá-la
-            # inerte seria a tela dizendo "não dá" sobre um botão que dá. Quem
-            # responde pela marca é `chips_sem_dono()`: sem degrau na ESCADA E
-            # sem modo no produto. **Hoje devolve `()`** — POINT-AND-CLICK-01,
-            # 17/09/2026: o único item era o Point And Click, uma linha que a
-            # tela não mostrava desde 31/08. O dicionário nasce VAZIO, e é o
-            # estado certo; a frase abaixo fica escrita para a próxima fileira
-            # que precisar dela.
-            "degraus_travados": {
-                c.chave: (
-                    f"“{c.rotulo}” ainda não tem quem o atenda no Hefesto: não é "
-                    "degrau da escada (integrations/ponte_escada.ESCADA) nem modo "
-                    "do produto (mode_transition.MODES). Está na tela por decisão "
-                    "dela, e marcado por isto."
-                )
-                for c in painel.chips_sem_dono()
-            },
+            # NENHUM CHIP ESTÁ SEM DONO, e o dicionário nasce vazio. A conta que
+            # o preenchia (`painel.chips_sem_dono`) saiu do produto em 28/09/2026
+            # e virou régua da suíte (`test_a_fileira_nao_tem_linha_fantasma.py`):
+            # a tela nunca a perguntou, e um chip cinza com "ainda não tem quem o
+            # atenda" seria a tela confessando dívida nossa.
+            "degraus_travados": {},
             # A POSIÇÃO DO INTERRUPTOR, DERIVADA — nunca a comparação de um botão
             # só. O Hefesto ligado é `gamepad` OU `desktop` (a Navegação); um a
             # um, com o modo vivo em `desktop` as duas posições ficam apagadas e
             # a tela fica MUDA, que parece defeito. Vem do `state` e não do eco:
             # esta aba não aplica nada, e a seção que abre é a do daemon.
             "hefesto_ligado": painel.hefesto_ligado(state),
-            "degrau": self.eco_degrau or painel.degrau_vivo(state, None) or "",
+            # O CHIP ACESO É O DO CAMINHO VIVO, e quem o lê é o pacote da aba
+            # publicada (`a01_jogar._chip_do_caminho`). O `painel.degrau_vivo`
+            # lia o carimbo por jogo e saiu em 28/09/2026: aqui ele era chamado
+            # com `pontes=None` e devolvia sempre `None`.
+            "degrau": self.eco_degrau or (_a01()._chip_do_caminho(state) if state else ""),
             "atencao_conta": painel.texto_da_conta(len(avisos)),
             "pendente": self.pendente,
             "cartoes": cartoes,

@@ -318,12 +318,28 @@ def test_o_algarismo_do_circulo_e_derivado_da_escada(
     assert depois["navegacao"] == painel.SEM_ALGARISMO
 
 
-def test_a_escada_nao_deve_mais_nada_a_tela(monkeypatch: pytest.MonkeyPatch) -> None:
-    """``degraus_sem_chip()`` devolve ``()`` — pela primeira vez, em 31/08/2026.
+def _degraus_sem_lugar_na_tela(painel_: object) -> list[object]:
+    """Os degraus da ``ESCADA`` que a tela não mostra em lugar nenhum.
 
-    Até 30/08 ela denunciava o segundo degrau, ``Ponte(gamepad, xbox)`` — *"o
-    piso mais largo que existe"* —, por onde a escada automática passava sem a
-    tela ter onde mostrá-lo. O desenho novo o pôs na fileira.
+    A CONTA MORA AQUI, e não no produto — A-TELA-PERGUNTA-AO-DONO-01,
+    28/09/2026. Ela era ``painel.degraus_sem_chip()``, e nenhuma tela a
+    perguntava: é pergunta de quem desenvolve ("a escada deve algo à tela?"), e
+    régua mora na suíte. As duas metades do "lugar" são LIDAS do produto: os
+    chips da fileira e as pontes do interruptor.
+    """
+    from hefesto_dualsense4unix.integrations import ponte_escada
+
+    nomeadas = {c.ponte for c in painel_.CHIPS_DA_ESCADA if c.ponte is not None}  # type: ignore[attr-defined]
+    nomeadas |= set(painel_.PONTES_DO_INTERRUPTOR)  # type: ignore[attr-defined]
+    return [d for d in ponte_escada.ESCADA if d.ponte not in nomeadas]
+
+
+def test_a_escada_nao_deve_mais_nada_a_tela(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Todo degrau da escada tem onde aparecer — desde 31/08/2026.
+
+    Até 30/08 a conta denunciava o segundo degrau, ``Ponte(gamepad, xbox)`` —
+    *"o piso mais largo que existe"* —, por onde a escada automática passava
+    sem a tela ter onde mostrá-lo. O desenho novo o pôs na fileira.
 
     **A mordida está DENTRO do teste:** sem :data:`painel.PONTES_DO_INTERRUPTOR`
     a régua acusaria o Nativo, que TEM lugar na tela (a posição Desligado) e só
@@ -332,10 +348,10 @@ def test_a_escada_nao_deve_mais_nada_a_tela(monkeypatch: pytest.MonkeyPatch) -> 
     """
     from hefesto_dualsense4unix.integrations import ponte_escada
 
-    assert painel.degraus_sem_chip() == ()
+    assert _degraus_sem_lugar_na_tela(painel) == []
 
     monkeypatch.setattr(painel, "PONTES_DO_INTERRUPTOR", frozenset())
-    orfaos = painel.degraus_sem_chip()
+    orfaos = _degraus_sem_lugar_na_tela(painel)
     assert [d.ponte for d in orfaos] == [ponte_escada.Ponte(ponte_escada.KIND_NATIVE)], (
         "sem a linha do interruptor a régua acusa o Nativo — e a acusação é FALSA"
     )
@@ -344,35 +360,68 @@ def test_a_escada_nao_deve_mais_nada_a_tela(monkeypatch: pytest.MonkeyPatch) -> 
 def test_sem_degrau_e_sem_dono_sao_perguntas_diferentes() -> None:
     """A Navegação separa as duas, e pintar uma pela outra mente na tela.
 
-    * ``chips_sem_degrau()`` = a ``ESCADA`` automática não tem este degrau.
-      Hoje: a Navegação.
-    * ``chips_sem_dono()``   = **ninguém atende**. Hoje: ``()``.
+    * **sem degrau** = a ``ESCADA`` automática não tem este chip
+      (:attr:`painel.Chip.indice` é ``-1``). Hoje: a Navegação.
+    * **sem dono** = sem degrau E sem modo com escritor. Hoje: nenhum.
 
-    A Navegação está na primeira e não na segunda, e é por isso que a segunda
-    teve de nascer: marcá-la como órfã seria a tela dizendo "não dá" sobre
-    ``apply_mode('desktop')``, que funciona hoje.
+    A Navegação está na primeira e não na segunda: marcá-la como órfã seria a
+    tela dizendo "não dá" sobre ``apply_mode('desktop')``, que funciona hoje.
+
+    AS DUAS CONTAS MORAM AQUI desde 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01): no
+    produto elas eram ``chips_sem_degrau`` e ``chips_sem_dono``, e nenhuma tela
+    as perguntava.
 
     DUAS SUBSTITUIÇÕES DE FATO — POINT-AND-CLICK-01, 17/09/2026:
 
-    * ``chips_sem_dono()`` devolvia ``["pointclick"]`` sobre uma linha que a
-      tela não mostra desde 31/08. A régua existe para marcar um botão inerte
-      **na tela**; medindo a TABELA, ela respondia sobre outra coisa que não o
-      produto. A linha saiu e a resposta é ``()``;
-    * ``chips_sem_degrau()`` não é "o PS + R3 não para aqui". Ele PARA na
-      Navegação desde 13/09 (``hotkey.CICLO_DE_PONTES``, e desde 17/09 pela
-      mesma porta do clique). O que ela mede é a ``ESCADA``, que é outro objeto.
+    * a conta dos sem dono devolvia ``["pointclick"]`` sobre uma linha que a
+      tela não mostra desde 31/08. A linha saiu e a resposta é vazia;
+    * "sem degrau" não é "o PS + R3 não para aqui". Ele PARA na Navegação
+      desde 13/09 (``hotkey.CICLO_DE_PONTES``). O que ela mede é a ``ESCADA``,
+      que é outro objeto.
     """
-    assert [c.chave for c in painel.chips_sem_degrau()] == ["navegacao"]
-    assert [c.chave for c in painel.chips_sem_dono()] == []
+    sem_degrau = [c.chave for c in painel.CHIPS_DA_ESCADA
+                  if c.ponte is not None and c.indice < 0]
+    sem_dono = [c.chave for c in painel.CHIPS_DA_ESCADA
+                if c.indice < 0 and (c.modo or "") not in painel.ESCRITOR_DOS_MODOS]
+    assert sem_degrau == ["navegacao"]
+    assert sem_dono == []
 
     navegacao = next(c for c in painel.CHIPS_DA_ESCADA if c.chave == "navegacao")
     assert navegacao.modo in painel.ESCRITOR_DOS_MODOS, (
-        "a Navegação TEM escritor — é o que a tira de chips_sem_dono"
+        "a Navegação TEM escritor — é o que a tira dos sem dono"
     )
     assert "pointclick" not in {c.chave for c in painel.CHIPS_DA_ESCADA}, (
         "a linha fantasma voltou à tabela. Ela não tem `data-degrau` na página "
         "publicada, e o gerador (`aba01.py`) tem trava contra o quinto chip."
     )
+
+
+def test_as_conferencias_sairam_do_produto() -> None:
+    """As perguntas que nenhuma tela fazia não voltam ao ``painel``.
+
+    A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026: a conta que só a régua pergunta
+    mora na régua, o leitor do chip aceso é um só (``caminho_vivo``, pelo
+    pacote da aba) e o do perfil ativo também (``pacotes.perfil.nome_do_ativo``).
+    **A mordida:** devolva qualquer uma ao módulo, e esta régua reprova antes
+    de o ``casa-sabe`` voltar a acusá-la sem caminho.
+    """
+    for nome in ("indice_do_chip", "chips_sem_degrau", "chips_sem_dono",
+                 "degraus_sem_chip", "degrau_vivo", "nome_do_perfil"):
+        assert not hasattr(painel, nome), (
+            f"`painel.{nome}` voltou ao produto sem tela que a pergunte")
+
+
+def test_a_recusa_do_botao_sem_escritor_e_a_do_dono() -> None:
+    """A frase com que o gesto recusa é a de ``escritor_do_modo`` — uma só.
+
+    ``porque_nao_aplica`` tinha a segunda redação do mesmo fato (*"ainda não
+    tem quem o atenda no Hefesto. Ele está no desenho e a decisão é dela"*).
+    **A mordida:** devolva a frase própria, e as duas divergem aqui.
+    """
+    for chave in (painel.MODO_DESLIGADO, "modo-que-nao-existe"):
+        assert painel.porque_nao_aplica(chave) == painel.escritor_do_modo(chave)
+    for chave in painel.ESCRITOR_DOS_MODOS:
+        assert painel.porque_nao_aplica(chave) == ""
 
 
 # ---------------------------------------------------------------------------
