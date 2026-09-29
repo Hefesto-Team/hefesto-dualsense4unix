@@ -41,7 +41,7 @@ aparece contada.
 
 <!-- BLOCO GERADO por scripts/gerar-contrato-ipc.py — não edite à mão -->
 
-**51 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **20** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
+**51 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **17** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
 
 Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e é por isso que ele está aqui: escrito à mão, ele já saiu 15, 17, 18 e 14 em levantamentos do mesmo dia.
 
@@ -80,10 +80,10 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `mic.volume.set` | `daemon/ipc_handlers.py:6759` (`_handle_mic_volume_set`) | `mic.volume.set` — volume da CAPTURA no sistema (MIC-VOLUME-01). | sim |
 | `mouse.emulation.set` | `daemon/ipc_handlers.py:6945` (`_handle_mouse_emulation_set`) | Liga/desliga emulação de mouse+teclado (FEAT-MOUSE-01). | sim |
 | `mouse.emulation.restore` | `daemon/ipc_handlers.py:7029` (`_handle_mouse_emulation_restore`) | Restaura a emulação de mouse conforme a preferência persistida (HARM-06). | **não** |
-| `desktop.arranjo.apply` | `daemon/ipc_handlers.py:7050` (`_handle_desktop_arranjo_apply`) | Carrega no aparelho o que a aba Navegação gravou no perfil ATIVO. | **não** |
+| `desktop.arranjo.apply` | `daemon/ipc_handlers.py:7050` (`_handle_desktop_arranjo_apply`) | Carrega no aparelho o que a aba Navegação gravou no perfil ATIVO. | sim |
 | `keyboard.emulation.set` | `daemon/ipc_handlers.py:7151` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO (EMULACAO-NO-JOGO-01). | **não** |
-| `desktop.status.set` | `daemon/ipc_handlers.py:7095` (`_handle_desktop_status_set`) | O «Status do Modo» da aba Navegação: mouse e teclado, e o perfil. | **não** |
-| `gamepad.emulation.set` | `daemon/ipc_handlers.py:7260` (`_handle_gamepad_emulation_set`) | Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01). | **não** |
+| `desktop.status.set` | `daemon/ipc_handlers.py:7095` (`_handle_desktop_status_set`) | O «Status do Modo» da aba Navegação: mouse e teclado, e o perfil. | sim |
+| `gamepad.emulation.set` | `daemon/ipc_handlers.py:7260` (`_handle_gamepad_emulation_set`) | Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01). | sim |
 | `gamepad.mask.set` | `daemon/ipc_handlers.py:7187` (`_handle_gamepad_mask_set`) | A máscara de UM aparelho: `gamepad.mask.set {uniq, flavor}`. | **não** |
 | `coop.set` | `daemon/ipc_handlers.py:7409` (`_handle_coop_set`) | Liga o co-op local; RECUSA desligar (FEAT-DSX-COOP-LOCAL-01). | sim |
 | `coop.sync` | `daemon/ipc_handlers.py:7463` (`_handle_coop_sync`) | Roda UM ciclo cheio de reconciliação do co-op (`sync(force=True)`). | sim |
@@ -499,7 +499,9 @@ adaptativos NATIVOS da Sony (Sackboy & cia). `enabled=true` → gatilhos Off/Off
 rumble passthrough, emulação (mouse/gamepad) desligada, autoswitch/hotkey
 gateados e daemon pausado; persiste em `native_mode.flag` (sobrevive a restart).
 `enabled=false` → restaura o último perfil. `daemon.state_full` e `daemon.status`
-expõem `native_mode: bool`.
+expõem `native_mode: bool`. Com `origin: "manual"`, ligar grava o modo
+`native` no perfil ativo depois do aparelho, como o `gamepad.emulation.set` e o
+`desktop.arranjo.apply` à mão gravam o modo deles (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01).
 
 ### `freestyle.set` — o Modo Freestyle (O-FREESTYLE-E-UMA-CAMADA-SO-01)
 
@@ -644,13 +646,23 @@ O schema de perfil aceita uma seção opcional `mouse`
 `suppress_desktop_emulation`. Nas rotas de ativação em runtime (`profile.switch`,
 autoswitch por janela, hotkey PS+D-pad):
 
-- perfil **com** seção `mouse` → a emulação de mouse é ligada/desligada com as
-  velocidades do perfil (mesmo efeito de `mouse.emulation.set` com `enabled`),
-  respeitando o **lock manual** (BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01): se a
-  usuária mexeu na emulação (mouse OU gamepad) manualmente há menos de 30 s, o
-  perfil NÃO toca no estado — não sequestra um gamepad virtual ligado na mão. É
-  idempotente (não recria o device a cada tick do autoswitch);
-- perfil **sem** seção `mouse` → o estado da emulação NÃO é tocado;
+- perfil **com** seção `mouse` → as velocidades do perfil entram, e o
+  liga/desliga só quando o perfil diz Navegação (`mode.kind: desktop`): fora
+  dela quem desliga o mouse é a exclusão mútua do modo, e um perfil sem opinião
+  de modo não desliga o mouse da Navegação (O-MOUSE-SEGUE-A-NAVEGACAO-01,
+  29/09/2026). Tudo respeitando o **lock manual**
+  (BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01): se a usuária mexeu na emulação (mouse
+  OU gamepad) manualmente há menos de 30 s, o perfil NÃO toca no estado — não
+  sequestra um gamepad virtual ligado na mão. É idempotente (não recria o
+  device a cada tick do autoswitch);
+- perfil **sem** seção `mouse` → o estado da emulação NÃO é tocado, salvo o
+  perfil que diz Navegação: ele liga o mouse com as velocidades da flag de
+  sessão, como a entrada pelo chip;
+- **a entrada na Navegação** (`desktop.arranjo.apply` e o PS + R3) liga o mouse
+  sempre, com as velocidades do perfil ou da flag de sessão
+  (D-2909-A-NAVEGACAO-LIGA-O-MOUSE); o «Status do Modo» (`desktop.status.set`)
+  o desliga enquanto ela estiver lá, e com `origin: manual` grava o `enabled`
+  da seção `mouse` e o `teclado_emulado` no perfil ativo;
 - **restore no boot** (BUG-BOOT-RESTORE-FLIPS-EMULATION-01): a seção `mouse` do
   último perfil NÃO é reaplicada — o estado da emulação no boot vem dos **flags
   persistidos** (`mouse_emulation.flag`/`gamepad_emulation.flag`), não do perfil.
