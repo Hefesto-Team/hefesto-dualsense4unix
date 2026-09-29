@@ -191,7 +191,7 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> _Bancada:
 # 1. a mesa parada — o defeito do dia
 # ---------------------------------------------------------------------------
 def test_a_mesa_de_quatro_parada_nao_levanta_ponte_nenhuma(bancada: _Bancada) -> None:
-    """Quatro controles ociosos escreviam 375 reports por segundo no rádio dela.
+    """Quatro controles ociosos escreviam 400 reports por segundo no rádio dela.
 
     MORDIDA: tire o `if modo == "som" and not sink_esta_tocando(...)` de
     `_casar_as_pontes` e as quatro pontes voltam — com elas, o `Output queue is

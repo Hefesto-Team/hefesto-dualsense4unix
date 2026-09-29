@@ -362,7 +362,7 @@ descarta calado, o `os.write` devolve sucesso, a bomba conta
 campo de taxa, então não há freio do lado do aparelho. A ponte de som passou a
 só existir enquanto alguém está tocando naquele controle
 (`RADIO-AFOGADO-01`, `daemon/subsystems/alto_falante.py`); com a mesa parada,
-as escritas vão de 375/s a ZERO.
+as escritas vão de 400/s a ZERO.
 
 **O QUE ELA CUSTA, medido no mesmo dia às 17:57:45:** o som começou às `.967`,
 o vigia acordou a volta às `45.162` e a ponte estava de pé às `45.221` —

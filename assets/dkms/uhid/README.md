@@ -77,7 +77,7 @@ a mudança sem pedir.
 
 **O produto está correto sem este módulo.** A cura de primeira ordem é a
 `RADIO-AFOGADO-01`: a ponte de som só existe enquanto há som, e com a mesa
-parada as escritas vão de 375/s a ZERO. Este módulo é o que sobra para o dia
+parada as escritas vão de 400/s a ZERO. Este módulo é o que sobra para o dia
 em que quatro pontes forem LEGÍTIMAS — quatro jogadores com som no controle —,
 e aí o teto de ar é alcançado sem que uma única escrita falhe.
 
