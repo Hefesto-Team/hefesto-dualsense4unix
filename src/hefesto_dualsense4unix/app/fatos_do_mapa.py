@@ -5599,7 +5599,7 @@ FATOS: Final[dict[str, dict[str, object]]] = {
             'aceita': 'desconhecido',
             'aciona': 'não',
             'ate_onde_foi': '',
-            'canal': 'outro',
+            'canal': 'hidraw',
             'de_onde_sei': 'inferido-do-codigo',
             'por_que_nao_aciona': 'divida',
         },
