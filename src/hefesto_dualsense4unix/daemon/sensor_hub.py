@@ -144,6 +144,8 @@ class SensorHub:
         #: pediria um reader de gamepad inútil para cada um deles. Aqui só
         #: entra quem ficaria mudo sem ele.
         self._demanda_entradas: dict[str, float] = {}
+        #: Demanda do TOQUE ROTEADO (`toque_da_peca`, NO-MODO-XBOX, 28/09).
+        self._demanda_do_toque: dict[str, float] = {}
         self._motion: dict[str, Any] = {}
         self._touch: dict[str, Any] = {}
         self._gamepad: dict[str, Any] = {}
@@ -377,7 +379,7 @@ class SensorHub:
             self._gamepad.clear()
             self._demanda.clear()
             self._demanda_entradas.clear()
-            self._demanda_do_toque_da_mesa().clear()
+            self._demanda_do_toque.clear()
         for reader in readers:
             with contextlib.suppress(Exception):
                 reader.stop()
@@ -771,20 +773,6 @@ class SensorHub:
     #: manutenção (1 s) e solta o nó logo que o controle virtual sai.
     _TOQUE_ROTEADO_TTL_S: ClassVar[float] = 1.5
 
-    def _demanda_do_toque_da_mesa(self) -> dict[str, float]:
-        """As peças cujo TOUCHPAD o tique leva ao cursor ou às zonas, com a hora
-        do último pedido — ver :meth:`toque_da_peca`. Quem chama segura o lock.
-
-        Nasce no primeiro uso, e não no `__init__`: o mapa de canais cita
-        `sensor_hub.py` por linha, e uma linha a mais lá em cima faria a faixa
-        do `leitura` andar sem o código andar.
-        """
-        demanda: dict[str, float] | None = self.__dict__.get("_demanda_do_toque")
-        if demanda is None:
-            demanda = {}
-            self._demanda_do_toque = demanda
-        return demanda
-
     def aceleracao_do_movimento(self, uniq: str) -> tuple[float, float, float] | None:
         """O acelerômetro de `uniq` AGORA, em g; `None` sem leitor.
 
@@ -826,7 +814,7 @@ class SensorHub:
         agora = self._relogio()
         with self._lock:
             self._demanda[uniq] = agora
-            self._demanda_do_toque_da_mesa()[uniq] = agora
+            self._demanda_do_toque[uniq] = agora
             touch = self._touch.get(uniq)
         self._garantir_manutencao()
         if touch is None:
@@ -849,7 +837,7 @@ class SensorHub:
         """
         with self._lock:
             leitores = dict(self._touch)
-            vistos = dict(self._demanda_do_toque_da_mesa())
+            vistos = dict(self._demanda_do_toque)
             self._demanda_do_toque = {
                 u: t for u, t in vistos.items() if agora - t <= self._TOQUE_ROTEADO_TTL_S
             }
