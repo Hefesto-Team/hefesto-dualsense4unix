@@ -188,11 +188,15 @@ def _ensaiar(
     assert not env["HOME"].startswith("/home/"), "o lar de mentira caiu numa casa de verdade"
     # O `flatpak list` de verdade cria o repositório do usuário na primeira
     # leitura; numa casa de verdade ele já existe. Ele nasce ANTES do retrato,
-    # para a régua medir o uninstall, não o flatpak.
-    flatpak = shutil.which("flatpak", path=PATH_DO_SISTEMA)
-    if flatpak is not None:
+    # para a régua medir o uninstall, não o flatpak. PELO DUBLÊ DESTE TESTE, o
+    # mesmo caminho da leitura do uninstall: o `flatpak` pelo nome, sob a
+    # suíte, é o do LANCADOR-DE-MENTIRA do conftest, que responde sem criar
+    # nada (A-SUITE-NAO-ABRE-NEM-FECHA-O-LANCADOR-DELA-01).
+    flatpak = tmp_path / "dubles" / "flatpak"
+    if flatpak.is_file():
         subprocess.run(
-            [flatpak, "--user", "list"], env=env, capture_output=True, timeout=60, check=False
+            [str(flatpak), "--user", "list"], env=env, capture_output=True, timeout=60,
+            check=False,
         )
     antes = _retrato(lar)
     r = subprocess.run(
