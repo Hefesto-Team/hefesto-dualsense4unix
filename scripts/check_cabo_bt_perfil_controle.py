@@ -299,6 +299,10 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     # «Botões» leem a posição dos dedos. As linhas deles respondem cabo e rádio.
     "inclinacao": ("movimento.acelerometro",),
     "toque": ("toque.touchpad.cursor", "toque.touchpad.dedos"),
+    # A HÁPTICA POR ÁUDIO (O-GANHO-DA-HAPTICA-TEM-DONO-01 e A-LINHA-DA-HAPTICA-POR-
+    # AUDIO-NA-VIBRACAO-01, publicadas na 05 em 29/09): o ganho dos atuadores de
+    # voice-coil, nos traseiros da placa no cabo e no conversor da ponte no rádio.
+    "haptica": ("vibracao.haptics_vcm",),
 }
 
 #: A DÍVIDA CONHECIDA — o gesto que HOJE não responde as quatro, com a sprint
@@ -335,7 +339,15 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
 #: honesta e por isso não virou defeito — mas passou UM DIA declarada, e ela a
 #: leu na tela antes de qualquer um de nós reler este arquivo. Dívida declarada
 #: é melhor que dívida escondida; melhor ainda é a que não dura um dia.
-A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {}
+A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {
+    "haptica": (
+        "2026-09-29-O-GANHO-DA-HAPTICA-TEM-DONO-01.md",
+        "a linha `vibracao.haptics_vcm@dualsense` do mapa segue em dívida nos dois "
+        "transportes: o ganho grava e alcança a placa (cabo) e o conversor da ponte "
+        "(rádio) com régua que morde, mas o grau do aparelho só sobe com o passo 0 "
+        "da sprint e a mão dela nos Caminhos da Forja",
+    ),
+}
 
 #: ONDE CADA FEATURE MORA NO PERFIL — `(campo do Profile, campo do
 #: ControllerOverrides)`.
@@ -374,6 +386,9 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     # e `.toque`), nos dois níveis; o chip de cada cartão escreve o do controle.
     "inclinacao": ("movimento", "movimento"),
     "toque": ("movimento", "movimento"),
+    # O ganho da háptica só existe POR CONTROLE (`controllers[<uniq>].rumble.haptica_pct`,
+    # 0 a 200): o perfil não tem um ganho de todos, e o ausente vale o padrão do dono.
+    "haptica": (None, "rumble"),
 }
 
 
