@@ -6376,6 +6376,35 @@ class Daemon:
             return HUB_AUSENTE
         return garantir()
 
+    def _garantir_cursor_do_toque(self) -> Any:
+        """O cursor que o touchpad move pelo Hefesto — um por sessão, ou ``None``.
+
+        NO-MODO-XBOX-TUDO-FUNCIONA-01 (28/09/2026), o arranjo «o touchpad move o
+        cursor» da resposta dela. Com o controle virtual de pé não há mouse
+        emulado (a exclusão mútua da Navegação), e o dedo precisa de um nó que
+        o computador leia como ponteiro: nasce aqui, na primeira vez que uma
+        peça o pede (`gamepad.aplicar_o_toque`), e sai com o controle virtual
+        ou quando ninguém mais o quer (`gamepad.soltar_o_cursor_do_toque`).
+
+        Mora no daemon concreto, como o `_garantir_sensor_hub`: o motor o pede
+        por `getattr`, e um daemon de teste sem ele não cria nó nenhum. Um
+        `start()` que falha vira ``False`` — *"tentei"* —, para o tique não
+        tentar criar um nó por quadro; a saída do controle virtual o zera.
+        """
+        cursor = getattr(self, "_cursor_do_toque", None)
+        if cursor is not None:
+            return cursor or None
+        from hefesto_dualsense4unix.integrations.uinput_mouse import CursorDoToque
+
+        novo = CursorDoToque()
+        if not novo.start():
+            # `Any`: o mesmo atributo guarda o nó, o ``False`` do «tentei» e o
+            # ``None`` da saída (`daemon.protocols.DaemonProtocol`).
+            self._cursor_do_toque: Any = False
+            return None
+        self._cursor_do_toque = novo
+        return novo
+
 
 #: Os campos da saída por controle que a economia põe no teto — a luz, o
 #: degrau das luzes de número e os dois gatilhos (`profiles.schema.
@@ -6438,6 +6467,12 @@ class _HubAusente:
         return None
 
     def angulo_do_movimento(self, uniq: str) -> None:
+        return None
+
+    def aceleracao_do_movimento(self, uniq: str) -> None:
+        return None
+
+    def toque_da_peca(self, uniq: str) -> None:
         return None
 
 

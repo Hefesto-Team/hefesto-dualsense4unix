@@ -2347,6 +2347,16 @@ class CoopManager:
                         player.identity, botoes=botoes, lx=lx, ly=ly, rx=rx, ry=ry, l2=l2, r2=r2
                     )
                 if arranjo_de_movimento is not None:
+                    # O TOQUE (NO-MODO-XBOX, 28/09): as zonas deste jogador
+                    # entram na MÃO dele, antes da Mira e da troca — o motor é o
+                    # do primário (`gamepad.aplicar_o_toque`), chamado.
+                    botoes, l2 = aplicar_o_toque(
+                        self._daemon,
+                        arranjo_de_movimento,
+                        uniq=player.identity,
+                        botoes=botoes,
+                        l2=l2,
+                    )
                     # O GATILHO LÊ OS BOTÕES ORIGINAIS, e por isso esta linha
                     # vem ANTES da troca — igual ao primário. Com o
                     # remapeamento ativo, a mira tem de ligar pelo botão que a
@@ -2359,7 +2369,7 @@ class CoopManager:
                         ly=ly,
                         rx=rx,
                         ry=ry,
-                        botoes=snap.buttons_pressed,
+                        botoes=botoes,
                     )
                 if troca:
                     botoes, l2, r2 = traduzir_remapeamento(botoes, l2, r2, troca)
@@ -3008,6 +3018,7 @@ from hefesto_dualsense4unix.core.roteador_de_movimento import (  # noqa: E402
 )
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (  # noqa: E402
     aplicar_o_movimento,
+    aplicar_o_toque,
 )
 from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import (  # noqa: E402
     marcas_da_partida,

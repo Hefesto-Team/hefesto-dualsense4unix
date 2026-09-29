@@ -124,6 +124,10 @@ class DaemonProtocol(Protocol):
     # keyboard (OSK + touchpad reader). Declarados aqui para mypy strict.
     _osk_controller: Any
     _touchpad_reader: Any
+    # NO-MODO-XBOX-TUDO-FUNCIONA-01 (28/09/2026): o cursor que o touchpad move
+    # pelo Hefesto com o controle virtual de pé (`uinput_mouse.CursorDoToque`),
+    # `False` depois de um start que falhou, ou None.
+    _cursor_do_toque: Any
 
     async def _run_blocking(self, fn: Callable[..., _T], *args: Any) -> _T:
         """Executa `fn` no executor compartilhado, mantendo a loop GTK livre."""

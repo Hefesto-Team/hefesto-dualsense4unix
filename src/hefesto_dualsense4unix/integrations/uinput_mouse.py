@@ -583,6 +583,110 @@ class UinputMouseDevice:
         self._device.syn()
 
 
+# ---------------------------------------------------------------------------
+# O CURSOR DO TOQUE — NO-MODO-XBOX-TUDO-FUNCIONA-01, 28/09/2026
+# ---------------------------------------------------------------------------
+
+#: O nome do nó. NÃO termina em «Touchpad», de propósito: a regra
+#: `assets/76-dualsense-touchpad-libinput-ignore.rules` tira do libinput todo
+#: nó `*Hefesto*Touchpad`, e este é o ponteiro que o computador tem de ler.
+NOME_DO_CURSOR_DO_TOQUE = "Hefesto - Dualsense4Unix Touch Cursor"
+
+
+@dataclass
+class CursorDoToque:
+    """O ponteiro que o touchpad move pelo Hefesto com o controle virtual de pé.
+
+    A resposta dela de 28/09 (~16h50) pôs «o touchpad move o cursor» entre os
+    arranjos por perfil de jogo. Na Navegação o cursor é o do mouse emulado;
+    no modo DualSense e no Xbox não há mouse emulado (a exclusão mútua), e o
+    arranjo precisa de um nó próprio, mínimo: movimento relativo e o botão
+    esquerdo, que é o clique do touchpad. Quem o cria é o daemon
+    (`Daemon._garantir_cursor_do_toque`); quem o move é o tique
+    (`gamepad.aplicar_o_toque`), já em pixels float — o carry sub-pixel é
+    daqui, como no `emit_gyro_move`.
+
+    O CLIQUE É DA MESA: duas peças no cursor dividem o mesmo botão, e ele fica
+    apertado enquanto qualquer uma o segurar.
+    """
+
+    name: str = NOME_DO_CURSOR_DO_TOQUE
+    _device: Any = None
+    _uinput_mod: Any = None
+    _carry_x: float = 0.0
+    _carry_y: float = 0.0
+    _clicando: set[str] = field(default_factory=set)
+    _botao: bool = False
+
+    def start(self) -> bool:
+        """Cria o nó. False sem `/dev/uinput` ou sem o módulo — o tique segue."""
+        if self._device is not None:
+            return True
+        try:
+            import uinput
+        except ImportError:
+            logger.warning("python-uinput não instalado — cursor do toque indisponível")
+            return False
+        try:
+            self._device = uinput.Device(
+                [uinput.REL_X, uinput.REL_Y, uinput.BTN_LEFT], name=self.name
+            )
+            self._uinput_mod = uinput
+        except Exception as exc:
+            logger.warning("cursor_do_toque_create_failed", err=str(exc))
+            return False
+        logger.info("cursor_do_toque_criado", name=self.name)
+        return True
+
+    def stop(self) -> None:
+        """Solta o botão, se estava apertado, e destrói o nó. Idempotente."""
+        if self._device is None:
+            return
+        if self._botao and self._uinput_mod is not None:
+            with contextlib.suppress(Exception):
+                self._device.emit(self._uinput_mod.BTN_LEFT, 0)
+        with contextlib.suppress(Exception):
+            self._device.destroy()
+        self._device = None
+        self._uinput_mod = None
+        self._carry_x = 0.0
+        self._carry_y = 0.0
+        self._clicando = set()
+        self._botao = False
+
+    def mover(self, px_x: float, px_y: float) -> None:
+        """Anda o cursor em pixels float, guardando o resto sub-pixel."""
+        if self._device is None or self._uinput_mod is None:
+            return
+        self._carry_x += px_x
+        self._carry_y += px_y
+        ix = int(self._carry_x)
+        iy = int(self._carry_y)
+        self._carry_x -= ix
+        self._carry_y -= iy
+        if ix == 0 and iy == 0:
+            return
+        u = self._uinput_mod
+        if ix != 0:
+            self._device.emit(u.REL_X, ix, syn=False)
+        if iy != 0:
+            self._device.emit(u.REL_Y, iy, syn=False)
+        self._device.syn()
+
+    def clicar(self, peca: str, apertado: bool) -> None:
+        """O clique do touchpad da `peca`; o botão só muda na borda da mesa."""
+        if apertado:
+            self._clicando.add(peca)
+        else:
+            self._clicando.discard(peca)
+        querido = bool(self._clicando)
+        if querido == self._botao:
+            return
+        if self._device is not None and self._uinput_mod is not None:
+            self._device.emit(self._uinput_mod.BTN_LEFT, 1 if querido else 0)
+        self._botao = querido
+
+
 __all__ = [
     "BUTTON_TO_UINPUT",
     "DEFAULT_MOUSE_SPEED",
@@ -594,10 +698,12 @@ __all__ = [
     "MOUSE_EXPO",
     "MOUSE_PX_PER_SEC_STEP",
     "MOVE_DEADZONE",
+    "NOME_DO_CURSOR_DO_TOQUE",
     "SCROLL_DEADZONE",
     "SCROLL_RATE_LIMIT_SEC",
     "TOUCHPAD_SENSITIVITY",
     "TRIGGER_PRESS_THRESHOLD",
+    "CursorDoToque",
     "UinputMouseDevice",
     "_compute_move_px_per_sec",
     "_compute_scroll_step",

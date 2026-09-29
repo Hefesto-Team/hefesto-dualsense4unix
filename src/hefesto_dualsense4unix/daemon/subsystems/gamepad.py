@@ -2829,6 +2829,9 @@ def stop_gamepad_emulation(
     daemon.config.gamepad_emulation_enabled = False
     if release_grab:
         _set_controller_grab(daemon, False)
+        # O cursor do toque (NO-MODO-XBOX, 28/09) sai com o controle virtual; a
+        # troca de máscara (`release_grab=False`) o mantém, porque volta já.
+        soltar_o_cursor_do_toque(daemon)
     if persist:
         with contextlib.suppress(Exception):
             from hefesto_dualsense4unix.utils.session import save_gamepad_emulation
@@ -3038,7 +3041,12 @@ def aplicar_o_movimento(
             return lx, ly, rx, ry
         from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
 
-        if not REGISTRO.estado(uniq).giroscopio:
+        sensores = REGISTRO.estado(uniq)
+        # A INCLINAÇÃO (NO-MODO-XBOX-TUDO-FUNCIONA-01, 28/09): o acelerômetro no
+        # analógico, depois do mesmo gatilho e com o mesmo interruptor dela.
+        if arranjo.inclina and sensores.acelerometro and not na_navegacao:
+            lx, ly, rx, ry = _a_inclinacao(hub, store, arranjo, uniq, lx, ly, rx, ry)
+        if not arranjo.ligado or not sensores.giroscopio:
             return lx, ly, rx, ry
 
         velocidade = hub.velocidade_do_movimento(uniq)
@@ -3106,6 +3114,16 @@ def dispatch_gamepad(
         l2 = state.l2_raw if state.l2_raw >= limiar_l else 0
         r2 = state.r2_raw if state.r2_raw >= limiar_r else 0
         botoes = buttons_pressed
+        # O TOQUE (NO-MODO-XBOX-TUDO-FUNCIONA-01, 28/09): as zonas do touchpad
+        # apertam botões ANTES da troca e da Mira — são a mão dela, e o L2 da
+        # zona liga o «Só enquanto eu segurar» como o L2 do plástico.
+        arranjo = roteador_ativo(store)
+        uniq = primary_identity(daemon) if arranjo is not None else None
+        if arranjo is not None:
+            botoes, l2 = aplicar_o_toque(daemon, arranjo, uniq=uniq, botoes=botoes, l2=l2)
+        elif getattr(daemon, "_cursor_do_toque", None):
+            soltar_o_cursor_do_toque(daemon)
+        da_mao = botoes
         # F1-REMAPEAR (13/09/2026): a troca botão a botão do perfil entra AQUI,
         # logo antes do `forward_buttons`, e só muda o que o JOGO vê. O PS, os
         # gestos, o atalho e o teclado e o mouse emulados leem o
@@ -3113,7 +3131,7 @@ def dispatch_gamepad(
         # custo: sem troca o jogo recebe o MESMO objeto, sem alocar nada.
         troca = remapeamento_ativo(store)
         if troca:
-            botoes, l2, r2 = traduzir_remapeamento(buttons_pressed, l2, r2, troca)
+            botoes, l2, r2 = traduzir_remapeamento(botoes, l2, r2, troca)
         lx, ly = state.raw_lx, state.raw_ly
         rx, ry = state.raw_rx, state.raw_ry
         # MOVIMENTO-EM-QUALQUER-MASCARA-01 (21/09/2026): a mira por movimento
@@ -3125,17 +3143,16 @@ def dispatch_gamepad(
         # que o jogo vê, e o PS continua sendo a saída de emergência.
         #
         # O `if` é a régua de custo: sem arranjo, o tique paga UM `getattr`.
-        arranjo = roteador_ativo(store)
         if arranjo is not None:
             lx, ly, rx, ry = aplicar_o_movimento(
                 daemon,
                 arranjo,
-                uniq=primary_identity(daemon),
+                uniq=uniq,
                 lx=lx,
                 ly=ly,
                 rx=rx,
                 ry=ry,
-                botoes=buttons_pressed,
+                botoes=da_mao,
             )
         device.forward_analog(lx=lx, ly=ly, rx=rx, ry=ry, l2=l2, r2=r2)
         device.forward_buttons(botoes)
@@ -3147,6 +3164,152 @@ def dispatch_gamepad(
             pump()
     except Exception as exc:
         logger.warning("gamepad_dispatch_failed", err=str(exc))
+
+
+# ---------------------------------------------------------------------------
+# O TOQUE E A INCLINAÇÃO — NO-MODO-XBOX-TUDO-FUNCIONA-01, 28/09/2026
+# ---------------------------------------------------------------------------
+#
+# A resposta dela de ~16h50: o touchpad move o cursor ou vira botões em zonas, e
+# a inclinação vira analógico, por perfil de jogo, um chip por controle. A regra
+# é pura e mora em `core/roteador_de_movimento.py`; aqui é o motor, chamado pelos
+# dois laços do tique (`dispatch_gamepad` para o P1, `coop.forward_all` para os
+# jogadores 2 a 4) com o `uniq` de cada controle. Mora no fim do módulo para as
+# citações `arquivo:linha` de cima não andarem.
+
+
+def _a_inclinacao(
+    hub: Any,
+    store: Any,
+    arranjo: Any,
+    uniq: str,
+    lx: int,
+    ly: int,
+    rx: int,
+    ry: int,
+) -> tuple[int, int, int, int]:
+    """O acelerômetro da peça somado ao analógico do arranjo. Nunca levanta.
+
+    O hub que não sabe ler o acelerômetro (o `HUB_AUSENTE`, os dublês) é
+    *"sem leitura"*: os eixos saem como entraram.
+    """
+    from hefesto_dualsense4unix.core import roteador_de_movimento as roteador
+
+    perguntar = getattr(hub, "aceleracao_do_movimento", None)
+    acel = perguntar(uniq) if callable(perguntar) else None
+    if acel is None:
+        return lx, ly, rx, ry
+    neutro = roteador.neutro_da_inclinacao(store, uniq, acel, time.monotonic())
+    dh, dv = roteador.deflexao_da_inclinacao(acel, neutro, arranjo)
+    if dh == 0 and dv == 0:
+        return lx, ly, rx, ry
+    if arranjo.acelerometro == roteador.DESTINO_ANALOGICO_DIREITO:
+        rx, ry = roteador.misturar(rx, ry, dh, dv)
+    else:
+        lx, ly = roteador.misturar(lx, ly, dh, dv)
+    return lx, ly, rx, ry
+
+
+def _dedos_do_toque(estado: Any) -> list[tuple[int, int, int]]:
+    """Os dedos apoiados como `(identidade, x, y)`, do `TouchState` do leitor.
+
+    Os slots do kernel quando o leitor os lê (MULTITOQUE-01); sem eles, o dedo
+    do resumo, e só se há toque. Nenhum dedo inventado.
+    """
+    pontos = tuple(getattr(estado, "pontos", ()) or ())
+    if pontos:
+        return [(int(p.identidade), int(p.x), int(p.y)) for p in pontos]
+    if getattr(estado, "touching", False):
+        return [(-1, int(estado.x), int(estado.y))]
+    return []
+
+
+def aplicar_o_toque(
+    daemon: DaemonProtocol,
+    arranjo: Any,
+    *,
+    uniq: str | None,
+    botoes: frozenset[str],
+    l2: int,
+) -> tuple[frozenset[str], int]:
+    """O touchpad da peça `uniq` vira botões (zonas) ou cursor. Nunca levanta.
+
+    NO-MODO-XBOX-TUDO-FUNCIONA-01 (28/09/2026), a resposta dela de ~16h50: os
+    DOIS arranjos, por perfil de jogo, por controle, e ela valida.
+
+    - **Zonas** (`TOQUE_ZONAS`): o dedo apoiado aperta o direcional, o L1 ou o
+      L2 (`roteador.botoes_das_zonas`), para quem não os alcança. Os botões
+      entram no conjunto da MÃO, antes da troca de botões e da Mira: o L2 da
+      zona leva a força cheia ao gatilho e liga o «Só enquanto eu segurar»
+      como o L2 do plástico.
+    - **Cursor** (`TOQUE_CURSOR`): o dedo move o cursor pelo Hefesto, com a
+      sensibilidade do arranjo, e o clique do touchpad é o botão esquerdo. O nó
+      do cursor é um só para a mesa (`Daemon._garantir_cursor_do_toque`): duas
+      peças no cursor somam, como duas mãos no mesmo mouse.
+
+    Nos dois, o nó do touchpad da peça fica grabado pelo hub enquanto o tique
+    perguntar (`SensorHub.toque_da_peca`): o dedo deixa de mover o ponteiro do
+    computador pelo libinput, e cada toque tem um dono só. Sem rota, esta
+    função devolve o MESMO conjunto e o mesmo L2 — o tique não aloca nada.
+    """
+    try:
+        if not uniq:
+            return botoes, l2
+        from hefesto_dualsense4unix.core import roteador_de_movimento as roteador
+
+        store = getattr(daemon, "store", None)
+        peca = roteador.da_peca(store, uniq, arranjo)
+        if peca is None or not peca.toca:
+            return botoes, l2
+        garantir = getattr(daemon, "_garantir_sensor_hub", None)
+        if garantir is None:
+            return botoes, l2
+        perguntar = getattr(garantir(), "toque_da_peca", None)
+        leitura = perguntar(uniq) if callable(perguntar) else None
+        if leitura is None:
+            return botoes, l2
+        estado, clicado = leitura
+        dedos = _dedos_do_toque(estado)
+        if peca.toque == roteador.TOQUE_ZONAS:
+            apertados = roteador.botoes_das_zonas(
+                ((x, y) for _dedo, x, y in dedos),
+                int(getattr(estado, "largura", 0) or 0),
+                int(getattr(estado, "altura", 0) or 0),
+            )
+            if not apertados:
+                return botoes, l2
+            if roteador.BOTAO_DA_ZONA_DE_BAIXO in apertados:
+                from hefesto_dualsense4unix.core.remapeamento_de_botao import FORCA_CHEIA
+
+                l2 = max(l2, FORCA_CHEIA)
+            return botoes | apertados, l2
+        dx, dy = roteador.delta_do_toque(store, uniq, dedos, time.monotonic())
+        garantir_o_cursor = getattr(daemon, "_garantir_cursor_do_toque", None)
+        cursor = garantir_o_cursor() if callable(garantir_o_cursor) else None
+        if cursor is not None:
+            if dx or dy:
+                cursor.mover(*roteador.pixels_do_toque(dx, dy, peca))
+            cursor.clicar(uniq, bool(clicado))
+        return botoes, l2
+    except Exception as exc:
+        logger.warning("roteador_do_toque_falhou", err=str(exc))
+        return botoes, l2
+
+
+def soltar_o_cursor_do_toque(daemon: Any) -> None:
+    """Destrói o cursor do toque da sessão, se houver. Idempotente.
+
+    Chamado quando o controle virtual sai (`stop_gamepad_emulation`) e quando
+    nenhuma peça leva mais o toque ao cursor (`dispatch_gamepad`): um ponteiro
+    sem dono não fica de pé.
+    """
+    cursor = getattr(daemon, "_cursor_do_toque", None)
+    if cursor is None:
+        return
+    if cursor is not False:
+        with contextlib.suppress(Exception):
+            cursor.stop()
+    daemon._cursor_do_toque = None
 
 
 __all__ = [
@@ -3163,6 +3326,7 @@ __all__ = [
     "STEAM_INPUT_VIGIA_INTERVAL_SEC",
     "GamepadSubsystem",
     "anotar_rumble_no_vpad",
+    "aplicar_o_toque",
     "apply_game_lightbar",
     "apply_game_player_leds",
     "apply_game_rumble",
@@ -3178,6 +3342,7 @@ __all__ = [
     "read_primary_calibration",
     "rehide_physical_hidraw",
     "resume_vpads_after_steam_input",
+    "soltar_o_cursor_do_toque",
     "start_gamepad_emulation",
     "start_gamepad_emulation_desfecho",
     "start_motion_reader",
