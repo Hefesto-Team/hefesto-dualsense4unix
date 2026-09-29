@@ -36,6 +36,10 @@ Regras de ouro (invariante "duplicado > zero controles"):
     físico deixado escondido por uma vida anterior do broker.
   - Um nó NUNCA é "esquecido" com o fs em 0600: só sai do rastreio DEPOIS do
     restore de fs verificado (lição 2 da auditoria que parkou a 1ª versão).
+  - A lease é do APARELHO, e não do nome (29/09/2026): ela guarda o pai HID
+    do nó no pedido, e o nome cujo pai mudou ou sumiu sai do rastreio sem
+    tocar no fs (`_podar_o_que_saiu`). O `0600` do aparelho que saiu não
+    existe mais, e o aparelho que herdou o nome não é dela.
   - O validador SÓ aceita hidraw cujo pai HID imediato tem HID_ID de DualSense
     físico (054c:0ce6, ou o Edge 054c:0df2, em USB 0003 ou BT 0005). O NOSSO
     vpad também anuncia 0df2, e é REJEITADO pela topologia e pela identidade
@@ -590,6 +594,39 @@ class FsAclOps:
         pai = os.path.realpath(f"{self._sys_class_hidraw}/{base}/device")
         return not _e_o_nosso_vpad(uevent, pai, int(match.group(1), 16))
 
+    def pai_hid_do_no(self, base: str) -> str | None:
+        """O aparelho que o nome `base` é AGORA: o pai HID dele. Só leitura.
+
+        O-BROKER-ESQUECE-O-CONTROLE-QUE-SAIU-01 (29/09/2026). A lease guarda
+        esta resposta no pedido, e o broker a compara com a de agora antes de
+        todo pedido e no EOF. Três respostas, e cada uma decide diferente:
+
+        - o `realpath` de `/sys/class/hidraw/<base>/device`, o diretório
+          `BUS:VID:PID.<seq>` do device HID. O `<seq>` sai de um contador do
+          kernel que só cresce (`hid_add_device`), e o caminho muda antes dele
+          quando o aparelho é outro (o pad é `0003:054C:0DF2` sob o `uhid`, o
+          físico pelo rádio é `0005:054C:0CE6`). O rdev não serve: o nome
+          herdado tem o mesmo `maior:menor`;
+        - `""` (SUMIDO): o diretório do nome não existe;
+        - `None` (MUDO): o diretório existe e a leitura falhou. «Não sei» não
+          poda: o broker não esquece por não conseguir ler.
+
+        O `readlink` separa o mudo do presente; o `realpath` sozinho devolve
+        um caminho até para o que não existe.
+        """
+        classe = f"{self._sys_class_hidraw}/{base}"
+        try:
+            os.lstat(classe)
+        except FileNotFoundError:
+            return ""
+        except OSError:
+            return None
+        try:
+            os.readlink(f"{classe}/device")
+        except OSError:
+            return None
+        return os.path.realpath(f"{classe}/device")
+
     def _pin(self, node: str, base: str) -> int | None:
         """O_PATH no nó + fstat cruzado com o sysfs. None = sumiu/reciclado (gone)."""
         try:
@@ -1014,10 +1051,15 @@ _RESTORE_BACKOFF_S = (0.0, 0.05, 0.2)
 
 @dataclass
 class _HiddenNode:
-    """Um nó escondido: uid gravado NO HIDE (fail-safe restaura por ele)."""
+    """Um nó escondido: uid gravado NO HIDE (fail-safe restaura por ele).
+
+    `pai` é o aparelho que o pedido escondeu (`FsAclOps.pai_hid_do_no`), e
+    `None` quer dizer «não sei»: a lease sem aparelho conhecido nunca é podada.
+    """
 
     uid: int
     refcount: int = 1
+    pai: str | None = None
 
 
 @dataclass
@@ -1030,10 +1072,13 @@ class _ExpostoNode:
     nó, conjunto por conexão, e EOF que devolve o nó ao repouso. Sem isso, um
     `expose` seria one-shot e nada re-fecharia — sair do Modo Nativo deixaria
     o nó aberto e a Steam voltaria a pegá-lo no próximo replug.
+
+    `pai` segue a regra do `_HiddenNode`: é o aparelho que o pedido expôs.
     """
 
     uid: int
     refcount: int = 1
+    pai: str | None = None
 
 
 class BrokerState:
@@ -1203,6 +1248,114 @@ class BrokerState:
             self._aplicar_entradas(node)
         return resposta
 
+    # -- a lease é do aparelho (O-BROKER-ESQUECE-O-CONTROLE-QUE-SAIU-01) ---
+    #
+    # A bancada de 29/09/2026: o P1 saiu, o primário que sai só reserva o
+    # posto e ninguém pediu o `restore` do nome dele. A conexão do daemon, que
+    # é a lease, seguiu viva, e o `hidden` guardou o `hidraw6` enquanto o
+    # kernel o dava ao pad do P2. O `status` dizia «escondido» sobre o pad, o
+    # doctor mediu os nós dele como os do físico, e uma exposição velha do
+    # mesmo jeito adiaria o `hide` do próximo físico com aquele nome. Quem
+    # sabe se o nome ainda é o aparelho é o broker, e ele passa a perguntar
+    # antes de todo pedido e no EOF.
+
+    def _pai_hid(self, base: str) -> str | None:
+        """A pergunta do `FsAclOps`; ops sem ela (dublê antigo) não sabe."""
+        pergunta = getattr(self._ops, "pai_hid_do_no", None)
+        if not callable(pergunta):
+            return None
+        try:
+            resposta = pergunta(base)
+        except OSError:
+            return None
+        return resposta if isinstance(resposta, str) else None
+
+    @staticmethod
+    def _lembrar_o_aparelho(entry: _HiddenNode | _ExpostoNode, pai: str | None) -> None:
+        """A lease guarda o aparelho do pedido, quando ainda não sabe qual é.
+
+        Só preenche o que está `None`: a lease que já sabe o aparelho não o
+        troca num pedido seguinte, porque quem decide se ele saiu é a poda,
+        que roda ANTES do pedido.
+        """
+        if entry.pai is None and pai:
+            entry.pai = pai
+
+    def _nomes_que_o_pedido_solta(
+        self, conn_id: int, cmd: object, request: dict[str, Any]
+    ) -> frozenset[str]:
+        """Os nomes que ESTE pedido solta da lease da própria conexão.
+
+        O pedido explícito do dono sobre o próprio nome vence a poda: o
+        `restore` do `_teardown_player` pelo secundário que saiu é o caminho
+        que já funcionava, e ele segue respondendo `gone` pelo `_repouso`,
+        cujo `_pin` recusa o nó que é de outro aparelho. A poda desses nomes
+        fica para o pedido seguinte, se sobrar lease de outra conexão.
+        """
+        if cmd == "restore_all":
+            return frozenset(self.by_conn.get(conn_id, set()))
+        if cmd not in ("restore", "unexpose"):
+            return frozenset()
+        base = canonical_hidraw_base(request.get("node"), dev_root=self._dev_root)
+        if base is None:
+            return frozenset()
+        canon = f"{self._dev_root}/{base}"
+        dela = self.by_conn if cmd == "restore" else self.expostos_by_conn
+        return frozenset({canon}) if canon in dela.get(conn_id, set()) else frozenset()
+
+    def _podar_o_que_saiu(self, *, exceto: frozenset[str] = frozenset()) -> None:
+        """Tira da contabilidade a lease cujo aparelho saiu. Não escreve no fs.
+
+        Para cada nome do `hidden` e do `expostos`, compara o pai HID de agora
+        com o guardado no pedido:
+
+        - diferente, ou sumido (`""`) ⇒ a entrada sai, e o nome sai de todo
+          `by_conn` (a do hide) ou de todo `expostos_by_conn` e
+          `entradas_by_conn` (a da exposição);
+        - mudo agora (`None`), ou `None` guardado ⇒ fica: «não sei» não poda;
+        - ops sem a pergunta (o dublê antigo) ⇒ nada muda.
+
+        Nenhum `chmod` e nenhuma ACL: o aparelho que herdou o nome não é dela.
+        Se for um físico, o próximo `hide` do daemon (o reesconder de 30 s) o
+        esconde com lease nova, e ele nasce fechado pela regra da cura; se for
+        o pad, fechá-lo tiraria o controle do jogo. O custo é um `readlink` e
+        um `realpath` por nome, a cada pedido.
+        """
+        if not callable(getattr(self._ops, "pai_hid_do_no", None)):
+            return
+        for canon in sorted((set(self.hidden) | set(self.expostos)) - exceto):
+            escondido = self.hidden.get(canon)
+            exposto = self.expostos.get(canon)
+            guardados = [e.pai for e in (escondido, exposto) if e is not None and e.pai]
+            if not guardados:
+                continue
+            base = canonical_hidraw_base(canon, dev_root=self._dev_root)
+            if base is None:
+                continue
+            agora = self._pai_hid(base)
+            if agora is None:
+                continue
+            de = ""
+            if escondido is not None and escondido.pai and escondido.pai != agora:
+                de = escondido.pai
+                del self.hidden[canon]
+                for held in self.by_conn.values():
+                    held.discard(canon)
+            if exposto is not None and exposto.pai and exposto.pai != agora:
+                de = de or exposto.pai
+                del self.expostos[canon]
+                for held in self.expostos_by_conn.values():
+                    held.discard(canon)
+                for held in self.entradas_by_conn.values():
+                    held.discard(canon)
+            if de:
+                self._log(
+                    "lease_do_aparelho_que_saiu",
+                    node=canon,
+                    de=os.path.basename(de),
+                    agora=os.path.basename(agora) or "-",
+                )
+
     # -- protocolo -------------------------------------------------------
 
     def handle_line(
@@ -1223,6 +1376,10 @@ class BrokerState:
         if not isinstance(request, dict):
             return ({"ok": False, "error": "reject_malformed"}, None)
         cmd = request.get("cmd")
+        # A lease é do aparelho: antes de qualquer `cmd`, sai a de quem saiu.
+        # É antes, e não depois: o `hide` de um nome que voltou com outro
+        # aparelho tem de achar a lease velha já fora, e gravar a nova.
+        self._podar_o_que_saiu(exceto=self._nomes_que_o_pedido_solta(conn_id, cmd, request))
         if cmd == "ping":
             return ({"ok": True, "cmd": "ping", "peer_uid": peer_uid}, None)
         if cmd == "status":
@@ -1309,6 +1466,7 @@ class BrokerState:
                 "error": "reject_not_physical_dualsense",
             }
         canon = f"{self._dev_root}/{base}"
+        pai = self._pai_hid(base)
         # Lição 2, espelhada: SEMPRE confere o fs e escreve o que difere. Um
         # nó recriado com o mesmo `hidrawN` nasceu FECHADO pela regra udev, e
         # o estado em memória não é prova de nada.
@@ -1334,6 +1492,7 @@ class BrokerState:
                 entry.refcount = 1
                 entry.uid = peer_uid
                 self._log("exposto_orfao_adotado", node=canon, conn=conn_id, uid=peer_uid)
+        self._lembrar_o_aparelho(self.expostos[canon], pai)
         held.add(canon)
         if entradas:
             self.entradas_by_conn.setdefault(conn_id, set()).add(canon)
@@ -1425,6 +1584,7 @@ class BrokerState:
                 "error": "reject_not_physical_dualsense",
             }
         canon = f"{self._dev_root}/{base}"
+        pai = self._pai_hid(base)
         held = self.by_conn.setdefault(conn_id, set())
         entry = self.hidden.get(canon)
         if self._exposicao_holders(canon) > 0:
@@ -1439,6 +1599,7 @@ class BrokerState:
                 self.hidden[canon] = _HiddenNode(uid=peer_uid, refcount=1)
             elif canon not in held and self._lease_holders(canon) > 0:
                 entry.refcount += 1
+            self._lembrar_o_aparelho(self.hidden[canon], pai)
             held.add(canon)
             self._log("hide_adiado_por_exposicao", node=canon, conn=conn_id)
             return {"ok": True, "cmd": "hide", "node": canon, "state": "exposed"}
@@ -1471,6 +1632,7 @@ class BrokerState:
                 entry.refcount = 1
                 entry.uid = peer_uid
                 self._log("orphan_adopted", node=canon, conn=conn_id, uid=peer_uid)
+        self._lembrar_o_aparelho(self.hidden[canon], pai)
         held.add(canon)
         return {"ok": True, "cmd": "hide", "node": canon, "state": "hidden"}
 
@@ -1669,7 +1831,13 @@ class BrokerState:
         de cada nó é o `_repouso`, não mais o restore incondicional: no mundo
         em que o nó nasce fechado, abrir tudo no EOF seria entregar o físico à
         Steam exatamente no instante em que o daemon morreu.
+
+        O-BROKER-ESQUECE-O-CONTROLE-QUE-SAIU-01: a poda roda ANTES de tudo.
+        Sem ela, o `_repouso` e o `_aplicar_entradas` pediriam ao fs por um
+        nome que já é de outro aparelho: o pad, que o `_pin` recusa, ou um
+        físico que ninguém pediu para esconder.
         """
+        self._podar_o_que_saiu()
         restored: list[str] = []
         failed: list[str] = []
         # HIDE-SO-O-HIDRAW-02: o pedido dos nós de entrada morre junto, e
