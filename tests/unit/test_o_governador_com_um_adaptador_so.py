@@ -425,3 +425,44 @@ def test_a_vaga_do_cabo_nunca_cede_nem_entra_na_conta() -> None:
     assert any(v.cedendo for v in vagas) or registro.de(gov.CEDEU_NA_FONTE), (
         "o dublê não congestionou o A"
     )
+
+
+# ---------------------------------------------------------------------------
+# 8. a vaga que nasce no episódio
+# ---------------------------------------------------------------------------
+def test_a_vaga_que_nasce_no_episodio_e_sobe_depois_dele_volta_a_escrever() -> None:
+    """A vaga concedida no meio de um episódio nasce cedendo, e a ponte dela
+    sobe um instante depois. Se o episódio acaba nesse instante, a ponte não
+    fica cedendo para sempre: ela volta a escrever com as outras.
+
+    Os episódios ficaram mais longos com a vez (só cede quem não cabe), e a
+    ponte que sobe dentro de um episódio passou a ser o caso comum.
+
+    MORDIDA: tire do ``tique`` o fim do ceder das vagas fora do episódio e a
+    segunda ponte segue cedendo, muda, com o adaptador sem episódio.
+    """
+    relogio, registro = _Relogio(), _Diario()
+    medidor = _AdaptadorQueEscoaDuas(capacidade=20)
+    governador = _governador(medidor, relogio, registro)
+    governador.tique()
+    primeira = governador.pedir_vaga(CONTROLE_1, "som")
+    assert isinstance(primeira, gov.Vaga)
+    primeira.subiu("som")
+    for _ in range(60):
+        primeira.contar_escrita()
+    medidor.janela(60)
+    relogio.agora += gov.PERIODO_S
+    governador.tique()
+    assert governador.publicar()[ADAPTADOR_A]["cedendo"], "o dublê não abriu o episódio"
+
+    segunda = governador.pedir_vaga(CONTROLE_2, "som")
+    assert isinstance(segunda, gov.Vaga) and segunda.cedendo, "a vaga do episódio nasce cedendo"
+    for _ in range(4):  # o adaptador escoa a fila antes de a ponte subir
+        medidor.janela(0)
+        relogio.agora += gov.PERIODO_S
+        governador.tique()
+    assert not governador.publicar()[ADAPTADOR_A]["cedendo"], "o episódio não acabou"
+    segunda.subiu("som")
+    relogio.agora += gov.PERIODO_S
+    governador.tique()
+    assert segunda.cedendo is False, "a ponte que subiu depois do episódio ficou cedendo"

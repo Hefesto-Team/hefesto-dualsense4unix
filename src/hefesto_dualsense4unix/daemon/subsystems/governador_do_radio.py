@@ -1252,6 +1252,15 @@ class GovernadorDoRadio:
                     andaram.append(endereco)
                 if estado.cedendo and estado.cedendo_medido_s > TETO_DE_CEDER_S:
                     paradas.append((endereco, list(vagas), estado.cedendo_medido_s))
+            # A VAGA SÓ CEDE DENTRO DO EPISÓDIO DO ADAPTADOR DELA. A vaga
+            # concedida no meio de um episódio nasce cedendo (:meth:`_conceder`),
+            # e o fim do episódio só alcança as pontes que já subiram: a que
+            # subia depois dele ficava cedendo para sempre, muda, sem escrita
+            # que abrisse o episódio seguinte.
+            cedendo = {e for e, s in self._estados.items() if s.cedendo}
+            for vaga in self._vagas:
+                if vaga.cedendo and vaga.adaptador not in cedendo:
+                    vaga.cedendo = False
         for o_que, dados in bordas:
             self._escrever(o_que, **dados)
         avisar = self.ao_autorizar
