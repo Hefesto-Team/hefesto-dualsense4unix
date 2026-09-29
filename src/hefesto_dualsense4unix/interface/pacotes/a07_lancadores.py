@@ -1229,8 +1229,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 # NENHUM DELES FALA COM O DAEMON, e isto os separa de todos os outros gestos
 # desta casa: o wrapper vive no `localconfig.vdf` da Steam e na lista
 # `jogos_sem_wrapper.txt`, dois arquivos em disco. O inventário do daemon
-# (`tests/unit/inventario_do_daemon.metodos()`) não traz UM método que os toque — por isso `PONTE` e `METODOS` ficam vazios, e
-# a prova destes botões é a régua da aba, que cobra o efeito NO ARQUIVO.
+# (`tests/unit/inventario_do_daemon.metodos()`) não traz UM método que os
+# toque — por isso `PONTE` e `METODOS` ficam vazios, e a prova destes botões é
+# a régua da aba, que cobra o efeito NO ARQUIVO.
 # ---------------------------------------------------------------------------
 from . import gesto  # noqa: E402
 
