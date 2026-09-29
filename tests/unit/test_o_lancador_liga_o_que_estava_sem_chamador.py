@@ -4,25 +4,35 @@ O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01. As duas moravam no motor e só a suíte as
 chamava desde que a janela GTK saiu (06/09, `D-0609-GTK-LEVA-INTEIRA`):
 
 1. ``utils/single_instance.acquire_or_bring_to_front`` — clicar no ícone com a
-   janela já aberta abria OUTRA janela. Agora a aberta recebe o pedido e vem
-   para a frente, e o segundo processo sai com ``rc=0`` antes do GTK.
+   janela já aberta abria OUTRA janela. Agora a aberta recebe o pedido pela
+   porta dela (um socket no runtime) e vem para a frente, e o segundo processo
+   sai com ``rc=0`` antes do GTK.
 2. ``app/arranque.sanear_loaders_do_gdk_pixbuf`` — o cache de loaders herdado de
    um terminal empacotado, cujos módulos são de outro confinamento, fazia o GTK
    abortar o processo no primeiro SVG. O lançador passa a descartá-lo antes de
    qualquer ``gi.repository``.
 
-NADA AQUI FALA COM A JANELA DELA. O runtime (onde mora o pid file) é um berço
-0700 dentro do ``tmp_path``, reimportado como em ``test_single_instance.py``; o
-nome do lock leva um ``WAYLAND_DISPLAY`` inventado por teste; e o único
-processo que recebe sinal é o filho que o próprio teste subiu.
+O PEDIDO NÃO É SINAL, e há régua para isso: a primeira versão mandava
+``SIGUSR1``, e a bancada de tela de 28/09 mostrou o WebKit tomando esse sinal
+para o coletor de lixo do JavaScriptCore — o segundo clique DERRUBOU a janela
+aberta com falha de segmentação.
+
+NADA AQUI FALA COM A JANELA DELA. O runtime (onde moram o pid file e a porta) é
+um berço 0700 curto em ``/tmp`` (o ``AF_UNIX`` aceita 108 bytes), reimportado
+como em ``test_single_instance.py``; o nome do lock leva um ``WAYLAND_DISPLAY``
+inventado por teste; e o único processo que recebe pedido é o filho que o
+próprio teste subiu.
 """
 from __future__ import annotations
 
+import ast
 import importlib
 import os
+import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 from collections.abc import Iterator
 from pathlib import Path
@@ -36,12 +46,10 @@ LANCADOR = RAIZ / "scripts" / "abrir_interface.py"
 #: Generoso: o filho é um interpretador novo que importa o pacote inteiro.
 ESPERA_PELO_FILHO_SEC = 20.0
 
-#: O filho que toma a vez e fica de pé. ``glib``: o ``main`` do lançador
-#: inteiro, com um piloto que segura o laço do GLib. ``cru``: só o tratador
-#: vazio, como o produto no meio do arranque, antes do GTK. A linha ``vez:``
-#: sai DEPOIS do tratador do modo estar armado: um pedido que chega antes disso
-#: cai no tratador vazio (é o arranque: a janela ainda vai nascer, e nasce na
-#: frente), e o teste mediria a corrida em vez do pedido.
+#: O filho que toma a vez. ``glib``: o ``main`` do lançador inteiro, com um
+#: piloto que segura o laço do GLib por 20 s. ``arranque``: toma a vez e
+#: DORME antes de armar a escuta (o pedido chega aí, como um segundo clique no
+#: meio do arranque), depois arma e roda o laço por 3 s e sai sozinho.
 _FILHO = """
 import os, sys, time, pathlib
 sys.path.insert(0, sys.argv[1])
@@ -52,12 +60,19 @@ if sys.argv[2] == "glib":
     sys.exit(ai.main([]))
 nome = ai.tomar_a_vez([])
 print("vez:" + repr(nome), flush=True)
-time.sleep(20)
+time.sleep(2.5)
+import gi
+gi.require_version("Gtk", "3.0")
+from gi.repository import GLib
+ai.armar_a_volta_a_frente(nome)
+laco = GLib.MainLoop()
+GLib.timeout_add(3000, laco.quit)
+laco.run()
 """
 
 #: O piloto do primeiro processo no modo ``glib``: o ``main`` do lançador já
-#: tomou a vez, vestiu a identidade e armou o tratador quando ele roda, e ele
-#: só avisa que está de pé e segura o laço do GLib, como a janela das abas.
+#: tomou a vez, vestiu a identidade e armou a escuta quando ele roda, e ele só
+#: avisa que está de pé e segura o laço do GLib, como a janela das abas.
 _PILOTO_QUE_FICA = """
 from gi.repository import GLib
 print("vez:'pronto'", flush=True)
@@ -78,13 +93,12 @@ def _carregar_o_lancador() -> ModuleType:
 
 
 @pytest.fixture
-def berco(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
-    """Runtime isolado, tela inventada e o sinal do processo devolvido no fim."""
-    runtime = tmp_path / "runtime"
-    runtime.mkdir()
+def berco(monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
+    """Runtime isolado e curto, e uma tela inventada."""
+    runtime = Path(tempfile.mkdtemp(prefix="hf-", dir="/tmp"))
     runtime.chmod(0o700)
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(runtime))
-    monkeypatch.setenv("WAYLAND_DISPLAY", f"regua-{os.getpid()}-{tmp_path.name}")
+    monkeypatch.setenv("WAYLAND_DISPLAY", f"r{os.getpid()}")
     monkeypatch.setenv("HEFESTO_NA_TELA", "1")
     monkeypatch.setenv("GDK_BACKEND", "x11")
     monkeypatch.delenv("XDG_ACTIVATION_TOKEN", raising=False)
@@ -98,13 +112,12 @@ def berco(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
     assert xdg_paths.runtime_dir().parent == runtime, (
         "o runtime resolveu fora do berço: o pid file iria para o de verdade"
     )
-    antes = signal.getsignal(signal.SIGUSR1)
     try:
         yield runtime
     finally:
-        signal.signal(signal.SIGUSR1, antes)
         for nome in list(single_instance._HELD_LOCKS):
             single_instance.release(nome)
+        shutil.rmtree(runtime, ignore_errors=True)
 
 
 def _subir_o_primeiro(modo: str, pasta: Path) -> subprocess.Popen[str]:
@@ -117,7 +130,7 @@ def _subir_o_primeiro(modo: str, pasta: Path) -> subprocess.Popen[str]:
         stderr=subprocess.STDOUT,
         text=True,
         # Num cano o stdout do filho é bufferizado em bloco, e o `kill` do fim
-        # jogaria fora a linha que o tratador imprimiu.
+        # jogaria fora a linha que o atendente imprimiu.
         env={**os.environ, "PYTHONUNBUFFERED": "1"},
     )
     assert filho.stdout is not None
@@ -166,7 +179,7 @@ class TestOSegundoCliqueTrazAJanela:
         monkeypatch.setattr(ai, "achar_o_piloto", lambda: _piloto_que_denuncia(tmp_path))
         monkeypatch.setenv("XDG_ACTIVATION_TOKEN", "token-do-clique")
 
-        primeiro = _subir_o_primeiro("glib", berco.parent)
+        primeiro = _subir_o_primeiro("glib", tmp_path)
         try:
             rc = ai.main([])
             vivo = primeiro.poll() is None
@@ -180,33 +193,47 @@ class TestOSegundoCliqueTrazAJanela:
         assert vivo, f"o pedido derrubou a janela que já estava aberta:\n{saida}"
         assert "a janela veio para a frente" in saida, saida
         assert "com o token de quem pediu" in saida, saida
-        assert not (berco / "hefesto-dualsense4unix" / f"{ai.nome_da_vez()}.ativacao").exists(), (
-            "o token ficou no disco: o próximo pedido reusaria um token gasto"
-        )
 
-    def test_o_pedido_no_meio_do_arranque_nao_derruba_a_janela(
+    def test_o_pedido_no_meio_do_arranque_espera_e_e_atendido(
         self, berco: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Antes de o GLib armar o tratador, o SIGUSR1 padrão MATARIA a janela."""
+        """O segundo clique antes do GTK não derruba nada e não se perde."""
         ai = _carregar_o_lancador()
         from hefesto_dualsense4unix.utils import single_instance
 
         monkeypatch.setattr(single_instance, "_is_hefesto_dualsense4unix_process", lambda _p: True)
-        primeiro = _subir_o_primeiro("cru", berco.parent)
+        primeiro = _subir_o_primeiro("arranque", berco)
         try:
             assert ai.tomar_a_vez([]) is None
-            time.sleep(0.3)
-            vivo = primeiro.poll() is None
+            saida, _ = primeiro.communicate(timeout=ESPERA_PELO_FILHO_SEC)
         finally:
-            saida = _enterrar(primeiro)
-        assert vivo, f"um segundo clique no arranque matou a janela:\n{saida}"
+            saida_final = _enterrar(primeiro) if primeiro.poll() is None else ""
+        saida = (saida or "") + saida_final
+        assert primeiro.returncode == 0, f"a janela morreu no arranque:\n{saida}"
+        assert "a janela veio para a frente" in saida, saida
 
-    def test_sem_janela_aberta_a_vez_e_deste_processo(self, berco: Path) -> None:
+    def test_sem_janela_aberta_a_vez_e_deste_processo_e_nenhum_sinal_muda(
+        self, berco: Path
+    ) -> None:
+        """A vez não mexe em sinal nenhum do processo: o WebKit usa o SIGUSR1."""
         ai = _carregar_o_lancador()
+        antes = {s: signal.getsignal(s) for s in (signal.SIGUSR1, signal.SIGUSR2)}
         nome = ai.tomar_a_vez([])
+        depois = {s: signal.getsignal(s) for s in (signal.SIGUSR1, signal.SIGUSR2)}
+
         assert nome == ai.nome_da_vez()
         pid_file = berco / "hefesto-dualsense4unix" / f"{nome}.pid"
         assert pid_file.read_text().strip() == str(os.getpid())
+        porta = berco / "hefesto-dualsense4unix" / f"{nome}.porta"
+        assert oct(porta.stat().st_mode & 0o777) == "0o600"
+        assert depois == antes, "o lançador mexeu num sinal que o WebKit usa"
+        arvore = ast.parse(LANCADOR.read_text(encoding="utf-8"))
+        importados = {
+            apelido.name
+            for no in ast.walk(arvore) if isinstance(no, ast.Import)
+            for apelido in no.names
+        }
+        assert "signal" not in importados, "o pedido de vir à frente voltou a ser sinal"
 
 
 class TestQuemNaoTomaAVez:
@@ -234,36 +261,40 @@ class TestQuemNaoTomaAVez:
         assert "/" not in ai.nome_da_vez()
 
 
-class TestOPedidoDeVirAFrente:
-    def test_o_token_esta_no_disco_antes_do_sinal(
+class TestAPortaDeFrente:
+    def test_o_pedido_leva_o_token_e_serve_uma_vez(
         self, berco: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         from hefesto_dualsense4unix.utils import single_instance
 
+        porta = single_instance.abrir_a_porta_de_frente("gui-t")
         monkeypatch.setenv("XDG_ACTIVATION_TOKEN", "token-x")
-        arquivo = berco / "hefesto-dualsense4unix" / "gui-t.ativacao"
-        vistos: list[tuple[int, int, bool]] = []
-        monkeypatch.setattr(
-            single_instance.os, "kill",
-            lambda pid, sinal: vistos.append((pid, sinal, arquivo.exists())),
-        )
         single_instance.pedir_a_frente("gui-t", 4242)
 
-        assert vistos == [(4242, signal.SIGUSR1, True)]
-        assert oct(arquivo.stat().st_mode & 0o777) == "0o600"
-        assert single_instance.ler_o_pedido_de_ativacao("gui-t") == "token-x"
-        assert single_instance.ler_o_pedido_de_ativacao("gui-t") is None, (
-            "um token serve a uma ativação só"
-        )
+        assert single_instance.ler_o_pedido(porta) == "token-x"
+        assert single_instance.ler_o_pedido(porta) is False, "a fila tinha um pedido só"
 
-    def test_sem_token_o_pedido_segue(self, berco: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_sem_token_o_pedido_segue(self, berco: Path) -> None:
         from hefesto_dualsense4unix.utils import single_instance
 
-        vistos: list[int] = []
-        monkeypatch.setattr(single_instance.os, "kill", lambda pid, _s: vistos.append(pid))
+        porta = single_instance.abrir_a_porta_de_frente("gui-t")
         single_instance.pedir_a_frente("gui-t", 4242)
-        assert vistos == [4242]
-        assert single_instance.ler_o_pedido_de_ativacao("gui-t") is None
+        assert single_instance.ler_o_pedido(porta) is None
+
+    def test_porta_fechada_nao_levanta(self, berco: Path) -> None:
+        """Sem porta, o pedido só se registra: a janela do outro segue de pé."""
+        from hefesto_dualsense4unix.utils import single_instance
+
+        single_instance.pedir_a_frente("gui-sem-porta", 4242)
+
+    def test_a_porta_velha_de_um_dono_morto_e_trocada(self, berco: Path) -> None:
+        from hefesto_dualsense4unix.utils import single_instance
+
+        velha = single_instance.abrir_a_porta_de_frente("gui-t")
+        velha.close()
+        nova = single_instance.abrir_a_porta_de_frente("gui-t")
+        single_instance.pedir_a_frente("gui-t", 4242)
+        assert single_instance.ler_o_pedido(nova) is None
 
 
 class TestOsLoadersDoGdkPixbuf:

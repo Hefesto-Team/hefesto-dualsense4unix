@@ -15,25 +15,20 @@ BUG-TRAY-SINGLE-FLASH-01: modelo "primeira vence" (`acquire_or_bring_to_front`).
   interface (`scripts/abrir_interface.py`) desde 28/09/2026: abrir o Hefesto com
   a janela já aberta traz a janela para a frente em vez de abrir outra.
 
-  O PEDIDO VIAJA POR SINAL E UM ARQUIVO (`pedir_a_frente` e
-  `ler_o_pedido_de_ativacao`, abaixo): o novo processo grava o token de
+  O PEDIDO VIAJA POR UM SOCKET UNIX, NUNCA POR SINAL (`abrir_a_porta_de_frente`,
+  `pedir_a_frente` e `ler_o_pedido`, abaixo). O dono da janela escuta em
+  ``<runtime>/<name>.porta``; o novo processo conecta e manda o token de
   ativação que o ambiente lhe deu (``XDG_ACTIVATION_TOKEN`` no Wayland,
-  ``DESKTOP_STARTUP_ID`` no X) e manda ``SIGUSR1`` ao predecessor, que o lê e
-  apresenta a janela com ele. Sem o token o compositor pode recusar o foco a
-  uma janela que não recebeu clique; com ele, o clique no ícone é quem pede.
+  ``DESKTOP_STARTUP_ID`` no X), com o qual a janela se apresenta. Sem o token o
+  compositor pode recusar o foco a uma janela que não recebeu clique.
 
-Motivação: udev ADD dispara `hefesto-dualsense4unix-gui-hotplug.service` duas vezes em <200ms
-(subsystem usb + hidraw/filhos). Com o modelo "última vence" a GUI2 matava a
-GUI1, causando o efeito "abre e fecha" no tray. Ver armadilha A-11 em
-VALIDATOR_BRIEF.md.
-
-O fd permanece aberto em `_HELD_LOCKS[name]` enquanto o processo vive. Em crash,
-o kernel libera o flock automaticamente.
-
-API:
-    pid = acquire_or_takeover("daemon")                     # daemon — última vence
-    pid = acquire_or_bring_to_front("gui-<tela>", cb)       # interface — primeira vence
-    alive = is_alive(pid)                                   # predicado leve
+  POR QUE NÃO O ``SIGUSR1`` DA JANELA GTK ANTIGA — medido em 28/09/2026 na
+  bancada de tela: o JavaScriptCore do WebKit toma o ``SIGUSR1`` para o coletor
+  de lixo (*"Overriding existing handler for signal 10"*), e o pedido do
+  segundo clique DERRUBOU a janela aberta com falha de segmentação. Sinal é um
+  recurso do processo inteiro, e a interface nova divide o processo com o
+  WebKit; o socket é só nosso, e um pedido perdido nele custa no máximo a
+  janela não vir à frente — nunca a janela.
 """
 from __future__ import annotations
 
@@ -42,6 +37,7 @@ import errno
 import fcntl
 import os
 import signal
+import socket
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -387,60 +383,90 @@ def acquire_or_bring_to_front(
     return own_pid
 
 
-#: O sinal que pede ao predecessor para trazer a janela para a frente. É o
-#: mesmo que a janela GTK antiga escutava (BUG-TRAY-SINGLE-FLASH-01). Quem toma
-#: a vez no modelo *primeira vence* tem de armar um tratador para ele ANTES de
-#: `acquire_or_bring_to_front`: a ação padrão do ``SIGUSR1`` é MATAR, e um
-#: segundo clique no meio do arranque derrubaria a janela que está nascendo.
-SINAL_DE_VIR_A_FRENTE = signal.SIGUSR1
-
 #: As variáveis em que o ambiente entrega o token de ativação a quem ele abriu,
 #: na ordem de preferência: a do Wayland (``xdg-activation-v1``) e a do X
 #: (startup-notification).
 _VARIAVEIS_DO_TOKEN: tuple[str, ...] = ("XDG_ACTIVATION_TOKEN", "DESKTOP_STARTUP_ID")
 
+#: O teto de um pedido, em bytes: um token é uma linha curta.
+_TETO_DO_PEDIDO = 4096
 
-def _arquivo_de_ativacao(name: str) -> Path:
-    return runtime_dir(ensure=True) / f"{name}.ativacao"
+#: As portas abertas por este processo, pelo mesmo motivo de ``_HELD_LOCKS``.
+_PORTAS: dict[str, socket.socket] = {}
+
+
+def _caminho_da_porta(name: str) -> Path:
+    return runtime_dir(ensure=True) / f"{name}.porta"
+
+
+def abrir_a_porta_de_frente(name: str) -> socket.socket:
+    """Abre a porta por onde chegam os pedidos de vir à frente, e a devolve.
+
+    Quem chama é o processo que VENCEU ``acquire_or_bring_to_front``, logo
+    depois de vencer: a porta velha de um dono que morreu é apagada, e a nova
+    nasce 0600, não bloqueante e fora dos filhos (``SOCK_CLOEXEC`` é o padrão
+    do Python). Pedido que chega antes de o laço da janela escutar fica na fila
+    do kernel e é atendido quando ele escutar — o arranque não perde pedido.
+    """
+    caminho = _caminho_da_porta(name)
+    with contextlib.suppress(FileNotFoundError):
+        caminho.unlink()
+    porta = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    porta.bind(str(caminho))
+    os.chmod(caminho, 0o600)
+    porta.listen(8)
+    porta.setblocking(False)
+    _PORTAS[name] = porta
+    return porta
+
+
+def porta_de_frente(name: str) -> socket.socket | None:
+    """A porta que este processo abriu para ``name``, ou ``None``."""
+    return _PORTAS.get(name)
 
 
 def pedir_a_frente(name: str, pid: int) -> None:
-    """Pede ao predecessor ``pid`` que traga a janela dele para a frente.
+    """Pede ao dono da janela (``pid``) que a traga para a frente.
 
-    É o ``bring_to_front_cb`` do lançador. Grava o token de ativação deste
-    processo (se o ambiente deu um) em ``<runtime>/<name>.ativacao``, com modo
-    0600, e manda ``SINAL_DE_VIR_A_FRENTE``. A ordem importa: o arquivo existe
-    ANTES de o sinal chegar, então o predecessor nunca lê um pedido pela
-    metade. Um token que não se grava não impede o pedido: sem ele o compositor
-    decide sozinho, que é o que acontecia antes.
+    É o ``bring_to_front_cb`` do lançador. Conecta na porta de ``name`` e manda
+    uma linha com o token de ativação deste processo (vazia se o ambiente não
+    deu um). Porta que não responde só é registrada: o dono está vivo (é o que
+    ``acquire_or_bring_to_front`` confere), a janela dele continua de pé, e o
+    pior que acontece é ela não vir à frente.
     """
     token = next(
-        (os.environ[v] for v in _VARIAVEIS_DO_TOKEN if os.environ.get(v)), None
+        (os.environ[v] for v in _VARIAVEIS_DO_TOKEN if os.environ.get(v)), ""
     )
-    if token:
-        arquivo = _arquivo_de_ativacao(name)
-        try:
-            fd = os.open(str(arquivo), os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
-            with os.fdopen(fd, "w", encoding="utf-8") as saida:
-                saida.write(token)
-        except OSError as exc:
-            logger.warning("single_instance_token_nao_gravado", name=name, err=str(exc))
-    os.kill(pid, SINAL_DE_VIR_A_FRENTE)
-
-
-def ler_o_pedido_de_ativacao(name: str) -> str | None:
-    """O token que o último pedido de vir à frente deixou, ou ``None``.
-
-    Lê e APAGA: um token serve a uma ativação só, e um velho reaproveitado no
-    pedido seguinte seria recusado pelo compositor.
-    """
-    arquivo = _arquivo_de_ativacao(name)
     try:
-        token = arquivo.read_text(encoding="utf-8").strip()
-    except OSError:
-        return None
-    with contextlib.suppress(OSError):
-        arquivo.unlink()
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as conexao:
+            conexao.settimeout(1.0)
+            conexao.connect(str(_caminho_da_porta(name)))
+            conexao.sendall(token.encode("utf-8", errors="replace")[:_TETO_DO_PEDIDO - 1] + b"\n")
+    except OSError as exc:
+        logger.warning("single_instance_pedido_nao_chegou", name=name, pid=pid, err=str(exc))
+
+
+def ler_o_pedido(porta: socket.socket) -> str | None | bool:
+    """Atende UM pedido da fila da porta: o token, ``None`` sem token, ``False`` sem pedido.
+
+    ``False`` quer dizer que não havia conexão esperando (a fila já foi
+    esvaziada). Uma conexão que não manda a linha em meio segundo conta como
+    pedido sem token: a janela vem à frente do mesmo jeito.
+    """
+    try:
+        conexao, _ = porta.accept()
+    except (BlockingIOError, InterruptedError):
+        return False
+    with conexao:
+        conexao.settimeout(0.5)
+        dados = b""
+        with contextlib.suppress(OSError):
+            while b"\n" not in dados and len(dados) < _TETO_DO_PEDIDO:
+                bloco = conexao.recv(_TETO_DO_PEDIDO)
+                if not bloco:
+                    break
+                dados += bloco
+    token = dados.split(b"\n", 1)[0].decode("utf-8", errors="replace").strip()
     return token or None
 
 
@@ -452,7 +478,11 @@ is_hefesto_dualsense4unix_process = _is_hefesto_dualsense4unix_process
 
 
 def release(name: str) -> None:
-    """Libera o lock explicitamente (útil para testes). No-op se ausente."""
+    """Libera o lock (e a porta de frente, se houver) explicitamente. No-op se ausente."""
+    porta = _PORTAS.pop(name, None)
+    if porta is not None:
+        with contextlib.suppress(OSError):
+            porta.close()
     fd = _HELD_LOCKS.pop(name, None)
     if fd is None:
         return
@@ -463,13 +493,14 @@ def release(name: str) -> None:
 
 __all__ = [
     "SIGTERM_GRACE_SEC",
-    "SINAL_DE_VIR_A_FRENTE",
     "_is_hefesto_dualsense4unix_process",
+    "abrir_a_porta_de_frente",
     "acquire_or_bring_to_front",
     "acquire_or_takeover",
     "is_alive",
     "is_hefesto_dualsense4unix_process",
-    "ler_o_pedido_de_ativacao",
+    "ler_o_pedido",
     "pedir_a_frente",
+    "porta_de_frente",
     "release",
 ]

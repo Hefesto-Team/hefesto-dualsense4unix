@@ -74,8 +74,10 @@ UMA JANELA POR TELA, E O SEGUNDO CLIQUE A TRAZ PARA A FRENTE (28/09/2026)
 Até aqui, clicar duas vezes no ícone abria duas janelas: o mecanismo que a
 janela GTK antiga usava (``utils/single_instance.acquire_or_bring_to_front``, o
 modelo *primeira vence*) ficou sem chamador quando ela saiu, em 06/09. Ele volta
-aqui (``tomar_a_vez``): a janela que já está aberta recebe o pedido e vem para a
-frente, e o segundo processo sai com ``rc=0`` antes de importar o GTK.
+aqui (``tomar_a_vez``): a janela que já está aberta recebe o pedido pela porta
+dela (um socket no runtime, NUNCA um sinal: o WebKit toma o ``SIGUSR1``, e o
+pedido por sinal derrubou a janela na bancada de 28/09) e vem para a frente; o
+segundo processo sai com ``rc=0`` antes de importar o GTK.
 
 O lock é POR TELA (``nome_da_vez``): a janela que nasce num ``Xvfb`` de
 instrumento nunca pede nada à janela da tela dela. E ele só vale quando a
@@ -101,7 +103,6 @@ from __future__ import annotations
 import os
 import re
 import runpy
-import signal
 import sys
 from pathlib import Path
 from typing import Any
@@ -241,20 +242,20 @@ def tomar_a_vez(args: list[str]) -> str | None:
     tomar (instrumento, janela oculta), e ``None`` quando uma janela já aberta
     recebeu o pedido e veio para a frente: quem chama sai com ``rc=0``.
 
-    O TRATADOR DO SINAL ENTRA ANTES DO LOCK, e é de propósito: a ação padrão do
-    ``SIGUSR1`` é MATAR. Do instante em que o pid file traz este PID até o
-    GLib armar o tratador de verdade, um segundo clique derrubaria a janela que
-    está nascendo. Um tratador vazio de Python é trocado na execução de um
-    filho (o WebKit), o que um ``SIG_IGN`` não seria.
+    A PORTA ABRE LOGO DEPOIS DO LOCK, antes do GTK: um segundo clique no meio do
+    arranque fica na fila do kernel e é atendido quando o laço da janela
+    escutar. Nada aqui mexe em sinal do processo.
     """
     if not a_janela_vai_para_a_tela(args):
         return ""
     from hefesto_dualsense4unix.utils import single_instance as si
 
     nome = nome_da_vez()
-    signal.signal(si.SINAL_DE_VIR_A_FRENTE, lambda *_: None)
     pid = si.acquire_or_bring_to_front(nome, lambda anterior: si.pedir_a_frente(nome, anterior))
-    return nome if pid is not None else None
+    if pid is None:
+        return None
+    si.abrir_a_porta_de_frente(nome)
+    return nome
 
 
 def janelas_de_frente(janelas: list[Any]) -> list[Any]:
@@ -276,30 +277,36 @@ def janelas_de_frente(janelas: list[Any]) -> list[Any]:
     ]
 
 
-def vir_a_frente(nome: str) -> bool:
-    """O tratador do pedido: apresenta a janela, com o token de quem pediu."""
+def vir_a_frente(porta: Any) -> bool:
+    """Atende os pedidos da fila da porta: apresenta a janela, com o token de quem pediu."""
     from gi.repository import Gtk
 
     from hefesto_dualsense4unix.utils import single_instance as si
 
-    token = si.ler_o_pedido_de_ativacao(nome)
-    janelas = janelas_de_frente(Gtk.Window.list_toplevels())
-    for janela in janelas:
-        if token:
-            janela.set_startup_id(token)
-        janela.present()
-    print(f"  a janela veio para a frente ({len(janelas)} apresentada(s)"
-          f"{', com o token de quem pediu' if token else ''})")
-    return True  # o GLib mantém o tratador para o próximo pedido
+    while (token := si.ler_o_pedido(porta)) is not False:
+        janelas = janelas_de_frente(Gtk.Window.list_toplevels())
+        for janela in janelas:
+            if token:
+                janela.set_startup_id(token)
+            janela.present()
+        print(f"  a janela veio para a frente ({len(janelas)} apresentada(s)"
+              f"{', com o token de quem pediu' if token else ''})")
+    return True  # o GLib mantém a escuta para o próximo pedido
 
 
 def armar_a_volta_a_frente(nome: str) -> None:
-    """Troca o tratador vazio pelo do laço do GLib, que roda na thread da janela."""
+    """Põe a porta da janela no laço do GLib, que roda na thread da janela."""
     from gi.repository import GLib
 
     from hefesto_dualsense4unix.utils import single_instance as si
 
-    GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, si.SINAL_DE_VIR_A_FRENTE, vir_a_frente, nome)
+    porta = si.porta_de_frente(nome)
+    if porta is None:
+        return
+    GLib.io_add_watch(
+        porta.fileno(), GLib.PRIORITY_DEFAULT, GLib.IOCondition.IN,
+        lambda _fd, _condicao: vir_a_frente(porta),
+    )
 
 
 #: O TETO DO DIÁRIO DA JANELA, em bytes. 1 MiB dá ~10 mil linhas de recado —
