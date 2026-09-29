@@ -719,9 +719,9 @@ def _hex(valor: str) -> str:
     """Só os dígitos hex minúsculos, "" quando não há nenhum.
 
     ``core.sysfs_leds.norm_mac`` é o normalizador público do projeto e é o MESMO
-    que produz o ``uniq`` do estado (``core/backend_pydualsense.py:6627-6641``,
-    o corpo de ``_key_to_uniq``; o endereço anterior, ``4674-4679``, apontava
-    para o ``set_coop_outputs`` desde alguma mudança não datada),
+    que produz o ``uniq`` do estado (``core/backend_pydualsense.py:7933-7948``,
+    o ``_key_to_uniq``, que só aceita os doze dígitos de um MAC e recusa a
+    chave que é caminho),
     então os dois lados casam por construção. Aqui só a ausência muda de forma:
     ``None`` vira ``""``, que é a resposta que o resto deste módulo espera.
     """

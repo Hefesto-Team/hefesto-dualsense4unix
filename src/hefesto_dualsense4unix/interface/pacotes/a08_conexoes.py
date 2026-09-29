@@ -2666,7 +2666,7 @@ def _teto_do_controle(
 # ---------------------------------------------------------------------------
 #: O RÓTULO DO "TODOS" NA LISTA DO ACORDEÃO. É o primeiro `<input>` do desenho
 #: (`#gc-todos`), e no daemon ele é `index: null` — o broadcast
-#: (`ipc_handlers.py:4134`: *"`index` null volta ao broadcast (padrão)"*).
+#: (`ipc_handlers.py:5275-5276`: *"`index` null volta ao broadcast (padrão)"*).
 TODOS_NA_TELA = "todos"
 
 
@@ -3545,7 +3545,7 @@ def todos(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     O `title` do botão é o contrato: *"Fecha. A fita volta para «Todos» e todos
     abrem juntos."* No daemon, "Todos" é `index: null`
-    (`ipc_handlers.py:4134`: *"`index` null volta ao broadcast (padrão)"*), e é o
+    (`ipc_handlers.py:5275-5276`: *"`index` null volta ao broadcast (padrão)"*), e é o
     mesmo `None` que a linha 0 do seletor da GUI estável carrega
     (`status_actions._controller_target_rows:1586`).
 

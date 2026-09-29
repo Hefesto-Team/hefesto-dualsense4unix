@@ -188,9 +188,9 @@ AUDIO_CONTROL_BASE_SEGURA = (
 #: comentário nenhum. Nada de lógica mudou; o comentário voltou para o que
 #: ele descreve.
 #:
-#: E o que ele descreve JÁ ESTÁ VIVO: `core/backend_pydualsense.py:881-858`
+#: E o que ele descreve JÁ ESTÁ VIVO: `core/backend_pydualsense.py:2162-2167`
 #: escreve `common[37]` e liga o `VALID_FLAG1_AUDIO_CONTROL2_ENABLE` sempre
-#: que há um pré-amp pedido, e a linha `:2695` manda o
+#: que há um pré-amp pedido, e a linha `:6099` manda o
 #: `SP_PREAMP_GAIN_PADRAO`. A seção 3 da referência canônica dizia até hoje
 #: que *"este projeto escreve só o volume"* — ela recebeu nota datada.
 SP_PREAMP_GAIN_MASK = 0x07
