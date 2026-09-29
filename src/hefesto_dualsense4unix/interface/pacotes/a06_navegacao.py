@@ -245,7 +245,7 @@ SEM_ENDERECO: dict[str, str] = {
 #: DUAS TÊM DONO E UMA NÃO, e qual é qual foi MEDIDO — ver o `fato_derrubado`
 #: no corpo de `teclado()`. O que o teclado emulado faz hoje **já é** "só fora
 #: do jogo": o daemon cala a emulação de desktop quando um jogo assume
-#: (`_jogo_no_controle_do_desktop`, `daemon/lifecycle.py:3186`, e o
+#: (`_jogo_no_controle_do_desktop`, `daemon/lifecycle.py:3340`, e o
 #: `gamepad_dispatched` do laço em `:5863`), e o `suppress_desktop_emulation`
 #: do perfil é a versão explícita e por perfil da MESMA coisa. Quem não tem
 #: dono é o INVERSO — "só dentro do jogo".
@@ -2337,7 +2337,7 @@ def _recusa_do_mouse(resposta: Any) -> str:
     `_call_checked_detalhado`, que é o único que entrega o corpo"*, e por isso
     um `{"status": "failed", "bloqueio": "sem_device"}` voltava como sucesso e a
     tela dela ficava sem uma palavra. A ponte entrega o corpo desde 01/09:
-    `ponte.resultado` (`interface/pacotes/ponte.py:244`) devolve o `result` do
+    `ponte.resultado` (`interface/pacotes/ponte.py:247`) devolve o `result` do
     daemon e levanta quando ninguém responde. Era um caminho que já existia e
     esta aba não chamava.
 
@@ -2557,15 +2557,16 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     27/08 no lugar de dois botões — *"Suspender Mouse e Teclado, Sair do Modo
     Jogo, deixam de existir devido ao botão status na parte superior"* —, e a
     dica dele diz o alcance: *"nada desta aba chega ao PC"*. Teclado é desta
-    aba. São duas chamadas porque o daemon tem dois interruptores separados
-    (`mouse.emulation.set` e `keyboard.emulation.set`), e o segundo nasceu
+    aba. O daemon tem dois interruptores separados, e o do teclado nasceu
     justamente porque desligar o mouse deixava o teclado emitindo Alt+Tab dentro
-    da partida (`daemon/ipc_handlers.py:5032`).
+    da partida (`daemon/ipc_handlers.py:7151`); o `desktop.status.set` aciona
+    os dois, numa chamada só.
 
-    O MOUSE VAI PRIMEIRO de propósito: é ele que tem exclusão mútua com o
-    gamepad virtual (`daemon/lifecycle.py:1500` — ligar o mouse PARA o vpad). Se
-    a primeira falhar, a segunda não chega a rodar e o teclado não fica ligado
-    sozinho num modo que não é dele.
+    O MOUSE VAI PRIMEIRO de propósito. É ele que tem exclusão mútua com o
+    gamepad virtual: ligá-lo PARA o vpad (`set_mouse_emulation`,
+    `daemon/lifecycle.py:1969`). Se o mouse falhar, o teclado não é tocado e
+    não fica ligado sozinho num modo que não é dele. A ordem mora no daemon
+    desde 29/09/2026 (`Daemon.definir_o_status_da_navegacao`).
 
     O LADO PARA ONDE IR SAI DO DAEMON, nunca da caixinha: o piloto não sabe
     escrever `checked` (o `escrever()` dele cobre texto, largura, fundo e
@@ -2711,7 +2712,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
        mouse/teclado no desktop (jogos de GAMEPAD que leem o controle cru)"*.
        O perfil é ativado quando o jogo casa; logo a supressão vale **durante o
        jogo** — o teclado funciona FORA dele.
-    2. `apply_profile_suppression` (`daemon/lifecycle.py:2814`) recebe esse
+    2. `apply_profile_suppression` (`daemon/lifecycle.py:2931`) recebe esse
        campo a cada ativação de perfil e liga a supressão com `desired=True`.
     3. Sem perfil nenhum a dizer o contrário, o daemon **já** cala a emulação de
        desktop quando um jogo assume: `_jogo_no_controle_do_desktop`
@@ -2728,11 +2729,11 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     SEM PORTÃO DE MODO, ao contrário do gesto `modo` logo acima, e é medido: o
     portão de lá existe porque ligar o MOUSE derruba o gamepad virtual — o
-    `set_mouse_emulation` (`daemon/lifecycle.py:1902`).
+    `set_mouse_emulation` (`daemon/lifecycle.py:1931`).
 
     Do outro lado, o teclado não mexe no gamepad virtual em momento nenhum.
     Quem o liga e desliga é o
-    `set_keyboard_emulation` (`daemon/lifecycle.py:2252`): ele cria ou destrói o
+    `set_keyboard_emulation` (`daemon/lifecycle.py:2351`): ele cria ou destrói o
     teclado virtual e nada mais.
 
     E COM O GAMEPAD DESPACHANDO, o teclado nem chega a ser consultado — a
@@ -2843,7 +2844,7 @@ def vel_rolagem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
 
     A FAIXA DELE É OUTRA, e o dono é o mesmo: `SCROLL_SPEED_MIN`/`MAX` (1..5,
     `uinput_mouse.py:79`), contra os 12 do cursor. O daemon apara com as mesmas
-    constantes (`daemon/lifecycle.py:1907` e `:2193`), e o `GtkAdjustment` da
+    constantes (`daemon/lifecycle.py:1964` e `:2334`), e o `GtkAdjustment` da
     janela estável publica os mesmos limites (`gui/main.glade:87`).
 
     FATO SUBSTITUÍDO — 03/09/2026. Esta frase estava truncada no meio e afirmava
@@ -4027,7 +4028,7 @@ def padrao_remapeamento(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
 #:    tela mostra" —, então pendurá-lo num "Voltar ao padrão" faria o botão
 #:    prometer uma coisa e fazer outra;
 #: 3. **ele LIGA o mouse.** `restore_mouse_preference`
-#:    (`daemon/lifecycle.py:1968`) chama `set_mouse_emulation(pref, …)` e, com a
+#:    (`daemon/lifecycle.py:1997`) chama `set_mouse_emulation(pref, …)` e, com a
 #:    preferência nunca gravada, `pref` vira `True` por default (`:1785`) — o
 #:    cursor DELA passa a andar pelo controle, e o gamepad virtual cai junto
 #:    (`:1741`). Isso o põe na mesma prateleira do gesto `modo`, que já está em
