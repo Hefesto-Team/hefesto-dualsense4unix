@@ -1145,6 +1145,7 @@ MOTOR_PCT_PADRAO = 100
 #: para o mesmo estouro — que é o defeito HARM-19 pela outra porta.
 MOTOR_PCT_MAX = 100
 
+
 def pcts_dos_motores(rumble: ControllerRumbleOverride | None) -> tuple[int, int]:
     """``(forte_pct, fraco_pct)`` desta peça — ``(100, 100)`` sem opinião.
 
