@@ -787,10 +787,8 @@ def test_o_pad_que_volta_ao_uhid_com_o_caminho_de_pe_segue_no_hid(
     MORDIDA: em ``_levar_a_haptica_fina``, devolva ``leva is True`` sem o
     ``converte and`` — o HID recebe (0, 0) e o rumble do jogo se perde.
     """
-    if transporte == "cabo":
-        controles = _no_cabo_os_quatro(mundo)
-    else:
-        controles = _no_radio_os_quatro(mundo)
+    montar = _no_cabo_os_quatro if transporte == "cabo" else _no_radio_os_quatro
+    controles = montar(mundo)
     mundo.mesa.volta(*controles)
     mundo.rumble(_P1, 100, 200)
     mundo.mesa.volta(*controles)
