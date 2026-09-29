@@ -736,6 +736,120 @@ def test_o_fio_nunca_le_o_no_ar(monkeypatch: pytest.MonkeyPatch) -> None:
     assert chamadas == []
 
 
+class _GerenciadorQuieto:
+    """O gerenciador de pontes que não sobe ponte nenhuma: só o `start` importa."""
+
+    def reconciliar(self, _nos: list[Any]) -> None:
+        return None
+
+    def dormir(self, _segundos: float) -> bool:
+        return True
+
+    def parar(self) -> None:
+        return None
+
+
+@pytest.mark.asyncio
+async def test_o_start_de_producao_entrega_a_heranca_ao_laco(
+    mesa: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O laço que a porta do nó usa é o que o `start()` DE PRODUÇÃO guarda.
+
+    As outras réguas do nó penduram o laço à mão (`sub._laco = …`), e com isso
+    nenhuma via o fio da produção: sem a linha do `start`, a porta do nó só
+    anota `bt_mic_heranca_sem_laco` no daemon de verdade, e o azul nunca herda.
+    Aqui o laço é o do `start`, o nó do roxo morre, e o azul herda; depois do
+    `stop`, a porta volta a não ter a quem entregar.
+
+    MORDIDA: tire o `self._laco = asyncio.get_running_loop()` do `start`, e o
+    azul não herda.
+    """
+    cena = await _cena_do_no(mesa, monkeypatch, no_ar=(AZUL, ROXO))
+    sub = cena.m.sub
+    sub._laco = None
+    sub._gerenciador_injetado = _GerenciadorQuieto()
+    # O fio do supervisor não roda: esta régua dirige a porta do nó à mão.
+    monkeypatch.setattr(sub, "_loop", lambda: None)
+    contexto = SimpleNamespace(config=None, controller=cena.m.backend)
+    await sub.start(contexto)  # type: ignore[arg-type]
+    try:
+        _o_roxo_morre(cena, _canal(VERMELHO))
+
+        await _uma_volta_da_porta_do_no(cena.m)
+
+        assert cena.m.pw.escritas == [_canal(AZUL)], (cena.m.pw.escritas, cena.avisos)
+        assert _eleitor(cena.m).eleito == AZUL
+    finally:
+        await sub.stop()
+    assert sub._laco is None, "o laço do daemon parado não pode receber herança"
+
+
+def _casamento_do_cabo(no_cabo: str) -> Any:
+    """O casamento USB de verdade (o tipo do produto): só `no_cabo` pendura no fio."""
+    from hefesto_dualsense4unix.integrations.fontes_de_captura import CasamentoUSB
+
+    def _montar(uniqs: list[str]) -> Any:
+        return CasamentoUSB(
+            por_uniq={u: ("3-1" if _n(u) == _n(no_cabo) else "") for u in uniqs},
+            por_no={NO_DO_KERNEL: "3-1"},
+        )
+
+    return _montar
+
+
+@pytest.mark.parametrize(
+    "caso",
+    ["o-calado-no-cabo", "o-que-esta-no-ar-no-cabo", "sem-casamento"],
+)
+@pytest.mark.asyncio
+async def test_no_cabo_o_no_do_kernel_herdeiro_segue_a_mesma_regra(
+    mesa: Any, monkeypatch: pytest.MonkeyPatch, caso: str
+) -> None:
+    """O herdeiro é a fonte que o KERNEL publica para o DualSense no cabo.
+
+    Ela não traz identidade no nome, e quem diz de que controle ela é é o
+    casamento pelo dispositivo USB. O roxo (padrão, no ar) morre com o azul no
+    ar, e o WirePlumber põe o padrão no nó do kernel:
+
+    - o-calado-no-cabo: o nó é do vermelho, calado no fio. A porta abre e o
+      padrão passa ao azul, como no rádio;
+    - o-que-esta-no-ar-no-cabo: o nó é do azul, que está no ar pelo fio. Foi
+      ela quem o ligou, e o padrão fica;
+    - sem-casamento: não dá para saber de quem é o nó. O «não sei» nunca
+      escreve, e o padrão fica.
+
+    MORDIDAS: sem os marcadores do DualSense em `bt_mic._e_canal_de_controle`,
+    o nó do kernel sai «nenhum» e o vermelho calado fica com o padrão; com o
+    «não sei» do casamento lido como «fora do ar», o sem-casamento escreve.
+    """
+    no_cabo = AZUL if caso == "o-que-esta-no-ar-no-cabo" else VERMELHO
+    m = mesa(_mesa_de(MESA_DE_29, _Fonte(90, NO_DO_KERNEL, porta=True)), cabo=no_cabo)
+    for uniq in (AZUL, ROXO):
+        assert (await _apertar(m, uniq, ligado=True)).feito, uniq
+    de_pe = {_canal(u) for u in OS_QUATRO}
+    m.sub._daemon = m.daemon
+    m.sub._laco = asyncio.get_running_loop()
+    monkeypatch.setattr(m.sub, "_nomes_de_pe", lambda: frozenset(de_pe))
+    monkeypatch.setattr(bt_mic, "fonte_padrao_crua", lambda ler=None: m.pw.ativo)
+    avisos: list[tuple[str, dict[str, Any]]] = []
+    monkeypatch.setattr(bt_mic.logger, "warning", lambda ev, **c: avisos.append((ev, c)))
+    assert await _uma_volta_da_porta_do_no(m) is None
+    cena = _CenaDoNo(m=m, de_pe=de_pe, avisos=avisos)
+    if caso != "sem-casamento":
+        monkeypatch.setattr(elm, "casamento_usb_agora", _casamento_do_cabo(no_cabo))
+    _o_roxo_morre(cena, NO_DO_KERNEL)
+
+    veredicto = await _uma_volta_da_porta_do_no(m)
+
+    assert veredicto is not None and veredicto.buraco == "canal_de_controle", veredicto
+    if caso == "o-calado-no-cabo":
+        assert m.pw.escritas == [_canal(AZUL)], (m.pw.escritas, avisos)
+        assert _eleitor(m).eleito == AZUL
+    else:
+        assert m.pw.escritas == [], m.pw.escritas
+        assert m.pw.ativo == NO_DO_KERNEL
+
+
 def test_o_uniq_da_fixture_e_da_faixa_sintetica() -> None:
     """A faixa de fixture da casa: endereço de teste nunca vem do real."""
     assert all(u.startswith("aa:bb:cc:00:00:") for u in OS_QUATRO)
