@@ -52,8 +52,9 @@ from tests.unit.test_cada_motor_tem_o_seu_multiplicador import (
 
 #: As duas placas do cabo e um endpoint do Hefesto, com os nomes na forma do
 #: servidor (a faixa forjada da casa; nenhum endereço real).
-PLACA_BRANCO = "alsa_output.usb-Sony_Interactive_Entertainment_Wireless_Controller-00.analog-surround-40"
-PLACA_PRETO = "alsa_output.usb-Sony_Interactive_Entertainment_Wireless_Controller-00.2.analog-surround-40"
+_SONY = "alsa_output.usb-Sony_Interactive_Entertainment_Wireless_Controller"
+PLACA_BRANCO = f"{_SONY}-00.analog-surround-40"
+PLACA_PRETO = f"{_SONY}-00.2.analog-surround-40"
 ENDPOINT = "alsa_output.usb-HEFESTO-lugar1-00.analog-surround-40"
 
 
@@ -154,7 +155,8 @@ class TestOServidorDeMentiraNaoEMaisFrouxoQueOReal:
         """``40%`` é −23,88 dB: o WirePlumber guardou 0,063997 linear na placa dela."""  # noqa: RUF002
         srv = _servidor()
         srv(["pactl", "set-sink-volume", PLACA_PRETO, "40%", "40%", "40%", "40%"])
-        assert round(linear_do_cru(srv.sinks[PLACA_PRETO][0]), 6) == pytest.approx(0.063997, abs=2e-6)
+        guardado = linear_do_cru(srv.sinks[PLACA_PRETO][0])
+        assert round(guardado, 6) == pytest.approx(0.063997, abs=2e-6)
 
     def test_as_quatro_formas(self) -> None:
         srv = _servidor()
@@ -167,7 +169,8 @@ class TestOServidorDeMentiraNaoEMaisFrouxoQueOReal:
 
     def test_formas_misturadas_sao_recusadas(self) -> None:
         srv = _servidor()
-        assert srv(["pactl", "set-sink-volume", PLACA_PRETO, "65536", "65536", "1.5", "1.5"]) is None
+        misturado = ["pactl", "set-sink-volume", PLACA_PRETO, "65536", "65536", "1.5", "1.5"]
+        assert srv(misturado) is None
 
 
 # ---------------------------------------------------------------------------

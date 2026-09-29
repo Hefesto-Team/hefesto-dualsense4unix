@@ -37,7 +37,6 @@ from hefesto_dualsense4unix.integrations.no_do_vpad import (
     resolver_no_do_vpad,
 )
 from hefesto_dualsense4unix.profiles.schema import (
-    HAPTICA_PCT_PADRAO,
     MOTOR_PCT_PADRAO,
     RUMBLE_CUSTOM_MULT_MAX,
 )
@@ -3458,6 +3457,8 @@ class IpcHandlersMixin:
             # lado para a tela não digitar o 100.
             result["rumble_motores"] = {}
             result["rumble_motor_pct_padrao"] = MOTOR_PCT_PADRAO
+            from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
+
             result["haptica_pct_padrao"] = HAPTICA_PCT_PADRAO
             with contextlib.suppress(Exception):
                 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
@@ -5862,6 +5863,7 @@ class IpcHandlersMixin:
         )
         from hefesto_dualsense4unix.profiles.schema import (
             HAPTICA_PCT_MAX,
+            HAPTICA_PCT_PADRAO,
             MOTOR_PCT_MAX,
             ControllerOverrides,
             ControllerRumbleOverride,

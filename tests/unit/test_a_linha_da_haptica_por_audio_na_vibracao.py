@@ -1,7 +1,8 @@
 """A linha «Háptica por áudio» na aba Vibração — A-LINHA-DA-HAPTICA-POR-AUDIO-NA-VIBRACAO-01.
 
 Ela, 29/09/2026, com a foto da aba: *«precisamos de uma linha disso na
-interface. e precisamos que isso funcione no modo bt também.»* <!-- noqa-acento: citação literal dela -->
+interface. e precisamos que isso funcione no modo bt também.»*
+<!-- noqa-acento: citação literal dela -->
 E depois: *«temos que ter um controle da parte haptica pq tanto no cabo ficou
 muito baixo»*. <!-- noqa-acento: citação literal dela -->
 
@@ -23,17 +24,17 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
-from hefesto_dualsense4unix.interface import aba05, pacotes  # noqa: E402
-from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05  # noqa: E402
-from hefesto_dualsense4unix.profiles import loader as loader_module  # noqa: E402
-from hefesto_dualsense4unix.profiles.loader import save_profile  # noqa: E402
-from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
+from hefesto_dualsense4unix.interface import aba05, pacotes
+from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
+from hefesto_dualsense4unix.profiles import loader as loader_module
+from hefesto_dualsense4unix.profiles.loader import save_profile
+from hefesto_dualsense4unix.profiles.schema import (
     HAPTICA_PCT_MAX,
     HAPTICA_PCT_PADRAO,
     MatchAny,
     Profile,
 )
-from tests.unit.test_cada_motor_tem_o_seu_multiplicador import (  # noqa: E402
+from tests.unit.test_cada_motor_tem_o_seu_multiplicador import (
     BRANCO,
     _Handlers,
 )

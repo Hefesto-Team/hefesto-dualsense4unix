@@ -65,7 +65,7 @@ def linear_do_pct(pct: float) -> float:
 
 def pct_do_linear(fator: float) -> float:
     """O `%` do servidor de um fator de amplitude (1,5 → 114,5 %)."""
-    return 100.0 * (max(fator, 0.0) ** (1.0 / 3.0))
+    return 100.0 * float(max(fator, 0.0) ** (1.0 / 3.0))
 
 
 class GanhoDaHaptica:

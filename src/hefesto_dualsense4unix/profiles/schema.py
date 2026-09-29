@@ -1145,44 +1145,6 @@ MOTOR_PCT_PADRAO = 100
 #: para o mesmo estouro — que é o defeito HARM-19 pela outra porta.
 MOTOR_PCT_MAX = 100
 
-#: O GANHO DA HÁPTICA POR ÁUDIO quando ninguém o arrastou. 150 % (+3,5 dB),
-#: por delegação, a validar por ela (O-GANHO-DA-HAPTICA-TEM-DONO-01, 29/09): a
-#: medida diz que do jogo à placa tudo já está em 0 dB e ela sentiu fraco, então
-#: nascer em 100 não mudaria nada do que ela sentiu.
-HAPTICA_PCT_PADRAO = 150
-
-#: Teto da barra da háptica. Passa de 100, ao contrário das barras dos motores,
-#: porque no PCM do jogo a Força não alcança: esta barra é o PRIMEIRO e único
-#: fator. 200 % é +6 dB, o que leva a textura mais fraca medida (0,45) a 0,9
-#: sem cortar; acima disso é só corte. É o mesmo teto do ``custom_mult``.
-HAPTICA_PCT_MAX = 200
-
-
-def pct_da_haptica(rumble: ControllerRumbleOverride | None) -> int:
-    """O ganho da háptica por áudio desta peça, em % — o padrão sem opinião.
-
-    O ÚNICO lugar que resolve o «não escrito» da barra da háptica, irmão de
-    ``pcts_dos_motores``: quem escala (o dono do ganho, no subsystem do som) lê
-    daqui e nunca repete o padrão.
-    """
-    if rumble is None or rumble.haptica_pct is None:
-        return HAPTICA_PCT_PADRAO
-    return int(rumble.haptica_pct)
-
-
-def pcts_da_haptica_dos_controles(
-    controllers: dict[str, ControllerOverrides] | None,
-) -> dict[str, int]:
-    """``{uniq: haptica_pct}`` de toda peça do perfil que ESCREVEU o campo."""
-    fora: dict[str, int] = {}
-    for uniq, cfg in (controllers or {}).items():
-        rumble = getattr(cfg, "rumble", None)
-        if rumble is None or "haptica_pct" not in rumble.model_fields_set:
-            continue
-        fora[uniq] = pct_da_haptica(rumble)
-    return fora
-
-
 def pcts_dos_motores(rumble: ControllerRumbleOverride | None) -> tuple[int, int]:
     """``(forte_pct, fraco_pct)`` desta peça — ``(100, 100)`` sem opinião.
 
@@ -3537,3 +3499,47 @@ __all__ = [
     "resolver_teclado_emulado",
     "vibracao_na_economia",
 ]
+
+
+# ---------------------------------------------------------------------------
+# O GANHO DA HÁPTICA POR ÁUDIO — O-GANHO-DA-HAPTICA-TEM-DONO-01, 29/09/2026.
+# No fim do arquivo de propósito: um bloco no meio empurraria toda citação
+# `profiles/schema.py:N` que a casa faz das barras dos motores.
+# ---------------------------------------------------------------------------
+
+#: O GANHO DA HÁPTICA POR ÁUDIO quando ninguém o arrastou. 150 % (+3,5 dB),
+#: por delegação, a validar por ela (O-GANHO-DA-HAPTICA-TEM-DONO-01, 29/09): a
+#: medida diz que do jogo à placa tudo já está em 0 dB e ela sentiu fraco, então
+#: nascer em 100 não mudaria nada do que ela sentiu.
+HAPTICA_PCT_PADRAO = 150
+
+#: Teto da barra da háptica. Passa de 100, ao contrário das barras dos motores,
+#: porque no PCM do jogo a Força não alcança: esta barra é o PRIMEIRO e único
+#: fator. 200 % é +6 dB, o que leva a textura mais fraca medida (0,45) a 0,9
+#: sem cortar; acima disso é só corte. É o mesmo teto do ``custom_mult``.
+HAPTICA_PCT_MAX = 200
+
+
+def pct_da_haptica(rumble: ControllerRumbleOverride | None) -> int:
+    """O ganho da háptica por áudio desta peça, em % — o padrão sem opinião.
+
+    O ÚNICO lugar que resolve o «não escrito» da barra da háptica, irmão de
+    ``pcts_dos_motores``: quem escala (o dono do ganho, no subsystem do som) lê
+    daqui e nunca repete o padrão.
+    """
+    if rumble is None or rumble.haptica_pct is None:
+        return HAPTICA_PCT_PADRAO
+    return int(rumble.haptica_pct)
+
+
+def pcts_da_haptica_dos_controles(
+    controllers: dict[str, ControllerOverrides] | None,
+) -> dict[str, int]:
+    """``{uniq: haptica_pct}`` de toda peça do perfil que ESCREVEU o campo."""
+    fora: dict[str, int] = {}
+    for uniq, cfg in (controllers or {}).items():
+        rumble = getattr(cfg, "rumble", None)
+        if rumble is None or "haptica_pct" not in rumble.model_fields_set:
+            continue
+        fora[uniq] = pct_da_haptica(rumble)
+    return fora
