@@ -5980,7 +5980,7 @@ class IpcHandlersMixin:
             esquecer_motores_do_perfil(self.daemon)
         # O dono do ganho relê no MESMO ato: a ponte do rádio o pergunta a cada
         # bloco, e a placa do cabo o recebe na próxima volta do som.
-        GANHO.ler_do_daemon(self.daemon)
+        GANHO.ler_do_daemon(self.daemon, forcar=True)
         logger.info(
             "rumble_motores_gravados",
             uniq=chave,

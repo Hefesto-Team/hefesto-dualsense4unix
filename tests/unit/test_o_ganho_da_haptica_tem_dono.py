@@ -483,3 +483,33 @@ class TestOStateFull:
         assert entries[1]["haptica_alcanca"] is False, (
             "Nativo pelo rádio sem a ponte: o jogo escreve no hidraw e o ganho não alcança"
         )
+
+
+class TestALeituraDoPerfil:
+    def test_o_perfil_fora_do_nome_do_arquivo_e_lido_pelo_carregador(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O perfil que só o `load_profile` acha: lido uma vez, e de novo quando o gravador pede."""
+        from types import SimpleNamespace
+
+        from hefesto_dualsense4unix.profiles import manager
+
+        cargas: list[str] = []
+        perfil = SimpleNamespace(controllers={
+            BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(haptica_pct=60))
+        })
+
+        def _carregar(nome: str) -> Any:
+            cargas.append(nome)
+            return perfil
+
+        monkeypatch.setattr(loader_module, "perfil_em_disco", lambda _n: None)
+        monkeypatch.setattr(loader_module, "load_profile", _carregar)
+        monkeypatch.setattr(manager, "nome_do_perfil_que_grava", lambda _a: "Estilo")
+        daemon = SimpleNamespace(store=SimpleNamespace(active_profile="Estilo"))
+        dono = GanhoDaHaptica()
+        dono.ler_do_daemon(daemon)
+        dono.ler_do_daemon(daemon)
+        assert dono.pct(BRANCO) == 60 and cargas == ["Estilo"]
+        dono.ler_do_daemon(daemon, forcar=True)
+        assert cargas == ["Estilo", "Estilo"]

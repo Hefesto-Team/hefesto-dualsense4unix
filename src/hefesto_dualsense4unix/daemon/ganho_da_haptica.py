@@ -76,6 +76,9 @@ class GanhoDaHaptica:
         self._escritos: dict[str, int] = {}
         #: As placas em que este dono escreveu, para o ``stop`` devolvê-las.
         self._placas: dict[str, float] = {}
+        #: O perfil que só o carregador inteiro achou (fora do nome do arquivo):
+        #: ele não se relê a cada volta, só quando o gravador pede.
+        self._pelo_carregador: str | None = None
 
     # -- a leitura ---------------------------------------------------------
     def ler_do_perfil(self, controllers: Any) -> None:
@@ -90,20 +93,30 @@ class GanhoDaHaptica:
                     mapa[chave] = pct
         self._escritos = mapa
 
-    def ler_do_daemon(self, daemon: Any) -> None:
+    def ler_do_daemon(self, daemon: Any, *, forcar: bool = False) -> None:
         """Relê o perfil que vale agora, pelo mesmo resolvedor dos gravadores.
 
+        O arquivo pelo nome (`perfil_em_disco`) é a leitura de cada volta; o
+        perfil que só o carregador inteiro acha (`load_profile`, as quatro
+        pernas) é lido uma vez e de novo quando quem grava pede (`forcar`).
         Nunca levanta: perfil ilegível é «ninguém opinou», e a háptica segue no
         padrão em vez de sumir por um JSON torto.
         """
         controllers: Any = None
         with contextlib.suppress(Exception):
-            from hefesto_dualsense4unix.profiles.loader import perfil_em_disco
+            from hefesto_dualsense4unix.profiles.loader import load_profile, perfil_em_disco
             from hefesto_dualsense4unix.profiles.manager import nome_do_perfil_que_grava
 
             store = getattr(daemon, "store", None)
             nome = nome_do_perfil_que_grava(getattr(store, "active_profile", None))
             perfil = perfil_em_disco(nome) if nome else None
+            if perfil is None and nome:
+                if not forcar and self._pelo_carregador == nome:
+                    return
+                self._pelo_carregador = nome
+                perfil = load_profile(nome)
+            else:
+                self._pelo_carregador = None
             controllers = getattr(perfil, "controllers", None)
         self.ler_do_perfil(controllers)
 
