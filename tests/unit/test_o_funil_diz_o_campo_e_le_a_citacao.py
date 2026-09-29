@@ -34,15 +34,15 @@ INTERFACE = RAIZ / "src/hefesto_dualsense4unix/interface"
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(INTERFACE))
 
-from tests.conftest import exigir_gi_real  # noqa: E402
+from tests.conftest import exigir_gi_real
 
 exigir_gi_real("importa `interface.hefesto_vivo`, que carrega o GTK e o WebKit")
 
-import hefesto_vivo as hv  # noqa: E402
+import hefesto_vivo as hv
 
-from hefesto_dualsense4unix.interface import frases_que_ela_baniu as fb  # noqa: E402
-from hefesto_dualsense4unix.interface.pacotes import Contexto  # noqa: E402
-from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09  # noqa: E402
+from hefesto_dualsense4unix.interface import frases_que_ela_baniu as fb
+from hefesto_dualsense4unix.interface.pacotes import Contexto
+from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
 PAGINA = "09-sistema.html"
 CAMPO = a09.REGISTRO
@@ -239,7 +239,7 @@ def test_as_frases_do_produto_no_diario_nao_sao_citacao(
 # 7. todo chamador do Piloto passa a página
 # --------------------------------------------------------------------------
 def test_todo_chamador_do_piloto_passa_a_pagina() -> None:
-    """Por AST: toda chamada de `_json` dentro de `class Piloto` leva `pagina`.
+    """Por AST: toda chamada de `_json` dentro de `class Piloto` leva a página (`pagina=`).
 
     A MORDIDA: tire o `pagina=` de uma das sete, e esta reprova nomeando a
     linha.
@@ -251,8 +251,9 @@ def test_todo_chamador_do_piloto_passa_a_pagina() -> None:
                 if isinstance(no, ast.Call) and isinstance(no.func, ast.Name)
                 and no.func.id == "_json"]
     assert len(chamadas) >= 7, f"o Piloto chama `_json` {len(chamadas)} vezes"
+    argumento = "pagina"  # (noqa-acento) nome do argumento do `_json`
     sem_pagina = [no.lineno for no in chamadas
-                  if not any(k.arg == "pagina" for k in no.keywords)]
+                  if not any(k.arg == argumento for k in no.keywords)]
     assert sem_pagina == [], (
         f"chamadas de `_json` sem a página nas linhas {sem_pagina}: a denúncia "
         "dali sai sem dizer de onde veio")
