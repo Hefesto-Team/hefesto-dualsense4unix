@@ -782,10 +782,12 @@ def test_o_jogo_nao_rouba_o_mudo_durante_a_gravacao(isolated_profiles_dir: Path)
     roubaria o mudo do microfone dela.
 
     A separação: o `volume` (ganho da fonte no PipeWire, não apaga luz nenhuma)
-    atravessa toda ativação; o `muted` só a troca EXPLÍCITA de perfil.
+    atravessa toda ativação; o `muted` NENHUMA — desde a
+    O-MUDO-E-DO-CONTROLE-01 (29/09/2026) ele é do controle, e só o replug o
+    devolve, lido do dono (`reapply_mic_on_connect`).
 
-    MORDIDA: apague o `if origin != "manual": muted = None` de `apply_mic` e
-    este caso fica vermelho na primeira asserção.
+    MORDIDA: deixe o `muted` do perfil atravessar a troca explícita na guarda
+    de `apply_mic` e este caso fica vermelho na última asserção.
     """
     save_profile(_mk_profile_com_mic("jogo", volume=70, muted=False))
     espiao = _MicEspiao()
@@ -804,10 +806,13 @@ def test_o_jogo_nao_rouba_o_mudo_durante_a_gravacao(isolated_profiles_dir: Path)
         "o mudo do perfil atravessou o restauro de boot/reconexão"
     )
 
+    # O-MUDO-E-DO-CONTROLE-01 (29/09/2026): nem a troca EXPLÍCITA leva o
+    # mudo. Ele é do controle (resposta 9 dela: vale em todo jogo), e o
+    # `muted` que um perfil ainda carregue é ignorado.
     manager.activate("jogo", origin="manual")
-    assert espiao.chamadas[-1] == (70, False, "manual"), (
-        "ela trocou de perfil DE PROPÓSITO e o mudo que ela salvou não foi "
-        f"aplicado: {espiao.chamadas[-1]!r}"
+    assert espiao.chamadas[-1] == (70, None, "manual"), (
+        "a troca explícita de perfil levou o mudo — ele é do controle, não do "
+        f"perfil: {espiao.chamadas[-1]!r}"
     )
 
 

@@ -603,6 +603,11 @@ def _gesto_mic(janela: Any) -> None:
     honesta: ele é o único dos três campos que ainda não tem superfície onde
     ela possa tocá-lo. O que este caso mede é que os TRÊS chegam ao arquivo
     juntos — quem lhe der superfície troca só estas duas linhas.
+
+    **NOTA DATADA — 29/09/2026 (O-MUDO-E-DO-CONTROLE-01).** O mudo saiu do
+    perfil: é do controle, mora no ``maquina.json`` e vale em todo jogo
+    (resposta 9 dela). O gesto continua clicando em Silenciar, e o que se mede
+    é que ele NÃO chega ao arquivo — o volume e o botão chegam.
     """
     from hefesto_dualsense4unix.app.draft_config import (
         MicDraft,
@@ -629,9 +634,9 @@ def _confere_mic(perfil: Profile) -> None:
         f"o volume do microfone no arquivo é {perfil.mic.volume!r} — ela "
         "deixou 70 no controle deslizante do card"
     )
-    assert perfil.mic.muted is True, (
-        f"o mudo do microfone no arquivo é {perfil.mic.muted!r} — ela clicou "
-        "em Silenciar"
+    assert perfil.mic.muted is None, (
+        f"o mudo do microfone chegou ao arquivo ({perfil.mic.muted!r}) — ele é "
+        "do controle, e o perfil não o leva"
     )
 
 

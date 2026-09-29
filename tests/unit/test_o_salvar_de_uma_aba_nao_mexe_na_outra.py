@@ -312,7 +312,9 @@ def test_a_forca_da_05_so_muda_a_vibracao() -> None:
 
 @pytest.mark.parametrize(("campos", "secao"), [
     ({"speaker": {"volume": 50}}, "speaker"),
-    ({"mic": {"muted": False}}, "mic"),
+    # O mudo não passa por aqui desde 29/09 (O-MUDO-E-DO-CONTROLE-01): é do
+    # controle. O caso do microfone mede o volume da peça.
+    ({"mic": {"volume": 55}}, "mic"),
 ])
 def test_o_som_da_02_so_muda_a_secao_do_gesto(campos: dict[str, Any], secao: str) -> None:
     """O escritor do som da 02 grava o campo do gesto, e a outra seção fica."""

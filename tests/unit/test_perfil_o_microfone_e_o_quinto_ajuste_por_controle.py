@@ -41,6 +41,16 @@ jogo voltaria a roubar o mudo dela no meio de uma gravação — o defeito que a
 AUDIT-FINDING-PROFILE-MIC-LED-RESET-01 fechou. Por isso o método REUSA
 ``apply_mic`` verbatim, e há teste abaixo que prova a herança da guarda.
 
+NOTA DATADA — 29/09/2026 (O-MUDO-E-DO-CONTROLE-01): O MUDO SAIU DO PERFIL
+-------------------------------------------------------------------------
+A resposta 9 dela (27/09): *o mudo do microfone é do controle, e vale em todo
+jogo*. Ele mora no ``maquina.json`` (``controles[k].microfone_mudo``), e
+nenhuma ativação de perfil o escreve — nem a explícita. O ``muted`` do
+``ControllerMicOverride`` continua legível no esquema (a migração
+``loader.o_mudo_do_microfone_vai_para_o_controle`` o leva ao dono e o tira do
+arquivo), e ``apply_mic`` o ignora. O caminho por peça que este arquivo prova
+segue o mesmo, agora com o ``volume`` da peça, que atravessa toda ativação.
+
 AS MORDIDAS (o que arrancar para ver reprovar)
 -----------------------------------------------
 1. apagar ``mic: ControllerMicOverride | None = None`` de ``ControllerOverrides``;
@@ -277,8 +287,11 @@ def test_a_ida_e_volta_pelo_disco_preserva_o_mudo_da_peca() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_cada_peca_recebe_o_proprio_mudo_na_ativacao() -> None:
-    """Duas unidades, dois mudos, um perfil só — o pedido dela por microfone.
+def test_cada_peca_recebe_o_proprio_volume_na_ativacao() -> None:
+    """Duas unidades, dois volumes, um perfil só — o pedido dela por microfone.
+
+    Até 29/09 este caso provava o MUDO por peça; o mudo passou a ser do controle
+    (O-MUDO-E-DO-CONTROLE-01), e o endereço se prova pelo volume.
 
     MORDIDA 2: tirar o ``uniq=str(uniq)`` da chamada em
     ``apply_controller_mics`` — o dado continua sendo calculado e deixa de ter
@@ -289,10 +302,10 @@ def test_cada_peca_recebe_o_proprio_mudo_na_ativacao() -> None:
     perfil = Profile(
         name="mic_por_peca",
         match=MatchAny(),
-        mic=ProfileMicConfig(button_toggles_system=True, muted=False),
+        mic=ProfileMicConfig(button_toggles_system=True, volume=50),
         controllers={
-            BRANCO: ControllerOverrides(mic=ControllerMicOverride(muted=True)),
-            PRETO: ControllerOverrides(mic=ControllerMicOverride(muted=False)),
+            BRANCO: ControllerOverrides(mic=ControllerMicOverride(volume=30)),
+            PRETO: ControllerOverrides(mic=ControllerMicOverride(volume=80)),
         },
     )
 
@@ -301,9 +314,9 @@ def test_cada_peca_recebe_o_proprio_mudo_na_ativacao() -> None:
     gerente.apply_controller_mics(perfil, relatorio=relatorio)
 
     assert chamadas == [
-        (None, False, None, "manual"),  # o global, sem endereço
-        (None, True, BRANCO, "manual"),
-        (None, False, PRETO, "manual"),
+        (50, None, None, "manual"),  # o global, sem endereço
+        (30, None, BRANCO, "manual"),
+        (80, None, PRETO, "manual"),
     ]
     # O relatório diz QUAL peça, para a GUI não fundir tudo num rótulo só.
     assert relatorio[f"mic:{BRANCO}"] == "aplicado"
@@ -322,13 +335,13 @@ def test_a_ativacao_do_perfil_chama_o_por_peca_depois_do_global() -> None:
     perfil = Profile(
         name="ativacao_inteira",
         match=MatchAny(),
-        mic=ProfileMicConfig(button_toggles_system=True, muted=False),
-        controllers={BRANCO: ControllerOverrides(mic=ControllerMicOverride(muted=True))},
+        mic=ProfileMicConfig(button_toggles_system=True, volume=50),
+        controllers={BRANCO: ControllerOverrides(mic=ControllerMicOverride(volume=30))},
     )
 
     relatorio = gerente.apply_emulation(perfil, origin="manual")
 
-    assert [(c[1], c[2]) for c in chamadas] == [(False, None), (True, BRANCO)]
+    assert [(c[0], c[2]) for c in chamadas] == [(50, None), (30, BRANCO)]
     assert relatorio["mic"] == "aplicado"
     assert relatorio[f"mic:{BRANCO}"] == "aplicado"
 
@@ -361,14 +374,16 @@ def test_a_peca_sem_opiniao_nao_produz_ordem_nenhuma() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_o_mudo_da_peca_nao_atravessa_o_autoswitch() -> None:
-    """MIC-GRAVACAO-01 vale igual por peça — e é a guarda mais cara de perder.
+def test_o_mudo_da_peca_nao_atravessa_ativacao_nenhuma() -> None:
+    """A guarda do mudo vale igual por peça — e é a guarda mais cara de perder.
 
     Ela grava, o jogo abre, o autoswitch entra com a trava manual já limpa
     (``profiles/autoswitch.py``, exceção F2). Se o ``muted`` por peça
     atravessasse, o perfil do jogo roubaria o mudo dela no meio da gravação e
     apagaria o LED vermelho como COLATERAL — o que a
-    AUDIT-FINDING-PROFILE-MIC-LED-RESET-01 proíbe.
+    AUDIT-FINDING-PROFILE-MIC-LED-RESET-01 proíbe. Desde 29/09
+    (O-MUDO-E-DO-CONTROLE-01) nem a troca explícita o leva: o mudo é do
+    controle.
 
     MORDIDA: escrever a chamada ao applier direto em ``apply_controller_mics``,
     em vez de reusar ``apply_mic`` — a guarda fica do lado de fora e este teste
@@ -382,14 +397,9 @@ def test_o_mudo_da_peca_nao_atravessa_o_autoswitch() -> None:
         controllers={BRANCO: ControllerOverrides(mic=ControllerMicOverride(muted=True))},
     )
 
-    for origem in ("autoswitch", "system"):
+    for origem in ("autoswitch", "system", "manual"):
         assert gerente.apply_controller_mics(perfil, origin=origem) == {}
-    assert chamadas == [], "o mudo da peça atravessou uma ativação automática"
-
-    assert gerente.apply_controller_mics(perfil, origin="manual") == {
-        f"mic:{BRANCO}": "aplicado"
-    }
-    assert chamadas == [(None, True, BRANCO, "manual")]
+    assert chamadas == [], "o mudo da peça atravessou uma ativação de perfil"
 
 
 
@@ -413,8 +423,8 @@ def test_o_applier_que_cai_nao_aborta_a_ativacao_e_diz_qual_peca() -> None:
         name="uma_cai_a_outra_nao",
         match=MatchAny(),
         controllers={
-            BRANCO: ControllerOverrides(mic=ControllerMicOverride(muted=True)),
-            PRETO: ControllerOverrides(mic=ControllerMicOverride(muted=True)),
+            BRANCO: ControllerOverrides(mic=ControllerMicOverride(volume=30)),
+            PRETO: ControllerOverrides(mic=ControllerMicOverride(volume=30)),
         },
     )
 

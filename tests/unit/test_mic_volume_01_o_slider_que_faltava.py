@@ -329,12 +329,16 @@ class TestOMicChegaAoRascunho:
     16/08 — a classe de defeito *"a casa sabe e o produto não faz"*.
     """
 
-    def test_o_mic_faz_ida_e_volta_com_volume_e_mudo(self) -> None:
-        """A trava do ``to_profile``: os dois campos novos chegam ao arquivo.
+    def test_o_mic_faz_ida_e_volta_com_o_volume_e_sem_o_mudo(self) -> None:
+        """A trava do ``to_profile``: o volume chega ao arquivo, o mudo não.
+
+        O mudo é do controle desde 29/09 (O-MUDO-E-DO-CONTROLE-01, resposta 9
+        dela): mora no ``maquina.json``, e o gesto de Silenciar não entra no
+        rascunho.
 
         MORDIDA: em ``app/draft_config.py``, tire ``volume=self.mic.volume``
-        (ou ``muted=self.mic.muted``) do ``ProfileMicConfig`` construído no
-        ``to_profile`` e este caso fica vermelho dizendo qual número se perdeu.
+        do ``ProfileMicConfig`` construído no ``to_profile`` (o volume some),
+        ou devolva o ``muted`` ao ``with_mic`` (o mudo chega ao arquivo).
         """
         from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
@@ -347,8 +351,9 @@ class TestOMicChegaAoRascunho:
         assert perfil.mic.volume == 70, (
             f"o volume do microfone é {perfil.mic.volume!r} — ela deixou 70"
         )
-        assert perfil.mic.muted is True, (
-            f"o mudo do microfone é {perfil.mic.muted!r} — ela silenciou"
+        assert perfil.mic.muted is None, (
+            f"o mudo do microfone chegou ao perfil ({perfil.mic.muted!r}) — "
+            "ele é do controle"
         )
 
     def test_perfil_sem_secao_mic_continua_sem_ganhar_uma(self) -> None:
@@ -358,15 +363,24 @@ class TestOMicChegaAoRascunho:
         assert DraftConfig().to_profile("intocado").mic is None
 
     def test_um_gesto_nao_apaga_o_campo_do_outro(self) -> None:
-        """Volume e mudo têm gestos SEPARADOS na tela e não se atropelam.
+        """O volume não apaga o que o disco já dizia do mudo.
 
-        Sem esta preservação, arrastar o controle deslizante depois de
-        silenciar desfaria o mudo no rascunho, em silêncio — e o perfil salvo
-        sairia sem a metade que ela acabou de escolher.
+        Desde 29/09 (O-MUDO-E-DO-CONTROLE-01) o rascunho não escreve o mudo —
+        mas um perfil de antes da migração ainda pode carregá-lo, e o gesto do
+        volume o atravessa como estava: apagá-lo no caminho seria um segundo
+        escritor, e quem o leva ao dono é a migração.
         """
         from hefesto_dualsense4unix.app.draft_config import DraftConfig
+        from hefesto_dualsense4unix.profiles.schema import (
+            MatchAny,
+            Profile,
+            ProfileMicConfig,
+        )
 
-        draft = DraftConfig().with_mic(muted=True).with_mic(volume=40)
+        de_antes = Profile(name="de_antes", match=MatchAny(),
+                           mic=ProfileMicConfig(button_toggles_system=True,
+                                                muted=True, volume=70))
+        draft = DraftConfig.from_profile(de_antes).with_mic(volume=40)
         assert draft.mic.muted is True
         assert draft.mic.volume == 40
 

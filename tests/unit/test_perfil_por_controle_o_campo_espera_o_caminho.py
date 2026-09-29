@@ -130,7 +130,9 @@ _CONSUMIDOR: dict[str, ConsumidorPorUnidade] = {
     ),
     "mic": ConsumidorPorUnidade(
         funcao="apply_controller_mics",
-        chega_em="apply_mic(uniq=...) → set_microphone_mute(uniq=...)",
+        # O-MUDO-E-DO-CONTROLE-01 (29/09/2026): o mudo é do controle e mora no
+        # `maquina.json`; pela peça do perfil chega o volume.
+        chega_em="apply_mic(uniq=...) → apply_profile_mic(volume, uniq=...)",
     ),
     "sensores": ConsumidorPorUnidade(
         funcao="apply_controller_sensores",
@@ -308,7 +310,7 @@ def _prova_mic(uniq: str) -> object:
     perfil = Profile(
         name="uma_peca_so",
         match=MatchAny(),
-        controllers={uniq: ControllerOverrides(mic=ControllerMicOverride(muted=True))},
+        controllers={uniq: ControllerOverrides(mic=ControllerMicOverride(volume=40))},
     )
     gerente.apply_controller_mics(perfil)
     return alvos == [uniq] or None

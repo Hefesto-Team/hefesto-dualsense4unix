@@ -1518,9 +1518,10 @@ class ProfileManager:
         REUSA ``apply_mic`` VERBATIM através de uma vista do perfil
         (``model_copy``) para não duplicar as três guardas dela: a trava manual
         de áudio, o silêncio de quem não pediu nada e — a que mais custaria
-        perder — a exceção MIC-GRAVACAO-01, que só deixa o ``muted`` atravessar
-        a troca EXPLÍCITA de perfil. Uma segunda cópia dessa regra é como o
-        perfil de um jogo voltaria a roubar o mudo dela no meio de uma gravação.
+        perder — a do mudo, que é do CONTROLE (O-MUDO-E-DO-CONTROLE-01) e que
+        ativação de perfil nenhuma escreve. Uma segunda cópia dessa regra é
+        como o perfil de um jogo voltaria a roubar o mudo dela no meio de uma
+        gravação.
 
         A VISTA CARREGA UM ``ControllerMicOverride`` ONDE O ESQUEMA DECLARA UM
         ``ProfileMicConfig``, e isso é deliberado: ``apply_mic`` lê a seção
@@ -1579,9 +1580,9 @@ class ProfileManager:
            do alto-falante: o `mic.set` e o `mic.volume.set` passaram a armá-la
            também, e `apply_mic` a consulta aqui do lado. O que continua sendo
            só daqui é a razão do item 1 (a POSSE dos bytes de volume do report);
-           o microfone tem razão própria, e ela é a exceção MIC-GRAVACAO-01
-           escrita em `apply_mic` — a trava sozinha não bastava, porque o perfil
-           de JOGO a limpa ao entrar.
+           o microfone tem razão própria, escrita em `apply_mic` — a trava
+           sozinha não bastava, porque o perfil de JOGO a limpa ao entrar, e
+           desde 28/09 o mudo é do controle (O-MUDO-E-DO-CONTROLE-01).
         3. **o par vai SEMPRE completo.** `volume` e `muted` juntos, nunca um
            `speaker.set` sem volume — medido: sem volume e sem preferência
            guardada a chamada toma a posse e manda ZERO, publicando

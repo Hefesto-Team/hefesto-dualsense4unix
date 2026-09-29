@@ -134,6 +134,9 @@ class TestDraft:
         carregar `volume` e `muted` junto do booleano. O que este caso mede
         continua sendo o GATE (`dirty`), não a lista de chaves — e por isso
         `None` nos dois campos novos, que é o rascunho sem opinião sobre eles.
+
+        NOTA DATADA — 29/09/2026 (O-MUDO-E-DO-CONTROLE-01): o `muted` saiu da
+        seção. O mudo é do controle, e o rascunho não fala dele.
         """
         limpo = DraftConfig.default()
         assert limpo.to_ipc_dict()["mic"] is None
@@ -144,7 +147,6 @@ class TestDraft:
         assert tocado.to_ipc_dict()["mic"] == {
             "button_toggles_system": False,
             "volume": None,
-            "muted": None,
         }
 
 
@@ -167,7 +169,7 @@ class TestGatePorCampo:
         depois_do_slider = DraftConfig.default().with_mic(volume=70)
         secao = depois_do_slider.to_ipc_dict()["mic"]
 
-        assert secao == {"volume": 70, "muted": None}, (
+        assert secao == {"volume": 70}, (
             f"a seção do microfone saiu como {secao!r} — o gesto do volume "
             "levou junto um campo que ninguém escolheu"
         )

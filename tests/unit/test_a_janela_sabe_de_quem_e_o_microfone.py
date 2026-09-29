@@ -243,15 +243,22 @@ def test_sem_fonte_nao_registra() -> None:
 def test_o_mudo_continua_falando_bool(ok: bool) -> None:
     """`mic.set` não mudou de rota, e o mesmo callback atende os dois gestos.
 
-    Se o callback passasse a exigir `dict`, o botão de mudo pararia de gravar o
-    estado dela no perfil — uma regressão silenciosa num gesto vizinho, que é
-    exatamente como a cura de um lado quebra o outro.
+    Se o callback passasse a exigir `dict`, o gesto do mudo quebraria com o
+    `bool` — uma regressão silenciosa num gesto vizinho, que é exatamente como
+    a cura de um lado quebra o outro.
+
+    NOTA DATADA — 29/09/2026 (O-MUDO-E-DO-CONTROLE-01): o mudo deixou de
+    entrar no rascunho. Ele é do controle, mora no `maquina.json` e tem um
+    escritor só, o ato do microfone no daemon; o callback aguenta o `bool` e
+    não anota nada.
     """
     card = _CardMinimo()
 
     card._mic_confirmado_pelo_daemon(muted=True)(ok)
 
-    assert card._dono_do_rascunho.draft.mic.muted is (True if ok else None)
+    assert card._dono_do_rascunho.draft.mic.muted is None, (
+        "o mudo entrou no rascunho — o «Salvar» o levaria ao perfil, e o mudo "
+        "é do controle")
     assert card.mostrou == [False], (
         "o gesto do mudo não fala de alvo — a tela não pode confessar nada"
     )
