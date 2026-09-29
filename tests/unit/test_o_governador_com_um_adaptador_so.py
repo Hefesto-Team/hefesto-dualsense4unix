@@ -329,16 +329,24 @@ def test_quatro_pontes_dividem_por_igual() -> None:
 
 
 def test_a_ponte_sem_escrita_nao_toma_a_vez() -> None:
-    """Três com escrita e uma de pé sem escrever: as três seguem com 60%.
+    """Três com escrita e uma de pé sem escrever: as três seguem com 60%, e
+    com a MESMA parte que teriam sem a quarta de pé.
 
-    MORDIDA: conte e gire por toda vaga de pé, e cada ponte com escrita cai
-    para 50%.
+    MORDIDA: conte e gire por toda vaga de pé. Medido em 28/09: a conta da
+    fila compensa em parte (a vez da calada é uma a menos cedendo, a fila
+    cresce e cabe uma a menos na janela seguinte), e as três caem de 66,8%
+    para 63%; a comparação com as três sozinhas é o que reprova.
     """
     ordem = (CONTROLE_1, CONTROLE_4, CONTROLE_2, CONTROLE_3)
     partes, _v, _g, _r = _partes(ordem, sem_escrita=(CONTROLE_4,))
     assert set(partes) == {CONTROLE_1, CONTROLE_2, CONTROLE_3}
     assert min(partes.values()) >= 0.60, partes
     assert _diferenca(partes) <= 0.10, partes
+    sozinhas, _v, _g, _r = _partes((CONTROLE_1, CONTROLE_2, CONTROLE_3))
+    for uniq, parte in partes.items():
+        assert abs(parte - sozinhas[uniq]) <= 0.01, (
+            f"a ponte sem escrita mudou a parte de {uniq}: {parte:.3f} × {sozinhas[uniq]:.3f}"
+        )
 
 
 @pytest.mark.parametrize(
