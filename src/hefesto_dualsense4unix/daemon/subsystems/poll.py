@@ -66,26 +66,28 @@ def evdev_buttons_once(daemon: object) -> frozenset[str]:
         return frozenset()
 
 
-# --- os atalhos do PS na espera do lugar guardado (OS-ATALHOS-NA-ESPERA-01) --
+# --- os atalhos do PS em qualquer controle (O-MODO-XBOX-NAO-E-QUEDA-02, item 5) --
 #
 # MORA DEPOIS DO `evdev_buttons_once` de propósito: o mapa de canais
 # (`docs/data/mapa-controles.csv`) cita aquela função por linha (`:53-66`), e
-# nada acima dela se mexe.
-
-#: O atributo do daemon em que fica QUEM segura os atalhos durante a vaga (o
-#: MAC do próximo da fila), para o diário dizer a troca de mão uma vez por
-#: episódio, e não a cada tique. None = os atalhos estão com o dono do posto.
-_MAO_DOS_ATALHOS = "_atalhos_na_mao_de"
+# nada acima dela se mexe — nem os imports, que por isso são locais aqui.
 
 
 def observar_os_atalhos(
     daemon: object, buttons_pressed: frozenset[str], *, now: float
 ) -> str | None:
-    """Entrega ao `HotkeyManager` os botões de QUEM SEGURA os atalhos do PS.
+    """Entrega ao `HotkeyManager` os botões de CADA controle na mesa.
 
     Chamado pelo `_poll_loop` a cada tique, no lugar em que ele chamava o
-    `observe` com os botões do primário. Devolve o que o `observe` devolve (o
-    nome do gesto que disparou, ou None), e None sem gerente de atalhos.
+    `observe` com os botões do primário. Devolve o nome do primeiro gesto que
+    disparou neste tique (ou None), e None sem gerente de atalhos.
+
+    **O PS E AS COMBINAÇÕES VALEM EM QUALQUER UM DOS QUATRO** (decisão dela de
+    27/09, `D-2709-O-PS-R3-EM-QUALQUER-CONTROLE`; O-MODO-XBOX-NAO-E-QUEDA-02,
+    item 5). Medido na sessão dela (G0 e G9 de 27/09): só o «primário» era
+    lido, e o PS do branco, que acende o «1», não abria a Steam. Cada controle
+    é lido com o aperto DELE (`observe(..., de=<MAC>)`), e o ato do gesto
+    pergunta de quem ele é (:func:`quem_segura_os_atalhos`).
 
     `buttons_pressed` continua sendo o que o laço leu do leitor do primário
     (`evdev_buttons_once`) e mandou ao vpad do P1 — esta função não o muda
@@ -94,65 +96,93 @@ def observar_os_atalhos(
     gerente = getattr(daemon, "_hotkey_manager", None)
     if gerente is None:
         return None
-    resultado: str | None = gerente.observe(
-        botoes_dos_atalhos(daemon, buttons_pressed), now=now
-    )
+    maos = botoes_de_cada_controle(daemon, buttons_pressed)
+    resultado: str | None = None
+    for quem, botoes in maos.items():
+        disparou: str | None = gerente.observe(botoes, now=now, de=quem)
+        if resultado is None:
+            resultado = disparou
+    soltar = getattr(gerente, "soltar_quem_saiu", None)
+    if callable(soltar):
+        soltar(maos)
     return resultado
 
 
-def botoes_dos_atalhos(daemon: object, botoes_do_posto: frozenset[str]) -> frozenset[str]:
-    """Os botões que os atalhos do PS leem neste tique.
+def botoes_de_cada_controle(
+    daemon: object, botoes_do_posto: frozenset[str]
+) -> dict[str | None, frozenset[str]]:
+    """Os botões que os atalhos do PS leem neste tique, por controle: `{MAC: botões}`.
 
-    **A DECISÃO É DELA** (24/09/2026, 19h, `D-2409-OS-ATALHOS-NA-ESPERA-FICAM-
-    COM-O-P2`): *«O P2 segura os atalhos durante a espera, sem trocar de
-    número»*, e quando o P1 volta, os atalhos voltam para ele. Revoga o «custo
-    aceito» da `D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO`.
+    Três fontes, e cada controle lê de uma só — a mesma ordem do `inputs` do
+    `state_full` (`IpcServer._controllers_enriquecidos`), que já resolve a
+    pergunta «o que este controle aperta agora» sem ler um nó duas vezes:
 
-    O DEFEITO, medido com a classe real (a bancada de queda): com o jogo aberto
-    e o P1 fora dentro do prazo, o posto de P1 fica VAGO (o backend,
-    `_quem_senta_no_posto`), o leitor do primário não tem nó, e este tique
-    devolvia `frozenset()` por até 30 s — nenhum atalho do PS disparava, de
-    controle nenhum. Antes da O-ASSENTO-GUARDADO-NAO-ANDA-02, o P2 virava
-    primário na hora e ganhava os atalhos junto com o boneco 1.
+    1. **o dono do posto de P1** (`primary_uniq`): `botoes_do_posto`, o que o
+       laço leu do leitor do primário. Na vaga do posto (o P1 fora dentro do
+       prazo do lugar guardado) ele não tem nó e a mão vem vazia;
+    2. **quem está sentado no co-op**: o leitor DELE
+       (`CoopManager.live_snapshots`). O co-op segura o nó com `EVIOCGRAB`, e
+       um leitor passivo ali não recebe evento nenhum. Quem renasce (sentado,
+       com o grab pendente, fora dos `live_snapshots`) fica com a mão vazia
+       até o leitor abrir o device;
+    3. **qualquer outro controle na mesa** — o co-op desmontado: mouse e
+       teclado, o Nativo, o co-op desligado, a suspensão pelo Steam Input: o
+       leitor PASSIVO do `SensorHub` (`entradas`, STATUS-04), sem grab. A
+       primeira pergunta devolve None (o leitor nasce na volta seguinte da
+       thread do hub), e a mão vem vazia nesse tique.
 
-    Fora da vaga, devolve `botoes_do_posto` intocado: o custo é um `getattr`
-    e uma comparação. Na vaga, devolve os do próximo da fila que está na mesa
-    (:func:`quem_segura_os_atalhos`) — os botões que ele já manda ao vpad
-    DELE, lidos pelo mesmo leitor do co-op. O vpad do P1 continua parado: o
-    laço manda a ele `botoes_do_posto`, nunca estes.
-
-    Na vaga sem ninguém sentado no co-op, ninguém segura: os atalhos leem o
-    posto vazio, e o diário não diz troca de mão — o posto segue vago, e
-    `atalhos_voltam_ao_posto` ali seria o diário mentindo sobre a volta do P1.
+    A chave é o MAC; a do dono do posto é None quando o backend não tem MAC
+    (o `FakeController`). Nunca levanta: uma fonte que falha deixa a mão
+    daquele controle vazia neste tique, e o laço segue.
     """
-    if not _o_posto_esta_vago(daemon):
-        _anotar_a_mao(daemon, None)
-        return botoes_do_posto
-    proximo = _o_proximo_da_fila(daemon)
-    if proximo is None:
-        return botoes_do_posto
-    _anotar_a_mao(daemon, proximo[0])
-    return proximo[1]
+    controller = getattr(daemon, "controller", None)
+    dono = _mac_ou_none(getattr(controller, "primary_uniq", None))
+    maos: dict[str | None, frozenset[str]] = {dono: botoes_do_posto}
+    vivos = _botoes_do_coop(daemon)
+    outros = [u for u in dict.fromkeys([*_na_mesa(controller), *vivos]) if u != dono]
+    if not outros:
+        return maos
+    sem_leitor = [u for u in outros if u not in vivos]
+    sentados = _sentados_no_coop(daemon) if sem_leitor else frozenset()
+    passivos = [u for u in sem_leitor if u not in sentados]
+    entradas = _entradas_do_hub(daemon) if passivos else None
+    for uniq in outros:
+        if uniq in vivos:
+            maos[uniq] = vivos[uniq]
+        elif uniq in sentados or entradas is None:
+            maos[uniq] = frozenset()
+        else:
+            maos[uniq] = _botoes_passivos(entradas, uniq)
+    return maos
 
 
 def quem_segura_os_atalhos(daemon: object) -> str | None:
-    """O MAC de quem segura os atalhos do PS agora — o DONO ÚNICO da pergunta.
+    """O MAC de quem fez o gesto em curso — o DONO ÚNICO da pergunta «de quem é o gesto».
 
-    O dono do posto de P1 (`primary_uniq`); na vaga do posto, o próximo da
-    fila que está na mesa. None quando não há de quem perguntar (sem
-    controle, backend sem MAC, ou a vaga sem ninguém sentado no co-op).
+    Dentro de um gesto, é o controle que o fez (`hotkey_daemon.quem_faz_o_gesto`,
+    que o `observe(..., de=<MAC>)` põe no contexto do ato): o PS + L3 anda o
+    cartão de quem o faz (`hotkey.build_next_mask_callback`), em qualquer um
+    dos quatro controles (O-MODO-XBOX-NAO-E-QUEDA-02, item 5).
 
-    Quem precisa saber de QUEM é o gesto pergunta aqui, e não ao
-    `primary_uniq`: o PS + L3 anda o cartão de quem o faz
-    (`hotkey.build_next_mask_callback`). Uma segunda resposta deixaria os
-    botões de um controle andando o cartão de outro — na vaga, o do P1
-    ausente, cujo vpad parado o jogo perderia ao ser recriado (a R-04).
+    Fora de um gesto (ou no gesto de um controle sem MAC), a resposta é a do
+    posto: o dono do posto de P1 (`primary_uniq`); na vaga do posto, o
+    próximo da fila que está na mesa — nunca o P1 ausente, cujo vpad parado o
+    jogo perderia ao ser recriado (a R-04). None quando não há de quem
+    perguntar (sem controle, backend sem MAC, ou a vaga sem ninguém sentado
+    no co-op).
     """
+    from hefesto_dualsense4unix.integrations.hotkey_daemon import quem_faz_o_gesto
+
+    feito_por = quem_faz_o_gesto()
+    if feito_por is not None:
+        return feito_por
     if _o_posto_esta_vago(daemon):
-        proximo = _o_proximo_da_fila(daemon)
-        return proximo[0] if proximo is not None else None
-    uniq = getattr(getattr(daemon, "controller", None), "primary_uniq", None)
-    return uniq if isinstance(uniq, str) and uniq else None
+        return _o_proximo_da_fila(daemon)
+    return _mac_ou_none(getattr(getattr(daemon, "controller", None), "primary_uniq", None))
+
+
+def _mac_ou_none(valor: object) -> str | None:
+    return valor if isinstance(valor, str) and valor else None
 
 
 def _o_posto_esta_vago(daemon: object) -> bool:
@@ -161,31 +191,103 @@ def _o_posto_esta_vago(daemon: object) -> bool:
     return isinstance(getattr(controller, "_posto_vago_de", None), str)
 
 
-def _o_proximo_da_fila(daemon: object) -> tuple[str, frozenset[str]] | None:
-    """Na vaga do posto de P1: `(MAC, botões)` do próximo da fila na mesa. Fora dela, None.
+def _na_mesa(controller: object) -> list[str]:
+    """Os MACs dos controles conectados agora (`alvos_conectados`, sem I/O)."""
+    alvos = getattr(controller, "alvos_conectados", None)
+    if not callable(alvos):
+        return []
+    try:
+        conectados = alvos()
+    except Exception as exc:
+        logger.debug("atalhos_sem_a_mesa", err=str(exc))
+        return []
+    if not isinstance(conectados, dict):
+        return []
+    return [u for u in conectados.values() if isinstance(u, str) and u]
+
+
+def _botoes_do_coop(daemon: object) -> dict[str, frozenset[str]]:
+    """`{MAC: botões}` dos jogadores do co-op com o vpad de pé (`live_snapshots`)."""
+    coop = getattr(daemon, "_coop_manager", None)
+    vivos_de = getattr(coop, "live_snapshots", None)
+    if not callable(vivos_de):
+        return {}
+    try:
+        vivos = vivos_de()
+        if not isinstance(vivos, dict):
+            return {}
+        return {
+            mac: frozenset(getattr(snap, "buttons_pressed", ()) or ())
+            for mac, snap in vivos.items()
+            if isinstance(mac, str) and mac
+        }
+    except Exception as exc:
+        logger.debug("atalhos_sem_o_coop", err=str(exc))
+        return {}
+
+
+def _sentados_no_coop(daemon: object) -> frozenset[str]:
+    """Quem o co-op numera — sentado, com o vpad de pé ou renascendo (`numeros_de_jogador`)."""
+    coop = getattr(daemon, "_coop_manager", None)
+    numeros_de = getattr(coop, "numeros_de_jogador", None)
+    if not callable(numeros_de):
+        return frozenset()
+    try:
+        numeros = numeros_de()
+    except Exception as exc:
+        logger.debug("atalhos_sem_os_numeros", err=str(exc))
+        return frozenset()
+    if not isinstance(numeros, dict):
+        return frozenset()
+    return frozenset(m for m in numeros if isinstance(m, str))
+
+
+def _entradas_do_hub(daemon: object) -> object | None:
+    """O `SensorHub.entradas` da sessão (o MESMO do IPC), ou None sem hub."""
+    garantir = getattr(daemon, "_garantir_sensor_hub", None)
+    if not callable(garantir):
+        return None
+    try:
+        entradas = getattr(garantir(), "entradas", None)
+    except Exception as exc:
+        logger.debug("atalhos_sem_o_hub", err=str(exc))
+        return None
+    return entradas if callable(entradas) else None
+
+
+def _botoes_passivos(entradas: object, uniq: str) -> frozenset[str]:
+    """Os botões de `uniq` pelo leitor passivo do hub; vazio sem leitura."""
+    if not callable(entradas):
+        return frozenset()
+    try:
+        leitura = entradas(uniq)
+    except Exception as exc:
+        logger.debug("atalhos_leitura_passiva_falhou", identity=uniq, err=str(exc))
+        return frozenset()
+    if not isinstance(leitura, dict):
+        return frozenset()
+    botoes = leitura.get("buttons")
+    if not isinstance(botoes, (list, tuple, set, frozenset)):
+        return frozenset()
+    return frozenset(str(b) for b in botoes)
+
+
+def _o_proximo_da_fila(daemon: object) -> str | None:
+    """Na vaga do posto de P1: o MAC do próximo da fila na mesa. Fora dela, None.
 
     **A VAGA É DO BACKEND**, e a pergunta é a MESMA que o `read_state` faz no
-    mesmo tique (`_posto_vago_de`): é ela que para o vpad do P1, e os atalhos
-    mudam de mão exatamente quando ele para. Refazer a conta aqui (o prazo, o
-    jogo com a autoridade, o co-op de pé) seria um segundo dono da vaga.
+    mesmo tique (`_posto_vago_de`): refazer a conta aqui (o prazo, o jogo com
+    a autoridade, o co-op de pé) seria um segundo dono da vaga.
 
     **O PRÓXIMO DA FILA** é o jogador sentado no co-op com o MENOR número da
     lâmpada — `CoopManager.numeros_de_jogador`, a fonte única do número que ele
-    vê no próprio controle, e que numera quem está na mesa, com o vpad de pé
-    ou renascendo; quem saiu e quem não tem MAC não entram. Na vaga ninguém
-    troca de número: é o P2; se o P2 também saiu, o P3; se o P3 também, o P4.
-    O dono do posto nunca entra na conta — ele é quem está fora.
+    vê no próprio controle, com o vpad de pé ou renascendo; quem saiu e quem
+    não tem MAC não entram. O dono do posto nunca entra na conta — ele é quem
+    está fora. É a resposta do posto fora de um gesto
+    (`D-2409-OS-ATALHOS-NA-ESPERA-FICAM-COM-O-P2`); dentro de um gesto, quem
+    responde é quem o fez.
 
-    **OS BOTÕES** são os que o leitor dele entrega (`CoopManager.live_snapshots`).
-    Quem renasce — o PS + R3 recria todos os jogadores, o PS + L3 recria o de
-    quem o faz — senta de novo com o grab pendente e fica um tique ou dois sem
-    vpad e fora dos `live_snapshots`: ele segue segurando, com a mão vazia até
-    o leitor abrir o device. Contar só quem tinha vpad de pé passava a mão ao
-    P3 nesse tique — ou, sem ninguém de pé, ao posto, e a pergunta «de quem é
-    o gesto» respondia o P1 ausente (conferência de 24/09/2026).
-
-    Nunca levanta: um co-op que falha aqui deixa os atalhos com o posto neste
-    tique, e o laço segue.
+    Nunca levanta: um co-op que falha aqui responde None.
     """
     if not _o_posto_esta_vago(daemon):
         return None
@@ -201,33 +303,10 @@ def _o_proximo_da_fila(daemon: object) -> tuple[str, frozenset[str]] | None:
         }
         if not sentados:
             return None
-        mac = min(sentados, key=sentados.__getitem__)
-        vivo = coop.live_snapshots().get(mac)
-        botoes = frozenset(vivo.buttons_pressed) if vivo is not None else frozenset()
-        return mac, botoes
+        return _mac_ou_none(min(sentados, key=sentados.__getitem__))
     except Exception as exc:
         logger.debug("atalhos_na_vaga_sem_fila", err=str(exc))
         return None
-
-
-def _anotar_a_mao(daemon: object, na_vaga: str | None) -> None:
-    """O diário diz quando os atalhos mudam de mão — uma vez por episódio.
-
-    Fora da vaga, o caminho de todo tique é um `getattr` e uma comparação.
-    """
-    antes = getattr(daemon, _MAO_DOS_ATALHOS, None)
-    if not isinstance(antes, str):
-        antes = None
-    if antes == na_vaga:
-        return
-    try:
-        setattr(daemon, _MAO_DOS_ATALHOS, na_vaga)
-    except Exception as exc:  # dublê que recusa atributo: só o diário perde
-        logger.debug("atalhos_mao_nao_anotada", err=str(exc))
-    if na_vaga is None:
-        logger.info("atalhos_voltam_ao_posto", de=antes)
-    else:
-        logger.info("atalhos_com_o_proximo_da_fila", uniq=na_vaga, de=antes)
 
 
 class PollSubsystem:
@@ -261,7 +340,7 @@ __all__ = [
     "BATTERY_MIN_INTERVAL_SEC",
     "BatteryDebouncer",
     "PollSubsystem",
-    "botoes_dos_atalhos",
+    "botoes_de_cada_controle",
     "evdev_buttons_once",
     "observar_os_atalhos",
     "quem_segura_os_atalhos",

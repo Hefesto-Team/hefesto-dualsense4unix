@@ -271,9 +271,12 @@ async def test_botoes_passados_ao_hotkey_manager_e_ao_mouse(
     # sobrescrita). Assim testamos o wiring de verdade.
     _orig_observe = HotkeyManager.observe
 
-    def _spy_observe(self: Any, pressed: Any, *, now: Any = None) -> Any:
+    def _spy_observe(self: Any, pressed: Any, *, now: Any = None, de: Any = None) -> Any:
+        # `de` é o controle dos botões (O-MODO-XBOX-NAO-E-QUEDA-02, item 5); com
+        # o FakeController há um só, o primário, e a chave dele é None.
+        assert de is None, f"o laço leu um controle que o FakeController não tem: {de}"
         hotkey_observes.append(frozenset(pressed))
-        return _orig_observe(self, pressed, now=now)
+        return _orig_observe(self, pressed, now=now, de=de)
 
     monkeypatch.setattr(HotkeyManager, "observe", _spy_observe)
 
