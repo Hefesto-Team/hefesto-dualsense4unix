@@ -397,10 +397,12 @@ def test_fechar_derruba_a_varredura(barramento: Path) -> None:
 
 
 # --- o relógio da tela -------------------------------------------------------
+#
+# `segundos_ate` SAIU em 28/09/2026 (A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01):
+# o desenho aprovado do «Conectar» não conta para baixo. A régua abaixo prova que
+# a conta não voltou calada — um relógio sem tela é a cura sem caminho de novo.
 
 
-def test_a_conta_da_janela_nao_fica_negativa() -> None:
-    """A tela conta para baixo, e zero é o piso — nunca "-3 s"."""
-    assert gp.segundos_ate(100.0, agora=70.0) == 30
-    assert gp.segundos_ate(100.0, agora=100.0) == 0
-    assert gp.segundos_ate(100.0, agora=130.0) == 0
+def test_a_conta_da_janela_saiu_com_a_tela_que_nao_conta() -> None:
+    assert not hasattr(gp, "segundos_ate")
+    assert "segundos_ate" not in gp.__all__

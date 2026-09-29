@@ -752,14 +752,9 @@ def procurar(
     return Resultado(ESTADO_ACHOU, "", achados)
 
 
-def segundos_ate(fim: float, *, agora: float | None = None) -> int:
-    """Quanto falta da janela, em segundos inteiros e nunca negativo.
-
-    Existe para a tela poder contar sem repetir a aritmética em cada aba — e
-    com o relógio por argumento, para a régua viajar no tempo sem dormir.
-    """
-    momento = time.monotonic() if agora is None else agora
-    return max(0, int(fim - momento))
+# A CONTA DA JANELA (`segundos_ate`) SAIU EM 28/09/2026: o desenho aprovado do
+# «Conectar» não conta para baixo — diz «Segure PS + Create» e, sem chegada,
+# «Não Conectou» (decisões de 23/09). Uma contagem seria tela nova.
 
 
 __all__ = [
@@ -795,5 +790,4 @@ __all__ = [
     "impedimentos",
     "ler_candidato",
     "procurar",
-    "segundos_ate",
 ]
