@@ -245,7 +245,7 @@ SEM_ENDERECO: dict[str, str] = {
 #: DUAS TÊM DONO E UMA NÃO, e qual é qual foi MEDIDO — ver o `fato_derrubado`
 #: no corpo de `teclado()`. O que o teclado emulado faz hoje **já é** "só fora
 #: do jogo": o daemon cala a emulação de desktop quando um jogo assume
-#: (`_jogo_no_controle_do_desktop`, `daemon/lifecycle.py:3095`, e o
+#: (`_jogo_no_controle_do_desktop`, `daemon/lifecycle.py:3186`, e o
 #: `gamepad_dispatched` do laço em `:5863`), e o `suppress_desktop_emulation`
 #: do perfil é a versão explícita e por perfil da MESMA coisa. Quem não tem
 #: dono é o INVERSO — "só dentro do jogo".
@@ -2130,7 +2130,7 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (  # noqa: E402
 from . import gesto  # noqa: E402
 
 #: A ORIGEM É `manual` PORQUE É A MÃO DELA. `origem_do_pedido`
-#: (`daemon/ipc_handlers.py:156`) lê a AUSÊNCIA como `"profile"`, e a assimetria é
+#: (`daemon/ipc_handlers.py:167`) lê a AUSÊNCIA como `"profile"`, e a assimetria é
 #: de propósito — foi um cliente que só reconciliava estado, promovido a gesto
 #: humano, que devolveu o gamepad virtual com o grab pulado e pôs um "Jogador 3"
 #: fantasma na tela dela (JOGADOR-3-FANTASMA-01). Aqui é clique, logo é manual.
@@ -2692,7 +2692,7 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
        mouse/teclado no desktop (jogos de GAMEPAD que leem o controle cru)"*.
        O perfil é ativado quando o jogo casa; logo a supressão vale **durante o
        jogo** — o teclado funciona FORA dele.
-    2. `apply_profile_suppression` (`daemon/lifecycle.py:2723`) recebe esse
+    2. `apply_profile_suppression` (`daemon/lifecycle.py:2814`) recebe esse
        campo a cada ativação de perfil e liga a supressão com `desired=True`.
     3. Sem perfil nenhum a dizer o contrário, o daemon **já** cala a emulação de
        desktop quando um jogo assume: `_jogo_no_controle_do_desktop`
@@ -2709,11 +2709,11 @@ def teclado(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
     SEM PORTÃO DE MODO, ao contrário do gesto `modo` logo acima, e é medido: o
     portão de lá existe porque ligar o MOUSE derruba o gamepad virtual — o
-    `set_mouse_emulation` (`daemon/lifecycle.py:1890`).
+    `set_mouse_emulation` (`daemon/lifecycle.py:1902`).
 
     Do outro lado, o teclado não mexe no gamepad virtual em momento nenhum.
     Quem o liga e desliga é o
-    `set_keyboard_emulation` (`daemon/lifecycle.py:2226`): ele cria ou destrói o
+    `set_keyboard_emulation` (`daemon/lifecycle.py:2252`): ele cria ou destrói o
     teclado virtual e nada mais.
 
     E COM O GAMEPAD DESPACHANDO, o teclado nem chega a ser consultado — a
@@ -4008,7 +4008,7 @@ def padrao_remapeamento(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
 #:    tela mostra" —, então pendurá-lo num "Voltar ao padrão" faria o botão
 #:    prometer uma coisa e fazer outra;
 #: 3. **ele LIGA o mouse.** `restore_mouse_preference`
-#:    (`daemon/lifecycle.py:1956`) chama `set_mouse_emulation(pref, …)` e, com a
+#:    (`daemon/lifecycle.py:1968`) chama `set_mouse_emulation(pref, …)` e, com a
 #:    preferência nunca gravada, `pref` vira `True` por default (`:1785`) — o
 #:    cursor DELA passa a andar pelo controle, e o gamepad virtual cai junto
 #:    (`:1741`). Isso o põe na mesma prateleira do gesto `modo`, que já está em

@@ -7527,7 +7527,7 @@ class IpcHandlersMixin:
         # aproveitar o payload: o que vale é o documento FUNDIDO, não o pedaço
         # que este pedido trouxe.
         #
-        # `DaemonProtocol` (`daemon/protocols.py:34`) não declara `_maquina`, e
+        # `DaemonProtocol` (`daemon/protocols.py:46`) não declara `_maquina`, e
         # declarar lá é de quem CONSOME a declaração: enquanto nenhum handler a
         # consulta, seria contrato sem leitor.
         vivo: Any = self.daemon
