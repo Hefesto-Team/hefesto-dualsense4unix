@@ -65,6 +65,7 @@ def _sysfs(raiz: Path, no: str, *, vendor: str, product: str, nome: str, teclas:
     (dev / "id").mkdir(parents=True)
     (dev / "id" / "vendor").write_text(vendor + "\n", encoding="ascii")
     (dev / "id" / "product").write_text(product + "\n", encoding="ascii")
+    (dev / "id" / "bustype").write_text("0005\n", encoding="ascii")
     (dev / "name").write_text(nome + "\n", encoding="utf-8")
     (dev / "uniq").write_text(_uniq_do_no(no) + "\n", encoding="ascii")
     (dev / "capabilities").mkdir()
@@ -266,7 +267,12 @@ class TestADescobertaAchaOFisicoFechado:
     def test_o_gamepad_fechado_entra_na_descoberta(
         self, mesa: Any, dev_input: dict[str, str], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        broker, _ = mesa
+        """O gamepad fechado entra na descoberta, e ela não pede nada ao broker
+        (O-NO-DO-DUALSENSE-SE-CLASSIFICA-PELO-SYSFS-01, 28/09/2026): vendor,
+        produto, endereço e botão de gamepad estão no sysfs. Quem pede o fd é
+        o leitor, ao abrir o nó que vai ler. A MORDIDA: faça a descoberta
+        abrir o nó do DualSense e o broker volta a receber o pedido."""
+        broker, recusa = mesa
         from evdev import ecodes
 
         monkeypatch.setattr(
@@ -275,6 +281,28 @@ class TestADescobertaAchaOFisicoFechado:
         )
         achados = er.discover_gamepads(com_sysfs=False)
         assert [g.evdev_path for g in achados] == [dev_input[NO_GAMEPAD]]
+        assert [g.identidade for g in achados] == ["e8473a000027"]
+        assert broker.pedidos == []
+        assert recusa.tentativas == [], "a descoberta tentou abrir um nó"
+
+    def test_o_gamepad_de_endereco_ilegivel_segue_pelo_broker(
+        self, mesa: Any, dev_input: dict[str, str], monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Sem o `uniq` no sysfs, o nó segue pelo caminho de antes: abre pelo
+        broker e lê a identidade pelo fd. A MORDIDA: pule o nó ilegível e o
+        gamepad some da descoberta."""
+        broker, _ = mesa
+        from evdev import ecodes
+
+        monkeypatch.setattr(
+            "evdev._input.ioctl_capabilities",
+            lambda fd: {ecodes.EV_KEY: [ecodes.BTN_SOUTH], ecodes.EV_ABS: []},
+        )
+        (tmp_path / "sys-class-input" / Path(NO_GAMEPAD).name / "device" / "uniq").unlink()
+        achados = er.discover_gamepads(com_sysfs=False)
+        assert [g.evdev_path for g in achados] == [dev_input[NO_GAMEPAD]]
+        assert [g.identidade for g in achados] == ["e8473a000027"]
         # O touchpad não tem BTN_GAMEPAD no sysfs: não foi pedido ao broker.
         assert broker.pedidos == [dev_input[NO_GAMEPAD]]
 

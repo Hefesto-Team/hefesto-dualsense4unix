@@ -363,6 +363,7 @@ def _montar(
             (entrada / "id").mkdir(parents=True)
             (entrada / "id" / "vendor").write_text(f"{no.vendor:04x}\n", encoding="ascii")
             (entrada / "id" / "product").write_text(f"{no.product:04x}\n", encoding="ascii")
+            (entrada / "id" / "bustype").write_text(f"{no.bus:04x}\n", encoding="ascii")
             (entrada / "name").write_text(no.name + "\n", encoding="utf-8")
             (entrada / "uniq").write_text(no.uniq + "\n", encoding="ascii")
             (entrada / "phys").write_text("\n", encoding="ascii")
@@ -563,20 +564,24 @@ _MATRIZ = [
 ]
 
 
-# --- R0, a mesa alcança o broker --------------------------------------------
+# --- R0, a descoberta acha todos os DualSense sem o broker -------------------
 
 
 @pytest.mark.parametrize(("nome", "escondidos", "externos"), _MATRIZ)
-def test_r0_a_mesa_alcanca_o_broker_e_acha_todos_os_dualsense(
+def test_r0_a_descoberta_acha_todos_os_dualsense_sem_pedir_ao_broker(
     montar: Any, nome: str, escondidos: bool, externos: bool
 ) -> None:
-    """O irmão que mede ANTES: quem quer o DualSense chega a cada um deles.
+    """Quem quer o DualSense acha cada um deles pelo sysfs, sem abrir o nó.
 
-    Sem ele, uma mesa que não alcança o broker deixaria a R1 verde sobre
-    nada. Escondidos, é um pedido ao broker por gamepad, cada um com a sua
-    linha no diário; abertos, o caminho abre como sempre e o broker não é
-    consultado. A MORDIDA: aplique o pulo sem olhar a espécie e esta régua
-    reprova, porque os DualSense somem da descoberta de quem os quer.
+    O-NO-DO-DUALSENSE-SE-CLASSIFICA-PELO-SYSFS-01 (28/09/2026) reescreve esta
+    régua: até ali a descoberta pedia ao broker o nó de gamepad de cada
+    DualSense escondido, a cada hotplug. Agora vendor, produto, endereço,
+    barramento e botão de gamepad vêm do sysfs, e o registro sai igual ao que
+    o fd diria. E o irmão que mede ANTES continua aqui: o leitor, que vai LER
+    o nó, alcança o broker, um pedido e uma linha no diário por nó escondido.
+    Sem ele, uma mesa que não chega ao broker deixaria esta régua e a R1
+    verdes sobre nada. A MORDIDA: faça a descoberta abrir o nó do DualSense
+    (para ler a faixa dos eixos, por exemplo) e os pedidos voltam.
     """
     dualsenses = MESAS[nome]
     mesa = montar(dualsenses, escondidos=escondidos, externos=externos)
@@ -587,15 +592,30 @@ def test_r0_a_mesa_alcanca_o_broker_e_acha_todos_os_dualsense(
     gamepads = [mesa.de(k) for k in range(1, n + 1)]
     ds = [gp for gp in achados if gp.especie == er.ESPECIE_DUALSENSE]
     assert [gp.evdev_path for gp in ds] == gamepads
+    for gp in ds:
+        no = next(no for e, no in mesa.nos.items() if mesa.caminho[e] == gp.evdev_path)
+        assert (gp.identidade, gp.name, gp.vid, gp.pid, gp.bus, gp.uniq) == (
+            norm_mac(no.uniq), no.name, f"{no.vendor:04x}", f"{no.product:04x}",
+            "bluetooth" if no.bus == 0x05 else "usb", no.uniq,
+        ), "o sysfs disse outra coisa que o fd diria"
+        assert gp.driver == "playstation" and gp.hidraw is not None
+    mapa = er.discover_dualsense_evdevs()
+    assert mapa == {norm_mac(mac_ds(k)): Path(mesa.de(k)) for k in range(1, n + 1)}
+    assert er.find_all_dualsense_evdevs() == [Path(c) for c in gamepads]
+    assert mesa.pedidos == [], "a descoberta pediu o nó ao broker"
+    assert mesa.fd_recebidos() == []
+    assert mesa.tentativas_em_dualsense() == [], "a descoberta abriu um nó de DualSense"
+
+    # O irmão que mede antes: quem LÊ o nó alcança o broker.
+    for caminho in gamepads:
+        with contextlib.suppress(Exception):
+            er.abrir_input_device(caminho).close()
     if escondidos:
         assert mesa.pedidos_de_open() == gamepads, "um pedido por DualSense escondido"
         assert [kw["node"] for kw in mesa.fd_recebidos()] == gamepads
     else:
         assert mesa.pedidos == []
-        assert set(gamepads) <= set(mesa.tentativas_em_dualsense())
-
-    mapa = er.discover_dualsense_evdevs()
-    assert mapa == {norm_mac(mac_ds(k)): Path(mesa.de(k)) for k in range(1, n + 1)}
+        assert mesa.tentativas_em_dualsense() == gamepads
 
 
 # --- R1, no tempo e pelos dois chamadores reais -----------------------------
@@ -835,19 +855,22 @@ def test_r3_o_dualsense_de_sysfs_ilegivel_e_tratado_como_hoje(
 
 @pytest.mark.parametrize("nome", ["3-misto", "4-misto"])
 @pytest.mark.parametrize("escondidos", [True, False], ids=["escondidos", "abertos"])
-def test_r4_localizar_o_p3_pela_identidade_continua_pedindo_ao_broker(
+def test_r4_localizar_o_p3_pela_identidade_sem_pedir_ao_broker(
     montar: Any, nome: str, escondidos: bool
 ) -> None:
-    """O leitor que perdeu o nó do P3 o reencontra pela identidade. A
-    MORDIDA: aplique o pulo sem olhar a espécie e o P3 some daqui."""
+    """O leitor que perdeu o nó do P3 o reencontra pela identidade, e a busca
+    não abre nada: nem o P3, nem os outros três
+    (O-NO-DO-DUALSENSE-SE-CLASSIFICA-PELO-SYSFS-01). A MORDIDA: aplique o
+    pulo sem olhar a espécie e o P3 some daqui; abra o nó na descoberta e os
+    pedidos voltam."""
     mesa = montar(MESAS[nome], escondidos=escondidos, externos=True)
 
     no = er.localizar_node_por_identidade(norm_mac(mac_ds(3)) or "")
 
     assert no == Path(mesa.de(3))
-    if escondidos:
-        assert mesa.de(3) in mesa.pedidos_de_open()
-        assert mesa.de(3) in [kw["node"] for kw in mesa.fd_recebidos()]
+    assert mesa.pedidos == []
+    assert mesa.fd_recebidos() == []
+    assert mesa.tentativas_em_dualsense() == []
 
 
 # --- R5, a suíte não lê o sysfs dela ----------------------------------------

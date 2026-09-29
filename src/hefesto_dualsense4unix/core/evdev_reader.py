@@ -490,35 +490,33 @@ def _gamepad_do_dualsense_no_sysfs(
     """`(vendor, product, bustype, nome, uniq)` do nó de GAMEPAD de um DualSense,
     lidos no sysfs, sem abrir o nó (O-NO-DO-DUALSENSE-SE-CLASSIFICA-PELO-SYSFS-01).
 
-    É o que a descoberta pedia ao `open` + ioctls (`EVIOCGID`, `EVIOCGNAME`,
-    `EVIOCGUNIQ`, `EVIOCGBIT`): o kernel publica o mesmo `input_dev` nos dois
-    lugares. None quando o nó não é de DualSense, não tem o botão de gamepad,
-    ou quando o sysfs não responde o que classifica (`id/vendor`,
-    `id/product`, `uniq` e `capabilities/key`): aí o nó segue pelo caminho de
-    sempre, que o abre. O nome e o barramento não classificam nada e são lidos
-    com a mesma tolerância da leitura pelo fd (ilegível, campo em branco).
+    São os campos que a descoberta pedia ao `open` + ioctls (`EVIOCGID`,
+    `EVIOCGNAME`, `EVIOCGUNIQ`, `EVIOCGBIT`): o kernel publica o mesmo
+    `input_dev` nos dois lugares, então o registro sai igual ao que o fd
+    diria. None quando o nó não é de DualSense, quando não tem o botão de
+    gamepad, ou quando o sysfs não responde um dos seis arquivos: aí o nó
+    segue pelo caminho de sempre, que o abre. Vazio é resposta (o `uniq` sem
+    endereço é o que o fd também diria); ilegível não é.
     """
-    lido = _identidade_no_sysfs(caminho)
-    if lido is None:
-        return None
-    vendor, product, nome, _uniq = lido
-    if vendor != DUALSENSE_VENDOR or product not in DUALSENSE_PIDS:
-        return None
-    if _tecla_no_sysfs(caminho, _BTN_GAMEPAD) is not True:
-        return None
-    raiz = f"{SYS_CLASS_INPUT}/{os.path.basename(caminho)}/device"
+    base = os.path.basename(caminho)
+    raiz = f"{SYS_CLASS_INPUT}/{base}/device"
     try:
-        # O `uniq` é a identidade: vazio é resposta (o fd diria o mesmo),
-        # ilegível não é, e o `_read_input_attr` não separa os dois.
-        with open(f"{raiz}/uniq", encoding="utf-8", errors="replace") as fh:
-            uniq = fh.read().strip()
-    except OSError:
-        return None
-    try:
+        with open(f"{raiz}/id/vendor", encoding="ascii") as fh:
+            vendor = int(fh.read().strip(), 16)
+        with open(f"{raiz}/id/product", encoding="ascii") as fh:
+            product = int(fh.read().strip(), 16)
+        if vendor != DUALSENSE_VENDOR or product not in DUALSENSE_PIDS:
+            return None
+        if _tecla_no_sysfs(caminho, _BTN_GAMEPAD) is not True:
+            return None
         with open(f"{raiz}/id/bustype", encoding="ascii") as fh:
             bustype = int(fh.read().strip(), 16)
+        with open(f"{raiz}/name", encoding="utf-8", errors="replace") as fh:
+            nome = fh.read().strip()
+        with open(f"{raiz}/uniq", encoding="utf-8", errors="replace") as fh:
+            uniq = fh.read().strip()
     except (OSError, ValueError):
-        bustype = 0
+        return None
     return vendor, product, bustype, nome, uniq
 
 
