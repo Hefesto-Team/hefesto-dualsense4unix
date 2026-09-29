@@ -34,6 +34,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import copy
+import itertools
 import json
 import pathlib
 import shutil
@@ -56,8 +57,18 @@ FIXTURE = RAIZ / "tests/fixtures/state_full_quatro_controles.json"
 #: no BT; 4 são dois no USB e dois no BT — os mesmos da banca.
 MESAS = {1: (0,), 2: (0, 2), 4: (0, 1, 2, 3)}
 
-#: Quarenta tiques são quatro segundos: a fase de cada régua no tempo.
-FASE_S = 4.0
+#: CADA FASE ACABA POR CONTAGEM, e o relógio só serve de teto
+#: (A-JANELA-ESCONDIDA-MEDE-SOB-CARGA-01, 28/09/2026). As réguas cobram tiques;
+#: um roteiro que avançasse pelo relógio juntaria menos tiques na mesma janela
+#: com a máquina ocupada, e a pré-condição cairia sem o produto mudar — foi a
+#: reprovação da suíte de 28/09 («poucos tiques escondidos para medir: 21»).
+TIQUES_POR_FASE = 40
+
+#: O TETO de uma fase é este tanto de vezes o tempo nominal dela, que sai do
+#: `TIQUE_MS` do produto (ver `_teto_da_fase_s`). Bater o teto não é pulo: a
+#: fase anota a fome em `fora.famintas`, e a régua que a lê reprova dizendo que
+#: foi a máquina.
+VEZES_O_NOMINAL = 5
 
 #: A folga para a janela assentar numa troca (a mensagem da página chega pelo
 #: laço do GTK, e uma leitura pode estar no meio quando o fio pausa).
@@ -185,14 +196,77 @@ def _gtk() -> Any:
     return Gtk
 
 
+def _nominal_s(quantos: int) -> float:
+    """Quanto `quantos` tiques duram na cadência do produto (`hv.TIQUE_MS`)."""
+    import hefesto_vivo as hv
+
+    return float(quantos * hv.TIQUE_MS) / 1000.0
+
+
+def _teto_da_fase_s(fora: Any, quantos: int) -> float:
+    """O teto de uma fase de `quantos` tiques: `VEZES_O_NOMINAL` o nominal dela.
+
+    O cenário pode pedir um teto próprio (`fora.teto_da_fase_s`): é assim que a
+    régua do teto prova que a fome se anota e a mensagem diz que foi a máquina.
+    """
+    proprio = getattr(fora, "teto_da_fase_s", None)
+    return float(proprio) if proprio else VEZES_O_NOMINAL * _nominal_s(quantos)
+
+
+def _maior_buraco(de: float, tiques: list[float], agora: float) -> float:
+    """O maior intervalo sem tique na fase, contando da abertura dela até agora."""
+    marcas = [de, *tiques, agora]
+    return max((b - a for a, b in itertools.pairwise(marcas)), default=0.0)
+
+
+def _fase(fora: Any, nome: str, de: float, quantos: int, teto_s: float, *,
+          ate: float = float("inf"), agora: float | None = None) -> bool:
+    """A fase `nome` acabou? Acaba quando junta `quantos` tiques em `[de, ate]`.
+
+    O relógio só serve de TETO: passados `teto_s` desde `de` sem juntar, a fase
+    acaba com fome, e anota `fora.famintas[nome] = (tiques, segundos,
+    maior_buraco)`. A régua que lê a fase reprova com a causa escrita
+    (`_sem_fome`), e não pula: pulo não é verde nesta casa.
+    """
+    agora = time.monotonic() if agora is None else agora
+    fora.fases[nome] = quantos
+    tiques = [x.t for x in fora.ticks if de <= x.t <= ate]
+    if len(tiques) >= quantos:
+        return True
+    if agora - de < teto_s:
+        return False
+    fora.famintas[nome] = (len(tiques), agora - de, _maior_buraco(de, tiques, agora))
+    return True
+
+
+def _virgula(x: float) -> str:
+    return f"{x:.1f}".replace(".", ",")
+
+
+def _sem_fome(fora: Any, *nomes: str) -> None:
+    """Reprova, com a causa escrita, se alguma destas fases bateu o teto."""
+    for nome in nomes:
+        if nome in fora.famintas:
+            tiques, segundos, buraco = fora.famintas[nome]
+            raise AssertionError(
+                f"a fase {nome} juntou {tiques} de {fora.fases[nome]} tiques em "
+                f"{_virgula(segundos)} s (maior buraco: {_virgula(buraco)} s): o laço "
+                "do GTK andou devagar demais para medir")
+
+
 def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
-            anda: str = "", teto_s: float = 60.0,
-            ajuste: Any = None) -> SimpleNamespace:
+            anda: str = "", teto_s: float | None = None,
+            ajuste: Any = None, teto_da_fase_s: float | None = None) -> SimpleNamespace:
     """Roda o piloto oculto na página pedida, com `n` controles, e segue o `roteiro`.
 
     O roteiro recebe `(fora, piloto, agora)` a cada 50 ms depois de a página
     estar de pé, e devolve `False` quando acabou. `fora` é o registro: cada
-    tique, cada pintura (com a carga), as leituras e os `pactl`.
+    tique, cada pintura (com a carga), as leituras e os `pactl`; `fora.comeco`
+    é o instante em que a página ficou de pé, de onde a primeira fase conta.
+
+    O TETO DO CENÁRIO é maior que a soma dos tetos das fases (o roteiro mais
+    longo, o dos pontinhos, tem seis fases e uma espera): ele só pega o roteiro
+    que nunca acaba, e nunca corta uma fase que ainda pode juntar os tiques.
     """
     gtk = _gtk()
     from gi.repository import GLib
@@ -208,7 +282,11 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
     estado = _Estado(n, anda)
     fora = SimpleNamespace(ticks=[], pinturas=[], marcos={}, estado=estado,
                            pactl=[], ponte=_PonteDeMentira(), mudas=False,
-                           avaliados={}, piloto=None, avisos=[], acabou=False)
+                           avaliados={}, piloto=None, avisos=[], acabou=False,
+                           comeco=0.0, fases={}, famintas={},
+                           teto_da_fase_s=teto_da_fase_s)
+    if teto_s is None:
+        teto_s = 8 * _teto_da_fase_s(fora, TIQUES_POR_FASE) + 30.0
 
     def pactl(argv: list[str]) -> str:
         fora.pactl.append((time.monotonic(), " ".join(argv)))
@@ -289,7 +367,7 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
                     piloto._ir(pagina)
                 return True
             if not comeco[0]:
-                comeco[0] = time.monotonic()
+                comeco[0] = fora.comeco = time.monotonic()
                 # O TESTE DE MOTOR EM CURSO — o coração que tem de seguir batendo.
                 a05._EM_TESTE[0] = str(estado.base["controllers"][0]["uniq"])
                 a05._BATEU_EM[0] = 0.0
@@ -324,27 +402,61 @@ def _inteira(carga: dict[str, Any]) -> bool:
     return "alvo" in carga and "fita" in carga
 
 
-def _roteiro_esconde_e_volta(fora: Any, piloto: Any, t: float) -> bool:
-    """40 tiques à vista, 40 escondida, 40 de volta."""
+def _teto_da_espera_s() -> float:
+    """O teto de uma ESPERA pelo produto (o `escondeu`, o `voltou`, uma leitura).
+
+    Espera não junta tiques e não tem fome: se o teto passa, é o produto que não
+    respondeu, e a régua dele reprova no que faltou. Sem teto, a mordida do
+    `_a_janela_mudou` penduraria o roteiro em vez de reprovar.
+    """
+    return VEZES_O_NOMINAL * _nominal_s(TIQUES_POR_FASE)
+
+
+def _roteiro_esconde_e_volta(fora: Any, piloto: Any, _t: float) -> bool:
+    """40 tiques à vista, 40 escondida, 40 de volta — contados.
+
+    Cada fase acaba quando junta os tiques, e o relógio só serve de teto
+    (`_fase`). Entre as fases, a espera pelo aviso da página (`escondeu`,
+    `voltou`) tem o seu teto.
+    """
     marcos = fora.marcos
-    if t < FASE_S:
-        return True
+    quantos = TIQUES_POR_FASE
+    teto = _teto_da_fase_s(fora, quantos)
     if "esconde" not in marcos:
+        if not _fase(fora, "à vista", fora.comeco, quantos, teto):
+            return True
         marcos["esconde"] = time.monotonic()
         piloto.tela.janela.hide()
         return True
-    if piloto._escondida and "escondeu" not in marcos:
-        marcos["escondeu"] = time.monotonic()
-    if t < 2 * FASE_S:
-        return True
     if "mostra" not in marcos:
-        marcos["mostra"] = time.monotonic()
-        fora.estado.atraso_s = ATRASO_NA_VOLTA_S
-        piloto.tela.janela.show_all()
-        return True
-    if not piloto._escondida and "voltou" not in marcos and "escondeu" in marcos:
+        if "escondeu" not in marcos:
+            if piloto._escondida:
+                marcos["escondeu"] = time.monotonic()
+            elif time.monotonic() - marcos["esconde"] < _teto_da_espera_s():
+                return True
+            else:
+                # A PÁGINA NUNCA DISSE QUE SE ESCONDEU: volta sem a fase
+                # escondida, e a R1 reprova no marco que faltou.
+                return _mostrar(fora, piloto)
+        de, ate = _janela_escondida(fora)
+        if not _fase(fora, "escondida", de, quantos, teto, ate=ate):
+            return True
+        return _mostrar(fora, piloto)
+    if "voltou" not in marcos:
+        if piloto._escondida or "escondeu" not in marcos:
+            # A janela nunca se escondeu (a mordida do `_a_janela_mudou`) ou
+            # nunca voltou: espera o teto e acaba. A régua reprova no marco.
+            return bool(time.monotonic() - marcos["mostra"] < _teto_da_espera_s())
         marcos["voltou"] = time.monotonic()
-    return t < 3 * FASE_S
+    return not _fase(fora, "de volta", _janela_escondida(fora)[1], quantos, teto)
+
+
+def _mostrar(fora: Any, piloto: Any) -> bool:
+    """A volta: o daemon passa a demorar como o de verdade, e a janela reaparece."""
+    fora.marcos["mostra"] = time.monotonic()
+    fora.estado.atraso_s = ATRASO_NA_VOLTA_S
+    piloto.tela.janela.show_all()
+    return True
 
 
 CENARIOS = [(p, n) for p in ("01-jogar.html", "02-controles.html", "08-conexoes.html")
@@ -361,42 +473,42 @@ def esconde_e_volta(request: pytest.FixtureRequest,
     return fora
 
 
-def _fim_do_escondido(fora: Any) -> float:
-    """O INSTANTE em que a página disse `vista` de novo, pelo aviso anotado.
+def _janela_escondida(fora: Any) -> tuple[float, float]:
+    """A fase escondida, com UM dono: `(de, ate)`, para o roteiro contar e as
+    réguas medirem a mesma janela.
 
-    O roteiro vê a volta até 50 ms depois, e o fio lê já na volta: o tique que
-    pinta o estado novo cairia dentro da fase escondida se ela terminasse na
-    marca do roteiro.
+    Começa no `escondeu` mais o `ASSENTAR_S`. Acaba no INSTANTE em que a página
+    disse `vista` de novo, pelo aviso anotado: o roteiro vê a volta até 50 ms
+    depois, e o fio lê já na volta, então o tique que pinta o estado novo
+    cairia dentro da fase escondida se ela terminasse na marca do roteiro.
+    Antes da volta, a fase não tem fim.
     """
-    return next((t for t, escondida, _ in fora.avisos
-                 if not escondida and t >= fora.marcos["esconde"]),
-                fora.marcos["mostra"])
+    de = fora.marcos["escondeu"] + ASSENTAR_S
+    ate = next((t for t, escondida, _ in fora.avisos
+                if not escondida and t >= fora.marcos["esconde"]),
+               fora.marcos.get("mostra", float("inf")))
+    return de, ate
 
 
 def _entre(fora: Any, de: float, ate: float) -> list[Any]:
     return [x for x in fora.ticks if de <= x.t <= ate]
 
 
+def _os_primeiros(fora: Any, de: float, quantos: int) -> list[Any]:
+    """Os `quantos` primeiros tiques desde `de`: a fase que a régua cobra."""
+    return [x for x in fora.ticks if x.t >= de][:quantos]
+
+
 # ===========================================================================
 # R1 — JANELA ESCONDIDA NÃO TRABALHA, NO TEMPO
 # ===========================================================================
-def test_r1_a_janela_escondida_nao_pinta_nem_pergunta(esconde_e_volta: Any) -> None:
-    """Escondida, zero pintura, zero `pactl` e uma leitura do estado por segundo.
-
-    A janela minimizada é o caso em que ela joga. O WebKit já parava de
-    desenhar, mas o tique seguia montando a carga e mandando-a, dez vezes por
-    segundo: 47% de um núcleo na banca, com a tela parada.
-
-    MORDIDA: faça `_a_janela_mudou` voltar logo na primeira linha. Com a
-    janela escondida voltam as ~40 leituras do estado e as cargas inteiras de
-    1 s — e esta régua reprova nas duas contas.
-    """
-    fora = esconde_e_volta
+def _a_escondida_nao_trabalha(fora: Any) -> None:
+    """As contas da R1 sobre a fase escondida de um cenário (ver a régua)."""
     assert "escondeu" in fora.marcos, (
         "a página nunca disse que estava escondida — o `hide()` da janela oculta "
         "não chegou ao `document.hidden`, ou o aviso não chegou ao piloto")
-    de = fora.marcos["escondeu"] + ASSENTAR_S
-    ate = _fim_do_escondido(fora)
+    _sem_fome(fora, "escondida")
+    de, ate = _janela_escondida(fora)
     dentro = _entre(fora, de, ate)
     assert len(dentro) >= 25, f"poucos tiques escondidos para medir: {len(dentro)}"
     pinturas = [p for p in fora.pinturas if de <= p[0] <= ate]
@@ -405,7 +517,8 @@ def test_r1_a_janela_escondida_nao_pinta_nem_pergunta(esconde_e_volta: Any) -> N
         f"{fora.pagina} com {fora.n} controle(s)")
     # ESCONDIDA, O FIO LÊ DE SEGUNDO EM SEGUNDO, e não dez vezes por segundo:
     # é o que mantém o contexto do coração com a mesa de agora (ver
-    # `test_r1_o_coracao_nao_bate_por_quem_saiu_escondido`).
+    # `test_r1_o_coracao_nao_bate_por_quem_saiu_escondido`). O teto é de
+    # RELÓGIO porque o fio é de relógio: ele lê pelo tempo, não pelo tique.
     import hefesto_vivo as hv
 
     leituras = dentro[-1].leituras - dentro[0].leituras
@@ -420,19 +533,29 @@ def test_r1_a_janela_escondida_nao_pinta_nem_pergunta(esconde_e_volta: Any) -> N
         "as ondas seguiram querendo nós com a janela escondida")
 
 
-def test_r1_o_coracao_segue_batendo_escondido(esconde_e_volta: Any) -> None:
-    """Esconder não é largar: o teste de motor em curso segue batendo.
+def test_r1_a_janela_escondida_nao_pinta_nem_pergunta(esconde_e_volta: Any) -> None:
+    """Escondida, zero pintura, zero `pactl` e uma leitura do estado por segundo.
 
-    O coração é de 1 em 1 s (`a05_vibracao.SEGUNDOS_ENTRE_BATIMENTOS`); em
-    quatro segundos escondida são três ou quatro batidas. Sem elas o teto do
-    daemon soltaria o teste que ela deixou ligado.
+    A janela minimizada é o caso em que ela joga. O WebKit já parava de
+    desenhar, mas o tique seguia montando a carga e mandando-a, dez vezes por
+    segundo: 47% de um núcleo na banca, com a tela parada.
 
-    MORDIDA: tire o `bater_os_coracoes` do ramo da janela escondida no
-    `_tique` e as batidas param de contar aqui.
+    AS TRÊS MORDIDAS, cada uma numa conta diferente:
+
+    * faça `_a_janela_mudou` voltar logo na primeira linha: o `_escondida`
+      nunca vira `True`, o roteiro não marca o `escondeu`, e a régua reprova
+      na pré-condição (a página nunca disse que estava escondida);
+    * tire o `self._escondida or` do `if` do `_tique`: a página volta a pintar
+      escondida, e a régua reprova nas pinturas;
+    * deixe o `LeitorDoEstado.pausar` sem efeito: a leitura volta a ~10 por
+      segundo, e a régua reprova no teto de leituras.
     """
-    fora = esconde_e_volta
-    de = fora.marcos["escondeu"] + ASSENTAR_S
-    ate = _fim_do_escondido(fora)
+    _a_escondida_nao_trabalha(esconde_e_volta)
+
+
+def _o_coracao_bate_escondido(fora: Any) -> None:
+    _sem_fome(fora, "escondida")
+    de, ate = _janela_escondida(fora)
     dentro = _entre(fora, de, ate)
     batidas = dentro[-1].batidas - dentro[0].batidas
     assert batidas >= 2, (
@@ -440,23 +563,166 @@ def test_r1_o_coracao_segue_batendo_escondido(esconde_e_volta: Any) -> None:
         "escondida e um teste de motor em curso")
 
 
-def _roteiro_o_controle_sai_escondido(fora: Any, piloto: Any, t: float) -> bool:
-    """1 s à vista; a janela se esconde; escondida, o controle do teste sai."""
+def test_r1_o_coracao_segue_batendo_escondido(esconde_e_volta: Any) -> None:
+    """Esconder não é largar: o teste de motor em curso segue batendo.
+
+    O coração é de 1 em 1 s (`a05_vibracao.SEGUNDOS_ENTRE_BATIMENTOS`); em
+    40 tiques escondida são três ou quatro batidas. Sem elas o teto do
+    daemon soltaria o teste que ela deixou ligado.
+
+    MORDIDA: tire o `bater_os_coracoes` do ramo da janela escondida no
+    `_tique` e as batidas param de contar aqui.
+    """
+    _o_coracao_bate_escondido(esconde_e_volta)
+
+
+# ===========================================================================
+# R1 SOB CARGA — a máquina ocupada não derruba a pré-condição
+# ===========================================================================
+def _com_carga(roteiro: Any, *, buraco_s: float = 0.0, lento_s: float = 0.0) -> Any:
+    """O roteiro com a máquina ocupada, SEM carregar a máquina dela.
+
+    `buraco_s`: o laço do GTK para uma vez, logo depois do `hide()` — é o buraco
+    da suíte de 28/09 (uns 1,4 s sem tique e sem passo). `lento_s`: o laço anda
+    devagar, um `sleep` a cada passo, só com a janela escondida.
+    """
+    def com_carga(fora: Any, piloto: Any, t: float) -> bool:
+        seguir = roteiro(fora, piloto, t)
+        if buraco_s and "esconde" in fora.marcos and "buraco" not in fora.marcos:
+            fora.marcos["buraco"] = time.monotonic()
+            time.sleep(buraco_s)
+        if lento_s and piloto._escondida:
+            time.sleep(lento_s)
+        return bool(seguir)
+
+    return com_carga
+
+
+CARGAS = {"buraco": {"buraco_s": 1.4}, "laco-lento": {"lento_s": 0.2}}
+
+
+@pytest.fixture(scope="module", params=sorted(CARGAS))
+def sob_carga(request: pytest.FixtureRequest,
+              publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
+    """A 08 com um controle — o cenário que reprovou em 28/09 —, com a carga pedida."""
+    fora = _correr(publicado_de_hoje, "08-conexoes.html", 1,
+                   _com_carga(_roteiro_esconde_e_volta, **CARGAS[request.param]))
+    fora.pagina, fora.n, fora.carga = "08-conexoes.html", 1, request.param
+    return fora
+
+
+def test_r1_sob_carga_a_janela_escondida_mede_o_mesmo(sob_carga: Any) -> None:
+    """Com o laço do GTK parado ou lento, a R1 e o coração continuam verdes.
+
+    A PROVA DE QUE A CARGA PEGOU vem junto: a janela de relógio do roteiro de
+    28/09 (a fase escondida acabava 40 tiques NOMINAIS depois do `hide()`)
+    teria juntado menos de 25 tiques neste mesmo cenário. Sem isso, a régua
+    ficaria verde sobre uma carga que não atrasou nada.
+
+    MORDIDA: devolva o roteiro de relógio (a fase escondida acabando no
+    `hide()` mais `_nominal_s(TIQUES_POR_FASE)`) e esta régua reprova em
+    «poucos tiques escondidos para medir», que é a reprovação de 28/09.
+    """
+    fora = sob_carga
+    _a_escondida_nao_trabalha(fora)
+    _o_coracao_bate_escondido(fora)
+    de, _ate = _janela_escondida(fora)
+    relogio = _entre(fora, de, fora.marcos["esconde"] + _nominal_s(TIQUES_POR_FASE))
+    assert len(relogio) < 25, (
+        f"a carga {fora.carga!r} não atrasou o laço: o relógio de 28/09 teria "
+        f"juntado {len(relogio)} tiques, e esta régua não provaria nada")
+
+
+@pytest.fixture(scope="module")
+def sob_carga_com_teto_curto(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
+    """O buraco de 28/09 com um teto de fase de 1 s: a fase escondida passa fome."""
+    fora = _correr(publicado_de_hoje, "08-conexoes.html", 1,
+                   _com_carga(_roteiro_esconde_e_volta, **CARGAS["buraco"]),
+                   teto_da_fase_s=1.0)
+    fora.pagina, fora.n = "08-conexoes.html", 1
+    return fora
+
+
+def test_r1_o_teto_batido_diz_que_foi_a_maquina(sob_carga_com_teto_curto: Any) -> None:
+    """A fase que bate o teto anota a fome, e a R1 reprova dizendo a causa.
+
+    Vermelho, e não pulo: pulo não é verde nesta casa. E vermelho com a causa
+    escrita, para ninguém ler a máquina lenta como produto quebrado.
+
+    MORDIDA: faça o `_fase` acabar no teto sem anotar em `fora.famintas` e a
+    R1 reprova no piso de 25, sem dizer que foi a máquina.
+    """
+    fora = sob_carga_com_teto_curto
+    tiques, segundos, _buraco = fora.famintas["escondida"]
+    assert tiques < TIQUES_POR_FASE and segundos >= 1.0, fora.famintas
+    with pytest.raises(AssertionError, match=(
+            r"a fase escondida juntou \d+ de 40 tiques em \d+,\d s \(maior buraco: "
+            r"\d+,\d s\): o laço do GTK andou devagar demais para medir")):
+        _a_escondida_nao_trabalha(fora)
+
+
+def test_a_fase_junta_os_tiques_e_anota_a_fome() -> None:
+    """O `_fase` sem GTK, com tiques sintéticos: junta, espera, e passa fome.
+
+    MORDIDA: faça o `_fase` contar pelo relógio (`agora - de >= teto_s` antes
+    de contar os tiques) e a fase cheia deixa de acabar ao juntar.
+    """
+    fora = SimpleNamespace(ticks=[SimpleNamespace(t=10.0 + 0.1 * i) for i in range(30)],
+                           fases={}, famintas={})
+    assert _fase(fora, "cheia", 10.0, 20, 5.0, agora=11.0), "juntou 20 e não acabou"
+    assert not _fase(fora, "juntando", 10.0, 40, 5.0, agora=13.0), (
+        "acabou antes de juntar e antes do teto")
+    assert not _fase(fora, "fechada", 10.0, 20, 5.0, ate=11.0, agora=11.5), (
+        "contou tique fora da janela da fase")
+    fora.ticks.append(SimpleNamespace(t=15.0))
+    assert _fase(fora, "faminta", 10.0, 40, 5.0, agora=15.5), "o teto não acabou a fase"
+    assert not {"cheia", "juntando", "fechada"} & set(fora.famintas), fora.famintas
+    tiques, segundos, buraco = fora.famintas["faminta"]
+    assert (tiques, segundos) == (31, 5.5) and buraco == pytest.approx(2.1), fora.famintas
+    _sem_fome(fora, "cheia", "juntando")
+    with pytest.raises(AssertionError, match=(
+            r"a fase faminta juntou 31 de 40 tiques em 5,5 s \(maior buraco: 2,1 s\): "
+            r"o laço do GTK andou devagar demais para medir")):
+        _sem_fome(fora, "cheia", "faminta")
+
+
+#: Quantos tiques a régua de quem saiu conta depois do `de` dela.
+TIQUES_DEPOIS_DE_SAIR = 20
+
+
+def _depois_de_sair(fora: Any) -> float:
+    """De onde a régua de quem saiu conta: uma leitura escondida e um batimento
+    de folga depois da saída. É de RELÓGIO porque o fio escondido é de relógio
+    (lê de `SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA` em
+    `SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA`)."""
+    import hefesto_vivo as hv
+
+    return float(fora.marcos["saiu"] + 2 * hv.LeitorDoEstado.SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA)
+
+
+def _roteiro_o_controle_sai_escondido(fora: Any, piloto: Any, _t: float) -> bool:
+    """10 tiques à vista; a janela se esconde; escondida, o controle do teste
+    sai, e a fase junta 20 tiques depois do `_depois_de_sair`."""
     marcos = fora.marcos
-    if t < 1.0:
-        return True
     if "esconde" not in marcos:
+        if not _fase(fora, "antes de esconder", fora.comeco, 10, _teto_da_fase_s(fora, 10)):
+            return True
         marcos["esconde"] = time.monotonic()
         piloto.tela.janela.hide()
         return True
-    if piloto._escondida and "saiu" not in marcos:
+    if "saiu" not in marcos:
+        if not piloto._escondida:
+            return bool(time.monotonic() - marcos["esconde"] < _teto_da_espera_s())
         # O CONTROLE EM TESTE É O PRIMEIRO DA MESA (ver `_correr`), e o outro
         # fica: é nele que o par sem endereço cairia.
         st = copy.deepcopy(fora.estado.base)
         st["controllers"] = st["controllers"][1:]
         fora.estado.fixo = st
         marcos["saiu"] = time.monotonic()
-    return "saiu" not in marcos or time.monotonic() - marcos["saiu"] < 4.5
+        return True
+    quantos = TIQUES_DEPOIS_DE_SAIR
+    return not _fase(fora, "depois de sair", _depois_de_sair(fora), quantos,
+                     _teto_da_fase_s(fora, quantos))
 
 
 @pytest.fixture(scope="module")
@@ -482,12 +748,10 @@ def test_r1_o_coracao_nao_bate_por_quem_saiu_escondido(
     """
     fora = o_controle_sai_escondido
     assert "saiu" in fora.marcos, "a janela nunca se escondeu para o controle sair"
-    import hefesto_vivo as hv
-
-    # Uma leitura escondida e um batimento de folga.
-    de = fora.marcos["saiu"] + 2 * hv.LeitorDoEstado.SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA
-    depois = [x for x in fora.ticks if x.t >= de]
-    assert len(depois) >= 10, f"poucos tiques depois da saída: {len(depois)}"
+    _sem_fome(fora, "antes de esconder", "depois de sair")
+    depois = [x for x in fora.ticks if x.t >= _depois_de_sair(fora)]
+    assert len(depois) >= TIQUES_DEPOIS_DE_SAIR, (
+        f"poucos tiques depois da saída: {len(depois)}")
     assert all(x.escondida for x in depois), "a janela voltou à vista no meio"
     batidas = depois[-1].batidas - depois[0].batidas
     assert batidas == 0, (
@@ -516,6 +780,7 @@ def test_r1_na_volta_a_carga_vai_inteira_e_com_estado_novo(esconde_e_volta: Any)
     """
     fora = esconde_e_volta
     assert "voltou" in fora.marcos, "a página nunca disse que voltou à vista"
+    _sem_fome(fora, "de volta")
     # O INSTANTE DO AVISO, e não o do roteiro, que o vê até 50 ms depois: o
     # tique que pintasse o estado velho cairia antes da marca e sairia da conta.
     voltou, _, leituras_na_volta = next(
@@ -555,20 +820,22 @@ def test_r1_trocar_de_aba_nao_e_esconder(esconde_e_volta: Any) -> None:
 # R2 — SÓ VAI O QUE MUDOU
 # ===========================================================================
 def test_r2_parada_a_aba_pinta_so_as_cargas_inteiras(esconde_e_volta: Any) -> None:
-    """Com o estado imóvel, 40 tiques à vista dão no máximo 5 pinturas.
+    """Com o estado imóvel, os 40 tiques à vista dão no máximo 5 pinturas.
 
     São as cargas inteiras de 1 em 1 s. Antes desta cura eram 40, de 15 KB
-    cada na 02.
+    cada na 02. A janela são os ÚLTIMOS 40 tiques da página antes do
+    `esconde`, contados: exatamente 40, e não os que couberam em 4 s.
 
     MORDIDA: faça `_o_que_mandar` devolver sempre `carga` e são 40.
     """
     fora = esconde_e_volta
-    comeco = fora.ticks[0].t if fora.ticks else 0.0
-    fim_a = fora.marcos["esconde"]
-    janela = [x for x in fora.ticks if fim_a - FASE_S <= x.t < fim_a]
-    janela = janela[-40:]
+    _sem_fome(fora, "à vista")
+    antes = [x for x in fora.ticks if fora.comeco <= x.t < fora.marcos["esconde"]]
+    janela = antes[-TIQUES_POR_FASE:]
+    assert len(janela) == TIQUES_POR_FASE, (
+        f"{len(janela)} tiques à vista antes de esconder, e a fase junta "
+        f"{TIQUES_POR_FASE}")
     pintaram = sum(1 for x in janela if x.pintou)
-    assert len(janela) >= 30 and comeco
     assert pintaram <= 5, (
         f"{pintaram} pinturas em {len(janela)} tiques com o estado imóvel em "
         f"{fora.pagina} ({fora.n} controle(s)) — o tique voltou a mandar a carga "
@@ -585,17 +852,22 @@ def test_r2_a_aba_quieta_nao_e_aba_muda(esconde_e_volta: Any) -> None:
     vira muda.
     """
     fora = esconde_e_volta
+    _sem_fome(fora, "à vista", "de volta")
     assert not fora.mudas, f"o relato acusou {fora.pagina} de aba muda"
     assert fora.piloto.tiques.get(fora.pagina, 0) >= 60, fora.piloto.tiques
 
 
 @pytest.fixture(scope="module")
 def so_o_giro(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
-    """A 02 com dois controles e só o giroscópio mexendo, 40 tiques."""
-    def roteiro(fora: Any, _piloto: Any, t: float) -> bool:
-        if "medindo" not in fora.marcos and t >= 1.5:
-            fora.marcos["medindo"] = time.monotonic()
-        return t < 1.5 + FASE_S
+    """A 02 com dois controles e só o giroscópio mexendo: 15 tiques para a
+    página assentar, e 40 medindo."""
+    def roteiro(fora: Any, _piloto: Any, _t: float) -> bool:
+        if "medindo" not in fora.marcos:
+            if _fase(fora, "aquecendo", fora.comeco, 15, _teto_da_fase_s(fora, 15)):
+                fora.marcos["medindo"] = time.monotonic()
+            return True
+        return not _fase(fora, "giro", fora.marcos["medindo"], TIQUES_POR_FASE,
+                         _teto_da_fase_s(fora, TIQUES_POR_FASE))
 
     return _correr(publicado_de_hoje, "02-controles.html", 2, roteiro, anda="giro")
 
@@ -606,8 +878,10 @@ def test_r2_so_o_giro_mexe_e_so_o_giro_vai(so_o_giro: Any) -> None:
     MORDIDA: faça `_o_que_mudou` devolver a carga inteira e as ~40 pinturas
     passam a levar tudo.
     """
+    _sem_fome(so_o_giro, "aquecendo", "giro")
     de = so_o_giro.marcos["medindo"]
-    pinturas = [c for t, c, _ in so_o_giro.pinturas if t >= de]
+    ate = _os_primeiros(so_o_giro, de, TIQUES_POR_FASE)[-1].t
+    pinturas = [c for t, c, _ in so_o_giro.pinturas if de <= t <= ate]
     assert len(pinturas) >= 25, f"o giro mexeu e só {len(pinturas)} pinturas saíram"
     inteiras = [c for c in pinturas if _inteira(c)]
     assert len(inteiras) <= 5, f"{len(inteiras)} cargas inteiras em 40 tiques"
@@ -623,17 +897,21 @@ def test_r2_so_o_giro_mexe_e_so_o_giro_vai(so_o_giro: Any) -> None:
 
 @pytest.fixture(scope="module")
 def um_controle_chega(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
-    """A 01 com um controle; aos 2 s, chega o segundo.
+    """A 01 com um controle; depois de 20 tiques chega o segundo, e a fase
+    conta mais 20.
 
     SEM A CARGA INTEIRA DE 1 s: ela cairia na mesma fase da chegada (a página
     abre, e a cada 10 tiques vem uma) e a régua ficaria verde sem a cura da
     forma. Aqui a única inteira depois da primeira é a que a forma pede.
     """
-    def roteiro(fora: Any, _piloto: Any, t: float) -> bool:
-        if t >= 2.0 and "chegou" not in fora.marcos:
-            fora.marcos["chegou"] = time.monotonic()
-            fora.estado.fixo = _estado_da_fixture(2)
-        return t < 4.0
+    def roteiro(fora: Any, _piloto: Any, _t: float) -> bool:
+        if "chegou" not in fora.marcos:
+            if _fase(fora, "antes de chegar", fora.comeco, 20, _teto_da_fase_s(fora, 20)):
+                fora.marcos["chegou"] = time.monotonic()
+                fora.estado.fixo = _estado_da_fixture(2)
+            return True
+        return not _fase(fora, "chegada", fora.marcos["chegou"], 20,
+                         _teto_da_fase_s(fora, 20))
 
     def sem_a_inteira_de_1_s(mp: pytest.MonkeyPatch, hv: Any) -> None:
         mp.setattr(hv.Piloto, "TIQUES_ENTRE_CARGAS_INTEIRAS", 10**6)
@@ -653,6 +931,7 @@ def test_r2_o_controle_que_chega_leva_a_carga_inteira(um_controle_chega: Any) ->
     vira uma diferença (a fita e os lugares, sem os campos).
     """
     fora = um_controle_chega
+    _sem_fome(fora, "antes de chegar", "chegada")
     chegou = fora.marcos["chegou"]
     inteira_antes = next(c for t, c, _ in fora.pinturas if _inteira(c))
     depois = [c for t, c, _ in fora.pinturas
@@ -997,10 +1276,16 @@ def _por_assento(estado: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {f"p{c['player_slot']}": c for c in estado["controllers"]}
 
 
+#: As fases do roteiro dos pontinhos, na ordem: as réguas R5 as leem.
+FASES_DOS_PONTINHOS = ("antes de observar", "andando", "até os extremos",
+                       "até o vazio", "o vazio parado")
+
+
 @pytest.fixture(scope="module")
 def os_pontinhos(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
-    """A 02 com quatro controles: 4 s com os analógicos andando, depois três
-    estados fixos — os extremos, e o lugar do P4 que fica vazio."""
+    """A 02 com quatro controles: 10 tiques de chegada, 40 com os analógicos andando, depois
+    três estados fixos — os extremos, e o lugar do P4 que fica vazio —, de 20
+    tiques cada."""
     base = _estado_da_fixture(4)
     assento = _por_assento(base)
     extremos = copy.deepcopy(base)
@@ -1017,27 +1302,45 @@ def os_pontinhos(publicado_de_hoje: pathlib.Path) -> SimpleNamespace:
     sem_o_quarto = copy.deepcopy(extremos)
     sem_o_quarto["controllers"] = extremos["controllers"][:3]
 
-    def roteiro(fora: Any, piloto: Any, t: float) -> bool:
-        m = fora.marcos
-        if "observa" not in m and t >= 1.0:
-            m["observa"] = time.monotonic()
-            piloto.tela.ponte.perguntar(OBSERVAR_AS_FOLHAS, lambda *_a: None)
-        if "leu-andando" not in m and t >= 1.0 + FASE_S:
-            m["leu-andando"] = time.monotonic()
-            _perguntar_e_guardar(piloto, LER_AS_FOLHAS, fora, "andando")
-            fora.estado.fixo = extremos
-        if "extremos" not in m and t >= 3.0 + FASE_S:
-            m["extremos"] = time.monotonic()
-            _perguntar_e_guardar(piloto, ONDE_ESTAO, fora, "extremos")
-            fora.estado.fixo = sem_o_quarto
-        if "vazio" not in m and t >= 5.0 + FASE_S:
-            m["vazio"] = time.monotonic()
-            _perguntar_e_guardar(piloto, ONDE_ESTAO, fora, "vazio")
-            _perguntar_e_guardar(piloto, LER_AS_FOLHAS, fora, "vazio-antes")
-        if "vazio-depois" not in m and t >= 7.0 + FASE_S:
-            m["vazio-depois"] = time.monotonic()
-            _perguntar_e_guardar(piloto, LER_AS_FOLHAS, fora, "vazio-depois")
-        return t < 7.5 + FASE_S
+    def observar(fora: Any, piloto: Any) -> None:
+        piloto.tela.ponte.perguntar(OBSERVAR_AS_FOLHAS, lambda *_a: None)
+
+    def leu_andando(fora: Any, piloto: Any) -> None:
+        _perguntar_e_guardar(piloto, LER_AS_FOLHAS, fora, "andando")
+        fora.estado.fixo = extremos
+
+    def leu_os_extremos(fora: Any, piloto: Any) -> None:
+        _perguntar_e_guardar(piloto, ONDE_ESTAO, fora, "extremos")
+        fora.estado.fixo = sem_o_quarto
+
+    def leu_o_vazio(fora: Any, piloto: Any) -> None:
+        _perguntar_e_guardar(piloto, ONDE_ESTAO, fora, "vazio")
+        _perguntar_e_guardar(piloto, LER_AS_FOLHAS, fora, "vazio-antes")
+
+    def leu_o_vazio_depois(fora: Any, piloto: Any) -> None:
+        _perguntar_e_guardar(piloto, LER_AS_FOLHAS, fora, "vazio-depois")
+
+    #: Cada etapa: o marco, a fase que o precede, quantos tiques ela junta, e o
+    #: que o roteiro faz ao fim dela. As fases são as `FASES_DOS_PONTINHOS`.
+    etapas = [("observa", FASES_DOS_PONTINHOS[0], 10, observar),
+              ("leu-andando", FASES_DOS_PONTINHOS[1], TIQUES_POR_FASE, leu_andando),
+              ("extremos", FASES_DOS_PONTINHOS[2], 20, leu_os_extremos),
+              ("vazio", FASES_DOS_PONTINHOS[3], 20, leu_o_vazio),
+              ("vazio-depois", FASES_DOS_PONTINHOS[4], 20, leu_o_vazio_depois)]
+
+    def roteiro(fora: Any, piloto: Any, _t: float) -> bool:
+        de = fora.comeco
+        for marco, fase, quantos, fazer in etapas:
+            if marco in fora.marcos:
+                de = fora.marcos[marco]
+                continue
+            if _fase(fora, fase, de, quantos, _teto_da_fase_s(fora, quantos)):
+                fora.marcos[marco] = time.monotonic()
+                fazer(fora, piloto)
+            return True
+        # A ÚLTIMA LEITURA É UMA ESPERA: acaba quando a resposta chega.
+        return ("vazio-depois" not in fora.avaliados
+                and time.monotonic() - de < _teto_da_espera_s())
 
     return _correr(publicado_de_hoje, "02-controles.html", 4, roteiro, anda="analogico")
 
@@ -1049,6 +1352,7 @@ def test_r5_nenhuma_folha_enderecada_muda_no_tique(os_pontinhos: Any) -> None:
     MORDIDA: a folha `posicao-css` de volta (o produto de `dca12170b`) dá uma
     mutação de folha por tique.
     """
+    _sem_fome(os_pontinhos, *FASES_DOS_PONTINHOS[:2])
     lido = os_pontinhos.avaliados.get("andando")
     assert isinstance(lido, dict), f"a régua não leu o observador: {lido}"
     assert lido["folhas"] == 0, f"{lido['folhas']} mutação(ões) em folha endereçada"
@@ -1069,6 +1373,7 @@ def test_r5_o_pontinho_vai_aos_extremos_e_volta_ao_repouso(os_pontinhos: Any) ->
     MORDIDA: tire o ramo `posicao` do `escrever` do BOOTSTRAP e os pontinhos
     ficam onde o desenho os cravou (ou no repouso).
     """
+    _sem_fome(os_pontinhos, *FASES_DOS_PONTINHOS[:3])
     onde = os_pontinhos.avaliados.get("extremos")
     assert isinstance(onde, dict), f"a régua não leu os pontinhos: {onde}"
     repouso = {k: (50.2, 50.2) for k in ("ana-e", "ana-d", "touch", "touch2")}
@@ -1090,6 +1395,7 @@ def test_r5_o_lugar_vazio_volta_ao_repouso_e_nao_soma_pintura(os_pontinhos: Any)
     MORDIDA: faça o ramo `posicao` escrever o travessão (`--hef-x:—`) em vez
     de tirar as variáveis e a regra invalida: o `left` volta `auto`.
     """
+    _sem_fome(os_pontinhos, *FASES_DOS_PONTINHOS)
     onde = os_pontinhos.avaliados.get("vazio")
     assert isinstance(onde, dict), onde
     for k in ("ana-e", "ana-d", "touch", "touch2"):
@@ -1345,10 +1651,11 @@ def test_r7_cem_mil_tiques_guardam_so_os_ultimos(publicado_de_hoje: pathlib.Path
 
     MORDIDA: volte `custos` e `custo_do_ipc` a `list` e ficam 100 mil.
     """
-    def roteiro(_fora: Any, _piloto: Any, t: float) -> bool:
-        return t < 1.0
+    def roteiro(fora: Any, _piloto: Any, _t: float) -> bool:
+        return not _fase(fora, "dos custos", fora.comeco, 10, _teto_da_fase_s(fora, 10))
 
     fora = _correr(publicado_de_hoje, "01-jogar.html", 1, roteiro)
+    _sem_fome(fora, "dos custos")
     piloto = fora.piloto
     assert len(piloto.custos) >= 5 and len(piloto.custo_do_ipc) >= 5
     for i in range(100_000):
