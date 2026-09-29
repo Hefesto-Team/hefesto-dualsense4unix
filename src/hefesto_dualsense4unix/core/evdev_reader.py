@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, ClassVar
 
+from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -610,17 +611,44 @@ class InputDirWatch:
     `nasceu` diz se a última mudança TROUXE algum nó (e não só levou): quem
     espera um controle voltar não tem o que procurar numa pasta que só
     perdeu entradas (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01).
+
+    O-REPOUSO-ESPERA-O-EVENTO-01 (29/09/2026): com o dono do evento armado e
+    olhando esta raiz (`core/o_dono_do_evento.py`), o `poll()` deixa de listar
+    a pasta e passa a ser «a geração de NOMES desta raiz mudou desde o meu
+    último poll?», e o `nasceu` diz se veio uma criação. Nenhum consumidor muda
+    de contrato: acordam pelo mesmo conjunto de nomes de antes. Sem o dono, o
+    `listdir` de sempre. `dono` é costura de teste; None = o do processo.
     """
 
-    def __init__(self, root: str = "/dev/input") -> None:
+    def __init__(self, root: str = "/dev/input", *, dono: Any = None) -> None:
         self._root = root
+        self._dono = dono
         self._last: frozenset[str] | None = None
+        self._ficha: tuple[int, ...] | None = None
         self.nasceu = False
 
     def poll(self) -> bool:
         """True se o conteúdo de /dev/input mudou desde o último poll (ou 1ª vez)."""
         import os
 
+        dono = self._dono if self._dono is not None else _ode.dono_armado()
+        ficha = (
+            dono.ficha((self._root, _ode.NOMES), (self._root, _ode.CRIACOES))
+            if dono is not None
+            else None
+        )
+        if ficha is not None:
+            anterior = self._ficha
+            # A época vem junto: a primeira pergunta sob um dono (ou sob um dono
+            # re-armado) é «mudou», como a primeira listagem sempre foi.
+            changed = ficha != anterior
+            self.nasceu = changed and (
+                anterior is None or anterior[0] != ficha[0] or anterior[2] != ficha[2]
+            )
+            self._ficha = ficha
+            self._last = None
+            return changed
+        self._ficha = None
         try:
             current = frozenset(os.listdir(self._root))
         except OSError:
