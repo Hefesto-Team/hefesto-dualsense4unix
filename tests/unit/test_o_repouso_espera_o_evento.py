@@ -1089,16 +1089,19 @@ class TestONegativoDeProc:
 
         from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
 
+        # Pelo `_tick` do autoswitch, o caminho do produto, e não pela função
+        # auxiliar: a régua que chama o auxiliar direto passa com o tique que
+        # nunca o chama (medido na conferência).
         sw = AutoSwitcher(manager=MagicMock(), window_reader=lambda: {})
-        sw._outra_janela_invalida_o_negativo({"wm_class": "firefox", "pid": 10})
+        sw._tick({"wm_class": "firefox", "pid": 10}, 0.0)
         _exibir(0.0)
-        sw._outra_janela_invalida_o_negativo({"wm_class": "firefox", "pid": 10})
+        sw._tick({"wm_class": "firefox", "pid": 10}, 4.0)
         _exibir(4.0)
-        sw._outra_janela_invalida_o_negativo({"wm_class": "", "pid": 0})  # cega
+        sw._tick({"wm_class": "", "pid": 0}, 6.0)  # cega
         _exibir(6.0)
         assert proc_de_mentira.varreduras == 1
         proc_de_mentira.mapa["200"] = _REAPER
-        sw._outra_janela_invalida_o_negativo({"wm_class": "steam_app_1599660", "pid": 200})
+        sw._tick({"wm_class": "steam_app_1599660", "pid": 200}, 8.0)
         assert _exibir(8.0) == 1599660
 
     def test_desarmado_a_exibicao_segue_nos_cinco_segundos(
