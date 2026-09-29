@@ -1013,8 +1013,9 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     #: O `hid_device`. Toda chamada ao C deste handle (o `read` da volta, o
     #: modo do `read`, o `write` de qualquer thread) entra e sai contada sob
     #: `_entrega` (`_no_c`). O `close()` marca `_fechando`; daí em diante nada
-    #: novo entra no C, e quem sai por último fecha — o `close()`, se não há
-    #: ninguém dentro; senão, quem estava lá. Fechar por cima de uma chamada em
+    #: novo entra no C. Se não há ninguém dentro, o `close()` fecha; senão ele
+    #: marca `_entregue` e volta no teto, e quem sai do C por último fecha.
+    #: Fechar por cima de uma chamada em
     #: curso é o `free(dev)` debaixo de quem lê (o `TypeError` da parada de
     #: 29/09). Defaults de CLASSE pela razão dos de cima: os dublês por
     #: `__new__`; o lock de classe é compartilhado, e o `__init__` dá a cada
@@ -1022,6 +1023,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     _entrega: threading.Lock = threading.Lock()
     _dentro_do_c: int = 0
     _fechando: bool = False
+    _entregue: bool = False
     _fechado: bool = False
     #: `time.monotonic()` do sinal (`ds_thread = False`), e quantos reports a
     #: volta leu DEPOIS dele e jogou fora (ver `sendReport`).
@@ -1686,9 +1688,10 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         um lock, e nunca com uma chamada em curso. A recusa é um `OSError`, que
         o laço já trata como fim de vida e os escritores avulsos já capturam.
 
-        Quem sai por último com o handle marcado fecha: o escritor avulso,
-        aqui; a `report_thread`, no `finally` do `sendReport`, para que a linha
-        de volta conte os reports que ela descartou.
+        Quem sai por último com o handle ENTREGUE (o `close()` já voltou sem
+        poder fechar) fecha: o escritor avulso, aqui; a `report_thread`, no
+        `finally` do `sendReport`, para que a linha de volta conte os reports
+        que ela descartou. Enquanto o `close()` ainda espera, quem fecha é ele.
         """
         with self._entrega:
             if self._fechando:
@@ -1701,7 +1704,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             with self._entrega:
                 self._dentro_do_c -= 1
                 if (
-                    self._fechando
+                    self._entregue
                     and self._dentro_do_c == 0
                     and not self._fechado
                     and threading.current_thread() is not getattr(self, "report_thread", None)
@@ -1735,6 +1738,9 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             fecho_eu = dentro == 0 and not self._fechado
             if fecho_eu:
                 self._fechado = True
+            elif not self._fechado:
+                # Alguém está no C: o handle fica com ele, que fecha ao sair.
+                self._entregue = True
         if fecho_eu:
             self._fechar_o_device()
             return
@@ -1757,9 +1763,9 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             )
 
     def _sair_e_fechar_se_for_o_ultimo(self) -> None:
-        """O `finally` da `report_thread`: fecha se o handle é dela."""
+        """O `finally` da `report_thread`: fecha se o `close()` lhe entregou o handle."""
         with self._entrega:
-            fecho_eu = self._fechando and self._dentro_do_c == 0 and not self._fechado
+            fecho_eu = self._entregue and self._dentro_do_c == 0 and not self._fechado
             if fecho_eu:
                 self._fechado = True
         if not fecho_eu:
