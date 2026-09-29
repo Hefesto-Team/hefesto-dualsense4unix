@@ -220,3 +220,63 @@ def test_o_vendor_ilegivel_no_no_aberto_segue_o_caminho_de_hoje(montar: Any) -> 
     }
     assert mesa.tentativas_em_dualsense() == [p3]
     assert mesa.pedidos == []
+
+
+@_ESCONDIDOS
+def test_nenhuma_porta_da_descoberta_abre_o_no_do_dualsense(
+    montar: Any, monkeypatch: pytest.MonkeyPatch, escondidos: bool
+) -> None:
+    """O `InputDevice` e o broker não são os únicos jeitos de abrir um nó: um
+    `os.open` cru (para um ioctl de `absinfo`, por exemplo) escapa das duas
+    contas acima. Aqui cada `os.open` e cada `open` num nó de DualSense conta,
+    por todas as portas da descoberta, nos dois estados do nó. A MORDIDA:
+    ponha um `os.close(os.open(path, os.O_RDONLY))` no ramo do sysfs, com o
+    erro engolido, e só esta régua reprova."""
+    import builtins
+
+    mesa = montar(escondidos)
+    dualsense = mesa.caminhos_de_dualsense()
+    abertos: list[str] = []
+    os_open_da_mesa = os.open
+    open_da_mesa = builtins.open
+
+    def _anota(caminho: Any) -> None:
+        with contextlib.suppress(TypeError, ValueError):
+            if os.fsdecode(caminho) in dualsense:
+                abertos.append(os.fsdecode(caminho))
+
+    def _os_open(caminho: Any, *args: Any, **kw: Any) -> int:
+        _anota(caminho)
+        return os_open_da_mesa(caminho, *args, **kw)
+
+    def _open(*args: Any, **kw: Any) -> Any:
+        _anota(args[0] if args else kw.get("file"))
+        return open_da_mesa(*args, **kw)
+
+    monkeypatch.setattr(os, "open", _os_open)
+    monkeypatch.setattr(builtins, "open", _open)
+
+    vistos = _todos_os_chamadores()
+
+    assert vistos["find_all_dualsense_evdevs"] == [Path(mesa.de(k)) for k in range(1, 5)]
+    assert abertos == [], f"a descoberta abriu {len(abertos)} nó(s) de DualSense"
+    assert mesa.pedidos == []
+
+
+def test_a_vista_dos_externos_nao_recebe_o_dualsense_do_sysfs(
+    montar: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Quem pede os externos nunca recebe um DualSense, nem quando o pulo da
+    O-INVENTARIO não o reconhece (a primeira leitura do sysfs falhou e a
+    segunda respondeu, no meio de um hotplug): o ramo do sysfs respeita a
+    espécie pedida, como o ramo do fd sempre respeitou. A MORDIDA: tire a
+    espécie do ramo do sysfs e os quatro DualSense aparecem entre os externos."""
+    mesa = montar(False)
+    monkeypatch.setattr(er, "_no_de_dualsense_no_sysfs", lambda caminho: False)
+
+    externos = er.discover_gamepads(especie=er.ESPECIE_EXTERNAL)
+
+    assert sorted(f"{gp.vid}:{gp.pid}" for gp in externos) == ["054c:05c4", "057e:2009"]
+    assert {gp.especie for gp in externos} == {er.ESPECIE_EXTERNAL}
+    assert mesa.tentativas_em_dualsense() == []
+    assert mesa.pedidos == []

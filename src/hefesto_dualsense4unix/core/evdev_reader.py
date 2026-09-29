@@ -1023,6 +1023,11 @@ def discover_gamepads(
         # ilegível segue para a abertura, como antes.
         lido = _gamepad_do_dualsense_no_sysfs(path)
         if lido is not None:
+            # A espécie pedida vale aqui como vale no ramo do fd: o pulo de
+            # cima lê o sysfs numa volta e esta noutra, e no meio de um
+            # hotplug as duas podem discordar.
+            if especie is not None and especie != ESPECIE_DUALSENSE:
+                continue
             vendor, product, bustype, nome, uniq_raw = lido
             identidade = norm_mac(uniq_raw) or f"path:{path}"
             driver, hidraw = (
