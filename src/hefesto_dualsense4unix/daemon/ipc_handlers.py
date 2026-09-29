@@ -7055,12 +7055,15 @@ class IpcHandlersMixin:
                 o lock de 30 s do gesto manual. **O silêncio é "profile"**
                 (ORIGEM-QUE-MENTE-01): quem quer o gesto dela tem de DECLARAR,
                 e é o que o plano da transição de modo faz.
-            forcar_mouse: bool (default False) — o SOCORRO do PS + R3. O clique
-                no chip nunca o manda.
 
         Resposta: ``{"status": "ok", "arranjo": {seção: estado}}`` — o relatório
         inteiro, e não um `bool`. A distinção entre *"não havia o que aplicar"*
         e *"não deu"* é o que o botão que responde calado não tem.
+
+        A ENTRADA LIGA O MOUSE (O-MOUSE-SEGUE-A-NAVEGACAO-01, 29/09/2026,
+        D-2909-A-NAVEGACAO-LIGA-O-MOUSE): o `forcar_mouse` do PS + R3 saiu, e
+        as duas portas fazem o mesmo. Um cliente antigo que o mande não muda
+        nada: a chave é ignorada.
 
         Daemon dublado em teste (sem o método) responde `failed` em vez de
         estourar: o modo desktop continua valendo sem o arranjo.
@@ -7077,11 +7080,7 @@ class IpcHandlersMixin:
         modo: dict[str, Any] = (
             {"grava_o_modo": _porta_que_grava(origem)} if origem == "manual" else {}
         )
-        arranjo = aplicar(
-            origin=origem,
-            forcar_mouse=bool(params.get("forcar_mouse", False)),
-            **modo,
-        )
+        arranjo = aplicar(origin=origem, **modo)
         return {"status": "ok", "arranjo": dict(arranjo or {})}
 
     async def _handle_keyboard_emulation_set(

@@ -39,6 +39,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     PonteConfirmada,
     Profile,
     ProfileModeConfig,
+    ProfileMouseConfig,
     controles_em_economia,
     e_endereco_de_jogo,
     economia_da_mesa,
@@ -1062,17 +1063,24 @@ class ProfileManager:
         perfil sem ela não chama applier nenhum (ver `apply_speaker`).
         """
         resultado: dict[str, str] = relatorio if relatorio is not None else {}
-        if self.mouse_applier is not None and profile.mouse is not None:
+        secao_mouse = profile.mouse
+        diz_navegacao = getattr(getattr(profile, "mode", None), "kind", None) == "desktop"
+        if self.mouse_applier is not None and (secao_mouse is not None or diz_navegacao):
             try:
                 # O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026): junto com a seção
                 # vai QUEM a mandou, como no `mode_applier`. Só o perfil que diz
                 # Navegação liga ou desliga o mouse; os outros aplicam as
-                # velocidades (`Daemon.apply_profile_mouse`).
+                # velocidades (`Daemon.apply_profile_mouse`). E O PERFIL QUE DIZ
+                # NAVEGAÇÃO SEM A SEÇÃO `mouse` entra pela mesma regra da entrada
+                # pelo chip: liga, com as velocidades da flag de sessão
+                # (`None` aqui). Sem esta perna ele entrava sem cursor: o modo
+                # derrubava o pad, e o mouse, que a exclusão mútua tinha
+                # desligado, ficava assim.
                 resultado["mouse"] = _estado_da_secao(
                     self.mouse_applier(
-                        profile.mouse.enabled,
-                        profile.mouse.speed,
-                        profile.mouse.scroll_speed,
+                        secao_mouse.enabled if secao_mouse is not None else True,
+                        secao_mouse.speed if secao_mouse is not None else None,
+                        secao_mouse.scroll_speed if secao_mouse is not None else None,
                         origin=origin,
                         profile=profile,
                     )
@@ -2680,8 +2688,46 @@ def nome_do_perfil_que_grava(do_daemon: object) -> str | None:
     return do_disco
 
 
+def secao_do_mouse_da_navegacao(
+    atual: ProfileMouseConfig | None,
+    *,
+    ligado: bool,
+    velocidades: tuple[int, int] | None = None,
+) -> ProfileMouseConfig:
+    """A seção `mouse` depois de a Navegação ligar ou desligar o mouse — o dono.
+
+    O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026). Dois chamadores, uma regra: a
+    entrada à mão na Navegação (que grava ``enabled: true`` junto com o modo,
+    :func:`gravar_o_modo_no_perfil_ativo`) e o «Status do Modo» da aba
+    Navegação (:func:`gravar_a_navegacao_no_perfil_ativo`). Só o ``enabled``
+    muda; as velocidades que a seção já tinha FICAM (quem as escreve são as
+    duas barras da aba). O perfil sem a seção ganha uma com as velocidades
+    VIVAS (``velocidades``), que são as que o mouse está usando: a mesma
+    leitura que a janela fazia (`a06_navegacao._secao_do_mouse`). Sem elas,
+    as do esquema.
+
+    RECONSTRUÍDA, e não `model_copy`ada, pela razão de
+    :func:`secao_do_modo_com_o_caminho`: o pydantic v2 não revalida no
+    `model_copy`.
+    """
+    if atual is not None:
+        campos: dict[str, object] = atual.model_dump()
+    elif velocidades is not None:
+        campos = {"speed": velocidades[0], "scroll_speed": velocidades[1]}
+    else:
+        campos = {}
+    campos["enabled"] = bool(ligado)
+    return ProfileMouseConfig(**campos)  # type: ignore[arg-type]
+
+
 def gravar_o_modo_no_perfil_ativo(
-    nome: str | None, *, kind: str, caminho: object = None, porta: str
+    nome: str | None,
+    *,
+    kind: str,
+    caminho: object = None,
+    porta: str,
+    mouse_ligado: bool | None = None,
+    velocidades: tuple[int, int] | None = None,
 ) -> Profile | None:
     """O modo escolhido vai ao perfil ATIVO, na hora. None = não gravou.
 
@@ -2699,6 +2745,10 @@ def gravar_o_modo_no_perfil_ativo(
     ``"controle"``) vai ao `profile_salvo` e à linha
     `modo_escolhido_gravado_no_perfil`.
 
+    `mouse_ligado` (O-MOUSE-SEGUE-A-NAVEGACAO-01, 29/09/2026): a entrada à mão
+    na Navegação grava, NA MESMA GRAVAÇÃO, o ``mouse.enabled`` que ela deixou
+    de pé (:func:`secao_do_mouse_da_navegacao`); ``None`` não toca a seção.
+
     NADA MUDOU, NADA SE GRAVA: o `.json` dela não ganha uma versão idêntica a
     cada aperto repetido.
     """
@@ -2707,9 +2757,20 @@ def gravar_o_modo_no_perfil_ativo(
     profile = load_profile(nome)
     antes = profile.mode
     depois = secao_do_modo_com_o_caminho(antes, kind=kind, caminho=caminho)
-    if antes is not None and antes.model_dump() == depois.model_dump():
+    mudou: dict[str, Any] = {}
+    if antes is None or antes.model_dump() != depois.model_dump():
+        mudou["mode"] = depois
+    if mouse_ligado is not None:
+        mouse = secao_do_mouse_da_navegacao(
+            profile.mouse,
+            ligado=mouse_ligado,
+            velocidades=velocidades,
+        )
+        if profile.mouse is None or profile.mouse.model_dump() != mouse.model_dump():
+            mudou["mouse"] = mouse
+    if not mudou:
         return profile
-    novo = profile.model_copy(update={"mode": depois})
+    novo = profile.model_copy(update=mudou)
     save_profile(novo, origem=porta)
     logger.info(
         "modo_escolhido_gravado_no_perfil",
@@ -2717,6 +2778,7 @@ def gravar_o_modo_no_perfil_ativo(
         kind=kind,
         caminho=depois.caminho,
         porta=porta,
+        **({"mouse_enabled": mudou["mouse"].enabled} if "mouse" in mudou else {}),
     )
     return novo
 

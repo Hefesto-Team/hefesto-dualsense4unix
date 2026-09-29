@@ -7,9 +7,11 @@ vivo copiado, e não de uma escolha dela —, o PS + R3 pela mesma porta ligava 
 `forcar_mouse`), e a ativação de perfil ligava e desligava o mouse em qualquer
 modo. Três donos, e cada porta perguntava a um.
 
-As decisões dela: D-2909-A-NAVEGACAO-LIGA-O-MOUSE (entrar na Navegação liga o
-mouse, pelas duas portas) e D-2909-A-NAVEGACAO-NAO-RELIGA-O-TECLADO (a entrada
-deixa o teclado com a lista «Função do teclado»).
+As duas perguntas da sprint foram decididas em 29/09 por quem coordena, pelo
+padrão dela e com ela dormindo, e ela pode desfazer:
+D-2909-A-NAVEGACAO-LIGA-O-MOUSE (entrar na Navegação liga o mouse, pelas duas
+portas) e D-2909-A-NAVEGACAO-NAO-RELIGA-O-TECLADO (a entrada deixa o teclado com
+a lista «Função do teclado»).
 
 A BANCADA é um lar de mentira: o `Daemon` é SUBCLASSE do real (herda as
 assinaturas), o `ProfileManager` é o real, os perfis e as flags de sessão moram
@@ -351,3 +353,272 @@ def test_o_rodape_da_ativacao_le_o_mouse_como_aplicado(
     assert relato is not None, f"o daemon não disse as seções: {resposta}"
     assert "mouse" in relato["applied"], relato
     assert "mouse" not in " ".join(relato["failed"]).lower(), relato
+
+
+# ---------------------------------------------------------------------------
+# O commit 2: a entrada na Navegação é uma só, e liga o mouse
+# ---------------------------------------------------------------------------
+FLAG_DA_SESSAO = {"enabled": False, "speed": 3, "scroll_speed": 1}
+
+
+def _flag_do_mouse(corpo: dict[str, Any] | None) -> None:
+    session.save_mouse_emulation(
+        bool(corpo and corpo["enabled"]),
+        speed=(corpo or {}).get("speed"),
+        scroll_speed=(corpo or {}).get("scroll_speed"),
+    )
+
+
+class _Handlers:
+    """O mixin de IPC de verdade, com o daemon e o gerente da bancada."""
+
+    def __new__(cls, daemon: _DaemonDaNavegacao) -> Any:
+        from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
+
+        class _H(IpcHandlersMixin):
+            pass
+
+        h = _H()
+        h.daemon = daemon  # type: ignore[assignment]
+        h.store = daemon.store  # type: ignore[assignment]
+        h.profile_manager = _gerente(daemon)  # type: ignore[assignment]
+        return h
+
+
+def _ativo(d: _DaemonDaNavegacao, nome: str) -> None:
+    d.store.set_active_profile(nome)
+
+
+def _o_chip(d: _DaemonDaNavegacao) -> dict[str, Any]:
+    import asyncio
+
+    return asyncio.run(_Handlers(d)._handle_desktop_arranjo_apply({"origin": "manual"}))
+
+
+# ---------------------------------------------------------------------------
+# 1. O chip liga o mouse com o perfil que diz desligado
+# ---------------------------------------------------------------------------
+def test_o_chip_liga_o_mouse_com_o_perfil_que_diz_desligado(bancada: _Bancada) -> None:
+    """O perfil com `{enabled: false, 11, 4}` e o mouse desligado: o chip liga.
+
+    MORDIDA: devolva ao arranjo o ramo que obedece ao `enabled` do perfil (pelo
+    `apply_profile_mouse`); o ramo idempotente devolve antes do setter, e o
+    `_mouse_device` segue `None`.
+    """
+    d = _daemon()
+    _flag_do_mouse(FLAG_DA_SESSAO)
+    _perfil(PERFIL, mode=None, mouse={"enabled": False, "speed": 11, "scroll_speed": 4})
+    _ativo(d, PERFIL)
+
+    _o_chip(d)
+
+    assert (True, 11, 4) in d.chamadas("set_mouse_emulation"), (
+        f"o chip não ligou o mouse com as velocidades do perfil: {d.recebeu}")
+    assert d.mouse_de_pe(), "o chip entrou na Navegação sem cursor — o achado 13"
+
+
+def test_o_chip_sem_a_secao_liga_com_as_velocidades_da_sessao(bancada: _Bancada) -> None:
+    """O perfil sem a seção `mouse`, e a flag de sessão dizendo desligado com `speed 3`.
+
+    O recuo de antes (`restore_mouse_preference`) obedecia à flag e deixava o
+    mouse desligado. Agora a entrada liga, e as velocidades saem da flag.
+
+    MORDIDA: devolva o recuo à preferência da flag e a régua reprova com o
+    mouse desligado.
+    """
+    d = _daemon()
+    _flag_do_mouse(FLAG_DA_SESSAO)
+    _perfil(PERFIL, mode=None, mouse=None)
+    _ativo(d, PERFIL)
+
+    _o_chip(d)
+
+    assert (True, 3, 1) in d.chamadas("set_mouse_emulation"), d.recebeu
+    assert d.mouse_de_pe()
+
+
+# ---------------------------------------------------------------------------
+# 2. As duas portas dão o mesmo
+# ---------------------------------------------------------------------------
+def test_o_chip_e_o_ps_r3_dao_o_mesmo(bancada: _Bancada) -> None:
+    """Dois daemons iguais, o mesmo perfil: o chip num, o PS + R3 no outro.
+
+    As listas de chamadas aos setters do mouse, do teclado e da supressão são
+    iguais, na ordem.
+
+    MORDIDA: faça o gesto religar o teclado por conta própria antes do arranjo
+    (`daemon.set_keyboard_emulation(True, persist=True)` no `hotkey.py`, o que
+    ele fazia até o SEGUNDO-ESCRITOR-01) e as listas divergem.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import hotkey
+
+    listas = []
+    for porta in ("chip", "ps_r3"):
+        d = _daemon()
+        _flag_do_mouse(FLAG_DA_SESSAO)
+        _perfil(PERFIL, mode={"kind": "gamepad", "caminho": "dualsense"},
+                mouse={"enabled": False, "speed": 11, "scroll_speed": 4})
+        _ativo(d, PERFIL)
+        _pad_de_pe(d)
+        d.recebeu.clear()
+        if porta == "chip":
+            import asyncio
+
+            h = _Handlers(d)
+            asyncio.run(h._handle_gamepad_emulation_set({"enabled": False, "origin": "manual"}))
+            asyncio.run(h._handle_desktop_arranjo_apply({"origin": "manual"}))
+        else:
+            hotkey._aplicar_ponte(d, hotkey.PONTE_MOUSE_TECLADO)
+        listas.append([
+            (nome, args) for nome, args in d.recebeu
+            if nome in ("set_mouse_emulation", "set_keyboard_emulation",
+                        "set_emulation_suppressed")
+        ])
+    chip, ps_r3 = listas
+    assert chip == ps_r3, f"o chip pediu {chip} e o PS + R3 pediu {ps_r3}"
+    assert ("set_mouse_emulation", (True, 11, 4)) in chip
+
+
+# ---------------------------------------------------------------------------
+# 3. A entrada grava o que ligou
+# ---------------------------------------------------------------------------
+def test_a_entrada_grava_o_mouse_ligado_junto_com_o_modo(bancada: _Bancada) -> None:
+    """O Freestyle ligado com `{false, 11, 4}` e `kind: gamepad`; o chip pela porta.
+
+    O `freestyle.json` relido diz `mouse.enabled: true` e `mode.kind: desktop`,
+    com UMA versão nova no `.historico`: o disco, o chip e o «Status do Modo»
+    dizem a mesma coisa depois da entrada.
+
+    MORDIDA: tire a escrita da seção `mouse` (o `mouse_ligado` que o arranjo
+    passa ao escritor) e o disco segue `false`.
+    """
+    from hefesto_dualsense4unix.profiles.manager import ligar_o_freestyle
+
+    d = _daemon()
+    _flag_do_mouse(FLAG_DA_SESSAO)
+    _perfil(FREESTYLE, mode={"kind": "gamepad", "caminho": "dualsense"},
+            mouse={"enabled": False, "speed": 11, "scroll_speed": 4})
+    ligar_o_freestyle(d.store, True)
+    _ativo(d, FREESTYLE)
+    versoes = len(loader.listar_historico(FREESTYLE))
+
+    _o_chip(d)
+
+    relido = loader.load_profile(FREESTYLE)
+    assert relido.mode is not None and relido.mode.kind == "desktop", relido.mode
+    assert relido.mouse is not None and relido.mouse.enabled is True, (
+        f"a entrada ligou o mouse e o perfil seguiu dizendo {relido.mouse!r}")
+    assert (relido.mouse.speed, relido.mouse.scroll_speed) == (11, 4), (
+        "a entrada trocou as velocidades que as barras da aba gravaram")
+    assert len(loader.listar_historico(FREESTYLE)) == versoes + 1, (
+        "o modo e o mouse foram em duas gravações")
+
+
+# ---------------------------------------------------------------------------
+# 4. O arranjo chamado direto não grava
+# ---------------------------------------------------------------------------
+def test_o_arranjo_chamado_direto_liga_e_nao_grava(bancada: _Bancada) -> None:
+    """Sem a porta, o arranjo liga o mouse e não muda o `sha256` do perfil.
+
+    MORDIDA: grave por `origin == "manual"` em vez do `grava_o_modo`, e o
+    `sha256` muda.
+    """
+    import hashlib
+
+    d = _daemon()
+    _flag_do_mouse(FLAG_DA_SESSAO)
+    _perfil(PERFIL, mode=None, mouse={"enabled": False, "speed": 11, "scroll_speed": 4})
+    _ativo(d, PERFIL)
+    arquivo = loader._profile_path(loader.load_profile(PERFIL))
+    antes = hashlib.sha256(arquivo.read_bytes()).hexdigest()
+
+    d.aplicar_o_arranjo_do_desktop(origin="manual")
+
+    assert d.mouse_de_pe()
+    assert hashlib.sha256(arquivo.read_bytes()).hexdigest() == antes, (
+        "o arranjo chamado direto escreveu no perfil")
+
+
+# ---------------------------------------------------------------------------
+# 9. O socorro não volta
+# ---------------------------------------------------------------------------
+def test_o_socorro_forcar_mouse_nao_volta() -> None:
+    """Nenhum nome, argumento, atributo ou chave `forcar_mouse` em `src/`.
+
+    Lido pela árvore: a prosa que conta a história (docstring, comentário) não
+    conta.
+
+    MORDIDA: devolva o parâmetro ao `hotkey.py` (`arranjo(..., forcar_mouse=True)`)
+    e a régua nomeia a linha.
+    """
+    import ast
+    from pathlib import Path
+
+    src = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
+    achados: list[str] = []
+    for py in sorted(src.rglob("*.py")):
+        arvore = ast.parse(py.read_text(encoding="utf-8"))
+        for no in ast.walk(arvore):
+            nome = (
+                no.id if isinstance(no, ast.Name)
+                else no.arg if isinstance(no, ast.arg | ast.keyword)
+                else no.attr if isinstance(no, ast.Attribute)
+                else no.value if isinstance(no, ast.Constant) and isinstance(no.value, str)
+                else None
+            )
+            if nome == "forcar_mouse":
+                achados.append(f"{py.relative_to(src)}:{getattr(no, 'lineno', '?')}")
+    assert not achados, f"o socorro do PS + R3 voltou: {achados}"
+
+
+# ---------------------------------------------------------------------------
+# 10. O diário diz o estado
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(("sobe", "esperado"), [(True, "ligado"), (False, "desligado")],
+                         ids=["o-device-subiu", "a-fabrica-recusou"])
+def test_o_diario_diz_o_mouse_vivo(bancada: _Bancada, sobe: bool, esperado: str) -> None:
+    """`arranjo_do_desktop_aplicado` diz `mouse_vivo`, lido do device.
+
+    MORDIDA: escreva `mouse_vivo` a partir do pedido (o `True` que foi ao
+    setter) em vez do device; com a fábrica recusando, a régua reprova.
+    """
+    import structlog
+
+    d = _daemon()
+    _flag_do_mouse(FLAG_DA_SESSAO)
+    _perfil(PERFIL, mode=None, mouse={"enabled": True, "speed": 11, "scroll_speed": 4})
+    _ativo(d, PERFIL)
+    bancada.mouse_sobe = sobe
+
+    with structlog.testing.capture_logs() as registros:
+        d.aplicar_o_arranjo_do_desktop(origin="manual")
+
+    linhas = [r for r in registros if r.get("event") == "arranjo_do_desktop_aplicado"]
+    assert len(linhas) == 1, registros
+    assert linhas[0].get("mouse_vivo") == esperado, linhas[0]
+    assert linhas[0].get("mouse") in ("aplicado", "falhou"), (
+        "a chave `mouse` saiu do vocabulário do applier")
+
+
+# ---------------------------------------------------------------------------
+# 12. O perfil de Navegação sem a seção liga na ativação
+# ---------------------------------------------------------------------------
+def test_o_perfil_de_navegacao_sem_secao_liga_o_mouse_na_ativacao(bancada: _Bancada) -> None:
+    """O pad de pé, um perfil com `kind: desktop` e sem `mouse`, a flag com `speed 3`.
+
+    A ativação à mão liga o mouse com as velocidades da flag, e o pad cai.
+
+    MORDIDA: tire a chamada do `mouse_applier` sem a seção
+    (`ProfileManager.apply_emulation`); o setter não é chamado e o
+    `_mouse_device` segue `None`.
+    """
+    d = _daemon()
+    _flag_do_mouse(FLAG_DA_SESSAO)
+    _perfil(PERFIL, mode={"kind": "desktop"}, mouse=None)
+    _pad_de_pe(d)
+
+    _gerente(d).activate(PERFIL, origin="manual")
+
+    assert (True, 3, 1) in d.chamadas("set_mouse_emulation"), d.recebeu
+    assert d.mouse_de_pe(), "o perfil de Navegação sem a seção entrou sem cursor"
+    assert d._gamepad_device is None, "o pad ficou de pé na Navegação"

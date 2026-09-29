@@ -17,9 +17,16 @@ A cura é a tela dizer. Estes testes trancam as duas metades:
 
 1. a frase certa nos casos certos, e **nenhuma frase** nos casos em que ela
    seria alarme falso (fora do desktop, payload incompleto, transição em voo);
-2. o plano do modo desktop continua NÃO impondo mouse nenhum — se alguém trocar
-   a cura pela outra saída (o modo LIGAR o mouse), este teste reprova e a
-   decisão volta para ela, que é de quem ela é.
+2. o plano do modo desktop passa pela porta do arranjo, e é o DAEMON quem
+   decide o mouse ali.
+
+NOTA DATADA — 29/09/2026 (O-MOUSE-SEGUE-A-NAVEGACAO-01). A segunda metade
+dizia *"se alguém trocar a cura pela outra saída (o modo LIGAR o mouse), este
+teste reprova e a decisão volta para ela"*. A pergunta foi à sessão dos desenhos
+com a letra dela de 09/08 junto, e foi decidida em 29/09 pelo padrão dela, com
+ela dormindo: D-2909-A-NAVEGACAO-LIGA-O-MOUSE — entrar na Navegação liga o
+mouse, pelo chip e pelo PS + R3. Ela pode desfazer. A razão está na classe
+`TestAEntradaLigaOMouse`.
 """
 from __future__ import annotations
 
@@ -168,44 +175,49 @@ class TestSemAlarmeFalso:
         assert texto_do_desktop_sem_emulacao(None) is None
 
 
-class TestOModoNaoImpoeMouse:
-    """A OUTRA saída, e por que ela não foi tomada.
+class TestAEntradaLigaOMouse:
+    """A saída que 09/08 não tomou, e por que 29/09 a tomou.
 
-    Ligar o mouse ao entrar em "Controlar o PC" sobrescreveria o interruptor
-    que ela desligou na aba Navegação — e *"a vontade na GUI prevalece
-    sempre"* (decisão dela, 09/08) vale para o gesto do interruptor tanto
-    quanto para o gesto do modo. HARM-06 já decidiu isto uma vez: restaurar a
-    preferência é diferente de impor uma. Trocar de ideia é decisão DELA, e
-    este teste garante que ninguém a tome por ela em silêncio.
+    ANTES (09/08): ligar o mouse ao entrar em "Controlar o PC" sobrescreveria o
+    interruptor que ela desligou na aba Navegação, e *"a vontade na GUI
+    prevalece sempre"* (a letra dela de 09/08) valia para o gesto do
+    interruptor tanto quanto para o gesto do modo.
+
+    DESDE 29/09 (D-2909-A-NAVEGACAO-LIGA-O-MOUSE, decidida pelo padrão dela e
+    reversível): o `false` que o chip obedecia não era gesto dela na GUI — era
+    o `{false, 6, 1}` que a janela copiava do estado vivo para o perfil, em oito
+    perfis iguais —, e o chip é. Entre dois gestos dela vale o mais novo, que é
+    a regra de ORDEM que o produto já segue na ativação. Na bancada de 29/09
+    (achado 13) ela tocou o chip e o cursor não andou; o PS + R3, pela mesma
+    porta, ligava. O interruptor da aba Navegação segue valendo enquanto ela
+    estiver lá, e numa ativação de perfil que diga Navegação.
+
+    Quem mede o mouse ligado é o daemon
+    (`test_o_mouse_segue_a_navegacao.py`); aqui fica o plano da tela.
     """
 
-    def test_o_plano_do_desktop_carrega_o_perfil_e_nao_impoe(self) -> None:
-        """POINT-AND-CLICK-01 (17/09/2026): a decisão dela ficou MAIS forte.
+    def test_o_plano_do_desktop_passa_pelo_arranjo(self) -> None:
+        """O plano entra pelo arranjo, que é quem liga o mouse no daemon.
 
-        O terceiro passo era `mouse.emulation.restore`, que lê a flag de sessão
-        da MÁQUINA. É `desktop.arranjo.apply`, que lê o PERFIL — que é onde a
-        aba Navegação grava o interruptor do mouse (`_guardar_no_perfil`). O
-        modo continua não IMPONDO nada: com `mouse.enabled: false` no perfil, o
-        cursor não liga. O que mudou é que agora ele obedece à escolha dela no
-        lugar em que ela a fez.
+        POINT-AND-CLICK-01 (17/09/2026): o terceiro passo era
+        `mouse.emulation.restore`, que lê a flag de sessão da MÁQUINA. É
+        `desktop.arranjo.apply`, que lê o PERFIL. O plano não chama o
+        `mouse.emulation.set` direto: um segundo escritor do mouse na entrada
+        seria a regra morando em dois lugares.
         """
         metodos = [m for m, _p in plan_mode_transition(MODE_DESKTOP)]
 
         assert "desktop.arranjo.apply" in metodos
         assert "mouse.emulation.set" not in metodos, (
-            "o plano passou a IMPOR o mouse. Ligar ao entrar sobrescreveria o "
-            "interruptor que ela desligou na aba Navegação, e *a vontade na "
-            "GUI prevalece sempre* (decisão dela, 09/08)."
-        )
+            "o plano passou a ligar o mouse por fora do arranjo — dois donos do "
+            "mouse na entrada da Navegação")
 
-    def test_o_arranjo_do_chip_nunca_forca_o_mouse(self) -> None:
-        """O socorro é do PS + R3, e não do clique.
+    def test_o_chip_nao_manda_parametro_que_o_ps_r3_nao_manda(self) -> None:
+        """As duas portas pedem o mesmo: o `forcar_mouse` saiu com o socorro.
 
-        `forcar_mouse=True` ignora o `mouse.enabled` do perfil, e existe para a
-        saída de emergência no controle — quando o jogo não responde e ela não
-        tem outro caminho. No clique ele seria a imposição pela porta dos
-        fundos: a cura com o nome novo e o comportamento que a decisão dela de
-        09/08 proíbe.
+        Até 29/09 o PS + R3 mandava `forcar_mouse=True` e o clique não; agora
+        entrar liga o mouse pelas duas, e um parâmetro só de uma porta seria
+        as duas voltando a fazer coisas diferentes.
         """
         passos = dict(plan_mode_transition(MODE_DESKTOP))
 
@@ -220,9 +232,9 @@ class TestOModoNaoImpoeMouse:
         de 30 s de `apply_profile_mouse` para que o modo que ela acabou de pedir
         não seja adiado por um toggle de segundos antes.
 
-        E ele não reabre o defeito pelo outro lado: `_furar_lock_de_emulacao`
-        CONSOME o carimbo, não o cria, e o `set_mouse_emulation` que o applier
-        dispara vai com `origin="profile"`, que não re-carimba.
+        NOTA DATADA — 29/09/2026 (O-MOUSE-SEGUE-A-NAVEGACAO-01): a entrada
+        passou a ligar o mouse com `origin="manual"` quando o pedido é à mão,
+        como o PS + R3 já fazia; o carimbo é do gesto dela de entrar no modo.
         """
         passos = dict(plan_mode_transition(MODE_DESKTOP))
 

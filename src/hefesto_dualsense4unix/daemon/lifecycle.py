@@ -179,6 +179,25 @@ def _caminho_do_dono(daemon: Any, motivo: str) -> str | None:
     return nomear_o_restart(daemon, motivo)
 
 
+def _velocidades_ou_as_da_sessao(
+    speed: int | None, scroll: int | None
+) -> tuple[int | None, int | None]:
+    """``(speed, scroll_speed)`` do perfil, e o que faltar sai da flag de sessão.
+
+    O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026): o recuo que o arranjo e a
+    ativação de um perfil de Navegação sem a seção `mouse` fazem, com UM dono.
+    A flag é a preferência da máquina (`utils.session.load_mouse_preference`);
+    nunca um default digitado aqui.
+    """
+    from hefesto_dualsense4unix.utils.session import load_mouse_preference
+
+    if speed is None or scroll is None:
+        _pref, speed_flag, scroll_flag = load_mouse_preference()
+        speed = speed if speed is not None else speed_flag
+        scroll = scroll if scroll is not None else scroll_flag
+    return speed, scroll
+
+
 def _o_perfil_diz_navegacao(profile: Any) -> bool:
     """O perfil tem a seção `mode` com ``kind == "desktop"``? Nunca levanta.
 
@@ -2032,7 +2051,6 @@ class Daemon:
         self,
         *,
         origin: str = "manual",
-        forcar_mouse: bool = False,
         grava_o_modo: GravaOModo = False,
     ) -> dict[str, str]:
         """Carrega no aparelho o que a aba Navegação gravou no perfil ATIVO.
@@ -2053,20 +2071,28 @@ class Daemon:
         variante mais cara: o produto perguntava ao arquivo de sessão quando
         devia perguntar ao perfil.
 
-        **NÃO REIMPLEMENTA NADA.** Cada seção vai pelo MESMO aplicador que
-        `ProfileManager.activate` já injeta — :meth:`apply_profile_mouse` (com o
-        lock manual e a idempotência), `ProfileManager.apply_keyboard`,
-        `ProfileManager.apply_button_actions`. E NÃO chama `activate()`: aquele
-        caminho termina em `profile_switch`, o daemon reaplica o perfil INTEIRO,
-        e a barra de luz que ela DESLIGOU acende de novo sem nada na tela dizer
-        que ia acontecer (medido em 03/09, `a03_gatilhos._gravar_so_o_gatilho`).
+        **NÃO REIMPLEMENTA NADA.** As teclas e os botões vão pelo MESMO
+        aplicador que `ProfileManager.activate` já injeta —
+        `ProfileManager.apply_keyboard`, `ProfileManager.apply_button_actions`.
+        E NÃO chama `activate()`: aquele caminho termina em `profile_switch`, o
+        daemon reaplica o perfil INTEIRO, e a barra de luz que ela DESLIGOU
+        acende de novo sem nada na tela dizer que ia acontecer (medido em 03/09,
+        `a03_gatilhos._gravar_so_o_gatilho`).
 
         A ORDEM DAS SEÇÕES, e ela não é arbitrária:
 
-        1. **mouse** — perfil com a seção manda; perfil sem ela **recua** para
-           :meth:`restore_mouse_preference`, que é o que o produto faz hoje. É a
-           disciplina do ``mode.caminho`` (MODO-DE-CONEXAO-01, §D.1): *nenhum
-           perfil existente muda de comportamento no dia da cura*.
+        1. **mouse** — ENTRAR NA NAVEGAÇÃO LIGA O MOUSE, pelas duas portas (o
+           chip e o PS + R3), com as velocidades do perfil, ou da flag de
+           sessão quando o perfil não tem a seção. É a
+           D-2909-A-NAVEGACAO-LIGA-O-MOUSE (O-MOUSE-SEGUE-A-NAVEGACAO-01,
+           29/09/2026): o chip obedecia ao ``mouse.enabled`` do perfil, e o
+           ``{false, 6, 1}`` que ele lia tinha a forma do estado vivo copiado,
+           não de uma escolha dela — ela entrou no modo «controle vira mouse»
+           e o cursor não andou. O PS + R3 ligava pelo socorro
+           (``forcar_mouse``), e as duas portas faziam o contrário uma da
+           outra. O ``enabled`` do perfil segue valendo na ATIVAÇÃO de um perfil
+           que diz Navegação (:meth:`apply_profile_mouse`), e enquanto ela
+           estiver na Navegação.
         2. **key_bindings** e **button_actions** — o teclado virtual recebe o
            que ela escreveu, com os mesmos `botoes_calados`.
         3. **teclado_emulado** — `schema.resolver_teclado_emulado` é a
@@ -2081,13 +2107,10 @@ class Daemon:
            :meth:`apply_profile_suppression` na ATIVAÇÃO, com o lock manual de
            30 s, e um segundo escritor faria os dois discordarem.
 
-        ``forcar_mouse`` É O SOCORRO, NÃO UMA INCONSISTÊNCIA. O PS + R3 é uma
-        das duas saídas de emergência quando o jogo não responde (a dica dos
-        gestos, em `06-navegacao.html`): obedecer a um perfil com
-        ``mouse.enabled: false`` tiraria dela o cursor justamente quando ela não
-        tem outro caminho. O gesto passa ``True`` e o clique no chip passa
-        ``False`` — a diferença entre uma escolha e um socorro. As velocidades
-        continuam saindo do perfil nos dois casos.
+        O TECLADO NÃO É RELIGADO PELA ENTRADA
+        (D-2909-A-NAVEGACAO-NAO-RELIGA-O-TECLADO): ele tem uma lista dona dele
+        (a «Função do teclado» da aba Navegação), e o «Desativado» dela é
+        escolha legítima. O item 3 acima segue a precedência da T14.
 
         O TECLADO NÃO PERSISTE AQUI (``persist=False``), e é o contrário do que
         o PS + R3 fazia até hoje: gravar o valor RESOLVIDO em
@@ -2102,7 +2125,15 @@ class Daemon:
         ``desktop`` vai ao perfil ativo depois do arranjo, por
         :meth:`gravar_o_modo_escolhido`. A ``origin`` não serve de sinal: ela é
         ``"manual"`` por padrão aqui, e quem chama o arranjo direto não escolheu
-        modo nenhum.
+        modo nenhum. E NA MESMA GRAVAÇÃO vai o que a entrada ligou:
+        ``mouse.enabled: true``, quando o mouse ficou de pé
+        (O-MOUSE-SEGUE-A-NAVEGACAO-01). Assim o disco, o chip e o «Status do
+        Modo» dizem a mesma coisa depois de cada entrada.
+
+        O DIÁRIO DIZ O ESTADO: ``arranjo_do_desktop_aplicado`` leva
+        ``mouse_vivo=ligado|desligado``, lido do device depois do setter, e não
+        do pedido. A chave ``mouse`` do relatório segue no vocabulário do
+        applier (``aplicado``, ``falhou``).
 
         Devolve ``seção → estado`` no vocabulário de
         :meth:`apply_profile_suppression` (``aplicado`` · ``adiado_lock_manual``
@@ -2114,47 +2145,30 @@ class Daemon:
         profile = self._perfil_do_arranjo()
         secao_mouse = getattr(profile, "mouse", None) if profile is not None else None
 
-        if forcar_mouse:
-            speed = getattr(secao_mouse, "speed", None)
-            scroll = getattr(secao_mouse, "scroll_speed", None)
-            if speed is None or scroll is None:
-                from hefesto_dualsense4unix.utils.session import (
-                    load_mouse_preference,
-                )
-
-                _pref, speed_flag, scroll_flag = load_mouse_preference()
-                speed = speed if speed is not None else speed_flag
-                scroll = scroll if scroll is not None else scroll_flag
-            try:
-                ok = self.set_mouse_emulation(True, speed, scroll, origin="manual")
-                relatorio["mouse"] = APLICADO if ok else "falhou"
-            except Exception as exc:
-                relatorio["mouse"] = "falhou"
-                logger.warning("arranjo_do_desktop_mouse_forcado_falhou", err=str(exc))
-        elif secao_mouse is not None:
-            try:
-                relatorio["mouse"] = str(
-                    self.apply_profile_mouse(
-                        secao_mouse.enabled,
-                        secao_mouse.speed,
-                        secao_mouse.scroll_speed,
-                        origin=origin,
-                    )
-                )
-            except Exception as exc:
-                relatorio["mouse"] = "falhou"
-                logger.warning("arranjo_do_desktop_mouse_falhou", err=str(exc))
-        else:
-            # O RECUO, e ele é o comportamento de hoje inteiro: sem seção no
-            # perfil quem manda é a flag de sessão. Escrever um default aqui
-            # seria o segundo default digitado no meio do caminho — o defeito
-            # com outra roupa.
-            try:
-                self.restore_mouse_preference()
-                relatorio["mouse"] = "aplicado_da_sessao"
-            except Exception as exc:
-                relatorio["mouse"] = "falhou"
-                logger.warning("arranjo_do_desktop_recuo_falhou", err=str(exc))
+        # A ENTRADA LIGA O MOUSE (D-2909-A-NAVEGACAO-LIGA-O-MOUSE). Um ramo só:
+        # as velocidades do perfil, e sem a seção as da flag de sessão — o
+        # recuo que já existia, e nunca um segundo default digitado aqui.
+        speed, scroll = _velocidades_ou_as_da_sessao(
+            getattr(secao_mouse, "speed", None),
+            getattr(secao_mouse, "scroll_speed", None),
+        )
+        try:
+            ok = self.set_mouse_emulation(
+                True,
+                speed,
+                scroll,
+                origin="manual" if origin == "manual" else "profile",
+            )
+            relatorio["mouse"] = APLICADO if ok else "falhou"
+        except Exception as exc:
+            relatorio["mouse"] = "falhou"
+            logger.warning("arranjo_do_desktop_mouse_falhou", err=str(exc))
+        # Lido do device, e nunca do pedido. Por `getattr`, porque o método
+        # promete não levantar.
+        mouse_vivo = bool(
+            getattr(self.config, "mouse_emulation_enabled", False)
+            and getattr(self, "_mouse_device", None) is not None
+        )
 
         if profile is not None:
             try:
@@ -2209,12 +2223,16 @@ class Daemon:
         logger.info(
             "arranjo_do_desktop_aplicado",
             profile=getattr(profile, "name", None),
-            forcar_mouse=bool(forcar_mouse),
             origin=origin,
+            mouse_vivo="ligado" if mouse_vivo else "desligado",
             **relatorio,
         )
         if grava_o_modo:
-            self.gravar_o_modo_escolhido("desktop", porta=grava_o_modo)
+            self.gravar_o_modo_escolhido(
+                "desktop",
+                porta=grava_o_modo,
+                mouse_ligado=True if mouse_vivo else None,
+            )
         return relatorio
 
     def set_mouse_speed(
@@ -2525,6 +2543,7 @@ class Daemon:
         *,
         caminho: str | None = None,
         porta: PortaQueGrava,
+        mouse_ligado: bool | None = None,
     ) -> str | None:
         """O modo que ela escolheu vai ao perfil ATIVO. Devolve o nome, ou None.
 
@@ -2543,6 +2562,11 @@ class Daemon:
         :func:`manager.secao_do_modo_com_o_caminho`: o modo não escreve a
         máscara, e nada mudou, nada se grava. `porta` vai ao `profile_salvo`.
 
+        `mouse_ligado` (O-MOUSE-SEGUE-A-NAVEGACAO-01): a entrada na Navegação
+        grava, na MESMA gravação, o ``mouse.enabled`` que ela deixou de pé,
+        pela regra do dono (`manager.secao_do_mouse_da_navegacao`), com as
+        velocidades vivas quando o perfil não tinha a seção.
+
         NUNCA LEVANTA: o aparelho já trocou, e um `.json` ilegível não pode
         transformar a troca em recusa.
         """
@@ -2555,8 +2579,20 @@ class Daemon:
             nome = nome_do_perfil_que_grava(
                 getattr(getattr(self, "store", None), "active_profile", None)
             )
+            # As velocidades vivas só entram quando há mouse a gravar: a troca
+            # de pad não lê a seção do mouse, e não depende dela.
+            velocidades = (
+                (self.config.mouse_speed, self.config.mouse_scroll_speed)
+                if mouse_ligado is not None
+                else None
+            )
             salvo = gravar_o_modo_no_perfil_ativo(
-                nome, kind=kind, caminho=caminho, porta=porta
+                nome,
+                kind=kind,
+                caminho=caminho,
+                porta=porta,
+                mouse_ligado=mouse_ligado,
+                velocidades=velocidades,
             )
         except Exception as exc:
             logger.warning(
@@ -3008,8 +3044,8 @@ class Daemon:
     def apply_profile_mouse(
         self,
         enabled: bool,
-        speed: int,
-        scroll_speed: int,
+        speed: int | None,
+        scroll_speed: int | None,
         *,
         origin: str = "autoswitch",
         profile: Any | None = None,
@@ -3053,6 +3089,10 @@ class Daemon:
         A PALAVRA DO RETORNO NÃO MUDA: a aba Perfis lê qualquer outra como seção
         que não entrou (`profiles_actions.relato_da_ativacao`). O que aconteceu
         com o liga/desliga vai ao diário, em `profile_mouse_aplicado`.
+
+        VELOCIDADE ``None`` é o perfil que diz Navegação e não tem a seção
+        `mouse` (commit 2): ele liga, como a entrada pelo chip, com as
+        velocidades da flag de sessão (`_velocidades_ou_as_da_sessao`).
         """
         from hefesto_dualsense4unix.daemon.state_store import (
             MANUAL_PROFILE_LOCK_SEC,
@@ -3071,6 +3111,7 @@ class Daemon:
             )
             return ADIADO_LOCK_MANUAL
         nome = getattr(profile, "name", None)
+        speed, scroll_speed = _velocidades_ou_as_da_sessao(speed, scroll_speed)
         if profile is not None and not _o_perfil_diz_navegacao(profile):
             self.set_mouse_speed(speed=speed, scroll_speed=scroll_speed)
             logger.info(

@@ -266,7 +266,6 @@ class DaemonProtocol(Protocol):
         self,
         *,
         origin: str = "manual",
-        forcar_mouse: bool = False,
         grava_o_modo: GravaOModo = False,
     ) -> dict[str, str]:
         """O modo Navegação carregando o PERFIL ATIVO (POINT-AND-CLICK-01).
@@ -276,12 +275,13 @@ class DaemonProtocol(Protocol):
         `mouse.emulation.restore` descartava, porque ele lê a flag de sessão da
         máquina e não abre perfil nenhum.
 
-        `forcar_mouse=True` é o SOCORRO do PS + R3 (uma das duas saídas de
-        emergência quando o jogo não responde): o cursor volta mesmo com
-        `mouse.enabled: false` no perfil. O clique no chip passa `False`.
+        Entrar na Navegação LIGA o mouse, pelas duas portas (o chip e o PS +
+        R3), com as velocidades do perfil (D-2909-A-NAVEGACAO-LIGA-O-MOUSE,
+        O-MOUSE-SEGUE-A-NAVEGACAO-01); o socorro `forcar_mouse` saiu com ela.
 
         `grava_o_modo`: a porta da escolha dela; o modo `desktop` vai ao
-        perfil ativo depois do arranjo (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01).
+        perfil ativo depois do arranjo, e o `mouse.enabled` que a entrada
+        ligou vai na mesma gravação (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01).
 
         Devolve `seção → estado` no vocabulário de `apply_profile_suppression`.
         Declarado aqui porque o GESTO o chama — o `hotkey.py` fala com o daemon
@@ -311,8 +311,8 @@ class DaemonProtocol(Protocol):
     def apply_profile_mouse(
         self,
         enabled: bool,
-        speed: int,
-        scroll_speed: int,
+        speed: int | None,
+        scroll_speed: int | None,
         *,
         origin: str = "autoswitch",
         profile: Any | None = None,
@@ -325,7 +325,7 @@ class DaemonProtocol(Protocol):
         R-03: `origin`/retorno — ver `apply_profile_suppression`.
         `profile`: só o perfil que diz Navegação (`mode.kind == "desktop"`)
         liga ou desliga o mouse; os outros aplicam as velocidades
-        (O-MOUSE-SEGUE-A-NAVEGACAO-01).
+        (O-MOUSE-SEGUE-A-NAVEGACAO-01). Velocidade `None`: a da flag de sessão.
         """
         ...
 

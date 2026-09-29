@@ -69,12 +69,10 @@ class _DaemonDoGesto:
         self,
         *,
         origin: str = "manual",
-        forcar_mouse: bool = False,
         grava_o_modo: Literal[False, "ipc", "controle"] = False,
     ) -> dict[str, str]:
         self.recebeu.append(
-            ("arranjo", {"origin": origin, "forcar_mouse": forcar_mouse,
-                         "grava_o_modo": grava_o_modo})
+            ("arranjo", {"origin": origin, "grava_o_modo": grava_o_modo})
         )
         return {"mouse": "aplicado"}
 
@@ -123,33 +121,33 @@ def test_os_dois_caminhos_terminam_no_mesmo_arranjo() -> None:
     )
 
 
-def test_o_gesto_e_socorro_e_o_chip_e_escolha() -> None:
-    """`forcar_mouse` separa os dois, e é a ÚNICA diferença.
+def test_o_gesto_e_o_chip_pedem_o_mesmo_arranjo() -> None:
+    """Nenhum parâmetro só do gesto: as duas portas pedem o MESMO arranjo.
 
-    O PS + R3 é uma das duas saídas de emergência quando o jogo não responde:
-    obedecer a um perfil com `mouse.enabled: false` tiraria dela o cursor
-    justamente quando ela não tem outro caminho. O clique é escolha e obedece.
+    AJUSTADA À D-2909-A-NAVEGACAO-LIGA-O-MOUSE — O-MOUSE-SEGUE-A-NAVEGACAO-01,
+    29/09/2026, decidida pelo padrão dela com ela dormindo. ANTES esta régua cobrava que o
+    `forcar_mouse` era a ÚNICA diferença: o PS + R3 ligava o mouse com o perfil
+    dizendo desligado (o socorro), e o clique no chip obedecia. Na bancada de
+    29/09 o chip entrou na Navegação sem cursor (achado 13). AGORA entrar na
+    Navegação liga o mouse pelas duas portas, e o socorro saiu: o que sobra de
+    diferença é a porta que grava (`grava_o_modo`), que diz por onde o modo
+    chegou ao perfil.
+
+    MORDIDA: devolva ao gesto um parâmetro que só ele mande (o
+    `forcar_mouse=True` de antes) e a régua reprova.
     """
     d = _DaemonDoGesto()
     hotkey._aplicar_ponte(d, hotkey.PONTE_MOUSE_TECLADO)
 
     arranjos = [p for nome, p in d.recebeu if nome == "arranjo"]
     assert arranjos, f"o gesto não chamou o arranjo: {d.efeitos()}"
-    assert arranjos[0]["forcar_mouse"] is True, (
-        "o PS + R3 deixou de forçar o mouse. Com um perfil que o desliga, a "
-        "saída de emergência dela passa a não devolver o cursor."
-    )
-    assert arranjos[0]["origin"] == "manual", (
-        "o gesto tem de DECLARAR que é dela — é o único origin que atravessa o "
-        "gate R-04 e o lock de 30 s do `apply_profile_mouse`."
-    )
+    assert arranjos[0] == {"origin": "manual", "grava_o_modo": "controle"}, (
+        f"o gesto pediu um arranjo diferente do chip: {arranjos[0]}")
 
     passos = dict(plan_mode_transition(MODE_DESKTOP))
-    assert "forcar_mouse" not in passos["desktop.arranjo.apply"], (
-        "o CLIQUE no chip passou a forçar o mouse. O socorro virou regra e o "
-        "perfil dela voltou a não ser lido — a cura com o nome novo e o "
-        "comportamento velho."
-    )
+    assert passos["desktop.arranjo.apply"] == {"origin": "manual"}, (
+        "o CLIQUE no chip passou a mandar um parâmetro que o gesto não manda: "
+        f"{passos['desktop.arranjo.apply']}")
 
 
 def test_o_gesto_derruba_o_vpad_antes_de_carregar_o_arranjo() -> None:

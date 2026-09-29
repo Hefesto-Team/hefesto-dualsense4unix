@@ -25,13 +25,16 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     launch_env.refresh   {}          -> {status}
     mouse.emulation.set  {enabled, speed?, scroll_speed?} -> {status, enabled}
     mouse.emulation.restore {}                            -> {status, enabled}
-    desktop.arranjo.apply {origin?, forcar_mouse?}        -> {status, arranjo}
+    desktop.arranjo.apply {origin?}                       -> {status, arranjo}
                          O modo Navegação carregando o que a aba Navegação
-                         gravou no perfil ATIVO — mouse, teclas, botões,
-                         `teclado_emulado` e a queda da supressão. `arranjo` é
+                         gravou no perfil ATIVO — teclas, botões,
+                         `teclado_emulado` e a queda da supressão —, e o mouse
+                         LIGADO com as velocidades do perfil: entrar na
+                         Navegação liga o mouse, pelo chip e pelo PS + R3
+                         (D-2909-A-NAVEGACAO-LIGA-O-MOUSE). `arranjo` é
                          `seção → estado` no vocabulário de
-                         `apply_profile_suppression`. `forcar_mouse` é o
-                         SOCORRO do PS + R3, e o clique no chip nunca o manda.
+                         `apply_profile_suppression`. Com `origin: manual` o
+                         modo e o mouse ligado vão ao perfil ativo.
     keyboard.emulation.set {enabled: bool} -> {status, enabled, keyboard_emulation}
     coop.set             {enabled: bool}       -> {status, enabled, players}
                          `enabled:false` é RECUSADO ({status: "recusado", motivo})

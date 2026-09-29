@@ -681,12 +681,12 @@ def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
     # TODOS os chamadores*; cobrir só o chip deixaria o gesto ligando o teclado
     # que o clique não liga.
     #
-    # `forcar_mouse=True` É O SOCORRO, e é a única diferença entre os dois
-    # caminhos. O PS + R3 é uma das duas saídas de emergência quando o jogo não
-    # responde (a dica dos gestos, em `06-navegacao.html`): obedecer a um perfil
-    # com `mouse.enabled: false` tiraria dela o cursor justamente quando ela não
-    # tem outro caminho. O clique no chip passa `False` — é a diferença entre
-    # uma escolha e um socorro, não uma inconsistência.
+    # AS DUAS PORTAS FAZEM O MESMO — O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026),
+    # D-2909-A-NAVEGACAO-LIGA-O-MOUSE. Aqui ia `forcar_mouse=True`, o socorro
+    # que ligava o mouse mesmo com o perfil dizendo desligado, enquanto o
+    # clique no chip obedecia ao perfil e entrava sem cursor. Agora entrar na
+    # Navegação liga o mouse pelas duas, e o PS + R3 segue sendo a saída de
+    # emergência da dica dos gestos (`06-navegacao.html`) sem regra própria.
     #
     # `origin="manual"` porque É gesto dela: é o único origin que atravessa o
     # gate R-04 (`_recriacao_bloqueada_por_jogo`) e o lock de 30 s do
@@ -709,7 +709,7 @@ def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
         logger.warning("ponte_sem_arranjo_do_desktop")
         return True
     with contextlib.suppress(Exception):
-        arranjo(origin="manual", forcar_mouse=True, grava_o_modo="controle")
+        arranjo(origin="manual", grava_o_modo="controle")
     return True
 
 

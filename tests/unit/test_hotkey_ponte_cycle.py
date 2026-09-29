@@ -251,15 +251,13 @@ class _FakeDaemon:
         self,
         *,
         origin: str = "manual",
-        forcar_mouse: bool = False,
         grava_o_modo: Any = False,
     ) -> dict[str, str]:
         # POINT-AND-CLICK-01 (17/09/2026): o gesto parou de escrever a própria
         # sequência de quatro chamadas e passou pela porta única do clique. O
         # dublê tem de ter o método, senão o produto cai no ramo do "daemon
         # enxuto" e o teste vira verde sobre um gesto que não carregou nada.
-        self.arranjo.append({"origin": origin, "forcar_mouse": forcar_mouse,
-                             "grava_o_modo": grava_o_modo})
+        self.arranjo.append({"origin": origin, "grava_o_modo": grava_o_modo})
         return {"mouse": "aplicado"}
 
 
@@ -353,12 +351,11 @@ async def test_ponte_mouse_teclado_derruba_o_vpad_e_carrega_o_arranjo() -> None:
     d = _FakeDaemon(flavor=PONTE_XBOX)
     await build_next_bridge_callback(d)()  # type: ignore[arg-type]
     assert ("gamepad", False, None, "manual", None) in d.trilha
-    assert d.arranjo == [{"origin": "manual", "forcar_mouse": True,
-                          "grava_o_modo": "controle"}], (
-        "o gesto não pediu o arranjo do desktop, ou pediu sem o socorro. O "
-        "PS + R3 é uma das duas saídas de emergência quando o jogo não "
-        f"responde: sem `forcar_mouse` um perfil que desliga o mouse deixa "
-        f"ela sem cursor. Pediu: {d.arranjo}"
+    # O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026): o `forcar_mouse` saiu — entrar
+    # na Navegação liga o mouse pelas duas portas (D-2909-A-NAVEGACAO-LIGA-O-
+    # MOUSE), e o gesto pede o mesmo arranjo do chip, com a porta que grava.
+    assert d.arranjo == [{"origin": "manual", "grava_o_modo": "controle"}], (
+        f"o gesto não pediu o arranjo do desktop como o chip pede: {d.arranjo}"
     )
     assert d.mouse == [] and d.teclado == [] and d.supressao == [], (
         "o gesto voltou a escrever as chamadas à mão, ao lado do arranjo — o "

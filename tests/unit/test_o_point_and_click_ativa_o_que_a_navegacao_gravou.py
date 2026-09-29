@@ -259,53 +259,42 @@ def test_o_recuo_e_a_flag_de_sessao_e_nunca_um_segundo_default() -> None:
     )
 
 
-def test_o_socorro_do_ps_r3_ignora_o_perfil_que_desliga_o_mouse() -> None:
-    """`forcar_mouse=True` devolve o cursor mesmo com `enabled: false`.
+@pytest.mark.parametrize("porta", ["chip", "ps_r3"])
+def test_as_duas_portas_ligam_o_mouse_com_as_velocidades_do_perfil(porta: str) -> None:
+    """Entrar na Navegação LIGA o mouse, mesmo com o perfil dizendo desligado.
 
-    O PS + R3 é uma das duas saídas de emergência quando o jogo não responde.
-    Obedecer a um perfil com o mouse desligado tiraria dela o cursor justamente
-    quando ela não tem outro caminho — é a diferença entre uma escolha e um
-    socorro. As velocidades continuam saindo do perfil.
+    D-2909-A-NAVEGACAO-LIGA-O-MOUSE (O-MOUSE-SEGUE-A-NAVEGACAO-01, 29/09/2026).
+    Aqui moravam duas réguas: o SOCORRO (o PS + R3 com `forcar_mouse=True`
+    ligava o mouse com o perfil dizendo desligado) e o CONTRAPESO (o clique no
+    chip obedecia ao perfil e o deixava desligado). As duas portas faziam o
+    contrário uma da outra, e a bancada de 29/09 (achado 13) mediu o preço:
+    ela tocou o chip, e o cursor não andou, porque o Freestyle dizia o
+    `{false, 6, 1}` que a janela copiara do estado vivo. As velocidades
+    continuam saindo do perfil.
+
+    MORDIDA: devolva ao arranjo o ramo que obedece ao `enabled` do perfil, e a
+    célula reprova com o mouse desligado.
     """
     _gravar_flag_do_mouse(FLAG_DA_SESSAO)
     desligado = dict(PERFIL_DA_NAVEGACAO)
     desligado["mouse"] = {"enabled": False, "speed": 11, "scroll_speed": 4}
     d = _daemon_com(desligado)
 
-    d.aplicar_o_arranjo_do_desktop(origin="manual", forcar_mouse=True)
+    if porta == "chip":
+        d.aplicar_o_arranjo_do_desktop(origin="manual")
+    else:
+        from hefesto_dualsense4unix.daemon.subsystems import hotkey
+
+        hotkey._aplicar_ponte(d, hotkey.PONTE_MOUSE_TECLADO)
 
     args = d.chamada("set_mouse_emulation")
-    assert args is not None, f"o socorro não chegou ao mouse: {d.metodos()}"
+    assert args is not None, f"a entrada não chegou ao mouse: {d.metodos()}"
     ligado, speed, scroll = args
     assert ligado is True, (
-        "o PS + R3 obedeceu ao `mouse.enabled: false` do perfil e deixou ela "
-        "sem cursor no modo que existe para lhe devolver o cursor."
-    )
+        f"a entrada pela porta {porta!r} obedeceu ao `mouse.enabled: false` do "
+        "perfil e deixou ela sem cursor no modo que existe para dar o cursor")
     assert (speed, scroll) == (11, 4), (
-        f"o socorro ligou o mouse com ({speed}, {scroll}) e o perfil diz (11, 4)"
-    )
-
-
-def test_o_clique_no_chip_obedece_ao_perfil_que_desliga_o_mouse() -> None:
-    """O contrapeso do socorro: sem `forcar_mouse`, a escolha dela vence.
-
-    Sem esta metade, `forcar_mouse` viraria "sempre liga" e o perfil voltaria a
-    não ser lido — a cura teria o nome novo e o comportamento velho.
-    """
-    _gravar_flag_do_mouse(FLAG_DA_SESSAO)
-    desligado = dict(PERFIL_DA_NAVEGACAO)
-    desligado["mouse"] = {"enabled": False, "speed": 11, "scroll_speed": 4}
-    d = _daemon_com(desligado)
-    d.config.mouse_emulation_enabled = True
-    d._mouse_device = object()
-
-    d.aplicar_o_arranjo_do_desktop(origin="manual")
-
-    args = d.chamada("set_mouse_emulation")
-    assert args is not None, f"o chip não chegou ao mouse: {d.metodos()}"
-    assert args[0] is False, (
-        "o chip ligou o mouse que o perfil dela manda deixar desligado — o "
-        "perfil deixou de ser lido."
+        f"a entrada ligou o mouse com ({speed}, {scroll}) e o perfil diz (11, 4)"
     )
 
 
