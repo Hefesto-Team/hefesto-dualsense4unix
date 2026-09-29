@@ -2837,9 +2837,9 @@ def at_linha(rot, dica, campo):
 
 D_MESA = ajuda(
     "Os controles ligados agora, cada um na cor do seu plástico.<br><br>"
-    f"<b>O cursor do PC é um só:</b> mouse, teclado e os {len(COMBOS)} gestos saem "
-    "do controle marcado «Navega o PC» aqui embaixo. Os outros chegam ao jogo e "
-    "não mexem no cursor.<br><br>"
+    "<b>O cursor do PC é um só:</b> mouse e teclado saem do controle marcado "
+    "«Navega o PC» aqui embaixo; os outros chegam ao jogo e não mexem no cursor. "
+    f"Os {len(COMBOS)} gestos valem em qualquer controle.<br><br>"
     "O alvo de um ajuste se escolhe na <b>fita do topo</b>; estes cartões são "
     "leitura.")
 

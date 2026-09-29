@@ -6447,10 +6447,10 @@ class Daemon:
                 if self._keyboard_device is not None and emu_active:
                     self._dispatch_keyboard_emulation(emu_buttons)
 
-            # OS-ATALHOS-NA-ESPERA-01 (24/09/2026): os atalhos do PS leem os
-            # botões de QUEM SEGURA os atalhos — o primário, ou, com o posto de
-            # P1 vago, o próximo da fila (`poll.botoes_dos_atalhos`). O vpad do
-            # P1 recebeu `buttons_pressed` lá em cima, e só ele.
+            # OS ATALHOS DO PS LEEM OS BOTÕES DE CADA CONTROLE NA MESA, cada um
+            # com o aperto dele (`poll.botoes_de_cada_controle`, desde o item 5
+            # da O-MODO-XBOX-NAO-E-QUEDA-02). O vpad do P1 recebeu
+            # `buttons_pressed` lá em cima, e só ele.
             from hefesto_dualsense4unix.daemon.subsystems.poll import observar_os_atalhos
 
             observar_os_atalhos(self, buttons_pressed, now=tick_started)

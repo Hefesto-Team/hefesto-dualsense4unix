@@ -255,7 +255,7 @@ GUARDA = {
 # DualSense — medido nesta casa e escrito no esquema (`:1002`).
 #
 # `AA:BB:` é o endereço DIDÁTICO da casa: nada de endereço real em arquivo
-# versionado (GUIA.md, e os dois portões que a regra tem).
+# versionado (regra da casa, e os dois portões que a guardam).
 ID_DA_PECA = {"p1": "AA:BB:CC:00:00:01", "p2": "AA:BB:CC:00:00:02",
               "p3": "AA:BB:CC:00:00:03", "p4": "AA:BB:CC:00:00:04"}
 
