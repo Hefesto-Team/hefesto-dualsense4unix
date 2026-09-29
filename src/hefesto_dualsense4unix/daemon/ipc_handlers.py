@@ -470,13 +470,6 @@ def _par_de_motores(cru: Any) -> list[int] | None:
     return [int(cru[0]), int(cru[1])]
 
 
-def _amostra_da_luz_do_mic(cru: Any) -> int | None:
-    """O `common[8]` do último pedido de luz do jogo, ou None (nunca um mock)."""
-    if isinstance(cru, bool) or not isinstance(cru, int):
-        return None
-    return int(cru)
-
-
 def _contador_do_vpad(vp: Any, nome: str) -> int:
     """Um contador cumulativo do vpad, com tipagem ESTRITA; 0 quando não há.
 
@@ -8383,6 +8376,13 @@ def _fora_da_mesa(mesa: list[tuple[int, int, str, Any]], numero: int) -> bool:
     if numero <= sum(1 for e in mesa if _ligado(e)):
         return False
     return numero > len(mesa) or not _ligado(mesa[numero - 1])
+
+
+def _amostra_da_luz_do_mic(cru: Any) -> int | None:
+    """O `common[8]` do último pedido de luz do jogo, ou None (nunca um mock)."""
+    if isinstance(cru, bool) or not isinstance(cru, int):
+        return None
+    return int(cru)
 
 
 __all__ = ["DraftApplier", "IpcHandlersMixin"]
