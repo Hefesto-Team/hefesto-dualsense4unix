@@ -68,8 +68,9 @@ RECONNECT_ONLINE_CHECK_INTERVAL_SEC: float = 30.0
 #: eventos já dizem: o `connect()` (a rajada da libudev), a sonda forçada de
 #: `/proc/*/fd` e o rehide (as duas rajadas por minuto do broker na sonda S.4).
 #: Com o dono, a volta acorda por evento — a geração de nomes de `/dev/input`
-#: ou dos `hidraw*` de `/dev`, a firma de um nó do físico, o barramento HID —
-#: e este teto fica como rede. Sem o dono, os 30 s de sempre.
+#: ou dos `hidraw*` de `/dev`, a firma de um nó do físico, as permissões de
+#: `/dev/input`, o barramento HID — e este teto fica como rede. Sem o dono, os
+#: 30 s de sempre.
 TETO_DA_VOLTA_PELO_EVENTO_SEC: float = 300.0
 
 #: Fatia curta do sleep ONLINE do reconnect_loop (FEAT-BACKEND-HOTPLUG-FAST-01).
@@ -2131,6 +2132,23 @@ def _firmas_dos_nos(daemon: DaemonProtocol) -> dict[str, tuple[int, int] | None]
     return {no: firma_do_no(no) for no in sorted(set(nos.values()))}
 
 
+def _permissoes_das_entradas() -> tuple[int, ...] | None:
+    """A geração de PERMISSÕES de `/dev/input` no dono do evento; None sem ele.
+
+    O-REPOUSO-ESPERA-O-EVENTO-01, família 5 (conferência). O rehide esconde o
+    `hidraw` do físico E os nós de entrada dele (o `fechar_entradas` do
+    broker); a firma cobre só o `hidraw`. A ACL que o udev devolve só aos nós
+    de entrada (um `udevadm trigger` do subsistema `input`) chega como
+    `IN_ATTRIB` em `/dev/input`, e sem este olhar esperaria o teto de 300 s,
+    onde o relógio de 30 s a pegava. Anotada depois da rodada, como a firma:
+    o próprio rehide faz `chmod` nesses nós.
+    """
+    dono = _ode.dono_armado()
+    if dono is None:
+        return None
+    return dono.ficha((dono.raiz_das_entradas, _ode.PERMISSOES))
+
+
 async def _wait_online_or_hotplug(
     daemon: DaemonProtocol, watch: InputDirWatch
 ) -> bool:
@@ -2154,8 +2172,10 @@ async def _wait_online_or_hotplug(
     O-REPOUSO-ESPERA-O-EVENTO-01, família 5 (29/09/2026): com o dono do evento
     armado, o teto é `TETO_DA_VOLTA_PELO_EVENTO_SEC` e a espera acorda também
     quando o nome de um `hidraw*` nasce ou some em `/dev` (o watch que o laço
-    guarda no daemon, `_watch_dos_hidraw`) ou quando a firma de um nó dos
-    controles muda. **As firmas se anotam aqui, DEPOIS da
+    guarda no daemon, `_watch_dos_hidraw`), quando a firma de um nó dos
+    controles muda ou quando um nó de `/dev/input` muda de permissão (a ACL
+    que volta ao nó de entrada do físico). **As firmas e as permissões se
+    anotam aqui, DEPOIS da
     própria rodada**: o `connect()` e o rehide mexem nos nós (o broker faz
     `chmod` ao esconder e ao expor para o `hidapi`), e a volta que acordasse com
     o próprio rastro rodaria de novo a cada fatia. Os NOMES seguem anotados
@@ -2173,6 +2193,7 @@ async def _wait_online_or_hotplug(
         TETO_DA_VOLTA_PELO_EVENTO_SEC if pelo_evento else RECONNECT_ONLINE_CHECK_INTERVAL_SEC
     )
     firmas = _firmas_dos_nos(daemon) if pelo_evento else None
+    permissoes = _permissoes_das_entradas() if pelo_evento else None
     nos = getattr(daemon, "_watch_dos_hidraw", None) if pelo_evento else None
     elapsed = 0.0
     while elapsed < teto:
@@ -2205,6 +2226,11 @@ async def _wait_online_or_hotplug(
             return True
         if firmas is not None and _firmas_dos_nos(daemon) != firmas:
             logger.debug("volta_acordada", pelo="firma_do_no")
+            return True
+        # A ACL que volta a um nó de ENTRADA do físico (um `udevadm trigger` de
+        # `input`) não muda a firma do `hidraw`, e o rehide fecha os dois.
+        if permissoes is not None and _permissoes_das_entradas() != permissoes:
+            logger.debug("volta_acordada", pelo="permissao_de_entrada")
             return True
         # O-CABO-ASSUME-DO-RADIO-01: o cabo que o kernel recusa não muda
         # `/dev/input`; ele aparece no barramento HID.

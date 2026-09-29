@@ -1352,6 +1352,29 @@ class TestAVoltaPeloEvento:
         volta.rodar()
         assert len(volta.rehides) == 2 and 41.0 <= volta.rehides[1] <= 43.0
 
+    def test_a_acl_devolvida_ao_no_de_entrada_roda_o_rehide(
+        self, mesa_do_rádio: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O `udevadm trigger` de `input` devolve a ACL só aos nós de entrada.
+
+        O rehide esconde o `hidraw` E os nós de entrada do físico (o
+        `fechar_entradas` do broker), e a firma do `hidraw` não muda quando só o
+        nó de entrada volta a abrir. É o `IN_ATTRIB` de `/dev/input` (a geração
+        de permissões, anotada depois da rodada) que acorda a volta.
+        """
+        entradas, dev = mesa_do_rádio
+        no_de_entrada = entradas / "event7"
+        no_de_entrada.write_text("")
+        os.chmod(no_de_entrada, 0o600)
+        daemon = _DaemonDoRepouso(_ControleDoRepouso(dev))
+
+        def devolver_a_acl() -> None:
+            os.chmod(no_de_entrada, 0o660)
+
+        volta = _VoltaDeMentira(monkeypatch, daemon, ate=100.0, agenda={41.0: devolver_a_acl})
+        volta.rodar()
+        assert len(volta.rehides) == 2 and 41.0 <= volta.rehides[1] <= 43.0, volta.rehides
+
     def test_o_barramento_hid_que_muda_roda_a_volta(
         self, mesa_do_rádio: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
     ) -> None:
