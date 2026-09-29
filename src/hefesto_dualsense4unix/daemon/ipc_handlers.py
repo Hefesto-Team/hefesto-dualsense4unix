@@ -3457,9 +3457,6 @@ class IpcHandlersMixin:
             # lado para a tela não digitar o 100.
             result["rumble_motores"] = {}
             result["rumble_motor_pct_padrao"] = MOTOR_PCT_PADRAO
-            from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
-
-            result["haptica_pct_padrao"] = HAPTICA_PCT_PADRAO
             with contextlib.suppress(Exception):
                 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
                     _motores_do_perfil_ativo,
@@ -7761,6 +7758,11 @@ class IpcHandlersMixin:
         with contextlib.suppress(Exception):
             self._merge_radio(entries)
             result["radio_ar"] = self._ar_por_adaptador(entries)
+        # O PADRÃO DO GANHO DA HÁPTICA, ao lado do ganho de cada controle que o
+        # `_merge_radio` publica: a tela liga a linha nele, e não num digitado.
+        from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
+
+        result["haptica_pct_padrao"] = HAPTICA_PCT_PADRAO
         with contextlib.suppress(Exception):
             result["radio_governador"] = self._o_governador_publica()
         with contextlib.suppress(Exception):
