@@ -247,6 +247,54 @@ def test_outro_adaptador_que_nao_se_leu_e_nao_sei() -> None:
     assert isinstance(vaga, gov.Vaga) and vaga.alem_do_limite is True
 
 
+def test_a_lista_que_o_kernel_nao_deu_e_nao_sei() -> None:
+    """O kernel nem listou os adaptadores (``SEM_BLUETOOTH``, a chave vazia do
+    medidor): a lista é «não sei», e não vazia. A terceira espera a medida.
+
+    MORDIDA: leia a lista como lida mesmo com ``SEM_BLUETOOTH`` e a terceira
+    sobe na hora além do limite, com o diário dizendo «não há».
+    """
+    relogio, registro = _Relogio(), _Diario()
+    medidor = _MedidorDaMesa({"": ar.SEM_BLUETOOTH})
+    governador = _governador(medidor, relogio, registro)
+    governador.tique()
+    _duas_de_pe(governador)
+    espera = governador.pedir_vaga(CONTROLE_3, "som")
+    assert isinstance(espera, gov.Recusa), "a lista que o kernel não deu virou «não há vaga»"
+    assert espera.motivo == gov.MOTIVO_SEM_MEDIDA
+
+
+def test_o_nao_sei_que_volta_depois_da_medida_espera_de_novo() -> None:
+    """O relógio do teto é da FALTA de medida: a medida inteira que chega o
+    zera. Um «não sei» que volta depois (o outro adaptador que falha de novo
+    a leitura) espera a medida outra vez, e não sobe na hora pelo teto velho.
+
+    MORDIDA: não zere o relógio quando a medida chega e a terceira sobe na
+    hora, além do limite, pelo teto de um «não sei» que já tinha acabado.
+    """
+    relogio, registro = _Relogio(), _Diario()
+    medidor = _MedidorDaMesa({ADAPTADOR_A: "", ADAPTADOR_B: ar.IOCTL_FALHOU})
+    governador = _governador(medidor, relogio, registro)
+    governador.tique()
+    _duas_de_pe(governador)
+    assert isinstance(governador.pedir_vaga(CONTROLE_3, "som"), gov.Recusa)
+    relogio.agora += gov.TETO_DO_NAO_SEI_S
+    governador.tique()
+    alem = governador.pedir_vaga(CONTROLE_3, "som")
+    assert isinstance(alem, gov.Vaga) and alem.sem_medida is True
+    alem.soltar("sem som")
+
+    medidor.motivos[ADAPTADOR_B] = ""  # a leitura do B voltou: medida inteira
+    relogio.agora += gov.PERIODO_S
+    governador.tique()
+    relogio.agora += 60.0
+    medidor.motivos[ADAPTADOR_B] = ar.IOCTL_FALHOU  # e falhou de novo
+    governador.tique()
+    espera = governador.pedir_vaga(CONTROLE_3, "som")
+    assert isinstance(espera, gov.Recusa), "o «não sei» novo subiu pelo teto do velho"
+    assert espera.motivo == gov.MOTIVO_SEM_MEDIDA
+
+
 def test_sem_cabo_o_governador_sem_medidor_segue_como_antes() -> None:
     """Sem medidor (o modo falso) não há medida a esperar: a R4 é a de sempre."""
     relogio, registro = _Relogio(), _Diario()
@@ -363,6 +411,23 @@ def test_a_ordem_de_chegada_nao_escolhe_quem_perde(ordem: tuple[str, ...]) -> No
     partes, _v, _g, _r = _partes(ordem)
     assert min(partes.values()) >= 0.60, partes
     assert _diferenca(partes) <= 0.10, partes
+
+
+def test_duas_pontes_num_adaptador_que_escoa_uma_revezam_sem_cair() -> None:
+    """Dentro do limite, com o adaptador escoando só uma ponte (o rádio
+    ruim): as duas revezam, cada uma com metade, e nenhuma cai. O adaptador
+    escoa o tempo todo, e o ceder de uma ponte na sua vez não é parada.
+
+    MORDIDA: deixe toda janela do episódio andar o relógio do teto (e não só
+    a do adaptador inteiro) e as duas caem, com a fila parada no diário.
+    """
+    partes, vagas, _g, registro = _partes(
+        (CONTROLE_1, CONTROLE_2), medidor=_AdaptadorQueEscoaDuas(capacidade=24)
+    )
+    assert min(partes.values()) >= 0.45, partes
+    assert _diferenca(partes) <= 0.10, partes
+    assert not any(v.derrubar for v in vagas), "o reveza virou queda"
+    assert registro.de(gov.FILA_PARADA) == []
 
 
 def test_o_adaptador_parado_segue_cedendo_inteiro() -> None:
