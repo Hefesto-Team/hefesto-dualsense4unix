@@ -291,3 +291,43 @@ async def test_a_partida_nao_passa_por_cima_do_controle_que_ela_escolheu(
     assert no_ar.esta(P1) and no_ar.esta(P2), (
         "respeitar a escolha dela custou o AR de um dos dois"
     )
+
+
+#: A mesa de um a quatro jogadores, na faixa forjada da casa.
+MESA_DE_QUATRO = ("aabbcc0000b1", "aabbcc0000b2", "aabbcc0000b3", "aabbcc0000b4")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("quantos", [1, 2, 4], ids=["um", "dois", "quatro"])
+async def test_a_partida_com_o_connect_lento_nasce_cada_controle_no_ar(
+    mesa: _Mesa, monkeypatch: pytest.MonkeyPatch, quantos: int
+) -> None:
+    """O connect de boot mais lento que o primeiro tique: o runner do CI.
+
+    `lifecycle.py` cria o poll loop ANTES do connect de boot, e o nascimento de
+    cada controle é pedido depois de dois `await` por alvo. Com 0,2 s em cada
+    `reapply_mic_after_connect`, o primeiro tique chega antes de qualquer pedido,
+    e a barreira que esperava o tique parava o daemon antes do nascimento (a
+    corrida 36503520655, no 3.11). MORDIDA (O-CI-DA-DEV-VOLTA-A-VERDE-02): volte
+    a barreira para o `poll.tick` e os três reprovam.
+    """
+    from hefesto_dualsense4unix.daemon import connection
+
+    original = connection.reapply_mic_after_connect
+
+    async def _lento(daemon: Any, *args: Any, **kwargs: Any) -> Any:
+        await asyncio.sleep(0.2)
+        return await original(daemon, *args, **kwargs)
+
+    monkeypatch.setattr(connection, "reapply_mic_after_connect", _lento)
+    # A emulação de vários controles não é desta régua (o mesmo motivo do caso de dois).
+    monkeypatch.setattr(
+        Daemon, "aplicar_gamepad_para_multiplos_controles", lambda self: None
+    )
+    uniqs = MESA_DE_QUATRO[:quantos]
+    daemon = await _subir_e_esperar_a_partida(mesa, _config(), uniqs)
+
+    no_ar = hotkey._no_ar_da_sessao(daemon)
+    fora = [u for u in uniqs if not no_ar.esta(u)]
+    assert not fora, f"com o connect lento, {len(fora)} de {quantos} controle(s) não nasceram no ar"
+    assert mesa.eleitor.chamadas == [uniqs[0]], mesa.eleitor.chamadas
