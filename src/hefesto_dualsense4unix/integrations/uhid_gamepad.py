@@ -360,8 +360,6 @@ _ATIVIDADE_POR_CATEGORIA: dict[str, str] = {
 #:   [43]     player_leds (ucPadLights)
 #:   [44..46] lightbar_red/green/blue
 _VALID_FLAG1_OFFSET = 1
-#: `mute_button_led` do `struct dualsense_output_report_common` (`common[8]`).
-_MIC_LED_OFFSET = 8
 _TRIGGER_R_BLOCK_OFFSET = 10
 _TRIGGER_L_BLOCK_OFFSET = 21
 _TRIGGER_BLOCK_LEN = 11
@@ -3037,6 +3035,12 @@ class _MacsDosVpadsVivos:
 
 #: O dono, um só por processo — como a lista do driver é uma só no kernel.
 _MACS_DOS_VPADS_VIVOS = _MacsDosVpadsVivos()
+
+
+#: O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01 — `mute_button_led` do
+#: `struct dualsense_output_report_common` (`common[8]`). Mora no fim do
+#: módulo para não deslocar as citações `arquivo:linha` do meio.
+_MIC_LED_OFFSET = 8
 
 
 __all__ = [
