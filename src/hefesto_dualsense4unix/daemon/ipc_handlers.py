@@ -7888,7 +7888,8 @@ class IpcHandlersMixin:
     #: resto do arranjo (eixo, teto, pixels por grau) mora no perfil: o IPC não
     #: abre uma porta que a tela não tem.
     _CAMPOS_DA_MIRA = ("ligada", "sensibilidade", "zona_morta_graus_s",
-                       "gatilho", "inverter_horizontal", "inverter_vertical")
+                       "gatilho", "inverter_horizontal", "inverter_vertical",
+                       "inclinacao", "toque")
 
     def _merge_mira(self, entries: list[dict[str, Any]]) -> None:
         """``entry["mira"]`` de cada controle: o chip e o bloco da Calibrar.
@@ -7913,9 +7914,15 @@ class IpcHandlersMixin:
                 continue
             vale = rot.da_peca(store, uniq, mesa)
             numeros = rot.parametros_da_peca(store, uniq)
+            # A MIRA É O GIRO: desde 28/09 (NO-MODO-XBOX-TUDO-FUNCIONA-01) o
+            # `da_peca` devolve também a peça que só toca ou só inclina, e o chip
+            # da Mira lê o giro, e só ele. O toque e a inclinação vêm ao lado.
+            mira = vale if vale is not None and vale.ligado else None
             entry["mira"] = {
-                "ligada": vale is not None,
-                "destino": vale.destino if vale is not None else rot.DESTINO_NENHUM,
+                "ligada": mira is not None,
+                "destino": mira.destino if mira is not None else rot.DESTINO_NENHUM,
+                "toque": vale.toque if vale is not None else rot.DESTINO_NENHUM,
+                "inclinacao": vale is not None and vale.inclina,
                 "sensibilidade": numeros.sensibilidade,
                 "zona_morta_graus_s": numeros.zona_morta_graus_s,
                 "gatilho": numeros.gatilho,
@@ -7928,7 +7935,11 @@ class IpcHandlersMixin:
 
         Params: ``{uniq?: str, ligada?: bool, sensibilidade?: 1-12,
         zona_morta_graus_s?: 0-60, gatilho?: str | null,
-        inverter_horizontal?: bool, inverter_vertical?: bool}``. `uniq` omitido
+        inverter_horizontal?: bool, inverter_vertical?: bool,
+        inclinacao?: bool, toque?: "nenhum" | "cursor" | "zonas"}``. Os dois
+        últimos são de 28/09 (NO-MODO-XBOX-TUDO-FUNCIONA-01): o chip da
+        inclinação (o acelerômetro no analógico esquerdo) e o do touchpad (o do
+        computador, o cursor ou as zonas). `uniq` omitido
         = o alvo de saída, e sem ele o primário (`_uniq_do_primario`); campo
         omitido = **não mexe naquele campo**. A palavra dela, 23/09/2026:
         *"Usar os movimentos do controle como mira (analógico R), pra pessoas
@@ -7972,8 +7983,8 @@ class IpcHandlersMixin:
             raise ValueError(
                 f"mira.set não conhece {desconhecidos}: a tela oferece o chip "
                 "(`ligada`), os dois deslizantes (`sensibilidade`, "
-                "`zona_morta_graus_s`), o `gatilho` e os dois `inverter_*`, e o "
-                "resto do arranjo mora no perfil"
+                "`zona_morta_graus_s`), o `gatilho`, os dois `inverter_*`, a "
+                "`inclinacao` e o `toque`, e o resto do arranjo mora no perfil"
             )
         pedidos: dict[str, Any] = {}
         if "ligada" in params:
@@ -8016,6 +8027,28 @@ class IpcHandlersMixin:
                 if not isinstance(valor, bool):
                     raise ValueError(f"mira.set: '{lado}' precisa ser boolean")
                 pedidos[lado] = valor
+        # O TOQUE E A INCLINAÇÃO — NO-MODO-XBOX-TUDO-FUNCIONA-01 (28/09/2026), a
+        # resposta dela de ~16h50: o chip da inclinação manda o acelerômetro ao
+        # analógico ESQUERDO (o que falta a quem só alcança o lado direito), e o
+        # do toque escolhe entre o computador, o cursor e as zonas.
+        if "inclinacao" in params:
+            valor = params["inclinacao"]
+            if not isinstance(valor, bool):
+                raise ValueError(
+                    "mira.set: 'inclinacao' precisa ser boolean — true manda a "
+                    "inclinação ao analógico esquerdo, false a apaga"
+                )
+            pedidos["acelerometro"] = (
+                rot.DESTINO_ANALOGICO_ESQUERDO if valor else rot.DESTINO_NENHUM
+            )
+        if "toque" in params:
+            valor = params["toque"]
+            if valor not in rot.TOQUES:
+                raise ValueError(
+                    f"mira.set: 'toque' é um de {', '.join(rot.TOQUES)} — o "
+                    "touchpad do computador, o cursor ou as zonas"
+                )
+            pedidos["toque"] = valor
         if not pedidos:
             raise ValueError(
                 f"mira.set exige ao menos um de {', '.join(self._CAMPOS_DA_MIRA)} "
@@ -8054,7 +8087,8 @@ class IpcHandlersMixin:
         nativo = bool(
             self.daemon is not None and getattr(self.daemon, "is_native_mode", bool)()
         )
-        if nativo and "ligada" in params:
+        # Os três chips acendem uma rota que precisa do controle virtual.
+        if nativo and {"ligada", "inclinacao", "toque"} & set(params):
             logger.info("mira_set_recusado_no_nativo", uniq=chave)
             return {
                 "status": "nativo",
@@ -8122,6 +8156,8 @@ class IpcHandlersMixin:
             gatilho=arranjo.gatilho,
             inverter_horizontal=arranjo.inverter_horizontal,
             inverter_vertical=arranjo.inverter_vertical,
+            toque=arranjo.toque,
+            acelerometro=arranjo.acelerometro,
             nativo=nativo,
         )
         return {
@@ -8135,6 +8171,8 @@ class IpcHandlersMixin:
             "gatilho": arranjo.gatilho,
             "inverter_horizontal": arranjo.inverter_horizontal,
             "inverter_vertical": arranjo.inverter_vertical,
+            "toque": arranjo.toque,
+            "inclinacao": arranjo.inclina,
             "alcance": {"tique": "nao_se_aplica" if nativo else "aplicado"},
             "ressalva": ressalva,
         }
