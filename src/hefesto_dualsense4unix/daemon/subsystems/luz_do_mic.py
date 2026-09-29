@@ -117,17 +117,26 @@ nada — é o mesmo `bool(None)` que esta casa já publicou como ATIVO sobre um
 controle que tinha acabado de cair. Por isso `decidir` devolve `None` (*"não
 sei, não escreva"*), que é um valor de primeira classe aqui.
 
-**A INVALIDAÇÃO PELA BORDA, e ela existe porque há DOIS escritores.** A
-eleição (`hotkey._eleger_ou_devolver`) também escreve neste byte, por
-`set_mic_led(aceso, uniq=)`, na borda do botão. Se este laço confiasse na
-memória do que ELE escreveu, um valor posto pela eleição ficaria de pé para
-sempre (nós não reescrevemos o que achamos já estar lá). Então o laço assina
+**A BORDA É SEGURADA, e isso existe porque há DOIS escritores.** A eleição
+(`hotkey._eleger_ou_devolver`) também escreve neste byte, por
+`set_mic_led(aceso, uniq=)`, na borda do botão. O laço assina
 `EventTopic.MIC_DA_MESA` — a mesma borda que a eleição consome, já com sossego
-e carência aplicados pelo `mic_da_mesa` — e ESQUECE o que escreveu naquele
-`uniq`, reescrevendo no tique seguinte. Isso limita a briga a um tique em vez
-de deixá-la eterna. **A briga em si é decisão de quem coordena**, e está no
-relatório: ou a eleição para de escrever a luz (arquivo alheio), ou os dois
-alternam visivelmente.
+e carência aplicados pelo `mic_da_mesa` — e, naquele `uniq`, NÃO escreve até o
+ato tomar a posse do mudo (`microphone_mute_for` deixa de ser `None`) ou até
+`SEGURA_A_BORDA_S`. Depois reescreve o que decidiu, uma vez, porque a eleição
+pode ter pintado por cima.
+
+Até 29/09/2026 o laço ESQUECIA o que escreveu e relia o bit de mudo no tique
+seguinte — e esse bit ainda era o de antes do aperto: o `readInput` lia uma
+fila de 63 reports, e na bancada de 29/09 a luz repintou o estado velho por
+cima da eleição por ~2,3 s, com os quatro no rádio
+(O-BOTAO-DO-MIC-CHEGA-NA-HORA-01). A leitura fresca não basta sozinha: o
+`mudo` da borda não é o que o ato faz (`hotkey._o_que_a_borda_pede` troca o
+calar por LIGAR no primeiro aperto depois de conectar), então a luz espera o
+ato e decide pelo que ele deixou (ver `_mudo`). No caso de sempre, os dois
+escritores escrevem o mesmo valor na mesma borda. **A briga quando a eleição
+RECUSA** (ela apaga, e o firmware livre acende) segue aberta, para quem
+coordena.
 """
 
 from __future__ import annotations
@@ -256,6 +265,15 @@ INTERVALO_DE_QUEM_OUVE_S: float = 1.0
 #: O que QUEM OUVE lê no retrato do som: os fluxos de gravação e as fontes.
 _O_QUE_A_LUZ_LE: tuple[str, ...] = ("source-outputs", "sources")
 
+#: Quanto a luz segura a borda de um controle, esperando o ato tomar a posse do
+#: mudo (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01, 29/09/2026). Na bancada de 29/09 o
+#: ato levou ~0,1 s da borda à escrita (`mic_da_mesa_borda` 47,979 →
+#: `microphone_mute_set` 48,075); um segundo é dez vezes isso, e é o mesmo
+#: sossego em que o `mic_da_mesa` não aceita outra borda do mesmo controle.
+#: Quando o ato não escreve (o firmware já está como ele pede), a luz decide
+#: pelo firmware passado o teto — e quem pintou no meio foi a eleição.
+SEGURA_A_BORDA_S: float = 1.0
+
 #: O quarto estado é a bateria, e o número é dela: *"pisca lento, se a bateria
 #: do controle tiver abaixo de 30%"*. Abaixo, não abaixo-ou-igual.
 LIMIAR_DE_BATERIA_PCT: int = 30
@@ -382,14 +400,45 @@ def decidir(
     return ACESA
 
 
-def _mudo(backend: Any, uniq: str) -> bool | None:
-    """O mudo do FIRMWARE daquele controle, ou `None` quando ele não disse.
+def _posse_do_mudo(backend: Any, uniq: str) -> bool | None:
+    """O mudo que o HEFESTO afirma no firmware, ou `None` quando o dono é o kernel.
 
-    `audio_status_for` é a leitura direta do byte de estado que veio no report
-    de INPUT (`core/backend_pydualsense.py:5490`). **Não é `microphone_mute_for`
-    de propósito**: aquele diz quem MANDA (o valor que o Hefesto afirma), não o
-    que está valendo no aparelho, e a §1.1 fala do firmware.
+    `microphone_mute_for` responde quem MANDA no `common[9]`: `True`/`False`
+    são ordens que vão em todo report, `None` é a posse do `hid-playstation`.
+    Backend sem o leitor (dublê enxuto, controle genérico) responde como a
+    posse do kernel — a mesma leitura do `hotkey._a_posse_nao_desdiz`.
     """
+    ler = getattr(backend, "microphone_mute_for", None)
+    if not callable(ler):
+        return None
+    try:
+        valor = ler(uniq)
+    except Exception as exc:  # pragma: no cover - defensivo
+        logger.warning("luz_do_mic_posse_falhou", uniq=uniq, err=str(exc))
+        return None
+    return valor if isinstance(valor, bool) else None
+
+
+def _mudo(backend: Any, uniq: str) -> bool | None:
+    """O mudo que vale naquele controle, ou `None` quando ninguém disse.
+
+    Sem posse nossa, é o do FIRMWARE: `audio_status_for` é a leitura do byte de
+    estado que veio no report de INPUT, e a §1.1 fala do firmware. Com a
+    volta que esvazia a fila, esse byte tem no máximo uma volta de idade.
+
+    **Com a posse NOSSA, é o que o Hefesto afirma (`microphone_mute_for`) —
+    a exceção de 29/09/2026** (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01). Até ali esta
+    função não lia a posse *«de propósito»*, porque ela diz quem MANDA e não o
+    que está valendo. Mas quem manda é obedecido na volta seguinte: a posse é
+    o que o firmware vai dizer, e o bit lido é o que ele dizia antes da ordem.
+    Pintar o bit enquanto a ordem viaja era a luz repintando o estado velho
+    por cima do ato. É a mesma regra do `hotkey._a_posse_nao_desdiz`, que
+    também só pula a escrita com a posse do kernel ou igual ao que o ato pede:
+    as duas decidem pelo `microphone_mute_for` quando ele é uma ordem.
+    """
+    posse = _posse_do_mudo(backend, uniq)
+    if posse is not None:
+        return posse
     ler = getattr(backend, "audio_status_for", None)
     if not callable(ler):
         return None

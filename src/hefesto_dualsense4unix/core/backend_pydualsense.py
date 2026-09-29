@@ -243,10 +243,16 @@ INIT_TIMEOUT_SEC: float = float(os.environ.get("HEFESTO_DUALSENSE4UNIX_INIT_TIME
 #: saturando o controlador USB compartilhado — e o adaptador Bluetooth vive no
 #: MESMO controlador (família do storm), degradando o link BT
 #: (`DualSense input CRC's check failed`) e matando o output do controle BT.
-#: Como o INPUT vem do evdev (não do `read` da pydualsense), dá pra throttlar o
-#: ciclo sem perder responsividade: ~125Hz de output é de sobra para
-#: gatilhos/LED/rumble, e a leitura de bateria/transporte é esparsa.
+#: ~125Hz de output é de sobra para gatilhos/LED/rumble.
 #: BUG-MULTI-CONTROLLER-BT-CRC-CONTENTION-01.
+#:
+#: **O throttle marca a SAÍDA, e não a idade da entrada** (O-BOTAO-DO-MIC-CHEGA-
+#: NA-HORA-01, 29/09/2026). A premissa de 27/06 era *«o INPUT vem do evdev»*, e
+#: ela caiu em 02/09 (`77ec100ff`): o botão do microfone e o bit de mudo só
+#: chegam pelo report cru desta volta. Lendo UM report por volta de uma fila de
+#: 63 (a do hidraw, por fd), cada dado lido tinha 63 voltas de idade — 2,1 s com
+#: quatro controles, medidos na bancada de 29/09. Desde então a volta esvazia a
+#: fila (`_esvaziar_a_fila`), e o dado lido tem no máximo uma volta.
 REPORT_THREAD_THROTTLE_SEC: float = float(
     os.environ.get("HEFESTO_DUALSENSE4UNIX_REPORT_THROTTLE_SEC", "0.008")
 )
@@ -254,8 +260,15 @@ REPORT_THREAD_THROTTLE_SEC: float = float(
 #: Teto do throttle adaptativo por-controle (PERF-MULTI-CONTROLLER-01): com N
 #: controles o throttle vira `base * N` capado aqui — 2 controles ≈ 60Hz de
 #: output, 4 ≈ 30Hz. Output é LED/trigger/rumble (latência de até ~32ms é
-#: imperceptível); o INPUT vem do evdev e não passa por este ciclo.
+#: imperceptível), e a entrada lida na volta tem no máximo esta idade, porque a
+#: volta esvazia a fila.
 REPORT_THREAD_THROTTLE_MAX_SEC: float = 0.032
+
+#: Teto de leituras por volta (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01, 29/09/2026). A
+#: fila do hidraw tem 64 posições por fd, 63 úteis (`uapi/linux/hidraw.h:56`):
+#: 64 leituras esvaziam uma fila cheia e mais um report que chegue no meio. Com
+#: quatro no rádio a ~700 reports/s e 33 ms de volta, a volta lê ~23.
+LEITURAS_POR_VOLTA: int = 64
 
 #: Keepalive do write OUT quando o report não mudou (PERF-MULTI-CONTROLLER-01):
 #: o firmware retém o último estado, então reescrever um report IDÊNTICO a
@@ -276,14 +289,13 @@ OUT_REPORT_KEEPALIVE_SEC: float = 0.5
 OUT_REPORT_KEEPALIVE_CONFIRMACAO_SEC: float = 2.0
 
 #: LACO-DE-ESCRITA-02 (15/08/2026): por quanto tempo a ENTRADA de um controle
-#: pode ficar muda antes de virar UMA linha de aviso no journal. O handle é
-#: aberto sem `blocking=True`, então `hidapi.Device.read` devolve `None` na hora
-#: quando não há dado — e isso NÃO é erro, é o contrato da leitura
-#: não-bloqueante. Mas a fila do `hidraw` vive cheia (o laço consome ~31
-#: reports/s de um fluxo de 200-360/s com a mesa cheia), então para o `read`
-#: devolver `None` o aparelho precisa ter parado por tempo suficiente para
-#: drenar a fila inteira — ordem de segundos. Um segundo já é MUITO acima do
-#: normal e ainda assim rende, no máximo, uma linha por episódio.
+#: pode ficar muda antes de virar UMA linha de aviso no journal. A leitura da
+#: volta tem prazo zero (`_hid_set_nonblocking`, depois do `init()`), então
+#: `hidapi.Device.read` devolve `None` quando a fila está vazia — e isso NÃO é
+#: erro. Uma volta sem report nenhum é normal no rádio, que entrega em rajadas
+#: (o p95 do intervalo chega a 187 ms, `physical_report_reader.py:57-59`); um
+#: segundo inteiro sem report já é MUITO acima disso e rende, no máximo, uma
+#: linha por episódio.
 LEITURA_VAZIA_AVISO_SEC: float = 1.0
 
 # QUEDA-QUE-PENDURA-01: teto do join da report_thread no `close()`. Meio
@@ -864,6 +876,33 @@ def _relogio_da_borda() -> float:
     return time.monotonic()
 
 
+def _hid_set_nonblocking(dispositivo: Any) -> None:
+    """`hid_set_nonblocking(dev, 1)`: o `read` sem prazo do handle para de esperar.
+
+    O-BOTAO-DO-MIC-CHEGA-NA-HORA-01 (29/09/2026). O `hidapi.Device(path=...)`
+    nasce com `blocking=True` (`hidapi.py:221`), e o `read(n)` cai no `hid_read`,
+    que obedece a esse modo (`:300-306`): com a fila vazia, ele espera o próximo
+    report. O wrapper só chama `hid_set_nonblocking` no construtor
+    (`blocking=False`, `:257`), e o `init()` do upstream PRECISA da espera, na
+    única leitura que descobre o transporte (`determineConnectionType`). Por
+    isso o modo muda aqui, uma vez, na thread do handle, depois do `init()`.
+
+    No hidraw o modo é só um campo da estrutura (`dev->blocking`, `hid.c:1277`):
+    o `read` passa a fazer `poll` com prazo 0 e devolve `None` com a fila vazia.
+
+    Um dono só para o toque no C que o wrapper não expõe, e é também a costura
+    que o dublê da régua troca: o dublê do `hidapi.Device` tem o mesmo modo.
+    """
+    cdata = getattr(dispositivo, "_device", None)
+    if cdata is None:
+        # O mesmo que o `_check_device_status` do wrapper diz a quem usa um
+        # dispositivo fechado — e o laço trata `OSError` como fim de vida.
+        raise OSError("Trying to perform action on closed device.")
+    import hidapi
+
+    hidapi.hidapi.hid_set_nonblocking(cdata, 1)
+
+
 class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     """`pydualsense` "pinada" a um hidraw `path` específico (multi-controle).
 
@@ -1122,55 +1161,62 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         return hidapi.Device(path=self._pinned_path), self._pinned_is_edge
 
     def sendReport(self) -> None:  # noqa: N802 - override do nome do upstream
-        """Igual ao loop do upstream, mas com throttle por ciclo.
+        """O laço do upstream, com throttle por volta e a fila esvaziada em cada uma.
 
         O upstream faz `read`+`write` num laço apertado sem pausa, na taxa do
         controle. Com múltiplos controles isso satura o controlador USB e
-        degrada o link Bluetooth (CRC fails → output do BT morre). Como o INPUT
-        real vem do evdev, aqui só precisamos do flush de OUTPUT e da leitura
-        esparsa de bateria/transporte — então pausamos `REPORT_THREAD_THROTTLE_SEC`
-        por ciclo. BUG-MULTI-CONTROLLER-BT-CRC-CONTENTION-01.
+        degrada o link Bluetooth (CRC fails → output do BT morre), então a
+        volta dorme `_throttle_sec`. BUG-MULTI-CONTROLLER-BT-CRC-CONTENTION-01.
+
+        O-BOTAO-DO-MIC-CHEGA-NA-HORA-01 (29/09/2026) — A VOLTA ESVAZIA A FILA.
+
+        O botão do microfone e o bit de mudo (`status[1]`) só chegam por este
+        `read`; o kernel consome o botão e não emite tecla. A volta lia UM
+        report de uma fila de 63 que o aparelho enche a centenas por segundo, e
+        o kernel descarta o report NOVO com a fila cheia: cada report lido tinha
+        63 voltas de idade. Na bancada de 29/09, com os quatro no rádio, isso
+        deu 2,1 s do dedo à borda (63 × 33 ms); com um no cabo, os 547 ms de
+        04/09 (63 × 8,7 ms). Agora a volta lê até a fila ficar vazia
+        (`_esvaziar_a_fila`), conta o botão e o `status[1]` em cada report, na
+        ordem em que chegaram, e entrega à pydualsense só o mais novo
+        (`_consumir_lote`). A metade da saída não mudou: o mesmo throttle, um
+        write quando muda e o keepalive.
+
+        **A leitura tem prazo zero, e é por isso que a saída não espera.** O
+        fd nasce bloqueante (`hidapi.Device(path=...)`, `blocking=True`); com a
+        fila cheia a leitura nunca esperava, e com a fila vazia a cada volta
+        ela seguraria a saída até o próximo report — ~190 ms no rádio parado.
+        O `init()` precisa de UMA leitura com espera para descobrir o
+        transporte, então o modo muda na primeira volta (`_hid_set_nonblocking`).
 
         LACO-DE-ESCRITA-02 (15/08/2026) — A LEITURA VAZIA NÃO PODE MATAR A SAÍDA.
 
-        O handle é aberto por `_pydualsense__find_device` com `hidapi.Device(
-        path=...)` — SEM `blocking=True` —, e o construtor do hidapi chama
-        `hid_set_nonblocking(...)` sempre que `blocking` é falso. Logo o `read`
-        pode devolver `None` (rv == 0, "não havia dado"), e `None` é resposta
-        legítima, não erro.
+        Com o prazo zero, o `read` devolve `None` com a fila vazia, e `None` é
+        resposta legítima, não erro. O `readInput` do upstream começa com
+        `list(inReport)`, que com `None` levanta `TypeError`. **A cura não é
+        capturar o `TypeError`**: é não passar `None` adiante. Sem dado, não há
+        o que interpretar, e a volta segue direto para a metade de SAÍDA.
+        (Nota de 29/09: a docstring de 15/08 dizia que o fd já nascia
+        não-bloqueante. Não nascia — o `hid_read` bloqueante nunca devolve 0 —,
+        e a cura de 15/08 passou a valer de verdade com o prazo zero.)
 
-        O `readInput` do upstream começa com `list(inReport)`. Com `None` isso
-        levanta `TypeError` — que este laço NÃO capturava (só `OSError` e
-        `AttributeError`). A thread morria, e com ela toda a saída daquele
-        controle: sem rumble, sem lightbar, sem gatilho, para sempre, porque o
-        `connect()` do `reconnect_loop` não reabre handle de controle que
-        continua enumerado. Pior: morria sem `connected = False`, então nem a
-        tela dela sabia.
-
-        **A cura não é capturar o `TypeError`** — capturar trocaria uma morte
-        calada por um laço calado, e continuaria tratando como acidente uma
-        resposta que a API promete. A cura é PARAR DE PASSAR `None` adiante: sem
-        dado, não há o que interpretar, e o ciclo segue direto para a metade de
-        SAÍDA, que é a metade que importa aqui (o INPUT vem do evdev). O
-        controle continua tendo saída durante o silêncio, que é o desfecho certo.
-
-        E o silêncio deixa RASTRO: uma linha de aviso por episódio quando ele
+        E o silêncio deixa RASTRO: a volta sem report nenhum é a leitura vazia
+        (`_registrar_leitura_vazia`), e só ela — o «não há mais» que fecha cada
+        drenagem não é silêncio. Uma linha de aviso por episódio quando ele
         passa de `LEITURA_VAZIA_AVISO_SEC`, e uma de volta quando a entrada
-        fala de novo — porque um controle mudo por segundos é notícia, e a
-        ausência de dado é justamente o sintoma que esta casa mais demora a ver.
+        fala de novo.
         """
+        sem_espera = False
         while self.ds_thread:
             try:
-                in_report = self.device.read(self.input_report_length)
-                if in_report is None:
-                    self._registrar_leitura_vazia()
+                if not sem_espera:
+                    _hid_set_nonblocking(self.device)
+                    sem_espera = True
+                lidos = self._esvaziar_a_fila()
+                if lidos:
+                    self._consumir_lote(lidos)
                 else:
-                    # O `_registrar_leitura_viva` fica FORA da guarda de
-                    # propósito: um report de áudio é prova de que o aparelho
-                    # está falando. Pô-lo depois faria um controle com a ponte
-                    # do microfone de pé ser anunciado como «entrada muda».
-                    self._registrar_leitura_viva()
-                    self._consumir_report(in_report)
+                    self._registrar_leitura_vazia()
                 # FEAT-NATIVE-OUTPUT-MUTE-01: mutado (Modo Nativo) = NENHUM
                 # write; o jogo é o dono do output deste controle.
                 if not self._output_muted:
@@ -1248,7 +1294,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             except Exception as exc:
                 # LACO-DE-ESCRITA-02 — a REDE, e ela não engole nada.
                 #
-                # O `TypeError` do `read` vazio foi curado na raiz acima; esta
+                # O `TypeError` do `read` vazio é curado na raiz acima; esta
                 # cláusula existe para a categoria dele, não para ele. Sem ela,
                 # qualquer exceção nova neste laço mata a `report_thread` com
                 # nada além de um traceback solto no stderr: sem linha
@@ -1306,6 +1352,29 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                 segundos=round(mudo_por, 3),
             )
 
+    def _esvaziar_a_fila(self) -> list[Any]:
+        """Lê TODO report pendente no fd deste handle, do mais velho ao mais novo.
+
+        O-BOTAO-DO-MIC-CHEGA-NA-HORA-01 (29/09/2026). A fila do hidraw é por
+        fd (`struct hidraw_list`, `buffer[64]`), e o kernel descarta o report
+        que chega com ela cheia: ler um por volta deixava cada report com 63
+        voltas de idade. Aqui a volta lê até o `read` devolver `None` (a
+        leitura tem prazo zero, ver `sendReport`), com teto de
+        `LEITURAS_POR_VOLTA`, e o dado mais velho que sobra tem uma volta.
+
+        A leitura viva conta ANTES da guarda, report a report: um quadro de
+        áudio é o aparelho falando, e deixá-lo para depois da guarda faria um
+        controle com a ponte do microfone de pé passar por «entrada muda».
+        """
+        lidos: list[Any] = []
+        for _ in range(LEITURAS_POR_VOLTA):
+            in_report = self.device.read(self.input_report_length)
+            if in_report is None:
+                break
+            self._registrar_leitura_viva()
+            lidos.append(in_report)
+        return lidos
+
     # QUEDA-QUE-PENDURA-01, 04/08/2026 — MEDIDO no journal dela.
     #
     # O `close()` do upstream é, literalmente:
@@ -1314,7 +1383,11 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     #     self.report_thread.join()     <- SEM TETO
     #     self.device.close()
     #
-    # e o topo do laço acima é `self.device.read(...)`, que BLOQUEIA. Enquanto
+    # (Nota de 29/09/2026, O-BOTAO-DO-MIC-CHEGA-NA-HORA-01: o `read` da volta
+    # não espera mais — ele tem prazo zero desde a primeira volta, ver
+    # `sendReport` —, e o teto do `join` fica.)
+    #
+    # e o topo do laço acima era `self.device.read(...)`, que BLOQUEAVA. Enquanto
     # o controle responde, o `ds_thread = False` é visto no ciclo seguinte e o
     # join volta em milissegundos. **Quando o controle some do rádio sem
     # despedida** — 8BitDo que se desliga sozinho, link Bluetooth que cai —
@@ -1344,7 +1417,27 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     # `shutdown` (`wait=False`) — *"uma thread wedged não impede o processo de
     # encerrar"*. Aqui ela vale para o handle, que era o furo que faltava.
     def _consumir_report(self, in_report: Any) -> None:
-        """Entrega o report cru aos dois consumidores — e SÓ se ele for ESTADO.
+        """A porta de UM report: o `_consumir_lote` de um só.
+
+        As réguas do botão (O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01) e da bateria
+        entram por aqui com um report de cada vez, e a volta do `sendReport`
+        entra pelo lote. Um dono só para as duas portas.
+        """
+        self._consumir_lote((in_report,))
+
+    def _consumir_lote(self, reports: Sequence[Any]) -> None:
+        """Entrega os reports crus de UMA volta aos dois consumidores — e SÓ os de ESTADO.
+
+        O-BOTAO-DO-MIC-CHEGA-NA-HORA-01 (29/09/2026). A volta esvazia a fila, e
+        cada report de estado conta o botão do microfone e o `status[1]`, na
+        ordem em que chegaram (`_captura_status_audio`): um toque que começa e
+        acaba dentro de uma volta ainda é um aperto. A pydualsense recebe só o
+        report de estado mais NOVO, uma vez por volta: o `readInput` é o parse
+        caro, e o estado que ele guarda é o de agora, não o de cada report.
+
+        **Cada report paga UMA validação.** A guarda é o próprio
+        `_captura_status_audio`: o `extract_estado_do_mic` já devolve `None`
+        para o que não é estado (id, tamanho, o bit de áudio e o CRC do BT).
 
         BATERIA-QUE-PULA-01, 16/09/2026, e a queixa dela foi: *"esse numero da
         bateria fica oscilando sem parar de 75 a 0 a 90 a 100"*.
@@ -1371,20 +1464,19 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         fora. *Quando a cura conhece a causa, ela cobre TODOS os chamadores*, e
         este é o único que existe: `readInput` tem UM chamador em todo o `src/`.
         """
-        from hefesto_dualsense4unix.core.physical_report_reader import (
-            eh_report_de_estado,
-        )
-
-        try:
-            cru = bytes(in_report)
-        except (TypeError, ValueError):
-            return
-        if not eh_report_de_estado(cru):
-            self._recusar_report(cru)
-            return
-        self._reports_aceitos += 1
-        self.readInput(in_report)
-        self._captura_status_audio(cru)
+        mais_novo: Any = None
+        for in_report in reports:
+            try:
+                cru = bytes(in_report)
+            except (TypeError, ValueError):
+                continue
+            if not self._captura_status_audio(cru):
+                self._recusar_report(cru)
+                continue
+            self._reports_aceitos += 1
+            mais_novo = in_report
+        if mais_novo is not None:
+            self.readInput(mais_novo)
 
     def _recusar_report(self, cru: bytes) -> None:
         """DESCARTA o report que não é estado — e CONTA.
@@ -1434,8 +1526,13 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
 
     # --- AUDIO-STATUS-01 / AUDIO-OWNER-01 --------------------------------
 
-    def _captura_status_audio(self, in_report: Any) -> None:
-        """Guarda o byte de estado de áudio do report CRU — com disciplina.
+    def _captura_status_audio(self, in_report: Any) -> bool:
+        """Guarda o byte de estado de áudio do report CRU — e diz se ele era ESTADO.
+
+        **Devolve `True` quando o report era estado de input** (e foi lido), e
+        `False` quando o extrator o recusou. É essa resposta que o
+        `_consumir_lote` usa como a guarda (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01,
+        29/09/2026): cada report paga uma conferência de CRC, e não duas.
 
         MIC-DA-MESA-ELEICAO-01 (01/09/2026) — POR QUE O CAMINHO MUDOU.
 
@@ -1472,13 +1569,14 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         try:
             cru = bytes(in_report)
         except (TypeError, ValueError):
-            return
+            return False
         lido = extract_estado_do_mic(cru)
         if lido is None:
-            return
+            return False
         status, botao = lido
         self._audio_status = status & 0xFF
         self._registrar_borda_do_mic(status & 0xFF, botao)
+        return True
 
     def _registrar_borda_do_mic(self, status: int, botao: bool) -> None:
         """Conta os APERTOS do botão do microfone deste controle.
