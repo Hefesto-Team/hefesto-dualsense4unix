@@ -1428,9 +1428,9 @@ def mic_volume_set(volume: int, uniq: str | None = None) -> bool:
     `mic_set`        o MUDO no firmware do controle (camada 3). É o único
                      que apaga a luz vermelha do microfone, e enquanto
                      vigorar o botão físico deixa de valer.
-    `mic_volume_set` o GANHO da fonte de captura no PipeWire (camada 1).
-                     Não toca no firmware, não tira o botão físico, e não
-                     apaga luz nenhuma.
+    `mic_volume_set` o GANHO da fonte de captura no PipeWire (camada 1) e,
+                     desde 09/09/2026, o `common[6]` do aparelho. Não tira
+                     o botão físico, e não apaga luz nenhuma.
     ===============  ====================================================
 
     **Por que ele é universal.** O que existe nos dois transportes é uma FONTE

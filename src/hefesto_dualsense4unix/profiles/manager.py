@@ -2077,9 +2077,9 @@ class ProfileManager:
         `common[9]` do FIRMWARE, e o nascimento levanta o CANAL e o `0x32` do
         rádio — deixar a ordem decidir entregaria o canal no ar de quem pediu
         silêncio, que é o defeito da SOM-MIC-REPLUG-01 (*"o silêncio que o
-        produto promete e não entrega"*) voltando pela porta da frente. E a
-        confirmação do byte leva ~550 ms: ler o aparelho logo depois do replug
-        devolveria o valor VELHO. O dono é a fonte que responde na hora.
+        produto promete e não entrega"*) voltando pela porta da frente. E o
+        aparelho confirma o byte uma volta de leitura depois (63 voltas até
+        29/09): lido logo após o replug, daria o VELHO. O dono responde na hora.
 
         `None` no dono é *"nunca disse"* e NÃO é silêncio — quem não diz nada
         nasce ligado, que é a ordem dela de 17/09/2026: *"os jogos e perfis tem

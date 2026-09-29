@@ -464,9 +464,9 @@ class TestOsDoisDeslizantes:
     def test_o_deslizante_do_microfone_manda_o_numero_cru(self) -> None:
         """`mic.volume.set` é 0-100 por contrato do daemon.
 
-        E ele NÃO toca no firmware: não apaga a luz vermelha e não tira o botão
-        físico do controle. É a metade medida da D-12 — o ganho da FONTE é
-        literalmente *"o canal específico dele"*.
+        E ele NÃO toca no mudo: não apaga a luz vermelha e não tira o botão
+        físico (desde 09/09 leva também o `common[6]`, o ganho do aparelho).
+        É a metade medida da D-12 — o ganho da FONTE é *"o canal específico dele"*.
 
         **A VARIANTE MUDOU EM 04/09/2026, decisão [03] da ONDA2-02** — de
         `mic_volume_set` para `mic_volume_set_detalhado`. O número mandado é o
