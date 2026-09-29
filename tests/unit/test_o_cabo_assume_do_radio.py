@@ -1301,19 +1301,27 @@ class TestAEnumeracaoPrefereOCabo:
 
     @pytest.mark.parametrize("ordem", ["radio-primeiro", "cabo-primeiro"])
     def test_o_mesmo_controle_nos_dois_barramentos_abre_o_cabo(
-        self, monkeypatch: pytest.MonkeyPatch, ordem: str
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, ordem: str
     ) -> None:
+        # O barramento sai do `uevent` de uma árvore de mentira, pela raiz do
+        # backend (O-BACKEND-NAO-LE-O-HIDRAW-DA-MAQUINA-NA-SUITE-01): o
+        # `_hidraw_uevent` e o `_is_virtual_hidraw` de verdade leem o que ela diz.
+        raiz = tmp_path / "class-hidraw"
+        for no, barramento in (("hidraw10", "0005"), ("hidraw1", "0003")):
+            pai = tmp_path / "devices" / "pci0000:00" / no
+            pai.mkdir(parents=True)
+            (pai / "uevent").write_text(
+                f"HID_ID={barramento}:0000054C:00000CE6\nHID_UNIQ={MACS[0]}\n",
+                encoding="utf-8",
+            )
+            (raiz / no).mkdir(parents=True)
+            (raiz / no / "device").symlink_to(pai)
+        monkeypatch.setattr(backend_mod, "RAIZ_CLASS_HIDRAW", str(raiz))
         radio = SimpleNamespace(product_id=0x0CE6, path=b"/dev/hidraw10", serial_number=MACS[0])
         cabo = SimpleNamespace(product_id=0x0CE6, path=b"/dev/hidraw1", serial_number=MACS[0])
         vistos = [radio, cabo] if ordem == "radio-primeiro" else [cabo, radio]
         fake_hidapi = SimpleNamespace(enumerate=lambda vendor_id: list(vistos))
         monkeypatch.setitem(sys.modules, "hidapi", fake_hidapi)
-        monkeypatch.setattr(backend_mod, "_is_virtual_hidraw", lambda _p: False)
-        monkeypatch.setattr(
-            backend_mod,
-            "_hidraw_uevent",
-            lambda no: {"HID_ID": "0003:x" if no == "hidraw1" else "0005:x"},
-        )
         assert PyDualSenseController._enumerate_device_keys() == [
             (MACS[0], b"/dev/hidraw1", False)
         ]
