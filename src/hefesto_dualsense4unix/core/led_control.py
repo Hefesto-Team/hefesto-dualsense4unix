@@ -19,6 +19,7 @@ Uso:
 """
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from hefesto_dualsense4unix.core.controller import IController
@@ -294,9 +295,13 @@ def _e_fossil(peca: PecaDaMesa, numeros: set[RGB]) -> bool:
       mesa dela em 08/09/2026: os ranks 2 e 4 guardavam as cores dos slots 1
       e 2, escolhidas num dia em que eles eram outros;
     * **`LEGADO`** — override do disco anterior ao campo. Aqui, e SÓ aqui, a
-      regra prova pela FORMA: uma cor que é exatamente a do número de OUTRO
-      da mesa (e não a do próprio) é fóssil. Perfil antigo com uma escolha de
-      verdade — um roxo que não é número de ninguém — sobrevive à migração;
+      regra prova pela FORMA: uma cor que acende o TOM automático de OUTRO da
+      mesa (e não o do próprio) é fóssil. Perfil antigo com uma escolha de
+      verdade — um roxo que não é número de ninguém — sobrevive à migração.
+      A pergunta é do TOM, e não do byte (A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01,
+      29/09/2026): as cores de número chegam escaladas pelo brilho de CADA
+      peça, e o byte fazia o vermelho legado do P1 ficar ou sair conforme o
+      trilho do P2 estivesse a 99% ou a 100%;
     * **todo o resto** (`DA_PALETA`, `DO_BROADCAST`, `DO_GLOBAL`, `DA_MAO`)
       nunca é fóssil. O broadcast dela é o caso que derrubou a primeira
       volta desta regra.
@@ -307,7 +312,9 @@ def _e_fossil(peca: PecaDaMesa, numeros: set[RGB]) -> bool:
         return peca.numero is None or peca.procedencia != peca.numero
     if peca.procedencia is not LEGADO or peca.pedida is None:
         return False
-    return peca.pedida in numeros and peca.pedida != peca.do_numero
+    if peca.do_numero is not None and _mesmo_tom(peca.pedida, peca.do_numero):
+        return False
+    return any(_mesmo_tom(peca.pedida, numero) for numero in numeros)
 
 
 def _acende_o_tom(acesa: RGB, tom: RGB) -> bool:
@@ -335,6 +342,59 @@ def _acende_o_tom(acesa: RGB, tom: RGB) -> bool:
     if baixo > alto:
         return False
     return LedSettings(lightbar=tom).apply_brightness((baixo + alto) / 2).lightbar == acesa
+
+
+def _mesmo_tom(a: RGB, b: RGB) -> bool:
+    """As duas luzes são o MESMO TOM, cada uma no seu brilho? — o dono único.
+
+    A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01, 29/09/2026. O resolvedor fazia três
+    perguntas pelo BYTE — o legado fóssil (`in numeros`), a cor repetida (`in
+    tomadas`) e o global que cede (`not in tomadas`) — e as três mudavam de
+    resposta com o brilho de OUTRA peça. Medido na função pura, com a mesa
+    dela das 02:30: com o White a 99% o Cosmic Red ficava vermelho, e a 100%
+    virava azul e o White, vermelho. As três passam a perguntar aqui.
+
+    Duas luzes são o mesmo tom quando uma acende a outra num brilho
+    (`_acende_o_tom`, nos dois sentidos) ou as duas acendem o mesmo tom da
+    paleta. O preto é ausência de cor: só é «o mesmo» que o próprio preto.
+    """
+    if a == b:
+        return True
+    if a == _APAGADA or b == _APAGADA:
+        return False
+    if _acende_o_tom(a, b) or _acende_o_tom(b, a):
+        return True
+    return any(
+        _acende_o_tom(a, tom) and _acende_o_tom(b, tom)
+        for tom in _PLAYER_SLOT_COLORS.values()
+    )
+
+
+def _ja_acesa(luz: RGB, acesas: Iterable[RGB]) -> bool:
+    """`luz` é o tom de alguma das `acesas`? — a pergunta de `in`, pelo tom."""
+    return any(_mesmo_tom(luz, outra) for outra in acesas)
+
+
+def _automaticas(mesa: list[PecaDaMesa]) -> set[RGB]:
+    """As cores automáticas da mesa, cada uma no brilho da sua peça."""
+    return {
+        peca.do_numero for peca in mesa
+        if peca.do_numero is not None and peca.do_numero != _APAGADA
+    }
+
+
+def fosseis(mesa: list[PecaDaMesa]) -> frozenset[str]:
+    """Os `uniq` da mesa cuja cor pedida é FÓSSIL — a pergunta da tela e do daemon.
+
+    A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01, 29/09/2026. A aba Iluminação montava
+    a peça com as cores de número cheias e chamava `_e_fossil` por conta
+    própria, e o daemon a montava com as cores escaladas: para o Cosmic Red
+    das 02:30 a tela respondia «fóssil» e o daemon, «não». As duas passam a
+    perguntar a esta função, com a mesa inteira, e a resposta é pelo tom:
+    ela não depende do brilho de ninguém.
+    """
+    numeros = _automaticas(mesa)
+    return frozenset(peca.uniq for peca in mesa if _e_fossil(peca, numeros))
 
 
 def _na_escala(tom: RGB, brilho: float | None) -> RGB:
@@ -380,11 +440,20 @@ def reescalar(
 def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
     """Resolve a mesa inteira de modo que duas peças nunca fiquem da mesma cor.
 
-    `D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR` (26/08/2026), decidida por ela como
-    **REGRA DO PRODUTO, SEMPRE**: *"duas coisas que precisam ser
-    distinguíveis não podem colidir"*. A barra é como ela sabe de quem é o
-    controle — na mesa dela quatro DualSense são do MESMO modelo, e a luz é a
-    única coisa que os separa.
+    A `D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR` (26/08/2026) FOI REVOGADA em
+    09/09/2026 pela `D-0909-A-COR-DE-OUTRO-CONTROLE-SE-RECUSA-COM-X`: a cor
+    de outro controle se recusa no GESTO, com o X, *«e nada se desloca
+    sozinho»*. O que este resolvedor segue cumprindo é o FÓSSIL de 08/09 (a
+    cor escolhida para outro número sai sozinha, ver `_e_fossil`). O SALTO do
+    fóssil, do legado e da cor repetida ao primeiro tom livre não tem decisão
+    de pé: é o que evita duas luzes iguais sem apagar nenhuma, e a
+    A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01 o registra como o que é
+    (29/09/2026). A barra é como ela sabe de quem é o controle — na mesa dela
+    quatro DualSense são do MESMO modelo, e a luz os separa.
+
+    AS PERGUNTAS DE COR SÃO PELO TOM, e não pelo byte (29/09/2026): o fóssil
+    legado, a cor repetida e o global que cede perguntam a `_mesmo_tom`, e a
+    resposta não depende do brilho de outra peça.
 
     **`mesa` já vem NA ORDEM que decide** (o número do controle, quando há
     um), e a ordem é o contrato: *"o segundo desloca para o tom vizinho"* são
@@ -432,10 +501,7 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
     controle e a tela pode dizer de quem é a cor; ver
     `interface/pacotes/a04_iluminacao.py::_sem_repetir_a_cor_do_vizinho`.
     """
-    numeros = {
-        peca.do_numero for peca in mesa
-        if peca.do_numero is not None and peca.do_numero != _APAGADA
-    }
+    numeros = _automaticas(mesa)
     tomadas: dict[RGB, str] = {}
     saida: dict[str, RGB] = {}
     do_global: list[PecaDaMesa] = []
@@ -459,7 +525,7 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
         # O TOM, E NÃO O BYTE — 25/09/2026. O azul do P1 a 82% e o azul cheio
         # são bytes diferentes e a mesma cor; ver `_acende_o_tom`.
         acesas = [*tomadas, *(luz for dono, luz in ficam if dono != uniq)]
-        if acesa in acesas:
+        if _ja_acesa(acesa, acesas):
             return True
         return any(
             _acende_o_tom(luz, tom)
@@ -506,14 +572,14 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
             # tomada, porque estar tomada é justamente o que ele pediu.
             tomadas.setdefault(peca.pedida, peca.uniq)
             continue
-        if _e_fossil(peca, numeros) or peca.pedida in tomadas:
+        if _e_fossil(peca, numeros) or _ja_acesa(peca.pedida, tomadas):
             _acomodar(peca, peca.pedida)
             continue
         tomadas.setdefault(peca.pedida, peca.uniq)
 
     for peca in do_global:
         pedida = peca.pedida
-        if pedida is None or pedida not in tomadas:
+        if pedida is None or not _ja_acesa(pedida, tomadas):
             # Ninguém COM IDENTIDADE nessa cor: fica. Duas peças no mesmo
             # global não se deslocam — é o gesto "Todos" do perfil (D4).
             continue
@@ -636,6 +702,7 @@ __all__ = [
     "cor_escolhida",
     "cores_sem_colisao",
     "degrau_do_brilho_das_luzes",
+    "fosseis",
     "hex_to_rgb",
     "off",
     "player_bitmask",

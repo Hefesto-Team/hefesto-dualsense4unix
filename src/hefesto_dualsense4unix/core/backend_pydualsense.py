@@ -3113,7 +3113,11 @@ class PyDualSenseController(IController):
     def _com_cor_unica_locked(
         self, key: str, r: _ResolvidoDoDaemon, *, incluir_coop: bool
     ) -> _DesiredOutput:
-        """Aplica `D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR` à saída de `key`.
+        """Aplica a regra de cor única (`led_control.cores_sem_colisao`) à saída de `key`.
+
+        A `D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR` que ela cumpria foi REVOGADA em
+        09/09/2026 pela D-0909-X (a recusa mora no gesto); o que o resolvedor
+        segue cumprindo é o fóssil de 08/09 e o salto ao tom livre, ver lá.
 
         A regra mora AQUI, no resolvedor, e não em cada gesto que grava cor:
         a leva de 08/09/2026 contou **dezenove** escritores de cor por

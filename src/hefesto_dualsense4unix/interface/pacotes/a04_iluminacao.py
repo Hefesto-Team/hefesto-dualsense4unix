@@ -2956,7 +2956,7 @@ def _a_cor_guardada_que_vale(ctx: Contexto, cru: dict[str, Any] | None,
     muda, a cor gravada é FÓSSIL e sai sozinha"*. A cor vai ao disco com o
     número para o qual foi escolhida (`lightbar_para_o_numero`), e o daemon a
     troca pela do número de hoje (`led_control.cores_sem_colisao`). Quem diz
-    se é fóssil é o dono da regra (`led_control._e_fossil`); aqui só se monta
+    se é fóssil é o dono da regra (`led_control.fosseis`); aqui só se monta
     a peça com o número deste controle (`_numero`) e as cores de número da
     mesa, que é o que o resolvedor lhe entrega.
 
@@ -2973,10 +2973,9 @@ def _a_cor_guardada_que_vale(ctx: Contexto, cru: dict[str, Any] | None,
     cor escolhida intacta, e ela segue a mesma regra de toda cor gravada. O
     OVERRIDE SEM PROCEDÊNCIA (`LEGADO`, perfil anterior a 08/09) é provado
     pela FORMA, como o resolvedor prova:
-    fóssil quando é a cor do número de OUTRO controle da mesa. A comparação é
-    antes do brilho; a do daemon é depois dele, e só diverge com brilhos
-    diferentes por controle — e aí o erro daqui cai para o lado que não troca
-    a cor de ninguém (a marca pisca a do número, o trilho manda a luz acesa).
+    fóssil quando acende o tom do número de OUTRO controle da mesa. A pergunta
+    é a mesma do daemon (`led_control.fosseis`), pelo tom: a tela monta as
+    cores antes do brilho e o daemon depois, e as duas respondem igual.
 
     SEM A PALETA, O FÓSSIL SAI QUANDO A LUZ DIZ O TOM — 25/09/2026,
     A-04-PERGUNTA-AO-DAEMON-VIVO-01. O daemon desloca o fóssil também sem a
@@ -2994,7 +2993,7 @@ def _a_cor_guardada_que_vale(ctx: Contexto, cru: dict[str, Any] | None,
     from hefesto_dualsense4unix.core.led_control import (
         LEGADO,
         PecaDaMesa,
-        _e_fossil,
+        fosseis,
         player_slot_color,
     )
 
@@ -3005,18 +3004,28 @@ def _a_cor_guardada_que_vale(ctx: Contexto, cru: dict[str, Any] | None,
     dono = ((cru or {}).get("controllers") or {}).get(chave_do_override(uniq))
     para = ((dono or {}).get("leds") or {}).get("lightbar_para_o_numero")
     numero = _numero(ctx, c)
+    procedencia = LEGADO if para is None else para
     if not automatico_do_perfil(cru):
         sem_paleta = PecaDaMesa(uniq=uniq, pedida=guardada, do_numero=None,
-                                procedencia=LEGADO if para is None else para,
-                                numero=numero)
+                                procedencia=procedencia, numero=numero)
         luz = _o_tom_que_acende(cor_do_swatch(c), brilho_aceso(c, cru, uniq))
-        return None if luz is not None and _e_fossil(sem_paleta, set()) else guardada
-    peca = PecaDaMesa(uniq=uniq, pedida=guardada,
-                      do_numero=player_slot_color(numero),
-                      procedencia=LEGADO if para is None else para,
-                      numero=numero)
-    numeros = {player_slot_color(_numero(ctx, outro)) for outro in ctx.conectados}
-    return None if _e_fossil(peca, numeros) else guardada
+        return None if luz is not None and uniq in fosseis([sem_paleta]) else guardada
+    # A MESA INTEIRA VAI AO DONO, e a resposta é a do daemon — 29/09/2026,
+    # A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01. Esta função montava a peça com as
+    # cores de número cheias e chamava `_e_fossil` por conta própria; o daemon
+    # a monta com as cores escaladas, e para o Cosmic Red das 02:30 as duas
+    # respostas divergiam. `led_control.fosseis` pergunta pelo tom, e o
+    # brilho de cada peça deixa de mudar a resposta.
+    mesa = [PecaDaMesa(uniq=uniq, pedida=guardada,
+                       do_numero=player_slot_color(numero),
+                       procedencia=procedencia, numero=numero)]
+    for outro in ctx.conectados:
+        dele = str(outro.get("uniq") or "")
+        if dele and dele != uniq:
+            mesa.append(PecaDaMesa(uniq=dele, pedida=None,
+                                   do_numero=player_slot_color(_numero(ctx, outro)),
+                                   numero=_numero(ctx, outro)))
+    return None if uniq in fosseis(mesa) else guardada
 
 
 def _a_cor_do_global(cru: dict[str, Any] | None) -> tuple[int, int, int] | None:
@@ -3155,7 +3164,8 @@ def _sem_repetir_a_cor_do_vizinho(
 ) -> tuple[tuple[int, int, int], str | None]:
     """A cor que ESTE controle recebe, e a frase quando ela não é a pedida.
 
-    `D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR`, a metade que **a tela** cumpre.
+    A metade que **a tela** cumpre da `D-0909-A-COR-DE-OUTRO-CONTROLE-SE-RECUSA-COM-X`,
+    que revogou a `D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR` em 09/09/2026.
 
     **FATO SUBSTITUÍDO — 08/09/2026.** Estas linhas diziam que o resolvedor do
     daemon *"não pode"* cumprir a regra inteira porque um broadcast e duas
@@ -3881,7 +3891,8 @@ _RECADO_DO_AUTOMATICO_SAIU = (
 #: a do número, quem tem a mantém — e a cor gravada que COLIDE volta para a do
 #: número, porque uma cor igual à de outro na mesa é o número de ontem
 #: fossilizado, não uma escolha. A segunda metade é promessa de produto
-#: (`D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR`), não confissão de defeito nosso.
+#: (o resolvedor, depois de a `D-DUAS-PECAS-NUNCA-TEM-A-MESMA-COR` ser
+#: revogada em 09/09/2026 pela D-0909-X), não confissão de defeito nosso.
 _RECADO_DO_AUTOMATICO_VOLTOU = (
     "Cores automáticas ligadas. Cada controle sem cor própria acende a cor do "
     "número dele, e duas nunca ficam iguais.")
