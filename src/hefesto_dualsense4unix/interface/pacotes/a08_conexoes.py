@@ -163,6 +163,12 @@ DICA_DO_DESFAZER = "Traz esta recomendação de volta para a lista."
 #: segundo o que ele acabou de recusar.
 _EXAME_PEDIDO: bool = False
 
+#: O ``state_full`` do último tique desta aba. O exame completo roda numa
+#: thread, sem ``Contexto`` (o gesto «Examinar» e a entrada na aba o chamam do
+#: mesmo jeito), e a conferência da leitura dos controles pergunta ao daemon
+#: por ele — o grab do controle principal que o daemon já publica.
+_ULTIMO_ESTADO: dict[str, Any] = {}
+
 #: OS APELIDOS DOS ADAPTADORES, lidos do BlueZ. **Forka `busctl`**, e por isso
 #: entra na mesma regra do `_MESA_DO_RADIO`: uma leitura, renovada pelo
 #: **Examinar Portas**. Medido nesta bancada em 04/09/2026: `ler_os_dongles()`
@@ -1083,8 +1089,17 @@ def _dica_da_linha(item: Any) -> str:
         # CADA PARTE É `(rótulo, texto)`, e o rótulo vazio quer dizer "frase
         # solta". Só as linhas da ordem são rotuladas — o verbete e a cura já
         # trazem o próprio começo.
-        partes: list[tuple[str, str]] = [
-            ("", _(str(DICAS_DAS_LINHAS.get(str(getattr(item, "chave", "")), ""))))]
+        chave = str(getattr(item, "chave", ""))
+        verbete = DICAS_DAS_LINHAS.get(chave, "")
+        if not verbete and chave == CHAVE_DA_LEITURA:
+            # A LEITURA DOS CONTROLES só vira linha no aviso do dono, e o `?`
+            # dela é o porquê do mesmo dono (`home_actions.AVISO_DE_GRAB_PORQUE`).
+            from hefesto_dualsense4unix.app.actions.home_actions import (
+                AVISO_DE_GRAB_PORQUE,
+            )
+
+            verbete = AVISO_DE_GRAB_PORQUE
+        partes: list[tuple[str, str]] = [("", _(str(verbete)))]
         ordem = getattr(item, "ordem", None)
         if ordem is not None:
             # AS DUAS ÚLTIMAS DAS TRÊS. A primeira (`O que eu vi aqui`) é o
@@ -1591,8 +1606,14 @@ def _exame() -> list[dict[str, Any]]:
     continua vendo tudo e a 01 continua vendo só o que fala. É a regra que esta
     casa pagou duas vezes em 05/09 — cobrir um chamador deixa a próxima pessoa
     remedindo o mesmo defeito.
+
+    **A LEITURA DOS CONTROLES TAMBÉM NÃO ATRAVESSA — 28/09/2026.** A aba Jogar
+    já diz esse fato pelo dono dele (`painel.aviso_do_grab_dobrado`, com a
+    mesma condição de `home_actions.aviso_de_grab`); a linha desta aba só
+    acrescenta a causa, e duas contagens do mesmo aviso lá divergiriam.
     """
-    return [_linha(i) for i in _itens_da_tela() if not _calada(i)]
+    return [_linha(i) for i in _itens_da_tela()
+            if not _calada(i) and getattr(i, "chave", "") != CHAVE_DA_LEITURA]
 
 
 def _bancada() -> Any:
@@ -4045,7 +4066,106 @@ def _correr_o_exame_completo() -> None:
     )
     if not itens:
         raise RuntimeError("não consegui examinar as entradas agora")
+    # A LEITURA DOS CONTROLES (28/09/2026): a conferência que diz a CAUSA do
+    # controle que o Hefesto não conseguiu segurar só para ele. Ela nunca
+    # derruba o exame: sem ela, as outras linhas continuam.
+    with contextlib.suppress(Exception):
+        leitura = _conferencia_da_leitura(_ULTIMO_ESTADO)
+        if leitura is not None:
+            itens = [*itens, leitura]
     _EXTRAS = tuple(itens)
+
+
+#: A CONFERÊNCIA DA LEITURA DOS CONTROLES — a chave e o nome dela no exame.
+CHAVE_DA_LEITURA = "leitura_dos_controles"
+ROTULO_DA_LEITURA = "Leitura dos controles"
+
+
+def _nos_dos_controles() -> dict[str, str]:
+    """``{endereço: /dev/input/eventN}`` de cada DualSense físico, pelo dono da descoberta."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.core.evdev_reader import discover_dualsense_evdevs
+
+    return {str(chave): str(no) for chave, no in discover_dualsense_evdevs().items()}
+
+
+def _abridor(porta: str) -> Callable[..., int]:
+    """Por onde o exame abre o nó do controle: a porta do broker, se ela
+    responde (o nó físico fica ESCONDIDO enquanto o Hefesto emula), e o
+    ``open()`` por caminho de reserva — a mesma ordem do
+    ``hidraw_broker_client.make_broker_opener``, que é do daemon."""
+    import os
+
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.integrations import hidraw_broker_client as broker
+
+    def abrir(caminho: str, flags: int = os.O_RDONLY) -> int:
+        if porta == broker.PORTA_BROKER:
+            cliente = broker.HidrawBrokerClient()
+            try:
+                fd = cliente.open_fd(caminho)
+            finally:
+                with contextlib.suppress(Exception):
+                    cliente.close()
+            if fd is not None:
+                return fd
+        return os.open(caminho, flags)
+
+    return abrir
+
+
+def _conferencia_da_leitura(state: dict[str, Any] | None, *,
+                            porta: Callable[[], tuple[str, str]] | None = None,
+                            grab: Callable[..., str] | None = None,
+                            nos: Callable[[], dict[str, str]] | None = None) -> Any:
+    """A linha do Check-up do controle que o Hefesto NÃO segura só para ele.
+
+    O RESULTADO É DO DAEMON, E A CONDIÇÃO É DO DONO: o grab do controle
+    principal (``primary_grab_state``) e a regra de quando ele vira aviso
+    (`home_actions.aviso_de_grab`: o principal conectado, com o controle do
+    Hefesto de pé, e o grab que FALHOU). A frase da linha e a do `?` também são
+    de lá. Sem aviso, não há linha — o aviso do dono só acende no defeito.
+
+    A CAUSA É DO EXAME, e é o que faltava (28/09/2026): o exame pergunta à
+    porta do broker (`porta_provavel`) e ao próprio nó (`estado_do_grab`), e
+    escreve no diário da janela as duas linhas de cabeçalho da casa
+    (`linha_da_porta`, `linha_do_grab`) com a leitura que um zero valeria ali
+    (`leitura_de_zero`) — «PEGO por outro processo» é diferente de «não posso
+    ler». Só pergunta ao nó quando o daemon JÁ disse que não conseguiu o grab:
+    então outro processo o segura, e a tentativa não tira nada de ninguém.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.actions import home_actions
+    from hefesto_dualsense4unix.integrations import hidraw_broker_client as broker
+    from hefesto_dualsense4unix.integrations.exame_da_mesa import Item
+
+    st = state if isinstance(state, dict) else {}
+    emulacao = st.get("gamepad_emulation")
+    gamepad_on = bool(emulacao.get("enabled")) if isinstance(emulacao, dict) else False
+    primario = next((c for c in st.get("controllers") or ()
+                     if isinstance(c, dict) and c.get("connected") is True
+                     and c.get("is_primary")), None)
+    aviso = home_actions.aviso_de_grab(st.get("primary_grab_state"),
+                                       is_primary=primario is not None,
+                                       gamepad_on=gamepad_on)
+    if aviso is None or primario is None:
+        return None
+    linha, _porque = aviso
+    qual, motivo = (porta or broker.porta_provavel)()
+    print(f"[relato] {PAGINA} · examinar-portas: {broker.linha_da_porta(qual, motivo)}",
+          file=sys.stderr)
+    por_endereco = {_mac(chave): str(no) for chave, no in (nos or _nos_dos_controles)().items()}
+    caminho = por_endereco.get(_mac(primario.get("uniq")))
+    if caminho:
+        estado = (grab or broker.estado_do_grab)(caminho, abrir=_abridor(qual))
+        print(f"[relato] {PAGINA} · examinar-portas: {broker.linha_do_grab(caminho, estado)}"
+              f" — um zero ali seria {broker.leitura_de_zero(estado)}", file=sys.stderr)
+    else:
+        print(f"[relato] {PAGINA} · examinar-portas: "
+              f"{broker.linha_do_grab('o nó do controle principal', broker.GRAB_SEM_NO)}",
+              file=sys.stderr)
+    return Item(chave=CHAVE_DA_LEITURA, rotulo=ROTULO_DA_LEITURA, estado="atencao",
+                porque=f"{linha}.")
 
 
 @gesto("08-conexoes.html", "ignorar", grava="machine_declare")
@@ -6595,7 +6715,8 @@ def _campos_da_cerimonia() -> dict[str, Any]:
 
 def campos_do_radio(ctx: Contexto) -> dict[str, Any]:
     """Os campos da seção Rádio e Adaptadores, pela cena da máquina dela."""
-    global _CENA_NA_TELA
+    global _CENA_NA_TELA, _ULTIMO_ESTADO
+    _ULTIMO_ESTADO = ctx.state if isinstance(ctx.state, dict) else {}
     cena = cena_do_radio(ctx)
     _CENA_NA_TELA = cena
     campos = campos_da_secao(cena)

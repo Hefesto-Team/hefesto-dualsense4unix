@@ -542,3 +542,105 @@ def _dono_de_mentira() -> object:
         e_vpad=False,
         rotulo="",
     )
+
+
+# --- a aba Conexões pergunta a causa (28/09/2026) -----------------------------
+# A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01. As quatro perguntas deste arquivo
+# (`porta_provavel`, `estado_do_grab`, `linha_do_grab`, `leitura_de_zero`) só
+# eram feitas pelos instrumentos; a aba Conexões dizia o resultado e não a
+# causa. O exame completo dela passa a perguntar — só quando o daemon JÁ disse
+# que não conseguiu segurar o controle principal —, e a linha do Check-up e o
+# `?` dela são as frases do dono do aviso (`home_actions.aviso_de_grab`).
+
+_PRINCIPAL = "aa:bb:cc:00:00:01"
+
+
+def _estado_do_daemon(grab: str, *, emulando: bool = True) -> dict[str, object]:
+    return {
+        "gamepad_emulation": {"enabled": emulando},
+        "primary_grab_state": grab,
+        "controllers": [{"uniq": _PRINCIPAL, "connected": True, "is_primary": True}],
+    }
+
+
+def _perguntas() -> tuple[dict[str, list[object]], dict[str, object]]:
+    feitas: dict[str, list[object]] = {"porta": [], "grab": []}
+
+    def porta() -> tuple[str, str]:
+        feitas["porta"].append(True)
+        return PORTA_BROKER, "o broker responde em /run/de-mentira.sock"
+
+    def grab(caminho: str, *, abrir: object) -> str:
+        feitas["grab"].append((caminho, callable(abrir)))
+        return GRAB_DE_TERCEIRO
+
+    def nos() -> dict[str, str]:
+        return {_PRINCIPAL.upper(): "/dev/input/event-de-mentira"}
+
+    return feitas, {"porta": porta, "grab": grab, "nos": nos}
+
+
+def test_o_exame_da_08_diz_a_causa_do_controle_que_o_hefesto_nao_segura(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Com o grab que FALHOU, o exame pergunta à porta e ao nó, escreve as duas
+    linhas de cabeçalho da casa no diário da janela, e a linha do Check-up é o
+    aviso do dono.
+
+    MORDIDA: troque o `estado_do_grab` da conferência por um `GRAB_LIVRE` fixo
+    — o diário deixa de dizer «PEGO por outro processo» e esta régua reprova.
+    """
+    from hefesto_dualsense4unix.app.actions.home_actions import AVISO_DE_GRAB_LINHA
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
+
+    feitas, dubles = _perguntas()
+    item = a08_conexoes._conferencia_da_leitura(_estado_do_daemon("failed"), **dubles)
+    assert item is not None
+    assert item.chave == a08_conexoes.CHAVE_DA_LEITURA
+    assert item.estado == "atencao" and item.porque == f"{AVISO_DE_GRAB_LINHA}."
+    assert feitas["porta"] and feitas["grab"] == [("/dev/input/event-de-mentira", True)]
+    diario = capsys.readouterr().err
+    assert linha_da_porta(PORTA_BROKER, "o broker responde em /run/de-mentira.sock") in diario
+    assert "grab do evdev .... /dev/input/event-de-mentira: " + GRAB_DE_TERCEIRO in diario
+    assert leitura_de_zero(GRAB_DE_TERCEIRO) in diario
+
+
+@pytest.mark.parametrize(("grab", "emulando"), [
+    ("held", True), ("pending", True), ("off", True), ("failed", False),
+])
+def test_sem_o_aviso_do_dono_o_exame_nao_toca_no_no(grab: str, emulando: bool) -> None:
+    """O grab que o Hefesto segura, o que ainda abre, e o modo sem o controle do
+    Hefesto: nenhuma linha, e nenhuma pergunta ao nó — tentar o grab de um nó
+    livre o tiraria, por um instante, de quem o lê."""
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
+
+    feitas, dubles = _perguntas()
+    estado = _estado_do_daemon(grab, emulando=emulando)
+    assert a08_conexoes._conferencia_da_leitura(estado, **dubles) is None
+    assert feitas == {"porta": [], "grab": []}
+
+
+def test_o_interrogacao_da_linha_e_o_porque_do_dono() -> None:
+    from hefesto_dualsense4unix.app.actions.home_actions import AVISO_DE_GRAB_PORQUE
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
+
+    _feitas, dubles = _perguntas()
+    item = a08_conexoes._conferencia_da_leitura(_estado_do_daemon("failed"), **dubles)
+    dica = a08_conexoes._dica_da_linha(item)
+    assert AVISO_DE_GRAB_PORQUE.split(",")[0] in dica
+
+
+def test_a_linha_da_leitura_entra_no_check_up_e_nao_na_aba_jogar(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O exame completo a acrescenta à tira da 08; o contrato da Jogar
+    (`_exame`) a deixa de fora, porque lá o dono já diz o aviso."""
+    from hefesto_dualsense4unix.integrations.exame_da_mesa import Item
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
+
+    leitura = Item(chave=a08_conexoes.CHAVE_DA_LEITURA, rotulo="x", estado="atencao",
+                   porque="y.")
+    monkeypatch.setattr(a08_conexoes, "_conferencias", lambda: [])
+    monkeypatch.setattr(a08_conexoes, "_EXTRAS", (leitura,))
+    assert leitura in a08_conexoes._itens_da_tela()
+    assert all(i.get("porque") != "y." for i in a08_conexoes._exame())
