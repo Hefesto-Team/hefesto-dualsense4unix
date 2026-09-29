@@ -166,14 +166,6 @@ _VPAD_PHYS = "hefesto-vpad"
 _VPAD_UNIQ_PREFIX = "02fe"
 
 
-#: A raiz de ``/sys/class/hidraw`` que o backend lê, lida NA CHAMADA pelos dois
-#: leitores do módulo (`_hidraw_uevent` e `_is_virtual_hidraw`). Mesmo nome da
-#: de `quem_o_jogo_le`: a suíte a aponta para uma pasta vazia (a irmã
-#: `_nenhum_hidraw_vivo_na_varredura_de_som` do ``tests/conftest.py``), e o
-#: dedupe do enumerate deixa de decidir pelo barramento dos nós da máquina.
-RAIZ_CLASS_HIDRAW = "/sys/class/hidraw"
-
-
 def _hidraw_uevent(node: str) -> dict[str, str]:
     """Pares chave=valor do uevent do device HID pai do hidraw ({} se ilegível)."""
     try:
@@ -8602,6 +8594,16 @@ def _o_cabo_vence(novo: bytes, guardado: bytes) -> bool:
     fica o primeiro, como sempre.
     """
     return _barramento_do_hidraw(novo) == "usb" and _barramento_do_hidraw(guardado) != "usb"
+
+
+#: A raiz de ``/sys/class/hidraw`` que o backend lê, lida NA CHAMADA pelos dois
+#: leitores do módulo (`_hidraw_uevent` e `_is_virtual_hidraw`). Mesmo nome da
+#: de `quem_o_jogo_le`: a suíte a aponta para uma pasta vazia (a irmã
+#: `_nenhum_hidraw_vivo_na_varredura_de_som` do ``tests/conftest.py``), e o
+#: dedupe do enumerate deixa de decidir pelo barramento dos nós da máquina.
+#: Mora no fim do módulo para nenhuma linha acima andar: as citações
+#: ``backend_pydualsense.py:<linha>`` da casa ficam onde estão.
+RAIZ_CLASS_HIDRAW = "/sys/class/hidraw"
 
 
 __all__ = [
