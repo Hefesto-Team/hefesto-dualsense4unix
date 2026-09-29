@@ -614,7 +614,7 @@ def _acende_em_alguma_intensidade(tom: tuple[int, int, int],
                                   alvo: tuple[int, int, int]) -> bool:
     """`tom`, escalado por algum brilho de (0, 1], acende exatamente `alvo`?
 
-    O intervalo sai por canal: a conta do dono trunca `c × brilho`, então o
+    O intervalo sai por canal: a conta do dono trunca `c * brilho`, então o
     canal `c` dá `v` para o brilho em `[v/c, (v+1)/c)`, e o canal zero só dá
     zero. Quem confirma é a conta do dono (`_com_o_brilho`) no meio do
     intervalo, e não esta conta: a borda de um trecho em ponto flutuante pode
@@ -657,7 +657,8 @@ def a_casa_da_cor(rgb: Any) -> str | None:
     """
     if not rgb or len(tuple(rgb)) < 3:
         return None
-    alvo = (int(tuple(rgb)[0]), int(tuple(rgb)[1]), int(tuple(rgb)[2]))
+    r, g, b = tuple(rgb)[:3]
+    alvo = (int(r), int(g), int(b))
     if alvo == (0, 0, 0):
         return None
     tons = tons_da_guia()
@@ -745,8 +746,8 @@ def tinta_da_linha(donos: list[dict[str, Any]]) -> str:
     D-2909-A-LINHA-DA-COR-DO-DONO. Um dono com plástico sabido: a cor pura. Um
     dono sem: `LINHA_INCERTA`. Vários (o «Todos», o global num tom): uma camada
     por dono, na ordem do número, cada uma com `1/n` da largura, lado a lado.
-    A posição de uma camada de largura `1/n` em `p%` cai em `p × (1 − 1/n)` da
-    casa, então a `i`-ésima vai a `i/(n − 1)`.
+    A posição de uma camada de largura `1/n` em `p%` cai em `p * (1 - 1/n)` da
+    casa, então a `i`-ésima vai a `i/(n - 1)`.
     """
     def tinta(d: dict[str, Any]) -> str:
         cor = str(d.get("plastico") or "")

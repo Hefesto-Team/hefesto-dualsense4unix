@@ -8,11 +8,19 @@ controle?» (três igualdades, dois dicionários de um dono por cor), e a pergun
 de tela é «de quem é esta casa?». O `#FCFCFC` do P4 (o branco a 99%) não tinha
 casa.
 
-As réguas 1 a 4 leem o pacote da aba. Nenhuma espera o que a própria função
-devolve: o esperado sai da cena montada ou de um oráculo de força bruta.
+As réguas 1 a 4 e a 6 leem o pacote da aba; a 5 lê a bancada (`mockup/`) no
+WebKit, com a carga do pacote, e fotografa a linha (rode no `xvfb-run -a`: sem
+tela ela PULA, e pulo não é verde). Nenhuma espera o que a própria função
+devolve: o esperado sai da cena montada, do dono do plástico ou de um oráculo
+de força bruta.
+
+A LINHA DO DONO (D-2909-A-LINHA-DA-COR-DO-DONO): a borda da casa escolhida
+era o `currentColor` de um `<button>` e saía `rgba(0, 0, 0, 0.8)` nas quatro
+colunas — é o que a mordida da régua 5 mede de volta.
 """
 from __future__ import annotations
 
+import itertools
 import re
 from typing import Any
 
@@ -201,7 +209,7 @@ def _marcas(colunas: dict[str, dict[str, Any]]) -> dict[int, dict[str, Any]]:
 def _os_brilhos_de_cada_trecho() -> list[float]:
     """Um brilho por trecho constante da conta do dono, e o 1,0.
 
-    A conta trunca `c × brilho` por canal: ela só muda nos saltos `k/c` de
+    A conta trunca `c * brilho` por canal: ela só muda nos saltos `k/c` de
     cada canal `c` que os tons têm. O meio de cada par de saltos vizinhos
     representa o trecho inteiro. Os canais se leem dos tons, não se digitam.
     """
@@ -209,7 +217,7 @@ def _os_brilhos_de_cada_trecho() -> list[float]:
 
     canais = {c for t in a04.tons_da_guia() for c in t if c}
     saltos = sorted({k / c for c in canais for k in range(1, c + 1)} | {1.0})
-    meios = [(a + b) / 2 for a, b in zip(saltos, saltos[1:], strict=False)]
+    meios = [(a + b) / 2 for a, b in itertools.pairwise(saltos)]
     return [*meios, 1.0]
 
 
@@ -415,3 +423,394 @@ def test_o_gesto_e_o_que_a_recusa_aceita(
                 discordam.append(f"P{n} {tom}: X numa casa que a recusa aceita")
     assert len(pecas) == 4
     assert not discordam, "\n".join(discordam)
+
+
+# ---------------------------------------------------------------------------
+# Régua 5 — a linha do dono, medida no WebKit (a bancada, `mockup/`)
+# ---------------------------------------------------------------------------
+
+#: O modelo de cada número nas cenas, e o plástico que o dono dá a ele. O
+#: esperado se pergunta ao dono (`tom_para_a_borda` sobre o `cor_de_css`), e
+#: não à função que o pacote chama.
+def _o_plastico_do_dono(modelo: str) -> str:
+    from hefesto_dualsense4unix.interface import pacotes  # noqa: F401 — põe `interface/` no path
+    import monta
+
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import tom_para_a_borda
+
+    return tom_para_a_borda(monta.cor_de_css(modelo)) if modelo else ""
+
+
+#: As casas de cada cena e os donos dela, na ordem do número — escritos a
+#: partir da cena, não do mapa que o pacote monta.
+DONOS_DA_FOTO = {VERMELHO: [1], AZUL: [2], AMARELO: [3], BRANCO: [4]}
+DONOS_DO_TODOS = {VERDE: [1, 2, 3, 4]}
+
+
+def _a_foto_sem_o_plastico_do_p2() -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """A foto, com o P2 de modelo desconhecido: a linha dele é tracejada."""
+    pecas, perfil = _a_cena_da_foto()
+    pecas[1]["modelo"] = ""
+    return pecas, perfil
+
+
+CENAS_DA_TELA = {
+    "a foto": _a_cena_da_foto,
+    "o Todos": _a_cena_do_todos,
+    "o plástico que não chegou": _a_foto_sem_o_plastico_do_p2,
+}
+
+#: A geometria de cada casa e da linha dela, lida do motor, e a caixa
+#: `#RRGGBB` da mesma coluna. Os `top`/`left` do `::before` saem resolvidos em
+#: px porque ele é posicionado; somados à caixa por dentro da borda da casa,
+#: dão a linha na vista.
+MEDIDA_DA_LINHA = r"""
+(function(){
+  var primeira = document.querySelector('[data-controle][data-conectado="sim"] .guia');
+  if (primeira) primeira.scrollIntoView({block: 'center'});
+  var de = document.documentElement;
+  var px = function(v){ return parseFloat(v) || 0; };
+  var colunas = {};
+  document.querySelectorAll('[data-controle][data-conectado="sim"]').forEach(function(ctrl){
+    var hex = ctrl.querySelector('.cel-cor .hex').getBoundingClientRect();
+    colunas[ctrl.getAttribute('data-controle')] = {
+      hex_topo: hex.top,
+      casas: Array.prototype.map.call(ctrl.querySelectorAll('.guia .tom'), function(el){
+        var r = el.getBoundingClientRect();
+        var s = getComputedStyle(el);
+        var b = getComputedStyle(el, '::before');
+        var x0 = r.left + px(s.borderLeftWidth), y0 = r.top + px(s.borderTopWidth);
+        return {
+          classes: el.className,
+          casa: [r.left, r.top, r.width, r.height],
+          borda: s.borderTopColor,
+          content: b.content,
+          linha: [x0 + px(b.left), y0 + px(b.top), px(b.width), px(b.height)],
+          cor: b.backgroundColor,
+          imagem: b.backgroundImage
+        };
+      })
+    };
+  });
+  return JSON.stringify({viewport: [de.clientWidth, de.clientHeight],
+                         colunas: colunas});
+})()
+"""
+
+
+def _carga_da_tela(cena: str) -> dict[str, Any]:
+    """A carga do tique da cena, como o piloto a manda à página."""
+    from hefesto_dualsense4unix.interface import pacotes
+    from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
+
+    pecas, perfil = CENAS_DA_TELA[cena]()
+    ctx = _contexto(pecas)
+    original = a04.perfil.ativo
+    a04.perfil.ativo = lambda _nome: perfil  # type: ignore[assignment]
+    try:
+        pacote = pacotes.pacote_da_pagina(PAGINA, ctx) or {}
+    finally:
+        a04.perfil.ativo = original  # type: ignore[assignment]
+    para_pref = {UNIQS[p["n"] - 1]: f"p{p['n']}" for p in pecas}
+    carga = pacotes.normalizar(pacote, para_pref)
+    return pacotes.apagar_os_lugares_sem_dono(
+        carga, sorted(para_pref.values()), pagina=PAGINA)
+
+
+def _medir_a_linha(tamanho: tuple[int, int], pintar: str) -> dict[str, Any]:
+    """Abre a 04 da bancada num WebKit offscreen, pinta, mede e fotografa."""
+    import json
+
+    from gi.repository import GLib, Gtk, WebKit2
+
+    from hefesto_dualsense4unix.interface import hefesto_vivo, onde
+
+    saiu: list[str] = []
+    foto: list[Any] = []
+    janela = Gtk.OffscreenWindow()
+    janela.set_default_size(*tamanho)
+    view = WebKit2.WebView()
+    janela.add(view)
+    janela.show_all()
+
+    def fotografar() -> bool:
+        foto.append(janela.get_pixbuf())
+        Gtk.main_quit()
+        return False
+
+    def mediu(v: Any, res: Any) -> None:
+        try:
+            saiu.append(v.evaluate_javascript_finish(res).to_string())
+        except Exception as e:  # o erro vai ao assert
+            saiu.append(f"ERRO na medida: {e}")
+            Gtk.main_quit()
+            return
+        # a pintura do motor vem depois da resposta do JavaScript
+        GLib.timeout_add(400, fotografar)
+
+    def pintou(v: Any, res: Any) -> None:
+        try:
+            v.evaluate_javascript_finish(res)
+        except Exception as e:
+            saiu.append(f"ERRO na pintura: {e}")
+            Gtk.main_quit()
+            return
+        v.evaluate_javascript(MEDIDA_DA_LINHA, -1, None, None, None, mediu)
+
+    def instalou(v: Any, res: Any) -> None:
+        try:
+            v.evaluate_javascript_finish(res)
+        except Exception as e:
+            saiu.append(f"ERRO no bootstrap: {e}")
+            Gtk.main_quit()
+            return
+        v.evaluate_javascript(pintar, -1, None, None, None, pintou)
+
+    def carregou(v: Any, evento: Any) -> None:
+        if evento == WebKit2.LoadEvent.FINISHED:
+            v.evaluate_javascript(hefesto_vivo.BOOTSTRAP, -1, None, None,
+                                  None, instalou)
+
+    view.connect("load-changed", carregou)
+    view.load_uri(onde.pagina(PAGINA, publicado=False).as_uri())
+    guarda = GLib.timeout_add(20000, Gtk.main_quit)
+    try:
+        Gtk.main()
+    finally:
+        GLib.source_remove(guarda)
+        janela.destroy()
+    assert saiu, f"o WebKit não respondeu em 20 s na vista {tamanho}"
+    assert not saiu[0].startswith("ERRO"), saiu[0]
+    medido = json.loads(saiu[0])
+    assert foto and foto[0] is not None, "a janela não devolveu a foto"
+    medido["_foto"] = foto[0]
+    return medido
+
+
+def _pixel(foto: Any, x: float, y: float) -> tuple[int, int, int]:
+    """O pixel da foto na coordenada da vista (a janela offscreen não tem escala)."""
+    xi, yi = int(x), int(y)
+    assert 0 <= xi < foto.get_width() and 0 <= yi < foto.get_height(), (
+        f"({xi}, {yi}) fora da foto {foto.get_width()}x{foto.get_height()}")
+    dados = foto.get_pixels()
+    i = yi * foto.get_rowstride() + xi * foto.get_n_channels()
+    return (dados[i], dados[i + 1], dados[i + 2])
+
+
+def _rgb(hexa: str) -> tuple[int, int, int]:
+    h = hexa.lstrip("#")
+    return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
+
+
+def _perto(a: tuple[int, int, int], b: tuple[int, int, int], folga: int = 10) -> bool:
+    return all(abs(x - y) <= folga for x, y in zip(a, b, strict=True))
+
+
+def _vistas() -> dict[str, tuple[int, int]]:
+    from hefesto_dualsense4unix.gui.ponte_da_tela import TAMANHO_OCULTA
+    from hefesto_dualsense4unix.interface.olhar import VISTA_DELA
+
+    return {"janela": TAMANHO_OCULTA, "dela": VISTA_DELA}
+
+
+@pytest.fixture(scope="module")
+def na_tela() -> dict[tuple[str, str], dict[str, Any]]:
+    """Cada cena em cada vista, medida no WebKit. Sem tela, PULA (e pulo não é verde)."""
+    import json
+
+    from tests.conftest import exigir_gi_real
+
+    exigir_gi_real("A-PALETA — a linha do dono medida no WebKit")
+    gi = pytest.importorskip("gi", reason="a tela precisa do PyGObject do sistema")
+    gi.require_version("Gtk", "3.0")
+    gi.require_version("WebKit2", "4.1")
+    from gi.repository import Gtk
+
+    if not Gtk.init_check(None)[0]:
+        pytest.skip("sem sessão gráfica — o WebKit não abre (rode no xvfb-run)")
+
+    from hefesto_dualsense4unix.interface import hefesto_vivo
+
+    medidas = {}
+    for cena in CENAS_DA_TELA:
+        pintar = hefesto_vivo.PEDIR_A_PINTURA.replace(
+            "CARGA", json.dumps(_carga_da_tela(cena), ensure_ascii=False))
+        for vista, tamanho in _vistas().items():
+            medidas[(cena, vista)] = _medir_a_linha(tamanho, pintar)
+    return medidas
+
+
+def _modelos(cena: str) -> dict[int, str]:
+    pecas, _perfil = CENAS_DA_TELA[cena]()
+    return {p["n"]: p["modelo"] for p in pecas}
+
+
+def _as_casas_na_tela(medido: dict[str, Any]) -> dict[int, dict[str, dict[str, Any]]]:
+    """`{número: {hex da casa: o que o motor mediu}}`, pela ordem da guia."""
+    from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
+
+    tons = [_hexa(t) for t in a04.tons_da_guia()]
+    saida = {}
+    for pref, coluna in medido["colunas"].items():
+        assert len(coluna["casas"]) == len(tons), coluna
+        saida[int(pref[1:])] = dict(zip(tons, coluna["casas"], strict=True))
+    return saida
+
+
+@pytest.mark.parametrize("vista", ["janela", "dela"])
+def test_a_linha_tem_a_cor_do_plastico_do_dono(na_tela, vista: str) -> None:
+    """Toda casa com dono, nas quatro colunas: a linha na tinta do plástico.
+
+    MORDIDA: pinte a linha com `currentColor` (a folha do `aba04.py`, regere a
+    04). A cor computada vira a do texto do botão, quase preta — o defeito da
+    borda desde 09/09, medido pela mesma régua.
+    """
+    medido = na_tela[("a foto", vista)]
+    modelos = _modelos("a foto")
+    casas = _as_casas_na_tela(medido)
+    assert set(casas) == {1, 2, 3, 4}, f"colunas pintadas: {sorted(casas)}"
+    erradas = []
+    for n, fileira in casas.items():
+        for tom, casa in fileira.items():
+            donos = DONOS_DA_FOTO.get(tom, [])
+            if not donos:
+                if casa["content"] not in ("none", "normal", ""):
+                    erradas.append(f"P{n} {tom}: casa sem dono tem linha")
+                continue
+            quer = _o_plastico_do_dono(modelos[donos[0]])
+            computada = casa["cor"].replace(" ", "")
+            if computada != "rgb({},{},{})".format(*_rgb(quer)):
+                erradas.append(f"P{n} {tom}: a linha é {casa['cor']}, o dono é {quer}")
+            x, y, w, _h = casa["linha"]
+            visto = _pixel(medido["_foto"], x + w / 2, int(y) + 1)
+            if not _perto(visto, _rgb(quer)):
+                erradas.append(f"P{n} {tom}: o pixel da linha é {visto}, o dono é {quer}")
+    assert not erradas, "\n".join(erradas)
+
+
+@pytest.mark.parametrize("vista", ["janela", "dela"])
+def test_a_linha_mora_no_vao_entre_a_casa_e_a_caixa(na_tela, vista: str) -> None:
+    """2 px abaixo da casa, 2 px de altura, a largura da casa, e sem cruzar a caixa."""
+    medido = na_tela[("a foto", vista)]
+    erradas = []
+    for pref, coluna in medido["colunas"].items():
+        for casa in coluna["casas"]:
+            if "com-dono" not in casa["classes"]:
+                continue
+            cx, cy, cw, ch = casa["casa"]
+            x, y, w, h = casa["linha"]
+            if y - (cy + ch) < 2 - 0.25:
+                erradas.append(f"{pref}: a linha começa {y - (cy + ch):.2f} px abaixo da casa")
+            if h < 2:
+                erradas.append(f"{pref}: a linha tem {h:.2f} px de altura")
+            if abs(w - cw) > 1 or abs(x - cx) > 1:
+                erradas.append(f"{pref}: a linha {x:.2f}+{w:.2f} e a casa {cx:.2f}+{cw:.2f}")
+            if y + h > coluna["hex_topo"] + 0.25:
+                erradas.append(f"{pref}: a linha acaba em {y + h:.2f} e a caixa começa "
+                               f"em {coluna['hex_topo']:.2f}")
+    assert not erradas, "\n".join(erradas)
+
+
+@pytest.mark.parametrize("vista", ["janela", "dela"])
+def test_a_casa_de_todos_tem_as_quatro_tintas_em_partes_iguais(na_tela, vista: str) -> None:
+    """O «Todos»: a linha da casa verde é dos quatro, um quarto cada, na ordem."""
+    medido = na_tela[("o Todos", vista)]
+    modelos = _modelos("o Todos")
+    casas = _as_casas_na_tela(medido)
+    quer = [_rgb(_o_plastico_do_dono(modelos[n])) for n in DONOS_DO_TODOS[VERDE]]
+    assert len(set(quer)) == 4, "a cena precisa de quatro plásticos diferentes"
+    for n, fileira in casas.items():
+        x, y, w, _h = fileira[VERDE]["linha"]
+        vistos = [_pixel(medido["_foto"], x + (i + 0.5) * w / 4, int(y) + 1)
+                  for i in range(4)]
+        assert all(_perto(v, q) for v, q in zip(vistos, quer, strict=True)), (
+            f"P{n}: os quartos da linha verde são {vistos}, os donos {quer}")
+
+
+@pytest.mark.parametrize("vista", ["janela", "dela"])
+def test_o_plastico_que_nao_chegou_e_tracejado(na_tela, vista: str) -> None:
+    """A gramática do anel incerto: tracejada em `--comment`, nunca cor inventada."""
+    medido = na_tela[("o plástico que não chegou", vista)]
+    casas = _as_casas_na_tela(medido)
+    comentario = (0x62, 0x72, 0xA4)
+    for n, fileira in casas.items():
+        casa = fileira[AZUL]
+        assert casa["imagem"].startswith("repeating-linear-gradient"), (
+            f"P{n}: a linha do P2 sem plástico é {casa['imagem']} / {casa['cor']}")
+        x, y, w, _h = casa["linha"]
+        vistos = [_pixel(medido["_foto"], x + i + 0.5, int(y) + 1) for i in range(int(w))]
+        assert any(_perto(v, comentario, 24) for v in vistos), (n, vistos)
+        assert any(not _perto(v, comentario, 24) for v in vistos), (
+            f"P{n}: a linha do P2 é cheia, não tracejada: {vistos}")
+
+
+@pytest.mark.parametrize("vista", ["janela", "dela"])
+def test_a_casa_propria_nao_tem_mais_borda(na_tela, vista: str) -> None:
+    """A resposta (a): a borda da escolhida saiu, e a linha fica sozinha."""
+    medido = na_tela[("a foto", vista)]
+    for n, fileira in _as_casas_na_tela(medido).items():
+        proprias = [c for c in fileira.values() if c["classes"].split()[:2] == ["tom", "on"]]
+        assert len(proprias) == 1, f"P{n}: {len(proprias)} casas próprias"
+        assert proprias[0]["borda"].replace(" ", "") in ("rgba(0,0,0,0)", "transparent"), (
+            f"P{n}: a casa própria ainda tem borda {proprias[0]['borda']}")
+
+
+def test_a_regua_mede_as_vistas_que_pediu(na_tela) -> None:
+    for (cena, vista), medido in na_tela.items():
+        assert medido["viewport"] == list(_vistas()[vista]), (cena, vista, medido["viewport"])
+
+
+# ---------------------------------------------------------------------------
+# Régua 6 — todo modelo tem linha
+# ---------------------------------------------------------------------------
+
+
+def _os_modelos_da_folha() -> list[str]:
+    """Os modelos que a folha do desenho publica — lidos, não digitados."""
+    from hefesto_dualsense4unix.interface import pacotes  # noqa: F401 — põe `interface/` no path
+    import monta
+
+    return sorted(set(re.findall(r'svg\[data-colorway="([^"]+)"\]', monta.DS)))
+
+
+def test_todo_modelo_tem_linha(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A tinta que o pacote emite para a linha, para cada modelo da folha.
+
+    Um hex com o contraste do piso da borda contra o fundo do card, ou a linha
+    tracejada. Nunca vazia, nunca `url(`. MORDIDA: `plastico_da_linha` lendo a
+    casca por `monta.cor_da_zona` — os oito sem amostra emitem
+    `url(#hachura-sem-hex)` e reprovam.
+    """
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import (
+        FUNDO_DO_CARD,
+        RAZAO_DA_BORDA,
+    )
+    from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
+    from hefesto_dualsense4unix.utils.color_contrast import razao_contraste
+
+    modelos = _os_modelos_da_folha()
+    assert len(modelos) >= 28, f"a folha publica {len(modelos)} modelos"
+    perfil = {"leds": {"auto_player_colors": True, "lightbar_brightness": 1.0}}
+    monkeypatch.setattr(a04.perfil, "ativo", lambda _nome: perfil)
+    from hefesto_dualsense4unix.interface import pacotes
+
+    erradas, tracejadas = [], []
+    for modelo in modelos:
+        ctx = _contexto([_peca(1, (0, 0, 255), 1.0, nome="DualSense", modelo=modelo)])
+        tons = (pacotes.pacote_da_pagina(PAGINA, ctx) or {})["colunas"][UNIQS[0]]["tons"]
+        tintas = re.findall(r"--dono:([^\"]+)\"", tons)
+        if len(tintas) != 1:
+            erradas.append(f"{modelo}: {len(tintas)} linhas na fileira")
+            continue
+        tinta = tintas[0]
+        if tinta == a04.LINHA_INCERTA:
+            tracejadas.append(modelo)
+            continue
+        if not re.fullmatch(r"#[0-9a-fA-F]{6}", tinta):
+            erradas.append(f"{modelo}: a tinta é {tinta!r}")
+            continue
+        razao = razao_contraste(_rgb(tinta), FUNDO_DO_CARD)
+        if razao < RAZAO_DA_BORDA:
+            erradas.append(f"{modelo}: {tinta} dá {razao:.2f}:1 contra o card")
+    assert not erradas, "\n".join(erradas)
+    assert len(tracejadas) < len(modelos), "todas tracejadas: o plástico não chega"
