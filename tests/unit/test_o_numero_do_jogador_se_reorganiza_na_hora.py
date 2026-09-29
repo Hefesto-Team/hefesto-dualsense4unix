@@ -37,24 +37,27 @@ saída do produto.
 
 AS MORDIDAS (29/09/2026, cada uma devolvida com o md5 conferido):
 
-- a chamada da fatia arrancada: 34 de 44 reprovam — as 28 da régua 1 (a
-  espera chega ao teto de 300 s sem armar), a 3 e a 4 que passam pelo
-  vencimento, e as três da régua 7 (as lâmpadas não se liberam e o P4 segue
-  no boneco 4);
+- a chamada da fatia arrancada: 36 de 46 reprovam — as 29 da régua 1 (a
+  espera chega ao teto de 300 s sem armar, com o prazo de um DualSense ou de
+  um externo), a 3 e a 4 que passam pelo vencimento, e as quatro da régua 7
+  (as lâmpadas não se liberam e o P4 segue no boneco 4);
+- a fatia que arma devolvendo True (acordar a volta e o ``connect()``): 34
+  reprovam (a espera tem de ir até o teto);
 - ``armar_gatilho_da_cor_por_numeracao`` armando sem comparar: as nove da
   régua 2 reprovam (o gatilho arma em toda fatia com a mesa parada);
 - o contador da régua 3 enxerga um provedor de externos que lê arquivo: é a
   prova positiva, ``test_o_contador_enxerga_quem_le_arquivo``;
-- ``_congelar_locked`` com os guardados na conta: a régua 4 reprova.
+- ``_congelar_locked`` com os guardados na conta: a régua 4 reprova;
+- sem a guarda da R-04 (``fixos`` vazio no ``coop._ordenar``): reprova
+  ``test_o_p1_que_voltou_tarde_segue_no_boneco_do_posto``.
 
-**A mordida da R-04 que a sprint previa NÃO morde aqui, e está medido:** com
-``fixos`` vazio no ``coop._ordenar``, as três da régua 7 passam. Nos
-vencimentos que a cura antecipa, o vpad do P1 nunca fica fora do boneco: o
-primário é a carta 1 (O-MODO-XBOX-NAO-E-QUEDA-02, item 4), e com o posto vago
-a carta dele é a do lugar em que espera. A guarda morde em
-``test_o_buraco_de_quem_saiu_se_fecha_no_jogo.py`` (a volta tardia do P1 e o
-diário da vaga). A régua 7 prova o DESFECHO da R-04 (o vpad do P1 é o mesmo
-objeto, vivo) com a cura acordando o co-op mais cedo.
+**A guarda da R-04 só trabalha com o vpad do posto FORA de ordem**, e isso só
+acontece depois que o P1 volta tarde (o P2 segue no posto, com a carta 2). Nos
+outros três casos da régua 7 ela não morde, e está medido: o primário é a
+carta 1 (O-MODO-XBOX-NAO-E-QUEDA-02, item 4), e com o posto vago a carta dele é
+a do lugar em que espera — o vpad do posto nunca sai do boneco. O quarto caso
+é o que a sprint pedia: a fatia renumera com o posto fora de ordem, e o vpad
+dele não entra na lista de recriação.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
@@ -70,6 +73,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import structlog
 
 import hefesto_dualsense4unix.daemon.connection as cx
 from hefesto_dualsense4unix.core.evdev_reader import InputDirWatch
@@ -77,6 +81,7 @@ from hefesto_dualsense4unix.core.lightbar_gatilho import ATRASO_APOS_A_ULTIMA_CO
 from hefesto_dualsense4unix.daemon.subsystems import identity as id_mod
 from hefesto_dualsense4unix.daemon.subsystems.external_identity import (
     ExternalIdentityRegistry,
+    _present_ranks_of,
 )
 from hefesto_dualsense4unix.daemon.subsystems.identity import (
     ControllerIdentityRegistry,
@@ -357,6 +362,65 @@ class TestOPrazoVenceEOGatilhoArma:
         )
         assert escritores.cabo, "o cabo não foi repintado junto"
         assert devolveu is False, "a espera acordou como hotplug sem nó novo"
+        assert espera.decorrido == pytest.approx(TETO), "a fatia não pode encurtar a volta"
+
+    def test_o_prazo_de_um_externo_tambem_arma(
+        self, raizes: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A outra causa sem hotplug: o lugar guardado de um controle EXTERNO vence.
+
+        A fila é única (NUM-01): o P1, depois um externo, depois o P2 — 1, 2 e
+        3. O externo sai, o lugar dele fica guardado 30 s no registro DELE, e
+        quando vence o P2 passa a 2 sem que nada mude em ``/dev`` nem no
+        registro dos DualSense. A ponte é a de produção
+        (``ExternalLedSync._wire_presence_providers`` e o lifecycle).
+        """
+        entradas, _dev = raizes
+        relogio = Relogio()
+        reg = ControllerIdentityRegistry(clock=relogio)
+        externos = ExternalIdentityRegistry(clock=relogio)
+        reg.set_external_reserve_provider(lambda: set(externos.snapshot().values()))
+        reg.set_external_presence_provider(externos.lugares_da_mesa)
+        reg.set_external_release_provider(externos.soltar_os_lugares_guardados)
+        externos.set_dualsense_release_provider(
+            lambda: reg.soltar_os_lugares_guardados(motivo="chegou_gente_nova")
+        )
+        externos.set_dualsense_presence_provider(lambda: _present_ranks_of(reg))
+        externo = "aa:bb:cc:00:00:0e"
+
+        reg.sync_connected([P1])
+        relogio.avancar(id_mod.JANELA_DE_ONDA_SEC * 2)
+        assert externos.slot_for(externo, reserve=1) == 2
+        externos.sync_connected([externo])
+        relogio.avancar(id_mod.JANELA_DE_ONDA_SEC * 2)
+        reg.sync_connected([P1, P2])
+        relogio.avancar(id_mod.JANELA_MESA_ESTAVEL_SEC + 1.0)
+        reg.sync_connected([P1, P2])
+        assert reg.liberar_as_lampadas() is True
+        escritores = _OsDoisEscritores(reg, relogio)
+        daemon = _DaemonDaEspera(reg, escritores)
+        assert escritores.numeros() == {P1: 1, P2: 3}, "a conta escrita aqui: P1, externo, P2"
+
+        externos.sync_connected([])  # o externo sai: o lugar dele fica guardado
+        saida = relogio()
+        _a_volta(daemon)
+
+        def tique() -> None:
+            reg.sync_connected([P1, P2])
+            externos.sync_connected([])
+
+        espera = _Espera(monkeypatch, daemon, relogio, ate=TETO + FATIA, tique=tique)
+        assert espera.rodar(_watch_parado(entradas)) is False
+
+        vence = saida + PRAZO
+        armou = espera.armou_por_numeracao()
+        assert armou and vence <= armou[0] <= vence + FATIA, (
+            f"o prazo do externo venceu aos {PRAZO:.0f} s e a fatia armou em {armou}"
+        )
+        pinturas = [t for t, n in escritores.radio if n == {P1: 1, P2: 2}]
+        assert pinturas and pinturas[0] <= vence + FATIA + ATRASO_APOS_A_ULTIMA_CONEXAO_S, (
+            f"as lâmpadas do P2 não disseram 2 depois do prazo do externo: {escritores.radio}"
+        )
         assert espera.decorrido == pytest.approx(TETO), "a fatia não pode encurtar a volta"
 
 
@@ -742,3 +806,64 @@ class TestComOJogoNaAutoridade:
         assert bancada.o_jogo_ve() == {1: None, 2: P3, 3: P4}, (
             f"o jogo não vê a mesa de agora: {bancada.o_jogo_ve()}"
         )
+
+    def test_o_p1_que_voltou_tarde_segue_no_boneco_do_posto(
+        self, jogo_aberto: Callable[[tuple[str, ...]], Any], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Onde a R-04 segura de verdade quando a fatia renumera.
+
+        O P1 sai, o prazo dele vence (o P2 assume o posto) e ele volta tarde: é
+        o 1 na tela, mas o vpad do posto segue com o P2, que agora é o 2, e o
+        co-op espera o jogo soltar (``coop_ordem_do_p1_espera_o_jogo``). Aí o P3
+        sai e o prazo dele vence NA FATIA: o P4 desce para o boneco 3, e o vpad
+        do posto, fora de ordem, não entra na lista de recriação.
+
+        A MORDIDA (29/09/2026): sem a guarda da R-04 (``fixos`` vazio no
+        ``coop._ordenar``), o vpad do posto se recria já na volta tardia do P1
+        e esta régua reprova.
+        """
+        bancada, escritores = jogo_aberto(())
+        vpad_do_p1 = bancada.vpad_do_p1
+        via = bancada.mesa.transporte_de(P1)
+        bancada.mesa.levantar(P1)
+        for _ in range(int(PRAZO / TIQUE_LENTO) + 3):
+            bancada.tique()
+            bancada.reg.liberar_as_lampadas()  # o gatilho de cada volta, já disparado
+        bancada.mesa.sentar(P1, transporte=via)
+        for _ in range(3):
+            bancada.tique()
+            bancada.reg.liberar_as_lampadas()
+        assert bancada.dono_do_vpad_do_p1() == P2, "o P2 assumiu o posto no prazo do P1"
+        assert bancada.coop._p1_espera_o_jogo is True, (
+            "a volta tardia do P1 recriou o vpad do posto com o jogo na autoridade"
+        )
+        assert bancada.o_jogo_ve() == {1: P2, 2: P1, 3: P3, 4: P4}
+
+        bancada.mesa.levantar(P3)
+        bancada.tique()
+        _a_volta(bancada.daemon)
+        vpad_do_p4 = bancada.vpad_de(P4)
+        saida = bancada.tempo()
+        espera = _Espera(
+            monkeypatch,
+            bancada.daemon,
+            bancada.tempo,
+            ate=PRAZO + 3 * FATIA,
+            tique=lambda: _tique_lento(bancada),
+        )
+        with structlog.testing.capture_logs() as registros:
+            espera.rodar(_WatchParado())
+
+        armou = espera.armou_por_numeracao()
+        assert armou and armou[0] <= saida + PRAZO + FATIA, (
+            f"a numeração não armou na fatia depois do prazo do P3: {armou}"
+        )
+        assert escritores.numeros() == {P1: 1, P2: 2, P4: 3}
+        recriadas = [r["recriar"] for r in registros if r["event"] == "coop_ordem_recriada"]
+        assert recriadas == [[P4]], f"a fatia recriou além do P4: {recriadas}"
+        assert bancada.vpad_de(P4) is not vpad_do_p4, "o P4 não renasceu no boneco 3"
+        assert bancada.daemon._gamepad_device is vpad_do_p1 and vpad_do_p1.vivo, (
+            "a R-04: o vpad do posto não se recria com o jogo na autoridade"
+        )
+        assert bancada.dono_do_vpad_do_p1() == P2
+        assert bancada.o_jogo_ve() == {1: P2, 2: P1, 3: P4}
