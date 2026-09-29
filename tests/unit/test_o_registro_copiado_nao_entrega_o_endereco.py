@@ -1056,10 +1056,19 @@ def _imports_que_nao_resolvem(fonte: str, versionados: set[str], vistos: set[str
     """Os imports que um clone limpo não resolve, seguindo os módulos locais que ele traz.
 
     Resolve: a biblioteca padrão, o pacote, um módulo de `scripts/` VERSIONADO, e um
-    pacote instalado fora da árvore. Um arquivo local que o git não tem não resolve.
-    """
-    import importlib.util
+    terceiro que o PROJETO declara. Um arquivo local que o git não tem não resolve.
 
+    A pergunta ao terceiro é ao dono dela, `test_os_portoes_declaram_o_que_importam.py`
+    (o `pyproject.toml` e as `EXCECOES` com motivo, onde o `gi` do sistema mora), e não
+    ao ambiente: o `find_spec` respondia «esta venv tem o pacote?», e a resposta mudava
+    com a máquina (sem `gi` no lint-test, com um `gi` falso depois da coleta).
+    """
+    from tests.unit.test_os_portoes_declaram_o_que_importam import (
+        EXCECOES,
+        _declaradas_no_pyproject,
+    )
+
+    declaradas = _declaradas_no_pyproject()
     ruins: list[str] = []
     for no in ast.walk(ast.parse(fonte)):
         if isinstance(no, ast.Import):
@@ -1082,9 +1091,11 @@ def _imports_que_nao_resolvem(fonte: str, versionados: set[str], vistos: set[str
                     ruins += _imports_que_nao_resolvem(
                         (RAIZ / locais[0]).read_text(encoding="utf-8"), versionados, vistos)
                 continue
-            spec = importlib.util.find_spec(topo)
-            if spec is None or RAIZ in Path(spec.origin or "/").resolve().parents:
-                ruins.append(nome)
+            if topo in EXCECOES:
+                continue
+            if topo.lower() in declaradas or topo.lower().replace("_", "-") in declaradas:
+                continue
+            ruins.append(nome)
     return ruins
 
 
@@ -1104,6 +1115,63 @@ def test_mordida_o_import_do_modulo_ignorado_reprova() -> None:
     assert _imports_que_nao_resolvem(velha, _versionados(), set()) == [
         "sanitizar_saida_de_agente"
     ]
+
+
+# A régua 6 nos três mundos (O-CI-DA-DEV-VOLTA-A-VERDE-02): o `gi` real (a máquina dela e
+# o job do GTK real), sem `gi` (um processo novo com o `gi` bloqueado, como o lint-test) e
+# com um `gi` falso de `__spec__` vazio no `sys.modules` (o lint-test depois da coleta).
+# A resposta é a mesma nos três, porque a pergunta é ao projeto e não ao ambiente.
+# MORDIDA: devolva o `importlib.util.find_spec(topo)` e os dois mundos sem o `gi` real
+# reprovam: o subprocesso com o `ModuleNotFoundError` do bloqueio, e o do `gi` falso com o
+# `ValueError: gi.__spec__ is None` da corrida 36503520655.
+
+_A_REGUA_6_NUM_PROCESSO_NOVO = '''
+import json, sys
+from tests.unit.test_o_registro_copiado_nao_entrega_o_endereco import (
+    _imports_que_nao_resolvem, _versionados,
+)
+print(json.dumps(_imports_que_nao_resolvem(sys.stdin.read(), _versionados(), set())))
+'''
+
+
+def _a_regua_6_sem_o_gi(tmp_path: Path, fonte: str) -> list[str]:
+    import json
+
+    from tests.unit.test_sem_gtk_o_teste_pula_com_o_motivo import _BLOQUEIO
+
+    bloqueio = tmp_path / "bloqueio"
+    bloqueio.mkdir()
+    (bloqueio / "sitecustomize.py").write_text(_BLOQUEIO, encoding="utf-8")
+    ambiente = dict(os.environ)
+    ambiente["PYTHONPATH"] = os.pathsep.join([str(bloqueio), str(RAIZ / "src"), str(RAIZ)])
+    r = subprocess.run(
+        [sys.executable, "-c", _A_REGUA_6_NUM_PROCESSO_NOVO],
+        input=fonte, capture_output=True, text=True, cwd=RAIZ, env=ambiente, timeout=120,
+    )
+    assert r.returncode == 0, f"a régua 6 não respondeu num processo sem o `gi`:\n{r.stderr[-1500:]}"
+    return cast(list[str], json.loads(r.stdout.strip().splitlines()[-1]))
+
+
+def test_a_regua_6_da_a_mesma_resposta_sem_o_gi(tmp_path: Path) -> None:
+    fonte = _ENSAIO_DO_TOUCHPAD.read_text(encoding="utf-8")
+    assert _a_regua_6_sem_o_gi(tmp_path, fonte) == []
+
+
+def test_a_regua_6_da_a_mesma_resposta_com_um_gi_falso(monkeypatch: pytest.MonkeyPatch) -> None:
+    import types
+
+    falso = types.ModuleType("gi")
+    falso.__spec__ = None
+    monkeypatch.setitem(sys.modules, "gi", falso)
+    fonte = _ENSAIO_DO_TOUCHPAD.read_text(encoding="utf-8")
+    assert _imports_que_nao_resolvem(fonte, _versionados(), set()) == []
+
+
+def test_o_terceiro_nao_declarado_continua_pego(tmp_path: Path) -> None:
+    """A lista é a do dono (o `pyproject.toml` e as exceções com motivo), e não uma digitada aqui."""
+    fonte = _ENSAIO_DO_TOUCHPAD.read_text(encoding="utf-8") + "\nimport requests\n"
+    assert _imports_que_nao_resolvem(fonte, _versionados(), set()) == ["requests"]
+    assert _a_regua_6_sem_o_gi(tmp_path, fonte) == ["requests"]
 
 
 def test_o_ensaio_tira_o_home_antes_do_dono(
