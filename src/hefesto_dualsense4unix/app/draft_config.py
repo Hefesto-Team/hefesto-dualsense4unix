@@ -1059,26 +1059,13 @@ class DraftConfig(BaseModel):
         """Rascunho com o MICROFONE trocado por gesto DELA (18/08/2026).
 
         PERFIL-GUARDA-O-MIC-01. Quem chama é a superfície que MANDOU o pedido
-        ao daemon (o controle deslizante do mic e o botão Silenciar do card),
-        DEPOIS de o daemon confirmar — o rascunho registra o que está de pé
-        para o "Salvar Perfil" persistir, exatamente como ``with_speaker``.
+        ao daemon (o controle deslizante do mic), DEPOIS de o daemon confirmar
+        — o rascunho registra o que está de pé para o "Salvar Perfil"
+        persistir, exatamente como ``with_speaker``.
 
-        **Campo a ``None`` é gesto SEM OPINIÃO sobre aquele campo**, e preserva
-        o que já estava registrado — a mesma regra do ``rota`` em
-        ``with_speaker``, e pelo mesmo motivo: os dois campos têm gestos
-        SEPARADOS (o controle deslizante mexe no volume da fonte do sistema; o
-        botão mexe no mudo do firmware), e um não pode apagar o outro. Sem esta
-        preservação, arrastar o volume depois de silenciar desfaria o mudo no
-        rascunho, em silêncio.
-
-        ``soltar_mudo`` é o irmão do ``soltar`` do alto-falante, e é o terceiro
-        estado do botão do card: "Liberar" devolve a posse do registrador de
-        mudo ao ``hid-playstation`` (o botão físico do controle volta a mandar).
-        Um perfil salvo depois desse gesto não pode continuar carregando um
-        ``muted`` que a ativação seguinte reaplicaria, retomando a posse que ela
-        acabou de largar — então o campo volta a ``None`` (sem opinião) e a
-        seção FICA, porque o volume e o ``button_toggles_system`` continuam
-        valendo.
+        **``volume=None`` é gesto SEM OPINIÃO sobre o volume**, e preserva o
+        que já estava registrado — a mesma regra do ``rota`` em
+        ``with_speaker``.
 
         Não há ``without_mic``: aqui não existe o byte inteiro para devolver. O
         volume é do PipeWire (o kernel continua dono da fonte).
