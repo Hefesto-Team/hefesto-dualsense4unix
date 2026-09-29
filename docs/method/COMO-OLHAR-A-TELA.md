@@ -165,8 +165,8 @@ Registrado em **14/08/2026**. **GRAU: MEDIDO.**
 
 `readme_inicio.png` saía **diferente a cada execução** do script oficial —
 ~3 mil pixels de 2,07 M, delta 1 a 2 por canal, sempre nas bordas dos dois
-botões segmentados **selecionados**. Quem rodasse o script antes de commitar,
-como o `GUIA.md` manda, via o `git status` sujar sem nada ter mudado na tela.
+botões segmentados **selecionados**. Quem rodasse o script antes de commitar
+via o `git status` sujar sem nada ter mudado na tela.
 
 A causa não é "ruído de gradiente": é **transição de CSS**. Um `GtkRadioButton`
 recém-marcado anima a mudança para `:checked` (o tema do sistema traz
@@ -407,7 +407,7 @@ Casos reais, todos de 22 e 23/08/2026, e vários são de quem escreveu isto:
 | a régua | o que ela devolveu | o que era |
 |---|---|---|
 | `grep` por `trigger` no perfil | *"34 perfis sem gatilho"* — levado à dona da casa | o campo é `triggers`, **no plural** |
-| `find /tmp /home -maxdepth 4` pelos logs de frametime | *"o log por quadro não está no disco; os números não são sustentáveis"* | estavam em `$ferramenta_JOB_DIR/tmp/mangohud/`, fora das raízes e abaixo do `maxdepth` |
+| `find /tmp /home -maxdepth 4` pelos logs de frametime | *"o log por quadro não está no disco; os números não são sustentáveis"* | estavam na pasta temporária da sessão (`…/tmp/mangohud/`), fora das raízes e abaixo do `maxdepth` |
 | `grep -rn "Disconnect(" src/` | *"zero chamadores; o chamador sumiu"* | a chamada é a **string** `"Disconnect"` dentro de um argv, sem parêntese |
 | `cat /sys/class/bluetooth/hci*/address` | campo vazio para todo adaptador | esse atributo não existe nesse caminho nesta máquina |
 | contar controles por `HID_PHYS` truncado no OUI | `3/1` adaptadores | são `2/1/1` — dois adaptadores do mesmo fabricante fundidos |
@@ -421,10 +421,10 @@ não acha, imprima onde ele procurou e até que profundidade. Uma régua que nun
 foi vista acertando não mediu nada — só ficou quieta.
 
 **E a variante social, que é a pior:** *afirmar o resultado de uma régua que
-nunca foi rodada.* Aconteceu nesta sessão — uma passagem disse a dois
-subagentes que um censo tinha sido "consertado e revalidado" quando ele não
-tinha sido rodado nenhuma vez, e os dois trabalharam vinte minutos sobre a
-premissa inventada. A regra que fecha isto é a de sempre nesta casa: **o
+nunca foi rodada.* Aconteceu na mesma leva — uma passagem de tarefa disse que
+um censo tinha sido "consertado e revalidado" quando ele não tinha sido
+rodado nenhuma vez, e duas frentes trabalharam vinte minutos sobre a premissa
+inventada. A regra que fecha isto é a de sempre nesta casa: **o
 comando ao lado do número.** Se não dá para colar o comando, o número não
 existe.
 

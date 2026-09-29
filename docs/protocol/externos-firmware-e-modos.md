@@ -405,7 +405,8 @@ genuíno e a do clone **passaram por este kernel hoje**, nos mesmos pacotes que
 produziram as duas linhas `controller MAC = ...` da seção 1.1, e foram
 descartadas. Ler o número exige mandar o `0x02` por `hidraw` — isto é,
 **escrever no aparelho**, fora do escopo desta página, e disputando o `hidraw`
-com o driver vivo (a terceira armadilha do `GUIA.md` da raiz).
+com o driver vivo (a armadilha «O instrumento pode estar brigando com o
+produto», em [COMO-OLHAR-A-TELA](../method/COMO-OLHAR-A-TELA.md)).
 
 **Ferramenta pronta no Linux para ler essa versão: não existe.** O
 `joycon-python` não expõe device info; o `joycontrol` é emulação, não leitura; o

@@ -6,9 +6,8 @@
 > interface usando o HTML do mockup. **Se alteramos no layout final a referência
 > do mockup se perde.**"*
 
-Ela tem razão, e o próprio `GUIA.md` confessava o colapso: *"se você mudar o
-mockup, mudou o produto"*. Mockup e produto eram o mesmo arquivo — então toda
-mudança de produto apagava, em silêncio, o desenho contra o qual comparar.
+Mockup e produto eram o mesmo arquivo — então toda mudança de produto apagava,
+em silêncio, o desenho contra o qual comparar.
 
 ## As duas pastas, e o que cada uma é
 
