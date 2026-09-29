@@ -21,14 +21,17 @@ outra:
 ===================  =========================================================
 `mic.set`            MUDO do firmware (camada 3). Único que apaga a luz
                      vermelha; enquanto vigora, o botão físico não vale.
-`mic.volume.set`     GANHO da fonte no PipeWire (camada 1). Não toca no
-                     firmware, não tira o botão físico, não apaga luz.
+`mic.volume.set`     GANHO da fonte no PipeWire (camada 1) e, desde
+                     09/09/2026, o `common[6]` do aparelho (MIC-VOLUME-02).
+                     Não tira o botão físico, não apaga luz.
 ===================  =========================================================
 
-**Por que o volume é universal**, que era o pedido: o DualSense não expõe
-registrador de ganho de microfone em transporte nenhum. O que existe nos dois
-casos é uma FONTE no sistema — no cabo o source ALSA do controle, no rádio o
-source que a ponte de áudio publica. Quem chama não escolhe caminho.
+**Por que o volume é universal**, que era o pedido: o que existe nos dois
+transportes é uma FONTE no sistema — no cabo o source ALSA do controle, no
+rádio o source que a ponte de áudio publica. Quem chama não escolhe caminho.
+O ganho do aparelho (`common[6]`) é o segundo degrau, medido só no cabo. Fato
+substituído em 29/09/2026: esta linha dizia que o DualSense não expõe
+registrador de ganho de microfone; a bancada dela o mediu em 09/09/2026.
 
 **E `sem_fonte` é resposta, não falha.** Por Bluetooth, sem a ponte de pé, não
 existe fonte de captura (medido em 16/08: `pactl list cards` traz só as duas
@@ -426,40 +429,6 @@ class TestOMicChegaAoRascunho:
         janela = _Janela()
         registrar_microfone_no_rascunho(janela)
         assert janela.draft.to_profile("nada").mic is None
-
-
-# ---------------------------------------------------------------------------
-# MIC-GRAVACAO-01 (18/08/2026) — o gesto dela ARMA a trava manual de áudio
-# ---------------------------------------------------------------------------
-
-
-class _MicComEstado:
-    """Controle mínimo: aceita o mudo e devolve leitura de áudio."""
-
-    def __init__(self, aceita: bool = True) -> None:
-        self.aceita = aceita
-        self.pedidos: list[bool | None] = []
-
-    def set_microphone_mute(self, muted: bool | None, *, uniq: str | None = None) -> bool:
-        self.pedidos.append(muted)
-        return self.aceita
-
-    def audio_status_for(self, uniq: str | None = None) -> dict[str, bool]:
-        return {"mic_mudo": False}
-
-
-def _host_de_ipc(controller: Any) -> Any:
-    from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
-    from hefesto_dualsense4unix.daemon.state_store import StateStore
-
-    class _Host(IpcHandlersMixin):  # type: ignore[misc]
-        def __init__(self) -> None:
-            self.controller = controller
-            self.store = StateStore()
-
-    return _Host()
-
-
 
 
 # ---------------------------------------------------------------------------

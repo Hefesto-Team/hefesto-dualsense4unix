@@ -15,9 +15,10 @@ acusa antes de alguém confiar num "22" que envelheceu).
 `resolver_teclado_emulado` (`profiles/schema.py`). O contrato: perfil SEM
 opinião (`None`) deixa a flag global mandar; perfil COM opinião vence —
 inclusive quando a opinião é "desligado" e a flag está ligada (a mesma
-proteção do `mic.muted`, MIC-GRAVACAO-01: perfil sem opinião nunca apaga o
-que já valia). **Nenhum widget foi ligado** — é a régua e o campo, não o fio
-(ver a nota datada em `Profile.teclado_emulado`).
+proteção que valia para o `mic.muted` até ele sair do perfil em 29/09/2026,
+O-MUDO-E-DO-CONTROLE-01: perfil sem opinião nunca apaga o que já valia).
+**Nenhum widget foi ligado** — é a régua e o campo, não o fio (ver a nota
+datada em `Profile.teclado_emulado`).
 """
 
 from __future__ import annotations

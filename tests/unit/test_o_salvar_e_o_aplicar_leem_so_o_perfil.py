@@ -8,8 +8,8 @@ O DEFEITO, MEDIDO: o mesmo valor tinha dois donos, o perfil no disco e o estado
 do aparelho, e o Salvar punha o aparelho por cima do disco. O aparelho tem três
 fontes que não são escolha dela:
 
-1. a ativação que não aplica todo campo (o mudo do microfone só atravessa a
-   troca manual);
+1. a ativação que não aplica todo campo (o mudo do microfone, que até 29/09
+   atravessava só a troca manual e desde então não atravessa troca nenhuma);
 2. as camadas (o teto da economia de bateria);
 3. o próprio controle (o botão do microfone, o PS + L3 da máscara).
 

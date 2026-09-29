@@ -715,12 +715,15 @@ class ProfileMicConfig(BaseModel):
     explícita de perfil) foi revogada em 29/09/2026 pela
     O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01, na metade O-MUDO-E-DO-CONTROLE-01.
 
-    **`volume` é do CAMINHO, não do firmware.** Ele é o volume da fonte de
-    captura no sistema (o source do PipeWire), e por isso funciona igual no cabo
-    e no rádio — que é exatamente o "independente de saber se tá via bt ou via
-    cabo" do pedido dela. O DualSense não expõe um registrador de ganho de
-    microfone; o que existe no firmware é o MUDO, e ele é do controle (ver o
-    bloco acima).
+    **`volume` é do CAMINHO, e desde 09/09/2026 também do aparelho.** Ele é o
+    volume da fonte de captura no sistema (o source do PipeWire), e por isso
+    funciona igual no cabo e no rádio — que é exatamente o "independente de
+    saber se tá via bt ou via cabo" do pedido dela. O segundo degrau é o
+    `common[6]` do controle, o ganho de captura do firmware, pela régua única
+    `core/backend_pydualsense.byte_do_volume_do_microfone` (MIC-VOLUME-02,
+    D-0909-O-VOLUME-DO-MIC-LIGA-O-BYTE-DO-APARELHO). Fato errado substituído
+    em 29/09/2026: este bloco dizia que o DualSense não expõe registrador de
+    ganho de microfone. O MUDO do firmware é do controle (ver o bloco acima).
 
     A faixa é 0-100 (por cento), diferente do `volume` do alto-falante, que é
     0-255 porque escreve um byte do report. Aqui o número é de sistema, e usar a

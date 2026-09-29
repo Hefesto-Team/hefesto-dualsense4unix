@@ -35,7 +35,8 @@ costura nascer, o fio fica vermelho e diz qual campo trazer.
 A GUARDA QUE NÃO PODE SER COPIADA
 ----------------------------------
 ``muted`` é o mudo do FIRMWARE, o mesmo que apaga o LED vermelho, e a exceção
-MIC-GRAVACAO-01 só o deixa atravessar a troca EXPLÍCITA de perfil. Se
+MIC-GRAVACAO-01 o deixava atravessar só a troca EXPLÍCITA de perfil (revogada
+em 29/09/2026: nenhuma troca o leva, ver a nota abaixo). Se
 ``apply_controller_mics`` tivesse a própria cópia dessa regra, o perfil de um
 jogo voltaria a roubar o mudo dela no meio de uma gravação — o defeito que a
 AUDIT-FINDING-PROFILE-MIC-LED-RESET-01 fechou. Por isso o método REUSA
