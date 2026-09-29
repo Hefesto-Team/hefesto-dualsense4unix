@@ -249,12 +249,14 @@ def test_o_no_fechado_sem_broker_fica_de_fora(
 
 
 def test_a_descoberta_do_gamepad_nao_abre_os_nos_auxiliares(mesa: Mesa) -> None:
-    """A descoberta do GAMEPAD abre o nó de gamepad (ela lê a forma dos eixos),
-    e só ele: o touchpad e o movimento ficam de fora pelo sysfs, sem abrir.
+    """A descoberta do GAMEPAD não abre nó nenhum: o touchpad e o movimento
+    ficam de fora pelo sysfs, e o nó de gamepad do DualSense se classifica
+    pelo sysfs também (O-NO-DO-DUALSENSE-SE-CLASSIFICA-PELO-SYSFS-01).
 
     **A MORDIDA:** tire o `_sysfs_tem_tecla(path, _BTN_GAMEPAD)` de antes da
     abertura e os oito nós auxiliares dos quatro controles voltam a ser
-    abertos em toda volta — e o filtro de caps os descarta logo depois.
+    abertos em toda volta — e o filtro de caps os descarta logo depois; abra
+    o nó de gamepad na descoberta e os quatro voltam à conta.
     """
     achados = er.discover_gamepads(com_sysfs=False)
     gamepads = {
@@ -262,10 +264,10 @@ def test_a_descoberta_do_gamepad_nao_abre_os_nos_auxiliares(mesa: Mesa) -> None:
         if nome == NOMES["gamepad"] and uniq != VPAD
     }
     assert {g.evdev_path for g in achados} == gamepads
-    abertos_a_mais = sorted(set(mesa.aberturas) - gamepads)
-    assert abertos_a_mais == [], (
-        f"a descoberta do gamepad abriu {len(abertos_a_mais)} nó(s) auxiliar(es)"
+    assert mesa.aberturas == [], (
+        f"a descoberta do gamepad abriu {len(mesa.aberturas)} nó(s)"
     )
+    assert mesa.pedidos_ao_broker == []
 
 
 def test_o_controle_que_saiu_nao_aparece(mesa: Mesa) -> None:

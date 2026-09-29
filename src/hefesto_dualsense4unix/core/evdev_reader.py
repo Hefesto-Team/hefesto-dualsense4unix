@@ -561,9 +561,10 @@ def abrir_input_device(
 
     HIDE-SO-O-HIDRAW-02. `pede_ao_broker` é um filtro opcional sobre o
     caminho, avaliado só depois do `PermissionError`: a descoberta o usa para
-    ir ao broker SÓ pelo nó que ela procura (o do gamepad, o do touchpad, o
-    dos sensores), em vez de pedir o fd de todo nó do controle a cada
-    hotplug — cada pedido é uma linha no diário do broker.
+    ir ao broker só pelo nó de gamepad que o sysfs não classificou, em vez de
+    pedir o fd de todo nó do controle a cada hotplug — cada pedido é uma
+    linha no diário do broker. Quem pede o fd, no mais, é o leitor que vai
+    LER o nó.
 
     O broker ausente, ou que recusa, devolve o `PermissionError` original:
     o chamador trata como sempre tratou.
@@ -599,9 +600,9 @@ def _event_num(path: Path) -> int:
 class InputDirWatch:
     """Detector barato de mudança em /dev/input (PERF-MULTI-CONTROLLER-01).
 
-    A enumeração dos gamepads (`discover_dualsense_evdevs`) abre cada nó de
-    gamepad (open + ioctls + close; o do físico, pelo broker) — caro demais
-    para rodar em timer de 2s no event loop (era o hitch rítmico do co-op). O
+    A enumeração dos gamepads (`discover_dualsense_evdevs`) lê o sysfs de cada
+    nó e abre o de gamepad que o sysfs não classifica — caro demais para rodar
+    em timer de 2s no event loop (era o hitch rítmico do co-op). O
     conjunto de nodes só muda em hotplug/re-enumeração, e isso é observável
     por um `os.listdir` (~µs). Cada consumidor tem a SUA instância (o "mudou?"
     é relativo ao último `poll()` DESTE watch).
@@ -895,8 +896,11 @@ class GamepadDescoberto:
     uniq: str | None
     driver: str | None
     hidraw: str | None
-    #: `código evdev -> faixa declarada` (ver `EixoAbsoluto`). É o que o
-    #: normalizador consome; vazio quando o node não declara `absinfo` legível.
+    #: `código evdev -> faixa declarada` (ver `EixoAbsoluto`), do nó aberto.
+    #: Vazio no DualSense classificado pelo sysfs, que não publica o `absinfo`:
+    #: nenhum código do produto o lê da descoberta, e o leitor lê a faixa do nó
+    #: que abre (`EvdevReader._on_device_opened`). Vazio também quando o nó
+    #: não declara `absinfo` legível.
     eixos: dict[int, EixoAbsoluto] = field(default_factory=dict)
 
     def como_entrada_de_inventario(self) -> dict[str, Any]:
@@ -929,7 +933,7 @@ def _int_ou(valor: Any, reserva: int) -> int:
 def discover_gamepads(
     *, com_sysfs: bool = True, especie: str | None = None
 ) -> list[GamepadDescoberto]:
-    """Descoberta ÚNICA: abre cada node de /dev/input UMA vez e classifica.
+    """Descoberta ÚNICA: classifica cada node de /dev/input numa volta só.
 
     LUGAR-À-MESA-01/E2. Até aqui havia DOIS laços — `discover_dualsense_evdevs`
     e `discover_external_gamepads` — que abriam **todos** os nodes, cada um com
@@ -972,13 +976,16 @@ def discover_gamepads(
     partida. O veto de 19/07 (*"externo não ganha controle virtual"*) segue de
     pé; quem o derruba é a `E3`, e ela é dela.
 
-    CUSTO (lição PERF-MULTI-CONTROLLER-01): abre cada nó não virtual que o
-    sysfs diz ter botão de gamepad (open + ioctls + close), e o do DualSense
-    físico, que nasce fechado, abre pelo broker — cada abertura dessas é uma
-    linha em cada diário. Touchpad, movimento, teclado, mouse e botão de
-    energia ficam de fora pelo sysfs, sem abrir
-    (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026); o nó de sysfs
-    ilegível ainda abre. Fora do event loop, sempre. **GRAU:
+    CUSTO (lição PERF-MULTI-CONTROLLER-01): touchpad, movimento, teclado,
+    mouse e botão de energia ficam de fora pelo sysfs, sem abrir
+    (A-DESCOBERTA-LE-O-SYSFS-E-NAO-ABRE-O-NO-01, 28/09/2026), e o nó de
+    gamepad do DualSense se classifica pelo sysfs, sem abrir e sem pedido ao
+    broker (`_gamepad_do_dualsense_no_sysfs`,
+    O-NO-DO-DUALSENSE-SE-CLASSIFICA-PELO-SYSFS-01, 28/09/2026): até ali cada
+    hotplug pedia ao broker o gamepad de cada controle, e a saída de um fazia
+    os outros três pedirem. Abre (open + ioctls + close) só o gamepad externo,
+    cuja faixa de eixos é dele, e o nó que o sysfs não responde; este, se for
+    do físico fechado, pelo broker. Fora do event loop, sempre. **GRAU:
     SUSPEITA COM MECANISMO** sobre o delta: o caminho DualSense passa a chamar
     `capabilities()` também nos nodes de outro vendor (antes o filtro de vendor
     curto-circuitava antes) — alguns ioctls a mais por node, num caminho que já
