@@ -1877,6 +1877,16 @@ def alturas_do_no(no: str) -> tuple[int, ...] | None:
         return None
 
 
+def campo_da_onda_calada(lado: str) -> str:
+    """O endereço do cinza da onda de `lado` (`aba02.onda`, o invólucro).
+
+    Um nome só para o gerador, o pacote e a régua: o gerador escreve
+    `{lado}-onda-calada` e o pacote o pinta com `"sim"` quando o dono do
+    selo diz que o microfone está calado.
+    """
+    return f"{lado}-onda-calada"
+
+
 def campos_da_onda(lado: str, alturas: tuple[int, ...] | None,
                    *, mudo: bool = False) -> dict[str, Any]:
     """Os quinze campos de um medidor: catorze alturas e o selo da leitura.
@@ -3288,6 +3298,19 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # com `mic_mudo: true`. A física responde, e o produto não
                 # precisa inferir.
                 **campos_da_onda(LADO_MIC, alturas_do_no(no_do_microfone(c))),
+                # A COR DA ONDA DO MICROFONE SEGUE O SELO — 29/09/2026. O
+                # cinza era a classe `mudo` que o gerador cravava nos cartões
+                # 2 e 4 pela cena, e a barra do P2 mexia cinza com o microfone
+                # aberto. O dono do mudo é o mesmo do selo que diz MUDO
+                # (`_faces_do_microfone`, a primeira resposta): uma face calada
+                # acinzenta, e o «não sei» não, porque a onda tem a leitura
+                # dela (`sem-leitura`). Endereço da bancada: só entra quando a
+                # página publicada o tiver.
+                **_so_se_a_pagina_tiver({
+                    campo_da_onda_calada(LADO_MIC): (
+                        "sim" if _faces_do_microfone(a)[0] else "nao"  # noqa-acento: valor de atributo
+                    ),
+                }),
                 **campos_da_onda(
                     LADO_ALTO,
                     alturas_do_no(no_do_alto_falante(uniq)),

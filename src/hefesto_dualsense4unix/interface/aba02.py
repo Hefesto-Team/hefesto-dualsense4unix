@@ -43,6 +43,7 @@ from hefesto_dualsense4unix.app.widgets.controller_card import texto_motion
 # palavras, a folha pararia de casar com o produto na primeira troca de língua,
 # e o ícone sumiria CALADO (a regra do CSS deixaria de casar, sem erro nenhum).
 from pacotes.a02_controles import ROTULO_DO_CLIQUE, carga_na_tela
+from pacotes.a02_controles import campo_da_onda_calada
 from pacotes.a02_controles import meias_da_barra as _meias_da_barra
 from pacotes.a02_controles import texto_do_xy as _texto_do_xy
 # AS DUAS FRASES DE TELA QUE O PRODUTO PINTA — e por isso o dono delas é o
@@ -829,6 +830,15 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .onda{height:18px;display:flex;align-items:flex-end;gap:2px;margin-bottom:5px}
   .onda i{flex:1;background:var(--cyan);border-radius:1px;display:block;opacity:.85}
   .onda.mudo i{background:var(--border-forte);opacity:.5}
+  /* O CINZA DO MUDO TEM ENDEREÇO — 29/09/2026, A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01.
+     O gerador cravava `mudo` na `.onda` do p2 e do p4 a partir da cena, e o
+     produto não tinha como desfazê-lo: a barra do P2 mexia CINZA com o
+     microfone aberto. O invólucro `.onda-do-mudo` é o endereço, e não custa
+     pixel (`display:contents`); a classe `calada` acende quando o dono do selo
+     diz que alguma face do microfone está calada. Vem ANTES do `sem-leitura`,
+     com a mesma especificidade: o «não sei» continua mandando. */
+  .onda-do-mudo{display:contents}
+  .onda-do-mudo.calada>.onda i{background:var(--border-forte);opacity:.5}
   /* SEM LEITURA — e esta regra é a que impede a tela de mentir.
      05/09/2026, com as ondas ligadas ao PipeWire.
 
@@ -1627,7 +1637,7 @@ def grade(apertados):
                 f'{glifo(n, ativo=False, tam=38)}</span>')
     return "\n".join(um(n) for n, _ in GL16)
 
-def onda(vals, mudo=False, lado=""):
+def onda(vals, mudo=None, lado=""):
     """O medidor de nível. Piso de 16%: com o microfone mudo os valores caem a 4-6%
     e as barras somem — o bloco lia como quebrado ao lado do card cheio. Silêncio
     é uma linha baixa e visível, não a ausência do desenho.
@@ -1653,6 +1663,17 @@ def onda(vals, mudo=False, lado=""):
     esta aba em 03/09.
 
     `lado` vazio mantém o desenho sem endereço nenhum, para quem só quer a peça.
+
+    **O MUDO TEM ENDEREÇO, E O GERADOR NÃO O CRAVA** — 29/09/2026,
+    A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01. Com `lado`, a `.onda` não leva mais
+    a classe `mudo`: ela ficava nos cartões 2 e 4 para sempre, porque a cena
+    os desenha mudos e nenhum tique a apagava, e a barra do P2 mexia cinza
+    com o microfone dele aberto. Quando `mudo` é um `bool`, a onda ganha um
+    invólucro com endereço próprio (`{lado}-onda-calada`, alvo `classe`,
+    `data-hef-quando="sim"`), e a classe `calada` dele nasce da cena e é
+    repintada pelo produto a cada tique (`a02_controles`, pelo dono do selo).
+    `mudo=None` é a onda sem mudo nenhum (o alto-falante, cujo mudo achata as
+    alturas em `campos_da_onda`).
     """
     if not lado:
         return ('<span class="onda' + (' mudo' if mudo else '') + '">'
@@ -1662,10 +1683,16 @@ def onda(vals, mudo=False, lado=""):
         f'<i data-campo="{lado}-onda-{i}" data-hef-alvo="altura"'
         f' style="height:{max(v, 16)}%"></i>'
         for i, v in enumerate(vals))
-    return ('<span class="onda' + (' mudo' if mudo else '') + '"'
-            f' data-campo="{lado}-onda-lida" data-hef-alvo="classe"'
-            ' data-hef-classe="sem-leitura" data-hef-quando="nao">'
-            + barras + '</span>')
+    medidor = ('<span class="onda"'
+               f' data-campo="{lado}-onda-lida" data-hef-alvo="classe"'
+               ' data-hef-classe="sem-leitura" data-hef-quando="nao">'
+               + barras + '</span>')
+    if mudo is None:
+        return medidor
+    return ('<span class="onda-do-mudo' + (' calada' if mudo else '') + '"'
+            f' data-campo="{campo_da_onda_calada(lado)}" data-hef-alvo="classe"'
+            ' data-hef-classe="calada" data-hef-quando="sim">'
+            + medidor + '</span>')
 
 # O `pos` SAIU DAQUI — 04/09/2026. Ele agora é `a02_controles.pos_do_analogico`,
 # importado no topo: a conta que põe o polegar na tela passou a ter UM dono, e o
