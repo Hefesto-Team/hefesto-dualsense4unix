@@ -36,7 +36,9 @@ função lia, saiu junto.
 
 `_kill_previous_instances` e `_is_systemd_managed` ficaram em `app/main.py` e
 morreram com ele. O mecanismo de instância única desta casa é
-`utils/single_instance.py`.
+`utils/single_instance.py`, e o lançador o usa desde 28/09/2026
+(`acquire_or_bring_to_front`, no modelo *primeira vence*: o segundo clique traz
+a janela aberta para a frente).
 """
 from __future__ import annotations
 

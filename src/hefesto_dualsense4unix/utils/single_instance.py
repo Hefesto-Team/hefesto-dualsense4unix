@@ -11,7 +11,16 @@ BUG-TRAY-SINGLE-FLASH-01: modelo "primeira vence" (`acquire_or_bring_to_front`).
   Novo processo detecta predecessor vivo, chama `bring_to_front_cb(pid)` para
   trazer a janela ao foco e retorna None — o caller deve chamar `sys.exit(0)`.
   Se o predecessor não responder dentro de `fallback_takeover_after_sec`, aplica
-  takeover como fallback (evita GUI zumbi travada). Usado pela GUI GTK.
+  takeover como fallback (evita GUI zumbi travada). Usado pelo lançador da
+  interface (`scripts/abrir_interface.py`) desde 28/09/2026: abrir o Hefesto com
+  a janela já aberta traz a janela para a frente em vez de abrir outra.
+
+  O PEDIDO VIAJA POR SINAL E UM ARQUIVO (`pedir_a_frente` e
+  `ler_o_pedido_de_ativacao`, abaixo): o novo processo grava o token de
+  ativação que o ambiente lhe deu (``XDG_ACTIVATION_TOKEN`` no Wayland,
+  ``DESKTOP_STARTUP_ID`` no X) e manda ``SIGUSR1`` ao predecessor, que o lê e
+  apresenta a janela com ele. Sem o token o compositor pode recusar o foco a
+  uma janela que não recebeu clique; com ele, o clique no ícone é quem pede.
 
 Motivação: udev ADD dispara `hefesto-dualsense4unix-gui-hotplug.service` duas vezes em <200ms
 (subsystem usb + hidraw/filhos). Com o modelo "última vence" a GUI2 matava a
@@ -23,7 +32,7 @@ o kernel libera o flock automaticamente.
 
 API:
     pid = acquire_or_takeover("daemon")                     # daemon — última vence
-    pid = acquire_or_bring_to_front("gui", cb)              # gui — primeira vence
+    pid = acquire_or_bring_to_front("gui-<tela>", cb)       # interface — primeira vence
     alive = is_alive(pid)                                   # predicado leve
 """
 from __future__ import annotations
@@ -378,6 +387,63 @@ def acquire_or_bring_to_front(
     return own_pid
 
 
+#: O sinal que pede ao predecessor para trazer a janela para a frente. É o
+#: mesmo que a janela GTK antiga escutava (BUG-TRAY-SINGLE-FLASH-01). Quem toma
+#: a vez no modelo *primeira vence* tem de armar um tratador para ele ANTES de
+#: `acquire_or_bring_to_front`: a ação padrão do ``SIGUSR1`` é MATAR, e um
+#: segundo clique no meio do arranque derrubaria a janela que está nascendo.
+SINAL_DE_VIR_A_FRENTE = signal.SIGUSR1
+
+#: As variáveis em que o ambiente entrega o token de ativação a quem ele abriu,
+#: na ordem de preferência: a do Wayland (``xdg-activation-v1``) e a do X
+#: (startup-notification).
+_VARIAVEIS_DO_TOKEN: tuple[str, ...] = ("XDG_ACTIVATION_TOKEN", "DESKTOP_STARTUP_ID")
+
+
+def _arquivo_de_ativacao(name: str) -> Path:
+    return runtime_dir(ensure=True) / f"{name}.ativacao"
+
+
+def pedir_a_frente(name: str, pid: int) -> None:
+    """Pede ao predecessor ``pid`` que traga a janela dele para a frente.
+
+    É o ``bring_to_front_cb`` do lançador. Grava o token de ativação deste
+    processo (se o ambiente deu um) em ``<runtime>/<name>.ativacao``, com modo
+    0600, e manda ``SINAL_DE_VIR_A_FRENTE``. A ordem importa: o arquivo existe
+    ANTES de o sinal chegar, então o predecessor nunca lê um pedido pela
+    metade. Um token que não se grava não impede o pedido: sem ele o compositor
+    decide sozinho, que é o que acontecia antes.
+    """
+    token = next(
+        (os.environ[v] for v in _VARIAVEIS_DO_TOKEN if os.environ.get(v)), None
+    )
+    if token:
+        arquivo = _arquivo_de_ativacao(name)
+        try:
+            fd = os.open(str(arquivo), os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as saida:
+                saida.write(token)
+        except OSError as exc:
+            logger.warning("single_instance_token_nao_gravado", name=name, err=str(exc))
+    os.kill(pid, SINAL_DE_VIR_A_FRENTE)
+
+
+def ler_o_pedido_de_ativacao(name: str) -> str | None:
+    """O token que o último pedido de vir à frente deixou, ou ``None``.
+
+    Lê e APAGA: um token serve a uma ativação só, e um velho reaproveitado no
+    pedido seguinte seria recusado pelo compositor.
+    """
+    arquivo = _arquivo_de_ativacao(name)
+    try:
+        token = arquivo.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    with contextlib.suppress(OSError):
+        arquivo.unlink()
+    return token or None
+
+
 # Alias público (CLUSTER-TRAY-POLISH-01): callers externos ao módulo usam o
 # nome sem underscore. A função original (`_is_hefesto_dualsense4unix_process`)
 # permanece como nome canônico interno e é referenciada pelos testes existentes
@@ -397,10 +463,13 @@ def release(name: str) -> None:
 
 __all__ = [
     "SIGTERM_GRACE_SEC",
+    "SINAL_DE_VIR_A_FRENTE",
     "_is_hefesto_dualsense4unix_process",
     "acquire_or_bring_to_front",
     "acquire_or_takeover",
     "is_alive",
     "is_hefesto_dualsense4unix_process",
+    "ler_o_pedido_de_ativacao",
+    "pedir_a_frente",
     "release",
 ]

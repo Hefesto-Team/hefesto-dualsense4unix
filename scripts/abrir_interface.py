@@ -69,6 +69,27 @@ no lugar errado. O conserto é de UMA LINHA, na máquina dela, e é decisão del
 qual lado quer: ``:minimize,maximize,close`` põe os três à direita, na ordem
 usual do COSMIC.
 
+UMA JANELA POR TELA, E O SEGUNDO CLIQUE A TRAZ PARA A FRENTE (28/09/2026)
+--------------------------------------------------------------------------
+Até aqui, clicar duas vezes no ícone abria duas janelas: o mecanismo que a
+janela GTK antiga usava (``utils/single_instance.acquire_or_bring_to_front``, o
+modelo *primeira vence*) ficou sem chamador quando ela saiu, em 06/09. Ele volta
+aqui (``tomar_a_vez``): a janela que já está aberta recebe o pedido e vem para a
+frente, e o segundo processo sai com ``rc=0`` antes de importar o GTK.
+
+O lock é POR TELA (``nome_da_vez``): a janela que nasce num ``Xvfb`` de
+instrumento nunca pede nada à janela da tela dela. E ele só vale quando a
+janela vai para uma tela de verdade (``HEFESTO_NA_TELA=1``, sem ``--oculta``):
+os instrumentos continuam abrindo quantas janelas escondidas quiserem.
+
+O CACHE DE LOADERS DO GDKPIXBUF SE CONFERE AQUI, ANTES DO GTK
+--------------------------------------------------------------
+``app/arranque.sanear_loaders_do_gdk_pixbuf`` descarta o
+``GDK_PIXBUF_MODULE_FILE`` herdado de um terminal empacotado quando os módulos
+dele são de outro confinamento, o caso em que o GTK aborta o processo no
+primeiro SVG. O ``run.sh`` faz a versão grossa em shell; a fina é esta, e ela
+só serve antes de qualquer import de ``gi.repository``.
+
 A INTERFACE É UM VISOR
 -----------------------
 Ela lê ``daemon.state_full`` do daemon que estiver no ar para mostrar a mesa
@@ -77,7 +98,10 @@ veste a identidade da JANELA e sai da frente.
 """
 from __future__ import annotations
 
+import os
+import re
 import runpy
+import signal
 import sys
 from pathlib import Path
 
@@ -185,6 +209,98 @@ def vestir_a_identidade(casa: object) -> list[str]:
     return feito
 
 
+def nome_da_vez() -> str:
+    """O nome do lock de instância única: um por TELA.
+
+    A tela é a do Wayland quando há uma (é nela que o GTK abre, salvo o opt-in
+    do XWayland, que continua na mesma sessão), senão a do X. Um ``Xvfb`` de
+    instrumento tem ``DISPLAY`` próprio e nenhum ``WAYLAND_DISPLAY``: o lock dele
+    é outro, e ele nunca manda a janela dela para a frente.
+    """
+    tela = os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY") or "sem-tela"
+    return "gui-" + re.sub(r"[^A-Za-z0-9_.-]", "_", tela)
+
+
+def a_janela_vai_para_a_tela(args: list[str]) -> bool:
+    """A janela deste processo nasce numa tela de verdade?
+
+    ``HEFESTO_NA_TELA=1`` é o que o atalho e o lançador de ``~/.local/bin``
+    declaram; sem ele, a guarda TELA-DELA-02 já desviou a janela para um
+    ``Xvfb`` próprio. ``--oculta`` é o ``Gtk.OffscreenWindow`` das réguas, que
+    não aparece em tela nenhuma. Nos dois casos não há o que trazer à frente.
+    """
+    return os.environ.get("HEFESTO_NA_TELA") == "1" and "--oculta" not in args
+
+
+def tomar_a_vez(args: list[str]) -> str | None:
+    """Toma a vez de ser A janela desta tela, no modelo *primeira vence*.
+
+    Devolve o nome do lock quando este processo é a janela (e aí quem chama
+    arma ``armar_a_volta_a_frente`` depois do GTK), ``""`` quando não há lock a
+    tomar (instrumento, janela oculta), e ``None`` quando uma janela já aberta
+    recebeu o pedido e veio para a frente: quem chama sai com ``rc=0``.
+
+    O TRATADOR DO SINAL ENTRA ANTES DO LOCK, e é de propósito: a ação padrão do
+    ``SIGUSR1`` é MATAR. Do instante em que o pid file traz este PID até o
+    GLib armar o tratador de verdade, um segundo clique derrubaria a janela que
+    está nascendo. Um tratador vazio de Python é trocado na execução de um
+    filho (o WebKit), o que um ``SIG_IGN`` não seria.
+    """
+    if not a_janela_vai_para_a_tela(args):
+        return ""
+    from hefesto_dualsense4unix.utils import single_instance as si
+
+    nome = nome_da_vez()
+    signal.signal(si.SINAL_DE_VIR_A_FRENTE, lambda *_: None)
+    pid = si.acquire_or_bring_to_front(nome, lambda anterior: si.pedir_a_frente(nome, anterior))
+    return nome if pid is not None else None
+
+
+def janelas_de_frente(janelas: list[object]) -> list[object]:
+    """As janelas que um pedido de vir à frente apresenta.
+
+    As de primeiro nível, visíveis e sem dona: a janela das abas. Um diálogo
+    (``transient_for``) vem junto com a dona, e uma ``Gtk.OffscreenWindow`` não
+    está em tela nenhuma.
+    """
+    from gi.repository import Gtk
+
+    return [
+        j for j in janelas
+        if isinstance(j, Gtk.Window)
+        and not isinstance(j, Gtk.OffscreenWindow)
+        and j.get_window_type() == Gtk.WindowType.TOPLEVEL
+        and j.get_visible()
+        and j.get_transient_for() is None
+    ]
+
+
+def vir_a_frente(nome: str) -> bool:
+    """O tratador do pedido: apresenta a janela, com o token de quem pediu."""
+    from gi.repository import Gtk
+
+    from hefesto_dualsense4unix.utils import single_instance as si
+
+    token = si.ler_o_pedido_de_ativacao(nome)
+    janelas = janelas_de_frente(Gtk.Window.list_toplevels())
+    for janela in janelas:
+        if token:
+            janela.set_startup_id(token)
+        janela.present()
+    print(f"  a janela veio para a frente ({len(janelas)} apresentada(s)"
+          f"{', com o token de quem pediu' if token else ''})")
+    return True  # o GLib mantém o tratador para o próximo pedido
+
+
+def armar_a_volta_a_frente(nome: str) -> None:
+    """Troca o tratador vazio pelo do laço do GLib, que roda na thread da janela."""
+    from gi.repository import GLib
+
+    from hefesto_dualsense4unix.utils import single_instance as si
+
+    GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, si.SINAL_DE_VIR_A_FRENTE, vir_a_frente, nome)
+
+
 #: O TETO DO DIÁRIO DA JANELA, em bytes. 1 MiB dá ~10 mil linhas de recado —
 #: mais do que uma sessão dela produz, e pouco o bastante para nunca aparecer
 #: numa conta de disco. Passou disso, o arquivo vira `.1` e recomeça: UMA volta
@@ -239,6 +355,12 @@ def diario_da_janela() -> object:
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
 
+    # ANTES DE QUALQUER `gi.repository`: depois dele o GdkPixbuf já leu o cache
+    # de loaders, e a correção chegaria tarde.
+    from hefesto_dualsense4unix.app.arranque import sanear_loaders_do_gdk_pixbuf
+
+    loaders_saneados = sanear_loaders_do_gdk_pixbuf()
+
     diario = diario_da_janela()
     if diario is not None:
         import datetime
@@ -252,6 +374,9 @@ def main(argv: list[str] | None = None) -> int:
         sys.stderr = diario  # type: ignore[assignment]
         print(f"\n===== a janela abriu em "
               f"{datetime.datetime.now().isoformat(timespec='seconds')} =====")
+    if loaders_saneados:
+        print("  loaders do GdkPixbuf: o cache herdado não serve a este processo;"
+              " vale o do sistema")
 
     piloto = achar_o_piloto()
     if piloto is None:
@@ -268,12 +393,21 @@ def main(argv: list[str] | None = None) -> int:
         sys.path.insert(0, str(src))
     from hefesto_dualsense4unix.utils import identidade
 
+    # UMA JANELA POR TELA: se já há uma aberta, ela vem para a frente e este
+    # processo sai aqui, sem ter importado o GTK.
+    vez = tomar_a_vez(args)
+    if vez is None:
+        print("  já havia uma janela aberta nesta tela: ela veio para a frente")
+        return 0
+
     # A IDENTIDADE VEM DO DONO DELA, nunca de um literal aqui: um nome digitado
     # neste arquivo põe no WM_CLASS algo que o `.desktop` não declara, e a dock
     # não acha o ícone quando os dois divergem.
     for linha in vestir_a_identidade(identidade.atual()):
         print(f"  {linha}")
     print()
+    if vez:
+        armar_a_volta_a_frente(vez)
 
     # `run_name="__main__"` para o piloto executar o próprio bloco de entrada.
     # `sys.argv[0]` passa a ser o piloto: é o que ele espera ver.
