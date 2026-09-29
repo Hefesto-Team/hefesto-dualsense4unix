@@ -1,132 +1,46 @@
 """O que se acerta no AMBIENTE antes de a primeira janela GTK nascer.
 
-DE ONDE ISTO VEIO, e por que não morreu com a janela — 06/09/2026, `GTK-3`
----------------------------------------------------------------------------
+DE ONDE ISTO VEIO — 06/09/2026, `GTK-3`
+---------------------------------------
 
 Estas funções moravam no topo de `app/main.py`, o entry point da janela GTK que
 a decisão dela (`D-0609-GTK-LEVA-INTEIRA`) aposentou: *"a ideia sempre foi
 reaproveitar o que fiz no gtk e não apontar nada mais pra lá mas pro html"*.
+Elas não montam janela: acertam VARIÁVEL DE AMBIENTE de PROCESSO, e o processo
+da interface nova é uma `Gtk.Window` com um `WebKit2.WebView` dentro.
 
-**Nenhuma delas monta janela**, e é essa a régua que decide o que sai e o que
-fica: elas acertam VARIÁVEL DE AMBIENTE de PROCESSO, e o processo da interface
-nova é uma `Gtk.Window` com um `WebKit2.WebView` dentro — tem exatamente os dois
-problemas que elas curam. `app/main.py` era o único chamador, e por isso elas
-mudam de casa em vez de morrer: o conhecimento é medido, o endereço é que estava
-errado.
-
-QUEM CHAMA ISTO HOJE: NINGUÉM EM PYTHON, e a razão está medida
----------------------------------------------------------------
+QUEM CHAMA ISTO HOJE — 28/09/2026
+---------------------------------
 
 O caminho que ela clica é `packaging/*.desktop` → `run.sh --gui` →
-`scripts/abrir_interface.py` → `interface/hefesto_vivo.py`, e o
-`run.sh` já faz as DUAS curas **em shell, com critério grosso**, antes de o
-Python subir:
+`scripts/abrir_interface.py` → `interface/hefesto_vivo.py`. O
+`scripts/abrir_interface.py` chama `sanear_loaders_do_gdk_pixbuf` antes de
+qualquer import de `gi.repository`
+(O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01). O `run.sh` já faz uma versão GROSSA da
+mesma limpeza em shell (só desarma quando todos os módulos do cache moram em
+`/snap`), e ela continua servindo o que roda antes do Python subir; a FINA, que
+descarta também o cache cujos `.so` são de outro confinamento, é esta.
 
-* `run.sh:63-68` desarma o `GDK_PIXBUF_MODULE_FILE` quando TODOS os módulos do
-  cache moram em `/snap` e o processo não está lá dentro;
-* `run.sh:82-86` força `GDK_BACKEND=x11` no COSMIC **sem conferir se há X vivo**.
+O QUE SAIU, e está escrito para ninguém procurar
+------------------------------------------------
 
-O que este módulo tem a mais é o critério FINO, e ele é o que a bancada mediu:
-`forcar_xwayland_no_cosmic` **recusa** quando o `DISPLAY` existe e está morto
-(T-02, ONDA0-Z7) — o caso em que forçar faz a janela não abrir; e
-`sanear_loaders_do_gdk_pixbuf` também descarta o cache cujos `.so` são de OUTRO
-confinamento, que é o caso em que o GTK **aborta o processo inteiro** em vez de
-desenhar um ícone vazio.
-
-**Ligar a versão fina ao lançador é mudança de comportamento e não foi pedida —
-a `GTK-3` mudou o endereço, não o produto.** Quem for costurar o lançador novo
-começa por `scripts/abrir_interface.py`, que já é quem veste prgname, WM_CLASS e
-ícone no processo antes da primeira janela.
-
-O QUE **NÃO** VEIO JUNTO, e está escrito para ninguém procurar
----------------------------------------------------------------
+`forcar_xwayland_no_cosmic` e `x11_alcancavel` saíram em 28/09/2026. A primeira
+forçava `GDK_BACKEND=x11` em toda sessão COSMIC, e a razão dela (os popups de
+`GtkMenu`/`GtkComboBox` no cosmic-comp) morreu com a janela GTK: a interface
+nova não tem nenhum dos dois. Por ordem dela de 19/09 (*"o certo é tirar dos
+dois. Faça"*), o XWayland deixou de ser o padrão no `run.sh` e no `.desktop`, e
+ligar a função ao lançador DESFARIA essa ordem. O opt-in que fica é o do
+`run.sh` (`HEFESTO_DUALSENSE4UNIX_XWAYLAND=1`, ou o `--force-xwayland` do
+`install.sh`). A chave `HEFESTO_DUALSENSE4UNIX_NO_XWAYLAND`, que só esta
+função lia, saiu junto.
 
 `_kill_previous_instances` e `_is_systemd_managed` ficaram em `app/main.py` e
-morreram com ele. Eles matavam por `pgrep -f` **a janela anterior**, que é o que
-deixou de existir; o mecanismo de instância única desta casa é
-`utils/single_instance.py`, vivo e com régua própria
-(`tests/unit/test_single_instance.py`). A lista de padrões continua onde estava,
-em `utils.identidade.atual().padroes_de_matanca`.
+morreram com ele. O mecanismo de instância única desta casa é
+`utils/single_instance.py`.
 """
 from __future__ import annotations
 
 import os
-
-#: O opt-out da cura do XWayland. O `portao_a_casa_sabe_e_o_produto_nao_faz`
-#: cobra que toda chave declarada tenha endereço vivo, e este é o dela.
-CHAVE_SEM_XWAYLAND = "HEFESTO_DUALSENSE4UNIX_NO_XWAYLAND"
-
-
-def x11_alcancavel(display: str, timeout: float = 0.2) -> bool:
-    """Confere BARATO se há servidor X ouvindo em `display` (T-02, ONDA0-Z7).
-
-    Sem abrir janela e sem `gi` — ela roda ANTES de qualquer import de
-    `gi.repository`, cuja cadeia já abre um `GdkDisplay`: usar `gi` aqui faria o
-    remédio virar a doença. Só sabe testar o caminho comum de displays LOCAIS
-    (`:N` ou `:N.M`, socket UNIX em `/tmp/.X11-unix/X<N>`, medido ao vivo em
-    23/08). Um display remoto (`host:N`) devolve `True` — a régua desta função é
-    só RECUSAR diante de PROVA de que não há ninguém do outro lado; incerteza
-    não é prova, e o padrão da casa é não mexer no ambiente sem saber.
-    """
-    numero = display[1:].split(".", 1)[0] if display.startswith(":") else ""
-    if not numero.isdigit():
-        return True
-    import socket
-
-    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    sock.settimeout(timeout)
-    try:
-        sock.connect(f"/tmp/.X11-unix/X{numero}")
-    except OSError:
-        return False
-    else:
-        return True
-    finally:
-        sock.close()
-
-
-def forcar_xwayland_no_cosmic() -> bool:
-    """Força GDK_BACKEND=x11 (XWayland) quando a sessão é COSMIC E há X vivo.
-
-    No cosmic-comp (Wayland nativo), os popups de GtkComboBox/GtkMenu abrem
-    com fundo claro, mal-posicionados e com grab quebrado (fecham sozinhos,
-    exigem "segurar o clique"). Rodar sob XWayland contorna o bug.
-
-    IMPORTANTE: a própria sessão COSMIC do Pop!_OS exporta
-    `GDK_BACKEND=wayland,x11` (lista de fallback que PREFERE wayland) — que é
-    exatamente o que dispara o bug. Por isso sobrescrevemos esse valor; só não
-    mexemos se já for `x11` puro ou se ela pediu opt-out via
-    `HEFESTO_DUALSENSE4UNIX_NO_XWAYLAND=1` (ex.: um COSMIC futuro que conserte
-    o grab de popups e queira Wayland nativo de volta).
-
-    T-02 (ONDA0-Z7, 24/08): a bancada mediu a janela NÃO ABRIR nesta máquina —
-    `Gtk.init_check()` devolve `False` sob `GDK_BACKEND=x11` quando não há
-    XWayland do outro lado, e o produto forçava sem conferir. Por isso, antes de
-    sobrescrever, confere se `DISPLAY` existe E se há alguém ouvindo nele
-    (`x11_alcancavel`, barata, sem abrir janela). Sem prova de X vivo, NÃO mexe
-    em `GDK_BACKEND` — a tela sobe em Wayland nativo, com o bug de popup do
-    cosmic-comp, que é infinitamente melhor que não subir.
-
-    Devolve True se aplicou — quem chamar registra depois que o log subir, e é
-    por isso que ela não loga sozinha: ela roda antes do `configure_logging`.
-    """
-    if os.environ.get(CHAVE_SEM_XWAYLAND) == "1":
-        return False
-    if os.environ.get("GDK_BACKEND", "") == "x11":
-        return False  # já é XWayland puro — nada a fazer
-    desktop = (
-        os.environ.get("XDG_CURRENT_DESKTOP", "")
-        + os.environ.get("XDG_SESSION_DESKTOP", "")
-    ).lower()
-    if "cosmic" not in desktop:
-        return False
-    display = os.environ.get("DISPLAY")
-    if not display:
-        return False  # sem DISPLAY: não há X para forçar
-    if not x11_alcancavel(display):
-        return False  # DISPLAY presente e MORTO conta como inválido (item 7)
-    os.environ["GDK_BACKEND"] = "x11"
-    return True
 
 
 def sanear_loaders_do_gdk_pixbuf() -> bool:
@@ -188,9 +102,6 @@ def de_outro_confinamento(modulo: str) -> bool:
 
 
 __all__ = [
-    "CHAVE_SEM_XWAYLAND",
     "de_outro_confinamento",
-    "forcar_xwayland_no_cosmic",
     "sanear_loaders_do_gdk_pixbuf",
-    "x11_alcancavel",
 ]
