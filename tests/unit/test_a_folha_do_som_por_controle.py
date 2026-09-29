@@ -178,12 +178,15 @@ def test_todo_arranjo_do_produto_vira_linha_em_todo_envelope(folha):
 def test_o_terceiro_arranjo_nao_e_alcancavel_por_montar_pelos_dois_arranjos(folha):
     """A razão de a folha montar por `ARRANJO_POR_NOME`, e não pelo atalho.
 
-    `montar_pelos_dois_arranjos` devolve só os dois de `ARRANJOS`. Se um dia ele
+    `montar_pelos_dois_arranjos` (do ensaio `o_som_que_sai.py` desde 28/09/2026,
+    quando desceu do produto) devolve só os dois de `ARRANJOS`. Se um dia ele
     passar a devolver os três, esta régua reprova — e aí o comentário do
     cabeçalho da folha é que está velho, não o código.
     """
+    from o_som_que_sai import montar_pelos_dois_arranjos
+
     quadros = [b"\x00" * 200, b"\x00" * 200]
-    pelos_dois = folha.af.montar_pelos_dois_arranjos(quadros, seq=1)
+    pelos_dois = montar_pelos_dois_arranjos(quadros, seq=1)
     assert set(pelos_dois) == {"ds5dongle", "senshi"}
     assert "common-preservado" in folha.af.ARRANJO_POR_NOME
     assert "common-preservado" not in pelos_dois

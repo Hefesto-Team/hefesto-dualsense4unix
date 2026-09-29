@@ -800,15 +800,13 @@ def de_pe() -> dict[str, str]:
         return {uniq: source.nome for uniq, source in _DE_PE.items()}
 
 
-def alimentando() -> dict[str, str]:
-    """`{uniq: nó de onde o áudio vem}` — quem está sendo enchido, e por onde.
-
-    Diferente de :func:`de_pe` de propósito: um canal publicado e MUDO é estado
-    legítimo (o do rádio, e o do cabo cujo `parec` não subiu), e colapsar os
-    dois faria "o nó existe" parecer "o microfone está entrando".
-    """
-    with _TRANCA:
-        return {uniq: alim.fonte for uniq, alim in _ALIMENTANDO.items()}
+# `alimentando()` MOROU AQUI até 28/09/2026 (O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01):
+# a leitura `{uniq: nó de onde o áudio vem}` de :data:`_ALIMENTANDO`. Nasceu na
+# ONDA5-MIC-VIRTUAL-01 para o caminho do cabo pedir, e o caminho do cabo
+# (`daemon/subsystems/bt_mic._reconciliar_o_cabo`) guarda a posse pelo nome do
+# canal e nunca perguntou. Sem leitor no produto, saiu; a distinção que ela
+# protegia (canal de pé ≠ microfone entrando) continua na tabela, e as réguas a
+# medem pelo que o processo e o nó de mentira recebem.
 
 
 def prioridade() -> int:

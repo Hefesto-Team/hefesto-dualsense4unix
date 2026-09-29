@@ -18,8 +18,11 @@ casa"*.
 
 from __future__ import annotations
 
+import importlib.util
 import zlib
 from itertools import pairwise
+from pathlib import Path
+from types import ModuleType
 
 import pytest
 
@@ -36,6 +39,24 @@ from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 #: portões, e um deles pega por FORMA, sem consultar OUI nenhum.
 MAC_A = "aa:bb:cc:00:00:01"
 MAC_B = "e8:47:3a:00:00:09"
+
+
+def _o_ensaio() -> ModuleType:
+    """O ensaio `scripts/ensaios/o_som_que_sai.py`, carregado pelo caminho.
+
+    `degrau_para_payload` e `montar_pelos_dois_arranjos` DESCERAM do produto
+    para ele em 28/09/2026 (O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01): só o ensaio
+    as chamava. As réguas seguem a função onde ela mora.
+    """
+    caminho = Path(__file__).resolve().parents[2] / "scripts" / "ensaios" / "o_som_que_sai.py"
+    spec = importlib.util.spec_from_file_location("ensaio_o_som_que_sai", caminho)
+    assert spec is not None and spec.loader is not None
+    modulo = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(modulo)
+    return modulo
+
+
+ENSAIO = _o_ensaio()
 
 
 def _pcm_de_um_quadro(canais: int = af.CANAIS_DO_ENCODER) -> bytes:
@@ -123,17 +144,17 @@ class TestOMenorDegrauQueComporta:
         [(0, 0x32), (24, 0x32), (88, 0x32), (89, 0x33), (152, 0x33), (153, 0x34), (493, 0x39)],
     )
     def test_escolhe_o_menor_que_cabe(self, payload: int, esperado: int) -> None:
-        assert af.degrau_para_payload(payload) == esperado
+        assert ENSAIO.degrau_para_payload(payload) == esperado
 
     def test_acima_do_teto_nao_cabe_em_degrau_nenhum(self) -> None:
-        assert af.degrau_para_payload(494) is None
+        assert ENSAIO.degrau_para_payload(494) is None
 
     def test_o_0x31_nunca_e_escolhido_porque_ele_e_do_kernel(self) -> None:
         # Ele comportaria 24 bytes, e ainda assim a escolha é o 0x32: o 0x31 é
         # o único degrau que declara Output E Input, e é por ele que o
         # `hid-playstation` fala.
         assert af.ORCAMENTO_DO_DEGRAU[af.DEGRAU_DO_KERNEL] >= 24
-        assert af.degrau_para_payload(1) != af.DEGRAU_DO_KERNEL
+        assert ENSAIO.degrau_para_payload(1) != af.DEGRAU_DO_KERNEL
 
 
 class TestOEncoderFechaOQuadroDeDuzentosBytes:
@@ -190,12 +211,12 @@ class TestOsDoisArranjosVaoJuntosENenhumEhEscolhido:
         with af.CodificadorOpus() as codificador:
             quadro = codificador.codificar(_pcm_de_um_quadro())
         assert quadro is not None
-        pacotes = af.montar_pelos_dois_arranjos([quadro, quadro])
+        pacotes = ENSAIO.montar_pelos_dois_arranjos([quadro, quadro])
         assert set(pacotes) == {"ds5dongle", "senshi"}
         assert pacotes["ds5dongle"] != pacotes["senshi"]
 
     def test_os_dois_tem_547_bytes_e_o_id_do_degrau(self) -> None:
-        pacotes = af.montar_pelos_dois_arranjos([b"\x01" * 200, b"\x02" * 200])
+        pacotes = ENSAIO.montar_pelos_dois_arranjos([b"\x01" * 200, b"\x02" * 200])
         for pkt in pacotes.values():
             assert len(pkt) == af.TAMANHO_DO_DEGRAU[0x39] == 547
             assert pkt[0] == 0x39
@@ -241,7 +262,7 @@ class TestOCrcEhODoProdutoEBateComAFonte:
         assert zlib.crc32(b"\xa2") & 0xFFFFFFFF == 0xEADA2D49
 
     def test_o_crc_fica_nos_quatro_ultimos_bytes_dos_dois_arranjos(self) -> None:
-        pacotes = af.montar_pelos_dois_arranjos([b"\x07" * 200, b"\x09" * 200])
+        pacotes = ENSAIO.montar_pelos_dois_arranjos([b"\x07" * 200, b"\x09" * 200])
         for pkt in pacotes.values():
             esperado = bt_crc32(pkt[:-4], seed=BT_CRC_SEED)
             assert int.from_bytes(pkt[-4:], "little") == esperado
@@ -304,6 +325,21 @@ class TestONomeDoNoNaoCarregaOTransporte:
         assert af.sufixo_do_sink_do_som("hefesto_som_000001") == "000001"
         assert af.sufixo_do_sink_do_som("alsa_output.usb-Sony-00") == ""
         assert af.sufixo_do_sink_do_som("hefesto_som_zzzzzz") == ""
+
+    def test_quem_pergunta_se_o_sink_e_de_controle_le_pelo_dono(self) -> None:
+        """A janela lê o nome do nó pelo leitor dele, e não casando o prefixo.
+
+        `app/audio_saida.e_saida_de_controle` é quem guarda a saída anterior
+        dela antes de mandar o som ao controle. Até 28/09/2026 ele respondia
+        `startswith("hefesto_som_")`, e um nó sem o rabo de endereço passava
+        por saída de controle. MORDIDA: volte a linha ao `startswith` e a
+        primeira asserção reprova.
+        """
+        from hefesto_dualsense4unix.app.audio_saida import e_saida_de_controle
+
+        assert e_saida_de_controle("hefesto_som_zzzzzz", "") is False
+        assert e_saida_de_controle("hefesto_som_", "") is False
+        assert e_saida_de_controle(af.nome_do_sink(MAC_A), "") is True
 
     def test_o_no_sem_nome_nao_sobe(self) -> None:
         runner = RunnerFalso()

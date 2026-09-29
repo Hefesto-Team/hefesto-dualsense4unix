@@ -78,7 +78,57 @@ _SRC = os.path.join(_RAIZ, "src")
 if _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
+from collections.abc import Sequence
+
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
+
+# ---------------------------------------------------------------------------
+# O QUE DESCEU DO PRODUTO PARA CÁ — 28/09/2026, O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01
+#
+# As duas funções abaixo moravam em `integrations/alto_falante_bt.py` e só este
+# ensaio (e as réguas dele) as chamava: o produto escreve UM degrau, o do
+# arranjo que tocou (`af.ARRANJO_035`), e nunca monta os dois candidatos do
+# `0x39` lado a lado. Elas continuam sendo do ensaio, que ainda roda.
+# ---------------------------------------------------------------------------
+
+
+def degrau_para_payload(bytes_de_payload: int) -> int | None:
+    """O MENOR degrau cujo orçamento comporta este payload. None se não cabe.
+
+    A regra é de TABELA (``af.ORCAMENTO_DO_DEGRAU``), e a leitura é ordenada
+    pelo id. O ``0x31`` fica fora dos candidatos porque ele é do kernel
+    (``af.DEGRAU_DO_KERNEL``).
+
+    **A mordida desta função:** peça 89 bytes e ela tem de devolver ``0x33``.
+    Se devolver ``0x32`` (88 B de orçamento) o CRC cai fora do lugar e o
+    firmware descarta calado.
+    """
+    if bytes_de_payload < 0:
+        return None
+    for degrau in sorted(af.TAMANHO_DO_DEGRAU):
+        if degrau == af.DEGRAU_DO_KERNEL:
+            continue
+        if af.ORCAMENTO_DO_DEGRAU[degrau] >= bytes_de_payload:
+            return degrau
+    return None
+
+
+def montar_pelos_dois_arranjos(
+    quadros: Sequence[bytes],
+    *,
+    seq: int = 0,
+    tag_audio: int = af.BLOCO_SPEAKER,
+) -> dict[str, bytes]:
+    """O MESMO PCM já codificado, montado pelos DOIS arranjos candidatos.
+
+    É o que a rota corrigida da SOM-QUE-SAI-01 pedia: *"mandam o MESMO PCM
+    pelos DOIS arranjos, cada um com a sua régua"*. Devolver os dois de uma
+    vez é o que impede que alguém meça um e conclua sobre o outro. O corpo de
+    cada um é o do produto (``Arranjo.montar``, com CRC e tag); daqui é só o
+    par.
+    """
+    return {a.nome: a.montar(quadros, seq=seq, tag_audio=tag_audio) for a in af.ARRANJOS}
+
 
 #: MAC SINTÉTICO da casa, e ele nunca sai deste arquivo. Faixas permitidas:
 #: ``02:fe:00``, ``aa:bb:cc``, ``e8:47:3a``, sem sequência simples. Nada de MAC
@@ -194,7 +244,7 @@ def medir_motor() -> int:
 
     print("A ESCOLHA DO DEGRAU — o MENOR cujo orçamento comporta o payload")
     for n in (24, 88, 89, 152, 493, 494):
-        degrau = af.degrau_para_payload(n)
+        degrau = degrau_para_payload(n)
         print(f"  {n:4d} B -> {('0x%02x' % degrau) if degrau else 'NÃO CABE em degrau nenhum'}")
     print()
 
@@ -221,7 +271,7 @@ def medir_motor() -> int:
         print()
 
         print("OS DOIS ARRANJOS — o MESMO PCM, dois corpos, e nenhum é escolhido")
-        pacotes = af.montar_pelos_dois_arranjos([q or b"" for q in opus])
+        pacotes = montar_pelos_dois_arranjos([q or b"" for q in opus])
         for nome, pkt in pacotes.items():
             arranjo = af.ARRANJO_POR_NOME[nome]
             print(f"  [{nome}] {arranjo.fonte}")

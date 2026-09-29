@@ -334,10 +334,13 @@ def test_sem_fonte_o_no_sobe_mudo() -> None:
     `escrever`, e é a MIC-VIRTUAL-02 que a liga. Colapsar os dois faria "o nó
     existe" parecer "o microfone está entrando".
     """
-    canal.abrir(P1, "P1", fabrica=SourceQueGuardaOPcm, lancar=ProcessoDeMentira)
+    source = canal.abrir(P1, "P1", fabrica=SourceQueGuardaOPcm, lancar=ProcessoDeMentira)
     assert canal.de_pe() == {P1: "hefesto_mic_000001"}
-    assert canal.alimentando() == {}
+    # O canal de pé e o microfone entrando são duas coisas: nenhum leitor
+    # nasceu, e nada entrou no nó. (Até 28/09/2026 isto se lia por
+    # `canal.alimentando()`, que saiu do produto sem leitor.)
     assert ProcessoDeMentira.lancados == []
+    assert source is not None and bytes(source.recebido) == b""
 
 
 def test_o_cabo_entra_no_no_pela_porta_publica_do_mecanismo() -> None:
@@ -356,7 +359,10 @@ def test_o_cabo_entra_no_no_pela_porta_publica_do_mecanismo() -> None:
             break
         time.sleep(0.005)
     assert bytes(source.recebido) == b"\x01\x02" * 64, "o cabo não entrou no nó"
-    assert canal.alimentando() == {P1: CABO_1}
+    assert len(ProcessoDeMentira.lancados) == 1
+    assert f"--device={CABO_1}" in ProcessoDeMentira.lancados[0], (
+        "o leitor que encheu o nó não leu o nó ALSA do cabo deste controle"
+    )
 
 
 def test_o_leitor_pergunta_o_formato_ao_no_e_nao_a_uma_constante() -> None:
@@ -414,9 +420,21 @@ def test_o_leitor_leva_as_propriedades_uma_por_argv() -> None:
 
 def test_fechar_mata_o_leitor_antes_de_derrubar_o_no() -> None:
     """A ordem: um `parec` vivo sem nó para onde mandar continua gravando ela."""
-    canal.abrir(P1, "P1", fonte=CABO_1, fabrica=SourceQueGuardaOPcm, lancar=ProcessoDeMentira)
+    vivos: list[ProcessoDeMentira] = []
+
+    def lancar(argv: list[str]) -> ProcessoDeMentira:
+        processo = ProcessoDeMentira(argv)
+        vivos.append(processo)
+        return processo
+
+    source = canal.abrir(
+        P1, "P1", fonte=CABO_1, fabrica=SourceQueGuardaOPcm, lancar=lancar
+    )
     assert canal.fechar(P1) is True
-    assert canal.alimentando() == {}
+    assert vivos and vivos[0].terminou + vivos[0].matou >= 1, (
+        "o canal fechou e o leitor do cabo continuou vivo"
+    )
+    assert source is not None and source.parou == 1
     assert canal.de_pe() == {}
 
 
@@ -435,7 +453,7 @@ def test_o_leitor_que_nao_lanca_nao_derruba_o_canal() -> None:
     )
     assert source is not None
     assert canal.de_pe() == {P1: "hefesto_mic_000001"}
-    assert canal.alimentando() == {}
+    assert bytes(source.recebido) == b"", "entrou áudio num canal sem leitor"
 
 
 # ---------------------------------------------------------------------------

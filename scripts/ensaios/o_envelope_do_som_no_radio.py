@@ -20,9 +20,10 @@ arranjos do produto, pelos DOIS envelopes, e a orelha dela decide.
 
 O QUE É DO PRODUTO, e o que é daqui
 ------------------------------------
-O Opus é o `CodificadorOpus` do produto; os reports saem de
-`montar_pelos_dois_arranjos` (`integrations/alto_falante_bt`) — com CRC, tag e
-os dois corpos candidatos, nunca redigitados aqui. Daqui é só o tom (440 Hz),
+O Opus é o `CodificadorOpus` do produto; os reports saem de `Arranjo.montar`
+(`integrations/alto_falante_bt`), pelo arranjo pedido — com CRC, tag e o corpo
+do produto, nunca redigitados aqui. O `common` de [3..49] vai só ao arranjo
+que o preserva, e sai de `af.common_de_audio`. Daqui é só o tom (440 Hz),
 o ritmo (um report a cada `quadros x 10 ms`) e a escolha do envelope.
 
 A MORDIDA
@@ -221,6 +222,7 @@ def main() -> int:
         for nome in nomes:
             arranjo = af.ARRANJO_POR_NOME[nome]
             por_report = max(1, int(getattr(arranjo, "quadros_de_audio", 1)))
+            common = af.common_de_audio() if arranjo.common_preservado else None
             for envelope in envelopes:
                 print(f"PASSO [{nome}] x [{envelope}] — {por_report} quadro(s) por report, "
                       f"um report a cada {por_report * 10} ms")
@@ -231,7 +233,12 @@ def main() -> int:
                     if len(lote) < por_report:
                         break
                     seq = (seq + 1) & 0x0F
-                    pacote = af.montar_pelos_dois_arranjos(lote, seq=seq)[nome]
+                    # Pelo ARRANJO pedido, e não pelo atalho dos dois
+                    # candidatos: até 28/09/2026 esta linha indexava o par
+                    # (`ds5dongle`, `senshi`) pelo nome, e os outros dois de
+                    # `ARRANJO_POR_NOME` — que a validação acima aceita, e que
+                    # são o padrão — morriam de `KeyError` na montagem.
+                    pacote = arranjo.montar(lote, seq=seq, common=common)
                     if args.crc_errado:
                         pacote = corromper_crc(pacote)
                     try:

@@ -5,55 +5,43 @@ virtual"*, para o som do controle funcionar **independente da máscara e do
 transporte**. O contrato é o mesmo do vpad: o jogo escolhe um gamepad, não um
 transporte — aqui, quem escolhe a saída escolhe um CONTROLE, não um sink.
 
-**As duas decisões que a sprint deixava para ela já estão tomadas**, por
-delegação (`docs/data/decisoes-dela.csv`, `D-0609-UM-NO-DE-SOM-POR-CONTROLE`):
-um nó por controle, com o número do assento.
+**O nome é dela** (`D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-MICROFONE-DO-CONTROLE-N`,
+palavra dela: *"4a"*): «Alto-falante do Controle N», par de «Microfone do
+Controle N», com o sufixo da Sony desde 23/09/2026. O `sink_name` segue o
+APARELHO (`hefesto_som_<hex6>`), e por isso sobrevive à troca de assento tanto
+quanto à troca de cabo.
 
-**O NOME MUDOU EM 09/09/2026, E QUEM O MUDOU FOI ELA.** Este arquivo aferia
-`Alto-falante · P1` … `P4` e escrevia, como MORDIDA de um dos testes, *"troque
-o rótulo por «Alto-falante do Controle N»"*. Era a leitura certa do mundo de
-06/09 — a decisão de então era por DELEGAÇÃO. Ela decidiu o contrário
-(`D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-MICROFONE-DO-CONTROLE-N`, palavra
-dela: *"4a"*), e o par com «Microfone do Controle N» está na LÍNGUA DESTA
-CASA. **O que era a mordida virou o produto**, e o que este arquivo mede agora
-é o nome dela.
+UM DONO SÓ, DESDE 28/09/2026 (O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01)
+-------------------------------------------------------------------
+Até aqui este arquivo aferia o PLANO DA JANELA (`app/audio_saida.
+plano_de_publicacao` e os irmãos): comandos que ninguém executava, escritos ao
+lado do dono que de fato publica o nó. O plano saiu, e as mesmas invariantes
+passaram a ser cobradas de quem faz: o `GerenciadorDeNosDeSom`
+(`daemon/subsystems/alto_falante.py`), que sobe um
+`integrations/alto_falante_bt.SinkVirtualPipeWire` por controle, com a rota de
+`alto_falante_bt.rota_do_no`.
 
-E o `sink_name` também tinha DOIS donos — `hefesto_alto_falante_<assento>`
-aqui e `hefesto_som_<hex6>` em `integrations/alto_falante_bt`, que é o que o
-produto de fato publica. Ficou o segundo: ele segue o APARELHO, e por isso
-sobrevive à troca de assento tanto quanto à troca de cabo.
+E ele é medido num SERVIDOR DE SOM DE MENTIRA (:class:`ServidorDeSomDeMentira`)
+que guarda o que foi carregado e responde por isso — não num dublê que só
+aceita. Nenhum módulo entra no PipeWire de ninguém.
 
-Cada teste deste arquivo diz, na docstring, **o que arrancar para vê-lo
-reprovar**. Nenhum áudio real, nenhum módulo carregado no PipeWire de ninguém:
-o produto devolve o PLANO de comandos, e o plano é o que se mede.
-
-**E esta régua não é a bancada desta casa.** Os endereços são das faixas
-sintéticas (`02fe00`, `aabbcc`), o terceiro controle nunca esteve nesta mesa, e
-nada aqui depende dos dois DualSense daqui: uma prova que só passa com eles
-mede a bancada, não a cura.
+**Esta régua não é a bancada desta casa.** Os endereços são das faixas
+sintéticas (`02fe00`, `aabbcc`), e nada aqui depende dos DualSense daqui.
 """
 
 from __future__ import annotations
 
+import inspect
 from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.app.audio_saida import (
-    ASSENTOS,
-    MOTIVO_NO_SEM_ASSENTO,
-    MOTIVO_NO_SEM_PLACA_NO_CABO,
-    MOTIVO_NO_SEM_PONTE_NO_RADIO,
-    POR_CABO,
-    POR_RADIO,
-    TRANSPORTE_CABO,
-    TRANSPORTE_RADIO,
-    NoDeAltoFalante,
-    no_do_controle,
-    nome_do_alto_falante,
-    plano_de_publicacao,
-    rota_do_no,
+from hefesto_dualsense4unix.daemon.subsystems.alto_falante import (
+    ControleNaLista,
+    GerenciadorDeNosDeSom,
 )
+from hefesto_dualsense4unix.integrations import alto_falante_bt as af
+from hefesto_dualsense4unix.integrations import dualsense_bt_audio as mic
 
 #: A FORMA A, decisão dela de 23/09/2026 (A-FORJA-VALIDA-O-SOM-01): o nome dela
 #: na frente e o ``iProduct`` da Sony atrás. Digitado aqui DE PROPÓSITO — a
@@ -61,12 +49,14 @@ from hefesto_dualsense4unix.app.audio_saida import (
 _SONY = " (DualSense Wireless Controller)"
 
 # ---------------------------------------------------------------------------
-# A bancada de mentira: dois controles no cabo, cada um no seu dispositivo USB
+# A bancada de mentira: até quatro controles, cada um no seu dispositivo USB
 # ---------------------------------------------------------------------------
 
 #: Faixas sintéticas da casa. NENHUM destes é um controle desta bancada.
 _UNIQ_P1 = "02fe0011a1b2"
 _UNIQ_P2 = "02fe0011a1b3"
+_UNIQ_P3 = "02fe0011a1b4"
+_UNIQ_P4 = "02fe0011a1b5"
 _UNIQ_NUNCA_VISTO = "aabbcc7f0e01"
 
 _SINK_P1 = (
@@ -77,43 +67,105 @@ _SINK_P2 = (
     "alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
     "Controller-00.2.analog-surround-40"
 )
-
-#: `pactl list sinks short` com os DOIS controles e uma HDMI no meio. Os dois
-#: nomes de DualSense diferem só por um `-00`/`-00.2` — desempate posicional do
-#: PipeWire, e não identidade. É a armadilha inteira num texto só.
-_SINKS_CURTO = (
-    f"59\t{_SINK_P1}\tPipeWire\ts16le 4ch 48000Hz\tSUSPENDED\n"
-    "61\talsa_output.pci-0000_0c_00.4.iec958-stereo\tPipeWire"
-    "\ts32le 2ch 48000Hz\tSUSPENDED\n"
-    f"73\t{_SINK_P2}\tPipeWire\ts16le 4ch 48000Hz\tSUSPENDED\n"
-)
-
-_SINKS_LONGO = (
-    f"Sink #59\n\tName: {_SINK_P1}\n\tProperties:\n"
-    '\t\tsysfs.path = "/devices/pci0000:00/usb3/3-1/3-1:1.0/sound/card3"\n'
-    f"Sink #73\n\tName: {_SINK_P2}\n\tProperties:\n"
-    '\t\tsysfs.path = "/devices/pci0000:00/usb3/3-2/3-2:1.0/sound/card4"\n'
-)
+_HDMI = "alsa_output.pci-0000_0c_00.4.hdmi-stereo"
 
 _USB_P1 = "/sys/devices/pci0000:00/usb3/3-1"
 _USB_P2 = "/sys/devices/pci0000:00/usb3/3-2"
 
+#: O assento de cada controle, como o numerador do daemon responderia.
+_ASSENTO = {_UNIQ_P1: 1, _UNIQ_P2: 2, _UNIQ_P3: 3, _UNIQ_P4: 4, _UNIQ_NUNCA_VISTO: 4}
 
-def _runner(curto: str = _SINKS_CURTO, longo: str = _SINKS_LONGO) -> Any:
-    """Dublê do `pactl`: um texto por pergunta, nenhum processo de verdade.
 
-    Ele sabe RECUSAR: com `curto=""` responde a lista vazia, que é o caminho de
-    erro que a régua exercita — dublê que só sabe passar não é dublê.
+class ServidorDeSomDeMentira:
+    """O servidor de som de mentira: GUARDA o que foi carregado e responde por isso.
+
+    Não é um dublê que só aceita: um `load-module` vira um módulo com id, a
+    lista de sinks passa a mostrar o nó que ele criou, e um `unload-module`
+    o tira. É o que deixa a régua perguntar AO SERVIDOR quantos nós existem,
+    e não à lembrança de quem os pediu.
+
+    ``placas`` são as placas USB de DualSense que o servidor tem, na ordem
+    em que o PipeWire as desempata (`-00`, `-00.2`).
     """
 
-    def roda(argv: list[str]) -> str:
+    def __init__(self, placas: tuple[str, ...] = (_SINK_P1, _SINK_P2)) -> None:
+        self.placas = placas
+        self.modulos: dict[str, tuple[str, ...]] = {}
+        self._proximo = 500
+
+    def __call__(self, argv: list[str]) -> str | None:
+        if argv[:2] == ["pactl", "load-module"]:
+            self._proximo += 1
+            self.modulos[str(self._proximo)] = tuple(argv[2:])
+            return f"{self._proximo}\n"
+        if argv[:2] == ["pactl", "unload-module"]:
+            self.modulos.pop(argv[2], None)
+            return ""
         if argv[:4] == ["pactl", "list", "sinks", "short"]:
-            return curto
+            linhas = [f"62\t{_HDMI}\tPipeWire\ts32le 2ch 48000Hz\tSUSPENDED"]
+            linhas += [
+                f"{70 + i}\t{p}\tPipeWire\ts16le 4ch 48000Hz\tSUSPENDED"
+                for i, p in enumerate(self.placas)
+            ]
+            linhas += [
+                f"{i}\t{nome}\tPipeWire\ts16le 2ch 48000Hz\tIDLE"
+                for i, nome in self.nos().items()
+            ]
+            return "\n".join(linhas) + "\n"
         if argv[:3] == ["pactl", "list", "sinks"]:
-            return longo
+            usb = {_SINK_P1: "3-1", _SINK_P2: "3-2"}
+            return "".join(
+                f"Sink #{70 + i}\n\tName: {p}\n\tProperties:\n"
+                f'\t\tsysfs.path = "/devices/pci0000:00/usb3/{usb.get(p, "9-9")}/'
+                f'{usb.get(p, "9-9")}:1.0/sound/card{3 + i}"\n'
+                for i, p in enumerate(self.placas)
+            )
+        if "get-default-sink" in argv:
+            return f"{_HDMI}\n"
+        if argv[:2] == ["pactl", "info"]:
+            return "Server Name: PulseAudio (on PipeWire 1.0.0)\n"
         return ""
 
-    return roda
+    def nos(self) -> dict[str, str]:
+        """`{id do módulo: sink_name}` de cada `module-null-sink` de pé."""
+        saida: dict[str, str] = {}
+        for ident, args in self.modulos.items():
+            if args and args[0] == "module-null-sink":
+                nome = next(a for a in args if a.startswith("sink_name="))
+                saida[ident] = nome.split("=", 1)[1]
+        return saida
+
+    def rotulo(self, sink_name: str) -> str:
+        """O `device.description` com que o nó foi carregado."""
+        for args in self.modulos.values():
+            if args and args[0] == "module-null-sink" and f"sink_name={sink_name}" in args:
+                props = next(a for a in args if a.startswith("sink_properties="))
+                return props.split("device.description='", 1)[1].split("'", 1)[0]
+        return ""
+
+    def lacos(self) -> list[tuple[str, str]]:
+        """`(source, sink)` de cada `module-loopback` de pé."""
+        saida: list[tuple[str, str]] = []
+        for args in self.modulos.values():
+            if args and args[0] == "module-loopback":
+                campos = dict(a.split("=", 1) for a in args[1:] if "=" in a)
+                saida.append((campos.get("source", ""), campos.get("sink", "")))
+        return saida
+
+
+@pytest.fixture
+def servidor(monkeypatch: pytest.MonkeyPatch) -> ServidorDeSomDeMentira:
+    """O servidor de mentira no lugar do `_rodar` do dono, e o numerador de assento.
+
+    O `SinkVirtualPipeWire` construído sem `runner` e o `sink_do_controle`
+    resolvem o `_rodar` do módulo NA CHAMADA, e é por isso que trocar o
+    atributo alcança o caminho do produto inteiro.
+    """
+    falso = ServidorDeSomDeMentira()
+    monkeypatch.setattr(af, "_rodar", falso)
+    anterior = mic.registrar_numerador_de_assento(lambda u: _ASSENTO.get(u))
+    yield falso
+    mic.registrar_numerador_de_assento(anterior)
 
 
 @pytest.fixture
@@ -140,24 +192,16 @@ def usb_da_bancada(monkeypatch: pytest.MonkeyPatch) -> None:
     )
 
 
-def _entry(
-    uniq: str,
-    *,
-    slot: int = 1,
-    transporte: str = TRANSPORTE_CABO,
-    flavor: str = "dualsense",
-) -> dict[str, Any]:
-    """Uma entrada de ``state_full.controllers``, com a MÁSCARA dentro.
+def _cabo(uniq: str) -> ControleNaLista:
+    return ControleNaLista(uniq=uniq, caminho="/dev/hidraw-de-mentira", transporte="cabo")
 
-    A máscara entra de propósito: ela é o que a invariante 3 proíbe de olhar.
-    """
-    return {
-        "index": slot - 1,
-        "player_slot": slot,
-        "uniq": uniq,
-        "transport": transporte,
-        "gamepad": {"flavor": flavor},
-    }
+
+def _radio(uniq: str) -> ControleNaLista:
+    return ControleNaLista(uniq=uniq, caminho="/dev/hidraw-de-mentira", transporte="rádio")
+
+
+def _ponte_de_pe(_uniq: str) -> Any:
+    return lambda: True
 
 
 # ---------------------------------------------------------------------------
@@ -165,59 +209,57 @@ def _entry(
 # ---------------------------------------------------------------------------
 
 
-def test_o_mesmo_controle_no_cabo_e_no_radio_e_o_mesmo_no() -> None:
-    """Trocar o cabo pelo rádio não pode trocar o nome nem o id da saída.
+def test_o_mesmo_controle_no_cabo_e_no_radio_e_o_mesmo_no(
+    servidor: ServidorDeSomDeMentira, usb_da_bancada: None
+) -> None:
+    """Trocar o cabo pelo rádio não pode trocar o nome nem o rótulo da saída.
 
-    MORDIDA: derive o nome ou o id do transporte — por exemplo, fazendo
-    `NoDeAltoFalante.id_do_no` devolver `f"{nome_do_sink(self.uniq)}_"
-    f"{self.transporte}"` — e este teste reprova nas duas comparações. É o
-    defeito que o nó existe para não ter: quem escolheu esta saída uma vez
-    continua com ela escolhida depois que o controle sai do cabo.
+    O P1 sobe no cabo, sai da mesa e volta pelo rádio: o servidor vê o MESMO
+    `sink_name` e o MESMO rótulo nas duas vidas.
+
+    MORDIDA: derive o nome do transporte — por exemplo, faça `nome_do_sink`
+    devolver `f"{PREFIXO_SINK_DO_SOM}{rabo}_{transporte}"` — e as duas
+    comparações reprovam. É o defeito que o nó existe para não ter.
     """
-    no_cabo = no_do_controle(_entry(_UNIQ_P1, slot=1, transporte=TRANSPORTE_CABO))
-    no_radio = no_do_controle(_entry(_UNIQ_P1, slot=1, transporte=TRANSPORTE_RADIO))
+    ger = GerenciadorDeNosDeSom(ponte_do_radio_por_controle=_ponte_de_pe)
+    ger.reconciliar([_cabo(_UNIQ_P1)])
+    no_cabo = list(servidor.nos().values())
+    rotulo_cabo = servidor.rotulo("hefesto_som_0000b2")
+    ger.reconciliar([])
+    assert servidor.nos() == {}
+    ger.reconciliar([_radio(_UNIQ_P1)])
+    no_radio = list(servidor.nos().values())
 
-    assert no_cabo is not None
-    assert no_radio is not None
-    assert no_cabo.nome == no_radio.nome == "Alto-falante do Controle 1" + _SONY
-    assert no_cabo.id_do_no == no_radio.id_do_no == "hefesto_som_0000b2"
+    assert no_cabo == no_radio == ["hefesto_som_0000b2"]
+    assert rotulo_cabo == servidor.rotulo("hefesto_som_0000b2")
+    assert rotulo_cabo == "Alto-falante do Controle 1" + _SONY
 
 
-def test_o_nome_e_o_id_vem_do_assento_e_de_mais_nada() -> None:
-    """Quatro assentos, quatro nomes, e o número é o do JOGADOR.
+def test_o_rotulo_e_o_do_assento_e_o_nome_e_o_do_aparelho() -> None:
+    """Quatro assentos, quatro rótulos; o `sink_name` não muda com o assento.
 
-    A palavra é DELA (`D-0909-OS-NOS-SE-CHAMAM-…`, *"4a"*): «Alto-falante do
-    Controle 1»… MORDIDA: volte o rótulo para `f"Alto-falante · {a.upper()}"`,
-    que é o que esta casa escrevia até 08/09, e as quatro comparações caem.
+    MORDIDA: volte o rótulo para `f"Alto-falante · P{n}"`, que é o que esta
+    casa escrevia até 08/09, e as quatro comparações caem.
     """
-    assert [nome_do_alto_falante(a) for a in ASSENTOS] == [
+    assert [af.rotulo_do_alto_falante(n) for n in (1, 2, 3, 4)] == [
         "Alto-falante do Controle 1" + _SONY,
         "Alto-falante do Controle 2" + _SONY,
         "Alto-falante do Controle 3" + _SONY,
         "Alto-falante do Controle 4" + _SONY,
     ]
+    anterior = mic.registrar_numerador_de_assento(lambda _u: 3)
+    try:
+        no_no_3 = af.SinkVirtualPipeWire(uniq=_UNIQ_P1)
+    finally:
+        mic.registrar_numerador_de_assento(anterior)
+    assert no_no_3.nome == af.nome_do_sink(_UNIQ_P1) == "hefesto_som_0000b2"
+    assert no_no_3.descricao == "Alto-falante do Controle 3" + _SONY
 
 
-def test_um_assento_que_o_desenho_nao_tem_nao_ganha_no() -> None:
-    """Um `p5` na lista de saída seria um nó que a tela não desenha.
-
-    MORDIDA: tire a guarda `if assento not in ASSENTOS` de
-    `nome_do_alto_falante` e o produto passa a nomear assentos que não existem.
-    """
-    assert nome_do_alto_falante("p5") == ""
-    assert no_do_controle({"player_slot": 5, "uniq": _UNIQ_NUNCA_VISTO}) is None
-    assert rota_do_no(None).motivo == MOTIVO_NO_SEM_ASSENTO
-
-
-def test_os_assentos_daqui_sao_os_mesmos_do_desenho() -> None:
-    """Duas listas de assentos é como esta casa fabrica divergência silenciosa.
-
-    MORDIDA: acrescente um `p5` a `ASSENTOS` e a comparação com o dono do lado
-    da tela (`interface/pacotes.TODOS_OS_LUGARES`) reprova.
-    """
-    from hefesto_dualsense4unix.interface.pacotes import TODOS_OS_LUGARES
-
-    assert set(ASSENTOS) == set(TODOS_OS_LUGARES)
+def test_sem_assento_sabido_nao_se_inventa_numero() -> None:
+    """Dois «Alto-falante do Controle 1» mentem sobre qual é qual."""
+    assert af.rotulo_do_alto_falante(None) == "Alto-falante do Controle" + _SONY
+    assert af.rotulo_do_alto_falante(0) == "Alto-falante do Controle" + _SONY
 
 
 # ---------------------------------------------------------------------------
@@ -226,7 +268,7 @@ def test_os_assentos_daqui_sao_os_mesmos_do_desenho() -> None:
 
 
 def test_dois_controles_no_cabo_e_cada_no_entrega_no_sink_do_seu(
-    usb_da_bancada: None,
+    servidor: ServidorDeSomDeMentira, usb_da_bancada: None
 ) -> None:
     """Dois DualSense no cabo: cada nó entrega no sink DAQUELE controle.
 
@@ -238,257 +280,206 @@ def test_dois_controles_no_cabo_e_cada_no_entrega_no_sink_do_seu(
     casamento de texto —
 
         alvos = [s for s in sinks if s.startswith("alsa_output.usb-")]
-        alvo = alvos[0] if alvos else ""
 
-    — e os DOIS nós passam a apontar para `_SINK_P1`: o som do P2 sai no
-    alto-falante do P1. É o erro que `audio_saida.sink_do_controle` já existe
-    para não cometer.
+    — e os DOIS laços passam a terminar em `_SINK_P1`: o som do P2 sai no
+    alto-falante do P1.
     """
-    mesa = [_UNIQ_P1, _UNIQ_P2]
+    ger = GerenciadorDeNosDeSom()
+    ger.reconciliar([_cabo(_UNIQ_P1), _cabo(_UNIQ_P2)])
 
-    plano_p1 = plano_de_publicacao(
-        no_do_controle(_entry(_UNIQ_P1, slot=1)), mesa, runner=_runner()
-    )
-    plano_p2 = plano_de_publicacao(
-        no_do_controle(_entry(_UNIQ_P2, slot=2)), mesa, runner=_runner()
-    )
-
-    assert plano_p1.sink == _SINK_P1
-    assert plano_p2.sink == _SINK_P2
-    assert plano_p1.sink != plano_p2.sink
-    assert plano_p1.por_onde == plano_p2.por_onde == POR_CABO
+    assert sorted(servidor.nos().values()) == ["hefesto_som_0000b2", "hefesto_som_0000b3"]
+    assert sorted(servidor.lacos()) == [
+        ("hefesto_som_0000b2.monitor", _SINK_P1),
+        ("hefesto_som_0000b3.monitor", _SINK_P2),
+    ]
 
 
-def test_o_plano_do_cabo_liga_o_no_ao_sink_pelos_dois_canais_da_frente(
-    usb_da_bancada: None,
+def test_o_laco_do_cabo_usa_os_dois_canais_da_frente(
+    servidor: ServidorDeSomDeMentira, usb_da_bancada: None
 ) -> None:
-    """Com rota, o plano tem as DUAS metades: criar o nó e ligá-lo ao aparelho.
+    """O mapa (`audio.alto_falante@dualsense`, `cabo_canal`) diz *canais 1-2*.
 
-    O mapa (`audio.alto_falante@dualsense`, `cabo_canal`) diz *canais 1-2 do
-    sink `alsa_output.usb-...analog-surround-40`*; numa placa `surround-40` os
-    canais 1 e 2 são `front-left` e `front-right`.
-
-    MORDIDA: devolva só o `module-null-sink` e o nó nasce sem destino — um sink
-    na lista de saída dela que aceita som e não o leva a lugar nenhum.
+    MORDIDA: tire o `channel_map` de `argv_para_ligar_o_no` e o laço cai nos
+    quatro canais da placa — os motores tocam o som do jogo.
     """
-    plano = plano_de_publicacao(
-        no_do_controle(_entry(_UNIQ_P1, slot=1)), [_UNIQ_P1, _UNIQ_P2], runner=_runner()
-    )
-
-    assert plano.vai_publicar is True
-    assert len(plano.argv) == 2
-    criar, ligar = plano.argv
-    assert "module-null-sink" in criar
-    assert "sink_name=hefesto_som_0000b2" in criar
-    assert any(
-        f"device.description='Alto-falante do Controle 1{_SONY}'" in arg for arg in criar
-    ), criar
-    assert "module-loopback" in ligar
-    assert "source=hefesto_som_0000b2.monitor" in ligar
-    assert f"sink={_SINK_P1}" in ligar
-    assert "channel_map=front-left,front-right" in ligar
+    GerenciadorDeNosDeSom().reconciliar([_cabo(_UNIQ_P1)])
+    lacos = [a for a in servidor.modulos.values() if a[0] == "module-loopback"]
+    assert len(lacos) == 1
+    assert "channel_map=front-left,front-right" in lacos[0]
 
 
-def test_sem_placa_de_som_no_cabo_o_no_diz_o_que_fazer() -> None:
+def test_sem_placa_de_som_no_cabo_o_no_nao_nasce_e_a_rota_diz_por_que(
+    servidor: ServidorDeSomDeMentira,
+) -> None:
     """O `pactl` sem nenhum sink de DualSense é "não sei", e "não sei" se diz.
 
-    **O NÓ EXISTE MESMO ASSIM — decisão dela de 08/09/2026**
-    (`D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE`): *"nó que some quebra o
-    jogo que o escolheu"*. O que falta sem placa é a ROTA, e é ela que o plano
-    recusa — com a frase, e sem um único `module-loopback`.
+    O dono só publica quem tem rota (a trava de
+    `test_o_no_de_som_nao_nasce_sumidouro.py`): sem placa, nenhum
+    `module-null-sink` entra no servidor, e a frase mora em `rota.motivo`.
 
-    MORDIDA: devolva um `module-loopback` neste ramo e o produto liga o som a
-    um sink que ele não resolveu.
+    MORDIDA: tire a guarda «SEM ROTA, SEM NÓ» de `GerenciadorDeNosDeSom._erguer`
+    e um nó mudo entra na lista de som dela.
     """
-    plano = plano_de_publicacao(
-        no_do_controle(_entry(_UNIQ_NUNCA_VISTO, slot=3)), runner=_runner(curto="")
-    )
-
-    assert plano.vai_publicar is True
-    assert plano.tem_rota is False
-    assert len(plano.argv) == 1
-    assert "module-null-sink" in plano.argv[0]
-    assert not any("module-loopback" in a for argv in plano.argv for a in argv)
-    assert plano.motivo == MOTIVO_NO_SEM_PLACA_NO_CABO
+    servidor.placas = ()
+    GerenciadorDeNosDeSom().reconciliar([_cabo(_UNIQ_NUNCA_VISTO)])
+    assert servidor.nos() == {}
+    rota = af.rota_do_no(_UNIQ_NUNCA_VISTO, af.TRANSPORTE_CABO, (_UNIQ_NUNCA_VISTO,))
+    assert rota.tem_rota is False
+    assert rota.motivo == af.MOTIVO_NO_SEM_PLACA_NO_CABO
 
 
 # ---------------------------------------------------------------------------
-# 3. SEM ROTA, ELE DIZ — e não engole o áudio
+# 3. NO RÁDIO, A ROTA É A PONTE — e sem ela a frase é dita
 # ---------------------------------------------------------------------------
 
 
-def test_no_radio_sem_ponte_o_no_recusa_com_a_frase() -> None:
+def test_no_radio_sem_ponte_a_rota_recusa_com_a_frase() -> None:
     """A queixa histórica dela: *"na hora do vamos ver a versão de BT não funcionava"*.
 
-    O nó EXISTE (tem nome e id, os mesmos do cabo) e reporta indisponível com a
-    frase do quê/por quê/o que fazer.
-
-    **O QUE MUDOU EM 08/09/2026, e foi ELA:** o nó por rádio é PUBLICADO —
-    `D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE`. Este teste aferia
-    `vai_publicar is False`, que era o mundo da decisão por delegação de 06/09.
-    O que ele mede agora é o par: o nó existe **e** a frase está lá.
-
-    MORDIDA: apague o `motivo` deste ramo — devolva `PlanoDoNo(True,
-    argv=(argv_para_publicar_o_no(no),))` e nada mais. O nó aparece na lista de
-    saída dela, ela escolhe, e o som some **sem uma palavra**, que é a metade
-    da invariante 4 que a decisão dela NÃO derrubou.
+    MORDIDA: devolva `RotaDoNo(True, por_onde=POR_RADIO)` sem perguntar à
+    ponte e o nó entrega a uma ponte que não existe — o sumidouro.
     """
-    no = no_do_controle(_entry(_UNIQ_P1, slot=1, transporte=TRANSPORTE_RADIO))
-    assert no is not None
-
-    plano = plano_de_publicacao(no)
-
-    assert plano.nome == "Alto-falante do Controle 1" + _SONY
-    assert plano.id_do_no == "hefesto_som_0000b2"
-    assert plano.vai_publicar is True
-    assert plano.tem_rota is False
-    assert len(plano.argv) == 1
-    assert not any("module-loopback" in a for argv in plano.argv for a in argv)
-    assert plano.motivo == MOTIVO_NO_SEM_PONTE_NO_RADIO
+    for ponte in (None, lambda: False):
+        rota = af.rota_do_no(_UNIQ_P2, af.TRANSPORTE_RADIO, ponte_do_radio=ponte)
+        assert rota.tem_rota is False
+        assert rota.motivo == af.MOTIVO_NO_SEM_PONTE_NO_RADIO
+    com_ponte = af.rota_do_no(_UNIQ_P2, af.TRANSPORTE_RADIO, ponte_do_radio=lambda: True)
+    assert com_ponte.por_onde == af.POR_RADIO
+    assert com_ponte.sink == ""
 
 
 def test_a_frase_do_radio_diz_as_tres_coisas() -> None:
     """O quê, por quê, e o que fazer — e sem palavra de dentro da máquina.
 
-    ESTA RÉGUA MEDIA O MUNDO DE ONTEM, e foi curada em 10/09/2026. Ela exigia
-    a frase *"ainda não sabe montar o pacote de áudio"* — que era verdade até
-    o alto-falante tocar por rádio, e passou a ser uma afirmação FALSA que a
-    tela dela repetia. Digitar o texto exigido aqui prendia a tela ao dia em
-    que a régua foi escrita.
-
-    Agora ela mede o que a frase PROMETE, não as palavras dela.
+    ESTA RÉGUA MEDIA O MUNDO DE ONTEM, e foi curada em 10/09/2026: ela exigia
+    a frase *"ainda não sabe montar o pacote de áudio"*, que virou FALSA quando
+    o alto-falante tocou por rádio. Agora ela mede o que a frase PROMETE.
 
     MORDIDA: troque a frase por *"indisponível"* e as três primeiras caem;
     escreva `hidraw` nela e a quarta cai; volte a dizer que o Hefesto não sabe
     montar e a quinta cai.
     """
-    frase = MOTIVO_NO_SEM_PONTE_NO_RADIO
+    frase = af.MOTIVO_NO_SEM_PONTE_NO_RADIO
 
-    # 1. O QUÊ: nomeia o som, o controle e o rádio.
     assert "som" in frase.lower()
     assert "rádio" in frase.lower()
-    # 2. POR QUÊ: diz que falta alguma coisa, em vez de só constatar.
     assert "falta" in frase.lower() or "não está" in frase.lower()
-    # 3. O QUE FAZER: dá a saída que funciona hoje.
     assert "Ligue-o no cabo" in frase
-    # 4. Sem palavra de dentro da máquina.
     for proibida in ("hidraw", "uniq", "MAC", "sink", "mesa"):
         assert proibida not in frase
-
-    # 5. E ELA NÃO PODE MAIS CULPAR O NOSSO CONHECIMENTO — o Hefesto SABE
-    #    montar o pacote desde 10/09/2026 (`ARRANJO_035`, som audível por 70 s).
-    #    Uma tela que diz "não sei fazer" quando o produto sabe empurra para o
-    #    aparelho um limite que é de fiação nossa.
-    assert "não sabe montar" not in frase, (
-        "a frase voltou a dizer que o Hefesto não sabe montar o pacote de "
-        "áudio por rádio — e ele sabe desde 10/09/2026, medido com a orelha "
-        "dela; ver `alto_falante_bt.a_ponte_do_radio_sabe_montar`"
-    )
-    from hefesto_dualsense4unix.integrations.alto_falante_bt import (
-        a_ponte_do_radio_sabe_montar,
-    )
-
-    assert a_ponte_do_radio_sabe_montar() is True
-
-
-def test_quando_a_ponte_do_radio_existir_o_no_publica_por_ela() -> None:
-    """A superfície já sabe receber a ponte da P5 — ela é que ainda não existe.
-
-    MORDIDA: ignore o `ponte_do_radio` e recuse sempre. A sprint que trouxer a
-    ponte teria de reabrir este módulo em vez de só passá-la aqui.
-    """
-    no = NoDeAltoFalante("p2", _UNIQ_P2, TRANSPORTE_RADIO)
-
-    plano = plano_de_publicacao(no, ponte_do_radio=lambda: True)
-
-    assert plano.vai_publicar is True
-    assert plano.por_onde == POR_RADIO
-    assert plano.sink == ""
-    assert len(plano.argv) == 1
-    assert "sink_name=hefesto_som_0000b3" in plano.argv[0]
-
-
-def test_ponte_do_radio_que_diz_nao_e_o_mesmo_que_ponte_nenhuma() -> None:
-    """O dublê tem de saber RECUSAR, e a régua exercita as duas respostas."""
-    no = NoDeAltoFalante("p2", _UNIQ_P2, TRANSPORTE_RADIO)
-
-    assert plano_de_publicacao(no, ponte_do_radio=lambda: False).motivo == (
-        MOTIVO_NO_SEM_PONTE_NO_RADIO
-    )
-    assert plano_de_publicacao(no, ponte_do_radio=None).motivo == (
-        MOTIVO_NO_SEM_PONTE_NO_RADIO
-    )
+    assert "não sabe montar" not in frase
+    assert af.a_ponte_do_radio_sabe_montar() is True
 
 
 # ---------------------------------------------------------------------------
-# 4. A MÁSCARA NÃO MUDA NADA
+# 4. DE UM A QUATRO, CABO E RÁDIO MISTURADOS — UM NÓ POR CONTROLE
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("flavor", ["dualsense", "xbox", "nintendo"])
-def test_a_mascara_nao_muda_o_no(flavor: str, usb_da_bancada: None) -> None:
-    """Os três valores de máscara, o mesmo nó e o mesmo plano.
+@pytest.mark.parametrize(
+    "mesa",
+    [
+        [_cabo(_UNIQ_P1)],
+        [_radio(_UNIQ_P1)],
+        [_cabo(_UNIQ_P1), _radio(_UNIQ_P3)],
+        [_radio(_UNIQ_P3), _cabo(_UNIQ_P2), _radio(_UNIQ_P4)],
+        [_cabo(_UNIQ_P1), _cabo(_UNIQ_P2), _radio(_UNIQ_P3), _radio(_UNIQ_P4)],
+    ],
+    ids=["um-no-cabo", "um-no-radio", "dois-misturados", "três", "quatro"],
+)
+def test_um_no_por_controle_no_servidor(
+    mesa: list[ControleNaLista],
+    servidor: ServidorDeSomDeMentira,
+    usb_da_bancada: None,
+) -> None:
+    """O servidor tem UM nó por controle, com o rótulo do assento, e mais nada.
 
-    Pedido dela, literal: o som funciona *independente da máscara*. Som não é
-    entrada, e a máscara é do gamepad.
+    O do cabo tem o laço até a placa DELE; o do rádio não tem laço de saída (a
+    ponte lê o monitor). Um segundo publicador do mesmo nó — o plano da janela
+    que saiu em 28/09 — apareceria aqui como dois `module-null-sink` com o
+    mesmo `sink_name`.
 
-    MORDIDA: faça `no_do_controle` ler `entry["gamepad"]["flavor"]` e entrar com
-    ele no nome (ou recusar fora de `dualsense`) — as três execuções divergem e
-    duas reprovam.
+    MORDIDA: faça `reconciliar` erguer o nó de novo a cada varredura (tire o
+    `if uniq in self._nos`) e a segunda passada dobra os módulos.
     """
-    plano = plano_de_publicacao(
-        no_do_controle(_entry(_UNIQ_P1, slot=1, flavor=flavor)),
-        [_UNIQ_P1, _UNIQ_P2],
-        runner=_runner(),
+    ger = GerenciadorDeNosDeSom(ponte_do_radio_por_controle=_ponte_de_pe)
+    ger.reconciliar(mesa)
+    ger.reconciliar(mesa)
+
+    esperados = sorted(af.nome_do_sink(c.uniq) for c in mesa)
+    assert sorted(servidor.nos().values()) == esperados
+    for controle in mesa:
+        nome = af.nome_do_sink(controle.uniq)
+        assert servidor.rotulo(nome) == af.rotulo_do_alto_falante(_ASSENTO[controle.uniq])
+    placa = {_UNIQ_P1: _SINK_P1, _UNIQ_P2: _SINK_P2}
+    assert sorted(servidor.lacos()) == sorted(
+        (f"{af.nome_do_sink(c.uniq)}.monitor", placa[c.uniq])
+        for c in mesa
+        if not af.e_radio(c.transporte)
     )
 
-    assert plano.nome == "Alto-falante do Controle 1" + _SONY
-    assert plano.id_do_no == "hefesto_som_0000b2"
-    assert plano.sink == _SINK_P1
-    assert plano.vai_publicar is True
 
+def test_quem_sai_da_mesa_leva_so_o_seu_no(
+    servidor: ServidorDeSomDeMentira, usb_da_bancada: None
+) -> None:
+    """Tirar um controle derruba o nó DELE — e a rota antes do nó.
 
-def test_a_mascara_nao_entra_em_assinatura_nenhuma() -> None:
-    """A invariante escrita como régua: `flavor` não é parâmetro desta seção.
-
-    MORDIDA: acrescente `flavor: str = "dualsense"` a qualquer uma das cinco e
-    este teste nomeia a que ganhou o parâmetro.
+    MORDIDA: derrube todos os nós quando a lista muda e o som dos outros três
+    cai junto — a rota sumindo debaixo do jogo, causada por nós.
     """
-    import inspect
+    ger = GerenciadorDeNosDeSom(ponte_do_radio_por_controle=_ponte_de_pe)
+    ger.reconciliar([_cabo(_UNIQ_P1), _cabo(_UNIQ_P2), _radio(_UNIQ_P3)])
+    ger.reconciliar([_cabo(_UNIQ_P1), _radio(_UNIQ_P3)])
 
-    from hefesto_dualsense4unix.app import audio_saida
+    assert sorted(servidor.nos().values()) == ["hefesto_som_0000b2", "hefesto_som_0000b4"]
+    assert servidor.lacos() == [("hefesto_som_0000b2.monitor", _SINK_P1)]
+    ger.parar()
+    assert servidor.modulos == {}
 
-    for nome in (
-        "nome_do_alto_falante",
-        "no_do_controle",
-        "assento_do_controle",
-        "rota_do_no",
-        "plano_de_publicacao",
+
+# ---------------------------------------------------------------------------
+# 5. A MÁSCARA NÃO ENTRA
+# ---------------------------------------------------------------------------
+
+
+def test_a_mascara_nao_entra_em_assinatura_nenhuma_do_dono() -> None:
+    """Som não é entrada, e a máscara é do gamepad — pedido dela, literal.
+
+    MORDIDA: acrescente `flavor: str = "dualsense"` a qualquer um destes e
+    este teste nomeia quem ganhou o parâmetro.
+    """
+    for alvo in (
+        af.nome_do_sink,
+        af.descricao_do_alto_falante,
+        af.rotulo_do_alto_falante,
+        af.rota_do_no,
+        af.SinkVirtualPipeWire.__init__,
+        GerenciadorDeNosDeSom.reconciliar,
     ):
-        parametros = inspect.signature(getattr(audio_saida, nome)).parameters
-        assert "flavor" not in parametros, nome
-        assert "mascara" not in parametros, nome
+        parametros = inspect.signature(alvo).parameters
+        assert "flavor" not in parametros, alvo
+        assert "mascara" not in parametros, alvo
+    assert "flavor" not in {f.name for f in ControleNaLista.__dataclass_fields__.values()}
 
 
 # ---------------------------------------------------------------------------
-# 5. A RÉGUA NÃO É A BANCADA DESTA CASA
+# 6. A RÉGUA NÃO É A BANCADA DESTA CASA
 # ---------------------------------------------------------------------------
 
 
-def test_um_controle_que_nunca_esteve_aqui_ganha_o_mesmo_no() -> None:
-    """Nenhum passo desta régua depende dos dois DualSense desta bancada.
+def test_um_controle_que_nunca_esteve_aqui_ganha_o_mesmo_no(
+    servidor: ServidorDeSomDeMentira,
+) -> None:
+    """Nenhum passo desta régua depende dos DualSense desta bancada.
 
-    O `_UNIQ_NUNCA_VISTO` é de outra faixa sintética e não tem nó USB no dublê:
-    ele cai no ramo honesto do "não sei", com nome e id normais.
+    O `_UNIQ_NUNCA_VISTO` é de outra faixa sintética: pelo rádio, com a ponte
+    de pé, ele ganha o nó de nome normal.
 
-    MORDIDA: amarre o nome ou o id ao endereço do controle e este teste passa a
-    exigir um aparelho específico para dar verde.
+    MORDIDA: amarre o nome ao endereço de um controle conhecido e este teste
+    passa a exigir um aparelho específico para dar verde.
     """
-    no = no_do_controle(_entry(_UNIQ_NUNCA_VISTO, slot=4))
-    assert no is not None
-    assert no.nome == "Alto-falante do Controle 4" + _SONY
-
-    plano = plano_de_publicacao(no, [_UNIQ_NUNCA_VISTO], runner=_runner(curto=""))
-    assert plano.vai_publicar is True
-    assert plano.tem_rota is False
-    assert plano.motivo == MOTIVO_NO_SEM_PLACA_NO_CABO
+    GerenciadorDeNosDeSom(ponte_do_radio_por_controle=_ponte_de_pe).reconciliar(
+        [_radio(_UNIQ_NUNCA_VISTO)]
+    )
+    assert list(servidor.nos().values()) == ["hefesto_som_000001"]
+    assert servidor.rotulo("hefesto_som_000001") == "Alto-falante do Controle 4" + _SONY

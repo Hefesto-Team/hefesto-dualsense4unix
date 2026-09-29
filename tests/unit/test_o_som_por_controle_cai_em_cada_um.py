@@ -38,6 +38,12 @@ nesta árvore, e nenhuma era "faltou código":
 
 Esta sprint mata a causa 1 (a rota existe) e a causa 2 (o nome é o dela). A
 terceira — as três linhas do registro — está fora da posse e vai na entrega.
+
+**UM DONO SÓ, DESDE 28/09/2026** (O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01): as
+réguas das seções 1 a 4 mediam o plano da janela (`app/audio_saida.
+plano_de_publicacao`), que ninguém executava, e ele saiu. Elas medem agora o
+dono do nó: `alto_falante_bt.rota_do_no`, `argv_das_rotas` e
+`SinkVirtualPipeWire`, com o `pactl` de mentira que guarda cada argv.
 """
 
 from __future__ import annotations
@@ -46,12 +52,6 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.app.audio_saida import (
-    NoDeAltoFalante,
-    no_do_controle,
-    nome_do_alto_falante,
-    plano_de_publicacao,
-)
 from hefesto_dualsense4unix.daemon.subsystems.alto_falante import (
     AltoFalanteSubsystem,
     ControleNaLista,
@@ -140,8 +140,20 @@ def usb_da_bancada(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(fontes_de_captura, "escolher_sink", escolher)
 
 
-def _entry(uniq: str, slot: int) -> dict[str, Any]:
-    return {"uniq": uniq, "player_slot": slot, "transport": "usb"}
+def _no_de_pe(
+    uniq: str, fonte: str = som.FONTE_PADRAO, mesa: tuple[str, ...] = (_UNIQ_P1, _UNIQ_P2)
+) -> _Gravador:
+    """Sobe o nó DESTE controle no cabo pelo DONO, e devolve o que chegou ao `pactl`.
+
+    A rota sai de `rota_do_no` (a leitura da bancada de mentira) e o nó a sobe
+    por `SinkVirtualPipeWire.iniciar` — o mesmo caminho do
+    `GerenciadorDeNosDeSom._construir`, sem o daemon.
+    """
+    rota = som.rota_do_no(uniq, "usb", mesa, fonte=fonte, runner=_runner_de_leitura())
+    gravador = _Gravador()
+    no = som.SinkVirtualPipeWire(uniq=uniq, rota=rota, runner=gravador)
+    assert no.iniciar() is True
+    return gravador
 
 
 # ---------------------------------------------------------------------------
@@ -152,13 +164,12 @@ def _entry(uniq: str, slot: int) -> dict[str, Any]:
 def test_o_no_se_chama_alto_falante_do_controle_n() -> None:
     """Decisão dela, 09/09/2026 (*"4a"*). Era «Alto-falante · P1» até 08/09.
 
-    MORDIDA: volte `nome_do_alto_falante` para `f"Alto-falante · {a.upper()}"`
-    e as quatro comparações caem — e com elas cai o instrumento de bancada, que
-    procura exatamente esta palavra na lista viva.
+    MORDIDA: volte `rotulo_do_alto_falante` para `f"Alto-falante · P{n}"` e as
+    comparações caem — e com elas cai o instrumento de bancada, que procura
+    exatamente esta palavra na lista viva.
     """
-    assert nome_do_alto_falante("p1") == "Alto-falante do Controle 1" + _SONY
-    assert nome_do_alto_falante("p4") == "Alto-falante do Controle 4" + _SONY
-    assert nome_do_alto_falante("p5") == ""
+    assert som.rotulo_do_alto_falante(1) == "Alto-falante do Controle 1" + _SONY
+    assert som.rotulo_do_alto_falante(4) == "Alto-falante do Controle 4" + _SONY
     assert som.NOME_DO_ALTO_FALANTE_DO_CONTROLE == "Alto-falante do Controle"
 
 
@@ -216,16 +227,22 @@ def test_o_endereco_dela_nunca_entra_no_rotulo() -> None:
 def test_o_sink_name_e_o_do_aparelho_e_nao_o_do_assento() -> None:
     """O jogo escolhe uma saída; trocar o controle de assento não pode trocá-la.
 
-    MORDIDA: volte `NoDeAltoFalante.id_do_no` para
-    `f"hefesto_alto_falante_{self.assento}"` e o mesmo aparelho passa a ter
-    dois `sink_name` conforme o assento em que ela o pôs.
+    MORDIDA: faça `SinkVirtualPipeWire` montar o nome pelo rótulo (o assento)
+    em vez de `nome_do_sink(uniq)` e o mesmo aparelho passa a ter dois
+    `sink_name` conforme o assento em que ela o pôs.
     """
-    no_p1 = NoDeAltoFalante("p1", _UNIQ_P1, "usb")
-    no_p3 = NoDeAltoFalante("p3", _UNIQ_P1, "bt")
+    nos = []
+    for assento in (1, 3):
+        anterior = mic.registrar_numerador_de_assento(lambda _u, n=assento: n)
+        try:
+            nos.append(som.SinkVirtualPipeWire(uniq=_UNIQ_P1, runner=_Gravador()))
+        finally:
+            mic.registrar_numerador_de_assento(anterior)
 
-    assert no_p1.id_do_no == no_p3.id_do_no == "hefesto_som_0000b2"
-    assert no_p1.id_do_no == som.nome_do_sink(_UNIQ_P1)
-    assert NoDeAltoFalante("p1", "", "usb").id_do_no == ""
+    assert nos[0].descricao != nos[1].descricao
+    assert nos[0].nome == nos[1].nome == "hefesto_som_0000b2"
+    assert nos[0].nome == som.nome_do_sink(_UNIQ_P1)
+    assert som.SinkVirtualPipeWire(uniq="", runner=_Gravador()).nome == ""
 
 
 # ---------------------------------------------------------------------------
@@ -236,17 +253,15 @@ def test_o_sink_name_e_o_do_aparelho_e_nao_o_do_assento() -> None:
 def test_mix_liga_o_monitor_da_saida_padrao_ao_no(usb_da_bancada: None) -> None:
     """O *«HDMI completo»* dela: o que a TV recebe, o controle recebe junto.
 
-    MORDIDA: apague o ramo `FONTE_MIX` de `argv_das_rotas` e o plano volta a
-    ter só a saída — o nó do controle nunca recebe o som do sistema, que é
-    metade do pedido dela.
+    MORDIDA: apague o ramo `FONTE_MIX` de `argv_das_rotas` e o nó volta a
+    subir só com a saída — o nó do controle nunca recebe o som do sistema, que
+    é metade do pedido dela.
     """
-    no = no_do_controle(_entry(_UNIQ_P1, 1), fonte=som.FONTE_MIX)
-    assert no is not None
-    plano = plano_de_publicacao(no, [_UNIQ_P1, _UNIQ_P2], runner=_runner_de_leitura())
+    linhas = _no_de_pe(_UNIQ_P1, fonte=som.FONTE_MIX).linhas
 
-    linhas = [" ".join(a) for a in plano.argv]
-    assert plano.fonte == som.FONTE_MIX
-    assert len(plano.argv) == 3, linhas
+    assert len(linhas) == 3, linhas
+    assert "module-null-sink" in linhas[0]
+    assert f"sink={_SINK_P1}" in linhas[1]
     assert f"source={_HDMI}.monitor" in linhas[2]
     assert "sink=hefesto_som_0000b2" in linhas[2]
 
@@ -260,13 +275,10 @@ def test_sfx_deixa_o_no_livre_para_o_jogo(usb_da_bancada: None) -> None:
     MORDIDA: faça `FONTE_PADRAO = FONTE_MIX` e este teste reprova — e o produto
     passa a tomar uma decisão que ela recusou por escrito.
     """
-    no = no_do_controle(_entry(_UNIQ_P1, 1))
-    assert no is not None
-    assert no.fonte == "sfx"
-    plano = plano_de_publicacao(no, [_UNIQ_P1, _UNIQ_P2], runner=_runner_de_leitura())
+    assert som.FONTE_PADRAO == "sfx"
+    linhas = _no_de_pe(_UNIQ_P1).linhas
 
-    linhas = [" ".join(a) for a in plano.argv]
-    assert len(plano.argv) == 2, linhas
+    assert len(linhas) == 2, linhas
     assert not any(f"source={_HDMI}" in linha for linha in linhas)
     assert f"sink={_SINK_P1}" in linhas[1]
 
@@ -280,22 +292,13 @@ def test_um_em_mix_e_outro_em_sfx_ao_mesmo_tempo(usb_da_bancada: None) -> None:
     MORDIDA: leia a fonte de um lugar global (uma constante de módulo, o último
     valor visto) em vez do nó, e os dois passam a ter a mesma.
     """
-    ler = _runner_de_leitura()
-    p1 = plano_de_publicacao(
-        no_do_controle(_entry(_UNIQ_P1, 1), fonte=som.FONTE_MIX),
-        [_UNIQ_P1, _UNIQ_P2],
-        runner=ler,
-    )
-    p2 = plano_de_publicacao(
-        no_do_controle(_entry(_UNIQ_P2, 2), fonte=som.FONTE_SFX),
-        [_UNIQ_P1, _UNIQ_P2],
-        runner=ler,
-    )
+    p1 = _no_de_pe(_UNIQ_P1, fonte=som.FONTE_MIX).linhas
+    p2 = _no_de_pe(_UNIQ_P2, fonte=som.FONTE_SFX).linhas
 
-    assert p1.fonte == "mix" and p2.fonte == "sfx"
-    assert len(p1.argv) == 3 and len(p2.argv) == 2
-    assert p1.sink == _SINK_P1 and p2.sink == _SINK_P2
-    assert p1.id_do_no != p2.id_do_no
+    assert len(p1) == 3 and len(p2) == 2
+    assert f"sink={_SINK_P1}" in p1[1] and f"sink={_SINK_P2}" in p2[1]
+    assert "sink_name=hefesto_som_0000b2" in p1[0]
+    assert "sink_name=hefesto_som_0000b3" in p2[0]
 
 
 def test_o_mix_nao_troca_a_origem_pelo_destino() -> None:
@@ -332,40 +335,37 @@ def test_sem_saida_padrao_legivel_o_mix_nao_se_inventa() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_sem_rota_o_no_existe_e_carrega_a_frase() -> None:
-    """`D-0809-O-NO-DE-SOM-POR-CONTROLE-VIVE-SEMPRE`: *"nó que some quebra o
-    jogo que o escolheu"*.
+def test_sem_rota_a_frase_mora_na_rota_e_nenhum_laco_sobe() -> None:
+    """Um nó sem rota tem de DIZER que não tem para onde ir.
 
-    As duas metades andam juntas: o nó é publicado E o motivo vem cheio. Um nó
-    publicado com o motivo VAZIO é o sumidouro que a invariante 4 recusa.
+    A frase mora em `RotaDoNo.motivo`; e um `SinkVirtualPipeWire` com essa rota
+    não sobe laço nenhum. (Quem decide se o nó sem rota entra no servidor é o
+    `GerenciadorDeNosDeSom`, e a trava disso é
+    `test_o_no_de_som_nao_nasce_sumidouro.py`.)
 
-    MORDIDA: volte `plano_de_publicacao` a devolver `PlanoDoNo(False, argv=())`
-    sem rota, que é o que esta casa fazia até 07/09, e as três primeiras
-    asserções caem.
+    MORDIDA: faça `_ligar_a_rota` ignorar o `tem_rota` e um `module-loopback`
+    com `sink=` vazio sobe — o som vai para a saída padrão dela.
     """
-    no = NoDeAltoFalante("p2", _UNIQ_P2, "bt")
-    plano = plano_de_publicacao(no)
-
-    assert plano.vai_publicar is True
-    assert len(plano.argv) == 1
-    assert plano.motivo == som.MOTIVO_NO_SEM_PONTE_NO_RADIO
-    assert plano.tem_rota is False
-    assert not any("module-loopback" in a for argv in plano.argv for a in argv)
+    rota = som.rota_do_no(_UNIQ_P2, "bt")
+    assert rota.tem_rota is False
+    assert rota.motivo == som.MOTIVO_NO_SEM_PONTE_NO_RADIO
+    gravador = _Gravador()
+    som.SinkVirtualPipeWire(uniq=_UNIQ_P2, rota=rota, runner=gravador).iniciar()
+    assert not any("module-loopback" in linha for linha in gravador.linhas)
 
 
-def test_publicar_e_ter_rota_sao_perguntas_diferentes(usb_da_bancada: None) -> None:
-    """Confundir as duas é o defeito seguinte: nó que existe e não entrega.
+def test_ter_rota_e_saber_por_onde_sao_a_mesma_pergunta(usb_da_bancada: None) -> None:
+    """`tem_rota` é `por_onde` cheio — e a rota recusada carrega a frase.
 
-    MORDIDA: faça `tem_rota` devolver `self.vai_publicar` e o par vira uma
-    coisa só — a tela passa a dizer "está tocando" sobre um nó mudo.
+    MORDIDA: faça `RotaDoNo.tem_rota` devolver `True` sempre e a rota do rádio
+    sem ponte passa a entregar em lugar nenhum dizendo que entrega.
     """
-    com = plano_de_publicacao(
-        no_do_controle(_entry(_UNIQ_P1, 1)), [_UNIQ_P1], runner=_runner_de_leitura()
-    )
-    sem = plano_de_publicacao(NoDeAltoFalante("p2", _UNIQ_P2, "bt"))
+    com = som.rota_do_no(_UNIQ_P1, "usb", (_UNIQ_P1,), runner=_runner_de_leitura())
+    sem = som.rota_do_no(_UNIQ_P2, "bt")
 
-    assert (com.vai_publicar, com.tem_rota) == (True, True)
-    assert (sem.vai_publicar, sem.tem_rota) == (True, False)
+    assert (com.tem_rota, com.por_onde, com.motivo) == (True, som.POR_CABO, "")
+    assert (sem.tem_rota, sem.por_onde) == (False, "")
+    assert sem.motivo
 
 
 # ---------------------------------------------------------------------------

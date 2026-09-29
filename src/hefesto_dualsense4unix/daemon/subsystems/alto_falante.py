@@ -52,12 +52,22 @@ O QUE ELE NÃO FAZ, E É METADE DO VALOR DE LER ISTO
   liga o monitor ao sink USB do controle no cabo"*, e era verdade: o
   ``module-loopback`` e o casamento por dispositivo USB estavam fora da posse
   daquela sprint. Estão dentro desta. Quem resolve a rota é
-  ``integrations.alto_falante_bt.rota_do_no``, e ele é o MESMO que a janela
-  chama por ``app/audio_saida`` — uma pergunta, um dono;
+  ``integrations.alto_falante_bt.rota_do_no`` — uma pergunta, um dono;
 * **não escolhe o número do rótulo.** O «Controle N» de «Alto-falante do
   Controle N» é a conta DA CASA, e este subsystem só a alcança — ver
   :meth:`AltoFalanteSubsystem.numero_do_assento` e
   ``daemon/subsystems/base.numero_do_assento_na_mesa``.
+
+UM DONO DO CICLO DE VIDA — 28/09/2026 (O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01)
+--------------------------------------------------------------------------
+O nó de som de cada controle, no cabo e no rádio, de um a quatro, nasce e
+morre AQUI (:class:`GerenciadorDeNosDeSom`), por
+:class:`~integrations.alto_falante_bt.SinkVirtualPipeWire`. O segundo
+publicador que existia — o plano da janela em ``app/audio_saida``
+(``plano_de_publicacao``, ``argv_para_publicar_o_no``) — nunca foi executado
+por ninguém e saiu; as invariantes dele são cobradas deste gerenciador em
+``tests/unit/test_o_alto_falante_virtual_esconde_o_transporte.py``, contra um
+servidor de som de mentira.
 
 O ÓRFÃO GANHOU A ROTA, E DEPOIS GANHOU AS TRÊS LINHAS DO REGISTRO
 ------------------------------------------------------------------
@@ -67,8 +77,8 @@ razões de verdade:
 * *"sem o ``module-loopback``, o nó publicado é um sumidouro"* — agora
   :class:`~integrations.alto_falante_bt.SinkVirtualPipeWire` sobe o loopback
   junto, e a pergunta *"onde este nó entrega?"* passou a ter **um** dono
-  (``integrations.alto_falante_bt.rota_do_no``), que é o mesmo que a janela
-  chama por ``app/audio_saida``. Eram duas respostas escritas; ficou uma;
+  (``integrations.alto_falante_bt.rota_do_no``). Eram duas respostas
+  escritas; ficou uma;
 * *"os quatro nascem com o MESMO rótulo"* — agora cada um nasce «Alto-falante
   do Controle N», com o número do ASSENTO, pelo mesmo gancho do «Microfone do
   Controle N» (decisão dela de 09/09, *"4a"*).
@@ -540,9 +550,10 @@ class GerenciadorDeNosDeSom:
         :meth:`_republicar` ser uma volta.
         """
         no = self._construir(uniq, transporte, mesa, descricao=descricao)
-        # SEM ROTA, SEM NÓ — e a razão está na invariante 4 de
-        # `app/audio_saida.py`: *"um `module-null-sink` sozinho seria
-        # exatamente o sink que aceita o áudio e o joga fora"*. Publicar
+        # SEM ROTA, SEM NÓ — e a razão é a invariante 4 que o plano da janela
+        # escrevia (`app/audio_saida.py`, até 28/09/2026): *"um
+        # `module-null-sink` sozinho seria exatamente o sink que aceita o
+        # áudio e o joga fora"*. Publicar
         # aqui poria uma entrada MUDA por DualSense na lista de som dela;
         # ela escolhe uma das quatro e o som some.
         #

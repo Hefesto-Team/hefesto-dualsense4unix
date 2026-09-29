@@ -86,8 +86,10 @@ O QUE ESTE MÓDULO **NÃO** FAZ, E TEM DONO
 * **não escolhe o degrau para regime.** A decisão dela
   (``D-0609-O-NO-DE-SOM-VIVE-COM-O-CONTROLE``) deixava ``0x32`` contra
   ``0x39`` para *depois do D5*, e a orelha dela achou o terceiro em 10/09: o
-  ``0x35`` é o :data:`ARRANJO_PADRAO`. :func:`degrau_para_payload` existe para
-  o tamanho, não para o regime.
+  ``0x35`` é o :data:`ARRANJO_PADRAO`. A escolha do degrau pelo tamanho do
+  payload desceu para o ensaio que a usava (``scripts/ensaios/o_som_que_sai.py``,
+  O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01, 28/09/2026): o produto escreve um degrau
+  só, e o do arranjo.
 """
 
 from __future__ import annotations
@@ -202,26 +204,6 @@ def orcamento_do_degrau(degrau: int) -> int:
 ORCAMENTO_DO_DEGRAU: dict[int, int] = {
     degrau: orcamento_do_degrau(degrau) for degrau in TAMANHO_DO_DEGRAU
 }
-
-
-def degrau_para_payload(bytes_de_payload: int) -> int | None:
-    """O MENOR degrau cujo orçamento comporta este payload. None se não cabe.
-
-    A regra é de TABELA, e a leitura é ordenada pelo id. O ``0x31`` fica fora
-    dos candidatos porque ele é do kernel (:data:`DEGRAU_DO_KERNEL`).
-
-    **A mordida desta função:** peça 89 bytes e ela tem de devolver ``0x33``.
-    Se devolver ``0x32`` (88 B de orçamento) o CRC cai fora do lugar e o
-    firmware descarta calado.
-    """
-    if bytes_de_payload < 0:
-        return None
-    for degrau in sorted(TAMANHO_DO_DEGRAU):
-        if degrau == DEGRAU_DO_KERNEL:
-            continue
-        if ORCAMENTO_DO_DEGRAU[degrau] >= bytes_de_payload:
-            return degrau
-    return None
 
 
 # ---------------------------------------------------------------------------
@@ -813,8 +795,9 @@ ARRANJO_035 = Arranjo(
 
 #: Os três por nome — é este dicionário que o ensaio consulta em `--arranjo`.
 #: O terceiro entra AQUI e não em :data:`ARRANJOS` para que `--arranjo
-#: common-preservado` exista sem que `montar_pelos_dois_arranjos` deixe de ser
-#: sobre os dois.
+#: common-preservado` exista sem que os dois candidatos externos deixem de ser
+#: só dois (quem os monta lado a lado é o ensaio,
+#: ``scripts/ensaios/o_som_que_sai.montar_pelos_dois_arranjos``).
 #: (E) **O ARRANJO QUE FEZ O MOTOR VIBRAR PELO RÁDIO** — 18/09/2026, com a mão
 #: dela: primeiro com senoide, depois com o PCM do PRAGMATA saindo do endpoint
 #: de 4 canais ("se eu atirei x vezes vibrou x vezes", 2161 reports, zero
@@ -846,7 +829,7 @@ ARRANJO_035 = Arranjo(
 #: bloco `0x11` e o bloco háptico — **vibrou**.
 #:
 #: **E É AQUI QUE A LEITURA FÁCIL ERRA — ela me pegou em 22/09.** O `montar`
-#: daquele ensaio (`scripts/ensaios/a_haptica_pelo_radio.py`) põe o bloco
+#: daquele ensaio (`scripts/ensaios/historico/a_haptica_pelo_radio.py`) põe o bloco
 #: háptico em `[11]` tag, `[12]` len, `[13..76]` corpo. O :data:`ARRANJO_035`
 #: põe o ÁUDIO em `[11]` tag, `[12]` len, `[13..212]` corpo. **É o mesmo
 #: assento.** A vibração que vibrou sentou onde o som viaja: a passada azul
@@ -994,6 +977,11 @@ def common_de_audio(
 ) -> bytes:
     """O ``common`` de 47 B que PEDE rota, volume e pré-amp. Para o ENSAIO.
 
+    **INSTRUMENTO, não promessa — nota de 28/09/2026.** O produto não o chama:
+    o ``0x35`` da ponte não leva ``common`` (:data:`ARRANJO_035`). Quem chama
+    são os ensaios do rádio e as réguas da bomba e do governador, que o
+    importam deste módulo; por isso ele mora aqui, com nome e assinatura fixos.
+
     **POR QUE ELE EXISTE, e o defeito que ele fecha é de 08/09/2026.** O
     terceiro corpo dizia carregar *"o `common` de 47 B idêntico ao do 0x31 do
     produto em [3..49]"*, e isso valia só para a chamada DIRETA que as réguas
@@ -1042,21 +1030,6 @@ def common_de_audio(
     )
     common[rep.COMMON_AUDIO_CONTROL2] = int(preamp) & rep.SP_PREAMP_GAIN_MASK
     return bytes(common)
-
-
-def montar_pelos_dois_arranjos(
-    quadros: Sequence[bytes],
-    *,
-    seq: int = 0,
-    tag_audio: int = BLOCO_SPEAKER,
-) -> dict[str, bytes]:
-    """O MESMO PCM já codificado, montado pelos DOIS arranjos candidatos.
-
-    É esta função que a rota corrigida da sprint pede: *"mandam o MESMO PCM
-    pelos DOIS arranjos, cada um com a sua régua"*. Devolver os dois de uma
-    vez é o que impede que alguém meça um e conclua sobre o outro.
-    """
-    return {a.nome: a.montar(quadros, seq=seq, tag_audio=tag_audio) for a in ARRANJOS}
 
 
 # ---------------------------------------------------------------------------
@@ -1157,6 +1130,11 @@ def nome_do_sink(uniq: str) -> str:
 
 def sufixo_do_sink_do_som(nome: str) -> str:
     """Rabo hex do MAC no nome do nó de som — "" se não for um.
+
+    É o LEITOR do nome que :func:`nome_do_sink` escreve, e o único: quem
+    pergunta *"este sink é o nó de um controle?"* pergunta aqui
+    (``app/audio_saida.e_saida_de_controle``, desde 28/09/2026), em vez de
+    casar o prefixo à mão.
 
     Recorta o prefixo ANTES de filtrar hex, e a ordem não é detalhe: o próprio
     ``hefesto_som_`` tem letras hex dentro (``e``, ``f``), e passar o nome
@@ -1307,7 +1285,8 @@ class SinkVirtualPipeWire:
         *"concordo com as 5"*): *"nó que some quebra o jogo que o escolheu"*. O
         que vai e volta é a ROTA, não o nó. **FATO SUBSTITUÍDO:** até 07/09 a
         casa escrevia o contrário — *"sem rota não se carrega módulo nenhum"*
-        (a invariante 4 de ``app/audio_saida.PlanoDoNo``, e a régua
+        (a invariante 4 do plano da janela, que morava em
+        ``app/audio_saida`` até 28/09/2026, e a régua
         ``tests/unit/test_o_no_de_som_nao_nasce_sumidouro.py``) — porque a
         decisão então valendo era a de 06/09, *"o nó vive só enquanto há
         controle"*, tomada por DELEGAÇÃO e declarada reversível numa frase. Ela
@@ -2386,6 +2365,12 @@ def fonte_com_ritmo(
 ) -> Callable[[int], bytes]:
     """Dá RITMO a uma fonte que não tem — e sem ela o ensaio vira uma inundação.
 
+    **INSTRUMENTO, não promessa — nota de 28/09/2026.** O produto não o chama:
+    a ponte lê o monitor do nó por ``pw-record``, que já entrega no tempo real
+    (:func:`fonte_do_monitor_do_no`). Quem chama é o ensaio de bancada e a
+    régua do governador, que o importam deste módulo com nome e assinatura
+    fixos.
+
     **O DEFEITO QUE ELA MATA, medido em 07/09/2026 antes de qualquer escrita.**
     A bomba anda no ritmo da fonte, e isso é certo para o monitor de um nó do
     PipeWire: pedir 20 ms de som bloqueia 20 ms. Uma fonte SINTÉTICA (o timbre
@@ -2516,7 +2501,14 @@ def versao_libopus() -> str | None:
 
 
 def diagnosticar(uniqs: Sequence[str] | None = None) -> Diagnostico:
-    """Fotografa as pré-condições do nó sem mexer em nada (só leitura)."""
+    """Fotografa as pré-condições do nó sem mexer em nada (só leitura).
+
+    **DIAGNÓSTICO DE BANCADA — nota de 28/09/2026.** Quem chama é o ensaio
+    ``scripts/ensaios/o_som_que_sai.py --sink``. O produto pergunta o que
+    precisa a :func:`a_ponte_do_radio_pode_subir` e a
+    :func:`ha_gravador_de_monitor`; o laudo (:class:`Diagnostico`) fica aqui
+    porque a frase da libopus dele tem régua própria.
+    """
     if uniqs is None:
         from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
             nos_dualsense_bluetooth,
@@ -2543,8 +2535,14 @@ def diagnosticar(uniqs: Sequence[str] | None = None) -> Diagnostico:
 # 01/09). Quem precisa da rota é o `AltoFalanteSubsystem`; deixar a resposta
 # em `app/` obrigaria o daemon a escrever a SEGUNDA, e duas verdades sobre a
 # mesma pergunta é como esta casa fabrica divergência silenciosa. O molde é o
-# `app/usb_pai.py` → `integrations/usb_pai.py`: o dono muda de endereço e
-# `app/audio_saida.py` REEXPORTA tudo, byte a byte da mesma resposta.
+# `app/usb_pai.py` → `integrations/usb_pai.py`: o dono muda de endereço.
+#
+# O PLANO DA JANELA SAIU EM 28/09/2026 (O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01).
+# `app/audio_saida.py` reexportava esta seção e montava um SEGUNDO plano de
+# publicação do nó (`plano_de_publicacao`, `argv_para_publicar_o_no`), que
+# ninguém executava: o nó de cada controle tem um dono do ciclo de vida, o
+# `AltoFalanteSubsystem` por :class:`SinkVirtualPipeWire`. A janela continua
+# importando daqui o que usa (`sink_do_controle`, as frases da rota).
 #
 # ESTE BLOCO FICA NO FIM DO MÓDULO DE PROPÓSITO: o `docs/data/mapa-controles.csv`
 # cita este arquivo por `arquivo:LINHA` (`:268`, `:455`, `:523`), e código novo
@@ -3765,10 +3763,11 @@ def argv_das_rotas(id_do_no: str, rota: RotaDoNo) -> tuple[tuple[str, ...], ...]
     engole nada de ninguém.
 
     **A TRAVA DO LAÇO MORA AQUI**, e não só em :func:`rota_do_no`: esta é a
-    função pura por onde passam os DOIS chamadores — o daemon
-    (:meth:`SinkVirtualPipeWire._ligar_a_rota`) e o plano da janela
-    (``app/audio_saida.plano_de_publicacao``) —, e uma ``RotaDoNo`` montada à
-    mão chega aqui sem ter passado por lá. Ver :func:`o_mix_fecha_laco`.
+    função pura por onde passa quem liga a rota
+    (:meth:`SinkVirtualPipeWire._ligar_a_rota`), e uma ``RotaDoNo`` montada à
+    mão chega aqui sem ter passado por lá. Ver :func:`o_mix_fecha_laco`. (O
+    segundo chamador, o plano da janela em ``app/audio_saida``, saiu em
+    28/09/2026: ninguém o executava.)
 
     **A LIMITAÇÃO HERDADA, escrita para ninguém descobrir sozinho:**
     :func:`assinatura_da_rota` ignora ``monitor_do_mix``, então um nó que foi
@@ -3835,9 +3834,10 @@ def rotulo_do_alto_falante(numero: int | None) -> str:
     (``dualsense_bt_audio.descricao_do_microfone``), os quatro controles, o
     cabo e o BT.
 
-    UM DONO para os dois caminhos que nomeiam o nó: :func:`descricao_do_alto_falante`
-    (o daemon, pelo ``uniq``) e ``app/audio_saida.nome_do_alto_falante`` (a
-    janela, pelo assento). Duas grafias seriam dois nomes para o mesmo nó.
+    UM DONO da grafia: quem nomeia o nó é :func:`descricao_do_alto_falante`
+    (o daemon, pelo ``uniq``). O segundo caminho, o da janela pelo assento
+    (``app/audio_saida.nome_do_alto_falante``), saiu em 28/09/2026 com o plano
+    que ninguém executava; duas grafias seriam dois nomes para o mesmo nó.
 
     ``None``, ``bool`` e número que não seja positivo valem como *"não sei o
     assento"*: sem número não se inventa número.
@@ -4028,7 +4028,6 @@ __all__ = [
     "common_de_audio",
     "conferir_o_alvo_do_gravador",
     "controle_de_audio_035",
-    "degrau_para_payload",
     "descricao_do_alto_falante",
     "diagnosticar",
     "e_radio",
@@ -4039,7 +4038,6 @@ __all__ = [
     "ha_gravador_de_monitor",
     "monitor_da_saida_padrao",
     "montar_com_o_common_preservado",
-    "montar_pelos_dois_arranjos",
     "nome_do_sink",
     "o_mix_fecha_laco",
     "o_servidor_e_o_pipewire",

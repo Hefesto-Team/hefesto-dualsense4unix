@@ -35,7 +35,6 @@ from collections.abc import Callable, Iterator
 
 import pytest
 
-from hefesto_dualsense4unix.app import audio_saida
 from hefesto_dualsense4unix.integrations import alto_falante_bt as som
 from hefesto_dualsense4unix.integrations import dualsense_bt_audio as mic
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as haptica
@@ -170,16 +169,13 @@ def test_o_sufixo_nunca_come_o_numero() -> None:
     assert vestido.com_o_nome_da_sony(uma) == uma == "Microfone do Controle 2" + _SONY
 
 
-@pytest.mark.parametrize("assento_da_tela", ["p1", "p2", "p3", "p4"])
-def test_a_janela_e_o_daemon_dizem_o_mesmo_nome(assento, assento_da_tela: str) -> None:
-    """Os dois caminhos que nomeiam o nó — pelo ``uniq`` e pelo assento — concordam.
-
-    MORDIDA: devolva a f-string antiga em ``audio_saida.nome_do_alto_falante``
-    e a janela passa a publicar um nó com um nome e o daemon com outro.
-    """
-    numero = int(assento_da_tela[1:])
-    assento(numero)
-    assert audio_saida.nome_do_alto_falante(assento_da_tela) == som.descricao_do_alto_falante(_UNIQ)
+# `test_a_janela_e_o_daemon_dizem_o_mesmo_nome` e
+# `test_a_janela_publica_o_mesmo_no_que_o_daemon` MORARAM AQUI até 28/09/2026:
+# mediam que o plano da janela (`app/audio_saida.nome_do_alto_falante` e
+# `argv_para_publicar_o_no`) e o daemon publicavam o MESMO nó. O plano saiu
+# (O-ALTO-FALANTE-TEM-UM-CAMINHO-SO-01) — ninguém o executava —, e com um
+# publicador só não há o que concordar: o nome e as propriedades do nó são as
+# do `SinkVirtualPipeWire`, medidas nas réguas desta seção e da seguinte.
 
 
 # ---------------------------------------------------------------------------
@@ -234,21 +230,6 @@ def test_o_no_do_alto_falante_nao_veste_a_identidade() -> None:
     props = _props_do_no_publicado("Alto-falante do Controle 1" + _SONY)
     for chave in ("device.bus", "device.vendor.id", "device.product.id", "sysfs.path"):
         assert chave not in props, f"o nó do alto-falante declarou {chave}={props[chave]!r}"
-
-
-def test_a_janela_publica_o_mesmo_no_que_o_daemon(assento) -> None:
-    """O plano da janela (``argv_para_publicar_o_no``) leva as MESMAS propriedades.
-
-    São dois os que publicam o nó; um vestido que só um deles levasse poria na
-    lista dela dois nós diferentes com o mesmo nome.
-    """
-    assento(2)
-    no = audio_saida.NoDeAltoFalante(assento="p2", uniq=_UNIQ)
-    argv = audio_saida.argv_para_publicar_o_no(no)
-    argumento = next(a for a in argv if a.startswith("sink_properties="))
-    da_janela = _como_o_servidor_le(argumento, "sink_properties")
-    do_daemon = _props_do_no_publicado(som.descricao_do_alto_falante(_UNIQ))
-    assert da_janela == do_daemon
 
 
 # ---------------------------------------------------------------------------

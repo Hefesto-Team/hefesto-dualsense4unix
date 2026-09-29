@@ -53,10 +53,11 @@ pior que o instrumento que substitui.
 **DEFEITO ACHADO AO LER, e é por isso que esta folha não chama
 `montar_pelos_dois_arranjos`:** aquela função devolve só os dois de `ARRANJOS`,
 enquanto `o_envelope_do_som_no_radio.py` valida `--arranjo` contra
-`ARRANJO_POR_NOME`, que tem três — então `--arranjo common-preservado` passa na
-validação e morre de `KeyError` na montagem. Aqui a montagem é
+`ARRANJO_POR_NOME`, que tem mais — então `--arranjo common-preservado` passava
+na validação e morria de `KeyError` na montagem. Aqui a montagem é
 `ARRANJO_POR_NOME[nome].montar(...)`, que é o MESMO código do produto e alcança
-os três. (O defeito é do outro arquivo e não foi tocado nesta tarefa.)
+todos. (O outro arquivo foi curado em 28/09/2026 da mesma forma, e a função do
+par desceu do produto para `o_som_que_sai.py`, o ensaio que a usa.)
 
 O NEGATIVO É UM BOTÃO, e não uma bandeira global
 -------------------------------------------------

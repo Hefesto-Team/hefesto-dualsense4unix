@@ -75,7 +75,7 @@ def test_os_dois_arranjos_continuam_escrevendo_noventa_e_um_ali() -> None:
     declaram. Trocar o [2] deles seria apagar a metade que dá sentido à
     comparação, e inventar uma terceira leitura das fontes.
     """
-    pacotes = af.montar_pelos_dois_arranjos(QUADROS)
+    pacotes = {a.nome: a.montar(QUADROS) for a in af.ARRANJOS}
     assert set(pacotes) == {"ds5dongle", "senshi"}
     for nome, pkt in pacotes.items():
         assert pkt[2] == 0x91, (
