@@ -289,6 +289,21 @@ class DaemonProtocol(Protocol):
         """
         ...
 
+    def definir_o_status_da_navegacao(
+        self,
+        ligado: bool,
+        *,
+        origin: Literal["manual", "profile"],
+        grava: GravaOModo = False,
+    ) -> dict[str, Any]:
+        """O «Status do Modo» da aba Navegação: o mouse, depois o teclado.
+
+        Com `grava`, ``mouse.enabled`` e ``teclado_emulado`` vão ao perfil
+        ativo numa gravação só, depois do aparelho
+        (O-MOUSE-SEGUE-A-NAVEGACAO-01). O `desktop.status.set` o chama.
+        """
+        ...
+
     def is_native_mode(self) -> bool:
         """True se o Modo Nativo está ativo (FEAT-NATIVE-MODE-01)."""
         ...

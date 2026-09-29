@@ -26,8 +26,10 @@ dela é DURABILIDADE — *"no dia seguinte e por diante"* —, não o gesto de s
 O QUE ESTES TESTES COBREM, cada um com a mordida escrita:
 
 1. as duas barras e a lista do teclado GRAVAM no disco, no clique, sem Salvar;
-2. o "Status do Modo" grava os DOIS lados juntos — meio perfil seria um estado
-   que este botão não sabe produzir;
+2. o "Status do Modo" pede ao dono UMA vez e não escreve o perfil pela janela:
+   desde 29/09/2026 (O-MOUSE-SEGUE-A-NAVEGACAO-01) quem grava os DOIS lados
+   juntos é o daemon, e a prova do disco é a régua 8 de
+   `test_o_mouse_segue_a_navegacao.py`;
 3. o segundo disparo do mesmo arraste (`change` + `click`) não reescreve o
    arquivo — o guarda é a IGUALDADE, não um relógio;
 4. gravar NÃO reaplica o perfil: nenhum `profile.switch` sai destes gestos, e é
@@ -299,37 +301,94 @@ def test_o_teclado_recusado_pelo_daemon_nao_grava(pac, a06):
 
 
 # ---------------------------------------------------------------------------
-# 3. O "STATUS DO MODO" grava os DOIS lados
+# 3. O "STATUS DO MODO" pede ao dono, e a janela não grava
 # ---------------------------------------------------------------------------
-def test_o_interruptor_grava_o_mouse_e_o_teclado_juntos(pac, a06):
-    """Meio perfil seria um estado que este botão não sabe produzir.
+class _DonoDoStatus(PonteDeMentira):
+    """A resposta do `desktop.status.set`, com o lado que o teste escolhe.
 
-    Ele desliga mouse E teclado com um clique. Gravar só o mouse deixaria o
-    perfil dizendo *mouse desligado, teclado ligado* — e a próxima ativação
-    imporia esse meio-passo.
+    A forma é a do daemon (`IpcHandlersMixin._handle_desktop_status_set`): os
+    blocos `mouse_emulation` e `keyboard_emulation`, cada um com o seu
+    `status`, mais `perfil` e `gravado`.
+    """
 
-    A MORDIDA: tire o `teclado_emulado=novo` da chamada e esta linha reprova.
+    def __init__(self, *, mouse: str = "ok", teclado: str = "ok",
+                 perfil: str = "regua", gravado: bool = True) -> None:
+        super().__init__()
+        self.corpo = {
+            "status": "ok" if (mouse, teclado) == ("ok", "ok") else "failed",
+            "mouse_emulation": {"status": mouse, "bloqueio": "sem_device"},
+            "keyboard_emulation": {"status": teclado, "enabled": True,
+                                   "bloqueio": "sem_device"},
+            "perfil": perfil,
+            "gravado": gravado,
+        }
+
+    def resultado(self, metodo: str, **params):
+        self.chamadas.append((metodo, params))
+        return self.corpo
+
+
+def test_o_interruptor_pede_ao_dono_uma_vez_e_nao_escreve_o_perfil(pac, a06):
+    """Uma chamada, `desktop.status.set`, e o disco intocado pela janela.
+
+    Quem grava `mouse.enabled` e `teclado_emulado` juntos é o daemon, depois do
+    aparelho (O-MOUSE-SEGUE-A-NAVEGACAO-01, 29/09/2026). O dublê da ponte não
+    escreve: se o disco mudar, foi a janela.
+
+    A MORDIDA: devolva ao gesto o `_guardar_no_perfil(ctx, teclado_emulado=novo)`
+    e esta linha reprova com o teclado gravado pela janela.
     """
     _zerar_a_memoria(a06)
     _semear("regua", enabled=True, teclado=True)
-    a06.modo(_ctx(pac), {}, PonteDeMentira())
+    ponte = _DonoDoStatus()
+    assert a06.modo(_ctx(pac), {}, ponte) is None
+    assert ponte.chamadas == [
+        ("desktop.status.set", {"enabled": False, "origin": "manual"})]
     d = _disco()
-    assert (d["enabled"], d["teclado"]) == (False, False)
+    assert (d["enabled"], d["teclado"]) == (True, True), (
+        "a janela voltou a escrever o liga/desliga no perfil")
 
 
-def test_o_interruptor_recusado_no_teclado_nao_grava_meio_passo(pac, a06):
-    """O mouse mudou e o teclado não: o gesto levanta, e o disco não guarda.
+def test_o_interruptor_diz_quando_o_teclado_recusou(pac, a06):
+    """O mouse mudou e o teclado não: o gesto levanta dizendo, e o disco fica.
 
-    A MORDIDA: mova a gravação para entre as duas chamadas e esta linha reprova
-    — o perfil guardaria `mouse.enabled=False` com o teclado ainda ligado.
+    A MORDIDA: tire o `if … keyboard_emulation … failed` do gesto e ele volta
+    calado sobre um teclado que seguiu ligado.
     """
     _zerar_a_memoria(a06)
     _semear("regua", enabled=True, teclado=True)
-    ponte = PonteDeMentira(recusa="keyboard.emulation.set")
-    with pytest.raises(RuntimeError):
-        a06.modo(_ctx(pac), {}, ponte)
+    with pytest.raises(RuntimeError, match="o teclado não"):
+        a06.modo(_ctx(pac), {}, _DonoDoStatus(teclado="failed", gravado=False))
     d = _disco()
     assert (d["enabled"], d["teclado"]) == (True, True)
+
+
+def test_o_interruptor_recusado_no_mouse_larga_a_reserva(pac, a06):
+    """O mouse recusou: a frase é a do produto, e o próximo clique parte do tique.
+
+    A MORDIDA: tire o `_largar_a_reserva` do `except` e o segundo clique pede
+    o mesmo `enabled` que o daemon acabou de recusar, com o lado invertido.
+    """
+    _zerar_a_memoria(a06)
+    ponte = _DonoDoStatus(mouse="failed", gravado=False)
+    with pytest.raises(RuntimeError):
+        a06.modo(_ctx(pac), {}, ponte)
+    with pytest.raises(RuntimeError):
+        a06.modo(_ctx(pac), {}, ponte)
+    assert [c[1]["enabled"] for c in ponte.chamadas] == [False, False]
+
+
+def test_o_interruptor_sem_perfil_avisa_em_vez_de_recusar(pac, a06):
+    """O daemon mudou o aparelho e não achou perfil: o recado é o de sempre.
+
+    A frase tem um dono (`_o_que_nao_guardou`), e é a mesma das barras.
+
+    A MORDIDA: tire o `if corpo.get("gravado") is False` e o gesto volta
+    calado sobre uma escolha que não vai durar até amanhã.
+    """
+    _zerar_a_memoria(a06)
+    volta = a06.modo(_ctx(pac), {}, _DonoDoStatus(perfil="", gravado=False))
+    assert isinstance(volta, dict) and "perfil ativo" in volta.get("recado", "")
 
 
 def test_o_portao_de_modo_recusa_antes_de_qualquer_escrita(pac, a06):

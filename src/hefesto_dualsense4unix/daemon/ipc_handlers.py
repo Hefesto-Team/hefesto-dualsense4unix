@@ -7003,19 +7003,28 @@ class IpcHandlersMixin:
         )
         resposta = {"status": "ok" if ok else "failed", "enabled": enabled and ok}
         if not ok:
-            bloqueio = self._bloqueio_do_mouse()
-            if enabled and bloqueio == "desligada":
-                # LIGAR falhou: `start_mouse_emulation` só marca
-                # `mouse_emulation_enabled` DEPOIS de o device subir, então a
-                # leitura pós-fato responde "desligada" — que é devolver o
-                # pedido dela como motivo do próprio pedido. O que falhou foi o
-                # device (`UinputMouseDevice.start()`), e é ele que a frase tem
-                # de nomear: sem permissão em `/dev/uinput` o texto certo manda
-                # abrir a aba Sistema, e "desligada" mandaria ligar o que ela
-                # acabou de tentar ligar.
-                bloqueio = "sem_device"
-            resposta["bloqueio"] = bloqueio
+            resposta["bloqueio"] = self._bloqueio_da_recusa_do_mouse(enabled)
         return resposta
+
+    def _bloqueio_da_recusa_do_mouse(self, pedia_ligar: bool) -> str | None:
+        """POR QUE o daemon disse não ao liga/desliga do mouse, lido depois do fato.
+
+        Um dono para os dois métodos que ligam o mouse à mão:
+        `mouse.emulation.set` e `desktop.status.set` (o «Status do Modo»,
+        O-MOUSE-SEGUE-A-NAVEGACAO-01).
+        """
+        bloqueio = self._bloqueio_do_mouse()
+        if pedia_ligar and bloqueio == "desligada":
+            # LIGAR falhou: `start_mouse_emulation` só marca
+            # `mouse_emulation_enabled` DEPOIS de o device subir, então a
+            # leitura pós-fato responde "desligada" — que é devolver o
+            # pedido dela como motivo do próprio pedido. O que falhou foi o
+            # device (`UinputMouseDevice.start()`), e é ele que a frase tem
+            # de nomear: sem permissão em `/dev/uinput` o texto certo manda
+            # abrir a aba Sistema, e "desligada" mandaria ligar o que ela
+            # acabou de tentar ligar.
+            bloqueio = "sem_device"
+        return bloqueio
 
     async def _handle_mouse_emulation_restore(
         self, _params: dict[str, Any]
@@ -7082,6 +7091,62 @@ class IpcHandlersMixin:
         )
         arranjo = aplicar(origin=origem, **modo)
         return {"status": "ok", "arranjo": dict(arranjo or {})}
+
+    async def _handle_desktop_status_set(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """O «Status do Modo» da aba Navegação: mouse e teclado, e o perfil.
+
+        O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026), commit 3. O interruptor
+        chamava `mouse.emulation.set` e `keyboard.emulation.set` e gravava o
+        perfil pela janela; agora chama este método uma vez, e o ato e a
+        gravação moram em `Daemon.definir_o_status_da_navegacao`.
+
+        Params:
+            enabled: bool (obrigatório)
+            origin: "manual"|"profile" — só o pedido que DIZ ``manual`` grava
+                ``mouse.enabled`` e ``teclado_emulado`` no perfil ativo; o
+                silêncio é reconciliação (ORIGEM-QUE-MENTE-01).
+
+        Resposta: ``{"status", "enabled", "mouse_emulation",
+        "keyboard_emulation", "perfil", "gravado"}``. Os dois blocos são os do
+        `state_full`, cada um com o `status` do seu lado, para a janela seguir
+        dizendo por que não deu: o do mouse leva o `bloqueio` DA RECUSA quando
+        falhou (a leitura de `mouse.emulation.set`); o do teclado diz
+        ``nao_tentado`` quando o mouse falhou antes dele.
+        """
+        enabled = params.get("enabled")
+        if not isinstance(enabled, bool):
+            raise ValueError("desktop.status.set exige 'enabled' boolean")
+        if self.daemon is None:
+            raise ValueError("daemon não disponível para o Status do Modo")
+        definir = getattr(self.daemon, "definir_o_status_da_navegacao", None)
+        if not callable(definir):
+            raise ValueError("daemon sem suporte ao Status do Modo")
+        origem = origem_do_pedido(params)
+        desfecho = definir(enabled, origin=origem, grava=_porta_que_grava(origem))
+
+        mouse_ok = bool(desfecho.get("mouse"))
+        bloco_do_mouse = {
+            **self._mouse_emulation_payload(),
+            "status": "ok" if mouse_ok else "failed",
+        }
+        if not mouse_ok:
+            bloco_do_mouse["bloqueio"] = self._bloqueio_da_recusa_do_mouse(enabled)
+        teclado = desfecho.get("teclado")
+        bloco_do_teclado = {
+            **self._keyboard_emulation_payload(),
+            "status": "nao_tentado" if teclado is None else ("ok" if teclado else "failed"),
+        }
+        ok = mouse_ok and bool(teclado)
+        return {
+            "status": "ok" if ok else "failed",
+            "enabled": bool(enabled and ok),
+            "mouse_emulation": bloco_do_mouse,
+            "keyboard_emulation": bloco_do_teclado,
+            "perfil": desfecho.get("perfil"),
+            "gravado": bool(desfecho.get("gravado")),
+        }
 
     async def _handle_keyboard_emulation_set(
         self, params: dict[str, Any]

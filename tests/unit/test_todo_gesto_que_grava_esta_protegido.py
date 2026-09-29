@@ -217,6 +217,11 @@ METODOS_QUE_ESCREVEM = {
     # limite do adaptador.
     "radio.mover",
     "radio.ponte.ligar_aqui",
+    # O «STATUS DO MODO» — O-MOUSE-SEGUE-A-NAVEGACAO-01, 29/09/2026. O
+    # interruptor da aba Navegação gravava `mouse.enabled` e `teclado_emulado`
+    # pela janela (`_guardar_no_perfil`); agora o daemon grava os dois no perfil
+    # ativo dela, depois do aparelho, e a porta é este método.
+    "desktop.status.set",
 }
 
 #: As portas de IPC do `ponte.py` cujo PRIMEIRO argumento é o método.

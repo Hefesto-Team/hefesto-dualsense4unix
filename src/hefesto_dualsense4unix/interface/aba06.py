@@ -1961,9 +1961,16 @@ if set(ROTULOS_DA_TROCA) != _ROTULOS_DO_DESENHO or _SEM_TROCA_DO_PACOTE != SEM_T
 #:     **Velocidade de cursor**, **Velocidade da rolagem** e **Função do
 #:     teclado**. É a armadilha que a D3 nomeou — a fita de cima oferece um
 #:     controle, e estes três valem para a máquina.
+#:
+#: O «ATÉ VOCÊ ENTRAR NA NAVEGAÇÃO DE NOVO» — 29/09/2026,
+#: O-MOUSE-SEGUE-A-NAVEGACAO-01, pela D-2909-A-NAVEGACAO-LIGA-O-MOUSE: entrar
+#: na Navegação (o chip ou o PS + R3) liga o mouse, e o «Desligado» deste
+#: interruptor passa a valer até a próxima entrada. A dica dizia o alcance
+#: inteiro, e deixaria de ser verdade sem a última oração.
 D_QUANDO = ajuda(
     "Vale para <b>este perfil</b>. <b>Desligado</b>, o controle "
-    "é só gamepad e nada desta aba chega ao PC.",
+    "é só gamepad e nada desta aba chega ao PC, até você entrar na Navegação "
+    "de novo.",
     vivas=("modo-portao",))
 D_TECLADO = ajuda(
     "Liga o que o controle <b>digita</b>: os atalhos das telas de botões, o teclado "

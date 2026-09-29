@@ -163,18 +163,25 @@ def test_o_ok_nao_reclama_de_nada() -> None:
 
 
 def test_o_modo_para_quando_o_mouse_recusa() -> None:
-    """Com o mouse recusado, o teclado NÃO é ligado sozinho.
+    """Com o mouse recusado, o gesto para e diz o motivo, numa chamada só.
 
     Era o pior lado do defeito: o `chamar` devolvia `True` e o gesto seguia,
     deixando o teclado ligado num modo que não é dele — que é exatamente o
-    estado que o `keyboard.emulation.set` nasceu para curar.
+    estado que o `keyboard.emulation.set` nasceu para curar. Desde 29/09/2026
+    (O-MOUSE-SEGUE-A-NAVEGACAO-01) o gesto manda `desktop.status.set`, e quem
+    não liga o teclado depois de o mouse recusar é o daemon
+    (`Daemon.definir_o_status_da_navegacao`, provado em
+    `test_o_mouse_segue_a_navegacao.py`). O bloco `mouse_emulation` traz a
+    recusa na forma de antes.
     """
     from pacotes import a06_navegacao as mod
 
-    ponte = _Ponte({"status": "failed", "bloqueio": "sem_device"})
+    ponte = _Ponte({"status": "failed",
+                    "mouse_emulation": {"status": "failed", "bloqueio": "sem_device"},
+                    "keyboard_emulation": {"status": "nao_tentado", "enabled": False}})
     with pytest.raises(RuntimeError) as caiu:
         mod.modo(_ctx(enabled=False), {}, ponte)
-    assert [m for m, _ in ponte.chamadas] == ["mouse.emulation.set"], (
+    assert [m for m, _ in ponte.chamadas] == ["desktop.status.set"], (
         f"o gesto seguiu adiante depois da recusa: {ponte.chamadas}")
     assert BLOQUEIO_DO_MOUSE_EM_PORTUGUES["sem_device"].split(" — ")[0] in str(
         caiu.value), caiu.value

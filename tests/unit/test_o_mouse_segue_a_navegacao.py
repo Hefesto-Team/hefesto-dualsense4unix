@@ -222,6 +222,7 @@ def _perfil(
     *,
     mode: dict[str, Any] | None,
     mouse: dict[str, Any] | None,
+    teclado: bool | None = None,
 ) -> None:
     loader.save_profile(
         Profile(
@@ -229,6 +230,7 @@ def _perfil(
             match=MatchAny(),
             mode=ProfileModeConfig(**mode) if mode is not None else None,
             mouse=ProfileMouseConfig(**mouse) if mouse is not None else None,
+            teclado_emulado=teclado,
         ),
         origem="régua",
     )
@@ -622,3 +624,174 @@ def test_o_perfil_de_navegacao_sem_secao_liga_o_mouse_na_ativacao(bancada: _Banc
     assert (True, 3, 1) in d.chamadas("set_mouse_emulation"), d.recebeu
     assert d.mouse_de_pe(), "o perfil de Navegação sem a seção entrou sem cursor"
     assert d._gamepad_device is None, "o pad ficou de pé na Navegação"
+
+
+# ---------------------------------------------------------------------------
+# 8. O «Status do Modo» escreve pelo dono
+# ---------------------------------------------------------------------------
+def _o_status(d: _DaemonDaNavegacao, **params: Any) -> dict[str, Any]:
+    import asyncio
+
+    return asyncio.run(_Handlers(d)._handle_desktop_status_set(params))
+
+
+def _navegacao_de_pe_com_o_teclado(d: _DaemonDaNavegacao) -> None:
+    _mouse_de_pe(d)
+    assert d.set_keyboard_emulation(True, persist=False) is True, "premissa da bancada"
+    d.recebeu.clear()
+
+
+def test_o_status_do_modo_desliga_os_dois_e_grava_pelo_dono(bancada: _Bancada) -> None:
+    """`desktop.status.set {enabled: false, origin: manual}`: o mouse, depois o teclado.
+
+    O disco relido diz `mouse.enabled: false` e `teclado_emulado: false`, com as
+    velocidades que a seção já tinha, numa versão nova só. Quem grava é o
+    daemon, depois do aparelho: a janela não escreve mais o liga/desliga.
+
+    MORDIDA: tire a gravação de `Daemon.definir_o_status_da_navegacao` e o
+    disco segue dizendo ligado. Chame o teclado antes do mouse, e a ordem
+    reprova.
+    """
+    d = _daemon()
+    _perfil(PERFIL, mode={"kind": "desktop"},
+            mouse={"enabled": True, "speed": 11, "scroll_speed": 4}, teclado=True)
+    _ativo(d, PERFIL)
+    _navegacao_de_pe_com_o_teclado(d)
+    versoes = len(loader.listar_historico(PERFIL))
+
+    resposta = _o_status(d, enabled=False, origin="manual")
+
+    assert d.chamadas("set_mouse_emulation") == [(False, None, None)], d.recebeu
+    assert [a[0] for a in d.chamadas("set_keyboard_emulation")] == [False], d.recebeu
+    nomes = [nome for nome, _ in d.recebeu]
+    assert nomes.index("set_mouse_emulation") < nomes.index("set_keyboard_emulation"), (
+        "o teclado foi antes do mouse, e o mouse é o que tem exclusão mútua com o pad")
+    relido = loader.load_profile(PERFIL)
+    assert relido.mouse is not None and relido.mouse.enabled is False, relido.mouse
+    assert (relido.mouse.speed, relido.mouse.scroll_speed) == (11, 4)
+    assert relido.teclado_emulado is False
+    assert len(loader.listar_historico(PERFIL)) == versoes + 1, (
+        "o mouse e o teclado foram ao perfil em duas gravações")
+    assert (resposta["status"], resposta["gravado"]) == ("ok", True), resposta
+    assert resposta["mouse_emulation"]["status"] == "ok"
+    assert resposta["keyboard_emulation"]["status"] == "ok"
+
+
+def test_o_teclado_recusado_nao_deixa_meio_passo_no_perfil(bancada: _Bancada) -> None:
+    """O mouse ligou e o teclado não subiu: o perfil fica como estava.
+
+    A resposta diz qual lado falhou, para a janela dizer por quê.
+
+    MORDIDA: grave com o mouse só (tire o teclado da condição da gravação) e
+    o disco ganha `mouse.enabled: true` com o teclado ainda desligado.
+    """
+    import hashlib
+
+    d = _daemon()
+    _flag_do_mouse(FLAG_DA_SESSAO)
+    _perfil(PERFIL, mode={"kind": "desktop"},
+            mouse={"enabled": False, "speed": 11, "scroll_speed": 4}, teclado=False)
+    _ativo(d, PERFIL)
+    d._start_keyboard_emulation = lambda: False  # type: ignore[method-assign]
+    arquivo = loader._profile_path(loader.load_profile(PERFIL))
+    antes = hashlib.sha256(arquivo.read_bytes()).hexdigest()
+
+    resposta = _o_status(d, enabled=True, origin="manual")
+
+    assert d.mouse_de_pe(), "premissa: o mouse subiu"
+    assert resposta["keyboard_emulation"]["status"] == "failed", resposta
+    assert resposta["status"] == "failed" and resposta["gravado"] is False
+    assert hashlib.sha256(arquivo.read_bytes()).hexdigest() == antes, (
+        "o perfil guardou o mouse ligado com o teclado que não subiu")
+
+
+def test_o_mouse_recusado_nao_liga_o_teclado_sozinho(bancada: _Bancada) -> None:
+    """A fábrica do mouse recusa: o teclado não é tocado, e a resposta diz o motivo.
+
+    O teclado ligado sozinho num modo que não é dele é o estado que o
+    `keyboard.emulation.set` nasceu para curar. A recusa volta no bloco
+    `mouse_emulation`, com o `bloqueio` que a janela traduz.
+
+    MORDIDA: chame o teclado mesmo com o mouse recusado (tire o
+    `if desfecho["mouse"]` de `Daemon.definir_o_status_da_navegacao`) e o
+    teclado liga.
+    """
+    d = _daemon()
+    _perfil(PERFIL, mode={"kind": "desktop"},
+            mouse={"enabled": False, "speed": 11, "scroll_speed": 4}, teclado=False)
+    _ativo(d, PERFIL)
+    bancada.mouse_sobe = False
+
+    resposta = _o_status(d, enabled=True, origin="manual")
+
+    assert d.chamadas("set_keyboard_emulation") == [], d.recebeu
+    assert resposta["mouse_emulation"]["status"] == "failed", resposta
+    assert resposta["mouse_emulation"]["bloqueio"] == "sem_device", resposta
+    assert resposta["keyboard_emulation"]["status"] == "nao_tentado", resposta
+    assert resposta["gravado"] is False
+
+
+def test_o_status_sem_a_mao_dela_nao_grava(bancada: _Bancada) -> None:
+    """O pedido sem `origin` é reconciliação (ORIGEM-QUE-MENTE-01): aplica e não grava.
+
+    MORDIDA: passe a porta sempre (`grava="ipc"` no handler) e o `sha256` muda.
+    """
+    import hashlib
+
+    d = _daemon()
+    _perfil(PERFIL, mode={"kind": "desktop"},
+            mouse={"enabled": True, "speed": 11, "scroll_speed": 4}, teclado=True)
+    _ativo(d, PERFIL)
+    _navegacao_de_pe_com_o_teclado(d)
+    arquivo = loader._profile_path(loader.load_profile(PERFIL))
+    antes = hashlib.sha256(arquivo.read_bytes()).hexdigest()
+
+    _o_status(d, enabled=False)
+
+    assert not d.mouse_de_pe()
+    assert hashlib.sha256(arquivo.read_bytes()).hexdigest() == antes
+
+
+def test_a_janela_nao_escreve_o_liga_desliga() -> None:
+    """Lido pela árvore de `a06_navegacao.py`, sem abrir janela.
+
+    - nenhuma chamada a `_guardar_no_perfil` passa `mouse_enabled`;
+    - o corpo do gesto `modo` não passa `teclado_emulado` (o gesto `teclado`, a
+      lista «Função do teclado», segue passando, e a régua o deixa);
+    - nenhuma chamada a `mouse.emulation.set` leva `enabled`.
+
+    MORDIDA: devolva ao gesto `modo` o
+    `_guardar_no_perfil(ctx, mouse_enabled=novo, teclado_emulado=novo)` e a
+    régua nomeia o arquivo e a linha.
+    """
+    import ast
+    from pathlib import Path
+
+    arquivo = (Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
+               / "interface" / "pacotes" / "a06_navegacao.py")
+    arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
+    achados: list[str] = []
+
+    def _nome(chamada: ast.Call) -> str:
+        f = chamada.func
+        return f.id if isinstance(f, ast.Name) else f.attr if isinstance(f, ast.Attribute) else ""
+
+    def _chaves(chamada: ast.Call) -> set[str]:
+        return {k.arg for k in chamada.keywords if k.arg}
+
+    for no in ast.walk(arvore):
+        if not isinstance(no, ast.Call):
+            continue
+        if _nome(no) == "_guardar_no_perfil" and "mouse_enabled" in _chaves(no):
+            achados.append(f"a06_navegacao.py:{no.lineno} passa `mouse_enabled`")
+        primeiro = no.args[0] if no.args else None
+        if (isinstance(primeiro, ast.Constant) and primeiro.value == "mouse.emulation.set"
+                and "enabled" in _chaves(no)):
+            achados.append(f"a06_navegacao.py:{no.lineno} manda `enabled` ao mouse")
+    modo = next(n for n in arvore.body if isinstance(n, ast.FunctionDef) and n.name == "modo")
+    for no in ast.walk(modo):
+        if isinstance(no, ast.Call) and "teclado_emulado" in _chaves(no):
+            achados.append(f"a06_navegacao.py:{no.lineno} grava `teclado_emulado` no `modo`")
+    assert not achados, (
+        "a janela voltou a escrever o liga/desliga do «Status do Modo» — quem "
+        "grava é o daemon, depois do aparelho:\n  " + "\n  ".join(achados))

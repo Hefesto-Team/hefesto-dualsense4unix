@@ -151,6 +151,9 @@ daemon_status_basic = _b.daemon_status_basic
 TETOS = {
     "gamepad.emulation.set": 2.0, "native.mode.set": 2.0,
     "mouse.emulation.set": 2.0, "keyboard.emulation.set": 2.0,
+    # O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026): o «Status do Modo», que
+    # juntou os dois de cima numa chamada; o teto é o deles.
+    "desktop.status.set": 2.0,
     "mouse.emulation.restore": 2.0, "daemon.emulation.suppress": 2.0,
     # POINT-AND-CLICK-01 (17/09/2026): o terceiro passo da entrada no modo
     # Navegação. **3,0 s — a família do `profile.switch`, e não a do

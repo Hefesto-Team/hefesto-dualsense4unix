@@ -2783,6 +2783,54 @@ def gravar_o_modo_no_perfil_ativo(
     return novo
 
 
+def gravar_a_navegacao_no_perfil_ativo(
+    nome: str | None,
+    *,
+    ligado: bool,
+    porta: str,
+    velocidades: tuple[int, int] | None = None,
+) -> Profile | None:
+    """O «Status do Modo» vai ao perfil ATIVO: ``mouse.enabled`` e ``teclado_emulado``.
+
+    O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026), commit 3. O interruptor da aba
+    Navegação liga e desliga mouse E teclado, e a janela gravava os dois pela
+    própria mão depois das duas respostas (`a06_navegacao._guardar_no_perfil`):
+    quem gravava era quem não tinha aplicado. Agora um chamador só,
+    `Daemon.definir_o_status_da_navegacao`, depois do aparelho.
+
+    Os dois lados vão NA MESMA GRAVAÇÃO (a decisão D2 de 05/09/2026): gravar só
+    o mouse deixaria o perfil dizendo *mouse desligado, teclado ligado*, um
+    estado que o interruptor não sabe produzir. A seção do mouse sai do dono,
+    :func:`secao_do_mouse_da_navegacao`: só o ``enabled`` muda, e as
+    velocidades que a seção já tinha ficam.
+
+    NADA MUDOU, NADA SE GRAVA. None = não havia perfil a gravar.
+    """
+    if not nome:
+        return None
+    profile = load_profile(nome)
+    mouse = secao_do_mouse_da_navegacao(
+        profile.mouse, ligado=ligado, velocidades=velocidades
+    )
+    mudou: dict[str, Any] = {}
+    if profile.mouse is None or profile.mouse.model_dump() != mouse.model_dump():
+        mudou["mouse"] = mouse
+    if profile.teclado_emulado is not bool(ligado):
+        mudou["teclado_emulado"] = bool(ligado)
+    if not mudou:
+        return profile
+    novo = profile.model_copy(update=mudou)
+    save_profile(novo, origem=porta)
+    logger.info(
+        "status_da_navegacao_gravado_no_perfil",
+        profile=novo.name,
+        ligado=bool(ligado),
+        porta=porta,
+        secoes=sorted(mudou),
+    )
+    return novo
+
+
 def chave_de_peca_que_grava(alvo: str) -> str | None:
     """A chave sob a qual é SEGURO gravar a escolha de UMA peça, ou `None`.
 

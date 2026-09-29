@@ -67,7 +67,10 @@ FALSO = {"uniq": UNIQ, "player": 1, "connected": True, "transport": "usb",
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
          "via": "USB", "cor": "cosmic-red", "mascara": "DualSense"}]
 
-MOUSE = "mouse.emulation.set"
+#: O MÉTODO DO INTERRUPTOR DESDE 29/09/2026 (O-MOUSE-SEGUE-A-NAVEGACAO-01):
+#: o «Status do Modo» manda `desktop.status.set` uma vez, e o daemon liga o
+#: mouse e o teclado. A memória do clique é a mesma, e é ela que se mede.
+STATUS = "desktop.status.set"
 
 
 class _Ponte:
@@ -141,19 +144,26 @@ def test_dois_cliques_no_interruptor_no_mesmo_tique_desfazem() -> None:
     ctx, ponte = _ctx(enabled=False, speed=6, scroll_speed=1), _Ponte()
     mod.modo(ctx, {"gesto": "modo"}, ponte)
     mod.modo(ctx, {"gesto": "modo"}, ponte)
-    assert ponte.pedidos(MOUSE, "enabled") == [True, False], (
+    assert ponte.pedidos(STATUS, "enabled") == [True, False], (
         f"dois cliques no 'Status do Modo' dentro do mesmo tique mandaram "
-        f"{ponte.pedidos(MOUSE, 'enabled')} — o segundo foi engolido.")
+        f"{ponte.pedidos(STATUS, 'enabled')} — o segundo foi engolido.")
 
 
 def test_o_teclado_acompanha_o_interruptor_nos_dois_cliques() -> None:
-    """O interruptor é dos DOIS (decisão dela, 27/08) — desfazer é dos dois."""
+    """O interruptor é dos DOIS (decisão dela, 27/08) — desfazer é dos dois.
+
+    Desde 29/09/2026 os dois vão no MESMO pedido (`desktop.status.set`), e o
+    daemon liga o teclado depois do mouse: a janela não manda um segundo
+    método que pudesse chegar sem o primeiro.
+    """
     from pacotes import a06_navegacao as mod
 
     ctx, ponte = _ctx(enabled=False), _Ponte()
     mod.modo(ctx, {"gesto": "modo"}, ponte)
     mod.modo(ctx, {"gesto": "modo"}, ponte)
-    assert ponte.pedidos("keyboard.emulation.set", "enabled") == [True, False]
+    assert ponte.pedidos(STATUS, "enabled") == [True, False]
+    assert ponte.pedidos("keyboard.emulation.set", "enabled") == [], (
+        "a janela voltou a mandar o teclado por conta própria")
 
 
 def test_quando_o_tique_chega_o_interruptor_parte_do_daemon() -> None:
@@ -164,10 +174,10 @@ def test_quando_o_tique_chega_o_interruptor_parte_do_daemon() -> None:
     mod.modo(_ctx(enabled=False), {"gesto": "modo"}, ponte)
     # O daemon aplicou e o tique trouxe `True`: o clique seguinte desliga.
     mod.modo(_ctx(enabled=True), {"gesto": "modo"}, ponte)
-    assert ponte.pedidos(MOUSE, "enabled") == [True, False]
+    assert ponte.pedidos(STATUS, "enabled") == [True, False]
     # E de novo, com o tique acompanhando: liga.
     mod.modo(_ctx(enabled=False), {"gesto": "modo"}, ponte)
-    assert ponte.pedidos(MOUSE, "enabled") == [True, False, True]
+    assert ponte.pedidos(STATUS, "enabled") == [True, False, True]
 
 
 def test_o_interruptor_recusado_nao_deixa_rastro() -> None:
@@ -187,7 +197,7 @@ def test_o_interruptor_recusado_nao_deixa_rastro() -> None:
 
     aceitou = _Ponte()
     mod.modo(ctx, {"gesto": "modo"}, aceitou)
-    assert aceitou.pedidos(MOUSE, "enabled") == [True], (
+    assert aceitou.pedidos(STATUS, "enabled") == [True], (
         "depois de uma recusa, o clique seguinte pediu o contrário do que ela "
         "quis — a memória guardou um pedido que não aconteceu.")
 
@@ -283,7 +293,7 @@ def test_a_recusa_nao_apaga_o_pedido_anterior() -> None:
         mod.modo(ctx, {"gesto": "modo"}, negou)                   # ligado -> desligado, não
     de_novo = _Ponte()
     mod.modo(ctx, {"gesto": "modo"}, de_novo)
-    assert de_novo.pedidos(MOUSE, "enabled") == [False], (
+    assert de_novo.pedidos(STATUS, "enabled") == [False], (
         "a recusa apagou o pedido que TINHA acontecido, e o clique seguinte "
         "voltou a pedir o que o daemon já tem")
 
@@ -300,7 +310,7 @@ def test_o_clique_aceito_continua_andando() -> None:
     ctx, ponte = _ctx(enabled=False), _Ponte()
     for _ in range(3):
         mod.modo(ctx, {"gesto": "modo"}, ponte)
-    assert ponte.pedidos(MOUSE, "enabled") == [True, False, True]
+    assert ponte.pedidos(STATUS, "enabled") == [True, False, True]
 
 
 # ---------------------------------------------------------------------------
@@ -326,9 +336,9 @@ def test_a_memoria_expira_e_a_volta_pela_janela_gtk_nao_pula_numero(
     # tique — é um gesto humano, noutra janela.
     relogio.agora += mod.MEMORIA_DE_UM_CLIQUE + 1.0
     mod.modo(_ctx(enabled=False), {"gesto": "modo"}, ponte)
-    assert ponte.pedidos(MOUSE, "enabled") == [True, True], (
+    assert ponte.pedidos(STATUS, "enabled") == [True, True], (
         f"a memória atravessou a volta pela janela GTK: "
-        f"{ponte.pedidos(MOUSE, 'enabled')}")
+        f"{ponte.pedidos(STATUS, 'enabled')}")
 
 
 def test_dentro_da_janela_do_tique_a_memoria_vale(
@@ -347,7 +357,7 @@ def test_dentro_da_janela_do_tique_a_memoria_vale(
     mod.modo(_ctx(enabled=False), {"gesto": "modo"}, ponte)
     relogio.agora += mod.MEMORIA_DE_UM_CLIQUE / 2
     mod.modo(_ctx(enabled=False), {"gesto": "modo"}, ponte)
-    assert ponte.pedidos(MOUSE, "enabled") == [True, False]
+    assert ponte.pedidos(STATUS, "enabled") == [True, False]
 
 
 def test_a_janela_da_memoria_cobre_mais_de_um_tique() -> None:

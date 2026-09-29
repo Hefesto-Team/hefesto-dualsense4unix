@@ -2096,9 +2096,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #
 # ESTA ABA NÃO ENDEREÇA POR CONTROLE, e é decisão do desenho: o `title` da fita
 # diz, com todas as letras, *"Não se aplica: mouse, teclado e gestos saem de um
-# controle só"* — o primário. Nenhum gesto daqui pede `uniq`, e nenhum dos três
-# métodos do daemon aceita um: `mouse.emulation.set`, `mouse.emulation.restore`
-# e `keyboard.emulation.set` valem para a MÁQUINA.
+# controle só"* — o primário. Nenhum gesto daqui pede `uniq`, e nenhum dos
+# métodos do daemon aceita um: `mouse.emulation.set`, `mouse.emulation.restore`,
+# `keyboard.emulation.set` e `desktop.status.set` valem para a MÁQUINA.
 #
 # DE ONDE VEM O NÚMERO DE QUEM DEPENDE DO ESTADO: do `ctx`, que é o do ÚLTIMO
 # TIQUE (100 ms, `hefesto_vivo.TIQUE_MS`). Ler o daemon a cada clique custaria um
@@ -2188,8 +2188,11 @@ def _rato(ctx: Contexto) -> dict[str, Any]:
 #: OS CAMPOS QUE ESTES GESTOS GRAVAM, e o nome de cada um dentro de
 #: `ProfileMouseConfig`. O prefixo existe para o helper distinguir, numa
 #: assinatura só, o que é do rato do que é do teclado.
+#:
+#: O `mouse_enabled` SAIU em 29/09/2026 (O-MOUSE-SEGUE-A-NAVEGACAO-01): quem
+#: grava o liga/desliga é o daemon, pelo «Status do Modo»
+#: (`Daemon.definir_o_status_da_navegacao`). Daqui só as duas barras.
 _DO_RATO: dict[str, str] = {
-    "mouse_enabled": "enabled",
     "mouse_speed": "speed",
     "mouse_scroll": "scroll_speed",
 }
@@ -2231,11 +2234,27 @@ def _secao_do_mouse(prof: Any, ctx: Contexto, campos: dict[str, Any]) -> Any:
     return ProfileMouseConfig(**novo)
 
 
+def _o_que_nao_guardou(nome: str) -> str:
+    """A frase de quando o aparelho mudou e o perfil não guardou. Um dono.
+
+    Dois chamadores: `_guardar_no_perfil` (as barras e a lista do teclado) e o
+    gesto `modo`, que lê a resposta do daemon (`perfil`, `gravado`) desde
+    29/09/2026. Sem nome, não há perfil ativo; com nome, o arquivo não abriu.
+    """
+    if not nome:
+        return ("mudei agora, mas não guardei: não há perfil ativo. "
+                "Escolha um na aba Perfis.")
+    # A MESMA ABERTURA DA IRMÃ DE CIMA (A5-027): a figura *"para amanhã"*
+    # sai das DUAS, ou a mesma tela diz a mesma coisa de dois jeitos.
+    return (f"mudei agora, mas não guardei: não consegui abrir o "
+            f"perfil “{nome}” para gravar.")
+
+
 def _guardar_no_perfil(ctx: Contexto, **campos: Any) -> str:
     """Grava no perfil ATIVO o que ESTE clique mudou. Disco, e nada mais.
 
-    Aceita `teclado_emulado=` e os três do rato (`mouse_enabled`, `mouse_speed`,
-    `mouse_scroll`) — ver `_DO_RATO`.
+    Aceita `teclado_emulado=` (a lista «Função do teclado») e os dois do rato
+    (`mouse_speed`, `mouse_scroll`) — ver `_DO_RATO`.
 
     :return: `""` quando gravou, e também quando não havia o que gravar (o
         disco já dizia isso). A frase do que NÃO deu quando não há perfil ativo
@@ -2257,16 +2276,12 @@ def _guardar_no_perfil(ctx: Contexto, **campos: Any) -> str:
     """
     nome = perfil.nome_do_ativo(ctx.state).strip()
     if not nome:
-        return ("mudei agora, mas não guardei: não há perfil ativo. "
-                "Escolha um na aba Perfis.")
+        return _o_que_nao_guardou("")
     loader = perfil._com_o_src()
     try:
         prof = loader.load_profile(nome)
     except Exception:
-        # A MESMA ABERTURA DA IRMÃ DE CIMA (A5-027): a figura *"para amanhã"*
-        # sai das DUAS, ou a mesma tela diz a mesma coisa de dois jeitos.
-        return (f"mudei agora, mas não guardei: não consegui abrir o "
-                f"perfil “{nome}” para gravar.")
+        return _o_que_nao_guardou(nome)
 
     mudanca: dict[str, Any] = {}
     if "teclado_emulado" in campos:
@@ -2534,7 +2549,7 @@ def _mandar(p: Any, **params: Any) -> None:
         raise RuntimeError(recusa)
 
 
-@gesto("06-navegacao.html", "modo", grava="save_profile")
+@gesto("06-navegacao.html", "modo", grava="desktop.status.set")
 def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Status do Modo": o interruptor que liga mouse E teclado.
 
@@ -2574,8 +2589,13 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     interruptor mexe em `mouse.enabled` **e** em `teclado_emulado`, e gravar só
     o primeiro deixaria o perfil dizendo *mouse desligado, teclado ligado* — um
     estado que este botão não sabe produzir e que a próxima ativação imporia.
-    A gravação vem DEPOIS das duas chamadas: se o teclado recusar, o gesto já
-    levantou, e o disco não guarda um meio-passo.
+
+    QUEM GRAVA É O DAEMON, DEPOIS DO APARELHO — O-MOUSE-SEGUE-A-NAVEGACAO-01
+    (29/09/2026). Este gesto mandava as duas chamadas e gravava o perfil pela
+    própria mão (`_guardar_no_perfil`); agora manda `desktop.status.set` uma
+    vez, e o ato, a ordem (o mouse primeiro) e a gravação dos dois lados moram
+    em `Daemon.definir_o_status_da_navegacao`. Se o teclado recusar, o daemon
+    não grava, e o gesto levanta dizendo por quê.
     """
     if not ctx.state:
         raise RuntimeError(
@@ -2605,32 +2625,31 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     reserva = _reservar("modo", int(ligado), int(novo), 0)
     try:
         try:
-            resposta = p.resultado("mouse.emulation.set", enabled=novo,
+            resposta = p.resultado("desktop.status.set", enabled=novo,
                                    origin=MANUAL)
         except RuntimeError as erro:
             raise RuntimeError(
                 "o Hefesto não respondeu — o mouse ficou como estava") from erro
-        # O MOTIVO DA RECUSA CHEGA À TELA — 03/09/2026. Este `if` não existia: o
-        # `chamar` devolvia `True` para um `{"status": "failed", "bloqueio":
-        # "sem_device"}` e o gesto seguia adiante, mandando ligar o teclado como
-        # se o mouse tivesse ligado. Agora ele PARA e diz o motivo, com a tabela
-        # do produto — e o interruptor da tela não mente, porque desde hoje é o
-        # daemon quem o acende (ver `pacote()`).
-        recusa = _recusa_do_mouse(resposta)
+        # O MOTIVO DA RECUSA CHEGA À TELA — 03/09/2026, e segue chegando: o
+        # bloco `mouse_emulation` da resposta leva o `status` e o `bloqueio` da
+        # recusa, na forma que o `mouse.emulation.set` devolvia. Sem o bloco, a
+        # resposta inteira é lida como a do mouse: um `failed` sem lado não
+        # passa calado como se tivesse ligado.
+        corpo = resposta if isinstance(resposta, dict) else {}
+        recusa = _recusa_do_mouse(corpo.get("mouse_emulation", corpo))
         if recusa:
             raise RuntimeError(recusa)
     except Exception:
         _largar_a_reserva("modo", reserva)
         raise
-    try:
-        resposta = p.resultado("keyboard.emulation.set", enabled=novo)
-    except RuntimeError as erro:
-        raise RuntimeError(
-            "o mouse mudou e o teclado não — o Hefesto não respondeu") from erro
-    if isinstance(resposta, dict) and resposta.get("status") == "failed":
-        raise RuntimeError(f"o mouse mudou e o teclado não: {_recusa_do_teclado(resposta)}")
-    recado = _guardar_no_perfil(ctx, mouse_enabled=novo, teclado_emulado=novo)
-    return {"recado": recado} if recado else None
+    if (corpo.get("keyboard_emulation") or {}).get("status") == "failed":
+        raise RuntimeError(f"o mouse mudou e o teclado não: {_recusa_do_teclado(corpo)}")
+    # O APARELHO MUDOU E O PERFIL NÃO GUARDOU: o canal do AVISO, nunca o da
+    # recusa (ver `_guardar_no_perfil`). Um daemon que não diz `gravado` não é
+    # lido como falha de gravação.
+    if corpo.get("gravado") is False:
+        return {"recado": _o_que_nao_guardou(str(corpo.get("perfil") or ""))}
+    return None
 
 
 #: O QUE CADA OPÇÃO DA LISTA MANDA FAZER. A chave é a palavra que DISTINGUE uma
@@ -4163,7 +4182,10 @@ SEM_ECO = ("guardar-definicoes", "padrao-definicoes",
 
 
 PONTE = {"chamar"}
-METODOS = {"mouse.emulation.set", "keyboard.emulation.set"}
+#: O `desktop.status.set` é o «Status do Modo» desde 29/09/2026
+#: (O-MOUSE-SEGUE-A-NAVEGACAO-01): o mouse, o teclado e a gravação do
+#: perfil numa chamada só, no daemon.
+METODOS = {"mouse.emulation.set", "keyboard.emulation.set", "desktop.status.set"}
 
 
 PAGINA = "06-navegacao.html"
@@ -4205,8 +4227,8 @@ def _prova(nome: str, clique: dict[str, Any], chama: list[Any]) -> dict[str, Any
 _MOUSE = "mouse.emulation.set"
 PROVAS = [
     _prova("modo", {},
-           [("resultado", [_MOUSE], {"enabled": True, "origin": "manual"}),
-            ("resultado", ["keyboard.emulation.set"], {"enabled": True})]),
+           [("resultado", ["desktop.status.set"],
+             {"enabled": True, "origin": "manual"})]),
     _prova("vel-cursor", {"valor": "9"},
            [("resultado", [_MOUSE], {"speed": 9, "origin": "manual"})]),
     _prova("vel-cursor", {"valor": "99"},

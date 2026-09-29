@@ -2235,6 +2235,77 @@ class Daemon:
             )
         return relatorio
 
+    def definir_o_status_da_navegacao(
+        self,
+        ligado: bool,
+        *,
+        origin: Literal["manual", "profile"],
+        grava: GravaOModo = False,
+    ) -> dict[str, Any]:
+        """O «Status do Modo» da aba Navegação: mouse e teclado, e o perfil depois.
+
+        O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026), commit 3. O interruptor
+        mandava `mouse.emulation.set` e `keyboard.emulation.set` e gravava
+        ``mouse.enabled`` e ``teclado_emulado`` no perfil ativo pela janela,
+        depois das duas respostas. É a forma que a O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01
+        curou para o modo: quem gravava era quem não tinha aplicado. Agora o ato
+        e a gravação moram aqui, e a janela chama uma vez (`desktop.status.set`).
+
+        A ORDEM É A DE ANTES, e tem razão: o MOUSE PRIMEIRO, porque é ele que tem
+        exclusão mútua com o pad virtual; se ele falhar, o teclado não é tocado
+        e não fica ligado sozinho. O teclado vai com o `persist` do
+        `keyboard.emulation.set` (o padrão do setter): a flag de sessão segue
+        guardando a escolha do interruptor, como sempre guardou.
+
+        Com ``grava`` (a porta da escolha dela), ``mouse.enabled`` e
+        ``teclado_emulado`` vão ao perfil ativo NA MESMA GRAVAÇÃO, por
+        :func:`manager.gravar_a_navegacao_no_perfil_ativo`, e só se os DOIS
+        lados chegaram: um teclado recusado não deixa meio-passo no disco.
+
+        Devolve ``{"mouse": bool, "teclado": bool | None, "perfil": str | None,
+        "gravado": bool}`` — ``teclado`` é ``None`` quando não foi tentado.
+        O portão do modo (só vale na Navegação) é da tela, que o conhece e diz
+        a frase; este método não o repete. NUNCA LEVANTA na gravação: o
+        aparelho já mudou.
+        """
+        ligar = bool(ligado)
+        desfecho: dict[str, Any] = {
+            "mouse": False, "teclado": None, "perfil": None, "gravado": False,
+        }
+        desfecho["mouse"] = bool(self.set_mouse_emulation(ligar, origin=origin))
+        if desfecho["mouse"]:
+            desfecho["teclado"] = bool(self.set_keyboard_emulation(ligar))
+        if grava and desfecho["mouse"] and desfecho["teclado"]:
+            from hefesto_dualsense4unix.profiles.manager import (
+                gravar_a_navegacao_no_perfil_ativo,
+                nome_do_perfil_que_grava,
+            )
+
+            try:
+                nome = nome_do_perfil_que_grava(
+                    getattr(getattr(self, "store", None), "active_profile", None)
+                )
+                desfecho["perfil"] = nome
+                salvo = gravar_a_navegacao_no_perfil_ativo(
+                    nome,
+                    ligado=ligar,
+                    porta=grava,
+                    velocidades=(self.config.mouse_speed, self.config.mouse_scroll_speed),
+                )
+                desfecho["gravado"] = salvo is not None
+            except Exception as exc:
+                logger.warning(
+                    "status_da_navegacao_nao_gravou", porta=grava, err=str(exc)
+                )
+        logger.info(
+            "status_da_navegacao_definido",
+            ligado=ligar,
+            origin=origin,
+            porta=grava or None,
+            **desfecho,
+        )
+        return desfecho
+
     def set_mouse_speed(
         self,
         speed: int | None = None,

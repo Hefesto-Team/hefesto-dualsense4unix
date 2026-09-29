@@ -36,6 +36,12 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
                          `apply_profile_suppression`. Com `origin: manual` o
                          modo e o mouse ligado vão ao perfil ativo.
     keyboard.emulation.set {enabled: bool} -> {status, enabled, keyboard_emulation}
+    desktop.status.set   {enabled: bool, origin?}
+                         -> {status, enabled, mouse_emulation, keyboard_emulation,
+                             perfil, gravado}
+                         O «Status do Modo» da aba Navegação: o mouse, depois o
+                         teclado, e com `origin: manual` o `mouse.enabled` e o
+                         `teclado_emulado` no perfil ativo, numa gravação só.
     coop.set             {enabled: bool}       -> {status, enabled, players}
                          `enabled:false` é RECUSADO ({status: "recusado", motivo})
     coop.sync            {}                    -> {status, players, active}
@@ -238,6 +244,10 @@ class IpcServer(IpcHandlersMixin):
             # teve. Sem ele, "desliguei o modo mouse teclado" desligava só o
             # mouse e o R1 seguia trocando de aplicativo dentro do jogo.
             "keyboard.emulation.set": self._handle_keyboard_emulation_set,
+            # O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026): o «Status do Modo» liga
+            # mouse e teclado e grava o perfil pelo dono, no daemon; a janela
+            # deixou de escrever o liga/desliga.
+            "desktop.status.set": self._handle_desktop_status_set,
             "gamepad.emulation.set": self._handle_gamepad_emulation_set,
             # A MÁSCARA DE UM APARELHO (MASCARA-NA-TELA-01, 03/09/2026):
             # `emulation.set` é a da SESSÃO e vale para quem não escolheu;
