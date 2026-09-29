@@ -720,6 +720,11 @@ class ControllerIdentityRegistry:
         #: segue a do número, como antes. A fiação do daemon o arma em
         #: :func:`make_auto_output_provider`.
         self._perguntar_a_fabrica: Callable[[str], Any] | None = None
+        #: Quem converge a luz quando o plástico chega (conferência de
+        #: 29/09/2026): o backend pendura aqui o `reassert_resolved_outputs`.
+        #: Sem ele, a cor do plástico só chegava à barra no próximo
+        #: `connect()` — até 30 s depois, e 300 s com a volta pelo evento.
+        self._ao_chegar_o_plastico: Callable[[], object] | None = None
 
     # ------------------------------------------------------------------
     # Config do automático (COR-03 / D11)
@@ -1833,6 +1838,18 @@ class ControllerIdentityRegistry:
         """Arma (ou desarma, com None) quem pergunta o serial ao aparelho."""
         self._perguntar_a_fabrica = perguntar
 
+    def avisar_quando_o_plastico_chegar(
+        self, fn: Callable[[], object] | None
+    ) -> None:
+        """Pendura (ou tira, com None) quem converge a luz quando o plástico chega.
+
+        A cor automática vem do plástico (D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO),
+        e a resposta chega numa thread, depois de o controle já ter acendido a
+        cor do número. O aviso sai só quando o plástico lido TEM tom, porque
+        só aí a automática muda; fora do ``_lock``, e a falha dele é engolida.
+        """
+        self._ao_chegar_o_plastico = fn
+
     @property
     def pergunta_de_fabrica_armada(self) -> bool:
         return self._perguntar_a_fabrica is not None
@@ -1926,6 +1943,16 @@ class ControllerIdentityRegistry:
                     modelo=getattr(getattr(achado, "cor", None), "nome", None),
                 )
             self._agenda_de_fabrica().registrar(key, achado)
+        # A LUZ CONVERGE QUANDO O PLÁSTICO CHEGA, e não no próximo `connect()`.
+        aviso = self._ao_chegar_o_plastico
+        if aviso is not None and getattr(achado, "definitiva", False):
+            from hefesto_dualsense4unix.integrations.cor_do_plastico import tom_da_luz
+
+            if tom_da_luz(getattr(achado, "cor", None)) is not None:
+                try:
+                    aviso()
+                except Exception as erro:  # defensivo — jamais derruba a thread
+                    logger.warning("plastico_aviso_falhou", err=str(erro))
 
     def snapshot(self) -> dict[str, int]:
         """Cópia do mapa key→LUGAR NA FILA (presentes + ausentes). Leitura pura.
@@ -2553,6 +2580,11 @@ def make_auto_output_provider(
     provider.numero_do_slot = numero_do_slot  # type: ignore[attr-defined]
     provider.uniqs_da_mesa = uniqs_da_mesa  # type: ignore[attr-defined]
     provider.tom_do_plastico = registry.tom_do_plastico  # type: ignore[attr-defined]
+    # Quem converge a luz quando o plástico chega: o backend se pendura aqui
+    # em `set_auto_output_provider` (conferência de 29/09/2026).
+    provider.avisar_quando_a_automatica_mudar = (  # type: ignore[attr-defined]
+        registry.avisar_quando_o_plastico_chegar
+    )
     provider.cor_do_numero = cor_do_numero  # type: ignore[attr-defined]
     # O-MODO-XBOX-NAO-E-QUEDA-02: a carta de quem ainda não tem lâmpada, para
     # o backend eleger o primário no `connect()` (ver `posto_na_fila`).

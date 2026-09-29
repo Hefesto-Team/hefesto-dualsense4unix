@@ -511,6 +511,32 @@ def test_o_tique_de_presenca_pergunta_o_plastico_sem_state_full(registro: Any) -
     assert registro.perguntas == [BRANCO_ID]
 
 
+@pytest.mark.parametrize(("uniq", "reafirma"), [(BRANCO_ID, True), (SEM_PLASTICO, False)],
+                         ids=["plastico-com-tom", "sem-plastico"])
+def test_a_luz_converge_quando_o_plastico_chega(registro: Any, uniq: str,
+                                               reafirma: bool) -> None:
+    """O plástico com tom chega e o backend reafirma a luz na hora, sem esperar o `connect()`.
+
+    Conferência de 29/09/2026: a cor do plástico chegava ao provider, e a
+    barra só a acendia no próximo `connect()` (até 30 s, e 300 s com a volta
+    online pelo evento). Sem tom, a automática não muda, e nada se reafirma.
+
+    **A MORDIDA:** tire o `avisar(self.reassert_resolved_outputs)` de
+    `set_auto_output_provider` (ou o `aviso()` do registro): o branco lido
+    nunca reafirma a luz.
+    """
+    import threading
+
+    chegou = threading.Event()
+    ctl = bp.PyDualSenseController()
+    ctl.reassert_resolved_outputs = lambda **_k: chegou.set()  # type: ignore[method-assign]
+    provider = _mesa_do_registro(registro, [])
+    ctl.set_auto_output_provider(provider)
+    registro.sync_connected([uniq])
+    _esperar_o_plastico(registro, uniq)
+    assert chegou.wait(2.0 if reafirma else 0.3) is reafirma
+
+
 def test_sem_a_fiacao_do_daemon_nenhuma_pergunta_sai(registro: Any) -> None:
     """O registro sem o provider do daemon (teste, CLI) não fala com aparelho nenhum."""
     registro.sync_connected([BRANCO_ID])

@@ -2795,6 +2795,13 @@ class PyDualSenseController(IController):
         """
         with self._io_lock:
             self._auto_output_provider = fn
+        # A AUTOMÁTICA QUE MUDA SOZINHA CONVERGE NA HORA (conferência da
+        # A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01, 29/09/2026): a cor do plástico
+        # chega numa thread do registro depois de o controle acender a do
+        # número, e sem este aviso a barra só a pegava no próximo `connect()`.
+        avisar = getattr(fn, "avisar_quando_a_automatica_mudar", None)
+        if callable(avisar):
+            avisar(self.reassert_resolved_outputs)
 
     def set_feature_opener(self, fn: Callable[[str], int] | None) -> None:
         """Injeta (ou remove, com None) o opener broker-aware da feature 0x05.
