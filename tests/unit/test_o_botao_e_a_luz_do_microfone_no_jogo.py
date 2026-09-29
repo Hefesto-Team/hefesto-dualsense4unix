@@ -692,3 +692,115 @@ async def test_state_full_nao_inventa_com_vpad_dublado(
     assert item["mic_button_forwards"] == 0
     assert item["mic_led_do_jogo_recusado"] == 0
     assert item["mic_led_do_jogo_amostra"] is None
+
+
+# --------------------------------------------------------------------------
+# 8. As réguas que faltavam (conferência de 29/09)
+# --------------------------------------------------------------------------
+
+
+class TestOLacoEsqueceNaPerda:
+    """A régua 4 pelo LAÇO de produção, e não pelo `_reset_mic_button` na mão.
+
+    Mordida: tirar o `_reset_mic_button()` do `finally` do `_run` reprova (o
+    teste que chama o esquecimento direto passa com ele arrancado do laço).
+    """
+
+    def test_reabrir_com_o_dedo_apertado_pelo_laco(self, uhid: _UhidPorFd) -> None:
+        pad = _vpad()
+        fd = pad._fd
+        assert fd is not None
+        canos = [os.pipe(), os.pipe()]
+        aberturas: list[int] = []
+
+        def _abrir(_path: str) -> int:
+            if len(aberturas) >= len(canos):
+                raise OSError("sem mais físico")
+            lido = canos[len(aberturas)][0]
+            aberturas.append(lido)
+            return os.dup(lido)
+
+        leitor = PhysicalReportReader(
+            path_provider=lambda: "/dev/hidraw-de-mentira",
+            vpad=pad,
+            max_hz=0,
+            opener=_abrir,
+        )
+        try:
+            assert leitor.start() is True
+            assert _esperar(lambda: pad.motion_streaming)
+            os.write(canos[0][1], _usb(mic=True, marca=1))
+            assert _esperar(lambda: leitor.reports_seen >= 1)
+            assert _esperar(lambda: _o_jogo_ve_o_mic(uhid, fd))
+            # O físico some com o dedo no botão: EOF no primeiro cano.
+            os.close(canos[0][1])
+            assert _esperar(lambda: len(aberturas) == 2 and pad.motion_streaming)
+            os.write(canos[1][1], _usb(mic=True, marca=2))
+            assert _esperar(lambda: leitor.reports_seen >= 2)
+            assert _esperar(lambda: _o_jogo_ve_o_mic(uhid, fd)), (
+                "o laço reabriu o físico com o dedo no botão e o aperto não "
+                "voltou a chegar ao jogo: o cache do reader não esqueceu"
+            )
+        finally:
+            leitor.stop()
+            pad.stop()
+            os.close(canos[1][1])
+            for lido, _ in canos:
+                os.close(lido)
+
+
+class TestALuzPorBitENaoPorIgualdade:
+    """A sprint separa o 0x02 do driver pelo bit 0x02, não por `== 0x03`.
+
+    Mordidas: trocar o teste de bit por `flag1 != 0x03` reprova o primeiro;
+    por `flag1 == 0x01`, o segundo; contar antes do `_replicating()`, o
+    terceiro.
+    """
+
+    def test_o_driver_com_a_barra_junto_nao_conta(
+        self, jogo_aberto: tuple[UhidDualSense, _Pias]
+    ) -> None:
+        pad, _pias = jogo_aberto
+        corpo = bytearray(_corpo_do_driver(True))
+        corpo[1] |= 0x04  # o worker do driver junta a barra pendente
+        pad._handle_output(_evento_de_output(bytes(corpo)))
+        assert pad.mic_led_do_jogo_recusado == 0
+
+    def test_o_jogo_com_a_barra_junto_conta(
+        self, jogo_aberto: tuple[UhidDualSense, _Pias]
+    ) -> None:
+        pad, _pias = jogo_aberto
+        corpo = bytearray(47)
+        corpo[1] = rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE | 0x04
+        corpo[_MUTE_BUTTON_LED] = 1
+        pad._handle_output(_evento_de_output(bytes(corpo)))
+        assert pad.mic_led_do_jogo_recusado == 1
+        assert pad.mic_led_do_jogo_amostra == 1
+
+    def test_a_escrita_do_nascimento_nao_conta(
+        self, jogo_aberto: tuple[UhidDualSense, _Pias]
+    ) -> None:
+        pad, _pias = jogo_aberto
+        pad._bound_at = pad.time_fn()  # ainda na carência do probe
+        corpo = bytearray(47)
+        corpo[1] = rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
+        pad._handle_output(_evento_de_output(bytes(corpo)))
+        assert pad.mic_led_do_jogo_recusado == 0
+
+
+def test_o_stop_solta_o_botao_e_zera_as_contas(uhid: _UhidPorFd) -> None:
+    """Mordida: sem o reset no `stop()`, a próxima vida nasce apertada."""
+    pad = _vpad()
+    pad._game_open = True
+    pad._bound_at = pad.time_fn() - 10.0
+    pad.forward_mic_button(True)
+    corpo = bytearray(47)
+    corpo[1] = rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
+    pad._handle_output(_evento_de_output(bytes(corpo)))
+    assert pad.mic_button and pad.mic_button_count == 1
+    assert pad.mic_led_do_jogo_recusado == 1
+    pad.stop()
+    assert pad.mic_button is False
+    assert pad.mic_button_count == 0
+    assert pad.mic_led_do_jogo_recusado == 0
+    assert pad.mic_led_do_jogo_amostra is None
