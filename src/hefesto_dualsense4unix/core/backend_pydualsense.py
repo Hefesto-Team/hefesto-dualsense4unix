@@ -166,11 +166,19 @@ _VPAD_PHYS = "hefesto-vpad"
 _VPAD_UNIQ_PREFIX = "02fe"
 
 
+#: A raiz de ``/sys/class/hidraw`` que o backend lê, lida NA CHAMADA pelos dois
+#: leitores do módulo (`_hidraw_uevent` e `_is_virtual_hidraw`). Mesmo nome da
+#: de `quem_o_jogo_le`: a suíte a aponta para uma pasta vazia (a irmã
+#: `_nenhum_hidraw_vivo_na_varredura_de_som` do ``tests/conftest.py``), e o
+#: dedupe do enumerate deixa de decidir pelo barramento dos nós da máquina.
+RAIZ_CLASS_HIDRAW = "/sys/class/hidraw"
+
+
 def _hidraw_uevent(node: str) -> dict[str, str]:
     """Pares chave=valor do uevent do device HID pai do hidraw ({} se ilegível)."""
     try:
         with open(
-            f"/sys/class/hidraw/{node}/device/uevent",
+            os.path.join(RAIZ_CLASS_HIDRAW, node, "device", "uevent"),
             encoding="utf-8",
             errors="replace",
         ) as fh:
@@ -213,7 +221,7 @@ def _is_virtual_hidraw(path: bytes) -> bool:
     if not node.startswith("hidraw"):  # path de libusb ("0001:0002:00")
         return False
     try:
-        destino = os.path.realpath(f"/sys/class/hidraw/{node}/device")
+        destino = os.path.realpath(os.path.join(RAIZ_CLASS_HIDRAW, node, "device"))
     except OSError:  # pragma: no cover - sysfs some sob replug
         return False
     if "/devices/virtual/" not in destino:

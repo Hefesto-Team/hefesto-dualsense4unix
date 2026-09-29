@@ -3022,10 +3022,18 @@ def _nenhum_hidraw_vivo_na_varredura_de_som(
     controle nenhum"*, que é a resposta honesta de uma máquina sem DualSense.
     Quem precisa de uma árvore forjada a monta e aponta a constante para ela
     com `monkeypatch` de escopo de função, que desfaz por cima desta.
+
+    O BACKEND É O TERCEIRO LEITOR (O-BACKEND-NAO-LE-O-HIDRAW-DA-MAQUINA-NA-SUITE-01,
+    28/09/2026): o dedupe do `_enumerate_device_keys` perguntava o barramento de
+    cada nó ao `/sys/class/hidraw` da máquina, e o «1º vence» do
+    `test_enumerate_device_keys_dedupe_e_filtra` caía conforme a ordem em que os
+    aparelhos dela nasceram no boot. A `backend_pydualsense.RAIZ_CLASS_HIDRAW`
+    aponta para a mesma pasta vazia.
     """
     vazio = tmp_path_factory.mktemp("sysfs-sem-hidraw")
     (vazio / "hidraw").mkdir()
     try:
+        from hefesto_dualsense4unix.core import backend_pydualsense
         from hefesto_dualsense4unix.integrations import dualsense_bt_audio
     except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
         # A mesma razão, palavra por palavra, da irmã logo acima: o job "A casa
@@ -3037,11 +3045,14 @@ def _nenhum_hidraw_vivo_na_varredura_de_som(
         return
 
     antes = dualsense_bt_audio._SYSFS_HIDRAW
+    antes_do_backend = backend_pydualsense.RAIZ_CLASS_HIDRAW
     dualsense_bt_audio._SYSFS_HIDRAW = str(vazio / "hidraw")
+    backend_pydualsense.RAIZ_CLASS_HIDRAW = str(vazio / "hidraw")
     try:
         yield
     finally:
         dualsense_bt_audio._SYSFS_HIDRAW = antes
+        backend_pydualsense.RAIZ_CLASS_HIDRAW = antes_do_backend
 
 
 @pytest.fixture(autouse=True, scope="session")
