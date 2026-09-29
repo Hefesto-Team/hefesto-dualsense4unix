@@ -334,6 +334,64 @@ def test_3_a_ponte_do_subsystem_sobe_com_o_ritmo_do_aparelho(
             ponte.descer()
 
 
+def test_3b_os_quatro_controles_do_radio_sobem_no_ritmo_do_aparelho(
+    gravadores: _Abertura, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """P1 a P4 no rádio: cada ponte tem gravador próprio, e os quatro pedem a mesma taxa.
+
+    A régua 3 mede um controle só. A taxa vem do papel, e não do controle, mas
+    a prova que fica só no P1 não diz nada dos outros três: aqui a volta de
+    produção sobe as quatro pontes, e cada argv é conferido.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
+    from hefesto_dualsense4unix.integrations import hidraw_broker_client as broker
+    from tests.unit.o_alto_falante_que_toca import todo_alto_falante_toca
+
+    _com_pw_record(monkeypatch)
+    # «Não conferido» é o que o PipeWire responde sem `pw-link`: a ponte sobe.
+    monkeypatch.setattr(af, "conferir_o_alvo_do_gravador", lambda _rotulo: None)
+    real = af.fonte_do_monitor_do_no
+    pedidos: list[tuple[str, str]] = []
+
+    def _embrulhada(id_do_no: str, **kw: Any) -> tuple[Any, Any, str]:
+        kw.pop("abrir", None)
+        pedidos.append((str(kw.get("uniq")), str(kw.get("papel", "som"))))
+        fonte, proc, motivo = real(id_do_no, abrir=gravadores, **kw)
+        return fonte, proc, str(motivo)
+
+    class _No:
+        def __init__(self, caminho: str) -> None:
+            self.fd = 101
+
+    _PonteDeMentira.criadas = []
+    monkeypatch.setattr(af, "fonte_do_monitor_do_no", _embrulhada)
+    monkeypatch.setattr(af, "PonteDeSomPorRadio", _PonteDeMentira)
+    todo_alto_falante_toca(monkeypatch)
+    monkeypatch.setattr(broker, "abrir_hidraw", lambda no, **_: _No(no))
+
+    uniqs = [f"aa:bb:cc:00:00:0{i}" for i in range(1, 5)]
+    controles = [_Controle(u, f"/dev/hidraw-de-mentira-{i}", "bluetooth")
+                 for i, u in enumerate(uniqs)]
+    ger = _GerenciadorDeMentira()
+    sub = mod.AltoFalanteSubsystem(gerenciador=ger, fonte_de_controles=lambda: list(controles))
+    sub._gerenciador = ger
+    sub._reconciliar(ger)
+    try:
+        assert sorted(p.uniq for p in _PonteDeMentira.criadas) == uniqs, (
+            f"nem todo controle do rádio subiu a ponte: {pedidos}"
+        )
+        assert sorted(pedidos) == [(u, "som") for u in uniqs], pedidos
+        assert len(gravadores.argvs) == 4
+        for argv in gravadores.argvs:
+            taxa = _taxa_do_argv(argv)
+            assert _amostras_que_a_fonte_entrega_por_report(taxa) == 480, (
+                f"um dos quatro lê o monitor a {taxa} Hz: {argv}"
+            )
+    finally:
+        for ponte in _PonteDeMentira.criadas:
+            ponte.descer()
+
+
 # ---------------------------------------------------------------------------
 # 4. No tempo: 180 s de relógio pela ponte de verdade
 # ---------------------------------------------------------------------------
@@ -487,6 +545,83 @@ def test_4b_o_diario_diz_o_que_a_ponte_fez_e_nao_a_constante(
     assert len(escritos) / relogio.t == pytest.approx(100.0, abs=0.05)
 
 
+class _VagaDeMentira:
+    """A vaga do governador, com o que a bomba e a ponte perguntam a ela."""
+
+    derrubar = False
+    cedendo = False
+
+    def __init__(self) -> None:
+        self.soltas: list[str] = []
+
+    def subiu(self, _papel: str) -> None:
+        return None
+
+    def contar_escrita(self) -> None:
+        return None
+
+    def fila_parada(self, _s: float) -> None:
+        return None
+
+    def soltar(self, por_que: str) -> None:
+        self.soltas.append(por_que)
+
+
+def test_4c_a_linha_de_saida_nunca_prende_a_vaga(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Um relógio que levanta na saída: a linha não sai, e a vaga volta ao governador.
+
+    A linha de saída mora no `finally` do laço, ANTES de a vaga voltar. Se o
+    relógio fosse lido fora da guarda dela, a exceção pularia o
+    ``_soltar_a_vaga`` e o adaptador ficaria com uma ponte a menos até o
+    governador reiniciar.
+
+    MORDIDA: ler o relógio na chamada (``relogio() - comeco``) e não dentro da
+    guarda prende a vaga.
+    """
+    monkeypatch.setattr(af, "a_ponte_do_radio_pode_subir", lambda: (True, ""))
+    monkeypatch.setattr(af, "CodificadorOpus", _CodificadorDeMentira)
+    monkeypatch.setattr(af, "escritor_de_hidraw", lambda _fd: (lambda dados: len(dados)))
+    diario = _Diario()
+    monkeypatch.setattr(af, "logger", diario)
+    class _Fonte:
+        """Dez leituras com sinal, e seca; o relógio levanta depois de secar."""
+
+        def __init__(self) -> None:
+            self.lidas = 0
+            self.secou = False
+
+        def relogio(self) -> float:
+            if self.secou:
+                raise RuntimeError("o relógio caiu na saída")
+            return 0.0
+
+        def ler(self, n: int) -> bytes:
+            if self.lidas >= 10:
+                self.secou = True
+                return b""
+            self.lidas += 1
+            return (b"\x01\x00" * n)[:n]
+
+    fonte = _Fonte()
+    vaga = _VagaDeMentira()
+    ponte = af.PonteDeSomPorRadio(
+        uniq=UNIQ,
+        abrir_hidraw=lambda: os.open(os.devnull, os.O_WRONLY),
+        fonte_de_pcm=fonte.ler,
+        relogio=fonte.relogio,
+        vaga=vaga,
+    )
+    assert ponte.subir() is True, ponte.motivo
+    thread = ponte._thread
+    assert thread is not None
+    thread.join(timeout=30.0)
+    assert not thread.is_alive()
+    assert vaga.soltas == ["a fonte do som secou"], (
+        f"a vaga não voltou ao governador: {vaga.soltas}"
+    )
+    assert diario.de("som_radio_ponte_saiu") == []
+
+
 # ---------------------------------------------------------------------------
 # 5. O outro chamador: o ensaio de bancada toca no ritmo e no tom do aparelho
 # ---------------------------------------------------------------------------
@@ -590,7 +725,7 @@ def test_5_o_ensaio_toca_no_ritmo_e_no_tom_do_aparelho(
 
     argumentos = argparse.Namespace(
         exigir_mac=ensaio.MAC_SINTETICO, arranjo=af.ARRANJO_035.nome,
-        eu_estou_ouvindo=True, segundos=8.0, tag=af.BLOCO_SPEAKER,
+        eu_estou_ouvindo=True, segundos=8.0, tag=bt_audio.BLOCO_SPEAKER,
     )
     assert ensaio.escrever_no_aparelho(argumentos) == 0
     saida = capsys.readouterr().out

@@ -2259,11 +2259,11 @@ class BombaDeSomPeloRadio:
         come 93,75, que é a taxa de estouro pela qual esta casa passou nove
         vezes.
 
-        **Quem a lê é só o** :meth:`rodar`, pelo ``dormir`` da fonte sem ritmo,
-        e o ensaio de bancada que dá ritmo ao timbre. A ponte do produto não
-        dorme: quem dá a cadência a ela é a TAXA da fonte
-        (:data:`TAXA_DA_FONTE_DO_SOM`), e esta propriedade é a mesma conta
-        vista do outro lado.
+        **Quem a lê é o** :meth:`rodar`, pelo ``dormir`` da fonte sem ritmo, o
+        :attr:`taxa_da_fonte_hz` e o ensaio de bancada que dá ritmo ao timbre.
+        A ponte do produto não dorme: quem dá a cadência a ela é a TAXA da
+        fonte (:data:`TAXA_DA_FONTE_DO_SOM`), e esta propriedade é a mesma
+        conta vista do outro lado.
         """
         medido = self.arranjo.intervalo_de_envio_s
         if medido is not None:
@@ -3355,16 +3355,22 @@ class PonteDeSomPorRadio:
                 os.close(fd)
             except OSError:
                 logger.debug("som_radio_fd_ja_fechado", uniq=self.uniq)
-            self._dizer_o_que_fez(bomba, por_que, relogio() - comeco, leituras)
+            self._dizer_o_que_fez(bomba, por_que, comeco, leituras)
             # A VAGA SAI COM A CORRIDA, e só com ela: enquanto a thread
             # respira, a ponte ainda pode pôr bytes no ar.
             self._soltar_a_vaga(por_que)
 
     def _dizer_o_que_fez(
-        self, bomba: BombaDeSomPeloRadio, por_que: str, segundos: float, leituras: int
+        self, bomba: BombaDeSomPeloRadio, por_que: str, comeco: float, leituras: int
     ) -> None:
-        """A linha de saída da ponte, com o que se contou. Nunca levanta."""
+        """A linha de saída da ponte, com o que se contou. Nunca levanta.
+
+        O relógio é lido AQUI DENTRO, e não na chamada: ela mora no `finally`
+        do laço, antes de a vaga voltar ao governador, e um relógio que
+        levantasse ali deixaria a vaga presa.
+        """
         try:
+            segundos = bomba.relogio() - comeco
             contagem = bomba.contagem
             contagem.segundos = segundos
             logger.info(
