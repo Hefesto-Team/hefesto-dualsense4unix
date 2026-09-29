@@ -419,7 +419,8 @@ def gesto_deixou_de_pe(
     NOTA DATADA — MODO-DE-CONEXAO-01, 13/09/2026. O registro guardava a MÁSCARA
     que o gesto pôs de pé, e o tique a alinhava em ``mode.gamepad_flavor`` do
     perfil do jogo. O gesto passou a andar por CAMINHOS, grava o caminho no
-    perfil ATIVO na hora (`hotkey._gravar_o_modo_do_gesto`), e o que este
+    perfil ATIVO na hora (`Daemon.gravar_o_modo_escolhido`, pelo setter do
+    modo, desde a O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01), e o que este
     registro leva ao perfil do jogo depois do silêncio é o caminho também
     (`manager.alinhar_o_modo_com_a_ponte`). A máscara não passa mais por aqui.
 

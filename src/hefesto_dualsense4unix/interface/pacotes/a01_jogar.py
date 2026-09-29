@@ -2362,82 +2362,18 @@ def _lembrar(campo: str, valor: str, rotulo: str) -> None:
     _ROTULO[campo] = rotulo or _rotulo_de(campo, valor)
 
 
-#: O MODO QUE ELA CLICA AQUI ENTRA NO PERFIL ATIVO — JOGAR-O-QUE-FALTA-01,
-#: Passo 1 (06/09/2026), e era a linha 5 do CSV da paridade. O veredito de lá
-#: nomeava o que faltava com todas as letras: *"nada. `_ESCOLHA`/`_ROTULO` são
-#: dicionários de módulo lidos só dentro do próprio arquivo"*, e a consequência
-#: medida: *"ela escolhe 'Xbox' na 01, clica em 'Salvar Perfil' na 10, e o
-#: perfil grava a máscara que estava no disco — a escolha dela não entra."*
+#: O MODO QUE ELA CLICA AQUI ENTRA NO PERFIL ATIVO — e quem grava é o DAEMON.
 #:
-#: **UM DONO, DUAS TELAS.** O escritor é `pacotes.perfil.gravar_o_modo_no_ativo`,
-#: o mesmo módulo compartilhado de `gravar_e_reaplicar` e `com_a_carona` — e a
-#: regra da seção (o `"none"` que REMOVE, a máscara zerada fora do modo jogo, o
-#: `ProfileModeConfig` reconstruído em vez de `model_copy`ado) mora em
-#: `perfil.secao_do_modo`, não aqui. A sprint nomeia o perigo desta entrega:
-#: *"se você criar um segundo caminho de gravação, o que ela escolher numa aba
-#: some quando ela mexer na outra"*.
-#:
-#: **A DIFERENÇA ENTRE ESTA GRAVAÇÃO E A DA ABA 10** é o tempo, não o lugar: lá
-#: o clique escolhe *o que ativar o perfil vai ligar*; aqui ele TROCA o modo
-#: agora, e a gravação é o que faz a escolha sobreviver à próxima ativação.
-#: Por isso ela vem DEPOIS de `_aplicar` e nunca levanta.
-def _gravar_o_modo(
-    ctx: Contexto,
-    kind: str,
-    flavor: str | None = None,
-    caminho: str | None = None,
-) -> str:
-    """Leva o modo clicado à seção `mode` do perfil ativo. Nunca levanta.
-
-    O chip de modo manda o ``caminho`` e nunca o ``flavor`` (MODO-DE-CONEXAO-01,
-    13/09/2026): o modo não escreve a máscara do perfil.
-
-    O NOME DE VOLTA É PARA A RÉGUA, não para a tela: ele diz qual perfil recebeu
-    a escolha (``""`` quando não houve escrita), e é o que a mordida do Passo 1
-    mede — clicar na 01 e ler o valor pela aba 10.
-
-    O `kind` NÃO É FILTRADO AQUI. Quem recusa um valor fora da faixa é o
-    `ProfileModeConfig` do esquema, dentro do `try` do dono — filtrar aqui seria
-    a segunda cópia de uma lista que o pydantic já tem, e ela envelheceria no
-    dia em que um quinto modo nascesse.
-    """
-    from . import perfil as _perfil
-
-    # O `caminho` só vai quando veio: quem já dubla o escritor com a assinatura
-    # de antes (o interruptor, a Navegação) não passa a quebrar por ele.
-    return _perfil.gravar_o_modo_no_ativo(
-        getattr(ctx, "state", None), kind, flavor,
-        **({"caminho": caminho} if caminho else {}))
-
-
-def _gravar_o_modo_do_chip(ctx: Contexto, chave: str) -> str:
-    """O mesmo, para um chip da fileira — e o EIXO sai da tabela, não de um `if`.
-
-    É a mesma leitura de `_lembrar_do_chip` e de `_plano_do_chip`, e as três
-    perguntam ao mesmo dono (:func:`o_que_o_chip_faz`): a Navegação **é** um
-    modo do produto, os outros são CAMINHOS do mesmo modo ``gamepad``. Escrever
-    aqui um ``if chave == "xbox"`` seria a segunda cópia dessa tabela.
-
-    O «STEAM INPUT» GRAVA O CAMINHO DELE — O-MODO-QUE-NAO-SAI-DO-STEAM-INPUT-01,
-    23/09/2026: o ``dualsense`` sobre o qual o degrau 4 senta. O terceiro termo
-    da ponte (o jogo na lista) não entra no perfil: a casa dele é o
-    `steam_input_apps.txt`.
-
-    FATO SUBSTITUÍDO — MODO-DE-CONEXAO-01, 13/09/2026: esta função gravava a
-    MÁSCARA da ponte do chip em ``mode.gamepad_flavor``, e o perfil ativo passava
-    a dizer `xbox` com o jogo recebendo o DualSense. Ela grava o caminho.
-    """
-    from hefesto_dualsense4unix.app.actions.mode_transition import MODE_GAMEPAD
-
-    try:
-        linha = o_que_o_chip_faz(chave)
-    except ValueError:
-        return ""
-    if linha.modo != MODE_GAMEPAD:
-        return _gravar_o_modo(ctx, linha.modo)
-    if not linha.caminho:
-        return ""
-    return _gravar_o_modo(ctx, linha.modo, caminho=linha.caminho)
+#: JOGAR-O-QUE-FALTA-01 (06/09/2026) levou a escolha do chip ao perfil ativo, e
+#: a gravação morava aqui, depois da resposta do plano. FATO SUBSTITUÍDO —
+#: O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026: a janela grava o que não sabe
+#: se aconteceu. Com quatro controles o `gamepad.emulation.set` leva ~2,9 s, o
+#: teto dela é 2,0 s, e o «Sony DualSense» das 01:43 de 29/09 trocou os quatro
+#: pads e deixou o Freestyle dela em Xbox no disco. Quem troca o modo grava o
+#: modo: os três passos do plano vão com `origin: "manual"`, e o daemon grava a
+#: seção `mode` do perfil ativo depois do aparelho
+#: (`Daemon.gravar_o_modo_escolhido`), com ou sem a resposta chegar aqui a
+#: tempo. A janela anota a pendência e diz :data:`MODO_SEM_CONFIRMACAO`, e só.
 
 
 def _rotulo_de(campo: str, valor: str) -> str:
@@ -2798,9 +2734,10 @@ def _dizer_se_nao_confirmou(confirmou: bool) -> None:
 #:
 #: O QUE CONTINUA VALENDO: a folga é 2,0 s, e um `False` pode vir com o modo
 #: aplicado. Por isso o gesto anota a pendência ANTES de levantar (ela some
-#: sozinha se o daemon alcançar tarde), não grava o perfil sobre um pedido não
-#: confirmado, e a frase (:data:`MODO_SEM_CONFIRMACAO`) diz *pode não ter
-#: acontecido* — nunca *não aconteceu*.
+#: sozinha se o daemon alcançar tarde), e a frase (:data:`MODO_SEM_CONFIRMACAO`)
+#: diz *pode não ter acontecido* — nunca *não aconteceu*. O perfil não é da
+#: janela: quem grava o modo é o daemon, depois do aparelho
+#: (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026).
 ACHADO_DO_TIMEOUT = (
     "ponte.TETOS dá 2,0 s aos cinco métodos desta aba, o mesmo valor de "
     "mode_transition.MODE_IPC_TIMEOUT_S; o teto de 250 ms é só o dos métodos "
@@ -2808,7 +2745,9 @@ ACHADO_DO_TIMEOUT = (
 )
 
 
-@gesto("01-jogar.html", "hefesto", grava="gravar_o_modo_no_ativo")
+@gesto("01-jogar.html", "hefesto",
+       grava="o modo no perfil ativo, pelo native.mode.set e pelo "
+             "gamepad.emulation.set à mão (o daemon grava)")
 def hefesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O INTERRUPTOR: Ligado (`gamepad`) ou Desligado (`native`).
 
@@ -2883,11 +2822,9 @@ def _hefesto_o_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # escritor, e anotar uma pendência que não chegou a sair prometeria uma
     # mudança que ninguém pediu ao daemon.
     _lembrar("modo", chave, str(o.get("texto") or ""))
+    # A ESCOLHA ENTRA NO PERFIL ATIVO pelo daemon, que a aplicou — os passos
+    # vão com `origin: "manual"` (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01).
     _dizer_se_nao_confirmou(confirmou)
-    # E A ESCOLHA ENTRA NO PERFIL ATIVO — Passo 1. Pela mesma razão de ordem:
-    # gravar antes de o plano sair prometeria, no disco dela, um modo que o
-    # daemon recusou. Ver `_gravar_o_modo`.
-    _gravar_o_modo(ctx, chave)
 
 
 def _plano_do_chip(chave: str) -> list[tuple[str, dict[str, Any]]]:
@@ -3000,10 +2937,10 @@ def _o_clique_da_fileira(ctx: Contexto, o: dict[str, Any], p: Any,
 
     O QUE A STEAM AINDA NÃO FEZ NÃO É RECUSA: ligar adiado vai à faixa de
     pendência (:func:`_a_ponte_que_falta`), desligar adiado volta como recado
-    (:func:`_reconciliar_o_vdf`). A gravação no perfil fica no CORPO de cada
-    gesto, para a régua das portas (`test_todo_gesto_que_grava_esta_protegido`)
-    achá-la dentro do teto dela, e depois desta função — que levanta com
-    :data:`MODO_SEM_CONFIRMACAO` quando o daemon não confirmou o plano.
+    (:func:`_reconciliar_o_vdf`). O modo no perfil ativo é gravado pelo
+    daemon, que o aplicou (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026); esta
+    função levanta com :data:`MODO_SEM_CONFIRMACAO` quando a resposta do plano
+    não chegou, e a escolha já pode estar no disco.
     """
     from hefesto_dualsense4unix.app.actions.daemon_actions import (
         format_game_broken_result,
@@ -3050,7 +2987,9 @@ def _o_clique_da_fileira(ctx: Contexto, o: dict[str, Any], p: Any,
     return {"recado": recado} if recado else None
 
 
-@gesto("01-jogar.html", "modo-dualsense", grava="gravar_o_modo_no_ativo")
+@gesto("01-jogar.html", "modo-dualsense",
+       grava="o caminho no perfil ativo, pelo gamepad.emulation.set à mão "
+             "(o daemon grava)")
 def modo_dualsense(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Sony DualSense": o Hefesto entrega o controle pelo canal do DualSense.
 
@@ -3068,12 +3007,12 @@ def modo_dualsense(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
     E TIRA O JOGO DA VEZ DO STEAM INPUT — a linha dele em
     :func:`o_que_o_chip_faz`; o clique é :func:`_o_clique_da_fileira`.
     """
-    recado = _o_clique_da_fileira(ctx, o, p, "dualsense")
-    _gravar_o_modo_do_chip(ctx, "dualsense")
-    return recado
+    return _o_clique_da_fileira(ctx, o, p, "dualsense")
 
 
-@gesto("01-jogar.html", "modo-xbox", grava="gravar_o_modo_no_ativo")
+@gesto("01-jogar.html", "modo-xbox",
+       grava="o caminho no perfil ativo, pelo gamepad.emulation.set à mão "
+             "(o daemon grava)")
 def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Xbox": o canal comum, o do controle de Xbox — o SEGUNDO que o Hefesto tenta.
 
@@ -3091,9 +3030,7 @@ def modo_xbox(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None
     lista, a Steam pegaria o controle do jogo por baixo do «Xbox» aceso. Ver
     :func:`o_que_o_chip_faz`.
     """
-    recado = _o_clique_da_fileira(ctx, o, p, "xbox")
-    _gravar_o_modo_do_chip(ctx, "xbox")
-    return recado
+    return _o_clique_da_fileira(ctx, o, p, "xbox")
 
 
 # ---------------------------------------------------------------------------
@@ -3390,7 +3327,6 @@ def modo_steam(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     if confirmado:
         return _fechar_a_steam_e_ligar(confirmado)
     recado = _o_clique_da_fileira(ctx, o, p, CHIP_DO_STEAM_INPUT)
-    _gravar_o_modo_do_chip(ctx, CHIP_DO_STEAM_INPUT)
     return recado or _armar_se_a_steam_segura(ctx)
 
 
@@ -3735,9 +3671,7 @@ def modo_navegacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
     E TIRA O JOGO DA VEZ DO STEAM INPUT, como o «Xbox» — a linha dela em
     :func:`o_que_o_chip_faz`, e o clique é :func:`_o_clique_da_fileira`.
     """
-    recado = _o_clique_da_fileira(ctx, o, p, "navegacao")
-    _gravar_o_modo_do_chip(ctx, "navegacao")
-    return recado
+    return _o_clique_da_fileira(ctx, o, p, "navegacao")
 
 
 @gesto("01-jogar.html", "cadeado", grava="freestyle_set")

@@ -30,6 +30,18 @@ if TYPE_CHECKING:
 
 _T = TypeVar("_T")
 
+#: A PORTA POR ONDE ELA ESCOLHEU O MODO — O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01
+#: (29/09/2026). ``"ipc"`` é a janela, a bandeja e a linha de comando;
+#: ``"controle"`` é o PS + R3. Vai ao diário e ao ``profile_salvo``, para a
+#: linha dizer por onde o modo chegou ao perfil.
+PortaQueGrava = Literal["ipc", "controle"]
+
+#: O parâmetro ``grava_o_modo`` dos três setters do modo. ``False`` (o padrão)
+#: aplica e não grava: é o perfil sendo ativado, o cartão, o boot, a saída do
+#: Nativo, a chamada direta. A porta da escolha dela diz de onde veio, e o setter
+#: grava o modo no perfil ativo DEPOIS de o aparelho trocar.
+GravaOModo = Literal[False, "ipc", "controle"]
+
 
 class DaemonProtocol(Protocol):
     """Superfície pública/privada do Daemon usada por handlers e subsystems.
@@ -207,6 +219,7 @@ class DaemonProtocol(Protocol):
         origin: Literal["manual", "profile"],
         caminho: str | None = None,
         caminho_e_escolha: bool = True,
+        grava_o_modo: GravaOModo = False,
     ) -> bool:
         """Liga/desliga o gamepad virtual e define a máscara (FEAT-DSX-GAMEPAD-FLAVOR-01).
 
@@ -214,6 +227,8 @@ class DaemonProtocol(Protocol):
         `"dualsense"` ou `"xbox"` —, separado da máscara; `None` não mexe nele.
         `caminho_e_escolha=False`: o caminho veio do perfil ativo, e não é
         escolha nova dela (O-FREESTYLE-E-UMA-CAMADA-SO-01).
+        `grava_o_modo`: a porta da escolha dela; ligado com o aparelho de
+        acordo, o modo vai ao perfil ativo (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01).
         """
         ...
 
@@ -248,7 +263,11 @@ class DaemonProtocol(Protocol):
         ...
 
     def aplicar_o_arranjo_do_desktop(
-        self, *, origin: str = "manual", forcar_mouse: bool = False
+        self,
+        *,
+        origin: str = "manual",
+        forcar_mouse: bool = False,
+        grava_o_modo: GravaOModo = False,
     ) -> dict[str, str]:
         """O modo Navegação carregando o PERFIL ATIVO (POINT-AND-CLICK-01).
 
@@ -260,6 +279,9 @@ class DaemonProtocol(Protocol):
         `forcar_mouse=True` é o SOCORRO do PS + R3 (uma das duas saídas de
         emergência quando o jogo não responde): o cursor volta mesmo com
         `mouse.enabled: false` no perfil. O clique no chip passa `False`.
+
+        `grava_o_modo`: a porta da escolha dela; o modo `desktop` vai ao
+        perfil ativo depois do arranjo (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01).
 
         Devolve `seção → estado` no vocabulário de `apply_profile_suppression`.
         Declarado aqui porque o GESTO o chama — o `hotkey.py` fala com o daemon
@@ -277,8 +299,13 @@ class DaemonProtocol(Protocol):
         *,
         reapply: bool = True,
         origin: Literal["manual", "profile", "exclusão"],
+        grava_o_modo: GravaOModo = False,
     ) -> bool:
-        """Liga/desliga o Modo Nativo — solta o controle para o jogo nativo."""
+        """Liga/desliga o Modo Nativo — solta o controle para o jogo nativo.
+
+        `grava_o_modo`: a porta da escolha dela; ligando, o modo `native` vai
+        ao perfil ativo (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01).
+        """
         ...
 
     def apply_profile_mouse(
@@ -344,4 +371,4 @@ class DaemonProtocol(Protocol):
         ...
 
 
-__all__ = ["DaemonProtocol"]
+__all__ = ["DaemonProtocol", "GravaOModo", "PortaQueGrava"]

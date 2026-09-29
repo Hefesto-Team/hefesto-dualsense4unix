@@ -280,11 +280,10 @@ AMBIENTE_DO_PRESET: dict[str, str] = {
 #: seção*. Perfil sem opinião de modo é o caso comum — 24 dos 33 perfis dela.
 #:
 #: **ELE É LITERAL DE PROPÓSITO, e não `next(iter(...))` do dono.** Derivá-lo
-#: faria uma reordenação da lista do dono trocar, em silêncio, o id que
-#: :func:`interface.pacotes.perfil.secao_do_modo` usa para REMOVER a seção — e a
-#: régua que hoje morde (ela compara este literal com o primeiro par do dono)
-#: passaria a se medir contra a própria saída, que é a família de defeito que
-#: esta casa mais pagou.
+#: faria uma reordenação da lista do dono trocar, em silêncio, o id que o
+#: editor lê como «remova a seção» — e a régua que hoje morde (ela compara este
+#: literal com o primeiro par do dono) passaria a se medir contra a própria
+#: saída, que é a família de defeito que esta casa mais pagou.
 MODO_SEM_OPINIAO = "none"
 
 FORA_DO_DESENHO: dict[str, str] = {

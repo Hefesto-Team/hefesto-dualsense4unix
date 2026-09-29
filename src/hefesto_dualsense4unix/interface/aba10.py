@@ -2658,11 +2658,11 @@ def _conferir(html: str) -> None:
     # E A FRASE TEM DE DIZER O ALCANCE — 11/09/2026, achado da conferência.
     #
     # A primeira redação desta legenda dizia que quem ESCOLHE o modo é a Jogar,
-    # sem qualificar o perfil, e isso é FALSO medido: quem escreve é
-    # `pacotes/perfil.gravar_o_modo_no_ativo`, que resolve o alvo por
-    # `nome_do_ativo(state)` — logo a Jogar grava a seção `mode` do perfil que
-    # está VALENDO, e só dele. Para um perfil que ela seleciona na lista e não
-    # ativou, nenhuma tela escolhe modo nenhum.
+    # sem qualificar o perfil, e isso é FALSO medido: quem escreve é o daemon,
+    # `Daemon.gravar_o_modo_escolhido`, que resolve o alvo por
+    # `manager.nome_do_perfil_que_grava` — logo a Jogar grava a seção `mode` do
+    # perfil que está VALENDO, e só dele. Para um perfil que ela seleciona na
+    # lista e não ativou, nenhuma tela escolhe modo nenhum.
     #
     # A retirada do quadro é ordem dela e continua de pé; o que não pode ficar
     # de pé é a tela AFIRMANDO alcance que o produto não tem. Esta exigência é o
@@ -2671,8 +2671,8 @@ def _conferir(html: str) -> None:
     exigir("no perfil que está valendo" in html,
            "a legenda perdeu o ALCANCE do que a aba Jogar escreve — sem ele a "
            "frase promete que a Jogar escolhe o modo de QUALQUER perfil, e o "
-           "escritor (`pacotes/perfil.gravar_o_modo_no_ativo`) só alcança o "
-           "perfil ativo")
+           "escritor (`Daemon.gravar_o_modo_escolhido`) só alcança o perfil "
+           "ativo")
     exigir("quem o escolhe é a Jogar" not in html,
            "a frase larga voltou à legenda — ela afirma que a Jogar escolhe o "
            "modo de qualquer perfil, e a Jogar grava só no que está valendo")

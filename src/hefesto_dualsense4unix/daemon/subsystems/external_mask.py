@@ -906,8 +906,8 @@ def escolher_a_mascara(
     isso em 13/09, quando a regra de em que perfil gravar saiu do handler
     porque *"o gesto não passa pelo handler"* (`profiles/manager.py`).
 
-    A ORDEM É O CONTRATO, e ela mudou — é a do PS + R3, que grava só depois de o
-    aparelho concordar (`hotkey._gravar_o_modo_do_gesto`):
+    A ORDEM É O CONTRATO, e ela mudou — é a do modo, que se grava só depois de o
+    aparelho trocar (`Daemon.gravar_o_modo_escolhido`):
 
     1. **o registro vivo** recebe a escolha, porque é dele que a fábrica do vpad
        lê a máscara ao nascer (`mascara_efetiva`). Sem esta escrita ANTES, não

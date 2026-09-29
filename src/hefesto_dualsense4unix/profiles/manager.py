@@ -2612,11 +2612,12 @@ def secao_do_modo_com_o_caminho(
 ) -> ProfileModeConfig:
     """A seção `mode` depois de o MODO mudar — o ESCRITOR ÚNICO do caminho.
 
-    MODO-DE-CONEXAO-01, 13/09/2026. Um dono, três chamadores: o chip de modo da
-    aba Jogar (`interface/pacotes/perfil.secao_do_modo`), o PS + R3
-    (:func:`gravar_o_modo_no_perfil_ativo`) e o alinhamento da escada
-    (:func:`alinhar_o_modo_com_a_ponte`). Dois escritores para o mesmo campo é
-    como o que ela escolhe numa porta some quando ela mexe na outra.
+    MODO-DE-CONEXAO-01, 13/09/2026. Um dono, dois chamadores: a escolha dela
+    (:func:`gravar_o_modo_no_perfil_ativo`, pelo escritor do daemon, que o chip
+    da aba Jogar e o PS + R3 alcançam desde a O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01)
+    e o alinhamento da escada (:func:`alinhar_o_modo_com_a_ponte`). Dois
+    escritores para o mesmo campo é como o que ela escolhe numa porta some
+    quando ela mexe na outra.
 
     A regra:
 
@@ -2674,16 +2675,23 @@ def nome_do_perfil_que_grava(do_daemon: object) -> str | None:
 
 
 def gravar_o_modo_no_perfil_ativo(
-    nome: str | None, *, kind: str, caminho: object = None
+    nome: str | None, *, kind: str, caminho: object = None, porta: str
 ) -> Profile | None:
-    """O PS + R3 grava o modo no perfil ATIVO, na hora. None = não gravou.
+    """O modo escolhido vai ao perfil ATIVO, na hora. None = não gravou.
 
     MODO-DE-CONEXAO-01, §D.4 (13/09/2026), pela palavra dela: *"inclusive o
     ps +r3 e isso fica setado no perfil"*. Até aqui o gesto só deixava rastro
     depois de 180 s de jogo aberto, e no perfil do JOGO; agora ele grava no
     perfil que está valendo logo que o aparelho confirma, sem esperar e sem
-    precisar de jogo — como o clique no chip. O carimbo por jogo da escada
-    (19/08) continua separado.
+    precisar de jogo.
+
+    UM CHAMADOR SÓ — O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01 (29/09/2026):
+    `Daemon.gravar_o_modo_escolhido`, que os três setters do modo chamam
+    depois do aparelho. O chip da aba Jogar gravava pela janela, e só com a
+    resposta no prazo; o PS + R3 gravava por aqui, com `origem="ps_r3"` fixo,
+    e o diário dizia PS + R3 sobre um clique. Agora a `porta` (``"ipc"`` ou
+    ``"controle"``) vai ao `profile_salvo` e à linha
+    `modo_escolhido_gravado_no_perfil`.
 
     NADA MUDOU, NADA SE GRAVA: o `.json` dela não ganha uma versão idêntica a
     cada aperto repetido.
@@ -2696,12 +2704,13 @@ def gravar_o_modo_no_perfil_ativo(
     if antes is not None and antes.model_dump() == depois.model_dump():
         return profile
     novo = profile.model_copy(update={"mode": depois})
-    save_profile(novo, origem="ps_r3")
+    save_profile(novo, origem=porta)
     logger.info(
-        "modo_do_gesto_gravado_no_perfil",
+        "modo_escolhido_gravado_no_perfil",
         profile=novo.name,
         kind=kind,
         caminho=depois.caminho,
+        porta=porta,
     )
     return novo
 

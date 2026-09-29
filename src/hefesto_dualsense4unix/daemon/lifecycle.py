@@ -38,6 +38,7 @@ from hefesto_dualsense4unix.daemon.battery_journal import (
     diario_da_bateria,
     registrar_queda_da_bateria,
 )
+from hefesto_dualsense4unix.daemon.protocols import GravaOModo, PortaQueGrava
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 
 #: VERDADE-01: o vocabulário de desfecho da emulação (`EMU_*`) e a origem
@@ -1553,6 +1554,7 @@ class Daemon:
         reapply: bool = True,
         restore_stash: bool = False,
         origin: Literal["manual", "profile", "exclusão"],
+        grava_o_modo: GravaOModo = False,
     ) -> bool:
         """Liga/desliga o Modo Nativo — "release total" do controle.
 
@@ -1582,6 +1584,12 @@ class Daemon:
         gateia o dispatch pelo próprio flag. Assim `daemon.resume` não "des-solta"
         o controle e um pause manual anterior não é pisado.
 
+        `grava_o_modo` (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026): a porta
+        da escolha dela. LIGANDO, o modo `native` vai ao perfil ativo por
+        :meth:`gravar_o_modo_escolhido`, também com o Nativo já ligado (o
+        clique no «Desligado» aceso conserta um perfil que divergiu). A saída
+        do Nativo não grava: quem grava é o modo que entra.
+
         Idempotente. Retorna o novo estado.
         """
         from hefesto_dualsense4unix.utils.session import (
@@ -1603,6 +1611,8 @@ class Daemon:
             # mão. Carimbo e posse andam juntos, sempre.
             self._mode_from_profile = None
         if enabled == self._native_mode:
+            if enabled and grava_o_modo:
+                self.gravar_o_modo_escolhido("native", porta=grava_o_modo)
             return self._native_mode
         if enabled:
             # Captura o estado de emulação ANTES do release (o release apaga os
@@ -1667,6 +1677,8 @@ class Daemon:
 
             materialize_launch_env(self)
         logger.info("native_mode_changed", native=enabled, origin=origin)
+        if enabled and grava_o_modo:
+            self.gravar_o_modo_escolhido("native", porta=grava_o_modo)
         return self._native_mode
 
     def _release_controller_to_game(self) -> None:
@@ -2007,7 +2019,11 @@ class Daemon:
             return None
 
     def aplicar_o_arranjo_do_desktop(
-        self, *, origin: str = "manual", forcar_mouse: bool = False
+        self,
+        *,
+        origin: str = "manual",
+        forcar_mouse: bool = False,
+        grava_o_modo: GravaOModo = False,
     ) -> dict[str, str]:
         """Carrega no aparelho o que a aba Navegação gravou no perfil ATIVO.
 
@@ -2069,6 +2085,14 @@ class Daemon:
         preferência GLOBAL, e a precedência da T14 deixaria de existir na
         ativação seguinte — o perfil que dissesse ``true`` uma vez mandaria para
         sempre, inclusive nos perfis sem opinião.
+
+        QUEM GRAVA O MODO É A PORTA, E NÃO A ORIGEM (O-MODO-SE-GRAVA-ONDE-ELE-
+        MUDA-01, 29/09/2026). Com ``grava_o_modo`` (o chip pelo
+        ``desktop.arranjo.apply {origin: manual}`` e o PS + R3), o modo
+        ``desktop`` vai ao perfil ativo depois do arranjo, por
+        :meth:`gravar_o_modo_escolhido`. A ``origin`` não serve de sinal: ela é
+        ``"manual"`` por padrão aqui, e quem chama o arranjo direto não escolheu
+        modo nenhum.
 
         Devolve ``seção → estado`` no vocabulário de
         :meth:`apply_profile_suppression` (``aplicado`` · ``adiado_lock_manual``
@@ -2179,6 +2203,8 @@ class Daemon:
             origin=origin,
             **relatorio,
         )
+        if grava_o_modo:
+            self.gravar_o_modo_escolhido("desktop", porta=grava_o_modo)
         return relatorio
 
     def set_mouse_speed(
@@ -2298,6 +2324,7 @@ class Daemon:
         origin: OrigemEmulacao,
         caminho: str | None = None,
         caminho_e_escolha: bool = True,
+        grava_o_modo: GravaOModo = False,
     ) -> bool:
         """Liga/desliga o gamepad virtual e define a máscara. Usado pelo IPC.
 
@@ -2340,7 +2367,7 @@ class Daemon:
 
         desfecho = self.set_gamepad_emulation_desfecho(
             enabled, flavor, origin=origin, caminho=caminho,
-            caminho_e_escolha=caminho_e_escolha,
+            caminho_e_escolha=caminho_e_escolha, grava_o_modo=grava_o_modo,
         )
         if enabled:
             return desfecho in DESFECHOS_EMULACAO_ATIVA
@@ -2359,11 +2386,20 @@ class Daemon:
         origin: OrigemEmulacao,
         caminho: str | None = None,
         caminho_e_escolha: bool = True,
+        grava_o_modo: GravaOModo = False,
     ) -> str:
         """O mesmo pedido de `set_gamepad_emulation`, dizendo o que ACONTECEU.
 
         `caminho_e_escolha=False`: o `caminho` é o do dono da sessão, e não uma
         escolha dela (ver `gamepad.start_gamepad_emulation_desfecho`).
+
+        `grava_o_modo` (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026): a porta
+        da escolha dela. Ligando, com o desfecho `aplicado` ou `ja_estava`, o
+        modo `gamepad` vai ao perfil ativo por :meth:`gravar_o_modo_escolhido`,
+        FORA do `_emu_lock` — o disco não segura a próxima troca. O caminho vai
+        quando é escolha (`caminho_e_escolha`); sem ele, o do perfil fica.
+        `falhou` não grava, porque o aparelho não mudou; e o `ja_estava` grava,
+        porque o clique no chip aceso conserta um perfil que divergiu.
 
         VERDADE-01 (18/08). Devolve o vocabulário `EMU_*` de
         `daemon.subsystems.gamepad`: `"aplicado"`, `"ja_estava"`,
@@ -2451,18 +2487,73 @@ class Daemon:
                     # Config efetiva não mudou: nenhum vpad foi recriado e o
                     # co-op segue no ciclo normal (~2s) do poll loop.
                     logger.debug("gamepad_apply_identico_sem_recriacao")
-                return desfecho
-            # HARM-16: o zero dos motores vem de dentro do stop (parar o vpad é
-            # o que deixa o motor sem dono), não de um passo extra aqui.
-            # R-07: só gesto manual apaga a preferência em disco. Um perfil sem
-            # seção `mode` desligando o gamepad fazia `flag.unlink()` — e no
-            # boot seguinte não nascia vpad nenhum, obrigando a religar tudo na
-            # mão. O runtime continua desligando; a PREFERÊNCIA sobrevive.
-            tinha_device = self._gamepad_device is not None
-            stop_gamepad_emulation(self, persist=(origin == "manual"))
-            # Desligar é sempre alcançado (o stop é idempotente): o desfecho só
-            # separa "parei o vpad que existia" de "já não havia vpad nenhum".
-            return EMU_DESLIGADO if tinha_device else EMU_JA_ESTAVA
+            else:
+                # HARM-16: o zero dos motores vem de dentro do stop (parar o
+                # vpad é o que deixa o motor sem dono), não de um passo extra.
+                # R-07: só gesto manual apaga a preferência em disco. Um perfil
+                # sem seção `mode` desligando o gamepad fazia `flag.unlink()` —
+                # e no boot seguinte não nascia vpad nenhum, obrigando a religar
+                # tudo na mão. O runtime continua desligando; a PREFERÊNCIA
+                # sobrevive.
+                tinha_device = self._gamepad_device is not None
+                stop_gamepad_emulation(self, persist=(origin == "manual"))
+                # Desligar é sempre alcançado (o stop é idempotente): o desfecho
+                # só separa "parei o vpad que existia" de "já não havia vpad".
+                return EMU_DESLIGADO if tinha_device else EMU_JA_ESTAVA
+        # O APARELHO PRIMEIRO, O PERFIL DEPOIS, e fora do lock.
+        if grava_o_modo and ok:
+            self.gravar_o_modo_escolhido(
+                "gamepad",
+                caminho=caminho if caminho_e_escolha else None,
+                porta=grava_o_modo,
+            )
+        return desfecho
+
+    def gravar_o_modo_escolhido(
+        self,
+        kind: str,
+        *,
+        caminho: str | None = None,
+        porta: PortaQueGrava,
+    ) -> str | None:
+        """O modo que ela escolheu vai ao perfil ATIVO. Devolve o nome, ou None.
+
+        O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01 (29/09/2026): QUEM TROCA O MODO GRAVA O
+        MODO. A escolha feita pelo chip da aba Jogar era gravada pela janela,
+        depois da resposta: com quatro controles a troca leva ~2,9 s, a janela
+        desiste aos 2,0 s, e o modo nunca chegava ao perfil — o Freestyle dela
+        seguiu em Xbox depois do «Sony DualSense» das 01:43 de 29/09. O PS + R3
+        gravava no daemon, e o cartão também. Agora há um escritor só, aqui, e
+        os três setters do modo o chamam depois do aparelho, só quando a porta
+        diz que é escolha dela (`grava_o_modo`).
+
+        O perfil é o de :func:`manager.nome_do_perfil_que_grava` (o ativo: com o
+        Freestyle ligado, o Freestyle; desligado, o do jogo que vale ou o de
+        fora do jogo), e a regra da seção é a do dono,
+        :func:`manager.secao_do_modo_com_o_caminho`: o modo não escreve a
+        máscara, e nada mudou, nada se grava. `porta` vai ao `profile_salvo`.
+
+        NUNCA LEVANTA: o aparelho já trocou, e um `.json` ilegível não pode
+        transformar a troca em recusa.
+        """
+        from hefesto_dualsense4unix.profiles.manager import (
+            gravar_o_modo_no_perfil_ativo,
+            nome_do_perfil_que_grava,
+        )
+
+        try:
+            nome = nome_do_perfil_que_grava(
+                getattr(getattr(self, "store", None), "active_profile", None)
+            )
+            salvo = gravar_o_modo_no_perfil_ativo(
+                nome, kind=kind, caminho=caminho, porta=porta
+            )
+        except Exception as exc:
+            logger.warning(
+                "modo_escolhido_nao_gravou", kind=kind, porta=porta, err=str(exc)
+            )
+            return None
+        return getattr(salvo, "name", None)
 
     def vestir_a_mascara_do_aparelho(self, uniq: str) -> str:
         """A máscara que o cartão acabou de gravar passa a valer COM O VPAD DE PÉ.

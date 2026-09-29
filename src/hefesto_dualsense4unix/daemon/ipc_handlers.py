@@ -149,8 +149,19 @@ def _mascaras_por_aparelho(handlers: object) -> dict[str, str]:
 
 if TYPE_CHECKING:
     from hefesto_dualsense4unix.core.controller import IController
-    from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
+    from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol, GravaOModo
     from hefesto_dualsense4unix.daemon.state_store import StateStore
+
+
+def _porta_que_grava(origem: str) -> GravaOModo:
+    """A porta que o setter do modo recebe: ``"ipc"`` para o pedido à mão.
+
+    O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01 (29/09/2026). Todo pedido pelo socket é
+    da porta ``"ipc"`` — a janela, a bandeja e a linha de comando —, e só o
+    que DIZ ``origin: "manual"`` é escolha dela: o silêncio é reconciliação
+    (ORIGEM-QUE-MENTE-01) e não grava perfil nenhum.
+    """
+    return "ipc" if origem == "manual" else False
 
 
 def origem_do_pedido(params: dict[str, Any] | None) -> Literal["manual", "profile"]:
@@ -2878,6 +2889,10 @@ class IpcHandlersMixin:
         `enabled` opcional: ausente → toggle. Solta o controle para o jogo
         (gatilhos Off, rumble passthrough, emulação off, autoswitch/hotkey
         gateados, pausado). Desligar restaura o último perfil.
+
+        O pedido à mão LIGANDO grava o modo `native` no perfil ativo
+        (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026): o setter recebe a porta
+        (`grava_o_modo`) e grava depois do aparelho — ver :func:`_porta_que_grava`.
         """
         if self.daemon is None:
             raise RuntimeError("daemon indisponível")
@@ -2888,7 +2903,13 @@ class IpcHandlersMixin:
             enabled = raw
         else:
             raise ValueError("native.mode.set exige 'enabled' boolean ou omitido")
-        new_state = self.daemon.set_native_mode(enabled, origin=origem_do_pedido(params))
+        origem = origem_do_pedido(params)
+        if enabled and origem == "manual":
+            new_state = self.daemon.set_native_mode(
+                enabled, origin=origem, grava_o_modo=_porta_que_grava(origem)
+            )
+        else:
+            new_state = self.daemon.set_native_mode(enabled, origin=origem)
         return {"status": "ok", "native_mode": bool(new_state)}
 
     async def _handle_daemon_state_full(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -7049,9 +7070,17 @@ class IpcHandlersMixin:
         aplicar = getattr(self.daemon, "aplicar_o_arranjo_do_desktop", None)
         if not callable(aplicar):
             return {"status": "failed", "arranjo": {}}
+        origem = origem_do_pedido(params)
+        # O PEDIDO À MÃO GRAVA O MODO `desktop` NO PERFIL ATIVO
+        # (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01): é o terceiro passo do chip
+        # «Navegação», e a porta diz que é escolha dela.
+        modo: dict[str, Any] = (
+            {"grava_o_modo": _porta_que_grava(origem)} if origem == "manual" else {}
+        )
         arranjo = aplicar(
-            origin=origem_do_pedido(params),
+            origin=origem,
             forcar_mouse=bool(params.get("forcar_mouse", False)),
+            **modo,
         )
         return {"status": "ok", "arranjo": dict(arranjo or {})}
 
@@ -7264,10 +7293,18 @@ class IpcHandlersMixin:
             do_dono = self._caminho_do_perfil_ativo()
             if do_dono is not None:
                 modo = {"caminho": do_dono, "caminho_e_escolha": False}
+        origem = origem_do_pedido(params)
+        # O PEDIDO À MÃO LIGANDO GRAVA O MODO NO PERFIL ATIVO
+        # (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026). Quem gravava o chip
+        # era a janela, depois da resposta: com quatro controles a troca passa
+        # do teto dela e a escolha não chegava ao perfil. O setter grava depois
+        # do aparelho, e só com o desfecho `aplicado` ou `ja_estava`.
+        if enabled and origem == "manual":
+            modo["grava_o_modo"] = _porta_que_grava(origem)
         ok = self.daemon.set_gamepad_emulation(
             enabled=enabled,
             flavor=flavor,
-            origin=origem_do_pedido(params),
+            origin=origem,
             **modo,
         )
         active_flavor = getattr(self.daemon.config, "gamepad_flavor", None)

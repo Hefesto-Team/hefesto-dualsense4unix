@@ -661,7 +661,13 @@ def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
         # dele. Ele ia como `flavor`, a máscara padrão, e a máscara do cartão a
         # vencia — o gesto pedia, o daemon respondia `ja_estava`, e o ciclo
         # parava. A máscara fica como está: `flavor` vai `None`.
-        return bool(setter(True, None, origin="manual", caminho=alvo))
+        #
+        # `grava_o_modo="controle"` (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01,
+        # 29/09/2026): o gesto é escolha dela, e o setter grava o modo no
+        # perfil ativo depois de o aparelho trocar — o mesmo escritor do chip.
+        return bool(
+            setter(True, None, origin="manual", caminho=alvo, grava_o_modo="controle")
+        )
     # Ponte mouse+teclado (point and click): sem vpad, o controle vira
     # cursor/teclas.
     #
@@ -703,7 +709,7 @@ def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
         logger.warning("ponte_sem_arranjo_do_desktop")
         return True
     with contextlib.suppress(Exception):
-        arranjo(origin="manual", forcar_mouse=True)
+        arranjo(origin="manual", forcar_mouse=True, grava_o_modo="controle")
     return True
 
 
@@ -724,43 +730,6 @@ def _appid_do_jogo_do_wrapper() -> int | None:
     from hefesto_dualsense4unix.daemon.launch_env import launch_session_appid
 
     return launch_session_appid()
-
-
-def _gravar_o_modo_do_gesto(daemon: DaemonProtocol, ponte: str) -> str | None:
-    """O PS + R3 grava o modo no perfil ATIVO, na hora. Devolve o nome, ou None.
-
-    MODO-DE-CONEXAO-01, §D.4 (13/09/2026) — a palavra dela está na sprint: o que
-    o PS + R3 escolhe fica gravado no perfil, como o clique no chip. Chamado só
-    DEPOIS de o aparelho concordar (`efetiva == alvo`), pela disciplina da
-    MASCARA-01: o retorno do applier não prova nada.
-
-    O escritor é o do chip (`manager.secao_do_modo_com_o_caminho`): a
-    Navegação grava o modo `desktop`, e os dois caminhos gravam `gamepad` com o
-    `caminho`, sem tocar a máscara padrão do perfil.
-
-    NUNCA LEVANTA: a troca já aconteceu no aparelho, e um `.json` ilegível não
-    pode transformá-la em pulsos vermelhos.
-    """
-    from hefesto_dualsense4unix.profiles.manager import (
-        gravar_o_modo_no_perfil_ativo,
-        nome_do_perfil_que_grava,
-    )
-
-    if ponte == PONTE_MOUSE_TECLADO:
-        kind, caminho = "desktop", None
-    elif ponte in (PONTE_DUALSENSE, PONTE_XBOX):
-        kind, caminho = "gamepad", ponte
-    else:
-        return None
-    try:
-        nome = nome_do_perfil_que_grava(
-            getattr(getattr(daemon, "store", None), "active_profile", None)
-        )
-        salvo = gravar_o_modo_no_perfil_ativo(nome, kind=kind, caminho=caminho)
-    except Exception as exc:
-        logger.warning("ponte_do_gesto_nao_gravou_no_perfil", ponte=ponte, err=str(exc))
-        return None
-    return getattr(salvo, "name", None)
 
 
 def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
@@ -797,10 +766,12 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
     journal, com 23 perfis pedindo `dualsense` e ela jogando em `xbox`.
 
     NOTA DATADA — MODO-DE-CONEXAO-01, 13/09/2026. O gesto troca o CAMINHO, e não
-    a máscara, e grava no perfil ATIVO logo que o aparelho concorda
-    (`_gravar_o_modo_do_gesto`), sem esperar silêncio nem jogo — é a regra
-    dela de 13/09, citada na sprint. O rastro por jogo de cima continua, e o que
-    ele alinha no perfil do jogo passou a ser `mode.caminho`.
+    a máscara, e grava no perfil ATIVO logo que o aparelho concorda, sem esperar
+    silêncio nem jogo — é a regra dela de 13/09, citada na sprint. O rastro por
+    jogo de cima continua, e o que ele alinha no perfil do jogo passou a ser
+    `mode.caminho`. Desde a O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01 (29/09/2026) quem
+    grava é o setter do daemon (`Daemon.gravar_o_modo_escolhido`), o mesmo do
+    chip: `_aplicar_ponte` manda `grava_o_modo="controle"`.
 
     O QUE O GESTO PROMETE:
       - troca a ponte na hora, com `origin="manual"` — a única origem que
@@ -970,10 +941,10 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
                     caminho=efetiva,
                     jogo_vivo=jogo_no_controle,
                 )
-            # E O PERFIL ATIVO RECEBE O MODO JÁ — MODO-DE-CONEXAO-01, §D.4. Sem
-            # esperar os 180 s e sem precisar de jogo: o registro de cima é o
-            # carimbo por jogo, que continua separado.
-            _gravar_o_modo_do_gesto(daemon, efetiva)
+            # O PERFIL ATIVO JÁ RECEBEU O MODO — MODO-DE-CONEXAO-01, §D.4, pelo
+            # setter do daemon (`grava_o_modo="controle"` em `_aplicar_ponte`,
+            # O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01). O registro de cima é o carimbo
+            # por jogo, que continua separado.
         logger.info(
             "ponte_trocada_por_gesto",
             de=atual,
