@@ -19,7 +19,6 @@ from hefesto_dualsense4unix.app.actions.external_controllers import (
     mode_guidance,
     mode_selector_state,
     nintendo_bt_warning,
-    short_button_label,
     slot_label,
     slot_of,
     transport_label,
@@ -83,11 +82,21 @@ class TestTransport:
 
 
 class TestBotaoCurto:
+    """O rótulo curto é o do botão que existe, antes de o daemon numerar.
+
+    Estes dois casos mediam o `short_button_label`, o rótulo de um seletor de
+    topo que nunca nasceu; ele saiu em 28/09/2026 (sem botão novo). O mesmo
+    rótulo sai de `button_labels_for` enquanto o daemon ainda não deu número
+    ao externo (`player_slot` presente e `None`), e é ele que fica medido.
+    """
+
     def test_nintendo_cabo(self) -> None:
-        assert short_button_label(_8BITDO_CABO) == "Nintendo · cabo"
+        sem_numero = {**_8BITDO_CABO, "player_slot": None}
+        assert button_labels_for([sem_numero]) == ["Nintendo · cabo"]
 
     def test_nintendo_bt(self) -> None:
-        assert short_button_label(_8BITDO_BT) == "Nintendo · BT"
+        sem_numero = {**_8BITDO_BT, "player_slot": None}
+        assert button_labels_for([sem_numero]) == ["Nintendo · BT"]
 
 
 class TestMarcaPorOUI:
@@ -118,7 +127,6 @@ class TestMarcaPorOUI:
 
     def test_botao_e_slot_do_8bitdo_ds4(self, monkeypatch) -> None:
         self._com_oui_sintetico(monkeypatch)
-        assert short_button_label(_8BITDO_DS4) == "8BitDo · BT"
         # com 2 DualSense conectados, o externo é o Controle 3.
         assert button_labels_for([_8BITDO_DS4], dualsense_count=2) == ["8BitDo 3 · BT"]
 

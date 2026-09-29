@@ -153,18 +153,6 @@ def transport_label(entry: dict[str, Any]) -> str:
     return bus or "desconhecido"
 
 
-def short_button_label(entry: dict[str, Any]) -> str:
-    """Rótulo curto para o botão do seletor no topo (cabe ao lado dos DualSense).
-
-    Ex.: '8BitDo · cabo', 'Pro Controller · BT'. Prioriza o fabricante para
-    ficar curto; o tooltip/ficha carregam o nome completo.
-    """
-    curto = brand_of(entry)
-    bus = str(entry.get("bus") or "").lower()
-    via = "cabo" if bus == "usb" else ("BT" if bus in ("bluetooth", "bt") else bus)
-    return f"{curto} · {via}" if via else curto
-
-
 def external_slot(dualsense_count: int, index: int) -> int:
     """Slot GLOBAL de co-op de um externo: continua a numeração dos DualSense.
 
