@@ -994,8 +994,8 @@ def fluxos_nos_lugares(
     alvos = {n for n in nomes if n}
     if not alvos:
         return frozenset(), frozenset()
-    correr: Any = runner or rodar_pactl
-    sinks = correr(["pactl", "list", "short", "sinks"])
+    chamar = runner or rodar_pactl
+    sinks = chamar(["pactl", "list", "short", "sinks"])
     if sinks is None:
         return None
     por_indice: dict[str, str] = {}
@@ -1005,7 +1005,7 @@ def fluxos_nos_lugares(
             por_indice[campos[0].strip()] = campos[1]
     if not por_indice:
         return frozenset(), frozenset()
-    texto = correr(["pactl", "list", "sink-inputs"])
+    texto = chamar(["pactl", "list", "sink-inputs"])
     if texto is None:
         return None
     nossos: set[str] = set()
@@ -1240,12 +1240,18 @@ class TocadorDoRumble:
 
     def _escrever(self, fd: int, dados: bytes) -> bool:
         """Escreve o bloco inteiro; ``False`` = o tocador parou de ler ou morreu."""
+        # `poll`, e não `select`: acima do descritor 1023 o `select` levanta
+        # (`tests/unit/test_a_espera_passa_do_descritor_1023.py`).
         vista = memoryview(dados)
+        espera = select.poll()
+        espera.register(fd, select.POLLOUT)
         parado_desde: float | None = None
         while vista and not self._fim.is_set():
             try:
-                _, prontos, _ = select.select([], [fd], [], 0.1)
+                prontos = espera.poll(100)
             except (OSError, ValueError):
+                return False
+            if any(ev & (select.POLLERR | select.POLLHUP | select.POLLNVAL) for _, ev in prontos):
                 return False
             if not prontos:
                 agora = self._relogio()
