@@ -15,9 +15,8 @@ tinham dono**, e o dono era o perfil:
     mouse.speed / scroll_speed     a velocidade do cursor         1/33 perfis
     key_bindings                   os gestos                      1/33 perfis
 
-O ERRO TEVE UMA FORMA SÓ, e é a que o portão
-`tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py` nomeia — *a casa sabe e
-o produto não faz*: **perguntei só ao `state_full` do daemon.** Ele não publica
+O ERRO TEVE UMA FORMA SÓ, a que `portao_a_casa_sabe_e_o_produto_nao_faz.py` nomeia —
+*a casa sabe e o produto não faz*: **perguntei só ao `state_full` do daemon.** Ele não publica
 gatilho nem brilho; concluí "não tem dono" e escrevi o travessão. O dado estava
 no disco dela o tempo todo, e a `gui/aba_*.py` que ela usa hoje já o lê.
 
