@@ -27,7 +27,7 @@
 > **não se apaga decisão medida** — só ganha a nota que diz o que caducou.
 
 
-> Pesquisa de 19/07 (agente com clone parcial do git upstream do BlueZ + Launchpad + madison).
+> Pesquisa de 19/07 (clone parcial do git upstream do BlueZ + Launchpad + madison).
 > Contexto medido na máquina: bluez 5.72-0ubuntu5.5 (noble-updates via espelho Pop), 5 crashes do
 > bluetoothd em 5 dias (14→19/07), sempre em sessão com controles BT: 2× SEGV, 3× heap corruption
 > (malloc tcache/fastbin/consolidate), com `hidp_add_connection`/`ioctl_is_connected`/
