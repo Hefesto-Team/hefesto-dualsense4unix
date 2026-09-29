@@ -40,10 +40,13 @@ RADIO_DA_MESA_MENTIROSA = '''\
 """radio_da_mesa.py de MENTIRA — só para teste."""
 from __future__ import annotations
 
+from hefesto_dualsense4unix.app.fala_do_mapa import Numero
+
 HZ_INPUT_SEM_MIC = 260.4
 
-NUMEROS_MEDIDOS_NO_MAPA: tuple[tuple[str, float, str, str], ...] = (
-    ("HZ_INPUT_SEM_MIC", HZ_INPUT_SEM_MIC, "audio.microfone@dualsense", "radio_ressalva"),
+NUMEROS_MEDIDOS_NO_MAPA: tuple[Numero, ...] = (
+    Numero(constante="HZ_INPUT_SEM_MIC", valor=HZ_INPUT_SEM_MIC,
+           chave="audio.microfone@dualsense", coluna="radio_ressalva"),
 )
 '''
 

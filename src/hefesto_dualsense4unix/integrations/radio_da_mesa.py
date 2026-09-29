@@ -104,6 +104,7 @@ from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from hefesto_dualsense4unix.app.fala_do_mapa import Numero
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
 #: Fatias de tempo por segundo do Bluetooth Classic — 625 µs cada. É
@@ -145,15 +146,22 @@ HZ_AUDIO_COM_MIC = 106.2
 #: SPRINT_ORDER, F9). Esta tupla é o que
 #: ``scripts/validar-fala-de-tela.py`` lê POR AST (nunca importando este
 #: módulo — ele puxa ``structlog`` por ``core.sysfs_leds``) para reprovar
-#: quando a constante e a célula divergirem: cada item é
-#: ``(nome_da_constante, valor, chave_do_mapa, coluna_do_mapa)``, e o
-#: ``valor`` é a MESMA referência de nome acima — nunca um literal copiado —
-#: para as duas nunca poderem divergir sem alguém precisar editar as duas
-#: linhas.
-NUMEROS_MEDIDOS_NO_MAPA: tuple[tuple[str, float, str, str], ...] = (
-    ("HZ_INPUT_SEM_MIC", HZ_INPUT_SEM_MIC, "audio.microfone@dualsense", "radio_ressalva"),
-    ("HZ_INPUT_COM_MIC", HZ_INPUT_COM_MIC, "audio.microfone@dualsense", "radio_ressalva"),
-    ("HZ_AUDIO_COM_MIC", HZ_AUDIO_COM_MIC, "audio.microfone@dualsense", "radio_ressalva"),
+#: quando a constante e a célula divergirem: cada item é um
+#: :class:`~hefesto_dualsense4unix.app.fala_do_mapa.Numero`, e o ``valor`` é a
+#: MESMA referência de nome acima — nunca um literal copiado — para as duas
+#: nunca poderem divergir sem alguém precisar editar as duas linhas.
+#:
+#: DE ``Numero``, E NÃO DE TUPLA CRUA, desde 28/09/2026: a tupla de quatro
+#: campos era o tipo sem o construtor, e o ``__post_init__`` que recusa valor
+#: que não é número (e chave vazia) nunca rodava sobre ela. Agora ele roda ao
+#: importar este módulo, e o portão aceita só esta forma.
+NUMEROS_MEDIDOS_NO_MAPA: tuple[Numero, ...] = (
+    Numero(constante="HZ_INPUT_SEM_MIC", valor=HZ_INPUT_SEM_MIC,
+           chave="audio.microfone@dualsense", coluna="radio_ressalva"),
+    Numero(constante="HZ_INPUT_COM_MIC", valor=HZ_INPUT_COM_MIC,
+           chave="audio.microfone@dualsense", coluna="radio_ressalva"),
+    Numero(constante="HZ_AUDIO_COM_MIC", valor=HZ_AUDIO_COM_MIC,
+           chave="audio.microfone@dualsense", coluna="radio_ressalva"),
 )
 
 #: Até aqui a mesa é "Folgada". Decisão R3 do PO.

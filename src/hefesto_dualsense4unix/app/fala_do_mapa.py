@@ -212,6 +212,10 @@ class Numero:
     e o portão (Z6-04) confere que a célula `coluna` do mapa cita esse mesmo
     valor, no formato pt-BR (`260,4`), na chave `chave`. Trocar a constante
     sem atualizar a célula reprova, nomeando os dois endereços.
+
+    Quem publica é `integrations/radio_da_mesa.NUMEROS_MEDIDOS_NO_MAPA`, uma
+    tupla de `Numero` desde 28/09/2026: o construtor roda ao importar aquele
+    módulo, e o portão lê só esta forma.
     """
 
     constante: str

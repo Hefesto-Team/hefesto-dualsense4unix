@@ -511,8 +511,43 @@ def _mapa_de_constantes_numericas(arvore: ast.Module) -> dict[str, float]:
     return valores
 
 
+#: Os quatro campos de `app/fala_do_mapa.Numero`, na ordem do dataclass — é a
+#: ordem em que um `Numero(...)` posicional os passa.
+CAMPOS_DO_NUMERO: tuple[str, ...] = ("constante", "valor", "chave", "coluna")
+
+
+def _campos_do_numero(item: ast.expr) -> tuple[ast.expr, ast.expr, ast.expr, ast.expr] | None:
+    """Os quatro campos de um item da tupla, se ele for um `Numero(...)`.
+
+    SÓ `Numero(...)` CONTA, desde 28/09/2026 (A-CONEXOES-DIZ-O-QUE-O-PRODUTO-
+    JA-MEDE-01). Até ali a tupla era de tuplas cruas de quatro campos, e o
+    construtor que recusa valor que não é número e chave vazia
+    (`Numero.__post_init__`) nunca rodava sobre ela. Aceitar as duas formas
+    aqui deixaria a tupla crua voltar calada; com uma forma só, quem a devolver
+    faz a régua contar zero números, e o piso (`PISO_DA_REGUA["numeros"]`)
+    reprova em voz alta.
+
+    Os campos vêm por posição ou por nome, como o dataclass aceita. Faltou um,
+    ou sobrou um que o `Numero` não tem: `None`, e o item não conta — o
+    construtor recusaria o mesmo item ao importar o módulo.
+    """
+    if not _e_chamada_de(item, "Numero"):
+        return None
+    assert isinstance(item, ast.Call)
+    if len(item.args) > len(CAMPOS_DO_NUMERO):
+        return None
+    campos: dict[str, ast.expr] = dict(zip(CAMPOS_DO_NUMERO, item.args, strict=False))
+    for palavra in item.keywords:
+        if palavra.arg not in CAMPOS_DO_NUMERO or palavra.arg in campos:
+            return None
+        campos[palavra.arg] = palavra.value
+    if set(campos) != set(CAMPOS_DO_NUMERO):
+        return None
+    return (campos["constante"], campos["valor"], campos["chave"], campos["coluna"])
+
+
 def descobre_numeros(raiz: Path) -> list[NumeroEncontrado]:
-    """Toda tupla de `NUMEROS_MEDIDOS_NO_MAPA` em `integrations/radio_da_mesa.py`.
+    """Todo `Numero(...)` de `NUMEROS_MEDIDOS_NO_MAPA` em `integrations/radio_da_mesa.py`.
 
     Por AST: o arquivo puxa `structlog` por `core.sysfs_leds`, e importar o
     módulo faria este portão `ImportError` num runner sem GUI/deps — o mesmo
@@ -540,9 +575,10 @@ def descobre_numeros(raiz: Path) -> list[NumeroEncontrado]:
         if not isinstance(valor_no, (ast.Tuple, ast.List)):
             continue
         for item in valor_no.elts:
-            if not isinstance(item, ast.Tuple) or len(item.elts) != 4:
+            campos = _campos_do_numero(item)
+            if campos is None:
                 continue
-            nome_no, valor_ref_no, chave_no, coluna_no = item.elts
+            nome_no, valor_ref_no, chave_no, coluna_no = campos
             nome = _literal(nome_no)
             chave = _literal(chave_no)
             coluna = _literal(coluna_no)
