@@ -2870,8 +2870,9 @@ def _gabinete(recarregar: bool = False) -> Any:
 
 @registrar("08-conexoes.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
-    global _ORDENS_NA_TELA
+    global _ORDENS_NA_TELA, _ULTIMO_ESTADO
     st = ctx.state
+    _ULTIMO_ESTADO = st if isinstance(st, dict) else {}
     # O EXAME COMPLETO PEDIDO UMA VEZ, ANTES DE LER A TIRA. Ele corre em thread
     # e não bloqueia este tique — o que ele traz aparece no tique seguinte, que
     # é a mesma latência que a janela estável tem. Ver
@@ -6716,8 +6717,7 @@ def _campos_da_cerimonia() -> dict[str, Any]:
 
 def campos_do_radio(ctx: Contexto) -> dict[str, Any]:
     """Os campos da seção Rádio e Adaptadores, pela cena da máquina dela."""
-    global _CENA_NA_TELA, _ULTIMO_ESTADO
-    _ULTIMO_ESTADO = ctx.state if isinstance(ctx.state, dict) else {}
+    global _CENA_NA_TELA
     cena = cena_do_radio(ctx)
     _CENA_NA_TELA = cena
     campos = campos_da_secao(cena)
