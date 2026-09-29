@@ -154,7 +154,10 @@ class TestOOpenDoNoDeEntrada:
     def test_o_broker_de_antes_da_cura_e_acusado(self, tmp_path: Path) -> None:
         saida = self._roda(tmp_path, "velho", "/dev/input/event27")
         assert "[WARN]" in saida, saida
-        assert "de antes da HIDE-SO-O-HIDRAW-02" in saida
+        # A mensagem diz a data da cura, e não o ID da sprint (a parte do
+        # doctor.sh da AS-PAGINAS-DE-USO-FALAM-COM-QUEM-USA-01, 29/09/2026).
+        assert "é o de antes de 24/09/2026" in saida
+        assert "HIDE-SO" not in saida
         assert "reinicio-sem-abrir" in saida
 
     def test_a_falha_nomeia_o_device_allow(self, tmp_path: Path) -> None:

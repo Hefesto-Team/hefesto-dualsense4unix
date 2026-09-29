@@ -336,7 +336,7 @@ for so in ('libhidapi-hidraw.so.0','libhidapi-libusb.so.0','libhidapi-hidraw.so'
 sys.exit(1)" 2>/dev/null; then
         pass "libhidapi presente (o backend do controle consegue abrir aparelho)"
     else
-        fail "libhidapi AUSENTE — sem ela o backend não abre NENHUM aparelho (o pydualsense faz dlopen dela; a wheel do pip não traz o .so); a libhidapi entra por default no instalador desta casa: $(conselho_de_instalacao)"
+        fail "libhidapi AUSENTE — sem ela o backend não abre NENHUM aparelho (o pydualsense faz dlopen dela; a wheel do pip não traz o .so); a libhidapi entra por default no instalador do Hefesto: $(conselho_de_instalacao)"
     fi
 }
 
@@ -369,7 +369,7 @@ finally:
     os.unlink(caminho)" 2>/dev/null; then
         pass "loader SVG do gdk-pixbuf presente (os glifos e o ícone da bandeja desenham)"
     else
-        fail "loader SVG AUSENTE — o ícone some da barra e os 38 glifos dos botões saem vazios (BUG-TRAY-ICONE-INVISIVEL-01). Instale o loader do librsvg (Debian: librsvg2-common), ou $(conselho_de_instalacao)"
+        fail "loader SVG AUSENTE — o ícone some da barra e os 38 glifos dos botões saem vazios. Instale o loader do librsvg (Debian: librsvg2-common), ou $(conselho_de_instalacao)"
     fi
 }
 
@@ -815,11 +815,11 @@ _vpad09_qualifica_acesso() {
     local node="$1" para_que="$2" grp
     grp="$(stat -c '%G' "${node}" 2>/dev/null || true)"
     if [[ "${grp}" != "hefesto" ]]; then
-        warn "${node} gravável só pela ACL do login — no boot o daemon pode perder a corrida contra o logind (VPAD-09). Rode: sudo bash scripts/install_udev.sh"
+        warn "${node} gravável só pela ACL do login — no boot o daemon pode perder a corrida contra o logind. Rode: sudo bash scripts/install_udev.sh"
     elif id -nG 2>/dev/null | tr ' ' '\n' | grep -qx hefesto; then
         pass "${node} presente e gravável (${para_que}; grupo hefesto ativo — sem corrida no boot)"
     else
-        info "${node} com grupo hefesto, mas sua sessão ainda não está no grupo (vale no próximo login) — até lá o acesso é a ACL do login (VPAD-09)"
+        info "${node} com grupo hefesto, mas sua sessão ainda não está no grupo (vale no próximo login) — até lá o acesso é a ACL do login"
     fi
 }
 
@@ -1811,9 +1811,9 @@ fix_default_source_monitor() {
         info "  esta cura só sabe eleger outra fonte de captura — sem nenhuma, o que resolve é conectar um mic, uma webcam com mic, ou o DualSense"
         return 0
     fi
-    _dualsense_por_falta_com_o_51 "${alvo}" "${prefere}" && { info "  não gravo ${alvo} como fonte padrão (§D.7 da MIC-PADRAO-NO-CABO-01): com o drop-in 51 o WirePlumber a elege sozinho acima de qualquer monitor, e gravada ela venceria a próxima webcam plugada"; return 0; }
+    _dualsense_por_falta_com_o_51 "${alvo}" "${prefere}" && { info "  não gravo ${alvo} como fonte padrão: com o drop-in 51 o WirePlumber a elege sozinho acima de qualquer monitor, e gravada ela venceria a próxima webcam plugada"; return 0; }
     if pactl set-default-source "${alvo}" 2>/dev/null; then
-        pass "fonte padrão trocada do monitor para a entrada ${alvo} (FONTE-PADRAO-01)"
+        pass "fonte padrão trocada do monitor para a entrada ${alvo}"
     else
         warn "falha ao eleger ${alvo} como fonte padrão (a padrão segue o monitor ${cur})"
     fi
@@ -2507,7 +2507,7 @@ check_mic_ganho_de_captura() {
     IFS=$'\t' read -r porta elemento fora <<< "${linha}"
     if [[ "${fora}" == "sim" ]]; then
         warn "a porta de captura do DualSense (${porta}) não liga o elemento '${elemento}' — o ganho de captura fica fora do alcance do PipeWire, da tela e dela. Isto é sobre a CONFIGURAÇÃO do som, não sobre a qualidade do áudio"
-        info "  quem define a porta hoje é o UCM desta casa (assets/ucm/DualSense-HiFi.conf); ligá-lo muda o SISTEMA dela e é decisão dela"
+        info "  quem define a porta hoje é o UCM do Hefesto (assets/ucm/DualSense-HiFi.conf); ligá-lo muda o SISTEMA de quem usa, e é escolha sua"
         info "  mede antes: scripts/ensaios/o_caminho_do_mic_no_cabo.py --ganho-plano"
         return
     fi
@@ -3195,7 +3195,7 @@ PYEOF
     local sem_sinal authority evidencia motivo degradado
     sem_sinal="$(sed -n 's/^sem_sinal=//p' <<<"${out}")"
     if [[ "${sem_sinal}" == "1" ]]; then
-        info "daemon não reporta o sinal de autoridade de exibição (versão antiga, sem NUMA-05)"
+        info "daemon não reporta o sinal de autoridade de exibição (versão antiga, de antes desse sinal)"
         return
     fi
     authority="$(sed -n 's/^authority=//p' <<<"${out}")"
@@ -3211,7 +3211,7 @@ PYEOF
             ;;
         unknown)
             if [[ "${degradado}" == "True" ]]; then
-                warn "autoridade de exibição UNKNOWN (causa: ${motivo:-sem motivo reportado}) — degrada para o comportamento de hoje (réplica passa, jogo vence, daemon NÃO repinta); nunca pior, mas sem a defesa do NUMA-03"
+                warn "autoridade de exibição UNKNOWN (causa: ${motivo:-sem motivo reportado}) — degrada para o comportamento de hoje (réplica passa, jogo vence, daemon NÃO repinta); nunca pior, mas sem a defesa de repintar a cor que o jogo apagou"
             else
                 info "autoridade de exibição unknown sem causa reportada — comportamento atual"
             fi
@@ -3920,7 +3920,7 @@ check_bluez_justworks_repairing() {
         | sed -n 's/^JustWorksRepairing: //p' || true)"
     case "${valor}" in
         confirm)
-            pass "JustWorksRepairing=confirm no main.conf — re-pareamento de quem já tem bond passa pelo agente (RADIO-ABERTO-01)"
+            pass "JustWorksRepairing=confirm no main.conf — re-pareamento de quem já tem bond passa pelo agente"
             # SELO-VERDE-CEDO-DEMAIS-01 (06/08/2026, achado de verificação
             # adversarial): dizer só "confirm no main.conf" carimbava VERDE um
             # rádio ainda ABERTO. O `bluez_config.sh` grava e NÃO reinicia o
@@ -3982,10 +3982,10 @@ check_bluez_justworks_repairing() {
             fi
             ;;
         always)
-            fail "JustWorksRepairing=always ATIVO no ${etc_bt}/main.conf — remove a última recusa do BlueZ ao re-pareamento por Just Works de quem já tem bond; com o agente NoInputNoOutput isso termina em injeção de teclas (RADIO-ABERTO-01). Cura, em qualquer formato: sudo bash ${dono} aplicar — corrige o bloco antigo do hefesto SEM reiniciar o bluetoothd$(so_no_checkout "— o ./install.sh SEM --no-udev faz o mesmo (a flag pula este passo inteiro)")"
+            fail "JustWorksRepairing=always ATIVO no ${etc_bt}/main.conf — remove a última recusa do BlueZ ao re-pareamento por Just Works de quem já tem bond; com o agente NoInputNoOutput isso termina em injeção de teclas. Cura, em qualquer formato: sudo bash ${dono} aplicar — corrige o bloco antigo do hefesto SEM reiniciar o bluetoothd$(so_no_checkout "— o ./install.sh SEM --no-udev faz o mesmo (a flag pula este passo inteiro)")"
             ;;
         ausente|"")
-            warn "JustWorksRepairing não está declarado no main.conf — o BlueZ cai no default da distro, que não é decisão desta casa; cura em qualquer formato: sudo bash ${dono} aplicar$(so_no_checkout "— o ./install.sh também aplica, por default, mas NÃO com --no-udev, que pula este passo")"
+            warn "JustWorksRepairing não está declarado no main.conf — o BlueZ cai no default da distro, que não é decisão do Hefesto; cura em qualquer formato: sudo bash ${dono} aplicar$(so_no_checkout "— o ./install.sh também aplica, por default, mas NÃO com --no-udev, que pula este passo")"
             ;;
         ilegível)
             warn "não consigo LER ${etc_bt}/main.conf — sem leitura não sei o valor de JustWorksRepairing; rode: sudo bash ${dono} verificar"
@@ -4006,10 +4006,10 @@ check_bluez_justworks_repairing() {
             # `remover` entrega o arquivo SEM a chave. O `aplicar` sabe dizer
             # qual dos dois casos é o dela (ele lê a posição da linha que vence);
             # o doctor não precisa saber, precisa é não prometer o que não pode.
-            warn "JustWorksRepairing=never no main.conf — é MAIS restritivo que o 'confirm' desta casa (recusa todo re-pareamento de quem já tem bond). Se foi escolha sua, NÃO deixe esta casa reescrever o valor: 'sudo bash ${dono} aplicar' rebaixa para 'confirm'$(so_no_checkout "— e o ./install.sh também"). E confira ONDE a sua linha está: FORA das sentinelas do hefesto ela é neutralizada e o 'bluez_config.sh remover' a devolve inteira; DENTRO do bloco ela é reescrita junto com o bloco e não volta (só o backup guarda)"
+            warn "JustWorksRepairing=never no main.conf — é MAIS restritivo que o 'confirm' do Hefesto (recusa todo re-pareamento de quem já tem bond). Se foi escolha sua, NÃO deixe o Hefesto reescrever o valor: 'sudo bash ${dono} aplicar' rebaixa para 'confirm'$(so_no_checkout "— e o ./install.sh também"). E confira ONDE a sua linha está: FORA das sentinelas do hefesto ela é neutralizada e o 'bluez_config.sh remover' a devolve inteira; DENTRO do bloco ela é reescrita junto com o bloco e não volta (só o backup guarda)"
             ;;
         *)
-            warn "JustWorksRepairing=${valor} no main.conf — esta casa instala 'confirm'; se o valor não foi escolha sua, $(conselho_de_instalacao)"
+            warn "JustWorksRepairing=${valor} no main.conf — o Hefesto instala 'confirm'; se o valor não foi escolha sua, $(conselho_de_instalacao)"
             ;;
     esac
 }
@@ -4265,7 +4265,7 @@ check_bt_clone_ds4() {
             # Isso atrapalha quem lê o diário, não o rádio de quem joga.
             warn "controle 'tipo DualShock 4' (054C:05C4) pareado (${mac}) — esse firmware não calcula a verificação de integridade e enche o diário do kernel de erros de CRC"
             info "  provavelmente é um 8BitDo em modo DirectInput/PS4, que é o modo RECOMENDADO por rádio — não troque para Switch sem o cabo, que por rádio é instável"
-            info "  o barulho fica no diário: 26.884 erros de CRC mediram ZERO frames corrompidos (RADIO-BOMBARDEADO-01, 04/08)"
+            info "  o barulho fica no diário: 26.884 erros de CRC mediram ZERO frames corrompidos (medido em 04/08/2026)"
             info "  para desparear: bluetoothctl remove ${mac}  (se for um DS4 v1 legítimo, o journal desempata: 'hw_version=0x00000000' = clone)"
         fi
     done <<<"${paths}"
@@ -4371,7 +4371,7 @@ check_bt_radio() {
         if [[ "$(_dbus_bt_prop "${p}" org.bluez.Device1 Paired)" == "true" ]] \
                 && ! _dbus_bt_prop "${p}" org.bluez.Device1 UUIDs \
                     | grep -q '00001124-0000-1000-8000-00805f9b34fb'; then
-            fail "${alias:-controle} (${mac}) tem bond mas NENHUM perfil HID registrado (SDP vazio) — o BlueZ recusa a reconexão dele como 'unknown device' e o link cai sozinho. Cura (apaga o pareamento): busctl call org.bluez ${p%/*} org.bluez.Adapter1 RemoveDevice o ${p} && sudo rm -f /var/lib/bluetooth/*/cache/${mac} — e pareie de novo. O cache TEM de sair junto (SDP-CACHE-01), senão o pareamento novo nasce igual"
+            fail "${alias:-controle} (${mac}) tem bond mas NENHUM perfil HID registrado (SDP vazio) — o BlueZ recusa a reconexão dele como 'unknown device' e o link cai sozinho. Cura (apaga o pareamento): busctl call org.bluez ${p%/*} org.bluez.Adapter1 RemoveDevice o ${p} && sudo rm -f /var/lib/bluetooth/*/cache/${mac} — e pareie de novo. O cache TEM de sair junto, senão o pareamento novo nasce igual"
         fi
     done <<<"${paths}"
     # Inquiry contínuo rouba banda dos links dos controles (provado ao vivo:
@@ -4674,7 +4674,7 @@ check_kernel_watch() {
 
     _relata JOYCON "${n_joycon}" "$(_quantos_desde JOYCON "${corte}")" \
         "$(_quando_o_ultimo JOYCON)" \
-        "o kernel deu rate-limit no controle Nintendo/8BitDo [JOYCON] — é a morte do 8BitDo em Bluetooth (muro do hid-nintendo); a configuração estável é NO CABO. Onda T: o patch DKMS (ver seção abaixo) reduz a chance do link cair, mas não elimina a degradação de rádio"
+        "o kernel deu rate-limit no controle Nintendo/8BitDo [JOYCON] — é a morte do 8BitDo em Bluetooth (muro do hid-nintendo); a configuração estável é NO CABO. O patch DKMS do hid-nintendo (ver seção abaixo) reduz a chance do link cair, mas não elimina a degradação de rádio"
     _relata JOYCON-PROBE "${n_joycon_probe}" "$(_quantos_desde JOYCON-PROBE "${corte}")" \
         "$(_quando_o_ultimo JOYCON-PROBE)" \
         "o hid-nintendo falhou no PROBE [JOYCON-PROBE] — morte 'invisível' (o device nem chega a registrar; sem cascata [JOYCON]); ver a seção DKMS hid-nintendo abaixo"
@@ -4930,7 +4930,7 @@ check_bluez_curas_do_backport() {
         fi
     done < <(sed -n 's/^MARCA_\([^=]*\)=\(.*\)$/\1\t\2/p' "${baseline}" 2>/dev/null)
     if [[ "${#faltam[@]}" -eq 0 && "${#tem[@]}" -gt 0 ]]; then
-        pass "o bluetoothd em execução traz as curas do backport desta casa (${tem[*]})"
+        pass "o bluetoothd em execução traz as curas do backport do Hefesto (${tem[*]})"
     elif [[ "${#faltam[@]}" -gt 0 ]] \
          && ! command -v "${HEFESTO_DOCTOR_DPKG:-dpkg}" >/dev/null 2>&1; then
         # FORA DO DPKG O DEFEITO É O MESMO, e ele não tem cura empacotada
@@ -4940,7 +4940,7 @@ check_bluez_curas_do_backport() {
         # sessão dos controles cai do mesmo jeito, calada. O backport desta
         # casa é .deb, então o aviso diz o EFEITO e onde estão os patches — e
         # não manda rodar um install que não entrega nada ali.
-        warn "o bluetoothd em execução (${vivo}) não traz ${faltam[*]} — com três ou mais controles pelo rádio, a sessão cai no EAGAIN (o rádio cheio derruba os controles por Bluetooth). O backport desta casa é .deb e esta distro não tem dpkg: os patches estão em assets/bluez-backport/patches, para o BlueZ da sua distro"
+        warn "o bluetoothd em execução (${vivo}) não traz ${faltam[*]} — com três ou mais controles pelo rádio, a sessão cai no EAGAIN (o rádio cheio derruba os controles por Bluetooth). O backport do Hefesto é .deb e esta distro não tem dpkg: os patches estão em assets/bluez-backport/patches, para o BlueZ da sua distro"
     elif [[ "${#faltam[@]}" -gt 0 ]]; then
         warn "o bluetoothd em execução (${vivo}) não traz ${faltam[*]} — sem o hefesto-0002, o rádio cheio (EAGAIN) derruba a sessão dos controles por Bluetooth: $(conselho_de_instalacao)$(so_no_checkout "(o passo 3f instala o backport que estiver no cache; sem ele: scripts/construir_bluez_backport.sh)")"
     else
@@ -4971,7 +4971,7 @@ check_bluez_backport_version() {
             pass "bluez ${ver}${origem} >= ${_BZ_PISO} e < ${_BZ_TETO} (sem os crashes crônicos de input/HIDP do 5.72, e sem o UAF do 5.87)"
             ;;
         nova)
-            warn "bluez ${ver}${origem} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se ela já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O alvo desta casa é o backport 5.86$(so_no_checkout "(./install.sh, passo 3f)"); o porquê está em docs/process/estudos/2026-08-07-o-defeito-do-bluez-que-ela-lembrou-e-os-outros-cinco.md §D"
+            warn "bluez ${ver}${origem} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se ela já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O alvo do Hefesto é o backport 5.86$(so_no_checkout "(./install.sh, passo 3f)")."
             ;;
         old)
             fail "bluez ${ver}${origem} < 5.79 — crashes crônicos de input/HIDP (heap corruption, 6x/5 dias medidos) documentados; aplique o backport: $(conselho_de_instalacao)$(so_no_checkout "(passo ONDA-R aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os com scripts/construir_bluez_backport.sh)")"
@@ -5090,7 +5090,7 @@ check_bt_resilience() {
         warn "resiliência do bluetoothd não instalada (crash do bluetoothd destrói bonds sem backup): $(conselho_de_instalacao "" "/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh" "— atenção: ele traz os alvos das regras 82/83, mas NÃO os timers")$(so_no_checkout "— em QUALQUER formato, inclusive --flatpak/--appimage/--deb")"
     fi
     if [[ ! -f /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf ]]; then
-        warn "drop-in 10-hefesto-resilience.conf ausente — sem o desarme do watchdog do systemd (BLUETOOTHD-MORTO-POR-NOS-01) e sem snapshot na parada do serviço"
+        warn "drop-in 10-hefesto-resilience.conf ausente — sem o desarme do watchdog do systemd (que matava o bluetoothd) e sem snapshot na parada do serviço"
     fi
     # BT-NINTENDO-ACTIVE-01 + BT-SNIFF-PER-OUI-01 (23/07): o modo ativo é o nome
     # "Nintendo*" (do ADAPTADOR, vale para todos) + no-sniff SÓ no Pro genuíno
@@ -5175,7 +5175,7 @@ check_bt_resilience() {
             if [[ "${_pro_lp}" == "SNIFF" ]]; then
                 warn "modo ativo p/ Nintendo: alias e SNIFF do adaptador OK, mas o Pro genuíno conectado está COM sniff (deveria ser sem). Reaplique: sudo /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh"
             else
-                pass "modo ativo p/ Nintendo (nome '${_alias}' + SNIFF no adaptador p/ o 8BitDo probar + no-sniff só no Pro genuíno — BT-SNIFF-PER-OUI-01)"
+                pass "modo ativo p/ Nintendo (nome '${_alias}' + SNIFF no adaptador p/ o 8BitDo probar + no-sniff só no Pro genuíno)"
             fi
         else
             warn "modo ativo p/ Nintendo incompleto (alias='${_alias:-?}', SNIFF-adaptador=${_lp:-AUSENTE}); o adaptador deve MANTER o SNIFF (o 8BitDo precisa) — reaplique: sudo /usr/local/lib/hefesto-dualsense4unix/bt_active_mode.sh"
@@ -6043,7 +6043,7 @@ _veredito_do_hide() {
         # de entrada junto com o hidraw. Nó de entrada aberto com o hidraw
         # escondido deixou de ser «decisão em aberto» e passou a ser um broker
         # que não fechou: o de antes da cura, ainda na memória.
-        warn "o hide não fechou os nós de entrada: ${TRES_SUP_ESCONDIDOS} de ${TRES_SUP_CONTROLES} controle(s) escondido(s) do jogo — o FÍSICO segue alcançável em ${TRES_SUP_N_ABERTOS} nó(s) de entrada (${TRES_SUP_ABERTOS}), e quem enumerar /dev/input em vez de hidraw acha o controle dobrado. O broker fecha os quatro junto com o hidraw desde a HIDE-SO-O-HIDRAW-02; se ele não fechou, o que roda é o de antes da cura (veja o check do broker em memória acima). Reinicie sem abrir o físico: ${GESTO_DE_REINICIAR_O_BROKER}"
+        warn "o hide não fechou os nós de entrada: ${TRES_SUP_ESCONDIDOS} de ${TRES_SUP_CONTROLES} controle(s) escondido(s) do jogo — o FÍSICO segue alcançável em ${TRES_SUP_N_ABERTOS} nó(s) de entrada (${TRES_SUP_ABERTOS}), e quem enumerar /dev/input em vez de hidraw acha o controle dobrado. O broker fecha os quatro junto com o hidraw desde 24/09/2026; se ele não fechou, o que roda é o de antes da cura (veja o check do broker em memória acima). Reinicie sem abrir o físico: ${GESTO_DE_REINICIAR_O_BROKER}"
         return
     fi
     # A conta é sobre o que foi MEDIDO, não sobre o que entrou na varredura.
@@ -6108,7 +6108,7 @@ _veredito_do_open_de_entrada() {
             pass "cmd open serviu o nó de ENTRADA do físico (${detalhe}) — o gamepad, o touchpad e o giroscópio chegam ao daemon com os nós fechados"
             ;;
         velho)
-            warn "o broker em memória não conhece os nós de entrada (recusou ${detalhe} como caminho) — é o de antes da HIDE-SO-O-HIDRAW-02, e com a regra 72 nova o daemon fica sem o gamepad, o touchpad e o giroscópio do físico até ele reiniciar: ${GESTO_DE_REINICIAR_O_BROKER}"
+            warn "o broker em memória não conhece os nós de entrada (recusou ${detalhe} como caminho) — é o de antes de 24/09/2026 (quando o broker passou a fechar os nós de entrada junto com o hidraw), e com a regra 72 nova o daemon fica sem o gamepad, o touchpad e o giroscópio do físico até ele reiniciar: ${GESTO_DE_REINICIAR_O_BROKER}"
             ;;
         fail)
             fail "cmd open do nó de ENTRADA falhou (${detalhe}) — o daemon fica sem o gamepad, o touchpad e o giroscópio do físico; confira DeviceAllow=char-input rw em /etc/systemd/system/hefesto-hidraw-broker.service e rode: sudo systemctl daemon-reload && ${GESTO_DE_REINICIAR_O_BROKER}"
@@ -6143,7 +6143,7 @@ _medir_o_broker_em_memoria() {
 check_hidraw_broker() {
     command -v systemctl >/dev/null 2>&1 || { info "systemctl ausente — não checo o broker hide-hidraw"; return; }
     if ! systemctl cat hefesto-hidraw-broker.socket >/dev/null 2>&1; then
-        info "broker hide-hidraw não instalado ($(conselho_de_instalacao)$(so_no_checkout "— BROKER-01 é DEFAULT, sem flag"))"
+        info "broker hide-hidraw não instalado ($(conselho_de_instalacao)$(so_no_checkout "— o broker vem por default, sem flag"))"
         return
     fi
     local sock_state
@@ -6906,7 +6906,7 @@ check_steam_input_allowlist() {
     done
     pass "allowlist do Steam Input (o Hefesto não desliga o Steam Input destes): ${nomes}"
     [[ -n "${desligado}" ]] && warn "jogo(s) na allowlist com o Steam Input DESLIGADO na Steam (UseSteamControllerConfig=0): ${desligado} — entrar na allowlist só IMPEDE o Hefesto de desligar, nunca LIGA; ligue na Steam (Propriedades → Controle → 'Ativar Entrada Steam'), ou tire o jogo da lista se a intenção mudou"
-    [[ -n "${ausente}" ]] && info "jogo(s) na allowlist sem a chave UseSteamControllerConfig no vdf (a Steam nunca gravou nada para eles): ${ausente} — vale o default da Steam, que esta casa não mediu; abrir Propriedades → Controle uma vez faz a Steam escrever a chave"
+    [[ -n "${ausente}" ]] && info "jogo(s) na allowlist sem a chave UseSteamControllerConfig no vdf (a Steam nunca gravou nada para eles): ${ausente} — vale o default da Steam, que o Hefesto não mediu; abrir Propriedades → Controle uma vez faz a Steam escrever a chave"
     return 0
 }
 
@@ -7702,7 +7702,7 @@ _check_dkms_secureboot() {
     local kver; kver="$(uname -r)"
     if compgen -G "${HEFESTO_DKMS_MODULES_ROOT:-/lib/modules}/${kver}/updates/dkms/*.ko*" >/dev/null 2>&1; then
         _DKMS_SB_WARNED=1
-        warn "Secure Boot ligado, a chave do DKMS não está inscrita, e há módulos desta casa em updates/dkms — o kernel os RECUSA no boot e NÃO volta ao driver de fábrica (o DualSense, o controle Nintendo ou o Wi-Fi USB ficam sem driver): $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_mok )"
+        warn "Secure Boot ligado, a chave do DKMS não está inscrita, e há módulos do Hefesto em updates/dkms — o kernel os RECUSA no boot e NÃO volta ao driver de fábrica (o DualSense, o controle Nintendo ou o Wi-Fi USB ficam sem driver): $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_mok )"
     fi
 }
 
@@ -7774,14 +7774,14 @@ _check_hid_nintendo_exceeded_dense_signature() {
 # NUNCA chama modprobe/rmmod/dkms install aqui (isso é do install.sh).
 check_hefesto_hid_nintendo_dkms() {
     if ! command -v dkms >/dev/null 2>&1; then
-        info "dkms ausente — patch DKMS do hid-nintendo (Onda T) não instalado (opcional: sudo apt install dkms$(so_no_checkout "— ou ./install.sh, que o instala por default"))"
+        info "dkms ausente — patch DKMS do hid-nintendo (a cura do probe pelo Bluetooth) não instalado (opcional: sudo apt install dkms$(so_no_checkout "— ou ./install.sh, que o instala por default"))"
         return
     fi
     local kver status
     kver="$(uname -r)"
     status="$(dkms status "${HEFESTO_DKMS_HID_NINTENDO_PKG}/${HEFESTO_DKMS_HID_NINTENDO_VER}" 2>/dev/null)"
     if [[ -z "${status}" ]]; then
-        info "patch DKMS do hid-nintendo (Onda T) não instalado — driver in-tree em uso (cura de raiz do probe BT: $(conselho_de_instalacao "" "/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh")$(so_no_checkout "— opt-out: --no-dkms"))"
+        info "patch DKMS do hid-nintendo não instalado — driver in-tree em uso (cura de raiz do probe BT: $(conselho_de_instalacao "" "/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh")$(so_no_checkout "— opt-out: --no-dkms"))"
         return
     fi
     if printf '%s\n' "${status}" | grep -qF ", ${kver}"; then
@@ -7834,14 +7834,14 @@ readonly HEFESTO_DKMS_RTW88_VER="1.0.0"
 # NUNCA chama modprobe/rmmod/dkms install aqui (isso é do install.sh).
 check_hefesto_rtw88_usb_dkms() {
     if ! command -v dkms >/dev/null 2>&1; then
-        info "dkms ausente — patch DKMS do rtw88_usb (Onda W) não instalado (opcional: sudo apt install dkms$(so_no_checkout "— ou ./install.sh, que o instala por default"))"
+        info "dkms ausente — patch DKMS do rtw88_usb (a cura do fantasma USB do dongle Wi-Fi) não instalado (opcional: sudo apt install dkms$(so_no_checkout "— ou ./install.sh, que o instala por default"))"
         return
     fi
     local kver status
     kver="$(uname -r)"
     status="$(dkms status "${HEFESTO_DKMS_RTW88_PKG}/${HEFESTO_DKMS_RTW88_VER}" 2>/dev/null)"
     if [[ -z "${status}" ]]; then
-        info "patch DKMS do rtw88_usb (Onda W) não instalado — driver in-tree em uso (cura de raiz do fantasma USB do dongle WiFi: $(conselho_de_instalacao "" "/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh")$(so_no_checkout "— opt-out: --no-dkms"))"
+        info "patch DKMS do rtw88_usb não instalado — driver in-tree em uso (cura de raiz do fantasma USB do dongle WiFi: $(conselho_de_instalacao "" "/usr/share/hefesto-dualsense4unix/scripts/install-host-udev.sh")$(so_no_checkout "— opt-out: --no-dkms"))"
         return
     fi
     if printf '%s\n' "${status}" | grep -qF ", ${kver}"; then
@@ -7929,12 +7929,12 @@ check_hefesto_hid_playstation_dkms() {
     [[ "${modpath}" == */updates/dkms/* ]] && staged=1
 
     if [[ -d "${modulo}" ]] && _hid_playstation_carregado_guarda_o_audio "${modulo}" "${baseline}"; then
-        pass "o driver do DualSense carregado descarta o áudio do microfone (o hid-playstation desta casa): o microfone pelo rádio pode subir"
+        pass "o driver do DualSense carregado descarta o áudio do microfone (o hid-playstation do Hefesto): o microfone pelo rádio pode subir"
         return
     fi
     if [[ ! -d "${modulo}" ]]; then
         if [[ "${staged}" -eq 1 ]]; then
-            info "o driver do DualSense não está carregado agora (sem DualSense ligado?) — o desta casa entra na próxima conexão (${modpath})"
+            info "o driver do DualSense não está carregado agora (sem DualSense ligado?) — o do Hefesto entra na próxima conexão (${modpath})"
         else
             info "o driver do DualSense não está carregado agora (sem DualSense ligado?)"
         fi
@@ -7944,16 +7944,16 @@ check_hefesto_hid_playstation_dkms() {
     # depende de por que o desta casa não está ali.
     local efeito="o microfone do DualSense pelo rádio fica desligado, porque o driver carregado leria o áudio como botão e mexeria o cursor"
     if [[ "${staged}" -eq 1 ]]; then
-        warn "${efeito} — o driver desta casa já está instalado para este kernel e entra no PRÓXIMO BOOT: reinicie o computador"
+        warn "${efeito} — o driver do Hefesto já está instalado para este kernel e entra no PRÓXIMO BOOT: reinicie o computador"
     elif [[ -n "${baseline}" && "${na_lista}" -eq 0 ]]; then
-        warn "${efeito} — o kernel ${kver} não está entre os conferidos (${validados:-nenhum}), e o driver desta casa não se constrói nele de propósito (patch/BASELINE); o de fábrica segue"
+        warn "${efeito} — o kernel ${kver} não está entre os conferidos (${validados:-nenhum}), e o driver do Hefesto não se constrói nele de propósito (patch/BASELINE); o de fábrica segue"
     elif [[ -r "${ROOT_DIR}/scripts/dkms_lib.sh" ]] \
          && ( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_secure_boot_ligado && ! dkms_chave_mok_inscrita ); then
-        warn "${efeito} — Secure Boot ligado e a chave do DKMS não está inscrita, e sem ela o driver desta casa não se instala: $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_mok )"
+        warn "${efeito} — Secure Boot ligado e a chave do DKMS não está inscrita, e sem ela o driver do Hefesto não se instala: $( source "${ROOT_DIR}/scripts/dkms_lib.sh"; dkms_passo_da_mok )"
     elif ! command -v dkms >/dev/null 2>&1; then
-        warn "${efeito} — falta o dkms (e os headers do kernel) para construir o driver desta casa: instale os dois e $(conselho_de_instalacao)"
+        warn "${efeito} — falta o dkms (e os headers do kernel) para construir o driver do Hefesto: instale os dois e $(conselho_de_instalacao)"
     else
-        warn "${efeito} — o driver desta casa não está instalado para o kernel ${kver}: $(conselho_de_instalacao)"
+        warn "${efeito} — o driver do Hefesto não está instalado para o kernel ${kver}: $(conselho_de_instalacao)"
     fi
 }
 
@@ -8596,7 +8596,7 @@ main() {
     # `fix_wireplumber_default_source.sh --promote-source` chama, para a cura
     # das camadas ter UM dono só e não virar dois códigos que divergem.
     if [[ "${FIX_MIC}" -eq 1 ]]; then
-        hdr "microfone do DualSense (MIC-USB-01 — camadas 1 e 2)"
+        hdr "microfone do DualSense (camadas 1 e 2)"
         fix_mic_dualsense
         check_mic_mute_persistido
         check_mic_perfil_sem_sinal
@@ -8690,7 +8690,7 @@ main() {
     hdr "o modo de cada jogador e a hora de cada pad"
     check_o_modo_no_ar
     check_a_hora_do_pad
-    hdr "broker hide-hidraw (BROKER-01 — cura de raiz do duplicado)"
+    hdr "broker hide-hidraw (cura de raiz do controle duplicado)"
     check_hidraw_broker
     check_quem_segura_o_fisico
     hdr "giroscópio no jogo (vpad Motion)"
@@ -8701,11 +8701,11 @@ main() {
     check_controller
     check_perms_soft
     check_hid_nintendo_bt_cascade
-    hdr "DKMS hid-nintendo (Onda T — cura de raiz do probe BT)"
+    hdr "DKMS hid-nintendo (cura de raiz do probe pelo Bluetooth)"
     check_hefesto_hid_nintendo_dkms
     hdr "DKMS hid-playstation (a guarda do microfone pelo rádio)"
     check_hefesto_hid_playstation_dkms
-    hdr "DKMS rtw88_usb / WiFi (Onda W — fantasma USB + powersave)"
+    hdr "DKMS rtw88_usb / WiFi (fantasma USB + powersave)"
     check_hefesto_rtw88_usb_dkms
     check_usb_fantasma
     check_wifi_powersave
