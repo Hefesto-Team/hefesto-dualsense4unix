@@ -3860,7 +3860,13 @@ os.environ.setdefault("PYTHONFAULTHANDLER", "1")
 # reescreve o próprio PATH por dentro e chama o lançador pelo nome; `os.kill`
 # num pid que não saiu do `pgrep` nem do `flatpak ps`; e a leitura do `/proc`
 # (`steam_game_running`), que continua vendo o jogo dela aberto — esse caminho
-# RECUSA o ato, então fica do lado seguro. E, onde não há Steam (o CI), o
+# RECUSA o ato, então fica do lado seguro. Como no SOM, também não alcança o
+# script de shell rodado com um `env` sem PATH nenhum (o shell usa o PATH
+# padrão dele) nem o lançador por caminho absoluto como ARGUMENTO de outro
+# programa (`setsid /usr/games/steam`): o desvio olha o programa, não o resto
+# do argv. E o veredito não alcança o ato de um `atexit` (ele roda depois do
+# fim da sessão) nem o teste marcado `xfail`, que engole a reprovação; nos
+# dois o ato continua caindo no dublê. Onde não há Steam (o CI), o
 # `shutil.which("steam")` passa a achar o dublê.
 
 #: Os nomes que ABREM, FECHAM ou trazem para a frente um lançador — e os que
