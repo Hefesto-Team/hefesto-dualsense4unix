@@ -422,13 +422,19 @@ def test_o_fluxo_mudo_do_alto_falante_nao_segura_o_rumble(
     mundo.mesa.servidor.placa(som, "/devices/virtual/som")
     mundo.mesa.servidor.jogo_em.add(som)
     mundo.mesa.volta(*controles)
-    # A ponte do som escuta o fluxo aberto e MUDO: bytes zero no monitor.
+    # A ponte do som escuta o fluxo aberto e MUDO: bytes zero no monitor. Na
+    # volta em que ela subiu ninguém o tinha ouvido ainda («não sei»), e o
+    # fluxo segurou; a volta seguinte já sabe que ele é mudo.
+    af.fonte_que_ouve(lambda n: bytes(n), som)(1920)
+    mundo.mesa.volta(*controles)
     af.fonte_que_ouve(lambda n: bytes(n), som)(1920)
     mundo.rumble(_X1, 0, 180)
+    af.fonte_que_ouve(lambda n: bytes(n), som)(1920)
     mundo.mesa.volta(*controles)
     # O tocador do rumble toca no endpoint do lugar, e a ponte do som o escuta.
     from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 
+    af.fonte_que_ouve(lambda n: bytes(n), som)(1920)
     af.fonte_que_ouve(
         lambda n: MOTOR * (n // 8), eh.nome_do_endpoint(1), canais=af.CANAIS_DA_HAPTICA
     )(4096)
@@ -440,6 +446,34 @@ def test_o_fluxo_mudo_do_alto_falante_nao_segura_o_rumble(
     af.fonte_que_ouve(lambda n: VOZ * (n // 4), som)(1920)
     mundo.mesa.volta(*controles)
     assert mundo.sub._pontes[_X1].arranjo is None
+
+
+def test_o_fluxo_do_alto_falante_que_ninguem_escutou_ainda_segura_o_rumble(
+    mundo: Any, monkeypatch: pytest.MonkeyPatch  # noqa: F811
+) -> None:
+    """«Não sei» não é «mudo»: sem ninguém escutando o nó do som, vale o fluxo aberto.
+
+    A ponte ainda não subiu (ou espera vaga) e ninguém leu o monitor do
+    alto-falante: o rumble segue pelo HID e o som fica com o rádio, como antes
+    (a D-2909-NO-RADIO-O-ALTO-FALANTE-GANHA com o ``na_duvida=True`` dela). Só o
+    fluxo ESCUTADO e mudo solta a ponte para o rumble.
+
+    MORDIDA: no ramo do rumble de ``_casar_as_pontes``, pergunte só
+    ``som_toca`` (o «não sei» vira «mudo») — a háptica do rumble toma o rádio de
+    um alto-falante que ninguém ouviu.
+    """
+    monkeypatch.setattr(af, "OUVIDO", af.OuvidoDosNos())
+    controles = _no_radio_os_quatro(mundo)
+    mundo.mesa.volta(*controles)
+    mundo.rumble(_X1, 0, 180)
+    mundo.mesa.volta(*controles)
+    som = af.nome_do_sink(_X1)
+    mundo.mesa.servidor.placa(som, "/devices/virtual/som")
+    mundo.mesa.servidor.jogo_em.add(som)
+    assert af.OUVIDO.tem_sinal(som) is None
+    mundo.mesa.volta(*controles)
+    assert mundo.sub._pontes[_X1].arranjo is None, "o «não sei» do ouvido virou «mudo»"
+    assert mundo.backend.do(_X1)[-1] == (0, 180), "o HID não voltou a levar"
 
 
 # ---------------------------------------------------------------------------

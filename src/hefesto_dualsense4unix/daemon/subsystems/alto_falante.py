@@ -2166,7 +2166,12 @@ class AltoFalanteSubsystem:
             # canto de O Canto saía mudo pelo rádio (e tocava no cabo). Quem
             # responde é o OUVIDO (:meth:`_o_no_tem_sinal`), com o que a ponte
             # leu dos dois monitores.
-            som_toca = self._o_no_tem_sinal(nome_do_sink(uniq)) is True
+            som_sinal = self._o_no_tem_sinal(nome_do_sink(uniq))
+            som_toca = som_sinal is True
+            # «NÃO SEI» NÃO É «MUDO»: sem ninguém escutando o nó do som (a
+            # ponte ainda não subiu, ou espera vaga), vale o fluxo, como antes.
+            # Só o fluxo ESCUTADO e mudo deixa de segurar o rádio. O fluxo é
+            # perguntado só por quem precisa: custa duas viagens ao `pactl`.
             # O RUMBLE CONVERTIDO É O TERCEIRO LADO (NO-MODO-XBOX-TUDO-FUNCIONA-01,
             # 29/09/2026): o jogo que só manda rumble já disse de quem é. Mas
             # pelo rádio som e vibração são exclusivos, e a háptica fina não
@@ -2174,7 +2179,9 @@ class AltoFalanteSubsystem:
             # só com o fluxo aberto e mudo), o HID leva.
             pelo_rumble = False
             if not este_joga and self._recebe_o_rumble(uniq):
-                if som_toca:
+                if som_toca if som_sinal is not None else sink_esta_tocando(
+                    nome_do_sink(uniq), na_duvida=True
+                ):
                     com_som.add(uniq)
                 else:
                     pelo_rumble = True
@@ -2226,8 +2233,10 @@ class AltoFalanteSubsystem:
                 self._descer_ponte_ociosa(uniq)
                 continue
             # COM SOM É O ALTO-FALANTE TOCANDO, com sinal: a ponte do som de pé
-            # sobre um fluxo mudo não tira o rumble convertido de ninguém.
-            if modo == "som" and som_toca:
+            # sobre um fluxo ESCUTADO e mudo não tira o rumble convertido de
+            # ninguém. O fluxo que ninguém escutou ainda segura, como antes (o
+            # portão logo acima já disse que ele está aberto).
+            if modo == "som" and som_sinal is not False:
                 com_som.add(uniq)
             # O LUGAR QUE ANDA TROCA A PONTE (conferência de 28/09/2026): a
             # ponte em modo háptica lê o endpoint do lugar de QUANDO subiu. Se
