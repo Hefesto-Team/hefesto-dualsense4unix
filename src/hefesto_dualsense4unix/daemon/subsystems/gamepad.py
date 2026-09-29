@@ -1315,47 +1315,6 @@ def _mults_por_motor(
     return (degrau * fraco_pct / 100.0, degrau * forte_pct / 100.0)
 
 
-def _levar_a_haptica_fina(
-    daemon: Any,
-    vpad: Any,
-    target_uniq: str | None,
-    weak: int,
-    strong: int,
-    *,
-    reaplicar: Callable[[], object] | None = None,
-) -> bool:
-    """O rumble do pad SEM háptica vai à háptica fina do lugar. True = ela leva.
-
-    NO-MODO-XBOX-TUDO-FUNCIONA-01, parte 4, 29/09/2026. Só o pad ``uinput``
-    converte: ele é o pad de todo cartão no modo Xbox (o Xbox 360 vestido), e
-    o do cartão Xbox ou Nintendo no modo DualSense — o jogo não tem canal de
-    háptica nenhum ali, só os dois motores. O pad ``uhid`` é um DualSense para
-    o jogo, e o jogo escolhe sozinho entre o rumble e a háptica dele.
-
-    O pad que não converte manda ZERO ao dono: o tocador que tocava o rumble
-    daquele controle (o pad que acabou de sair do ``uinput``, o rumble fixado
-    pela tela) cala. Sem endereço não há lugar, e nada se pergunta.
-    """
-    if not isinstance(target_uniq, str) or not target_uniq:
-        return False
-    alto_falante = getattr(daemon, "_alto_falante_subsystem", None)
-    levar = getattr(alto_falante, "levar_o_rumble", None)
-    if not callable(levar):
-        return False
-    converte = getattr(vpad, "backend", None) == "uinput"
-    try:
-        leva = levar(
-            target_uniq,
-            weak if converte else 0,
-            strong if converte else 0,
-            reaplicar=reaplicar if converte else None,
-        )
-    except Exception as exc:  # a háptica fina nunca derruba o rumble do jogo
-        logger.debug("haptica_fina_do_rumble_falhou", err=str(exc))
-        return False
-    return converte and leva is True
-
-
 def apply_game_rumble(
     daemon: DaemonProtocol,
     weak: int,
@@ -1460,6 +1419,47 @@ def apply_game_rumble(
         logger.warning("game_rumble_failed", err=str(exc))
         return None
     return (weak_eff, strong_eff)
+
+
+def _levar_a_haptica_fina(
+    daemon: Any,
+    vpad: Any,
+    target_uniq: str | None,
+    weak: int,
+    strong: int,
+    *,
+    reaplicar: Callable[[], object] | None = None,
+) -> bool:
+    """O rumble do pad SEM háptica vai à háptica fina do lugar. True = ela leva.
+
+    NO-MODO-XBOX-TUDO-FUNCIONA-01, parte 4, 29/09/2026. Só o pad ``uinput``
+    converte: ele é o pad de todo cartão no modo Xbox (o Xbox 360 vestido), e
+    o do cartão Xbox ou Nintendo no modo DualSense — o jogo não tem canal de
+    háptica nenhum ali, só os dois motores. O pad ``uhid`` é um DualSense para
+    o jogo, e o jogo escolhe sozinho entre o rumble e a háptica dele.
+
+    O pad que não converte manda ZERO ao dono: o tocador que tocava o rumble
+    daquele controle (o pad que acabou de sair do ``uinput``, o rumble fixado
+    pela tela) cala. Sem endereço não há lugar, e nada se pergunta.
+    """
+    if not isinstance(target_uniq, str) or not target_uniq:
+        return False
+    alto_falante = getattr(daemon, "_alto_falante_subsystem", None)
+    levar = getattr(alto_falante, "levar_o_rumble", None)
+    if not callable(levar):
+        return False
+    converte = getattr(vpad, "backend", None) == "uinput"
+    try:
+        leva = levar(
+            target_uniq,
+            weak if converte else 0,
+            strong if converte else 0,
+            reaplicar=reaplicar if converte else None,
+        )
+    except Exception as exc:  # a háptica fina nunca derruba o rumble do jogo
+        logger.debug("haptica_fina_do_rumble_falhou", err=str(exc))
+        return False
+    return converte and leva is True
 
 
 def apply_game_trigger(
