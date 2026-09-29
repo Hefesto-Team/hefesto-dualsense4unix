@@ -3033,7 +3033,6 @@ def _nenhum_hidraw_vivo_na_varredura_de_som(
     vazio = tmp_path_factory.mktemp("sysfs-sem-hidraw")
     (vazio / "hidraw").mkdir()
     try:
-        from hefesto_dualsense4unix.core import backend_pydualsense
         from hefesto_dualsense4unix.integrations import dualsense_bt_audio
     except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
         # A mesma razão, palavra por palavra, da irmã logo acima: o job "A casa
@@ -3044,15 +3043,26 @@ def _nenhum_hidraw_vivo_na_varredura_de_som(
         yield
         return
 
+    # O backend num import próprio: ele puxa o `pydualsense`, que as varreduras
+    # do som não usam. Se só ele faltar, o desvio do som continua de pé.
+    backend_pydualsense: Any = None
+    try:
+        from hefesto_dualsense4unix.core import backend_pydualsense
+    except ModuleNotFoundError as erro:  # pragma: no cover - só sem o pydualsense
+        if not _o_produto_nao_roda_neste_ambiente(erro):
+            raise
+
     antes = dualsense_bt_audio._SYSFS_HIDRAW
-    antes_do_backend = backend_pydualsense.RAIZ_CLASS_HIDRAW
     dualsense_bt_audio._SYSFS_HIDRAW = str(vazio / "hidraw")
-    backend_pydualsense.RAIZ_CLASS_HIDRAW = str(vazio / "hidraw")
+    if backend_pydualsense is not None:
+        antes_do_backend = backend_pydualsense.RAIZ_CLASS_HIDRAW
+        backend_pydualsense.RAIZ_CLASS_HIDRAW = str(vazio / "hidraw")
     try:
         yield
     finally:
         dualsense_bt_audio._SYSFS_HIDRAW = antes
-        backend_pydualsense.RAIZ_CLASS_HIDRAW = antes_do_backend
+        if backend_pydualsense is not None:
+            backend_pydualsense.RAIZ_CLASS_HIDRAW = antes_do_backend
 
 
 @pytest.fixture(autouse=True, scope="session")
