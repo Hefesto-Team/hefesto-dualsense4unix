@@ -485,7 +485,7 @@ def _baterias(backend: Any) -> dict[str, int]:
     """`{uniq: battery_pct}` dos controles conectados. Só quem reportou entra.
 
     `describe_controllers` já devolve a carga por controle
-    (`core/backend_pydualsense.py:7896`) e a leitura é `getattr` no objeto que
+    (`core/backend_pydualsense.py:7963`) e a leitura é `getattr` no objeto que
     a thread de report atualiza — sem HID I/O, e já há três consumidores do
     daemon pagando esse preço por tique.
 
@@ -563,7 +563,7 @@ async def _fora_do_laco(daemon: Any, fn: Any, *args: Any) -> Any:
     pior caso, 9 s, se lê como a máquina dela travando.
 
     A queda para a chamada direta existe porque `_run_blocking` exige o
-    executor montado (`daemon/lifecycle.py:6267` afirma isso), e um daemon
+    executor montado (`daemon/lifecycle.py:6512` afirma isso), e um daemon
     dublado ou meio subido não o tem. Bloquear um teste é aceitável; derrubar
     a luz por causa dele não é.
     """
@@ -986,7 +986,7 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                         desinscrever(_TOPICO_DA_BORDA, fila)
             # A DEVOLUÇÃO NO DESLIGAMENTO mora aqui porque o
             # `connection.shutdown` só sabe CANCELAR tasks
-            # (`daemon/connection.py:2206-2207`) — um laço cancelado não repinta e
+            # (`daemon/connection.py:2435-2436`) — um laço cancelado não repinta e
             # não solta nada. O `finally` roda com a cancelação já entregue, e
             # como o `shutdown` chama `cancel()` UMA vez por task, o `await` de
             # dentro de `_devolver` sobrevive; se não sobreviver, a repintura já
