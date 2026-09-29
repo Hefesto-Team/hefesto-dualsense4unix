@@ -811,3 +811,80 @@ async def test_o_ato_que_nao_escreve_solta_a_borda_no_teto(
 
     assert antes == [luz.ACESA]
     assert apos == [luz.ACESA], f"depois do teto, UMA reescrita pelo bit fresco: {apos}"
+
+
+#: O segundo controle das réguas da luz, na faixa forjada da suíte.
+DOIS = "aabbcc0000c2"
+
+
+class _BackendDeDois(_Backend):
+    """Dois controles na mesa, cada um com o seu bit de firmware e a sua posse."""
+
+    def __init__(self) -> None:
+        super().__init__(mudo_no_firmware=False)
+        self.firmware_de: dict[str, bool] = {UM: False, DOIS: False}
+        self.posse_de: dict[str, bool | None] = {UM: None, DOIS: None}
+
+    def audio_status_for(self, uniq: str | None = None) -> dict[str, bool] | None:
+        if uniq not in self.firmware_de:
+            return None
+        return {"fone_plugado": False, "mic_externo": False, "mic_mudo": self.firmware_de[uniq]}
+
+    def microphone_mute_for(self, uniq: str | None = None) -> bool | None:
+        return self.posse_de.get(uniq or "")
+
+    def describe_controllers(self) -> list[dict[str, object]]:
+        self.voltas += 1
+        return [
+            {
+                "index": i,
+                "connected": True,
+                "transport": "bt",
+                "is_primary": i == 0,
+                "uniq": uniq,
+                "battery_pct": 90,
+            }
+            for i, uniq in enumerate((UM, DOIS))
+        ]
+
+
+@pytest.mark.usefixtures("luz_na_bancada")
+async def test_a_borda_de_um_controle_nao_segura_a_luz_do_outro(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A borda do P1 segura SÓ a luz do P1; a do P2 segue o que muda nele.
+
+    Durante a espera do ato do primeiro, o segundo é calado pela tela (o bit
+    dele vira): a luz do segundo apaga na hora, e a do primeiro não é escrita.
+    Nunca só o P1: a espera é por controle, e cada um tem a sua borda.
+
+    MORDIDA: uma espera comum a todos (a borda de um segurando a mesa)
+    deixa o segundo sem a escrita até o teto.
+    """
+    monkeypatch.setattr(luz, "SEGURA_A_BORDA_S", 30.0)
+    monkeypatch.setattr(
+        sys.modules[luz.MODULO_DE_QUEM_OUVE],
+        "quem_ouve_agora",
+        lambda _uniqs: {UM: [], DOIS: []},
+    )
+    backend = _BackendDeDois()
+    daemon = _Daemon(backend)
+    tarefa = asyncio.create_task(luz.luz_do_mic_loop(daemon))
+    try:
+        await _esperar_voltas(backend, 20)
+        assert sorted(backend.escritas) == sorted([(UM, luz.ACESA), (DOIS, luz.ACESA)])
+        marca = len(backend.escritas)
+        daemon.bus.publish(str(EventTopic.MIC_DA_MESA), {"uniq": UM, "mudo": True, "seq": 1})
+        await _esperar_voltas(backend, 20)
+        backend.firmware_de[DOIS] = True
+        await _esperar_voltas(backend, 20)
+        depois = backend.escritas[marca:]
+    finally:
+        tarefa.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await tarefa
+
+    assert [v for u, v in depois if u == UM] == [], f"a borda do P1 foi pintada: {depois}"
+    assert [v for u, v in depois if u == DOIS] == [luz.APAGADA], (
+        f"a luz do P2 esperou a borda do P1: {depois}"
+    )
