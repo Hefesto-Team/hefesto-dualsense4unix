@@ -14,8 +14,8 @@ AS CINCO RÉGUAS:
    produto e um ``sudo`` de mentira no começo do ``PATH``, que aceita só o que a
    regra de verdade aceita e roda a ponte da árvore numa árvore do BlueZ de
    mentira;
-2. ninguém mais monta o sudo da ponte (a AST do ``src/`` e o texto de
-   ``scripts/``);
+2. ninguém mais monta o sudo da ponte (a AST do ``src/`` e dos ``scripts/`` em
+   Python, e o texto de ``scripts/``);
 3. a regra não tem argumento livre, e a sonda pergunta à regra a linha que o
    pedido usa (a regra nova passa; a meia-instalação, a ponte nova com a regra
    velha, não);
@@ -555,6 +555,58 @@ def test_a_regua_da_ast_ve_a_lista_montada_a_mao() -> None:
     """A régua acima não mede o vazio: a forma velha do parear é achada."""
     velho = 'def parear(self):\n    return ["sudo", "-n", "--", self.caminho, "parear"]\n'
     assert _listas_de_sudo(ast.parse(velho)) == ["parear"]
+
+
+#: Os verbos da ponte que leem endereço: numa lista literal que começa com
+#: ``"sudo"``, um deles é a ponte montada à mão, com o endereço ao lado.
+_VERBOS_COM_ENDERECO = frozenset(
+    {"bonds", "renomear", "esquecer", "parear", "desconectar", "descobrir"}
+)
+
+
+def _sudo_da_ponte_montado_a_mao(arvore: ast.AST) -> list[int]:
+    """A linha de cada lista/tupla literal que começa com ``"sudo"`` e nomeia
+    um verbo da ponte que lê endereço."""
+    linhas = []
+    for no in ast.walk(arvore):
+        if not isinstance(no, (ast.List, ast.Tuple)) or not no.elts:
+            continue
+        primeiro = no.elts[0]
+        if not (isinstance(primeiro, ast.Constant) and primeiro.value == "sudo"):
+            continue
+        if any(
+            isinstance(e, ast.Constant) and e.value in _VERBOS_COM_ENDERECO for e in no.elts[1:]
+        ):
+            linhas.append(no.lineno)
+    return linhas
+
+
+def test_nenhum_script_python_monta_o_sudo_da_ponte() -> None:
+    """Os ``scripts/`` em Python passam pelo dono (``pedido_a_ponte``), como a
+    etapa ``limpar`` da bancada do rádio: a varredura de texto abaixo lê o
+    gesto escrito para gente, e não vê uma lista do ``subprocess``.
+
+    MORDIDA: o ``["sudo", "-n", ponte, "esquecer", endereco, mac]`` de volta à
+    etapa ``limpar`` do ``scripts/bancada_do_radio.py`` reprova.
+    """
+    achados = []
+    for arquivo in sorted((RAIZ / "scripts").rglob("*.py")):
+        try:
+            arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
+        except (SyntaxError, UnicodeDecodeError):
+            continue
+        rel = arquivo.relative_to(RAIZ)
+        achados += [f"{rel}:{n}" for n in _sudo_da_ponte_montado_a_mao(arvore)]
+    assert achados == []
+
+
+def test_a_regua_dos_scripts_python_ve_a_lista_da_ponte() -> None:
+    """A régua acima não mede o vazio: a forma velha da bancada é achada, e o
+    ``sudo`` de outro programa não."""
+    velho = 'subprocess.run(["sudo", "-n", ponte, "esquecer", endereco, mac])\n'
+    outro = 'subprocess.run(["sudo", "-n", "hcitool", "con"])\n'
+    assert _sudo_da_ponte_montado_a_mao(ast.parse(velho)) == [1]
+    assert _sudo_da_ponte_montado_a_mao(ast.parse(outro)) == []
 
 
 #: A ponte (pelo nome ou por uma variável dela) seguida de um verbo que lê
