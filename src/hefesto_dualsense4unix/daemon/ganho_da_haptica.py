@@ -34,9 +34,10 @@ logger = get_logger(__name__)
 #: O volume cru que o servidor chama de 100 % (``PA_VOLUME_NORM``).
 VOLUME_NORMAL = 65536
 
-#: Quanto o fator lido pode diferir do pedido sem nova escrita: o servidor
-#: guarda o volume como inteiro cru, e a volta pela raiz cúbica arredonda.
-TOLERANCIA = 0.01
+#: Quanto o volume lido pode diferir do pedido sem nova escrita, em pontos do
+#: `%` do servidor: o leitor da casa (`volumes_do_sink`) devolve o `%`
+#: arredondado ao inteiro, e um ponto é o arredondamento.
+TOLERANCIA_PCT = 1.0
 
 Rodar = Callable[[list[str]], "str | None"]
 
@@ -52,29 +53,19 @@ def _chave(uniq: str | None) -> str | None:
     return None
 
 
-def volumes_crus(nome: str, saida: str) -> list[int] | None:
-    """Os volumes crus (inteiros, 65536 = 100 %) por canal deste sink."""
-    dentro = False
-    for linha in saida.splitlines():
-        crua = linha.strip()
-        if crua.startswith("Name:"):
-            dentro = crua.split(":", 1)[1].strip() == nome
-            continue
-        if dentro and crua.startswith("Volume:"):
-            achados: list[int] = []
-            for parte in crua.split(":", 1)[1].split(","):
-                if ":" not in parte:
-                    continue
-                cru = parte.split(":", 1)[1].split("/", 1)[0].strip()
-                with contextlib.suppress(ValueError):
-                    achados.append(int(cru))
-            return achados or None
-    return None
-
-
 def linear_do_cru(cru: int) -> float:
     """O fator de amplitude de um volume cru (a escala do servidor é cúbica)."""
     return float((max(cru, 0) / VOLUME_NORMAL) ** 3)
+
+
+def linear_do_pct(pct: float) -> float:
+    """O fator de amplitude do `%` do servidor (40 % → 0,064)."""
+    return float((max(pct, 0.0) / 100.0) ** 3)
+
+
+def pct_do_linear(fator: float) -> float:
+    """O `%` do servidor de um fator de amplitude (1,5 → 114,5 %)."""
+    return 100.0 * (max(fator, 0.0) ** (1.0 / 3.0))
 
 
 class GanhoDaHaptica:
@@ -150,13 +141,9 @@ class GanhoDaHaptica:
         perfil muda: o WirePlumber guarda o volume pelo NOME da placa, e o
         ganho de um controle voltaria na placa de quem plugar primeiro amanhã.
         """
-        from hefesto_dualsense4unix.integrations.alto_falante_bt import (
-            rodar_pactl,
-            sink_do_controle,
-        )
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import sink_do_controle
         from hefesto_dualsense4unix.integrations.endpoint_de_haptica import MARCA_DO_NOME
 
-        correr: Any = runner or rodar_pactl
         achar: Any = placa_de or (lambda u, mesa: sink_do_controle(u, mesa, runner=runner))
         placas = set(placas_com_motores)
         com_dono: dict[str, str] = {}
@@ -169,15 +156,10 @@ class GanhoDaHaptica:
             if not placa or placa not in placas or MARCA_DO_NOME in placa:
                 continue
             com_dono[placa] = uniq
-        if not com_dono:
-            return set()
-        longa = correr(["pactl", "list", "sinks"])
-        if longa is None:
-            return set(com_dono)  # servidor mudo: a placa segue com dono, sem escrita
         for placa, uniq in com_dono.items():
             fator = self.fator(uniq)
             self._placas[placa] = fator
-            self._escrever_traseiros(placa, fator, longa, correr)
+            self._escrever_traseiros(placa, fator, runner)
         return set(com_dono)
 
     def devolver_as_placas(self, *, runner: Rodar | None = None) -> None:
@@ -186,38 +168,41 @@ class GanhoDaHaptica:
         O ganho não sobrevive ao Hefesto: sem isto, o WirePlumber guardaria o
         1,5 da placa, e o piso de 100 % de amanhã não o baixaria.
         """
-        from hefesto_dualsense4unix.integrations.alto_falante_bt import rodar_pactl
-
-        correr: Any = runner or rodar_pactl
         placas, self._placas = dict(self._placas), {}
-        if not placas:
-            return
-        longa = correr(["pactl", "list", "sinks"])
-        if longa is None:
-            return
         for placa in placas:
             with contextlib.suppress(Exception):
-                self._escrever_traseiros(placa, 1.0, longa, correr)
+                self._escrever_traseiros(placa, 1.0, runner)
 
     @staticmethod
-    def _escrever_traseiros(placa: str, fator: float, longa: str, correr: Any) -> bool:
-        """Escreve os traseiros em fator linear, a frente como estava. True = escreveu."""
-        crus = volumes_crus(placa, longa)
-        if not crus or len(crus) < 4:
-            return False
-        traseiros = [linear_do_cru(c) for c in crus[2:4]]
-        if all(abs(t - fator) <= TOLERANCIA * max(fator, 1.0) for t in traseiros):
+    def _escrever_traseiros(placa: str, fator: float, runner: Rodar | None) -> bool:
+        """Escreve os traseiros em fator linear, a frente como estava. True = escreveu.
+
+        A LEITURA É A DA CASA (`volumes_do_sink`, que passa pelo retrato do
+        servidor de som): uma segunda pergunta `list sinks` aqui seria outro
+        leitor do mesmo servidor.
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+            rodar_pactl,
+            volumes_do_sink,
+        )
+
+        volumes = volumes_do_sink(placa, runner)
+        if not volumes or len(volumes) < 4:
+            return False  # placa estéreo ou servidor mudo: sem escrita
+        alvo = pct_do_linear(fator)
+        if all(abs(v - alvo) <= TOLERANCIA_PCT for v in volumes[2:4]):
             return False
         # OS QUATRO NA MESMA FORMA: o `pactl` recusa canais em formas
-        # diferentes. A frente volta como o fator do inteiro cru que o servidor
-        # tinha (o `%` que ele mostra é arredondado), e o alto-falante é dela.
-        frente = [f"{linear_do_cru(c):.6f}" for c in crus[:2]]
+        # diferentes. A frente volta no fator do `%` que o servidor tinha, e o
+        # alto-falante é dela.
+        frente = [f"{linear_do_pct(v):.6f}" for v in volumes[:2]]
+        correr: Any = runner or rodar_pactl
         correr([
             "pactl", "set-sink-volume", placa, *frente, f"{fator:.4f}", f"{fator:.4f}",
         ])
         logger.info(
             "haptica_ganho_na_placa",
-            sink=placa, eram=[round(t, 4) for t in traseiros], agora=round(fator, 4),
+            sink=placa, eram_pct=volumes[2:4], agora=round(fator, 4),
         )
         return True
 
