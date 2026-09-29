@@ -43,6 +43,7 @@ from monta import (monta, svg, glifo, CSS_GLIFO, CSS_POPUP, DADOS_DO_REPO, MESA,
                    cor_da_zona, player_slot_color, DS)
 from monta import NADA_A_DIZER  # noqa: E402
 from monta import TITULOS_DA_FITA  # noqa: E402
+from monta import folha_das_cores  # noqa: E402
 
 # O DESENHO E O PRODUTO ESCREVEM A IDENTIDADE PELA MESMA FUNÇÃO — 03/09/2026,
 # IDENTIDADE-VEM-DE-CIMA. É o mesmo arranjo de `aba04.py` com
@@ -1505,19 +1506,16 @@ CSS += """
 # O PREÇO, MEDIDO: a página troca 4 cópias podadas (12,3 KB) por uma folha
 # completa (45,5 KB) — +33 KB numa página de 400 KB, e o CSS das cores passa a
 # existir em UM lugar só em vez de quatro.
+#
+# A FOLHA TEM UM DONO, e é o `monta.folha_das_cores()` — 28/09/2026
+# (A-TELA-PERGUNTA-AO-DONO-01). Esta aba tinha uma `folha_das_cores` própria,
+# com a mesma leitura, ao lado da do `monta.py`, que a `aba05` e a bancada de
+# medição já usavam. A página saiu byte a byte igual com a troca (o import está
+# no topo, com os outros do `monta`). O padrão abaixo fica: ele serve a OUTRA
+# coisa, que é tirar a cópia podada de dentro de cada desenho (`desenho`), e o
+# `[^"]*` casa o id já prefixado por controle.
 _FOLHA_NO_SVG = re.compile(
     r'<style id="[^"]*cores-do-dualsense-folha">.*?</style>', re.S)
-
-
-def folha_das_cores():
-    """As 28 cores do mapa, tiradas do SVG que o gerador de cores pinta."""
-    m = _FOLHA_NO_SVG.search(DS)
-    if not m:
-        raise SystemExit(
-            "ERRO em 06-navegacao: o `<style id=\"cores-do-dualsense-folha\">` "
-            "sumiu do ds_limpo.svg — rode scripts/gerar_cores_do_dualsense.py")
-    return m.group(0)
-
 
 CSS += "\n  /* ---- as 28 cores do mapa, publicadas UMA vez ---- */\n"
 CSS += re.sub(r"</?style[^>]*>", "", folha_das_cores())

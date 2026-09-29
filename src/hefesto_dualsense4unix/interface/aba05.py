@@ -1413,18 +1413,16 @@ def _endereca_o_tremor(desenho, pref):
 # `scripts/gerar_cores_do_dualsense.py` escreveu no desenho a partir do
 # `docs/data/cores-do-dualsense.csv`, lida de volta — o mesmo caminho que
 # `cor_da_zona()` já usa para a moldura.
-_ACHOU_A_FOLHA = re.search(
-    r'<style id="cores-do-dualsense-folha">(.*?)</style>', monta_.DS, re.S)
-if _ACHOU_A_FOLHA is None:
-    raise SystemExit(
-        "ERRO em aba05: o desenho compartilhado não traz mais a folha "
-        "`cores-do-dualsense-folha` — sem ela não há os 28 modelos dela para "
-        "publicar, e o desenho voltaria a ter uma cor só. Rode "
-        "scripts/gerar_cores_do_dualsense.py")
+#
+# A LEITURA TEM UM DONO, e é o `monta.folha_das_cores()` — 28/09/2026
+# (A-TELA-PERGUNTA-AO-DONO-01). Esta aba relia o `<style>` do desenho por conta
+# própria, com o mesmo padrão; o `monta` recusa com `SystemExit` do mesmo jeito
+# quando a folha some do `ds_limpo.svg`. Tirar as duas marcas do `<style>` dá o
+# miolo que esta aba publicava, e a página saiu byte a byte igual.
 
 #: A TABELA DELA, em CSS: as dez zonas dos 28 modelos. Entra no `<style>` da
 #: página, ao lado do CSS da aba.
-FOLHA_DOS_28 = _ACHOU_A_FOLHA.group(1)
+FOLHA_DOS_28 = re.sub(r"</?style[^>]*>", "", monta_.folha_das_cores())
 
 #: A TINTA QUE A FOLHA REFERENCIA. Doze dos 28 modelos pintam com `url(#…)` — a
 #: hachura dos que ela não amostrou e os dois gradientes de casca (God of War
