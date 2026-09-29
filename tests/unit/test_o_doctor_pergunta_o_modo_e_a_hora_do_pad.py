@@ -633,17 +633,29 @@ def _bin(lar: Path, kernel: list[str], diario: list[str]) -> Path:
     return binario
 
 
-def _doctor(lar: Path, funcao: str, binario: Path | None = None) -> str:
+def _doctor(lar: Path, funcao: str, binario: Path | None = None, doctor: Path = DOCTOR) -> str:
+    """Roda uma função do doctor com o `binario` à frente do PATH.
+
+    O python que o `binario` traz é o que o doctor usa: a escolha é do
+    `_python_do_produto` (a `.venv` ao lado do script, a do `HOME`, a do `/opt`, e só
+    por último o `python3` do PATH), e o teste a diz redefinindo o dono depois do
+    `source`, como as réguas do INSTALL-UNIVERSAL. Sem isso o python plantado só era
+    o escolhido onde não há `.venv` ao lado do `doctor.sh`; no job do GTK real e na
+    mesa dela há uma, e ela respondia no lugar dele.
+    """
     caminho = f"{binario}:/usr/bin:/bin" if binario else "/usr/bin:/bin"
+    escolha = (
+        f"_python_do_produto() {{ printf '%s\\n' '{binario}/python3'; }}; " if binario else ""
+    )
     res = subprocess.run(
-        ["bash", "-c", f'set --; source "$DOCTOR_SH"; {funcao}'],
+        ["bash", "-c", f'set --; source "$DOCTOR_SH"; {escolha}{funcao}'],
         capture_output=True,
         text=True,
         timeout=60,
         check=False,
         env={
             "PATH": caminho,
-            "DOCTOR_SH": str(DOCTOR),
+            "DOCTOR_SH": str(doctor),
             "XDG_RUNTIME_DIR": str(lar),
             "HOME": str(lar),
         },
@@ -748,6 +760,32 @@ class TestODoctorPergunta:
         saida = _doctor(lar, "check_a_hora_do_pad", binario)
         assert "[WARN] a medida da hora de cada pad não respondeu" in saida, saida
         assert "o diário do daemon não tem a subida dele" not in saida
+
+    def test_a_medida_que_morre_calada_avisa_com_uma_venv_ao_lado(self, lar: Path) -> None:
+        """O mundo do job do GTK real e da mesa dela: uma `.venv` ao lado do `doctor.sh`.
+
+        A `.venv` vem primeiro na ordem do dono (`_python_do_produto`), e a de mentira
+        daqui RESPONDE (`ok|…`). O python que o teste plantou e que morre é o que o
+        doctor tem de usar, com ou sem `.venv` ao lado: o teste diz ao doctor qual é.
+        MORDIDA (O-CI-DA-DEV-VOLTA-A-VERDE-02): tire a redefinição do `_doctor` e isto
+        reprova com a frase do `ok`, que é o vermelho da corrida 36503520655.
+        """
+        copia = lar / "scripts" / "doctor.sh"
+        copia.parent.mkdir()
+        shutil.copy2(DOCTOR, copia)
+        venv = lar / ".venv" / "bin"
+        venv.mkdir(parents=True)
+        (venv / "python").write_text(
+            "#!/bin/sh\ncat >/dev/null\necho 'ok|o pad Xbox das 03:01:35 nasceu em 0,0 s'\n",
+            encoding="utf-8",
+        )
+        (venv / "python").chmod(0o755)
+        _servir(_socket(lar), {"connected": True})
+        binario = _bin(lar, BOOT_KERNEL, BOOT_DAEMON)
+        (binario / "python3").write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
+        saida = _doctor(lar, "check_a_hora_do_pad", binario, doctor=copia)
+        assert "[WARN] a medida da hora de cada pad não respondeu" in saida, saida
+        assert "[ OK ]" not in saida, saida
 
     def test_a_linha_que_a_funcao_nao_le_avisa(self, lar: Path) -> None:
         """O formato do daemon mudou (aqui, com cor): o que sobra não é «nenhum pad»."""
