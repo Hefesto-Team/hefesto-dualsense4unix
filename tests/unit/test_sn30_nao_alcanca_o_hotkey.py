@@ -33,11 +33,13 @@ O CAMINHO, medido lendo o código (nenhum aparelho tocado):
     core/evdev_reader.py:692-695, "O que ela NÃO faz: adotar ninguém (...)
     o veto de 19/07 segue de pé; quem o derruba é a E3, e ela é dela").
 
-    Desde 24/09/2026 (OS-ATALHOS-NA-ESPERA-01) o laço entrega os botões por
-    `poll.observar_os_atalhos`, e na espera do lugar guardado do P1 a fonte é
-    o próximo da fila do co-op (`CoopManager.live_snapshots`). Os jogadores do
-    co-op nascem de `discover_dualsense_evdevs` — a mesma porta FECHADA de
-    cima —, então o SN30 também não chega aos atalhos por ali.
+    Desde 28/09/2026 (O-MODO-XBOX-NAO-E-QUEDA-02, item 5) o laço entrega aos
+    atalhos os botões de CADA controle na mesa (`poll.botoes_de_cada_controle`):
+    os do co-op (`CoopManager.live_snapshots`) e os outros pelo leitor passivo
+    do `SensorHub`. Os três nascem da mesma porta FECHADA de cima — os
+    jogadores do co-op e o hub, de `discover_dualsense_evdevs`; a lista de
+    quem está na mesa, dos handles hidapi Sony do backend (`alvos_conectados`)
+    —, então o SN30 também não chega aos atalhos por ali.
 
 A MORDIDA: se alguém alargar `DUALSENSE_PIDS`/`DUALSENSE_VENDOR` para
 incluir o SN30 (em qualquer dos quatro disfarces), ou se a classificação de
