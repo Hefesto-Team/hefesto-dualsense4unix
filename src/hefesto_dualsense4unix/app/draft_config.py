@@ -232,7 +232,10 @@ class MicDraft(BaseModel):
     #: Volume da captura no sistema, em por cento (a escala do
     #: ``ProfileMicConfig.volume``, NÃO a do alto-falante, que é 0-255).
     volume: int | None = Field(default=None, ge=0, le=100)
-    #: Mudo do FIRMWARE — o mesmo que apaga a luz vermelha do microfone.
+    #: Mudo do FIRMWARE — o mesmo que apaga a luz vermelha do microfone. Desde
+    #: a O-MUDO-E-DO-CONTROLE-01 (28/09/2026) ele é do CONTROLE (o
+    #: ``maquina.json``) e nenhum gesto o escreve aqui: o campo só carrega o
+    #: que um perfil de antes da migração ainda diga, e atravessa como estava.
     muted: bool | None = None
     #: **O GANHO DE ENTRADA, 0..100 — 21/09/2026, ordem dela** (*"OS DOIS
     #: SLICERS REFLETEM TANTO LÁ QUANTO NO JOGO E ISSO DEVE SER SALVO"*).
@@ -1078,9 +1081,17 @@ class DraftConfig(BaseModel):
         valendo.
 
         Não há ``without_mic``: aqui não existe o byte inteiro para devolver. O
-        volume é do PipeWire (o kernel continua dono da fonte) e o mudo tem a
-        própria devolução acima.
+        volume é do PipeWire (o kernel continua dono da fonte).
+
+        **``muted`` E ``soltar_mudo`` NÃO MEXEM MAIS NO RASCUNHO —
+        O-MUDO-E-DO-CONTROLE-01 (28/09/2026).** O mudo é do controle (resposta
+        9 dela: *vale em todo jogo*), mora no ``maquina.json`` e tem UM
+        escritor, o ato do microfone no daemon. Os dois argumentos ficam na
+        assinatura porque o cartão do controle (``app/widgets/controller_card``)
+        ainda os passa; o ``muted`` que o rascunho carrega é o que o disco já
+        dizia, e atravessa como estava.
         """
+        del muted, soltar_mudo  # o mudo é do controle, não do rascunho
         return self.model_copy(
             update={
                 "mic": self.mic.model_copy(
@@ -1089,13 +1100,6 @@ class DraftConfig(BaseModel):
                             self.mic.volume
                             if volume is None
                             else max(0, min(100, int(volume)))
-                        ),
-                        "muted": (
-                            None
-                            if soltar_mudo
-                            else self.mic.muted
-                            if muted is None
-                            else bool(muted)
                         ),
                         "dirty": True,
                         "in_profile": True,
@@ -1449,20 +1453,25 @@ class DraftConfig(BaseModel):
         (``ControllerMicOverride``): ``hotkey.mic_button_loop`` consulta o
         ``DaemonConfig``, que é um por máquina — o campo não tem caminho por
         unidade, e campo que grava sem quem leia faz a tela prometer.
+
+        **O ``muted`` TAMBÉM NÃO ENTRA — O-MUDO-E-DO-CONTROLE-01 (28/09/2026).**
+        O mudo é do controle (resposta 9 dela: *vale em todo jogo*), mora no
+        ``maquina.json`` e tem UM escritor, o ato do microfone no daemon. O
+        rascunho não o escreve nem o apaga: um ``muted`` que a peça ainda
+        carregue no disco (de antes da migração) atravessa como estava.
         """
         from hefesto_dualsense4unix.profiles.schema import ControllerMicOverride
 
         campos: dict[str, Any] = {}
-        if mic.muted is not None and mic.muted != self.mic.muted:
-            campos["muted"] = bool(mic.muted)
         if mic.volume is not None and mic.volume != self.mic.volume:
             campos["volume"] = int(mic.volume)
         if mic.gain is not None and mic.gain != self.mic.gain:
             campos["gain"] = int(mic.gain)
         if not campos:
-            return self.with_controller_fields_cleared(
-                uniq, "mic", {"muted", "volume", "gain"}
-            )
+            return self.with_controller_fields_cleared(uniq, "mic", {"volume", "gain"})
+        antes = getattr(self.controller_override(uniq), "mic", None)
+        if antes is not None and "muted" in antes.model_fields_set:
+            campos["muted"] = antes.muted
         return self._with_override_section(
             uniq, "mic", ControllerMicOverride(**campos)
         )
@@ -1931,7 +1940,9 @@ class DraftConfig(BaseModel):
         # do ``DaemonConfig`` (ver ``MicDraft``).
         mic_ipc: dict[str, Any] | None = None
         if self.mic.dirty:
-            mic_ipc = {"volume": self.mic.volume, "muted": self.mic.muted}
+            # O MUDO NÃO VIAJA (O-MUDO-E-DO-CONTROLE-01): é do controle, e o
+            # «Aplicar» não é ato sobre ele.
+            mic_ipc = {"volume": self.mic.volume}
             if self.mic.button_toggles_system is not None:
                 mic_ipc["button_toggles_system"] = self.mic.button_toggles_system
         return {
@@ -2193,10 +2204,11 @@ def registrar_microfone_no_rascunho(
     draft = getattr(janela, "draft", None)
     if not isinstance(draft, DraftConfig):
         return
-    if volume is None and muted is None and not soltar_mudo:
-        # Gesto sem opinião nenhuma não marca a seção como tocada: marcar aqui
-        # faria um perfil legado ganhar seção `mic` fantasma por um clique que
-        # não mudou nada.
+    if volume is None:
+        # Gesto sem opinião sobre o volume não marca a seção como tocada:
+        # marcar aqui faria um perfil legado ganhar seção `mic` fantasma por um
+        # clique que não mudou nada. O MUDO não conta como opinião do rascunho
+        # desde a O-MUDO-E-DO-CONTROLE-01: ele é do controle (ver `with_mic`).
         return
     janela.draft = draft.with_mic(
         volume=volume, muted=muted, soltar_mudo=soltar_mudo

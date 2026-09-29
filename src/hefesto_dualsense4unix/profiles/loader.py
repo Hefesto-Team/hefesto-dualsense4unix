@@ -1339,6 +1339,153 @@ def enxugar_perfis_de_jogo(dest_dir: Path | None = None) -> list[str]:
     return enxutos
 
 
+# --- O-MUDO-E-DO-CONTROLE-01 (28/09/2026) — o mudo sai do perfil -------------
+# A decisão é dela (resposta 9 da noite de 27/09): *o mudo do microfone é do
+# controle, e vale em todo jogo*. Ele morava em três lugares — o perfil
+# (`mic.muted` e `controllers[k].mic.muted`), a sessão do daemon e o aparelho —,
+# e a troca de perfil levava o mudo junto. O dono passou a ser o `maquina.json`
+# (`controles[k].microfone_mudo`, `utils/maquina.py`), e esta migração leva o
+# que os perfis guardam, UMA vez:
+#
+#   * o mudo do perfil ATIVO (o que o boot restaura) vira o mudo de cada
+#     controle — a peça vence o global, que vale para os controles conhecidos
+#     (os do perfil e os do `maquina.json`) sem opinião própria. Um controle
+#     que já tem o mudo no dono não é tocado;
+#   * o `muted` sai de TODO perfil, com os bytes de antes no `.historico`
+#     (`restaurar_do_historico` os devolve) e a nota no diário
+#     (`mic_mudo_saiu_dos_perfis`). Nenhum outro campo muda: a edição é no
+#     JSON cru, e um arquivo que não valida depois dela não é escrito;
+#   * sem gravar no dono, nada sai dos perfis e não há marca: a próxima subida
+#     tenta de novo, e o silêncio dela não se perde no meio do caminho.
+_MUDO_FOI_PARA_O_CONTROLE_MARKER = ".mudo_do_microfone_foi_para_o_controle"
+
+
+def _mudos_do_perfil(dados: dict[str, object], conhecidos: set[str]) -> dict[str, bool]:
+    """``{chave do controle: mudo}`` que um perfil cru guarda — a peça vence o global."""
+    from hefesto_dualsense4unix.utils.maquina import chave_do_controle
+
+    mudos: dict[str, bool] = {}
+    controles = dados.get("controllers")
+    if isinstance(controles, dict):
+        for chave, cfg in controles.items():
+            mic = cfg.get("mic") if isinstance(cfg, dict) else None
+            valor = mic.get("muted") if isinstance(mic, dict) else None
+            dono = chave_do_controle(chave)
+            if isinstance(valor, bool) and dono is not None:
+                mudos[dono] = valor
+    mic_global = dados.get("mic")
+    valor_global = mic_global.get("muted") if isinstance(mic_global, dict) else None
+    if isinstance(valor_global, bool):
+        for chave in sorted(conhecidos):
+            mudos.setdefault(chave, valor_global)
+    return mudos
+
+
+def _sem_o_mudo_do_microfone(dados: dict[str, object]) -> dict[str, object]:
+    """O perfil cru sem o `muted` do microfone — e só sem ele.
+
+    A peça que ficou vazia sai (um override vazio não diz nada), e o mapa de
+    peças vazio também; a seção global fica, porque o
+    `button_toggles_system` a sustenta.
+    """
+    novo: dict[str, object] = json.loads(json.dumps(dados))
+    mic = novo.get("mic")
+    if isinstance(mic, dict):
+        mic.pop("muted", None)
+    controles = novo.get("controllers")
+    if isinstance(controles, dict):
+        for chave in list(controles):
+            cfg = controles[chave]
+            if not isinstance(cfg, dict):
+                continue
+            dele = cfg.get("mic")
+            if isinstance(dele, dict) and "muted" in dele:
+                dele.pop("muted")
+                if not dele:
+                    cfg.pop("mic")
+                if not cfg:
+                    controles.pop(chave)
+        if not controles:
+            novo.pop("controllers")
+    return novo
+
+
+def o_mudo_do_microfone_vai_para_o_controle(
+    dest_dir: Path | None = None, *, ativo: str | None = None
+) -> dict[str, bool] | None:
+    """Leva o mudo dos perfis ao dono (`maquina.json`), uma vez. Ver o bloco acima.
+
+    Devolve ``{chave: mudo}`` do que foi ao dono, ou ``None`` quando não rodou
+    (marca presente, ou o dono recusou). `ativo` é o nome do perfil ativo
+    quando quem chama já o sabe; sem ele, é o que o boot restaura
+    (`utils.session.resolve_boot_profile`).
+    """
+    from hefesto_dualsense4unix.utils import maquina as _maquina
+
+    directory = dest_dir if dest_dir is not None else profiles_dir(ensure=True)
+    marker = directory / _MUDO_FOI_PARA_O_CONTROLE_MARKER
+    if marker.exists():
+        return None
+    with FileLock(str(_lock_path(marker))):
+        if marker.exists():
+            return None
+        if ativo is None:
+            from hefesto_dualsense4unix.utils.session import resolve_boot_profile
+
+            ativo = resolve_boot_profile()
+        declarado = _maquina.carregar_maquina()
+        dados_do_ativo: dict[str, object] | None = None
+        if ativo:
+            caminho = arquivo_do_perfil(ativo, directory)
+            dados_do_ativo = _dados_crus_do_perfil(caminho) if caminho else None
+        conhecidos = set(declarado.controles or {})
+        pecas_do_ativo = (dados_do_ativo or {}).get("controllers")
+        if isinstance(pecas_do_ativo, dict):
+            conhecidos |= {
+                c for c in (_maquina.chave_do_controle(k) for k in pecas_do_ativo)
+                if c is not None
+            }
+        mudos = _mudos_do_perfil(dados_do_ativo or {}, conhecidos)
+        levados: dict[str, bool] = {}
+        for chave, mudo in sorted(mudos.items()):
+            if _maquina.mudo_do_microfone(chave, declarado) is not None:
+                continue
+            if not _maquina.gravar_o_mudo_do_microfone(chave, mudo):
+                logger.warning("mic_mudo_nao_foi_para_o_controle", uniq=chave)
+                return None
+            levados[chave] = mudo
+        tirados: list[str] = []
+        for path in sorted(directory.glob("*.json")):
+            dados = _dados_crus_do_perfil(path)
+            if dados is None:
+                continue
+            novo = _sem_o_mudo_do_microfone(dados)
+            if novo == dados:
+                continue
+            try:
+                Profile.model_validate(novo)
+                bruto = path.read_bytes()
+                _arquivar_versao(path.stem, bruto, raiz=directory)
+                _atomic_write_json(path, novo)
+            except (ValidationError, OSError, ValueError) as exc:
+                logger.warning(
+                    "mic_mudo_nao_saiu_do_perfil", arquivo=path.name, err=str(exc)[:200]
+                )
+                continue
+            tirados.append(path.name)
+        with contextlib.suppress(Exception):
+            marker.write_text("done\n", encoding="utf-8")
+    logger.info(
+        "mic_mudo_saiu_dos_perfis",
+        perfil_ativo=ativo,
+        levados_ao_controle=levados,
+        perfis=tirados,
+        nota="o mudo do microfone é do controle (O-MUDO-E-DO-CONTROLE-01); "
+             "a versão de antes de cada perfil está no .historico",
+    )
+    return levados
+
+
 def _maybe_seed_presets() -> None:
     """Dispara a semeadura uma vez por processo, antes da primeira carga.
 
@@ -1393,6 +1540,10 @@ def _maybe_seed_presets() -> None:
         # E os perfis de jogo intocados ficam só com nome, id e prioridade.
         with contextlib.suppress(Exception):
             enxugar_perfis_de_jogo()
+        # O-MUDO-E-DO-CONTROLE-01: DEPOIS das renomeações, para o perfil ativo
+        # que o boot restaura já ter o nome de hoje. One-shot.
+        with contextlib.suppress(Exception):
+            o_mudo_do_microfone_vai_para_o_controle()
     except Exception as exc:  # boundary best-effort (ver docstring)
         logger.warning(
             "presets_seed_failed",
@@ -3091,6 +3242,7 @@ __all__ = [
     "migrate_coop_local_match",
     "migrate_default_profile_name",
     "o_freestyle_de_fabrica_nasce_ligado",
+    "o_mudo_do_microfone_vai_para_o_controle",
     "o_perfil_de_fora_do_jogo",
     "o_personalizado_vira_freestyle",
     "perfis_de_jogo_semeados",

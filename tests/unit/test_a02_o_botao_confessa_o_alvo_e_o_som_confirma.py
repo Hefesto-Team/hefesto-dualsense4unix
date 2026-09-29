@@ -9,9 +9,10 @@ AS DUAS METADES QUE ESTA RÉGUA MEDE
 
 1. **o mudo confessa o alvo.** O gesto `mudo` do microfone passa a perguntar ao
    mesmo dono que o deslizante já pergunta — `frase_do_alvo_do_mic` sobre
-   `alvo_honrado` — e sobe a confissão pelo canal da recusa, **antes** de
-   gravar no perfil. `frase_do_ato_do_microfone`, que já estava lá, responde
-   outra pergunta: QUAL METADE do ato faltou;
+   `alvo_honrado` — e sobe a confissão pelo canal da recusa. O gesto não grava
+   no perfil desde a O-MUDO-E-DO-CONTROLE-01 (28/09/2026): o mudo é do
+   controle, e quem o grava é o ato, no daemon. `frase_do_ato_do_microfone`,
+   que já estava lá, responde outra pergunta: QUAL METADE do ato faltou;
 2. **o som de confirmação.** `app/audio_saida.tocar_confirmacao` tinha zero
    chamadores em `interface/`, e a janela GTK o toca em quatro gestos do bloco
    do alto-falante desde a SOM-04. Ele volta nos TRÊS que esta aba tem — o
@@ -40,8 +41,8 @@ AS MORDIDAS DESTE ARQUIVO
 * **acusar sem ler o valor** (confessar com `alvo_honrado` valendo `True` ou
   `None`) — reprova `test_o_mudo_nao_acusa_quando_honrou_nem_quando_nao_sabe`,
   a mordida que separa a cura da superstição: *"não sei" não é "não honrei"*;
-* **gravar antes de confessar** — reprova o terceiro `assert` da primeira, que
-  lê os BYTES do perfil no disco;
+* **gravar o mudo no perfil** (o escritor que saiu) — reprova o terceiro
+  `assert` da primeira, que lê os BYTES do perfil no disco;
 * **digitar a frase** em vez de perguntar ao dono — reprova
   `test_a_frase_da_confissao_e_a_do_dono`;
 * **arrancar `_confirmar_com_som`** de qualquer um dos três gestos — reprova
@@ -215,14 +216,13 @@ def _gesto(nome: str) -> Any:
 def test_o_mudo_confessa_quando_o_alvo_nao_foi_honrado(casa: Any) -> None:
     """MORDIDA: arranque as duas linhas da confissão e isto reprova.
 
-    Sem elas o gesto passa das duas metades do ato, grava o override e volta
-    como SUCESSO — que é o defeito inteiro na mesa cheia: a tela pinta o selo do
-    cartão certo e quem ficou mudo foi outra pessoa.
+    Sem elas o gesto passa das duas metades do ato e volta como SUCESSO — que é
+    o defeito inteiro na mesa cheia: a tela pinta o selo do cartão certo e quem
+    ficou mudo foi outra pessoa.
 
-    A TERCEIRA ASSERÇÃO É A ORDEM, e ela é a razão de a confissão vir antes do
-    `_lembrar_do_som`: gravar primeiro poria no `controllers[este]` um estado
-    que este controle nunca teve. Ela lê os BYTES do arquivo — perguntar ao
-    dublê mediria a intenção do código que está sob teste.
+    A TERCEIRA ASSERÇÃO lê os BYTES do perfil: o gesto não grava nele (o mudo é
+    do controle, O-MUDO-E-DO-CONTROLE-01) — perguntar ao dublê mediria a
+    intenção do código que está sob teste.
     """
     antes = _bytes_do_perfil()
     p = PonteQueDizDeQuem({"status": "ok", "por_uniq": False})
@@ -268,9 +268,12 @@ def test_o_mudo_nao_acusa_quando_honrou_nem_quando_nao_sabe(
     p = PonteQueDizDeQuem(corpo)
     _gesto("mudo")(_ctx(), {"uniq": P1, "mudo": "microfone"}, p)
 
-    assert _do_controle(CHAVE_P1).get("mic") == {"muted": True}, (
-        f"com o alvo {rotulo}, o mudo não chegou ao perfil — a confissão "
-        f"recusou um gesto que o daemon honrou"
+    assert p.nomes == ["mic_canal_set_detalhado"], (
+        f"com o alvo {rotulo}, o gesto não chegou ao ato: {p.nomes!r}"
+    )
+    assert "mic" not in _do_controle(CHAVE_P1), (
+        f"com o alvo {rotulo}, o gesto gravou o mudo no perfil — o mudo é do "
+        "controle, e quem o grava é o ato"
     )
 
 

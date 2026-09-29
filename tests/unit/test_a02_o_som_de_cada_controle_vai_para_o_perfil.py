@@ -38,9 +38,11 @@ AS MORDIDAS DESTE ARQUIVO
 
 Cada uma foi executada, e a frase entre parênteses é a que a régua devolveu:
 
-* apagar a chamada ``_lembrar_do_som`` do ramo ``microfone`` do gesto ``mudo``
-  — reprova ``test_o_mudo_do_microfone_vira_override_no_perfil`` (*"o mudo do
-  microfone não chegou ao perfil"*);
+* devolver a chamada ``_lembrar_do_som`` ao ramo ``microfone`` do gesto
+  ``mudo`` — reprova ``test_o_mudo_do_microfone_nao_vai_ao_perfil``. Até
+  28/09/2026 a mordida era a contrária: o mudo do microfone ia ao perfil. A
+  O-MUDO-E-DO-CONTROLE-01 o levou ao dono (o ``maquina.json``), com o ato do
+  daemon como escritor único;
 * apagar a do ramo ``alto-falante`` — reprova
   ``test_o_mudo_do_alto_falante_grava_volume_e_mudo_juntos``;
 * apagar a do gesto ``rota`` — reprova ``test_a_rota_do_som_vai_para_o_perfil``;
@@ -201,24 +203,26 @@ def _bytes_do_perfil() -> bytes:
 # ===========================================================================
 
 
-def test_o_mudo_do_microfone_vira_override_no_perfil(casa: Any) -> None:
-    """O 🎙 daquele card guarda o mudo DAQUELE controle.
+def test_o_mudo_do_microfone_nao_vai_ao_perfil(casa: Any) -> None:
+    """O 🎙 daquele card cala DAQUELE controle, e o perfil não é tocado.
 
-    MORDIDA: apagar a chamada `_lembrar_do_som` do ramo `microfone` do gesto
-    `mudo` — o override some e esta régua diz que o mudo não chegou ao perfil.
+    O-MUDO-E-DO-CONTROLE-01 (28/09/2026), resposta 9 dela: o mudo é do
+    controle e vale em todo jogo. Quem o grava é o ATO, no daemon, no
+    `maquina.json`; a tela só pede o ato.
+
+    MORDIDA: devolver a chamada `_lembrar_do_som` ao ramo `microfone` do gesto
+    `mudo` — o perfil volta a ser regravado pelo clique.
     """
+    antes = _bytes_do_perfil()
     p = Ponte()
     _gesto("mudo")(_ctx(), {"uniq": P1, "mudo": "microfone"}, p)
 
-    assert _do_controle(CHAVE_P1).get("mic") == {"muted": True}, (
-        "o mudo do microfone não chegou ao perfil — amanhã ele volta ao de "
-        f"ontem. No disco: {_perfil_do_disco().get('controllers')!r}")
-    # ELE GRAVA E NÃO MANDA REAPLICAR, e a ausência é a decisão medida: o
-    # aparelho JÁ está no valor (a linha acima é o eco do daemon confirmando), e
-    # `ProfileManager.activate` faz `load_profile` a cada ativação — não há
-    # cópia em memória a corrigir. Um `profile.switch` aqui reaplicaria o perfil
-    # INTEIRO — luz, gatilhos, vibração — a cada clique no mudo, no meio de uma
-    # partida, para reafirmar um byte que já estava escrito.
+    assert _bytes_do_perfil() == antes, (
+        "o clique no mudo do microfone regravou o perfil — o mudo é do "
+        f"controle. No disco: {_perfil_do_disco().get('controllers')!r}")
+    # NADA DE REAPLICAR: o aparelho JÁ está no valor, e um `profile.switch`
+    # aqui reaplicaria o perfil INTEIRO — luz, gatilhos, vibração — a cada
+    # clique no mudo, no meio de uma partida.
     assert p.nomes == ["mic_canal_set_detalhado"], (
         f"o clique no mudo pediu mais que o ato ao daemon: {p.nomes!r}")
 
@@ -493,7 +497,7 @@ def test_sem_endereco_estavel_ele_avisa(casa: Any) -> None:
     p = Ponte()
     with pytest.raises(RuntimeError) as erro:
         _gesto("mudo")(_ctx(avulso), {"uniq": "path:/dev/hidraw3",
-                                      "mudo": "microfone"}, p)
+                                      "mudo": "alto-falante"}, p)
 
     frase = str(erro.value)
     assert frase.startswith(SOM_SEM_ENDERECO), (
@@ -571,7 +575,8 @@ def test_gravar_o_som_nao_derruba_o_resto_do_perfil(casa: Any) -> None:
         origem="regua")
 
     p = Ponte()
-    _gesto("mudo")(_ctx(_dele(P1), _dele(P2)), {"uniq": P1, "mudo": "microfone"}, p)
+    _gesto("volume")(_ctx(_dele(P1), _dele(P2)),
+                     {"uniq": P1, "volume": "microfone", "valor": "42"}, p)
 
     disco = _perfil_do_disco()
     assert disco.get("priority") == 7, "a prioridade caiu na travessia"
@@ -579,4 +584,4 @@ def test_gravar_o_som_nao_derruba_o_resto_do_perfil(casa: Any) -> None:
         "o casamento caiu na travessia — o perfil deixou de ser só-manual")
     assert (_do_controle(CHAVE_P2).get("rumble") or {}).get("policy") == "max", (
         "a força própria do OUTRO controle caiu quando este gravou o som")
-    assert _do_controle(CHAVE_P1).get("mic") == {"muted": True}
+    assert _do_controle(CHAVE_P1).get("mic") == {"volume": 42}

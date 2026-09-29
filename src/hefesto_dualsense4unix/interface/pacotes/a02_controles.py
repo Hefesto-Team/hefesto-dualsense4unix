@@ -4130,7 +4130,7 @@ def _lembrar_do_som(
 
     ESCRITOR ÚNICO DO SOM POR PEÇA nesta aba, e ser um só é a regra da casa:
     a classe de defeito que ela persegue é *"três escritores do perfil sem
-    dono"*. Os cinco gestos de som desta aba chamam ESTA função, e nenhum
+    dono"*. Os gestos de som desta aba chamam ESTA função, e nenhum
     monta `controllers[...]` à mão.
 
     **QUEM CHAMA É O CALLBACK DE SUCESSO, nunca o gesto em si** — a mesma
@@ -4140,7 +4140,9 @@ def _lembrar_do_som(
     contradizer o aparelho, e a ativação seguinte reimporia o que nunca pegou.
 
     `mic` e `speaker` são os campos que ESTE gesto fez ficar de pé, e só eles:
-    `{"muted": True}`, `{"volume": 42}`, `{"rota": 2}`. Campo ausente é campo
+    `{"volume": 42}`, `{"gain": 30}`, `{"rota": 2}`. O MUDO DO MICROFONE não
+    passa por aqui: ele é do controle (O-MUDO-E-DO-CONTROLE-01), e o ato o
+    grava no daemon. Campo ausente é campo
     não tocado, e o que já estava no perfil sobrevive — é a mesma regra do
     `rota` do `SpeakerDraft` (*"mexer no volume não pode apagar o mudo que ela
     acabou de escolher, nem o contrário"*).
@@ -4186,9 +4188,9 @@ def _lembrar_do_som(
 
     O `launch_env.refresh` do mesmo dono também fica de fora, e pelo mesmo
     critério: o que ele rematerializa é a antecipação de MODO/emulação por
-    `appid` (`ipc_handlers._handle_launch_env_refresh`), e nenhum dos cinco
-    campos daqui — `mic.muted`, `mic.volume`, `speaker.volume/.muted/.rota` —
-    entra nessa conta. Um dia em que este arquivo passar a gravar `mode`,
+    `appid` (`ipc_handlers._handle_launch_env_refresh`), e nenhum dos campos
+    daqui — `mic.volume`, `mic.gain`, `speaker.volume/.muted/.rota` — entra
+    nessa conta. Um dia em que este arquivo passar a gravar `mode`,
     `match` ou emulação, ele volta.
 
     O CAMINHO DE DISCO É O DA ABA PERFIS até o penúltimo passo: `load_profile`
@@ -4480,15 +4482,12 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         confissao = frase_do_alvo_do_mic(alvo_honrado(corpo))
         if confissao:
             raise RuntimeError(confissao)
-        # O PERFIL LEMBRA — e só agora, depois das DUAS metades. A frase acima
-        # é a que separa *"o canal foi eleito e o firmware ficou represado"* de
-        # *"o firmware obedeceu e não há canal"*: gravar antes dela poria no
-        # disco um mudo que o plástico não tem.
-        #
-        # `not agora` É O QUE FICOU DE PÉ, e a inversão vale a linha: `agora` é
-        # *"está mudo"*, e o ato acima LIGA o microfone exatamente quando ele
-        # está mudo — logo depois dele o mudo é o oposto do que era.
-        _lembrar_do_som(ctx, uniq, mic={"muted": not agora})
+        # A TELA NÃO GRAVA O MUDO — O-MUDO-E-DO-CONTROLE-01 (28/09/2026). O
+        # mudo é do controle (resposta 9 dela: *vale em todo jogo*), e quem o
+        # grava é o próprio ato, no daemon (`hotkey._o_disco_guarda_o_ato`, no
+        # `maquina.json`). Aqui o escritor do som desta aba gravava o mudo no
+        # perfil ativo, e era o segundo escritor do mesmo clique: ele relia o
+        # perfil e gravava de novo o que o daemon acabara de gravar.
         return
 
     if qual == "alto-falante":

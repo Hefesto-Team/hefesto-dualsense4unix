@@ -192,8 +192,8 @@ def test_morde_o_campo_arrancado_do_esquema(regua, monkeypatch, capsys):
     """
     real = regua._campos_do_esquema
 
-    def sem_o_speaker(classe: str) -> set[str]:
-        campos = real(classe)
+    def sem_o_speaker(classe: str, *fonte: object) -> set[str]:
+        campos = real(classe, *fonte)
         return campos - {"speaker"} if classe == "ControllerOverrides" else campos
 
     monkeypatch.setattr(regua, "_campos_do_esquema", sem_o_speaker)
@@ -218,3 +218,40 @@ def test_morde_o_transporte_rebaixado_no_mapa(regua, monkeypatch, capsys):
     saida = capsys.readouterr().out
     for gesto in ("cor", "brilho", "apagar", "reenviar"):
         assert f"{gesto}: rádio: {regua.NAO}" in saida
+
+
+def test_o_mudo_do_microfone_responde_no_controle(regua):
+    """O-MUDO-E-DO-CONTROLE-01 (28/09/2026): o mudo não fica no perfil.
+
+    A resposta dela (a 9 da noite de 27/09) é que o mudo do microfone é do
+    controle e vale em todo jogo: ele mora no `maquina.json`. A terceira
+    pergunta responde «no controle», e a quarta, «sim» — guardado por
+    controle, fora do perfil de propósito.
+    """
+    linhas = {linha[0]: linha for linha in regua.tabela()}
+    for gesto in ("mudo", "custo-mic"):
+        _g, _abas, _cabo, _radio, perfil, controle, _falta = linhas[gesto]
+        assert (perfil, controle) == ("no controle", "sim"), (
+            f"o `{gesto}` não responde pelo dono do mudo: {perfil!r}, {controle!r}")
+        assert gesto not in regua.NO_PERFIL, (
+            f"o `{gesto}` ainda se declara no perfil — o mudo saiu de lá")
+
+
+def test_morde_o_mudo_arrancado_do_controle(regua, monkeypatch, capsys):
+    """Tirar `microfone_mudo` de `ControleDeclarado` reprova o `mudo` e o `custo-mic`.
+
+    O campo é LIDO do fonte do `utils/maquina.py`: sem esta mordida, arrancá-lo
+    deixaria a tabela dizendo «no controle» sobre um lugar que não existe.
+    """
+    real = regua._campos_do_esquema
+
+    def sem_o_mudo(classe: str, *fonte: object) -> set[str]:
+        campos = real(classe, *fonte)
+        return campos - {"microfone_mudo"} if classe == "ControleDeclarado" else campos
+
+    monkeypatch.setattr(regua, "_campos_do_esquema", sem_o_mudo)
+    assert regua.main() == 1
+    saida = capsys.readouterr().out
+    for gesto in ("mudo", "custo-mic"):
+        assert f"{gesto}: não está no perfil" in saida
+

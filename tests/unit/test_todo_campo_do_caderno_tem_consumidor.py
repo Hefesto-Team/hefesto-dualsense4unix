@@ -38,6 +38,9 @@ CONSUMIDOR_DE_PRODUCAO: dict[str, str] = {
     # O-MODO-ECONOMIA-POR-CONTROLE-01 (25/09/2026): quem lê é a ativação do
     # perfil (`manager._perfil_na_economia`), por este leitor.
     "controles.economia": "profiles/schema.py:def controles_em_economia",
+    # O-MUDO-E-DO-CONTROLE-01 (28/09/2026): o mudo do microfone é do controle;
+    # quem o lê é a reconexão e o nascimento, pelo gerente de perfis.
+    "controles.microfone_mudo": "profiles/manager.py:def _mudo_do_controle",
     # O-RADIO-CONECTA-ONDE-ELA-MANDA-02 (26/09/2026): o nome que ela deu volta
     # como ``Alias`` do BlueZ em todo ``Pair`` e em toda conexão.
     "controles.nome": "integrations/central_do_radio.py:def cuidar_dos_nomes",

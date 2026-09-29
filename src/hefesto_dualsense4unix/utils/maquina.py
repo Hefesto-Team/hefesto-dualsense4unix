@@ -801,6 +801,20 @@ class ControleDeclarado(BaseModel):
     #: ``A_ECONOMIA_EM_CADA_PECA``); o escritor é
     #: ``profiles.schema.declaracao_da_economia``.
     economia: bool | None = None
+    #: O MUDO DO MICROFONE deste controle — O-MUDO-E-DO-CONTROLE-01
+    #: (28/09/2026), resposta 9 dela na noite de 27/09: *o mudo do microfone
+    #: é do controle, e vale em todo jogo*. ``True`` = ela calou; ``False`` =
+    #: ela ligou; ``None`` = nunca disse, e o microfone nasce no ar (a ordem de
+    #: 18/09, a mesma do ``microfone`` acima). Mora aqui, e não no perfil, pela
+    #: razão da ``economia``: um silêncio que some ao trocar de jogo é a
+    #: surpresa, e o preço dela é de privacidade. É o único registro do mudo:
+    #: o perfil deixou de guardá-lo (a migração é
+    #: ``profiles.loader.o_mudo_do_microfone_vai_para_o_controle``), e a
+    #: sessão do daemon deixou de lembrá-lo. Quem grava é o ato do microfone
+    #: (``daemon/subsystems/hotkey._o_disco_guarda_o_ato``: o botão do
+    #: plástico e o 🎙 da tela); quem lê é a reconexão e o nascimento
+    #: (``profiles.manager.ProfileManager.o_controle_pede_silencio``).
+    microfone_mudo: bool | None = None
     #: O NOME QUE ELA DEU ao controle — O-RADIO-CONECTA-ONDE-ELA-MANDA-02
     #: (26/09/2026), o item 4 da lista dela da madrugada: *«quando eu conectar
     #: os dispositivos bt novamente eu quero que o nome deles sejam lidos
@@ -1688,6 +1702,55 @@ def gravar_o_nome_do_controle(endereco: str, nome: str | None) -> bool:
         return gravar_maquina({"controles": {chave: {"nome": valor}}})
     except (ValueError, OSError) as exc:
         logger.warning("maquina_nome_do_controle_nao_gravou", err=str(exc)[:200])
+        return False
+
+
+# ---------------------------------------------------------------------------
+# O mudo do microfone de cada controle (O-MUDO-E-DO-CONTROLE-01)
+# ---------------------------------------------------------------------------
+
+
+def mudo_do_microfone(
+    endereco: object, maquina: MaquinaConfig | None = None
+) -> bool | None:
+    """O mudo que ela deixou no microfone DESTE controle. **Nunca levanta.**
+
+    ``True`` = calado; ``False`` = no ar; ``None`` = ela nunca disse (ou o
+    endereço não tem forma de controle), e o microfone nasce no ar. Sem
+    ``maquina``, lê o disco agora: quem pergunta é a conexão de um controle, e
+    a resposta tem de ser a de agora, não a do boot.
+    """
+    chave = chave_do_controle(endereco)
+    if chave is None:
+        return None
+    if maquina is None:
+        maquina = carregar_maquina()
+    declarado = (maquina.controles or {}).get(chave)
+    valor = getattr(declarado, "microfone_mudo", None)
+    return valor if isinstance(valor, bool) else None
+
+
+def gravar_o_mudo_do_microfone(endereco: object, mudo: bool) -> bool:
+    """Grava o mudo do microfone deste controle. **Nunca levanta.**
+
+    ``True`` = o disco diz ``mudo`` agora (gravou, ou já dizia). ``False`` =
+    não gravou: endereço sem forma de controle ou sintetizado (o vpad, o
+    ``02`` do DKMS), disco que recusa, versão estranha. A fusão de
+    :func:`gravar_maquina` desce no dicionário: o ``microfone``, a
+    ``economia``, a ``cor`` e o ``nome`` do mesmo controle ficam como estavam.
+
+    NADA MUDOU = NADA GRAVA: apertar o botão duas vezes para o mesmo lado não
+    reescreve o arquivo.
+    """
+    chave = chave_do_controle(endereco)
+    if chave is None:
+        return False
+    try:
+        if mudo_do_microfone(chave) is bool(mudo):
+            return True
+        return gravar_maquina({"controles": {chave: {"microfone_mudo": bool(mudo)}}})
+    except (ValueError, OSError) as exc:
+        logger.warning("maquina_mudo_do_microfone_nao_gravou", err=str(exc)[:200])
         return False
 
 

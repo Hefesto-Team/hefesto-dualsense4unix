@@ -38,6 +38,8 @@ As três fontes das respostas:
 cabo / rádio     `docs/data/mapa-controles.csv` (`cabo_aciona`,
                  `radio_aciona`, e a ressalva de cada transporte)
 no perfil        `profiles/schema.py` — o campo existe em `Profile`?
+                 (ou «no controle»: mora no `maquina.json`, por decisão
+                 dela — ver `NO_CONTROLE`)
 por controle     `profiles/schema.py` — existe em `ControllerOverrides`?
 ===============  ===================================================
 
@@ -55,6 +57,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[1]
 PAGINAS = RAIZ / "src/hefesto_dualsense4unix/interface/paginas"
 MAPA = RAIZ / "docs/data/mapa-controles.csv"
 ESQUEMA = RAIZ / "src/hefesto_dualsense4unix/profiles/schema.py"
+MAQUINA = RAIZ / "src/hefesto_dualsense4unix/utils/maquina.py"
 
 _SIM = {"sim", "1", "true"}
 
@@ -343,7 +346,6 @@ A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {}
 NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "mascara": ("mode", None),
     "mic-modo": ("mic", "mic"),
-    "mudo": ("mic", "mic"),
     "volume": ("mic", "mic"),
     "ganho-mic": ("mic", "mic"),
     "rota": ("speaker", "speaker"),
@@ -359,13 +361,34 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     # `uniq`, e o valor mora em `controllers[<uniq>].rumble` — o mesmo lugar do
     # arraste da barra, porque é o mesmo número.
     "lado": ("rumble", "rumble"),
-    # O 🎙 da seção do rádio grava pelo `mudo` da 02 (`_lembrar_do_som`), no
-    # mesmo `controllers[<uniq>].mic` — é o mesmo gesto, chamado.
-    "custo-mic": ("mic", "mic"),
     # A Mira grava em `movimento`, nos dois níveis: o default do perfil e o
     # `controllers[<uniq>].movimento` que o chip de cada cartão escreve.
     "mira": ("movimento", "movimento"),
 }
+
+
+#: O QUE MORA NO CONTROLE, e não no perfil — `{gesto: campo de
+#: ControleDeclarado}` do `maquina.json`.
+#:
+#: **É A TERCEIRA RESPOSTA DITA DE OUTRO JEITO, e quem a deu foi ela.** O mudo
+#: do microfone é do controle e vale em todo jogo (resposta 9 da noite de
+#: 27/09, O-MUDO-E-DO-CONTROLE-01, 28/09/2026): ele saiu do perfil e mora em
+#: `controles[<uniq>].microfone_mudo`. A pergunta «fica no perfil?» responde
+#: «no controle» — guardado, e por controle, fora do perfil de propósito. O
+#: campo é LIDO do fonte do `utils/maquina.py`: um campo que sair de lá volta a
+#: reprovar o gesto.
+#:
+#: O 🎙 da linha do controle na seção do rádio (`a08_conexoes.custo_mic`) é o
+#: MESMO ato do `mudo` da 02, chamado — e grava no mesmo lugar. A metade do
+#: alto-falante do gesto `mudo` segue no perfil (`controllers[<uniq>].speaker`),
+#: e não é ela que a chave do mapa declarada acima responde.
+NO_CONTROLE: dict[str, str] = {
+    "mudo": "microfone_mudo",
+    "custo-mic": "microfone_mudo",
+}
+
+#: A resposta «no controle» da terceira pergunta (ver `NO_CONTROLE`).
+_NO_CONTROLE = "no controle"
 
 
 def gestos_da_tela() -> dict[str, list[str]]:
@@ -389,13 +412,13 @@ def _linhas_do_mapa() -> dict[str, list[dict[str, str]]]:
     return fora
 
 
-def _campos_do_esquema(classe: str) -> set[str]:
-    """Os campos declarados numa classe do `schema.py`, lidos do fonte.
+def _campos_do_esquema(classe: str, fonte: pathlib.Path = ESQUEMA) -> set[str]:
+    """Os campos declarados numa classe do `schema.py` (ou de `fonte`), lidos do fonte.
 
     LÊ O FONTE E NÃO IMPORTA O MÓDULO: o `pydantic` do produto puxa metade do
     motor, e este portão roda na camada rápida.
     """
-    texto = ESQUEMA.read_text(encoding="utf-8")
+    texto = fonte.read_text(encoding="utf-8")
     corpo = texto.split(f"class {classe}(", 1)[-1].split("\nclass ", 1)[0]
     return set(re.findall(r"^    ([a-z_]+):\s", corpo, re.M))
 
@@ -478,6 +501,7 @@ def tabela() -> list[tuple[str, str, str, str, str, str, str]]:
     mapa = _linhas_do_mapa()
     do_perfil = _campos_do_esquema("Profile")
     do_controle = _campos_do_esquema("ControllerOverrides")
+    do_controle_declarado = _campos_do_esquema("ControleDeclarado", MAQUINA)
     fora = []
     for gesto, abas in sorted(gestos_da_tela().items()):
         if gesto in NAO_E_DO_APARELHO:
@@ -492,11 +516,16 @@ def tabela() -> list[tuple[str, str, str, str, str, str, str]]:
                       for c in chaves])
         radio = _pior([_resposta_de_transporte(mapa.get(c, []), "radio")
                        for c in chaves])
-        campo, campo_ctrl = NO_PERFIL.get(gesto, ("", None))
-        perfil = ("só por controle" if campo is None
-                  else _SIM_ if campo in do_perfil else NAO)
-        controle = ("global" if campo_ctrl is None
-                    else (_SIM_ if campo_ctrl in do_controle else NAO))
+        if gesto in NO_CONTROLE:
+            existe = NO_CONTROLE[gesto] in do_controle_declarado
+            perfil = _NO_CONTROLE if existe else NAO
+            controle = _SIM_ if existe else NAO
+        else:
+            campo, campo_ctrl = NO_PERFIL.get(gesto, ("", None))
+            perfil = ("só por controle" if campo is None
+                      else _SIM_ if campo in do_perfil else NAO)
+            controle = ("global" if campo_ctrl is None
+                        else (_SIM_ if campo_ctrl in do_controle else NAO))
         falta = "; ".join(
             p for p in (
                 f"cabo: {cabo}" if cabo in (NAO, _SEM_LINHA) else "",

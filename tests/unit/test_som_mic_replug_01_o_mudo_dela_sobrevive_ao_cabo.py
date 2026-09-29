@@ -19,10 +19,15 @@ A CONCILIAÇÃO, e é ela que esta régua trava
 -------------------------------------------
 Havia DUAS decisões medidas em tensão, e as duas continuam de pé:
 
-- ``MIC-GRAVACAO-01`` — o `muted` só atravessa troca EXPLÍCITA de perfil, para
-  o perfil do jogo não roubar o mudo dela no meio de uma gravação.
+- o perfil do jogo não rouba o mudo dela no meio de uma gravação — desde
+  28/09/2026 (O-MUDO-E-DO-CONTROLE-01) por uma razão mais forte que a
+  ``MIC-GRAVACAO-01``: o mudo é do CONTROLE e mora no ``maquina.json``, e
+  nenhuma troca de perfil o escreve, nem a explícita;
 - ``AUDIT-FINDING-PROFILE-MIC-LED-RESET-01`` — o LED vermelho do mic jamais se
   apaga como colateral.
+
+O replug lê o mudo do DONO (``utils.maquina.mudo_do_microfone``); o perfil
+ativo só empresta o volume.
 
 A passagem do replug é ASSIMÉTRICA, e é por isso que cabe entre as duas::
 
@@ -31,8 +36,8 @@ A passagem do replug é ASSIMÉTRICA, e é por isso que cabe entre as duas::
                            seguro tem sinal visível, o inseguro não tem nenhum.
     muted=False  não       já é o default do firmware, e escrever APAGARIA o LED.
 
-E a regra mora em UM lugar (`apply_mic`), porque a casa exige que a
-MIC-GRAVACAO-01 não tenha duas cópias que possam divergir.
+E a regra mora em UM lugar (`apply_mic`), porque a casa exige que a guarda do
+mudo não tenha duas cópias que possam divergir.
 """
 from __future__ import annotations
 
@@ -42,6 +47,7 @@ import pytest
 
 from hefesto_dualsense4unix.profiles import manager as mgr
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
+from hefesto_dualsense4unix.utils import maquina
 
 
 class _Store:
@@ -105,6 +111,11 @@ def mesa(monkeypatch: pytest.MonkeyPatch):
     return Mesa()
 
 
+def _dono(uniq: str, mudo: bool) -> None:
+    """O mudo que ela deu ao controle, no dono (o `maquina.json` do lar da suíte)."""
+    assert maquina.gravar_o_mudo_do_microfone(uniq, mudo)
+
+
 class TestOMudoVoltaNoReplug:
     def test_o_mudo_dela_atravessa_o_replug(self, mesa) -> None:
         """**O CASO QUE ORIGINOU ESTA RÉGUA.**
@@ -113,7 +124,8 @@ class TestOMudoVoltaNoReplug:
         `reapply_mic_on_connect` — a guarda do `apply_mic` zera o `muted` e o
         microfone dela volta aberto, calado, como antes da cura.
         """
-        m = mesa.com(_perfil(mic={"muted": True}))
+        _dono("aabbcc000003", True)
+        m = mesa.com(_perfil())
         estado = m.reapply_mic_on_connect(uniq="aabbcc000003")
         assert estado == "aplicado"
         assert mesa.applier.chamadas, "nada chegou ao aparelho"
@@ -130,9 +142,11 @@ class TestOMudoVoltaNoReplug:
 
         MORDIDA: deixar `muted` passar sem filtro no ramo `replug`.
         """
-        m = mesa.com(_perfil(mic={"muted": False, "volume": 70}))
+        _dono("aabbcc000003", False)
+        m = mesa.com(_perfil(mic={"volume": 70}))
         m.reapply_mic_on_connect(uniq="aabbcc000003")
-        assert mesa.applier.chamadas[-1]["muted"] is None, (
+        assert mesa.applier.chamadas, "o volume do perfil não chegou ao aparelho"
+        assert [c["muted"] for c in mesa.applier.chamadas] == [None], (
             "o replug apagou o LED vermelho do microfone"
         )
 
@@ -143,75 +157,72 @@ class TestOMudoVoltaNoReplug:
         assert mesa.applier.chamadas[-1]["volume"] == 70
 
 
-class TestAPecaVenceOGlobal:
-    def test_o_override_da_peca_entra_por_ultimo(self, mesa) -> None:
+class TestOPerfilEmprestaOVolumeEODonoDizOMudo:
+    def test_o_global_escreve_e_o_mudo_do_dono_vem_por_ultimo(self, mesa) -> None:
         """A MESMA ordem do `apply`, e a mesma da SOM-ROTA-03.
 
-        Sem isto o replug mandaria o global a uma peça que tem opinião própria
-        — o defeito com o sinal trocado que a cura do alto-falante pegou.
+        O global do perfil leva o volume; o mudo vem do dono, na peça.
         """
-        # O global leva `volume` de propósito: um global com `muted=False` e
-        # mais nada não escreveria linha nenhuma (é o desenho — `False` não
-        # atravessa o replug), e o caso mediria a ordem sem ter duas escritas.
+        _dono("aabbcc000003", True)
+        m = mesa.com(_perfil(mic={"volume": 50}))
+        m.reapply_mic_on_connect(uniq="aabbcc000003")
+        assert len(mesa.applier.chamadas) == 2, "global e peça, nesta ordem"
+        assert mesa.applier.chamadas[0]["volume"] == 50, "o global não escreveu"
+        assert mesa.applier.chamadas[0]["muted"] is None, "o global levou o mudo"
+        assert mesa.applier.chamadas[-1]["muted"] is True, (
+            "o mudo do dono não chegou à peça"
+        )
+
+    def test_o_mudo_de_um_perfil_nao_fala_no_replug(self, mesa) -> None:
+        """O `muted` que um perfil ainda carregue não é o mudo do controle.
+
+        O-MUDO-E-DO-CONTROLE-01: o dono não diz nada deste controle, e o perfil
+        (de antes da migração) diz calado no global e na peça. Nada se cala.
+
+        MORDIDA: deixar o `muted` do perfil na vista do replug.
+        """
         m = mesa.com(
             _perfil(
-                mic={"muted": False, "volume": 50},
+                mic={"muted": True, "volume": 50},
                 por_peca={"aabbcc000003": {"mic": {"muted": True}}},
             )
         )
         m.reapply_mic_on_connect(uniq="aabbcc000003")
-        assert len(mesa.applier.chamadas) == 2, "global e peça, nesta ordem"
-        assert mesa.applier.chamadas[0]["volume"] == 50, "o global não escreveu"
-        assert mesa.applier.chamadas[-1]["muted"] is True, (
-            "o global pisou o ajuste daquela peça"
+        assert [c["muted"] for c in mesa.applier.chamadas if c["muted"]] == [], (
+            "o replug calou o controle pelo mudo de um perfil"
         )
 
     def test_a_chave_e_procurada_ja_canonizada(self, mesa) -> None:
-        """`norm_mac`, e não o MAC cru — o mapa guarda 12 hex sem `:`.
-
-        Foi a régua da cura irmã que pegou este defeito na primeira versão
-        dela, não a leitura. MORDIDA: tirar o `norm_mac`.
-        """
-        m = mesa.com(
-            _perfil(por_peca={"aabbcc000003": {"mic": {"muted": True}}})
-        )
+        """A tela manda `aa:bb:…`; o dono guarda 12 hex. MORDIDA: ler cru."""
+        _dono("aabbcc000003", True)
+        m = mesa.com(_perfil())
         m.reapply_mic_on_connect(uniq="aa:bb:cc:00:00:03")
-        assert mesa.applier.chamadas, "a chave com dois-pontos não achou a peça"
+        assert mesa.applier.chamadas, "a chave com dois-pontos não achou o controle"
         assert mesa.applier.chamadas[-1]["muted"] is True
 
-    def test_perfil_sem_opiniao_nao_escreve_nada(self, mesa) -> None:
-        """Perfil que não pediu não pode impor — a guarda 1 dos dois appliers."""
+    def test_sem_opiniao_nenhuma_nao_escreve_nada(self, mesa) -> None:
+        """Nem o perfil nem o dono pediram: nada se impõe."""
         m = mesa.com(_perfil())
         assert m.reapply_mic_on_connect(uniq="aabbcc000003") is None
         assert mesa.applier.chamadas == []
 
 
-class TestAsOutrasDuasDecisoesContinuamDePe:
-    def test_o_autoswitch_continua_sem_roubar_o_mudo(self, mesa) -> None:
-        """MIC-GRAVACAO-01 INTACTA — a cura não pode abrir a porta que ela fecha.
+class TestATrocaDePerfilNaoLevaOMudo:
+    @pytest.mark.parametrize("origem", ["autoswitch", "system", "manual"])
+    def test_nenhuma_ativacao_leva_o_mudo(self, mesa, origem: str) -> None:
+        """Nem o autoswitch, nem o restore de boot, nem a troca explícita.
 
-        O perfil do jogo entrando no meio de uma gravação é `origin=
-        "autoswitch"`, e ali o `muted` continua sem atravessar.
+        O-MUDO-E-DO-CONTROLE-01 (28/09/2026), resposta 9 dela: o mudo é do
+        controle e vale em todo jogo. Até ali a troca explícita levava o
+        `muted` do perfil (MIC-GRAVACAO-01).
 
-        MORDIDA: fazer o ramo `replug` valer para todo `origin != "manual"`.
+        MORDIDA: o `apply_mic` voltar a deixar o `muted` passar em `manual`.
         """
         m = mesa.com(_perfil(mic={"muted": True}))
-        m.apply_mic(_perfil(mic={"muted": True}), origin="autoswitch")
+        m.apply_mic(_perfil(mic={"muted": True}), origin=origem)
         assert mesa.applier.chamadas == [], (
-            "o autoswitch voltou a mexer no mudo — MIC-GRAVACAO-01 caiu"
+            f"a ativação {origem} mexeu no mudo do microfone"
         )
-
-    def test_o_restore_de_boot_continua_sem_mexer_no_mudo(self, mesa) -> None:
-        """`origin="system"` é o restore de boot, e ele nunca mexeu no mudo."""
-        m = mesa.com(_perfil(mic={"muted": True}))
-        m.apply_mic(_perfil(mic={"muted": True}), origin="system")
-        assert mesa.applier.chamadas == []
-
-    def test_a_troca_explicita_dela_continua_mandando(self, mesa) -> None:
-        """`origin="manual"` é ela escolhendo o perfil, e ali tudo passa."""
-        m = mesa.com(_perfil(mic={"muted": False}))
-        m.apply_mic(_perfil(mic={"muted": False}), origin="manual")
-        assert mesa.applier.chamadas[-1]["muted"] is False
 
 
 class TestACuraEstaLIGADA:

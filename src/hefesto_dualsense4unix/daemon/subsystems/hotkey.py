@@ -1049,8 +1049,8 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
         # FÁBRICA — paridade com o `profile.switch` (IPC), o autoswitch e o
         # lançamento por ser a MESMA lista, não por ser uma cópia fiel dela.
         # O que este gesto tem de próprio é o `origin="manual"` lá embaixo: o
-        # ciclo PS+D-pad é troca explícita dela, e é o ÚNICO caminho por onde o
-        # `mic.muted` do perfil atravessa (MIC-GRAVACAO-01).
+        # ciclo PS+D-pad é troca explícita dela. O mudo do microfone NÃO
+        # atravessa, nem aqui: ele é do controle (O-MUDO-E-DO-CONTROLE-01).
         manager = gerente_do_daemon(daemon, store=daemon.store)
         profiles = await daemon._run_blocking(manager.list_profiles)
         if len(profiles) < 2:
@@ -1695,26 +1695,28 @@ async def ligar_o_microfone(
 
 
 async def _o_disco_guarda_o_ato(daemon: DaemonProtocol, ato: AtoDoMicrofone) -> None:
-    """O último ato vale, e o disco o guarda. O-BOTAO-DO-MIC-GRAVA-NO-PERFIL-01.
+    """O último ato vale, e o DONO do mudo o guarda: o controle, no `maquina.json`.
 
-    **O ACHADO, 25/09/2026**, no journal dela: o perfil Freestyle guardava
-    ``mic.muted: true`` para o P4. Ela ligou o microfone pelo botão do
-    controle às 17:19:55 (``mic_ato … feito=True ligado=True``), o perfil
-    continuou dizendo mudo, e no restart do install, às 18:08:02, o P4 calou
-    de novo: ``profile_mic_mute_applied muted=True origin=replug`` e
-    ``mic_nasce_calado_por_perfil``. O mesmo ciclo às 23h59, 09h32 e 09h56.
-    O P4 não tinha defeito — tinha o registro de um ato velho vencendo o novo.
+    **O ACHADO, 25/09/2026**, no journal dela: o P4 calava de novo a cada
+    restart depois de ela o ligar pelo botão — o registro de um ato velho
+    vencia o novo (O-BOTAO-DO-MIC-GRAVA-NO-PERFIL-01). A cura daquele dia
+    gravou o ato no perfil ativo e o lembrou na sessão, e ficaram TRÊS cópias
+    do mudo (o perfil, a sessão e o aparelho) com dois escritores no mesmo
+    clique.
+
+    **O DONO, 28/09/2026 — O-MUDO-E-DO-CONTROLE-01.** A decisão é dela
+    (resposta 9 da noite de 27/09): *o mudo do microfone é do controle, e vale
+    em todo jogo*. O ato grava em `utils.maquina.gravar_o_mudo_do_microfone`,
+    e só ali: a reconexão e o nascimento leem dali
+    (`ProfileManager.reapply_mic_on_connect` e `o_controle_pede_silencio`), a
+    troca de perfil não mexe nele, e o restart o encontra no disco.
 
     **AQUI, E NÃO NO LAÇO DO BOTÃO**, pela razão de sempre deste arquivo: o
     ato é UMA função com dois chamadores (a borda do plástico e o 🎙 da tela),
-    e gravar só no laço do botão deixaria a tela fora. Os dois gravam no MESMO
-    lugar — o ajuste daquele controle no perfil ativo
-    (`manager.gravar_o_mic_no_perfil_ativo`, com as regras do clique da tela)
-    — e a reconexão lê dali (`reapply_mic_on_connect` e o nascimento, por
-    `o_perfil_pede_silencio`). O nascimento NÃO passa por aqui: ele chama
-    `_metade_do_canal` direto, e nascer não é ato dela — a regra de 18/09
-    (todo controle nasce com o microfone; só um «calado» gravado desliga)
-    continua de pé.
+    e gravar só no laço do botão deixaria a tela fora. O nascimento NÃO passa
+    por aqui: ele chama `_metade_do_canal` direto, e nascer não é ato dela — a
+    regra de 18/09 (todo controle nasce com o microfone; só o calado que ela
+    deu desliga) continua de pé.
 
     **O QUE SE GRAVA É A PALAVRA DELA, quando alguma metade ficou de pé.**
     Calar grava sempre que o firmware ou o canal obedeceram — o silêncio que
@@ -1725,57 +1727,31 @@ async def _o_disco_guarda_o_ato(daemon: DaemonProtocol, ato: AtoDoMicrofone) -> 
     em que NADA aconteceu (as duas metades recusadas) não vai ao disco: o
     arquivo não pode dizer o que o aparelho nunca teve.
 
-    **E A SESSÃO LEMBRA O ATO**, além do disco (`StateStore.lembrar_o_ato_do_mic`):
-    a troca automática pode pôr outro perfil no lugar, com um registro mais
-    velho deste controle, e a reconexão seguinte leria esse registro. A troca
-    EXPLÍCITA de perfil esquece a lembrança — ela é, ela mesma, ato dela.
-
     Nunca levanta: o ato já aconteceu no aparelho, e um `.json` ilegível não
     pode transformá-lo em traceback no laço do botão.
     """
     if not (ato.canal_no_sistema.feita or ato.firmware.feita):
         logger.info("mic_ato_nao_gravado", uniq=ato.uniq, motivo="nada_ficou_de_pe")
         return
-    from hefesto_dualsense4unix.profiles.manager import chave_de_peca_que_grava
+    from hefesto_dualsense4unix.utils.maquina import (
+        chave_do_controle,
+        gravar_o_mudo_do_microfone,
+    )
 
-    chave = chave_de_peca_que_grava(str(ato.uniq or ""))
+    chave = chave_do_controle(str(ato.uniq or ""))
     if chave is None:
-        logger.info("mic_ato_nao_gravado", uniq=ato.uniq, motivo="sem_endereco_de_peca")
+        logger.info("mic_ato_nao_gravado", uniq=ato.uniq, motivo="sem_endereco_de_controle")
         return
     mudo = not ato.ligado
-    store = getattr(daemon, "store", None)
-    lembrar = getattr(store, "lembrar_o_ato_do_mic", None)
-    if callable(lembrar):
-        try:
-            lembrar(chave, mudo)
-        except Exception:  # best-effort: o ato já aconteceu no aparelho
-            logger.debug("mic_ato_nao_lembrado", uniq=chave, exc_info=True)
-    ativo = getattr(store, "active_profile", None)
     try:
-        nome, gravou, motivo = await daemon._run_blocking(
-            _gravar_o_ato_no_perfil, ativo if isinstance(ativo, str) else None, chave, mudo
-        )
+        gravou = await daemon._run_blocking(gravar_o_mudo_do_microfone, chave, mudo)
     except Exception as exc:
         logger.warning("mic_ato_nao_gravado", uniq=chave, motivo="erro", err=str(exc))
         return
-    if not gravou:
-        logger.info("mic_ato_nao_gravado", uniq=chave, perfil=nome, motivo=motivo)
-
-
-def _gravar_o_ato_no_perfil(
-    ativo: str | None, chave: str, mudo: bool
-) -> tuple[str | None, bool, str | None]:
-    """Resolve o perfil que grava e grava. POSICIONAIS: `_run_blocking(fn, *args)`.
-
-    Disco (ler o perfil, gravar o `.json`): corre no worker, nunca no laço.
-    """
-    from hefesto_dualsense4unix.profiles.manager import (
-        gravar_o_mic_no_perfil_ativo,
-        nome_do_perfil_que_grava,
-    )
-
-    nome = nome_do_perfil_que_grava(ativo)
-    return gravar_o_mic_no_perfil_ativo(nome, chave=chave, muted=mudo)
+    if gravou:
+        logger.info("mic_mudo_gravado_no_controle", uniq=chave, mudo=mudo)
+    else:
+        logger.info("mic_ato_nao_gravado", uniq=chave, motivo="o_disco_recusou")
 
 
 async def _metade_do_canal(
@@ -1916,7 +1892,11 @@ async def _metade_do_firmware(
         with contextlib.suppress(Exception):
             estado = leitor(uniq)
     mudo_agora = estado.get("mic_mudo") if isinstance(estado, dict) else None
-    if isinstance(mudo_agora, bool) and mudo_agora == mudo_desejado:
+    if (
+        isinstance(mudo_agora, bool)
+        and mudo_agora == mudo_desejado
+        and _a_posse_nao_desdiz(controller, uniq, mudo_desejado)
+    ):
         # Já está como o ato pede. É o caminho do BOTÃO DO PLÁSTICO, e não
         # escrever aqui é o que deixa a posse com o kernel — ou seja, o que
         # deixa o botão dela continuar funcionando no toque seguinte.
@@ -1934,6 +1914,29 @@ async def _metade_do_firmware(
     _marcar_eco_do_ato(uniq, mudo_desejado)
     _agendar_a_devolucao_da_posse(daemon, uniq, mudo_desejado)
     return MetadeDoAto(True)
+
+
+def _a_posse_nao_desdiz(controller: Any, uniq: str, mudo_desejado: bool) -> bool:
+    """A posse do mudo deste controle é do kernel, ou já pede o mesmo que o ato?
+
+    O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01, item 2, pelo lado da tela (a
+    conferência de 28/09 deixou para a O-MUDO-E-DO-CONTROLE-01): o bit lido
+    pode estar momentaneamente no valor que o ato pede com a POSSE do Hefesto
+    pedindo o contrário — a posse velha que um calado deixou. Pular a escrita
+    ali deixa o report seguinte do Hefesto reescrever a posse velha, e o 🎙
+    responde «feito» sobre um microfone que volta a calar. Só a posse `None`
+    (do kernel) ou igual ao desejado deixa a escrita ser pulada.
+
+    Backend sem o leitor da posse (dublê enxuto, controle genérico) responde
+    como a posse do kernel: é o que ele era antes desta guarda.
+    """
+    leitor = getattr(controller, "microphone_mute_for", None)
+    if not callable(leitor):
+        return True
+    posse: Any = None
+    with contextlib.suppress(Exception):
+        posse = leitor(uniq)
+    return posse is None or (isinstance(posse, bool) and posse == mudo_desejado)
 
 
 def _mutar(setter: Any, muted: bool | None, uniq: str) -> bool:
@@ -2704,32 +2707,33 @@ def _o_firmware_esta_mudo(daemon: DaemonProtocol, uniq: str) -> bool:
     return mudo is True
 
 
-async def _o_perfil_pede_silencio(daemon: DaemonProtocol, uniq: str) -> bool:
-    """O perfil ativo manda calar ESTE microfone? Pergunta ao dono da resposta.
+async def _o_controle_pede_silencio(daemon: DaemonProtocol, uniq: str) -> bool:
+    """Ela calou ESTE microfone? Pergunta ao dono da resposta.
 
-    Nenhuma régua nova sobre `controllers[…].mic` nasce aqui: quem responde é
-    `profiles/manager.ProfileManager.o_perfil_pede_silencio`, que resolve a
-    peça sobre o global com a MESMA ordem de `reapply_mic_on_connect` e a
-    mesma canonização de chave. Uma segunda leitura desse mapa seria a terceira
-    cópia dele.
+    Quem responde é `profiles/manager.ProfileManager.o_controle_pede_silencio`,
+    que lê o mudo do controle no `maquina.json` (O-MUDO-E-DO-CONTROLE-01) — a
+    MESMA leitura de `reapply_mic_on_connect`. Uma segunda leitura do dono
+    aqui seria a segunda cópia dele.
 
-    Vai por `_run_blocking` quando o daemon tem um: `load_profile` é disco, e
-    disco dentro do laço do daemon é a família REVIEW-M5-PGREP-BLOCK-01.
+    Vai por `_run_blocking` quando o daemon tem um: ler o `maquina.json` é
+    disco, e disco dentro do laço do daemon é a família
+    REVIEW-M5-PGREP-BLOCK-01.
     """
-    store = getattr(daemon, "store", None)
     controller = getattr(daemon, "controller", None)
-    if store is None or controller is None:
+    if controller is None:
         return False
     try:
         from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
-        manager = ProfileManager(controller=controller, store=store)
+        # O DONO NÃO DEPENDE DO PERFIL ATIVO, e por isso a pergunta não pede o
+        # `store`: um daemon sem perfil ativo também respeita o calado dela.
+        manager = ProfileManager(controller=controller)
         correr = getattr(daemon, "_run_blocking", None)
         if callable(correr):
-            return bool(await correr(manager.o_perfil_pede_silencio, uniq))
-        return bool(manager.o_perfil_pede_silencio(uniq))
+            return bool(await correr(manager.o_controle_pede_silencio, uniq))
+        return bool(manager.o_controle_pede_silencio(uniq))
     except Exception:  # best-effort: a conexão dela não vira traceback
-        logger.debug("mic_nascimento_leitura_do_perfil_falhou", exc_info=True)
+        logger.debug("mic_nascimento_leitura_do_mudo_do_controle_falhou", exc_info=True)
         return False
 
 
@@ -2799,9 +2803,9 @@ async def nascer_no_ar(daemon: DaemonProtocol, uniq: str) -> bool:
 
     **O SILÊNCIO DELA VENCE, e por isso há três perguntas antes das escritas.**
     O `microfone: false` do `maquina.json` (o "Desligar" dela, que vence
-    qualquer pedido), o perfil que diz `mic.muted: true` (o `pragmata.json`
-    dela diz) e o bit do mudo já aceso no aparelho são as três formas de ela
-    ter pedido silêncio; o nascimento recua nas três. Deixar a ORDEM contra o
+    qualquer pedido), o mudo do controle no mesmo arquivo (`microfone_mudo`,
+    O-MUDO-E-DO-CONTROLE-01) e o bit do mudo já aceso no aparelho são as três
+    formas de ela ter pedido silêncio; o nascimento recua nas três. Deixar a ORDEM contra o
     `reapply_mic_after_connect` resolver isso não bastaria: aquele caminho
     escreve o FIRMWARE, e este levanta o CANAL — o microfone de quem pediu
     silêncio iria ao ar do mesmo jeito, que é a SOM-MIC-REPLUG-01 voltando pela
@@ -3014,8 +3018,8 @@ async def _nascer_no_ar_na_vez(daemon: DaemonProtocol, uniq: str) -> bool:
     if _ela_desligou_este_microfone(daemon, uniq):
         logger.info("mic_nasce_calado_por_recusa", uniq=uniq)
         return False
-    if await _o_perfil_pede_silencio(daemon, uniq):
-        logger.info("mic_nasce_calado_por_perfil", uniq=uniq)
+    if await _o_controle_pede_silencio(daemon, uniq):
+        logger.info("mic_nasce_calado_pelo_controle", uniq=uniq)
         return False
     if _o_firmware_esta_mudo(daemon, uniq):
         logger.info("mic_nasce_calado_por_gesto", uniq=uniq)

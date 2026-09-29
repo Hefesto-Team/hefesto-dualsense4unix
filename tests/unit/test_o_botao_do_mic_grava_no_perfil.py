@@ -6,32 +6,34 @@ O P4 não tinha defeito: o perfil Freestyle guardava ``mic.muted: true`` só par
 ele. Ela ligou o microfone pelo botão do controle às 17:19:55 (``mic_ato …
 feito=True ligado=True``), e o perfil continuou dizendo mudo; no restart do
 install, às 18:08:02, ele calou de novo — ``profile_mic_mute_applied muted=True
-origin=replug`` e ``mic_nasce_calado_por_perfil``. O mesmo ciclo às 23h59, 09h32
-e 09h56. A palavra dela:
+origin=replug``. O mesmo ciclo às 23h59, 09h32 e 09h56. A palavra dela:
 *«isso aqui deveriamos ter uma correção a nivel de produto.»*  # (noqa-acento) dela
+
+**O DISCO MUDOU DE DONO EM 28/09/2026 — O-MUDO-E-DO-CONTROLE-01.** A cura de
+25/09 gravava o ato no perfil ativo e o lembrava na sessão; a decisão dela
+(resposta 9 da noite de 27/09: *o mudo do microfone é do controle, e vale em
+todo jogo*) levou o mudo ao ``maquina.json`` (``controles[k].microfone_mudo``).
+As cenas deste arquivo são as mesmas, e o disco que elas leem é o do dono. O
+que mudou de CONTRATO (a troca de perfil não mexe mais no mudo, nem a
+explícita) está em ``test_o_mudo_e_do_controle.py``.
 
 A CENA É A DO PRODUTO, E NO TEMPO
 ------------------------------------------------------------------------------
 Os dois laços do botão (`mic_da_mesa_loop` e `mic_button_loop`) sobem de
 verdade, e o aperto nasce do toggle cego do `hid-playstation` — o molde da
-régua MIC-FASE-01. O ato, o `ProfileManager`, o `loader` que grava o `.json`,
-o gancho de conexão (`connection.reapply_mic_after_connect`), o applier do
-daemon (`Daemon.apply_profile_mic`), o registro da ponte e o nascimento são os
-REAIS. Dublês só onde está o aparelho (o kernel) e o PipeWire (o eleitor).
+régua MIC-FASE-01. O ato, o `ProfileManager`, o `utils/maquina` que grava o
+dono, o gancho de conexão (`connection.reapply_mic_after_connect`), o applier
+do daemon (`Daemon.apply_profile_mic`), o registro da ponte e o nascimento são
+os REAIS. Dublês só onde está o aparelho (o kernel) e o PipeWire (o eleitor).
 
 O QUE SE AFIRMA
 ------------------------------------------------------------------------------
-1. o botão liga e o disco guarda; a reconexão e o restart deixam ligado — e o
+1. o botão liga e o dono guarda; a reconexão e o restart deixam ligado — e o
    contrário, e para os quatro;
-2. a troca AUTOMÁTICA de perfil não desfaz o ato na reconexão; a EXPLÍCITA
-   vale, porque é ato dela;
-3. o mudo da peça vence o do global também no replug (dois leitores, um
-   veredito);
-4. o que se grava é o mesmo que o 🎙 da tela grava (`DraftConfig`);
-5. o `mic_nasce_calado_por_perfil` só aparece quando o último ato foi calar.
-
-A MORDIDA, arrancada uma a uma e medida (25/09/2026) — ver a seção
-«O que foi feito» da sprint, e o `pendente` do relato.
+2. uma metade de pé basta para o dono guardar; nenhuma, e nada se grava;
+3. o calar do dono chega ao firmware mesmo sem perfil legível;
+4. o mudo que um perfil ainda carregue não fala mais no replug;
+5. o `mic_nasce_calado_pelo_controle` só aparece quando o último ato foi calar.
 
 Os endereços são da faixa FORJADA de fixture (`aa:bb:cc`), nunca da bancada dela.
 """
@@ -47,7 +49,6 @@ from typing import Any
 import pytest
 import structlog
 
-from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.daemon import connection, lifecycle
@@ -60,12 +61,10 @@ from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
 )
 from hefesto_dualsense4unix.integrations import eleicao_de_microfone as elm
 from hefesto_dualsense4unix.profiles import loader
-from hefesto_dualsense4unix.profiles.manager import (
-    ProfileManager,
-    gravar_o_mic_no_perfil_ativo,
-)
+from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import MatchManual, Profile
 from hefesto_dualsense4unix.testing.fake_controller import FakeController
+from hefesto_dualsense4unix.utils import maquina
 from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
 P1 = "aabbcc000011"
@@ -130,6 +129,11 @@ class _Kernel(FakeController):  # type: ignore[misc]
     real, em que escrita nenhuma aperta botão. O firmware nasce ABERTO a cada
     conexão: é a premissa do replug.
 
+    **A POSSE É A DO BACKEND REAL** (``microphone_mute_for``): a nossa escrita
+    a toma, ``None`` a devolve, o aperto a solta (a cura da onda 2 da
+    O-BOTAO-DO-MIC-SO-OBEDECE-A-MAO-01) e ``report`` é o report seguinte do
+    Hefesto, que reescreve no firmware a posse que ficou.
+
     É um `FakeController` de propósito: a troca de perfil desta régua é o
     `ProfileManager.activate` REAL, e ele fala com o backend inteiro.
     """
@@ -146,12 +150,15 @@ class _Kernel(FakeController):  # type: ignore[misc]
         self._seq = dict.fromkeys(uniqs, 0)
         #: O que o último aperto PEDE, por controle (o `mudo` da borda).
         self._pedido: dict[str, bool] = {}
+        #: A posse do mudo que o HEFESTO segura, por controle (ausente = kernel).
+        self._posse: dict[str, bool] = {}
         #: Cada escrita do mudo que chegou ao aparelho, com endereço.
         self.escritas_do_mudo: list[tuple[bool | None, str | None]] = []
 
     def apertar(self, uniq: str) -> None:
         """Todo aperto é UMA borda; a mão devolve a posse e o kernel escreve."""
         self._pedido[uniq] = not self._firmware_mudo[uniq]
+        self._posse.pop(uniq, None)
         self._seq[uniq] += 1
         self._kernel_mudo[uniq] = not self._kernel_mudo[uniq]
         self._firmware_mudo[uniq] = self._kernel_mudo[uniq]
@@ -176,13 +183,26 @@ class _Kernel(FakeController):  # type: ignore[misc]
         self.escritas_do_mudo.append((muted, uniq))
         if uniq not in self._firmware_mudo:
             return False
-        if muted is not None:
+        if muted is None:
+            self._posse.pop(uniq, None)
+        else:
+            self._posse[uniq] = bool(muted)
             self._firmware_mudo[uniq] = bool(muted)
             # A escrita com posse leva o firmware; o toggle seguinte do kernel
             # parte do valor que o aparelho mostra — é o que a borda de
             # `mudo=False` do journal dela às 17:19:55 prova.
             self._kernel_mudo[uniq] = bool(muted)
         return True
+
+    def microphone_mute_for(self, uniq: str | None = None) -> bool | None:
+        uniq = norm_mac(str(uniq or "")) or uniq
+        return self._posse.get(str(uniq))
+
+    def report(self, uniq: str) -> None:
+        """O report seguinte do Hefesto: a posse que ficou vai ao firmware."""
+        if uniq in self._posse:
+            self._firmware_mudo[uniq] = self._posse[uniq]
+            self._kernel_mudo[uniq] = self._posse[uniq]
 
     def set_mic_led(self, aceso: bool, *, uniq: str | None = None) -> None:
         self.mic_led_history.append(bool(aceso))
@@ -285,6 +305,14 @@ def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
             mic = dele.get("mic")
             return mic if isinstance(mic, dict) else None
 
+        def calar_no_dono(self, *uniqs: str) -> None:
+            """O calado que ela deu antes da cena, no dono (o `maquina.json`)."""
+            for uniq in uniqs:
+                assert maquina.gravar_o_mudo_do_microfone(uniq, True)
+
+        def mudo_no_dono(self, uniq: str) -> bool | None:
+            return maquina.mudo_do_microfone(uniq)
+
         def daemon(self, uniqs: tuple[str, ...] = (P4,), *, ativo: str = FREESTYLE,
                    store: StateStore | None = None, elege_ok: bool = True,
                    transportes: tuple[str, ...] = ()) -> _Daemon:
@@ -335,9 +363,10 @@ async def _apertar(daemon: _Daemon, *uniqs: str) -> None:
 
 
 async def _reconectar(daemon: _Daemon, uniq: str) -> bool:
-    """O controle volta: firmware ABERTO, e os dois ganchos REAIS da conexão."""
+    """O controle volta: firmware ABERTO, posse do kernel, e os dois ganchos REAIS."""
     daemon.controller._firmware_mudo[uniq] = False
     daemon.controller._kernel_mudo[uniq] = False
+    daemon.controller._posse.pop(uniq, None)
     await connection.reapply_mic_after_connect(daemon, uniq=uniq)
     return bool(await hotkey.nascer_no_ar(daemon, uniq))
 
@@ -365,32 +394,34 @@ def _ativar(daemon: _Daemon, nome: str, *, origin: str) -> None:
 
 
 # ===========================================================================
-# 1. O ACHADO: o P4 calado no perfil, o botão liga, e ele segue ligado
+# 1. O ACHADO: o P4 calado, o botão liga, e ele segue ligado
 # ===========================================================================
 
 
-class TestOBotaoLigaEODiscoGuarda:
+class TestOBotaoLigaEODonoGuarda:
     @pytest.mark.asyncio
-    async def test_o_botao_grava_o_ligado_no_perfil_ativo(self, casa: Any) -> None:
+    async def test_o_botao_grava_o_ligado_no_dono(self, casa: Any) -> None:
         """A cena de 17:19:55. MORDIDA: arrancar a gravação do ato."""
-        casa.perfil(FREESTYLE, por_peca={P4: {"mic": {"muted": True}}})
+        casa.perfil(FREESTYLE)
+        casa.calar_no_dono(P4)
         daemon = casa.daemon()
-        # A conexão que abre a cena: o replug devolve o calado do perfil.
+        # A conexão que abre a cena: o replug devolve o calado do dono.
         assert await _reconectar(daemon, P4) is False
         assert daemon.controller.mudo_no_firmware(P4) is True
 
         await _apertar(daemon, P4)
 
         assert daemon.controller.mudo_no_firmware(P4) is False, "a cena não ligou"
-        assert casa.mic_no_disco(FREESTYLE, P4) == {"muted": False}, (
-            "o botão ligou o microfone e o perfil continuou dizendo mudo — a "
+        assert casa.mudo_no_dono(P4) is False, (
+            "o botão ligou o microfone e o dono continuou dizendo mudo — a "
             "reconexão seguinte o cala de novo, que é o achado de 25/09"
         )
 
     @pytest.mark.asyncio
     async def test_a_reconexao_e_o_restart_deixam_ligado(self, casa: Any) -> None:
         """O restart de 18:08:02, e o replug de 23h59, 09h32 e 09h56."""
-        casa.perfil(FREESTYLE, por_peca={P4: {"mic": {"muted": True}}})
+        casa.perfil(FREESTYLE)
+        casa.calar_no_dono(P4)
         daemon = casa.daemon()
         assert await _reconectar(daemon, P4) is False
         await _apertar(daemon, P4)
@@ -405,8 +436,8 @@ class TestOBotaoLigaEODiscoGuarda:
         with structlog.testing.capture_logs() as registros:
             assert await _reconectar(novo, P4) is True
         assert novo.controller.mudos_escritos(P4) == []
-        assert not [r for r in registros if r["event"] == "mic_nasce_calado_por_perfil"], (
-            "o restart disse `mic_nasce_calado_por_perfil` depois de ela ligar"
+        assert not [r for r in registros if r["event"] == "mic_nasce_calado_pelo_controle"], (
+            "o restart disse `mic_nasce_calado_pelo_controle` depois de ela ligar"
         )
 
     @pytest.mark.asyncio
@@ -419,9 +450,12 @@ class TestOBotaoLigaEODiscoGuarda:
         await _apertar(daemon, P4)
 
         assert daemon.controller.mudo_no_firmware(P4) is True, "a cena não calou"
-        assert casa.mic_no_disco(FREESTYLE, P4) == {"muted": True}, (
-            "o botão calou e o perfil não guardou — a reconexão abriria o "
+        assert casa.mudo_no_dono(P4) is True, (
+            "o botão calou e o dono não guardou — a reconexão abriria o "
             "microfone de quem pediu silêncio"
+        )
+        assert loader.load_profile(FREESTYLE).controllers is None, (
+            "o ato gravou o mudo no perfil — o mudo é do controle"
         )
         novo = _reiniciar(casa)
         with structlog.testing.capture_logs() as registros:
@@ -429,15 +463,15 @@ class TestOBotaoLigaEODiscoGuarda:
         assert novo.controller.mudos_escritos(P4) == [True], (
             "o replug não devolveu o mudo ao firmware que volta aberto"
         )
-        assert [r for r in registros if r["event"] == "mic_nasce_calado_por_perfil"]
+        assert [r for r in registros if r["event"] == "mic_nasce_calado_pelo_controle"]
 
 
 class TestOsQuatro:
     @pytest.mark.asyncio
     async def test_os_quatro_ligam_e_os_quatro_calam(self, casa: Any) -> None:
-        """Cabo e rádio, os quatro jogadores: cada botão grava a SUA peça."""
-        calados = {u: {"mic": {"muted": True}} for u in OS_QUATRO}
-        casa.perfil(FREESTYLE, por_peca=calados)
+        """Cabo e rádio, os quatro jogadores: cada botão grava o SEU controle."""
+        casa.perfil(FREESTYLE)
+        casa.calar_no_dono(*OS_QUATRO)
         transportes = ("usb", "bt", "usb", "bt")
         daemon = casa.daemon(OS_QUATRO, transportes=transportes)
         for u in OS_QUATRO:
@@ -446,9 +480,7 @@ class TestOsQuatro:
         await _apertar(daemon, *OS_QUATRO)
 
         for u in OS_QUATRO:
-            assert casa.mic_no_disco(FREESTYLE, u) == {"muted": False}, (
-                f"o botão do {u} não gravou no perfil"
-            )
+            assert casa.mudo_no_dono(u) is False, f"o botão do {u} não gravou no dono"
         novo = casa.daemon(OS_QUATRO, transportes=transportes)
         for u in OS_QUATRO:
             assert await _reconectar(novo, u) is True, f"o restart calou o {u}"
@@ -457,163 +489,42 @@ class TestOsQuatro:
         await _apertar(novo, *OS_QUATRO)
 
         for u in OS_QUATRO:
-            assert casa.mic_no_disco(FREESTYLE, u) == {"muted": True}, (
-                f"o calar do {u} não gravou no perfil"
-            )
+            assert casa.mudo_no_dono(u) is True, f"o calar do {u} não gravou no dono"
         terceiro = casa.daemon(OS_QUATRO, transportes=transportes)
         for u in OS_QUATRO:
             assert await _reconectar(terceiro, u) is False, f"o restart abriu o {u}"
 
 
 # ===========================================================================
-# 2. A TROCA DE PERFIL DEPOIS DO ATO
+# 2. UMA METADE DE PÉ BASTA
 # ===========================================================================
 
 
-class TestATrocaDePerfilDepois:
-    @pytest.mark.asyncio
-    async def test_a_troca_automatica_nao_desfaz_o_ato_na_reconexao(self, casa: Any) -> None:
-        """O ato no Freestyle, o jogo abre, o rádio pisca: o P4 segue ligado.
-
-        O perfil do jogo guarda um registro MAIS VELHO do P4 (calado). A troca
-        automática não escreve o mudo (MIC-GRAVACAO-01) — mas a reconexão
-        seguinte lia o perfil do jogo e desfazia o ato dela.
-
-        MORDIDA: `_ato_da_sessao` devolvendo sempre `None`.
-        """
-        casa.perfil(FREESTYLE, por_peca={P4: {"mic": {"muted": True}}})
-        casa.perfil(JOGO, por_peca={P4: {"mic": {"muted": True}}})
-        daemon = casa.daemon()
-        assert await _reconectar(daemon, P4) is False
-        await _apertar(daemon, P4)
-        assert daemon.controller.mudo_no_firmware(P4) is False, "a cena não ligou"
-        daemon.controller.escritas_do_mudo.clear()
-
-        _ativar(daemon, JOGO, origin="autoswitch")
-        assert daemon.store.active_profile == JOGO
-        assert daemon.controller.mudos_escritos(P4) == [], "a troca automática calou"
-
-        assert await _reconectar(daemon, P4) is True, (
-            "a reconexão sob o perfil do jogo desfez o ato dela no Freestyle"
-        )
-        assert True not in daemon.controller.mudos_escritos(P4)
-        assert casa.mic_no_disco(JOGO, P4) == {"muted": True}, (
-            "o ato reescreveu um perfil que não estava ativo"
-        )
-
-    @pytest.mark.asyncio
-    async def test_a_troca_explicita_vale_porque_e_ato_dela(self, casa: Any) -> None:
-        """Ela escolhe na mão o perfil que diz calado: ESSE é o último ato.
-
-        MORDIDA: arrancar o `_esquecer_o_ato_da_sessao` do `apply_mic`.
-        """
-        casa.perfil(FREESTYLE, por_peca={P4: {"mic": {"muted": True}}})
-        casa.perfil(JOGO, por_peca={P4: {"mic": {"muted": True}}})
-        daemon = casa.daemon()
-        assert await _reconectar(daemon, P4) is False
-        await _apertar(daemon, P4)
-        assert daemon.controller.mudo_no_firmware(P4) is False, "a cena não ligou"
-        daemon.controller.escritas_do_mudo.clear()
-
-        _ativar(daemon, JOGO, origin="manual")
-        assert daemon.controller.mudo_no_firmware(P4) is True, "a troca explícita não calou"
-
-        assert await _reconectar(daemon, P4) is False, (
-            "a reconexão abriu o microfone que ela calou escolhendo o perfil"
-        )
-        assert daemon.controller.mudos_escritos(P4)[-1] is True
-
-    @pytest.mark.asyncio
-    async def test_perfil_sem_opiniao_escolhido_na_mao_nao_apaga_o_ato(self, casa: Any) -> None:
-        """Um perfil que não diz nada sobre o microfone não é ato sobre ele."""
-        casa.perfil(FREESTYLE)
-        casa.perfil(JOGO)
-        daemon = casa.daemon()
-        assert await hotkey.nascer_no_ar(daemon, P4) is True
-        await _apertar(daemon, P4)  # calou
-
-        _ativar(daemon, JOGO, origin="manual")
-
-        assert await _reconectar(daemon, P4) is False, (
-            "o perfil sem opinião apagou o silêncio que ela pediu no botão"
-        )
-        assert daemon.controller.mudos_escritos(P4)[-1] is True
-
-    @pytest.mark.asyncio
-    async def test_secao_do_mic_sem_o_mudo_escolhida_na_mao_nao_apaga_o_ato(
-        self, casa: Any
-    ) -> None:
-        """A seção `mic` que existe e não diz o mudo também não é ato sobre ele.
-
-        O caso de cima não alcança a guarda: perfil SEM a seção sai do
-        `apply_mic` antes de chegar a ela. Aqui a seção existe só pelo
-        `button_toggles_system` — é a forma de um perfil de fábrica.
-
-        MORDIDA: a troca explícita esquecendo o ato mesmo sem opinião
-        (`if origin == "manual":` sem o `muted is not None`).
-        """
-        casa.perfil(FREESTYLE)
-        casa.perfil(JOGO, mic={})
-        daemon = casa.daemon()
-        assert await hotkey.nascer_no_ar(daemon, P4) is True
-        await _apertar(daemon, P4)  # calou
-
-        _ativar(daemon, JOGO, origin="manual")
-
-        assert await _reconectar(daemon, P4) is False, (
-            "a seção do mic sem opinião sobre o mudo apagou o silêncio dela"
-        )
-        assert daemon.controller.mudos_escritos(P4)[-1] is True
-
-    @pytest.mark.asyncio
-    async def test_a_troca_explicita_pelo_global_vale_para_a_mesa(self, casa: Any) -> None:
-        """Ela escolhe na mão um perfil cujo GLOBAL diz calado: vale para todos.
-
-        O global não tem endereço — na reconexão ele fala por toda peça sem
-        opinião —, então a troca explícita esquece o ato de TODOS.
-
-        MORDIDA: `_esquecer_o_ato_da_sessao(None)` sem esquecer ninguém.
-        """
-        casa.perfil(FREESTYLE, por_peca={P4: {"mic": {"muted": True}}})
-        casa.perfil(JOGO, mic={"muted": True})
-        daemon = casa.daemon()
-        assert await _reconectar(daemon, P4) is False
-        await _apertar(daemon, P4)
-        assert daemon.controller.mudo_no_firmware(P4) is False, "a cena não ligou"
-
-        _ativar(daemon, JOGO, origin="manual")
-        daemon.controller.escritas_do_mudo.clear()
-
-        assert await _reconectar(daemon, P4) is False, (
-            "a reconexão abriu o microfone que o global escolhido na mão cala"
-        )
-        assert daemon.controller.mudos_escritos(P4) == [True]
-
-
 class TestUmaMetadeDePeBasta:
-    """O ato vai ao disco quando UMA das metades ficou de pé.
+    """O ato vai ao dono quando UMA das metades ficou de pé.
 
     MORDIDA das duas: exigir as DUAS metades (`and` no lugar do `or` da guarda
     de `_o_disco_guarda_o_ato`).
     """
 
     @pytest.mark.asyncio
-    async def test_o_radio_que_recusa_o_canal_nao_impede_o_disco(self, casa: Any) -> None:
+    async def test_o_radio_que_recusa_o_canal_nao_impede_o_dono(self, casa: Any) -> None:
         """O desfecho COMUM por rádio: a ponte ainda não publicou o canal.
 
         O firmware obedeceu (o kernel já virou o bit) e a eleição recusou. Sem
         a gravação, a reconexão seguinte calaria de novo o microfone que ela
         ligou pelo botão — a queixa inteira.
         """
-        casa.perfil(FREESTYLE, por_peca={P4: {"mic": {"muted": True}}})
+        casa.perfil(FREESTYLE)
+        casa.calar_no_dono(P4)
         daemon = casa.daemon(elege_ok=False, transportes=("bt",))
         assert await _reconectar(daemon, P4) is False
 
         await _apertar(daemon, P4)
 
         assert daemon.controller.mudo_no_firmware(P4) is False, "a cena não ligou"
-        assert casa.mic_no_disco(FREESTYLE, P4) == {"muted": False}, (
-            "o canal recusado pelo rádio impediu o disco de guardar o ligado"
+        assert casa.mudo_no_dono(P4) is False, (
+            "o canal recusado pelo rádio impediu o dono de guardar o ligado"
         )
         novo = casa.daemon(transportes=("bt",))  # a ponte já publicou
         assert await _reconectar(novo, P4) is True, "o restart calou o P4"
@@ -635,138 +546,115 @@ class TestUmaMetadeDePeBasta:
         assert not ato.canal_no_sistema.feita and ato.firmware.feita, (
             "a cena não é a de uma metade só"
         )
-        assert casa.mic_no_disco(FREESTYLE, P4) == {"muted": True}, (
-            "o calar com o canal recusado não foi ao disco"
-        )
+        assert casa.mudo_no_dono(P4) is True, "o calar com o canal recusado não foi ao dono"
         novo = _reiniciar(casa)
         assert await _reconectar(novo, P4) is False, "o restart pôs no ar quem ela calou"
         assert novo.controller.mudos_escritos(P4) == [True]
 
 
-class TestOAtoDaSessaoSemPerfil:
+# ===========================================================================
+# 3. O CALAR DO DONO NÃO DEPENDE DO PERFIL
+# ===========================================================================
+
+
+class TestOCalarDoDonoSemPerfil:
     @pytest.mark.asyncio
-    async def test_o_calar_da_sessao_chega_ao_firmware_sem_perfil_legivel(
+    async def test_o_calar_do_dono_chega_ao_firmware_sem_perfil_legivel(
         self, casa: Any
     ) -> None:
-        """O ativo não carrega (apagado, ilegível): o ato de calar ainda vale.
+        """O ativo não carrega (apagado, ilegível): o calado dela ainda vale.
 
-        O nascimento pergunta o ato ANTES do disco e recua; o replug tem de
-        escrever o mesmo veredito no firmware, senão o plástico volta ABERTO
-        com o canal recuado — dois leitores, dois vereditos.
+        O nascimento pergunta ao dono e recua; o replug tem de escrever o mesmo
+        veredito no firmware, senão o plástico volta ABERTO com o canal
+        recuado — dois leitores, dois vereditos.
 
         MORDIDA: o ramo sem perfil legível devolvendo `None`.
         """
         daemon = casa.daemon(ativo="Sumiu")
         ato = await hotkey.ligar_o_microfone(daemon, P4, ligado=False)
         await _derrubar(daemon)
-        assert ato.firmware.feita and daemon.store.ato_do_mic(P4) is True
+        assert ato.firmware.feita and casa.mudo_no_dono(P4) is True
         daemon.controller.escritas_do_mudo.clear()
 
         assert await _reconectar(daemon, P4) is False
         assert daemon.controller.mudos_escritos(P4) == [True], (
-            "o replug deixou o firmware aberto sobre o silêncio da sessão"
+            "o replug deixou o firmware aberto sobre o silêncio do dono"
         )
 
-    def test_o_ato_da_sessao_casa_o_mac_com_dois_pontos(self) -> None:
-        """A tela manda `aa:bb:…`; a sessão guarda 12 hex. MORDIDA: ler cru."""
-        store = StateStore()
-        store.lembrar_o_ato_do_mic(P4, True)
-        m = ProfileManager(controller=object(), store=store)
+    def test_o_dono_casa_o_mac_com_dois_pontos(self, casa: Any) -> None:
+        """A tela manda `aa:bb:…`; o dono guarda 12 hex. MORDIDA: ler cru."""
+        casa.calar_no_dono(P4)
+        m = ProfileManager(controller=object(), store=StateStore())
 
-        assert m.o_perfil_pede_silencio("aa:bb:cc:00:00:44") is True
+        assert m.o_controle_pede_silencio("aa:bb:cc:00:00:44") is True
+        assert m.o_controle_pede_silencio(P3) is False, "quem nunca disse nasce no ar"
 
 
 # ===========================================================================
-# 3. O MUDO DA PEÇA VENCE O DO GLOBAL, TAMBÉM NO REPLUG
+# 4. O MUDO DE UM PERFIL NÃO FALA MAIS NO REPLUG
 # ===========================================================================
 
 
-class TestAPecaVenceOGlobalNoReplug:
-    def test_o_global_calado_nao_pisa_a_peca_ligada(self, casa: Any) -> None:
-        """O `pragmata.json` dela tem `mic.muted: true` no global.
-
-        O botão grava a PEÇA; o replug escrevia o global por cima, e o `False`
-        da peça não atravessa o replug para desfazê-lo — medido num lar de
-        mentira: `o_perfil_pede_silencio` dizia `False` e o replug escrevia
-        `True`. MORDIDA: tirar a guarda do global em `reapply_mic_on_connect`.
-        """
-        casa.perfil(FREESTYLE, mic={"muted": True, "volume": 70},
-                    por_peca={P4: {"mic": {"muted": False}}})
+class TestOMudoDoPerfilNaoFalaNoReplug:
+    def _applier(self) -> tuple[list[dict[str, Any]], Any]:
         chamadas: list[dict[str, Any]] = []
 
         def applier(volume: Any, muted: Any, *, uniq: Any = None, origin: str = "") -> str:
             chamadas.append({"volume": volume, "muted": muted, "uniq": uniq})
             return "aplicado"
 
+        return chamadas, applier
+
+    def test_o_global_calado_de_um_perfil_nao_cala_o_controle(self, casa: Any) -> None:
+        """O `pragmata.json` dela tinha `mic.muted: true` no global.
+
+        O dono não diz nada deste controle: o replug leva o volume do perfil e
+        nenhum mudo. MORDIDA: devolver o `muted` do global à vista do replug.
+        """
+        casa.perfil(FREESTYLE, mic={"muted": True, "volume": 70})
+        chamadas, applier = self._applier()
         store = StateStore()
         store.set_active_profile(FREESTYLE)
         m = ProfileManager(controller=object(), store=store, mic_applier=applier)
 
-        assert m.o_perfil_pede_silencio(P4) is False
+        assert m.o_controle_pede_silencio(P4) is False
         m.reapply_mic_on_connect(P4)
 
         assert [c["muted"] for c in chamadas if c["muted"] is not None] == [], (
-            "o replug calou a peça que diz ligado — dois leitores, dois vereditos"
+            "o replug calou o controle pelo mudo que o perfil ainda carrega"
         )
         assert chamadas and chamadas[0]["volume"] == 70, "o volume do global sumiu"
 
+    def test_a_peca_do_perfil_nao_vence_o_dono(self, casa: Any) -> None:
+        """O perfil diz a peça no ar; o dono diz calado: vale o dono.
 
-# ===========================================================================
-# 4. O MESMO LUGAR E AS MESMAS REGRAS DO CLIQUE DA TELA
-# ===========================================================================
-
-
-class TestOMesmoLugarDoCliqueDaTela:
-    @pytest.mark.parametrize(
-        ("mic_global", "peca", "mudo"),
-        [
-            (None, {"muted": True}, False),
-            (None, None, True),
-            ({"muted": True}, None, False),
-            ({"muted": False}, {"muted": True, "volume": 40}, False),
-            ({"muted": True}, {"muted": False}, True),
-            (None, {"gain": 30}, True),
-        ],
-    )
-    def test_o_disco_fica_igual_ao_que_a_tela_grava(
-        self, casa: Any, mic_global: Any, peca: Any, mudo: bool
-    ) -> None:
-        """`DraftConfig.with_controller_mic` é o escritor do 🎙 da aba 02.
-
-        MORDIDA: tirar a regra "igual ao global não vira override".
+        MORDIDA: ler o `muted` da peça do perfil em vez do dono.
         """
-        casa.perfil(FREESTYLE, mic=mic_global,
-                    por_peca={P4: {"mic": peca}} if peca is not None else None)
-        prof = loader.load_profile(FREESTYLE)
-        draft = DraftConfig.from_profile(prof)
-        tela = draft.with_controller_mic(
-            P4, draft.effective_mic_for(P4).model_copy(update={"muted": mudo})
-        ).to_profile(FREESTYLE, priority=prof.priority)
-        esperado = {
-            k: v.model_dump(exclude_unset=True) for k, v in (tela.controllers or {}).items()
-        }
+        casa.perfil(FREESTYLE, por_peca={P4: {"mic": {"muted": False}}})
+        casa.calar_no_dono(P4)
+        chamadas, applier = self._applier()
+        store = StateStore()
+        store.set_active_profile(FREESTYLE)
+        m = ProfileManager(controller=object(), store=store, mic_applier=applier)
 
-        gravar_o_mic_no_perfil_ativo(FREESTYLE, chave=P4, muted=mudo)
+        m.reapply_mic_on_connect(P4)
 
-        agora = loader.load_profile(FREESTYLE)
-        obtido = {
-            k: v.model_dump(exclude_unset=True) for k, v in (agora.controllers or {}).items()
-        }
-        assert obtido == esperado
+        assert [c["muted"] for c in chamadas] == [True], (
+            "o replug deixou o firmware aberto sobre o calado do dono"
+        )
 
-    def test_o_mesmo_lado_duas_vezes_nao_regrava(self, casa: Any) -> None:
-        casa.perfil(FREESTYLE)
-        assert gravar_o_mic_no_perfil_ativo(FREESTYLE, chave=P4, muted=True) == (
-            FREESTYLE, True, None)
-        assert gravar_o_mic_no_perfil_ativo(FREESTYLE, chave=P4, muted=True) == (
-            FREESTYLE, False, "sem_mudanca")
+
+# ===========================================================================
+# 5. O 🎙 DA TELA GRAVA PELO MESMO ATO
+# ===========================================================================
 
 
 class TestOAtoDaTelaGravaPeloMesmoCaminho:
     @pytest.mark.asyncio
     async def test_o_mic_canal_set_grava_como_o_botao(self, casa: Any) -> None:
         """O 🎙 chega pelo `mic.canal.set`, que é `ligar_o_microfone` — o mesmo ato."""
-        casa.perfil(FREESTYLE, por_peca={P4: {"mic": {"muted": True}}})
+        casa.perfil(FREESTYLE)
+        casa.calar_no_dono(P4)
         daemon = casa.daemon()
         daemon.controller._firmware_mudo[P4] = True
 
@@ -774,17 +662,18 @@ class TestOAtoDaTelaGravaPeloMesmoCaminho:
         await _derrubar(daemon)
 
         assert ato.feito
-        assert casa.mic_no_disco(FREESTYLE, P4) == {"muted": False}
+        assert casa.mudo_no_dono(P4) is False
 
     @pytest.mark.asyncio
-    async def test_o_ato_em_que_nada_ficou_de_pe_nao_vai_ao_disco(
+    async def test_o_ato_em_que_nada_ficou_de_pe_nao_vai_ao_dono(
         self, casa: Any, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """As duas metades recusadas: o arquivo não diz o que o aparelho não teve.
 
         MORDIDA: tirar a guarda "nada ficou de pé".
         """
-        casa.perfil(FREESTYLE, por_peca={P4: {"mic": {"muted": True}}})
+        casa.perfil(FREESTYLE)
+        casa.calar_no_dono(P4)
         daemon = casa.daemon(elege_ok=False)
         daemon.controller._firmware_mudo[P4] = True
         monkeypatch.setattr(daemon.controller, "set_microphone_mute",
@@ -793,11 +682,10 @@ class TestOAtoDaTelaGravaPeloMesmoCaminho:
         ato = await hotkey.ligar_o_microfone(daemon, P4, ligado=True)
 
         assert not ato.canal_no_sistema.feita and not ato.firmware.feita
-        assert casa.mic_no_disco(FREESTYLE, P4) == {"muted": True}
-        assert daemon.store.ato_do_mic(P4) is None
+        assert casa.mudo_no_dono(P4) is True
 
     @pytest.mark.asyncio
-    async def test_o_vpad_nao_e_peca_e_nao_grava(self, casa: Any) -> None:
+    async def test_o_vpad_nao_e_controle_e_nao_grava(self, casa: Any) -> None:
         casa.perfil(FREESTYLE)
         vpad = "02fe00000001"
         daemon = casa.daemon((vpad,))
@@ -805,4 +693,6 @@ class TestOAtoDaTelaGravaPeloMesmoCaminho:
         await hotkey.ligar_o_microfone(daemon, vpad, ligado=False)
         await _derrubar(daemon)
 
+        assert maquina.carregar_maquina().controles == {}
         assert loader.load_profile(FREESTYLE).controllers is None
+

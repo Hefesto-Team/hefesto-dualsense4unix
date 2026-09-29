@@ -87,8 +87,9 @@ mudou é que a chegada volta a dizer a palavra — e é por isso que ela não
 clicava uma vez, clicava *toda vez*.
 
 **E O SILÊNCIO DELA CONTINUA VENCENDO.** O nascimento recua diante das duas
-formas de ela ter pedido para calar: `mic.muted: true` no perfil ativo (a
-`ProfileManager.o_perfil_pede_silencio`) e o bit do mudo já aceso no aparelho.
+formas de ela ter pedido para calar: o mudo daquele controle no `maquina.json`
+(a `ProfileManager.o_controle_pede_silencio`, O-MUDO-E-DO-CONTROLE-01) e o bit
+do mudo já aceso no aparelho.
 Sem isso a SOM-MIC-REPLUG-01 — *"o silêncio que o produto promete e não
 entrega"* — voltaria pela porta da frente.
 

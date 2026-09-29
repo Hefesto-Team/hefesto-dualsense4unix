@@ -484,8 +484,9 @@ async def test_no_tempo_o_fantasma_nao_chega_a_eleicao(
     """Três segundos de luz/mudo virando nos quatro, e depois UM aperto do P2.
 
     O laço de produção (`mic_da_mesa_loop`) sobre o controlador de produção:
-    cada `MIC_DA_MESA` é uma eleição e uma gravação no perfil dela
-    (`hotkey.mic_button_loop` -> `ligar_o_microfone` -> `_o_disco_guarda_o_ato`).
+    cada `MIC_DA_MESA` é uma eleição e uma gravação do mudo daquele controle
+    (`hotkey.mic_button_loop` -> `ligar_o_microfone` -> `_o_disco_guarda_o_ato`,
+    no `maquina.json` desde a O-MUDO-E-DO-CONTROLE-01).
     Zero publicações sem mão; uma, com o endereço dela, quando ela aperta.
     """
     from hefesto_dualsense4unix.daemon import lifecycle

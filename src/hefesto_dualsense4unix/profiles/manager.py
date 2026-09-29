@@ -308,10 +308,9 @@ class ProfileManager:
     # seção não chama o applier. Sem opinião é silêncio, não ordem.
     #
     # A DIFERENÇA que este eixo tem e o alto-falante não: `muted` é o mudo do
-    # FIRMWARE, o mesmo que apaga a luz vermelha do microfone — e há decisão
-    # medida proibindo o perfil de apagá-la como COLATERAL
-    # (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01). A conciliação está em
-    # `apply_mic`, e ela é a exceção nomeada MIC-GRAVACAO-01.
+    # FIRMWARE, o mesmo que apaga a luz vermelha do microfone — e ele é do
+    # CONTROLE, não do perfil (O-MUDO-E-DO-CONTROLE-01): só o replug o leva,
+    # com o valor do dono. A guarda está em `apply_mic`.
     #
     # None = seção ignorada (CLI/testes sem daemon).
     mic_applier: Callable[..., object] | None = None
@@ -1658,40 +1657,35 @@ class ProfileManager:
            também pelo `mic.set`/`mic.volume.set` (18/08/2026). Se ela acabou
            de mexer no microfone na mão, o autoswitch reaplicando o perfil a
            cada troca de janela NÃO pisa o ajuste dela.
-        3. **MIC-GRAVACAO-01 — o `muted` só vai em troca EXPLÍCITA de perfil.**
+        3. **O MUDO NÃO É DO PERFIL — O-MUDO-E-DO-CONTROLE-01 (28/09/2026).**
 
-        A TERCEIRA GUARDA, por extenso, porque ela é o que explica o que já
-        funcionava. `ProfileMicConfig.muted` é o mudo do FIRMWARE, o mesmo que
-        apaga o LED vermelho, e há decisão medida proibindo o perfil de apagar
-        aquele LED como COLATERAL (AUDIT-FINDING-PROFILE-MIC-LED-RESET-01).
-        Some-se a isso que a trava manual **não é intransponível**: o perfil de
-        JOGO a limpa ao entrar (`profiles/autoswitch.py`, a exceção F2 — a
-        troca por jogo não pode ficar silenciada para sempre por um `led.set`
-        da manhã). As duas coisas juntas produziriam o defeito: ela grava, o
-        jogo abre, o perfil do jogo entra com a trava limpa e **rouba o mudo do
-        microfone dela no meio da gravação**.
+        A TERCEIRA GUARDA, por extenso. A decisão é dela (resposta 9 da noite
+        de 27/09): *o mudo do microfone é do controle, e vale em todo jogo*.
+        Ele mora no `maquina.json` (`controles[k].microfone_mudo`), e nenhuma
+        ativação de perfil o escreve — nem a troca automática, nem a
+        explícita, nem o restore de boot. Um `muted` que um perfil ainda
+        carregue (a migração `loader.o_mudo_do_microfone_vai_para_o_controle`
+        o tira) é ignorado aqui.
 
-        A conciliação é separar os dois campos pelo que eles custam:
+        A ÚNICA PASSAGEM é o `origin="replug"`, e quem a monta é
+        `reapply_mic_on_connect`, com o mudo do DONO no lugar do do perfil:
+        o firmware volta ABERTO a cada conexão, e devolver o silêncio que ela
+        pediu é o que o replug existe para fazer. A passagem continua
+        ASSIMÉTRICA — ver o comentário no corpo.
 
-        - **`volume` aplica SEMPRE** (respeitada a trava). Ele é o ganho da
-          fonte no PipeWire — não toca no firmware, não tira o botão físico do
-          controle e não apaga luz nenhuma. Errar aqui custa um número, e ela
-          vê o número na tela.
-        - **`muted` só em `origin="manual"`** — ela escolhendo o perfil na
-          GUI/CLI ou no PS+D-pad. Autoswitch, restore de boot e reconexão
-          (`"autoswitch"`/`"system"`) NÃO mexem no mudo. O LED do mic morre
-          como colateral e sobrevive como consequência de um pedido explícito
-          dela, que é exatamente o que a decisão de 2026-07 protegia.
+        O `volume` aplica SEMPRE (respeitada a trava): ele é o ganho da fonte
+        no PipeWire e o `common[6]`, não toca no mudo, não tira o botão físico
+        do controle e não apaga luz nenhuma.
 
         O LED do mic continua FORA de `LedSettings`/`ControllerOverrides`: nada
         aqui o escreve por conta própria — quem o move é o firmware, ao receber
-        o mudo que ELA pediu e salvou.
+        o mudo que ELA pediu.
 
         **REUSADO POR PEÇA DESDE 03/09/2026** (MIC-QUINTO-AJUSTE-01): quem
         aplica o `ControllerOverrides.mic` é `apply_controller_mics`, e ele
         chama ESTE método com o `uniq` da peça em vez de repetir as guardas.
-        Se você mexer aqui, mexeu nos dois — e é essa a intenção: a exceção
-        MIC-GRAVACAO-01 não pode existir em duas cópias que divergem.
+        Se você mexer aqui, mexeu nos dois — e é essa a intenção: a guarda do
+        mudo não pode existir em duas cópias que divergem.
 
         Best-effort como os irmãos: falha do applier loga warning e não aborta
         a ativação. `relatorio` recebe `"mic" → estado`.
@@ -1702,14 +1696,17 @@ class ProfileManager:
             return None
         volume = getattr(secao, "volume", None)
         muted = getattr(secao, "muted", None)
-        # MIC-GRAVACAO-01: o mudo só atravessa a troca EXPLÍCITA de perfil.
+        # O MUDO NÃO É DO PERFIL (O-MUDO-E-DO-CONTROLE-01, 28/09/2026): só o
+        # replug o leva, e o `muted` que chega por ele é o do DONO
+        # (`reapply_mic_on_connect` o põe na vista). Toda ativação de perfil —
+        # automática, explícita ou de boot — deixa o mudo como está.
         #
-        # **E O REPLUG, QUE É O TERCEIRO CASO — SOM-MIC-REPLUG-01, 16/09/2026.**
-        # Ele não é troca de perfil: é o aparelho VOLTANDO, e voltando com o
-        # firmware no default dele — microfone ABERTO, LED apagado. A lição do
-        # mesmo dia, do outro lado do byte de áudio (`SOM-ECO-01`), vale aqui:
-        # *não escrever não é o lado neutro*. Quem pediu mudo e recebe aberto
-        # **fala sem saber que é ouvida**, e o produto foi quem abriu.
+        # **O REPLUG — SOM-MIC-REPLUG-01, 16/09/2026.** Ele não é troca de
+        # perfil: é o aparelho VOLTANDO, e voltando com o firmware no default
+        # dele — microfone ABERTO, LED apagado. A lição do mesmo dia, do outro
+        # lado do byte de áudio (`SOM-ECO-01`), vale aqui: *não escrever não é
+        # o lado neutro*. Quem pediu mudo e recebe aberto **fala sem saber que
+        # é ouvida**, e o produto foi quem abriu.
         #
         # A passagem é ASSIMÉTRICA, e é isso que concilia as duas decisões:
         #
@@ -1722,23 +1719,10 @@ class ProfileManager:
         #                  exatamente o que a AUDIT-FINDING-PROFILE-MIC-LED-
         #                  RESET-01 proíbe fora de pedido explícito dela.
         #
-        # Por isso a exceção mora AQUI e não no chamador: a casa exige que a
-        # MIC-GRAVACAO-01 não tenha duas cópias que possam divergir, e um
-        # `reapply_mic_on_connect` que filtrasse por conta própria seria a
-        # segunda cópia.
-        if origin == "replug":
-            muted = True if muted is True else None
-        elif origin != "manual":
-            muted = None
-        # A TROCA EXPLÍCITA É ATO DELA — O-BOTAO-DO-MIC-GRAVA-NO-PERFIL-01
-        # (25/09/2026). Quando ela escolhe na mão um perfil que diz o mudo, é
-        # esse o último ato sobre o microfone, e a memória da sessão (o ato do
-        # botão ou do 🎙 feito em OUTRO perfil) cede: sem isto a reconexão
-        # seguinte desfaria o silêncio que ela acabou de escolher. Sem `uniq`
-        # é a seção global, que fala por todos os controles na reconexão.
-        # Perfil sem opinião sobre o mudo (`muted is None`) não apaga nada.
-        if origin == "manual" and muted is not None:
-            self._esquecer_o_ato_da_sessao(uniq)
+        # Por isso a guarda mora AQUI e não no chamador: ela não pode ter duas
+        # cópias que possam divergir, e um `reapply_mic_on_connect` que
+        # filtrasse por conta própria seria a segunda cópia.
+        muted = True if (origin == "replug" and muted is True) else None
         # O GANHO DE ENTRADA — 21/09/2026, ordem dela: *"OS DOIS SLICERS
         # REFLETEM TANTO LÁ QUANTO NO JOGO E ISSO DEVE SER SALVO."*
         #
@@ -1927,118 +1911,89 @@ class ProfileManager:
         mais grave desta família: **o silêncio que o produto promete e não
         entrega**.
 
-        Espelho exato do `reapply_speaker_on_connect`, e de propósito — mesma
-        ordem (global escreve, peça reescreve por cima), mesmo `norm_mac` para
-        canonizar a chave de `controllers`, mesmo best-effort. O que muda é uma
-        coisa só: o `origin` é `"replug"` e não `"system"`, porque é ele que
-        abre a passagem ASSIMÉTRICA do `muted` em `apply_mic` — `True` atravessa,
-        `False` não. A regra mora lá, em cópia única.
+        Espelho do `reapply_speaker_on_connect` no `volume` — mesma ordem
+        (global escreve, peça reescreve por cima), mesmo `norm_mac` para
+        canonizar a chave de `controllers`, mesmo best-effort. O `origin` é
+        `"replug"` e não `"system"`, porque é ele que abre a passagem
+        ASSIMÉTRICA do `muted` em `apply_mic` — `True` atravessa, `False` não.
+        A regra mora lá, em cópia única.
 
         O `volume` atravessa dos dois jeitos e sempre atravessou: ele é ganho de
         captura, não mexe no LED nem tira o botão físico de ninguém.
 
-        **O MUDO DA PEÇA VENCE O DO GLOBAL — O-BOTAO-DO-MIC-GRAVA-NO-PERFIL-01
-        (25/09/2026).** "O global escreve e a peça reescreve por cima" só vale
-        quando as duas escritas atravessam, e a do `False` não atravessa o
-        replug. Medido num lar de mentira, com o `pragmata.json` na forma dela
-        (global `muted: true`) e a peça dizendo `false`: o
-        `o_perfil_pede_silencio` respondia `False` e este gancho escrevia `True`
-        no firmware — dois leitores do mesmo mapa, dois vereditos, e o
-        microfone nascia no ar com o firmware mudo. Agora o mudo do global só
-        vai quando a peça não tem opinião sobre ele.
+        **O MUDO VEM DO DONO — O-MUDO-E-DO-CONTROLE-01 (28/09/2026).** A
+        decisão é dela (resposta 9 da noite de 27/09): *o mudo do microfone é
+        do controle, e vale em todo jogo*. Ele mora no `maquina.json`
+        (`utils.maquina.mudo_do_microfone`), e é de lá que esta reconexão o lê
+        — nunca do perfil ativo, que só empresta o `volume` e o `gain`. Um
+        `muted` que o perfil ainda carregue é tirado da vista antes de chegar
+        ao `apply_mic`: o perfil de um jogo não fala pelo silêncio dela.
 
-        **E O ÚLTIMO ATO DELA NESTA SESSÃO VENCE O PERFIL ATIVO** — o botão do
-        plástico ou o 🎙 (`hotkey.ligar_o_microfone`) gravam o ato no perfil
-        que estava ativo e o lembram no `StateStore`. Sem a lembrança, a troca
-        automática para um perfil com um registro mais velho deste controle
-        desfaria o ato na primeira reconexão. Ver `_ato_da_sessao`.
+        Antes do dono o mudo tinha três cópias (o perfil, a sessão do daemon e
+        o aparelho), e a reconexão depois de uma troca de perfil ou de um
+        restart lia a cópia errada. O restart é o caso que a cura existe para
+        fechar: a sessão morria com o daemon, e o perfil que o boot restaurava
+        podia dizer outra coisa.
         """
-        ato = self._ato_da_sessao(uniq)
+        mudo = self._mudo_do_controle(uniq)
         lido = self._mic_do_perfil_ativo(uniq)
         if lido is None:
-            # Perfil sem opinião sobre o microfone: só o ato de CALAR tem o que
-            # escrever (o `False` não atravessa o replug, e é o default do
-            # firmware).
-            if ato is not True:
+            # Perfil sem opinião sobre o microfone: só o CALAR do dono tem o
+            # que escrever (o `False` não atravessa o replug, e é o default do
+            # firmware). E ele não depende de o perfil carregar: a vista vazia
+            # só leva a peça, e quem decide o que atravessa continua sendo o
+            # `apply_mic`, em cópia única.
+            if mudo is not True:
                 return None
-            # E O CALAR DA SESSÃO NÃO DEPENDE DE O PERFIL CARREGAR (conferência
-            # de 25/09/2026). `o_perfil_pede_silencio` responde pelo ato ANTES
-            # de abrir o disco, e o nascimento recua; com o ativo ilegível ou
-            # ausente este ramo devolvia `None` e o firmware voltava ABERTO —
-            # dois leitores, dois vereditos, a forma que a guarda do global cura
-            # logo abaixo. A vista vazia só leva a peça: quem decide o que
-            # atravessa o replug continua sendo o `apply_mic`, em cópia única.
             profile = self._perfil_ativo_carregado()
             if profile is None:
                 from hefesto_dualsense4unix.profiles.schema import MatchManual
 
-                profile = Profile(name="ato da sessão", match=MatchManual())
+                profile = Profile(name="o mudo do controle", match=MatchManual())
             global_, override = None, None
         else:
             profile, global_, override = lido
-        mudo_da_peca = ato if ato is not None else getattr(override, "muted", None)
         estado = None
         if global_ is not None:
+            # A ORDEM É A DE `apply`: o global escreve e a peça reescreve por
+            # cima. O global nunca leva o mudo — ele não tem endereço, e o mudo
+            # é de cada controle.
             secao = global_
-            if mudo_da_peca is not None and getattr(global_, "muted", None) is not None:
+            if getattr(global_, "muted", None) is not None:
                 secao = global_.model_copy(update={"muted": None})
             estado = self.apply_mic(
                 profile.model_copy(update={"mic": secao}), origin="replug", uniq=uniq
             )
-        if override is not None or ato is not None:
+        if override is not None or mudo is not None:
             from hefesto_dualsense4unix.profiles.schema import ControllerMicOverride
 
             peca = override if override is not None else ControllerMicOverride()
-            if ato is not None:
-                peca = peca.model_copy(update={"muted": ato})
+            peca = peca.model_copy(update={"muted": mudo})
             vista = profile.model_copy(update={"mic": peca})
             escrito = self.apply_mic(vista, origin="replug", uniq=uniq)
             if escrito is not None:
                 estado = escrito
         return estado
 
-    def _ato_da_sessao(self, uniq: str | None) -> bool | None:
-        """O último ato dela sobre o microfone DESTE controle, nesta sessão.
+    def _mudo_do_controle(self, uniq: str | None) -> bool | None:
+        """O mudo que ela deixou no microfone DESTE controle, lido do dono.
 
-        `True` = calou, `False` = ligou, `None` = nenhum ato desde que o daemon
-        nasceu ou desde a última troca EXPLÍCITA de perfil. Quem escreve é
-        `hotkey.ligar_o_microfone`; quem guarda é
-        `StateStore.lembrar_o_ato_do_mic`. Store sem o método (dublê enxuto,
-        CLI) responde `None`, e a reconexão lê só o perfil, como antes.
+        `True` = calou; `False` = ligou; `None` = nunca disse (ou o endereço
+        não é de controle), e o microfone nasce no ar. Quem escreve é
+        `hotkey.ligar_o_microfone` (o botão do plástico e o 🎙 da tela), pela
+        API do `utils/maquina.py`. Nunca levanta: a conexão dela não vira
+        traceback por um `maquina.json` ilegível — e ilegível vale como
+        «nunca disse», que é o que a leitura do dono já devolve.
         """
         if not uniq:
             return None
-        ler = getattr(getattr(self, "store", None), "ato_do_mic", None)
-        if not callable(ler):
-            return None
-        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+        from hefesto_dualsense4unix.utils.maquina import mudo_do_microfone
 
-        chave = norm_mac(str(uniq))
-        if not chave:
-            return None
         try:
-            ato = ler(chave)
+            return mudo_do_microfone(str(uniq))
         except Exception:  # best-effort: a conexão dela não vira traceback
-            logger.debug("mic_ato_da_sessao_ilegivel", exc_info=True)
+            logger.debug("mic_mudo_do_controle_ilegivel", exc_info=True)
             return None
-        return ato if isinstance(ato, bool) else None
-
-    def _esquecer_o_ato_da_sessao(self, uniq: str | None) -> None:
-        """A troca explícita de perfil venceu o ato: `uniq=None` esquece todos."""
-        esquecer = getattr(getattr(self, "store", None), "esquecer_atos_do_mic", None)
-        if not callable(esquecer):
-            return
-        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
-
-        chave = norm_mac(str(uniq)) if uniq else None
-        if uniq and not chave:
-            # Endereço que não normaliza não é "todos": esquecer a mesa inteira
-            # por um `uniq` ilegível apagaria o ato dos outros três.
-            return
-        try:
-            esquecer(chave)
-        except Exception:  # best-effort: a ativação dela não vira traceback
-            logger.debug("mic_ato_da_sessao_nao_esquecido", exc_info=True)
 
     def _perfil_ativo_carregado(self) -> Any:
         """O `Profile` ativo lido do disco, ou `None` (sem ativo, ou não carrega)."""
@@ -2065,7 +2020,9 @@ class ProfileManager:
         uma segunda escrita dela seria a terceira cópia do mapa de
         `controllers`, que é a família de defeito que esta casa já pagou onze
         vezes. Aqui não há política nenhuma: a política do `replug` continua
-        inteira em `apply_mic`, e a do nascimento em `o_perfil_pede_silencio`.
+        inteira em `apply_mic`. O MUDO não é lido daqui — ele é do controle
+        (`_mudo_do_controle`, O-MUDO-E-DO-CONTROLE-01); o perfil só empresta o
+        `volume` e o `gain`.
 
         `None` = não há perfil ativo, ele não carrega, ou ele não tem opinião
         sobre microfone (nem global, nem da peça).
@@ -2089,60 +2046,36 @@ class ProfileManager:
             return None
         return profile, global_, override
 
-    def o_perfil_pede_silencio(self, uniq: str | None = None) -> bool:
-        """O perfil ATIVO manda calar o microfone DESTA peça? (NASCE-LIGADO-MIC-01)
+    def o_controle_pede_silencio(self, uniq: str | None = None) -> bool:
+        """Ela calou o microfone DESTE controle? (NASCE-LIGADO-MIC-01)
 
         Existe para UMA pergunta, a do nascimento: *"posso pôr este microfone
-        no ar sem passar por cima de um silêncio que ela pediu?"*.
+        no ar sem passar por cima de um silêncio que ela pediu?"*. Quem
+        responde é o dono do mudo (`_mudo_do_controle`, o `maquina.json`),
+        desde a O-MUDO-E-DO-CONTROLE-01 (28/09/2026) — e não o perfil ativo: a
+        decisão dela é que o mudo é do controle e vale em todo jogo.
 
         **POR QUE O NASCIMENTO PERGUNTA EM VEZ DE CONFIAR NA ORDEM.** O
-        `reapply_mic_on_connect` acima também carrega o `muted: true` do perfil
-        para o aparelho, e bastaria correr ANTES do nascimento para o byte
-        ficar certo. Só que os dois lados não escrevem a mesma camada: o
-        `replug` escreve o `common[9]` do FIRMWARE, e o nascimento levanta o
-        CANAL e o `0x32` do rádio — deixar a ordem decidir entregaria o canal
-        no ar de quem pediu silêncio, que é o defeito da SOM-MIC-REPLUG-01
-        (*"o silêncio que o produto promete e não entrega"*) voltando pela
-        porta da frente. E a confirmação do byte leva ~550 ms: ler o aparelho
-        logo depois do replug devolveria o valor VELHO. O perfil é a única
-        fonte que responde na hora.
+        `reapply_mic_on_connect` acima também leva o mudo ao aparelho, e
+        bastaria correr ANTES do nascimento para o byte ficar certo. Só que os
+        dois lados não escrevem a mesma camada: o `replug` escreve o
+        `common[9]` do FIRMWARE, e o nascimento levanta o CANAL e o `0x32` do
+        rádio — deixar a ordem decidir entregaria o canal no ar de quem pediu
+        silêncio, que é o defeito da SOM-MIC-REPLUG-01 (*"o silêncio que o
+        produto promete e não entrega"*) voltando pela porta da frente. E a
+        confirmação do byte leva ~550 ms: ler o aparelho logo depois do replug
+        devolveria o valor VELHO. O dono é a fonte que responde na hora.
 
-        A PRECEDÊNCIA É A DE `reapply_mic_on_connect`: o global escreve e a
-        peça reescreve por cima, então a peça vence quando diz alguma coisa.
-        `muted=None` é *"não tenho opinião"* e NÃO é silêncio — quem não diz
-        nada nasce ligado, que é a ordem dela de 17/09/2026: *"os jogos e
-        perfis tem que iniciar com todas as features ativadas por default."*
-        (noqa-acento: citação dela)
+        `None` no dono é *"nunca disse"* e NÃO é silêncio — quem não diz nada
+        nasce ligado, que é a ordem dela de 17/09/2026: *"os jogos e perfis tem
+        que iniciar com todas as features ativadas por default."* (noqa-acento:
+        citação dela)
 
-        Nunca levanta: um perfil que não carrega vale como *"não pediu
-        silêncio"*, e o nascimento segue. O lado inseguro seria o contrário —
-        a conexão de um controle virando traceback no laço do daemon.
-
-        **O ÚLTIMO ATO DELA NESTA SESSÃO VEM ANTES DO PERFIL** — a mesma
-        precedência de `reapply_mic_on_connect`, e pelo mesmo dono
-        (`_ato_da_sessao`). O ato já está gravado no perfil em que foi feito;
-        a pergunta a ele só muda a resposta quando a troca automática pôs
-        outro perfil no lugar. Com isso o `mic_nasce_calado_por_perfil` só
-        aparece quando o último ato dela foi calar.
+        Nunca levanta: um dono ilegível vale como *"não pediu silêncio"*, e o
+        nascimento segue. O lado inseguro seria o contrário — a conexão de um
+        controle virando traceback no laço do daemon.
         """
-        ato = self._ato_da_sessao(uniq)
-        if ato is not None:
-            return ato
-        try:
-            lido = self._mic_do_perfil_ativo(uniq)
-        except Exception:  # pragma: no cover - defensivo
-            logger.debug("profile_mic_silencio_falhou", exc_info=True)
-            return False
-        if lido is None:
-            return False
-        _perfil, global_, override = lido
-        for secao in (override, global_):
-            if secao is None:
-                continue
-            mudo = getattr(secao, "muted", None)
-            if mudo is not None:
-                return bool(mudo)
-        return False
+        return self._mudo_do_controle(uniq) is True
 
     def select_for_window(self, window_info: dict[str, object]) -> Profile | None:
         """Escolhe o perfil MAIS ESPECÍFICO que case com a janela.
@@ -2846,79 +2779,6 @@ def gravar_a_mascara_no_perfil_ativo(
     logger.info(
         "gamepad_mascara_gravada_no_perfil", uniq=chave, perfil=nome, mascara=mascara
     )
-    return nome, True, None
-
-
-def gravar_o_mic_no_perfil_ativo(
-    nome: str | None, *, chave: str | None, muted: bool
-) -> tuple[str | None, bool, str | None]:
-    """O mudo do microfone de UMA peça no perfil ATIVO — a irmã da máscara.
-
-    O-BOTAO-DO-MIC-GRAVA-NO-PERFIL-01 (25/09/2026). Achado dela: o perfil
-    Freestyle guardava ``mic.muted: true`` para o P4; ela ligou o microfone
-    pelo botão do controle, e a reconexão seguinte (o restart do install) o
-    calou de novo, porque o botão não gravava nada. A palavra dela:
-    *«isso aqui deveriamos ter uma correção a nivel de produto.»*  # (noqa-acento) dela
-
-    Devolve ``(nome do perfil, gravou?, motivo de não ter gravado)``, no molde
-    de `gravar_a_mascara_no_perfil_ativo`.
-
-    **O LUGAR É O MESMO DO CLIQUE DA TELA**, e as duas regras também:
-    `app/draft_config.DraftConfig.with_controller_mic`, que é o que o 🎙 da aba
-    Controles usa para gravar (`a02_controles._lembrar_do_som`).
-
-    * **igual ao global não vira override** (COR-04): o campo sai da peça, e
-      ela herda o global que diz a mesma coisa;
-    * **só o campo mexido entra**: o `volume` e o `gain` que a peça já tinha
-      ficam como estavam.
-
-    Com o mesmo resultado no disco, o clique da tela depois do ato não regrava
-    nada — o "NADA MUDOU = NADA GRAVA" de lá acha o arquivo igual.
-
-    **NÃO É O `DraftConfig` POR DENTRO**, e é camada: `app` importa `profiles`,
-    e o caminho inverso seria um ciclo. O que se repete são duas regras de uma
-    linha, com a régua desta sprint comparando as duas saídas.
-
-    NADA MUDOU = NÃO REGRAVA: um `save_profile` troca a data do arquivo e
-    arquiva uma versão, e apertar o botão duas vezes para o mesmo lado não
-    pode custar isso.
-    """
-    from hefesto_dualsense4unix.profiles.schema import ControllerMicOverride
-
-    if not chave:
-        return None, False, "sem_endereco"
-    if not nome:
-        return None, False, "sem_perfil"
-    perfil = load_profile(nome)
-    atuais = dict(perfil.controllers or {})
-    dele = atuais.get(chave) or ControllerOverrides()
-    antes = getattr(dele, "mic", None)
-    campos: dict[str, Any] = (
-        {c: getattr(antes, c) for c in antes.model_fields_set} if antes is not None else {}
-    )
-    if bool(muted) == getattr(getattr(perfil, "mic", None), "muted", None):
-        campos.pop("muted", None)
-    else:
-        campos["muted"] = bool(muted)
-    depois = ControllerMicOverride(**campos) if campos else None
-    mesma = (antes is None and depois is None) or (
-        antes is not None
-        and depois is not None
-        and antes.model_dump(exclude_unset=True) == depois.model_dump(exclude_unset=True)
-    )
-    if mesma:
-        return nome, False, "sem_mudanca"
-    novo = dele.model_copy(update={"mic": depois})
-    if all(
-        getattr(novo, campo, None) is None for campo in ControllerOverrides.model_fields
-    ):
-        atuais.pop(chave, None)
-    else:
-        atuais[chave] = novo
-    save_profile(
-        perfil.model_copy(update={"controllers": atuais or None}), origem="ato_do_mic"
-    )
-    logger.info("mic_ato_gravado_no_perfil", uniq=chave, perfil=nome, muted=bool(muted))
     return nome, True, None
 
 

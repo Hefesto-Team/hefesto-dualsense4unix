@@ -54,11 +54,12 @@ e o microfone real dela sairia do caminho sem ela ter tocado em nada. Por isso
 
 E A TERCEIRA: O SILÊNCIO DELA VENCE
 ------------------------------------------------------------------------------
-`pragmata.json`, na mesa dela, tem `mic.muted: true`. Um nascimento que
-ignorasse isso reabriria o microfone de quem pediu silêncio — a SOM-MIC-REPLUG-01
+Ela calou um controle (o botão, ou o 🎙 da tela). Um nascimento que ignorasse
+isso reabriria o microfone de quem pediu silêncio — a SOM-MIC-REPLUG-01
 (*"o silêncio que o produto promete e não entrega"*) voltando pela porta da
-frente. São DOIS caminhos de silêncio e os dois têm caso: o perfil ativo e o
-bit do mudo já aceso no aparelho.
+frente. São DOIS caminhos de silêncio e os dois têm caso: o mudo do controle
+no `maquina.json` (O-MUDO-E-DO-CONTROLE-01, 28/09/2026: o mudo é do controle,
+e não mais do perfil ativo) e o bit do mudo já aceso no aparelho.
 
 A MORDIDA, ARRANCADA UMA A UMA E MEDIDA (17/09/2026)
 ------------------------------------------------------------------------------
@@ -77,8 +78,8 @@ Cada pedaço da cura foi removido, a régua rodada, e o vermelho anotado::
                                                  le_ativo` + o do replug
   a condição `_eleitor(daemon).eleito is None`   `test_o_segundo_nao_rouba_a_
   trocada por `True`                             fonte_padrao` + os outros 3
-  a guarda `_o_perfil_pede_silencio`             `test_o_perfil_que_pede_
-                                                 silencio_impede_o_nascimento`
+  a guarda `_o_controle_pede_silencio`           `test_o_controle_calado_
+                                                 impede_o_nascimento`
   a guarda `_o_firmware_esta_mudo`               `test_o_bit_do_mudo_ja_aceso_
                                                  impede_o_nascimento`
   o `async with _fila_do_nascimento(daemon)`     `test_dois_nascimentos_ao_
@@ -114,6 +115,7 @@ from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
 )
 from hefesto_dualsense4unix.integrations import eleicao_de_microfone as elm
 from hefesto_dualsense4unix.profiles import manager as mgr
+from hefesto_dualsense4unix.utils import maquina
 
 #: O primeiro controle da mesa dela, na grafia do plástico (sem dois-pontos).
 P1 = "aabbcc000011"
@@ -607,11 +609,9 @@ class TestOSilencioDelaVence:
     grave desta família volta pelo lado de dentro."""
 
     @pytest.mark.asyncio
-    async def test_o_perfil_que_pede_silencio_impede_o_nascimento(
-        self, mesa, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """`pragmata.json`, na mesa dela, tem `mic.muted: true`."""
-        monkeypatch.setattr(mgr, "load_profile", lambda _n: _perfil(mic={"muted": True}))
+    async def test_o_controle_calado_impede_o_nascimento(self, mesa) -> None:
+        """Ela calou este controle: o mudo mora no dono (`maquina.json`)."""
+        assert maquina.gravar_o_mudo_do_microfone(P1, True)
         daemon = mesa.daemon(perfil_ativo="o-perfil-dela")
 
         assert await hotkey.nascer_no_ar(daemon, P1) is False
@@ -622,18 +622,20 @@ class TestOSilencioDelaVence:
         assert mesa.eleitor.eleito is None
 
     @pytest.mark.asyncio
-    async def test_o_silencio_da_peca_vence_o_global_que_cala(
+    async def test_o_mudo_de_um_perfil_nao_cala_o_nascimento(
         self, mesa, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A peça reescreve o global — é a ordem de `reapply_mic_on_connect`.
+        """O `mic.muted: true` que um perfil ainda carregue não é o mudo dela.
 
-        Global mudo, peça FALANDO: este controle nasce no ar.
+        O `pragmata.json` dela tinha o global calado. Desde a
+        O-MUDO-E-DO-CONTROLE-01 o mudo é do controle, e o controle que ela não
+        calou nasce no ar em todo jogo.
         """
         monkeypatch.setattr(
             mgr,
             "load_profile",
             lambda _n: _perfil(
-                mic={"muted": True}, por_peca={P1: {"mic": {"muted": False}}}
+                mic={"muted": True}, por_peca={P1: {"mic": {"muted": True}}}
             ),
         )
         daemon = mesa.daemon(perfil_ativo="o-perfil-dela")
@@ -642,19 +644,22 @@ class TestOSilencioDelaVence:
         assert mesa.registro.no_ar().get(P1) is True
 
     @pytest.mark.asyncio
-    async def test_o_perfil_sem_opiniao_nasce_ligado(
+    async def test_o_controle_sem_opiniao_nasce_ligado(
         self, mesa, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A ordem dela de 17/09/2026: *"os jogos e perfis tem que iniciar com
         todas as features ativadas por default."*  # (noqa-acento: citação dela)
 
-        `muted=None` é *"não tenho opinião"*, e opinião ausente NÃO é silêncio.
+        O dono sem opinião (`None`) NÃO é silêncio; e ter dito «no ar» também
+        não cala.
         """
         monkeypatch.setattr(mgr, "load_profile", lambda _n: _perfil(mic={"volume": 100}))
+        assert maquina.gravar_o_mudo_do_microfone(P2, False)
         daemon = mesa.daemon(perfil_ativo="o-perfil-dela")
 
         assert await hotkey.nascer_no_ar(daemon, P1) is True
         assert mesa.registro.no_ar().get(P1) is True
+        assert await hotkey.nascer_no_ar(daemon, P2) is True
 
     @pytest.mark.asyncio
     async def test_o_bit_do_mudo_ja_aceso_impede_o_nascimento(self, mesa) -> None:

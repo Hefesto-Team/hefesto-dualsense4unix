@@ -58,11 +58,19 @@ def test_as_seis_secoes_do_esquema_tem_escritor() -> None:
 
 
 def test_o_mic_grava_os_dois_campos_daquela_peca() -> None:
-    """``muted`` e ``volume`` viram override DELA, e não do vizinho."""
+    """``volume`` e ``gain`` viram override DELA, e não do vizinho.
+
+    O ``muted`` NÃO: desde a O-MUDO-E-DO-CONTROLE-01 (28/09/2026) o mudo é do
+    controle e mora no ``maquina.json``, com um escritor só (o ato do
+    microfone, no daemon). MORDIDA: devolver o ramo do ``muted`` ao
+    ``with_controller_mic``.
+    """
     d = DraftConfig.default().with_controller_mic(
-        UNIQ, MicDraft(muted=True, volume=40))
+        UNIQ, MicDraft(muted=True, volume=40, gain=30))
     secao = d.controller_override(UNIQ).mic
-    assert secao is not None and secao.muted is True and secao.volume == 40
+    assert secao is not None and secao.volume == 40 and secao.gain == 30
+    assert "muted" not in secao.model_fields_set, (
+        "o rascunho escreveu o mudo do microfone no perfil — o mudo é do controle")
 
 
 def test_o_mic_nao_grava_o_botao_do_sistema() -> None:
@@ -73,7 +81,7 @@ def test_o_mic_nao_grava_o_botao_do_sistema() -> None:
     um valor que nada aplica.
     """
     d = DraftConfig.default().with_controller_mic(
-        UNIQ, MicDraft(muted=True, button_toggles_system=True))
+        UNIQ, MicDraft(volume=40, button_toggles_system=True))
     secao = d.controller_override(UNIQ).mic
     assert "button_toggles_system" not in secao.model_fields_set
 
@@ -98,12 +106,12 @@ def test_valor_igual_ao_global_nao_vira_override() -> None:
 
 
 def test_o_mic_efetivo_herda_o_global_campo_a_campo() -> None:
-    """Override só de ``muted`` não pode zerar o volume que o global carrega."""
+    """Override só do ``gain`` não pode zerar o volume que o global carrega."""
     base = DraftConfig.default().model_copy(
-        update={"mic": MicDraft(volume=77, muted=False)})
-    d = base.with_controller_mic(UNIQ, MicDraft(muted=True, volume=77))
+        update={"mic": MicDraft(volume=77, gain=50)})
+    d = base.with_controller_mic(UNIQ, MicDraft(gain=30, volume=77))
     efetivo = d.effective_mic_for(UNIQ)
-    assert efetivo.muted is True
+    assert efetivo.gain == 30
     assert efetivo.volume == 77, "o volume do global sumiu num override parcial"
 
 
@@ -134,8 +142,8 @@ def test_sem_opiniao_limpa_a_secao_de_sensores() -> None:
 def test_escrever_uma_secao_nao_apaga_a_vizinha() -> None:
     """As seis convivem na mesma peça — é o ponto inteiro do override."""
     d = (DraftConfig.default()
-         .with_controller_mic(UNIQ, MicDraft(muted=True))
+         .with_controller_mic(UNIQ, MicDraft(volume=40))
          .with_controller_sensores(UNIQ, giroscopio=False))
     override = d.controller_override(UNIQ)
-    assert override.mic is not None and override.mic.muted is True
+    assert override.mic is not None and override.mic.volume == 40
     assert override.sensores is not None and override.sensores.giroscopio is False
