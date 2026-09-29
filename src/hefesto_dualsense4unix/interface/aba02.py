@@ -1410,8 +1410,8 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   }
   .sensores-peca .sw .p{width:6px;height:6px;border-radius:50%;background:var(--green);
                         box-shadow:0 0 6px var(--green)}
-  .sensores-peca .sw.off,.sensores-peca .chip-da-mira.off>.sw,.sensores-peca .chip-virtual.off>.sw{border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
-  .sensores-peca .sw.off .p,.sensores-peca .chip-da-mira.off>.sw .p,.sensores-peca .chip-virtual.off>.sw .p{background:var(--border-forte);box-shadow:none}
+  .sensores-peca .sw.off,.sensores-peca .chip-da-mira.off>.sw{border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
+  .sensores-peca .sw.off .p,.sensores-peca .chip-da-mira.off>.sw .p{background:var(--border-forte);box-shadow:none}
   /* A DICA DO GIROSCÓPIO MORA NUM INVÓLUCRO SEM CAIXA — 24/09/2026,
      A-MIRA-POR-MOVIMENTO-NA-TELA-02. `display:contents` tira o invólucro da
      grade: quem ocupa a coluna continua sendo o botão, e a largura dos três
@@ -1421,21 +1421,53 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      `aria-disabled` só vale no próprio botão, e um elemento aceita UM alvo: o
      aceso da Mira desceu para este invólucro sem caixa, e o botão ficou com o
      cinza (`mira-fora`) e o `aria-disabled` que o piloto deriva dele. */
-  .sensores-peca .chip-da-mira,.sensores-peca .chip-virtual{display:contents}
+  .sensores-peca .chip-da-mira{display:contents}
   /* NO MODO NATIVO O CHIP DA MIRA FICA CINZA — decisão dela, 24/09/2026:
      *"fica cinza no Nativo, sem gravar"*. A cara é a do cinza da casa
      (`.btn.apagado`, `monta.py`): a borda sutil, o texto mudo e o cursor que
      recusa — e ela vence o aceso e o apagado do chip, porque no Nativo nenhum
      dos dois vale. Cor explícita, nada de `opacity`. */
   .sensores-peca.sem-mira .sw[data-gesto="mira"],
-  .sensores-peca.sem-mira .sw[data-gesto="mira"]:hover,
-  .sensores-peca.sem-mira .chip-virtual>.sw,
-  .sensores-peca.sem-mira .chip-virtual>.sw:hover{
+  .sensores-peca.sem-mira .sw[data-gesto="mira"]:hover{
     border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo);
     cursor:not-allowed}
-  .sensores-peca.sem-mira .sw[data-gesto="mira"] .p,
-  .sensores-peca.sem-mira .chip-virtual>.sw .p{
+  .sensores-peca.sem-mira .sw[data-gesto="mira"] .p{
     background:var(--border-sutil);box-shadow:none}
+  /* A INCLINAÇÃO EMBAIXO DE CADA ANALÓGICO — 28/09/2026, NO-MODO-XBOX-TUDO-
+     FUNCIONA-01. A pastilha é a dos chips do cabeçalho (17px, a mesma borda e
+     o mesmo ponto), escrita à parte para as regras aprovadas não mudarem de
+     texto. O aceso é o `on` do invólucro (o analógico que recebe a
+     inclinação), e o cinza do Nativo é o `sem-mira` do botão, como o da Mira.
+     O `stick-topo` junta o nome e o chip no topo da coluna, e o
+     `space-between` da coluna continua com três filhos. */
+  .stick-topo{display:flex;flex-direction:column}
+  .chip-virtual{display:flex;justify-content:center;margin-top:4px}
+  .chip-virtual>.sw{height:17px;border-radius:6px;font-size:10.5px;font-family:inherit;
+    cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;
+    justify-content:center;gap:6px;padding:0 10px;
+    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
+  .chip-virtual>.sw .p{width:6px;height:6px;border-radius:50%;background:var(--border-forte)}
+  .chip-virtual.on>.sw{border-color:var(--green);background:rgba(80,250,123,.09);color:var(--green)}
+  .chip-virtual.on>.sw .p{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .chip-virtual>.sw.sem-mira,.chip-virtual>.sw.sem-mira:hover{
+    border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo);
+    cursor:not-allowed}
+  .chip-virtual>.sw.sem-mira .p{background:var(--border-sutil);box-shadow:none}
+  /* O «CURSOR | BOTÕES» NA SUPERFÍCIE DO TOUCHPAD — 28/09/2026. A forma é a do
+     «Virtual | Nativo» do microfone, e ele mora por cima da superfície, no pé
+     dela: a coluna não tem altura para uma fileira embaixo (ver
+     `modo_do_toque`). O ponto do dedo fica por cima dos dois botões, para o
+     dedo na zona do L2 continuar aparecendo. */
+  .rota.toque-modo{position:absolute;left:5px;right:5px;bottom:5px;margin:0;
+    flex-direction:row;gap:5px;z-index:1}
+  .rota.toque-modo .aceso-do-toque{display:contents}
+  .rota.toque-modo button{flex:1;min-width:0}
+  .rota .aceso-do-toque.on>button{border-color:var(--purple);background:var(--sel-bg);
+    color:var(--fg);font-weight:600}
+  .rota.toque-modo button.sem-mira,.rota.toque-modo button.sem-mira:hover{
+    border-color:var(--border-sutil);background:var(--panel);color:var(--texto-mudo);
+    font-weight:400;cursor:not-allowed}
+  .touch .ponto{z-index:2}
 """
 
 # ---------------------------------------------------------------------------
@@ -1724,24 +1756,74 @@ ROTULO_DA_MIRA_VIRTUAL = "Mira Virtual"
 DICA_DA_MIRA_VIRTUAL = ("Usar os movimentos do controle como mira (analógico R), "
                         "para pessoas com deficiência motora.")
 
-#: OS TRÊS CHIPS DO TOQUE E DA INCLINAÇÃO — 28/09/2026, NO-MODO-XBOX-TUDO-FUNCIONA-01.
-#: A resposta dela das ~16h50 de 28/09 às perguntas 1 e 2 da sprint: *os dois*
-#: arranjos — o touchpad move o cursor e o acelerômetro vira analógico, um chip
-#: por controle como a Mira Virtual, **e** o touchpad em zonas vira botões
-#: (direcional, L1, L2) —, por perfil de jogo. Os nomes seguem o padrão dela
-#: («Mira Virtual»), e a sessão dos desenhos é quem os aprova. O Cursor e os
-#: Botões são o MESMO touchpad: acender um apaga o outro (`toque` é um campo só
-#: no perfil, `ProfileMovimentoConfig.toque`). As zonas moram no
-#: `core.roteador_de_movimento.botoes_das_zonas`, e a dica diz a mesma divisão.
-ROTULO_DA_DIRECAO_VIRTUAL = "Direção Virtual"
-DICA_DA_DIRECAO_VIRTUAL = ("Usar a inclinação do controle como direção (analógico L), "
-                           "para pessoas com deficiência motora.")
-ROTULO_DO_CURSOR_VIRTUAL = "Cursor Virtual"
-DICA_DO_CURSOR_VIRTUAL = ("Usar o touchpad do controle como mouse no jogo; o clique "
-                          "dele é o botão esquerdo.")
-ROTULO_DOS_BOTOES_VIRTUAIS = "Botões Virtuais"
-DICA_DOS_BOTOES_VIRTUAIS = ("Usar o touchpad como botões: os dois terços da esquerda "
-                            "são o direcional; à direita, em cima o L1 e embaixo o L2.")
+#: A INCLINAÇÃO E O TOQUE — 28/09/2026, NO-MODO-XBOX-TUDO-FUNCIONA-01. A resposta
+#: dela das ~16h50 de 28/09 às perguntas 1 e 2 da sprint: *os dois* arranjos —
+#: o touchpad move o cursor e o acelerômetro vira analógico, um chip por
+#: controle como a Mira Virtual, **e** o touchpad em zonas vira botões
+#: (direcional, L1, L2) —, por perfil de jogo. Moram na peça que eles mexem,
+#: e não no cabeçalho: a inclinação embaixo do nome de cada analógico (o chip
+#: diz para qual dos dois ela vai), o Cursor e os Botões na superfície do
+#: touchpad (os dois são o MESMO campo, `ProfileMovimentoConfig.toque`, e
+#: acender um apaga o outro). O cabeçalho não tinha lugar: medido no Chrome,
+#: a 1180px os três chips novos pedem 331px e o vão elástico da linha dá 250,
+#: e a linha que quebra leva o cartão a 335px contra os 328 de `PARA_O_CARD`.
+#: As zonas moram em `core.roteador_de_movimento.botoes_das_zonas`, e a dica
+#: diz a mesma divisão.
+ROTULO_DA_INCLINACAO = "Inclinação"
+DICA_DA_INCLINACAO = {
+    "analogico_esquerdo": ("Inclinar o controle move o analógico esquerdo, para "
+                           "pessoas com deficiência motora."),
+    "analogico_direito": ("Inclinar o controle move o analógico direito, para "
+                          "pessoas com deficiência motora."),
+}
+ROTULO_DO_CURSOR = "Cursor"
+DICA_DO_CURSOR = ("Usar o touchpad deste controle como mouse no jogo; o clique "
+                  "dele é o botão esquerdo.")
+ROTULO_DOS_BOTOES = "Botões"
+DICA_DOS_BOTOES = ("Usar o touchpad como botões: os dois terços da esquerda são o "
+                   "direcional; à direita, em cima o L1 e embaixo o L2.")
+
+
+def chip_da_inclinacao(destino):
+    """O chip «Inclinação» embaixo do nome de UM analógico — 28/09/2026.
+
+    O invólucro sem caixa leva o aceso (`inclinacao-destino`, que o pacote da
+    aba emitirá com o `acelerometro` do controle: aceso no analógico que o
+    recebe), e o botão leva o MESMO `mira-fora` da Mira: no Nativo o daemon
+    recusa a inclinação pelo mesmo motivo (`mira.set`), e o cinza e o
+    `aria-disabled` chegam pelo mesmo endereço. Nasce apagado. O gesto e a
+    pintura moram no pacote, que esta sprint não toca: sem a sessão dos
+    desenhos, a bancada é o lugar deles.
+    """
+    return (f'<span class="chip-virtual" data-campo="inclinacao-destino" '
+            f'data-hef-alvo="classe" data-hef-quando="{destino}">'
+            f'<button class="sw" data-gesto="inclinacao" data-destino="{destino}" '
+            f'data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" '
+            f'data-hef-quando="{MIRA_NO_NATIVO}" data-hef-atributo="aria-disabled" '
+            f'title="{DICA_DA_INCLINACAO[destino]}"><span class="p"></span>'
+            f'{ROTULO_DA_INCLINACAO}</button></span>')
+
+
+def modo_do_toque():
+    """O «Cursor | Botões» na superfície do touchpad — 28/09/2026.
+
+    A forma é a do «Virtual | Nativo» do microfone (`.rota.mic-modo`): dois
+    botões, um campo (`toque-modo`, o `toque` do controle), o aceso no
+    invólucro `aceso-do-toque` e o cinza do Nativo no botão, com o
+    `aria-disabled`. Os dois apagados é o «nenhum»: o touchpad segue sendo o do
+    computador. Mora DENTRO da superfície porque a coluna não tem altura: a
+    1440px a barra de luz e o LED do jogador só cedem 12px, e uma fileira
+    embaixo da superfície pede 22 (medido: o cartão iria a 339px).
+    """
+    def botao(valor, rotulo_do_botao, dica):
+        return (f'<span class="aceso-do-toque" data-campo="toque-modo" '
+                f'data-hef-alvo="classe" data-hef-quando="{valor}">'
+                f'<button data-gesto="toque" data-toque="{valor}" data-campo="mira-fora" '
+                f'data-hef-alvo="classe" data-hef-classe="sem-mira" '
+                f'data-hef-quando="{MIRA_NO_NATIVO}" data-hef-atributo="aria-disabled" '
+                f'title="{dica}">{rotulo_do_botao}</button></span>')
+    return (f'<span class="rota toque-modo">{botao("cursor", ROTULO_DO_CURSOR, DICA_DO_CURSOR)}'
+            f'{botao("zonas", ROTULO_DOS_BOTOES, DICA_DOS_BOTOES)}</span>')
 
 
 def sensores_da_peca(c):
@@ -1824,29 +1906,7 @@ def sensores_da_peca(c):
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="{DICA_DO_GIRO}"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
             <span class="chip-da-mira off" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="{MIRA_NO_NATIVO}" data-hef-atributo="aria-disabled" title="{DICA_DA_MIRA_VIRTUAL}"><span class="p"></span>{ROTULO_DA_MIRA_VIRTUAL}</button></span>
-{_chip_virtual("inclinacao", "inclinacao-ligada", "", DICA_DA_DIRECAO_VIRTUAL, ROTULO_DA_DIRECAO_VIRTUAL)}
-{_chip_virtual("toque", "toque-cursor", ' data-toque="cursor"', DICA_DO_CURSOR_VIRTUAL, ROTULO_DO_CURSOR_VIRTUAL)}
-{_chip_virtual("toque", "toque-zonas", ' data-toque="zonas"', DICA_DOS_BOTOES_VIRTUAIS, ROTULO_DOS_BOTOES_VIRTUAIS)}
           </span>'''
-
-
-def _chip_virtual(gesto, campo, extra, dica, nome):
-    """UM CHIP DO TOQUE OU DA INCLINAÇÃO, na forma do chip da Mira Virtual.
-
-    28/09/2026, NO-MODO-XBOX-TUDO-FUNCIONA-01. O invólucro sem caixa
-    (`chip-virtual`) leva o aceso, e o botão leva o MESMO `mira-fora` da Mira:
-    no Nativo o daemon recusa os três pelo mesmo motivo (o jogo lê o controle
-    direto, e o Hefesto não tem o que traduzir), então o cinza e o
-    `aria-disabled` chegam aos quatro pelo mesmo endereço. Nascem apagados,
-    como a Mira. O gesto e a pintura moram no pacote da aba, que esta sprint
-    não toca: sem a sessão dos desenhos, a bancada é o lugar deles.
-    """
-    return (f'            <span class="chip-virtual off" data-campo="{campo}" '
-            f'data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO">'
-            f'<button class="sw" data-gesto="{gesto}"{extra} data-campo="mira-fora" '
-            f'data-hef-alvo="classe" data-hef-classe="sem-mira" '
-            f'data-hef-quando="{MIRA_NO_NATIVO}" data-hef-atributo="aria-disabled" '
-            f'title="{dica}"><span class="p"></span>{nome}</button></span>')
 
 
 def identidade(c, *, bat, carga=None, meio=""):
@@ -2999,7 +3059,8 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
               <span class="de-quem" data-campo="touch-estado" title="{DICA_TOQUE}">{toque_txt}</span></div>
             <div class="touch">
               <span data-campo="{CAMPOS_DA_POSICAO["touch"]}" data-hef-alvo="posicao"{onde_esta(touch[0], touch[1])}><span class="ponto ponto-1{ponto_on}" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
-              <span data-campo="{CAMPOS_DA_POSICAO["touch2"]}" data-hef-alvo="posicao"{onde_esta(touch2[0], touch2[1])}><span class="ponto ponto-2{ponto2_on}" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span></div>
+              <span data-campo="{CAMPOS_DA_POSICAO["touch2"]}" data-hef-alvo="posicao"{onde_esta(touch2[0], touch2[1])}><span class="ponto ponto-2{ponto2_on}" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span>
+              {modo_do_toque()}</div>
           </div>
           <!-- O TRAVESSÃO VIROU PALAVRA — decisão dela, 04/09/2026 [02]:
                *"palavra curta no lugar do travessão, frase inteira no hover"*,
@@ -3058,14 +3119,16 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           <div class="moldura">
             <div class="sticks">
               <div>
-                <div class="stick-rot">Analógico<br>esquerdo</div>
+                <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
+                  {chip_da_inclinacao("analogico_esquerdo")}</div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">{ROTULO_DO_CLIQUE["l"]}</span>
                   <span class="p" data-campo="{CAMPOS_DA_POSICAO["ana-e"]}" data-hef-alvo="posicao"{onde_esta(pos(sticks[0]), pos(sticks[1]))}></span></div>
                 <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">{_texto_do_xy(sticks[0], sticks[1])}</div>
               </div>
               <div>
-                <div class="stick-rot">Analógico<br>direito</div>
+                <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
+                  {chip_da_inclinacao("analogico_direito")}</div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">{ROTULO_DO_CLIQUE["r"]}</span>
                   <span class="p" data-campo="{CAMPOS_DA_POSICAO["ana-d"]}" data-hef-alvo="posicao"{onde_esta(pos(sticks[2]), pos(sticks[3]))}></span></div>
@@ -4793,21 +4856,17 @@ def _conferir(doc):
         corpo)) == len(MESA),
         "o chip da Mira perdeu o `aria-disabled` em algum controle — no Nativo "
         "ele fica cinza e o leitor de tela o anuncia como clicável")
-    # 2e''''. OS TRÊS CHIPS DO TOQUE E DA INCLINAÇÃO — 28/09/2026,
-    #     NO-MODO-XBOX-TUDO-FUNCIONA-01. Um de cada por controle, no grupo da
-    #     Mira, com o mesmo cinza do Nativo. MORDE: tire um dos três de
-    #     `sensores_da_peca` e o gerador para.
-    for campo, nome_do_chip in (("inclinacao-ligada", ROTULO_DA_DIRECAO_VIRTUAL),
-                                ("toque-cursor", ROTULO_DO_CURSOR_VIRTUAL),
-                                ("toque-zonas", ROTULO_DOS_BOTOES_VIRTUAIS)):
-        exigir(len(re.findall(
-            rf'<span class="chip-virtual(?: off)?" data-campo="{campo}" [^>]*>'
-            r'<button class="sw" data-gesto="(?:inclinacao|toque)"[^>]* '
-            rf'data-hef-quando="{MIRA_NO_NATIVO}" data-hef-atributo="aria-disabled"'
-            rf'[^>]*><span class="p"></span>{nome_do_chip}</button>',
-            corpo)) == len(MESA),
-            f"o chip «{nome_do_chip}» não está nos {len(MESA)} controles, no grupo e "
-            f"com o cinza do Nativo")
+    # 2e-bis. A INCLINAÇÃO E O TOQUE — 28/09/2026, NO-MODO-XBOX-TUDO-FUNCIONA-01.
+    #     Um chip embaixo de cada analógico e o «Cursor | Botões» na superfície
+    #     do touchpad, em cada controle, com o cinza do Nativo e o
+    #     `aria-disabled`. MORDE: tire um dos dois do marcado e o gerador para.
+    for destino in DICA_DA_INCLINACAO:
+        exigir(corpo.count(chip_da_inclinacao(destino)) == len(MESA),
+               f"o chip «{ROTULO_DA_INCLINACAO}» do {destino} não está nos "
+               f"{len(MESA)} controles")
+    exigir(corpo.count(modo_do_toque()) == len(MESA),
+           f"o «{ROTULO_DO_CURSOR} | {ROTULO_DOS_BOTOES}» do touchpad não está nos "
+           f"{len(MESA)} controles")
     exigir(len(re.findall(
         r'<button data-gesto="mic-modo" data-mic-modo="nativo" '
         r'data-campo="mic-nativo-fora" data-hef-alvo="classe" '

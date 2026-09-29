@@ -121,14 +121,15 @@ TREMOR = (1, 60, 3)          # idem, em graus/s
 #: A linha que liga os deslizantes ao chip. Sem ela os dois números flutuam na
 #: página de calibração sem dizer a que servem.
 #:
-#: E ELA DIZ OS OUTROS DOIS CHIPS DESDE 28/09/2026 (NO-MODO-XBOX-TUDO-FUNCIONA-01):
-#: a Direção Virtual lê o quanto anda, o segurar e o inverter do mesmo controle
-#: (a zona morta dela é de inclinação, em graus, e não o tremor em graus/s), e o
-#: Cursor Virtual só o quanto anda — um cursor que anda ao contrário do dedo é
-#: defeito, não ajuste (`roteador_de_movimento.pixels_do_toque`).
+#: E ELA DIZ OS OUTROS DOIS DESDE 28/09/2026 (NO-MODO-XBOX-TUDO-FUNCIONA-01): a
+#: «Inclinação» embaixo de cada analógico lê o quanto anda, o segurar e o
+#: inverter do mesmo controle (a zona morta dela é de inclinação, em graus, e
+#: não o tremor em graus/s), e o «Cursor» do touchpad só o quanto anda — um
+#: cursor que anda ao contrário do dedo é defeito, não ajuste
+#: (`roteador_de_movimento.pixels_do_toque`).
 DE_ONDE_VEM_A_MIRA = ("Valem para o controle com a Mira Virtual acesa, na aba "
-                      "Controles. A Direção Virtual usa todos menos o tremor, e "
-                      "o Cursor Virtual, só o quanto um gesto anda.")
+                      "Controles. A Inclinação usa todos menos o tremor, e o "
+                      "Cursor do touchpad, só o quanto um gesto anda.")
 
 # ---------------------------------------------------------------------------
 # «SÓ ENQUANTO EU SEGURAR» E «INVERTER» — 24/09/2026, A-MIRA-POR-MOVIMENTO-NA-TELA-02

@@ -194,9 +194,9 @@ NOME_DA_SECAO = {
     # (`data-gesto="mascara"`) — não é vocabulário novo de tela.
     "mascara": "máscara",
     # «comandos virtuais» DESDE 28/09/2026 (NO-MODO-XBOX-TUDO-FUNCIONA-01): a
-    # seção guarda os quatro chips do cartão — a Mira, a Direção, o Cursor e os
-    # Botões Virtuais — e «mira virtual» diria um dos quatro sobre um controle
-    # que só guardou o toque. Era o nome do chip que ela pediu em 24/09.
+    # seção guarda a Mira Virtual, a Inclinação de cada analógico e o Cursor ou
+    # os Botões do touchpad, e «mira virtual» diria um dos três sobre um
+    # controle que só guardou o toque. Era o nome do chip que ela pediu em 24/09.
     "movimento": "comandos virtuais",
 }
 

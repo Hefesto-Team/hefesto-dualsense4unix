@@ -2307,8 +2307,8 @@
   }
   .sensores-peca .sw .p{width:6px;height:6px;border-radius:50%;background:var(--green);
                         box-shadow:0 0 6px var(--green)}
-  .sensores-peca .sw.off,.sensores-peca .chip-da-mira.off>.sw,.sensores-peca .chip-virtual.off>.sw{border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
-  .sensores-peca .sw.off .p,.sensores-peca .chip-da-mira.off>.sw .p,.sensores-peca .chip-virtual.off>.sw .p{background:var(--border-forte);box-shadow:none}
+  .sensores-peca .sw.off,.sensores-peca .chip-da-mira.off>.sw{border-color:var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
+  .sensores-peca .sw.off .p,.sensores-peca .chip-da-mira.off>.sw .p{background:var(--border-forte);box-shadow:none}
   /* A DICA DO GIROSCÓPIO MORA NUM INVÓLUCRO SEM CAIXA — 24/09/2026,
      A-MIRA-POR-MOVIMENTO-NA-TELA-02. `display:contents` tira o invólucro da
      grade: quem ocupa a coluna continua sendo o botão, e a largura dos três
@@ -2318,21 +2318,53 @@
      `aria-disabled` só vale no próprio botão, e um elemento aceita UM alvo: o
      aceso da Mira desceu para este invólucro sem caixa, e o botão ficou com o
      cinza (`mira-fora`) e o `aria-disabled` que o piloto deriva dele. */
-  .sensores-peca .chip-da-mira,.sensores-peca .chip-virtual{display:contents}
+  .sensores-peca .chip-da-mira{display:contents}
   /* NO MODO NATIVO O CHIP DA MIRA FICA CINZA — decisão dela, 24/09/2026:
      *"fica cinza no Nativo, sem gravar"*. A cara é a do cinza da casa
      (`.btn.apagado`, `monta.py`): a borda sutil, o texto mudo e o cursor que
      recusa — e ela vence o aceso e o apagado do chip, porque no Nativo nenhum
      dos dois vale. Cor explícita, nada de `opacity`. */
   .sensores-peca.sem-mira .sw[data-gesto="mira"],
-  .sensores-peca.sem-mira .sw[data-gesto="mira"]:hover,
-  .sensores-peca.sem-mira .chip-virtual>.sw,
-  .sensores-peca.sem-mira .chip-virtual>.sw:hover{
+  .sensores-peca.sem-mira .sw[data-gesto="mira"]:hover{
     border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo);
     cursor:not-allowed}
-  .sensores-peca.sem-mira .sw[data-gesto="mira"] .p,
-  .sensores-peca.sem-mira .chip-virtual>.sw .p{
+  .sensores-peca.sem-mira .sw[data-gesto="mira"] .p{
     background:var(--border-sutil);box-shadow:none}
+  /* A INCLINAÇÃO EMBAIXO DE CADA ANALÓGICO — 28/09/2026, NO-MODO-XBOX-TUDO-
+     FUNCIONA-01. A pastilha é a dos chips do cabeçalho (17px, a mesma borda e
+     o mesmo ponto), escrita à parte para as regras aprovadas não mudarem de
+     texto. O aceso é o `on` do invólucro (o analógico que recebe a
+     inclinação), e o cinza do Nativo é o `sem-mira` do botão, como o da Mira.
+     O `stick-topo` junta o nome e o chip no topo da coluna, e o
+     `space-between` da coluna continua com três filhos. */
+  .stick-topo{display:flex;flex-direction:column}
+  .chip-virtual{display:flex;justify-content:center;margin-top:4px}
+  .chip-virtual>.sw{height:17px;border-radius:6px;font-size:10.5px;font-family:inherit;
+    cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;
+    justify-content:center;gap:6px;padding:0 10px;
+    border:1px solid var(--border-forte);background:var(--app-bg);color:var(--texto-mudo)}
+  .chip-virtual>.sw .p{width:6px;height:6px;border-radius:50%;background:var(--border-forte)}
+  .chip-virtual.on>.sw{border-color:var(--green);background:rgba(80,250,123,.09);color:var(--green)}
+  .chip-virtual.on>.sw .p{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .chip-virtual>.sw.sem-mira,.chip-virtual>.sw.sem-mira:hover{
+    border-color:var(--border-sutil);background:var(--app-bg);color:var(--texto-mudo);
+    cursor:not-allowed}
+  .chip-virtual>.sw.sem-mira .p{background:var(--border-sutil);box-shadow:none}
+  /* O «CURSOR | BOTÕES» NA SUPERFÍCIE DO TOUCHPAD — 28/09/2026. A forma é a do
+     «Virtual | Nativo» do microfone, e ele mora por cima da superfície, no pé
+     dela: a coluna não tem altura para uma fileira embaixo (ver
+     `modo_do_toque`). O ponto do dedo fica por cima dos dois botões, para o
+     dedo na zona do L2 continuar aparecendo. */
+  .rota.toque-modo{position:absolute;left:5px;right:5px;bottom:5px;margin:0;
+    flex-direction:row;gap:5px;z-index:1}
+  .rota.toque-modo .aceso-do-toque{display:contents}
+  .rota.toque-modo button{flex:1;min-width:0}
+  .rota .aceso-do-toque.on>button{border-color:var(--purple);background:var(--sel-bg);
+    color:var(--fg);font-weight:600}
+  .rota.toque-modo button.sem-mira,.rota.toque-modo button.sem-mira:hover{
+    border-color:var(--border-sutil);background:var(--panel);color:var(--texto-mudo);
+    font-weight:400;cursor:not-allowed}
+  .touch .ponto{z-index:2}
 
   .bat .carga-i[data-carga="Carregando"] .g-raio{display:block;color:var(--green)}
   .bat .carga-i[data-carga="Cheio"] .g-cheio{display:block;color:var(--green)}
@@ -2826,9 +2858,6 @@
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
             <span class="chip-da-mira off" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como mira (analógico R), para pessoas com deficiência motora."><span class="p"></span>Mira Virtual</button></span>
-            <span class="chip-virtual off" data-campo="inclinacao-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="inclinacao" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar a inclinação do controle como direção (analógico L), para pessoas com deficiência motora."><span class="p"></span>Direção Virtual</button></span>
-            <span class="chip-virtual off" data-campo="toque-cursor" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="toque" data-toque="cursor" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad do controle como mouse no jogo; o clique dele é o botão esquerdo."><span class="p"></span>Cursor Virtual</button></span>
-            <span class="chip-virtual off" data-campo="toque-zonas" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="toque" data-toque="zonas" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad como botões: os dois terços da esquerda são o direcional; à direita, em cima o L1 e embaixo o L2."><span class="p"></span>Botões Virtuais</button></span>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -2855,7 +2884,8 @@
               <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque, não há ponto.">1 toque</span></div>
             <div class="touch">
               <span data-campo="pos-touch" data-hef-alvo="posicao" style="--hef-x:62%;--hef-y:44%"><span class="ponto ponto-1 on" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
-              <span data-campo="pos-touch-2" data-hef-alvo="posicao" style="--hef-x:38%;--hef-y:56%"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span></div>
+              <span data-campo="pos-touch-2" data-hef-alvo="posicao" style="--hef-x:38%;--hef-y:56%"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span>
+              <span class="rota toque-modo"><span class="aceso-do-toque" data-campo="toque-modo" data-hef-alvo="classe" data-hef-quando="cursor"><button data-gesto="toque" data-toque="cursor" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad deste controle como mouse no jogo; o clique dele é o botão esquerdo.">Cursor</button></span><span class="aceso-do-toque" data-campo="toque-modo" data-hef-alvo="classe" data-hef-quando="zonas"><button data-gesto="toque" data-toque="zonas" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad como botões: os dois terços da esquerda são o direcional; à direita, em cima o L1 e embaixo o L2.">Botões</button></span></span></div>
           </div>
           <!-- O TRAVESSÃO VIROU PALAVRA — decisão dela, 04/09/2026 [02]:
                *"palavra curta no lugar do travessão, frase inteira no hover"*,
@@ -2914,14 +2944,16 @@
           <div class="moldura">
             <div class="sticks">
               <div>
-                <div class="stick-rot">Analógico<br>esquerdo</div>
+                <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
+                  <span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="inclinacao" data-destino="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico esquerdo, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">L3</span>
                   <span class="p" data-campo="pos-ana-e" data-hef-alvo="posicao" style="--hef-x:23.5%;--hef-y:78.4%"></span></div>
                 <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">X: 60<br>Y:200</div>
               </div>
               <div>
-                <div class="stick-rot">Analógico<br>direito</div>
+                <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
+                  <span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="inclinacao" data-destino="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico direito, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">R3</span>
                   <span class="p" data-campo="pos-ana-d" data-hef-alvo="posicao" style="--hef-x:70.6%;--hef-y:35.3%"></span></div>
@@ -3391,9 +3423,6 @@
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
             <span class="chip-da-mira off" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como mira (analógico R), para pessoas com deficiência motora."><span class="p"></span>Mira Virtual</button></span>
-            <span class="chip-virtual off" data-campo="inclinacao-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="inclinacao" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar a inclinação do controle como direção (analógico L), para pessoas com deficiência motora."><span class="p"></span>Direção Virtual</button></span>
-            <span class="chip-virtual off" data-campo="toque-cursor" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="toque" data-toque="cursor" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad do controle como mouse no jogo; o clique dele é o botão esquerdo."><span class="p"></span>Cursor Virtual</button></span>
-            <span class="chip-virtual off" data-campo="toque-zonas" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="toque" data-toque="zonas" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad como botões: os dois terços da esquerda são o direcional; à direita, em cima o L1 e embaixo o L2."><span class="p"></span>Botões Virtuais</button></span>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -3420,7 +3449,8 @@
               <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque, não há ponto.">Sem toque</span></div>
             <div class="touch">
               <span data-campo="pos-touch" data-hef-alvo="posicao" style="--hef-x:50%;--hef-y:50%"><span class="ponto ponto-1" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
-              <span data-campo="pos-touch-2" data-hef-alvo="posicao" style="--hef-x:50%;--hef-y:50%"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span></div>
+              <span data-campo="pos-touch-2" data-hef-alvo="posicao" style="--hef-x:50%;--hef-y:50%"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span>
+              <span class="rota toque-modo"><span class="aceso-do-toque" data-campo="toque-modo" data-hef-alvo="classe" data-hef-quando="cursor"><button data-gesto="toque" data-toque="cursor" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad deste controle como mouse no jogo; o clique dele é o botão esquerdo.">Cursor</button></span><span class="aceso-do-toque" data-campo="toque-modo" data-hef-alvo="classe" data-hef-quando="zonas"><button data-gesto="toque" data-toque="zonas" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad como botões: os dois terços da esquerda são o direcional; à direita, em cima o L1 e embaixo o L2.">Botões</button></span></span></div>
           </div>
           <!-- O TRAVESSÃO VIROU PALAVRA — decisão dela, 04/09/2026 [02]:
                *"palavra curta no lugar do travessão, frase inteira no hover"*,
@@ -3479,14 +3509,16 @@
           <div class="moldura">
             <div class="sticks">
               <div>
-                <div class="stick-rot">Analógico<br>esquerdo</div>
+                <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
+                  <span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="inclinacao" data-destino="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico esquerdo, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">L3</span>
                   <span class="p" data-campo="pos-ana-e" data-hef-alvo="posicao" style="--hef-x:50.2%;--hef-y:50.2%"></span></div>
                 <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">X:128<br>Y:128</div>
               </div>
               <div>
-                <div class="stick-rot">Analógico<br>direito</div>
+                <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
+                  <span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="inclinacao" data-destino="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico direito, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">R3</span>
                   <span class="p" data-campo="pos-ana-d" data-hef-alvo="posicao" style="--hef-x:50.2%;--hef-y:50.2%"></span></div>
@@ -3956,9 +3988,6 @@
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
             <span class="chip-da-mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como mira (analógico R), para pessoas com deficiência motora."><span class="p"></span>Mira Virtual</button></span>
-            <span class="chip-virtual" data-campo="inclinacao-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="inclinacao" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar a inclinação do controle como direção (analógico L), para pessoas com deficiência motora."><span class="p"></span>Direção Virtual</button></span>
-            <span class="chip-virtual" data-campo="toque-cursor" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="toque" data-toque="cursor" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad do controle como mouse no jogo; o clique dele é o botão esquerdo."><span class="p"></span>Cursor Virtual</button></span>
-            <span class="chip-virtual" data-campo="toque-zonas" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="toque" data-toque="zonas" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad como botões: os dois terços da esquerda são o direcional; à direita, em cima o L1 e embaixo o L2."><span class="p"></span>Botões Virtuais</button></span>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -3985,7 +4014,8 @@
               <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque, não há ponto.">—</span></div>
             <div class="touch">
               <span data-campo="pos-touch" data-hef-alvo="posicao"><span class="ponto ponto-1" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
-              <span data-campo="pos-touch-2" data-hef-alvo="posicao"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span></div>
+              <span data-campo="pos-touch-2" data-hef-alvo="posicao"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span>
+              <span class="rota toque-modo"><span class="aceso-do-toque" data-campo="toque-modo" data-hef-alvo="classe" data-hef-quando="cursor"><button data-gesto="toque" data-toque="cursor" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad deste controle como mouse no jogo; o clique dele é o botão esquerdo.">Cursor</button></span><span class="aceso-do-toque" data-campo="toque-modo" data-hef-alvo="classe" data-hef-quando="zonas"><button data-gesto="toque" data-toque="zonas" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad como botões: os dois terços da esquerda são o direcional; à direita, em cima o L1 e embaixo o L2.">Botões</button></span></span></div>
           </div>
           <!-- O TRAVESSÃO VIROU PALAVRA — decisão dela, 04/09/2026 [02]:
                *"palavra curta no lugar do travessão, frase inteira no hover"*,
@@ -4044,14 +4074,16 @@
           <div class="moldura">
             <div class="sticks">
               <div>
-                <div class="stick-rot">Analógico<br>esquerdo</div>
+                <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
+                  <span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="inclinacao" data-destino="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico esquerdo, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">—</span>
                   <span class="p" data-campo="pos-ana-e" data-hef-alvo="posicao"></span></div>
                 <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">X:128<br>Y:128</div>
               </div>
               <div>
-                <div class="stick-rot">Analógico<br>direito</div>
+                <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
+                  <span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="inclinacao" data-destino="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico direito, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">—</span>
                   <span class="p" data-campo="pos-ana-d" data-hef-alvo="posicao"></span></div>
@@ -4521,9 +4553,6 @@
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="title"><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" title="Ligado: o jogo recebe a inclinação e o chacoalhar deste controle."><span class="p"></span>Acelerômetro</button>
             <span class="chip-da-mira" data-campo="mira-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="mira" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar os movimentos do controle como mira (analógico R), para pessoas com deficiência motora."><span class="p"></span>Mira Virtual</button></span>
-            <span class="chip-virtual" data-campo="inclinacao-ligada" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="inclinacao" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar a inclinação do controle como direção (analógico L), para pessoas com deficiência motora."><span class="p"></span>Direção Virtual</button></span>
-            <span class="chip-virtual" data-campo="toque-cursor" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="toque" data-toque="cursor" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad do controle como mouse no jogo; o clique dele é o botão esquerdo."><span class="p"></span>Cursor Virtual</button></span>
-            <span class="chip-virtual" data-campo="toque-zonas" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><button class="sw" data-gesto="toque" data-toque="zonas" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad como botões: os dois terços da esquerda são o direcional; à direita, em cima o L1 e embaixo o L2."><span class="p"></span>Botões Virtuais</button></span>
           </span>
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
                PINTURA DO MOCKUP para sempre: o pacote da aba emite `bateria`
@@ -4550,7 +4579,8 @@
               <span class="de-quem" data-campo="touch-estado" title="O ponto marca onde o dedo está. Sem toque, não há ponto.">—</span></div>
             <div class="touch">
               <span data-campo="pos-touch" data-hef-alvo="posicao"><span class="ponto ponto-1" data-campo="touch-ponto" data-hef-alvo="classe"></span></span>
-              <span data-campo="pos-touch-2" data-hef-alvo="posicao"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span></div>
+              <span data-campo="pos-touch-2" data-hef-alvo="posicao"><span class="ponto ponto-2" data-campo="touch-ponto-2" data-hef-alvo="classe"></span></span>
+              <span class="rota toque-modo"><span class="aceso-do-toque" data-campo="toque-modo" data-hef-alvo="classe" data-hef-quando="cursor"><button data-gesto="toque" data-toque="cursor" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad deste controle como mouse no jogo; o clique dele é o botão esquerdo.">Cursor</button></span><span class="aceso-do-toque" data-campo="toque-modo" data-hef-alvo="classe" data-hef-quando="zonas"><button data-gesto="toque" data-toque="zonas" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Usar o touchpad como botões: os dois terços da esquerda são o direcional; à direita, em cima o L1 e embaixo o L2.">Botões</button></span></span></div>
           </div>
           <!-- O TRAVESSÃO VIROU PALAVRA — decisão dela, 04/09/2026 [02]:
                *"palavra curta no lugar do travessão, frase inteira no hover"*,
@@ -4609,14 +4639,16 @@
           <div class="moldura">
             <div class="sticks">
               <div>
-                <div class="stick-rot">Analógico<br>esquerdo</div>
+                <div class="stick-topo"><div class="stick-rot">Analógico<br>esquerdo</div>
+                  <span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_esquerdo"><button class="sw" data-gesto="inclinacao" data-destino="analogico_esquerdo" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico esquerdo, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></div>
                 <div class="stick" data-stick="l">
                   <span class="rotl" data-campo="l3">—</span>
                   <span class="p" data-campo="pos-ana-e" data-hef-alvo="posicao"></span></div>
                 <div class="xy" data-xy="l" data-campo="xy-l" data-hef-alvo="html">X:128<br>Y:128</div>
               </div>
               <div>
-                <div class="stick-rot">Analógico<br>direito</div>
+                <div class="stick-topo"><div class="stick-rot">Analógico<br>direito</div>
+                  <span class="chip-virtual" data-campo="inclinacao-destino" data-hef-alvo="classe" data-hef-quando="analogico_direito"><button class="sw" data-gesto="inclinacao" data-destino="analogico_direito" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO" data-hef-atributo="aria-disabled" title="Inclinar o controle move o analógico direito, para pessoas com deficiência motora."><span class="p"></span>Inclinação</button></span></div>
                 <div class="stick" data-stick="r">
                   <span class="rotl" data-campo="r3">—</span>
                   <span class="p" data-campo="pos-ana-d" data-hef-alvo="posicao"></span></div>
