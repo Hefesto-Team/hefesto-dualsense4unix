@@ -89,6 +89,12 @@ class JanelaDeMentira:
     máquina de quem a executa: o `_status_do_daemon` faz dois, o repouso do
     painel faz mais um, e o `autostart`/`reiniciar` fariam `enable` e `restart`.
     Uma régua que reinicia o daemon de quem a roda não é régua.
+
+    O «reiniciar» tem DOIS atos desde 21/09: o `restart` (este dublê) e a
+    reposição do lançador (`reposicao_dos_lancadores.repor`, dublado na
+    fixture `a09`). Até 29/09 só o primeiro era dublado, e o segundo fechou e
+    reabriu a Steam de quem rodava a suíte seis vezes
+    (A-SUITE-NAO-ABRE-NEM-FECHA-O-LANCADOR-DELA-01).
     """
 
     def __init__(self, status="online_systemd", texto="● unidade ativa", rc=0):
@@ -131,6 +137,20 @@ def a09(monkeypatch):
     # `is-enabled` NÃO PODE SAIR DA MÁQUINA DE QUEM RODA: `_autostart` chama
     # `subprocess.run` direto, fora do mixin.
     monkeypatch.setattr(mod, "_autostart", lambda: "enabled")
+    # O SEGUNDO ATO DO «REINICIAR» TAMBÉM NÃO SAI DA MÁQUINA DE QUEM RODA: o
+    # `_repor_o_lancador` chama `reposicao_dos_lancadores.repor`, que varre o
+    # `/proc` dela, fecha e reabre o lançador aberto. As chamadas ficam em
+    # `mod.reposicoes`, para a régua contar.
+    from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
+
+    reposicoes: list[None] = []
+
+    def _repor_de_mentira() -> rl.Recibo:
+        reposicoes.append(None)
+        return rl.Recibo()
+
+    monkeypatch.setattr(rl, "repor", _repor_de_mentira)
+    monkeypatch.setattr(mod, "reposicoes", reposicoes, raising=False)
     mod._LENTO.clear()
     mod._LENTO_EM_VOO[0] = False
     mod._PRONTUARIO.clear()
@@ -634,6 +654,10 @@ def test_o_reiniciar_faz_reset_failed_antes(a09, ctx):
     assert janela.comandos == [["reset-failed", a09._unidade()],
                                ["restart", a09._unidade()]], (
         f"o restart foi sem `reset-failed`: {janela.comandos}")
+    # O segundo ato chegou ao DUBLÊ, uma vez (A-SUITE-NAO-ABRE-NEM-FECHA-O-
+    # LANCADOR-DELA-01): sem a linha da fixture, ele iria à máquina de quem roda.
+    assert len(a09.reposicoes) == 1, (
+        f"a reposição do lançador foi chamada {len(a09.reposicoes)} vez(es) no dublê")
 
 
 def test_o_systemctl_que_falha_recusa_dizendo(a09, ctx):
@@ -647,6 +671,7 @@ def test_o_systemctl_que_falha_recusa_dizendo(a09, ctx):
     with pytest.raises(RuntimeError) as erro:
         acao(ctx, {}, None)
     assert "Failed to enable unit." in str(erro.value)
+    assert a09.reposicoes == [], "o restart falhou e o lançador foi reposto assim mesmo"
 
 
 def test_o_retomar_recusa_quando_nao_ha_pausa(a09, ctx):
