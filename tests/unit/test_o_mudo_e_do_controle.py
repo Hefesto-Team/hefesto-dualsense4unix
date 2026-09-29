@@ -298,6 +298,46 @@ class TestUmEscritor:
 
 
 # ===========================================================================
+# 1. UM DONO: o `maquina.json`, pela API do `utils/maquina.py`
+# ===========================================================================
+
+
+class TestODono:
+    @pytest.mark.parametrize("uniq", OS_QUATRO)
+    def test_nada_mudou_nada_grava(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, uniq: str
+    ) -> None:
+        """Apertar duas vezes para o mesmo lado não reescreve o arquivo.
+
+        MORDIDA: tirar a pergunta ao disco do começo de
+        `gravar_o_mudo_do_microfone` — a segunda chamada grava de novo.
+        """
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+        gravacoes: list[dict[str, Any]] = []
+        real = maquina.gravar_maquina
+        monkeypatch.setattr(maquina, "gravar_maquina",
+                            lambda d: gravacoes.append(d) or real(d))
+
+        assert maquina.gravar_o_mudo_do_microfone(uniq, True)
+        assert maquina.gravar_o_mudo_do_microfone(uniq, True)
+
+        assert len(gravacoes) == 1, f"o mesmo mudo gravou {len(gravacoes)} vezes"
+        assert maquina.mudo_do_microfone(uniq) is True
+        assert maquina.gravar_o_mudo_do_microfone(uniq, False)
+        assert len(gravacoes) == 2 and maquina.mudo_do_microfone(uniq) is False
+
+    def test_o_endereco_sintetizado_nao_grava(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O vpad (`02fe…`) não é peça de plástico: não ganha mudo no dono."""
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+
+        assert maquina.gravar_o_mudo_do_microfone("02:fe:00:00:00:01", True) is False
+        assert maquina.mudo_do_microfone("02:fe:00:00:00:01") is None
+        assert not (maquina.carregar_maquina().controles or {})
+
+
+# ===========================================================================
 # 5. A MIGRAÇÃO, UMA VEZ
 # ===========================================================================
 
@@ -346,7 +386,9 @@ class TestAMigracao:
 
         O P3 é conhecido pelo `maquina.json` (ela deu nome a ele) e não tem
         peça no perfil: herda o global calado. O P4 só aparece no perfil do
-        JOGO, que não é o ativo: não é tocado.
+        JOGO, que não é o ativo: a peça de lá não conta, mas ele é um controle
+        conhecido, e herda o global calado do ativo — o mesmo que o boot de
+        antes da migração faria com ele ao conectar.
         """
         self._o_ativo(pasta)
         self._o_do_jogo(pasta)
@@ -354,12 +396,37 @@ class TestAMigracao:
 
         levados = loader.o_mudo_do_microfone_vai_para_o_controle(ativo="Freestyle")
 
-        assert levados == {P1: False, P2: True, P3: True}
+        assert levados == {P1: False, P2: True, P3: True, P4: True}
         assert maquina.mudo_do_microfone(P1) is False
         assert maquina.mudo_do_microfone(P2) is True
         assert maquina.mudo_do_microfone(P3) is True
-        assert maquina.mudo_do_microfone(P4) is None
+        assert maquina.mudo_do_microfone(P4) is True
         assert maquina.carregar_maquina().controles[P3].nome == "Controle da sala"
+
+    def test_o_global_calado_alcanca_o_controle_de_outro_perfil(self, pasta: Path) -> None:
+        """O controle que só um perfil de jogo conhece herda o global calado do ativo.
+
+        Antes da migração, o `mic.muted: true` global do ativo calava TODO
+        controle que conectasse (o replug e o nascimento liam o global). O P4
+        não está no `maquina.json` e só tem, no perfil do jogo, um volume —
+        nenhuma opinião sobre o mudo. Ficar fora da lista o poria no ar.
+
+        MORDIDA: contar como conhecidos só os controles do ativo e do
+        `maquina.json` — o P4 volta a `None`, e nasce no ar.
+        """
+        self._o_ativo(pasta)
+        _grava_cru(pasta, "jogo.json", {
+            "name": "Jogo", "version": 1, "priority": 80,
+            "match": {"type": "criteria", "window_class": ["steam_app_42"]},
+            "controllers": {"aabbcc000044": {"mic": {"volume": 55}}},
+        })
+
+        levados = loader.o_mudo_do_microfone_vai_para_o_controle(ativo="Freestyle")
+
+        assert (levados or {}).get(P4) is True
+        assert maquina.mudo_do_microfone(P4) is True
+        assert _cru(pasta, "jogo.json")["controllers"]["aabbcc000044"] == {
+            "mic": {"volume": 55}}, "a migração mexeu num perfil que não tinha mudo"
 
     def test_o_mudo_sai_de_todo_perfil_e_nada_mais_muda(self, pasta: Path) -> None:
         """Só o `muted` sai; a versão de antes fica no histórico.

@@ -1349,8 +1349,8 @@ def enxugar_perfis_de_jogo(dest_dir: Path | None = None) -> list[str]:
 #
 #   * o mudo do perfil ATIVO (o que o boot restaura) vira o mudo de cada
 #     controle — a peça vence o global, que vale para os controles conhecidos
-#     (os do perfil e os do `maquina.json`) sem opinião própria. Um controle
-#     que já tem o mudo no dono não é tocado;
+#     (os de qualquer perfil e os do `maquina.json`) sem opinião própria. Um
+#     controle que já tem o mudo no dono não é tocado;
 #   * o `muted` sai de TODO perfil, com os bytes de antes no `.historico`
 #     (`restaurar_do_historico` os devolve) e a nota no diário
 #     (`mic_mudo_saiu_dos_perfis`). Nenhum outro campo muda: a edição é no
@@ -1460,13 +1460,20 @@ def o_mudo_do_microfone_vai_para_o_controle(
             dados_do_ativo = _dados_crus_do_perfil(caminho) if caminho else None
             if caminho and dados_do_ativo and _e_copia_de_fabrica(caminho, dados_do_ativo):
                 dados_do_ativo = None
+        # OS CONHECIDOS SÃO TODOS OS CONTROLES QUE A CASA JÁ VIU: os do
+        # `maquina.json` e os que QUALQUER perfil guarda por peça. Antes da
+        # migração, o global calado do ativo calava todo controle que
+        # conectasse; um controle que ela configurou só no perfil de um jogo
+        # também era calado por ele, e sair da lista o poria no ar sem ela
+        # saber — o silêncio que o produto promete e não entrega.
         conhecidos = set(declarado.controles or {})
-        pecas_do_ativo = (dados_do_ativo or {}).get("controllers")
-        if isinstance(pecas_do_ativo, dict):
-            conhecidos |= {
-                c for c in (_maquina.chave_do_controle(k) for k in pecas_do_ativo)
-                if c is not None
-            }
+        for path in sorted(directory.glob("*.json")):
+            pecas = (_dados_crus_do_perfil(path) or {}).get("controllers")
+            if isinstance(pecas, dict):
+                conhecidos |= {
+                    c for c in (_maquina.chave_do_controle(k) for k in pecas)
+                    if c is not None
+                }
         mudos = _mudos_do_perfil(dados_do_ativo or {}, conhecidos)
         levados: dict[str, bool] = {}
         for chave, mudo in sorted(mudos.items()):
