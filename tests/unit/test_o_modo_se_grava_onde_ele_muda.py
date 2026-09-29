@@ -429,6 +429,33 @@ def test_o_nativo_a_mao_grava_native(bancada: _Bancada) -> None:
     assert modo.gamepad_flavor == "dualsense", "o Nativo apagou a máscara padrão do perfil"
 
 
+def test_o_nativo_ja_aceso_grava_native_no_perfil_que_divergiu(bancada: _Bancada) -> None:
+    """O Nativo já ligado e o perfil dizendo `gamepad`: o clique à mão conserta o perfil.
+
+    É o `ja_estava` do Nativo: o setter volta cedo (nada a trocar no aparelho),
+    e a escolha dela vai ao perfil do mesmo jeito, como o chip aceso faz com o
+    caminho. Sem isto, o «Desligado» aceso clicado de novo deixaria o perfil
+    dizendo o modo de antes, e o boot o seguiria.
+
+    MORDIDA: tire a chamada de `gravar_o_modo_escolhido` do ramo idempotente de
+    `set_native_mode` (o `if enabled == self._native_mode`) e o perfil segue
+    `gamepad`.
+    """
+    d = _daemon()
+    _perfil(JOGO, mode={"kind": "gamepad", "caminho": "xbox"})
+    d.store.set_active_profile(JOGO)
+    d.set_native_mode(True, origin="profile")
+    assert d.is_native_mode() is True, "premissa: o Nativo já está ligado"
+    assert _modo_no_disco(JOGO).kind == "gamepad", "premissa: o perfil divergiu"  # type: ignore[union-attr]
+    h = _Handlers(d, _gerente(d))
+
+    asyncio.run(h._handle_native_mode_set({"enabled": True, "origin": "manual"}))
+
+    modo = _modo_no_disco(JOGO)
+    assert modo is not None and modo.kind == "native", (
+        f"o clique no Nativo aceso deixou o perfil dizendo {modo!r}")
+
+
 def test_a_navegacao_a_mao_grava_desktop(bancada: _Bancada) -> None:
     """`desktop.arranjo.apply {origin: "manual"}` grava `kind: desktop`.
 
