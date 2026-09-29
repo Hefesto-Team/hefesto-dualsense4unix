@@ -70,6 +70,27 @@ o nó declara** — um `usb_device` real sem placa de som, a ÂNCORA. É a mesma
 conta que o `winepulse` faz, com a mesma entrada, e por isso nenhum acerto
 precisa ser combinado entre o daemon e o lançador: os dois lados leem o nó.
 
+O REGISTRO É DOS LUGARES, E TEM UM DONO DA LISTA — 28/09/2026
+-------------------------------------------------------------
+
+A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01. A lista era `controles_no_cabo() +
+controles_no_radio()`, e o texto novo apaga todo bloco nosso e escreve só
+esses: com o jogo aberto (`wineserver` vivo) nada se grava, e o controle que
+chegava depois não tinha bloco. Agora os endpoints são um por LUGAR
+(`endpoint_de_haptica`, P1 a P4), de pé desde o primeiro DualSense da mesa, e
+o registro grava os quatro no lançamento: quem entra depois cai num lugar que
+o jogo já conhece.
+
+O cabo cujo lugar tem endpoint SAI da lista: um laço nosso leva o endpoint do
+lugar à placa dele (`integrations/haptica_do_cabo.py`), e placa e lugar seriam
+dois alvos para o mesmo controle. Quem diz que placa um lugar serve é o
+SERVIDOR (:func:`placas_servidas`), e não uma segunda conta de assento aqui. O
+cabo sem lugar ancorado segue pela placa, pelo `BUSNUM-DEVNUM`, como sempre.
+
+A lista tem UM dono, :func:`controles_do_registro`: o `main` deste curador (o
+gancho de lançamento) e o `daemon/launch_env._device_ks_nos_lancadores` leem a
+mesma função.
+
 Este módulo é **100% stdlib de propósito**, como o `camadas_vulkan`: o
 `install.sh` o materializa em `~/.local/share/hefesto-dualsense4unix/bin/` e o
 `assets/hefesto-launch.sh` o roda com o `python3` do sistema, antes do Proton
@@ -366,6 +387,10 @@ def controles_no_radio(
     `DEVNUM` e o `USEC_INITIALIZED` do `usb_device` que o nó declara. Por isso
     não há nada a combinar entre quem monta o nó e quem grava o registro — os
     dois leem o mesmo lugar.
+
+    **Desde 28/09/2026 os nós são os LUGARES** (P1 a P4, em qualquer
+    transporte), e o nome desta função ficou do tempo em que eram só do rádio.
+    Quem monta a lista do registro é :func:`controles_do_registro`.
     """
     achados: list[Controle] = []
     for pid, caminho in endpoints_de_mentira(runner):
@@ -398,6 +423,134 @@ def controles_no_radio(
         if controle not in achados:
             achados.append(controle)
     return achados
+
+
+#: A FAMÍLIA DO LAÇO DO CABO no dono dos laços (`integrations/laco_de_audio.
+#: Lacos`), que dá aos nós o nome `hefesto-<família>-<chave>`. Mora AQUI, no
+#: módulo stdlib, porque é daqui que o curador a lê no servidor: quem sobe o
+#: laço (`integrations/haptica_do_cabo.py`) importa a mesma constante.
+FAMILIA_DO_LACO_DO_CABO = "haptica-do-cabo"
+MARCA_DO_LACO_DO_CABO = f"hefesto-{FAMILIA_DO_LACO_DO_CABO}-"
+
+_SINK_DA_ENTRADA = re.compile(r"^\tSink: (\d+)\s*$", re.M)
+_NUMERO_DO_SINK = re.compile(r"^Sink #(\d+)")
+
+
+def _lembrando(
+    runner: Callable[[list[str]], str | None],
+) -> Callable[[list[str]], str | None]:
+    """O mesmo `runner`, com UMA pergunta por argv e o servidor mudo lembrado.
+
+    O curador roda dentro do lançamento, com um teto de dez segundos
+    (`hefesto-launch.sh`, `curar_audio_ks`), e cada `pactl` tem cinco. Duas
+    perguntas ao mesmo servidor travado estourariam o teto: a primeira que
+    volta sem resposta cala as seguintes, e a lista sai com o que se sabe.
+    """
+    respostas: dict[tuple[str, ...], str | None] = {}
+    mudo = False
+
+    def perguntar(argv: list[str]) -> str | None:
+        nonlocal mudo
+        chave = tuple(argv)
+        if chave in respostas:
+            return respostas[chave]
+        if mudo:
+            return None
+        resposta = runner(argv)
+        respostas[chave] = resposta
+        if resposta is None:
+            mudo = True
+        return resposta
+
+    return perguntar
+
+
+def placas_servidas(
+    sysfs: Path = Path("/sys"),
+    runner: Callable[[list[str]], str | None] = _pactl,
+) -> list[tuple[int, int]]:
+    """`(BUSNUM, DEVNUM)` de cada placa de DualSense que um LUGAR já serve.
+
+    A pergunta é ao SERVIDOR, e não a uma conta de assento: o laço do cabo é
+    um fluxo que toca na placa do controle, e o nome dele carrega
+    :data:`MARCA_DO_LACO_DO_CABO`. Do fluxo sai o sink; do sink, o
+    `sysfs.path`; e do `sysfs.path`, o `usb_device` — a mesma subida que o
+    `winepulse` faz (:func:`pai_usb_device`). Servidor mudo é lista vazia: o
+    cabo segue pela placa, que é o caminho que já vibrava.
+    """
+    entradas = runner(["pactl", "list", "sink-inputs"]) or ""
+    alvos: set[str] = set()
+    for bloco in re.split(r"\n(?=Sink Input #\d+)", entradas):
+        if MARCA_DO_LACO_DO_CABO not in bloco:
+            continue
+        m = _SINK_DA_ENTRADA.search(bloco)
+        if m:
+            alvos.add(m.group(1))
+    if not alvos:
+        return []
+    saida = runner(["pactl", "list", "sinks"]) or ""
+    achadas: list[tuple[int, int]] = []
+    for bloco in re.split(r"\n(?=Sink #\d+)", saida):
+        m = _NUMERO_DO_SINK.match(bloco.lstrip("\n"))
+        if not m or m.group(1) not in alvos:
+            continue
+        aparelho = pai_usb_device(_propriedade(bloco, _PROP_SYSFS), sysfs)
+        if aparelho is None:
+            continue
+        bus, num = _ler(aparelho / "busnum"), _ler(aparelho / "devnum")
+        if bus and num and bus.isdigit() and num.isdigit():
+            par = (int(bus), int(num))
+            if par not in achadas:
+                achadas.append(par)
+    return achadas
+
+
+def indice_do_fluxo(
+    marca: str,
+    runner: Callable[[list[str]], str | None] = _pactl,
+) -> str | None:
+    """O índice do fluxo (sink-input) cujo bloco carrega ``marca``. ``None`` = não achei.
+
+    O portão dos motores do cabo é o volume do fluxo do laço
+    (`integrations/haptica_do_cabo`), e o índice muda a cada laço que sobe; o
+    nome que o dono dos laços dá ao nó (:data:`MARCA_DO_LACO_DO_CABO` mais a
+    chave do lugar) aparece nas propriedades do fluxo, e é por ele que se acha.
+    Mora aqui, ao lado de :func:`placas_servidas`, porque as duas leem o MESMO
+    fluxo pela mesma marca: uma para o registro, a outra para o portão.
+    """
+    if not marca:
+        return None
+    saida = runner(["pactl", "list", "sink-inputs"])
+    if not saida:
+        return None
+    for bloco in re.split(r"\n(?=Sink Input #\d+)", saida):
+        achado = re.match(r"\s*Sink Input #(\d+)", bloco)
+        if achado and marca in bloco:
+            return achado.group(1)
+    return None
+
+
+def controles_do_registro(
+    sysfs: Path = Path("/sys"),
+    udev_data: Path = Path("/run/udev/data"),
+    runner: Callable[[list[str]], str | None] = _pactl,
+) -> list[Controle]:
+    """A lista que o registro grava — o DONO dela, desde 28/09/2026.
+
+    Os lugares com endpoint (:func:`controles_no_radio`, que lê os nós
+    vivos) e o cabo que nenhum lugar serve (:func:`placas_servidas`), nesta
+    ordem: o cabo primeiro, como sempre, e nunca o mesmo aparelho duas vezes.
+    Um alvo por controle: o cabo servido por um lugar é o lugar. Sem controle
+    no cabo, os fluxos nem se perguntam — é uma ida ao servidor a menos no
+    lançamento de quem joga pelo rádio.
+    """
+    perguntar = _lembrando(runner)
+    lugares = controles_no_radio(sysfs, udev_data, perguntar)
+    cabo = controles_no_cabo(sysfs, udev_data)
+    if cabo:
+        servidas = set(placas_servidas(sysfs, perguntar))
+        cabo = [c for c in cabo if (c.bus, c.dev) not in servidas]
+    return cabo + lugares
 
 
 # --------------------------------------------------------------------------
@@ -721,10 +874,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.remover:
         controles: list[Controle] = []
     else:
-        sysfs, udev = Path(args.sysfs), Path(args.udev_data)
-        # O cabo e o rádio, nesta ordem, e nunca o mesmo aparelho duas vezes:
-        # quem tem placa de som fica com o cabo (ver `controles_no_radio`).
-        controles = controles_no_cabo(sysfs, udev) + controles_no_radio(sysfs, udev)
+        # A LISTA TEM UM DONO (28/09/2026): os lugares e o cabo que nenhum
+        # lugar serve — a mesma função que o daemon lê.
+        controles = controles_do_registro(Path(args.sysfs), Path(args.udev_data))
     try:
         resultado = aplicar(Path(args.prefixo), controles=controles)
     except OSError as erro:

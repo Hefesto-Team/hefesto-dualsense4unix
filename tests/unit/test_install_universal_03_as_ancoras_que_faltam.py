@@ -11,8 +11,14 @@ Duas pontas, e cada uma morde:
 
 * o daemon avisa no journal — **na mudança**, porque a volta roda a cada
   `RECONCILIA_S` e um aviso por volta encheria o log;
-* o doctor conta as MESMAS âncoras (o código do daemon, importado) contra os
-  DualSense no rádio, e diz o gesto.
+* o doctor conta as MESMAS âncoras (o código do daemon, importado) e diz o
+  gesto.
+
+**A CONTA É POR LUGAR DESDE 28/09/2026** (A-HAPTICA-CHEGA-A-QUEM-ENTRA-
+DEPOIS-01): o endpoint é um por lugar (P1 a P4), e os quatro sobem com o
+primeiro DualSense. O daemon conta os lugares sem âncora; o doctor avisa
+quando falta âncora para um lugar OCUPADO e informa os livres. As réguas que
+contavam controles no rádio foram trocadas pelo fato de agora.
 
 Nada vai para a tela: a dívida é nossa, e a tela não a confessa.
 """
@@ -91,15 +97,20 @@ def _avisos(registros: list[dict[str, Any]], evento: str) -> list[dict[str, Any]
 
 
 def test_faltando_ancora_o_daemon_diz_quantos(bancada: _Bancada) -> None:
-    """A MORDIDA: arranque o aviso e o `continue` volta a ser mudo."""
+    """Uma âncora para os quatro lugares: três sem âncora.
+
+    A MORDIDA: arranque o aviso e o `continue` volta a ser mudo.
+    """
     with structlog.testing.capture_logs() as registros:
         bancada.sub._casar_as_pontes(_tres_no_radio())
     avisos = _avisos(registros, "haptica_sem_ancora")
     assert len(avisos) == 1, registros
-    assert avisos[0]["faltam"] == 2
-    assert avisos[0]["controles"] == 3
+    assert avisos[0]["faltam"] == 3
+    assert avisos[0]["lugares"] == 4
     assert avisos[0]["log_level"] == "warning"
-    assert len(_EndpointDeMentira.criados) == 1, "o que tinha âncora continua ganhando endpoint"
+    assert [e.lugar for e in _EndpointDeMentira.criados] == [1], (
+        "o lugar que tinha âncora continua ganhando endpoint"
+    )
 
 
 def test_o_aviso_sai_na_mudanca_e_nao_a_cada_volta(bancada: _Bancada) -> None:
@@ -115,16 +126,22 @@ def test_a_ancora_que_chega_desliga_o_aviso(bancada: _Bancada) -> None:
 
     bancada.sub._casar_as_pontes(_tres_no_radio())
     bancada.ancoras.extend(
-        eh.Ancora(syspath=f"/d/{i}", declarado=f"/d/{i}/i:1.0") for i in (1, 2)
+        eh.Ancora(syspath=f"/d/{i}", declarado=f"/d/{i}/i:1.0") for i in (1, 2, 3)
     )
     with structlog.testing.capture_logs() as registros:
         bancada.sub._casar_as_pontes(_tres_no_radio())
     assert _avisos(registros, "haptica_ancoras_bastam"), registros
     assert not _avisos(registros, "haptica_sem_ancora")
-    assert len(_EndpointDeMentira.criados) == 3
+    assert len(_EndpointDeMentira.criados) == 4
 
 
 def test_ancoras_de_sobra_nao_avisam_nada(bancada: _Bancada) -> None:
+    """Quatro âncoras, uma por lugar: nenhuma linha."""
+    from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
+
+    bancada.ancoras.extend(
+        eh.Ancora(syspath=f"/d/{i}", declarado=f"/d/{i}/i:1.0") for i in (1, 2, 3)
+    )
     with structlog.testing.capture_logs() as registros:
         bancada.sub._casar_as_pontes(_tres_no_radio()[:1])
     assert not _avisos(registros, "haptica_sem_ancora")
@@ -191,7 +208,7 @@ def _doctor(tmp_path: Path, sysfs: Path, python: str = sys.executable) -> str:
             "-c",
             f'source "{DOCTOR}"; '
             f"_python_do_produto() {{ printf '%s\\n' '{python}'; }}; "
-            "check_ancoras_da_haptica_por_radio",
+            "check_ancoras_dos_lugares_da_haptica",
         ],
         capture_output=True,
         text=True,
@@ -205,20 +222,28 @@ def _doctor(tmp_path: Path, sysfs: Path, python: str = sys.executable) -> str:
 def test_doctor_acusa_as_ancoras_que_faltam(tmp_path: Path) -> None:
     """A MORDIDA: troque a comparação e a falta passa em verde."""
     saida = _doctor(tmp_path, _sysfs(tmp_path / "sys", no_radio=3, ancoras=1))
-    assert "[WARN] a vibração pelo rádio precisa de um aparelho USB sem som por controle" in saida
-    assert "há 1 para 3 DualSense no rádio, e 2 fica(m) sem vibração" in saida
+    assert "[WARN] 2 lugar(es) sem âncora" in saida, saida
+    assert "há 1 para 3 DualSense na mesa" in saida
 
 
-def test_doctor_passa_com_ancoras_de_sobra(tmp_path: Path) -> None:
-    saida = _doctor(tmp_path, _sysfs(tmp_path / "sys", no_radio=2, ancoras=2, no_cabo=1))
+def test_doctor_passa_com_uma_ancora_por_lugar(tmp_path: Path) -> None:
+    saida = _doctor(tmp_path, _sysfs(tmp_path / "sys", no_radio=2, ancoras=4, no_cabo=1))
     assert "[WARN]" not in saida
-    assert "[ OK ] âncoras USB da vibração pelo rádio: 2 para 2 controle(s)" in saida
+    assert "[ OK ] âncoras USB da vibração: 4 para os 4 lugares" in saida, saida
 
 
-def test_doctor_calado_sem_dualsense_no_radio(tmp_path: Path) -> None:
+def test_doctor_informa_os_lugares_livres_sem_ancora(tmp_path: Path) -> None:
+    """Âncoras que bastam para a mesa, e não para os quatro: é de quem entrar depois."""
+    saida = _doctor(tmp_path, _sysfs(tmp_path / "sys", no_radio=2, ancoras=2, no_cabo=1))
+    assert "[WARN]" not in saida and "[ OK ]" not in saida, saida
+    assert "2 âncora(s) USB para os 4 lugares da vibração" in saida
+
+
+def test_doctor_calado_sem_dualsense_na_mesa(tmp_path: Path) -> None:
+    """O cabo que só publica o HID (sem a placa de som) não senta num lugar."""
     saida = _doctor(tmp_path, _sysfs(tmp_path / "sys", no_radio=0, ancoras=0, no_cabo=2))
     assert "[WARN]" not in saida and "[ OK ]" not in saida
-    assert "nenhum DualSense no rádio" in saida
+    assert "nenhum DualSense na mesa" in saida
 
 
 def test_doctor_sem_o_pacote_se_declara_incapaz(tmp_path: Path) -> None:
@@ -235,4 +260,4 @@ def test_o_doctor_roda_a_checagem() -> None:
     texto = DOCTOR.read_text(encoding="utf-8")
     corpo = texto[texto.index("\nmain() {") :]
     corpo = corpo[: corpo.index("\n}\n")]
-    assert "\n    check_ancoras_da_haptica_por_radio\n" in corpo
+    assert "\n    check_ancoras_dos_lugares_da_haptica\n" in corpo

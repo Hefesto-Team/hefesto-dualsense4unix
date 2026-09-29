@@ -1267,3 +1267,48 @@ def test_o_vizinho_que_nao_se_leu_nao_conta_como_parado(ob: ModuleType) -> None:
     assert veredito == ob.NAO_SEI and "não se leram" in porque
     assert ob.veredito_do_tremor(tremores, "a1", {"a1", "a2"})[0] == ob.VERDE
     assert ob.veredito_do_tremor(tremores, "a3", {"a1", "a2", "a3"})[0] == ob.NAO_SEI
+
+
+# ---------------------------------------------------------------------------
+# O endpoint do LUGAR, nos dois transportes — 28/09/2026
+# ---------------------------------------------------------------------------
+
+
+def _endpoints_dos_lugares(lugares: Sequence[int]) -> str:
+    """O ``--json`` do ensaio dos endpoints, com o laudo inteiro nos lugares dados."""
+    from hefesto_dualsense4unix.integrations.endpoint_de_haptica import nome_do_endpoint
+
+    return json.dumps({"endpoints": [
+        {"nome": nome_do_endpoint(n), "laudo": [[True, "o nó declara a âncora"]]}
+        for n in lugares
+    ]})
+
+
+def test_o_endpoint_do_lugar_e_medido_no_cabo_e_no_radio(
+    ob: ModuleType, tmp_path: Path
+) -> None:
+    """A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01: o cabo também passa pelo lugar.
+
+    A mesa de mentira tem P1 e P2 no cabo e P3 e P4 no rádio; o ensaio devolve
+    os endpoints dos lugares 1, 2 e 4. O P3 sai vermelho, dizendo o lugar, e o
+    cabo sai MEDIDO — e não «não se aplica».
+
+    MORDIDA: volte `_linha_dos_endpoints` a pular o cabo («no cabo a háptica é
+    a placa do próprio controle») — P1 e P2 deixam de ser verdes.
+    """
+    estado = estado_da_mesa()
+    maquina = fazer_maquina(
+        ob, estado, tmp_path / "config", dispositivos=pads_uhid(4),
+        ensaios={
+            "quem_e_quem.py": quem_e_quem_json(ob, estado),
+            "os_endpoints_de_haptica.py": _endpoints_dos_lugares((1, 2, 4)),
+        },
+    )
+    saida = tmp_path / "saida"
+    ob.executar(["--saida", str(saida), "retrato"], maquina)
+
+    por_jogador = {p["jogador"]: p for p in da_linha(saida, "o endpoint de háptica")}
+    assert {j: p["veredito"] for j, p in por_jogador.items()} == {
+        "P1": ob.VERDE, "P2": ob.VERDE, "P3": ob.VERMELHO, "P4": ob.VERDE,
+    }
+    assert "o lugar P3 sem endpoint de háptica" in por_jogador["P3"]["porque"]

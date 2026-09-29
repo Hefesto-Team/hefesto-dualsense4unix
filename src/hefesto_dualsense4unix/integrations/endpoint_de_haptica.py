@@ -6,7 +6,8 @@ Pelo RÁDIO o DualSense não tem placa de som nenhuma, e sem endpoint o jogo nã
 tem onde tocar — ele desiste antes de olhar o HID.
 
 Este módulo publica o endpoint que falta: um ``module-null-sink`` do PipeWire
-vestido de DualSense, um por controle no rádio.
+vestido de DualSense, um por LUGAR da mesa (P1 a P4) — ver «UM ENDPOINT POR
+LUGAR», abaixo.
 
 O QUE O GE-PROTON LÊ, E POR QUE UM NÓ BASTA
 --------------------------------------------
@@ -52,10 +53,8 @@ O RÓTULO DIZ O CONTROLE, E NÃO O ENDEREÇO — 24/09/2026
 A-HAPTICA-TEM-NOME-DE-CONTROLE-01. O nó aparecia na lista de saídas de som da
 pessoa como «DualSense <os seis hex do endereço> (háptica)». Passou à FORMA A
 dos outros dois nós do controle: «Háptica do Controle N (DualSense Wireless
-Controller)», com o número do jogador, republicado quando o número muda
-(:meth:`EndpointDeHaptica.renovar_o_rotulo`). O NOME do nó continua pela marca
-do aparelho: é dele que o Wine tira o id do endpoint, e é ele que sobrevive à
-reconexão.
+Controller)», com o número do jogador. Desde 28/09 o N é o do LUGAR, e o
+rótulo é fixo: quem anda é o controle, não o nó (abaixo).
 
 **O que o jogo lê não mudou, e isso foi medido no código** — o GE-Proton11-7
 com os 182 patches ``proton-ds5-haptic`` aplicados em ordem. A descrição vira
@@ -71,11 +70,32 @@ depois desta cura. O id do endpoint sai do NOME, e a âncora do
 ``ContainerId`` — o que a RE Engine casa com o device KS — sai do
 ``sysfs.path``. Nenhum dos dois mudou. A régua é
 ``tests/unit/test_a_haptica_tem_nome_de_controle.py``.
+
+UM ENDPOINT POR LUGAR — 28/09/2026
+----------------------------------
+A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01. O endpoint era um por CONTROLE no
+rádio, com o nome pelo rabo do endereço, e nascia e morria com o controle. O
+registro que o jogo lê (o device KS, ``audio_ks_dualsense``) só se grava no
+lançamento, com o ``wineserver`` ainda fora do ar: o controle que chegava com
+o jogo aberto caía num endpoint que o jogo não conhecia, e o que caía e voltava
+podia voltar noutra âncora.
+
+Agora são QUATRO nós, um por lugar, com o nome pelo lugar
+(:func:`nome_do_endpoint`) e a âncora própria, e eles sobem com o primeiro
+DualSense da mesa, em qualquer transporte. O jogo casa o LUGAR, e não o
+aparelho: quem entra depois, em qualquer ordem, cai num endpoint que o
+lançamento já registrou. No rádio a ponte lê o endpoint do lugar do controle;
+no cabo um laço leva o endpoint do lugar à placa do controle
+(``integrations/haptica_do_cabo.py``). O número que anda troca o laço ou a
+ponte, e nunca o endpoint.
+
+A MARCA DO LUGAR NÃO TEM A FORMA DE SEIS HEX (:data:`MOLDE_DA_MARCA_DO_LUGAR`):
+as réguas de forma leem ``HEFESTO<6 hex>`` como o rabo de um endereço
+(``scripts/check_endereco_de_radio.py``, ``core/formas_do_endereco.py``).
 """
 
 from __future__ import annotations
 
-import re
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -107,8 +127,8 @@ logger = get_logger(__name__)
 TAXA_DO_ENDPOINT = 48000
 
 #: As três agulhas que os patches do GE procuram no nome, e um discriminador
-#: por controle: dois endpoints de nome IGUAL viram um só (patch 0186,
-#: `is_shared_sony_mono_backend_name`), e aí a háptica de dois controles iria
+#: por LUGAR: dois endpoints de nome IGUAL viram um só (patch 0186,
+#: `is_shared_sony_mono_backend_name`), e aí a háptica de dois lugares iria
 #: para o mesmo aparelho.
 MOLDE_DO_NOME = (
     "alsa_output.usb-Sony_Interactive_Entertainment_"
@@ -119,6 +139,22 @@ MOLDE_DO_NOME = (
 #: ela, um `unload-module` nosso poderia derrubar o sink que o `pipewire`
 #: publicou para um controle plugado, que não é nosso para derrubar.
 MARCA_DO_NOME = "HEFESTO"
+
+#: OS LUGARES DA MESA — A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01, 28/09/2026. Um
+#: endpoint por lugar, os quatro de pé desde o primeiro DualSense. O número é o
+#: «Controle N» que a tela imprime no cartão.
+LUGARES: tuple[int, ...] = (1, 2, 3, 4)
+
+#: A marca do lugar no nome. **Sem a forma de seis hex**: ``HEFESTO<6 hex>`` é
+#: o que as réguas de forma leem como o rabo de um endereço, e o nome do lugar
+#: não tem endereço nenhum.
+MOLDE_DA_MARCA_DO_LUGAR = "LUGAR{lugar}"
+
+#: A marca que só o endpoint montado pelo ENSAIO carrega
+#: (``scripts/ensaios/os_endpoints_de_haptica.py --montar``). A varredura de
+#: órfãos não o derruba: o instrumento que a bancada montou não é resto de
+#: processo nenhum, e derrubá-lo seria o produto brigando com o instrumento.
+MARCA_DO_ENSAIO = "hefesto.origem=ensaio"
 
 AGULHAS = (
     "alsa_output.usb-Sony_Interactive_Entertainment_",
@@ -159,12 +195,6 @@ VOLUME_DOS_MOTORES = "100%"
 NOME_DA_HAPTICA_DO_CONTROLE = "Háptica do Controle"
 
 _MODULO_NULL_SINK = "module-null-sink"
-
-#: O rótulo dentro do argumento do módulo, como o ``pactl list short modules``
-#: o devolve: entre aspas SIMPLES, dentro do ``sink_properties="…"`` — as aspas
-#: que :func:`propriedades_do_endpoint` escreve. O rótulo desta casa nunca leva
-#: uma aspa simples.
-_ROTULO_NO_ARGUMENTO = re.compile(r"device\.description='([^']*)'")
 
 
 @dataclass(frozen=True)
@@ -237,17 +267,22 @@ def ancoras(sysfs: Path | None = None) -> list[Ancora]:
 
 
 def distribuir_ancoras(
-    uniqs: Iterable[str],
+    lugares: Iterable[int],
     disponiveis: Iterable[Ancora],
     de_pe: Mapping[str, Sequence[tuple[str, str]]] | None = None,
     *,
-    ja_postas: Mapping[str, Ancora] | None = None,
-) -> dict[str, Ancora]:
-    """Uma âncora por controle, e NUNCA a mesma para dois. Função pura.
+    ja_postas: Mapping[int, Ancora] | None = None,
+) -> dict[int, Ancora]:
+    """Uma âncora por LUGAR, e NUNCA a mesma para dois. Função pura.
 
     **Duas âncoras iguais são dois endpoints com o mesmo ``ContainerId``**, e
-    aí o jogo não distingue os controles — a háptica do jogador 2 iria para o
+    aí o jogo não distingue os lugares — a háptica do jogador 2 iria para o
     device KS do jogador 1.
+
+    **POR LUGAR DESDE 28/09/2026** (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01): as
+    chaves eram os ``uniq`` dos controles no rádio, e passaram a ser os lugares
+    (:data:`LUGARES`). A posse é a mesma, nos mesmos três passos; faltando
+    âncora, fica de fora o lugar de número MAIOR.
 
     **A DISTRIBUIÇÃO ERA POR ORDEM, E A ORDEM REPETIA ÂNCORA — 18/09/2026.** Ela
     ordenava TODOS os controles vivos e dava a i-ésima âncora ao i-ésimo; quem
@@ -275,35 +310,35 @@ def distribuir_ancoras(
     lista = list(disponiveis)
     por_aparelho = {a.syspath: a for a in lista}
     por_declarado = {a.declarado: a for a in lista}
-    ordem = sorted({str(u) for u in uniqs})
-    postas: dict[str, Ancora] = {}
+    ordem = sorted({int(n) for n in lugares if int(n) in LUGARES})
+    postas: dict[int, Ancora] = {}
     tomadas: set[str] = set()
 
-    def tomar(uniq: str, ancora: Ancora | None) -> bool:
+    def tomar(lugar: int, ancora: Ancora | None) -> bool:
         if ancora is None or ancora.syspath in tomadas:
             return False
-        postas[uniq] = ancora
+        postas[lugar] = ancora
         tomadas.add(ancora.syspath)
         return True
 
     lembradas = ja_postas or {}
-    for uniq in ordem:
-        lembrada = lembradas.get(uniq)
+    for lugar in ordem:
+        lembrada = lembradas.get(lugar)
         if lembrada is not None and lembrada.syspath in por_aparelho:
-            tomar(uniq, lembrada)
+            tomar(lugar, lembrada)
     servidor = de_pe or {}
-    for uniq in ordem:
-        if uniq in postas:
+    for lugar in ordem:
+        if lugar in postas:
             continue
-        for _module_id, caminho in servidor.get(nome_do_endpoint(uniq), ()):
-            if tomar(uniq, por_declarado.get(caminho)):
+        for _module_id, caminho in servidor.get(nome_do_endpoint(lugar), ()):
+            if tomar(lugar, por_declarado.get(caminho)):
                 break
     livres = (a for a in lista if a.syspath not in tomadas)
-    for uniq in ordem:
-        if uniq in postas:
+    for lugar in ordem:
+        if lugar in postas:
             continue
         for ancora in livres:
-            if tomar(uniq, ancora):
+            if tomar(lugar, ancora):
                 break
     return postas
 
@@ -312,19 +347,34 @@ def marca_do_controle(uniq: str) -> str:
     """Os seis hex do rabo do ``uniq`` — a identidade que sobrevive a hotplug.
 
     A mesma de :func:`alto_falante_bt.nome_do_sink`, e pelo mesmo motivo: o
-    ``hidrawN`` muda a cada reconexão, o endereço do controle não.
+    ``hidrawN`` muda a cada reconexão, o endereço do controle não. Desde
+    28/09/2026 ela não entra no nome do endpoint (:func:`nome_do_endpoint` é
+    pelo lugar); segue como a marca do gravador da ponte
+    (``alto_falante_bt.rotulo_do_gravador``).
     """
     rabo = so_hex(str(uniq))
     return rabo[-HEX_DO_SUFIXO:] if len(rabo) >= HEX_DO_SUFIXO else ""
 
 
-def nome_do_endpoint(uniq: str) -> str:
-    """O nome do nó, ou "" quando o ``uniq`` não dá identidade.
+def marca_do_lugar(lugar: int) -> str:
+    """``LUGAR<n>`` para um dos :data:`LUGARES`, e "" para qualquer outro valor.
 
-    "" é recusa, não um nome vazio: publicar um nó anônimo faria dois controles
-    disputarem o mesmo endpoint.
+    ``bool`` não é lugar, embora seja ``int``: ``True`` viraria o lugar 1.
     """
-    marca = marca_do_controle(uniq)
+    if isinstance(lugar, bool) or not isinstance(lugar, int) or lugar not in LUGARES:
+        return ""
+    return MOLDE_DA_MARCA_DO_LUGAR.format(lugar=lugar)
+
+
+def nome_do_endpoint(lugar: int) -> str:
+    """O nome do nó do lugar, ou "" quando o valor não é um dos :data:`LUGARES`.
+
+    "" é recusa, não um nome vazio: publicar um nó anônimo faria dois lugares
+    disputarem o mesmo endpoint. **O nome é do LUGAR desde 28/09/2026** — era
+    pelo rabo do endereço do controle, e o controle que chegava com o jogo
+    aberto caía num endpoint que o registro do lançamento não tinha.
+    """
+    marca = marca_do_lugar(lugar)
     if not marca:
         return ""
     nome = MOLDE_DO_NOME.format(marca=marca)
@@ -350,25 +400,7 @@ def rotulo_da_haptica(numero: int | None) -> str:
     return com_o_nome_da_sony(base)
 
 
-def descricao_da_haptica(uniq: str) -> str:
-    """O rótulo deste controle AGORA, com o assento perguntado ao DONO.
-
-    O número vem de ``dualsense_bt_audio.numero_do_assento`` — o mesmo
-    numerador que dá o «Alto-falante do Controle N» e o «Microfone do Controle
-    N». Um segundo numerador aqui poria o mesmo controle no 3 numa linha da
-    lista de som e no 4 na de baixo; a posição na lista de controles não é o
-    número do jogador.
-    """
-    from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
-        numero_do_assento,
-    )
-
-    return rotulo_da_haptica(numero_do_assento(str(uniq or "")))
-
-
-def propriedades_do_endpoint(
-    uniq: str, ancora: Ancora, rotulo: str | None = None
-) -> str:
+def propriedades_do_endpoint(lugar: int, ancora: Ancora) -> str:
     """O ``sink_properties=``, ENTRE ASPAS DUPLAS.
 
     **As aspas são a cura conhecida desta casa**, paga em 06/09/2026: o parser
@@ -376,11 +408,10 @@ def propriedades_do_endpoint(
     entre aspas, e só a primeira propriedade chega — com a régua dando verde
     por ler o argv em vez do nó.
 
-    O rótulo pronto entra por ``rotulo`` quando quem publica precisa lembrar
-    dele (:meth:`EndpointDeHaptica.iniciar`); sem ele, é o de agora.
+    O rótulo é o do LUGAR, e fixo (28/09/2026): o nó não renasce quando o
+    assento de um controle anda, porque quem anda é o controle.
     """
-    if rotulo is None:
-        rotulo = descricao_da_haptica(uniq)
+    rotulo = rotulo_da_haptica(lugar if marca_do_lugar(lugar) else None)
     campos = (
         # A IDENTIDADE tem um dono, e a âncora é a dele: sem `sysfs.path` o
         # Wine zera o `ContainerId` e o jogo não casa o endpoint com o device
@@ -426,22 +457,23 @@ def endpoints_de_pe(
     chamar = runner or rodar_pactl
     saida = chamar(["pactl", "list", "short", "modules"]) or ""
     de_pe: dict[str, list[tuple[str, str]]] = {}
-    for module_id, nome, caminho, _rotulo in _modulos_desta_casa(saida):
+    for module_id, nome, caminho in _modulos_desta_casa(saida):
         de_pe.setdefault(nome, []).append((module_id, caminho))
     return de_pe
 
 
-def _modulos_desta_casa(saida: str) -> list[tuple[str, str, str, str]]:
-    """``(module_id, sink_name, sysfs.path, rótulo)`` de cada endpoint desta casa.
+def _modulos_desta_casa(saida: str) -> list[tuple[str, str, str]]:
+    """``(module_id, sink_name, sysfs.path)`` de cada endpoint desta casa.
 
-    O leitor ÚNICO do ``pactl list short modules`` deste módulo: a posse (nome e
-    âncora, :func:`endpoints_de_pe`) e o rótulo do nó adotado
-    (:func:`rotulo_no_ar`) saem da mesma linha, e duas leituras dela divergiriam
-    no dia em que uma aprendesse um campo. Rótulo ausente é ``""``.
+    O leitor ÚNICO do ``pactl list short modules`` deste módulo. **O do ensaio
+    fica de fora** (:data:`MARCA_DO_ENSAIO`): ele não é do produto, e o que não
+    é do produto o produto não adota nem derruba.
     """
-    achados: list[tuple[str, str, str, str]] = []
+    achados: list[tuple[str, str, str]] = []
     for linha in saida.splitlines():
         if _MODULO_NULL_SINK not in linha or MARCA_DO_NOME not in linha:
+            continue
+        if MARCA_DO_ENSAIO in linha:
             continue
         partes = linha.split("\t")
         if len(partes) < 3 or not partes[0].strip().isdigit():
@@ -456,29 +488,8 @@ def _modulos_desta_casa(saida: str) -> list[tuple[str, str, str, str]]:
                 caminho = pedaco[len("sysfs.path=") :]
         if not nome:
             continue
-        rotulo = _ROTULO_NO_ARGUMENTO.search(argv)
-        achados.append((partes[0].strip(), nome, caminho, rotulo.group(1) if rotulo else ""))
+        achados.append((partes[0].strip(), nome, caminho))
     return achados
-
-
-def rotulo_no_ar(
-    module_id: str, runner: Callable[[list[str]], str | None] | None = None
-) -> str:
-    """O rótulo com que o módulo ``module_id`` nasceu — ``""`` quando não se sabe.
-
-    **É A MEMÓRIA DO NÓ ADOTADO.** O daemon que reinicia adota o endpoint que
-    está de pé, sem recarregá-lo (:meth:`EndpointDeHaptica.iniciar`), e o
-    servidor de som não guarda o assento em lugar nenhum além deste texto. Sem
-    ele o nó adotado nunca saberia que o rótulo envelheceu — e o do produto de
-    antes («DualSense <hex6> (háptica)») ficaria na lista dela até o controle
-    reconectar.
-    """
-    chamar = runner or rodar_pactl
-    saida = chamar(["pactl", "list", "short", "modules"]) or ""
-    for achado_id, _nome, _caminho, rotulo in _modulos_desta_casa(saida):
-        if achado_id == str(module_id):
-            return rotulo
-    return ""
 
 
 def _volume_da_frente(saida_do_pactl: str, nome_do_sink: str) -> tuple[str, str]:
@@ -507,17 +518,23 @@ def _volume_da_frente(saida_do_pactl: str, nome_do_sink: str) -> tuple[str, str]
 
 
 def varrer_endpoints_orfaos(
-    vivos: Iterable[str],
+    vivos: Iterable[int],
     runner: Callable[[list[str]], str | None] | None = None,
     *,
     de_pe: Mapping[str, Sequence[tuple[str, str]]] | None = None,
 ) -> list[str]:
-    """Derruba todo endpoint desta casa que não pertence a um controle vivo.
+    """Derruba todo endpoint desta casa que não é de um lugar vivo.
 
-    ``vivos`` são os ``uniq`` que estão na mesa AGORA. O que sobra é resto de
-    sessão anterior — e resto de sessão anterior não é inofensivo: ele entra na
-    lista de saídas de som da pessoa com o mesmo nome do endpoint bom, e o jogo
-    que procura o alto-falante do DualSense pode achar o morto.
+    ``vivos`` são os LUGARES que ficam de pé AGORA (desde 28/09/2026; eram os
+    ``uniq`` da mesa). O que sobra é resto de sessão anterior — e resto de
+    sessão anterior não é inofensivo: ele entra na lista de saídas de som da
+    pessoa com o mesmo nome do endpoint bom, e o jogo que procura o
+    alto-falante do DualSense pode achar o morto.
+
+    **O NOME DE ANTES CAI NA PRIMEIRA VOLTA DEPOIS DO INSTALL.** O endpoint por
+    controle (``HEFESTO<6 hex>``) não é de lugar nenhum, e sai por esta mesma
+    conta: a varredura lê TODO nó desta casa (:data:`MARCA_DO_NOME`), e não só
+    os de nome novo.
 
     ``de_pe`` é a resposta de :func:`endpoints_de_pe` que quem chama já tem: a
     mesma pergunta semeia :func:`distribuir_ancoras`, e fazê-la duas vezes por
@@ -526,7 +543,7 @@ def varrer_endpoints_orfaos(
     Devolve os ``module_id`` derrubados, para o log e para a régua.
     """
     chamar = runner or rodar_pactl
-    esperados = {nome_do_endpoint(u) for u in vivos} - {""}
+    esperados = {nome_do_endpoint(lugar) for lugar in vivos} - {""}
     caidos: list[str] = []
     servidor = endpoints_de_pe(chamar) if de_pe is None else de_pe
     for nome, instancias in servidor.items():
@@ -543,33 +560,40 @@ def varrer_endpoints_orfaos(
 class EndpointDeHaptica:
     """O nó de quatro canais que o JOGO enxerga como alto-falante do DualSense.
 
-    **São DOIS nós por controle no rádio, e a diferença é de identidade:** o
-    ``hefesto_som_<hex6>`` é a saída da MÁQUINA para o controle — a pessoa o
-    escolhe nas saídas de som, e o nome dele tem dono. Este aqui é o que o JOGO
-    escolhe sozinho, pelo teste do GE, e o nome dele é ditado pelos patches.
-    Só este casa com o teste, então o jogo não se confunde entre os dois.
+    **É DO LUGAR, E NÃO DO CONTROLE** (28/09/2026): ``lugar`` é um dos
+    :data:`LUGARES`, e o nome, a âncora e o rótulo são dele. O controle que
+    está sentado ali chega pelo rádio (a ponte lê o monitor deste nó) ou pelo
+    cabo (o laço leva o monitor à placa dele).
+
+    **Não é o ``hefesto_som_<hex6>``:** aquele é a saída da MÁQUINA para o
+    controle — a pessoa o escolhe nas saídas de som, e o nome dele tem dono.
+    Este aqui é o que o JOGO escolhe sozinho, pelo teste do GE, e o nome dele é
+    ditado pelos patches. Só este casa com o teste, então o jogo não se
+    confunde entre os dois.
     """
+
+    #: O lugar deste nó. **No corpo da classe**, e não só no ``__init__``: o
+    #: dublê montado por ``object.__new__`` não roda o ``__init__``, e estado
+    #: que só nasce lá deixa o dublê mais pobre que o produto. ``0`` não é
+    #: lugar, e o rótulo sai sem número.
+    lugar: int = 0
 
     def __init__(
         self,
         *,
-        uniq: str,
+        lugar: int,
         ancora: Ancora,
         runner: Callable[[list[str]], str | None] | None = None,
         canais: int = CANAIS_DA_HAPTICA,
         taxa_hz: int = TAXA_DO_ENDPOINT,
     ) -> None:
-        self.uniq = str(uniq)
+        self.lugar = lugar
         self.ancora = ancora
-        self.nome = nome_do_endpoint(uniq)
+        self.nome = nome_do_endpoint(lugar)
         self.canais = canais
         self.taxa_hz = taxa_hz
         self.runner = runner or rodar_pactl
         self._module_id: str | None = None
-        #: O rótulo que está NO AR: o do ``load-module`` deste processo, ou o
-        #: que o servidor diz do nó adotado. ``""`` é *"não sei"*, e rótulo que
-        #: não se sabe nunca autoriza derrubar o nó (:meth:`rotulo_envelheceu`).
-        self.rotulo = ""
 
     @property
     def module_id(self) -> str | None:
@@ -577,7 +601,7 @@ class EndpointDeHaptica:
 
     @property
     def monitor(self) -> str:
-        """O monitor de onde a ponte lê o PCM da háptica."""
+        """O monitor de onde a ponte e o laço do cabo leem o PCM da háptica."""
         return f"{self.nome}.monitor" if self.nome else ""
 
     def iniciar(self) -> bool:
@@ -592,8 +616,8 @@ class EndpointDeHaptica:
 
         * nenhum de pé com este nome → carrega, como sempre;
         * um de pé com a MESMA âncora → **adota o id** e não carrega nada. É o
-          restart do daemon com o controle no lugar, e recarregar trocaria um
-          nó vivo (com o jogo talvez já ligado nele) por outro idêntico;
+          restart do daemon com a mesa no lugar, e recarregar trocaria um nó
+          vivo (com o jogo talvez já ligado nele) por outro idêntico;
         * um ou mais de pé com âncora DIFERENTE → derruba todos e carrega um.
           A âncora é o que o jogo lê para calcular o ``ContainerId``; um nó com
           a âncora velha responde a pergunta errada.
@@ -601,7 +625,7 @@ class EndpointDeHaptica:
         if self._module_id is not None:
             return True
         if not self.nome:
-            logger.info("haptica_endpoint_sem_identidade", uniq=self.uniq)
+            logger.info("haptica_endpoint_sem_lugar", lugar=self.lugar)
             return False
         instancias = endpoints_de_pe(self.runner).get(self.nome, [])
         iguais = [m for m, caminho in instancias if caminho == self.ancora.declarado]
@@ -611,13 +635,9 @@ class EndpointDeHaptica:
             self._module_id = iguais[0]
             for sobrando in [m for m, _ in instancias if m != iguais[0]]:
                 self.runner(["pactl", "unload-module", sobrando])
-            # O nó adotado traz o rótulo de QUANDO nasceu — talvez de outro
-            # assento, talvez do produto de antes. Lembrá-lo é o que deixa
-            # `renovar_o_rotulo` alcançar também o nó que o restart herdou.
-            self.rotulo = rotulo_no_ar(iguais[0], self.runner)
             logger.info(
                 "haptica_endpoint_adotado",
-                uniq=self.uniq,
+                lugar=self.lugar,
                 sink=self.nome,
                 derrubados=len(instancias) - 1,
             )
@@ -627,22 +647,22 @@ class EndpointDeHaptica:
         if instancias:
             logger.info(
                 "haptica_endpoint_de_ancora_velha_derrubado",
-                uniq=self.uniq,
+                lugar=self.lugar,
                 quantos=len(instancias),
             )
-        if not self._carregar(self.rotulo_de_agora()):
-            logger.warning("haptica_endpoint_nao_subiu", uniq=self.uniq)
+        if not self._carregar():
+            logger.warning("haptica_endpoint_nao_subiu", lugar=self.lugar)
             return False
         logger.info(
             "haptica_endpoint_publicado",
-            uniq=self.uniq,
+            lugar=self.lugar,
             sink=self.nome,
             ancora=self.ancora.syspath,
         )
         return True
 
-    def _carregar(self, rotulo: str) -> bool:
-        """Um ``load-module`` com este rótulo. True = o servidor devolveu o id."""
+    def _carregar(self) -> bool:
+        """Um ``load-module`` do nó do lugar. True = o servidor devolveu o id."""
         saida = self.runner(
             [
                 "pactl",
@@ -653,91 +673,22 @@ class EndpointDeHaptica:
                 f"rate={self.taxa_hz}",
                 f"channels={self.canais}",
                 "channel_map=front-left,front-right,rear-left,rear-right",
-                propriedades_do_endpoint(self.uniq, self.ancora, rotulo),
+                propriedades_do_endpoint(self.lugar, self.ancora),
             ]
         )
         linhas = [ln.strip() for ln in (saida or "").splitlines() if ln.strip()]
         if not linhas or not linhas[-1].isdigit():
             return False
         self._module_id = linhas[-1]
-        self.rotulo = rotulo
         self._ligar_os_motores()
         return True
 
-    # -- o rótulo acompanha o assento — A-HAPTICA-TEM-NOME-DE-CONTROLE-01 ------
-
-    def rotulo_de_agora(self) -> str:
-        """O rótulo que este nó teria se nascesse AGORA."""
-        return descricao_da_haptica(self.uniq)
-
-    def rotulo_envelheceu(self) -> bool:
-        """O rótulo no ar ficou para trás do assento de agora? Nunca levanta.
-
-        A regra é a do alto-falante, e mora num lugar só
-        (``dualsense_bt_audio.rotulo_envelheceu``): perder o número nunca conta
-        como envelhecer, senão o nó renasceria a cada vez que o numerador
-        piscasse. Nó que não está de pé, ou cujo rótulo não se sabe, não
-        envelhece — *"não sei"* nunca autoriza derrubar o que está no ar.
-        """
-        return bool(self._rotulo_novo())
-
-    def _rotulo_novo(self) -> str:
-        """O rótulo de agora, se o do ar envelheceu; ``""`` se não há o que trocar.
-
-        UMA leitura do numerador para as duas perguntas: conferir com uma e
-        publicar com outra abriria a janela em que o número some entre elas, e
-        o nó renasceria sem número — o que a regra do envelhecer existe para
-        impedir.
-        """
-        if self._module_id is None or not self.rotulo:
-            return ""
-        from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
-            rotulo_envelheceu,
-        )
-
-        try:
-            de_agora = self.rotulo_de_agora()
-            return de_agora if rotulo_envelheceu(self.rotulo, de_agora) else ""
-        except Exception:  # pragma: no cover - defensivo: numerador explodindo
-            logger.debug("haptica_rotulo_de_agora_ilegivel", uniq=self.uniq, exc_info=True)
-            return ""
-
-    def renovar_o_rotulo(self) -> bool:
-        """O nó renasce com o rótulo de agora. True só quando renasceu com ele.
-
-        **Renomear é republicar:** o ``device.description`` de um
-        ``module-null-sink`` se fixa no ``load-module`` e não se reescreve —
-        medido em 20/09/2026 (``dualsense_bt_audio.rotulo_envelheceu``). O NOME
-        e a ÂNCORA ficam, então o jogo que abrir depois acha o mesmo endpoint,
-        com o mesmo id e o mesmo ``ContainerId``.
-
-        **QUANDO é do subsystem**, que sabe se há jogo aberto
-        (``AltoFalanteSubsystem._renovar_o_rotulo_da_haptica``); aqui só se
-        faz, e só se o rótulo envelheceu de fato. A ordem é a do nó do
-        alto-falante (``GerenciadorDeNosDeSom._republicar``): o rótulo novo se
-        resolve ANTES de derrubar, e o nó que não sobe com ele volta com o
-        velho — um rótulo velho é melhor que endpoint nenhum. Só quando nem a
-        volta sobe o nó fica fora, com ``module_id`` vazio para quem chama ver.
-        """
-        module_id = self._module_id
-        de_agora = self._rotulo_novo()
-        if module_id is None or not de_agora:
-            return False
-        velho = self.rotulo
-        self.runner(["pactl", "unload-module", module_id])
-        self._module_id = None
-        if self._carregar(de_agora):
-            logger.info(
-                "haptica_rotulo_renovado", uniq=self.uniq, no_ar=velho, de_agora=de_agora
-            )
-            return True
-        logger.warning("haptica_rotulo_novo_nao_subiu", uniq=self.uniq, de_agora=de_agora)
-        if self._carregar(velho):
-            logger.info("haptica_endpoint_voltou_com_o_rotulo_velho", uniq=self.uniq)
-        else:
-            self.rotulo = ""
-            logger.warning("haptica_endpoint_sumiu_ao_renovar", uniq=self.uniq)
-        return False
+    # O RÓTULO NÃO SE RENOVA MAIS — 28/09/2026. Aqui moravam o
+    # `renovar_o_rotulo`, o `rotulo_envelheceu` e o `rotulo_de_agora`
+    # (A-HAPTICA-TEM-NOME-DE-CONTROLE-01, 24/09): o nó era do CONTROLE, e o
+    # «Háptica do Controle N» renascia quando o assento andava. O nó passou a
+    # ser do LUGAR, e o rótulo do lugar não envelhece — quem anda é o controle,
+    # e o que troca é o laço ou a ponte, nunca o endpoint.
 
     def _ligar_os_motores(self) -> None:
         """Põe os canais traseiros em :data:`VOLUME_DOS_MOTORES`, preservando a frente.
@@ -759,11 +710,11 @@ class EndpointDeHaptica:
                 frente[0], frente[1], VOLUME_DOS_MOTORES, VOLUME_DOS_MOTORES,
             ])
         except Exception as exc:  # pragma: no cover — pactl é o mundo de fora
-            logger.warning("haptica_motores_sem_volume", uniq=self.uniq, err=str(exc))
+            logger.warning("haptica_motores_sem_volume", lugar=self.lugar, err=str(exc))
             return
         logger.info(
             "haptica_motores_ligados",
-            uniq=self.uniq,
+            lugar=self.lugar,
             frente=list(frente),
             motores=VOLUME_DOS_MOTORES,
         )
@@ -773,9 +724,8 @@ class EndpointDeHaptica:
         if self._module_id is None:
             return
         self.runner(["pactl", "unload-module", self._module_id])
-        logger.info("haptica_endpoint_derrubado", uniq=self.uniq, sink=self.nome)
+        logger.info("haptica_endpoint_derrubado", lugar=self.lugar, sink=self.nome)
         self._module_id = None
-        self.rotulo = ""
 
     def __enter__(self) -> EndpointDeHaptica:
         self.iniciar()
@@ -787,6 +737,9 @@ class EndpointDeHaptica:
 
 __all__ = [
     "AGULHAS",
+    "LUGARES",
+    "MARCA_DO_ENSAIO",
+    "MOLDE_DA_MARCA_DO_LUGAR",
     "MOLDE_DO_NOME",
     "NOME_DA_HAPTICA_DO_CONTROLE",
     "PID_DUALSENSE",
@@ -794,13 +747,12 @@ __all__ = [
     "Ancora",
     "EndpointDeHaptica",
     "ancoras",
-    "descricao_da_haptica",
     "distribuir_ancoras",
     "endpoints_de_pe",
     "marca_do_controle",
+    "marca_do_lugar",
     "nome_do_endpoint",
     "propriedades_do_endpoint",
     "rotulo_da_haptica",
-    "rotulo_no_ar",
     "varrer_endpoints_orfaos",
 ]

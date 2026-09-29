@@ -1954,26 +1954,32 @@ check_ucm_do_dualsense() {
     fi
 }
 
-# HAPTICA-POR-RADIO-01 — AS ÂNCORAS USB (INSTALL-UNIVERSAL, 18/09/2026).
+# AS ÂNCORAS USB DOS LUGARES (INSTALL-UNIVERSAL, 18/09/2026; POR LUGAR DESDE
+# 28/09/2026, A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01).
 #
-# Pelo rádio o controle não tem placa de som, e o endpoint que o jogo acha é um
-# nó nosso que declara o `sysfs.path` de um aparelho USB SEM placa de som — a
-# âncora de onde o Wine tira o ContainerId. É uma âncora por controle (duas
-# iguais seriam dois endpoints com o mesmo ContainerId), e o daemon só entrega
-# enquanto houver: o controle que sobra fica sem vibração, calado. Num desktop
-# sobram âncoras (o próprio adaptador Bluetooth e os hubs internos); num
-# notebook com a mesa de quatro, podem faltar.
+# O endpoint que o jogo acha é um nó nosso por LUGAR (P1 a P4), que declara o
+# `sysfs.path` de um aparelho USB SEM placa de som — a âncora de onde o Wine
+# tira o ContainerId. É uma âncora por lugar (duas iguais seriam dois endpoints
+# com o mesmo ContainerId), e o daemon só entrega enquanto houver. O controle
+# sentado num lugar sem âncora vibra pela própria placa no cabo, e fica sem
+# vibração no rádio. Num desktop sobram âncoras (o próprio adaptador Bluetooth
+# e os hubs internos); num notebook, podem faltar.
+#
+# A conta é contra os quatro lugares, e AVISA só quando falta âncora para um
+# lugar OCUPADO: com dois na mesa e uma âncora, é «1 lugar sem âncora». Os
+# lugares livres sem âncora saem como informação, porque são de quem entrar
+# depois.
 #
 # A pergunta é a MESMA do daemon, importada e não redigitada:
-# `endpoint_de_haptica.ancoras` e a lista dos DualSense no rádio do
-# `dualsense_bt_audio` (o mesmo filtro que o `alto_falante.controles_na_lista`
-# aplica com `e_radio`, sem arrastar o pacote do daemon). Sem o pacote ao
-# alcance (python sem as dependências), o check se declara incapaz em vez de
-# responder. HEFESTO_SYSFS existe para os testes.
-check_ancoras_da_haptica_por_radio() {
-    local py saida radio ancoras
+# `endpoint_de_haptica.ancoras` e `LUGARES`, os DualSense no rádio do
+# `dualsense_bt_audio` e os do cabo com placa do `audio_ks_dualsense` (o mesmo
+# dono que o registro do lançamento lê), sem arrastar o pacote do daemon. Sem o
+# pacote ao alcance (python sem as dependências), o check se declara incapaz em
+# vez de responder. HEFESTO_SYSFS existe para os testes.
+check_ancoras_dos_lugares_da_haptica() {
+    local py saida mesa ancoras lugares em_uso
     py="$(_python_do_produto)"
-    [[ -n "${py}" ]] || { info "sem python para conferir as âncoras da vibração pelo rádio"; return; }
+    [[ -n "${py}" ]] || { info "sem python para conferir as âncoras da vibração"; return; }
     saida="$(HEFESTO_SRC="${ROOT_DIR}/src" HEFESTO_SYSFS="${HEFESTO_SYSFS:-/sys}" \
         "${py}" - <<'PY' 2>/dev/null
 import os
@@ -1984,28 +1990,32 @@ src = os.environ.get("HEFESTO_SRC", "")
 if src and os.path.isdir(src):
     sys.path.insert(0, src)
 try:
+    from hefesto_dualsense4unix.integrations.audio_ks_dualsense import controles_no_cabo
     from hefesto_dualsense4unix.integrations.dualsense_bt_audio import nos_dualsense_bluetooth
-    from hefesto_dualsense4unix.integrations.endpoint_de_haptica import ancoras
+    from hefesto_dualsense4unix.integrations.endpoint_de_haptica import LUGARES, ancoras
 except Exception:  # noqa: BLE001 - qualquer falha de import é "não sei"
     print("sem-produto")
     raise SystemExit(0)
 sysfs = Path(os.environ.get("HEFESTO_SYSFS") or "/sys")
 radio = {n.uniq for n in nos_dualsense_bluetooth(str(sysfs / "class" / "hidraw")) if n.uniq}
-print(len(radio), len(ancoras(sysfs)))
+cabo = controles_no_cabo(sysfs)
+print(len(radio) + len(cabo), len(ancoras(sysfs)), len(LUGARES))
 PY
 )" || saida=""
-    if [[ ! "${saida}" =~ ^[0-9]+\ [0-9]+$ ]]; then
-        info "âncoras da vibração pelo rádio não conferidas (o pacote não está ao alcance do python ${py})"
+    if [[ ! "${saida}" =~ ^[0-9]+\ [0-9]+\ [0-9]+$ ]]; then
+        info "âncoras da vibração não conferidas (o pacote não está ao alcance do python ${py})"
         return
     fi
-    radio="${saida% *}"
-    ancoras="${saida#* }"
-    if [[ "${radio}" -eq 0 ]]; then
-        info "nenhum DualSense no rádio — âncoras da vibração pelo rádio não conferidas (${ancoras} disponível(is))"
-    elif [[ "${ancoras}" -ge "${radio}" ]]; then
-        pass "âncoras USB da vibração pelo rádio: ${ancoras} para ${radio} controle(s)"
+    read -r mesa ancoras lugares <<< "${saida}"
+    em_uso=$(( mesa < lugares ? mesa : lugares ))
+    if [[ "${mesa}" -eq 0 ]]; then
+        info "nenhum DualSense na mesa — âncoras da vibração não conferidas (${ancoras} disponível(is))"
+    elif [[ "${ancoras}" -ge "${lugares}" ]]; then
+        pass "âncoras USB da vibração: ${ancoras} para os ${lugares} lugares"
+    elif [[ "${em_uso}" -gt "${ancoras}" ]]; then
+        warn "$((em_uso - ancoras)) lugar(es) sem âncora: a vibração precisa de um aparelho USB sem som por lugar; ligue um hub ou um dongle — há ${ancoras} para ${mesa} DualSense na mesa, e o controle de um lugar sem âncora vibra pela placa no cabo e fica sem vibração no rádio"
     else
-        warn "a vibração pelo rádio precisa de um aparelho USB sem som por controle; ligue um hub ou um dongle — há ${ancoras} para ${radio} DualSense no rádio, e $((radio - ancoras)) fica(m) sem vibração nos jogos"
+        info "${ancoras} âncora(s) USB para os ${lugares} lugares da vibração: bastam para os ${mesa} DualSense na mesa; quem entrar depois num lugar sem âncora vibra pela placa no cabo e fica sem vibração no rádio"
     fi
 }
 
@@ -2742,9 +2752,9 @@ check_ultimo_device_ks() {
         sem-python)
             warn "o último lançamento pelo Proton (${jogo}${quando}) não achou python3 no PATH — sem ele o lançamento não fala com o daemon e a vibração dos jogos da Sony não chega; instale o python3 pelo gerenciador de pacotes da sua distribuição e abra o jogo de novo" ;;
         desligado)
-            info "último lançamento pelo Proton (${jogo}${quando}) sem a opção da vibração: sem DualSense com endpoint de som, ou com o daemon fora do ar" ;;
+            info "último lançamento pelo Proton (${jogo}${quando}) sem a opção da vibração: sem DualSense na mesa quando o jogo abriu, ou com o daemon fora do ar — quem entrar depois nessa sessão fica sem vibração até reabrir o jogo" ;;
         removido)
-            info "último lançamento pelo Proton (${jogo}${quando}) sem a opção da vibração: sem DualSense com endpoint de som, ou com o daemon fora do ar — o device KS de um lançamento anterior saiu do prefixo" ;;
+            info "último lançamento pelo Proton (${jogo}${quando}) sem a opção da vibração: sem DualSense na mesa quando o jogo abriu, ou com o daemon fora do ar — quem entrar depois nessa sessão fica sem vibração até reabrir o jogo, e o device KS de um lançamento anterior saiu do prefixo" ;;
         *)
             info "rastro do device KS ilegível em ${arq}" ;;
     esac
@@ -8660,7 +8670,7 @@ main() {
     check_dualsense_sink_disabled
     check_dropin_do_alto_falante_acordado
     check_ucm_do_dualsense
-    check_ancoras_da_haptica_por_radio
+    check_ancoras_dos_lugares_da_haptica
     check_audio_sink_muted
     check_mic_mute_persistido
     check_mic_perfil_sem_sinal

@@ -400,10 +400,21 @@ def test_doctor_sem_python_e_aviso(tmp_path: Path) -> None:
 
 
 def test_doctor_desligado_e_informacao(tmp_path: Path) -> None:
+    """Sem a opção, o doctor diz o preço da escolha (a) de 28/09/2026.
+
+    O jogo aberto sem DualSense na mesa fica sem a opção, e quem entra depois
+    naquela sessão não vibra até o jogo reabrir
+    (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01). A frase diz isso.
+
+    MORDIDA: volte a frase do `desligado` à de antes («sem DualSense com
+    endpoint de som») — o custo da escolha some da única tela que o conta.
+    """
     _rastro_no_disco(tmp_path, "desligado")
     saida = _doctor("check_ultimo_device_ks", tmp_path)
     assert "[WARN]" not in saida and "[ OK ]" not in saida
     assert "sem a opção da vibração" in saida
+    assert "sem DualSense na mesa quando o jogo abriu" in saida
+    assert "quem entrar depois nessa sessão fica sem vibração até reabrir o jogo" in saida
 
 
 def test_doctor_removido_e_informacao_e_nao_verde(tmp_path: Path) -> None:

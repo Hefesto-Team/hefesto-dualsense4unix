@@ -439,12 +439,25 @@ def _sysfs_com_ancora(raiz: Path) -> Path:
     return raiz
 
 
+def _com_dualsense_no_radio(raiz: Path) -> Path:
+    """Um HID Sony no barramento do Bluetooth (0x0005): o DualSense no rádio.
+
+    É o que a guarda do lançamento pergunta desde 28/09/2026
+    (`dualsense_no_radio`), no lugar do `pactl`: o nome do diretório que o
+    kernel escreve em `bus/hid/devices`, `BBBB:VVVV:PPPP.NNNN`.
+    """
+    (raiz / "bus" / "hid" / "devices" / "0005:054C:0CE6.0007").mkdir(parents=True)
+    return raiz
+
+
 #: O nome tem de carregar as três agulhas dos patches do GE, e ele é longo
 #: por isso: `Sony_Interactive_Entertainment`, `Wireless_Controller`,
-#: `Speaker__sink` — mais o marcador da casa e o rabo do `uniq`.
+#: `Speaker__sink` — mais o marcador da casa e o LUGAR (desde 28/09/2026 o nó é
+#: um por lugar, A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01; antes levava o rabo
+#: do `uniq`).
 _NOME_DO_NO_DO_RADIO = (
     "alsa_output.usb-Sony_Interactive_Entertainment_"
-    "DualSense_Wireless_Controller_HEFESTO0000cc-00.HiFi__Speaker__sink"
+    "DualSense_Wireless_Controller_HEFESTOLUGAR1-00.HiFi__Speaker__sink"
 )
 
 _SINK_DO_RADIO = f"""Sink #7
@@ -469,8 +482,9 @@ def _lancar(
     """Roda o wrapper; devolve (o valor da opção do MHWilds no jogo, o system.reg).
 
     `sinks` põe um `pactl` de mentira no PATH, e é assim que o caso do RÁDIO se
-    mede: sem ele o `command -v pactl` falha e a sondagem do endpoint responde
-    "não há" — que é o comportamento certo numa máquina sem servidor de som.
+    mede: é do nó do lugar que o curador tira a âncora. Sem ele o `pactl` não
+    existe e o curador responde "não há lugar" — o comportamento certo numa
+    máquina sem servidor de som.
     """
     home = tmp_path / "home"
     binario = home / ".local" / "share" / "hefesto-dualsense4unix" / "bin"
@@ -565,15 +579,23 @@ def test_sem_a_opcao_o_gancho_so_limpa_o_que_e_nosso(tmp_path: Path) -> None:
 # -- o rádio (HAPTICA-POR-RADIO-01, P3c) --------------------------------------
 
 
-def test_com_o_endpoint_do_radio_vivo_a_opcao_chega_ao_jogo(tmp_path: Path) -> None:
-    """Sem DualSense no cabo, mas com o nó do rádio de pé: o caminho tem de abrir.
+def test_com_o_dualsense_no_radio_a_opcao_chega_ao_jogo(tmp_path: Path) -> None:
+    """Sem DualSense no cabo, mas com um no rádio: o caminho tem de abrir.
 
     Sem a opção o `setupapi` não publica interface KSCATEGORY_AUDIO nenhuma
-    (patch 0103, `devinst.c`) e o jogo desiste antes de olhar o registro.
+    (patch 0103, `devinst.c`) e o jogo desiste antes de olhar o registro. O
+    bloco é o do LUGAR 1, com a âncora dele.
+
+    **FATO QUE CAIU, 28/09/2026:** esta régua se chamava «com o endpoint do
+    rádio vivo», e a guarda perguntava ao `pactl` se o nó estava de pé. Os nós
+    passaram a ser os quatro lugares, de pé com qualquer DualSense e enquanto
+    um jogo toca num deles; a guarda pergunta agora pelo CONTROLE
+    (`dualsense_fisico_na_mesa`). O caso sem controle e com os lugares de pé
+    está em `test_a_haptica_chega_a_quem_entra_depois.py`.
     """
     valor, registro = _lancar(
         tmp_path,
-        sysfs=_sysfs_com_ancora(tmp_path / "sys"),
+        sysfs=_com_dualsense_no_radio(_sysfs_com_ancora(tmp_path / "sys")),
         env_do_daemon=_ENV_LIGADO,
         registro=_registro(),
         sinks=_SINK_DO_RADIO,
@@ -586,7 +608,7 @@ def test_com_o_endpoint_do_radio_vivo_a_opcao_chega_ao_jogo(tmp_path: Path) -> N
 
 
 def test_sem_no_do_radio_nem_cabo_nada_muda(tmp_path: Path) -> None:
-    """Um `pactl` que responde, e nenhum nó nosso na lista: a opção sai zero."""
+    """Um `pactl` que responde, nenhum nó nosso e nenhum DualSense: a opção sai zero."""
     outro = 'Sink #3\n\tState: IDLE\n\tName: alsa_output.pci-0000_0a_00.1.hdmi-stereo\n'
     valor, registro = _lancar(
         tmp_path,
@@ -599,13 +621,20 @@ def test_sem_no_do_radio_nem_cabo_nada_muda(tmp_path: Path) -> None:
     assert "HEFESTOKS" not in registro
 
 
-# -- a sonda do nó do rádio não segura o jogo (INSTALL-UNIVERSAL, 18/09) -------
+# -- o servidor de som não segura o jogo (INSTALL-UNIVERSAL, 18/09) -----------
 #
-# `endpoint_de_mentira_vivo` roda em TODO lançamento com o daemon vivo e sem
-# DualSense no cabo. Nasceu sem teto de tempo e com o ambiente do runtime da
-# Steam, ao contrário de todo vizinho do arquivo. Um `pipewire-pulse` travado —
-# medido nesta casa por horas depois da queda de um controle BT — deixava o
+# A sonda `endpoint_de_mentira_vivo` rodava em TODO lançamento com o daemon vivo
+# e sem DualSense no cabo. Nasceu sem teto de tempo e com o ambiente do runtime
+# da Steam, ao contrário de todo vizinho do arquivo. Um `pipewire-pulse` travado
+# — medido nesta casa por horas depois da queda de um controle BT — deixava o
 # `pactl` preso e o wrapper nunca chegava ao `exec`: nenhum jogo abria.
+#
+# DESDE 28/09/2026 A SONDA NÃO EXISTE (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01):
+# a guarda do Black Desert pergunta pelo controle no `sysfs`, em shell puro, e o
+# único `pactl` do lançamento é o do CURADOR — que roda sem o loader da Steam,
+# em `LC_ALL=C`, com teto de 5 s por pergunta, a primeira sem resposta calando
+# as seguintes, e o `timeout 10` do gancho por cima. As duas réguas abaixo
+# ficaram, e mudaram de alvo.
 
 def _lancar_com_o_pactl(
     tmp_path: Path,
@@ -614,8 +643,9 @@ def _lancar_com_o_pactl(
     env_extra: dict[str, str] | None = None,
     prazo_s: float = 30.0,
     eco: str = "${PROTON_ENABLE_MHWILDS_USB_AUDIO:-ausente}",
-) -> str:
-    """Roda o wrapper com um `pactl` escrito à mão; devolve o que o jogo viu.
+    sysfs: Path | None = None,
+) -> tuple[str, str]:
+    """Roda o wrapper com um `pactl` escrito à mão; devolve (o que o jogo viu, o registro).
 
     Separado de :func:`_lancar` por um motivo só: o `pactl` daqui pode TRAVAR, e
     quem estoura o prazo tem de levar junto o processo preso. O wrapper nasce
@@ -623,14 +653,19 @@ def _lancar_com_o_pactl(
     a régua reprovaria e deixaria um `pactl` pendurado na máquina.
     """
     home = tmp_path / "home"
-    (home / ".local" / "share" / "hefesto-dualsense4unix" / "bin").mkdir(parents=True)
+    binario = home / ".local" / "share" / "hefesto-dualsense4unix" / "bin"
+    binario.mkdir(parents=True)
+    curador = binario / "hefesto-audio-ks"
+    curador.write_bytes(_MODULO.read_bytes())
+    curador.chmod(0o755)
     estado = tmp_path / "estado"
     pasta = estado / "hefesto-dualsense4unix" / "launch_env"
     pasta.mkdir(parents=True)
     (pasta / "default.env").write_text(_ENV_LIGADO, encoding="utf-8")
     compat = _prefixo(tmp_path, _registro())
-    vazio = tmp_path / "sys"
-    (vazio / "bus" / "usb" / "devices").mkdir(parents=True)
+    if sysfs is None:
+        sysfs = tmp_path / "sys"
+        (sysfs / "bus" / "usb" / "devices").mkdir(parents=True)
     caminho = _path_minimo(tmp_path / "bin")
     pactl = Path(caminho) / "pactl"
     pactl.write_text("#!/bin/sh\n" + corpo_do_pactl, encoding="utf-8")
@@ -645,7 +680,7 @@ def _lancar_com_o_pactl(
         "XDG_STATE_HOME": str(estado),
         "SteamAppId": "3357650",
         "STEAM_COMPAT_DATA_PATH": str(compat),
-        "HEFESTO_SYSFS": str(vazio),
+        "HEFESTO_SYSFS": str(sysfs),
         **(env_extra or {}),
     }
     try:
@@ -671,61 +706,73 @@ def _lancar_com_o_pactl(
         daemon.parar()
         shutil.rmtree(runtime, ignore_errors=True)
     assert proc.returncode == 0, erro
-    return saida.strip()
+    return saida.strip(), _ler(compat)
 
 
 def test_o_pactl_travado_nao_segura_o_jogo(tmp_path: Path) -> None:
-    """O servidor de som que não responde vira "não há nó", e o jogo abre.
+    """Sem DualSense na mesa, o lançamento nem pergunta ao servidor de som.
 
     O `pactl` dublê bloqueia para sempre abrindo um fifo que ninguém escreve —
     sem gastar CPU e sem `sleep`, que o PATH mínimo não tem. O prazo de 8 s não
-    é relógio cravado: o wrapper ainda gasta até ~1 s no gate de vida, e o teto
-    do `pactl` é de 2 s. O que a régua exige é que ele TERMINE, e com a opção
-    do MHWilds escrita "0", como numa máquina sem o nó do rádio.
+    é relógio cravado: o wrapper ainda gasta até ~1 s no gate de vida. O que a
+    régua exige é que ele TERMINE, e com a opção do MHWilds escrita "0".
 
-    MORDIDA: arrancar o `timeout 2` de `endpoint_de_mentira_vivo`, e o wrapper
-    fica preso até o prazo estourar.
+    MORDIDA (28/09/2026): faça `dualsense_fisico_na_mesa` perguntar ao `pactl`
+    sem teto, como a sonda de antes perguntava — o wrapper fica preso até o
+    prazo estourar. A mordida de antes (o `timeout 2` da sonda) caiu com a
+    sonda.
     """
     trava = tmp_path / "trava"
     os.mkfifo(trava)
-    valor = _lancar_com_o_pactl(
+    valor, registro = _lancar_com_o_pactl(
         tmp_path,
         corpo_do_pactl=f"read -r _ < '{trava}'\nexit 1\n",
         prazo_s=8.0,
     )
     assert valor == "0"
+    assert "HEFESTOKS" not in registro
 
 
-def test_a_sonda_pergunta_em_c_e_sem_o_loader_da_steam(tmp_path: Path) -> None:
-    """O `pactl` recebe `LC_ALL=C` e as variáveis do loader limpas; o jogo não.
+def test_a_pergunta_do_curador_e_em_c_e_sem_o_loader_da_steam(tmp_path: Path) -> None:
+    """O `pactl` do curador recebe `LC_ALL=C` e o loader limpo; o jogo não.
 
     O env que chega ao wrapper é o do runtime da Steam, com uma libpulse própria
     no LD_LIBRARY_PATH. O dublê só responde quando as três condições valem — e o
     jogo, no fim, tem de receber o LD_LIBRARY_PATH e o LD_PRELOAD intactos.
 
-    MORDIDA: tirar o `LC_ALL=C` (ou uma das duas limpezas) da sonda, e a opção
-    do MHWilds sai "0" com o nó do rádio de pé.
+    **ALVO NOVO, 28/09/2026:** a régua media a sonda do gancho, que caiu (a
+    guarda pergunta pelo controle no `sysfs`). O `pactl` que sobrou no
+    lançamento é o do curador, que lê o nó do LUGAR para achar a âncora; é ele
+    que tem de perguntar em C e sem o loader.
+
+    MORDIDA: tire o `LC_ALL=C` do `_pactl` do curador, ou uma das duas limpezas
+    do `curar_audio_ks` — o bloco do lugar não chega ao registro, com o
+    DualSense no rádio e o nó de pé.
     """
     loader = tmp_path / "runtime-da-steam"
     loader.mkdir()
     preload = str(tmp_path / "nao-existe.so")  # o ld.so avisa e ignora
-    linha = f"7\t{_NOME_DO_NO_DO_RADIO}\tPipeWire\tfloat32le 4ch 48000Hz\tIDLE"
+    linhas = " ".join(f"'{ln}'" for ln in _SINK_DO_RADIO.splitlines())
     corpo = (
         '[ -z "${LD_LIBRARY_PATH:-}" ] || exit 1\n'
         '[ -z "${LD_PRELOAD:-}" ] || exit 1\n'
         '[ "${LC_ALL:-}" = C ] || exit 1\n'
         'case "$*" in\n'
-        f"    'list short sinks') printf '%s\\n' '{linha}' ;;\n"
+        f"    'list sinks') printf '%s\\n' {linhas} ;;\n"
         "    *) exit 1 ;;\n"
         "esac\n"
     )
-    visto = _lancar_com_o_pactl(
+    visto, registro = _lancar_com_o_pactl(
         tmp_path,
         corpo_do_pactl=corpo,
         env_extra={"LD_LIBRARY_PATH": str(loader), "LD_PRELOAD": preload},
         eco="${PROTON_ENABLE_MHWILDS_USB_AUDIO:-ausente}|${LD_LIBRARY_PATH:-}|${LD_PRELOAD:-}",
+        sysfs=_com_dualsense_no_radio(_sysfs_com_ancora(tmp_path / "sys")),
     )
     assert visto == f"1|{loader}|{preload}"
+    assert "HEFESTOKS&003&029&0" in registro, (
+        "o curador não leu o nó do lugar: o pactl dele não perguntou em C e sem o loader"
+    )
 
 
 # ------------------------------------------ D1: as duas nascem em TODA variante

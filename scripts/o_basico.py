@@ -1513,30 +1513,40 @@ def _linha_dos_nos_de_som(s: Sessao, mesa: Sequence[Mapping[str, Any]]) -> None:
 
 
 def _linha_dos_endpoints(s: Sessao, mesa: Sequence[Mapping[str, Any]]) -> None:
+    """O endpoint do LUGAR de cada controle, nos DOIS transportes.
+
+    A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01 (28/09/2026): o endpoint é um por
+    lugar (P1 a P4), e o do cabo também passa por ele (um laço do endpoint à
+    placa). A linha dizia «no cabo a háptica é a placa do próprio controle» e
+    pulava o cabo; o lugar é o número do jogador que o estado publica.
+    """
     rc, texto = s.rodar_ensaio("os_endpoints_de_haptica.py", "--json", teto_s=60.0)
     dado = _json_do_ensaio(texto)
     endpoints = _lista(_dict(dado).get("endpoints")) if isinstance(dado, Mapping) else []
-    nome_do_endpoint: Callable[[str], str] | None
+    nome_do_endpoint: Callable[[int], str] | None
     try:
         from hefesto_dualsense4unix.integrations.endpoint_de_haptica import nome_do_endpoint
     except Exception:
         nome_do_endpoint = None
     for c in mesa:
         jogador = f"P{c['player']}"
-        if c.get("transport") != "bt":
-            _passo(s, "o endpoint de háptica", jogador, transporte_de(c), NAO_SE_APLICA,
-                   "no cabo a háptica é a placa do próprio controle")
-            continue
         if not isinstance(dado, Mapping) or nome_do_endpoint is None:
             _passo(s, "o endpoint de háptica", jogador, transporte_de(c), NAO_SEI,
                    f"o ensaio dos endpoints não respondeu em JSON (rc={rc})",
                    comando="os_endpoints_de_haptica.py --json")
             continue
-        esperado = s.mascarado(nome_do_endpoint(str(c.get("uniq") or "")))
+        lugar = c.get("player")
+        nome = nome_do_endpoint(lugar) if isinstance(lugar, int) and not isinstance(lugar, bool) else ""
+        if not nome:
+            _passo(s, "o endpoint de háptica", jogador, transporte_de(c), NAO_SEI,
+                   "o estado não dá a este controle um dos quatro lugares",
+                   comando="os_endpoints_de_haptica.py --json")
+            continue
+        esperado = s.mascarado(nome)
         achados = [ep for ep in endpoints if s.mascarado(str(ep.get("nome") or "")) == esperado]
         if len(achados) != 1:
             veredito = VERMELHO if not achados else NAO_SEI
-            porque = "o controle no rádio sem endpoint de háptica" if not achados else "dois endpoints com o mesmo nome mascarado"
+            porque = f"o lugar {jogador} sem endpoint de háptica" if not achados else "dois endpoints com o mesmo nome mascarado"
         else:
             faltam = [frase for ok, frase in achados[0].get("laudo") or [] if not ok]
             veredito = VERMELHO if faltam else VERDE

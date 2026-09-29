@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Os endpoints de háptica — o laudo do que o GE-Proton leria, controle a controle.
+"""Os endpoints de háptica — o laudo do que o GE-Proton leria, e o que cada canal toca.
 
 **O NOME MUDOU EM 28/09/2026** (O-BASICO-MEDIDO-01, A5 do protocolo do
 básico): este ensaio se chamava ``o_endpoint_de_mentira.py``, e o nome
@@ -10,6 +10,21 @@ argumento, então, ele é a leitura do produto: um laudo por endpoint vivo, que 
 ``o_basico.py retrato`` pede com ``--json``. Montar um de mentira continua
 existindo, atrás de ``--montar --marca``; o ``--desmontar`` derruba só o que
 ele mesmo montou, e nunca um endpoint do produto.
+
+**OS ENDPOINTS DO PRODUTO SÃO POR LUGAR DESDE 28/09/2026**
+(A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01): quatro nós, ``…HEFESTOLUGAR1-00…`` a
+``…LUGAR4…``, de pé desde o primeiro DualSense da mesa, nos dois transportes. O
+laudo lê os quatro, e o que o curador vai gravar sai do dono da lista
+(``audio_ks_dualsense.controles_do_registro``).
+
+**A GRAVAÇÃO POR CANAL** (``--gravar SEGUNDOS``) nasce aqui, versionada: o
+``medidas/grava_endpoints.sh`` que a auditoria de 27/09 e a
+A-HAPTICA-DO-RADIO citam morava no ``/tmp`` e não existe mais (procurado em
+28/09). Ela lê o monitor de cada endpoint ao mesmo tempo e diz o RMS de cada
+um dos quatro canais — a frente é o alto-falante, os traseiros são os motores
+—, que é como se vê, sem a mão dela, se o jogo espelha a vibração nos quatro
+lugares ou manda a cada um a sua. Ler o monitor não escreve nada em lugar
+nenhum.
 
 O desenho abaixo é o de HAPTICA-POR-RADIO-01, P3, que o ensaio mediu em 18/09.
 
@@ -70,8 +85,13 @@ medível sem o jogo: que os campos chegam ao nó como o GE os lê.
 from __future__ import annotations
 
 import argparse
+import array
+import math
 import re
+import shutil
+import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -83,8 +103,11 @@ from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 from hefesto_dualsense4unix.integrations.alto_falante_bt import rodar_pactl
 from hefesto_dualsense4unix.integrations.audio_ks_dualsense import (
     container_id,
-    controles_no_radio,
+    controles_do_registro,
     variantes_de_data4,
+)
+from hefesto_dualsense4unix.integrations.endpoint_de_haptica import (
+    MARCA_DO_ENSAIO as _MARCA_DO_ENSAIO_DO_PRODUTO,
 )
 
 #: O VID/PID que o GE exige NO PROPLIST — não no aparelho.
@@ -115,8 +138,10 @@ _PRIORIDADE = 0
 
 #: A marca que só o endpoint montado por ESTE ensaio carrega. O ``--desmontar``
 #: derruba só os módulos que a trazem: o produto monta endpoints com o mesmo
-#: molde de nome, e derrubá-los tiraria a háptica de quem joga.
-MARCA_DO_ENSAIO = "hefesto.origem=ensaio"
+#: molde de nome, e derrubá-los tiraria a háptica de quem joga. O dono é o
+#: produto desde 28/09/2026: a varredura de órfãos dele pula o que traz a
+#: marca, e duas grafias dela divergiriam no dia em que uma mudasse.
+MARCA_DO_ENSAIO = _MARCA_DO_ENSAIO_DO_PRODUTO
 
 
 @dataclass(frozen=True)
@@ -408,12 +433,93 @@ def status() -> int:
         for ok, frase in _laudo(sink):
             _dizer(f"  [{'x' if ok else ' '}] {frase}")
     # O FECHO DO CÍRCULO: o que o curador vai gravar sai da MESMA função que
-    # lê os nós vivos. Se estas linhas não aparecerem, o device KS não sairá —
-    # e foi assim que o erro de um nível na árvore do USB se escondeu.
-    for controle in controles_no_radio():
+    # ele lê — o dono da lista, os lugares e o cabo que nenhum lugar serve. Se
+    # estas linhas não aparecerem, o device KS não sairá — e foi assim que o
+    # erro de um nível na árvore do USB se escondeu.
+    for controle in controles_do_registro():
         guids = " · ".join(container_id(controle, d4) for d4 in variantes_de_data4(controle, []))
         _dizer(f"\n  o device KS vai declarar: {guids}")
     return 0 if all(all(ok for ok, _f in _laudo(s)) for s in achados) else 1
+
+
+# -- a gravação por canal -----------------------------------------------------
+
+#: A latência do gravador. **Explícita**, e o número é o dos gravadores desta
+#: casa: sem ela o servidor escolhe um buffer generoso e a leitura chega dois
+#: segundos atrasada (a memória «gravador sem latência atrasa dois segundos»).
+_LATENCIA_MS = 40
+
+
+def rms_por_canal(pcm: bytes, canais: int = CANAIS) -> list[float]:
+    """O RMS de cada canal de um PCM ``float32le`` intercalado. Função pura.
+
+    O resto que não fecha um quadro inteiro (``4 × canais`` bytes) sai: um
+    gravador interrompido no meio de um quadro não pode deslocar os canais.
+    """
+    amostras = array.array("f")
+    inteiro = len(pcm) - len(pcm) % (4 * canais)
+    amostras.frombytes(pcm[:inteiro])
+    if sys.byteorder != "little":
+        amostras.byteswap()
+    quadros = len(amostras) // canais
+    if quadros == 0:
+        return [0.0] * canais
+    return [
+        math.sqrt(sum(x * x for x in amostras[c::canais]) / quadros) for c in range(canais)
+    ]
+
+
+def argv_da_gravacao(nome: str) -> list[str]:
+    """O ``parec`` que lê o monitor de um endpoint, em quatro canais.
+
+    ``parec`` pelo NOME do ``.monitor``, e não o ``pw-record`` pelo nome: o
+    ``pw-record --target=<nome>.monitor`` caiu na fonte padrão em 16/09/2026
+    (SOM-ECO-02, a tabela em ``alto_falante_bt.argv_do_gravador``), e o
+    ``parec`` acertou pelo nome.
+    """
+    return [
+        "parec", f"--device={nome}.monitor", "--format=float32le", f"--rate={TAXA}",
+        f"--channels={CANAIS}", f"--latency-msec={_LATENCIA_MS}", "--raw",
+    ]
+
+
+def gravar(segundos: float) -> dict[str, object]:
+    """Grava o monitor de TODOS os endpoints ao mesmo tempo e diz o RMS de cada canal."""
+    if shutil.which("parec") is None:
+        return {"veredito": "sem parec: não há como ler o monitor", "endpoints": []}
+    sinks = nossos_sinks()
+    gravadores = []
+    for sink in sinks:
+        try:
+            proc = subprocess.Popen(  # argv fixo, sem shell
+                argv_da_gravacao(sink["nome"]),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+            )
+        except OSError:
+            continue
+        gravadores.append((sink, proc))
+    time.sleep(max(0.1, segundos))
+    endpoints = []
+    for sink, proc in gravadores:
+        proc.terminate()
+        try:
+            pcm, _erro = proc.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            pcm, _erro = proc.communicate()
+        rms = rms_por_canal(pcm or b"")
+        endpoints.append({
+            "nome": mascarar(sink["nome"]),
+            "quadros": len(pcm or b"") // (4 * CANAIS),
+            "rms": {"frente": [round(v, 5) for v in rms[:2]], "motores": [round(v, 5) for v in rms[2:]]},
+        })
+    com_motor = sum(1 for e in endpoints if any(v > 0 for v in e["rms"]["motores"]))  # type: ignore[index]
+    return {
+        "veredito": f"{com_motor} de {len(endpoints)} endpoint(s) com sinal nos motores em {segundos:g} s",
+        "medidas": {"segundos": segundos, "endpoints": len(endpoints), "com_motor": com_motor},
+        "endpoints": endpoints,
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -422,6 +528,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--desmontar", action="store_true", help="derruba os nossos")
     p.add_argument("--marca", default="", help="os seis hex do rabo do uniq do controle (exigido no --montar)")
     p.add_argument("--json", action="store_true", help="a leitura, na forma que o o_basico.py lê")
+    p.add_argument("--gravar", type=float, default=0.0, metavar="SEGUNDOS",
+                   help="grava o monitor dos endpoints e diz o RMS de cada canal")
     p.add_argument("--ancora", default="", help="syspath do usb_device âncora (o padrão é o primeiro)")
     p.add_argument("--ancoras", action="store_true", help="lista as âncoras candidatas")
     args = p.parse_args(argv)
@@ -443,6 +551,17 @@ def main(argv: list[str] | None = None) -> int:
         escolhida = next((a for a in disponiveis if a.syspath == args.ancora), disponiveis[0])
         rc = montar(args.marca, escolhida)
         return rc or status()
+    if args.gravar > 0:
+        import json
+
+        gravado = gravar(args.gravar)
+        if args.json:
+            print(json.dumps(gravado, ensure_ascii=False, indent=1))
+        else:
+            _dizer(str(gravado["veredito"]))
+            for e in gravado["endpoints"]:  # type: ignore[attr-defined]
+                _dizer(f"  {e['nome']}  frente {e['rms']['frente']}  motores {e['rms']['motores']}")
+        return 0 if gravado["endpoints"] else 1
     if args.json:
         import json
 

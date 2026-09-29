@@ -45,9 +45,12 @@ _OUTRO = """Sink #37984
 #: máquina plausível (≈10 dias de `uptime` em µs).
 _USEC_DA_ANCORA = 0xCCBBAA0000
 
+#: O nó é o do LUGAR 1 desde 28/09/2026 (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01):
+#: o nome não carrega mais o rabo do `uniq`. O curador não lê o nome — lê o
+#: VID/PID e o `sysfs.path` —, e por isso nenhuma régua daqui mudou de conta.
 _NOME_DO_NO = (
     "alsa_output.usb-Sony_Interactive_Entertainment_"
-    "DualSense_Wireless_Controller_HEFESTO0000cc-00.HiFi__Speaker__sink"
+    "DualSense_Wireless_Controller_HEFESTOLUGAR1-00.HiFi__Speaker__sink"
 )
 #: A ÂNCORA é o `usb_device`; o nó declara a INTERFACE dela. O
 #: `udev_device_get_parent_with_subsystem_devtype` devolve um ancestral, nunca

@@ -104,6 +104,12 @@ def test_no_sem_endereco_nunca_entra() -> None:
 # ---------------------------------------------------------------------------
 # O ENDPOINT — a idempotência mudou de alvo
 # ---------------------------------------------------------------------------
+#
+# O ENDPOINT É DO LUGAR DESDE 28/09/2026 (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01):
+# era um por controle no rádio, com o nome pelo endereço. A idempotência contra
+# o servidor é a mesma, e as réguas seguem pelo LUGAR.
+
+_L1, _L2 = 1, 2
 
 _ANCORA = Ancora(
     syspath="/sys/devices/pci0000:00/usb3/3-4",
@@ -149,9 +155,9 @@ class _Pactl:
 
 def test_o_endpoint_de_pe_com_a_mesma_ancora_e_adotado() -> None:
     """O restart do daemon não pode trocar um nó vivo por outro idêntico."""
-    nome = nome_do_endpoint(_A)
+    nome = nome_do_endpoint(_L1)
     pactl = _Pactl([("77", nome, _ANCORA.declarado)])
-    e = EndpointDeHaptica(uniq=_A, ancora=_ANCORA, runner=pactl)
+    e = EndpointDeHaptica(lugar=_L1, ancora=_ANCORA, runner=pactl)
     assert e.iniciar() is True
     assert e.module_id == "77", "carregou um novo em vez de adotar o de pé"
     assert not any(c[:2] == ["pactl", "load-module"] for c in pactl.comandos)
@@ -159,31 +165,31 @@ def test_o_endpoint_de_pe_com_a_mesma_ancora_e_adotado() -> None:
 
 def test_os_duplicados_da_mesma_ancora_caem_na_adocao() -> None:
     """Cinco do mesmo controle era o estado REAL da mesa dela."""
-    nome = nome_do_endpoint(_A)
+    nome = nome_do_endpoint(_L1)
     pactl = _Pactl([(str(70 + i), nome, _ANCORA.declarado) for i in range(5)])
-    EndpointDeHaptica(uniq=_A, ancora=_ANCORA, runner=pactl).iniciar()
+    EndpointDeHaptica(lugar=_L1, ancora=_ANCORA, runner=pactl).iniciar()
     assert len(pactl.modulos) == 1, pactl.modulos
 
 
 def test_ancora_diferente_derruba_e_recria() -> None:
     """A âncora é o que o jogo lê para o ContainerId: a velha responde errado."""
-    nome = nome_do_endpoint(_A)
+    nome = nome_do_endpoint(_L1)
     pactl = _Pactl([("77", nome, _OUTRA.declarado)])
-    e = EndpointDeHaptica(uniq=_A, ancora=_ANCORA, runner=pactl)
+    e = EndpointDeHaptica(lugar=_L1, ancora=_ANCORA, runner=pactl)
     assert e.iniciar() is True
     assert e.module_id != "77"
     assert len(pactl.modulos) == 1
     assert ["pactl", "unload-module", "77"] in pactl.comandos
 
 
-def test_o_orfao_de_controle_que_saiu_e_derrubado() -> None:
+def test_o_orfao_do_lugar_que_saiu_e_derrubado() -> None:
     pactl = _Pactl(
         [
-            ("77", nome_do_endpoint(_A), _ANCORA.declarado),
-            ("78", nome_do_endpoint(_B), _ANCORA.declarado),
+            ("77", nome_do_endpoint(_L1), _ANCORA.declarado),
+            ("78", nome_do_endpoint(_L2), _ANCORA.declarado),
         ]
     )
-    caidos = varrer_endpoints_orfaos([_A], pactl)
+    caidos = varrer_endpoints_orfaos([_L1], pactl)
     assert caidos == ["78"]
     assert [m[0] for m in pactl.modulos] == ["77"]
 
@@ -205,13 +211,13 @@ def test_mordida_do_endpoint_sem_perguntar_ao_servidor_ele_soma() -> None:
     O `_module_id` de instância nasce None a cada processo, então a versão
     antiga carregava sempre. Esta régua reproduz o vazamento MEDIDO.
     """
-    nome = nome_do_endpoint(_A)
+    nome = nome_do_endpoint(_L1)
     pactl = _Pactl([("77", nome, _ANCORA.declarado)])
     for _ in range(4):  # quatro "restarts do daemon"
-        e = EndpointDeHaptica(uniq=_A, ancora=_ANCORA, runner=pactl)
+        e = EndpointDeHaptica(lugar=_L1, ancora=_ANCORA, runner=pactl)
         e._module_id = None
         pactl(["pactl", "load-module", "module-null-sink", f"sink_name={nome}"])
     assert len(pactl.modulos) == 5, "a mordida não reproduz o vazamento"
     # e a cura, no mesmo servidor sujo, devolve UM:
-    EndpointDeHaptica(uniq=_A, ancora=_ANCORA, runner=pactl).iniciar()
+    EndpointDeHaptica(lugar=_L1, ancora=_ANCORA, runner=pactl).iniciar()
     assert len(endpoints_de_pe(pactl)[nome]) == 1

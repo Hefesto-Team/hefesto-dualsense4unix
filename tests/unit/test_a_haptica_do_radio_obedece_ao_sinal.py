@@ -362,6 +362,16 @@ class TestODonoDoFluxo:
 
 P1, P2, P3, P4 = (f"aa:bb:cc:00:00:0{i}" for i in range(1, 5))
 MESA = (P1, P2, P3, P4)
+
+
+def no_do(uniq: str) -> str:
+    """O endpoint do LUGAR deste controle — o dublê de ``_EndpointDeMentira``.
+
+    O endpoint é do lugar desde 28/09/2026 (A-HAPTICA-CHEGA-A-QUEM-ENTRA-
+    DEPOIS-01), e o lugar é o «Controle N» que o dono responde: a ordem da MESA
+    (o dublê de ``numero_do_assento`` na bancada abaixo).
+    """
+    return f"endpoint::{MESA.index(uniq) + 1}"
 #: O cliente do servidor de som que é o jogo (o ``winepulse`` do PRAGMATA).
 JOGO = "4243"
 
@@ -404,6 +414,9 @@ class MesaDeQuatro:
         monkeypatch.setattr(eh, "varrer_endpoints_orfaos", lambda *a, **k: None)
         self.daemon = SimpleNamespace()
         self.sub = AltoFalanteSubsystem(daemon=self.daemon)
+        monkeypatch.setattr(
+            AltoFalanteSubsystem, "numero_do_assento", lambda _self, u: MESA.index(u) + 1
+        )
         self.sub._abrir_hidraw = self._abrir  # type: ignore[method-assign]
         self._controle = ControleNaLista
 
@@ -415,7 +428,7 @@ class MesaDeQuatro:
 
     def _fonte(self, id_do_no: str, **kw: Any) -> tuple[Any, Any, str]:
         if kw.get("papel") == "haptica":
-            uniq = id_do_no.removeprefix("endpoint::")
+            uniq = MESA[int(id_do_no.removeprefix("endpoint::")) - 1]
             return _fonte(self.sinal.get(uniq, [])), None, ""
         return (lambda _n: b""), None, ""
 
@@ -427,7 +440,7 @@ class MesaDeQuatro:
     def o_jogo_abre(self) -> None:
         """O jogo abre um fluxo em cada um dos quatro endpoints — medido em 27/09."""
         for uniq in MESA:
-            self.servidor.tocar(f"endpoint::{uniq}", JOGO)
+            self.servidor.tocar(no_do(uniq), JOGO)
 
     def mexer(self, *quem: str) -> None:
         from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import quem_mexe_de
@@ -892,7 +905,7 @@ def test_a_volta_guarda_o_que_leu_e_a_espera_so_acorda_pela_mudanca(
     mesa = mesa_de_quatro({})
     mesa.sub._fonte = mesa.controles
     mesa.sub._reconciliar(_Gerenciador())
-    assert sorted(mesa.sub._endpoints) == sorted(MESA), "a volta não publicou os endpoints"
+    assert sorted(mesa.sub._endpoints) == [1, 2, 3, 4], "a volta não publicou os lugares"
     assert mesa.sub._a_mesa_do_som_mudou() is False, "a mesa parada acordou a volta"
     mesa.servidor.tocar("alsa_output.fone_dela", "77")
     assert mesa.sub._a_mesa_do_som_mudou() is False, "o fluxo de fora da mesa acordou a volta"

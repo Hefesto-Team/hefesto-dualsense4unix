@@ -14,6 +14,12 @@ ninguém ESCREVIA o device naquele prefixo.
 
 A cura é a carona: `materialize_launch_env` já roda a cada transição de
 controle, e o que muda o device KS é exatamente o conjunto de controles.
+
+**A LISTA TEM UM DONO DESDE 28/09/2026** (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01):
+o curador do lançamento e esta carona leem a MESMA função,
+`audio_ks_dualsense.controles_do_registro` — os lugares e o cabo que nenhum
+lugar serve. As réguas abaixo dublam as duas fontes dela e a pergunta das
+placas servidas; as duas do fim medem que as duas pontas leem o dono.
 """
 
 from __future__ import annotations
@@ -51,6 +57,7 @@ def test_o_prefixo_do_lancador_recebe_o_device(_lar, monkeypatch):
         ks, "controles_no_cabo",
         lambda *a, **k: [ks.Controle(pid=0x0CE6, bus=1, dev=7, usec=42)])
     monkeypatch.setattr(ks, "controles_no_radio", lambda *a, **k: [])
+    monkeypatch.setattr(ks, "placas_servidas", lambda *a, **k: [])
 
     fora = launch_env._device_ks_nos_lancadores()
 
@@ -76,6 +83,7 @@ def test_a_segunda_volta_nao_reescreve(_lar, monkeypatch):
         ks, "controles_no_cabo",
         lambda *a, **k: [ks.Controle(pid=0x0CE6, bus=1, dev=7, usec=42)])
     monkeypatch.setattr(ks, "controles_no_radio", lambda *a, **k: [])
+    monkeypatch.setattr(ks, "placas_servidas", lambda *a, **k: [])
 
     launch_env._device_ks_nos_lancadores()
     fora = launch_env._device_ks_nos_lancadores()
@@ -98,6 +106,7 @@ def test_o_prefixo_ocupado_e_pulado_e_contado(_lar, monkeypatch):
 
     monkeypatch.setattr(ks, "controles_no_cabo", lambda *a, **k: [])
     monkeypatch.setattr(ks, "controles_no_radio", lambda *a, **k: [])
+    monkeypatch.setattr(ks, "placas_servidas", lambda *a, **k: [])
     monkeypatch.setattr(ks, "wineserver_do_prefixo_vivo", lambda *a, **k: True)
 
     fora = launch_env._device_ks_nos_lancadores()
@@ -146,3 +155,51 @@ def test_o_numero_vai_ao_log(monkeypatch):
         "src/hefesto_dualsense4unix/daemon/launch_env.py"
     ).read_text(encoding="utf-8")
     assert "device_ks=ks," in fonte
+
+
+# ---------------------------------------------------------------------------
+# As duas pontas leem o mesmo dono da lista — 28/09/2026
+# ---------------------------------------------------------------------------
+
+_DO_DONO = [
+    # o lugar 1, pela âncora (um hub), e o cabo que nenhum lugar serve
+    ("lugar", 0x0CE6, 3, 11),
+    ("cabo", 0x0CE6, 1, 7),
+]
+
+
+def _a_lista_do_dono(monkeypatch: pytest.MonkeyPatch) -> list[object]:
+    from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
+
+    lista = [ks.Controle(pid=pid, bus=bus, dev=dev, usec=None) for _q, pid, bus, dev in _DO_DONO]
+    monkeypatch.setattr(ks, "controles_do_registro", lambda *a, **k: list(lista))
+    # As fontes de antes respondem VAZIO: quem as somasse de novo não gravaria nada.
+    monkeypatch.setattr(ks, "controles_no_cabo", lambda *a, **k: [])
+    monkeypatch.setattr(ks, "controles_no_radio", lambda *a, **k: [])
+    return lista
+
+
+def test_a_carona_do_daemon_le_o_dono_da_lista(_lar, monkeypatch):
+    """O daemon grava o que o dono diz, e não uma soma própria.
+
+    MORDIDA: volte `_device_ks_nos_lancadores` a `controles_no_cabo() +
+    controles_no_radio()` — o prefixo fica sem os lugares.
+    """
+    _a_lista_do_dono(monkeypatch)
+    assert launch_env._device_ks_nos_lancadores()["escritos"] == 1
+    texto = (_lar / "pfx" / "system.reg").read_text(encoding="utf-8")
+    assert "HEFESTOKS&003&011&0" in texto and "HEFESTOKS&001&007&0" in texto
+
+
+def test_o_curador_do_lancamento_le_o_dono_da_lista(_lar, monkeypatch):
+    """O gancho de lançamento roda o `main` do curador: a mesma lista.
+
+    MORDIDA: volte o `main` a somar `controles_no_cabo` e `controles_no_radio`.
+    """
+    from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
+
+    _a_lista_do_dono(monkeypatch)
+    compat = _lar
+    assert ks.main(["--prefixo", str(compat)]) == 0
+    texto = (compat / "pfx" / "system.reg").read_text(encoding="utf-8")
+    assert "HEFESTOKS&003&011&0" in texto and "HEFESTOKS&001&007&0" in texto

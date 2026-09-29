@@ -72,6 +72,21 @@ PID_WINEDEVICE, PID_DO_EXE, PID_DA_STEAM = 4242, 4243, 100
 JOGO = "5150"
 
 
+def assento(uniq: str) -> int | None:
+    """O «Controle N» que o dono responde: a ordem da MESA; fora dela, «não sei»."""
+    return MESA.index(uniq) + 1 if uniq in MESA else None
+
+
+def no_do(uniq: str) -> str:
+    """O endpoint do LUGAR deste controle — o dublê de ``_EndpointDeMentira``.
+
+    O endpoint é do lugar desde 28/09/2026 (A-HAPTICA-CHEGA-A-QUEM-ENTRA-
+    DEPOIS-01): o jogo toca no endpoint do lugar em que o controle senta. Quem
+    o dono não numera senta no primeiro lugar livre.
+    """
+    return f"endpoint::{assento(uniq) or 1}"
+
+
 def colada(uniq: str) -> str:
     """``aa:bb:cc:00:00:02`` → ``aabbcc000002``: a grafia do co-op e do backend."""
     return uniq.replace(":", "")
@@ -190,6 +205,9 @@ class Bancada:
         )
         self.daemon = SimpleNamespace(_coop_manager=coop)
         self.sub = AltoFalanteSubsystem(daemon=self.daemon)
+        monkeypatch.setattr(
+            AltoFalanteSubsystem, "numero_do_assento", lambda _self, u: assento(u)
+        )
         # O aviso de quem entra na partida, como o `start()` o liga.
         self.sub._ouvir_quem_entra_na_partida(self.sub._acordar_a_volta)
         vias = transportes or {}
@@ -207,7 +225,7 @@ class Bancada:
         else:
             self.mundo.abrir_o_jogo_do_ge(pids=pids)
         for uniq in MESA:
-            self.servidor.tocar(f"endpoint::{uniq}", cliente)
+            self.servidor.tocar(no_do(uniq), cliente)
 
     def fechar_o_jogo(self, *, cliente: str = JOGO) -> None:
         self.mundo.fechar_o_jogo()
@@ -442,7 +460,7 @@ class TestAPartida:
         bancada.abrir_o_jogo()
         bancada.volta()
         bancada.mexer(P2)
-        bancada.servidor.tocar(f"endpoint::{P2}", "5151")
+        bancada.servidor.tocar(no_do(P2), "5151")
         assert bancada.volta() == {P2}
 
     def test_o_jogo_que_fecha_o_fluxo_e_segue_vivo_nao_zera(self, bancada: Bancada) -> None:
@@ -454,7 +472,7 @@ class TestAPartida:
         bancada.volta()
         assert bancada.marcas.joga(P2), "o fluxo que caiu com o jogo vivo zerou a marca"
         for uniq in MESA:
-            bancada.servidor.tocar(f"endpoint::{uniq}", JOGO)
+            bancada.servidor.tocar(no_do(uniq), JOGO)
         assert bancada.volta() == {P2}
 
     def test_o_servidor_mudo_nao_fecha_a_partida(self, bancada: Bancada) -> None:
@@ -510,7 +528,7 @@ class TestOPortaoDizPorQueFechou:
         # endpoint toca, e não há jogo.
         bancada.fechar_o_jogo()
         for uniq in MESA:
-            bancada.servidor.tocar(f"endpoint::{uniq}", "-")
+            bancada.servidor.tocar(no_do(uniq), "-")
         with structlog.testing.capture_logs() as registros:
             bancada.volta()
             bancada.volta()
@@ -554,7 +572,7 @@ class TestOPortaoDizPorQueFechou:
         bancada.controles = [
             ControleNaLista(uniq="aa:bb:cc:12:34:05", caminho="/dev/hidraw19", transporte="rádio")
         ]
-        bancada.servidor.tocar("endpoint::aa:bb:cc:12:34:05", "-")
+        bancada.servidor.tocar(no_do("aa:bb:cc:12:34:05"), "-")
         with structlog.testing.capture_logs() as registros:
             bancada.volta()
         assert [r["uniq"] for r in _linhas(registros)] == ["aa:bb:cc:00:00:05"]

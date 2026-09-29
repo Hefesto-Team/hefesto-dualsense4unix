@@ -2443,8 +2443,7 @@ def _device_ks_nos_lancadores() -> dict[str, int]:
         from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
         from hefesto_dualsense4unix.integrations.audio_ks_dualsense import (
             aplicar,
-            controles_no_cabo,
-            controles_no_radio,
+            controles_do_registro,
         )
 
         prefixos = [
@@ -2454,9 +2453,11 @@ def _device_ks_nos_lancadores() -> dict[str, int]:
         fora["prefixos"] = len(prefixos)
         if not prefixos:
             return fora
-        # A ORDEM É A MESMA DO CLI: cabo e depois rádio, e nunca o mesmo
-        # aparelho duas vezes — quem tem placa de som fica com o cabo.
-        controles = controles_no_cabo() + controles_no_radio()
+        # A LISTA É A DO CURADOR, pela mesma função (28/09/2026,
+        # A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01): os quatro lugares e o cabo
+        # que nenhum lugar serve. Uma segunda soma aqui seria a segunda grafia
+        # da lista que o lançamento grava.
+        controles = controles_do_registro()
         for prefixo in prefixos:
             try:
                 r = aplicar(prefixo, controles=controles)

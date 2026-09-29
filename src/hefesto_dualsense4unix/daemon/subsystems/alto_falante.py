@@ -807,6 +807,16 @@ class AltoFalanteSubsystem:
     #: Alguém pediu a volta agora (o controle que entrou na partida, a resposta
     #: dela ao «Ligar aqui»). Lido e zerado pelo laço.
     _volta_pedida: bool = False
+    #: ``{uniq: lugar}`` de cada DualSense da mesa na última volta
+    #: (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01, 28/09/2026). O lugar é o
+    #: «Controle N» do dono (:meth:`numero_do_assento`); quem o dono não numera
+    #: fica onde estava, e é para isso que a volta o lembra. Imutável no corpo
+    #: da classe; cada volta troca o dicionário inteiro.
+    _lugar_de: Mapping[str, int] = MappingProxyType({})
+    #: Os laços do cabo (``integrations/haptica_do_cabo.HapticaDoCabo``). Nasce
+    #: na primeira volta que precisa dele (:meth:`_o_cabo`) — dublê montado por
+    #: ``__new__`` também o ganha.
+    _cabo: Any = None
 
     #: O GOVERNADOR DO RÁDIO (GOVERNADOR-DO-RADIO-01, 23/09/2026): quem dá a
     #: vaga de cada ponte, por adaptador, e manda ceder na fonte quando o
@@ -839,10 +849,12 @@ class AltoFalanteSubsystem:
         self._gerenciador: Any = None
         #: UMA ponte por controle no rádio, pelo `uniq`.
         self._pontes: dict[str, Any] = {}
-        #: O endpoint de mentira por controle no rádio — o alto-falante de
-        #: quatro canais que o JOGO enxerga. Ele não é o `hefesto_som_<hex6>`:
-        #: aquele é a saída da MÁQUINA para o controle, e a pessoa o escolhe.
-        self._endpoints: dict[str, Any] = {}
+        #: O endpoint de háptica por LUGAR (P1 a P4) — o alto-falante de quatro
+        #: canais que o JOGO enxerga. Ele não é o `hefesto_som_<hex6>`: aquele
+        #: é a saída da MÁQUINA para o controle, e a pessoa o escolhe. Era um
+        #: por controle no rádio até 28/09/2026
+        #: (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01).
+        self._endpoints: dict[int, Any] = {}
         #: "som" ou "haptica": qual arranjo a ponte daquele controle está
         #: mandando AGORA. O escritor é um só, e trocar de arranjo exige
         #: derrubar e subir — é por isso que o modo é lembrado.
@@ -1193,77 +1205,150 @@ class AltoFalanteSubsystem:
             return None
         return lambda: True
 
-    def _renovar_o_rotulo_da_haptica(self, uniq: str, endpoint: Any) -> None:
-        """O «Háptica do Controle N» segue o assento — e NUNCA com jogo aberto.
+    # O RÓTULO DA HÁPTICA NÃO SE RENOVA MAIS — 28/09/2026. Aqui moravam o
+    # `_renovar_o_rotulo_da_haptica` e as duas guardas dele (o jogo aberto e a
+    # ponte em modo háptica), da A-HAPTICA-TEM-NOME-DE-CONTROLE-01 (24/09): o
+    # nó era do CONTROLE, e o «Háptica do Controle N» renascia quando o assento
+    # andava. O nó passou a ser do LUGAR (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-
+    # 01), com o rótulo do lugar, e quem anda é o controle: o que troca é a
+    # ponte ou o laço, e nunca o endpoint.
 
-        A-HAPTICA-TEM-NOME-DE-CONTROLE-01, 24/09/2026. A regra de QUANDO o
-        rótulo envelhece é a do alto-falante
-        (``dualsense_bt_audio.rotulo_envelheceu``), e renomear é republicar
-        (``EndpointDeHaptica.renovar_o_rotulo``). O que muda aqui é a guarda, e
-        ela é mais dura que a do nó do som, porque este nó é o que a háptica do
-        jogo usa:
+    def _lugares_da_mesa(self, controles: list[Any]) -> dict[str, int]:
+        """``{uniq: lugar}`` de cada DualSense da mesa. Um lugar por controle.
 
-        * **o jogo tocando no nó**, ou a ponte deste controle em modo háptica —
-          a mesma guarda da troca de âncora, com o servidor mudo contando como
-          *"toca"*;
-        * **qualquer jogo aberto na máquina** (``quem_o_jogo_le.pids_de_jogo``).
-          Republicar tira o endpoint e o devolve, e o GE conta cada entrada e
-          saída de endpoint Sony como hotplug — o gatilho que remira a háptica
-          do jogo aberto (``vestido_de_dualsense``, patch 0015). Entre o jogo
-          enumerar o endpoint e abrir o primeiro stream não há sink-input para
-          ver, e é a janela que a troca de âncora declara como limite. Um nome
-          uma partida atrasado custa um número velho numa lista; o endpoint
-          sumindo debaixo do jogo custa a vibração.
+        A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01. O lugar é o «Controle N» do dono
+        (:meth:`numero_do_assento`, o mesmo número do cartão). Nesta ordem:
 
-        Nunca levanta, e só pergunta alguma coisa ao servidor ou ao ``/proc``
-        quando o rótulo de fato envelheceu — o caso raro, no assento que anda.
+        1. o número do dono, quando ele é um dos :data:`LUGARES` e ninguém o
+           tomou antes;
+        2. quem o dono não numera (sem daemon, ou ainda fora da fila) fica no
+           lugar da volta anterior, se ele estiver livre — sem isso o controle
+           pularia de endpoint a cada volta;
+        3. o resto, em ordem, nos lugares livres. Sem lugar livre (o quinto
+           controle), fica sem lugar: repetir seria pior que faltar.
         """
-        envelheceu = getattr(endpoint, "rotulo_envelheceu", None)
-        renovar = getattr(endpoint, "renovar_o_rotulo", None)
-        if not callable(envelheceu) or not callable(renovar):
-            return
-        try:
-            if not envelheceu():
-                return
-            if self._a_haptica_esta_em_uso(uniq, endpoint):
-                logger.debug("haptica_rotulo_velho_espera_o_jogo_fechar", uniq=uniq)
-                return
-            renovar()
-        except Exception:  # nunca derruba a volta
-            logger.debug("haptica_rotulo_nao_renovou", uniq=uniq, exc_info=True)
-        # NEM A VOLTA SUBIU: o nó não está no servidor, e quem nasce é a
-        # próxima volta, pelo caminho de sempre — guardá-lo aqui o deixaria de
-        # fora para sempre, porque o laço só cria endpoint para quem não tem.
-        if getattr(endpoint, "module_id", "") is None:
-            self._endpoints.pop(uniq, None)
+        from hefesto_dualsense4unix.integrations.endpoint_de_haptica import LUGARES
 
-    def _a_haptica_esta_em_uso(self, uniq: str, endpoint: Any) -> bool:
-        """Há jogo usando — ou podendo usar — o endpoint de háptica agora?"""
+        uniqs = sorted({str(getattr(c, "uniq", "") or "") for c in controles} - {""})
+        postos: dict[str, int] = {}
+        tomados: set[int] = set()
+        for uniq in uniqs:
+            numero = self.numero_do_assento(uniq)
+            if isinstance(numero, int) and numero in LUGARES and numero not in tomados:
+                postos[uniq] = numero
+                tomados.add(numero)
+        for uniq in uniqs:
+            antes = self._lugar_de.get(uniq)
+            if uniq not in postos and antes in LUGARES and antes not in tomados:
+                postos[uniq] = int(antes)
+                tomados.add(int(antes))
+        livres = [n for n in LUGARES if n not in tomados]
+        for uniq in uniqs:
+            if uniq not in postos and livres:
+                postos[uniq] = livres.pop(0)
+        self._lugar_de = MappingProxyType(dict(postos))
+        return postos
+
+    def _endpoint_de(self, uniq: str) -> Any:
+        """O endpoint do lugar deste controle, ou ``None``."""
+        lugar = self._lugar_de.get(uniq)
+        return None if lugar is None else self._endpoints.get(lugar)
+
+    def _lugares_de_pe(self, ha_dualsense: bool) -> tuple[int, ...]:
+        """Os lugares que ficam de pé nesta volta: os quatro, ou nenhum.
+
+        Os quatro sobem com o primeiro DualSense da mesa, em qualquer
+        transporte, e FICAM enquanto houver DualSense ou jogo com fluxo num
+        deles: o nó que some debaixo do jogo leva a háptica da partida junto
+        (a decisão dela de 08/09, «nó que some quebra o jogo que o escolheu»).
+        Servidor mudo é «toca» — na dúvida, o nó fica.
+        """
+        from hefesto_dualsense4unix.integrations.alto_falante_bt import sink_esta_tocando
+        from hefesto_dualsense4unix.integrations.endpoint_de_haptica import LUGARES
+
+        if ha_dualsense:
+            return LUGARES
+        for endpoint in list(self._endpoints.values()):
+            if sink_esta_tocando(str(getattr(endpoint, "nome", "") or ""), na_duvida=True):
+                return LUGARES
+        return ()
+
+    def _o_cabo(self) -> Any:
+        """O dono dos laços do cabo, criado na primeira vez que se pede."""
+        if self._cabo is None:
+            from hefesto_dualsense4unix.integrations.haptica_do_cabo import HapticaDoCabo
+
+            self._cabo = HapticaDoCabo()
+        return self._cabo
+
+    def _casar_o_cabo(
+        self,
+        controles: list[Any],
+        jogando: set[str],
+        motores: list[str],
+    ) -> None:
+        """Um laço por DualSense no cabo, do endpoint do lugar à placa dele.
+
+        A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01, itens 3 e 4. Os motores do laço
+        (os traseiros) abrem só para quem joga — a escolha (b) dela, a mesma
+        do rádio; a frente (o alto-falante) passa sempre. A placa é a do dono
+        (``alto_falante_bt.sink_do_controle``), e só vale se for uma placa de
+        quatro canais que não é nossa (``motores``, a leitura da volta): sem
+        ela o controle segue pela placa, sem laço, e o registro lhe dá o bloco
+        pelo ``BUSNUM-DEVNUM`` (``audio_ks_dualsense.controles_do_registro``).
+        """
         from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+            e_radio,
+            sink_do_controle,
             sink_esta_tocando,
         )
+        from hefesto_dualsense4unix.integrations.endpoint_de_haptica import MARCA_DO_NOME
+        from hefesto_dualsense4unix.integrations.haptica_do_cabo import (
+            RotaDoCabo,
+            alvo_do_no,
+        )
 
-        if uniq in self._pontes and self._modo_da_ponte.get(uniq) == "haptica":
-            return True
-        if sink_esta_tocando(str(getattr(endpoint, "nome", "") or ""), na_duvida=True):
-            return True
-        return self._ha_jogo_aberto()
+        na_mesa = [str(getattr(c, "uniq", "") or "") for c in controles]
+        na_mesa = [u for u in na_mesa if u]
+        no_cabo = [
+            str(getattr(c, "uniq", "") or "")
+            for c in controles
+            if not e_radio(str(getattr(c, "transporte", "") or ""))
+        ]
+        cabo = self._cabo
+        if not [u for u in no_cabo if u] and (cabo is None or not cabo.lugares()):
+            return
+        placas = set(motores)
+        rotas: dict[int, Any] = {}
+        abertos: set[int] = set()
+        for uniq in no_cabo:
+            lugar = self._lugar_de.get(uniq)
+            endpoint = self._endpoint_de(uniq)
+            if lugar is None or endpoint is None or getattr(endpoint, "module_id", None) is None:
+                continue
+            placa = sink_do_controle(uniq, na_mesa)
+            if not placa or placa not in placas or MARCA_DO_NOME in placa:
+                continue
+            captura, destino = alvo_do_no(str(endpoint.nome)), alvo_do_no(placa)
+            if not captura or not destino:
+                continue
+            rotas[lugar] = RotaDoCabo(captura=captura, destino=destino)
+            este_joga = uniq.lower() in jogando
+            if este_joga:
+                abertos.add(lugar)
+            self._vigiar_o_portao(
+                uniq,
+                fechado=sink_esta_tocando(str(endpoint.nome)) and not este_joga,
+                controles=controles,
+            )
+        self._o_cabo().casar(rotas, abertos)
 
-    def _ha_jogo_aberto(self) -> bool:
-        """Algum processo da máquina é um jogo, pelo ambiente e não pelo nome.
+    def _avisar_ancoras_que_faltam(self, faltam: int, lugares: int) -> None:
+        """O lugar sem âncora USB fica sem endpoint — e diz isso.
 
-        É a pergunta de ``quem_o_jogo_le.pids_de_jogo`` — a mesma que decide quem
-        vibra —, e ela não depende de lista de jogos nem de lançador.
-        """
-        from hefesto_dualsense4unix.integrations.quem_o_jogo_le import pids_de_jogo
-
-        try:
-            return bool(pids_de_jogo())
-        except Exception:  # pragma: no cover - defensivo: na dúvida, há jogo
-            return True
-
-    def _avisar_ancoras_que_faltam(self, faltam: int, controles: int) -> None:
-        """O controle no rádio sem âncora USB fica sem vibração — e diz isso.
+        **POR LUGAR DESDE 28/09/2026** (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01):
+        a conta era de controles no rádio. O controle sentado num lugar sem
+        âncora segue pela placa no cabo e fica sem vibração no rádio.
 
         **INSTALL-UNIVERSAL, 18/09/2026.** O endpoint da háptica precisa de uma
         âncora por controle (um aparelho USB com interface e sem placa de som),
@@ -1280,9 +1365,9 @@ class AltoFalanteSubsystem:
         if faltam == self._faltam_ancoras:
             return
         if faltam > 0:
-            logger.warning("haptica_sem_ancora", faltam=faltam, controles=controles)
+            logger.warning("haptica_sem_ancora", faltam=faltam, lugares=lugares)
         else:
-            logger.info("haptica_ancoras_bastam", controles=controles)
+            logger.info("haptica_ancoras_bastam", lugares=lugares)
         self._faltam_ancoras = faltam
 
     def _quem_o_jogo_le(self, controles: list[Any]) -> set[str]:
@@ -1485,11 +1570,13 @@ class AltoFalanteSubsystem:
             return None, None
 
     def _casar_as_pontes(self, controles: list[Any]) -> None:
-        """Sobe uma ponte por controle NO RÁDIO, e derruba a de quem saiu.
+        """Os endpoints dos lugares, a ponte de cada controle no rádio e o laço do cabo.
 
         Roda na thread de reconciliação, junto com os nós — as duas coisas
         respondem à mesma lista, e separá-las abriria a janela em que o nó
-        existe e a ponte não (ou o contrário).
+        existe e a ponte não (ou o contrário). ``controles`` são os DualSense
+        da mesa nos DOIS transportes: os lugares sobem com o primeiro deles
+        (A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01, 28/09/2026).
         """
         from hefesto_dualsense4unix.integrations.alto_falante_bt import (
             ARRANJO_HAPTICA_032,
@@ -1533,10 +1620,21 @@ class AltoFalanteSubsystem:
             if ponte is not None:
                 ponte.descer()
                 logger.info("som_ponte_derrubada", uniq=uniq)
-        # O ENDPOINT DA HÁPTICA CAI DEPOIS DA PONTE, nunca antes: a ponte lê o
-        # monitor dele, e derrubar o nó primeiro deixaria a leitura pendurada.
-        for uniq in [u for u in self._endpoints if u not in vivos]:
-            endpoint = self._endpoints.pop(uniq, None)
+        # O LUGAR DE CADA CONTROLE, nos dois transportes — A-HAPTICA-CHEGA-A-
+        # QUEM-ENTRA-DEPOIS-01, 28/09/2026. O endpoint é do LUGAR, e os quatro
+        # sobem com o primeiro DualSense da mesa: quem entra depois cai num
+        # endpoint que o registro do lançamento já tem.
+        lugar_de = self._lugares_da_mesa(controles)
+        lugares_vivos = self._lugares_de_pe(bool(lugar_de))
+        ocupante = {lugar: uniq for uniq, lugar in lugar_de.items()}
+
+        # O ENDPOINT DO LUGAR CAI DEPOIS DA PONTE E DO LAÇO, nunca antes: os
+        # dois leem o monitor dele, e derrubar o nó primeiro deixaria a leitura
+        # pendurada — e o laço cujo alvo some pode ser religado à fonte padrão
+        # (SOM-ECO-02). As pontes de quem saiu já desceram acima.
+        for lugar in [n for n in self._endpoints if n not in lugares_vivos]:
+            self._o_cabo().soltar(lugar)
+            endpoint = self._endpoints.pop(lugar, None)
             if endpoint is not None:
                 endpoint.parar()
         # O QUE O PROCESSO ANTERIOR DEIXOU — 18/09/2026, e ele não é teórico:
@@ -1545,7 +1643,9 @@ class AltoFalanteSubsystem:
         # de som é outro processo e sobrevive ao restart do daemon. Sem esta
         # varredura, cada reinício somava mais um nó com o mesmo nome à lista de
         # saídas de som dela. É a mesma classe — e a mesma cura — do canal órfão
-        # do microfone (`bt_mic.VarredorDeCanaisOrfaos`).
+        # do microfone (`bt_mic.VarredorDeCanaisOrfaos`). E é ela que derruba,
+        # na primeira volta depois do install, os endpoints por controle de
+        # antes de 28/09 (o nome pelo rabo do endereço não é de lugar nenhum).
         #
         # UMA pergunta ao servidor por volta, e ela serve às duas coisas: à
         # varredura e à semente das âncoras logo abaixo.
@@ -1553,34 +1653,25 @@ class AltoFalanteSubsystem:
         with contextlib.suppress(Exception):
             de_pe = endpoints_de_pe()
         with contextlib.suppress(Exception):
-            varrer_endpoints_orfaos(vivos, de_pe=de_pe)
+            varrer_endpoints_orfaos(lugares_vivos, de_pe=de_pe)
 
-        # O ENDPOINT DA HÁPTICA — um por controle no rádio, e ele VIVE ENQUANTO
-        # O CONTROLE EXISTIR. É a mesma decisão dela de 08/09 para o nó do som
-        # ("nó que some quebra o jogo que o escolheu"), e aqui ela pesa mais: se
-        # o nó cair no meio da partida, o endpoint da háptica morre com o jogo
-        # aberto. Cada controle ganha uma âncora PRÓPRIA — âncoras iguais são
-        # ContainerIds iguais, e aí a háptica do jogador 2 iria para o device do
-        # jogador 1. A distribuição respeita a POSSE — a memória deste processo
-        # e o que o servidor já tem de pé — e só as livres vão para quem chega:
-        # por ordem pura, o controle que chegava depois com o `uniq` menor
-        # herdava a âncora de quem já estava (INSTALL-UNIVERSAL, 18/09/2026).
+        # UMA ÂNCORA POR LUGAR, e ela VIVE ENQUANTO O LUGAR EXISTIR. É a mesma
+        # decisão dela de 08/09 para o nó do som ("nó que some quebra o jogo
+        # que o escolheu"), e aqui ela pesa mais: se o nó cair no meio da
+        # partida, a háptica morre com o jogo aberto. Âncoras iguais são
+        # ContainerIds iguais, e aí a háptica do jogador 2 iria para o device
+        # do jogador 1. A distribuição respeita a POSSE — a memória deste
+        # processo e o que o servidor já tem de pé — e só as livres vão para
+        # quem não tem (INSTALL-UNIVERSAL, 18/09/2026).
         postas = distribuir_ancoras(
-            vivos, ancoras(), de_pe,
-            ja_postas={u: e.ancora for u, e in self._endpoints.items()},
+            lugares_vivos, ancoras(), de_pe,
+            ja_postas={n: e.ancora for n, e in self._endpoints.items()},
         )
-        for uniq in vivos:
-            posta = postas.get(uniq)
-            atual = self._endpoints.get(uniq)
+        for lugar in lugares_vivos:
+            posta = postas.get(lugar)
+            atual = self._endpoints.get(lugar)
             if atual is not None:
-                if posta is None:
-                    continue
-                if posta.syspath == atual.ancora.syspath:
-                    # A ÂNCORA É A MESMA, E O RÓTULO PODE TER ENVELHECIDO —
-                    # A-HAPTICA-TEM-NOME-DE-CONTROLE-01, 24/09/2026: o
-                    # «Háptica do Controle N» acompanha o assento, e só renasce
-                    # sem jogo aberto (`_renovar_o_rotulo_da_haptica`).
-                    self._renovar_o_rotulo_da_haptica(uniq, atual)
+                if posta is None or posta.syspath == atual.ancora.syspath:
                     continue
                 # O APARELHO DA ÂNCORA SAIU DO BARRAMENTO: o nó declara um
                 # caminho que o Wine já não resolve, e o próximo jogo não casa
@@ -1589,12 +1680,12 @@ class AltoFalanteSubsystem:
                 # próxima volta sem stream.
                 #
                 # QUEM DIZ SE O JOGO TOCA É O SERVIDOR, AGORA. O modo da ponte
-                # é o da volta ANTERIOR e não basta sozinho: o jogo que abre o
-                # nó nesta mesma volta, a fonte da háptica que não subiu (a
-                # ponte fica no som com o jogo tocando) e o controle sem ponte
-                # (hidraw que não abre, sem libopus) derrubavam o nó com o
-                # jogo aberto. E servidor mudo não é "ninguém toca": na
-                # dúvida, o nó fica (`na_duvida=True`).
+                # de quem está no lugar é o da volta ANTERIOR e não basta
+                # sozinho: o jogo que abre o nó nesta mesma volta, a fonte da
+                # háptica que não subiu (a ponte fica no som com o jogo
+                # tocando) e o controle sem ponte (hidraw que não abre, sem
+                # libopus) derrubavam o nó com o jogo aberto. E servidor mudo
+                # não é "ninguém toca": na dúvida, o nó fica (`na_duvida=True`).
                 #
                 # LIMITE CONHECIDO: entre o jogo ENUMERAR o endpoint — é aí que
                 # ele guarda o ContainerId que sobe do `sysfs.path` — e abrir o
@@ -1603,21 +1694,23 @@ class AltoFalanteSubsystem:
                 # ContainerId que não casa mais. A janela é estreita; se a
                 # bancada mostrar o caso, a guarda passa a ser "nenhum
                 # processo Wine/Proton vivo".
+                quem = ocupante.get(lugar, "")
                 if (
-                    uniq in self._pontes and self._modo_da_ponte.get(uniq) == "haptica"
+                    quem in self._pontes and self._modo_da_ponte.get(quem) == "haptica"
                 ) or sink_esta_tocando(atual.nome, na_duvida=True):
                     continue
-                self._endpoints.pop(uniq, None)
+                self._o_cabo().soltar(lugar)
+                self._endpoints.pop(lugar, None)
                 atual.parar()
-                logger.info("haptica_endpoint_reancorado", uniq=uniq, ancora=posta.syspath)
+                logger.info("haptica_endpoint_reancorado", lugar=lugar, ancora=posta.syspath)
             if posta is None:
                 continue
-            endpoint = EndpointDeHaptica(uniq=uniq, ancora=posta)
+            endpoint = EndpointDeHaptica(lugar=lugar, ancora=posta)
             if endpoint.iniciar():
-                self._endpoints[uniq] = endpoint
+                self._endpoints[lugar] = endpoint
         self._avisar_ancoras_que_faltam(
-            sum(1 for u in vivos if u not in self._endpoints and u not in postas),
-            len(vivos),
+            sum(1 for n in lugares_vivos if n not in self._endpoints and n not in postas),
+            len(lugares_vivos),
         )
 
         # OS MOTORES DOS SINKS DE 4 CANAIS — HAPTICA-CABO-VOLUME-01 (Z2),
@@ -1639,8 +1732,10 @@ class AltoFalanteSubsystem:
         # têm motores vêm de duas origens diferentes (o ALSA, no cabo; e o
         # `EndpointDeHaptica`, para o Wine) e nenhum dos dois nomes se deriva do
         # `uniq`.
+        motores: list[str] = []
         with contextlib.suppress(Exception):
-            for sink_com_motor in sinks_com_motores():
+            motores = list(sinks_com_motores())
+            for sink_com_motor in motores:
                 garantir_motores_audiveis(sink_com_motor)
 
         # QUEM O JOGO ESTÁ LENDO — QUEM-JOGA-E-QUEM-VIBRA-01, 20/09/2026.
@@ -1667,11 +1762,22 @@ class AltoFalanteSubsystem:
         # quando a linha do portão fechado sai.
         jogando = self._quem_mexeu_na_partida(controles)
 
+        # Quem saiu da mesa sai da memória do portão: se voltar no mesmo
+        # estado, é outro endpoint, e a linha sai de novo. Pela MESA, e não só
+        # pelo rádio: o cabo também tem portão desde 28/09.
+        self._portao_fechado = {
+            u: m for u, m in self._portao_fechado.items() if u in lugar_de
+        }
+        # O CABO PASSA PELO LUGAR — A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01: um
+        # laço por DualSense no cabo, do endpoint do lugar à placa, com os
+        # motores só para quem joga (a escolha (b) dela, no cabo também).
+        try:
+            self._casar_o_cabo(controles, jogando, motores)
+        except Exception:  # o laço do cabo nunca derruba a ponte do rádio
+            logger.warning("haptica_do_cabo_falhou", exc_info=True)
+
         governador = self.governador
         esperando: set[tuple[str, str]] = set()
-        # Quem saiu da mesa sai da memória do portão: se voltar no mesmo
-        # estado, é outro endpoint, e a linha sai de novo.
-        self._portao_fechado = {u: m for u, m in self._portao_fechado.items() if u in vivos}
         for uniq, caminho in vivos.items():
             # A PONTE QUE TERMINOU SOZINHA SAI DA LISTA — GOVERNADOR-DO-RADIO-01.
             # A fonte secou, a escrita foi recusada, ou o teto de ceder a
@@ -1688,7 +1794,9 @@ class AltoFalanteSubsystem:
             # meio da partida, e é aí que a háptica passa a valer. Quem muda de
             # modo desce e sobe de novo — o escritor é UM SÓ, e trocar o
             # arranjo com a bomba rodando mudaria o corpo do report no meio.
-            endpoint = self._endpoints.get(uniq)
+            # A PONTE LÊ O ENDPOINT DO LUGAR do controle (28/09/2026), e não um
+            # próprio: o número que anda troca a ponte, e nunca o endpoint.
+            endpoint = self._endpoint_de(uniq)
             # O GATE TEM DOIS LADOS, e os dois precisam ser verdade: o jogo
             # abriu o canal DAQUELE endpoint E aquele controle JOGA — mexeu
             # desde que o jogo abriu. Só o primeiro deixava três controles
@@ -2051,6 +2159,13 @@ class AltoFalanteSubsystem:
             )
         for uniq, _ponte in pontes:
             self._pontes.pop(uniq, None)
+        # OS LAÇOS DO CABO MORREM COM O SUBSYSTEM, como as pontes: cada um é um
+        # `pw-loopback` lendo o endpoint de um lugar. O endpoint FICA (o
+        # restart o adota), e o laço volta na primeira volta do próximo start.
+        cabo = self._cabo
+        if cabo is not None:
+            with contextlib.suppress(Exception):
+                await asyncio.to_thread(cabo.parar)
         # O governador para DEPOIS das pontes: elas devolvem a vaga ao descer.
         governador, self.governador = self.governador, None
         if governador is not None:
