@@ -535,8 +535,9 @@ python3 scripts/gerar-mapa.py --check   # a página publicada é a que as fontes
 ```
 
 **E o `--fix` da acentuação reescreve o ARQUIVO INTEIRO** (`A-15`).
-`scripts/validar-acentuacao.py:869` faz `path.write_text(...)` com o conteúdo
-todo; e como a leitura é `read_text` (linha 745), que traduz `\r\n` em `\n` por
+`scripts/validar-acentuacao.py:1097`, no fim de `corrigir_arquivo`, faz
+`path.write_text(...)` com o conteúdo todo; e como a leitura é `read_text`
+(linha 969, na mesma função), que traduz `\r\n` em `\n` por
 newline universal, **um arquivo CRLF volta LF depois de uma única substituição**,
 sem uma palavra. Importa para o `ensaios.csv`: o `csv.writer` do Python termina
 linha em `\r\n` por padrão, então o caderno recém-escrito pela bancada é CRLF, e

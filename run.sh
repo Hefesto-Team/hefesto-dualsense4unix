@@ -58,7 +58,8 @@ done
 # no primeiro ícone que precisar de SVG — a janela morre ao abrir, com
 # "Unable to load image-loading module ... GLIBC_2.xx not found".
 #
-# `app/main.py` também faz esta limpeza, com critério mais fino. Aqui ela cobre
+# `scripts/abrir_interface.py` também faz esta limpeza, com critério mais fino
+# (`app/arranque.sanear_loaders_do_gdk_pixbuf`). Aqui ela cobre
 # o que roda ANTES do Python subir (o smoke abaixo, entre outros), e por isso o
 # critério é o grosso: se todos os módulos do cache moram dentro de /snap e nós
 # não estamos lá dentro, o cache não serve para este processo.

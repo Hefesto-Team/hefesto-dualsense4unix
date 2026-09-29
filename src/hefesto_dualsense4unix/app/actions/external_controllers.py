@@ -274,7 +274,7 @@ def modo_deduzido(entry: dict[str, Any]) -> str:
     (``externos-firmware-e-modos.md:218-228``), e declará-lo colidiria com a
     salvaguarda 2 da ``D-A1`` ("onde a medição existe, ela pré-preenche e a
     declaração só corrige") — além de nascer órfã: o MAC do 8BitDo MUDA com o
-    modo (``docs/usage/troubleshooting-8bitdo.md:130-143``), então uma
+    modo (``docs/usage/troubleshooting-8bitdo.md:27-29``), então uma
     declaração gravada por identidade descreve um aparelho que não existe mais
     no instante em que a pessoa troca o modo que ela descrevia.
 

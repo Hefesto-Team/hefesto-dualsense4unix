@@ -2539,7 +2539,7 @@ def colorway_do_controle(m: Any) -> str:
 # O QUE A RECUSA DIZIA ESTAVA ERRADO NAS DUAS METADES, e a regra desta casa
 # manda substituir o fato errado, não anotá-lo. Ela dizia que *"o produto
 # aplica `min` (`core/rumble.py`)"* e que *"sobrepor mudaria o daemon"*. O
-# `min` de `core/rumble.py:108` compara a política GLOBAL com o teto do
+# `min` de `core/rumble.py:102` compara a política GLOBAL com o teto do
 # ORÇAMENTO — nenhum dos dois é por controle —, e o caminho por controle não
 # passa por ali: ele é um FATOR aplicado um andar abaixo. Sobrepor não muda
 # uma linha do daemon.
@@ -3353,7 +3353,7 @@ SEM_GESTO: dict[str, str] = {
     # `min` é justamente o que impede um 'teto' de AUMENTAR a força […]
     # sobrepor mudaria o DAEMON, não a tela."*
     #
-    # O `min` de `core/rumble.py:108` compara a política GLOBAL com o teto do
+    # O `min` de `core/rumble.py:102` compara a política GLOBAL com o teto do
     # ORÇAMENTO DA MESA — nenhum dos dois é por controle. E o caminho por
     # controle não passa por ali: ele é um FATOR aplicado um andar ABAIXO, em
     # `core/backend_pydualsense._escalar_rumble:3797-3818`, alimentado por
@@ -3832,7 +3832,7 @@ def teto_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     regra desta casa manda substituí-lo. Ela dizia que *"o produto aplica `min`
     (`core/rumble.py`), e o `min` é o que impede um 'teto' de AUMENTAR a
     força"*, e que *"sobrepor mudaria o daemon, não a tela"*. O `min` de
-    `core/rumble.py:108` compara a política GLOBAL com o teto do ORÇAMENTO —
+    `core/rumble.py:102` compara a política GLOBAL com o teto do ORÇAMENTO —
     nenhum dos dois é por controle —, e o caminho por controle passa um andar
     ABAIXO dele, em `core/backend_pydualsense._escalar_rumble:3797-3818`.
 
