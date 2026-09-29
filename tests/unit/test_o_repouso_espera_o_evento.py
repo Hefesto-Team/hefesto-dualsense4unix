@@ -911,3 +911,163 @@ class TestOsArquivosDaCasa:
         assert len(_sob(conta, marcador, "open")) == 1
         marcador.write_text("appid=2497900\nepoch=1900000100\npid=4343\n")
         assert launch_env.read_last_run_marker(tmp_path) == (2497900, 1900000100)
+
+
+# ---------------------------------------------------------------------------
+# Régua 5 — o negativo de /proc vale até o evento, só na pergunta de exibição
+# ---------------------------------------------------------------------------
+
+_REAPER = (
+    "/home/quem/.steam/ubuntu12_32/reaper SteamLaunch AppId=1599660 -- "
+    "/.../proton waitforexitandrun /.../Jogo.exe"
+)
+
+
+class _ProcDeMentira:
+    """`/proc` de mentira: o mapa pid → cmdline, e a conta das varreduras."""
+
+    def __init__(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        from hefesto_dualsense4unix.daemon import launch_env
+        from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+        self.mapa: dict[str, str] = {"100": "cosmic-comp", "101": "pipewire"}
+        self.varreduras = 0
+        self.lancamento = tmp_path / "launch_env"
+        self.lancamento.mkdir()
+        listar_de_verdade = os.listdir
+
+        def listar(caminho: Any = ".") -> list[str]:
+            if str(caminho) == "/proc":
+                self.varreduras += 1
+                return [*self.mapa, "self", "cpuinfo"]
+            return listar_de_verdade(caminho)
+
+        monkeypatch.setattr(os, "listdir", listar)  # o `os` que o módulo usa
+        monkeypatch.setattr(slo, "_cmdline_of", lambda pid: self.mapa.get(str(pid), ""))
+        monkeypatch.setattr(launch_env, "launch_env_dir", lambda: self.lancamento)
+        monkeypatch.setattr(slo, "_agora", lambda: _RELOGIO_DA_FOTO[0])
+        launch_env._MARCADORES_PELA_ASSINATURA.esquecer()
+        slo.invalidar_varredura_de_proc()
+
+    def lancar(self, appid: int, pid: int) -> None:
+        """O wrapper regrava o marker `last_run` (um lançamento novo)."""
+        (self.lancamento / "last_run").write_text(
+            f"appid={appid}\nepoch=1900000000\npid={pid}\n"
+        )
+
+
+@pytest.fixture
+def proc_de_mentira(
+    raizes: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> Iterator[_ProcDeMentira]:
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    proc = _ProcDeMentira(monkeypatch, tmp_path)
+    yield proc
+    slo.invalidar_varredura_de_proc()
+
+
+_RELOGIO_DA_FOTO: list[float] = [0.0]
+
+
+def _exibir(agora: float) -> int | None:
+    """A pergunta de exibição do poll loop, no instante `agora` do relógio injetado."""
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    _RELOGIO_DA_FOTO[0] = agora
+    return slo.steam_game_running_appid()
+
+
+def _recusar(agora: float) -> bool:
+    """A pergunta de quem pensa em fechar a Steam, no instante `agora`."""
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    _RELOGIO_DA_FOTO[0] = agora
+    return slo.steam_game_running()
+
+
+class TestONegativoDeProc:
+    def test_trinta_perguntas_de_exibicao_em_59_s_uma_varredura(
+        self, proc_de_mentira: _ProcDeMentira
+    ) -> None:
+
+        for t in range(0, 60, 2):
+            assert _exibir(float(t)) is None
+        assert proc_de_mentira.varreduras == 1
+
+    def test_aos_60_s_varre(self, proc_de_mentira: _ProcDeMentira) -> None:
+
+        _exibir(0.0)
+        _exibir(59.0)
+        assert proc_de_mentira.varreduras == 1
+        _exibir(60.0)
+        assert proc_de_mentira.varreduras == 2
+
+    def test_o_marcador_que_muda_varre(self, proc_de_mentira: _ProcDeMentira) -> None:
+
+        _exibir(0.0)
+        _exibir(8.0)
+        assert proc_de_mentira.varreduras == 1
+        proc_de_mentira.lancar(1599660, 4242)
+        _exibir(10.0)
+        assert proc_de_mentira.varreduras == 2
+
+    def test_invalidar_varre(self, proc_de_mentira: _ProcDeMentira) -> None:
+        from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+        _exibir(0.0)
+        slo.invalidar_varredura_de_proc()
+        _exibir(8.0)
+        assert proc_de_mentira.varreduras == 2
+
+    def test_a_pergunta_de_recusa_segue_nos_cinco_segundos(
+        self, proc_de_mentira: _ProcDeMentira
+    ) -> None:
+        """O jogo que nasce aos 10 s: a recusa o vê aos 16 s; a exibição, sozinha, no teto."""
+
+        assert _exibir(0.0) is None
+        proc_de_mentira.mapa["200"] = _REAPER  # o jogo nasce aos 10 s, fora do lançador
+        assert _exibir(12.0) is None  # o preço declarado
+        assert _recusar(16.0) is True, (
+            "a pergunta de quem pensa em fechar a Steam leu o negativo longo"
+        )
+
+    def test_so_a_exibicao_ve_o_jogo_fora_do_lancador_no_teto(
+        self, proc_de_mentira: _ProcDeMentira
+    ) -> None:
+        """O caso do item 4, dito em voz alta: backend cego e sem lançador, até 60 s."""
+
+        assert _exibir(0.0) is None
+        proc_de_mentira.mapa["200"] = _REAPER
+        vistos = [_exibir(float(t)) for t in range(10, 60, 2)]
+        assert vistos == [None] * len(vistos)
+        assert _exibir(60.0) == 1599660
+
+    def test_outra_janela_em_foco_invalida_o_negativo(
+        self, proc_de_mentira: _ProcDeMentira
+    ) -> None:
+        from unittest.mock import MagicMock
+
+        from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
+
+        sw = AutoSwitcher(manager=MagicMock(), window_reader=lambda: {})
+        sw._outra_janela_invalida_o_negativo({"wm_class": "firefox", "pid": 10})
+        _exibir(0.0)
+        sw._outra_janela_invalida_o_negativo({"wm_class": "firefox", "pid": 10})
+        _exibir(4.0)
+        sw._outra_janela_invalida_o_negativo({"wm_class": "", "pid": 0})  # cega
+        _exibir(6.0)
+        assert proc_de_mentira.varreduras == 1
+        proc_de_mentira.mapa["200"] = _REAPER
+        sw._outra_janela_invalida_o_negativo({"wm_class": "steam_app_1599660", "pid": 200})
+        assert _exibir(8.0) == 1599660
+
+    def test_desarmado_a_exibicao_segue_nos_cinco_segundos(
+        self, proc_de_mentira: _ProcDeMentira
+    ) -> None:
+
+        while ode.armado():
+            ode.desarmar()
+        for t in range(0, 60, 2):
+            _exibir(float(t))
+        assert proc_de_mentira.varreduras == 10

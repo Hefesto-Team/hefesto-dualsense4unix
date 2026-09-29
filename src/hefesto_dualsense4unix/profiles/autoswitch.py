@@ -40,6 +40,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.manager import (
     MOTIVO_JOGO_SEM_PERFIL_PROPRIO,
@@ -334,6 +335,11 @@ class AutoSwitcher:
     # em disco só é visto na próxima troca, e o efeito se limita à guarda.
     _appids_do_perfil_nome: str | None = None
     _appids_do_perfil_valor: frozenset[int] = frozenset()
+    # O-REPOUSO-ESPERA-O-EVENTO-01, família 4: a janela em foco `(pid,
+    # wm_class)` da última vez que o negativo da varredura de `/proc` foi
+    # invalidado. Outra janela em foco é o evento que o «não há jogo» longo da
+    # pergunta de exibição espera.
+    _foco_do_negativo: tuple[object, str] | None = None
 
     def disabled(self) -> bool:
         return os.environ.get("HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT") == "1"
@@ -451,6 +457,33 @@ class AutoSwitcher:
             )
         return self._current_profile
 
+    def _outra_janela_invalida_o_negativo(self, info: dict[str, Any]) -> None:
+        """Outra janela em foco joga fora o «não há jogo» da varredura de `/proc`.
+
+        O-REPOUSO-ESPERA-O-EVENTO-01, família 4 (29/09/2026). Com o dono do
+        evento armado, a pergunta de exibição (`steam_game_running_appid`)
+        guarda o negativo até 60 s; o jogo do Proton é uma janela que ganha
+        foco, e ganhar foco é o evento que o encurta. Outro `pid` ou outra
+        `wm_class` chama o `invalidar_varredura_de_proc` que já existe, e a
+        pergunta seguinte varre. A leitura sem informação (o backend cego) não
+        conta: não é outra janela. Sem o dono, nada muda aqui.
+        """
+        if not _ode.armado():
+            return
+        wm_class = str(info.get("wm_class") or "")
+        pid = info.get("pid") or None
+        if not pid and wm_class in ("", "unknown"):
+            return
+        chave = (pid, wm_class)
+        if chave == self._foco_do_negativo:
+            return
+        self._foco_do_negativo = chave
+        from hefesto_dualsense4unix.integrations.steam_launch_options import (
+            invalidar_varredura_de_proc,
+        )
+
+        invalidar_varredura_de_proc()
+
     def _tick(self, info: dict[str, Any], now: float) -> None:
         """Um ciclo de decisão do autoswitch (leitura já feita pelo caller).
 
@@ -464,6 +497,7 @@ class AutoSwitcher:
         # senão o resto do tique decide contra uma crença que pode estar horas
         # atrasada em relação ao que ela escolheu na mão.
         self._perfil_corrente()
+        self._outra_janela_invalida_o_negativo(info)
         # UX-01 (SPRINT-UX-AUTOSWITCH-01): histerese. Leitura sem informação
         # (backend cego: janela X morta, foco em janela Wayland nativa) NÃO
         # significa "é o desktop" — pula o tick INTEIRO: não mexe no candidato,

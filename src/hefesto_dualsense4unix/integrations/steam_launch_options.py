@@ -1096,6 +1096,53 @@ VALIDADE_DA_VARREDURA_S: float = 5.0
 #: pelo mesmo motivo do `escritor_cru`: a gravação é atômica sob a GIL.
 _ultima_varredura: tuple[float, int | None] | None = None
 
+#: O-REPOUSO-ESPERA-O-EVENTO-01, família 4 (29/09/2026): até quando o «não há
+#: jogo» vale para a pergunta de EXIBIÇÃO (`steam_game_running_appid`, a do
+#: poll loop, que alimenta o sinal de jogo e a aba do jogo), com o dono do
+#: evento armado. Medido na sonda S.4 (60 s, sem jogo): 5.277 leituras de
+#: `cmdline`, 480 pids lidos exatamente 10 vezes — a validade de 5 s com as
+#: perguntas a cada 2 s. O negativo longo cai antes do teto quando o marker do
+#: lançamento muda, quando o autoswitch vê outra janela em foco
+#: (`invalidar_varredura_de_proc`) e em todo gesto destrutivo deste módulo.
+#: A pergunta de RECUSA (`steam_game_running`) segue nos 5 s: os chamadores
+#: dela de fora deste módulo não invalidam, e o negativo longo nunca decide um
+#: gesto destrutivo. O preço, dito: o jogo aberto fora do nosso lançador e
+#: fora do alcance do backend de janela aparece na aba do jogo em até 60 s.
+TETO_DO_NEGATIVO_DE_EXIBICAO_S: float = 60.0
+
+#: `(quando, assinatura do marker)` do último negativo carimbado com o dono
+#: armado — a assinatura lida ANTES da varredura. O negativo longo só vale se o
+#: `quando` é o da foto e o marker não mudou desde então.
+_marcador_do_negativo: tuple[float, object] | None = None
+
+
+def _agora() -> float:
+    """O relógio da foto (`time.monotonic`); costura de teste das duas perguntas."""
+    return time.monotonic()
+
+
+def _o_dono_do_evento_armado() -> bool:
+    """O dono do evento do processo está armado? False no modo avulso."""
+    try:
+        from hefesto_dualsense4unix.core.o_dono_do_evento import armado
+    except ImportError:
+        return False
+    return armado()
+
+
+def _assinatura_do_marcador() -> object:
+    """A assinatura do `stat` do marker `last_run`; None se não se sabe."""
+    try:
+        from hefesto_dualsense4unix.daemon.launch_env import (
+            assinatura_do_ultimo_lancamento,
+        )
+    except ImportError:
+        return None
+    try:
+        return assinatura_do_ultimo_lancamento()
+    except OSError:
+        return None
+
 
 def invalidar_varredura_de_proc() -> None:
     """Joga fora a foto da varredura: a próxima pergunta varre `/proc` de novo.
@@ -1136,7 +1183,9 @@ def cmdline_de_pid(pid: str | int) -> str:
 _cmdline_of = cmdline_de_pid
 
 
-def _steam_launch_cmdline(*, agora: float | None = None) -> str | None:
+def _steam_launch_cmdline(
+    *, agora: float | None = None, exibicao: bool = False
+) -> str | None:
     """A cmdline do launch da Steam em curso, ou None. Sem forkar nada.
 
     PERF-PROC-SCAN-01 (12/08/2026). Isto substitui um `pgrep -f` que o daemon
@@ -1213,8 +1262,13 @@ def _steam_launch_cmdline(*, agora: float | None = None) -> str | None:
     O retorno é a cmdline crua para o chamador extrair o que quiser — é o que
     permite `steam_game_running` e `steam_game_running_appid` compartilharem uma
     varredura só, e é por isso que ambas enxergam exatamente o mesmo processo.
+
+    `exibicao` é a pergunta de quem MOSTRA (O-REPOUSO-ESPERA-O-EVENTO-01,
+    família 4): com o dono do evento armado, o negativo vale até
+    `TETO_DO_NEGATIVO_DE_EXIBICAO_S` enquanto o marker do lançamento não mudar.
+    Sem o dono (a janela, a CLI, o modo avulso), a camada 3 de sempre.
     """
-    global _ultima_varredura
+    global _ultima_varredura, _marcador_do_negativo
     # 1) Caminho rápido: o marker que o próprio wrapper grava no launch.
     #
     #    Import TARDIO porque este módulo é stdlib puro de propósito (ver o
@@ -1250,7 +1304,7 @@ def _steam_launch_cmdline(*, agora: float | None = None) -> str | None:
         if _STEAM_LAUNCH_RE.search(cmd) and re.search(rf"AppId={appid}\b", cmd):
             return cmd
 
-    agora = time.monotonic() if agora is None else float(agora)
+    agora = _agora() if agora is None else float(agora)
     foto = _ultima_varredura
 
     # 2) Reconfirmação do pid da última varredura: UM `open`, e a resposta é
@@ -1272,8 +1326,28 @@ def _steam_launch_cmdline(*, agora: float | None = None) -> str | None:
     # 3) Negativo ainda fresco: não varre `/proc` de novo.
     if foto is not None and (agora - foto[0]) < VALIDADE_DA_VARREDURA_S:
         return None
+    # 3b) O negativo longo da pergunta de exibição, preso ao marker
+    #     (O-REPOUSO-ESPERA-O-EVENTO-01, família 4). Só com o dono armado.
+    armado = _o_dono_do_evento_armado()
+    if (
+        exibicao
+        and armado
+        and foto is not None
+        and foto[1] is None
+        and (agora - foto[0]) < TETO_DO_NEGATIVO_DE_EXIBICAO_S
+    ):
+        guardado = _marcador_do_negativo
+        if (
+            guardado is not None
+            and guardado[0] == foto[0]
+            and guardado[1] == _assinatura_do_marcador()
+        ):
+            return None
 
     # 4) Varredura direta, sem forkar. Um `open` por pid.
+    #    O marker é assinado ANTES da varredura: um lançamento que o regrave no
+    #    meio dela muda a assinatura, e a pergunta seguinte varre de novo.
+    marcador_antes = _assinatura_do_marcador() if armado else None
     try:
         entries = os.listdir("/proc")
     except OSError:
@@ -1301,6 +1375,8 @@ def _steam_launch_cmdline(*, agora: float | None = None) -> str | None:
         _ultima_varredura = (agora, avaliador[0])
         return avaliador[1]
     _ultima_varredura = (agora, None)
+    if armado:
+        _marcador_do_negativo = (agora, marcador_antes)
     return None
 
 
@@ -1325,6 +1401,10 @@ def steam_game_running() -> bool:
     reconfirmado toda vez. Quem for FECHAR a Steam chama
     `invalidar_varredura_de_proc()` antes desta pergunta; a lista de quem já
     chama e de quem ainda não está em `_steam_launch_cmdline`.
+
+    O-REPOUSO-ESPERA-O-EVENTO-01 (29/09/2026): esta é a pergunta de RECUSA, e
+    segue na validade de 5 s mesmo com o dono do evento armado — o negativo
+    longo é só da pergunta de exibição.
     """
     return _steam_launch_cmdline() is not None
 
@@ -1360,8 +1440,13 @@ def steam_game_running_appid() -> int | None:
     devolve None. Esta é a evidência E4 do sinal de jogo
     (`game_signal.classify`), e contá-lo punha o lançamento no ramo
     `jogo_vivo` antes de o jogo existir — ver `e_avaliador_do_install_script`.
+
+    O-REPOUSO-ESPERA-O-EVENTO-01 (29/09/2026): é a pergunta de EXIBIÇÃO. Com o
+    dono do evento armado, o «não há jogo» vale até
+    `TETO_DO_NEGATIVO_DE_EXIBICAO_S` enquanto o marker do lançamento não
+    mudar e ninguém invalidar a foto.
     """
-    cmd = _steam_launch_cmdline()
+    cmd = _steam_launch_cmdline(exibicao=True)
     if cmd is None or e_avaliador_do_install_script(cmd):
         return None
     achado = re.search(r"SteamLaunch AppId=(\d+)", cmd)
