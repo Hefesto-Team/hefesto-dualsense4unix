@@ -273,6 +273,15 @@ REPORT_THREAD_THROTTLE_MAX_SEC: float = 0.032
 #: quatro no rádio a ~700 reports/s e 33 ms de volta, a volta lê ~23.
 LEITURAS_POR_VOLTA: int = 64
 
+#: A espera da volta VAZIA quando o throttle é zero (o botão
+#: `HEFESTO_DUALSENSE4UNIX_REPORT_THROTTLE_SEC=0`, que o `if throttle > 0` do
+#: laço aceita). Com a leitura bloqueante de antes, o throttle zero era o laço
+#: do upstream, no ritmo do aparelho; com a leitura sem espera, uma volta sem
+#: report e sem sono gira em falso e come um núcleo. Um milissegundo é menos
+#: que o intervalo de um report no cabo (4 ms) e devolve o ritmo do aparelho
+#: (O-BOTAO-DO-MIC-CHEGA-NA-HORA-01, conferência de 29/09/2026).
+ESPERA_DA_VOLTA_VAZIA_SEM_THROTTLE_SEC: float = 0.001
+
 #: Keepalive do write OUT quando o report não mudou (PERF-MULTI-CONTROLLER-01):
 #: o firmware retém o último estado, então reescrever um report IDÊNTICO a
 #: ~100Hz só satura o barramento (2+ controles = pressão no host controller da
@@ -1439,6 +1448,8 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                 throttle = self._throttle_sec
                 if throttle > 0:
                     time.sleep(throttle)
+                elif not lidos:
+                    time.sleep(ESPERA_DA_VOLTA_VAZIA_SEM_THROTTLE_SEC)
             except OSError:
                 self.connected = False
                 break

@@ -465,6 +465,44 @@ def test_com_a_fila_vazia_a_saida_escreve_em_cada_volta(bancada: _Bancada) -> No
     assert aparelho.lidos == 0
 
 
+class _GiraEmFalso(BaseException):
+    """Cem leituras no mesmo instante do relógio: a volta não dorme nunca."""
+
+
+def test_sem_throttle_a_volta_vazia_nao_gira_em_falso(
+    bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Com o throttle zero e o aparelho calado, a volta ainda dorme.
+
+    O `if throttle > 0` do laço aceita o zero (o botão do ambiente), e com a
+    leitura bloqueante de antes ele era o laço do upstream, no ritmo do
+    aparelho. Com a leitura sem espera, a volta vazia sem sono gira em falso.
+
+    MORDIDA: tirar a espera da volta vazia (`ESPERA_DA_VOLTA_VAZIA_SEM_
+    THROTTLE_SEC`) faz cem leituras no mesmo instante, e a régua levanta.
+    """
+    aparelho = _Aparelho(bancada.relogio, transporte="radio", taxa=0.0)
+    h = bancada.handle(aparelho, n=1)
+    h._throttle_sec = 0.0
+    h._output_muted = True
+    ler = bancada.c.hid_read_timeout
+    visto = {"t": -1.0, "n": 0}
+
+    def _contar(dev: Any, bufp: Any, length: int, ms: int) -> int:
+        if visto["t"] == bancada.relogio.t:
+            visto["n"] += 1
+            if visto["n"] > 100:
+                raise _GiraEmFalso("a volta vazia não dormiu")
+        else:
+            visto["t"], visto["n"] = bancada.relogio.t, 0
+        return ler(dev, bufp, length, ms)
+
+    monkeypatch.setattr(bancada.c, "hid_read_timeout", _contar)
+    bancada.rodar(h, segundos=0.05)
+
+    assert h.connected is True
+
+
 # ---------------------------------------------------------------------------
 # 4. Um parse por volta, com o report mais novo
 # ---------------------------------------------------------------------------
