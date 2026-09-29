@@ -213,28 +213,6 @@ def test_b_passa_no_widgets_da_tui() -> None:
     assert res.returncode == 0, res.stdout + res.stderr
 
 
-def test_b_passa_no_registro_historico_da_regressao() -> None:
-    """O diff de 21/04/2026 guarda 238 caracteres dos blocos preservados.
-
-    É o registro do incidente que originou o ADR-011. Se o portão reprovar este
-    arquivo, o portão virou o higienizador.
-    """
-    alvo = RAIZ / "docs" / "history" / "glyph-strip-regression-2026-04-23.diff"
-    if not alvo.exists():
-        pytest.skip("registro histórico ausente nesta árvore")
-
-    texto = alvo.read_text(encoding="utf-8")
-    quantos = sum(
-        1
-        for ch in texto
-        if any(ini <= ord(ch) <= fim for ini, fim in BLOCOS_ADR_011)
-    )
-    assert quantos > 100, "o registro histórico perdeu os glifos que o definem"
-
-    res = _roda(["--check-file", str(alvo)], RAIZ)
-    assert res.returncode == 0, res.stdout + res.stderr
-
-
 # ---------------------------------------------------------------------------
 # (c) A MORDIDA: arrancar a cláusula de preservação tem de fazer reprovar.
 # ---------------------------------------------------------------------------

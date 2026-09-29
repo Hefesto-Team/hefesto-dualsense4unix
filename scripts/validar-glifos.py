@@ -161,8 +161,7 @@ FAIXAS_EMOJI_PRESENTATION: tuple[tuple[int, int], ...] = (
 # ---------------------------------------------------------------------------
 # ADR-011, seção "Decisão", item "Permitidos". São os quatro blocos de UI
 # textual funcional. Apagá-los já quebrou a GUI em 21/04/2026 (indicadores de
-# estado Pango) e o BatteryMeter da TUI; ver
-# docs/history/glyph-strip-regression-2026-04-23.diff.
+# estado Pango) e o BatteryMeter da TUI.
 # ---------------------------------------------------------------------------
 BLOCOS_PRESERVADOS_ADR_011: tuple[tuple[int, int, str], ...] = (
     (0x2190, 0x21FF, "Arrows"),
