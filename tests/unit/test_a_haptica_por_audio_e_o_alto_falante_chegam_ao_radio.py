@@ -571,3 +571,64 @@ def test_os_tres_nos_do_lugar_dizem_o_lugar(
     assert servidor.nos[nos["alto-falante"]]["device.description"] == (
         af.descricao_do_alto_falante(uniq)
     )
+
+
+def test_o_microfone_do_radio_pelo_caminho_de_volta_tambem_diz_o_lugar(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """O canal recusa (o ``uniq`` sem identidade, ou o canal que não sobe) e a ponte
+    publica o nó de sempre: ele também diz o lugar, o mesmo N do dono do assento.
+
+    MORDIDA: tire o ``lugar=numero_do_assento(...)`` do ``SourceVirtualPipeWire``
+    de reserva em ``PonteMicBluetooth.iniciar`` — o nó chega sem o lugar.
+    """
+    from hefesto_dualsense4unix.integrations import canal_do_microfone as canal
+    from hefesto_dualsense4unix.integrations import dualsense_bt_audio as dba
+
+    servidor = ServidorQueGuarda()
+    monkeypatch.setattr(dba, "_NUMERADOR_DE_ASSENTO", ASSENTOS.get)
+    monkeypatch.setattr(dba, "_rodar", servidor)
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    monkeypatch.setattr(canal, "abrir", lambda *_a, **_k: None)
+
+    class _SourceQuePublicaEPara(dba.SourceVirtualPipeWire):
+        """Publica o nó de verdade no servidor de mentira e recusa depois: a
+        régua lê o NÓ, e não quer uma thread de áudio girando na suíte."""
+
+        def iniciar(self) -> bool:
+            super().iniciar()
+            return False
+
+    monkeypatch.setattr(dba, "SourceVirtualPipeWire", _SourceQuePublicaEPara)
+    leitura, escrita = os.pipe()
+    os.close(escrita)
+    no = dba.NoDualSenseBT(caminho="/dev/hidraw9", uniq=P3, produto=0x0CE6)
+    ponte = dba.PonteMicBluetooth(no, opener=lambda _c: leitura, decodificador=object())
+    assert ponte.iniciar() is False
+    nome = ponte._nome_source
+    assert nome in servidor.nos, "o nó de reserva do microfone não foi publicado"
+    assert servidor.nos[nome].get("hefesto.lugar") == str(ASSENTOS[P3]), servidor.nos[nome]
+
+
+def test_a_ponte_do_som_que_subiu_antes_do_endpoint_ganha_o_ouvido(sala: Mesa) -> None:
+    """O fluxo do alto-falante abre antes do endpoint (a ponte sobe sem ouvido da
+    háptica); o endpoint abre depois, com o canto calado: a ponte sobe de novo COM o
+    ouvido, e a pausa entre dois cantos não dá o rádio à háptica muda.
+
+    MORDIDA: faça ``sem_ouvido`` ser sempre falso em ``_casar_as_pontes`` — o
+    endpoint fica sem ninguém que o escute («não sei»), e o jogador que mexe na
+    pausa leva a ponte à háptica muda.
+    """
+    som, endpoint = af.nome_do_sink(P4), no_do(P4)
+    sala.servidor.tocar(som, FORJA)
+    sala.volta()
+    assert sala.arranjo(P4) == af.ARRANJO_035.nome
+    sala.esperar(som, False)
+    assert sala.ouvido.tem_sinal(endpoint) is None
+    sala.servidor.tocar(endpoint, FORJA)
+    sala.volta()
+    assert sala.arranjo(P4) == af.ARRANJO_035.nome
+    sala.esperar(endpoint, False)
+    sala.mexer(P4)
+    sala.volta()
+    assert sala.arranjo(P4) == af.ARRANJO_035.nome, "a pausa do canto deu o rádio à háptica muda"
