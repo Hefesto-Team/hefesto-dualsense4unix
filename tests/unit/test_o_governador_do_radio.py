@@ -265,13 +265,19 @@ class _AdaptadorQueEscoaDuas:
 def test_tres_pontes_que_alternam_nao_enchem_o_diario() -> None:
     """A R4 de verdade: três pontes num adaptador que escoa duas.
 
-    O governador alterna ceder e voltar a cada janela — é o engasgo que a R4
-    aceita. Só a borda no diário dava 240 linhas por minuto, e o diário de
-    meio mega girava em minutos, levando o ``PONTE_SUBIU`` que o fato da queda
-    lê. Um episódio por minuto entra; os outros são contados na linha seguinte.
+    Os episódios de ceder se repetem — é o engasgo que a R4 aceita. Só a borda
+    no diário dava 240 linhas por minuto, e o diário de meio mega girava em
+    minutos, levando o ``PONTE_SUBIU`` que o fato da queda lê. Um episódio por
+    minuto entra; os outros são contados na linha seguinte.
 
-    MORDIDA: ``INTERVALO_DAS_BORDAS_NO_DIARIO_S = 0`` e o diário ganha as
-    seiscentas bordas de cinco minutos.
+    O-GOVERNADOR-COM-UM-ADAPTADOR-SO-01 (28/09/2026): dentro do episódio só
+    cede quem não cabe, e a vez gira (``test_o_governador_com_um_adaptador_so``).
+    Esta régua guarda o teto do diário; o ``episodios > 100`` que documentava a
+    alternância de antes saiu, e o episódio é o do ADAPTADOR (o ``cedendo`` que
+    o ``publicar()`` diz), não o da primeira ponte, que agora cede na sua vez.
+
+    MORDIDA: ``INTERVALO_DAS_BORDAS_NO_DIARIO_S = 0`` e o diário ganha uma
+    borda por episódio.
     """
     relogio, registro = _Relogio(), _Diario()
     medidor = _AdaptadorQueEscoaDuas()
@@ -301,11 +307,12 @@ def test_tres_pontes_que_alternam_nao_enchem_o_diario() -> None:
         medidor.janela(escritas)
         relogio.agora += gov.PERIODO_S
         governador.tique()
-        if vagas[0].cedendo and not cedendo_antes:
+        cedendo = governador.publicar()[ADAPTADOR_A]["cedendo"]
+        if cedendo and not cedendo_antes:
             episodios += 1
-        cedendo_antes = vagas[0].cedendo
+        cedendo_antes = cedendo
     cedeu = registro.de(gov.CEDEU_NA_FONTE)
-    assert episodios > 100, f"o dublê não alternou ({episodios} episódios)"
+    assert episodios > 6, f"o dublê não repetiu o episódio ({episodios})"
     assert len(cedeu) <= 6, f"{len(cedeu)} bordas em cinco minutos: o diário gira e perde o resto"
     assert len(registro.de(gov.VOLTOU_A_ESCREVER)) in (len(cedeu), len(cedeu) - 1)
     contados = sum(1 + e["antes"]["episodios_calados"] for e in cedeu)

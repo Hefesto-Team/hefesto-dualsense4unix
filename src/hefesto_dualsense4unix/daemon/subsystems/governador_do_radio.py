@@ -186,6 +186,8 @@ ESCRITAS_QUE_PROVAM_QUE_A_FILA_ANDA = 64
 #: diário de meio mega girava em minutos, levando junto o ``PONTE_SUBIU`` que o
 #: ``storm_doctor.o_fato_da_queda`` precisa e as frases dos outros motores. O
 #: episódio que não entra é CONTADO, e a próxima linha diz quantos foram.
+#: Desde 28/09 (O-GOVERNADOR-COM-UM-ADAPTADOR-SO-01) dentro do episódio só cede
+#: quem não cabe, e os episódios são mais longos; o teto do diário fica.
 INTERVALO_DAS_BORDAS_NO_DIARIO_S = 60.0
 
 #: Um pedido que a tela não respondeu e que ninguém renovou some. O subsystem
@@ -558,6 +560,22 @@ class _Estado:
     #: De quem é a vez de ceder: a posição na ordem da vaga. Fica entre os
     #: episódios, para a mesma ponte não abrir todos.
     vez: int = 0
+    #: A última decisão cedeu o adaptador INTEIRO (não coube nenhuma). Só a
+    #: janela que segue uma decisão dessas anda o relógio do teto.
+    inteiro: bool = False
+
+
+@dataclass
+class _JanelaMedida:
+    """O que uma janela medida disse de um adaptador — a entrada da vez."""
+
+    #: As pontes que escreveram nesta janela, na ordem da vaga.
+    com_escrita: list[Any]
+    #: Pacotes que o adaptador pôs no ar na janela (a saída vezes a janela).
+    no_ar: float
+    #: Quanto a fila do host cresceu na janela (negativo = escoou).
+    cresceu: float
+    janela_s: float
 
 
 @dataclass
@@ -1286,42 +1304,111 @@ class GovernadorDoRadio:
             return False
         estado.ultimo_ar = ar
         escritas = 0
+        com_escrita: list[Vaga] = []
         for vaga in vagas:
-            escritas += vaga.escritas - vaga._vistas
+            desta = vaga.escritas - vaga._vistas
             vaga._vistas = vaga.escritas
+            escritas += desta
+            if desta > 0:
+                com_escrita.append(vaga)
         saida = getattr(ar, "saida_por_s", None)
         janela = float(getattr(ar, "janela_s", 0.0) or 0.0)
         if saida is None or janela <= 0:
             estado.deficit_medido = False
             return False
         estado.deficit_medido = True
+        fila_antes = estado.fila
         estado.fila = max(0.0, estado.fila + escritas - float(saida) * janela)
-        self._as_bordas(estado, vagas, endereco, agora, janela, bordas)
+        if com_escrita:
+            media = escritas / len(com_escrita)
+            estado.por_ponte = (
+                media
+                if estado.por_ponte is None
+                else estado.por_ponte + PESO_DA_JANELA_NA_MEDIA * (media - estado.por_ponte)
+            )
+        janela_medida = _JanelaMedida(
+            com_escrita=com_escrita,
+            no_ar=float(saida) * janela,
+            cresceu=estado.fila - fila_antes,
+            janela_s=janela,
+        )
+        self._as_bordas(estado, vagas, janela_medida, endereco, agora, bordas)
         return (
             escritas >= LIMIAR_DO_DEFICIT
             and estado.fila <= FOLGA_PARA_VOLTAR
             and not estado.cedendo
         )
 
+    def _a_vez(self, estado: _Estado, vagas: list[Vaga], janela: _JanelaMedida) -> None:
+        """Cede só quem não cabe, e cada um na sua vez. Chamado com a trava.
+
+        O-GOVERNADOR-COM-UM-ADAPTADOR-SO-01. Quantas CABEM é a saída medida da
+        janela dividida pelo que uma ponte com escrita escreve (a média de
+        :attr:`_Estado.por_ponte`, arredondada: a contagem de uma janela oscila
+        de um quadro). Se a fila cresceu mais que um quadro por ponte com as que
+        escreveram, cabe uma a menos que elas — a conta nunca deixa a fila
+        crescer duas janelas seguidas.
+
+        Entram na vez as pontes COM ESCRITA na janela e as que estavam
+        cedendo (quem cede não escreve, e segue querendo). A ponte sem escrita
+        que não estava cedendo fica fora: ela não pesa no ar, e dar a ela a vez
+        de ceder tiraria a vez de quem escreve. A vez gira pela ORDEM DA VAGA
+        (a ordem de :attr:`GovernadorDoRadio._vagas`), nunca pelo número do
+        jogador, e anda quantas cederam — na volta inteira, cada uma cede o
+        mesmo número de janelas.
+
+        No episódio cede ao menos uma: a fila está acima da folga, e é o ceder
+        que a escoa. Quando não cabe nenhuma — o adaptador parado, o 2B —, cede
+        o adaptador inteiro, como antes, e :attr:`_Estado.inteiro` diz ao
+        relógio do teto que esta janela conta.
+        """
+        com_escrita = janela.com_escrita
+        na_vez = [v for v in vagas if v.cedendo or any(v is e for e in com_escrita)]
+        por_ponte = estado.por_ponte or 0.0
+        cabem = int(janela.no_ar / por_ponte) if por_ponte > 0 else 0
+        if janela.cresceu > len(com_escrita):
+            cabem = min(cabem, len(com_escrita) - 1)
+        if cabem <= 0 or not na_vez:
+            estado.inteiro = True
+            for vaga in vagas:
+                vaga.cedendo = True
+            return
+        estado.inteiro = False
+        ceder = min(len(na_vez), max(1, len(na_vez) - cabem))
+        inicio = estado.vez % len(na_vez)
+        cedem = [na_vez[(inicio + i) % len(na_vez)] for i in range(ceder)]
+        estado.vez = inicio + ceder
+        for vaga in vagas:
+            vaga.cedendo = any(vaga is c for c in cedem)
+
     def _as_bordas(
         self,
         estado: _Estado,
         vagas: list[Vaga],
+        janela: _JanelaMedida,
         endereco: str,
         agora: float,
-        janela: float,
         bordas: list[tuple[str, dict[str, Any]]],
     ) -> None:
         """Ceder e voltar, pela fila da janela medida. Chamado com a trava."""
         if estado.cedendo and estado.fila > FOLGA_PARA_VOLTAR:
-            # Seguiu cedendo numa janela MEDIDA: só esta anda o relógio do teto.
-            estado.cedendo_medido_s += janela
+            por_ponte = estado.por_ponte or 0.0
+            if estado.inteiro:
+                # O adaptador inteiro seguiu cedendo numa janela MEDIDA: só
+                # esta anda o relógio do teto.
+                estado.cedendo_medido_s += janela.janela_s
+            elif por_ponte > 0 and janela.no_ar >= por_ponte:
+                # A janela pôs no ar ao menos o que uma ponte escreve: o
+                # adaptador escoa, e o que o relógio somou não era parada.
+                estado.cedendo_medido_s = 0.0
+        if estado.cedendo and estado.fila > FOLGA_PARA_VOLTAR:
+            # O episódio segue: a vez anda.
+            self._a_vez(estado, vagas, janela)
         if not estado.cedendo and estado.fila > LIMIAR_DO_DEFICIT:
             estado.cedendo = True
             estado.cedendo_desde = agora
             estado.cedendo_medido_s = 0.0
-            for vaga in vagas:
-                vaga.cedendo = True
+            self._a_vez(estado, vagas, janela)
             diario_das_bordas = self._bordas_no_diario.setdefault(endereco, _BordasNoDiario())
             # Durante a espera crescente de uma fila parada (item 3), ceder é a
             # TENTATIVA falhando de novo: o diário já disse a espera, e a borda
@@ -1352,6 +1439,7 @@ class GovernadorDoRadio:
             )
         elif estado.cedendo and estado.fila <= FOLGA_PARA_VOLTAR:
             estado.cedendo = False
+            estado.inteiro = False
             segundos = agora - (estado.cedendo_desde or agora)
             estado.cedendo_desde = None
             estado.cedendo_medido_s = 0.0
@@ -1404,6 +1492,7 @@ class GovernadorDoRadio:
             estado = self._estados.get(adaptador)
             if estado is not None:
                 estado.cedendo = False
+                estado.inteiro = False
                 estado.cedendo_desde = None
                 estado.cedendo_medido_s = 0.0
                 estado.fila = 0.0
