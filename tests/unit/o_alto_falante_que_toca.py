@@ -1,7 +1,7 @@
 """O alto-falante daquele controle TEM som saindo — o dublê de uma linha.
 
 **Nascido da RADIO-AFOGADO-01, 22/09/2026, e compartilhado de propósito.**
-Naquele dia a ponte do som deixou de subir em silêncio: ela escrevia 93,75
+Naquele dia a ponte do som deixou de subir em silêncio: ela escrevia 100
 reports de 334 B por segundo em cada DualSense do rádio, tocasse alguém ou
 não, e com três de pé a mesa dela caía em 11 a 89 segundos.
 

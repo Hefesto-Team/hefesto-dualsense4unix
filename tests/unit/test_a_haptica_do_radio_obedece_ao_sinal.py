@@ -3,8 +3,8 @@
 **A causa, medida em 27/09/2026** (PRAGMATA no menu, os quatro no rádio): o
 jogo abre um fluxo de quatro canais em cada um dos quatro endpoints e manda
 SILÊNCIO EXATO por eles (RMS e pico 0). Para o daemon, «tocando» era «o fluxo
-existe», e não «há sinal»: a ponte de pé em silêncio a 93,75 reports por
-segundo foi o que afogou o rádio em 22/09, e o portão por evdev (20/09) e o
+existe», e não «há sinal»: a ponte do som de pé em silêncio a 100 reports
+por segundo afogou o rádio em 22/09, e o portão por evdev (20/09) e o
 ``quem_mexe`` (26/09) nasceram para não subir quatro pontes mudas.
 
 **A cura:** a ponte escuta o monitor o tempo todo (ler é local) e só escreve o

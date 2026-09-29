@@ -336,9 +336,9 @@ A queixa dela foi *"4 controles conectados só um aparece na interface agora"*.
 
 | o que | quanto |
 | --- | --- |
-| escrita da ponte de som por rádio | **93,75 reports de 334 B por segundo, POR CONTROLE** |
-| no fio (`ACL Data TX`, +5 de L2CAP+HIDP) | 339 B por pacote ≈ 254 kbit/s por ponte |
-| quatro pontes num adaptador só | ≈ 1,0 Mbit/s SÓ de saída |
+| escrita da ponte de som por rádio | **100 reports de 334 B por segundo, POR CONTROLE** (o diário imprimia a constante, 93,75; o kprobe de 27/09 contou 100,0/s, e desde 29/09 a ponte anda a 93,75) |
+| no fio (`ACL Data TX`, +5 de L2CAP+HIDP) | 339 B por pacote ≈ 271 kbit/s por ponte |
+| quatro pontes num adaptador só | ≈ 1,1 Mbit/s SÓ de saída |
 | `kernel: playstation …: Output queue is full` | 3807 linhas em um minuto, um único aparelho |
 | `escrita_recusada` no diário do daemon | **ZERO** |
 

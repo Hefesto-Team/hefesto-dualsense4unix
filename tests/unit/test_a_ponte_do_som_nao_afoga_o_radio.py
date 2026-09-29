@@ -5,11 +5,11 @@ interface agora"*. <!-- noqa-acento: citação literal dela -->
 
 **O QUE FOI MEDIDO NO DIÁRIO DAQUELE DIA:**
 
-* a ponte do som escreve **93,75 reports de 334 B por segundo, por controle**,
-  e não pergunta se alguém está tocando: o monitor de um `module-null-sink`
-  entrega silêncio em tempo real para sempre, e silêncio custa o mesmo byte
-  que música. Uma ponte ficou de pé **44 minutos sem uma linha de som** no
-  diário — 247 mil escritas, 83 MB no rádio, para não tocar nada;
+* a ponte do som escrevia **100 reports de 334 B por segundo, por controle**
+  (o diário imprimia a constante, 93,75), e não perguntava se alguém tocava:
+  o monitor de um `module-null-sink` entrega silêncio em tempo real para
+  sempre, e silêncio custa o mesmo byte que música. Uma ponte ficou de pé
+  **44 minutos sem uma linha de som** no diário — ~264 mil escritas, 88 MB no rádio, para nada;
 * **o teto da mesa dela é DUAS.** Duas pontes viveram 63 minutos sem um único
   `EAGAIN`; as TRÊS vezes em que a terceira subiu, a mesa inteira caiu em 11,
   15 e 89 segundos;

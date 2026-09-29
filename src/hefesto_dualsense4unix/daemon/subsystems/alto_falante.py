@@ -2156,10 +2156,10 @@ class AltoFalanteSubsystem:
             )
             # A PONTE DO SOM SÓ EXISTE ENQUANTO HÁ SOM — RADIO-AFOGADO-01,
             # 22/09/2026, e é o defeito que tirou três dos quatro controles
-            # dela da mesa. Ela escrevia 93,75 reports de 334 B por segundo
-            # por controle, tocasse alguém ou não; o teto medido desta mesa é
-            # DUAS pontes, e a terceira derrubou os quatro em 11 a 89
-            # segundos. Os números, a corrente até o `EAGAIN` do bluetoothd e
+            # dela da mesa. Ela escrevia 100 reports de 334 B por segundo por
+            # controle (93,75 desde 29/09), tocasse alguém ou não; o teto
+            # medido desta mesa é DUAS pontes, e a terceira derrubou os quatro
+            # em 11 a 89 segundos. Os números, a corrente até o `EAGAIN` do bluetoothd e
             # a razão de portão nenhum ter visto isto estão em
             # `tests/unit/test_a_ponte_do_som_nao_afoga_o_radio.py`.
             #
@@ -2260,7 +2260,7 @@ class AltoFalanteSubsystem:
             # O BIT DO MICROFONE VAI JUNTO, E ELE É PERGUNTADO A CADA REPORT
             # — 10/09/2026, queixa dela com o som tocando pelo rádio. O `0x35`
             # carrega, no bit 0 dos enables, o mesmo microfone; a ponte nascia
-            # com ele em ZERO e o repetia 93,75 vezes por segundo, desligando
+            # com ele em ZERO e o repetia cem vezes por segundo, desligando
             # o microfone dela enquanto o som saía. Quem responde é o
             # `BtMicSubsystem`, pelo gancho — nenhum subsystem importa o
             # outro. `functools.partial` e não `lambda` pela mesma razão do

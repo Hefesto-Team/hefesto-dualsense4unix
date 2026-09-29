@@ -14,9 +14,9 @@ O `0x35` que leva o som carrega, no primeiro byte do bloco `0x11`, sete bits de
 enable — e **o bit 0 é o MICROFONE** (`ENABLES_SEM_MIC = 0xFE`,
 `ENABLES_COM_MIC = 0xFF`, medidos em 10/09). O `AltoFalanteSubsystem` construía
 `PonteDeSomPorRadio` sem `com_microfone`, logo com o padrão `False` — e a bomba
-repetia aquele `0xFE` a **93,75 reports por segundo**.
+repetia aquele `0xFE` a **100 reports por segundo**.
 
-*O som desligava o microfone noventa e três vezes por segundo.*
+*O som desligava o microfone cem vezes por segundo.*
 
 É a família de defeito que este lote já pagou duas vezes no mesmo dia (A1 e
 A2): **um parâmetro por controle que ninguém injetava**. A diferença é que os
@@ -168,7 +168,7 @@ class TestAFiacao:
         """MORDIDA: tire `com_microfone=` da fábrica em `alto_falante.py`.
 
         Sem esse argumento a ponte volta ao padrão `False` — que é o produto
-        de antes desta cura, com o `0xFE` no fio 93,75 vezes por segundo.
+        de antes desta cura, com o `0xFE` no fio cem vezes por segundo.
         """
         from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
 
