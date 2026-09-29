@@ -1,7 +1,11 @@
 """Subsystem Autoswitch — gerencia troca automática de perfis por janela ativa.
 
-Implementa o protocolo Subsystem e expõe start_autoswitch() / stop_autoswitch()
-como funções utilitárias para uso direto pelo Daemon.
+Implementa o protocolo Subsystem e expõe start_autoswitch() como função
+utilitária para uso direto pelo Daemon.
+
+O DESLIGAR TEM UM DONO SÓ, e é o `shutdown` de `daemon/connection.py`: ele
+para o autoswitch em linha e descarta a referência. A utilitária
+`stop_autoswitch`, que fazia o mesmo e só a suíte chamava, saiu em 28/09/2026.
 """
 from __future__ import annotations
 
@@ -301,12 +305,4 @@ async def start_autoswitch(daemon: DaemonProtocol) -> None:
         daemon._autoswitch.start()
 
 
-async def stop_autoswitch(daemon: DaemonProtocol) -> None:
-    """Função utilitária: para o AutoSwitcher do Daemon."""
-    if daemon._autoswitch is not None:
-        with contextlib.suppress(Exception):
-            daemon._autoswitch.stop()
-        daemon._autoswitch = None
-
-
-__all__ = ["AutoswitchSubsystem", "start_autoswitch", "stop_autoswitch"]
+__all__ = ["AutoswitchSubsystem", "start_autoswitch"]

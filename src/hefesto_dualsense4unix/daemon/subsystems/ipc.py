@@ -1,7 +1,11 @@
 """Subsystem IPC — wrapper do IpcServer para o orquestrador.
 
-Expõe start_ipc() / stop_ipc() como funções utilitárias e implementa
-o protocolo Subsystem para integração com o registry.
+Expõe start_ipc() como função utilitária e implementa o protocolo
+Subsystem para integração com o registry.
+
+O DESLIGAR TEM UM DONO SÓ, e é o `shutdown` de `daemon/connection.py`: ele
+derruba o servidor de IPC em linha, com teto de 2 s. A utilitária `stop_ipc`,
+que fazia o mesmo sem o teto e só a suíte chamava, saiu em 28/09/2026.
 """
 from __future__ import annotations
 
@@ -81,12 +85,4 @@ async def start_ipc(daemon: DaemonProtocol) -> None:
     await daemon._ipc_server.start()
 
 
-async def stop_ipc(daemon: DaemonProtocol) -> None:
-    """Função utilitária: para o IpcServer do Daemon."""
-    if daemon._ipc_server is not None:
-        with contextlib.suppress(Exception):
-            await daemon._ipc_server.stop()
-        daemon._ipc_server = None
-
-
-__all__ = ["IpcSubsystem", "start_ipc", "stop_ipc"]
+__all__ = ["IpcSubsystem", "start_ipc"]

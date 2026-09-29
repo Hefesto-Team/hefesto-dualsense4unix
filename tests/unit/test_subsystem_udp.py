@@ -4,7 +4,7 @@ Prova que:
   - UdpSubsystem.is_enabled segue config.udp_enabled.
   - UdpSubsystem.stop é idempotente.
   - UdpSubsystem.stop chama server.stop() quando server existe.
-  - stop_udp é noop quando daemon._udp_server is None.
+  - o desligar do daemon tem um dono só: a utilitária `stop_udp` não volta.
 """
 from __future__ import annotations
 
@@ -12,7 +12,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from hefesto_dualsense4unix.daemon.subsystems.udp import UdpSubsystem, stop_udp
+from hefesto_dualsense4unix.daemon.subsystems import udp as modulo
+from hefesto_dualsense4unix.daemon.subsystems.udp import UdpSubsystem
 
 
 class TestUdpSubsystem:
@@ -45,19 +46,16 @@ class TestUdpSubsystem:
         assert subsystem._server is None
 
 
-class TestStopUdp:
-    @pytest.mark.asyncio
-    async def test_stop_udp_noop_sem_server(self) -> None:
-        daemon = MagicMock()
-        daemon._udp_server = None
-        await stop_udp(daemon)  # não deve lançar
+class TestODesligarTemUmDonoSo:
+    """O `shutdown` de `daemon/connection.py` derruba `_udp_server` em linha.
 
-    @pytest.mark.asyncio
-    async def test_stop_udp_chama_stop_e_zera_referencia(self) -> None:
-        daemon = MagicMock()
-        mock_server = MagicMock()
-        mock_server.stop = AsyncMock()
-        daemon._udp_server = mock_server
-        await stop_udp(daemon)
-        mock_server.stop.assert_called_once()
-        assert daemon._udp_server is None
+    A utilitária `stop_udp` fazia o mesmo e só a suíte a chamava: duas cópias
+    do desligar, e a do `shutdown` tem o teto de tempo que a outra não tinha.
+    Ela saiu em 28/09/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01). Quem prova
+    o desligar é `tests/unit/test_daemon_shutdown.py`, que sobe o daemon e
+    confere `_udp_server` zerado depois do `shutdown`.
+    """
+
+    def test_a_utilitaria_de_desligar_nao_volta(self) -> None:
+        assert not hasattr(modulo, "stop_udp")
+        assert "stop_udp" not in modulo.__all__

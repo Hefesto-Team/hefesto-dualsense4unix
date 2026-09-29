@@ -4,7 +4,7 @@ Prova que:
   - AutoswitchSubsystem.is_enabled segue config.autoswitch_enabled.
   - AutoswitchSubsystem.stop é idempotente.
   - AutoswitchSubsystem.stop chama autoswitch.stop() quando existe.
-  - stop_autoswitch é noop quando daemon._autoswitch is None.
+  - o desligar do daemon tem um dono só: a utilitária `stop_autoswitch` não volta.
 """
 from __future__ import annotations
 
@@ -12,10 +12,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto_dualsense4unix.daemon.subsystems.autoswitch import (
-    AutoswitchSubsystem,
-    stop_autoswitch,
-)
+from hefesto_dualsense4unix.daemon.subsystems import autoswitch as modulo
+from hefesto_dualsense4unix.daemon.subsystems.autoswitch import AutoswitchSubsystem
 
 
 class TestAutoswitchSubsystem:
@@ -47,18 +45,16 @@ class TestAutoswitchSubsystem:
         assert subsystem._autoswitch is None
 
 
-class TestStopAutoswitch:
-    @pytest.mark.asyncio
-    async def test_stop_autoswitch_noop_sem_autoswitch(self) -> None:
-        daemon = MagicMock()
-        daemon._autoswitch = None
-        await stop_autoswitch(daemon)  # não deve lançar
+class TestODesligarTemUmDonoSo:
+    """O `shutdown` de `daemon/connection.py` derruba `_autoswitch` em linha.
 
-    @pytest.mark.asyncio
-    async def test_stop_autoswitch_chama_stop(self) -> None:
-        daemon = MagicMock()
-        mock_sw = MagicMock()
-        daemon._autoswitch = mock_sw
-        await stop_autoswitch(daemon)
-        mock_sw.stop.assert_called_once()
-        assert daemon._autoswitch is None
+    A utilitária `stop_autoswitch` fazia o mesmo e só a suíte a chamava: duas
+    cópias do desligar, que divergiriam na primeira mudança de uma delas.
+    Ela saiu em 28/09/2026 (O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01). Quem prova
+    o desligar é `tests/unit/test_daemon_shutdown.py`, que sobe o daemon e
+    confere `_autoswitch` zerado depois do `shutdown`.
+    """
+
+    def test_a_utilitaria_de_desligar_nao_volta(self) -> None:
+        assert not hasattr(modulo, "stop_autoswitch")
+        assert "stop_autoswitch" not in modulo.__all__
