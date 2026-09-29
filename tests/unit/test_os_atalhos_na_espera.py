@@ -3,7 +3,7 @@
 **REVISTO EM 28/09/2026** pela O-MODO-XBOX-NAO-E-QUEDA-02, item 5 (a decisão
 dela de 27/09, ``D-2709-O-PS-R3-EM-QUALQUER-CONTROLE``): o PS e as combinações
 valem em QUALQUER um dos quatro controles, dentro e fora da espera. O que esta
-régua media como «só o próximo da fila segura» (as testemunhas mudas, o P2 mudo
+régua afirmava como «só o próximo da fila segura» (as testemunhas mudas, o P2 mudo
 com o P1 na mesa, o diário da troca de mão) caducou com a decisão; o que fica é
 a espera: o P1 fora dentro do prazo não cala os atalhos de ninguém, o vpad
 parado dele não recebe nada, e a pergunta «de quem é o gesto» nunca responde o
