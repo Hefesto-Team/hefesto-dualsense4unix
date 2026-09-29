@@ -412,9 +412,12 @@ def test_o_escritor_avulso_fecha_ao_sair_e_o_close_nao_espera_por_ele(
 # ---------------------------------------------------------------------------
 
 
-def _mesa_presa(bancada: _Bancada, n: int) -> tuple[Any, list[_No]]:
+def _mesa_presa(
+    bancada: _Bancada, n: int
+) -> tuple[Any, list[_No], list[bp._PinnedPyDualSense]]:
     ctl = bp.PyDualSenseController()
     nos: list[_No] = []
+    handles: list[bp._PinnedPyDualSense] = []
     for i in range(n):
         no = _No()
         no.segurar_read = True
@@ -423,26 +426,50 @@ def _mesa_presa(bancada: _Bancada, n: int) -> tuple[Any, list[_No]]:
         assert no.preso_no_read.wait(2.0)
         ctl._handles[f"aabbcc0000a{i}"] = h
         nos.append(no)
-    return ctl, nos
+        handles.append(h)
+    return ctl, nos, handles
+
+
+def _os_que_sairam_param_e_fecham(
+    bancada: _Bancada, nos: list[_No], handles: list[bp._PinnedPyDualSense]
+) -> None:
+    """Todo handle que saiu recebeu o sinal, e fecha quando o «kernel» o solta.
+
+    Sem esta conferência, um teto comum sem o sinal passaria verde: o prazo
+    acaba igual, mas as threads seguem com `ds_thread` de pé e voltam a
+    escrever num controle que já saiu do mapa (mordida de 29/09, conferência).
+    """
+    assert all(h.ds_thread is False for h in handles), "um handle saiu sem o sinal"
+    for no in nos:
+        no.soltar(_report_do_radio())
+    for h in handles:
+        assert h.report_thread is not None
+        h.report_thread.join(timeout=2.0)
+        assert not h.report_thread.is_alive(), "a thread que saiu não parou"
+    assert all(no.fechado for no in nos), "quem saiu por último não fechou"
+    assert not any(no.liberado_com_uso for no in nos)
+    assert len(bancada.diario.eventos("report_thread_saiu_e_fechou")) == len(handles)
 
 
 def test_os_quatro_presos_param_num_teto_so(bancada: _Bancada) -> None:
     """`disconnect()` com os quatro presos no `read` volta em < 1,5 x o teto.
 
-    MORDIDA: o sinal e o `join` um handle por vez dão ≥ 4 x o teto.
+    MORDIDAS: o sinal e o `join` um handle por vez dão ≥ 4 x o teto; o teto
+    comum SEM o sinal de todos antes do primeiro `join` deixa as threads de pé.
     """
-    ctl, nos = _mesa_presa(bancada, 4)
+    ctl, nos, handles = _mesa_presa(bancada, 4)
 
     gasto = _cronometrar(ctl.disconnect)
 
     assert gasto < 1.5 * TETO, f"o disconnect levou {gasto:.2f} s com quatro presos"
     assert not any(no.fechado for no in nos), "fechou por cima de uma leitura"
     assert len(bancada.diario.eventos("report_thread_nao_encerrou")) == 4
+    _os_que_sairam_param_e_fecham(bancada, nos, handles)
 
 
 def test_os_dois_que_saem_no_hotplug_pagam_um_teto(bancada: _Bancada) -> None:
     """O `_close_handles` com duas chaves saindo, idem."""
-    ctl, nos = _mesa_presa(bancada, 4)
+    ctl, nos, handles = _mesa_presa(bancada, 4)
     ficam = {"aabbcc0000a0", "aabbcc0000a1"}
 
     def _hotplug() -> None:
@@ -454,6 +481,8 @@ def test_os_dois_que_saem_no_hotplug_pagam_um_teto(bancada: _Bancada) -> None:
     assert gasto < 1.5 * TETO, f"o hotplug levou {gasto:.2f} s com dois saindo"
     assert set(ctl._handles) == ficam
     assert not any(no.fechado for no in nos)
+    assert all(h.ds_thread is True for h in handles[:2]), "o sinal alcançou quem fica"
+    _os_que_sairam_param_e_fecham(bancada, nos[2:], handles[2:])
 
 
 # ---------------------------------------------------------------------------
