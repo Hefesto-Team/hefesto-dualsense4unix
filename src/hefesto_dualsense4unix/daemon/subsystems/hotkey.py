@@ -2220,12 +2220,12 @@ async def _eleger_ou_devolver(
         ativo=resultado.ativo,
         motivo=resultado.motivo,
     )
-    # ...E A MESMA FRASE VAI PARA A TELA. As cinco frases de
+    # ...E A MESMA FRASE VAI PARA A TELA. As frases de
     # `ResultadoDaEleicao.motivo` ("não há canal de captura atribuível a este
-    # controle", "o WirePlumber reelegeu por cima", "não há microfone para onde
-    # voltar"…) saíam SÓ no `logger.info` acima, e o docstring do tipo já
-    # prometia que elas eram "o texto que vai para a tela". O recado sobrevive
-    # ao tique seguinte porque fica GUARDADO — ver
+    # controle", "o WirePlumber reelegeu por cima"…) saíam SÓ no `logger.info`
+    # acima (o «não há para onde voltar» não chega mais aqui: é o «fica»).
+    # O docstring do tipo já prometia que elas eram "o texto que vai para a
+    # tela". O recado sobrevive ao tique seguinte porque fica GUARDADO — ver
     # `daemon/subsystems/recado_do_microfone`.
     recado_do_microfone.anotar(
         daemon,
