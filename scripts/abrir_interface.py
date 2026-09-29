@@ -104,6 +104,7 @@ import runpy
 import signal
 import sys
 from pathlib import Path
+from typing import Any
 
 # Este lançador roda o piloto no PRÓPRIO processo (`runpy`), então a janela dele
 # é uma janela de verdade — e não nasce na tela dela (TELA-DELA-02). Quem quer
@@ -256,7 +257,7 @@ def tomar_a_vez(args: list[str]) -> str | None:
     return nome if pid is not None else None
 
 
-def janelas_de_frente(janelas: list[object]) -> list[object]:
+def janelas_de_frente(janelas: list[Any]) -> list[Any]:
     """As janelas que um pedido de vir à frente apresenta.
 
     As de primeiro nível, visíveis e sem dona: a janela das abas. Um diálogo

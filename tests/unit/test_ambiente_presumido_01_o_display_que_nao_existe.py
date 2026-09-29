@@ -19,7 +19,7 @@ mecanismos.
 O T-02 SAIU DO PRODUTO EM 28/09/2026, e a régua dele virou a guarda do contrário
 ----------------------------------------------------------------------------------
 
-O T-02 media `forcar_xwayland_no_cosmic` (e a `x11_alcancavel` que ela usava):
+O T-02 conferia `forcar_xwayland_no_cosmic` (e a `x11_alcancavel` que ela usava):
 não forçar `GDK_BACKEND=x11` sem prova de X vivo. Desde 19/09, por ordem dela
 (*"o certo é tirar dos dois. Faça"*), o XWayland não é mais o padrão do
 lançador, e a razão dele (os popups de `GtkMenu` no cosmic-comp) morreu com a
