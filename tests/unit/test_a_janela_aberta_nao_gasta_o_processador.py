@@ -227,6 +227,11 @@ def _fase(fora: Any, nome: str, de: float, quantos: int, teto_s: float, *,
     acaba com fome, e anota `fora.famintas[nome] = (tiques, segundos,
     maior_buraco)`. A régua que lê a fase reprova com a causa escrita
     (`_sem_fome`), e não pula: pulo não é verde nesta casa.
+
+    O LAÇO TAMBÉM SE ANOTA, em `fora.lacos[nome]`: o maior intervalo sem
+    `passo` do roteiro na mesma fase. É ele que separa a máquina do produto
+    (ver `_sem_fome`); sem `fora.passos`, não se anota nada, e a causa não se
+    afirma.
     """
     agora = time.monotonic() if agora is None else agora
     fora.fases[nome] = quantos
@@ -236,6 +241,9 @@ def _fase(fora: Any, nome: str, de: float, quantos: int, teto_s: float, *,
     if agora - de < teto_s:
         return False
     fora.famintas[nome] = (len(tiques), agora - de, _maior_buraco(de, tiques, agora))
+    passos = getattr(fora, "passos", None)
+    if passos is not None:
+        fora.lacos[nome] = _maior_buraco(de, [p for p in passos if de <= p <= agora], agora)
     return True
 
 
@@ -243,15 +251,37 @@ def _virgula(x: float) -> str:
     return f"{x:.1f}".replace(".", ",")
 
 
+def _o_tique_parou_com_o_laco_andando(buraco: float, laco: float | None) -> bool:
+    """A fome é do PRODUTO? O tique e o `passo` do roteiro rodam no mesmo laço
+    do GTK: com a máquina ocupada, os dois param juntos, e o maior buraco de um
+    fica perto do outro. Se o laço seguiu andando e só o tique sumiu (o `_tique`
+    que devolve `False` desliga o próprio relógio), o buraco dos tiques passa
+    de três vezes o do laço, e de três tiques nominais.
+    """
+    if laco is None:
+        return False
+    return buraco > 3 * max(laco, _nominal_s(1))
+
+
 def _sem_fome(fora: Any, *nomes: str) -> None:
-    """Reprova, com a causa escrita, se alguma destas fases bateu o teto."""
+    """Reprova, com a causa escrita, se alguma destas fases bateu o teto.
+
+    A causa é a que a medida sustenta: o laço do GTK devagar (a máquina), ou o
+    tique parado com o laço andando (o produto). Chamar de máquina o produto
+    que parou mandaria repetir a corrida em vez de olhar o `_tique`.
+    """
     for nome in nomes:
         if nome in fora.famintas:
             tiques, segundos, buraco = fora.famintas[nome]
+            laco = getattr(fora, "lacos", {}).get(nome)
+            if _o_tique_parou_com_o_laco_andando(buraco, laco):
+                causa = (f"o laço do GTK andou (maior buraco dele: {_virgula(laco or 0.0)} "
+                         "s) e o tique parou: é o produto, e não a máquina")
+            else:
+                causa = "o laço do GTK andou devagar demais para medir"
             raise AssertionError(
                 f"a fase {nome} juntou {tiques} de {fora.fases[nome]} tiques em "
-                f"{_virgula(segundos)} s (maior buraco: {_virgula(buraco)} s): o laço "
-                "do GTK andou devagar demais para medir")
+                f"{_virgula(segundos)} s (maior buraco: {_virgula(buraco)} s): {causa}")
 
 
 def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
@@ -264,9 +294,11 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
     tique, cada pintura (com a carga), as leituras e os `pactl`; `fora.comeco`
     é o instante em que a página ficou de pé, de onde a primeira fase conta.
 
-    O TETO DO CENÁRIO é maior que a soma dos tetos das fases (o roteiro mais
-    longo, o dos pontinhos, tem seis fases e uma espera): ele só pega o roteiro
-    que nunca acaba, e nunca corta uma fase que ainda pode juntar os tiques.
+    O TETO DO CENÁRIO é maior que a soma dos tetos das fases e das esperas (o
+    roteiro de teto maior, o `esconde_e_volta`, soma três fases e duas esperas;
+    o dos pontinhos, cinco fases e uma espera): ele só pega o roteiro que nunca
+    acaba, e nunca corta uma fase que ainda pode juntar os tiques. Vale também
+    com o teto de fase do cenário, porque as esperas guardam o teto delas.
     """
     gtk = _gtk()
     from gi.repository import GLib
@@ -283,10 +315,10 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
     fora = SimpleNamespace(ticks=[], pinturas=[], marcos={}, estado=estado,
                            pactl=[], ponte=_PonteDeMentira(), mudas=False,
                            avaliados={}, piloto=None, avisos=[], acabou=False,
-                           comeco=0.0, fases={}, famintas={},
+                           comeco=0.0, fases={}, famintas={}, passos=[], lacos={},
                            teto_da_fase_s=teto_da_fase_s)
     if teto_s is None:
-        teto_s = 8 * _teto_da_fase_s(fora, TIQUES_POR_FASE) + 30.0
+        teto_s = 8 * max(_teto_da_fase_s(fora, TIQUES_POR_FASE), _teto_da_espera_s()) + 30.0
 
     def pactl(argv: list[str]) -> str:
         fora.pactl.append((time.monotonic(), " ".join(argv)))
@@ -359,6 +391,7 @@ def _correr(publicado: pathlib.Path, pagina: str, n: int, roteiro: Any, *,
         comeco = [0.0]
 
         def passo() -> bool:
+            fora.passos.append(time.monotonic())
             if not piloto.pronto or not piloto.tela.na_aba:
                 return True
             if piloto.pagina != pagina:
@@ -685,6 +718,35 @@ def test_a_fase_junta_os_tiques_e_anota_a_fome() -> None:
             r"a fase faminta juntou 31 de 40 tiques em 5,5 s \(maior buraco: 2,1 s\): "
             r"o laço do GTK andou devagar demais para medir")):
         _sem_fome(fora, "cheia", "faminta")
+
+
+def test_a_fome_do_produto_nao_se_le_como_maquina() -> None:
+    """O tique que PARA com o laço andando é o produto, e a régua diz isso.
+
+    O `_tique` que devolve `False` desliga o próprio relógio: a fase passa
+    fome com o laço do GTK folgado. Chamar isso de máquina lenta mandaria
+    repetir a corrida, que é o contrário da cura desta régua. E a máquina lenta
+    de verdade (o laço parado junto com o tique) continua dita como máquina.
+
+    MORDIDA: faça o `_o_tique_parou_com_o_laco_andando` devolver sempre `False`
+    e a fome do produto volta a se ler como máquina.
+    """
+    passos = [10.0 + 0.2 * i for i in range(51)]
+    parou = SimpleNamespace(ticks=[SimpleNamespace(t=10.0 + 0.1 * i) for i in range(3)],
+                            fases={}, famintas={}, passos=passos, lacos={})
+    assert _fase(parou, "escondida", 10.0, 40, 10.0, agora=20.0)
+    with pytest.raises(AssertionError, match=(
+            r"a fase escondida juntou 3 de 40 tiques em 10,0 s \(maior buraco: 9,8 s\): "
+            r"o laço do GTK andou \(maior buraco dele: 0,2 s\) e o tique parou: é o "
+            r"produto, e não a máquina")):
+        _sem_fome(parou, "escondida")
+    # A MÁQUINA LENTA: o laço para junto com o tique, de 1,4 s em 1,4 s.
+    marcas = [10.0 + 1.4 * i for i in range(8)]
+    lenta = SimpleNamespace(ticks=[SimpleNamespace(t=t) for t in marcas],
+                            fases={}, famintas={}, passos=list(marcas), lacos={})
+    assert _fase(lenta, "escondida", 10.0, 40, 10.0, agora=20.0)
+    with pytest.raises(AssertionError, match="o laço do GTK andou devagar demais"):
+        _sem_fome(lenta, "escondida")
 
 
 #: Quantos tiques a régua de quem saiu conta depois do `de` dela.
