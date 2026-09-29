@@ -2683,7 +2683,7 @@ def veredito(n, esticada=False):
 #: As lacunas que ESTA cena produz, na ordem em que o produto as declara.
 #:
 #: MEDIDO no produto, e as duas primeiras não têm como não estar:
-#:   · `posicao`   — `mapa_das_portas.py:562-569` não é condicional: basta
+#:   · `posicao`   — `mapa_das_portas.py:483-490` não é condicional: basta
 #:                   existir uma face.
 #:   · `velocidade`— esta janela nunca escreve `nos`; quem escreve é a outra
 #:                   (`calibrar_entradas.py:743-746`). Logo TODA entrada sai

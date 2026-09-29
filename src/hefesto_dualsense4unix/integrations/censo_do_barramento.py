@@ -373,10 +373,9 @@ def hub_em_comum(censo: Censo, nos: Sequence[str]) -> str:
     return ""
 
 
-# `filhos_de` (quem pendura DIRETAMENTE num nó) SAIU EM 28/09/2026: nasceu em
-# 23/08 para uma segunda frase na linha do hub em comum — «quem mais está no
-# hub» — e essa frase nunca entrou. O desenho aprovado da aba 08 marca o
-# adaptador atrás de hub sem listar os vizinhos, e uma lista ali seria tela nova.
+# `filhos_de` (quem pendura num nó) SAIU EM 28/09/2026: a frase «quem mais está
+# no hub» que ele servia nunca entrou, e o desenho aprovado da aba 08 marca o
+# adaptador atrás de hub sem listar os vizinhos — uma lista ali seria tela nova.
 
 
 def _barramentos(aparelhos: Sequence[Aparelho]) -> tuple[Barramento, ...]:
