@@ -135,6 +135,8 @@ class _Mesa:
         self.subsystem = BtMicSubsystem(registro=self.registro)
         self.outro_microfone: str | None = None
         self.eleitor = _EleitorDublado()
+        #: os `uniq` cujo nascimento foi PEDIDO, na ordem do pedido: a barreira da partida
+        self.pedidos: list[str | None] = []
 
 
 @pytest.fixture
@@ -147,6 +149,16 @@ def mesa(monkeypatch: pytest.MonkeyPatch) -> Iterator[_Mesa]:
         m.subsystem._config = self.config
 
     monkeypatch.setattr(Daemon, "_start_bt_mic", _sem_o_supervisor_de_verdade)
+    agendar = hotkey.agendar_o_nascimento_do_microfone
+
+    def _anotar_o_pedido(daemon: Any, *, uniq: str | None) -> Any:
+        # O espião anota e devolve a tarefa do dono. O `nascer_o_microfone_ao_conectar`
+        # importa o nome na hora da chamada (`connection.py`), e o chama para todo
+        # `uniq`, inclusive o que ela recusou: a recusa mora DEPOIS do pedido.
+        m.pedidos.append(uniq)
+        return agendar(daemon, uniq=uniq)
+
+    monkeypatch.setattr(hotkey, "agendar_o_nascimento_do_microfone", _anotar_o_pedido)
     monkeypatch.setattr(elm, "outra_captura_elegivel", lambda: m.outro_microfone)
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.load_paused_state", lambda: False
@@ -167,9 +179,13 @@ async def _subir_e_esperar_a_partida(
 ) -> Daemon:
     """Sobe o `Daemon` com o controle JÁ plugado e espera a partida acabar.
 
-    "Acabou" é o poll loop ter dado um tique — o connect de boot vem antes
-    dele — e as tarefas de nascimento em voo terem terminado. Um `sleep`
-    solto mediria um instante e daria verde intermitente.
+    "Acabou" é o nascimento PEDIDO para cada `uniq` da mesa, e as tarefas desses
+    nascimentos terminadas. O primeiro tique do poll loop não serve: o
+    `lifecycle.py` cria o poll loop ANTES do connect de boot, e o connect só pede o
+    nascimento no fim do `reaplicar_som_em_todos_os_alvos`, depois de dois `await`
+    por controle. No runner do CI o tique vinha antes do pedido, o conjunto em voo
+    estava vazio e o `stop` chegava antes do nascimento (a corrida 36503520655).
+    Vale para um, dois ou quatro controles. Um `sleep` solto mediria um instante.
     """
     controle = _ControleNaMesa(*uniqs)
     store = StateStore()
@@ -177,11 +193,12 @@ async def _subir_e_esperar_a_partida(
     daemon._eleitor_de_microfone = mesa.eleitor  # type: ignore[attr-defined]
     tarefa = asyncio.create_task(daemon.run())
     try:
-        for _ in range(300):
-            if store.counter("poll.tick") >= 1:
+        for _ in range(1000):
+            if set(uniqs) <= set(mesa.pedidos) or tarefa.done():
                 break
             await asyncio.sleep(0.01)
-        assert store.counter("poll.tick") >= 1, "o daemon não chegou ao poll loop"
+        faltam = [u for u in uniqs if u not in mesa.pedidos]
+        assert not faltam, f"a partida não pediu o nascimento de {len(faltam)} controle(s)"
         for _ in range(50):
             em_voo = [t for t in hotkey._NASCIMENTOS_EM_VOO if not t.done()]
             if not em_voo:
@@ -306,10 +323,15 @@ async def test_a_partida_com_o_connect_lento_nasce_cada_controle_no_ar(
 
     `lifecycle.py` cria o poll loop ANTES do connect de boot, e o nascimento de
     cada controle é pedido depois de dois `await` por alvo. Com 0,2 s em cada
-    `reapply_mic_after_connect`, o primeiro tique chega antes de qualquer pedido,
-    e a barreira que esperava o tique parava o daemon antes do nascimento (a
-    corrida 36503520655, no 3.11). MORDIDA (O-CI-DA-DEV-VOLTA-A-VERDE-02): volte
-    a barreira para o `poll.tick` e os três reprovam.
+    `reapply_mic_after_connect`, o primeiro tique chega antes de qualquer pedido;
+    e com 0,3 s no `nascer_no_ar` (a eleição que pergunta ao servidor de som), o
+    nascimento ainda corre quando a partida termina. A barreira que esperava o
+    tique parava o daemon antes do nascimento, e a régua olhava o ar antes de
+    ele acabar (a corrida 36503520655, no 3.11). Sem o atraso do nascimento, a
+    máquina daqui termina o nascimento dentro do `shutdown` e a barreira velha
+    passa: os dois atrasos juntos são o mundo lento. MORDIDA
+    (O-CI-DA-DEV-VOLTA-A-VERDE-02): volte a barreira para o `poll.tick` e os três
+    reprovam.
     """
     from hefesto_dualsense4unix.daemon import connection
 
@@ -320,6 +342,13 @@ async def test_a_partida_com_o_connect_lento_nasce_cada_controle_no_ar(
         return await original(daemon, *args, **kwargs)
 
     monkeypatch.setattr(connection, "reapply_mic_after_connect", _lento)
+    nascer = hotkey.nascer_no_ar
+
+    async def _nascer_devagar(daemon: Any, uniq: str) -> bool:
+        await asyncio.sleep(0.3)
+        return await nascer(daemon, uniq)
+
+    monkeypatch.setattr(hotkey, "nascer_no_ar", _nascer_devagar)
     # A emulação de vários controles não é desta régua (o mesmo motivo do caso de dois).
     monkeypatch.setattr(
         Daemon, "aplicar_gamepad_para_multiplos_controles", lambda self: None
