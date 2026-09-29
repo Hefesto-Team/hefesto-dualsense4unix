@@ -395,7 +395,6 @@ for errada, correta in _PARES:
 # ---------------------------------------------------------------------------
 WHITELIST_PATTERNS: list[str] = [
     r"^VALIDATOR_BRIEF\.md$",
-    r"^AGENTS\.md$",
     r"^LICENSE$",
     r"^NOTICE$",
     r"^CHANGELOG\.md$",

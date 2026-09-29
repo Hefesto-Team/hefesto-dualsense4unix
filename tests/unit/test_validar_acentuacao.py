@@ -164,4 +164,4 @@ def test_show_whitelist_lista_padroes(sandbox: Path) -> None:
     res = _roda(["--show-whitelist"], sandbox)
     assert res.returncode == 0
     assert "VALIDATOR_BRIEF" in res.stdout
-    assert "AGENTS" in res.stdout
+    assert "CHANGELOG" in res.stdout
