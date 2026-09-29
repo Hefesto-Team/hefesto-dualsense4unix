@@ -787,9 +787,9 @@ def test_a_casa_tomada_diz_de_quem_e_sem_a_regra() -> None:
     from hefesto_dualsense4unix.core.led_control import player_slot_color
     from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
-    tomado = "#{:02X}{:02X}{:02X}".format(*player_slot_color(2))
-    html = a04.fileira_de_tons(
-        "", {tomado: {"nome": "P2 (DualSense)", "plastico": "#1c1c1c"}})
+    html = a04.fileira_de_tons("eu", a04.as_casas_da_mesa([
+        {"quem": "vizinho", "cor": player_slot_color(2), "nome": "P2 (DualSense)",
+         "numero": 2, "plastico": "#1c1c1c"}]))
     casas = [linha for linha in html.splitlines() if "tomado" in linha]
     assert len(casas) == 1, html
     assert 'title="P2 (DualSense)"' in casas[0], casas[0]

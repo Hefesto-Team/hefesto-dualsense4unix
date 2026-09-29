@@ -610,9 +610,118 @@ def titulo_da_casa(i: int) -> str:
     return f"{quem}Pinta a barra, não muda o número."
 
 
-def fileira_de_tons(escolhida: str, tomadas: dict[str, dict[str, str]],
+def _acende_em_alguma_intensidade(tom: tuple[int, int, int],
+                                  alvo: tuple[int, int, int]) -> bool:
+    """`tom`, escalado por algum brilho de (0, 1], acende exatamente `alvo`?
+
+    O intervalo sai por canal: a conta do dono trunca `c × brilho`, então o
+    canal `c` dá `v` para o brilho em `[v/c, (v+1)/c)`, e o canal zero só dá
+    zero. Quem confirma é a conta do dono (`_com_o_brilho`) no meio do
+    intervalo, e não esta conta: a borda de um trecho em ponto flutuante pode
+    cair do lado errado, o meio não.
+    """
+    baixo, alto = 0.0, float("inf")
+    for c, v in zip(tom, alvo, strict=True):
+        if c == 0:
+            if v != 0:
+                return False
+            continue
+        baixo, alto = max(baixo, v / c), min(alto, (v + 1) / c)
+    if baixo <= 0.0 or baixo >= alto or baixo > 1.0:
+        return False
+    topo = min(alto, 1.0)
+    brilho = 1.0 if topo <= baixo else (baixo + topo) / 2
+    return _com_o_brilho(tom, brilho) == alvo
+
+
+def a_casa_da_cor(rgb: Any) -> str | None:
+    """A CASA da guia de uma cor pedida: o tom que a acende, ou `None`.
+
+    A-PALETA-MARCA-A-COR-DE-CADA-CONTROLE-01, 29/09/2026. A fileira perguntava
+    «este hex é o de algum controle?», e a pergunta de tela é «de quem é esta
+    casa?». Na bancada de 29/09 o P4 pedia `#FCFCFC` (o branco a 99%, um
+    override legado): igualdade nenhuma o achava, e o X dele sumia das três
+    outras colunas e a marca da própria.
+
+    A casa é o tom da guia que, pela conta do brilho do produto
+    (`_com_o_brilho`, a do `LedSettings.apply_brightness`), acende esta cor em
+    alguma intensidade de (0, 1]:
+
+    * o tom exato vence;
+    * a resposta tem de ser única — abaixo de 1% o vermelho, o rosa e o
+      laranja acendem o mesmo `(1, 0, 0)`, e aí é `None`, a regra de
+      `_o_tom_que_acende`;
+    * o preto é `None`: barra apagada não toma cor.
+
+    Uma cor que nenhum tom acende (o global `#2850B4`) não tem casa.
+    """
+    if not rgb or len(tuple(rgb)) < 3:
+        return None
+    alvo = (int(tuple(rgb)[0]), int(tuple(rgb)[1]), int(tuple(rgb)[2]))
+    if alvo == (0, 0, 0):
+        return None
+    tons = tons_da_guia()
+    if alvo in tons:
+        return _hex(alvo)
+    casados = [t for t in tons if _acende_em_alguma_intensidade(t, alvo)]
+    return _hex(casados[0]) if len(casados) == 1 else None
+
+
+def a_chave_da_cor(rgb: Any) -> str | None:
+    """Onde a cor pousa na mesa das casas: a casa, ou a própria cor sem casa.
+
+    A cor sem casa entra pelo próprio hex, que casa nenhuma da fileira tem: não
+    marca a fileira, e a recusa pergunta por ela como perguntava antes. O preto
+    não pousa (`None`).
+    """
+    if not rgb or len(tuple(rgb)) < 3 or tuple(rgb)[:3] == (0, 0, 0):
+        return None
+    return a_casa_da_cor(rgb) or _hex(tuple(int(c) for c in tuple(rgb)[:3]))
+
+
+def as_casas_da_mesa(pecas: Any) -> dict[str, list[dict[str, Any]]]:
+    """A MESA DAS CASAS: `{casa: [donos na ordem do número]}`, uma vez por tique.
+
+    UMA mesa para as três perguntas — o X, a marca própria e a recusa — que
+    liam dois dicionários de um dono por cor (o do X guardava o último, o da
+    recusa o primeiro). Duas peças no mesmo tom (o «Todos», ou o global de
+    vários) ficam as duas na casa.
+
+    A entrada é dado puro, uma peça por controle — `quem` (o `uniq` no
+    produto, o lugar na bancada), `cor`, `nome`, `numero` e `plastico` —, para
+    o pacote e a bancada chamarem a mesma função.
+    """
+    casas: dict[str, list[dict[str, Any]]] = {}
+    for peca in sorted(pecas, key=lambda p: int(p.get("numero") or 0)):
+        chave = a_chave_da_cor(peca.get("cor"))
+        if chave is not None:
+            casas.setdefault(chave, []).append(peca)
+    return casas
+
+
+def os_outros_donos(casas: dict[str, list[dict[str, Any]]], chave: str | None,
+                    meu: str) -> list[dict[str, Any]]:
+    """A pergunta UMA: quem, além deste controle, tem esta casa?
+
+    A fileira a faz para decidir o X e o gesto; a recusa, para decidir se o
+    clique passa. As duas ao mesmo mapa (`as_casas_da_mesa`).
+    """
+    if chave is None:
+        return []
+    return [d for d in casas.get(chave, ()) if d.get("quem") != meu]
+
+
+def _os_nomes(donos: list[dict[str, Any]]) -> str:
+    """«P2», «P2 e P3», «P2, P3 e P4» — na ordem em que vieram."""
+    nomes = [str(d.get("nome") or "") for d in donos if d.get("nome")]
+    if len(nomes) <= 1:
+        return "".join(nomes)
+    return f"{', '.join(nomes[:-1])} e {nomes[-1]}"
+
+
+def fileira_de_tons(meu: str, casas: dict[str, list[dict[str, Any]]],
                     recuo: str = "", *, ligado: bool = True) -> str:
-    """Os catorze tons de uma coluna, em HTML — o miolo da `.guia`.
+    """Os onze tons de uma coluna, em HTML — o miolo da `.guia`.
 
     **COR-X-01, decisão dela de 09/09/2026:** *"onde eu escolher uma cor, em
     volta dela fica a borda da cor do plastico do controle e um X na cor
@@ -626,17 +735,23 @@ def fileira_de_tons(escolhida: str, tomadas: dict[str, dict[str, str]],
     tomaram" não é uma igualdade, e não há `data-hef-quando` que a exprima.
     Quem sabe quem tem qual cor é o pacote, que vê a mesa inteira.
 
-    O X É DESENHADO NA COR DO PLÁSTICO DO DONO, e não numa cor de aviso: é
-    assim que esta aba diz de quem é a luz
-    (`D-A-BORDA-E-A-IDENTIDADE-DA-PECA`). Ele viaja no `--dono`, uma variável
-    inline, porque o valor é por-botão e a folha é uma só.
+    CADA CASA RESPONDE «de quem é?» pela mesa das casas (`as_casas_da_mesa`),
+    e não mais «este hex é de alguém?» — A-PALETA-MARCA-A-COR-DE-CADA-
+    CONTROLE-01, 29/09/2026:
 
-    E A DICA DIZ O NOME, não só que está tomada: um X mudo obriga ela a
-    adivinhar qual dos outros controles está naquele tom.
+    * `on` quando a casa tem este controle;
+    * X quando a casa tem outro dono e não tem este. O X é preto com contorno
+      branco desde 09/09 (a cor do plástico sumia no tom pastel); no «Todos» a
+      casa de todos não ganha X em coluna nenhuma;
+    * o `data-gesto` só onde a recusa passa: a casa sem dono e a casa só dele.
+      A casa que ele divide com outros (o «Todos», o global num tom) fica `on`,
+      sem X e sem gesto, com o `aria-disabled`: a coluna do último dono
+      oferecia esse clique, e o botão piscava a recusa;
+    * o `title` da casa com dono alheio nomeia os donos: um X mudo obriga ela a
+      adivinhar qual dos outros controles está naquele tom.
 
-    :param escolhida: o hex CRU da cor deste controle, ou `""` se não há.
-    :param tomadas: `{hex cru: {"nome": …, "plastico": …}}` das cores dos
-        OUTROS controles ligados.
+    :param meu: quem é esta coluna — o `uniq` no produto, o lugar na bancada.
+    :param casas: a mesa das casas (`as_casas_da_mesa`), com este controle.
     :param ligado: há controle neste lugar? Um lugar vazio não ganha `on` nem
         X — não há escolha a marcar e não há dono a proteger.
     """
@@ -645,15 +760,18 @@ def fileira_de_tons(escolhida: str, tomadas: dict[str, dict[str, str]],
     linhas = []
     for i, rgb in enumerate(tons_da_guia(), start=1):
         cru = "#{:02X}{:02X}{:02X}".format(*rgb)
-        dono = tomadas.get(cru) if ligado else None
+        donos = list(casas.get(cru, ())) if ligado else []
+        outros = os_outros_donos(casas, cru, meu) if ligado else []
+        dele = len(outros) < len(donos)
+        alheia = bool(outros) and not dele
         classes = "tom"
-        if ligado and escolhida and cru.upper() == escolhida.upper():
+        if dele:
             classes += " on"
-        if dono:
+        if alheia:
             classes += " tomado"
         estilo = f"background:{monta.tom_da_casa(cru)}"
-        if dono:
-            estilo += f";--dono:{dono.get('plastico') or 'var(--comment)'}"
+        if alheia:
+            estilo += f";--dono:{outros[0].get('plastico') or 'var(--comment)'}"
         # A DICA DO TOM TOMADO DIZ SÓ DE QUEM ELE É — 13/09/2026,
         # FRASES-E-DICAS-01, §I.5. Ela dizia «<dono> já está neste tom — duas
         # peças nunca ficam da mesma cor.», e a regra colada é aviso: saiu.
@@ -662,7 +780,7 @@ def fileira_de_tons(escolhida: str, tomadas: dict[str, dict[str, str]],
         # tom pastel), e a régua do X cobra o nome na casa
         # (`test_fecha_iluminacao_01_duas_pecas_nunca_tem_a_mesma_cor`). A frase
         # da casa livre («Pinta a barra…») não serve: a casa com X não pinta.
-        titulo = str(dono.get("nome") or "") if dono else titulo_da_casa(i)
+        titulo = _os_nomes(outros) if outros else titulo_da_casa(i)
         # O TOM COM X NÃO É GESTO — 09/09/2026, e é a palavra dela sendo
         # cumprida: *"um X na cor selecionada por mim de forma que me IMPEÇA de
         # setar alguma cor de um coleguinha"*. <!-- noqa-acento: citação dela -->
@@ -682,13 +800,17 @@ def fileira_de_tons(escolhida: str, tomadas: dict[str, dict[str, str]],
         # continua nomeando o dono — a explicação custa ZERO clique, que é a
         # regra dela de 07/09.
         #
+        # A CASA DIVIDIDA TAMBÉM NÃO É GESTO (29/09/2026): a pergunta é a da
+        # recusa, «tem dono que não é este controle?», e a resposta é a mesma
+        # para a casa com X e para a casa que ele divide.
+        #
         # E O `RuntimeError` DO PACOTE FICA: ele é a rede, não a porta. O gesto
         # `cor` também chega por outros caminhos (a prova botão a botão, um
         # tique entre a leitura e o clique), e duas peças da mesma cor não podem
         # passar por nenhum deles. Quem o guarda é
         # `test_a_cor_do_vizinho_se_recusa_com_o_nome_do_dono`.
-        aberto = ("" if dono else f' data-gesto="cor" data-hex="{cru}"')
-        travado = ' aria-disabled="true"' if dono else ""
+        aberto = ("" if outros else f' data-gesto="cor" data-hex="{cru}"')
+        travado = ' aria-disabled="true"' if outros else ""
         linhas.append(
             f'{recuo}<button class="{classes}" style="{estilo}"'
             f'{aberto}{travado} title="{titulo}"></button>')
@@ -1921,33 +2043,28 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         if casa_dele:
             donos[_numero(ctx, c)] = casa_dele
 
-    # AS CORES TOMADAS, uma vez para a mesa inteira — COR-X-01. Cada coluna
-    # precisa saber que tons os OUTROS estão acendendo, para desenhar o X.
+    # A MESA DAS CASAS, uma vez para a mesa inteira — COR-X-01. Cada coluna
+    # precisa saber de quem é cada casa, para desenhar o X e a marca própria.
     #
-    # A CHAVE É A COR PEDIDA, PRÉ-BRILHO, e é o mesmo `_a_cor_de_agora` que
+    # A COR É A PEDIDA, PRÉ-BRILHO, e é o mesmo `_a_cor_de_agora` que
     # `_sem_repetir_a_cor_do_vizinho` usa para recusar: comparar o hexa da guia
     # com o valor já escurecido diria "livre" sobre a cor que o vizinho está
     # acendendo, e a tela ofereceria o que o gesto recusa — as duas metades da
     # mesma regra discordando na mesma tela.
     #
-    # E ELA É A MESMA DA BORDA DA PRÓPRIA COLUNA — 24/09/2026,
+    # E ELA É A MESMA DA MARCA DA PRÓPRIA COLUNA — 24/09/2026,
     # A-MARCA-DA-COR-NAO-SOME-01: uma resposta por controle por tique, lida do
     # MESMO perfil (`p`, e não uma segunda leitura do disco que o gesto do
-    # trilho pode ter regravado no meio). A borda de um e o X dos outros não têm
-    # como discordar sobre a cor do mesmo controle.
-    cor_de = [_a_cor_de_agora(ctx, p, c) for c in ctx.conectados]
-    tons_tomados: dict[str, dict[str, str]] = {}
-    for c, rgb in zip(ctx.conectados, cor_de, strict=True):
-        if rgb == (0, 0, 0):
-            # BARRA APAGADA NÃO TOMA COR DE NINGUÉM — é a mesma isenção que
-            # `cores_sem_colisao` dá ao preto: ausência de cor não é identidade.
-            continue
-        casa_dele = _da_mesa(ctx, str(c.get("uniq") or ""))
-        tons_tomados["#{:02X}{:02X}{:02X}".format(*rgb)] = {
-            "uniq": str(c.get("uniq") or ""),
-            "nome": _quem_e(ctx, c),
-            "plastico": _cor_do_plastico(str((casa_dele or {}).get("cor") or "")),
-        }
+    # trilho pode ter regravado no meio).
+    #
+    # A MESA É UMA SÓ PARA O X, A MARCA E A RECUSA — 29/09/2026,
+    # A-PALETA-MARCA-A-COR-DE-CADA-CONTROLE-01: a cor pousa na CASA que a acende
+    # (`a_casa_da_cor`), e cada casa guarda todos os donos. Antes eram três
+    # igualdades de hex sobre dois dicionários de um dono por cor, e o branco a
+    # 99% do P4 da bancada não tinha casa nenhuma.
+    pecas = _as_pecas_da_mesa(ctx, p)
+    cor_de = [peca["cor"] for peca in pecas]
+    casas = as_casas_da_mesa(pecas)
 
     colunas: dict[str, dict[str, Any]] = {}
     #: A LUZ DO DESENHO GRANDE, por LUGAR — ver `folha_da_luz`. Ela nasce vazia
@@ -2031,14 +2148,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             #: exatamente quando ela mexia no brilho. Ver `cor_escolhida`.
             "hex": _hex(pedida),
             #: A GUIA VIVA — COR-X-01. Ela vem pelo alvo `html` porque o X não
-            #: é uma igualdade: ver `fileira_de_tons`. As cores dos OUTROS
-            #: entram; a DESTA coluna sai, senão o controle ganharia um X na
-            #: própria cor e o gesto de reenviar ficaria bloqueado por si mesmo.
-            "tons": fileira_de_tons(
-                _hex(pedida),
-                {k: v for k, v in tons_tomados.items()
-                 if v.get("uniq") != str(c.get("uniq") or "")},
-                "              "),
+            #: é uma igualdade: ver `fileira_de_tons`. A mesa das casas tem
+            #: todos, este também; quem separa o `on` do X é a própria fileira,
+            #: pela pergunta da recusa (`os_outros_donos`).
+            "tons": fileira_de_tons(uniq, casas, "              "),
             #: A COR DO PLÁSTICO, e ela é a lei dela de 03/09/2026: *"se
             #: identificou o controle como modelo White a cor do card em volta
             #: tem que ser branco. Temos isso no mapa."*
@@ -3020,9 +3133,10 @@ def _sem_repetir_a_cor_do_vizinho(
     ela clicava num tom e o aparelho acendia OUTRO, escolhido pelo produto. A
     decisão nova o revoga; o que sobra é a recusa que diz de quem é a cor.
 
-    E A TELA NÃO OFERECE O QUE ESTA FUNÇÃO RECUSA: a guia desenha um X na cor
-    do plástico do dono, pela mesma leitura (`fileira_de_tons`). Ofereceria
-    duas metades da mesma regra discordando na mesma tela.
+    E A TELA NÃO OFERECE O QUE ESTA FUNÇÃO RECUSA: a guia tira o gesto de toda
+    casa com dono que não é este controle, pela mesma pergunta ao mesmo mapa
+    (`os_outros_donos` sobre `as_casas_da_mesa`). Ofereceria duas metades da
+    mesma regra discordando na mesma tela.
 
     :return: `(cor, recado)` — hoje o `recado` é sempre `None`, e o par fica
         porque o `_escrever_a_cor` já o lê: um dia a regra volta a ter algo a
@@ -3037,17 +3151,44 @@ def _sem_repetir_a_cor_do_vizinho(
     # diria "livre" sobre o tom que o vizinho está acendendo. Há régua:
     # `tests/unit/test_o_perfil_ativado_chega_nas_outras_abas.py`.
     cru = perfil.ativo(ctx.state.get("active_profile"))
-    tomadas: dict[tuple[int, int, int], dict[str, Any]] = {}
-    for c in ctx.conectados:
-        outro = str(c.get("uniq") or "")
-        if outro and outro != uniq:
-            tomadas.setdefault(_a_cor_de_agora(ctx, cru, c), c)
-    dono = tomadas.get(rgb)
-    if dono is None:
+    # A MESMA MESA DA FILEIRA — 29/09/2026, A-PALETA-MARCA-A-COR-DE-CADA-
+    # CONTROLE-01. Este mapa era outro: guardava o PRIMEIRO dono de cada hex
+    # (o do X guardava o último) e não isentava o preto. A pergunta agora é a
+    # da fileira, ao mesmo mapa: a casa da cor clicada (ou a própria cor, sem
+    # casa) tem dono que não é este controle? O nome é o do primeiro na ordem
+    # do número.
+    casas = as_casas_da_mesa(_as_pecas_da_mesa(ctx, cru))
+    outros = os_outros_donos(casas, a_chave_da_cor(rgb), uniq)
+    if not outros:
         return rgb, None
     raise RuntimeError(
-        f"O {_quem_e(ctx, dono)} já está nesse tom: duas peças nunca ficam da "
+        f"O {outros[0]['nome']} já está nesse tom: duas peças nunca ficam da "
         f"mesma cor. Nada mudou — escolha outro tom.")
+
+
+def _as_pecas_da_mesa(ctx: Contexto, cru: dict[str, Any]
+                      ) -> list[dict[str, Any]]:
+    """Uma peça por controle ligado, na forma que `as_casas_da_mesa` lê.
+
+    UM DONO, DOIS CHAMADORES: a pintura de cada tique e a recusa de cada
+    clique. A cor é `_a_cor_de_agora` (a escada inteira), o nome é o `_quem_e`
+    e o plástico é o tom que a borda do card usa (`tom_para_a_borda`), vazio
+    quando ninguém sabe.
+    """
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import tom_para_a_borda
+
+    pecas = []
+    for c in ctx.conectados:
+        uniq = str(c.get("uniq") or "")
+        casa = _da_mesa(ctx, uniq)
+        pecas.append({
+            "quem": uniq,
+            "cor": _a_cor_de_agora(ctx, cru, c),
+            "nome": _quem_e(ctx, c),
+            "numero": _numero(ctx, c),
+            "plastico": tom_para_a_borda(_cor_do_plastico(str(casa.get("cor") or ""))),
+        })
+    return pecas
 
 
 def _quem_e(ctx: Contexto, c: dict[str, Any]) -> str:

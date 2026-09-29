@@ -775,10 +775,10 @@ class TestOGestoDaAba:
         """
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
-        tomado = _hexa(player_slot_color(2))
-        html = a04.fileira_de_tons(
-            _hexa(player_slot_color(1)),
-            {tomado: {"nome": "P2 (DualSense)", "plastico": "#1c1c1c"}})
+        html = a04.fileira_de_tons("eu", a04.as_casas_da_mesa([
+            {"quem": "eu", "cor": player_slot_color(1), "nome": "P1", "numero": 1},
+            {"quem": "vizinho", "cor": player_slot_color(2),
+             "nome": "P2 (DualSense)", "numero": 2, "plastico": "#1c1c1c"}]))
 
         casas = [linha for linha in html.splitlines() if "<button" in linha]
         assert len(casas) == len(a04.tons_da_guia())
@@ -839,10 +839,10 @@ class TestOGestoDaAba:
         """
         from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
-        html = a04.fileira_de_tons(
-            _hexa(player_slot_color(1)),
-            {_hexa(player_slot_color(2)): {"nome": "P2", "plastico": "#1c1c1c"}},
-            ligado=False)
+        html = a04.fileira_de_tons("eu", a04.as_casas_da_mesa([
+            {"quem": "eu", "cor": player_slot_color(1), "nome": "P1", "numero": 1},
+            {"quem": "vizinho", "cor": player_slot_color(2), "nome": "P2",
+             "numero": 2, "plastico": "#1c1c1c"}]), ligado=False)
 
         assert "tom on" not in html
         assert "tomado" not in html

@@ -1353,11 +1353,15 @@ def coluna(c):
     # `test_nenhuma_dica_congelada_do_miolo_nomeia_um_controle` reprova. O
     # plástico vai vazio pela mesma razão: o X é preto desde 09/09, e cor de
     # aparelho cravada na bancada é o que `check_a_cor_vem_do_aparelho` reprova.
-    tomadas = {} if not ligado else {
-        luz(d["jogador"]): {"nome": f'P{d["jogador"]}', "plastico": ""}
-        for d in DONOS_NA_MESA.values() if d["pref"] != p}
-    tons = _pacote04.fileira_de_tons(cor if ligado else "", tomadas, "            ",
-                                     ligado=ligado)
+    #
+    # A MESA DAS CASAS É A DO PACOTE — 29/09/2026, A-PALETA-MARCA-A-COR-DE-CADA-
+    # CONTROLE-01: as mesmas duas funções (`as_casas_da_mesa` e
+    # `fileira_de_tons`), com a cena do desenho, cada peça pelo LUGAR.
+    casas = _pacote04.as_casas_da_mesa(
+        {"quem": d["pref"], "cor": player_slot_color(d["jogador"]),
+         "nome": f'P{d["jogador"]}', "numero": d["jogador"], "plastico": ""}
+        for d in DONOS_NA_MESA.values())
+    tons = _pacote04.fileira_de_tons(p, casas, "            ", ligado=ligado)
 
     # ---- O QUE O `conectado` DECIDE, peça por peça ----
     # Cada nome abaixo é UM pedaço do molde único lá embaixo. O endereço
@@ -1423,12 +1427,17 @@ def coluna(c):
     # A GUIA VESTE O PLÁSTICO — 09/09/2026, decisão dela: *"onde eu escolher uma
     # cor, em volta dela fica a borda da cor do plastico do controle"*.
     #
-    # NÃO HÁ ENDEREÇO NOVO, e é isso que faz a cura caber numa linha: o
-    # `data-campo="plastico"` já existe na moldura do desenho, e o pintor
-    # escreve o mesmo valor em TODO elemento que carregue aquele campo (é o
-    # mesmo desenho dos onze botões que dividem o `hex`). Pondo o par aqui, a
-    # guia inteira passa a ter `color` = a cor do plástico daquele controle, e o
-    # `.tom.on` só precisa pedir `currentColor`.
+    # NÃO HÁ ENDEREÇO NOVO: o `data-campo="plastico"` já existe na moldura do
+    # desenho, e o pintor escreve o mesmo valor em TODO elemento que carregue
+    # aquele campo (é o mesmo desenho dos onze botões que dividem o `hex`).
+    # Pondo o par aqui, a `.guia` passa a ter `color` = a cor do plástico.
+    #
+    # FATO ERRADO, SUBSTITUÍDO (29/09/2026, A-PALETA-MARCA-A-COR-DE-CADA-
+    # CONTROLE-01): esta linha dizia que o `.tom.on` herdava essa cor pelo
+    # `currentColor`. Não herda: a casa é um `<button>`, e o `<button>` não
+    # herda `color` — o `currentColor` é a cor de texto de botão do motor, e a
+    # borda saiu quase preta nas quatro colunas desde 09/09 (a foto da bancada
+    # de 29/09).
     #
     # A ALTERNATIVA ERA UM SEGUNDO CAMPO com o mesmo valor — e dois endereços
     # para o mesmo fato é o que esta casa persegue o oposto de fazer: eles podem
