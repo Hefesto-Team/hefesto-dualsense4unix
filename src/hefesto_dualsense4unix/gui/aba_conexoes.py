@@ -1,8 +1,12 @@
-"""aba_conexoes — os valores e os gestos da aba 08, com endereço, sem GTK.
+"""aba_conexoes — as frases, os desenhos e as contas da aba 08, sem GTK.
 
 A aba **Conexões** no motor novo: o mockup aprovado (`08-conexoes.html`) rodando
-num ``WebKit2.WebView``, e este módulo é o lado Python dela — o que pinta e o que
-ouve. A janela, as duas pontes e a guarda de carga **não estão aqui**: são de
+num ``WebKit2.WebView``. Quem a PINTA é o pacote
+``interface/pacotes/a08_conexoes.py``; este módulo é o que ele e o gerador do
+desenho pedem — o selo de cada estado, o controle de uma linha, o teto da
+vibração, o mapa do gabinete. A pintura e o ouvinte próprios desta camada
+saíram em 28/09/2026 (ver o bloco «O pacote de um tique»). A janela, as duas
+pontes e a guarda de carga **não estão aqui**: são de
 :mod:`hefesto_dualsense4unix.gui.ponte_da_tela`, que nasceu para as dez abas.
 
 POR QUE ELE NÃO IMPORTA GTK, NEM LÊ ``/sys``, NEM FALA COM O DAEMON
@@ -30,8 +34,10 @@ Proposta na ``MIGRA-CONEXOES-03`` e adotada aqui sem mudança, porque duas
 gramáticas de endereço seriam a segunda verdade que a regra do fato errado existe
 para matar:
 
-* ``data-v="<família>.<campo>"`` — o que o Python **pinta**;
-* ``data-g="<gesto>"`` — o que o Python **recebe**;
+* ``data-v="<família>.<campo>"`` — o endereço de um valor;
+* o ``data-g="<gesto>"`` e a lista ``GESTOS`` saíram em 28/09/2026 com a
+  pintura da bancada: a página aprovada fala ``data-gesto``, e quem recusa o
+  gesto sem dono é o registro ``interface/pacotes``;
 * a chave de um controle é o ``uniq``, **nunca** o ``p1``/``p2`` do mockup. O
   ``p1..p4`` é posição na mesa de exemplo, e endereço por posição é o "jogador 3
   fantasma" voltando pela porta dos atributos. :func:`endereco_por_posicao`
@@ -65,31 +71,6 @@ FAMILIAS: frozenset[str] = frozenset(
     {"mesa", "controle", "exame", "ordem", "adaptador", "vizinho", "pista", "rodape"}
 )
 
-#: Os gestos que esta aba oferece, e o conjunto também é fechado. Um botão que a
-#: tela desenha e o Python não conhece é o "botão morto" que custou a esta casa
-#: uma leva inteira em 29/08: tinha ``cursor:pointer``, era pintado, e não tinha
-#: ouvinte nenhum.
-GESTOS: frozenset[str] = frozenset(
-    {
-        "controle.mic.existe",
-        "controle.mic.escopo",
-        "controle.vibracao.teto",
-        "controle.luz.nao-acende",
-        "controle.abrir",
-        "exame.reexaminar",
-        "exame.ja-movi",
-        "exame.ignorar",
-        "exame.ignoradas",
-        "adaptador.renomear",
-        "vizinho.oque",
-        "mesa.mapear-entradas",
-        "mesa.mapear-entrada-a-entrada",
-        "rodape.aplicar",
-        "rodape.salvar",
-        "rodape.importar",
-        "rodape.exportar",
-    }
-)
 
 #: O QUE A TELA MOSTRA E O PRODUTO NÃO TEM DE ONDE TIRAR — declarado, nunca
 #: inventado. Cada linha é ``(endereço, o que falta, quem fecha)``.
@@ -185,13 +166,6 @@ def v(*partes: str) -> str:
             "uniq — p1..p4 é a mesa de exemplo do mockup."
         )
     return endereco
-
-
-def g(gesto: str) -> str:
-    """Valida um ``data-g`` contra :data:`GESTOS`. Gesto novo entra na lista."""
-    if gesto not in GESTOS:
-        raise EnderecoInvalido(f"{gesto!r} não está em GESTOS — declare-o antes de usá-lo")
-    return gesto
 
 
 def _e(texto: object) -> str:
