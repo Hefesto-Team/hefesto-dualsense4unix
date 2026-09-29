@@ -1307,7 +1307,16 @@ class AltoFalanteSubsystem:
         segue no cabo, no mesmo lugar, FICA como está — ele é um processo do
         PipeWire, e não depende do ``pipewire-pulse`` que travou. Só cai o de
         quem saiu do cabo, que o ``/sys`` diz sem perguntar ao servidor.
+
+        **NO MODO NATIVO O DONO DOS MOTORES É O JOGO** (NO-MODO-XBOX-TUDO-
+        FUNCIONA-01, parte 4, 29/09/2026): o co-op desmonta e o daemon só lê o
+        físico do posto (o limite de ``quem_mexe.py``), e a (b) fechava os
+        motores dos secundários, que vibravam direto pela placa até 28/09. O
+        laço abre os motores de todo controle no cabo, e quem responde é o
+        mesmo dono das três portas do rumble
+        (``rumble.modo_nativo_manda_nos_motores``), a cada volta.
         """
+        from hefesto_dualsense4unix.daemon.subsystems import rumble
         from hefesto_dualsense4unix.integrations.alto_falante_bt import (
             e_radio,
             sink_do_controle,
@@ -1318,6 +1327,11 @@ class AltoFalanteSubsystem:
             RotaDoCabo,
             alvo_do_no,
         )
+
+        o_jogo_manda = rumble.modo_nativo_manda_nos_motores(getattr(self, "_daemon", None))
+
+        def _abre(uniq: str) -> bool:
+            return o_jogo_manda or uniq.lower() in jogando
 
         na_mesa = [str(getattr(c, "uniq", "") or "") for c in controles]
         na_mesa = [u for u in na_mesa if u]
@@ -1337,7 +1351,7 @@ class AltoFalanteSubsystem:
                 dono = str(getattr(rota, "dono", "") or "")
                 if dono in no_cabo and self._lugar_de.get(dono) == lugar:
                     rotas[lugar] = rota
-                    if dono.lower() in jogando:
+                    if _abre(dono):
                         abertos.add(lugar)
             logger.debug("haptica_do_cabo_servidor_mudo", ficam=sorted(rotas))
             self._o_cabo().casar(rotas, abertos)
@@ -1357,7 +1371,7 @@ class AltoFalanteSubsystem:
             rotas[lugar] = RotaDoCabo(
                 captura=captura, destino=destino, origem=str(endpoint.nome), dono=uniq
             )
-            este_joga = uniq.lower() in jogando
+            este_joga = _abre(uniq)
             if este_joga:
                 abertos.add(lugar)
             self._vigiar_o_portao(
@@ -1816,7 +1830,8 @@ class AltoFalanteSubsystem:
         }
         # O CABO PASSA PELO LUGAR — A-HAPTICA-CHEGA-A-QUEM-ENTRA-DEPOIS-01: um
         # laço por DualSense no cabo, do endpoint do lugar à placa, com os
-        # motores só para quem joga (a escolha (b) dela, no cabo também).
+        # motores só para quem joga (a escolha (b) dela, no cabo também); no
+        # Modo Nativo, para todos, porque o dono dos motores é o jogo.
         try:
             self._casar_o_cabo(controles, jogando, motores)
         except Exception:  # o laço do cabo nunca derruba a ponte do rádio
