@@ -4461,6 +4461,12 @@ ESPERA_NA_TELA_S = _central_do_radio.PRAZO_DO_PENDENTE_S
 #: fala do «Conectar» que ela ACABOU de fazer; o de uma hora atrás é história, e
 #: a central já nem o guarda depois de um reinício do serviço.
 LEMBRA_O_NAO_CONECTOU_S = 600.0
+#: QUANTAS VOLTAS DO VIGIA DE ZUMBIS a última delas vale na tela. O vigia
+#: (`daemon/subsystems/conexoes.py`) olha de ``INTERVALO_S`` em ``INTERVALO_S``
+#: e carimba a volta pelo relógio monotônico, que é o mesmo em todo processo
+#: da máquina: passadas três voltas sem carimbo novo, o daemon parou de olhar,
+#: e o que o arquivo diz é passado.
+VOLTAS_DO_VIGIA_NA_TELA = 3
 
 #: Os ícones do desenho aprovado, pelo tipo do aparelho. O prefixo `rd-` é o
 #: sprite desta seção, e não colide com nenhum `id` da aba.
@@ -5920,6 +5926,8 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     aparelhos = _aparelhos_da_cena(ctx, st, governador, esperando, aparelhos_bz,
                                    endereco_do_caminho, enderecos)
     falhas = _os_que_nao_conectaram(ctx, movimentos, agora, enderecos)
+    falhas += _os_que_nao_viraram_controle(
+        _em_fundo("zumbis", _ler_os_zumbis, 2.0), enderecos, falhas, time.monotonic())
     aparelhos += falhas
     no_usb = frozenset(_so_hex(str(c.get("uniq") or "")) for c in ctx.conectados
                        if str(c.get("transport") or "").lower() == "usb")
@@ -6209,6 +6217,76 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
             else str(eu["nome"]),
             "nao_conectou": True, "chave": chave,
             "esperando": False, "fixo": True,
+        })
+    return linhas
+
+
+def _ler_os_zumbis() -> dict[str, Any]:
+    """A última volta do vigia de zumbis, do arquivo que ele grava a cada volta."""
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.daemon.subsystems.conexoes import ler_o_diario
+
+    return ler_o_diario()
+
+
+def _os_que_nao_viraram_controle(diario: dict[str, Any] | None, enderecos: list[str],
+                                 falhas: list[dict[str, Any]],
+                                 agora: float) -> list[dict[str, Any]]:
+    """A linha «Não Conectou» do controle que conectou no rádio e NÃO virou controle.
+
+    O vigia de zumbis derruba sozinho o link de pé sem ``hidraw`` e sem registro
+    no BlueZ (CONEXAO-ZUMBI-01). Quando ele NÃO consegue — a ponte que corta o
+    link não está instalada, o teto o segurou porque o controle voltou logo
+    depois da última derrubada, ou a derrubada falhou —, o gesto que resta é
+    dela: parear de novo naquele adaptador. É o que a volta do vigia escreve
+    no próprio diário, e até 28/09/2026 só o arquivo sabia: a tela calava.
+
+    A LINHA É A DO DESENHO APROVADO, e nada mais: a «Não Conectou» dentro da
+    caixa do adaptador, com o «Tentar de Novo» (o «Conectar» naquele
+    adaptador) e o X, que só tira a linha — não há pareamento para esquecer,
+    porque o BlueZ não conhece esse controle ali. Nada de recado nem de botão
+    novo (as decisões de 23/09). Um controle derrubado nesta volta não ganha
+    linha: a cura andou, e ele volta a procurar o adaptador dele sozinho.
+
+    Só a volta FRESCA conta (:data:`VOLTAS_DO_VIGIA_NA_TELA`), e só no
+    adaptador que a tela mostra. O X vale pelo episódio: quando uma volta fresca
+    já não traz o controle, a dispensa dele cai, e o próximo episódio volta a
+    aparecer.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.daemon.subsystems.conexoes import INTERVALO_S
+
+    volta = diario if isinstance(diario, dict) else {}
+    carimbo = volta.get("carimbo")
+    idade = agora - float(carimbo) if isinstance(carimbo, int | float) else -1.0
+    fresca = 0.0 <= idade <= VOLTAS_DO_VIGIA_NA_TELA * INTERVALO_S
+
+    def pares(chave: str) -> list[tuple[str, str]]:
+        return [(_mac(link.get("adaptador")), _so_hex(str(link.get("controle") or "")))
+                for link in volta.get(chave) or () if isinstance(link, dict)]
+
+    derrubados = set(pares("derrubados")) if fresca else set()
+    presos = [par for par in (pares("zumbis") if fresca else [])
+              if par not in derrubados and par[0] in enderecos and par[1]]
+    chaves = {f"zumbi|{lugar}|{quem}" for lugar, quem in presos}
+    if fresca:
+        # Só uma volta lida cura a dispensa: a leitura que ainda não chegou
+        # (o fio de fundo) não é «o controle saiu da lista».
+        for velha in [c for c in _DISPENSADOS if c.startswith("zumbi|") and c not in chaves]:
+            _DISPENSADOS.discard(velha)
+    ja = {(str(f.get("lugar") or ""), _so_hex(str(f.get("aparelho") or ""))) for f in falhas}
+    linhas: list[dict[str, Any]] = []
+    vistos: set[tuple[str, str]] = set()
+    for lugar, quem in presos:
+        chave = f"zumbi|{lugar}|{quem}"
+        if (lugar, quem) in ja or (lugar, quem) in vistos or chave in _DISPENSADOS:
+            continue
+        vistos.add((lugar, quem))
+        linhas.append({
+            "id": f"nao-virou-{_so_hex(lugar)}-{quem}", "aparelho": "",
+            "tipo": "controle", "lugar": lugar, "nome": "", "modalias": "",
+            "jogador": None, "rotulo": "DualSense", "cor": "", "cor_nome": "",
+            "nao_conectou": True, "chave": chave, "esperando": False, "fixo": True,
         })
     return linhas
 

@@ -37,6 +37,7 @@ dela no meio de uma partida é exatamente o defeito que esta sprint cura.
 
 from __future__ import annotations
 
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -467,3 +468,170 @@ async def test_o_laco_do_subsystem_mede_o_tempo_de_verdade() -> None:
     quantos = len(ponte.pedidos)
     time.sleep(0.3)
     assert len(ponte.pedidos) == quantos
+
+
+# --- a aba Conexões diz o que o vigia não curou --------------------------------
+# 28/09/2026, A-CONEXOES-DIZ-O-QUE-O-PRODUTO-JA-MEDE-01. O vigia escrevia a
+# volta dele no disco para «a aba Conexões ler», e a aba não lia: quando a cura
+# não bastava (a ponte que corta o link fora do ar, o teto, a derrubada que
+# falhou), o gesto que resta — parear de novo naquele adaptador — só existia no
+# arquivo. A linha é a «Não Conectou» do desenho aprovado, na caixa do
+# adaptador: nada de recado, nada de botão novo.
+
+
+class _PonteDoServico:
+    """A ponte do pedido `radio.mover`: anota o pedido e a central aceita."""
+
+    def __init__(self) -> None:
+        self.pedidos: list[tuple[str, dict[str, Any]]] = []
+
+    def resultado(self, metodo: str, **parametros: Any) -> dict[str, Any]:
+        self.pedidos.append((metodo, parametros))
+        return {"status": "ok"}
+
+
+@pytest.fixture()
+def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
+    """A aba 08 com dois adaptadores na tela, lidos na hora, sem BlueZ de verdade."""
+    from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez
+    from hefesto_dualsense4unix.integrations.mesa_de_radio import Mesa
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
+    from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
+
+    lidos = (
+        AdaptadorDoBluez("/org/bluez/hci0", "hci0", DONGLE_A.upper(), lugar="3-1",
+                         varrendo=False),
+        AdaptadorDoBluez("/org/bluez/hci1", "hci1", DONGLE_B.upper(), lugar="3-2",
+                         varrendo=False),
+    )
+    monkeypatch.setattr(a08_conexoes, "LER_NA_HORA", True)
+    monkeypatch.setattr(a08_conexoes, "_FUNDO", {})
+    monkeypatch.setattr(a08_conexoes, "_ABERTO", {})
+    monkeypatch.setattr(a08_conexoes, "_CENA_NA_TELA", {})
+    monkeypatch.setattr(a08_conexoes, "_DISPENSADOS", set())
+    monkeypatch.setattr(a08_conexoes, "_mesa_do_radio", lambda recarregar=False: Mesa())
+    monkeypatch.setattr(a08_conexoes, "_ler_o_historico", lambda: {})
+    monkeypatch.setattr(a08_conexoes, "_ler_o_bluez", lambda: (lidos, ()))
+    monkeypatch.setattr(a08_conexoes, "_ler_a_maquina", lambda: (MaquinaConfig(), {}))
+    return a08_conexoes
+
+
+def _cena_da_aba(a08: Any) -> dict[str, Any]:
+    from hefesto_dualsense4unix.interface.pacotes import Contexto
+
+    a08._FUNDO.clear()  # cada tique desta régua lê o diário de agora
+    estado = {"controllers": [], "radio_central": {"movimentos": [], "proposta": None}}
+    a08.campos_do_radio(Contexto(state=estado, conectados=[], mesa=[]))
+    return dict(a08._CENA_NA_TELA)
+
+
+def _presos(cena: dict[str, Any]) -> list[dict[str, Any]]:
+    return [a for a in cena["aparelhos"]
+            if a.get("nao_conectou") and str(a.get("chave") or "").startswith("zumbi|")]
+
+
+def _volta(ponte: Any, links: list[LinkDeRadio], *, quando: float | None = None,
+           vigia: VigiaDeZumbis | None = None) -> ConexoesSubsystem:
+    subsystem = ConexoesSubsystem(
+        vigia=vigia or _vigia(ponte, segundos_para_zumbi=0.0),
+        olhador=lambda: (links, {SAO}, CONHECIDOS, []),
+    )
+    subsystem.uma_volta(time.monotonic() if quando is None else quando)
+    return subsystem
+
+
+def test_o_zumbi_que_o_vigia_nao_cura_vira_nao_conectou_na_caixa_dele(a08: Any) -> None:
+    """Sem a ponte que corta o link, a linha «Não Conectou» nasce na caixa do
+    adaptador em que o controle está preso — e só nela —, com o «Tentar de
+    Novo» que abre o «Conectar» ali e o X que só tira a linha.
+
+    MORDIDA: tire de `cena_do_radio` a soma do `_os_que_nao_viraram_controle`
+    — esta régua reprova sem linha nenhuma.
+    """
+    _volta(PonteDeMentira(impede=["a ponte privilegiada não está instalada"]), [LINK_ZUMBI])
+    cena = _cena_da_aba(a08)
+    presos = _presos(cena)
+    assert len(presos) == 1, cena["aparelhos"]
+    linha = presos[0]
+    assert linha["lugar"] == DONGLE_B.upper()
+    assert linha["tipo"] == "controle" and linha["aparelho"] == ""
+    caixas = {lug["id"]: lug.get("nao_conectou") for lug in cena["lugares"]}
+    assert caixas == {DONGLE_A.upper(): False, DONGLE_B.upper(): True}
+    assert cena["aberto"] == DONGLE_B.upper(), "a caixa de quem não chegou abre"
+    html = a08.html_da_linha(linha, cena)
+    assert a08.NAO_CONECTOU in html and 'data-gesto="tentar-de-novo"' in html
+    assert 'data-abre="conectar"' in html and "Tirar esta linha" in html
+    # O endereço do controle preso não vai para o texto da linha.
+    texto = re.sub(r"<[^>]+>", " ", html)
+    assert ZUMBI.upper() not in texto.upper() and ZUMBI.replace(":", "") not in texto
+
+
+def test_o_teto_e_a_derrubada_que_falha_tambem_deixam_a_linha(a08: Any) -> None:
+    """Os três jeitos de a cura não bastar dão a mesma linha: o impedimento
+    (acima), o teto e a derrubada que falhou."""
+    _volta(PonteDeMentira(funciona=False), [LINK_ZUMBI])
+    assert len(_presos(_cena_da_aba(a08))) == 1, "a derrubada falhou e a tela calou"
+
+    ponte = PonteDeMentira()
+    vigia = _vigia(ponte, segundos_para_zumbi=0.0)
+    agora = time.monotonic()
+    _volta(ponte, [LINK_ZUMBI], vigia=vigia, quando=agora - 1.0)
+    assert ponte.pedidos, "a primeira volta tinha de derrubar"
+    _volta(ponte, [LINK_ZUMBI], vigia=vigia, quando=agora)
+    assert len(ponte.pedidos) == 1, "o teto não segurou a segunda derrubada"
+    assert len(_presos(_cena_da_aba(a08))) == 1, "o teto segurou e a tela calou"
+
+
+def test_o_zumbi_derrubado_nao_ganha_linha(a08: Any) -> None:
+    """A cura andou: o controle volta a procurar o adaptador dele sozinho."""
+    _volta(PonteDeMentira(), [LINK_ZUMBI])
+    assert _presos(_cena_da_aba(a08)) == []
+
+
+def test_a_volta_velha_do_vigia_nao_vale(a08: Any) -> None:
+    """Um minuto sem volta nova é o daemon parado: o arquivo é passado. E um
+    carimbo do FUTURO (o de antes de um reinício da máquina) também não vale."""
+    ponte = PonteDeMentira(impede=["a ponte privilegiada não está instalada"])
+    _volta(ponte, [LINK_ZUMBI], quando=time.monotonic() - 60.0)
+    assert _presos(_cena_da_aba(a08)) == []
+    _volta(ponte, [LINK_ZUMBI], quando=time.monotonic() + 3600.0)
+    assert _presos(_cena_da_aba(a08)) == []
+
+
+def test_o_zumbi_de_adaptador_fora_da_tela_nao_aparece(a08: Any) -> None:
+    fora = LinkDeRadio(hci="hci7", adaptador="aa:bb:cc:00:00:77", controle=ZUMBI)
+    _volta(PonteDeMentira(impede=["a ponte privilegiada não está instalada"]), [fora])
+    assert _presos(_cena_da_aba(a08)) == []
+
+
+def test_o_x_tira_a_linha_ate_o_episodio_acabar(a08: Any) -> None:
+    """O X (`esquecer-aparelho`) tira a linha sem esquecer nada, e ela não volta
+    no tique seguinte; quando uma volta fresca já não traz o controle, o
+    próximo episódio aparece de novo."""
+    from hefesto_dualsense4unix.interface.pacotes import Contexto
+
+    ponte = PonteDeMentira(impede=["a ponte privilegiada não está instalada"])
+    _volta(ponte, [LINK_ZUMBI])
+    linha = _presos(_cena_da_aba(a08))[0]
+    ctx = Contexto(state={}, conectados=[], mesa=[])
+    assert a08.esquecer_aparelho(ctx, {"alvo": linha["id"], "lugar": linha["lugar"]},
+                                 None) == {"armou": True}
+    assert _presos(_cena_da_aba(a08)) == [], "o X não tirou a linha"
+    _volta(ponte, [])  # o controle saiu da lista do vigia
+    assert _presos(_cena_da_aba(a08)) == []
+    _volta(ponte, [LINK_ZUMBI])  # e voltou a ficar preso
+    assert len(_presos(_cena_da_aba(a08))) == 1, "o episódio novo ficou dispensado"
+
+
+def test_tentar_de_novo_abre_o_conectar_no_adaptador_do_preso(a08: Any) -> None:
+    """«Tentar de Novo» é o «Conectar» naquele adaptador: o `radio.mover` sem
+    aparelho, com o destino da caixa — o repareio que o diário do vigia pede."""
+    from hefesto_dualsense4unix.interface.pacotes import Contexto
+
+    _volta(PonteDeMentira(impede=["a ponte privilegiada não está instalada"]), [LINK_ZUMBI])
+    _cena_da_aba(a08)
+    servico = _PonteDoServico()
+    ctx = Contexto(state={}, conectados=[], mesa=[])
+    a08.tentar_de_novo(ctx, {"alvo": DONGLE_B.upper()}, servico)
+    assert servico.pedidos == [("radio.mover", {"destino": DONGLE_B.upper()})]
+    assert _presos(_cena_da_aba(a08)) == [], "a linha refeita continuou na tela"
