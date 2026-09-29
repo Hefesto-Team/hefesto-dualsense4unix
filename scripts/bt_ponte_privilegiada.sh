@@ -382,12 +382,12 @@ _mac_do_stdin() {
 #: metade dele lida. E um stdin que não fecha em 10 s também — root parado
 #: esperando é falha de disponibilidade com privilégio.
 _fim_do_stdin() {
-    local sobra="" codigo=0
-    IFS= read -r -t 10 sobra || codigo=$?
+    local sobra="" rc=0
+    IFS= read -r -t 10 sobra || rc=$?
     #: `read` devolve 0 com a linha inteira, 1 no fim do arquivo (com o resto
     #: sem quebra de linha em `sobra`, se houver) e mais de 128 no prazo.
-    (( codigo <= 128 )) || _recusar "o stdin não fechou em 10 s depois dos dados do verbo"
-    [[ "${codigo}" -ne 0 && -z "${sobra}" ]] \
+    (( rc <= 128 )) || _recusar "o stdin não fechou em 10 s depois dos dados do verbo"
+    [[ "${rc}" -ne 0 && -z "${sobra}" ]] \
         || _recusar "o stdin trouxe uma linha a mais do que o verbo lê"
 }
 

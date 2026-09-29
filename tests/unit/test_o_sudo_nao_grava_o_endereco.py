@@ -128,24 +128,24 @@ if (not os.environ.get("HEFESTO_BT_LIB", "").startswith(raiz + os.sep)
     anotar(argv=pedido, veredito="guarda")
     sys.exit(97)
 resto = list(pedido)
-opcoes = []
+bandeiras = []
 while resto and resto[0].startswith("-") and resto[0] != "--":
-    opcoes.append(resto.pop(0))
+    bandeiras.append(resto.pop(0))
 if resto[:1] == ["--"]:
     resto.pop(0)
-lista = "-l" in opcoes
+lista = "-l" in bandeiras
 with open(os.environ["HEFESTO_TESTE_SUDO_REGRAS"], encoding="utf-8") as arquivo:
     regras = json.load(arquivo)
 
 
 def casa(regra, linha):
     return len(regra) == len(linha) and regra[0] == linha[0] and all(
-        fnmatch.fnmatchcase(arg, re.sub(r"\\\\(.)", r"\\1", padrao))
-        for padrao, arg in zip(regra[1:], linha[1:])
+        fnmatch.fnmatchcase(arg, re.sub(r"\\\\(.)", r"\\1", molde))
+        for molde, arg in zip(regra[1:], linha[1:])
     )
 
 
-aceito = "-n" in opcoes and bool(resto) and any(casa(r, resto) for r in regras)
+aceito = "-n" in bandeiras and bool(resto) and any(casa(r, resto) for r in regras)
 anotar(argv=pedido, lista=lista, veredito="aceito" if aceito else "recusado")
 if not aceito:
     sys.exit(1)
