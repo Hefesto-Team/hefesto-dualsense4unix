@@ -102,7 +102,7 @@ SEM_FONTE: tuple[tuple[str, str, str], ...] = (
     (
         "controle.*.vibracao.sem-teto",
         "'Sem teto' é a única das TRÊS opções sem representação possível: "
-        "`ControllerRumbleOverride` (`profiles/schema.py:1191`) só diz QUAL "
+        "`ControllerRumbleOverride` (`profiles/schema.py:1195`) só diz QUAL "
         "política a peça usa, nunca 'esta peça ignora o teto do orçamento'; e o "
         "`min` que imporia um teto de verdade vive em "
         "`core.rumble._effective_mult`, que não conhece `uniq` e roda antes de a "
@@ -410,7 +410,7 @@ def rotulo_da_politica(policy: str | None) -> str | None:
     por controle, ela traduziria `balanceado` e `max` — os dois — como "Sem
     teto", que é justamente a opção sem tradução. Aqui a pergunta é outra: das
     quatro políticas que `ControllerRumbleOverride` aceita
-    (`profiles/schema.py:1191`), **uma só** tem opção no campo.
+    (`profiles/schema.py:1195`), **uma só** tem opção no campo.
     """
     from hefesto_dualsense4unix.core.rumble import _ORCAMENTO_COM_TETO
 

@@ -582,7 +582,7 @@ def leitura_viva(entrada: dict[str, Any]) -> dict[str, Any]:
     """Tudo o que o card LÊ do aparelho: glifos, gatilhos, analógicos, sensores.
 
     SEM LEITOR, TUDO VOLTA AO REPOUSO — e não ao último valor nem ao desenho. É
-    o `_reset_inputs_render` da GTK (`controller_card.py:5634`), linha por
+    o `_reset_inputs_render` da GTK (`controller_card.py:5636`), linha por
     linha: gatilhos em `0 / 255` com a barra vazia, analógicos no centro, os
     dezesseis glifos apagados e os sensores no travessão. Vale para METADE da
     mesa dela agora: o daemon só publica `inputs` para o `is_primary`.
@@ -4588,11 +4588,11 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     *"o speaker do controle faz os barulhos da espada do Link enquanto na tela
     tem o som normal do jogo"*. É o `OUTPUT_PATH_SEL` = 2: canal esquerdo para o
     fone/TV, direito para o alto-falante do controle. O `speaker.set` leva a
-    `rota` (`ipc_handlers.py:5814`) e a GUI estável manda exatamente isto
-    (`controller_card.py:4316`).
+    `rota` (`ipc_handlers.py:6240`) e a GUI estável manda exatamente isto
+    (`controller_card.py:4430`).
 
     "TODO O SOM DO PC" SÃO DUAS CAMADAS, E A SEGUNDA NÃO É IPC. O
-    `profiles/schema.py:803` já escreve o limite com todas as letras:
+    `profiles/schema.py:839` já escreve o limite com todas as letras:
 
         LIMITE DECLARADO: a rota é a CAMADA 2 (o firmware). O estado "Todo o
         som do PC" da janela também mexe na CAMADA 1 (o *default sink* do
