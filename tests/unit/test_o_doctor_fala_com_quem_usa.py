@@ -12,8 +12,9 @@ Os comentários ficam de fora. A etiqueta do kernel-watch (``[USB-71]``) também
 ela não é chamada de mensagem, e sim o nome da linha que o ``storm_watch.sh``
 escreve. O «dela» não entra, pela mesma razão da régua do instalador.
 
-A MORDIDA: devolver o ``(VPAD-09)`` ao aviso da ACL do login, ou o ``(Onda T)``
-ao ``info`` do patch do hid-nintendo, reprova aqui.
+A MORDIDA: devolver o ``(VPAD-09)`` ao aviso da ACL do login, o ``(Onda T)``
+ao ``info`` do patch do hid-nintendo, ou o ``ONDA-R`` ao passo do backport do
+BlueZ (o install o chama de ``3f``), reprova aqui.
 """
 
 from __future__ import annotations
@@ -30,7 +31,8 @@ _MENSAGEM = re.compile(
     r"""(?:^\s*|&&\s*|\|\|\s*|\{\s*|;\s*)(?:pass|fail|warn|info|hdr|printf|echo)\b"""
 )
 _VOCABULARIO_DE_QUEM_CONSTROI = re.compile(
-    r"\b[A-Z]{2,}(?:-[A-Z0-9]+)*-[0-9]{2}\b|\b(?:d|n)?esta casa\b|\bOnda [A-Z]\b|docs/process"
+    r"\b[A-Z]{2,}(?:-[A-Z0-9]+)*-[0-9]{2}\b|\b(?:d|n)?esta casa\b|\bOnda [A-Z]\b|\bONDA-[A-Z0-9]+\b"
+    r"|docs/process"
 )
 #: O critério 5 da sprint, literal.
 _CRITERIO_5_LINHA = re.compile(r"^\s*(step|warn|die|printf|_faria|info)")
@@ -76,6 +78,7 @@ def test_a_regua_ve_as_tres_formas() -> None:
         '    f && { info "  não gravo (§D.7 da MIC-PADRAO-NO-CABO-01)"; return 0; }',
         '        info "dkms ausente — patch DKMS do hid-nintendo (Onda T) não instalado"',
         '        warn "o porquê está em docs/process/estudos/x.md"',
+        '        warn "x: $(so_no_checkout "(ONDA-R aplica por default)")"',
     )
     ignoradas = (
         "# VPAD-09: o comentário pode citar a sprint",

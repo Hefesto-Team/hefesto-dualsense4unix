@@ -4974,7 +4974,7 @@ check_bluez_backport_version() {
             warn "bluez ${ver}${origem} >= ${_BZ_TETO} — o 5.87 carrega um uso-depois-de-liberado em dev_disconnected (src/adapter.c: device_is_connected() chamado depois de adapter_remove_connection() liberar o device; commit 5d836f1). A correção 5bc6aa79 está um commit DEPOIS do 5.87 e nenhum lançamento a carregava até 07/08/2026 — se esta versão é o 5.88 ou mais nova, confira se ela já traz o 5bc6aa79 e suba o teto (_BZ_TETO) no doctor.sh. O alvo do Hefesto é o backport 5.86$(so_no_checkout "(./install.sh, passo 3f)")."
             ;;
         old)
-            fail "bluez ${ver}${origem} < 5.79 — crashes crônicos de input/HIDP (heap corruption, 6x/5 dias medidos) documentados; aplique o backport: $(conselho_de_instalacao)$(so_no_checkout "(passo ONDA-R aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os com scripts/construir_bluez_backport.sh)")"
+            fail "bluez ${ver}${origem} < 5.79 — crashes crônicos de input/HIDP (heap corruption, 6x/5 dias medidos) documentados; aplique o backport: $(conselho_de_instalacao)$(so_no_checkout "(o passo 3f aplica sozinho se os .debs estiverem em ~/.cache/hefesto-dualsense4unix/bluez-backport/; senão, gere-os com scripts/construir_bluez_backport.sh, pela receita em docs/usage/receita-backport-bluez.md)")"
             ;;
         *)
             info "bluez não encontrado (nem daemon em execução, nem pacote) — pulo o check de versão"
@@ -4997,7 +4997,7 @@ check_bt_agent_service() {
     elif systemctl cat hefesto-bt-agent.service >/dev/null 2>&1; then
         warn "hefesto-bt-agent.service instalado mas ${state:-inativo} — bond meio-salvo à espreita (Paired sem Bonded); ligue: sudo systemctl enable --now hefesto-bt-agent.service"
     else
-        warn "hefesto-bt-agent.service não instalado — pareamento fora da GUI/daemon pode ficar meio-salvo (Paired sem Bonded, 'No agent available for request type 2'); $(conselho_de_instalacao)$(so_no_checkout "(ONDA-R aplica por default)")"
+        warn "hefesto-bt-agent.service não instalado — pareamento fora da GUI/daemon pode ficar meio-salvo (Paired sem Bonded, 'No agent available for request type 2'); $(conselho_de_instalacao)$(so_no_checkout "(o passo 3g aplica por default)")"
     fi
 }
 
