@@ -532,6 +532,38 @@ class ProfileMovimentoConfig(BaseModel):
     pixels_por_grau: float = Field(default=12.0, gt=0.0, le=200.0)
     #: O botão que LIGA a mira enquanto está apertado. `None` = sempre ligada.
     gatilho: str | None = None
+    #: O TOQUE — NO-MODO-XBOX-TUDO-FUNCIONA-01, resposta dela de 28/09 (~16h50):
+    #: *os dois* arranjos, por perfil de jogo. `cursor` = o dedo move o cursor
+    #: (pelo Hefesto, com a `sensibilidade`); `zonas` = o toque aperta o
+    #: direcional, o L1 e o L2 (`roteador_de_movimento.botoes_das_zonas`), para
+    #: quem não os alcança. `nenhum` = sem opinião: o touchpad é o do computador
+    #: (TOUCHPAD-DO-SISTEMA-01). Vale onde há controle virtual, P1 a P4.
+    toque: Literal["nenhum", "cursor", "zonas"] = "nenhum"
+    #: A INCLINAÇÃO — o acelerômetro vira analógico (mesma resposta). O chip da
+    #: tela a manda ao analógico esquerdo, que é o que falta a quem só alcança o
+    #: lado direito; o direito fica no esquema para quem escrever o perfil.
+    acelerometro: Literal["nenhum", "analogico_esquerdo", "analogico_direito"] = (
+        "nenhum"
+    )
+
+    @model_serializer(mode="wrap")
+    def _o_toque_e_a_inclinacao_sem_opiniao_nao_vao_ao_disco(
+        self, handler: SerializerFunctionWrapHandler
+    ) -> Any:
+        """Os dois campos de 28/09 só vão ao arquivo quando alguém os escreveu.
+
+        A mesma cura do ``rota``/``caminho``/``ponte``: com ``extra="forbid"`` um
+        hefesto ANTIGO recusa o perfil INTEIRO ao ver chave que não conhece, e o
+        ``load → save`` de uma mira de ontem não pode ganhar as duas chaves.
+        Pelo ``model_fields_set``, e não pelo valor: a peça que APAGOU o toque
+        (``nenhum`` por cima do ``zonas`` do perfil) tem opinião, e ela vai.
+        """
+        dados = handler(self)
+        if isinstance(dados, dict):
+            for novo in ("toque", "acelerometro"):
+                if novo not in self.model_fields_set:
+                    dados.pop(novo, None)
+        return dados
 
     @field_validator("destino", mode="after")
     @classmethod
@@ -3337,6 +3369,20 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "`None` = a mira fica SEMPRE ligada enquanto o destino não é `nenhum` — "
         "o vazio aqui é LIGADO. Um botão escolhido a restringe ao aperto.",
         dono="hefesto_dualsense4unix.daemon.subsystems.gamepad:aplicar_o_movimento",
+    ),
+    # NO-MODO-XBOX-TUDO-FUNCIONA-01, 28/09/2026: o toque e a inclinação como
+    # fonte. São ARRANJO, como o destino do giro: o touchpad e o acelerômetro do
+    # plástico nascem de pé por conta deles, e o que se classifica é a tradução.
+    "ProfileMovimentoConfig.toque": Nascimento(
+        E_CONTRATO,
+        "`nenhum` = o touchpad é o do computador, como sempre foi "
+        "(TOUCHPAD-DO-SISTEMA-01). Nascer em `zonas` tiraria o ponteiro dela; "
+        "em `cursor`, trocaria o dono do cursor sem pedido.",
+    ),
+    "ProfileMovimentoConfig.acelerometro": Nascimento(
+        E_CONTRATO,
+        "`nenhum` = a inclinação não move analógico nenhum. Ligada sem o gesto "
+        "dela, o personagem andaria sozinho com o controle torto na mão.",
     ),
 }
 

@@ -96,6 +96,14 @@ FAIXA_GIROSCOPIO = slice(0, 6)
 #: Faixa do ACELERÔMETRO: ``accel[3] __le16``, bytes absolutos 21-26.
 FAIXA_ACELEROMETRO = slice(6, 12)
 
+#: OS DOIS BYTES DE CONTATO DO TOQUE na janela (bytes absolutos 32 e 36): o
+#: primeiro de cada `struct dualsense_touch_point`. O bit 7 aceso é o dedo
+#: AUSENTE (`DS_TOUCH_POINT_INACTIVE`, `hid-playstation.c`) — é assim, e não com
+#: zeros, que o próprio controle diz «ninguém tocando»: zerar o byte diria «o
+#: dedo 0 está apoiado no canto».
+CONTATOS_DO_TOQUE = (17, 21)
+TOQUE_INATIVO = 0x80
+
 #: Tamanho da janela. Repetido aqui de propósito: importar o
 #: `uhid_gamepad` puxaria o backend uhid inteiro (e o `/dev/uhid`) para dentro
 #: de um módulo que é PURO — e é justamente essa pureza que deixa a régua
@@ -123,7 +131,8 @@ class EstadoDosSensores(NamedTuple):
 
 
 def janela_com_sensores(
-    janela: bytes, *, giroscopio: bool = True, acelerometro: bool = True
+    janela: bytes, *, giroscopio: bool = True, acelerometro: bool = True,
+    toque: bool = True,
 ) -> bytes:
     """A janela de motion com o sensor desligado ZERADO — o resto verbatim.
 
@@ -143,8 +152,13 @@ def janela_com_sensores(
     duas respostas para o mesmo report torto.
 
     Com os dois ligados devolve **o mesmo objeto** — ver o custo no cabeçalho.
+
+    ``toque=False`` (NO-MODO-XBOX-TUDO-FUNCIONA-01, 28/09/2026): a peça cujo
+    touchpad o Hefesto leva ao cursor ou às zonas. Os dois dedos saem da janela
+    marcados AUSENTES (:data:`TOQUE_INATIVO` no byte de contato), e a posição
+    fica: é o que o controle manda quando ninguém toca.
     """
-    if giroscopio and acelerometro:
+    if giroscopio and acelerometro and toque:
         return janela
     if len(janela) != TAMANHO_DA_JANELA:
         return janela
@@ -153,6 +167,9 @@ def janela_com_sensores(
         fora[FAIXA_GIROSCOPIO] = bytes(6)
     if not acelerometro:
         fora[FAIXA_ACELEROMETRO] = bytes(6)
+    if not toque:
+        for contato in CONTATOS_DO_TOQUE:
+            fora[contato] |= TOQUE_INATIVO
     return bytes(fora)
 
 
@@ -200,6 +217,10 @@ class RegistroDeSensores:
         #: mora; aqui só se guarda a resposta, para a thread do report.
         self._roteado_sem_chip = False
         self._roteado: dict[str, bool] = {}
+        #: AS PEÇAS CUJO TOQUE O HEFESTO LEVA (NO-MODO-XBOX-TUDO-FUNCIONA-01,
+        #: 28/09): o dedo delas vai ao cursor ou às zonas, e sai da janela.
+        self._toque_roteado_sem_chip = False
+        self._toque_roteado: dict[str, bool] = {}
 
     def definir(
         self,
@@ -254,25 +275,52 @@ class RegistroDeSensores:
         """
         estado = self.estado(uniq)
         giro = estado.giroscopio and not self.roteado(uniq)
-        if giro and estado.acelerometro:
+        toque = not self.toque_roteado(uniq)
+        if giro and estado.acelerometro and toque:
             return janela
         return janela_com_sensores(
             janela,
             giroscopio=giro,
             acelerometro=estado.acelerometro,
+            toque=toque,
         )
 
-    def definir_roteados(self, *, sem_chip: bool, por_peca: Mapping[str, bool]) -> None:
+    def definir_roteados(
+        self,
+        *,
+        sem_chip: bool,
+        por_peca: Mapping[str, bool],
+        toque_sem_chip: bool = False,
+        toque_por_peca: Mapping[str, bool] | None = None,
+    ) -> None:
         """Quais peças mandam o giro à MIRA em vez de ao jogo. TROCA tudo.
 
         `sem_chip` vale para a peça sem opinião (a mira do perfil, para todos);
         `por_peca` é quem tem o chip «Mira Virtual» próprio. Chamado só por
         `roteador_de_movimento.sincronizar_o_filtro`.
+
+        `toque_sem_chip` e `toque_por_peca` são o mesmo par para o TOUCHPAD
+        (NO-MODO-XBOX-TUDO-FUNCIONA-01, 28/09): a peça cujo dedo o Hefesto leva
+        ao cursor ou às zonas. Omitidos = ninguém, e a troca apaga o anterior.
         """
         limpo = {chave_de_sensor(k): bool(v) for k, v in por_peca.items() if chave_de_sensor(k)}
+        toques = {
+            chave_de_sensor(k): bool(v)
+            for k, v in (toque_por_peca or {}).items()
+            if chave_de_sensor(k)
+        }
         with self._lock:
             self._roteado_sem_chip = bool(sem_chip)
             self._roteado = limpo
+            self._toque_roteado_sem_chip = bool(toque_sem_chip)
+            self._toque_roteado = toques
+
+    def toque_roteado(self, uniq: str | None) -> bool:
+        """O dedo desta peça vai ao cursor ou às zonas, e não ao jogo?"""
+        if not uniq:
+            return False
+        with self._lock:
+            return self._toque_roteado.get(chave_de_sensor(uniq), self._toque_roteado_sem_chip)
 
     def roteado(self, uniq: str | None) -> bool:
         """Esta peça está mirando — o giro dela vai ao analógico, não ao jogo?"""
@@ -298,6 +346,8 @@ class RegistroDeSensores:
             self._estado.clear()
             self._roteado_sem_chip = False
             self._roteado = {}
+            self._toque_roteado_sem_chip = False
+            self._toque_roteado = {}
 
 
 def chave_de_sensor(uniq: str) -> str:
@@ -327,10 +377,12 @@ REGISTRO = RegistroDeSensores()
 
 
 __all__ = [
+    "CONTATOS_DO_TOQUE",
     "FAIXA_ACELEROMETRO",
     "FAIXA_GIROSCOPIO",
     "REGISTRO",
     "TAMANHO_DA_JANELA",
+    "TOQUE_INATIVO",
     "EstadoDosSensores",
     "RegistroDeSensores",
     "chave_de_sensor",
