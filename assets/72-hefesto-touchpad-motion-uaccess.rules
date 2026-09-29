@@ -1,19 +1,7 @@
-# hefesto-dualsense4unix — acesso da usuária aos nós de ENTRADA do TOUCHPAD e
-# dos SENSORES DE MOVIMENTO (giroscópio + acelerômetro).
+# hefesto-dualsense4unix — acesso da sessão aos nós de ENTRADA do TOUCHPAD e
+# dos SENSORES DE MOVIMENTO (giroscópio + acelerômetro), em todos os modos.
 #
-# OQ-6 — este é o item, e ele já tinha nome antes desta regra existir:
-#   docs/process/sprints/2026-08-07-INDICE-a-ordem-de-execucao-do-que-o-
-#     diagnostico-abriu.md:372 — *"a regra que daria acesso aos nós de entrada
-#     nunca foi escrita"*, custo M, entra no jogo;
-#   docs/process/sprints/2026-08-08-INDICE-a-madrugada-em-que-o-produto-era-o-
-#     reu.md:123 — o mesmo item como C-3, grau MEDIDO;
-#   docs/process/sprints/2026-08-09-A-NOITE-DOS-QUATRO-INVENTARIOS-01-o-que-a-
-#     casa-sabe-e-o-que-o-produto-faz.md:133 — F-8, *"o touchpad e o giroscópio
-#     dela funcionam por acidente"*.
-# Autorização dela, 09/08/2026: *"autorizo inclusive o touchpad e giroscópio
-# devem funcionar por default em todos os modos possíveis"*.
-#
-# O DEFEITO QUE ESTA REGRA CURA — medido em 09/08/2026 na máquina dela, com
+# O DEFEITO QUE ESTA REGRA CURA — medido em 09/08/2026 com
 # `udevadm info -q property` e `getfacl` nos nós vivos:
 #
 #   /dev/input/event6  "DualSense Wireless Controller"                 TAGS=:uaccess:seat:
@@ -28,23 +16,23 @@
 # e os nós auxiliares do `hid_playstation` NÃO são joystick: o `input_id` do
 # kernel classifica o de movimento como `ID_INPUT_ACCELEROMETER=1` e o do
 # touchpad como `ID_INPUT_TOUCHPAD=1`. Nenhum dos dois casa aquela linha, e
-# nenhuma regra desta casa dava acesso a eles — eles ficavam no `0660
+# nenhuma regra do Hefesto dava acesso a eles — eles ficavam no `0660
 # root:input` do default do udev.
 #
-# POR QUE ISSO NUNCA APARECEU: a usuária desta máquina está no grupo `input`
-# **por fora do produto** (`id` devolve `995(input)`). Nenhum instalador daqui
+# POR QUE ISSO NUNCA APARECEU: a máquina de referência tem a usuária no grupo
+# `input` **por fora do produto** (`id` devolve `995(input)`). Nenhum instalador daqui
 # põe ninguém nesse grupo — o `install_udev.sh` só cria o grupo `hefesto`. Ou
 # seja: o touchpad e o giroscópio funcionavam por ACIDENTE HISTÓRICO, e numa
 # máquina nova não funcionariam, sem ninguém saber por quê.
 #
 # POR QUE `uaccess` E NÃO GRUPO — a decisão, e não só o mecanismo:
 #
-#   1. o grupo `input` é PROIBIDO nesta casa desde o item 3.3 de
+#   1. o grupo `input` é PROIBIDO neste projeto desde o item 3.3 de
 #      `docs/history/RESPOSTAS_V1.md` — *"NÃO adicionar usuário ao grupo input.
 #      Criar udev rule seletiva por VID/PID"* — e a `71-uhid.rules` repete o
 #      porquê: "grupo DEDICADO de propósito: nunca o 'input' (membro de input
 #      lê todos os /dev/input/event* = primitiva de keylogger)". Entrar no
-#      `input` daria à usuária leitura do teclado dela inteiro para resolver um
+#      `input` daria à usuária leitura do próprio teclado inteiro para resolver um
 #      problema de touchpad de controle. Esta regra é a "udev rule seletiva"
 #      que aquele item pediu, e que nunca tinha sido escrita;
 #   2. um grupo NOVO (à moda do `hefesto`) resolveria o escopo mas não o
@@ -85,7 +73,7 @@
 #
 # LIMITE HONESTO: o casamento é por FABRICANTE + sufixo de nome, então um
 # device Sony NÃO-controle cujo nó de entrada terminasse em "Touchpad" também
-# ganharia a ACL da sessão local. Não há um na casa, e o preço da alternativa
+# ganharia a ACL da sessão local. Não se conhece um, e o preço da alternativa
 # (lista de PIDs) é o defeito acima. A ACL vai para a usuária da sessão ATIVA,
 # nunca para um grupo do sistema.
 #
@@ -120,8 +108,7 @@ ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ATTRS{id/vendor}=="0
 # HIDE-SO-O-HIDRAW-02 (24/09/2026) — OS NÓS DE ENTRADA DO FÍSICO NASCEM FECHADOS
 # ---------------------------------------------------------------------------
 #
-# A palavra dela, 23/09/2026, escolhida entre as opções: «Esconder tudo». Os
-# quatro nós de entrada do DualSense FÍSICO — o gamepad, o touchpad, os
+# Os quatro nós de entrada do DualSense FÍSICO — o gamepad, o touchpad, os
 # sensores de movimento e a tomada do fone (`event*`), e o joystick legado
 # (`js*`) — somem para todos, menos para o Hefesto, como o hidraw já some
 # desde a `73-hefesto-ps5-controller.rules`. Só o Modo Nativo os devolve, pelo broker.

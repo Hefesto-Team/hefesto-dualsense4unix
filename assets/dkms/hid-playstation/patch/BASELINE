@@ -70,10 +70,13 @@ POP_LINUX_COMMIT_HID_IDS_H=3af2f9de43174ce5063110f94b7b01226499ba13
 SHA256_VANILLA_C=9e8266ab8e5e4298d32097b3730f1fc03dbf6a9e57abdce627cd26ffc59883f0
 # SHA256_PATCHED_C mudou em 28/09/2026 com a marca do 0003 e a base v7.1.5
 # (era 4e7b30c62692a6149088c7e97a5bdb302ebcbbe8633f68aa8e171bd0753af318, a
-# série de três sobre o v7.0.11). Editar o .c sem mexer AQUI quebra a
-# proveniência do módulo que roda na máquina dela, e três testes desta série
+# série de três sobre o v7.0.11), e de novo no mesmo dia, só por um comentário
+# do 0003 que vai para o /usr/src de quem instala (era
+# 3b22fd83a95bcc3bdccc158fbf6eb0c6b4fc9036ef4a72d59aec3c1357e58af6; o
+# srcversion não muda, porque ignora comentário). Editar o .c sem mexer AQUI
+# quebra a proveniência do módulo instalado, e três testes desta série
 # reprovam.
-SHA256_PATCHED_C=3b22fd83a95bcc3bdccc158fbf6eb0c6b4fc9036ef4a72d59aec3c1357e58af6
+SHA256_PATCHED_C=c56601b0f2f9f26ba68126bbe560840c41beda71062f9046c78b8ecae8bb115e
 SHA256_HID_IDS_H=a88d22bed0835d0b12d2ade286e9f562fcdb2dcebe2db380ab6b3c3ea8ad7838
 SRCVERSION_DO_0003_SEM_A_MARCA=CFB81A3D4C7FAA41489CCBD
 PATCH=0001-HID-playstation-retry-feature-reports-that-time-out-o.patch

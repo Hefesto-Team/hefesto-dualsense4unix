@@ -1,6 +1,5 @@
 [Unit]
-# doc: docs/process/sprints/arquivados/2026-07-26-STEAM-INPUT-01-ela-nunca-mais-precisa-decidir.md
-# doc: docs/process/sprints/arquivados/2026-08-16-SENTINELA-WRAPPER-01-a-steam-guarda-uma-linha-por-jogo-e-comeu-a-nossa.md
+# doc: docs/usage/instalacao.md
 Description=Hefesto — devolve a configuração que a Steam reescreve (Steam Input desligado, e o atalho de inicialização de volta)
 
 [Service]
@@ -47,7 +46,7 @@ ExecStart=-/usr/bin/env python3 __PROTON_PIN__ --manter
 #    linha sem o atalho — medido no diário de um dia inteiro: o PRAGMATA
 #    perdia o atalho de hora em hora e o passo 2 o repunha, das 04:31 às 22:00.
 #    Agora a tabela é do Hefesto (`opcoes_por_jogo.txt`) e a linha sai COMPOSTA:
-#    o atalho na frente, as opções dela atrás.
+#    o atalho na frente, as opções de quem joga atrás.
 #
 #    O `-` pelo mesmo motivo dos passos 2 e 3: com a Steam ou um jogo abertos
 #    ele adia (rc 3), e isso não é falha.

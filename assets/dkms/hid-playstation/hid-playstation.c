@@ -1635,7 +1635,7 @@ static int dualsense_parse_report(struct ps_device *ps_dev, struct hid_report *r
 		 *
 		 * Descartar e o certo: um report de audio nao carrega estado de
 		 * input nenhum, entao nao ha nada a publicar. Devolver 0 diz
-		 * "consumido, sem erro" -- -EILSEQ encheria o dmesg dela a 100
+		 * "consumido, sem erro" -- -EILSEQ encheria o dmesg a 100
 		 * reports por segundo com o microfone ligado.
 		 */
 		if (data[1] & DS_INPUT_BT_FLAG_AUDIO)

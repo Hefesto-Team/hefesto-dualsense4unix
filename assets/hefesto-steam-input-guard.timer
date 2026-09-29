@@ -1,5 +1,5 @@
 [Unit]
-# doc: docs/process/sprints/arquivados/2026-07-26-STEAM-INPUT-01-ela-nunca-mais-precisa-decidir.md
+# doc: docs/usage/instalacao.md
 Description=Hefesto — rede de segurança: reaplica Steam Input OFF periodicamente
 
 [Timer]
@@ -17,7 +17,7 @@ Description=Hefesto — rede de segurança: reaplica Steam Input OFF periodicame
 #
 # O gatilho é todo `install.sh` que substitui as unidades: o objeto de unidade
 # é recriado do zero (last_trigger zerado) com o carimbo antigo ainda no disco.
-# A/B na máquina dela, mesmo roteiro, só esta linha de diferença:
+# A/B na máquina de referência, mesmo roteiro, só esta linha de diferença:
 #   com Persistent=true -> SubState=elapsed, NextElapseUSecMonotonic=infinity
 #   sem Persistent      -> SubState=waiting, dispara na hora, rearma em 30min
 OnBootSec=3min

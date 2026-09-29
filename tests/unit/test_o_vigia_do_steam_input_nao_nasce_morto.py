@@ -172,6 +172,13 @@ class TestAUnidadeConsertada:
         que importa: o dia em que uma unidade citar um documento VERSIONADO que
         sumiu, este teste continua reprovando no claro. Dispensar o teste todo
         com um marcador teria calado esse caso junto.
+
+        E O ALVO É UMA PÁGINA DE USO (28/09/2026). A unidade vai para o
+        `~/.config/systemd/user` de quem instala, e quem abre o arquivo ali
+        precisa de uma página que exista no clone dele e fale com ele. As três
+        passaram a apontar `docs/usage/instalacao.md`, que tem a seção do
+        vigia; um `# doc:` fora de `docs/usage/` reprova aqui, antes do teste de
+        existência.
         """
         conferidos = 0
         dispensados: list[str] = []
@@ -180,6 +187,11 @@ class TestAUnidadeConsertada:
                 if not linha.startswith("# doc:"):
                     continue
                 relativo = linha.split(":", 1)[1].strip()
+                assert relativo.startswith("docs/usage/"), (
+                    f"{unidade.name} aponta `# doc:` para {relativo}: a unidade "
+                    "vai para a máquina de quem instala, e o seu documento tem "
+                    "de ser uma página de uso (docs/usage/)"
+                )
                 insumo = olhar_insumo(relativo)
                 if insumo.nao_viaja:
                     dispensados.append(f"{unidade.name} -> {insumo.razao}")
