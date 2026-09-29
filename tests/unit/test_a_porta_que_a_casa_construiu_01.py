@@ -621,14 +621,24 @@ def test_sem_o_aviso_do_dono_o_exame_nao_toca_no_no(grab: str, emulando: bool) -
     assert feitas == {"porta": [], "grab": []}
 
 
-def test_o_interrogacao_da_linha_e_o_porque_do_dono() -> None:
+def test_o_interrogacao_e_a_sugestao_sao_as_duas_metades_do_dono() -> None:
+    """O `?` leva o porquê e a Sugestão de Conexão leva o que fazer — as duas
+    metades de `home_actions.AVISO_DE_GRAB_PORQUE`, sem a mesma frase duas vezes.
+
+    MORDIDA: tire a `cura` da conferência — a Sugestão volta a repetir a linha
+    da esquerda («O jogo pode receber…») no lugar do que fazer.
+    """
     from hefesto_dualsense4unix.app.actions.home_actions import AVISO_DE_GRAB_PORQUE
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 
     _feitas, dubles = _perguntas()
     item = a08_conexoes._conferencia_da_leitura(_estado_do_daemon("failed"), **dubles)
+    porque, cura = a08_conexoes._o_porque_e_a_cura_do_dono()
+    assert cura and cura.lower() in AVISO_DE_GRAB_PORQUE.lower()
+    assert porque.rstrip(".") in AVISO_DE_GRAB_PORQUE and cura not in porque
     dica = a08_conexoes._dica_da_linha(item)
-    assert AVISO_DE_GRAB_PORQUE.split(",")[0] in dica
+    assert porque.split(",")[0] in dica and dica.count(cura.split(",")[-1].strip()) == 1
+    assert a08_conexoes._sugestoes_do_exame([item]) == [(cura, None)]
 
 
 def test_a_linha_da_leitura_entra_no_check_up_e_nao_na_aba_jogar(

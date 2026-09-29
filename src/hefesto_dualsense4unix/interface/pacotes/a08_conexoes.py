@@ -1094,11 +1094,7 @@ def _dica_da_linha(item: Any) -> str:
         if not verbete and chave == CHAVE_DA_LEITURA:
             # A LEITURA DOS CONTROLES só vira linha no aviso do dono, e o `?`
             # dela é o porquê do mesmo dono (`home_actions.AVISO_DE_GRAB_PORQUE`).
-            from hefesto_dualsense4unix.app.actions.home_actions import (
-                AVISO_DE_GRAB_PORQUE,
-            )
-
-            verbete = AVISO_DE_GRAB_PORQUE
+            verbete = _o_porque_e_a_cura_do_dono()[0]
         partes: list[tuple[str, str]] = [("", _(str(verbete)))]
         ordem = getattr(item, "ordem", None)
         if ordem is not None:
@@ -4115,6 +4111,24 @@ def _abridor(porta: str) -> Callable[..., int]:
     return abrir
 
 
+def _o_porque_e_a_cura_do_dono() -> tuple[str, str]:
+    """``(o porquê, o que fazer)`` do aviso de grab, as duas metades da frase do dono.
+
+    `home_actions.AVISO_DE_GRAB_PORQUE` diz o que é, o que causa e o que fazer,
+    nessa ordem, e o «o que fazer» é a última oração. Aqui ela se parte no
+    último ``; ``: o `?` da linha leva o porquê e a Sugestão de Conexão leva o
+    que fazer — sem uma palavra nossa, e sem a mesma frase duas vezes na caixa.
+    Se o dono deixar de ter essa forma, o porquê vai inteiro e não há cura.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.actions.home_actions import AVISO_DE_GRAB_PORQUE
+
+    antes, _sep, cura = AVISO_DE_GRAB_PORQUE.rpartition("; ")
+    if not antes or not cura:
+        return AVISO_DE_GRAB_PORQUE, ""
+    return f"{antes}.", cura[:1].upper() + cura[1:]
+
+
 def _conferencia_da_leitura(state: dict[str, Any] | None, *,
                             porta: Callable[[], tuple[str, str]] | None = None,
                             grab: Callable[..., str] | None = None,
@@ -4125,7 +4139,8 @@ def _conferencia_da_leitura(state: dict[str, Any] | None, *,
     principal (``primary_grab_state``) e a regra de quando ele vira aviso
     (`home_actions.aviso_de_grab`: o principal conectado, com o controle do
     Hefesto de pé, e o grab que FALHOU). A frase da linha e a do `?` também são
-    de lá. Sem aviso, não há linha — o aviso do dono só acende no defeito.
+    de lá (:func:`_o_porque_e_a_cura_do_dono`). Sem aviso, não há linha — o
+    aviso do dono só acende no defeito.
 
     A CAUSA É DO EXAME, e é o que faltava (28/09/2026): o exame pergunta à
     porta do broker (`porta_provavel`) e ao próprio nó (`estado_do_grab`), e
@@ -4167,7 +4182,7 @@ def _conferencia_da_leitura(state: dict[str, Any] | None, *,
               file=sys.stderr)
     return Item(chave=CHAVE_DA_LEITURA, rotulo=ROTULO_DA_LEITURA,
                 estado="atencao",  # (noqa-acento): chave de máquina do exame
-                porque=f"{linha}.")
+                porque=f"{linha}.", cura=_o_porque_e_a_cura_do_dono()[1] or None)
 
 
 @gesto("08-conexoes.html", "ignorar", grava="machine_declare")
