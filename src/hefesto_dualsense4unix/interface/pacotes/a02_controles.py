@@ -1142,7 +1142,7 @@ def _byte_da_rota(entry: Any) -> int | None:
 # O CARD 2 DELA ACENDIA "TODO O SOM DO PC" COM O SOM NA TV, medido em
 # 03/09/2026. A causa está escrita no motor: *"a camada 1 vence a camada 2 —
 # volume e rota perfeitos num sink mudo é trabalho invisível"*
-# (`controller_card.py:4218`). O byte é a camada 2; quem decide ONDE o som sai
+# (`controller_card.py:4375`). O byte é a camada 2; quem decide ONDE o som sai
 # é a saída padrão do sistema.
 #
 # POR QUE NÃO NO TIQUE: `audio_saida.ler_as_duas_camadas` roda `pactl` — dois
@@ -4615,13 +4615,13 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     (`controller_card.py:4430`).
 
     "TODO O SOM DO PC" SÃO DUAS CAMADAS, E A SEGUNDA NÃO É IPC. O
-    `profiles/schema.py:839` já escreve o limite com todas as letras:
+    `profiles/schema.py:842` já escreve o limite com todas as letras:
 
         LIMITE DECLARADO: a rota é a CAMADA 2 (o firmware). O estado "Todo o
         som do PC" da janela também mexe na CAMADA 1 (o *default sink* do
         PipeWire), que é um fato GLOBAL do sistema (…)
 
-    E `controller_card.py:4218` diz quem vence: *"A camada 1 vence a camada 2:
+    E `controller_card.py:4375` diz quem vence: *"A camada 1 vence a camada 2:
     volume e rota perfeitos num sink mudo é trabalho invisível."* Quem executa a
     camada 1 é `app/audio_saida.RotaDeSaida.mandar_para_o_controle` (`:820`),
     que roda `pactl set-default-sink` — não há método no daemon para isso, e não
@@ -4644,7 +4644,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     **A ORDEM É CAMADA 1 PRIMEIRO, e ela é medida:** *"a camada 1 vence a camada
     2 — volume e rota perfeitos num sink mudo é trabalho invisível"*
-    (`controller_card.py:4218`). Se o sink não existe (o RÁDIO, em que o
+    (`controller_card.py:4375`). Se o sink não existe (o RÁDIO, em que o
     DualSense não publica placa de som), este gesto recusa ANTES de escrever o
     byte, dizendo por quê — em vez de deixar o firmware roteado para um canal
     que o sistema não alimenta.

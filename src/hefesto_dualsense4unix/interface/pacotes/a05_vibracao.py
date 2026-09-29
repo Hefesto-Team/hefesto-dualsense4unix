@@ -970,7 +970,7 @@ def _sem_marcacao(texto: str) -> str:
 # Quem escolhe o controle é o ALVO DE OUTPUT do daemon, e o handler o congela
 # junto do par: `daemon/ipc_handlers.py:5498` grava `rumble_active_uniq =
 # uniq_do_alvo_de_output(self.controller)`. Sem alvo escolhido o padrão é
-# BROADCAST (`ipc_handlers.py:4533`) — os quatro tremeriam, e a coluna, que é o
+# BROADCAST (`ipc_handlers.py:5304`) — os quatro tremeriam, e a coluna, que é o
 # endereço desta aba, estaria mentindo. Por isso `_mirar()` vem antes.
 #
 # A política é a exceção, e não é descuido meu: ela é DA MESA e o produto sabe
@@ -1397,7 +1397,7 @@ def _mirar(ctx: Contexto, o: dict[str, Any], p: Any) -> str:
     esta função guardava.** O `chamar()` devolve `bool` e o retorno era jogado
     fora: com o daemon mudo — ou só lento além dos 250 ms do `_safe_call` —, a
     mira FALHAVA e o gesto seguia adiante para o `rumble.set`, **que sem alvo
-    escolhido é BROADCAST** (`ipc_handlers.py:4533`). O "Testar" da coluna do
+    escolhido é BROADCAST** (`ipc_handlers.py:5304`). O "Testar" da coluna do
     P2 sacudia os quatro controles, e a tela não dizia uma palavra. É o
     contrário do que o desenho promete — *"Testar faz este controle tremer até
     o Parar"* — e é pior que não fazer nada: faz na mesa inteira.

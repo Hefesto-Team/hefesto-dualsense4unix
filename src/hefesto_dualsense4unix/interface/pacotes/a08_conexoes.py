@@ -2922,7 +2922,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # — corrigido em 01/09/2026, e foi o defeito que segurou esta leva:
     #
     #   perfil.rumble.policy   o DENOMINADOR do fator por peça
-    #                          (`profiles/manager.py:2943`)
+    #                          (`profiles/manager.py:3330`)
     #   state['rumble_policy'] o que MULTIPLICA no funil do motor
     #                          (`daemon/ipc_handlers.py:3439` → `_effective_mult`)
     #   maquina.json           o teto por CIMA da viva, com `min`

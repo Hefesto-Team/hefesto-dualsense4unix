@@ -82,7 +82,7 @@ from hefesto_dualsense4unix.profiles.simple_match import (  # noqa: E402
 # O QUE O PERFIL GUARDA DE CADA CONTROLE — e isto NÃO é escolha de desenho.
 #
 # `Profile.controllers` é um mapa `{ID da peça: ControllerOverrides}`
-# (`profiles/schema.py:1867`), e a classe tem OITO campos hoje
+# (`profiles/schema.py:1910`), e a classe tem OITO campos hoje
 # (`profiles/schema.py:1718-1762`), que a coluna desenha todos
 # (`a10_perfis.SECOES_DA_COLUNA`):
 #
