@@ -490,13 +490,15 @@ def test_o_tocador_sobe_com_o_rumble_toca_o_nivel_e_sai_no_silencio(processos: A
     tocador.levar(0, 255, sink=_ENDPOINT_1, dono=_P1)
     assert _esperar(lambda: tocador.vivo), "o tocador não subiu"
     assert _esperar(lambda: len(processos.criados[0].lido) >= 7680 * 3)
-    assert avisos == ["mudou"]
+    # O aviso sai DEPOIS de o tocador se dizer de pé (e, na saída, depois de
+    # se dizer fora): quem o lê espera por ele, e não pelo ``vivo``.
+    assert _esperar(lambda: avisos == ["mudou"]), avisos
     _fl, _fr, esquerdo, direito = _canais(bytes(processos.criados[0].lido[: 7680 * 3]))
     assert max(esquerdo) > 0.9 and max(map(abs, direito)) == 0.0
     tocador.calar()
     assert _esperar(lambda: not tocador.vivo), "o silêncio não tirou o tocador do endpoint"
-    assert processos.criados[0].poll() is not None, "o processo ficou de pé"
-    assert avisos == ["mudou", "mudou"]
+    assert _esperar(lambda: processos.criados[0].poll() is not None), "o processo ficou de pé"
+    assert _esperar(lambda: avisos == ["mudou", "mudou"]), avisos
     tocador.levar(10, 10, sink=_ENDPOINT_1, dono=_P1)
     assert _esperar(lambda: tocador.vivo) and len(processos.criados) == 2
     tocador.parar()
@@ -769,6 +771,35 @@ def test_o_pad_uhid_nunca_converte(mundo: _Mundo) -> None:
     mundo.rumble(_P1, 90, 90, vpad=uhid)
     assert mundo.tocador(1).nivel == (0, 0)
     assert mundo.backend.do(_P1)[-1] == (90, 90)
+
+
+@pytest.mark.parametrize("transporte", ["cabo", "radio"])
+def test_o_pad_que_volta_ao_uhid_com_o_caminho_de_pe_segue_no_hid(
+    mundo: _Mundo, transporte: str
+) -> None:
+    """O pad trocou de ``uinput`` para ``uhid`` com o caminho da háptica ainda de pé.
+
+    O tocador do lugar cala, mas segue no endpoint durante a folga, e o laço
+    do cabo (ou a ponte do rádio) segue aberto para ele. O rumble que o jogo
+    manda ao pad ``uhid`` nessa janela vai ao HID inteiro: quem converte é só o
+    ``uinput``, e o caminho de pé não é licença para soltar os motores.
+
+    MORDIDA: em ``_levar_a_haptica_fina``, devolva ``leva is True`` sem o
+    ``converte and`` — o HID recebe (0, 0) e o rumble do jogo se perde.
+    """
+    if transporte == "cabo":
+        controles = _no_cabo_os_quatro(mundo)
+    else:
+        controles = _no_radio_os_quatro(mundo)
+    mundo.mesa.volta(*controles)
+    mundo.rumble(_P1, 100, 200)
+    mundo.mesa.volta(*controles)
+    assert mundo.backend.do(_P1)[-1] == (0, 0), "o caminho da háptica não abriu"
+    assert mundo.tocador(1).vivo
+    uhid = UhidDualSense(player=1)
+    assert mundo.rumble(_P1, 90, 90, vpad=uhid) == (90, 90)
+    assert mundo.tocador(1).nivel == (0, 0)
+    assert mundo.backend.do(_P1)[-1] == (90, 90), "o rumble do pad uhid não chegou ao HID"
 
 
 def test_o_rumble_fixado_pela_tela_cala_a_haptica_fina(mundo: _Mundo) -> None:
