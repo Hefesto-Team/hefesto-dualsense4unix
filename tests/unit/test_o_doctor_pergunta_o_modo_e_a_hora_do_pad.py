@@ -634,9 +634,9 @@ def _bin(lar: Path, kernel: list[str], diario: list[str]) -> Path:
 
 
 def _doctor(lar: Path, funcao: str, binario: Path | None = None, doctor: Path = DOCTOR) -> str:
-    """Roda uma função do doctor com o `binario` à frente do PATH.
+    """Roda uma função do doctor com a pasta de mentira à frente do PATH.
 
-    O python que o `binario` traz é o que o doctor usa: a escolha é do
+    O python que essa pasta traz é o que o doctor usa: a escolha é do
     `_python_do_produto` (a `.venv` ao lado do script, a do `HOME`, a do `/opt`, e só
     por último o `python3` do PATH), e o teste a diz redefinindo o dono depois do
     `source`, como as réguas do INSTALL-UNIVERSAL. Sem isso o python plantado só era

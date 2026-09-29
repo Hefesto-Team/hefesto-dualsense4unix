@@ -313,7 +313,7 @@ async def _o_ouvinte_subiu(
     """A barreira de toda volta do ouvinte: o retrato vivo E o padrão dele publicado.
 
     O retrato fica vivo no `assumir` do `_carregar_o_retrato`, e a leitura do padrão
-    (numa thread) e a publicação vêm DEPOIS. Esperar só o `RETRATO.vivo` media um
+    (numa thread) e a publicação vêm DEPOIS. Esperar só o `RETRATO.vivo` mediria um
     instante antes do fato cobrado: no runner do CI a thread passa da volta do laço
     (a corrida 36503520655, no 3.12). A publicação sai em toda volta, com o servidor
     de pé ou não, por isso a barreira pede o VALOR que o retrato diz, e não só a

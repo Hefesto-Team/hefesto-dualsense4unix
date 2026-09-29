@@ -1148,7 +1148,8 @@ def _a_regua_6_sem_o_gi(tmp_path: Path, fonte: str) -> list[str]:
         [sys.executable, "-c", _A_REGUA_6_NUM_PROCESSO_NOVO],
         input=fonte, capture_output=True, text=True, cwd=RAIZ, env=ambiente, timeout=120,
     )
-    assert r.returncode == 0, f"a régua 6 não respondeu num processo sem o `gi`:\n{r.stderr[-1500:]}"
+    assert r.returncode == 0, (
+        f"a régua 6 não respondeu num processo sem o `gi`:\n{r.stderr[-1500:]}")
     return cast(list[str], json.loads(r.stdout.strip().splitlines()[-1]))
 
 
@@ -1168,7 +1169,7 @@ def test_a_regua_6_da_a_mesma_resposta_com_um_gi_falso(monkeypatch: pytest.Monke
 
 
 def test_o_terceiro_nao_declarado_continua_pego(tmp_path: Path) -> None:
-    """A lista é a do dono (o `pyproject.toml` e as exceções com motivo), e não uma digitada aqui."""
+    """A lista é a do dono (o `pyproject.toml` e as exceções com motivo), não uma digitada aqui."""
     fonte = _ENSAIO_DO_TOUCHPAD.read_text(encoding="utf-8") + "\nimport requests\n"
     assert _imports_que_nao_resolvem(fonte, _versionados(), set()) == ["requests"]
     assert _a_regua_6_sem_o_gi(tmp_path, fonte) == ["requests"]
