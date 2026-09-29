@@ -293,6 +293,12 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     # a linha dele que responde cabo e rádio. A matriz das duas sprints provou
     # os dois transportes, do P1 ao P4.
     "mira": ("movimento.giroscopio",),
+    # A INCLINAÇÃO E O TOQUE (NO-MODO-XBOX-TUDO-FUNCIONA-01, os dois arranjos da
+    # resposta dela de 28/09, publicados na 02 em 29/09): arranjo, como a Mira. A
+    # inclinação lê o acelerômetro; o «Cursor» lê o dedo pelo nó do touchpad, e os
+    # «Botões» leem a posição dos dedos. As linhas deles respondem cabo e rádio.
+    "inclinacao": ("movimento.acelerometro",),
+    "toque": ("toque.touchpad.cursor", "toque.touchpad.dedos"),
 }
 
 #: A DÍVIDA CONHECIDA — o gesto que HOJE não responde as quatro, com a sprint
@@ -364,6 +370,10 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     # A Mira grava em `movimento`, nos dois níveis: o default do perfil e o
     # `controllers[<uniq>].movimento` que o chip de cada cartão escreve.
     "mira": ("movimento", "movimento"),
+    # Os dois moram no mesmo `movimento` da Mira (`ProfileMovimentoConfig.acelerometro`
+    # e `.toque`), nos dois níveis; o chip de cada cartão escreve o do controle.
+    "inclinacao": ("movimento", "movimento"),
+    "toque": ("movimento", "movimento"),
 }
 
 
