@@ -25,6 +25,7 @@ from __future__ import annotations
 import contextlib
 import fcntl
 import os
+import sys
 import threading
 import time
 from contextlib import AbstractContextManager
@@ -32,6 +33,8 @@ from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
 from pydualsense import pydualsense
+from pydualsense.enums import ConnectionType
+from pydualsense.pydualsense import DSAudio, DSBattery, DSLight, DSState, DSTrigger
 
 # SOM-ROTA-01: import no TOPO, e não tardio como as três ocorrências dentro de
 # funções deste arquivo. O `ds_output_report` só importa `zlib` — não há ciclo
@@ -70,7 +73,7 @@ from hefesto_dualsense4unix.core.led_control import (
 from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -905,6 +908,51 @@ def _hid_set_nonblocking(dispositivo: Any) -> None:
     hidapi.hidapi.hid_set_nonblocking(cdata, 1)
 
 
+def _onde_a_thread_esta(thread: threading.Thread, quadros: int = 4) -> str | None:
+    """Os quadros de cima da pilha de `thread`: `função (arquivo:linha) < …`.
+
+    A-REPORT-THREAD-SAI-ANTES-DO-HANDLE-FECHAR-01 (29/09/2026). A parada de
+    29/09 deixou um `report_thread_nao_encerrou` sem dizer ONDE a thread
+    estava, e o que se sabe dali é inferido da assinatura. Os quadros do C
+    não aparecem: o de cima é a última função Python, que para o `read` e o
+    `write` é a do wrapper do `hidapi`.
+    """
+    quadro = sys._current_frames().get(thread.ident) if thread.ident else None
+    pedacos: list[str] = []
+    while quadro is not None and len(pedacos) < quadros:
+        codigo = quadro.f_code
+        pedacos.append(
+            f"{codigo.co_name} ({os.path.basename(codigo.co_filename)}:{quadro.f_lineno})"
+        )
+        quadro = quadro.f_back
+    return " < ".join(pedacos) or None
+
+
+def _fechar_os_handles_juntos(handles: Iterable[Any]) -> None:
+    """Fecha muitos handles pagando UM teto, e não um por handle.
+
+    A-REPORT-THREAD-SAI-ANTES-DO-HANDLE-FECHAR-01 (29/09/2026), item 3. O
+    `disconnect()` e o `_close_handles` fechavam um por um sob o `_io_lock`, e
+    cada `close()` pagava o seu teto: na parada de 29/09, ~1,65 s de
+    `_io_lock` segurado, e 4 x 2 x 0,5 s no pior caso de antes. Aqui o sinal
+    baixa em TODOS antes do primeiro `join`, e os `join` dividem um prazo só.
+    Handle que não é `_PinnedPyDualSense` (um dublê que só sabe `close()`)
+    fecha pelo `close()` dele.
+    """
+    lista = list(handles)
+    prazo = time.monotonic() + CLOSE_JOIN_TIMEOUT_SEC
+    for handle in lista:
+        if isinstance(handle, _PinnedPyDualSense):
+            with contextlib.suppress(Exception):
+                handle._baixar_o_sinal()
+    for handle in lista:
+        with contextlib.suppress(Exception):
+            if isinstance(handle, _PinnedPyDualSense):
+                handle._terminar_de_fechar(prazo)
+            else:
+                handle.close()
+
+
 class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     """`pydualsense` "pinada" a um hidraw `path` específico (multi-controle).
 
@@ -961,6 +1009,25 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     #: manda 0x03.
     _brilho_das_luzes: int = degrau_do_brilho_das_luzes(None)
 
+    #: A-REPORT-THREAD-SAI-ANTES-DO-HANDLE-FECHAR-01 (29/09/2026) — QUEM FECHA
+    #: O `hid_device`. Toda chamada ao C deste handle (o `read` da volta, o
+    #: modo do `read`, o `write` de qualquer thread) entra e sai contada sob
+    #: `_entrega` (`_no_c`). O `close()` marca `_fechando`; daí em diante nada
+    #: novo entra no C, e quem sai por último fecha — o `close()`, se não há
+    #: ninguém dentro; senão, quem estava lá. Fechar por cima de uma chamada em
+    #: curso é o `free(dev)` debaixo de quem lê (o `TypeError` da parada de
+    #: 29/09). Defaults de CLASSE pela razão dos de cima: os dublês por
+    #: `__new__`; o lock de classe é compartilhado, e o `__init__` dá a cada
+    #: handle de produção o seu.
+    _entrega: threading.Lock = threading.Lock()
+    _dentro_do_c: int = 0
+    _fechando: bool = False
+    _fechado: bool = False
+    #: `time.monotonic()` do sinal (`ds_thread = False`), e quantos reports a
+    #: volta leu DEPOIS dele e jogou fora (ver `sendReport`).
+    _sinal_em: float | None = None
+    _descartados_depois_do_sinal: int = 0
+
     def __init__(self, path: bytes, *, is_edge: bool) -> None:
         super().__init__()
         self._pinned_path = path
@@ -969,6 +1036,9 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         # instância, nunca compartilhado entre controles — um `hid_write` que
         # pendure num controle não pode calar os outros três da mesa.
         self._write_lock = threading.Lock()
+        # A-REPORT-THREAD-SAI-ANTES-DO-HANDLE-FECHAR-01: o lock da entrega do
+        # `hid_device` DESTE handle (ver `_no_c` e `close`).
+        self._entrega = threading.Lock()
         # FEAT-DSX-LIGHTBAR-SYSFS-01: quando a lightbar/player-LED deste controle
         # estão sendo controlados pela rota sysfs do kernel (cor funciona em
         # USB E BT), suprimimos a escrita desses LEDs no report_thread para NÃO
@@ -1154,6 +1224,61 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         # LIDO do aparelho, e apagá-lo transformaria «ainda não vi report
         # íntegro» em «vi, e estava limpo». Quem o define é o `__init__`.
 
+    def init(self) -> None:
+        """O `init()` do upstream, mas a `report_thread` é daemon e diz de quem é.
+
+        A-REPORT-THREAD-SAI-ANTES-DO-HANDLE-FECHAR-01 (29/09/2026). O upstream
+        sobe `threading.Thread(target=self.sendReport)` sem `daemon`
+        (`pydualsense.py:139`), e o Python dá à thread nova o `daemon` de quem a
+        cria. Toda `report_thread` de produção era daemon só porque o `init()`
+        roda dentro do `_runner` do `_open_one`, que nasce `daemon=True` — uma
+        garantia que ninguém tinha escrito, e que um `init()` chamado de uma
+        thread não-daemon (um teste, um ensaio, um caminho novo) perdia calado.
+        Uma thread presa no kernel não pode segurar a saída do processo, e essa
+        garantia passa a morar no dono da thread. E o nome é o do nó
+        (`hefesto-report-hidrawN`), que o diário e o `/proc` mostram no lugar
+        de `Thread-N (sendReport)`.
+
+        O resto é o do upstream, linha a linha, como no `close()`.
+        """
+        self.device, self.is_edge = self._pydualsense__find_device()
+        self.light = DSLight()
+        self.audio = DSAudio()
+        self.triggerL = DSTrigger()
+        self.triggerR = DSTrigger()
+        self.state = DSState()
+        if self.is_edge:
+            self.state.L4, self.state.L5, self.state.R4, self.state.R5 = (
+                False,
+                False,
+                False,
+                False,
+            )
+            (
+                self.l4_changed.available,
+                self.l5_changed.available,
+                self.r4_changed.available,
+                self.r5_changed.available,
+            ) = True, True, True, True
+        self.battery = DSBattery()
+        self.conType = self.determineConnectionType()
+        if self.conType is ConnectionType.ERROR:
+            raise Exception("Couldn't determine connection type")
+        self.ds_thread = True
+        self.connected = True
+        self.report_thread = threading.Thread(
+            target=self.sendReport, daemon=True, name=self._nome_da_thread()
+        )
+        self.report_thread.start()
+        self.states = None
+
+    def _nome_da_thread(self) -> str:
+        """`hefesto-report-hidrawN`: o nó, nunca o endereço do controle."""
+        caminho = getattr(self, "_pinned_path", b"") or b""
+        if isinstance(caminho, bytes):
+            caminho = caminho.decode("utf-8", "replace")
+        return f"hefesto-report-{os.path.basename(str(caminho)) or 'sem-no'}"
+
     # O nome manglado de `pydualsense.__find_device` é
     # `_pydualsense__find_device`; o `init()` do upstream chama
     # `self.__find_device()` que resolve para este override.
@@ -1207,14 +1332,39 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         drenagem não é silêncio. Uma linha de aviso por episódio quando ele
         passa de `LEITURA_VAZIA_AVISO_SEC`, e uma de volta quando a entrada
         fala de novo.
+
+        A-REPORT-THREAD-SAI-ANTES-DO-HANDLE-FECHAR-01 (29/09/2026) — DEPOIS DO
+        SINAL, NADA VAI AO APARELHO, E QUEM SAI POR ÚLTIMO FECHA.
+
+        O laço confere o `ds_thread` depois de cada leitura: um report lido
+        depois do sinal é jogado fora (não vai à borda do microfone, nem ao
+        `readInput`, nem à metade da saída) e contado. Um handle que o
+        `close()` deixou com a thread (ela estava dentro do C) pode ter o
+        controle de volta no mesmo nó, ou já ter um handle novo por outro nó; o
+        report velho não escreve nada num controle que já tem dono. E a thread
+        que sai do C por último, com o handle marcado, fecha o `hid_device` no
+        `finally` (`_sair_e_fechar_se_for_o_ultimo`).
         """
+        try:
+            self._girar_a_volta()
+        finally:
+            self._sair_e_fechar_se_for_o_ultimo()
+
+    def _girar_a_volta(self) -> None:
+        """O laço do `sendReport`; a docstring de lá diz o porquê de cada parte."""
         sem_espera = False
         while self.ds_thread:
             try:
                 if not sem_espera:
-                    _hid_set_nonblocking(self.device)
+                    with self._no_c():
+                        _hid_set_nonblocking(self.device)
                     sem_espera = True
                 lidos = self._esvaziar_a_fila()
+                if not self.ds_thread:
+                    # O SINAL VEIO COM A LEITURA NA MÃO: nada do que ela trouxe
+                    # vai à borda, ao `readInput` ou à saída.
+                    self._descartados_depois_do_sinal += len(lidos)
+                    break
                 if lidos:
                     self._consumir_lote(lidos)
                 else:
@@ -1370,53 +1520,18 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         """
         lidos: list[Any] = []
         for _ in range(LEITURAS_POR_VOLTA):
-            in_report = self.device.read(self.input_report_length)
+            with self._no_c():
+                in_report = self.device.read(self.input_report_length)
             if in_report is None:
                 break
             self._registrar_leitura_viva()
             lidos.append(in_report)
+            if not self.ds_thread:
+                # A-REPORT-THREAD-SAI-ANTES-DO-HANDLE-FECHAR-01: depois do
+                # sinal, nenhuma leitura nova; quem chamou descarta o lote.
+                break
         return lidos
 
-    # QUEDA-QUE-PENDURA-01, 04/08/2026 — MEDIDO no journal dela.
-    #
-    # O `close()` do upstream é, literalmente:
-    #
-    #     self.ds_thread = False
-    #     self.report_thread.join()     <- SEM TETO
-    #     self.device.close()
-    #
-    # e o topo do laço acima era `self.device.read(...)`, que BLOQUEAVA (nota
-    # de 29/09/2026, O-BOTAO-DO-MIC-CHEGA-NA-HORA-01: o `read` da volta não
-    # espera mais — a leitura é sem espera desde a primeira volta, ver
-    # `sendReport` —, e o teto do `join` fica). Enquanto
-    # o controle responde, o `ds_thread = False` é visto no ciclo seguinte e o
-    # join volta em milissegundos. **Quando o controle some do rádio sem
-    # despedida** — 8BitDo que se desliga sozinho, link Bluetooth que cai —
-    # o `read` fica pendurado num fd que nunca mais entrega nada, o join espera
-    # para sempre, e a espera sobe inteira pela pilha:
-    #
-    #     read (nunca volta)
-    #       -> report_thread.join()          (upstream, sem teto)
-    #         -> handle.close()
-    #           -> disconnect()              SEGURANDO o `_io_lock`
-    #             -> shutdown() do daemon
-    #               -> systemd: 90 s e SIGKILL
-    #
-    # O journal de 04/08 tem a coisa inteira: `gamepad_emulation_stopped` às
-    # 00:20:19.601, o `daemon_stopped` NUNCA, e às 00:21:49
-    # *"State 'stop-sigterm' timed out. Killing."*. Custo real: 90 segundos em
-    # que o serviço não volta, os vpads não renascem e a mesa fica sem
-    # controle nenhum.
-    #
-    # A cura é fechar o fd MESMO ASSIM. O laço acima já trata `OSError` como
-    # fim de vida (`connected = False; break`) — fechar o dispositivo faz o
-    # `read` pendurado retornar erro e a thread sair sozinha, que é a ordem
-    # inversa da do upstream e a única que funciona com o fd morto.
-    #
-    # Uma thread que ainda assim não morra NÃO segura o processo: é o mesmo
-    # trade-off que o `HANG-01` já escreveu por extenso nos dois executores do
-    # `shutdown` (`wait=False`) — *"uma thread wedged não impede o processo de
-    # encerrar"*. Aqui ela vale para o handle, que era o furo que faltava.
     def _consumir_report(self, in_report: Any) -> None:
         """A porta de UM report: o `_consumir_lote` de um só.
 
@@ -1506,24 +1621,164 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             ),
         )
 
+    # QUEDA-QUE-PENDURA-01, 04/08/2026 — MEDIDO no journal dela.
+    #
+    # O `close()` do upstream é, literalmente:
+    #
+    #     self.ds_thread = False
+    #     self.report_thread.join()     <- SEM TETO
+    #     self.device.close()
+    #
+    # e o topo do laço acima era `self.device.read(...)`, que BLOQUEAVA. Enquanto
+    # o controle responde, o `ds_thread = False` é visto no ciclo seguinte e o
+    # join volta em milissegundos. **Quando o controle some do rádio sem
+    # despedida** — 8BitDo que se desliga sozinho, link Bluetooth que cai —
+    # o `read` fica pendurado num fd que nunca mais entrega nada, o join espera
+    # para sempre, e a espera sobe inteira pela pilha:
+    #
+    #     read (nunca volta)
+    #       -> report_thread.join()          (upstream, sem teto)
+    #         -> handle.close()
+    #           -> disconnect()              SEGURANDO o `_io_lock`
+    #             -> shutdown() do daemon
+    #               -> systemd: 90 s e SIGKILL
+    #
+    # O journal de 04/08 tem a coisa inteira: `gamepad_emulation_stopped` às
+    # 00:20:19.601, o `daemon_stopped` NUNCA, e às 00:21:49
+    # *"State 'stop-sigterm' timed out. Killing."*. Custo real: 90 segundos em
+    # que o serviço não volta, os vpads não renascem e a mesa fica sem
+    # controle nenhum.
+    #
+    # A cura de 04/08 foi o TETO do `join`, e é ele que tirou os 90 s. Ela
+    # também fechava o fd com a thread ainda dentro do `read`, pela premissa de
+    # que fechar faria o `read` pendurado voltar erro. **Nota de 29/09/2026
+    # (A-REPORT-THREAD-SAI-ANTES-DO-HANDLE-FECHAR-01): a premissa caiu.**
+    # Fechar o fd não acorda o `read` (medido neste kernel, com um pipe: a
+    # thread só sai quando chega o próximo dado); o `hid_close` dá `free` na
+    # estrutura debaixo de quem lê, e quando o kernel solta a thread o `read`
+    # volta erro e o wrapper chama `hid_error(None)` — o `TypeError` da parada
+    # de 29/09, 00:21:26, com um `report_thread_nao_encerrou` antes dele. Na
+    # mesma leva, a O-BOTAO-DO-MIC-CHEGA-NA-HORA-01 tirou a espera do `read`
+    # da volta. O que fica: o teto do `join`. O que mudou: quem fecha o
+    # `hid_device` é quem sai do C por último (`_no_c`), e nunca com alguém
+    # dentro.
+    #
+    # Uma thread que ainda assim não morra NÃO segura o processo, e quem
+    # garante isso é o `daemon=True` com que o `init()` desta classe sobe a
+    # `report_thread` (até 29/09, só a herança do `_runner` do `_open_one`,
+    # que ninguém tinha escrito; o `wait=False` dos executores do `shutdown`,
+    # que esta linha citava, é de outras threads).
     def close(self) -> None:
-        """Igual ao upstream, mas o join tem TETO e o fd fecha de todo jeito."""
-        self.ds_thread = False
+        """O `close()` do upstream com teto, e sem fechar por cima de ninguém.
+
+        Um handle só paga um teto (`CLOSE_JOIN_TIMEOUT_SEC`); muitos que saem
+        juntos pagam um teto comum (`_fechar_os_handles_juntos`).
+        """
+        self._baixar_o_sinal()
+        self._terminar_de_fechar(time.monotonic() + CLOSE_JOIN_TIMEOUT_SEC)
+
+    @contextlib.contextmanager
+    def _no_c(self) -> Iterator[None]:
+        """Uma chamada ao C deste handle, contada — e recusada se ele está fechando.
+
+        A-REPORT-THREAD-SAI-ANTES-DO-HANDLE-FECHAR-01 (29/09/2026). É a mesma
+        forma do `entrega` do `_open_one`: quem fecha o `hid_device` decide sob
+        um lock, e nunca com uma chamada em curso. A recusa é um `OSError`, que
+        o laço já trata como fim de vida e os escritores avulsos já capturam.
+
+        Quem sai por último com o handle marcado fecha: o escritor avulso,
+        aqui; a `report_thread`, no `finally` do `sendReport`, para que a linha
+        de volta conte os reports que ela descartou.
+        """
+        with self._entrega:
+            if self._fechando:
+                raise OSError("handle fechando: nada mais vai ao aparelho")
+            self._dentro_do_c += 1
+        fecho_eu = False
+        try:
+            yield
+        finally:
+            with self._entrega:
+                self._dentro_do_c -= 1
+                if (
+                    self._fechando
+                    and self._dentro_do_c == 0
+                    and not self._fechado
+                    and threading.current_thread() is not getattr(self, "report_thread", None)
+                ):
+                    self._fechado = True
+                    fecho_eu = True
+            if fecho_eu:
+                self._fechar_o_device()
+                logger.info(
+                    "escrita_avulsa_saiu_e_fechou",
+                    path=getattr(self, "_pinned_path", None),
+                    segundos=self._segundos_desde_o_sinal(),
+                )
+
+    def _baixar_o_sinal(self) -> None:
+        """Marca o handle: a thread para, e nada novo entra no C."""
+        with self._entrega:
+            self._fechando = True
+            self.ds_thread = False
+            if self._sinal_em is None:
+                self._sinal_em = time.monotonic()
+
+    def _terminar_de_fechar(self, prazo: float) -> None:
+        """Espera a thread até `prazo` e fecha — ou deixa o handle com quem está no C."""
         thread = getattr(self, "report_thread", None)
-        if thread is not None and thread.is_alive():
-            thread.join(timeout=CLOSE_JOIN_TIMEOUT_SEC)
+        propria = thread is threading.current_thread()
+        if thread is not None and not propria and thread.is_alive():
+            thread.join(timeout=max(0.0, prazo - time.monotonic()))
+        with self._entrega:
+            dentro = self._dentro_do_c
+            fecho_eu = dentro == 0 and not self._fechado
+            if fecho_eu:
+                self._fechado = True
+        if fecho_eu:
+            self._fechar_o_device()
+            return
+        if thread is not None and not propria and thread.is_alive():
+            logger.warning(
+                "report_thread_nao_encerrou",
+                path=getattr(self, "_pinned_path", None),
+                segundos=self._segundos_desde_o_sinal(),
+                onde=_onde_a_thread_esta(thread),
+                detalhe=(
+                    "a thread segue dentro do C e o handle ficou com ela: "
+                    "quem sair por último fecha o hid_device"
+                ),
+            )
+        elif dentro:
+            logger.info(
+                "handle_ficou_com_a_escrita_avulsa",
+                path=getattr(self, "_pinned_path", None),
+                dentro=dentro,
+            )
+
+    def _sair_e_fechar_se_for_o_ultimo(self) -> None:
+        """O `finally` da `report_thread`: fecha se o handle é dela."""
+        with self._entrega:
+            fecho_eu = self._fechando and self._dentro_do_c == 0 and not self._fechado
+            if fecho_eu:
+                self._fechado = True
+        if not fecho_eu:
+            return
+        self._fechar_o_device()
+        logger.info(
+            "report_thread_saiu_e_fechou",
+            path=getattr(self, "_pinned_path", None),
+            segundos=self._segundos_desde_o_sinal(),
+            descartados=self._descartados_depois_do_sinal,
+        )
+
+    def _fechar_o_device(self) -> None:
         with contextlib.suppress(Exception):
             self.device.close()
-        if thread is not None and thread.is_alive():
-            # O fd acabou de fechar; dá-se à thread a última chance de ver o
-            # OSError e sair. Se nem assim, seguimos — ela não escreve mais em
-            # dispositivo nenhum, e o processo precisa poder morrer.
-            thread.join(timeout=CLOSE_JOIN_TIMEOUT_SEC)
-            if thread.is_alive():
-                logger.warning(
-                    "report_thread_nao_encerrou",
-                    detalhe="fd fechado e thread ainda viva — controle sumiu do rádio",
-                )
+
+    def _segundos_desde_o_sinal(self) -> float | None:
+        sinal = self._sinal_em
+        return None if sinal is None else round(time.monotonic() - sinal, 3)
 
     # --- AUDIO-STATUS-01 / AUDIO-OWNER-01 --------------------------------
 
@@ -2026,8 +2281,16 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
         serializado pelo kernel no mesmo descritor — o lock só antecipa a espera
         para o espaço do usuário. E um `hid_write` pendurado num controle não
         alcança os outros: cada handle tem o seu lock.
+
+        **A entrega ao C é contada** (`_no_c`, A-REPORT-THREAD-SAI-ANTES-DO-
+        HANDLE-FECHAR-01, 29/09/2026): com o handle fechando, a escrita recusa
+        com `OSError` antes de tocar o C, e a que estava dentro fecha o
+        `hid_device` ao sair, se for a última. O `close()` nunca toma o
+        `_write_lock`: um `hid_write` preso seguraria o `close()`, e com ele o
+        `_io_lock` do `disconnect()` — a cadeia dos 90 s da QUEDA-QUE-PENDURA-01
+        com o `write` no lugar do `read`.
         """
-        with self._write_lock:
+        with self._write_lock, self._no_c():
             if len(outReport) == 78 and outReport[0] == 0x31:
                 from hefesto_dualsense4unix.core import ds_output_report as rep
 
@@ -3791,12 +4054,16 @@ class PyDualSenseController(IController):
         (`_resolver_escopo`) e o alvo volta a valer sozinho quando o
         controle reconecta.
         """
+        saindo: list[tuple[str, Any]] = []
         for key in [k for k in self._handles if k not in keep]:
             handle = self._handles.pop(key)
             self._segurar_a_volta_pelo_radio_locked(key, handle)
-            with contextlib.suppress(Exception):
-                handle.close()
-            # Depois do `close`: a thread do report parou e não marca mais.
+            saindo.append((key, handle))
+        # UM teto para todos os que saem (`_fechar_os_handles_juntos`).
+        _fechar_os_handles_juntos(handle for _key, handle in saindo)
+        for key, handle in saindo:
+            # Depois do `close`: a thread do report parou, ou recebeu o sinal
+            # e não marca mais nada (ela confere o sinal depois de cada leitura).
             self._levar_ao_mapa_a_posse_que_a_mao_soltou(key, handle)
         if self._primary_key is not None and self._primary_key not in self._handles:
             self._reservar_o_posto_de_primario(self._primary_key)
@@ -3924,10 +4191,11 @@ class PyDualSenseController(IController):
         with contextlib.suppress(Exception):
             self._evdev.stop()
         with self._io_lock:
-            for key in list(self._handles):
-                handle = self._handles.pop(key)
-                with contextlib.suppress(Exception):
-                    handle.close()
+            saindo = [(key, self._handles.pop(key)) for key in list(self._handles)]
+            # UM teto para os quatro (`_fechar_os_handles_juntos`), e não um
+            # por handle com o `_io_lock` na mão.
+            _fechar_os_handles_juntos(handle for _key, handle in saindo)
+            for key, handle in saindo:
                 self._levar_ao_mapa_a_posse_que_a_mao_soltou(key, handle)
             # E2(a): o `reconnect()` do poll loop é disconnect + connect — do
             # ponto de vista dela, a mesma piscada do hotplug-out. Sem reservar
