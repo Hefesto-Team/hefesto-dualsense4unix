@@ -151,7 +151,9 @@ def test_a_pagina_declara_o_que_nao_foi_testado(assunto):
     verde com três curas ausentes.
     """
     pagina = _pagina()
-    assert "NÃO foi testado" in pagina, (
+    # Sem caixa alta: a página de uso não grita, e a seção se chama «O que não
+    # foi testado».
+    assert "não foi testado" in pagina.lower(), (
         "a seção do que não foi testado sumiu; sem ela a página promete mais do "
         "que a casa mediu"
     )

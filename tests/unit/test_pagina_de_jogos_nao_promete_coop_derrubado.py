@@ -110,16 +110,22 @@ def test_o_codigo_ainda_esconde_o_fisico_e_mantem_o_virtual():
     )
 
 
-@pytest.mark.parametrize("marca", ["ESCONDER-EM-VEZ-DE-SAIR-01", "09/08"])
-def test_a_nota_datada_explica_o_que_mudou(marca):
-    """A página tem de dizer o que caducou, não só apagar.
+#: As duas metades do mecanismo, como a página as diz a quem usa.
+_O_MECANISMO = ("esconde o controle físico", "virtual continua de pé")
 
-    Fato errado se substitui; decisão medida ganha data. A medição de 06/08
-    (a exceção não cala o Hefesto: a cor fica, o gatilho segura) continua
-    valendo e fica. O que mudou foi o mecanismo, e isso leva data.
+
+@pytest.mark.parametrize("trecho", _O_MECANISMO)
+def test_a_pagina_diz_o_mecanismo(trecho):
+    """A página tem de dizer por que o co-op fica, e não só que ele fica.
+
+    Até 28/09/2026 este caso cobrava da página a data e o nome interno da
+    mudança de mecanismo, e a página de uso deixou de carregar data de decisão
+    e nome interno (o histórico mora no `git log`). O que a pessoa precisa é o
+    mecanismo de hoje: o físico escondido e o virtual de pé. Mordida: tirar a
+    frase do mecanismo da página reprova aqui.
     """
     texto = (_raiz() / PAGINA).read_text(encoding="utf-8")
-    assert marca in texto, (
-        f"a página não menciona {marca!r}: sem isso, quem ler a nota de 06/08 não "
-        "sabe qual metade dela ainda vale"
+    assert trecho in texto, (
+        f"a página não diz {trecho!r}: sem o mecanismo, a frase do co-op fica "
+        "sem razão, e a próxima pessoa volta a escrevê-la errado"
     )

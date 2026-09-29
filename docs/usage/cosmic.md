@@ -1,169 +1,46 @@
-# Hefesto - DualSense4Unix no COSMIC DE (Pop!_OS 24.04, Wayland)
+# O Hefesto no COSMIC
 
-Guia de uso do Hefesto - DualSense4Unix no ambiente COSMIC, o desktop Wayland nativo do Pop!_OS.
+O COSMIC (Pop!_OS 24.04) é onde o Hefesto é testado com controles.
 
----
+| Recurso | Estado |
+|---|---|
+| controles pelo cabo e pelo Bluetooth, atalhos, mouse e teclado do controle | funcionam, sem depender da sessão gráfica |
+| a janela | abre pelo XWayland |
+| o ícone da bandeja | aparece na área de status do painel |
+| a troca automática de perfil | funciona para jogos em XWayland (o que inclui a Steam e o Proton) |
 
-## Estado atual do suporte
+## O ícone da bandeja
 
-Medido na alfa 0.1.1 (Pop!\_OS 24.04 + COSMIC + Wayland, a máquina de
-desenvolvimento). As referências a versões `v3.x` abaixo são históricas: a
-numeração recomeçou em 0.1.0 em 24/07/2026 (ver [CHANGELOG](../../CHANGELOG.md)).
+O ícone aparece na área de status do painel do COSMIC, sem configuração. Se não
+aparecer, confira em Configurações, Painel, se o miniaplicativo da área de
+status está no painel. O menu dele abre a janela, troca de perfil e mostra o
+estado.
 
-| Recurso | Estado | Observação |
-|---|---|---|
-| Detecção DualSense USB/BT | OK | evdev, independente de display |
-| Polling de botões/eixos | OK | hidraw, independente de display |
-| Hotkeys globais | OK | /dev/input, independente de display |
-| Mouse emulado (uinput) | OK | nível kernel; suprimível pelo modo jogo |
-| Autoswitch de perfil | Parcial | XWayland OK; Wayland puro depende do portal — ver seção abaixo |
-| GUI GTK3 | OK via XWayland | dropdown Drácula legível; sem busy-loop de CPU |
-| Tray AppIndicator | OK via XWayland | Ayatana funciona em XWayland |
-| **Applet nativo COSMIC panel** | **OK** | Rust + libcosmic; aparece em Miniaplicativos com `X-HostWaylandDisplay=true` + PNG 256x256 |
-| **Modo jogo** | **OK, pelo combo PS + Options** | O gesto de long-press do PS existe no código mas vem **desligado** (`ps_long_press_ms = 0`): ele causava modo-jogo acidental quando o toque de abrir a Steam passava de ~1 s. Ver [`hotkeys.md`](hotkeys.md) |
+O antigo miniaplicativo próprio do COSMIC foi aposentado: o ícone da bandeja faz
+o mesmo e funciona fora do COSMIC. Quem ainda o quiser pode compilá-lo com
+`./install.sh --enable-cosmic-applet`.
 
----
+## A troca automática de perfil
 
-## Autoswitch de perfil no COSMIC
+O Hefesto descobre o jogo em foco pela janela. No COSMIC:
 
-O Hefesto - DualSense4Unix detecta automaticamente o backend de janela ativa com base nas
-variaveis de ambiente do compositor:
+- **janelas XWayland** (a Steam, os jogos pelo Proton e a maioria dos jogos):
+  funciona. Com `DISPLAY` e `WAYLAND_DISPLAY` definidos, o Hefesto usa o X11;
+- **janelas Wayland nativas**: o COSMIC não oferece ao Hefesto como saber qual
+  janela está em foco (nem o `wlr-foreign-toplevel-management`, que o `wlrctl`
+  usa, nem o portal `GetActiveWindow`). Sem essa informação, o perfil ativo
+  continua valendo; troque pela janela, pela linha de comando ou com PS +
+  direcional.
 
-### Cenario 1 — XWayland ativo (padrão no COSMIC 1.0+)
+No diário do serviço, `window_backend_selected backend=xlib` confirma o X11, e
+`autoswitch_compositor_unsupported` diz que o compositor não informou a janela.
+A decisão técnica está em [ADR-014](../adr/014-cosmic-wayland-support.md).
 
-Quando `DISPLAY` e `WAYLAND_DISPLAY` estao presentes simultaneamente (XWayland
-em execução), o Hefesto - DualSense4Unix usa o backend X11 (`XlibBackend`). O autoswitch de
-perfil funciona normalmente.
+## Instalar
 
-Verificar:
-```bash
-echo "DISPLAY=$DISPLAY  WAYLAND_DISPLAY=$WAYLAND_DISPLAY"
-```
+O `./install.sh` padrão serve para o COSMIC. Duas opções que podem interessar:
 
-Esperado: ambas as variaveis preenchidas.
-
-### Cenario 2 — Wayland puro (sem XWayland)
-
-Quando apenas `WAYLAND_DISPLAY` esta presente, o Hefesto - DualSense4Unix tenta usar o portal
-XDG D-Bus `org.freedesktop.portal.Window.GetActiveWindow` (disponivel no
-COSMIC 1.0+ e GNOME 46+).
-
-Para que o portal funcione, instale uma das bibliotecas opcionais:
-
-```bash
-# Opção A: jeepney (puro Python, recomendado — é o extra [cosmic] do projeto)
-venv/bin/pip install jeepney
-
-# Opção B: dbus-fast (assíncrono)
-venv/bin/pip install dbus-fast
-```
-
-Se nenhuma biblioteca estiver disponivel, o autoswitch fica em modo silencioso:
-sem informação de janela ele **pula o tique inteiro e mantém o perfil que já
-está ativo**. Você troca de perfil pela janela, pela CLI ou pelo combo no
-controle. O log mostra `autoswitch_compositor_unsupported`.
-
-**FATO SUBSTITUÍDO em 26/08/2026** — esta linha dizia "sempre usa
-`fallback.json`". É o contrário do que o código faz: a histerese da UX-01
-existe justamente porque leitura SEM informação não significa "é o desktop".
-Tratá-la como desktop trocava o perfil no meio da partida — e o custo medido
-foi o perfil do jogo caindo num alt-tab. Sem informação, o produto não mexe.
-
-### Cenario 3 — Sem display (servidor headless)
-
-O Hefesto - DualSense4Unix inicia em modo silencioso. Daemon e polling funcionam; GUI não abre.
-
----
-
-## Instalação no COSMIC
-
-```bash
-# Clone do repositório (veja a caixa "Onde esta versão mora" no README)
-cd hefesto-dualsense4unix
-./install.sh --yes --with-wireplumber-fix --enable-hotplug-gui
-```
-
-Flags relevantes no COSMIC:
-
-- `--enable-cosmic-applet` — **não é mais necessária em COSMIC**: o applet nativo
-  em Rust/libcosmic passou a ser default-on quando a sessão é COSMIC (ou quando
-  ele já está instalado). A flag continua valendo para **forçar** a compilação
-  fora do COSMIC; `--no-cosmic-applet` é o opt-out. Sem o applet, o Hefesto fica
-  acessível pela GUI GTK3 (XWayland) e pelo tray Ayatana (se o
-  `cosmic-applet-status-area` estiver habilitado em Configurações > Painel >
-  Miniaplicativos). A primeira compilação do libcosmic passa de 10 minutos, e se
-  faltar `cargo`/`just` o instalador **avisa e segue** — não falha.
-- `--with-wireplumber-fix` — instala o drop-in que impede o DualSense de virar o microfone padrão
-  (problema clássico do `wireplumber.conf` ao plugar o controle).
-- `--keep-steam-input` — opt-out do desligamento default de `SteamController_PSSupport`. Sem essa
-  flag, o install zera as toggles do Steam Input nos `localconfig.vdf` para evitar conflito Steam
-  Input vs daemon. Vide [troubleshooting seção 12](troubleshooting.md).
-- `--enable-hotplug-gui` — copia e habilita a unit
-  `hefesto-dualsense4unix-gui-hotplug.service`. Apesar do nome, ela abre a
-  janela **no início da sessão gráfica**, não ao plugar o controle: as regras
-  udev de hotplug foram retiradas em 2026. Detalhe em
-  [`hotplug.md`](hotplug.md). É opt-in — o padrão do instalador é não instalar.
-
-Após instalar o applet, recarregue o painel: `killall cosmic-panel`. Ele reaparece no segundo
-seguinte e o Hefesto deve aparecer em **Configurações > Painel > Miniaplicativos**.
-
----
-
-## Verificar backend ativo
-
-No log do daemon (journal ou stdout com `--dev`):
-
-```
-# Backend X11 (XWayland ou X11 puro):
-window_backend_selected backend=xlib xwayland=True
-
-# Backend Wayland portal:
-window_backend_selected backend=wayland_portal
-
-# Modo silencioso (sem display):
-autoswitch_compositor_unsupported
-```
-
----
-
-## Captura de tela no COSMIC (Wayland)
-
-As ferramentas X11 (`scrot`, `import`) não funcionam em Wayland puro. Use:
-
-```bash
-# Captura de regiao (requer grim + slurp)
-grim -g "$(slurp)" /tmp/hefesto_captura.png
-
-# Captura de tela completa
-grim /tmp/hefesto_tela.png
-```
-
-Instalar no Pop!_OS:
-```bash
-sudo apt install grim slurp
-```
-
----
-
-## Problemas conhecidos
-
-- **Applet COSMIC ausente em Miniaplicativos (resolvido em v3.8.0)**: o `.desktop` do applet
-  precisa de `X-HostWaylandDisplay=true` + um ícone PNG 256x256, e o `cosmic-panel` precisa ser
-  recarregado (`killall cosmic-panel`) após instalar. O `install.sh --enable-cosmic-applet` faz
-  isso. Se o applet não aparecer, conferir com `ls /usr/local/bin/hefesto-dualsense4unix-applet
-  /usr/share/applications/com.vitoriamaria.HefestoDualsense4Unix.desktop` — ambos devem existir.
-
-- **`wlrctl` não funciona no COSMIC**: o cosmic-comp não implementa
-  `wlr-foreign-toplevel-management-unstable-v1`, então `wlrctl toplevel list --json` retorna
-  vazio. Isso afeta o autoswitch em Wayland **puro** — em XWayland (default no COSMIC 1.0+), o
-  `XlibBackend` funciona normalmente.
-
-- **Portal GetActiveWindow não disponivel**: compositors Wayland que não
-  implementam `org.freedesktop.portal.Window` (Sway, Hyprland, COSMIC < 1.0)
-  resultam em autoswitch silencioso. Funcionalidade completa requer XWayland
-  ativo ou portal disponivel.
-
-- **Tray AppIndicator some no COSMIC**: o `cosmic-applet-status-area` pode estar desabilitado em
-  Configurações > Painel > Miniaplicativos. Habilite-o ou use o **applet nativo COSMIC** (preferível
-  no COSMIC — fala direto com o daemon via IPC JSON-RPC e tem ações de Pausar/Retomar + Modo jogo
-  no popover).
+- `--enable-hotplug-gui` abre a janela do Hefesto no início da sessão (ver
+  [hotplug.md](hotplug.md));
+- `--keep-steam-input` mantém o Steam Input ligado (ver
+  [jogos-e-mascaras.md](jogos-e-mascaras.md)).

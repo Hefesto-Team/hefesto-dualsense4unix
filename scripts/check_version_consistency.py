@@ -34,7 +34,9 @@ Alvo acrescentado em 31/07 (PUBLICAÇÃO-FIEL-01):
   - docs/usage/instalacao.md         `git checkout vX.Y.Z`
 Ela é a página canônica de instalação (o README aponta para ela duas vezes) e
 ficou uma release inteira para trás: mandava `git checkout v0.3.0` com a 0.4.0
-publicada, enquanto quickstart e flatpak já diziam v0.4.0.
+publicada, enquanto quickstart e flatpak já diziam v0.4.0. O alvo saiu em
+28/09/2026: a página passou a instalar pelo ramo padrão, como o README, e a
+frase da versão dela é conferida no teste das páginas de uso.
 
 Conferência de DATA acrescentada em 31/07 (PUBLICAÇÃO-FIEL-01): a régua acima
 compara NÚMERO, e só. O buraco por onde a v0.4.0 passou foi esse — o commit do
@@ -105,12 +107,11 @@ _TARGETS: list[tuple[str, str, str]] = [
     # uma por dependência), ancorando pelo `name` na linha de cima.
     ("Cargo.lock do applet", "packaging/cosmic-applet/Cargo.lock",
      r'^name = "hefesto-dualsense4unix-applet"\nversion = "([^"]+)"'),
-    # Página canônica de instalação: o alvo é a TAG do comando de clone, que é
-    # o que alguém copia e executa. A frase em prosa da mesma página cita a
-    # versão de novo e não cabe nesta régua (um regex por alvo); ela é conferida
-    # em tests/unit/test_versao_publicada_data_e_paginas_de_uso.py.
-    ("página de instalação (git checkout)", "docs/usage/instalacao.md",
-     r"^git checkout v(\S+)"),
+    # A página de instalação saiu desta lista: ela instala pelo ramo padrão,
+    # como o README, e não traz mais `git checkout v<tag>` (a tag da 0.9.4.5 é
+    # de antes da interface das dez abas). A versão que ela cita, e a tag se o
+    # comando voltar, são conferidas em
+    # tests/unit/test_versao_publicada_data_e_paginas_de_uso.py.
 ]
 
 def versao_para_cargo(canonica: str) -> str:

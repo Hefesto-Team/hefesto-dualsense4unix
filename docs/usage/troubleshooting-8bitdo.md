@@ -1,383 +1,96 @@
-# 8BitDo SN30 Pro — modos, identificação e a morte por Bluetooth
+# O 8BitDo SN30 Pro
 
-Uma página só, sobre UM controle: o 8BitDo SN30 Pro que convive com os DualSense
-nesta máquina. O hefesto **não gerencia** esse controle em modo nenhum — ele
-entra na lista de **externos** (read-only), nunca é adotado.
+O Hefesto não gerencia o 8BitDo: ele aparece na lista de controles externos
+(`hefesto-dualsense4unix controller list --external`) e chega ao jogo como o
+controle que já é. Esta página diz qual modo usar e como reconhecer os
+problemas conhecidos.
 
-O filtro do discovery é por **VID *e* PID**, não só por fabricante:
-`DUALSENSE_VENDOR = 0x054C` com `DUALSENSE_PIDS = {0x0CE6, 0x0DF2}`
-(`core/evdev_reader.py:28-29`) — DualSense e DualSense Edge, e só. Isso importa
-desde 25/07: em **modo DirectInput/PS4 o 8BitDo é `054c:05c4`**, ou seja, tem o
-VID da Sony e mesmo assim **não** é adotado, porque `05c4` (DualShock 4) não está
-na lista. Verificado ao vivo: com os 4 controles conectados, o
-`controller.list {"external": true}` traz o 8BitDo, e o `controller.list` (os
-adotados) não.
+## Qual modo usar
 
-Esta página existe porque o controle divide a máquina com o daemon e o
-`scripts/doctor.sh` sabe reconhecer a assinatura de morte dele.
-
-Cada afirmação abaixo carrega o seu nível de prova: **PROVADO** (medido nesta
-máquina, com a **data**, o **modo** e o **transporte** ditos na própria linha),
-**HIPÓTESE** (plausível, não provada) ou **EXPERIMENTO** (nunca exercitado
-aqui).
-
-**PROVADO sem escopo não vale.** Este controle tem cinco modos e dois
-transportes, e o que é verdade num não é verdade no outro: foi assim que uma
-linha de journal medida num modo virou, nesta página, uma afirmação sobre "o
-firmware clone" inteiro — ver o fim da seção de identificação.
-
----
-
-## O essencial
-
-| Modo do controle | Identidade no kernel | Driver | Gyro | Nível de prova |
+| Modo | Como ligar | O kernel vê | Pelo cabo | Pelo Bluetooth |
 |---|---|---|---|---|
-| **DirectInput/PS4 por Bluetooth** | `054c:05c4` (bus `0005`) | `hid-playstation` | não³ | **RECOMENDADO — PROVADO que conecta** (25/07: subiu de primeira e ficou de pé na sessão de quatro controles). **A estabilidade longa NÃO está provada** — ver a ressalva logo abaixo da tabela |
-| Switch **por cabo** | `057e:2009` (bus `0003`) | `hid-nintendo` | sim¹ | **PROVADO estável, no cabo** (16/07: instância USB sem um único timeout; 11/08: probe completa — dois inputs, `hidraw`, cinco LEDs, bateria e calibração de fábrica de stick e de IMU) |
-| Switch por Bluetooth | `057e:2009` (bus `0005`) | `hid-nintendo` | sim¹ | **PROVADO instável, no rádio** (mortes medidas em 16/07, com e sem Steam) |
-| X-input **por cabo** | `045e:028e` | `xpad` | não² | Xbox 360 real; estabilidade esperada, não medida |
-| X-input por Bluetooth | `045e:02e0` | `hid-microsoft` | não² | **driver MEDIDO em 11/08** (o alias `hid:b0005g*v0000045Ep000002E0` está no `hid-microsoft` instalado aqui); o **aparelho** neste modo continua **EXPERIMENTO** — ninguém o ligou nesta casa |
+| **DirectInput/PS4** | `Start + A` | DualShock 4 (`054c:05c4`, driver `hid-playstation`) | não medido | **o recomendado**: conecta de primeira |
+| Switch | `Y + Start` | Pro Controller (`057e:2009`, driver `hid-nintendo`) | **estável**, com giroscópio | cai sob carga |
+| X-input | `X + Start` | Xbox 360 (`045e:028e` no cabo, `045e:02e0` no rádio) | não medido | não medido |
 
-¹ O gyro existe e é real — **PROVADO em 11/08, por VALOR e não por taxa**: com o
-controle parado no cabo, o eixo Z do acelerômetro fica entre **4153 e 4269**,
-que é a gravidade na mesma escala em que o Pro genuíno a reporta (4200 a 4207).
-Taxa **não** prova sensor: o relatório `0x30` sempre carrega os bytes de IMU, e
-um firmware que mandasse zeros produziria a mesma contagem (199,4 amostras/s no
-clone). A existência do nó `Pro Controller (IMU)` e a linha `using factory cal
-for IMU` também não provam — provam que o driver criou o nó e leu a SPI. O que
-chega ao **jogo** só chega com Steam Input ativo; veja o conflito com o guard
-abaixo.
-² Limitação do protocolo XInput (não tem canal de motion), não do controle.
-³ Não verificado. O DualShock 4 real tem IMU; se o clone expõe a dele neste
-modo é **pergunta em aberto** — ninguém mediu.
+Pelo Bluetooth, use o modo DirectInput/PS4. Pelo cabo, o modo Switch é o estável
+e é o único com giroscópio. Os combos podem mudar de um modelo de 8BitDo para
+outro; o `Start + A` foi conferido no SN30 Pro.
 
-**A ressalva do modo por Bluetooth, e ela é do escopo, não do modo.** O que
-está provado do `054c:05c4` é que **ele conecta** — medido em 25/07, com quatro
-controles no rádio ao mesmo tempo. **Ficar de pé por horas não está provado:**
-em 07/08, entre 19h17 e 19h41, este mesmo modo foi medido **mudo** (zero
-relatórios em três janelas de leitura pura) e depois **sem HID nenhum, com o
-link de rádio ainda autenticado e cifrado**. A medição inteira está na
-[canônica dos externos](../protocol/externos-referencia-canonica.md), seção 1.2.
+O Hefesto só adota controles Sony com o PID do DualSense e do DualSense Edge
+(`0ce6` e `0df2`). No modo DirectInput/PS4 o 8BitDo tem o fabricante da Sony,
+mas o PID do DualShock 4, e por isso continua externo.
 
-**O `045e:02e0` está confirmado como alias do `hid-microsoft` desta máquina**,
-mas o ID é documentado para o SN30 Pro**+**; para o SN30 Pro sem "+" a atribuição
-é de fonte pública, não medida. E o `045e:02fd`, que esta página listava como
-PID provável do 8BitDo, é o **Xbox One Model 1708 genuíno** da Microsoft
-(`assets/dkms/hid-nintendo/hid-ids.h:1018`) — nada tem a ver com este controle.
+### O que o modo DirectInput/PS4 custa
 
-**Por Bluetooth, use o modo DirectInput/PS4.** Por cabo, o modo Switch é o
-provadamente estável.
+- **Não há luz de jogador**: o DualShock 4 usa a barra de luz no lugar da luz de jogador.
+- **O endereço Bluetooth muda com o modo.** Cada modo é um pareamento, e o
+  Hefesto vê os dois como controles diferentes. Se os números saírem trocados,
+  use **Reconectar Controles**, na aba Jogar.
+- Conectar está medido; horas de uso contínuo neste modo, não.
 
-### Os combos, e a correção de 03/08/2026
+## Identificar o modo agora
 
-| modo | combo ao ligar | origem |
-|---|---|---|
-| **DirectInput/PS4** (o recomendado por BT) | **`Start + A`** | **MEDIDO com ela**, 03/08/2026, no controle dela |
-| X-input | `X+Start` | manual da 8BitDo |
-| Switch | `Y+Start` | manual da 8BitDo |
-
-> **O que esta tabela corrige.** Até 03/08 este parágrafo recomendava o modo
-> **DirectInput/PS4** e, na frase seguinte, ensinava o combo do **X-input** —
-> dois modos diferentes. Quem seguisse a página ia para o modo errado. E o combo
-> do modo recomendado **não estava documentado em lugar nenhum do repositório**:
-> `grep` por `Start` nos combos devolvia só as duas linhas do manual.
->
-> O `Start + A` é o que ela usa e **não** vem do manual — vem da mão dela. Os
-> outros dois seguem marcados como "segundo o manual", que é o grau que têm.
->
-> **Combos variam por modelo de 8BitDo.** Esta linha vale para o controle desta
-> casa; não a generalize sem medir outro.
-
----
-
-## A cura do Bluetooth: trocar de modo, não consertar o driver (25/07/2026)
-
-Durante meses a conclusão registrada aqui foi *"por Bluetooth ele morre; o cabo
-é a via"*, e a caçada toda — patch DKMS, `bt_probe_retries`, análise do
-handshake USB — partia do pressuposto de que ele **tinha** que funcionar em modo
-Switch. Nesse modo ele se apresenta como `057e:2009`, cai no `hid-nintendo`, e
-morre.
-
-O pressuposto era o erro. **Em modo DirectInput/PS4 o controle vira um device
-Sony, o `hid-playstation` assume, e ele conecta de primeira.** Medido:
-
-```
-antes (modo Switch):   057e:2009  ->  driver nintendo    ->  morria no probe
-agora (modo PS4):      054c:05c4  ->  driver playstation ->  subiu direto
-```
-
-Placar do teste ao vivo, quatro controles por Bluetooth **ao mesmo tempo**, um
-por jogador — o cenário que o projeto persegue:
-
-```
-DualSense #1   14:3a:9a:...   event256  js3   slot 1
-DualSense #2   a0:fa:9c:...   event260  js0   slot 2
-Nintendo Pro   e0:f6:b5:...   event2     -    slot 3   (Switch por BT, driver nintendo)
-8BitDo Pro     e4:17:d8:...   event259  js8   slot 4   (PS4 por BT, driver playstation)
-```
-
-> **NOTA DATADA — 06/08/2026: o `slot` deste placar é lugar na fila, não jogador
-> na partida.** O placar fica como está: os quatro **conectaram** por Bluetooth
-> ao mesmo tempo, e é isso que ele mediu. O que caducou é o *"um por jogador"* da
-> linha acima. **GRAU: MEDIDO** em 06/08/2026 às 22h40, com um DualSense, um
-> Nintendo Pro e um 8BitDo ligados: `coop status` respondeu **"jogadores ativos:
-> 1"** e `controller list` mostrou **um** controle. Coerente com o que esta
-> página já diz na abertura — o 8BitDo entra na lista de **externos** e **nunca é
-> adotado**; o `slot` que ele recebe serve à luz e à ordem, não à contagem de
-> jogadores. Medição inteira na
-> [LUGAR-À-MESA-01](../process/sprints/arquivados/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md).
-
-###  O MAC MUDA com o modo — e isso tem consequência
-
-O mesmo controle físico usa **endereços Bluetooth diferentes em cada modo**
-(medido nesta bancada: dois endereços que só diferem no fim, ambos com o OUI
-`E4:17:D8`, que é o prefixo público da 8BitDo — um em Switch, outro em PS4).
-Consequências práticas:
-
-- **São dois pareamentos distintos.** Trocar de modo não reaproveita o bond:
-  é preciso parear de novo, e o bond do outro modo continua no BlueZ.
-- **O hefesto registra os dois como controles diferentes.** No teste, o 8BitDo
-  em PS4 entrou no **slot 5** porque a identidade do modo Switch ainda ocupava o
-  4. Curou com `identity.renumber` (o botão **"Reconciliar jogadores"** da aba
-     Início — chamava-se *"Renumerar agora"* até 06/08/2026),
-  mas a identidade fantasma do outro modo segue no `controllers.json`.
-
-### O que este modo custa
-
-O `hid-playstation` trata o controle como DualShock 4: **não há LEDs de player**
-(o DS4 usa a lightbar colorida). No teste, ele foi o único dos quatro sem LED de
-jogador aceso. Quem depende do LED para saber quem é quem perde essa pista.
-
----
-
-##  Bond apagado sem crash: `Host is down (112)` (25/07/2026)
-
-O projeto já documenta a perda de bonds por **crash do `bluetoothd`**. Este é um
-modo **diferente**, medido no mesmo dia, e com o serviço vivo o tempo todo
-(`systemctl show bluetooth -p NRestarts` = **0**):
-
-```
-src/device.c:search_cb() E4:17:D8:00:00:1A: error updating services: Host is down (112)
-```
-
-Repetido de 12:14 a 12:21; no fim, o diretório do device tinha sumido de
-`/var/lib/bluetooth/<adaptador>/`.
-
-**O gatilho é corriqueiro:** o controle estava **pareado por Bluetooth e em uso
-pelo cabo**. Com o rádio dele desligado, o BlueZ insistiu em resolver os
-serviços, colecionou "Host is down" e removeu o device.
-
-Se acontecer, há duas saídas:
-
-1. **Re-parear do zero** (mais limpo, sem risco): botão de sync + o agente do
-   hefesto (`hefesto-bt-agent.service`) pareia sozinho.
-2. **Restaurar o snapshot**: `sudo scripts/bt_bonds_restore.sh --list` e depois
-   `--latest` ou o timestamp.  O restore **para o `bluetooth.service`** (derruba
-   quem está conectado) e, se o controle já rotacionou a própria chave, a
-   LinkKey antiga é rejeitada — loop de autenticação, que é a classe de gatilho
-   do crash de heap. Por isso o script é manual e o doctor só **sugere**.
-
----
-
-## Identificar o modo agora (sem sudo)
-
-O controle **se apresenta com VID/PID de outra marca conforme o modo** — o que
-não mente é o OUI do MAC. Nunca use um `eventN` decorado: os números renumeram
-a cada replug; resolva sempre na hora, por VID:PID.
+O fabricante e o produto que o controle anuncia mudam com o modo. O que não muda
+é o prefixo do endereço (o `E4:17:D8` é da 8BitDo).
 
 ```bash
-# 1) Que instâncias HID existem e com que driver? (bus 0003=cabo, 0005=Bluetooth)
+# o dispositivo e o driver (bus 0003 é o cabo, 0005 é o Bluetooth)
 for d in /sys/bus/hid/devices/*; do
   printf '%s driver=%s\n' "$(basename "$d")" "$(basename "$(readlink -f "$d/driver")")"
 done
-# 057e:2009 + driver=nintendo                  -> modo Switch
-# 045e:028e + driver=xpad                      -> modo X-input por cabo
-# 045e:02e0 + driver=microsoft                 -> modo X-input por Bluetooth
-```
-
-```bash
-# 2) De quem é o hardware de verdade? (nome + MAC; o OUI do MAC identifica o dono)
+# o nome e o endereço de cada um
 grep -H . /sys/bus/hid/devices/*/uevent | grep -E 'HID_NAME|HID_UNIQ'
-systemd-hwdb query "OUI:E417D8"
-# => ID_OUI_FROM_DATABASE=8BITDO TECHNOLOGY HK LIMITED
-# (troque E417D8 pelos 3 primeiros octetos do HID_UNIQ, sem os dois-pontos)
 ```
 
-```bash
-# 3) O node de input, resolvido por VID:PID (nunca eventN fixo)
-for e in /sys/class/input/event*/device/id/vendor; do
-  v="$(cat "$e")"; p="$(cat "${e%vendor}product")"
-  [ "$v:$p" = "057e:2009" ] && echo "/dev/input/$(basename "${e%/device/id/vendor}")"
-done
-# confirme as propriedades udev do node encontrado:
-#   udevadm info /dev/input/eventN
-```
+## O controle morre pelo Bluetooth no modo Switch
 
-**Detalhe do firmware, e ele vale para UM modo, não para o aparelho.** Em
-25/07 apareceu no bind a linha `unknown main item tag 0x0`, de descritor HID
-malformado. **Em modo Switch pelo cabo isso NÃO acontece** — medido em 11/08 por
-duas rotas independentes: o `journalctl -k` do boot inteiro não tem uma única
-linha `unknown main item tag`, e os **203 bytes** do descritor daquele modo
-foram parseados item a item **sem um item malformado** — nem main desconhecido,
-nem item reservado.
-
-Cada modo publica **outro** descritor (o do `054c:05c4` tem **364 bytes**), então
-descritor malformado **não é propriedade "do firmware clone"**: é propriedade de
-um modo. **Em qual modo a linha de 25/07 apareceu não está registrado**, e o
-journal daquele dia não é mais legível — a observação foi real, a generalização
-é que caiu. Nos dois casos é contexto, não defeito a consertar.
-
----
-
-## A morte por Bluetooth (o controle "morre sem desconectar")
-
-> **Esta seção descreve o modo SWITCH por Bluetooth — que continua sem cura.**
-> A saída não é consertar este caminho: é **usar o modo DirectInput/PS4**, onde
-> o controle nem chega perto do `hid-nintendo`. Veja
-> [A cura do Bluetooth](#-a-cura-do-bluetooth-trocar-de-modo-não-consertar-o-driver-25072026).
-> O que segue continua valendo como diagnóstico de quem insistir no modo Switch.
-
-**PROVADO em 16/07, por Bluetooth e em modo Switch:** o input morre com o link
-BT ainda de pé (`bluetoothctl` segue dizendo `Connected: yes`), e o journal
-traz a cascata abaixo — dezenas de timeouts culminando no rate-limiter do
-`hid-nintendo`, que estoura e desiste.
-
-**O que está medido é a assinatura; a causa é mecanismo, não medição.** A
-leitura de que o firmware do clone não acompanha o ritmo dos subcomandos é a
-explicação com mecanismo mais plausível, e continua sem changelog do fabricante
-nem bancada que a feche. Por **cabo**, no mesmo modo, não há um único timeout.
-
-A assinatura no journal do kernel é a **CASCATA**, na MESMA instância hid:
+O controle para de responder e o `bluetoothctl` continua dizendo
+`Connected: yes`. No diário do kernel aparece, na mesma instância, uma série de
+timeouts terminando no limitador do `hid-nintendo`:
 
 ```text
-nintendo 0005:057E:2009.0014: timeout waiting for input report     (dezenas)
+nintendo 0005:057E:2009.0014: timeout waiting for input report
 nintendo 0005:057E:2009.0014: joycon_enforce_subcmd_rate: exceeded max attempts
 ```
-
-Duas honestidades importantes:
-
-- **A linha isolada não é morte.** Houve `exceeded max attempts` medido que
-  NÃO foi terminal (estourou na conexão e o controle viveu mais ~8 minutos).
-  Só a cascata — série de timeouts culminando no `exceeded` — diagnostica.
-- **A morte aconteceu SEM Steam rodando** (primeira morte às 12:38:46; Steam
-  só subiu às 12:46:51). Portanto **fechar o Steam não é cura** de nada aqui.
-
-Como olhar (sem sudo — o grupo `adm` dá acesso ao journal do kernel; o
-`dmesg` cru é restrito nesta máquina por `kernel.dmesg_restrict=1`):
 
 ```bash
 journalctl -b -k --no-pager | grep -aE 'nintendo|joycon'
 ```
 
-O `scripts/doctor.sh` faz essa leitura sozinho: se o boot atual tiver a
-cascata, ele imprime o diagnóstico citando a instância; com journal limpo (ou
-só linhas isoladas), fica em silêncio.
+Uma linha `exceeded max attempts` sozinha não é a morte; a série é. O
+`hefesto-dualsense4unix doctor` faz essa leitura e avisa quando a acha. Fechar
+a Steam não resolve (a morte acontece sem ela), e o Hefesto não está no caminho:
+o `src/` tem mais de uma centena de linhas sobre controles Nintendo e 8BitDo,
+mas as únicas duas escritas em controle externo são a luz de jogador (desligada)
+e a ativação do giroscópio, só no Pro Controller original e só pelo cabo.
 
-**O hefesto está fora da cadeia causal destas mortes, e a razão não é ausência
-de código.** O `src/` tem hoje mais de uma centena de linhas que falam de
-Nintendo e de 8BitDo — o módulo `core/external_leds.py` é inteiro sobre elas. A
-razão é o **escopo do que ele escreve**, e a superfície de escrita em externo
-são **duas** funções:
+A saída é o modo DirectInput/PS4 pelo Bluetooth, ou o modo Switch pelo cabo.
+Não ponha o `hid_nintendo` na lista negra do kernel: isso mata o controle para
+todos os programas.
 
-- `apply_player_number`, que escreve no `sysfs` de LED e está **desligada**
-  desde 07/08 (`EXTERNAL_PLAYER_LED_ENABLED = False`, em
-  `daemon/subsystems/external_identity.py:194`);
-- `enable_imu`, que escreve no `hidraw` e só é disparada pelo
-  `ExternalImuEnabler` quando a OUI é a do Pro **genuíno** (`e0:f6:b5`) **e** o
-  barramento é **USB**.
+## O pareamento sumiu sem o Bluetooth travar
 
-Some-se o filtro do discovery, que só adota por VID **e** PID Sony (`054C` com
-`0CE6`/`0DF2`), e as launch options de jogos, que não participam: as mortes
-foram no **rádio**, no clone, e fora de jogo. **PROVADO no código**, com os dois
-caminhos de escrita nomeados acima.
+`Host is down (112)` repetido no diário do `bluetoothd`, e o controle some da
+lista de pareados. Acontece com o controle pareado pelo Bluetooth e em uso pelo
+cabo: o BlueZ insiste em procurar o rádio desligado e desiste do controle.
+Pareie de novo, ou restaure a cópia com `sudo scripts/bt_bonds_restore.sh
+--list` e `--latest` (ele para o Bluetooth por um instante).
 
----
+## O giroscópio no jogo
 
-## Gyro × Steam Input × o guard do hefesto (o conflito, com todas as letras)
-
-O gyro do SN30 Pro só é exposto em modo Switch, e só chega ao **jogo** com o
-**Steam Input ativo** para aquele app. Só que o hefesto trabalha contra isso,
-de propósito: o `hefesto-steam-input-guard` reaplica Steam Input OFF, e jogos
-já configurados podem ter `UseSteamControllerConfig=0` persistido — que
-desliga o Steam Input do app para TODOS os controles.
-
-Ou seja: **para ter gyro do 8BitDo num jogo, é preciso reativar o Steam Input
-daquele jogo, sabendo que o guard do hefesto vai desfazer a escolha sozinho.**
-Não há configuração que dê gyro + guard ao mesmo tempo hoje. Dito isso, a
-escolha é sua — o hefesto não quebra o controle em nenhum dos casos; ele só não
-participa.
-
-**Quando ele desfaz, exatamente.** O guard não é um gesto da instalação: são
-três unidades de usuário habilitadas por ela, e a reaplicação acontece em dois
-gatilhos — `hefesto-steam-input-guard.path`, que acorda quando a Steam escreve
-em `userdata/` (isto é, quando ela acaba de sair), e
-`hefesto-steam-input-guard.timer`, a cada **30 minutos**, como rede de
-segurança. Com a Steam viva o serviço **adia** em vez de fechá-la, então a sua
-escolha sobrevive à sessão em que você a fez e cai depois. Para segurar o gyro,
-desligue os dois:
+O giroscópio do 8BitDo existe no modo Switch e só chega ao jogo com o Steam
+Input daquele jogo ligado. O vigia do Steam Input do Hefesto volta a desligá-lo
+quando a Steam fecha e a cada 30 minutos. Para manter o giroscópio, desligue o
+vigia:
 
 ```bash
-systemctl --user disable --now hefesto-steam-input-guard.path \
-                               hefesto-steam-input-guard.timer
+systemctl --user disable --now hefesto-steam-input-guard.path hefesto-steam-input-guard.timer
 ```
 
-Desabilitar assim é uma escolha, e o Hefesto a respeita: o cartão *Saúde do
-sistema* (aba Sistema) **não** reclama de vigia desabilitado. Ele só avisa
-quando o vigia está habilitado e mesmo assim parou — que é defeito, não escolha.
-O `install.sh` reabilita os dois; para manter o gyro, rode-o com
-`--keep-steam-input` ou repita o `disable` depois.
+A aba Sistema não reclama de um vigia desligado assim. O `install.sh` o religa;
+rode-o com `--keep-steam-input` para não religar.
 
-A lista inteira do que a instalação deixa rodando está em
-[instalação](instalacao.md).
-
----
-
-## "Aparece como Xbox" — HIPÓTESE, não fato
-
-O kernel **nunca viu** um device `045e`/xpad/Xbox no ciclo medido — o rótulo
-"Xbox" que aparece em jogos vem de camada acima do kernel. Duas hipóteses,
-nenhuma provada:
-
-- **A**: o vpad XInput do Steam Input para o Pro Controller (conflita com o
-  `UseSteamControllerConfig=0` persistido nos jogos onde o guard atuou);
-- **B** (mais parcimoniosa): a ponte winebus/XInput do Proton, que apresenta
-  QUALQUER controle como "Xbox 360" sem Steam Input nenhum.
-
-Não conclua o modo do controle a partir do rótulo que o jogo mostra — use os
-comandos da seção de identificação.
-
----
-
-## Quem segura o hidraw (e por que isso é normal)
-
-**PROVADO na sessão de 16/07**, com o 8BitDo e os DualSense no rádio: o Steam
-mantém aberto o hidraw de TODO controle suportado — o do 8BitDo E os dos
-DualSense saudáveis, mesmo com PSSupport desligado. **Fd aberto é estado normal,
-não assinatura de conflito.** A sonda, se quiser ver
-com os próprios olhos (só processos seus, sem sudo):
-
-```bash
-for pid in $(pgrep -x steam); do
-  ls -l "/proc/$pid/fd" 2>/dev/null | grep -o 'hidraw[0-9]*' | sort -u \
-    | sed "s|^|steam($pid) segura |"
-done
-```
-
-**HIPÓTESE** (não provada; o contra-exemplo vivo são os DualSense, que
-coabitam sem corromper): dois mestres escrevendo subcommands no mesmo hidraw
-do clone (driver de Switch do Steam × `hid-nintendo`) poderiam agravar o
-"descontrolado". Quem fecha ou derruba essa hipótese é a validação humana com
-o modo escolhido — não um aviso automático.
-
----
-
-## O que NÃO fazer
-
-- **Não blackliste o `hid_nintendo`**: mata o controle para qualquer app fora
-  do Steam — quebra em vez de proteger, com efeito colateral no sistema todo.
-- **Não trate "fechar o Steam" como cura**: a morte por BT está provada sem
-  Steam rodando.
-- **Não culpe o hefesto nem launch options de jogos**: a única escrita do daemon
-  num `057e:2009` é o `enable_imu`, e ela é escopada ao Pro **genuíno** e ao
-  **cabo** — nunca ao clone, nunca no rádio. As mortes aconteceram no rádio e
-  fora de jogo.
+Se o jogo mostrar o 8BitDo como «Xbox», o nome vem da camada acima do kernel
+(o Steam Input ou o Proton), e não diz o modo do controle: use os comandos de
+«Identificar o modo agora».

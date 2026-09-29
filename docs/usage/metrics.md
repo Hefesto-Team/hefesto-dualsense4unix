@@ -1,108 +1,50 @@
 # Métricas Prometheus
 
-O daemon Hefesto - DualSense4Unix expõe métricas no formato Prometheus text exposition via HTTP
-em `127.0.0.1:<metrics_port>/metrics`. Por padrão o endpoint está **desligado**;
-é necessário habilitá-lo explicitamente.
+O serviço pode expor métricas no formato do Prometheus em
+`http://127.0.0.1:<porta>/metrics`. Elas vêm desligadas.
 
----
+## Ligar
 
-## Habilitando as métricas — o estado real hoje
+Duas variáveis de ambiente, lidas quando o serviço sobe:
 
-**Existem duas variáveis de ambiente, desde 01/08/2026** (PROMESSA-NÃO-CUMPRIDA-01/C1).
-Conferido rodando o código em 22/08/2026:
+- `HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED=1` liga (só o valor `1` liga);
+- `HEFESTO_DUALSENSE4UNIX_METRICS_PORT` escolhe a porta (o padrão é 9090). Um
+  valor inválido não derruba o serviço: ele fica na porta padrão e registra o
+  motivo no diário.
 
 ```bash
-# ligar (só o valor "1" liga — "true" não liga, igual aos plugins)
-HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED=1 hefesto-dualsense4unix daemon start
-
-# e, se a 9090 estiver ocupada, escolher a porta
-HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED=1 \
-HEFESTO_DUALSENSE4UNIX_METRICS_PORT=19199 hefesto-dualsense4unix daemon start
+systemctl --user set-environment HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED=1 \
+                                 HEFESTO_DUALSENSE4UNIX_METRICS_PORT=19199
+systemctl --user restart hefesto-dualsense4unix.service
 ```
 
-Num serviço systemd, as mesmas duas linhas vão em `Environment=` na unit, antes
-de o daemon subir.
+Nada no instalador nem na janela liga as métricas por você, e ligar exige
+reiniciar o serviço: o `daemon.reload` não sobe o servidor de métricas.
 
-> **A ressalva que continua de pé: existe chave, não existe botão.** Nada na
-> árvore escreve estas variáveis por você — nem o `install.sh`, nem a unit
-> systemd, nem a janela. Quem quiser as métricas exporta a variável à mão (ou
-> edita a unit) antes de iniciar o daemon. Medido em 22/08/2026: nenhum
-> `.service` de `assets/` tem `Environment=` com estas variáveis, e `install.sh`
-> não menciona `METRICS`. Fora de `src/` elas só aparecem onde ninguém as
-> exporta — documentação, testes e o `%changelog` do pacote Fedora.
->
-> **E ligar exige reiniciar o daemon.** O `MetricsSubsystem` só é instanciado na
-> subida (`_start_metrics`, no caminho de start, que consulta
-> `MetricsSubsystem.is_enabled`). O `reload_config` não o toca — zero ocorrências
-> de `metrics` no corpo dele — então o `daemon.reload` via IPC, mesmo aceitando
-> `config_overrides` com qualquer campo do `DaemonConfig`, **não** sobe o servidor
-> num daemon que já está rodando. Esse é o segundo dos "dois que faltavam", e ele
-> não foi feito.
+As variáveis são o único caminho porque o serviço constrói o `DaemonConfig` com
+quatro parâmetros (`poll_hz`, `auto_reconnect`, `ps_long_press_ms` e
+`keyboard_emulation_enabled`), e `metrics_enabled` não é um deles.
 
-**Por que a variável é o único caminho.** O `daemon/main.py` constrói o
-`DaemonConfig` com quatro parâmetros — `poll_hz`, `auto_reconnect`,
-`ps_long_press_ms` e `keyboard_emulation_enabled` — e `metrics_enabled` não é
-nenhum deles: ele fica no default `False` e nada de fora do código o alcança. É
-essa lacuna que o `MetricsSubsystem.is_enabled` cobre lendo a variável de
-ambiente por cima da config.
-
-O outro caminho, sem variável nenhuma, continua sendo `metrics_enabled=True` na
-construção do `DaemonConfig` em `daemon/main.py` — mas isso é mexer no código.
-Tudo o que vem abaixo (formato, métricas, scraping, dashboard) descreve o que o
-`MetricsSubsystem` faz **quando ele sobe**.
-
-> **Quem segura esta página:** `tests/unit/test_metricas_a_doc_nao_mente.py`.
-> Ele deriva do código as duas chaves, o corpo do `reload_config`, a ausência
-> de `METRICS` em `assets/*.service` e no `install.sh`, os oito nomes de
-> métrica da tabela abaixo e o comportamento do `is_enabled`/`_porta_efetiva`.
-> A ADR-016 afirmou por um mês *"zero ocorrências em `src/`"* de uma variável
-> que já existia; o portão existe para que nenhuma frase desta página possa
-> caducar calada do mesmo jeito.
-
----
-
-## Verificando o endpoint
+## Conferir
 
 ```bash
 curl -s http://127.0.0.1:9090/metrics | head -30
 ```
 
-Saída esperada (trecho):
+## As métricas
 
-```
-# HELP hefesto_poll_ticks_total Total de ticks do poll loop
-# TYPE hefesto_poll_ticks_total counter
-hefesto_poll_ticks_total 3600
-
-# HELP hefesto_controller_connected 1 se o controller está conectado, 0 caso contrário
-# TYPE hefesto_controller_connected gauge
-hefesto_controller_connected{transport="usb"} 1
-
-# HELP hefesto_battery_pct Nível de bateria atual em porcentagem (-1 se desconhecido)
-# TYPE hefesto_battery_pct gauge
-hefesto_battery_pct 85
-```
-
----
-
-## Métricas disponíveis
-
-| Métrica | Tipo | Descrição |
+| Métrica | Tipo | O que conta |
 |---|---|---|
-| `hefesto_poll_ticks_total` | counter | Ticks do poll loop desde o início |
-| `hefesto_controller_connected{transport}` | gauge | 1 se conectado, 0 se desconectado |
-| `hefesto_battery_pct` | gauge | Nível de bateria em % (-1 se desconhecido) |
-| `hefesto_ipc_requests_total{method,status}` | counter | Requisições IPC por método e status |
-| `hefesto_udp_packets_total{result}` | counter | Pacotes UDP por resultado |
-| `hefesto_events_dispatched_total{topic}` | counter | Eventos publicados no bus por tópico |
-| `hefesto_button_down_emitted_total` | counter | Eventos de botão pressionado |
-| `hefesto_button_up_emitted_total` | counter | Eventos de botão liberado |
+| `hefesto_poll_ticks_total` | counter | leituras do controle desde a subida |
+| `hefesto_controller_connected{transport}` | gauge | 1 com o controle conectado, 0 sem |
+| `hefesto_battery_pct` | gauge | bateria em %, -1 se desconhecida |
+| `hefesto_ipc_requests_total{method,status}` | counter | pedidos ao socket, por método e resultado |
+| `hefesto_udp_packets_total{result}` | counter | pacotes UDP, por resultado |
+| `hefesto_events_dispatched_total{topic}` | counter | eventos internos, por tópico |
+| `hefesto_button_down_emitted_total` | counter | botões apertados |
+| `hefesto_button_up_emitted_total` | counter | botões soltos |
 
----
-
-## Configurando o Prometheus
-
-Adicione ao `prometheus.yml`:
+## Prometheus
 
 ```yaml
 scrape_configs:
@@ -110,61 +52,12 @@ scrape_configs:
     static_configs:
       - targets: ["127.0.0.1:9090"]
     scrape_interval: 15s
-    metrics_path: /metrics
 ```
 
-Intervalo recomendado: **15 segundos**. O daemon executa poll a 60 Hz; contadores
-de tick crescem ~3600/min. Intervalos menores que 5s oferecem pouco benefício
-extra e aumentam o custo de parse.
+O endpoint só escuta em `127.0.0.1` e não tem autenticação. Para um Prometheus
+em outra máquina, ponha um proxy reverso local na frente dele. As métricas não
+levam caminho, PID nem dado pessoal.
 
-> **Nota de porta:** a porta padrão 9090 é usada por muitos componentes
-> Prometheus. Se houver conflito, exporte
-> `HEFESTO_DUALSENSE4UNIX_METRICS_PORT` — ela vence o `metrics_port` do
-> `DaemonConfig` (conferido em 22/08/2026: com a variável em `19199`, o endpoint
-> sobe na 19199 e não na 9090). Valor não numérico ou fora da faixa 1–65535 não
-> derruba o daemon: ele loga `metrics_port_env_invalida` ou
-> `metrics_port_env_fora_da_faixa` e usa a porta da config.
-
----
-
-## Scraping remoto
-
-O endpoint só aceita conexões de `127.0.0.1` (loopback). Para expor a um
-servidor Prometheus remoto, use um reverse proxy local:
-
-### Exemplo com nginx
-
-```nginx
-server {
-    listen 9091;
-    location /metrics {
-        proxy_pass http://127.0.0.1:9090/metrics;
-        allow <ip-do-prometheus>;
-        deny all;
-    }
-}
-```
-
----
-
-## Dashboard Grafana (referência)
-
-Um dashboard básico pode ser construído com os painéis:
-
-1. **Poll rate** — `rate(hefesto_poll_ticks_total[1m])` (linha, Hz alvo: ~60).
-2. **Bateria** — `hefesto_battery_pct` (gauge 0-100).
-3. **Conexão** — `hefesto_controller_connected` (stat, vermelho=0 verde=1).
-4. **IPC por método** — `rate(hefesto_ipc_requests_total[5m])` agrupado por `method`.
-5. **UDP aceito vs limitado** — `rate(hefesto_udp_packets_total[5m])` por `result`.
-
-Não há JSON de dashboard pronto no repositório. `docs/grafana/` foi anunciado em
-versões anteriores desta página como algo que viria "em sprint futura" e nunca
-existiu — os cinco painéis acima são a receita para montar o seu.
-
----
-
-## Segurança
-
-- Bind exclusivo em `127.0.0.1` — nunca em `0.0.0.0`.
-- Sem autenticação no endpoint. Acesso local apenas.
-- Não há informações sensíveis nas métricas (sem PID, paths ou dados de usuário).
+Painéis úteis: `rate(hefesto_poll_ticks_total[1m])` (a frequência de leitura,
+perto de 60 Hz), `hefesto_battery_pct`, `hefesto_controller_connected` e
+`rate(hefesto_ipc_requests_total[5m])` por método.

@@ -1,348 +1,116 @@
-# Hotkeys do DualSense
+# Atalhos no controle
 
-O Hefesto - DualSense4Unix reconhece atalhos nativos do DualSense detectados pelo daemon via
-`HotkeyManager`. Todos os atalhos respeitam o buffer de 150 ms (V3-2) para
-distinguir combos de toques isolados.
+O Hefesto reconhece combinações com o botão PS. Elas valem com o jogo aberto e
+sem largar o controle.
 
-**Os atalhos saem de um controle só: o do jogador 1.** Com um jogo aberto e o
-jogador 1 desligado, nos até trinta segundos em que o lugar dele fica guardado,
-eles ficam com o próximo da fila que continua ligado — o jogador 2; se ele
-também saiu, o 3 —, e ninguém troca de número. Quando o jogador 1 volta, os
-atalhos voltam para ele (OS-ATALHOS-NA-ESPERA-01, 24/09/2026; o lugar guardado
-está em [`modos.md`](modos.md)).
+**O PS e as combinações valem em qualquer um dos quatro controles.** O gesto
+que muda um cartão da aba Jogar muda o de quem o fez: o PS + L3 no controle do
+jogador 3 troca a máscara do jogador 3. O cursor do PC continua um só, e o
+mouse e o teclado do controle saem do jogador 1.
 
-## Combos sagrados (troca de perfil)
+## Os gestos
 
-| Combo            | Ação                                  |
-|------------------|---------------------------------------|
-| PS + D-pad cima  | Avança para o próximo perfil ativo    |
-| PS + D-pad baixo | Volta para o perfil anterior          |
+| Gesto | O que faz |
+|---|---|
+| PS + direcional para cima | próximo perfil |
+| PS + direcional para baixo | perfil anterior |
+| PS + R3 | próximo modo: Sony DualSense, Xbox, Navegação e de volta ao Sony DualSense |
+| PS + L3 | próxima máscara: DualSense, Xbox 360, Nintendo Pro e de volta à DualSense |
+| PS + Options | pausa e devolve o mouse e o teclado do controle |
+| PS, sozinho | abre a Steam, ou a traz para a frente se já estiver aberta |
+| L3 / R3, no modo Navegação | abre / fecha o teclado na tela |
+| botão do microfone | liga e desliga o microfone daquele controle |
 
-Política:
+Os dois botões de uma combinação contam juntos se chegarem em até 0,15 s. O PS
+sozinho só age quando você o solta sem ter feito combinação nenhuma, então um
+PS + direcional nunca abre a Steam.
 
-- Pressionar `PS` isolado atrasa qualquer repasse ao gamepad virtual (quando
-  emulação uinput está ligada) por até **150 ms** para aguardar o segundo botão.
-- Se o combo completo for detectado nesse buffer, o perfil troca e o PS **não**
-  propaga ao jogo.
-- Se o buffer expirar ou o D-pad nunca chegar, trata-se como **PS solo**
-  (ver abaixo).
+Comece pelo PS. Com o L3 ou o R3 afundado antes do PS, o teclado na tela abre
+antes de a combinação valer. Afundar os dois analógicos com o PS dispara um
+gesto só.
 
-## Onde a configuração dos hotkeys mora (leia antes)
+## A cor que confirma
 
-**O daemon não lê `daemon.toml`.** O arquivo que a aba Emulação abre no botão
-"Ver daemon.toml (referência)" é só isso — referência. Ele nasce com um
-cabeçalho dizendo exatamente o mesmo, e nada nele chega ao daemon.
+O PS + R3 e o PS + L3 piscam a barra de luz três vezes na cor do que ficou, em
+todos os controles, e a barra volta à cor do perfil em seguida.
 
-A configuração efetiva vem de duas fontes, e só delas:
+| Cor | Modo (PS + R3) | Máscara (PS + L3) |
+|---|---|---|
+| rosa | Sony DualSense | DualSense |
+| verde claro | Xbox | Xbox 360 |
+| laranja | Navegação | |
+| roxo | | Nintendo Pro |
 
-1. **Variáveis de ambiente lidas na subida do daemon** — hoje são seis, todas
-   em `daemon/main.py`:
-   `HEFESTO_DUALSENSE4UNIX_POLL_HZ`, `HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS`,
-   `HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION`, `HEFESTO_DUALSENSE4UNIX_NICE`,
-   `HEFESTO_DUALSENSE4UNIX_FAKE` e `HEFESTO_DUALSENSE4UNIX_FAKE_TRANSPORT`.
+O Steam Input (azul claro) e o Modo Nativo (branco) não entram no ciclo do
+gesto; a cor deles aparece quando você os escolhe na aba Jogar.
 
-   As duas últimas são o backend falso (teste e desenvolvimento, sem hardware),
-   não configuração de uso. A terceira,
-   `HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION`, nasceu em 29/07 com a
-   EMULACAO-NO-JOGO-01 e é o desligador do teclado emulado — `=0` desliga,
-   qualquer outro valor mantém ligado. Esta página a omitia até 01/08 e
-   afirmava "hoje são três" (DOC-VERDADE-02, E7). A precedência dela, do mais
-   fraco ao mais forte: default do `DaemonConfig` < esta variável <
-   `keyboard_emulation.flag`, que é a escolha registrada na janela e vence
-   sempre.
-2. **O método IPC `daemon.reload`**, que aceita `config_overrides` com qualquer
-   subconjunto dos campos de `DaemonConfig` e aplica em tempo de execução:
+Com um jogo aberto, dois pulsos vermelhos vêm antes da troca: trocar o modo ou a
+máscara recria o controle virtual, e alguns jogos só o reconhecem reabrindo.
+Dois pulsos vermelhos e um longo dizem que a troca não aconteceu.
 
-   ```bash
-   echo '{"jsonrpc":"2.0","id":1,"method":"daemon.reload",
-          "params":{"config_overrides":{"ps_button_action":"none"}}}' \
-     | nc -U "$XDG_RUNTIME_DIR/hefesto-dualsense4unix/hefesto-dualsense4unix.sock"
-   ```
+Num jogo que ainda não achou o modo que funciona, o PS + R3 também diz ao
+Hefesto que o modo de agora não serve: ele passa para a próxima tentativa, e o
+modo que ficar de pé é guardado no perfil do jogo.
 
-   Overrides feitos assim são **transitórios**: valem até o daemon reiniciar.
-   Não há hoje persistência em disco para eles.
+## O botão PS sozinho
 
-Os nomes dos campos são os do `DaemonConfig` (`ps_button_action`,
-`ps_button_command`, `ps_long_press_ms`, …) — não os nomes de seção TOML que
-apareciam nas versões anteriores desta página.
+O que o PS faz sozinho é o campo `ps_button_action`:
 
-## Botão PS isolado (FEAT-HOTKEY-STEAM-01)
+- `steam` (o padrão): abre a Steam, ou traz a janela da Steam para a frente;
+- `none`: não faz nada;
+- `custom`: roda o comando de `ps_button_command`, uma lista de argumentos
+  (nunca uma linha de shell). Por exemplo,
+  `["xdg-open", "steam://open/bigpicture"]` abre o Big Picture.
 
-Quando `PS` é pressionado e solto sem que nenhum combo tenha disparado, o
-daemon executa a ação de `ps_button_action`.
-
-### Modos suportados
-
-`ps_button_action` aceita `"steam"` (padrão), `"none"` ou `"custom"`; com
-`"custom"`, `ps_button_command` é a lista argv a executar — nunca uma string de
-shell.
-
-- **`steam`** (padrão): abre a Steam se ela não estiver rodando;
-  se estiver, foca a janela principal (`WM_CLASS = steam.Steam`).
-  Requer `steam` no PATH. Usa `pgrep -x steam` para detectar processo e
-  `wmctrl -lx` / `wmctrl -ia <wid>` para focar. Nunca bloqueia o daemon —
-  execução em thread worker dedicada.
-- **`none`**: PS solo é ignorado (útil para quem quer preservar o botão
-  home para outros usos via mapeamento externo).
-- **`custom`**: executa a lista `ps_button_command` via `subprocess.Popen` com
-  `start_new_session=True` e stdio em `/dev/null`. Exemplo:
-  `["xdg-open", "steam://open/bigpicture"]` abre o Big Picture Mode.
-
-### Falhas silenciosas
-
-- Se `steam` não existe no PATH, o daemon loga `steam_binary_not_found`
-  uma vez e passa a ignorar futuras tentativas até reinício. Evita poluir
-  logs com repetições.
-- Se `wmctrl` não existe, loga `wmctrl_binary_not_found` e faz fallback
-  para spawn (pode resultar em tentativas duplicadas do usuário, mas a
-  Steam já trata múltiplas instâncias).
-- Qualquer erro inesperado é capturado e logado como `warning` — o daemon
-  nunca morre por causa do hotkey.
-
-### Segurança
-
-- `shell=True` **nunca** é usado. Toda chamada passa uma lista argv.
-- Processo filho é desprendido via `start_new_session=True` — fechar o
-  daemon não mata a Steam.
-- stdin/stdout/stderr vão para `/dev/null` — nada vaza nos logs do daemon.
-
-## Modo jogo — combo PS + Options
-
-O "modo jogo" alterna a supressão da emulação de mouse/teclado do daemon,
-mantendo os **combos de troca de perfil ativos** — para o gesto continuar
-funcionando e conseguir reativar a emulação depois.
-
-| Gesto | Ação |
-|-------|------|
-| PS (toque curto) | Ação `[hotkey.ps_button]` — default `steam` |
-| **PS + Options** | Modo jogo on/off — suprime/restaura emulação de mouse/teclado |
-| PS + D-pad ↑/↓ | Troca de perfil (combo sagrado) |
-| **PS + R3** | **Próximo modo** — Sony DualSense → Xbox → Navegação (ver a seção abaixo) |
-| **PS + L3** | **Próxima máscara** — DualSense → Xbox 360 → Nintendo Pro (ver a seção abaixo) |
-| **L3 / R3** | Abre / fecha o **teclado na tela** (ver a seção abaixo) |
-
-**Por que não é mais o long-press.** O gesto original era segurar o PS por ~1 s
-(FEAT-EMULATION-GAMEMODE-LONGPRESS-01, v3.8.1). Ele provocava modo jogo
-**acidental**: o toque de abrir a Steam que passasse de um segundo alternava o
-modo sem ninguém pedir. Hoje o padrão é `ps_long_press_ms = 0` — o gesto vem
-**desligado** — e o modo jogo é o combo deliberado PS + Options
-(FEAT-EMULATION-GAMEMODE-COMBO-01).
-
-**Diferenças entre os gestos do PS:**
-
-- O combo (PS + outro botão) dispara primeiro — long-press e PS solo ficam suprimidos.
-- O PS solo só dispara no release, e só se nenhum combo já tiver disparado.
-
-**Configuração:** o limiar do long-press é `ps_long_press_ms` (ms). Padrão `0` =
-gesto desligado; valor maior que zero traz o gesto de volta, com o risco de
-acionamento acidental. É o único campo de hotkey com variável de ambiente
-própria:
+Para mudar sem reiniciar o serviço, use o método `daemon.reload` do socket do
+Hefesto (a mudança vale até o serviço reiniciar):
 
 ```bash
-HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS=1000 \
-  systemctl --user restart hefesto-dualsense4unix.service
+echo '{"jsonrpc":"2.0","id":1,"method":"daemon.reload",
+       "params":{"config_overrides":{"ps_button_action":"none"}}}' \
+  | nc -U "$XDG_RUNTIME_DIR/hefesto-dualsense4unix/hefesto-dualsense4unix.sock"
 ```
 
-**Estado do modo jogo via IPC** (útil para GUI/applet/CLI custom):
+Segurar o PS por um tempo não faz nada por padrão. `ps_long_press_ms` maior
+que zero liga esse gesto (ele pausa o mouse e o teclado, como o PS + Options),
+com o risco de disparar sem querer ao abrir a Steam.
+
+## O PS + Options
+
+Pausa o mouse e o teclado que o controle emula, e o mesmo gesto os devolve. Os
+atalhos de perfil continuam valendo durante a pausa. Uma notificação confirma
+cada troca. A pausa dura até o serviço reiniciar; para guardá-la num perfil,
+use o interruptor da aba Navegação e o Salvar Perfil.
+
+Pelo socket, o estado está no campo `emulation_suppressed` de `daemon.status`,
+e `daemon.emulation.suppress` alterna.
+
+## O teclado na tela
+
+No modo Navegação, o L3 abre e o R3 fecha o teclado na tela do sistema: `wvkbd`
+numa sessão Wayland, `onboard` no X11. O instalador instala o certo; sem nenhum
+dos dois, o L3 avisa na tela. É o único jeito de digitar texto pelo controle.
+Quando o L3 não abre nada, veja «O L3 não abre o teclado na tela» em
+[troubleshooting.md](troubleshooting.md).
+
+## As variáveis de ambiente
+
+O serviço não lê arquivo de configuração para os atalhos. Na subida, ele lê
+variáveis de ambiente, e hoje são seis:
+
+- `HEFESTO_DUALSENSE4UNIX_POLL_HZ`: quantas leituras do controle por segundo;
+- `HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS`: o tempo do PS segurado (`0`
+  desliga, o padrão);
+- `HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION`: `0` desliga o teclado emulado. A
+  escolha feita na aba Navegação vence esta variável;
+- `HEFESTO_DUALSENSE4UNIX_NICE`: a prioridade do processo;
+- `HEFESTO_DUALSENSE4UNIX_FAKE` e `HEFESTO_DUALSENSE4UNIX_FAKE_TRANSPORT`: um
+  controle simulado, para desenvolvimento.
+
+Para o serviço ler uma delas, ponha-a no ambiente do systemd do usuário e
+reinicie o serviço:
 
 ```bash
-# Consulta — o campo `emulation_suppressed` vem do método IPC `daemon.status`.
-# Atenção: `hefesto-dualsense4unix daemon status` NÃO serve aqui — esse
-# subcomando imprime a saída do `systemctl --user`, não o JSON do daemon.
-echo '{"jsonrpc":"2.0","id":1,"method":"daemon.status","params":{}}' \
-  | nc -U "$XDG_RUNTIME_DIR/hefesto-dualsense4unix/hefesto-dualsense4unix.sock"
-
-# Alternar (espelha o gesto)
-echo '{"jsonrpc":"2.0","id":1,"method":"daemon.emulation.suppress","params":{}}' \
-  | nc -U "$XDG_RUNTIME_DIR/hefesto-dualsense4unix/hefesto-dualsense4unix.sock"
-
-# Definir explicitamente
-# params: {"suppressed": true}  ou  {"suppressed": false}
+systemctl --user set-environment HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS=1000
+systemctl --user restart hefesto-dualsense4unix.service
 ```
-
-Notifica via D-Bus (`org.freedesktop.Notifications`) em ambas as transições — feedback necessário
-porque a ação é deliberada (sem visual, o usuário não saberia se o gesto pegou). O estado é
-**transitório**: não persiste entre boots — a emulação volta ao estado da config no próximo
-restart do daemon.
-
-> **NOTA DATADA — 09/08/2026: "transitório" continua verdade para o GESTO, e
-> deixou de ser toda a história.** O combo PS + Options segue sem persistir. O
-> que mudou é que a **janela** passou a guardar o modo jogo: o interruptor da
-> aba Emulação escreve no rascunho e o **Salvar Perfil** do rodapé o persiste em
-> `suppress_desktop_emulation`, **inclusive** em perfil "Vale sempre" — a recusa
-> que existia nesse caso caiu por decisão dela, *"a vontade na GUI prevalece
-> sempre"*. Num perfil "Vale sempre" o valor fica guardado no arquivo mas o
-> daemon **não o liga sozinho** na ativação seguinte, e é isso que impede o
-> desktop de acordar sem ponteiro depois de um boot. O campo e o preço estão em
-> [`creating-profiles.md`](creating-profiles.md#seção-opcional-mouse-e-suppress_desktop_emulation).
-
-## Próxima ponte — combo PS + R3
-
-**Ponte** é a forma como o jogo enxerga o controle. O gesto **PS + R3** troca de
-ponte sem fechar o jogo, em ciclo: **DualSense → Xbox 360 → mouse+teclado →
-DualSense**. Ele vem **ligado de fábrica** (FEAT-HOTKEY-PONTE-CYCLE-01).
-
-**O R3 sozinho continua fechando o teclado na tela** — é o PS *junto* com o R3
-que troca a ponte. Os dois não brigam: o latch de combo
-(FEAT-HOTKEY-COMBO-NO-LEAK-02) segura o R3 até todos os botões serem soltos, e o
-combo só dispara com PS e R3 pressionados **juntos** por mais de 150 ms
-(`buffer_ms`). Acionar por acidente é difícil; acionar **sem saber o que se
-fez** é fácil, e é por isso que esta seção existe.
-
-**O produto avisa pela lightbar** — o único canal visível sem sair do jogo. As
-cores saem da paleta da janela, não são inventadas aqui:
-
-| Cor da barra | O que ficou de pé |
-|---|---|
-| **rosa** `#ff79c6` | ponte **DualSense** (o Hefesto na frente) |
-| **verde claro** `#50fa7b` | ponte **Xbox 360** |
-| **laranja** `#ffb86c` | ponte **mouse+teclado** |
-| **azul claro** `#8be9fd` | **Steam Input** (não entra no ciclo do gesto) |
-| **branco** `#f8f8f2` | **Modo Nativo** (não entra no ciclo do gesto) |
-| **dois pulsos vermelhos**, antes de aplicar | "isto pode derrubar o controle dentro do jogo" |
-| dois pulsos vermelhos **+ um vermelho longo** | "pedi a ponte e não consegui" — o vpad não subiu |
-
-A cor do modo sai em **três piscadas rápidas** (0,15 s acesa, 0,12 s apagada) em
-**todos** os DualSense conectados, e a barra **volta à cor do perfil** no fim —
-aviso que rouba a cor e não devolve é defeito. Ela é de **modo**, não de gesto:
-acende igual quando a troca vem da janela, da CLI/IPC ou do autoswitch por jogo
-(AVISO-DE-MODO-01). Os dois pulsos vermelhos só saem quando **há jogo com o
-controle na mão** — é o risco que eles anunciam, e sem jogo aberto não há risco
-a anunciar.
-
-**O preço, que foi medido (R-04):** trocar de ponte **destrói e recria o vpad**,
-e isso invalida o handle que o jogo já tinha aberto. Um jogo aberto pode precisar
-de replug lógico — daí o aviso vermelho *antes* de aplicar.
-
-**Num jogo sem ponte carimbada o alvo não é o ciclo fixo**, e sim o próximo
-degrau da escada de tentativas (PONTE-ESCADA-LACO-01): apertar o gesto é o sinal
-de que o degrau atual não serve. Com jogo já carimbado — ou sem jogo nenhum — o
-gesto anda o ciclo de sempre. O carimbo está em
-[`creating-profiles.md`](creating-profiles.md).
-
-**Ressalva de 22/08/2026 — o que tem prova de plástico e o que não tem.** A
-**troca em si** já foi vista em hardware, na bancada de 19→20/08 com ela ao
-controle: o `PS + R3` trocou a ponte dentro do Duskfade na primeira tentativa
-(`gestos=1`, de `dualsense` para `xbox`) e o jogo passou a andar. O que segue
-**sem prova de plástico são as cinco cores da piscada** — nenhuma delas foi
-conferida com o olho dela. O roteiro está em
-[PROVA-NO-PLASTICO-01](../process/sprints/arquivados/2026-08-19-PROVA-NO-PLASTICO-01-o-roteiro-de-quarenta-minutos-com-o-controle-na-mao.md).
-
-## Próxima máscara — combo PS + L3
-
-**Máscara** é como o jogo reconhece o controle, por cima do modo: DualSense,
-Xbox 360 ou Nintendo Pro. O gesto **PS + L3** anda por elas sem fechar o jogo, em
-ciclo — **DualSense → Xbox 360 → Nintendo Pro → DualSense** — e é o mesmo chip
-do cartão de quem faz o gesto na aba Jogar: a máscara vale na hora e fica
-gravada no perfil ativo (PS-L3-MASCARA-01, 14/09/2026). O modo não muda; quem
-troca o modo é o **PS + R3**.
-
-**O L3 sozinho continua abrindo o teclado na tela** — o mesmo latch de combo do
-R3 segura o L3 até todos os botões serem soltos. O latch só pega o L3 quando o
-**PS já está apertado**: afundar o L3 primeiro e o PS depois abre o teclado
-antes de o gesto valer (é assim com o R3 desde sempre; comece pelo PS).
-
-**Um gesto por aperto.** Afundar os dois analógicos com o PS — `PS + L3 + R3` —
-dispara **um** gesto só, e o outro só depois de soltar. Até 14/09/2026 os dois
-combos se revezavam a cada leitura do controle (60 por segundo), trocando modo e
-máscara em rajada.
-
-| Cor da barra (três piscadas) | A máscara que ficou |
-|---|---|
-| **rosa** `#ff79c6` | **DualSense** |
-| **verde claro** `#50fa7b` | **Xbox 360** |
-| **roxo** `#bd93f9` | **Nintendo Pro** |
-| **dois pulsos vermelhos**, antes de aplicar | há jogo com o controle na mão: recriar o controle virtual pode derrubá-lo |
-| dois pulsos vermelhos **+ um vermelho longo** | a máscara não chegou ao aparelho, ou não há controle primário |
-
-**O cartão é o de quem segura os atalhos.** O gesto anda o cartão do jogador 1;
-na espera do lugar guardado, o de quem segura os atalhos — o do jogador 1
-ausente não se mexe, e o controle virtual dele, parado à espera, não é recriado.
-Os outros trocam de máscara pelo próprio cartão, na aba Jogar. **Na Navegação**
-o gesto guarda a máscara e não liga o controle virtual: ela vale quando um modo
-de jogo subir.
-
-**O que o modo muda com cada máscara, medido em 14/09/2026** no daemon vivo, com
-a libSDL2 do sistema: com a máscara **DualSense**, o modo Sony DualSense dá o
-Edge 0df2 pelo canal próprio (com hidraw) e o modo Xbox dá o mesmo Edge pelo
-canal comum; com **Xbox 360** ou **Nintendo Pro**, os dois modos dão o mesmo
-aparelho — o canal próprio do DualSense só existe com a máscara DualSense.
-
-**O jogo abre pronto para as duas trocas.** Fora do Modo Nativo, o jogo vê só o
-controle virtual — com perfil ou sem perfil, inclusive quando abre na Navegação.
-É decisão dela de 14/09/2026 (`D-1409-FORA-DO-NATIVO-O-JOGO-VE-SO-O-VIRTUAL`), e
-existe porque o jogo lê a env UMA vez, no `exec`: as trocas de modo e de máscara
-acontecem depois, dentro dele. O preço, que ela leu antes de escolher: **na
-Navegação o jogo não vê gamepad nenhum** até ela subir um modo.
-
-**Até onde isso chega, e onde não chega:**
-
-* jogos da Steam, com ou sem perfil próprio — o wrapper `hefesto-launch` exporta
-  a env em qualquer um dos dois casos;
-* Heroic, Lutris e os outros lançadores — pela cura por estrada, que copia a
-  mesma env;
-* **não chega** a atalho não-Steam (sem `SteamAppId`) nem a jogo da Steam que
-  ainda não recebeu o wrapper — a Steam só grava as opções de lançamento quando
-  fecha;
-* **Modo Nativo** é a exceção por desenho: lá o controle de plástico É o
-  controle, e escondê-lo deixaria o jogo sem nenhum.
-
-**O que continua dependendo do jogo, e nenhuma env resolve:** trocar a máscara
-recria o controle virtual, então o jogo precisa aceitar um controle que entra no
-lugar de outro. Alguns seguem jogando, outros tratam como jogador novo, e há os
-que só voltam ao normal reabrindo. E a dica `SDL_JOYSTICK_HIDAPI=0`, que sai
-para as máscaras Xbox 360 e Nintendo Pro, fica congelada na abertura: um jogo
-aberto nelas e trocado para DualSense lá dentro recebe o controle pelo caminho
-comum, sem o driver PS5 do SDL — funciona, mas pode vir com botões fora do lugar
-nas bibliotecas mais novas. Reabrir o jogo acerta.
-
-## Teclado na tela — L3 abre, R3 fecha
-
-Os defaults de `l3` e `r3` no mapa de fábrica não são teclas: são os tokens
-virtuais `__OPEN_OSK__` e `__CLOSE_OSK__`, interceptados pelo device de teclado
-virtual e delegados ao subsistema de teclado, que sobe (ou mata) o processo do
-teclado na tela do sistema. Nada de evento de tecla real é emitido.
-
-**Isto é o único caminho de fábrica para escrever texto pelo controle.** Nenhum
-atalho de fábrica digita uma letra: o mapa de fábrica tem nove entradas, e as
-que emitem tecla de verdade são Super (Options), PrintScreen (Create),
-Alt+Shift+Tab (L1) e Alt+Tab (R1) — mais Backspace, Enter e Delete, que eram
-das três regiões do touchpad e [saíram em 09/08/2026](modos.md#o-touchpad-é-touchpad-do-sistema).
-As outras duas entradas são justamente o `l3` e o `r3` desta seção.
-
-O programa é do sistema, e a escolha sai da **sessão viva**, não de preferência:
-
-| Sessão | Pacote | Binário | Como digita |
-|---|---|---|---|
-| Wayland | `wvkbd` | `wvkbd-mobintl` | `zwp_virtual_keyboard_manager_v1` — cliente Wayland puro |
-| X11 | `onboard` | `onboard` | XTEST |
-
-Desde 10/08/2026 o `install.sh` instala o certo sozinho, sem flag (passo 4f). Em
-máquina provisionada antes disso, `sudo apt install wvkbd` (ou `onboard` em X11)
-resolve, **sem reiniciar o daemon** — ele reconsulta o sistema a cada 10 s. Sem
-nenhum dos dois instalados, o L3 **avisa na tela** em vez de não fazer nada.
-
-A ordem importa e já foi um defeito: até 10/08 a lista de candidatos era fixa,
-com o `onboard` primeiro. Com os dois instalados numa sessão Wayland, o daemon
-escolheria justamente o que **abre e não digita**. Hoje quem decide é
-`WAYLAND_DISPLAY` primeiro, `DISPLAY` só depois — numa sessão Wayland com
-XWayland os dois estão setados, então olhar `DISPLAY` antes classificaria toda
-sessão Wayland moderna como X11.
-
-Desligar **"Emular teclado"** na aba Navegação tira também o teclado na tela: é
-o mesmo device virtual que carrega os dois. Diagnóstico e as quatro histórias de
-um `command -v` vazio em
-[`troubleshooting.md`](troubleshooting.md#17-o-l3-não-abre-o-teclado-na-tela).
-
-## Observações
-
-- O combo sagrado tem **prioridade** sobre o PS solo: pressionar PS + D-pad
-  em menos de 150 ms sempre troca perfil, nunca abre a Steam.
-- O release do PS após um combo não dispara PS solo (suprimido internamente
-  pelo `HotkeyManager`).
-- Para desativar temporariamente o PS solo, mande
-  `{"ps_button_action":"none"}` em `config_overrides` do `daemon.reload` (ver a
-  primeira seção). **Não existe** `hefesto-dualsense4unix daemon reload` na
-  linha de comando — só o método IPC.
-- O combo PS + Options é independente da ação configurada para o PS solo — ele
-  funciona mesmo com `ps_button_action = "none"`.

@@ -332,6 +332,11 @@ class TestDocumentacaoHonesta:
 
         Mordida: devolver `v0.3.0` à página, ou publicar a 0.5.0 sem tocar
         nela, reprova aqui.
+
+        A página instala pelo ramo padrão, como o README (a tag da 0.9.4.5 é de
+        antes da interface das dez abas). Por isso o `git checkout` deixou de
+        ser obrigatório: o que se cobra é a frase da versão e, se um `git
+        checkout v<tag>` voltar, que a tag seja a da versão canônica.
         """
         versao = re.search(
             r'^version\s*=\s*"([^"]+)"',
@@ -341,7 +346,9 @@ class TestDocumentacaoHonesta:
         assert versao is not None, "pyproject.toml sem campo version"
         assert "sprint/harmonia-uhid" not in DOC
         assert "alfa 0.1.1" not in DOC
-        assert f"git checkout v{versao.group(1)}" in DOC
+        assert f"A versão corrente é a alfa **{versao.group(1)}**" in DOC
+        tags = set(re.findall(r"^git checkout v(\S+)", DOC, re.MULTILINE))
+        assert tags <= {versao.group(1)}, f"a página manda instalar {sorted(tags)}"
 
     def test_no_udev_nao_promete_cobrir_todo_etc(self) -> None:
         assert "e todos os passos que escrevem em `/etc`" not in DOC, (

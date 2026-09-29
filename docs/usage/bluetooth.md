@@ -1,246 +1,111 @@
 # Bluetooth
 
-O Hefesto trata USB e Bluetooth do mesmo jeito — o backend é agnóstico ao
-transporte. Gatilhos adaptativos, vibração, LED de microfone e LEDs de jogador
-funcionam nos dois. A diferença é o pareamento inicial, que ainda é manual: não
-há tela dedicada na janela.
+O Hefesto trata o cabo e o Bluetooth do mesmo jeito: gatilhos, vibração, luz,
+número do jogador, giroscópio, microfone e alto-falante funcionam nos dois. O
+que muda é o pareamento, e que o rádio tem um limite de controles por adaptador.
 
-**A cor da barra de luz tem uma exceção por Bluetooth, e ela foi medida em
-12/08/2026:** se a **Steam já estiver aberta** no momento em que você liga o
-controle, a barra costuma nascer apagada e **não aceita a sua cor** enquanto
-aquela conexão durar. Não é avaria do controle nem do pareamento — é a Steam
-pintando a barra de todos os DualSense a cada conexão nova. O que fazer está em
-[Solução de problemas, seção 20](troubleshooting.md#20-a-barra-de-luz-não-pega-a-cor-por-bluetooth).
+## Parear pela aba Conexões
 
-## Parear um DualSense
+1. Na aba **Conexões**, clique em **Conectar** no adaptador que vai receber o
+   controle.
+2. No controle, segure **PS + Create** até a barra de luz piscar rápido.
+3. O controle aparece na lista e conecta. Se não conectar, a linha diz «Não
+   Conectou», e **Tentar de Novo** reabre a espera.
+
+Nas próximas vezes, um toque no PS liga o controle e ele volta sozinho.
+
+Com mais de um adaptador, a aba Conexões também move um controle de um adaptador
+para outro. Quantos controles cabem em cada um, e como dividi-los, está em
+[bluetooth-varios-adaptadores.md](bluetooth-varios-adaptadores.md).
+
+## Parear pelo terminal
 
 ```bash
 bluetoothctl
-# dentro do prompt:
 power on
 agent on
 default-agent
 scan on
-# no controle: segure PS + Create por ~3 s até a barra de luz piscar rápido
-# espere a entrada "Wireless Controller" aparecer com o endereço MAC
-pair  AA:BB:CC:DD:EE:FF      # troque pelo endereço que apareceu
-trust AA:BB:CC:DD:EE:FF
-connect AA:BB:CC:DD:EE:FF
+# segure PS + Create no controle até a barra piscar rápido,
+# e espere aparecer "Wireless Controller" com o endereço
+pair  AA:BB:CC:00:00:FF      # o endereço que apareceu
+trust AA:BB:CC:00:00:FF
+connect AA:BB:CC:00:00:FF
 exit
 ```
 
-### Por que o PS + Create é obrigatório — e a razão NÃO é o firmware
+Em até cinco segundos o Hefesto encontra o controle; `hefesto-dualsense4unix
+status` mostra `transport = bt`.
 
-Esta casa afirmou por engano, em 19/09/2026, que pôr o controle em modo de
-pareamento *"é firmware, não há verbo, D-Bus nem sysfs que faça isso"*. A
-conclusão prática está certa; **a razão está errada**, e é a razão que a
-próxima pessoa lê.
+### Por que o PS + Create
 
-O DualSense **tem** uma porta para isso: o feature report **`0x0A` «Set
-Bluetooth Pairing»**, 27 bytes, que grava o endereço do host e a link key de
-16 bytes no próprio controle — **por cabo**, na mesma ordem de bytes do BlueZ.
-Está descrito em
+O controle entra em modo de pareamento pelo PS + Create porque ninguém construiu
+a alternativa, e não porque o controle a proíba. O DualSense tem uma porta para
+gravar o pareamento pelo cabo, o feature report `0x0A` («Set Bluetooth
+Pairing»), descrito em
 [dualsense-plataforma-e-identidade.md](../protocol/dualsense-plataforma-e-identidade.md),
-§3, e o `0x0A` aparece no censo de reports lido do descritor dos controles
-desta bancada.
+§3. Três ressalvas:
 
-**Por que ninguém a usa, e as três ressalvas importam:**
-
-1. o grau declarado do documento é `afirmado-no-doc` — **nenhum byte saiu para
-   o aparelho**;
-2. **não está implementado**: não há uma linha de código nesta árvore que
-   escreva o `0x0A`;
-3. o próprio documento **desaconselha**, porque `0x0A` é escrita e, mal
-   formado, reescreve o pareamento de um controle que alguém está usando.
-
-**A frase certa é: hoje o PS + Create é obrigatório porque ninguém construiu a
-alternativa — não porque o firmware a proíba.** Quem ler *"é firmware, não
-dá"* fecha uma porta que está aberta e documentada.
-
-Depois de pareado, o daemon detecta em até 5 segundos. Para conferir:
-
-```bash
-hefesto-dualsense4unix status
-#   connected  = True
-#   transport  = bt
-```
-
-Nas próximas sessões basta ligar o controle com um toque no PS — o `bluetoothd`
-reaproveita o `trust` salvo.
+1. o grau do documento é `afirmado-no-doc`: nenhum byte foi mandado ao controle;
+2. o Hefesto não o usa: não está implementado;
+3. o próprio documento desaconselha, porque uma escrita mal formada troca o
+   pareamento de um controle em uso.
 
 ## O que o instalador faz pelo Bluetooth
 
-Com os padrões de fábrica, o `install.sh` deixa no sistema:
+- ajustes do BlueZ para conectar rápido e parear de novo sem confirmação;
+- o adaptador USB sem suspensão no meio do jogo;
+- um agente de pareamento do sistema;
+- uma cópia dos pareamentos a cada 15 minutos e a cada conexão, em
+  `/var/lib/hefesto-dualsense4unix/bt-bonds/`, e um vigia que reinicia o
+  Bluetooth quando ele trava.
 
-- Dois drop-ins do BlueZ: conexão mais rápida (`FastConnectable`) e
-  re-pareamento sem confirmação (`JustWorksRepairing`).
-- Um drop-in de modprobe que impede o adaptador USB de dormir no meio do jogo.
-- Um agente Bluetooth de sistema.
-- Dois timers: um que **fotografa os pareamentos** e outro de vigia de saúde da
-  conexão. As fotos ficam em `/var/lib/hefesto-dualsense4unix/bt-bonds/`.
-- Uma regra udev que tira uma foto extra **na borda de cada conexão nova** — sem
-  ela, um pareamento feito logo depois de uma foto ficaria sem cópia até o
-  próximo ciclo do timer.
+O `uninstall.sh` desfaz tudo isso. A lista completa está em
+[instalacao.md](instalacao.md).
 
-Tudo isso sai com o `uninstall.sh`.
+## Quando o pareamento some
 
-## Limitação conhecida: o `bluetoothd` derruba pareamentos
+O `bluetoothd` pode travar com vários controles e perder pareamentos. No diário
+aparece `malloc_consolidate(): unaligned fastbin chunk detected`, e o controle
+acende, tenta conectar e desiste (`Refusing input device connect`). O gatilho
+observado foi ligar dois controles Nintendo no mesmo instante.
 
-Esta é a limitação mais séria do projeto hoje, e ela **não é nossa** — é
-corrupção de heap no `bluetoothd`:
+- Ligue um controle por vez e espere ele conectar antes do próximo.
+- O instalador oferece o BlueZ 5.86 corrigido
+  ([receita-backport-bluez.md](receita-backport-bluez.md)).
+- As cópias de pareamento ficam guardadas; `scripts/bt_bonds_restore.sh` as
+  devolve. Ele é manual de propósito: se o controle já trocou a chave dele,
+  impor a antiga cria um laço de falha.
+- Parear de novo sempre resolve.
 
-```
-malloc_consolidate(): unaligned fastbin chunk detected
-bluetooth.service: Main process exited, code=dumped, status=6/ABRT
-```
+Um controle pareado pelo Bluetooth e ligado no cabo ao mesmo tempo também pode
+perder o pareamento. Quando ele conecta pelo rádio, o Hefesto esquece a cópia que
+sobrou em outro adaptador.
 
-Quando isso acontece, o serviço reinicia e **pareamentos desaparecem**. O sintoma
-que você vê é o controle acendendo, tentando conectar e desistindo: no log,
-`Refusing input device connect` / `unknown device`. De fora parece "o controle
-desconecta sozinho" ou "conecta e desliga".
+## O 8BitDo pelo Bluetooth
 
-**O gatilho medido** foi a reconexão de dois controles Nintendo-class em poucos
-segundos — o Pro Controller genuíno e um 8BitDo em modo Switch, que se apresenta
-com o mesmo VID:PID e o mesmo nome do genuíno. Isso pertence à família de um
-problema aberto no BlueZ ("random crash on device reconnect"), e a pesquisa do
-projeto **não encontrou correção upstream** para a corrupção de heap na via
-kernel-HIDP. Nós não temos como consertar isso a partir daqui.
+Use o modo DirectInput/PS4: nele o 8BitDo se apresenta como um DualShock 4
+(`054c:05c4`) e conecta de primeira. No modo Switch (`057e:2009`) ele cai sob
+carga pelo rádio. O endereço muda com o modo, então cada modo é um pareamento.
+Detalhes em [troubleshooting-8bitdo.md](troubleshooting-8bitdo.md).
 
-> **NOTA DATADA — 07/08/2026: a atribuição do parágrafo acima CADUCOU.** Ela
-> descrevia corretamente o que se sabia em 24/07, e por isso não se apaga. O que
-> a varredura do BlueZ de 07/08 mediu:
->
-> - **a issue "random crash on device reconnect" (#815) está FECHADA**, e a
->   família dela foi corrigida na via uhid **entre o 5.74 e o 5.79**. Quem roda
->   5.86 — como esta máquina, há semanas — **já tem** todas essas correções.
->   **GRAU: MEDIDO**, por leitura da issue e dos commits nas tags;
-> - **logo o crash de heap desta casa NÃO é aquele.** Ele continua acontecendo
->   numa versão que tem a cura. **GRAU: MEDIDO**;
-> - **subir de 5.72 para 5.86 não reduziu a taxa nesta máquina:** quatro abortos
->   em cinco dias no 5.86, contra cinco em cinco dias no 5.72. **GRAU: MEDIDO**
->   para os dois números — e amostras de cinco dias **não** decidem tendência;
-> - **a causa continua sem prova, e sem backtrace não há causa.** Não se
->   encontrou issue pública para esta assinatura (`unaligned fastbin`); o
->   candidato mais próximo é o `LP #2137758`, ainda em aberto. **GRAU: SUSPEITA
->   COM MECANISMO** para o candidato, **SEM PROVA** para a causa.
->
-> **O que não muda:** o gatilho medido (dois controles Nintendo-class na mesma
-> janela de segundos), os conselhos abaixo e as fotos de pareamento continuam
-> valendo palavra por palavra. O que muda é a expectativa: *"esperar a correção
-> upstream"* deixou de ser um plano — ela chegou, e o defeito ficou.
->
-> O estudo inteiro, com os sete defeitos de BlueZ separados um a um, está em
-> [o defeito do BlueZ que ela lembrou e os outros cinco](../process/estudos/2026-08-07-o-defeito-do-bluez-que-ela-lembrou-e-os-outros-cinco.md).
+## O som pelo Bluetooth
 
-**O que dá para fazer:**
+O DualSense não tem perfil de áudio Bluetooth: o microfone e o alto-falante
+passam pelo mesmo canal dos comandos do controle, e o Hefesto faz a ponte. A
+`libopus` do sistema é necessária para os dois sentidos, e o instalador a
+instala.
 
-- Não ligue dois controles Nintendo-class na mesma janela de segundos. Ligue um,
-  espere ele adotar, e só então o outro.
-- As fotos de pareamento existem exatamente para este caso. O restaurador
-  (`bt_bonds_restore.sh`) é **manual por decisão de projeto**: se o controle já
-  girou a própria chave, reimpor a chave antiga gera um laço de falha de
-  autenticação — a mesma classe de gatilho do crash. Quem decide restaurar é você.
-- Se acontecer, re-parear pelo `bluetoothctl` sempre resolve.
+- **O microfone** de cada controle já vem ligado. Enquanto algum programa o
+  escuta, ele divide o rádio com os comandos do controle, e a conta de quantos
+  cabem por adaptador muda
+  ([bluetooth-varios-adaptadores.md](bluetooth-varios-adaptadores.md)).
+- O microfone pelo rádio precisa do módulo `hid-playstation` do Hefesto. O de
+  fábrica lê o som como se fossem botões: desliga o microfone em um segundo e
+  mexe o cursor sozinho. Sem o módulo (Secure Boot sem a chave inscrita, ou um
+  kernel que o Hefesto ainda não conferiu), o Hefesto não liga o microfone pelo
+  rádio. Depois de instalar, reinicie o computador.
+- **O alto-falante e o fone** do controle recebem o som pelo mesmo canal.
 
-## 8BitDo por Bluetooth: use o modo DirectInput/PS4
-
-Em **modo Switch** o 8BitDo se apresenta como `057e:2009`, cai no
-`hid-nintendo` e cede sob carga sustentada por Bluetooth — isso continua
-verdade e continua sem cura.
-
-**Em modo DirectInput/PS4 ele funciona.** Vira `054c:05c4`, o `hid-playstation`
-assume e conecta de primeira — validado em 25/07/2026 com **quatro controles por
-Bluetooth ao mesmo tempo**, um por jogador.
-
-> **NOTA DATADA — 06/08/2026: "um por jogador" aqui é um lugar na fila, não um
-> jogador na partida.** O que 25/07 provou continua de pé — os quatro
-> **conectam** ao mesmo tempo, e cada um ganha o seu lugar. O que caducou é a
-> leitura de que são quatro jogadores. **GRAU: MEDIDO** em 06/08/2026 às 22h40,
-> com um DualSense, um Nintendo Pro e um 8BitDo ligados: `coop status` respondeu
-> **"jogadores ativos: 1"** e `controller list` mostrou **um** controle. O co-op
-> só conta DualSense; o externo entra na fila e recebe luz, e nada mais. Medição
-> inteira na
-> [LUGAR-À-MESA-01](../process/sprints/arquivados/2026-08-06-LUGAR-A-MESA-01-tres-controles-ligados-e-um-jogador-so.md).
-
-Duas pegadinhas: o **MAC muda com o modo** (são dois pareamentos distintos, e o
-hefesto registra os dois como controles diferentes — use "Reconciliar jogadores"
-na aba Início se os slots saírem trocados) e **não há LEDs de jogador** neste modo,
-porque o DualShock 4 usa a lightbar no lugar deles.
-
-Detalhes, medições e a tabela completa de modos em
-[`troubleshooting-8bitdo.md`](troubleshooting-8bitdo.md).
-
-## Áudio do controle sem fio — o que anda e o que não anda
-
-São **duas** perguntas, e elas têm respostas diferentes. Por USB as duas
-funcionam.
-
-**O microfone por rádio anda, e vem desligado.** Está implementado por inteiro e
-nasce em opt-in, por privacidade e por banda: ligue com
-`HEFESTO_DUALSENSE4UNIX_BT_MIC=1`. *Não implementado* e *não ligado por padrão*
-são coisas diferentes, e confundi-las já custou tempo aqui.
-
-> **DEFEITO CONHECIDO, com causa achada em 10/09/2026 — e ele é do driver.**
-> Com o microfone no ar, o `hid-playstation` lê os quadros de áudio como estado
-> de gamepad: eles chegam com o mesmo `reportID`, o mesmo tamanho e CRC válido,
-> e só um bit os separa. O driver não o consulta. **O resultado é duplo: o
-> microfone se desliga sozinho depois de ~1 segundo, e o cursor e o teclado se
-> mexem sozinhos.**
->
-> **CURADO EM 10/09/2026, e a cura é uma linha no módulo do kernel.** Ela vem
-> no `patch/0003` do módulo DKMS que este projeto instala, e entra pelo caminho
-> normal: rode o `./install.sh` e reconecte o controle.
->
-> Medido antes e depois, com o microfone ligado: as transições do bit de mudo
-> caíram de **1231** para **uma**, e os dois sintomas sumiram.
->
-> Se você atualizou o projeto e o defeito continua, o módulo velho ainda está
-> carregado — reinicie a máquina, ou reconecte depois de rodar o instalador.
->
-> O detalhe técnico está em `docs/protocol/dualsense-referencia-canonica.md`,
-> seção *"O microfone por rádio, e o driver que o desliga"*.
-
-**O som SAINDO pelo alto-falante do controle, por rádio: o caminho está PROVADO,
-e o produto ainda não o usa.** As duas metades desta frase importam.
-
-**PROVADO em 10/09/2026, na bancada:** o alto-falante do DualSense tocou por
-rádio, **70 segundos contínuos sem um corte**, com a orelha dela como
-instrumento e o alcance testado. Foi `write()` no `/dev/hidraw`, com o daemon
-vivo e o `hid-playstation` ligado — sem socket L2CAP, sem root, sem unbind.
-
-```
-report 0x35 · 334 B · UM quadro Opus de 10 ms · tag 0x13 · a cada 10,667 ms
-```
-
-**O QUE O PRODUTO JÁ FAZ, e o que ainda falta.** Ele monta esse report desde
-10/09 — `integrations/alto_falante_bt.ARRANJO_035`, provado byte a byte contra o
-que tocou, e a peça que o bombeia por controle (`PonteDeSomPorRadio`) existe e
-tem teste. **O que falta é a FIAÇÃO:** nenhuma linha de produção constrói a
-ponte, então o daemon ainda não a sobe sozinho. Enquanto isso não fechar, o som
-por rádio sai pelo ensaio (`scripts/ensaios/o_som_pelo_035.py`) e a interface
-diz honestamente que a ponte deste controle não está no ar.
-
-O que continua valendo do que se sabia antes:
-
-- **A2DP e HFP estão descartados por medição** (07/08/2026, registro do BlueZ):
-  o controle anuncia só HID (`0x1124`) e PnP (`0x1200`), e a Class of Device
-  `0x002508` não tem o bit de áudio. Nenhum card de áudio nasce, e nenhum perfil
-  Bluetooth **padrão** leva som a este aparelho. Não é o host que não sabe: o
-  adaptador expõe A2DP Source e Sink, com aptX/LDAC/LC3/mSBC/G722. **O som de
-  10/09 não passou por nenhum perfil de áudio — passou por HID.**
-- **O canal por HID existe e responde** (15/08/2026): o descritor do rádio
-  declara nove degraus de report de saída, de `0x31` (77 B) a `0x39` (546 B), de
-  64 em 64 bytes. **O degrau que carrega áudio é o `0x35`** — o quinto, não o
-  teto.
-
-**A frase que caducou, e ela viveu aqui até 10/09:** *"o payload não foi
-identificado"*. Foi. E o que atrasou a resposta foi mirar no `0x39`, o report
-maior, por nove passadas — em vez do `0x35`.
-
-**A `libopus` do sistema (`libopus.so.0`) é necessária nas DUAS direções:** o
-microfone a decodifica, o alto-falante a codifica. O `install.sh` já a instala.
-
-Linha por linha, com a procedência de cada célula, no
-[mapa de canais](../specs.html) — `audio.microfone@dualsense`,
-`audio.saida_dedicada@dualsense` e
-`audio.saida_dedicada.payload_do_degrau@dualsense`.
+A ponte do microfone pode ser conferida com
+`hefesto-dualsense4unix mic bt-status` ([cli.md](cli.md)).

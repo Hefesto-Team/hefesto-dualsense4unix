@@ -23,7 +23,7 @@ Mordidas deste arquivo, uma por uma:
   - apagar a entrada da 0.3.0 do metainfo derruba
     `test_toda_secao_datada_0x_do_changelog_tem_release_no_metainfo`;
   - devolver `v0.3.0` a qualquer uma das páginas de uso derruba
-    `test_paginas_de_uso_clonam_a_tag_da_versao_canonica`;
+    `test_paginas_de_uso_nao_mandam_instalar_outra_versao`;
   - devolver o marcador a qualquer URL derruba
     `test_nenhum_marcador_de_redacao_dentro_de_url`, que é ESTREITO de
     propósito: o mesmo marcador num campo de e-mail continua permitido, e
@@ -258,13 +258,25 @@ def test_a_release_corrente_nao_repete_o_texto_da_anterior() -> None:
 # --------------------------------------------------------------------------
 
 
+#: O endereço que as páginas mandam clonar: o repositório da organização.
+CLONE = "git clone https://github.com/Hefesto-Team/hefesto-dualsense4unix.git"
+
+
 @pytest.mark.parametrize("relpath", PAGINAS_DE_USO)
-def test_paginas_de_uso_clonam_a_tag_da_versao_canonica(relpath: str) -> None:
+def test_paginas_de_uso_nao_mandam_instalar_outra_versao(relpath: str) -> None:
+    """A página clona o repositório e não manda para uma tag de outra versão.
+
+    As páginas instalam pelo ramo padrão, como o README: a tag `v0.9.4.5` é de
+    antes da interface das dez abas (ela não tem `interface/`), e mandar para
+    ela instalava um produto diferente do que as páginas descrevem. Quando a
+    release nova sair, a linha volta a ser `git checkout v<nova>`, e aqui ela
+    tem de ser a da versão canônica.
+    """
     texto = (REPO / relpath).read_text(encoding="utf-8")
-    tags = re.findall(r"^git checkout v(\S+)", texto, re.MULTILINE)
-    assert tags, f"{relpath} perdeu o `git checkout v<tag>`"
-    assert set(tags) == {_versao_canonica()}, (
-        f"{relpath} manda instalar {sorted(set(tags))} com a "
+    assert CLONE in texto, f"{relpath} perdeu o `{CLONE}`"
+    tags = set(re.findall(r"^git checkout v(\S+)", texto, re.MULTILINE))
+    assert tags <= {_versao_canonica()}, (
+        f"{relpath} manda instalar {sorted(tags)} com a "
         f"{_versao_canonica()} publicada"
     )
 
