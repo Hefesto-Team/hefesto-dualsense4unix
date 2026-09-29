@@ -1071,3 +1071,282 @@ class TestONegativoDeProc:
         for t in range(0, 60, 2):
             _exibir(float(t))
         assert proc_de_mentira.varreduras == 10
+
+
+# ---------------------------------------------------------------------------
+# Régua 6 — a volta de 30 s pelo evento
+# ---------------------------------------------------------------------------
+
+_QUATRO = ("aabbcc000001", "aabbcc000002", "aabbcc000003", "aabbcc000004")
+
+
+class _BrokerDeMentira:
+    """Esconde com `chmod`, como o broker: cada rehide mexe na firma do nó."""
+
+    def __init__(self) -> None:
+        self.hides: list[str] = []
+
+    def hide(self, no: str) -> None:
+        import time
+
+        time.sleep(0.02)  # passa do tique do relógio do sistema de arquivos
+        os.chmod(no, 0o000)
+        self.hides.append(no)
+
+
+class _ControleDoRepouso:
+    """Os quatro no rádio, sempre online; o `connect()` conta."""
+
+    def __init__(self, dev: Path) -> None:
+        self.connects = 0
+        self.nos = {uniq: str(dev / f"hidraw{i}") for i, uniq in enumerate(_QUATRO)}
+
+    def connect(self) -> None:
+        self.connects += 1
+
+    def is_connected(self) -> bool:
+        return True
+
+    def get_transport(self) -> str:
+        return "bt"
+
+    def nos_hidraw_por_uniq(self) -> dict[str, str]:
+        return dict(self.nos)
+
+    def hidraw_path(self, uniq: str | None = None) -> str | None:
+        return self.nos.get(uniq or _QUATRO[0])
+
+
+class _DaemonDoRepouso:
+    """O que o `reconnect_loop` e o rehide real usam, com o broker de mentira."""
+
+    def __init__(self, controller: _ControleDoRepouso, *, nativo: bool = False) -> None:
+        from hefesto_dualsense4unix.core.events import EventBus
+
+        self.controller = controller
+        self.bus = EventBus()
+        self.config = SimpleNamespace(
+            reconnect_backoff_sec=0.01, auto_reconnect=True, gamepad_emulation_enabled=True
+        )
+        self._stop_event: asyncio.Event | None = None
+        self._nativo = nativo
+        self._gamepad_device = object()  # o vpad do P1, vivo
+        self._coop_manager = SimpleNamespace(
+            _players={u: SimpleNamespace(vpad=object()) for u in _QUATRO[1:]}
+        )
+        self._hidraw_broker_client = _BrokerDeMentira()
+
+    def _is_stopping(self) -> bool:
+        return self._stop_event is not None and self._stop_event.is_set()
+
+    async def _run_blocking(self, fn: Any, *args: Any) -> Any:
+        return fn(*args)
+
+    def _arm_input_grace(self) -> None:
+        pass
+
+    def is_native_mode(self) -> bool:
+        return self._nativo
+
+    def stop(self) -> None:
+        if self._stop_event is not None:
+            self._stop_event.set()
+
+
+class _VoltaDeMentira:
+    """O relógio de mentira do laço: cada espera avança o relógio sem dormir.
+
+    `agenda` são os eventos de fora, cada um no seu segundo; as voltas anotam o
+    segundo de cada `connect()`, de cada rehide e de cada sonda forçada.
+    """
+
+    def __init__(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        daemon: _DaemonDoRepouso,
+        *,
+        ate: float,
+        agenda: dict[float, Any] | None = None,
+    ) -> None:
+        import hefesto_dualsense4unix.daemon.connection as cx
+        from hefesto_dualsense4unix.integrations import hidraw_broker_client
+
+        self.daemon = daemon
+        self.agora = 0.0
+        self.ate = ate
+        self.agenda = dict(sorted((agenda or {}).items()))
+        self.sondas: list[float] = []
+        self.connects: list[float] = []
+        self.rehides: list[float] = []
+        controle = daemon.controller
+        connect_real = controle.connect
+
+        def connect() -> None:
+            self.connects.append(self.agora)
+            connect_real()
+
+        controle.connect = connect  # type: ignore[method-assign]
+        broker = daemon._hidraw_broker_client
+        hide_real = broker.hide
+
+        def hide(no: str) -> None:
+            if not self.rehides or self.rehides[-1] != self.agora:
+                self.rehides.append(self.agora)
+            hide_real(no)
+
+        broker.hide = hide  # type: ignore[method-assign]
+
+        async def esperar(_daemon: Any, segundos: float) -> None:
+            self.agora += segundos
+            while self.agenda and next(iter(self.agenda)) <= self.agora:
+                quando = next(iter(self.agenda))
+                self.agenda.pop(quando)()
+            if self.agora >= self.ate:
+                daemon.stop()
+            await asyncio.sleep(0)
+
+        async def sondar(_daemon: Any, *, forcar: bool) -> int:
+            if forcar:
+                self.sondas.append(self.agora)
+            return 0
+
+        async def nada(*_a: Any, **_kw: Any) -> int:
+            return 0
+
+        monkeypatch.setattr(cx, "_wait_or_stop", esperar)
+        monkeypatch.setattr(cx, "vigiar_escritor_cru", sondar)
+        monkeypatch.setattr(cx, "vigiar_o_sequestro", nada)
+        monkeypatch.setattr(cx, "carimbar_o_nascimento", nada)
+        monkeypatch.setattr(cx, "vigiar_o_cabo_em_espera", nada)
+        monkeypatch.setattr(hidraw_broker_client, "broker_executor_for", lambda _d: None)
+
+    def rodar(self) -> None:
+        from hefesto_dualsense4unix.daemon.connection import reconnect_loop
+
+        async def _rodar() -> None:
+            self.daemon._stop_event = asyncio.Event()
+            await asyncio.wait_for(reconnect_loop(self.daemon), timeout=60.0)  # type: ignore[arg-type]
+
+        asyncio.run(_rodar())
+
+
+@pytest.fixture
+def mesa_do_rádio(raizes: tuple[Path, Path]) -> tuple[Path, Path]:
+    """Os quatro `hidraw` do rádio, escondidos (0000), na `/dev` de mentira."""
+    entradas, dev = raizes
+    for i in range(len(_QUATRO)):
+        no = dev / f"hidraw{i}"
+        no.write_text("")
+        os.chmod(no, 0o000)
+    return entradas, dev
+
+
+class TestAVoltaPeloEvento:
+    def test_trezentos_segundos_sem_evento_uma_volta(
+        self, mesa_do_rádio: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _entradas, dev = mesa_do_rádio
+        daemon = _DaemonDoRepouso(_ControleDoRepouso(dev))
+        volta = _VoltaDeMentira(monkeypatch, daemon, ate=299.0)
+        volta.rodar()
+        assert volta.connects == [0.0], f"voltas sem evento: {volta.connects}"
+        assert volta.rehides == [0.0]
+        assert volta.sondas == [0.0]
+        assert len(daemon._hidraw_broker_client.hides) == 4, "o rehide é dos quatro"
+
+    def test_no_teto_a_volta_roda(
+        self, mesa_do_rádio: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import hefesto_dualsense4unix.daemon.connection as cx
+
+        _entradas, dev = mesa_do_rádio
+        daemon = _DaemonDoRepouso(_ControleDoRepouso(dev))
+        volta = _VoltaDeMentira(monkeypatch, daemon, ate=cx.TETO_DA_VOLTA_PELO_EVENTO_SEC + 1)
+        volta.rodar()
+        assert volta.connects == [0.0, cx.TETO_DA_VOLTA_PELO_EVENTO_SEC]
+
+    def test_um_no_que_nasce_acorda_a_volta_na_fatia_seguinte(
+        self, mesa_do_rádio: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import hefesto_dualsense4unix.daemon.connection as cx
+
+        entradas, dev = mesa_do_rádio
+        daemon = _DaemonDoRepouso(_ControleDoRepouso(dev))
+        volta = _VoltaDeMentira(
+            monkeypatch,
+            daemon,
+            ate=100.0,
+            agenda={21.0: lambda: (entradas / "event40").write_text("")},
+        )
+        volta.rodar()
+        assert len(volta.connects) == 2
+        segunda = volta.connects[1]
+        assert 21.0 <= segunda <= 21.0 + cx.RECONNECT_HOTPLUG_POLL_INTERVAL_SEC
+        assert volta.rehides == volta.connects
+        assert volta.sondas == volta.connects
+
+    def test_o_hidraw_que_nasce_em_dev_acorda_a_volta(
+        self, mesa_do_rádio: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _entradas, dev = mesa_do_rádio
+        daemon = _DaemonDoRepouso(_ControleDoRepouso(dev))
+        volta = _VoltaDeMentira(
+            monkeypatch, daemon, ate=100.0, agenda={31.0: lambda: (dev / "hidraw9").write_text("")}
+        )
+        volta.rodar()
+        assert len(volta.connects) == 2 and 31.0 <= volta.connects[1] <= 33.0
+
+    def test_a_firma_de_um_no_escondido_que_muda_roda_o_rehide(
+        self, mesa_do_rádio: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A ACL que o udev devolve ao físico: um `chmod` de fora, no nó."""
+        _entradas, dev = mesa_do_rádio
+        daemon = _DaemonDoRepouso(_ControleDoRepouso(dev))
+
+        def devolver_a_acl() -> None:
+            import time
+
+            time.sleep(0.02)
+            os.chmod(dev / "hidraw2", 0o000)
+
+        volta = _VoltaDeMentira(monkeypatch, daemon, ate=100.0, agenda={41.0: devolver_a_acl})
+        volta.rodar()
+        assert len(volta.rehides) == 2 and 41.0 <= volta.rehides[1] <= 43.0
+
+    def test_o_barramento_hid_que_muda_roda_a_volta(
+        self, mesa_do_rádio: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import hefesto_dualsense4unix.daemon.connection as cx
+
+        _entradas, dev = mesa_do_rádio
+        daemon = _DaemonDoRepouso(_ControleDoRepouso(dev))
+        volta = _VoltaDeMentira(monkeypatch, daemon, ate=100.0)
+        monkeypatch.setattr(cx, "_o_barramento_hid_mudou", lambda _d: volta.agora == 51.0 + 1.0)
+        volta.rodar()
+        assert volta.connects == [0.0, 52.0]
+
+    def test_no_modo_nativo_nenhum_rehide(
+        self, mesa_do_rádio: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _entradas, dev = mesa_do_rádio
+        daemon = _DaemonDoRepouso(_ControleDoRepouso(dev), nativo=True)
+        volta = _VoltaDeMentira(monkeypatch, daemon, ate=299.0)
+        volta.rodar()
+        assert volta.rehides == []
+        assert volta.connects == [0.0]
+
+    def test_desarmado_a_volta_de_trinta_segundos_de_sempre(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Sem `inotify` (o dono não arma): o relógio de 30 s de hoje."""
+        while ode.armado():
+            ode.desarmar()
+        dev = tmp_path / "dev"
+        (dev / "input").mkdir(parents=True)
+        monkeypatch.setattr(ode, "RAIZ_DAS_ENTRADAS", str(dev / "input"))
+        monkeypatch.setattr(ode, "RAIZ_DOS_NOS", str(dev))
+        monkeypatch.setattr(ode, "_libc_do_processo", lambda: _LibcQueFalha())
+        daemon = _DaemonDoRepouso(_ControleDoRepouso(dev))
+        volta = _VoltaDeMentira(monkeypatch, daemon, ate=299.0)
+        volta.rodar()
+        assert len(volta.connects) == 10

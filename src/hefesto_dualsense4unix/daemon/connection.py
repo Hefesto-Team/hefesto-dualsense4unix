@@ -19,6 +19,7 @@ from hefesto_dualsense4unix.core.escritor_cru import (
     SentinelaDeEscritorCru,
     Veredito,
     VigiaDoSequestro,
+    firma_do_no,
 )
 from hefesto_dualsense4unix.core.evdev_reader import InputDirWatch
 from hefesto_dualsense4unix.core.events import EventTopic
@@ -61,6 +62,15 @@ RECONNECT_PROBE_INTERVAL_SEC: float = 5.0
 #: Múltiplo do probe offline para evitar overhead — o poll_loop já detecta
 #: desconexão via exceção em read_state e dispara reconnect a parte.
 RECONNECT_ONLINE_CHECK_INTERVAL_SEC: float = 30.0
+
+#: O-REPOUSO-ESPERA-O-EVENTO-01, família 5 (29/09/2026): o teto da volta online
+#: com o dono do evento armado. A volta de 30 s refazia, por relógio, o que os
+#: eventos já dizem: o `connect()` (a rajada da libudev), a sonda forçada de
+#: `/proc/*/fd` e o rehide (as duas rajadas por minuto do broker na sonda S.4).
+#: Com o dono, a volta acorda por evento — a geração de nomes de `/dev/input`
+#: ou dos `hidraw*` de `/dev`, a firma de um nó do físico, o barramento HID —
+#: e este teto fica como rede. Sem o dono, os 30 s de sempre.
+TETO_DA_VOLTA_PELO_EVENTO_SEC: float = 300.0
 
 #: Fatia curta do sleep ONLINE do reconnect_loop (FEAT-BACKEND-HOTPLUG-FAST-01).
 #: A cada fatia consultamos o `InputDirWatch` (um `os.listdir` de /dev/input,
@@ -1094,12 +1104,21 @@ async def reconnect_loop(
             watch = InputDirWatch(root=dono.raiz_das_entradas)
         else:
             watch = InputDirWatch()
+        # Família 5: com o dono, o nome de um `hidraw*` que nasce ou some em
+        # `/dev` também acorda a volta (o nó do rádio que o wake BT recria).
+        # Sem o dono não há este olhar: listar `/dev` a cada fatia seria caro.
+        # Mora no daemon, como o watch do barramento HID: a espera o lê de lá.
+        nos = InputDirWatch(root=dono.raiz_dos_nos) if dono is not None else None
+        with contextlib.suppress(Exception):
+            setattr(daemon, "_watch_dos_hidraw", nos)  # noqa: B010 — fora do protocolo
         registrar_gatilho_da_lightbar(daemon)
         # Baseline do watch: a 1ª chamada de poll() devolve True por construção
         # (não havia snapshot anterior). Consumimos aqui para que só mudança REAL
         # de /dev/input dispare reconciliação antecipada — o connect() do boot já
         # cobriu o estado inicial.
         watch.poll()
+        if nos is not None:
+            nos.poll()
 
         # Se o boot já conectou e restaurou o perfil, não re-publica
         # CONTROLLER_CONNECTED nem reaplica o perfil — apenas monitora transições.
@@ -1143,8 +1162,11 @@ async def reconnect_loop(
             # ESCRITOR-CRU-01: e no mesmo tique, a pergunta que a classe LED não
             # sabe responder — "quem mais segura estes controles?". `forcar=True`
             # porque este é o único ponto do produto com orçamento para o `pgrep`
-            # (uma vez a cada 30 s), e é ele que enxerga a Steam SUBINDO sem que
-            # ninguém tenha mexido em nada.
+            # (uma vez por volta: a cada 30 s sem o dono do evento; com ele, a
+            # cada evento ou no teto de `TETO_DA_VOLTA_PELO_EVENTO_SEC`), e é ele
+            # que enxerga a Steam SUBINDO sem que ninguém tenha mexido em nada.
+            # Com o dono, a Steam que abre um nó alcançável é da
+            # `VigiaDoSequestro`, que o olha a cada meio segundo.
             await vigiar_escritor_cru(daemon, forcar=True)
             # SINAL-NO-NASCIMENTO-01: e no mesmo tique, o CARIMBO — "como esta
             # conexão NASCEU?". Vem DEPOIS do vigia de propósito e por duas razões:
@@ -2092,6 +2114,23 @@ async def disparar_gatilhos_devidos(daemon: DaemonProtocol) -> int:
     return len(prontos)
 
 
+def _firmas_dos_nos(daemon: DaemonProtocol) -> dict[str, tuple[int, int] | None]:
+    """`{nó: firma}` dos `hidraw` dos controles abertos — um `stat` por nó.
+
+    O-REPOUSO-ESPERA-O-EVENTO-01, família 5. A firma (`firma_do_no`: inode e
+    `ctime`) muda quando o nó é recriado, quando o broker o esconde ou expõe
+    (`chmod` e `setxattr`) e quando o udev devolve a ACL ao físico: é o evento
+    que o rehide de 30 s refazia por relógio. Os nós são os do backend
+    (`nos_hidraw_por_uniq`), só memória; sem o método, nenhum.
+    """
+    nos: dict[str, str] = {}
+    mapear = getattr(daemon.controller, "nos_hidraw_por_uniq", None)
+    if callable(mapear):
+        with contextlib.suppress(Exception):
+            nos = dict(mapear() or {})
+    return {no: firma_do_no(no) for no in sorted(set(nos.values()))}
+
+
 async def _wait_online_or_hotplug(
     daemon: DaemonProtocol, watch: InputDirWatch
 ) -> bool:
@@ -2111,17 +2150,35 @@ async def _wait_online_or_hotplug(
     avaliados entre as fatias. A espera não termina por causa de um disparo —
     reafirmar uma cor não é motivo para reconciliar hotplug, e devolver True
     aqui faria o chamador logar uma mudança de `/dev/input` que não houve.
+
+    O-REPOUSO-ESPERA-O-EVENTO-01, família 5 (29/09/2026): com o dono do evento
+    armado, o teto é `TETO_DA_VOLTA_PELO_EVENTO_SEC` e a espera acorda também
+    quando o nome de um `hidraw*` nasce ou some em `/dev` (o watch que o laço
+    guarda no daemon, `_watch_dos_hidraw`) ou quando a firma de um nó dos
+    controles muda. **As firmas se anotam aqui, DEPOIS da
+    própria rodada**: o `connect()` e o rehide mexem nos nós (o broker faz
+    `chmod` ao esconder e ao expor para o `hidapi`), e a volta que acordasse com
+    o próprio rastro rodaria de novo a cada fatia. Os NOMES seguem anotados
+    antes da rodada, como sempre foram (o watch não é consumido depois dela):
+    um nó que nasce no meio da rodada acorda a volta seguinte, e os nomes que a
+    própria rodada cria (o vpad) convergem numa volta a mais, como hoje.
     """
     # STEAM-NO-FISICO-01: a vigia olha UMA vez antes de dormir. Se o rehide
     # acabou de fechar um nó que estava aberto (a firma mudou), o fd que entrou
     # pela janela de exposição é visto agora — não depois da primeira fatia de
     # 2 s. Com os nós parados, o rehide não escreve e o passo não varre.
     await vigiar_o_sequestro(daemon)
+    pelo_evento = _ode.dono_armado() is not None
+    teto = (
+        TETO_DA_VOLTA_PELO_EVENTO_SEC if pelo_evento else RECONNECT_ONLINE_CHECK_INTERVAL_SEC
+    )
+    firmas = _firmas_dos_nos(daemon) if pelo_evento else None
+    nos = getattr(daemon, "_watch_dos_hidraw", None) if pelo_evento else None
     elapsed = 0.0
-    while elapsed < RECONNECT_ONLINE_CHECK_INTERVAL_SEC:
+    while elapsed < teto:
         step = min(
             RECONNECT_HOTPLUG_POLL_INTERVAL_SEC,
-            RECONNECT_ONLINE_CHECK_INTERVAL_SEC - elapsed,
+            teto - elapsed,
         )
         if registro_de_gatilhos_de(daemon).algum_armado():
             step = min(step, PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC)
@@ -2141,6 +2198,13 @@ async def _wait_online_or_hotplug(
         await vigiar_o_sequestro(daemon)
         await disparar_gatilhos_devidos(daemon)
         if watch.poll():
+            return True
+        # Família 5: o nome de um `hidraw*` e a firma de um nó, só com o dono.
+        if isinstance(nos, InputDirWatch) and _ode.armado() and nos.poll():
+            logger.debug("volta_acordada", pelo="hidraw_novo")
+            return True
+        if firmas is not None and _firmas_dos_nos(daemon) != firmas:
+            logger.debug("volta_acordada", pelo="firma_do_no")
             return True
         # O-CABO-ASSUME-DO-RADIO-01: o cabo que o kernel recusa não muda
         # `/dev/input`; ele aparece no barramento HID.
@@ -2361,6 +2425,7 @@ __all__ = [
     "RECONNECT_HOTPLUG_POLL_INTERVAL_SEC",
     "RECONNECT_ONLINE_CHECK_INTERVAL_SEC",
     "RECONNECT_PROBE_INTERVAL_SEC",
+    "TETO_DA_VOLTA_PELO_EVENTO_SEC",
     "Tarefa",
     "armar_gatilho",
     "armar_gatilho_da_cor",
