@@ -223,6 +223,17 @@ class _EleitorDeMentira:
         self.eleito = None
         return eleicao.ResultadoDaEleicao(ok=True, ativo="fonte-de-antes")
 
+    def passar_o_padrao(
+        self, no_ar: list[str], conectados: list[str], calou: str | None = None
+    ) -> Any:
+        """A pergunta de `EleitorDeMicrofone.passar_o_padrao`: quem está no ar,
+        depois a volta à máquina, que aqui recusa com a frase do eleitor real."""
+        for candidato in no_ar:
+            passado = self.eleger_o_controle(candidato, conectados)
+            if passado.ok:
+                return passado
+        return self.devolver_o_microfone()
+
 
 class _DaemonDeMentira:
     def __init__(self, eleitor: Any = None) -> None:

@@ -163,6 +163,26 @@ class _EleitorDublado:
         self.eleito = None
         return _Resultado(ok=True, ativo="mic_da_placa_mae")
 
+    def passar_o_padrao(
+        self, no_ar: list[str], conectados: list[str], calou: str | None = None
+    ) -> _Resultado:
+        """A pergunta de `EleitorDeMicrofone.passar_o_padrao`, com o contrato dela.
+
+        Quem está no ar, depois a volta à máquina; sem destino, o ato de calar
+        do eleito está FEITO e a posse cai (A-VOLTA-DO-MICROFONE-NAO-ELEGE-
+        CONTROLE-01, 29/09/2026).
+        """
+        for candidato in no_ar:
+            passado = self.eleger_o_controle(candidato, conectados)
+            if passado.ok:
+                return passado
+        volta = self.devolver_o_microfone()
+        if volta.ok or calou is None:
+            return volta
+        if self.eleito == calou:
+            self.eleito = None
+        return _Resultado(ok=True)
+
 
 class _BackendComOKernelDentro:
     """O backend dublado, e o que ele dubla é o `hid-playstation`.

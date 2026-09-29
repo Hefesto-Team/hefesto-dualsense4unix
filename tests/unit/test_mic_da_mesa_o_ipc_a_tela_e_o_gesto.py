@@ -386,6 +386,18 @@ class _EleitorDublado:
         self.eleito = None
         return _Resultado(ok=True, ativo="mic_da_placa_mae", motivo="")
 
+    def passar_o_padrao(
+        self, no_ar: list[str], conectados: list[str], calou: str | None = None
+    ) -> _Resultado:
+        """A pergunta de `EleitorDeMicrofone.passar_o_padrao`: quem está no ar,
+        depois a volta à máquina (`devolver_o_microfone`, que aqui sempre tem
+        para onde ir)."""
+        for candidato in no_ar:
+            passado = self.eleger_o_controle(candidato, conectados)
+            if passado.ok:
+                return passado
+        return self.devolver_o_microfone()
+
 
 class _BackendDaMesa:
     """Backend com dois controles na mesa e o LED de cada um."""

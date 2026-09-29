@@ -39,6 +39,7 @@ DualSense em cima. O leitor da fonte padrão é dublado em todas as réguas.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import pytest
@@ -59,11 +60,15 @@ _UM_MICROFONE_DE_VERDADE = "alsa_input.pci-0000_0c_00.4.analog-stereo"
 
 
 class _EleitorDeMentira:
-    """O eleitor da sessão, dublado. Conta as devoluções e o que recebeu.
+    """O eleitor da sessão, dublado. Conta as perguntas e o que recebeu.
 
     `recusa` reproduz o desfecho MEDIDO nesta bancada: o único microfone dela é
     o do DualSense, e com o controle fora da mesa não sobra fonte de captura
     com porta usável — então o eleitor recusa e NADA é escrito.
+
+    A PORTA É `passar_o_padrao` desde 29/09/2026 (A-VOLTA-DO-MICROFONE-NAO-
+    ELEGE-CONTROLE-01): a do nó que morre faz a mesma pergunta do botão, e a
+    faz pelo laço do daemon. Era `devolver_o_microfone`, chamado do fio.
     """
 
     def __init__(self, *, ok: bool = True, alvo: str | None = None) -> None:
@@ -71,7 +76,7 @@ class _EleitorDeMentira:
         self._ok = ok
         self._alvo = alvo
 
-    def devolver_o_microfone(self, *args: Any, **kwargs: Any) -> Any:
+    def passar_o_padrao(self, *args: Any, **kwargs: Any) -> Any:
         self.chamadas.append((args, kwargs))
 
         class _R:
@@ -84,10 +89,18 @@ class _EleitorDeMentira:
 
 
 class _DaemonComEleitor:
-    """O daemon, só com o que `hotkey._eleitor` procura nele."""
+    """O daemon, só com o que a porta do nó procura nele.
+
+    O eleitor da sessão (`hotkey._eleitor`), o backend (quem está na mesa) e o
+    `_run_blocking` com a assinatura do daemon real, sem `**kwargs`.
+    """
 
     def __init__(self, eleitor: Any) -> None:
         self._eleitor_de_microfone = eleitor
+        self.controller = _BackendVazio()
+
+    async def _run_blocking(self, fn: Any, *args: Any) -> Any:
+        return fn(*args)
 
 
 class _BackendVazio:
@@ -140,8 +153,30 @@ def _supervisor_com(
     return sub
 
 
-def _uma_volta_do_laco(sub: Any, monkeypatch: pytest.MonkeyPatch) -> list[str]:
-    """Roda UMA volta de `BtMicSubsystem._loop` e devolve o que ele engoliu.
+async def _drenar(sub: Any) -> None:
+    """Espera as heranças que o fio entregou ao laço terminarem."""
+    for _ in range(50):
+        await asyncio.sleep(0)
+        em_voo = [t for t in sub._herancas_em_voo if not t.done()]
+        if em_voo:
+            await asyncio.gather(*em_voo)
+
+
+async def _porta_do_no(sub: Any) -> Any:
+    """`_devolver_a_fonte_padrao` NO FIO, como no daemon, com o laço de pé.
+
+    A pergunta vai ao laço desde 29/09/2026: o fio classifica a herança e
+    entrega o resto por `call_soon_threadsafe`. Chamar o método na thread do
+    laço, sem `to_thread`, mediria outra coisa que não o daemon.
+    """
+    sub._laco = asyncio.get_running_loop()
+    veredicto = await asyncio.to_thread(sub._devolver_a_fonte_padrao)
+    await _drenar(sub)
+    return veredicto
+
+
+async def _uma_volta_do_laco(sub: Any, monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Roda UMA volta de `BtMicSubsystem._loop` NO FIO e devolve o que ele engoliu.
 
     **O laço engole toda exceção**, e é por isso que a lista é asserida: sem
     ela, um erro a meio caminho faria a régua reprovar dizendo *"a devolução
@@ -157,7 +192,9 @@ def _uma_volta_do_laco(sub: Any, monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
     monkeypatch.setattr(supervisor.logger, "debug", _espiar)
     monkeypatch.setattr(sub, "_dormir", lambda gerenciador: True)
-    sub._loop()
+    sub._laco = asyncio.get_running_loop()
+    await asyncio.to_thread(sub._loop)
+    await _drenar(sub)
     return engolidas
 
 
@@ -238,7 +275,8 @@ def test_nao_sei_nunca_conta_como_buraco() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_o_ciclo_nascer_e_morrer_devolve_a_fonte_padrao(
+@pytest.mark.asyncio
+async def test_o_ciclo_nascer_e_morrer_devolve_a_fonte_padrao(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O nó nasce, é o padrão, MORRE — e alguém devolve a eleição.
@@ -246,8 +284,7 @@ def test_o_ciclo_nascer_e_morrer_devolve_a_fonte_padrao(
     Aqui não se chama `_devolver_a_fonte_padrao`: roda-se o LAÇO, que é o que
     corre na máquina dela de `RECONCILIA_S` em `RECONCILIA_S`. Um método que
     só o teste chama é um método que o daemon não chama — e foi exatamente
-    esse o defeito: `devolver_o_microfone` existia e só o BOTÃO do microfone a
-    abria.
+    esse o defeito: a volta existia e só o BOTÃO do microfone a abria.
 
     **A PRIMEIRA VOLTA NÃO PODE ACUSAR**, e a régua mede isso na mesma corrida:
     com o nó de pé e o padrão apontado para ele, ninguém devolve nada.
@@ -260,20 +297,21 @@ def test_o_ciclo_nascer_e_morrer_devolve_a_fonte_padrao(
     bruto: list[str | None] = [_NO_DO_CONTROLE]
     sub = _supervisor_com(monkeypatch, eleitor=eleitor, de_pe=de_pe, bruto=bruto)
 
-    assert _uma_volta_do_laco(sub, monkeypatch) == []
+    assert await _uma_volta_do_laco(sub, monkeypatch) == []
     assert eleitor.chamadas == [], "a volta com o nó DE PÉ não devolve nada"
 
     # Ela desligou o controle: o nó cai e o WirePlumber elege o monitor.
     de_pe.clear()
     bruto[0] = _O_MONITOR_QUE_HERDA
 
-    assert _uma_volta_do_laco(sub, monkeypatch) == []
+    assert await _uma_volta_do_laco(sub, monkeypatch) == []
     assert len(eleitor.chamadas) == 1, (
         "o nó morreu com um MONITOR eleito e ninguém devolveu a fonte padrão"
     )
 
 
-def test_a_devolucao_passa_pelo_eleitor_da_sessao(
+@pytest.mark.asyncio
+async def test_a_devolucao_passa_pelo_eleitor_da_sessao(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Quem devolve é o eleitor pendurado no DAEMON, não um recém-criado.
@@ -294,19 +332,21 @@ def test_a_devolucao_passa_pelo_eleitor_da_sessao(
     bruto: list[str | None] = [_NO_DO_CONTROLE]
     sub = _supervisor_com(monkeypatch, eleitor=sentinela, de_pe=de_pe, bruto=bruto)
 
-    sub._devolver_a_fonte_padrao()
+    await _porta_do_no(sub)
     de_pe.clear()
     bruto[0] = _O_MONITOR_QUE_HERDA
-    sub._devolver_a_fonte_padrao()
+    await _porta_do_no(sub)
 
     assert len(sentinela.chamadas) == 1
-    assert sentinela.chamadas[0] == ((), {}), (
-        "o alvo NÃO se digita aqui: quem escolhe é o eleitor, e é por isso que "
-        "nenhum caminho nosso pode terminar num monitor"
+    assert sentinela.chamadas[0] == (([], []), {}), (
+        "o alvo NÃO se digita aqui: a porta entrega só quem está no ar (ninguém, "
+        "nesta mesa vazia) e quem está na mesa; quem escolhe é o eleitor, e é "
+        "por isso que nenhum caminho nosso pode terminar num monitor"
     )
 
 
-def test_a_recusa_do_eleitor_nomeia_o_no_que_ficou(
+@pytest.mark.asyncio
+async def test_a_recusa_do_eleitor_nomeia_o_no_que_ficou(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Sem microfone para onde voltar, a denúncia diz QUAL nó herdou.
@@ -327,10 +367,10 @@ def test_a_recusa_do_eleitor_nomeia_o_no_que_ficou(
     bruto: list[str | None] = [_NO_DO_CONTROLE]
     sub = _supervisor_com(monkeypatch, eleitor=eleitor, de_pe=de_pe, bruto=bruto)
 
-    sub._devolver_a_fonte_padrao()
+    await _porta_do_no(sub)
     de_pe.clear()
     bruto[0] = _O_MONITOR_QUE_HERDA
-    sub._devolver_a_fonte_padrao()
+    await _porta_do_no(sub)
 
     denuncias = [c for ev, c in avisos if ev == "bt_mic_heranca_do_no_morto"]
     assert len(denuncias) == 1
@@ -339,7 +379,8 @@ def test_a_recusa_do_eleitor_nomeia_o_no_que_ficou(
     assert denuncias[0]["morreram"] == [_NO_DO_CONTROLE]
 
 
-def test_o_padrao_que_ja_e_microfone_de_verdade_nao_e_tocado(
+@pytest.mark.asyncio
+async def test_o_padrao_que_ja_e_microfone_de_verdade_nao_e_tocado(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Morreu um nó nosso, mas o padrão é uma entrada de verdade: não se mexe.
@@ -355,15 +396,16 @@ def test_o_padrao_que_ja_e_microfone_de_verdade_nao_e_tocado(
     bruto: list[str | None] = [_NO_DO_CONTROLE]
     sub = _supervisor_com(monkeypatch, eleitor=eleitor, de_pe=de_pe, bruto=bruto)
 
-    sub._devolver_a_fonte_padrao()
+    await _porta_do_no(sub)
     de_pe.clear()
     bruto[0] = _UM_MICROFONE_DE_VERDADE
-    sub._devolver_a_fonte_padrao()
+    await _porta_do_no(sub)
 
     assert eleitor.chamadas == []
 
 
-def test_o_gatilho_e_a_morte_e_nunca_a_presenca(
+@pytest.mark.asyncio
+async def test_o_gatilho_e_a_morte_e_nunca_a_presenca(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """O daemon sobe com o servidor JÁ num monitor — e não se mexe nisso.
@@ -392,11 +434,12 @@ def test_o_gatilho_e_a_morte_e_nunca_a_presenca(
         bruto=[_O_MONITOR_QUE_HERDA],
     )
 
-    assert sub._devolver_a_fonte_padrao() is None
+    assert await _porta_do_no(sub) is None
     assert eleitor.chamadas == []
 
 
-def test_o_pactl_mudo_nao_dispara_devolucao(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.asyncio
+async def test_o_pactl_mudo_nao_dispara_devolucao(monkeypatch: pytest.MonkeyPatch) -> None:
     """O nó morreu e o `pactl` não respondeu: não se devolve às cegas.
 
     MORDIDA: faça `fonte_padrao_crua` devolver `""` no lugar de `None` quando o
@@ -408,10 +451,10 @@ def test_o_pactl_mudo_nao_dispara_devolucao(monkeypatch: pytest.MonkeyPatch) -> 
     bruto: list[str | None] = [_NO_DO_CONTROLE]
     sub = _supervisor_com(monkeypatch, eleitor=eleitor, de_pe=de_pe, bruto=bruto)
 
-    sub._devolver_a_fonte_padrao()
+    await _porta_do_no(sub)
     de_pe.clear()
     bruto[0] = None
-    veredicto = sub._devolver_a_fonte_padrao()
+    veredicto = await _porta_do_no(sub)
 
     assert veredicto is not None
     assert veredicto.buraco == "nao_sei"

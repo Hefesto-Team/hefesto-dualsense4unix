@@ -100,7 +100,7 @@ class _PipeWire:
         self.responde = True
         monkeypatch.setattr(ele, "_rodar", self._rodar)
         monkeypatch.setattr(ele, "fonte_se_sustenta", lambda _nome: True)
-        monkeypatch.setattr(ele, "melhor_fonte_elegivel", lambda: PLACA)
+        monkeypatch.setattr(ele, "outra_captura_elegivel", self._outra_captura)
         monkeypatch.setattr(ele, "casamento_usb_agora", lambda _uniqs: None)
         monkeypatch.setattr(ele, "SETTLE_PASSOS", 2)
         monkeypatch.setattr(ele, "SETTLE_PASSO_S", 0.0)
@@ -112,6 +112,31 @@ class _PipeWire:
         )
         monkeypatch.setattr(audio_control, "volume_da_captura", lambda **_k: 100)
         monkeypatch.setattr(hotkey, "_fonte_esta_muda", lambda _fonte: False)
+
+    def _outra_captura(self) -> str | None:
+        """O que `--outra-captura-elegivel` responde sobre ESTA lista.
+
+        A-VOLTA-DO-MICROFONE-NAO-ELEGE-CONTROLE-01 (29/09/2026). O dublê era
+        `melhor_fonte_elegivel -> PLACA`, uma constante: a pergunta do install
+        responde o PRIMEIRO canal de controle na mesa dela, e um dublê que
+        responde sempre a placa é mais frouxo que o produto. Agora ele sai da
+        lista, com a regra do script: o primeiro nó que não é controle nenhum
+        (nem canal `hefesto_mic_`, nem «dualsense», nem monitor). Aqui a porta
+        de todos se sustenta (`fonte_se_sustenta` acima), então é a placa; na
+        mesa dela, sem porta usável na placa, seria nenhum — e esse caso é
+        medido em `test_a_volta_do_microfone_nao_elege_controle.py`, contra o
+        script de verdade.
+        """
+        for nome in [PLACA, *self.publicados.values()]:
+            baixa = nome.lower()
+            if (
+                baixa.startswith("hefesto_mic_")
+                or "dualsense" in baixa
+                or baixa.endswith(".monitor")
+            ):
+                continue
+            return nome
+        return None
 
     def _listagem(self) -> str:
         nomes = [PLACA, *self.publicados.values()]
@@ -335,9 +360,9 @@ def test_os_quatro_da_mesa_dela_no_ar_e_cada_ponte_de_radio_recebe_o_sim(
 def test_desligar_o_padrao_passa_o_padrao_ao_ultimo_que_continua_no_ar(mesa: Any) -> None:
     """Liga A, B e C; desliga C (o padrão): o padrão é B, e A e B seguem no ar.
 
-    MORDIDA: em `hotkey._passar_o_padrao_ou_devolver`, pule os candidatos e
-    vá direto ao `devolver_o_microfone` — o padrão cai na placa da máquina com
-    dois microfones no ar.
+    MORDIDA: em `EleitorDeMicrofone.passar_o_padrao`, pule os candidatos (o
+    passo «quem está no ar») e vá direto ao `devolver_o_microfone` — o padrão
+    cai na placa da máquina com dois microfones no ar.
     """
     for uniq in (P1, P2, P3):
         assert _apertar(mesa, uniq, ligado=True).feito

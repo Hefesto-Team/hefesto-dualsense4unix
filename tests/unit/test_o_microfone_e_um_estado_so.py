@@ -116,6 +116,18 @@ class EleitorDeMentira:
         self.eleito = None
         return ResultadoDaEleicao(ok=True, ativo="fonte-de-antes")
 
+    def passar_o_padrao(
+        self, no_ar: list[str], conectados: list[str], calou: str | None = None
+    ) -> ResultadoDaEleicao:
+        """A pergunta de `EleitorDeMicrofone.passar_o_padrao`: quem está no ar,
+        depois a volta à máquina (`devolver_o_microfone`, que aqui sempre tem
+        para onde ir)."""
+        for candidato in no_ar:
+            passado = self.eleger_o_controle(candidato, conectados)
+            if passado.ok:
+                return passado
+        return self.devolver_o_microfone()
+
 
 class DaemonDeMentira:
     """O daemon, com o mínimo que o ato pede — e nada além."""

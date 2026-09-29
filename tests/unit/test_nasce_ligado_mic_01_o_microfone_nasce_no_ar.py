@@ -170,6 +170,18 @@ class _EleitorDublado:
         self.eleito = None
         return _Resultado(ok=True, ativo="mic_da_placa_mae")
 
+    def passar_o_padrao(
+        self, no_ar: list[str], conectados: list[str], calou: str | None = None
+    ) -> _Resultado:
+        """A pergunta de `EleitorDeMicrofone.passar_o_padrao`: quem está no ar,
+        depois a volta à máquina (`devolver_o_microfone`, que aqui sempre tem
+        para onde ir)."""
+        for candidato in no_ar:
+            passado = self.eleger_o_controle(candidato, conectados)
+            if passado.ok:
+                return passado
+        return self.devolver_o_microfone()
+
     def eleger_por_uniq(self, uniq: str, **_kw: Any) -> _Resultado:
         return self.eleger_o_controle(uniq, [])
 
@@ -878,18 +890,40 @@ class TestAMaquinaComOutroMicrofone:
 
     @pytest.mark.asyncio
     async def test_o_canal_de_outro_controle_nao_e_o_microfone_da_maquina(
-        self, mesa, monkeypatch: pytest.MonkeyPatch
+        self, mesa, monkeypatch: pytest.MonkeyPatch, tmp_path
     ) -> None:
         """A pergunta é "não é CONTROLE NENHUM", e não a lista do install.
 
-        `melhor_fonte_elegivel` responde o canal por controle de propósito (o
-        §D.2 da MIC-PADRAO-NO-CABO-01). Foi a primeira escrita desta cura, e
-        com ela o canal de um controle passava por headset: na mesa que só tem
-        os controles, ninguém elegeria. MORDIDA: troque
-        `outra_captura_elegivel` por `melhor_fonte_elegivel` em
-        `hotkey._microfone_que_ja_e_da_maquina`.
+        A pergunta do install (`--melhor-fonte-elegivel`) responde o canal por
+        controle de propósito (o §D.2 da MIC-PADRAO-NO-CABO-01). Foi a primeira
+        escrita desta cura, e com ela o canal de um controle passava por
+        headset: na mesa que só tem os controles, ninguém elegeria.
+
+        O `_rodar` daqui responde as DUAS perguntas como o script responde na
+        mesa só de controles: o canal do outro controle para a do install, e
+        vazio para a da volta. FATO SUBSTITUÍDO (29/09/2026): a régua dublava
+        `melhor_fonte_elegivel`, que saiu do Python sem chamador
+        (A-VOLTA-DO-MICROFONE-NAO-ELEGE-CONTROLE-01).
+
+        MORDIDA: faça `hotkey._microfone_que_ja_e_da_maquina` perguntar a flag
+        do install (`--melhor-fonte-elegivel`, pelo `eleicao_de_microfone.
+        _rodar`) no lugar de `outra_captura_elegivel`.
         """
-        monkeypatch.setattr(elm, "melhor_fonte_elegivel", lambda: f"hefesto_mic_{P2[-6:]}")
+        canal_do_outro = f"hefesto_mic_{P2[-6:]}"
+        script = tmp_path / "fix_wireplumber_default_source.sh"
+        script.write_text(
+            "#!/usr/bin/env bash\n--outra-captura-elegivel) :;;\n"
+            "--melhor-fonte-elegivel) :;;\n"
+        )
+
+        def _rodar(argv: list[str]) -> tuple[int, str]:
+            if "--melhor-fonte-elegivel" in argv:
+                return (0, canal_do_outro)
+            return (0, "")
+
+        monkeypatch.setattr(elm, "outra_captura_elegivel", _OUTRA_CAPTURA_DE_VERDADE)
+        monkeypatch.setattr(elm, "_script_do_wireplumber", lambda: script)
+        monkeypatch.setattr(elm, "_rodar", _rodar)
         daemon = mesa.daemon()
 
         await hotkey.nascer_no_ar(daemon, P1)

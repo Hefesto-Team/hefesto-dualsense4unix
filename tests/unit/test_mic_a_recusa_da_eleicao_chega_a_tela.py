@@ -89,6 +89,7 @@ class _EleitorDublado:
         motivo: str = "",
         devolve_ok: bool = True,
         motivo_da_devolucao: str = "",
+        sem_destino: bool = False,
     ) -> None:
         self.chamadas: list[tuple[str, Any]] = []
         self.eleito: str | None = None
@@ -96,6 +97,9 @@ class _EleitorDublado:
         self._motivo = motivo
         self._devolve_ok = devolve_ok
         self._motivo_da_devolucao = motivo_da_devolucao
+        #: `True` = a volta à máquina não tem para onde ir (nada escrito), que
+        #: é o «fica» de `EleitorDeMicrofone.passar_o_padrao`.
+        self._sem_destino = sem_destino
 
     def eleger_o_controle(self, uniq: str, conectados: list[str]) -> _Resultado:
         self.chamadas.append(("eleger", uniq))
@@ -116,10 +120,32 @@ class _EleitorDublado:
         # sistema continua sendo o canal daquele controle. Um dublê que zera
         # no fracasso é o defeito nº 5 desta onda de volta: a régua mediria o
         # dublê e daria verde sobre o produto errado.
+        if self._sem_destino:
+            return _Resultado(ok=False, motivo="não há microfone para onde voltar")
         if self._devolve_ok:
             self.eleito = None
             return _Resultado(ok=True, ativo="mic_da_placa_mae")
         return _Resultado(ok=False, motivo=self._motivo_da_devolucao)
+
+    def passar_o_padrao(
+        self, no_ar: list[str], conectados: list[str], calou: str | None = None
+    ) -> _Resultado:
+        """A pergunta de `EleitorDeMicrofone.passar_o_padrao`, com o contrato dela.
+
+        Quem está no ar, depois a volta à máquina; sem destino, o ato de calar
+        do eleito está FEITO (``ok=True``, sem frase) e a posse cai, e a volta
+        sem `calou` (a do nó que morre) devolve a recusa.
+        """
+        for candidato in no_ar:
+            passado = self.eleger_o_controle(candidato, conectados)
+            if passado.ok:
+                return passado
+        volta = self.devolver_o_microfone()
+        if volta.ok or not self._sem_destino or calou is None:
+            return volta
+        if self.eleito == calou:
+            self.eleito = None
+        return _Resultado(ok=True)
 
 
 class _Backend:
@@ -195,6 +221,7 @@ def _mesa(
     motivo: str = "",
     devolve_ok: bool = True,
     motivo_da_devolucao: str = "",
+    sem_destino: bool = False,
 ) -> tuple[_Daemon, _Backend, _EleitorDublado]:
     backend = _Backend(uniqs)
     eleitor = _EleitorDublado(
@@ -202,6 +229,7 @@ def _mesa(
         motivo=motivo,
         devolve_ok=devolve_ok,
         motivo_da_devolucao=motivo_da_devolucao,
+        sem_destino=sem_destino,
     )
     return _Daemon(backend, eleitor), backend, eleitor
 
@@ -580,26 +608,29 @@ def test_o_deposito_tem_teto_e_descarta_o_mais_velho() -> None:
 
 @pytest.mark.asyncio
 async def test_o_gesto_devolver_chega_a_tela_com_a_frase_do_caminho_de_volta() -> None:
-    """A J1 elege e aperta de novo: o ramo `devolver` e a QUINTA frase.
+    """A J1 elege e aperta de novo: o ramo `devolver` e a frase da volta.
 
     ACHADO DA AUDITORIA (02/09/2026), reproduzido: uma bomba
-    (`raise AssertionError`) posta imediatamente antes do
-    `eleitor.devolver_o_microfone()` NÃO disparava — nenhuma borda tinha
-    `mudo=True` com `eleitor.eleito == uniq`. Consequências medidas: (a)
-    `GESTOS` declara três gestos e só dois eram vistos, então colapsar
-    `gesto="devolver" if mudo else "eleger"` em `"eleger"` deixava os nove
-    verdes; (b) a quinta das cinco frases que esta frente promete atravessar —
-    *"não há microfone para onde voltar"* — tinha ZERO cobertura no
-    `state_full`.
+    (`raise AssertionError`) posta imediatamente antes da volta NÃO disparava
+    — nenhuma borda tinha `mudo=True` com `eleitor.eleito == uniq`.
+    Consequências medidas: (a) `GESTOS` declara três gestos e só dois eram
+    vistos, então colapsar `gesto="devolver" if mudo else "eleger"` em
+    `"eleger"` deixava os nove verdes; (b) a frase da volta tinha ZERO
+    cobertura no `state_full`.
+
+    FATO SUBSTITUÍDO (29/09/2026, A-VOLTA-DO-MICROFONE-NAO-ELEGE-CONTROLE-01):
+    a frase desta régua era *"não há microfone para onde voltar"*. Pelo botão
+    ela não chega mais ao cartão — o ato de calar sem destino está FEITO (a
+    régua de baixo). A frase que chega é a da volta que ESCREVEU e não pegou.
 
     CURA A ARRANCAR: qualquer metade do ramo `devolver`.
     """
-    sem_volta = (
-        "não há microfone para onde voltar: nenhuma fonte de captura com porta "
-        "usável nesta máquina"
+    reelegeu = (
+        f"a escrita foi aceita mas o microfone ATIVO continua mic_de_{_J1} — o "
+        "WirePlumber reelegeu por cima"
     )
     daemon, backend, eleitor = _mesa(
-        devolve_ok=False, motivo_da_devolucao=sem_volta
+        devolve_ok=False, motivo_da_devolucao=reelegeu
     )
 
     await _rodar_o_gesto(
@@ -621,23 +652,45 @@ async def test_o_gesto_devolver_chega_a_tela_com_a_frase_do_caminho_de_volta() -
         f"duas notícias diferentes para quem está com o controle — {recado}"
     )
     assert recado["ok"] is False
-    assert recado["motivo"] == sem_volta, (
+    assert recado["motivo"] == reelegeu, (
         "a frase do caminho de volta ficou no log: a pessoa apertou, o "
-        f"microfone não voltou para lugar nenhum, e a tela não disse nada — {recado}"
+        f"microfone não saiu dela, e a tela não disse nada — {recado}"
     )
     assert bloco["eleito"] == _J1, (
-        "FATO SUBSTITUÍDO (02/09/2026): esta linha exigia `None`, com a razão "
-        "'a posse cai mesmo sem destino'. A premissa era falsa — a devolução "
-        "recusada não escreve nada, e o padrão do sistema continua sendo o "
-        "canal da J1. Publicar `eleito: null` com o canal ainda nela é a tela "
-        f"dizendo que ninguém está no ar enquanto o sistema grava por ela: {bloco}"
+        "a volta escreveu e o WirePlumber devolveu o canal à J1: a posse fica "
+        f"com ela — {bloco}"
     )
     assert backend.leds == {_J1: True}, (
-        "A LUZ FICA ACESA — decisão dela, e consequência do contrato do LED "
-        "('aceso = este mic está no ar'). O canal continua sendo o da J1, "
-        "logo o microfone dela está no ar. Aqui o produto cravava "
-        f"`aceso = False` antes de saber o desfecho: {backend.leds}"
+        "a volta não pegou e o canal continua o da J1: a luz segue a posse, e a "
+        f"posse ficou — {backend.leds}"
     )
+
+
+@pytest.mark.asyncio
+async def test_o_ato_de_calar_sem_destino_chega_a_tela_como_feito() -> None:
+    """A J1 é a única no ar e não há outro microfone: calar está FEITO.
+
+    A-VOLTA-DO-MICROFONE-NAO-ELEGE-CONTROLE-01 (29/09/2026). O padrão fica no
+    canal que ela calou, gravando silêncio por escolha dela; a posse cai, a luz
+    apaga (a decisão dela de 19/09: mudo é apagada) e o cartão não ganha frase
+    — *"não há microfone para onde voltar"* não é recusa do que ela pediu.
+
+    CURA A ARRANCAR: leia o «fica» como a falha de antes (o `ok=False` com o
+    motivo em `passar_o_padrao`), e o cartão ganha a frase e a luz fica acesa.
+    """
+    daemon, backend, eleitor = _mesa(sem_destino=True)
+
+    await _rodar_o_gesto(
+        daemon,
+        [{"uniq": _J1, "mudo": False}, {"uniq": _J1, "mudo": True}],
+    )
+    bloco = (await _tique_async(daemon))["mic_da_mesa"]
+
+    assert eleitor.chamadas == [("eleger", _J1), ("devolver", None)]
+    recado = bloco["recados"][_J1]
+    assert (recado["gesto"], recado["ok"], recado["motivo"]) == ("devolver", True, ""), recado
+    assert bloco["eleito"] is None, bloco
+    assert backend.leds == {_J1: False}, backend.leds
 
 
 # ---------------------------------------------------------------------------
@@ -951,21 +1004,28 @@ def test_a_leitura_da_mesa_e_uma_so_e_ela_exige_o_connected() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 13. A LUZ FICA ACESA QUANDO A DEVOLUÇÃO É RECUSADA — decisão dela (02/09)
+# 13. A LUZ SEGUE A POSSE — e a volta que não pegou deixa a posse de pé
 # ---------------------------------------------------------------------------
+#
+# FATO SUBSTITUÍDO (29/09/2026, A-VOLTA-DO-MICROFONE-NAO-ELEGE-CONTROLE-01).
+# Esta seção se chamava *"A LUZ FICA ACESA QUANDO A DEVOLUÇÃO É RECUSADA —
+# decisão dela (02/09)"*. Era a regra de 02/09, sem linha no
+# `docs/data/decisoes-dela.csv`, e ela foi escrita para a volta SEM DESTINO. Ali
+# vale a decisão dela de 19/09: mudo é luz apagada. As falhas da volta que
+# ESCREVEU seguem com a posse de pé e a luz acesa.
 
 
 @pytest.mark.asyncio
 async def test_a_luz_apaga_apenas_quando_a_devolucao_e_conferida() -> None:
-    """O par simétrico: devolveu de verdade apaga; não conseguiu, fica acesa.
+    """Devolveu de verdade apaga; escreveu e não pegou, fica acesa; sem destino, apaga.
 
     Contrato do LED, escrito por ela em 01/09: *"aceso = este mic está no
-    ar"*. O produto cravava `aceso = False` ANTES de chamar
-    `devolver_o_microfone()` — a luz caía pela INTENÇÃO, que é a mesma mentira
-    de segunda geração que o lado da eleição já evitava, só que ao contrário.
+    ar"*. O produto cravava `aceso = False` ANTES de chamar a volta — a luz
+    caía pela INTENÇÃO, que é a mesma mentira de segunda geração que o lado da
+    eleição já evitava, só que ao contrário.
 
-    CURA A ARRANCAR: `aceso = not bool(resultado.ok)` de volta para
-    `aceso = False`. O segundo caso reprova.
+    CURA A ARRANCAR: `aceso = _mesmo_controle(eleitor.eleito, uniq)` de volta
+    para `aceso = False`. O segundo caso reprova.
     """
     # a devolução DEU CERTO: o canal saiu dela, a luz apaga
     daemon, backend, _eleitor = _mesa()
@@ -976,18 +1036,27 @@ async def test_a_luz_apaga_apenas_quando_a_devolucao_e_conferida() -> None:
         f"a devolução foi conferida e a luz tinha de apagar: {backend.leds}"
     )
 
-    # a devolução FOI RECUSADA: o canal continua dela, a luz fica acesa
+    # a volta ESCREVEU e o WirePlumber devolveu o canal a ela: a luz fica
     daemon2, backend2, _e2 = _mesa(
         devolve_ok=False,
-        motivo_da_devolucao="não há microfone para onde voltar",
+        motivo_da_devolucao="o WirePlumber reelegeu por cima",
     )
     await _rodar_o_gesto(
         daemon2, [{"uniq": _J1, "mudo": False}, {"uniq": _J1, "mudo": True}]
     )
     assert backend2.leds == {_J1: True}, (
-        "o produto não conseguiu devolver: o padrão do sistema continua sendo "
-        "o canal deste controle, logo o microfone dele está no ar, logo a luz "
-        f"fica acesa. {backend2.leds}"
+        "a volta não pegou: o padrão do sistema continua sendo o canal deste "
+        f"controle, e a posse ficou com ele. {backend2.leds}"
+    )
+
+    # SEM DESTINO: o ato de calar está feito, e mudo é luz apagada (19/09)
+    daemon3, backend3, _e3 = _mesa(sem_destino=True)
+    await _rodar_o_gesto(
+        daemon3, [{"uniq": _J1, "mudo": False}, {"uniq": _J1, "mudo": True}]
+    )
+    assert backend3.leds == {_J1: False}, (
+        "ela calou e não havia para onde ir: o microfone dela está mudo, e a "
+        f"luz é o estado do microfone dela. {backend3.leds}"
     )
 
 
@@ -1000,9 +1069,14 @@ def test_a_posse_so_cai_quando_a_devolucao_e_conferida() -> None:
 
     FATO SUBSTITUÍDO (02/09/2026): `devolver_o_microfone` zerava `self.eleito`
     incondicionalmente, com o comentário *"A POSSE CAI MESMO SEM DESTINO — o
-    controle saiu do ar"*. A premissa era falsa, e este teste a mede: nas duas
-    recusas o `set-default-source` **nunca roda**, então o padrão do sistema
-    continua sendo o canal do controle.
+    controle saiu do ar"*. Nas recusas o `set-default-source` **nunca roda**,
+    e a volta sozinha não sabe se foi um ato de calar.
+
+    AS DUAS PORTAS SE SEPARAM (29/09/2026, A-VOLTA-DO-MICROFONE-NAO-ELEGE-
+    CONTROLE-01). *"Não há para onde voltar"* é a mesma resposta nas duas, e
+    cada uma a lê pelo que ela é: a volta sozinha (a do nó que morre) deixa a
+    posse de pé e recusa; o ato de calar do eleito (a do botão, com `calou`)
+    solta a posse e está feito. As duas sem escrever nada.
 
     CURA A ARRANCAR: o `if resultado.ok:` de `devolver_o_microfone`.
     """
@@ -1012,7 +1086,7 @@ def test_a_posse_so_cai_quando_a_devolucao_e_conferida() -> None:
         monkey: pytest.MonkeyPatch, *, destino: str | None, sustenta: bool
     ) -> tuple[Any, list[list[str]]]:
         escritas: list[list[str]] = []
-        monkey.setattr(ele, "melhor_fonte_elegivel", lambda: destino)
+        monkey.setattr(ele, "outra_captura_elegivel", lambda: destino)
         monkey.setattr(ele, "fonte_se_sustenta", lambda _nome: sustenta)
         monkey.setattr(ele, "fonte_ativa", lambda: destino)
         monkey.setattr(
@@ -1034,9 +1108,19 @@ def test_a_posse_so_cai_quando_a_devolucao_e_conferida() -> None:
                 f"{rotulo}: a recusa não pode ter escrito nada — {escritas}"
             )
             assert eleitor.eleito == _J1, (
-                f"{rotulo}: nada foi escrito, o padrão do sistema continua "
-                "sendo o canal deste controle, e a posse não pode cair"
+                f"{rotulo}: nada foi escrito, e a volta sozinha não sabe se foi "
+                "um ato de calar — a posse não pode cair aqui"
             )
+
+    with pytest.MonkeyPatch.context() as monkey:
+        eleitor, escritas = montar(monkey, destino=None, sustenta=True)
+        no_morto = eleitor.passar_o_padrao([], [_J1])
+        assert no_morto.ok is False and "para onde voltar" in no_morto.motivo
+        assert eleitor.eleito == _J1, "a porta do nó não se calou: a posse fica"
+        botao = eleitor.passar_o_padrao([], [_J1], _J1)
+        assert botao.ok is True and botao.motivo == "", botao
+        assert eleitor.eleito is None, "o ato de calar da J1 ficou sem destino"
+        assert escritas == [], f"nenhuma das duas portas escreve — {escritas}"
 
     with pytest.MonkeyPatch.context() as monkey:
         eleitor, escritas = montar(
@@ -1169,7 +1253,7 @@ def test_o_prazo_filtra_e_nao_escreve_no_deposito() -> None:
 #
 # TODA esta seção usa o `EleitorDeMicrofone` DE VERDADE: o que se dubla são as
 # quatro portas externas do módulo (`_rodar`, `fonte_se_sustenta`,
-# `fonte_ativa`, `melhor_fonte_elegivel`) mais a resolução `uniq → canal`.
+# `fonte_ativa`, `outra_captura_elegivel`) mais a resolução `uniq → canal`.
 # Nenhum `pactl` roda, nenhum aparelho é tocado, nenhuma janela nasce.
 
 _CANAL_DO_J1 = "alsa_input.o_canal_do_j1"
@@ -1190,7 +1274,7 @@ class _PipeWireDublado:
         monkey.setattr(ele, "_rodar", self._rodar)
         monkey.setattr(ele, "fonte_se_sustenta", lambda _nome: self.sustenta)
         monkey.setattr(ele, "fonte_ativa", lambda: self.ativo)
-        monkey.setattr(ele, "melhor_fonte_elegivel", lambda: _DA_PLACA)
+        monkey.setattr(ele, "outra_captura_elegivel", lambda: _DA_PLACA)
         monkey.setattr(
             ele, "fontes_de_captura_agora", lambda: [_CANAL_DO_J1, _DA_PLACA]
         )
@@ -1447,15 +1531,17 @@ async def test_o_toque_do_botao_le_a_mesa_uma_vez_so() -> None:
         f"Perguntou {backend.perguntas}"
     )
 
-    # b) A DEVOLUÇÃO do eleito: nenhuma. `devolver_o_microfone()` é global.
+    # b) A DEVOLUÇÃO do eleito, sem ninguém mais no ar: nenhuma. A mesa só
+    # filtra quem herda (`hotkey._quem_herda_o_padrao`), e sem candidato não
+    # há o que filtrar.
     backend_b = _BackendQueConta((_J1,))
     eleitor_b = _EleitorDublado()
     eleitor_b.eleito = _J1
     daemon_b = _Daemon(backend_b, eleitor_b)
     await hotkey._eleger_ou_devolver(daemon_b, _J1, True)  # type: ignore[arg-type]
     assert backend_b.perguntas == 0, (
-        "a devolução não pergunta a mesa a ninguém: `devolver_o_microfone()` "
-        f"não recebe `uniq`. Perguntou {backend_b.perguntas}"
+        "a devolução sem ninguém no ar não pergunta a mesa: sem candidato não "
+        f"há quem filtrar. Perguntou {backend_b.perguntas}"
     )
 
     # c) A ELEIÇÃO: uma, e é a lista de quem PODE ser eleito.
