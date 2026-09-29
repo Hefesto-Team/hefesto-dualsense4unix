@@ -654,6 +654,7 @@ def test_a_linha_da_leitura_entra_no_check_up_e_nao_na_aba_jogar(
                    porque="y.")
     monkeypatch.setattr(a08_conexoes, "_conferencias", lambda: [])
     monkeypatch.setattr(a08_conexoes, "_EXTRAS", (leitura,))
+    monkeypatch.setattr(a08_conexoes, "_ULTIMO_ESTADO", _estado_do_daemon("failed"))
     assert leitura in a08_conexoes._itens_da_tela()
     assert all(i.get("porque") != "y." for i in a08_conexoes._exame())
 
@@ -689,3 +690,29 @@ def test_o_exame_completo_pergunta_pela_leitura(monkeypatch: pytest.MonkeyPatch)
     monkeypatch.setattr(a08_conexoes, "_ULTIMO_ESTADO", _estado_do_daemon("held"))
     a08_conexoes._correr_o_exame_completo()
     assert [i.chave for i in a08_conexoes._EXTRAS] == ["energia_do_radio"]
+
+
+def test_a_linha_da_leitura_sai_quando_o_daemon_volta_a_segurar(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O grab que falhou volta sozinho (o daemon tenta de 2 em 2 s). A linha
+    guardada no exame não pode seguir dizendo «AJUSTAR» sobre um controle que o
+    Hefesto já segura: o Check-up pergunta ao dono a cada tique, como a aba
+    Jogar pergunta.
+
+    MORDIDA: tire de `_itens_da_tela` o filtro da `CHAVE_DA_LEITURA` — a linha
+    fica na tira com o grab `held` e esta régua reprova.
+    """
+    from hefesto_dualsense4unix.integrations.exame_da_mesa import Item
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
+
+    leitura = Item(chave=a08_conexoes.CHAVE_DA_LEITURA, rotulo="x",
+                   estado="atencao",  # (noqa-acento): chave de máquina do exame
+                   porque="y.")
+    monkeypatch.setattr(a08_conexoes, "_conferencias", lambda: [])
+    monkeypatch.setattr(a08_conexoes, "_EXTRAS", (leitura,))
+    monkeypatch.setattr(a08_conexoes, "_ULTIMO_ESTADO", _estado_do_daemon("failed"))
+    assert leitura in a08_conexoes._itens_da_tela()
+    for voltou in (_estado_do_daemon("held"), _estado_do_daemon("failed", emulando=False)):
+        monkeypatch.setattr(a08_conexoes, "_ULTIMO_ESTADO", voltou)
+        assert leitura not in a08_conexoes._itens_da_tela(), voltou

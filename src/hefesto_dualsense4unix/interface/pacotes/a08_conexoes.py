@@ -758,7 +758,14 @@ def _itens_da_tela() -> list[Any]:
     conferidas = _conferencias()
     vistas = {getattr(i, "chave", "") for i in conferidas}
     for item in _EXTRAS:
-        if getattr(item, "chave", "") in vistas:
+        chave = getattr(item, "chave", "")
+        if chave in vistas:
+            continue
+        # A LEITURA DOS CONTROLES SEGUE O DAEMON, NÃO O EXAME (28/09/2026). O
+        # grab que falhou volta sozinho (o daemon tenta de 2 em 2 s), e a linha
+        # guardada no exame diria «AJUSTAR» sobre um controle que o Hefesto já
+        # segura — com a aba Jogar, que lê o mesmo dono a cada tique, já calada.
+        if chave == CHAVE_DA_LEITURA and _o_aviso_do_grab(_ULTIMO_ESTADO) is None:
             continue
         conferidas.append(item)
     # AS ORDENS VÊM ANTES, E A REGRA É DO PRODUTO — 03/09/2026, `MIGRA-08-01`.
@@ -4129,6 +4136,34 @@ def _o_porque_e_a_cura_do_dono() -> tuple[str, str]:
     return f"{antes}.", cura[:1].upper() + cura[1:]
 
 
+def _o_aviso_do_grab(
+    state: dict[str, Any] | None,
+) -> tuple[tuple[str, str], dict[str, Any]] | None:
+    """``((linha, porquê), o principal)`` quando o aviso do dono acende; ``None`` quando não.
+
+    A CONDIÇÃO É DO DONO (`home_actions.aviso_de_grab`), com os três termos lidos
+    do ``state`` como a aba Jogar os lê (`painel.aviso_do_grab_dobrado`): o
+    principal conectado, o controle do Hefesto de pé e o grab que FALHOU. Quem
+    pergunta é a conferência, no exame, e o Check-up, a cada tique — a linha
+    sai quando o daemon volta a segurar o controle, sem esperar outro exame.
+    """
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.app.actions import home_actions
+
+    st = state if isinstance(state, dict) else {}
+    emulacao = st.get("gamepad_emulation")
+    gamepad_on = bool(emulacao.get("enabled")) if isinstance(emulacao, dict) else False
+    primario = next((c for c in st.get("controllers") or ()
+                     if isinstance(c, dict) and c.get("connected") is True
+                     and c.get("is_primary")), None)
+    aviso = home_actions.aviso_de_grab(st.get("primary_grab_state"),
+                                       is_primary=primario is not None,
+                                       gamepad_on=gamepad_on)
+    if aviso is None or primario is None:
+        return None
+    return aviso, primario
+
+
 def _conferencia_da_leitura(state: dict[str, Any] | None, *,
                             porta: Callable[[], tuple[str, str]] | None = None,
                             grab: Callable[..., str] | None = None,
@@ -4151,22 +4186,13 @@ def _conferencia_da_leitura(state: dict[str, Any] | None, *,
     então outro processo o segura, e a tentativa não tira nada de ninguém.
     """
     perfil._com_o_src()
-    from hefesto_dualsense4unix.app.actions import home_actions
     from hefesto_dualsense4unix.integrations import hidraw_broker_client as broker
     from hefesto_dualsense4unix.integrations.exame_da_mesa import Item
 
-    st = state if isinstance(state, dict) else {}
-    emulacao = st.get("gamepad_emulation")
-    gamepad_on = bool(emulacao.get("enabled")) if isinstance(emulacao, dict) else False
-    primario = next((c for c in st.get("controllers") or ()
-                     if isinstance(c, dict) and c.get("connected") is True
-                     and c.get("is_primary")), None)
-    aviso = home_actions.aviso_de_grab(st.get("primary_grab_state"),
-                                       is_primary=primario is not None,
-                                       gamepad_on=gamepad_on)
-    if aviso is None or primario is None:
+    acende = _o_aviso_do_grab(state)
+    if acende is None:
         return None
-    linha, _porque = aviso
+    (linha, _porque), primario = acende
     qual, motivo = (porta or broker.porta_provavel)()
     print(f"[relato] {PAGINA} · examinar-portas: {broker.linha_da_porta(qual, motivo)}",
           file=sys.stderr)
