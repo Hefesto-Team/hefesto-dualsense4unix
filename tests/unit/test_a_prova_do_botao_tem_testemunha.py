@@ -209,8 +209,8 @@ def vpad_uhid(qq: ModuleType, raiz: Path, jogador: int) -> tuple[Any, str]:
     return aparelho, caminho
 
 
-def fisico(qq: ModuleType, raiz: Path, jogador: int, led: str = "") -> tuple[Any, str]:
-    dir_device = raiz / f"fisico{jogador}"
+def controle_fisico(qq: ModuleType, raiz: Path, jogador: int, led: str = "") -> tuple[Any, str]:
+    dir_device = raiz / f"controle{jogador}"
     caminho = _no_de_entrada(dir_device, 10 + jogador, 10 + jogador,
                              "Sony Interactive Entertainment DualSense Wireless Controller")
     if led:
@@ -245,7 +245,7 @@ def _nome_do_pad_xbox() -> str:
 
     nomes = {str(d["name"]) for d in FLAVORS.values()}
     assert XBOX360_NAME in nomes
-    return XBOX360_NAME
+    return str(XBOX360_NAME)
 
 
 # ---------------------------------------------------------------------------
@@ -284,7 +284,7 @@ def mundo(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, tela: Any) -> Mundo:
 
     def grab(caminho: str, **_: Any) -> str:
         m.grabs_perguntados.append(caminho)
-        return m.grab.get(caminho, hidraw_broker_client.GRAB_LIVRE)
+        return str(m.grab.get(caminho, hidraw_broker_client.GRAB_LIVRE))
 
     monkeypatch.setattr(evdev_reader, "abrir_input_device", abrir)
     monkeypatch.setattr(hidraw_broker_client, "estado_do_grab", grab)
@@ -453,7 +453,7 @@ def test_regua_6_o_modo_xbox_abre_os_pads_uinput(qq: ModuleType, mundo: Mundo, t
     régua reprova; e os físicos não são testemunha quando há pad.
     """
     caminhos = pads_uinput(mundo.raiz_sys, 4, _nome_do_pad_xbox())
-    fisicos = [fisico(qq, tmp_path, n)[0] for n in range(1, 5)]
+    fisicos = [controle_fisico(qq, tmp_path, n)[0] for n in range(1, 5)]
     aperto(mundo.pad(caminhos[2]), "BTN_SOUTH", INICIO + 1.02, 0.3)
     mundo.cena.apertados.append((3, "cross", INICIO + 1.05, INICIO + 1.35))
     rc = rodar(qq, mundo, fisicos)
@@ -514,7 +514,7 @@ def test_regua_9_o_nativo_segurado_por_outro(qq: ModuleType, mundo: Mundo, tmp_p
     """
     from hefesto_dualsense4unix.integrations import hidraw_broker_client as dono
 
-    par = [fisico(qq, tmp_path, n) for n in (1, 3)]
+    par = [controle_fisico(qq, tmp_path, n) for n in (1, 3)]
     mundo.cena.jogadores = (1, 3)
     for _, caminho in par:
         mundo.grab[caminho] = dono.GRAB_DE_TERCEIRO
@@ -531,7 +531,7 @@ def test_regua_9_o_nativo_confere_o_cartao_pelo_endereco(
     qq: ModuleType, mundo: Mundo, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """O físico do P3 que acende o cartão do P1: o endereço diz de quem é o cartão, e é FALHA."""
-    par = [fisico(qq, tmp_path, n) for n in (1, 3)]
+    par = [controle_fisico(qq, tmp_path, n) for n in (1, 3)]
     mundo.cena.jogadores = (1, 3)
     aperto(mundo.pad(par[1][1]), "BTN_SOUTH", INICIO + 1.02, 0.3)
     mundo.cena.apertados.append((1, "cross", INICIO + 1.05, INICIO + 1.35))
@@ -570,7 +570,7 @@ def _main_com_led_repetido(qq: ModuleType, m: Mundo, tmp_path: Path,
                            monkeypatch: pytest.MonkeyPatch, acende: int) -> int:
     import functools
 
-    dois = [fisico(qq, tmp_path, n, led="00100")[0] for n in (1, 2)]  # os dois dizem P1
+    dois = [controle_fisico(qq, tmp_path, n, led="00100")[0] for n in (1, 2)]  # os dois dizem P1
     vpad2, caminho2 = vpad_uhid(qq, tmp_path, 2)
     aperto(m.pad(caminho2), "BTN_SOUTH", INICIO + 1.02, 0.3)
     m.cena.apertados.append((acende, "cross", INICIO + 1.05, INICIO + 1.35))
@@ -629,7 +629,7 @@ def _sem_gi(tmp_path: Path, argv: list[str]) -> subprocess.CompletedProcess[str]
     import dataclasses
 
     qq = _carregar()
-    aparelhos = [dataclasses.asdict(fisico(qq, tmp_path, n, led=led)[0])
+    aparelhos = [dataclasses.asdict(controle_fisico(qq, tmp_path, n, led=led)[0])
                  for n, led in ((1, "00100"), (2, "01010"))]
     ambiente = dict(os.environ)
     ambiente["PYTHONPATH"] = str(RAIZ / "src")
