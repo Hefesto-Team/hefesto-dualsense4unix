@@ -36,8 +36,8 @@ mesmo tratamento — dar a mesma marca às três seria maquiar:
 
 A MORDIDA: tire o ``data-campo="degrau"`` dos quatro botões em ``aba05._coluna``,
 rode ``python3 aba05.py``, e ``test_os_oito_degraus_saem_do_produto`` reprova
-nomeando os oito. Tire o ``data-hef-rotulo`` e
-``test_os_oito_rotulos_estao_declarados`` reprova nomeando os oito.
+nomeando os oito. Tire o ``data-hef-rotulo`` do «Parar» e
+``test_os_oito_rotulos_estao_declarados`` reprova nomeando os quatro que ficam.
 
 ONDE ELA MEDE: na **BANCADA** (``mockup/``), que é onde o gerador escreve.
 Apontá-la para o publicado daria verde sobre a página congelada.
@@ -131,7 +131,7 @@ def _a_tela_depois_da_pintura(regua, cravados, declarados):
     `economia` e apaga `max` com exatamente estes valores.
 
     Quem o pacote NÃO declara fica como está no arquivo, sem selo — que é o
-    caso dos oito rótulos e das duas molduras dos lugares vazios.
+    caso dos quatro rótulos e das duas molduras dos lugares vazios.
 
     O ALVO `plastico` É A EXCEÇÃO, e ela É O ACHADO DESTA FRENTE: o
     `escrever()` do piloto o escreve numa PROPRIEDADE DE CSS
@@ -283,9 +283,14 @@ def test_o_degrau_aceso_e_o_da_mesa_e_nao_o_do_mockup(regua, cravados,
 #: do motor —, e um endereço que o produto PINTA não pode carregar a marca de
 #: rótulo: o veredito `ROTULO` vem antes de todos os outros ramos do
 #: `_classificar` e apagaria da medição justamente o dado novo.
+#:
+#: O `testar` SAIU PELO MESMO CAMINHO EM 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01):
+#: desde 07/09 o «Testar» é ESTADO (`a05_vibracao.em_teste`), e ele passou a
+#: acender pelo alvo `classe` (`data-campo="em-teste"`), com o `aria-pressed`
+#: junto. O texto continua o que ela decidiu em 30/08; o que a régua mede no
+#: elemento agora é o estado, como nos degraus e nos punhos. Fica o «Parar».
 ROTULOS = {
-    "testar": "o texto do botão, decidido por ela em 30/08 para NÃO mudar",
-    "parar": "o texto do botão, o par do Testar",
+    "parar": "o texto do botão, decidido por ela em 30/08 para NÃO mudar",
 }
 
 
@@ -294,18 +299,19 @@ def test_os_oito_rotulos_estao_declarados(regua, vereditos):
 
     A CONTA É POR LUGAR desde 07/09/2026, e não por coluna viva: com a fusão dos
     dois ramos de coluna (`aba05._coluna`) os quatro lugares trazem os mesmos
-    elementos. São DUAS marcas em cada um — o par `Testar`/`Parar` — desde que
-    os dois punhos (`lado`) ganharam fonte em 14/09/2026 e saíram da categoria.
+    elementos. É UMA marca em cada um — o «Parar» — desde que o «Testar» ganhou
+    o alvo `classe` em 28/09/2026; os dois punhos (`lado`) saíram em 14/09. O
+    nome do teste guarda o número de quando ele nasceu.
     """
     from hefesto_dualsense4unix.interface import aba05
-    esperado = 2 * len(aba05.MESA)
+    esperado = len(ROTULOS) * len(aba05.MESA)
     marcados = [v for v in vereditos if v.classe == regua.ROTULO]
     assert len(marcados) == esperado, (
-        f"os rótulos desta aba são {esperado} (testar + parar, em "
+        f"os rótulos desta aba são {esperado} (o parar, em "
         f"{len(aba05.MESA)} lugares), e a régua contou {len(marcados)}: "
         f"{sorted((v.campo.dono, v.campo.chave) for v in marcados)}. "
-        f"Se `lado` reapareceu aqui, o interruptor de punho perdeu o alvo "
-        f"`classe` que ele ganhou em 14/09/2026 e voltou a ser desenho")
+        f"Se `lado` ou `testar` reapareceu aqui, o interruptor de punho ou o "
+        f"Testar perdeu o alvo `classe` e voltou a ser desenho")
     assert {v.campo.chave for v in marcados} == set(ROTULOS)
 
 
