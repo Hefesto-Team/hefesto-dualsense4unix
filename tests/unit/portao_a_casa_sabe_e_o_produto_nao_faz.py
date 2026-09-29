@@ -947,6 +947,14 @@ _SEM_MAO_HOJE: dict[str, str] = {
 #: Não é dívida: é classificação. A razão CITA a evidência que a sustenta,
 #: porque "confie em mim" não é razão.
 _NAO_E_PROMESSA: dict[str, str] = {
+    "daemon/ganho_da_haptica.py::linear_do_cru": (
+        "29/09/2026, O-GANHO-DA-HAPTICA-TEM-DONO-01 — é o instrumento das "
+        "réguas, não promessa ao produto: traduz o volume CRU que o servidor de "
+        "som de mentira de `tests/unit/test_o_ganho_da_haptica_tem_dono.py` "
+        "guarda (:127, :159) para o fator de amplitude. O produto lê a placa pelo "
+        "`%` do leitor da casa (`volumes_do_sink`) e usa as irmãs `linear_do_pct` "
+        "e `pct_do_linear`, que têm chamador no dono do ganho"
+    ),
     "core/formas_do_endereco.py::formas_do_endereco": (
         "28/09/2026, O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-01 — são as "
         "formas de UM endereço para as RÉGUAS, e não uma promessa ao produto: "
