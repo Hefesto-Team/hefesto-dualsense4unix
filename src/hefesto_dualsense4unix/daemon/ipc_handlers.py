@@ -470,6 +470,13 @@ def _par_de_motores(cru: Any) -> list[int] | None:
     return [int(cru[0]), int(cru[1])]
 
 
+def _amostra_da_luz_do_mic(cru: Any) -> int | None:
+    """O `common[8]` do último pedido de luz do jogo, ou None (nunca um mock)."""
+    if isinstance(cru, bool) or not isinstance(cru, int):
+        return None
+    return int(cru)
+
+
 def _contador_do_vpad(vp: Any, nome: str) -> int:
     """Um contador cumulativo do vpad, com tipagem ESTRITA; 0 quando não há.
 
@@ -3734,6 +3741,21 @@ class IpcHandlersMixin:
                             "bateria_no_jogo": _bateria_do_vpad(vp),
                             "battery_forwards": _contador_do_vpad(
                                 vp, "battery_forward_count"
+                            ),
+                            # O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01: os
+                            # apertos do botão do microfone que SAÍRAM no
+                            # report ao jogo, e os pedidos de luz do microfone
+                            # que o jogo fez e o Hefesto recusou (a luz é dele).
+                            # Separam "o jogo não viu o pad" de "o jogo pediu e
+                            # nós seguramos de propósito".
+                            "mic_button_forwards": _contador_do_vpad(
+                                vp, "mic_button_count"
+                            ),
+                            "mic_led_do_jogo_recusado": _contador_do_vpad(
+                                vp, "mic_led_do_jogo_recusado"
+                            ),
+                            "mic_led_do_jogo_amostra": _amostra_da_luz_do_mic(
+                                getattr(vp, "mic_led_do_jogo_amostra", None)
                             ),
                             # MOTOR-QUE-NAO-SE-VE-01: o par que foi AOS
                             # MOTORES, depois da política de intensidade. Todos

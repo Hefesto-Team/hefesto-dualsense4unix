@@ -18,11 +18,15 @@ from __future__ import annotations
 import os
 import struct
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
+from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 
+from hefesto_dualsense4unix.cli.ipc_client import IpcClient
 from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.core import physical_report_reader as prr
 from hefesto_dualsense4unix.core.ds_output_report import (
@@ -30,11 +34,16 @@ from hefesto_dualsense4unix.core.ds_output_report import (
     bt_crc32,
 )
 from hefesto_dualsense4unix.core.physical_report_reader import PhysicalReportReader
+from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
+from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.integrations import uhid_gamepad
 from hefesto_dualsense4unix.integrations.uhid_gamepad import (
     UHID_INPUT2,
     UhidDualSense,
 )
+from hefesto_dualsense4unix.profiles import loader as loader_module
+from hefesto_dualsense4unix.profiles.manager import ProfileManager
+from hefesto_dualsense4unix.testing import FakeController
 
 #: `DS_BUTTONS2_MIC_MUTE` do `drivers/hid/hid-playstation.c`, e o byte do
 #: `struct dualsense_input_report` em que ele mora (`buttons[2]`, o décimo
@@ -583,3 +592,103 @@ class TestQuatroJogadoresNoTempo:
             assert leitores[i].mic_button_forwards == apertos[i]
         for p in pads:
             p.stop()
+
+
+# --------------------------------------------------------------------------
+# 7. O `state_full` publica as duas contas, com o vpad de produção
+# --------------------------------------------------------------------------
+
+
+@pytest.fixture
+async def servidor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, uhid: _UhidPorFd
+) -> AsyncIterator[tuple[Path, Any]]:
+    perfis = tmp_path / "profiles"
+    perfis.mkdir()
+
+    def _perfis(ensure: bool = False) -> Path:
+        if ensure:
+            perfis.mkdir(parents=True, exist_ok=True)
+        return perfis
+
+    monkeypatch.setattr(loader_module, "profiles_dir", _perfis)
+    fc = FakeController(transport="usb")
+    fc.connect()
+    store = StateStore()
+    daemon = MagicMock()
+    daemon._last_state = None
+    daemon.config = MagicMock(
+        mouse_emulation_enabled=False,
+        mouse_speed=6,
+        mouse_scroll_speed=1,
+        rumble_policy="balanceado",
+        rumble_policy_custom_mult=0.7,
+        rumble_active=None,
+    )
+    daemon._motion_reader = SimpleNamespace(emit_hz=0.0)
+    daemon._coop_manager = None
+    caminho = tmp_path / "hefesto-dualsense4unix.sock"
+    server = IpcServer(
+        controller=fc,
+        store=store,
+        profile_manager=ProfileManager(controller=fc, store=store),
+        socket_path=caminho,
+        daemon=daemon,
+    )
+    await server.start()
+    try:
+        yield caminho, daemon
+    finally:
+        await server.stop()
+
+
+async def _o_vpad_do_p1(caminho: Path) -> dict[str, Any]:
+    async with IpcClient.connect(caminho) as cliente:
+        resultado = await cliente.call("daemon.state_full")
+    por_vpad = resultado["rumble_ff"]["per_vpad"]
+    assert isinstance(por_vpad, list) and por_vpad
+    return dict(por_vpad[0])
+
+
+@pytest.mark.asyncio
+async def test_state_full_publica_o_botao_e_a_luz_recusada(
+    servidor: tuple[Path, Any],
+) -> None:
+    """Mordida: sem as chaves no bloco do vpad, reprova."""
+    caminho, daemon = servidor
+    pad = _vpad()
+    pad._game_open = True
+    pad._bound_at = pad.time_fn() - 10.0
+    pad.forward_mic_button(True)
+    pad.forward_mic_button(False)
+    pad.forward_mic_button(True)
+    corpo = bytearray(47)
+    corpo[1] = rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
+    corpo[_MUTE_BUTTON_LED] = 1
+    pad._handle_output(_evento_de_output(bytes(corpo)))
+    daemon._gamepad_device = pad
+    try:
+        item = await _o_vpad_do_p1(caminho)
+    finally:
+        pad.stop()
+    assert item["mic_button_forwards"] == 2
+    assert item["mic_led_do_jogo_recusado"] == 1
+    assert item["mic_led_do_jogo_amostra"] == 1
+
+
+@pytest.mark.asyncio
+async def test_state_full_nao_inventa_com_vpad_dublado(
+    servidor: tuple[Path, Any],
+) -> None:
+    caminho, daemon = servidor
+    daemon._gamepad_device = SimpleNamespace(
+        backend="uinput",
+        flavor="xbox360",
+        mic_button_count=MagicMock(),
+        mic_led_do_jogo_recusado=MagicMock(),
+        mic_led_do_jogo_amostra=MagicMock(),
+    )
+    item = await _o_vpad_do_p1(caminho)
+    assert item["mic_button_forwards"] == 0
+    assert item["mic_led_do_jogo_recusado"] == 0
+    assert item["mic_led_do_jogo_amostra"] is None
