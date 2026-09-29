@@ -360,6 +360,8 @@ _ATIVIDADE_POR_CATEGORIA: dict[str, str] = {
 #:   [43]     player_leds (ucPadLights)
 #:   [44..46] lightbar_red/green/blue
 _VALID_FLAG1_OFFSET = 1
+#: `mute_button_led` do `struct dualsense_output_report_common` (`common[8]`).
+_MIC_LED_OFFSET = 8
 _TRIGGER_R_BLOCK_OFFSET = 10
 _TRIGGER_L_BLOCK_OFFSET = 21
 _TRIGGER_BLOCK_LEN = 11
@@ -1070,6 +1072,14 @@ class UhidDualSense:
     _trigger_replicas: int = 0
     _lightbar_replicas: int = 0
     _player_led_replicas: int = 0
+    #: O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01 — a luz do microfone é do
+    #: Hefesto (o `luz_do_mic` é o único escritor do `common[8]`, na língua
+    #: dela, inversa da Sony). O pedido do jogo é RECUSADO por desenho, e
+    #: contado aqui para a recusa não ser calada: a tela e a Forja separam
+    #: "o jogo não viu o pad" de "o jogo pediu e o Hefesto segurou".
+    _mic_led_do_jogo_recusado: int = 0
+    #: O `common[8]` do último pedido recusado; `None` = nenhum nesta sessão.
+    _mic_led_do_jogo_amostra: int | None = None
     #: PAINEL-DA-VERDADE-01: instante (relógio de `time_fn`) do último evento
     #: de cada categoria. Categoria ausente = NUNCA aconteceu nesta sessão, e
     #: isso é diferente de "aconteceu há muito tempo" — a tela diz coisas
@@ -1679,6 +1689,13 @@ class UhidDualSense:
             # `_STATUS_DESCONHECIDO` é o mesmo default do nascimento.
             self._status_byte = _STATUS_DESCONHECIDO
             self._battery_forward_count = 0
+            # O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01: a próxima vida do vpad
+            # não nasce com o botão do microfone apertado, nem com a conta
+            # da luz que outro jogo pediu.
+            self._mic_button = False
+            self._mic_button_count = 0
+            self._mic_led_do_jogo_recusado = 0
+            self._mic_led_do_jogo_amostra = None
 
     def _silence_rumble(self) -> None:
         """Zera os motores do controle físico se o jogo os deixou ligados.
@@ -1819,6 +1836,16 @@ class UhidDualSense:
             self._mic_button = alvo
             if self._emit_if_changed(from_reader=True) and alvo:
                 self._mic_button_count += 1
+
+    @property
+    def mic_led_do_jogo_recusado(self) -> int:
+        """Nº de pedidos de luz do microfone do jogo, recusados (a luz é do Hefesto)."""
+        return self._mic_led_do_jogo_recusado
+
+    @property
+    def mic_led_do_jogo_amostra(self) -> int | None:
+        """O `common[8]` do último pedido recusado; None = nenhum nesta sessão."""
+        return self._mic_led_do_jogo_amostra
 
     @property
     def mic_button(self) -> bool:
@@ -2523,6 +2550,17 @@ class UhidDualSense:
             self._queue_replica(
                 "player_leds", tuple(bool(mask & (1 << i)) for i in range(5))
             )
+        if (
+            flag1 & rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
+            and not flag1 & rep.VALID_FLAG1_POWER_SAVE_CONTROL_ENABLE
+            and len(body) > _MIC_LED_OFFSET
+        ):
+            # O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01: contado e recusado,
+            # nunca calado. O 0x02 que o `hid-playstation` do lado do vpad
+            # manda ao alternar o mudo dele (a cada aperto, agora que o botão
+            # chega ao jogo) liga o POWER_SAVE junto, e não é pedido de jogo.
+            self._mic_led_do_jogo_recusado += 1
+            self._mic_led_do_jogo_amostra = int(body[_MIC_LED_OFFSET])
         if flag1 & _LIGHTBAR_CONTROL_ENABLE and len(body) >= _LIGHTBAR_RGB_OFFSET + 3:
             self._queue_replica(
                 "lightbar",

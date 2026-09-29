@@ -504,6 +504,23 @@ class TestO0x02DoDriverNaoViraEscrita:
         )
         assert len(uhid.escritas[fd]) == antes, "o 0x02 do driver virou eco no jogo"
         assert pad.ff_descartado_count == 0
+        assert pad.mic_led_do_jogo_recusado == 0, (
+            "o 0x02 do driver do vpad foi contado como pedido de luz do jogo"
+        )
+
+    def test_o_pedido_de_luz_do_jogo_e_contado_e_nao_pinta(
+        self, jogo_aberto: tuple[UhidDualSense, _Pias]
+    ) -> None:
+        """Mordida: sem o contador, reprova."""
+        pad, pias = jogo_aberto
+        corpo = bytearray(47)
+        corpo[1] = rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
+        corpo[_MUTE_BUTTON_LED] = 2  # piscando, na língua da Sony
+        pad._handle_output(_evento_de_output(bytes(corpo)))
+        pad._flush_replicas()
+        assert pias.chamadas == [], "o pedido de luz do jogo pintou o controle"
+        assert pad.mic_led_do_jogo_recusado == 1
+        assert pad.mic_led_do_jogo_amostra == 2
 
     def test_nao_para_a_vibracao_do_jogo(
         self, jogo_aberto: tuple[UhidDualSense, _Pias]
