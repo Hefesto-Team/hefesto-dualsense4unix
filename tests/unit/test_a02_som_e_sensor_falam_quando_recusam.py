@@ -404,7 +404,7 @@ class TestOsQuatroBotoesDeSensor:
         sair do daemon, o gesto passa a chamar um fantasma e o clique dela some
         outra vez — e é esta linha que avisa.
         """
-        from pacotes import daemon
+        from tests.unit import inventario_do_daemon as daemon
 
         metodos = daemon.metodos()
         assert metodos, "o inventário de métodos veio vazio — régua cega"

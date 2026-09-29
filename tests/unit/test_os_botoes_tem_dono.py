@@ -9,7 +9,7 @@ ignora, e a tela não muda; quem clicou conclui que o produto está quebrado.
 
 O QUE ESTA RÉGUA COBRA, e cada item nasceu de um defeito real desta casa:
 
-1. **O método existe no daemon.** `pacotes/daemon.py` lê os 39 do
+1. **O método existe no daemon.** `tests/unit/inventario_do_daemon.py` lê os 39 do
    `ipc_server.py`. Um nome inventado é o defeito mais caro daqui — uma tela que
    promete um ajuste que o produto não faz.
 2. **Os parâmetros são os que o handler lê.** `led.set` lê `rgb`, `brightness` e
@@ -166,7 +166,7 @@ def test_o_inventario_le_os_metodos_do_daemon():
     `identity.number.set`, que a aba Iluminação precisa. **Uma régua que procura
     o padrão errado não acha nada e não reclama.**
     """
-    from pacotes import daemon
+    from tests.unit import inventario_do_daemon as daemon
 
     m = daemon.metodos()
     assert len(m) >= 39, (
@@ -180,7 +180,7 @@ def test_nenhum_pacote_cita_metodo_que_o_daemon_nao_atende(pac):
     """Um nome inventado aparece AQUI, não na mão de quem clica."""
     import importlib
 
-    from pacotes import daemon
+    from tests.unit import inventario_do_daemon as daemon
 
     usados: set[str] = set()
     for arq in sorted((RAIZ /

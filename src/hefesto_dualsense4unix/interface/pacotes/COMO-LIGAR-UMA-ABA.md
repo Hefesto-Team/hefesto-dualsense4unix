@@ -73,11 +73,12 @@ e a tela nova chama treze.
 
 `lightbar.reset` se apresenta como *"INSTRUMENTO de medição"* — e é o que
 devolve a luz ao jogo. **Leia o handler** em `daemon/ipc_handlers.py` antes de
-ligar qualquer botão. `pacotes/daemon.py` te dá o mapa:
+ligar qualquer botão. `tests/unit/inventario_do_daemon.py` te dá o mapa (é
+instrumento de régua, e mora com as réguas desde 28/09/2026):
 
 ```python
-from . import daemon
-daemon.metodos()              # os 39 que o daemon atende, lidos do ipc_server
+from tests.unit import inventario_do_daemon as daemon
+daemon.metodos()              # os que o daemon atende, lidos do ipc_server
 daemon.parametros("led.set")  # ('rgb', 'brightness', 'uniq')
 ```
 

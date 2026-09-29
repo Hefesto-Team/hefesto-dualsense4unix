@@ -19,6 +19,16 @@ CUIDADO MEDIDO, 01/09/2026: o primeiro censo destes métodos usou o padrão
 deles é justamente o que responde "este controle é o Player 2", que a aba
 Iluminação precisa. **Uma régua que procura o padrão errado não acha nada e não
 reclama.**
+
+MUDOU DE CASA EM 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01): morava em
+`src/hefesto_dualsense4unix/interface/pacotes/daemon.py`, e o `casa-sabe` a
+contava como promessa do produto sem caminho. Ela é instrumento de RÉGUA: o
+produto não precisa dela para recusar o método que o daemon não atende, porque o
+dono já recusa na hora — `daemon/ipc_server.py` responde `método desconhecido`
+(`CODE_METHOD_NOT_FOUND`) sem esperar tempo de socket nenhum. E ler o fonte do
+daemon em tempo de execução seria a segunda verdade que mente no caso que mais
+importa: um daemon mais velho que a janela, em que o fonte diz que o método
+existe e o processo vivo diz que não.
 """
 from __future__ import annotations
 
@@ -26,7 +36,7 @@ import functools
 import pathlib
 import re
 
-RAIZ = pathlib.Path(__file__).resolve().parents[4]
+RAIZ = pathlib.Path(__file__).resolve().parents[2]
 SERVIDOR = RAIZ / "src/hefesto_dualsense4unix/daemon/ipc_server.py"
 HANDLERS = RAIZ / "src/hefesto_dualsense4unix/daemon/ipc_handlers.py"
 
