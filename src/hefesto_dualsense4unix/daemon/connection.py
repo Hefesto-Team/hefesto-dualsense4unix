@@ -2218,6 +2218,13 @@ async def _wait_online_or_hotplug(
         await vigiar_escritor_cru(daemon, forcar=False)
         await vigiar_o_sequestro(daemon)
         await disparar_gatilhos_devidos(daemon)
+        # O-NUMERO-DO-JOGADOR-SE-REORGANIZA-NA-HORA-E-O-JOGO-VE-01: o número
+        # muda sem evento nenhum quando o prazo do lugar guardado vence, e a
+        # volta pelo evento dorme até o teto — o P4 dela ficou 4 por 271 s
+        # depois do prazo. A conferência é a leitura que a tela faz (memória,
+        # sob o lock), e só arma quando a tabela MUDA; armado, a fatia encolhe
+        # e o disparo cai `ATRASO_APOS_A_ULTIMA_CONEXAO_S` depois.
+        armar_gatilho_da_cor_por_numeracao(daemon)
         if watch.poll():
             return True
         # Família 5: o nome de um `hidraw*` e a firma de um nó, só com o dono.
