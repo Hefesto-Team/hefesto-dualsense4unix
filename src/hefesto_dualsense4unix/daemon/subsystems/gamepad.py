@@ -2451,6 +2451,7 @@ def start_gamepad_emulation_desfecho(
         make_virtual_pad,
         motivo_da_degradacao,
         normalizar_caminho,
+        o_aparelho_mudou,
         quer_uhid,
     )
 
@@ -2522,8 +2523,11 @@ def start_gamepad_emulation_desfecho(
         # recriá-lo seria arrancar o controle do jogo por nada.
         # A promoção uinput→uhid (VPAD-02) só vale para quem PEDE o uhid: o
         # uinput do caminho Xbox não é degradação, é a escolha dela.
+        # E O APARELHO (o juiz pelo aparelho, NO-MODO-XBOX, 28/09): o mesmo
+        # `virtual_pad.o_aparelho_mudou` do juiz do co-op, ou o P1 entra em laço.
         mesmo_canal = (
             quer_uhid(caminho_do_vpad(existing), mascara_do_p1) == uhid_pedido
+            and not o_aparelho_mudou(existing, caminho_pedido, mascara_do_p1)
         )
         if (
             getattr(existing, "flavor", None) == mascara_do_p1

@@ -22,10 +22,12 @@ MORDIDAS (cada classe diz a sua): tire a chamada de `_vestir_o_aparelho` da
 fábrica; troque `normalizar_caminho` por `caminho_resolvido` na regra; devolva
 ao `UinputGamepad` a tabela e as capacidades pelo `flavor`.
 
-A DÍVIDA QUE FICA, com dono e data: a troca de modo com o pad Nintendo de pé
-não o recria (os juízes comparam o canal, e não o aparelho). Ela está aqui em
-`xfail(strict=True)`, o molde da casa: o dia em que a cura entrar, o teste
-passa e o `strict` obriga a tirar a marca.
+A DÍVIDA QUE FICOU EM 28/09 FECHOU NA ONDA 3: a troca de modo com o pad
+Nintendo de pé não o recriava (os juízes comparavam o canal, e não o aparelho).
+Os dois juízes perguntam agora a `virtual_pad.o_aparelho_mudou`, juntos, e as
+duas réguas que estavam em `xfail(strict=True)` passaram a valer. MORDIDA:
+faça `o_aparelho_mudou` devolver `False` e as duas reprovam; tire a pergunta de
+UM dos juízes e a régua do laço reprova.
 """
 
 from __future__ import annotations
@@ -504,21 +506,18 @@ class TestATrocaDeModoComOPadDePe:
         finally:
             gp.stop_gamepad_emulation(d, persist=False)
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason=(
-            "DÍVIDA DA ONDA 3, com dono: os juízes de recriação (o `ja_estava` de "
-            "`gamepad.start_gamepad_emulation_desfecho` e "
-            "`external_mask.vpad_ficou_para_tras`) comparam o canal por "
-            "`quer_uhid`, que é sempre falso para a máscara Nintendo; a troca de "
-            "modo com o Pro de pé não o recria. A cura é um juiz pelo aparelho "
-            "(`virtual_pad.mascara_no_jogo`) nos dois, juntos. No dia em que ela "
-            "entrar, este teste passa e o `strict` obriga a tirar o xfail."
-        ),
-    )
     def test_o_cartao_nintendo_vira_xbox_360_quando_o_modo_muda(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """O juiz pelo aparelho, no P1 — e sem laço depois dele.
+
+        Era `xfail(strict=True)` até a onda 3 (28/09). A segunda metade é a que
+        prova os dois juízes JUNTOS: dez compassos do `reconciliar_as_mascaras`
+        e um apply idêntico não recriam o Xbox 360 recém-vestido. MORDIDA: tire
+        o `o_aparelho_mudou` do `ja_estava` do P1 e ele passa a discordar do
+        juiz do compasso (o Pro fica; o compasso pede o start e ouve «já
+        estava»); tirado do `vpad_ficou_para_tras`, reprova a régua do co-op.
+        """
         registro_de_mascaras().set_mask(MACS[0], "nintendo")
         d = _daemon_do_p1(monkeypatch)
         try:
@@ -534,17 +533,52 @@ class TestATrocaDeModoComOPadDePe:
                 "o modo Xbox chegou com o Pro de pé e ele ficou Pro no `uinput`, "
                 "sem hidraw: o P4 azul do G3"
             )
+            vestido = d._gamepad_device
+            criados = len(_NoGravado.criados)
+            for _ in range(10):
+                assert gp.reconciliar_as_mascaras(d) is None, (
+                    "o juiz do compasso quer recriar o Xbox 360 que o P1 acabou de vestir"
+                )
+            assert (
+                gp.start_gamepad_emulation_desfecho(
+                    d, "dualsense", origin="profile", caminho=CAMINHO_XBOX
+                )
+                == gp.EMU_JA_ESTAVA
+            )
+            assert d._gamepad_device is vestido
+            assert len(_NoGravado.criados) == criados, "o P1 entrou em laço de recriação"
         finally:
             gp.stop_gamepad_emulation(d, persist=False)
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason=(
-            "A MESMA DÍVIDA, no juiz dos jogadores 2 a 4 "
-            "(`external_mask.vpad_ficou_para_tras`): ele muda junto com o do P1, "
-            "na onda 3, ou o P1 entra em laço de recriação (ver a nota da sprint)."
-        ),
-    )
+    def test_o_pro_sem_modo_escolhido_fica_pro_e_nao_entra_em_laco(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Sem modo escolhido o Pro segue Pro, e o juiz não o recria em laço.
+
+        A armadilha que a pergunta AO PAD evita: a fábrica pendura o caminho
+        RESOLVIDO, e o Pro sem escolha nasce com o caminho Xbox pendurado. Um
+        juiz que fizesse a conta pelo caminho pendurado veria «Xbox 360» onde
+        há um Pro, e o recriaria a cada compasso. MORDIDA: troque, em
+        `o_aparelho_mudou`, a pergunta ao pad por
+        `mascara_no_jogo(caminho_do_vpad(vpad), vpad.flavor)`.
+        """
+        registro_de_mascaras().set_mask(MACS[0], "nintendo")
+        d = _daemon_do_p1(monkeypatch)
+        try:
+            gp.start_gamepad_emulation_desfecho(d, "dualsense", origin="profile", caminho=None)
+            assert _vidpid_do_p1(d)[0] == NINTENDO_VENDOR, "premissa: o Pro"
+            pad = d._gamepad_device
+            for _ in range(10):
+                assert gp.reconciliar_as_mascaras(d) is None
+            assert (
+                gp.start_gamepad_emulation_desfecho(d, "dualsense", origin="profile", caminho=None)
+                == gp.EMU_JA_ESTAVA
+            )
+            assert d._gamepad_device is pad
+            assert len(_NoGravado.criados) == 1
+        finally:
+            gp.stop_gamepad_emulation(d, persist=False)
+
     def test_o_juiz_do_coop_ve_o_pro_ficar_para_tras(self) -> None:
         registro_de_mascaras().set_mask(MACS[1], "nintendo")
         pad = _pad("dualsense", CAMINHO_DUALSENSE, identity=MACS[1], player=2)

@@ -841,9 +841,19 @@ def vpad_ficou_para_tras(
         return True
     if vpad is None:
         return False
-    from hefesto_dualsense4unix.integrations.virtual_pad import caminho_do_vpad, quer_uhid
+    from hefesto_dualsense4unix.integrations.virtual_pad import (
+        caminho_do_vpad,
+        o_aparelho_mudou,
+        quer_uhid,
+    )
 
-    return quer_uhid(caminho_do_vpad(vpad), mascara) != quer_uhid(caminho, mascara)
+    # E O APARELHO — o juiz pelo aparelho (NO-MODO-XBOX-TUDO-FUNCIONA-01, 28/09):
+    # a máscara Nintendo fica no `uinput` nos dois modos, e o modo Xbox que
+    # chega com o Pro de pé tem de vesti-lo de Xbox 360. A pergunta é a MESMA do
+    # `ja_estava` do P1 (`virtual_pad.o_aparelho_mudou`), ou os dois brigam.
+    return quer_uhid(caminho_do_vpad(vpad), mascara) != quer_uhid(
+        caminho, mascara
+    ) or o_aparelho_mudou(vpad, caminho, mascara)
 
 
 def mascara_vestida(daemon: Any, uniq: str | None = None) -> str | None:

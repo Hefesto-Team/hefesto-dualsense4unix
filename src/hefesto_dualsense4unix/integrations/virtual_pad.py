@@ -511,6 +511,33 @@ def _try_uhid(
     return pad, None
 
 
+def o_aparelho_mudou(vpad: object, caminho: object, mascara: str) -> bool:
+    """O aparelho que ESTE vpad mostra ao jogo não é o que o par pede?
+
+    O JUIZ PELO APARELHO — NO-MODO-XBOX-TUDO-FUNCIONA-01, onda 3 (28/09/2026).
+    Os dois juízes de recriação (o `ja_estava` de
+    `gamepad.start_gamepad_emulation_desfecho` e
+    `external_mask.vpad_ficou_para_tras`) comparavam a máscara e o CANAL
+    (:func:`quer_uhid`), e o canal da máscara Nintendo é o `uinput` nos dois
+    modos: a troca para o modo Xbox com o Pro de pé não o recriava, e o Pro
+    seguia no `uinput`, sem hidraw — a combinação que o jogo sob o Proton abre e
+    não entende (o P4 azul do G3, 27/09). Os dois juízes perguntam AQUI, e a
+    mesma pergunta nos dois é o que impede o laço: um só curado faria o P1 pedir
+    o start a cada compasso.
+
+    A PERGUNTA É AO PAD (`UinputGamepad.mascara_no_jogo`), e não à conta pelo
+    caminho pendurado: a fábrica pendura o caminho RESOLVIDO, e o Pro sem modo
+    escolhido nasce com o caminho Xbox pendurado e continua sendo o Pro. Um pad
+    que não sabe dizer o que veste (o `uhid`, que só nasce DualSense no modo
+    DualSense, e os dublês das réguas) não tem aparelho a comparar: fica o juízo
+    do canal, que é o de antes.
+    """
+    vestido = getattr(vpad, "mascara_no_jogo", None)
+    if not isinstance(vestido, str) or not vestido:
+        return False
+    return vestido != mascara_no_jogo(caminho, mascara)
+
+
 __all__ = [
     "CAMINHOS",
     "CAMINHO_DUALSENSE",
@@ -524,5 +551,6 @@ __all__ = [
     "mascara_no_jogo",
     "motivo_da_degradacao",
     "normalizar_caminho",
+    "o_aparelho_mudou",
     "quer_uhid",
 ]
