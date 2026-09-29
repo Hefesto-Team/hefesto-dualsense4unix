@@ -46,7 +46,7 @@ import pytest
 from hefesto_dualsense4unix.integrations import ambiente_do_jogo as adj
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 from hefesto_dualsense4unix.integrations import steam_launcher
-from tests.conftest import som_de_mentira
+from tests.conftest import lancador_de_mentira, som_de_mentira
 
 _RAIZ = Path(__file__).resolve().parents[2]
 _WRAPPER = _RAIZ / "assets" / "hefesto-launch.sh"
@@ -585,10 +585,11 @@ def _dubles(pasta: Path, corpos: dict[str, str]) -> None:
 
 
 def _path_sem_o_som_da_suite(caminho: str) -> str:
-    """O PATH que o processo recebeu, sem o diretório que a `conftest` põe na
-    frente dos de sistema para a suíte não falar com o servidor de som."""
-    duble = som_de_mentira()
-    return ":".join(e for e in caminho.split(":") if duble is None or e != str(duble))
+    """O PATH que o processo recebeu, sem os diretórios que a `conftest` põe na
+    frente: o do som (a suíte não fala com o servidor de som) e o dos
+    lançadores (a suíte não abre nem fecha o lançador de quem a roda)."""
+    da_suite = {str(d) for d in (som_de_mentira(), lancador_de_mentira()) if d is not None}
+    return ":".join(e for e in caminho.split(":") if e not in da_suite)
 
 
 def _le_env(texto: str) -> dict[str, str]:
