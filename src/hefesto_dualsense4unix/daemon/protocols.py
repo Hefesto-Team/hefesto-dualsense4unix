@@ -315,6 +315,7 @@ class DaemonProtocol(Protocol):
         scroll_speed: int,
         *,
         origin: str = "autoswitch",
+        profile: Any | None = None,
     ) -> str:
         """Aplica a seção `mouse` de um perfil (BUG-PROFILE-MOUSE-KILLS-GAMEPAD-01).
 
@@ -322,6 +323,9 @@ class DaemonProtocol(Protocol):
         ligado na mão) e é idempotente. Injetado como `mouse_applier` do
         ProfileManager nas rotas de ativação (IPC switch, autoswitch, hotkey).
         R-03: `origin`/retorno — ver `apply_profile_suppression`.
+        `profile`: só o perfil que diz Navegação (`mode.kind == "desktop"`)
+        liga ou desliga o mouse; os outros aplicam as velocidades
+        (O-MOUSE-SEGUE-A-NAVEGACAO-01).
         """
         ...
 

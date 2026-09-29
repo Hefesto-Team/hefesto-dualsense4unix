@@ -124,10 +124,18 @@ class _Spy:
         self.suppression_calls: list[bool] = []
 
     def mouse(
-        self, enabled: bool, speed: int, scroll: int, *, origin: str = "autoswitch"
+        self,
+        enabled: bool,
+        speed: int,
+        scroll: int,
+        *,
+        origin: str = "autoswitch",
+        profile: object = None,
     ) -> bool:
         # R-03: o applier recebe a ORIGEM da ativação ("manual" fura o lock de
         # gesto manual; automática adia). O dublê só registra o efeito pedido.
+        # O-MOUSE-SEGUE-A-NAVEGACAO-01: e QUEM mandou, como o do modo — é o
+        # applier do daemon que decide se o perfil opina sobre o liga/desliga.
         self.mouse_calls.append((enabled, speed, scroll))
         return True
 

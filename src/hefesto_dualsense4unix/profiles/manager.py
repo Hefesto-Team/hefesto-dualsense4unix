@@ -1038,9 +1038,10 @@ class ProfileManager:
         FEAT-POINT-AND-CLICK-01. Best-effort (falha loga warning, não aborta a
         ativação — paridade com `apply_keyboard`):
 
-        - `profile.mouse` presente + `mouse_applier` injetado → liga/desliga a
-          emulação de mouse com as velocidades do perfil. `mouse=None` NÃO toca
-          no estado (comportamento v1 preservado).
+        - `profile.mouse` presente + `mouse_applier` injetado → as velocidades
+          do perfil, e o liga/desliga só quando o perfil diz Navegação
+          (`mode.kind == "desktop"`, O-MOUSE-SEGUE-A-NAVEGACAO-01). `mouse=None`
+          NÃO toca no estado (comportamento v1 preservado).
         - `suppression_applier` injetado → recebe SEMPRE o valor de
           `suppress_desktop_emulation` (inclusive o default False, para que
           trocar para um perfil sem o campo LIBERE a supressão ligada por outro
@@ -1063,12 +1064,17 @@ class ProfileManager:
         resultado: dict[str, str] = relatorio if relatorio is not None else {}
         if self.mouse_applier is not None and profile.mouse is not None:
             try:
+                # O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026): junto com a seção
+                # vai QUEM a mandou, como no `mode_applier`. Só o perfil que diz
+                # Navegação liga ou desliga o mouse; os outros aplicam as
+                # velocidades (`Daemon.apply_profile_mouse`).
                 resultado["mouse"] = _estado_da_secao(
                     self.mouse_applier(
                         profile.mouse.enabled,
                         profile.mouse.speed,
                         profile.mouse.scroll_speed,
                         origin=origin,
+                        profile=profile,
                     )
                 )
             except Exception as exc:

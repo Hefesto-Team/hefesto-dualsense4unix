@@ -179,6 +179,16 @@ def _caminho_do_dono(daemon: Any, motivo: str) -> str | None:
     return nomear_o_restart(daemon, motivo)
 
 
+def _o_perfil_diz_navegacao(profile: Any) -> bool:
+    """O perfil tem a seção `mode` com ``kind == "desktop"``? Nunca levanta.
+
+    O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026): é o perfil que tem autoridade
+    sobre o liga/desliga do mouse na ativação (`Daemon.apply_profile_mouse`) e
+    que liga o mouse mesmo sem a seção `mouse` (`ProfileManager.apply_emulation`).
+    """
+    return getattr(getattr(profile, "mode", None), "kind", None) == "desktop"
+
+
 def _o_modo_do_perfil_do_boot(
     store: Any = None,
 ) -> tuple[str | None, str | None, str | None]:
@@ -3002,6 +3012,7 @@ class Daemon:
         scroll_speed: int,
         *,
         origin: str = "autoswitch",
+        profile: Any | None = None,
     ) -> str:
         """Aplica a seção `mouse` de um perfil recém-ativado (BUG-PROFILE-MOUSE-
         KILLS-GAMEPAD-01). Injetado como `mouse_applier` nas rotas de ativação
@@ -3024,6 +3035,24 @@ class Daemon:
         R-03: ativação com ``origin="manual"`` FURA o item 1 e consome o carimbo
         (`_furar_lock_de_emulacao`). Retorno: vocabulário `APLICADO`/
         `ADIADO_LOCK_MANUAL`.
+
+        SÓ O PERFIL QUE DIZ NAVEGAÇÃO OPINA SOBRE O LIGA/DESLIGA —
+        O-MOUSE-SEGUE-A-NAVEGACAO-01 (29/09/2026), commit 1. O `profile` vem do
+        `ProfileManager.apply_emulation`, como o do `mode_applier`. Com
+        ``mode.kind == "desktop"`` o ``enabled`` vale, como sempre. Com qualquer
+        outro perfil (de pad, de Nativo, ou sem `mode`) só as velocidades
+        entram: fora da Navegação quem desliga o mouse é a exclusão mútua do
+        modo, e dentro dela um perfil sem opinião de modo não tem autoridade
+        para desligá-lo (a regra do R-02 para o modo, aplicada ao mouse). Era o
+        pad que renascia: o Freestyle com ``mouse.enabled: true`` e
+        ``kind: gamepad`` ligava o mouse, a exclusão mútua derrubava o pad, e o
+        `mode_applier` logo depois o levantava de novo, com o co-op recriando
+        os secundários. ``profile=None`` (chamador direto, dublê) é o
+        comportamento de antes.
+
+        A PALAVRA DO RETORNO NÃO MUDA: a aba Perfis lê qualquer outra como seção
+        que não entrou (`profiles_actions.relato_da_ativacao`). O que aconteceu
+        com o liga/desliga vai ao diário, em `profile_mouse_aplicado`.
         """
         from hefesto_dualsense4unix.daemon.state_store import (
             MANUAL_PROFILE_LOCK_SEC,
@@ -3041,6 +3070,13 @@ class Daemon:
                 ),
             )
             return ADIADO_LOCK_MANUAL
+        nome = getattr(profile, "name", None)
+        if profile is not None and not _o_perfil_diz_navegacao(profile):
+            self.set_mouse_speed(speed=speed, scroll_speed=scroll_speed)
+            logger.info(
+                "profile_mouse_aplicado", liga_desliga="nao_opina", profile=nome
+            )
+            return APLICADO
         # BUG-PROFILE-MOUSE-IDEMPOTENT-STALE-CONFIG-01: o estado REAL de "ligado"
         # é config E device vivo. No boot, run() seta config=True do flag ANTES do
         # start; se start_mouse_emulation falha (uinput indisponível no boot),
@@ -3051,9 +3087,15 @@ class Daemon:
         if enabled == actual_on:
             if enabled:
                 self.set_mouse_speed(speed=speed, scroll_speed=scroll_speed)
+            logger.info("profile_mouse_aplicado", liga_desliga="ficou", profile=nome)
             return APLICADO
         self.set_mouse_emulation(
             enabled, speed, scroll_speed, origin="profile"
+        )
+        logger.info(
+            "profile_mouse_aplicado",
+            liga_desliga="ligou" if enabled else "desligou",
+            profile=nome,
         )
         return APLICADO
 

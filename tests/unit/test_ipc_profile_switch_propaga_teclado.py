@@ -91,8 +91,10 @@ class _FakeDaemon:
         scroll_speed: int,
         *,
         origin: str = "autoswitch",
+        profile: Any = None,
     ) -> None:
         # R-03: o applier recebe a ORIGEM da ativação (o dublê só registra).
+        # O-MOUSE-SEGUE-A-NAVEGACAO-01: e QUEM mandou, como o do modo.
         self.mouse_calls.append((enabled, int(speed), int(scroll_speed)))
 
     def apply_profile_suppression(
