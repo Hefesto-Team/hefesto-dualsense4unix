@@ -1804,7 +1804,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # 8 linhas deixa o espaço vazio»*. O exame é só a lista; o endereço da
     # contagem saiu da página e daqui (`docs/data/paridade-gtk-html.csv`).
     if isinstance(exame, dict):
-        fora["exame-lista"] = _html_do_exame(exame)
+        fora["exame-lista"] = _html_do_exame(_com_os_avisos(exame, ctx))
     tira = _html_da_fita(ctx.mesa)
     if tira:
         fora[CAMPO_DA_FITA] = tira
@@ -1818,6 +1818,65 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     fora[CAMPO_DO_VERDE] = MODO_A_CORRIGIR if (pausado or not de_pe) else ""
     fora["blocos"] = blocos_dos_botoes(de_pe, pausado)
     return fora
+
+
+#: COMO UM AVISO DO PRODUTO ENTRA NO EXAME. O veredito é o do `doctor`, e quem
+#: o traduz em selo, classe e glifo é o dono da tradução (`gui/aba_sistema.
+#: exame`): um aviso é um ``[WARN]``, e sai com o selo AVISO do desenho.
+VEREDITO_DO_AVISO = "[WARN]"
+
+
+def _avisos_do_produto(ctx: Contexto) -> list[dict[str, Any]]:
+    """As linhas que a coluna Atenção da Jogar publicava, já na forma do exame.
+
+    A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026. A coluna Atenção saiu da Jogar em
+    07/09, por ordem dela, e as fontes que só ela publicava ficaram caladas no
+    produto: as de `painel.AVISOS_DA_TELA` e as três que o pacote da Jogar
+    junta a elas (o opt-out antigo, a ponte com o jogo e a divergência de
+    máscara). A frase viva do detector cego já mandava ler a Sistema (*"A aba
+    Sistema diz por quê"*), e esta é a lista que diz.
+
+    QUEM ESCOLHE E ORDENA É O DONO DO CANAL (`a01_jogar.coluna_de_atencao`),
+    e quem traduz o veredito em selo é `gui/aba_sistema.exame` — nenhuma das
+    duas contas se refaz aqui. Uma fonte que levanta não apaga o exame: vira
+    uma linha que diz qual não respondeu, como as fontes do canal já fazem.
+
+    POR TIQUE, e não na faixa lenta: as fontes leem o `state` que o tique já
+    trouxe, e a única que abre arquivo é a lembrança do gamepad (um `stat` e
+    uma linha). Medido em lar de mentira, 28/09/2026: 0,030 ms por chamada.
+    """
+    from . import a01_jogar
+
+    try:
+        avisos = a01_jogar.coluna_de_atencao(ctx)
+    except Exception as erro:
+        avisos = [{"texto": f"os avisos do produto não responderam "
+                            f"({type(erro).__name__})."}]
+    achados = [(VEREDITO_DO_AVISO, str(a.get("texto") or "")) for a in avisos
+               if a.get("texto")]
+    linhas: list[dict[str, Any]] = _tela.exame(achados)["linhas"]
+    return linhas
+
+
+def _com_os_avisos(exame: dict[str, Any], ctx: Contexto) -> dict[str, Any]:
+    """O exame da camada do produto, com os avisos do produto no fim da lista.
+
+    NO FIM, e não misturados: as linhas do exame vêm na ordem do `storm_report`,
+    que é a do `doctor` no terminal, e os avisos vêm na ordem da gravidade
+    deles. Intercalar as duas escadas seria inventar uma terceira.
+
+    SEM LINHA DO EXAME E COM AVISO, a frase do vazio vira uma linha de NOTA em
+    vez de sumir: a frase é *"O exame não respondeu"*, e engoli-la porque há um
+    aviso ao lado faria uma falha de leitura passar por máquina lida.
+    """
+    avisos = _avisos_do_produto(ctx)
+    if not avisos:
+        return exame
+    linhas = list(exame.get("linhas") or [])
+    vazio = str(exame.get("vazio") or "")
+    if not linhas and vazio:
+        linhas = _tela.exame([("[INFO]", vazio)])["linhas"]
+    return {**exame, "linhas": linhas + avisos, "vazio": ""}
 
 
 def _pausado(ctx: Contexto) -> bool:

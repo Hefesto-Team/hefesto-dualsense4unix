@@ -1,24 +1,22 @@
 #!/usr/bin/env python3
-"""A coluna Atenção: até três, o mais grave em cima, e o `+N` do que não coube.
+"""Os avisos do produto: o mais grave em cima, e a lista do exame da 09 os recebe.
+
+**FATO SUBSTITUÍDO — 28/09/2026, A-TELA-PERGUNTA-AO-DONO-01.** Esta régua nasceu
+para a coluna Atenção da Jogar (*"até três, o mais grave em cima, e o `+N`"*).
+A coluna saiu da tela em 07/09 por ordem dela, e os avisos que só ela publicava
+foram para a lista do exame da aba Sistema (`a09_sistema._com_os_avisos`), que
+mostra todos, em duas colunas, sem teto. O que da D-09 sobrevive é a ORDEM; o
+teto de três, o `+N` e as seis linhas da página morreram com a coluna, e as
+réguas deles saíram com ela.
 
 DECISÃO DELA — 04/09/2026, D-09: *"Até três linhas, o mais grave em cima."*, com
 ``+N`` se passar. E D-10: *"Todas na coluna Atenção."*, sobre as frases órfãs da
 aba Jogar.
 
-**UM FATO DO ENUNCIADO CAIU AQUI, e ele está medido nesta régua.** A D-09 nasceu
-de *"a página tem UM par selo/texto e a conta do produto diz 3 avisos"*, e o
-coordenador remediu e achou QUATRO. Nenhum dos dois números é o de hoje: a
-página publica :data:`a01_jogar.AVISOS_VIVOS` — **seis** —, e as seis já são
-endereço vivo desde 03/09. O que faltava não era LUGAR: era
-
-1. **ordem** — a coluna mostrava as fontes na ordem em que o produto as
-   declarou, que não é a ordem em que elas doem;
-2. **teto** — com seis avisos a coluna crescia seis linhas e reabria o vão de
-   38 px que ela reclamou em 31/08;
-3. **a sétima fonte** — a linha *"Ponte com o jogo"*, que era a ÚNICA das três
-   órfãs da D-10 sem canal nenhum. A PAUSA e o cadeado já estavam na coluna:
-   são, respectivamente, a primeira e as duas últimas de
-   `painel.AVISOS_DA_TELA`.
+O que a D-09 trouxe e continua valendo é a **ordem** (a coluna mostrava as fontes
+na ordem em que o produto as declarou, que não é a ordem em que elas doem) e a
+**sétima fonte** — a linha *"Ponte com o jogo"*, que era a ÚNICA das três órfãs
+da D-10 sem canal nenhum.
 
 **E A SEÇÃO 4 NASCEU EM 06/09/2026 (ONDA5-01-01), com outra palavra dela:**
 *"Não me lembro disso acontecer. E não deveria. Mas caso ocorra na coluna
@@ -70,15 +68,19 @@ def _ctx(state: dict[str, Any]) -> Contexto:
     return Contexto(state=state, mesa=[], conectados=[], estados={})
 
 
-def _acesas(fora: dict[str, Any]) -> tuple[list[str], list[str]]:
-    """As linhas que a coluna ACENDE — as vazias são o apagador, não conteúdo.
+def _acesas(fora: list[dict[str, str]]) -> tuple[list[str], list[str]]:
+    """Os selos e os textos da lista, na ordem em que ela os devolveu."""
+    return [a["selo"] for a in fora], [a["texto"] for a in fora]
 
-    Os três endereços viajam SEMPRE com `AVISOS_VIVOS` entradas (ver a nota do
-    `_coluna_de_avisos`): a lista curta some inteira em `pacotes.normalizar`
-    quando fica vazia, e é a coluna vazia que precisa apagar o aviso do desenho.
+
+def _canal(ctx: Contexto) -> list[dict[str, str]]:
+    """O CANAL INTEIRO, na ordem da gravidade — com as fontes que têm outra casa.
+
+    A cura do travamento é uma delas: a 09 a lê pelo `storm_report`, e
+    `coluna_de_atencao` a deixa de fora para não repetir a linha. As réguas da
+    cura medem o canal, que é onde ela continua a ser colhida.
     """
-    selos = [s for s in fora["aviso-selo"] if s]
-    return selos, fora["aviso-texto"][:len(selos)]
+    return aba._em_ordem(aba._avisos(ctx))
 
 
 def _so_estes(monkeypatch: Any, avisos: list[dict[str, str]]) -> None:
@@ -140,7 +142,7 @@ def test_o_mais_grave_sobe_e_a_ordem_e_a_da_gravidade(monkeypatch: Any) -> None:
     devolvesse a lista como a recebeu, este teste passaria por acaso com
     qualquer entrada. Aqui ele só passa se alguém ORDENOU.
 
-    A MORDIDA: troque o `sorted(...)` de `_coluna_de_avisos` por
+    A MORDIDA: troque o `sorted(...)` de `_em_ordem` por
     `list(avisos)` e a asserção reprova com
     ``['PERFIL', 'RÁDIO', 'GAMEPAD'] != ['GAMEPAD', 'PAUSA'...]`` — medido.
     """
@@ -192,119 +194,48 @@ def test_a_ordem_e_estavel_entre_iguais(monkeypatch: Any) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 2. O TETO E O `+N`
+# 2. A LISTA NÃO TEM TETO — e só leva o que não tem outra casa
 # ---------------------------------------------------------------------------
-def test_com_quatro_avisos_a_coluna_mostra_tres_e_conta_o_quarto(
-        monkeypatch: Any) -> None:
-    """*"Até três linhas"*, com ``+N`` se passar — e o quarto NÃO some calado.
+def test_a_lista_leva_todos_os_avisos(monkeypatch: Any) -> None:
+    """Dez avisos, dez linhas: a lista do exame da 09 não tem o teto da coluna.
 
-    O ``+N`` OCUPA A QUARTA LINHA e não sai do teto: somá-lo ao teto faria a
-    coluna mostrar três e só avisar a partir do QUINTO, escondendo o quarto sem
-    contá-lo — o defeito exato que esta linha existe para fechar.
-
-    A MORDIDA: apague o bloco ``if sobra > 0:`` de `_coluna_de_avisos` e a
-    coluna volta a mostrar três de quatro sem uma palavra — reprova na segunda
-    asserção.
-    """
-    _so_estes(monkeypatch, [
-        {"selo": "PAUSA", "texto": "a", "fonte": "x"},
-        {"selo": "GAMEPAD", "texto": "b", "fonte": "x"},
-        {"selo": "RÁDIO", "texto": "c", "fonte": "x"},
-        {"selo": "PERFIL", "texto": "d", "fonte": "x"},
-    ])
-    fora = aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO))
-    assert fora["aviso-texto"][:3] == ["a", "b", "c"]
-    assert fora["aviso-selo"][3] == "+1", (
-        f"o quarto aviso sumiu calado: {fora['aviso-selo']!r}")
-    assert "1 aviso" in fora["aviso-texto"][3], (
-        f"a linha do `+N` não diz quantos ficaram: {fora['aviso-texto'][3]!r}")
-    # E O ACENDEDOR ACOMPANHA: uma linha escrita e não acesa não aparece.
-    assert fora["aviso-vivo"] == ["1"] * 4 + [""] * (aba.AVISOS_VIVOS - 4)
-
-
-def test_com_tres_avisos_nao_nasce_linha_de_mais(monkeypatch: Any) -> None:
-    """Exatamente no teto, o ``+N`` não existe — ele não é decoração.
-
-    A MORDIDA: troque `if sobra > 0` por `if sobra >= 0` e a coluna passa a
-    escrever "+0" numa máquina com três avisos.
-    """
-    _so_estes(monkeypatch, [
-        {"selo": "PAUSA", "texto": "a", "fonte": "x"},
-        {"selo": "GAMEPAD", "texto": "b", "fonte": "x"},
-        {"selo": "RÁDIO", "texto": "c", "fonte": "x"},
-    ])
-    selos, _ = _acesas(aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO)))
-    assert len(selos) == aba.AVISOS_NA_COLUNA
-    assert not any(s.startswith("+") for s in selos), (
-        f"nasceu um `+N` sem nada de fora: {selos!r}")
-
-
-def test_a_coluna_nunca_escreve_mais_linhas_do_que_a_pagina_publica(
-        monkeypatch: Any) -> None:
-    """O teto do produto tem de caber no teto da página.
-
-    São dois números diferentes de propósito (`AVISOS_NA_COLUNA` < `AVISOS_
-    VIVOS`), e esta régua é o que impede o dia em que alguém subir o primeiro
-    sem olhar o segundo: o piloto distribui a lista pelos elementos na ORDEM e
-    joga fora o que sobra — sem erro, sem contagem, calado.
-
-    A MORDIDA: ponha `AVISOS_NA_COLUNA = AVISOS_VIVOS` e a linha do `+N` passa
-    a ser a sétima, reprovando aqui.
-    """
-    _so_estes(monkeypatch, [{"selo": "PAUSA", "texto": str(i), "fonte": "x"}
-                            for i in range(20)])
-    fora = aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO))
-    selos, _ = _acesas(fora)
-    assert len(selos) <= aba.AVISOS_VIVOS
-    assert len(fora["aviso-selo"]) == len(fora["aviso-texto"]) == len(
-        fora["aviso-vivo"]) == aba.AVISOS_VIVOS
-
-
-def test_a_conta_ao_lado_continua_dizendo_o_total(monkeypatch: Any) -> None:
-    """A coluna mostra 3 e a conta diz 10 — e é assim que ela sabe que há mais.
-
-    A MORDIDA: passe `len(selos)` a `texto_da_conta` em vez de `len(avisos)` e
-    a tela volta a esconder sete avisos escrevendo "3 avisos".
+    A MORDIDA: corte a devolução de `coluna_de_atencao` em três (o teto que a
+    coluna da Jogar tinha) e esta régua reprova — sete avisos somem calados.
     """
     _so_estes(monkeypatch, [{"selo": "PAUSA", "texto": str(i), "fonte": "x"}
                             for i in range(10)])
-    fora = aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO))
-    assert fora["atencao-conta"] == painel.texto_da_conta(10), (
-        f"a conta deixou de dizer o total: {fora['atencao-conta']!r}")
+    _, textos = _acesas(aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO)))
+    assert textos == [str(i) for i in range(10)], (
+        f"a lista cortou avisos: {textos!r}")
 
 
-# ---------------------------------------------------------------------------
-# 3. O APAGADOR — a coluna vazia tem de APAGAR o aviso do desenho
-# ---------------------------------------------------------------------------
-def test_a_coluna_sem_aviso_apaga_o_que_o_mockup_cravou(monkeypatch: Any) -> None:
-    """Fotografado no DOM vivo em 04/09/2026, e é uma tela se contradizendo.
+def test_as_fontes_com_outra_casa_nao_vao_a_09(monkeypatch: Any) -> None:
+    """O serviço calado, a cura do travamento e o exame dos controles ficam fora.
 
-    Com a máquina dela sem um aviso, a coluna mostrava *"RÁDIO · Dois rádios da
-    bancada estão em portas vizinhas"* — a cena do mockup (`aba01.AVISOS`) — ao
-    lado de *"nenhum aviso"*, escrito pelo produto no mesmo tique.
+    Os três já têm lugar na tela — o Status da 09, o `storm_report` do exame da
+    09 e a aba Conexões —, e a mesma notícia duas vezes é duas verdades para
+    divergir. O canal (`_avisos`) continua colhendo os três.
 
-    A CAUSA ESTÁ FORA DESTA ABA e vale para todas: `pacotes.normalizar` descarta
-    lista VAZIA (`if valor and all(...)`), então os três endereços não chegavam
-    ao JS e o piloto **nunca visitava** os seis elementos — medido pelo selo da
-    visita, `data-hef-visto` ausente nos seis. A cura daqui é declarar as seis
-    linhas sempre, que é certo por si: quem publica seis lugares diz o que cada
-    um dos seis mostra.
-
-    A MORDIDA: troque o `vazias = [""] * (...)` por `vazias = []` e a lista volta
-    a sair vazia — `normalizar` a come, e o aviso do desenho fica na tela para
-    sempre. Reprova nas duas asserções abaixo.
+    A MORDIDA: faça `coluna_de_atencao` devolver `_em_ordem(_avisos(ctx))` e
+    esta régua reprova nas três fontes.
     """
-    from pacotes import normalizar
+    monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [])
+    monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
+    monkeypatch.setattr(
+        home_actions, "aviso_de_opt_out_antigo", lambda *a, **k: None)
+    monkeypatch.setattr(aba, "_aviso_da_cura_do_travamento", lambda: {
+        "selo": aba.SELO_DA_CURA, "texto": "a cura", "fonte": "storm_doctor.check_snd_quirk"})
+    monkeypatch.setattr(aba, "_do_exame", lambda: [
+        {"selo": "AVISO", "titulo": "um achado grave", "grave": True}])
+    vazio = Contexto(state={}, mesa=[], conectados=[], estados={})
 
-    _so_estes(monkeypatch, [])
-    fora = aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO))
-    assert fora["atencao-conta"] == "nenhum aviso"
-    for campo in ("aviso-selo", "aviso-texto", "aviso-vivo"):
-        assert fora[campo] == [""] * aba.AVISOS_VIVOS, (
-            f"{campo} não sai com as {aba.AVISOS_VIVOS} vazias: {fora[campo]!r}")
-        assert campo in normalizar(fora)["mesa"], (
-            f"{campo} não sobreviveu ao despachante — o endereço não chega ao "
-            "JS, e o aviso que o mockup cravou fica na tela")
+    no_canal = {a["fonte"] for a in aba._avisos(vazio)}
+    assert {"storm_doctor.check_snd_quirk", "a08_conexoes._exame",
+            "home_actions._render_home (ramo offline)"} <= no_canal, (
+        f"o canal perdeu uma fonte: {sorted(no_canal)}")
+    assert aba.coluna_de_atencao(vazio) == [], (
+        "uma fonte que já tem casa na tela foi levada à lista da 09: "
+        f"{aba.coluna_de_atencao(vazio)!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -381,10 +312,8 @@ def test_a_cura_ativa_nao_vira_alarme(monkeypatch: Any, tmp_path: Any) -> None:
     assert selo == storm_doctor.OK, "o estado montado não é o `[ OK ]` do dono"
 
     assert aba._aviso_da_cura_do_travamento() is None
-    fora = aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO))
-    assert fora["atencao-conta"] == "nenhum aviso", (
-        f"a cura DE PÉ acendeu a coluna: {fora['aviso-texto']!r}")
-    assert fora["aviso-selo"] == [""] * aba.AVISOS_VIVOS
+    fora = _canal(_ctx(VIVO_NAVEGACAO))
+    assert fora == [], f"a cura DE PÉ virou aviso: {fora!r}"
 
 
 def test_a_cura_ausente_chega_a_coluna(monkeypatch: Any, tmp_path: Any) -> None:
@@ -405,12 +334,10 @@ def test_a_cura_ausente_chega_a_coluna(monkeypatch: Any, tmp_path: Any) -> None:
     selo, frase = _maquina(monkeypatch, "", tmp_path / "nao-existe.conf")
     assert selo == storm_doctor.WARN, "o estado montado não é o `[WARN]` do dono"
 
-    fora = aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO))
-    selos, textos = _acesas(fora)
+    selos, textos = _acesas(_canal(_ctx(VIVO_NAVEGACAO)))
     assert textos == [frase], (
-        f"a frase do dono não chegou inteira à coluna: {textos!r}")
+        f"a frase do dono não chegou inteira ao canal: {textos!r}")
     assert selos == [aba.SELO_DA_CURA], f"o selo não é o da cura: {selos!r}"
-    assert fora["atencao-conta"] == painel.texto_da_conta(1)
 
 
 def test_a_cura_agendada_tambem_e_trabalho_pendente(
@@ -435,21 +362,21 @@ def test_a_cura_agendada_tambem_e_trabalho_pendente(
     selo, frase = _maquina(monkeypatch, "", conf)
     assert selo == storm_doctor.INFO, "o estado montado não é o `[INFO]` do dono"
 
-    _, textos = _acesas(aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO)))
+    _, textos = _acesas(_canal(_ctx(VIVO_NAVEGACAO)))
     assert textos == [frase], (
-        f"a cura AGENDADA não chegou à coluna: {textos!r}")
+        f"a cura AGENDADA não chegou ao canal: {textos!r}")
 
 
 def test_o_selo_novo_esta_na_escada(monkeypatch: Any, tmp_path: Any) -> None:
-    """``CONTROLE`` está em `ORDEM_DA_GRAVIDADE` — senão a máquina cheia o some.
+    """``CONTROLE`` está em `ORDEM_DA_GRAVIDADE` — senão a cura desce.
 
-    O que não está na tupla vai para DEPOIS DE TUDO (`posto.get(..., fim)`), e
-    com a coluna mostrando três de cada vez isso é o mesmo que esconder a linha
-    atrás do ``+N``. Os três avisos de companhia são todos MENOS graves que a
-    queda do controle, então na escada certa a cura vem em primeiro.
+    O que não está na tupla vai para DEPOIS DE TUDO (`posto.get(..., fim)`),
+    abaixo de notícias menos graves. Os três avisos de companhia são todos
+    MENOS graves que a queda do controle, então na escada certa a cura vem em
+    primeiro.
 
     A MORDIDA: tire ``"CONTROLE"`` de `ORDEM_DA_GRAVIDADE` e deixe a fonte no
-    lugar — a linha da cura cai para o fim, some no ``+1`` e as duas asserções
+    lugar — a linha da cura cai para o fim e as duas últimas asserções
     reprovam.
     """
     monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [
@@ -463,13 +390,12 @@ def test_o_selo_novo_esta_na_escada(monkeypatch: Any, tmp_path: Any) -> None:
         home_actions, "aviso_de_opt_out_antigo", lambda *a, **k: None)
     _, frase = _maquina(monkeypatch, "", tmp_path / "nao-existe.conf")
 
-    fora = aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO))
+    selos, textos = _acesas(_canal(_ctx(VIVO_NAVEGACAO)))
     assert aba.SELO_DA_CURA in aba.ORDEM_DA_GRAVIDADE, (
         "o selo da cura saiu da escada — ele vai para depois de tudo")
-    assert fora["aviso-selo"][0] == aba.SELO_DA_CURA, (
-        f"a cura não subiu na escada: {fora['aviso-selo']!r}")
-    assert frase in fora["aviso-texto"][:aba.AVISOS_NA_COLUNA], (
-        f"a linha da cura sumiu atrás do `+N`: {fora['aviso-texto']!r}")
+    assert selos[0] == aba.SELO_DA_CURA, (
+        f"a cura não subiu na escada: {selos!r}")
+    assert textos[0] == frase, f"a frase da cura não é a do dono: {textos!r}"
 
 
 def test_o_selo_nao_e_o_do_radio(monkeypatch: Any, tmp_path: Any) -> None:
@@ -492,7 +418,7 @@ def test_o_selo_nao_e_o_do_radio(monkeypatch: Any, tmp_path: Any) -> None:
         home_actions, "aviso_de_opt_out_antigo", lambda *a, **k: None)
     _maquina(monkeypatch, "", tmp_path / "nao-existe.conf")
 
-    selos, _ = _acesas(aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO)))
+    selos, _ = _acesas(_canal(_ctx(VIVO_NAVEGACAO)))
     assert aba.SELO_DA_CURA != "RÁDIO", "a cura do cabo pegou o selo do rádio"
     assert len(set(selos)) == len(selos) == 2, (
         f"o cabo e o rádio saíram com o mesmo selo: {selos!r}")
@@ -506,8 +432,9 @@ def test_a_fonte_que_levanta_vira_erro_e_nao_derruba_a_coluna(
     é a PRIMEIRA desta coluna a tocar o disco a cada tique — um `/sys`
     remontado ou um `/etc` sem permissão não pode apagar as outras nove linhas.
 
-    A MORDIDA: tire o `try/except` que embrulha a chamada em `_avisos` e a
-    `coluna_de_atencao` inteira levanta — as outras dez linhas somem com ela.
+    A MORDIDA: tire o `try/except` que embrulha a chamada em
+    `_avisos_com_outra_casa` e o canal inteiro levanta — as outras linhas somem
+    com ele.
 
     ELA JÁ DERRUBOU O `pacote()` INTEIRO, e isso mudou em 07/09/2026: `_avisos`
     era chamado no meio de `pacote()`, então uma fonte que quebrasse levava
@@ -525,7 +452,7 @@ def test_a_fonte_que_levanta_vira_erro_e_nao_derruba_a_coluna(
         home_actions, "aviso_de_opt_out_antigo", lambda *a, **k: None)
     monkeypatch.setattr(aba, "_aviso_da_cura_do_travamento", _explode)
 
-    selos, textos = _acesas(aba.coluna_de_atencao(_ctx(VIVO_NAVEGACAO)))
+    selos, textos = _acesas(_canal(_ctx(VIVO_NAVEGACAO)))
     assert selos == ["ERRO"], f"a fonte que levantou não virou ERRO: {selos!r}"
     assert "OSError" in textos[0], (
         f"o aviso de erro não diz o que quebrou: {textos[0]!r}")
@@ -573,3 +500,71 @@ def test_a_frase_da_cura_nao_se_digita_nesta_aba(tmp_path: Any) -> None:
         "a frase da cura foi redigitada em código:\n  " + "\n  ".join(acusados)
         + "\nEla vem inteira de `storm_doctor.check_snd_quirk` e de mais lugar "
           "nenhum")
+
+
+# ---------------------------------------------------------------------------
+# 5. A ABA SISTEMA RECEBE O CANAL — A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026
+#
+# A lápide de `coluna_de_atencao` dizia, desde 07/09: *"O destino proposto é a
+# aba 09, Sistema — é o que a própria frase viva manda ('A aba Sistema diz por
+# quê'), e a página já publica uma lista de achados com selo, glifo e frase
+# (`exame-lista`)"*. É o que estas três medem.
+# ---------------------------------------------------------------------------
+def test_a_lista_do_exame_da_09_recebe_os_avisos(monkeypatch: Any) -> None:
+    """O aviso entra no fim da lista do exame, com o selo AVISO do desenho.
+
+    O SELO NÃO SE DIGITA: o veredito é ``[WARN]`` e quem o traduz é
+    `gui/aba_sistema.exame`, o mesmo dono que traduz as linhas do `doctor`.
+
+    A MORDIDA: faça `_com_os_avisos` devolver o `exame` sem tocar e a frase da
+    pausa some da lista — reprova na primeira asserção.
+    """
+    from pacotes import a09_sistema
+
+    frase = "O Hefesto está em pausa."
+    monkeypatch.setattr(aba, "coluna_de_atencao", lambda _c: [
+        {"selo": "PAUSA", "texto": frase, "fonte": "home_actions.texto_da_pausa"}])
+    exame = {"linhas": [{"selo": "OK", "cls": "ok", "g": "✓", "txt": "do doctor"}],
+             "vazio": ""}
+    fora = a09_sistema._com_os_avisos(exame, _ctx(VIVO_NAVEGACAO))
+    assert [linha["txt"] for linha in fora["linhas"]] == ["do doctor", frase], (
+        f"o aviso não entrou no fim do exame: {fora['linhas']!r}")
+    assert fora["linhas"][-1]["selo"] == "AVISO"
+    assert frase in a09_sistema._html_do_exame(fora)
+
+
+def test_o_exame_que_nao_respondeu_nao_some_atras_do_aviso(monkeypatch: Any) -> None:
+    """Sem linha do exame e com aviso, a frase do vazio vira uma linha de NOTA.
+
+    A MORDIDA: apague o ramo `if not linhas and vazio` de `_com_os_avisos` e a
+    falha de leitura do exame passa por máquina lida — reprova aqui.
+    """
+    from pacotes import a09_sistema
+
+    monkeypatch.setattr(aba, "coluna_de_atencao", lambda _c: [
+        {"selo": "RÁDIO", "texto": "o rádio está frágil", "fonte": "x"}])
+    nao_respondeu = a09_sistema._tela.exame(None)
+    fora = a09_sistema._com_os_avisos(nao_respondeu, _ctx(VIVO_NAVEGACAO))
+    textos = [linha["txt"] for linha in fora["linhas"]]
+    assert textos == [nao_respondeu["vazio"], "o rádio está frágil"], textos
+
+
+def test_o_pacote_da_09_passa_o_exame_pelos_avisos() -> None:
+    """`a09_sistema.pacote` chama `_com_os_avisos` antes de desenhar o exame.
+
+    Medido pelo FONTE, e não pelo pacote inteiro: ele pergunta ao `systemctl`,
+    ao disco e ao Proton, e cada dublê a mais é uma chance de a régua medir o
+    dublê. O que se cobra aqui é a costura; o que ela faz, as duas acima.
+
+    A MORDIDA: troque `_html_do_exame(_com_os_avisos(exame, ctx))` por
+    `_html_do_exame(exame)` e esta régua reprova.
+    """
+    import ast
+
+    fonte = (INTERFACE / "pacotes" / "a09_sistema.py").read_text(encoding="utf-8")
+    pacote = next(no for no in ast.walk(ast.parse(fonte))
+                  if isinstance(no, ast.FunctionDef) and no.name == "pacote")
+    chamadas = {no.func.id for no in ast.walk(pacote)
+                if isinstance(no, ast.Call) and isinstance(no.func, ast.Name)}
+    assert "_com_os_avisos" in chamadas, (
+        "o pacote da 09 deixou de levar os avisos do produto ao exame")

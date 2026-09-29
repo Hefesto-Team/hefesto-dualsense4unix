@@ -117,12 +117,10 @@ def test_a_ponte_chega_a_COLUNA_e_nao_so_a_funcao() -> None:  # noqa: N802
     """
     ctx = Contexto(state=SEM_PONTE, mesa=[], conectados=[], estados={})
     fora = aba.coluna_de_atencao(ctx)
-    assert aba.SELO_DA_PONTE in fora["aviso-selo"], (
-        f"a ponte não chegou à coluna Atenção: {fora['aviso-selo']!r}")
-    i = fora["aviso-selo"].index(aba.SELO_DA_PONTE)
-    assert "nenhuma" in fora["aviso-texto"][i]
-    # E ELA ENTRA NA CONTA: a coluna e o número ao lado falam do mesmo conjunto.
-    assert fora["atencao-conta"] == painel.texto_da_conta(len(aba._avisos(ctx)))
+    selos = [a["selo"] for a in fora]
+    assert aba.SELO_DA_PONTE in selos, (
+        f"a ponte não chegou à lista que a aba Sistema recebe: {selos!r}")
+    assert "nenhuma" in fora[selos.index(aba.SELO_DA_PONTE)]["texto"]
 
 
 def test_a_boa_noticia_da_ponte_nao_entra() -> None:

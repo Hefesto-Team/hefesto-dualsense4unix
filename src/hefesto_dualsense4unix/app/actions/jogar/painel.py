@@ -671,9 +671,9 @@ def aviso_do_modo_nativo(state: dict[str, Any] | None) -> str | None:
     """A linha da Conexão Nativa quando há mais de um controle, ou ``None``.
 
     **SÓ COM DOIS OU MAIS, e o teto é o ponto.** Com um controle só não existe
-    pergunta de co-op — a linha seria ruído numa coluna que se chama Atenção, e
-    a coluna mostra três de cada vez (``a01_jogar.AVISOS_NA_COLUNA``): um aviso
-    que fala sempre empurra para o ``+N`` os que falam quando dói.
+    pergunta de co-op — a linha seria ruído numa lista de avisos (hoje, a do
+    exame da aba Sistema), e um aviso que fala sempre enterra os que falam
+    quando dói.
 
     **É A ÚNICA DAS SETE QUE NÃO MORA EM ``home_actions``**, e é escolha, não
     descuido. A frase nasceu nesta leva e o dono dela é esta aba; pô-la lá
@@ -1009,9 +1009,8 @@ AVISOS_DA_TELA: tuple[Aviso, ...] = (
     # --- JOGAR-OS-SEIS-AVISOS-01, 06/09/2026: as cinco que faltavam ---------
     #
     # NENHUM SELO NOVO, e é escolha medida. `a01_jogar.ORDEM_DA_GRAVIDADE` diz
-    # que o que não está na tupla dela cai DEPOIS DE TUDO — e com a coluna
-    # mostrando três de cada vez (`AVISOS_NA_COLUNA`), um selo fora da escada é
-    # um selo que a máquina cheia esconde atrás do `+N`. As cinco entram nos
+    # que o que não está na tupla dela cai DEPOIS DE TUDO — abaixo de notícias
+    # menos graves que ele. As cinco entram nos
     # degraus que já existem, pelo assunto de cada uma.
     #
     # `MODO` — a tela promete "Controlar o PC" e o controle não move o cursor.

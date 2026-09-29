@@ -790,17 +790,16 @@ def test_o_servico_calado_diz_e_para_de_afirmar() -> None:
     # saiu da Jogar por ordem dela, então o canal deixou de viajar no `pacote()`
     # e passou a ter porta própria (`coluna_de_atencao`). O que a régua mede não
     # mudou: a coluna DIZ, e a página para de afirmar.
-    coluna = aba.coluna_de_atencao(ctx)
+    # 28/09/2026: o canal inteiro é `_avisos`; `coluna_de_atencao` passou a ser
+    # a lista da aba Sistema, que deixa o serviço calado com o Status dela.
+    canal = aba._avisos(ctx)
     fora = aba.pacote(ctx)
 
-    assert aba.SELO_DO_SERVICO in coluna["aviso-selo"], (
-        "a coluna Atenção ficou calada com o serviço calado — e a conta ao lado "
-        "diz 'nenhum aviso', que é a tela afirmando sobre um estado que ninguém "
-        "leu")
-    i = list(coluna["aviso-selo"]).index(aba.SELO_DO_SERVICO)
-    assert coluna["aviso-texto"][i] == aba.SERVICO_CALADO
-    assert coluna["atencao-conta"] != _painel_do_produto().texto_da_conta(0), (
-        "a conta continuou dizendo 'nenhum aviso' com a linha do serviço acesa")
+    selos = [a["selo"] for a in canal]
+    assert aba.SELO_DO_SERVICO in selos, (
+        "o canal ficou calado com o serviço calado — a tela afirmando sobre um "
+        "estado que ninguém leu")
+    assert canal[selos.index(aba.SELO_DO_SERVICO)]["texto"] == aba.SERVICO_CALADO
 
     # E NADA MAIS É AFIRMADO: as outras respostas da aba continuam mudas.
     assert fora["hef-posicao"] == "", "o interruptor acendeu sem estado"
@@ -828,8 +827,8 @@ def test_com_o_servico_vivo_a_linha_do_servico_nao_existe() -> None:
     """
     c1 = {"uniq": P1, "connected": True, "player_slot": 1, "player": 1,
           "is_primary": True, "transport": "usb"}
-    fora = aba.coluna_de_atencao(_ctx([c1]))
-    assert aba.SELO_DO_SERVICO not in fora["aviso-selo"], (
+    fora = aba._avisos(_ctx([c1]))
+    assert aba.SELO_DO_SERVICO not in [a["selo"] for a in fora], (
         "a linha do serviço calado continuou na coluna com o daemon vivo")
 
 
@@ -841,15 +840,15 @@ def test_o_selo_do_servico_abre_a_escada_da_gravidade() -> None:
     com ele, nem a pausa se sabe.
 
     A MORDIDA: tire ``SERVIÇO`` de `ORDEM_DA_GRAVIDADE` e ele cai para DEPOIS de
-    tudo (`posto.get(..., fim)`), onde a coluna cheia o esconde atrás do ``+N``.
+    tudo (`posto.get(..., fim)`), abaixo de notícias menos graves.
     """
     assert aba.ORDEM_DA_GRAVIDADE[0] == aba.SELO_DO_SERVICO, (
         "o selo do serviço saiu da frente da escada")
-    selos, _ = aba._coluna_de_avisos([
+    selos = [a["selo"] for a in aba._em_ordem([
         {"selo": "PERFIL", "texto": "a"}, {"selo": "PAUSA", "texto": "b"},
         {"selo": aba.SELO_DO_SERVICO, "texto": "c"},
-    ])
-    assert selos[0] == aba.SELO_DO_SERVICO, f"a coluna ordenou {selos!r}"
+    ])]
+    assert selos[0] == aba.SELO_DO_SERVICO, f"o canal ordenou {selos!r}"
 
 
 def test_a_frase_do_servico_e_a_que_ela_ja_leu() -> None:

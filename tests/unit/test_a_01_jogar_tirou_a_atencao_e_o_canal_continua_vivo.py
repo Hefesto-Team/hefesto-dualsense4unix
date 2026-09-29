@@ -36,7 +36,6 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
-from hefesto_dualsense4unix.app.actions.jogar import painel
 from hefesto_dualsense4unix.interface import onde
 from pacotes import Contexto
 from pacotes import a01_jogar as aba
@@ -159,52 +158,53 @@ def test_o_travessao_solto_dos_externos_morreu() -> None:
 # 2. A METADE QUE NINGUÉM PEDIU — o canal não morre com a tela
 # ---------------------------------------------------------------------------
 def test_as_onze_fontes_continuam_de_pe_e_com_porta_propria() -> None:
-    """`coluna_de_atencao` responde o que a coluna pintava — sem página nenhuma.
+    """`coluna_de_atencao` responde a lista que a aba Sistema recebe.
 
-    É o handoff para quem der casa a estas linhas: a frente recebe a conta do
-    produto, os selos, os textos e o acendedor, já ordenados pela gravidade e já
-    cortados em `AVISOS_NA_COLUNA` com o `+N`.
+    FATO SUBSTITUÍDO — 28/09/2026, A-TELA-PERGUNTA-AO-DONO-01: ela devolvia os
+    quatro endereços da coluna (a conta, os selos, os textos e o acendedor),
+    cortados em três com o `+N`. A coluna saiu da tela em 07/09 e o canal achou
+    casa no exame da 09, que recebe cada aviso com a frase do dono.
 
-    A MORDIDA: apague `coluna_de_atencao` (ou `_avisos`) e esta régua reprova —
-    que é exatamente o que se quer, porque apagar qualquer um dos dois fecha o
-    único caminho por que dez das onze fontes já souberam chegar a uma tela.
+    A MORDIDA: apague `coluna_de_atencao` (ou `_avisos_sem_outra_casa`) e esta
+    régua reprova.
     """
     fora = aba.coluna_de_atencao(_ctx())
-    assert set(fora) == set(DA_COLUNA), (
-        f"a porta do canal mudou de vocabulário: {sorted(fora)}")
-    assert len(fora["aviso-selo"]) == aba.AVISOS_VIVOS
-    assert len(fora["aviso-texto"]) == aba.AVISOS_VIVOS
-    assert len(fora["aviso-vivo"]) == aba.AVISOS_VIVOS
+    assert isinstance(fora, list)
+    for aviso in fora:
+        assert set(aviso) == {"selo", "texto", "fonte"}, (
+            f"a porta do canal mudou de vocabulário: {sorted(aviso)}")
 
 
 def test_o_servico_calado_ainda_encontra_o_canal() -> None:
-    """A fonte que fala quando TODAS as outras calam continua respondendo.
+    """A fonte que fala quando TODAS as outras calam continua no canal.
 
-    Ela é a única das onze que responde sobre a AUSÊNCIA de estado, e por isso é
-    a que mede se o canal sobreviveu à saída da tela: com `state={}` nenhuma
-    outra tem o que dizer.
+    Ela é a única que responde sobre a AUSÊNCIA de estado, e por isso é a que
+    mede se o canal sobreviveu à saída da tela: com `state={}` nenhuma outra
+    tem o que dizer. Ela NÃO vai à lista da 09 — o Status da 09 diz o estado do
+    serviço —, e é o canal inteiro (`_avisos`) que a colhe.
 
     A MORDIDA: troque `_aviso_do_servico_calado` por `return None` — esta régua
     reprova, e a da faixa lá em cima continua verde. É por isso que as duas
     existem.
     """
-    fora = aba.coluna_de_atencao(_ctx({}))
-    assert aba.SELO_DO_SERVICO in fora["aviso-selo"], (
+    selos = [a["selo"] for a in aba._avisos(_ctx({}))]
+    assert aba.SELO_DO_SERVICO in selos, (
         "o canal perdeu a fonte do serviço calado quando a tela saiu")
-    assert fora["atencao-conta"] != painel.texto_da_conta(0), (
-        "a conta voltou a dizer 'nenhum aviso' sobre um estado que ninguém leu")
 
 
 def test_a_unica_fonte_com_segunda_casa_e_o_exame() -> None:
-    """O número que autorizou a remoção, trancado para não envelhecer calado.
+    """A porta do canal é UMA: quem chama as fontes é só o `a01_jogar`.
 
     Das onze fontes, só o exame da mesa (`a08_conexoes._exame`) é publicado
-    noutra aba — a Conexões, de onde ele vem. As outras dez perderam a tela e
-    esperam a aba Sistema, e é ISSO que faz esta remoção uma dívida declarada e
-    não um esquecimento.
+    noutra aba — a Conexões, de onde ele vem. As outras perderam a tela em
+    07/09 e voltaram a ela em 28/09 pela aba Sistema, que as recebe por
+    `coluna_de_atencao` (`a09_sistema._avisos_do_produto`) e não as chama uma a
+    uma: uma segunda aba chamando a fonte direto seria o segundo dono da mesma
+    linha.
 
-    A MORDIDA: dê casa a uma das dez numa aba publicada e esta régua reprova —
-    reprovar aqui é BOA notícia, e o conserto é apagar o nome dela da lista.
+    A MORDIDA: chame uma das fontes de outro pacote de aba e esta régua
+    reprova; faça a 09 deixar de chamar `coluna_de_atencao` e a última
+    asserção reprova.
     """
     pacotes = INTERFACE / "pacotes"
     fontes = {
@@ -225,5 +225,10 @@ def test_a_unica_fonte_com_segunda_casa_e_o_exame() -> None:
                   if f"{fonte}(" in (pacotes / c).read_text(encoding="utf-8")
                   or f"{fonte}:" in (pacotes / c).read_text(encoding="utf-8")]
         assert chamam in ([], ["a01_jogar.py"]), (
-            f"{oque} ganhou casa em {chamam} — se for uma aba PUBLICADA, o "
-            f"canal achou destino e o docstring de `_avisos` tem de dizê-lo")
+            f"{oque} é chamada direto por {chamam} — a porta do canal é "
+            "`a01_jogar.coluna_de_atencao`, e uma segunda porta é um segundo "
+            "dono da mesma linha")
+    do_sistema = (pacotes / "a09_sistema.py").read_text(encoding="utf-8")
+    assert "a01_jogar.coluna_de_atencao(ctx)" in do_sistema, (
+        "a aba Sistema deixou de receber o canal — os avisos voltam a ficar "
+        "calados no produto")

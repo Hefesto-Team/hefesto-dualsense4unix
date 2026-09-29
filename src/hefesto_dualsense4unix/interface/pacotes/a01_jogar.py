@@ -197,29 +197,12 @@ POR_CARTAO: tuple[str, ...] = ("plastico", "desenho", "jogador", "jogador-espera
                                "bateria", "identidade", "mascara-cartao",
                                "marcador-principal")
 
-#: QUANTOS `aviso-item` A COLUNA TEM. **Este é o dono do número**, e o gerador o
-#: lê daqui (`aba01.py` importa esta constante) — a direção é essa e não a
-#: inversa: o produto não pode depender do gerador, que puxa os SVGs e a folha
-#: de estilo para montar uma página que ele nunca vai abrir.
-#:
-#: SÃO SEIS PORQUE SEIS É O QUE O PRODUTO SABE DIZER: `painel.AVISOS_DA_TELA`
-#: tem seis fontes puras. O opt-out antigo e os achados graves do exame entram
-#: por cima disso, e é por isso que a conta ao lado (`atencao-conta`) diz o
-#: TOTAL e não o que coube — uma coluna que mostra 6 de 8 e escreve "6 avisos"
-#: esconderia dois sem dizer que os escondeu.
-AVISOS_VIVOS = 6
-
-#: QUANTAS A COLUNA ACENDE — decisão dela, 04/09/2026 (D-09): *"Até três linhas,
-#: o mais grave em cima."*, com ``+N`` se passar.
-#:
-#: SÃO DOIS NÚMEROS DIFERENTES, E ISSO NÃO É DESCUIDO. :data:`AVISOS_VIVOS` é
-#: quantas linhas a PÁGINA publica (endereço, e endereço não move pixel); este é
-#: quantas o PRODUTO acende. O quarto lugar recebe a linha do ``+N``, e os dois
-#: que sobram ficam apagados — prontos para o dia em que ela subir o teto, o que
-#: custa esta constante e nada mais. Cravar os dois no mesmo número faria a
-#: coluna crescer até seis numa máquina ruim, que é o vão de 38 px que ela
-#: reclamou em 31/08.
-AVISOS_NA_COLUNA = 3
+# `AVISOS_VIVOS` (as seis linhas que a página publicava) e `AVISOS_NA_COLUNA`
+# (as três que a D-09 acendia, com o `+N`) SAÍRAM — A-TELA-PERGUNTA-AO-DONO-01,
+# 28/09/2026. Eram o desenho da coluna Atenção da Jogar, que saiu da tela em
+# 07/09 por ordem dela; a lista do exame da 09, que recebeu os avisos, mostra
+# todos em duas colunas e não tem teto. O que da D-09 sobrevive é a ORDEM
+# (*"o mais grave em cima"*), logo abaixo.
 
 #: A ORDEM DA GRAVIDADE, do que mais dói para o que menos dói — a outra metade
 #: da D-09 (*"o mais grave em cima"*).
@@ -247,12 +230,10 @@ AVISOS_NA_COLUNA = 3
 #: (`a08_conexoes._exame`). Uma lista que tentasse ranqueá-los aqui seria a
 #: segunda cópia de uma escada que `secao_exame.ESCADA_DE_GRAVIDADE` já tem.
 #:
-#: **O SELO NOVO TINHA DE ENTRAR NA TUPLA, e não é asseio.** O que não está
-#: aqui vai para DEPOIS DE TUDO (`posto.get(..., fim)` em
-#: :func:`_coluna_de_avisos`) — que é o desenho certo para os achados do exame
-#: e o errado para um selo nomeado neste arquivo: com a coluna mostrando três
-#: de cada vez (:data:`AVISOS_NA_COLUNA`), um selo fora da escada é um selo que
-#: a máquina cheia esconde atrás do ``+N``.
+#: **O SELO NOVO TEM DE ENTRAR NA TUPLA, e não é asseio.** O que não está
+#: aqui vai para DEPOIS DE TUDO (`posto.get(..., fim)` em :func:`_em_ordem`) —
+#: que é o desenho certo para os achados do exame e o errado para um selo
+#: nomeado neste arquivo: ele desceria abaixo de notícias menos graves.
 #: ``SERVIÇO`` ABRE A ESCADA — JOGAR-O-QUE-FALTA-01, Passo 5 (06/09/2026), e o
 #: critério é o mesmo que já põe a ``PAUSA`` na frente: *o que invalida o quê*.
 #: Com o serviço calado nem a PAUSA se sabe — ninguém respondeu se o produto
@@ -323,21 +304,6 @@ SERVICO_CALADO = (
     f"{SERVICO_DESLIGADO} Esta tela parou de ler o serviço. Ela volta sozinha "
     "quando ele responder."
 )
-
-#: A LINHA DO ``+N`` — o que a coluna diz quando não coube tudo.
-#:
-#: PROVISÓRIO — texto de tela é palavra dela (PROVA-DE-TELA-01). O que a D-09
-#: fixou foi a FORMA (*"com `+N` se passar de três"*); a frase é minha até ela
-#: ver. Ela nomeia as duas coisas que a pessoa precisa saber para não achar que
-#: a coluna está mentindo: quantos ficaram de fora e por que critério.
-def _linha_do_mais(quantos: int) -> tuple[str, str]:
-    """``(selo, texto)`` da linha que fecha a coluna quando não coube tudo."""
-    return (
-        f"+{quantos}",
-        f"mais {quantos} aviso" + ("s" if quantos != 1 else "")
-        + f" — a coluna mostra {AVISOS_NA_COLUNA} de cada vez, do mais grave.",
-    )
-
 
 #: A FRASE DA MESA VAZIA — decisão dela, 04/09/2026 (D-07): *"Uma frase por cima
 #: dos lugares apagados."*
@@ -930,16 +896,11 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
     onze — a cura do travamento do USB. As dez órfãs cabem na MESMA lista, sem
     peça de tela nova.
 
-    **ISTO É PROPOSTA, NÃO ENTREGA.** `aba09.py` e `a09_sistema.py` são de outra
-    frente, e escrever nelas no mesmo dia é a colisão que esta casa evita por
-    posse de arquivo. Enquanto a 09 não os recebe, **as dez estão caladas no
-    produto** — está RELATADO, e é o preço declarado da ordem dela, não um
-    esquecimento.
-
-    **NÃO APAGUE ESTA FUNÇÃO POR ESTAR SEM CHAMADOR NA TELA.** Ela é o único
-    ponto do produto novo que reúne as onze; apagá-la faria a frente da 09
-    reescrever de zero as onze chamadas, com os quatro `try` próprios e a ordem
-    de gravidade que já estão medidos aqui.
+    **E FORAM — 28/09/2026, A-TELA-PERGUNTA-AO-DONO-01.** O pacote da 09
+    (`a09_sistema.pacote`) pergunta a :func:`coluna_de_atencao` e acrescenta as
+    linhas ao exame, com o selo de aviso do exame. Vão as fontes SEM outra casa
+    (:func:`_avisos_sem_outra_casa`); as três que a tela já mostra em outro
+    lugar ficam no canal e fora da 09.
 
     **NADA SE ESCREVE AQUI.** As fontes já existiam, e todas fora deste
     arquivo — o que faltava era o produto novo CHAMÁ-LAS. Medido em
@@ -993,14 +954,30 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
     gamepad virtual que o jogo vê. Inventar um selo a mais poria uma palavra de
     tela num arquivo que não é o dono de nenhuma.
     """
-    painel = _painel()
     # O SERVIÇO CALADO VEM ANTES DE TUDO, e é a única fonte desta coluna que
     # RESPONDE SOBRE A AUSÊNCIA de estado — ver `_aviso_do_servico_calado`. As
     # outras perguntam ao `state`; sem ele, todas calam, e o silêncio delas
     # era a tela dizendo "nenhum aviso" sobre um estado que ninguém leu.
     calado = _aviso_do_servico_calado(ctx)
     fora: list[dict[str, str]] = [calado] if calado else []
-    fora += list(painel.avisos_do_estado(ctx.state))
+    fora += _avisos_sem_outra_casa(ctx)
+    fora += _avisos_com_outra_casa()
+    return fora
+
+
+def _avisos_sem_outra_casa(ctx: Contexto) -> list[dict[str, str]]:
+    """As fontes que SÓ a coluna Atenção publicava — as que vão à aba Sistema.
+
+    SEPARADAS DAS OUTRAS em 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01), quando a
+    lista do exame da 09 passou a recebê-las (:func:`coluna_de_atencao`). As
+    três que ficam de fora já têm casa na tela, e levá-las à 09 poria a mesma
+    notícia duas vezes: o serviço calado (o Status da 09 diz o estado do
+    serviço), a cura do travamento do USB (o exame da 09 a lê pelo mesmo dono,
+    `storm_doctor.check_snd_quirk`, dentro do `storm_report`) e os achados do
+    exame dos controles (a aba Conexões, de onde eles vêm).
+    """
+    painel = _painel()
+    fora: list[dict[str, str]] = list(painel.avisos_do_estado(ctx.state))
 
     try:
         from hefesto_dualsense4unix.app.actions import home_actions
@@ -1037,6 +1014,18 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
                               f"({type(erro).__name__}).",
                      "fonte": "home_actions.mascara_divergente_do_daemon"})
 
+    return fora
+
+
+def _avisos_com_outra_casa() -> list[dict[str, str]]:
+    """As duas fontes do canal que a tela já mostra em outro lugar.
+
+    Ver :func:`_avisos_sem_outra_casa`: a cura do travamento chega ao exame da
+    aba Sistema pelo `storm_report`, e os achados graves do exame dos controles
+    moram na aba Conexões. Elas continuam no canal (:func:`_avisos`) porque ele
+    é a lista inteira do que o produto sabe avisar.
+    """
+    fora: list[dict[str, str]] = []
     # A CURA DO TRAVAMENTO DO USB — sob `try` PRÓPRIO, que é a política deste
     # arquivo: uma fonte que levanta não derruba a coluna, ela vira selo
     # ``ERRO``. Esta lê DOIS ARQUIVOS DO SISTEMA por chamada — se um `/sys`
@@ -1314,106 +1303,46 @@ def _aviso_da_cura_do_travamento() -> dict[str, str] | None:
             "fonte": "storm_doctor.check_snd_quirk"}
 
 
-def _coluna_de_avisos(avisos: list[dict[str, str]]) -> tuple[list[str], list[str]]:
-    """``(selos, textos)`` da coluna — o mais grave em cima, e o ``+N`` no fim.
+def _em_ordem(avisos: list[dict[str, str]]) -> list[dict[str, str]]:
+    """Os avisos com o mais grave em cima — a metade da D-09 que sobreviveu.
 
-    A D-09 dela, em duas metades: *"Até três linhas, o mais grave em cima"*,
-    *"com `+N` se passar de três"*.
+    A D-09 dela, 04/09/2026: *"Até três linhas, o mais grave em cima"*. O teto
+    de três e o ``+N`` eram da coluna Atenção da Jogar, que saiu da tela em
+    07/09; a ORDEM continua, porque a lista que os recebeu (o exame da 09) os
+    lê de cima para baixo.
 
-    A ORDENAÇÃO É ESTÁVEL, e isso é o que faz a coluna parar quieta: dois
-    avisos do mesmo selo mantêm a ordem em que as fontes falaram, então a linha
-    não troca de lugar a cada tique só porque um dicionário mudou de humor. O
-    que não está em :data:`ORDEM_DA_GRAVIDADE` cai depois de tudo, na ordem de
-    chegada — são os achados do exame, que já vêm ordenados pelo dono.
-
-    O ``+N`` OCUPA UMA LINHA, e ela não sai do teto: com quatro avisos a coluna
-    mostra três e diz "+1". Somar o ``+N`` ao teto faria a coluna mostrar três
-    avisos e a linha do "+1" só a partir do QUINTO, escondendo o quarto sem
-    contá-lo — que é o defeito que esta linha existe para fechar.
-
-    E A CONTA AO LADO CONTINUA DIZENDO O TOTAL (`atencao-conta`, do
-    `painel.texto_da_conta`): ela conta os avisos, não as linhas. Uma coluna que
-    mostrasse 3 e escrevesse "3 avisos" com cinco na máquina esconderia dois sem
-    dizer que os escondeu.
+    A ORDENAÇÃO É ESTÁVEL, e isso é o que faz a lista parar quieta: dois avisos
+    do mesmo selo mantêm a ordem em que as fontes falaram, então a linha não
+    troca de lugar a cada tique só porque um dicionário mudou de humor. O que
+    não está em :data:`ORDEM_DA_GRAVIDADE` cai depois de tudo, na ordem de
+    chegada.
     """
     posto = {selo: i for i, selo in enumerate(ORDEM_DA_GRAVIDADE)}
     fim = len(ORDEM_DA_GRAVIDADE)
-    ordenados = sorted(avisos, key=lambda a: posto.get(str(a.get("selo") or ""), fim))
-
-    selos = [str(a["selo"]) for a in ordenados[:AVISOS_NA_COLUNA]]
-    textos = [str(a["texto"]) for a in ordenados[:AVISOS_NA_COLUNA]]
-    sobra = len(ordenados) - AVISOS_NA_COLUNA
-    if sobra > 0:
-        selo, texto = _linha_do_mais(sobra)
-        selos.append(selo)
-        textos.append(texto)
-    # AS SEIS SAEM SEMPRE, com `""` no que não tem aviso — e esta linha é uma
-    # CURA, não asseio. Medida no DOM vivo em 04/09/2026, com a máquina dela sem
-    # um aviso: a coluna mostrava *"RÁDIO · Dois rádios da bancada estão em
-    # portas vizinhas"* ao lado de *"nenhum aviso"* — a mesma tela afirmando duas
-    # coisas contrárias. A frase é do MOCKUP (`aba01.AVISOS`, cena declarada), e
-    # ninguém a apagava.
-    #
-    # A CAUSA NÃO É DAQUI, e está nomeada para quem cuidar do despachante:
-    # `pacotes.normalizar` descarta lista VAZIA (`if valor and all(...)`, e
-    # `all([])` já seria `True`), então os três endereços não chegavam ao JS e o
-    # piloto **nunca visitava** os seis elementos — medido pelo selo da visita,
-    # `data-hef-visto` ausente nos seis. Vale para toda aba que emita lista: os
-    # achados do exame na 08 e a lista de perfis na 10 têm o mesmo caminho.
-    #
-    # A CURA DAQUI É CERTA POR SI: quem publica seis lugares tem de dizer o que
-    # cada um dos seis mostra. Depender do `i < v.length ? v[i] : ''` do piloto
-    # é depender de um comportamento; declarar as seis é afirmá-lo — e é o que
-    # faz o endereço vazio APAGAR em vez de deixar o desenho à mostra.
-    vazias = [""] * (AVISOS_VIVOS - len(selos))
-    return (selos + vazias)[:AVISOS_VIVOS], (textos + vazias)[:AVISOS_VIVOS]
+    return sorted(avisos, key=lambda a: posto.get(str(a.get("selo") or ""), fim))
 
 
-def coluna_de_atencao(ctx: Contexto) -> dict[str, Any]:
-    """Os quatro valores que a coluna Atenção pintava — **hoje sem tela**.
+def coluna_de_atencao(ctx: Contexto) -> list[dict[str, str]]:
+    """Os avisos que SÓ a coluna Atenção publicava, o mais grave em cima.
 
-    NASCEU EM 07/09/2026, NO DIA EM QUE A COLUNA SAIU DA JOGAR, e é a metade que
-    a ordem dela não podia levar junto: *"em jogar remover essa seção do
-    atenção, nenhum aviso esse — deixar só o reconectar controles."* A seção
-    saiu; as onze fontes de :func:`_avisos` não têm por que sair com ela.
+    NASCEU EM 07/09/2026, NO DIA EM QUE A COLUNA SAIU DA JOGAR, como a porta por
+    onde a próxima frente pegaria o canal pronto: *"em jogar remover essa seção
+    do atenção, nenhum aviso esse — deixar só o reconectar controles."* A seção
+    saiu; as fontes de :func:`_avisos` não tinham por que sair com ela.
 
-    **É PÚBLICA DE PROPÓSITO, e é o handoff.** A frente que der casa a estas
-    linhas — a aba 09, Sistema, pela razão que :func:`_avisos` mede — chama ESTA
-    função e recebe pronto o que a 01 pintava: a conta do produto, os selos, os
-    textos e o acendedor, já ordenados pela gravidade e já cortados em
-    :data:`AVISOS_NA_COLUNA` com o ``+N``. Sem ela, a próxima frente reescreveria
-    de zero quatro linhas que já custaram três medições.
+    **QUEM A CHAMA É A ABA SISTEMA — 28/09/2026, A-TELA-PERGUNTA-AO-DONO-01.**
+    `a09_sistema.pacote` põe estas linhas na lista do exame (`exame-lista`),
+    que já tinha selo, glifo e frase por linha. A forma de antes — os quatro
+    `data-campo` da coluna, as seis linhas e o ``+N`` — morreu com a coluna, e
+    esta função passou a devolver o que a lista do exame precisa: cada aviso,
+    com a frase do dono dele, na ordem da gravidade.
 
-    **`pacote()` NÃO A CHAMA**, e isso é o ponto: os quatro endereços saíram de
-    :data:`DA_PAGINA` porque a página não os tem mais, e emitir um endereço sem
-    elemento onde pousar é o órfão que o `casamento.py` acusa.
-
-    **AS CHAVES SÃO OS `data-campo` de então**, e não nomes novos: quem receber o
-    canal recebe também o vocabulário com que ele já foi medido, e as onze
-    réguas que o cobram não precisam aprender uma segunda língua.
+    SÓ AS FONTES SEM OUTRA CASA (:func:`_avisos_sem_outra_casa`). O serviço
+    calado, a cura do travamento do USB e os achados do exame dos controles já
+    têm lugar na tela, e a mesma notícia duas vezes seria duas verdades para
+    divergir.
     """
-    avisos = _avisos(ctx)
-    selos, textos = _coluna_de_avisos(avisos)
-    return {
-        # A CONTA É DO PRODUTO — `painel.texto_da_conta`, o mesmo que a bancada
-        # já chamava. Ela sabe dizer "nenhum aviso", que o desenho não tinha (o
-        # mockup cravava "1 aviso") e que é o estado normal de uma máquina
-        # saudável. Ela CONTA OS AVISOS, não as linhas: uma coluna que mostrasse
-        # três e escrevesse "3 avisos" com cinco na máquina esconderia dois.
-        "atencao-conta": _painel().texto_da_conta(len(avisos)),
-        "aviso-selo": selos,
-        "aviso-texto": textos,
-        # O ACENDEDOR DAS LINHAS. Uma linha sem aviso não pode ficar com o
-        # travessão à mostra: seriam seis linhas de `— —` numa máquina sem nada
-        # a dizer. O alvo `classe` sem `data-hef-quando` é BOOLEANO
-        # (`hefesto_vivo.escrever`), e o travessão que o piloto escreve num valor
-        # vazio conta como desligado — então a lista de `"1"` acende exatamente
-        # as que têm texto.
-        # ELE ACOMPANHA AS SEIS, e não só as acesas — ver a nota do
-        # `_coluna_de_avisos`. Uma lista curta some inteira quando fica vazia, e
-        # é justamente a coluna VAZIA que precisa apagar o aviso do desenho.
-        "aviso-vivo": ["1" if s else "" for s in selos],
-    }
+    return _em_ordem(_avisos_sem_outra_casa(ctx))
 
 
 def _frase_da_mesa(ctx: Contexto) -> str:

@@ -278,13 +278,14 @@ def test_fora_do_modo_nativo_a_linha_nao_existe() -> None:
 
 
 def test_a_linha_do_modo_chega_a_coluna_da_aba(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O caminho INTEIRO: do estado ao ``aviso-texto`` que o piloto pinta.
+    """O caminho INTEIRO: do estado à lista que a aba Sistema recebe.
 
     As outras fontes ficam caladas porque esta régua mede o TRAJETO, não a
-    concorrência: a coluna mostra três de cada vez, e um aviso do disco desta
-    máquina empurraria o meu para o ``+N`` — verde aqui, vermelho no CI, e
-    nenhum dos dois falando do defeito medido. `painel.avisos_do_estado` fica
-    REAL de propósito: é ele que está sob medição.
+    concorrência: um aviso do disco desta máquina entraria na lista — verde
+    aqui, vermelho no CI, e nenhum dos dois falando do defeito medido.
+    `painel.avisos_do_estado` fica REAL de propósito: é ele que está sob
+    medição. (Até 28/09/2026 o destino era a coluna Atenção da Jogar, que saiu
+    da tela em 07/09; ver `a01_jogar.coluna_de_atencao`.)
     """
     monkeypatch.setattr(aba, "_do_exame", lambda: [])
     monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
@@ -294,19 +295,19 @@ def test_a_linha_do_modo_chega_a_coluna_da_aba(monkeypatch: pytest.MonkeyPatch) 
     ctx = Contexto(
         state=_estado(nativo=True, quantos=2), mesa=[], conectados=[], estados={})
     fora = aba.coluna_de_atencao(ctx)
-    assert "MODO" in fora["aviso-selo"], (
-        f"o selo do modo não chegou à coluna: {fora['aviso-selo']}")
-    escritos = [t for t in fora["aviso-texto"] if t]
+    selos = [a["selo"] for a in fora]
+    assert "MODO" in selos, (
+        f"o selo do modo não chegou à lista que a aba Sistema recebe: {selos}")
+    escritos = [a["texto"] for a in fora]
     assert any("jogadores" in t for t in escritos), (
-        f"a coluna publicou {escritos} e nenhuma linha fala de jogadores")
+        f"a lista publicou {escritos} e nenhuma linha fala de jogadores")
 
 
 def test_o_selo_do_modo_esta_na_escada_da_gravidade() -> None:
     """Selo fora de ``ORDEM_DA_GRAVIDADE`` vai para DEPOIS DE TUDO.
 
-    E «depois de tudo» com três linhas na coluna é *escondido atrás do ``+N``*.
-    Um selo nomeado no produto e ausente da escada é um aviso que a máquina
-    cheia cala — que é o defeito que esta régua trava.
+    Um selo nomeado no produto e ausente da escada desce abaixo de notícias
+    menos graves — que é o defeito que esta régua trava.
     """
     assert painel.SELO_DO_MODO in aba.ORDEM_DA_GRAVIDADE, (
         f"o selo {painel.SELO_DO_MODO!r} não está na escada de gravidade")
