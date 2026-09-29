@@ -675,7 +675,11 @@ def test_o_interruptor_de_sensor_existe_e_e_por_peca() -> None:
     # ângulo integrado no ritmo do nó, `velocidade_do_movimento` só lê.
     # E `hz_do_movimento` em 23/09/2026 (AR-MEDIDO-01, R10 dela): os pacotes
     # por segundo que o nó recebe AGORA — leitura, não interruptor.
+    # E as duas do toque e da inclinação em 28/09/2026
+    # (NO-MODO-XBOX-TUDO-FUNCIONA-01): `aceleracao_do_movimento` só lê, e
+    # `toque_da_peca` lê o dedo e pede o nó do touchpad enquanto a rota anda.
     assert publicos == {
+        "aceleracao_do_movimento",
         "angulo_do_movimento",
         "entradas",
         "grab_do_movimento",
@@ -683,6 +687,7 @@ def test_o_interruptor_de_sensor_existe_e_e_por_peca() -> None:
         "leitura",
         "reconciliar",
         "stop_all",
+        "toque_da_peca",
         "velocidade_do_movimento",
     }, f"o SensorHub mudou de superfície pública: {sorted(publicos)}"
 
