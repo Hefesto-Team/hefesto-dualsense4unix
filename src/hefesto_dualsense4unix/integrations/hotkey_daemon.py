@@ -360,7 +360,7 @@ class HotkeyManager:
 
         # Rastreamento do PS solo.
         # Se o PS esta pressionado junto com outro botao (combo potencial) e o
-        # combo disparou, marca `_ps_combo_fired` para suprimir o solo no release.
+        # combo disparou, marca `ps_combo_fired` do aperto para suprimir o solo no release.
         if combo_fired is not None and PS_BUTTON in combos[combo_fired]:
             aperto.ps_combo_fired = True
 

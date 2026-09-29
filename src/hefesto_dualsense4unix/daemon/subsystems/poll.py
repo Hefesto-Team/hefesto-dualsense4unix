@@ -82,9 +82,10 @@ def observar_os_atalhos(
     `observe` com os botões do primário. Devolve o nome do primeiro gesto que
     disparou neste tique (ou None), e None sem gerente de atalhos.
 
-    **O PS E AS COMBINAÇÕES VALEM EM QUALQUER UM DOS QUATRO** (decisão dela de
-    27/09, `D-2709-O-PS-R3-EM-QUALQUER-CONTROLE`; O-MODO-XBOX-NAO-E-QUEDA-02,
-    item 5). Medido na sessão dela (G0 e G9 de 27/09): só o «primário» era
+    **O PS E AS COMBINAÇÕES VALEM EM QUALQUER UM DOS QUATRO.** O PS + R3 é
+    decisão dela de 27/09 (resposta 11, `D-2709-O-PS-R3-EM-QUALQUER-CONTROLE`);
+    o item 5 da O-MODO-XBOX-NAO-E-QUEDA-02 estende a regra ao PS sozinho e às
+    outras combinações. Medido na sessão dela (G0 e G9 de 27/09): só o «primário» era
     lido, e o PS do branco, que acende o «1», não abria a Steam. Cada controle
     é lido com o aperto DELE (`observe(..., de=<MAC>)`), e o ato do gesto
     pergunta de quem ele é (:func:`quem_segura_os_atalhos`).
@@ -126,10 +127,14 @@ def botoes_de_cada_controle(
        com o grab pendente, fora dos `live_snapshots`) fica com a mão vazia
        até o leitor abrir o device;
     3. **qualquer outro controle na mesa** — o co-op desmontado: mouse e
-       teclado, o Nativo, o co-op desligado, a suspensão pelo Steam Input: o
-       leitor PASSIVO do `SensorHub` (`entradas`, STATUS-04), sem grab. A
-       primeira pergunta devolve None (o leitor nasce na volta seguinte da
-       thread do hub), e a mão vem vazia nesse tique.
+       teclado, o co-op desligado, a suspensão pelo Steam Input: o leitor
+       PASSIVO do `SensorHub` (`entradas`, STATUS-04), sem grab. A primeira
+       pergunta devolve None (o leitor nasce na volta seguinte da thread do
+       hub), e a mão vem vazia nesse tique.
+
+    O MODO NATIVO NÃO PASSA POR AQUI: o `_poll_loop` congela o tique antes
+    dos atalhos (`input_ready` com `not self._native_mode`), para o P1 e para
+    os outros — é o beco sem saída que o `build_next_bridge_callback` descreve.
 
     A chave é o MAC; a do dono do posto é None quando o backend não tem MAC
     (o `FakeController`). Nunca levanta: uma fonte que falha deixa a mão
