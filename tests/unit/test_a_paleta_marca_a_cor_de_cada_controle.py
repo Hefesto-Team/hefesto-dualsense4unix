@@ -26,6 +26,8 @@ from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.core.led_control import LedSettings
+
 PAGINA = "04-iluminacao.html"
 
 #: Faixa SINTÉTICA da casa, nunca endereço de aparelho.
@@ -84,7 +86,12 @@ def _a_cena_da_foto() -> tuple[list[dict[str, Any]], dict[str, Any]]:
     pecas = [
         _peca(1, (255, 0, 0), 1.0, nome="Cosmic Red", modelo="cosmic-red",
               via="usb"),
-        _peca(2, (0, 0, 20), 0.08, nome="White", modelo="white"),
+        # A LUZ É A QUE O DAEMON PUBLICA HOJE para o azul a 8%, perguntada ao
+        # dono da escala: a foto tinha `(0, 0, 20)`, e desde o piso do brilho
+        # (D-2909-O-BRILHO-TEM-PISO, 29/09/2026) o mesmo azul a 8% acende
+        # mais claro. A cena é a mesma; o byte é o do produto de agora.
+        _peca(2, LedSettings(lightbar=(0, 0, 255)).apply_brightness(0.08).lightbar,
+              0.08, nome="White", modelo="white"),
         _peca(3, (255, 255, 0), 1.0, nome="Starlight Blue",
               modelo="starlight-blue"),
         _peca(4, (249, 249, 249), 0.99, nome="Galactic Purple",

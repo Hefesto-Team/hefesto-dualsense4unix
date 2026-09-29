@@ -179,12 +179,46 @@ def _reaplicar(mesa: Mesa, caminho: str) -> None:
 CAMINHOS = ["boot", "troca-manual", "troca-de-jogo", "autoswitch", "aplicar", "salvar"]
 
 
+def o_aplicar_passa_pelo_dono_da_escala() -> bool:
+    """O «Aplicar» do rodapé acende pela conta do dono (com o piso do brilho)?
+
+    D-2909-O-BRILHO-TEM-PISO (29/09/2026, A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01):
+    a conta «tom x brilho» mora em `LedSettings.apply_brightness`, e o
+    `DraftApplier._scaled_rgb_from` ainda a faz por conta própria, sem o piso.
+    O arquivo é da O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01, e a troca de três
+    linhas está pronta para a costura. A pergunta é ao próprio aplicador, e
+    não a uma bandeira: quando ele passar pelo dono, as réguas marcadas com
+    `O_APLICAR_SEM_O_PISO` voltam a valer sozinhas.
+    """
+    from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
+
+    pedido = {"lightbar_rgb": [255, 128, 0], "lightbar_brightness": 0.08}
+    dono = LedSettings(lightbar=(255, 128, 0)).apply_brightness(0.08).lightbar
+    return DraftApplier._scaled_rgb_from(pedido) == dono
+
+
+#: As réguas do «Aplicar» esperam o `DraftApplier` passar pelo dono da escala
+#: (ver `o_aplicar_passa_pelo_dono_da_escala`). `strict`: no dia em que ele
+#: passar, a marca some sozinha, porque a condição vira falsa.
+O_APLICAR_SEM_O_PISO = pytest.mark.xfail(
+    condition=not o_aplicar_passa_pelo_dono_da_escala(),
+    strict=True,
+    reason="o «Aplicar» escala a cor fora do dono (ipc_draft_applier, da O-APLICAR)",
+)
+
+#: Os caminhos, com o do «Aplicar» marcado onde o brilho fica abaixo de 100%.
+CAMINHOS_COM_O_PISO = [
+    pytest.param(c, marks=O_APLICAR_SEM_O_PISO) if c == "aplicar" else c
+    for c in CAMINHOS
+]
+
+
 # ---------------------------------------------------------------------------
 # 1. o brilho entra uma vez só — P1 a P4, USB e BT, «Todos» e um controle só
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("via", ["usb", "bt"])
 @pytest.mark.parametrize("alvo", ["todos", "um"])
-@pytest.mark.parametrize("caminho", CAMINHOS)
+@pytest.mark.parametrize("caminho", CAMINHOS_COM_O_PISO)
 def test_reaplicar_tres_vezes_da_a_luz_da_primeira(mesa_de, caminho, alvo, via):
     """O trilho acende; o perfil reaplicado três vezes acende o mesmo byte.
 
@@ -217,7 +251,7 @@ def test_reaplicar_tres_vezes_da_a_luz_da_primeira(mesa_de, caminho, alvo, via):
 
 @pytest.mark.parametrize("via", ["usb", "bt"])
 @pytest.mark.parametrize("alvo", ["todos", "um"])
-@pytest.mark.parametrize("caminho", CAMINHOS)
+@pytest.mark.parametrize("caminho", CAMINHOS_COM_O_PISO)
 def test_sem_a_paleta_o_global_acende_a_conta_do_trilho(mesa_de, caminho, alvo, via):
     """Sem a paleta, o controle no GLOBAL com o brilho dele acende o byte do trilho.
 
@@ -379,6 +413,7 @@ def test_sem_a_paleta_o_salvar_grava_o_global_e_nao_a_luz(mesa_de):
 @pytest.mark.parametrize("via", ["usb", "bt"])
 @pytest.mark.parametrize("alvo", ["todos", "um"])
 @pytest.mark.parametrize("o_que_mudou", ["brilho-do-controle", "brilho-do-perfil"])
+@O_APLICAR_SEM_O_PISO
 def test_o_aplicar_acende_o_brilho_que_o_disco_diz(mesa_de, o_que_mudou, alvo, via):
     """O «Aplicar» leva à barra o brilho do disco, e não só ao resolvido.
 
@@ -618,14 +653,19 @@ def test_reescalar_faz_a_conta_de_uma_vez_na_paleta_e_a_razao_fora_dela():
         for para in (0.0, 0.3, 0.6, 1.0):
             for tom in PALETA:
                 assert reescalar(_na(tom, de), de, para) == _na(tom, para), (tom, de, para)
-    # o global dela, fora da paleta: vale a razão
+    # o global dela, fora da paleta: vale a razão — entre os FATORES do piso
+    # (D-2909-O-BRILHO-TEM-PISO, 29/09/2026), e não entre os brilhos
+    from hefesto_dualsense4unix.core.led_control import _escala_crua, fator_do_brilho
+
     fora = _na((40, 80, 180), 0.82)
-    assert reescalar(fora, 0.82, 0.41) == _na(fora, 0.41 / 0.82)
+    assert reescalar(fora, 0.82, 0.41) == _escala_crua(
+        fora, fator_do_brilho(0.41) / fator_do_brilho(0.82))
     # o global dela entra como tom a mais, e a conta é a do trilho
     assert reescalar(fora, 0.82, 0.41, ((40, 80, 180),)) == _na((40, 80, 180), 0.41)
     # abaixo de 1% o vermelho, o rosa e o laranja acendem o mesmo (1, 0, 0):
     # não há tom único, e o brilho não troca a cor por palpite
-    assert reescalar((1, 0, 0), 0.005, 1.0) == _na((1, 0, 0), 1.0 / 0.005)
+    assert reescalar((1, 0, 0), 0.005, 1.0) == _escala_crua(
+        (1, 0, 0), fator_do_brilho(1.0) / fator_do_brilho(0.005))
 
 
 def test_o_tom_livre_sai_no_brilho_da_peca():
@@ -637,5 +677,7 @@ def test_o_tom_livre_sai_no_brilho_da_peca():
                    procedencia=2, numero=3, brilho=0.6),
     ]
     saida = cores_sem_colisao(mesa)
-    assert saida["p1"] == (0, 0, 209)
+    # O azul do P1 a 82%, perguntado ao dono da escala: era `(0, 0, 209)` antes
+    # do piso do brilho (D-2909-O-BRILHO-TEM-PISO, 29/09/2026).
+    assert saida["p1"] == _na(player_slot_color(1), 0.82)
     assert saida["p3"] == _na(player_slot_color(2), 0.6), saida

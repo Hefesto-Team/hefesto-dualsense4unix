@@ -428,7 +428,12 @@ def test_a_cor_pedida_sai_do_brilho_velho(pac):
     _semear("regua", overrides={CHAVE: {"lightbar_brightness": 0.5}})
     p = PonteDeMentira()
     fn = pac.gesto_da_pagina(PAGINA, "brilho")
-    fn(_ctx(pac, aceso={"lightbar_rgb": [127, 64, 0]}),
+    from hefesto_dualsense4unix.core.led_control import LedSettings
+
+    # O laranja a 50% que o daemon publica, perguntado ao dono da escala: era
+    # `#7F4000` antes do piso do brilho (D-2909-O-BRILHO-TEM-PISO, 29/09/2026).
+    meio = LedSettings(lightbar=(255, 128, 0)).apply_brightness(0.5).lightbar
+    fn(_ctx(pac, aceso={"lightbar_rgb": list(meio)}),
        {"uniq": UNIQ, "valor": "100", "evento": "change"}, p)
 
     _nome, args, kwargs = p.chamadas[0]

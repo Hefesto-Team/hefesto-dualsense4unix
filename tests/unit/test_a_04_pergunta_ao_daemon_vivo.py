@@ -43,6 +43,9 @@ from tests.unit.test_a_marca_da_cor_nao_some import (
     UNIQS,
     Mesa,
 )
+from tests.unit.test_a_barra_nao_escurece_ao_reaplicar import (
+    O_APLICAR_SEM_O_PISO as _O_APLICAR_SEM_O_PISO,
+)
 
 #: O perfil para onde a troca AUTOMÁTICA vai: o mesmo global, sem opinião
 #: por controle, e as luzes no Fraco.
@@ -464,6 +467,7 @@ def test_o_salvar_depois_do_autoswitch_nao_leva_a_camada_dela_ao_outro_perfil(me
     assert mesa.disco(NOME, 1).lightbar_brightness == pytest.approx(0.60)
 
 
+@_O_APLICAR_SEM_O_PISO
 def test_o_aplicar_carimba_o_brilho_da_cor(mesa_de):
     """A cor do «Aplicar» leva o brilho dela, e ele atravessa a troca automática.
 

@@ -1494,9 +1494,15 @@ class IpcHandlersMixin:
             raise ValueError(
                 f"led.set: brightness fora de [0.0, 1.0]: {brightness}"
             )
-        r = max(0, min(255, int(rgb[0] * brightness)))
-        g = max(0, min(255, int(rgb[1] * brightness)))
-        b = max(0, min(255, int(rgb[2] * brightness)))
+        # A CONTA É DO DONO DA ESCALA (`LedSettings.apply_brightness`), com o
+        # piso de D-2909-O-BRILHO-TEM-PISO — 29/09/2026. Por conta própria, o
+        # gesto de brilho da aba Iluminação acendia sem o piso e o perfil
+        # reaplicado, com ele.
+        from hefesto_dualsense4unix.core.led_control import LedSettings
+
+        r, g, b = LedSettings(
+            lightbar=(int(rgb[0]), int(rgb[1]), int(rgb[2]))
+        ).apply_brightness(brightness).lightbar
         # PERFIL-05 (22/07): com um controle selecionado no seletor, a GUI
         # manda o MAC (`uniq`) e a escrita vai por `apply_output_for` —
         # registra o override por-uniq (acima da paleta no merge, sobrevive

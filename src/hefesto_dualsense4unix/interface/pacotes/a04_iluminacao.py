@@ -494,14 +494,12 @@ DICA_DO_BRILHO = ("Brilho da barra deste controle. Grava no perfil ao "
 def _com_o_brilho(rgb: tuple[int, int, int], brilho: float) -> tuple[int, int, int]:
     """`rgb` escalado pelo brilho — **pela função do produto**, nunca por conta.
 
-    `core/led_control.LedSettings.apply_brightness` é o dono, e a conta dele é
-    `max(0, min(255, int(c * level)))` por canal. Ela aparece em DOIS lugares do
-    produto com o mesmo corpo — o `_handle_led_set` do daemon
-    (`ipc_handlers.py`) e o provider da cor automática (D11) —, e é justamente
-    por ser a mesma que a varredura de `cor_escolhida` pode ser exata. Digitar a
-    multiplicação aqui seria a terceira cópia, e a que envelheceria calada no dia
-    em que o produto ganhasse a curva de resposta não-linear que o docstring do
-    dono já prevê.
+    `core/led_control.LedSettings.apply_brightness` é o dono, e a conta dele
+    passa pelo PISO (`fator_do_brilho`, D-2909-O-BRILHO-TEM-PISO): acima de 0 a
+    luz nunca sai abaixo do piso. O `_handle_led_set` do daemon e o provider da
+    cor automática (D11) chamam o mesmo dono, e é por ser a mesma conta que a
+    varredura de `cor_escolhida` pode ser exata. Digitar a multiplicação aqui
+    seria uma cópia, e ela envelheceu calada no dia em que o dono ganhou o piso.
     """
     from hefesto_dualsense4unix.core.led_control import LedSettings
 
@@ -612,14 +610,19 @@ def titulo_da_casa(i: int) -> str:
 
 def _acende_em_alguma_intensidade(tom: tuple[int, int, int],
                                   alvo: tuple[int, int, int]) -> bool:
-    """`tom`, escalado por algum brilho de (0, 1], acende exatamente `alvo`?
+    """`tom`, escalado por algum fator de (0, 1], acende exatamente `alvo`?
 
-    O intervalo sai por canal: a conta do dono trunca `c * brilho`, então o
-    canal `c` dá `v` para o brilho em `[v/c, (v+1)/c)`, e o canal zero só dá
-    zero. Quem confirma é a conta do dono (`_com_o_brilho`) no meio do
-    intervalo, e não esta conta: a borda de um trecho em ponto flutuante pode
-    cair do lado errado, o meio não.
+    O intervalo sai por canal: a conta do dono trunca `c * fator`, então o
+    canal `c` dá `v` para o fator em `[v/c, (v+1)/c)`, e o canal zero só dá
+    zero. Quem confirma é a conta CRUA do dono (`led_control._escala_crua`)
+    no meio do intervalo, e não esta conta: a borda de um trecho em ponto
+    flutuante pode cair do lado errado, o meio não. É a conta crua, e não a
+    do trilho (`_com_o_brilho`), desde o piso do brilho
+    (D-2909-O-BRILHO-TEM-PISO, 29/09/2026): a pergunta é de que TOM a luz é,
+    e o piso só diz quais fatores o trilho alcança.
     """
+    from hefesto_dualsense4unix.core.led_control import _escala_crua
+
     baixo, alto = 0.0, float("inf")
     for c, v in zip(tom, alvo, strict=True):
         if c == 0:
@@ -630,8 +633,8 @@ def _acende_em_alguma_intensidade(tom: tuple[int, int, int],
     if baixo <= 0.0 or baixo >= alto or baixo > 1.0:
         return False
     topo = min(alto, 1.0)
-    brilho = 1.0 if topo <= baixo else (baixo + topo) / 2
-    return _com_o_brilho(tom, brilho) == alvo
+    fator = 1.0 if topo <= baixo else (baixo + topo) / 2
+    return _escala_crua(tom, fator) == alvo
 
 
 def a_casa_da_cor(rgb: Any) -> str | None:

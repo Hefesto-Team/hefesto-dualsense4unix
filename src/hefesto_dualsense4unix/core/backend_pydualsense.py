@@ -65,6 +65,7 @@ from hefesto_dualsense4unix.core.led_control import (
     DO_BROADCAST,
     DO_GLOBAL,
     LEGADO,
+    LedSettings,
     PecaDaMesa,
     cores_sem_colisao,
     degrau_do_brilho_das_luzes,
@@ -3356,11 +3357,16 @@ class PyDualSenseController(IController):
                 desired,
                 led=reescalar((int(r), int(g), int(b)), base, para, extras),
             )
+        # SEM O BRILHO DO PERFIL, o fator passa pelo DONO DA ESCALA
+        # (`LedSettings.apply_brightness`, com o piso de
+        # D-2909-O-BRILHO-TEM-PISO), como se a base tivesse chegado no brilho
+        # cheio. A conta por conta própria acendia abaixo do piso.
+        r, g, b = desired.led
         return replace(
             desired,
-            led=tuple(  # type: ignore[arg-type]
-                max(0, min(255, int(canal * fator))) for canal in desired.led
-            ),
+            led=LedSettings(lightbar=(int(r), int(g), int(b))).apply_brightness(
+                fator
+            ).lightbar,
         )
 
     def _clear_layer_locked(self, layer: str) -> None:

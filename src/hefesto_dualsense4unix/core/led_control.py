@@ -28,6 +28,48 @@ from hefesto_dualsense4unix.core.controller import IController
 RGB = tuple[int, int, int]
 
 
+#: O PISO DO BRILHO — D-2909-O-BRILHO-TEM-PISO (29/09/2026, a resposta (a) da
+#: A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01): todo passo do trilho acima de 0%
+#: acende uma cor que se vê, e só o 0% (o «Desligar», D-2509) apaga. A escala
+#: inteira vai até ele: o fator é `PISO_DO_BRILHO + (1 - PISO_DO_BRILHO) *
+#: brilho`, e cada passo do trilho ainda muda o tom (a ilusão do slicer que
+#: ela declarou, D-0909-O-BRILHO-DA-BARRA-E-ILUSAO-DECLARADA).
+#:
+#: O FATO QUE O ANCORA: às 02:30 de 29/09 a luz do White a 8% era
+#: `(0, 0, 20)`, e ela a leu como preto (*«a lightbar do controle tá preto»*).
+#: Com o piso, 1% acende o canal maior em 53 e 8% em 67. O valor é de quem
+#: coordenou, pelo padrão dela, sem a sessão com a luz na mão (ela dormia): a
+#: sprint mandava medir de 2% a 20% e ficar com o maior em que ela reconhece a
+#: cor, e 20% é o topo dessa faixa — o mais seguro para quem enxerga pouco.
+#: Quem se incomoda com luz tem o 0%.
+PISO_DO_BRILHO = 0.20
+
+
+def fator_do_brilho(brilho: float) -> float:
+    """O fator que multiplica o RGB no `brilho` do trilho — a conta do piso.
+
+    `0` (e abaixo) apaga; acima de 0 o fator parte do piso e chega a 1 no
+    100%. Acima de 1 (o fator relativo de um controle mais claro que o perfil)
+    passa como está: o corte por canal é de `apply_brightness`. O
+    arredondamento desfaz o ruído do ponto flutuante na borda.
+    """
+    if brilho <= 0.0:
+        return 0.0
+    if brilho >= 1.0:
+        return brilho
+    return round(PISO_DO_BRILHO + (1.0 - PISO_DO_BRILHO) * brilho, 9)
+
+
+def _escala_crua(rgb: RGB, fator: float) -> RGB:
+    """`rgb` vezes `fator`, truncado por canal — a conta sem o piso."""
+    r, g, b = rgb
+    return (
+        max(0, min(255, int(r * fator))),
+        max(0, min(255, int(g * fator))),
+        max(0, min(255, int(b * fator))),
+    )
+
+
 @dataclass(frozen=True)
 class LedSettings:
     """Configuração imutável de LEDs.
@@ -64,16 +106,13 @@ class LedSettings:
     def apply_brightness(self, level: float) -> LedSettings:
         """Devolve cópia com canais RGB escalados por ``level`` (clamp 0-255).
 
-        ``level`` é multiplicador linear. Valores fora de [0.0, 1.0] são
-        tolerados e acabam truncados pelo clamp por canal; isso cobre
-        futura curva de resposta não-linear sem quebrar o contrato atual.
+        ``level`` é o brilho do trilho, e passa pelo PISO (`fator_do_brilho`,
+        D-2909-O-BRILHO-TEM-PISO): acima de 0 a luz nunca sai abaixo do piso,
+        e 0 apaga. Valores acima de 1.0 são tolerados e acabam truncados pelo
+        clamp por canal. É o DONO da conta «tom vezes brilho → luz»: o provider,
+        o manager, o `led.set` e o backend passam por aqui.
         """
-        r, g, b = self.lightbar
-        scaled: RGB = (
-            max(0, min(255, int(r * level))),
-            max(0, min(255, int(g * level))),
-            max(0, min(255, int(b * level))),
-        )
+        scaled = _escala_crua(self.lightbar, fator_do_brilho(level))
         return LedSettings(
             lightbar=scaled,
             brightness_level=self.brightness_level,
@@ -356,11 +395,13 @@ def _acende_o_tom(acesa: RGB, tom: RGB) -> bool:
     na mão de quem joga. A régua de cor única comparava bytes, e o fóssil do
     P3 era deslocado para o azul cheio ao lado do P1 azul.
 
-    A CONTA É A DO DONO DA ESCALA (`LedSettings.apply_brightness`: cada canal
-    vezes o brilho, truncado), e a resposta é exata, sem tolerância: existe um
-    brilho `b` em [0, 1] que leva o `tom` à `acesa` quando os intervalos de
-    `b` de cada canal se cruzam. O brilho do meio do cruzamento é conferido
-    pela própria conta, para a borda de ponto flutuante não mentir.
+    A CONTA É A CRUA DO DONO DA ESCALA (`_escala_crua`: cada canal vezes o
+    fator, truncado), e a resposta é exata, sem tolerância: existe um fator
+    `f` em [0, 1] que leva o `tom` à `acesa` quando os intervalos de `f` de
+    cada canal se cruzam. O fator do meio do cruzamento é conferido pela
+    própria conta, para a borda de ponto flutuante não mentir. O piso do
+    trilho (D-2909-O-BRILHO-TEM-PISO) não entra: ele diz quais fatores o
+    trilho alcança, e não de que tom uma luz é.
     """
     baixo, alto = 0.0, 1.0
     for luz, canal in zip(acesa, tom, strict=True):
@@ -372,7 +413,10 @@ def _acende_o_tom(acesa: RGB, tom: RGB) -> bool:
         alto = min(alto, (luz + 1) / canal)
     if baixo > alto:
         return False
-    return LedSettings(lightbar=tom).apply_brightness((baixo + alto) / 2).lightbar == acesa
+    # A CONTA CRUA, e não a do trilho: a pergunta é se a luz está no RAIO do
+    # tom, em qualquer fator. O piso (D-2909-O-BRILHO-TEM-PISO) só limita os
+    # fatores que o trilho alcança, e não muda de que tom uma luz é.
+    return _escala_crua(tom, (baixo + alto) / 2) == acesa
 
 
 def _mesmo_tom(a: RGB, b: RGB) -> bool:
@@ -508,8 +552,10 @@ def reescalar(
         tons = [t for t in candidatos if _na_escala(t, de) == acesa]
         if len(tons) == 1:
             return _na_escala(tons[0], para)
-    fator = para / de if de > 0.0 else 0.0
-    return LedSettings(lightbar=acesa).apply_brightness(fator).lightbar
+    # A RAZÃO É ENTRE OS FATORES do piso (D-2909-O-BRILHO-TEM-PISO), e não
+    # entre os brilhos: a luz `acesa` saiu do fator de `de`, e vai ao de `para`.
+    fator = fator_do_brilho(para) / fator_do_brilho(de) if de > 0.0 else 0.0
+    return _escala_crua(acesa, fator)
 
 
 def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
@@ -775,6 +821,7 @@ __all__ = [
     "DO_BROADCAST",
     "DO_GLOBAL",
     "LEGADO",
+    "PISO_DO_BRILHO",
     "PRETO",
     "RGB",
     "LedSettings",
@@ -784,6 +831,7 @@ __all__ = [
     "cor_escolhida",
     "cores_sem_colisao",
     "degrau_do_brilho_das_luzes",
+    "fator_do_brilho",
     "fosseis",
     "hex_to_rgb",
     "off",

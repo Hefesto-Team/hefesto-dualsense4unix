@@ -411,3 +411,114 @@ def test_sem_a_fiacao_do_daemon_nenhuma_pergunta_sai(registro: Any) -> None:
     registro.sync_connected([BRANCO_ID])
     assert registro.perguntas == []
     assert registro.identidade_de_fabrica(BRANCO_ID) is None
+
+
+# ===========================================================================
+# 8. A luz acesa se vê (D-2909-O-BRILHO-TEM-PISO)
+# ===========================================================================
+#: O FATO DE FORA DO DONO que ancora a régua: às 02:30 de 29/09 a luz do
+#: White a 8% era `(0, 0, 20)`, e ela a leu como preto. Sem esta âncora,
+#: zerar a constante do piso deixaria a régua verde, porque ela leria o zero
+#: do próprio dono.
+LIDA_COMO_PRETO = 20
+BRILHO_DAS_0230 = 0.08
+
+
+def _tons_da_regua() -> list[RGB]:
+    """Os tons da paleta e os do plástico do mapa (a resposta (b))."""
+    from hefesto_dualsense4unix.integrations import cor_do_plastico as cp
+
+    tons = [player_slot_color(n) for n in range(1, 9)]
+    for cor in cp.TABELA.values():
+        tom = cp.tom_da_luz(cor)
+        if tom is not None and tom not in tons:
+            tons.append(tom)
+    return tons
+
+
+def _piso_do_dono() -> int:
+    """O canal maior mais fraco que o trilho acende, lido do dono."""
+    return int(255 * lc.PISO_DO_BRILHO)
+
+
+@pytest.mark.parametrize("tom", _tons_da_regua(), ids=lambda t: "#{:02X}{:02X}{:02X}".format(*t))
+def test_todo_passo_do_trilho_acende_uma_cor_que_se_ve(tom: RGB) -> None:
+    """De 1% a 100%, o canal maior nunca fica abaixo do piso, e a luz sobe a cada passo."""
+    anterior: RGB | None = None
+    for pct in range(1, 101):
+        luz = _na_escala(tom, pct / 100)
+        assert max(luz) >= _piso_do_dono(), (pct, luz)
+        if anterior is not None:
+            assert all(a <= b for a, b in zip(anterior, luz, strict=True)), (pct, anterior, luz)
+            assert luz != anterior, f"o passo de {pct - 1}% a {pct}% não muda a luz {luz}"
+        anterior = luz
+    assert _na_escala(tom, 0.0) == (0, 0, 0), "o 0% (o «Desligar») apaga"
+
+
+@pytest.mark.parametrize("tom", _tons_da_regua(), ids=lambda t: "#{:02X}{:02X}{:02X}".format(*t))
+def test_a_oito_por_cento_a_luz_nao_e_mais_a_que_ela_leu_como_preto(tom: RGB) -> None:
+    """A âncora: a 8%, em todo tom, o canal maior passa do `20` das 02:30."""
+    assert max(_na_escala(tom, BRILHO_DAS_0230)) > LIDA_COMO_PRETO
+
+
+def test_o_provider_acende_no_piso(registro: Any) -> None:
+    """A cor automática do daemon, no brilho de 8% do perfil, se vê."""
+    registro.configure(brightness=BRILHO_DAS_0230)
+    provider = _mesa_do_registro(registro, [SEM_PLASTICO])
+    _esperar_o_plastico(registro, SEM_PLASTICO)
+    assert max(provider(SEM_PLASTICO).led) > LIDA_COMO_PRETO
+
+
+@pytest.mark.parametrize("brilho_do_perfil", [1.0, None], ids=["com-o-perfil", "fator-sem-base"])
+def test_o_trilho_por_controle_acende_no_piso(brilho_do_perfil: float | None) -> None:
+    """O merge do backend com o trilho de um controle a 8% e o perfil a 100%.
+
+    `fator-sem-base` é o backend a quem o perfil não publicou o brilho: a conta
+    do fator relativo passa pelo dono da escala, e não por conta própria.
+    """
+    escolhas = MESA_DO_LEGADO_ESCURO
+    ctl = bp.PyDualSenseController()
+    ctl._handles = dict.fromkeys(MACS)
+    ctl.set_auto_output_provider(_provider({e.uniq: e.numero for e in escolhas}))
+    ctl.set_game_authority_provider(lambda: "daemon")
+    ctl.set_led_scales({UNIQS[0]: BRILHO_DAS_0230}, brilho_do_perfil=brilho_do_perfil,
+                       cor_do_perfil=None)
+    with ctl._io_lock:
+        luz = ctl._merged_desired_for_key(MACS[0]).led
+    assert luz == _na_escala(player_slot_color(1), BRILHO_DAS_0230)
+    assert max(luz) > LIDA_COMO_PRETO
+
+
+def test_o_perfil_aplicado_acende_no_piso(tmp_path: pathlib.Path,
+                                          monkeypatch: pytest.MonkeyPatch) -> None:
+    """O `ProfileManager.apply` de um perfil a 8% manda ao aparelho uma luz que se vê."""
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+    from hefesto_dualsense4unix.profiles.schema import LedsConfig, MatchCriteria, Profile
+    from hefesto_dualsense4unix.testing import FakeController
+
+    perfil = Profile(name="piso", match=MatchCriteria(window_class=["piso_class"]),
+                     priority=10,
+                     leds=LedsConfig(lightbar=AMARELO, lightbar_brightness=BRILHO_DAS_0230))
+    fc = FakeController()
+    fc.connect()
+    ProfileManager(controller=fc).apply(perfil)
+    assert fc.last_led is not None
+    assert tuple(fc.last_led.color) == _na_escala(AMARELO, BRILHO_DAS_0230)
+    assert max(fc.last_led.color) > LIDA_COMO_PRETO
+
+
+@pytest.mark.asyncio
+async def test_o_led_set_da_aba_acende_no_piso(tmp_path: pathlib.Path) -> None:
+    """O gesto de brilho da aba Iluminação (`led.set` com `brightness`) passa pelo dono."""
+    from tests.unit.test_fecha_iluminacao_01_duas_pecas_nunca_tem_a_mesma_cor import (
+        MACS as MACS_DA_MESA,
+    )
+    from tests.unit.test_fecha_iluminacao_01_duas_pecas_nunca_tem_a_mesma_cor import (
+        _mesa_de_quatro,
+    )
+
+    server, _ctl, nos = _mesa_de_quatro(tmp_path, overrides={})
+    await server._handle_led_set({"rgb": list(AMARELO), "brightness": BRILHO_DAS_0230,
+                                  "uniq": MACS_DA_MESA[1]})
+    assert nos[MACS_DA_MESA[1]].rgb[-1] == _na_escala(AMARELO, BRILHO_DAS_0230)
+    assert max(nos[MACS_DA_MESA[1]].rgb[-1]) > LIDA_COMO_PRETO

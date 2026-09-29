@@ -446,11 +446,12 @@ def test_apply_propaga_brightness(isolated_profiles_dir: Path):
     manager.apply(profile)
 
     assert fc.last_led is not None, "set_led não foi chamado"
-    # RGB escalado: 200*0.25=50, 100*0.25=25, 50*0.25=12
+    # RGB escalado pelo dono, com o piso (D-2909-O-BRILHO-TEM-PISO, 29/09/2026):
+    # a 25% o fator é 0,2 + 0,8 x 0,25 = 0,4 — 200*0,4=80, 100*0,4=40, 50*0,4=20.
     r, g, b = fc.last_led.color
-    assert r == 50, f"canal R esperado 50, recebeu {r}"
-    assert g == 25, f"canal G esperado 25, recebeu {g}"
-    assert b == 12, f"canal B esperado 12, recebeu {b}"
+    assert r == 80, f"canal R esperado 80, recebeu {r}"
+    assert g == 40, f"canal G esperado 40, recebeu {g}"
+    assert b == 20, f"canal B esperado 20, recebeu {b}"
 
 
 def test_apply_propaga_multi_position(isolated_profiles_dir: Path):
@@ -913,8 +914,9 @@ def test_activate_override_escala_brilho_no_mesmo_caminho(
     manager = ProfileManager(controller=backend, store=StateStore())
     manager.activate("vitoria")
 
-    assert h2.light.colors[-1] == (50, 100, 25)
-    assert backend._desired_by_uniq[UNIQ_2].led == (50, 100, 25)
+    # A 50% o fator é 0,6 pelo piso (D-2909-O-BRILHO-TEM-PISO, 29/09/2026).
+    assert h2.light.colors[-1] == (60, 120, 30)
+    assert backend._desired_by_uniq[UNIQ_2].led == (60, 120, 30)
 
 
 # ---------------------------------------------------------------------------
@@ -948,9 +950,10 @@ def test_activate_override_parcial_herda_player_e_brilho_do_global(
     manager = ProfileManager(controller=backend, store=StateStore())
     manager.activate("vitoria")
 
-    # A cor escrita herda o brilho 0.5 do GLOBAL (verde escalado, não cheio).
-    assert h2.light.colors[-1] == (0, 127, 0)
-    assert backend._desired_by_uniq[UNIQ_2].led == (0, 127, 0)
+    # A cor escrita herda o brilho 0.5 do GLOBAL (verde escalado, não cheio),
+    # pelo fator 0,6 do piso (D-2909-O-BRILHO-TEM-PISO, 29/09/2026).
+    assert h2.light.colors[-1] == (0, 153, 0)
+    assert backend._desired_by_uniq[UNIQ_2].led == (0, 153, 0)
     # Campos não escritos ficam SEM OPINIÃO no mapa → hotplug herda o global
     # (antes: player_leds=(False,)*5 apagava o player 1 aceso do global).
     assert backend._desired_by_uniq[UNIQ_2].player_leds is None

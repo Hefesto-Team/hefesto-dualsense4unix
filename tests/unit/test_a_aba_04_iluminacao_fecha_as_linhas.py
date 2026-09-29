@@ -326,8 +326,13 @@ def test_a_cor_gravada_e_a_que_estava_acesa(pac, a04):
     crua (`cor_do_swatch(c)`) e esta linha reprova com `(0, 127, 0)`; faça a
     inversão usar o brilho de 100% e ela reprova com o azul do número.
     """
+    from hefesto_dualsense4unix.core.led_control import LedSettings
+
     caminho = _semear(automatico=True, brilho=0.5)
-    meio = dict(P1, lightbar_rgb=[0, 127, 0])
+    # O verde a 50% que o daemon publica, perguntado ao dono da escala: era
+    # `(0, 127, 0)` antes do piso do brilho (D-2909-O-BRILHO-TEM-PISO, 29/09/2026).
+    meio = dict(P1, lightbar_rgb=list(
+        LedSettings(lightbar=(0, 255, 0)).apply_brightness(0.5).lightbar))
     a04.auto_cores(_ctx(pac, conectados=[meio]), _mudanca(), PonteDeMentira())
 
     gravada = _do_disco(caminho)["controllers"][CHAVE_UM]["leds"]["lightbar"]

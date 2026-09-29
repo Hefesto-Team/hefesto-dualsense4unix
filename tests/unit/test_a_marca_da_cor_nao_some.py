@@ -499,22 +499,29 @@ def test_subir_do_zero_acende_a_cor_dele(mesa_de, n):
 
 
 def test_abaixo_de_um_por_cento_a_luz_nao_escolhe_o_primeiro_tom(mesa_de):
-    """De 0,4% a 0,7%, o vermelho, o rosa e o laranja acendem o mesmo `(1, 0, 0)`.
+    """Abaixo de 1% a luz não é mais ambígua: o piso a deixa no tom dela.
 
-    O trilho não chega lá (anda de 1 em 1%), mas o disco chega. Com o P2 a
-    0,5%, a luz dele casa com três tons, e a leitura que devolvia o primeiro
-    da tabela diria que o P2 é VERMELHO — a cor do número 2 —, com o X laranja
-    fora das outras três fileiras.
+    Até 29/09/2026, de 0,4% a 0,7% o vermelho, o rosa e o laranja acendiam o
+    mesmo `(1, 0, 0)`, e a leitura que devolvia o primeiro da tabela dizia que
+    o P2 era VERMELHO. Com o piso do brilho (D-2909-O-BRILHO-TEM-PISO,
+    A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01) o P2 a 0,5% acende o laranja no
+    piso, uma luz que só o laranja acende, e a marca fica no laranja. A guarda
+    da luz ambígua segue em `_o_tom_que_acende` para a luz que não passa pelo
+    trilho (a do jogo).
 
-    **A MORDIDA:** faça `_o_tom_que_acende` devolver `casados[0]` sempre que
-    houver casamento, e esta reprova com a borda do P2 no vermelho.
+    **A MORDIDA:** tire o piso (`fator_do_brilho` devolvendo o brilho) e o P2
+    volta a acender `(1, 0, 0)`.
     """
+    from hefesto_dualsense4unix.core.led_control import LedSettings
+
     mesa = mesa_de()
     mesa.gravar_o_brilho(2, 0.005)
     mesa.ponte.led_set_detalhado(LARANJA, brightness=0.005, uniq=UNIQS[1])
     luz = {c["uniq"]: c["lightbar_rgb"] for c in mesa.publicado()}
-    assert luz[UNIQS[1]] == [1, 0, 0], (
-        f"a régua precisa da luz que casa com três tons, e o P2 acende {luz[UNIQS[1]]}")
+    no_piso = LedSettings(lightbar=LARANJA).apply_brightness(0.005).lightbar
+    assert tuple(luz[UNIQS[1]]) == no_piso, (
+        f"o P2 a 0,5% acende {luz[UNIQS[1]]}, e o laranja no piso é {no_piso}")
+    assert tuple(luz[UNIQS[1]]) != (1, 0, 0)
     assert mesa.fora_do_lugar() == []
 
 
