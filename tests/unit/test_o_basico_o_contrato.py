@@ -250,6 +250,7 @@ def estado_da_mesa(
         controles.append({
             "uniq": uniq,
             "player": n,
+            "player_slot": n,
             "connected": True,
             "transport": "usb" if n <= 2 else "bt",
             "adaptador": None if n <= 2 else "hci0",
@@ -1312,3 +1313,53 @@ def test_o_endpoint_do_lugar_e_medido_no_cabo_e_no_radio(
         "P1": ob.VERDE, "P2": ob.VERDE, "P3": ob.VERMELHO, "P4": ob.VERDE,
     }
     assert "o lugar P3 sem endpoint de háptica" in por_jogador["P3"]["porque"]
+
+
+def test_o_lugar_e_o_numero_do_cartao_e_nao_o_do_jogo(ob: ModuleType, tmp_path: Path) -> None:
+    """O lugar de cada controle é o «Controle N» do cartão, e não o ``player``.
+
+    O daemon senta cada controle no número que a tela imprime (o
+    ``player_slot``); o ``player`` do estado é o número que o jogo vê. Na mesa
+    de quatro medida (MESA-CHEIA-11) as duas listas são outras: ``[4, 1, 3,
+    2]`` contra ``[1, 2, 3, 4]``. Sem o endpoint do lugar 4, quem fica sem
+    vibração é o controle do cartão 4 — o P1 do jogo.
+
+    MORDIDA: volte o lugar a ``c.get("player")`` — o vermelho cai no P4, que
+    tem endpoint, e o P1 sem endpoint sai verde.
+    """
+    estado = estado_da_mesa()
+    for controle, cartao in zip(estado["controllers"], (4, 1, 3, 2), strict=True):
+        controle["player_slot"] = cartao
+    maquina = fazer_maquina(
+        ob, estado, tmp_path / "config", dispositivos=pads_uhid(4),
+        ensaios={
+            "quem_e_quem.py": quem_e_quem_json(ob, estado),
+            "os_endpoints_de_haptica.py": _endpoints_dos_lugares((1, 2, 3)),
+        },
+    )
+    saida = tmp_path / "saida"
+    ob.executar(["--saida", str(saida), "retrato"], maquina)
+
+    por_jogador = {p["jogador"]: p for p in da_linha(saida, "o endpoint de háptica")}
+    assert {j: p["veredito"] for j, p in por_jogador.items()} == {
+        "P1": ob.VERMELHO, "P2": ob.VERDE, "P3": ob.VERDE, "P4": ob.VERDE,
+    }
+    assert "o lugar P4 sem endpoint de háptica" in por_jogador["P1"]["porque"]
+
+
+def test_sem_numero_de_cartao_o_lugar_e_nao_sei(ob: ModuleType, tmp_path: Path) -> None:
+    """Sem ``player_slot`` nem ``index`` o estado não diz o lugar: «não sei», e não o 1."""
+    estado = estado_da_mesa()
+    for controle in estado["controllers"]:
+        del controle["player_slot"]
+    maquina = fazer_maquina(
+        ob, estado, tmp_path / "config", dispositivos=pads_uhid(4),
+        ensaios={
+            "quem_e_quem.py": quem_e_quem_json(ob, estado),
+            "os_endpoints_de_haptica.py": _endpoints_dos_lugares((1, 2, 3, 4)),
+        },
+    )
+    saida = tmp_path / "saida"
+    ob.executar(["--saida", str(saida), "retrato"], maquina)
+    vereditos = {p["veredito"] for p in da_linha(saida, "o endpoint de háptica")}
+    assert vereditos == {ob.NAO_SEI}
