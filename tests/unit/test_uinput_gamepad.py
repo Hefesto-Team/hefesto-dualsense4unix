@@ -237,3 +237,93 @@ def test_dpad_vector_estatico() -> None:
     assert UinputGamepad._dpad_vector(frozenset({"dpad_left"})) == (-1, 0)
     assert UinputGamepad._dpad_vector(frozenset({"dpad_right"})) == (1, 0)
     assert UinputGamepad._dpad_vector(frozenset({"dpad_up", "dpad_right"})) == (1, -1)
+
+
+# ---------------------------------------------------------------------------
+# O `stop()` fecha o nó UMA vez — NO-MODO-XBOX-TUDO-FUNCIONA-01, onda 3
+# ---------------------------------------------------------------------------
+#
+# O irmão `uhid` foi curado em 28/09/2026 (A-ENTRADA-DE-CADA-JOGADOR-CHEGA-
+# INTEIRA-01): dois `stop()` juntos fechavam o despertador duas vezes, e o
+# `fio.start()` que falhava deixava o nó no kernel sem dono. O pad do modo Xbox
+# tinha as duas formas do mesmo defeito, e estas duas réguas mordem cada uma.
+
+
+def test_dois_stop_juntos_fecham_o_no_uma_vez(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A interface troca o modo enquanto o laço derruba o pad: um `close()` só.
+
+    O `close()` do python-evdev confere o `fd` e só depois o zera; o segundo
+    `stop()` que entra nesse meio fecha um número que outra thread pode já ter
+    reaproveitado. MORDIDA: devolva o `self._device.close()` lido do atributo
+    (sem o `dict.pop`) e o segundo `stop()` chama o `close()` de novo.
+    """
+    import threading
+
+    fake = _install_fake_evdev(monkeypatch)
+    gp = UinputGamepad()
+    assert gp.start() is True
+    dev = fake.instances[0]
+    entrou = threading.Event()
+    solta = threading.Event()
+    fechamentos: list[int] = []
+
+    def close() -> None:
+        fechamentos.append(threading.get_ident())
+        entrou.set()
+        solta.wait(2.0)
+
+    dev.close = close  # type: ignore[method-assign]
+    primeiro = threading.Thread(target=gp.stop)
+    primeiro.start()
+    assert entrou.wait(2.0), "premissa: o primeiro stop() chegou ao close()"
+    segundo = threading.Thread(target=gp.stop)
+    segundo.start()
+    segundo.join(0.5)
+    solta.set()
+    primeiro.join(2.0)
+    segundo.join(2.0)
+    assert len(fechamentos) == 1, (
+        f"o nó foi fechado {len(fechamentos)} vezes por dois stop() juntos — o "
+        "segundo close cai num descritor que outra thread pode ter reaproveitado"
+    )
+    assert gp.is_active() is False
+
+
+def test_sem_fio_novo_o_pad_nasce_e_o_tique_atende(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Com o processo no teto de fios, o pad nasce e a vibração vai pelo tique.
+
+    MORDIDA: tire o `try` em volta do `fio.start()` e o `start()` levanta com o
+    nó já criado no kernel — um controle a mais que o jogo vê e ninguém
+    alimenta, e que ninguém fecharia.
+    """
+    import threading
+
+    fake = _install_fake_evdev(monkeypatch)
+
+    lidos: list[int] = []
+
+    class _ComFd(fake):  # type: ignore[misc, valid-type]
+        fd = 7
+
+        def read_one(self) -> Any:
+            lidos.append(1)
+            return None
+
+    mod = sys.modules["evdev"]
+    monkeypatch.setattr(mod, "UInput", _ComFd)
+    inicio_de_verdade = threading.Thread.start
+
+    def start(fio: threading.Thread) -> None:
+        if fio.name.startswith("hefesto-ff-"):
+            raise RuntimeError("can't start new thread")
+        inicio_de_verdade(fio)
+
+    monkeypatch.setattr(threading.Thread, "start", start)
+    gp = UinputGamepad()
+    assert gp.start() is True, "o pad não nasceu sem o fio da vibração"
+    assert gp._ff_fio is None
+    gp.pump_ff()
+    assert lidos, "sem o fio, o tique não leu o protocolo da vibração"
+    dev = fake.instances[-1]
+    gp.stop()
+    assert dev.closed is True, "o nó ficou no kernel depois do stop()"

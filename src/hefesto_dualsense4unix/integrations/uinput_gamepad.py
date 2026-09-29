@@ -842,7 +842,18 @@ class UinputGamepad:
             daemon=True,
         )
         self._ff_fio = fio
-        fio.start()
+        try:
+            fio.start()
+        except RuntimeError as exc:
+            # O processo no teto de fios: o pad nasce assim mesmo e o tique
+            # atende a vibração (`pump_ff` lê o fd quando o fio não está vivo).
+            # Sem isto o `start()` levantava com o nó já criado no kernel, e
+            # ninguém o destruiria: um controle a mais que o jogo vê e ninguém
+            # alimenta. É a cura do irmão `uhid` (A-ENTRADA-DE-CADA-JOGADOR-
+            # CHEGA-INTEIRA-01, 28/09/2026), no pad do modo Xbox.
+            logger.warning("uinput_fio_da_vibracao_nao_nasceu", err=str(exc),
+                           name=self.name)
+            self._ff_fio = None
 
     def _atender_a_vibracao(self, device: Any, fd: int, pare: threading.Event) -> None:
         """O laço do fio: acorda quando o fd tem evento e atende na hora.
@@ -897,15 +908,30 @@ class UinputGamepad:
             return None
 
     def stop(self) -> None:
-        if self._device is None:
+        """Fecha o pad UMA vez, mesmo com dois `stop()` ao mesmo tempo.
+
+        O NÓ É DE QUEM O TIRA PRIMEIRO (`dict.pop`, atômico sob o GIL), e é a
+        cura que a A-ENTRADA-DE-CADA-JOGADOR-CHEGA-INTEIRA-01 deu ao irmão
+        `uhid` em 28/09/2026. Dois `stop()` juntos (a interface troca o modo
+        enquanto o laço derruba o pad) liam o mesmo `_device` e chamavam o
+        `close()` dele duas vezes; o do python-evdev confere o `fd` e só depois
+        o zera, e o segundo `close` caía num descritor que outra thread já
+        tinha reaproveitado. Quem chega depois só espera o fio sair.
+        """
+        fio = getattr(self, "_ff_fio", None)
+        if self._device is None and fio is None:
             return
         # O fio da vibração sai ANTES do fd fechar: um select num fd fechado
         # (e talvez reaproveitado por outro aparelho) atenderia o pad errado.
-        fio = getattr(self, "_ff_fio", None)
+        # Os dois `stop()` esperam por ele; o nó só sai depois, e de um só.
         if fio is not None:
             self._ff_pare.set()
             fio.join(timeout=2 * _FF_FIO_ACORDA_S + 0.5)
-            self._ff_fio = None
+            if self._ff_fio is fio:
+                self._ff_fio = None
+        device = self.__dict__.pop("_device", None)
+        if device is None:
+            return
         # FEAT-VPAD-FF-PASSTHROUGH-01: se o FF do jogo deixou motor ligado,
         # zera o rumble físico antes de fechar (o vpad some; ninguém mais
         # mandaria o stop e o DualSense ficaria vibrando).
@@ -913,7 +939,7 @@ class UinputGamepad:
             with contextlib.suppress(Exception):
                 self.rumble_sink(0, 0)
         with contextlib.suppress(Exception):
-            self._device.close()
+            device.close()
         self._device = None
         self._ecodes = None
         self._last_buttons = frozenset()
