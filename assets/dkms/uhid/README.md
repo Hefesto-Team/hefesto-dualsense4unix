@@ -12,9 +12,9 @@ por sua vez só é instalado com `./install.sh --uhid-contrapressao`.
 A queixa dela, em 22/09/2026: *«4 controles conectados só um aparece na
 interface agora»*. <!-- noqa-acento: citação literal dela -->
 
-A ponte de áudio por rádio do Hefesto escrevia **93,75 reports de 334 B por
-segundo, por controle** — ~254 kbit/s de payload ACL cada, e com quatro
-controles ~1,0 Mbit/s só de saída num adaptador só. A corrente que isso fecha:
+A ponte de áudio por rádio do Hefesto escrevia **100 reports de 334 B por
+segundo, por controle** — ~271 kbit/s de payload ACL cada, e com quatro
+controles ~1,1 Mbit/s só de saída num adaptador só. A corrente que isso fecha:
 
 ```
 a bomba escreve
