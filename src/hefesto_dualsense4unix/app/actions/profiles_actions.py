@@ -988,7 +988,7 @@ def mensagem_do_salvar(
 # sabe por onde entra'"*. Medido:
 #
 #     $ grep -rn "pontes_confirmadas" src/hefesto_dualsense4unix/app/
-#     app/draft_config.py:445:    # `manager.pontes_confirmadas()` …  <- comentário
+#     app/draft_config.py:574:    # `manager.pontes_confirmadas()` …  <- comentário
 #     app/actions/profiles_actions.py:4409: # carimbo viaja junto …    <- comentário
 #
 # Dois hits, os dois em COMENTÁRIO. Zero leitores. A aba PRESERVA o carimbo no
