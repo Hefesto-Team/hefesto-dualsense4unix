@@ -92,7 +92,7 @@ jobs:
       - run: python3 scripts/check_regua_de_tela.py
       # PORTAO-DE-ENDERECO-01 (25/08/2026): o irmão acima procura nomes de
       # fornecedor e frases de autoria; ele NUNCA olhou um endereço de rádio,
-      # embora o GUIA.md prometesse um portão para isso desde sempre. Medido
+      # embora as instruções da casa prometessem um portão para isso. Medido
       # no dia: um arquivo com um MAC real E com o mesmo endereço na forma de
       # serial USB de doze hexadecimais passava verde por todo o bloco de fim
       # de leva. Duas sprints escritas por agente já tinham copiado o endereço
@@ -114,7 +114,7 @@ jobs:
       - run: bash scripts/check_test_data.sh
       # LUZ-CEGA-01/E8 (25/08/2026): o `check_faixa_sintetica.py` nasceu em
       # 24/08 e ficou sem chamador NENHUM — nem aqui, nem em gancho, nem na
-      # lista do GUIA.md. Portão que ninguém chama é o defeito
+      # lista local de portões. Portão que ninguém chama é o defeito
       # `A-CASA-SABE-E-O-PRODUTO-NÃO-FAZ`, e foi assim que quatro endereços de
       # fixture ficaram três dias no `controllers.json` de produção dela sem
       # ninguém saber. Aqui roda o modo `--arvore` (o default), que varre a
@@ -273,6 +273,12 @@ jobs:
         run: python -m pip install pytest
       - name: Varredura de referências
         run: python3 scripts/validar-referencias-docs.py --all
+      # O TEXTO PÚBLICO FALA COM QUEM USA (28/09/2026): o README, as páginas de
+      # uso, os modelos do .github, o NOTICE, o CHANGELOG e o metainfo, sem ID,
+      # sem «dela» e sem o vocabulário de quem constrói. A mesma linha do
+      # scripts/portoes.sh.
+      - name: O texto público fala com quem usa
+        run: python3 scripts/check_texto_publico.py
       # CITACOES-DERIVADAS-01 (13/08). O passo acima confere o ARQUIVO; este
       # confere a LINHA, que é a metade que apodrece sozinha — nenhuma
       # refatoração renomeia `core/backend_pydualsense.py`, e toda refatoração
