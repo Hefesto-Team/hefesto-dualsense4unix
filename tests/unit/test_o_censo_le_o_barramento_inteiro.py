@@ -57,7 +57,6 @@ from hefesto_dualsense4unix.integrations.censo_do_barramento import (
     GRAU_LIDO,
     Censo,
     cadeia_de_hubs,
-    filhos_de,
     hub_em_comum,
     ler_o_barramento,
 )
@@ -735,7 +734,8 @@ def test_a_ordem_e_por_porta_numerica_e_nao_alfabetica() -> None:
     `4-3.1.10` subiu para antes do microfone `4-3.1.2` e o teste reprovou.
     """
     censo = _censo()
-    no_hub = [a.nome_do_kernel for a in filhos_de(censo, f"{USB4}/4-3/4-3.1")]
+    # Os filhos DIRETOS do hub, na ordem em que o censo os publica.
+    no_hub = [a.nome_do_kernel for a in censo.aparelhos if a.pai == f"{USB4}/4-3/4-3.1"]
 
     assert no_hub == ["4-3.1.2", "4-3.1.10"], no_hub
     # E a lista inteira começa no barramento 1 e termina no 4.

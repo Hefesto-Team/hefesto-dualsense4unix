@@ -373,9 +373,10 @@ def hub_em_comum(censo: Censo, nos: Sequence[str]) -> str:
     return ""
 
 
-def filhos_de(censo: Censo, no: str) -> tuple[Aparelho, ...]:
-    """Quem pendura DIRETAMENTE neste nó, em ordem de porta."""
-    return tuple(sorted((a for a in censo.aparelhos if a.pai == no), key=_ordem))
+# `filhos_de` (quem pendura DIRETAMENTE num nó) SAIU EM 28/09/2026: nasceu em
+# 23/08 para uma segunda frase na linha do hub em comum — «quem mais está no
+# hub» — e essa frase nunca entrou. O desenho aprovado da aba 08 marca o
+# adaptador atrás de hub sem listar os vizinhos, e uma lista ali seria tela nova.
 
 
 def _barramentos(aparelhos: Sequence[Aparelho]) -> tuple[Barramento, ...]:
@@ -685,7 +686,6 @@ __all__ = [
     "Censo",
     "Energia",
     "cadeia_de_hubs",
-    "filhos_de",
     "hub_em_comum",
     "ler_o_barramento",
 ]
