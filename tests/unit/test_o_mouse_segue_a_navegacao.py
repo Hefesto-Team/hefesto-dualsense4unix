@@ -516,6 +516,35 @@ def test_a_entrada_grava_o_mouse_ligado_junto_com_o_modo(bancada: _Bancada) -> N
         "o modo e o mouse foram em duas gravações")
 
 
+def test_a_segunda_entrada_nao_grava_de_novo(bancada: _Bancada) -> None:
+    """Entrar na Navegação já estando nela: nada mudou, nada se grava.
+
+    A regra do modo (`manager.secao_do_modo_com_o_caminho`) vale para a seção
+    do mouse que a entrada grava junto (`manager.secao_do_mouse_da_navegacao`):
+    o `.json` dela não ganha uma versão idêntica a cada toque no chip aceso.
+
+    MORDIDA: grave a seção `mouse` sempre, sem compará-la com a do disco (em
+    `manager.gravar_o_modo_no_perfil_ativo`), e a segunda entrada deixa uma
+    versão a mais no `.historico`.
+    """
+    d = _daemon()
+    _flag_do_mouse(FLAG_DA_SESSAO)
+    _perfil(PERFIL, mode={"kind": "gamepad", "caminho": "dualsense"},
+            mouse={"enabled": False, "speed": 11, "scroll_speed": 4})
+    _ativo(d, PERFIL)
+    _o_chip(d)
+    relido = loader.load_profile(PERFIL)
+    assert relido.mouse is not None and relido.mouse.enabled is True, (
+        "premissa: a primeira entrada gravou o mouse ligado")
+    versoes = len(loader.listar_historico(PERFIL))
+
+    _o_chip(d)
+
+    assert d.mouse_de_pe()
+    assert len(loader.listar_historico(PERFIL)) == versoes, (
+        "a segunda entrada na Navegação regravou o perfil sem nada ter mudado")
+
+
 # ---------------------------------------------------------------------------
 # 4. O arranjo chamado direto não grava
 # ---------------------------------------------------------------------------
@@ -675,6 +704,26 @@ def test_o_status_do_modo_desliga_os_dois_e_grava_pelo_dono(bancada: _Bancada) -
     assert (resposta["status"], resposta["gravado"]) == ("ok", True), resposta
     assert resposta["mouse_emulation"]["status"] == "ok"
     assert resposta["keyboard_emulation"]["status"] == "ok"
+
+
+def test_o_status_pedido_para_o_lado_do_disco_nao_grava(bancada: _Bancada) -> None:
+    """O perfil já diz desligado, e o «Status do Modo» pede desligado: nada se grava.
+
+    MORDIDA: tire o «nada mudou, nada se grava» de
+    `manager.gravar_a_navegacao_no_perfil_ativo` e o disco ganha uma versão
+    idêntica à de antes.
+    """
+    d = _daemon()
+    _perfil(PERFIL, mode={"kind": "desktop"},
+            mouse={"enabled": False, "speed": 11, "scroll_speed": 4}, teclado=False)
+    _ativo(d, PERFIL)
+    versoes = len(loader.listar_historico(PERFIL))
+
+    resposta = _o_status(d, enabled=False, origin="manual")
+
+    assert resposta["status"] == "ok", resposta
+    assert len(loader.listar_historico(PERFIL)) == versoes, (
+        "o «Status do Modo» regravou um perfil que já dizia o mesmo")
 
 
 def test_o_teclado_recusado_nao_deixa_meio_passo_no_perfil(bancada: _Bancada) -> None:
