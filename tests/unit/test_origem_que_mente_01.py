@@ -246,9 +246,9 @@ def test_o_restore_do_mouse_nao_finge_ser_gesto() -> None:
     ONDE ELE MORA HOJE. Em 17/09/2026 (POINT-AND-CLICK-01) ele saiu do plano
     da transição, que passou a chamar o `desktop.arranjo.apply` (lê o PERFIL);
     em 29/09 (O-MOUSE-SEGUE-A-NAVEGACAO-01) o arranjo parou de recuar para ele
-    e lê só as velocidades da flag de sessão. Sobrou o método IPC, cujo corpo é
-    `Daemon.restore_mouse_preference`, e a pergunta é a mesma — aquele caminho
-    continua carimbando `origin="profile"`.
+    (sem a seção no perfil, lê da flag só as velocidades). Sobrou o método IPC,
+    cujo corpo é `Daemon.restore_mouse_preference`, e a pergunta é a mesma —
+    aquele caminho continua carimbando `origin="profile"`.
     """
     texto = (
         RAIZ / "src" / "hefesto_dualsense4unix" / "daemon/lifecycle.py"
@@ -266,7 +266,7 @@ def test_o_restore_do_mouse_nao_finge_ser_gesto() -> None:
         "defeito pelo outro lado."
     )
     assert 'origin="manual"' not in bloco, (
-        "o recuo para a flag de sessão passou a viajar como gesto manual."
+        "a restauração da flag de sessão passou a viajar como gesto manual."
     )
 
 
