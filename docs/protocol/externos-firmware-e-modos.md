@@ -730,7 +730,8 @@ autoriza acreditar nelas.
 
 ### 6.2 Uma afirmação do repositório que NÃO se reproduziu hoje
 
-`docs/usage/troubleshooting-8bitdo.md:190` diz, marcado **PROVADO**:
+`docs/usage/troubleshooting-8bitdo.md` dizia em 11/08 (na linha 190 da versão
+daquele dia; desde 29/09 a página não fala mais disso), marcado **PROVADO**:
 
 > *"no bind aparece `unknown main item tag 0x0` — descriptor HID malformado,
 > típico de firmware clone; o original não produz isso"*
