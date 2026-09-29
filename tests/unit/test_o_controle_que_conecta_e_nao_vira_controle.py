@@ -525,6 +525,11 @@ def _cena_da_aba(a08: Any) -> dict[str, Any]:
     return dict(a08._CENA_NA_TELA)
 
 
+def _na_tela(endereco: str) -> str:
+    """O adaptador como a aba o endereça: os doze dígitos, em maiúscula."""
+    return endereco.replace(":", "").upper()
+
+
 def _presos(cena: dict[str, Any]) -> list[dict[str, Any]]:
     return [a for a in cena["aparelhos"]
             if a.get("nao_conectou") and str(a.get("chave") or "").startswith("zumbi|")]
@@ -553,11 +558,11 @@ def test_o_zumbi_que_o_vigia_nao_cura_vira_nao_conectou_na_caixa_dele(a08: Any) 
     presos = _presos(cena)
     assert len(presos) == 1, cena["aparelhos"]
     linha = presos[0]
-    assert linha["lugar"] == DONGLE_B.upper()
+    assert linha["lugar"] == _na_tela(DONGLE_B)
     assert linha["tipo"] == "controle" and linha["aparelho"] == ""
     caixas = {lug["id"]: lug.get("nao_conectou") for lug in cena["lugares"]}
-    assert caixas == {DONGLE_A.upper(): False, DONGLE_B.upper(): True}
-    assert cena["aberto"] == DONGLE_B.upper(), "a caixa de quem não chegou abre"
+    assert caixas == {_na_tela(DONGLE_A): False, _na_tela(DONGLE_B): True}
+    assert cena["aberto"] == _na_tela(DONGLE_B), "a caixa de quem não chegou abre"
     html = a08.html_da_linha(linha, cena)
     assert a08.NAO_CONECTOU in html and 'data-gesto="tentar-de-novo"' in html
     assert 'data-abre="conectar"' in html and "Tirar esta linha" in html
@@ -632,6 +637,6 @@ def test_tentar_de_novo_abre_o_conectar_no_adaptador_do_preso(a08: Any) -> None:
     _cena_da_aba(a08)
     servico = _PonteDoServico()
     ctx = Contexto(state={}, conectados=[], mesa=[])
-    a08.tentar_de_novo(ctx, {"alvo": DONGLE_B.upper()}, servico)
-    assert servico.pedidos == [("radio.mover", {"destino": DONGLE_B.upper()})]
+    a08.tentar_de_novo(ctx, {"alvo": _na_tela(DONGLE_B)}, servico)
+    assert servico.pedidos == [("radio.mover", {"destino": _na_tela(DONGLE_B)})]
     assert _presos(_cena_da_aba(a08)) == [], "a linha refeita continuou na tela"
