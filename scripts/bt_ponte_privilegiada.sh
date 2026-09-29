@@ -25,9 +25,10 @@
 # COMO A JANELA CHAMA SEM PEDIR SENHA — e por que `sudoers.d`
 #
 # O `install.sh` grava `/etc/sudoers.d/49-hefesto-bt-ponte` com NOPASSWD
-# restrito a ESTE caminho absoluto e a FORMAS DE ARGUMENTO fixas (o verbo
-# `regra-sudo` abaixo é o dono único desse texto — verbo novo entra na regra
-# sozinho, e é impossível a regra ficar mais larga que a lista de verbos).
+# restrito a ESTE caminho absoluto e aos verbos nomeados um a um, sem
+# argumento de aparelho (o verbo `regra-sudo` abaixo é o dono único desse
+# texto — verbo novo entra na regra sozinho, e é impossível a regra ficar mais
+# larga que a lista de verbos).
 #
 # O preço de cada alternativa, medido contra o que este projeto já tem:
 #
@@ -55,40 +56,56 @@
 #
 # AS TRÊS CONTENÇÕES (não relaxar)
 #
-#   1. FORMA DE ARGUMENTO EM DOIS LUGARES. A regra do sudoers só casa MAC com
-#      classes de caractere explícitas (`[0-9A-Fa-f][0-9A-Fa-f]\:...`), sem
-#      nenhum `*`; e este script revalida tudo com regex. Uma das duas falhando
-#      ainda deixa a outra de pé;
-#   2. NOME NOVO VEM PELO STDIN, NUNCA POR ARGV. É o único dado de forma livre
-#      do produto. Pelo stdin, a linha de comando permitida pelo sudoers fica
-#      COMPLETAMENTE fechada — nenhum argumento livre para casar;
+#   1. O ENDEREÇO E O NOME NOVO VÊM PELO STDIN, NUNCA POR ARGV. A linha de
+#      comando de um `sudo` é registro por desenho: o sudo a escreve no
+#      journal (e no `auth.log`), o journal a põe na unidade de quem chamou, e
+#      o `/proc/<pid>/cmdline` a mostra a qualquer conta enquanto o processo
+#      vive. No argv vão só o verbo e os segundos do `descobrir`, que não
+#      identificam ninguém: o sudo registra `COMMAND=<ponte> esquecer`, quem,
+#      quando e qual verbo, e nenhum aparelho. E a linha de comando permitida
+#      pelo sudoers fica COMPLETAMENTE fechada — nenhum argumento livre para
+#      casar;
+#   2. A FORMA É CONFERIDA AQUI, ANTES DE QUALQUER EFEITO. O preço da
+#      contenção 1: o sudoers deixou de conferir a forma do endereço (até
+#      29/09/2026 ele a casava em classes de caractere). Quem confere é este
+#      script — `_mac`, uma regex ancorada de MAC, no despacho, antes do
+#      verbo —, e linha que falta, linha a mais e o endereço no argv (a forma
+#      velha) são recusa;
 #   3. OS GANCHOS DE TESTE MORREM SOB SUDO. `HEFESTO_BT_LIB`,
 #      `HEFESTO_PONTE_DRY_RUN` e `HEFESTO_BT_LOG_DEST` são apagados quando
 #      `SUDO_UID` está no ambiente. O `Defaults env_reset` do sudo já faria
 #      isso, mas quem o desligou não pode ganhar de brinde um `rm` como root em
 #      raiz escolhida por ele.
 #
-# OS VERBOS (a lista é curta de propósito)
+# OS VERBOS (a lista é curta de propósito). O stdin traz uma linha por dado, na
+# ordem da coluna do meio, e fecha depois dela:
 #
-#   adaptadores                          lista MAC, alias, ligado e hciN
-#   bonds      <MAC_ADAPTADOR>           lista os controles pareados naquele
-#   renomear   <MAC_ADAPTADOR>           alias novo pelo STDIN (1 linha)
-#   esquecer   <MAC_ADAPTADOR> <MAC_CTRL>  remove o bond E o cache SDP
-#   descobrir  <MAC_ADAPTADOR> <SEG>     janela de busca (BLOQUEIA <SEG>) e,
-#                                        enquanto ela vive, os candidatos
-#   parear     <MAC_ADAPTADOR> <MAC_CTRL>  Pair() + Trusted=true
-#   desconectar <MAC_ADAPTADOR> <MAC_CTRL> derruba o LINK (o controle zumbi)
-#   reiniciar-travado                    reinicia o adaptador que o KERNEL diz
-#                                        estar travado em laço (família 3) —
-#                                        sem argumento nenhum: quem escolhe a
-#                                        porta é o journal do kernel, nunca
-#                                        quem chama
-#   religar-orfaos                       religa NA HORA o controle que perdeu a
-#                                        probe — o do cabo no -71, o do rádio
-#                                        na contenção (STORM-USB-02). Sem
-#                                        argumento: quem escolhe é o /sys, pelas
-#                                        guardas do bt_rebind_orphans.sh
-#   regra-sudo <USUARIA>                 imprime o /etc/sudoers.d (não instala)
+#   verbo e argv       stdin                  o que faz
+#   adaptadores        —                      lista MAC, alias, ligado e hciN
+#   bonds              adaptador              lista os controles pareados naquele
+#   renomear           adaptador, nome novo   escreve o alias novo
+#   esquecer           adaptador, controle    remove o bond E o cache SDP
+#   descobrir <SEG>    adaptador              janela de busca (BLOQUEIA <SEG>) e,
+#                                             enquanto ela vive, os candidatos
+#   parear             adaptador, controle    Pair() + Trusted=true
+#   desconectar        adaptador, controle    derruba o LINK (o controle zumbi)
+#   reiniciar-travado  —                      reinicia o adaptador que o KERNEL
+#                                             diz estar travado em laço (família
+#                                             3) — sem dado nenhum: quem escolhe
+#                                             a porta é o journal do kernel,
+#                                             nunca quem chama
+#   religar-orfaos     —                      religa NA HORA o controle que
+#                                             perdeu a probe — o do cabo no -71,
+#                                             o do rádio na contenção
+#                                             (STORM-USB-02). Sem dado: quem
+#                                             escolhe é o /sys, pelas guardas do
+#                                             bt_rebind_orphans.sh
+#   regra-sudo <USUARIA>  —                   imprime o /etc/sudoers.d (não
+#                                             instala)
+#
+# Os verbos sem dado não leem o stdin: quem os chama (o watchdog, o
+# storm_watch, o install) não fecha o stdin, e um verbo que o esperasse ficaria
+# parado 10 s por nada.
 #
 # A TRAVA DO RÁDIO É DE QUEM CHAMA (O-DIARIO-DO-RADIO-01). Os motores que mexem
 # no rádio passam por um `flock` em /run/hefesto-dualsense4unix/radio.lock
@@ -205,6 +222,14 @@ SEGUNDOS_MAX=120
 # nunca aconteceram.
 LOG_TAG=hefesto-bt-ponte
 LOG_DEST="${HEFESTO_BT_LOG_DEST:-}"
+#: O REGISTRO NÃO LEVA ENDEREÇO (O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01,
+#: 29/09/2026). A linha vai ao journal do sistema, que toda conta do grupo `adm`
+#: lê: ela diz o verbo e o `hciN`, e o adaptador fora da mesa sai como «um
+#: adaptador fora da mesa». O endereço fica no diário do root (`_diario`),
+#: que é dado com leitor (`diario_do_radio.ler` junta os dois diários por ele).
+#: E não se mascara aqui: este script não importa o dono da máscara nem faz
+#: `source` de nada (ver «DUAS CÓPIAS, UMA FORMA» abaixo), e uma máscara
+#: escrita em bash seria uma cópia dela.
 _registrar() {
     case "${LOG_DEST}" in
         "")   logger -t "${LOG_TAG}" "$*" 2>/dev/null || true ;;
@@ -269,18 +294,21 @@ _recusar() { _erro "$*"; exit 2; }
 
 _uso() {
     cat >&2 <<'FIM'
-uso: bt_ponte_privilegiada.sh <verbo> [argumentos]
+uso: bt_ponte_privilegiada.sh <verbo> [segundos]   (os dados vêm pelo STDIN)
 
-  adaptadores
-  bonds      <MAC_ADAPTADOR>
-  renomear   <MAC_ADAPTADOR>            (o nome novo vem pelo STDIN, 1 linha)
-  esquecer   <MAC_ADAPTADOR> <MAC_CONTROLE>
-  descobrir  <MAC_ADAPTADOR> <SEGUNDOS>
-  parear     <MAC_ADAPTADOR> <MAC_CONTROLE>
-  desconectar <MAC_ADAPTADOR> <MAC_CONTROLE>
-  reiniciar-travado
-  religar-orfaos
+  verbo              o STDIN, uma linha por dado, nesta ordem
+  adaptadores        —
+  bonds              MAC do adaptador
+  renomear           MAC do adaptador, nome novo
+  esquecer           MAC do adaptador, MAC do controle
+  descobrir <SEG>    MAC do adaptador
+  parear             MAC do adaptador, MAC do controle
+  desconectar        MAC do adaptador, MAC do controle
+  reiniciar-travado  —
+  religar-orfaos     —
   regra-sudo <USUARIA>
+
+  exemplo: printf '%s\n%s\n' <adaptador> <controle> | sudo bt_ponte_privilegiada.sh esquecer
 
   --dry-run como PRIMEIRO argumento: não muda nada, imprime o que faria.
 FIM
@@ -339,8 +367,41 @@ _usuaria() {
     VALIDADO="${valor}"
 }
 
-#: O nome novo do adaptador — o ÚNICO dado de forma livre, e por isso o único
-#: que vem pelo stdin (contenção 2). A régua é ALLOWLIST, e é feita por
+#: O endereço de um aparelho, pela próxima linha do stdin (contenção 1). As
+#: regras são as do `_nome_do_stdin`: o prazo de 10 s, a recusa com código 2
+#: no shell principal (a devolução pela global `VALIDADO`) e a forma do `_mac`,
+#: que é a mesma de quando o endereço vinha no argv.
+_mac_do_stdin() {
+    local papel="$1" linha
+    IFS= read -r -t 10 linha || _recusar "${papel} não veio pelo stdin (o endereço vem pelo stdin, uma linha por dado)"
+    _mac "${linha}" "${papel}"
+}
+
+#: Depois das linhas que o verbo pede, o stdin tem de FECHAR. Linha a mais é
+#: recusa: um chamador que monta o pedido errado tem de falhar alto, e não ter
+#: metade dele lida. E um stdin que não fecha em 10 s também — root parado
+#: esperando é falha de disponibilidade com privilégio.
+_fim_do_stdin() {
+    local sobra="" codigo=0
+    IFS= read -r -t 10 sobra || codigo=$?
+    #: `read` devolve 0 com a linha inteira, 1 no fim do arquivo (com o resto
+    #: sem quebra de linha em `sobra`, se houver) e mais de 128 no prazo.
+    (( codigo <= 128 )) || _recusar "o stdin não fechou em 10 s depois dos dados do verbo"
+    [[ "${codigo}" -ne 0 && -z "${sobra}" ]] \
+        || _recusar "o stdin trouxe uma linha a mais do que o verbo lê"
+}
+
+#: O endereço no argv é a forma de antes de 29/09/2026 — e é recusa com a
+#: frase certa, não com a contagem: quem chamar pelo jeito antigo tem de saber
+#: por quê, e nada acontece. A regra do sudoers nova também não a deixa passar
+#: sem senha.
+_sem_dado_no_argv() {
+    local verbo="$1"; shift
+    [[ $# -eq 0 ]] || _recusar "${verbo}: o endereço vem pelo stdin, uma linha por dado, e não no argv"
+}
+
+#: O nome novo do adaptador — o único dado de forma livre, e ele vem pelo
+#: stdin como o endereço (contenção 1). A régua é ALLOWLIST, e é feita por
 #: subtração para não depender de locale: tira os permitidos ASCII, tira os
 #: bytes >= 0x80 (acentuação em UTF-8, que ela usa), e o que sobrar reprova.
 #: Uma allowlist com `[[:alnum:]]` mudaria de significado entre LC_ALL=C e
@@ -387,6 +448,16 @@ _dizer_seco() { printf '[dry-run] %s\n' "$*"; }
 
 #: `dev_AA_BB_...` — a forma que o BlueZ usa no caminho de objeto D-Bus.
 _no_do_dispositivo() { printf 'dev_%s\n' "${1//:/_}"; }
+
+#: De onde, para o registro: o `hciN`, ou «um adaptador fora da mesa» quando o
+#: adaptador não está plugado — nunca o endereço (ver `_registrar`).
+_onde() {
+    if [[ -n "${1:-}" ]]; then
+        printf 'do adaptador %s' "$1"
+    else
+        printf 'de um adaptador fora da mesa'
+    fi
+}
 
 #: MAC do adaptador -> hciN. Vazio (e retorno 1) quando o dongle não está
 #: plugado — e isso é caso NORMAL: migrar um controle de um dongle que saiu da
@@ -484,12 +555,9 @@ verbo_bonds() {
     return 0
 }
 
+#: O nome já vem validado do despacho (o `_nome_do_stdin`, depois do endereço).
 verbo_renomear() {
-    local adaptador="$1" nome hci
-    #: A recusa do nome tem de matar o PROCESSO, não uma subshell — por isso a
-    #: função devolve pela global (ver o comentário de `VALIDADO`).
-    _nome_do_stdin
-    nome="${VALIDADO}"
+    local adaptador="$1" nome="$2" hci
     hci="$(_hci_do_mac "${adaptador}" || true)"
     [[ -n "${hci}" ]] || { _erro "adaptador ${adaptador} não está na mesa (plugado e ligado?)"; exit 1; }
     if _seco; then
@@ -497,7 +565,7 @@ verbo_renomear() {
         return 0
     fi
     if busctl set-property org.bluez "/org/bluez/${hci}" org.bluez.Adapter1 Alias s "${nome}" 2>/dev/null; then
-        _registrar "adaptador ${adaptador} (${hci}) renomeado"
+        _registrar "o adaptador ${hci} foi renomeado"
         return 0
     fi
     _erro "não consegui escrever o alias de ${adaptador} (${hci})"
@@ -544,14 +612,14 @@ verbo_esquecer() {
         #: verbo acabou de tirar (ou, a seco, tiraria).
         if [[ "${pasta_adap##*/}" != "${adaptador}" ]] \
             && _bond_com_chave "${pasta_adap}/${controle}"; then
-            _registrar "cache SDP de ${controle} mantido em ${pasta_adap##*/}: é do bond que mora lá"
+            _registrar "cache SDP do controle mantido em outro adaptador, ao lado de um bond com chave"
             continue
         fi
         _apagar "${pasta_adap}/cache/${controle}" "cache SDP"
     done
     _enterrar "${adaptador}" "${controle}"
     if ! _seco; then
-        _registrar "controle ${controle} esquecido do adaptador ${adaptador} (bond + cache SDP + lápide)"
+        _registrar "um controle esquecido $(_onde "${hci}") (bond + cache SDP + lápide)"
         _diario "bt-ponte" "esqueceu o controle" "pedido à ponte privilegiada" \
             "{\"bond\": $(_json_texto "no adaptador")}" \
             "{\"bond\": null, \"lapide\": true}" \
@@ -702,7 +770,7 @@ verbo_descobrir() {
     #: reprovou nada — era linha a mais dizendo o que esta já diz.
     trap _fechar_a_busca EXIT
     printf 'select %s\npower on\npairable on\nscan on\n' "${adaptador}" >"${BUSCA_ROTEIRO}"
-    _registrar "janela de busca de ${segundos}s aberta em ${adaptador} (${hci})"
+    _registrar "janela de busca de ${segundos}s aberta no adaptador ${hci}"
     #: O teto de tempo externo é cinto: se o bluetoothctl ignorar o --timeout,
     #: quem fica preso é um processo ROOT.
     #:
@@ -726,7 +794,7 @@ verbo_descobrir() {
     quantos="$(wc -l <"${BUSCA_JAVISTOS}" 2>/dev/null || printf '0')"
     #: O DIÁRIO CONTA, NÃO NOMEIA. Uma varredura vê o celular do vizinho, e o
     #: journal desta máquina não é lugar para o endereço de quem passou na rua.
-    _registrar "janela de busca fechada em ${adaptador} (${hci}): ${quantos} candidato(s)"
+    _registrar "janela de busca fechada no adaptador ${hci}: ${quantos} candidato(s)"
     return 0
 }
 
@@ -752,7 +820,7 @@ verbo_parear() {
         exit 1
     fi
     busctl set-property org.bluez "${caminho}" org.bluez.Device1 Trusted b true >/dev/null 2>&1 || true
-    _registrar "controle ${controle} pareado e confiado em ${adaptador} (${hci})"
+    _registrar "um controle pareado e confiado no adaptador ${hci}"
     return 0
 }
 
@@ -790,13 +858,13 @@ verbo_desconectar() {
     fi
     if command -v hcitool >/dev/null 2>&1; then
         if timeout 10 hcitool -i "${hci}" dc "${controle}" >/dev/null 2>&1; then
-            _registrar "link de ${controle} derrubado em ${adaptador} (${hci}) por hcitool dc"
+            _registrar "o link de um controle derrubado no adaptador ${hci} por hcitool dc"
             return 0
         fi
     fi
     if command -v btmgmt >/dev/null 2>&1; then
         if timeout 10 btmgmt --index "${indice}" disconnect "${controle}" >/dev/null 2>&1; then
-            _registrar "link de ${controle} derrubado em ${adaptador} (${hci}) por btmgmt disconnect"
+            _registrar "o link de um controle derrubado no adaptador ${hci} por btmgmt disconnect"
             return 0
         fi
     fi
@@ -1195,36 +1263,38 @@ verbo_religar_orfaos() {
 #: para o `visudo -c`. Verbo novo no `case` lá embaixo tem de aparecer aqui, ou
 #: a janela não consegue chamá-lo — que é o sentido certo da falha.
 verbo_regra_sudo() {
-    local usuaria="$1" m
-    #: MAC em classes de caractere EXPLÍCITAS, sem um `*` sequer: `*` no
+    local usuaria="$1"
+    #: NENHUM argumento de aparelho, e nenhum `*`: o endereço e o nome novo vêm
+    #: pelo stdin (contenção 1), e a linha de comando que o sudo permite é o
+    #: verbo e nada mais. Um verbo com argumento na regra casa SÓ aquele
+    #: argumento — `<ponte> esquecer` não casa `<ponte> esquecer <um> <outro>`,
+    #: e a forma velha pede senha. Os segundos do `descobrir` são o único
+    #: argumento, em classes de caractere, uma linha por largura: `*` no
     #: sudoers casa espaço em branco, e casar espaço em argumento é como
-    #: NOPASSWD estreito vira NOPASSWD largo. O `\:` é obrigatório — `:` é
-    #: metacaractere do sudoers.
-    m='[0-9A-Fa-f][0-9A-Fa-f]\:[0-9A-Fa-f][0-9A-Fa-f]\:[0-9A-Fa-f][0-9A-Fa-f]'
-    m="${m}\\:[0-9A-Fa-f][0-9A-Fa-f]\\:[0-9A-Fa-f][0-9A-Fa-f]\\:[0-9A-Fa-f][0-9A-Fa-f]"
+    #: NOPASSWD estreito vira NOPASSWD largo.
     cat <<FIM
 # /etc/sudoers.d/49-hefesto-bt-ponte — gerado por
 # ${ALVO_INSTALADO} regra-sudo ${usuaria}
 #
-# A ponte privilegiada do Bluetooth (decisão dela, 22/08/2026: o sudo é do
-# install e vale para o app inteiro). NÃO editar à mão: o install regrava.
+# A ponte privilegiada do Bluetooth: o sudo é do install e vale para o app
+# inteiro. NÃO editar à mão: o install regrava.
 #
-# A regra é estreita de propósito — caminho absoluto, verbos nomeados um a um,
-# MAC em classes de caractere explícitas e NENHUM curinga. O nome novo do
-# adaptador entra pelo STDIN, não por argv, justamente para que não sobre
-# argumento livre a casar aqui.
+# A regra é estreita de propósito — caminho absoluto, verbos nomeados um a um e
+# NENHUM curinga. O endereço e o nome novo entram pelo STDIN, não por argv:
+# assim não sobra argumento livre a casar aqui, e o registro do sudo diz o
+# verbo e nenhum aparelho.
 Cmnd_Alias HEFESTO_BT_PONTE = \\
     ${ALVO_INSTALADO} adaptadores, \\
-    ${ALVO_INSTALADO} bonds ${m}, \\
-    ${ALVO_INSTALADO} renomear ${m}, \\
-    ${ALVO_INSTALADO} esquecer ${m} ${m}, \\
-    ${ALVO_INSTALADO} parear ${m} ${m}, \\
-    ${ALVO_INSTALADO} desconectar ${m} ${m}, \\
+    ${ALVO_INSTALADO} bonds, \\
+    ${ALVO_INSTALADO} renomear, \\
+    ${ALVO_INSTALADO} esquecer, \\
+    ${ALVO_INSTALADO} parear, \\
+    ${ALVO_INSTALADO} desconectar, \\
     ${ALVO_INSTALADO} reiniciar-travado, \\
     ${ALVO_INSTALADO} religar-orfaos, \\
-    ${ALVO_INSTALADO} descobrir ${m} [0-9], \\
-    ${ALVO_INSTALADO} descobrir ${m} [0-9][0-9], \\
-    ${ALVO_INSTALADO} descobrir ${m} [0-9][0-9][0-9]
+    ${ALVO_INSTALADO} descobrir [0-9], \\
+    ${ALVO_INSTALADO} descobrir [0-9][0-9], \\
+    ${ALVO_INSTALADO} descobrir [0-9][0-9][0-9]
 
 ${usuaria} ALL=(root) NOPASSWD: HEFESTO_BT_PONTE
 FIM
@@ -1247,37 +1317,46 @@ case "${VERBO}" in
         verbo_adaptadores
         ;;
     bonds)
-        [[ $# -eq 1 ]] || _recusar "bonds recebe exatamente 1 argumento (MAC do adaptador)"
-        _mac "${1}" 'MAC do adaptador'; ARG_ADAPTADOR="${VALIDADO}"
+        _sem_dado_no_argv bonds "$@"
+        _mac_do_stdin 'MAC do adaptador'; ARG_ADAPTADOR="${VALIDADO}"
+        _fim_do_stdin
         verbo_bonds "${ARG_ADAPTADOR}"
         ;;
     renomear)
-        [[ $# -eq 1 ]] || _recusar "renomear recebe exatamente 1 argumento (MAC do adaptador); o nome vem pelo stdin"
-        _mac "${1}" 'MAC do adaptador'; ARG_ADAPTADOR="${VALIDADO}"
-        verbo_renomear "${ARG_ADAPTADOR}"
+        _sem_dado_no_argv renomear "$@"
+        _mac_do_stdin 'MAC do adaptador'; ARG_ADAPTADOR="${VALIDADO}"
+        #: A recusa do nome tem de matar o PROCESSO, não uma subshell — por
+        #: isso a função devolve pela global (ver o comentário de `VALIDADO`).
+        _nome_do_stdin;                    ARG_NOME="${VALIDADO}"
+        _fim_do_stdin
+        verbo_renomear "${ARG_ADAPTADOR}" "${ARG_NOME}"
         ;;
     esquecer)
-        [[ $# -eq 2 ]] || _recusar "esquecer recebe exatamente 2 argumentos (MAC do adaptador, MAC do controle)"
-        _mac "${1}" 'MAC do adaptador'; ARG_ADAPTADOR="${VALIDADO}"
-        _mac "${2}" 'MAC do controle';  ARG_CONTROLE="${VALIDADO}"
+        _sem_dado_no_argv esquecer "$@"
+        _mac_do_stdin 'MAC do adaptador'; ARG_ADAPTADOR="${VALIDADO}"
+        _mac_do_stdin 'MAC do controle';  ARG_CONTROLE="${VALIDADO}"
+        _fim_do_stdin
         verbo_esquecer "${ARG_ADAPTADOR}" "${ARG_CONTROLE}"
         ;;
     descobrir)
-        [[ $# -eq 2 ]] || _recusar "descobrir recebe exatamente 2 argumentos (MAC do adaptador, segundos)"
-        _mac "${1}" 'MAC do adaptador'; ARG_ADAPTADOR="${VALIDADO}"
-        _segundos "${2}";               ARG_SEGUNDOS="${VALIDADO}"
+        [[ $# -eq 1 ]] || _recusar "descobrir recebe só os segundos no argv; o endereço vem pelo stdin, uma linha por dado"
+        _segundos "${1}";                  ARG_SEGUNDOS="${VALIDADO}"
+        _mac_do_stdin 'MAC do adaptador'; ARG_ADAPTADOR="${VALIDADO}"
+        _fim_do_stdin
         verbo_descobrir "${ARG_ADAPTADOR}" "${ARG_SEGUNDOS}"
         ;;
     parear)
-        [[ $# -eq 2 ]] || _recusar "parear recebe exatamente 2 argumentos (MAC do adaptador, MAC do controle)"
-        _mac "${1}" 'MAC do adaptador'; ARG_ADAPTADOR="${VALIDADO}"
-        _mac "${2}" 'MAC do controle';  ARG_CONTROLE="${VALIDADO}"
+        _sem_dado_no_argv parear "$@"
+        _mac_do_stdin 'MAC do adaptador'; ARG_ADAPTADOR="${VALIDADO}"
+        _mac_do_stdin 'MAC do controle';  ARG_CONTROLE="${VALIDADO}"
+        _fim_do_stdin
         verbo_parear "${ARG_ADAPTADOR}" "${ARG_CONTROLE}"
         ;;
     desconectar)
-        [[ $# -eq 2 ]] || _recusar "desconectar recebe exatamente 2 argumentos (MAC do adaptador, MAC do controle)"
-        _mac "${1}" 'MAC do adaptador'; ARG_ADAPTADOR="${VALIDADO}"
-        _mac "${2}" 'MAC do controle';  ARG_CONTROLE="${VALIDADO}"
+        _sem_dado_no_argv desconectar "$@"
+        _mac_do_stdin 'MAC do adaptador'; ARG_ADAPTADOR="${VALIDADO}"
+        _mac_do_stdin 'MAC do controle';  ARG_CONTROLE="${VALIDADO}"
+        _fim_do_stdin
         verbo_desconectar "${ARG_ADAPTADOR}" "${ARG_CONTROLE}"
         ;;
     reiniciar-travado)

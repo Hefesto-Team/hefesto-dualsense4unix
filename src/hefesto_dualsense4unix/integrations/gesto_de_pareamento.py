@@ -59,9 +59,9 @@ AS TRÊS DISCIPLINAS, AS MESMAS DE ``gesto_de_reconexao.py``
 * **"não deu" nunca é "não achei"** — o quarto estado é obrigatório. Uma
   varredura que não rodou tem de dizer isso, porque lista vazia lida como
   "ninguém apareceu" manda a pessoa repetir um gesto que nunca foi medido;
-* **Nenhum endereço inteiro sai numa frase.** O endereço cheio existe para ser
-  argumento da ponte; o que vai para a tela e para o diário é
-  :attr:`Candidato.mascara`.
+* **Nenhum endereço inteiro sai numa frase.** O endereço cheio existe para ir
+  à ponte, pelo stdin (``conexao_zumbi.pedido_a_ponte``); o que vai para a
+  tela e para o diário é :attr:`Candidato.mascara`.
 
 PELO DONO DO BLUEZ E PELO AGENTE NOSSO (BLUEZ-UM-DONO-01, 23/09/2026)
 ======================================================================
@@ -95,14 +95,16 @@ import contextlib
 import subprocess
 import threading
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from hefesto_dualsense4unix.integrations import bluez_dbus
 from hefesto_dualsense4unix.integrations.conexao_zumbi import (
     PONTE_INSTALADA,
+    PedidoAPonte,
     PontePrivilegiada,
     mac_limpo,
+    pedido_a_ponte,
 )
 from hefesto_dualsense4unix.integrations.gesto_de_reconexao import mascarar
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -203,8 +205,8 @@ def e_controle(classe: int | None) -> bool:
 class Candidato:
     """Um aparelho que a varredura achou. Imutável: é uma foto, não estado."""
 
-    #: O endereço INTEIRO, em minúsculas. Ele existe para ser argumento da
-    #: ponte, e é o único lugar do módulo onde ele aparece inteiro.
+    #: O endereço INTEIRO, em minúsculas. Ele existe para ir à ponte, e é o
+    #: único lugar do módulo onde ele aparece inteiro.
     endereco: str
     #: O nome que o BlueZ publica. Vem de terceiro — já higienizado do outro
     #: lado, e nunca usado para decidir nada.
@@ -257,7 +259,7 @@ def ler_candidato(linha: str) -> Candidato | None:
     """Uma linha de TSV da ponte vira um :class:`Candidato`, ou ``None``.
 
     O contrato é ``MAC \\t NOME \\t novo|pareado \\t CLASSE``. Recusar em vez de
-    adivinhar é deliberado: o endereço vira argumento de um comando
+    adivinhar é deliberado: o endereço vira dado de um comando
     privilegiado, e o que não é um endereço tem de sair como ``None``, nunca
     como um endereço aproximado. É a mesma régua de
     ``conexao_zumbi.mac_limpo``, e é dela que este módulo a pega.
@@ -278,14 +280,15 @@ def ler_candidato(linha: str) -> Candidato | None:
     return Candidato(endereco=endereco, nome=nome, ja_pareado=ja_pareado, classe=classe)
 
 
-#: O que abre um processo: recebe a linha de comando e devolve algo com
-#: ``stdout`` (linhas), ``poll()``, ``terminate()``, ``kill()`` e ``wait()``. É
-#: por este tipo que o módulo inteiro fica exercitável sem ponte instalada, sem
-#: ``sudo`` e sem adaptador na mesa.
-Abrir = Callable[[Sequence[str]], "subprocess.Popen[str]"]
+#: O que abre um processo: recebe o pedido à ponte (o ``argv`` que o sudo vê e
+#: a ``entrada`` que vai pelo stdin) e devolve algo com ``stdout`` (linhas),
+#: ``poll()``, ``terminate()``, ``kill()`` e ``wait()``. É por este tipo que o
+#: módulo inteiro fica exercitável sem ponte instalada, sem ``sudo`` e sem
+#: adaptador na mesa.
+Abrir = Callable[[PedidoAPonte], "subprocess.Popen[str]"]
 
-#: O que roda um comando até o fim e devolve ``(código, stderr)``. Mesma razão.
-Correr = Callable[[Sequence[str]], "tuple[int, str]"]
+#: O que roda um pedido até o fim e devolve ``(código, stderr)``. Mesma razão.
+Correr = Callable[[PedidoAPonte], "tuple[int, str]"]
 
 
 def _segundos_validos(segundos: int) -> int:
@@ -293,15 +296,30 @@ def _segundos_validos(segundos: int) -> int:
     return max(1, min(SEGUNDOS_MAX, int(segundos)))
 
 
-def _abrir_de_verdade(argumentos: Sequence[str]) -> subprocess.Popen[str]:
-    """Abre a ponte de verdade, com a saída em linhas."""
-    return subprocess.Popen(
-        list(argumentos),
+def _abrir_de_verdade(pedido: PedidoAPonte) -> subprocess.Popen[str]:
+    """Abre a ponte de verdade, com a saída em linhas e os dados pelo stdin.
+
+    O stdin é um cano NOSSO, e nunca o de quem chamou: a entrada é escrita e o
+    cano FECHA antes de a saída ser lida. A ponte espera o fim do stdin depois
+    dos dados; sem o fechar, a busca esperaria 10 s e seria recusada.
+    """
+    processo = subprocess.Popen(
+        list(pedido.argv),
+        stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
         bufsize=1,
     )
+    if processo.stdin is not None:
+        # A ponte que morreu antes de ler (recusa, sudo sem regra) fecha o
+        # cano do lado de lá: o fio de leitura vê o fim da saída, e o motivo
+        # vem do código de saída — não daqui.
+        with contextlib.suppress(OSError):
+            processo.stdin.write(pedido.entrada)
+        with contextlib.suppress(OSError):
+            processo.stdin.close()
+    return processo
 
 
 def _dono_que_pareia(dono: bluez_dbus.LeitorDoBluez | None) -> bluez_dbus.LeitorDoBluez | None:
@@ -319,11 +337,13 @@ def _limpo(nome: str) -> str:
     return " ".join("".join(c if c.isprintable() else " " for c in nome).split())
 
 
-def _correr_de_verdade(argumentos: Sequence[str]) -> tuple[int, str]:
-    """Roda a ponte até o fim. Os três jeitos de não dar viram ``(1, motivo)``."""
+def _correr_de_verdade(pedido: PedidoAPonte) -> tuple[int, str]:
+    """Roda a ponte até o fim, com os dados pelo stdin. Os três jeitos de não
+    dar viram ``(1, motivo)``."""
     try:
         feito = subprocess.run(
-            list(argumentos),
+            list(pedido.argv),
+            input=pedido.entrada,
             capture_output=True,
             text=True,
             timeout=ESPERA_DO_PAREAR_S,
@@ -390,22 +410,16 @@ class JanelaDeBusca:
             return self._abrir_pelo_dono(self._dono)
         if self._processo is not None:
             return ""
-        argumentos = [
-            "sudo",
-            "-n",
-            "--",
-            self.caminho,
-            "descobrir",
-            self.adaptador,
-            str(self.segundos),
-        ]
         from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
 
         try:
+            pedido = pedido_a_ponte(
+                "descobrir", self.adaptador, segundos=self.segundos, caminho=self.caminho
+            )
             # A trava cobre o NASCIMENTO da busca da ponte: ela não começa a
             # varrer no meio do gesto de outro motor.
             with bluez_dbus.na_trava(QUEM):
-                self._processo = self._abrir(argumentos)
+                self._processo = self._abrir(pedido)
         except TravaOcupadaError as ocupada:
             return f"o rádio estava ocupado: {ocupada}"
         except (OSError, ValueError) as erro:
@@ -596,7 +610,7 @@ class JanelaDeBusca:
         try:
             with bluez_dbus.na_trava(QUEM):
                 codigo, erro = self._correr(
-                    ["sudo", "-n", "--", self.caminho, "parear", self.adaptador, alvo]
+                    pedido_a_ponte("parear", self.adaptador, alvo, caminho=self.caminho)
                 )
         except TravaOcupadaError as ocupada:
             codigo, erro = 1, str(ocupada)
@@ -698,15 +712,21 @@ def esquecer_o_pareamento(
     return Resultado(ESTADO_NAO_DEU, FRASE_NAO_ESQUECEU)
 
 
-def impedimentos(caminho: str = PONTE_INSTALADA) -> list[str]:
+def impedimentos(
+    caminho: str = PONTE_INSTALADA, segundos: int = SEGUNDOS_DA_JANELA
+) -> list[str]:
     """Por que o pareamento pelo Hefesto não pode acontecer agora. Vazio = pode.
 
     Delega à porta que a ``CONEXAO-ZUMBI-01`` já escreveu: ponte instalada,
     ``sudo`` presente e a regra do ``sudoers.d`` no lugar. Escrever a mesma
     sonda de novo aqui deixaria duas verdades sobre a mesma porta, que é o
-    defeito que esta casa mais paga.
+    defeito que esta casa mais paga. A sonda pergunta à regra as duas linhas
+    que este gesto vai pedir: o ``descobrir <segundos>`` e o ``parear``.
     """
-    return PontePrivilegiada(caminho=caminho).impedimentos()
+    return PontePrivilegiada(caminho=caminho).impedimentos_do_pedido(
+        pedido_a_ponte("descobrir", segundos=_segundos_validos(segundos), caminho=caminho),
+        pedido_a_ponte("parear", caminho=caminho),
+    )
 
 
 def procurar(
@@ -732,7 +752,7 @@ def procurar(
         adaptador, segundos, caminho=caminho, abrir=abrir, correr=correr, dono=dono
     )
     if conferir_a_porta and not janela.pelo_dono:
-        motivos = impedimentos(caminho)
+        motivos = impedimentos(caminho, janela.segundos)
         if motivos:
             logger.info("pareamento_sem_porta", motivos=len(motivos))
             return Resultado(

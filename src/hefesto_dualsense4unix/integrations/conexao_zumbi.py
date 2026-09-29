@@ -129,14 +129,92 @@ def mac_limpo(valor: str | None) -> str | None:
 
     ESTRITA DE PROPÓSITO, e não usa ``core.sysfs_leds.norm_mac``: aquela
     recolhe os dígitos hex de QUALQUER texto (``norm_mac("/dev/hidraw4")``
-    devolve ``'deda4'``, medido em 04/09/2026). Aqui o valor vira argumento de
-    um comando privilegiado — o que não é um endereço tem de sair como
+    devolve ``'deda4'``, medido em 04/09/2026). Aqui o valor vira dado de um
+    comando privilegiado — o que não é um endereço tem de sair como
     ``None``, não como um endereço aproximado.
     """
     if not valor:
         return None
     texto = str(valor).strip().lower()
     return texto if _FORMA_MAC.match(texto) else None
+
+
+# --- o pedido à ponte (um dono, os cinco chamadores) --------------------------
+
+#: Quantos endereços cada verbo da ponte lê pelo stdin, nesta ordem: o do
+#: adaptador, depois o do controle. É o espelho do despacho de
+#: ``scripts/bt_ponte_privilegiada.sh``; a régua
+#: ``tests/unit/test_o_sudo_nao_grava_o_endereco.py`` roda os dois juntos.
+_ENDERECOS_DO_VERBO: dict[str, int] = {
+    "bonds": 1,
+    "renomear": 1,
+    "descobrir": 1,
+    "esquecer": 2,
+    "parear": 2,
+    "desconectar": 2,
+}
+
+
+@dataclass(frozen=True)
+class PedidoAPonte:
+    """Um pedido à ponte root, montado por :func:`pedido_a_ponte`.
+
+    ``argv`` é o que o ``sudo`` vê — e REGISTRA, no journal, na unidade de quem
+    chamou e no ``/proc`` enquanto vive: o verbo, e os segundos do
+    ``descobrir``. ``entrada`` é o que vai pelo stdin, uma linha por dado.
+    ``sonda`` é a MESMA linha do ``argv`` perguntada à regra do sudoers
+    (``sudo -n -l``), sem rodar a ponte.
+    """
+
+    argv: tuple[str, ...]
+    entrada: str
+    sonda: tuple[str, ...]
+
+
+def pedido_a_ponte(
+    verbo: str,
+    *enderecos: str,
+    segundos: int | None = None,
+    nome: str | None = None,
+    caminho: str = PONTE_INSTALADA,
+) -> PedidoAPonte:
+    """O pedido à ponte root — o ÚNICO lugar do ``src/`` que escreve ``sudo`` para ela.
+
+    O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01 (29/09/2026). O endereço ia no
+    argv, e o argv de um ``sudo`` é registro por desenho: a bancada de 29/09
+    achou 15 linhas ``COMMAND=…esquecer <adaptador> <controle>`` inteiras no
+    diário da unidade do daemon. Agora o argv leva só o verbo (e os segundos
+    do ``descobrir``, que não identificam ninguém), e os endereços vão pelo
+    stdin — como o nome novo do ``renomear`` já ia.
+
+    Cada endereço passa por :func:`mac_limpo`, e o que não tem forma de
+    endereço levanta ``ValueError`` antes de qualquer processo. Sem
+    endereço, o pedido só serve à ``sonda``, que não leva dado nenhum: rodado,
+    a ponte o recusa com código 2 (a linha que não veio).
+    """
+    esperados = _ENDERECOS_DO_VERBO.get(verbo)
+    if esperados is None:
+        raise ValueError(f"a ponte não tem o verbo {verbo!r} com dado pelo stdin")
+    limpos = [mac_limpo(endereco) for endereco in enderecos]
+    if any(limpo is None for limpo in limpos):
+        raise ValueError("o endereço não tem forma de endereço")
+    if limpos and len(limpos) != esperados:
+        raise ValueError(f"o verbo {verbo} lê {esperados} endereço(s), e vieram {len(limpos)}")
+    if (segundos is not None) != (verbo == "descobrir"):
+        raise ValueError("só o descobrir leva os segundos, e ele sempre os leva")
+    if nome is not None and verbo != "renomear":
+        raise ValueError("só o renomear leva o nome novo")
+    linha: tuple[str, ...] = (caminho, verbo)
+    if segundos is not None:
+        linha = (*linha, str(int(segundos)))
+    dados = [str(limpo) for limpo in limpos]
+    if nome is not None:
+        dados.append(nome)
+    return PedidoAPonte(
+        argv=("sudo", "-n", "--", *linha),
+        entrada="".join(f"{dado}\n" for dado in dados),
+        sonda=("sudo", "-n", "-l", "--", *linha),
+    )
 
 
 @dataclass(frozen=True)
@@ -402,16 +480,33 @@ class PontePrivilegiada:
     """O único caminho de root desta cura — ``bt_ponte_privilegiada.sh``.
 
     O produto NÃO chama ``hcitool dc`` direto: derrubar link é root, e a porta
-    já existe, com a entrada validada dos dois lados (regex aqui, classes de
-    caractere no ``sudoers.d/49-hefesto-bt-ponte``).
+    já existe. O endereço vai à ponte pelo stdin (:func:`pedido_a_ponte`), e é
+    ela que confere a forma dele, antes de qualquer efeito; o
+    ``sudoers.d/49-hefesto-bt-ponte`` casa só o verbo.
     """
 
     caminho: str = PONTE_INSTALADA
     #: Injetável para a régua não precisar de sudo nem de ponte instalada.
+    #: Recebe UM objeto, o :class:`PedidoAPonte` (o que o sudo veria), e
+    #: devolve ``(agiu, motivo)``.
     executor: object = None
 
     def impedimentos(self) -> list[str]:
-        """Por que esta porta não pode ser usada agora. Vazio = pode."""
+        """Por que esta porta não pode ser usada agora. Vazio = pode.
+
+        A sonda pergunta à regra o verbo DESTA porta, o ``desconectar``.
+        """
+        return self.impedimentos_do_pedido(pedido_a_ponte("desconectar", caminho=self.caminho))
+
+    def impedimentos_do_pedido(self, *pedidos: PedidoAPonte) -> list[str]:
+        """Os impedimentos, com a sonda de CADA pedido perguntada à regra.
+
+        A sonda é a linha que o pedido vai usar, e não a do ``adaptadores`` que
+        o install pergunta: essa linha é igual na regra velha (a do endereço no
+        argv) e na nova, e a meia-instalação — a ponte nova com a regra velha,
+        que o ``install-host-udev.sh`` deixa porque troca a ponte e não a
+        regra — passaria nela e seria recusada no pedido.
+        """
         if self.executor is not None:
             return []
         motivos: list[str] = []
@@ -422,7 +517,7 @@ class PontePrivilegiada:
             )
         if shutil.which("sudo") is None:
             motivos.append("o 'sudo' não está nesta máquina")
-        elif not self._sudo_sem_senha():
+        elif not all(self._sudo_sem_senha(pedido) for pedido in pedidos):
             motivos.append(
                 "o sudo sem senha para a ponte não está no lugar "
                 f"(/etc/sudoers.d/49-hefesto-bt-ponte) — "
@@ -430,10 +525,11 @@ class PontePrivilegiada:
             )
         return motivos
 
-    def _sudo_sem_senha(self) -> bool:
+    def _sudo_sem_senha(self, pedido: PedidoAPonte) -> bool:
         try:
             resultado = subprocess.run(
-                ["sudo", "-n", "--", self.caminho, "--dry-run", "adaptadores"],
+                list(pedido.sonda),
+                stdin=subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -445,21 +541,19 @@ class PontePrivilegiada:
 
     def desconectar(self, link: LinkDeRadio) -> tuple[bool, str]:
         """Pede à ponte que derrube ESTE link. ``(agiu, motivo)``."""
-        argumentos = [
-            "sudo",
-            "-n",
-            "--",
-            self.caminho,
-            "desconectar",
-            link.adaptador,
-            link.controle,
-        ]
+        try:
+            pedido = pedido_a_ponte(
+                "desconectar", link.adaptador, link.controle, caminho=self.caminho
+            )
+        except ValueError as erro:
+            return False, str(erro)
         correr = self.executor
         if callable(correr):
-            return correr(argumentos, link)  # type: ignore[no-any-return]
+            return correr(pedido)  # type: ignore[no-any-return]
         try:
             resultado = subprocess.run(
-                argumentos,
+                list(pedido.argv),
+                input=pedido.entrada,
                 capture_output=True,
                 text=True,
                 timeout=20,
@@ -600,6 +694,7 @@ __all__ = [
     "RAIZ_HIDRAW",
     "SEGUNDOS_PARA_ZUMBI",
     "LinkDeRadio",
+    "PedidoAPonte",
     "PontePrivilegiada",
     "Veredito",
     "VigiaDeZumbis",
@@ -608,6 +703,7 @@ __all__ = [
     "links_de_pe",
     "mac_limpo",
     "olhar_a_mesa",
+    "pedido_a_ponte",
     "uniqs_com_hid",
     "zumbis",
 ]

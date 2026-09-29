@@ -49,7 +49,8 @@ PROVA DE MORDIDA (20/09/2026), cada arrancada devolvida em seguida. Controle:
 
 from __future__ import annotations
 
-import subprocess
+import dataclasses
+import os
 import time
 from pathlib import Path
 from typing import Any
@@ -57,6 +58,7 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.integrations import gesto_de_pareamento as gp
+from hefesto_dualsense4unix.integrations.conexao_zumbi import PedidoAPonte
 from tests.unit.barramento_de_mentira import (
     ADAPTADOR,
     CLASSE_DO_DUALSENSE,
@@ -79,9 +81,20 @@ CLASSE_DO_JOYSTICK = 0x002504
 
 
 @pytest.fixture()
-def barramento(tmp_path: Path) -> Path:
-    """O BlueZ de mentira da bancada — ver `tests/unit/barramento_de_mentira.py`."""
-    return montar(tmp_path)
+def barramento(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """O BlueZ de mentira da bancada — ver `tests/unit/barramento_de_mentira.py`.
+
+    O ambiente da ponte vai ao ``os.environ``: os executores do PRÓPRIO produto
+    (``_abrir_de_verdade`` e ``_correr_de_verdade``) não recebem ambiente, e a
+    ponte herda o de quem a abre.
+    """
+    raiz = montar(tmp_path)
+    for chave in ("SUDO_UID", "SUDO_USER"):
+        monkeypatch.delenv(chave, raising=False)
+    for chave, valor in ambiente(raiz).items():
+        if os.environ.get(chave) != valor:
+            monkeypatch.setenv(chave, valor)
+    return raiz
 
 
 # --- quem é controle se pergunta à CLASSE ------------------------------------
@@ -213,43 +226,30 @@ def test_o_adaptador_sem_forma_de_endereco_nao_chega_ao_sudo() -> None:
 # --- de ponta a ponta, contra a ponte DE VERDADE -----------------------------
 
 
+def _sem_sudo(pedido: PedidoAPonte) -> PedidoAPonte:
+    """O único dublê: o ``sudo -n --`` sai da frente do argv, e fica ``bash <ponte> <verbo>``.
+
+    A entrada (os endereços pelo stdin) segue a do pedido, e quem a escreve é
+    o executor do produto.
+    """
+    assert pedido.argv[:3] == ("sudo", "-n", "--"), pedido.argv
+    return dataclasses.replace(pedido, argv=("bash", *pedido.argv[3:]))
+
+
 def _janela_contra_a_ponte(barramento: Path, segundos: int) -> gp.JanelaDeBusca:
     """Uma `JanelaDeBusca` que dirige o script de verdade, sem `sudo`.
 
     O único dublê é a troca de `sudo -n -- <ponte>` por `bash <ponte>`: o resto
-    do caminho — o argumento, o TSV, o fluxo — é o do produto.
+    do caminho — os executores do produto, o stdin, o TSV, o fluxo — é o do
+    produto. O ambiente da ponte é o do ``barramento`` (a fixture).
     """
-    env = ambiente(barramento)
-
-    def sem_sudo(argumentos: Any) -> Any:
-        resto = list(argumentos)[3:]
-        return subprocess.Popen(
-            ["bash", *resto],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            bufsize=1,
-            env=env,
-        )
-
-    def correr_sem_sudo(argumentos: Any) -> tuple[int, str]:
-        resto = list(argumentos)[3:]
-        feito = subprocess.run(
-            ["bash", *resto],
-            capture_output=True,
-            text=True,
-            env=env,
-            timeout=60,
-            check=False,
-        )
-        return feito.returncode, (feito.stderr or "").strip()
-
+    assert (barramento / "bin").is_dir()
     return gp.JanelaDeBusca(
         ADAPTADOR,
         segundos,
         caminho=str(PONTE),
-        abrir=sem_sudo,
-        correr=correr_sem_sudo,
+        abrir=lambda pedido: gp._abrir_de_verdade(_sem_sudo(pedido)),
+        correr=lambda pedido: gp._correr_de_verdade(_sem_sudo(pedido)),
     )
 
 

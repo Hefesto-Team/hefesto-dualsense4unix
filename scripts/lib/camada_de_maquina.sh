@@ -701,9 +701,9 @@ install_bt_ponte_privilegiada_host() {
     fi
     rm -f "${_ponte_tmp}"
     printf '      ponte privilegiada instalada: mover controle entre dongles sem digitar senha\n'
-    printf '        (%s, NOPASSWD só para %s; os verbos nomeados um a um, MAC com forma fixa,\n' \
+    printf '        (%s, NOPASSWD só para %s; os verbos nomeados um a um, o endereço\n' \
         "${_ponte_regra}" "${_ponte_usuaria}"
-    printf '         nome novo pelo stdin e NENHUM verbo que execute comando livre)\n'
+    printf '         e o nome novo pelo stdin, e NENHUM verbo que execute comando livre)\n'
     if sudo -n -l -U "${_ponte_usuaria}" "${_ponte_alvo}" adaptadores >/dev/null 2>&1; then
         printf '      conferido no próprio sudo: a regra já vale para %s (não é só arquivo no disco)\n' "${_ponte_usuaria}"
     else

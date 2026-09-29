@@ -415,12 +415,13 @@ def etapa_bonds() -> int:
     print(f"\n  {len(dobrados)} CONTROLE(S) COM CHAVE EM MAIS DE UM ADAPTADOR.")
     print("  A ESCOLHA É DELA: em qual adaptador cada um deve ficar.")
     print("  O gesto, para o que SAI (um por adaptador de origem):\n")
-    ponte = "/usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh"
+    # O gesto é a etapa `limpar` deste script, com o endereço MASCARADO: ela
+    # resolve o real sozinha, e o endereço de verdade não chega ao terminal
+    # nem à linha de comando que o sudo registra.
     for mac, hcis in sorted(dobrados.items()):
         for h in sorted(hcis):
-            end = _prop(f"/org/bluez/{h}", "org.bluez.Adapter1", "Address")
             print(f"    # tirar do {h}:")
-            print(f"    sudo {ponte} esquecer {end} {mac}")
+            print(f"    python3 scripts/bancada_do_radio.py limpar {h} {_mascarar(mac)}")
     print("\n  Ele apaga o bond E o cache SDP na mesma execução — o cache")
     print("  sozinho envenena o pareamento seguinte (SDP-CACHE-01).")
     print("  " + "─" * 58 + "\n")
@@ -461,15 +462,27 @@ def etapa_limpar(alvo: str, mac_pedido: str) -> int:
     print(f"\n  APAGANDO o bond de {_mascarar(mac)} em {alvo}")
     print("  (o bond E o cache SDP saem na mesma execução — o cache sozinho")
     print("   envenena o pareamento seguinte)\n")
+    # O pedido é o do produto: os dois endereços vão pelo stdin, e o sudo
+    # registra só `esquecer` (O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01).
+    from hefesto_dualsense4unix.integrations.conexao_zumbi import pedido_a_ponte
+
+    try:
+        pedido = pedido_a_ponte("esquecer", endereco, mac, caminho=ponte)
+    except ValueError:
+        print(f"  não consegui ler o endereço de {alvo} no BlueZ. Nada foi apagado.")
+        return 4
     fim = subprocess.run(
-        ["sudo", "-n", ponte, "esquecer", endereco, mac],
+        list(pedido.argv),
+        input=pedido.entrada,
         capture_output=True,
         text=True,
         check=False,
     )
     saida = (fim.stdout + fim.stderr).strip()
     for linha in saida.splitlines()[:12]:
-        print("    " + linha.replace(mac, _mascarar(mac)))
+        for real in (mac, endereco):
+            linha = linha.replace(real, _mascarar(real))
+        print("    " + linha)
     if fim.returncode != 0:
         print(f"\n  a ponte recusou (rc={fim.returncode}). Nada foi apagado.")
         return fim.returncode

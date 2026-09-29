@@ -280,9 +280,10 @@ def _regra_do_sudo() -> str:
 def _linhas_permitidas(regra: str, ponte: Path) -> list[str]:
     """As linhas SEM curinga da regra, com o caminho instalado trocado pelo da árvore.
 
-    As de curinga (os MAC) ficam de fora: o sudo de mentira não as aceita, o
-    que é MAIS estrito que o de verdade — e o verbo desta sprint não tem
-    argumento a casar.
+    As de curinga (os segundos do ``descobrir``, as únicas desde que o
+    endereço foi para o stdin, em 29/09/2026) ficam de fora: o sudo de mentira
+    não as aceita, o que é MAIS estrito que o de verdade — e o verbo desta
+    sprint não tem argumento a casar.
     """
     alvo = _alvo_instalado()
     permitidas = []

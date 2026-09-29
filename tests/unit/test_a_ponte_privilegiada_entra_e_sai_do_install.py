@@ -29,7 +29,8 @@ PROVA DE MORDIDA (22/08/2026), quatro arrancadas, todas devolvidas em seguida
      mais sutil: a regra continua válida no `visudo -c`, e o buraco só
      apareceria no dia em que alguém pedisse uma janela de 30 segundos;
   b) trocada a forma do MAC por `*` — **2 reprovações**:
-     `test_a_regra_nao_tem_curinga` e `test_a_regra_so_aceita_mac_com_forma_de_mac`;
+     `test_a_regra_nao_tem_curinga` e a régua da forma do MAC (desde 29/09,
+     `test_a_regra_nao_aceita_endereco`: o endereço saiu da regra);
   c) apagado do `uninstall.sh` o `rm` de `/etc/sudoers.d/49-hefesto-bt-ponte` —
      reprovou `test_tudo_que_o_install_grava_o_uninstall_tira`, nomeando o
      caminho que ficou para trás;
@@ -192,15 +193,28 @@ def test_a_regra_nao_tem_curinga() -> None:
         assert "?" not in linha, f"curinga de um caractere na regra: {linha.strip()}"
 
 
-def test_a_regra_so_aceita_mac_com_forma_de_mac() -> None:
-    """Cada posição de MAC é seis pares de classe hexadecimal, e nada mais."""
-    par = re.escape(r"[0-9A-Fa-f][0-9A-Fa-f]")
-    forma = par + (re.escape(r"\:") + par) * 5
+def test_a_regra_nao_aceita_endereco() -> None:
+    """A regra casa o verbo, e nenhum endereço: ele vem pelo stdin.
+
+    O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01 (29/09/2026). Até ali cada posição
+    de MAC era seis pares de classe hexadecimal, e o endereço ia no argv — que o
+    sudo grava no journal, na unidade do daemon. Agora a linha de cada verbo de
+    aparelho é ``<ponte> <verbo>`` e nada depois (o sudoers casa os argumentos
+    por inteiro: ``<ponte> esquecer`` não casa ``<ponte> esquecer <um> <outro>``),
+    e o único argumento que sobra são os segundos do ``descobrir``.
+    """
     regra = _regra()
-    for verbo in ("bonds", "renomear"):
-        assert re.search(rf"{re.escape(ALVO)} {verbo} {forma},", regra), verbo
-    for verbo in ("esquecer", "parear", "desconectar"):
-        assert re.search(rf"{re.escape(ALVO)} {verbo} {forma} {forma},", regra), verbo
+    for verbo in ("bonds", "renomear", "esquecer", "parear", "desconectar"):
+        assert re.search(rf"^\s*{re.escape(ALVO)} {verbo}, \\$", regra, re.M), verbo
+    for linha in regra.splitlines():
+        if ALVO not in linha or linha.lstrip().startswith("#"):
+            continue
+        assert "A-F" not in linha and "\\:" not in linha, f"classe de endereço: {linha.strip()}"
+        resto = linha.strip().rstrip("\\").strip().rstrip(",").split()[1:]
+        if resto[0] == "descobrir":
+            assert len(resto) == 2 and re.fullmatch(r"(\[0-9\]){1,3}", resto[1]), linha
+        else:
+            assert len(resto) == 1, f"argumento além do verbo: {linha.strip()}"
 
 
 def test_a_regra_cobre_uma_janela_de_busca_de_dois_digitos() -> None:

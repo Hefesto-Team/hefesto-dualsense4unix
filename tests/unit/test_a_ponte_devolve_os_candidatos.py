@@ -75,15 +75,39 @@ def _ambiente(raiz: Path) -> dict[str, str]:
     return ambiente(raiz)
 
 
+#: O adaptador vai pelo stdin (O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01): no
+#: argv, o sudo o gravava no journal. Os segundos seguem no argv.
+ENTRADA = f"{ADAPTADOR}\n"
+
+
 def _descobrir(barramento: Path, segundos: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        ["bash", str(PONTE), "descobrir", ADAPTADOR, segundos],
+        ["bash", str(PONTE), "descobrir", segundos],
         capture_output=True,
         text=True,
+        input=ENTRADA,
         env=_ambiente(barramento),
         timeout=60,
         check=False,
     )
+
+
+def _abrir_descobrir(barramento: Path, segundos: str) -> subprocess.Popen[str]:
+    """A janela em fluxo, com o adaptador escrito no stdin e o cano FECHADO:
+    a ponte espera o fim do stdin depois dos dados."""
+    processo = subprocess.Popen(
+        ["bash", str(PONTE), "descobrir", segundos],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+        env=_ambiente(barramento),
+    )
+    assert processo.stdin is not None
+    processo.stdin.write(ENTRADA)
+    processo.stdin.close()
+    return processo
 
 
 def _linhas(saida: str) -> list[list[str]]:
@@ -173,14 +197,7 @@ def test_o_candidato_sai_enquanto_a_janela_ainda_esta_aberta(
     """
     comeco = time.monotonic()
     varrendo = barramento / "varrendo"
-    processo = subprocess.Popen(
-        ["bash", str(PONTE), "descobrir", ADAPTADOR, "4"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        bufsize=1,
-        env=_ambiente(barramento),
-    )
+    processo = _abrir_descobrir(barramento, "4")
     try:
         assert processo.stdout is not None
         primeira = processo.stdout.readline()
@@ -213,9 +230,10 @@ def test_o_roteiro_pede_pairable_e_scan_no_adaptador_escolhido(
 def test_o_dry_run_anuncia_a_lista_e_nao_abre_janela(barramento: Path) -> None:
     """`--dry-run` não varre nada — e diz que devolveria a lista."""
     feito = subprocess.run(
-        ["bash", str(PONTE), "--dry-run", "descobrir", ADAPTADOR, "3"],
+        ["bash", str(PONTE), "--dry-run", "descobrir", "3"],
         capture_output=True,
         text=True,
+        input=ENTRADA,
         env=_ambiente(barramento),
         timeout=30,
         check=False,
@@ -235,9 +253,10 @@ def test_o_diario_conta_os_candidatos_e_nao_os_nomeia(barramento: Path) -> None:
     env = _ambiente(barramento)
     env["HEFESTO_BT_LOG_DEST"] = str(diario)
     subprocess.run(
-        ["bash", str(PONTE), "descobrir", ADAPTADOR, "3"],
+        ["bash", str(PONTE), "descobrir", "3"],
         capture_output=True,
         text=True,
+        input=ENTRADA,
         env=env,
         timeout=60,
         check=False,
@@ -256,14 +275,7 @@ def test_a_varredura_cai_junto_com_a_ponte(barramento: Path) -> None:
     controles em cima. É o custo de rádio que esta sprint existe para não
     pagar, deixado para trás justamente por quem fechou a janela.
     """
-    processo = subprocess.Popen(
-        ["bash", str(PONTE), "descobrir", ADAPTADOR, "60"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        bufsize=1,
-        env=_ambiente(barramento),
-    )
+    processo = _abrir_descobrir(barramento, "60")
     try:
         assert processo.stdout is not None
         assert processo.stdout.readline().strip(), "a ponte não chegou a varrer"
@@ -307,9 +319,10 @@ def test_sem_o_gancho_a_raiz_de_teste_continua_inerte(barramento: Path) -> None:
     env = _ambiente(barramento)
     env.pop("HEFESTO_BT_BIN")
     feito = subprocess.run(
-        ["bash", str(PONTE), "descobrir", ADAPTADOR, "1"],
+        ["bash", str(PONTE), "descobrir", "1"],
         capture_output=True,
         text=True,
+        input=ENTRADA,
         env=env,
         timeout=30,
         check=False,
@@ -328,9 +341,10 @@ def test_o_gancho_do_barramento_morre_sob_sudo(barramento: Path) -> None:
     env = _ambiente(barramento)
     env["SUDO_UID"] = "1000"
     feito = subprocess.run(
-        ["bash", str(PONTE), "descobrir", ADAPTADOR, "1"],
+        ["bash", str(PONTE), "descobrir", "1"],
         capture_output=True,
         text=True,
+        input=ENTRADA,
         env=env,
         timeout=30,
         check=False,

@@ -180,6 +180,15 @@ def _tudo(raiz: Path) -> set[str]:
     return {str(p.relative_to(raiz)) for p in raiz.rglob("*")}
 
 
+def _linhas(*dados: str) -> str:
+    """O stdin da ponte: uma linha por dado, na ordem do verbo.
+
+    O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01 (29/09/2026): o endereço vem pelo
+    stdin, como o nome novo já vinha. No argv, o sudo o gravava no journal.
+    """
+    return "".join(f"{dado}\n" for dado in dados)
+
+
 # --- a metade que tem de FUNCIONAR ------------------------------------------
 #
 # Sem estes dois, o arquivo inteiro passaria com o script trocado por `exit 2`.
@@ -194,7 +203,7 @@ def test_esquecer_apaga_o_bond_e_o_cache_de_todos_os_adaptadores(arvore: Path) -
     device*, e o link cair sozinho parecendo defeito do controle.
     """
     antes = _tudo(arvore)
-    resultado = _rodar(arvore, "esquecer", ADAPTADOR, CONTROLE)
+    resultado = _rodar(arvore, "esquecer", entrada=_linhas(ADAPTADOR, CONTROLE))
     assert resultado.returncode == 0, resultado.stderr
 
     assert not (arvore / ADAPTADOR.upper() / CONTROLE.upper()).exists()
@@ -213,7 +222,7 @@ def test_esquecer_apaga_o_bond_e_o_cache_de_todos_os_adaptadores(arvore: Path) -
 
 
 def test_bonds_lista_o_que_esta_pareado_naquele_adaptador(arvore: Path) -> None:
-    resultado = _rodar(arvore, "bonds", ADAPTADOR)
+    resultado = _rodar(arvore, "bonds", entrada=_linhas(ADAPTADOR))
     assert resultado.returncode == 0, resultado.stderr
     linhas = [linha.split("\t") for linha in resultado.stdout.splitlines() if linha]
     por_mac = {linha[0]: linha for linha in linhas}
@@ -226,7 +235,7 @@ def test_bonds_lista_o_que_esta_pareado_naquele_adaptador(arvore: Path) -> None:
 
 def test_dry_run_nao_apaga_nada_e_diz_o_que_faria(arvore: Path) -> None:
     antes = _tudo(arvore)
-    resultado = _rodar(arvore, "--dry-run", "esquecer", ADAPTADOR, CONTROLE)
+    resultado = _rodar(arvore, "--dry-run", "esquecer", entrada=_linhas(ADAPTADOR, CONTROLE))
     assert resultado.returncode == 0, resultado.stderr
     assert _tudo(arvore) == antes
     assert "[dry-run]" in resultado.stdout
@@ -238,26 +247,113 @@ def test_dry_run_nao_apaga_nada_e_diz_o_que_faria(arvore: Path) -> None:
 
 @pytest.mark.parametrize("sujo", MACS_SUJOS)
 def test_mac_sujo_e_recusado(arvore: Path, sujo: str) -> None:
-    """Recusa com código 2 em TODO verbo que recebe MAC, e sem tocar no disco."""
+    """Recusa com código 2 em TODO verbo que recebe MAC, e sem tocar no disco.
+
+    O sujo vai pela primeira linha do stdin e pela segunda. O que tem quebra de
+    linha embutida vira duas linhas, e a recusa é a da linha a mais (ou a do
+    nome novo, no ``renomear``): a mesma porta, com o código 2.
+    """
     antes = _tudo(arvore)
-    for args in (
-        ("bonds", sujo),
-        ("esquecer", sujo, CONTROLE),
-        ("esquecer", ADAPTADOR, sujo),
-        ("descobrir", sujo, "5"),
-        ("parear", sujo, CONTROLE),
-        ("parear", ADAPTADOR, sujo),
+    for verbo, argv, dados in (
+        ("bonds", (), (sujo,)),
+        ("esquecer", (), (sujo, CONTROLE)),
+        ("esquecer", (), (ADAPTADOR, sujo)),
+        ("descobrir", ("5",), (sujo,)),
+        ("parear", (), (sujo, CONTROLE)),
+        ("parear", (), (ADAPTADOR, sujo)),
         # CONEXAO-ZUMBI-01: o verbo que derruba um link. Ele é o mais perigoso
         # da lista para receber MAC sujo — não apaga arquivo, mas CORTA o rádio
         # de alguém, e do outro lado do sudo.
-        ("desconectar", sujo, CONTROLE),
-        ("desconectar", ADAPTADOR, sujo),
-        ("renomear", sujo),
+        ("desconectar", (), (sujo, CONTROLE)),
+        ("desconectar", (), (ADAPTADOR, sujo)),
+        ("renomear", (), (sujo, "Rack 1")),
     ):
-        resultado = _rodar(arvore, *args, entrada="Rack 1\n")
-        assert resultado.returncode == RECUSA, f"{args}: rc={resultado.returncode}"
-        assert resultado.stdout == "", f"{args}: escreveu no stdout"
-        assert "inválido" in resultado.stderr or "ausente" in resultado.stderr
+        caso = (verbo, *argv, *dados)
+        resultado = _rodar(arvore, verbo, *argv, entrada=_linhas(*dados))
+        assert resultado.returncode == RECUSA, f"{caso}: rc={resultado.returncode}"
+        assert resultado.stdout == "", f"{caso}: escreveu no stdout"
+        assert any(
+            motivo in resultado.stderr
+            for motivo in ("inválido", "ausente", "linha a mais", "nome novo")
+        ), f"{caso}: {resultado.stderr}"
+    assert _tudo(arvore) == antes
+
+
+def test_a_linha_que_nao_vem_e_recusada(arvore: Path) -> None:
+    """O stdin que fecha antes do controle: recusa, e o bond fica."""
+    antes = _tudo(arvore)
+    for entrada in ("", _linhas(ADAPTADOR), ADAPTADOR):
+        resultado = _rodar(arvore, "esquecer", entrada=entrada)
+        assert resultado.returncode == RECUSA, f"{entrada!r}: rc={resultado.returncode}"
+        assert "não veio pelo stdin" in resultado.stderr
+    assert _tudo(arvore) == antes
+
+
+def test_a_linha_a_mais_e_recusada(arvore: Path) -> None:
+    """Depois dos dados do verbo o stdin FECHA: linha a mais é pedido montado
+    errado, e metade dele não pode ser lida como se fosse o todo."""
+    antes = _tudo(arvore)
+    for entrada in (
+        _linhas(ADAPTADOR, CONTROLE, CONTROLE),
+        _linhas(ADAPTADOR, CONTROLE, ""),
+        _linhas(ADAPTADOR, CONTROLE) + "resto sem quebra",
+    ):
+        resultado = _rodar(arvore, "esquecer", entrada=entrada)
+        assert resultado.returncode == RECUSA, f"{entrada!r}: rc={resultado.returncode}"
+        assert "linha a mais" in resultado.stderr
+    assert _tudo(arvore) == antes
+
+
+def test_o_endereco_no_argv_e_recusado(arvore: Path) -> None:
+    """A forma de antes de 29/09 (``esquecer <adaptador> <controle>``) falha
+    alto e sem efeito, com a frase que diz o caminho novo — mesmo com o stdin
+    certo ao lado. É a que o sudo gravava no journal."""
+    antes = _tudo(arvore)
+    for verbo, argv in (
+        ("esquecer", (ADAPTADOR, CONTROLE)),
+        ("parear", (ADAPTADOR, CONTROLE)),
+        ("desconectar", (ADAPTADOR, CONTROLE)),
+        ("bonds", (ADAPTADOR,)),
+        ("renomear", (ADAPTADOR,)),
+        ("descobrir", (ADAPTADOR, "5")),
+    ):
+        resultado = _rodar(arvore, verbo, *argv, entrada=_linhas(ADAPTADOR, CONTROLE))
+        assert resultado.returncode == RECUSA, f"{verbo}: rc={resultado.returncode}"
+        assert "o endereço vem pelo stdin" in resultado.stderr, resultado.stderr
+    assert _tudo(arvore) == antes
+
+
+def test_o_stdin_que_nao_fecha_e_recusado(arvore: Path) -> None:
+    """Os dados certos e o cano aberto: a ponte espera o fim por 10 s e recusa.
+
+    É a razão de quem abre a ponte FECHAR o stdin depois de escrever
+    (``gesto_de_pareamento._abrir_de_verdade``): root parado esperando é falha
+    de disponibilidade com privilégio.
+    """
+    antes = _tudo(arvore)
+    processo = subprocess.Popen(
+        ["bash", str(PONTE), "esquecer"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=_ambiente(arvore),
+    )
+    try:
+        assert processo.stdin is not None and processo.stderr is not None
+        processo.stdin.write(_linhas(ADAPTADOR, CONTROLE))
+        processo.stdin.flush()
+        #: O cano segue aberto: a recusa tem de vir do prazo da ponte (10 s).
+        codigo = processo.wait(timeout=30)
+        erro = processo.stderr.read()
+    finally:
+        if processo.poll() is None:
+            processo.kill()
+            processo.wait(timeout=10)
+        if processo.stdin is not None:
+            processo.stdin.close()
+    assert codigo == RECUSA
+    assert "não fechou" in erro
     assert _tudo(arvore) == antes
 
 
@@ -270,7 +366,7 @@ def test_o_verbo_esquecer_nao_toca_em_nada_quando_o_mac_e_sujo(arvore: Path) -> 
     ainda estar no disco depois.
     """
     bond = arvore / ADAPTADOR.upper() / CONTROLE.upper() / "info"
-    resultado = _rodar(arvore, "esquecer", ADAPTADOR, "../../../etc/passwd")
+    resultado = _rodar(arvore, "esquecer", entrada=_linhas(ADAPTADOR, "../../../etc/passwd"))
     assert resultado.returncode == RECUSA
     assert bond.exists(), "a recusa deixou o gesto continuar"
 
@@ -283,7 +379,7 @@ def test_nome_novo_sujo_e_recusado(arvore: Path, sujo: str) -> None:
     fechada (nenhum argumento livre a casar). Em troca, a régua do conteúdo tem
     de morar aqui.
     """
-    resultado = _rodar(arvore, "renomear", ADAPTADOR, entrada=f"{sujo}\n")
+    resultado = _rodar(arvore, "renomear", entrada=_linhas(ADAPTADOR, sujo))
     assert resultado.returncode == RECUSA, resultado.stderr
     assert "nome novo" in resultado.stderr
 
@@ -295,12 +391,12 @@ def test_nome_com_acento_e_aceito(arvore: Path) -> None:
     código 1 — o adaptador de mentira não existe no barramento —, e é
     exatamente essa diferença de código que prova que a entrada foi aceita.
     """
-    resultado = _rodar(arvore, "renomear", ADAPTADOR, entrada="Sótão — rack (nº 1)\n")
+    resultado = _rodar(arvore, "renomear", entrada=_linhas(ADAPTADOR, "Sótão — rack (nº 1)"))
     assert resultado.returncode != RECUSA, resultado.stderr
 
 
 def test_nome_com_caractere_de_controle_e_recusado(arvore: Path) -> None:
-    resultado = _rodar(arvore, "renomear", ADAPTADOR, entrada="a\tb\n")
+    resultado = _rodar(arvore, "renomear", entrada=_linhas(ADAPTADOR, "a\tb"))
     assert resultado.returncode == RECUSA
     assert "controle" in resultado.stderr
 
@@ -312,7 +408,7 @@ def test_segundos_sujo_e_recusado(arvore: Path, sujo: str) -> None:
     Por isso ela tem teto, e por isso o teto é validado aqui: `descobrir X
     999999` seria root parado por onze dias.
     """
-    resultado = _rodar(arvore, "descobrir", ADAPTADOR, sujo)
+    resultado = _rodar(arvore, "descobrir", sujo, entrada=_linhas(ADAPTADOR))
     assert resultado.returncode == RECUSA, resultado.stderr
     assert "segundos" in resultado.stderr
 
@@ -341,16 +437,16 @@ def test_argumento_a_mais_e_recusado(arvore: Path) -> None:
     """
     for tentativa in (
         ("adaptadores", "extra"),
-        ("bonds", ADAPTADOR, "extra"),
-        ("esquecer", ADAPTADOR),
-        ("esquecer", ADAPTADOR, CONTROLE, "extra"),
-        ("descobrir", ADAPTADOR),
-        ("parear", ADAPTADOR),
-        ("desconectar", ADAPTADOR),
-        ("desconectar", ADAPTADOR, CONTROLE, "extra"),
+        ("bonds", "extra"),
+        ("esquecer", "extra"),
+        ("descobrir",),
+        ("descobrir", "5", "extra"),
+        ("parear", "extra"),
+        ("desconectar", "extra"),
+        ("renomear", "extra"),
         ("regra-sudo",),
     ):
-        resultado = _rodar(arvore, *tentativa)
+        resultado = _rodar(arvore, *tentativa, entrada=_linhas(ADAPTADOR, CONTROLE))
         assert resultado.returncode == RECUSA, f"{tentativa}: rc={resultado.returncode}"
 
 
@@ -385,12 +481,14 @@ def test_os_ganchos_de_teste_morrem_sob_sudo(arvore: Path) -> None:
     morto, `bonds` volta a mirar `/var/lib/bluetooth`, que é 700 do root: sem
     root, o script tem de EXIGIR root em vez de trabalhar na raiz injetada.
     """
-    resultado = _rodar(arvore, "bonds", ADAPTADOR, env_extra={"SUDO_UID": "1000"})
+    resultado = _rodar(
+        arvore, "bonds", entrada=_linhas(ADAPTADOR), env_extra={"SUDO_UID": "1000"}
+    )
     assert resultado.returncode == 1
     assert "requer root" in resultado.stderr
     #: E a régua do gancho: sem SUDO_UID, o MESMO comando funciona. Sem esta
     #: metade, o teste acima passaria com o script quebrado de qualquer jeito.
-    assert _rodar(arvore, "bonds", ADAPTADOR).returncode == 0
+    assert _rodar(arvore, "bonds", entrada=_linhas(ADAPTADOR)).returncode == 0
 
 
 def test_a_raiz_de_teste_nao_fala_com_o_barramento_real(arvore: Path) -> None:
@@ -402,12 +500,12 @@ def test_a_raiz_de_teste_nao_fala_com_o_barramento_real(arvore: Path) -> None:
     para um portão derrubar a mesa dela no meio de uma partida. E o
     `desconectar` (CONEXAO-ZUMBI-01) é o que mais dói: ele CORTA um link.
     """
-    for args in (
-        ("renomear", ADAPTADOR),
-        ("descobrir", ADAPTADOR, "1"),
-        ("parear", ADAPTADOR, CONTROLE),
-        ("desconectar", ADAPTADOR, CONTROLE),
+    for verbo, argv, dados in (
+        ("renomear", (), (ADAPTADOR, "Rack 1")),
+        ("descobrir", ("1",), (ADAPTADOR,)),
+        ("parear", (), (ADAPTADOR, CONTROLE)),
+        ("desconectar", (), (ADAPTADOR, CONTROLE)),
     ):
-        resultado = _rodar(arvore, *args, entrada="Rack 1\n")
-        assert resultado.returncode == 1, f"{args}: rc={resultado.returncode}"
+        resultado = _rodar(arvore, verbo, *argv, entrada=_linhas(*dados))
+        assert resultado.returncode == 1, f"{verbo}: rc={resultado.returncode}"
         assert "não está na mesa" in resultado.stderr

@@ -5429,8 +5429,9 @@ check_bond_dobrado() {
         adps="${linha#* }"
         # O RECADO DIZ O GESTO — regra desta casa: quem acusa diz o comando.
         # `esquecer` da ponte apaga o bond E o cache SDP na mesma execução; o
-        # cache sozinho envenena o pareamento seguinte (SDP-CACHE-01).
-        warn "o controle ${mac} tem chave de pareamento em MAIS DE UM adaptador (${adps# }) — migração feita pela metade: o bond do adaptador de ORIGEM ficou. Na reconexão o adaptador errado pode ganhar a corrida, e a conta de ocupação do rádio soma o mesmo controle duas vezes. O Hefesto esquece a sobra sozinho assim que o controle conectar pelo rádio (a chave que ele usar é a que fica). Para não esperar, apague a do adaptador que sai: sudo /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh esquecer <adaptador-que-sai> ${mac}"
+        # cache sozinho envenena o pareamento seguinte (SDP-CACHE-01). Os
+        # endereços vão pelo stdin: no argv, o sudo os grava no journal.
+        warn "o controle ${mac} tem chave de pareamento em MAIS DE UM adaptador (${adps# }) — migração feita pela metade: o bond do adaptador de ORIGEM ficou. Na reconexão o adaptador errado pode ganhar a corrida, e a conta de ocupação do rádio soma o mesmo controle duas vezes. O Hefesto esquece a sobra sozinho assim que o controle conectar pelo rádio (a chave que ele usar é a que fica). Para não esperar, apague a do adaptador que sai (os dois endereços vão pelo stdin, e o registro do sudo fica sem eles): printf '%s\n%s\n' <adaptador-que-sai> ${mac} | sudo /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh esquecer"
     done < <(_bond_dobrado_por_controle)
     [[ "${achou}" -eq 0 ]] && pass "nenhum controle com bond em mais de um adaptador"
 }

@@ -419,7 +419,9 @@ def test_o_esquecer_da_ponte_escreve_a_lapide_que_o_autorestore_le(tmp_path: Pat
     (bond / "info").write_text(_info_com_chave(), encoding="utf-8")
 
     resultado = subprocess.run(
-        ["bash", str(PONTE), "esquecer", ADAPTADOR.lower(), VERMELHO.lower()],
+        ["bash", str(PONTE), "esquecer"],
+        # Os endereços vão pelo stdin (O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01).
+        input=f"{ADAPTADOR.lower()}\n{VERMELHO.lower()}\n",
         capture_output=True,
         text=True,
         timeout=60,
@@ -447,7 +449,8 @@ def test_o_esquecer_da_ponte_escreve_a_lapide_que_o_autorestore_le(tmp_path: Pat
 def test_o_esquecer_a_seco_so_diz_a_lapide(tmp_path: Path) -> None:
     lapides = tmp_path / ".lapides"
     resultado = subprocess.run(
-        ["bash", str(PONTE), "--dry-run", "esquecer", ADAPTADOR, VERMELHO],
+        ["bash", str(PONTE), "--dry-run", "esquecer"],
+        input=f"{ADAPTADOR}\n{VERMELHO}\n",
         capture_output=True,
         text=True,
         timeout=60,

@@ -59,7 +59,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 if (RAIZ / "src").is_dir() and str(RAIZ / "src") not in sys.path:
     sys.path.insert(0, str(RAIZ / "src"))
 
-from hefesto_dualsense4unix.core.formas_do_endereco import formas_do_endereco
+from hefesto_dualsense4unix.core.formas_do_endereco import _UUID, formas_do_endereco
 
 EXCLUIR_SUFIXO = {
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf",
@@ -89,6 +89,20 @@ def sintetico(o: tuple[str, ...]) -> bool:
 
 
 def enderecos_do_texto(texto: str, *, colado: bool) -> set[tuple[str, ...]]:
+    """Os endereços de uma FONTE da máquina (o config, o ``bluetoothctl``, o sysfs).
+
+    O UUID sai antes das regex (O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01,
+    29/09/2026): o ``controllers.json`` guarda o ``boot_id``, e o último grupo
+    dele (doze hex) virava um «endereço dela» — a linha do diário que cita o
+    mesmo boot (``arquivo_boot=<uuid>``) era acusada por um endereço que não é
+    de aparelho nenhum. A forma do UUID é a do dono da máscara, a mesma que ele
+    guarda antes da forma colada.
+
+    SÓ NA LEITURA: a varredura (:func:`varrer`) segue lendo o UUID inteiro. Um
+    UUID de versão 1 carrega um endereço no último grupo, e um trecho com forma
+    de UUID não pode virar esconderijo.
+    """
+    texto = _UUID.sub(" ", texto)
     achados: set[tuple[str, ...]] = set()
     padroes = (_MAC_COM_SEPARADOR, _MAC_COLADO) if colado else (_MAC_COM_SEPARADOR,)
     for padrao in padroes:

@@ -769,7 +769,9 @@ def test_o_esquecer_da_origem_guarda_o_cache_sdp_do_bond_novo(tmp_path: Path) ->
     (lib / varanda / "cache" / vermelho).write_text("[ServiceRecords]\n", encoding="utf-8")
 
     resultado = subprocess.run(
-        ["bash", str(PONTE), "esquecer", SALA, VERMELHO],
+        ["bash", str(PONTE), "esquecer"],
+        # Os endereços vão pelo stdin (O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01).
+        input=f"{SALA}\n{VERMELHO}\n",
         capture_output=True,
         text=True,
         timeout=60,

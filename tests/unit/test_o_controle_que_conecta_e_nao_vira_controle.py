@@ -51,6 +51,7 @@ from hefesto_dualsense4unix.daemon.subsystems.conexoes import (
 )
 from hefesto_dualsense4unix.integrations.conexao_zumbi import (
     LinkDeRadio,
+    PedidoAPonte,
     PontePrivilegiada,
     VigiaDeZumbis,
     adaptadores_na_mesa,
@@ -356,23 +357,26 @@ def test_mac_limpo_recusa_o_que_nao_e_endereco(sujo: str | None) -> None:
 
 
 def test_a_ponte_monta_o_comando_com_o_adaptador_e_o_controle() -> None:
-    """O que vai ao `sudo` é exatamente o verbo novo, com os dois MACs.
+    """O que vai ao `sudo` é só o verbo; os dois MACs vão pelo stdin.
 
-    Nada é executado: o executor injetado captura a linha. Um teste que rodasse
-    isto de verdade cortaria o rádio dela.
+    O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01 (29/09/2026): o argv do sudo é
+    registro (o journal, a unidade do daemon, o ``/proc``), e o endereço saiu
+    dele. Nada é executado: o executor injetado recebe o pedido. Um teste que
+    rodasse isto de verdade cortaria o rádio dela.
     """
-    capturado: list[list[str]] = []
+    capturado: list[PedidoAPonte] = []
 
-    def espia(args: list[str], link: LinkDeRadio) -> tuple[bool, str]:
-        capturado.append(list(args))
+    def espia(pedido: PedidoAPonte) -> tuple[bool, str]:
+        capturado.append(pedido)
         return True, ""
 
     ponte = PontePrivilegiada(caminho="/caminho/ponte.sh", executor=espia)
     assert ponte.impedimentos() == []
     assert ponte.desconectar(LINK_ZUMBI) == (True, "")
-    assert capturado == [
-        ["sudo", "-n", "--", "/caminho/ponte.sh", "desconectar", DONGLE_B, ZUMBI]
-    ]
+    [pedido] = capturado
+    assert pedido.argv == ("sudo", "-n", "--", "/caminho/ponte.sh", "desconectar")
+    assert pedido.entrada == f"{DONGLE_B}\n{ZUMBI}\n"
+    assert pedido.sonda == ("sudo", "-n", "-l", "--", "/caminho/ponte.sh", "desconectar")
 
 
 def test_a_ponte_nao_instalada_e_impedimento_declarado() -> None:

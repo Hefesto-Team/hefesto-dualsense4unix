@@ -130,7 +130,12 @@ from dataclasses import dataclass, field, replace
 from typing import Any, Protocol
 
 from hefesto_dualsense4unix.integrations import bluez_dbus
-from hefesto_dualsense4unix.integrations.conexao_zumbi import PONTE_INSTALADA, mac_limpo
+from hefesto_dualsense4unix.integrations.conexao_zumbi import (
+    PONTE_INSTALADA,
+    PedidoAPonte,
+    mac_limpo,
+    pedido_a_ponte,
+)
 from hefesto_dualsense4unix.integrations.gesto_de_pareamento import (
     ESTADO_JA_PAREADO,
     ESTADO_PAREOU,
@@ -460,8 +465,8 @@ def _hex12(endereco: str) -> str:
 def endereco_de(valor: object) -> str | None:
     """O endereço do aparelho, pelas duas formas que circulam: com ``:`` ou 12 hex.
 
-    Estrita como ``conexao_zumbi.mac_limpo``: o endereço vira argumento da
-    ponte root, e o que não tem forma de endereço sai ``None``.
+    Estrita como ``conexao_zumbi.mac_limpo``: o endereço vira dado da ponte
+    root, e o que não tem forma de endereço sai ``None``.
     """
     if not isinstance(valor, str):
         return None
@@ -483,32 +488,35 @@ def esquecer_pela_ponte(
     aparelho: str,
     *,
     caminho: str = PONTE_INSTALADA,
-    correr: Callable[[Sequence[str]], tuple[int, str]] | None = None,
+    correr: Callable[[PedidoAPonte], tuple[int, str]] | None = None,
 ) -> tuple[bool, str]:
     """O verbo ``esquecer`` da ponte root: bond em disco, cache SDP e a lápide.
 
     Sob a suíte recusa sem rodar nada — ``sudo`` contra a ponte instalada é o
-    rádio dela. Quem chama já segura a trava; a ponte NUNCA a pede.
+    rádio dela. Quem chama já segura a trava; a ponte NUNCA a pede. Os dois
+    endereços vão pelo stdin (:func:`conexao_zumbi.pedido_a_ponte`): o sudo
+    registra só ``esquecer``.
     """
-    alvo_adaptador = mac_limpo(adaptador)
-    alvo = mac_limpo(aparelho)
-    if alvo_adaptador is None or alvo is None:
+    try:
+        pedido = pedido_a_ponte("esquecer", adaptador, aparelho, caminho=caminho)
+    except ValueError:
         return False, "o endereço não tem forma de endereço"
-    argumentos = ["sudo", "-n", "--", caminho, "esquecer", alvo_adaptador, alvo]
     if correr is None:
         if bluez_dbus.a_suite_esta_rodando():
             return False, "a suíte está no ar e esta é a ponte de verdade"
         correr = _correr_a_ponte
-    codigo, erro = correr(argumentos)
+    codigo, erro = correr(pedido)
     if codigo == 0:
         return True, ""
     return False, erro or f"a ponte saiu com {codigo}"
 
 
-def _correr_a_ponte(argumentos: Sequence[str]) -> tuple[int, str]:
+def _correr_a_ponte(pedido: PedidoAPonte) -> tuple[int, str]:
+    """Roda o pedido até o fim, com os dados pelo stdin — nunca o de quem chamou."""
     try:
         feito = subprocess.run(
-            list(argumentos),
+            list(pedido.argv),
+            input=pedido.entrada,
             capture_output=True,
             text=True,
             timeout=ESPERA_DA_PONTE_S,
@@ -536,11 +544,11 @@ def _janela_de_busca(
     return JanelaDeBusca(destino, segundos, dono=dono)
 
 
-def _recusar_a_ponte_sob_a_suite(_argumentos: Sequence[str]) -> subprocess.Popen[str]:
+def _recusar_a_ponte_sob_a_suite(_pedido: PedidoAPonte) -> subprocess.Popen[str]:
     raise OSError("a suíte está no ar e esta é a ponte de verdade")
 
 
-def _nao_correr_sob_a_suite(_argumentos: Sequence[str]) -> tuple[int, str]:
+def _nao_correr_sob_a_suite(_pedido: PedidoAPonte) -> tuple[int, str]:
     return 1, "a suíte está no ar e esta é a ponte de verdade"
 
 

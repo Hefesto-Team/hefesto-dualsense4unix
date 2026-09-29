@@ -625,10 +625,10 @@ def test_sob_a_suite_o_esquecer_nao_chama_a_ponte_de_verdade(
 ) -> None:
     """MORDIDA: tire a guarda da suíte do ``esquecer_pela_ponte`` — o pedido
     chega ao executor e esta régua reprova."""
-    pedidos: list[list[str]] = []
+    pedidos: list[Any] = []
 
-    def correr(argumentos: Any) -> tuple[int, str]:
-        pedidos.append(list(argumentos))
+    def correr(pedido: Any) -> tuple[int, str]:
+        pedidos.append(pedido)
         return 0, ""
 
     monkeypatch.setattr(cr, "_correr_a_ponte", correr)
@@ -649,10 +649,10 @@ def test_sob_a_suite_a_janela_pela_ponte_nao_chama_sudo(
     """
     from hefesto_dualsense4unix.integrations import gesto_de_pareamento as gp
 
-    pedidos: list[list[str]] = []
+    pedidos: list[Any] = []
 
-    def abrir(argumentos: Any) -> Any:
-        pedidos.append(list(argumentos))
+    def abrir(pedido: Any) -> Any:
+        pedidos.append(pedido)
         raise OSError("dublê: nada roda")
 
     monkeypatch.setattr(gp, "_abrir_de_verdade", abrir)
