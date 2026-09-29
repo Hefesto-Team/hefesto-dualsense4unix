@@ -1153,6 +1153,13 @@ class BrokerState:
         #: A exposição transitória do handle de controle (`hidapi` abrindo por
         #: caminho) não pede, e os nós de entrada seguem fechados durante ela.
         self.entradas_by_conn: dict[int, set[str]] = {}
+        #: O-BROKER-ESQUECE-O-CONTROLE-QUE-SAIU-01: por conexão, os nomes que a
+        #: poda tirou da lease de hide DELA. O `restore` do dono que chega
+        #: depois de a poda rodar num pedido de OUTRA conexão (o `status` do
+        #: doctor, o `open` de um leitor) responde `gone`, como antes da cura,
+        #: e não a recusa do validador: a resposta não depende de quem chegou
+        #: primeiro. Sai no `hide` do mesmo nome, no `restore` e no EOF.
+        self.podados_by_conn: dict[int, set[str]] = {}
 
     # -- validação -------------------------------------------------------
 
@@ -1339,8 +1346,10 @@ class BrokerState:
             if escondido is not None and escondido.pai and escondido.pai != agora:
                 de = escondido.pai
                 del self.hidden[canon]
-                for held in self.by_conn.values():
-                    held.discard(canon)
+                for conn, held in self.by_conn.items():
+                    if canon in held:
+                        held.discard(canon)
+                        self.podados_by_conn.setdefault(conn, set()).add(canon)
             if exposto is not None and exposto.pai and exposto.pai != agora:
                 de = de or exposto.pai
                 del self.expostos[canon]
@@ -1585,6 +1594,7 @@ class BrokerState:
             }
         canon = f"{self._dev_root}/{base}"
         pai = self._pai_hid(base)
+        self.podados_by_conn.get(conn_id, set()).discard(canon)
         held = self.by_conn.setdefault(conn_id, set())
         entry = self.hidden.get(canon)
         if self._exposicao_holders(canon) > 0:
@@ -1642,6 +1652,8 @@ class BrokerState:
         if base is None:
             return {"ok": False, "cmd": "restore", "node": raw, "error": "reject_bad_path"}
         canon = f"{self._dev_root}/{base}"
+        podado = canon in self.podados_by_conn.get(conn_id, set())
+        self.podados_by_conn.get(conn_id, set()).discard(canon)
         held = self.by_conn.get(conn_id, set())
         entry = self.hidden.get(canon)
         if canon in held:
@@ -1679,6 +1691,11 @@ class BrokerState:
         # instalada e sem lease de exposição, este caminho FECHA. Quem precisa
         # do físico aberto passa a dizê-lo com `expose`, por desenho.
         if self._validate(canon) is None:
+            if podado:
+                # O aparelho que ESTA conexão escondeu saiu, e a poda já tirou
+                # a lease: é o `gone` de sempre, sem pedir nada ao fs.
+                self._log("restore_node_gone", node=canon, conn=conn_id)
+                return {"ok": True, "cmd": "restore", "node": canon, "state": "gone"}
             return {
                 "ok": False,
                 "cmd": "restore",
@@ -1692,7 +1709,8 @@ class BrokerState:
         # mantido no rastreio, e o loop segue para os demais.
         restored: list[str] = []
         failed: list[str] = []
-        for canon in sorted(self.by_conn.get(conn_id, set())):
+        nomes = self.by_conn.get(conn_id, set()) | self.podados_by_conn.get(conn_id, set())
+        for canon in sorted(nomes):
             # HIDE-SO-O-HIDRAW-02: os nós de entrada de cada nó seguem a lease.
             response = self._entradas_seguem(self._cmd_restore(conn_id, canon))
             if response.get("ok") and response.get("state") in ("exposed", "fechado", "gone"):
@@ -1899,6 +1917,7 @@ class BrokerState:
             else:
                 failed.append(canon)
         self.by_conn.pop(conn_id, None)
+        self.podados_by_conn.pop(conn_id, None)
         # HIDE-SO-O-HIDRAW-02: com a contabilidade já sem esta conexão, os nós
         # de entrada de cada nó que ela tocava vão para o estado que sobra.
         for canon in sorted(tocados):
@@ -1955,6 +1974,7 @@ class BrokerState:
                     with contextlib.suppress(OSError):
                         abrir(canon.rsplit("/", 1)[-1], self.allowed_uid)
         self.by_conn.clear()
+        self.podados_by_conn.clear()
         self.expostos.clear()
         self.expostos_by_conn.clear()
         self.entradas_by_conn.clear()

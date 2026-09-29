@@ -724,3 +724,91 @@ class TestOCaminhoQueJaFuncionava:
         }
         assert _podas(diario) == []
         assert _escondidos(st) == []
+
+    @pytest.mark.parametrize("herdeiro", ["ninguem", "pad"])
+    def test_o_pedido_de_outra_conexao_antes_do_restore_nao_muda_a_resposta(
+        self, mesa: Mesa, herdeiro: str
+    ) -> None:
+        """A corrida: entre a saída do secundário e o `restore` do teardown, um
+        pedido de OUTRA conexão (o `status` do doctor, o `open` de um leitor)
+        roda a poda antes. A resposta ao dono segue `gone`, e nada vai ao fs.
+        MORDIDA: tire o `gone` do nome podado no `_cmd_restore`, e a resposta
+        vira `reject_not_physical_dualsense` (o validador recusa o nome que
+        sumiu ou que o pad herdou)."""
+        mesa.nascer("hidraw7", "cabo", 3)
+        st, ops, diario = _estado(mesa)
+        _pede(st, DAEMON, {"cmd": "hide", "node": mesa.no("hidraw7")})
+        if herdeiro == "ninguem":
+            mesa.sair("hidraw7")
+        else:
+            mesa.trocar("hidraw7", "pad", 3)
+        assert _pede(st, OUTRA, {"cmd": "status"})["hidden"] == []
+        ops.chamadas.clear()
+
+        resposta = _pede(st, DAEMON, {"cmd": "restore", "node": mesa.no("hidraw7")})
+
+        assert resposta == {
+            "ok": True, "cmd": "restore", "node": mesa.no("hidraw7"), "state": "gone",
+        }
+        assert ops.chamadas == []
+        assert len(_podas(diario)) == 1
+        assert st.podados_by_conn.get(DAEMON, set()) == set()
+
+    def test_o_nome_podado_que_um_fisico_novo_herdou_segue_o_repouso(self, mesa: Mesa) -> None:
+        """A memória do nome podado não sequestra o aparelho novo: se o nome
+        já é de outro DualSense físico, o `restore` do dono faz o que fazia
+        antes da cura (o repouso, fechado com a regra da cura). MORDIDA:
+        responda `gone` ao nome podado antes do validador, e o físico novo
+        fica sem o repouso."""
+        mesa.nascer("hidraw7", "cabo", 3)
+        st, ops, _diario = _estado(mesa)
+        _pede(st, DAEMON, {"cmd": "hide", "node": mesa.no("hidraw7")})
+        mesa.trocar("hidraw7", "radio", 4)
+        _pede(st, OUTRA, {"cmd": "status"})
+        ops.chamadas.clear()
+
+        resposta = _pede(st, DAEMON, {"cmd": "restore", "node": mesa.no("hidraw7")})
+
+        assert resposta["ok"] is True and resposta["state"] == "fechado", resposta
+        assert ("hide", "hidraw7") in ops.chamadas
+
+    @pytest.mark.parametrize("corrida", [False, True], ids=["sem-corrida", "com-corrida"])
+    def test_o_restore_all_do_dono_conta_o_nome_que_saiu(
+        self, mesa: Mesa, corrida: bool
+    ) -> None:
+        """O `restore_all` (o teardown, o Modo Nativo) solta os nomes da própria
+        lease, e o que saiu entra no `restored` como `gone`, com ou sem um
+        pedido de outra conexão no meio. MORDIDA: tire o `restore_all` da
+        exceção do pedido do dono (sem corrida), ou os nomes podados do laço
+        do `restore_all` (com corrida), e o nome some do `restored`."""
+        mesa.nascer("hidraw5", "radio", 2)
+        mesa.nascer("hidraw7", "cabo", 3)
+        st, _ops, diario = _estado(mesa)
+        for base in ("hidraw5", "hidraw7"):
+            _pede(st, DAEMON, {"cmd": "hide", "node": mesa.no(base)})
+        mesa.sair("hidraw7")
+        if corrida:
+            _pede(st, OUTRA, {"cmd": "status"})
+
+        resposta = _pede(st, DAEMON, {"cmd": "restore_all"})
+
+        assert resposta["restored"] == [mesa.no("hidraw5"), mesa.no("hidraw7")], resposta
+        assert resposta["failed"] == []
+        assert len(_podas(diario)) == (1 if corrida else 0)
+        assert _escondidos(st) == []
+
+    def test_o_unexpose_do_dono_nao_passa_pela_poda(self, mesa: Mesa) -> None:
+        """O `unexpose` do Modo Nativo sobre o próprio nome, depois de o
+        físico sair, solta a exposição sem a linha da poda. MORDIDA: tire o
+        `unexpose` da exceção do pedido do dono, e o diário ganha a linha."""
+        mesa.nascer("hidraw7", "cabo", 3)
+        st, _ops, diario = _estado(mesa)
+        _pede(st, NATIVO, {"cmd": "expose", "node": mesa.no("hidraw7"), "entradas": True})
+        mesa.sair("hidraw7")
+
+        resposta = _pede(st, NATIVO, {"cmd": "unexpose", "node": mesa.no("hidraw7")})
+
+        assert resposta["ok"] is True and resposta["state"] == "gone", resposta
+        assert _podas(diario) == []
+        assert st.expostos == {}
+        assert st.entradas_by_conn.get(NATIVO, set()) == set()
