@@ -74,7 +74,15 @@ def _bt_report(window: bytes = _WINDOW, *, corrupt: bool = False) -> bytes:
     return bytes(raw)
 
 
-class TestAJanelaComoOLacoALe:
+class TestExtractMotionWindow:
+    """A janela de motion como o laço vivo a lê.
+
+    O NOME DA CLASSE FICA, e o extrator que ele nomeia saiu (28/09/2026): cinco
+    linhas do `docs/data/mapa-controles.csv` citam esta classe como a régua que
+    morde (`teste_que_morde`), e o portão da paridade confere que ela existe.
+    O que ela mede é o par que o laço usa, por `_janela_do_laco`, logo acima.
+    """
+
     def test_usb_extrai_a_janela_verbatim(self) -> None:
         assert _janela_do_laco(_usb_report()) == _WINDOW
 
