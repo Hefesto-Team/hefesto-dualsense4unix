@@ -787,7 +787,11 @@ def test_o_plastico_que_nao_chegou_e_tracejado(na_tela, vista: str) -> None:
 
 @pytest.mark.parametrize("vista", ["janela", "dela"])
 def test_a_casa_propria_nao_tem_mais_borda(na_tela, vista: str) -> None:
-    """A resposta (a): a borda da escolhida saiu, e a linha fica sozinha."""
+    """A escolha (a) da D-2909-A-LINHA-DA-COR-DO-DONO: a borda da escolhida saiu.
+
+    Escolha de quem coordena pelo padrão dela (a recomendação da sprint), sobre
+    o pedido dela na bancada de 29/09; a linha fica sozinha.
+    """
     medido = na_tela[("a foto", vista)]
     for n, fileira in _as_casas_na_tela(medido).items():
         proprias = [c for c in fileira.values() if c["classes"].split()[:2] == ["tom", "on"]]
