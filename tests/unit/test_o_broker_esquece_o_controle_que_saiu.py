@@ -650,6 +650,50 @@ class TestODonoDaPergunta:
 
 
 # ---------------------------------------------------------------------------
+# O órfão: a lease morta com o restore falho passa pela mesma poda
+# ---------------------------------------------------------------------------
+
+
+class _QueFalhaAoFechar(_Gravador):
+    """O `FsAclOps` de produção com o fechar falhando quando a régua manda."""
+
+    falhar = False
+
+    def hide(self, node: str, base: str) -> None:
+        if self.falhar:
+            self.chamadas.append(("hide", base))
+            raise PermissionError(node)
+        super().hide(node, base)
+
+
+class TestOOrfao:
+    def test_o_orfao_do_aparelho_que_saiu_sai_do_status(self, mesa: Mesa) -> None:
+        """O EOF com o fs falhando deixa o nó no `hidden` sem lease (a lição
+        2: nunca esquecer um `0600`). Se o aparelho saiu, o `0600` dele não
+        existe mais, e o órfão sai como qualquer lease. MORDIDA: faça a poda
+        olhar só os nomes que alguma conexão segura, e o órfão fica."""
+        mesa.nascer(O_DO_P1, "radio", 1)
+        ops = _QueFalhaAoFechar(
+            sys_class_hidraw=str(mesa.sys_hidraw),
+            dev_input_root=str(mesa.dev_input),
+            sys_class_input=str(mesa.sys_input),
+            sys_class_bluetooth=str(mesa.bluetooth),
+        )
+        st, _ops, diario = _estado(mesa, ops=ops)
+        _pede(st, DAEMON, {"cmd": "hide", "node": mesa.no(O_DO_P1)})
+        ops.falhar = True
+        st.on_conn_closed(DAEMON)
+        ops.falhar = False
+        assert mesa.no(O_DO_P1) in st.hidden, "o órfão da lição 2"
+        assert _escondidos(st) == [mesa.no(O_DO_P1)]
+
+        mesa.trocar(O_DO_P1, "pad", 2)
+
+        assert _escondidos(st) == []
+        assert [p["node"] for p in _podas(diario)] == [mesa.no(O_DO_P1)]
+
+
+# ---------------------------------------------------------------------------
 # 9. O caminho que já funcionava: o restore do secundário que saiu
 # ---------------------------------------------------------------------------
 
