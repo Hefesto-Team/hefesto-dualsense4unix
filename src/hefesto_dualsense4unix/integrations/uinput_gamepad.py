@@ -1015,8 +1015,14 @@ class UinputGamepad:
         """Aplica valores analógicos no device virtual (só o que MUDOU).
 
         PERF-MULTI-CONTROLLER-01: emite apenas os eixos com valor novo e o SYN
-        só quando algo foi emitido. Sticks parados = zero writes (o kernel de
+        só quando algo foi emitido. Valor repetido não escreve nada (o kernel de
         qualquer forma descartaria ABS repetido, mas o write/syscall era pago).
+
+        O stick parado na mesa ainda escreve: o repouso de alguns eixos cai na
+        fronteira entre dois valores do conversor, e o aparelho publica a troca
+        de 1 LSB (29/09/2026: 4.079 eventos de eixo em 60 s nos quatro pads).
+        O pad repete o byte do aparelho, chiado incluído, e não põe filtro nem
+        zona morta: a zona é do jogo (D-2909-O-CHIADO-DO-ANALOGICO-VAI-AO-JOGO).
         """
         if self._device is None or self._ecodes is None:
             return
