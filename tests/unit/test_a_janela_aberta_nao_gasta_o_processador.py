@@ -649,8 +649,9 @@ def test_r1_o_teto_batido_diz_que_foi_a_maquina(sob_carga_com_teto_curto: Any) -
     Vermelho, e não pulo: pulo não é verde nesta casa. E vermelho com a causa
     escrita, para ninguém ler a máquina lenta como produto quebrado.
 
-    MORDIDA: faça o `_fase` acabar no teto sem anotar em `fora.famintas` e a
-    R1 reprova no piso de 25, sem dizer que foi a máquina.
+    MORDIDA: faça o `_fase` acabar no teto sem anotar em `fora.famintas` e
+    esta régua reprova: a fome some, e a R1 cairia no piso de 25 sem dizer que
+    foi a máquina.
     """
     fora = sob_carga_com_teto_curto
     tiques, segundos, _buraco = fora.famintas["escondida"]
