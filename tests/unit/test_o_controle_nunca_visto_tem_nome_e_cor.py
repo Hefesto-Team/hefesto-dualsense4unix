@@ -495,6 +495,14 @@ def test_nenhuma_funcao_do_controle_depende_da_cor() -> None:
     controle funcionar pergunta a edição. A régua reprova quem passar a
     perguntar — o dia em que uma função depender do mapa das cores, o controle
     que ele não conhece para de funcionar.
+
+    A BARRA PASSOU A PERGUNTAR O PLÁSTICO, POR DECISÃO — 29/09/2026,
+    D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO (A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01):
+    a cor automática vem da casca, e o registro de identidade
+    (``daemon/subsystems/identity.py``) pergunta o plástico sem a janela. O
+    controle que o mapa não conhece segue funcionando igual: sem tom, a barra
+    acende a cor do número (``led_control.cor_automatica``), e a régua 6 de
+    ``test_a_luz_do_controle_nunca_sai_preta.py`` cobra essa queda.
     """
     raiz = RAIZ / "src" / "hefesto_dualsense4unix"
 
@@ -519,7 +527,7 @@ def test_nenhuma_funcao_do_controle_depende_da_cor() -> None:
         for arq in (raiz / pasta).rglob("*.py")
         if importa_a_cor(arq)
     )
-    assert quem == ["daemon/ipc_handlers.py"], quem
+    assert quem == ["daemon/ipc_handlers.py", "daemon/subsystems/identity.py"], quem
 
 
 #: Um DualSense, um Edge e um receptor qualquer, como o BlueZ os entrega.
