@@ -12,6 +12,7 @@ import time
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
 from hefesto_dualsense4unix.core.escritor_cru import (
     PASSO_DA_VIGIA_S,
     PassoDaVigia,
@@ -1079,245 +1080,261 @@ async def reconnect_loop(
         restore_last_profile as _restore_last_profile,
     )
 
-    watch = input_watch if input_watch is not None else InputDirWatch()
-    registrar_gatilho_da_lightbar(daemon)
-    # Baseline do watch: a 1ª chamada de poll() devolve True por construção
-    # (não havia snapshot anterior). Consumimos aqui para que só mudança REAL
-    # de /dev/input dispare reconciliação antecipada — o connect() do boot já
-    # cobriu o estado inicial.
-    watch.poll()
-
-    # Se o boot já conectou e restaurou o perfil, não re-publica
-    # CONTROLLER_CONNECTED nem reaplica o perfil — apenas monitora transições.
-    initial_connected = bool(daemon.controller.is_connected())
-    restored = initial_connected
-    was_connected = initial_connected
-    # BORDA-DE-QUEDA-01: a memória POR ALVO, ao lado da agregada. Ela nasce com
-    # a foto de agora, e não vazia: com um controle já de pé no boot, uma
-    # memória vazia leria a primeira volta do laço como "chegou alguém" e
-    # reaplicaria o som sem que nada tivesse acontecido.
-    alvos_antes = alvos_conectados_de(daemon) or {}
-    # O-CABO-ASSUME-DO-RADIO-01: e POR ONDE cada um está — a troca que cabe
-    # num tique só não é borda de ninguém, e só a foto do transporte a vê.
-    transportes_antes = transportes_dos_alvos_de(daemon) or {}
-    while not daemon._is_stopping():
-        try:
-            await daemon._run_blocking(daemon.controller.connect)
-        except Exception as exc:
-            # Backend real só levanta para erros não-"No device detected"
-            # (permissão hidraw, USB transitório). Loga em DEBUG para não
-            # poluir; próxima iteração tenta de novo.
-            logger.debug("reconnect_probe_failed", err=str(exc), exc_info=True)
-            # S-2: a classe "permissão hidraw" inclui o nó AINDA ESCONDIDO
-            # pelo broker após um handle morrer sem re-enumeração — sem o
-            # restore aqui o probe falharia para sempre (zero controles).
-            await _restore_hidden_before_reopen(daemon)
-            await _wait_or_stop(daemon, RECONNECT_PROBE_INTERVAL_SEC)
-            continue
-
-        # GATILHO-DA-COR-01: logo depois do tick de hotplug, e ANTES de
-        # qualquer transição — as conexões que o `connect()` acabou de abrir
-        # são o sinal, e cada uma re-adia o disparo. Fica fora do ramo
-        # `offline→online` de propósito: a rajada da Steam que apaga as barras
-        # acontece justamente quando um SEGUNDO controle chega com o primeiro
-        # já online, e ali não há transição nenhuma para pendurar o gancho.
-        armar_gatilho_da_cor(daemon)
-        # E O NÚMERO, que é o sinal mais tardio e o mais certo: a conexão diz
-        # que a mesa vai mudar, a numeração diz que ela MUDOU. Ver
-        # `armar_gatilho_da_cor_por_numeracao`.
-        armar_gatilho_da_cor_por_numeracao(daemon)
-        # ESCRITOR-CRU-01: e no mesmo tique, a pergunta que a classe LED não
-        # sabe responder — "quem mais segura estes controles?". `forcar=True`
-        # porque este é o único ponto do produto com orçamento para o `pgrep`
-        # (uma vez a cada 30 s), e é ele que enxerga a Steam SUBINDO sem que
-        # ninguém tenha mexido em nada.
-        await vigiar_escritor_cru(daemon, forcar=True)
-        # SINAL-NO-NASCIMENTO-01: e no mesmo tique, o CARIMBO — "como esta
-        # conexão NASCEU?". Vem DEPOIS do vigia de propósito e por duas razões:
-        # a linha `lightbar_escritor_cru_detectado` que o diário vai casar é
-        # escrita ali em cima, e a foto do sentinela (a régua de primeira mão
-        # que agrava um carimbo) acabou de ser tirada. Custo zero em mesa
-        # parada: sem instância nova, nem `journalctl` roda.
-        await carimbar_o_nascimento(daemon)
-        # O-CABO-ASSUME-DO-RADIO-01: e o controle do rádio que ganhou cabo
-        # passa para o cabo. Depois do `connect()` de propósito: a mesa que ele
-        # consulta (quem está no rádio, com que carga) é a deste tique.
-        await vigiar_o_cabo_em_espera(daemon)
-
-        is_connected = bool(daemon.controller.is_connected())
-        # BORDA-DE-QUEDA-01: a foto por alvo do MESMO tique do agregado — as
-        # duas têm de vir do mesmo instante, senão a comparação atribui a um
-        # tique uma borda que aconteceu no outro.
-        alvos_agora = alvos_conectados_de(daemon)
-        transportes_agora = transportes_dos_alvos_de(daemon)
-        trocando = trocas_de_transporte_pendentes(daemon)
-        if is_connected and not was_connected:
-            # BUG-DAEMON-CONNECT-GHOST-INPUT-01: transição offline→online
-            # detectada pelo probe. Rearma o settling antes de qualquer outra
-            # coisa para que o poll loop suprima o input emulado do estado
-            # inicial cru (mute fantasma + teclas aleatórias). O poll loop
-            # também arma o grace na própria borda; aqui cobrimos o caso em
-            # que o probe chega primeiro / reconecta sem o loop ver offline.
-            daemon._arm_input_grace()
-            transport = daemon.controller.get_transport()
-            daemon.bus.publish(
-                EventTopic.CONTROLLER_CONNECTED, {"transport": transport}
-            )
-            logger.info("controller_connected", transport=transport)
-            # VPAD-01: hotplug tardio promove o vpad degradado — espelha o
-            # gancho do boot (`lifecycle.run`). Antes, o único caller era o
-            # connect inicial: quem ligasse o controle DEPOIS do boot ficava
-            # com o vpad uinput até reiniciar o daemon. Roda no executor
-            # (`_run_blocking`): este loop divide o event loop com o poll
-            # loop e a promoção é síncrona (pior caso ~0,5 s no
-            # `UHID_BIND_TIMEOUT_S`) — bloquear aqui congelaria o input. O
-            # `_emu_lock` (RLock) serializa com set_gamepad_emulation/
-            # set_mouse_emulation das outras superfícies (IPC/GUI/hotkey);
-            # os gates internos do upgrade (já-uhid, precheck
-            # `uhid_available()`, cooldown compartilhado com o VPAD-02)
-            # garantem zero churn nas reconexões normais.
-            with contextlib.suppress(Exception):
-                from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
-                    upgrade_primary_vpad_to_uhid,
-                )
-
-                def _promover_vpad() -> bool:
-                    with getattr(daemon, "_emu_lock", contextlib.nullcontext()):
-                        return upgrade_primary_vpad_to_uhid(daemon)
-
-                await daemon._run_blocking(_promover_vpad)
-            # FEAT-COSMIC-NOTIFICATIONS-01: opt-in via env var.
-            with contextlib.suppress(Exception):
-                from hefesto_dualsense4unix.integrations.desktop_notifications import (
-                    notify_controller_connected,
-                )
-                notify_controller_connected(transport or "usb")
-            if not restored:
-                with contextlib.suppress(Exception):
-                    await _restore_last_profile(daemon)
-                restored = True
-            # SOM-02/E4 (armadilha 4): a posse dos bytes de áudio morre com o
-            # cabo — `_volumes_audio` nasce vazio em cada handle. Roda em TODA
-            # transição offline→online, inclusive na primeira (em que o restore
-            # acima já pode ter aplicado o volume): a reescrita é idempotente
-            # (os mesmos bytes) e o restore tem vários caminhos de desistência
-            # (Modo Nativo, perfil de janela, marker órfão) em que o volume do
-            # perfil ativo se perderia em silêncio. Preferimos a escrita repetida
-            # à perda calada.
-            #
-            # BORDA-DE-QUEDA-01: e num controle POR CONTROLE, não só no
-            # primário — `reapply_speaker_after_connect` sem `uniq` escreve no
-            # primário e em mais ninguém.
-            await reaplicar_som_em_todos_os_alvos(daemon)
-            was_connected = True
-        elif not is_connected and was_connected and trocando:
-            # O-CABO-ASSUME-DO-RADIO-01: a mesa ficou vazia porque o controle
-            # está TROCANDO de transporte — o rádio saiu e o cabo ainda não
-            # entrou. Não é queda: sem `probe_offline`, sem aviso no desktop, e
-            # a memória agregada fica "online" para a volta não virar conexão
-            # nova. As bordas por alvo dizem o que houver a dizer.
-            await anunciar_bordas_por_alvo(daemon, alvos_antes, alvos_agora or {})
-        elif not is_connected and was_connected:
-            # Transição online→offline detectada pelo probe (poll_loop também
-            # pode detectar via exceção em read_state e disparar reconnect()
-            # legado; logamos aqui só se chegamos primeiro).
-            # PROTOCOLO-QUEDA-01 (07/08): ANTES de publicar, deixa no journal a
-            # última capacidade conhecida. O `probe_offline` é o daemon
-            # PERCEBENDO, não causando — e sem a carga ao lado dele a linha não
-            # distingue "acabou a bateria" de "o link caiu". A leitura mais
-            # fresca vem do nó do kernel, que costuma sobreviver alguns
-            # instantes ao handle; o `idade_s` da linha diz qual das duas é.
-            registrar_queda_da_bateria(
-                daemon, "probe_offline", asyncio.get_running_loop().time()
-            )
-            daemon.bus.publish(
-                EventTopic.CONTROLLER_DISCONNECTED, {"reason": "probe_offline"}
-            )
-            logger.info("controller_disconnected", reason="probe_offline")
-            with contextlib.suppress(Exception):
-                from hefesto_dualsense4unix.integrations.desktop_notifications import (
-                    notify_controller_disconnected,
-                )
-                notify_controller_disconnected("probe offline")
-            was_connected = False
-        elif alvos_agora is not None:
-            # BORDA-DE-QUEDA-01: o agregado não se mexeu — e é justamente aqui
-            # que mora a queda que ninguém via. Com dois ou mais na mesa,
-            # `is_connected()` é `any(...)` e continua dizendo "sim" depois de
-            # um cair: nenhum dos dois ramos acima dispara, e o Controle 2 some
-            # sem evento, sem linha e sem o som de volta quando retorna.
-            await anunciar_bordas_por_alvo(daemon, alvos_antes, alvos_agora)
-            if transportes_agora is not None:
-                await reaplicar_som_de_quem_trocou_de_transporte(
-                    daemon, alvos_antes, alvos_agora, transportes_antes, transportes_agora
-                )
-
-        # A memória por alvo avança em TODOS os caminhos (inclusive nos dois
-        # ramos agregados, que são donos das bordas deles): deixá-la para trás
-        # faria o tique seguinte reanunciar a mesma borda.
-        if alvos_agora is not None:
-            alvos_antes = alvos_agora
-        if transportes_agora is not None:
-            transportes_antes = transportes_agora
-
-        if is_connected:
-            # BROKER-01 §2.2: re-hide do físico a cada reconciliação online —
-            # nó recriado pelo replug/wake BT nasce VISÍVEL (rule 70/uaccess do
-            # udev) e é re-escondido aqui (o broker confere o fs e escreve o que
-            # difere mesmo para nó já rastreado, lição 2; com os nós parados,
-            # nada). Corretor final (interação S x HANG-01,
-            # achado #6): no executor DEDICADO do broker ('hefesto-broker',
-            # 1 worker FIFO), NUNCA no pool compartilhado 'hefesto-hid' de
-            # `_run_blocking` — o cliente do broker faz I/O de socket com
-            # timeout de 2 s por chamada (até ~8s com 4 nós de co-op e broker
-            # degradado), e ocupar 1 dos 2 workers de 'hefesto-hid' enfileira
-            # read_state/_gather_game_signal_inputs/heal atrás dele (o padrão
-            # que o HANG-01 baniu ao isolar `_sync_external_leds`). O await
-            # preserva o backpressure: um broker travado atrasa só ESTE loop,
-            # sem acumular rehides na fila. Best-effort: falha nunca derruba
-            # o probe.
-            with contextlib.suppress(Exception):
-                from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
-                    rehide_physical_hidraw,
-                )
-                from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
-                    broker_executor_for,
-                )
-
-                await asyncio.get_running_loop().run_in_executor(
-                    broker_executor_for(daemon), rehide_physical_hidraw, daemon
-                )
-            # FEAT-BACKEND-HOTPLUG-FAST-01: online, espera em fatias curtas
-            # observando /dev/input — hotplug antecipa a reconciliação (o
-            # connect() da próxima iteração) sem esperar o fallback de 30s.
-            if await _wait_online_or_hotplug(daemon, watch):
-                logger.info(
-                    "backend_hotplug_reconcile", trigger="input_dir_change"
-                )
+    # O-REPOUSO-ESPERA-O-EVENTO-01: o caminho de produção (sem watch injetado)
+    # ARMA o dono do evento do processo (`core/o_dono_do_evento.py`), e só ele
+    # arma. Armado, o watch olha a raiz do dono e deixa de listar a pasta; o
+    # desarme no `finally` zera os caches presos a ele. Sem `inotify`, o
+    # `armar` devolve False e tudo segue como antes.
+    armou = input_watch is None and _ode.armar()
+    try:
+        dono = _ode.dono_armado()
+        if input_watch is not None:
+            watch = input_watch
+        elif dono is not None:
+            watch = InputDirWatch(root=dono.raiz_das_entradas)
         else:
-            # Offline o probe já é curto (5s) e cada iteração reconcilia —
-            # o watch não acrescentaria nada aqui.
-            # GATILHO-DA-COR-01: offline não há barra para pintar; uma sequência
-            # que ficasse armada dispararia numa mesa vazia (no-op caro) ou, pior,
-            # no primeiro controle da PRÓXIMA rajada, adiantada.
-            # Desarma SÓ o gatilho da lightbar, e por nome: "não há controle" é
-            # um motivo DELE, não do mecanismo. Quem registrar outro gatilho
-            # decide se a mesa vazia invalida a sequência dele — presumir que
-            # sim seria uma regra escondida no laço de outra pessoa.
-            gatilho_lightbar = registro_de_gatilhos_de(daemon).obter(
-                NOME_DO_GATILHO_DA_LIGHTBAR
-            )
-            if gatilho_lightbar is not None:
-                gatilho_lightbar.desarmar()
-            # O-CABO-ASSUME-DO-RADIO-01: com o controle trocando de transporte
-            # o cabo entra em menos de um segundo, e esperar os 5 s do probe
-            # seria deixar o jogador parado à toa.
-            await _wait_or_stop(
-                daemon,
-                PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC
-                if trocando
-                else RECONNECT_PROBE_INTERVAL_SEC,
-            )
+            watch = InputDirWatch()
+        registrar_gatilho_da_lightbar(daemon)
+        # Baseline do watch: a 1ª chamada de poll() devolve True por construção
+        # (não havia snapshot anterior). Consumimos aqui para que só mudança REAL
+        # de /dev/input dispare reconciliação antecipada — o connect() do boot já
+        # cobriu o estado inicial.
+        watch.poll()
+
+        # Se o boot já conectou e restaurou o perfil, não re-publica
+        # CONTROLLER_CONNECTED nem reaplica o perfil — apenas monitora transições.
+        initial_connected = bool(daemon.controller.is_connected())
+        restored = initial_connected
+        was_connected = initial_connected
+        # BORDA-DE-QUEDA-01: a memória POR ALVO, ao lado da agregada. Ela nasce com
+        # a foto de agora, e não vazia: com um controle já de pé no boot, uma
+        # memória vazia leria a primeira volta do laço como "chegou alguém" e
+        # reaplicaria o som sem que nada tivesse acontecido.
+        alvos_antes = alvos_conectados_de(daemon) or {}
+        # O-CABO-ASSUME-DO-RADIO-01: e POR ONDE cada um está — a troca que cabe
+        # num tique só não é borda de ninguém, e só a foto do transporte a vê.
+        transportes_antes = transportes_dos_alvos_de(daemon) or {}
+        while not daemon._is_stopping():
+            try:
+                await daemon._run_blocking(daemon.controller.connect)
+            except Exception as exc:
+                # Backend real só levanta para erros não-"No device detected"
+                # (permissão hidraw, USB transitório). Loga em DEBUG para não
+                # poluir; próxima iteração tenta de novo.
+                logger.debug("reconnect_probe_failed", err=str(exc), exc_info=True)
+                # S-2: a classe "permissão hidraw" inclui o nó AINDA ESCONDIDO
+                # pelo broker após um handle morrer sem re-enumeração — sem o
+                # restore aqui o probe falharia para sempre (zero controles).
+                await _restore_hidden_before_reopen(daemon)
+                await _wait_or_stop(daemon, RECONNECT_PROBE_INTERVAL_SEC)
+                continue
+
+            # GATILHO-DA-COR-01: logo depois do tick de hotplug, e ANTES de
+            # qualquer transição — as conexões que o `connect()` acabou de abrir
+            # são o sinal, e cada uma re-adia o disparo. Fica fora do ramo
+            # `offline→online` de propósito: a rajada da Steam que apaga as barras
+            # acontece justamente quando um SEGUNDO controle chega com o primeiro
+            # já online, e ali não há transição nenhuma para pendurar o gancho.
+            armar_gatilho_da_cor(daemon)
+            # E O NÚMERO, que é o sinal mais tardio e o mais certo: a conexão diz
+            # que a mesa vai mudar, a numeração diz que ela MUDOU. Ver
+            # `armar_gatilho_da_cor_por_numeracao`.
+            armar_gatilho_da_cor_por_numeracao(daemon)
+            # ESCRITOR-CRU-01: e no mesmo tique, a pergunta que a classe LED não
+            # sabe responder — "quem mais segura estes controles?". `forcar=True`
+            # porque este é o único ponto do produto com orçamento para o `pgrep`
+            # (uma vez a cada 30 s), e é ele que enxerga a Steam SUBINDO sem que
+            # ninguém tenha mexido em nada.
+            await vigiar_escritor_cru(daemon, forcar=True)
+            # SINAL-NO-NASCIMENTO-01: e no mesmo tique, o CARIMBO — "como esta
+            # conexão NASCEU?". Vem DEPOIS do vigia de propósito e por duas razões:
+            # a linha `lightbar_escritor_cru_detectado` que o diário vai casar é
+            # escrita ali em cima, e a foto do sentinela (a régua de primeira mão
+            # que agrava um carimbo) acabou de ser tirada. Custo zero em mesa
+            # parada: sem instância nova, nem `journalctl` roda.
+            await carimbar_o_nascimento(daemon)
+            # O-CABO-ASSUME-DO-RADIO-01: e o controle do rádio que ganhou cabo
+            # passa para o cabo. Depois do `connect()` de propósito: a mesa que ele
+            # consulta (quem está no rádio, com que carga) é a deste tique.
+            await vigiar_o_cabo_em_espera(daemon)
+
+            is_connected = bool(daemon.controller.is_connected())
+            # BORDA-DE-QUEDA-01: a foto por alvo do MESMO tique do agregado — as
+            # duas têm de vir do mesmo instante, senão a comparação atribui a um
+            # tique uma borda que aconteceu no outro.
+            alvos_agora = alvos_conectados_de(daemon)
+            transportes_agora = transportes_dos_alvos_de(daemon)
+            trocando = trocas_de_transporte_pendentes(daemon)
+            if is_connected and not was_connected:
+                # BUG-DAEMON-CONNECT-GHOST-INPUT-01: transição offline→online
+                # detectada pelo probe. Rearma o settling antes de qualquer outra
+                # coisa para que o poll loop suprima o input emulado do estado
+                # inicial cru (mute fantasma + teclas aleatórias). O poll loop
+                # também arma o grace na própria borda; aqui cobrimos o caso em
+                # que o probe chega primeiro / reconecta sem o loop ver offline.
+                daemon._arm_input_grace()
+                transport = daemon.controller.get_transport()
+                daemon.bus.publish(
+                    EventTopic.CONTROLLER_CONNECTED, {"transport": transport}
+                )
+                logger.info("controller_connected", transport=transport)
+                # VPAD-01: hotplug tardio promove o vpad degradado — espelha o
+                # gancho do boot (`lifecycle.run`). Antes, o único caller era o
+                # connect inicial: quem ligasse o controle DEPOIS do boot ficava
+                # com o vpad uinput até reiniciar o daemon. Roda no executor
+                # (`_run_blocking`): este loop divide o event loop com o poll
+                # loop e a promoção é síncrona (pior caso ~0,5 s no
+                # `UHID_BIND_TIMEOUT_S`) — bloquear aqui congelaria o input. O
+                # `_emu_lock` (RLock) serializa com set_gamepad_emulation/
+                # set_mouse_emulation das outras superfícies (IPC/GUI/hotkey);
+                # os gates internos do upgrade (já-uhid, precheck
+                # `uhid_available()`, cooldown compartilhado com o VPAD-02)
+                # garantem zero churn nas reconexões normais.
+                with contextlib.suppress(Exception):
+                    from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                        upgrade_primary_vpad_to_uhid,
+                    )
+
+                    def _promover_vpad() -> bool:
+                        with getattr(daemon, "_emu_lock", contextlib.nullcontext()):
+                            return upgrade_primary_vpad_to_uhid(daemon)
+
+                    await daemon._run_blocking(_promover_vpad)
+                # FEAT-COSMIC-NOTIFICATIONS-01: opt-in via env var.
+                with contextlib.suppress(Exception):
+                    from hefesto_dualsense4unix.integrations.desktop_notifications import (
+                        notify_controller_connected,
+                    )
+                    notify_controller_connected(transport or "usb")
+                if not restored:
+                    with contextlib.suppress(Exception):
+                        await _restore_last_profile(daemon)
+                    restored = True
+                # SOM-02/E4 (armadilha 4): a posse dos bytes de áudio morre com o
+                # cabo — `_volumes_audio` nasce vazio em cada handle. Roda em TODA
+                # transição offline→online, inclusive na primeira (em que o restore
+                # acima já pode ter aplicado o volume): a reescrita é idempotente
+                # (os mesmos bytes) e o restore tem vários caminhos de desistência
+                # (Modo Nativo, perfil de janela, marker órfão) em que o volume do
+                # perfil ativo se perderia em silêncio. Preferimos a escrita repetida
+                # à perda calada.
+                #
+                # BORDA-DE-QUEDA-01: e num controle POR CONTROLE, não só no
+                # primário — `reapply_speaker_after_connect` sem `uniq` escreve no
+                # primário e em mais ninguém.
+                await reaplicar_som_em_todos_os_alvos(daemon)
+                was_connected = True
+            elif not is_connected and was_connected and trocando:
+                # O-CABO-ASSUME-DO-RADIO-01: a mesa ficou vazia porque o controle
+                # está TROCANDO de transporte — o rádio saiu e o cabo ainda não
+                # entrou. Não é queda: sem `probe_offline`, sem aviso no desktop, e
+                # a memória agregada fica "online" para a volta não virar conexão
+                # nova. As bordas por alvo dizem o que houver a dizer.
+                await anunciar_bordas_por_alvo(daemon, alvos_antes, alvos_agora or {})
+            elif not is_connected and was_connected:
+                # Transição online→offline detectada pelo probe (poll_loop também
+                # pode detectar via exceção em read_state e disparar reconnect()
+                # legado; logamos aqui só se chegamos primeiro).
+                # PROTOCOLO-QUEDA-01 (07/08): ANTES de publicar, deixa no journal a
+                # última capacidade conhecida. O `probe_offline` é o daemon
+                # PERCEBENDO, não causando — e sem a carga ao lado dele a linha não
+                # distingue "acabou a bateria" de "o link caiu". A leitura mais
+                # fresca vem do nó do kernel, que costuma sobreviver alguns
+                # instantes ao handle; o `idade_s` da linha diz qual das duas é.
+                registrar_queda_da_bateria(
+                    daemon, "probe_offline", asyncio.get_running_loop().time()
+                )
+                daemon.bus.publish(
+                    EventTopic.CONTROLLER_DISCONNECTED, {"reason": "probe_offline"}
+                )
+                logger.info("controller_disconnected", reason="probe_offline")
+                with contextlib.suppress(Exception):
+                    from hefesto_dualsense4unix.integrations.desktop_notifications import (
+                        notify_controller_disconnected,
+                    )
+                    notify_controller_disconnected("probe offline")
+                was_connected = False
+            elif alvos_agora is not None:
+                # BORDA-DE-QUEDA-01: o agregado não se mexeu — e é justamente aqui
+                # que mora a queda que ninguém via. Com dois ou mais na mesa,
+                # `is_connected()` é `any(...)` e continua dizendo "sim" depois de
+                # um cair: nenhum dos dois ramos acima dispara, e o Controle 2 some
+                # sem evento, sem linha e sem o som de volta quando retorna.
+                await anunciar_bordas_por_alvo(daemon, alvos_antes, alvos_agora)
+                if transportes_agora is not None:
+                    await reaplicar_som_de_quem_trocou_de_transporte(
+                        daemon, alvos_antes, alvos_agora, transportes_antes, transportes_agora
+                    )
+
+            # A memória por alvo avança em TODOS os caminhos (inclusive nos dois
+            # ramos agregados, que são donos das bordas deles): deixá-la para trás
+            # faria o tique seguinte reanunciar a mesma borda.
+            if alvos_agora is not None:
+                alvos_antes = alvos_agora
+            if transportes_agora is not None:
+                transportes_antes = transportes_agora
+
+            if is_connected:
+                # BROKER-01 §2.2: re-hide do físico a cada reconciliação online —
+                # nó recriado pelo replug/wake BT nasce VISÍVEL (rule 70/uaccess do
+                # udev) e é re-escondido aqui (o broker confere o fs e escreve o que
+                # difere mesmo para nó já rastreado, lição 2; com os nós parados,
+                # nada). Corretor final (interação S x HANG-01,
+                # achado #6): no executor DEDICADO do broker ('hefesto-broker',
+                # 1 worker FIFO), NUNCA no pool compartilhado 'hefesto-hid' de
+                # `_run_blocking` — o cliente do broker faz I/O de socket com
+                # timeout de 2 s por chamada (até ~8s com 4 nós de co-op e broker
+                # degradado), e ocupar 1 dos 2 workers de 'hefesto-hid' enfileira
+                # read_state/_gather_game_signal_inputs/heal atrás dele (o padrão
+                # que o HANG-01 baniu ao isolar `_sync_external_leds`). O await
+                # preserva o backpressure: um broker travado atrasa só ESTE loop,
+                # sem acumular rehides na fila. Best-effort: falha nunca derruba
+                # o probe.
+                with contextlib.suppress(Exception):
+                    from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                        rehide_physical_hidraw,
+                    )
+                    from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
+                        broker_executor_for,
+                    )
+
+                    await asyncio.get_running_loop().run_in_executor(
+                        broker_executor_for(daemon), rehide_physical_hidraw, daemon
+                    )
+                # FEAT-BACKEND-HOTPLUG-FAST-01: online, espera em fatias curtas
+                # observando /dev/input — hotplug antecipa a reconciliação (o
+                # connect() da próxima iteração) sem esperar o fallback de 30s.
+                if await _wait_online_or_hotplug(daemon, watch):
+                    logger.info(
+                        "backend_hotplug_reconcile", trigger="input_dir_change"
+                    )
+            else:
+                # Offline o probe já é curto (5s) e cada iteração reconcilia —
+                # o watch não acrescentaria nada aqui.
+                # GATILHO-DA-COR-01: offline não há barra para pintar; uma sequência
+                # que ficasse armada dispararia numa mesa vazia (no-op caro) ou, pior,
+                # no primeiro controle da PRÓXIMA rajada, adiantada.
+                # Desarma SÓ o gatilho da lightbar, e por nome: "não há controle" é
+                # um motivo DELE, não do mecanismo. Quem registrar outro gatilho
+                # decide se a mesa vazia invalida a sequência dele — presumir que
+                # sim seria uma regra escondida no laço de outra pessoa.
+                gatilho_lightbar = registro_de_gatilhos_de(daemon).obter(
+                    NOME_DO_GATILHO_DA_LIGHTBAR
+                )
+                if gatilho_lightbar is not None:
+                    gatilho_lightbar.desarmar()
+                # O-CABO-ASSUME-DO-RADIO-01: com o controle trocando de transporte
+                # o cabo entra em menos de um segundo, e esperar os 5 s do probe
+                # seria deixar o jogador parado à toa.
+                await _wait_or_stop(
+                    daemon,
+                    PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC
+                    if trocando
+                    else RECONNECT_PROBE_INTERVAL_SEC,
+                )
+    finally:
+        if armou:
+            _ode.desarmar()
 
 
 def registro_de_gatilhos_de(daemon: DaemonProtocol) -> RegistroDeGatilhos:

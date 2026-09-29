@@ -57,8 +57,8 @@ RAIZ_DOS_NOS = "/dev"
 PREFIXO_DOS_NOS = "hidraw"
 
 NOMES = "nomes"
-CRIACOES = "criacoes"
-PERMISSOES = "permissoes"
+CRIACOES = "criações"
+PERMISSOES = "permissões"
 _TIPOS: tuple[str, ...] = (NOMES, CRIACOES, PERMISSOES)
 
 # linux/inotify.h
