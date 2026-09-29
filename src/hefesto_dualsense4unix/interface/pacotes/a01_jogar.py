@@ -990,7 +990,8 @@ def _do_painel(ctx: Contexto, com_outra_casa: bool) -> list[dict[str, str]]:
     em :data:`FONTES_DO_PAINEL_COM_OUTRA_CASA`. A linha de ``ERRO`` de uma fonte
     que levantou vai para o mesmo lado da fonte.
     """
-    return [a for a in _painel().avisos_do_estado(ctx.state)
+    painel = _painel()
+    return [a for a in painel.avisos_do_estado(ctx.state)
             if (a.get("fonte") in FONTES_DO_PAINEL_COM_OUTRA_CASA) is com_outra_casa]
 
 
