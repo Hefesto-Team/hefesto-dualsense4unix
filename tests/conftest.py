@@ -4378,6 +4378,9 @@ def _lancador_no_fim_da_sessao(session: Any) -> None:
         return
     if lancador_de_mentira() is None:
         return
+    # o dublê que um fio abriu sem esperar, depois do último teste, escreve
+    # quando RODA: sem esta espera, o fim da sessão lê o livro antes dele
+    _esperar_os_filhos_no_duble()
     _abrir_a_fase()
     if not _ATOS_FORA_DE_FASE:
         return

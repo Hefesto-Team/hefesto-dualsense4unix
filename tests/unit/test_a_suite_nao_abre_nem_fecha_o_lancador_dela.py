@@ -20,6 +20,7 @@ da guarda fica armado.
 
 from __future__ import annotations
 
+import contextlib
 import inspect
 import os
 import re
@@ -366,9 +367,129 @@ def test_o_ato_fora_de_teste_reprova_a_sessao(tmp_path: Path) -> None:
     assert "`xdg-open steam://open/main`" in texto, texto[-3000:]
 
 
+def test_o_fim_da_sessao_espera_o_filho_que_ninguem_esperou(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Um fio que abre o lançador SEM esperar, logo antes do fim da sessão: o
+    dublê escreve no livro quando roda, e o fim da sessão tem de esperá-lo
+    como o fim de cada fase espera. O filho aqui é de mentira e escreve na
+    terceira pergunta, que é o atraso de um processo que ainda não rodou.
+
+    MORDIDA: tire o `_esperar_os_filhos_no_duble()` de
+    `_lancador_no_fim_da_sessao`. O livro é lido antes do filho, e a sessão
+    fecha verde.
+    """
+    duble = tmp_path / "duble"
+    duble.mkdir()
+    livro = duble / "atos.txt"
+    livro.touch()
+
+    class _FilhoAtrasado:
+        voltas = 0
+
+        def poll(self) -> int | None:
+            self.voltas += 1
+            if self.voltas < 3:
+                return None
+            with livro.open("a", encoding="utf-8") as arquivo:
+                arquivo.write("xdg-open steam://open/main\t\n")
+            return 1
+
+    class _Sessao:
+        exitstatus = 0
+        config = None
+
+    sessao = _Sessao()
+    escritos: list[str] = []
+    with monkeypatch.context() as troca:
+        troca.setattr(conftest, "_LANCADOR_DE_MENTIRA", [duble])
+        troca.setattr(conftest, "_SESSAO_DO_LANCADOR", [id(sessao)])
+        troca.setattr(conftest, "_LIVRO_LIDO", [0])
+        troca.setattr(conftest, "_ATOS_FORA_DE_FASE", [])
+        troca.setattr(conftest, "_ATOS_DE_PROPOSITO", set())
+        troca.setattr(conftest, "_FILHOS_NO_DUBLE", [_FilhoAtrasado()])
+        troca.setattr(conftest, "_escrever_no_terminal",
+                      lambda _sessao, linhas: escritos.extend(linhas))
+        conftest._lancador_no_fim_da_sessao(sessao)
+    assert sessao.exitstatus == 1, "o ato do fio chegou depois da leitura do livro"
+    assert any("`xdg-open steam://open/main`" in linha for linha in escritos), escritos
+
+
+def test_o_ato_de_proposito_nao_e_escape(ato_de_proposito: Callable[..., Any]) -> None:
+    """A declaração confere o argv EXATO: um ato diferente do declarado, ou um
+    declarado que não chegou, reprova. Aberta a qualquer argv, ela viraria o
+    escape que a guarda não tem.
+
+    MORDIDA: tire o `assert chegaram == list(esperados)` de `_declarar`. Os
+    dois blocos de dentro deixam de reprovar.
+    """
+    _duble()
+    # o bloco de fora declara o ato de verdade, para o veredito da fase não
+    # reprovar esta régua pelo ato que ela chama de propósito
+    with (
+        ato_de_proposito("steam -shutdown"),
+        pytest.raises(AssertionError, match="declarou"),
+        ato_de_proposito("steam"),
+    ):
+        subprocess.run(["steam", "-shutdown"], capture_output=True, timeout=30, check=False)
+    with pytest.raises(AssertionError, match="declarou"), ato_de_proposito("steam -shutdown"):
+        pass
+
+
 # ---------------------------------------------------------------------------
 # 4 e 5. O Popen: `/usr/games`, o PATH explícito e o dublê do próprio teste
 # ---------------------------------------------------------------------------
+
+
+def test_o_executable_tambem_cai_no_duble(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    espiao: Callable[..., Espiao],
+    ato_de_proposito: Callable[..., Any],
+) -> None:
+    """`Popen(argv, executable=…)` roda o `executable`, e não o `argv[0]`: o
+    desvio vale para os dois.
+
+    MORDIDA: em `_desviar_para_o_lancador`, ignore o `executable=` (tire o
+    bloco dele). O espião recusa o `steam` de fora pelo caminho.
+    """
+    fora = tmp_path / "games"
+    _executavel(fora / "steam", f"echo rodou >> '{tmp_path}/fora.log'\nexit 0\n")
+    _declarar_fora_da_sessao(monkeypatch, fora)
+    olho = espiao()
+    with ato_de_proposito("steam -shutdown"):
+        # o espião recusa com `PermissionError`: a asserção de baixo diz qual
+        with contextlib.suppress(PermissionError):
+            subprocess.run(
+                ["qualquer-nome", "-shutdown"], executable=str(fora / "steam"),
+                env={"PATH": f"{fora}{os.pathsep}/usr/bin"},
+                capture_output=True, timeout=30, check=False)
+        assert not olho.recusados, f"o `steam` de fora da sessão ia rodar: {olho.recusados}"
+    assert not (tmp_path / "fora.log").exists(), "o `steam` de fora da sessão rodou"
+
+
+def test_o_script_de_shell_com_path_explicito_cai_no_duble(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    ato_de_proposito: Callable[..., Any],
+) -> None:
+    """O `disable_steam_input.sh` fecha a Steam por dentro de um shell, com o
+    PATH que o teste lhe deu: o `Popen` só vê o `/bin/sh`, e o que salva é o
+    diretório dos dublês entrar no PATH do `env`. O juiz é o `steam` de fora,
+    que só escreve o registro dele se rodar.
+
+    MORDIDA: faça `_path_com_o_lancador` devolver o PATH sem mexer. O `steam`
+    de fora roda, e o registro dele aparece.
+    """
+    fora = tmp_path / "games"
+    _executavel(fora / "steam", f"echo rodou >> '{tmp_path}/fora.log'\nexit 0\n")
+    _declarar_fora_da_sessao(monkeypatch, fora)
+    with ato_de_proposito("steam -shutdown"):
+        subprocess.run(
+            ["/bin/sh", "-c", "steam -shutdown"],
+            env={"PATH": f"{fora}{os.pathsep}/usr/bin{os.pathsep}/bin"},
+            capture_output=True, timeout=30, check=False)
+    assert not (tmp_path / "fora.log").exists(), "o `steam` de fora da sessão rodou"
 
 
 def test_o_path_explicito_e_o_caminho_absoluto_caem_no_duble(
