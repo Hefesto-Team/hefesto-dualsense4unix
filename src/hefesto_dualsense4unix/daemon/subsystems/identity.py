@@ -705,6 +705,21 @@ class ControllerIdentityRegistry:
         self._auto_colors = True
         self._auto_numbers = True
         self._auto_brightness = 1.0
+        # -- o plástico de cada controle (A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01) --
+        #: D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO: a cor automática vem do
+        #: plástico, e o daemon precisa sabê-lo SEM a janela. A pergunta de
+        #: fábrica (o `SET_FEATURE` da família `0x80`) sai daqui, no tique de
+        #: presença, para quem chega; a resposta fica neste cache, que o
+        #: provider lê sem I/O e o `state_full` lê também. Só a RESPOSTA
+        #: DEFINITIVA entra (o serial não muda); a falha volta à agenda.
+        self._fabrica: dict[str, Any] = {}
+        #: A `AgendaDaPergunta` da fábrica, criada no primeiro uso.
+        self._agenda_da_fabrica: Any = None
+        #: Quem pergunta ao aparelho: `(uniq) -> IdentidadeDeFabrica`. None =
+        #: não armado (teste, CLI): nenhuma pergunta sai, e a cor automática
+        #: segue a do número, como antes. A fiação do daemon o arma em
+        #: :func:`make_auto_output_provider`.
+        self._perguntar_a_fabrica: Callable[[str], Any] | None = None
 
     # ------------------------------------------------------------------
     # Config do automático (COR-03 / D11)
@@ -1738,6 +1753,7 @@ class ControllerIdentityRegistry:
         # aparelho colapsam numa key só, e a segunda perderia o cache à toa,
         # reperguntando ao aparelho a cada tick.
         crus_vivos = set(na_mesa)
+        a_perguntar: list[tuple[str, str]] = []
         for uniq in na_mesa:
             key, persistable = self._chave(uniq)
             if not key or key in vistos:
@@ -1746,6 +1762,8 @@ class ControllerIdentityRegistry:
                 continue  # D9: vpad não é controle
             vistos.add(key)
             vivos.append((key, persistable))
+            if persistable:
+                a_perguntar.append((key, uniq))
         with self._lock:
             # Quem saiu da mesa devolve o crachá: o cache é indexado pelo
             # path, e path reocupado por outro aparelho daria a ele a
@@ -1801,6 +1819,113 @@ class ControllerIdentityRegistry:
         if chegou_gente_nova:
             # A mesa é uma só: o lugar guardado de um externo também cede.
             self._soltar_os_lugares_dos_externos()
+        # O PLÁSTICO DE QUEM CHEGOU — fora do ``_lock``, no tique lento, como
+        # o crachá: a pergunta sai numa thread, uma em voo por controle.
+        for key, uniq in a_perguntar:
+            self._agendar_a_pergunta_de_fabrica(key, uniq)
+
+    # ------------------------------------------------------------------
+    # O plástico (A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01)
+    # ------------------------------------------------------------------
+    def armar_a_pergunta_de_fabrica(
+        self, perguntar: Callable[[str], Any] | None
+    ) -> None:
+        """Arma (ou desarma, com None) quem pergunta o serial ao aparelho."""
+        self._perguntar_a_fabrica = perguntar
+
+    @property
+    def pergunta_de_fabrica_armada(self) -> bool:
+        return self._perguntar_a_fabrica is not None
+
+    def _agenda_de_fabrica(self) -> Any:
+        agenda = self._agenda_da_fabrica
+        if agenda is None:
+            from hefesto_dualsense4unix.integrations.cor_do_plastico import (
+                AgendaDaPergunta,
+            )
+
+            agenda = AgendaDaPergunta()
+            self._agenda_da_fabrica = agenda
+        return agenda
+
+    def identidade_de_fabrica(self, uniq: str | None) -> Any:
+        """A `IdentidadeDeFabrica` definitiva de `uniq`, ou None. Leitura pura."""
+        if not uniq:
+            return None
+        key, _persistable = self._canonical(uniq)
+        with self._lock:
+            return self._fabrica.get(key)
+
+    def tom_do_plastico(self, uniq: str) -> tuple[int, int, int] | None:
+        """O tom de luz do plástico de `uniq`, sem I/O — None quando não se sabe.
+
+        É a companheira que o provider pendura para o backend: quem perde o
+        tom do plástico cai na cor do número, e o backend leva as duas à mesa.
+        """
+        achado = self.identidade_de_fabrica(uniq)
+        if achado is None:
+            return None
+        from hefesto_dualsense4unix.integrations.cor_do_plastico import tom_da_luz
+
+        return tom_da_luz(getattr(achado, "cor", None))
+
+    def agendar_a_pergunta_de_fabrica(self, uniq: str) -> None:
+        """Agenda a pergunta de `uniq` (o `state_full` chama; o tique também)."""
+        key, persistable = self._canonical(uniq)
+        if key and persistable:
+            self._agendar_a_pergunta_de_fabrica(key, uniq)
+
+    def _agendar_a_pergunta_de_fabrica(self, key: str, uniq: str) -> None:
+        perguntar = self._perguntar_a_fabrica
+        if perguntar is None:
+            return
+        with self._lock:
+            if key in self._fabrica:
+                return
+        if not self._agenda_de_fabrica().reservar(key):
+            return
+        try:
+            threading.Thread(
+                target=self._perguntar_a_fabrica_agora,
+                args=(perguntar, key, uniq),
+                name=f"fabrica-{key[:6]}",
+                daemon=True,
+            ).start()
+        except Exception:
+            # A thread não nasceu: o voo é solto como falha, senão o controle
+            # fica preso sem pergunta para sempre.
+            from hefesto_dualsense4unix.integrations.cor_do_plastico import (
+                IdentidadeDeFabrica,
+            )
+
+            self._agenda_de_fabrica().registrar(
+                key, IdentidadeDeFabrica(motivo="a thread não nasceu")
+            )
+
+    def _perguntar_a_fabrica_agora(
+        self, perguntar: Callable[[str], Any], key: str, uniq: str
+    ) -> None:
+        """A leitura, fora do laço. Só a resposta definitiva entra no cache."""
+        from hefesto_dualsense4unix.integrations.cor_do_plastico import (
+            IdentidadeDeFabrica,
+        )
+
+        achado: Any = IdentidadeDeFabrica(motivo="a leitura não devolveu")
+        try:
+            achado = perguntar(uniq)
+        except Exception as erro:  # defensivo — jamais derruba o daemon
+            achado = IdentidadeDeFabrica(
+                motivo=f"a leitura levantou {type(erro).__name__}"
+            )
+        finally:
+            if getattr(achado, "definitiva", False):
+                with self._lock:
+                    self._fabrica[key] = achado
+                logger.info(
+                    "plastico_do_controle_lido",
+                    modelo=getattr(getattr(achado, "cor", None), "nome", None),
+                )
+            self._agenda_de_fabrica().registrar(key, achado)
 
     def snapshot(self) -> dict[str, int]:
         """Cópia do mapa key→LUGAR NA FILA (presentes + ausentes). Leitura pura.
@@ -2314,8 +2439,19 @@ def make_auto_output_provider(
     from hefesto_dualsense4unix.core.backend_pydualsense import _DesiredOutput
     from hefesto_dualsense4unix.core.led_control import (
         LedSettings,
+        cor_automatica,
         player_led_pattern,
         player_slot_color,
+    )
+    from hefesto_dualsense4unix.integrations import cor_do_plastico
+
+    # O PLÁSTICO É PERGUNTADO PELO DAEMON, SEM A JANELA — 29/09/2026,
+    # D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO. Esta é a fiação do daemon (a
+    # única que chama esta fábrica), e é aqui que a pergunta se arma. O leitor
+    # é procurado NA HORA da pergunta, pelo módulo, para o dublê da suíte
+    # (`monkeypatch` em `cor_do_plastico.ler_identidade_pelo_cabo`) valer.
+    registry.armar_a_pergunta_de_fabrica(
+        lambda uniq: cor_do_plastico.ler_identidade_pelo_cabo(uniq)
     )
 
     def provider(uniq: str) -> _DesiredOutput | None:
@@ -2341,8 +2477,11 @@ def make_auto_output_provider(
         campos: dict[str, Any] = {}
         if registry.auto_enabled:
             brilho = registry.auto_brightness
+            # A COR AUTOMÁTICA TEM UM DONO (`led_control.cor_automatica`): a do
+            # plástico, lido sem I/O do registro, e a do número sem ele.
             settings = LedSettings(
-                lightbar=player_slot_color(slot), brightness_level=brilho
+                lightbar=cor_automatica(slot, registry.tom_do_plastico(uniq)),
+                brightness_level=brilho,
             )
             campos["led"] = settings.apply_brightness(brilho).lightbar
         if registry.auto_numbers_enabled:
@@ -2396,8 +2535,25 @@ def make_auto_output_provider(
         """
         return list(registry.numeros_da_mesa())
 
+    def cor_do_numero(uniq: str) -> tuple[int, int, int] | None:
+        """A cor do NÚMERO de `uniq`, no brilho do perfil — a queda do plástico.
+
+        Com a cor automática vinda do plástico, o provider acende o plástico,
+        e a regra de cor única leva a do número para quem o perder (dois
+        plásticos iguais). Mesmo contrato das irmãs: só memória.
+        """
+        slot = registry.numero_da_lampada(uniq, autoridade_de_presenca=False)
+        if slot is None or not registry.auto_enabled:
+            return None
+        brilho = registry.auto_brightness
+        return LedSettings(lightbar=player_slot_color(slot)).apply_brightness(
+            brilho
+        ).lightbar
+
     provider.numero_do_slot = numero_do_slot  # type: ignore[attr-defined]
     provider.uniqs_da_mesa = uniqs_da_mesa  # type: ignore[attr-defined]
+    provider.tom_do_plastico = registry.tom_do_plastico  # type: ignore[attr-defined]
+    provider.cor_do_numero = cor_do_numero  # type: ignore[attr-defined]
     # O-MODO-XBOX-NAO-E-QUEDA-02: a carta de quem ainda não tem lâmpada, para
     # o backend eleger o primário no `connect()` (ver `posto_na_fila`).
     provider.posto_na_fila = registry.posto_na_fila  # type: ignore[attr-defined]

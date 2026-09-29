@@ -19,6 +19,7 @@ Uso:
 """
 from __future__ import annotations
 
+import colorsys
 from collections.abc import Iterable
 from dataclasses import dataclass
 
@@ -201,6 +202,24 @@ _PLAYER_SLOT_COLORS: dict[int, RGB] = {
 }
 
 
+def cor_automatica(numero: int | None, tom_do_plastico: RGB | None) -> RGB:
+    """A cor AUTOMÁTICA de um controle: a do plástico, e a do número sem ela.
+
+    D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO (29/09/2026, a resposta (b) da
+    A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01): o plástico já é a identidade do
+    controle na tela inteira, e o número já tem as lâmpadas dele. Um dono só:
+    o provider do daemon, o degrau 4 da aba Iluminação, a peça da tela e a
+    prévia da troca de número perguntam aqui. `tom_do_plastico` é o de
+    `integrations.cor_do_plastico.tom_da_luz` — `None` quando o plástico não
+    foi lido ou não tem tom, e aí vale a cor do número. Quem perde o tom do
+    plástico para outra peça (dois plásticos iguais) vai à do número pelo
+    `cores_sem_colisao`, que leva as duas.
+    """
+    if tom_do_plastico is not None:
+        return tom_do_plastico
+    return player_slot_color(numero if numero is not None else 0)
+
+
 def player_slot_color(slot: int) -> RGB:
     """Cor canônica de lightbar do controle `slot` (1=azul, 2=vermelho, 3=verde, 4=rosa).
 
@@ -275,6 +294,11 @@ class PecaDaMesa:
     controle quando ele tem o seu): é nele que sai o tom da paleta para onde
     ela for deslocada (A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01, 25/09/2026).
     `None` é *"não se sabe"*, e o tom sai cheio, como antes do campo.
+
+    `do_plastico` é o tom do PLÁSTICO no brilho dela (29/09/2026,
+    D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO): quando existe, é a cor
+    automática, e o fóssil volta a ele antes do número. `None` é o plástico
+    não lido ou sem tom, e a automática é a do número, como antes do campo.
     """
 
     uniq: str
@@ -283,6 +307,12 @@ class PecaDaMesa:
     procedencia: object = LEGADO
     numero: int | None = None
     brilho: float | None = None
+    do_plastico: RGB | None = None
+
+    @property
+    def automatica(self) -> RGB | None:
+        """A cor automática desta peça: a do plástico, e a do número sem ela."""
+        return self.do_plastico if self.do_plastico is not None else self.do_numero
 
 
 def _e_fossil(peca: PecaDaMesa, numeros: set[RGB]) -> bool:
@@ -312,7 +342,8 @@ def _e_fossil(peca: PecaDaMesa, numeros: set[RGB]) -> bool:
         return peca.numero is None or peca.procedencia != peca.numero
     if peca.procedencia is not LEGADO or peca.pedida is None:
         return False
-    if peca.do_numero is not None and _mesmo_tom(peca.pedida, peca.do_numero):
+    proprias = (peca.do_plastico, peca.do_numero)
+    if any(p is not None and _mesmo_tom(peca.pedida, p) for p in proprias):
         return False
     return any(_mesmo_tom(peca.pedida, numero) for numero in numeros)
 
@@ -372,7 +403,41 @@ def _mesmo_tom(a: RGB, b: RGB) -> bool:
         return False
     if tons_a and tons_b:
         return tons_a == tons_b
-    return _acende_o_tom(a, b) or _acende_o_tom(b, a)
+    if _acende_o_tom(a, b) or _acende_o_tom(b, a):
+        return True
+    # E O «MESMO» É POR VIZINHANÇA desde a cor do plástico
+    # (D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO): os tons do plástico caem ao
+    # lado dos da paleta — o Galactic Purple `(131, 0, 255)` e o roxo
+    # `(128, 0, 255)` são a mesma luz na mão, e o Cosmic Red `(255, 0, 82)`
+    # fica perto do rosa `(255, 0, 128)`. Ver `_vizinhos`.
+    return _vizinhos(a, b)
+
+
+#: A VIZINHANÇA ENTRE DUAS LUZES — 29/09/2026, com a cor do plástico. Duas
+#: luzes coloridas são a mesma na mão quando o matiz delas fica a menos de
+#: `LIMIAR_DE_MATIZ` graus e a saturação a menos de `LIMIAR_DE_SATURACAO`; duas
+#: neutras (brancos e cinzas, abaixo de `SATURACAO_NEUTRA_DA_LUZ`) são sempre
+#: a mesma. Os tons da paleta ficam a 30° uns dos outros (o vermelho, o
+#: laranja e o rosa; o azul e o roxo), e o limiar de 15° é a metade: nenhum
+#: tom da paleta vira vizinho de outro, e o Galactic Purple (a 0,8° do roxo)
+#: e o Cosmic Red (a 10,7° do rosa) viram. Escolhidos por quem coordenou, pelo
+#: padrão dela, sem a sessão com a luz na mão.
+LIMIAR_DE_MATIZ = 15.0
+LIMIAR_DE_SATURACAO = 0.25
+SATURACAO_NEUTRA_DA_LUZ = 0.15
+
+
+def _vizinhos(a: RGB, b: RGB) -> bool:
+    """As duas luzes (nenhuma apagada) são a mesma na mão, pelo matiz?"""
+    ha, sa, _va = colorsys.rgb_to_hsv(*(c / 255 for c in a))
+    hb, sb, _vb = colorsys.rgb_to_hsv(*(c / 255 for c in b))
+    neutra_a = sa < SATURACAO_NEUTRA_DA_LUZ
+    neutra_b = sb < SATURACAO_NEUTRA_DA_LUZ
+    if neutra_a or neutra_b:
+        return neutra_a and neutra_b
+    distancia = abs(ha - hb) * 360.0
+    distancia = min(distancia, 360.0 - distancia)
+    return distancia < LIMIAR_DE_MATIZ and abs(sa - sb) < LIMIAR_DE_SATURACAO
 
 
 def _tons_da_paleta(luz: RGB) -> tuple[RGB, ...]:
@@ -386,10 +451,10 @@ def _ja_acesa(luz: RGB, acesas: Iterable[RGB]) -> bool:
 
 
 def _automaticas(mesa: list[PecaDaMesa]) -> set[RGB]:
-    """As cores automáticas da mesa, cada uma no brilho da sua peça."""
+    """As cores automáticas da mesa (o plástico, ou o número), cada uma no brilho da sua peça."""
     return {
-        peca.do_numero for peca in mesa
-        if peca.do_numero is not None and peca.do_numero != _APAGADA
+        peca.automatica for peca in mesa
+        if peca.automatica is not None and peca.automatica != _APAGADA
     }
 
 
@@ -549,6 +614,12 @@ def cores_sem_colisao(mesa: list[PecaDaMesa]) -> dict[str, RGB]:
         # levados ao brilho dela — sem isso o fóssil do P3 saía em
         # (0,0,255) ao lado do P1 a (0,0,209). A-BARRA-NAO-ESCURECE-AO-REAPLICAR-01.
         candidatas: list[tuple[RGB, tuple[RGB, ...]]] = []
+        # O PLÁSTICO PRIMEIRO (29/09/2026, D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO):
+        # o fóssil volta à cor automática, e ela é a do plástico quando ele
+        # tem tom. Quem o perde para outra peça cai no número, e depois na
+        # paleta, como antes.
+        if peca.do_plastico is not None:
+            candidatas.append((peca.do_plastico, ()))
         if peca.do_numero is not None:
             tons = tuple(t for t in paleta if _acende_o_tom(peca.do_numero, t))
             candidatas.append((peca.do_numero, tons))
@@ -709,6 +780,7 @@ __all__ = [
     "LedSettings",
     "PecaDaMesa",
     "apply_led_settings",
+    "cor_automatica",
     "cor_escolhida",
     "cores_sem_colisao",
     "degrau_do_brilho_das_luzes",

@@ -606,6 +606,10 @@ class _ResolvidoDoDaemon:
     cor_do_numero: tuple[int, int, int] | None
     procedencia: object
     numero: int | None
+    #: O tom do PLÁSTICO no brilho da saída, quando a cor automática veio dele
+    #: (D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO); `cor_do_numero` é então a do
+    #: número, para onde ele cai quando outro já acende o mesmo plástico.
+    cor_do_plastico: tuple[int, int, int] | None = None
 
 
 #: Lugar de quem a consulta de número não alcança (ausente da mesa, vpad, key
@@ -2979,14 +2983,25 @@ class PyDualSenseController(IController):
         resolved = _merge_desired(base, override)
         coop: _DesiredOutput | None = None
         cor_do_numero: tuple[int, int, int] | None = None
+        cor_do_plastico: tuple[int, int, int] | None = None
         if uniq is not None:
             if incluir_coop:
                 coop = self._desired_coop_by_uniq.get(uniq)
                 resolved = _merge_desired(resolved, coop)
             if auto is not None and auto.led is not None:
-                cor_do_numero = self._scaled_led(
-                    uniq, _DesiredOutput(led=auto.led)
-                ).led
+                # A AUTOMÁTICA É O PLÁSTICO quando o provider o sabe
+                # (D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO), e a do número vai
+                # à mesa como a queda dele. Sem o plástico, a automática É a
+                # do número, como antes.
+                automatica = self._scaled_led(uniq, _DesiredOutput(led=auto.led)).led
+                do_numero = self._cor_do_numero_do_provider(uniq)
+                if self._tom_do_plastico(uniq) is not None and do_numero is not None:
+                    cor_do_plastico = automatica
+                    cor_do_numero = self._scaled_led(
+                        uniq, _DesiredOutput(led=do_numero)
+                    ).led
+                else:
+                    cor_do_numero = automatica
         # A PROCEDÊNCIA É A DA CAMADA MAIS ALTA QUE FALOU DE COR, na mesma
         # ordem do merge acima. O co-op publica por controle e por gesto
         # explícito (ligar o co-op), então vale como escolha da mão: ele não
@@ -3003,8 +3018,36 @@ class PyDualSenseController(IController):
         if coop is not None and coop.led is not None:
             procedencia = DA_MAO
         return _ResolvidoDoDaemon(
-            resolved, cor_do_numero, procedencia, self._numero_do_slot(uniq)
+            resolved, cor_do_numero, procedencia, self._numero_do_slot(uniq),
+            cor_do_plastico,
         )
+
+    def _tom_do_plastico(self, uniq: str | None) -> tuple[int, int, int] | None:
+        """O tom do plástico de `uniq`, pela companheira do provider — ou None.
+
+        D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO. Mesmo fio do `numero_do_slot`:
+        pendurado no provider, barato e sem I/O. Provider de teste sem ela
+        responde None, e a automática é a do número, como antes.
+        """
+        consulta = getattr(self._auto_output_provider, "tom_do_plastico", None)
+        if uniq is None or not callable(consulta):
+            return None
+        with contextlib.suppress(Exception):
+            tom = consulta(uniq)
+            if isinstance(tom, tuple) and len(tom) == 3:
+                return (int(tom[0]), int(tom[1]), int(tom[2]))
+        return None
+
+    def _cor_do_numero_do_provider(self, uniq: str) -> tuple[int, int, int] | None:
+        """A cor do número de `uniq` no brilho do perfil, pela companheira."""
+        consulta = getattr(self._auto_output_provider, "cor_do_numero", None)
+        if not callable(consulta):
+            return None
+        with contextlib.suppress(Exception):
+            cor = consulta(uniq)
+            if isinstance(cor, tuple) and len(cor) == 3:
+                return (int(cor[0]), int(cor[1]), int(cor[2]))
+        return None
 
     def _numero_do_slot(self, uniq: str | None) -> int | None:
         """O número que `uniq` acende AGORA — ou `None` quando não há resposta.
@@ -3105,6 +3148,7 @@ class PyDualSenseController(IController):
                     procedencia=r.procedencia,
                     numero=r.numero,
                     brilho=self._brilho_da_peca_locked(uniq),
+                    do_plastico=r.cor_do_plastico,
                 ),
             ))
         pecas.sort(key=lambda peca: (peca[0], peca[1]))
@@ -3301,7 +3345,13 @@ class PyDualSenseController(IController):
         para = self._brilho_da_peca_locked(uniq)
         if base is not None and para is not None:
             r, g, b = desired.led
-            extras = () if self._cor_do_perfil is None else (self._cor_do_perfil,)
+            # O TOM DO PLÁSTICO ENTRA ENTRE OS TONS SABIDOS (29/09/2026): com a
+            # automática vinda dele, a base carrega um tom fora da paleta, e
+            # sem ele a conta caía na razão, com duas truncagens.
+            extras = tuple(
+                tom for tom in (self._cor_do_perfil, self._tom_do_plastico(uniq))
+                if tom is not None
+            )
             return replace(
                 desired,
                 led=reescalar((int(r), int(g), int(b)), base, para, extras),

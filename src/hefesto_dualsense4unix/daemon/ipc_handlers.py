@@ -4114,6 +4114,25 @@ class IpcHandlersMixin:
         if pronto is not None:
             # O que o aparelho respondeu não muda: nem a agenda é consultada.
             return dict(pronto)
+        # O DONO DO CACHE É O REGISTRO DE IDENTIDADE — 29/09/2026,
+        # A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01. A cor automática passou a vir
+        # do plástico (D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO), e o daemon
+        # tem de sabê-lo sem a janela: o tique de presença pergunta a quem
+        # chega, e este `state_full` lê o MESMO cache, sem uma segunda
+        # pergunta ao aparelho. Sem registro armado (o mixin montado à mão, a
+        # CLI) vale o caminho de sempre, logo abaixo.
+        dono = getattr(self, "daemon", None)
+        registro: Any = getattr(dono, "identity_registry", None) if dono else None
+        if registro is not None and getattr(registro, "pergunta_de_fabrica_armada", False):
+            achado = registro.identidade_de_fabrica(uniq)
+            if achado is None:
+                registro.agendar_a_pergunta_de_fabrica(uniq)
+                return dict(vazio)
+            cor = getattr(achado, "cor", None)
+            return {
+                "serial": getattr(achado, "serial", None),
+                "modelo": None if cor is None else cor.nome,
+            }
         if self._agenda_de_identidade().reservar(uniq):
             try:
                 import threading

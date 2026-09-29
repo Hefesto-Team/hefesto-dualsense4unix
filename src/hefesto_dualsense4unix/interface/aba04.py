@@ -1654,7 +1654,11 @@ MIOLO = f'''
 
              A DICA DIZ A CONSEQUÊNCIA, e ela é a que ela aceitou por escrito
              (*"ok aceito o caminho"*): desligar GRAVA a cor de cada controle no
-             ato, para nenhuma se perder e nenhuma se repetir. -->
+             ato, para nenhuma se perder e nenhuma se repetir.
+
+             E A REGRA DA COR AUTOMÁTICA É A DO PLÁSTICO desde 29/09/2026
+             (D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO): a cor da casca, e a do
+             número quando o plástico não tem tom ou se repete. -->
         <label class="chave-auto">
           <input type="checkbox" data-gesto="auto-cores" data-campo="auto-cores"
                  data-hef-alvo="marcado" checked>
@@ -1662,8 +1666,9 @@ MIOLO = f'''
           <span>Cores automáticas por controle</span>
         </label>
         <span class="ajuda esq">?<span class="dica">
-          Ligado, cada controle recebe um número e acende a <b>cor dele</b> —
-          inclusive os de outras marcas.<br><br>
+          Ligado, cada controle recebe um número e acende a cor do seu
+          <b>plástico</b>; sem cor de plástico, ou com dois iguais, a cor do
+          <b>número</b> — inclusive os de outras marcas.<br><br>
           Ao <b>desligar</b>, a cor de agora fica <b>gravada no perfil</b>, para nenhuma
           se perder.<br><br>
           É do <b>perfil</b>: viaja quando você troca de perfil.

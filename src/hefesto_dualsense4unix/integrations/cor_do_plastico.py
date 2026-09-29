@@ -89,6 +89,7 @@ para saber qual controle é qual; a cor da lightbar continua sendo dela e mora e
 """
 from __future__ import annotations
 
+import colorsys
 import csv
 import os
 import pathlib
@@ -462,6 +463,61 @@ def cor_do_serial(serial: str) -> CorDoPlastico | None:
     if len(serial or "") < FATIA_DA_COR.stop:
         return None
     return cor_do_codigo(serial[FATIA_DA_COR])
+
+
+#: O TOM DA LUZ DE CADA PLÁSTICO — D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO,
+#: 29/09/2026 (A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01). A cor automática de cada
+#: controle vem da casca, por uma REGRA e não por coluna nova no mapa: o matiz
+#: da casca com saturação e valor cheios. Casca neutra (branco, preto, cinzas)
+#: não tem matiz: a clara acende branco, e a escura não tem tom e cai no
+#: número. Os dois limiares abaixo foram escolhidos por quem coordenou, pelo
+#: padrão dela, sem a sessão com a luz na mão (ela dormia): a saturação de 15%
+#: separa as cascas neutras do mapa (White 5%, Sterling Silver 3%, Midnight
+#: Black 7%) das coloridas (a menor é a do Starlight Blue, 41%), e o valor de
+#: 50% separa o preto (12%) dos cinzas claros (30th Anniversary, 69%).
+SATURACAO_NEUTRA = 0.15
+VALOR_CLARO = 0.5
+
+#: O branco que a casca neutra e clara acende.
+LUZ_BRANCA = (255, 255, 255)
+
+
+def tom_da_luz(cor: CorDoPlastico | None) -> tuple[int, int, int] | None:
+    """O tom de luz do plástico `cor` — ou `None` quando o plástico não tem tom.
+
+    Um dono só (D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO): o provider do daemon
+    e a aba Iluminação perguntam aqui. `None` em três casos, e os três caem na
+    cor do número: o plástico não foi lido, a casca não tem hexa (camuflado,
+    iridescente, arte), ou a casca é neutra e escura (Midnight Black).
+    """
+    if cor is None or not cor.tom:
+        return None
+    hexa = cor.tom.strip().lstrip("#")
+    try:
+        r, g, b = (int(hexa[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    except ValueError:
+        return None
+    matiz, saturacao, valor = colorsys.rgb_to_hsv(r, g, b)
+    if saturacao < SATURACAO_NEUTRA:
+        return LUZ_BRANCA if valor >= VALOR_CLARO else None
+    cheia = colorsys.hsv_to_rgb(matiz, 1.0, 1.0)
+    return (round(cheia[0] * 255), round(cheia[1] * 255), round(cheia[2] * 255))
+
+
+def tom_da_luz_do_nome(nome: str | None) -> tuple[int, int, int] | None:
+    """O tom de luz pelo NOME de fábrica que o `state_full` publica (`modelo`)."""
+    if not nome:
+        return None
+    return tom_da_luz(cor_do_nome(nome) or cor_do_codigo_por_id(nome))
+
+
+def cor_do_codigo_por_id(ident: str) -> CorDoPlastico | None:
+    """A cor pelo `id` da linha do mapa (`white`, `cosmic-red`) — o `data-colorway`."""
+    procurado = (ident or "").strip().casefold()
+    for cor in TABELA.values():
+        if cor.id and cor.id.casefold() == procurado:
+            return cor
+    return None
 
 
 def tom_para_a_borda(tom: str, *, minimo: float = RAZAO_DA_BORDA) -> str:

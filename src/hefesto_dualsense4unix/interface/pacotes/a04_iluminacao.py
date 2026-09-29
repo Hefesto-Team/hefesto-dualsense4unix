@@ -1959,7 +1959,7 @@ def secao_da_troca(mesa: list[dict[str, Any]], recuo: str = "  ") -> str:
                 f"{quantos} agora. Com dois ligados, esta seção mostra o antes e "
                 f"o depois com eles.</p>")
 
-    from hefesto_dualsense4unix.core.led_control import player_slot_color
+    from hefesto_dualsense4unix.core.led_control import cor_automatica
 
     tem, quer = ordenada[0], ordenada[1]
     #: O DEPOIS é uma PERMUTAÇÃO, e é o que a frase dela exige: *"nunca fica um
@@ -2003,15 +2003,18 @@ def secao_da_troca(mesa: list[dict[str, Any]], recuo: str = "  ") -> str:
         f"do <b>meio</b>,\n{r}      2 são as duas de dentro, 3 são as pontas e o "
         f"meio, 4 são quatro sem a do meio\n{r}      "
         f"(<code>core/led_control.py::player_led_pattern</code>).</li>",
-        f"{r}  <li><b>E a cor da barra segue junto</b>, porque sem escolha à mão "
-        f"ela é a cor do\n{r}      <i>número</i>: depois da troca o "
-        f'{quer["nome"]} acende\n{r}      <span class="marca">'
+        # A BARRA É A DO PLÁSTICO, e só sem ele a do número — 29/09/2026,
+        # D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO. A frase dizia que a cor da
+        # barra seguia o número; com o plástico lido, ela fica.
+        f"{r}  <li><b>E a cor da barra</b>, sem escolha à mão, é a do "
+        f"<i>plástico</i>, e a do\n{r}      <i>número</i> só sem ela: depois "
+        f'da troca o {quer["nome"]} acende\n{r}      <span class="marca">'
         # `_hex` É O DONO DA FORMA `#RRGGBB` neste arquivo, e usá-lo aqui evita a
         # segunda escrita da mesma conversão — a que já divergiu uma vez.
-        f'{_hex(player_slot_color(int(tem["jogador"] or 0)))}</span> e o '
-        f'{tem["nome"]} acende\n{r}      <span class="marca">'
-        f'{_hex(player_slot_color(int(quer["jogador"] or 0)))}</span>'
-        f"\n{r}      (<code>core/led_control.py::player_slot_color</code>).</li>",
+        f'{_hex(cor_automatica(int(tem["jogador"] or 0), _tom_do_plastico(quer)))}'
+        f'</span> e o {tem["nome"]} acende\n{r}      <span class="marca">'
+        f'{_hex(cor_automatica(int(quer["jogador"] or 0), _tom_do_plastico(tem)))}'
+        f"</span>\n{r}      (<code>core/led_control.py::cor_automatica</code>).</li>",
         f"{r}</ul>",
     ])
 
@@ -3016,16 +3019,41 @@ def _a_cor_guardada_que_vale(ctx: Contexto, cru: dict[str, Any] | None,
     # a monta com as cores escaladas, e para o Cosmic Red das 02:30 as duas
     # respostas divergiam. `led_control.fosseis` pergunta pelo tom, e o
     # brilho de cada peça deixa de mudar a resposta.
+    # A COR AUTOMÁTICA DE CADA UM É A DO PLÁSTICO, quando ele tem tom
+    # (D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO), com a do número para a queda:
+    # a mesma peça que o daemon monta.
     mesa = [PecaDaMesa(uniq=uniq, pedida=guardada,
                        do_numero=player_slot_color(numero),
-                       procedencia=procedencia, numero=numero)]
+                       procedencia=procedencia, numero=numero,
+                       do_plastico=_tom_do_plastico(c))]
     for outro in ctx.conectados:
         dele = str(outro.get("uniq") or "")
         if dele and dele != uniq:
             mesa.append(PecaDaMesa(uniq=dele, pedida=None,
                                    do_numero=player_slot_color(_numero(ctx, outro)),
-                                   numero=_numero(ctx, outro)))
+                                   numero=_numero(ctx, outro),
+                                   do_plastico=_tom_do_plastico(outro)))
     return None if uniq in fosseis(mesa) else guardada
+
+
+def _tom_do_plastico(c: dict[str, Any]) -> tuple[int, int, int] | None:
+    """O tom de luz do plástico deste controle — o mesmo dono do daemon.
+
+    O `state_full` publica o `modelo` (o nome de fábrica que o aparelho
+    respondeu), e a mesa da tela carrega a `cor` (o `id` da linha do mapa).
+    Qualquer dos dois vai a `cor_do_plastico.tom_da_luz`, a regra que o
+    provider do daemon usa. `None` quando o plástico não foi lido ou não tem
+    tom, e a cor automática é a do número.
+    """
+    from hefesto_dualsense4unix.integrations.cor_do_plastico import (
+        tom_da_luz_do_nome,
+    )
+
+    for chave in ("modelo", "cor"):
+        tom = tom_da_luz_do_nome(str(c.get(chave) or ""))
+        if tom is not None:
+            return tom
+    return None
 
 
 def _a_cor_do_global(cru: dict[str, Any] | None) -> tuple[int, int, int] | None:
@@ -3750,7 +3778,8 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
            (`_a_cor_guardada_que_vale`);
         3. com a paleta automática desligada, a cor GLOBAL do perfil, antes do
            brilho (`_a_cor_do_global`) — e, sem global, a luz acesa como está;
-        4. a cor do número, que é a da paleta automática.
+        4. a cor automática (`led_control.cor_automatica`): a do plástico,
+           e a do número sem ela (D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO).
 
     O DEGRAU 1 SOZINHO NÃO SEGURAVA A MARCA, e o piloto mediu os três buracos
     com o clique: por meio segundo depois de SOLTAR o trilho o disco já tem o
@@ -3779,7 +3808,7 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
         a cor gravada sairia escurecida.
     """
     from hefesto_dualsense4unix.app.widgets.controller_card import cor_do_swatch
-    from hefesto_dualsense4unix.core.led_control import player_slot_color
+    from hefesto_dualsense4unix.core.led_control import cor_automatica
 
     uniq = str(c.get("uniq") or "")
     efetiva = cor_do_swatch(c)
@@ -3803,7 +3832,7 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
         if efetiva and tuple(efetiva)[:3] != (0, 0, 0):
             r, g, b = tuple(efetiva)[:3]
             return (int(r), int(g), int(b))
-    return player_slot_color(_numero(ctx, c))
+    return cor_automatica(_numero(ctx, c), _tom_do_plastico(c))
 
 
 def _com_a_cor_gravada(prof: Any, uniq: str, rgb: tuple[int, int, int],
@@ -3895,7 +3924,7 @@ _RECADO_DO_AUTOMATICO_SAIU = (
 #: revogada em 09/09/2026 pela D-0909-X), não confissão de defeito nosso.
 _RECADO_DO_AUTOMATICO_VOLTOU = (
     "Cores automáticas ligadas. Cada controle sem cor própria acende a cor do "
-    "número dele, e duas nunca ficam iguais.")
+    "plástico dele, ou a do número, e duas nunca ficam iguais.")
 
 
 @gesto("04-iluminacao.html", "auto-cores", grava="gravar_e_reaplicar")

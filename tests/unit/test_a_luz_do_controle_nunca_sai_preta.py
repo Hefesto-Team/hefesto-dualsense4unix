@@ -276,3 +276,138 @@ def test_o_legado_da_cor_de_outro_numero_e_fossil_em_todo_brilho() -> None:
         variada = tuple(replace(e, brilho=brilho) if e.numero == 4 else e
                         for e in MESA_DAS_0124)
         assert UNIQS[2] in _fosseis_do_daemon(variada)
+
+
+# ===========================================================================
+# 6. A cor automática tem um dono, e ele sabe o plástico
+#    (D-2909-A-COR-AUTOMATICA-VEM-DO-PLASTICO, a resposta (b))
+# ===========================================================================
+BRANCO_ID = "aabbcc0000b1"
+BRANCO_ID_2 = "aabbcc0000b2"
+SEM_PLASTICO = "aabbcc0000c1"
+
+
+@pytest.fixture
+def registro(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> Any:
+    """O registro de identidade REAL, num disco de mentira, com o leitor de dublê.
+
+    O leitor de dublê responde como o de verdade (`IdentidadeDeFabrica`), e
+    quem o chama é o registro, pelo mesmo fio que o daemon arma
+    (`make_auto_output_provider`). Nenhum byte vai a aparelho nenhum.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import identity as id_mod
+    from hefesto_dualsense4unix.integrations import cor_do_plastico as cp
+    from hefesto_dualsense4unix.utils import xdg_paths
+
+    def config_de_mentira(ensure: bool = False) -> pathlib.Path:
+        if ensure:
+            tmp_path.mkdir(parents=True, exist_ok=True)
+        return tmp_path
+
+    monkeypatch.setattr(xdg_paths, "config_dir", config_de_mentira)
+    monkeypatch.setattr(id_mod, "_read_boot_id", lambda: "boot-da-luz")
+    perguntas: list[str] = []
+
+    def leitor(uniq: str) -> Any:
+        perguntas.append(uniq)
+        if uniq in (BRANCO_ID, BRANCO_ID_2):
+            return cp.IdentidadeDeFabrica(serial="DUBLE00##########",
+                                          cor=cp.cor_do_nome("White"))
+        return cp.IdentidadeDeFabrica(serial="DUBLE01##########", cor=None)
+
+    monkeypatch.setattr(cp, "ler_identidade_pelo_cabo", leitor)
+    reg = id_mod.ControllerIdentityRegistry()
+    reg.perguntas = perguntas  # type: ignore[attr-defined]
+    return reg
+
+
+def _esperar_o_plastico(reg: Any, *uniqs: str) -> None:
+    """A pergunta sai numa thread: espera a resposta chegar ao cache."""
+    import time
+
+    fim = time.monotonic() + 5.0
+    while time.monotonic() < fim:
+        if all(reg.identidade_de_fabrica(u) is not None for u in uniqs):
+            return
+        time.sleep(0.01)
+    raise AssertionError(f"o plástico de {uniqs} não chegou ao registro")
+
+
+def _mesa_do_registro(reg: Any, uniqs: list[str]) -> Any:
+    from hefesto_dualsense4unix.daemon.subsystems import identity as id_mod
+
+    provider = id_mod.make_auto_output_provider(reg)
+    reg.sync_connected(uniqs)
+    reg.liberar_as_lampadas()
+    return provider
+
+
+def test_o_white_lido_acende_branco_e_sem_plastico_acende_o_numero(registro: Any) -> None:
+    """O provider acende o plástico lido; sem ele, a cor do número de hoje."""
+    provider = _mesa_do_registro(registro, [BRANCO_ID, SEM_PLASTICO])
+    _esperar_o_plastico(registro, BRANCO_ID, SEM_PLASTICO)
+    assert provider(BRANCO_ID).led == BRANCO
+    numero = provider.numero_do_slot(SEM_PLASTICO)
+    assert provider(SEM_PLASTICO).led == player_slot_color(numero)
+
+
+def test_dois_white_o_segundo_cai_no_numero(registro: Any) -> None:
+    """Dois plásticos iguais: o primeiro fica com o branco, o segundo vai ao número dele."""
+    provider = _mesa_do_registro(registro, [BRANCO_ID, BRANCO_ID_2])
+    _esperar_o_plastico(registro, BRANCO_ID, BRANCO_ID_2)
+    ctl = bp.PyDualSenseController()
+    ctl._handles = {"AA:BB:CC:00:00:B1": None, "AA:BB:CC:00:00:B2": None}
+    ctl.set_auto_output_provider(provider)
+    ctl.set_game_authority_provider(lambda: "daemon")
+    with ctl._io_lock:
+        saida = cores_sem_colisao(ctl._mesa_de_cores_locked(incluir_coop=True))
+    primeiro, segundo = sorted((BRANCO_ID, BRANCO_ID_2), key=provider.numero_do_slot)
+    assert saida[primeiro] == BRANCO
+    assert saida[segundo] == player_slot_color(provider.numero_do_slot(segundo))
+
+
+def test_o_degrau_4_da_tela_diz_o_mesmo_que_o_provider(registro: Any) -> None:
+    """A tela pergunta ao mesmo dono: para as mesmas entradas, a mesma cor."""
+    from tests.conftest import exigir_gi_real
+
+    exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
+    for caminho in (str(RAIZ / "src"), str(INTERFACE)):
+        if caminho not in sys.path:
+            sys.path.insert(0, caminho)
+    from pacotes import Contexto
+    from pacotes import a04_iluminacao as a04
+
+    provider = _mesa_do_registro(registro, [BRANCO_ID, SEM_PLASTICO])
+    _esperar_o_plastico(registro, BRANCO_ID, SEM_PLASTICO)
+    conectados = []
+    for uniq in (BRANCO_ID, SEM_PLASTICO):
+        achado = registro.identidade_de_fabrica(uniq)
+        conectados.append({
+            "uniq": uniq, "player_slot": provider.numero_do_slot(uniq),
+            "connected": True,
+            "modelo": None if achado.cor is None else achado.cor.nome,
+        })
+    ctx = Contexto(state={}, mesa=[], conectados=conectados, estados={})
+    for c in conectados:
+        assert a04._a_cor_de_agora(ctx, None, c) == provider(c["uniq"]).led, c
+
+
+# ===========================================================================
+# 7. O daemon sabe o plástico sem a janela
+# ===========================================================================
+def test_o_tique_de_presenca_pergunta_o_plastico_sem_state_full(registro: Any) -> None:
+    """O `sync_connected` agenda a pergunta de quem chega, e o provider vê o plástico."""
+    provider = _mesa_do_registro(registro, [BRANCO_ID])
+    _esperar_o_plastico(registro, BRANCO_ID)
+    assert registro.perguntas == [BRANCO_ID]
+    assert provider.tom_do_plastico(BRANCO_ID) == BRANCO
+    # A resposta definitiva não se pergunta de novo.
+    registro.sync_connected([BRANCO_ID])
+    assert registro.perguntas == [BRANCO_ID]
+
+
+def test_sem_a_fiacao_do_daemon_nenhuma_pergunta_sai(registro: Any) -> None:
+    """O registro sem o provider do daemon (teste, CLI) não fala com aparelho nenhum."""
+    registro.sync_connected([BRANCO_ID])
+    assert registro.perguntas == []
+    assert registro.identidade_de_fabrica(BRANCO_ID) is None
