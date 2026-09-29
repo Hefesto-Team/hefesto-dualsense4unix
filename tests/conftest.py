@@ -1067,11 +1067,11 @@ def _nascidos_fora_do_berco() -> list[str]:
     lar = lar_de_sessao()
     if lar is not None:
         novos.discard(lar.name)
-    # SOM-DE-MENTIRA: os dublês do som também moram fora do berço de propósito
+    # SOM-DE-MENTIRA e LANCADOR-DE-MENTIRA: os dublês moram fora do berço de propósito
     # (eles têm de sobreviver ao fim da sessão), e também são NOSSOS.
-    som = som_de_mentira()
-    if som is not None:
-        novos.discard(som.name)
+    for nosso in (som_de_mentira(), lancador_de_mentira()):
+        if nosso is not None:
+            novos.discard(nosso.name)
     return sorted(novos)
 
 
@@ -1501,6 +1501,7 @@ def pytest_sessionstart(session: Any) -> None:
     # o que roda na importação de um módulo passa por baixo de toda fixture.
     # Depois do berço, porque é dele que sai o `/tmp` de verdade.
     _armar_som_de_mentira()
+    _armar_lancador_de_mentira(session)  # LANCADOR-DE-MENTIRA, a mesma razão
     # FAIXA-NO-BERCO-01: a foto do que JÁ estava sujo. Fora do `if` do canário
     # de propósito — esta régua fica de pé mesmo com aquele desligado, que é a
     # razão de ela existir.
@@ -1642,6 +1643,7 @@ def _sessionfinish_das_guardas(session: Any) -> None:
     # atribui) e o AVISO (o journal do kernel, que enxerga o que a vigia não
     # alcança — processo filho — e não sabe de quem é).
     _vigia_no_fim_da_sessao(session)
+    _lancador_no_fim_da_sessao(session)  # LANCADOR-DE-MENTIRA, o ato sem dono
 
     # FAIXA-NO-BERCO-01 ANTES do canário, e fora do `return` dele: é a régua
     # que precisa valer justamente quando o canário está desligado.
@@ -3453,30 +3455,14 @@ def _desviar_para_o_duble(argumentos: dict[str, Any], duble: Path) -> None:
 
 
 def _instalar_popen_sem_som() -> None:
-    """A camada 2: o `Popen.__init__` da sessão desvia quem não herda o PATH."""
-    import functools
-    import subprocess
+    """A camada 2: o `Popen.__init__` da sessão desvia quem não herda o PATH.
 
-    if _POPEN_INIT_REAL:
-        return
-    real = subprocess.Popen.__init__
-    assinatura = inspect.signature(real)
-
-    @functools.wraps(real)
-    def _init_sem_som(self: Any, *args: Any, **kwargs: Any) -> None:
-        duble = som_de_mentira()
-        if duble is not None:
-            try:
-                amarrado = assinatura.bind(self, *args, **kwargs)
-            except TypeError:
-                pass  # chamada inválida: o `Popen` real reprova com a mensagem dele
-            else:
-                _desviar_para_o_duble(amarrado.arguments, duble)
-                return real(*amarrado.args, **amarrado.kwargs)
-        return real(self, *args, **kwargs)
-
-    _POPEN_INIT_REAL.append(real)
-    subprocess.Popen.__init__ = _init_sem_som  # type: ignore[method-assign]
+    O embrulho é UM só para o som e os lançadores (`_instalar_popen_da_sessao`,
+    no bloco LANCADOR-DE-MENTIRA): esta chamada liga nele a tabela do som.
+    """
+    if not _POPEN_COM_SOM:
+        _POPEN_COM_SOM.append(True)
+    _instalar_popen_da_sessao()
 
 
 # ---------------------------------------------------------------------------
@@ -3823,3 +3809,550 @@ def pytest_collection_modifyitems(config: Any, items: list[Any]) -> None:
 # no filho lançado com `-I`. A régua é
 # `tests/unit/test_o_segfault_da_suite_diz_onde.py`.
 os.environ.setdefault("PYTHONFAULTHANDLER", "1")
+
+
+# ---------------------------------------------------------------------------
+# LANCADOR-DE-MENTIRA (29/09/2026) — a suíte não abre nem fecha o lançador dela
+# ---------------------------------------------------------------------------
+#
+# A-SUITE-NAO-ABRE-NEM-FECHA-O-LANCADOR-DELA-01, achado 8 da bancada de 29/09.
+#
+# MEDIDO no diário dela, seis vezes desde 25/09: o gesto «reiniciar» da aba
+# Sistema ganhou em 21/09 um segundo ato (fechar e reabrir o lançador aberto),
+# e o teste de 03/09 que o exercita dublava só o primeiro. Sob a suíte, o
+# segundo ato perguntou à máquina dela se a Steam estava aberta (`pgrep`),
+# mandou `steam -shutdown` com o HOME do lar de mentira (que instalou uma Steam
+# nova em `/tmp`), derrubou o webhelper da Steam dela pelo nome no fallback
+# (`pkill -x steamwebhelper`) e, na janela em que o cliente dela ainda não o
+# tinha relançado, reabriu `steam`. A régua passava em todos os casos: o
+# produto engole tudo nesse caminho, e o único sinal era o tempo (38 s).
+#
+# A CURA É NA BORDA DO PROCESSO, como a do SOM logo acima: oito portas do
+# produto e dois scripts de shell chegam a um lançador, e cobrir executor por
+# executor deixaria o próximo de fora. Três camadas, armadas no `sessionstart`:
+#
+#   1. o PATH — um diretório com um dublê para cada nome de
+#      `BINARIOS_DE_LANCADOR` entra na FRENTE do `PATH`. O dublê de um ATO
+#      (abrir, fechar, trazer para a frente) anota o argv no livro e sai com
+#      rc=1, como um lançador ausente ou um `pkill` que não casou nada. O de
+#      uma LEITURA sobre lançador (`pgrep`, `flatpak ps|list|info`,
+#      `wmctrl -l`) responde «fechado», calado. O resto de `pgrep`, `pkill`,
+#      `killall`, `gio` e `flatpak` segue para o binário de verdade, pelo
+#      caminho resolvido no arme e escrito dentro do dublê;
+#   2. o `Popen` — o MESMO embrulho do SOM (uma função, duas tabelas): o nome
+#      da tabela vira o dublê onde quer que resolva (`/usr/games` inclusive,
+#      que o critério de sistema do SOM não conhece) e também quando não
+#      resolve em lugar nenhum. A exceção é o que resolve nos temporários da
+#      sessão (o berço e a `basetemp`): o dublê que o próprio teste montou
+#      vence;
+#   3. o VEREDITO — um embrulho em volta de cada fase do teste relê o livro, e
+#      o ato que chegou durante a fase reprova AQUELE teste, com o argv. O ato
+#      fora de qualquer fase (um fio, um finalizador) reprova a sessão. A
+#      reprovação vem do livro e não de exceção, porque nesses caminhos o
+#      produto engole tudo.
+#
+# SEM ESCAPE, de propósito: nenhum ensaio de bancada precisa de lançador de
+# verdade dentro do pytest. O `HEFESTO_SOM_DE_VERDADE=1` desliga só a tabela
+# do som; os lançadores moram noutro diretório e ficam.
+#
+# O QUE ISTO NÃO ALCANÇA, escrito para ninguém confiar demais: `shell=True`
+# com o caminho absoluto dentro do texto do comando; script de shell que
+# reescreve o próprio PATH por dentro e chama o lançador pelo nome; `os.kill`
+# num pid que não saiu do `pgrep` nem do `flatpak ps`; e a leitura do `/proc`
+# (`steam_game_running`), que continua vendo o jogo dela aberto — esse caminho
+# RECUSA o ato, então fica do lado seguro. E, onde não há Steam (o CI), o
+# `shutil.which("steam")` passa a achar o dublê.
+
+#: Os nomes que ABREM, FECHAM ou trazem para a frente um lançador — e os que
+#: LEEM se ele está aberto. A régua
+#: `test_a_suite_nao_abre_nem_fecha_o_lancador_dela.py` faz o CENSO das tabelas
+#: dos donos (`reposicao_dos_lancadores.LANCADORES`, `steam_launcher`,
+#: `desenho_dos_lancadores.A_STEAM`) e de `src/` e `scripts/`, e reprova o
+#: nome que não estiver aqui.
+BINARIOS_DE_LANCADOR: tuple[str, ...] = (
+    # os lançadores, pelo executável nativo e pelo id do flatpak
+    "steam", "steam-native", "steamwebhelper", "com.valvesoftware.Steam",
+    "heroic", "com.heroicgameslauncher.hgl",
+    "lutris", "net.lutris.Lutris",
+    # os abridores genéricos, que abrem qualquer um
+    "xdg-open", "gtk-launch", "gio",
+    # o flatpak (`run`, `kill`, ...) e o foco de janela (`wmctrl -ia`)
+    "flatpak", "wmctrl",
+    # quem fecha pelo nome, e quem pergunta pelo nome
+    "pkill", "killall", "pgrep",
+)
+
+#: As raízes que fazem um padrão de `pgrep`/`pkill`/`killall` «nomear um
+#: lançador». Todo nome de lançador acima contém uma delas (a régua confere),
+#: sem diferença de caixa: `com.valvesoftware.Steam`, `steamrt64/steam`.
+RAIZES_DE_LANCADOR: tuple[str, ...] = ("steam", "heroic", "lutris")
+
+#: O que cada nome faz no dublê. Quem não está aqui é um ATO inteiro.
+_FORMA_DO_DUBLE: dict[str, str] = {
+    "pgrep": "pergunta",
+    "pkill": "mata",
+    "killall": "mata",
+    "flatpak": "flatpak",
+    "wmctrl": "wmctrl",
+    "gio": "gio",
+}
+
+#: Prefixo do diretório dos dublês, com o pid pelo critério de órfão do som.
+_LANCADOR_PREFIXO = "hefesto-lancador-de-mentira-"
+_LANCADOR_LIVRO = "atos.txt"
+
+#: No máximo um — o diretório desta sessão.
+_LANCADOR_DE_MENTIRA: list[Path] = []
+
+#: Os temporários desta sessão, em `realpath`: o berço e a `basetemp`.
+_TEMPORARIOS_DA_SESSAO: list[str] = []
+
+#: `id()` da Session que armou a guarda: os testes do canário chamam
+#: `pytest_sessionfinish` com uma Session de mentira no meio da sessão viva.
+_SESSAO_DO_LANCADOR: list[int] = []
+
+#: Até onde o livro já foi lido (em bytes), o que chegou fora de fase, e os
+#: começos de linha que uma régua declarou pela `ato_de_proposito`.
+_LIVRO_LIDO: list[int] = [0]
+_ATOS_FORA_DE_FASE: list[str] = []
+_ATOS_DE_PROPOSITO: set[int] = set()
+
+#: O SOM ligou a tabela dele no embrulho? (a mordida da régua do som tira o
+#: `_instalar_popen_sem_som()` do arme do som, e o embrulho continua de pé
+#: pelos lançadores; sem esta marca, a mordida dele deixaria de morder).
+_POPEN_COM_SOM: list[bool] = []
+
+_SIGLA_DO_LANCADOR = "A-SUITE-NAO-ABRE-NEM-FECHA-O-LANCADOR-DELA-01"
+
+
+def lancador_de_mentira() -> Path | None:
+    """O diretório dos dublês dos lançadores desta sessão."""
+    return _LANCADOR_DE_MENTIRA[0] if _LANCADOR_DE_MENTIRA else None
+
+
+def _livro_do_lancador() -> Path | None:
+    duble = lancador_de_mentira()
+    return None if duble is None else duble / _LANCADOR_LIVRO
+
+
+def _ler_o_livro(desde: int) -> tuple[list[tuple[int, str]], int]:
+    """As linhas INTEIRAS do livro a partir do byte `desde`, com o começo de
+    cada uma, e o byte até onde se leu. Linha sem `\\n` fica para a próxima."""
+    livro = _livro_do_lancador()
+    if livro is None:
+        return [], desde
+    try:
+        with livro.open("rb") as arquivo:
+            arquivo.seek(desde)
+            bruto = arquivo.read()
+    except OSError:
+        return [], desde
+    linhas: list[tuple[int, str]] = []
+    posicao = desde
+    for pedaco in bruto.splitlines(keepends=True):
+        if not pedaco.endswith(b"\n"):
+            break
+        linhas.append((posicao, pedaco.decode("utf-8", "replace").rstrip("\n")))
+        posicao += len(pedaco)
+    return linhas, posicao
+
+
+def _partir_a_linha(linha: str) -> tuple[str, str]:
+    """``"<argv>\\t<PYTEST_CURRENT_TEST>"`` → (argv, quem o ambiente dizia)."""
+    argv, _, quem = linha.partition("\t")
+    return argv, quem
+
+
+def atos_no_livro() -> list[str]:
+    """Todo argv que chegou a um dublê de ato nesta sessão, na ordem."""
+    linhas, _ = _ler_o_livro(0)
+    return [_partir_a_linha(linha)[0] for _, linha in linhas]
+
+
+def _padrao_de_lancador() -> str:
+    """O `case` do shell que casa uma raiz de lançador, sem diferença de caixa."""
+    def _sem_caixa(raiz: str) -> str:
+        return "".join(
+            f"[{c.upper()}{c.lower()}]" if c.isalpha() else c for c in raiz
+        )
+
+    return "|".join(f"*{_sem_caixa(r)}*" for r in RAIZES_DE_LANCADOR)
+
+
+def _texto_do_lancador(nome: str, livro: Path, real: str | None) -> str:
+    """O script de um dublê. `real` é o binário de verdade para o que não é
+    lançador (ou None, quando esta máquina não o tem)."""
+    forma = _FORMA_DO_DUBLE.get(nome, "ato")
+    padrao = _padrao_de_lancador()
+    cabeca = (
+        "#!/bin/sh\n"
+        "# LANCADOR-DE-MENTIRA (tests/conftest.py): sob a suíte, este nome não\n"
+        "# abre, não fecha e não traz para a frente o lançador de quem a roda.\n"
+        f"LIVRO={shlex.quote(str(livro))}\n"
+        f"REAL={shlex.quote(real or '')}\n"
+        "ato() {\n"
+        f"  if [ $# -gt 0 ]; then linha=\"{nome} $*\"; else linha={shlex.quote(nome)}; fi\n"
+        "  printf '%s\\t%s\\n' \"$linha\" \"${PYTEST_CURRENT_TEST:-}\" >> \"$LIVRO\" 2>/dev/null\n"
+        "  exit 1\n"
+        "}\n"
+        "repassa() {\n"
+        "  [ -n \"$REAL\" ] && exec \"$REAL\" \"$@\"\n"
+        f"  echo {shlex.quote(nome + ': não há o binário de verdade nesta máquina')} >&2\n"
+        "  exit 127\n"
+        "}\n"
+        "primeiro() {\n"
+        "  for a in \"$@\"; do case \"$a\" in -*) ;; *) printf '%s' \"$a\"; return;; esac; done\n"
+        "}\n"
+    )
+    if forma == "pergunta":
+        corpo = (
+            f"for a in \"$@\"; do case \"$a\" in {padrao}) exit 1;; esac; done\n"
+            "repassa \"$@\"\n"
+        )
+    elif forma == "mata":
+        corpo = (
+            f"for a in \"$@\"; do case \"$a\" in {padrao}) ato \"$@\";; esac; done\n"
+            "repassa \"$@\"\n"
+        )
+    elif forma == "flatpak":
+        corpo = (
+            "case \"$(primeiro \"$@\")\" in\n"
+            "  '') repassa \"$@\";;\n"
+            "  ps|list) exit 0;;\n"
+            "  info) exit 1;;\n"
+            "  *) ato \"$@\";;\n"
+            "esac\n"
+        )
+    elif forma == "wmctrl":
+        corpo = "case \"${1:-}\" in -l*|-m|-d) exit 0;; esac\nato \"$@\"\n"
+    elif forma == "gio":
+        corpo = (
+            "case \"$(primeiro \"$@\")\" in open|launch) ato \"$@\";; esac\n"
+            "repassa \"$@\"\n"
+        )
+    else:
+        corpo = "ato \"$@\"\n"
+    return cabeca + corpo
+
+
+def escrever_os_dubles_dos_lancadores(
+    destino: Path, livro: Path, reais: dict[str, str | None]
+) -> None:
+    """Escreve em `destino` um dublê por nome de `BINARIOS_DE_LANCADOR`.
+
+    `reais` diz onde mora o binário de verdade de cada nome (o que o dublê
+    repassa quando a pergunta não é sobre lançador). É parâmetro para a régua
+    poder pôr um binário falso no lugar e ver QUEM respondeu.
+    """
+    livro.touch()
+    for nome in BINARIOS_DE_LANCADOR:
+        duble = destino / nome
+        duble.write_text(
+            _texto_do_lancador(nome, livro, reais.get(nome)), encoding="utf-8"
+        )
+        duble.chmod(0o755)
+
+
+def _lancador_orfaos(raiz: Path) -> list[Path]:
+    """Diretórios de dublê de sessões MORTAS — o critério por pid do berço."""
+    orfaos: list[Path] = []
+    with contextlib.suppress(OSError):
+        for entrada in raiz.iterdir():
+            if not entrada.name.startswith(_LANCADOR_PREFIXO):
+                continue
+            cauda = entrada.name[len(_LANCADOR_PREFIXO):]
+            if not cauda.isdigit() or entrada.is_symlink() or not entrada.is_dir():
+                continue
+            if _pid_vivo(int(cauda)):
+                continue
+            orfaos.append(entrada)
+    return orfaos
+
+
+def _reais_dos_lancadores(caminho: str) -> dict[str, str | None]:
+    """Onde o PATH de ANTES do arme acha cada nome — sem o dublê de uma sessão
+    mãe (a suíte que roda pytest em subprocesso)."""
+    limpo = os.pathsep.join(
+        e for e in caminho.split(os.pathsep)
+        if not os.path.basename(e.rstrip(os.sep)).startswith(_LANCADOR_PREFIXO)
+    )
+    return {nome: shutil.which(nome, path=limpo) for nome in BINARIOS_DE_LANCADOR}
+
+
+def _armar_lancador_de_mentira(session: Any) -> None:
+    """Cria os dublês, põe o diretório na frente do PATH e instala o `Popen`."""
+    if _LANCADOR_DE_MENTIRA:
+        return
+    raiz = _TMP_REAL[0] if _TMP_REAL else Path(tempfile.gettempdir())
+    for orfao in _lancador_orfaos(raiz):
+        shutil.rmtree(orfao, ignore_errors=True)
+    destino = raiz / f"{_LANCADOR_PREFIXO}{os.getpid()}"
+    shutil.rmtree(destino, ignore_errors=True)
+    antes = os.environ.get("PATH", os.defpath)
+    try:
+        destino.mkdir(mode=0o700)
+        escrever_os_dubles_dos_lancadores(
+            destino, destino / _LANCADOR_LIVRO, _reais_dos_lancadores(antes)
+        )
+    except OSError:  # pragma: no cover — /tmp sem escrita derruba a suíte antes
+        shutil.rmtree(destino, ignore_errors=True)
+        return
+    temporarios = [berco()]
+    fabrica = getattr(getattr(session, "config", None), "_tmp_path_factory", None)
+    if fabrica is not None:
+        with contextlib.suppress(Exception):
+            temporarios.append(fabrica.getbasetemp())
+    _TEMPORARIOS_DA_SESSAO.extend(
+        os.path.realpath(t) for t in temporarios if t is not None
+    )
+    _LANCADOR_DE_MENTIRA.append(destino)
+    _SESSAO_DO_LANCADOR.append(id(session))
+    os.environ["PATH"] = os.pathsep.join([str(destino), antes]) if antes else str(destino)
+    _instalar_popen_da_sessao()
+
+
+def _e_temporario_da_sessao(caminho: str) -> bool:
+    """`caminho` mora no berço ou na `basetemp` desta sessão?"""
+    real = os.path.realpath(caminho or os.curdir)
+    return any(
+        real == t or real.startswith(t.rstrip(os.sep) + os.sep)
+        for t in _TEMPORARIOS_DA_SESSAO
+    )
+
+
+def _path_com_o_lancador(caminho: str, duble: Path) -> str:
+    """`caminho` com o dublê ANTES do primeiro diretório que não seja
+    temporário da sessão. Nada muda quando o PATH só tem temporários: o teste
+    montou um PATH só dele."""
+    alvo = str(duble)
+    entradas = caminho.split(os.pathsep)
+    for i, entrada in enumerate(entradas):
+        if entrada == alvo:
+            return caminho
+        if not _e_temporario_da_sessao(entrada):
+            return os.pathsep.join([*entradas[:i], alvo, *entradas[i:]])
+    return caminho
+
+
+def _lancador_no_lugar_de(programa: Any, caminho: str, duble: Path) -> str | None:
+    """O dublê que roda no lugar de `programa`, ou None se não há o que trocar.
+
+    Troca o nome da tabela onde quer que ele resolva, e também quando não
+    resolve: sem a troca, o ato viraria um `FileNotFoundError` que o produto
+    engole, e o livro não o veria. Fica só o que resolve no próprio dublê ou
+    num temporário da sessão (o dublê que o teste montou).
+    """
+    try:
+        texto = os.fsdecode(programa)
+    except (TypeError, ValueError):
+        return None
+    nome = os.path.basename(texto)
+    if nome not in BINARIOS_DE_LANCADOR:
+        return None
+    resolvido = texto if os.path.dirname(texto) else shutil.which(texto, path=caminho)
+    if resolvido is not None:
+        pasta = os.path.realpath(os.path.dirname(resolvido) or os.curdir)
+        if pasta == os.path.realpath(duble) or _e_temporario_da_sessao(pasta):
+            return None
+    return str(duble / nome)
+
+
+def _desviar_para_o_lancador(argumentos: dict[str, Any], duble: Path) -> None:
+    """Ajusta, no lugar, os argumentos de um `Popen` que alcançaria um lançador."""
+    env = argumentos.get("env")
+    base = os.environ if env is None else env
+    caminho = base.get("PATH") if hasattr(base, "get") else None
+    if isinstance(caminho, str):
+        novo = _path_com_o_lancador(caminho, duble)
+        if novo != caminho:
+            argumentos["env"] = {**base, "PATH": novo}
+            caminho = novo
+    else:
+        caminho = os.defpath
+    if argumentos.get("shell"):
+        return
+    if argumentos.get("executable") is not None:
+        troca = _lancador_no_lugar_de(argumentos["executable"], caminho, duble)
+        if troca is not None:
+            argumentos["executable"] = troca
+        return
+    programa = argumentos.get("args")
+    if programa is None:
+        return
+    if isinstance(programa, (str, bytes, os.PathLike)):
+        troca = _lancador_no_lugar_de(programa, caminho, duble)
+        if troca is not None:
+            argumentos["args"] = troca
+        return
+    if not isinstance(programa, (list, tuple)):
+        try:
+            programa = list(programa)
+        except TypeError:
+            return
+        argumentos["args"] = programa
+    if not programa:
+        return
+    troca = _lancador_no_lugar_de(programa[0], caminho, duble)
+    if troca is not None:
+        argumentos["args"] = type(programa)([troca, *programa[1:]])
+
+
+def _instalar_popen_da_sessao() -> None:
+    """O embrulho ÚNICO do `Popen.__init__` da sessão, com as duas tabelas.
+
+    Dois embrulhos encadeados seriam dois donos da mesma porta. O `__init__`
+    de verdade é lido de `_POPEN_INIT_REAL[0]` a cada chamada, e não guardado
+    no fecho: a régua dos lançadores põe ali um espião que só executa o que
+    mora no diretório dos dublês.
+    """
+    import functools
+    import subprocess
+
+    if _POPEN_INIT_REAL:
+        return
+    real = subprocess.Popen.__init__
+    assinatura = inspect.signature(real)
+
+    @functools.wraps(real)
+    def _init_da_sessao(self: Any, *args: Any, **kwargs: Any) -> None:
+        som = som_de_mentira() if _POPEN_COM_SOM else None
+        lancador = lancador_de_mentira()
+        if som is not None or lancador is not None:
+            try:
+                amarrado = assinatura.bind(self, *args, **kwargs)
+            except TypeError:
+                pass  # chamada inválida: o `Popen` real reprova com a mensagem dele
+            else:
+                if som is not None:
+                    _desviar_para_o_duble(amarrado.arguments, som)
+                if lancador is not None:
+                    _desviar_para_o_lancador(amarrado.arguments, lancador)
+                return _POPEN_INIT_REAL[0](*amarrado.args, **amarrado.kwargs)
+        return _POPEN_INIT_REAL[0](self, *args, **kwargs)
+
+    _POPEN_INIT_REAL.append(real)
+    subprocess.Popen.__init__ = _init_da_sessao  # type: ignore[method-assign]
+
+
+# O VEREDITO POR TESTE. A atribuição é pelo LIVRO, e não pelo ambiente do
+# filho: um `env={"PATH": …}` apaga o `$PYTEST_CURRENT_TEST`, e o ato ficaria
+# sem dono. Cada fase guarda até onde o livro estava e o relê no fim; toda
+# linha nova é daquela fase, daquele teste.
+
+
+def _abrir_a_fase() -> None:
+    """O que chegou ao livro ENTRE fases não é de teste nenhum."""
+    linhas, ate = _ler_o_livro(_LIVRO_LIDO[0])
+    _ATOS_FORA_DE_FASE.extend(
+        linha for inicio, linha in linhas if inicio not in _ATOS_DE_PROPOSITO
+    )
+    _LIVRO_LIDO[0] = ate
+
+
+def _fechar_a_fase(item: Any, fase: str) -> None:
+    """Reprova a fase que chamou um ato, com o argv e o nodeid."""
+    linhas, ate = _ler_o_livro(_LIVRO_LIDO[0])
+    _LIVRO_LIDO[0] = ate
+    atos = [linha for inicio, linha in linhas if inicio not in _ATOS_DE_PROPOSITO]
+    if not atos:
+        return
+    nodeid = str(getattr(item, "nodeid", item))
+    relato = []
+    for linha in atos:
+        argv, quem = _partir_a_linha(linha)
+        dito = f" (o ambiente do filho dizia: {quem})" if quem else ""
+        relato.append(f"  - `{argv}`{dito}")
+    raise AssertionError("\n".join([
+        f"{_SIGLA_DO_LANCADOR}: este teste ({nodeid}, fase {fase}) chamou "
+        f"{len(atos)} ato(s) de lançador; sem a guarda, isso fecharia (ou "
+        "abriria) o lançador de quem roda a suíte:",
+        *relato,
+        "  Dublê o ato no próprio teste (como `test_o_reiniciar_repoe_o_lancador.py`"
+        " dubla `rl.repor`), ou declare-o pela fixture `ato_de_proposito`.",
+    ]))
+
+
+@contextlib.contextmanager
+def _fase_vigiada(item: Any, fase: str) -> Iterator[None]:
+    if lancador_de_mentira() is None:
+        yield
+        return
+    _abrir_a_fase()
+    try:
+        yield
+    finally:
+        _fechar_a_fase(item, fase)
+
+
+@pytest.hookimpl(wrapper=True, tryfirst=True, specname="pytest_runtest_setup")
+def pytest_runtest_setup_do_lancador(item: Any) -> Iterator[None]:
+    with _fase_vigiada(item, "setup"):
+        return (yield)
+
+
+@pytest.hookimpl(wrapper=True, tryfirst=True, specname="pytest_runtest_call")
+def pytest_runtest_call_do_lancador(item: Any) -> Iterator[None]:
+    with _fase_vigiada(item, "call"):
+        return (yield)
+
+
+@pytest.hookimpl(wrapper=True, tryfirst=True, specname="pytest_runtest_teardown")
+def pytest_runtest_teardown_do_lancador(item: Any, nextitem: Any) -> Iterator[None]:
+    with _fase_vigiada(item, "teardown"):
+        return (yield)
+
+
+@pytest.fixture
+def ato_de_proposito() -> Callable[..., contextlib.AbstractContextManager[None]]:
+    """Declara o ato que a régua chama DE PROPÓSITO, para provar a guarda.
+
+    Uso: ``with ato_de_proposito("steam -shutdown", "steam"): ...``. Na saída
+    do bloco, o livro tem de trazer ESSES argv, nesta ordem, e só eles; aí eles
+    saem do veredito do teste. Qualquer outro ato, ou um declarado que não
+    chegou, reprova. Aberta a qualquer argv, ela seria o escape que a guarda
+    não tem.
+    """
+
+    @contextlib.contextmanager
+    def _declarar(*esperados: str) -> Iterator[None]:
+        assert lancador_de_mentira() is not None, (
+            f"{_SIGLA_DO_LANCADOR}: a sessão não armou os dublês dos lançadores"
+        )
+        _, desde = _ler_o_livro(_LIVRO_LIDO[0])
+        # o que já estava no livro antes do bloco é da fase, não do bloco
+        yield
+        linhas, _ = _ler_o_livro(desde)
+        chegaram = [_partir_a_linha(linha)[0] for _, linha in linhas]
+        assert chegaram == list(esperados), (
+            f"{_SIGLA_DO_LANCADOR}: o bloco declarou {list(esperados)} e o livro "
+            f"trouxe {chegaram}"
+        )
+        _ATOS_DE_PROPOSITO.update(inicio for inicio, _ in linhas)
+
+    return _declarar
+
+
+def _lancador_no_fim_da_sessao(session: Any) -> None:
+    """O ato que chegou fora de qualquer fase reprova a SESSÃO, com o livro."""
+    if _SESSAO_DO_LANCADOR and id(session) not in _SESSAO_DO_LANCADOR:
+        return
+    if lancador_de_mentira() is None:
+        return
+    _abrir_a_fase()
+    if not _ATOS_FORA_DE_FASE:
+        return
+    mostrados = _ATOS_FORA_DE_FASE[:_VIGIA_LIMITE_RELATO]
+    restam = len(_ATOS_FORA_DE_FASE) - len(mostrados)
+    linhas = []
+    for linha in mostrados:
+        argv, quem = _partir_a_linha(linha)
+        linhas.append(f"  - `{argv}`" + (f" (o ambiente dizia: {quem})" if quem else ""))
+    _escrever_no_terminal(session, [
+        "",
+        f"{_SIGLA_DO_LANCADOR}: {len(_ATOS_FORA_DE_FASE)} ato(s) de lançador "
+        "chegaram FORA de qualquer teste (um fio, um finalizador):",
+        *linhas,
+        *([f"  ... e mais {restam}"] if restam > 0 else []),
+        "  Sem a guarda, isso fecharia (ou abriria) o lançador de quem roda a suíte.",
+    ])
+    session.exitstatus = 1
