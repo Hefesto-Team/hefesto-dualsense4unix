@@ -192,6 +192,24 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "virar a câmera com o controle na mão dela, e a sensibilidade e o eixo "
         "(yaw ou roll) que só a mão decide. É da MESA-DE-QUATRO-01",
     ),
+    # A INCLINAÇÃO E O TOQUE (NO-MODO-XBOX-TUDO-FUNCIONA-01, E12b, 29/09/2026):
+    # arranjo, como a Mira, e a escada é a da peça que eles leem.
+    "inclinacao": (
+        "médio",
+        "2026-09-27-NO-MODO-XBOX-TUDO-FUNCIONA-01.md",
+        "a Inclinação lê o acelerômetro, e `movimento.acelerometro@dualsense` está em "
+        "MONTOU nos dois transportes. A régua da E12b leva o clique ao perfil no disco e "
+        "de volta à tela com o Daemon de verdade, P1 a P4, no USB e no BT; falta o jogo "
+        "aberto andar com o controle inclinado na mão dela, que é a prova da sprint",
+    ),
+    "toque": (
+        "médio",
+        "2026-09-27-NO-MODO-XBOX-TUDO-FUNCIONA-01.md",
+        "o «Cursor | Botões» lê o touchpad, e `toque.touchpad.cursor` e "
+        "`toque.touchpad.dedos` estão em MONTOU nos dois transportes. A régua da E12b "
+        "grava e relê o arranjo por controle; falta o dedo dela mover o cursor e "
+        "apertar o direcional, o L1 e o L2 num jogo aberto, que é a prova da sprint",
+    ),
     "ganho-mic": (
         "médio",
         "2026-09-20-O-GANHO-DO-MIC-TEM-DONO-01.md",
