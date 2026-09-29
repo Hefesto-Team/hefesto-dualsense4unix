@@ -729,7 +729,26 @@ _COLUNA_DOS_ARGS = 2
 _F_SETPIPE_SZ = getattr(fcntl, "F_SETPIPE_SZ", 1031)
 
 
-def propriedades_da_source(descricao: str) -> str:
+def campo_do_lugar(lugar: int | None) -> tuple[str, ...]:
+    """``hefesto.lugar=N``, a propriedade que diz de qual lugar à mesa o nó é.
+
+    A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-CHEGAM-AO-RADIO-01, 29/09/2026: os
+    três nós do lugar N (o alto-falante, o microfone do rádio e a háptica)
+    declaram o MESMO N, lido do dono do assento (:func:`numero_do_assento`) —
+    um endereço que um jogo nativo lê sem depender do texto do rótulo. O
+    espaço ``hefesto.`` é lido do dono dele. Sem lugar sabido, nada: sem
+    número não se inventa número.
+    """
+    from hefesto_dualsense4unix.integrations.quem_ouve_o_microfone import (
+        PREFIXO_PROPRIEDADE_HEFESTO,
+    )
+
+    if isinstance(lugar, int) and not isinstance(lugar, bool) and lugar > 0:
+        return (f"{PREFIXO_PROPRIEDADE_HEFESTO}lugar={lugar}",)
+    return ()
+
+
+def propriedades_da_source(descricao: str, lugar: int | None = None) -> str:
     """O argumento `source_properties=` do `load-module` — ENTRE ASPAS DUPLAS.
 
     **AS ASPAS SÃO A CURA, e sem elas a ponte perdia DOIS fatos em silêncio.**
@@ -769,6 +788,9 @@ def propriedades_da_source(descricao: str) -> str:
                 f"device.description='{descricao}'",
                 f"priority.session={PRIORIDADE_SESSAO_DA_PONTE}",
                 "device.icon_name=audio-input-microphone",
+                # O LUGAR, o mesmo N do alto-falante e da háptica do lugar
+                # (A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-CHEGAM-AO-RADIO-01).
+                *campo_do_lugar(lugar),
             )
         )
         + '"'
@@ -791,9 +813,13 @@ class SourceVirtualPipeWire:
         taxa_hz: int = MIC_TAXA_HZ,
         canais: int = MIC_CANAIS,
         runner: Callable[[list[str]], str | None] | None = None,
+        lugar: int | None = None,
     ) -> None:
         self.nome = nome
         self.descricao = descricao
+        #: O LUGAR à mesa (``hefesto.lugar``): quem constrói sabe o controle e
+        #: o lê do dono do assento, no mesmo instante do rótulo.
+        self.lugar = lugar
         self.taxa_hz = taxa_hz
         self.canais = canais
         self.runner = _com_recuo(runner or _rodar)
@@ -887,7 +913,7 @@ class SourceVirtualPipeWire:
                 # falha que o 200 criava (perder para o laço de retorno do
                 # alto-falante) deixa de ser possível. Ver
                 # `PRIORIDADE_SESSAO_DA_PONTE` para os números medidos.
-                propriedades_da_source(self.descricao),
+                propriedades_da_source(self.descricao, self.lugar),
             ]
         )
         linhas = [ln.strip() for ln in (saida or "").splitlines() if ln.strip()]
@@ -1252,7 +1278,9 @@ class PonteMicBluetooth:
             self._source = self._abrir_o_canal_por_controle(descricao)
         if self._source is None:
             self._source = SourceVirtualPipeWire(
-                nome=self._nome_source, descricao=descricao
+                nome=self._nome_source,
+                descricao=descricao,
+                lugar=numero_do_assento(self.no.uniq),
             )
         if not self._source.iniciar():
             self._fechar_fd()
@@ -2525,6 +2553,7 @@ __all__ = [
     "SourceVirtualPipeWire",
     "abrir_hidraw_rw",
     "alguem_escreve_no_fifo",
+    "campo_do_lugar",
     "descarregar_modulo",
     "descricao_do_microfone",
     "diagnosticar",

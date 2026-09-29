@@ -145,6 +145,7 @@ lido do dono, e quem reconhece continua sendo aquela peça.
 
 from __future__ import annotations
 
+import functools
 import logging
 import subprocess
 import threading
@@ -157,6 +158,7 @@ from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
     MIC_TAXA_HZ,
     PRIORIDADE_SESSAO_DA_PONTE,
     SourceVirtualPipeWire,
+    numero_do_assento,
     rotulo_envelheceu,
 )
 from hefesto_dualsense4unix.integrations.filho_de_som import (
@@ -640,7 +642,12 @@ def abrir(
         ja = _DE_PE.get(uniq)
         if ja is not None:
             return ja
-        construir = fabrica or SourceVirtualPipeWire
+        # O LUGAR do canal (`hefesto.lugar`), lido do dono do assento no
+        # mesmo instante do rótulo — A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-
+        # CHEGAM-AO-RADIO-01. A fábrica da régua troca o mecanismo inteiro.
+        construir = fabrica or functools.partial(
+            SourceVirtualPipeWire, lugar=numero_do_assento(uniq)
+        )
         try:
             source = construir(nome=nome, descricao=descricao)
             if not source.iniciar():

@@ -479,3 +479,95 @@ def test_o_ouvido_diz_nao_sei_quando_ninguem_escuta() -> None:
     assert ouvido.tem_sinal("hefesto_som_000021") is True
     agora[0] += af.JANELA_DO_SINAL_S + af.SURDO_S + 0.1
     assert ouvido.tem_sinal("hefesto_som_000021") is None
+
+
+# ---------------------------------------------------------------------------
+# 6. Os três nós do lugar dizem o lugar
+# ---------------------------------------------------------------------------
+
+
+class ServidorQueGuarda:
+    """O ``pipewire-pulse`` de mentira que guarda o que o NÓ recebeu.
+
+    O argumento ``sink_properties=``/``source_properties=`` é lido como o real
+    o lê (``_props_do_argumento`` da irmã de 28/09): entre aspas duplas vale
+    inteiro, sem elas o valor morre no primeiro espaço. Quem é lido é o nó, e
+    não o argv. Todo o resto responde vazio, como um comando que deu certo.
+    """
+
+    def __init__(self) -> None:
+        self.nos: dict[str, dict[str, str]] = {}
+        self._id = 500
+
+    def __call__(self, argv: list[str]) -> str | None:
+        from tests.unit.test_a_haptica_chega_a_quem_entra_depois import _props_do_argumento
+
+        a = list(argv)
+        if a[:2] != ["pactl", "load-module"]:
+            return ""
+        nome = next(
+            (x.split("=", 1)[1] for x in a if x.startswith(("sink_name=", "source_name="))), ""
+        )
+        self.nos[nome] = next(
+            (
+                _props_do_argumento(x)
+                for x in a
+                if x.startswith(("sink_properties=", "source_properties="))
+            ),
+            {},
+        )
+        self._id += 1
+        return f"{self._id}\n"
+
+
+#: O dono do assento desta régua: nenhum lugar é a posição do controle na lista.
+ASSENTOS = {P1: 3, P2: 1, P3: 4, P4: 2}
+
+
+@pytest.mark.parametrize("uniq", MESA)
+def test_os_tres_nos_do_lugar_dizem_o_lugar(
+    uniq: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    """O alto-falante, o microfone do rádio e a háptica do lugar N: ``hefesto.lugar=N``.
+
+    O N é o que o dono do assento deu ao controle (lido dele, e não do
+    rótulo), e é o MESMO nos três nós.
+
+    MORDIDA: tire ``*campo_do_lugar(...)`` de um dos três
+    (``propriedades_do_sink``, ``propriedades_da_source`` ou
+    ``propriedades_do_endpoint``) — aquele nó chega ao servidor sem o lugar.
+    """
+    from hefesto_dualsense4unix.integrations import canal_do_microfone as canal
+    from hefesto_dualsense4unix.integrations import dualsense_bt_audio as dba
+    from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
+
+    servidor = ServidorQueGuarda()
+    monkeypatch.setattr(dba, "_NUMERADOR_DE_ASSENTO", ASSENTOS.get)
+    monkeypatch.setattr(dba, "_rodar", servidor)
+    monkeypatch.setattr(af, "_o_servidor_atende", lambda *_a, **_k: True)
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    monkeypatch.setattr(canal, "_DE_PE", {})
+    lugar = dba.numero_do_assento(uniq)
+    assert lugar == ASSENTOS[uniq]
+
+    assert af.SinkVirtualPipeWire(uniq=uniq, runner=servidor).iniciar()
+    canal.abrir(uniq, dba.descricao_do_microfone(uniq))
+    endpoint = eh.EndpointDeHaptica(
+        lugar=lugar, ancora=eh.Ancora(syspath="/d/1", declarado="/d/1/i:1.0"), runner=servidor
+    )
+    assert endpoint.iniciar()
+
+    nos = {
+        "alto-falante": af.nome_do_sink(uniq),
+        "microfone": canal.nome_do_canal(uniq),
+        "háptica": eh.nome_do_endpoint(lugar),
+    }
+    for papel, nome in nos.items():
+        assert nome in servidor.nos, f"o nó do {papel} não foi publicado"
+        assert servidor.nos[nome].get("hefesto.lugar") == str(lugar), (
+            f"o nó do {papel} não diz o lugar {lugar}: {servidor.nos[nome]}"
+        )
+    # O rótulo continua o dele: a propriedade nova não comeu o que vinha antes.
+    assert servidor.nos[nos["alto-falante"]]["device.description"] == (
+        af.descricao_do_alto_falante(uniq)
+    )

@@ -135,6 +135,7 @@ from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     serial_do_no,
     so_hex,
 )
+from hefesto_dualsense4unix.integrations.dualsense_bt_audio import campo_do_lugar
 from hefesto_dualsense4unix.integrations.vestido_de_dualsense import (
     PID_DUALSENSE,
     VID_SONY,
@@ -465,6 +466,9 @@ def propriedades_do_endpoint(lugar: int, ancora: Ancora) -> str:
         f"device.description='{rotulo}'",
         f"priority.session={PRIORIDADE_DA_SESSAO}",
         "device.icon_name=audio-speakers",
+        # O LUGAR, o mesmo N do alto-falante e do microfone do lugar
+        # (A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-CHEGAM-AO-RADIO-01).
+        *campo_do_lugar(lugar),
     )
     return 'sink_properties="' + " ".join(campos) + '"'
 

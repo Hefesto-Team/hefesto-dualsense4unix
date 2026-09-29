@@ -1178,7 +1178,7 @@ def sufixo_do_sink_do_som(nome: str) -> str:
     return resto
 
 
-def propriedades_do_sink(descricao: str) -> str:
+def propriedades_do_sink(descricao: str, lugar: int | None = None) -> str:
     """O argumento ``sink_properties=`` do ``load-module`` — ENTRE ASPAS DUPLAS.
 
     **AS ASPAS SÃO A CURA**, e a lição é da metade de entrada, paga em 06/09/2026: o
@@ -1190,6 +1190,7 @@ def propriedades_do_sink(descricao: str) -> str:
     O nome da Sony (``vestido_de_dualsense.campos_do_nome``, a forma A) mora AQUI, e não em
     quem chama, porque são dois os que publicam o nó: um que o esquecesse daria dois nós.
     """
+    from hefesto_dualsense4unix.integrations.dualsense_bt_audio import campo_do_lugar
     from hefesto_dualsense4unix.integrations.vestido_de_dualsense import campos_do_nome
     return (
         'sink_properties="'
@@ -1199,6 +1200,7 @@ def propriedades_do_sink(descricao: str) -> str:
                 f"priority.session={PRIORIDADE_SESSAO_DO_SOM}",
                 "device.icon_name=audio-speakers",
                 *campos_do_nome(),
+                *campo_do_lugar(lugar),
             )
         )
         + '"'
@@ -1278,10 +1280,20 @@ class SinkVirtualPipeWire:
         canais: int = CANAIS_DO_ENCODER,
         runner: Callable[[list[str]], str | None] | None = None,
         rota: RotaDoNo | None = None,
+        lugar: int | None = None,
     ) -> None:
         self.uniq = str(uniq)
         self.nome = nome_do_sink(uniq)
         self.descricao = descricao or descricao_do_alto_falante(uniq)
+        #: O LUGAR à mesa (``hefesto.lugar``), do mesmo dono do assento que dá
+        #: o N do rótulo, e lido no mesmo instante que ele.
+        if lugar is None:
+            from hefesto_dualsense4unix.integrations.dualsense_bt_audio import (
+                numero_do_assento,
+            )
+
+            lugar = numero_do_assento(self.uniq)
+        self.lugar = lugar
         self.taxa_hz = taxa_hz
         self.canais = canais
         self.runner = _com_o_recuo(runner or _rodar)
@@ -1338,7 +1350,7 @@ class SinkVirtualPipeWire:
                 "format=s16le",
                 f"rate={self.taxa_hz}",
                 f"channels={self.canais}",
-                propriedades_do_sink(self.descricao),
+                propriedades_do_sink(self.descricao, self.lugar),
             ]
         )
         linhas = [ln.strip() for ln in (saida or "").splitlines() if ln.strip()]
