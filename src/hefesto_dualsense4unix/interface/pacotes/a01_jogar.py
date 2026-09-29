@@ -899,7 +899,7 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
     **E FORAM — 28/09/2026, A-TELA-PERGUNTA-AO-DONO-01.** O pacote da 09
     (`a09_sistema.pacote`) pergunta a :func:`coluna_de_atencao` e acrescenta as
     linhas ao exame, com o selo de aviso do exame. Vão as fontes SEM outra casa
-    (:func:`_avisos_sem_outra_casa`); as três que a tela já mostra em outro
+    (:func:`_avisos_sem_outra_casa`); as quatro que a tela já mostra em outro
     lugar ficam no canal e fora da 09.
 
     **NADA SE ESCREVE AQUI.** As fontes já existiam, e todas fora deste
@@ -928,7 +928,8 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
        literal dela de 31/08 (*"não sei se segue desativado"*), e na máquina
        dela ela está QUENTE agora;
     3. **a ponte com o jogo** (:func:`_aviso_da_ponte`), e só quando ela é má
-       notícia;
+       notícia. Desde 28/09/2026 ela fica no canal e fora da 09
+       (:func:`_avisos_com_outra_casa` diz por quê);
     3-bis. **a divergência de máscara**
        (:func:`_aviso_da_divergencia_de_mascara`), o ALARME que o daemon publica
        desde a MASCARA-01. Ela mora AQUI e não em `AVISOS_DA_TELA` porque volta
@@ -961,7 +962,7 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
     calado = _aviso_do_servico_calado(ctx)
     fora: list[dict[str, str]] = [calado] if calado else []
     fora += _avisos_sem_outra_casa(ctx)
-    fora += _avisos_com_outra_casa()
+    fora += _avisos_com_outra_casa(ctx)
     return fora
 
 
@@ -970,9 +971,10 @@ def _avisos_sem_outra_casa(ctx: Contexto) -> list[dict[str, str]]:
 
     SEPARADAS DAS OUTRAS em 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01), quando a
     lista do exame da 09 passou a recebê-las (:func:`coluna_de_atencao`). As
-    três que ficam de fora já têm casa na tela, e levá-las à 09 poria a mesma
+    quatro que ficam de fora já têm casa na tela, e levá-las à 09 poria a mesma
     notícia duas vezes: o serviço calado (o Status da 09 diz o estado do
-    serviço), a cura do travamento do USB (o exame da 09 a lê pelo mesmo dono,
+    serviço), a ponte com o jogo (a fileira da Jogar acende o caminho vivo),
+    a cura do travamento do USB (o exame da 09 a lê pelo mesmo dono,
     `storm_doctor.check_snd_quirk`, dentro do `storm_report`) e os achados do
     exame dos controles (a aba Conexões, de onde eles vêm).
     """
@@ -995,13 +997,9 @@ def _avisos_sem_outra_casa(ctx: Contexto) -> list[dict[str, str]]:
                      "texto": f"o opt-out antigo não respondeu ({type(erro).__name__}).",
                      "fonte": "home_actions.aviso_de_opt_out_antigo"})
 
-    ponte = _aviso_da_ponte(ctx.state)
-    if ponte:
-        fora.append(ponte)
-
-    # A DIVERGÊNCIA DE MÁSCARA — JOGAR-OS-SEIS-AVISOS-01, 06/09/2026, e ela vem
-    # logo depois da ponte porque é a irmã dela: as duas voltam em markup do
-    # Pango e passam por `_sem_markup`. Sob `try` PRÓPRIO, que é a política
+    # A DIVERGÊNCIA DE MÁSCARA — JOGAR-OS-SEIS-AVISOS-01, 06/09/2026, e ela é a
+    # irmã da ponte: as duas voltam em markup do Pango e passam por
+    # `_sem_markup`. Sob `try` PRÓPRIO, que é a política
     # deste arquivo — uma fonte que levanta vira selo `ERRO`, nunca uma coluna
     # que some.
     try:
@@ -1017,15 +1015,27 @@ def _avisos_sem_outra_casa(ctx: Contexto) -> list[dict[str, str]]:
     return fora
 
 
-def _avisos_com_outra_casa() -> list[dict[str, str]]:
-    """As duas fontes do canal que a tela já mostra em outro lugar.
+def _avisos_com_outra_casa(ctx: Contexto) -> list[dict[str, str]]:
+    """As três fontes do canal que a tela já mostra em outro lugar.
 
     Ver :func:`_avisos_sem_outra_casa`: a cura do travamento chega ao exame da
     aba Sistema pelo `storm_report`, e os achados graves do exame dos controles
     moram na aba Conexões. Elas continuam no canal (:func:`_avisos`) porque ele
     é a lista inteira do que o produto sabe avisar.
+
+    A PONTE COM O JOGO MORA AQUI — conferência de 28/09/2026. Ela ia à 09 e
+    saía como «AVISO · Nenhuma»: o prefixo «Ponte com o jogo:» sai do texto
+    porque, na coluna, o selo PONTE dizia o assunto (ver :func:`_aviso_da_ponte`),
+    e no exame da 09 o selo é AVISO e a tela mostra só a cabeça da frase. E ela
+    não é notícia nova em lugar nenhum: o «nenhuma» é o modo Navegação, que a
+    fileira da Jogar já acende, e o «de pé, e vazia» é a mesa sem controle, que
+    a Jogar e o topo já dizem. Na 09 ela virava um AVISO fixo para quem escolheu
+    a Navegação, com uma dica que manda clicar num botão que a tela não tem.
     """
     fora: list[dict[str, str]] = []
+    ponte = _aviso_da_ponte(ctx.state)
+    if ponte:
+        fora.append(ponte)
     # A CURA DO TRAVAMENTO DO USB — sob `try` PRÓPRIO, que é a política deste
     # arquivo: uma fonte que levanta não derruba a coluna, ela vira selo
     # ``ERRO``. Esta lê DOIS ARQUIVOS DO SISTEMA por chamada — se um `/sys`
@@ -1338,9 +1348,9 @@ def coluna_de_atencao(ctx: Contexto) -> list[dict[str, str]]:
     com a frase do dono dele, na ordem da gravidade.
 
     SÓ AS FONTES SEM OUTRA CASA (:func:`_avisos_sem_outra_casa`). O serviço
-    calado, a cura do travamento do USB e os achados do exame dos controles já
-    têm lugar na tela, e a mesma notícia duas vezes seria duas verdades para
-    divergir.
+    calado, a ponte com o jogo, a cura do travamento do USB e os achados do
+    exame dos controles já têm lugar na tela, e a mesma notícia duas vezes
+    seria duas verdades para divergir.
     """
     return _em_ordem(_avisos_sem_outra_casa(ctx))
 

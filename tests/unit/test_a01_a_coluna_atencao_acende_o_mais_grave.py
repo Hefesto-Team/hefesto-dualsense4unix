@@ -210,17 +210,22 @@ def test_a_lista_leva_todos_os_avisos(monkeypatch: Any) -> None:
 
 
 def test_as_fontes_com_outra_casa_nao_vao_a_09(monkeypatch: Any) -> None:
-    """O serviço calado, a cura do travamento e o exame dos controles ficam fora.
+    """O serviço calado, a ponte, a cura do travamento e o exame dos controles
+    ficam fora.
 
-    Os três já têm lugar na tela — o Status da 09, o `storm_report` do exame da
-    09 e a aba Conexões —, e a mesma notícia duas vezes é duas verdades para
-    divergir. O canal (`_avisos`) continua colhendo os três.
+    Os quatro já têm lugar na tela — o Status da 09, a fileira da Jogar, o
+    `storm_report` do exame da 09 e a aba Conexões —, e a mesma notícia duas
+    vezes é duas verdades para divergir. O canal (`_avisos`) continua colhendo
+    os quatro.
 
     A MORDIDA: faça `coluna_de_atencao` devolver `_em_ordem(_avisos(ctx))` e
-    esta régua reprova nas três fontes.
+    esta régua reprova nas quatro fontes; devolva a ponte a
+    `_avisos_sem_outra_casa` e ela reprova na ponte.
     """
     monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [])
-    monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: None)
+    monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: {
+        "selo": aba.SELO_DA_PONTE, "texto": "nenhuma — nenhum jogo",
+        "fonte": "home_actions.texto_da_ponte"})
     monkeypatch.setattr(
         home_actions, "aviso_de_opt_out_antigo", lambda *a, **k: None)
     monkeypatch.setattr(aba, "_aviso_da_cura_do_travamento", lambda: {
@@ -231,7 +236,8 @@ def test_as_fontes_com_outra_casa_nao_vao_a_09(monkeypatch: Any) -> None:
 
     no_canal = {a["fonte"] for a in aba._avisos(vazio)}
     assert {"storm_doctor.check_snd_quirk", "a08_conexoes._exame",
-            "home_actions._render_home (ramo offline)"} <= no_canal, (
+            "home_actions._render_home (ramo offline)",
+            "home_actions.texto_da_ponte"} <= no_canal, (
         f"o canal perdeu uma fonte: {sorted(no_canal)}")
     assert aba.coluna_de_atencao(vazio) == [], (
         "uma fonte que já tem casa na tela foi levada à lista da 09: "

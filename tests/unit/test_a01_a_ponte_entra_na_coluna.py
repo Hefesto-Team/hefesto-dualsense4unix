@@ -112,15 +112,45 @@ def test_a_ponte_chega_a_COLUNA_e_nao_so_a_funcao() -> None:  # noqa: N802
     Uma régua assim daria verde sobre o estado exato que esta sprint veio curar:
     a frase existindo no produto e não chegando a tela nenhuma.
 
-    A MORDIDA: apague o `fora.append(ponte)` de `_avisos` — esta reprova, e a
-    de cima continua verde. É por isso que as duas existem.
+    A MORDIDA: apague o `fora.append(ponte)` de `_avisos_com_outra_casa` —
+    esta reprova, e a de cima continua verde. É por isso que as duas existem.
+
+    O CANAL, E NÃO A LISTA DA 09 — conferência de 28/09/2026. A ponte tem casa
+    na tela (a fileira da Jogar acende o caminho vivo), e na 09 ela saía como
+    «AVISO · Nenhuma», fixa para quem escolheu a Navegação. Ela continua no
+    canal (`_avisos`), que é a lista inteira do que o produto sabe avisar; a
+    régua abaixo mede que ela não vai à 09.
     """
     ctx = Contexto(state=SEM_PONTE, mesa=[], conectados=[], estados={})
-    fora = aba.coluna_de_atencao(ctx)
+    fora = aba._avisos(ctx)
     selos = [a["selo"] for a in fora]
     assert aba.SELO_DA_PONTE in selos, (
-        f"a ponte não chegou à lista que a aba Sistema recebe: {selos!r}")
+        f"a ponte não chegou ao canal de avisos: {selos!r}")
     assert "nenhuma" in fora[selos.index(aba.SELO_DA_PONTE)]["texto"]
+
+
+def test_a_ponte_nao_vira_linha_sem_assunto_na_09() -> None:
+    """Na 09 a ponte virava «AVISO · Nenhuma» — a cabeça da frase, sem o assunto.
+
+    O `_aviso_da_ponte` tira o prefixo «Ponte com o jogo:» porque, na coluna, o
+    selo PONTE dizia o assunto; no exame da 09 o selo é AVISO e a tela mostra só
+    a cabeça da frase (`a09_sistema.frase_curta_do_exame`). E o «nenhuma» é o
+    modo Navegação, que a fileira da Jogar já acende: na 09 ele era um aviso fixo
+    para quem escolheu a Navegação.
+
+    A MORDIDA: devolva a ponte a `_avisos_sem_outra_casa` e esta reprova com a
+    linha «Nenhuma» no exame da 09.
+    """
+    from pacotes import a09_sistema
+
+    ctx = Contexto(state=SEM_PONTE, mesa=[], conectados=[], estados={})
+    selos = [a["selo"] for a in aba.coluna_de_atencao(ctx)]
+    assert aba.SELO_DA_PONTE not in selos, (
+        f"a ponte foi levada à lista da aba Sistema: {selos!r}")
+    na_tela = [a09_sistema.frase_curta_do_exame(str(linha["txt"]))
+               for linha in a09_sistema._avisos_do_produto(ctx)]
+    assert "Nenhuma" not in na_tela, (
+        f"o exame da 09 mostra uma linha sem assunto: {na_tela!r}")
 
 
 def test_a_boa_noticia_da_ponte_nao_entra() -> None:
