@@ -81,7 +81,11 @@ class LedSettings:
 
 
 def player_bitmask(leds: tuple[bool, bool, bool, bool, bool]) -> int:
-    """Converte 5 flags em bitmask 0-31 (mesmo layout usado pelo protocolo DSX)."""
+    """Converte 5 flags em bitmask 0-31 (mesmo layout usado pelo protocolo DSX).
+
+    É o DONO da conta: `core.lightbar_gatilho.mascara_de_player_leds`, que
+    escreve o ``common[43]`` do report das luzes, pergunta aqui (28/09/2026).
+    """
     value = 0
     for idx, on in enumerate(leds):
         if on:

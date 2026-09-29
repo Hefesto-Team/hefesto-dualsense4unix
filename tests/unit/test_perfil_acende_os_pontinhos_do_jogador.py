@@ -128,3 +128,28 @@ def test_a_conversao_do_backend_e_a_de_led_control_sao_a_mesma() -> None:
             f"as duas conversões divergem em {bits}: `player_bitmask` diz "
             f"{player_bitmask(bits)} e o backend diz {do_backend}"  # type: ignore[arg-type]
         )
+
+
+def test_o_report_das_luzes_pergunta_ao_dono_da_conta() -> None:
+    """`lightbar_gatilho.mascara_de_player_leds` é `player_bitmask`, e não uma cópia.
+
+    A-TELA-PERGUNTA-AO-DONO-01, 28/09/2026. O `common[43]` do report das luzes
+    (o que a arbitragem de cor manda depois de cada conexão) tinha a conta
+    escrita de novo, ao lado do dono que o `casa-sabe` acusava sem chamador. A
+    régua mede as duas coisas: o valor igual nos 32 padrões, e o fonte sem a
+    conta própria.
+
+    A MORDIDA: devolva o `sum(1 << i …)` ao corpo de `mascara_de_player_leds` —
+    o valor continua igual e a segunda asserção reprova, que é o que separa
+    "a mesma conta" de "o mesmo dono".
+    """
+    import inspect
+
+    from hefesto_dualsense4unix.core import lightbar_gatilho
+
+    for indice in range(32):
+        bits = tuple(bool(indice & (1 << posicao)) for posicao in range(5))
+        assert lightbar_gatilho.mascara_de_player_leds(bits) == player_bitmask(bits)  # type: ignore[arg-type]
+    corpo = inspect.getsource(lightbar_gatilho.mascara_de_player_leds)
+    assert "player_bitmask(" in corpo and "<<" not in corpo.split('"""')[-1], (
+        "o report das luzes voltou a fazer a conta por conta própria")

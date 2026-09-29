@@ -70,6 +70,7 @@ from hefesto_dualsense4unix.core.ds_output_report import (
     build_bt_report,
     build_usb_report,
 )
+from hefesto_dualsense4unix.core.led_control import player_bitmask
 
 #: Offsets dentro do payload ``common`` de 47 bytes (espelho do
 #: ``dualsense_output_report_common`` do ``hid-playstation``): o padrão de LED
@@ -110,8 +111,14 @@ def mascara_de_player_leds(padrao: tuple[bool, bool, bool, bool, bool]) -> int:
     ``BIT(2)``, ``BIT(3)|BIT(1)``, ``BIT(4)|BIT(2)|BIT(0)``,
     ``BIT(4)|BIT(3)|BIT(1)|BIT(0)``, todos) — os palíndromos ``--x--``,
     ``-x-x-``, ``x-x-x``, ``xx-xx``, ``xxxxx``.
+
+    A CONTA TEM UM DONO, e é ``core.led_control.player_bitmask`` — 28/09/2026,
+    A-TELA-PERGUNTA-AO-DONO-01. Ela morava aqui escrita de novo (``sum(1 << i
+    ...)``), ao lado do dono que ninguém chamava; o nome desta função fica
+    porque é o vocabulário do report (``common[43]``) que as réguas do
+    STEAM-NO-FISICO leem.
     """
-    return sum(1 << i for i, aceso in enumerate(padrao) if aceso)
+    return player_bitmask(padrao)
 
 
 def common_das_luzes(
