@@ -100,11 +100,13 @@ from __future__ import annotations
 
 import os
 import re
+import threading
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
 from hefesto_dualsense4unix.app.fala_do_mapa import Numero
+from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
 #: Fatias de tempo por segundo do Bluetooth Classic — 625 µs cada. É
@@ -218,6 +220,56 @@ _MAC_RE = re.compile(r"^[0-9a-f]{2}(:[0-9a-f]{2}){5}$")
 _MARCA_UNIQ = "HID_UNIQ="
 _MARCA_PHYS = "HID_PHYS="
 
+#: A raiz de produção do ``hidraw`` no ``/sys``. O mapa guardado só vale nela
+#: (ou com o dono injetado): a suíte aponta a raiz para uma pasta de mentira, e
+#: um mapa da raiz real não pode responder por ela.
+RAIZ_DO_HIDRAW = "/sys/class/hidraw"
+
+#: O-REPOUSO-ESPERA-O-EVENTO-01, família 2 (29/09/2026): o mapa inteiro
+#: ``{uniq em hex: HID_PHYS ou ""}`` dos nós, preso à geração de NOMES dos
+#: ``hidraw*`` de ``/dev``. Medido na sonda S.4 (60 s, os quatro no rádio,
+#: parados): 2.788 leituras de ``uevent`` por minuto, porque o governador
+#: pergunta a cada 1 s por controle autorizado e cada pergunta lia os 12 nós. A
+#: resposta só muda quando o controle sai do adaptador, e sair do adaptador é o
+#: nó dele sumir: um evento. ``(raiz, ficha do dono, mapa)``; None = nada guardado.
+_MAPA_DO_HIDRAW: tuple[str, tuple[int, ...], dict[str, str]] | None = None
+_MAPA_TRAVA = threading.Lock()
+
+
+def _esquecer_o_mapa() -> None:
+    """O dono desarmou: o mapa guardado não tem mais quem o invalide."""
+    global _MAPA_DO_HIDRAW
+    with _MAPA_TRAVA:
+        _MAPA_DO_HIDRAW = None
+
+
+_ode.ao_desarmar(_esquecer_o_mapa)
+
+
+def _mapa_do_hidraw(
+    raiz: str, listar: Callable[[str], list[str]]
+) -> tuple[dict[str, str], bool]:
+    """``({uniq em hex: HID_PHYS ou ""}, completo?)`` dos nós de ``raiz``.
+
+    A mesma regra do laço de :func:`adaptador_por_uniq`: por ``uniq``, vale o
+    primeiro nó (em ordem) cujo ``HID_PHYS`` é MAC. ``completo`` é False quando
+    algum ``uevent`` não se leu (o sysfs some sob a mão): um mapa assim não se
+    guarda. O ``OSError`` do ``listar`` sobe para quem chama.
+    """
+    mapa: dict[str, str] = {}
+    completo = True
+    for no in sorted(listar(raiz)):
+        texto = _ler_texto(os.path.join(raiz, no, "device", "uevent"))
+        if not texto:
+            completo = False
+            continue
+        hex_uniq = _hex(_valor_do_uevent(texto, _MARCA_UNIQ))
+        if not hex_uniq or mapa.get(hex_uniq):
+            continue
+        phys = _valor_do_uevent(texto, _MARCA_PHYS).lower()
+        mapa[hex_uniq] = phys if _MAC_RE.match(phys) else ""
+    return mapa, completo
+
 
 @dataclass(frozen=True)
 class Ocupacao:
@@ -273,9 +325,10 @@ def palavra_da_ocupacao(fracao: float) -> str:
 def adaptador_por_uniq(
     uniqs: Iterable[str],
     *,
-    raiz: str = "/sys/class/hidraw",
+    raiz: str = RAIZ_DO_HIDRAW,
     listar: Callable[[str], list[str]] = os.listdir,
     ler: Callable[[str], str] | None = None,
+    dono: Any = None,
 ) -> dict[str, str]:
     """``{uniq: endereço do adaptador}`` — ``""`` para quem não está no rádio.
 
@@ -302,10 +355,45 @@ def adaptador_por_uniq(
 
     Uma varredura de ``/sys`` por chamada, sem subprocesso e sem abrir
     ``/dev``: nada aqui disputa o hidraw com o daemon.
+
+    **Com o dono do evento armado** (O-REPOUSO-ESPERA-O-EVENTO-01, família 2),
+    a varredura sai só quando a geração de nomes dos ``hidraw*`` de ``/dev``
+    muda: o mapa inteiro dos nós fica guardado até lá, e cobre os quatro
+    chamadores (o governador, a central do rádio, o plano e o ``state_full``).
+    Vale só na raiz de produção e sem ``ler`` injetado; ``dono`` é costura de
+    teste, e com ele injetado vale em qualquer raiz. O ``listar`` do governador
+    (o que levanta em vez de devolver vazio) só roda quando o mapa perde. Sem o
+    dono, a varredura de sempre, byte a byte.
     """
+    global _MAPA_DO_HIDRAW
     procurados = {_hex(u): u for u in uniqs if u and _hex(u)}
     saida: dict[str, str] = dict.fromkeys(procurados.values(), "")
     if not procurados:
+        return saida
+    dono_efetivo = dono if dono is not None else _ode.dono_armado()
+    ficha = (
+        dono_efetivo.ficha((dono_efetivo.raiz_dos_nos, _ode.NOMES))
+        if dono_efetivo is not None
+        and ler is None
+        and (dono is not None or raiz == RAIZ_DO_HIDRAW)
+        else None
+    )
+    if ficha is not None:
+        with _MAPA_TRAVA:
+            guardado = _MAPA_DO_HIDRAW
+        if guardado is not None and guardado[0] == raiz and guardado[1] == ficha:
+            mapa = guardado[2]
+        else:
+            try:
+                mapa, completo = _mapa_do_hidraw(raiz, listar)
+            except OSError:
+                # O mesmo «não sei» de sempre, e nada se guarda.
+                return saida
+            if completo:
+                with _MAPA_TRAVA:
+                    _MAPA_DO_HIDRAW = (raiz, ficha, mapa)
+        for hex_procurado, como_veio in procurados.items():
+            saida[como_veio] = mapa.get(hex_procurado, "")
         return saida
     try:
         nos = sorted(listar(raiz))

@@ -369,3 +369,140 @@ async def _rodar_uma_volta(daemon: _DaemonDeBancada, *, watch: Any = None) -> No
 
     daemon._stop_event = asyncio.Event()
     await asyncio.wait_for(reconnect_loop(daemon, input_watch=watch), timeout=5.0)  # type: ignore[arg-type]
+
+
+# ---------------------------------------------------------------------------
+# Régua 4 — o adaptador pela geração do hidraw
+# ---------------------------------------------------------------------------
+
+#: Quatro controles no rádio (faixa forjada), dois adaptadores forjados.
+_UNIQS = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04")
+_ADAPTADOR_A = "02:fe:00:00:00:0a"
+_ADAPTADOR_B = "02:fe:00:00:00:0b"
+
+
+def _uevent(uniq: str, phys: str) -> str:
+    return (
+        "DRIVER=playstation\n"
+        "HID_ID=0005:0000054C:00000CE6\n"
+        "HID_NAME=DualSense Wireless Controller\n"
+        f"HID_PHYS={phys}\n"
+        f"HID_UNIQ={uniq}\n"
+    )
+
+
+def _mesa_do_hidraw(sysfs: Path, dev: Path) -> None:
+    """12 nós: os quatro físicos no rádio, os quatro vpads e quatro de fora."""
+    nos: list[tuple[str, str]] = []
+    for i, uniq in enumerate(_UNIQS):
+        nos.append((uniq, _ADAPTADOR_A if i < 2 else _ADAPTADOR_B))
+    for uniq in _UNIQS:
+        nos.append((uniq, "hefesto-vpad"))
+    for i in range(4):
+        nos.append((f"aa:bb:cc:00:01:0{i}", f"usb-0000:0c:00.3-{i}/input3"))
+    for n, (uniq, phys) in enumerate(nos):
+        pasta = sysfs / f"hidraw{n}" / "device"
+        pasta.mkdir(parents=True, exist_ok=True)
+        (pasta / "uevent").write_text(_uevent(uniq, phys))
+        (dev / f"hidraw{n}").write_text("")
+
+
+class TestOAdaptadorPelaGeracaoDoHidraw:
+    def test_sessenta_perguntas_leem_os_doze_uevent_uma_vez(self, tmp_path: Path) -> None:
+        from hefesto_dualsense4unix.integrations import radio_da_mesa as rm
+
+        sysfs = tmp_path / "sys"
+        dev = tmp_path / "dev"
+        (dev / "input").mkdir(parents=True)
+        _mesa_do_hidraw(sysfs, dev)
+        dono = ode.DonoDoEvento(entradas=str(dev / "input"), nos=str(dev))
+        assert dono.armar()
+        try:
+            rm._esquecer_o_mapa()
+            with contando() as conta:
+                respostas = [
+                    rm.adaptador_por_uniq(_UNIQS, raiz=str(sysfs), dono=dono)
+                    for _ in range(60)
+                ]
+            lidos = _sob(conta, sysfs, "open")
+            assert len(lidos) == 12, f"{len(lidos)} uevent lidos em 60 perguntas"
+            assert respostas[-1] == {
+                _UNIQS[0]: _ADAPTADOR_A,
+                _UNIQS[1]: _ADAPTADOR_A,
+                _UNIQS[2]: _ADAPTADOR_B,
+                _UNIQS[3]: _ADAPTADOR_B,
+            }
+
+            # O controle 1 sai do adaptador A e volta pelo B: o nó dele some e
+            # nasce outro (o hidraw12), com o HID_PHYS novo.
+            (dev / "hidraw0").unlink()
+            (sysfs / "hidraw0" / "device" / "uevent").unlink()
+            (sysfs / "hidraw0" / "device").rmdir()
+            (sysfs / "hidraw0").rmdir()
+            novo = sysfs / "hidraw12" / "device"
+            novo.mkdir(parents=True)
+            (novo / "uevent").write_text(_uevent(_UNIQS[0], _ADAPTADOR_B))
+            (dev / "hidraw12").write_text("")
+            assert rm.adaptador_por_uniq(_UNIQS, raiz=str(sysfs), dono=dono)[_UNIQS[0]] == (
+                _ADAPTADOR_B
+            )
+        finally:
+            dono.desarmar()
+            rm._esquecer_o_mapa()
+
+    def test_com_ler_injetado_e_sem_dono_le_como_hoje(self, tmp_path: Path) -> None:
+        from hefesto_dualsense4unix.integrations import radio_da_mesa as rm
+
+        while ode.armado():
+            ode.desarmar()
+        sysfs = tmp_path / "sys"
+        dev = tmp_path / "dev"
+        dev.mkdir()
+        _mesa_do_hidraw(sysfs, dev)
+        lidos: list[str] = []
+
+        def ler(caminho: str) -> str:
+            lidos.append(caminho)
+            return Path(caminho).read_text()
+
+        for _ in range(60):
+            rm.adaptador_por_uniq(_UNIQS, raiz=str(sysfs), ler=ler)
+        assert len(lidos) == 720
+
+    def test_a_raiz_de_mentira_da_suite_nao_herda_o_mapa(
+        self, raizes: tuple[Path, Path], tmp_path: Path
+    ) -> None:
+        """Dono do processo armado, raiz que não é a de produção: como hoje."""
+        from hefesto_dualsense4unix.integrations import radio_da_mesa as rm
+
+        sysfs = tmp_path / "sys"
+        _entradas, dev = raizes
+        _mesa_do_hidraw(sysfs, dev)
+        with contando() as conta:
+            for _ in range(5):
+                rm.adaptador_por_uniq(_UNIQS, raiz=str(sysfs))
+        assert len(_sob(conta, sysfs, "open")) == 60
+
+    def test_o_listar_que_levanta_so_roda_quando_o_mapa_perde(self, tmp_path: Path) -> None:
+        from hefesto_dualsense4unix.integrations import radio_da_mesa as rm
+
+        sysfs = tmp_path / "sys"
+        dev = tmp_path / "dev"
+        (dev / "input").mkdir(parents=True)
+        _mesa_do_hidraw(sysfs, dev)
+        chamadas: list[str] = []
+
+        def listar(raiz: str) -> list[str]:
+            chamadas.append(raiz)
+            return os.listdir(raiz)
+
+        dono = ode.DonoDoEvento(entradas=str(dev / "input"), nos=str(dev))
+        assert dono.armar()
+        try:
+            rm._esquecer_o_mapa()
+            for _ in range(10):
+                rm.adaptador_por_uniq(_UNIQS[:1], raiz=str(sysfs), listar=listar, dono=dono)
+            assert len(chamadas) == 1
+        finally:
+            dono.desarmar()
+            rm._esquecer_o_mapa()
