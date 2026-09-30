@@ -390,6 +390,16 @@ def test_o_haptico_por_radio_nao_promete_obediencia(
 
     Mordida: promover `radio_aciona` para `sim`/`parcial`, ou `radio_de_onde_sei`
     para `medido`, sem ensaio — esta régua reprova.
+
+    NOTA DATADA, 29/09/2026: o `radio_canal` passou a `hidraw`, e pela condição
+    que esta própria régua escreveu — *vira `hidraw` quando alguém mandar o
+    bloco háptico e o motor responder*. Mandaram: o `0x91` de controle antes do
+    `0x92`, dentro do `0x32`, vibrou pelo rádio em 18/09/2026 com a mão dela, e é
+    o `ARRANJO_HAPTICA_032` que a ponte da háptica escreve pelo hidraw do broker
+    (A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-CHEGAM-AO-RADIO-01 e a costura de
+    29/09). O canal se lê no DONO: sem o arranjo háptico no produto, o `hidraw`
+    volta a ser a falácia. O grau NÃO sobe com ele — o ensaio não está no caderno.
+    Mordida nova: tirar o bloco háptico do `ARRANJO_HAPTICA_032` — reprova.
     """
     linha = mapa["vibracao.haptics_vcm@dualsense"]
     assert linha["radio_aciona"] == "não", (
@@ -399,9 +409,18 @@ def test_o_haptico_por_radio_nao_promete_obediencia(
         "o háptico por rádio virou `medido` — leitura de fonte de terceiro não é "
         "medição nesta bancada"
     )
-    assert linha["radio_canal"] == "outro", (
-        "`radio_canal` do háptico virou `hidraw` — é a FALÁCIA DO CANAL QUE RESPONDE; "
-        "o degrau responde, o háptico é que não foi tentado"
+    from hefesto_dualsense4unix.integrations.alto_falante_bt import (
+        ARRANJO_HAPTICA_032,
+    )
+
+    tentado = ARRANJO_HAPTICA_032.degrau == 0x32 and ARRANJO_HAPTICA_032.len_haptico > 0
+    assert tentado, (
+        "o produto não monta mais o bloco háptico no 0x32: o `hidraw` do mapa volta "
+        "a ser a FALÁCIA DO CANAL QUE RESPONDE"
+    )
+    assert linha["radio_canal"] == "hidraw", (
+        "o háptico por rádio anda pelo hidraw (o `ARRANJO_HAPTICA_032`), e o mapa "
+        f"diz `{linha['radio_canal']}`"
     )
     assert linha["radio_por_que_nao_aciona"] == "divida", (
         "o háptico por rádio é DÍVIDA (falta o payload), não recusa do aparelho"
