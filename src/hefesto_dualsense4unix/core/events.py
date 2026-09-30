@@ -48,6 +48,13 @@ class EventTopic:
     #: quebraria o contrato de perfil e de plugin; (2) o botão do mic nem
     #: chega lá — o `hid-playstation` CONSOME a borda e ela não vira evdev.
     MIC_DA_MESA = "mic.da_mesa"
+    #: A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01: o que o JOGO pediu ao
+    #: pad virtual sobre o microfone do controle de um jogador —
+    #: `{uniq, em, luz | mudo | solta}`. Quem publica é o ralo do pad
+    #: (`gamepad.apply_game_mic`); quem aplica são os donos de sempre: a luz, o
+    #: `luz_do_mic`; o mudo, o `hotkey`. Tópico próprio pela razão do de cima:
+    #: o pedido tem endereço, e o `em` é o que decide entre ele e ela.
+    MIC_DO_JOGO = "mic.do_jogo"
     #: O-SOM-DO-SISTEMA-E-O-DA-TELA-01: a saída e a entrada PADRÃO do sistema
     #: mudaram — `{saida, entrada}`, os nomes crus dos nós. Quem publica é
     #: `daemon/subsystems/ouvinte_do_som`, que segue um `pactl subscribe`.
