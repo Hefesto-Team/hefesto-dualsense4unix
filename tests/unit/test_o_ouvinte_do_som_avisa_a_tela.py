@@ -321,3 +321,50 @@ def test_o_nome_cru_serve_de_reserva() -> None:
         {"som_do_sistema": {"saida": "alsa_output.x"}})
     assert linha is not None
     assert "alsa_output.x" in linha[1]
+
+
+def test_sem_pactl_o_ouvinte_espera_calado_e_volta_quando_ele_aparece(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """Sem o `pactl` não há o que ouvir, e isso não é queda (30/09/2026).
+
+    O `runtime-smoke` do CI, numa máquina sem o programa, pegou o laço
+    soltando `FileNotFoundError` com a pilha inteira a cada volta. A cura: uma
+    linha só na transição, nenhum `subscribe` tentado, e a volta ao ouvir
+    quando o programa aparece.
+
+    MORDE: tire a pergunta ao `shutil.which` do laço e a régua reprova — o
+    `create_subprocess_exec` é chamado sem o programa e o `ouvinte_do_som_caiu`
+    sai com a pilha.
+    """
+    presente = iter([None, None, None, "/usr/bin/pactl"])
+    tentativas: list[tuple[Any, ...]] = []
+    linhas: list[str] = []
+
+    def _which(nome: str) -> str | None:
+        assert nome == "pactl"
+        return next(presente, "/usr/bin/pactl")
+
+    async def _uma_volta(_daemon: Any) -> None:
+        tentativas.append(("subscribe",))
+        raise asyncio.CancelledError
+
+    async def _dormir(_s: float) -> None:
+        return None
+
+    class _Log:
+        def info(self, evento: str, **_k: Any) -> None:
+            linhas.append(evento)
+
+        def warning(self, evento: str, **_k: Any) -> None:
+            linhas.append(evento)
+
+    monkeypatch.setattr(ods.shutil, "which", _which)
+    monkeypatch.setattr(ods, "_uma_volta", _uma_volta)
+    monkeypatch.setattr(ods.asyncio, "sleep", _dormir)
+    monkeypatch.setattr(ods, "logger", _Log())
+
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(ods.ouvinte_do_som_loop(_DaemonDeMentira()))
+
+    assert linhas == ["ouvinte_do_som_sem_pactl", "ouvinte_do_som_achou_o_pactl"]
+    assert tentativas == [("subscribe",)], "só tenta ouvir quando o pactl existe"

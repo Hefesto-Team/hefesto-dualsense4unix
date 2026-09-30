@@ -47,6 +47,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
+import shutil
 from dataclasses import dataclass
 from typing import Any
 
@@ -190,8 +191,26 @@ async def ouvinte_do_som_loop(daemon: Any) -> None:
     **QUEM PARA O LAÇO SOLTA O RETRATO**: sem ouvinte não há evento, e uma
     foto que ninguém mantém responderia sobre o passado.
     """
+    sem_pactl = False
     try:
         while True:
+            # SEM `pactl` NÃO HÁ O QUE OUVIR, e isso não é queda (30/09/2026).
+            # O `runtime-smoke` do CI, numa máquina sem o programa, pegou o
+            # laço soltando um `FileNotFoundError` com a pilha inteira a cada
+            # volta. O leitor do retrato já pergunta o mesmo antes de chamar
+            # (`retrato_do_som.py`, `shutil.which("pactl")`): o ouvinte diz uma
+            # linha na transição, fica sem retrato, e volta a ouvir sozinho se
+            # o programa aparecer.
+            if shutil.which("pactl") is None:
+                if not sem_pactl:
+                    sem_pactl = True
+                    retrato_do_som.RETRATO.soltar()
+                    logger.info("ouvinte_do_som_sem_pactl")
+                await asyncio.sleep(ESPERA_PARA_RELIGAR_S)
+                continue
+            if sem_pactl:
+                sem_pactl = False
+                logger.info("ouvinte_do_som_achou_o_pactl")
             try:
                 await _uma_volta(daemon)
             except asyncio.CancelledError:
