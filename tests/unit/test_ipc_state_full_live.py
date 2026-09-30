@@ -28,7 +28,7 @@ from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.loader import save_profile
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
-from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO, MatchAny, Profile
 from hefesto_dualsense4unix.testing import FakeController
 
 
@@ -290,6 +290,13 @@ class TestPlayerPorControle:
         # dela das ~16h50 (o touchpad no cursor ou nas zonas, e o analógico que
         # a inclinação move), lidos de volta pela aba Controles. Nascem
         # `nenhum`, como no esquema: arranjo não se liga sem o gesto dela.
+        #
+        # NOTA DATADA — 29/09/2026 (O-GANHO-DA-HAPTICA-TEM-DONO-01). Entraram
+        # `haptica_pct` e `haptica_alcanca`: o ganho da háptica por áudio de
+        # cada controle, que a linha «Háptica por áudio» da aba Vibração pinta
+        # (A-LINHA-DA-HAPTICA-POR-AUDIO-NA-VIBRACAO-01). O nível é o padrão do
+        # DONO, lido do esquema e não digitado; e no cabo o Hefesto está sempre
+        # no caminho, então alcança.
         assert result["controllers"] == [
             {"index": 0, "connected": True, "transport": "usb",
              "is_primary": True, "uniq": "aabbcc001100", "player": None,
@@ -302,6 +309,7 @@ class TestPlayerPorControle:
              "inputs": None, "vpad_backend": None, "vpad_motivo": None,
              "adaptador": None, "hz_movimento": None, "hz_voz": None,
              "ponte_do_radio": None,
+             "haptica_pct": HAPTICA_PCT_PADRAO, "haptica_alcanca": True,
              "mira": {"ligada": False, "destino": "nenhum",
                       "toque": "nenhum", "inclinacao": "nenhum",
                       "sensibilidade": 6, "zona_morta_graus_s": 3.0,
