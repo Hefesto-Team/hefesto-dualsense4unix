@@ -3737,19 +3737,16 @@ class IpcHandlersMixin:
                             ),
                             # O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01: os
                             # apertos do botão do microfone que SAÍRAM no
-                            # report ao jogo, e os pedidos de luz do microfone
-                            # que o jogo fez e o Hefesto recusou (a luz é dele).
-                            # Separam "o jogo não viu o pad" de "o jogo pediu e
-                            # nós seguramos de propósito".
+                            # report ao jogo. E, desde a A-LUZ-E-O-MUDO-DO-
+                            # MICROFONE-OBEDECEM-AO-JOGO-01, a luz e o mudo que
+                            # o jogo pediu e chegaram ao controle, os retidos
+                            # (sem jogo) e os ecos do driver do pad, que não
+                            # contam: "o jogo não viu o pad", "pediu e chegou"
+                            # e "quem escreveu foi o driver" são três coisas.
                             "mic_button_forwards": _contador_do_vpad(
                                 vp, "mic_button_count"
                             ),
-                            "mic_led_do_jogo_recusado": _contador_do_vpad(
-                                vp, "mic_led_do_jogo_recusado"
-                            ),
-                            "mic_led_do_jogo_amostra": _amostra_da_luz_do_mic(
-                                getattr(vp, "mic_led_do_jogo_amostra", None)
-                            ),
+                            **_o_microfone_do_jogo_no_vpad(vp),
                             # MOTOR-QUE-NAO-SE-VE-01: o par que foi AOS
                             # MOTORES, depois da política de intensidade. Todos
                             # os `ff_*` acima são o que o JOGO PEDIU; entre um
@@ -4465,6 +4462,10 @@ class IpcHandlersMixin:
             luz = estado_da_luz_do_mic(str(uniq or ""))
             if luz is not None:
                 status["luz_do_mic"] = int(luz)
+            # A LUZ QUE O JOGO PEDIU, só enquanto o pedido está de pé
+            # (A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01): o plástico é
+            # do jogo, e o `luz_do_mic` acima segue dizendo o microfone.
+            _a_luz_do_jogo_no_controle(status, uniq)
             # E QUEM OUVE VAI JUNTO — 19/09/2026, a outra metade da decisão
             # dela na A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01. A luz passou a espelhar
             # o BOTÃO, então ela sozinha não distingue mais *"ligado"* de
@@ -8416,6 +8417,34 @@ def _amostra_da_luz_do_mic(cru: Any) -> int | None:
     if isinstance(cru, bool) or not isinstance(cru, int):
         return None
     return int(cru)
+
+
+def _o_microfone_do_jogo_no_vpad(vp: Any) -> dict[str, Any]:
+    """As chaves do microfone do jogo no bloco de um pad virtual.
+
+    A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01: o pad dublado (ou o
+    `uinput`, que não tem microfone) publica `0` e `None`, nunca um dublê.
+    """
+    mudo = getattr(vp, "mic_mudo_do_jogo_amostra", None)
+    return {
+        "mic_led_do_jogo": _contador_do_vpad(vp, "mic_led_do_jogo"),
+        "mic_led_do_jogo_amostra": _amostra_da_luz_do_mic(
+            getattr(vp, "mic_led_do_jogo_amostra", None)
+        ),
+        "mic_mudo_do_jogo": _contador_do_vpad(vp, "mic_mudo_do_jogo"),
+        "mic_mudo_do_jogo_amostra": mudo if isinstance(mudo, bool) else None,
+        "mic_eco_do_driver": _contador_do_vpad(vp, "mic_eco_do_driver"),
+        "mic_do_jogo_retido": _contador_do_vpad(vp, "mic_do_jogo_retido"),
+    }
+
+
+def _a_luz_do_jogo_no_controle(status: dict[str, Any], uniq: Any) -> None:
+    """`luz_do_mic_do_jogo` no `audio` do controle, só com o pedido de pé."""
+    from hefesto_dualsense4unix.daemon.subsystems.luz_do_mic import luz_do_mic_do_jogo
+
+    do_jogo = luz_do_mic_do_jogo(str(uniq or ""))
+    if do_jogo is not None:
+        status["luz_do_mic_do_jogo"] = int(do_jogo)
 
 
 __all__ = ["DraftApplier", "IpcHandlersMixin"]
