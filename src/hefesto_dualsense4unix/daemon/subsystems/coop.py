@@ -1269,21 +1269,16 @@ class CoopManager:
             apply_game_player_leds(daemon, bits, target_uniq=target)
 
         def _session_end() -> None:
-            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
-                end_game_output_session,
-            )
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import end_game_output_session
 
             end_game_output_session(daemon, target_uniq=target)
-
-        from hefesto_dualsense4unix.daemon.subsystems.gamepad import ralos_do_mic
 
         return {
             "trigger_sink": _trigger,
             "lightbar_sink": _lightbar,
             "player_led_sink": _player_leds,
             "session_end_sink": _session_end,
-            # A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01: a luz e o mudo
-            # do microfone que o jogo pede, ao controle DESTE jogador.
+            # A luz e o mudo do microfone que o jogo pede, ao controle DESTE jogador.
             **ralos_do_mic(daemon, lambda: target),
         }
 
@@ -3024,6 +3019,7 @@ from hefesto_dualsense4unix.core.roteador_de_movimento import (  # noqa: E402
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (  # noqa: E402
     aplicar_o_movimento,
     aplicar_o_toque,
+    ralos_do_mic,
 )
 from hefesto_dualsense4unix.daemon.subsystems.quem_mexe import (  # noqa: E402
     marcas_da_partida,
