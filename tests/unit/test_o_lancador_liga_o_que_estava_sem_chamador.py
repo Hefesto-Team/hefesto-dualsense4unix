@@ -42,6 +42,8 @@ from types import ModuleType
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
 RAIZ = Path(__file__).resolve().parents[2]
 LANCADOR = RAIZ / "scripts" / "abrir_interface.py"
 
@@ -86,6 +88,32 @@ laco = GLib.MainLoop()
 GLib.timeout_add(20000, laco.quit)
 laco.run()
 """
+
+
+#: O MOTIVO de os dois filhos que armam a escuta pedirem o GTK de verdade.
+_O_FILHO_PRECISA_DO_GLIB = (
+    "o filho roda o lançador de verdade: `vestir_a_identidade` importa o Gtk e o "
+    "`armar_a_volta_a_frente` põe a porta no laço do GLib"
+)
+
+
+def _o_filho_tem_o_glib() -> None:
+    """Os modos ``glib`` e ``arranque`` do filho só existem com o PyGObject real.
+
+    ELES REPROVAVAM NO `lint-test` COM A CAUSA ERRADA — 30/09/2026. O filho é
+    um ``sys.executable -c``, e na venv sem ``gi`` do job ele morre no ``import
+    gi`` (medido: ``ModuleNotFoundError: No module named 'gi'`` no
+    ``vestir_a_identidade`` e depois do ``time.sleep(2.5)`` do ``arranque``).
+    O pai não via isso: dizia *"o primeiro processo não tomou a vez"* ou
+    ``assert '' is None`` — a porta aberta sem ninguém para ler, o ``Connection
+    reset by peer`` do pedido. A falta do GTK morava num SUBPROCESSO, e a regra
+    do conftest (``_falta_o_gtk``) só enxerga a do processo dele.
+
+    A pergunta é a do dono, ``exigir_gi_real``: no job do GTK real
+    (``HEFESTO_EXIGE_GTK_REAL=1``) a falta reprova, e é lá que estes dois rodam
+    inteiros. O modo ``travada`` não importa o ``gi`` e não passa por aqui.
+    """
+    exigir_gi_real(_O_FILHO_PRECISA_DO_GLIB)
 
 
 def _carregar_o_lancador() -> ModuleType:
@@ -175,6 +203,7 @@ class TestOSegundoCliqueTrazAJanela:
     def test_o_segundo_clique_nao_abre_outra_janela_e_a_primeira_vem_a_frente(
         self, berco: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        _o_filho_tem_o_glib()
         ai = _carregar_o_lancador()
         from hefesto_dualsense4unix.utils import single_instance
 
@@ -204,6 +233,7 @@ class TestOSegundoCliqueTrazAJanela:
         self, berco: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """O segundo clique antes do GTK não derruba nada e não se perde."""
+        _o_filho_tem_o_glib()
         ai = _carregar_o_lancador()
         from hefesto_dualsense4unix.utils import single_instance
 
