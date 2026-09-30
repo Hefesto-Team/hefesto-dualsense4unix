@@ -61,8 +61,8 @@ def _config(**over: object) -> DaemonConfig:
     return DaemonConfig(**base)  # type: ignore[arg-type]
 
 
-async def _ate_o_assentamento(daemon: Daemon, store: StateStore, prazo_s: float = 5.0) -> None:
-    """Espera o PRIMEIRO tique do assentamento, e confere que ainda é dentro dele.
+async def _ate_o_assentamento(store: StateStore, prazo_s: float = 5.0) -> None:
+    """Espera o PRIMEIRO tique do assentamento: o fato que os testes cobram.
 
     A BARREIRA ERA UM INSTANTE — 30/09/2026. Os testes "dentro do grace"
     dormiam 0,15 s e cobravam `poll.tick >= 1`. O grace se arma no primeiro
@@ -70,20 +70,34 @@ async def _ate_o_assentamento(daemon: Daemon, store: StateStore, prazo_s: float 
     tique vem depois do arranque do `Daemon.run`, e o primeiro arranque do
     processo paga os imports preguiçosos dele: medido com a cobertura ligada
     (o job do GTK real), 140 ms dos 150 ms; num núcleo dividido, nenhum tique
-    em 150 ms, e `assert 0 >= 1`. A espera agora é pelo FATO (o tique do
-    assentamento), com prazo, e a janela é conferida no relógio do laço em vez
-    de presumida.
+    em 150 ms, e `assert 0 >= 1`. A espera agora é pelo FATO, com prazo.
+
+    O CONTADOR JÁ É A PROVA DE QUE O TIQUE FOI DENTRO DO GRACE: o
+    `input.settling.tick` só sobe no ramo `not input_ready`. Conferir depois o
+    relógio do laço contra o `_input_ready_at` mediria a hora em que ESTA
+    corrotina acordou, e não o produto: com o processo parado pelo sistema
+    além de 0,3 s, reprovaria um daemon certo.
+
+    E O VERMELHO DIZ O QUE ACONTECEU (conferência de 30/09/2026). Com o gate do
+    grace sabotado (`input_ready` sem o `grace_passed`), a primeira versão desta
+    espera rodava 5 s e dizia *"o laço não chegou a ler"* sobre um laço que já
+    tinha lido centenas de vezes. Agora, lido o bastante sem assentar, ela
+    reprova na hora e diz que o grace não suprimiu.
     """
     laco = asyncio.get_running_loop()
     limite = laco.time() + prazo_s
     while store.counter("input.settling.tick") < 1:
+        # Entre o `poll.tick` e o `input.settling.tick` do MESMO tique pode
+        # haver um `await` (o vigia do evdev): três tiques lidos garantem que o
+        # primeiro já passou pelo ramo do assentamento, se ia passar.
+        assert store.counter("poll.tick") < 3, (
+            f"o laço leu {store.counter('poll.tick')} vezes e nenhum tique foi de "
+            "assentamento: o grace não se armou, ou não suprime o input"
+        )
         assert laco.time() < limite, (
-            f"nenhum tique do assentamento em {prazo_s} s: o laço não chegou a ler"
+            f"nenhum tique do laço em {prazo_s} s: o daemon não chegou a ler"
         )
         await asyncio.sleep(0.005)
-    assert laco.time() < daemon._input_ready_at, (
-        "o primeiro tique do assentamento chegou e o grace já tinha passado"
-    )
 
 
 class _GhostThenIdle(FakeController):
@@ -124,7 +138,7 @@ async def test_input_settling_suppresses_mic_btn_down() -> None:
         )
         run_task = asyncio.create_task(daemon.run())
         # Janela inteiramente DENTRO do grace: o primeiro tique dele, e para.
-        await _ate_o_assentamento(daemon, store)
+        await _ate_o_assentamento(store)
         # Ainda em settling — confirma que de fato lemos estado (ticks correm).
         assert store.counter("poll.tick") >= 1
         assert store.counter("input.settling.tick") >= 1
@@ -151,7 +165,7 @@ async def test_input_settling_publishes_state_update_and_battery() -> None:
 
     daemon = Daemon(controller=fc, bus=bus, store=store, config=_config())
     run_task = asyncio.create_task(daemon.run())
-    await _ate_o_assentamento(daemon, store)  # dentro do grace
+    await _ate_o_assentamento(store)  # dentro do grace
     daemon.stop()
     await run_task
 
@@ -187,7 +201,7 @@ async def test_input_settling_suppresses_keyboard_dispatch() -> None:
     daemon._keyboard_device = mock_kbd
 
     run_task = asyncio.create_task(daemon.run())
-    await _ate_o_assentamento(daemon, store)  # dentro do grace
+    await _ate_o_assentamento(store)  # dentro do grace
     daemon.stop()
     await run_task
 
