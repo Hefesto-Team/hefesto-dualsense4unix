@@ -273,8 +273,12 @@ def test_a_vibracao_publicada_nao_tem_data_gesto_e_a_regua_sabe():
     # O `lado` ENTROU EM 14/09/2026: o interruptor de punho deixou de ser
     # desenho e virou gesto (`a05_vibracao.lado`), por ordem dela com o controle
     # na mão. É o caso que o próprio recado abaixo previa.
+    # A `haptica` ENTROU EM 29/09/2026 (A-LINHA-DA-HAPTICA-POR-AUDIO-NA-
+    # VIBRACAO-01): o interruptor da linha «Háptica por áudio», com gesto
+    # próprio registrado em `a05_vibracao.haptica`, pelo pedido dela das ~17h
+    # de um controle da háptica na tela (citado na sprint).
     assert not (do_html - {"aplicar", "salvar", "importar", "exportar",
-                           "lado"}), (
+                           "lado", "haptica"}), (
         f"a 05-vibracao passou a ter `data-gesto` próprio: {sorted(do_html)}. "
         f"Se isso é intencional, esta régua fica mais fácil — mas o teste tem "
         f"de saber, porque a união com os registrados existe por causa disto.")
