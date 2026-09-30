@@ -441,6 +441,71 @@ def test_silencio_curto_nao_polui_o_journal(monkeypatch: pytest.MonkeyPatch) -> 
     assert registro.eventos("report_thread_entrada_voltou") == []
 
 
+def test_no_radio_a_saida_espera_a_entrada_que_parou(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No rádio, saída nova não entra num episódio de entrada já muda.
+
+    O primeiro ciclo ainda escreve: o silêncio ainda não é episódio. A partir
+    de `LEITURA_VAZIA_AVISO_SEC` a saída fica devida e não sai. Quando a
+    entrada volta, UMA escrita entrega o estado de agora.
+
+    Mordida: `_a_saida_espera_a_entrada` devolvendo False faz este teste
+    contar quatro escritas — a saída segue martelando o cano mudo.
+    """
+    from pydualsense.enums import ConnectionType
+
+    inst = _handle_do_laco()
+    inst.conType = ConnectionType.BT
+    inst._pinned_path = b"/dev/hidraw-teste"
+    inst._rumble_active = True
+
+    relogio = {"t": 1000.0}
+    contas = {"read": 0, "write": 0, "sleep": 0}
+    # Quatro voltas: a 1ª muda e curta (escreve), as duas seguintes já no
+    # episódio (não escrevem), a 4ª com dado (a devida sai uma vez).
+    mudos = 3
+
+    class _DispositivoDeMentira(_DispositivoDoLaco):
+        _entregou = False
+
+        def read(self, _n: int) -> bytes | None:
+            contas["read"] += 1
+            if contas["sleep"] >= mudos and not self._entregou:
+                self._entregou = True
+                return _estado_do_cabo()
+            self._vazio()
+            return None
+
+    inst.device = _DispositivoDeMentira()
+    monkeypatch.setattr(inst, "readInput", lambda _r: None)
+    monkeypatch.setattr(inst, "prepareReport", lambda: [1, 2, 3])
+
+    def _conta_write(_r: object) -> None:
+        contas["write"] += 1
+
+    monkeypatch.setattr(inst, "writeReport", _conta_write)
+    monkeypatch.setattr(bp.time, "monotonic", lambda: relogio["t"])
+
+    def _sono_de_mentira(_secs: float) -> None:
+        contas["sleep"] += 1
+        # Cada volta muda passa de um keepalive (0,5 s). Sem a espera, as
+        # três voltas mudas escrevem; com ela, só a primeira e a de volta.
+        relogio["t"] += 1.1 if contas["sleep"] == 1 else 0.6
+        if contas["sleep"] >= 4:
+            inst.ds_thread = False
+
+    monkeypatch.setattr(bp.time, "sleep", _sono_de_mentira)
+
+    inst.sendReport()
+
+    assert contas["write"] == 2, (
+        "a saída do rádio não esperou a entrada "
+        f"(escritas={contas['write']}, esperadas a primeira e a de volta)"
+    )
+    assert inst._saida_adiada_pelo_silencio is False
+
+
 def test_excecao_inesperada_no_laco_deixa_linha_antes_de_morrer(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -1001,6 +1001,12 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     #: Um aviso por episódio, não um por ciclo.
     _leitura_vazia_avisada: bool = False
 
+    #: A saída do rádio ficou DEVIDA enquanto a entrada estava muda. Quando a
+    #: entrada volta, uma escrita só entrega o estado de agora — não a fila
+    #: do que se acumulou no vão. Default de classe pelo mesmo motivo dos
+    #: vizinhos: o dublê nasce por `__new__`.
+    _saida_adiada_pelo_silencio: bool = False
+
     #: BATERIA-QUE-PULA-01 (16/09/2026) — quantos reports este handle ACEITOU e
     #: quantos RECUSOU por não serem estado de input. `_reports_aceitos` subindo
     #: é a prova viva de que a guarda não congelou a entrada, e é o que a régua
@@ -1446,7 +1452,27 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                         now - self._last_change_at
                     ) < OUT_REPORT_KEEPALIVE_CONFIRMACAO_SEC
                     vencido = (now - self._last_write_at) >= OUT_REPORT_KEEPALIVE_SEC
-                    if mudou or (vencido and (dono_do_rumble or confirmando)):
+                    deve_escrever = mudou or (
+                        vencido and (dono_do_rumble or confirmando)
+                    )
+                    # O rádio é UM cano. Medido em 30/09: com a saída viva, a
+                    # entrada do aparelho parou por 1 a 7 s no pulso de
+                    # vibração. Enquanto esse episódio está aberto, outra
+                    # saída só reabre o buraco. A que ficou devida sai UMA
+                    # vez quando a entrada volta — o motor nosso retoma, e a
+                    # mudança não se perde. O cabo é outro cano (a dose de
+                    # 11/08 continua lá). O vão curto entre rajadas, abaixo
+                    # de `LEITURA_VAZIA_AVISO_SEC`, não é este episódio.
+                    if deve_escrever and self._a_saida_espera_a_entrada(now):
+                        self._saida_adiada_pelo_silencio = True
+                        deve_escrever = False
+                    elif (
+                        self._saida_adiada_pelo_silencio
+                        and not self._a_saida_espera_a_entrada(now)
+                    ):
+                        deve_escrever = True
+                        self._saida_adiada_pelo_silencio = False
+                    if deve_escrever:
                         self.writeReport(out)
                         self._last_out_report = out
                         self._last_write_at = now
@@ -1483,6 +1509,20 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                     err=str(exc),
                 )
                 break
+
+    def _a_saida_espera_a_entrada(self, agora: float) -> bool:
+        """No rádio, não escrever enquanto a entrada está muda há tempo demais.
+
+        ``False`` no cabo, sem transporte, e no silêncio curto entre rajadas.
+        O limiar é o mesmo aviso do episódio (`LEITURA_VAZIA_AVISO_SEC`):
+        abaixo dele a entrada só está entre dois reports.
+        """
+        if getattr(self, "conType", None) != ConnectionType.BT:
+            return False
+        desde = self._leitura_vazia_desde
+        if desde is None:
+            return False
+        return (agora - desde) >= LEITURA_VAZIA_AVISO_SEC
 
     def _registrar_leitura_vazia(self) -> None:
         """Contabiliza um `read` sem dado (LACO-DE-ESCRITA-02).

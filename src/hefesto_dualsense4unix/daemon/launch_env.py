@@ -1165,6 +1165,25 @@ def tique_da_escada(
     return resultado.fim
 
 
+def _soltar_a_trava_do_lancamento(daemon: Any) -> None:
+    """Um lançamento novo pode vestir o pad. A trava do anterior acaba aqui."""
+    daemon._pad_travado_pelo_lancamento = None  # type: ignore[attr-defined]
+
+
+def _travar_o_pad_que_o_jogo_vai_abrir(daemon: Any, appid: int, epoch: float) -> None:
+    """O pad de pé ao `exec` é o que o jogo abre. Nada automático o recria.
+
+    O R-04 só olha `display_authority`, e ela vira ``game`` segundos depois
+    do `exec` — ou nunca, quando a janela não tem classe. Nesse vão o perfil
+    de fora do jogo reaplicava o caminho dele e o jogo perdia o aparelho que
+    acabara de abrir. A trava começa aqui. O gesto dela continua passando
+    (`gamepad.ORIGENS_GESTO_DELA`), e o próximo lançamento a solta antes de
+    vestir o pad dele.
+    """
+    daemon._pad_travado_pelo_lancamento = (int(appid), epoch)  # type: ignore[attr-defined]
+    logger.info("pad_travado_pelo_lancamento", appid=appid, epoch=epoch)
+
+
 def arm_launch_profile(
     daemon: DaemonProtocol,
     *,
@@ -1273,6 +1292,10 @@ def arm_launch_profile(
     if getattr(daemon, "_launch_armed_for", None) == (appid, epoch):
         return None
     daemon._launch_armed_for = (appid, epoch)  # type: ignore[attr-defined]
+    # A trava do lançamento ANTERIOR acaba aqui, antes do apply: este
+    # lançamento é quem veste o pad, e a trava nova só nasce quando o jogo
+    # está para executar. Sem esta soltura o arming se bloquearia a si mesmo.
+    _soltar_a_trava_do_lancamento(daemon)
 
     # O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026): com o Modo Freestyle ligado
     # o jogo que abre usa o Freestyle, que já é o perfil ativo — nem a ativação,
@@ -1299,6 +1322,7 @@ def arm_launch_profile(
             else "launch_arm_sem_perfil",
             appid=appid,
         )
+        _travar_o_pad_que_o_jogo_vai_abrir(daemon, appid, epoch)
         return {
             "appid": appid,
             "armado": False,
@@ -1370,6 +1394,7 @@ def arm_launch_profile(
             supressao=supressao,
             ativacao=ativacao,
         )
+        _travar_o_pad_que_o_jogo_vai_abrir(daemon, appid, epoch)
         return {
             "appid": appid,
             "armado": False,
@@ -1442,6 +1467,7 @@ def arm_launch_profile(
             profile=getattr(profile, "name", None),
             escada=comeco.motivo,
         )
+        _travar_o_pad_que_o_jogo_vai_abrir(daemon, appid, epoch)
         return {
             "appid": appid,
             "armado": False,
@@ -1544,6 +1570,7 @@ def arm_launch_profile(
             # seguinte pularia justamente o degrau que faltava tentar. Mesma
             # disciplina da MASCARA-01 — a prova é o aparelho, nunca o retorno.
             ponte_tentativa.encerrar(daemon, motivo="degrau_nao_subiu")
+    _travar_o_pad_que_o_jogo_vai_abrir(daemon, appid, epoch)
     return {
         "appid": appid,
         "armado": True,

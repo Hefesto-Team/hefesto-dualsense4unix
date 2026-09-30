@@ -1735,6 +1735,32 @@ def _recriacao_bloqueada_por_jogo(
     """
     if origin in ORIGENS_GESTO_DELA:
         return False
+    # O lançamento já vestiu o pad, e o jogo está para abrir — ou já abriu —
+    # mesmo quando a janela ainda não disse `game`. Recriar nesse vão é o
+    # mesmo arranque de handle que o R-04 segura depois. O gesto dela passou
+    # na linha de cima. A trava é do `arm_launch_profile`, e um lançamento
+    # novo a solta ANTES de vestir o pad dele, senão o arming se bloqueava.
+    if getattr(daemon, "_pad_travado_pelo_lancamento", None) is not None:
+        episodio = "lancamento"
+        if getattr(daemon, "_bloqueio_recriacao_episodio", None) == episodio:
+            logger.debug(
+                "vpad_recriacao_bloqueada_pelo_lancamento_repetida",
+                motivo=motivo,
+                origem=origin,
+            )
+        else:
+            with contextlib.suppress(Exception):
+                daemon._bloqueio_recriacao_episodio = episodio  # type: ignore[attr-defined]
+            logger.warning(
+                "vpad_recriacao_bloqueada_pelo_lancamento",
+                motivo=motivo,
+                origem=origin,
+            )
+        store = getattr(daemon, "store", None)
+        if store is not None:
+            with contextlib.suppress(Exception):
+                store.bump("gamepad.recreate.blocked_by_launch")
+        return True
     if not _autoridade_do_jogo(daemon):
         # Borda de saída: o jogo devolveu a autoridade — o próximo bloqueio é
         # um episódio novo e merece linha própria no journal.
