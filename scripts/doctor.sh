@@ -5188,18 +5188,48 @@ check_bt_resilience() {
 # "pareamentos que evaporam" é cache/ populado com ZERO diretórios de bond
 # (<MAC>/info) em /var/lib/bluetooth. Leitura exige root (árvore 700) —
 # best-effort: sem sudo -n, só informa como conferir.
+#
+# CACHE NÃO É BOND (30/09/2026, medido nesta máquina). O cache guarda o NOME de
+# todo aparelho que um dia apareceu numa busca — 159 aqui —, e quem remove um
+# pareamento pelo sistema (Configurações, `bluetoothctl remove`) deixa esse nome
+# para trás. Às 01h13 ela removeu três controles assim: os três caches ficaram
+# com 46 bytes, só o `[General] Name=`, e o install das 01h16 terminou com este
+# FAIL mandando restaurar snapshot — ou seja, desfazer o que ela tinha acabado
+# de fazer de propósito. O RemoveDevice do BlueZ apaga o bond E o
+# `[ServiceRecords]` do cache; o que sobra de um bond que evaporou (só em
+# memória, ou destruído por crash) é o registro de serviço SEM o `info`. Só
+# esse órfão é defeito. Zero bonds sem órfão é a máquina sem controle pareado.
+#
+# PURA: stdin = caminhos, um por linha — `<adaptador>/<MAC>/info` e
+# `<adaptador>/cache/<MAC>` (só os caches COM `[ServiceRecords]`). Imprime
+# quantos desses caches não têm o `info` do mesmo aparelho no mesmo adaptador.
+_bt_caches_orfaos() {
+    awk -F/ '
+        NF < 3 { next }
+        $NF == "info"      { bond[$(NF-2) "/" $(NF-1)] = 1; next }
+        $(NF-1) == "cache" { sdp[$(NF-2) "/" $NF] = 1 }
+        END { n = 0; for (k in sdp) if (!(k in bond)) n++; print n }
+    '
+}
+
 check_bt_bonds_persistidos() {
     if ! sudo -n true 2>/dev/null; then
         info "sem sudo sem senha — não leio /var/lib/bluetooth (confira à mão: sudo find /var/lib/bluetooth -name info)"
         return
     fi
-    local n_info n_cache
+    local n_info n_cache n_orfaos
     n_info="$(sudo -n find /var/lib/bluetooth -mindepth 3 -maxdepth 3 -type f -name info 2>/dev/null | wc -l)"
     n_cache="$(sudo -n find /var/lib/bluetooth -mindepth 3 -maxdepth 3 -type f -path '*/cache/*' 2>/dev/null | wc -l)"
+    n_orfaos="$( { sudo -n find /var/lib/bluetooth -mindepth 3 -maxdepth 3 -type f -name info
+                   sudo -n find /var/lib/bluetooth -mindepth 3 -maxdepth 3 -type f -path '*/cache/*' \
+                        -exec grep -l '^\[ServiceRecords\]' {} +
+                 } 2>/dev/null | _bt_caches_orfaos )"
     if [[ "${n_info}" -gt 0 ]]; then
         pass "bonds BT persistidos em disco: ${n_info} (cache com ${n_cache} devices vistos)"
+    elif [[ "${n_orfaos:-0}" -gt 0 ]]; then
+        fail "ZERO bonds em disco e ${n_orfaos} aparelho(s) com registro de serviço no cache — pareamentos vivendo só em memória (evaporam no disconnect) ou destruídos por crash; re-pareie com Pair() explícito (bluetoothctl pair <MAC>) e confira Bonded: yes; se houver snapshot: sudo /usr/local/lib/hefesto-dualsense4unix/bt_bonds_restore.sh --list"
     elif [[ "${n_cache}" -gt 0 ]]; then
-        fail "ZERO bonds em disco com cache de ${n_cache} devices — pareamentos vivendo só em memória (evaporam no disconnect) ou destruídos por crash; re-pareie com Pair() explícito (bluetoothctl pair <MAC>) e confira Bonded: yes; se houver snapshot: sudo /usr/local/lib/hefesto-dualsense4unix/bt_bonds_restore.sh --list"
+        info "nenhum controle pareado agora — os ${n_cache} do cache são só nomes vistos em buscas; pareamento removido pelo sistema não deixa bond nem registro de serviço, e isso é escolha, não perda"
     else
         info "nenhum bond nem cache em /var/lib/bluetooth — adaptador nunca pareou nada (ou árvore em outro lugar)"
     fi
