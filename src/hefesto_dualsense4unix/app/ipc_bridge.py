@@ -963,7 +963,7 @@ def __getattr__(nome: str) -> Any:
     * como atribuição no topo, a derivação rodaria na IMPORTAÇÃO do módulo, que
       é exatamente o instante em que o ciclo com ``secao_janela`` se fecha;
     * três arquivos de teste leem ``ipc_bridge._CAMPOS_DA_MAQUINA`` como
-      dicionário (``test_descartados_chegam_ao_rodape.py:396``,
+      dicionário (``test_descartados_chegam_ao_rodape.py:414``,
       ``test_o_teto_da_mesa_diz_o_que_faz.py:96``). Trocar a forma do nome
       público quebraria portões de outras frentes por uma mudança que é de
       redação — e a regra desta fronteira é aditiva, não destrutiva.

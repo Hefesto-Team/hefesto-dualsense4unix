@@ -202,17 +202,33 @@ async def test_a_lista_atravessa_o_fio(
     # `/run/user/<uid>` de verdade: o servidor escutava aqui e a ponte batia
     # no runtime da máquina, e a régua dizia `(False, None, ())` sobre um fio
     # que está certo. O 4.2 da mesa não confere, e ali ela passava.
-    runtime = tmp_path / "run"
+    #
+    # E O BERÇO É CURTO, como o da régua irmã (test_maquina_a_declaracao_persiste,
+    # 08/09/2026). Medido em 30/09/2026 na suíte da casa: com o TMPDIR da
+    # suíte e o contador `pytest-40`, `<tmp_path>/run/hefesto-dualsense4unix/d.sock`
+    # chegou a 107 caracteres, e o `AF_UNIX` morre com `path too long` a partir
+    # daí (o teto de 108 conta o terminador). O `mkdtemp` na raiz do sistema
+    # deixa a folga em ~70, qualquer que seja o nome do teste ou o contador.
+    import shutil
+    import tempfile
+
+    berco = Path(tempfile.mkdtemp(prefix="hef-fio-"))
+    runtime = berco / "run"
     runtime.mkdir(mode=0o700)
     runtime.chmod(0o700)
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(runtime))
     assert xdg_paths.runtime_dir().parent == runtime, (
         "o runtime resolveu fora do de mentira: a ponte falaria com o da máquina")
+    caminho = runtime / "hefesto-dualsense4unix" / "d.sock"
+    assert len(str(caminho)) < 100, (
+        f"o berço do socket mede {len(str(caminho))} caracteres e o teto do "
+        f"`AF_UNIX` é 108: {caminho}. Esta régua morreria por endereço longo, "
+        f"não por defeito.")
     servidor = IpcServer(
         controller=FakeController(transport="usb", states=[_estado()]),
         store=StateStore(),
         profile_manager=None,  # type: ignore[arg-type]
-        socket_path=tmp_path / "run" / "hefesto-dualsense4unix" / "d.sock",
+        socket_path=caminho,
         daemon=SimpleNamespace(_maquina=MaquinaConfig()),
     )
     monkeypatch.setenv(
@@ -228,6 +244,8 @@ async def test_a_lista_atravessa_o_fio(
         )
     finally:
         await servidor.stop()
+        # O berço é nosso, então a limpeza também é — o pytest não conhece este.
+        shutil.rmtree(berco, ignore_errors=True)
     assert resposta == (True, None, (ROTULO_DO_ORCAMENTO,))
 
 
