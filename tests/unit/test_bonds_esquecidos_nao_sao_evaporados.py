@@ -25,9 +25,9 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[2]
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 
-ADAPTADOR = "AC:A7:F1:00:00:CE"
-CONTROLE = "A0:FA:9C:00:00:F0"
-OUTRO = "D4:2F:4B:00:00:D8"
+ADAPTADOR = "AA:BB:CC:00:00:01"
+CONTROLE = "AA:BB:CC:00:00:02"
+OUTRO = "AA:BB:CC:00:00:03"
 
 SO_O_NOME = "[General]\nName=DualSense Wireless Controller\n"
 COM_SERVICO = SO_O_NOME + "\n[ServiceRecords]\n0x00010000=3601\n"
@@ -58,7 +58,7 @@ class TestOrfaoPuro:
         assert _orfaos(entrada) == "0"
 
     def test_o_info_vale_so_no_mesmo_adaptador(self) -> None:
-        entrada = f"/b/AC:A7:F1:00:00:41/{CONTROLE}/info\n/b/{ADAPTADOR}/cache/{CONTROLE}\n"
+        entrada = f"/b/AA:BB:CC:00:00:04/{CONTROLE}/info\n/b/{ADAPTADOR}/cache/{CONTROLE}\n"
         assert _orfaos(entrada) == "1"
 
 
