@@ -189,8 +189,24 @@ def load_paused_state() -> bool:
 
 
 _FREESTYLE_LIGADO_FLAG_FILE = "freestyle_ligado.flag"
+#: 30/09/2026, Vitória: o Modo Freestyle fica no produto, e o clique não muda
+#: nada até a leva dele fechar. Existe = suspenso. Apagar devolve o clique.
+_FREESTYLE_SUSPENSO_FLAG_FILE = "freestyle_suspenso.flag"
 #: O arquivo do cadeado de 23/07 (FEAT-AUTOSWITCH-LOCK-01). Só a migração o lê.
 _FLAG_DO_CADEADO_ANTIGO = "autoswitch_locked.flag"
+
+
+def freestyle_suspenso() -> bool:
+    """O clique do Modo Freestyle está sem efeito?
+
+    O arquivo `freestyle_suspenso.flag` na configuração é a suspensão. O botão,
+    o «Ativar» que ligaria o modo e o boot leem daqui. Sem o arquivo, o clique
+    volta a valer.
+    """
+    try:
+        return (config_dir() / _FREESTYLE_SUSPENSO_FLAG_FILE).exists()
+    except Exception:
+        return False
 
 
 def save_freestyle_ligado(ligado: bool) -> None:
@@ -237,6 +253,8 @@ def load_freestyle_ligado() -> bool:
     primeira coisa que o produto novo faz no disco dela.
     """
     try:
+        if freestyle_suspenso():
+            return False
         base = config_dir()
         with contextlib.suppress(OSError):
             _o_cadeado_antigo_vira_freestyle(base)
@@ -761,6 +779,7 @@ def migrate_coop_optout() -> bool:
 
 
 __all__ = [
+    "freestyle_suspenso",
     "load_freestyle_ligado",
     "load_gamepad_caminho_com_origem",
     "load_gamepad_emulation",

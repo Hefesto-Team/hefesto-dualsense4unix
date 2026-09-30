@@ -184,6 +184,10 @@ def o_freestyle_manda(store: object | None) -> bool:
     escritor passa por `ligar_o_freestyle`, que grava as duas juntas. Um dublê
     sem o atributo responde `False`: sem evidência, o comportamento de sempre.
     """
+    from hefesto_dualsense4unix.utils.session import freestyle_suspenso
+
+    if freestyle_suspenso():
+        return False
     return getattr(store, "freestyle_ligado", False) is True
 
 
@@ -191,10 +195,16 @@ def ligar_o_freestyle(store: object | None, ligado: bool) -> None:
     """O ÚNICO escritor do Modo Freestyle: a memória e o disco, juntos.
 
     Nunca levanta — quem chama é a ativação de um perfil, e o disco cheio não
-    pode desfazer o perfil que ela escolheu.
+    pode desfazer o perfil que ela escolheu. Com a suspensão, ligar vira
+    desligar: o clique não grava o modo.
     """
-    from hefesto_dualsense4unix.utils.session import save_freestyle_ligado
+    from hefesto_dualsense4unix.utils.session import (
+        freestyle_suspenso,
+        save_freestyle_ligado,
+    )
 
+    if freestyle_suspenso():
+        ligado = False
     antes = o_freestyle_manda(store)
     setter = getattr(store, "set_freestyle_ligado", None)
     if callable(setter):

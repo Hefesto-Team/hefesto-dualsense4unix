@@ -2836,7 +2836,11 @@ class IpcHandlersMixin:
             ligar_o_freestyle,
             o_freestyle_manda,
         )
+        from hefesto_dualsense4unix.utils.session import freestyle_suspenso
 
+        if freestyle_suspenso():
+            ligar_o_freestyle(self.store, False)
+            return {"status": "ok", "freestyle_ligado": False, "freestyle_suspenso": True}
         pedido = params.get("ligado")
         if pedido is not None and not isinstance(pedido, bool):
             raise ValueError("freestyle.set: 'ligado' precisa ser boolean")
