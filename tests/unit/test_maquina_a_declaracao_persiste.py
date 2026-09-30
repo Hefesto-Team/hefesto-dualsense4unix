@@ -56,6 +56,7 @@ from hefesto_dualsense4unix.utils.maquina import (
     fundir_declaracao,
     gravar_maquina,
 )
+from hefesto_dualsense4unix.utils import xdg_paths
 
 #: Um rosto da faixa forjada, na forma em que a chave vai ao disco: doze hex
 #: minúsculos, sem separador (a saída de `ExternalIdentityRegistry._canonical`).
@@ -711,9 +712,21 @@ async def test_ida_e_volta_pelo_socket_de_verdade(
     import shutil
     import tempfile
 
+    #
+    # E O RUNTIME DE MENTIRA TEM DE SER UM RUNTIME — 30/09/2026. A especificação
+    # XDG pede `0700`, e o `platformdirs` 4.12 (o do CI) confere o modo: num
+    # `run` que o `mkdir` do servidor criou com `0755`, ele cai para o
+    # `/run/user/<uid>` de verdade. O servidor escutava no berço, a ponte batia
+    # no runtime da máquina, e a régua dizia `(False, None)` sobre um fio certo.
+    # O 4.2 da mesa não confere o modo, e ali ela passava.
     berco = Path(tempfile.mkdtemp(prefix="hef-e2e-"))
-    monkeypatch.setenv("XDG_RUNTIME_DIR", str(berco / "run"))
-    caminho = berco / "run" / "hefesto-dualsense4unix" / "e2e.sock"
+    runtime = berco / "run"
+    runtime.mkdir(mode=0o700)
+    runtime.chmod(0o700)
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(runtime))
+    assert xdg_paths.runtime_dir().parent == runtime, (
+        "o runtime resolveu fora do berço: a ponte falaria com o da máquina")
+    caminho = runtime / "hefesto-dualsense4unix" / "e2e.sock"
     assert len(str(caminho)) < 100, (
         f"o berço do socket mede {len(str(caminho))} caracteres e o teto do "
         f"`AF_UNIX` é 108: {caminho}. Esta régua morreria por endereço longo, "

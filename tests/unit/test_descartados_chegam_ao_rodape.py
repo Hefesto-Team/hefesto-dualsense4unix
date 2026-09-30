@@ -61,6 +61,7 @@ from hefesto_dualsense4unix.utils.maquina import (
     MaquinaConfig,
     caminho_da_maquina,
 )
+from hefesto_dualsense4unix.utils import xdg_paths
 
 #: O documento em disco que força um descarte: ``teto`` fora do catálogo derruba
 #: o ``orcamento`` sozinho, e a ``mesa`` ao lado dele SOBREVIVE — é a cura de
@@ -195,7 +196,18 @@ async def test_a_lista_atravessa_o_fio(
     ``machine_declare_detalhado`` — reprova com ``()`` no lugar do rótulo.
     """
     _corromper(arquivo)
-    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "run"))
+    # O RUNTIME DE MENTIRA TEM DE SER UM RUNTIME, e a especificação XDG pede
+    # `0700`. O `platformdirs` 4.12 (o do CI, 30/09/2026) confere o modo e, num
+    # `run` que o `mkdir` do servidor criou com `0755`, cai para o
+    # `/run/user/<uid>` de verdade: o servidor escutava aqui e a ponte batia
+    # no runtime da máquina, e a régua dizia `(False, None, ())` sobre um fio
+    # que está certo. O 4.2 da mesa não confere, e ali ela passava.
+    runtime = tmp_path / "run"
+    runtime.mkdir(mode=0o700)
+    runtime.chmod(0o700)
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(runtime))
+    assert xdg_paths.runtime_dir().parent == runtime, (
+        "o runtime resolveu fora do de mentira: a ponte falaria com o da máquina")
     servidor = IpcServer(
         controller=FakeController(transport="usb", states=[_estado()]),
         store=StateStore(),
