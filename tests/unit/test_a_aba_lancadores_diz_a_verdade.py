@@ -94,6 +94,44 @@ def a07():
     return a07_lancadores
 
 
+#: As DUAS cópias do pacote da aba que esta régua carrega: a do produto (a
+#: fixture `a07`) e a da pasta `interface/` no `sys.path` (o `import pacotes`
+#: do `ctx` e do `_gesto`). Cada uma tem a sua `VIGIA`.
+_AS_DUAS_COPIAS = ("hefesto_dualsense4unix.interface.pacotes.a07_lancadores",
+                   "pacotes.a07_lancadores")
+
+
+@pytest.fixture(autouse=True)
+def _a_vigia_so_le_quando_a_regua_pede(monkeypatch):
+    """Nenhuma régua daqui acorda a thread da `VIGIA` por tabela.
+
+    A CORRIDA ERA DE IMPORT — 30/09/2026. A pintura e os gestos chamam
+    `VIGIA.agora()`, que dispara a leitura do disco numa thread; essa thread
+    importa o `launch_wrapper_dialog` (`_dispensados`) enquanto a thread do
+    teste o importa no `aviso_do_jogo_aberto`. Onde o import dele falha (o
+    `lint-test`, sem `gi`), dois imports simultâneos do mesmo módulo que falha
+    deixam o CPython devolver a um deles o módulo morto, e o erro sai
+    `cannot import name 'launch_wrapper_dialog'` sem o `gi` na corrente: o
+    conftest não o reconhece como falta do GTK, e o teste da vez reprova.
+    Medido: 1 em 12 corridas da aba no 3.11 sem `gi`, em teste diferente a cada
+    vez (o `test_cancelar_o_seletor_nao_e_erro_nem_noticia` do CI, o
+    `test_o_nome_descartado_e_dito` aqui); e de 23 a 34 em 300 pares de
+    threads num pacote de três linhas, no 3.10, no 3.11 e no 3.12.
+
+    É O MESMO RUÍDO que a régua da moldura já dublava à mão (*"uma régua que
+    acorda o disco de outra é ruído"*) e que a do `anotar=False` tolerava. A
+    régua que quer a leitura a pede com `VIGIA.ler()`, na thread dela.
+    """
+    import importlib
+
+    for nome in _AS_DUAS_COPIAS:
+        try:
+            modulo = importlib.import_module(nome)
+        except Exception:  # sem o GTK a aba não importa, e não há vigia para calar
+            continue
+        monkeypatch.setattr(modulo.VIGIA, "_disparar", lambda: None)
+
+
 @pytest.fixture
 def ctx():
     import pacotes
