@@ -50,6 +50,7 @@ avisando que a vibração da máscara DualSense não vai funcionar.
 """
 from __future__ import annotations
 
+import collections
 import contextlib
 import errno
 import fcntl
@@ -961,6 +962,11 @@ class UhidDualSense:
     #: Chamado no fim da sessão de jogo (UHID_CLOSE/STOP/stop()) SE algo foi
     #: replicado — é o gancho "devolve perfil/paleta/co-op" da posse.
     session_end_sink: Callable[[], None] | None = None
+    #: A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01 — a luz (`common[8]`,
+    #: 0 a 3, ou None = o jogo soltou) e o mudo (`common[9]` 0x10) que o jogo
+    #: pediu, para o controle DESTE jogador. Devolvem se aplicaram ou retiveram.
+    mic_led_sink: Callable[[int | None], bool] | None = None
+    mic_mute_sink: Callable[[bool], bool] | None = None
     #: Relógio/sleep injetáveis (testes herméticos do `wait_for_bind`).
     time_fn: Callable[[], float] = time.monotonic
     sleep_fn: Callable[[float], None] = time.sleep
@@ -1070,14 +1076,32 @@ class UhidDualSense:
     _trigger_replicas: int = 0
     _lightbar_replicas: int = 0
     _player_led_replicas: int = 0
-    #: O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01 — a luz do microfone é do
-    #: Hefesto (o `luz_do_mic` é o único escritor do `common[8]`, na língua
-    #: dela, inversa da Sony). O pedido do jogo é RECUSADO por desenho, e
-    #: contado aqui para a recusa não ser calada: a tela e a Forja separam
-    #: "o jogo não viu o pad" de "o jogo pediu e o Hefesto segurou".
-    _mic_led_do_jogo_recusado: int = 0
-    #: O `common[8]` do último pedido recusado; `None` = nenhum nesta sessão.
+    #: A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01 (29/09/2026, revoga a
+    #: recusa da O-BOTAO): a luz e o mudo que o jogo pede OBEDECEM, P1 a P4.
+    #: Os pedidos entregues aos ralos (aplicados), os retidos (sem jogo, sob a
+    #: autoridade `daemon`) e os ecos do driver deste pad, contados à parte:
+    #: a tela e a Forja separam "o jogo não viu o pad", "o jogo pediu e
+    #: chegou" e "quem escreveu foi o driver, a cada aperto".
+    _mic_led_do_jogo: int = 0
+    _mic_mudo_do_jogo: int = 0
+    _mic_do_jogo_retido: int = 0
+    _mic_eco_do_driver: int = 0
+    #: O `common[8]` e o mudo do último pedido do jogo; `None` = nenhum.
     _mic_led_do_jogo_amostra: int | None = None
+    _mic_mudo_do_jogo_amostra: bool | None = None
+    #: A sessão entregou alguma luz: o fim dela solta (`mic_led_sink(None)`).
+    #: Marca PRÓPRIA, e não o `_game_dirty`: ligá-lo repintaria perfil e
+    #: paleta no fim de toda sessão que só falou do microfone.
+    _mic_luz_entregue: bool = False
+    _mic_solta_a_entregar: bool = False
+    #: As janelas do eco do driver: o instante de cada borda do botão que SAIU
+    #: no report ao jogo (ver `_abrir_a_janela_do_eco`). A thread do leitor só
+    #: ANEXA; quem vence e consome é só o lado da saída.
+    _janelas_do_eco: collections.deque[float] = field(
+        default_factory=lambda: collections.deque(maxlen=_JANELAS_DO_ECO_MAX)
+    )
+    #: O bit do botão no último report que SAIU (a borda do driver é a subida).
+    _mic_bit_que_saiu: bool = False
     #: PAINEL-DA-VERDADE-01: instante (relógio de `time_fn`) do último evento
     #: de cada categoria. Categoria ausente = NUNCA aconteceu nesta sessão, e
     #: isso é diferente de "aconteceu há muito tempo" — a tela diz coisas
@@ -1176,6 +1200,8 @@ class UhidDualSense:
         blueprint: dict[str, Any] | None = None,
         calibration_0x05: bytes | None = None,
         identity: str | None = None,
+        mic_led_sink: Callable[[int | None], bool] | None = None,
+        mic_mute_sink: Callable[[bool], bool] | None = None,
     ) -> UhidDualSense | None:
         """Vpad uhid para o flavor pedido, ou **None** = "use o UinputGamepad".
 
@@ -1224,6 +1250,8 @@ class UhidDualSense:
             lightbar_sink=lightbar_sink,
             player_led_sink=player_led_sink,
             session_end_sink=session_end_sink,
+            mic_led_sink=mic_led_sink,
+            mic_mute_sink=mic_mute_sink,
         )
 
     @property
@@ -1692,8 +1720,7 @@ class UhidDualSense:
             # da luz que outro jogo pediu.
             self._mic_button = False
             self._mic_button_count = 0
-            self._mic_led_do_jogo_recusado = 0
-            self._mic_led_do_jogo_amostra = None
+            self._esquecer_o_microfone_do_jogo()
 
     def _silence_rumble(self) -> None:
         """Zera os motores do controle físico se o jogo os deixou ligados.
@@ -1836,13 +1863,13 @@ class UhidDualSense:
                 self._mic_button_count += 1
 
     @property
-    def mic_led_do_jogo_recusado(self) -> int:
-        """Nº de pedidos de luz do microfone do jogo, recusados (a luz é do Hefesto)."""
-        return self._mic_led_do_jogo_recusado
+    def mic_led_do_jogo(self) -> int:
+        """Nº de pedidos de luz do microfone que o jogo fez e chegaram ao controle."""
+        return self._mic_led_do_jogo
 
     @property
     def mic_led_do_jogo_amostra(self) -> int | None:
-        """O `common[8]` do último pedido recusado; None = nenhum nesta sessão."""
+        """O `common[8]` do último pedido de luz do jogo; None = nenhum nesta sessão."""
         return self._mic_led_do_jogo_amostra
 
     @property
@@ -1994,7 +2021,10 @@ class UhidDualSense:
             # delta seria reportar perda que não houve.
             self._seq = (self._seq + 1) & 0xFF
             body[_SEQ_OFFSET] = self._seq
-            return self.send_report(bytes([_INPUT_REPORT_USB]) + bytes(body))
+            if not self.send_report(bytes([_INPUT_REPORT_USB]) + bytes(body)):
+                return False
+            self._abrir_a_janela_do_eco(body)
+            return True
 
     def _encode_body(self) -> bytearray:
         """Payload do report 0x01 a partir do estado, com o seq ZERADO.
@@ -2271,6 +2301,11 @@ class UhidDualSense:
             # REPLICA-03: âncora da graça anti-ruído-de-probe (o probe do
             # hid_playstation emite outputs PRÓPRIOS logo após o START).
             self._bound_at = self.time_fn()
+            # A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01: driver novo,
+            # `last_btn_mic_state` e `mic_muted` de novo `false`: o dedo que
+            # segue apertado é borda para ele no próximo report que sair.
+            self._mic_bit_que_saiu = False
+            self._janelas_do_eco.clear()
             logger.info("uhid_bind_ok", player=self.player, name=self.name)
         elif event_type == UHID_OPEN:
             # Primeiro usuário abriu o device — começa a sessão de jogo
@@ -2316,6 +2351,12 @@ class UhidDualSense:
                 self._output_id_estranho_count += 1
                 self._output_id_estranho_amostra = (report[0], len(report))
             return
+        # A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01: o 0x02 que o driver
+        # deste pad manda depois de uma borda do botão que NÓS emitimos não é
+        # escrita de ninguém; o puro nem conta como output.
+        eco = self._e_eco_do_driver(report[1:])
+        if eco and _e_eco_puro(report[1:]):
+            return
         self._output_count += 1
         # O carimbo do OUTPUT é o mais bruto e o mais valioso dos seis: ele diz
         # que ALGUÉM está escrevendo no hidraw deste vpad agora — ou seja, que
@@ -2350,7 +2391,7 @@ class UhidDualSense:
                 body[rep.COMMON_AUDIO_PATH],
             )
         if len(body) > _VALID_FLAG1_OFFSET:
-            self._replicate_from_output(body)
+            self._replicate_from_output(body, eco=eco)
         if len(body) <= _RUMBLE_STRONG_OFFSET:
             return
         if _e_a_parada_do_sdl(body):
@@ -2527,8 +2568,12 @@ class UhidDualSense:
             return False
         return (self.time_fn() - bound_at) >= _GAME_REPLICA_GRACE_S
 
-    def _replicate_from_output(self, body: bytes) -> None:
-        """Enfileira as categorias presentes no report 0x02 (bits de valid_flag)."""
+    def _replicate_from_output(self, body: bytes, *, eco: bool = False) -> None:
+        """Enfileira as categorias presentes no report 0x02 (bits de valid_flag).
+
+        `eco`: o report é o do driver deste pad depois de uma borda do botão
+        do microfone; os campos do microfone dele não são pedido de ninguém.
+        """
         if not self._replicating():
             return
         flag0 = body[_VALID_FLAG0_OFFSET]
@@ -2548,17 +2593,10 @@ class UhidDualSense:
             self._queue_replica(
                 "player_leds", tuple(bool(mask & (1 << i)) for i in range(5))
             )
-        if (
-            flag1 & rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
-            and not flag1 & rep.VALID_FLAG1_POWER_SAVE_CONTROL_ENABLE
-            and len(body) > _MIC_LED_OFFSET
-        ):
-            # O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01: contado e recusado,
-            # nunca calado. O 0x02 que o `hid-playstation` do lado do vpad
-            # manda ao alternar o mudo dele (a cada aperto, agora que o botão
-            # chega ao jogo) liga o POWER_SAVE junto, e não é pedido de jogo.
-            self._mic_led_do_jogo_recusado += 1
-            self._mic_led_do_jogo_amostra = int(body[_MIC_LED_OFFSET])
+        if not eco:
+            # A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01: a luz e o mudo
+            # que o jogo pede vão ao controle deste jogador (revoga a recusa).
+            self._pedido_do_microfone(flag1, body)
         if flag1 & _LIGHTBAR_CONTROL_ENABLE and len(body) >= _LIGHTBAR_RGB_OFFSET + 3:
             self._queue_replica(
                 "lightbar",
@@ -2641,6 +2679,8 @@ class UhidDualSense:
                 self._player_led_replicas += 1
                 self._game_dirty = True
                 self.player_led_sink(valor)
+            elif categoria in (_REPLICA_MIC_LED, _REPLICA_MIC_MUDO):
+                self._entregar_o_microfone(categoria, valor)
         except Exception as exc:
             logger.warning(
                 "uhid_replica_sink_failed",
@@ -2661,6 +2701,9 @@ class UhidDualSense:
         self._replica_pending.clear()
         self._replica_last.clear()
         self._replica_ts.clear()
+        # A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01: ANTES do portão do
+        # `_game_dirty`, que a entrega do microfone não liga.
+        self._soltar_a_luz_do_microfone()
         if not self._game_dirty:
             return
         self._game_dirty = False
@@ -2717,6 +2760,8 @@ class UhidDualSense:
         """
         if self._fd is not None:
             return True
+        self._janelas_do_eco.clear()
+        self._mic_bit_que_saiu = False
         _MACS_DOS_VPADS_VIVOS.vestir(self)
         if self._criar_o_device():
             return True
@@ -2898,10 +2943,151 @@ class UhidDualSense:
                     logger.warning(
                         "uhid_session_end_sink_failed", err=str(exc), player=self.player
                     )
+        if self._mic_solta_a_entregar:
+            self._mic_solta_a_entregar = False
+            self._dizer_que_o_jogo_soltou_a_luz()
         par = self._rumble_a_entregar
         if par is not None:
             self._rumble_a_entregar = None
             self._emit_rumble(*par)
+
+    # -- o microfone obedece ao jogo: A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01
+    #
+    # A luz (`common[8]`) e o mudo (`common[9]` 0x10) que o jogo pede ao pad
+    # virtual vão ao controle DESTE jogador, pelos donos de sempre (o
+    # `luz_do_mic` e o `hotkey`), com o dedup e o teto de 250 Hz da REPLICA-03.
+    #
+    # O ECO DO DRIVER. Desde a O-BOTAO o aperto do botão chega ao pad, e o
+    # `hid-playstation` que o adotou faz o que faria num DualSense: na borda de
+    # subida inverte o próprio `mic_muted` e manda UM 0x02 com o 0x01 e o 0x02
+    # do `valid_flag1`, a luz em 0 ou 1 e o 0x10 concordando
+    # (`hid-playstation.c:1559-1577`, `:1686-1691`). É um toggle cego, na fase
+    # do driver: obedecê-lo inverteria o microfone dela a cada aperto. O que o
+    # separa do jogo não é o bit (um jogo na língua da Sony manda o 0x03
+    # inteiro), é a CAUSA: o driver só escreve depois de uma borda que este pad
+    # emitiu, e o pad sabe cada uma. A janela se abre onde o report SAI
+    # (`_emit_if_changed`), e o eco, que o driver agenda antes de o evento
+    # chegar ao evdev, consome a janela daquele aperto antes da resposta do
+    # jogo, que chega depois e conta como jogo.
+
+    @property
+    def mic_mudo_do_jogo(self) -> int:
+        """Nº de pedidos de mudo do jogo que chegaram ao controle."""
+        return self._mic_mudo_do_jogo
+
+    @property
+    def mic_mudo_do_jogo_amostra(self) -> bool | None:
+        """O mudo do último pedido do jogo; None = nenhum nesta sessão."""
+        return self._mic_mudo_do_jogo_amostra
+
+    @property
+    def mic_do_jogo_retido(self) -> int:
+        """Nº de pedidos do microfone retidos (sem jogo: autoridade `daemon`)."""
+        return self._mic_do_jogo_retido
+
+    @property
+    def mic_eco_do_driver(self) -> int:
+        """Nº de 0x02 do driver deste pad depois de uma borda do botão (não contam)."""
+        return self._mic_eco_do_driver
+
+    def _abrir_a_janela_do_eco(self, body: bytes | bytearray) -> None:
+        """Um report SAIU: se ele traz a subida do botão, o driver vai ecoar.
+
+        Roda sob `_lock`, na thread de quem emitiu (o leitor do físico ou o
+        laço). Só ANEXA ao `deque` (atômico no CPython): tomar a trava da
+        saída aqui inverteria a ordem das travas do `_destruir_o_device`.
+        """
+        bit = bool(body[_BUTTONS2_OFFSET] & _BUTTONS2_BITS["mic_btn"])
+        if bit and not self._mic_bit_que_saiu:
+            self._janelas_do_eco.append(self.time_fn())
+        self._mic_bit_que_saiu = bit
+
+    def _e_eco_do_driver(self, body: bytes) -> bool:
+        """O report tem a assinatura do eco e há uma janela aberta? Consome UMA.
+
+        Só o lado da saída chama: vence as janelas velhas (`ECO_DO_DRIVER_S`)
+        e consome a mais velha, uma por aperto. A resposta do jogo que vem
+        depois do eco, com a mesma assinatura, acha a janela consumida.
+        """
+        if not _tem_a_assinatura_do_eco(body):
+            return False
+        janelas = self._janelas_do_eco
+        agora = self.time_fn()
+        while janelas and agora - janelas[0] > ECO_DO_DRIVER_S:
+            janelas.popleft()
+        if not janelas:
+            return False
+        janelas.popleft()
+        self._mic_eco_do_driver += 1
+        return True
+
+    def _pedido_do_microfone(self, flag1: int, body: bytes) -> None:
+        """Enfileira a luz e o mudo que o jogo pediu, com o dedup de sempre.
+
+        O dedup por valor fica de pé depois do aperto dela: um jogo que
+        reafirma o mesmo valor a cada quadro não desfaz o que ela pediu, e só
+        volta a mandar quando MUDA o pedido.
+        """
+        if flag1 & rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE and len(body) > _MIC_LED_OFFSET:
+            luz = int(body[_MIC_LED_OFFSET])
+            self._mic_led_do_jogo_amostra = luz
+            self._queue_replica(_REPLICA_MIC_LED, luz)
+        if flag1 & rep.VALID_FLAG1_POWER_SAVE_CONTROL_ENABLE and len(body) > _MIC_MUDO_OFFSET:
+            mudo = bool(body[_MIC_MUDO_OFFSET] & rep.POWER_SAVE_MIC_MUTE)
+            self._mic_mudo_do_jogo_amostra = mudo
+            self._queue_replica(_REPLICA_MIC_MUDO, mudo)
+
+    def _entregar_o_microfone(self, categoria: str, valor: Any) -> None:
+        """Entrega UM pedido do microfone ao ralo do jogador e conta o desfecho.
+
+        O retido (sem jogo) esquece o último entregue daquela categoria: o
+        mesmo pedido, reafirmado quando houver jogo, tenta de novo.
+        """
+        luz = categoria == _REPLICA_MIC_LED
+        ralo = self.mic_led_sink if luz else self.mic_mute_sink
+        if ralo is None:
+            return
+        if not ralo(valor):
+            self._mic_do_jogo_retido += 1
+            self._replica_last.pop(categoria, None)
+            return
+        if luz:
+            self._mic_led_do_jogo += 1
+            self._mic_luz_entregue = True
+        else:
+            self._mic_mudo_do_jogo += 1
+
+    def _soltar_a_luz_do_microfone(self) -> None:
+        """Fim da sessão: se ela entregou alguma luz, o jogo a solta."""
+        if not self._mic_luz_entregue:
+            return
+        self._mic_luz_entregue = False
+        if self._no_fio_do_uhid():
+            # No fio, a entrega é do tique, como o fim da sessão.
+            self._mic_solta_a_entregar = True
+            return
+        self._dizer_que_o_jogo_soltou_a_luz()
+
+    def _dizer_que_o_jogo_soltou_a_luz(self) -> None:
+        if self.mic_led_sink is None:
+            return
+        try:
+            self.mic_led_sink(None)
+        except Exception as exc:
+            logger.warning("uhid_mic_solta_falhou", err=str(exc), player=self.player)
+
+    def _esquecer_o_microfone_do_jogo(self) -> None:
+        """A próxima vida do pad nasce sem conta, amostra nem janela da anterior."""
+        self._mic_led_do_jogo = 0
+        self._mic_mudo_do_jogo = 0
+        self._mic_do_jogo_retido = 0
+        self._mic_eco_do_driver = 0
+        self._mic_led_do_jogo_amostra = None
+        self._mic_mudo_do_jogo_amostra = None
+        self._mic_luz_entregue = False
+        self._mic_solta_a_entregar = False
+        self._janelas_do_eco.clear()
+        self._mic_bit_que_saiu = False
 
 
 # ---------------------------------------------------------------------------
@@ -3041,6 +3227,72 @@ _MACS_DOS_VPADS_VIVOS = _MacsDosVpadsVivos()
 #: `struct dualsense_output_report_common` (`common[8]`). Mora no fim do
 #: módulo para não deslocar as citações `arquivo:linha` do meio.
 _MIC_LED_OFFSET = 8
+
+#: A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01 — `power_save_control`
+#: (`common[9]`), onde mora o bit 0x10 do mudo do microfone.
+_MIC_MUDO_OFFSET = 9
+
+#: As duas categorias de réplica do microfone (o vocabulário do
+#: `_forward_replica`), com o dedup e o teto das outras.
+_REPLICA_MIC_LED = "mic_led"
+_REPLICA_MIC_MUDO = "mic_mudo"
+
+#: Quanto a janela de um aperto espera o eco do driver. TETO, NÃO MEDIDO: o
+#: driver agenda o trabalho do eco na hora do parse do report que trouxe a
+#: borda (`hid-playstation.c:1691`), e o jogo só responde depois de ler o
+#: evento. O diário da bancada diz a idade do eco, e ela fixa este número.
+ECO_DO_DRIVER_S = 1.0
+
+#: Quantas bordas o pad guarda à espera do eco. Oito apertos dentro de um
+#: segundo não são mão humana; o teto existe para o `deque` não crescer.
+_JANELAS_DO_ECO_MAX = 8
+
+#: Os bits do `valid_flag1` que um eco PURO pode trazer: a luz, o mudo e o
+#: `audio_control2` que o mesmo trabalho do driver pode juntar.
+_FLAG1_DO_ECO_PURO = (
+    rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
+    | rep.VALID_FLAG1_POWER_SAVE_CONTROL_ENABLE
+    | rep.VALID_FLAG1_AUDIO_CONTROL2_ENABLE
+)
+
+
+def _tem_a_assinatura_do_eco(body: bytes) -> bool:
+    """A forma do 0x02 que o driver manda ao alternar o mudo dele.
+
+    Os dois bits juntos no `valid_flag1`, a luz em 0 ou 1 (é o `bool`
+    `mic_muted`) e o 0x10 do `common[9]` concordando com ela. O resto do
+    report não entra: o driver junta no mesmo report o que estiver pendente.
+    """
+    if len(body) <= _MIC_MUDO_OFFSET:
+        return False
+    ambos = (
+        rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
+        | rep.VALID_FLAG1_POWER_SAVE_CONTROL_ENABLE
+    )
+    if body[_VALID_FLAG1_OFFSET] & ambos != ambos:
+        return False
+    luz = body[_MIC_LED_OFFSET]
+    if luz not in (0, 1):
+        return False
+    return bool(body[_MIC_MUDO_OFFSET] & rep.POWER_SAVE_MIC_MUTE) == bool(luz)
+
+
+def _e_eco_puro(body: bytes) -> bool:
+    """O eco veio sozinho: sem vibração, sem gatilho, sem luz, sem som.
+
+    Um eco que veio junto com a vibração do FF do evdev (o
+    `dualsense_output_worker` junta tudo num report só) segue o caminho de
+    sempre; só os campos do microfone dele são ignorados.
+    """
+    if body[_VALID_FLAG0_OFFSET]:
+        return False
+    if len(body) > rep.COMMON_VALID_FLAG2 and body[rep.COMMON_VALID_FLAG2]:
+        return False
+    if len(body) > _RUMBLE_STRONG_OFFSET and (
+        body[_RUMBLE_WEAK_OFFSET] or body[_RUMBLE_STRONG_OFFSET]
+    ):
+        return False
+    return not body[_VALID_FLAG1_OFFSET] & ~_FLAG1_DO_ECO_PURO & 0xFF
 
 
 __all__ = [

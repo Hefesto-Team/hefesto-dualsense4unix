@@ -326,6 +326,8 @@ def make_virtual_pad(
     allow_uhid: bool = True,
     calibration_0x05: bytes | None = None,
     caminho: str | None = None,
+    mic_led_sink: Callable[[int | None], bool] | None = None,
+    mic_mute_sink: Callable[[bool], bool] | None = None,
 ) -> VirtualPad | None:
     """Cria e **starta** o vpad do jogador `player`. None = nenhum backend subiu.
 
@@ -354,7 +356,9 @@ def make_virtual_pad(
     REPLICA-03: os sinks de gatilho/lightbar/player-LED/fim-de-sessão replicam
     o output do JOGO ao controle físico — são exclusivos do backend uhid (o
     uinput é evdev-only: FF é o único output que chega até ele), então no
-    fallback eles são deliberadamente descartados.
+    fallback eles são deliberadamente descartados. O mesmo vale para os dois
+    do microfone (A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01): o pad Xbox
+    360 não tem luz nem mudo de microfone no protocolo.
 
     `allow_uhid=False` (VPAD-08): o chamador declara "sem uhid" quando o backend
     do controle é o fake (`run.sh --fake`) — um vpad uhid é um DualSense Edge
@@ -416,6 +420,8 @@ def make_virtual_pad(
             player=player,
             identity=identity,
             calibration_0x05=calibration_0x05,
+            mic_led_sink=mic_led_sink,
+            mic_mute_sink=mic_mute_sink,
         )
         if uhid is not None:
             _pendurar_o_caminho(uhid, resolvido)
@@ -450,6 +456,8 @@ def _try_uhid(
     player: int,
     identity: str | None = None,
     calibration_0x05: bytes | None = None,
+    mic_led_sink: Callable[[int | None], bool] | None = None,
+    mic_mute_sink: Callable[[bool], bool] | None = None,
 ) -> tuple[VirtualPad | None, str | None]:
     """Tenta o backend uhid; ``(None, motivo)`` = "use o uinput".
 
@@ -485,6 +493,8 @@ def _try_uhid(
         player=player,
         blueprint=canonical_blueprint(),
         calibration_0x05=calibration_0x05,
+        mic_led_sink=mic_led_sink,
+        mic_mute_sink=mic_mute_sink,
     )
     if pad is None:  # pragma: no cover - o gate de flavor acima já garante
         return None, "uhid_indisponivel"
