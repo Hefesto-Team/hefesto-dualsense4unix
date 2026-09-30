@@ -392,8 +392,9 @@ def test_o_haptico_por_radio_nao_promete_obediencia(
     para `medido`, sem ensaio — esta régua reprova.
 
     NOTA DATADA, 29/09/2026: o `radio_canal` passou a `hidraw`, e pela condição
-    que esta própria régua escreveu — *vira `hidraw` quando alguém mandar o
-    bloco háptico e o motor responder*. Mandaram: o `0x91` de controle antes do
+    que a ressalva desta linha do mapa escreveu — *vira `hidraw` quando alguém
+    mandar um bloco 0x12 e o motor responder* (o `0x92` é a tag `0x12` com o bit
+    alto, como o `0x91` é a `0x11`). Mandaram: o `0x91` de controle antes do
     `0x92`, dentro do `0x32`, vibrou pelo rádio em 18/09/2026 com a mão dela, e é
     o `ARRANJO_HAPTICA_032` que a ponte da háptica escreve pelo hidraw do broker
     (A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-CHEGAM-AO-RADIO-01 e a costura de
