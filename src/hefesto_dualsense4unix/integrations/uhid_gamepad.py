@@ -964,9 +964,10 @@ class UhidDualSense:
     session_end_sink: Callable[[], None] | None = None
     #: A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01 — a luz (`common[8]`,
     #: 0 a 3, ou None = o jogo soltou) e o mudo (`common[9]` 0x10) que o jogo
-    #: pediu, para o controle DESTE jogador. Devolvem se aplicaram ou retiveram.
-    mic_led_sink: Callable[[int | None], bool] | None = None
-    mic_mute_sink: Callable[[bool], bool] | None = None
+    #: pediu, para o controle DESTE jogador. Devolvem se aplicaram (`True`),
+    #: retiveram (`False`, sem jogo) ou descartaram (`None`, sem endereço).
+    mic_led_sink: Callable[[int | None], bool | None] | None = None
+    mic_mute_sink: Callable[[bool], bool | None] | None = None
     #: Relógio/sleep injetáveis (testes herméticos do `wait_for_bind`).
     time_fn: Callable[[], float] = time.monotonic
     sleep_fn: Callable[[float], None] = time.sleep
@@ -1200,8 +1201,8 @@ class UhidDualSense:
         blueprint: dict[str, Any] | None = None,
         calibration_0x05: bytes | None = None,
         identity: str | None = None,
-        mic_led_sink: Callable[[int | None], bool] | None = None,
-        mic_mute_sink: Callable[[bool], bool] | None = None,
+        mic_led_sink: Callable[[int | None], bool | None] | None = None,
+        mic_mute_sink: Callable[[bool], bool | None] | None = None,
     ) -> UhidDualSense | None:
         """Vpad uhid para o flavor pedido, ou **None** = "use o UinputGamepad".
 
@@ -3068,14 +3069,20 @@ class UhidDualSense:
         """Entrega UM pedido do microfone ao ralo do jogador e conta o desfecho.
 
         O retido (sem jogo) esquece o último entregue daquela categoria: o
-        mesmo pedido, reafirmado quando houver jogo, tenta de novo.
+        mesmo pedido, reafirmado quando houver jogo, tenta de novo. O
+        descartado (`None`: o jogador sem endereço de controle, ou o primário
+        que sumiu no meio) também tenta de novo, e não conta como retido: o
+        `mic_do_jogo_retido` é a pergunta «quem escreve sem jogo?», e um
+        jogador sem MAC não a responde.
         """
         luz = categoria == _REPLICA_MIC_LED
         ralo = self.mic_led_sink if luz else self.mic_mute_sink
         if ralo is None:
             return
-        if not ralo(valor):
-            self._mic_do_jogo_retido += 1
+        desfecho = ralo(valor)
+        if not desfecho:
+            if desfecho is not None:
+                self._mic_do_jogo_retido += 1
             self._replica_last.pop(categoria, None)
             return
         if luz:

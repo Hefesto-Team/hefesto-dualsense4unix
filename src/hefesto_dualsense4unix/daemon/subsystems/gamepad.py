@@ -3430,11 +3430,11 @@ def apply_game_mic(
     luz: int | None = None,
     mudo: bool | None = None,
     solta: bool = False,
-) -> bool:
+) -> bool | None:
     """Leva ao dono o pedido do microfone do jogo. `True` = aplicado.
 
     - Endereço que não é MAC descarta com log, nunca difunde
-      (BROADCAST-PROIBIDO-01).
+      (BROADCAST-PROIBIDO-01), e devolve `None`: descartado não é retido.
     - Sob `display_authority == "daemon"` (evidência positiva de que quem
       escreve é o cliente Steam, sem jogo, NUMA-02) o pedido fica RETIDO, e o
       journal o diz uma vez por episódio: é a regra da barra. O `solta` passa
@@ -3448,7 +3448,7 @@ def apply_game_mic(
     chave = chave_do_mic(target_uniq)
     if chave is None:
         logger.debug("game_mic_sem_alvo_descartado", target=target_uniq)
-        return False
+        return None
     evento: dict[str, Any] = {"uniq": chave, "em": time.monotonic()}
     if solta:
         evento["solta"] = True
@@ -3457,7 +3457,7 @@ def apply_game_mic(
     elif mudo is not None:
         evento["mudo"] = bool(mudo)
     else:
-        return False
+        return None
     autoridade = getattr(daemon, "display_authority", "unknown")
     if not solta and autoridade == "daemon":
         if chave not in _RETIDO_JA_DITO:
@@ -3468,7 +3468,7 @@ def apply_game_mic(
     publicar = getattr(getattr(daemon, "bus", None), "publish", None)
     if not callable(publicar):
         logger.debug("game_mic_sem_barramento", uniq=chave)
-        return False
+        return None
     publicar(EventTopic.MIC_DO_JOGO, evento)
     return True
 
@@ -3484,7 +3484,7 @@ def ralos_do_mic(daemon: Any, alvo: Callable[[], str | None]) -> dict[str, Any]:
     """
     luz_entregue_a: set[str] = set()
 
-    def _luz(valor: int | None) -> bool:
+    def _luz(valor: int | None) -> bool | None:
         if valor is None:
             alvos = tuple(luz_entregue_a)
             luz_entregue_a.clear()
@@ -3497,7 +3497,7 @@ def ralos_do_mic(daemon: Any, alvo: Callable[[], str | None]) -> dict[str, Any]:
             luz_entregue_a.add(uniq)
         return aplicado
 
-    def _mudo(mudo: bool) -> bool:
+    def _mudo(mudo: bool) -> bool | None:
         return apply_game_mic(daemon, target_uniq=alvo(), mudo=mudo)
 
     return {"mic_led_sink": _luz, "mic_mute_sink": _mudo}

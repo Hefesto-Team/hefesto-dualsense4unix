@@ -326,8 +326,8 @@ def make_virtual_pad(
     allow_uhid: bool = True,
     calibration_0x05: bytes | None = None,
     caminho: str | None = None,
-    mic_led_sink: Callable[[int | None], bool] | None = None,
-    mic_mute_sink: Callable[[bool], bool] | None = None,
+    mic_led_sink: Callable[[int | None], bool | None] | None = None,
+    mic_mute_sink: Callable[[bool], bool | None] | None = None,
 ) -> VirtualPad | None:
     """Cria e **starta** o vpad do jogador `player`. None = nenhum backend subiu.
 
@@ -456,8 +456,8 @@ def _try_uhid(
     player: int,
     identity: str | None = None,
     calibration_0x05: bytes | None = None,
-    mic_led_sink: Callable[[int | None], bool] | None = None,
-    mic_mute_sink: Callable[[bool], bool] | None = None,
+    mic_led_sink: Callable[[int | None], bool | None] | None = None,
+    mic_mute_sink: Callable[[bool], bool | None] | None = None,
 ) -> tuple[VirtualPad | None, str | None]:
     """Tenta o backend uhid; ``(None, motivo)`` = "use o uinput".
 

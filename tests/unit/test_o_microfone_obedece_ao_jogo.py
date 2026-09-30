@@ -1080,6 +1080,9 @@ class TestOEnderecoDoPedido:
             _mandar(pad, relogio, _saida(luz=1, mudo=True))
             assert _eventos(espiao) == [], "o pedido de um jogador sem MAC foi difundido"
             assert pad.mic_led_do_jogo == 0 and pad.mic_mudo_do_jogo == 0
+            # «Retido» é a pergunta da prova 5 (quem escreve sem jogo?); o
+            # jogador sem MAC não a responde.
+            assert pad.mic_do_jogo_retido == 0, "o descartado sem endereço contou como retido"
         finally:
             pad.stop()
 
