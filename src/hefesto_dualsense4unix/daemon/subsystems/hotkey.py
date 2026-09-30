@@ -1150,6 +1150,10 @@ def start_mic_hotkey(daemon: DaemonProtocol) -> None:
     start_mic_da_mesa(daemon)
     task = asyncio.create_task(mic_button_loop(daemon), name="mic_button_loop")
     daemon._tasks.append(task)
+    # O MUDO QUE O JOGO PEDE (A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01).
+    daemon._tasks.append(
+        asyncio.create_task(mic_do_jogo_loop(daemon), name="mic_do_jogo_loop")
+    )
     # A QUARTA FACE DO ESTADO (MICROFONE-UM-ATO-01): o que o PipeWire diz sobre
     # o canal deste controle. Laço próprio, e não leitura no tique: o
     # `state_full` roda a 20 Hz e só LÊ o que o laço já leu. O laço acorda pelo
@@ -1373,8 +1377,17 @@ async def mic_button_loop(daemon: DaemonProtocol) -> None:
             # ao bit do firmware o poder de dizer o que ela quis. Ver
             # `_o_que_a_borda_pede`.
             ligado = _o_que_a_borda_pede(daemon, uniq, mudo)
+            # O JOGO QUE RESPONDEU A ESTE APERTO GANHA O SENTIDO DELE
+            # (A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01): o pedido de
+            # mudo do jogo mais novo que o aperto é a resposta a ele, e o ato
+            # a adota, com o canal, a eleição e o disco do mesmo lado.
+            em = _instante_da_borda(payload.get("em"))
+            resposta = _a_resposta_do_jogo(uniq, em)
+            if resposta is not None:
+                ligado = not resposta
+                logger.info("mic_ato_segue_o_jogo", uniq=uniq, ligado=ligado)
             try:
-                await ligar_o_microfone(daemon, uniq, ligado=ligado)
+                await ligar_o_microfone(daemon, uniq, ligado=ligado, em=em)
             except Exception as exc:
                 logger.warning("mic_hotkey_falhou", err=str(exc))
     finally:
@@ -1624,7 +1637,7 @@ class AtoDoMicrofone:
 
 
 async def ligar_o_microfone(
-    daemon: DaemonProtocol, uniq: str, *, ligado: bool
+    daemon: DaemonProtocol, uniq: str, *, ligado: bool, em: float | None = None
 ) -> AtoDoMicrofone:
     """O ATO — e é a MESMA função para o botão do plástico e o da tela.
 
@@ -1642,7 +1655,14 @@ async def ligar_o_microfone(
     funciona em qualquer modo (o PipeWire não passa pelo hidraw) e é a que ela
     nomeou — *"ele ser ouvido no canal específico dele"*. A do firmware pode
     ficar represada; fazê-la primeiro atrasaria a metade que sempre pega.
+
+    **O ATO É ORDEM DELA, com o instante dela** (A-LUZ-E-O-MUDO-DO-MICROFONE-
+    OBEDECEM-AO-JOGO-01): `em` é o do aperto (a borda), e `None` é o clique da
+    tela, que é agora. O pedido do jogo mais velho que ele cai.
     """
+    from hefesto_dualsense4unix.daemon.subsystems.luz_do_mic import a_pessoa_mandou
+
+    a_pessoa_mandou(uniq, em)
     no_sistema, ativo = await _metade_do_canal(daemon, uniq, ligado)
     firmware = await _metade_do_firmware(daemon, uniq, ligado)
     ato = AtoDoMicrofone(
@@ -1829,7 +1849,12 @@ def _devolver_a_palavra(uniq: str, antes: bool | None, ligado: bool) -> None:
 
 
 async def _metade_do_firmware(
-    daemon: DaemonProtocol, uniq: str, ligado: bool
+    daemon: DaemonProtocol,
+    uniq: str,
+    ligado: bool,
+    *,
+    marcar_eco: bool = True,
+    recado: bool = True,
 ) -> MetadeDoAto:
     """A metade do APARELHO: o bit `MIC_MUTE` do firmware, e a posse de volta.
 
@@ -1882,8 +1907,12 @@ async def _metade_do_firmware(
         ok = bool(await daemon._run_blocking(_mutar, setter, mudo_desejado, uniq))
     if not ok:
         return MetadeDoAto(False, MOTIVO_FIRMWARE_REPRESADO)
-    _marcar_eco_do_ato(uniq, mudo_desejado)
-    _agendar_a_devolucao_da_posse(daemon, uniq, mudo_desejado)
+    # O PEDIDO DO JOGO não marca eco (o aperto dela logo depois é gesto) nem
+    # deixa recado de represamento, cuja frase fala do botão
+    # (A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01).
+    if marcar_eco:
+        _marcar_eco_do_ato(uniq, mudo_desejado)
+    _agendar_a_devolucao_da_posse(daemon, uniq, mudo_desejado, recado=recado)
     return MetadeDoAto(True)
 
 
@@ -1933,7 +1962,7 @@ def _mutar(setter: Any, muted: bool | None, uniq: str) -> bool:
 
 
 def _agendar_a_devolucao_da_posse(
-    daemon: DaemonProtocol, uniq: str, mudo_desejado: bool
+    daemon: DaemonProtocol, uniq: str, mudo_desejado: bool, *, recado: bool = True
 ) -> None:
     """Espera o aparelho CONFIRMAR e só então devolve a posse ao kernel.
 
@@ -1952,14 +1981,14 @@ def _agendar_a_devolucao_da_posse(
     """
     with contextlib.suppress(Exception):
         task = asyncio.create_task(
-            _confirmar_e_devolver(daemon, uniq, mudo_desejado),
+            _confirmar_e_devolver(daemon, uniq, mudo_desejado, recado=recado),
             name=f"mic_ato_confirma_{uniq}",
         )
         daemon._tasks.append(task)
 
 
 async def _confirmar_e_devolver(
-    daemon: DaemonProtocol, uniq: str, mudo_desejado: bool
+    daemon: DaemonProtocol, uniq: str, mudo_desejado: bool, *, recado: bool = True
 ) -> None:
     """Relê até o aparelho concordar; devolve a posse; anota o que aconteceu."""
     controller = getattr(daemon, "controller", None)
@@ -1986,6 +2015,8 @@ async def _confirmar_e_devolver(
             )
             return
     logger.info("mic_ato_represado", uniq=uniq, mudo_desejado=mudo_desejado)
+    if not recado:
+        return
     # `recusa` E NÃO UMA PALAVRA NOVA. `recado_do_microfone.GESTOS` é uma
     # tupla FECHADA e `anotar` LEVANTA em gesto desconhecido — de propósito,
     # para a tela nunca receber uma palavra que não sabe pintar. Medido na
@@ -3641,6 +3672,111 @@ def _mudo_pelo_retrato(fonte: str) -> _sp.CompletedProcess[str] | None:
     return _sp.CompletedProcess(pergunta, 1, stdout="", stderr="")
 
 
+# ---------------------------------------------------------------------------
+# O MUDO OBEDECE AO JOGO — A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01
+# (29/09/2026, a D-2909-O-MICROFONE-OBEDECE-AO-JOGO, que revoga a recusa)
+# ---------------------------------------------------------------------------
+#
+# Com pad virtual DualSense, o 0x10 do `common[9]` que o jogo pede cala ou abre
+# o microfone DAQUELE jogador no firmware, pelo dono do mudo, que é este
+# módulo: a metade do firmware do ato, sem marcar eco nem deixar recado, e a
+# palavra do rádio. O jogo NÃO passa pelo `ligar_o_microfone`: ele elegeria a
+# fonte do sistema e gravaria o disco, e o pedido do jogo não é palavra dela.
+#
+# CALAR diz «não» ao rádio (`dizer_no_ar(uniq, False)`: cala e vence quem
+# grava, como o mudo do firmware). ABRIR não diz «sim»: abrir o microfone é o
+# que o jogo pede, pôr no ar é de quem ouve. Se a palavra de pé era o «não»,
+# ela é esquecida e a ponte do rádio volta a seguir quem ouve a fonte.
+
+#: `{chave: (em, mudo)}` — o último pedido de mudo do jogo por controle. O
+#: aperto dela o consulta: mais novo que a borda, é a resposta a ela.
+_MUDO_DO_JOGO: dict[str, tuple[float, bool]] = {}
+
+
+def _instante_da_borda(em: Any) -> float | None:
+    """O `em` do evento da borda, ou `None` quando ele não veio."""
+    if isinstance(em, (int, float)) and not isinstance(em, bool):
+        return float(em)
+    return None
+
+
+def _a_resposta_do_jogo(uniq: str, em_da_borda: float | None) -> bool | None:
+    """O mudo que o jogo pediu DEPOIS deste aperto (a resposta a ele), ou `None`."""
+    from hefesto_dualsense4unix.daemon.subsystems.luz_do_mic import chave_do_mic
+
+    chave = chave_do_mic(uniq)
+    pedido = _MUDO_DO_JOGO.get(chave) if chave else None
+    if pedido is None or em_da_borda is None:
+        return None
+    quando, mudo = pedido
+    return mudo if quando >= em_da_borda else None
+
+
+async def o_jogo_pede_o_mudo(
+    daemon: DaemonProtocol, uniq: str, mudo: bool, em: float
+) -> MetadeDoAto | None:
+    """O jogo pediu para calar (`True`) ou abrir o microfone deste controle.
+
+    `None` = o pedido é mais velho que a última ordem dela e não se aplica (o
+    aperto ou o 🎙 dela mandaram depois). Nunca levanta pelo caminho da
+    palavra: `dizer_no_ar` e `esquecer_a_palavra` engolem o que der errado.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.luz_do_mic import (
+        chave_do_mic,
+        quando_a_pessoa_mandou,
+    )
+
+    chave = chave_do_mic(uniq) or uniq
+    _MUDO_DO_JOGO[chave] = (em, bool(mudo))
+    ela = quando_a_pessoa_mandou(uniq)
+    if ela is not None and em < ela:
+        logger.info("mic_mudo_do_jogo_velho", uniq=chave, mudo=mudo)
+        return None
+    if mudo:
+        dizer_no_ar(chave, False)
+    elif palavra_no_ar(chave) is False:
+        esquecer_a_palavra(chave)
+    firmware = await _metade_do_firmware(
+        daemon, chave, not mudo, marcar_eco=False, recado=False
+    )
+    logger.info("mic_mudo_do_jogo", uniq=chave, mudo=mudo, feito=firmware.feita)
+    return firmware
+
+
+async def mic_do_jogo_loop(daemon: DaemonProtocol) -> None:
+    """Consome o `mudo` e o `solta` do `MIC_DO_JOGO`; a `luz` é do laço da luz."""
+    from hefesto_dualsense4unix.core.events import EventTopic
+    from hefesto_dualsense4unix.daemon.subsystems.luz_do_mic import chave_do_mic
+
+    queue = daemon.bus.subscribe(EventTopic.MIC_DO_JOGO)
+    try:
+        while not daemon._is_stopping():
+            try:
+                payload = await asyncio.wait_for(queue.get(), timeout=0.5)
+            except asyncio.TimeoutError:
+                continue
+            if not isinstance(payload, dict):
+                continue
+            chave = chave_do_mic(payload.get("uniq"))
+            if chave is None:
+                continue
+            if payload.get("solta"):
+                _MUDO_DO_JOGO.pop(chave, None)
+                continue
+            mudo = payload.get("mudo")
+            if not isinstance(mudo, bool):
+                continue
+            em = _instante_da_borda(payload.get("em"))
+            try:
+                await o_jogo_pede_o_mudo(
+                    daemon, chave, mudo, em if em is not None else _relogio()
+                )
+            except Exception as exc:
+                logger.warning("mic_mudo_do_jogo_falhou", uniq=chave, err=str(exc))
+    finally:
+        daemon.bus.unsubscribe(EventTopic.MIC_DO_JOGO, queue)
+
+
 __all__ = [
     "CANAL_TTL_S",
     "CICLO_DE_MASCARAS",
@@ -3672,7 +3808,9 @@ __all__ = [
     "devolver_a_luz_ao_kernel",
     "ligar_o_microfone",
     "mic_button_loop",
+    "mic_do_jogo_loop",
     "modo_vigente",
+    "o_jogo_pede_o_mudo",
     "passar_o_padrao_do_no_morto",
     "ponte_atual",
     "proxima_ponte",
