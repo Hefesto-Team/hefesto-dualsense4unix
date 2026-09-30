@@ -702,12 +702,13 @@ def test_a_medicao_de_hoje_bate_com_o_csv_de_hoje(mi):
     SUBSTITUI, em todos os lugares onde aparece.
 
     O QUE A MORDIDA ARRANCA: troque ``estado == "decidida"`` por um contador
-    de todas as linhas e a conta passa a incluir as caducas — duas decisões
-    que ninguém tem de provar entram na fila.
+    de todas as linhas e a conta passa a incluir as caducas — três decisões
+    que ninguém tem de provar entram na fila. (A terceira caducou em 29/09:
+    a D-2909-A-LUZ-DO-MIC-NAO-OBEDECE-AO-JOGO, revogada por ela.)
     """
     medida = mi.medir()
-    assert medida["decididas"] == medida["linhas"] - 2, (
-        "o CSV tem duas linhas `caduca`; se isso mudou, o laudo tem de dizer")
+    assert medida["decididas"] == medida["linhas"] - 3, (
+        "o CSV tem três linhas `caduca`; se isso mudou, o laudo tem de dizer")
     assert medida["decididas"] > 0
     assert len(medida["com_regua_dentro_de_teste"]) <= medida["decididas"]
     assert set(medida["com_regua_dentro_de_teste"]).isdisjoint(
