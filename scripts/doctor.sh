@@ -5191,7 +5191,7 @@ check_bt_resilience() {
 #
 # CACHE NÃO É BOND (30/09/2026, medido nesta máquina). O cache guarda o NOME de
 # todo aparelho que um dia apareceu numa busca — 159 aqui —, e quem remove um
-# pareamento pelo sistema (Configurações, `bluetoothctl remove`) deixa esse nome
+# pareamento pelo sistema (as Configurações, o remove do bluetoothctl) deixa esse nome
 # para trás. Às 01h13 ela removeu três controles assim: os três caches ficaram
 # com 46 bytes, só o `[General] Name=`, e o install das 01h16 terminou com este
 # FAIL mandando restaurar snapshot — ou seja, desfazer o que ela tinha acabado
