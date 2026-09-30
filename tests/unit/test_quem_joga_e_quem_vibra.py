@@ -278,7 +278,10 @@ class TestOGateEstaLigado:
         condicao = corpo[i : corpo.index("\n", i)]
         assert "este_joga" in condicao, "o gate saiu da condição do modo"
         assert "endpoint_aberto" in condicao, "o canal saiu da condição do modo"
-        assert "endpoint_aberto = endpoint is not None and sink_esta_tocando(endpoint.nome)" in corpo
+        assert (
+            "endpoint_aberto = endpoint is not None and sink_esta_tocando(endpoint.nome)"
+            in corpo
+        )
         chamada = corpo[corpo.index("modo = self._modo_pelo_sinal(") :]
         assert "candidata=candidata" in chamada[: chamada.index("\n            )")], (
             "o modo deixou de receber o portão"
