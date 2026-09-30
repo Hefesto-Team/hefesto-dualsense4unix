@@ -139,7 +139,7 @@ async def mic_da_mesa_loop(daemon: DaemonProtocol) -> None:
             if uniq not in atual:
                 visto.pop(uniq, None)
                 ultimo_por_uniq.pop(uniq, None)
-        for uniq, (seq, mudo, _quando) in atual.items():
+        for uniq, (seq, mudo, quando) in atual.items():
             anterior = visto.get(uniq)
             visto[uniq] = seq
             if anterior is None or seq == anterior:
@@ -164,8 +164,12 @@ async def mic_da_mesa_loop(daemon: DaemonProtocol) -> None:
                 repiques_engolidos=repiques,
             )
             repiques = 0
+            # O `em` é o instante do APERTO (`bordas_do_mic`, `time.monotonic`),
+            # o mesmo relógio do `em` do pedido do jogo: é por ele que a luz e o
+            # ato decidem quem mandou por último, e não pela hora em que o
+            # Hefesto processa a borda (A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01).
             daemon.bus.publish(
-                _TOPICO, {"uniq": uniq, "mudo": mudo, "seq": seq}
+                _TOPICO, {"uniq": uniq, "mudo": mudo, "seq": seq, "em": quando}
             )
 
 

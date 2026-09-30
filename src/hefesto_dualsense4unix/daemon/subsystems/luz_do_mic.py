@@ -854,10 +854,13 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
     medidor: Any = None
 
     fila: Any = None
+    fila_do_jogo: Any = None
     inscrever = getattr(getattr(daemon, "bus", None), "subscribe", None)
     if callable(inscrever):
         with contextlib.suppress(Exception):
             fila = inscrever(_TOPICO_DA_BORDA)
+        with contextlib.suppress(Exception):
+            fila_do_jogo = inscrever(_TOPICO_DO_JOGO)
 
     try:
         while not daemon._is_stopping():
@@ -886,6 +889,15 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                         escrito.pop(alvo, None)
                         posse.add(alvo)
                         segura_desde[alvo] = agora
+                        # O APERTO É ORDEM DELA, com o instante do aperto: o
+                        # pedido do jogo mais velho que ele cai.
+                        a_pessoa_mandou(alvo, evento.get("em"))
+            # O QUE O JOGO PEDIU (A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01):
+            # o pedido de pé esquece o escrito, para a luz do jogo ir ao
+            # plástico no tique seguinte.
+            for chave in _drenar_o_jogo(fila_do_jogo):
+                for uniq in [u for u in escrito if chave_do_mic(u) == chave]:
+                    escrito.pop(uniq, None)
 
             mesa = mesa_de_agora(daemon)
             if mesa is None:
@@ -902,6 +914,8 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                 posse.discard(uniq)
                 segura_desde.pop(uniq, None)
                 sem_resposta_desde.pop(uniq, None)
+            # O controle que sai da mesa esquece o pedido do jogo.
+            _esquecer_o_jogo_fora_da_mesa(mesa)
 
             marca = RETRATO.marca(_O_QUE_A_LUZ_LE)
             if marca != marca_vista or (agora - perguntei_em) >= INTERVALO_DE_QUEM_OUVE_S:
@@ -939,14 +953,19 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                 if captando_por_uniq is not None:
                     bruto_b = captando_por_uniq.get(uniq)
                     captando = bruto_b if isinstance(bruto_b, bool) else None
-                alvo = decidir(
+                decidido = decidir(
                     mudo=_mudo(backend, uniq),
                     ouvintes=ouvintes,
                     captando=captando,
                     bateria_pct=baterias.get(uniq),
                 )
 
-                _lembrar_o_estado(uniq, alvo)
+                # A TELA PINTA O ESTADO DO MICROFONE, e não a luz do jogo: o
+                # `_DECIDIDO` guarda sempre o `decidir`. O plástico, com o
+                # pedido do jogo de pé, é do jogo, literal (língua da Sony).
+                _lembrar_o_estado(uniq, decidido)
+                do_jogo = luz_do_mic_do_jogo(uniq)
+                alvo = do_jogo if do_jogo is not None else decidido
                 if alvo is None:
                     # PAROU DE SABER. Segurar para sempre deixaria um `2`
                     # eterno quando a PEÇA A cai; soltar na primeira falha
@@ -979,11 +998,12 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
         # deixaria os `parec` vivos — com a fonte de captura DELA aberta e
         # ninguém lendo. A luz errada é um defeito; o microfone preso é dela.
         try:
-            if fila is not None:
-                desinscrever = getattr(getattr(daemon, "bus", None), "unsubscribe", None)
-                if callable(desinscrever):
-                    with contextlib.suppress(Exception):
-                        desinscrever(_TOPICO_DA_BORDA, fila)
+            desinscrever = getattr(getattr(daemon, "bus", None), "unsubscribe", None)
+            if callable(desinscrever):
+                for topico, aberta in ((_TOPICO_DA_BORDA, fila), (_TOPICO_DO_JOGO, fila_do_jogo)):
+                    if aberta is not None:
+                        with contextlib.suppress(Exception):
+                            desinscrever(topico, aberta)
             # A DEVOLUÇÃO NO DESLIGAMENTO mora aqui porque o
             # `connection.shutdown` só sabe CANCELAR tasks
             # (`daemon/connection.py:2435-2436`) — um laço cancelado não repinta e
@@ -1015,6 +1035,15 @@ def _topico_da_borda() -> str:
 _TOPICO_DA_BORDA = _topico_da_borda()
 
 
+def _topico_do_jogo() -> str:
+    from hefesto_dualsense4unix.core.events import EventTopic
+
+    return str(EventTopic.MIC_DO_JOGO)
+
+
+_TOPICO_DO_JOGO = _topico_do_jogo()
+
+
 def mesa_de_agora(daemon: Any) -> list[str] | None:
     """Reexporta a ÚNICA leitura pública de *"tem card na tela"*.
 
@@ -1027,6 +1056,136 @@ def mesa_de_agora(daemon: Any) -> list[str] | None:
     )
 
     return _mesa(daemon)
+
+
+# ---------------------------------------------------------------------------
+# A LUZ OBEDECE AO JOGO — A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01
+# (29/09/2026, a D-2909-O-MICROFONE-OBEDECE-AO-JOGO, que revoga a recusa)
+# ---------------------------------------------------------------------------
+#
+# Com pad virtual DualSense, o `common[8]` que o jogo pede vai ao plástico do
+# controle daquele jogador como veio (0 a 3), na língua do jogo, que é a da
+# Sony: traduzir faria o plástico dizer outra coisa que o jogo disse. Quem
+# escreve continua sendo este laço, o único escritor por decisão de estado.
+#
+# QUANDO O JOGO E ELA DISCORDAM, VALE O ÚLTIMO QUE MANDOU, e o instante dela é
+# o do APERTO (o `em` da borda), não o da hora em que o Hefesto o processa: o
+# jogo que responde ao aperto é mais novo que ele e fica com a luz; o jogo que
+# só reafirma não conta de novo (o dedup do pad) e o aperto dela vale sozinho.
+# O 🎙 da tela é ordem dela com o instante do clique. O fim da sessão solta.
+
+#: `{chave: (valor, em)}` — o pedido de luz do jogo DE PÉ, por controle.
+_LUZ_DO_JOGO: dict[str, tuple[int, float]] = {}
+
+#: `{chave: em}` — a última ordem dela (o aperto, o 🎙), por controle.
+_A_PESSOA_MANDOU_EM: dict[str, float] = {}
+
+
+def chave_do_mic(uniq: str | None) -> str | None:
+    """O `uniq` na forma da mesa (`norm_mac`, doze hex), ou `None` se não é MAC.
+
+    É a forma do `describe_controllers` (pelo `_key_to_uniq`), do
+    `primary_uniq` e do alvo do co-op: os três lados casam por ela.
+    """
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    chave = norm_mac(uniq)
+    if chave is None or len(chave) != 12:
+        return None
+    return chave
+
+
+def luz_do_mic_do_jogo(uniq: str | None) -> int | None:
+    """A luz que o jogo pediu e está de pé neste controle; `None` = nenhuma.
+
+    Leitura barata (um `dict`), pensada para o `state_full`.
+    """
+    chave = chave_do_mic(uniq)
+    pedido = _LUZ_DO_JOGO.get(chave) if chave else None
+    return None if pedido is None else pedido[0]
+
+
+def a_pessoa_mandou(uniq: str | None, em: float | None = None) -> None:
+    """Ela mandou no microfone deste controle (o aperto, o 🎙). `None` = agora.
+
+    Guarda o MAIOR instante, e o pedido de luz do jogo mais velho que ele cai:
+    a luz volta à língua dela. Um pedido do jogo mais novo fica.
+    """
+    chave = chave_do_mic(uniq)
+    if chave is None:
+        return
+    quando = _instante(em)
+    if quando > _A_PESSOA_MANDOU_EM.get(chave, float("-inf")):
+        _A_PESSOA_MANDOU_EM[chave] = quando
+    pedido = _LUZ_DO_JOGO.get(chave)
+    if pedido is not None and pedido[1] <= _A_PESSOA_MANDOU_EM[chave]:
+        _LUZ_DO_JOGO.pop(chave, None)
+        logger.info("luz_do_mic_volta_a_ela", uniq=chave)
+
+
+def quando_a_pessoa_mandou(uniq: str | None) -> float | None:
+    """O instante da última ordem dela neste controle; `None` = nenhuma."""
+    chave = chave_do_mic(uniq)
+    return _A_PESSOA_MANDOU_EM.get(chave) if chave else None
+
+
+def _instante(em: Any) -> float:
+    """O `em` de um evento, ou agora (`time.monotonic`, o relógio da borda)."""
+    import time
+
+    if isinstance(em, (int, float)) and not isinstance(em, bool):
+        return float(em)
+    return time.monotonic()
+
+
+def _o_jogo_pede_a_luz(chave: str, valor: int, em: float) -> bool:
+    """Guarda o pedido de luz do jogo se ele é mais novo que a ordem dela."""
+    if em <= _A_PESSOA_MANDOU_EM.get(chave, float("-inf")):
+        logger.info("luz_do_mic_pedido_velho_do_jogo", uniq=chave, luz=valor)
+        return False
+    _LUZ_DO_JOGO[chave] = (int(valor), em)
+    return True
+
+
+def _drenar_o_jogo(fila: Any) -> list[str]:
+    """Aplica os eventos `MIC_DO_JOGO` da fila; devolve as chaves que mudaram.
+
+    Só a `luz` e o `solta` são deste laço; o `mudo` é do `hotkey`.
+    """
+    mudaram: list[str] = []
+    if fila is None:
+        return mudaram
+    while True:
+        try:
+            evento = fila.get_nowait()
+        except asyncio.QueueEmpty:
+            break
+        except Exception:  # pragma: no cover - defensivo
+            break
+        if not isinstance(evento, dict):
+            continue
+        chave = chave_do_mic(evento.get("uniq"))
+        if chave is None:
+            continue
+        if evento.get("solta"):
+            if _LUZ_DO_JOGO.pop(chave, None) is not None:
+                logger.info("luz_do_mic_o_jogo_soltou", uniq=chave)
+                mudaram.append(chave)
+            continue
+        luz = evento.get("luz")
+        if isinstance(luz, bool) or not isinstance(luz, int):
+            continue
+        if _o_jogo_pede_a_luz(chave, luz, _instante(evento.get("em"))):
+            logger.info("luz_do_mic_do_jogo", uniq=chave, luz=luz)
+            mudaram.append(chave)
+    return mudaram
+
+
+def _esquecer_o_jogo_fora_da_mesa(mesa: list[str]) -> None:
+    """O controle que sai da mesa esquece o pedido do jogo: o handle volta novo."""
+    na_mesa = {chave_do_mic(u) for u in mesa}
+    for chave in [c for c in _LUZ_DO_JOGO if c not in na_mesa]:
+        _LUZ_DO_JOGO.pop(chave, None)
 
 
 __all__ = [
@@ -1044,7 +1203,11 @@ __all__ = [
     "PISCANDO_LENTO",
     "SEGURA_A_BORDA_S",
     "SEM_RESPOSTA_ATE_SOLTAR_S",
+    "a_pessoa_mandou",
+    "chave_do_mic",
     "decidir",
+    "luz_do_mic_do_jogo",
     "luz_do_mic_loop",
+    "quando_a_pessoa_mandou",
     "start_luz_do_mic",
 ]
