@@ -2304,8 +2304,9 @@ class UhidDualSense:
             # A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01: driver novo,
             # `last_btn_mic_state` e `mic_muted` de novo `false`: o dedo que
             # segue apertado é borda para ele no próximo report que sair.
-            self._mic_bit_que_saiu = False
-            self._as_janelas_do_eco().clear()
+            with self._lock:
+                self._mic_bit_que_saiu = False
+                self._as_janelas_do_eco().clear()
             logger.info("uhid_bind_ok", player=self.player, name=self.name)
         elif event_type == UHID_OPEN:
             # Primeiro usuário abriu o device — começa a sessão de jogo
@@ -3002,18 +3003,25 @@ class UhidDualSense:
         Só o lado da saída chama: vence as janelas velhas (`ECO_DO_DRIVER_S`)
         e consome a mais velha, uma por aperto. A resposta do jogo que vem
         depois do eco, com a mesma assinatura, acha a janela consumida.
+
+        SOB O `_lock` DO EMISSOR: o kernel agenda o eco dentro do `write` do
+        report que trouxe a borda, e o `kworker` pode entregá-lo ao fio do uhid
+        antes de o `write` voltar e a janela ser anexada. O emissor segura o
+        `_lock` do `write` até a janela, então esperar por ele aqui é esperar
+        a janela. A ordem é a de sempre (a saída, e depois o `_lock`).
         """
         if not _tem_a_assinatura_do_eco(body):
             return False
-        janelas = self._as_janelas_do_eco()
-        agora = self.time_fn()
-        while janelas and agora - janelas[0] > ECO_DO_DRIVER_S:
+        with self._lock:
+            janelas = self._as_janelas_do_eco()
+            agora = self.time_fn()
+            while janelas and agora - janelas[0] > ECO_DO_DRIVER_S:
+                janelas.popleft()
+            if not janelas:
+                return False
             janelas.popleft()
-        if not janelas:
-            return False
-        janelas.popleft()
-        self._mic_eco_do_driver += 1
-        return True
+            self._mic_eco_do_driver += 1
+            return True
 
     def _as_janelas_do_eco(self) -> collections.deque[float]:
         """As janelas do eco, garantidas pelo dono (o molde de `_a_trava_da_saida`).

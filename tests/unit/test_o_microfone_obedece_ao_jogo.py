@@ -654,6 +654,45 @@ class TestOEcoDoDriver:
         assert pad.mic_eco_do_driver == 2, "a reentrega depois do START não abriu janela"
         assert ralos.do_microfone() == []
 
+    def test_o_eco_que_chega_antes_de_o_write_voltar_e_eco(
+        self, pad_e_ralos: tuple[UhidDualSense, _Ralos, _Relogio], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O kernel agenda o eco DENTRO do `write` do report que traz a borda.
+
+        O `kworker` pode entregar o 0x02 ao fio do uhid antes de o `write`
+        voltar à thread que emitiu; o fio o atende na hora. A janela tem de
+        estar aberta para ele nesse instante, e não só depois do `write`.
+        Mordida: a janela aberta sem a trava do emissor (o fio acha o deque
+        vazio e entrega o eco aos ralos como se fosse o jogo).
+        """
+        pad, ralos, relogio = pad_e_ralos
+        real = pad.send_report
+        fios: list[threading.Thread] = []
+
+        def _send_com_o_eco_no_meio(report: bytes) -> bool:
+            ok = real(report)
+            fio = threading.Thread(
+                target=pad._handle_output, args=(_eco_do_driver(True),), daemon=True
+            )
+            fios.append(fio)
+            fio.start()
+            # O fio do uhid atende enquanto o emissor ainda está no `write`.
+            fio.join(timeout=0.3)
+            return ok
+
+        monkeypatch.setattr(pad, "send_report", _send_com_o_eco_no_meio)
+        relogio.andar(0.005)
+        pad.forward_mic_button(True)
+        monkeypatch.setattr(pad, "send_report", real)
+        for fio in fios:
+            fio.join(timeout=5.0)
+            assert not fio.is_alive()
+        pad.pump_ff()
+        assert ralos.do_microfone() == [], (
+            "o eco que chegou antes de o write voltar foi entregue como pedido do jogo"
+        )
+        assert pad.mic_eco_do_driver == 1
+
     def test_o_report_que_nao_saiu_nao_abre_janela(
         self, pad_e_ralos: tuple[UhidDualSense, _Ralos, _Relogio], monkeypatch: pytest.MonkeyPatch
     ) -> None:
