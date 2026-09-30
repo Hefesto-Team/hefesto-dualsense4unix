@@ -1582,6 +1582,7 @@ def make_primary_replica_sinks(daemon: DaemonProtocol) -> dict[str, Any]:
             daemon, bits, target_uniq=_uniq()
         ),
         "session_end_sink": _session_end,
+        **ralos_do_mic(daemon, lambda: _primario_da_hora(daemon)),
     }
 
 
@@ -3401,6 +3402,107 @@ def _conferir_o_cursor_do_toque(daemon: Any, store: Any) -> None:
         logger.warning("cursor_do_toque_conferir_falhou", err=str(exc))
 
 
+# ---------------------------------------------------------------------------
+# O MICROFONE OBEDECE AO JOGO — A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01
+# (29/09/2026, D-2909-O-MICROFONE-OBEDECE-AO-JOGO, que revoga a recusa)
+# ---------------------------------------------------------------------------
+#
+# Com pad virtual DualSense, a luz e o mudo do microfone que o jogo pede vão
+# ao controle DAQUELE jogador, P1 a P4, cabo e rádio. Este aplicador não
+# escreve no aparelho: ele publica `MIC_DO_JOGO`, e quem aplica são os donos de
+# sempre (a luz, o `luz_do_mic`; o mudo, o `hotkey`). Um segundo escritor da
+# luz seria pintado por cima pelo laço dela no tique seguinte.
+
+#: Os controles cujo pedido retido já foi dito no journal neste episódio.
+_RETIDO_JA_DITO: set[str] = set()
+
+
+def _primario_da_hora(daemon: Any) -> str | None:
+    """O `primary_uniq` do INSTANTE, sem entrar na conta das réplicas da sessão."""
+    uniq = getattr(getattr(daemon, "controller", None), "primary_uniq", None)
+    return uniq if isinstance(uniq, str) and uniq else None
+
+
+def apply_game_mic(
+    daemon: Any,
+    *,
+    target_uniq: str | None,
+    luz: int | None = None,
+    mudo: bool | None = None,
+    solta: bool = False,
+) -> bool:
+    """Leva ao dono o pedido do microfone do jogo. `True` = aplicado.
+
+    - Endereço que não é MAC descarta com log, nunca difunde
+      (BROADCAST-PROIBIDO-01).
+    - Sob `display_authority == "daemon"` (evidência positiva de que quem
+      escreve é o cliente Steam, sem jogo, NUMA-02) o pedido fica RETIDO, e o
+      journal o diz uma vez por episódio: é a regra da barra. O `solta` passa
+      sempre.
+    - Senão publica `MIC_DO_JOGO` com o `em` (`time.monotonic`, o relógio da
+      borda do botão). O `publish` é seguro fora do laço do daemon.
+    """
+    from hefesto_dualsense4unix.core.events import EventTopic
+    from hefesto_dualsense4unix.daemon.subsystems.luz_do_mic import chave_do_mic
+
+    chave = chave_do_mic(target_uniq)
+    if chave is None:
+        logger.debug("game_mic_sem_alvo_descartado", target=target_uniq)
+        return False
+    evento: dict[str, Any] = {"uniq": chave, "em": time.monotonic()}
+    if solta:
+        evento["solta"] = True
+    elif luz is not None:
+        evento["luz"] = int(luz)
+    elif mudo is not None:
+        evento["mudo"] = bool(mudo)
+    else:
+        return False
+    autoridade = getattr(daemon, "display_authority", "unknown")
+    if not solta and autoridade == "daemon":
+        if chave not in _RETIDO_JA_DITO:
+            _RETIDO_JA_DITO.add(chave)
+            logger.info("mic_do_jogo_retido_sem_jogo", uniq=chave, autoridade=autoridade)
+        return False
+    _RETIDO_JA_DITO.discard(chave)
+    publicar = getattr(getattr(daemon, "bus", None), "publish", None)
+    if not callable(publicar):
+        logger.debug("game_mic_sem_barramento", uniq=chave)
+        return False
+    publicar(EventTopic.MIC_DO_JOGO, evento)
+    return True
+
+
+def ralos_do_mic(daemon: Any, alvo: Callable[[], str | None]) -> dict[str, Any]:
+    """Os dois ralos do microfone de UM pad virtual; `alvo` diz o controle na hora.
+
+    As chaves casam com os kwargs de `make_virtual_pad`, como as da
+    REPLICA-03. O `solta` (a luz `None`) vai a CADA controle que recebeu luz
+    na sessão, e não ao alvo do instante: o primário pode ter trocado no meio
+    do jogo, e a luz ficou com quem a recebeu (é o que o `_session_end` faz
+    com a barra).
+    """
+    luz_entregue_a: set[str] = set()
+
+    def _luz(valor: int | None) -> bool:
+        if valor is None:
+            alvos = tuple(luz_entregue_a)
+            luz_entregue_a.clear()
+            for uniq in alvos:
+                apply_game_mic(daemon, target_uniq=uniq, solta=True)
+            return True
+        uniq = alvo()
+        aplicado = apply_game_mic(daemon, target_uniq=uniq, luz=valor)
+        if aplicado and uniq:
+            luz_entregue_a.add(uniq)
+        return aplicado
+
+    def _mudo(mudo: bool) -> bool:
+        return apply_game_mic(daemon, target_uniq=alvo(), mudo=mudo)
+
+    return {"mic_led_sink": _luz, "mic_mute_sink": _mudo}
+
+
 def soltar_o_cursor_do_toque(daemon: Any) -> None:
     """Destrói o cursor do toque da sessão, se houver. Idempotente.
 
@@ -3433,6 +3535,7 @@ __all__ = [
     "anotar_rumble_no_vpad",
     "aplicar_o_toque",
     "apply_game_lightbar",
+    "apply_game_mic",
     "apply_game_player_leds",
     "apply_game_rumble",
     "apply_game_trigger",
@@ -3444,6 +3547,7 @@ __all__ = [
     "make_primary_replica_sinks",
     "make_primary_rumble_sink",
     "notify_vpad_degradado",
+    "ralos_do_mic",
     "read_primary_calibration",
     "rehide_physical_hidraw",
     "resume_vpads_after_steam_input",

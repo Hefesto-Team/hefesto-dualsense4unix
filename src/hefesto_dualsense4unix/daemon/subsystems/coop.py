@@ -1275,11 +1275,16 @@ class CoopManager:
 
             end_game_output_session(daemon, target_uniq=target)
 
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import ralos_do_mic
+
         return {
             "trigger_sink": _trigger,
             "lightbar_sink": _lightbar,
             "player_led_sink": _player_leds,
             "session_end_sink": _session_end,
+            # A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01: a luz e o mudo
+            # do microfone que o jogo pede, ao controle DESTE jogador.
+            **ralos_do_mic(daemon, lambda: target),
         }
 
     def _promote_player(self, player: _SecondaryPlayer) -> None:
