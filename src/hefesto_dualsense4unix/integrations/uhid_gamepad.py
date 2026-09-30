@@ -1099,7 +1099,7 @@ class UhidDualSense:
     #: ANEXA; quem vence e consome é só o lado da saída.
     _janelas_do_eco: collections.deque[float] = field(
         default_factory=lambda: collections.deque(maxlen=_JANELAS_DO_ECO_MAX)
-    )
+    )  # quem lê pergunta ao dono, `_as_janelas_do_eco`
     #: O bit do botão no último report que SAIU (a borda do driver é a subida).
     _mic_bit_que_saiu: bool = False
     #: PAINEL-DA-VERDADE-01: instante (relógio de `time_fn`) do último evento
@@ -2305,7 +2305,7 @@ class UhidDualSense:
             # `last_btn_mic_state` e `mic_muted` de novo `false`: o dedo que
             # segue apertado é borda para ele no próximo report que sair.
             self._mic_bit_que_saiu = False
-            self._janelas_do_eco.clear()
+            self._as_janelas_do_eco().clear()
             logger.info("uhid_bind_ok", player=self.player, name=self.name)
         elif event_type == UHID_OPEN:
             # Primeiro usuário abriu o device — começa a sessão de jogo
@@ -2391,7 +2391,9 @@ class UhidDualSense:
                 body[rep.COMMON_AUDIO_PATH],
             )
         if len(body) > _VALID_FLAG1_OFFSET:
-            self._replicate_from_output(body, eco=eco)
+            self._replicate_from_output(body)
+            if not eco:
+                self._o_jogo_pede_o_microfone(body)
         if len(body) <= _RUMBLE_STRONG_OFFSET:
             return
         if _e_a_parada_do_sdl(body):
@@ -2568,12 +2570,8 @@ class UhidDualSense:
             return False
         return (self.time_fn() - bound_at) >= _GAME_REPLICA_GRACE_S
 
-    def _replicate_from_output(self, body: bytes, *, eco: bool = False) -> None:
-        """Enfileira as categorias presentes no report 0x02 (bits de valid_flag).
-
-        `eco`: o report é o do driver deste pad depois de uma borda do botão
-        do microfone; os campos do microfone dele não são pedido de ninguém.
-        """
+    def _replicate_from_output(self, body: bytes) -> None:
+        """Enfileira as categorias presentes no report 0x02 (bits de valid_flag)."""
         if not self._replicating():
             return
         flag0 = body[_VALID_FLAG0_OFFSET]
@@ -2593,10 +2591,6 @@ class UhidDualSense:
             self._queue_replica(
                 "player_leds", tuple(bool(mask & (1 << i)) for i in range(5))
             )
-        if not eco:
-            # A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01: a luz e o mudo
-            # que o jogo pede vão ao controle deste jogador (revoga a recusa).
-            self._pedido_do_microfone(flag1, body)
         if flag1 & _LIGHTBAR_CONTROL_ENABLE and len(body) >= _LIGHTBAR_RGB_OFFSET + 3:
             self._queue_replica(
                 "lightbar",
@@ -2760,7 +2754,7 @@ class UhidDualSense:
         """
         if self._fd is not None:
             return True
-        self._janelas_do_eco.clear()
+        self._as_janelas_do_eco().clear()
         self._mic_bit_que_saiu = False
         _MACS_DOS_VPADS_VIVOS.vestir(self)
         if self._criar_o_device():
@@ -2999,7 +2993,7 @@ class UhidDualSense:
         """
         bit = bool(body[_BUTTONS2_OFFSET] & _BUTTONS2_BITS["mic_btn"])
         if bit and not self._mic_bit_que_saiu:
-            self._janelas_do_eco.append(self.time_fn())
+            self._as_janelas_do_eco().append(self.time_fn())
         self._mic_bit_que_saiu = bit
 
     def _e_eco_do_driver(self, body: bytes) -> bool:
@@ -3011,7 +3005,7 @@ class UhidDualSense:
         """
         if not _tem_a_assinatura_do_eco(body):
             return False
-        janelas = self._janelas_do_eco
+        janelas = self._as_janelas_do_eco()
         agora = self.time_fn()
         while janelas and agora - janelas[0] > ECO_DO_DRIVER_S:
             janelas.popleft()
@@ -3020,6 +3014,31 @@ class UhidDualSense:
         janelas.popleft()
         self._mic_eco_do_driver += 1
         return True
+
+    def _as_janelas_do_eco(self) -> collections.deque[float]:
+        """As janelas do eco, garantidas pelo dono (o molde de `_a_trava_da_saida`).
+
+        As bancadas da suíte que montam o pad sem o `__init__` do dataclass não
+        têm o campo; o `setdefault` é atômico sob o GIL.
+        """
+        janelas: collections.deque[float] | None = self.__dict__.get("_janelas_do_eco")
+        if janelas is None:
+            janelas = self.__dict__.setdefault(
+                "_janelas_do_eco", collections.deque(maxlen=_JANELAS_DO_ECO_MAX)
+            )
+        assert janelas is not None
+        return janelas
+
+    def _o_jogo_pede_o_microfone(self, body: bytes) -> None:
+        """Fora do eco, a luz e o mudo do report vão à fila das réplicas.
+
+        Depois da carência, como as outras categorias; no fio, o tique entrega.
+        """
+        if not self._replicating():
+            return
+        self._pedido_do_microfone(body[_VALID_FLAG1_OFFSET], body)
+        if not self._no_fio_do_uhid():
+            self._flush_replicas()
 
     def _pedido_do_microfone(self, flag1: int, body: bytes) -> None:
         """Enfileira a luz e o mudo que o jogo pediu, com o dedup de sempre.
@@ -3086,7 +3105,7 @@ class UhidDualSense:
         self._mic_mudo_do_jogo_amostra = None
         self._mic_luz_entregue = False
         self._mic_solta_a_entregar = False
-        self._janelas_do_eco.clear()
+        self._as_janelas_do_eco().clear()
         self._mic_bit_que_saiu = False
 
 
