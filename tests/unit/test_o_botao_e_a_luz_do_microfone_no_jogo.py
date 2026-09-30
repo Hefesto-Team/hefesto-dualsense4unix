@@ -1,5 +1,13 @@
 """O botão do microfone chega ao jogo (O-BOTAO-E-A-LUZ-DO-MICROFONE-NO-JOGO-01).
 
+**A recusa da luz caiu em 29/09/2026** (A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-
+AO-JOGO-01, a D-2909-O-MICROFONE-OBEDECE-AO-JOGO, que revoga a
+D-2909-A-LUZ-DO-MIC-NAO-OBEDECE-AO-JOGO): a luz e o mudo que o jogo pede vão ao
+ralo do jogador, e o 0x02 do driver do pad só é eco quando uma borda do botão
+que o pad EMITIU o precede. As réguas da obediência inteira estão em
+`test_o_microfone_obedece_ao_jogo.py`; aqui ficam as da O-BOTAO, trocadas da
+recusa para a obediência.
+
 A Forja de 29/09 (sala «A Voz») reprovou *«o botão do microfone nunca
 chegou»*. A causa, lida no código: o `hid-playstation` consome o botão e o
 evdev não o traz; os dois caminhos do jogo (o primário e o co-op) montam os
@@ -480,6 +488,24 @@ class _Pias:
         pad.trigger_sink = lambda lado, v: self.chamadas.append(("gatilho", lado))
         pad.lightbar_sink = lambda r, g, b: self.chamadas.append(("barra", (r, g, b)))
         pad.player_led_sink = lambda *a: self.chamadas.append(("numero", a))
+        pad.mic_led_sink = self._luz
+        pad.mic_mute_sink = self._mudo
+
+    def _luz(self, valor: int | None) -> bool:
+        self.chamadas.append(("luz_do_mic", valor))
+        return True
+
+    def _mudo(self, mudo: bool) -> bool:
+        self.chamadas.append(("mudo_do_mic", mudo))
+        return True
+
+    def do_microfone(self) -> list[tuple[str, Any]]:
+        return [c for c in self.chamadas if c[0] in ("luz_do_mic", "mudo_do_mic")]
+
+
+def _apertar_no_pad(pad: UhidDualSense) -> None:
+    """Uma borda do botão que o PAD emite ao jogo (e o driver dele vê)."""
+    pad.forward_mic_button(True)
 
 
 @pytest.fixture()
@@ -496,39 +522,50 @@ def jogo_aberto(uhid: _UhidPorFd) -> Iterator[tuple[UhidDualSense, _Pias]]:
 
 
 class TestO0x02DoDriverNaoViraEscrita:
-    """O aperto agora chega ao driver do vpad, que responde com um 0x02."""
+    """O aperto chega ao driver do vpad, que responde com um 0x02: é eco.
+
+    Desde a A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01 o que separa o eco
+    do jogo é a BORDA que o pad emitiu antes dele, e não o bit: cada 0x03 aqui
+    vem depois de um aperto que saiu no report ao jogo.
+    """
 
     def test_nao_chama_pia_nenhuma(
         self, jogo_aberto: tuple[UhidDualSense, _Pias], uhid: _UhidPorFd
     ) -> None:
+        """Mordida: tirar a janela do eco (todo 0x03 vira jogo) reprova."""
         pad, pias = jogo_aberto
         fd = pad._fd
         assert fd is not None
-        antes = len(uhid.escritas[fd])
         for mudo in (True, False, True, False):
+            _apertar_no_pad(pad)
+            antes = len(uhid.escritas[fd])
             pad._handle_output(_evento_de_output(_corpo_do_driver(mudo)))
             pad._flush_replicas()
+            assert len(uhid.escritas[fd]) == antes, "o 0x02 do driver virou eco no jogo"
+            pad.forward_mic_button(False)
         assert pias.chamadas == [], (
             f"o 0x02 do driver do vpad virou escrita no controle: {pias.chamadas}"
         )
-        assert len(uhid.escritas[fd]) == antes, "o 0x02 do driver virou eco no jogo"
         assert pad.ff_descartado_count == 0
-        assert pad.mic_led_do_jogo_recusado == 0, (
+        assert pad.mic_eco_do_driver == 4
+        assert pad.mic_led_do_jogo == 0, (
             "o 0x02 do driver do vpad foi contado como pedido de luz do jogo"
         )
 
-    def test_o_pedido_de_luz_do_jogo_e_contado_e_nao_pinta(
+    def test_o_pedido_de_luz_do_jogo_vai_ao_ralo_do_jogador(
         self, jogo_aberto: tuple[UhidDualSense, _Pias]
     ) -> None:
-        """Mordida: sem o contador, reprova."""
+        """Mordida: a recusa de volta (contar e não entregar) reprova."""
         pad, pias = jogo_aberto
         corpo = bytearray(47)
         corpo[1] = rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
         corpo[_MUTE_BUTTON_LED] = 2  # piscando, na língua da Sony
         pad._handle_output(_evento_de_output(bytes(corpo)))
         pad._flush_replicas()
-        assert pias.chamadas == [], "o pedido de luz do jogo pintou o controle"
-        assert pad.mic_led_do_jogo_recusado == 1
+        assert pias.chamadas == [("luz_do_mic", 2)], (
+            "o pedido de luz do jogo não chegou ao ralo do jogador, literal"
+        )
+        assert pad.mic_led_do_jogo == 1
         assert pad.mic_led_do_jogo_amostra == 2
 
     def test_nao_para_a_vibracao_do_jogo(
@@ -538,11 +575,14 @@ class TestO0x02DoDriverNaoViraEscrita:
         pad, pias = jogo_aberto
         pad._handle_output(_evento_de_output(_corpo_do_jogo_vibrando(90, 200)))
         assert pias.chamadas == [("rumble", (90, 200))]
-        pad._handle_output(_evento_de_output(_corpo_do_driver(True)))
-        pad._handle_output(_evento_de_output(_corpo_do_driver(False)))
+        for mudo in (True, False):
+            _apertar_no_pad(pad)
+            pad._handle_output(_evento_de_output(_corpo_do_driver(mudo)))
+            pad.forward_mic_button(False)
         assert ("rumble", (0, 0)) not in pias.chamadas, (
             "o 0x02 do driver do vpad parou a vibração que o jogo pediu"
         )
+        assert pias.do_microfone() == []
 
 
 # --------------------------------------------------------------------------
@@ -651,12 +691,14 @@ async def _o_vpad_do_p1(caminho: Path) -> dict[str, Any]:
 
 
 @pytest.mark.asyncio
-async def test_state_full_publica_o_botao_e_a_luz_recusada(
+async def test_state_full_publica_o_botao_e_a_luz_do_jogo(
     servidor: tuple[Path, Any],
 ) -> None:
     """Mordida: sem as chaves no bloco do vpad, reprova."""
     caminho, daemon = servidor
     pad = _vpad()
+    pias = _Pias()
+    pias.ligar(pad)
     pad._game_open = True
     pad._bound_at = pad.time_fn() - 10.0
     pad.forward_mic_button(True)
@@ -672,8 +714,9 @@ async def test_state_full_publica_o_botao_e_a_luz_recusada(
     finally:
         pad.stop()
     assert item["mic_button_forwards"] == 2
-    assert item["mic_led_do_jogo_recusado"] == 1
+    assert item["mic_led_do_jogo"] == 1
     assert item["mic_led_do_jogo_amostra"] == 1
+    assert "mic_led_do_jogo_recusado" not in item
 
 
 @pytest.mark.asyncio
@@ -685,12 +728,12 @@ async def test_state_full_nao_inventa_com_vpad_dublado(
         backend="uinput",
         flavor="xbox360",
         mic_button_count=MagicMock(),
-        mic_led_do_jogo_recusado=MagicMock(),
+        mic_led_do_jogo=MagicMock(),
         mic_led_do_jogo_amostra=MagicMock(),
     )
     item = await _o_vpad_do_p1(caminho)
     assert item["mic_button_forwards"] == 0
-    assert item["mic_led_do_jogo_recusado"] == 0
+    assert item["mic_led_do_jogo"] == 0
     assert item["mic_led_do_jogo_amostra"] is None
 
 
@@ -749,48 +792,73 @@ class TestOLacoEsqueceNaPerda:
                 os.close(lido)
 
 
-class TestALuzPorBitENaoPorIgualdade:
-    """A sprint separa o 0x02 do driver pelo bit 0x02, não por `== 0x03`.
+class TestALuzPorCausaENaoPorBit:
+    """O que separa o eco do jogo é a borda que o pad emitiu, não o bit.
 
-    Mordidas: trocar o teste de bit por `flag1 != 0x03` reprova o primeiro;
-    por `flag1 == 0x01`, o segundo; contar antes do `_replicating()`, o
-    terceiro.
+    A O-BOTAO separava pelo bit 0x02 (o `0x01` sem o `0x02` era jogo); desde a
+    A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01 o pedido de mudo do jogo
+    É o 0x02, e um jogo na língua da Sony manda o 0x03 inteiro, igual ao
+    driver. Mordidas: separar pelo bit de novo reprova o segundo e o terceiro;
+    contar antes do `_replicating()`, o quarto.
     """
 
-    def test_o_driver_com_a_barra_junto_nao_conta(
+    def test_o_driver_com_a_barra_junto_entrega_so_a_barra(
         self, jogo_aberto: tuple[UhidDualSense, _Pias]
     ) -> None:
-        pad, _pias = jogo_aberto
+        pad, pias = jogo_aberto
+        _apertar_no_pad(pad)
         corpo = bytearray(_corpo_do_driver(True))
         corpo[1] |= 0x04  # o worker do driver junta a barra pendente
+        corpo[44:47] = bytes([10, 20, 30])
         pad._handle_output(_evento_de_output(bytes(corpo)))
-        assert pad.mic_led_do_jogo_recusado == 0
+        pad._flush_replicas()
+        assert ("barra", (10, 20, 30)) in pias.chamadas
+        assert pias.do_microfone() == [], "o eco do driver foi entregue como jogo"
+        assert pad.mic_eco_do_driver == 1
 
-    def test_o_jogo_com_a_barra_junto_conta(
+    def test_o_0x07_sem_borda_e_o_jogo(
         self, jogo_aberto: tuple[UhidDualSense, _Pias]
     ) -> None:
-        pad, _pias = jogo_aberto
+        pad, pias = jogo_aberto
+        corpo = bytearray(_corpo_do_driver(True))
+        corpo[1] |= 0x04
+        pad._handle_output(_evento_de_output(bytes(corpo)))
+        pad._flush_replicas()
+        assert pias.do_microfone() == [("luz_do_mic", 1), ("mudo_do_mic", True)]
+        assert pad.mic_eco_do_driver == 0
+
+    def test_o_jogo_com_a_barra_junto_entrega_os_dois(
+        self, jogo_aberto: tuple[UhidDualSense, _Pias]
+    ) -> None:
+        pad, pias = jogo_aberto
         corpo = bytearray(47)
         corpo[1] = rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE | 0x04
         corpo[_MUTE_BUTTON_LED] = 1
         pad._handle_output(_evento_de_output(bytes(corpo)))
-        assert pad.mic_led_do_jogo_recusado == 1
+        pad._flush_replicas()
+        assert pias.do_microfone() == [("luz_do_mic", 1)]
+        assert pad.mic_led_do_jogo == 1
         assert pad.mic_led_do_jogo_amostra == 1
 
     def test_a_escrita_do_nascimento_nao_conta(
         self, jogo_aberto: tuple[UhidDualSense, _Pias]
     ) -> None:
-        pad, _pias = jogo_aberto
+        pad, pias = jogo_aberto
         pad._bound_at = pad.time_fn()  # ainda na carência do probe
         corpo = bytearray(47)
         corpo[1] = rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
         pad._handle_output(_evento_de_output(bytes(corpo)))
-        assert pad.mic_led_do_jogo_recusado == 0
+        pad._flush_replicas()
+        assert pias.do_microfone() == []
+        assert pad.mic_led_do_jogo == 0
+        assert pad.mic_led_do_jogo_amostra is None
 
 
-def test_o_stop_solta_o_botao_e_zera_as_contas(uhid: _UhidPorFd) -> None:
+def test_o_stop_solta_o_botao_zera_as_contas_e_solta_a_luz(uhid: _UhidPorFd) -> None:
     """Mordida: sem o reset no `stop()`, a próxima vida nasce apertada."""
     pad = _vpad()
+    pias = _Pias()
+    pias.ligar(pad)
     pad._game_open = True
     pad._bound_at = pad.time_fn() - 10.0
     pad.forward_mic_button(True)
@@ -798,9 +866,12 @@ def test_o_stop_solta_o_botao_e_zera_as_contas(uhid: _UhidPorFd) -> None:
     corpo[1] = rep.VALID_FLAG1_MIC_MUTE_LED_CONTROL_ENABLE
     pad._handle_output(_evento_de_output(bytes(corpo)))
     assert pad.mic_button and pad.mic_button_count == 1
-    assert pad.mic_led_do_jogo_recusado == 1
+    assert pad.mic_led_do_jogo == 1
     pad.stop()
     assert pad.mic_button is False
     assert pad.mic_button_count == 0
-    assert pad.mic_led_do_jogo_recusado == 0
+    assert pad.mic_led_do_jogo == 0
     assert pad.mic_led_do_jogo_amostra is None
+    assert pias.do_microfone() == [("luz_do_mic", 0), ("luz_do_mic", None)], (
+        "o fim do pad não soltou a luz que o jogo pediu"
+    )
