@@ -1148,12 +1148,8 @@ def start_mic_hotkey(daemon: DaemonProtocol) -> None:
     if daemon._audio is None:
         daemon._audio = AudioControl()
     start_mic_da_mesa(daemon)
-    task = asyncio.create_task(mic_button_loop(daemon), name="mic_button_loop")
-    daemon._tasks.append(task)
-    # O MUDO QUE O JOGO PEDE (A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01).
-    daemon._tasks.append(
-        asyncio.create_task(mic_do_jogo_loop(daemon), name="mic_do_jogo_loop")
-    )
+    for laco in (mic_button_loop, mic_do_jogo_loop):  # o 2º: o mudo que o jogo pede
+        daemon._tasks.append(asyncio.create_task(laco(daemon), name=laco.__name__))
     # A QUARTA FACE DO ESTADO (MICROFONE-UM-ATO-01): o que o PipeWire diz sobre
     # o canal deste controle. Laço próprio, e não leitura no tique: o
     # `state_full` roda a 20 Hz e só LÊ o que o laço já leu. O laço acorda pelo

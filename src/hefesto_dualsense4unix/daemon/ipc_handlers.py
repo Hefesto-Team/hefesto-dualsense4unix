@@ -4462,9 +4462,8 @@ class IpcHandlersMixin:
             luz = estado_da_luz_do_mic(str(uniq or ""))
             if luz is not None:
                 status["luz_do_mic"] = int(luz)
-            # A LUZ QUE O JOGO PEDIU, só enquanto o pedido está de pé
-            # (A-LUZ-E-O-MUDO-DO-MICROFONE-OBEDECEM-AO-JOGO-01): o plástico é
-            # do jogo, e o `luz_do_mic` acima segue dizendo o microfone.
+            # A LUZ QUE O JOGO PEDIU, só com o pedido de pé (A-LUZ-E-O-MUDO-DO-
+            # MICROFONE-OBEDECEM-AO-JOGO-01); o `luz_do_mic` segue dizendo o mic.
             _a_luz_do_jogo_no_controle(status, uniq)
             # E QUEM OUVE VAI JUNTO — 19/09/2026, a outra metade da decisão
             # dela na A-LUZ-DO-MIC-ESPELHA-O-BOTAO-01. A luz passou a espelhar
