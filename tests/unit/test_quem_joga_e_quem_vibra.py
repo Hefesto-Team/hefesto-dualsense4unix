@@ -253,7 +253,7 @@ class TestOGateEstaLigado:
         pista do evdev só se pergunta quando a linha do portão sai.
         """
         corpo = self._corpo()
-        antes_do_modo = corpo[: corpo.index('modo = "haptica"')]
+        antes_do_modo = corpo[: corpo.index("modo = self._modo_pelo_sinal(")]
         assert "jogando = self._quem_mexeu_na_partida(controles)" in antes_do_modo, (
             "o voto de quem joga não é consultado dentro de `_casar_as_pontes`"
         )
@@ -267,13 +267,31 @@ class TestOGateEstaLigado:
         Só o primeiro deixava três controles vibrarem num jogo de um jogador.
 
         MORDIDA: tirar `este_joga` da condição.
+
+        O MODO SAIU PARA UM DONO SÓ, `_modo_pelo_sinal` (A-HAPTICA-POR-AUDIO-E-O-
+        ALTO-FALANTE-CHEGAM-AO-RADIO-01, 29/09/2026): quem tem sinal fica com o
+        rádio. O portão de sempre virou a `candidata` que ele recebe, e sem ela
+        o modo é som — os dois sinais continuam exigidos, agora em duas linhas.
         """
         corpo = self._corpo()
-        i = corpo.index('modo = "haptica"')
+        i = corpo.index("candidata = ")
         condicao = corpo[i : corpo.index("\n", i)]
         assert "este_joga" in condicao, "o gate saiu da condição do modo"
-        assert "endpoint_toca" in condicao, "o canal saiu da condição do modo"
-        assert "endpoint_toca = endpoint is not None and sink_esta_tocando(endpoint.nome)" in corpo
+        assert "endpoint_aberto" in condicao, "o canal saiu da condição do modo"
+        assert "endpoint_aberto = endpoint is not None and sink_esta_tocando(endpoint.nome)" in corpo
+        chamada = corpo[corpo.index("modo = self._modo_pelo_sinal(") :]
+        assert "candidata=candidata" in chamada[: chamada.index("\n            )")], (
+            "o modo deixou de receber o portão"
+        )
+        fonte = pathlib.Path(
+            "src/hefesto_dualsense4unix/daemon/subsystems/alto_falante.py"
+        ).read_text(encoding="utf-8")
+        regra = fonte[fonte.index("def _modo_pelo_sinal") :]
+        regra = regra[regra.index('"""', regra.index('"""') + 3) + 3 :]
+        primeira = regra.strip().splitlines()[0]
+        assert primeira.startswith("if not candidata"), (
+            "o portão não é a primeira pergunta do modo: sem ele, tem de ser som"
+        )
 
 
 @pytest.mark.parametrize("quem", [P1, P2, P3, P4])
