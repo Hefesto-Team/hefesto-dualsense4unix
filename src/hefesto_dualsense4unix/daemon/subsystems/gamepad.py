@@ -3488,8 +3488,8 @@ def ralos_do_mic(daemon: Any, alvo: Callable[[], str | None]) -> dict[str, Any]:
         if valor is None:
             alvos = tuple(luz_entregue_a)
             luz_entregue_a.clear()
-            for uniq in alvos:
-                apply_game_mic(daemon, target_uniq=uniq, solta=True)
+            for quem in alvos:
+                apply_game_mic(daemon, target_uniq=quem, solta=True)
             return True
         uniq = alvo()
         aplicado = apply_game_mic(daemon, target_uniq=uniq, luz=valor)
