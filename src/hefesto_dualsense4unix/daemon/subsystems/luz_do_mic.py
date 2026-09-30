@@ -914,8 +914,10 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                 posse.discard(uniq)
                 segura_desde.pop(uniq, None)
                 sem_resposta_desde.pop(uniq, None)
-            # O controle que sai da mesa esquece o pedido do jogo.
-            _esquecer_o_jogo_fora_da_mesa(mesa)
+            # O PEDIDO DO JOGO NÃO SAI COM O CONTROLE: o rádio cai e volta no
+            # meio do jogo, o pad virtual fica, e o dedup dele não reenvia o
+            # mesmo valor. O `escrito` que saiu acima faz a luz do jogo voltar
+            # ao plástico novo; quem apaga o pedido é o `solta` do pad.
 
             marca = RETRATO.marca(_O_QUE_A_LUZ_LE)
             if marca != marca_vista or (agora - perguntei_em) >= INTERVALO_DE_QUEM_OUVE_S:
@@ -1179,13 +1181,6 @@ def _drenar_o_jogo(fila: Any) -> list[str]:
             logger.info("luz_do_mic_do_jogo", uniq=chave, luz=luz)
             mudaram.append(chave)
     return mudaram
-
-
-def _esquecer_o_jogo_fora_da_mesa(mesa: list[str]) -> None:
-    """O controle que sai da mesa esquece o pedido do jogo: o handle volta novo."""
-    na_mesa = {chave_do_mic(u) for u in mesa}
-    for chave in [c for c in _LUZ_DO_JOGO if c not in na_mesa]:
-        _LUZ_DO_JOGO.pop(chave, None)
 
 
 __all__ = [

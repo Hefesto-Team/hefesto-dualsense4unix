@@ -1033,6 +1033,57 @@ class TestOJogoSolta:
             pad.stop()
 
 
+class TestOEnderecoDoPedido:
+    """O pedido vai ao controle do jogador pelo endereço dele, e só a ele.
+
+    Mordidas: o laço da luz esquecendo o pedido do controle que saiu da mesa (o
+    rádio que cai e volta no meio do jogo perde a luz do jogo, e o dedup do pad
+    não a reenvia); o aplicador caindo no primário quando o alvo não é MAC.
+    """
+
+    async def test_o_radio_que_cai_e_volta_traz_a_luz_do_jogo(
+        self, uhid: _UhidPorFd, palavra: _Palavra  # noqa: F811
+    ) -> None:
+        aparelho = _Aparelho((P1, P2), transportes=("usb", "bt"))
+        daemon = _DaemonDoJogo(aparelho)
+        relogio = _Relogio()
+        pad = _pad(2, CoopManager(daemon)._make_player_replica_sinks(_com_dois_pontos(P2)),
+                   relogio)
+        try:
+            async with _lacos(daemon):
+                _mandar(pad, relogio, _saida(luz=2))
+                await _ate(lambda: aparelho.luzes_de(P2)[-1:] == [2])
+                # O rádio do P2 cai (sai da mesa) e volta com o handle novo; o
+                # pad virtual fica, e o jogo não repete o que já pediu.
+                aparelho.uniqs.remove(P2)
+                await _ate(lambda: luz.estado_da_luz_do_mic(P2) is None)
+                aparelho.handles[P2] = _handle()
+                aparelho.uniqs.append(P2)
+                _mandar(pad, relogio, _saida(luz=2))  # o jogo reafirma: o dedup segura
+                await _ate(lambda: aparelho.common(P2)[_BYTE_LUZ] == 2)
+                assert aparelho.luzes_de(P2)[-1] == 2
+                assert luz.luz_do_mic_do_jogo(P2) == 2
+                assert pad.mic_led_do_jogo == 1, "o dedup do pad reenviou o mesmo pedido"
+        finally:
+            pad.stop()
+
+    async def test_o_jogador_sem_mac_nunca_difunde(
+        self, uhid: _UhidPorFd, palavra: _Palavra  # noqa: F811
+    ) -> None:
+        aparelho = _Aparelho((P1,))
+        daemon = _DaemonDoJogo(aparelho)
+        relogio = _Relogio()
+        espiao = daemon.bus.subscribe(str(EventTopic.MIC_DO_JOGO))
+        pad = _pad(2, CoopManager(daemon)._make_player_replica_sinks("path:/dev/input/event9"),
+                   relogio)
+        try:
+            _mandar(pad, relogio, _saida(luz=1, mudo=True))
+            assert _eventos(espiao) == [], "o pedido de um jogador sem MAC foi difundido"
+            assert pad.mic_led_do_jogo == 0 and pad.mic_mudo_do_jogo == 0
+        finally:
+            pad.stop()
+
+
 # ===========================================================================
 # 7. Quatro jogadores, no tempo
 # ===========================================================================
