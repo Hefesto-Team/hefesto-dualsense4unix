@@ -340,7 +340,7 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
 #: leu na tela antes de qualquer um de nós reler este arquivo. Dívida declarada
 #: é melhor que dívida escondida; melhor ainda é a que não dura um dia.
 A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {
-    "haptica": (
+    "haptica": (  # sai com: O-GANHO-DA-HAPTICA-TEM-DONO-01
         "2026-09-29-O-GANHO-DA-HAPTICA-TEM-DONO-01.md",
         "a linha `vibracao.haptics_vcm@dualsense` do mapa segue em dívida nos dois "
         "transportes: o ganho grava e alcança a placa (cabo) e o conversor da ponte "
