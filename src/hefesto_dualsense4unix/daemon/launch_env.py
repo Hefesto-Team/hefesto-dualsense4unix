@@ -1167,7 +1167,7 @@ def tique_da_escada(
 
 def _soltar_a_trava_do_lancamento(daemon: Any) -> None:
     """Um lançamento novo pode vestir o pad. A trava do anterior acaba aqui."""
-    daemon._pad_travado_pelo_lancamento = None  # type: ignore[attr-defined]
+    daemon._pad_travado_pelo_lancamento = None
 
 
 def _travar_o_pad_que_o_jogo_vai_abrir(daemon: Any, appid: int, epoch: float) -> None:
@@ -1180,7 +1180,7 @@ def _travar_o_pad_que_o_jogo_vai_abrir(daemon: Any, appid: int, epoch: float) ->
     (`gamepad.ORIGENS_GESTO_DELA`), e o próximo lançamento a solta antes de
     vestir o pad dele.
     """
-    daemon._pad_travado_pelo_lancamento = (int(appid), epoch)  # type: ignore[attr-defined]
+    daemon._pad_travado_pelo_lancamento = (int(appid), epoch)
     logger.info("pad_travado_pelo_lancamento", appid=appid, epoch=epoch)
 
 
