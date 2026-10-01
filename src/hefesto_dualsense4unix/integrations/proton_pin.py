@@ -2150,6 +2150,188 @@ def jogos_sem_entrada_nova(
     return nativos
 
 
+# --------------------------------------------------------------------------
+# As versões que sobram (O-FIXAR-PROTON-DESINSTALA-AS-VERSOES-QUE-SOBRAM-01)
+# --------------------------------------------------------------------------
+# Ao abrir, o cliente da Steam roda `proton run …/d3ddriverquery64.exe` duas
+# vezes por versão em `compatibilitytools.d`, todas no mesmo `compatdata/0`, e
+# cada uma regrava o prefixo da anterior. Medido em 01/10 com cinco GE-Proton:
+# dez rodadas, ~2,5 min, e trancos de até 2,7 s no jogo aberto nessa janela.
+# Os 30 jogos dela usavam um só. Ela: «Nosso botao de fixar o proton deveria
+# desinstalar as outras versoes nao usadas». (noqa-acento: citação literal dela)
+
+#: O nome interno de uma ferramenta, a chave logo abaixo de `"compat_tools"`.
+_NOME_INTERNO_RE = re.compile(r'"(?P<nome>(?:\\.|[^"\\])+)"[^\n{]*\n\s*\{')
+
+
+@dataclass(frozen=True)
+class VersaoQueSobra:
+    """Uma pasta de `compatibilitytools.d` que nenhum jogo nem o pino usam."""
+
+    pasta: Path
+    nomes: tuple[str, ...]
+    tamanho: int
+
+
+def nomes_internos(pasta: Path) -> tuple[str, ...]:
+    """Os nomes que a Steam lê no `compatibilitytool.vdf` da pasta.
+
+    É por eles, e não pelo nome da pasta, que o `CompatToolMapping` aponta.
+    Sem o arquivo legível, o nome da pasta: o lado que preserva.
+    """
+    try:
+        texto = (pasta / "compatibilitytool.vdf").read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return (pasta.name,)
+    inicio = texto.find('"compat_tools"')
+    if inicio < 0:
+        return (pasta.name,)
+    corpo = texto[inicio + len('"compat_tools"'):]
+    abre = corpo.find("{")
+    if abre < 0:
+        return (pasta.name,)
+    nomes: list[str] = []
+    nivel = 0
+    i = abre
+    while i < len(corpo):
+        ch = corpo[i]
+        if ch == "{":
+            nivel += 1
+        elif ch == "}":
+            nivel -= 1
+            if nivel == 0:
+                break
+        elif ch == '"' and nivel == 1:
+            achado = _NOME_INTERNO_RE.match(corpo, i)
+            if achado is not None:
+                nomes.append(_vdf_unescape(achado.group("nome")))
+                i = achado.end() - 1
+                continue
+            fim = corpo.find('"', i + 1)
+            i = fim if fim > 0 else len(corpo)
+        elif ch == "/" and corpo.startswith("//", i):
+            fim = corpo.find("\n", i)
+            i = fim if fim > 0 else len(corpo)
+            continue
+        i += 1
+    return tuple(nomes) or (pasta.name,)
+
+
+def _tamanho_da_pasta(pasta: Path) -> int:
+    total = 0
+    for raiz, _dirs, arquivos in os.walk(pasta, followlinks=False):
+        for nome in arquivos:
+            with contextlib.suppress(OSError):
+                total += os.lstat(os.path.join(raiz, nome)).st_size
+    return total
+
+
+def versoes_que_sobram(
+    home: Path | None = None,
+    *,
+    pino: str | None = None,
+) -> list[VersaoQueSobra]:
+    """As versões do Proton em `compatibilitytools.d` que ninguém usa.
+
+    «Usada» é o pino e todo nome do `CompatToolMapping`, inclusive a chave
+    global `"0"`, o jogo que ela tirou do pino e o jogo desinstalado (a entrada
+    fica, e o jogo reinstalado volta com a versão dele). Só a família Proton:
+    outra ferramenta (luxtorpeda, Boxtron) é escolha de rodar nativo. Nunca
+    levanta: sem a raiz da Steam, sem o pino ou sem o `config.vdf` legível,
+    a resposta é vazia, que é o lado que não apaga nada.
+    """
+    raiz, _recusa = steam_root_ou_recusa(home)
+    if raiz is None:
+        return []
+    try:
+        nome_do_pino = pino if pino is not None else _load_conf(None)["name"]
+        mapa = extract_compat_tool_mapping(
+            (raiz / "config" / "config.vdf").read_text(encoding="utf-8", errors="replace"))
+    except (OSError, ValueError, KeyError):
+        return []
+    usadas = {nome_do_pino, *mapa.values()}
+    compat = raiz / "compatibilitytools.d"
+    try:
+        pastas = sorted(p for p in compat.iterdir() if p.is_dir() and not p.is_symlink())
+    except OSError:
+        return []
+    sobras: list[VersaoQueSobra] = []
+    for pasta in pastas:
+        nomes = nomes_internos(pasta)
+        if not all(e_da_familia_proton(n) for n in nomes):
+            continue
+        if usadas.intersection(nomes) or pasta.name in usadas:
+            continue
+        sobras.append(VersaoQueSobra(pasta, nomes, _tamanho_da_pasta(pasta)))
+    return sobras
+
+
+def _em_uso(pasta: Path) -> bool:
+    """Algum processo vivo roda de dentro da pasta (a fila da Steam, um jogo)?"""
+    alvo = str(pasta.resolve())
+    prefixo = alvo + os.sep
+    for pid in os.listdir("/proc"):
+        if not pid.isdigit():
+            continue
+        with contextlib.suppress(OSError):
+            exe = os.readlink(f"/proc/{pid}/exe")
+            if exe == alvo or exe.startswith(prefixo):
+                return True
+        with contextlib.suppress(OSError):
+            linha = Path(f"/proc/{pid}/cmdline").read_bytes()
+            if prefixo.encode() in linha:
+                return True
+    return False
+
+
+def _para_a_lixeira(pasta: Path) -> str | None:
+    """Manda a pasta para a lixeira do usuário. `None` deu certo; senão, o motivo.
+
+    Nunca apaga: sem `gio`, recusa. Um clique que perde 1,5 GB sem volta pede
+    mais do que uma frase.
+    """
+    gio = shutil.which("gio")
+    if gio is None:
+        return "sem lixeira nesta máquina (falta o gio)"
+    proc = subprocess.run([gio, "trash", str(pasta)], check=False,
+                          capture_output=True, text=True, timeout=120)
+    if proc.returncode != 0:
+        return (proc.stderr or proc.stdout or f"gio rc={proc.returncode}").strip()
+    return None
+
+
+def desinstalar_as_que_sobram(
+    sobras: Sequence[VersaoQueSobra],
+    *,
+    lixeira: Callable[[Path], str | None] = _para_a_lixeira,
+    em_uso: Callable[[Path], bool] = _em_uso,
+) -> tuple[list[VersaoQueSobra], dict[str, str]]:
+    """Manda cada sobra para a lixeira. Devolve as que saíram e as recusadas.
+
+    Recusa a pasta que um processo vivo está usando (a fila da Steam, logo
+    depois de ela abrir) e a que deixou de estar dentro de
+    `compatibilitytools.d`. Nunca levanta.
+    """
+    saiu: list[VersaoQueSobra] = []
+    recusadas: dict[str, str] = {}
+    for sobra in sobras:
+        if sobra.pasta.parent.name != "compatibilitytools.d" or not sobra.pasta.is_dir():
+            recusadas[sobra.pasta.name] = "não está mais em compatibilitytools.d"
+            continue
+        try:
+            if em_uso(sobra.pasta):
+                recusadas[sobra.pasta.name] = "em uso agora"
+                continue
+            motivo = lixeira(sobra.pasta)
+        except Exception as exc:
+            motivo = str(exc) or type(exc).__name__
+        if motivo is None:
+            saiu.append(sobra)
+        else:
+            recusadas[sobra.pasta.name] = motivo
+    return saiu, recusadas
+
+
 def proton_pin_report(
     conf: dict[str, str],
     *,
