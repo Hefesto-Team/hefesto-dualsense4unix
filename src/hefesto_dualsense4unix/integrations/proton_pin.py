@@ -2332,35 +2332,6 @@ def desinstalar_as_que_sobram(
     return saiu, recusadas
 
 
-def _gb(total: int) -> str:
-    return f"{total / 1e9:.1f}".replace(".", ",") + " GB"
-
-
-def frase_das_que_vao_sair(sobras: Sequence[VersaoQueSobra]) -> str:
-    """O que o primeiro clique mostra, antes de agir. Vazio quando nada sobra."""
-    if not sobras:
-        return ""
-    nomes = ", ".join(s.pasta.name for s in sobras)
-    quantas = "1 versão" if len(sobras) == 1 else f"{len(sobras)} versões"
-    return (f"Vão para a lixeira {quantas} do Proton que nenhum jogo usa: "
-            f"{nomes} ({_gb(sum(s.tamanho for s in sobras))}).")
-
-
-def frase_do_que_saiu(saiu: Sequence[VersaoQueSobra], recusadas: dict[str, str]) -> str:
-    """O recibo: o que foi para a lixeira e o que ficou, com o motivo."""
-    partes: list[str] = []
-    if saiu:
-        if len(saiu) == 1:
-            quantas, verbo = "1 versão", "foi"
-        else:
-            quantas, verbo = f"{len(saiu)} versões", "foram"
-        partes.append(f"{quantas} do Proton sem uso {verbo} para a lixeira "
-                      f"({_gb(sum(s.tamanho for s in saiu))}).")
-    for nome, motivo in recusadas.items():
-        partes.append(f"{nome} ficou: {motivo}.")
-    return " ".join(partes)
-
-
 def proton_pin_report(
     conf: dict[str, str],
     *,

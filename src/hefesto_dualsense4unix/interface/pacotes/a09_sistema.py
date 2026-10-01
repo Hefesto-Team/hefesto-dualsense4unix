@@ -83,6 +83,9 @@ from hefesto_dualsense4unix.app.actions.config import secao_orcamento as _orcame
 # no topo não custa nada aqui: este módulo já traz `gui.aba_sistema` logo abaixo.
 from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
 
+# A vírgula do tamanho das versões do Proton que sobram passa pelo dono único.
+from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
+
 # O DONO DA MÁSCARA E O DO `maquina.json` — 28/09/2026, O-REGISTRO-COPIADO-NAO-
 # ENTREGA-O-ENDERECO-01: o diário e o «Copiar» passam pelo dono das formas do
 # endereço, e o «Copiar» leva como conhecidas as chaves que ela declarou.
@@ -3529,6 +3532,35 @@ def _versoes_que_sobram() -> list[Any]:
         return []
 
 
+def _gb(total: int) -> str:
+    return formata_pt_br(total / 1e9) + " GB"
+
+
+def _frase_das_que_vao_sair(sobras: list[Any]) -> str:
+    """O que o primeiro clique mostra, antes de agir. Vazio quando nada sobra."""
+    if not sobras:
+        return ""
+    nomes = ", ".join(s.pasta.name for s in sobras)
+    quantas = "1 versão" if len(sobras) == 1 else f"{len(sobras)} versões"
+    return (f"Vão para a lixeira {quantas} do Proton que nenhum jogo usa: "
+            f"{nomes} ({_gb(sum(s.tamanho for s in sobras))}).")
+
+
+def _frase_do_que_saiu(saiu: list[Any], recusadas: dict[str, str]) -> str:
+    """O recibo: o que foi para a lixeira e o que ficou, com o motivo."""
+    partes: list[str] = []
+    if saiu:
+        if len(saiu) == 1:
+            quantas, verbo = "1 versão", "foi"
+        else:
+            quantas, verbo = f"{len(saiu)} versões", "foram"
+        partes.append(f"{quantas} do Proton sem uso {verbo} para a lixeira "
+                      f"({_gb(sum(s.tamanho for s in saiu))}).")
+    for nome, motivo in recusadas.items():
+        partes.append(f"{nome} ficou: {motivo}.")
+    return " ".join(partes)
+
+
 def _levar_as_que_sobram(sobras: list[Any]) -> str:
     """Manda para a lixeira o que o primeiro clique mostrou; devolve o recibo."""
     if not sobras:
@@ -3536,7 +3568,7 @@ def _levar_as_que_sobram(sobras: list[Any]) -> str:
     try:
         from hefesto_dualsense4unix.integrations import proton_pin
         saiu, recusadas = proton_pin.desinstalar_as_que_sobram(sobras)
-        return proton_pin.frase_do_que_saiu(saiu, recusadas)
+        return _frase_do_que_saiu(list(saiu), recusadas)
     except Exception as erro:
         return f"As versões do Proton sem uso ficaram: {erro}."
 
@@ -3568,8 +3600,7 @@ def _frase_do_que_vai_mudar(jogos: list[str] | None, sobras: list[Any] | None = 
                       f"{_plural(len(jogos), 'jogo', 'jogos')}: "
                       + ", ".join(jogos) + ".")
     if sobras:
-        from hefesto_dualsense4unix.integrations import proton_pin
-        linhas.append("  " + proton_pin.frase_das_que_vao_sair(sobras))
+        linhas.append("  " + _frase_das_que_vao_sair(sobras))
     linhas.append(f"  {CLIQUE_DE_NOVO}")
     return "\n".join(linhas)
 
