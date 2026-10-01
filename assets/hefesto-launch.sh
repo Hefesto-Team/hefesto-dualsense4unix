@@ -340,6 +340,37 @@ enter_game_mode() {
     return 0
 }
 
+# --- A placa acordada (O-JOGO-LEVE-ACORDA-A-PLACA-01) ------------------------
+# Com a carga leve, a placa desce sozinha (a NVIDIA vai a 210 MHz em ~5 s) e o
+# quadro que aperta passa do vsync: medido em 01/10, 116 quadros acima de 20 ms
+# viraram 24 com o piso travado. O `system76-power` em Performance não mexe no
+# clock da placa. Quem trava o piso é o script de root que o install põe em
+# /usr/local/lib (a regra do sudo nomeia os verbos; o PID vai pelo stdin), e
+# ele só devolve quando o último jogo vivo sai. À prova de falha: sem o
+# script, sem a regra ou com qualquer erro, o jogo abre igual.
+PLACA_ACORDADA="${HEFESTO_PLACA_ACORDADA:-/usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh}"
+
+acordar_a_placa() {
+    [ -x "$PLACA_ACORDADA" ] || return 0
+    command -v sudo >/dev/null 2>&1 || return 0
+    if command -v timeout >/dev/null 2>&1; then
+        printf '%s\n' "$$" | timeout 5 sudo -n "$PLACA_ACORDADA" acordar >/dev/null 2>&1 || return 0
+    else
+        printf '%s\n' "$$" | sudo -n "$PLACA_ACORDADA" acordar >/dev/null 2>&1 || return 0
+    fi
+    pa_pid=$$
+    (
+        # O mesmo restaurador do Game Mode: espera o PID do jogo (este, via
+        # exec) sumir e devolve. FDs fechados para não segurar o jogo.
+        pa_poll="${HEFESTO_GM_POLL_SECS:-2}"
+        while kill -0 "$pa_pid" 2>/dev/null; do
+            sleep "$pa_poll" || break
+        done
+        printf '%s\n' "$pa_pid" | sudo -n "$PLACA_ACORDADA" devolver
+    ) </dev/null >/dev/null 2>&1 &
+    return 0
+}
+
 # --- O que chega ao jogo: as camadas Vulkan (O-ENGASGO-SE-CURA-PELO-QUE-CHEGA-AO-JOGO-01)
 # O «Corrigir Vulkan» da aba Sistema age aqui, onde a camada carrega (28/09).
 # O Wine chama o carregador Vulkan do Linux, e ele carrega as camadas
@@ -775,6 +806,7 @@ curar_audio_ks || true
 # Game Mode COSMIC (PLAT-05): DEPOIS das envs decididas, ANTES do exec — e à
 # prova de falha: o jogo abre mesmo se nada disso funcionar.
 enter_game_mode || true
+acordar_a_placa || true
 
 # O último passo antes do exec (AMBIENTE-DO-JOGO-01): o jogo nasce sem o
 # interpretador do terminal que abriu a Steam.

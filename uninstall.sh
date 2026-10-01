@@ -466,6 +466,9 @@ grep -qsF '# >>> hefesto JustWorksRepairing >>>' /etc/bluetooth/main.conf 2>/dev
 # tipo de resíduo — é privilégio concedido a um caminho que talvez já nem exista.
 [[ -e /etc/sudoers.d/49-hefesto-bt-ponte ]] && _NEEDS_SUDO=1
 [[ -e /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh ]] && _NEEDS_SUDO=1
+# O-JOGO-LEVE-ACORDA-A-PLACA-01 (01/10/2026): a mesma forma, para a placa de vídeo.
+[[ -e /etc/sudoers.d/49-hefesto-placa ]] && _NEEDS_SUDO=1
+[[ -e /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh ]] && _NEEDS_SUDO=1
 [[ "${KEEP_BLUEZ}" -eq 0 && -f "${HOME}/.cache/hefesto-dualsense4unix/bluez-backport/VERSOES-ANTERIORES.txt" ]] && _NEEDS_SUDO=1
 # O-DIARIO-DO-RADIO-01 (instalado pela INSTALL-E-UNINSTALL-DO-RADIO-01): a
 # trava comum do rádio (tmpfiles.d + /run), os carimbos da ponte, do religar
@@ -1050,6 +1053,20 @@ if sudo -n true 2>/dev/null; then
         sudo rm -f /etc/sudoers.d/49-hefesto-bt-ponte 2>/dev/null || true
     fi
     sudo rm -f /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh 2>/dev/null || true
+    # A PLACA ACORDADA (O-JOGO-LEVE-ACORDA-A-PLACA-01): devolve o clock antes de
+    # tirar o script, porque sem ele ninguém mais devolve até o próximo boot. Um
+    # jogo vivo segura a placa, e o boot a solta. Depois, a regra e o helper,
+    # nessa ordem, pela mesma razão da ponte.
+    if [[ -x /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh ]]; then
+        printf '0\n' | sudo bash /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh devolver \
+            >/dev/null 2>&1 || true
+    fi
+    if [[ -e /etc/sudoers.d/49-hefesto-placa ]]; then
+        log "removendo a regra da placa acordada (/etc/sudoers.d/49-hefesto-placa)"
+        sudo rm -f /etc/sudoers.d/49-hefesto-placa 2>/dev/null || true
+    fi
+    sudo rm -f /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh 2>/dev/null || true
+    sudo rm -rf /run/hefesto-dualsense4unix/placa 2>/dev/null || true
     # OS CARIMBOS DE ROOT EM /run das peças que este bloco tira: os `reset-<porta>`
     # da ponte (O-DIARIO-DO-RADIO-01), os do religar e os `evento-*` (STORM-USB-02),
     # os `promoted-*` e o do reinício do watchdog. tmpfs: sair aqui é não deixar rastro.
@@ -1322,7 +1339,8 @@ for dele in registros:
 elif [[ -e /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
         || -e /etc/systemd/system/bluetooth.service.d/10-hefesto-resilience.conf \
         || -e /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf \
-        || -e /etc/sudoers.d/49-hefesto-bt-ponte ]]; then
+        || -e /etc/sudoers.d/49-hefesto-bt-ponte \
+        || -e /etc/sudoers.d/49-hefesto-placa ]]; then
     log "sudo indisponível — resiliência do bluetoothd (timers/drop-ins/scripts) NÃO removida"
     if [[ -e /etc/tmpfiles.d/hefesto-dualsense4unix-radio.conf ]]; then
         log "  nem a trava comum do rádio:"
@@ -1331,6 +1349,10 @@ elif [[ -e /etc/systemd/system/hefesto-bt-bonds-snapshot.timer \
     if [[ -e /etc/sudoers.d/49-hefesto-bt-ponte ]]; then
         log "  e a ponte privilegiada FICOU: é privilégio de root pendurado, remova à mão —"
         log "  sudo rm /etc/sudoers.d/49-hefesto-bt-ponte /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh"
+    fi
+    if [[ -e /etc/sudoers.d/49-hefesto-placa ]]; then
+        log "  e a placa acordada FICOU: é privilégio de root pendurado, remova à mão —"
+        log "  sudo rm /etc/sudoers.d/49-hefesto-placa /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh"
     fi
 fi
 # SEM ROOT, AS CÓPIAS DE ANTES FICAM (O-PURGE-LEVA-AS-COPIAS-DE-PAREAMENTO-01):

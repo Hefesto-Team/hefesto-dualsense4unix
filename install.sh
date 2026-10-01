@@ -1321,6 +1321,10 @@ _ensaio_camada() {
             _faria_root "instalar /usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh"
             _faria_root "gravar /etc/sudoers.d/49-hefesto-bt-ponte (0440 root:root) — CONFERIDO com 'visudo -c' antes; se não passar, nada é gravado"
             ;;
+        placa)
+            _faria_root "instalar /usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh"
+            _faria_root "gravar /etc/sudoers.d/49-hefesto-placa (0440 root:root) — CONFERIDO com 'visudo -c' antes; se não passar, nada é gravado"
+            ;;
         gabinete)
             _faria_root "ler a tabela SMBIOS 8 com dmidecode (leitura pura, nada é escrito no firmware)"
             _faria "gravar o censo em ${HOME}/.local/state/hefesto-dualsense4unix/gabinete.json"
@@ -1426,6 +1430,7 @@ _ENSAIO_CURAS_DE_HOST=(
     "install_bt_resilience_host:bt-res"
     "install_bt_agent_host:bt-agent"
     "install_bt_ponte_privilegiada_host:bt-ponte"
+    "install_placa_acordada_host:placa"
     "install_censo_do_gabinete_host:gabinete"
     "install_dkms_hid_nintendo_host:dkms-nintendo"
     "install_dkms_rtw88_usb_host:dkms-rtw88"
@@ -1763,6 +1768,10 @@ if [[ "${FORMAT}" != "native" ]]; then
     # flatpak/appimage/deb sairia com a aba de rádio pedindo senha a cada gesto.
     step "bt-ponte" "mover controle entre adaptadores Bluetooth sem pedir senha (DEFAULT em todo formato)"
     install_bt_ponte_privilegiada_host
+    # O-JOGO-LEVE-ACORDA-A-PLACA-01: mesma camada de sistema da ponte (helper em
+    # /usr/local/lib + regra em /etc/sudoers.d), ortogonal ao formato.
+    step "placa" "a placa de vídeo acordada enquanto um jogo vive (DEFAULT em todo formato)"
+    install_placa_acordada_host
     # MOTOR-7: mesma razão das duas linhas acima. Ler a tabela SMBIOS é trabalho
     # de HOST — quem tem a tabela é a placa, não o formato do aplicativo. Sem
     # esta chamada, quem instala por flatpak/appimage/deb sairia pelo `exit 0`
@@ -2614,6 +2623,15 @@ install_bt_resilience_host
 # fica colada na resiliência porque é a mesma camada de Bluetooth.
 step "3e-ter" "mover controle entre adaptadores Bluetooth sem pedir senha"
 install_bt_ponte_privilegiada_host
+
+# ---------------------------------------------------------------------------
+# 3e-ter-bis. O-JOGO-LEVE-ACORDA-A-PLACA-01: a placa acordada no jogo
+# ---------------------------------------------------------------------------
+# O corpo mora em `install_placa_acordada_host`, acima da bifurcação de formato,
+# e o outro lado da cerca a chama também. Fica colada na ponte porque é a mesma
+# forma de root (helper + sudoers conferido).
+step "3e-ter-bis" "a placa de vídeo acordada enquanto um jogo vive"
+install_placa_acordada_host
 
 # ---------------------------------------------------------------------------
 # 3e-quater. MOTOR-7: o censo do gabinete, lido do firmware

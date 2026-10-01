@@ -711,6 +711,77 @@ install_bt_ponte_privilegiada_host() {
     fi
 }
 
+# O-JOGO-LEVE-ACORDA-A-PLACA-01 (01/10/2026) — a placa de vídeo acordada
+# enquanto um jogo vive, sem a janela nem o lançador pedirem senha.
+#
+# Medido no Pro Jank Footy: com a carga leve, a NVIDIA desce sozinha a 210 MHz e
+# o quadro que aperta passa do vsync; com o piso de clock travado, 116 quadros
+# acima de 20 ms viraram 24. Travar o piso é trabalho de root nas três marcas
+# (`nvidia-smi -lgc`, o `power_dpm_force_performance_level` da AMD, o mínimo do
+# i915/xe), e o lançador o pede a cada jogo.
+#
+# A MESMA DISCIPLINA DA PONTE, acima: o texto da regra sai do próprio script
+# (`regra-sudo`), nada vai a /etc/sudoers.d sem o `visudo -c`, e a conferência
+# é o `sudo -l`, não a existência do arquivo. A regra nomeia três verbos, sem
+# curinga; o PID do jogo entra pelo stdin.
+#
+# ACIMA DA BIFURCAÇÃO e chamada dos DOIS lados: é mudança de SISTEMA.
+install_placa_acordada_host() {
+    local _placa_fonte="${ROOT_DIR}/scripts/hefesto_placa_acordada.sh"
+    local _placa_alvo=/usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh
+    local _placa_regra=/etc/sudoers.d/49-hefesto-placa
+    local _placa_usuaria _placa_tmp
+    if ! command -v sudo >/dev/null 2>&1; then
+        warn "sudo ausente — a placa acordada NÃO instalada (jogo leve segue com o clock que o driver escolher)"
+        return 0
+    fi
+    if ! sudo -n true 2>/dev/null; then
+        warn "sudo recusado — a placa acordada pulada (re-execute ./install.sh)"
+        return 0
+    fi
+    _placa_usuaria="${SUDO_USER:-$(id -un)}"
+    if [[ "${_placa_usuaria}" == "root" ]]; then
+        warn "install rodando como root sem SUDO_USER — não sei para quem abrir a placa acordada; regra do sudoers NÃO gravada (rode ./install.sh como você, sem sudo)"
+        return 0
+    fi
+    if ! sudo install -Dm755 -o root -g root "${_placa_fonte}" "${_placa_alvo}" 2>/dev/null; then
+        warn "não consegui instalar ${_placa_alvo} — a placa acordada indisponível"
+        return 0
+    fi
+    if ! command -v visudo >/dev/null 2>&1; then
+        warn "visudo ausente — a regra do sudoers da placa NÃO foi gravada (sudoers inválido derruba o sudo da máquina inteira; não gravamos sem conferir)"
+        return 0
+    fi
+    _placa_tmp="$(mktemp)" || {
+        warn "não consegui criar arquivo temporário — regra da placa NÃO gravada"
+        return 0
+    }
+    if ! bash "${_placa_alvo}" regra-sudo "${_placa_usuaria}" >"${_placa_tmp}" 2>/dev/null; then
+        warn "o script da placa recusou gerar a regra para '${_placa_usuaria}' — nada gravado em ${_placa_regra}"
+        rm -f "${_placa_tmp}"
+        return 0
+    fi
+    if ! sudo visudo -cqf "${_placa_tmp}" 2>/dev/null; then
+        warn "a regra da placa NÃO passou no 'visudo -c' — nada gravado em ${_placa_regra} (o sudo desta máquina segue intacto)"
+        rm -f "${_placa_tmp}"
+        return 0
+    fi
+    if ! sudo install -Dm440 -o root -g root "${_placa_tmp}" "${_placa_regra}" 2>/dev/null; then
+        warn "não consegui gravar ${_placa_regra} — o lançador não vai acordar a placa"
+        rm -f "${_placa_tmp}"
+        return 0
+    fi
+    rm -f "${_placa_tmp}"
+    printf '      placa acordada instalada: o jogo pede o piso de clock da placa e o devolve ao sair\n'
+    printf '        (%s, NOPASSWD só para %s, três verbos e o PID pelo stdin)\n' \
+        "${_placa_regra}" "${_placa_usuaria}"
+    if sudo -n -l -U "${_placa_usuaria}" "${_placa_alvo}" estado >/dev/null 2>&1; then
+        printf '      conferido no próprio sudo: a regra já vale para %s (não é só arquivo no disco)\n' "${_placa_usuaria}"
+    else
+        warn "a regra da placa foi gravada mas o sudo NÃO a reconheceu para ${_placa_usuaria} — confira ${_placa_regra} e o '#includedir /etc/sudoers.d' em /etc/sudoers"
+    fi
+}
+
 # MOTOR-7 (25/08/2026) — o install lê o firmware, e a aba abre com o gabinete
 # JÁ DESENHADO.
 #
