@@ -440,7 +440,7 @@ class DaemonConfig:
     #
     # É uma FONTE (chamável), não uma cópia da chave, e a diferença é o gesto
     # do "Aplicar": o `machine.declare` relê o `maquina.json` e REBINDA
-    # `daemon._maquina` (`ipc_handlers.py:5248`), então uma cópia tirada no boot
+    # `daemon._maquina` (`ipc_handlers.py:7662`), então uma cópia tirada no boot
     # ficaria velha no instante exato em que ela acabou de escolher — e o teto
     # novo só valeria no próximo início do Hefesto. Com a fonte, o próximo
     # cálculo de vibração já lê a declaração nova, sem tique nem invalidação.

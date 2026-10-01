@@ -3637,10 +3637,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 #
 # O QUE TEM DONO, medido nos 39 métodos do `ipc_server` em 01/09/2026:
 #
-#   🎙  data-mudo="microfone"      `mic.set`      (ipc_handlers.py:6529)
-#   ♪   data-mudo="alto-falante"   `speaker.set`  (ipc_handlers.py:6275)
-#   Sons do jogo  data-rota="jogo" `speaker.set`  com `rota`, o mesmo :4589
-#   Virtual / Nativo  data-mic-modo  `machine.declare` (ipc_handlers.py:7182)
+#   🎙  data-mudo="microfone"      `mic.set`      (ipc_handlers.py:6533)
+#   ♪   data-mudo="alto-falante"   `speaker.set`  (ipc_handlers.py:6279)
+#   Sons do jogo  data-rota="jogo" `speaker.set`  com `rota`, o mesmo :6324
+#   Virtual / Nativo  data-mic-modo  `machine.declare` (ipc_handlers.py:7580)
 #
 # O "VIRTUAL / NATIVO" GANHOU DONO EM 01/09/2026, E A AFIRMAÇÃO ANTERIOR CAIU.
 # Aqui estava escrito, e é uma frase minha, da primeira leva:
@@ -4235,7 +4235,7 @@ def _lembrar_do_som(
     daemon confirmou. O perfil é o REGISTRO do que já está de pé.
 
     E o disco não fica para trás: `ProfileManager.activate` faz
-    `load_profile(name)` a CADA ativação (`profiles/manager.py:371`) — não há
+    `load_profile(name)` a CADA ativação (`profiles/manager.py:381`) — não há
     cópia do `Profile` em memória atravessando ativações, então a próxima
     (hotplug, troca de jogo, boot) lê o que esta função escreveu.
 
@@ -4400,7 +4400,7 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     FIRMWARE (camada 3, `ipc_handlers.py:6529`): é o único que apaga a luz
     vermelha do plástico, e a partir dele o botão físico do controle deixa de
     valer — é o que o `title` do desenho já promete. O `speaker.set` manda ZERO
-    ao alto-falante guardando o volume preferido (`ipc_handlers.py:6275`).
+    ao alto-falante guardando o volume preferido (`ipc_handlers.py:6279`).
     Trocar um pelo outro calaria a coisa errada.
 
     ALTERNAR EXIGE LER O ESTADO, e ele vem do daemon, nunca de memória nossa:
@@ -4854,7 +4854,7 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 #: O QUE O 🎙 E O ♪ ACEITAM DE VOLUME. O mic é 0-100 por contrato do daemon
-#: (`mic.volume.set`, `ipc_handlers.py:6872-6878`); o alto-falante também sai
+#: (`mic.volume.set`, `ipc_handlers.py:6907-6913`); o alto-falante também sai
 #: daqui em 0-100 e quem converte para o registrador 0-255 é o dono da curva
 #: (`core/speaker_scale.volume_do_percentual`), a MESMA que pinta o `alto-num`.
 #: Digitar 255 aqui seria a segunda escala.
