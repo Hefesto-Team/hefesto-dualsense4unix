@@ -377,6 +377,19 @@ $cs_gravador"
     return 0
 }
 
+# --- O xalia fica fora de todo jogo (AS-CORRECOES-AUTOMATICAS-DESLIGAM-O-XALIA-E-O-FOSSILIZE-01)
+# O `proton` (Valve e GE) liga o xalia quando `PROTON_USE_XALIA` não está no
+# ambiente (GE-Proton 11-7, `proton:2527-2533`). Medido em 01/10 no Pro Jank
+# Footy, 200 s sem ninguém jogando: com ele, 135 quadros acima de 20 ms; com
+# `PROTON_USE_XALIA=0`, 28. É correção automática: vale em todo jogo, com o
+# daemon vivo ou não. Quem já pôs `PROTON_USE_XALIA` na Launch Option manda.
+xalia_fora() {
+    xf_envs=""
+    [ -z "${PROTON_USE_XALIA+x}" ] || return 0
+    xf_envs="PROTON_USE_XALIA=0"
+    return 0
+}
+
 # O REGISTRO DO PREFIXO, e só no jogo que o lê. Uma camada Vulkan registrada no
 # prefixo Wine só é lida pelo carregador oficial da Khronos (`vulkan-1.dll`),
 # num jogo que o traga: o `vulkan-1` do Wine devolve zero camadas (26/09). Até
@@ -750,6 +763,10 @@ $cs_envs
 HEFESTO_CS_EOF
 fi
 curar_camadas_vulkan || true
+
+# O xalia, pelo mesmo ambiente do exec.
+xalia_fora || xf_envs=""
+[ -n "$xf_envs" ] && set -- "$xf_envs" "$@"
 
 # O device de áudio KS do DualSense (HAPTICA-NATIVA-01): também antes do exec,
 # pelo mesmo motivo — o `wineserver` deste prefixo ainda não subiu.
