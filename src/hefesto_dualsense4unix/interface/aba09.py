@@ -522,7 +522,8 @@ LIGAVEIS = (
      "Liga o serviço junto com o computador. Clique para trocar."),
     ("Fixar Proton", "fixar-proton", "proton-fixado", True,
      "Mantém os jogos na versão do Proton que faz o controle vibrar e tocar "
-     "som. Clique para trocar, com a Steam fechada."),
+     "som, e leva à lixeira as versões que nenhum jogo usa. Clique para "
+     "trocar, com a Steam fechada."),
     ("Corrigir Vulkan", "corrigir-vulkan", "vulkan-corrigido", False,
      "Tira dos jogos a sobreposição e o gravador de shaders da Steam. Sem "
      "eles, o Shift+Tab da Steam some e ela não guarda os shaders do jogo. "
@@ -766,7 +767,7 @@ MIOLO = f'''
           </div>
           <div class="risco"></div>
           <div class="coluna">
-{item("Reaplicar correções automáticas", "Desliga o Steam Input onde ele atrapalha. Sem senha, sem fechar nada, e com cópia de segurança.", gesto=_gesto("refazer-consertos"))}
+{item("Reaplicar correções automáticas", "Desliga o Steam Input onde ele atrapalha e leva à lixeira as versões do Proton que nenhum jogo usa. Sem senha, sem fechar nada, e com cópia de segurança.", gesto=_gesto("refazer-consertos"))}
 {item("Aplicar soluções nos lançadores", "Põe a linha do Hefesto nos jogos da Steam, sem perder as suas opções. Pergunta antes: fecha a Steam por uns 20 segundos.", gesto=_gesto("aplicar-aos-jogos"))}
 {item("Restaurar de fábrica", "Devolve o perfil de fábrica. Pergunta antes, e os seus perfis salvos ficam.", "btn vermelho", gesto=_gesto("restaurar-de-fabrica"))}
           </div>

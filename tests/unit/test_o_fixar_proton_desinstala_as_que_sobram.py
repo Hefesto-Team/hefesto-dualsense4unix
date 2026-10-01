@@ -16,11 +16,19 @@ AS MORDIDAS:
 """
 from __future__ import annotations
 
+import contextlib
+import io
+import subprocess
+import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from hefesto_dualsense4unix.integrations import proton_pin as pp
+
+RAIZ = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 PINO = "GE-Proton11-7-x86_64"
 
@@ -169,3 +177,92 @@ def test_a_lixeira_de_verdade_nunca_apaga_sem_gio(
     pasta = steam / ".steam" / "steam" / "compatibilitytools.d" / "GE-Proton11-1"
     assert pp._para_a_lixeira(pasta) is not None
     assert pasta.is_dir()
+
+
+# ---------------------------------------------------------------------------
+# Os dois botões da aba Sistema
+# ---------------------------------------------------------------------------
+
+
+class _Janela:
+    """O dublê da janela antiga: o script do conserto nunca existe."""
+
+    def _find_repo_file(self, relpath: str) -> Path:
+        return Path("/nao-existe") / relpath
+
+
+@pytest.fixture
+def a09(monkeypatch: pytest.MonkeyPatch) -> Any:
+    from pacotes import a09_sistema as mod
+
+    def limpar() -> None:
+        mod._LENTO.clear()
+        mod._ARMADO.clear()
+        mod._PAINEL[0] = None
+        mod._PERGUNTA.clear()
+        mod._ANTES_DO_CONSERTO.clear()
+
+    mod._JANELA_ANTIGA[:] = [_Janela()]
+    limpar()
+    recibos: list[tuple[str, str]] = []
+    monkeypatch.setattr(mod, "_relatar_o_recibo", lambda g, f: recibos.append((g, f)))
+    mod.recibos_da_regua = recibos
+    yield mod
+    mod._JANELA_ANTIGA.clear()
+    limpar()
+
+
+def _sobra(nome: str) -> pp.VersaoQueSobra:
+    return pp.VersaoQueSobra(Path("/x/compatibilitytools.d") / nome, (nome,), 1_500_000_000)
+
+
+def _ctx() -> Any:
+    import pacotes
+
+    return pacotes.Contexto(state={"paused": False, "controllers": []},
+                            mesa=[], conectados=[], estados={})
+
+
+def test_o_reaplicar_mostra_antes_e_leva_so_o_que_mostrou(
+        a09: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Clique 1 mostra as duas; no clique 2 apareceu uma terceira, que fica."""
+    import pacotes
+
+    vistas = [_sobra("GE-Proton11-1"), _sobra("GE-Proton11-3")]
+    agora = [list(vistas)]
+    monkeypatch.setattr(a09, "_versoes_que_sobram", lambda: list(agora[0]))
+    monkeypatch.setattr(a09._daemon, "medir_jogos_com_steam_input", lambda: [])
+    monkeypatch.setattr(subprocess, "run",
+                        lambda *a, **k: subprocess.CompletedProcess(a, 0, "", ""))
+    levadas: list[str] = []
+    monkeypatch.setattr(pp, "desinstalar_as_que_sobram",
+                        lambda s: (levadas.extend(x.pasta.name for x in s), (list(s), {}))[1])
+    acao = pacotes.gesto_da_pagina("09-sistema.html", "refazer-consertos")
+
+    acao(_ctx(), {"texto": a09._rotulo_do_desenho("refazer-consertos")}, None)
+    assert "GE-Proton11-1, GE-Proton11-3 (3,0 GB)" in str(a09._PAINEL[0])
+    agora[0] = [*vistas, _sobra("GE-Proton10-34")]
+    with contextlib.redirect_stderr(io.StringIO()):
+        acao(_ctx(), {"texto": a09.CONFIRMA}, None)
+
+    assert levadas == ["GE-Proton11-1", "GE-Proton11-3"]
+    assert "foram para a lixeira (3,0 GB)" in a09.recibos_da_regua[-1][1]
+
+
+def test_ligar_o_fixar_proton_leva_as_que_sobram(
+        a09: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    import pacotes
+
+    fixado = [False]
+    monkeypatch.setattr(a09, "_o_pino",
+                        lambda: (object(), lambda **k: fixado.__setitem__(0, True)))
+    monkeypatch.setattr(a09, "_porque_o_proton_nao_trava", lambda *_a: None)
+    monkeypatch.setattr(a09, "proton_fixado", lambda: fixado[0])
+    monkeypatch.setattr(a09._daemon, "format_proton_lock_result", lambda _r: "Travei.")
+    monkeypatch.setattr(a09, "_versoes_que_sobram", lambda: [_sobra("GE-Proton11-6-x86_64")])
+    monkeypatch.setattr(pp, "desinstalar_as_que_sobram", lambda s: (list(s), {}))
+
+    pacotes.gesto_da_pagina("09-sistema.html", "fixar-proton")(_ctx(), {}, None)
+
+    assert a09.recibos_da_regua == [
+        ("fixar-proton", "Travei. 1 versão do Proton sem uso foi para a lixeira (1,5 GB).")]

@@ -3520,7 +3520,28 @@ def _consertos_no_disco() -> list[tuple[Any, list[str]]]:
     return achados
 
 
-def _frase_do_que_vai_mudar(jogos: list[str] | None) -> str:
+def _versoes_que_sobram() -> list[Any]:
+    """As versões do Proton sem uso (`proton_pin.versoes_que_sobram`). Nunca levanta."""
+    try:
+        from hefesto_dualsense4unix.integrations import proton_pin
+        return list(proton_pin.versoes_que_sobram())
+    except Exception:
+        return []
+
+
+def _levar_as_que_sobram(sobras: list[Any]) -> str:
+    """Manda para a lixeira o que o primeiro clique mostrou; devolve o recibo."""
+    if not sobras:
+        return ""
+    try:
+        from hefesto_dualsense4unix.integrations import proton_pin
+        saiu, recusadas = proton_pin.desinstalar_as_que_sobram(sobras)
+        return proton_pin.frase_do_que_saiu(saiu, recusadas)
+    except Exception as erro:
+        return f"As versões do Proton sem uso ficaram: {erro}."
+
+
+def _frase_do_que_vai_mudar(jogos: list[str] | None, sobras: list[Any] | None = None) -> str:
     """O que o clique 1 escreve no painel: o que EXISTE agora, sem agir.
 
     A DIFERENÇA ENTRE `None` E `[]` VIAJA INTEIRA, e ela é a informação:
@@ -3546,6 +3567,9 @@ def _frase_do_que_vai_mudar(jogos: list[str] | None) -> str:
         linhas.append(f"  Steam Input ligado em {len(jogos)} "
                       f"{_plural(len(jogos), 'jogo', 'jogos')}: "
                       + ", ".join(jogos) + ".")
+    if sobras:
+        from hefesto_dualsense4unix.integrations import proton_pin
+        linhas.append("  " + proton_pin.frase_das_que_vao_sair(sobras))
     linhas.append(f"  {CLIQUE_DE_NOVO}")
     return "\n".join(linhas)
 
@@ -3582,8 +3606,10 @@ def refazer_consertos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         except Exception:
             jogos = None
         _ANTES_DO_CONSERTO["jogos"] = jogos
+        sobras = _versoes_que_sobram()
+        _ANTES_DO_CONSERTO["sobras"] = sobras
         return _so_armou(_de_pe(ctx), _para_o_painel(
-            _frase_do_que_vai_mudar(jogos), pergunta_de="refazer-consertos"))
+            _frase_do_que_vai_mudar(jogos, sobras), pergunta_de="refazer-consertos"))
 
     _limpar_o_painel()
     import subprocess
@@ -3619,9 +3645,16 @@ def refazer_consertos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     # A FAIXA LENTA É ZERADA, e não é enfeite: o exame do cartão ao lado acabou
     # de mudar de valor, e mostrar o de até 2 s atrás depois do conserto é a
     # tela afirmando números que ninguém releu.
+    # AS VERSÕES DO PROTON QUE SOBRAM (O-FIXAR-PROTON-DESINSTALA-AS-VERSOES-
+    # QUE-SOBRAM-01): só as que o clique 1 mostrou e que continuam sobrando.
+    # Sem o clique 1, nenhuma: a lixeira não recebe o que ela não viu.
+    vistas = {s.pasta for s in _ANTES_DO_CONSERTO.pop("sobras", [])}
+    sobras = [s for s in _versoes_que_sobram() if s.pasta in vistas]
+    recibo = _daemon.format_fix_safe_result(relatorio)
+    if sobras:
+        recibo = f"{recibo} {_levar_as_que_sobram(sobras)}"
     _LENTO.clear()
-    _relatar_o_recibo("refazer-consertos",
-                      _daemon.format_fix_safe_result(relatorio))
+    _relatar_o_recibo("refazer-consertos", recibo)
     return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
 
 
@@ -3798,8 +3831,16 @@ def fixar_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             raise RuntimeError(
                 "Não consegui soltar o Proton dos jogos — nada foi mudado.")
     else:
-        _relatar_o_recibo("fixar-proton",
-                          _daemon.format_proton_lock_result(travar(todos=True)))
+        recibo = _daemon.format_proton_lock_result(travar(todos=True))
+        # Com os jogos no pino, as outras versões do Proton só alimentam a
+        # fila do `d3ddriverquery64.exe` a cada abertura da Steam
+        # (O-FIXAR-PROTON-DESINSTALA-AS-VERSOES-QUE-SOBRAM-01). Vão para a
+        # lixeira, que é a volta; a Steam está fechada, ou o travar recusaria.
+        if proton_fixado():
+            sobra = _levar_as_que_sobram(_versoes_que_sobram())
+            if sobra:
+                recibo = f"{recibo} {sobra}"
+        _relatar_o_recibo("fixar-proton", recibo)
     _BARATO.clear()
 
 
