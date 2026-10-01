@@ -100,10 +100,10 @@ _dois_tercos() { printf '%s\n' "$(( $1 * 2 / 3 ))"; }
 
 _acordar_nvidia() {
     command -v "${NVSMI}" >/dev/null 2>&1 || return 0
-    local idx maximo
-    while IFS=', ' read -r idx maximo; do
-        [[ "${idx}" =~ ^[0-9]+$ && "${maximo}" =~ ^[0-9]+$ ]] || continue
-        "${NVSMI}" -i "${idx}" -lgc "$(_dois_tercos "${maximo}"),${maximo}" >/dev/null 2>&1 \
+    local idx teto
+    while IFS=', ' read -r idx teto; do
+        [[ "${idx}" =~ ^[0-9]+$ && "${teto}" =~ ^[0-9]+$ ]] || continue
+        "${NVSMI}" -i "${idx}" -lgc "$(_dois_tercos "${teto}"),${teto}" >/dev/null 2>&1 \
             && printf 'nvidia\t%s\n' "${idx}" >>"${ESTADO}/devolver"
     done < <("${NVSMI}" --query-gpu=index,clocks.max.graphics --format=csv,noheader,nounits 2>/dev/null)
 }
@@ -118,18 +118,18 @@ _acordar_amd() {
 }
 
 _acordar_intel() {
-    local c="$1" minimo rp0 antes alvo
-    for minimo in "${c}/gt_min_freq_mhz" "${c}"/device/tile*/gt*/freq0/min_freq; do
-        [[ -w "${minimo}" ]] || continue
-        rp0="${minimo%min_freq_mhz}RP0_freq_mhz"
-        [[ "${minimo}" == */min_freq ]] && rp0="${minimo%min_freq}rp0_freq"
-        antes="$(cat "${minimo}" 2>/dev/null)" || continue
+    local c="$1" piso rp0 antes alvo
+    for piso in "${c}/gt_min_freq_mhz" "${c}"/device/tile*/gt*/freq0/min_freq; do
+        [[ -w "${piso}" ]] || continue
+        rp0="${piso%min_freq_mhz}RP0_freq_mhz"
+        [[ "${piso}" == */min_freq ]] && rp0="${piso%min_freq}rp0_freq"
+        antes="$(cat "${piso}" 2>/dev/null)" || continue
         alvo="$(cat "${rp0}" 2>/dev/null)" || continue
         [[ "${antes}" =~ ^[0-9]+$ && "${alvo}" =~ ^[0-9]+$ ]] || continue
         alvo="$(_dois_tercos "${alvo}")"
         (( alvo > antes )) || continue
-        printf '%s\n' "${alvo}" >"${minimo}" 2>/dev/null \
-            && printf 'arquivo\t%s\t%s\n' "${minimo}" "${antes}" >>"${ESTADO}/devolver"
+        printf '%s\n' "${alvo}" >"${piso}" 2>/dev/null \
+            && printf 'arquivo\t%s\t%s\n' "${piso}" "${antes}" >>"${ESTADO}/devolver"
     done
 }
 
