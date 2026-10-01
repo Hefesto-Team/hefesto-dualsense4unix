@@ -23,11 +23,11 @@ _spec.loader.exec_module(qj)
 
 PROTON = "/home/x/.steam/debian-installation/compatibilitytools.d/GE-Proton11-7-x86_64"
 MAPS = "\n".join([
-    "7f1c2a000000-7f1c2a020000 r--p 00000000 103:02 1234 "
+    "10000000-10020000 r--p 00000000 103:02 1234 "
     "/usr/lib/x86_64-linux-gnu/libvulkan.so.1.4.309",
-    f"7f1c3b000000-7f1c3b080000 r-xp 00010000 103:02 5678 "
+    f"20000000-20080000 r-xp 00010000 103:02 5678 "
     f"{PROTON}/files/lib/wine/x86_64-unix/winevulkan.so",
-    f"7f1c3c000000-7f1c3c010000 r--p 00000000 103:02 9999 "
+    f"30000000-30010000 r--p 00000000 103:02 9999 "
     f"{PROTON}/files/lib/wine/x86_64-windows/winevulkan.dll",
 ]) + "\n"
 
