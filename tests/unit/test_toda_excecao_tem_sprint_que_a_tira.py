@@ -238,7 +238,7 @@ DIVIDAS: dict[str, int] = {
     "tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py::_SEM_MAO_HOJE": 5,
     "tests/unit/test_a_costura_da_onda_2.py::_OS_QUE_PODEM": 10,
     "tests/unit/test_a_janela_estreita_nao_engole_o_desenho.py::CORTE_CONHECIDO_NO_DESENHO": 0,
-    "tests/unit/test_guarda_gi_falso_precisa_de_exigir_gi_real.py::DIVIDA_GI_FALSO": 11,
+    "tests/unit/test_guarda_gi_falso_precisa_de_exigir_gi_real.py::DIVIDA_GI_FALSO": 0,
     "tests/unit/test_mic_volume_01_o_slider_que_faltava.py::_SEM_MIC_HOJE": 0,
     "tests/unit/test_o_pacote_cabe_na_pagina_publicada.py::EXCECOES_DATADAS": 0,
     "tests/unit/test_o_pacote_leva_os_alvos_das_regras_82_e_83.py::LACUNA_HOJE": 1,

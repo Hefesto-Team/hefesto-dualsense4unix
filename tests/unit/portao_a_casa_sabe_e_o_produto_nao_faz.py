@@ -1594,7 +1594,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "o que a ponte manda quando o jogo cala, e é a MORDIDA da bancada — "
         "com ele o controle parou, e foi isso que separou o voice-coil do "
         "rumble clássico em 18/09/2026.",
-    # sai com: OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01
+    # sai com: O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01
     "integrations/cura_por_estrada.py::tem_estrada":
         "O BOTÃO «Consertar» DOS CARTÕES SEM CENSO SAIU EM 10/09/2026 "
         "(LANCADOR-LOCALIZAR-01), por palavra dela — 'se tenho tudo "
@@ -1607,7 +1607,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "`assets/hefesto-launch.sh` só age com `SteamAppId`, e nenhum jogo "
         "do Heroic, do Lutris, do RetroArch, do Dolphin ou do mGBA tem um — "
         "este módulo é o ÚNICO código desta casa que entrega o ambiente da "
-        "ponte a um lançador que não é a Steam, e a lacuna continua aberta. "
+        "ponte a um lançador que não é a Steam (a carona, nas cópias de cada jogo do Heroic desde 01/10/2026; o `tem_estrada` segue sem chamador). "
         "O que FECHA: a LANCADOR-CARONA-01, que põe a cura na CARONA em vez "
         "de num botão — palavra dela de 16/08/2026 "
         "(`app/actions/carona_do_wrapper.py:7`), o mesmo lugar em que "
