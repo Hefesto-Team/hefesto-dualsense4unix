@@ -2449,27 +2449,32 @@ def _write_atomic(path: Path, content: str) -> None:
 def _jogadores_sem_imu(daemon: DaemonProtocol) -> list[str]:
     """Quem está com o par «máscara DualSense + caminho Xbox» AGORA.
 
-    Nomeia, nunca só conta (WRAPPER-EM-TODOS-01): `"1"` é o primário, e os
-    demais são o `player_index` de cada vpad do co-op. O contágio leva os
-    quatro jogadores juntos porque o caminho é da SESSÃO, e um evento que
-    dissesse só «o P1» faria a mesa de quatro parecer um caso isolado.
+    Nomeia, nunca só conta (WRAPPER-EM-TODOS-01), pelo número da CARTA — o
+    do nome do pad, da lâmpada e do cartão (O-NUMERO-DO-JOGADOR-SE-REORGANIZA-
+    NA-HORA-E-O-JOGO-VE-01, cura 2; era o `player_index` do co-op, o índice de
+    alocação). O contágio leva os quatro jogadores juntos porque o caminho é
+    da SESSÃO, e um evento que dissesse só «o P1» faria a mesa de quatro
+    parecer um caso isolado.
 
     SÓ LEITURA, e nunca levanta: este é um diagnóstico dentro de uma
     materialização que não pode derrubar o start da emulação.
     """
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import _rotulo_do_jogador
     from hefesto_dualsense4unix.integrations.canal_sem_imu import canal_sem_imu_do_vpad
 
     fora: list[str] = []
-    if canal_sem_imu_do_vpad(getattr(daemon, "_gamepad_device", None)):
-        fora.append("1")
     coop = getattr(daemon, "_coop_manager", None)
+    if canal_sem_imu_do_vpad(getattr(daemon, "_gamepad_device", None)):
+        primario = getattr(coop, "numero_do_primario_no_diario", None)
+        numero = primario() if callable(primario) else 1
+        valido = isinstance(numero, int) and not isinstance(numero, bool) and numero >= 1
+        fora.append(str(numero) if valido else "1")
     jogadores = getattr(coop, "_players", None)
     if isinstance(jogadores, dict):
         for jogador in jogadores.values():
             if not canal_sem_imu_do_vpad(getattr(jogador, "vpad", None)):
                 continue
-            indice = getattr(jogador, "player_index", None)
-            fora.append(str(indice) if isinstance(indice, int) else "?")
+            fora.append(_rotulo_do_jogador(coop, jogador))
     return fora
 
 

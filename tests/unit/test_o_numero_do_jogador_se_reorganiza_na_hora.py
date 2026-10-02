@@ -70,6 +70,7 @@ import json
 import time
 from collections.abc import Callable, Iterator
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -867,3 +868,277 @@ class TestComOJogoNaAutoridade:
         )
         assert bancada.dono_do_vpad_do_p1() == P2
         assert bancada.o_jogo_ve() == {1: P2, 2: P1, 3: P4}
+
+
+# ---------------------------------------------------------------------------
+# Régua 5 — o diário diz a carta (a cura 2, 02/10/2026)
+# ---------------------------------------------------------------------------
+#
+# O roxo da fala dela: alocado com o índice 4 (o menor livre quando ele chegou,
+# com o P2 e o P3 de pé) e a carta 2 depois que os dois saíram e o prazo
+# passou. O número esperado sai da conta escrita aqui (a fila menos quem
+# saiu), e o índice, das duas vagas que os dois lugares de ``path:`` seguram —
+# a identidade sem MAC fica fora da numeração, como no produto.
+#
+# AS MORDIDAS (02/10/2026, devolvidas com o md5 conferido): o
+# ``CoopManager._numero_e_indice`` dizendo o ``player_index`` reprova as cinco
+# linhas do co-op e o ``vpad_degradado``; o ``gamepad._rotulo_do_jogador``
+# dizendo o índice reprova o ``jogador_N_uinput`` e o ``canal_sem_imu``.
+
+#: A carta do roxo, pela conta: P1, P2, P3, P4 na fila; o P2 e o P3 saem; o prazo passa.
+CARTA_DO_ROXO = 2
+#: O índice de alocação do roxo: o 2 e o 3 já estavam tomados quando ele chegou.
+INDICE_DO_ROXO = 4
+
+
+class _LeitorDoRoxo:
+    """O ``EvdevReader`` do secundário: só o que o co-op pergunta ao registrar."""
+
+    grab_state = "held"
+
+    def __init__(self, device_path: Any = None, target_uniq: str | None = None) -> None:
+        self.device_path = device_path
+
+    def start(self) -> bool:
+        return True
+
+    def set_grab(self, _grab: bool) -> bool:
+        return True
+
+    def stop(self) -> None:
+        pass
+
+
+class _LeitorComGrabPendente(_LeitorDoRoxo):
+    grab_state = "pending"
+
+
+class _PadDoRoxo:
+    """O pad virtual que a fábrica devolveria: ``uhid`` (espelho) ou ``uinput``."""
+
+    def __init__(self, backend: str, *, caminho: str = "dualsense") -> None:
+        self.backend = backend
+        self.flavor = "dualsense"
+        self.caminho = caminho
+        self.mac = "02:fe:00:00:00:04"
+
+    def stop(self) -> None:
+        pass
+
+
+class _EspelhoQueNaoAbre:
+    """O ``PhysicalReportReader``: o co-op só o constrói e o liga."""
+
+    def __init__(self, **_kw: Any) -> None:
+        pass
+
+    def start(self) -> None:
+        pass
+
+
+def _registro_com_o_roxo_na_carta_2() -> ControllerIdentityRegistry:
+    """Os quatro na mesa, o P2 e o P3 saem, e o prazo passa: o roxo é a carta 2."""
+    relogio, reg, _escritores, _daemon = _mesa_assentada(QUATRO)
+    reg.sync_connected([P1, P4])
+    relogio.avancar(PRAZO + 1.0)
+    reg.sync_connected([P1, P4])
+    assert reg.liberar_as_lampadas() is True
+    assert reg.numero_da_lampada(P4, assign=False) == CARTA_DO_ROXO
+    return reg
+
+
+@pytest.fixture
+def coop_do_roxo(config_isolado: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
+    """O ``CoopManager`` de produção com o registro de produção e o roxo a registrar."""
+    from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
+    from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager, _SecondaryPlayer
+
+    reg = _registro_com_o_roxo_na_carta_2()
+    daemon = SimpleNamespace(
+        config=DaemonConfig(coop_enabled=True, gamepad_emulation_enabled=True),
+        controller=SimpleNamespace(primary_uniq=P1, hidraw_path=lambda _u: None),
+        identity_registry=reg,
+        display_authority="daemon",
+        _gamepad_device=None,
+        _coop_manager=None,
+        store=None,
+    )
+    coop = CoopManager(daemon)  # type: ignore[arg-type]
+    daemon._coop_manager = coop
+    # As duas vagas que o P2 e o P3 seguravam quando o roxo chegou.
+    for indice in (2, 3):
+        chave = f"path:/dev/input/event{20 + indice}"
+        coop._players[chave] = _SecondaryPlayer(
+            identity=chave, evdev_path=chave[5:], reader=_LeitorDoRoxo(), player_index=indice
+        )
+    monkeypatch.setattr(coop, "_prefetch_calibration", lambda _i: None)
+    monkeypatch.setattr(coop, "_armar_sossego_do_launch_env", lambda _m: None)
+    monkeypatch.setattr(coop, "_materialize_launch_env", lambda: None)
+    monkeypatch.setattr(coop, "_broker_hide_player", lambda _p: None)
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.core.physical_report_reader.PhysicalReportReader",
+        _EspelhoQueNaoAbre,
+    )
+    return coop
+
+
+def _linhas(registros: list[dict[str, Any]], evento: str) -> list[tuple[Any, Any]]:
+    return [(r.get("player"), r.get("indice")) for r in registros if r["event"] == evento]
+
+
+class _DiarioDoCoop:
+    """O ``logger`` do co-op, anotando TODO nível: o ``calibracao_pendente`` é ``debug``.
+
+    O ``capture_logs`` não o vê (o filtro de nível corta antes), e é uma das
+    cinco linhas que a sprint pede.
+    """
+
+    def __init__(self) -> None:
+        self.linhas: list[dict[str, Any]] = []
+
+    def _anotar(self, evento: str, **campos: Any) -> None:
+        self.linhas.append({"event": evento, **campos})
+
+    debug = info = warning = _anotar
+
+
+class TestODiarioDizACarta:
+    def test_as_cinco_linhas_do_co_op(
+        self, coop_do_roxo: Any, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        coop = coop_do_roxo
+        esperado = [(CARTA_DO_ROXO, INDICE_DO_ROXO)]
+        monkeypatch.setattr(
+            "hefesto_dualsense4unix.core.evdev_reader.EvdevReader", _LeitorComGrabPendente
+        )
+        diario = _DiarioDoCoop()
+        monkeypatch.setattr("hefesto_dualsense4unix.daemon.subsystems.coop.logger", diario)
+        registros = diario.linhas
+        coop._spawn_player(P4, "/dev/input/event40")
+        roxo = coop._players[P4]
+        assert roxo.player_index == INDICE_DO_ROXO, "a bancada não alocou o 4"
+        monkeypatch.setattr(coop, "_calibration_pronta", lambda _i: (False, None))
+        coop._promote_player(roxo)
+        monkeypatch.setattr(coop, "_calibration_pronta", lambda _i: (True, None))
+        monkeypatch.setattr(
+            "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad",
+            lambda *_a, **_kw: _PadDoRoxo("uhid"),
+        )
+        coop._promote_player(roxo)
+        coop.ceder_ao_primario(P1, P4)  # o roxo vira o primário
+        for evento in (
+            "coop_player_grab_pending",
+            "coop_player_calibracao_pendente",
+            "coop_player_added",
+            "coop_motion_reader_spawned",
+            "coop_player_cedido_ao_primario",
+        ):
+            assert _linhas(registros, evento) == esperado, (
+                f"{evento}: {_linhas(registros, evento)} — o diário tem de dizer "
+                f"player={CARTA_DO_ROXO} (a carta) e indice={INDICE_DO_ROXO}"
+            )
+
+    def test_o_pad_degradado_tambem(
+        self, coop_do_roxo: Any, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        coop = coop_do_roxo
+        monkeypatch.setattr(
+            "hefesto_dualsense4unix.core.evdev_reader.EvdevReader", _LeitorDoRoxo
+        )
+        monkeypatch.setattr(coop, "_calibration_pronta", lambda _i: (True, None))
+        monkeypatch.setattr(coop, "_pode_nascer_na_ordem", lambda _p: False)
+        coop._spawn_player(P4, "/dev/input/event40")
+        monkeypatch.setattr(
+            "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad",
+            lambda *_a, **_kw: _PadDoRoxo("uinput"),
+        )
+        with structlog.testing.capture_logs() as registros:
+            coop._promote_player(coop._players[P4])
+        assert _linhas(registros, "vpad_degradado") == [(CARTA_DO_ROXO, INDICE_DO_ROXO)]
+
+    def test_o_jogador_que_caiu_e_o_canal_sem_imu_dizem_a_carta(
+        self, coop_do_roxo: Any
+    ) -> None:
+        from hefesto_dualsense4unix.daemon.launch_env import _jogadores_sem_imu
+        from hefesto_dualsense4unix.daemon.subsystems.coop import _SecondaryPlayer
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import dedup_status
+
+        coop = coop_do_roxo
+        daemon = coop._daemon
+        daemon.is_native_mode = lambda: False
+        daemon._gamepad_device = _PadDoRoxo("uhid")
+        coop._players[P4] = _SecondaryPlayer(
+            identity=P4,
+            evdev_path="/dev/input/event40",
+            reader=_LeitorDoRoxo(),
+            player_index=INDICE_DO_ROXO,
+            vpad=_PadDoRoxo("uinput"),  # type: ignore[arg-type]
+        )
+        _ok, motivos = dedup_status(daemon)
+        assert motivos == [f"jogador_{CARTA_DO_ROXO}_uinput"], motivos
+
+        coop._players[P4].vpad = _PadDoRoxo("uinput", caminho="xbox")  # type: ignore[assignment]
+        daemon._gamepad_device = _PadDoRoxo("uinput", caminho="xbox")
+        assert _jogadores_sem_imu(daemon) == ["1", str(CARTA_DO_ROXO)]
+
+
+# ---------------------------------------------------------------------------
+# Régua 6 — o número que o jogo escreveu, a cada mudança (a cura 3, 02/10/2026)
+# ---------------------------------------------------------------------------
+#
+# A tabela é a do ``hid-playstation`` (``player_ids[]``), escrita aqui e não
+# lida do ``led_control`` do produto: bit ``i`` do valor é a lâmpada ``i``.
+#
+# AS MORDIDAS (02/10/2026, devolvidas com o md5 conferido): sem a chamada em
+# ``apply_game_player_leds`` (o diário de antes, que só a recusa do backend
+# dizia, uma vez por sessão) reprova a primeira linha; a marca sem o
+# ``_esquecer_o_numero_do_jogo`` no fim da sessão reprova a última; e a
+# peneira do número tirada do ``set_game_output_for`` reprova a D-2309 (o
+# padrão vira camada GAME).
+
+PLAYER_IDS = {1: 0x04, 2: 0x0A, 3: 0x15, 4: 0x1B}
+
+
+def _desenho(numero: int) -> tuple[bool, bool, bool, bool, bool]:
+    valor = PLAYER_IDS[numero]
+    return tuple(bool(valor >> i & 1) for i in range(5))  # type: ignore[return-value]
+
+
+@pytest.mark.usefixtures("config_isolado")
+class TestONumeroQueOJogoEscreveu:
+    def test_a_cada_mudanca_e_de_novo_depois_da_sessao(self) -> None:
+        from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
+        from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
+        from tests.unit.test_backend_multi_controller import _FakeHandle, _null_evdev
+
+        _relogio, reg, _escritores, _daemon = _mesa_assentada((P1, P2))
+        assert reg.numero_da_lampada(P2, assign=False) == 2, "a conta: o P2 é o segundo"
+        inst = PyDualSenseController(evdev_reader=_null_evdev())
+        inst._handles = {"AA:BB:CC:00:00:02": _FakeHandle()}  # type: ignore[assignment]
+        inst._primary_key = "AA:BB:CC:00:00:02"
+        daemon = SimpleNamespace(controller=inst, identity_registry=reg)
+
+        def escreve(numero: int) -> list[dict[str, Any]]:
+            with structlog.testing.capture_logs() as registros:
+                gp.apply_game_player_leds(daemon, _desenho(numero), target_uniq=P2)
+            return [r for r in registros if r["event"] == "o_numero_que_o_jogo_escreveu"]
+
+        def par(linhas: list[dict[str, Any]]) -> list[tuple[Any, Any, Any]]:
+            return [(r["jogo"], r["hefesto"], r["concorda"]) for r in linhas]
+
+        primeira = escreve(1)
+        assert par(primeira) == [(1, 2, False)], primeira
+        assert par(escreve(1)) == [], "o mesmo número de novo não é mudança"
+        assert par(escreve(2)) == [(2, 2, True)]
+        gp.end_game_output_session(daemon, target_uniq=P2)
+        assert par(escreve(2)) == [(2, 2, True)], "a sessão nova diz desde a primeira escrita"
+        # A D-2309: o número do jogo nunca chega ao backend como camada.
+        assert all(
+            getattr(camada, "player_leds", None) is None
+            for camadas in (
+                inst._game_output_by_uniq,
+                inst._desired_coop_by_uniq,
+                inst._desired_by_uniq,
+            )
+            for camada in camadas.values()
+        ), "o padrão do jogo virou camada no backend"

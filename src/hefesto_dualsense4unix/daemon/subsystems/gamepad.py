@@ -1530,7 +1530,10 @@ def apply_game_player_leds(
 
     CADUCOU em 23/09/2026 o «o número NO CONTROLE é o que o JOGO atribuiu»: por
     decisão dela o número é do Hefesto, e `set_game_output_for` o recusa.
+    O que o jogo escreveu é CONTADO antes, a cada mudança (o fim do módulo).
     """
+    if target_uniq is not None:
+        _o_numero_que_o_jogo_escreveu(daemon, bits, target_uniq)
     fn: Any = getattr(daemon.controller, "set_game_output_for", None)
     if target_uniq is None or not callable(fn):
         logger.debug("game_player_leds_sem_alvo_descartado", target=target_uniq)
@@ -1545,6 +1548,7 @@ def end_game_output_session(
     daemon: DaemonProtocol, *, target_uniq: str | None = None
 ) -> None:
     """Fim da sessão uhid do jogador: devolve perfil/paleta/co-op (REPLICA-03)."""
+    _esquecer_o_numero_do_jogo(daemon, target_uniq)
     fn: Any = getattr(daemon.controller, "end_game_session_for", None)
     if target_uniq is None or not callable(fn):
         logger.debug("game_session_end_sem_alvo", target=target_uniq)
@@ -1603,7 +1607,9 @@ def make_primary_replica_sinks(daemon: DaemonProtocol) -> dict[str, Any]:
     }
 
 
-def notify_vpad_degradado(daemon: DaemonProtocol, *, player: int, motivo: str) -> None:
+def notify_vpad_degradado(
+    daemon: DaemonProtocol, *, player: int, motivo: str, indice: int | None = None
+) -> None:
     """Anuncia a TRANSIÇÃO "vpad deste jogador nasceu degradado" (BT-03).
 
     Duas saídas, ambas best-effort e nunca fatais:
@@ -1621,7 +1627,10 @@ def notify_vpad_degradado(daemon: DaemonProtocol, *, player: int, motivo: str) -
     secundários em `CoopManager._promote_player`) — nunca no `state_full` a
     10 Hz (seria flood, a mesma regra do `dedup_broken` do DEDUP-06).
     """
-    logger.warning("vpad_degradado", player=player, motivo=motivo)
+    # O-NUMERO-DO-JOGADOR-SE-REORGANIZA-NA-HORA-E-O-JOGO-VE-01, cura 2: ``player``
+    # é o número da carta; o índice de alocação do co-op vai em campo próprio.
+    campos = {"indice": indice} if indice is not None else {}
+    logger.warning("vpad_degradado", player=player, motivo=motivo, **campos)
     bus = getattr(daemon, "bus", None)
     if bus is None:
         return
@@ -1679,9 +1688,7 @@ def dedup_status(daemon: DaemonProtocol) -> tuple[bool, list[str]]:
             vpad = getattr(player, "vpad", None)
             if vpad is None or motivo_da_degradacao(vpad) is None:
                 continue
-            indice = getattr(player, "player_index", None)
-            rotulo = str(indice) if isinstance(indice, int) else "?"
-            motivos.append(f"jogador_{rotulo}_uinput")
+            motivos.append(f"jogador_{_rotulo_do_jogador(coop, player)}_uinput")
     return not motivos, motivos
 
 
@@ -3606,6 +3613,102 @@ def soltar_o_cursor_do_toque(daemon: Any) -> None:
         with contextlib.suppress(Exception):
             cursor.stop()
     daemon._cursor_do_toque = None
+
+
+
+# ---------------------------------------------------------------------------
+# O NÚMERO NO DIÁRIO — O-NUMERO-DO-JOGADOR-SE-REORGANIZA-NA-HORA-E-O-JOGO-VE-01
+# ---------------------------------------------------------------------------
+#
+# No fim do módulo pela razão de sempre: o mapa de canais cita as funções de
+# cima por número de linha.
+
+
+def _rotulo_do_jogador(coop: Any, player: Any) -> str:
+    """O ``N`` do ``jogador_N_uinput``: o número da carta, como o nome e a lâmpada.
+
+    Cura 2 da sprint (02/10/2026): era o ``player_index``, o índice de
+    ALOCAÇÃO do vpad, e o aviso da tela («o jogador N caiu») apontava o
+    controle de outra pessoa sempre que a fila andou. Quem responde é o co-op
+    (`CoopManager.numero_do_diario`); sem ele, o índice; sem índice, ``?``.
+    """
+    indice = getattr(player, "player_index", None)
+    if not isinstance(indice, int) or isinstance(indice, bool):
+        return "?"
+    perguntar = getattr(coop, "numero_do_diario", None)
+    if callable(perguntar):
+        with contextlib.suppress(Exception):
+            numero = perguntar(getattr(player, "identity", None), indice)
+            if isinstance(numero, int) and not isinstance(numero, bool) and numero >= 1:
+                return str(numero)
+    return str(indice)
+
+
+#: Onde o último par (jogo, Hefesto) de cada controle fica, no próprio daemon.
+_ATRIBUTO_DO_NUMERO_DO_JOGO = "_numero_que_o_jogo_escreveu"
+
+
+def _marcas_do_numero_do_jogo(daemon: Any) -> dict[str, tuple[int | None, int | None]] | None:
+    """O ``{uniq: (jogo, hefesto)}`` deste daemon, criado na primeira consulta."""
+    marcas = getattr(daemon, _ATRIBUTO_DO_NUMERO_DO_JOGO, None)
+    if isinstance(marcas, dict):
+        return marcas
+    novas: dict[str, tuple[int | None, int | None]] = {}
+    try:
+        setattr(daemon, _ATRIBUTO_DO_NUMERO_DO_JOGO, novas)
+    except Exception:
+        return None
+    return novas
+
+
+def _o_numero_que_o_jogo_escreveu(daemon: Any, bits: Any, target_uniq: str) -> None:
+    """Diz no diário o número que o jogo escreveu nas lâmpadas, a cada mudança. Nunca levanta.
+
+    A cura 3 da sprint (02/10/2026). A recusa do backend
+    (`game_output_recusado_o_hefesto_numera`, a `D-2309-O-HEFESTO-MANDA-NO-NUMERO`)
+    diz o valor UMA vez por controle e por sessão do pad: em 29/09 o lobby da
+    Forja das 15:19 escreveu «jogador 1» no pad do P2 e o diário não disse
+    nada, porque a linha daquele controle tinha sido gasta às 12:34:59. Aqui o
+    padrão vira número pelo tradutor único (`numero_do_desenho`: a tabela do
+    `hid-playstation`, 0 apagado, ``?`` fora dela), o número do Hefesto vem do
+    dono (`numero_da_lampada`) e a linha sai quando o PAR muda. A recusa não
+    muda: quem decide o aparelho continua sendo o backend.
+    """
+    try:
+        from hefesto_dualsense4unix.core.backend_pydualsense import (
+            _endereco_mascarado,
+            numero_do_desenho,
+        )
+
+        jogo = numero_do_desenho(bits)
+        hefesto: int | None = None
+        perguntar = getattr(getattr(daemon, "identity_registry", None), "numero_da_lampada", None)
+        if callable(perguntar):
+            bruto = perguntar(target_uniq, assign=False)
+            if isinstance(bruto, int) and not isinstance(bruto, bool) and bruto >= 1:
+                hefesto = bruto
+        marcas = _marcas_do_numero_do_jogo(daemon)
+        if marcas is None or marcas.get(target_uniq) == (jogo, hefesto):
+            return
+        marcas[target_uniq] = (jogo, hefesto)
+        logger.info(
+            "o_numero_que_o_jogo_escreveu",
+            uniq=_endereco_mascarado(target_uniq) or "?",
+            jogo="?" if jogo is None else jogo,
+            hefesto=hefesto,
+            concorda=jogo is not None and jogo == hefesto,
+        )
+    except Exception as exc:  # o instrumento nunca derruba a réplica
+        logger.debug("o_numero_que_o_jogo_escreveu_falhou", err=str(exc))
+
+
+def _esquecer_o_numero_do_jogo(daemon: Any, target_uniq: str | None) -> None:
+    """O fim da sessão do pad zera a marca: o próximo jogo é dito desde a primeira escrita."""
+    if target_uniq is None:
+        return
+    marcas = getattr(daemon, _ATRIBUTO_DO_NUMERO_DO_JOGO, None)
+    if isinstance(marcas, dict):
+        marcas.pop(target_uniq, None)
 
 
 __all__ = [

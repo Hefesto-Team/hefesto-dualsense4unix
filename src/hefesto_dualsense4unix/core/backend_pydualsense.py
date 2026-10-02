@@ -9097,10 +9097,38 @@ def _o_cabo_vence(novo: bytes, guardado: bytes) -> bool:
 RAIZ_CLASS_HIDRAW = "/sys/class/hidraw"
 
 
+def numero_do_desenho(bits: object) -> int | None:
+    """O número que o desenho das cinco lâmpadas de jogador diz. O tradutor ÚNICO.
+
+    O-NUMERO-DO-JOGADOR-SE-REORGANIZA-NA-HORA-E-O-JOGO-VE-01 (o número que o
+    jogo escreveu) e A-NUMERACAO-BATE-A-LUZ-COM-O-JOGO-01 (o número que acendeu,
+    no diário do gatilho e da camada do co-op) leem por aqui: um desenho, um
+    número. É a tabela do `player_led_pattern` (a do `hid-playstation` de 1 a 4,
+    a desta casa de 5 a 8) lida ao contrário, sem cópia: ``0`` é o apagado, e
+    ``None`` o que não está na tabela (o padrão do overflow, um tamanho errado).
+    Mora no fim do módulo para nenhuma linha acima andar.
+    """
+    from hefesto_dualsense4unix.core.led_control import player_led_pattern
+
+    try:
+        desenho = tuple(bool(b) for b in bits)  # type: ignore[attr-defined]
+    except TypeError:
+        return None
+    if len(desenho) != 5:
+        return None
+    if not any(desenho):
+        return 0
+    for numero in range(1, 9):
+        if player_led_pattern(numero) == desenho:
+            return numero
+    return None
+
+
 __all__ = [
     "ESTADO_DE_CARGA",
     "FOLGA_DEPOIS_DA_TROCA_S",
     "PRAZO_DA_TROCA_DE_TRANSPORTE_S",
     "PyDualSenseController",
+    "numero_do_desenho",
     "relogio_do_prazo",
 ]

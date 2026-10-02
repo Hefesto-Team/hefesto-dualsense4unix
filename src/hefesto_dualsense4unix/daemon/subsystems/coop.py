@@ -660,7 +660,7 @@ class CoopManager:
             "coop_player_cedido_ao_primario",
             identity=novo,
             anterior=anterior,
-            player=player.player_index,
+            **self._numero_e_indice(player),
         )
 
     def _recolher_os_cedidos(self) -> None:
@@ -1197,7 +1197,7 @@ class CoopManager:
                 "coop_player_grab_pending",
                 identity=identity,
                 evdev=path,
-                player=player.player_index,
+                **self._numero_e_indice(player),
             )
             # IGNORE-NO-FIM-DA-SEQUENCIA-01: este é o ramo que não materializa
             # nada — e é o ramo em que a mesa fica desequilibrada (mais um
@@ -1325,7 +1325,7 @@ class CoopManager:
             logger.debug(
                 "coop_player_calibracao_pendente",
                 identity=player.identity,
-                player=player.player_index,
+                **self._numero_e_indice(player),
             )
             return
 
@@ -1383,7 +1383,7 @@ class CoopManager:
             "coop_player_added",
             identity=player.identity,
             evdev=player.evdev_path,
-            player=player.player_index,
+            **self._numero_e_indice(player),
             players=self.player_count(),
         )
         # BT-03: vpad de secundário que nasceu degradado é transição anunciada
@@ -1400,7 +1400,7 @@ class CoopManager:
 
             with contextlib.suppress(Exception):
                 notify_vpad_degradado(
-                    self._daemon, player=player.player_index, motivo=motivo
+                    self._daemon, motivo=motivo, **self._numero_e_indice(player)
                 )
         # DEDUP-04: gatilho "mudança do conjunto de jogadores" — o dedup_ok do
         # launch é POR JOGADOR (um único vpad de co-op degradado em uinput já
@@ -1622,7 +1622,7 @@ class CoopManager:
         logger.info(
             "coop_motion_reader_spawned",
             identity=identity,
-            player=player.player_index,
+            **self._numero_e_indice(player),
         )
 
     # -- broker hide-hidraw por jogador (BROKER-01) ----------------------
@@ -3040,6 +3040,36 @@ class CoopManager:
             self._nomes_velhos_ditos = nomes
             logger.info("coop_nome_do_virtual_renasce", nomes=nomes, recriados=len(juntos))
         return juntos
+
+    # -- o número no diário (O-NUMERO-DO-JOGADOR-SE-REORGANIZA-NA-HORA-E-O-JOGO-VE-01) --
+    # No fim da classe pela razão de sempre: o mapa de canais cita os métodos
+    # desta classe por número de linha.
+
+    def numero_do_diario(self, identity: str | None, indice: int) -> int:
+        """O número que o diário diz para este jogador: o da CARTA.
+
+        A cura 2 da sprint (02/10/2026). O diário dizia ``player=`` com o
+        ``player_index``, o índice de ALOCAÇÃO do vpad: em 29/09 o roxo nasceu
+        «Hefesto P2», com a lâmpada e a tela dizendo 2, e o diário escreveu
+        ``coop_player_added player=4``. Quem lia procurava o P4 e achava o
+        controle de outra pessoa. O dono do número é um só
+        (:meth:`numero_para_o_nome`, a mesma conta do nome, da lâmpada e do
+        cartão); sem identidade, ou sem registro, vale o índice, como o nome.
+        """
+        if not identity or identity.startswith("path:"):
+            return indice
+        return self.numero_para_o_nome(identity, indice)
+
+    def numero_do_primario_no_diario(self) -> int:
+        """O número do controle que alimenta o pad do P1, para o diário (1 sem carta)."""
+        return self.numero_do_diario(self._primary_identity(), 1)
+
+    def _numero_e_indice(self, player: _SecondaryPlayer) -> dict[str, int]:
+        """Os dois campos do diário de um secundário: ``player`` (a carta) e ``indice``."""
+        return {
+            "player": self.numero_do_diario(player.identity, player.player_index),
+            "indice": player.player_index,
+        }
 
 
 # F1-REMAPEAR (13/09/2026): o import da troca de botões mora AQUI, depois da
