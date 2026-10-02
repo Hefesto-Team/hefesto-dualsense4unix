@@ -1131,10 +1131,14 @@ def processos_da_steam(proc: Path = PROC) -> list[ProcessoDaSteam]:
             continue
         achados[int(pasta.name)] = ProcessoDaSteam(
             int(pasta.name), papel, _lar_do_processo(pasta), _inicio(pasta))
-    #: O PID QUE O WEBHELPER CARREGA É O CLIENTE, seja qual for o caminho dele.
+    #: O PID QUE O WEBHELPER CARREGA É O CLIENTE, seja qual for o caminho dele,
+    #: SE o processo com esse número for a Steam. Na Steam do Flatpak o
+    #: `-steampid=` é o número do cliente no espaço de PIDs da caixa, e aqui
+    #: fora o mesmo número pode ser o `systemd --user` ou o servidor de som do
+    #: mesmo usuário: sem conferir o `comm`, o fecho os mataria.
     for pid in referidos - set(achados):
         pasta = proc / str(pid)
-        if _uid_real(pasta) == uid:
+        if _uid_real(pasta) == uid and _texto(pasta / "comm").strip() == "steam":
             achados[pid] = ProcessoDaSteam(pid, "cliente", _lar_do_processo(pasta),
                                            _inicio(pasta))
     #: O WEBHELPER É DO LAR DO CLIENTE QUE O PÔS DE PÉ: o `environ` dele não

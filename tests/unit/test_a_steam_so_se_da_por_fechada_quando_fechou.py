@@ -180,6 +180,25 @@ def test_o_cliente_se_acha_pelo_steampid_do_webhelper(mesa: Mesa) -> None:
     assert papeis == {CLIENTE: "cliente", WEBHELPER: "webhelper"}
 
 
+def test_o_pid_que_o_webhelper_cita_so_e_cliente_se_for_a_steam(mesa: Mesa) -> None:
+    """A Steam do Flatpak roda num espaço de PIDs próprio: o `-steampid=` do
+    webhelper é o número do cliente LÁ DENTRO, e aqui fora o mesmo número pode
+    ser qualquer processo do mesmo usuário e do mesmo `HOME` (o `systemd
+    --user`, o servidor de som, o serviço do Hefesto). ARRANQUE a conferência
+    do `comm` no pid citado e este teste reprova: o fecho manda `TERM` e
+    `KILL` num processo que não é a Steam."""
+    steam = f"{mesa.lar}/.local/share/Steam"
+    mesa.processo(300, "steam", [f"{steam}/ubuntu12_32/steam", "-srt-logger-opened"])
+    mesa.processo(301, "steamwebhelper",
+                  [f"{steam}/ubuntu12_64/steamwebhelper", "-steampid=7", "-lang=pt"],
+                  como_o_chromium=True)
+    mesa.processo(7, "systemd", ["/usr/lib/systemd/systemd", "--user"])
+    assert {x.pid for x in slo.processos_da_steam(mesa.raiz)} == {300, 301}
+    assert _parar(mesa) is True
+    assert {pid for pid, _ in mesa.sinais} == {300, 301}
+    assert (mesa.raiz / "7").exists()
+
+
 def test_o_lar_e_o_usuario_se_conferem(mesa: Mesa, tmp_path: Path) -> None:
     """Deste lar: o mesmo usuário e o mesmo `HOME` (ou um dentro dele, a Snap)."""
     mesa.processo(200, "heroic", ["heroic"])
