@@ -924,6 +924,10 @@ def test_com_a_janela_aberta_o_chip_e_o_da_janela_e_o_outro_recusa(
 
     MORDIDA: tire o ``espera`` do ``_o_aberto`` — com o Centro varrendo, o chip
     pula para a Esquerda.
+
+    MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a janela aberta é a ``busca`` que
+    a central publica, e não a idade do movimento sem aparelho. O pedido é o
+    mesmo.
     """
     from hefesto_dualsense4unix.integrations.bluez_dbus import AdaptadorDoBluez
 
@@ -936,8 +940,10 @@ def test_com_a_janela_aberta_o_chip_e_o_da_janela_e_o_outro_recusa(
     monkeypatch.setattr(a08, "_ler_o_bluez", lambda: (lidos, ()))
     janela = {"aparelho": "", "destino": centro, "estado": "esperando", "passo": "gesto",
               "motivo": "", "origens": [], "e_controle": True, "quando": time.time()}
+    busca = {"adaptador": centro, "desde": time.time(), "ate": time.time() + 120.0}
     cena = _cena(a08, _estado({VERMELHO: 1, AZUL: 1},
-                              central={"movimentos": [janela], "proposta": None}))
+                              central={"movimentos": [janela], "proposta": None,
+                                       "busca": busca}))
     assert cena["destino_do_conectar"] == _id(centro)
     assert cena["aberto"] == _id(centro), "a caixa da janela abre sozinha"
     ponte = _PonteDaCentralOcupada()

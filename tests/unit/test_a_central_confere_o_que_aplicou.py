@@ -547,7 +547,10 @@ def test_o_publicar_nao_abre_o_dono_antes_de_ligar(
     monkeypatch.setattr(bd, "dono", nao_abra)
     central = cr.CentralDoRadio()
 
-    assert central.publicar([]) == {"movimentos": [], "em_curso": False, "proposta": None}
+    # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a ``busca`` do «Procurar» vai
+    # junto, ``None`` sem ela.
+    assert central.publicar([]) == {"movimentos": [], "em_curso": False, "proposta": None,
+                                    "busca": None}
     assert not _esperar(lambda: bool(pedidos), teto=0.3), "o state_full abriu o dono do BlueZ"
 
 

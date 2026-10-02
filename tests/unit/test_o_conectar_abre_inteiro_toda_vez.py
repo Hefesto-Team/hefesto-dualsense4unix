@@ -88,11 +88,18 @@ def _busca(adaptador: int, *, passo: str = "gesto", aparelho: str = "",
             "passo": passo, "quando": time.time() - ha_s, "e_controle": bool(aparelho)}
 
 
-def _campos(a08: Any, *movimentos: dict[str, Any]) -> dict[str, Any]:
+def _campos(a08: Any, *movimentos: dict[str, Any], busca: int | None = None) -> dict[str, Any]:
+    """Um tique da seção, com o que a central publicou. ``busca``: o adaptador
+    ``hci{busca}`` com a janela do «Procurar» aberta — o campo ``busca`` que a
+    central publica desde a O-CONECTAR-E-UM-INTERRUPTOR-01, e que é o que a
+    pílula, o chip e a ordem da lista leem."""
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
+    publicada = None if busca is None else {
+        "adaptador": ADAPTADORES[busca], "desde": time.time() - 2.0, "ate": time.time() + 118.0}
     estado = {"controllers": [],
-              "radio_central": {"movimentos": list(movimentos), "proposta": None}}
+              "radio_central": {"movimentos": list(movimentos), "proposta": None,
+                                "busca": publicada}}
     return dict(a08.campos_do_radio(Contexto(state=estado, conectados=[], mesa=[])))
 
 
@@ -183,13 +190,13 @@ def test_a_lista_nao_anda_e_recomeca_com_a_busca(
     for n, leitura in enumerate(leituras, start=1):
         _ler(a08, monkeypatch, tuple(_visto(0, quem, rssi) for quem, rssi in leitura))
         vistos = [_id(quem) for quem, _ in leitura]
-        assert [a for a, _ in _linhas(_campos(a08, primeira))] == vistos, f"leitura {n}"
+        assert [a for a, _ in _linhas(_campos(a08, primeira, busca=0))] == vistos, f"leitura {n}"
 
     todos = tuple(_visto(0, quem, rssi) for quem, rssi in ((A, -70), (B, -60), (C, -40)))
     _ler(a08, monkeypatch, todos)
     _campos(a08)  # a busca acabou; outro programa procura, e os três seguem à vista
     segunda = _busca(0, ha_s=1.0)
-    assert [a for a, _ in _linhas(_campos(a08, segunda))] == [_id(C), _id(B), _id(A)]
+    assert [a for a, _ in _linhas(_campos(a08, segunda, busca=0))] == [_id(C), _id(B), _id(A)]
 
 
 # ---------------------------------------------------------------------------
@@ -207,18 +214,22 @@ def test_a_busca_e_a_varredura_nao_trocam_a_sala(
     ela varre (a sala muda, e a lista ``radio-varrendo`` perde o par); tire o
     ``ocupado`` do ``_sem_o_que_pisca`` (a sala muda com a busca); troque o
     ``_sala_estavel`` pelo ``html_da_sala`` (a sala muda a cada tique).
+
+    MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca do quarto tique é a que a
+    central PUBLICA (``busca``), com o movimento sem aparelho — a pílula lê a
+    busca, e não a idade do movimento. O pedido é o mesmo.
     """
     _chip(a08, 0)
     tiques = []
-    for varrendo, movimentos in (
-            ((False, False, False), ()),
-            ((True, False, False), ()),
-            ((False, False, False), ()),
-            ((False, False, False), (_busca(0),)),
-            ((False, False, False), ()),
+    for varrendo, movimentos, busca in (
+            ((False, False, False), (), None),
+            ((True, False, False), (), None),
+            ((False, False, False), (), None),
+            ((False, False, False), (_busca(0),), 0),
+            ((False, False, False), (), None),
     ):
         _ler(a08, monkeypatch, varrendo=varrendo)
-        tiques.append(_campos(a08, *movimentos))
+        tiques.append(_campos(a08, *movimentos, busca=busca))
 
     salas = {t["radio-sala"] for t in tiques}
     assert len(salas) == 1, "a sala se refez com a varredura ou a busca"
@@ -295,9 +306,14 @@ def test_depois_do_gesto_o_chip_de_outro_adaptador_diz_que_agora_nao(
     MORDIDAS, uma por vez: ignore o passo (o chip apaga no ``gesto``, que é
     quando a central aceita); apague todo chip com movimento, sem olhar se ele
     pediria ao rádio (o da Esquerda apaga).
+
+    MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: depois do clique dela no «Parear»
+    (O-PAREAR-ESPERA-O-CLIQUE-01) o movimento já tem o aparelho que ela
+    escolheu, e a busca saiu do publicado — o «onde espera» é a linha dele.
+    O pedido é o mesmo.
     """
     _ler(a08, monkeypatch)
-    chips = _chips(_campos(a08, _busca(0, passo=passo)))
+    chips = _chips(_campos(a08, _busca(0, passo=passo, aparelho=rm.uniq(VERMELHO))))
     esquerda, direita, centro = (chips[_id(e)] for e in ADAPTADORES)
 
     assert esquerda["aria-pressed"] == "true"
@@ -312,7 +328,8 @@ def test_depois_do_gesto_o_chip_de_outro_adaptador_diz_que_agora_nao(
 def test_no_gesto_todo_chip_pede_ao_radio(a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """No passo ``gesto`` a central ainda leva a busca junto: nenhum chip apaga."""
     _ler(a08, monkeypatch)
-    for chips in (_chips(_campos(a08, _busca(0, passo="gesto"))), _chips(_campos(a08))):
+    for chips in (_chips(_campos(a08, _busca(0, passo="gesto"), busca=0)),
+                  _chips(_campos(a08))):
         for chip in chips.values():
             assert chip.get("data-gesto") == "escolher-adaptador"
             assert "aria-disabled" not in chip

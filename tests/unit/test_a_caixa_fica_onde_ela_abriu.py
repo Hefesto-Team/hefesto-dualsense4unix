@@ -85,11 +85,15 @@ def mundo_com(adaptadores: tuple[str, ...]) -> rm.RadioDeMentira:
 
 
 def _a_busca_abre_em(bancada: Bancada, busca: BuscaDePe, destino: str) -> None:
-    """O caminho dela: o chip do destino, e o «Conectar» — a janela abre ali."""
+    """O caminho dela: o chip do destino, e o «Procurar» — a janela abre ali.
+
+    MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo interruptor
+    «Procurar» (``radio.busca.set``); o «+ Conectar» só abre o painel.
+    """
     bancada.cena()
     bancada.gesto("escolher-adaptador", alvo=id_da_tela(destino))
     bancada.cena()
-    assert bancada.gesto("conectar-aparelho") == {"armou": True}
+    assert bancada.gesto("radio-procurar") == {"armou": True}
     assert busca.dentro.wait(5.0), "a central não abriu a janela"
     (movimento,) = bancada.central.movimentos()
     assert (movimento.estado, movimento.passo, movimento.destino) == (
@@ -290,8 +294,10 @@ def test_o_chip_de_outro_adaptador_pede_a_busca_ao_radio(
         assert len(bancada.ponte.chamadas) == 1, "o chip da busca pediu ao rádio"
 
         assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(chip)) == {"armou": True}
+        # A primeira chamada é o «Procurar» (O-CONECTAR-E-UM-INTERRUPTOR-01);
+        # a do chip segue o ``radio.mover`` para ele, como era.
         assert bancada.ponte.chamadas == [
-            ("radio.mover", {"destino": id_da_tela(onde_busca)}),
+            ("radio.busca.set", {"ligada": True, "destino": id_da_tela(onde_busca)}),
             ("radio.mover", {"destino": id_da_tela(chip)}),
         ], "o chip recusou sem perguntar ao rádio"
         assert a08._ABERTO["lugar"] == id_da_tela(chip)

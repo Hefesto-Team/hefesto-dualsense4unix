@@ -484,13 +484,20 @@ async def test_o_laco_do_subsystem_mede_o_tempo_de_verdade() -> None:
 
 
 class _PonteDoServico:
-    """A ponte do pedido `radio.mover`: anota o pedido e a central aceita."""
+    """A ponte do pedido ao rádio: anota o pedido e a central aceita.
+
+    O ``radio.busca.set`` (O-CONECTAR-E-UM-INTERRUPTOR-01) responde como o
+    tratador real: a ``busca`` que ficou valendo, no destino pedido."""
 
     def __init__(self) -> None:
         self.pedidos: list[tuple[str, dict[str, Any]]] = []
 
     def resultado(self, metodo: str, **parametros: Any) -> dict[str, Any]:
         self.pedidos.append((metodo, parametros))
+        if metodo == "radio.busca.set":
+            busca = ({"adaptador": parametros.get("destino"), "desde": 0.0, "ate": 120.0}
+                     if parametros.get("ligada") else None)
+            return {"status": "ok", "busca": busca}
         return {"status": "ok"}
 
 
@@ -633,8 +640,13 @@ def test_o_x_tira_a_linha_ate_o_episodio_acabar(a08: Any) -> None:
 
 
 def test_tentar_de_novo_abre_o_conectar_no_adaptador_do_preso(a08: Any) -> None:
-    """«Tentar de Novo» é o «Conectar» naquele adaptador: o `radio.mover` sem
-    aparelho, com o destino da caixa — o repareio que o diário do vigia pede."""
+    """«Tentar de Novo» é o «Conectar» naquele adaptador: a busca ligada com o
+    destino da caixa — o repareio que o diário do vigia pede.
+
+    MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo
+    ``radio.busca.set`` (o «Procurar»), e não pelo ``radio.mover`` sem
+    aparelho. O pedido é o mesmo: a busca no adaptador do preso.
+    """
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     _volta(PonteDeMentira(impede=["a ponte privilegiada não está instalada"]), [LINK_ZUMBI])
@@ -642,5 +654,6 @@ def test_tentar_de_novo_abre_o_conectar_no_adaptador_do_preso(a08: Any) -> None:
     servico = _PonteDoServico()
     ctx = Contexto(state={}, conectados=[], mesa=[])
     a08.tentar_de_novo(ctx, {"alvo": _na_tela(DONGLE_B)}, servico)
-    assert servico.pedidos == [("radio.mover", {"destino": _na_tela(DONGLE_B)})]
+    assert servico.pedidos == [
+        ("radio.busca.set", {"ligada": True, "destino": _na_tela(DONGLE_B)})]
     assert _presos(_cena_da_aba(a08)) == [], "a linha refeita continuou na tela"

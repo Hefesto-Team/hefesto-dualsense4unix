@@ -394,6 +394,14 @@ class _CentralDeMentira:
         self.pedidos.append(("", destino))
         return self._movimento("", destino)
 
+    def ligar_a_busca(self, ligada: bool, destino: str | None = None) -> dict[str, Any]:
+        """O «Procurar» (O-CONECTAR-E-UM-INTERRUPTOR-01), com a resposta da central."""
+        self.pedidos.append(("busca" if ligada else "parar", destino))
+        if self.ocupada:
+            return {"status": "ocupado", "busca": None}
+        return {"status": "ok",
+                "busca": {"adaptador": destino, "desde": 0.0, "ate": 120.0} if ligada else None}
+
 
 class _GovernadorDeMentira:
     def __init__(self) -> None:
@@ -424,7 +432,8 @@ class _PonteQueVaiAoDaemon:
 
     def resultado(self, metodo: str, timeout: float | None = None, **params: Any) -> Any:
         tratador = {"radio.mover": self.eu._handle_radio_mover,
-                    "radio.ponte.ligar_aqui": self.eu._handle_radio_ponte_ligar_aqui}
+                    "radio.ponte.ligar_aqui": self.eu._handle_radio_ponte_ligar_aqui,
+                    "radio.busca.set": self.eu._handle_radio_busca_set}
         assert metodo in tratador, f"método que o daemon não atende: {metodo}"
         self.chamadas.append((metodo, dict(params)))
         return asyncio.run(tratador[metodo](params))
@@ -435,6 +444,7 @@ def test_os_metodos_existem_no_servidor() -> None:
         encoding="utf-8")
     assert '"radio.mover": self._handle_radio_mover' in fonte
     assert '"radio.ponte.ligar_aqui": self._handle_radio_ponte_ligar_aqui' in fonte
+    assert '"radio.busca.set": self._handle_radio_busca_set' in fonte
 
 
 def _gesto(nome: str) -> Any:
@@ -480,13 +490,22 @@ def test_com_um_movimento_esperando_a_tela_nem_pede(mesa: Any) -> None:
     assert central.pedidos == [] and ponte.chamadas == []
 
 
-def test_conectar_sem_alvo_abre_a_janela_no_destino_da_tela(mesa: Any) -> None:
+def test_o_procurar_liga_a_busca_no_destino_da_tela_e_o_conectar_so_abre(mesa: Any) -> None:
+    """O destino da busca é o adaptador aberto na tela. Quem a liga é o
+    «Procurar»; o «+ Conectar» sem alvo só abre o painel e não fala com o rádio.
+
+    FATO SUBSTITUÍDO (01/10/2026, O-CONECTAR-E-UM-INTERRUPTOR-01): esta régua
+    era o «Conectar» sem alvo abrindo a janela da central no destino da tela.
+    """
     _campos(mesa)
     central = _CentralDeMentira()
     ponte = _PonteQueVaiAoDaemon(central, _GovernadorDeMentira())
     _gesto("escolher-adaptador")(None, {"alvo": I2}, ponte)
-    _gesto("conectar-aparelho")(None, {}, ponte)
-    assert central.pedidos == [("", I2)]
+    assert _gesto("conectar-aparelho")(None, {}, ponte) == {"armou": True}
+    assert central.pedidos == [] and ponte.chamadas == []
+    _campos(mesa)
+    assert _gesto("radio-procurar")(None, {}, ponte) == {"armou": True}
+    assert central.pedidos == [("busca", I2)]
 
 
 def test_ligar_aqui_sobe_a_ponte_pelo_governador(mesa: Any) -> None:

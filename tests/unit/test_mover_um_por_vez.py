@@ -735,7 +735,10 @@ def test_duas_mais_duas_nao_propoe_nada(
     ]
     assert central.propor(mesa) is None
     publicado = central.publicar(mesa)
-    assert publicado == {"movimentos": [], "em_curso": False, "proposta": None}
+    # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a central publica a busca do
+    # «Procurar» (``busca``), e sem busca ligada ela é ``None``.
+    assert publicado == {"movimentos": [], "em_curso": False, "proposta": None,
+                         "busca": None}
     dono.fechar()
 
 
@@ -895,7 +898,7 @@ async def test_o_ipc_ocupado_e_a_recusa_e_o_parametro_torto_levanta(
 #: Os métodos que nasceram DEPOIS do `radio.mover`, na ordem — e por isso vêm
 #: depois dele na tabela. A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026) pôs o
 #: `mira.set` no fim, pela mesma regra.
-_DEPOIS_DO_RADIO_MOVER = ("mira.set", "haptica.testar")
+_DEPOIS_DO_RADIO_MOVER = ("mira.set", "haptica.testar", "radio.busca.set")
 
 
 def test_radio_mover_e_o_ultimo_metodo_da_tabela() -> None:
@@ -941,7 +944,10 @@ async def test_o_state_full_publica_a_central(
     handlers._afh_lido_em = time.monotonic()
     payload = await handlers._handle_daemon_state_full({})
 
-    assert payload["radio_central"] == {"movimentos": [], "em_curso": False, "proposta": None}
+    # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a ``busca`` do «Procurar» vai
+    # junto, ``None`` sem ela.
+    assert payload["radio_central"] == {"movimentos": [], "em_curso": False, "proposta": None,
+                                        "busca": None}
 
 
 @pytest.mark.asyncio

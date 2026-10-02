@@ -126,7 +126,9 @@ def _conectar_em(bancada: Bancada, destino: str, quem: str) -> cr.Movimento:
         bancada.gesto("abrir-adaptador", alvo=id_da_tela(destino))
     bancada.cena()
     rm.ela_pareia(bancada.relogio, bancada.mundo, bancada.central, quem)
-    bancada.gesto("conectar-aparelho")
+    # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo «Procurar»;
+    # o «+ Conectar» só abre o painel.
+    bancada.gesto("radio-procurar")
     bancada.esperar_a_central()
     return next(m for m in bancada.central.movimentos() if m.destino == destino)
 

@@ -8432,6 +8432,37 @@ class IpcHandlersMixin:
         resposta = testar(uniq.strip(), ligado)
         return dict(resposta) if isinstance(resposta, dict) else {"status": "sem_som"}
 
+    # =================================================================
+    # O-CONECTAR-E-UM-INTERRUPTOR-01 (30/09/2026): o «Procurar» da aba Conexões
+    # =================================================================
+    #
+    # No fim da classe, pela mesma regra do `mira.set`: este arquivo é citado
+    # por número de linha em mais de cem lugares.
+
+    async def _handle_radio_busca_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        """O «Procurar»: liga ou desliga a busca do rádio, com valor absoluto.
+
+        ``{ligada: bool, destino?: "aa:bb:…"}`` →
+        ``{status, busca: {adaptador, desde, ate} | null}``. Ligada, é o
+        «Conectar» sem aparelho no destino (sem ele, a D8), até ela desligar ou
+        até o teto de 120 s; desligada, a janela fecha agora e o movimento acaba
+        «desligada», que não é falha. Pedir o estado que já vale responde ``ok``
+        sem tocar no rádio. A central roda num fio (``asyncio.to_thread``): o
+        laço do serviço não espera o D-Bus (``central_do_radio.ligar_a_busca``).
+        """
+        ligada = params.get("ligada")
+        destino = params.get("destino")
+        if not isinstance(ligada, bool):
+            raise ValueError("radio.busca.set: `ligada` é true ou false")
+        if destino is not None and not isinstance(destino, str):
+            raise ValueError("radio.busca.set: `destino` é o endereço do adaptador")
+        central = self._a_central()
+        if central is None:
+            return {"status": "sem_central", "busca": None}
+        resposta = await asyncio.to_thread(
+            central.ligar_a_busca, ligada, (destino or "").strip() or None)
+        return dict(resposta)
+
 
 # ---------------------------------------------------------------------------
 # A MESA QUE ELA VÊ, para a troca do `identity.number.set`

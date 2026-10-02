@@ -71,9 +71,12 @@ class PonteQueVaiAoDaemon:
         self.chamadas: list[tuple[str, dict[str, Any]]] = []
 
     def resultado(self, metodo: str, timeout: float | None = None, **params: Any) -> Any:
-        assert metodo == "radio.mover", f"método que esta régua não esperava: {metodo}"
+        # O «Procurar» (O-CONECTAR-E-UM-INTERRUPTOR-01) fala pelo `radio.busca.set`.
+        tratadores = {"radio.mover": self.eu._handle_radio_mover,
+                      "radio.busca.set": self.eu._handle_radio_busca_set}
+        assert metodo in tratadores, f"método que esta régua não esperava: {metodo}"
         self.chamadas.append((metodo, dict(params)))
-        return asyncio.run(self.eu._handle_radio_mover(params))
+        return asyncio.run(tratadores[metodo](params))
 
 
 class Bancada:
@@ -266,10 +269,13 @@ def test_abrir_o_adaptador_e_conectar_pareia_nele(
         # PS + Create, e o clique dela no «Parear» da linha do verde
         # (O-PAREAR-ESPERA-O-CLIQUE-01: sem o clique, nada pareia).
         rm.ela_pareia(relogio, mundo, bancada.central, VERDE)
-        assert bancada.gesto("conectar-aparelho") == {"armou": True}
+        assert bancada.gesto("radio-procurar") == {"armou": True}
         bancada.esperar_a_central()
 
-        assert bancada.ponte.chamadas == [("radio.mover", {"destino": id_da_tela(destino)})]
+        # Quem liga a busca é o «Procurar» (O-CONECTAR-E-UM-INTERRUPTOR-01), no
+        # adaptador aberto, com valor absoluto.
+        assert bancada.ponte.chamadas == [
+            ("radio.busca.set", {"ligada": True, "destino": id_da_tela(destino)})]
         assert onde_buscou(mundo) == [rm.HCIS[destino]], "a busca saiu de outro adaptador"
         assert onde_pareou(mundo) == [rm.HCIS[destino]], "o Pair saiu de outro adaptador"
         (feito,) = [m for m in bancada.central.movimentos() if m.aparelho == VERDE]
@@ -296,7 +302,9 @@ def test_o_chip_do_procurando_abre_o_mesmo_adaptador(
         assert f'class="lugar aberto" data-id="{id_da_tela(VARANDA)}"' in sala
 
         ela_segura_ps_create(mundo, relogio, VERDE)
-        bancada.gesto("conectar-aparelho")
+        # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo «Procurar»;
+        # o «+ Conectar» só abre o painel.
+        bancada.gesto("radio-procurar")
         bancada.esperar_a_central()
         assert onde_buscou(mundo) == [rm.HCIS[VARANDA]]
     finally:
@@ -320,7 +328,9 @@ def test_sem_nenhum_aberto_vale_a_escolha_da_central(
         assert cena["destino_do_conectar"] == d8
 
         ela_segura_ps_create(mundo, relogio, VERDE)
-        bancada.gesto("conectar-aparelho")
+        # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo «Procurar»;
+        # o «+ Conectar» só abre o painel.
+        bancada.gesto("radio-procurar")
         bancada.esperar_a_central()
         (hci,) = onde_buscou(mundo)
         assert id_da_tela(next(e for e, c in rm.HCIS.items() if c == hci)) == d8
@@ -350,7 +360,9 @@ def test_com_a_janela_aberta_o_chip_de_outro_adaptador_leva_a_busca(
         bancada.cena()
         bancada.gesto("escolher-adaptador", alvo=id_da_tela(QUARTO))
         bancada.cena()
-        bancada.gesto("conectar-aparelho")
+        # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo «Procurar»;
+        # o «+ Conectar» só abre o painel.
+        bancada.gesto("radio-procurar")
         assert busca.dentro.wait(5.0), "a central não abriu a janela"
         cena = bancada.cena()
         assert cena["ocupado"] and cena["destino_do_conectar"] == id_da_tela(QUARTO)

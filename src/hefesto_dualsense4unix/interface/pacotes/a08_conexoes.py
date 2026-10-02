@@ -4693,6 +4693,15 @@ USB3_AO_LADO = "Entrada USB 3.0: faz ruído no rádio. Prefira uma 2.0."
 SEM_RADIO = "Sem rádio"
 #: A dica do chip que a central não aceita agora: o controle já está pareando.
 ESPERANDO_O_CONTROLE = "Esperando o controle chegar."
+#: O INTERRUPTOR «PROCURAR» (O-CONECTAR-E-UM-INTERRUPTOR-01): as três
+#: respostas do «Modo Freestyle» da aba Jogar — acesa, apagada, e o travessão
+#: quando o daemon não respondeu, que classe nenhuma casa.
+PROCURAR_LIGADO = "LIGADO"
+PROCURAR_DESLIGADO = "DESLIGADO"
+TRAVESSAO_DO_PROCURAR = "—"
+#: O tremor do «Procurar» que o rádio não aceitou (o recado vai ao diário da
+#: janela; a tela só treme, R8).
+PROCURAR_RECUSA = "o rádio não ligou nem desligou a busca agora"
 #: O traço do «não há» e da faixa de canais (o do desenho aprovado).
 TRACO_CURTO = "\u2013"
 
@@ -5559,8 +5568,13 @@ def _moldes_de_painel(cena: dict[str, Any]) -> str:
            f'<button class="btn" data-gesto="parear-aparelho" data-alvo="{_x(a["id"])}">'
            'Parear</button>')
         + "</div>" for a in cena.get("perto", ()) if a.get("adaptador") == destino)
-    moldes.append(f'<template class="painel-molde" data-painel="conectar" data-alvo="" '
-                  f'data-titulo="Procurando" data-pulso="1">'
+    # O TÍTULO E O PULSO DIZEM A BUSCA (O-CONECTAR-E-UM-INTERRUPTOR-01, cura 7):
+    # «Procurando», pulsando, só com o «Procurar» ligado; desligado, «Conectar».
+    procurando = any(lug.get("conectando") for lug in lugares)
+    titulo = (' data-titulo="Procurando" data-pulso="1"' if procurando
+              else ' data-titulo="Conectar"')
+    moldes.append(f'<template class="painel-molde" data-painel="conectar" data-alvo=""'
+                  f'{titulo}>'
                   f'<div class="conectar"><div class="escolha-lugar" role="group" '
                   f'aria-label="Em qual adaptador conectar">{chips}</div>'
                   f'<div class="achados">{achados}</div></div></template>')
@@ -5925,6 +5939,7 @@ def campos_da_secao(cena: dict[str, Any]) -> dict[str, Any]:
         # caixa tem UM elemento de cada campo.
         "radio-varrendo": ["sim" if lug.get("varrendo") else "" for lug in lugares],
         "radio-conectando": ["sim" if lug.get("conectando") else "" for lug in lugares],
+        "radio-procurando": str(cena.get("procurando") or TRAVESSAO_DO_PROCURAR),
         "radio-moldes": html_dos_moldes(cena),
         "hz-movimento": [_hz(a.get("hz_mov")) for a in controles],
         "hz-pouco": ["sim" if _e_pouco(a.get("hz_mov")) else "" for a in controles],
@@ -6203,7 +6218,13 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
 
     agora = time.time()
     movimentos = [m for m in central.get("movimentos") or () if isinstance(m, dict)]
-    esperando = [m for m in movimentos if _ainda_espera(m, agora)]
+    # A BUSCA DO «PROCURAR» É A QUE A CENTRAL PUBLICA (O-CONECTAR-E-UM-
+    # INTERRUPTOR-01): o adaptador em que a janela de um movimento SEM aparelho
+    # está aberta. A pílula, a borda, o «onde a busca está» e o interruptor
+    # leem isto, e não a idade do movimento.
+    busca = central.get("busca") if isinstance(central.get("busca"), dict) else None
+    busca_em = _mac(busca.get("adaptador")) if busca else ""
+    esperando = [m for m in movimentos if _ainda_espera(m, agora, busca_em)]
     ocupado = bool(esperando)
 
     # Quem está COLADO em outro rádio — a mesa já mediu (`Mesa.apertadas`).
@@ -6255,10 +6276,11 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
             "sabido": bz is not None and maquina is not None,
             "face": face or "",
             "hub": bool(getattr(mz, "atras_de_hub", False)),
-            "varrendo": bool(getattr(bz, "varrendo", False)),
+            # O `Discovering` MENOS a busca do próprio Hefesto: a marca é de
+            # «outro programa procurando», e a busca dela não é outro programa.
+            "varrendo": bool(getattr(bz, "varrendo", False)) and end != busca_em,
             "junto": junto, "usb3": False,
-            "conectando": any(not m.get("aparelho") and _mac(m.get("destino")) == end
-                              for m in esperando),
+            "conectando": bool(busca_em) and end == busca_em,
             "chegou": [str(m.get("aparelho") or "") for m in movimentos
                        if m.get("estado") == "chegou" and _mac(m.get("destino")) == end],
         })
@@ -6279,7 +6301,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
                            for a in adaptadores_bz}
     aparelhos = _aparelhos_da_cena(ctx, st, governador, esperando, aparelhos_bz,
                                    endereco_do_caminho, enderecos)
-    falhas = _os_que_nao_conectaram(ctx, movimentos, agora, enderecos)
+    falhas = _os_que_nao_conectaram(ctx, movimentos, agora, enderecos, busca_em)
     falhas += _os_que_nao_viraram_controle(
         _em_fundo("zumbis", _ler_os_zumbis, 2.0), enderecos, falhas, time.monotonic())
     aparelhos += falhas
@@ -6339,6 +6361,10 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         # do gesto ela não muda o destino, e o chip que pediria diz que agora
         # não (:func:`_moldes_de_painel`).
         "passo_da_espera": next((str(m.get("passo") or "") for m in esperando), ""),
+        # O INTERRUPTOR «PROCURAR»: a busca publicada, ou o travessão quando o
+        # daemon não respondeu (a mesma gramática do «Modo Freestyle»).
+        "procurando": (TRAVESSAO_DO_PROCURAR if not isinstance(st.get("radio_central"), dict)
+                       else PROCURAR_LIGADO if busca_em else PROCURAR_DESLIGADO),
         "aberto": _o_aberto(lugares, aparelhos, proposta),
         "perto": _perto(aparelhos_bz, adaptadores_bz, aparelhos, buscas),
     }
@@ -6502,13 +6528,19 @@ def _grupo_da_porta(caminho: str) -> str:
     return pai or "Direto no computador"
 
 
-def _ainda_espera(m: dict[str, Any], agora: float) -> bool:
+def _ainda_espera(m: dict[str, Any], agora: float, busca_em: str = "") -> bool:
     """Este movimento ainda segura a tela: «esperando», e há menos de
     :data:`ESPERA_NA_TELA_S`. Depois disso a linha diz «Não Conectou» e os
     botões voltam — a linha «Segure PS + Create» para sempre era o «estado
     morto» dela (item 2)."""
-    return (m.get("estado") == "esperando"
-            and agora - float(m.get("quando") or 0.0) <= ESPERA_NA_TELA_S)
+    if m.get("estado") != "esperando":
+        return False
+    # A BUSCA DO «PROCURAR» NÃO TEM IDADE (O-CONECTAR-E-UM-INTERRUPTOR-01): o
+    # movimento sem aparelho com a busca publicada espera até ela desligar ou
+    # até o teto da central; a idade fica para o «Mover».
+    if not m.get("aparelho") and busca_em:
+        return True
+    return agora - float(m.get("quando") or 0.0) <= ESPERA_NA_TELA_S
 
 
 #: O estado da central de quem acabou sem chegar — a chave de máquina dela.
@@ -6526,7 +6558,7 @@ def _chave_da_falha(m: dict[str, Any]) -> str:
 
 
 def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agora: float,
-                           enderecos: list[str]) -> list[dict[str, Any]]:
+                           enderecos: list[str], busca_em: str = "") -> list[dict[str, Any]]:
     """A linha «Não Conectou» de cada adaptador cujo ÚLTIMO movimento não chegou.
 
     Não chegou é a central dizendo «não chegou» (qualquer motivo, menos a
@@ -6557,8 +6589,18 @@ def _os_que_nao_conectaram(ctx: Contexto, movimentos: list[dict[str, Any]], agor
     for destino, m in ultimo.items():
         idade = agora - float(m.get("quando") or 0.0)
         estado = str(m.get("estado") or "")
-        falhou = ((estado == _NAO_CHEGOU_NA_CENTRAL and m.get("motivo") != _RECUSA_DA_CENTRAL)
-                  or (estado == "esperando" and idade > ESPERA_NA_TELA_S))
+        motivo = str(m.get("motivo") or "")
+        sem_aparelho = not m.get("aparelho")
+        # A BUSCA DO «PROCURAR» QUE ACABOU NÃO É FALHA (O-CONECTAR-E-UM-
+        # INTERRUPTOR-01, D-3009-A-BUSCA-DESLIGADA-NAO-E-FALHA): ela a desligou,
+        # ou ela chegou ao teto sem ela escolher ninguém. «Não Conectou» fica
+        # para o que ela mandou e não chegou.
+        busca_acabou = (motivo == _central_do_radio.MOTIVO_DESLIGADA
+                        or (sem_aparelho and motivo == _central_do_radio.MOTIVO_SEM_GESTO))
+        falhou = ((estado == _NAO_CHEGOU_NA_CENTRAL and motivo != _RECUSA_DA_CENTRAL
+                   and not busca_acabou)
+                  or (estado == "esperando" and idade > ESPERA_NA_TELA_S
+                      and not (sem_aparelho and busca_em)))
         chave = _chave_da_falha(m)
         if not falhou or idade > LEMBRA_O_NAO_CONECTOU_S or chave in _DISPENSADOS:
             continue
@@ -7222,17 +7264,22 @@ def ligar_mesmo_assim(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("08-conexoes.html", "conectar-aparelho", grava="radio.mover")
 def conectar_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Conectar»: sem alvo, a busca abre no adaptador ABERTO na lista (sem
-    nenhum aberto, no da D8 — :func:`_destino_do_conectar`), e a lista mostra
-    quem ela acha; com alvo (um achado que o destino já conhece), é a escolha
-    dela na busca de pé (:func:`_escolher_na_busca`), ou, sem busca, um Mover."""
+    """«Conectar»: sem alvo, SÓ ABRE o painel com a lista — quem liga a busca
+    é o «Procurar» (:func:`radio_procurar`, O-CONECTAR-E-UM-INTERRUPTOR-01:
+    até 30/09 o clique que abria o painel ligava o rádio calado, e fechar o
+    painel não o desligava). Com alvo (um achado que o destino já conhece), é
+    a escolha dela na busca de pé (:func:`_escolher_na_busca`), ou, sem busca,
+    um Mover."""
     alvo = str(o.get("alvo") or "")
-    if alvo and (escolha := _escolher_na_busca(p, alvo)) is not None:
+    if not alvo:
+        return _so_abre()
+    escolha = _escolher_na_busca(p, alvo)
+    if escolha is not None:
         return escolha
     destino = str(_CENA_NA_TELA.get("destino_do_conectar") or "")
     if not destino:
         raise RuntimeError("não há adaptador Bluetooth para conectar")
-    feito = _mover(p, alvo or None, destino)
+    feito = _mover(p, alvo, destino)
     # A CAIXA DO DESTINO FICA ABERTA DEPOIS: o «Segure PS + Create», o «Não
     # Conectou» e a piscada da chegada moram nela, e é onde ela olha.
     _abrir_na_tela(destino)
@@ -7316,12 +7363,13 @@ def tentar_de_novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     nenhum outro. A linha «Não Conectou» sai quando a central aceita; recusada,
     ela fica, e o botão treme.
 
-    O «Não Conectou» de um CONTROLE abre a busca naquele adaptador, e ela
-    espera o clique dela no «Parear» da linha dele
-    (`central_do_radio._esperar_a_escolha_dela`, O-PAREAR-ESPERA-O-CLIQUE-01).
-    O de um fone ou de um teclado que ela moveu já nomeia o aparelho: tentar de
-    novo é o MESMO mover, do mesmo aparelho para o mesmo adaptador, e a central
-    diz na hora se ainda o conhece.
+    O «Não Conectou» de um CONTROLE liga o «Procurar» naquele adaptador
+    (`radio.busca.set`, O-CONECTAR-E-UM-INTERRUPTOR-01), e a busca espera o
+    clique dela no «Parear» da linha dele (`central_do_radio._esperar_a_escolha_dela`,
+    O-PAREAR-ESPERA-O-CLIQUE-01); a página abre o painel. O de um fone ou de
+    um teclado que ela moveu já nomeia o aparelho: tentar de novo é o MESMO
+    mover, do mesmo aparelho para o mesmo adaptador, e a central diz na hora se
+    ainda o conhece.
     """
     lug = _lugar_na_tela(o)
     lid = str(lug["id"])
@@ -7329,7 +7377,7 @@ def tentar_de_novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
                   if ap.get("nao_conectou") and ap.get("lugar") == lid), None)
     outro = (str(linha.get("aparelho") or "")
              if linha is not None and linha.get("tipo") != "controle" else "")
-    feito = _mover(p, outro or None, lid)
+    feito = _mover(p, outro, lid) if outro else _ligar_a_busca(p, True, lid)
     for ap in _CENA_NA_TELA.get("aparelhos", ()):
         if ap.get("nao_conectou") and ap.get("lugar") == lid:
             _DISPENSADOS.add(str(ap.get("chave") or ""))
@@ -7379,6 +7427,51 @@ def equilibrar_radio(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]
     if not _CENA_NA_TELA.get("proposta"):
         raise RuntimeError("já está equilibrado")
     return {"armou": True}
+
+
+def _ligar_a_busca(p: Any, ligada: bool, destino: str) -> dict[str, Any]:
+    """O ``radio.busca.set`` com valor absoluto, e o verde só com a resposta
+    que traz a busca pedida: ligada no ``destino``, ou nenhuma. Recusada, o
+    botão treme e a tela fica como estava (a verdade volta no tique, da central)."""
+    parametros: dict[str, Any] = {"ligada": ligada}
+    if destino:
+        parametros["destino"] = destino
+    resposta = p.resultado("radio.busca.set", **parametros)
+    busca = resposta.get("busca") if isinstance(resposta, dict) else None
+    status = str(resposta.get("status") or "") if isinstance(resposta, dict) else ""
+    feita = (isinstance(busca, dict) and (not destino or _mac(busca.get("adaptador"))
+                                          == _mac(destino))) if ligada else busca is None
+    if status != "ok" or not feita:
+        raise RuntimeError(f"{PROCURAR_RECUSA} ({status or 'sem resposta'})")
+    return {"armou": True}
+
+
+@gesto("08-conexoes.html", "radio-procurar", grava="radio.busca.set")
+def radio_procurar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """O «Procurar»: liga e desliga a busca do rádio (O-CONECTAR-E-UM-INTERRUPTOR-01).
+
+    O pedido dela (30/09): *«falta um switch ali no lado esquerdo do conectar
+    pra clicar e ativar igual o botão modo freestyle na aba jogar»* — a mesma
+    peça e a mesma gramática do ``cadeado`` da aba Jogar: o valor vai
+    ABSOLUTO (o contrário do que a tela mostra), nunca um «inverta»; o que não
+    é ``click`` não conta; com o travessão (o daemon não respondeu), não manda
+    nada e treme. O destino é o do «Conectar» (:func:`_destino_do_conectar`: o
+    adaptador aberto; sem nenhum, a D8). Ligar abre também o painel (a
+    página); fechar o painel não desliga. <!-- noqa-acento: citação literal dela -->
+    """
+    if str(o.get("evento") or "click") != "click":
+        return None
+    agora = str(_CENA_NA_TELA.get("procurando") or TRAVESSAO_DO_PROCURAR)
+    if agora not in (PROCURAR_LIGADO, PROCURAR_DESLIGADO):
+        raise RuntimeError(PROCURAR_RECUSA)
+    ligar = agora != PROCURAR_LIGADO
+    destino = str(_CENA_NA_TELA.get("destino_do_conectar") or "") if ligar else ""
+    if ligar and not destino:
+        raise RuntimeError("não há adaptador Bluetooth para procurar")
+    feito = _ligar_a_busca(p, ligar, destino)
+    if ligar:
+        _abrir_na_tela(destino)
+    return feito
 
 
 def _so_abre() -> dict[str, Any]:

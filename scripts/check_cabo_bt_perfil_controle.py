@@ -202,13 +202,14 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "equilibrar-radio": "abre a proposta da central de rádio — é da tela",
     "confirmar-mudanca": "move um aparelho de adaptador (`radio.mover`) — é o rádio "
                          "da máquina: o controle continua o mesmo, com o mesmo perfil",
-    "conectar-aparelho": "abre a janela de pareamento num adaptador (`radio.mover` "
-                         "sem alvo) — é o rádio da máquina",
+    "conectar-aparelho": "abre o painel do «Conectar» (sem alvo, nada vai ao rádio); "
+                         "com alvo, conecta um aparelho conhecido — é o rádio da máquina",
     "parear-aparelho": "pareia um aparelho achado num adaptador — é o rádio da máquina",
     # Os três da onda 2 do rádio, publicados pela A-GESTAO-DOS-CONTROLES-NO-PRODUTO-01
     # (26/09/2026): a linha «Não Conectou», o «Tentar de Novo» e o X.
-    "tentar-de-novo": "o mesmo «Conectar», no mesmo adaptador da linha que não "
-                      "chegou (`radio.mover` sem alvo) — é o rádio da máquina",
+    "tentar-de-novo": "liga a busca no mesmo adaptador da linha que não chegou "
+                      "(`radio.busca.set`), ou refaz o mover do aparelho que não é "
+                      "controle — é o rádio da máquina",
     "esquecer-aparelho": "o X abre a pergunta de esquecer, ou tira a linha de uma "
                          "busca sem aparelho — é da tela",
     "confirmar-esquecer": "esquece o pareamento deste controle NESTE adaptador "

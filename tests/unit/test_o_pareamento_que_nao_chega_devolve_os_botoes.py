@@ -127,6 +127,11 @@ def test_o_esperando_segura_a_tela_pelo_prazo_da_central_e_nao_mais(
     a tela lê o da central (``ESPERA_NA_TELA_S = PRAZO_DO_PENDENTE_S``), e era
     de 60 s contra os 120 s dela — a zona morta da régua do contrato abaixo.
 
+    É O «MOVER» DO VERDE DESDE 01/10/2026 (O-CONECTAR-E-UM-INTERRUPTOR-01): a
+    busca SEM aparelho não tem mais idade — com a ``busca`` publicada, quem
+    manda é ela, e o «Não Conectou» por idade fica para quem ela nomeou. A
+    trava da tela que esta régua segura é a do «Mover» (o ``_mover``).
+
     MORDIDA: tire a idade de ``_ainda_espera`` (o «esperando» vale para sempre)
     — o caso de depois do prazo reprova, que é o «estado morto» dela.
     """
@@ -137,7 +142,7 @@ def test_o_esperando_segura_a_tela_pelo_prazo_da_central_e_nao_mais(
     try:
         agora = time.time()
         _com_a_central(bancada, monkeypatch, cr.Movimento(
-            "", destino, cr.ESPERANDO, cr.PASSO_GESTO,
+            VERDE, destino, cr.ESPERANDO, cr.PASSO_GESTO, e_controle=True,
             quando=agora - (a08.ESPERA_NA_TELA_S - 1.0)))
         cena = bancada.cena()
         assert cena["ocupado"] is True
@@ -145,16 +150,17 @@ def test_o_esperando_segura_a_tela_pelo_prazo_da_central_e_nao_mais(
         assert cena["destino_do_conectar"] == id_da_tela(destino)
         assert not _linhas(cena, destino, nao_conectou=True)
         with pytest.raises(RuntimeError):
-            bancada.gesto("conectar-aparelho")
+            bancada.gesto("confirmar-mudanca", alvo=rm.uniq(VERMELHO),
+                          destino=id_da_tela(destino))
 
         _com_a_central(bancada, monkeypatch, cr.Movimento(
-            "", destino, cr.ESPERANDO, cr.PASSO_GESTO,
+            VERDE, destino, cr.ESPERANDO, cr.PASSO_GESTO, e_controle=True,
             quando=agora - (a08.ESPERA_NA_TELA_S + 1.0)))
         sala = bancada.tique()["radio-sala"]
         cena = dict(a08._CENA_NA_TELA)
         assert cena["ocupado"] is False, "a janela morta segurou a tela depois do prazo"
         (linha,) = _linhas(cena, destino, nao_conectou=True)
-        assert linha["aparelho"] == ""
+        assert linha["aparelho"] == id_da_tela(VERDE)
         assert "Não Conectou" in sala
         assert f'data-gesto="tentar-de-novo" data-alvo="{id_da_tela(destino)}"' in sala
         assert (f'data-gesto="esquecer-aparelho" data-alvo="{linha["id"]}" '
@@ -195,31 +201,36 @@ def test_com_a_janela_aberta_o_x_treme(
 # ---------------------------------------------------------------------------
 
 
-def test_a_busca_que_ninguem_respondeu_vira_nao_conectou_e_o_x_tira_a_linha(
+def test_a_busca_que_ninguem_respondeu_acaba_sem_nao_conectou(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Ela abre a varanda, clica «Conectar», e não segura PS + Create: a central
-    fecha a janela com «não chegou», e a linha da varanda diz «Não Conectou».
-    O X não tem pareamento a esquecer — ele tira a linha, e nada sai do rádio."""
+    """Ela abre a varanda, liga o «Procurar», e não segura PS + Create: a
+    central fecha a janela no teto, sem gesto, e a linha da varanda NÃO diz
+    «Não Conectou» — a busca que acabou não é falha.
+
+    FATO SUBSTITUÍDO (01/10/2026, O-CONECTAR-E-UM-INTERRUPTOR-01,
+    D-3009-A-BUSCA-DESLIGADA-NAO-E-FALHA, a validar por ela): até aqui esta
+    régua cobrava a linha «Não Conectou» dessa busca e o X que a tirava; era o
+    «fantasma» das imagens 6 e 7 dela. O X de uma linha sem aparelho é da
+    ESQUECER-E-LIMPAR-AS-CONEXOES-01."""
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     bancada = Bancada(a08, monkeypatch, mundo, relogio)
     try:
         bancada.cena()
         bancada.gesto("abrir-adaptador", alvo=id_da_tela(VARANDA))
         bancada.cena()
-        bancada.gesto("conectar-aparelho")
+        # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo «Procurar»;
+        # o «+ Conectar» só abre o painel.
+        bancada.gesto("radio-procurar")
         bancada.esperar_a_central()
         (feito,) = bancada.central.movimentos()
-        assert (feito.estado, feito.destino) == (cr.NAO_CHEGOU, VARANDA)
+        assert (feito.estado, feito.motivo, feito.destino) == (
+            cr.NAO_CHEGOU, cr.MOTIVO_SEM_GESTO, VARANDA)
 
         cena = bancada.cena()
-        (linha,) = _linhas(cena, VARANDA, nao_conectou=True)
-        assert linha["aparelho"] == ""
+        assert not _linhas(cena, VARANDA, nao_conectou=True)
         assert cena["ocupado"] is False and cena["aberto"] == id_da_tela(VARANDA)
-
-        assert bancada.gesto("esquecer-aparelho", alvo=linha["id"],
-                             lugar=id_da_tela(VARANDA)) == {"armou": True}
-        assert not _linhas(bancada.cena(), VARANDA, nao_conectou=True)
+        assert cena["procurando"] == a08.PROCURAR_DESLIGADO
         assert mundo.metodos("RemoveDevice") == [] and mundo.lapides == []
     finally:
         bancada.fechar()
@@ -257,7 +268,9 @@ def test_o_branco_perde_a_meia_chave_so_ali_e_tenta_de_novo_no_mesmo_adaptador(
         bancada.gesto("escolher-adaptador", alvo=id_da_tela(destino))
         bancada.cena()
         rm.ela_pareia(relogio, mundo, bancada.central, VERDE)
-        bancada.gesto("conectar-aparelho")
+        # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo «Procurar»;
+        # o «+ Conectar» só abre o painel.
+        bancada.gesto("radio-procurar")
         bancada.esperar_a_central()
         (feito,) = [m for m in bancada.central.movimentos() if m.estado == cr.NAO_CHEGOU]
         assert feito.destino == destino
@@ -313,7 +326,9 @@ def test_o_controle_que_o_pair_conecta_nao_recebe_connect(
         bancada.gesto("abrir-adaptador", alvo=id_da_tela(QUARTO))
         bancada.cena()
         rm.ela_pareia(relogio, mundo, bancada.central, VERDE)
-        bancada.gesto("conectar-aparelho")
+        # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo «Procurar»;
+        # o «+ Conectar» só abre o painel.
+        bancada.gesto("radio-procurar")
         bancada.esperar_a_central()
         assert mundo.onde_esta(rm.uniq(VERDE)) == QUARTO
         assert mundo.metodos("Connect") == []
@@ -838,11 +853,16 @@ def test_todo_x_na_tela_tem_a_pergunta_dele(
     adaptador)``, e sem o molde dela o clique não faz NADA — nem pergunta, nem
     tremida. Todo X que tem o que esquecer (o vermelho no ar, o roxo desligado em
     cada adaptador, o branco que não chegou) tem a pergunta com o «Esquecer»
-    (``confirmar-esquecer``); o «Não Conectou» da busca que ninguém respondeu não
-    tem: o X dele só tira a linha.
+    (``confirmar-esquecer``); o «Não Conectou» sem aparelho não tem: o X dele só
+    tira a linha.
 
     MORDIDA: tire ``_moldes_de_esquecer`` de ``html_dos_moldes`` — todo X vira um
     botão morto, e esta régua reprova.
+
+    MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01 (D-3009-A-BUSCA-DESLIGADA-NAO-E-FALHA):
+    a busca que ninguém respondeu (``sem_gesto`` sem aparelho) não faz mais
+    linha; a linha sem aparelho que sobra é a da janela que não abriu
+    (``sem_janela``). O pedido é o mesmo.
     """
     mundo, relogio = _mesa_das_chaves(), rm.Relogio()
     mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
@@ -853,7 +873,7 @@ def test_todo_x_na_tela_tem_a_pergunta_dele(
                        cr.Movimento(VERDE, QUARTO, cr.NAO_CHEGOU, cr.PASSO_FIM,
                                     motivo=cr.MOTIVO_NAO_PAREOU, quando=agora - 5.0),
                        cr.Movimento("", VARANDA, cr.NAO_CHEGOU, cr.PASSO_FIM,
-                                    motivo=cr.MOTIVO_SEM_GESTO, quando=agora - 5.0))
+                                    motivo=cr.MOTIVO_SEM_JANELA, quando=agora - 5.0))
         campos = bancada.tique()
         xis = re.findall(r'data-gesto="esquecer-aparelho" data-alvo="([^"]+)" '
                          r'data-lugar="([^"]+)"', campos["radio-sala"])

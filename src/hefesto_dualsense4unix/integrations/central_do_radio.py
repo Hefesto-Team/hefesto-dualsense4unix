@@ -144,6 +144,7 @@ from hefesto_dualsense4unix.integrations.gesto_de_pareamento import (
     ESTADO_JA_PAREADO,
     ESTADO_PAREOU,
     SEGUNDOS_DA_JANELA,
+    SEGUNDOS_MAX,
     JanelaDeBusca,
     Resultado,
     e_controle,
@@ -216,6 +217,10 @@ MOTIVO_FALHOU = "falhou"
 #: O «Conectar» acabou «chegou» porque o controle voltou pelo pareamento antigo,
 #: no adaptador que já tinha a chave dele — não pela janela.
 MOTIVO_PELO_PAREAMENTO_ANTIGO = "pelo_pareamento_antigo"
+#: Ela desligou o «Procurar» (``radio.busca.set``): a busca acabou a pedido, e
+#: isso não é falha — a tela não faz «Não Conectou» dele
+#: (O-CONECTAR-E-UM-INTERRUPTOR-01, D-3009-A-BUSCA-DESLIGADA-NAO-E-FALHA).
+MOTIVO_DESLIGADA = "desligada"
 
 # --- o diário -----------------------------------------------------------------
 
@@ -679,6 +684,7 @@ class CentralDoRadio:
         relogio: Callable[[], float] = time.monotonic,
         dormir: Callable[[float], None] = time.sleep,
         segundos_da_janela: int = SEGUNDOS_DA_JANELA,
+        segundos_da_busca: int = SEGUNDOS_MAX,
         conferir_s: float = CONFERIR_S,
         prazo_do_pendente_s: float = PRAZO_DO_PENDENTE_S,
         prazo_da_trava_s: float = PRAZO_DA_TRAVA_DO_GESTO_S,
@@ -702,6 +708,11 @@ class CentralDoRadio:
         self._relogio = relogio
         self._dormir = dormir
         self._segundos = int(segundos_da_janela)
+        #: O TETO DA BUSCA do «Procurar» (D-3009-O-TETO-DA-BUSCA, quem coordena,
+        #: 30/09/2026, a validar por ela): a janela do movimento SEM aparelho
+        #: fica até ela desligar ou até o teto da ponte (``SEGUNDOS_MAX``,
+        #: 120 s); a do «Mover» segue com ``_segundos``.
+        self._segundos_da_busca = int(segundos_da_busca)
         self._conferir_s = float(conferir_s)
         self._prazo_do_pendente_s = float(prazo_do_pendente_s)
         self._prazo_da_trava_s = float(prazo_da_trava_s)
@@ -717,6 +728,18 @@ class CentralDoRadio:
         #: ela fechou, ou foi para outro adaptador, e eles zeram.
         self._escolha: str | None = None
         self._vistos_na_janela: frozenset[str] = frozenset()
+        #: A BUSCA DO «PROCURAR», PUBLICADA (O-CONECTAR-E-UM-INTERRUPTOR-01):
+        #: ``{"adaptador", "desde", "ate"}`` enquanto a janela de um movimento
+        #: SEM aparelho está aberta, e ``None`` fora dela. A janela dela, para o
+        #: ``radio.busca.set`` a fechar de outro fio, e o pedido de desligar.
+        self._busca: dict[str, Any] | None = None
+        self._janela_da_busca: Janela | None = None
+        self._desligar = False
+        #: Quantas buscas abriram, e a última como abriu: o ``ligar_a_busca``
+        #: responde pela que ELE abriu, mesmo que ela já tenha acabado (a
+        #: escolha dela, ou o pareamento antigo, no meio da resposta).
+        self._aberturas = 0
+        self._ultima_busca: dict[str, Any] | None = None
         #: ``{(adaptador, aparelho)}``: as meias chaves que um «não chegou» não
         #: pôde tirar (a trava de outro motor, ou um erro no meio). Saem na
         #: primeira vez em que a central segura a trava (:meth:`_pagar_as_meias_chaves`).
@@ -812,6 +835,7 @@ class CentralDoRadio:
         with self._tranca:
             self._destino_pedido = None
             self._escolha, self._vistos_na_janela = None, frozenset()
+            self._desligar = False
         return self._guardar(movimento)
 
     def _sair_do_gesto(self, movimento: Movimento, **mudancas: Any) -> Movimento | None:
@@ -879,7 +903,108 @@ class CentralDoRadio:
             "movimentos": [m.publicar() for m in self._movimentos_publicados()],
             "em_curso": self.em_curso,
             "proposta": proposta,
+            "busca": self._busca_publicada(),
         }
+
+    def _busca_publicada(self) -> dict[str, Any] | None:
+        """A busca do «Procurar» como a tela a lê, ou ``None``: com o chip dela
+        pedindo outro adaptador, a busca JÁ é dele, como o destino do movimento
+        (:meth:`_movimentos_publicados`)."""
+        with self._tranca:
+            if self._busca is None:
+                return None
+            busca = dict(self._busca)
+            if self._destino_pedido is not None:
+                busca["adaptador"] = self._destino_pedido
+            return busca
+
+    def ligar_a_busca(self, ligada: bool, destino: str | None = None) -> dict[str, Any]:
+        """O «Procurar»: liga ou desliga a busca, com valor absoluto.
+
+        O-CONECTAR-E-UM-INTERRUPTOR-01 (D-3009-O-CONECTAR-E-UM-INTERRUPTOR, quem
+        coordena, 30/09/2026, a validar por ela). Até aqui a busca do rádio só
+        nascia do clique que abre o painel do «+ Conectar» e não tinha verbo de
+        parar: ficava os 30 s dela, e acabava «Não Conectou».
+
+        * ``ligada``: o ``comecar_a_conectar`` de sempre — e, com a busca de pé
+          noutro adaptador, a busca vai para o pedido (:meth:`_mudar_o_destino`).
+          Volta quando a janela abriu, ou quando o movimento acabou sem abrir.
+        * desligada: marca o pedido sob a tranca e FECHA a janela agora (a
+          ``JanelaDeBusca.fechar`` é segura entre fios); o fio dela acaba o
+          movimento em :data:`MOTIVO_DESLIGADA`, e o ``finally`` devolve o
+          ``Pairable``. Volta quando a busca saiu do publicado.
+
+        Pedir o estado que já vale responde ``ok`` sem tocar no rádio. Devolve
+        ``{"status", "busca"}``, com a busca que ficou valendo. Bloqueia por
+        até :data:`PRAZO_DA_TRAVA_DO_GESTO_S` e pouco: o tratador do daemon o
+        roda num fio (``asyncio.to_thread``).
+        """
+        if not ligada:
+            with self._tranca:
+                janela = self._janela_da_busca
+                conectando = self._movimentos.get(CONECTANDO)
+                if janela is None and (conectando is None or not conectando.em_curso):
+                    return {"status": "ok", "busca": None}
+                self._desligar = True
+                self._destino_pedido = None
+            if janela is not None:
+                with contextlib.suppress(Exception):
+                    janela.fechar()
+            busca = self._esperar_a_busca(lambda b: b is None)
+            return {"status": "ok" if busca is None else "ocupado", "busca": busca}
+        pedido = endereco_de(destino) if destino else None
+        agora = self._busca_publicada()
+        if agora is not None and (pedido is None or agora["adaptador"] == pedido):
+            return {"status": "ok", "busca": agora}
+        with self._tranca:
+            antes = self._aberturas
+        # Um «Mover» em curso não é levado pelo «Procurar», como seria pelo chip
+        # (:meth:`_mudar_o_destino`): o interruptor só liga a busca SEM aparelho.
+        # O que já venceu o prazo resolve antes (o «Tentar de Novo» aos 61 s).
+        self._vencer_os_prazos()
+        with self._tranca:
+            mover = any(m.em_curso and m.aparelho != CONECTANDO
+                        for m in self._movimentos.values())
+        if mover:
+            return {"status": MOTIVO_OCUPADO, "busca": agora}
+        feito = self.comecar_a_conectar(destino)
+        if feito.motivo:
+            return {"status": feito.motivo, "busca": self._busca_publicada()}
+
+        def no_pedido(busca: dict[str, Any] | None) -> bool:
+            return busca is not None and (pedido is None or busca["adaptador"] == pedido)
+
+        fim = time.monotonic() + self._prazo_da_trava_s + 1.0
+        espera = threading.Event()
+        while True:
+            agora = self._busca_publicada()
+            with self._tranca:
+                aberta = dict(self._ultima_busca) if (
+                    self._aberturas > antes and self._ultima_busca is not None) else None
+            for busca in (agora, aberta):
+                if no_pedido(busca):
+                    return {"status": "ok", "busca": busca}
+            conectando = self._pela_chave(CONECTANDO)
+            if conectando is None or not conectando.em_curso or time.monotonic() >= fim:
+                motivo = conectando.motivo if conectando is not None else ""
+                return {"status": motivo or MOTIVO_SEM_JANELA, "busca": agora}
+            espera.wait(0.01)
+
+    def _esperar_a_busca(
+        self, pronta: Callable[[dict[str, Any] | None], bool]
+    ) -> dict[str, Any] | None:
+        """Espera, no relógio de verdade, a busca publicada ficar como pedida —
+        ou o «Conectar» acabar sem ela. Quem anda é o fio do movimento."""
+        fim = time.monotonic() + self._prazo_da_trava_s + 1.0
+        espera = threading.Event()
+        while True:
+            busca = self._busca_publicada()
+            conectando = self._pela_chave(CONECTANDO)
+            if pronta(busca) or conectando is None or not conectando.em_curso:
+                return busca
+            if time.monotonic() >= fim:
+                return busca
+            espera.wait(0.01)
 
     def _movimentos_publicados(self) -> tuple[Movimento, ...]:
         """Os movimentos como a tela os lê: o destino que ela pediu, e que o fio
@@ -961,8 +1086,13 @@ class CentralDoRadio:
         from hefesto_dualsense4unix.integrations import plano_de_radio
 
         adaptadores = self._adaptadores(esperar=esperar)
+        # A BUSCA DO PRÓPRIO HEFESTO NÃO É «OUTRO PROGRAMA PROCURANDO»
+        # (O-CONECTAR-E-UM-INTERRUPTOR-01, cura 8): o ``Discovering`` do
+        # adaptador do «Procurar» é ela, e ele não vai para o fim da D8 por isso.
+        busca = self._busca_publicada()
+        propria = busca["adaptador"] if busca is not None else None
         varrendo = (
-            frozenset(a.endereco for a in adaptadores if a.varrendo)
+            frozenset(a.endereco for a in adaptadores if a.varrendo and a.endereco != propria)
             if adaptadores is not None
             else None
         )
@@ -1209,6 +1339,8 @@ class CentralDoRadio:
                 if not recomecar:
                     return None
                 novo = movimento.destino
+            if self._busca is not None:
+                self._busca = {**self._busca, "adaptador": novo}
             feito = replace(
                 movimento, destino=novo, passo=PASSO_PREPARANDO,
                 origens=tuple(o for o in movimento.origens if o != novo),
@@ -1663,7 +1795,13 @@ class CentralDoRadio:
         restaurar = self._preparar_o_adaptador(dono, adaptador)
         with self._tranca:
             self._escolha, self._vistos_na_janela = None, frozenset()
-        janela = self._abrir_janela(adaptador.endereco, self._segundos, dono)
+        # A JANELA É DO MOVIMENTO (D-3009-O-TETO-DA-BUSCA): a busca do
+        # «Procurar» vai até o teto da ponte; a do «Mover», os 30 s de sempre.
+        segundos = self._segundos_da_busca if conectar else self._segundos
+        janela = self._abrir_janela(adaptador.endereco, segundos, dono)
+        # A busca segue publicada quando a janela fecha por um pedido do chip:
+        # ela só muda de adaptador, e o interruptor não pisca no meio.
+        segue = False
         try:
             motivo = janela.abrir_a_janela()
             if motivo:
@@ -1672,16 +1810,27 @@ class CentralDoRadio:
             movimento = self._guardar(replace(movimento, passo=PASSO_GESTO))
             comeco = self._relogio()
             if conectar:
+                desde = time.time()
+                with self._tranca:
+                    self._busca = {"adaptador": adaptador.endereco, "desde": round(desde, 3),
+                                   "ate": round(desde + segundos, 3)}
+                    self._janela_da_busca = janela
+                    self._aberturas += 1
+                    self._ultima_busca = dict(self._busca)
                 achado = self._esperar_a_escolha_dela(janela, dono, ligados_antes,
-                                                      comeco=comeco)
+                                                      comeco=comeco, segundos=segundos)
                 if achado is None:
-                    return self._sem_gesto(movimento, janela, comeco)
+                    fim = self._sem_gesto(movimento, janela, comeco, segundos)
+                    segue = fim is None
+                    return fim
+                with self._tranca:
+                    self._busca = None
                 endereco, pelo_antigo = achado
                 if pelo_antigo:
                     return self._voltou_pelo_antigo(movimento, endereco, dono)
                 pareando = self._quem_chegou(movimento, endereco, dono)
             elif not self._esperar_o_gesto(janela, movimento.aparelho, comeco=comeco):
-                return self._sem_gesto(movimento, janela, comeco)
+                return self._sem_gesto(movimento, janela, comeco, segundos)
             else:
                 pareando = self._sair_do_gesto(movimento, passo=PASSO_PAREANDO)
             if pareando is None:
@@ -1698,16 +1847,23 @@ class CentralDoRadio:
         finally:
             with self._tranca:
                 self._escolha, self._vistos_na_janela = None, frozenset()
+                self._janela_da_busca, self._desligar = None, False
+                if not segue:
+                    self._busca = None
             janela.fechar()
             restaurar()
 
-    def _sem_gesto(self, movimento: Movimento, janela: Janela, comeco: float) -> Movimento | None:
+    def _sem_gesto(self, movimento: Movimento, janela: Janela, comeco: float,
+                   segundos: float) -> Movimento | None:
         """A espera do gesto voltou sem o aparelho. Se a janela ainda estava de
         pé, quem a interrompeu foi um pedido de outro destino — e um pedido que
         ela desfez no mesmo instante não é «não chegou»: ``None``, e a janela
-        recomeça. Acabada a janela, é o «não chegou» (ou o pedido, se veio)."""
+        recomeça. Acabada a janela, é o «não chegou» (ou o pedido, se veio); e,
+        se foi ela que desligou o «Procurar», o fim é :data:`MOTIVO_DESLIGADA`."""
+        if self._desligar:
+            return self._sem_chegar_do_gesto(movimento, MOTIVO_DESLIGADA)
         if not (self._parar.is_set() or not janela.aberta
-                or self._relogio() >= comeco + self._segundos):
+                or self._relogio() >= comeco + segundos):
             return None
         return self._sem_chegar_do_gesto(movimento, MOTIVO_SEM_GESTO)
 
@@ -1905,6 +2061,7 @@ class CentralDoRadio:
         ligados_antes: frozenset[str],
         *,
         comeco: float,
+        segundos: float,
     ) -> tuple[str, bool] | None:
         """O «Conectar»: ``(endereço, pelo_antigo)`` do aparelho dela, ou ``None``.
 
@@ -1927,9 +2084,10 @@ class CentralDoRadio:
         segundo, e a tela, que lê o BlueZ a cada 3 s, nunca o mostrava na lista
         — e o controle com a chave só do lado dele, que chama o adaptador
         sozinho, era pareado de novo sem modo de parear (o 01:23:40 da madrugada
-        dela). Cada volta guarda os VISTOS da janela, para a escolha.
+        dela). Cada volta guarda os VISTOS da janela, para a escolha. Ela acaba
+        também quando ela desliga o «Procurar» (:meth:`ligar_a_busca`).
         """
-        fim = comeco + self._segundos
+        fim = comeco + segundos
         while True:
             vistos = frozenset(str(getattr(c, "endereco", "") or "")
                                for c in janela.candidatos()) - {""}
@@ -1941,8 +2099,8 @@ class CentralDoRadio:
             voltou = self._quem_voltou_sozinho(dono, ligados_antes)
             if voltou:
                 return voltou, True
-            if (self._parar.is_set() or self._relogio() >= fim or not janela.aberta
-                    or self._destino_pedido is not None):
+            if (self._parar.is_set() or self._desligar or self._relogio() >= fim
+                    or not janela.aberta or self._destino_pedido is not None):
                 return None
             self._dormir(PASSO_S)
 

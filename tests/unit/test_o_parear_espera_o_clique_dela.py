@@ -268,13 +268,21 @@ def tela(monkeypatch: pytest.MonkeyPatch) -> Any:
 
 
 def _campos_com_a_busca_na_direita(a08: Any) -> dict[str, Any]:
-    """A busca de pé na Direita, e a caixa Meio aberta por ela."""
+    """A busca de pé na Direita, e a caixa Meio aberta por ela.
+
+    MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca é a que a central
+    PUBLICA (``busca``), ao lado do movimento sem aparelho; a tela lê dali
+    onde ela está. O pedido é o mesmo.
+    """
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
     a08._ABERTO["lugar"] = _id(ADAPTADORES[2])
     busca = {"aparelho": "", "destino": ADAPTADORES[1], "estado": "esperando",
              "passo": "gesto", "quando": time.time() - 2.0, "e_controle": False}
-    estado = {"controllers": [], "radio_central": {"movimentos": [busca], "proposta": None}}
+    publicada = {"adaptador": ADAPTADORES[1], "desde": time.time() - 2.0,
+                 "ate": time.time() + 118.0}
+    estado = {"controllers": [], "radio_central": {"movimentos": [busca], "proposta": None,
+                                                   "busca": publicada}}
     return dict(a08.campos_do_radio(Contexto(state=estado, conectados=[], mesa=[])))
 
 

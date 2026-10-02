@@ -3247,6 +3247,21 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   /* O arrasto com um movimento esperando treme a linha, como o botão (R8). */
   .radio .linha.recusa{animation:rd-recusa 420ms var(--ease) 1}
   @media (prefers-reduced-motion: reduce){.radio .linha.recusa{animation:none}}
+  /* O «PROCURAR» (O-CONECTAR-E-UM-INTERRUPTOR-01): a pílula do «Modo
+     Freestyle» da aba Jogar, com os valores DELA (`aba01.py`, a folha
+     `.cadeado`), copiados e presos pela régua do interruptor — sem importar
+     de outra aba. No painel, ela fica à direita do título. */
+  .radio .cadeado{display:inline-flex;align-items:center;justify-content:center;gap:7px;
+           margin-left:auto;height:26px;flex:0 0 auto;white-space:nowrap;
+           border-radius:7px;padding:0 12px;font-size:12.5px;font-family:inherit;
+           cursor:pointer;
+           border:1px solid var(--border-forte);background:var(--app-bg);
+           color:var(--texto-mudo)}
+  .radio .cadeado .p{width:7px;height:7px;border-radius:50%;flex:0 0 auto;
+              background:var(--border-forte);box-shadow:none}
+  .radio .cadeado.ligada{border-color:var(--green);background:rgba(80,250,123,.09);
+                  color:var(--green)}
+  .radio .cadeado.ligada .p{background:var(--green);box-shadow:0 0 6px var(--green)}
 """
 
 
@@ -3389,6 +3404,10 @@ def _cena_do_desenho() -> dict:
         "ocupado": False, "aberto": cheio["id"], "perto": perto,
         "destino_do_conectar": vazio["id"],
     }
+    # O «Procurar» do desenho diz o que as caixas dizem: aceso com uma busca.
+    cena["procurando"] = (_pacote08.PROCURAR_LIGADO
+                          if any(lg.get("conectando") for lg in lugares)
+                          else _pacote08.PROCURAR_DESLIGADO)
     return cena
 
 
@@ -3397,6 +3416,18 @@ CAMPOS_DO_RADIO = _pacote08.campos_da_secao(CENA_DO_RADIO)
 #: A sala do DESENHO nasce com os Hz escritos; a do produto, com o lugar deles
 #: vazio — o tique os pinta pelas listas `hz-*` (ver `a08_conexoes.html_da_sala`).
 SALA_DO_DESENHO = _pacote08.html_da_sala(CENA_DO_RADIO, com_hz=True)
+#: O «PROCURAR» (O-CONECTAR-E-UM-INTERRUPTOR-01): o pedido dela, *«um switch
+#: ali no lado esquerdo do conectar pra clicar e ativar igual o botão modo
+#: freestyle na aba jogar»*. A mesma peça no cabeçalho da seção e no do painel
+#: (o véu do painel cobre o da seção): o mesmo campo e o mesmo gesto, e o
+#: pintor acende os dois. <!-- noqa-acento: citação literal dela -->
+INTERRUPTOR_PROCURAR = (
+    '<button class="cadeado'
+    + (" ligada" if CAMPOS_DO_RADIO["radio-procurando"] == _pacote08.PROCURAR_LIGADO else "")
+    + '" data-gesto="radio-procurar" data-campo="radio-procurando" data-hef-alvo="classe" '
+    f'data-hef-classe="ligada" data-hef-quando="{_pacote08.PROCURAR_LIGADO}" '
+    'title="Procura aparelhos no adaptador aberto. Desligue para parar.">'
+    '<span class="p"></span>Procurar</button>')
 SPRITE_DO_RADIO = _sprite_do_radio()
 
 #: O CONVITE DA FASE EM PÉ, CURTO — R9 dela: *"usarmos um dualsense e o USB
@@ -3641,8 +3672,12 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
         if(b.dataset.abre) abrirPainel(b.dataset.abre, '');
         return;
       }
-      if((b = perto(ev, '#rd-b-conectar'))){
-        if(b.classList.contains('apagado')) balancar(b); else abrirPainel('conectar', '');
+      // O «+ CONECTAR» SÓ ABRE O PAINEL (O-CONECTAR-E-UM-INTERRUPTOR-01): quem
+      // liga a busca é o «Procurar», e ligá-lo abre o painel também; fechar o
+      // painel não o desliga. A cópia de dentro do painel não reabre nada.
+      if((b = perto(ev, '#rd-b-conectar'))){ abrirPainel('conectar', ''); return; }
+      if((b = perto(ev, '.radio .cadeado[data-gesto="radio-procurar"]'))){
+        if(!b.classList.contains('ligada') && !b.closest('#rd-painel')) abrirPainel('conectar', '');
         return;
       }
       if((b = perto(ev, '#rd-b-equilibrar'))){
@@ -4333,7 +4368,8 @@ MIOLO = f'''
         <label class="quadro-titulo" for="cx8-3">Rádio e Adaptadores</label>
         <span class="conta" data-campo="conta-de-adaptadores" data-hef-alvo="html">{CAMPOS_DO_RADIO["conta-de-adaptadores"]}</span>
         <div class="direita">
-          <button class="btn principal" id="rd-b-conectar" data-gesto="conectar-aparelho" data-campo="radio-ocupado" data-hef-alvo="classe" data-hef-classe="apagado" title="Conectar um aparelho novo">
+          {INTERRUPTOR_PROCURAR}
+          <button class="btn principal" id="rd-b-conectar" data-gesto="conectar-aparelho" title="Conectar um aparelho novo">
             <svg class="i" aria-hidden="true"><use href="#rd-mais"/></svg> Conectar</button>
           <button class="btn" id="rd-b-equilibrar" data-gesto="equilibrar-radio" data-campo="radio-ocupado" data-hef-alvo="classe" data-hef-classe="apagado" title="Move um controle por vez">
             <svg class="i" aria-hidden="true"><use href="#rd-equilibrar"/></svg> Equilibrar</button>
@@ -4378,6 +4414,7 @@ MIOLO = f'''
           <div class="painel-cab">
             <span class="pulso" id="rd-pulso"></span>
             <h2 id="rd-painel-titulo"></h2>
+            {INTERRUPTOR_PROCURAR}
             <button class="btn so-icone fechar" id="rd-fechar" aria-label="Fechar" title="Fechar">
               <svg class="i" aria-hidden="true"><use href="#rd-sair"/></svg></button>
           </div>

@@ -272,8 +272,14 @@ def test_o_ultimo_clique_dela_vence(
 def test_o_chip_no_ultimo_instante_da_janela_ainda_leva_a_busca(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """Ela clica o chip quando a janela de 30 s acaba: o pedido chegou antes
-    do fim, e o fim não vira «não chegou» — a busca vai para o chip, inteira.
+    """Ela clica o chip quando a janela do «Conectar» acaba: o pedido chegou
+    antes do fim, e o fim não vira «não chegou» — a busca vai para o chip,
+    inteira.
+
+    MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01 (D-3009-O-TETO-DA-BUSCA): a janela
+    é do movimento, e a do «Conectar» vai até o teto da ponte
+    (``gp.SEGUNDOS_MAX``), não os 30 s do «Mover». O pedido é o mesmo: o
+    último instante dela.
 
     MORDIDA: tire da saída do gesto (``_sair_do_gesto``) a pergunta pelo
     pedido — a janela que acabou fecha «não chegou» no adaptador de antes.
@@ -283,7 +289,7 @@ def test_o_chip_no_ultimo_instante_da_janela_ainda_leva_a_busca(
     busca = BuscaDePe(mesa.relogio)
     fechar.append(busca.soltar)
     antes = _o_conectar_no_gesto(mesa, busca, SALA)
-    mesa.relogio.agora = antes.comecou + gp.SEGUNDOS_DA_JANELA
+    mesa.relogio.agora = antes.comecou + gp.SEGUNDOS_MAX
 
     assert mesa.chip(QUARTO)["status"] == "ok"
     rm.ela_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
@@ -351,17 +357,21 @@ def test_a_janela_que_um_pedido_desfeito_interrompeu_recomeca(
 
     MORDIDA: tire do ``_sem_gesto`` a pergunta pela janela — o clique de volta
     fecha a busca «não chegou».
+
+    MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01 (D-3009-O-TETO-DA-BUSCA): o
+    ``_sem_gesto`` recebe o tamanho da janela, que é do movimento; a do
+    «Conectar» é o teto da ponte (``gp.SEGUNDOS_MAX``). O pedido é o mesmo.
     """
     mesa = Mesa(mundo_da_madrugada())
     fechar.append(mesa.fechar)
     no_gesto = mesa.central._guardar(cr.Movimento(
         cr.CONECTANDO, SALA, cr.ESPERANDO, cr.PASSO_GESTO, comecou=mesa.relogio()))
     comeco = mesa.relogio()
-    assert mesa.central._sem_gesto(no_gesto, JanelaDePe(), comeco) is None
+    assert mesa.central._sem_gesto(no_gesto, JanelaDePe(), comeco, gp.SEGUNDOS_MAX) is None
     assert mesa.central.movimentos() == (no_gesto,)
 
-    mesa.relogio.agora = comeco + gp.SEGUNDOS_DA_JANELA
-    fim = mesa.central._sem_gesto(no_gesto, JanelaDePe(), comeco)
+    mesa.relogio.agora = comeco + gp.SEGUNDOS_MAX
+    fim = mesa.central._sem_gesto(no_gesto, JanelaDePe(), comeco, gp.SEGUNDOS_MAX)
     assert fim is not None and (fim.estado, fim.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_SEM_GESTO)
 
 
@@ -433,7 +443,9 @@ def test_a_tela_mostra_a_busca_no_adaptador_do_chip(
         bancada.cena()
         bancada.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca))
         bancada.cena()
-        assert bancada.gesto("conectar-aparelho") == {"armou": True}
+        # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo «Procurar»;
+        # o «+ Conectar» só abre o painel.
+        assert bancada.gesto("radio-procurar") == {"armou": True}
         assert busca.dentro.wait(5.0), "a central não abriu a janela"
 
         bancada.cena()
@@ -969,7 +981,9 @@ def test_o_clique_de_volta_pela_tela_desfaz_o_pedido_que_a_busca_ainda_nao_levou
         bancada.cena()
         bancada.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca))
         bancada.cena()
-        assert bancada.gesto("conectar-aparelho") == {"armou": True}
+        # MUDOU NA O-CONECTAR-E-UM-INTERRUPTOR-01: a busca liga pelo «Procurar»;
+        # o «+ Conectar» só abre o painel.
+        assert bancada.gesto("radio-procurar") == {"armou": True}
         assert busca.dentro.wait(5.0), "a central não abriu a janela"
         bancada.cena()
         assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(chip)) == {"armou": True}

@@ -41,7 +41,7 @@ aparece contada.
 
 <!-- BLOCO GERADO por scripts/gerar-contrato-ipc.py — não edite à mão -->
 
-**53 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **18** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
+**54 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **18** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
 
 Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e é por isso que ele está aqui: escrito à mão, ele já saiu 15, 17, 18 e 14 em levantamentos do mesmo dia.
 
@@ -100,6 +100,7 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `radio.mover` | `daemon/ipc_handlers.py:8064` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
 | `mira.set` | `daemon/ipc_handlers.py:8158` (`_handle_mira_set`) | `mira.set` — o chip «Mira Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |
 | `haptica.testar` | `daemon/ipc_handlers.py:8404` (`_handle_haptica_testar`) | `haptica.testar` — o botão «Háptica» da aba Vibração, num controle. | sim |
+| `radio.busca.set` | `daemon/ipc_handlers.py:8442` (`_handle_radio_busca_set`) | O «Procurar»: liga ou desliga a busca do rádio, com valor absoluto. | sim |
 
 <!-- FIM DO BLOCO GERADO -->
 
@@ -598,7 +599,23 @@ chega por `daemon.state_full`, na chave `radio_central`:
 pelo `HID_PHYS`, outro aparelho pelo `Connected`. `controle` só existe na `proposta`,
 e lá é o `uniq`. `proposta` é o «Equilibrar» — UM movimento, com `controle` e
 `destino`, que a tela aplica chamando `radio.mover` com esses dois —, ou `null`,
-e é sempre `null` enquanto um movimento está `esperando`.
+e é sempre `null` enquanto um movimento está `esperando`. `busca` é a busca do
+«Procurar»: `{adaptador, desde, ate}` enquanto a janela de um movimento SEM
+aparelho está aberta, ou `null`.
+
+### `radio.busca.set` — o «Procurar» da aba Conexões (O-CONECTAR-E-UM-INTERRUPTOR-01)
+
+| Método            | Parâmetros                                 | Retorno                         |
+|-------------------|--------------------------------------------|---------------------------------|
+| `radio.busca.set` | `{ligada: bool, destino?: "aa:bb:…"}`      | `{status, busca}`               |
+
+Valor absoluto, como o `freestyle.set`. Ligada, é o «Conectar» sem aparelho no
+`destino` (sem ele, a D8), até ela desligar ou até o teto de 120 s; com a busca
+de pé noutro adaptador, ela vai para o `destino`. Desligada, a janela fecha
+agora, e o movimento acaba em `desligada`, que não é falha (a tela não faz «Não
+Conectou» dele). Pedir o estado que já vale responde `ok` sem tocar no rádio. A
+resposta traz a `busca` que ficou valendo; `status` diferente de `ok` é a
+recusa (`ocupado`, com um «Mover» em curso; `sem_destino`; `sem_central`).
 
 ### `mira.set` — o chip «Mira Virtual», por controle (A-MIRA-POR-MOVIMENTO-NA-TELA-01)
 
