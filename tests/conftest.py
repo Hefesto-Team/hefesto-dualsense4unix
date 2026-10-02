@@ -3858,8 +3858,8 @@ os.environ.setdefault("PYTHONFAULTHANDLER", "1")
 # O QUE ISTO NÃO ALCANÇA, escrito para ninguém confiar demais: `shell=True`
 # com o caminho absoluto dentro do texto do comando; script de shell que
 # reescreve o próprio PATH por dentro e chama o lançador pelo nome; `os.kill`
-# num pid que não saiu do `pgrep` nem do `flatpak ps`; e a leitura do `/proc`
-# (`steam_game_running`), que continua vendo o jogo dela aberto — esse caminho
+# num pid que não saiu do `pgrep` nem do `flatpak ps`; e o `/proc` de um FILHO
+# (`steam_game_running`), que vê o jogo dela (aqui, o JOGO-SO-DA-SESSAO o tira) — esse caminho
 # RECUSA o ato, então fica do lado seguro. Como no SOM, também não alcança o
 # script de shell rodado com um `env` sem PATH nenhum (o shell usa o PATH
 # padrão dele) nem o lançador por caminho absoluto como ARGUMENTO de outro
@@ -4437,7 +4437,10 @@ def _lancador_no_fim_da_sessao(session: Any) -> None:
 # seguinte.
 #
 # O QUE ISTO NÃO ALCANÇA: o produto rodado num SUBPROCESSO (a CLI, o
-# `uninstall.sh` avulso), que tem o próprio `/proc` sem embrulho; e as outras
+# `uninstall.sh` avulso, o guarda do Steam Input), que tem o próprio `/proc` sem
+# embrulho (a do guarda tem borda própria, a `_PONTE_DA_BANCADA` do
+# `test_ponte_steam_input_01_a_lista_que_so_preservava.py`, medida com ela
+# jogando em 02/10); e as outras
 # leituras do `/proc` (o `escritor_cru`, o `autoswitch` sem `proc_dir`, o
 # `proton_pin._em_uso`), que perguntam outra coisa que não «há jogo da Steam».
 
