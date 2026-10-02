@@ -247,6 +247,11 @@ def test_a_emissao_e_o_estado_de_cada_secao_e_nao_o_nome_dela(
 
     MORDIDA: volte a ``[s for g in guarda for s in (g.get("secoes") or [])]`` e
     este teste reprova com ``['leds', 'triggers', …]`` no lugar dos estados.
+
+    O DISCO É O PONTO DESDE 02/10/2026 (A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01):
+    a emissão medida aqui é a do ``guarda.proprio``; o ``guarda.secao`` diz o
+    controle agora e tem régua própria
+    (``test_a_coluna_status_diz_o_controle_de_agora.py``).
     """
     monkeypatch.setattr(a10_perfis, "_SECAO_POR_CLASSE", True, raising=False)
     fora = _emitidos(rumble={"policy": "economia"})
@@ -258,12 +263,12 @@ def test_a_emissao_e_o_estado_de_cada_secao_e_nao_o_nome_dela(
     # emite os quatro para o lugar vazio poder acender a marca que esconde os
     # glifos do mockup).
     esperado += [""] * quantas * (a10_perfis.LUGARES_DA_TABELA - 1)
-    assert fora["guarda.secao"] == esperado, (
-        f"a coluna não conta o que o perfil guarda: {fora['guarda.secao']!r} "
+    assert fora["guarda.proprio"] == esperado, (
+        f"a coluna não conta o que o perfil guarda: {fora['guarda.proprio']!r} "
         f"em vez de {esperado!r}")
 
     # E O QUE A TELA FARIA COM ISSO — a mesma lista que o `ligado()` do JS lê.
-    acesos = [regua_do_mockup._ligado(str(v)) for v in fora["guarda.secao"]]
+    acesos = [regua_do_mockup._ligado(str(v)) for v in fora["guarda.proprio"]]
     assert acesos == [v == "sim" for v in esperado], (
         "o que o pacote emite não é lido como aceso/apagado pelo alvo `classe`")
 
@@ -326,9 +331,10 @@ def test_cada_secao_guardada_acende_a_sua_celula_e_so_a_dela(
         # As três linhas que sobram da tabela vêm vazias — ver a nota no teste
         # acima, 05/09/2026.
         esperado += [""] * quantas * (a10_perfis.LUGARES_DA_TABELA - 1)
-        assert fora["guarda.secao"] == esperado, (
+        # O PONTO, desde 02/10/2026 — ver a nota do teste acima.
+        assert fora["guarda.proprio"] == esperado, (
             f"com só `{secao}` guardado, a coluna acendeu "
-            f"{fora['guarda.secao']!r} em vez de {esperado!r}")
+            f"{fora['guarda.proprio']!r} em vez de {esperado!r}")
 
 
 # ---------------------------------------------------------------------------

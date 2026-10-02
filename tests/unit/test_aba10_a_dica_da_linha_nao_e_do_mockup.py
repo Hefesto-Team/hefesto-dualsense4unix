@@ -40,9 +40,17 @@ que mudou é que a quarta virou trabalho, e não mais um bilhete.
 
 TIRAR FOI A CURA, E NÃO PERDEU NADA: o modelo está na PRÓPRIA célula que o
 cursor toca (``guarda.nome``, vivo) e a conta está na coluna ao lado
-(``guarda.secao``, alvo ``classe``, vivo). É a decisão nº4 dela deste mesmo
-dia, sobre esta mesma tabela: *"Meu Deus melhor nenhuma assim. Auto falante é
-auto falante, gatilho é gatilho."*
+(``guarda.proprio``, o ponto embaixo de cada glifo, alvo ``classe``, vivo; até
+02/10/2026 era o próprio glifo, ``guarda.secao``, que desde então diz o
+controle agora). É a decisão nº4 dela deste mesmo dia, sobre esta mesma
+tabela: *"Meu Deus melhor nenhuma assim. Auto falante é auto falante, gatilho é
+gatilho."*
+
+A CÉLULA GANHOU DICA EM 02/10/2026, e não é a volta das oito: ela só existe
+onde há o que dizer (*"O controle não diz."* e a máscara que não é a
+DualSense, decisão dela de 29/09: «a dica diz qual»), vem do pacote
+(``guarda.dica``) e não nomeia aparelho. A régua de baixo, que olha TODA dica
+da tabela contra os 28 modelos, continua cobrindo-a.
 
 AS QUATRO MORDIDAS, e cada uma acusa uma metade diferente:
 

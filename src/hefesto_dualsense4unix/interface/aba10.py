@@ -111,10 +111,13 @@ from hefesto_dualsense4unix.profiles.simple_match import (  # noqa: E402
 # verdade.
 #
 # Campo `None` = **sem opinião**: aquele controle herda a seção global do perfil
-# (merge POR CAMPO, PERFIL-01). É por isso que a coluna tem dois estados e não
-# um: aceso é "este perfil guarda um ajuste só deste controle", apagado é
-# "ele usa o do perfil, igual aos outros" — e apagado é a resposta certa para a
-# maioria dos controles na maioria dos perfis.
+# (merge POR CAMPO, PERFIL-01). É por isso que o PONTO embaixo do glifo tem dois
+# estados: com ponto é "este perfil guarda um ajuste só deste controle", sem
+# ponto é "ele usa o do perfil, igual aos outros" — e sem ponto é a resposta
+# certa para a maioria dos controles na maioria dos perfis. O GLIFO diz outra
+# coisa desde 02/10/2026 (A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01, «Ponto
+# embaixo», decidido por ela em 29/09): o que está ligado AGORA naquele
+# controle, e ver `AGORA`.
 #
 # A lista abaixo é uma TRADUÇÃO da classe mais a decisão nº20, não uma segunda
 # verdade: quem a compara com o esquema é
@@ -246,6 +249,37 @@ GUARDA = {
     "p3": {"leds", "mascara"},
     "p4": set(),
 }
+
+# O CONTROLE AGORA, no desenho — 02/10/2026 (A-ABA-PERFIS-DIZ-O-STATUS-DE-
+# AGORA-01). Desde então o `GUARDA` acima desenha os PONTOS, e isto desenha os
+# GLIFOS, nas duas linhas que o desenho tem na mesa: o P1 com o microfone mudo
+# e a mira ligada, o P2 com a barra apagada e a mira desligada. A máscara não
+# está aqui: ela sai da `mascara` da `MESA`, como no pacote (o P2 do desenho
+# joga como Xbox 360, e o glifo dele apaga com a dica dizendo qual). O gatilho
+# fica no «não sei», que é o que o daemon de hoje responde (ele não publica o
+# efeito do gatilho por controle). O que não está aqui é aceso: um controle na
+# mesa costuma estar com quase tudo ligado.
+NAO_DIZ = "—"
+AGORA = {
+    "p1": {"triggers": NAO_DIZ, "mic": ""},
+    "p2": {"triggers": NAO_DIZ, "leds": "", "movimento": ""},
+    "p3": {"triggers": NAO_DIZ},
+    "p4": {"triggers": NAO_DIZ},
+}
+#: As duas dicas que a célula pode ter, as mesmas do pacote
+#: (`a10_perfis.DICA_DO_NAO_DIZ` e `DICA_DA_MASCARA`). Quem confere que são as
+#: mesmas é `tests/unit/test_a_coluna_status_diz_o_controle_de_agora.py`: o
+#: gerador não importa o pacote.
+DICA_DO_NAO_DIZ = "O controle não diz."
+DICA_DA_MASCARA = "Máscara: {mascara}."
+#: A máscara que acende o glifo: a que leva tudo ao jogo. É o rótulo de
+#: `mesa_viva.NOME_DA_MASCARA["dualsense"]`, que o gerador não importa (ele traz
+#: o GTK); a régua confere que são o mesmo.
+MASCARA_QUE_ACENDE = "DualSense"
+#: A dica do cabeçalho «Status», com as duas camadas — o texto da sprint, que o
+#: `exigir` trava.
+DICA_DO_STATUS = ("Aceso: ligado agora neste controle. O ponto embaixo: o perfil "
+                  "aberto guarda este ajuste só para ele.")
 
 # O ID DA PEÇA é o endereço de rádio normalizado — a MESMA chave que o
 # `_validate_controllers_keys` aceita e canoniza (`profiles/schema.py:2101`), e
@@ -1034,9 +1068,14 @@ CSS = CSS_GLIFO + """
      SEM regra que a pintasse, então acesa e apagada tinham o mesmo
      `fill: rgb(107,115,133)`. É o defeito que a `aba04.py` cura com
      `.ctrl .led-on{fill:var(--led-aceso)}` e que esta aba não tinha. */
-  /* AS QUATRO SEÇÕES TÊM DE SE LER COMO QUATRO. Com o mesmo vão entre todos os
-     glifos, os sete viravam um borrão só e ninguém achava onde a luz acaba e o
-     gatilho começa: 2px DENTRO de uma seção, 11px ENTRE elas. */
+  /* AS OITO SEÇÕES TÊM DE SE LER COMO OITO. Com o mesmo vão entre todos os
+     glifos, eles viravam um borrão só e ninguém achava onde a luz acaba e o
+     gatilho começa: 2px DENTRO de uma seção, 6px ENTRE elas. Eram 11px até
+     02/10/2026, e com a máscara (08/09) e os comandos virtuais (24/09) a
+     fileira passou a pedir 265px numa coluna de 255: o oitavo grupo ficava
+     inteiro fora da célula, nas quatro linhas (a foto dela de 29/09). Com 6px
+     ela pede 230 (os doze glifos de 15px com os vãos de dentro, 188, e sete
+     vãos de 6), e cabe nos 235 que a folga de 20 deixa. */
   /* O NÚMERO É MEDIDO, e ele mudou de dono em 11/09/2026. Com `table-layout`
      em `auto` esta coluna media  (noqa-acento: verbo medir, imperfeito) 255px
      na tela (a fileira de glifos pede 239 e a
@@ -1045,8 +1084,19 @@ CSS = CSS_GLIFO + """
      glifos era CORTADA — fotografado. O valor agora é o que a tela
      media.  (noqa-acento: verbo medir, imperfeito) */
   .gd-pecas{width:255px}
-  .gd-pecas .gls{gap:11px}
-  /* aceso = tem ajuste só dele · apagado = usa o do perfil, como os outros */
+  .gd-pecas .gls{gap:6px}
+  /* O GLIFO DIZ O CONTROLE AGORA, E O PONTO EMBAIXO DIZ O DISCO — 02/10/2026,
+     decidido por ela em 29/09 («Ponto embaixo»): aceso = ligado agora neste
+     controle · apagado = desligado · tracejado = o controle não diz · o ponto
+     = o perfil aberto no editor guarda esta seção só para ele. O ponto mora
+     FORA do `.gr`, e por isso não herda a cor nem o halo do aceso: as duas
+     camadas não se confundem. */
+  .gc{position:relative;display:inline-flex}
+  .gq{display:inline-flex;align-items:center;gap:2px;border-radius:3px}
+  .gq.nd{outline:1px dashed var(--comment);outline-offset:1px}
+  .gp{position:absolute;left:50%;bottom:-6px;width:4px;height:4px;margin-left:-2px;
+      border-radius:50%;background:var(--fg);visibility:hidden}
+  .gp.on{visibility:visible}
   /* O APAGADO PASSOU DE `--border-forte` PARA `--comment` — 30/08/2026.
      #44475a sobre o painel dá **1,56:1**: não era glifo apagado, era glifo
      INVISÍVEL — e um estado que não se vê não comunica estado nenhum, só
@@ -1103,7 +1153,7 @@ CSS = CSS_GLIFO + """
      `visibility` e não `display`: a fileira guarda a altura da linha, e um
      `display:none` faria as quatro linhas da tabela mudarem de altura conforme
      a mesa — a tabela inteira pulando quando um controle entra ou sai. */
-  .tab.miuda tr.fora .gr{visibility:hidden}
+  .tab.miuda tr.fora .gr,.tab.miuda tr.fora .gp{visibility:hidden}
 """
 
 # O CADEADO, EM DOIS TRAÇOS — decisão [01] do PO, 04/09/2026. Ver o bloco
@@ -1558,7 +1608,26 @@ def opts(lista, escolhido, vazio=False, travessao=False):
     return "\n".join(linhas)
 
 
-def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None):
+def _celula_de_agora(c, campo, agora):
+    """`(aceso, não_diz, dica)` de uma célula do cenário `AGORA`.
+
+    A máscara é a da `MESA` (`c["mascara"]`), com a regra do pacote
+    (`a10_perfis._mascara_agora`): acesa só na DualSense.
+    """
+    if campo == "mascara" and campo not in agora:
+        mascara = str(c.get("mascara") or "")
+        if mascara in ("", NAO_DIZ):
+            return False, True, DICA_DO_NAO_DIZ
+        if mascara != MASCARA_QUE_ACENDE:
+            return False, False, DICA_DA_MASCARA.format(mascara=mascara)
+        return True, False, ""
+    valor = agora.get(campo, "sim")
+    if valor == NAO_DIZ:
+        return False, True, DICA_DO_NAO_DIZ
+    return valor == "sim", False, ""
+
+
+def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None, agora=None):
     """Uma linha da tabela de baixo: o controle, o que é só dele, e o ID da peça.
 
     O rótulo é o encurtado — `P1 • Cosmic Red • USB` —, na ordem dela de 26/08:
@@ -1581,6 +1650,7 @@ def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None):
     """
     na_mesa = c.get("conectado", True)
     tem = GUARDA[c["pref"]] if tem is None else tem
+    agora = AGORA.get(c["pref"], {}) if agora is None else agora
     id_visivel = ID_DA_PECA[c["pref"]] if id_da_peca is None else id_da_peca
     endereco = uniq if uniq is not None else c["pref"]
     grupos = []
@@ -1588,11 +1658,27 @@ def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None):
     # `SECOES`. O `data-hef-alvo="classe"` é o que deixa o PRODUTO acender e
     # apagar esta célula: sem ele o pintor cai no ramo do texto e o
     # `textContent` apaga o glifo SVG que mora dentro do `<span>`.
+    #
+    # QUATRO ENDEREÇOS POR CÉLULA DESDE 02/10/2026 (A-ABA-PERFIS-DIZ-O-STATUS-
+    # DE-AGORA-01): o `.gc` leva a dica (`guarda.dica`, só na célula que tem o
+    # que dizer, e é a decisão dela de 29/09 sobre a máscara: «a dica diz
+    # qual»); o `.gr` acende com o controle agora (`guarda.secao`); o `.gq`
+    # tracejado é o «não sei» (`guarda.incerto`); e o `.gp` é o ponto do disco
+    # (`guarda.proprio`). O `.gr` continua sem `title`: as oito dicas fixas
+    # que saíram em 03/09 não voltam.
     for campo, pecas in SECOES:
-        on = campo in tem
+        on, nao_diz, dica_da_celula = _celula_de_agora(c, campo, agora)
         gs = "".join(glifo(p, ativo=on, tam=15) for p in pecas)
-        grupos.append(f'<span class="gr{" on" if on else ""}" data-hef="guarda.secao"'
-                      f' data-hef-alvo="classe" data-hef-secao="{campo}">{gs}</span>')
+        titulo = f' title="{dica_da_celula}"' if dica_da_celula else ""
+        grupos.append(
+            f'<span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo"'
+            f' data-hef-atributo="title"{titulo}>'
+            f'<span class="gr{" on" if on else ""}" data-hef="guarda.secao"'
+            f' data-hef-alvo="classe" data-hef-secao="{campo}">'
+            f'<span class="gq{" nd" if nao_diz else ""}" data-hef="guarda.incerto"'
+            f' data-hef-alvo="classe" data-hef-classe="nd">{gs}</span></span>'
+            f'<span class="gp{" on" if campo in tem else ""}" data-hef="guarda.proprio"'
+            f' data-hef-alvo="classe"></span></span>')
     # O LUGAR DE QUEM NÃO ESTÁ NA MESA — 31/08/2026, decisão dela, e ela vale para
     # TODA página que eu tocar: *"o espaço fica, mas o nome do canto muda: agora o
     # p3 e o p4 será P3 bolinha Desconectado, igual página gatilhos"*.
@@ -2139,7 +2225,7 @@ MIOLO = f'''
                   <colgroup><col data-coluna="controle"><col data-coluna="status"><col data-coluna="id"></colgroup>
                   <thead><tr>
                     <th title="O perfil guarda um ajuste por controle. Aqui você vê quais são só deste controle e quais vêm do perfil.">Controle{puxador("controle", "10-perfis.guarda")}</th>
-                    <th class="gd-pecas" title="Aceso: este perfil guarda um ajuste só deste controle. Apagado: ele usa o do perfil. São {QUANTAS_SECOES}: {_lista_das_secoes()}.">Status{puxador("status", "10-perfis.guarda")}</th>
+                    <th class="gd-pecas" title="{DICA_DO_STATUS} São {QUANTAS_SECOES}: {_lista_das_secoes()}.">Status{puxador("status", "10-perfis.guarda")}</th>
                     <th class="gd-id" title="O endereço de rádio do controle: é por ele que o perfil o reconhece, no cabo e no rádio.">ID da peça</th>
                   </tr></thead>
                   <tbody data-hef="guarda.linhas">
@@ -2492,6 +2578,23 @@ def _conferir(html: str) -> None:
     exigir(not com_dica,
            f"{len(com_dica)} célula(s) de `Ajuste próprio` voltaram a ter dica — "
            f'ela mandou as oito saírem: "Auto falante é auto falante, gatilho é gatilho"')
+
+    # AS QUATRO CAMADAS DE CADA CÉLULA — 02/10/2026. Uma camada com uma célula
+    # a menos desloca a distribuição dela inteira, como a `guarda.secao`.
+    for endereco in ("guarda.dica", "guarda.incerto", "guarda.proprio"):
+        quantas = html.count(f'data-hef="{endereco}"')
+        exigir(quantas == len(MESA) * len(SECOES),
+               f"não são {len(MESA) * len(SECOES)} células de `{endereco}`, e sim "
+               f"{quantas}")
+    # A DICA DA CÉLULA SÓ DIZ O QUE O PACOTE DIZ: o «não sei» ou a máscara.
+    dicas_das_celulas = re.findall(
+        r'<span class="gc" data-hef="guarda\.dica"[^>]*?title="([^"]*)"', html)
+    estranhas = [d for d in dicas_das_celulas if d != DICA_DO_NAO_DIZ
+                 and not re.fullmatch(re.escape(DICA_DA_MASCARA).replace(
+                     re.escape("{mascara}"), ".+"), d)]
+    exigir(not estranhas,
+           f"a célula da coluna «Status» ganhou uma dica que o pacote não "
+           f"escreve: {estranhas}")
 
     # O ALVO QUE DEIXA O PRODUTO ACENDER A CÉLULA. Sem ele o pintor escreve
     # `textContent` e apaga o glifo SVG de dentro do `<span>` — é o defeito que
@@ -3002,10 +3105,18 @@ def _conferir(html: str) -> None:
     exigir("controles com ajuste próprio" in html,
            "o contador do cabeçalho virou `status` — a troca é do RÓTULO da "
            "coluna, e a prosa continua nomeando a coisa")
-    exigir("guarda um ajuste só deste controle" in html,
-           "a dica do `<th>` mudou — ela é quem explica o que os ícones acesos "
-           "querem dizer, e encurtar o rótulo só funciona porque a explicação "
-           "tem outro dono")
+    # O SIGNIFICADO MUDOU EM 02/10/2026, e o rótulo não (A-ABA-PERFIS-DIZ-O-
+    # STATUS-DE-AGORA-01, «Ponto embaixo», decidido por ela em 29/09): o glifo
+    # diz o controle agora e o ponto diz o disco. A trava é a frase das DUAS
+    # camadas; a de antes («guarda um ajuste só deste controle») afirmaria o
+    # contrário do que a coluna pinta.
+    exigir(DICA_DO_STATUS in html,
+           "a dica do `<th>` não diz as duas camadas — ela é quem explica o que "
+           "o glifo aceso e o ponto embaixo querem dizer, e encurtar o rótulo só "
+           "funciona porque a explicação tem outro dono")
+    exigir("guarda um ajuste só deste controle" not in html,
+           "a frase do significado de antes voltou à página — a coluna pinta o "
+           "controle agora, e o disco é o ponto")
 
     # §5 — A LARGURA ARRASTADA. As TRÊS metades, e a primeira é a armadilha que
     # o próprio arquivo já registrava: com `table-layout:auto` a `width` é

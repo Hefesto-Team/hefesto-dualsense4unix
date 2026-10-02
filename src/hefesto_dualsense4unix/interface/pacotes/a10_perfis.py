@@ -848,7 +848,14 @@ SEM_ENDERECO = {
 #: **quem publica dá a baixa no mesmo commit.** Uma declaração que envelheceu é
 #: a régua se desligando sem ninguém decidir isso — a lista deixa de ser lida
 #: como fila e passa a ser lida como decoração.
-ESPERANDO_A_PUBLICACAO: dict[str, str] = {}
+ESPERANDO_A_PUBLICACAO: dict[str, str] = {
+    # A SÉTIMA CARGA, 02/10/2026 (A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01): a
+    # coluna «Status» ganhou o ponto embaixo do glifo, o tracejado do «não
+    # sei» e a dica da célula. Mudam pixel; o `--publicar 10` dá a baixa.
+    "guarda.proprio": "o ponto embaixo do glifo (o disco do perfil do editor)",
+    "guarda.incerto": "o tracejado da célula que o controle não responde",
+    "guarda.dica": "a dica da célula neutra e da máscara que não é a DualSense",
+}
 
 
 #: O FIM DA FRASE DA EXIGÊNCIA ESCONDIDA — decisão [02] do PO, 04/09/2026:
@@ -1066,7 +1073,7 @@ def _plastico(controle: dict[str, Any]) -> str:
         return ""
 
 
-def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _mesa_com_rotulo(mesa: list[dict[str, Any]], conectados: Any = ()) -> list[dict[str, Any]]:
     """A mesa no formato que `perfis_web.pacote_da_aba` DIZ esperar.
 
     FATO ERRADO, SUBSTITUÍDO — 02/09/2026. A docstring de
@@ -1094,7 +1101,8 @@ def _mesa_com_rotulo(mesa: list[dict[str, Any]]) -> list[dict[str, Any]]:
     `_linhas_da_guarda` lê `controle.get("plastico")` (`perfis_web.py:615`) e
     recebia `""` para todo controle, porque ninguém o punha aqui. Ver `_plastico`.
     """
-    return [{**c, "rotulo": _rotulo_curto(c), "plastico": _plastico(c)}
+    return [{**c, "rotulo": _rotulo_curto(c), "plastico": _plastico(c),
+             "entrada": _entrada_viva(conectados, str(c.get("uniq") or ""))}
             for c in mesa]
 
 
@@ -2071,7 +2079,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         escolhido = _escolhido([{"nome": x.name} for x in todos], ativo)
         alvo = find_by_slug(escolhido, todos)
         bruto = _tela.pacote_da_aba(todos, ativo=ativo or None,
-                                    mesa=_mesa_com_rotulo(ctx.mesa), editado=alvo)
+                                    mesa=_mesa_com_rotulo(ctx.mesa, getattr(ctx, "conectados", ())),
+                                    editado=alvo)
     except Exception:
         return {"sem_dono": {}, "cobertura": {"pintados": 0, "sem_dono": 1}}
 
@@ -2344,12 +2353,25 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # quatro linhas. O `forEach` escreve `''` no que sobra, o alvo `classe`
         # lê isso como apagado, e a linha vazia deixa de exibir o que o MOCKUP
         # guardava. É o mesmo tratamento que `guarda.nome` e `guarda.id` já dão.
+        # O GLIFO DIZ O CONTROLE AGORA, E O PONTO O DISCO — 02/10/2026
+        # (A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01, decidido por ela em 29/09:
+        # «Ponto embaixo»). `guarda.secao` sai de `o_agora_da_linha`, e o que
+        # o perfil do editor guarda só deste controle vai para `guarda.proprio`.
+        estado = getattr(ctx, "state", None) or {}
+        agora = [o_agora_da_linha(g, estado) for g in guarda]
+        vazio = [("", "") for _ in SECOES_DA_COLUNA]
+        celulas = [c for bloco in _com_os_lugares_vazios(agora, lambda _n: vazio)
+                   for c in bloco]
+        fora["guarda.secao"] = [valor for valor, _dica in celulas]
+        fora["guarda.incerto"] = ["sim" if valor == AGORA_NAO_DIZ else ""
+                                  for valor, _dica in celulas]
+        fora["guarda.dica"] = [dica for _valor, dica in celulas]
         por_linha = [
             ["sim" if (g.get("secoes") or {}).get(secao) else ""
              for secao in SECOES_DA_COLUNA]
             for g in guarda
         ]
-        fora["guarda.secao"] = [
+        fora["guarda.proprio"] = [
             valor
             for bloco in _com_os_lugares_vazios(
                 por_linha, lambda _n: ["" for _ in SECOES_DA_COLUNA])
@@ -4348,3 +4370,187 @@ SEM_ECO = ("selecionar", "editor.nome", "editor.ambiente", "editor.jogo",
            # `gui_preferences.json`, que é da JANELA. Nenhuma das 49 chaves do
            # `state_full` muda quando ela arrasta uma divisa.
            "procurar", "ordenar", "largura-da-coluna")
+
+
+# ---------------------------------------------------------------------------
+# A COLUNA «STATUS» DIZ O CONTROLE DE AGORA — A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01
+# ---------------------------------------------------------------------------
+#: O que a célula diz quando o dono não respondeu: nem acesa nem apagada. É o
+#: «não sei» da casa, e o alvo `classe` o lê como apagado (`ligado('—')` é
+#: falso) — a página publicada antes do `--publicar 10` mostra apagado, nunca
+#: aceso.
+AGORA_NAO_DIZ = TRAVESSAO
+
+#: A dica da célula neutra, e a da máscara que não é a DualSense (decisão dela
+#: de 29/09, pergunta [40]: «Aceso no DualSense», com a dica dizendo qual).
+DICA_DO_NAO_DIZ = "O controle não diz."
+DICA_DA_MASCARA = "Máscara: {mascara}."
+
+
+def _luz_agora(entrada: dict[str, Any], state: dict[str, Any], _linha: dict[str, Any]
+               ) -> bool | None:
+    """A barra acesa, pela regra do cartão (`controller_card.rotulo_lightbar`).
+
+    Quem traduz o rótulo em aceso, apagado ou incerto é a aba Iluminação
+    (`a04_iluminacao.estado_da_tira`), e é ela que se pergunta aqui.
+    """
+    from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
+
+    from . import a04_iluminacao
+
+    estado = a04_iluminacao.estado_da_tira(rotulo_lightbar(entrada, state)[0])
+    if estado == a04_iluminacao.ACESA:
+        return True
+    return False if estado == a04_iluminacao.APAGADA else None
+
+
+def _gatilhos_agora(_entrada: dict[str, Any], _state: dict[str, Any],
+                    _linha: dict[str, Any]) -> bool | None:
+    """Sempre `None`: o daemon não publica o efeito do gatilho por controle.
+
+    Medido em 02/10/2026 no `state_full`: nenhuma chave `trigger_*` por
+    controle (o `trigger_replicas` é a contagem da réplica do pad virtual), e
+    o DualSense não devolve o efeito (`a03_gatilhos.SEM_ECO`). A publicação
+    vira sprint própria; até lá a célula fica neutra, e o disco não a
+    preenche.
+    """
+    return None
+
+
+def _vibracao_agora(_entrada: dict[str, Any], state: dict[str, Any],
+                    linha: dict[str, Any]) -> bool | None:
+    """Um motor deste controle acima de zero (`a05_vibracao._barras_dos_motores`).
+
+    Sem o mapa `rumble_motores` no `state_full` (daemon velho), a força que o
+    dono devolveria seria o padrão do esquema, e não uma leitura: neutro.
+    """
+    if not isinstance(state.get("rumble_motores"), dict):
+        return None
+    from . import a05_vibracao
+
+    barras = a05_vibracao._barras_dos_motores(state, str(linha.get("uniq") or ""))
+    return any(valor > 0 for valor in barras.values())
+
+
+def _alto_falante_agora(entrada: dict[str, Any], _state: dict[str, Any],
+                        _linha: dict[str, Any]) -> bool | None:
+    """Ligado e sem mudo (`controller_card.speaker_do_entry`)."""
+    from hefesto_dualsense4unix.app.widgets.controller_card import speaker_do_entry
+
+    lido = speaker_do_entry(entrada)
+    if lido is None:
+        return None
+    volume, mudo = lido
+    if mudo is True or volume == 0:
+        return False
+    return None if mudo is None else True
+
+
+def _microfone_agora(entrada: dict[str, Any], _state: dict[str, Any],
+                     _linha: dict[str, Any]) -> bool | None:
+    """Aberto, pelas quatro faces (`a02_controles._faces_do_microfone`).
+
+    A ordem é a do selo da aba Controles: quem diz calado ganha de quem não
+    foi lido.
+    """
+    audio = entrada.get("audio")
+    if not isinstance(audio, dict):
+        return None
+    from . import a02_controles
+
+    calado, nao_sei = a02_controles._faces_do_microfone(audio)
+    if calado:
+        return False
+    return None if nao_sei else True
+
+
+def _sensores_agora(entrada: dict[str, Any], _state: dict[str, Any],
+                    _linha: dict[str, Any]) -> bool | None:
+    """Giroscópio ou acelerômetro ligado (`a02_controles._sensor_ligado`)."""
+    from . import a02_controles
+
+    lidos = [a02_controles._sensor_ligado(entrada, qual)
+             for qual in ("giroscopio", "acelerometro")]
+    if any(valor is True for valor in lidos):
+        return True
+    return False if all(valor is False for valor in lidos) else None
+
+
+def _mascara_agora(_entrada: dict[str, Any], _state: dict[str, Any],
+                   linha: dict[str, Any]) -> bool | None:
+    """A máscara deste controle é a DualSense (`mesa_viva.NOME_DA_MASCARA`)."""
+    import mesa_viva
+
+    mascara = str(linha.get("mascara") or "")
+    if mascara in ("", TRAVESSAO):
+        return None
+    return mascara == str(mesa_viva.NOME_DA_MASCARA["dualsense"])
+
+
+def _comandos_virtuais_agora(entrada: dict[str, Any], _state: dict[str, Any],
+                             _linha: dict[str, Any]) -> bool | None:
+    """Mira, toque ou inclinação ligados (`a02_controles._mira_ligada` e
+    `_destino_da_mira`, contra `roteador_de_movimento.DESTINO_NENHUM`)."""
+    from hefesto_dualsense4unix.core import roteador_de_movimento as rot
+
+    from . import a02_controles
+
+    ligada = a02_controles._mira_ligada(entrada)
+    if ligada is None:
+        return None
+    destinos = [a02_controles._destino_da_mira(entrada, chave)
+                for chave in ("toque", "inclinacao")]
+    return ligada or any(d not in (None, rot.DESTINO_NENHUM) for d in destinos)
+
+
+#: Quem responde cada célula, por seção da coluna. A régua cobra que toda seção
+#: de `SECOES_DA_COLUNA` tenha um.
+QUEM_DIZ_O_AGORA: dict[str, Callable[[dict[str, Any], dict[str, Any], dict[str, Any]],
+                                     bool | None]] = {
+    "leds": _luz_agora,
+    "triggers": _gatilhos_agora,
+    "rumble": _vibracao_agora,
+    "speaker": _alto_falante_agora,
+    "mic": _microfone_agora,
+    "sensores": _sensores_agora,
+    "mascara": _mascara_agora,
+    "movimento": _comandos_virtuais_agora,
+}
+
+
+def o_agora_da_linha(linha: dict[str, Any], state: dict[str, Any]
+                     ) -> list[tuple[str, str]]:
+    """`(valor, dica)` de cada célula da linha, na ordem de `SECOES_DA_COLUNA`.
+
+    O valor é `"sim"` (aceso), `""` (apagado) ou `AGORA_NAO_DIZ`. A entrada
+    é a do daemon para este `uniq` (`perfis_web._linhas_da_guarda` a traz);
+    sem ela, nenhuma célula afirma nada.
+    """
+    entrada = linha.get("entrada")
+    fora: list[tuple[str, str]] = []
+    for secao in SECOES_DA_COLUNA:
+        dono = QUEM_DIZ_O_AGORA.get(secao)
+        if not isinstance(entrada, dict) or not entrada or dono is None:
+            fora.append((AGORA_NAO_DIZ, DICA_DO_NAO_DIZ))
+            continue
+        aceso = dono(entrada, state, linha)
+        if aceso is None:
+            fora.append((AGORA_NAO_DIZ, DICA_DO_NAO_DIZ))
+        elif secao == "mascara" and not aceso:
+            fora.append(("", DICA_DA_MASCARA.format(mascara=linha.get("mascara"))))
+        else:
+            fora.append(("sim" if aceso else "", ""))
+    return fora
+
+
+def _entrada_viva(conectados: Any, uniq: str) -> dict[str, Any]:
+    """A entrada do daemon deste `uniq` (`Contexto.conectados`), ou `{}`.
+
+    É a pergunta de `Contexto.por_uniq`, feita sobre a lista e não sobre o
+    contexto: um dublê de contexto sem `conectados` responde `{}`, e a célula
+    fica no «não sei» em vez de derrubar a aba.
+    """
+    for entrada in conectados or ():
+        if isinstance(entrada, dict) and str(entrada.get("uniq") or "") == uniq:
+            return entrada
+    return {}

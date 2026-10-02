@@ -206,6 +206,12 @@ def test_cada_celula_da_guarda_diz_o_que_o_disco_guarda(
     MORDIDA: troque `for g in guarda for secao in SECOES_DA_COLUNA` por
     `for secao in SECOES_DA_COLUNA for g in guarda` em `a10_perfis.pacote` — a
     lista continua com dez valores e este teste reprova nomeando a célula.
+
+    O DISCO É O PONTO DESDE 02/10/2026 (A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01):
+    o glifo (`guarda.secao`) passou a dizer o controle agora, e o que o perfil
+    guarda só deste controle é o `guarda.proprio`, uma célula por seção na
+    mesma ordem. A régua mede o ponto; na página publicada ele espera o
+    `--publicar 10` (`a10_perfis.ESPERANDO_A_PUBLICACAO`).
     """
     guardado = {MESA[0]["uniq"]: ["leds", "rumble"], MESA[1]["uniq"]: ["triggers"]}
     if not publicado:
@@ -219,8 +225,16 @@ def test_cada_celula_da_guarda_diz_o_que_o_disco_guarda(
             s for s in perfis_web.SECOES_POR_CONTROLE
             if s in perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA))
     fora = _emitido(_perfil(guardado))
-    celulas = _celulas_da_guarda(_pagina(publicado))
-    acesos = _distribuir(fora["guarda.secao"], celulas)
+    html = _pagina(publicado)
+    if 'data-hef="guarda.proprio"' not in html:
+        assert publicado and "guarda.proprio" in a10_perfis.ESPERANDO_A_PUBLICACAO, (
+            "a página não tem o ponto do disco (`guarda.proprio`), e ele não está "
+            "declarado à espera da publicação")
+        return
+    celulas = _celulas_da_guarda(html)
+    assert html.count('data-hef="guarda.proprio"') == len(celulas), (
+        "o ponto do disco não tem uma célula por seção, na ordem do glifo")
+    acesos = _distribuir(fora["guarda.proprio"], celulas)
 
     # O QUE O DISCO DIZ, POR LINHA — e a ordem das linhas é a da MESA, que é a
     # que `perfis_web._linhas_da_guarda` percorre.

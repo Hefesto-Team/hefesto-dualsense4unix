@@ -615,6 +615,8 @@ def _linhas_da_guarda(mesa: list[dict[str, Any]], profile: Any) -> list[dict[str
                 "nome": str(controle.get("rotulo") or ""),
                 "secoes": secoes,
                 "dica": f"{controle.get('nome') or '—'} — {quanto}.",
+                "entrada": dict(controle.get("entrada") or {}),
+                "mascara": str(controle.get("mascara") or ""),
             }
         )
     return linhas
@@ -662,7 +664,7 @@ def pacote_da_aba(
         alvo = perfis[0]
 
     mesa_de_agora = list(mesa or [])
-    guarda = _linhas_da_guarda(mesa_de_agora, alvo) if alvo is not None else []
+    guarda = _linhas_da_guarda(mesa_de_agora, alvo)
     com_ajuste = sum(
         1 for linha in guarda if any(linha["secoes"].get(s) for s in SECOES_NA_TELA))
 

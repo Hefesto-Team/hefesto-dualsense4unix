@@ -14,6 +14,11 @@ FILHOS-ELEMENTO apaga todos eles::
     guarda.secao           <span>   16 vezes 2   o glifo SVG de cada seção
     editor.prioridade.dica <span>    2 filhos   o TRILHO e o número ao lado
 
+(Medido em 02/09. Desde 02/10/2026 cada célula da coluna «Status» tem quatro
+endereços: `guarda.dica` por fora, `guarda.secao` dentro dele, `guarda.incerto`
+em volta dos glifos e `guarda.proprio` ao lado; os quatro declaram alvo que não escreve texto, e a
+régua abaixo os cobre do mesmo jeito.)
+
 A régua é geral e mecânica, e é o que a torna útil fora desta aba: **todo
 endereço que o pacote emite tem de ser pintável na página PUBLICADA** — sem
 ESTRUTURA dentro, ou então com um ``data-hef-alvo`` que não escreva

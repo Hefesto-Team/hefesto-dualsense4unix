@@ -166,10 +166,14 @@ def test_o_produto_acende_a_celula_do_controle_certo() -> None:
     Ela mede as duas metades de uma vez — que o endereço SAI do pacote (se
     voltar a `NAO_PINTAVEIS`, não sai) e que ele sai com os ESTADOS, não com os
     nomes das seções.
+
+    O ENDEREÇO É O PONTO DESDE 02/10/2026 (A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01):
+    o glifo (`guarda.secao`) diz o controle agora, e o disco do perfil virou o
+    ponto embaixo dele (`guarda.proprio`). A pergunta desta régua não mudou.
     """
-    emitido = _emitidos().get("guarda.secao")
+    emitido = _emitidos().get("guarda.proprio")
     assert emitido is not None, (
-        "`guarda.secao` não é emitido: a coluna `Ajuste próprio` voltou a ser "
+        "`guarda.proprio` não é emitido: o ponto do disco voltou a ser "
         "desenho. Se ele foi devolvido a `NAO_PINTAVEIS`, o motivo tem de estar "
         "escrito lá — o alvo `classe` existe no piloto desde 03/09/2026.")
 

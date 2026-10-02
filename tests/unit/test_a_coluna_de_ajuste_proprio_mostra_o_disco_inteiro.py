@@ -94,13 +94,18 @@ MENOR_CORPO: dict[str, Any] = {
 #: ``alvos.forEach(function(el, i){ escrever(el, i < v.length ? v[i] : ''); })``.
 #: Ela é chamada pelo ``BOOTSTRAP`` de verdade — o texto abaixo só ENTREGA a
 #: carga e LÊ o DOM depois.
-LER_AS_CELULAS = """
+#:
+#: O QUE SE LÊ É O PONTO desde 02/10/2026 (A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01):
+#: o glifo diz o controle agora, e o que o perfil guarda só deste controle é o
+#: ponto (`guarda.proprio`) do mesmo `.gc`. A seção é a do glifo ao lado.
+LER_OS_PONTOS = """
 () => {
   const linhas = [];
   for (const tr of document.querySelectorAll(
          'tbody[data-hef="guarda.linhas"] tr')) {
-    linhas.push([...tr.querySelectorAll('[data-hef="guarda.secao"]')].map(
-      el => [el.dataset.hefSecao, el.classList.contains('on')]));
+    linhas.push([...tr.querySelectorAll('.gc')].map(gc => [
+      gc.querySelector('[data-hef="guarda.secao"]').dataset.hefSecao,
+      gc.querySelector('[data-hef="guarda.proprio"]').classList.contains('on')]));
   }
   return linhas;
 }
@@ -232,9 +237,14 @@ def test_uma_secao_guardada_acende_uma_celula_so_e_na_linha_dela(
     e cada um afirma o endereço EXATO do que acendeu.
 
     O CAMINHO É O DO PRODUTO, inteiro: ``pacote()`` monta a lista achatada, o
-    ``BOOTSTRAP`` de verdade a distribui pelos ``[data-hef="guarda.secao"]`` na
+    ``BOOTSTRAP`` de verdade a distribui pelos ``[data-hef="guarda.proprio"]`` na
     ordem do documento, e o alvo ``classe`` decide quem fica ``.on``. Nada aqui
     reimplementa a pintura.
+
+    O ENDEREÇO MUDOU EM 02/10/2026 (A-ABA-PERFIS-DIZ-O-STATUS-DE-AGORA-01): o
+    disco é o ponto embaixo do glifo. Enquanto o ponto espera o `--publicar 10`
+    (`a10_perfis.ESPERANDO_A_PUBLICACAO`), a régua mede a página do gerador; no
+    dia da publicação ela passa sozinha para a publicada.
     """
     from playwright.sync_api import sync_playwright
 
@@ -244,9 +254,11 @@ def test_uma_secao_guardada_acende_uma_celula_so_e_na_linha_dela(
         f"atravessa este arquivo sem ser medida")
     fora = _emitidos(monkeypatch, str(MESA[linha]["uniq"]),
                      **{secao: MENOR_CORPO[secao]})
-    carga = {"mesa": {"guarda.secao": fora["guarda.secao"]}}
+    carga = {"mesa": {"guarda.proprio": fora["guarda.proprio"]}}
 
-    pagina = onde.pagina("10-perfis.html", publicado=True)
+    pagina = onde.pagina(
+        "10-perfis.html",
+        publicado="guarda.proprio" not in a10_perfis.ESPERANDO_A_PUBLICACAO)
     with sync_playwright() as pw:
         navegador = pw.chromium.launch(
             executable_path=str(CHROME), args=["--no-sandbox"])
@@ -261,7 +273,7 @@ def test_uma_secao_guardada_acende_uma_celula_so_e_na_linha_dela(
                 "{postMessage: function(){}}}};")
             pg.evaluate(_bootstrap())
             pg.evaluate("(p) => window.__hef.pintar(p)", carga)
-            linhas = pg.evaluate(LER_AS_CELULAS)
+            linhas = pg.evaluate(LER_OS_PONTOS)
         finally:
             navegador.close()
 
