@@ -384,3 +384,59 @@ def test_a_roda_do_ps_e_d_pad_nao_passa_pelo_freestyle(aceso: bool, sentido: int
     assert set(vistos) == {AVATAR, OUTRO}, vistos
     assert store.freestyle_ligado is False
 
+
+def test_a_tui_sem_daemon_nao_lista_o_freestyle(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A TUI com o daemon fora do ar lê o disco, e lê a mesma oferta do daemon.
+
+    Conferência de 02/10/2026. MORDIDA: troque o `os_perfis_de_escolher(
+    load_all_profiles())` da reserva de `tui.app.fetch_daemon_snapshot` por
+    `load_all_profiles()` e o Freestyle volta à tabela.
+    """
+    from hefesto_dualsense4unix.cli import ipc_client
+    from hefesto_dualsense4unix.tui.app import fetch_daemon_snapshot
+
+    def _fora_do_ar(*_a: Any, **_k: Any) -> Any:
+        raise FileNotFoundError("sem socket nesta régua")
+
+    _o_disco()
+    monkeypatch.setattr(ipc_client.IpcClient, "connect", _fora_do_ar)
+
+    retrato = asyncio.run(fetch_daemon_snapshot())
+
+    nomes = [p["name"] for p in retrato.profiles]
+    assert retrato.online is False
+    assert AVATAR in nomes
+    assert FREESTYLE not in nomes, nomes
+
+
+@pytest.mark.parametrize("perfis", [[], [{"name": AVATAR}]], ids=["maquina-nova", "com-perfil"])
+def test_o_doctor_nao_acusa_a_maquina_nova(
+    perfis: list[dict[str, str]], monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Na máquina nova o `profile.list` é vazio (só o Freestyle, que não é oferta).
+
+    Conferência de 02/10/2026: o `doctor` dizia «nenhum perfil listado pelo
+    daemon» como aviso, e na máquina nova isso passou a ser o estado certo.
+
+    MORDIDA: devolva o `[WARN]` para a lista vazia e a célula `maquina-nova`
+    reprova.
+    """
+    from hefesto_dualsense4unix.cli import cmd_doctor
+
+    class _Cliente:
+        async def __aenter__(self) -> _Cliente:
+            return self
+
+        async def __aexit__(self, *_a: Any) -> None:
+            return None
+
+        async def call(self, metodo: str, *_a: Any, **_k: Any) -> dict[str, Any]:
+            return {"profiles": perfis} if metodo == "profile.list" else {"paused": False}
+
+    monkeypatch.setattr(cmd_doctor.IpcClient, "connect", lambda *_a, **_k: _Cliente())
+
+    linhas = asyncio.run(cmd_doctor._daemon_checks())
+
+    assert ("[ OK ]", f"perfis listáveis via IPC ({len(perfis)})") in linhas, linhas
+    assert not any(tag == "[WARN]" for tag, _m in linhas), linhas
+

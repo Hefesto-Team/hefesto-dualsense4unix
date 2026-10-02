@@ -59,11 +59,14 @@ async def fetch_daemon_snapshot() -> DaemonSnapshot:
                 profiles=profiles.get("profiles", []),
             )
     except (FileNotFoundError, ConnectionError, OSError):
-        # Daemon offline: carrega perfis direto do disco.
+        # Daemon offline: carrega perfis direto do disco — os mesmos que o
+        # `profile.list` do daemon oferece, sem o Freestyle (a ordem dela de
+        # 02/10/2026: ele é o botão «Modo Freestyle», e não um perfil a escolher).
         from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+        from hefesto_dualsense4unix.profiles.manager import os_perfis_de_escolher
 
         try:
-            profiles_raw = load_all_profiles()
+            profiles_raw = os_perfis_de_escolher(load_all_profiles())
             profiles = [
                 {
                     "name": p.name,

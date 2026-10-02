@@ -68,12 +68,17 @@ async def _daemon_checks() -> list[tuple[str, str]]:
                 rows.append(
                     ("[WARN]", "daemon PAUSADO — input suspenso ('daemon resume' p/ retomar)")
                 )
+            # O `profile.list` responde os perfis A ESCOLHER, sem o Freestyle
+            # (a ordem dela de 02/10/2026). Numa máquina nova o Freestyle é o
+            # único perfil do install, e a lista vazia é o estado certo: a
+            # pergunta aqui é se o IPC responde, e uma resposta sem a chave é
+            # que é o defeito.
             profiles = await client.call("profile.list")
-            count = len(profiles.get("profiles", [])) if isinstance(profiles, dict) else 0
-            if count > 0:
-                rows.append(("[ OK ]", f"perfis listáveis via IPC ({count})"))
+            lista = profiles.get("profiles") if isinstance(profiles, dict) else None
+            if isinstance(lista, list):
+                rows.append(("[ OK ]", f"perfis listáveis via IPC ({len(lista)})"))
             else:
-                rows.append(("[WARN]", "nenhum perfil listado pelo daemon"))
+                rows.append(("[WARN]", "o daemon não respondeu a lista de perfis"))
     except (FileNotFoundError, ConnectionError, IpcError):
         rows.append(("[WARN]", "daemon offline — checks de runtime pulados"))
     return rows
