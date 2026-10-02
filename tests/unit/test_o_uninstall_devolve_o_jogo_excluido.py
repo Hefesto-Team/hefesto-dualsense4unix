@@ -62,9 +62,10 @@ _LUTRIS = "net.lutris.Lutris"
 
 
 def _nossas() -> set[str]:
+    """A ponte e as correções que a carona leva junto (o `PROTON_USE_XALIA`)."""
     from hefesto_dualsense4unix.daemon.launch_env import ENV_ALLOWLIST
 
-    return set(ENV_ALLOWLIST)
+    return set(ENV_ALLOWLIST) | {k for k, _ in cpe.CORRECOES_DA_CARONA}
 
 
 def _md5(caminho: Path) -> str:
