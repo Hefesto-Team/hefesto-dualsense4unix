@@ -1081,6 +1081,20 @@ class TestODiarioDizACarta:
         daemon._gamepad_device = _PadDoRoxo("uinput", caminho="xbox")
         assert _jogadores_sem_imu(daemon) == ["1", str(CARTA_DO_ROXO)]
 
+    def test_o_canal_sem_imu_do_posto_diz_a_carta_de_quem_o_alimenta(
+        self, coop_do_roxo: Any
+    ) -> None:
+        """O roxo cedido ao posto do P1 (o primário é ele): a lista do
+        ``canal_sem_imu`` diz a carta dele, e não um «1» fixo. Conferência de
+        02/10: a mordida «o primário sempre 1» passava sem esta."""
+        from hefesto_dualsense4unix.daemon.launch_env import _jogadores_sem_imu
+
+        coop = coop_do_roxo
+        daemon = coop._daemon
+        daemon.controller.primary_uniq = P4
+        daemon._gamepad_device = _PadDoRoxo("uinput", caminho="xbox")
+        assert _jogadores_sem_imu(daemon) == [str(CARTA_DO_ROXO)]
+
 
 # ---------------------------------------------------------------------------
 # Régua 6 — o número que o jogo escreveu, a cada mudança (a cura 3, 02/10/2026)
