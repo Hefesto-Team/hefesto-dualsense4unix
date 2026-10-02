@@ -3839,6 +3839,12 @@ class Piloto:
         if not nova or (nova == self.pagina and self.pronto):
             self._a_mesma_recarregou(nova)
             return
+        # O CLIQUE NA TIRA TAMBÉM É TROCAR DE PÁGINA (02/10/2026): o link da aba
+        # carrega a página sem passar pelo `_ir`, e o teste ligado na 05 seguia
+        # batendo o coração nas outras abas, com o controle vibrando. Largar o
+        # que já está solto é inócuo, então a volta pelo `_ir` larga duas vezes.
+        if nova != self.pagina:
+            pacotes.largar_o_que_as_abas_seguram(ponte)
         self.pagina = nova
         if nova not in self.visitadas:
             self.visitadas.append(nova)
