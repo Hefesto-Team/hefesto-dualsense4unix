@@ -357,7 +357,7 @@ def tela() -> Any:
     sys.path.insert(0, str(RAIZ / "scripts"))
     import regua_de_tela
 
-    from hefesto_dualsense4unix.gui.ponte_da_tela import FOLHA_DA_CASA
+    from hefesto_dualsense4unix.interface.folha_da_casa import FOLHA_DA_CASA
 
     t = regua_de_tela.Tela(onde.BANCADA / "10-perfis.html", titulo_esperado="Hefesto",
                            largura=1280, altura=900)
