@@ -181,7 +181,8 @@ def test_sem_escolha_dela_a_caixa_da_busca_abre(
         for _ in range(TIQUES):
             assert bancada.cena()["aberto"] == id_da_tela(onde_busca)
         cartao = _cartao(bancada.tique()["radio-sala"], id_da_tela(onde_busca))
-        assert "aberto" in cartao.split('"', 2)[1] and "Segure PS + Create" in cartao
+        classes = cartao.split('"', 2)[1].split()
+        assert "aberto" in classes and "buscando" in classes and "Segure PS + Create" in cartao
     finally:
         busca.soltar()
         bancada.fechar()
@@ -207,11 +208,18 @@ def test_ela_fecha_a_caixa_da_busca_e_a_espera_fica_no_cabecalho(
         bancada.gesto("abrir-adaptador", alvo=id_da_tela(onde_busca))
         for _ in range(TIQUES):
             assert bancada.cena()["aberto"] is None, "a caixa da busca abriu por cima dela"
-        cartao = _cartao(bancada.tique()["radio-sala"], id_da_tela(onde_busca))
+        campos = bancada.tique()
+        cartao = _cartao(campos["radio-sala"], id_da_tela(onde_busca))
         classes = cartao.split('"', 2)[1].split()
-        assert "aberto" not in classes and "esperando" in classes
+        # A BUSCA É A CLASSE `buscando`, acesa pela lista `radio-conectando`
+        # (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 2): a pílula mora sempre
+        # no cabeçalho, e a folha a mostra só na caixa que busca.
+        assert "aberto" not in classes and "buscando" in classes
         topo = cartao[:cartao.index('<div class="aparelhos"')]
-        assert '<span class="espera"' in topo and "Segure PS + Create" in topo
+        assert '<span class="espera busca"' in topo and "Segure PS + Create" in topo
+        ids = [lug["id"] for lug in a08._CENA_NA_TELA["lugares"]]
+        assert campos["radio-conectando"] == [
+            "sim" if lid == id_da_tela(onde_busca) else "" for lid in ids]
     finally:
         busca.soltar()
         bancada.fechar()

@@ -31,6 +31,7 @@ Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
 
 from __future__ import annotations
 
+import re
 import time
 from collections.abc import Iterator
 from pathlib import Path
@@ -439,6 +440,8 @@ def a08(monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setattr(a08_conexoes, "_FUNDO", {})
     monkeypatch.setattr(a08_conexoes, "_ABERTO", {})
     monkeypatch.setattr(a08_conexoes, "_CENA_NA_TELA", {})
+    monkeypatch.setattr(a08_conexoes, "_SALA_NA_TELA", {})
+    monkeypatch.setattr(a08_conexoes, "_CHEGADAS", {})
     monkeypatch.setattr(a08_conexoes, "_mesa_do_radio", lambda recarregar=False: Mesa())
     monkeypatch.setattr(a08_conexoes, "_ler_o_historico", lambda: {})
     return a08_conexoes
@@ -612,8 +615,13 @@ def test_o_teclado_esperando_nao_pede_ps_create_nem_veste_dualsense(
     assert "PS + Create" not in linha
     assert "ponha o teclado para parear" in linha
     centro = next(lug for lug in cena["lugares"] if lug["id"] == _id(ADAPTADORES_DA_TELA[2]))
+    assert not centro.get("conectando"), "a régua precisa da caixa sem a busca do «Conectar»"
+    # A PÍLULA DA BUSCA MORA SEMPRE NO CABEÇALHO, escondida pela folha até a
+    # caixa estar `buscando` (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 2): o que
+    # se lê no cabeçalho desta caixa, que não busca, é a espera do teclado.
     topo = a08._marcas_de_onde(centro, cena)
-    assert "PS + Create" not in topo and "#rd-teclado" in topo
+    visivel = topo.replace(re.search(r'<span class="espera busca".*?</span>', topo).group(0), "")
+    assert "PS + Create" not in visivel and "#rd-teclado" in visivel
 
 
 @pytest.mark.parametrize(("modalias", "gesto"), [
@@ -650,6 +658,11 @@ def test_o_teclado_de_baixo_consumo_tem_o_desenho_do_teclado(
     deriva da ``Appearance``. Ligado, na lista do «Conectar» ou num celular
     que o produto não conhece (o genérico), cada um com o desenho que é dele.
 
+    O PAINEL DO «CONECTAR» É LIDO COM O CHIP NA DIREITA (o ``hci1`` desta
+    mesa), o adaptador em que o mouse e o celular estão: a lista do painel é a
+    do adaptador do chip aceso (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 3),
+    e com o chip noutro adaptador ela não teria os dois.
+
     MORDIDA: faça ``_tipo_do_aparelho`` ignorar o ``Icon`` — o teclado volta
     ao desenho genérico e esta régua reprova.
     """
@@ -662,7 +675,9 @@ def test_o_teclado_de_baixo_consumo_tem_o_desenho_do_teclado(
         _objeto(2, "aa:bb:cc:00:00:6f", nome="Fone", conectado=True, classe=0x240404),
     )
     _montar(a08, monkeypatch, aparelhos=aparelhos)
+    a08._ABERTO["lugar"] = _id(ADAPTADORES_DA_TELA[1])
     cena = _cena(a08, _estado({VERMELHO: 0}))
+    assert cena["destino_do_conectar"] == _id(ADAPTADORES_DA_TELA[1])
     tipos = {a["id"]: a["tipo"] for a in cena["aparelhos"]}
     assert tipos[_id(TECLADO)] == "teclado"
     assert tipos[_id("aa:bb:cc:00:00:6f")] == "fone"
@@ -964,7 +979,9 @@ def test_a_caixa_de_quem_espera_o_gesto_abre_sozinha(
     cena = _cena(a08, _estado({AZUL: 0}, central={"movimentos": [mover], "proposta": None}))
     assert cena["aberto"] == _id(alvo)
     cartao = a08.html_do_lugar(next(lug for lug in cena["lugares"] if lug["id"] == _id(alvo)), cena)
-    assert "aberto" in cartao.split('"', 2)[1] and "Segure PS + Create" in cartao
+    # a fala da LINHA que espera (a pílula da busca mora em toda caixa, escondida)
+    assert ("aberto" in cartao.split('"', 2)[1]
+            and '<span class="segure">Segure PS + Create</span>' in cartao)
     # acabou: volta a ser a escolha dela (nenhuma, e ninguém passou do limite)
     assert _cena(a08, _estado({AZUL: 0}))["aberto"] is None
 

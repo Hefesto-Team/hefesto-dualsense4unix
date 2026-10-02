@@ -451,9 +451,7 @@ def test_a_tela_mostra_a_busca_no_adaptador_do_chip(
         assert cena["aberto"] == cena["destino_do_conectar"] == id_da_tela(chip)
         acesos = [lid for aceso, lid in CHIP.findall(campos["radio-moldes"]) if aceso == "true"]
         assert acesos == [id_da_tela(chip)]
-        for adaptador in TRES:
-            cartao = _cartao(campos["radio-sala"], id_da_tela(adaptador))
-            assert ("Segure PS + Create" in cartao) == (adaptador == chip), adaptador
+        _a_busca_acende_so_no(campos, a08, chip)
     finally:
         busca.soltar()
         bancada.fechar()
@@ -976,9 +974,7 @@ def test_o_clique_de_volta_pela_tela_desfaz_o_pedido_que_a_busca_ainda_nao_levou
         # O fio ainda não levou o pedido (a espera está presa): o tique da tela
         # já diz a busca indo para o chip, e só nele.
         campos = bancada.tique()
-        for adaptador in TRES:
-            cartao = _cartao(campos["radio-sala"], id_da_tela(adaptador))
-            assert ("Segure PS + Create" in cartao) == (adaptador == chip), adaptador
+        _a_busca_acende_so_no(campos, a08, chip)
 
         assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca)) == {
             "armou": True}
@@ -993,6 +989,18 @@ def test_o_clique_de_volta_pela_tela_desfaz_o_pedido_que_a_busca_ainda_nao_levou
     finally:
         busca.soltar()
         bancada.fechar()
+
+
+def _a_busca_acende_so_no(campos: dict[str, Any], a08: Any, adaptador: str) -> None:
+    """A pílula «Segure PS + Create» mora em toda caixa, escondida, e acende só
+    na que busca: pela lista `radio-conectando` e pela classe `buscando` com que
+    a caixa nasce (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 2)."""
+    ids = [lug["id"] for lug in a08._CENA_NA_TELA["lugares"]]
+    assert campos["radio-conectando"] == [
+        "sim" if lid == id_da_tela(adaptador) else "" for lid in ids]
+    for outro in TRES:
+        cartao = _cartao(campos["radio-sala"], id_da_tela(outro))
+        assert ("buscando" in cartao.split('"', 2)[1].split()) == (outro == adaptador), outro
 
 
 def _o_bluetoothd_sai(mundo: rm.RadioDeMentira) -> None:

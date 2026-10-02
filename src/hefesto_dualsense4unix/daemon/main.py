@@ -144,8 +144,13 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
     daemon = Daemon(controller=controller, config=config)
 
     logger.info("daemon_main", fake=os.getenv("HEFESTO_DUALSENSE4UNIX_FAKE") == "1")
+    # O LAÇO QUE PARA SE DENUNCIA (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 6):
+    # em 30/09 ele parou 3 min 30 s calado, e só o SIGKILL do install o tirou
+    # dali. A vigia escreve `laco_parado` e a pilha de todos os fios no diário.
+    from hefesto_dualsense4unix.daemon.subsystems.vigia_do_laco import vigiado
+
     try:
-        asyncio.run(daemon.run())
+        asyncio.run(vigiado(daemon.run()))
         return 0
     except KeyboardInterrupt:
         logger.info("daemon_interrupted")

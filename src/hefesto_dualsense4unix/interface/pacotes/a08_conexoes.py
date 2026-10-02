@@ -2871,8 +2871,97 @@ def _gabinete(recarregar: bool = False) -> Any:
     return _GABINETE
 
 
+#: O TIQUE DA 08 QUE PASSA DISTO DIZ ONDE GASTOU — O-CONECTAR-ABRE-INTEIRO-
+#: TODA-VEZ-01, cura 5. Medido no ``interface.log`` dela (29/09 18h11 → 30/09
+#: 01h58): 90 dos 94 ``[tique lento]`` da noite eram desta aba, inclusive com
+#: ela parada, e a bancada não os reproduz (o pacote inteiro custa 5 a 8 ms
+#: nela). A linha é o instrumento, e fica depois de qualquer cura.
+TIQUE_LENTO_DA_08_MS = 50.0
+#: Os segundos de coleta de lixo somados desde que o olho ligou, em qualquer
+#: fio (o ``gc`` roda um de cada vez, segurando o GIL).
+_COLETA = [0.0]
+_COMECO_DA_COLETA: dict[int, float] = {}
+
+
+def _olho_da_coleta(fase: str, _info: dict[str, Any]) -> None:
+    """``gc.callbacks``: soma o tempo de cada coleta, em qualquer fio."""
+    if fase == "start":
+        _COMECO_DA_COLETA[threading.get_ident()] = time.perf_counter()
+        return
+    comeco = _COMECO_DA_COLETA.pop(threading.get_ident(), None)
+    if comeco is not None:
+        _COLETA[0] += time.perf_counter() - comeco
+
+
+class _MedidaDoTique:
+    """O relógio do :func:`pacote` e das partes dele — e a linha ``[08 lento]``.
+
+    O tique da janela é de 100 ms e roda no laço do GTK: um pacote longo
+    segura a janela inteira (rolar, passar o mouse, clicar). A linha diz em que
+    parte o tempo foi, quanto dele foi CPU deste fio (``time.thread_time``) e
+    quanto foi coleta de lixo. Pacote longo com pouca CPU é o fio principal
+    ESPERANDO — outro fio segurando o GIL, ou uma leitura que bloqueia —, e não
+    trabalhando: a cura, então, é do dono do outro fio.
+    """
+
+    PARTES = ("rádio", "exame", "mapa", "gestão")
+
+    def __init__(self) -> None:
+        self.partes: dict[str, float] = {}
+        self.total = self.cpu = self.coleta = 0.0
+        self._marcas = (0.0, 0.0, 0.0)
+
+    def __enter__(self) -> _MedidaDoTique:
+        import gc
+
+        if _olho_da_coleta not in gc.callbacks:
+            gc.callbacks.append(_olho_da_coleta)
+        self._marcas = (time.perf_counter(), time.thread_time(), _COLETA[0])
+        return self
+
+    def __exit__(self, *_erro: object) -> None:
+        parede, cpu, coleta = self._marcas
+        self.total = (time.perf_counter() - parede) * 1000
+        self.cpu = (time.thread_time() - cpu) * 1000
+        self.coleta = (_COLETA[0] - coleta) * 1000
+
+    def somar(self, nome: str, desde: float) -> None:
+        """Soma à parte ``nome`` o tempo desde ``desde`` (``time.perf_counter``)."""
+        self.partes[nome] = self.partes.get(nome, 0.0) + (time.perf_counter() - desde) * 1000
+
+    @contextlib.contextmanager
+    def parte(self, nome: str) -> Any:
+        comeco = time.perf_counter()
+        try:
+            yield
+        finally:
+            self.somar(nome, comeco)
+
+    def linha(self) -> str:
+        """``[08 lento] 312 ms · cpu 20 · rádio 12 · exame 3 · mapa 2 · gestão 4 · resto 11
+        · coleta 280`` — só números, nenhum endereço."""
+        partes = [f"{nome} {round(self.partes.get(nome, 0.0))}" for nome in self.PARTES]
+        resto = max(0.0, self.total - sum(self.partes.values()))
+        return " · ".join([f"[08 lento] {round(self.total)} ms", f"cpu {round(self.cpu)}",
+                           *partes, f"resto {round(resto)}", f"coleta {round(self.coleta)}"])
+
+    def dizer(self) -> None:
+        """A linha vai ao ``stderr`` da janela (o ``interface.log``), logo antes
+        do ``[tique lento]`` do piloto, quando o pacote passou do orçamento."""
+        if self.total > TIQUE_LENTO_DA_08_MS:
+            print(self.linha(), file=sys.stderr, flush=True)
+
+
 @registrar("08-conexoes.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
+    """O tique da 08, medido por partes (:class:`_MedidaDoTique`)."""
+    with _MedidaDoTique() as medida:
+        campos = _o_pacote(ctx, medida)
+    medida.dizer()
+    return campos
+
+
+def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
     global _ORDENS_NA_TELA, _ULTIMO_ESTADO
     st = ctx.state
     _ULTIMO_ESTADO = st if isinstance(st, dict) else {}
@@ -2882,7 +2971,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # `_pedir_o_exame_de_entrada`: sem isto, duas das cinco linhas do Check-up
     # nasciam vazias e a ordem de serviço da tela era a do mockup.
     _pedir_o_exame_de_entrada()
-    vivos = _itens_da_tela()
+    with medida.parte("exame"):
+        vivos = _itens_da_tela()
     itens = [_linha(i) for i in vivos]
     # A PONTE ENTRE O CLIQUE E A ORDEM, e ela se refaz a cada pintura: o ⊘ da
     # posição N age sobre o que foi PINTADO na posição N. Guardar a lista aqui,
@@ -2963,6 +3053,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # o «Modo de conexão» é da mesa: lido no primeiro controle, e só se houver um
     modo_da_mesa: str | None = None
     colunas = {}
+    comeco_da_gestao = time.perf_counter()
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
         teto_campo, teto_frase = _teto_do_controle(overrides, uniq, vibracao, sem_dono)
@@ -3058,13 +3149,17 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         colunas[uniq].update(estado_do_controle(c, eu, st, declaracao, modo_da_mesa))
         colunas[uniq].update(perfil_na_linha(declaracao, uniq))
         colunas[uniq]["dono"] = dono_na_linha(nomes, uniq, eu.get("jogador"))
+    medida.somar("gestão", comeco_da_gestao)
     # UMA LEITURA SÓ, e ela é a razão de esta linha não estar dentro do
     # dicionário: a `cobertura` conta os campos da confissão, e chamar a função
     # duas vezes releria o barramento no mesmo tique.
     confissao = _confissao_do_mapa()
     # A SEÇÃO DO RÁDIO ANTES DA SUGESTÃO: a caixa diz a proposta da central,
     # e a proposta é a da cena DESTE tique (`_CENA_NA_TELA`).
-    radio = campos_do_radio(ctx)
+    with medida.parte("rádio"):
+        radio = campos_do_radio(ctx)
+    with medida.parte("mapa"):
+        mapa = _html_do_mapa()
     return {
         # A TELA DO MAPEAR (A-08-O-CHECKUP-ABSORVE-A-GESTAO-01): o que o dono do
         # mapa das portas vê agora — ver :func:`campos_do_mapear`.
@@ -3086,7 +3181,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # nomeiam o plástico ("o P1 Cosmic Red, no cabo") e passavam por
         # congelados. A troca é a mesma — `data-hef-alvo="html"` também escreve
         # `innerHTML` —, e agora as réguas a enxergam.
-        "blocos": {".mm-faces": _html_do_mapa()},
+        "blocos": {".mm-faces": mapa},
         "aparelhos": _html_dos_aparelhos(),
         # A CONFISSÃO DO DESENHO, e ela é a da MESA DELA — ver
         # :func:`_confissao_do_mapa`. A `.mm-conf-linha` mora FORA do
@@ -4596,6 +4691,8 @@ MARCA_VARRENDO = ("Outro programa está procurando aparelhos por aqui. "
                   "Controle novo vai para outro adaptador.")
 USB3_AO_LADO = "Entrada USB 3.0: faz ruído no rádio. Prefira uma 2.0."
 SEM_RADIO = "Sem rádio"
+#: A dica do chip que a central não aceita agora: o controle já está pareando.
+ESPERANDO_O_CONTROLE = "Esperando o controle chegar."
 #: O traço do «não há» e da faixa de canais (o do desenho aprovado).
 TRACO_CURTO = "\u2013"
 
@@ -4982,7 +5079,11 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
     """Uma linha da sala: desenho, nome, o que manda e recebe, qual vaga de ponte."""
     aid = _x(ap["id"])
     esperando = bool(ap.get("esperando"))
-    arrasta = not ap.get("fixo") and not esperando and not _ocupado(cena)
+    # A LINHA SE ARRASTA MESMO COM UM MOVIMENTO ESPERANDO, e é a página que a
+    # recusa (o arrastar treme pelo `radio-ocupado`): o `draggable` que seguia
+    # o «ocupado» refazia a sala inteira a cada busca que começava ou acabava
+    # (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 2).
+    arrasta = not ap.get("fixo") and not esperando
     nome = str(ap.get("nome") or "")
     rotulo = str(ap.get("rotulo") or "")
     quem = "controle" if ap.get("tipo") == "controle" else str(ap.get("tipo"))
@@ -5079,9 +5180,19 @@ def _marcas_de_onde(lug: dict[str, Any], cena: dict[str, Any]) -> str:
         partes.append(f'<span class="marca {"hub" if lug.get("hub") else "direto"}" role="img" '
                       f'title="{face}" aria-label="{face}">{_ic(icone)}</span>'
                       f'<span>{_x(lug.get("entrada") or "")}</span>')
-    if lug.get("varrendo"):
-        partes.append(f'<span class="marca varrendo" role="img" title="{MARCA_VARRENDO}" '
-                      f'aria-label="{MARCA_VARRENDO}">{_ic("varrendo")}</span>')
+    # A MARCA E A PÍLULA DA BUSCA MORAM SEMPRE NO CABEÇALHO, escondidas pela
+    # folha (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 2): quem as acende são
+    # as listas `radio-varrendo` e `radio-conectando` (:func:`campos_da_secao`).
+    # No HTML elas faziam a sala INTEIRA (20 KB, as três caixas) se refazer
+    # cada vez que um adaptador começava ou parava de varrer, e a busca que
+    # começava ou acabava — a pílula recomeçava a pulsar e o nó debaixo do
+    # mouse dela sumia. A sala nasce com o estado de agora
+    # (:func:`_sala_estavel`), e as listas o seguem.
+    aceso = " aceso" if lug.get("varrendo") else ""
+    partes.append(f'<span class="marca varrendo{aceso}" role="img" title="{MARCA_VARRENDO}" '
+                  f'aria-label="{MARCA_VARRENDO}" data-campo="radio-varrendo" '
+                  'data-hef-alvo="classe" data-hef-classe="aceso" data-hef-quando="sim">'
+                  f'{_ic("varrendo")}</span>')
     if lug.get("junto"):
         dica = _x(_maiuscula(str(lug["junto"])) + ".")
         partes.append(f'<span class="marca junto" role="img" title="{dica}" '
@@ -5098,10 +5209,9 @@ def _marcas_de_onde(lug: dict[str, Any], cena: dict[str, Any]) -> str:
             partes.append(f'<span class="espera" '
                           f'data-alvo="{_x(ap["id"])}" title="{_x(dica)}">'
                           f'{_desenho_de(ap)}{_x(gesto)}</span>')
-    if lug.get("conectando"):
-        partes.append(f'<span class="espera" data-alvo="" '
-                      f'title="Segure PS + Create no controle até a luz piscar.">'
-                      f'{_silhueta({})}{SEGURE}</span>')
+    partes.append(f'<span class="espera busca" data-alvo="" '
+                  f'title="Segure PS + Create no controle até a luz piscar.">'
+                  f'{_silhueta({})}{SEGURE}</span>')
     if not lug.get("sabido", True):
         pass  # o BlueZ ainda não disse onde ele pendura: nem placa-mãe, nem «Onde fica?»
     elif not lug.get("lugar"):
@@ -5185,10 +5295,14 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = Fals
     classes = ["lugar"]
     if len(pontes) > PONTES_POR_ADAPTADOR:
         classes.append("cheio")
-    if lug.get("conectando") or any(a.get("esperando") for a in moradores):
+    # «esperando» é de quem ESTÁ na caixa (o aparelho que ela moveu, conteúdo);
+    # «buscando» é a busca, e quem a segue é a lista `radio-conectando`.
+    if any(a.get("esperando") for a in moradores):
         classes.append("esperando")
     elif lug.get("nao_conectou"):
         classes.append("nao-conectou")
+    if lug.get("conectando"):
+        classes.append("buscando")
     if aberto:
         classes.append("aberto")
     ver = ("Esconder" if aberto else "Ver") + " os aparelhos deste adaptador"
@@ -5219,7 +5333,13 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = Fals
         + _marcas_de_onde(lug, cena) + sino + _barra_do_lugar(lug, cena)
         + _conta_do_lugar(lug, cena) + "</div>")
     linhas = "".join(html_da_linha(ap, cena, com_hz) for ap in moradores)
-    apagado = ' apagado" aria-disabled="true' if _ocupado(cena) else ""
+    # O «TRAZER PARA CÁ» E A LÂMPADA APAGAM PELO `radio-ocupado`, o mesmo campo
+    # do «Equilibrar» (cura 2 da O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01): no HTML,
+    # o `apagado` refazia a sala inteira a cada busca que começava ou acabava.
+    ocupado = _ocupado(cena)
+    apagado = (f'{" apagado" if ocupado else ""}" aria-disabled="{str(ocupado).lower()}" '
+               'data-campo="radio-ocupado" data-hef-alvo="classe" data-hef-classe="apagado" '
+               'data-hef-atributo="aria-disabled')
     lampada = ""
     if cena.get("proposta") and cena["proposta"].get("destino") == lug["id"]:
         lampada = (f'<button class="lampada{apagado}" title="Quem funciona melhor aqui" '
@@ -5230,8 +5350,11 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = Fals
              f'<div class="soltar-fila"><button class="soltar{apagado}" '
              f'title="Trazer um aparelho para cá" data-gesto="trazer-para-ca" '
              f'data-alvo="{lid}">{_ic("soltar")}{soltar}</button>{lampada}</div></div>')
+    # A CAIXA LEVA O ENDEREÇO DA BUSCA: a lista `radio-conectando` acende a
+    # borda verde e a pílula «Segure PS + Create» nela, sem refazer a sala.
     return (f'<div class="{" ".join(classes)}" data-id="{lid}" data-alvo="{lid}" '
-            f'data-chegou="{chegou}">' + topo + corpo + "</div>")
+            f'data-chegou="{chegou}" data-campo="radio-conectando" data-hef-alvo="classe" '
+            f'data-hef-classe="buscando" data-hef-quando="sim">' + topo + corpo + "</div>")
 
 
 # -- as janelas que a página abre -------------------------------------------
@@ -5394,15 +5517,38 @@ def _moldes_de_painel(cena: dict[str, Any]) -> str:
     # CONECTAR: o destino vem escolhido pela D8, e o que está perto. Com a
     # busca de pé, o chip aceso é o do adaptador em que ela ESTÁ — a caixa que
     # ela abriu pode ser outra (:func:`_o_aberto`), e o chip diz o rádio.
-    destino = (_onde_espera(lugares, list(cena.get("aparelhos") or ()))
-               or cena.get("destino_do_conectar") or (lugares[0]["id"] if lugares else ""))
-    chips = "".join(
-        f'<button class="op" aria-pressed="{str(lug["id"] == destino).lower()}" '
-        f'title="Com som: {len(_pontes(cena, str(lug["id"])))} de {PONTES_POR_ADAPTADOR}" '
-        f'data-gesto="escolher-adaptador" data-alvo="{_x(lug["id"])}">'
-        f'{_x(_titulo_do_lugar(lug))}</button>' for lug in lugares)
+    busca = _onde_espera(lugares, list(cena.get("aparelhos") or ()))
+    destino = busca or cena.get("destino_do_conectar") or (lugares[0]["id"] if lugares else "")
+    # O CHIP QUE A CENTRAL NÃO ACEITA AGORA DIZ POR QUÊ
+    # (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 4). O chip de outro adaptador,
+    # com a busca de pé, pede ao rádio (:func:`escolher_adaptador`); depois do
+    # gesto (pareando, conferindo) a central recusa, e o chip tremia calado — as
+    # 01h22:15 e 01h22:27 dela de 30/09. Ele nasce apagado, sem gesto, e a dica
+    # diz o que espera. O chip que só abre a caixa nunca apaga: a central não é
+    # perguntada.
+    agora_nao = bool(busca) and str(cena.get("passo_da_espera") or "") not in (
+        _central_do_radio.PASSOS_EM_QUE_O_DESTINO_MUDA)
+
+    def chip(lug: dict[str, Any]) -> str:
+        lid = str(lug["id"])
+        aceso = str(lid == destino).lower()
+        if agora_nao and lid != busca:
+            return (f'<button class="op" aria-pressed="{aceso}" aria-disabled="true" '
+                    f'title="{ESPERANDO_O_CONTROLE}" data-alvo="{_x(lid)}">'
+                    f'{_x(_titulo_do_lugar(lug))}</button>')
+        return (f'<button class="op" aria-pressed="{aceso}" '
+                f'title="Com som: {len(_pontes(cena, lid))} de {PONTES_POR_ADAPTADOR}" '
+                f'data-gesto="escolher-adaptador" data-alvo="{_x(lid)}">'
+                f'{_x(_titulo_do_lugar(lug))}</button>')
+
+    chips = "".join(chip(lug) for lug in lugares)
+    # A LISTA É DO ADAPTADOR DO CHIP ACESO, com o sinal medido por ele, e cada
+    # linha tem o endereço dela (``data-alvo``): o painel aberto se remenda pela
+    # chave, sem refazer a linha debaixo do mouse dela (o ``seguirOPainel`` da
+    # página). O número do sinal mora NA LINHA: uma lista à parte cairia nas
+    # linhas velhas, uma casa fora, na pintura em que alguém sai.
     achados = "".join(
-        '<div class="achado">'
+        f'<div class="achado" data-alvo="{_x(a["id"])}">'
         + (_ic("ds", "ds cheio") if a.get("tipo") == "controle"
            else _ic(ICONE_DO_APARELHO.get(str(a.get("tipo")), "radio"), "ico"))
         + f'<span class="nome">{_x(a.get("nome"))}</span>'
@@ -5412,7 +5558,7 @@ def _moldes_de_painel(cena: dict[str, Any]) -> str:
            'Conectar</button>' if a.get("conhecido") else
            f'<button class="btn" data-gesto="parear-aparelho" data-alvo="{_x(a["id"])}">'
            'Parear</button>')
-        + "</div>" for a in cena.get("perto", ()))
+        + "</div>" for a in cena.get("perto", ()) if a.get("adaptador") == destino)
     moldes.append(f'<template class="painel-molde" data-painel="conectar" data-alvo="" '
                   f'data-titulo="Procurando" data-pulso="1">'
                   f'<div class="conectar"><div class="escolha-lugar" role="group" '
@@ -5734,15 +5880,51 @@ def html_da_conta_do_radio(cena: dict[str, Any]) -> str:
             f"{lugares} {'adaptador' if lugares == 1 else 'adaptadores'}")
 
 
+#: A SALA QUE A TELA TEM, e a chave dela sem o que pisca (a varredura, a busca
+#: e o «ocupado»). Ver :func:`_sala_estavel`.
+_SALA_NA_TELA: dict[str, str] = {}
+
+
+def _sem_o_que_pisca(cena: dict[str, Any]) -> dict[str, Any]:
+    """A cena sem a varredura, a busca e o «ocupado» — o que as listas acendem."""
+    return {**cena, "ocupado": False,
+            "lugares": [{**lug, "varrendo": False, "conectando": False}
+                        for lug in cena.get("lugares") or ()]}
+
+
+def _sala_estavel(cena: dict[str, Any]) -> str:
+    """A sala, que SÓ MUDA quando mudam as caixas ou os aparelhos dentro delas.
+
+    O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 2. Medido na bancada em 30/09: um
+    adaptador que passa a varrer (o ``Discovering`` do BlueZ) trocava as três
+    caixas inteiras (20 KB), e a busca que começa ou acaba também. A varredura,
+    a busca e o «ocupado» chegam à tela pelas listas `radio-varrendo`,
+    `radio-conectando` e `radio-ocupado`, e não mexem neste texto: a sala de
+    agora só é refeita quando a chave dela (a sala sem o que pisca) muda — e
+    nasce, então, com o estado DAQUELE tique, porque o piloto só manda de novo
+    a lista que mudou.
+    """
+    chave = html_da_sala(_sem_o_que_pisca(cena))
+    if _SALA_NA_TELA.get("chave") != chave:
+        _SALA_NA_TELA.update(chave=chave, html=html_da_sala(cena))
+    return _SALA_NA_TELA["html"]
+
+
 def campos_da_secao(cena: dict[str, Any]) -> dict[str, Any]:
-    """O que o pacote emite para a seção, NA ORDEM: a sala antes dos Hz, porque
-    os Hz pousam nos elementos que a sala acabou de escrever."""
+    """O que o pacote emite para a seção, NA ORDEM: a sala antes dos Hz e das
+    marcas, porque eles pousam nos elementos que a sala acabou de escrever."""
     controles = [a for lug in cena.get("lugares", ()) for a in _moradores(cena, str(lug["id"]))
                  if a.get("tipo") == "controle" and not a.get("esperando") and _no_ar(a)]
     com_mic = [a for a in controles if a.get("mic")]
+    lugares = list(cena.get("lugares") or ())
     return {
         "conta-de-adaptadores": html_da_conta_do_radio(cena),
-        "radio-sala": html_da_sala(cena),
+        "radio-sala": _sala_estavel(cena),
+        # UMA ENTRADA POR CAIXA, NA ORDEM DAS CAIXAS: o piloto distribui a
+        # lista pela ordem dos elementos (`hefesto_vivo.py`, o `achar`), e cada
+        # caixa tem UM elemento de cada campo.
+        "radio-varrendo": ["sim" if lug.get("varrendo") else "" for lug in lugares],
+        "radio-conectando": ["sim" if lug.get("conectando") else "" for lug in lugares],
         "radio-moldes": html_dos_moldes(cena),
         "hz-movimento": [_hz(a.get("hz_mov")) for a in controles],
         "hz-pouco": ["sim" if _e_pouco(a.get("hz_mov")) else "" for a in controles],
@@ -6132,6 +6314,11 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         proposta = ({"controle": dono["id"], "destino": _mac(proposta.get("destino"))}
                     if dono else None)
     lugares = _na_ordem_dela(lugares)
+    # A BUSCA DE CADA ADAPTADOR, pelo movimento que espera nele: quando ela
+    # acaba ou recomeça, a ordem da lista dali recomeça (:func:`_perto`).
+    buscas: dict[str, object] = {
+        _mac(m.get("destino")): (str(m.get("aparelho") or ""), float(m.get("quando") or 0.0))
+        for m in esperando if _mac(m.get("destino"))}
     cena = {
         # ALGUÉM RESPONDEU sobre os adaptadores: o BlueZ, ou o daemon pelo
         # `radio_ar`/`radio_governador`. Sem isso a sala não diz «nenhum».
@@ -6139,8 +6326,12 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         "lugares": lugares, "aparelhos": aparelhos, "evitados": evitados,
         "canais_medidos": canais_medidos, "espectro": [], "vizinhos": vizinhos,
         "portas": portas, "pedido": pedido, "proposta": proposta, "ocupado": ocupado,
+        # O PASSO DO MOVIMENTO QUE ESPERA (a central segura um por vez): depois
+        # do gesto ela não muda o destino, e o chip que pediria diz que agora
+        # não (:func:`_moldes_de_painel`).
+        "passo_da_espera": next((str(m.get("passo") or "") for m in esperando), ""),
         "aberto": _o_aberto(lugares, aparelhos, proposta),
-        "perto": _perto(aparelhos_bz, adaptadores_bz, aparelhos),
+        "perto": _perto(aparelhos_bz, adaptadores_bz, aparelhos, buscas),
     }
     cena["destino_da_central"] = _destino_da_central(cena, st)
     cena["destino_do_conectar"] = _destino_do_conectar(cena)
@@ -6637,21 +6828,70 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
     return fora
 
 
+#: A ORDEM DE CHEGADA DE CADA LISTA DO «CONECTAR», POR ADAPTADOR —
+#: D-3009-A-LISTA-NAO-ANDA-SOZINHA (quem coordena, 30/09/2026, a validar por
+#: ela). ``{adaptador: (a busca, {aparelho: número da chegada})}``. A lista
+#: ordenada pelo sinal se reordenava a cada leitura do BlueZ (3 s) e o que
+#: estava debaixo do mouse dela fugia; agora a linha fica onde apareceu, quem
+#: chega vai para o fim, e entre os que chegam juntos o sinal mais forte vem
+#: antes. A ordem se esquece quando a busca daquele adaptador acaba ou muda (a
+#: busca é outra), e a linha que saiu da lista sai da ordem.
+_CHEGADAS: dict[str, tuple[object, dict[str, int]]] = {}
+_NUMERO_DA_CHEGADA = [0]
+
+
+def _na_ordem_da_chegada(vistos: dict[tuple[str, str], dict[str, Any]],
+                         buscas: dict[str, object]) -> list[dict[str, Any]]:
+    """As linhas de ``vistos`` na ordem em que cada adaptador as viu chegar."""
+    for onde in set(_CHEGADAS) | {onde for onde, _ in vistos} | set(buscas):
+        guardada = _CHEGADAS.get(onde)
+        if guardada is None or guardada[0] != buscas.get(onde):
+            _CHEGADAS[onde] = (buscas.get(onde), {})
+    for onde, (_busca, ordem) in list(_CHEGADAS.items()):
+        for quem in [q for q in ordem if (onde, q) not in vistos]:
+            del ordem[quem]
+        if not ordem and onde not in buscas and not any(o == onde for o, _ in vistos):
+            del _CHEGADAS[onde]
+    novos = sorted((par for par in vistos if par[1] not in _CHEGADAS[par[0]][1]),
+                   key=lambda par: -(vistos[par]["forca"] or -999))
+    for onde, quem in novos:
+        _NUMERO_DA_CHEGADA[0] += 1
+        _CHEGADAS[onde][1][quem] = _NUMERO_DA_CHEGADA[0]
+    return sorted(vistos.values(),
+                  key=lambda a: _CHEGADAS[a["adaptador"]][1][str(a["id"])])
+
+
 def _perto(aparelhos_bz: tuple[Any, ...], adaptadores_bz: tuple[Any, ...],
-           ja: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """O que o rádio está vendo e não está ligado — a lista do «Conectar»."""
+           ja: list[dict[str, Any]],
+           buscas: dict[str, object] | None = None) -> list[dict[str, Any]]:
+    """O que CADA rádio está vendo e não está ligado — as listas do «Conectar».
+
+    UMA LINHA POR ADAPTADOR QUE VIU O APARELHO, com o sinal medido POR ELE
+    (D-3009-A-LISTA-E-DO-ADAPTADOR-ACESO, quem coordena, 30/09/2026, a validar
+    por ela). A lista de antes era de todo aparelho com sinal em qualquer
+    adaptador, pelo endereço só: o mesmo aparelho visto por dois ficava com o
+    sinal do último que o BlueZ listou, e o «Parear» mandava o chip aceso como
+    destino de um aparelho que ele talvez nunca tivesse visto. O painel desenha
+    só as do adaptador do chip aceso (:func:`_moldes_de_painel`).
+
+    ``buscas`` é ``{adaptador: quem busca ali}`` — a identidade da busca do
+    Hefesto em cada adaptador; quando ela muda, a ordem daquele adaptador
+    recomeça (:func:`_na_ordem_da_chegada`).
+    """
     ligados = {_so_hex(a["id"]) for a in ja}
-    vistos: dict[str, dict[str, Any]] = {}
+    adaptador_de = {str(getattr(a, "caminho", "")): _mac(a.endereco) for a in adaptadores_bz}
+    vistos: dict[tuple[str, str], dict[str, Any]] = {}
     for a in aparelhos_bz:
-        if a.conectado or a.rssi is None or _so_hex(a.endereco) in ligados:
+        onde = adaptador_de.get(str(a.adaptador), "")
+        if not onde or a.conectado or a.rssi is None or _so_hex(a.endereco) in ligados:
             continue
-        vistos[_mac(a.endereco)] = {
-            "id": _mac(a.endereco), "nome": a.nome or _mac(a.endereco),
+        vistos[(onde, _mac(a.endereco))] = {
+            "id": _mac(a.endereco), "adaptador": onde, "nome": a.nome or _mac(a.endereco),
             "tipo": ("controle" if "054C" in str(a.modalias).upper()
                      else _tipo_do_aparelho(getattr(a, "icone", ""), a.classe)),
             "forca": a.rssi, "conhecido": bool(a.pareado),
         }
-    return sorted(vistos.values(), key=lambda a: -(a["forca"] or -999))
+    return _na_ordem_da_chegada(vistos, dict(buscas or {}))
 
 
 def _destino_do_conectar(cena: dict[str, Any]) -> str:

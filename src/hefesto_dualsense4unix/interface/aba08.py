@@ -3235,6 +3235,18 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
      (noqa-acento: citação literal dela) */
   .radio button.selo-fora{background:transparent;color:var(--texto-suave);line-height:1.3}
   .radio button.selo-fora:hover{border-color:var(--purple);color:var(--fg)}
+  /* A VARREDURA E A BUSCA MORAM SEMPRE NO CABEÇALHO DA CAIXA, e as listas
+     `radio-varrendo` e `radio-conectando` as acendem — sem refazer a sala
+     (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 2). A borda da busca é a da
+     espera do desenho aprovado (`.lugar.esperando`). */
+  .radio .marca.varrendo:not(.aceso){display:none}
+  .radio .lugar:not(.buscando) .espera.busca{display:none}
+  .radio .lugar.buscando{border-color:rgba(80,250,123,.6)}
+  /* O chip que a central não aceita agora: apagado, com a dica, e sem tremer. */
+  .radio .op[aria-disabled="true"]{cursor:not-allowed;opacity:.5}
+  /* O arrasto com um movimento esperando treme a linha, como o botão (R8). */
+  .radio .linha.recusa{animation:rd-recusa 420ms var(--ease) 1}
+  @media (prefers-reduced-motion: reduce){.radio .linha.recusa{animation:none}}
 """
 
 
@@ -3342,13 +3354,17 @@ def _cena_do_desenho() -> dict:
     portas = [{"id": x["id"], "caminho": x["a"], "usb": x["b"], "ocupa": x["c"],
                "grupo": re.sub(r"\bmesa\b", "escrivaninha", x["d"]), "rotulo": x["a"]}
               for x in linhas if x["tabela"] == "porta"]
-    perto = [{"id": x["id"], "nome": x["nome"], "tipo": x["tipo"], "forca": int(x["forca"]),
-              "conhecido": x["conhecido"] == "sim"} for x in _csv_do_desenho("perto")]
     cheio = max(lugares, key=lambda lg: sum(1 for a in aparelhos
                                             if a["lugar"] == lg["id"] and a["ponte"]))
     vazio = min(lugares, key=lambda lg: (sum(1 for a in aparelhos
                                              if a["lugar"] == lg["id"] and a["ponte"]),
                                          lg["varrendo"]))
+    # O QUE ESTÁ PERTO É DE UM ADAPTADOR, e o painel mostra só o do chip aceso
+    # (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 3): os achados do desenho são
+    # do adaptador do «Conectar» dele, e o painel do mockup continua com eles.
+    perto = [{"id": x["id"], "adaptador": vazio["id"], "nome": x["nome"], "tipo": x["tipo"],
+              "forca": int(x["forca"]), "conhecido": x["conhecido"] == "sim"}
+             for x in _csv_do_desenho("perto")]
     quem_sai = [a for a in aparelhos if a["lugar"] == cheio["id"] and a["ponte"]][-1]
     # O-RADIO-CONECTA-ONDE-ELA-MANDA-01 (26/09/2026): os estados que a lista
     # dela de 26/09 pediu, na caixa aberta — o «Conectar» que não chegou (com o
@@ -3501,6 +3517,9 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       corpo.innerHTML = ''; corpo.appendChild(m.content.cloneNode(true));
       return corpo;
     }
+    function marcaDoMolde(m){
+      return (m.dataset.titulo || '') + '\u0000' + (m.dataset.pulso || '') + '\u0000' + m.innerHTML;
+    }
     function abrirPainel(tipo, alvo){
       var m = moldeDoPainel(tipo, alvo);
       if(!m) return false;
@@ -3508,26 +3527,66 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       quemAbriu = document.activeElement;
       var p = document.getElementById('rd-painel');
       var corpo = encherOPainel(m);
-      painelAberto = {tipo: tipo, alvo: alvo || '', html: m.innerHTML};
+      painelAberto = {tipo: tipo, alvo: alvo || '', marca: marcaDoMolde(m)};
       p.classList.add('aberto'); p.removeAttribute('inert'); p.setAttribute('aria-hidden', 'false');
       document.getElementById('rd-veu').classList.add('aberto');
       var primeiro = um('button, a, input', corpo) || document.getElementById('rd-fechar');
       if(primeiro) primeiro.focus();
       return true;
     }
+    // O PAINEL ABERTO SE REMENDA, NÃO SE REFAZ (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01,
+    // cura 1). Ele se esvaziava e se enchia de novo a cada molde novo — e o
+    // molde do «Conectar» muda a cada leitura do BlueZ (3 s), porque o sinal
+    // de quem está perto mora nele: todo botão do painel era destruído e
+    // recriado, o que estava debaixo do ponteiro dela também. Agora os nós
+    // casam pela chave (a tag e o `data-alvo`): a linha que fica é o MESMO nó,
+    // e só o que mudou nela muda (o número do sinal, o `aria-pressed` e a dica
+    // do chip); a que chegou entra no lugar dela, e a que saiu sai. O título e
+    // o pulso são do molde também, e mudam no lugar.
+    function chaveDoNo(n){
+      if(n.nodeType !== 1) return '#' + n.nodeType;
+      var alvo = n.getAttribute('data-alvo');
+      return n.tagName + (alvo === null ? '' : '|' + alvo);
+    }
+    function remendarOsAtributos(vivo, novo){
+      Array.prototype.slice.call(vivo.attributes).forEach(function(a){
+        if(!novo.hasAttribute(a.name)) vivo.removeAttribute(a.name);
+      });
+      Array.prototype.slice.call(novo.attributes).forEach(function(a){
+        if(vivo.getAttribute(a.name) !== a.value) vivo.setAttribute(a.name, a.value);
+      });
+    }
+    function remendar(vivo, novo){
+      var livres = {};
+      Array.prototype.slice.call(vivo.childNodes).forEach(function(n){
+        var k = chaveDoNo(n); (livres[k] = livres[k] || []).push(n);
+      });
+      var antes = null;
+      Array.prototype.slice.call(novo.childNodes).forEach(function(m){
+        var lista = livres[chaveDoNo(m)], n = lista && lista.length ? lista.shift() : null;
+        if(!n) n = document.importNode(m, true);
+        else if(n.nodeType === 1){ remendarOsAtributos(n, m); remendar(n, m); }
+        else if(n.nodeValue !== m.nodeValue) n.nodeValue = m.nodeValue;
+        var lugar = antes ? antes.nextSibling : vivo.firstChild;
+        if(lugar !== n) vivo.insertBefore(n, lugar);
+        antes = n;
+      });
+      Object.keys(livres).forEach(function(k){
+        livres[k].forEach(function(n){ if(n.parentNode === vivo) vivo.removeChild(n); });
+      });
+    }
     function seguirOPainel(){
       if(!painelAberto) return;
       var m = moldeDoPainel(painelAberto.tipo, painelAberto.alvo);
       if(!m){ fecharPainel(); return; }
-      if(m.innerHTML === painelAberto.html) return;
-      var foco = document.activeElement, corpo = document.getElementById('rd-painel-corpo');
-      var chave = (foco && corpo.contains(foco) && foco.dataset)
-        ? '[data-gesto="' + aspas(foco.dataset.gesto || '') + '"][data-alvo="' + aspas(foco.dataset.alvo || '') + '"]'
-        : '';
-      encherOPainel(m);
-      painelAberto.html = m.innerHTML;
-      var volta = chave ? um(chave, corpo) : null;
-      if(volta) volta.focus();
+      var marca = marcaDoMolde(m);
+      if(marca === painelAberto.marca) return;
+      var titulo = document.getElementById('rd-painel-titulo');
+      if(titulo.textContent !== (m.dataset.titulo || '')) titulo.textContent = m.dataset.titulo || '';
+      var pulso = document.getElementById('rd-pulso'), mostra = m.dataset.pulso ? '' : 'none';
+      if(pulso.style.display !== mostra) pulso.style.display = mostra;
+      remendar(document.getElementById('rd-painel-corpo'), m.content);
+      painelAberto.marca = marca;
     }
     function fecharPainel(){
       var p = document.getElementById('rd-painel');
@@ -3553,7 +3612,8 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       // recusado ficava aceso sobre a busca que continuava noutro adaptador.
       var chip = perto(ev, '#rd-painel .op');
       if(chip){
-        if(comPiloto()) return;
+        // O chip apagado diz que agora não pela dica, e não treme nem acende.
+        if(chip.getAttribute('aria-disabled') === 'true' || comPiloto()) return;
         todos('.op', chip.parentNode).forEach(function(o){ o.setAttribute('aria-pressed', 'false'); });
         chip.setAttribute('aria-pressed', 'true'); return;
       }
@@ -3612,7 +3672,9 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
       if(ev.key !== 'Enter' && ev.key !== ' ') return;
       var l = ev.target && ev.target.matches && ev.target.matches('.radio .linha[tabindex]') ? ev.target : null;
       if(!l) return;
-      ev.preventDefault(); abrirPainel('para-onde', l.dataset.id);
+      ev.preventDefault();
+      if(ocupado()){ balancar(l); return; }
+      abrirPainel('para-onde', l.dataset.id);
     });
 
     // ---- ARRASTAR AS CAIXAS: a ordem é dela, e fica gravada ----
@@ -3664,11 +3726,20 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
     });
 
     // ---- ARRASTAR: o destino é o adaptador inteiro, aberto ou fechado ----
+    // COM UM MOVIMENTO ESPERANDO, O ARRASTO TREME (R8): a linha se arrasta
+    // sempre no HTML, e quem diz «agora não» é o `radio-ocupado`, o mesmo
+    // campo do «Equilibrar» — o `draggable` que seguia o «ocupado» refazia a
+    // sala inteira a cada busca (O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01, cura 2).
+    function ocupado(){
+      var e = um('.radio [data-campo="radio-ocupado"]');
+      return !!(e && e.classList.contains('apagado'));
+    }
     document.addEventListener('dragstart', function(ev){
       var l = perto(ev, '.radio .linha[draggable="true"]');
       if(!l || !ev.dataTransfer) return;
       if(document.activeElement && document.activeElement.classList.contains('nome')
          && l.contains(document.activeElement)) return;
+      if(ocupado()){ ev.preventDefault(); balancar(l); return; }
       ev.dataTransfer.setData('text/plain', l.dataset.id);
       ev.dataTransfer.effectAllowed = 'move';
       l.classList.add('arrastando');
