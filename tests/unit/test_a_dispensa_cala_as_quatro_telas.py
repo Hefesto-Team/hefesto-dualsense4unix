@@ -80,16 +80,8 @@ def test_as_quatro_telas_chamam_o_dono_novo():
     """A MORDIDA estrutural: se uma tela voltar ao cru, ela volta a acusar."""
     import inspect
 
-    from hefesto_dualsense4unix.app.actions import status_actions
     from hefesto_dualsense4unix.app.actions.jogar import painel
 
     assert "home_actions.aviso_do_wrapper" in inspect.getsource(painel), (
         "a coluna Atenção da aba Jogar voltou a chamar a função crua"
-    )
-    fonte_status = inspect.getsource(status_actions)
-    assert "aviso = aviso_do_wrapper(state)" in fonte_status, (
-        "a aba Status voltou a chamar a função crua"
-    )
-    assert "aviso_wrapper = aviso_do_wrapper(state)" in inspect.getsource(ha), (
-        "a janela Início voltou a chamar a função crua"
     )

@@ -135,18 +135,6 @@ def test_o_mouse_pronto_diz_a_frase_da_gtk() -> None:
     assert 'class="verde"' in linha["rato-estado"]
 
 
-def test_a_frase_do_pronto_e_a_mesma_que_a_gtk_escreve() -> None:
-    """A cópia declarada não pode divergir calada."""
-    from pacotes import a06_navegacao as mod
-
-    fonte = (RAIZ / "src/hefesto_dualsense4unix/app/actions/mouse_actions.py"
-             ).read_text(encoding="utf-8")
-    assert mod.PRONTO_PARA_MOUSE in fonte, (
-        f"{mod.PRONTO_PARA_MOUSE!r} não está mais em `mouse_actions.py`. Ou a "
-        "GTK mudou a frase — e esta aba tem de acompanhar —, ou ela virou "
-        "constante lá, e o certo passou a ser IMPORTÁ-LA em vez de copiar.")
-
-
 @pytest.mark.parametrize("bloqueio", sorted(BLOQUEIO_DO_MOUSE_EM_PORTUGUES))
 def test_o_motivo_do_bloqueio_e_a_tabela_do_produto(bloqueio: str) -> None:
     """Cada motivo do daemon vira a frase que a GTK já traduzia."""

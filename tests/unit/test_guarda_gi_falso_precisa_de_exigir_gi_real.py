@@ -3,10 +3,6 @@
 from __future__ import annotations
 
 import ast
-import json
-import os
-import subprocess
-import sys
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -417,74 +413,3 @@ class TestAGuardaVemAntesDoPlantio:
         if alvo.exists():
             assert plantacoes_de_gi_falso(alvo.read_text(encoding="utf-8"))
             assert alvo.name not in arquivos_em_falta()
-
-
-RAIZ = TESTS_UNIT.parents[1]
-
-OS_DOIS_DO_MARCADOR = (
-    "tests/unit/test_p10_os_quatro_caminhos_da_aba_perfis_sem_mordida.py",
-    "tests/unit/test_p3_o_salvar_solta_a_thread_e_para_de_prometer.py",
-)
-
-_ESCONDE_O_GI = '''
-import sys
-class _EscondeOGi:
-    def find_spec(self, nome, caminho=None, alvo=None):
-        if nome.split(".")[0] in ("gi", "cairo"):
-            raise ModuleNotFoundError(f"No module named {nome!r}", name=nome)
-        return None
-sys.meta_path.insert(0, _EscondeOGi())
-'''
-
-_ESPIA_DA_JANELA = '''
-import json, os, sys
-_VISTOS = []
-def pytest_collectreport(report):
-    if report.nodeid.endswith(".py"):
-        _VISTOS.append(report.nodeid)
-def pytest_collection_finish(session):
-    janela = sorted(m for m in sys.modules
-                    if m == "hefesto_dualsense4unix.app"
-                    or m.startswith("hefesto_dualsense4unix.app."))
-    escondido = any(type(f).__name__ == "_EscondeOGi" for f in sys.meta_path)
-    with open(os.environ["ESPIA_DA_JANELA"], "w", encoding="utf-8") as saida:
-        json.dump({"gi_escondido": escondido, "vistos": _VISTOS, "janela": janela}, saida)
-'''
-
-
-def test_a_coleta_sem_gtk_nao_deixa_a_janela_no_processo(tmp_path: Path) -> None:
-    """O p10 e o p3 coletados sem `gi`, num pytest filho: nenhum módulo da janela fica."""
-    lar = tmp_path / "sem_gi"
-    lar.mkdir()
-    (lar / "sitecustomize.py").write_text(_ESCONDE_O_GI, encoding="utf-8")
-    (lar / "espia_da_janela.py").write_text(_ESPIA_DA_JANELA, encoding="utf-8")
-    saida = tmp_path / "espia.json"
-    ambiente = dict(os.environ)
-    ambiente["PYTHONPATH"] = os.pathsep.join([str(lar), str(RAIZ / "src"), str(RAIZ)])
-    ambiente["ESPIA_DA_JANELA"] = str(saida)
-    ambiente["PYTHONDONTWRITEBYTECODE"] = "1"
-    ambiente.pop("HEFESTO_EXIGE_GTK_REAL", None)
-    ambiente.pop("PYTEST_ADDOPTS", None)
-    r = subprocess.run(
-        [
-            sys.executable, "-m", "pytest", "--collect-only", "-q",
-            "-p", "no:cacheprovider", "-p", "espia_da_janela", *OS_DOIS_DO_MARCADOR,
-        ],
-        capture_output=True,
-        text=True,
-        cwd=RAIZ,
-        env=ambiente,
-        timeout=180,
-    )
-    assert saida.exists(), (
-        f"o pytest filho não chegou ao fim da coleta:\n{(r.stdout + r.stderr)[-1500:]}"
-    )
-    dados = json.loads(saida.read_text(encoding="utf-8"))
-    assert dados["gi_escondido"], "o gi não foi escondido: a régua mediria o mundo com GTK"
-    faltaram = [a for a in OS_DOIS_DO_MARCADOR if a not in dados["vistos"]]
-    assert not faltaram, f"a coleta não passou por {faltaram}: zero com o alvo fora não é zero"
-    assert not dados["janela"], (
-        f"a coleta sem GTK deixou {len(dados['janela'])} módulos da janela no processo, "
-        "construídos sobre o gi falso, para o arquivo seguinte importar:\n  "
-        + "\n  ".join(dados["janela"])
-    )

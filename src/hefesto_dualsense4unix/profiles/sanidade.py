@@ -311,8 +311,8 @@ def verificar_perfis_do_disco() -> list[Achado]:
     fiá-la no doctor trocaria a linha *"não deu para ler os perfis: <erro>"* por
     um traceback na cara de quem foi justamente pedir diagnóstico. Seria piorar
     o produto para fechar uma lápide.
-    Ela fica de pé como atalho de teste — e quem precisar da corrente em produção usa as duas metades separadas, como o
-    doctor usa.
+    Ela fica de pé como atalho de teste — e quem precisar da corrente em
+    produção usa as duas metades separadas, como o doctor usa.
 
     NOTA DATADA — 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01): o que caducou é o
     "não deve ganhar chamador de produção". A razão era o traceback no lugar da

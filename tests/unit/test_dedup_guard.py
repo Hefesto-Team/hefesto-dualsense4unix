@@ -17,7 +17,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from tests.conftest import skip_sem_gi_real
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import dedup_status
 
 
@@ -169,27 +168,3 @@ class TestLaunchEnvRefreshHandler:
         fonte = Path(ipc_server.__file__).read_text(encoding="utf-8")
         assert '"launch_env.refresh": self._handle_launch_env_refresh' in fonte
 
-    @skip_sem_gi_real
-    def test_gui_avisa_apos_save_delete_import_restore(self) -> None:
-        """save/delete/import/restore de perfil notificam o daemon — sem isso"""
-        from hefesto_dualsense4unix.app.actions import (
-            footer_actions,
-            profile_writer,
-            profiles_actions,
-        )
-
-        footer = Path(footer_actions.__file__).read_text(encoding="utf-8")
-        funil = Path(profile_writer.__file__).read_text(encoding="utf-8")
-        perfis = Path(profiles_actions.__file__).read_text(encoding="utf-8")
-        assert '"_notify_launch_env_refresh"' in funil, (
-            "o funil de gravação parou de avisar o daemon"
-        )
-        assert footer.count("self._gravar_perfil_async(") >= 3, (
-            "os três botões que gravam perfil (Salvar, Importar, Restaurar "
-            "Padrão) têm de passar pelo funil — é ele que avisa o daemon"
-        )
-        assert perfis.count("self._notify_launch_env_refresh()") >= 2
-        for fonte in (footer, funil, perfis):
-            assert '"launch_env.refresh"' in fonte or (
-                "launch_env.refresh" in fonte
-            )

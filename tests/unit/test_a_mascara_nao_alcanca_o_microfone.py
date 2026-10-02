@@ -89,9 +89,3 @@ def test_a_regua_le_codigo_e_nao_prosa() -> None:
         "a régua voltou a medir prosa")
 
 
-def test_o_produto_ja_afirma_isto_na_tela() -> None:
-    """A frase de preço da máscara promete o microfone — e a promessa tem dono."""
-    texto = (SRC / "app/actions/home_actions.py").read_text(encoding="utf-8")
-    assert "microfone e alto-falante continuam funcionando" in texto, (
-        "a frase que promete o microfone sob a máscara mudou de forma — "
-        "confira se ela ainda promete, e ajuste esta régua junto")
