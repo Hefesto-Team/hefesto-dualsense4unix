@@ -678,8 +678,18 @@ class CoopManager:
 
     # -- reconciliação --------------------------------------------------
 
-    def sync(self, *, force: bool = False) -> None:
+    def sync(self, *, force: bool = False, origem: str | None = None) -> None:
         """Reconcilia os secundários com os controles plugados. Idempotente.
+
+        A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01 (01/10/2026): o juiz da máscara
+        (o secundário cujo pad ficou para trás) pergunta ao dono da trava
+        (`gamepad._recriacao_bloqueada_por_jogo`) antes de derrubar. No ciclo
+        não forçado a origem é `coop_tique` (automática: com o jogo aberto, o
+        secundário segue com o pad que o jogo tem, e converge quando o jogo
+        fecha, pelo `reconciliar_as_mascaras`). No ciclo forçado, quem forçou
+        diz a origem por nome (`origem=`): o P1 recriado (a origem do pedido
+        dele) e a máscara de um secundário (`manual`). Os outros chamadores do
+        ciclo forçado já perguntaram antes de forçar, e não passam origem.
 
         Keyed por IDENTIDADE (MAC). Derruba e recria um jogador quando:
         o controle sumiu; o node evdev do MESMO controle mudou (re-enumeração
@@ -811,6 +821,8 @@ class CoopManager:
                 vpad=player.vpad,
                 caminho=desired_caminho,
             ):
+                if self._a_mascara_espera_o_jogo(mac, origem if force else "coop_tique"):
+                    continue
                 # MÁSCARA-POR-JOGADOR-01 (29/08/2026): `desired_flavor` deixou
                 # de ser um VALOR e passou a ser FUNÇÃO do aparelho. Sem esta
                 # troca, um jogador com máscara própria diverge do
@@ -843,6 +855,22 @@ class CoopManager:
         # como o replug também dispara o watch, este reassert devolve o padrão
         # do jogador logo em seguida).
         self._apply_coop_player_leds()
+
+    def _a_mascara_espera_o_jogo(self, mac: str, origem: str | None) -> bool:
+        """O pad deste secundário, que ficou para trás da máscara, espera o jogo?
+
+        Pergunta ao dono da trava (`gamepad._recriacao_bloqueada_por_jogo`).
+        ``origem`` ``None`` é o ciclo forçado por quem já perguntou: não espera.
+        """
+        if origem is None:
+            return False
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+            _recriacao_bloqueada_por_jogo,
+        )
+
+        return _recriacao_bloqueada_por_jogo(
+            self._daemon, origin=origem, motivo=f"mascara_do_secundario:{_rotulo(mac)}"
+        )
 
     def _segura_na_troca_de_transporte(
         self, player: _SecondaryPlayer, no_de_agora: str | None
@@ -2611,6 +2639,18 @@ class CoopManager:
                     recriar=[_rotulo(c) for c in recriar],
                     cartas=cartas_no_diario,
                     jogo=autoridade,
+                )
+                # A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01: a ordem passa pelo
+                # dono da trava, que a deixa passar pela D-2309 e diz a linha
+                # de quem recriou com o jogo aberto.
+                from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                    _recriacao_bloqueada_por_jogo,
+                )
+
+                _recriacao_bloqueada_por_jogo(
+                    self._daemon,
+                    origin="ordem_do_coop",
+                    motivo="ordem:" + ",".join(_rotulo(c) for c in recriar),
                 )
         elif not chaves_novas:
             self._ultima_recriacao = None

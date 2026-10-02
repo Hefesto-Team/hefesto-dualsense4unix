@@ -164,6 +164,23 @@ DESFECHOS_EMULACAO_ATIVA = frozenset(
 #:     Steam Input): a diferença é só quem tem autoridade sobre o vpad vivo.
 ORIGENS_GESTO_DELA = frozenset({"manual", "gesto_de_perfil"})
 
+#: A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01 (01/10/2026): as origens que recriam o
+#: pad com o jogo aberto, cada uma com a decisão DELA que a autoriza. Toda outra
+#: origem é automática e espera o jogo fechar. Quem pergunta é
+#: :func:`_recriacao_bloqueada_por_jogo`, o dono da pergunta; o
+#: `ORIGENS_GESTO_DELA` acima fica como leitura das duas primeiras.
+#:
+#:   - ``"manual"`` e ``"gesto_de_perfil"`` — o gesto dela (o cartão, o
+#:     «Aplicar», o chip, o PS + R3, o PS + L3, o perfil ativado à mão);
+#:   - ``"ordem_do_coop"`` — a carta renumerada na aba, a carta menor que chega
+#:     depois da maior, e o prazo do lugar guardado que venceu (os secundários;
+#:     o P1 é fixo na ordem com o jogo aberto).
+ORIGENS_QUE_PASSAM_COM_O_JOGO: dict[str, str] = {
+    "manual": "D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR",
+    "gesto_de_perfil": "D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR",
+    "ordem_do_coop": "D-2309-FORA-DE-ORDEM-SE-RECRIA-NA-HORA",
+}
+
 #: Origem de emulação aceita por `start_gamepad_emulation`/`set_gamepad_emulation`.
 OrigemEmulacao = Literal["manual", "profile", "gesto_de_perfil"]
 
@@ -1732,8 +1749,30 @@ def _recriacao_bloqueada_por_jogo(
     (`_bloqueio_recriacao_episodio`) morre sozinho na borda em que o jogo perde
     a autoridade, então um bloqueio NOVO volta a ser gritado. O contador do
     store continua subindo a cada recusa — ele é a frequência, o log é o fato.
+
+    UM DONO SÓ — A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01 (01/10/2026). A pergunta
+    «posso recriar com o jogo aberto?» se fazia em cinco lugares, de três
+    jeitos, e o juiz da máscara do co-op não perguntava. Agora todo destruidor
+    de pad pergunta aqui:
+
+    - as origens de :data:`ORIGENS_QUE_PASSAM_COM_O_JOGO` passam, e com o jogo
+      na autoridade dizem uma linha (`pad_recriado_com_o_jogo_aberto
+      origem=… decisao=… motivo=…`): até aqui o gesto passava calado, e achar
+      quem recriou às 03:07:09 de 30/09 custou juntar cinco eventos;
+    - toda outra origem espera, e o aviso sai UMA vez por origem por episódio
+      (o latch é um conjunto, e não uma vaga): com `reconciliacao`,
+      `coop_tique` e `profile` se revezando no mesmo episódio, uma vaga só
+      rearmaria o aviso a cada troca, e o diário encheria como em 18→19/08.
     """
-    if origin in ORIGENS_GESTO_DELA:
+    decisao = ORIGENS_QUE_PASSAM_COM_O_JOGO.get(origin)
+    if decisao is not None:
+        if _autoridade_do_jogo(daemon):
+            logger.info(
+                "pad_recriado_com_o_jogo_aberto",
+                origem=origin,
+                decisao=decisao,
+                motivo=motivo,
+            )
         return False
     # O lançamento já vestiu o pad, e o jogo está para abrir — ou já abriu —
     # mesmo quando a janela ainda não disse `game`. Recriar nesse vão é o
@@ -1741,16 +1780,13 @@ def _recriacao_bloqueada_por_jogo(
     # na linha de cima. A trava é do `arm_launch_profile`, e um lançamento
     # novo a solta ANTES de vestir o pad dele, senão o arming se bloqueava.
     if getattr(daemon, "_pad_travado_pelo_lancamento", None) is not None:
-        episodio = "lancamento"
-        if getattr(daemon, "_bloqueio_recriacao_episodio", None) == episodio:
+        if not _primeira_vez_no_episodio(daemon, "lancamento"):
             logger.debug(
                 "vpad_recriacao_bloqueada_pelo_lancamento_repetida",
                 motivo=motivo,
                 origem=origin,
             )
         else:
-            with contextlib.suppress(Exception):
-                daemon._bloqueio_recriacao_episodio = episodio  # type: ignore[attr-defined]
             logger.warning(
                 "vpad_recriacao_bloqueada_pelo_lancamento",
                 motivo=motivo,
@@ -1767,18 +1803,15 @@ def _recriacao_bloqueada_por_jogo(
         with contextlib.suppress(Exception):
             daemon._bloqueio_recriacao_episodio = None  # type: ignore[attr-defined]
         return False
-    # O episódio é a ORIGEM, não o motivo: a noite de 18→19/08 alternava
-    # `dualsense->xbox` e `xbox->dualsense` no mesmo laço, e chavear pelo motivo
-    # deixaria as duas linhas se revezando para sempre. O motivo de cada recusa
-    # segue no DEBUG.
-    episodio = origin
-    if getattr(daemon, "_bloqueio_recriacao_episodio", None) == episodio:
+    # O episódio guarda as ORIGENS, não os motivos: a noite de 18→19/08
+    # alternava `dualsense->xbox` e `xbox->dualsense` no mesmo laço, e chavear
+    # pelo motivo deixaria as duas linhas se revezando para sempre. O motivo de
+    # cada recusa segue no DEBUG.
+    if not _primeira_vez_no_episodio(daemon, origin):
         logger.debug(
             "vpad_recriacao_bloqueada_por_jogo_repetida", motivo=motivo, origem=origin
         )
     else:
-        with contextlib.suppress(Exception):
-            daemon._bloqueio_recriacao_episodio = episodio  # type: ignore[attr-defined]
         logger.warning(
             "vpad_recriacao_bloqueada_por_jogo", motivo=motivo, origem=origin
         )
@@ -1786,6 +1819,24 @@ def _recriacao_bloqueada_por_jogo(
     if store is not None:
         with contextlib.suppress(Exception):
             store.bump("gamepad.recreate.blocked_by_game")
+    return True
+
+
+def _primeira_vez_no_episodio(daemon: Any, chave: str) -> bool:
+    """`chave` (uma origem, ou o lançamento) ainda não foi dita neste episódio?
+
+    O episódio é o conjunto em `_bloqueio_recriacao_episodio`, e acaba na
+    borda em que o jogo devolve a autoridade (:func:`_recriacao_bloqueada_por_jogo`
+    o zera). Anota a chave e devolve True na primeira vez; False nas outras.
+    """
+    vistos = getattr(daemon, "_bloqueio_recriacao_episodio", None)
+    if not isinstance(vistos, set):
+        vistos = set()
+    if chave in vistos:
+        return False
+    vistos.add(chave)
+    with contextlib.suppress(Exception):
+        daemon._bloqueio_recriacao_episodio = vistos
     return True
 
 
@@ -2847,6 +2898,12 @@ def reconciliar_as_mascaras(daemon: Any) -> str | None:
     única espera é a R-04: com o jogo na autoridade ninguém é recriado na mão
     dela, e o tique seguinte a ele sair converge sozinho.
 
+    A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01 (01/10/2026): a espera pergunta ao
+    dono (:func:`_recriacao_bloqueada_por_jogo`, `origin="reconciliacao"`), e
+    SÓ quando há boneco para trás. Lendo o sinal antes, como até aqui, o dono
+    diria a espera em toda partida sem nada a recriar, e o contador subiria a
+    cada tique (~2 s).
+
     Devolve o desfecho quando refez o boneco do P1, ou ``None``.
     """
     from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
@@ -2859,14 +2916,12 @@ def reconciliar_as_mascaras(daemon: Any) -> str | None:
         return None
     if getattr(daemon, "_native_mode", False) or steam_input_vpad_suspenso(daemon):
         return None
-    if _autoridade_do_jogo(daemon):
-        return None
     flavor_do_jogo = getattr(cfg, "gamepad_flavor", None)
     caminho = caminho_da_sessao(daemon)
     desfecho: str | None = None
     vpad = getattr(daemon, "_gamepad_device", None)
     identity = primary_identity(daemon)
-    if (
+    p1_para_tras = bool(
         vpad is not None
         and vpad_vivo(vpad)
         and vpad_ficou_para_tras(
@@ -2876,7 +2931,17 @@ def reconciliar_as_mascaras(daemon: Any) -> str | None:
             vpad=vpad,
             caminho=caminho,
         )
+    )
+    coop = getattr(daemon, "_coop_manager", None)
+    atrasado = getattr(coop, "algum_boneco_ficou_para_tras", None)
+    secundario_para_tras = bool(coop is not None and callable(atrasado) and atrasado())
+    if not (p1_para_tras or secundario_para_tras):
+        return None
+    if _recriacao_bloqueada_por_jogo(
+        daemon, origin="reconciliacao", motivo="mascara_reconciliada"
     ):
+        return None
+    if p1_para_tras:
         logger.info(
             "mascara_do_p1_reconciliada",
             vestia=getattr(vpad, "flavor", None),
@@ -2884,9 +2949,7 @@ def reconciliar_as_mascaras(daemon: Any) -> str | None:
         )
         with getattr(daemon, "_emu_lock", contextlib.nullcontext()):
             desfecho = reerguer_o_p1(daemon, motivo="mascara_reconciliada")
-    coop = getattr(daemon, "_coop_manager", None)
-    atrasado = getattr(coop, "algum_boneco_ficou_para_tras", None)
-    if coop is not None and callable(atrasado) and atrasado():
+    if secundario_para_tras and coop is not None:
         coop.sync(force=True)
     return desfecho
 
@@ -3555,6 +3618,7 @@ __all__ = [
     "EMU_RECUSADO_STEAM_INPUT",
     "LAUNCH_RECONCILE_INTERVAL_SEC",
     "ORIGENS_GESTO_DELA",
+    "ORIGENS_QUE_PASSAM_COM_O_JOGO",
     "REBACKEND_COOLDOWN_SEC",
     "STEAM_INPUT_VIGIA_INTERVAL_SEC",
     "GamepadSubsystem",

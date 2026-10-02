@@ -637,7 +637,7 @@ async def vigiar_o_cabo_em_espera(
     return passaram
 
 
-def _o_nome_que_o_boot_restaura(store: Any) -> str | None:
+def _o_nome_que_o_boot_restaura(store: Any, *, appid_em_cena: int | None = None) -> str | None:
     """O nome da escolha dela para o boot, com a memória do botão quando há.
 
     `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 4: o boot e a reconexão
@@ -646,6 +646,16 @@ def _o_nome_que_o_boot_restaura(store: Any) -> str | None:
     `a_escolha_dela`); a memória do Modo Freestyle (`o_freestyle_manda`) vale
     quando há `store`, e o disco quando o boot pergunta antes de haver memória.
     O Freestyle desligado nunca volta (item 6). Levanta só o que o dono levanta.
+
+    O JOGO EM CENA VEM ANTES DA ESCOLHA — A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01
+    (01/10/2026, `D-3009-O-REINICIO-COM-O-JOGO-ABERTO-NASCE-NO-PERFIL-DO-JOGO`,
+    a validar por ela). Com um jogo aberto na hora do boot (o «Reiniciar», o
+    install, uma queda do serviço), o perfil cuja regra `steam_app_<appid>`
+    casa com ele é o que vale, e o primeiro pad nasce no modo dele: o
+    autoswitch o poria nove segundos depois, com a trava já protegendo o modo
+    de fora do jogo. Com o Freestyle ligado, vale o Freestyle, como sempre.
+    `appid_em_cena` é o do sinal de jogo (`Daemon.appid_em_cena`); sem ele, a
+    escolha dela.
 
     NOTA DATADA — 01/10/2026: aqui morava a RESTORE-ESCOPO-01 (22/07), que
     pulava todo perfil com regra de janela, e o Freestyle entrava no lugar
@@ -665,6 +675,12 @@ def _o_nome_que_o_boot_restaura(store: Any) -> str | None:
     manda = o_freestyle_manda(store) if store is not None else load_freestyle_ligado()
     if manda:
         return NOME_DO_PADRAO
+    if appid_em_cena is not None:
+        from hefesto_dualsense4unix.profiles.manager import perfil_do_appid
+
+        do_jogo = perfil_do_appid(appid_em_cena)
+        if do_jogo is not None and not e_o_freestyle(do_jogo.name):
+            return str(do_jogo.name)
     nome = resolve_boot_profile()
     if e_o_freestyle(nome):
         # O disco diz o botão aceso e a memória diz apagado: vale a memória,
@@ -675,7 +691,9 @@ def _o_nome_que_o_boot_restaura(store: Any) -> str | None:
     return nome
 
 
-def perfil_que_o_boot_restaura(store: Any = None) -> Any | None:
+def perfil_que_o_boot_restaura(
+    store: Any = None, *, appid_em_cena: int | None = None,
+) -> Any | None:
     """O perfil que o `restore_last_profile` vai ativar, lido sem ativar nada.
 
     O-MODO-XBOX-NAO-E-QUEDA-02 (28/09/2026), item 3 da cura consolidada. O
@@ -690,12 +708,14 @@ def perfil_que_o_boot_restaura(store: Any = None) -> Any | None:
     Modo Freestyle ligado, o Freestyle, e o primeiro pad nasce no modo DELE;
     desligado, a escolha dela, com regra de janela ou sem — escolher o Future
     Knight à mão deixa o controle no Xbox fora do jogo, que é o que o «Ativar»
-    já faz. Nunca levanta: sem perfil legível, ``None`` e o boot de sempre.
+    já faz. Com um jogo aberto na hora do boot (`appid_em_cena`, desde a
+    A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01), o perfil do jogo vem antes da
+    escolha. Nunca levanta: sem perfil legível, ``None`` e o boot de sempre.
     """
     try:
         from hefesto_dualsense4unix.profiles.loader import load_profile
 
-        nome = _o_nome_que_o_boot_restaura(store)
+        nome = _o_nome_que_o_boot_restaura(store, appid_em_cena=appid_em_cena)
         return load_profile(nome) if nome else None
     except Exception:
         return None
@@ -718,6 +738,11 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
 
     «Sem escolha» (item 10) não ativa nada: o `active_profile` fica `None`, o
     chip diz «—», e o controle fica com o que já tinha.
+
+    Com um jogo aberto na hora do boot, o perfil do jogo vem antes da escolha
+    (A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01): o appid é o do sinal de jogo
+    (`Daemon.appid_em_cena`), lido antes do primeiro pad. Também com
+    `origin="system"`: o jogo em cena não vira a escolha dela.
     """
     from functools import partial
 
@@ -737,10 +762,15 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
     if o_freestyle_manda(store) and not o_perfil_de_fora_do_jogo():
         logger.warning("freestyle_ligado_sem_o_perfil", acao="desligado")
         ligar_o_freestyle(store, False)
-    name = _o_nome_que_o_boot_restaura(store)
+    appid_em_cena = getattr(daemon, "appid_em_cena", None)
+    if not isinstance(appid_em_cena, int) or isinstance(appid_em_cena, bool):
+        appid_em_cena = None
+    name = _o_nome_que_o_boot_restaura(store, appid_em_cena=appid_em_cena)
     if not name:
         logger.info("boot_sem_escolha")
         return
+    if appid_em_cena is not None:
+        logger.info("boot_com_o_jogo_em_cena", appid=appid_em_cena, perfil=name)
     # FEAT-NATIVE-MODE-01: em Modo Nativo o controle fica SOLTO para o jogo — não
     # re-aplica o perfil (que re-escreveria gatilhos/emulação por cima).
     if getattr(daemon, "_native_mode", False):

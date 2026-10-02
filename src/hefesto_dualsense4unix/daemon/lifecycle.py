@@ -209,20 +209,21 @@ def _o_perfil_diz_navegacao(profile: Any) -> bool:
 
 
 def _o_modo_do_perfil_do_boot(
-    store: Any = None,
+    store: Any = None, *, appid_em_cena: int | None = None,
 ) -> tuple[str | None, str | None, str | None]:
     """``(caminho, máscara, nome)`` do perfil que o boot restaura, ou vazios.
 
     O-MODO-XBOX-NAO-E-QUEDA-02, item 3. Só a seção `mode` de `kind="gamepad"`
     opina (é o ramo do `apply_profile_mode` que liga o pad); `native`/`desktop`
     continuam com os flags do boot (BUG-BOOT-RESTORE-FLIPS-EMULATION-01).
-    Nunca levanta.
+    `appid_em_cena`: o jogo aberto na hora do boot (A-TRAVA-DO-JOGO-ABERTO-TEM-
+    UM-DONO-01), a mesma pergunta do restauro. Nunca levanta.
     """
     from hefesto_dualsense4unix.daemon.connection import perfil_que_o_boot_restaura
     from hefesto_dualsense4unix.integrations.uinput_gamepad import resolver_flavor
 
     try:
-        perfil = perfil_que_o_boot_restaura(store)
+        perfil = perfil_que_o_boot_restaura(store, appid_em_cena=appid_em_cena)
     except Exception:
         return None, None, None
     if perfil is None:
@@ -234,6 +235,55 @@ def _o_modo_do_perfil_do_boot(
     bruta = getattr(mode, "gamepad_flavor", None)
     mascara = resolver_flavor(bruta) if bruta else None
     return _caminho_da_secao(mode), mascara, nome
+
+
+def _o_appid_da_evidencia(inputs: dict[str, Any]) -> int | None:
+    """O appid do jogo pela evidência do sinal: o marcador vivo, ou o processo.
+
+    A mesma conta da evidência 3 e da 4 do `game_signal.classify`
+    (`launch_env.wrapper_game_running`, e o `appid_de_jogo_vivo` da varredura
+    canônica). Pura e sem I/O: as entradas são as que o
+    `Daemon._gather_game_signal_inputs` já leu. Nunca levanta.
+    """
+    from hefesto_dualsense4unix.daemon.launch_env import wrapper_game_running
+
+    try:
+        marker = inputs.get("marker")
+        if marker is not None and wrapper_game_running(
+            marker=marker,
+            exit_marker=inputs.get("exit_marker"),
+            pid_alive=bool(inputs.get("marker_pid_alive")),
+            marker_pid=inputs.get("marker_pid"),
+            exit_pid=inputs.get("exit_pid"),
+            now=float(inputs.get("now") or time.time()),
+        ):
+            return int(marker[0])
+        vivo = inputs.get("appid_de_jogo_vivo")
+        if isinstance(vivo, int) and vivo > 0:
+            return vivo
+    except Exception:
+        return None
+    return None
+
+
+def _soltar_o_pad_do_lancamento(daemon: Any) -> None:
+    """O jogo devolveu a autoridade: a trava do lançamento acaba aqui.
+
+    A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01 (01/10/2026). A trava do lançamento
+    (`launch_env._travar_o_pad_que_o_jogo_vai_abrir`) segura o pad do `exec`
+    até a janela dizer `game`, e só o lançamento seguinte a soltava: depois de
+    o jogo fechar, toda troca automática do pad (a volta à escolha dela, a
+    reconciliação das máscaras, o co-op que converge) seguia recusada até o
+    próximo jogo. Com o jogo de volta à mesa do daemon, não há aparelho que o
+    jogo tenha aberto para proteger.
+    """
+    travado = getattr(daemon, "_pad_travado_pelo_lancamento", None)
+    if travado is None:
+        return
+    with contextlib.suppress(Exception):
+        daemon._pad_travado_pelo_lancamento = None
+    logger.info("pad_do_lancamento_destravado", motivo="o_jogo_devolveu_a_autoridade",
+                appid=travado[0] if isinstance(travado, tuple) and travado else None)
 
 
 def _mascara_da_maquina() -> str:
@@ -516,7 +566,7 @@ class DaemonConfig:
     #
     # É uma FONTE (chamável), não uma cópia da chave, e a diferença é o gesto
     # do "Aplicar": o `machine.declare` relê o `maquina.json` e REBINDA
-    # `daemon._maquina` (`ipc_handlers.py:7662`), então uma cópia tirada no boot
+    # `daemon._maquina` (`ipc_handlers.py:7694`), então uma cópia tirada no boot
     # ficaria velha no instante exato em que ela acabou de escolher — e o teto
     # novo só valeria no próximo início do Hefesto. Com a fonte, o próximo
     # cálculo de vibração já lê a declaração nova, sem tique nem invalidação.
@@ -1177,6 +1227,10 @@ class Daemon:
     # provider`) é gateada por `hasattr` — sem o método, o backend fica
     # byte-idêntico ao HEAD (fail-safe da síntese da Onda N).
     _game_signal: Any = None
+    # A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01: o appid da evidência do sinal (o
+    # marcador do lançador vivo, ou o processo do jogo), lido a cada avaliação.
+    # Quem o lê é `appid_em_cena`, que só o devolve com o jogo na autoridade.
+    _appid_da_evidencia: int | None = None
     # GATILHO-DA-COR-01: o `core.gatilho_fim_de_sequencia.RegistroDeGatilhos`
     # deste daemon — as reafirmações "no fim da sequência" por nome —, ou None
     # até a primeira consulta. Mora no daemon, e não no `reconnect_loop`,
@@ -1384,9 +1438,19 @@ class Daemon:
         # arquivo global (CAMINHO-CONTAGIO-01), e o start do boot o limparia de
         # qualquer jeito. Sem perfil que opine, o slot nasce vazio, como antes.
         self._caminho_do_boot: str | None = None
+        # A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01 (01/10/2026): O SINAL ANTES DO
+        # PAD. Medido em 30/09: o «Reiniciar» com o Future Knight aberto subiu o
+        # pad do P1 às 03:06:47 no modo de fora do jogo, o sinal só foi fiado às
+        # 03:06:50 e subiu às 03:06:51, e às 03:06:59 a trava passou a proteger
+        # um modo que ninguém escolheu para aquele jogo. Agora o sinal nasce e é
+        # avaliado aqui, antes do modo do boot e do primeiro pad; o marcador do
+        # lançador e o processo do jogo não dependem do leitor de janela.
+        self._wire_game_signal()
+        with contextlib.suppress(Exception):
+            await self._sync_game_signal()
         if not self._native_mode:
             caminho_do_boot, mascara_do_boot, perfil_do_boot = _o_modo_do_perfil_do_boot(
-                self.store
+                self.store, appid_em_cena=self.appid_em_cena
             )
             self._caminho_do_boot = caminho_do_boot
             if mascara_do_boot is not None and self.config.gamepad_emulation_enabled:
@@ -1499,10 +1563,9 @@ class Daemon:
             # EXT-04: identidade + LED dos externos, no MESMO gate de backend
             # real do identity_registry (fake => tudo desligado).
             self._wire_external_registry()
-            # NUMA-01: sinal "jogo real ativo" — ATIVA o gate NUMA-02/03
-            # (dormente até aqui). Ao contrário dos dois acima, nasce SEMPRE
-            # (ver docstring de `_wire_game_signal`).
-            self._wire_game_signal()
+            # NUMA-01: o sinal "jogo real ativo" nasce no começo do `run`,
+            # antes do modo do boot e do primeiro pad (A-TRAVA-DO-JOGO-ABERTO-
+            # TEM-UM-DONO-01): ver o bloco do `_caminho_do_boot`.
             # S-5: opener broker-aware da leitura de calibração 0x05 — sem ele
             # o `read_calibration` dá EACCES no hidraw ESCONDIDO (promoção
             # VPAD-02, respawn de coop) e o vpad herda calibração canônica
@@ -2667,8 +2730,12 @@ class Daemon:
                         get_coop_manager,
                     )
 
+                    # A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01: a origem do pedido
+                    # do P1 segue para o juiz do co-op. Um P1 morto que renasce
+                    # sozinho com o jogo aberto (origem automática) não leva
+                    # junto o secundário VIVO que ficou para trás da máscara.
                     with contextlib.suppress(Exception):
-                        get_coop_manager(self).sync(force=True)
+                        get_coop_manager(self).sync(force=True, origem=origin)
                 elif ok:
                     # Config efetiva não mudou: nenhum vpad foi recriado e o
                     # co-op segue no ciclo normal (~2s) do poll loop.
@@ -2803,8 +2870,11 @@ class Daemon:
             )
         from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
 
+        # A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01: a máscara do cartão (ou do
+        # PS + L3) de um secundário é gesto dela, e o dono da trava diz a
+        # linha de quem recriou com o jogo aberto.
         with contextlib.suppress(Exception):
-            get_coop_manager(self).sync(force=True)
+            get_coop_manager(self).sync(force=True, origem="manual")
         return "coop"
 
     def set_coop_enabled(
@@ -4251,6 +4321,9 @@ class Daemon:
           4. o jogo está com a autoridade de exibição e a aplicação seria
              destrutiva → segura a pendência até a primeira borda em que a
              autoridade sair de "game" (log 1x, senão sairiam ~1 linha/s).
+             Quem responde é o dono da trava
+             (`gamepad._recriacao_bloqueada_por_jogo`, `origin="pendencia"`),
+             desde a A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01 (01/10/2026).
         """
         pendencia = self._mode_pendente
         if pendencia is None:
@@ -4276,8 +4349,12 @@ class Daemon:
                 ativo=ativo,
             )
             return
-        if self.display_authority == "game" and self._modo_seria_destrutivo(
-            pendencia.mode
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+            _recriacao_bloqueada_por_jogo,
+        )
+
+        if self._modo_seria_destrutivo(pendencia.mode) and _recriacao_bloqueada_por_jogo(
+            self, origin="pendencia", motivo="modo_pendente"
         ):
             if not pendencia.esperando_jogo:
                 pendencia.esperando_jogo = True
@@ -5534,6 +5611,21 @@ class Daemon:
     # ------------------------------------------------------------------
 
     @property
+    def appid_em_cena(self) -> int | None:
+        """O appid do jogo aberto AGORA, com o jogo na autoridade; senão ``None``.
+
+        A-TRAVA-DO-JOGO-ABERTO-TEM-UM-DONO-01 (01/10/2026). É a evidência que o
+        sinal acabou de ler (o marcador do lançador com o pid vivo, ou o
+        processo do jogo), e só vale enquanto o sinal diz `game`. Quem
+        pergunta é o boot e o restauro (`connection.perfil_que_o_boot_restaura`):
+        com um jogo aberto na hora do boot, o pad e o perfil são os do jogo.
+        """
+        if self.display_authority != "game":
+            return None
+        appid = self._appid_da_evidencia
+        return appid if isinstance(appid, int) and appid > 0 else None
+
+    @property
     def display_authority(self) -> str:
         """Autoridade de exibição CORRENTE ('game'|'daemon'|'unknown').
 
@@ -5990,12 +6082,16 @@ class Daemon:
         except Exception as exc:
             logger.warning("game_signal_degradado", motivo=str(exc))
             signal.mark_degraded(str(exc))
+            self._appid_da_evidencia = None
         else:
             raw = classify(**inputs)
             signal.evaluate(raw, session_open=bool(inputs["session_open"]))
+            self._appid_da_evidencia = _o_appid_da_evidencia(inputs)
         novo = signal.authority
         if novo == anterior:
             return
+        if anterior == "game" and novo == "daemon":
+            _soltar_o_pad_do_lancamento(self)
         # GATILHO-DA-COR-01 (escolha dela, 12/08): a rajada de repintura da
         # Steam é por EVENTO, e a conexão é só o evento mais visível — abrir e
         # fechar jogo também a provoca. Esta transição É o "jogo abrindo/
