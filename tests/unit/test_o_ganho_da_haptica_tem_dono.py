@@ -663,6 +663,84 @@ class TestAEconomiaCortaAHaptica:
         assert entries[0]["haptica_pct"] == 150
         assert entries[0]["haptica_vale_pct"] == 30
 
+    def test_a_economia_de_um_controle_corta_a_haptica_dele_e_so_a_dele(self) -> None:
+        """O botão de economia da linha do controle corta a háptica DAQUELE controle.
+
+        A peça «Vibração» da economia por controle (``A_ECONOMIA_EM_CADA_PECA``)
+        já corta os motores dele; a háptica é vibração também, e a regra é a de
+        ``economia_vale`` (a mesa OU o controle). O outro controle, sem a sua
+        economia e com a mesa sem teto, segue com o ganho inteiro.
+
+        MORDIDA: em ``GanhoDaHaptica.fator``, volte a ``self._teto`` no lugar
+        de ``self._teto_de(uniq)`` → o branco vale 1,5 com a economia dele
+        ligada, e reprova.
+        """
+        from types import SimpleNamespace
+
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+        from hefesto_dualsense4unix.profiles import schema
+
+        declaracao = SimpleNamespace(
+            orcamento=SimpleNamespace(teto=None),
+            controles={norm_mac(BRANCO): SimpleNamespace(economia=True)},
+        )
+        schema.registrar_declaracao_da_mesa(lambda: declaracao)
+        try:
+            dono = _dono(branco=150, preto=150)
+            dono.ler_o_teto(_mesa_com_orcamento(None))
+            assert dono.fator(BRANCO) == pytest.approx(0.3)
+            assert dono.pct_que_vale(BRANCO) == 30
+            assert dono.pct(BRANCO) == 150, "o teto é leitura: o que ela escolheu não muda"
+            assert dono.fator(PRETO) == pytest.approx(1.5), "a economia é DAQUELE controle"
+            srv = _servidor()
+            dono.escrever_nas_placas([BRANCO], [BRANCO], [PLACA_BRANCO], runner=srv,
+                                     placa_de=_placa_de)
+            assert srv.traseiros(PLACA_BRANCO) == [0.3, 0.3]
+            assert set(_bloco(functools.partial(dono.fator, BRANCO))) == {19}
+            # ela desliga a economia do controle: na volta seguinte o ganho volta
+            declaracao.controles = {}
+            dono.ler_o_teto(_mesa_com_orcamento(None))
+            assert dono.fator(BRANCO) == pytest.approx(1.5)
+        finally:
+            schema.registrar_declaracao_da_mesa(None)
+
+    def test_a_luz_no_ar_do_state_full_e_a_do_subsystem_do_som(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O ``haptica_no_ar`` de cada controle é o que o subsystem do som responde.
+
+        O controle desconectado não pergunta, e o subsystem que levanta não
+        derruba o ``state_full``: a luz fica apagada.
+
+        MORDIDA: em ``_merge_radio``, escreva ``False`` no lugar do ``no_ar`` →
+        a luz do branco não acende, e reprova.
+        """
+        from types import SimpleNamespace
+
+        from hefesto_dualsense4unix.daemon import ganho_da_haptica as mod
+
+        monkeypatch.setattr(mod, "GANHO", _dono(branco=150))
+        perguntas: list[str] = []
+
+        def no_ar(uniq: str) -> bool:
+            perguntas.append(uniq)
+            if uniq == PRETO:
+                raise RuntimeError("o ouvido caiu")
+            return uniq == BRANCO
+
+        h = _Handlers(ativo=None, primario=BRANCO)
+        h._sensor_hub = object()  # type: ignore[attr-defined]
+        h.daemon._alto_falante_subsystem = SimpleNamespace(haptica_no_ar=no_ar)  # type: ignore[attr-defined]
+        monkeypatch.setattr(h, "_adaptadores_do_radio", lambda _u: {}, raising=False)
+        entries: list[dict[str, Any]] = [
+            {"uniq": BRANCO, "transport": "usb"},
+            {"uniq": PRETO, "transport": "bt"},
+            {"uniq": "aa:bb:cc:00:00:09", "transport": "bt", "connected": False},
+        ]
+        h._merge_radio(entries)
+        assert [e["haptica_no_ar"] for e in entries] == [True, False, False]
+        assert "aa:bb:cc:00:00:09" not in perguntas, "o desconectado não pergunta"
+
 
 # ---------------------------------------------------------------------------
 # 8. Desligada pelo rádio fora do Xbox: a ponte não vai à háptica (item 6)

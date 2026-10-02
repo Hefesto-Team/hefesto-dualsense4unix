@@ -88,6 +88,9 @@ class GanhoDaHaptica:
         #: O teto do orçamento da mesa, em fator (``None`` = sem teto). Relido
         #: com o perfil, a cada volta do som e no ato do pedido.
         self._teto: float | None = None
+        #: As chaves dos controles que ligaram a SUA economia (o botão da linha
+        #: do controle, ``maquina.json``), relidas junto com o teto da mesa.
+        self._em_economia: frozenset[str] = frozenset()
 
     # -- a leitura ---------------------------------------------------------
     def ler_do_perfil(self, controllers: Any) -> None:
@@ -131,10 +134,14 @@ class GanhoDaHaptica:
         self.ler_do_perfil(controllers)
 
     def ler_o_teto(self, daemon: Any) -> None:
-        """O teto do orçamento da mesa de agora, pela fonte que o funil do rumble lê.
+        """O teto da Economia de agora: o da mesa e o de cada controle que ligou a sua.
 
-        Nunca levanta: sem config, sem a fonte ou com ela levantando, não há
-        teto — nunca um teto inventado (``core.rumble._orcamento_declarado``).
+        O da mesa vem pela fonte que o funil do rumble lê; o de cada controle,
+        pela declaração que a vibração dele já obedece
+        (``profiles.schema.controles_em_economia``, a peça «Vibração» de
+        ``A_ECONOMIA_EM_CADA_PECA``). Nunca levanta: sem config, sem a fonte ou
+        com ela levantando, não há teto — nunca um teto inventado
+        (``core.rumble._orcamento_declarado``).
         """
         teto: float | None = None
         with contextlib.suppress(Exception):
@@ -145,6 +152,30 @@ class GanhoDaHaptica:
 
             teto = teto_do_orcamento(_orcamento_declarado(getattr(daemon, "config", None)))
         self._teto = teto
+        ligados: frozenset[str] = frozenset()
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.profiles.schema import controles_em_economia
+
+            ligados = frozenset(c for c in (_chave(u) for u in controles_em_economia()) if c)
+        self._em_economia = ligados
+
+    def _teto_de(self, uniq: str | None) -> float | None:
+        """O teto deste controle: o da mesa, ou o da economia que ELE ligou.
+
+        A ECONOMIA DE UM CONTROLE CORTA A HÁPTICA DELE — 02/10/2026, pela
+        resposta [25] dela («Corta também») e pela palavra dela de 29/09, *«todas
+        as features são um por aparelho. sempre.»*.
+        A regra entre os dois é a de ``profiles.schema.economia_vale`` (a mesa OU
+        o controle), e o número é o mesmo degrau da mesa: um só teto da Economia.
+        """
+        if self._teto is not None:
+            return self._teto
+        chave = _chave(uniq)
+        if chave is None or chave not in self._em_economia:
+            return None
+        from hefesto_dualsense4unix.core.rumble import _ORCAMENTO_COM_TETO, teto_do_orcamento
+
+        return teto_do_orcamento(_ORCAMENTO_COM_TETO)
 
     def pct(self, uniq: str | None) -> int:
         """O ganho que ela escolheu para este controle, em % (0 a ``HAPTICA_PCT_MAX``)."""
@@ -159,7 +190,7 @@ class GanhoDaHaptica:
         """O ganho que VALE em fator linear de amplitude (150 % → 1,5; na Economia, 0,3)."""
         from hefesto_dualsense4unix.core.rumble import _sob_o_teto
 
-        return _sob_o_teto(self.pct(uniq) / 100.0, self._teto)
+        return _sob_o_teto(self.pct(uniq) / 100.0, self._teto_de(uniq))
 
     def pct_que_vale(self, uniq: str | None) -> int:
         """O ganho que vale agora, em %: o escolhido sob o teto do orçamento."""
