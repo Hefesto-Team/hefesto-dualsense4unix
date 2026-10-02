@@ -17,7 +17,9 @@ de cada régua sai do que a régua montou, nunca do que o pacote escreveu:
 5. a classe acende a peça, no motor dela (WebKit);
 6. a fita é uma só: o chip do mapa leva o gesto das abas, e a escolha feita no
    mapa chega ao contexto das abas (esta última espera a linha do
-   `hefesto_vivo._contexto`, ver o `xfail`).
+   `hefesto_vivo._contexto`, ver o `xfail`);
+7. o desenho nunca fica com o controle de outro chip: a mesa sem controle apaga
+   as lâmpadas e a barra, e o «Todos» desenha o primeiro da mesa (WebKit).
 
 A PÁGINA LIDA: enquanto o mapa estiver declarado em trabalho no
 `mockup/DIVERGENCIAS.md` (a licença do portão `desenho-aprovado`), a bancada;
@@ -26,9 +28,10 @@ depois do `--publicar`, a publicada.
 AS MORDIDAS: o pacote ler o primeiro da mesa no lugar do escolhido (1, 2); a
 troca com o id cru (3); tirar a regra da marca tracejada, ou emitir
 `trocada-` para toda peça (3b); tirar o endereço de um item do gerador (4);
-tirar a regra `.on` do laço (5); um gesto local do mapa (6).
+tirar a regra `.on` do laço (5); um gesto local do mapa (6); o `segue` sem a
+queda no «Nenhum», ou o `desenha` do «Todos» sem o primeiro da mesa (7).
 
-Sem tela o WebKit não abre e as réguas 3b e 5 PULAM: rode com `xvfb-run -a`.
+Sem tela o WebKit não abre e as réguas 3b, 5 e 7 PULAM: rode com `xvfb-run -a`.
 """
 from __future__ import annotations
 
@@ -222,15 +225,24 @@ MEDIDA = r"""
     marca_tri: vis('.m-triangle'), marca_cruz: vis('.m-cross'),
     linha_tri: vis('.item-triangle .troca'), linha_cruz: vis('.item-cross .troca'),
     texto_tri: (document.querySelector('[data-campo="troca-triangle"]') || {}).textContent,
-    peca_tri: fill('#mp-triangle .peca'), peca_cruz: fill('#mp-cross .peca')
+    peca_tri: fill('#mp-triangle .peca'), peca_cruz: fill('#mp-cross .peca'),
+    leds: [1, 2, 3, 4, 5].filter(i => document.querySelector('#mp-led-jogador-' + i)
+                                     .classList.contains('led-on')),
+    luz: fill('#mp-lightbar *'), apagada: getComputedStyle(document.documentElement)
+                                         .getPropertyValue('--luz-apagada').trim(),
+    nenhum_on: !!document.querySelector('[data-bloco="controles-do-mapa"] [data-jogador="0"].on')
   });
 })()
 """
 ROSA = "rgb(255, 121, 198)"
 
 
-def _no_webkit(cargas: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Abre a página, instala a ponte e mede depois de cada carga pintada."""
+def _no_webkit(cargas: list[Any]) -> list[dict[str, Any]]:
+    """Abre a página, instala a ponte e mede depois de cada carga pintada.
+
+    Uma carga que é texto é um gesto (JavaScript) da pessoa na página, e não uma
+    pintura do produto: a medida vem depois dele do mesmo jeito.
+    """
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -251,8 +263,9 @@ def _no_webkit(cargas: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if not fila:
             Gtk.main_quit()
             return
-        pedido = hefesto_vivo.PEDIR_A_PINTURA.replace(
-            "CARGA", json.dumps(fila.pop(0), ensure_ascii=False))
+        carga = fila.pop(0)
+        pedido = carga if isinstance(carga, str) else hefesto_vivo.PEDIR_A_PINTURA.replace(
+            "CARGA", json.dumps(carga, ensure_ascii=False))
         view.evaluate_javascript(pedido, -1, None, None, None, pintou)
 
     def mediu(v: Any, res: Any) -> None:
@@ -317,3 +330,39 @@ def test_a_troca_e_o_pisca_aparecem_no_desenho(com_troca: dict[str, Any]) -> Non
     assert com_p3["peca_tri"] == ROSA and com_p3["peca_cruz"] != ROSA, com_p3
     # trocando para o P1, o Triângulo apaga e a Cruz acende
     assert com_p1["peca_tri"] != ROSA and com_p1["peca_cruz"] == ROSA, com_p1
+
+
+def _rgb(cor: str) -> str:
+    r, g, b = (int(cor.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
+    return f"rgb({r}, {g}, {b})"
+
+
+def test_a_mesa_sem_controle_e_o_desenho_sem_controle() -> None:
+    """7: sem controle na mesa, o bloco do produto chega só com o «Nenhum», e o
+    desenho apaga as lâmpadas e a barra; antes ficava o chip da bancada aceso."""
+    ctx = pacotes.Contexto(state={"controllers": []}, mesa=[], conectados=[], estados={})
+    vazia = pacotes.normalizar(pacotes.pacote_da_pagina(PAGINA, ctx) or {}, {})
+    (medida,) = _no_webkit([vazia])
+    assert medida["leds"] == [], f"sem controle, lâmpadas acesas: {medida}"
+    assert medida["luz"] == _rgb(medida["apagada"]), f"sem controle, a barra acesa: {medida}"
+    assert medida["nenhum_on"], f"sem controle, o «Nenhum» não ficou aceso: {medida}"
+
+
+def test_o_todos_desenha_o_primeiro_da_mesa() -> None:
+    """7: o «Todos» depois de outro chip desenha o primeiro da mesa, de quem o
+    produto pinta a barra, e não as lâmpadas do chip anterior."""
+    from hefesto_dualsense4unix.core.led_control import player_led_pattern
+
+    def acesas(n: int) -> list[int]:
+        return [i + 1 for i, on in enumerate(player_led_pattern(n)) if on]
+
+    primeiro = int(monta.MESA[0]["jogador"])
+    outro = next(c for c in monta.MESA if int(c["jogador"]) != primeiro)
+    assert acesas(int(outro["jogador"])) != acesas(primeiro), "a régua seria cega"
+    bloco = '[data-bloco="controles-do-mapa"] '
+    clicar = ("(function(){document.querySelector('%s.bt[data-pref=\"%s\"]').click();"
+              "return 1;})()")
+    no_outro, no_todos = _no_webkit([clicar % (bloco, outro["pref"]), clicar % (bloco, "todos")])
+    assert no_outro["leds"] == acesas(int(outro["jogador"])), no_outro
+    assert no_todos["leds"] == acesas(primeiro), (
+        f"o «Todos» ficou com as lâmpadas do chip anterior: {no_todos}")

@@ -624,10 +624,17 @@ def banco_de_provas():
   // pelo modelo. O «Nenhum» é o desenho sem controle, e com ele o pisca não
   // acende (`.sem-controle`). O «Cor do plástico» continua livre: escolher
   // um modelo depois de um chip vale até o próximo chip.
+  // O «Todos» não é UM controle: o desenho dele é o do primeiro da mesa, o
+  // mesmo de quem o produto pinta a barra (`luz-cor`). Sem isso, as lâmpadas e
+  // o plástico ficavam os do chip anterior.
+  function primeiro() {{
+    return chips.querySelector('.bt[data-jogador]:not([data-jogador="0"])');
+  }}
   function desenha(b) {{
-    if (b.hasAttribute("data-jogador")) acende(+b.dataset.jogador, b.dataset.luz);
-    if (b.hasAttribute("data-colorway")) plastico(b.dataset.colorway);
-    cx.classList.toggle("sem-controle", b.dataset.jogador === "0");
+    const d = b.hasAttribute("data-jogador") ? b : (primeiro() || b);
+    if (d.hasAttribute("data-jogador")) acende(+d.dataset.jogador, d.dataset.luz);
+    if (d.hasAttribute("data-colorway")) plastico(d.dataset.colorway);
+    cx.classList.toggle("sem-controle", d.dataset.jogador === "0");
   }}
   // POR DELEGAÇÃO, porque o produto troca os chips a cada mudança da mesa: um
   // ouvinte posto em cada botão ao carregar morreria com o bloco.
@@ -637,9 +644,14 @@ def banco_de_provas():
     chips.querySelectorAll(".bt").forEach(x => x.classList.toggle("on", x === b));
     desenha(b);
   }});
+  // A MESA SEM CONTROLE é o «Nenhum»: o bloco do produto chega só com ele, e
+  // o desenho não pode ficar com as lâmpadas e a barra do chip da bancada.
   function segue() {{
-    const b = chips.querySelector(".bt.on[data-jogador]")
-           || chips.querySelector('.bt[data-jogador]:not([data-jogador="0"])');
+    let b = chips.querySelector(".bt.on[data-jogador]") || primeiro();
+    if (!b) {{
+      b = chips.querySelector('.bt[data-jogador="0"]');
+      if (b && !chips.querySelector(".bt.on")) b.classList.add("on");
+    }}
     if (b) desenha(b);
   }}
   new MutationObserver(segue).observe(chips, {{childList: true}});
