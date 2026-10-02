@@ -30,5 +30,8 @@ seção daqui**: a aba deixou de estar em trabalho.
 ## mapa-das-portas.html
 - **01/10/2026** — o Mapa das Conexões cabe na aba: o resumo do Atual numa linha, as entradas de cada face em quantas colunas couberem, a legenda na linha dos modos, «Atualmente conectado» rolando por dentro até o fim da última face, o Adicionar numa linha com «O que você pretende conectar?», o Sugestões com uma linha por movimento (as razões no «?»), o mapa dele só com o veredito, o «então» com acento e o «Já movi» sem repetir o id do «Examinar» (O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01). As onze edições esperam em `pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA`. Até publicar, a página dela rola no Atual, a legenda fica embaixo do palco e o Sugestões mostra as razões, o parágrafo do «Já movi» e o «Entrada Null» do motor no mapa.
 
+## mapa-do-controle.html
+- **01/10/2026** — o «← Voltar» volta para a aba de onde o mapa foi aberto (pergunta à lista de volta do WebView, e não ao `document.referrer`, que no WebKit vem vazio entre arquivos), e os dois botões da barra de provas começam com maiúscula, «Nenhum» e «Apagar» (O-VOLTAR-DO-MAPA-VOLTA-PARA-A-ABA-DE-ONDE-VEIO-01). Até publicar, o «Voltar» da página dela leva sempre à Controles, e a barra diz «nenhum» e «apagar».
+
 ## calibrar-sensores.html
 - **28/09/2026** — a linha da Mira Virtual diz também o que vale para a Inclinação e para o Cursor do touchpad (NO-MODO-XBOX-TUDO-FUNCIONA-01). Até publicar, a Calibrar dela fala só da Mira Virtual, e os deslizantes já valem para os três.

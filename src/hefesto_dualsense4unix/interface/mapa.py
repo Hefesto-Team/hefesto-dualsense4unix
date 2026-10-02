@@ -533,13 +533,13 @@ def banco_de_provas():
     </div>
     <div class="prova">
       <div class="prova-rot">Jogador</div>
-      <div class="linha">{botoes_p}<button class="bt" data-jogador="0">nenhum</button></div>
+      <div class="linha">{botoes_p}<button class="bt" data-jogador="0">Nenhum</button></div>
     </div>
     <div class="prova">
       <div class="prova-rot">Barra de luz</div>
       <div class="linha">
         <input type="color" id="luz" class="ct ct-cor" value="#0000ff">
-        <button class="bt" id="luz-off">apagar</button>
+        <button class="bt" id="luz-off">Apagar</button>
       </div>
     </div>
     <div class="prova-nota" id="nota">&nbsp;</div>
@@ -598,7 +598,7 @@ def banco_de_provas():
   // ficam na cor de apagado — que é o estado honesto de um controle sem luz, e
   // some sobre o fundo escuro. Ela reparou na ausência antes, com estas mesmas
   // duas peças: "faltou só os dois lightbar e os led de player". O apagado
-  // continua a um clique, no botão "nenhum".
+  // continua a um clique, no botão "Nenhum".
   acende(1);
   </script>
 """
@@ -910,7 +910,7 @@ def main():
        padding:0 8px;font-family:var(--f);font-size:12px}}
   .ct-cor{{width:44px;padding:2px;cursor:pointer}}
   /* OS QUATRO NÚMEROS SÃO UMA FAMÍLIA, e família tem a mesma largura. O
-     "nenhum" e o "apagar" são outro papel — palavra, não número — e por isso
+     "Nenhum" e o "Apagar" são outro papel — palavra, não número — e por isso
      medem o que a palavra pede. */
   .bt{{height:28px;min-width:30px;padding:0 9px;background:var(--elevated);
        color:var(--texto-suave);border:1px solid var(--border-forte);
@@ -927,8 +927,7 @@ def main():
      pra cá. Mas e o botão pra voltar?"*. Não havia: `grep href` no mapa gerado
      devolvia ZERO. Quem entrava aqui só saía pelo botão do navegador — e o
      mockup abre como ARQUIVO, onde nem sempre há um.
-     O destino não é chute: `grep -l mapa-do-controle.html layout/*.html`
-     devolve UMA aba, a Navegação. Cada mapa tem uma origem só. */
+     O destino é a aba de onde ela veio (o dono é o `caixa_da_janela.voltar`). */
   .voltar{{position:absolute;left:0;top:2px;display:inline-flex;align-items:center;gap:6px;
            padding:5px 11px;border-radius:7px;text-decoration:none;
            border:1px solid var(--border-forte);background:var(--panel);
@@ -944,14 +943,11 @@ def main():
 
 <div class="cx">
   <div class="topo">
-    <!-- O VOLTAR VOLTA PARA DE ONDE VEIO. Medido em 31/08/2026: DUAS abas
-         abrem este mapa — a Controles (o botão novo, pedido dela) e a
-         Navegação (`a.porta`). Um destino fixo estaria errado para metade de
-         quem chega. O `href` é o fallback de quem abre o arquivo direto, com
-         duplo clique, que é como ela abre. -->
-    <a class="voltar" href="02-controles.html"
-       onclick="if (document.referrer) {{ history.back(); return false }}"
-       title="Volta para a aba anterior.">← Voltar</a>
+    <!-- O VOLTAR VOLTA PARA DE ONDE VEIO: três abas abrem este mapa (a
+         Controles, a Navegação e a Conexões). O dono é o
+         `caixa_da_janela.voltar`, que pergunta à lista de volta do WebView;
+         o `href` é a reserva de quem abre o arquivo direto. -->
+    {caixa_da_janela.voltar("02-controles.html")}
     <h1><span class="p">O mapa do controle</span> — o nome de cada peça</h1>
     <!-- A LINHA DE INSTRUÇÃO SAIU — decisão dela, 31/08/2026: *"passe o mouse
          num glifo e a peça acende no desenho · passe na peça e o glifo acende

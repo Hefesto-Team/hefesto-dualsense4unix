@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A caixa da janela das abas, para as páginas que abrem POR FORA delas.
+"""A caixa da janela das abas e o «Voltar», para as páginas que abrem POR FORA delas.
 
 AS TRÊS PÁGINAS AVULSAS pedem a caixa a este arquivo: a Calibrar
 (`calibrar.py`), o «Mapa do controle» (`mapa.py`) e o mapa das portas
@@ -107,3 +107,20 @@ def moldura(topo: str | None = None, caixa: str = ".cx") -> str:
     return (f"  :root{{{';'.join(variaveis)}}}\n"
             f"  body{{padding:{corpo['padding']}}}\n"
             f"  {caixa}{{{tamanho}}}\n")
+
+
+def voltar(reserva: str) -> str:
+    """O «← Voltar» das páginas avulsas: volta para a aba de onde ela veio.
+
+    A ORIGEM É A LISTA DE VOLTA DO PRÓPRIO WEBVIEW, e não o
+    `document.referrer`. Medido no WebKitGTK em 29/09 e em 01/10/2026: de
+    `file://` para `file://` o `referrer` vem vazio, e o «Voltar» caía sempre
+    na reserva (quem abria o mapa pela Conexões ou pela Navegação voltava à
+    Controles). Toda chegada por link deixa `history.length` em 2 ou mais.
+
+    ``reserva`` é o `href` de quem abre o arquivo direto, com duplo clique,
+    onde não há para onde voltar.
+    """
+    return (f'<a class="voltar" href="{reserva}"'
+            ' onclick="if (history.length > 1) { history.back(); return false }"'
+            ' title="Volta para a aba anterior.">← Voltar</a>')
