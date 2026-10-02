@@ -269,3 +269,16 @@ def test_a_pergunta_do_painel_e_a_do_dono() -> None:
     """As duas pontas continuam uma só: o painel lê o corpo do dono."""
     corpo = " ".join(_daemon.DaemonActionsMixin._STEAM_APPLY_CORPO.split())
     assert corpo in " ".join(a09._pergunta_da_steam().split())
+
+
+def test_a_pergunta_fala_a_lingua_da_tela() -> None:
+    """A pergunta é texto de tela, e a tela fala português: o atalho do
+    Hefesto na Steam e a desinstalação não entram em inglês (o glossário,
+    `docs/A-LINGUA-DESTA-CASA-o-glossario-que-a-tela-e-o-codigo-falam.md`, e a
+    dica do botão, que diz «Põe o Hefesto nos jogos»). Conferência de 02/10/2026.
+
+    MORDIDA: o corpo com «launcher do Hefesto» e «para tirar no uninstall».
+    """
+    pergunta = " ".join(a09._pergunta_da_steam().split())
+    em_ingles = [p for p in ("launcher", "uninstall") if p in pergunta.casefold()]
+    assert not em_ingles, f"a pergunta diz {em_ingles} na tela:\n{pergunta}"
