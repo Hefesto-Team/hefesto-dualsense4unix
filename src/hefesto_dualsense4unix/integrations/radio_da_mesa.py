@@ -427,7 +427,7 @@ def ocupacao_por_adaptador(
     """``{endereço do adaptador: Ocupacao}`` a partir do estado do daemon.
 
     ``controles`` é a lista ``state["controllers"]`` como ela já chega
-    (``core/backend_pydualsense.py:8003``, o `describe_controllers`): cada item traz ``transport``,
+    (``core/backend_pydualsense.py:8021``, o `describe_controllers`): cada item traz ``transport``,
     ``connected`` e ``uniq`` — este último com 12 hex sem separador, **ou
     ``None``** quando a chave do backend era um caminho e não um MAC
     (``:4664-4679``, a guarda que impediu o pseudo-MAC ``deda4``).
@@ -719,7 +719,7 @@ def _hex(valor: str) -> str:
     """Só os dígitos hex minúsculos, "" quando não há nenhum.
 
     ``core.sysfs_leds.norm_mac`` é o normalizador público do projeto e é o MESMO
-    que produz o ``uniq`` do estado (``core/backend_pydualsense.py:7933-7948``,
+    que produz o ``uniq`` do estado (``core/backend_pydualsense.py:8059-8073``,
     o ``_key_to_uniq``, que só aceita os doze dígitos de um MAC e recusa a
     chave que é caminho),
     então os dois lados casam por construção. Aqui só a ausência muda de forma:
