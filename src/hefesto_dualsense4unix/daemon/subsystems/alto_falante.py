@@ -1556,6 +1556,20 @@ class AltoFalanteSubsystem:
             except Exception as exc:  # a volta nunca cai por um reaplicar
                 logger.debug("haptica_fina_reaplicar_falhou", err=str(exc))
 
+    def _o_jogo_manda_nos_motores(self) -> bool:
+        """No Modo Nativo o dono dos motores é o jogo, no cabo E no rádio.
+
+        Uma pergunta só para os dois transportes, e quem responde é o dono das
+        três portas do rumble (``rumble.modo_nativo_manda_nos_motores``). O
+        laço do cabo a faz desde 29/09 (NO-MODO-XBOX-TUDO-FUNCIONA-01, parte
+        4); a ponte do rádio passou a fazê-la em 02/10
+        (NO-NATIVO-PELO-RADIO-O-JOGO-E-DONO-DOS-MOTORES-01): no Nativo o daemon
+        só lê o físico do posto, e ninguém via os secundários mexerem.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems import rumble
+
+        return rumble.modo_nativo_manda_nos_motores(getattr(self, "_daemon", None))
+
     def _casar_o_cabo(
         self,
         controles: list[Any],
@@ -1585,7 +1599,6 @@ class AltoFalanteSubsystem:
         mesmo dono das três portas do rumble
         (``rumble.modo_nativo_manda_nos_motores``), a cada volta.
         """
-        from hefesto_dualsense4unix.daemon.subsystems import rumble
         from hefesto_dualsense4unix.integrations.alto_falante_bt import (
             e_radio,
             sink_do_controle,
@@ -1597,7 +1610,7 @@ class AltoFalanteSubsystem:
             alvo_do_no,
         )
 
-        o_jogo_manda = rumble.modo_nativo_manda_nos_motores(getattr(self, "_daemon", None))
+        o_jogo_manda = self._o_jogo_manda_nos_motores()
 
         def _abre(uniq: str) -> bool:
             return o_jogo_manda or uniq.lower() in jogando or self._recebe_o_rumble(uniq)
@@ -2149,6 +2162,13 @@ class AltoFalanteSubsystem:
         governador = self.governador
         esperando: set[tuple[str, str]] = set()
         com_som: set[str] = set()
+        # NO MODO NATIVO O JOGO É O DONO DOS MOTORES, TAMBÉM PELO RÁDIO —
+        # NO-NATIVO-PELO-RADIO-O-JOGO-E-DONO-DOS-MOTORES-01, 02/10/2026. A
+        # mesma pergunta do laço do cabo (:meth:`_o_jogo_manda_nos_motores`):
+        # o daemon só lê o físico do posto, e a escolha (b) deixava a ponte dos
+        # secundários fora da háptica que o jogo manda a eles. A ponte só
+        # escreve o bloco com sinal, e o governador segue contando as vagas.
+        o_jogo_manda = self._o_jogo_manda_nos_motores()
         for uniq, caminho in vivos.items():
             # A PONTE QUE TERMINOU SOZINHA SAI DA LISTA — GOVERNADOR-DO-RADIO-01.
             # A fonte secou, a escrita foi recusada, ou o teto de ceder a
@@ -2179,7 +2199,7 @@ class AltoFalanteSubsystem:
             # OBEDECE-AO-SINAL-DO-JOGO-01): a ponte lê o monitor o tempo todo e
             # só escreve o bloco que tem sinal nos motores. No menu, com o
             # fluxo aberto e mudo, o rádio fica livre.
-            este_joga = uniq.lower() in jogando
+            este_joga = o_jogo_manda or uniq.lower() in jogando
             # QUEM FICA COM O RÁDIO É QUEM TEM SINAL, e não quem tem fluxo —
             # A-HAPTICA-POR-AUDIO-E-O-ALTO-FALANTE-CHEGAM-AO-RADIO-01, 29/09/2026.
             # A Forja abre o alto-falante e a háptica de cada jogador em toda
