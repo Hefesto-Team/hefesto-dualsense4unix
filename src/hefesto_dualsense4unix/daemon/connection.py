@@ -1364,7 +1364,7 @@ def _preparar_a_lightbar(daemon: DaemonProtocol) -> None:
     oito das 133 liberações de 24/09 a 30/09 feitas só pelo rádio escreveram um
     desenho diferente do número solto. Republicada aqui, sem escrever, a
     escrita do gatilho (uma por controle, nos dois transportes) já resolve o
-    número novo.
+    número novo; o cabo sem nó de LED, que ele não alcança, sai na publicação.
     """
     with contextlib.suppress(Exception):
         soltar = getattr(

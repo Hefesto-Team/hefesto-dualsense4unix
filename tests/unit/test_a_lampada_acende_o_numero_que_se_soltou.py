@@ -525,3 +525,64 @@ class TestQuemChegaSemLiberacao:
             assert bancada.o_que_acendeu(uniq)[:1] == [numero], (
                 f"{uniq}: {bancada.o_que_acendeu(uniq)}, a conta diz {numero}"
             )
+
+
+# ---------------------------------------------------------------------------
+# Régua 8 — o cabo sem o nó de LED também acende a conta
+# ---------------------------------------------------------------------------
+
+
+class _Luz:
+    """O ``handle.light`` da pydualsense: o número que o ``report_thread`` leva pelo cabo."""
+
+    def __init__(self) -> None:
+        self.playerNumber: int | None = None
+
+    def setColorI(self, *_rgb: int) -> None:  # noqa: N802 — API pydualsense
+        pass
+
+
+class TestOCaboSemONo:
+    @pytest.mark.parametrize("sai", (P1, P2, P3), ids=["sai-p1", "sai-p2", "sai-p3"])
+    def test_o_cabo_sem_o_no_de_led_acende_a_conta(
+        self, mesa_da_luz: Callable[..., MesaDaLuz], monkeypatch: pytest.MonkeyPatch, sai: str
+    ) -> None:
+        """O cabo sem nó de LED gravável (sem a regra 77), o caminho degradado de sempre.
+
+        O gatilho não o alcança (o rádio vai pelo ``0x31``, o cabo pela classe
+        LED, nó a nó), e quem leva o número a ele é a escrita do co-op, pelo
+        ``handle`` (o fallback da pydualsense em ``_write_partial_output``). Em
+        f78c0c035 o tique do co-op a fazia depois da liberação; com o preparo
+        publicando a camada sem escrita e o tique vendo a camada já publicada,
+        ninguém a fazia, e o P4 ficava com o 4 depois de a conta dizer 3 (as
+        três reprovavam, medido pelo conferente final em 02/10/2026; na base,
+        as três passam). O P4 é o que muda de número nas três saídas.
+
+        MORDIDA (02/10/2026): o ``escrever=False`` pulando também o cabo sem nó
+        (o ``return`` antes do laço, como estava): as três reprovam, e o md5 do
+        backend volta conferido.
+        """
+        bancada = mesa_da_luz("usb")
+        monkeypatch.setattr(
+            "hefesto_dualsense4unix.core.sysfs_leds.discover",
+            lambda: {u: bancada._no_de(u) for u in bancada.mesa.nodes if u != P4},
+        )
+        luz = _Luz()
+        bancada.handles[P4].light = luz  # type: ignore[attr-defined]
+        bancada.tique()
+        assert P4 not in {
+            bancada.inst._key_to_uniq(k) for k in bancada.inst._sysfs
+        }, "a bancada não tirou o nó do P4"
+        esperado = _sai_e_o_prazo_passa(bancada, sai)
+        assert esperado[P4] == 3, esperado
+        bancada.disparar()
+        for _ in range(3):
+            bancada.tique()
+        assert luz.playerNumber is not None and int(luz.playerNumber) == PLAYER_IDS[3], (
+            f"o P4 (cabo sem nó) acende {luz.playerNumber!r}, a conta diz 3 (saiu {sai})"
+        )
+        for uniq, numero in esperado.items():
+            if uniq != P4:
+                assert bancada.o_que_acendeu(uniq)[:1] == [numero], (
+                    f"{uniq}: {bancada.o_que_acendeu(uniq)}, a conta diz {numero}"
+                )

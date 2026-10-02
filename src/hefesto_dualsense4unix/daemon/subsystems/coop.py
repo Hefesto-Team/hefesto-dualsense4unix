@@ -3087,7 +3087,7 @@ class CoopManager:
         mesmo disparo escreveu 1, 3 e 4, porque esta camada é uma CÓPIA do
         número, fica acima da automática no merge, e só se atualizava no tique
         seguinte do co-op. Republicada antes, a escrita do gatilho já resolve o
-        número novo — e é ela que escreve, uma vez por controle.
+        número novo, uma escrita por controle (o cabo sem nó de LED sai aqui).
 
         Sem jogador secundário não faz nada: a camada já está revogada
         (`_apply_coop_player_leds`).

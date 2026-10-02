@@ -7401,12 +7401,12 @@ class PyDualSenseController(IController):
         ou trocou de padrão), pela mesma rota do resto do backend (sysfs com
         fallback pydualsense). `None`/vazio revoga a camada inteira.
 
-        ``escrever=False`` (A-NUMERACAO-BATE-A-LUZ-COM-O-JOGO-01, cura 1): troca a
-        camada e não escreve nada. É o preparo do gatilho da lightbar, que
-        escreve logo depois, uma vez por controle, nos dois transportes — duas
-        escritas do mesmo número seriam duas fatias do rádio por nada. A escrita
-        que sai daqui diz o número em ``info`` (``camada_do_coop_escrita``): até
-        02/10 ela era só ``debug``, e o diário não dizia a correção do número.
+        ``escrever=False`` (A-NUMERACAO-BATE-A-LUZ-COM-O-JOGO-01, cura 1): o preparo
+        do gatilho da lightbar, que escreve logo depois o rádio e o cabo com nó de
+        LED (duas escritas seriam duas fatias do rádio por nada); aqui só sai o
+        cabo SEM nó, pelo handle, que o gatilho não alcança. A escrita diz o número
+        em ``info`` (``camada_do_coop_escrita``): até 02/10 ela era só ``debug``,
+        e o diário não dizia a correção do número.
         """
         novo: dict[str, _DesiredOutput] = {}
         for uniq, spec in (outputs or {}).items():
@@ -7429,13 +7429,13 @@ class PyDualSenseController(IController):
             if antigo == novo:
                 return
             self._desired_coop_by_uniq = novo
-            if not escrever:
-                return
             for alvo in set(antigo) | set(novo):
                 key = self._key_for_uniq(alvo)
                 handle = self._handles.get(key) if key is not None else None
                 if key is None or handle is None:
                     continue
+                if not escrever and (key in self._sysfs or self._detect_transport(handle) == "bt"):
+                    continue  # o gatilho escreve este: o 0x31 no rádio, a classe LED no cabo
                 bits = self._merged_desired_for_key(key).player_leds
                 if bits is None:
                     continue
