@@ -311,9 +311,7 @@ def verificar_perfis_do_disco() -> list[Achado]:
     fiá-la no doctor trocaria a linha *"não deu para ler os perfis: <erro>"* por
     um traceback na cara de quem foi justamente pedir diagnóstico. Seria piorar
     o produto para fechar uma lápide.
-    Ela fica de pé como atalho de teste (é assim que
-    `test_regra_nao_se_perde_02_o_nome_novo_nascia_sem_regra.py` a usa) — e
-    quem precisar da corrente em produção usa as duas metades separadas, como o
+    Ela fica de pé como atalho de teste — e quem precisar da corrente em produção usa as duas metades separadas, como o
     doctor usa.
 
     NOTA DATADA — 28/09/2026 (A-TELA-PERGUNTA-AO-DONO-01): o que caducou é o
