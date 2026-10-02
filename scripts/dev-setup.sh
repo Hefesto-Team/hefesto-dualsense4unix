@@ -51,8 +51,8 @@ fi
 echo "[dev-setup] OK: $count."
 
 # INFRA-VENV-PYGOBJECT-01 (A-12): valida disponibilidade do PyGObject no venv.
-# Sem isto: `./run.sh --gui`, `.venv/bin/python -m hefesto_dualsense4unix.app.main` e o
-# teste tests/unit/test_status_actions_reconnect.py falham por ModuleNotFoundError.
+# Sem isto: `./run.sh --gui` e `.venv/bin/python -m hefesto_dualsense4unix.app.main` falham
+# por ModuleNotFoundError, e os testes da janela (exigir_gi_real) pulam em vez de rodar.
 # Não bloqueia o fluxo (GUI é opt-in) — apenas instrui com mensagem acionável.
 echo "[dev-setup] validando PyGObject (GUI GTK3)..."
 if "$VENV_DIR/bin/python" -c "import gi; gi.require_version('Gtk', '3.0'); from gi.repository import Gtk" >/dev/null 2>&1; then
@@ -60,8 +60,8 @@ if "$VENV_DIR/bin/python" -c "import gi; gi.require_version('Gtk', '3.0'); from 
 else
     cat <<'HINT'
 [dev-setup] AVISO: PyGObject ausente ou incompleto no .venv.
-            Gates de teste passam, mas a GUI não sobe e o teste
-            tests/unit/test_status_actions_reconnect.py falha na coleta.
+            Gates de teste passam, mas a GUI não sobe e os
+            testes da janela (exigir_gi_real) pulam em vez de rodar.
             Para habilitar GUI (opt-in):
 
               sudo apt install python3-gi libgirepository-1.0-dev \
