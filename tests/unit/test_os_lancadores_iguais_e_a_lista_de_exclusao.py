@@ -1140,7 +1140,7 @@ def test_tirar_do_disco_tira_o_ks_do_prefixo_do_heroic(
 
     A Steam e o jogo da máquina ficam fora (`_steam_do_teste`): sem isso, um
     jogo aberto na máquina de quem roda a suíte fazia o `tirar_do_disco`
-    responder «espera_a_steam», e a régua media a máquina, não o produto."""
+    responder «espera_a_steam», e a régua respondia sobre a máquina, não sobre o produto."""
     _heroic_de_mentira(com_copia=True)
     raiz = Path.home() / "Games/Heroic/Prefixes/Guardioes"
     (raiz / "pfx").mkdir(parents=True)
