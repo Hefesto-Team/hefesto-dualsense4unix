@@ -897,7 +897,7 @@ def test_o_aplicar_verde_do_rodape_repoe_o_atalho(
     assert resposta is None, resposta
     assert PRAGMATA in capsys.readouterr().err
     # A carona NUNCA substitui o gesto: o perfil foi mesmo aos controles.
-    assert ponte.apply_draft_detalhado.call_count == 1
+    assert ponte.profile_reaplicar.call_count == 1
 
 
 def test_sem_nada_a_repor_o_rodape_nao_fala(

@@ -6,6 +6,7 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     profile.list         {}          -> {profiles: [{name, priority, match_type}]}
     profile.apply_draft  {triggers?, leds?, rumble?, mouse?}
                          -> {status, applied: [str], failed: {str: str}}
+    profile.reaplicar    {name: str} -> {active_profile, mode_aplicado, secoes}
     trigger.set    {side, mode, params, uniq?} -> {status, aplicado_em, guardado_em}
     trigger.reset  {side?, uniq?}              -> {status, aplicado_em, guardado_em}
     led.set              {rgb}                 -> {status}
@@ -151,6 +152,9 @@ class IpcServer(IpcHandlersMixin):
             "profile.switch": self._handle_profile_switch,
             "profile.list": self._handle_profile_list,
             "profile.apply_draft": self._handle_profile_apply_draft,
+            # O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026): o «Aplicar»
+            # do rodapé, a cadeia da ativação sem os efeitos da escolha.
+            "profile.reaplicar": self._handle_profile_reaplicar,
             "trigger.set": self._handle_trigger_set,
             "trigger.reset": self._handle_trigger_reset,
             "led.set": self._handle_led_set,

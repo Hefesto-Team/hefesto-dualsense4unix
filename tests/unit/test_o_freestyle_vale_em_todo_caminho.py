@@ -417,13 +417,13 @@ class _PonteDoRodape:
     """
 
     def __init__(self, salva: str | None = None) -> None:
-        self.enviados: list[dict[str, Any]] = []
+        self.enviados: list[str] = []
         self.salvar_pedido: list[str] = []
         self._salva = salva
 
-    def apply_draft_detalhado(self, payload: dict[str, Any]) -> dict[str, Any]:
-        self.enviados.append(payload)
-        return {"status": "ok", "applied": sorted(payload), "failed": {}}
+    def profile_reaplicar(self, nome: str) -> dict[str, Any]:
+        self.enviados.append(nome)
+        return {"active_profile": nome, "mode_aplicado": True, "secoes": {}}
 
     def salvar_arquivo(self, titulo: str, sugestao: str = "", **_: Any) -> str | None:
         self.salvar_pedido.append(sugestao)
@@ -436,13 +436,6 @@ def _ctx_sem_perfil() -> Any:
 
     return Contexto(state={"connected": True, "active_profile": None},
                     mesa=[], conectados=[], estados={})
-
-
-def _o_draft_do_freestyle() -> dict[str, Any]:
-    from hefesto_dualsense4unix.app.draft_config import DraftConfig
-
-    return dict(DraftConfig.from_profile(
-        loader.load_profile(loader.NOME_DO_PADRAO)).to_ipc_dict())
 
 
 @pytest.mark.parametrize("gesto", ["aplicar", "salvar", "exportar"])
@@ -472,7 +465,7 @@ def test_os_tres_gestos_sem_perfil_ativo_agem_no_freestyle(
     getattr(rodape, gesto)(ctx, {}, ponte)
 
     if gesto == "aplicar":
-        assert ponte.enviados == [_o_draft_do_freestyle()]
+        assert ponte.enviados == [loader.NOME_DO_PADRAO]
         assert arquivo.read_bytes() == antes, "o Aplicar não grava"
     elif gesto == "salvar":
         assert json.loads(arquivo.read_text(encoding="utf-8"))["name"] == "Freestyle"

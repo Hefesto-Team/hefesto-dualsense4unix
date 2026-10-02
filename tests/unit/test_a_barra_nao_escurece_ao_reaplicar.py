@@ -126,7 +126,12 @@ def _luz(mesa: Mesa) -> list[tuple[int, int, int]]:
 
 
 class _PonteDoRodape:
-    """A ponte do rodapé com o `profile.apply_draft` entregue ao handler REAL.
+    """A ponte do rodapé com o `profile.reaplicar` entregue ao handler REAL.
+
+    O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026): o «Aplicar» manda o
+    nome, e o daemon roda a cadeia da ativação com o perfil do disco. O
+    `apply_draft_detalhado` fica para as réguas que medem o `DraftApplier`
+    (o método do daemon segue para a janela GTK e a linha de comando).
 
     Qualquer outra chamada é recusada: um dublê que aceita tudo mede menos
     que o produto.
@@ -134,6 +139,9 @@ class _PonteDoRodape:
 
     def __init__(self, mesa: Mesa) -> None:
         self.mesa = mesa
+
+    def profile_reaplicar(self, nome: str) -> dict[str, Any]:
+        return self.mesa.rodar(self.mesa.server._handle_profile_reaplicar({"name": nome}))
 
     def apply_draft_detalhado(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self.mesa.rodar(self.mesa.server._handle_profile_apply_draft(payload))

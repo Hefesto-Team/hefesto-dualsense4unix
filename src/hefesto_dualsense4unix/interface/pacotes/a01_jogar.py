@@ -2320,16 +2320,14 @@ def _rotulo_da_mascara(mascara: str | None) -> str:
 #:    matou a CONTRADIÇÃO e deixou no lugar uma frase que só sabe prometer o que
 #:    já está valendo: cravada em `MODO_ACESO`, ela nunca poderá dizer outra
 #:    coisa.
-#: 2. **"quando você clicar em Aplicar"** é falso em TODO estado desta interface.
-#:    O Aplicar daqui é `pacotes/rodape.aplicar`, que manda
-#:    `profile.apply_draft` com o `to_ipc_dict()` do rascunho — e o contrato
-#:    desse payload, escrito no próprio produto (`app/draft_config.to_ipc_dict`,
-#:    PERFIL-SALVA-TUDO-01), é: *"`mode` e `suppress_desktop_emulation` … NÃO
-#:    viajam no 'Aplicar'"*. **Clicar em Aplicar não troca modo nem máscara.**
-#:    Na janela GTK a frase era verdadeira porque `footer_actions.on_apply_draft`
-#:    tem um SEGUNDO ramo (`_aplicar_escolha_pendente` → `apply_mode`); o rodapé
-#:    desta interface não tem, e a docstring dele já dizia isso com todas as
-#:    letras — *"a interface nova ainda não guarda"*.
+#: 2. **"quando você clicar em Aplicar"** prometia um depois que o Aplicar não
+#:    guarda. O Aplicar daqui é `pacotes/rodape.aplicar`, que desde 01/10/2026
+#:    (O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01) manda `profile.reaplicar`: o
+#:    perfil do DISCO inteiro, modo e máscara incluídos, na hora. Uma escolha
+#:    que não chegou ao perfil não tem como esperar por ele. Na janela GTK a
+#:    frase era verdadeira porque `footer_actions.on_apply_draft` tem um
+#:    SEGUNDO ramo (`_aplicar_escolha_pendente` → `apply_mode`), que guarda a
+#:    escolha pendente; esta interface não guarda pendência para o Aplicar.
 #:
 #: O QUE A FAIXA PASSA A DIZER, e é o que ela SEMPRE existiu para dizer
 #: (AGORA-E-DEPOIS-01, `relancar.texto_do_pendente`): *"esta é a única prova de

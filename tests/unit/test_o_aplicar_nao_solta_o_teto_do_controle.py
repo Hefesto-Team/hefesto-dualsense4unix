@@ -50,6 +50,17 @@ A CURA, e cada régua abaixo mede uma parte:
   `_publicar_a_economia` (ou o número no rascunho), o teto do global da mesa,
   o `_o_rascunho_tem_o_mapa` e o resto da entrada em `_entrada_na_economia`.
 
+NOTA DATADA — 01/10/2026 (O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01). O «Aplicar»
+do rodapé deixou de passar pelo `DraftApplier`: ele manda `profile.reaplicar`,
+e o daemon roda a cadeia da ativação. As partes da cura que moram no
+`DraftApplier` seguem valendo para o `profile.apply_draft` (a janela GTK e a
+linha de comando) e são medidas pelas seções que o chamam direto; pelo
+«Aplicar», o teto é o `manager._perfil_na_economia` da ativação, e o «Todos»
+das luzes que não pisca é o `manager._o_todos_das_luzes_vai_cru`. As mordidas
+da seção 1 pelo «Aplicar» passam a ser: tire o `_perfil_na_economia` do
+`ProfileManager.apply`, ou faça o `_o_todos_das_luzes_vai_cru` devolver sempre
+`True` (o quadro intermediário).
+
 A régua dela, a de toda decisão: *«nunca é pensada só em um modo, rota, forma
 de conexão se cabo ou se bt, ou só pro player 1.»* <!-- noqa-acento: citação literal dela -->
 — P1 a P4, cabo e rádio.
@@ -438,17 +449,21 @@ def test_na_bateria_longa_quem_herda_o_global_fica_no_teto_depois_do_aplicar(
 
 
 @pytest.mark.parametrize("via", ["usb", "bt"])
-def test_sem_mapa_no_rascunho_o_aplicar_da_economia_nao_apaga_a_camada_dela(
+def test_sem_mapa_no_perfil_o_aplicar_da_economia_devolve_o_disco_e_nao_pisca(
         mesa_de, economia, via: str) -> None:
-    """Perfil sem opinião por controle: o «Aplicar» não troca o mapa (Z4/T8).
+    """Perfil sem opinião por controle e a economia no P2: o «Aplicar» é o disco.
 
-    O rascunho sem `controllers` é «sem opinião», e o `DraftApplier` não
-    toca a camada dela. Com a economia no P2, a vista acrescenta o P2 ao
-    rascunho — e isso não pode virar um mapa vazio que apaga a cor que ela
-    deu ao P3 pelo `led.set` (que não grava no disco).
+    NOTA DATADA — 01/10/2026 (O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01). Esta régua
+    dizia que o «Aplicar» não apagava a cor que o `led.set` deu ao P3 sem
+    gravar no disco: o `DraftApplier` escrevia na camada dela e não tocava o
+    que o rascunho não dizia. O «Aplicar» passou a ser a cadeia da ativação,
+    e o aparelho volta a ser a projeção do disco
+    (`D-2709-O-SALVAR-LE-O-PERFIL`; a prova da sprint é o valor do aparelho
+    que diverge do disco voltando ao do disco). O roxo que só o aparelho
+    tinha sai; a economia do P2 fica, e nenhum controle pisca.
 
-    **A MORDIDA:** tire o `_o_rascunho_tem_o_mapa` de `_apply_controllers` e o
-    P3 perde o roxo no «Aplicar».
+    **A MORDIDA:** faça o `reaplicar` aplicar a luz com a origem `system` (que
+    não solta a camada da mão, `ProfileManager.apply`) e o roxo fica no P3.
     """
     from hefesto_dualsense4unix.app.draft_config import DraftConfig
     from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
@@ -463,10 +478,10 @@ def test_sem_mapa_no_rascunho_o_aplicar_da_economia_nao_apaga_a_camada_dela(
         "a régua precisa de um perfil sem mapa por controle")
     economia(declaracao_da_economia(UNIQS[1], True))
     mesa.trocar(NOME, "manual")
-    mesa.ponte.led_set_detalhado(ROXO, BRILHO_GLOBAL, UNIQS[2])
-    assert mesa.luz(3) == _na(ROXO, BRILHO_GLOBAL), "a régua precisa do roxo no P3"
     esperado = _mesa_inteira(mesa)
     assert esperado[2]["luzes"] == (FRACO, FRACO), "a régua precisa do P2 em economia"
+    mesa.ponte.led_set_detalhado(ROXO, BRILHO_GLOBAL, UNIQS[2])
+    assert mesa.luz(3) == _na(ROXO, BRILHO_GLOBAL), "a régua precisa do roxo no P3"
     _o_aplicar_nao_mexe_e_nao_pisca(mesa, esperado, f"sem-mapa/{via}")
 
 

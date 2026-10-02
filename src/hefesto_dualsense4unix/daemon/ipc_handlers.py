@@ -1052,6 +1052,41 @@ class IpcHandlersMixin:
         applied = applier.apply(params)
         return {"status": "ok", "applied": applied, "failed": dict(applier.failed)}
 
+    async def _handle_profile_reaplicar(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """O «Aplicar»: o perfil inteiro de novo aos controles, sem virar escolha.
+
+        O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026). A MESMA cadeia do
+        `profile.switch` (`ProfileManager.reaplicar`), com todas as camadas; o
+        que fica de fora é só o que é da escolha: a sessão, o marcador, o Modo
+        Freestyle e a trava da troca à mão. A resposta tem a forma da do
+        `profile.switch`.
+        """
+        name = params.get("name")
+        if not isinstance(name, str) or not name:
+            raise ValueError("profile.reaplicar exige 'name' string")
+        relatorio: dict[str, str] = {}
+        profile = self.profile_manager.reaplicar(name, relatorio=relatorio)
+        # A troca do «Aplicar» também pode mudar o modo ou a máscara de um
+        # jogo; o lançamento relê o que os jogos vão receber, como no switch.
+        if self.daemon is not None:
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.daemon.launch_env import (
+                    materialize_launch_env,
+                )
+
+                materialize_launch_env(self.daemon)
+        estado_modo = relatorio.get("mode", "aplicado")
+        resposta: dict[str, Any] = {
+            "active_profile": profile.name,
+            "mode_aplicado": estado_modo == "aplicado",
+            "secoes": dict(relatorio),
+        }
+        if estado_modo != "aplicado":
+            resposta["motivo"] = estado_modo
+        return resposta
+
     # --- triggers --------------------------------------------------------
 
     def _apply_por_uniq(

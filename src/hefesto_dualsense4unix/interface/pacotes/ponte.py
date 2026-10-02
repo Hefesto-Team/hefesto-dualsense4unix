@@ -171,6 +171,9 @@ TETOS = {
     # justificado pelos 0,7 ms.
     "desktop.arranjo.apply": 3.0,
     "profile.switch": 3.0, "profile.apply_draft": 3.0,
+    # O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026): o «Aplicar» roda a
+    # cadeia da ativação, e por isso o teto é o do `profile.switch`.
+    "profile.reaplicar": 3.0,
     "coop.set": 2.0, "coop.sync": 2.0, "identity.renumber": 2.0,
     # A MÁSCARA GRAVA EM DISCO E PODE RECRIAR O VPAD — mesma família do
     # `gamepad.emulation.set` logo acima, e por isso o mesmo teto. Sem ele o
@@ -242,6 +245,20 @@ def chamar_detalhado(metodo: str, **params: Any) -> tuple[bool, str | None]:
         metodo, params, timeout=teto(metodo)
     )
     return ok, motivo or _b._recusa_no_corpo(corpo)
+
+
+def profile_reaplicar(nome: str) -> dict[str, Any] | None:
+    """O «Aplicar» do rodapé: a resposta do `profile.reaplicar`, ou ``None``.
+
+    O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026). O daemon roda a cadeia
+    da ativação com o perfil inteiro, sem gravar a escolha dela. ``None`` é
+    «não houve resposta» (daemon calado, teto estourado ou recusa), e o gesto
+    diz isso; nunca vira «aplicado».
+    """
+    ok, r = _b._safe_call(
+        "profile.reaplicar", {"name": nome}, timeout=teto("profile.reaplicar")
+    )
+    return r if ok and isinstance(r, dict) else None
 
 
 def resultado(metodo: str, timeout: float | None = None, **params: Any) -> Any:

@@ -416,9 +416,46 @@ class ProfileManager:
         resultado de uma ativação disparada pela hotkey (thread do executor)
         poderia ser lido como se fosse o de outra.
         """
+        return self._ativar(
+            name, origin=origin, relatorio=relatorio, e_a_escolha=origin == "manual"
+        )
+
+    def reaplicar(
+        self,
+        name: str,
+        *,
+        relatorio: dict[str, str] | None = None,
+    ) -> Profile:
+        """O perfil inteiro de novo aos controles, sem virar a escolha dela.
+
+        O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026). O «Aplicar» mandava
+        `profile.apply_draft` (o `DraftApplier`), que leva menos da metade do
+        perfil: ficavam de fora o volume e o ganho do microfone, os sensores, a
+        máscara, a mira, o modo e a política de vibração. Agora ele roda a
+        MESMA cadeia da ativação, com todas as camadas.
+
+        Os appliers recebem a origem `manual`: o «Aplicar» é gesto dela
+        (`D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR`), e com o jogo na
+        autoridade a R-04 vale igual à da ativação. O que ele NÃO faz é o que
+        só a escolha faz: não grava o `session.json` nem o
+        `active_profile.txt`, não mexe no Modo Freestyle e não arma a trava da
+        troca à mão (essa é do handler do `profile.switch`).
+        """
+        return self._ativar(name, origin="manual", relatorio=relatorio, e_a_escolha=False)
+
+    def _ativar(
+        self,
+        name: str,
+        *,
+        origin: str,
+        relatorio: dict[str, str] | None,
+        e_a_escolha: bool,
+    ) -> Profile:
+        """A cadeia única da ativação e do «Aplicar». Ver :meth:`activate`."""
         # O-FREESTYLE-E-UMA-CAMADA-SO-01: com o Freestyle ligado, só a mão dela
-        # troca de perfil. Ver o bloco antes desta classe.
-        if origin != "manual" and o_freestyle_manda(self.store) and not e_o_freestyle(name):
+        # troca de perfil. Ver o bloco antes desta classe. O «Aplicar» não é
+        # escolha: com o Freestyle ligado ele só reaplica o próprio Freestyle.
+        if not e_a_escolha and o_freestyle_manda(self.store) and not e_o_freestyle(name):
             logger.info("perfil_recusado_o_freestyle_manda", pedido=name, origin=origin)
             raise OFreestyleMandaError(
                 f"o Modo Freestyle está ligado: {name!r} não entra por {origin!r}"
@@ -434,14 +471,15 @@ class ProfileManager:
         self.apply_movimento(profile, relatorio=relatorio)
         self.apply_emulation(profile, origin=origin, relatorio=relatorio)
         self.store.set_active_profile(profile.name)
-        self.store.bump("profile.activated")
+        reaplicacao = origin == "manual" and not e_a_escolha
+        self.store.bump("profile.reaplicado" if reaplicacao else "profile.activated")
         logger.info(
-            "profile_activated",
+            "perfil_reaplicado" if reaplicacao else "profile_activated",
             name=profile.name,
             priority=profile.priority,
             origin=origin,
         )
-        if origin == "manual":
+        if e_a_escolha:
             from hefesto_dualsense4unix.utils.session import save_last_profile
             save_last_profile(profile.name)
             # O gesto dela decide o Modo Freestyle, e o gesto é a TROCA: o
@@ -455,6 +493,9 @@ class ProfileManager:
                 ligar_o_freestyle(self.store, True)
         # FEAT-COSMIC-NOTIFICATIONS-01: opt-in via env var
         # `HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS=1`. Sem isso, no-op.
+        # O «Aplicar» não troca de perfil, e não avisa.
+        if reaplicacao:
+            return profile
         try:
             from hefesto_dualsense4unix.integrations.desktop_notifications import (
                 notify_profile_activated,
@@ -610,11 +651,15 @@ class ProfileManager:
                 player_leds=settings.player_leds,
                 # O BRILHO DAS LUZES DE NÚMERO de todos — o «Todos» do perfil
                 # (24/09/2026, `D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`).
-                # Sempre com valor: perfil sem o campo valida com o Fraco, e o
-                # Hefesto manda no brilho das lâmpadas também quando ninguém
-                # escolheu.
-                player_led_brightness=degrau_do_brilho_das_luzes(
-                    profile.leds.player_led_brightness
+                # Perfil sem o campo valida com o Fraco, e o Hefesto manda no
+                # brilho das lâmpadas também quando ninguém escolheu. A
+                # exceção é o perfil que já vale aplicado de novo (o «Aplicar»,
+                # O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01): ver
+                # :meth:`_o_todos_das_luzes_vai_cru`.
+                player_led_brightness=(
+                    degrau_do_brilho_das_luzes(profile.leds.player_led_brightness)
+                    if self._o_todos_das_luzes_vai_cru(profile)
+                    else None
                 ),
             )
         )
@@ -734,6 +779,35 @@ class ProfileManager:
             )
             for categoria in sorted(_SECOES_DA_SAIDA):
                 relatorio.setdefault(categoria, palavra)
+
+    def _o_todos_das_luzes_vai_cru(self, profile: Profile) -> bool:
+        """O «Todos» das luzes de número vai cru a todo controle nesta ativação?
+
+        O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026), a regra que o
+        `DraftApplier._o_todos_das_luzes` já tinha para o «Aplicar» antigo. O
+        `apply_output_defaults` leva o global CRU a todo handle; um controle que
+        termina noutro degrau (a palavra dele, ou o Fraco da economia) passaria
+        por ele antes do dele, um quadro intermediário (medido na mesa de
+        quatro: o P1 no Forte passava por `[2, 0, 0]`). Com o MESMO perfil que
+        já vale, o padrão do backend já é este global, e ele fica: cada
+        controle recebe o seu pela camada do perfil. Na troca de perfil o
+        global novo vai sempre, porque o padrão de antes é de outro perfil.
+        `profile` é a vista com a economia posta.
+        """
+        if not self._refers_same_profile(
+            str(getattr(self.store, "active_profile", "") or ""), profile.name
+        ):
+            return True
+        global_ = profile.leds.player_led_brightness
+        for override in (profile.controllers or {}).values():
+            leds = getattr(override, "leds", None)
+            if (
+                leds is not None
+                and "player_led_brightness" in leds.model_fields_set
+                and leds.player_led_brightness != global_
+            ):
+                return False
+        return True
 
     # `_categorias_travadas` SAIU DAQUI — 14/09/2026,
     # `D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO`. Ela devolvia as

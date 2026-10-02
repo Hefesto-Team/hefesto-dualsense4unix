@@ -129,6 +129,16 @@ class _PonteDoRodape(barra._PonteDoRodape):
         super().__init__(mesa)
         self.rascunhos: list[dict[str, Any]] = []
 
+    def profile_reaplicar(self, nome: str) -> Any:
+        """O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01: o «Aplicar» manda o nome.
+
+        O que se guarda é o perfil que o daemon lê do disco, na forma do
+        rascunho (o mesmo `DraftConfig.from_profile(...).to_ipc_dict()` que o
+        rodapé mandava até 01/10/2026), lido no instante do clique.
+        """
+        self.rascunhos.append(_o_perfil_que_o_daemon_le(nome))
+        return super().profile_reaplicar(nome)
+
     def apply_draft_detalhado(self, payload: dict[str, Any]) -> Any:
         self.rascunhos.append(payload)
         return super().apply_draft_detalhado(payload)
@@ -141,6 +151,14 @@ class _PonteDoRodape(barra._PonteDoRodape):
                 for uniq, entrada in sorted((rascunho.get("controllers") or {}).items())
                 if (palavra := ((entrada or {}).get("leds") or {}).get(
                     "player_led_brightness")) is not None]
+
+
+def _o_perfil_que_o_daemon_le(nome: str) -> dict[str, Any]:
+    """O perfil do disco na forma do rascunho: o que o `profile.reaplicar` aplica."""
+    from hefesto_dualsense4unix.app.draft_config import DraftConfig
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
+    return DraftConfig.from_profile(load_profile(nome)).to_ipc_dict()
 
 
 def _aplicar(mesa: Any) -> _PonteDoRodape:
@@ -411,8 +429,8 @@ def test_sem_resposta_do_daemon_o_aplicar_recusa_dizendo(mesa_de, via: str) -> N
     import re
 
     class _Calada(_PonteDoRodape):
-        def apply_draft_detalhado(self, payload: dict[str, Any]) -> Any:
-            self.rascunhos.append(payload)
+        def profile_reaplicar(self, nome: str) -> Any:
+            self.rascunhos.append(_o_perfil_que_o_daemon_le(nome))
             return None
 
     mesa = mesa_de("todos", via)

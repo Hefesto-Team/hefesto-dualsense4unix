@@ -10,6 +10,7 @@ O QUE CADA BOTÃO É NO PRODUTO ESTÁVEL, medido em 01/09/2026 a pedido dela
 com o output seu"*):
 
     Aplicar   `footer_actions.on_apply_draft`  → `profile.apply_draft`
+              (aqui, desde 01/10/2026: `profile.reaplicar`, a cadeia da ativação)
     Salvar    `footer_actions.on_save_profile` → diálogo de nome + save_profile
     Importar  `footer_actions.on_import_profile` → FileChooser + validação
     Exportar  **NÃO EXISTE**
@@ -141,39 +142,32 @@ def _draft_do_ativo(nome: str) -> Any:
 # `or ""` aqui seria a terceira leitura de uma pergunta que já tem resposta.
 @gesto("*", "aplicar")
 def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O botão verde. Manda o perfil ativo aos controles, sem gravar.
+    """O botão verde. Manda o perfil ativo INTEIRO aos controles, sem gravar.
 
-    `profile.apply_draft` é o método, e o payload é o `to_ipc_dict()` do
-    rascunho que :func:`_draft_do_ativo` lê do disco: o MESMO que o «Salvar»
-    regrava, em qualquer aba. Nada aqui monta payload nem lê o aparelho.
+    O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026): o método é o
+    `profile.reaplicar`, que roda no daemon a MESMA cadeia da ativação, com o
+    perfil lido do disco e todas as camadas (a luz, os gatilhos, a vibração e
+    a política dela, o modo, a máscara de cada controle, os sensores, a mira,
+    o som e o volume do microfone). Até aqui ia o `profile.apply_draft` com o
+    `to_ipc_dict()` do rascunho, que levava menos da metade disso. O
+    «Aplicar» não é escolha: não grava a sessão, não mexe no Modo Freestyle e
+    não arma a trava da troca à mão.
 
-    O QUE ESTA VERSÃO AINDA NÃO FAZ, e é honesto dizer: o "depois" (modo e
-    máscara) da janela estável vem de uma escolha PENDENTE da aba Início, que a
-    interface nova ainda não guarda. Aqui vai só o "agora".
+    O PERFIL É O DO RODAPÉ (:func:`perfil_do_rodape`), o mesmo do «Salvar» e
+    do «Exportar». Sem ele, recusa dizendo o que fazer.
 
-    SEM PERFIL ATIVO, MANDA O «FREESTYLE» — o mesmo que o Salvar grava e o boot
-    restaura (:func:`perfil_do_rodape`).
-
-    UMA VIAGEM SÓ — O-APLICAR-NAO-SOLTA-O-TETO-DO-CONTROLE-01, 26/09/2026. O
-    Fraco, o Médio e o Forte de cada controle viajam no rascunho
-    (`DraftConfig._controllers_to_ipc`), e o teto da economia é posto do
-    outro lado (`DraftApplier._com_o_teto_da_economia`). Até hoje uma segunda
-    viagem (`led.player_brightness_set`, controle a controle) devolvia a
-    palavra depois do `apply_draft`, e o cabo recebia o global entre as duas.
-
-    O DAEMON CALADO RECUSA: o `None` do `apply_draft_detalhado` é «não houve
+    O DAEMON CALADO RECUSA: o `None` do `profile_reaplicar` é «não houve
     resposta», e a frase é a que a pílula já usa
     (`a04_iluminacao.sem_resposta_do_daemon`). Antes o botão piscava verde.
     """
     from .a04_iluminacao import sem_resposta_do_daemon
 
     nome = perfil_do_rodape(ctx.state)
-    draft = _draft_do_ativo(nome)
-    if draft is None:
+    if not nome:
         raise ValueError(
             "aplicar: não há perfil ativo para mandar aos controles. "
             "Escolha um na aba Perfis.")
-    if p.apply_draft_detalhado(draft.to_ipc_dict()) is None:
+    if p.profile_reaplicar(nome) is None:
         raise RuntimeError(sem_resposta_do_daemon())
     _recado(perfil.com_a_carona())
     return None
@@ -335,5 +329,5 @@ PROVAS: list[dict[str, Any]] = [
     # O "aplicar" e o "salvar" dependem do perfil ATIVO, e a régua roda sem
     # daemon: eles são provados pelo teste de recusa, abaixo, e no aparelho.
 ]
-PONTE = {"apply_draft_detalhado", "escolher_arquivo", "salvar_arquivo"}
+PONTE = {"profile_reaplicar", "escolher_arquivo", "salvar_arquivo"}
 METODOS: set[str] = set()

@@ -2717,7 +2717,7 @@ _METODO_DO_GESTO = {
     "atualizar": "daemon.reload", "modo-dualsense": "gamepad.emulation.set",
     "modo-xbox": "gamepad.emulation.set", "modo-navegacao": "mouse.emulation.set",
     "hefesto": "native.mode.set", "ativar": "profile.switch",
-    "aplicar": "profile.apply_draft", "reconectar": "coop.sync",
+    "aplicar": "profile.reaplicar", "reconectar": "coop.sync",
 }
 
 #: OS GESTOS QUE MEXEM NA MÁQUINA DELA, e que a prova botão a botão NÃO clica

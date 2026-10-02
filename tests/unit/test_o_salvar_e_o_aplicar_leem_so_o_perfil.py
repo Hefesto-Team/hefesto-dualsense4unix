@@ -22,7 +22,8 @@ A RÉGUA: um estado vivo que diverge do disco em TUDO (microfone aberto, teto
 de 30%, `policy=max`, a cor acesa de outro tom, o sensor desligado, o mouse, o
 volume), os quatro controles, dois no cabo e dois no rádio, com máscaras
 diferentes. O Salvar das dez abas grava o perfil que estava no disco,
-normalizado, e o Aplicar das dez manda o rascunho do disco. A comparação é
+normalizado, e o Aplicar das dez pede ao daemon o perfil do disco pelo nome
+(desde 01/10/2026, `profile.reaplicar`). A comparação é
 sempre contra o disco lido ANTES do gesto, nunca contra a saída dele.
 
 A MORDIDA (medida na entrega): devolva a sobreposição a uma aba só — no
@@ -47,7 +48,6 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
-from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.interface import pacotes
 from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
 from hefesto_dualsense4unix.profiles import loader
@@ -149,11 +149,16 @@ class PonteDoRodape:
     """O que o «Aplicar» chama, com a resposta que o daemon real devolve."""
 
     def __init__(self) -> None:
-        self.rascunhos: list[dict[str, Any]] = []
+        self.reaplicados: list[str] = []
 
-    def apply_draft_detalhado(self, payload: dict[str, Any]) -> dict[str, Any]:
-        self.rascunhos.append(copy.deepcopy(payload))
-        return {"status": "ok", "applied": sorted(payload), "failed": {}}
+    def profile_reaplicar(self, nome: str) -> dict[str, Any]:
+        """O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01: o «Aplicar» manda só o nome.
+
+        O daemon lê o perfil do disco e roda a cadeia da ativação; nada do
+        aparelho viaja no pedido.
+        """
+        self.reaplicados.append(nome)
+        return {"active_profile": nome, "mode_aplicado": True, "secoes": {}}
 
     def profile_switch(self, nome: str) -> bool:
         return True
@@ -211,11 +216,6 @@ def _o_perfil() -> dict[str, Any]:
     perfil = Profile.model_validate(cru).model_dump(mode="json")
     perfil["controllers"] = cru.get("controllers")
     return perfil
-
-
-def _do_disco() -> dict[str, Any]:
-    """O rascunho que o disco dá, lido ANTES de qualquer gesto."""
-    return DraftConfig.from_profile(loader.load_profile(NOME)).to_ipc_dict()
 
 
 def _o_que_mudou(antes: Any, depois: Any, pre: str = "") -> list[str]:
@@ -308,33 +308,33 @@ def test_salvar_duas_vezes_grava_o_mesmo_arquivo_nas_dez_abas() -> None:
 # 2. o Aplicar, nas dez abas, e o mesmo rascunho do Salvar
 # --------------------------------------------------------------------------
 @pytest.mark.parametrize("aba", AS_DEZ)
-def test_o_aplicar_de_qualquer_aba_manda_o_rascunho_do_disco(aba: str) -> None:
-    """O payload é o do disco, e duas vezes o mesmo."""
-    esperado = _do_disco()
+def test_o_aplicar_de_qualquer_aba_manda_o_perfil_do_disco(aba: str) -> None:
+    """O «Aplicar» pede ao daemon o perfil do disco, pelo nome, e não grava nada.
+
+    O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026): o pedido é o
+    `profile.reaplicar` com o nome do perfil do rodapé; o aparelho, que diverge
+    em tudo, não viaja.
+    """
+    antes = _o_arquivo()
     gesto = pacotes.gesto_da_pagina(aba, "aplicar")
     assert gesto is not None, f"a {aba} não tem quem atenda o «Aplicar»"
     ponte = PonteDoRodape()
     gesto(_ctx(), _clique(aba, "aplicar"), ponte)
     gesto(_ctx(), _clique(aba, "aplicar"), ponte)
-    assert len(ponte.rascunhos) == 2, ponte.rascunhos
-    for rascunho in ponte.rascunhos:
-        mudou = _o_que_mudou(esperado, rascunho)
-        assert not mudou, (
-            f"o «Aplicar» da {aba} mandou um rascunho que não é o do disco:\n  "
-            + "\n  ".join(mudou))
+    assert ponte.reaplicados == [NOME, NOME], (
+        f"o «Aplicar» da {aba} pediu {ponte.reaplicados}, e o perfil é {NOME!r}")
+    assert _o_arquivo() == antes, f"o «Aplicar» da {aba} gravou no disco"
 
 
-def test_o_aplicar_e_o_salvar_leem_o_mesmo_rascunho() -> None:
-    """O que o Aplicar manda é o que o arquivo gravado pelo Salvar dá."""
+def test_o_aplicar_e_o_salvar_miram_o_mesmo_perfil() -> None:
+    """O perfil que o Aplicar pede é o arquivo que o Salvar grava."""
     ponte = PonteDoRodape()
     pacotes.gesto_da_pagina("05-vibracao.html", "aplicar")(
         _ctx(), _clique("05-vibracao.html", "aplicar"), ponte)
     _salvar("02-controles.html")
-    do_salvo = DraftConfig.from_profile(
-        Profile.model_validate(json.loads(_o_arquivo()))).to_ipc_dict()
-    mudou = _o_que_mudou(do_salvo, ponte.rascunhos[-1])
-    assert not mudou, (
-        "o «Aplicar» e o «Salvar» leram coisas diferentes:\n  " + "\n  ".join(mudou))
+    gravado = Profile.model_validate(json.loads(_o_arquivo()))
+    assert ponte.reaplicados == [gravado.name], (
+        f"o «Aplicar» pediu {ponte.reaplicados} e o «Salvar» gravou {gravado.name!r}")
 
 
 # --------------------------------------------------------------------------

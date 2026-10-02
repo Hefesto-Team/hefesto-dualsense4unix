@@ -468,11 +468,19 @@ def test_o_salvar_depois_do_autoswitch_nao_leva_a_camada_dela_ao_outro_perfil(me
 
 
 @_O_APLICAR_SEM_O_PISO
-def test_o_aplicar_carimba_o_brilho_da_cor(mesa_de):
-    """A cor do «Aplicar» leva o brilho dela, e ele atravessa a troca automática.
+def test_o_aplicar_diz_o_brilho_da_cor_que_acendeu(mesa_de):
+    """A cor do «Aplicar» acende no brilho do disco, e o daemon o sabe dizer.
 
-    **A MORDIDA:** tire o `brilho_da_cor` do `DraftApplier` e o daemon diz
-    «não sei» sobre a cor que o Aplicar acendeu.
+    NOTA DATADA — 01/10/2026 (O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01). Esta régua
+    dizia que o brilho atravessava a troca automática para OUTRO perfil: o
+    `DraftApplier` escrevia a cor na camada dela, que a troca automática não
+    solta. O «Aplicar» passou a ser a cadeia da ativação, a cor vai na camada
+    do perfil, e o perfil seguinte manda na dele (`D-1409`, o perfil aplica
+    tudo). O que fica medido é o que o daemon diz da cor que o «Aplicar»
+    acendeu.
+
+    **A MORDIDA:** tire o ramo da camada do perfil de
+    `PyDualSenseController.brilho_da_barra_para` e o daemon diz «não sei».
     """
     from pacotes import rodape
 
@@ -482,7 +490,6 @@ def test_o_aplicar_carimba_o_brilho_da_cor(mesa_de):
     mesa.gravar_o_brilho(2, 0.40)
     rodape.aplicar(mesa.ctx(), {"tipo": "button", "evento": "click"}, _PonteDoRodape(mesa))
     assert mesa.luz(2) == _na(LARANJA, 0.40)
-    mesa.trocar(NOME_B, "autoswitch")
     assert mesa.server._brilhos_acesos(UNIQS[1])["brilho_da_barra"] == pytest.approx(0.40)
     assert mesa.coluna(2)["brilho"] == "40%"
 

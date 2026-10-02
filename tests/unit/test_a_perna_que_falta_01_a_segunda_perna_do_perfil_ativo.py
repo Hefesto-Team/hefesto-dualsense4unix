@@ -336,6 +336,9 @@ def test_o_censo_dos_leitores_do_store_no_ipc_handlers() -> None:
         "_perfil_que_grava": "grava",
         # SÓ RELATA o que o daemon sabe — `null` é resposta, não defeito.
         "_handle_profile_switch": "so-le",
+        # O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026): o «Aplicar»
+        # relata o perfil que reaplicou, e não grava a escolha.
+        "_handle_profile_reaplicar": "so-le",
         "_handle_daemon_status": "so-le",
         "_handle_daemon_state_full": "so-le",
         # O-FREESTYLE-E-UMA-CAMADA-SO-01, 28/09/2026. O chip «Jogar pelo
@@ -408,9 +411,9 @@ class _PonteDoRodape:
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, tuple, dict]] = []
 
-    def apply_draft_detalhado(self, payload: dict[str, Any]) -> tuple[bool, None]:
-        self.chamadas.append(("apply_draft_detalhado", (payload,), {}))
-        return True, None
+    def profile_reaplicar(self, nome: str) -> dict[str, Any]:
+        self.chamadas.append(("profile_reaplicar", (nome,), {}))
+        return {"active_profile": nome, "mode_aplicado": True, "secoes": {}}
 
     def salvar_arquivo(self, titulo: str, sugestao: str = "") -> str | None:
         self.chamadas.append(("salvar_arquivo", (titulo,), {"sugestao": sugestao}))
@@ -474,7 +477,9 @@ def test_o_aplicar_e_o_exportar_atravessam_com_o_daemon_calado(
     """
     p = _PonteDoRodape()
     rodape.aplicar(_ctx_do_daemon_calado(), {}, p)
-    assert [c[0] for c in p.chamadas] == ["apply_draft_detalhado"]
+    assert [c[0] for c in p.chamadas] == ["profile_reaplicar"]
+    assert p.chamadas[0][1] == (NO_DISCO,), (
+        f"o «Aplicar» mandou outro perfil: {p.chamadas[0][1]!r}")
 
     q = _PonteDoRodape()
     assert rodape.exportar(_ctx_do_daemon_calado(), {}, q) is None
