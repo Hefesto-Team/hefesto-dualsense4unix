@@ -1502,6 +1502,7 @@ def pytest_sessionstart(session: Any) -> None:
     # Depois do berço, porque é dele que sai o `/tmp` de verdade.
     _armar_som_de_mentira()
     _armar_lancador_de_mentira(session)  # LANCADOR-DE-MENTIRA, a mesma razão
+    _armar_jogo_so_da_sessao()  # JOGO-SO-DA-SESSAO: o jogo dela não entra
     # FAIXA-NO-BERCO-01: a foto do que JÁ estava sujo. Fora do `if` do canário
     # de propósito — esta régua fica de pé mesmo com aquele desligado, que é a
     # razão de ela existir.
@@ -4405,3 +4406,117 @@ def _lancador_no_fim_da_sessao(session: Any) -> None:
         "  Sem a guarda, isso fecharia (ou abriria) o lançador de quem roda a suíte.",
     ])
     session.exitstatus = 1
+
+
+# ---------------------------------------------------------------------------
+# JOGO-SO-DA-SESSAO (01/10/2026) — a suíte não vê o jogo aberto de quem a roda
+# ---------------------------------------------------------------------------
+#
+# MEDIDO em 01/10/2026: a suíte de quem coordena rodou com ela jogando, e
+# quatro testes de `test_game_signal_wiring.py` reprovaram com `'game'` no
+# lugar de `'daemon'`. A pergunta «há jogo da Steam aberto?»
+# (`steam_launch_options._steam_launch_cmdline`, a evidência E4 do sinal de
+# jogo, o `jogo_aberto` do «reiniciar», a recusa do `with_steam_closed`)
+# varre o `/proc` da MÁQUINA, e o `reaper SteamLaunch AppId=<N>` do jogo dela
+# casava a agulha. Simulado sem nascer processo nenhum (um pid acima do
+# `pid_max` na listagem do `/proc`, com a cmdline do reaper), 110 arquivos que
+# chegam a essa pergunta deram 6 vermelhos em 2 arquivos; sem o jogo, zero.
+# Régua que depende do que está aberto na máquina mede a máquina, não o
+# produto.
+#
+# A CURA É NO LEITOR DE UMA CMDLINE (`_cmdline_of`), que só a varredura do
+# jogo usa: a cmdline que casa a agulha do DONO (`_STEAM_LAUNCH_RE`) só chega
+# ao produto quando o processo DESCENDE desta sessão de pytest. O jogo de
+# quem roda a suíte some; o processo que um teste nasceu continua visto (nada
+# fica mais frouxo que o produto), e toda outra cmdline passa intacta. O teste
+# que quer o jogo aberto já dubla o `_cmdline_of` (ou o `steam_game_running`)
+# pelo `monkeypatch`, que vence este embrulho e o devolve no fim.
+#
+# Armado no `sessionstart` e conferido em cada teste: um teste que tire o
+# módulo do `sys.modules` e o importe de novo ganha o embrulho no seguinte.
+#
+# O QUE ISTO NÃO ALCANÇA: o produto rodado num SUBPROCESSO (a CLI, o
+# `uninstall.sh` avulso), que tem o próprio `/proc` sem embrulho; e as outras
+# leituras do `/proc` (o `escritor_cru`, o `autoswitch` sem `proc_dir`, o
+# `proton_pin._em_uso`), que perguntam outra coisa que não «há jogo da Steam».
+
+_MODULO_DO_JOGO = "hefesto_dualsense4unix.integrations.steam_launch_options"
+
+#: O leitor de cmdline de verdade, guardado no arme. Lista para a régua poder
+#: trocá-lo por um que finge o `/proc` dela com o jogo aberto.
+_LEITOR_DO_JOGO_REAL: list[Callable[[Any], str]] = []
+
+#: O pid desta sessão de pytest: a raiz de quem conta como «da sessão».
+_PID_DA_SESSAO_DO_JOGO: list[int] = []
+
+
+def _pai_de(pid: int, raiz_proc: str = "/proc") -> int | None:
+    """O ppid de `pid` pelo `stat` (o 4º campo, depois do `comm` entre parênteses)."""
+    try:
+        with open(f"{raiz_proc}/{pid}/stat", encoding="utf-8", errors="replace") as fh:
+            texto = fh.read()
+    except OSError:
+        return None
+    _, _, resto = texto.rpartition(")")
+    campos = resto.split()
+    if len(campos) < 2 or not campos[1].lstrip("-").isdigit():
+        return None
+    return int(campos[1])
+
+
+def descende_da_sessao(pid: Any, sessao: int | None = None) -> bool:
+    """`pid` é esta sessão de pytest ou um processo que ela nasceu?"""
+    try:
+        atual: int | None = int(pid)
+    except (TypeError, ValueError):
+        return False
+    raiz = sessao if sessao is not None else (
+        _PID_DA_SESSAO_DO_JOGO[0] if _PID_DA_SESSAO_DO_JOGO else os.getpid()
+    )
+    for _ in range(64):  # a profundidade de uma árvore de processos de teste
+        if atual is None or atual <= 1:
+            return False
+        if atual == raiz:
+            return True
+        atual = _pai_de(atual)
+    return False
+
+
+def _cmdline_so_da_sessao(pid: Any) -> str:
+    """O leitor que o produto vê sob a suíte: o jogo de fora some."""
+    leitor = _LEITOR_DO_JOGO_REAL[0]
+    cmd = leitor(pid)
+    modulo = sys.modules.get(_MODULO_DO_JOGO)
+    agulha = getattr(modulo, "_STEAM_LAUNCH_RE", None)
+    if not cmd or agulha is None or not agulha.search(cmd):
+        return cmd
+    return cmd if descende_da_sessao(pid) else ""
+
+
+_cmdline_so_da_sessao._so_da_sessao = True  # type: ignore[attr-defined]
+
+
+def _armar_jogo_so_da_sessao() -> None:
+    """Põe o embrulho no `_cmdline_of` do módulo carregado (ou o carrega)."""
+    modulo = sys.modules.get(_MODULO_DO_JOGO)
+    if modulo is None:
+        try:
+            import importlib
+
+            modulo = importlib.import_module(_MODULO_DO_JOGO)
+        except Exception:  # pragma: no cover — sem o pacote não há o que vigiar
+            return
+    atual = getattr(modulo, "_cmdline_of", None)
+    if atual is None or getattr(atual, "_so_da_sessao", False):
+        return
+    if not _PID_DA_SESSAO_DO_JOGO:
+        _PID_DA_SESSAO_DO_JOGO.append(os.getpid())
+    # o leitor de verdade é o do módulo, e não o que um teste deixou trocado
+    _LEITOR_DO_JOGO_REAL[:] = [getattr(modulo, "cmdline_de_pid", atual)]
+    setattr(modulo, "_cmdline_of", _cmdline_so_da_sessao)  # noqa: B010
+
+
+@pytest.fixture(autouse=True)
+def _o_jogo_de_fora_nao_entra() -> None:
+    """JOGO-SO-DA-SESSAO: confere o embrulho antes de cada teste."""
+    _armar_jogo_so_da_sessao()
