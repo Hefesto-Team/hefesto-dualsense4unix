@@ -464,6 +464,37 @@ class TestOProntuarioLigado:
 _BASH = shutil.which("bash") or "/bin/bash"
 _RAIZ = Path(__file__).resolve().parents[2]
 _GUARDA = _RAIZ / "scripts" / "disable_steam_input.sh"
+_DONO_DA_PONTE = _RAIZ / "src" / "hefesto_dualsense4unix" / "integrations"
+
+#: A ponte de verdade, pela porta que o guarda já abre (`PONTE_PY`), sem o jogo
+#: da máquina. MEDIDO em 02/10/2026, com ela jogando: o `pgrep` de mentira da
+#: bancada só responde ao shell; a ponte em Python pergunta «há jogo?» pelo
+#: `/proc` (`steam_game_running`, desde a PERF-PROC-SCAN-01), achou o jogo DELA
+#: e respondeu `adiado_jogo_aberto`, e dois testes daqui reprovaram. É a família
+#: do bloco JOGO-SO-DA-SESSAO do `tests/conftest.py`, num processo filho, aonde o
+#: embrulho dele não chega. Esta borda responde à ponte o que o `pgrep` responde
+#: ao shell: a cmdline de jogo da máquina não chega à pergunta; o resto do `/proc`
+#: passa intacto.
+_PONTE_DA_BANCADA = """\
+import runpy
+import sys
+
+DONO = {dono!r}
+sys.path.insert(0, DONO)
+import steam_launch_options as slo
+
+_ler = slo.cmdline_de_pid
+
+
+def _sem_o_jogo_da_maquina(pid):
+    cmd = _ler(pid)
+    return "" if slo._STEAM_LAUNCH_RE.search(cmd) else cmd
+
+
+slo._cmdline_of = _sem_o_jogo_da_maquina
+sys.argv[0] = DONO + "/steam_input_ponte.py"
+runpy.run_path(sys.argv[0], run_name="__main__")
+"""
 
 
 class TestOGuardaConstroiAPonte:
@@ -472,7 +503,9 @@ class TestOGuardaConstroiAPonte:
     gatilho novo seria refazer o que já está de pé.
 
     Execução real do bash, com HOME em `tmp_path` e `pgrep`/`steam`/`sleep`
-    stubados no PATH: nenhum processo desta máquina é tocado.
+    stubados no PATH: nenhum processo desta máquina é tocado. A ponte em Python
+    roda pela `_PONTE_DA_BANCADA`, que tira da pergunta «há jogo?» o jogo aberto
+    na máquina de quem roda a suíte.
     """
 
     @pytest.fixture()
@@ -500,7 +533,11 @@ class TestOGuardaConstroiAPonte:
             alvo = stubs / nome
             alvo.write_text(f"#!/bin/sh\n{corpo}\n", encoding="utf-8")
             alvo.chmod(0o755)
-        return {"home": home, "vdf": vdf, "stubs": stubs}
+        ponte_py = tmp_path / "ponte_da_bancada.py"
+        ponte_py.write_text(
+            _PONTE_DA_BANCADA.format(dono=str(_DONO_DA_PONTE)), encoding="utf-8"
+        )
+        return {"home": home, "vdf": vdf, "stubs": stubs, "ponte_py": ponte_py}
 
     def _roda(
         self, bancada: dict[str, Any], *args: str
@@ -511,6 +548,7 @@ class TestOGuardaConstroiAPonte:
         # faria a bancada ler a allowlist REAL da mantenedora.
         env["XDG_CONFIG_HOME"] = str(bancada["home"] / ".config")
         env["PATH"] = f"{bancada['stubs']}:/usr/bin:/bin"
+        env["PONTE_PY"] = str(bancada["ponte_py"])
         return subprocess.run(
             [_BASH, str(_GUARDA), *args],
             capture_output=True, text=True, check=False, env=env, timeout=120,
