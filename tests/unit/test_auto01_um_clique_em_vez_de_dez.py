@@ -166,10 +166,26 @@ def _daemon(controles: int) -> Daemon:
     )
 
 
-async def _gira_o_poll_loop(daemon: Daemon, segundos: float = 0.12) -> None:
-    """Roda o daemon DE VERDADE por um instante (caminho público)."""
+async def _gira_o_poll_loop(
+    daemon: Daemon, segundos: float = 0.12, teto: float = 3.0
+) -> None:
+    """Roda o daemon DE VERDADE por um instante (caminho público).
+
+    O INSTANTE CONTA DO PRIMEIRO TIQUE DO LAÇO, e não da criação da tarefa
+    (02/10/2026). A subida do `run()` até o laço é síncrona (as migrações de
+    uma vez, a mesa declarada) e, num lote carregado, passava dos 0,12 s: o
+    `stop()` chegava antes do primeiro tique e o laço não girava nenhuma vez,
+    com o daemon dizendo que não ligou a emulação que ele nem chegou a
+    olhar. As réguas que esperam «nada» continuam valendo: o laço gira pelo
+    menos um tique, como antes.
+    """
     task = asyncio.create_task(daemon.run())
     await asyncio.sleep(segundos)
+    laco = asyncio.get_running_loop()
+    prazo = laco.time() + teto
+    while (daemon.store.counter("poll.tick") < 1 and not task.done()
+           and laco.time() < prazo):
+        await asyncio.sleep(0.01)
     daemon.stop()
     await task
 
