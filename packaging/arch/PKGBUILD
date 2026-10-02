@@ -53,6 +53,7 @@ depends=(
     'python-structlog'
     'python-platformdirs'
     'python-filelock'
+    'python-yaml'
     'python-jeepney'
     # Sem python-pydualsense no Arch — vamos puxar via pip.
 )

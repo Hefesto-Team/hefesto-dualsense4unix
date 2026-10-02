@@ -35,7 +35,11 @@ ganha a lista própria de ambiente sem o que é nosso (o Heroic monta
 a caixa do Flatpak de um emulador excluído perde o ambiente inteiro. A carona
 de cada transição (`cura_por_estrada.curar_todas_as_estradas`) pergunta a esta
 lista o que pular (:func:`o_que_a_carona_pula`), e a do device KS também
-(:func:`prefixos_excluidos`). Os donos dos arquivos continuam sendo os de
+(:func:`prefixos_excluidos`). Desde 02/10/2026 (A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01)
+o jogo do Lutris Flatpak com a mesma janela ganha a camada dele (o
+`system.env` do `.yml`, cobrindo a caixa, que é de todos os jogos), com o
+«antes» em ``lutris``; e o prefixo do Heroic que outro jogo divide fica com o
+que é nosso (:func:`prefixos_excluidos`). Os donos dos arquivos continuam sendo os de
 sempre; esta lista só diz QUAIS jogos. A alternativa (cada feature aprender a
 perguntar a esta lista) faria oito donos lerem um arquivo novo, e o primeiro que
 esquecesse deixaria uma feature viva num jogo que ela excluiu.
@@ -65,13 +69,14 @@ dela inteira para gravar uma linha.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
 import tempfile
 import time
-from collections.abc import Callable
-from dataclasses import asdict, dataclass, field
+from collections.abc import Callable, Iterable
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
 from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
@@ -134,6 +139,9 @@ class Entrada:
     #: (01/10/2026): o jogo do Heroic sai do ambiente pela lista própria, e o
     #: «Tirar» a devolve. Vazio para quem o Heroic não conhece.
     heroic: tuple[cpe.CopiaDoJogo, ...] = field(default_factory=tuple)
+    #: Os `.yml` do Lutris Flatpak que esta exclusão cobriu, com o «antes» de
+    #: cada um (02/10/2026). Vazio para quem o Lutris não conhece.
+    lutris: tuple[cpe.YmlDoJogo, ...] = field(default_factory=tuple)
 
 
 # ---------------------------------------------------------------------------
@@ -175,6 +183,8 @@ def _ler_cru(destino: Path) -> list[Entrada]:
                 janelas=tuple(str(x) for x in j.get("janelas", ()) if str(x).strip()),
                 heroic=tuple(c for c in (cpe.CopiaDoJogo.de_dado(x)
                                          for x in j.get("heroic", ())) if c),
+                lutris=tuple(y for y in (cpe.YmlDoJogo.de_dado(x)
+                                         for x in j.get("lutris", ())) if y),
             )
             for j in jogos
         ]
@@ -192,8 +202,11 @@ def _como_dado(e: Entrada) -> dict[str, object]:
     """
     dado: dict[str, object] = asdict(e)
     dado.pop("heroic", None)
+    dado.pop("lutris", None)
     if e.heroic:
         dado["heroic"] = [c.como_dado() for c in e.heroic]
+    if e.lutris:
+        dado["lutris"] = [y.como_dado() for y in e.lutris]
     return dado
 
 
@@ -250,41 +263,170 @@ def o_que_a_carona_pula(config_home: Path | None = None) -> cpe.NaExclusao:
     """O que `cura_por_estrada.curar_todas_as_estradas` não escreve.
 
     As caixas: as janelas das entradas de emulador (os `app-id` estão entre
-    elas). As cópias: as do Heroic, que a carona mantém sem o que é nosso.
+    elas). As cópias: as do Heroic, que a carona mantém sem o que é nosso. Os
+    `.yml`: os do Lutris Flatpak, que a carona mantém cobrindo a caixa.
     """
     entradas = ler(config_home)
     return cpe.NaExclusao(
         caixas=frozenset(j.casefold() for e in entradas if e_caixa(e.chave)
                          for j in e.janelas),
-        copias=tuple(c for e in entradas for c in e.heroic))
+        copias=tuple(c for e in entradas for c in e.heroic),
+        ymls=tuple(y for e in entradas for y in e.lutris))
+
+
+def anotar_os_ymls(ymls: Iterable[cpe.YmlDoJogo], config_home: Path | None = None) -> str:
+    """A carona escreveu de novo nestes `.yml`: o registro da volta acompanha.
+
+    Cada um substitui o de mesmo arquivo na entrada que o tem. Sem isso, a
+    volta byte a byte compararia o arquivo com o `sha256` de uma escrita velha
+    e cairia na volta pelos pares. Status: ``"feito"`` | ``"nada"`` |
+    ``"erro"``. Nunca levanta.
+    """
+    novos = {y.arquivo: y for y in ymls}
+    if not novos:
+        return "nada"
+    destino = caminho(config_home)
+    try:
+        atuais = _ler_cru(destino)
+    except (_ArquivoTortoError, OSError):
+        return "erro"
+    mudou = False
+    saida: list[Entrada] = []
+    for e in atuais:
+        if any(y.arquivo in novos for y in e.lutris):
+            e = replace(e, lutris=tuple(novos.get(y.arquivo, y) for y in e.lutris))
+            mudou = True
+        saida.append(e)
+    if not mudou:
+        return "nada"
+    try:
+        _gravar(destino, saida)
+    except OSError:
+        return "erro"
+    return "feito"
+
+
+#: O arquivo em que o Heroic anota quem usa cada prefixo: a cada lançamento ele
+#: acrescenta o `app_name` do jogo a `<winePrefix>/installed_games`, uma lista
+#: JSON (lido no `app.asar` do Heroic 2.22.3 em 02/10/2026; no disco dela, o
+#: prefixo do Guardiões tem um `app_name` só).
+_MORADORES_DO_HEROIC = "installed_games"
+
+#: Os prefixos divididos já ditos no diário, com o número de moradores — uma
+#: linha por mudança, e não uma por transição.
+_DIVIDIDOS_DITOS: set[tuple[str, int]] = set()
+
+
+def _resolvido(caminho: str | Path) -> Path | None:
+    try:
+        return Path(caminho).expanduser().resolve()
+    except (OSError, RuntimeError):  # pragma: no cover - caminho impossível
+        return None
+
+
+def _moradores(prefixo: Path, casa: Path) -> set[str]:
+    """Os `app_name` dos jogos do Heroic que moram neste prefixo (resolvido).
+
+    Três fontes, somadas: quem o Heroic anotou em `installed_games`; toda cópia
+    da casa (`GamesConfig/<app>.json`) com o mesmo `winePrefix` resolvido; e,
+    quando o prefixo é o da lista global (`defaultSettings.winePrefix`), todo
+    jogo sem `winePrefix` próprio — as cópias sem ele e os instalados sem
+    cópia. Nunca levanta: o que não se lê não entra.
+    """
+    fora: set[str] = set()
+    try:
+        anotados = json.loads((prefixo / _MORADORES_DO_HEROIC).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        anotados = []
+    fora.update(str(a) for a in (anotados if isinstance(anotados, list) else ())
+                if isinstance(a, str) and a)
+    try:
+        global_ = json.loads((casa / "config.json").read_text(encoding="utf-8"))
+        padrao = global_.get("defaultSettings", {}).get("winePrefix")
+    except (OSError, ValueError, AttributeError):
+        padrao = None
+    e_o_global = isinstance(padrao, str) and padrao.strip() != "" and (
+        _resolvido(padrao.strip()) == prefixo)
+    com_copia: set[str] = set()
+    pasta = casa / "GamesConfig"
+    for arquivo in sorted(pasta.glob("*.json")) if pasta.is_dir() else ():
+        try:
+            dado = json.loads(arquivo.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        jogo = dado.get(arquivo.stem) if isinstance(dado, dict) else None
+        if not isinstance(jogo, dict):
+            continue
+        com_copia.add(arquivo.stem)
+        proprio = jogo.get("winePrefix")
+        if isinstance(proprio, str) and proprio.strip():
+            if _resolvido(proprio.strip()) == prefixo:
+                fora.add(arquivo.stem)
+        elif e_o_global:
+            fora.add(arquivo.stem)
+    if e_o_global:
+        from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+        with contextlib.suppress(Exception):
+            fora.update(j.chave for j in censo._heroic(casa).jogos
+                        if j.instalado and j.chave not in com_copia)
+    return fora
 
 
 def prefixos_excluidos(config_home: Path | None = None) -> frozenset[Path]:
-    """Os prefixos próprios dos jogos excluídos do Heroic — o device KS não entra.
+    """Os prefixos dos jogos excluídos do Heroic em que TODO morador está excluído.
 
-    Caminho resolvido, porque quem compara (a carona do device KS) lê o mesmo
-    prefixo por outra fonte.
+    Caminho resolvido, porque quem compara (a carona do device KS e o
+    «Corrigir Vulkan») lê o mesmo prefixo por outra fonte.
+
+    **O PREFIXO DIVIDIDO FICA — 02/10/2026, A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01.**
+    O Heroic aceita dois jogos no mesmo `winePrefix`, e o device KS e as camadas
+    Vulkan moram no prefixo, não no jogo. Medido num lar de mentira na
+    integração: com A e B no mesmo prefixo e só A excluído, a carona do KS
+    pulava o prefixo, e B perdia a háptica pelo áudio sem ter sido excluído.
+    Por delegação, a validar por ela: o prefixo em que mora alguém que ela não
+    excluiu fica com o device KS e as camadas, porque tirar a háptica do jogo
+    que ela não excluiu custa mais do que deixá-la no que ela excluiu. O diário
+    diz ``exclusao_prefixo_dividido moradores=<n>`` (:func:`_moradores`).
     """
-    fora: set[Path] = set()
+    excluidos: dict[Path, set[str]] = {}
+    candidatos: dict[Path, Path] = {}
     for e in ler(config_home):
         for c in e.heroic:
+            casa = Path(c.arquivo).parent.parent
+            excluidos.setdefault(casa, set()).add(c.app)
             if c.prefixo.strip():
-                try:
-                    fora.add(Path(c.prefixo).resolve())
-                except OSError:  # pragma: no cover - caminho impossível
-                    continue
+                real = _resolvido(c.prefixo.strip())
+                if real is not None:
+                    candidatos.setdefault(real, casa)
+    fora: set[Path] = set()
+    for prefixo, casa in candidatos.items():
+        moradores = _moradores(prefixo, casa)
+        if moradores <= excluidos.get(casa, set()):
+            fora.add(prefixo)
+            continue
+        dito = (str(prefixo), len(moradores))
+        if dito not in _DIVIDIDOS_DITOS:
+            _DIVIDIDOS_DITOS.add(dito)
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+                get_logger(__name__).info(
+                    "exclusao_prefixo_dividido", moradores=len(moradores),
+                    prefixo=prefixo.name)
     return frozenset(fora)
 
 
 def ids_dos_prefixos(config_home: Path | None = None) -> list[str]:
-    """O que o botão Vulkan pula: os appids e a pasta do prefixo do Heroic.
+    """O que o botão Vulkan pula: o appid na Steam, o caminho resolvido nos outros.
 
-    `camadas_vulkan` chama de `appid` o NOME DA PASTA do prefixo — o número
-    na Steam, o título no Heroic. O botão compara por ele.
+    `camadas_vulkan.curar_todos` compara o appid só com os prefixos de
+    `compatdata` e o caminho com os demais (02/10/2026): pelo NOME da pasta, a
+    exclusão de um jogo do Heroic pulava também o prefixo de outra casa com a
+    mesma pasta. O prefixo dividido não entra (:func:`prefixos_excluidos`).
     """
-    nomes = [Path(c.prefixo).name for e in ler(config_home) for c in e.heroic
-             if c.prefixo.strip()]
-    return list(dict.fromkeys([*appids(config_home), *nomes]))
+    caminhos = sorted(str(p) for p in prefixos_excluidos(config_home))
+    return list(dict.fromkeys([*appids(config_home), *caminhos]))
 
 
 def appids(config_home: Path | None = None) -> list[str]:
@@ -372,9 +514,17 @@ def adicionar(
     # ganha a lista própria sem o que é nosso; a caixa do emulador perde o
     # ambiente inteiro. Ver `cura_por_estrada`, «A EXCLUSÃO».
     copias: tuple[cpe.CopiaDoJogo, ...] = ()
+    ymls: tuple[cpe.YmlDoJogo, ...] = ()
     if appid is not None:
         copias, status = cpe.tirar_o_nosso_do_jogo_do_heroic(alvo, lar=lar)
         if status == "erro":
+            desfazer_as_listas()
+            return "erro"
+        # A CAMADA DO JOGO DO LUTRIS (02/10/2026): o `.yml` do jogo do Lutris
+        # Flatpak com esta janela cobre a caixa, que é de todos os jogos dele.
+        ymls, status = cpe.tirar_o_nosso_do_jogo_do_lutris(alvo, lar=lar)
+        if status == "erro":
+            cpe.devolver_ao_jogo_do_heroic(copias)
             desfazer_as_listas()
             return "erro"
     elif e_caixa(alvo) and cpe.tirar_o_nosso_da_caixa(janelas_limpas, lar=lar) == "erro":
@@ -386,12 +536,14 @@ def adicionar(
         escritas=tuple(x for x in LISTAS if x in escritas),
         janelas=janelas_limpas,
         heroic=copias,
+        lutris=ymls,
     )
     try:
         _gravar(destino, [*atuais, nova])
     except OSError:
         desfazer_as_listas()
         cpe.devolver_ao_jogo_do_heroic(copias)
+        cpe.devolver_ao_jogo_do_lutris(ymls)
         return "erro"
     return "adicionado"
 
@@ -418,6 +570,8 @@ def tirar(chave: str, *, config_home: Path | None = None, lar: Path | None = Non
             if _TIRAR[lista](appid) not in ("removido", "nao_estava"):
                 return "erro"
     if cpe.devolver_ao_jogo_do_heroic(achada.heroic) == "erro":
+        return "erro"
+    if cpe.devolver_ao_jogo_do_lutris(achada.lutris) == "erro":
         return "erro"
     try:
         _gravar(destino, [e for e in atuais if e.chave != alvo])
@@ -461,8 +615,12 @@ def tirar_do_disco(chave: str) -> str:
         return "sem_appid"
     pino = proton_pin.destravar_um_jogo(appid)
     atalho = slo.tirar_o_atalho_dos_jogos([appid])
+    # O PREFIXO DIVIDIDO FICA (02/10/2026): só sai o prefixo em que todo
+    # morador está excluído — a mesma regra da carona do device KS.
+    inteiros = prefixos_excluidos()
     do_heroic = [Path(c.prefixo) for e in ler() if e.chave == chave.strip()
-                 for c in e.heroic if c.prefixo.strip()]
+                 for c in e.heroic if c.prefixo.strip()
+                 and _resolvido(c.prefixo.strip()) in inteiros]
     prefixo = _devolver_o_prefixo(appid, do_heroic)
     razoes = {str(e.get("reason", "")) for e in atalho["errors"]}
     if pino.get("status") == "recusado" or razoes & _ESPERA_A_STEAM or prefixo == "ocupado":

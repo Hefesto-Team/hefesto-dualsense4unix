@@ -32,6 +32,9 @@ dependencies = [
     "rich>=13.0",
     "platformdirs>=4.0",
     "filelock>=3.13",
+    # O `.yml` do jogo do Lutris se lê e se escreve com ele, o mesmo leitor do
+    # Lutris (a camada da lista de exclusão, A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01).
+    "PyYAML>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -43,8 +46,7 @@ dev = [
     "ruff==0.15.20",
     "mypy>=1.7",
     "types-python-xlib",
-    # Os testes do workflow de release leem os YAML do GitHub; sem o PyYAML eles pulam no CI.
-    "PyYAML>=6.0",
+    # O PyYAML é dependência de execução desde 02/10/2026 (acima); os tipos dele ficam aqui.
     "types-PyYAML",
     # Dois verificadores de desenho abrem o Chrome do sistema pelo Playwright; o pacote
     # pip basta, sem `playwright install`.

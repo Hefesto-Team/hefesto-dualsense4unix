@@ -49,6 +49,17 @@ jogo que ele lança roda dentro da caixa dele, herdando o ambiente. É por
 lançador e não por jogo — e por jogo não faria diferença, porque **a conta é a
 mesma para todos**: o ambiente vem da ponte, não do título.
 
+**NOTA DE 02/10/2026 — O QUE CADUCOU (A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01).**
+A lista de exclusão (21/09, fora da Steam desde 01/10) é o caso em que a conta
+deixa de ser a mesma para todos: o jogo excluído do Lutris Flatpak herdava da
+caixa o `SDL_GAMECONTROLLER_IGNORE_DEVICES` e o `PROTON_DISABLE_HIDRAW`, com o
+Modo Nativo ligado em foco — zero controles. A caixa continua sendo a estrada
+da carona; o `system.env` do `.yml` do jogo passou a ser a camada da EXCLUSÃO
+(«A CAMADA DO JOGO DO LUTRIS», mais abaixo). O motivo 1 caiu: o PyYAML passou a
+dependência de execução (por delegação, a validar por ela), o mesmo leitor do
+Lutris, e nenhum YAML se escreve à mão. O motivo 2 continua medido: o Lutris
+dela segue sem jogo.
+
 O QUE ESTE MÓDULO NUNCA FAZ
 ----------------------------
 
@@ -131,6 +142,7 @@ import tempfile
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
+from types import ModuleType
 from typing import cast
 
 try:
@@ -928,8 +940,10 @@ def curar_todas_as_estradas(
     Devolve as chaves dos cartões em que escreveu, para o journal.
 
     **A LISTA DE EXCLUSÃO MANDA AQUI TAMBÉM** (01/10/2026): a caixa de um
-    emulador excluído não recebe o ambiente, e a cópia de um jogo do Heroic
-    excluído volta a ficar sem o que é nosso — ver :class:`NaExclusao`.
+    emulador excluído não recebe o ambiente, a cópia de um jogo do Heroic
+    excluído volta a ficar sem o que é nosso, e (02/10/2026) o `.yml` de um
+    jogo excluído do Lutris Flatpak volta a cobrir a caixa — ver
+    :class:`NaExclusao`.
     O parâmetro da exclusão existe para a régua; ``None`` lê a lista do dono.
     """
     fora = _a_exclusao() if exclusao is None else exclusao
@@ -961,6 +975,9 @@ def curar_todas_as_estradas(
     for copia in fora.copias:
         with contextlib.suppress(Exception):
             _sem_o_nosso_no_jogo(Path(copia.arquivo), copia.app, pasta_do_ambiente)
+    #: O `.yml` do jogo excluído do Lutris Flatpak cobre a caixa que acabou de
+    #: ser escrita (A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01, 02/10/2026).
+    _manter_os_ymls(fora.ymls, lar, pasta_do_ambiente)
     return tuple(escritos)
 
 
@@ -1440,12 +1457,59 @@ class CopiaDoJogo:
 
 
 @dataclass(frozen=True)
+class YmlDoJogo:
+    """O que a exclusão fez no `.yml` de UM jogo do Lutris Flatpak — e como voltar.
+
+    A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01 (02/10/2026): a camada que só este jogo
+    lê é o `system.env` do `games/<configpath>.yml` dele, e o Lutris a põe por
+    cima do ambiente da caixa (`monitored_command.get_child_environment` e
+    `runners/runner.py:292-293`, lidos no 0.5.22 instalado nela).
+    """
+
+    #: `<configuração do Lutris>/games/<configpath>.yml`.
+    arquivo: str
+    #: O texto inteiro de antes da exclusão, para a volta byte a byte. ``None``
+    #: quando ela mexeu no arquivo e a carona escreveu de novo por cima: aí a
+    #: volta é só pelos pares.
+    antes: str | None
+    #: O `sha256` do texto que a exclusão (ou a carona dela) gravou por último.
+    depois: str
+    #: Os pares que a exclusão pôs em `system.env`, e só os que não estavam lá.
+    pares: tuple[tuple[str, str], ...] = ()
+    #: As peças que o arquivo não tinha e a exclusão criou (`system`, `env`).
+    moldura: tuple[str, ...] = ()
+
+    def como_dado(self) -> dict[str, object]:
+        """O dicionário que vai ao JSON da lista de exclusão."""
+        return {"arquivo": self.arquivo, "antes": self.antes, "depois": self.depois,
+                "pares": [list(p) for p in self.pares], "moldura": list(self.moldura)}
+
+    @classmethod
+    def de_dado(cls, dado: object) -> YmlDoJogo | None:
+        """O registro lido do JSON; torto = ``None``."""
+        if not isinstance(dado, dict):
+            return None
+        arquivo, depois, antes = dado.get("arquivo"), dado.get("depois"), dado.get("antes")
+        if not isinstance(arquivo, str) or not arquivo or not isinstance(depois, str):
+            return None
+        cru = dado.get("pares")
+        pares = tuple((str(p[0]), str(p[1])) for p in (cru if isinstance(cru, list) else ())
+                      if isinstance(p, list | tuple) and len(p) == 2)
+        moldura = dado.get("moldura")
+        return cls(arquivo, antes if isinstance(antes, str) else None, depois, pares,
+                   tuple(str(x) for x in moldura) if isinstance(moldura, list) else ())
+
+
+@dataclass(frozen=True)
 class NaExclusao:
     """O que a carona pula: as caixas excluídas e as cópias a manter limpas."""
 
     #: Os `app-id` das caixas excluídas, em `casefold`.
     caixas: frozenset[str] = frozenset()
     copias: tuple[CopiaDoJogo, ...] = ()
+    #: Os `.yml` dos jogos excluídos do Lutris Flatpak, que a carona mantém
+    #: cobrindo a caixa (02/10/2026).
+    ymls: tuple[YmlDoJogo, ...] = ()
 
 
 def _a_exclusao() -> NaExclusao:
@@ -1654,6 +1718,348 @@ def tirar_o_nosso_da_caixa(
         except OSError:
             return "erro"
     return status
+
+
+# ── A CAMADA DO JOGO DO LUTRIS: o `system.env` do `.yml` do excluído ───────
+#
+# A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01 (02/10/2026). A caixa do Lutris Flatpak
+# é uma só para todos os jogos dele, e a exclusão é de UM jogo: tirar o
+# ambiente da caixa tiraria o Hefesto de todos, e deixá-lo mantinha o jogo
+# excluído com o físico escondido e o Modo Nativo ligado em foco — zero
+# controles. Medido num lar de mentira na integração: a caixa seguia com as 9.
+#
+# O LUTRIS PÕE O AMBIENTE DO JOGO POR CIMA DO DA CAIXA (0.5.22, lido no fonte
+# instalado nela): `get_child_environment` faz `system.get_environment()` e
+# depois `env.update(self.env)` (`monitored_command.py:150-154`), e o `self.env`
+# traz o `system.env` do `.yml` do jogo por último (`runners/runner.py:292-293`).
+# Uma chave com valor `''` passa e cobre a da caixa; uma chave NULA é pulada
+# (`monitored_command.py:141-142`), e aí vale a da caixa.
+#
+# O LUTRIS NATIVO NÃO GANHA CAMADA: o ambiente do Hefesto só chega ao jogo dele
+# pela caixa do Flatpak (a carona não tem estrada para o nativo), e um `.yml`
+# com valores nossos ali mudaria o jogo em vez de devolvê-lo.
+#
+# O ARQUIVO SE LÊ E SE ESCREVE COM O PyYAML, o mesmo leitor do Lutris
+# (`util/yaml.py`: `safe_load` e `safe_dump(..., default_flow_style=False)`). O
+# import é tardio: o desfazer do uninstall roda este arquivo com o `python3` do
+# sistema, e sem o PyYAML a volta é só a exata (:func:`devolver_ao_jogo_do_lutris`).
+
+#: A caixa do Lutris Flatpak.
+_LUTRIS_APP_ID = "net.lutris.Lutris"
+
+#: As pastas de configuração do Lutris Flatpak no lar: a `config/lutris` (no
+#: disco dela, um atalho para `data/lutris`, medido em 11/09/2026) e a
+#: `data/lutris`, que o 0.5.22 usa quando a `config/` não existe
+#: (`settings.CONFIG_DIR`).
+_PASTAS_DO_LUTRIS_FLATPAK = (f".var/app/{_LUTRIS_APP_ID}/config/lutris",
+                             f".var/app/{_LUTRIS_APP_ID}/data/lutris")
+
+#: O «NÃO VEIO» DE CADA LEITOR: o valor que o leitor de uma família de variáveis
+#: lê como se ela não tivesse vindo. Nunca nulo (o Lutris pula a chave nula).
+#:
+#: * ``SDL_`` → ``""``. MEDIDO em 02/10/2026 no SDL2 2.32.10 do runtime da Steam
+#:   (`SDL_GetHintBoolean` por `ctypes`, sem iniciar subsistema nenhum): com o
+#:   valor vazio, as três dicas booleanas devolvem o padrão, como ausentes. A
+#:   lista do `SDL_GAMECONTROLLER_IGNORE_DEVICES` vazia não ignora aparelho
+#:   nenhum (lido, não medido: a função que a lê é interna). O SDL do runtime do
+#:   Proton é da mesma série, e fica a confirmar nele;
+#: * ``PROTON_`` → ``""``. O script do Proton (GE-Proton10-34) lê as opções dele
+#:   por `nonzero` (`len(s) > 0 and s != "0"`, `proton:167-168`, pela
+#:   `check_environment`, `:1733-1740`): `''` desliga como a ausência, mas a
+#:   presença cala os padrões que o próprio script poria. As três `PROTON_*` de
+#:   hoje não passam pelo `check_environment`: quem as lê é o Wine, depois do
+#:   script, e o efeito do `''` no jogo não foi medido além disso;
+#: * o par ``__GL_SHADER_*`` FICA FORA: o leitor é o driver fechado da NVIDIA, e
+#:   o efeito do `''` não está medido (ele pode desligar o cache). Por
+#:   delegação, a validar por ela: sem a medida, o jogo excluído do Lutris herda
+#:   da caixa o cache de shader, que não toca o controle. Com um «antes» dela no
+#:   registro da caixa, o `.yml` leva o dela.
+_NAO_VEIO: tuple[tuple[str, str], ...] = (("SDL_", ""), ("PROTON_", ""))
+
+
+def nao_veio(chave: str) -> str | None:
+    """O valor que o leitor de `chave` lê como «não veio»; ``None`` = sem medida."""
+    for prefixo, valor in _NAO_VEIO:
+        if chave.startswith(prefixo):
+            return valor
+    return None
+
+
+def _sha(texto: str) -> str:
+    import hashlib
+
+    return hashlib.sha256(texto.encode("utf-8")).hexdigest()
+
+
+def _yaml() -> ModuleType | None:
+    """O PyYAML, ou ``None`` — o desfazer roda com o `python3` do sistema."""
+    try:
+        import yaml
+    except ImportError:
+        return None
+    return yaml
+
+
+def pares_da_camada_do_lutris(
+    lar: Path | None = None, pasta_do_ambiente: Path | None = None,
+) -> dict[str, str]:
+    """O que o `.yml` de um jogo excluído do Lutris Flatpak precisa cobrir.
+
+    Cada chave que o desfazer tiraria da caixa (:func:`_desfazer_pares`, a mesma
+    conta da cópia do Heroic), no valor que o jogo veria sem o Hefesto: o
+    «antes» do registro da caixa quando ela tinha um, e quando não tinha, o
+    :func:`nao_veio` do leitor. Caixa sem o nosso, ou ilegível = ``{}``.
+    """
+    lar = Path.home() if lar is None else lar
+    caixa = _override_da_caixa(_LUTRIS_APP_ID, lar)
+    cfg = _ler_override(caixa)
+    if cfg is None or not cfg.has_section("Environment"):
+        return {}
+    entrada = ler_registro(pasta_do_ambiente).get(str(caixa), Entrada(FLATPAK_OVERRIDE))
+    novos, contas = _desfazer_pares(list(cfg.items("Environment")), copy.deepcopy(entrada))
+    devolvidos = dict(novos)
+    fora: dict[str, str] = {}
+    for chave in contas.tiradas:
+        if chave in contas.devolvidas and chave in devolvidos:
+            fora[chave] = devolvidos[chave]
+            continue
+        valor = None if chave in PODEM_SER_DELA else nao_veio(chave)
+        if valor is not None:
+            fora[chave] = valor
+    return fora
+
+
+def _pasta_do_lutris_flatpak(lar: Path) -> Path | None:
+    for rel in _PASTAS_DO_LUTRIS_FLATPAK:
+        if (lar / rel).is_dir():
+            return lar / rel
+    return None
+
+
+def jogos_do_lutris_pela_janela(classe: str, lar: Path | None = None) -> list[Path]:
+    """Os `.yml` dos jogos do Lutris FLATPAK que anunciam esta janela.
+
+    Quem diz qual jogo anuncia qual janela é o censo (`classe_de_janela`, com o
+    umu-id do Lutris); a casa é só a do Flatpak (o nativo não ganha camada).
+    Só os `.yml` que existem: sem ele o Lutris nem abre o jogo.
+    """
+    alvo = classe.strip()
+    lar = Path.home() if lar is None else lar
+    pasta = _pasta_do_lutris_flatpak(lar)
+    if not alvo or pasta is None:
+        return []
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+    vistos: list[Path] = []
+    for jogo in censo._lutris(pasta).jogos:
+        yml = jogo.configuracao
+        if (jogo.classe_de_janela == alvo and yml is not None and yml.is_file()
+                and not yml.is_symlink() and yml not in vistos):
+            vistos.append(yml)
+    return vistos
+
+
+def _com_o_nosso_no_yml(
+    texto: str, pares: dict[str, str], moldura: tuple[str, ...] = (),
+) -> tuple[str, tuple[tuple[str, str], ...], tuple[str, ...]] | None:
+    """O `.yml` com os pares em `system.env`, sem passar por cima de chave dela.
+
+    Devolve ``(texto, os pares postos, a moldura)``; ``None`` = o arquivo não é
+    um dicionário que o Lutris leria (não se reescreve por cima). Uma chave que
+    já está no `system.env` é dela (ou da exclusão, de antes) e fica.
+    """
+    yaml = _yaml()
+    if yaml is None:
+        return None
+    try:
+        raiz = yaml.safe_load(texto) if texto.strip() else {}
+    except yaml.YAMLError:
+        return None
+    if not isinstance(raiz, dict):
+        return None
+    nova = list(moldura)
+    sistema = raiz.get("system")
+    if sistema is None:
+        sistema = {}
+        nova.append("system")
+    if not isinstance(sistema, dict):
+        return None
+    env = sistema.get("env")
+    if env is None:
+        env = {}
+        nova.append("env")
+    if not isinstance(env, dict):
+        return None
+    postos = tuple((k, v) for k, v in sorted(pares.items()) if k not in env)
+    if not postos:
+        return texto, (), moldura
+    env.update(dict(postos))
+    sistema["env"] = env
+    raiz["system"] = sistema
+    return (str(yaml.safe_dump(raiz, default_flow_style=False)), postos,
+            tuple(dict.fromkeys(nova)))
+
+
+def _cobrir_no_yml(alvo: Path, pares: dict[str, str]) -> YmlDoJogo | None:
+    """Escreve os pares no `.yml` e devolve o registro da volta. ``None`` = erro."""
+    try:
+        texto = alvo.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    feito = _com_o_nosso_no_yml(texto, pares)
+    if feito is None:
+        return None
+    novo, postos, moldura = feito
+    if novo != texto:
+        try:
+            _escrever_atomico(alvo, novo)
+        except OSError:
+            return None
+    return YmlDoJogo(str(alvo), texto, _sha(novo), postos, moldura)
+
+
+def tirar_o_nosso_do_jogo_do_lutris(
+    classe: str, *, lar: Path | None = None, pasta_do_ambiente: Path | None = None,
+) -> tuple[tuple[YmlDoJogo, ...], str]:
+    """O jogo do Lutris Flatpak com esta janela passa a cobrir a caixa.
+
+    Devolve ``(o que fez, status)``: ``"feito"`` | ``"nada"`` | ``"erro"``. O
+    jogo cuja caixa ainda não tem o nosso fica anotado sem pares: a carona o
+    cobre quando escrever a caixa. Com erro num `.yml`, os já feitos voltam —
+    tudo ou nada. A caixa não é tocada.
+    """
+    ymls = jogos_do_lutris_pela_janela(classe, lar)
+    if not ymls:
+        return (), "nada"
+    pares = pares_da_camada_do_lutris(lar, pasta_do_ambiente)
+    feitos: list[YmlDoJogo] = []
+    for alvo in ymls:
+        yml = _cobrir_no_yml(alvo, pares)
+        if yml is None:
+            devolver_ao_jogo_do_lutris(feitos)
+            return (), "erro"
+        feitos.append(yml)
+    return tuple(feitos), "feito" if any(y.pares for y in feitos) else "nada"
+
+
+def _manter_o_yml(yml: YmlDoJogo, pares: dict[str, str]) -> YmlDoJogo | None:
+    """A carona mantém o `.yml` do excluído cobrindo a caixa de agora.
+
+    Só acrescenta (o par que a caixa perdeu, no Modo Nativo, fica: ele é o «não
+    veio» e não muda nada). Devolve o registro novo quando escreveu, ``None``
+    quando não mudou nada ou não pôde. Se ela mexeu no arquivo desde a última
+    escrita nossa, a volta exata deixa de valer (``antes=None``).
+    """
+    alvo = Path(yml.arquivo)
+    try:
+        texto = alvo.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    faltam = {k: v for k, v in pares.items() if k not in dict(yml.pares)}
+    if not faltam:
+        return None
+    feito = _com_o_nosso_no_yml(texto, faltam, yml.moldura)
+    if feito is None:
+        return None
+    novo, postos, moldura = feito
+    if not postos:
+        return None
+    try:
+        _escrever_atomico(alvo, novo)
+    except OSError:
+        return None
+    antes = yml.antes if _sha(texto) == yml.depois else None
+    return YmlDoJogo(yml.arquivo, antes, _sha(novo), (*yml.pares, *postos), moldura)
+
+
+def _sem_os_pares_no_yml(texto: str, yml: YmlDoJogo) -> str | None:
+    """O `.yml` sem os pares da exclusão que ainda estão lá com o valor dela.
+
+    ``None`` = sem PyYAML, ou o arquivo não abre: não se escreve YAML à mão.
+    """
+    yaml = _yaml()
+    if yaml is None:
+        return None
+    try:
+        raiz = yaml.safe_load(texto)
+    except yaml.YAMLError:
+        return None
+    sistema = raiz.get("system") if isinstance(raiz, dict) else None
+    env = sistema.get("env") if isinstance(sistema, dict) else None
+    if not isinstance(raiz, dict) or not isinstance(sistema, dict) or not isinstance(env, dict):
+        return texto
+    for chave, valor in yml.pares:
+        if chave in env and env[chave] == valor:
+            del env[chave]
+    if "env" in yml.moldura and not env:
+        del sistema["env"]
+    if "system" in yml.moldura and not sistema:
+        del raiz["system"]
+    return str(yaml.safe_dump(raiz, default_flow_style=False))
+
+
+def devolver_ao_jogo_do_lutris(ymls: Iterable[YmlDoJogo]) -> str:
+    """A volta: o `.yml` de cada jogo como estava antes da exclusão.
+
+    Se ninguém mexeu no arquivo desde a última escrita nossa (o `sha256` bate),
+    o texto de antes volta inteiro, byte a byte — sem PyYAML. Se ela (ou o
+    Lutris) mexeu, saem só os pares da exclusão que ainda têm o valor dela, e
+    isso precisa do PyYAML; sem ele o arquivo fica como está e o status é
+    ``"ficou"``. Status: ``"feito"`` | ``"nada"`` | ``"ficou"`` | ``"erro"``.
+    Nunca levanta.
+    """
+    status = "nada"
+    for yml in ymls:
+        if not yml.pares:
+            continue
+        alvo = Path(yml.arquivo)
+        try:
+            texto = alvo.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            continue
+        except OSError:
+            status = "erro"
+            continue
+        if _sha(texto) == yml.depois and yml.antes is not None:
+            novo = yml.antes
+        else:
+            parcial = _sem_os_pares_no_yml(texto, yml)
+            if parcial is None:
+                if status != "erro":
+                    status = "ficou"
+                continue
+            novo = parcial
+        if novo == texto:
+            continue
+        try:
+            _escrever_atomico(alvo, novo)
+        except OSError:
+            status = "erro"
+            continue
+        if status == "nada":
+            status = "feito"
+    return status
+
+
+def _manter_os_ymls(ymls: Iterable[YmlDoJogo], lar: Path | None,
+                    pasta_do_ambiente: Path | None) -> list[YmlDoJogo]:
+    """A carona sobre os `.yml` dos excluídos: os registros que mudaram."""
+    lista = list(ymls)
+    if not lista:
+        return []
+    pares = pares_da_camada_do_lutris(lar, pasta_do_ambiente)
+    mudados: list[YmlDoJogo] = []
+    for yml in lista:
+        with contextlib.suppress(Exception):
+            novo = _manter_o_yml(yml, pares)
+            if novo is not None:
+                mudados.append(novo)
+    if mudados:
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
+
+            lx.anotar_os_ymls(mudados)
+    return mudados
 
 
 def _pastas_do_ambiente_padrao(lar: Path) -> list[Path]:

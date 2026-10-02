@@ -190,6 +190,7 @@ modules:
           "platformdirs>=4.0"
           "filelock>=3.13"
           "jeepney>=0.8"
+          "PyYAML>=6.0"
     sources: []
 
   # Módulo intermediário: libhidapi — biblioteca nativa que o wrapper Python

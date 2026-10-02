@@ -129,6 +129,11 @@ class JogoDoLancador:
     #: Conteúdo adicional (DLC, pacote de arte, redistribuível). **Não é jogo**
     #: — ver `e_acessorio`.
     dlc: bool = False
+    #: O ARQUIVO DE CONFIGURAÇÃO DESTE JOGO NO LANÇADOR, quando ele tem um: o
+    #: `games/<configpath>.yml` do Lutris (A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01,
+    #: 02/10/2026). É a camada que só este jogo lê, e é nela que a exclusão
+    #: escreve (`cura_por_estrada`, «A CAMADA DO JOGO DO LUTRIS»).
+    configuracao: Path | None = None
 
     @property
     def classe_de_janela(self) -> str:
@@ -366,10 +371,31 @@ def _instalados_do_heroic(caminho: Path) -> set[str]:
 #: **`service`/`service_id` ENTRARAM EM 21/09/2026, e são o degrau 2.** As
 #: colunas existem no `pga.db` dela (schema lido no disco, 23 colunas), e
 #: quando `service == "steam"` o `service_id` É o appid da Steam daquele jogo.
-#: Sem elas todo jogo do Lutris caía no «não sei», porque o degrau 1 (o umu-id)
-#: só tem leitor no Heroic.
+#: Sem elas todo jogo do Lutris caía no «não sei».
+#:
+#: **02/10/2026 (A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01): o degrau 1 (o umu-id)
+#: passou a ter leitor no Lutris também** — ver `_umu_do_lutris`. A frase que
+#: ficava aqui dizia que ele «só tem leitor no Heroic».
 _COLUNAS_DO_LUTRIS = ("name", "slug", "executable", "directory", "installed",
                       "runner", "service", "service_id")
+
+#: AS COLUNAS QUE PODEM FALTAR, e entram como `NULL` quando faltam. O
+#: `configpath` existe no `pga.db` dela (lido no disco em 02/10/2026) e é o nome
+#: do `games/<configpath>.yml` do jogo (`lutris/game.py`, `game_config_id`); um
+#: banco que não o tenha não pode derrubar a biblioteca inteira por uma coluna
+#: que só a exclusão usa.
+_COLUNAS_OPCIONAIS_DO_LUTRIS = ("configpath",)
+
+#: O RUNNER QUE PASSA PELO UMU. No Lutris 0.5.22 (lido no fonte instalado nela,
+#: `runners/wine.py:1275-1281`), só o runner `wine` pede o `GAMEID` ao
+#: `util/wine/proton.get_game_id`, e só quando a versão do Wine é um Proton ou
+#: o próprio umu. Um jogo nativo (`linux`) ou de emulador nunca vira
+#: `steam_app_<N>`.
+_RUNNER_DO_UMU = "wine"
+
+#: A versão do Wine que o Lutris trata como «nenhuma escolhida» e entrega ao umu
+#: (`util/wine/wine.GE_PROTON_LATEST`; `get_default_wine_version` a devolve).
+_VERSAO_PADRAO_DO_LUTRIS = "ge-proton"
 
 #: O valor da coluna `service` que significa "este jogo é da Steam". O Lutris
 #: usa o mesmo vocabulário para `gog`, `egs`, `humble` — e para esses o
@@ -422,13 +448,25 @@ def _lutris(pasta: Path) -> BibliotecaDoLancador:
     Por isso o que entra aqui é só o degrau que JÁ ESTÁ MEDIDO em outro leitor:
     `service == "steam"` ⇒ `service_id` é o appid da Steam, e um appid da Steam
     vira `steam_app_<N>` — o mesmo fato que a biblioteca da Steam usa há meses.
-    Nenhum degrau novo se inventa aqui: jogo do Lutris sem serviço da Steam
-    continua respondendo «não sei» e mandando ao «Detectar», que é a resposta
-    honesta até alguém abrir um e ler a classe.
+    Nenhum degrau novo se inventava aqui: jogo do Lutris sem serviço da Steam
+    respondia «não sei» e mandava ao «Detectar».
+
+    **02/10/2026 — O DEGRAU 1 ENTROU, LIDO NO FONTE DO LUTRIS
+    (A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01).** O jogo da GOG, da Epic, da Humble
+    ou da Amazon no Lutris abre pelo umu com o `GAMEID` que o próprio Lutris
+    acha (`util/wine/proton.get_game_id`, lido no 0.5.22 instalado nela): o
+    `UMU_ID` do ambiente do jogo, ou a loja e o id do jogo no `umu-games.json`
+    da casa dele. O umu põe a janela em `steam_app_<N>` — medido no Guardiões
+    pelo Heroic em 21/09 (`identidade_de_janela`), que é o mesmo umu. A regra
+    está em :func:`_umu_do_lutris`, com as condições do Lutris (o runner `wine`
+    e uma versão que seja Proton). A janela de um jogo do Lutris continua sem
+    leitura em aparelho nenhum desta casa (o Lutris dela segue vazio).
     """
     jogos: list[JogoDoLancador] = []
     erros: list[str] = []
     vistos: set[str] = set()
+    ymls_vistos: set[str] = set()
+    umu = _UmuDoLutris(pasta)
     banco = pasta / "pga.db"
     if banco.is_file():
         try:
@@ -437,16 +475,20 @@ def _lutris(pasta: Path) -> BibliotecaDoLancador:
             erros.append(f"pga.db não abriu: {erro}")
         else:
             with contextlib.closing(conexao):
-                colunas = ", ".join(_COLUNAS_DO_LUTRIS)
                 try:
+                    tem = {str(c[1]) for c in conexao.execute("PRAGMA table_info(games)")}
+                    colunas = ", ".join(
+                        [*_COLUNAS_DO_LUTRIS,
+                         *(c if c in tem else f"NULL AS {c}"
+                           for c in _COLUNAS_OPCIONAIS_DO_LUTRIS)])
                     linhas = list(
                         conexao.execute(f"SELECT {colunas} FROM games"))
                 except sqlite3.Error as erro:
                     erros.append(f"pga.db não traz `games`: {erro}")
                     linhas = []
                 for linha in linhas:
-                    (nome, slug, executavel, pasta_do_jogo, instalado, _runner,
-                     servico, id_do_servico) = linha
+                    (nome, slug, executavel, pasta_do_jogo, instalado, runner,
+                     servico, id_do_servico, configpath) = linha
                     chave = str(slug or nome or "")
                     if not chave or chave in vistos:
                         continue
@@ -461,6 +503,10 @@ def _lutris(pasta: Path) -> BibliotecaDoLancador:
                         == _SERVICO_DA_STEAM and numero.isdigit()
                         else ""
                     )
+                    yml = (pasta / "games" / f"{configpath}.yml"
+                           if str(configpath or "").strip() else None)
+                    if yml is not None:
+                        ymls_vistos.add(yml.name)
                     jogos.append(JogoDoLancador(
                         chave=chave,
                         nome=str(nome or chave),
@@ -469,18 +515,172 @@ def _lutris(pasta: Path) -> BibliotecaDoLancador:
                         caminho=(Path(str(pasta_do_jogo))
                                  if pasta_do_jogo else None),
                         executavel=str(executavel or ""),
-                        appid_da_steam=da_steam))
+                        umu_id=(umu.do_jogo(str(runner or ""), str(servico or ""),
+                                            str(id_do_servico or ""), yml)
+                                if instalado else ""),
+                        appid_da_steam=da_steam,
+                        configuracao=yml))
     games = pasta / "games"
     if games.is_dir():
         for p in sorted(games.glob("*.yml")):
-            if p.stem in vistos:
+            if p.stem in vistos or p.name in ymls_vistos:
                 continue
             vistos.add(p.stem)
             jogos.append(JogoDoLancador(
                 chave=p.stem, nome=p.stem.replace("-", " "),
-                loja="Lutris", instalado=True, caminho=p))
+                loja="Lutris", instalado=True, caminho=p, configuracao=p))
     jogos.sort(key=lambda j: (j.nome.casefold(), j.chave))
     return BibliotecaDoLancador("Lutris", LIDO, pasta, jogos, erros)
+
+
+def _ler_yml(alvo: Path) -> dict[str, object] | None:
+    """Um `.yml` do Lutris como dicionário; ausente, torto ou sem PyYAML = ``None``.
+
+    O IMPORT É TARDIO, e é estrutural: o desfazer do uninstall importa este
+    módulo com o `python3` do sistema, que pode não ter o PyYAML. O leitor é o
+    mesmo do Lutris (`util/yaml.read_yaml_from_file`: `yaml.safe_load`).
+    """
+    try:
+        import yaml
+    except ImportError:  # pragma: no cover - o produto declara o PyYAML
+        return None
+    try:
+        texto = alvo.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    try:
+        dado = yaml.safe_load(texto)
+    except yaml.YAMLError:
+        return None
+    return dado if isinstance(dado, dict) else None
+
+
+def _secao(dado: dict[str, object] | None, *caminho: str) -> object:
+    """``dado[a][b]…`` — ``None`` no primeiro degrau que não é dicionário."""
+    atual: object = dado
+    for passo in caminho:
+        if not isinstance(atual, dict):
+            return None
+        atual = atual.get(passo)
+    return atual
+
+
+class _UmuDoLutris:
+    """O `GAMEID` que o Lutris daria a cada jogo — a regra dele, lida no fonte.
+
+    No Lutris 0.5.22 (`runners/wine.py:1275-1281` e
+    `util/wine/proton.py:196-221`, lidos no Flatpak instalado nela em
+    02/10/2026), um jogo do runner `wine` passa pelo umu quando a versão do Wine
+    é a padrão (`ge-proton`, que o umu resolve) ou um Proton instalado; aí o
+    `GAMEID` é o `UMU_ID` do ambiente do jogo, ou o `umu_id` da linha do
+    `umu-games.json` (na pasta `runtime/` dos dados dele) com a mesma loja e o
+    mesmo id. Qualquer outro caso devolve ``""``: «não sei» é resposta, e uma
+    chave que nunca casa é o defeito R-12.
+
+    O que fica de fora, e cai no «não sei»: o `UMU_ID` posto no nível do runner
+    ou do sistema (só o do jogo é lido), e o Proton de uma biblioteca da Steam
+    fora das pastas de sempre (o Lutris a acharia pelo `libraryfolders.vdf`).
+    Uma leitura só do `umu-games.json` e do `runners/wine.yml` por biblioteca.
+    """
+
+    def __init__(self, pasta: Path) -> None:
+        self.pasta = pasta
+        self._dados = _pasta_de_dados_do_lutris(pasta)
+        self._conf = _conf_do_lutris(pasta)
+        self._tabela: dict[tuple[str, str], str] | None = None
+        self._versao_do_runner: str | None = None
+        self._leu_o_runner = False
+
+    def _umu_games(self) -> dict[tuple[str, str], str]:
+        if self._tabela is not None:
+            return self._tabela
+        runtime = Path(self._conf.get("runtime_dir") or self._dados / "runtime")
+        dado = _json(runtime / "umu-games" / "umu-games.json")
+        tabela: dict[tuple[str, str], str] = {}
+        for linha in dado if isinstance(dado, list) else ():
+            if not isinstance(linha, dict):
+                continue
+            loja, appid, umu_id = linha.get("store"), linha.get("appid"), linha.get("umu_id")
+            if not loja or not isinstance(umu_id, str) or appid is None:
+                continue
+            # A PRIMEIRA LINHA GANHA, como no laço do Lutris.
+            tabela.setdefault((str(loja), str(appid)), umu_id)
+        self._tabela = tabela
+        return tabela
+
+    def _do_runner(self) -> str | None:
+        if not self._leu_o_runner:
+            self._leu_o_runner = True
+            versao = _secao(_ler_yml(self.pasta / "runners" / "wine.yml"), "wine", "version")
+            self._versao_do_runner = str(versao) if versao else None
+        return self._versao_do_runner
+
+    def _e_proton(self, versao: str) -> bool:
+        """`proton.is_proton_version`: uma pasta com o script `proton` dentro."""
+        runners = Path(self._conf.get("runner_dir") or self._dados / "runners")
+        lar = _lar_da_pasta(self.pasta)
+        locais = [runners / "wine"]
+        for steam in (".steam/steam", ".local/share/Steam",
+                      ".var/app/com.valvesoftware.Steam/.local/share/Steam"):
+            locais += [lar / steam / "compatibilitytools.d", lar / steam / "steamapps/common"]
+        return any((onde / versao / "proton").is_file() for onde in locais)
+
+    def do_jogo(self, runner: str, servico: str, appid: str, yml: Path | None) -> str:
+        """O `umu-<N>` deste jogo, ou ``""``."""
+        if runner.strip() != _RUNNER_DO_UMU:
+            return ""
+        dado = _ler_yml(yml) if yml is not None else None
+        versao: str | None = None
+        for nivel in (_secao(dado, "wine", "version"), self._do_runner()):
+            if nivel and str(nivel) != _VERSAO_PADRAO_DO_LUTRIS:
+                versao = str(nivel)
+                break
+        if versao is not None and not self._e_proton(versao):
+            return ""
+        proprio = _secao(dado, "system", "env", "UMU_ID")
+        if isinstance(proprio, str) and proprio.strip():
+            return proprio.strip()
+        loja = servico.strip()
+        if not loja:
+            return ""
+        tabela = self._umu_games()
+        achado = tabela.get((loja, appid.strip()))
+        if achado is None and loja == "humblebundle":
+            achado = tabela.get(("humble", appid.strip()))
+        return achado or ""
+
+
+def _lar_da_pasta(pasta: Path) -> Path:
+    """O lar de uma pasta de configuração: o de antes do `.var/app/<id>` no
+    Flatpak, e o de antes do `.config` no nativo."""
+    partes = pasta.parts
+    if ".var" in partes:
+        return Path(*partes[:partes.index(".var")])
+    return pasta.parent.parent
+
+
+def _pasta_de_dados_do_lutris(pasta: Path) -> Path:
+    """A pasta de dados do Lutris (a do `runtime/`), a partir da de configuração.
+
+    No Flatpak dela a configuração é um atalho para os dados
+    (`config/lutris -> data/lutris`, medido em 11/09/2026); no nativo os dados
+    moram em `~/.local/share/lutris`.
+    """
+    casa = pasta.parent.parent
+    for tentativa in (pasta, casa / "data" / "lutris", casa / ".local/share/lutris"):
+        if (tentativa / "runtime").is_dir() or (tentativa / "runners").is_dir():
+            return tentativa
+    return pasta
+
+
+def _conf_do_lutris(pasta: Path) -> dict[str, str]:
+    """A seção `[lutris]` do `lutris.conf` — onde o `runtime_dir` pode mudar de lugar."""
+    cfg = configparser.ConfigParser(strict=False, interpolation=None)
+    try:
+        cfg.read_string((pasta / "lutris.conf").read_text(encoding="utf-8", errors="replace"))
+    except (OSError, configparser.Error):
+        return {}
+    return dict(cfg.items("lutris")) if cfg.has_section("lutris") else {}
 
 
 def _retroarch(pasta: Path) -> BibliotecaDoLancador:
@@ -698,7 +898,12 @@ _FONTES: dict[str, tuple[str, ...]] = {
     #: O `-wal` ENTRA, e é requisito e não zelo: em modo WAL o sqlite escreve
     #: as linhas novas no `pga.db-wal` e pode não tocar no `pga.db`. Quem lê
     #: em `mode=ro` enxerga os dois; a impressão tem de enxergar os dois.
-    "Lutris": ("pga.db", "pga.db-wal", "games/*.yml"),
+    #: O `runners/wine.yml` e o `umu-games.json` ENTRARAM EM 02/10/2026, com o
+    #: degrau 1 do Lutris (`_UmuDoLutris`): a versão do Wine e a tabela do umu
+    #: mudam a chave de janela sem tocar no banco. O segundo só é visto quando a
+    #: configuração é o atalho para os dados (o Flatpak dela).
+    "Lutris": ("pga.db", "pga.db-wal", "games/*.yml", "runners/wine.yml",
+               "runtime/umu-games/umu-games.json"),
     "RetroArch": ("playlists/*.lpl",),
     "Dolphin": ("Dolphin.ini",),
     "mGBA": ("config.ini",),

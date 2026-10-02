@@ -170,6 +170,7 @@ nunca enumera nada.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import re
@@ -1233,12 +1234,33 @@ def curar_todos(
     botão não toca no prefixo de um jogo que ela tirou do Hefesto — quem o
     chama lê a lista, porque este arquivo roda também como cópia avulsa, sem o
     pacote no caminho.
+
+    **O APPID SÓ VALE NO `compatdata`, E O CAMINHO NO RESTO — 02/10/2026,
+    A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01.** O `appid` de um prefixo de fora da
+    Steam é o NOME da pasta (o título do jogo no Heroic), e dois prefixos com a
+    mesma pasta em casas diferentes eram o mesmo para esta comparação: medido
+    num lar de mentira, a exclusão de um jogo do Heroic pulava também o
+    prefixo de outra casa. Agora o número da Steam se compara só com os prefixos
+    de `compatdata`, e os demais pelo caminho resolvido
+    (`lista_de_exclusao.ids_dos_prefixos` manda os dois).
     """
     fora = {str(a).strip() for a in excluir}
+    da_steam: set[Path] = set()
+    for pasta in pastas_compatdata(home):
+        with contextlib.suppress(OSError):
+            da_steam.add(pasta.resolve())
+
+    def pulado(p: PrefixoDeJogo) -> bool:
+        try:
+            pai, raiz = p.raiz.parent.resolve(), p.raiz.resolve()
+        except OSError:  # pragma: no cover - caminho impossível
+            return False
+        return p.appid in fora if pai in da_steam else str(raiz) in fora
+
     return [
         aplicar_no_prefixo(p, religar=religar, forcar=forcar, home=home)
         for p in censo(home)
-        if p.camadas and p.appid not in fora
+        if p.camadas and not pulado(p)
     ]
 
 

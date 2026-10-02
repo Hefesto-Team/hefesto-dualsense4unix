@@ -89,6 +89,7 @@ python3Packages.buildPythonApplication rec {
     platformdirs
     filelock
     jeepney
+    pyyaml
     # pydualsense nao esta em nixpkgs ainda — buildPythonPackage extra
     # abaixo dentro do propagatedBuildInputs como deriv inline.
     (python3Packages.buildPythonPackage rec {
