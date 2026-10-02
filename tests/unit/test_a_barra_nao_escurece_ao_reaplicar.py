@@ -187,38 +187,13 @@ def _reaplicar(mesa: Mesa, caminho: str) -> None:
 CAMINHOS = ["boot", "troca-manual", "troca-de-jogo", "autoswitch", "aplicar", "salvar"]
 
 
-def o_aplicar_passa_pelo_dono_da_escala() -> bool:
-    """O «Aplicar» do rodapé acende pela conta do dono (com o piso do brilho)?
-
-    D-2909-O-BRILHO-TEM-PISO (29/09/2026, A-LUZ-DO-CONTROLE-NUNCA-SAI-PRETA-01):
-    a conta «tom x brilho» mora em `LedSettings.apply_brightness`, e o
-    `DraftApplier._scaled_rgb_from` ainda a faz por conta própria, sem o piso.
-    O arquivo é da O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01, e a troca de três
-    linhas está pronta para a costura. A pergunta é ao próprio aplicador, e
-    não a uma bandeira: quando ele passar pelo dono, as réguas marcadas com
-    `O_APLICAR_SEM_O_PISO` voltam a valer sozinhas.
-    """
-    from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
-
-    pedido = {"lightbar_rgb": [255, 128, 0], "lightbar_brightness": 0.08}
-    dono = LedSettings(lightbar=(255, 128, 0)).apply_brightness(0.08).lightbar
-    return DraftApplier._scaled_rgb_from(pedido) == dono
-
-
-#: As réguas do «Aplicar» esperam o `DraftApplier` passar pelo dono da escala
-#: (ver `o_aplicar_passa_pelo_dono_da_escala`). `strict`: no dia em que ele
-#: passar, a marca some sozinha, porque a condição vira falsa.
-O_APLICAR_SEM_O_PISO = pytest.mark.xfail(
-    condition=not o_aplicar_passa_pelo_dono_da_escala(),
-    strict=True,
-    reason="o «Aplicar» escala a cor fora do dono (ipc_draft_applier, da O-APLICAR)",
-)
-
-#: Os caminhos, com o do «Aplicar» marcado onde o brilho fica abaixo de 100%.
-CAMINHOS_COM_O_PISO = [
-    pytest.param(c, marks=O_APLICAR_SEM_O_PISO) if c == "aplicar" else c
-    for c in CAMINHOS
-]
+#: NOTA DATADA — 01/10/2026: aqui morava `O_APLICAR_SEM_O_PISO`, o `xfail` das
+#: réguas do «Aplicar» enquanto o `DraftApplier` escalava a cor fora do dono
+#: (`LedSettings.apply_brightness`, com o piso de D-2909-O-BRILHO-TEM-PISO). O
+#: «Aplicar» deixou de passar pelo `DraftApplier`: ele é a cadeia da ativação
+#: (`profile.reaplicar`, O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01), que acende pelo
+#: dono por construção, e a marca perguntava a um aplicador que o gesto não usa.
+CAMINHOS_COM_O_PISO = CAMINHOS
 
 
 # ---------------------------------------------------------------------------
@@ -421,7 +396,6 @@ def test_sem_a_paleta_o_salvar_grava_o_global_e_nao_a_luz(mesa_de):
 @pytest.mark.parametrize("via", ["usb", "bt"])
 @pytest.mark.parametrize("alvo", ["todos", "um"])
 @pytest.mark.parametrize("o_que_mudou", ["brilho-do-controle", "brilho-do-perfil"])
-@O_APLICAR_SEM_O_PISO
 def test_o_aplicar_acende_o_brilho_que_o_disco_diz(mesa_de, o_que_mudou, alvo, via):
     """O «Aplicar» leva à barra o brilho do disco, e não só ao resolvido.
 

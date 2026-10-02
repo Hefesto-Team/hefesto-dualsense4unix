@@ -42,7 +42,7 @@ O QUE ESTA RÉGUA COBRA — e cada caso traz a mordida no docstring:
   sucedido é ruído crônico, e ruído crônico é como um aviso deixa de ser lido.
 
 **A PONTE É DUBLÊ, SEMPRE.** `perfil.gravar_e_reaplicar` chama
-`p.profile_switch(...)`, e uma ponte real mandaria isso ao daemon DELA. Todo
+`p.profile_reaplicar(...)`, e uma ponte real mandaria isso ao daemon DELA. Todo
 `uniq` daqui vem da faixa sintética `aa:bb:cc:00:00:0N` — há dois portões de
 anonimato nesta árvore e eles não perdoam.
 """
@@ -544,7 +544,7 @@ def test_a_forca_que_vira_escala_chega_ao_motor_e_nao_fala(
         f"sobre o `balanceado` que o daemon assume sem opinião global. Um mapa "
         f"vazio aqui é a escolha dela guardada e ignorada — o defeito que esta "
         f"aba inteira persegue")
-    assert "profile_switch" in p.nomes, (
+    assert "profile_reaplicar" in p.nomes, (
         f"gravou e não mandou reaplicar ({p.nomes}) — o perfil novo só chegaria "
         f"ao motor na próxima troca de perfil")
 

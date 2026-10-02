@@ -232,7 +232,9 @@ def test_sem_perfil_ativo_ninguem_se_realca() -> None:
 # --------------------------------------------------------------------------
 # 4. O TITLE DA DISPUTA
 # --------------------------------------------------------------------------
-def test_o_title_da_linha_traz_a_explicacao_da_disputa() -> None:
+def test_o_title_da_linha_traz_a_explicacao_da_disputa(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """O ``title=""`` do desenho passa a carregar o que o produto já calculava.
 
     ``explicacao_da_disputa`` roda a cada tique dentro de
@@ -241,21 +243,30 @@ def test_o_title_da_linha_traz_a_explicacao_da_disputa() -> None:
     dado; o mockup não tem nenhum"* (palavras do gerador). O dado existe; o que
     faltava era a porta.
 
+    NOTA DATADA — 01/10/2026 (O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-DIZ-
+    A-VERDADE-01): o `match any` saiu da seleção automática, e não há mais
+    disputa entre os «Sempre» — o produto responde ``""``, e a linha sai sem
+    dica. A régua passa a medir a PORTA com uma frase posta por ela: a porta
+    fica, e a frase do produto é a que ele calcular.
+
     MORDIDA: emita ``""`` no lugar do ``dica`` em ``_html_da_lista`` e este
     teste reprova.
     """
+    from hefesto_dualsense4unix.app.actions import perfis_web
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
         explicacao_da_disputa,
     )
 
     perfis = _perfis("Um", "Dois")
-    esperado = explicacao_da_disputa(perfis[0], perfis, None)
-    assert esperado, "o produto tem de ter o que dizer sobre a disputa"
+    assert explicacao_da_disputa(perfis[0], perfis, None) == "", (
+        "o produto voltou a explicar uma disputa que não existe desde 01/10/2026")
+    esperado = "Primeiro parágrafo da régua.\n\nSegundo & último."
+    monkeypatch.setattr(perfis_web, "explicacao_da_disputa", lambda *_a, **_k: esperado)
 
     linhas = _linhas(_pacote(["Um", "Dois"]))
     titulos = [re.search(r'title="((?:[^"])*)"', x, re.S) for x in linhas]
     vivos = [m.group(1) for m in titulos if m and m.group(1)]
-    assert len(vivos) == len(linhas), "toda linha em disputa leva a explicação"
+    assert len(vivos) == len(linhas), "toda linha leva a explicação que o produto calcula"
     assert vivos[0] == esperado.replace("&", "&amp;"), (
         "o title da linha não é a frase que o produto calcula")
 

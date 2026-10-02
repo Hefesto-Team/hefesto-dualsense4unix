@@ -171,7 +171,11 @@ def test_prioridade_ainda_decide_entre_perfis_igualmente_especificos(
     assert picked.name == "sackboy"
 
 
-def test_select_for_window_fallback(isolated_profiles_dir: Path):
+def test_select_for_window_nao_elege_o_match_any(isolated_profiles_dir: Path):
+    """NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item
+    5): o `match any` era o fallback de toda janela sem regra; ele saiu da
+    seleção automática, e só entra pela mão dela. Numa janela sem regra, quem
+    decide é o autoswitch, com a escolha dela."""
     save_profile(
         _mk_profile("shooter", match=MatchCriteria(window_class=["DoomEternal"]))
     )
@@ -180,9 +184,8 @@ def test_select_for_window_fallback(isolated_profiles_dir: Path):
     fc = FakeController()
     fc.connect()
     manager = ProfileManager(controller=fc)
-    picked = manager.select_for_window({"wm_class": "Inkscape"})
-    assert picked is not None
-    assert picked.name == "fallback"
+    assert manager.select_for_window({"wm_class": "Inkscape"}) is None
+    assert manager.select_for_window({"wm_class": "DoomEternal"}).name == "shooter"
 
 
 def test_select_for_window_sem_match_sem_fallback(isolated_profiles_dir: Path):
@@ -318,29 +321,34 @@ def test_perfil_que_casa_por_titulo_no_jogo_nao_e_vetado(
     assert picked is not None and picked.name == "fps"
 
 
-def test_catch_all_segue_valendo_em_janela_comum(isolated_profiles_dir: Path):
-    """O veto é EXCLUSIVO de janela de jogo — no desktop o catch-all continua
-    sendo o fallback de sempre (senão a aba Mouse/Teclado ficaria sem perfil)."""
+def test_catch_all_nao_entra_nem_em_janela_comum(isolated_profiles_dir: Path):
+    """NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`): o
+    veto era EXCLUSIVO de janela de jogo, e no desktop o catch-all era o
+    fallback de sempre. Às 17h31min19 de 29/09 ele trocou a escolha dela pelo
+    terminal em foco. No desktop, agora, a resposta é «nada casou», e a aba
+    Mouse/Teclado tem perfil pela escolha dela (o autoswitch a põe)."""
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
 
     fc = FakeController()
     fc.connect()
     manager = ProfileManager(controller=fc)
-    picked = manager.select_for_window({"wm_class": "firefox"})
-    assert picked is not None and picked.name == "vitoria"
+    assert manager.select_for_window_ex({"wm_class": "firefox"}) == (
+        None, "sem_candidato")
 
 
 def test_wm_class_parecida_com_steam_app_nao_e_vetada(isolated_profiles_dir: Path):
     """`steam_app_` sem número, ou com sufixo, NÃO é janela de jogo da Steam —
-    o predicado é o mesmo (ancorado) dos outros dois lugares que o usam."""
+    o predicado é o mesmo (ancorado) dos outros dois lugares que o usam. O
+    motivo diz isso: «nada casou», e não «jogo sem perfil próprio» (desde
+    01/10/2026 o `match any` não é eleito em janela nenhuma)."""
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
 
     fc = FakeController()
     fc.connect()
     manager = ProfileManager(controller=fc)
     for wm in ("steam_app_", "steam_app_abc", "xsteam_app_1", "steam_app_1_x"):
-        picked = manager.select_for_window({"wm_class": wm})
-        assert picked is not None and picked.name == "vitoria", wm
+        assert manager.select_for_window_ex({"wm_class": wm}) == (
+            None, "sem_candidato"), wm
 
 
 def test_veto_loga_uma_vez_por_jogo(

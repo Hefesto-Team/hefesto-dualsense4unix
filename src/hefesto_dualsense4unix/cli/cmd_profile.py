@@ -78,8 +78,13 @@ def _guarda_slug(name: str, *, force: bool) -> None:
 
 @app.command("list")
 def cmd_list() -> None:
-    """Lista perfis no diretório XDG."""
-    profiles = load_all_profiles()
+    """Lista os perfis a escolher no diretório XDG — o Freestyle é o botão, não linha.
+
+    A ordem dela de 02/10/2026 (`profiles.manager.os_perfis_de_escolher`).
+    """
+    from hefesto_dualsense4unix.profiles.manager import os_perfis_de_escolher
+
+    profiles = os_perfis_de_escolher(load_all_profiles())
     if not profiles:
         console.print("[dim]nenhum perfil encontrado[/dim]")
         return
@@ -114,11 +119,11 @@ def cmd_activate(name: str) -> None:
     """Ativa um perfil. Prefere o daemon vivo (profile.switch via IPC).
 
     Com o daemon rodando, `profile.switch` faz a troca DE VERDADE no processo
-    vivo (grava session + marker e aplica no controle). Antes, este comando
+    vivo (grava a escolha dela e aplica no controle). Antes, este comando
     abria um 2º controller local e gravava só o marker — o daemon vivo
     sobrescrevia o controle logo em seguida, e o perfil em uso não mudava.
-    Só caímos no fallback (controller local + marker) quando o daemon está
-    offline; nesse caso o comportamento é 100% o de antes.
+    Só caímos no fallback (controller local + a escolha gravada pelo dono)
+    quando o daemon está offline.
     """
     try:
         profile = load_profile(name)
@@ -133,7 +138,7 @@ def cmd_activate(name: str) -> None:
         console.print(f"[green]perfil ativado via daemon:[/green] {name}")
         return
 
-    # Fallback offline: aplica direto no hardware (se houver) e grava o marker.
+    # Fallback offline: aplica direto no hardware (se houver) e grava a escolha.
     try:
         from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
         from hefesto_dualsense4unix.profiles.manager import ProfileManager
@@ -149,7 +154,7 @@ def cmd_activate(name: str) -> None:
             f"[yellow]perfil não aplicado (hardware não detectado): {exc}[/yellow]"
         )
 
-    _write_active_marker(name)
+    _gravar_a_escolha_sem_o_daemon(name)
 
 
 @app.command("create")
@@ -444,7 +449,7 @@ def cmd_save(
 
 
 def _activate_via_ipc_or_fallback(name: str) -> None:
-    """Tenta `profile.switch` no daemon; em falha, grava marker e avisa.
+    """Tenta `profile.switch` no daemon; offline, grava a escolha e avisa.
 
     Mantido em função isolada para reuso em `apply`. Mensagens claras
     (sem traceback) para todos os modos de falha.
@@ -455,27 +460,27 @@ def _activate_via_ipc_or_fallback(name: str) -> None:
     try:
         _run_call("profile.switch", {"name": name}, timeout=1.0)
         console.print(f"[green]perfil ativado via daemon:[/green] {name}")
-        _write_active_marker(name)
+        # O daemon já gravou a escolha (e o espelho) pelo dono: nada a fazer
+        # aqui. NOTA DATADA — 01/10/2026: a CLI reescrevia o marcador depois.
         return
     except IpcError as exc:
         # Fix do review (2026-07-16, MED): recusa ≠ ativação. O daemon está
-        # VIVO e disse não (perfil inexistente/corrompido) — gravar o marker
-        # aqui registrava um switch que nunca aconteceu, e o marker tem
-        # autoridade de boot (resolve_boot_profile): um marker envenenado
-        # desviava o restore de TODO boot seguinte.
+        # VIVO e disse não (perfil inexistente/corrompido) — gravar a escolha
+        # aqui registrava um switch que nunca aconteceu, e o boot seguinte
+        # abriria nele.
         console.print(f"[yellow]daemon recusou profile.switch:[/yellow] {exc.message}")
         console.print(
-            "[dim]nada foi ativado — o marker local ficou como estava.[/dim]"
+            "[dim]nada foi ativado — a escolha gravada ficou como estava.[/dim]"
         )
         return
     except (FileNotFoundError, ConnectionError, OSError):
         console.print(
-            "[yellow]daemon offline — gravando marker local apenas.[/yellow]"
+            "[yellow]daemon offline — gravando a escolha local apenas.[/yellow]"
         )
 
-    _write_active_marker(name)
+    _gravar_a_escolha_sem_o_daemon(name)
     console.print(
-        f"[dim]marker local atualizado: próxima inicialização do daemon usara '{name}'[/dim]"
+        f"[dim]escolha gravada: a próxima inicialização do daemon usará '{name}'[/dim]"
     )
 
 
@@ -497,16 +502,22 @@ def _describe_match(profile: Profile) -> str:
     return " ".join(parts) if parts else "[dim]vazio[/dim]"
 
 
-def _write_active_marker(name: str) -> None:
-    """Wrapper compat — delega para `utils.session.save_active_marker`.
+def _gravar_a_escolha_sem_o_daemon(name: str) -> None:
+    """A ativação à mão com o daemon fora do ar: a escolha dela, pelo dono.
 
-    CLUSTER-IPC-STATE-PROFILE-01 (Bug B): centralizou a escrita do marker
-    em `utils.session` para que o handler IPC `profile.switch` possa usá-lo
-    sem importar `cli.*` (CLI deveria depender do daemon, não o contrário).
+    `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 2: o `profile activate` da
+    CLI conta como ativado por ela, com o daemon no ar ou não. O Modo
+    Freestyle segue a mesma regra do `activate`: escolher o Freestyle o liga,
+    escolher outro o desliga. A frase *«próxima inicialização do daemon
+    usará»* fica verdadeira pelo dono (`utils.session.gravar_a_escolha`), e não
+    pela precedência do marcador, que deixou de existir em 01/10/2026 — até lá
+    esta função gravava só o `active_profile.txt`.
     """
-    from hefesto_dualsense4unix.utils.session import save_active_marker
+    from hefesto_dualsense4unix.profiles.manager import e_o_freestyle, ligar_o_freestyle
+    from hefesto_dualsense4unix.utils.session import gravar_a_escolha
 
-    save_active_marker(name)
+    ligar_o_freestyle(None, e_o_freestyle(name))
+    gravar_a_escolha(name)
 
 
 def read_active_marker() -> str | None:

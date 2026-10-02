@@ -895,24 +895,19 @@ class IpcHandlersMixin:
     async def _handle_profile_switch(self, params: dict[str, Any]) -> dict[str, Any]:
         """Aplica perfil escolhido pelo usuário (entrada manual via IPC).
 
-        Persistência (CLUSTER-IPC-STATE-PROFILE-01 Bug B):
-          - `manager.activate(name, origin="manual")` grava `session.json`
-            (canônico — usado pelo daemon em `restore_last_profile` no
-            boot/reconnect). PERFIL-03: este handler é gesto MANUAL da
-            usuária (GUI/CLI) — só os origins "manual" persistem a intenção.
-          - Adicionalmente, escrevemos `active_profile.txt` — o marker que
-            `cli/cmd_profile.py:403` (`profile save --from-active`) lê para
-            clonar o perfil ativo. Fato substituído (ONDA0-Z5/T14): o
-            consumidor NÃO é o antigo subcomando de leitura citado aqui até
-            23/08 — ele nunca existiu na CLI, ver `utils/session.py:9-14`.
-          - Falha em escrever o marker é best-effort: loga warning mas não
-            falha o IPC. Atomicidade do conjunto: se `activate` levantar,
-            `active_profile.txt` NÃO é tocado.
+        Persistência: `manager.activate(name, origin="manual")` grava a
+        escolha dela pelo dono (`utils.session.gravar_a_escolha`: o
+        `session.json` e o espelho `active_profile.txt`). Este handler é gesto
+        MANUAL dela (GUI/CLI/bandeja/TUI). Atomicidade: se `activate` levantar,
+        nenhum dos dois é tocado. NOTA DATADA — 01/10/2026: o marcador era
+        escrito AQUI, depois do `activate`; o escritor passou a ser um só.
 
-        Lock manual (Bug C): após persistir, ativa lock de
-        ``MANUAL_PROFILE_LOCK_SEC`` segundos no `StateStore` para suprimir
-        autoswitch enquanto o usuário "respira" — autoswitch volta ao normal
-        quando o lock expira.
+        Trava da troca à mão (Bug C): a ativação à mão a arma sem prazo
+        (`profiles.manager.armar_a_trava_da_mao`), e ela solta num evento —
+        outra troca dela, um jogo com perfil abrindo, o jogo em cena fechando,
+        o botão «Modo Freestyle» desligado —, sempre com uma linha no diário.
+        Até 01/10/2026 ela expirava sozinha em ``MANUAL_PROFILE_LOCK_SEC``
+        (30 s), e a escolha caía calada pela janela em foco.
 
         R-03 (auditoria 23/07): a resposta passou a contar a VERDADE. Antes ela
         era `{"active_profile": nome}` mesmo quando o lock de gesto manual fazia
@@ -971,9 +966,6 @@ class IpcHandlersMixin:
             # (TRAVA-QUE-SOLTA-TARDE-01) e apontada na revisão.
             self.store.mark_manual_profile_lock(lock_antes)
             raise
-        # Bug B: paridade do marker da CLI legada com session.json.
-        from hefesto_dualsense4unix.utils.session import save_active_marker
-        save_active_marker(profile.name)
         # DEDUP-04: gatilho "mudança de perfil" — perfis com `steam_app_<id>`
         # no match materializam arquivo de env próprio; a troca manual também
         # pode ter mudado modo/máscara via apply do perfil.
@@ -1012,7 +1004,11 @@ class IpcHandlersMixin:
         return resposta
 
     async def _handle_profile_list(self, params: dict[str, Any]) -> dict[str, Any]:
-        profiles = self.profile_manager.list_profiles()
+        from hefesto_dualsense4unix.profiles.manager import os_perfis_de_escolher
+
+        # O Freestyle não é perfil a escolher (a ordem dela de 02/10/2026): a
+        # bandeja, a TUI e o `doctor` leem a lista daqui.
+        profiles = os_perfis_de_escolher(self.profile_manager.list_profiles())
         return {
             "profiles": [
                 {
@@ -2855,78 +2851,79 @@ class IpcHandlersMixin:
         `ligado` opcional: ausente → inverte.
 
         **LIGAR É O «ATIVAR» DO FREESTYLE NA ABA PERFIS**, e é o mesmo caminho:
-        o `profile.switch` dele, com a ativação à mão, e o modo ligado pelo
-        dono (`profiles.manager.ligar_o_freestyle`) — explícito aqui, porque com
-        o Freestyle já valendo a ativação é uma reativação, e reativar não muda
-        o modo. Ligado, nenhum caminho automático troca o perfil.
+        o `profile.switch` dele, com a ativação à mão, que liga o modo SEMPRE
+        (`profiles.manager`, `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`). Ligado,
+        nenhum caminho automático troca o perfil.
 
-        **DESLIGAR DEVOLVE O JOGO SEM REABRIR** (a prova 3 da sprint). O lock de
-        30 s da troca à mão sai — desligar é ela devolvendo a escolha ao
-        Hefesto —, e o jogo vivo do lançamento volta com o perfil dele, ativado
-        como o «Ativar» o ativaria. Sem jogo vivo, o autoswitch decide pela
-        janela no tique seguinte.
+        **DESLIGAR DEVOLVE A ESCOLHA DELA NA HORA** (item 3 da decisão), sem
+        depender do leitor de janela — no COSMIC sem portal o autoswitch não
+        acha janela nunca. Com jogo vivo, o jogo volta por cima
+        (`origin="launch"`), e a escolha fica a de antes; sem jogo, a escolha
+        (`origin="system"`); sem escolha, nenhum perfil ativo (item 10, «Fica
+        sem perfil», dela em 29/09 ~20h35). A trava da troca à mão solta junto,
+        com a linha no diário.
         """
         from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
         from hefesto_dualsense4unix.profiles.manager import (
-            ligar_o_freestyle,
             o_freestyle_manda,
+            soltar_a_trava_da_mao,
         )
-        from hefesto_dualsense4unix.utils.session import freestyle_suspenso
 
-        if freestyle_suspenso():
-            ligar_o_freestyle(self.store, False)
-            return {"status": "ok", "freestyle_ligado": False, "freestyle_suspenso": True}
         pedido = params.get("ligado")
         if pedido is not None and not isinstance(pedido, bool):
             raise ValueError("freestyle.set: 'ligado' precisa ser boolean")
         novo = (not o_freestyle_manda(self.store)) if pedido is None else pedido
         if novo:
             resposta = await self._handle_profile_switch({"name": NOME_DO_PADRAO})
-            # Com o Freestyle JÁ valendo (o de fora do jogo), a ativação acima é
-            # uma reativação, e reativar não liga o modo (o gravar-e-reaplicar
-            # das abas passa pelo mesmo `profile.switch`). O botão diz o modo.
-            ligar_o_freestyle(self.store, True)
         else:
-            ligar_o_freestyle(self.store, False)
-            self.store.mark_manual_profile_lock(0.0)
-            resposta = await self._o_jogo_vivo_volta()
+            soltar_a_trava_da_mao(self.store, "freestyle_desligado")
+            resposta = await self._o_que_volta_sem_o_freestyle()
         resposta["status"] = "ok"
         resposta["freestyle_ligado"] = o_freestyle_manda(self.store)
         logger.info("freestyle_set", ligado=resposta["freestyle_ligado"])
         return resposta
 
-    async def _o_jogo_vivo_volta(self) -> dict[str, Any]:
-        """O jogo do lançamento que ainda roda volta com o perfil dele.
+    async def _o_que_volta_sem_o_freestyle(self) -> dict[str, Any]:
+        """O botão apagado: o jogo vivo, ou a escolha dela, ou nenhum perfil.
 
         Quem responde "que jogo está vivo" é o dono do lançamento
         (`autoswitch.jogo_do_wrapper_vivo`, o marker do wrapper com o `AppId=`
         conferido na linha de comando), e "qual é o perfil dele" é a leitura
         única (`manager.perfil_do_appid`). A janela em foco não entra: com o jogo
         em outra tela, ela não diria nada — é o caso da
-        `D-2709-O-PERFIL-DO-JOGO-ENTRA-NO-LANCAMENTO`.
+        `D-2709-O-PERFIL-DO-JOGO-ENTRA-NO-LANCAMENTO`. Sem jogo vivo, a escolha
+        dela (`utils.session.a_escolha_dela`). Nenhum dos dois vira escolha: o
+        gerente os põe por `apagar_o_freestyle`, que desliga o modo depois de
+        o perfil entrar.
+
+        As envs do lançamento se regravam nos três casos: ligado, cada
+        `steam_app_<id>.env` dizia a máscara do Freestyle
+        (`launch_env._o_freestyle_que_manda`), e o próximo jogo leria no `exec`
+        a máscara de um modo que ela acabou de desligar (conferência de
+        28/09/2026).
         """
         from hefesto_dualsense4unix.profiles.autoswitch import jogo_do_wrapper_vivo
         from hefesto_dualsense4unix.profiles.manager import perfil_do_appid
+        from hefesto_dualsense4unix.utils.session import a_escolha_dela
 
         perfil = None
         with contextlib.suppress(Exception):
             appid = jogo_do_wrapper_vivo()
             perfil = perfil_do_appid(appid) if appid is not None else None
-        if perfil is None:
-            # Sem jogo vivo não há `profile.switch`, e é ele que regrava as
-            # envs do lançamento. Ligado, cada `steam_app_<id>.env` dizia a
-            # máscara do Freestyle (`launch_env._o_freestyle_que_manda`); sem
-            # regravar, o próximo jogo leria no `exec` a máscara de um modo que
-            # ela acabou de desligar (conferência de 28/09/2026).
-            if self.daemon is not None:
-                with contextlib.suppress(Exception):
-                    from hefesto_dualsense4unix.daemon.launch_env import (
-                        materialize_launch_env,
-                    )
+        # O flag do disco ainda diz «aceso» aqui (quem o apaga é o gerente,
+        # depois): a pergunta vai com o botão como ele fica.
+        nome, origem = (perfil.name, "launch") if perfil is not None else (
+            a_escolha_dela(freestyle_ligado=False), "system")
+        relatorio: dict[str, str] = {}
+        self.profile_manager.apagar_o_freestyle(nome, origin=origem, relatorio=relatorio)
+        if self.daemon is not None:
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.daemon.launch_env import (
+                    materialize_launch_env,
+                )
 
-                    materialize_launch_env(self.daemon)
-            return {"active_profile": self.store.active_profile}
-        return await self._handle_profile_switch({"name": perfil.name})
+                materialize_launch_env(self.daemon)
+        return {"active_profile": self.store.active_profile, "secoes": dict(relatorio)}
 
     async def _handle_native_mode_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """Liga/desliga o Modo Nativo — "release total" do controle (FEAT-NATIVE-MODE-01).

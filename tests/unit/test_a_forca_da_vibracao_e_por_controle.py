@@ -17,13 +17,13 @@ DUAS DECISÕES DELA, no mesmo dia, e esta régua mede as duas:
 POR QUE ELA PRECISA DE ARQUIVO PRÓPRIO, e não de linhas em
 `a05_vibracao.PROVAS`: aquela régua passa um dublê de ponte e cobra QUAL função
 dela foi chamada. Estes dois gestos exigem **perfil ativo** — que o `ctx` dela
-não tem — e o que eles mudam PRIMEIRO é o disco; o `profile.switch` vem depois.
+não tem — e o que eles mudam PRIMEIRO é o disco; o `profile.reaplicar` vem depois.
 Uma prova que só olhasse a ponte diria que eles funcionam mesmo com o que foi
 para o arquivo errado. É a mesma razão que tirou o `teto-da-vibracao` das provas
 da aba Conexões.
 
 A PONTE É DUBLÊ E O DISCO É DE MENTIRA, SEMPRE. `perfil.gravar_e_reaplicar`
-chama `p.profile_switch(...)` quando o nome casa o ativo, e uma ponte real
+chama `p.profile_reaplicar(...)` quando o nome casa o ativo, e uma ponte real
 mandaria isso ao daemon DELA, que está vivo com um DualSense no cabo. Todo
 `uniq` daqui vem da faixa sintética `aa:bb:cc:00:00:01` — há dois portões de
 anonimato que reprovam o contrário.
@@ -34,7 +34,7 @@ O QUE ELA COBRA, e cada item é um jeito diferente de a tela ou o disco mentir:
  2. a chave gravada é a NORMALIZADA — a mesma com que o backend casa o fator;
  3. `Auto` LIMPA o override, e nunca o grava (o esquema o recusa por unidade);
  4. degrau igual ao global não vira override;
- 5. o segundo clique igual não regrava — nem dispara `profile.switch`;
+ 5. o segundo clique igual não regrava — nem dispara `profile.reaplicar`;
  6. a barra arrastada grava `custom` com o multiplicador em 0-2;
  7. o teto é o do esquema, e passar dele RECUSA DIZENDO;
  8. sem perfil ativo, e sem controle, a recusa é `RuntimeError` — a única que
@@ -81,6 +81,12 @@ class PonteDeMentira:
     def profile_switch(self, nome: str) -> bool:
         self.chamadas.append(("profile_switch", (nome,)))
         return True
+
+    def profile_reaplicar(self, nome: str) -> dict[str, Any]:
+        # 01/10/2026: o gravar-e-reaplicar e o «voltar à de ontem» reaplicam
+        # pelo `profile.reaplicar`, que não grava a escolha dela.
+        self.chamadas.append(("profile_reaplicar", (nome,)))
+        return {"active_profile": nome}
 
     def chamar(self, metodo: str, **_: Any) -> bool:
         self.chamadas.append(("chamar", (metodo,)))
@@ -311,7 +317,7 @@ def test_degrau_igual_ao_global_nao_vira_override(
 
 
 def test_o_segundo_clique_igual_nao_regrava(pac, clique_no_degrau, disco) -> None:
-    """Regravar o mesmo perfil dispara `profile.switch` no meio da partida.
+    """Regravar o mesmo perfil dispara `profile.reaplicar` no meio da partida.
 
     É a guarda que também torna inócuo o clique DOBRADO da barra arrastável: o
     ouvinte do piloto escuta `change` **e** `click`, e soltar o polegar de um
@@ -319,7 +325,7 @@ def test_o_segundo_clique_igual_nao_regrava(pac, clique_no_degrau, disco) -> Non
 
     MORDIDA: em `_gravar_a_forca`, tire o `if novo.source_controllers ==
     draft.source_controllers: return` — este caso reprova com duas gravações e
-    dois `profile_switch`.
+    dois `profile_reaplicar`.
     """
     estado, gravados = disco
     estado["Bancada"] = _perfil_de_verdade(

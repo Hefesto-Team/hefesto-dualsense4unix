@@ -25,6 +25,15 @@ para ela era "o Hefesto perdeu o meu perfil".
 Estes testes fixam as três coisas que passam a ser distinguíveis, e a nº 3 é a
 que dá sentido às outras duas: sem ela, um campo que responde sempre o mesmo
 "Sackboy" passaria igual.
+
+NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 4):
+a RESTORE-ESCOPO-01 caducou para a escolha dela. O boot restaura o perfil que
+ela ativou à mão, com regra de janela ou sem: medido no diário de 28 e 29/09,
+seis boots com a sessão num perfil de jogo, e nenhum abriu nele — o Freestyle
+entrava no lugar. Nada mais espera a janela no boot, e o campo
+`perfil_adiado_por_janela` ficou sem escritor (o `state_store` não é desta
+sprint; a saída dele está no relato). A régua do caso dela vira a do boot que
+abre no Sackboy; a do contraste e a do campo que se limpa ficam.
 """
 from __future__ import annotations
 
@@ -107,14 +116,14 @@ def _salvar_sackboy_dela() -> None:
 
 
 @pytest.mark.asyncio
-async def test_boot_adia_perfil_de_janela_e_diz_que_adiou(
+async def test_boot_restaura_o_perfil_de_janela_que_ela_escolheu(
     isolated_config: Path, isolated_profiles: Path
 ) -> None:
-    """O caso dela, fim a fim: o perfil não entra — e o estado explica por quê.
+    """O caso dela, fim a fim: o Sackboy que ela ativou à mão volta no boot.
 
-    O `active_profile is None` é o desenho de 22/07 e continua valendo (esta
-    cura NÃO força o restore). O que muda é o campo ao lado: agora existe onde
-    ler que o perfil ADIADO é o `Sackboy`, esperando a janela do jogo.
+    Era `test_boot_adia_perfil_de_janela_e_diz_que_adiou` (o desenho de 22/07,
+    que deixava `active_profile` vazio e o Sackboy esperando a janela). Desde
+    01/10/2026 a escolha dela volta com regra de janela ou sem, e nada espera.
     """
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
     from hefesto_dualsense4unix.daemon.state_store import StateStore
@@ -137,10 +146,8 @@ async def test_boot_adia_perfil_de_janela_e_diz_que_adiou(
     daemon = _BootDaemon(controller=fc, store=store)
     await restore_last_profile(daemon)  # type: ignore[arg-type]
 
-    # O desenho, intacto: nada foi ativado no boot.
-    assert store.active_profile is None
-    # A cura: a espera é LEGÍVEL, em vez de morrer no journal.
-    assert store.perfil_adiado_por_janela == "Sackboy"
+    assert store.active_profile == "Sackboy"
+    assert store.perfil_adiado_por_janela is None
 
 
 @pytest.mark.asyncio
@@ -175,6 +182,10 @@ async def test_abrir_o_jogo_encerra_a_espera(
 ) -> None:
     """A espera TERMINA quando o perfil entra — por qualquer porta.
 
+    Desde 01/10/2026 o boot não adia mais (ver o cabeçalho); a régua fica pelo
+    contrato do `StateStore`, que ainda guarda o campo: escrito à mão aqui, ele
+    se limpa com o perfil que entra.
+
     Encena o que o journal dela mostra acontecendo de verdade: o boot adia, ela
     abre o Sackboy e o autoswitch ativa o perfil (`profile_autoswitch
     to=Sackboy wm_class=steam_app_1599660`, 16 vezes em 08/08). A dica não pode
@@ -184,24 +195,16 @@ async def test_abrir_o_jogo_encerra_a_espera(
     `origin="autoswitch"` de propósito — é a porta pela qual o perfil realmente
     volta na máquina dela, e a que NÃO regrava a intenção manual (PERFIL-03).
     """
-    from hefesto_dualsense4unix.daemon.connection import restore_last_profile
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
     from hefesto_dualsense4unix.testing import FakeController
-    from hefesto_dualsense4unix.utils.session import (
-        save_active_marker,
-        save_last_profile,
-    )
 
     _salvar_sackboy_dela()
-    save_last_profile("Sackboy")
-    save_active_marker("Sackboy")
 
     fc = FakeController()
     fc.connect()
     store = StateStore()
-    daemon = _BootDaemon(controller=fc, store=store)
-    await restore_last_profile(daemon)  # type: ignore[arg-type]
+    store.set_perfil_adiado_por_janela("Sackboy")
     assert store.perfil_adiado_por_janela == "Sackboy"
 
     # A janela do jogo apareceu: o autoswitch ativa o perfil.

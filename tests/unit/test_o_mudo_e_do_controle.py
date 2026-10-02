@@ -168,12 +168,16 @@ class TestORestartDevolveODono:
         transportes = TRANSPORTES[arranjo]
         casa.perfil(FREESTYLE)
         casa.perfil(JOGO, por_peca={P3: {"mic": {"muted": False}}})
+        # NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`): o
+        # jogo que fecha devolve a escolha dela, e não o Freestyle desligado,
+        # que não entra por origem automática.
+        casa.perfil("Desktop Dela")
         daemon = casa.daemon(OS_QUATRO, transportes=transportes)
         for u in OS_QUATRO:
             assert await hotkey.nascer_no_ar(daemon, u) is True
         await _apertar(daemon, P3)
         _ativar(daemon, JOGO, origin="autoswitch")    # o jogo abre
-        _ativar(daemon, FREESTYLE, origin="autoswitch")  # o jogo fecha
+        _ativar(daemon, "Desktop Dela", origin="autoswitch")  # o jogo fecha
         await _derrubar(daemon)
 
         novo = casa.daemon(OS_QUATRO, ativo=JOGO, transportes=transportes)

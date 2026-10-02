@@ -1253,7 +1253,16 @@ class Daemon:
         # (a prova 5 da sprint). A leitura migra, uma vez, o cadeado de 23/07.
         # É memória carregada do disco, e não escrita: por isso o setter cru, e
         # não o `ligar_o_freestyle`, que regravaria o que acabou de ler.
+        #
+        # A SEMEADURA VEM ANTES (01/10/2026, `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-
+        # DELA`, itens 7 e 8): ela roda as renomeações do perfil padrão e, logo
+        # depois delas, a migração da escolha dela, que acende o botão da
+        # máquina nova. Lida depois, a memória nasceria apagada com o disco
+        # aceso, e o primeiro boot da máquina nova abriria sem perfil.
+        from hefesto_dualsense4unix.profiles.loader import o_perfil_de_fora_do_jogo
         from hefesto_dualsense4unix.utils.session import load_freestyle_ligado
+        with contextlib.suppress(Exception):
+            o_perfil_de_fora_do_jogo()
         self.store.set_freestyle_ligado(load_freestyle_ligado())
         # FEAT-NATIVE-MODE-01: se a sessão anterior terminou em Modo Nativo, sobe
         # SOLTO — o controle fica com o jogo. Implica pausado e NÃO restaura
@@ -1842,27 +1851,29 @@ class Daemon:
         """Re-ativa o perfil corrente ao sair do Modo Nativo (gatilhos/teclado).
 
         PERFIL-03: prefere `store.active_profile` (o perfil ATIVO — inclusive
-        um escolhido pelo autoswitch pela janela em foco) e só cai no
-        session.json quando não há ativo em memória. Com a semântica nova
-        (session.json = última escolha MANUAL), a ordem antiga re-aplicaria a
-        última escolha manual por cima do perfil que o autoswitch ativou —
-        mudança não intencional apontada pela tabela dos 5 call sites. A
-        ativação vai com `origin="system"`: sair do nativo não é escolha nova
-        de perfil e NÃO regrava a intenção manual.
+        um escolhido pelo autoswitch pela janela em foco) e só cai na escolha
+        dela quando não há ativo em memória. A ativação vai com
+        `origin="system"`: sair do nativo não é escolha nova de perfil e NÃO
+        regrava a escolha.
+
+        NOTA DATADA — 01/10/2026, `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`: a
+        segunda perna era o `session.json` cru; passou a ser o dono
+        (`utils.session.a_escolha_dela`), que nunca responde o Freestyle
+        desligado, e que diz «sem escolha» em vez de um nome que não carrega.
         """
         from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
         from hefesto_dualsense4unix.profiles.manager import (
             gerente_do_daemon,
             o_freestyle_manda,
         )
-        from hefesto_dualsense4unix.utils.session import load_last_profile
+        from hefesto_dualsense4unix.utils.session import a_escolha_dela
 
         # O-FREESTYLE-E-UMA-CAMADA-SO-01: com o Modo Freestyle ligado, é ele
         # que volta — o `session.json` pode apontar um perfil de jogo que o
         # `activate` recusaria, e a saída do Nativo ficaria sem perfil nenhum.
-        name = (
-            NOME_DO_PADRAO if o_freestyle_manda(self.store) else None
-        ) or self.store.active_profile or load_last_profile()
+        manda = o_freestyle_manda(self.store)
+        name = (NOME_DO_PADRAO if manda else None) or self.store.active_profile or (
+            a_escolha_dela(freestyle_ligado=manda))
         if not name:
             return
         # A-FÁBRICA-COM-UM-CLIENTE-01/E1 (26/08/2026): esta rota montava o
@@ -2704,8 +2715,8 @@ class Daemon:
         diz que é escolha dela (`grava_o_modo`).
 
         O perfil é o de :func:`manager.nome_do_perfil_que_grava` (o ativo: com o
-        Freestyle ligado, o Freestyle; desligado, o do jogo que vale ou o de
-        fora do jogo), e a regra da seção é a do dono,
+        Freestyle ligado, o Freestyle; desligado, o do jogo que vale ou a
+        escolha dela; «sem escolha», nenhum), e a regra da seção é a do dono,
         :func:`manager.secao_do_modo_com_o_caminho`: o modo não escreve a
         máscara, e nada mudou, nada se grava. `porta` vai ao `profile_salvo`.
 

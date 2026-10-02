@@ -171,6 +171,15 @@ def test_a_sessao_segue_o_nome_novo(
 
     assert session.load_last_profile() == NOME_DO_PADRAO
     assert session.read_active_marker() == NOME_DO_PADRAO
+    # NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, itens
+    # 6 e 8): a sessão no Freestyle com o botão apagado é «sem escolha», e o
+    # boot não o restaura; com o botão aceso, é ele que volta.
+    # O dono confere que o nome abre um perfil: a pasta é a desta régua.
+    from hefesto_dualsense4unix.profiles import loader as _loader
+
+    monkeypatch.setattr(_loader, "profiles_dir", lambda ensure=False: disco)
+    assert session.resolve_boot_profile() is None
+    session.save_freestyle_ligado(True)
     assert session.resolve_boot_profile() == NOME_DO_PADRAO
 
 

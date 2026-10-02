@@ -52,6 +52,7 @@ from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles import loader
 from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
 from hefesto_dualsense4unix.profiles.manager import (
+    OFreestyleDesligadoError,
     OFreestyleMandaError,
     ProfileManager,
     ligar_o_freestyle,
@@ -633,65 +634,94 @@ def test_ligar_pelo_botao_e_o_ativar_do_freestyle(semeadura_ligada: None) -> Non
     assert asyncio.run(h._handle_freestyle_set({}))["freestyle_ligado"] is False
 
 
-def _o_freestyle_de_fora_do_jogo(store: StateStore) -> _Handlers:
-    """O estado de todo desktop desde o boot: o Freestyle valendo, com o modo desligado."""
+def test_o_freestyle_de_fora_do_jogo_com_o_modo_desligado_nao_existe_mais(
+    semeadura_ligada: None,
+) -> None:
+    """O estado de todo desktop até 01/10/2026 é recusado na origem.
+
+    NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 6):
+    até aqui o boot e a volta do jogo punham o Freestyle valendo com o modo
+    desligado, e esta seção partia desse estado. Desligado, o Freestyle não
+    vale em lugar nenhum: nenhum caminho que não seja a mão dela o põe.
+    """
+    loader.load_all_profiles()
+    session.save_freestyle_ligado(False)
+    store = StateStore()
+
+    with pytest.raises(OFreestyleDesligadoError):
+        _gerente(store).activate(FREESTYLE, origin="system")
+    assert (store.active_profile, store.freestyle_ligado) == (None, False)
+
+
+def _o_jogo_valendo_fora_da_escolha(store: StateStore) -> _Handlers:
+    """O botão apagado, a escolha dela no Sofá, e o PRAGMATA posto pelo lançamento."""
+    _o_jogo()
+    loader.save_profile(Profile(name="Sofá", match=MatchCriteria(window_class=["zathura"]),
+                                priority=60))
+    session.save_freestyle_ligado(False)
+    session.save_last_profile("Sofá")
     gerente = _gerente(store)
-    gerente.activate(FREESTYLE, origin="system")
-    assert (store.active_profile, store.freestyle_ligado) == (FREESTYLE, False)
+    gerente.activate(JOGO, origin="launch")
+    assert (store.active_profile, store.freestyle_ligado) == (JOGO, False)
     return _Handlers(store, gerente)
 
 
 @pytest.mark.parametrize("ligado", [False, True], ids=["desligado", "ligado"])
 def test_gravar_numa_aba_nao_muda_o_modo(semeadura_ligada: None, ligado: bool) -> None:
-    """O gravar-e-reaplicar das abas reativa o Freestyle, e reativar não muda o modo.
+    """O gravar-e-reaplicar das abas reaplica o perfil ativo, e não é escolha.
 
     Conferência de 28/09/2026. Toda aba que grava passa pelo funil
-    `interface/pacotes/perfil.gravar_e_reaplicar`, que manda `profile.switch`
-    do perfil ativo — com a origem `manual`. Com o Freestyle de fora do jogo
-    valendo (o desktop de toda máquina, desde o boot), o primeiro ajuste dela
-    ligava o Modo Freestyle sozinho, e todo jogo seguinte perdia o perfil dele.
-    É o funil de verdade, com o handler de verdade.
+    `interface/pacotes/perfil.gravar_e_reaplicar`. Até 01/10/2026 ele mandava
+    `profile.switch` (a ativação à mão): o primeiro ajuste dela mexia no Modo
+    Freestyle, e o perfil do jogo posto pelo lançamento virava a escolha dela.
+    Desde O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 é o `profile.reaplicar`. É o
+    funil de verdade, com o handler de verdade, nas duas pontas: o jogo valendo
+    com o botão apagado, e o Freestyle com o botão aceso.
 
-    MORDIDA: devolva ao ramo `origin == "manual"` do `activate` o
-    `ligar_o_freestyle(self.store, e_o_freestyle(profile.name))` e a célula
-    `desligado` reprova com o modo ligado.
+    MORDIDA: faça o funil mandar `profile_switch` de novo e a célula
+    `desligado` reprova com o PRAGMATA gravado como a escolha dela.
     """
     from hefesto_dualsense4unix.interface.pacotes import perfil as funil
 
     loader.load_all_profiles()
     store = StateStore()
-    h = _o_freestyle_de_fora_do_jogo(store)
+    h = _o_jogo_valendo_fora_da_escolha(store)
     if ligado:
         asyncio.run(h._handle_freestyle_set({"ligado": True}))
+    ativo = store.active_profile
     ponte = SimpleNamespace(
-        profile_switch=lambda nome: asyncio.run(h._handle_profile_switch({"name": nome})),
+        profile_reaplicar=lambda nome: asyncio.run(
+            h._handle_profile_reaplicar({"name": nome})),
+        profile_switch=lambda nome: asyncio.run(
+            h._handle_profile_switch({"name": nome})),
         chamar=lambda *a, **k: None,
     )
 
-    funil.gravar_e_reaplicar(loader.load_profile(FREESTYLE),
-                             SimpleNamespace(state={"active_profile": FREESTYLE}), ponte)
+    funil.gravar_e_reaplicar(loader.load_profile(ativo),
+                             SimpleNamespace(state={"active_profile": ativo}), ponte)
 
+    assert ativo == (FREESTYLE if ligado else JOGO)
     assert (store.active_profile, store.freestyle_ligado,
-            session.load_freestyle_ligado()) == (FREESTYLE, ligado, ligado)
+            session.load_freestyle_ligado()) == (ativo, ligado, ligado)
+    assert session.load_last_profile() == "Sofá", "gravar numa aba virou escolha"
 
 
-def test_o_botao_liga_com_o_freestyle_ja_valendo(semeadura_ligada: None) -> None:
-    """O botão no desktop, com o Freestyle de fora do jogo valendo: o modo liga.
+def test_o_botao_liga_sem_escolha(semeadura_ligada: None) -> None:
+    """O botão no desktop «sem escolha» (nenhum perfil ativo): o Freestyle entra, e o modo liga.
 
-    Ali a ativação do `freestyle.set` é uma reativação, e reativar não muda o
-    modo — quem liga é o próprio `freestyle.set`, dizendo o modo.
-
-    MORDIDA: tire o `ligar_o_freestyle(self.store, True)` do ramo de ligar do
-    `_handle_freestyle_set` e o botão responde desligado.
+    MORDIDA: tire o `ligar_o_freestyle(self.store, True)` do ramo do Freestyle
+    à mão em `ProfileManager._ativar` e o botão responde desligado.
     """
     loader.load_all_profiles()
+    session.save_freestyle_ligado(False)
     store = StateStore()
-    h = _o_freestyle_de_fora_do_jogo(store)
+    h = _Handlers(store, _gerente(store))
 
     resposta = asyncio.run(h._handle_freestyle_set({"ligado": True}))
 
     assert (resposta["freestyle_ligado"], store.freestyle_ligado,
-            session.load_freestyle_ligado()) == (True, True, True)
+            session.load_freestyle_ligado(), store.active_profile) == (
+                True, True, True, FREESTYLE)
 
 
 def test_desligar_devolve_o_jogo_vivo_sem_reabrir(
@@ -848,12 +878,20 @@ def test_com_o_jogo_vivo_a_janela_de_fora_nao_tira_o_perfil_dele(semeadura_ligad
 
     Com o jogo morto, a troca volta a sair no debounce de sempre.
 
+    Desde 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 5) a troca
+    fora do jogo é para a escolha dela — aqui, o Sofá que ela ativou à mão —,
+    e não para o Freestyle, que desligado não vale em lugar nenhum.
+
     MORDIDA: devolva à `_recusa_a_troca_com_o_jogo_vivo` o termo antigo — só
     recusa com a janela do CLIENTE Steam (`e_janela_do_cliente_steam`) — e a
-    primeira asserção reprova com o Freestyle entrando aos 12 s.
+    primeira asserção reprova com a escolha entrando aos 12 s.
     """
     loader.load_all_profiles()
+    session.save_freestyle_ligado(False)
     _o_jogo()
+    loader.save_profile(Profile(name="Sofá", match=MatchCriteria(window_class=["zathura"]),
+                                priority=60))
+    session.save_last_profile("Sofá")
     store = StateStore()
     vivo: list[int | None] = [APPID]
     vigia = _vigia_com_o_jogo(store, vivo)
@@ -865,7 +903,7 @@ def test_com_o_jogo_vivo_a_janela_de_fora_nao_tira_o_perfil_dele(semeadura_ligad
     vivo[0] = None
     for t in (301.0, 314.0):
         vigia._tick({"wm_class": "firefox", "wm_name": "Mozilla Firefox"}, t)
-    assert store.active_profile == FREESTYLE
+    assert store.active_profile == "Sofá"
 
 
 def test_com_o_jogo_vivo_a_janela_de_outro_jogo_troca(semeadura_ligada: None) -> None:

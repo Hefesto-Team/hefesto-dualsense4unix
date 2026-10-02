@@ -149,24 +149,37 @@ class TestOFatoDoGestoDela:
         assert perfil_que_ela_ativou() is None
 
     def test_o_ativar_de_ontem_ainda_responde_hoje(self) -> None:
-        """`session.json` é o que o `profile.switch` grava — manual-only."""
+        """`session.json` é o que o `profile.switch` grava — manual-only.
+
+        Desde 01/10/2026 a resposta é a do dono (`a_escolha_dela`), que só diz
+        um nome que CARREGA: o perfil está no disco.
+        """
+        from hefesto_dualsense4unix.profiles.loader import save_profile
+
+        save_profile(Profile(name="Pragmata", match=MatchAny()), origem="regua")
         (config_dir(ensure=True) / "session.json").write_text(
             '{"last_profile": "Pragmata"}', encoding="utf-8"
         )
         assert perfil_que_ela_ativou() == "Pragmata"
 
-    def test_o_marker_manual_vence_um_session_json_herdado(self) -> None:
-        """PERFIL-03: versões antigas deixavam o autoswitch sujar o session.json.
+    def test_o_marcador_e_espelho_e_nao_vence_o_session_json(self) -> None:
+        """O `active_profile.txt` não decide nada: vale o `session.json`.
 
-        O `active_profile.txt` sempre foi só do gesto manual, então quando os
-        dois divergem quem carrega a escolha DELA é o marker.
+        NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`): até
+        aqui o marcador vencia na divergência (o seed do PERFIL-03, para as
+        versões em que o autoswitch sujava o `session.json`). A convergência que
+        ele esperava aconteceu, e o marcador virou espelho da escolha.
         """
+        from hefesto_dualsense4unix.profiles.loader import save_profile
+
+        for nome in ("Navegação", "vitoria"):
+            save_profile(Profile(name=nome, match=MatchAny()), origem="regua")
         cfg = config_dir(ensure=True)
         (cfg / "session.json").write_text(
             '{"last_profile": "Navegação"}', encoding="utf-8"
         )
         (cfg / "active_profile.txt").write_text("vitoria\n", encoding="utf-8")
-        assert perfil_que_ela_ativou() == "vitoria"
+        assert perfil_que_ela_ativou() == "Navegação"
 
     def test_disco_ilegivel_nao_derruba_a_aba(self, monkeypatch) -> None:
         """Best-effort: sem nome não há destaque — nunca uma exceção na GTK."""
@@ -463,6 +476,12 @@ class TestAOrdemDasLinhasNaoVazaParaADisputa:
     tooltip lista os concorrentes na ordem que recebe, e essa muda. Uma frase da
     GUI recitando a fila numa ordem que não é a do daemon é exatamente o que
     esta casa não entrega, e é o que este teste segura.
+
+    NOTA DATADA — 01/10/2026, `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 5:
+    o `match any` saiu da seleção automática, e a disputa entre os «Sempre»
+    acabou — a coluna não anuncia vencedor nem recita fila. O que este bloco
+    segura agora é que arrastar a linha dela para o topo não faz a coluna nem o
+    tooltip inventarem disputa.
     """
 
     @staticmethod
@@ -471,7 +490,7 @@ class TestAOrdemDasLinhasNaoVazaParaADisputa:
         # empatados no topo, então é ele que a exibição arrasta para a frente.
         return [_catch_all("aaa", 9), _catch_all("bbb", 5), _catch_all("zzz", 9)]
 
-    def test_o_tooltip_lista_os_concorrentes_na_ordem_de_carga(self) -> None:
+    def test_o_tooltip_nao_recita_fila_nenhuma(self) -> None:
         stub = _stub()
         perfis = self._mesa_de_empate()
         stub._profiles_cache = list(perfis)
@@ -479,12 +498,9 @@ class TestAOrdemDasLinhasNaoVazaParaADisputa:
         stub._populate_profiles_store(perfis, None)
 
         tooltips = {linha[0]: linha[4] for linha in stub._profiles_store}
-        assert "casa: aaa, bbb, zzz." in tooltips["aaa"], (
-            "o tooltip da disputa recebeu a lista da EXIBIÇÃO — a GUI passou a "
-            "recitar a fila numa ordem que não é a do loader (EMPATE-01/E2)"
-        )
+        assert tooltips == {"aaa": "", "bbb": "", "zzz": ""}
 
-    def test_o_vencedor_anunciado_nao_muda_com_a_linha_no_topo(self) -> None:
+    def test_a_linha_no_topo_nao_inventa_vencedor(self) -> None:
         stub = _stub()
         perfis = self._mesa_de_empate()
         stub._profiles_cache = list(perfis)
@@ -492,8 +508,7 @@ class TestAOrdemDasLinhasNaoVazaParaADisputa:
         stub._populate_profiles_store(perfis, None)
 
         colunas = {linha[0]: linha[2] for linha in stub._profiles_store}
-        assert colunas["aaa"] == "Sempre — 3 disputam, este vence"
-        assert colunas["zzz"] == "Sempre — 3 disputam, vence aaa"
+        assert colunas == {"aaa": "Sempre", "bbb": "Sempre", "zzz": "Sempre"}
 
     def test_a_coluna_zero_continua_sendo_so_o_nome(self) -> None:
         """Marcador textual ali quebraria Salvar, Ativar, Duplicar e Remover.

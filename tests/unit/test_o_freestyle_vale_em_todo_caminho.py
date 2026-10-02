@@ -1,5 +1,15 @@
 """O-MODO-FREESTYLE-03 — o perfil de fora do jogo vale em todo caminho, e nasce ligado.
 
+NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, a fala dela de
+29/09): o Freestyle deixou de ser o perfil de fora do jogo. Desligado, ele não
+vale em lugar nenhum; fora do jogo vale a escolha dela, que o boot restaura com
+regra de janela ou sem (a RESTORE-ESCOPO-01 saiu). Os achados 1 e 2 abaixo
+mudaram de propósito: o boot restaura a escolha dela, a máquina nova nasce com o
+botão aceso (e é ali que o Freestyle vale no boot), e o rodapé sem perfil age na
+escolha dela, e não no Freestyle. As réguas do contrato novo estão em
+`test_o_hefesto_abre_na_escolha_dela.py` e
+`test_o_freestyle_desligado_nunca_e_o_perfil_ativo.py`; os achados 3 a 5 seguem.
+
 A conferência da O-MODO-FREESTYLE-02 deixou cinco achados, e os cinco são do mesmo
 dono: o perfil de fora do jogo. Esta régua os mede um a um; cada cura tem a sua
 célula, e arrancá-la reprova aquela célula (a mordida está no docstring de cada
@@ -64,8 +74,8 @@ MESA: tuple[tuple[str, str], ...] = (
     ("AA:BB:CC:00:00:04", "bt"),
 )
 
-#: O perfil de um jogo, com a regra de janela que o faz ser PULADO no boot
-#: (RESTORE-ESCOPO-01). `steam_app_1599660` é o Sackboy na Steam.
+#: O perfil de um jogo, com regra de janela (até 01/10/2026 o boot o PULAVA,
+#: RESTORE-ESCOPO-01). `steam_app_1599660` é o Sackboy na Steam.
 JANELA_DO_JOGO = "steam_app_1599660"
 JOGO = "Sackboy"
 
@@ -137,8 +147,13 @@ def _o_jogo_de_janela() -> None:
 
 
 def _prepara_a_sessao(caminho: str) -> None:
-    """Deixa o disco no caminho pedido. A semeadura já pôs o Freestyle lá."""
-    loader.load_all_profiles()
+    """Deixa o disco no caminho pedido, e só então semeia.
+
+    A ORDEM É A DO DISCO DE QUEM ATUALIZA: a sessão e o perfil do jogo já
+    existem quando a semeadura roda a migração da escolha
+    (`utils.session.migrar_a_escolha_dela`), que espelha a escolha no
+    marcador. Sem sessão nenhuma, é a máquina nova, e o botão nasce aceso.
+    """
     _o_jogo_de_janela()
     if caminho == "sessao-com-perfil-de-janela":
         session.save_last_profile(JOGO)
@@ -146,6 +161,7 @@ def _prepara_a_sessao(caminho: str) -> None:
     elif caminho == "sessao-com-o-freestyle":
         session.save_last_profile(loader.NOME_DO_PADRAO)
         session.save_active_marker(loader.NOME_DO_PADRAO)
+    loader.load_all_profiles()
 
 
 def _o_gatilho_no_fio(handle: Any, envelope: EnvelopeDeTransporte) -> dict[str, tuple[int, ...]]:
@@ -175,33 +191,44 @@ def _o_estado_do_boot(store: StateStore) -> tuple[str | None, str | None]:
 # 1 e 3. O BOOT — os quatro controles, USB e BT, nos três caminhos
 # =============================================================================
 
+#: O que o boot deixa valendo em cada caminho da sessão, desde 01/10/2026: a
+#: máquina nova nasce com o botão aceso (Freestyle); a escolha dela com regra de
+#: janela volta; a sessão que apontava o Freestyle desligado é «sem escolha».
+VALE_NO_BOOT = {
+    "sessao-vazia": (loader.NOME_DO_PADRAO, True),
+    "sessao-com-perfil-de-janela": (JOGO, False),
+    "sessao-com-o-freestyle": (None, False),
+}
+
+
 @pytest.mark.parametrize("caminho", CAMINHOS)
-def test_o_boot_deixa_o_freestyle_valendo_nos_quatro_com_os_gatilhos_ligados(
+def test_o_boot_deixa_valendo_o_que_ela_escolheu_nos_quatro(
     semeadura_ligada: None, fabrica_de_bancada: Any, caminho: str,
 ) -> None:
-    """Em cada caminho da sessão, o Freestyle vale, e o gatilho chega RÍGIDO aos quatro.
-
-    O caminho do perfil de janela é o achado 1: o boot o pula de propósito e,
-    até esta sprint, ficava sem perfil até o jogo abrir. Com o Modo Freestyle
-    DESLIGADO, que é o caminho que esta régua mede: ligado, o restore ativa o
-    Freestyle direto (`test_o_freestyle_ligado_manda_em_tudo.py`), e a mordida
-    abaixo não morderia.
+    """Em cada caminho da sessão, vale o que ela escolheu, e o gatilho chega aos quatro.
 
     MORDIDAS:
-    - tire o `_o_de_fora_do_jogo_enquanto_espera` do ramo `if pulado:` de
-      `restore_last_profile` e a célula `sessao-com-perfil-de-janela` reprova
-      com `active_profile` vazio;
-    - devolva `"mode": "Off"` aos gatilhos do `freestyle.json` de fábrica e as
-      três células reprovam no byte, nos quatro controles e nos dois transportes.
+    - tire a migração da escolha da semeadura (`migrar_a_escolha_dela`) e a
+      célula `sessao-vazia` reprova sem perfil nenhum;
+    - devolva o `pulado` da RESTORE-ESCOPO-01 ao `restore_last_profile` e a
+      célula `sessao-com-perfil-de-janela` reprova sem o Sackboy;
+    - devolva `"mode": "Off"` aos gatilhos do `freestyle.json` de fábrica e a
+      célula `sessao-vazia` reprova no byte, nos quatro controles e nos dois
+      transportes.
     """
     _prepara_a_sessao(caminho)
     controle, pecas = _mesa_de_quatro(fabrica_de_bancada)
     store = StateStore()
+    store.set_freestyle_ligado(session.load_freestyle_ligado())
 
     _boot(controle, store)
 
-    assert store.active_profile == loader.NOME_DO_PADRAO, (
+    esperado_nome, aceso = VALE_NO_BOOT[caminho]
+    assert (store.active_profile, store.freestyle_ligado) == (esperado_nome, aceso), (
         f"{caminho}: o boot terminou com {store.active_profile!r} valendo")
+    if esperado_nome is None:
+        assert all(h.device.quadros == [] for h, _ in pecas), "sem escolha, nada vai ao fio"
+        return
     nascimento = _o_gatilho_de_nascimento()
     assert nascimento[0] != int(off().mode)
     no_fio = {f"{mac} ({transporte})": _o_gatilho_no_fio(handle, envelope)
@@ -210,118 +237,56 @@ def test_o_boot_deixa_o_freestyle_valendo_nos_quatro_com_os_gatilhos_ligados(
     assert no_fio == esperado, f"{caminho}: o gatilho que chegou ao fio"
 
 
-@pytest.mark.parametrize("sessao", [  # (noqa-acento): nome de parâmetro
-    ("Apagado", "Apagado"),   # a sessão e o marcador apontam um perfil que ela apagou
-    ("Sumido", "Apagado"),    # os dois divergem, e nenhum dos dois existe
-    (JOGO, "Apagado"),        # o marcador órfão, e o session.json num perfil de janela
-], ids=["os-dois-orfaos", "orfaos-diferentes", "marcador-orfao-e-sessao-de-janela"])
-def test_a_sessao_que_nao_ativa_tambem_cai_no_freestyle(
-    semeadura_ligada: None, fabrica_de_bancada: Any, sessao: tuple[str, str],
-) -> None:
-    """Os outros caminhos em que o boot terminava sem perfil: o nome não ativa.
-
-    O marcador vence a divergência (`resolve_boot_profile`); quando ele não
-    ativa, o boot cai no `session.json`; e quando nem este ativa — órfão, ou de
-    janela —, até esta sprint o boot terminava sem perfil.
-
-    MORDIDA: tire a última linha de `restore_last_profile`
-    (`await _o_de_fora_do_jogo_enquanto_espera(tentados, motivo)`) e as três
-    células reprovam.
-    """
-    ultimo, marcador = sessao
-    _prepara_a_sessao("sessao-vazia")
-    session.save_last_profile(ultimo)
-    session.save_active_marker(marcador)
-    controle, _ = _mesa_de_quatro(fabrica_de_bancada)
-    store = StateStore()
-
-    _boot(controle, store)
-
-    assert store.active_profile == loader.NOME_DO_PADRAO
-
-
 def test_o_boot_nao_reescreve_a_escolha_dela(
     semeadura_ligada: None, fabrica_de_bancada: Any,
 ) -> None:
-    """O Freestyle vale ENQUANTO espera: a sessão continua dizendo o jogo dela.
+    """O boot restaura a escolha sem regravá-la: a sessão continua dizendo o jogo dela.
 
-    Se o boot gravasse o Freestyle na sessão, o próximo boot não esperaria mais
-    o Sackboy — a escolha dela sumiria por um reinício. `origin="system"` é o
-    que segura: o marcador e o `session.json` só mudam por gesto manual.
+    `origin="system"` é o que segura: a escolha só muda por gesto dela.
 
-    MORDIDA: troque o `origin="system"` de `_ativar` por `origin="manual"` e a
-    sessão passa a dizer Freestyle.
+    MORDIDA: troque o `origin="system"` do `restore_last_profile` por
+    `origin="manual"` e o espelho passa a ser regravado (a trava da troca à
+    mão se arma no boot).
     """
     _prepara_a_sessao("sessao-com-perfil-de-janela")
     controle, _ = _mesa_de_quatro(fabrica_de_bancada)
+    store = StateStore()
 
-    _boot(controle, StateStore())
+    _boot(controle, store)
+
+    import time
 
     assert (session.load_last_profile(), session.read_active_marker()) == (JOGO, JOGO)
-
-
-def test_a_espera_do_perfil_de_janela_segue_o_contrato_dela(
-    semeadura_ligada: None, fabrica_de_bancada: Any,
-) -> None:
-    """PERFIL-ADIADO-POR-JANELA-01: a espera só tem valor com `active_profile` vazio.
-
-    A MEDIDA ANTES DE MEXER (a sprint pediu): nenhum leitor de tela lê a espera —
-    ela não sai no `daemon.state_full` e nenhum pacote a pergunta. A tela diz o
-    perfil pelo dono (`perfil.nome_do_ativo`): o daemon, depois o disco. Com o
-    daemon calado ela lia o disco e dizia **Sackboy** sobre um controle sem perfil
-    nenhum aplicado; com a cura o daemon diz Freestyle, que é o que está valendo.
-
-    Os dois lados do contrato:
-    - com o Freestyle no disco, o par é `("Freestyle", None)` — entrou;
-    - sem ele (ela o apagou), o par é o de antes desta sprint, `(None, "Sackboy")`.
-
-    MORDIDA: a mesma da primeira célula da matriz, e a primeira metade reprova.
-    """
-    from hefesto_dualsense4unix.interface import pacotes
-
-    _prepara_a_sessao("sessao-com-perfil-de-janela")
-    controle, _ = _mesa_de_quatro(fabrica_de_bancada)
-    store = StateStore()
-    _boot(controle, store)
-    assert _o_estado_do_boot(store) == (loader.NOME_DO_PADRAO, None)
-    ctx = SimpleNamespace(state={"active_profile": store.active_profile}, mesa=[])
-    assert pacotes.topo(ctx)["perfil"] == loader.NOME_DO_PADRAO
-
-    (profiles_dir() / loader.ARQUIVO_DO_PADRAO).unlink()
-    store = StateStore()
-    _boot(controle, store)
-    assert _o_estado_do_boot(store) == (None, JOGO)
+    assert not store.manual_profile_lock_active(time.monotonic()), (
+        "o boot armou a trava da troca à mão: ele virou escolha dela")
 
 
 def test_com_o_modo_ligado_o_jogo_nao_entra_e_desligado_entra(
     semeadura_ligada: None, fabrica_de_bancada: Any,
 ) -> None:
-    """A cena inteira: o boot deixa o Freestyle; ligado, nada o troca; desligado, o jogo entra.
+    """A cena inteira: o botão aceso, nada o troca; apagado, o jogo entra.
 
     NOTA DATADA — 28/09/2026. Esta régua cobria a
     `D-2409-COM-O-FREESTYLE-O-JOGO-ENTRA-POR-CIMA` (LOCK-CEDE-01): com o Modo
     Freestyle ligado, a janela do jogo com perfil próprio trocava o perfil. A
     `D-2709-O-FREESTYLE-E-UM-PERFIL-QUE-MANDA` a revogou: ligado, o Freestyle
     manda em tudo, e o jogo só entra com ele desligado. É o autoswitch real, com
-    o `ProfileManager` real.
+    o `ProfileManager` real. NOTA DATADA — 01/10/2026: o «Ativar» do Freestyle
+    liga o modo sempre (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 3), e
+    apagá-lo devolve a escolha dela (aqui, nenhuma: o perfil sai).
 
     MORDIDA: devolva ao `_tick` do autoswitch o cadeado que cedia à regra do
     jogo, e tire a recusa do `ProfileManager.activate` — a primeira metade
     reprova com o Sackboy valendo.
     """
-    _prepara_a_sessao("sessao-com-perfil-de-janela")
+    _prepara_a_sessao("sessao-com-o-freestyle")
     controle, _ = _mesa_de_quatro(fabrica_de_bancada)
     store = StateStore()
     _boot(controle, store)
     gerente = ProfileManager(controller=controle, store=store)
-    from hefesto_dualsense4unix.profiles.manager import ligar_o_freestyle
 
-    # O botão, como o `freestyle.set` o faz: o Freestyle já vale desde o boot,
-    # então a ativação à mão é uma REATIVAÇÃO, que não muda o modo — quem o
-    # liga é o dono, com todas as letras (conferência de 28/09/2026).
     gerente.activate(loader.NOME_DO_PADRAO, origin="manual")
-    assert store.freestyle_ligado is False
-    ligar_o_freestyle(store, True)
+    assert store.freestyle_ligado is True, "o «Ativar» do Freestyle liga o modo"
     vigia = AutoSwitcher(manager=gerente, window_reader=lambda: {}, store=store)
 
     for t in (0.0, 0.6, 30.0):
@@ -330,28 +295,26 @@ def test_com_o_modo_ligado_o_jogo_nao_entra_e_desligado_entra(
         vigia._tick({"wm_class": JANELA_DO_JOGO, "wm_name": "Sackboy"}, t)
     assert store.active_profile == loader.NOME_DO_PADRAO
 
-    ligar_o_freestyle(store, False)
+    gerente.apagar_o_freestyle(None)
+    assert (store.active_profile, store.freestyle_ligado) == (None, False)
     for t in (61.0, 61.6):
         vigia._tick({"wm_class": JANELA_DO_JOGO, "wm_name": "Sackboy"}, t)
-    assert _o_estado_do_boot(store) == (JOGO, None)
+    assert store.active_profile == JOGO
 
 
-@pytest.mark.parametrize("caminho", ["sessao-vazia", "sessao-com-perfil-de-janela"])
-def test_o_freestyle_nao_entra_por_cima_do_jogo_que_ja_vale(
+@pytest.mark.parametrize("caminho", ["sessao-vazia", "sessao-com-o-freestyle"])
+def test_o_boot_nao_entra_por_cima_do_jogo_que_ja_vale(
     semeadura_ligada: None, fabrica_de_bancada: Any, caminho: str,
 ) -> None:
     """O daemon reiniciado no meio da partida: o jogo já vale antes do controle chegar.
 
     O autoswitch roda antes do primeiro controle, e pode ter posto o Sackboy.
-    O boot não troca isso pelo Freestyle — seria uma troca no meio do jogo,
-    desfeita um tique depois pelo próprio autoswitch —, e não escreve nada no fio.
-    Vale nos dois caminhos em que o Freestyle entra como o de fora do jogo, e
-    não como escolha dela: a sessão com o perfil de janela e a sessão VAZIA, que
-    é a da máquina que nunca ativou perfil na mão.
+    O boot não troca isso pelo que ela escolheu — seria uma troca no meio do
+    jogo, desfeita um tique depois pelo próprio autoswitch —, e não escreve nada
+    no fio. Vale na máquina nova (o Freestyle aceso) e com «sem escolha».
 
-    MORDIDAS: tire o `if isinstance(ja_vale, str) and ja_vale:` de
-    `_o_de_fora_do_jogo_enquanto_espera` e as duas células reprovam; tire de
-    `restore_last_profile` o ramo da sessão vazia e a célula dela reprova.
+    MORDIDA: tire de `restore_last_profile` o `if isinstance(ja_vale, str) and
+    ja_vale and not mesmo_slug(...)` e a célula `sessao-vazia` reprova.
     """
     _prepara_a_sessao(caminho)
     controle, pecas = _mesa_de_quatro(fabrica_de_bancada)
@@ -364,41 +327,17 @@ def test_o_freestyle_nao_entra_por_cima_do_jogo_que_ja_vale(
     assert all(h.device.quadros == [] for h, _ in pecas)
 
 
-def test_o_freestyle_com_regra_de_janela_dela_espera_como_os_outros(
-    semeadura_ligada: None, fabrica_de_bancada: Any,
-) -> None:
-    """Se ELA pôs no Freestyle uma regra de janela, ele é de janela também.
-
-    A regra de cima (RESTORE-ESCOPO-01) vale para ele: o boot não o força sem a
-    janela. O par volta a ser o de antes: sem perfil, esperando o Sackboy.
-
-    MORDIDA: tire o `if _escopado_a_janela(fora_do_jogo): return` de
-    `_o_de_fora_do_jogo_enquanto_espera` e o boot força o Freestyle dela.
-    """
-    _prepara_a_sessao("sessao-com-perfil-de-janela")
-    arquivo = profiles_dir() / loader.ARQUIVO_DO_PADRAO
-    dela = json.loads(arquivo.read_text(encoding="utf-8"))
-    dela["match"] = {"type": "criteria", "window_class": ["firefox"]}
-    arquivo.write_text(json.dumps(dela, indent=2), encoding="utf-8")
-    controle, _ = _mesa_de_quatro(fabrica_de_bancada)
-    store = StateStore()
-
-    _boot(controle, store)
-
-    assert _o_estado_do_boot(store) == (None, JOGO)
-
-
 def test_no_modo_nativo_o_boot_nao_aplica_perfil_nenhum(
     semeadura_ligada: None, fabrica_de_bancada: Any,
 ) -> None:
-    """FEAT-NATIVE-MODE-01: o controle fica solto para o jogo, e o Freestyle não fura."""
+    """FEAT-NATIVE-MODE-01: o controle fica solto para o jogo, e a escolha não fura."""
     _prepara_a_sessao("sessao-com-perfil-de-janela")
     controle, pecas = _mesa_de_quatro(fabrica_de_bancada)
     store = StateStore()
 
     _boot(controle, store, nativo=True)
 
-    assert _o_estado_do_boot(store) == (None, None)
+    assert store.active_profile is None
     assert all(h.device.quadros == [] for h, _ in pecas)
 
 
@@ -442,20 +381,23 @@ def _ctx_sem_perfil() -> Any:
 def test_os_tres_gestos_sem_perfil_ativo_agem_no_freestyle(
     semeadura_ligada: None, tmp_path: Path, gesto: str,
 ) -> None:
-    """Sem perfil valendo, os três botões agem onde o boot restauraria.
+    """Sem perfil valendo, os três botões agem na escolha dela.
 
-    Antes desta sprint o Salvar gravava no Freestyle (O-MODO-FREESTYLE-02) e o
-    Aplicar e o Exportar recusavam — *"não há perfil ativo"* — com o Freestyle no
-    disco. A dica de cada um diz o mesmo nome.
+    Na máquina nova a escolha é o Freestyle aceso (a semeadura acende o botão,
+    `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 7), e a dica de cada um diz o
+    mesmo nome. NOTA DATADA — 01/10/2026: até aqui o rodapé caía no Freestyle
+    quando nada valia, com o botão apagado também; isso saiu (item 10), e a
+    recusa de «sem escolha» é a de `test_o_freestyle_desligado_nunca_e_o_perfil_ativo.py`.
 
     MORDIDAS: devolva `perfil.nome_do_ativo(ctx.state)` à primeira linha do
-    `aplicar` (ou do `exportar`) e a célula dele reprova; tire o
-    `o_perfil_de_fora_do_jogo()` de `perfil_do_rodape` e as três reprovam.
+    `aplicar` (ou do `exportar`) e a célula dele reprova; tire a migração da
+    escolha da semeadura e as três reprovam.
     """
     from hefesto_dualsense4unix.interface import pacotes
     from hefesto_dualsense4unix.interface.pacotes import rodape
 
     loader.load_all_profiles()
+    assert session.load_freestyle_ligado() is True, "a máquina nova nasce acesa"
     arquivo = profiles_dir() / loader.ARQUIVO_DO_PADRAO
     antes = arquivo.read_bytes()
     levado = tmp_path / "levado.json"

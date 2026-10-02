@@ -125,10 +125,9 @@ def _draft_do_ativo(nome: str) -> Any:
 # dos três lê `ctx.state["active_profile"]` cru. A-PERNA-QUE-FALTA-01,
 # 11/09/2026, e O-MODO-FREESTYLE-03, 24/09/2026.
 #
-# A PERGUNTA TEM UM DONO E ELE RESOLVE EM TRÊS PERNAS — o daemon primeiro, o
-# marcador em disco depois (`profiles_actions.perfil_que_esta_valendo`, e deste
-# lado `perfil.nome_do_ativo`), e, quando os dois calam, o perfil de fora do
-# jogo (`loader.o_perfil_de_fora_do_jogo`). O estado cru só tem a primeira.
+# A PERGUNTA TEM UM DONO E ELE RESOLVE EM DUAS PERNAS — o daemon primeiro, a
+# escolha dela no disco depois (`profiles_actions.perfil_que_esta_valendo`, e
+# deste lado `perfil.nome_do_ativo`). O estado cru só tem a primeira.
 #
 # E A SEGUNDA PERNA NÃO É HIPÓTESE: `nome_do_ativo` documenta, medido em
 # 06/09/2026 na máquina dela, o daemon respondendo `active_profile: null` com um
@@ -205,29 +204,24 @@ def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 def perfil_do_rodape(state: Any) -> str:
-    """O perfil dos três gestos do rodapé: o ativo, ou o de fora do jogo.
+    """O perfil dos três gestos do rodapé: o ativo, ou a escolha dela.
 
-    O-MODO-FREESTYLE-02, 24/09/2026, e O-MODO-FREESTYLE-03 no dia seguinte:
-    nasceu `perfil_do_salvar` e servia só ao Salvar, e o Aplicar e o Exportar
-    recusavam sem perfil ativo com o Freestyle no disco. Agora os três perguntam
-    aqui. `perfil.nome_do_ativo` responde as duas pernas (o daemon, depois a
-    sessão no disco); quando as duas dizem "ninguém", vale o que o boot
-    restauraria — `loader.o_perfil_de_fora_do_jogo`, o «Freestyle» quando ele
-    está no disco. `""` quando nem ele está: a recusa de cada gesto continua
-    dizendo o que fazer.
+    O-MODO-FREESTYLE-02, 24/09/2026: nasceu `perfil_do_salvar` e servia só ao
+    Salvar; agora os três perguntam aqui. `perfil.nome_do_ativo` responde as
+    duas pernas: o daemon, depois o disco — e a perna do disco é a escolha dela
+    (`utils.session.a_escolha_dela`, pela `perfil_que_esta_valendo`). `""`
+    quando as duas dizem "ninguém": a recusa de cada gesto continua dizendo o
+    que fazer.
+
+    NOTA DATADA — 01/10/2026, item 10 da `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-
+    DELA`: havia uma terceira perna, o Freestyle (`loader.o_perfil_de_fora_do_
+    jogo`), quando as duas calavam. Com «sem escolha» o chip diz «—», e o
+    «Aplicar», o «Salvar» e o «Exportar» mirariam o Freestyle — e um «Aplicar»
+    que o reativasse poria o Freestyle desligado como o perfil ativo. Saiu.
 
     NUNCA LEVANTA: as dicas do rodapé perguntam o mesmo a cada tique.
     """
-    nome = perfil.nome_do_ativo(state)
-    if nome:
-        return nome
-    try:
-        perfil._com_o_src()
-        from hefesto_dualsense4unix.profiles.loader import o_perfil_de_fora_do_jogo
-
-        return o_perfil_de_fora_do_jogo() or ""
-    except Exception:
-        return ""
+    return perfil.nome_do_ativo(state)
 
 
 @gesto("*", "exportar")

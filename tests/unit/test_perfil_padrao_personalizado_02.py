@@ -214,9 +214,17 @@ async def test_o_perfil_renomeado_continua_voltando_no_boot(lar: Path) -> None:
         (perfis / ARQUIVO_DO_PADRAO).read_text(encoding="utf-8")
     )["name"] == NOME_DO_PADRAO
 
+    # NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, itens
+    # 6 e 8): o Freestyle só volta no boot com o botão aceso; apagado, a sessão
+    # que o aponta é «sem escolha». A régua liga o botão para medir o que ela
+    # mede: a renomeação não quebra o restauro.
+    from hefesto_dualsense4unix.utils.session import save_freestyle_ligado
+
+    save_freestyle_ligado(True)
     controle = FakeController()
     controle.connect()
     store = StateStore()
+    store.set_freestyle_ligado(True)
     await restore_last_profile(  # type: ignore[arg-type]
         _DaemonDeBoot(controller=controle, store=store)
     )

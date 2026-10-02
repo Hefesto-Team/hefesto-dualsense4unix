@@ -153,8 +153,13 @@ def test_activate_nao_manual_nao_grava_session(origin: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# PERFIL-03 — resolve_boot_profile (seed de migração do marker manual)
+# A escolha dela tem um dono (D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA, 01/10/2026)
 # ---------------------------------------------------------------------------
+# NOTA DATADA — 01/10/2026: estas réguas fixavam o seed do PERFIL-03, em que o
+# `active_profile.txt` vencia o `session.json` na divergência. A convergência
+# que ele esperava aconteceu, o marcador virou espelho, e `resolve_boot_profile`
+# pergunta a `a_escolha_dela`: o `session.json`, se o perfil carrega e não é o
+# Freestyle; o Freestyle, com o botão aceso; senão, nenhum.
 
 
 @pytest.fixture()
@@ -183,48 +188,6 @@ def isolated_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return config
 
 
-def test_resolve_boot_sem_nada_retorna_none(isolated_config: Path) -> None:
-    assert resolve_boot_profile() is None
-
-
-def test_resolve_boot_sem_marker_usa_session(isolated_config: Path) -> None:
-    """Sem escolha manual registrada (marker ausente), o restore não regride:
-    cai no comportamento histórico (session.json) — risco 4 do sprint doc."""
-    save_last_profile("shooter")
-    assert resolve_boot_profile() == "shooter"
-
-
-def test_resolve_boot_seed_marker_vence_session_divergente(
-    isolated_config: Path,
-) -> None:
-    """Aceite 3 do PERFIL-03: session.json='Navegação' (clobber herdado do
-    autoswitch) + active_profile.txt='vitoria' (intenção manual) → o 1º
-    restore pós-update prefere o marker."""
-    save_last_profile("Navegação")
-    save_active_marker("vitoria")
-    assert resolve_boot_profile() == "vitoria"
-
-
-def test_resolve_boot_convergidos_usa_session(isolated_config: Path) -> None:
-    """Pós-fix os dois arquivos convergem a cada gesto manual — o seed vira
-    no-op e o canônico (session.json) responde."""
-    save_last_profile("vitoria")
-    save_active_marker("vitoria")
-    assert resolve_boot_profile() == "vitoria"
-
-
-def test_resolve_boot_so_marker_usa_marker(isolated_config: Path) -> None:
-    """Marker manual presente com session.json ausente (ex.: apagado) ainda
-    restaura a intenção manual."""
-    save_active_marker("vitoria")
-    assert resolve_boot_profile() == "vitoria"
-
-
-# ---------------------------------------------------------------------------
-# PERFIL-03 — aceite 1 fim a fim: manual sobrevive ao autoswitch + boot
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture()
 def isolated_profiles(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Isola profiles_dir em tmp_path (padrão dos testes de loader)."""
@@ -240,6 +203,51 @@ def isolated_profiles(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
     monkeypatch.setattr(loader_module, "profiles_dir", fake_profiles_dir)
     return profiles
+
+
+def _perfis(*nomes: str) -> None:
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+
+    for nome in nomes:
+        save_profile(Profile(name=nome, match=MatchAny(), priority=5))
+
+
+def test_resolve_boot_sem_nada_retorna_none(isolated_config: Path) -> None:
+    assert resolve_boot_profile() is None
+
+
+def test_resolve_boot_usa_o_session_json_que_carrega(
+    isolated_config: Path, isolated_profiles: Path
+) -> None:
+    save_last_profile("shooter")
+    assert resolve_boot_profile() is None, "o perfil não está no disco: sem escolha"
+    _perfis("shooter")
+    assert resolve_boot_profile() == "shooter"
+
+
+def test_o_marcador_e_espelho_e_nao_vence_o_session_json(
+    isolated_config: Path, isolated_profiles: Path
+) -> None:
+    """O marcador divergente não decide: vale o `session.json`."""
+    _perfis("Navegação", "vitoria")
+    save_last_profile("Navegação")
+    save_active_marker("vitoria")
+    assert resolve_boot_profile() == "Navegação"
+
+
+def test_so_o_marcador_e_sem_escolha(
+    isolated_config: Path, isolated_profiles: Path
+) -> None:
+    """Sem `session.json`, o marcador sozinho não vira escolha."""
+    _perfis("vitoria")
+    save_active_marker("vitoria")
+    assert resolve_boot_profile() is None
+
+
+# ---------------------------------------------------------------------------
+# PERFIL-03 — aceite 1 fim a fim: manual sobrevive ao autoswitch + boot
+# ---------------------------------------------------------------------------
 
 
 class _BootDaemon:
@@ -303,16 +311,18 @@ async def test_aceite_boot_restaura_escolha_manual_e_nao_o_autoswitch(
 
 
 @pytest.mark.asyncio
-async def test_boot_nao_restaura_perfil_escopado_a_janela(
+async def test_boot_restaura_a_escolha_com_regra_de_janela(
     isolated_config: Path, isolated_profiles: Path
 ) -> None:
-    """RESTORE-ESCOPO-01 (22/07): perfil com match por janela/título/processo
-    NÃO volta no restore de boot — ele pertence ao autoswitch, que o ativa
-    quando a janela existir. Caso medido: marker "FPS" (regex de títulos,
-    gravado dias antes) reativado a cada boot/reconexão, pintando a lightbar
-    e suprimindo a paleta automática sem NENHUMA janela correspondente
-    aberta (e, com a detecção de janela morta, preso para sempre — o
-    AutoSwitcher não tem caminho de reversão, por design UX-01)."""
+    """A escolha dela volta no boot, com regra de janela ou sem.
+
+    NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 4):
+    a RESTORE-ESCOPO-01 (22/07) pulava todo perfil com match por janela,
+    título ou processo, e era o contrário que esta régua cobrava. No disco
+    dela isso é todo perfil que não é o Freestyle, e nenhum dos seis boots de
+    28 e 29/09 abriu no perfil que ela tinha ativado. A fala dela de 29/09
+    revogou a regra para a escolha dela.
+    """
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.profiles.loader import save_profile
@@ -326,22 +336,21 @@ async def test_boot_nao_restaura_perfil_escopado_a_janela(
             priority=60,
         )
     )
-    save_active_marker("FPS")
+    save_last_profile("FPS")
 
     fc = FakeController()
     fc.connect()
     store = StateStore()
     daemon = _BootDaemon(controller=fc, store=store)
     await restore_last_profile(daemon)  # type: ignore[arg-type]
-    # O restore PULOU o perfil de janela — nada ativado no boot.
-    assert store.active_profile is None
+    assert store.active_profile == "FPS"
 
 
 @pytest.mark.asyncio
 async def test_boot_restaura_perfil_match_any_normalmente(
     isolated_config: Path, isolated_profiles: Path
 ) -> None:
-    """Par do RESTORE-ESCOPO-01: perfil "sempre" (MatchAny) segue voltando."""
+    """Par da régua de cima: o perfil "sempre" (MatchAny) escolhido também volta."""
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.profiles.loader import save_profile
@@ -349,7 +358,7 @@ async def test_boot_restaura_perfil_match_any_normalmente(
     from hefesto_dualsense4unix.testing import FakeController
 
     save_profile(Profile(name="meu_perfil", match=MatchAny(), priority=0))
-    save_active_marker("meu_perfil")
+    save_last_profile("meu_perfil")
 
     fc = FakeController()
     fc.connect()
@@ -360,63 +369,30 @@ async def test_boot_restaura_perfil_match_any_normalmente(
 
 
 @pytest.mark.asyncio
-async def test_aceite_boot_seed_pos_update_ativa_a_intencao_manual(
+async def test_o_marcador_divergente_nao_desvia_o_boot(
     isolated_config: Path, isolated_profiles: Path
 ) -> None:
-    """Aceite 3 fim a fim: herança pré-fix (session.json='navegacao' gravado
-    pelo autoswitch antigo, marker='vitoria' manual) → o 1º boot pós-update
-    ativa 'vitoria', não 'navegacao'."""
+    """O marcador diz outro perfil, ou um que sumiu: o boot abre no `session.json`.
+
+    NOTA DATADA — 01/10/2026: no lugar do aceite 3 do PERFIL-03 (o marcador
+    vencia o `session.json` herdado do autoswitch antigo) e do fix do review de
+    16/07 (o marcador órfão caía no `session.json`, com o log
+    `last_profile_seed_marker_invalido`). O marcador virou espelho, e as duas
+    réguas viraram esta.
+    """
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
     from hefesto_dualsense4unix.daemon.state_store import StateStore
-    from hefesto_dualsense4unix.profiles.loader import save_profile
-    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
     from hefesto_dualsense4unix.testing import FakeController
 
-    for name in ("vitoria", "navegacao"):
-        save_profile(Profile(name=name, match=MatchAny(), priority=5))
-
-    save_last_profile("navegacao")  # clobber herdado da versão antiga
-    save_active_marker("vitoria")  # a última escolha MANUAL real
-
-    fc = FakeController()
-    fc.connect()
-    store = StateStore()
-    daemon = _BootDaemon(controller=fc, store=store)
-    await restore_last_profile(daemon)  # type: ignore[arg-type]
-
-    assert store.active_profile == "vitoria"
-
-
-@pytest.mark.asyncio
-async def test_boot_marker_orfao_cai_no_session_json(
-    isolated_config: Path, isolated_profiles: Path
-) -> None:
-    """Fix do review (2026-07-16, MED): o marker vence na divergência, mas
-    pode apontar perfil renomeado/apagado (sem novo gesto manual, a
-    divergência nunca se cura). O restore NÃO pode ficar sem perfil: cai no
-    session.json carregável, com o log `last_profile_seed_marker_invalido`."""
-    import structlog
-
-    from hefesto_dualsense4unix.daemon.connection import restore_last_profile
-    from hefesto_dualsense4unix.daemon.state_store import StateStore
-    from hefesto_dualsense4unix.profiles.loader import save_profile
-    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
-    from hefesto_dualsense4unix.testing import FakeController
-
-    save_profile(Profile(name="navegacao", match=MatchAny(), priority=5))
-    save_last_profile("navegacao")
-    save_active_marker("vitoria")  # órfão: o perfil foi renomeado/apagado
-
-    fc = FakeController()
-    fc.connect()
-    store = StateStore()
-    daemon = _BootDaemon(controller=fc, store=store)
-    with structlog.testing.capture_logs() as captured:
-        await restore_last_profile(daemon)  # type: ignore[arg-type]
-
-    assert store.active_profile == "navegacao"
-    eventos = [rec.get("event") for rec in captured]
-    assert "last_profile_seed_marker_invalido" in eventos
+    _perfis("vitoria", "navegacao")
+    for marcador in ("vitoria", "sumiu"):
+        save_last_profile("navegacao")
+        save_active_marker(marcador)
+        fc = FakeController()
+        fc.connect()
+        store = StateStore()
+        await restore_last_profile(_BootDaemon(controller=fc, store=store))  # type: ignore[arg-type]
+        assert store.active_profile == "navegacao", marcador
 
 
 @pytest.mark.asyncio

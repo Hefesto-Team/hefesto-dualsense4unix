@@ -1,26 +1,24 @@
-"""EMPATE-01 (E2) — a coluna "Quando usar" diz que HÁ disputa e quem ganha.
+"""EMPATE-01 (E2) — a coluna "Quando usar" nunca anuncia um vencedor que o gerente não elege.
 
 Medido no disco dela em 31/07/2026: QUATRO perfis dizem "Sempre" ao mesmo
 tempo (`fallback` prio 0, `vitoria` prio 0, `meu_perfil` prio 1 e `Pragmata`
 prio 5). A coluna escrevia a MESMA palavra nas quatro linhas, um deles vencia
-e nada na tela dizia qual, nem por quê. É o mecanismo direto da queixa mais
-antiga da casa, *"a config que eu deixo nunca é respeitada"*.
+e nada na tela dizia qual, nem por quê. A cura de então fez a coluna dizer a
+disputa e o vencedor, espelhando o `ProfileManager`.
 
-Este arquivo trava as duas metades:
+NOTA DATADA — 01/10/2026, `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 5: o
+`match any` saiu da seleção automática — nenhum «Sempre» entra sozinho, e numa
+janela que regra nenhuma casa vale a escolha dela. A disputa ACABOU, e o
+contrato desta régua continua o mesmo, com a resposta nova: o vencedor que a
+coluna anuncia é o que o gerente elege — e o gerente não elege nenhum «Sempre»,
+então a coluna não anuncia nenhum. O tooltip da disputa ficou vazio.
 
-- que a frase da coluna NÃO INVENTE critério — o vencedor anunciado tem de ser
-  o mesmo que o `ProfileManager` de verdade elege, e há um teste que confronta
-  os dois lado a lado, com os perfis montados aqui;
-- que ela não passe a mentir no caso simples: com um catch-all só (o usuário
-  recém-instalado, com o `fallback` sozinho) a palavra continua sendo "Sempre",
-  sem disputa nenhuma pendurada.
-
-Sem GTK de propósito: `rotulo_quando_usar`, `perfis_em_disputa` e
-`vencedor_da_disputa` são funções puras justamente para o contrato de texto
-ficar testável no CI headless. A fiação do ListStore (a 5ª coluna do tooltip)
-é o único ponto que exige widget, e vive em `TestFiacaoDaColuna`, atrás do
-`exigir_gi_real` do módulo — que roda no topo, antes de qualquer import de
-`gi`, pela regra GUARDA-GI-REAL-01.
+Sem GTK de propósito: `rotulo_quando_usar` e `explicacao_da_disputa` são
+funções puras justamente para o contrato de texto ficar testável no CI
+headless. A fiação do ListStore (a 5ª coluna do tooltip) é o único ponto que
+exige widget, e vive em `TestFiacaoDaColuna`, atrás do `exigir_gi_real` do
+módulo — que roda no topo, antes de qualquer import de `gi`, pela regra
+GUARDA-GI-REAL-01.
 """
 from __future__ import annotations
 
@@ -36,9 +34,7 @@ from hefesto_dualsense4unix.app.actions.profiles_actions import (
     LABEL_SO_MANUAL,
     ProfilesActionsMixin,
     explicacao_da_disputa,
-    perfis_em_disputa,
     rotulo_quando_usar,
-    vencedor_da_disputa,
 )
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import (
@@ -72,44 +68,19 @@ def _mesa_dela() -> list[Profile]:
     ]
 
 
-class TestQuemDisputa:
-    def test_so_o_sempre_entra_na_disputa(self) -> None:
-        """`MatchCriteria` vazio é catch-all para o manager e NÃO disputa.
-
-        `MatchCriteria.matches` devolve False sem condição alguma — o perfil
-        nunca vira candidato. Contá-lo inflaria o número anunciado com quem não
-        disputa nada, e a coluna já o chama de `LABEL_SO_MANUAL`.
-        """
-        perfis = [
-            _catch_all("fallback", 0),
-            _perfil("vazio", 50, MatchCriteria()),
-            _perfil("manual", 50, MatchManual()),
-            _catch_all("vitoria", 0),
-        ]
-        assert [p.name for p in perfis_em_disputa(perfis)] == ["fallback", "vitoria"]
-
-    def test_o_pragmata2_saiu_da_disputa_nesta_madrugada(self) -> None:
-        """Regra de jogo não disputa com catch-all — a medição de hoje."""
-        nomes = [p.name for p in perfis_em_disputa(_mesa_dela())]
-        assert nomes == ["fallback", "meu_perfil", "Pragmata", "vitoria"]
-        assert "Pragmata2" not in nomes
-
-
 class TestOTextoDaColuna:
-    def test_quatro_disputam_e_a_coluna_diz_quem_ganha(self) -> None:
-        perfis = _mesa_dela()
-        rotulos = {p.name: rotulo_quando_usar(p, perfis, "Pragmata2") for p in perfis}
-        assert rotulos["Pragmata"] == "Sempre — 4 disputam, este vence"
-        for perdedor in ("fallback", "meu_perfil", "vitoria"):
-            assert rotulos[perdedor] == "Sempre — 4 disputam, vence Pragmata"
+    def test_nenhum_sempre_anuncia_disputa(self) -> None:
+        """Os quatro «Sempre» da mesa dela dizem só «Sempre»: ninguém vence sozinho.
 
-    def test_a_coluna_nao_para_mais_em_sempre(self) -> None:
-        """A mordida direta: nenhum dos quatro pode dizer só "Sempre"."""
+        MORDIDA: devolva a frase da disputa (`rotulo_quando_usar` com o
+        «N disputam, este vence») e este caso reprova nos quatro.
+        """
         perfis = _mesa_dela()
-        for perfil in perfis_em_disputa(perfis):
-            assert rotulo_quando_usar(perfil, perfis, None) != "Sempre"
+        for perfil in perfis:
+            if perfil.match.type == "any":
+                assert rotulo_quando_usar(perfil, perfis, "Pragmata2") == "Sempre"
 
-    def test_um_catch_all_sozinho_nao_inventa_disputa(self) -> None:
+    def test_um_catch_all_sozinho_continua_sempre(self) -> None:
         """Recém-instalado: só o `fallback` no disco. Nada a explicar."""
         perfis = [
             _catch_all("fallback", 0),
@@ -131,7 +102,7 @@ class TestOTextoDaColuna:
         assert rotulo_quando_usar(por_nome["manual"], perfis, None) == LABEL_SO_MANUAL
 
 
-class TestODesempateEspelhaOManager:
+class TestAColunaEspelhaOManager:
     """O ponto que impede a tela de mentir: o vencedor é o do `ProfileManager`."""
 
     @staticmethod
@@ -147,90 +118,42 @@ class TestODesempateEspelhaOManager:
             active_profile = incumbente
 
         gerente = ProfileManager(controller=None, store=_Store())
-        # Janela de DESKTOP: nenhuma regra específica casa, então só os
-        # catch-all viram candidatos — é exatamente a situação que a coluna
-        # descreve.
         escolhido, _motivo = gerente.select_for_window_ex(
             {"wm_class": "nautilus", "wm_name": "Pastas", "exe_basename": "nautilus"}
         )
         return None if escolhido is None else escolhido.name
 
-    def test_maior_prioridade_vence_e_a_coluna_concorda(
-        self, monkeypatch: pytest.MonkeyPatch
+    @pytest.mark.parametrize("incumbente", ["Pragmata2", "vitoria", None])
+    def test_o_manager_nao_elege_sempre_e_a_coluna_nao_anuncia(
+        self, monkeypatch: pytest.MonkeyPatch, incumbente: str | None
     ) -> None:
+        """Janela de desktop sem regra: o gerente não elege ninguém, a coluna também.
+
+        MORDIDA: devolva o `match any` à seleção automática
+        (`select_for_window_ex`) e o gerente elege o `Pragmata` — a coluna, que
+        não anuncia ninguém, deixa de espelhá-lo.
+        """
         perfis = _mesa_dela()
-        real = self._quem_o_manager_escolhe(perfis, "Pragmata2", monkeypatch)
+        real = self._quem_o_manager_escolhe(perfis, incumbente, monkeypatch)
         anunciado = [
-            p.name
-            for p in perfis_em_disputa(perfis)
-            if "este vence" in rotulo_quando_usar(p, perfis, "Pragmata2")
+            p.name for p in perfis
+            if "vence" in rotulo_quando_usar(p, perfis, incumbente)
         ]
-        assert real == "Pragmata"
-        assert anunciado == [real]
-
-    def test_no_empate_quem_ja_esta_ativo_continua_e_a_coluna_concorda(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Terceiro termo do desempate: o INCUMBENTE (manager.py:688-695)."""
-        perfis = [_catch_all("aaa", 7), _catch_all("zzz", 7)]
-        real = self._quem_o_manager_escolhe(perfis, "zzz", monkeypatch)
-        assert real == "zzz"
-        assert vencedor_da_disputa(perfis, "zzz").name == "zzz"
-        assert rotulo_quando_usar(perfis[1], perfis, "zzz") == (
-            "Sempre — 2 disputam, este vence"
-        )
-        assert rotulo_quando_usar(perfis[0], perfis, "zzz") == (
-            "Sempre — 2 disputam, vence zzz"
-        )
-
-    def test_sem_incumbente_o_empate_cai_na_ordem_do_arquivo(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Sem incumbente entre os empatados, vence o primeiro da ordem de carga.
-
-        Não é critério de ninguém — é o `sorted(glob)` do loader —, e por isso
-        mesmo a tela tem de anunciar o MESMO acidente que o daemon comete.
-        """
-        perfis = [_catch_all("aaa", 7), _catch_all("zzz", 7)]
-        real = self._quem_o_manager_escolhe(perfis, "Pragmata2", monkeypatch)
-        assert real == "aaa"
-        assert vencedor_da_disputa(perfis, "Pragmata2").name == "aaa"
-
-    def test_o_incumbente_e_comparado_por_slug_como_no_manager(self) -> None:
-        """`_refers_same_profile` compara slugs — "Navegacao" é "Navegação"."""
-        perfis = [_catch_all("aaa", 7), _catch_all("Navegação", 7)]
-        assert vencedor_da_disputa(perfis, "Navegacao").name == "Navegação"
+        assert real is None
+        assert anunciado == []
 
 
-class TestOTooltipDizOPrecoInteiro:
-    def test_lista_os_disputantes_o_vencedor_e_a_ordem_do_desempate(self) -> None:
+class TestOTooltip:
+    def test_o_sempre_nao_tem_mais_tooltip(self) -> None:
+        """A frase «é o que entra quando nenhuma regra específica casa» saiu."""
         perfis = _mesa_dela()
-        texto = explicacao_da_disputa(perfis[0], perfis, "Pragmata2")
-        assert "4 perfis" in texto
-        for nome in ("fallback", "meu_perfil", "Pragmata", "vitoria"):
-            assert nome in texto
-        assert "prioridade 5" in texto
-        # As três regras do desempate, em palavras.
-        assert "regra própria" in texto
-        assert "maior prioridade" in texto
-        assert "já estava ativo" in texto
-
-    def test_diz_que_dentro_do_jogo_nenhum_deles_entra(self) -> None:
-        """Verdade dos DOIS ramos do manager, e a tela não pode omiti-la.
-
-        Em janela de jogo: ou todos os candidatos são catch-all e o veto R-21
-        recusa trocar (`manager.py:620-630`), ou existe um perfil com regra
-        própria — e aí ele ganha de qualquer "Sempre" pelo PRIMEIRO termo da
-        chave (`not e_catch_all`, `manager.py:640`).
-        """
-        perfis = _mesa_dela()
-        texto = explicacao_da_disputa(perfis[0], perfis, "Pragmata2")
-        assert "jogo" in texto
+        for perfil in perfis:
+            assert explicacao_da_disputa(perfil, perfis, "Pragmata2") == ""
 
     def test_o_veto_do_jogo_realmente_acontece(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A frase acima é medida, não retórica."""
+        """Dentro de um jogo sem regra própria, nenhum «Sempre» entra."""
         perfis = _mesa_dela()
         monkeypatch.setattr(
             "hefesto_dualsense4unix.profiles.manager.load_all_profiles",
@@ -246,11 +169,6 @@ class TestOTooltipDizOPrecoInteiro:
         )
         assert escolhido is None
         assert motivo == "jogo_sem_perfil_proprio"
-
-    def test_quem_nao_e_sempre_nao_tem_tooltip(self) -> None:
-        perfis = _mesa_dela()
-        regra = next(p for p in perfis if p.name == "Pragmata2")
-        assert explicacao_da_disputa(regra, perfis, None) == ""
 
 
 class TestFiacaoDaColuna:
@@ -284,33 +202,23 @@ class TestFiacaoDaColuna:
 
         return _Stub()
 
-    def test_o_store_recebe_a_disputa_e_o_tooltip(self) -> None:
+    def test_o_store_recebe_a_frase_e_o_tooltip(self) -> None:
         stub = self._stub()
         perfis = _mesa_dela()
         stub._active_profile_hint = "Pragmata2"
         stub._populate_profiles_store(perfis, None)
         linhas = {linha[0]: (linha[2], linha[4]) for linha in stub._profiles_store}
-        assert linhas["Pragmata"][0] == "Sempre — 4 disputam, este vence"
-        assert linhas["vitoria"][0] == "Sempre — 4 disputam, vence Pragmata"
-        assert "prioridade 5" in linhas["vitoria"][1]
-        # Quem não é "Sempre" não ganha tooltip nenhum.
+        assert linhas["Pragmata"] == ("Sempre", "")
+        assert linhas["vitoria"] == ("Sempre", "")
         assert linhas["Pragmata2"] == ("Só neste programa", "")
 
-    def test_trocar_de_perfil_ativo_recalcula_a_disputa_in_place(self) -> None:
-        """O ativo É o incumbente: mudar de perfil pode mudar o vencedor.
-
-        Sem este recálculo o negrito andaria e a frase ficaria congelada na
-        disputa do perfil anterior — a tela diria dois donos ao mesmo tempo.
-        """
+    def test_trocar_de_perfil_ativo_nao_inventa_vencedor(self) -> None:
+        """Trocar o ativo não faz nenhum «Sempre» virar o vencedor da coluna."""
         stub = self._stub()
         perfis = [_catch_all("aaa", 7), _catch_all("zzz", 7)]
         stub._profiles_cache = list(perfis)
         stub._active_profile_hint = "aaa"
         stub._populate_profiles_store(perfis, None)
-        antes = {linha[0]: linha[2] for linha in stub._profiles_store}
-        assert antes["aaa"] == "Sempre — 2 disputam, este vence"
-
         stub._mark_active_profile_row("zzz")
         depois = {linha[0]: linha[2] for linha in stub._profiles_store}
-        assert depois["zzz"] == "Sempre — 2 disputam, este vence"
-        assert depois["aaa"] == "Sempre — 2 disputam, vence zzz"
+        assert depois == {"aaa": "Sempre", "zzz": "Sempre"}

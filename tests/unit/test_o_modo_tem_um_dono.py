@@ -426,14 +426,25 @@ def _lar(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> Any:
     return casa
 
 
+#: O perfil que ela ativou à mão, fora de jogo: o que o boot restaura.
+#:
+#: NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`): estas
+#: réguas usavam o Freestyle como o perfil de fora do jogo que o boot restaura,
+#: e o ativavam pela origem `autoswitch`. O Freestyle desligado não vale em
+#: lugar nenhum desde então, e o boot restaura a escolha dela; o que as réguas
+#: medem (o modo do primeiro pad, a máscara que entra junto) não muda.
+DE_FORA = "Desktop Dela"
+
+
 @pytest.fixture
 def _lar_do_boot(monkeypatch: pytest.MonkeyPatch, _lar: Any) -> Iterator[list[Any]]:
-    """O lar de mentira com o Freestyle em Xbox e a emulação ligada no disco."""
+    """O lar de mentira com a escolha dela em Xbox e a emulação ligada no disco."""
     monkeypatch.setattr(session, "load_gamepad_preference", _PREFERENCIA_REAL)
     _SALVAR_EMULACAO_REAL(True, "dualsense")
+    session.save_last_profile(DE_FORA)
     loader.save_profile(
         Profile(
-            name=loader.NOME_DO_PADRAO,
+            name=DE_FORA,
             match=MatchAny(),
             mode=ProfileModeConfig(kind="gamepad", caminho="xbox"),
         ),
@@ -459,9 +470,11 @@ def _config_do_boot() -> lifecycle.DaemonConfig:
     )
 
 
-async def _o_boot(*, com_foco: bool, controle: Any = None) -> lifecycle.Daemon:
-    """Sobe o `Daemon` REAL até o restore, e (com foco) ativa o Freestyle como o
-    autoswitch ativa: com o `apply_profile_mode` do daemon como applier."""
+async def _o_boot(
+    *, com_foco: bool, controle: Any = None, nome: str = DE_FORA
+) -> lifecycle.Daemon:
+    """Sobe o `Daemon` REAL até o restore, e (com foco) ativa a escolha dela como
+    o autoswitch ativa: com o `apply_profile_mode` do daemon como applier."""
     store = StateStore()
     estado = ControllerState(
         battery_pct=80, l2_raw=0, r2_raw=0, connected=True,
@@ -474,15 +487,15 @@ async def _o_boot(*, com_foco: bool, controle: Any = None) -> lifecycle.Daemon:
     corrida = asyncio.create_task(daemon.run())
     try:
         for _ in range(600):
-            if store.active_profile == loader.NOME_DO_PADRAO and store.counter("poll.tick"):
+            if store.active_profile == nome and store.counter("poll.tick"):
                 break
             await asyncio.sleep(0.01)
-        assert store.active_profile == loader.NOME_DO_PADRAO, "o boot não restaurou o Freestyle"
+        assert store.active_profile == nome, f"o boot não restaurou a escolha dela ({nome!r})"
         if com_foco:
             from hefesto_dualsense4unix.profiles.manager import gerente_do_daemon
 
             gerente_do_daemon(daemon, store=store).activate(
-                loader.NOME_DO_PADRAO, origin="autoswitch"
+                nome, origin="autoswitch"
             )
     finally:
         daemon.stop()
@@ -494,7 +507,7 @@ async def _o_boot(*, com_foco: bool, controle: Any = None) -> lifecycle.Daemon:
 def test_o_boot_nasce_no_modo_do_perfil_uma_vez(
     com_foco: bool, _lar_do_boot: list[Any]
 ) -> None:
-    """Freestyle em Xbox: o pad do P1 nasce em Xbox no boot, e nasce UMA vez.
+    """A escolha dela em Xbox: o pad do P1 nasce em Xbox no boot, e nasce UMA vez.
 
     MORDE: tire do boot o caminho do perfil (o `_start_gamepad_emulation` volta
     a subir sem caminho) — sem foco o modo fica DualSense, e com foco o
@@ -510,7 +523,7 @@ def test_o_boot_nasce_no_modo_do_perfil_uma_vez(
     assert len(_lar_do_boot) == 1, "o P1 nasceu mais de uma vez"
     assert vp.caminho_do_vpad(_lar_do_boot[0]) == "xbox"
     assert gp.caminho_da_sessao(daemon) == "xbox", "o dono da sessão não diz o modo do perfil"
-    assert {"event": "modo_do_boot_pelo_perfil", "perfil": "Freestyle", "caminho": "xbox"} in [
+    assert {"event": "modo_do_boot_pelo_perfil", "perfil": DE_FORA, "caminho": "xbox"} in [
         {k: r.get(k) for k in ("event", "perfil", "caminho")} for r in diario
     ]
 
@@ -518,9 +531,9 @@ def test_o_boot_nasce_no_modo_do_perfil_uma_vez(
 def test_sem_perfil_que_opine_o_boot_e_o_de_sempre(
     _lar_do_boot: list[Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """O Freestyle sem `mode`: o pad nasce pela máscara (DualSense), e o slot vazio."""
+    """A escolha dela sem `mode`: o pad nasce pela máscara (DualSense), e o slot vazio."""
     loader.save_profile(
-        Profile(name=loader.NOME_DO_PADRAO, match=MatchAny()), origem="teste"
+        Profile(name=DE_FORA, match=MatchAny()), origem="teste"
     )
     with structlog.testing.capture_logs() as diario:
         daemon = asyncio.run(_o_boot(com_foco=False))
@@ -533,7 +546,7 @@ def test_sem_perfil_que_opine_o_boot_e_o_de_sempre(
 def test_o_boot_veste_a_mascara_do_perfil_uma_vez(
     com_foco: bool, _lar_do_boot: list[Any]
 ) -> None:
-    """Freestyle em Xbox COM a máscara Xbox: o P1 nasce vestido, e nasce uma vez.
+    """A escolha dela em Xbox COM a máscara Xbox: o P1 nasce vestido, e nasce uma vez.
 
     O modo do perfil é o caminho E a máscara (`mode.gamepad_flavor`). Conferência
     de 28/09: nenhuma régua olhava a máscara do boot.
@@ -544,7 +557,7 @@ def test_o_boot_veste_a_mascara_do_perfil_uma_vez(
     """
     loader.save_profile(
         Profile(
-            name=loader.NOME_DO_PADRAO,
+            name=DE_FORA,
             match=MatchAny(),
             mode=ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox", caminho="xbox"),
         ),
@@ -561,23 +574,22 @@ def test_o_boot_veste_a_mascara_do_perfil_uma_vez(
     assert len(_lar_do_boot) == 1 and _lar_do_boot[0].flavor == "xbox"
 
 
-def test_a_sessao_de_janela_nao_empresta_o_modo_ao_boot(
+def test_o_boot_restaura_a_escolha_de_janela_e_nasce_no_modo_dela(
     _lar_do_boot: list[Any],
 ) -> None:
-    """O marker aponta um perfil de janela; o `session.json`, outro perfil em Xbox.
+    """A escolha dela é um perfil com regra de janela, em Xbox; o marcador, outro.
 
-    O restore pula o de janela e vai direto ao Freestyle (RESTORE-ESCOPO-01 e
-    O-MODO-FREESTYLE-03) — nunca tenta o `session.json`. O boot tem de ler o
-    mesmo perfil que o restore ativa: o pad nasce no modo do Freestyle (sem
-    opinião: DualSense), e não no Xbox de um perfil que ninguém ativou.
+    NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 4):
+    esta régua cobrava o contrário — o restore pulava o perfil de janela
+    (RESTORE-ESCOPO-01) e o pad nascia no modo do Freestyle. A escolha dela
+    volta com regra de janela ou sem, e o marcador é espelho: o boot lê o
+    MESMO perfil que o restore ativa, e o pad nasce no Xbox dele.
 
-    MORDE: faça o boot tentar o `session.json` depois do perfil de janela (a
-    lista de candidatos de antes da conferência de 28/09) — o P1 nasce Xbox com
-    a tela dizendo «Freestyle».
+    MORDE: faça o boot ler o marcador (o `resolve_boot_profile` de antes) — o
+    P1 nasce DualSense, no modo do «Outro».
     """
     from hefesto_dualsense4unix.profiles.schema import MatchCriteria
 
-    loader.save_profile(Profile(name=loader.NOME_DO_PADRAO, match=MatchAny()), origem="teste")
     loader.save_profile(
         Profile(
             name="Jogo de janela",
@@ -586,33 +598,27 @@ def test_a_sessao_de_janela_nao_empresta_o_modo_ao_boot(
         ),
         origem="teste",
     )
-    loader.save_profile(
-        Profile(
-            name="Outro",
-            match=MatchAny(),
-            mode=ProfileModeConfig(kind="gamepad", caminho="xbox"),
-        ),
-        origem="teste",
-    )
-    session.save_last_profile("Outro")
-    session.save_active_marker("Jogo de janela")
-    assert session.resolve_boot_profile() == "Jogo de janela", "premissa: o marker vence"
-
+    loader.save_profile(Profile(name="Outro", match=MatchAny()), origem="teste")
+    session.save_last_profile("Jogo de janela")
+    session.save_active_marker("Outro")
+    assert session.resolve_boot_profile() == "Jogo de janela", "premissa: a escolha dela"
     with structlog.testing.capture_logs() as diario:
-        daemon = asyncio.run(_o_boot(com_foco=False))
+        daemon = asyncio.run(_o_boot(com_foco=False, nome="Jogo de janela"))
 
     partidas = [r.get("caminho") for r in diario if r["event"] == "gamepad_emulation_started"]
-    assert partidas == ["dualsense"], (
-        f"o boot vestiu o modo de um perfil que o restore não ativou: {partidas}"
+    assert partidas == ["xbox"], (
+        f"o boot não nasceu no modo do perfil que o restore ativou: {partidas}"
     )
-    assert gp.caminho_da_sessao(daemon) is None
+    assert gp.caminho_da_sessao(daemon) == "xbox"
 
 
 # ---------------------------------------------------------------------------
 # Item 2 — o perfil que entra aplica o modo E a máscara, na mesma ativação
 # ---------------------------------------------------------------------------
 # G3 (a sessão dela, 27/09 23h38): o Future Knight abriu com o modo Xbox já de
-# pé, e o P1 e o P3 ficaram com a máscara DualSense do Freestyle. A ativação
+# pé, e o P1 e o P3 ficaram com a máscara DualSense do Freestyle. (Desde
+# 01/10/2026 o perfil de antes é a escolha dela, `DE_FORA`: o Freestyle
+# desligado não entra por origem automática.) A ativação
 # aplicava o `mode` ANTES das máscaras por controle: o pedido do P1 comparava a
 # máscara com o cartão do perfil ANTERIOR (`ja_estava`), e o cartão novo só
 # chegava ao registro depois, sem ninguém para vestir o P1 — o juiz das máscaras
@@ -624,7 +630,7 @@ def _perfis_do_g3() -> None:
 
     loader.save_profile(
         Profile(
-            name="Freestyle",
+            name=DE_FORA,
             match=MatchAny(),
             mode=ProfileModeConfig(kind="gamepad", caminho="xbox"),
             controllers={P1: ControllerOverrides(mascara="dualsense")},
@@ -663,7 +669,7 @@ def test_o_perfil_que_entra_veste_o_p1_na_mesma_ativacao(
     """
     _perfis_do_g3()
     daemon, gerente = _daemon_do_g3()
-    gerente.activate("Freestyle", origin="autoswitch")
+    gerente.activate(DE_FORA, origin="autoswitch")
     assert daemon._gamepad_device is not None
     assert (daemon._gamepad_device.flavor, vp.caminho_do_vpad(daemon._gamepad_device)) == (
         "dualsense", "xbox"), "premissa: o Freestyle veste o P1 de DualSense no Xbox"
@@ -700,7 +706,7 @@ def test_o_perfil_sem_caminho_nao_herda_o_xbox_do_anterior(
     """
     loader.save_profile(
         Profile(
-            name="Freestyle",
+            name=DE_FORA,
             match=MatchAny(),
             mode=ProfileModeConfig(kind="gamepad", caminho="xbox"),
         ),
@@ -715,7 +721,7 @@ def test_o_perfil_sem_caminho_nao_herda_o_xbox_do_anterior(
         origem="teste",
     )
     daemon, gerente = _daemon_do_g3()
-    gerente.activate("Freestyle", origin="autoswitch")
+    gerente.activate(DE_FORA, origin="autoswitch")
     assert gp.caminho_da_sessao(daemon) == "xbox", "premissa: o Freestyle pôs o Xbox"
 
     gerente.activate("Jogo sem caminho", origin=origem)
@@ -754,7 +760,7 @@ def test_o_arme_com_o_modo_ja_de_pe_veste_a_mascara_do_jogo(
 
     _perfis_do_g3()
     daemon, gerente = _daemon_do_g3()
-    gerente.activate("Freestyle", origin="autoswitch")
+    gerente.activate(DE_FORA, origin="autoswitch")
     assert daemon._gamepad_device is not None
     assert daemon._gamepad_device.flavor == "dualsense", "premissa: o cartão do Freestyle"
     perfil = loader.load_profile("Future Knight")

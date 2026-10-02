@@ -177,6 +177,20 @@ def test_autoswitch_ativa_com_origin_autoswitch() -> None:
 # ---------------------------------------------------------------------------
 
 
+def _no_disco(*nomes: str) -> None:
+    """Os perfis no disco isolado: a escolha dela só vale se o perfil abre.
+
+    Desde 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 1) o dono
+    (`utils.session.a_escolha_dela`) confere que o nome abre um perfil; um nome
+    sem arquivo é «sem escolha».
+    """
+    from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+
+    for nome in nomes:
+        loader.save_profile(Profile(name=nome, match=MatchAny()), origem="régua")
+
+
 class _BootDaemon:
     def __init__(self) -> None:
         self.controller = MagicMock()
@@ -195,6 +209,7 @@ async def test_restore_de_boot_ativa_com_origin_system(
 ) -> None:
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
 
+    _no_disco("vitoria")
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.load_last_profile",
         lambda: "vitoria",
@@ -210,14 +225,21 @@ async def test_restore_de_boot_ativa_com_origin_system(
 
 
 @pytest.mark.asyncio
-async def test_restore_de_boot_prefere_o_marker_manual_divergente(
+async def test_restore_de_boot_le_a_sessao_e_o_marcador_e_so_espelho(
     monkeypatch: pytest.MonkeyPatch,
     recording_manager: type[_RecordingManager],
 ) -> None:
-    """Seed de migração fiado no boot: session.json herdado do clobber do
-    autoswitch ('Navegação') + marker manual ('vitoria') → ativa 'vitoria'."""
+    """O marcador divergente não desvia o boot: a escolha é a do `session.json`.
+
+    NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 1):
+    esta régua era `test_restore_de_boot_prefere_o_marker_manual_divergente`,
+    o seed de julho (PERFIL-03) que dava ao marcador a vitória na divergência.
+    A convergência que ele esperava aconteceu, e o marcador virou espelho: o
+    único escritor dos dois é `utils.session.gravar_a_escolha`.
+    """
     from hefesto_dualsense4unix.daemon.connection import restore_last_profile
 
+    _no_disco("Navegação", "vitoria")
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.load_last_profile",
         lambda: "Navegação",
@@ -229,7 +251,7 @@ async def test_restore_de_boot_prefere_o_marker_manual_divergente(
 
     await restore_last_profile(_BootDaemon())  # type: ignore[arg-type]
 
-    assert recording_manager.activations == [("vitoria", "system")]
+    assert recording_manager.activations == [("Navegação", "system")]
 
 
 # ---------------------------------------------------------------------------
@@ -274,6 +296,7 @@ def test_saida_do_nativo_sem_ativo_cai_no_session(
     nativo), o session.json ainda responde."""
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon
 
+    _no_disco("ultima_manual")
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.load_last_profile",
         lambda: "ultima_manual",

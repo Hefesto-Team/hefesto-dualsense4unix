@@ -744,11 +744,18 @@ def o_personalizado_vira_freestyle(dest_dir: Path | None = None) -> Path | None:
 def o_perfil_de_fora_do_jogo() -> str | None:
     """O nome do «Freestyle» quando ele está no disco; `None` quando não.
 
-    É o que o boot restaura quando ela nunca ativou um perfil na mão
-    (`connection.restore_last_profile`): numa máquina nova a sessão está vazia,
-    e sem isto o boot ficaria sem perfil até o autoswitch achar uma janela — e
-    com o Modo Freestyle ligado, ou sem leitor de janela, não acharia nunca.
-    Pergunta ao disco depois da semeadura, que é quem o põe lá.
+    Pergunta ao disco depois da semeadura, que é quem o põe lá — e que, na
+    máquina nova, acende o botão (`utils.session.migrar_a_escolha_dela`). Quem
+    pergunta é o restauro do boot, para não segurar o Modo Freestyle ligado
+    sem o arquivo dele, e o boot do daemon, para a semeadura rodar antes de a
+    memória ler o botão.
+
+    NOTA DATADA — 01/10/2026, `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`: o nome
+    diz o que o Freestyle ERA — o perfil de fora do jogo, que o boot restaurava
+    quando a sessão estava vazia ou apontava um perfil de janela. A fala dela
+    de 29/09 revogou isso: o Freestyle desligado não vale em lugar nenhum, e
+    fora do jogo vale a escolha dela. O nome fica porque réguas de outras
+    sprints o chamam.
     """
     _maybe_seed_presets()
     with contextlib.suppress(Exception):
@@ -1548,6 +1555,14 @@ def _maybe_seed_presets() -> None:
         # que numa máquina nova entrega o asset de hoje.
         with contextlib.suppress(Exception):
             o_freestyle_de_fabrica_nasce_ligado()
+        # D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA, itens 7 e 8: DEPOIS das duas
+        # renomeações, que podem ter acabado de escrever o Freestyle na sessão.
+        # A máquina nova nasce com o botão aceso; a sessão que apontava o
+        # Freestyle desligado vira «sem escolha». One-shot, com marca.
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.utils.session import migrar_a_escolha_dela
+
+            migrar_a_escolha_dela()
         seed_default_presets()
         # MASCARA-QUE-GRUDA-01 (22/08/2026): aqui rodava a
         # `migrate_game_presets_to_xbox`. Nenhuma migração escreve máscara em

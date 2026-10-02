@@ -103,9 +103,9 @@ def nome_do_ativo(state: Any = None) -> str:
     continuariam cegas.
 
     O DONO DA PERGUNTA É `profiles_actions.perfil_que_esta_valendo` (§P1), e
-    ele resolve em DUAS pernas: o daemon primeiro, o marcador em disco depois
-    (`session.json` + `active_profile.txt`, o mesmo caminho do boot). O
-    ``state.get("active_profile")`` CRU só tem a primeira.
+    ele resolve em DUAS pernas: o daemon primeiro, a escolha dela no disco
+    depois (`utils.session.a_escolha_dela`, o mesmo dono que o boot pergunta).
+    O ``state.get("active_profile")`` CRU só tem a primeira.
 
     O QUE ISSO CURA, MEDIDO em 06/09/2026 com um perfil no disco e o daemon
     respondendo ``active_profile: null`` — que é o estado da máquina dela
@@ -372,6 +372,14 @@ def lista() -> list[dict[str, Any]]:
 def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
     """Grava o perfil em disco e, se ele for o ATIVO, manda o daemon reaplicá-lo.
 
+    O REAPLICAR É O `profile.reaplicar` (01/10/2026,
+    O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-DIZ-A-VERDADE-01, item 9 da
+    cura): era o `profile.switch`, que é a ativação À MÃO — a cada clique que
+    grava, o perfil que vale virava a escolha dela, e com um perfil de jogo
+    posto pelo autoswitch ela passava a abrir o Hefesto naquele jogo. O
+    `profile.reaplicar` roda a mesma cadeia da ativação sem gravar a escolha
+    (O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01).
+
     OS TRÊS TEMPOS, e a ordem importa: disco, reaplicar, avisar a antecipação de
     lançamento. Gravar sem reaplicar deixa a tela dizendo uma coisa e o aparelho
     fazendo outra até a próxima troca de perfil.
@@ -447,7 +455,7 @@ def gravar_e_reaplicar(prof: Any, ctx: Any, p: Any, *, era: str = "") -> None:
     loader.save_profile(prof, origem="interface-nova")
     ativo_agora = perfil_que_esta_valendo(getattr(ctx, "state", None)).nome or ""
     if ativo_agora and mesmo_slug(ativo_agora, era or prof.name):
-        p.profile_switch(prof.name)
+        p.profile_reaplicar(prof.name)
     # A ANTECIPAÇÃO DE LANÇAMENTO relê o que os jogos vão receber. Sem ela, o
     # perfil novo só chega ao jogo no próximo start do daemon.
     p.chamar("launch_env.refresh")

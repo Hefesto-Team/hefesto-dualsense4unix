@@ -11,7 +11,9 @@ Auto-switch por janela ativa fica em `hefesto_dualsense4unix.profiles.autoswitch
 """
 from __future__ import annotations
 
-from collections.abc import Callable
+import contextlib
+import math
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -152,21 +154,32 @@ _RESULTADO_PARA_RELATORIO: dict[str, str] = {
 # a recusa dentro do `activate` é o que garante que um caminho novo, que
 # esqueça de perguntar, também não passa por cima.
 #
-# O GESTO DELA É O ÚNICO QUE MUDA ISSO, e o gesto é a TROCA: ativar à mão o
-# Freestyle vindo de outro perfil o liga, e ativar à mão outro perfil o desliga.
-# O botão «Modo Freestyle» e o «Ativar» da aba Perfis são o mesmo gesto.
+# O GESTO DELA É O ÚNICO QUE MUDA ISSO: ativar à mão o Freestyle o liga SEMPRE,
+# e ativar à mão outro perfil o desliga. O botão «Modo Freestyle» e o «Ativar»
+# da aba Perfis são o mesmo gesto.
 #
-# REATIVAR O PERFIL QUE JÁ VALE NÃO MUDA O MODO (conferência de 28/09/2026). As
-# abas reativam o perfil ativo a cada clique que grava
-# (`interface/pacotes/perfil.gravar_e_reaplicar` → `profile.switch`, com a
-# origem `manual`): sem esta metade, o Freestyle desligado de fora do jogo — o
-# perfil que vale no desktop, desde o boot — se ligava sozinho no primeiro
-# ajuste dela numa aba, e todo jogo seguinte perdia o perfil dele. O botão liga
-# pelo `freestyle.set`, que diz o modo com todas as letras.
+# NOTA DATADA — 01/10/2026, `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`. Aqui dizia
+# que reativar o Freestyle que já vale não mudava o modo: as abas reativavam o
+# perfil ativo a cada clique que grava, e o Freestyle desligado era o perfil de
+# fora do jogo. As duas premissas caíram: o gravar-e-reaplicar passou ao
+# `profile.reaplicar`, que não é escolha, e o Freestyle desligado não vale em
+# lugar nenhum — o `activate` o recusa por toda origem que não é a mão dela
+# (`OFreestyleDesligadoError`, logo abaixo). Com isso o chip («Perfil ativo»)
+# e o botão leem a mesma coisa por construção.
 
 
 class OFreestyleMandaError(RuntimeError):
     """Um caminho automático pediu outro perfil com o Freestyle ligado."""
+
+
+class OFreestyleDesligadoError(RuntimeError):
+    """Um caminho que não é a mão dela pediu o Freestyle com o modo desligado.
+
+    Item 6 da `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`: o Freestyle desligado
+    nunca é o `active_profile`. A guarda mora no `activate` (e no `reaplicar`,
+    que roda a mesma cadeia) para valer em todo caminho, inclusive os que
+    ninguém listou — o rodapé, o «voltar à de ontem» e a CLI foram três.
+    """
 
 
 def e_o_freestyle(nome: object) -> bool:
@@ -177,6 +190,19 @@ def e_o_freestyle(nome: object) -> bool:
     return isinstance(nome, str) and mesmo_slug(nome, SLUG_DO_PADRAO)
 
 
+def os_perfis_de_escolher(perfis: Iterable[Any]) -> list[Any]:
+    """A lista que se oferece para ESCOLHER: todos os perfis, menos o Freestyle.
+
+    A ordem dela de 02/10/2026: o Freestyle não aparece como perfil em seletor
+    nenhum, ligado ou desligado — ele é o botão «Modo Freestyle» da aba Jogar.
+    O arquivo continua na pasta dos perfis (é onde as abas gravam com o botão
+    aceso), e quem precisa dele pelo nome o abre pelo nome; o que sai é a
+    oferta. Quem pergunta: a aba Perfis, o `profile.list` do daemon (a bandeja,
+    a TUI e o `doctor` leem dele) e o `profile list` da CLI.
+    """
+    return [p for p in perfis if not e_o_freestyle(getattr(p, "name", None))]
+
+
 def o_freestyle_manda(store: object | None) -> bool:
     """O Modo Freestyle está ligado agora? Só o `True` literal do store conta.
 
@@ -184,10 +210,6 @@ def o_freestyle_manda(store: object | None) -> bool:
     escritor passa por `ligar_o_freestyle`, que grava as duas juntas. Um dublê
     sem o atributo responde `False`: sem evidência, o comportamento de sempre.
     """
-    from hefesto_dualsense4unix.utils.session import freestyle_suspenso
-
-    if freestyle_suspenso():
-        return False
     return getattr(store, "freestyle_ligado", False) is True
 
 
@@ -195,23 +217,75 @@ def ligar_o_freestyle(store: object | None, ligado: bool) -> None:
     """O ÚNICO escritor do Modo Freestyle: a memória e o disco, juntos.
 
     Nunca levanta — quem chama é a ativação de um perfil, e o disco cheio não
-    pode desfazer o perfil que ela escolheu. Com a suspensão, ligar vira
-    desligar: o clique não grava o modo.
+    pode desfazer o perfil que ela escolheu. O espelho da escolha
+    (`active_profile.txt`) acompanha: ligado, ele diz o Freestyle; desligado,
+    o último perfil que ela ativou.
     """
     from hefesto_dualsense4unix.utils.session import (
-        freestyle_suspenso,
+        espelhar_a_escolha,
         save_freestyle_ligado,
     )
 
-    if freestyle_suspenso():
-        ligado = False
     antes = o_freestyle_manda(store)
     setter = getattr(store, "set_freestyle_ligado", None)
     if callable(setter):
         setter(bool(ligado))
     save_freestyle_ligado(bool(ligado))
+    with contextlib.suppress(Exception):
+        espelhar_a_escolha()
     if antes != bool(ligado):
         logger.info("freestyle_ligado" if ligado else "freestyle_desligado")
+
+
+# --- A TROCA À MÃO FICA ATÉ UM EVENTO (01/10/2026) ---------------------------
+# A medida (a) do tema «Freestyle definitivo»: a ativação à mão fica até ELA
+# trocar, um jogo com perfil abrir, ou o jogo dela fechar — nunca cai calada por
+# troca de janela nem por tempo. Medido no diário dela de 29/09: às 17h30min25
+# ela ativou o Avatar Legends na aba Perfis, e às 17h31min19 o autoswitch o
+# trocou pelo terminal em foco; o que segurava a escolha era o `manual_profile_
+# lock` de 30 s (`daemon/state_store.MANUAL_PROFILE_LOCK_SEC`), que expira
+# sozinho e sem linha no diário.
+#
+# O mecanismo é o mesmo do store, e muda o PRAZO: a ativação à mão arma a trava
+# sem prazo, e quem a solta é um evento, sempre com uma linha
+# (`trava_da_troca_a_mao_solta motivo=…`). Os eventos e quem os vê:
+#   - outra ativação à mão — rearma (o gesto dela é a troca);
+#   - o lançamento de um jogo com perfil — `ProfileManager._ativar` com a
+#     origem `launch`;
+#   - outro jogo com perfil em foco, ou o jogo que estava em cena fechando — o
+#     `AutoSwitcher` (`profiles/autoswitch.py`), que é quem vê a janela;
+#   - o botão «Modo Freestyle» desligado — o `freestyle.set`, que devolve a
+#     escolha dela na hora.
+
+
+def armar_a_trava_da_mao(store: object | None) -> None:
+    """Arma a trava da troca à mão, sem prazo. Nunca levanta."""
+    marcar = getattr(store, "mark_manual_profile_lock", None)
+    if callable(marcar):
+        with contextlib.suppress(Exception):
+            marcar(math.inf)
+
+
+def soltar_a_trava_da_mao(store: object | None, motivo: str, **contexto: object) -> bool:
+    """Solta a trava da troca à mão, com a linha no diário. Devolve se estava armada.
+
+    Uma trava já solta não escreve nada: a linha é o evento, e um tique a 2 Hz
+    não pode repeti-la.
+    """
+    import time as _time
+
+    ativa = getattr(store, "manual_profile_lock_active", None)
+    marcar = getattr(store, "mark_manual_profile_lock", None)
+    if not callable(ativa) or not callable(marcar):
+        return False
+    try:
+        if not ativa(_time.monotonic()):
+            return False
+        marcar(0.0)
+    except Exception:
+        return False
+    logger.info("trava_da_troca_a_mao_solta", motivo=motivo, **contexto)
+    return True
 
 
 @dataclass
@@ -360,6 +434,11 @@ class ProfileManager:
         # nenhum: toda ativação automática seria recusada, para sempre.
         if e_o_freestyle(name):
             ligar_o_freestyle(self.store, False)
+        # Item 9 da `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`: apagar o perfil que
+        # ela escolheu leva a «sem escolha», e não a um nome que o boot não acha.
+        from hefesto_dualsense4unix.utils.session import esquecer_a_escolha
+
+        esquecer_a_escolha(name)
         logger.info("profile_deleted", name=name)
 
     @staticmethod
@@ -392,13 +471,18 @@ class ProfileManager:
         reescrever `session.json` a cada troca de janela, e o boot restaurar
         "Navegação" em vez da escolha dela. Valores:
 
-          - ``"manual"`` (default) — profile.switch via IPC (GUI/CLI) e o
-            ciclo por hotkey (PS+D-pad): É a intenção da usuária → persiste
-            em `session.json` (`save_last_profile`).
+          - ``"manual"`` (default) — profile.switch via IPC (GUI/CLI/bandeja/
+            TUI) e o ciclo por hotkey (PS+D-pad): É a escolha dela → grava
+            pelo dono (`utils.session.gravar_a_escolha`), decide o Modo
+            Freestyle e arma a trava da troca à mão (ver o bloco antes da
+            classe).
           - ``"autoswitch"`` — troca automática por janela em foco: aplica e
-            marca ativo, mas NÃO grava a intenção manual.
-          - ``"system"`` — restore de boot e saída do Modo Nativo: idem, o
-            sistema re-aplicando estado não é escolha nova.
+            marca ativo, mas NÃO grava a escolha.
+          - ``"launch"`` — o lançamento de um jogo com perfil: idem, e solta a
+            trava da troca à mão (o jogo com perfil abriu).
+          - ``"system"`` — restore de boot e de reconexão, saída do Modo
+            Nativo e o botão desligado: idem, o sistema devolvendo a escolha
+            não é escolha nova.
 
         O default "manual" é deliberado: um caller novo que esqueça o
         parâmetro preserva o comportamento histórico (gravar), nunca
@@ -443,6 +527,43 @@ class ProfileManager:
         """
         return self._ativar(name, origin="manual", relatorio=relatorio, e_a_escolha=False)
 
+    def apagar_o_freestyle(
+        self,
+        name: str | None,
+        *,
+        origin: str = "system",
+        relatorio: dict[str, str] | None = None,
+    ) -> Profile | None:
+        """O botão «Modo Freestyle» apagado: o perfil que volta, e o modo desliga.
+
+        `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 3: desligar o botão
+        devolve a escolha dela na hora (`origin="system"`), ou o jogo vivo por
+        cima (`origin="launch"`), sem que nenhum dos dois vire a escolha. Sem
+        nada a devolver (`name` vazio), o estado é «sem escolha» (item 10):
+        nenhum perfil ativo, e o controle fica com o que já tinha. O próprio
+        Freestyle como `name` é «sem escolha» também: ele não volta quando o
+        botão apaga (item 6).
+
+        A ORDEM é a da invariante: o perfil que volta entra com o modo ainda
+        ligado, e o modo desliga depois — o retrato do meio diz «outro perfil,
+        modo ligado», nunca «Freestyle, modo desligado». Se a cadeia falhar, o
+        botão apaga mesmo assim, em «sem escolha»: um botão que não apaga ao
+        ser clicado é o defeito que esta casa chama de «diz aplicado sem mudar
+        nada».
+        """
+        if name and not e_o_freestyle(name):
+            try:
+                return self._ativar(
+                    name, origin=origin, relatorio=relatorio,
+                    e_a_escolha=False, apagando_o_freestyle=True,
+                )
+            except Exception as exc:
+                logger.warning("freestyle_apagado_sem_o_perfil_que_volta",
+                               name=name, err=str(exc))
+        self.store.set_active_profile(None)
+        ligar_o_freestyle(self.store, False)
+        return None
+
     def _ativar(
         self,
         name: str,
@@ -450,17 +571,31 @@ class ProfileManager:
         origin: str,
         relatorio: dict[str, str] | None,
         e_a_escolha: bool,
+        apagando_o_freestyle: bool = False,
     ) -> Profile:
-        """A cadeia única da ativação e do «Aplicar». Ver :meth:`activate`."""
+        """A cadeia única da ativação e do «Aplicar». Ver :meth:`activate`.
+
+        `apagando_o_freestyle`: o botão desligado devolve outro perfil com o
+        modo ainda ligado; a cadeia roda, o perfil entra, e SÓ ENTÃO o modo
+        desliga — nenhum retrato pega o Freestyle sem o modo (ver
+        :meth:`apagar_o_freestyle`).
+        """
+        manda = o_freestyle_manda(self.store)
         # O-FREESTYLE-E-UMA-CAMADA-SO-01: com o Freestyle ligado, só a mão dela
         # troca de perfil. Ver o bloco antes desta classe. O «Aplicar» não é
         # escolha: com o Freestyle ligado ele só reaplica o próprio Freestyle.
-        if not e_a_escolha and o_freestyle_manda(self.store) and not e_o_freestyle(name):
+        if not e_a_escolha and manda and not apagando_o_freestyle and not e_o_freestyle(name):
             logger.info("perfil_recusado_o_freestyle_manda", pedido=name, origin=origin)
             raise OFreestyleMandaError(
                 f"o Modo Freestyle está ligado: {name!r} não entra por {origin!r}"
             )
-        vinha_do_freestyle = e_o_freestyle(getattr(self.store, "active_profile", None))
+        # D-2909, item 6: o Freestyle desligado nunca é o perfil ativo. Só a mão
+        # dela o põe, e pondo-o liga o modo (logo abaixo).
+        if not e_a_escolha and not manda and e_o_freestyle(name):
+            logger.info("perfil_recusado_o_freestyle_desligado", pedido=name, origin=origin)
+            raise OFreestyleDesligadoError(
+                f"o Modo Freestyle está desligado: {name!r} não entra por {origin!r}"
+            )
         profile = load_profile(name)
         # PERFIL-REESCRITO-NA-PARTIDA-01, item 4: o `relatorio` desce até o
         # `apply` para as categorias travadas na mão entrarem nele — ver lá.
@@ -470,7 +605,13 @@ class ProfileManager:
         self.apply_remapeamento(profile, relatorio=relatorio)
         self.apply_movimento(profile, relatorio=relatorio)
         self.apply_emulation(profile, origin=origin, relatorio=relatorio)
+        # O modo liga ANTES de o perfil virar o ativo: nenhum retrato pega o
+        # Freestyle com o botão apagado (item 6 da decisão).
+        if e_a_escolha and e_o_freestyle(profile.name):
+            ligar_o_freestyle(self.store, True)
         self.store.set_active_profile(profile.name)
+        if apagando_o_freestyle:
+            ligar_o_freestyle(self.store, False)
         reaplicacao = origin == "manual" and not e_a_escolha
         self.store.bump("profile.reaplicado" if reaplicacao else "profile.activated")
         logger.info(
@@ -480,17 +621,20 @@ class ProfileManager:
             origin=origin,
         )
         if e_a_escolha:
-            from hefesto_dualsense4unix.utils.session import save_last_profile
-            save_last_profile(profile.name)
-            # O gesto dela decide o Modo Freestyle, e o gesto é a TROCA: o
-            # «Ativar» do Freestyle vindo de outro perfil o liga, o de qualquer
-            # outro perfil o desliga, e reativar o Freestyle que já vale (o
-            # gravar-e-reaplicar das abas) não mexe nele. Ver o bloco antes da
-            # classe.
+            from hefesto_dualsense4unix.utils.session import gravar_a_escolha
+
+            # O gesto dela decide o Modo Freestyle: o «Ativar» do Freestyle o
+            # liga (acima, antes do `set_active_profile`), o de qualquer outro
+            # perfil o desliga. A escolha se grava pelo dono, que deixa o
+            # `last_profile` intacto quando ela escolhe o Freestyle.
             if not e_o_freestyle(profile.name):
                 ligar_o_freestyle(self.store, False)
-            elif not vinha_do_freestyle:
-                ligar_o_freestyle(self.store, True)
+            gravar_a_escolha(profile.name)
+            armar_a_trava_da_mao(self.store)
+        elif origin == "launch":
+            soltar_a_trava_da_mao(
+                self.store, "lancamento_de_jogo_com_perfil", perfil=profile.name
+            )
         # FEAT-COSMIC-NOTIFICATIONS-01: opt-in via env var
         # `HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS=1`. Sem isso, no-op.
         # O «Aplicar» não troca de perfil, e não avisa.
@@ -639,10 +783,10 @@ class ProfileManager:
         # — e nenhuma das duas frases fala em trava, porque a trava nunca
         # chegou à tela.
         #
-        # O QUE CONTINUA PROTEGENDO A ESCOLHA DELA: o `manual_profile_lock`
-        # (`state_store.MANUAL_PROFILE_LOCK_SEC`, 30 s), que é outro mecanismo e
-        # continua de pé — ele guarda a escolha MANUAL DE PERFIL contra o
-        # autoswitch, e não silencia seção nenhuma.
+        # O QUE CONTINUA PROTEGENDO A ESCOLHA DELA: a trava da troca à mão
+        # (`armar_a_trava_da_mao`, no topo deste módulo), que é outro mecanismo
+        # — ela guarda a escolha MANUAL DE PERFIL contra o autoswitch até um
+        # evento, e não silencia seção nenhuma.
         resultado_da_saida = self.controller.apply_output_defaults(
             OutputSpec(
                 trigger_left=left,
@@ -2242,8 +2386,19 @@ class ProfileManager:
         Também cobre o caso vizinho que o veto nunca alcançou: janela de jogo com
         ZERO candidatos (nem catch-all no disco) é o mesmo silêncio, pelo mesmo
         motivo.
+
+        O `match any` NÃO ENTRA EM SELEÇÃO AUTOMÁTICA NENHUMA — 01/10/2026,
+        item 5 da `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`. O veto da R-21 valia
+        só em janela de jogo; no terminal o Freestyle (o único `match any` da
+        casa) era eleito, e às 17h31min19 de 29/09 ele trocou a escolha dela
+        pelo terminal em foco. Perfil `match any` só entra pela mão dela; numa
+        janela que não é jogo, quem decide é o autoswitch, com a escolha dela
+        (`utils.session.a_escolha_dela`). O `e_catch_all` fica, para os donos
+        que o leem por outra razão (a supressão de desktop, a política de
+        vibração, a dica do Salvar).
         """
-        candidates = [p for p in load_all_profiles() if p.matches(dict(window_info))]
+        casaram = [p for p in load_all_profiles() if p.matches(dict(window_info))]
+        candidates = [p for p in casaram if not p.e_catch_all]
         wm_class = str(window_info.get("wm_class") or "")
         # **QUALQUER LANÇADOR, NÃO SÓ A STEAM — 21/09/2026, ordem dela:**
         # *"O PROJETO E SUAS FEATURES DEVEM FUNCIONAR INDEPENDENTE DO LANÇADOR
@@ -2264,16 +2419,15 @@ class ProfileManager:
         # `steam_app_<id>` e caía no carimbo.
         e_janela_de_jogo = e_endereco_de_jogo(wm_class)
         if not candidates:
-            if e_janela_de_jogo:
-                return None, MOTIVO_JOGO_SEM_PERFIL_PROPRIO
-            return None, MOTIVO_SEM_CANDIDATO
-        if e_janela_de_jogo and all(p.e_catch_all for p in candidates):
-            if self._ultimo_veto_catch_all != wm_class:
+            if not e_janela_de_jogo:
+                self._ultimo_veto_catch_all = None
+                return None, MOTIVO_SEM_CANDIDATO
+            if casaram and self._ultimo_veto_catch_all != wm_class:
                 self._ultimo_veto_catch_all = wm_class
                 logger.info(
                     "profile_select_catch_all_sem_autoridade_em_jogo",
                     wm_class=wm_class,
-                    candidatos=sorted(p.name for p in candidates),
+                    candidatos=sorted(p.name for p in casaram),
                 )
             return None, MOTIVO_JOGO_SEM_PERFIL_PROPRIO
         self._ultimo_veto_catch_all = None
@@ -2751,8 +2905,9 @@ def nome_do_perfil_que_grava(do_daemon: object) -> str | None:
     R3 também grava no perfil ativo (MODO-DE-CONEXAO-01, §D.4), e o gesto não
     passa pelo handler. Duas pernas: o nome que o daemon sabe
     (`store.active_profile`, que o chamador lê e passa em ``do_daemon``) e, sem
-    ele, o resolvedor do boot (`utils/session.resolve_boot_profile`) — só se o
-    perfil CARREGAR.
+    ele, a escolha dela (`utils/session.resolve_boot_profile`, que pergunta a
+    `a_escolha_dela`) — só se o perfil CARREGAR. «Sem escolha» é `None`, e o
+    gesto recusa com o recado que aponta a aba Perfis.
 
     NUNCA LEVANTA: quem chama é rota de escrita de um gesto dela.
     """
@@ -3763,5 +3918,6 @@ __all__ = [
     "gerente_do_daemon",
     "ligar_o_freestyle",
     "o_freestyle_manda",
+    "os_perfis_de_escolher",
     "resolve_key_bindings",
 ]

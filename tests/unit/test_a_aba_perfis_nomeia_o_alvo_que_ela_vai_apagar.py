@@ -80,6 +80,12 @@ class PonteDeMentira:
         self.chamadas.append(("profile_switch", (nome,)))
         return True
 
+    def profile_reaplicar(self, nome: str) -> dict[str, Any]:
+        # 01/10/2026: o gravar-e-reaplicar e o «voltar à de ontem» reaplicam
+        # pelo `profile.reaplicar`, que não grava a escolha dela.
+        self.chamadas.append(("profile_reaplicar", (nome,)))
+        return {"active_profile": nome}
+
     def chamar(self, metodo: str, *a: Any, **kw: Any) -> Any:
         self.chamadas.append((metodo, a))
         return True
@@ -360,7 +366,13 @@ def test_voltar_a_de_ontem_acha_o_perfil_e_manda_reaplicar(
 
     MORDIDA: troque qualquer um dos dois pela leitura crua do ``state`` e este
     teste reprova — o primeiro com ``RuntimeError``, o segundo sem o
-    ``profile_switch`` na ponte.
+    ``profile_reaplicar`` na ponte.
+
+    NOTA DATADA — 01/10/2026 (O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-
+    DIZ-A-VERDADE-01): a régua cobrava o ``profile_switch``, que é a ativação
+    À MÃO — o desfazer de um perfil de jogo posto pelo autoswitch o gravava
+    como a escolha dela. Agora cobra o ``profile_reaplicar``, e que o
+    ``profile_switch`` NÃO saia.
     """
     restaurados: list[str] = []
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy")
@@ -379,8 +391,10 @@ def test_voltar_a_de_ontem_acha_o_perfil_e_manda_reaplicar(
     ponte = PonteDeMentira()
     a10_perfis.voltar_a_de_ontem(_ctx(), {}, ponte)
     assert restaurados == ["Sackboy"]
-    assert ("profile_switch", ("Sackboy",)) in ponte.chamadas, (
+    assert ("profile_reaplicar", ("Sackboy",)) in ponte.chamadas, (
         "o perfil restaurado é o que está valendo e o daemon não foi avisado")
+    assert not any(nome == "profile_switch" for nome, _ in ponte.chamadas), (
+        "o desfazer ativou o perfil À MÃO: ele viraria a escolha dela")
     assert ("launch_env.refresh", ()) in ponte.chamadas
 
 

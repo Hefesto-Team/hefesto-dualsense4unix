@@ -361,8 +361,15 @@ def test_perfil_de_desktop_corrente_nao_ganha_guarda_nenhuma(
 
     Com um catch-all no controle, a janela da Steam continua trocando de perfil
     como sempre trocou — mesmo com um jogo vivo em segundo plano.
+
+    NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`): o
+    `match any` só entra pela mão dela; o «desktop» chega ao controle por ser a
+    escolha dela no disco, e não por casar a janela.
     """
+    from hefesto_dualsense4unix.utils.session import save_last_profile
+
     manager, store = _bancada([_perfil("desktop"), _perfil("navegacao", janela="steam")])
+    save_last_profile("desktop")
     sw = _switcher(manager, store, jogo_vivo=lambda: APPID)
     sw._tick({"wm_class": "nautilus"}, 0.0)
     sw._tick({"wm_class": "nautilus"}, 1.0)

@@ -718,15 +718,21 @@ def test_um_arranjo_torto_nao_derruba_as_luzes_dela() -> None:
 
 def test_a_secao_nova_entra_na_ativacao() -> None:
     """A régua de LIGAÇÃO: uma seção de perfil sem quem a aplique é trabalho
-    dela que morre no disco. ARRANQUE a linha do `activate` e ela reprova."""
+    dela que morre no disco. ARRANQUE a linha do `activate` e ela reprova.
+
+    NOTA DATADA — 01/10/2026 (O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01): a cadeia
+    da ativação mora em `_ativar`, que o `activate` e o `reaplicar` (o
+    «Aplicar») chamam; a régua lê a cadeia, e confere que os dois a chamam."""
     import inspect
 
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
 
-    fonte = inspect.getsource(ProfileManager.activate)
+    fonte = inspect.getsource(ProfileManager._ativar)
     assert "apply_movimento" in fonte, (
-        "`activate` não chama `apply_movimento` — o campo do perfil existe e "
-        "nunca chega ao tique")
+        "a cadeia da ativação não chama `apply_movimento` — o campo do perfil "
+        "existe e nunca chega ao tique")
+    for porta in (ProfileManager.activate, ProfileManager.reaplicar):
+        assert "self._ativar(" in inspect.getsource(porta), porta.__name__
 
 
 # ---------------------------------------------------------------------------

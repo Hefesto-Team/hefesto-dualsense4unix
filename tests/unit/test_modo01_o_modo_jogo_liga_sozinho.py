@@ -279,11 +279,19 @@ class TestMotivoDoVeto:
         assert motivo == MOTIVO_SELECIONADO
 
     def test_assinatura_antiga_preservada(self, isolated_profiles_dir: Path) -> None:
-        """Quem só quer o perfil (CLI, lifecycle, dublês) não muda de chamada."""
+        """Quem só quer o perfil (CLI, lifecycle, dublês) não muda de chamada.
+
+        NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item
+        5): o `match any` saiu da seleção automática, e o desktop também
+        responde `None`; a regra de janela continua respondendo o perfil dela.
+        """
         save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+        save_profile(Profile(
+            name="leitura", match=MatchCriteria(window_class=["zathura"]), priority=5))
         manager = self._manager()
 
-        assert manager.select_for_window({"wm_class": "firefox"}).name == "vitoria"
+        assert manager.select_for_window({"wm_class": "zathura"}).name == "leitura"
+        assert manager.select_for_window({"wm_class": "firefox"}) is None
         assert manager.select_for_window({"wm_class": WM_MMJ}) is None
 
 

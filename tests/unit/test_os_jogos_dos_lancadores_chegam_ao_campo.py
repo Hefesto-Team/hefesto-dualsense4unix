@@ -876,6 +876,10 @@ def test_o_botao_detectar_nomeia_o_jogo_do_heroic_que_acabou_de_gravar(
         def profile_switch(self, nome: str) -> bool:
             return True
 
+        # 01/10/2026: o gravar-e-reaplicar pede o `profile.reaplicar`, que não é escolha.
+        def profile_reaplicar(self, nome: str) -> bool:
+            return True
+
         def chamar(self, metodo: str, *a: Any, **kw: Any) -> Any:
             return True
 

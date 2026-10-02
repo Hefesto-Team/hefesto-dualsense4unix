@@ -1,33 +1,21 @@
-"""Persistência de sessão — salva e carrega o último perfil ativo do usuário.
+"""Persistência de sessão — a escolha dela, e os flags que atravessam o reboot.
 
-ONDA0-Z5/T13 [PROVISÓRIO — decisão dela pendente, D-N, §10 da sprint]: das
-TRÊS rotas que guardam "perfil ativo" no Hefesto, as DUAS deste módulo
-respondem "qual foi a ÚLTIMA ESCOLHA" — nunca "o que está em vigor agora no
-daemon vivo" (essa terceira rota é `store.active_profile`, publicada por
-`daemon.status`/`daemon.state_full`, rotulada em `cli/cmd_status.py`). As
-duas podem divergir do daemon vivo por decisão MEDIDA (o restauro de perfil
-de janela às vezes é pulado de propósito,
-`last_profile_restore_pulado_perfil_de_janela`, journal) — não é bug, é o
-daemon escolhendo não aplicar a última escolha automaticamente. Qual das
-três "vence" na tela quando elas divergem é D-N, ainda em aberto.
+A ESCOLHA DELA TEM DOIS CAMPOS E UM DONO (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`,
+O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-DIZ-A-VERDADE-01, 01/10/2026). O
+`freestyle_ligado.flag` diz se o Freestyle manda; o `session.json` guarda o
+último perfil que ELA ativou, fora o Freestyle. Quem responde «qual é a escolha
+dela» é :func:`a_escolha_dela`, e quem a grava é :func:`gravar_a_escolha` — só
+o gesto dela (`ProfileManager.activate(origin="manual")`) chega lá; o
+autoswitch, o lançamento, o restauro e o «Aplicar» não tocam em nenhum dos dois.
 
-O arquivo `~/.config/hefesto-dualsense4unix/session.json` guarda apenas o nome do
-último perfil explicitamente ativado — desde o PERFIL-03, SÓ o gesto manual
-(`ProfileManager.activate(origin="manual")`) o escreve; autoswitch e restores
-de sistema não tocam nele. O daemon lê esse arquivo no startup (via
-`resolve_boot_profile`) e re-ativa o perfil automaticamente.
+O `active_profile.txt` é ESPELHO da resposta (o Freestyle quando ligado),
+escrito pelo mesmo escritor, para o `profile save --from-active` da CLI. Ninguém
+o lê para decidir. Até 01/10 o boot o lia, e ele vencia o `session.json` na
+divergência: era o seed de migração de julho, cuja convergência já aconteceu.
 
-CLUSTER-IPC-STATE-PROFILE-01 (Bug B): adicional `active_profile.txt` é marker
-secundário lido por `cli/cmd_profile.py:403` (`profile save --from-active`,
-que clona o perfil ativo). Fato substituído (ONDA0-Z5/T14, 24/08/2026): o
-cabeçalho dizia que o consumidor era um subcomando de leitura da CLI que
-mediu-se não existir (`typer` devolve "No such command", sugerindo `create`
-no lugar dele). `session.json` continua sendo o canônico para o daemon
-restaurar no boot.
-Ambos são escritos em paridade pelos gestos manuais (handler IPC
-`profile.switch` e ciclo por hotkey); quando divergem (herança de versões em
-que o autoswitch clobberava o session.json), o marker vence no boot — ver
-`resolve_boot_profile`.
+O `store.active_profile` do daemon (publicado por `daemon.status`/`state_full`)
+é o perfil que VALE agora — outra pergunta: o jogo aberto entra por cima da
+escolha, e sai devolvendo-a.
 
 Nunca propaga exceção: falha silenciosa em ambos os sentidos.
 """
@@ -88,10 +76,11 @@ def load_last_profile() -> str | None:
 
 
 def save_active_marker(name: str) -> None:
-    """Escreve `active_profile.txt` (marker da CLI legada).
+    """Escreve `active_profile.txt`, o espelho da escolha (ver o cabeçalho).
 
-    Best-effort: falha silenciosa para não quebrar o IPC chamador.
-    `session.json` segue sendo o canônico para o daemon.
+    Best-effort: falha silenciosa para não quebrar o IPC chamador. Quem chama
+    para decidir é só :func:`espelhar_a_escolha`; os chamadores de fora que
+    sobram escrevem o mesmo nome que ela escreveria.
 
     Import lazy de `config_dir` para preservar o ponto de monkeypatch nos
     testes (`monkeypatch.setattr(xdg_paths, "config_dir", ...)`).
@@ -109,9 +98,8 @@ def save_active_marker(name: str) -> None:
 def read_active_marker() -> str | None:
     """Lê `active_profile.txt`, ou None se ausente/vazio.
 
-    Marker secundário lido por `cli/cmd_profile.py:403`
-    (`profile save --from-active`). Daemon usa `resolve_boot_profile`
-    (session.json + seed do marker) no restore.
+    O espelho lido pelo `profile save --from-active` da CLI. Ninguém o lê para
+    decidir: a escolha é de :func:`a_escolha_dela`.
 
     Import lazy de `config_dir` (mesma justificativa de `save_active_marker`).
     """
@@ -127,37 +115,190 @@ def read_active_marker() -> str | None:
         return None
 
 
-def resolve_boot_profile() -> str | None:
-    """Nome do perfil a restaurar no boot — com o seed de migração (PERFIL-03).
+def _e_o_freestyle(nome: object) -> bool:
+    """O nome aponta o Freestyle? Pelo slug, como `profiles.manager.e_o_freestyle`.
 
-    `session.json` é o canônico e, pós-fix, guarda só a última escolha
-    MANUAL (`ProfileManager.activate(origin="manual")`). Mas versões
-    anteriores deixavam o autoswitch sobrescrevê-lo a cada troca de janela —
-    o valor herdado pode ser lixo (provado ao vivo: session.json dizia
-    "Navegação" enquanto a escolha da usuária era "vitoria"). O marker
-    `active_profile.txt` sempre foi manual-only (escrito apenas pelo
-    profile.switch IPC e pelo ciclo de hotkey), então quando os dois
-    DIVERGEM é o marker que carrega a intenção manual — ele vence, com log.
-
-    Pós-fix os dois arquivos convergem a cada gesto manual (o autoswitch
-    não grava mais nenhum dos dois) e o seed vira no-op. Sem marker (nunca
-    houve escolha manual) o comportamento é o histórico: session.json.
-
-    Nota (review 2026-07-16): esta função só resolve NOMES — não valida se o
-    perfil carrega. Quem cobre marker órfão (perfil renomeado/apagado) é o
-    `restore_last_profile` (daemon/connection.py), que cai no session.json
-    com o log `last_profile_seed_marker_invalido` quando a ativação falha.
+    Cópia de UMA linha, e de propósito: este módulo é o mais baixo da casa, e
+    importar o `manager` daqui puxaria o produto inteiro para ler um flag.
     """
-    session_name = load_last_profile()
-    marker = read_active_marker()
-    if marker and marker != session_name:
-        logger.info(
-            "last_profile_seed_from_marker",
-            session=session_name,
-            marker=marker,
-        )
-        return marker
-    return session_name
+    from hefesto_dualsense4unix.profiles.loader import SLUG_DO_PADRAO
+    from hefesto_dualsense4unix.profiles.slug import mesmo_slug
+
+    return isinstance(nome, str) and mesmo_slug(nome, SLUG_DO_PADRAO)
+
+
+def _o_perfil_carrega(nome: str) -> bool:
+    """Há arquivo para este nome? Pelo dono de «nome vira arquivo», sem semear."""
+    from hefesto_dualsense4unix.profiles.loader import arquivo_do_perfil
+
+    try:
+        return arquivo_do_perfil(nome) is not None
+    except Exception:
+        return False
+
+
+def a_escolha_dela(*, freestyle_ligado: bool | None = None) -> str | None:
+    """A escolha dela: o Freestyle ligado, ou o último perfil que ela ativou.
+
+    `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 1. Ligado (e com o arquivo),
+    é o Freestyle; desligado, é o `last_profile`, se ele carrega e não é o
+    Freestyle; senão, `None` — «sem escolha» (item 10): o chip diz «—» e os
+    gestos que gravam recusam. O Freestyle desligado nunca é a escolha (item 6).
+
+    `freestyle_ligado`: o botão segundo quem pergunta. O daemon passa a
+    memória dele (`profiles.manager.o_freestyle_manda`), que é quem a ativação
+    obedece; sem ele, vale o flag do disco. Medido em 01/10/2026: o botão que
+    apaga pergunta ANTES de o flag virar, e o disco ainda dizia «aceso» — a
+    escolha voltava o próprio Freestyle, com o modo desligado.
+
+    Quem pergunta: o boot e a reconexão, a volta do jogo (o autoswitch numa
+    janela que não é jogo), o botão desligado, a saída do Modo Nativo, o
+    rodapé e a perna do disco do chip. Nunca levanta.
+    """
+    from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
+
+    try:
+        ligado = load_freestyle_ligado() if freestyle_ligado is None else freestyle_ligado
+        if ligado and _o_perfil_carrega(NOME_DO_PADRAO):
+            return NOME_DO_PADRAO
+        nome = load_last_profile()
+        if nome and not _e_o_freestyle(nome) and _o_perfil_carrega(nome):
+            return nome
+    except Exception as exc:
+        logger.debug("a_escolha_dela_ilegivel", err=str(exc))
+    return None
+
+
+def resolve_boot_profile() -> str | None:
+    """O nome que o boot restaura — a escolha dela (:func:`a_escolha_dela`).
+
+    O nome fica porque réguas de outras sprints o trocam por dublê para dizer
+    «a escolha dela é X»; o corpo pergunta ao dono na hora da chamada, então
+    um dublê em qualquer um dos dois nomes vale para quem chama este. Até
+    01/10/2026 o marcador `active_profile.txt` vencia o `session.json` na
+    divergência (o seed de julho, PERFIL-03); o marcador virou espelho.
+    """
+    return a_escolha_dela()
+
+
+def _apagar_o_espelho() -> None:
+    from hefesto_dualsense4unix.utils.xdg_paths import config_dir as _config_dir
+
+    with contextlib.suppress(Exception):
+        (_config_dir() / _ACTIVE_MARKER_FILE).unlink(missing_ok=True)
+
+
+def espelhar_a_escolha() -> None:
+    """O `active_profile.txt` passa a dizer a escolha de agora; sem ela, sai.
+
+    Chamado pelo escritor da escolha e pelo dono do Modo Freestyle
+    (`profiles.manager.ligar_o_freestyle`): ligar e desligar o botão muda a
+    resposta sem mudar o `session.json`.
+    """
+    nome = a_escolha_dela()
+    if nome:
+        save_active_marker(nome)
+    else:
+        _apagar_o_espelho()
+
+
+def gravar_a_escolha(nome: str) -> None:
+    """O escritor único da escolha dela: o `session.json` e o espelho.
+
+    O Freestyle não se grava no `session.json` (item 3: ligar o Freestyle não
+    toca o último perfil, e desligá-lo devolve esse perfil); para ele, só o
+    espelho muda — quem diz que ele manda é o flag, que o dono do modo grava.
+    """
+    if not _e_o_freestyle(nome):
+        save_last_profile(nome)
+    espelhar_a_escolha()
+
+
+def esquecer_a_escolha(nome: str | None = None) -> None:
+    """Zera o `last_profile` — todo, ou só se ele aponta `nome` (pelo slug).
+
+    Item 9: apagar o perfil escolhido leva a «sem escolha», e não a um nome que
+    o boot não acharia. Grava `{}` em vez de apagar o arquivo: o arquivo
+    ausente é o sinal da máquina nova (:func:`migrar_a_escolha_dela`).
+    """
+    from hefesto_dualsense4unix.profiles.slug import mesmo_slug
+
+    atual = load_last_profile()
+    if atual is None:
+        return
+    if nome is not None and not mesmo_slug(atual, nome) and atual != nome:
+        return
+    path = _session_path()
+    try:
+        fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".session_")
+        try:
+            os.write(fd, b"{}")
+        finally:
+            os.close(fd)
+        os.replace(tmp, path)
+        logger.info("a_escolha_dela_esquecida", nome=atual)
+    except Exception as exc:
+        logger.debug("session_save_failed", err=str(exc))
+    espelhar_a_escolha()
+
+
+#: A marca da migração da escolha (itens 7 e 8 da decisão). Existe = já rodou.
+_MARCA_DA_ESCOLHA = ".a_escolha_dela_migrada"
+#: A cópia do `session.json` antes de a migração o esvaziar.
+_COPIA_DA_SESSAO = "session-antes-da-escolha.json"
+
+
+def migrar_a_escolha_dela() -> str | None:
+    """Uma vez só, com marca: a máquina nova e a sessão que apontava o Freestyle.
+
+    Itens 7 e 8 da `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`:
+
+    - **a máquina nova** (sem `session.json` e sem nunca ter gravado o flag)
+      nasce com o botão aceso: o Freestyle é o único perfil do install, e o
+      chip diz o que o botão diz. Decidido por ela em 29/09, ~20h35 («Nasce
+      aceso»). O preço, escrito: o primeiro perfil de jogo que a pessoa criar
+      não entra sozinho enquanto o botão estiver aceso;
+    - **a sessão apontando o Freestyle com o modo desligado** vira «sem
+      escolha», com o arquivo copiado antes (`_COPIA_DA_SESSAO`). Acender o
+      botão calaria os perfis de jogo dessa pessoa, que hoje entram sozinhos.
+
+    Quem chama é a semeadura (`profiles.loader._maybe_seed_presets`), DEPOIS das
+    duas renomeações do perfil padrão, que podem ter acabado de escrever o
+    Freestyle na sessão. Devolve o desfecho, ou `None` quando a marca já
+    estava. Nunca levanta.
+    """
+    import shutil
+
+    from filelock import FileLock
+
+    try:
+        base = config_dir(ensure=True)
+        marca = base / _MARCA_DA_ESCOLHA
+        if marca.exists():
+            return None
+        with FileLock(str(base / f"{_MARCA_DA_ESCOLHA}.lock")):
+            if marca.exists():
+                return None
+            with contextlib.suppress(OSError):
+                _o_cadeado_antigo_vira_freestyle(base)
+            sessao = base / _SESSION_FILE
+            flag = base / _FREESTYLE_LIGADO_FLAG_FILE
+            if not sessao.exists() and not flag.exists():
+                save_freestyle_ligado(True)
+                desfecho = "maquina_nova_nasce_acesa"
+            elif not flag.exists() and _e_o_freestyle(load_last_profile()):
+                shutil.copy2(sessao, base / _COPIA_DA_SESSAO)
+                esquecer_a_escolha()
+                desfecho = "freestyle_desligado_vira_sem_escolha"
+            else:
+                desfecho = "nada_a_mudar"
+            espelhar_a_escolha()
+            marca.write_text("done\n", encoding="utf-8")
+    except Exception as exc:
+        logger.warning("a_escolha_dela_nao_migrou", err=str(exc))
+        return None
+    logger.info("a_escolha_dela_migrada", desfecho=desfecho)
+    return desfecho
 
 
 _PAUSED_FLAG_FILE = "paused.flag"
@@ -189,24 +330,8 @@ def load_paused_state() -> bool:
 
 
 _FREESTYLE_LIGADO_FLAG_FILE = "freestyle_ligado.flag"
-#: 30/09/2026, Vitória: o Modo Freestyle fica no produto, e o clique não muda
-#: nada até a leva dele fechar. Existe = suspenso. Apagar devolve o clique.
-_FREESTYLE_SUSPENSO_FLAG_FILE = "freestyle_suspenso.flag"
 #: O arquivo do cadeado de 23/07 (FEAT-AUTOSWITCH-LOCK-01). Só a migração o lê.
 _FLAG_DO_CADEADO_ANTIGO = "autoswitch_locked.flag"
-
-
-def freestyle_suspenso() -> bool:
-    """O clique do Modo Freestyle está sem efeito?
-
-    O arquivo `freestyle_suspenso.flag` na configuração é a suspensão. O botão,
-    o «Ativar» que ligaria o modo e o boot leem daqui. Sem o arquivo, o clique
-    volta a valer.
-    """
-    try:
-        return (config_dir() / _FREESTYLE_SUSPENSO_FLAG_FILE).exists()
-    except Exception:
-        return False
 
 
 def save_freestyle_ligado(ligado: bool) -> None:
@@ -253,8 +378,6 @@ def load_freestyle_ligado() -> bool:
     primeira coisa que o produto novo faz no disco dela.
     """
     try:
-        if freestyle_suspenso():
-            return False
         base = config_dir()
         with contextlib.suppress(OSError):
             _o_cadeado_antigo_vira_freestyle(base)
@@ -779,7 +902,10 @@ def migrate_coop_optout() -> bool:
 
 
 __all__ = [
-    "freestyle_suspenso",
+    "a_escolha_dela",
+    "espelhar_a_escolha",
+    "esquecer_a_escolha",
+    "gravar_a_escolha",
     "load_freestyle_ligado",
     "load_gamepad_caminho_com_origem",
     "load_gamepad_emulation",
@@ -789,6 +915,7 @@ __all__ = [
     "load_mouse_emulation",
     "load_mouse_preference",
     "load_paused_state",
+    "migrar_a_escolha_dela",
     "read_active_marker",
     "resolve_boot_profile",
     "save_active_marker",

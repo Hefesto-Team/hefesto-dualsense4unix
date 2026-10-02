@@ -465,7 +465,7 @@ SEGUNDOS_PARA_CONFIRMAR = 8.0
 #:
 #: POR QUE ELE PRECISOU EXISTIR, e é defeito de PARIDADE, não de desenho: na
 #: janela GTK **todo** gesto desta aba termina num `_toast_profile`
-#: (`profiles_actions.py:4648`) — "Perfil removido: X", "Lista recarregada",
+#: (`profiles_actions.py:4600`) — "Perfil removido: X", "Lista recarregada",
 #: `mensagem_do_salvar`, `mensagem_de_ativacao`. Aqui só a RECUSA falava:
 #: `RuntimeError` vira tarja (`hefesto_vivo._recusou_dizendo`) e o SUCESSO era
 #: SILÊNCIO — o piloto anota `("aplicou", "")` e não escreve uma letra na tela.
@@ -1881,7 +1881,7 @@ def _rotulo_do_remover(alvo: str) -> str:
 
     A dica no desenho diz *"Apaga do disco. Pergunta antes."* — e esta janela
     não tem diálogo. O `on_profile_remove` da janela estável abre um
-    `gui_dialogs.confirm_delete_profile` (`profiles_actions.py:3231`), que é
+    `gui_dialogs.confirm_delete_profile` (`profiles_actions.py:3183`), que é
     GTK e MODAL; daqui não dá para abri-lo, porque **os gestos rodam em
     thread** (`hefesto_vivo.py:3572`) e GTK só aceita diálogo no laço principal.
 
@@ -1995,10 +1995,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+    from hefesto_dualsense4unix.profiles.manager import os_perfis_de_escolher
     from hefesto_dualsense4unix.profiles.slug import find_by_slug
 
     try:
-        todos = load_all_profiles()
+        # O FREESTYLE NÃO É LINHA DESTA LISTA, ligado ou desligado — a ordem
+        # dela de 02/10/2026: ele é o botão «Modo Freestyle» da aba Jogar, e
+        # uma linha com «Ativar» aqui o ofereceria como perfil a escolher. O
+        # dono da oferta é `profiles.manager.os_perfis_de_escolher`.
+        todos = os_perfis_de_escolher(load_all_profiles())
         # O DISCO É LIDO UMA VEZ POR TIQUE, e `_valendo` recebe a lista em vez
         # de relê-la: ele resolve o nome que vale contra os perfis que existem
         # (ver a docstring dele), e são 33 arquivos a cada 500 ms.
@@ -2389,7 +2394,7 @@ def selecionar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ELE NÃO FALA COM O DAEMON, e é o único desta aba que não fala — de
     propósito. Escolher uma linha não muda nada no aparelho; muda o ALVO dos
     botões ao lado, que é o que a janela estável faz no
-    `on_profile_selection_changed` (`profiles_actions.py:3053`). Ligar isto ao
+    `on_profile_selection_changed` (`profiles_actions.py:3005`). Ligar isto ao
     `profile.switch` faria passar o mouse pela lista trocar o perfil que está
     valendo — o oposto da coluna ter um botão "Ativar".
 
@@ -2474,7 +2479,7 @@ def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     # daemon montou com cuidado: a diferença entre "ativado" e "ativado, menos o
     # que o lock manual descartou" (ATIVAR-NAO-MENTE-01). A janela estável lê
     # esse corpo desde sempre — `mensagem_de_ativacao(name, result)`
-    # (`profiles_actions.py:914`) —, e aqui ele estava sendo descartado: ela
+    # (`profiles_actions.py:866`) —, e aqui ele estava sendo descartado: ela
     # trocava de perfil e não ficava sabendo que metade não entrou.
     #
     # `ponte.resultado` é o degrau que entrega o corpo, com o MESMO teto de 3 s
@@ -2523,11 +2528,14 @@ def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
 
     AS DUAS CHAMADAS DEPOIS DO DISCO NÃO SÃO ENFEITE:
 
-    * `profile.switch` — **o daemon não relê JSON de perfil por conta
+    * `profile.reaplicar` — **o daemon não relê JSON de perfil por conta
       própria** (PERFIL-SAVE-APPLY-01, `profiles_actions.py:3508`). Sem ele o
       arquivo volta ao que era e o controle continua com o de agora, que é o
       sintoma que ela leu como "não está salvando". Só quando o perfil restaurado
       é o que está VALENDO: reaplicar outro trocaria o perfil pelas costas dela.
+      NOTA DATADA — 01/10/2026: era o `profile.switch`, a ativação À MÃO, e o
+      desfazer de um perfil de jogo posto pelo autoswitch o gravava como a
+      escolha dela (O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-DIZ-A-VERDADE-01).
     * `launch_env.refresh` — a regra pode ter mudado, e com ela o
       `steam_app_<id>.env` de antecipação. É o mesmo aviso que o Salvar e o
       Remover da janela estável mandam (`footer_actions.py:205`), e a ordem é a
@@ -2566,7 +2574,7 @@ def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     _, versao = restaurar_do_historico(nome)
     ativo = _valendo(ctx)
     if ativo and mesmo_slug(ativo, nome):
-        p.profile_switch(nome)
+        p.profile_reaplicar(nome)
     p.chamar("launch_env.refresh")
     # A CARONA — 06/09/2026, o nono dos que a `ONDA5-07-02` mediu sem ela. Este
     # gesto é o «Restaurar Padrão» da janela velha, e lá ele PEGA a carona pelo
@@ -3718,7 +3726,7 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     **A PRIORIDADE DEIXOU DE NASCER EM ZERO** — 03/09/2026,
     PERFIL-NASCE-CERTO-01. Aqui estava escrito que a conta *"mora num mixin GTK
     que depende de widget"*. **Não depende.** O corpo de
-    `_prioridade_acima_dos_catch_all` (`profiles_actions.py:4241`) lê UM
+    `_prioridade_acima_dos_catch_all` (`profiles_actions.py:4193`) lê UM
     atributo — `self._profiles_cache`, a lista de perfis — e mais nada: sem
     `Gtk`, sem `self._get`, sem widget. O que faltava era alguém lhe entregar a
     lista, e esta aba já a tem na mão.
@@ -3990,7 +3998,7 @@ def recarregar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     feito"*. A premissa está certa e a conclusão não segue — a janela estável
     tem o MESMO botão, sobre uma lista que ela também mantém em cache
     (`on_profile_reload` → `_reload_profiles_store` + toast "Lista recarregada",
-    `profiles_actions.py:3388`). O trabalho que ele faz não é a leitura: é
+    `profiles_actions.py:3340`). O trabalho que ele faz não é a leitura: é
     **dizer que leu**. Um botão cuja promessa é tranquilizar não fica mudo
     porque o produto já estava certo.
 
@@ -4199,12 +4207,12 @@ def _editor_de(prof: Any) -> dict[str, Any]:
 #: O que continua VERDADEIRO é a outra metade, e é a razão de `editor.estilo`
 #: seguir em `NAO_PINTAVEIS`: escrever nele é que não dá — ver a nota do
 #: `editor_estilo` sobre o `'—'` do `escrever()`.
-#: `resultado` ENTROU EM 03/09/2026, e o `profile_switch` FICA: o `ativar`
-#: passou a ler o CORPO da resposta em vez do booleano (ELO-MUDO-01), mas o
-#: `voltar-a-de-ontem` e o `gravar_e_reaplicar` continuam usando o invólucro —
-#: para eles o booleano basta, porque a pergunta é "o daemon aceitou?" e não
-#: "o que entrou?".
-PONTE = {"profile_switch", "chamar", "resultado"}
+#: `resultado` ENTROU EM 03/09/2026: o `ativar` lê o CORPO da resposta do
+#: `profile.switch` em vez do booleano (ELO-MUDO-01). O `profile_reaplicar`
+#: ENTROU EM 01/10/2026 no lugar do `profile_switch`, que o
+#: `voltar-a-de-ontem` e o `gravar_e_reaplicar` usavam: reaplicar não é
+#: escolha (O-HEFESTO-ABRE-NO-ULTIMO-PERFIL-E-O-FREESTYLE-DIZ-A-VERDADE-01).
+PONTE = {"profile_reaplicar", "chamar", "resultado"}
 #: `profile.switch` ENTROU com o `resultado`: quem chama por nome de método
 #: declara o método. O `test_nenhum_pacote_cita_metodo_que_o_daemon_nao_atende`
 #: confere os dois contra o `ipc_server.py`.

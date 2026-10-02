@@ -91,6 +91,11 @@ class PonteDeMentira:
         self.chamadas.append(("profile_switch", (nome,)))
         return True
 
+    # 01/10/2026: o gravar-e-reaplicar pede o `profile.reaplicar`, que não é escolha.
+    def profile_reaplicar(self, nome: str) -> bool:
+        self.chamadas.append(("profile_reaplicar", (nome,)))
+        return True
+
     def chamar(self, metodo: str, **_: Any) -> bool:
         self.chamadas.append(("chamar", (metodo,)))
         return True
@@ -823,10 +828,11 @@ def test_o_json_do_perfil_sobrevive_ao_disco(tmp_path, pac, tela, gesto,
     relido = loader.load_profile("Descartavel")
     assert relido.controllers[CHAVE].rumble.policy == "economia", (
         "o loader não conseguiu reler o que o gesto gravou")
-    # E O `profile.switch` FOI PEDIDO, porque o nome casa o ativo — é o que faz
-    # `apply_profile` publicar as escalas no backend e a escolha VALER AGORA.
-    assert ("profile_switch", ("Descartavel",)) in p.chamadas, (
-        f"o gesto fez {p.chamadas} e não pediu o `profile.switch`")
+    # E O `profile.reaplicar` FOI PEDIDO, porque o nome casa o ativo — é o que
+    # faz `apply_profile` publicar as escalas no backend e a escolha VALER AGORA.
+    # (Era o `profile.switch` até 01/10/2026; reaplicar não é escolha dela.)
+    assert ("profile_reaplicar", ("Descartavel",)) in p.chamadas, (
+        f"o gesto fez {p.chamadas} e não pediu o `profile.reaplicar`")
 
 
 # ---------------------------------------------------------------------------

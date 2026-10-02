@@ -19,6 +19,17 @@ from hefesto_dualsense4unix.profiles.schema import (
     TriggersConfig,
 )
 from hefesto_dualsense4unix.testing import FakeController
+from hefesto_dualsense4unix.utils import session as _session
+
+# NOTA DATADA — 01/10/2026, `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 5: o
+# `match any` saiu da seleção automática. As réguas abaixo que esperavam o
+# genérico eleito numa janela de desktop passam a dizer, no disco, a escolha
+# dela (`_a_escolha_dela`): é ela, e não o catch-all, que vale fora do jogo.
+
+
+def _a_escolha_dela(nome: str) -> None:
+    """O último perfil que ela ativou à mão, no `session.json` do lar isolado."""
+    _session.save_last_profile(nome)
 
 
 @pytest.fixture
@@ -221,6 +232,7 @@ def test_cenario_medido_sackboy_nativo_unknown_nao_cai_para_vitoria(
         )
     )
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    _a_escolha_dela("vitoria")
 
     fc = FakeController()
     fc.connect()
@@ -245,6 +257,7 @@ def test_matchany_nunca_ativado_por_leitura_vazia_ou_unknown(
     """Critério 2: com perfil MatchAny salvo, reads `{}` ou unknown NUNCA o
     ativam — por mais estáveis que fiquem (sem TTL, por design)."""
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    _a_escolha_dela("vitoria")
 
     fc = FakeController()
     fc.connect()
@@ -312,9 +325,11 @@ def test_unknown_com_titulo_ativa_fallback_apos_debounce(
     isolated_profiles_dir: Path,
 ):
     """Tradeoff residual aceito (armadilha 3 da UX-01, coberto de propósito):
-    janela X sem WM_CLASS mas com TÍTULO ainda entra no select e ativa o
-    fallback MatchAny depois do debounce."""
+    janela X sem WM_CLASS mas com TÍTULO ainda entra no select e, sem regra que
+    a case, ativa a escolha dela depois do debounce (até 01/10/2026, o
+    fallback MatchAny)."""
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    _a_escolha_dela("vitoria")
 
     fc = FakeController()
     fc.connect()
@@ -407,6 +422,7 @@ async def test_histerese_no_run_loop_mantem_perfil(isolated_profiles_dir: Path):
     nunca rouba o lugar)."""
     save_profile(_mk_profile("shooter", match=MatchCriteria(window_class=["Doom"])))
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    _a_escolha_dela("vitoria")
 
     fc = FakeController()
     fc.connect()
@@ -500,6 +516,7 @@ def test_gui_propria_em_foco_nao_flipa_perfil(isolated_profiles_dir: Path):
         )
     )
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    _a_escolha_dela("vitoria")
 
     fc = FakeController()
     fc.connect()
@@ -531,6 +548,7 @@ def test_gui_propria_nunca_ativa_fallback_sem_perfil_corrente(
     """Sem perfil corrente, encarar a GUI por minutos não ativa o MatchAny —
     a janela própria é 'sem informação', não evidência de desktop."""
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    _a_escolha_dela("vitoria")
 
     fc = FakeController()
     fc.connect()
@@ -661,6 +679,7 @@ def test_entrar_no_perfil_do_jogo_continua_rapido(isolated_profiles_dir: Path):
         )
     )
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    _a_escolha_dela("vitoria")
 
     fc = FakeController()
     fc.connect()
@@ -676,17 +695,19 @@ def test_entrar_no_perfil_do_jogo_continua_rapido(isolated_profiles_dir: Path):
     assert sw._current_profile == "madjack"  # ~0,5 s, como sempre
 
 
-def test_sair_do_perfil_de_jogo_para_catch_all_exige_o_debounce_longo(
+def test_sair_do_perfil_de_jogo_para_a_escolha_exige_o_debounce_longo(
     isolated_profiles_dir: Path,
 ):
-    """O cenário exato do journal: alt-tab do jogo para uma janela que só casa
-    o genérico. Antes trocava em 1 s; agora precisa de estabilidade REAL."""
+    """O cenário exato do journal: alt-tab do jogo para uma janela que regra
+    nenhuma casa. Antes trocava em 1 s; agora precisa de estabilidade REAL. A
+    volta é à escolha dela (até 01/10/2026, ao genérico)."""
     save_profile(
         _mk_profile(
             "madjack", match=MatchCriteria(window_class=["steam_app_2111190"])
         )
     )
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    _a_escolha_dela("vitoria")
 
     fc = FakeController()
     fc.connect()
@@ -708,13 +729,14 @@ def test_sair_do_perfil_de_jogo_para_catch_all_exige_o_debounce_longo(
 
 def test_alt_tab_curto_no_meio_do_jogo_nao_flipa(isolated_profiles_dir: Path):
     """Ping-pong de 18-28 s do journal, reproduzido: com o debounce de saída,
-    nenhuma das idas ao genérico se consolida."""
+    nenhuma das idas à escolha dela se consolida."""
     save_profile(
         _mk_profile(
             "madjack", match=MatchCriteria(window_class=["steam_app_2111190"])
         )
     )
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    _a_escolha_dela("vitoria")
 
     fc = FakeController()
     fc.connect()
@@ -763,8 +785,10 @@ def test_saida_de_catch_all_para_catch_all_nao_paga_o_debounce_longo(
     isolated_profiles_dir: Path,
 ):
     """Só perfil ESPECÍFICO arma o lado lento: quem já está no genérico não tem
-    nada de valioso a proteger."""
+    nada de valioso a proteger. O genérico aqui é a escolha dela (desde
+    01/10/2026, o `match any` só entra por ela)."""
     save_profile(Profile(name="vitoria", match=MatchAny(), priority=5))
+    _a_escolha_dela("vitoria")
     save_profile(
         _mk_profile("leitura", priority=50, match=MatchCriteria(window_class=["zathura"]))
     )

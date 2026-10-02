@@ -24,6 +24,13 @@ tique para ANTES de casar a janela — o Freestyle manda, e o autoswitch não
 troca por perfil de jogo nenhum. Quem decide é `profiles.manager`
 (`o_freestyle_manda`).
 
+`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA` (01/10/2026): numa janela que não é
+jogo e que regra nenhuma casa, o candidato é a escolha dela
+(`utils.session.a_escolha_dela`) — o `match any` saiu da seleção automática —, e
+a volta à escolha paga o debounce de saída mesmo quando a escolha é um perfil de
+jogo. E a troca à mão fica até um evento, nunca até um prazo: ver
+`AutoSwitcher._a_trava_da_mao_segura`.
+
 Desligável via env `HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT=1` (usado pelo unit headless,
 V2-4 / Patch 8).
 """
@@ -48,6 +55,7 @@ from hefesto_dualsense4unix.profiles.manager import (
     ProfileManager,
     _estado_da_secao,
     o_freestyle_manda,
+    soltar_a_trava_da_mao,
 )
 from hefesto_dualsense4unix.profiles.schema import (
     Profile,
@@ -248,8 +256,9 @@ class AutoSwitcher:
     poll_interval_sec: float = DEFAULT_POLL_INTERVAL_SEC
     debounce_sec: float = DEFAULT_DEBOUNCE_SEC
     # UX-04: o lado LENTO do debounce assimétrico (ver DEFAULT_DEBOUNCE_SAIDA_SEC).
-    # Só vale para SAIR de um perfil específico rumo a um catch-all; qualquer
-    # outra transição usa `debounce_sec`.
+    # Só vale para SAIR de um perfil específico rumo à escolha dela (desde
+    # 01/10/2026; antes, rumo a um catch-all); qualquer outra transição usa
+    # `debounce_sec`.
     debounce_saida_sec: float = DEFAULT_DEBOUNCE_SAIDA_SEC
     # BUG-MOUSE-TRIGGERS-01: opcional para permitir testes legados que
     # instanciam AutoSwitcher sem store. Em produção, o Daemon injeta o
@@ -340,6 +349,20 @@ class AutoSwitcher:
     # invalidado. Outra janela em foco é o evento que o «não há jogo» longo da
     # pergunta de exibição espera.
     _foco_do_negativo: tuple[object, str] | None = None
+    # D-2909, item 5: o perfil da escolha dela, guardado pelo NOME. A pergunta
+    # `a_escolha_dela()` é feita a cada tique numa janela que não é jogo (lê o
+    # `session.json` e o flag, que são dela e mudam por gesto); o perfil só é
+    # relido quando o nome muda.
+    _escolha_nome: str | None = None
+    _escolha_perfil: Profile | None = None
+    # A TROCA À MÃO FICA ATÉ UM EVENTO (01/10/2026): o episódio da trava que
+    # este autoswitch já viu, e o perfil que estava em cena quando ela armou
+    # (o que a mão dela tirou) com os appids dele. Ver
+    # `_acompanhar_a_trava_da_mao` e `_a_trava_da_mao_segura`.
+    _trava_vista: bool = False
+    _jogo_da_trava: str | None = None
+    _appids_da_trava: frozenset[int] = frozenset()
+    _antes_da_mao: str | None = None
 
     def disabled(self) -> bool:
         return os.environ.get("HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT") == "1"
@@ -448,6 +471,7 @@ class AutoSwitcher:
             return self._current_profile
         if ativo != self._current_profile:
             anterior = self._current_profile
+            self._antes_da_mao = anterior
             self._current_profile = ativo
             self._current_especifico = True
             logger.info(
@@ -497,6 +521,7 @@ class AutoSwitcher:
         # senão o resto do tique decide contra uma crença que pode estar horas
         # atrasada em relação ao que ela escolheu na mão.
         self._perfil_corrente()
+        self._acompanhar_a_trava_da_mao()
         self._outra_janela_invalida_o_negativo(info)
         # UX-01 (SPRINT-UX-AUTOSWITCH-01): histerese. Leitura sem informação
         # (backend cego: janela X morta, foco em janela Wayland nativa) NÃO
@@ -559,6 +584,14 @@ class AutoSwitcher:
         self._freestyle_log_key = None
 
         profile, motivo = self._selecionar_com_motivo(info)
+        # D-2909, item 5: numa janela que não é jogo e que regra nenhuma casa,
+        # o candidato é a escolha dela. Sem escolha, nenhum candidato, e o
+        # perfil corrente fica. Janela de jogo sem perfil próprio não troca de
+        # perfil (o modo jogo padrão, logo abaixo, é que responde a ela).
+        veio_da_escolha = False
+        if profile is None and motivo == MOTIVO_SEM_CANDIDATO:
+            profile = self._perfil_da_escolha()
+            veio_da_escolha = profile is not None
         candidate = profile.name if profile else None
 
         # PERFIL-REESCRITO-NA-PARTIDA-01, item 1: quando o candidato É o perfil
@@ -600,7 +633,9 @@ class AutoSwitcher:
         # candidato, a espera não acumula. Quando o jogo morre, o candidato
         # renasce e a troca sai no debounce normal (~1 s) — é o ensaio E-4 da
         # FOCO-ERRANTE-01, e é o que separa esta cura de um cadeado.
-        if self._recusa_a_troca_com_o_jogo_vivo(candidate, profile, info):
+        if self._recusa_a_troca_com_o_jogo_vivo(
+            candidate, profile, info, veio_da_escolha=veio_da_escolha
+        ):
             self._last_candidate = None
             if not self._suppression_active():
                 self._suppress_log_key = None
@@ -616,9 +651,9 @@ class AutoSwitcher:
             self._candidate_since = now
 
         # UX-04: debounce assimétrico — barato para ENTRAR, caro para SAIR
-        # rumo a um genérico (ver DEFAULT_DEBOUNCE_SAIDA_SEC).
+        # rumo à escolha dela (ver DEFAULT_DEBOUNCE_SAIDA_SEC).
         limite = self.debounce_sec
-        if self._saida_para_catch_all(profile):
+        if self._saida_para_a_escolha(profile, veio_da_escolha):
             limite = max(self.debounce_sec, self.debounce_saida_sec)
         stable = now - self._candidate_since >= limite
         # BUG-AUTOSWITCH-LOG-KEY-STUCK-01: reabre o log de supressão assim que
@@ -632,7 +667,7 @@ class AutoSwitcher:
         if stable and candidate and candidate != self._current_profile:
             # R-01: o objeto Profile já está aqui — propagá-lo evita que o
             # `_activate` tenha de adivinhar POR QUE o candidato casou.
-            self._activate(candidate, info, profile)
+            self._activate(candidate, info, profile, veio_da_escolha=veio_da_escolha)
 
     def _selecionar_com_motivo(
         self, info: dict[str, Any]
@@ -795,27 +830,65 @@ class AutoSwitcher:
         freestyle = perfil_em_disco(NOME_DO_PADRAO)
         return freestyle is not None and freestyle.mode is not None
 
-    def _saida_para_catch_all(self, profile: Profile | None) -> bool:
-        """True quando a troca é SAÍDA de um perfil específico rumo a um genérico.
+    def _saida_para_a_escolha(
+        self, profile: Profile | None, veio_da_escolha: bool
+    ) -> bool:
+        """True quando a troca é SAÍDA de um perfil específico rumo à escolha dela.
 
         UX-04: é o único caso que paga o debounce lento. Exige as três coisas —
         há perfil corrente, ele é ESPECÍFICO (casou por regra de verdade) e o
-        candidato é OUTRO perfil, catch-all. Entrar num específico, trocar entre
-        específicos e reentrar no mesmo perfil seguem no debounce curto: só a
-        volta ao genérico é a decisão cara de desfazer no meio da partida.
+        candidato é OUTRO perfil, vindo da escolha dela. Entrar num específico,
+        trocar entre específicos e reentrar no mesmo perfil seguem no debounce
+        curto: só a volta é a decisão cara de desfazer no meio da partida.
 
-        `getattr` com default True (= "trate como catch-all") mantém o predicado
-        tolerante a dublês de teste sem inventar atrito: na dúvida, o debounce
-        que vale é o curto de sempre — dúvida não pode virar regressão de UX.
+        NOTA DATADA — 01/10/2026, item 5 da `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-
+        DELA`. A pergunta era `e_catch_all` do candidato, porque a volta era ao
+        catch-all. A volta passou a ser à escolha dela, que pode ser um perfil
+        de jogo (o Avatar Legends, regra `steam_app_2424420`): perguntando
+        `e_catch_all`, ela sairia no debounce curto, em ~1 s. A pergunta agora é
+        de onde o candidato veio.
         """
-        if profile is None or not self._current_especifico:
+        if profile is None or not veio_da_escolha or not self._current_especifico:
             return False
-        if self._current_profile is None or profile.name == self._current_profile:
-            return False
-        return bool(getattr(profile, "e_catch_all", True))
+        return self._current_profile is not None and profile.name != self._current_profile
+
+    def _perfil_da_escolha(self) -> Profile | None:
+        """O perfil da escolha dela, pelo dono (`a_escolha_dela`). Nunca levanta.
+
+        Relido do disco só quando o NOME muda (ver `_escolha_nome`); o
+        `manager.get` de um dublê sem o método, ou um perfil que não abre, é
+        «sem escolha» neste tique.
+        """
+        from hefesto_dualsense4unix.utils.session import a_escolha_dela
+
+        nome = a_escolha_dela(freestyle_ligado=self.freestyle_ligado())
+        if not nome:
+            self._escolha_nome = None
+            self._escolha_perfil = None
+            return None
+        if nome == self._escolha_nome and self._escolha_perfil is not None:
+            return self._escolha_perfil
+        getter = getattr(self.manager, "get", None)
+        if not callable(getter):
+            return None
+        try:
+            perfil = getter(nome)
+        except Exception as exc:
+            logger.debug("escolha_ilegivel", name=nome, err=str(exc))
+            return None
+        if not isinstance(perfil, Profile):
+            return None
+        self._escolha_nome = nome
+        self._escolha_perfil = perfil
+        return perfil
 
     def _recusa_a_troca_com_o_jogo_vivo(
-        self, candidate: str | None, profile: Profile | None, info: dict[str, Any]
+        self,
+        candidate: str | None,
+        profile: Profile | None,
+        info: dict[str, Any],
+        *,
+        veio_da_escolha: bool = False,
     ) -> bool:
         """A troca de perfil tem de ser RECUSADA neste tique? (FOCO-ERRANTE-01)
 
@@ -843,11 +916,18 @@ class AutoSwitcher:
 
         Só recusa uma troca que ia acontecer: candidato ausente, ou candidato
         que já É o perfil corrente, seguem pelo caminho de sempre.
+
+        A ESCOLHA DELA NÃO É «OUTRO JOGO» (01/10/2026): o candidato que veio da
+        escolha (`veio_da_escolha`) não passa pelo termo 1, mesmo quando é um
+        perfil de jogo — ele não casou a janela em foco, é o que vale fora do
+        jogo. A guarda vale para ele como valia para o catch-all.
         """
         corrente = self._current_profile
         if candidate is None or corrente is None or candidate == corrente:
             return False
-        if perfil_e_regra_de_jogo(profile, info) or perfil_declara_modo_de_jogo(profile):
+        if not veio_da_escolha and (
+            perfil_e_regra_de_jogo(profile, info) or perfil_declara_modo_de_jogo(profile)
+        ):
             return False
         appids = self._appids_do_perfil_corrente(corrente)
         if not appids:
@@ -974,11 +1054,92 @@ class AutoSwitcher:
         if self._stop_event is not None:
             self._stop_event.set()
 
+    def _acompanhar_a_trava_da_mao(self) -> None:
+        """Guarda, no começo de cada episódio da trava, o que estava em cena.
+
+        A trava da troca à mão (`profiles.manager.armar_a_trava_da_mao`) é
+        armada pela ativação à mão, sem prazo. O que este autoswitch precisa
+        saber para soltá-la no evento certo é o perfil que a mão dela TIROU —
+        o do jogo em cena, quando era um —, e ele é o `anterior` da
+        sincronização de crença do mesmo tique (`_perfil_corrente`). Chamado
+        logo depois dela, no começo do `_tique`.
+        """
+        store = self.store
+        if store is None:
+            return
+        try:
+            armada = bool(store.manual_profile_lock_active(time.monotonic()))
+        except Exception:
+            armada = False
+        if not armada:
+            self._trava_vista = False
+            return
+        if self._trava_vista:
+            return
+        self._trava_vista = True
+        jogo = self._antes_da_mao
+        self._jogo_da_trava = jogo
+        self._appids_da_trava = self._appids_do_perfil_corrente(jogo) if jogo else frozenset()
+
+    def _a_trava_da_mao_segura(
+        self,
+        name: str,
+        profile: Profile | None,
+        info: dict[str, Any],
+        veio_da_escolha: bool,
+    ) -> bool:
+        """A trava da troca à mão segura ESTA troca? Solta-a no evento, com a linha.
+
+        A medida (a) do tema «Freestyle definitivo», 01/10/2026: a ativação à
+        mão fica até ELA trocar, um jogo com perfil abrir, ou o jogo dela
+        fechar — nunca cai por troca de janela nem por tempo, e toda soltura
+        diz no diário (`trava_da_troca_a_mao_solta motivo=…`). Aqui moram os
+        dois eventos que só a janela mostra:
+
+        - **o jogo que estava em cena fechou** — o perfil que a mão dela tirou
+          era a regra de um jogo da Steam (`_appids_da_trava`), a janela em
+          foco não é a dele, e o wrapper não o diz vivo
+          (`jogo_do_wrapper_vivo`). LIMITE, declarado: o jogo aberto sem o
+          wrapper não tem quem o diga vivo, e conta como fechado quando sai do
+          foco para uma janela com outro perfil;
+        - **outro jogo com perfil em foco** — o candidato é a regra do jogo da
+          janela, ou um perfil que se declara de jogo, e não é o que a mão dela
+          tirou. A escolha dela nunca conta como «outro jogo».
+
+        Qualquer outra troca fica segurada: a janela que muda e o tempo que
+        passa não soltam a trava.
+        """
+        store = self.store
+        if store is None or not store.manual_profile_lock_active(time.monotonic()):
+            return False
+        jogo = self._jogo_da_trava
+        if self._appids_da_trava and name != jogo:
+            vivo = self._appid_do_jogo_vivo()
+            if vivo is None or vivo not in self._appids_da_trava:
+                soltar_a_trava_da_mao(
+                    store, "o_jogo_em_cena_fechou", jogo=jogo or "", candidato=name
+                )
+                return False
+        e_outro_jogo = (
+            not veio_da_escolha
+            and profile is not None
+            and name != jogo
+            and (perfil_e_regra_de_jogo(profile, info) or perfil_declara_modo_de_jogo(profile))
+        )
+        if e_outro_jogo:
+            soltar_a_trava_da_mao(
+                store, "jogo_com_perfil_em_foco", candidato=name, jogo=jogo or "",
+                wm_class=str(info.get("wm_class") or ""),
+            )
+            return False
+        return True
+
     def _suppression_active(self) -> bool:
         """True se alguma fonte de supressão do autoswitch está ativa agora.
 
-        Hoje a fonte é UMA — o lock de perfil manual (`MANUAL_PROFILE_LOCK_SEC`,
-        30 s). Ela espelha os gates de `_activate`, e é assim que o run-loop sabe
+        Hoje a fonte é UMA — a trava da troca à mão
+        (`profiles.manager.armar_a_trava_da_mao`, sem prazo desde 01/10/2026).
+        Ela espelha os gates de `_activate`, e é assim que o run-loop sabe
         quando o episódio de supressão terminou para reabrir o log
         (BUG-AUTOSWITCH-LOG-KEY-STUCK-01).
 
@@ -993,7 +1154,12 @@ class AutoSwitcher:
         return self.store.manual_profile_lock_active(time.monotonic())
 
     def _activate(
-        self, name: str, info: dict[str, Any], profile: Profile | None = None
+        self,
+        name: str,
+        info: dict[str, Any],
+        profile: Profile | None = None,
+        *,
+        veio_da_escolha: bool = False,
     ) -> None:
         # PERFIL-REESCRITO-NA-PARTIDA-01, item 1: sincroniza a crença também
         # aqui — `_tick` já o faz, mas `_activate` é chamado direto por outros
@@ -1043,17 +1209,14 @@ class AutoSwitcher:
         # configuração recém-feita, e quem decide QUAL perfil casa continua sendo
         # a seleção por prioridade — nada disso passava por esta linha.
         #
-        # O LOCK DE 30 s LOGO ABAIXO FICA. Ele é outro mecanismo, e é o que
-        # guarda a escolha manual de PERFIL (`profile.switch`) contra uma troca
-        # de janela no segundo seguinte. Ele expira sozinho e não silencia seção
-        # nenhuma — a trava que saiu fazia as duas coisas ao contrário: nunca
-        # expirava sem gesto e silenciava seção do perfil.
-        # CLUSTER-IPC-STATE-PROFILE-01 (Bug C): respeita lock manual armado
-        # por `profile.switch` IPC. Lock dura `MANUAL_PROFILE_LOCK_SEC` (30s)
-        # e expira sozinho — não exige reset.
-        if self.store is not None and self.store.manual_profile_lock_active(
-            time.monotonic()
-        ):
+        # A TRAVA DA TROCA À MÃO LOGO ABAIXO FICA. Ela é outro mecanismo, e é o
+        # que guarda a escolha manual de PERFIL contra uma troca de janela. Não
+        # silencia seção nenhuma. NOTA DATADA — 01/10/2026: ela expirava sozinha
+        # em `MANUAL_PROFILE_LOCK_SEC` (30 s), sem linha no diário, e às
+        # 17h31min19 de 29/09 o terminal em foco levou a escolha dela. Desde a
+        # medida (a) do tema «Freestyle definitivo» ela não tem prazo, e solta
+        # num evento (`_a_trava_da_mao_segura`), sempre dizendo qual.
+        if self._a_trava_da_mao_segura(name, profile, info, veio_da_escolha):
             self._log_suppressed_once(
                 "autoswitch_suppressed_by_manual_profile_lock", name, info
             )

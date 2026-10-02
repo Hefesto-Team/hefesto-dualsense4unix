@@ -346,7 +346,7 @@ def test_o_censo_dos_leitores_do_store_no_ipc_handlers() -> None:
         # desligado relata o perfil que ficou. Nenhum dos dois grava: com o
         # daemon sem saber, o chip cai no padrão da máquina, que é o de sempre.
         "_caminho_do_perfil_ativo": "so-le",
-        "_o_jogo_vivo_volta": "so-le",
+        "_o_que_volta_sem_o_freestyle": "so-le",
     }
 
     achados: dict[str, list[int]] = {}

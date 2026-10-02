@@ -115,6 +115,11 @@ class PonteDeMentira:
         self.chamadas.append(("profile_switch", (nome,), {}))
         return self.resposta
 
+    # 01/10/2026: o gravar-e-reaplicar pede o `profile.reaplicar`, que não é escolha.
+    def profile_reaplicar(self, nome: str) -> bool:
+        self.chamadas.append(("profile_reaplicar", (nome,), {}))
+        return self.resposta
+
     @property
     def metodos(self) -> list[str]:
         return [m for m, _a, _k in self.chamadas]
@@ -437,9 +442,10 @@ def test_o_restaurar_de_fabrica_nao_grava_no_primeiro_clique(_preset) -> None:
 
 def test_o_restaurar_de_fabrica_adota_o_perfil_como_ativo(
         _preset, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Os TRÊS tempos do dono: disco, `profile.switch` e `launch_env.refresh`.
+    """Os TRÊS tempos do dono: disco, `profile.reaplicar` e `launch_env.refresh`.
 
-    O `era=` é o que faz o `switch` sair. Sem ele o `.json` muda no disco e o
+    O `era=` é o que faz o reaplicar sair (o `profile.switch` até 01/10/2026:
+    reaplicar não é escolha dela). Sem ele o `.json` muda no disco e o
     controle continua com o perfil anterior — o sintoma que ela leu como *"não
     está salvando"*.
     """
@@ -457,7 +463,7 @@ def test_o_restaurar_de_fabrica_adota_o_perfil_como_ativo(
                                     ponte)
 
     assert len(_preset) == 1, "o perfil de fábrica não foi gravado"
-    assert ponte.metodos == ["profile_switch", "launch_env.refresh"], (
+    assert ponte.metodos == ["profile_reaplicar", "launch_env.refresh"], (
         "o perfil foi gravado no disco e o controle não foi avisado — "
         f"{ponte.chamadas}")
     assert ponte.chamadas[0][1] == (_preset[0].name,), ponte.chamadas

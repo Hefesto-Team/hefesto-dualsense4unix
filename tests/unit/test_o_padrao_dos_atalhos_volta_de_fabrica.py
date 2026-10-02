@@ -50,6 +50,11 @@ class PonteDeMentira:
         self.chamadas.append(("profile_switch", (nome,)))
         return True
 
+    # 01/10/2026: o gravar-e-reaplicar pede o `profile.reaplicar`, que não é escolha.
+    def profile_reaplicar(self, nome: str) -> bool:
+        self.chamadas.append(("profile_reaplicar", (nome,)))
+        return True
+
     def chamar(self, metodo: str, **_: Any) -> bool:
         self.chamadas.append(("chamar", (metodo,)))
         return True
@@ -146,8 +151,9 @@ def test_reaplica_o_perfil_ativo_e_relê_o_ambiente(pac, gesto, disco) -> None:
     gesto(_ctx(pac, "Mortal Kombat"), {}, p)
 
     nomes = [c[0] for c in p.chamadas]
-    assert "profile_switch" in nomes, (
-        f"o gesto fez {nomes} e não pediu o `profile.switch`. O perfil mudou no "
+    # Era o `profile.switch` até 01/10/2026; reaplicar não é escolha dela.
+    assert "profile_reaplicar" in nomes, (
+        f"o gesto fez {nomes} e não pediu o `profile.reaplicar`. O perfil mudou no "
         f"disco e o aparelho continua com os atalhos velhos até a próxima troca.")
     assert ("chamar", ("launch_env.refresh",)) in p.chamadas, (
         "o `launch_env.refresh` não foi pedido — o perfil novo só chegaria ao "

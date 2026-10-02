@@ -143,8 +143,13 @@ async def test_profile_switch_falha_nao_toca_marker(running_server: Any) -> None
 async def test_profile_switch_arma_lock_manual(running_server: Any) -> None:
     """Após `profile.switch`, `manual_profile_lock_active` deve retornar True.
 
-    Cobre integração Bug B + Bug C: handler arma lock por
-    MANUAL_PROFILE_LOCK_SEC após persistir o marker.
+    Cobre integração Bug B + Bug C: a ativação à mão arma a trava.
+
+    NOTA DATADA — 01/10/2026 (a medida (a) do tema «Freestyle definitivo»): a
+    trava expirava em MANUAL_PROFILE_LOCK_SEC (30 s), sem linha no diário, e a
+    escolha dela caía pela janela em foco. Agora ela não tem prazo: solta num
+    evento (`profiles.manager.soltar_a_trava_da_mao`), e esta régua cobra que
+    o tempo sozinho não a solte.
     """
     import time
 
@@ -156,7 +161,6 @@ async def test_profile_switch_arma_lock_manual(running_server: Any) -> None:
 
     now = time.monotonic()
     assert store.manual_profile_lock_active(now) is True
-    # Lock no futuro: ativo até now + MANUAL_PROFILE_LOCK_SEC (≈30s).
-    assert store.manual_profile_lock_active(now + MANUAL_PROFILE_LOCK_SEC - 1) is True
-    # Após o limite, lock expira.
-    assert store.manual_profile_lock_active(now + MANUAL_PROFILE_LOCK_SEC + 1) is False
+    # O tempo sozinho não solta: nem passados os 30 s de antes, nem uma hora.
+    assert store.manual_profile_lock_active(now + MANUAL_PROFILE_LOCK_SEC + 1) is True
+    assert store.manual_profile_lock_active(now + 3600.0) is True

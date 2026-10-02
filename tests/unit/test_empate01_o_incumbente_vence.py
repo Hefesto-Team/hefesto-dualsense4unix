@@ -19,6 +19,12 @@ Resultado: vencia o `Pragmata`. O perfil que ela deixou ativo era o
 config que eu deixo nunca é respeitada"*.
 
 O terceiro termo agora é declarado: **em empate, o incumbente continua**.
+
+NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 5): o
+`match any` saiu da seleção automática — ele só entra pela mão dela —, então o
+empate entre dois «Sempre» não acontece mais. O desempate continua valendo entre
+REGRAS de mesma prioridade, e é isso que estas réguas medem agora: os dois
+gêmeos casam a mesma janela por `window_class` (`_REGRA_DO_DESKTOP`).
 """
 from __future__ import annotations
 
@@ -39,6 +45,8 @@ from hefesto_dualsense4unix.profiles.schema import (
 from hefesto_dualsense4unix.testing import FakeController
 
 WM_DESKTOP = "firefox"
+#: A regra que os gêmeos dividem (ver a nota datada no topo).
+_REGRA_DO_DESKTOP = MatchCriteria(window_class=[WM_DESKTOP])
 
 
 @pytest.fixture
@@ -66,8 +74,8 @@ def _manager(ativo: str | None) -> ProfileManager:
 
 def _semear_o_disco_dela() -> None:
     """Os dois `Pragmata` como estão no disco: gêmeos, empatados em 5."""
-    save_profile(Profile(name="Pragmata", match=MatchAny(), priority=5))
-    save_profile(Profile(name="Pragmata2", match=MatchAny(), priority=5))
+    save_profile(Profile(name="Pragmata", match=_REGRA_DO_DESKTOP, priority=5))
+    save_profile(Profile(name="Pragmata2", match=_REGRA_DO_DESKTOP, priority=5))
 
 
 class TestOCasoRealDosDoisPragmata:
@@ -108,8 +116,8 @@ class TestOCasoRealDosDoisPragmata:
         O perdedor histórico ganha um nome que vem ANTES no alfabeto. Se a
         escolha ainda fosse a ordem de arquivo, o vencedor mudaria.
         """
-        save_profile(Profile(name="Pragmata", match=MatchAny(), priority=5))
-        save_profile(Profile(name="Aaa Pragmata2", match=MatchAny(), priority=5))
+        save_profile(Profile(name="Pragmata", match=_REGRA_DO_DESKTOP, priority=5))
+        save_profile(Profile(name="Aaa Pragmata2", match=_REGRA_DO_DESKTOP, priority=5))
 
         escolhido = _manager("Aaa Pragmata2").select_for_window(
             {"wm_class": WM_DESKTOP}
@@ -159,8 +167,8 @@ class TestOCasoRealDosDoisPragmata:
         prioridade maior — senão o incumbente viraria um cadeado, e a escala de
         prioridade deixaria de significar o que diz.
         """
-        save_profile(Profile(name="Baixo", match=MatchAny(), priority=5))
-        save_profile(Profile(name="Alto", match=MatchAny(), priority=80))
+        save_profile(Profile(name="Baixo", match=_REGRA_DO_DESKTOP, priority=5))
+        save_profile(Profile(name="Alto", match=_REGRA_DO_DESKTOP, priority=80))
 
         escolhido = _manager("Baixo").select_for_window({"wm_class": WM_DESKTOP})
 
@@ -194,8 +202,8 @@ class TestOCasoRealDosDoisPragmata:
         crua deixaria "Navegação" e "Navegacao" como perfis diferentes — a
         mesma classe de bug que já custou um arquivo sobrescrito em silêncio.
         """
-        save_profile(Profile(name="Aaa", match=MatchAny(), priority=5))
-        save_profile(Profile(name="Navegação", match=MatchAny(), priority=5))
+        save_profile(Profile(name="Aaa", match=_REGRA_DO_DESKTOP, priority=5))
+        save_profile(Profile(name="Navegação", match=_REGRA_DO_DESKTOP, priority=5))
 
         escolhido = _manager("Navegacao").select_for_window({"wm_class": WM_DESKTOP})
 

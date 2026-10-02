@@ -399,90 +399,38 @@ def _match_label(match: object) -> str:
 # candidatos são "Sempre" e o veto recusa, ou existe um perfil com regra
 # própria — e aí ele vence qualquer "Sempre" pelo primeiro termo da chave.
 
-#: Quem entra na disputa: só o `MatchAny`. Um `MatchCriteria` vazio também é
-#: `e_catch_all` para o manager, mas `MatchCriteria.matches` devolve False sem
-#: condição alguma — ele nunca vira candidato, e a coluna já o chama de
-#: `LABEL_SO_MANUAL`. Somá-lo aqui inflaria o número da disputa com um perfil
-#: que não disputa nada.
-def perfis_em_disputa(perfis: list[Any]) -> list[Any]:
-    """Os perfis que dizem "Sempre" — os que casam com QUALQUER janela."""
-    return [p for p in perfis if getattr(getattr(p, "match", None), "type", None) == "any"]
-
-
-def vencedor_da_disputa(
-    disputantes: list[Any], incumbente: str | None = None
-) -> Any | None:
-    """Qual "Sempre" ganha — mesma ordem de desempate do `ProfileManager`.
-
-    Recebe a lista JÁ na ordem de carga do loader, porque o terceiro termo do
-    desempate é exatamente essa ordem. Devolve ``None`` para lista vazia.
-    """
-    if not disputantes:
-        return None
-    maior = max(int(getattr(p, "priority", 0)) for p in disputantes)
-    empatados = [p for p in disputantes if int(getattr(p, "priority", 0)) == maior]
-    if len(empatados) == 1 or not incumbente:
-        return empatados[0]
-    for candidato in empatados:
-        if mesmo_slug(incumbente, str(getattr(candidato, "name", ""))):
-            return candidato
-    return empatados[0]
-
-
+#: NOTA DATADA — 01/10/2026, `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 5:
+#: A DISPUTA ACABOU. O `match any` saiu da seleção automática
+#: (`ProfileManager.select_for_window_ex`): nenhum «Sempre» entra sozinho, e numa
+#: janela que regra nenhuma casa vale a escolha dela. Anunciar «N disputam, este
+#: vence» seria a coluna dizer um vencedor que o gerente não elege — o que esta
+#: casa existe para não deixar acontecer. Saíram junto `perfis_em_disputa` e
+#: `vencedor_da_disputa`, que só serviam à frase; o desempate entre REGRAS de
+#: mesma prioridade continua no gerente (`_melhor_candidato`).
 def rotulo_quando_usar(
     profile: Any, perfis: list[Any], incumbente: str | None = None
 ) -> str:
     """Texto da coluna "Quando usar" — função pura, testável sem GTK.
 
-    Só o "Sempre" muda, e só quando há mais de um: com um catch-all no disco
-    não existe disputa, e a coluna continua dizendo a palavra de sempre (que
-    também é o caso do usuário recém-instalado, com o `fallback` sozinho).
+    `perfis` e `incumbente` ficam na assinatura dos chamadores (a lista da aba
+    e a da janela), que os passavam para a frase da disputa. Ver a nota acima.
     """
-    base = _match_label(getattr(profile, "match", None))
-    if base != _MATCH_LABELS["any"]:
-        return base
-    disputantes = perfis_em_disputa(perfis)
-    if len(disputantes) < 2:
-        return base
-    vencedor = vencedor_da_disputa(disputantes, incumbente)
-    quantos = len(disputantes)
-    nome = str(getattr(vencedor, "name", ""))
-    if nome == str(getattr(profile, "name", "")):
-        return f"Sempre — {quantos} disputam, este vence"
-    return f"Sempre — {quantos} disputam, vence {nome}"
+    del perfis, incumbente
+    return _match_label(getattr(profile, "match", None))
 
 
 def explicacao_da_disputa(
     profile: Any, perfis: list[Any], incumbente: str | None = None
 ) -> str:
-    """Tooltip da linha: a disputa inteira, com a ordem do desempate.
+    """Tooltip da linha: vazio desde 01/10/2026 — não há disputa a explicar.
 
-    A coluna cabe em uma linha (o `hscrollbar-policy` da lista é ``never``:
-    texto largo empurra a aba inteira, lição da LARGURA-01), então o preço
-    completo vive aqui.
+    Até lá ele dizia, do «Sempre» sozinho, *«é o que entra quando nenhuma regra
+    específica casa»*, e dos vários, quem vencia e por quê. As duas coisas
+    deixaram de ser verdade (ver a nota acima), e a frase saiu em vez de virar
+    outra: frase nova de tela é decisão dela.
     """
-    disputantes = perfis_em_disputa(perfis)
-    if getattr(getattr(profile, "match", None), "type", None) != "any":
-        return ""
-    if len(disputantes) < 2:
-        return (
-            "Este perfil vale para qualquer janela — é o que entra quando "
-            "nenhuma regra específica casa."
-        )
-    vencedor = vencedor_da_disputa(disputantes, incumbente)
-    nomes = ", ".join(str(getattr(p, "name", "")) for p in disputantes)
-    nome_vencedor = str(getattr(vencedor, "name", ""))
-    prioridade = int(getattr(vencedor, "priority", 0))
-    return (
-        f"{len(disputantes)} perfis dizem “Sempre” e disputam toda janela em "
-        f"que nenhuma regra específica casa: {nomes}.\n\n"
-        f"Hoje quem vence é “{nome_vencedor}” (prioridade {prioridade}). O "
-        "desempate, nesta ordem: um perfil com regra própria ganha de qualquer "
-        "“Sempre”; depois vence a maior prioridade; e em empate de prioridade "
-        "continua valendo o que já estava ativo.\n\n"
-        "Dentro de um jogo nenhum destes entra sozinho: com o jogo em foco o "
-        "Hefesto só troca de perfil por uma regra do próprio jogo."
-    )
+    del profile, perfis, incumbente
+    return ""
 
 
 # --- PERFIL-ATUAL-01 (10/08/2026): a linha do perfil dela tem cor e é a 1ª ---
@@ -497,12 +445,12 @@ def explicacao_da_disputa(
 # autoswitch ligado desde 03:59 de hoje: `daemon.status` responde `null` e o
 # destaque nasceria invisível.
 #
-# O gesto de Ativar, esse, deixa fato em disco: `profile.switch` grava
-# `session.json` (`save_last_profile`) e `active_profile.txt`
-# (`save_active_marker`), os dois manual-only desde o PERFIL-03 — o autoswitch
-# não encosta em nenhum deles. `resolve_boot_profile()` é quem já sabe ler os
-# dois e resolver a divergência, e é o MESMO nome que o daemon restaura no
-# boot. Por isso a lista parte dele em vez de partir do vazio.
+# O gesto de Ativar, esse, deixa fato em disco: `profile.switch` grava a
+# escolha dela pelo dono (`utils.session.gravar_a_escolha`), manual-only desde
+# o PERFIL-03 — o autoswitch não encosta nela. `resolve_boot_profile()` é a
+# pergunta ao mesmo dono (`a_escolha_dela`, desde 01/10/2026), e é o MESMO
+# nome que o daemon restaura no boot. Por isso a lista parte dele em vez de
+# partir do vazio.
 
 #: A cor do "ligado" desta casa — `@green` do `gui/theme.css:26`, a mesma que a
 #: janela compacta já usa para o perfil ativo (`compact_window.py:320`). Literal
@@ -550,12 +498,17 @@ def realce_do_perfil_ativo() -> Any:
 
 
 def perfil_que_ela_ativou() -> str | None:
-    """O último perfil que ela ATIVOU pela aba Perfis — lido do disco.
+    """A escolha dela, lida do disco pelo dono (`utils.session.a_escolha_dela`).
 
-    Sobrevive ao daemon responder `active_profile: null`, que é o estado da
-    máquina dela hoje, e sobrevive a fechar e reabrir a janela. Best-effort:
+    O Freestyle quando o botão está ligado; desligado, o último perfil que ela
+    ativou; «sem escolha», `None`. Sobrevive ao daemon responder
+    `active_profile: null` e a fechar e reabrir a janela. Best-effort:
     qualquer falha de I/O vira `None`, e a lista simplesmente não destaca
     ninguém — nunca uma exceção na thread GTK.
+
+    NOTA DATADA — 01/10/2026: lia o `session.json` e o `active_profile.txt`,
+    com o marcador vencendo na divergência; com a sessão no Freestyle de fora
+    do jogo e o botão apagado, a perna do disco dizia «Freestyle».
     """
     from hefesto_dualsense4unix.utils.session import resolve_boot_profile
 
@@ -630,11 +583,10 @@ def perfil_que_esta_valendo(state: Any = None) -> PerfilQueVale:
 
     1. **o daemon primeiro** — ele é quem aplicou as seções no controle, e um
        autoswitch por janela só existe lá;
-    2. **o disco depois, declarado** — `perfil_que_ela_ativou` lê
-       `session.json` + `active_profile.txt` pelo MESMO caminho que o daemon
-       usa no boot (`resolve_boot_profile`). Sobrevive ao daemon responder
-       ``active_profile: null``, que é o estado da máquina dela hoje, e
-       sobrevive a fechar e reabrir a janela.
+    2. **o disco depois, declarado** — `perfil_que_ela_ativou` pergunta a
+       escolha dela ao MESMO dono que o daemon pergunta no boot
+       (`utils.session.a_escolha_dela`). Sobrevive ao daemon responder
+       ``active_profile: null`` e a fechar e reabrir a janela.
 
     ``state`` ausente (ou que não é dicionário) significa "o daemon não falou"
     — nunca "não há perfil". Best-effort em tudo: qualquer falha de I/O do

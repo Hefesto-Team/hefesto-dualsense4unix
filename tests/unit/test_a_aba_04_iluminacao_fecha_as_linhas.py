@@ -397,7 +397,7 @@ def test_o_interruptor_reaplica_o_perfil(pac, a04):
     _semear(automatico=True)
     p = PonteDeMentira()
     a04.auto_cores(_ctx(pac), _mudanca(), p)
-    assert "profile_switch" in p.nomes(), (
+    assert "profile_reaplicar" in p.nomes(), (
         f"o gesto não mandou o daemon reaplicar o perfil: {p.nomes()}")
 
 

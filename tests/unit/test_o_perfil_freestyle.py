@@ -304,7 +304,15 @@ def test_a_copia_mora_na_pasta_que_a_migracao_recebeu(tmp_path: Path) -> None:
 
 
 def test_a_sessao_que_apontava_o_personalizado_aponta_o_freestyle() -> None:
-    """Sem isto o boot procuraria um arquivo que virou outro, e ficaria sem perfil."""
+    """Sem isto o boot procuraria um arquivo que virou outro, e ficaria sem perfil.
+
+    NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 6):
+    o Freestyle só é a escolha com o botão aceso. A renomeação continua a
+    apontar o nome novo; quem decide se ele vale é o botão, e com o botão
+    apagado a migração da escolha (`migrar_a_escolha_dela`) é que leva a
+    sessão a «sem escolha» — a régua dela mora em
+    `test_o_hefesto_abre_na_escolha_dela.py`.
+    """
     _grava_dela(profiles_dir(ensure=True))
     session.save_last_profile("Personalizado")
     session.save_active_marker("Personalizado")
@@ -313,6 +321,8 @@ def test_a_sessao_que_apontava_o_personalizado_aponta_o_freestyle() -> None:
 
     assert session.load_last_profile() == "Freestyle"
     assert session.read_active_marker() == "Freestyle"
+    assert session.resolve_boot_profile() is None, "o botão apagado: sem escolha"
+    session.save_freestyle_ligado(True)
     assert session.resolve_boot_profile() == "Freestyle"
 
 
@@ -352,9 +362,16 @@ def _install_profiles(home: Path) -> subprocess.CompletedProcess[str]:
 
 
 def test_maquina_nova_abre_com_o_freestyle(semeadura_ligada: None) -> None:
-    """A primeira carga de perfis do processo — o que o daemon e a janela fazem."""
+    """A primeira carga de perfis do processo — o que o daemon e a janela fazem.
+
+    Desde 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 7) a
+    máquina nova abre no Freestyle PORQUE o botão nasce aceso: o Freestyle
+    apagado não vale em lugar nenhum.
+    """
     assert [p.name for p in loader.load_all_profiles()] == ["Freestyle"]
     assert loader.o_perfil_de_fora_do_jogo() == "Freestyle"
+    assert session.load_freestyle_ligado() is True, "a máquina nova nasce acesa"
+    assert session.resolve_boot_profile() == "Freestyle"
 
 
 def test_o_disco_de_23_09_vira_freestyle_numa_carga(semeadura_ligada: None) -> None:
@@ -368,7 +385,11 @@ def test_o_disco_de_23_09_vira_freestyle_numa_carga(semeadura_ligada: None) -> N
 
     assert _freestyle(pasta)["controllers"] == QUATRO
     assert [c.read_bytes() for c in _copias(pasta)] == [bruto]
-    assert session.resolve_boot_profile() == "Freestyle"
+    # D-2909, item 8: a sessão que a renomeação apontou ao Freestyle, com o
+    # botão nunca aceso, vira «sem escolha», com a cópia de antes.
+    assert session.resolve_boot_profile() is None
+    assert session.load_freestyle_ligado() is False
+    assert (session.config_dir() / session._COPIA_DA_SESSAO).is_file()
 
 
 def test_o_disco_de_antes_de_05_09_vai_direto_ao_freestyle(semeadura_ligada: None) -> None:
@@ -384,7 +405,9 @@ def test_o_disco_de_antes_de_05_09_vai_direto_ao_freestyle(semeadura_ligada: Non
 
     assert (pasta / loader.BACKUP_DO_PADRAO).is_file()
     assert _freestyle(pasta)["controllers"] == QUATRO
-    assert session.resolve_boot_profile() == "Freestyle"
+    # D-2909, item 8: como no disco de 23/09 — «sem escolha», com a cópia.
+    assert session.resolve_boot_profile() is None
+    assert (session.config_dir() / session._COPIA_DA_SESSAO).is_file()
 
 
 def test_o_install_profiles_de_hoje_roda_antes_e_o_dela_vence(
@@ -564,15 +587,21 @@ def _boot(controle: FakeController, store: StateStore) -> None:
 def test_o_boot_restaura_o_freestyle_com_os_quatro_controles(
     semeadura_ligada: None, transporte: str,
 ) -> None:
-    """O disco dela, uma carga, e o boot: o Freestyle vale, com os quatro."""
+    """O disco dela, uma carga, e o boot: o Freestyle vale, com os quatro.
+
+    Com o botão aceso (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, item 6): é ele
+    que faz o Freestyle valer. A memória do daemon é a que o boot lê do disco.
+    """
     pasta = profiles_dir(ensure=True)
     _grava_dela(pasta)
     session.save_last_profile("Personalizado")
     session.save_active_marker("Personalizado")
+    session.save_freestyle_ligado(True)
     loader.load_all_profiles()
     controle = _ControleQueGuarda(transport=transporte)
     controle.connect()
     store = StateStore()
+    store.set_freestyle_ligado(session.load_freestyle_ligado())
 
     _boot(controle, store)
 
@@ -618,16 +647,25 @@ def test_sem_freestyle_no_disco_o_boot_nao_inventa(semeadura_ligada: None,
     assert store.active_profile is None
 
 
-def _cena(travado: bool) -> list[str | None]:
+def _cena(travado: bool, escolha: str | None = None) -> list[str | None]:
     """O boot, o desktop, um jogo com perfil próprio, e o desktop de novo.
 
     O `restore_last_profile`, o `AutoSwitcher` e o `ProfileManager` são os REAIS.
     Devolve o perfil ativo depois do boot e ao fim de cada uma das três janelas.
+    `escolha`: o perfil que ela ativou à mão (com regra de janela, que não casa
+    nenhuma das três), ou `None` — «sem escolha». O botão vale igual no disco e
+    na memória, como o boot do daemon os deixa.
     """
     loader.load_all_profiles()
     loader.save_profile(Profile(name="Mullet Mad Jack",
                                 match=MatchCriteria(window_class=[JOGO]),
                                 priority=80))
+    if escolha is not None:
+        loader.save_profile(Profile(name=escolha,
+                                    match=MatchCriteria(window_class=["zathura"]),
+                                    priority=60))
+        session.save_last_profile(escolha)
+    session.save_freestyle_ligado(travado)
     store = StateStore()
     store.set_freestyle_ligado(travado)
     controle = _ControleQueGuarda()
@@ -664,11 +702,25 @@ def test_com_o_modo_freestyle_ligado_o_jogo_nao_entra(
                                    "Freestyle"]
 
 
-def test_com_o_modo_freestyle_desligado_a_volta_e_ao_freestyle(
+def test_com_o_modo_freestyle_desligado_a_volta_e_a_escolha_dela(
     semeadura_ligada: None,
 ) -> None:
-    assert _cena(travado=False) == ["Freestyle", "Freestyle", "Mullet Mad Jack",
-                                    "Freestyle"]
+    """Desligado, o boot abre na escolha dela, o jogo entra e a volta é a ela.
+
+    NOTA DATADA — 01/10/2026 (`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, itens 4
+    e 5): a volta era ao Freestyle, que casava toda janela por ser
+    `match any`. Desligado, o Freestyle não vale em lugar nenhum.
+    """
+    assert _cena(travado=False, escolha="Sofá") == ["Sofá", "Sofá",
+                                                    "Mullet Mad Jack", "Sofá"]
+
+
+def test_sem_escolha_o_desligado_nao_cai_no_freestyle(semeadura_ligada: None) -> None:
+    """«Sem escolha» (item 10): nenhum perfil no boot, e a volta do jogo não inventa um.
+
+    Sem candidato fora do jogo, o perfil corrente fica (o `MOTIVO_SEM_CANDIDATO`).
+    """
+    assert _cena(travado=False) == [None, None, "Mullet Mad Jack", "Mullet Mad Jack"]
 
 
 # =============================================================================
@@ -695,8 +747,10 @@ def _brilho_sem_daemon() -> str:
 def test_com_o_freestyle_as_abas_tem_onde_guardar(semeadura_ligada: None) -> None:
     """A medição que derrubou o motor da 01, com o sinal que a decisão pediu.
 
-    No disco dela, depois da migração, o ajuste tem alvo — o Freestyle, pela
-    sessão — e o brilho só recusa porque o controle da cena não está ligado.
+    No disco dela, depois da migração, o ajuste tem alvo — o Freestyle, pelo
+    botão aceso (desde 01/10/2026, `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`; o
+    Freestyle apagado não é alvo) — e o brilho só recusa porque o controle da
+    cena não está ligado.
 
     O ALVO SE MEDE PELO NOME, e o nome tem de abrir um perfil: só a ausência da
     frase «não há perfil ativo» passava com a migração arrancada inteira (a
@@ -709,6 +763,7 @@ def test_com_o_freestyle_as_abas_tem_onde_guardar(semeadura_ligada: None) -> Non
     _grava_dela(profiles_dir(ensure=True))
     session.save_last_profile("Personalizado")
     session.save_active_marker("Personalizado")
+    session.save_freestyle_ligado(True)
     loader.load_all_profiles()
 
     alvo = perfil.nome_do_ativo({"active_profile": None, "controllers": []})
@@ -718,12 +773,13 @@ def test_com_o_freestyle_as_abas_tem_onde_guardar(semeadura_ligada: None) -> Non
 
 
 def test_o_topo_diz_freestyle(semeadura_ligada: None) -> None:
-    """Fora do jogo, o chip «Perfil ativo» diz «Freestyle» — nunca o nome que saiu."""
+    """Com o botão aceso, o chip «Perfil ativo» diz «Freestyle» — nunca o nome que saiu."""
     from hefesto_dualsense4unix.interface.pacotes import Contexto, topo
 
     _grava_dela(profiles_dir(ensure=True))
     session.save_last_profile("Personalizado")
     session.save_active_marker("Personalizado")
+    session.save_freestyle_ligado(True)
     loader.load_all_profiles()
 
     ctx = Contexto(state={"active_profile": None, "controllers": []})

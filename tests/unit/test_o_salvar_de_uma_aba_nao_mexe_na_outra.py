@@ -151,6 +151,11 @@ class PonteDeMentira:
         self.chamadas.append(f"profile_switch:{nome}")
         return True
 
+    # 01/10/2026: o gravar-e-reaplicar pede o `profile.reaplicar`, que não é escolha.
+    def profile_reaplicar(self, nome: str) -> bool:
+        self.chamadas.append(f"profile_reaplicar:{nome}")
+        return True
+
     def chamar(self, metodo: str, *a: Any, **kw: Any) -> Any:
         self.chamadas.append(f"chamar:{metodo}")
         return True

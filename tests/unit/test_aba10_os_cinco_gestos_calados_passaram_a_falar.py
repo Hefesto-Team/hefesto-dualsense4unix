@@ -76,6 +76,12 @@ class PonteDeMentira:
         self.chamadas.append(("profile_switch", (nome,)))
         return True
 
+    def profile_reaplicar(self, nome: str) -> dict[str, Any]:
+        # 01/10/2026: o gravar-e-reaplicar e o «voltar à de ontem» reaplicam
+        # pelo `profile.reaplicar`, que não grava a escolha dela.
+        self.chamadas.append(("profile_reaplicar", (nome,)))
+        return {"active_profile": nome}
+
     def chamar(self, metodo: str, *a: Any, **kw: Any) -> Any:
         self.chamadas.append((metodo, a))
         return True

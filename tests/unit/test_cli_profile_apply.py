@@ -124,7 +124,7 @@ def test_apply_schema_invalido_exit_1(
     assert "não valida" in result.output
 
 
-def test_apply_daemon_offline_grava_marker(
+def test_apply_daemon_offline_grava_a_escolha(
     tmp_path: Path,
     isolated_profiles_dir: Path,
     mock_ipc: dict[str, Any],
@@ -138,9 +138,12 @@ def test_apply_daemon_offline_grava_marker(
     assert result.exit_code == 0, result.output
     assert "offline" in result.output
 
-    # Marker foi gravado
-    from hefesto_dualsense4unix.utils import xdg_paths
+    # A escolha foi gravada pelo dono (`utils.session.gravar_a_escolha`): o
+    # `session.json`, que o boot lê, e o marcador, que é espelho para a CLI.
+    # Até 01/10/2026 só o marcador era gravado, e o boot o lia por precedência.
+    from hefesto_dualsense4unix.utils import session, xdg_paths
 
+    assert session.load_last_profile() == "draft"
     marker = xdg_paths.config_dir() / "active_profile.txt"
     assert marker.exists()
     assert marker.read_text(encoding="utf-8").strip() == "draft"
@@ -160,11 +163,12 @@ def test_apply_daemon_recusa_ipc_error(
     assert result.exit_code == 0
     assert "recusou" in result.output
 
-    # Fix do review (2026-07-16, MED): recusa ≠ ativação. O marker tem
-    # autoridade de boot (resolve_boot_profile) — gravá-lo aqui registrava um
+    # Fix do review (2026-07-16, MED): recusa ≠ ativação. A escolha tem
+    # autoridade de boot (resolve_boot_profile) — gravá-la aqui registrava um
     # switch que NUNCA aconteceu e desviava o restore de todo boot seguinte.
-    from hefesto_dualsense4unix.utils import xdg_paths
+    from hefesto_dualsense4unix.utils import session, xdg_paths
 
+    assert session.load_last_profile() is None
     marker = xdg_paths.config_dir() / "active_profile.txt"
     assert not marker.exists()
 

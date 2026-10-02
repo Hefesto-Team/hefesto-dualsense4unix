@@ -562,8 +562,8 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "active_profile.txt": (CASA, "o marcador do perfil ativo; não identifica controle"),
     "paused.flag": (CASA, "o daemon pausado"),
     "freestyle_ligado.flag": (CASA, "o Modo Freestyle ligado"),
-    "freestyle_suspenso.flag": (
-        CASA, "o clique do Modo Freestyle sem efeito até a leva fechar",
+    "session-antes-da-escolha.json": (
+        CASA, "a cópia do session.json de antes da migração da escolha dela",
     ),
     "autoswitch_locked.flag": (CASA, "o cadeado de 23/07; a migração o lê e o apaga"),
     "native_mode.flag": (CASA, "o modo nativo"),

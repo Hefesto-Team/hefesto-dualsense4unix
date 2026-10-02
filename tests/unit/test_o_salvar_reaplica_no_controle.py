@@ -49,6 +49,10 @@ class _Ponte:
     def profile_switch(self, nome: str) -> None:
         self.trocou.append(nome)
 
+    # 01/10/2026: o gravar-e-reaplicar pede o `profile.reaplicar`, que não é escolha.
+    def profile_reaplicar(self, nome: str) -> None:
+        self.trocou.append(nome)
+
     def chamar(self, metodo: str, **_kw: Any) -> None:
         self.chamou.append(metodo)
 
