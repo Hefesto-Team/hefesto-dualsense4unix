@@ -43,7 +43,6 @@ from hefesto_dualsense4unix.app.actions.mode_transition import (
     STATE_IPC_TIMEOUT_S,
     mode_of_state,
 )
-
 from hefesto_dualsense4unix.app.actions.relancar import (
     TOAST_ESCOLHA_ANOTADA,
     TOAST_ESCOLHA_DESFEITA,

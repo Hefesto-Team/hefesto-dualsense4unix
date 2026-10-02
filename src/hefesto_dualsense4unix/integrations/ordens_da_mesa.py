@@ -110,7 +110,6 @@ from hefesto_dualsense4unix.integrations.portas_do_barramento import (
 from hefesto_dualsense4unix.utils.lugar import caminho_do_no
 from hefesto_dualsense4unix.utils.rotulo_da_entrada import com_artigo, na_frase
 
-
 MEDIDO_AQUI = "medido-aqui"
 
 DERIVADO_DA_CONTA = "derivado-da-conta"

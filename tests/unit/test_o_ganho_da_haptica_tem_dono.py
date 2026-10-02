@@ -135,7 +135,7 @@ def _dono(**pcts: int) -> GanhoDaHaptica:
 
 class TestOServidorDeMentiraNaoEMaisFrouxoQueOReal:
     def test_quarenta_por_cento_guarda_o_numero_medido_em_29_09(self) -> None:
-        """``40%`` é −23,88 dB: o WirePlumber guardou 0,063997 linear na placa dela."""  # noqa: RUF002
+        """``40%`` é -23,88 dB: o WirePlumber guardou 0,063997 linear na placa dela."""
         srv = _servidor()
         srv(["pactl", "set-sink-volume", PLACA_PRETO, "40%", "40%", "40%", "40%"])
         guardado = linear_do_cru(srv.sinks[PLACA_PRETO][0])
@@ -201,7 +201,7 @@ class TestACaboAPlaca:
         assert srv.traseiros(PLACA_BRANCO) == [HAPTICA_PCT_PADRAO / 100] * 2
 
     def test_o_piso_nao_briga_com_o_ganho(self) -> None:
-        """Régua 2: ``haptica_pct=50``, duas voltas → −6,02 dB nos traseiros."""
+        """Régua 2: ``haptica_pct=50``, duas voltas → -6,02 dB nos traseiros."""
         srv = _servidor()
         dono = _dono(branco=50)
         for _volta in range(2):

@@ -173,9 +173,7 @@ def dehumanize_binding(friendly: str) -> str:
             saida.append(_REV_KEY[chave])
         elif tok.startswith("KEY_") or tok.startswith("__"):
             saida.append(tok)
-        elif len(tok) == 1 and tok.isalnum():
-            saida.append(f"KEY_{tok.upper()}")
-        elif _e_nome_de_tecla(tok):
+        elif (len(tok) == 1 and tok.isalnum()) or _e_nome_de_tecla(tok):
             saida.append(f"KEY_{tok.upper()}")
         else:
             saida.append(tok)

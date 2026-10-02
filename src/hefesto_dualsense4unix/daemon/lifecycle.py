@@ -26,13 +26,11 @@ from hefesto_dualsense4unix.daemon.battery_journal import (
 )
 from hefesto_dualsense4unix.daemon.protocols import GravaOModo, PortaQueGrava
 from hefesto_dualsense4unix.daemon.state_store import StateStore
-
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
     EMU_BLOQUEADO_POR_JOGO,
     OrigemEmulacao,
     reconciliar_as_mascaras,
 )
-
 from hefesto_dualsense4unix.daemon.subsystems.poll import (
     BATTERY_DEBOUNCE_SEC,
     BATTERY_DELTA_THRESHOLD_PCT,
@@ -674,7 +672,6 @@ class Daemon:
             uniqs_declarados,
             uniqs_recusados,
         )
-
         from hefesto_dualsense4unix.profiles.o_padrao_do_computador import migrar_uma_vez
         from hefesto_dualsense4unix.utils.maquina import carregar_maquina
         with contextlib.suppress(Exception):

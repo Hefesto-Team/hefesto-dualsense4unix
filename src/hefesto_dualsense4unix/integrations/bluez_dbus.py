@@ -20,7 +20,6 @@ from typing import Any, Protocol
 
 from hefesto_dualsense4unix.utils.lugar import lugar_de
 
-
 SERVICO = "org.bluez"
 ADAPTADOR = "org.bluez.Adapter1"
 APARELHO = "org.bluez.Device1"

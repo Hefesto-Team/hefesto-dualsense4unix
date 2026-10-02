@@ -12,7 +12,6 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.profiles.slug import slugify
 
-
 CATCH_ALL_LEGITIMOS: frozenset[str] = frozenset({"fallback"})
 
 PRIORIDADE_DE_FUNDO = 0

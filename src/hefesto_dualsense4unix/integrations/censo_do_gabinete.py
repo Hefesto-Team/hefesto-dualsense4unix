@@ -11,7 +11,6 @@ from datetime import datetime, timezone
 
 from .entradas_do_gabinete import NoDeEntrada, furos, listar_entradas
 
-
 LIDO_DO_FIRMWARE = "lido-do-firmware"
 
 LIDO_DO_KERNEL = "lido-do-kernel"

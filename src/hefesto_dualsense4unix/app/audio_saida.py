@@ -73,7 +73,6 @@ from hefesto_dualsense4unix.core.ds_output_report import (
     SAIDA_L_FONE_R_ALTO_FALANTE,
     SAIDA_SO_NO_ALTO_FALANTE,
 )
-
 from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     sink_do_controle as _sink_do_controle,
 )

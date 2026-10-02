@@ -81,7 +81,6 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     SLOTS_POR_SEGUNDO,
 )
 
-
 Mapa = Mapping[str, str]
 Leitura = Mapping[str, str]
 

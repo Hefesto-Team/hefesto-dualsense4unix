@@ -33,7 +33,6 @@ from hefesto_dualsense4unix.profiles.schema import (
     RumbleConfig,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
-
 from hefesto_dualsense4unix.utils.lugar import (
     FORMA_DO_CAMINHO,
     FORMA_DO_NO,

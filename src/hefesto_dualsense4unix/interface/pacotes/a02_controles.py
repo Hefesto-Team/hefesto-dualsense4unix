@@ -128,7 +128,6 @@ from hefesto_dualsense4unix.core.speaker_scale import (
     percentual_do_volume,
     volume_do_percentual,
 )
-
 from hefesto_dualsense4unix.integrations import (
     ganho_do_microfone as _ganho_no_aparelho,
 )

@@ -6,7 +6,6 @@ from collections.abc import Sequence
 
 from hefesto_dualsense4unix.utils.color_contrast import ensure_min_contrast
 
-
 try:
     import gi
 

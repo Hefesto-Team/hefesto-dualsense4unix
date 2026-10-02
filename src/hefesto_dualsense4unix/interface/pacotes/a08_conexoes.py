@@ -2006,7 +2006,6 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
 #      (`Disconnect` do BlueZ por D-Bus, `integrations/gesto_de_reconexao.py`).
 #      **Foi exatamente essa a cura de `vizinho-o-que-e`**: em vez de ligar o
 from . import gesto  # noqa: E402
-
 from .a02_controles import mudo as _o_mudo_da_aba_02  # noqa: E402
 
 # `integrations/gesto_de_reconexao.py`, que roda `busctl` e não passa pelo

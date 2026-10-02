@@ -51,7 +51,6 @@ from hefesto_dualsense4unix.core.evdev_reader import (
     DUALSENSE_VENDOR,
     EvdevReader,
 )
-
 from hefesto_dualsense4unix.core.led_control import (
     DA_MAO,
     DA_PALETA,

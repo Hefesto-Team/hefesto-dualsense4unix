@@ -5,7 +5,6 @@ from collections.abc import Callable
 from typing import Any
 
 from hefesto_dualsense4unix.app.ipc_bridge import call_async
-
 from hefesto_dualsense4unix.integrations.uinput_gamepad import DEFAULT_FLAVOR
 
 MODE_IPC_TIMEOUT_S = 2.0
