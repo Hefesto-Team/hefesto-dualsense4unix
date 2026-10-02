@@ -38,6 +38,9 @@ precisou delas, e a segunda cópia é a que esquece um dos tempos:
 * `com_a_carona()` (06/09/2026) — o atalho de inicialização que a Steam comeu,
   reposto de carona no gesto que ela já dá. Ver o docstring de cada uma.
 
+Depois delas, `a_volta_do_perfil()` (02/10/2026), que não escreve perfil: é o
+fim dos três botões do rodapé que gravam ou mandam perfil.
+
 E QUEM RESPONDE "QUAL PERFIL ESTÁ VALENDO" É `nome_do_ativo()` (06/09/2026,
 PERFIL-MODO-01): ele pergunta ao dono do §P1 em vez de ler
 `state["active_profile"]` cru, e `ativo()` cai nele quando o nome não vem. É a
@@ -533,6 +536,124 @@ def com_a_carona(frase: str = "") -> str:
     if not resultado.frase:
         return frase
     return f"{frase} · {resultado.frase}" if frase else resultado.frase
+
+
+# ---------------------------------------------------------------------------
+# A VOLTA DO PERFIL — O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01 (02/10/2026)
+# ---------------------------------------------------------------------------
+def os_jogadores_de_volta(p: Any) -> tuple[Any, Any]:
+    """Os passos 1 e 2 do «Reconectar controles»: devolve ``(sync, renumerou)``.
+
+    1. ``coop.sync``: o ciclo FORÇADO de reconciliação, o único que traz de
+       volta o jogador cujo grab foi recusado ou cujo vpad morreu sem que
+       ``/dev/input`` mudasse. LEVANTA quando o daemon não responde: quem chama
+       decide o que isso é (o «Reconectar» recusa; a volta do rodapé só anota).
+    2. ``identity.renumber``: compacta a numeração. A recusa por jogo aberto
+       chega DENTRO de uma resposta bem-sucedida e não é erro; sem resposta,
+       ``None``, e os jogadores já voltaram no passo 1.
+
+    A ORDEM É A DO BOTÃO ANTIGO (``home_actions._on_home_reconciliar_clicked``):
+    renumerar antes de reconciliar compactaria uma mesa ainda incompleta.
+
+    UM DONO: o «Reconectar» (``a01_jogar.reconectar``) e a volta do rodapé
+    (:func:`a_volta_do_perfil`) chamam esta função.
+    """
+    sync = p.resultado("coop.sync")
+    # O `except` LARGO é de propósito: o `_safe_call` da ponte propaga
+    # `ValueError`/`TypeError` de bug interno, e a numeração é acabamento.
+    try:
+        renumerou = p.resultado("identity.renumber")
+    except Exception:
+        renumerou = None
+    return sync, renumerou
+
+
+def o_radio_de_volta(ctx: Any, *, so_o_elo_morto: bool = False) -> tuple[int, int]:
+    """O rádio dos DualSense fora da mesa do Hefesto: ``(voltaram, esperam_o_ps)``.
+
+    Para cada DualSense que o BlueZ conhece (a árvore inteira, todos os
+    adaptadores) e que NÃO está entre os controles da mesa, o dono do rádio
+    (``gesto_de_reconexao.reconectar``) derruba o elo morto e chama de volta.
+    Quem decide se o elo está morto é o kernel, lá dentro: com o HID vivo, o
+    controle fica (O-RECONECTAR-SO-DERRUBA-O-ELO-MORTO-01).
+
+    QUEM ESTÁ NA MESA NÃO É TOCADO: mexer no rádio de quem o daemon já enxerga
+    trocaria um problema que não existe por segundos sem controle.
+
+    ``so_o_elo_morto`` é a volta do rodapé: só o DualSense que o BlueZ diz
+    ``Connected`` (o caso de 22/09). O que ele diz fora, ou que não respondeu,
+    fica de fora: é o ``Connect`` de até 12 s que não traz quem está desligado.
+    O «Reconectar» chama sem ele, e tenta todos.
+
+    NUNCA LEVANTA: o rádio é acréscimo. Sem o BlueZ, ``(0, 0)``.
+    """
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+    from hefesto_dualsense4unix.integrations import gesto_de_reconexao as radio
+
+    na_mesa = {
+        norm_mac(str(peca.get("uniq") or "")) or ""
+        for peca in (getattr(ctx, "mesa", None) or [])
+        if isinstance(peca, dict)
+    }
+    voltaram = esperam = 0
+    try:
+        conhecidos = radio.dualsenses_do_radio()
+    except Exception:  # best-effort: o rádio não derruba o gesto
+        return (0, 0)
+    for mac, conectado in conhecidos:
+        if (norm_mac(mac) or "") in na_mesa:
+            continue
+        if so_o_elo_morto and conectado is not True:
+            continue
+        try:
+            desfecho = radio.reconectar(mac)
+        except Exception:
+            continue
+        if desfecho.estado == radio.ESTADO_VOLTOU:
+            voltaram += 1
+        elif desfecho.estado == radio.ESTADO_SO_O_PS:
+            esperam += 1
+    return (voltaram, esperam)
+
+
+def _relatar_a_volta(passo: str, motivo: object) -> None:
+    """A falha de um passo da volta vai ao diário da janela, nunca à tela."""
+    print(f"[relato] volta do perfil · {passo}: {motivo}", file=sys.stderr)
+
+
+def a_volta_do_perfil(ctx: Any, p: Any) -> None:
+    """O fim do «Aplicar», do «Salvar Perfil» e do «Importar» do rodapé.
+
+    O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01: os três botões que gravam ou mandam
+    perfil terminam com a parte do «Atualizar» (aba Sistema) e do «Reconectar
+    controles» (aba Jogar) que é do perfil. É a «versão leve» que ela escolheu
+    em 29/09 (respostas 42, 43 e 44 da sprint):
+
+    1. ``launch_env.refresh``: os arquivos que a Steam lê ao abrir um jogo. Não
+       é o ``daemon.reload``, que para e sobe o leitor dos atalhos (um PS + L3
+       no meio cairia no vão);
+    2. o rádio só do elo morto (:func:`o_radio_de_volta`, ``so_o_elo_morto``);
+    3. ``coop.sync`` e ``identity.renumber`` (:func:`os_jogadores_de_volta`):
+       a numeração se compacta a cada Salvar, Aplicar e Importar.
+
+    O rádio vem antes dos jogadores pela razão do «Reconectar»: o controle que
+    volta agora é um jogador que o ``coop.sync`` ainda alcança nesta volta. Os
+    dois botões de origem ficam como estão, para a volta inteira.
+
+    NUNCA LEVANTA: quando ela começa, o disco e o aparelho já receberam o
+    perfil. A falha de um passo vai ao diário com o motivo e não impede o
+    seguinte; o botão responde pelo ato dele, e nenhuma frase nova vai à tela.
+    """
+    try:
+        if not p.chamar("launch_env.refresh"):
+            _relatar_a_volta("launch_env.refresh", "o serviço não respondeu")
+    except Exception as erro:
+        _relatar_a_volta("launch_env.refresh", erro)
+    o_radio_de_volta(ctx, so_o_elo_morto=True)
+    try:
+        os_jogadores_de_volta(p)
+    except Exception as erro:
+        _relatar_a_volta("coop.sync", erro)
 
 
 # ---------------------------------------------------------------------------

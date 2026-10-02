@@ -419,6 +419,16 @@ class _PonteDoRodape:
         self.chamadas.append(("salvar_arquivo", (titulo,), {"sugestao": sugestao}))
         return None  # ela cancelou — o gesto só tinha de CHEGAR aqui
 
+    # A VOLTA DO RODAPÉ (02/10/2026, O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01): o
+    # funil do Salvar avisa o lançamento, e a volta reconcilia e renumera.
+    def chamar(self, metodo: str, timeout: float | None = None, **params: Any) -> bool:
+        self.chamadas.append(("chamar", (metodo,), params))
+        return True
+
+    def resultado(self, metodo: str, timeout: float | None = None, **params: Any) -> Any:
+        self.chamadas.append(("resultado", (metodo,), params))
+        return {"status": "ok"}
+
 
 def _ctx_do_daemon_calado() -> Contexto:
     """O contexto da máquina dela: o daemon não diz quem está ativo."""
@@ -477,7 +487,13 @@ def test_o_aplicar_e_o_exportar_atravessam_com_o_daemon_calado(
     """
     p = _PonteDoRodape()
     rodape.aplicar(_ctx_do_daemon_calado(), {}, p)
-    assert [c[0] for c in p.chamadas] == ["profile_reaplicar"]
+    # Depois do `profile_reaplicar`, a volta do rodapé (02/10/2026,
+    # O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01): o aviso ao lançamento, a
+    # reconciliação e a numeração.
+    assert [(c[0], *c[1][:1]) for c in p.chamadas[1:]] == [
+        ("chamar", "launch_env.refresh"), ("resultado", "coop.sync"),
+        ("resultado", "identity.renumber")]
+    assert [c[0] for c in p.chamadas[:1]] == ["profile_reaplicar"]
     assert p.chamadas[0][1] == (NO_DISCO,), (
         f"o «Aplicar» mandou outro perfil: {p.chamadas[0][1]!r}")
 

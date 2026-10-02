@@ -3800,32 +3800,14 @@ def _o_radio_de_volta(ctx: Contexto) -> tuple[int, int]:
 
     NUNCA LEVANTA: o rádio é acréscimo. Se o `busctl` não responder, o gesto
     segue para os jogadores — que é o que ele sempre fez.
-    """
-    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
-    from hefesto_dualsense4unix.integrations import gesto_de_reconexao as radio
 
-    na_mesa = {
-        norm_mac(str(peca.get("uniq") or "")) or ""
-        for peca in (ctx.mesa or [])
-        if isinstance(peca, dict)
-    }
-    voltaram = esperam = 0
-    try:
-        conhecidos = radio.dualsenses_do_radio()
-    except Exception:  # best-effort: o rádio não derruba o gesto
-        return (0, 0)
-    for mac, _conectado in conhecidos:
-        if (norm_mac(mac) or "") in na_mesa:
-            continue
-        try:
-            desfecho = radio.reconectar(mac)
-        except Exception:
-            continue
-        if desfecho.estado == radio.ESTADO_VOLTOU:
-            voltaram += 1
-        elif desfecho.estado == radio.ESTADO_SO_O_PS:
-            esperam += 1
-    return (voltaram, esperam)
+    O DONO É `perfil.o_radio_de_volta` desde 02/10/2026
+    (O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01): a volta dos três botões do rodapé
+    chama o mesmo, só para o elo morto. Este botão tenta todos.
+    """
+    from . import perfil
+
+    return perfil.o_radio_de_volta(ctx)
 
 
 @gesto("01-jogar.html", "reconectar")
@@ -3898,15 +3880,17 @@ def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     # da reconciliação: um controle que volta pelo rádio agora é um jogador que
     # o passo 1 ainda alcança nesta mesma execução.
     voltaram, esperam_o_ps = _o_radio_de_volta(ctx)
+    # OS PASSOS 1 E 2 TÊM UM DONO desde 02/10/2026, `perfil.os_jogadores_de_volta`,
+    # que a volta do «Aplicar», do «Salvar» e do «Importar» também chama
+    # (O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01). A falha do `coop.sync` levanta lá;
+    # aqui ela vira a recusa deste botão.
+    from . import perfil
+
     try:
-        sync = p.resultado("coop.sync")
+        sync, renumerou = perfil.os_jogadores_de_volta(p)
     except Exception as erro:
         raise RuntimeError(_painel().RECONECTAR_SEM_SERVICO) from erro
     jogadores = sync.get("players") if isinstance(sync, dict) else None
-    try:
-        renumerou = p.resultado("identity.renumber")
-    except Exception:
-        renumerou = None
     #: **SEM NOTÍCIA, SEM FRASE — JOGAR-02, 09/09/2026.** O recibo devolve `""`
     #: quando não houve o que contar, e um `{"recado": ""}` não é o mesmo que
     #: nenhum recado: o piloto pousaria uma caixa verde VAZIA em cima da

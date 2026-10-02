@@ -31,6 +31,7 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
+from tests.unit.ponte_do_rodape import PonteDoRodape
 
 #: O ESTADO DELA, medido no daemon vivo em 06/09/2026 às 04h42. O `0.7` é o
 #: teto lembrado de quando o degrau era "custom".
@@ -69,7 +70,7 @@ def _salvar(estado: dict[str, Any]) -> Profile:
     from hefesto_dualsense4unix.interface.pacotes import rodape
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
-    rodape.salvar(_ctx(estado), {"gesto": "salvar"}, None)
+    rodape.salvar(_ctx(estado), {"gesto": "salvar"}, PonteDoRodape())
     return load_profile("Personalizado")
 
 

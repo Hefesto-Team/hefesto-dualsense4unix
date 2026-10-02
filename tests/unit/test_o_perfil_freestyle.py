@@ -796,6 +796,21 @@ class _PonteDoRodape:
         self.chamadas.append(("apply_draft_detalhado", (payload,)))
         return True, None
 
+    # O SALVAR FALA COM O DAEMON desde 02/10/2026 (O-APLICAR-E-O-SALVAR-JA-
+    # ATUALIZAM-01): o funil reaplica o perfil que vale e avisa o lançamento, e
+    # a volta reconcilia e renumera.
+    def profile_reaplicar(self, nome: str) -> dict[str, Any]:
+        self.chamadas.append(("profile_reaplicar", (nome,)))
+        return {"active_profile": nome, "mode_aplicado": True, "secoes": {}}
+
+    def chamar(self, metodo: str, timeout: float | None = None, **params: Any) -> bool:
+        self.chamadas.append(("chamar", (metodo,)))
+        return True
+
+    def resultado(self, metodo: str, timeout: float | None = None, **params: Any) -> Any:
+        self.chamadas.append(("resultado", (metodo,)))
+        return {"status": "ok"}
+
 
 def _ctx_sem_perfil() -> Any:
     """O daemon não diz quem está ativo, e a sessão está vazia."""

@@ -53,6 +53,7 @@ from typing import Any
 import pytest
 
 from tests.conftest import exigir_gi_real
+from tests.unit.ponte_do_rodape import PonteDoRodape
 
 exigir_gi_real("importa as réguas e os pacotes da aba 04, que carregam o GTK")
 
@@ -173,7 +174,7 @@ def _aplicar(mesa: Any) -> _PonteDoRodape:
 
 
 def _salvar(mesa: Any) -> None:
-    rodape.salvar(mesa.ctx(), CLIQUE, None)
+    rodape.salvar(mesa.ctx(), CLIQUE, PonteDoRodape())
 
 
 def _o_global_das_luzes(mesa: Any, palavra: str) -> None:

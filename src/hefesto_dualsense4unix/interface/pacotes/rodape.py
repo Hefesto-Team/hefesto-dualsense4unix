@@ -158,6 +158,10 @@ def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     O DAEMON CALADO RECUSA: o `None` do `profile_reaplicar` é «não houve
     resposta», e a frase é a que a pílula já usa
     (`a04_iluminacao.sem_resposta_do_daemon`). Antes o botão piscava verde.
+
+    E TERMINA COM A VOLTA (:func:`perfil.a_volta_do_perfil`, 02/10/2026): os
+    arquivos que a Steam lê, o elo morto do rádio, a reconciliação e a
+    numeração (O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01).
     """
     from .a04_iluminacao import sem_resposta_do_daemon
 
@@ -168,11 +172,12 @@ def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "Escolha um na aba Perfis.")
     if p.profile_reaplicar(nome) is None:
         raise RuntimeError(sem_resposta_do_daemon())
+    perfil.a_volta_do_perfil(ctx, p)
     _recado(perfil.com_a_carona())
     return None
 
 
-@gesto("*", "salvar", grava="save_profile")
+@gesto("*", "salvar", grava="gravar_e_reaplicar")
 def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Regrava o perfil ATIVO como o disco o tem, normalizado, e roda a carona.
 
@@ -188,17 +193,22 @@ def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     SEM PERFIL ATIVO E SEM ESCOLHA, RECUSA apontando a aba Perfis
     (:func:`perfil_do_rodape`, sem a perna do Freestyle desde 01/10/2026).
+
+    PELO FUNIL DOS GESTOS DE CAMPO, desde 02/10/2026
+    (O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01): :func:`perfil.gravar_e_reaplicar`
+    grava, reaplica o perfil quando ele é o que vale, e avisa o lançamento. Até
+    aqui o Salvar ia ao `save_profile` direto e não falava com o daemon: o
+    arquivo mudava e o controle seguia com o que tinha. Depois, a volta
+    (:func:`perfil.a_volta_do_perfil`), como o «Aplicar» e o «Importar».
     """
     nome = perfil_do_rodape(ctx.state)
     draft = _draft_do_ativo(nome)
     if draft is None:
         raise ValueError("salvar: não há perfil ativo. Escolha um na aba Perfis.")
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.profiles.loader import save_profile
-
     # A PRIORIDADE É A QUE O DISCO JÁ TINHA, e viaja no próprio rascunho.
-    save_profile(draft.to_profile(nome, priority=draft.source_priority),
-                 origem="interface-nova")
+    perfil.gravar_e_reaplicar(
+        draft.to_profile(nome, priority=draft.source_priority), ctx, p)
+    perfil.a_volta_do_perfil(ctx, p)
     _recado(perfil.com_a_carona())
     return None
 
@@ -278,6 +288,10 @@ def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     O CONFLITO DE NOME NÃO SOBRESCREVE. A janela estável "resolve conflito de
     nome se necessário"; aqui o novo entra como `nome-2`, `nome-3`… Perder um
     perfil dela por um clique de importação é o estrago que esta linha impede.
+
+    DEPOIS DE GRAVAR, A VOLTA (:func:`perfil.a_volta_do_perfil`, 02/10/2026),
+    como o «Salvar»: todo botão do rodapé que grava perfil termina igual (a
+    resposta 44 dela na O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01).
     """
     caminho = p.escolher_arquivo("Escolha o perfil para importar", padrao="*.json")
     if not caminho:
@@ -314,6 +328,7 @@ def importar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     destino.write_text(_json.dumps(dados, ensure_ascii=False, indent=2),
                        encoding="utf-8")
     print(f"[importar] {novo.name!r} → {destino}")
+    perfil.a_volta_do_perfil(ctx, p)
     _recado(perfil.com_a_carona())
     return None
 
@@ -323,5 +338,8 @@ PROVAS: list[dict[str, Any]] = [
     # O "aplicar" e o "salvar" dependem do perfil ATIVO, e a régua roda sem
     # daemon: eles são provados pelo teste de recusa, abaixo, e no aparelho.
 ]
-PONTE = {"profile_reaplicar", "escolher_arquivo", "salvar_arquivo"}
-METODOS: set[str] = set()
+#: `chamar` e `resultado` são da volta (`perfil.a_volta_do_perfil`), que os três
+#: botões que gravam ou mandam perfil chamam no fim.
+PONTE = {"profile_reaplicar", "escolher_arquivo", "salvar_arquivo",
+         "chamar", "resultado"}
+METODOS: set[str] = {"launch_env.refresh", "coop.sync", "identity.renumber"}

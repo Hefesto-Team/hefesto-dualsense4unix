@@ -43,6 +43,7 @@ from tests.unit.test_a_marca_da_cor_nao_some import (
     UNIQS,
     Mesa,
 )
+from tests.unit.ponte_do_rodape import PonteDoRodape
 
 #: O perfil para onde a troca AUTOMÁTICA vai: o mesmo global, sem opinião
 #: por controle, e as luzes no Fraco.
@@ -363,7 +364,7 @@ def _reaplicar(mesa: MesaViva, caminho: str) -> None:
         mesa.ctl.clear_user_output_overrides()
         mesa.pm.apply(load_profile(NOME), origin="system")
     elif caminho == "salvar":
-        rodape.salvar(mesa.ctx(), clique, None)
+        rodape.salvar(mesa.ctx(), clique, PonteDoRodape())
         mesa.ctl.clear_user_output_overrides()
         mesa.pm.apply(load_profile(NOME), origin="system")
     elif caminho == "aplicar":
@@ -456,7 +457,7 @@ def test_o_salvar_depois_do_autoswitch_nao_leva_a_camada_dela_ao_outro_perfil(me
         "a régua precisa dos 60% no perfil A")
     mesa.trocar(NOME_B, "autoswitch")
     antes = load_profile(NOME_B).model_dump(mode="json")
-    rodape.salvar(mesa.ctx(), CLIQUE_DA_04, None)
+    rodape.salvar(mesa.ctx(), CLIQUE_DA_04, PonteDoRodape())
     depois = load_profile(NOME_B).model_dump(mode="json")
     assert depois == antes, (
         f"o Salvar do B gravou a camada da mão: {antes.get('controllers')} -> "

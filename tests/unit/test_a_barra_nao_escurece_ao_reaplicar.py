@@ -59,6 +59,7 @@ from tests.unit.test_a_marca_da_cor_nao_some import (
     VERDE_AGUA,
     Mesa,
 )
+from tests.unit.ponte_do_rodape import PonteDoRodape
 
 #: A PALETA AUTOMÁTICA, os oito tons do número.
 PALETA = tuple(player_slot_color(n) for n in range(1, 9))
@@ -178,7 +179,7 @@ def _reaplicar(mesa: Mesa, caminho: str) -> None:
     elif caminho == "salvar":
         from pacotes import rodape
 
-        rodape.salvar(mesa.ctx(), CLIQUE_DA_04, None)
+        rodape.salvar(mesa.ctx(), CLIQUE_DA_04, PonteDoRodape())
         mesa.pm.apply(mesa._perfil(), origin="system")
     else:
         raise AssertionError(caminho)
@@ -347,7 +348,7 @@ def test_o_salvar_nao_grava_a_luz_acesa_como_a_cor(mesa_de):
     mesa.soltar(1, 60)
     mesa.soltar(2, 50)
     antes = load_profile(NOME).controllers
-    rodape.salvar(mesa.ctx(), CLIQUE_DA_04, None)
+    rodape.salvar(mesa.ctx(), CLIQUE_DA_04, PonteDoRodape())
     depois = load_profile(NOME).controllers
     for n in (1, 2):
         chave = a04_iluminacao.chave_do_override(UNIQS[n - 1])
@@ -380,7 +381,7 @@ def test_sem_a_paleta_o_salvar_grava_o_global_e_nao_a_luz(mesa_de):
     acesa = _luz(mesa)[3]
     assert acesa == _na(global_dela, BRILHO_GLOBAL), "a régua precisa do P4 no global"
     for _ in range(3):
-        rodape.salvar(mesa.ctx(), CLIQUE_DA_04, None)
+        rodape.salvar(mesa.ctx(), CLIQUE_DA_04, PonteDoRodape())
         mesa.pm.apply(mesa._perfil(), origin="manual")
         assert _luz(mesa)[3] == acesa, "o Salvar e a troca escureceram o P4"
     # A cor do P4 no disco: a dele, ou o global que ele herda — o rascunho só

@@ -43,6 +43,7 @@ from hefesto_dualsense4unix.daemon.subsystems import external_mask as em
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.daemon.subsystems import hotkey
 from hefesto_dualsense4unix.integrations import virtual_pad as vp
+from tests.unit.ponte_do_rodape import PonteDoRodape
 from hefesto_dualsense4unix.profiles import loader
 from hefesto_dualsense4unix.profiles.manager import ProfileManager, ligar_o_freestyle
 from hefesto_dualsense4unix.profiles.schema import (
@@ -647,11 +648,11 @@ def test_o_salvar_logo_depois_do_chip_nao_devolve_o_modo_velho(
     h = _Handlers(d, _gerente(d))
     ctx = SimpleNamespace(state={"active_profile": FREESTYLE})
 
-    rodape.salvar(ctx, {}, None)
+    rodape.salvar(ctx, {}, PonteDoRodape())
     assert _modo_no_disco(FREESTYLE).caminho == "xbox", "premissa: o Salvar antes do chip"  # type: ignore[union-attr]
 
     _chip(h, "dualsense")
-    rodape.salvar(ctx, {}, None)
+    rodape.salvar(ctx, {}, PonteDoRodape())
 
     modo = _modo_no_disco(FREESTYLE)
     assert modo is not None and (modo.kind, modo.caminho) == ("gamepad", "dualsense"), (

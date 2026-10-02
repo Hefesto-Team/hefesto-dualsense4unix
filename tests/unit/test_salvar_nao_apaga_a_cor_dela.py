@@ -30,6 +30,7 @@ from typing import Any
 import pytest
 
 from tests.conftest import exigir_gi_real
+from tests.unit.ponte_do_rodape import PonteDoRodape
 
 exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
@@ -69,7 +70,7 @@ def _salvar(perfil: str, *conectados: dict[str, Any]) -> Any:
     """O «Salvar Perfil» do rodapé, e o perfil que ficou no disco."""
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
-    rodape.salvar(_Ctx(list(conectados), perfil), {"gesto": "salvar"}, None)
+    rodape.salvar(_Ctx(list(conectados), perfil), {"gesto": "salvar"}, PonteDoRodape())
     return load_profile(perfil)
 
 

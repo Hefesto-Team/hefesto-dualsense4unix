@@ -57,6 +57,7 @@ for _p in (str(RAIZ / "src"), str(RAIZ / "src" / "hefesto_dualsense4unix" / "int
         sys.path.insert(0, _p)
 
 from hefesto_dualsense4unix.core import backend_pydualsense as bp
+from tests.unit.ponte_do_rodape import PonteDoRodape
 from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.core.controller import OutputSpec
 from hefesto_dualsense4unix.core.led_control import (
@@ -606,7 +607,7 @@ def test_o_salvar_do_rodape_nao_apaga_o_brilho_das_luzes() -> None:
     ctx = SimpleNamespace(state={"active_profile": nome}, conectados=[
         {"uniq": UNIQS[2], "lightbar_rgb": [0, 0, 255], "lightbar_on": True,
          "lightbar_source": "sysfs", "brilho_das_luzes": "forte"}])
-    rodape.salvar(ctx, {"gesto": "salvar"}, None)
+    rodape.salvar(ctx, {"gesto": "salvar"}, PonteDoRodape())
     gravado = load_profile(nome)
     dele = gravado.controllers[UNIQS[2]].leds
     assert "lightbar" not in dele.model_fields_set, (

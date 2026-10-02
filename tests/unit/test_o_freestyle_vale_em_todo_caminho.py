@@ -379,6 +379,14 @@ class _PonteDoRodape:
         self.salvar_pedido.append(sugestao)
         return self._salva
 
+    # A VOLTA DO RODAPÉ (02/10/2026, O-APLICAR-E-O-SALVAR-JA-ATUALIZAM-01): o
+    # funil do Salvar avisa o lançamento, e a volta reconcilia e renumera.
+    def chamar(self, metodo: str, timeout: float | None = None, **params: Any) -> bool:
+        return True
+
+    def resultado(self, metodo: str, timeout: float | None = None, **params: Any) -> Any:
+        return {"status": "ok"}
+
 
 def _ctx_sem_perfil() -> Any:
     """O daemon não diz quem está ativo, e a sessão está vazia."""

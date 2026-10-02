@@ -41,6 +41,7 @@ from typing import Any
 import pytest
 
 from tests.conftest import exigir_gi_real
+from tests.unit.ponte_do_rodape import PonteDoRodape
 
 exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
@@ -92,7 +93,7 @@ def _salvar(perfil: str, ctx: _Ctx) -> Any:
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
     ctx.state = {**ctx.state, "active_profile": perfil}
-    rodape.salvar(ctx, {"gesto": "salvar"}, None)
+    rodape.salvar(ctx, {"gesto": "salvar"}, PonteDoRodape())
     return load_profile(perfil)
 
 
