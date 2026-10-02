@@ -566,7 +566,7 @@ roteiro.
 
 **O que isto prova.** Prova que o botão «Em todos» põe o efeito de gatilho de uma coluna nos três controles ligados de uma vez, e o guarda como o efeito de todo mundo — a ponto de um quarto controle, ligado só depois, já nascer com ele.
 
-**Onde olhar.** Na aba Gatilhos, no pé de cada coluna de controle, o botão «Em todos», ao lado do campo «Nome» e do «Guardar». Depois do clique, as colunas dos outros controles passam a mostrar o mesmo Modo. A prova de verdade é o dedo: aperte o L2 e o R2 de cada controle. E, no fim, a aba Perfis, tabela de baixo, coluna «Status»: ali cada controle tem uma linha, e o desenho do L2 e do R2 fica apagado quando aquele controle usa o gatilho do perfil inteiro, que é o que este teste quer ver.
+**Onde olhar.** Na aba Gatilhos, no pé de cada coluna de controle, o botão «Em todos», ao lado do campo «Nome» e do «Guardar». Depois do clique, as colunas dos outros controles passam a mostrar o mesmo Modo. A prova de verdade é o dedo: aperte o L2 e o R2 de cada controle. E, no fim, a aba Perfis, tabela de baixo, coluna «Status»: ali cada controle tem uma linha, e o ponto embaixo do desenho do L2 e do R2 some quando aquele controle usa o gatilho do perfil inteiro, que é o que este teste quer ver. O desenho em si diz o controle de agora, e o do gatilho fica tracejado: o controle não diz o efeito que está fazendo.
 
 **Os passos.**
 
@@ -584,9 +584,9 @@ roteiro.
 12. Espere a coluna dele voltar com o nome dele.
 13. Aperte o L2 e o R2 do P4 e sinta se ele já nasceu com o efeito.
 14. Abra a aba Perfis.
-15. Confira, na tabela de baixo, coluna «Status», que o desenho do L2 e do R2 está apagado nas quatro linhas de controle.
+15. Confira, na tabela de baixo, coluna «Status», que não há ponto embaixo do desenho do L2 e do R2 nas quatro linhas de controle.
 
-**Passa quando.** Um clique só põe o mesmo efeito no L2 e no R2 dos três controles ligados, e você sente isso no dedo nos três. O P4, que estava desligado na hora do clique, já nasce com o efeito quando você o liga. E na tabela da aba Perfis o L2 e o R2 ficam apagados nas quatro linhas — apagado ali quer dizer "usa o do perfil inteiro", que é justamente o que o «Em todos» tinha de escrever.
+**Passa quando.** Um clique só põe o mesmo efeito no L2 e no R2 dos três controles ligados, e você sente isso no dedo nos três. O P4, que estava desligado na hora do clique, já nasce com o efeito quando você o liga. E na tabela da aba Perfis nenhuma das quatro linhas tem o ponto embaixo do L2 e do R2 — sem o ponto quer dizer "usa o do perfil inteiro", que é justamente o que o «Em todos» tinha de escrever.
 
 **Por controle.**
 
