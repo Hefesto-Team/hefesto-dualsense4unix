@@ -316,41 +316,58 @@ def _lutris_no_harness(lar: Path, dados: Path) -> Path:
     return alvo
 
 
+def _uninstall_com_um_excluido_de_cada(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[m.Raizes, dict[str, Path], str]:
+    r, repo = _casa_de_mentira(tmp_path, xdg_fora=False)
+    _instalar_pelos_donos(r, repo, heroic_nativo=False, com_venv=True)
+    alvos, yml_antes = _excluir_um_de_cada(r, monkeypatch)
+    rodou, diario = _desinstalar(tmp_path, r, repo, UNINSTALL.read_text(encoding="utf-8"),
+                                 xdg_fora=False)
+    assert rodou.returncode == 0, rodou.stdout[-3000:] + rodou.stderr[-3000:]
+    assert "RECUSADO" not in diario, diario
+    return r, alvos, yml_antes
+
+
 def test_o_purge_nao_apaga_antes_e_a_volta_segue_a_global(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O `uninstall.sh` real, do começo ao fim, com `--purge-config`.
+    """2 · O `uninstall.sh` real, do começo ao fim, com `--purge-config`.
 
     MORDIDA: a ordem de antes (o bloco da configuração antes do desfazer dos
     lançadores); reprova pelo nome de A.
     """
-    r, repo = _casa_de_mentira(tmp_path, xdg_fora=False)
-    _instalar_pelos_donos(r, repo, heroic_nativo=False, com_venv=True)
-    alvos, yml_antes = _excluir_um_de_cada(r, monkeypatch)
-
-    rodou, diario = _desinstalar(tmp_path, r, repo, UNINSTALL.read_text(encoding="utf-8"),
-                                 xdg_fora=False)
-
-    assert rodou.returncode == 0, rodou.stdout[-3000:] + rodou.stderr[-3000:]
-    assert "RECUSADO" not in diario, diario
+    r, alvos, _ = _uninstall_com_um_excluido_de_cada(tmp_path, monkeypatch)
     ficou = _lista_propria(alvos["casa"], "A")
     assert ficou is None, (
-        f"A saiu do uninstall com a lista própria {ficou}: o purge apagou a lista de "
-        "exclusão antes do desfazer")
+        f"A saiu do uninstall com a lista própria {ficou}: a lista de exclusão não "
+        "chegou ao desfazer")
     assert not lx.caminho(r.config).exists(), "a configuração não saiu com --purge-config"
     assert list(r.config.glob(f"{m.SLUG}.backup-*/*/lista_de_exclusao.json")), (
         "a lista de exclusão não foi para o backup da configuração")
-    # 3 · UM EXCLUÍDO DE CADA: nenhum arquivo dos quatro com o nosso.
+
+
+def test_um_excluido_de_cada_e_nenhum_rastro(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """3 · Um jogo da Steam, um do Heroic, um do Lutris Flatpak e um emulador
+    na lista; depois do uninstall, nenhum arquivo dos quatro tem o nosso.
+
+    MORDIDA: tirar a volta do Heroic; só ele aparece no rastro.
+    """
+    r, alvos, yml_antes = _uninstall_com_um_excluido_de_cada(tmp_path, monkeypatch)
     nossas = _nossas()
-    for app in ("A",):
-        sobrou = {k for k, _ in (_lista_propria(alvos["casa"], app) or [])} & nossas
-        assert not sobrou, f"o jogo {app} do Heroic ficou com {sorted(sobrou)}"
-    assert alvos["yml"].read_text() == yml_antes, alvos["yml"].read_text()
-    for caixa in (alvos["lutris"], alvos["mgba"]):
+    rastros: list[str] = []
+    no_heroic = {k for k, _ in (_lista_propria(alvos["casa"], "A") or [])} & nossas
+    if no_heroic or _lista_propria(alvos["casa"], "A") is not None:
+        rastros.append(f"Heroic, A: lista própria com {sorted(no_heroic)}")
+    if alvos["yml"].read_text() != yml_antes:
+        rastros.append(f"Lutris, {alvos['yml'].name}: {alvos['yml'].read_text()!r}")
+    for rotulo, caixa in (("Lutris, a caixa", alvos["lutris"]), ("mGBA", alvos["mgba"])):
         texto = caixa.read_text() if caixa.exists() else ""
-        assert not {k for k in nossas if f"{k}=" in texto}, f"{caixa.name}: {texto}"
-    assert not alvos["pasta"].exists(), "o launch_env ficou (com o steam_app da Steam)"
+        if {k for k in nossas if f"{k}=" in texto}:
+            rastros.append(f"{rotulo}: {texto!r}")
     vdf = next(r.lar.glob(".steam/steam/userdata/*/config/localconfig.vdf"))
-    assert not {k for k in nossas if k in vdf.read_text()}, vdf.read_text()
+    if alvos["pasta"].exists() or {k for k in nossas if k in vdf.read_text()}:
+        rastros.append("Steam: o ambiente do jogo excluído ficou")
+    assert not rastros, "o uninstall deixou o nosso no excluído:\n" + "\n".join(rastros)
 
 
 def test_o_desfazer_adiado_leva_a_lista_e_termina_depois(
