@@ -921,6 +921,10 @@ _ROTULOS_SEM_SECAO: dict[str, str] = {
     # D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO (26/09/2026): o nome de cada adaptador,
     # escrito pelo campo do cartão em «Rádio e Adaptadores».
     "adaptadores": "O nome de cada adaptador Bluetooth",
+    # O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 (02/10/2026): os seis gestos do
+    # controle e o padrão do computador que todo jogo herda.
+    "gestos": "O que cada gesto do controle faz",
+    "computador": "O padrão do computador",
 }
 
 

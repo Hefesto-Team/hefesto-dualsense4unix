@@ -1663,6 +1663,22 @@
      para elemento que a página não tem é a segunda cara de um dado morto — a
      mesma lição das quatro regras da `.vib .ressalva`, logo acima. */
 
+.camadas{display:inline-flex;align-items:center;gap:6px;margin-left:auto;height:17px}
+.camada-rot{font-size:11px;line-height:17px;color:var(--texto-mudo,#9aa0b4)}
+.camada{display:inline-flex;gap:6px;align-items:center;height:17px;max-width:100%;
+  font-size:11px;line-height:15px;color:var(--texto-mudo,#9aa0b4);white-space:nowrap}
+.camada-dono{padding:0 6px;border:1px solid currentColor;border-radius:8px;
+  flex:0 100 auto;min-width:0;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.camada a{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;
+  cursor:pointer;color:var(--cyan,#8be9fd);text-decoration:none}
+.camada a:hover{text-decoration:underline}
+[data-conectado="nao"] .camada{visibility:hidden}
+
+  .vib .ctrl{position:relative}
+  .vib .ctrl > .camada{position:absolute;top:-8px;left:18px;z-index:1;
+    padding:0 5px;background:var(--panel);max-width:calc(100% - 30px)}
+  .vib .ctrl > .camada::before{content:none}
+
   .vib{
     --larg-rot:138px;
     --gap-col:16px;
@@ -2674,6 +2690,7 @@
               <button class="btn vermelho" data-papel="parar"
                       data-hef-rotulo="o texto do botão">Parar</button>
             </div>
+            <span class="camada" data-campo="camada-vibracao" data-hef-alvo="html"><span class="camada-dono" aria-label="PC">PC</span></span>
           </div>
           <div class="ctrl" data-controle="p2" data-uniq="">
             <div class="moldura" data-hef="desenho" data-campo="plastico"
@@ -3039,6 +3056,7 @@
               <button class="btn vermelho" data-papel="parar"
                       data-hef-rotulo="o texto do botão">Parar</button>
             </div>
+            <span class="camada" data-campo="camada-vibracao" data-hef-alvo="html"><span class="camada-dono" aria-label="PC">PC</span></span>
           </div>
           <div class="ctrl off" data-controle="p3" data-uniq="" data-conectado="nao" title="Nenhum controle neste lugar.">
             <div class="moldura" data-hef="desenho" data-campo="plastico"
@@ -3403,6 +3421,7 @@
               <button class="btn vermelho" data-papel="parar"
                       data-hef-rotulo="o texto do botão">Parar</button>
             </div>
+            <span class="camada" data-campo="camada-vibracao" data-hef-alvo="html"><span class="camada-dono" aria-label="PC">PC</span></span>
           </div>
           <div class="ctrl off" data-controle="p4" data-uniq="" data-conectado="nao" title="Nenhum controle neste lugar.">
             <div class="moldura" data-hef="desenho" data-campo="plastico"
@@ -3767,6 +3786,7 @@
               <button class="btn vermelho" data-papel="parar"
                       data-hef-rotulo="o texto do botão">Parar</button>
             </div>
+            <span class="camada" data-campo="camada-vibracao" data-hef-alvo="html"><span class="camada-dono" aria-label="PC">PC</span></span>
           </div>
 
         </div>
