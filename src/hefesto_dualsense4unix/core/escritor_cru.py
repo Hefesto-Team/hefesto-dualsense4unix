@@ -59,8 +59,8 @@ RUMBLE-SEM-DONO-01 era um report que levava os motores).
 
 O QUE ELE NÃO VÊ, dito antes que alguém descubra do jeito caro
 ==============================================================
-- **Só reconhece a Steam.** A varredura é restrita aos PIDs dela (os mesmos
-  padrões do ``steam_running`` canônico). Um segundo escritor cru — um jogo
+- **Só reconhece a Steam.** A varredura é restrita aos PIDs dela (o ``comm``
+  e a cmdline de :func:`pids_da_steam`). Um segundo escritor cru — um jogo
   fora do Steam, outro daemon de controle — passa despercebido. Varrer
   ``/proc/*/fd`` inteiro seria caro e indiscreto, e a Steam é o escritor que
   a mesa dela mediu;
@@ -179,7 +179,7 @@ def _comm_de_pid(pid: str | int) -> str:
 def pids_da_steam(*, agora: float | None = None, forcar: bool = False) -> list[int]:
     """PIDs do processo Steam por varredura de ``/proc`` — sem forkar nada.
 
-    Mesmos matches de ``integrations/steam_launch_options.steam_running``, e o
+    A pergunta é quem pode segurar o hidraw, e não a do ``steam_running``; o
     contrato é **idêntico** ao do par de ``pgrep`` que estava aqui até
     06/09/2026: ``steamrt64/steam`` na cmdline (o runtime pelo PATH; nunca
     ``steam`` solto — o falso-positivo histórico do earlyoom) e ``comm``
