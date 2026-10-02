@@ -40,17 +40,17 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-from hefesto_dualsense4unix.core import acoes_do_gesto as ag  # noqa: E402
-from hefesto_dualsense4unix.daemon.subsystems import hotkey  # noqa: E402
-from hefesto_dualsense4unix.integrations import (  # noqa: E402
+from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+from hefesto_dualsense4unix.daemon.subsystems import hotkey
+from hefesto_dualsense4unix.integrations import (
     desktop_notifications,
     fora_do_servico,
     hotkey_daemon,
     steam_launcher,
 )
-from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyManager  # noqa: E402
-from hefesto_dualsense4unix.profiles import autoswitch  # noqa: E402
-from hefesto_dualsense4unix.utils import maquina as mq  # noqa: E402
+from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyManager
+from hefesto_dualsense4unix.profiles import autoswitch
+from hefesto_dualsense4unix.utils import maquina as mq
 
 PAGINA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
 
@@ -357,7 +357,8 @@ def test_as_guardas_do_arquivo(tmp_path: pathlib.Path) -> None:
     assert ag.conferir_o_script("limpa.sh") == ag.CAMINHO_INVALIDO
     assert ag.conferir_o_script(str(tmp_path / "nao-ha.sh")) == ag.SEM_O_ARQUIVO
     assert ag.conferir_o_script(str(bom), uid=os.getuid() + 1) == ag.DE_OUTRO_DONO
-    assert ag.conferir_o_script(str(_script(tmp_path, "g.sh", modo=0o720))) == ag.GRAVAVEL_POR_OUTROS
+    grupo = _script(tmp_path, "g.sh", modo=0o720)
+    assert ag.conferir_o_script(str(grupo)) == ag.GRAVAVEL_POR_OUTROS
     assert ag.conferir_o_script(str(_script(tmp_path, "x.sh", modo=0o600))) == ag.SEM_EXECUCAO
     assert ag.conferir_o_script(
         str(_script(tmp_path, "b.sh", corpo=b"echo oi\n"))) == ag.SEM_O_INTERPRETADOR
@@ -559,7 +560,6 @@ def test_o_main_da_bandeja_e_o_ato_dela(monkeypatch: pytest.MonkeyPatch) -> None
 # 8 — a tela pinta o que vale, e sobrevive a reabrir
 # ---------------------------------------------------------------------------
 def _pintar() -> dict[str, Any]:
-    import pacotes
     from pacotes import a06_navegacao
 
     a06_navegacao._A_MAQUINA = None  # a janela reaberta: nada em memória
