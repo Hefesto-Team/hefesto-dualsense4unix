@@ -131,7 +131,10 @@ class TestOEndereco:
             bloco = _bloco(html, pref)
             for campo in ENDERECOS:
                 assert f'data-campo="{campo}"' in bloco, (pref, campo)
-        assert '<span class="sec-rot">Háptica por áudio' in html
+        # O RÓTULO É O DELA DESDE 02/10/2026, «Sensor Háptico», e a linha mora
+        # na faixa que era do Personalizado (A-ABA-VIBRACAO-TEM-O-SENSOR-
+        # HAPTICO-E-DOIS-TESTES-01, a resposta [26]).
+        assert '<span class="sec-rot">Sensor Háptico' in html
 
     def test_o_teto_e_lido_do_esquema(self) -> None:
         """Régua 4: o `max` do trilho é o `HAPTICA_PCT_MAX`. MORDIDA: digitar 100.
@@ -146,11 +149,19 @@ class TestOEndereco:
             for tag in trilhos:
                 assert f'max="{HAPTICA_PCT_MAX}"' in tag and 'data-papel="haptica"' in tag
 
-    def test_a_grade_paga_a_linha_com_o_desenho(self) -> None:
-        """Os 46 px saem de `--r-des` (124 → 78), e a grade ganha a terceira faixa."""
-        css = aba05.CSS
-        assert "--r-des:78px" in css
-        assert "var(--r-motor) var(--r-motor) var(--r-motor) var(--r-acoes);" in css
+    def test_a_linha_mora_logo_abaixo_da_forca(self) -> None:
+        """A linha é a primeira depois da Força, antes dos dois motores (02/10/2026).
+
+        FATO SUBSTITUÍDO: esta régua cobrava a linha na terceira faixa de motor,
+        paga com 46 px do desenho (124 → 78). O desenho novo dela (a resposta
+        [26] de 29/09) a pôs na faixa do Personalizado, e a altura do desenho
+        mora na régua da A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01.
+        """
+        bloco = _bloco("".join(aba05._coluna(c) for c in aba05.MESA), "p1")
+        forca = bloco.index('<div class="forca">')
+        linha = bloco.index('data-campo="haptica-fora"')
+        esquerdo = bloco.index('data-campo="motor-e-pedido"')
+        assert forca < linha < esquerdo
 
 
 # ---------------------------------------------------------------------------

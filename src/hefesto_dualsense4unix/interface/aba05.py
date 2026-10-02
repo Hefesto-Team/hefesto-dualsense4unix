@@ -434,8 +434,8 @@ CSS = """
        deixa estranho essa área da primeira coluna."* */
     grid-template-columns:var(--larg-rot) repeat(4,1fr);
     gap:var(--gap-col);
-    --r-des:78px;--r-nome:17px;--r-forca:79px;--r-barra:26px;--r-motor:36px;
-    --r-acoes:74px;
+    --r-des:124px;--r-nome:17px;--r-forca:112px;--r-barra:26px;--r-motor:36px;
+    --r-acoes:34px;
     --r-ar:5px;--r-passo:calc(var(--r-ar) * 2);
   }
   /* SETE FAIXAS, E NÃO OITO — a oitava saiu em 05/09/2026 com a linha "Estado"
@@ -455,14 +455,31 @@ CSS = """
      a última — nenhuma linha horizontal dependia da altura dela. */
   .vib > div{
     display:grid;row-gap:var(--r-passo);
-    grid-template-rows:var(--r-des) var(--r-nome) var(--r-forca) var(--r-barra)
+    grid-template-rows:var(--r-des) var(--r-nome) var(--r-forca)
                        var(--r-motor) var(--r-motor) var(--r-motor) var(--r-acoes);
   }
-  /* A LINHA DA HÁPTICA POR ÁUDIO — 29/09/2026 (A-LINHA-DA-HAPTICA-POR-AUDIO-NA-
-     VIBRACAO-01). Custa `--r-motor` mais dois `--r-ar` (46px), e o preço saiu
-     de `--r-des`, como o censo acima prescreve: o desenho foi de 124 para 78.
-     O risco no meio do trilho marca 100%, o jogo como ele mandou. Onde o
-     Hefesto não está no caminho do controle, a linha fica cinza e inerte. */
+  /* O DESENHO NOVO DELA — 02/10/2026 (A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-
+     DOIS-TESTES-01, a resposta [26] de 29/09). O trilho do Personalizado sobe
+     para dentro da Força (`--r-forca` 112 = 79 dos degraus + 7 de vão + 26 do
+     trilho, `--r-barra`), e a faixa que era dele vira a «Sensor Háptico», a
+     linha da háptica por áudio (36, com o interruptor). A linha de baixo dos
+     motores, que a háptica ocupava desde 29/09 com o desenho pagando 46 px,
+     sai. E o «Testar agora» vira UMA linha («Vibração», «Háptica» e «Parar»,
+     `--r-acoes` 34 = `--h-acao`): medido no WebKit da janela, os três pedem
+     175 px e a coluna tem 206. Saldo: o desenho volta aos 124 px de antes de
+     29/09 (o desenho dela não encolhe), e a grade cresce 3 px, de 452 a 455.
+     Cabe com folga: medido no WebKit da janela do produto, sobram 108 px
+     embaixo da grade, e a linha de estado com o aviso aceso cabe neles.
+     O risco no meio do trilho da háptica marca 100%, o jogo como ele mandou.
+     Onde o Hefesto não está no caminho do controle, a linha fica cinza e
+     inerte; a bolinha verde depois do `%` é a luz «no ar»: há háptica
+     chegando a este controle agora. */
+  .vib .forca{display:flex;flex-direction:column;justify-content:center;gap:7px}
+  .vib .forca > .motor{height:var(--r-barra);flex:none}
+  .vib .ctrl[data-conectado="nao"] .forca > .motor{display:none}
+  .motor.haptica .teto.no-ar.on::after{content:'';display:inline-block;width:6px;
+    height:6px;border-radius:50%;background:var(--green);margin-left:3px;
+    vertical-align:1px}
   .motor.haptica .trilho.arrasta{
     background:linear-gradient(to right,transparent calc(50% - 1px),
       var(--comment) calc(50% - 1px),var(--comment) calc(50% + 1px),
@@ -543,9 +560,8 @@ CSS = """
        mesmo estado na mesma tela é o que esta regra existe para evitar. */
     /* `height:100%` NÃO É ENFEITE — é a régua de alinhamento falando. A coluna
        vazia tem a MESMA altura da viva (452px) e as mesmas sete linhas; o que
-       acabava 26px antes era o CONTEÚDO da última célula: dois botões
-       empilhados preenchem os 74px de `--r-acoes`, um travessão centrado para
-       no meio. A régua leu isso como "o conteúdo das colunas acaba em y
+       acabava 26px antes era o CONTEÚDO da última célula: os botões
+       preenchem a faixa `--r-acoes`, e um travessão centrado para no meio. A régua leu isso como "o conteúdo das colunas acaba em y
        diferentes", e leu certo. */
     content:"—";color:var(--linha);display:flex;align-items:center;
     justify-content:center;grid-column:1/-1;width:100%;height:100%}
@@ -803,8 +819,10 @@ CSS = """
   .lado.on{border-color:var(--orange);background:rgba(255,184,108,.1);color:var(--orange)}
   .lado:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
 
-  /* os dois botões de ação, um sobre o outro e da MESMA largura */
-  .acoes-col{display:grid;grid-template-columns:1fr;gap:6px}
+  /* os dois testes lado a lado («Vibração» e «Háptica», a resposta [24] dela)
+     e o «Parar» na mesma linha, no tamanho do texto dele: os dois testes
+     dividem o resto (75 px cada, para os 62 que «Vibração» pede) */
+  .acoes-col{display:grid;grid-template-columns:1fr 1fr auto;gap:6px}
   .acoes-col .btn{width:100%;justify-content:center;padding:0 6px;font-size:11.5px}
   /* o Testar aceso é o teste ligado naquela coluna: a mesma cor do lado que treme */
   .acoes-col .btn.on{border-color:var(--orange);background:rgba(255,184,108,.1);color:var(--orange)}
@@ -1072,7 +1090,7 @@ CSS = """
 #: em 05/09 com ela. Palavra dela: *"não é pra ter mesa em nada da interface (…)
 #: segue os três modos sempre"*. Ver :data:`FORCA`.
 PAPEIS_QUE_SAO_GESTO = ("forca", "testar", "parar",
-                        "intensidade", "motor", "haptica")
+                        "intensidade", "motor", "haptica", "testar-haptica")
 
 
 def _endereco_de_pintura(nome, extra=""):
@@ -1321,7 +1339,12 @@ def _barra_de_motor(valor, sigla, m, ligado, botao, vazio=False):
 
 
 def _linha_da_haptica(valor, ligado, vazio=False):
-    """A linha «Háptica por áudio»: interruptor · trilho de 0 a 200 · número · `%`.
+    """A linha «Sensor Háptico»: interruptor · trilho de 0 a 200 · número · `%` e a luz.
+
+    Desde 02/10/2026 ela mora na faixa que era do Personalizado, logo abaixo da
+    Força (A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01); o nome é o
+    dela, «Sensor Háptico». A luz «no ar» é a bolinha depois do `%`, acesa pelo
+    `haptica_no_ar` do `state_full`.
 
     O mesmo desenho das linhas dos motores, com gesto próprio (`haptica`,
     porque o teto é outro), e o mesmo par: o
@@ -1352,7 +1375,9 @@ def _linha_da_haptica(valor, ligado, vazio=False):
             f'{botao}{trilho}'
             f'<span class="num" data-campo="barra-h-pct">'
             f'{VAZIO if vazio else valor}</span>'
-            f'<span class="teto">%</span></div>')
+            f'<span class="teto no-ar" data-campo="haptica-no-ar"'
+            f' data-hef-alvo="classe"'
+            f' title="Aceso: há háptica chegando a este controle agora.">%</span></div>')
 
 
 def _teto_do_multiplicador(no_teto):
@@ -1809,15 +1834,17 @@ def _coluna(c, e=None, conectado=None):
             <div class="moldura" data-hef="desenho" data-campo="plastico"
                  data-hef-alvo="plastico"{tinta}>{desenho}</div>
             <div class="rot-ctrl" data-hef="identidade">{rotulo}
-            <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
-                 data-hef-classe="herdado">{degraus}</div>
-            {_barra(e["pct"], TETO, "", papel="", campo_num="mult",
-                    arrasta=True, campo_trilho="mult-pos",
-                    sufixo_html=_teto_do_multiplicador(e["pct"] == TETO),
-                    vazio=not conectado)}
+            <div class="forca">
+              <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
+                   data-hef-classe="herdado">{degraus}</div>
+              {_barra(e["pct"], TETO, "", papel="", campo_num="mult",
+                      arrasta=True, campo_trilho="mult-pos",
+                      sufixo_html=_teto_do_multiplicador(e["pct"] == TETO),
+                      vazio=not conectado)}
+            </div>
+            {_linha_da_haptica(e["hap"][1], e["hap"][0], vazio=not conectado)}
             {linhas[0]}
             {linhas[1]}
-            {_linha_da_haptica(e["hap"][1], e["hap"][0], vazio=not conectado)}
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão dela, 30/08:
                    *"ali vai ser só Testar; se o user quiser parar vai clicar em Parar"*.
@@ -1835,9 +1862,17 @@ def _coluna(c, e=None, conectado=None):
                    alvo `classe` (`em-teste`), com o `aria-pressed` junto para
                    quem não vê a cor. Como os degraus, ele não leva a marca de
                    rótulo: o que a régua mede aqui é o ESTADO. -->
+              <!-- OS DOIS TESTES LADO A LADO — 02/10/2026, a resposta [24] dela:
+                   *«ficam dois botões lado a Lado Vibração e Háptica»*. O
+                   «Vibração» é o Testar de sempre; o «Háptica» toca a vibração
+                   fina pelo som. Ligar um desliga o outro, e o «Parar» corta
+                   os dois. -->
               <button class="btn" data-papel="testar" data-campo="em-teste"
                       data-hef-alvo="classe" data-hef-atributo="aria-pressed"
-                      aria-pressed="false">Testar</button>
+                      aria-pressed="false">Vibração</button>
+              <button class="btn" data-papel="testar-haptica" data-campo="em-teste-h"
+                      data-hef-alvo="classe" data-hef-atributo="aria-pressed"
+                      aria-pressed="false">Háptica</button>
               <button class="btn vermelho" data-papel="parar"
                       data-hef-rotulo="o texto do botão">Parar</button>
             </div>
@@ -1888,6 +1923,8 @@ MIOLO = f'''
                 Quanto da vibração que o jogo pede chega ao controle.<br><br>
                 <b>Economia</b> 30% · <b>Balanceado</b> 100%, como o jogo pediu ·
                 <b>Máximo</b> 150%, mais forte.<br><br>
+                O trilho embaixo vai de 0 a {TETO}%, e o valor que vale é o dele:
+                acende o maior degrau que ele alcança.<br><br>
                 {DICA_DO_TETO_DA_MESA}<br><br>
                 <!-- O MECANISMO DO AUTO MUDOU DE CASA — 05-Q4 dela, 06/09/2026.
                      Ele era a segunda metade de `a05_vibracao.FRASE_DA_MESA_EM_AUTO`,
@@ -1904,7 +1941,15 @@ MIOLO = f'''
                 Com a <b>força geral</b> em Auto, a escolha de cada coluna fica
                 guardada e não chega ao motor.
               </span></span></span></div>
-            <div><span class="sec-rot">Personalizado</span></div>
+            <div><span class="sec-rot">Sensor Háptico
+              <span class="ajuda">?<span class="dica">
+                <b>A vibração fina</b> que o jogo manda como som, no cabo e no BT.<br><br>
+                O risco no meio é 100%: o jogo como ele mandou. Acima disso ela
+                fica mais forte; em 0, ela para. A bolinha verde acende quando
+                ela está chegando ao controle.<br><br>
+                Cinza quando o jogo fala direto com o controle, sem passar pelo
+                Hefesto.
+              </span></span></span></div>
             <div><span class="sec-rot">{ESQ["rot"]}
               <span class="ajuda">?<span class="dica">
                 <!-- O PUNHO NO LUGAR DO NOME DA PEÇA — 11/09/2026, aprovado por ela.
@@ -1916,19 +1961,11 @@ MIOLO = f'''
                       deve morar. -->
                 <b>Motor do punho esquerdo</b>: contrapeso maior, som grosso.<br><br>
                 Desligue um lado e aquele punho para de tremer; o outro continua.<br><br>
-                A barra ao lado é a força desse motor no <b>Testar</b>.
+                A barra ao lado é a força desse motor no teste <b>Vibração</b>.
               </span></span></span></div>
             <div><span class="sec-rot">{DIR["rot"]}
               <span class="ajuda">?<span class="dica">
                 <b>Motor do punho direito</b>: contrapeso menor, som fino.
-              </span></span></span></div>
-            <div><span class="sec-rot">Háptica por áudio
-              <span class="ajuda">?<span class="dica">
-                <b>A vibração fina</b> que o jogo manda como som, no cabo e no BT.<br><br>
-                O risco no meio é 100%: o jogo como ele mandou. Acima disso ela
-                fica mais forte; em 0, ela para.<br><br>
-                Cinza quando o jogo fala direto com o controle, sem passar pelo
-                Hefesto.
               </span></span></span></div>
             <!-- A DICA DESTE `?` ABRE PARA A DIREITA, e o número é medido — 06/09/2026.
                  Ela carregava `style="left:auto;right:22px"`, que é o arranjo das
@@ -1952,9 +1989,11 @@ MIOLO = f'''
                      barras ao vivo, e o Testar de outra coluna encerra o
                      anterior (`_EM_TESTE`, um teste só). Medido no daemon de
                      mentira: nenhum `rumble.stop` sai sem o Parar. -->
-                <b>Testar</b> treme este controle até o <b>Parar</b>, seguindo ao vivo
-                as barras da coluna. <b>Parar</b> corta e devolve a vibração ao jogo.
-                Testar outro controle encerra este.<br><br>
+                <b>Vibração</b> treme os motores deste controle até o <b>Parar</b>,
+                seguindo ao vivo as barras da coluna. <b>Háptica</b> toca a vibração
+                fina pelo som, com a força do <b>Sensor Háptico</b>. Ligar um desliga
+                o outro, e testar outro controle encerra este. <b>Parar</b> corta os
+                dois e devolve a vibração ao jogo.<br><br>
                 <!-- A NOTA DOS VALORES QUE PASSAM VOLTOU PARA CÁ — 05-Q2 dela,
                      05/09/2026: *"As duas na dica."* Ela é a única frase desta
                      aba que explica um resultado que a PRÓPRIA TELA produz (por
@@ -2015,6 +2054,7 @@ MIOLO = f'''
 LEGENDA = f'''<div class="nota">
   <h2>O que você pediu, e está aqui</h2>
   <ul>
+    <li><b>O trilho do Personalizado mora dentro da Força</b> (02/10), logo abaixo dos três degraus: o valor que vale é o do trilho, e acende o maior degrau que ele alcança (de 150% para cima, o Máximo). A faixa que era dele virou a <b>Sensor Háptico</b>, com a bolinha verde acesa quando a háptica está chegando ao controle; o <b>Testar agora</b> tem <b>Vibração</b>, <b>Háptica</b> e <b>Parar</b> numa linha só; e o desenho do controle voltou aos 124 px. A faixa entre os degraus (o Balanceado de 100 a 149, o Economia de 30 a 99) foi escolhida por delegação, e é sua para validar.</li>
     <li><b>Os quatro controles, um por coluna, sempre à vista</b> — na mesma ordem da fita do topo, cada um com a sua cor de plástico na borda do desenho.</li>
     <li><b>A força tem endereço, e o endereço é a coluna</b> — cada uma tem os seus quatro degraus e a sua barra. Como os quatro estão à vista, <b>a fita do topo não escolhe nada aqui</b> e nasce esmaecida (28/08). Também saiu o destaque que a coluna do P1 tinha: com a fita inerte, ele afirmaria na tela uma coisa que a fita já não faz.</li>
     <li><b>As cinco lâmpadas do jogador saíram do desenho</b> (28/08). Medidas neste navegador, nesta aba: <b>2,79 × 0,93 px</b> cada uma. Não é pouco contraste, é pouco pixel — menos de um pixel de altura não diz nada, aceso ou apagado. Quem diz o jogador aqui é o rótulo embaixo da coluna, que se lê. Elas continuam desenhadas na <b>Iluminação</b>, onde o controle é grande.</li>

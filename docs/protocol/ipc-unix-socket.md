@@ -41,7 +41,7 @@ aparece contada.
 
 <!-- BLOCO GERADO por scripts/gerar-contrato-ipc.py — não edite à mão -->
 
-**52 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **17** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
+**53 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **18** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
 
 Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e é por isso que ele está aqui: escrito à mão, ele já saiu 15, 17, 18 e 14 em levantamentos do mesmo dia.
 
@@ -50,7 +50,7 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `profile.switch` | `daemon/ipc_handlers.py:895` (`_handle_profile_switch`) | Aplica perfil escolhido pelo usuário (entrada manual via IPC). | sim |
 | `profile.list` | `daemon/ipc_handlers.py:1006` (`_handle_profile_list`) | _(o handler não tem docstring)_ | sim |
 | `profile.apply_draft` | `daemon/ipc_handlers.py:1027` (`_handle_profile_apply_draft`) | Aplica draft completo em ordem canonica: leds -> triggers -> rumble -> mouse. | sim |
-| `profile.reaplicar` | `daemon/ipc_handlers.py:1051` (`_handle_profile_reaplicar`) | O «Aplicar»: o perfil inteiro de novo aos controles, sem virar escolha. | sim |
+| `profile.reaplicar` | `daemon/ipc_handlers.py:1051` (`_handle_profile_reaplicar`) | O «Aplicar»: o perfil inteiro de novo aos controles, sem virar escolha. | **não** |
 | `trigger.set` | `daemon/ipc_handlers.py:1409` (`_handle_trigger_set`) | _(o handler não tem docstring)_ | sim |
 | `trigger.reset` | `daemon/ipc_handlers.py:1456` (`_handle_trigger_reset`) | Devolve o gatilho ao perfil e LIBERA a trava manual dele (R-19). | sim |
 | `led.set` | `daemon/ipc_handlers.py:1510` (`_handle_led_set`) | _(o handler não tem docstring)_ | sim |
@@ -96,9 +96,10 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `machine.declare` | `daemon/ipc_handlers.py:7612` (`_handle_machine_declare`) | Grava no `maquina.json` o que ela DECLAROU sobre a mesa (CONFIG-03). | sim |
 | `plugin.list` | `daemon/ipc_handlers.py:7726` (`_handle_plugin_list`) | Lista plugins carregados no daemon (FEAT-PLUGIN-01). | **não** |
 | `plugin.reload` | `daemon/ipc_handlers.py:7738` (`_handle_plugin_reload`) | Recarrega plugins do disco (FEAT-PLUGIN-01). | **não** |
-| `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:8010` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
-| `radio.mover` | `daemon/ipc_handlers.py:8052` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
-| `mira.set` | `daemon/ipc_handlers.py:8146` (`_handle_mira_set`) | `mira.set` — o chip «Mira Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |
+| `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:8022` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
+| `radio.mover` | `daemon/ipc_handlers.py:8064` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
+| `mira.set` | `daemon/ipc_handlers.py:8158` (`_handle_mira_set`) | `mira.set` — o chip «Mira Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |
+| `haptica.testar` | `daemon/ipc_handlers.py:8404` (`_handle_haptica_testar`) | `haptica.testar` — o botão «Háptica» da aba Vibração, num controle. | sim |
 
 <!-- FIM DO BLOCO GERADO -->
 
@@ -111,7 +112,6 @@ dispatcher. Ela cobre o subconjunto v1 — a lista COMPLETA é a de cima.
 |---------------------|-----------------------------------------------|----------------------------------------|
 | `profile.switch`    | `{name: str}`                                 | `{status: "ok", active_profile: str}`  |
 | `profile.list`      | `{}`                                          | `{profiles: [{name, priority, match}]}` |
-| `profile.reaplicar` | `{name: str}`                                 | `{active_profile, mode_aplicado, secoes}` (o «Aplicar»: a cadeia do `profile.switch`, sem gravar a escolha) |
 | `trigger.set`       | `{side, mode, params: [int]}`                 | `{status, aplicado_em, guardado_em}`   |
 | `trigger.reset`     | `{side?: "left"\|"right"\|"both"}`            | `{status, aplicado_em, guardado_em}`   |
 | `led.set`           | `{rgb: [r,g,b], player_leds?: [bool]*5}`      | `{status, aplicado_em, guardado_em}`   |
@@ -120,7 +120,7 @@ dispatcher. Ela cobre o subconjunto v1 — a lista COMPLETA é a de cima.
 | `daemon.reload`     | `{}`                                          | `{status}`                             |
 | `mouse.emulation.set` | `{enabled?: bool, speed?: 1-12, scroll_speed?: 1-5}` | `{status, enabled}`             |
 | `native.mode.set`   | `{enabled?: bool}` (ausente = toggle)         | `{status, native_mode}`                |
-| `freestyle.set`     | `{ligado?: bool}` (ausente = inverte)         | `{status, freestyle_ligado, active_profile}` (`active_profile` é `null` sem escolha) |
+| `freestyle.set`     | `{ligado?: bool}` (ausente = inverte)         | `{status, freestyle_ligado, active_profile}` |
 
 ### `uniq` — o alvo por controle (PERFIL-05 / R-17 / ABAS-06)
 
@@ -523,13 +523,8 @@ de 23/07, que cedia a todo perfil de jogo) desde 28/09/2026. `ligado=true` é o
 `profile.switch` do Freestyle, o mesmo gesto do «Ativar» na aba Perfis: ligado,
 o Freestyle vale para os quatro controles, no cabo e no rádio, e nenhum caminho
 automático troca o perfil (autoswitch, lançamento, restauro, perfil de janela).
-`ligado=false` solta a trava da troca à mão (com a linha
-`trava_da_troca_a_mao_solta motivo=freestyle_desligado`) e devolve na hora, sem
-depender do leitor de janela: o jogo vivo do lançamento com o perfil dele
-(`origin="launch"`), ou a escolha dela (`origin="system"`), ou nenhum perfil
-(«sem escolha»: `active_profile` vai a `null`) — nenhum dos três vira escolha
-(`D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`, 01/10/2026). O Freestyle desligado
-nunca é o `active_profile`. Persiste em `freestyle_ligado.flag`; o
+`ligado=false` solta a trava de 30 s da troca à mão e devolve o jogo vivo do
+lançamento com o perfil dele. Persiste em `freestyle_ligado.flag`; o
 `autoswitch_locked.flag` de antes é migrado uma vez no boot. `daemon.state_full`
 e `daemon.status` expõem `freestyle_ligado: bool` (no lugar de
 `autoswitch_locked`).
@@ -656,6 +651,28 @@ inverter_horizontal, inverter_vertical}` — o que vale AGORA para aquela peça
 `inclinacao` diz o analógico que ela move, como no pedido),
 pela mesma pergunta que o tique faz (`roteador_de_movimento.da_peca`), e os
 números mesmo com a mira apagada.
+
+### `haptica.testar` — o botão «Háptica» da aba Vibração (A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01)
+
+| Método           | Parâmetros                     | Retorno                                 |
+|------------------|--------------------------------|-----------------------------------------|
+| `haptica.testar` | `{uniq: str, ligado: bool}`    | `{status, uniq, ligado, leva, par?}`    |
+
+A resposta [24] dela, 29/09/2026: o «Testar agora» tem dois botões, «Vibração» e
+«Háptica». Ligado, o tocador do aparelho daquele controle toca o par `(127, 127)`
+no endpoint dele (a amplitude é `nível / 255`, e com o ganho no teto, 200 %, dá
+0,996, sem cortar), com o ganho da linha «Sensor Háptico» aplicado depois (a placa
+no cabo, o conversor da ponte no rádio). É a mesma porta do rumble convertido do
+modo Xbox, com as mesmas recusas: o endpoint com fluxo de jogo, o alto-falante
+tocando pelo rádio e o ganho em 0 deixam o tocador calado, e `leva` diz se o
+caminho até o controle está de pé agora. `ligado: false` cala.
+
+**O teste que ninguém rebate solta sozinho**: a janela manda o `ligado: true` a
+cada segundo, e o daemon cala o tocador do teste que passou do teto do rumble
+fixado (`rumble.TETO_DO_RUMBLE_FIXADO_S`) sem rebate. `status` pode ser `"ok"`,
+`"sem_controle"` (o controle fora da mesa, ou sem háptica) ou `"sem_som"` (o
+subsystem do som fora do ar), os dois últimos com `motivo`. Sem `uniq` ou sem
+`ligado` booleano, o erro é de parâmetro.
 
 ## Perfil com seção `mouse` (FEAT-POINT-AND-CLICK-01)
 

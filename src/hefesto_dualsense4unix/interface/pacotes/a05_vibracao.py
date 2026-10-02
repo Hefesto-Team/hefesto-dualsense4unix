@@ -227,6 +227,34 @@ def _chave_no_perfil(uniq: str) -> str:
     return norm_mac(str(uniq or "").strip()) or ""
 
 
+def degrau_da_faixa(policy: str, custom: Any) -> str:
+    """O degrau que acende pelo valor do trilho da Força: o MAIOR que o valor alcança.
+
+    A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01 (a resposta [26]
+    dela, 29/09/2026): *«qualquer valor acima disso é Máximo o botão ativo mas
+    o valor real é o do slicer»*. <!-- noqa-acento: citação literal dela -->
+    De 150 a 200, o Máximo; de 100 a 149, o Balanceado; de 30 a 99, o Economia;
+    abaixo de 30, nenhum. A faixa entre os degraus é por delegação, a validar
+    por ela (a fala dela diz só a de cima). Os limites são os da escada do
+    produto (``app/telas/vibracao``), e não números daqui.
+
+    O VALOR É O DO TRILHO: o mesmo pedido que o número ao lado mostra
+    (``_tela._pedido_da_politica``). Política fora da escada, ou personalizado
+    sem número lido, não acende nada.
+    """
+    pedido = _tela._pedido_da_politica(
+        {"rumble_policy": policy, "rumble_mult_applied": custom})
+    if pedido is None:
+        return ""
+    valor = round(float(pedido) * 100)
+    escada = _tela._escada()
+    aceso = ""
+    for chave in _tela.degraus_da_forca():
+        if valor >= round(escada[chave] * 100):
+            aceso = chave
+    return aceso
+
+
 def _haptica_do_controle(state: dict[str, Any], uniq: str) -> tuple[int, bool]:
     """``(haptica_pct, alcança)`` deste controle, do `state_full`.
 
@@ -253,6 +281,18 @@ def _haptica_do_controle(state: dict[str, Any], uniq: str) -> tuple[int, bool]:
                else int(padrao))
         return pct, c.get("haptica_alcanca") is not False
     return int(padrao), True
+
+
+def _haptica_no_ar(state: dict[str, Any], uniq: str) -> bool:
+    """O `haptica_no_ar` deste controle no `state_full`; sem ele, apagada."""
+    chave = _chave_no_perfil(uniq)
+    for c in state.get("controllers") or ():
+        if not isinstance(c, dict):
+            continue
+        dele = str(c.get("uniq") or "")
+        if dele and (dele == uniq or _chave_no_perfil(dele) == chave):
+            return c.get("haptica_no_ar") is True
+    return False
 
 
 def _perfil_ativo(ctx: Contexto) -> dict[str, Any]:
@@ -780,7 +820,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # herdado ganha uma marca própria em vez de ficar apagado. Herdado
             # continua diferente de escolhido; o que deixou de existir é o
             # "herdado = nada na tela".
-            "degrau": politica,
+            # **DESDE 02/10/2026 ELE SEGUE A FAIXA DO TRILHO**, e não o nome da
+            # política (A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01):
+            # o trilho mora dentro da Força, e o personalizado em 180 acende o
+            # Máximo. Ver :func:`degrau_da_faixa`.
+            "degrau": degrau_da_faixa(politica, custom),
             # DE ONDE VEM O DEGRAU ACESO — o par do campo acima, e sem ele a
             # cura seria pior que o defeito: um degrau herdado com a MESMA cara
             # de um escolhido é a mentira que a decisão [05] nasceu para matar.
@@ -875,6 +919,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         plano["barra-h-pct"] = str(haptica)
         plano["lado-h"] = "1" if haptica > 0 else ""
         plano["haptica-fora"] = "" if alcanca else "1"
+        # A LUZ «NO AR» (O-GANHO-DA-HAPTICA-TEM-DONO-01, item 8): há háptica
+        # chegando a ESTE controle agora, do `state_full` (`haptica_no_ar`).
+        plano["haptica-no-ar"] = "1" if _haptica_no_ar(ctx.state, uniq) else ""
+        # O BOTÃO «Háptica» ACESO enquanto o teste dela é DESTE controle.
+        plano["em-teste-h"] = "1" if uniq and uniq == em_teste_da_haptica() else ""
         # O PUNHO QUE TREME — 03/09/2026, e era um FIO SOLTO com as duas pontas
         # já prontas. `app/telas/vibracao.pacote_da_coluna` calcula `treme` por
         # lado desde que nasceu, o CSS que acende o punho existe
@@ -1083,6 +1132,25 @@ def em_teste() -> str:
     return _EM_TESTE[0]
 
 
+#: O CONTROLE COM O TESTE «Háptica» LIGADO — A-ABA-VIBRACAO-TEM-O-SENSOR-
+#: HAPTICO-E-DOIS-TESTES-01 (a resposta [24] dela, 29/09/2026): *«ficam dois
+#: botões lado a Lado Vibração e Háptica»*. <!-- noqa-acento: citação literal dela -->
+#: O par do :data:`_EM_TESTE`, e os dois nunca ficam ligados juntos: com os
+#: dois, o bit do rumble cala a háptica (O-GANHO-DA-HAPTICA-TEM-DONO-01, item
+#: 10). Um teste só na mesa, de um tipo só.
+_EM_TESTE_DA_HAPTICA = [""]
+
+
+def em_teste_da_haptica() -> str:
+    """O `uniq` com o teste da háptica ligado agora, ou `""`. Leitura pura."""
+    return _EM_TESTE_DA_HAPTICA[0]
+
+
+def parar_o_teste_da_haptica() -> None:
+    """Apaga a marca do teste da háptica. Pelas mesmas duas portas do irmão."""
+    _EM_TESTE_DA_HAPTICA[0] = ""
+
+
 def parar_o_teste() -> None:
     """Apaga a marca do teste. O ÚNICO jeito de zerá-la de fora.
 
@@ -1149,6 +1217,53 @@ def _bater_o_coracao_do_teste(ctx: Contexto, p: Any) -> None:
     weak, strong = _par_das_barras(ctx, uniq)
     with contextlib.suppress(Exception):
         p.rumble_set_checked(weak, strong)
+
+
+_BATEU_A_HAPTICA_EM = [0.0]
+
+
+@coracao
+def _bater_o_coracao_da_haptica(ctx: Contexto, p: Any) -> None:
+    """Rebate o teste da háptica a cada segundo: o daemon solta o que ninguém rebate.
+
+    É o par de :func:`_bater_o_coracao_do_teste`, com o mesmo teto do lado do
+    daemon (``alto_falante._conferir_o_teste_da_haptica``): fechar a janela, ou
+    ela morrer, não deixa o controle vibrando.
+    """
+    uniq = _EM_TESTE_DA_HAPTICA[0]
+    if not uniq:
+        return
+    agora = _monotonic()
+    if agora - _BATEU_A_HAPTICA_EM[0] < SEGUNDOS_ENTRE_BATIMENTOS:
+        return
+    _BATEU_A_HAPTICA_EM[0] = agora
+    if not any(str(c.get("uniq") or "") == uniq for c in ctx.mesa):
+        parar_o_teste_da_haptica()
+        return
+    with contextlib.suppress(Exception):
+        p.haptica_testar(uniq, True)
+
+
+@largada
+def _largar_o_teste_da_haptica(p: Any) -> None:
+    """Cala o teste da háptica ao trocar de página e ao fim da janela."""
+    uniq = _EM_TESTE_DA_HAPTICA[0]
+    if not uniq:
+        return
+    parar_o_teste_da_haptica()
+    _BATEU_A_HAPTICA_EM[0] = 0.0
+    with contextlib.suppress(Exception):
+        p.haptica_testar(uniq, False)
+
+
+def _calar_o_teste_da_haptica(p: Any) -> None:
+    """O teste da háptica ligado (de qualquer coluna) cala, e a marca cai."""
+    uniq = _EM_TESTE_DA_HAPTICA[0]
+    if not uniq:
+        return
+    parar_o_teste_da_haptica()
+    with contextlib.suppress(Exception):
+        p.haptica_testar(uniq, False)
 
 
 @largada
@@ -2325,6 +2440,12 @@ def haptica(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(
             str(resposta.get("motivo")
                 or "o Hefesto não gravou esta barra. Tente de novo."))
+    # O TESTE «Háptica» DESTE CONTROLE SEGUE O ARRASTE: o rebate acorda a
+    # volta do som, que escreve o ganho novo na placa do cabo (no rádio a
+    # bomba o pergunta a cada bloco). Mudo no erro, como o irmão do «Vibração».
+    if _EM_TESTE_DA_HAPTICA[0] == uniq:
+        with contextlib.suppress(Exception):
+            p.haptica_testar(uniq, True)
 
 
 @gesto("05-vibracao.html", "testar")
@@ -2373,6 +2494,9 @@ def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """
     _minha_vez()
     uniq = _mirar(ctx, o, p)
+    # LIGAR UM DESLIGA O OUTRO (A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-
+    # TESTES-01): com o rumble pedido, o firmware cala a háptica.
+    _calar_o_teste_da_haptica(p)
     weak, strong = _par_das_barras(ctx, uniq)
     ok, motivo = _resposta(p.rumble_set_checked(weak, strong))
     if not ok:
@@ -2419,6 +2543,8 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     # `rumble.stop` no alvo de agora: parar o P1 apagaria a vibração do P2.
     _minha_vez()
     _mirar(ctx, o, p)
+    # O «Parar» desliga o que estiver ligado: a háptica cala primeiro.
+    _calar_o_teste_da_haptica(p)
     ok, motivo = _resposta(p.rumble_stop_checked())
     if not ok:
         # O `motivo` É A RECUSA DO DAEMON JÁ TRADUZIDA EM FRASE DE TELA, e é
@@ -2451,9 +2577,53 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #: e ficou SEM CHAMADOR nesta aba em 05/09, quando a linha saiu. Ele continua na
 #: `PONTE` porque a janela GTK o usa e porque tirá-lo daqui não tiraria um método
 #: do produto — só esconderia da régua que esta aba não o chama mais.
+FRASE_SEM_HAPTICA_NESTE_CONTROLE = (
+    "este controle não tem a háptica por áudio agora. Veja se ele é um "
+    "DualSense e se o som do Hefesto está no ar, na aba Sistema.")
+
+
+@gesto("05-vibracao.html", "testar-haptica")
+def testar_haptica(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Háptica»: o tocador DAQUELE controle toca o par de teste até o «Parar».
+
+    A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01 (a resposta [24] dela):
+    o irmão do «Vibração» (:func:`testar`), na mesma linha «Testar agora». O
+    teste é do daemon (``haptica.testar``): o par (127, 127) no endpoint do
+    aparelho, com o ganho da linha «Sensor Háptico» — e o arraste dela segue
+    ao vivo, porque o ganho é aplicado depois do tocador (a placa no cabo, a
+    bomba no rádio). Toca só com o caminho de pé; pelo rádio com o
+    alto-falante tocando, o botão acende e a luz «no ar» fica apagada, que é a
+    luz dizendo a verdade.
+
+    LIGAR UM DESLIGA O OUTRO: o «Vibração» ligado para (com o rumble pedido, o
+    firmware cala a háptica), e o teste da háptica de outra coluna cala — um
+    teste só na mesa. Sem mira: o método leva o ``uniq``.
+    """
+    _minha_vez()
+    uniq = _uniq(o)
+    if not uniq:
+        raise RuntimeError(
+            "Clique o botão dentro da coluna do controle que você quer sentir.")
+    if _EM_TESTE[0]:
+        p.rumble_stop_checked()
+        p.rumble_passthrough(True)
+        parar_o_teste()
+    antes = _EM_TESTE_DA_HAPTICA[0]
+    if antes and antes != uniq:
+        _calar_o_teste_da_haptica(p)
+    ok, corpo = p.haptica_testar(uniq, True)
+    if not ok:
+        raise RuntimeError("o Hefesto não está rodando — ligue na aba Sistema")
+    resposta = corpo if isinstance(corpo, dict) else {}
+    if str(resposta.get("status") or "") != "ok":
+        raise RuntimeError(str(resposta.get("motivo") or FRASE_SEM_HAPTICA_NESTE_CONTROLE))
+    _EM_TESTE_DA_HAPTICA[0] = uniq
+    _BATEU_A_HAPTICA_EM[0] = _monotonic()
+
+
 PONTE = {"chamar", "profile_switch", "rumble_set_checked",
          "rumble_stop", "rumble_stop_checked", "rumble_passthrough",
-         "rumble_motores_set", "rumble_policy_set_checked"}
+         "rumble_motores_set", "rumble_policy_set_checked", "haptica_testar"}
 #: O ÚNICO MÉTODO CRU, e ele é o que dá endereço aos outros quatro.
 METODOS = {"controller.target.set"}
 
@@ -2576,4 +2746,5 @@ PROVAS = [
 #: :func:`_barras_dos_motores` (o mesmo caminho do `motor`) e a régua
 #: `tests/unit/test_o_interruptor_de_punho_liga_de_verdade.py`. `SEM_ECO` cala
 #: UMA régua sobre UM assunto que ela não alcança, e não é dispensa de prova.
-SEM_ECO = ("testar", "parar", "forca", "intensidade", "motor", "lado")
+SEM_ECO = ("testar", "parar", "forca", "intensidade", "motor", "lado",
+           "testar-haptica")

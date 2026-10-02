@@ -291,6 +291,9 @@ class IpcServer(IpcHandlersMixin):
             # A-MIRA-POR-MOVIMENTO-NA-TELA-01 (24/09/2026): o chip «Mira
             # Virtual» de cada controle e os dois deslizantes da Calibrar.
             "mira.set": self._handle_mira_set,
+            # A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01 (02/10/2026):
+            # o botão «Háptica» da aba Vibração, ligado até o «Parar».
+            "haptica.testar": self._handle_haptica_testar,
         }
 
     async def start(self) -> None:

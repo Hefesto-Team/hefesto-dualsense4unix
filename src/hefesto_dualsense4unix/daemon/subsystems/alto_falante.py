@@ -168,6 +168,15 @@ _O_QUE_A_VOLTA_OUVE: tuple[str, ...] = ("sinks", "sink-inputs")
 #: pedir de novo.
 RECUSA_DA_PONTE_S = 60.0
 
+#: O PAR DO BOTÃO «Háptica» da aba Vibração —
+#: A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01, 02/10/2026. Um pouco
+#: abaixo da meia escala: a amplitude do tocador é ``nível / 255``
+#: (``endpoint_de_haptica.bloco_da_haptica``), e o ganho da linha «Sensor
+#: Háptico» multiplica depois (a placa no cabo, a bomba no rádio). 127 dá
+#: 0,498, e no teto do ganho (``HAPTICA_PCT_MAX``, 200%) dá 0,996, sem cortar;
+#: 128 já passaria de 1,0.
+PAR_DO_TESTE_DA_HAPTICA: tuple[int, int] = (127, 127)
+
 #: Os doze dígitos hex de um MAC. Um ``uniq`` que não os tenha não é endereço,
 #: e `norm_mac` só FILTRA hex — sem esta trava, `"a"` viraria uma chave válida
 #: e casaria com qualquer coisa. Mesma régua da metade de entrada.
@@ -871,6 +880,11 @@ class AltoFalanteSubsystem:
     #: Os controles do rádio com o alto-falante tocando: pelo rádio som e
     #: vibração são exclusivos, e a háptica fina não tira o som de ninguém.
     _radio_com_som: frozenset[str] = frozenset()
+    #: ``{uniq: quando foi rebatido}`` dos controles com o teste «Háptica» da
+    #: aba Vibração ligado (:meth:`testar_a_haptica`). A janela rebate a cada
+    #: segundo; o que ninguém rebate solta sozinho
+    #: (:meth:`_conferir_o_teste_da_haptica`).
+    _teste_da_haptica: Mapping[str, float] = MappingProxyType({})
     _trava_do_rumble = threading.Lock()
 
     #: O GOVERNADOR DO RÁDIO (GOVERNADOR-DO-RADIO-01, 23/09/2026): quem dá a
@@ -1457,6 +1471,74 @@ class AltoFalanteSubsystem:
                 vivos[chave] = (reaplicar, retrato)
             self._rumble_vivo = MappingProxyType(vivos)
         return retrato[2]
+
+    def testar_a_haptica(self, uniq: str, ligado: bool) -> dict[str, Any]:
+        """O botão «Háptica» da aba Vibração: o par de teste no tocador DESTE controle.
+
+        A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01 (a resposta [24]
+        dela, 29/09/2026). O teste é o rumble convertido de sempre
+        (:meth:`levar_o_rumble`) com o par :data:`PAR_DO_TESTE_DA_HAPTICA`: a
+        mesma porta, o mesmo caminho (o laço do cabo, a ponte do rádio em
+        háptica) e as mesmas recusas — o endpoint com fluxo de jogo, o
+        alto-falante tocando pelo rádio, o ganho em 0. Nessas, o tocador não
+        toca, e a resposta diz ``leva: False``; a luz «no ar» é quem diz se
+        chegou.
+
+        ``ligado`` falso cala o tocador. Ligar de novo é o rebate: a janela o
+        manda a cada segundo, e o teste que ninguém rebate solta sozinho
+        (:meth:`_conferir_o_teste_da_haptica`). Nunca levanta.
+        """
+        chave = self._chave_do_rumble(uniq)
+        if chave is None:
+            return {
+                "status": "sem_controle",
+                "motivo": "este controle não está na mesa, ou não tem háptica",
+            }
+        if not ligado:
+            self._soltar_o_teste_da_haptica(chave)
+            return {"status": "ok", "uniq": chave, "ligado": False, "leva": False}
+        with self._trava_do_rumble:
+            self._teste_da_haptica = MappingProxyType(
+                {**self._teste_da_haptica, chave: time.monotonic()}
+            )
+        leva = self.levar_o_rumble(chave, *PAR_DO_TESTE_DA_HAPTICA)
+        # A VOLTA AGORA, e não no relógio: ela abre o caminho (o laço do cabo,
+        # a ponte do rádio) e escreve o ganho de agora na placa do cabo — o
+        # arraste da «Sensor Háptico» rebate o teste, e a mão sente na hora.
+        self._acordar_a_volta()
+        return {
+            "status": "ok",
+            "uniq": chave,
+            "ligado": True,
+            "leva": bool(leva),
+            "par": list(PAR_DO_TESTE_DA_HAPTICA),
+        }
+
+    def _soltar_o_teste_da_haptica(self, chave: str) -> None:
+        """O tocador deste controle cala, e o teste sai da lista."""
+        with self._trava_do_rumble:
+            self._teste_da_haptica = MappingProxyType(
+                {u: t for u, t in self._teste_da_haptica.items() if u != chave}
+            )
+        self.levar_o_rumble(chave, 0, 0)
+
+    def _conferir_o_teste_da_haptica(self) -> None:
+        """O teste que a janela deixou de rebater solta: o tocador não fica preso ligado.
+
+        É o par do teto do rumble fixado (``rumble.TETO_DO_RUMBLE_FIXADO_S``),
+        e pelo mesmo motivo: a janela que fecha sem o «Parar» (ou morre) não
+        pode deixar o controle vibrando. A conta é na volta, que roda ao menos
+        a cada :data:`RECONCILIA_S`.
+        """
+        if not self._teste_da_haptica:
+            return
+        from hefesto_dualsense4unix.daemon.subsystems.rumble import TETO_DO_RUMBLE_FIXADO_S
+
+        agora = time.monotonic()
+        for chave, quando in list(self._teste_da_haptica.items()):
+            if agora - quando > TETO_DO_RUMBLE_FIXADO_S:
+                logger.info("haptica_teste_solto_sem_rebate", controle=self._aparelho_de.get(chave))
+                self._soltar_o_teste_da_haptica(chave)
 
     def _retrato_do_rumble(self, chave: str) -> tuple[str | None, bool, bool]:
         """``(marca, quer a háptica fina, a háptica leva)`` deste controle agora."""
@@ -2597,6 +2679,7 @@ class AltoFalanteSubsystem:
                 logger.info("som_ponte_nao_subiu", uniq=uniq, motivo=ponte.motivo)
         self._esperando_vaga = frozenset(esperando)
         self._radio_com_som = frozenset(com_som)
+        self._conferir_o_teste_da_haptica()
         self._conferir_o_rumble()
 
     def _esquecer_a_espera(self, uniq: str) -> None:

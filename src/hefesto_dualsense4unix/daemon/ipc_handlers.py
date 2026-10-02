@@ -8401,6 +8401,37 @@ class IpcHandlersMixin:
             "ressalva": ressalva,
         }
 
+    async def _handle_haptica_testar(self, params: dict[str, Any]) -> dict[str, Any]:
+        """`haptica.testar` — o botão «Háptica» da aba Vibração, num controle.
+
+        A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01 (02/10/2026).
+        Params: ``{uniq: str, ligado: bool}``. Ligado, o tocador do aparelho
+        daquele controle toca o par de teste (``alto_falante.PAR_DO_TESTE_DA_HAPTICA``)
+        no endpoint dele, com o ganho da linha «Sensor Háptico»; desligado,
+        cala. A janela rebate o ligado a cada segundo, e o teste que ninguém
+        rebate solta sozinho. Mora no fim da classe para nenhuma citação
+        ``arquivo:linha`` deste arquivo andar.
+
+        Responde ``{status, uniq, ligado, leva}``: ``leva`` diz se o caminho
+        até o controle está de pé agora (o laço do cabo, a ponte do rádio em
+        háptica). ``sem_som`` quando o subsystem do som não está no ar.
+        """
+        uniq = params.get("uniq")
+        if not isinstance(uniq, str) or not uniq.strip():
+            raise ValueError("haptica.testar exige 'uniq': o teste é de um controle")
+        ligado = params.get("ligado")
+        if not isinstance(ligado, bool):
+            raise ValueError("haptica.testar exige 'ligado' verdadeiro ou falso")
+        sub = getattr(self.daemon, "_alto_falante_subsystem", None)
+        testar = getattr(sub, "testar_a_haptica", None)
+        if not callable(testar):
+            return {
+                "status": "sem_som",
+                "motivo": "o som do Hefesto não está no ar; reinicie o serviço",
+            }
+        resposta = testar(uniq.strip(), ligado)
+        return dict(resposta) if isinstance(resposta, dict) else {"status": "sem_som"}
+
 
 # ---------------------------------------------------------------------------
 # A MESA QUE ELA VÊ, para a troca do `identity.number.set`

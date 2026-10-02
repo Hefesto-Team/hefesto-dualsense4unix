@@ -1664,6 +1664,19 @@ def mira_set_detalhado(
     return _corpo_do_daemon("mira.set", payload)
 
 
+def haptica_testar(uniq: str, ligado: bool) -> tuple[bool, dict[str, Any] | None]:
+    """``haptica.testar`` — o botão «Háptica» da aba Vibração, num controle.
+
+    A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01 (02/10/2026). Ligado,
+    o tocador do aparelho toca o par de teste com o ganho da linha «Sensor
+    Háptico»; desligado, cala. Devolve ``(ok, corpo)``, e o corpo é o do
+    daemon (``status``, ``ligado``, ``leva``, o ``motivo`` quando recusa).
+    Corpo ``None`` quer dizer daemon fora do ar.
+    """
+    corpo = _corpo_do_daemon("haptica.testar", {"uniq": uniq, "ligado": bool(ligado)})
+    return corpo is not None, corpo
+
+
 # PODA DE 26/08/2026 (BG-07) — cinco pontes públicas sem NENHUM chamador em
 # `src/` foram apagadas daqui, e o `__all__` abaixo é o registro do que ficou:
 # `apply_draft`, `rumble_policy_set`, `rumble_policy_set_detalhado`,
@@ -1700,6 +1713,7 @@ __all__ = [
     "frase_do_ato_do_microfone",
     "frase_do_interruptor_de_sensor",
     "freestyle_set",
+    "haptica_testar",
     "identity_number_set",
     "led_set",
     "led_set_detalhado",

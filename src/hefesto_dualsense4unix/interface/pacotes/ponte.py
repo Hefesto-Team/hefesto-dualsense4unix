@@ -341,3 +341,10 @@ def dentro_da_janela() -> bool:
     fato já estava disponível sem tocar no piloto.
     """
     return getattr(escolher_arquivo, "__module__", __name__) != __name__
+
+
+#: O TESTE «Háptica» DA ABA VIBRAÇÃO — A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-
+#: TESTES-01 (02/10/2026). Mora no fim do arquivo, e não junto dos irmãos do
+#: rumble: uma linha a mais lá andaria as citações `ponte.py:NNN` de outros
+#: pacotes.
+haptica_testar = _b.haptica_testar

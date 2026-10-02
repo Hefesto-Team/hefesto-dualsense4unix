@@ -107,6 +107,9 @@ ATOS: dict[Chave, str] = {
     ("05-vibracao.html", "parar"):
         "sessão: corta o teste daquele controle e devolve os motores ao jogo; "
         "parar não muda a vibração no jogo — ordem dela de 15/09",
+    ("05-vibracao.html", "testar-haptica"):
+        "sessão: o teste «Háptica» toca a vibração fina daquele controle até o "
+        "«Parar» (o coração da janela o rebate), e nada vai ao perfil",
     ("06-navegacao.html", "fechar-definicoes"): _FECHAR_DA_06,
     ("06-navegacao.html", "fechar-ponto"): _FECHAR_DA_06,
     ("06-navegacao.html", "fechar-teclas"): _FECHAR_DA_06,
