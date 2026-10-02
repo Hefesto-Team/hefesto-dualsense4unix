@@ -89,15 +89,30 @@ import asyncio
 import contextlib
 import json
 import os
+import select
 import socket as _socket
+import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.core.controller import IController
+from hefesto_dualsense4unix.daemon import launch_env
 from hefesto_dualsense4unix.daemon.ipc_handlers import DraftApplier, IpcHandlersMixin
 from hefesto_dualsense4unix.daemon.ipc_rumble_policy import apply_rumble_policy
+from hefesto_dualsense4unix.daemon.protocolo_do_ipc import (
+    CODE_CONTROLLER_DISCONNECTED,
+    CODE_CONTROLLER_LOST,
+    CODE_INTERNAL,
+    CODE_INVALID_PARAMS,
+    CODE_INVALID_REQUEST,
+    CODE_METHOD_NOT_FOUND,
+    CODE_PARSE_ERROR,
+    CODE_PROFILE_NOT_FOUND,
+    MAX_PAYLOAD_BYTES,
+    PROTOCOL_VERSION,
+)
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -105,22 +120,30 @@ from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
 
 logger = get_logger(__name__)
 
-PROTOCOL_VERSION = "2.0"
+# A versão do protocolo, os códigos de erro e o teto do payload moram em
+# `protocolo_do_ipc` desde 02/10/2026 (O-APP-RESPONDE-NA-HORA-01): os clientes
+# os leem de lá sem importar este servidor (e com ele os handlers inteiros).
+# Daqui eles são reexportados (o `__all__` do fim), e quem os importa deste
+# módulo segue igual.
 
-CODE_CONTROLLER_DISCONNECTED = -32001
-CODE_PROFILE_NOT_FOUND = -32002
-CODE_INVALID_PARAMS = -32003
-CODE_CONTROLLER_LOST = -32004
-CODE_INTERNAL = -32603
-CODE_METHOD_NOT_FOUND = -32601
-CODE_PARSE_ERROR = -32700
-CODE_INVALID_REQUEST = -32600
+#: O-APP-RESPONDE-NA-HORA-01 (02/10/2026): o pedido que passa deste teto vai ao
+#: diário (`ipc_lento metodo=<nome> ms=<n>`). É o instrumento abaixo da vigia
+#: do laço (10 s): a materialização segurava o laço de 0,4 a 2,8 s por gesto, e
+#: ninguém dizia quem.
+TETO_DO_PEDIDO_MS = 100.0
 
-# Limite explícito de bytes por request JSON-RPC no dispatch. Cobre handler
-# atuais (payloads tipicamente ~1-2 KiB) com folga generosa e protege contra
-# payload gigante de cliente local malicioso (socket Unix restrito ao user).
-# Ajuste defensivo — HARDEN-IPC-PAYLOAD-LIMIT-01.
-MAX_PAYLOAD_BYTES = 32_768
+#: A LISTA FECHADA das perguntas que não rodam quando o cliente já fechou a
+#: conexão (O-APP-RESPONDE-NA-HORA-01). Cada uma provada sem efeito no handler
+#: (02/10/2026): o `state_full` e o `controller.list` só leem (contadores e
+#: caches em memória, nenhum agendamento, nada no disco); o `profile.list`
+#: carrega os perfis, e a única escrita possível ali é a semeadura preguiçosa
+#: do `load_all_profiles`, que não é do pedido e que a carga seguinte faz. O
+#: `daemon.status` fica FORA: ele agenda o arming do lançamento
+#: (`_agendar_arming_do_launch`), e o wrapper que desiste em 1 s ainda precisa
+#: dele.
+PERGUNTAS_QUE_NAO_RODAM_ABANDONADAS = frozenset(
+    {"daemon.state_full", "controller.list", "profile.list"}
+)
 
 
 Handler = Callable[[dict[str, Any]], Awaitable[Any]]
@@ -146,6 +169,8 @@ class IpcServer(IpcHandlersMixin):
     _handlers: dict[str, Handler] = field(default_factory=dict)
     _server: asyncio.base_events.Server | None = None
     _socket_inode: int | None = None
+    #: O escrevente do lançamento que ESTE servidor armou (O-APP-RESPONDE-NA-HORA-01).
+    _escrevente: Any = None
 
     def __post_init__(self) -> None:
         self._handlers = {
@@ -323,6 +348,17 @@ class IpcServer(IpcHandlersMixin):
         with contextlib.suppress(FileNotFoundError):
             self._socket_inode = self.socket_path.stat().st_ino
         logger.info("ipc_server_listening", path=str(self.socket_path))
+        # O-APP-RESPONDE-NA-HORA-01 (02/10/2026): o trabalho do lançamento sai
+        # do laço. Só o daemon sobe este servidor, então só ele arma o
+        # escrevente; a suíte, a CLI e os instrumentos escrevem na hora.
+        laco = asyncio.get_running_loop()
+
+        def devolver(acao: Callable[[], None]) -> None:
+            # O laço fechado é o serviço saindo: a devolução não tem mais dono.
+            with contextlib.suppress(RuntimeError):
+                laco.call_soon_threadsafe(acao)
+
+        self._escrevente = launch_env.armar_o_escrevente(devolver)
 
     def _probe_socket_and_cleanup(self) -> None:
         """Probe ativo para distinguir socket vivo de resto-morto.
@@ -376,6 +412,12 @@ class IpcServer(IpcHandlersMixin):
             with contextlib.suppress(Exception):
                 await self._server.wait_closed()
             self._server = None
+        # O-APP-RESPONDE-NA-HORA-01: as próximas materializações são na hora, e
+        # a pendente é escrita antes de o serviço sair (fora do laço).
+        escrevente, self._escrevente = self._escrevente, None
+        if escrevente is not None:
+            with contextlib.suppress(Exception):
+                await asyncio.to_thread(launch_env.desarmar_o_escrevente, escrevente)
 
         if self._socket_inode is None:
             return
@@ -404,7 +446,9 @@ class IpcServer(IpcHandlersMixin):
                 raw = await reader.readline()
                 if not raw:
                     break
-                response = await self._dispatch(raw)
+                response = await self._dispatch(
+                    raw, abandonado=lambda: _o_cliente_ja_foi(writer)
+                )
                 if response is not None:
                     writer.write(response + b"\n")
                     await writer.drain()
@@ -430,7 +474,9 @@ class IpcServer(IpcHandlersMixin):
                 writer.close()
                 await writer.wait_closed()
 
-    async def _dispatch(self, raw: bytes) -> bytes | None:
+    async def _dispatch(
+        self, raw: bytes, abandonado: Callable[[], bool] | None = None
+    ) -> bytes | None:
         if len(raw) > MAX_PAYLOAD_BYTES:
             logger.warning(
                 "ipc_payload_excede_limite", size=len(raw), limit=MAX_PAYLOAD_BYTES
@@ -460,6 +506,19 @@ class IpcServer(IpcHandlersMixin):
         if handler is None:
             return _json_rpc_error(req_id, CODE_METHOD_NOT_FOUND, f"método desconhecido: {method}")
 
+        # O-APP-RESPONDE-NA-HORA-01: depois de um laço preso, a fila tem as
+        # perguntas de quem já desistiu (o cliente estourou o teto e fechou).
+        # Responder a quem foi embora é o serviço gastando a volta à toa. Só a
+        # lista fechada de perguntas sem efeito; todo o resto roda, como antes.
+        if (
+            method in PERGUNTAS_QUE_NAO_RODAM_ABANDONADAS
+            and abandonado is not None
+            and abandonado()
+        ):
+            logger.debug("ipc_pergunta_abandonada", metodo=method)
+            return None
+
+        t0 = time.perf_counter()
         try:
             result = await handler(params)
         except FileNotFoundError as exc:
@@ -477,10 +536,38 @@ class IpcServer(IpcHandlersMixin):
                 CODE_INTERNAL,
                 f"erro interno ({type(exc).__name__})",
             )
+        finally:
+            # O-APP-RESPONDE-NA-HORA-01: o servidor diz quem o segurou. Uma
+            # linha por pedido acima do teto, só com o nome do método e o
+            # tempo: nenhum parâmetro vai ao diário (nenhum endereço).
+            ms = (time.perf_counter() - t0) * 1000
+            if ms > TETO_DO_PEDIDO_MS:
+                logger.info("ipc_lento", metodo=method, ms=round(ms))
 
         if req_id is None:
             return None
         return _json_rpc_result(req_id, result)
+
+
+def _o_cliente_ja_foi(writer: asyncio.StreamWriter) -> bool:
+    """O cliente FECHOU a conexão? (O-APP-RESPONDE-NA-HORA-01)
+
+    É o `POLLHUP` do socket, e não o fim da leitura: quem só fecha a escrita
+    (o `socat`, o `nc -N`) ainda espera a resposta, e o `at_eof` não separa os
+    dois. Sem socket legível, a resposta é «ainda está aqui».
+    """
+    sock = writer.get_extra_info("socket")
+    try:
+        fd = sock.fileno() if sock is not None else -1
+    except Exception:
+        return False
+    if fd < 0:
+        return sock is not None
+    sonda = select.poll()
+    sonda.register(fd, select.POLLIN)
+    return any(
+        evento & (select.POLLHUP | select.POLLERR) for _fd, evento in sonda.poll(0)
+    )
 
 
 def _json_rpc_result(req_id: Any, result: Any) -> bytes:
@@ -507,7 +594,9 @@ __all__ = [
     "CODE_PARSE_ERROR",
     "CODE_PROFILE_NOT_FOUND",
     "MAX_PAYLOAD_BYTES",
+    "PERGUNTAS_QUE_NAO_RODAM_ABANDONADAS",
     "PROTOCOL_VERSION",
+    "TETO_DO_PEDIDO_MS",
     "DraftApplier",
     "IpcServer",
     "_apply_rumble_policy",
