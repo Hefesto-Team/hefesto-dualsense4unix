@@ -1793,7 +1793,12 @@
   .mp-duas{display:grid;grid-template-columns:minmax(0,1.5fr) 1px minmax(0,1fr);gap:0 18px}
   .mp-duas::before{content:"";grid-column:2;grid-row:1;background:var(--border-sutil)}
   .mp-esq{grid-column:1;grid-row:1;display:flex;flex-direction:column;gap:8px;min-width:0}
-  .mp-dir{grid-column:3;grid-row:1;display:flex;flex-direction:column;gap:8px;min-width:0}
+  /* A LISTA ROLA, E A ALTURA É A DA ESQUERDA (29/09/2026,
+     O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01): com `height:0` a coluna da direita
+     não conta na altura da linha da grade, e o `min-height:100%` a estica até a
+     esquerda; as 15 entradas dela rolam por dentro em vez de empurrar o diálogo. */
+  .mp-dir{grid-column:3;grid-row:1;display:flex;flex-direction:column;gap:8px;min-width:0;
+          height:0;min-height:100%}
   .mp-rot{font-size:12px;font-weight:600;color:var(--rot-campo)}
   .mp-porta{border:1px solid var(--border-sutil);border-radius:7px;background:var(--app-bg);
             padding:4px 12px;min-height:42px}
@@ -1811,7 +1816,8 @@
                   border-radius:7px;border:1px solid var(--border-forte);background:var(--app-bg);
                   color:var(--fg);font:inherit;font-size:12.5px}
   .mp-campos input:focus,.mp-campos select:focus{border-color:var(--purple);outline:none}
-  .mp-lista{list-style:none;margin:0;padding:0;border-top:1px solid var(--border-sutil)}
+  .mp-lista{list-style:none;margin:0;padding:0;border-top:1px solid var(--border-sutil);
+            flex:1 1 0;min-height:0;overflow-y:auto}
   .mp-lista li{display:flex;align-items:center;gap:8px;height:25.5px;font-size:12px;
                border-bottom:1px solid var(--border-sutil);min-width:0}
   .mp-lista li b{color:var(--fg);font-weight:600;white-space:nowrap}
@@ -5195,11 +5201,11 @@ document.addEventListener("click", function (ev) {
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo mp" id="mp-forma">
-      <p class="mp-diz"><i class="mp-luz" data-campo="mapear-estado" data-hef-alvo="atributo" data-hef-atributo="data-estado" data-estado="porta"></i><span data-campo="mapear-diz">Entrada encontrada. Dê um nome e o lugar dela, e salve.</span></p>
+      <p class="mp-diz"><i class="mp-luz" data-campo="mapear-estado" data-hef-alvo="atributo" data-hef-atributo="data-estado" data-estado="porta"></i><span data-campo="mapear-diz">Conecte um DualSense em cada entrada USB do seu dispositivo. Nomeie a entrada (ou deixe vazia para ela ser enumerada). Ao final, valide e, caso necessário, faça os ajustes na entrada no botão Mapa das Conexões.</span></p>
       <div class="mp-duas">
         <div class="mp-esq">
           <div class="mp-rot">O que o Hefesto mediu</div>
-          <div class="mp-porta" data-campo="mapear-porta" data-hef-alvo="html"><dl class="mp-fatos"><dt>Entrada</dt><dd>Entrada 3</dd><dt>Velocidade</dt><dd>USB 3.0</dd><dt>Ligação</dt><dd>direto no computador</dd><dt>Quedas</dt><dd>nenhuma em 7 dias</dd><dt>Onde fica</dt><dd>Traseira, a segunda de cima</dd></dl></div>
+          <div class="mp-porta" data-campo="mapear-porta" data-hef-alvo="html"><dl class="mp-fatos"><dt>Entrada</dt><dd>Entrada 3</dd><dt>Velocidade</dt><dd>USB 3.0</dd><dt>Ligação</dt><dd>Direto no computador</dd><dt>Quedas</dt><dd>Nenhuma em 7 dias</dd><dt>Onde fica</dt><dd>Traseira, a segunda de cima</dd></dl></div>
           <div class="mp-campos">
             <label><span class="mp-rot">Nome da entrada</span><input type="text" data-linha="nome" maxlength="32" placeholder="Ex.: Frente, a de cima"></label>
             <label><span class="mp-rot">Lugar</span><select data-linha="lugar"><option value="">Escolha o lugar</option><option>Frente do gabinete</option><option>Atrás do gabinete</option><option>Topo do gabinete</option><option>Lateral do gabinete</option><option>Num hub ou extensão</option><option>No monitor</option><option>Outro lugar</option></select></label>
@@ -5207,8 +5213,8 @@ document.addEventListener("click", function (ev) {
         </div>
         <div class="mp-dir">
           <div class="mp-rot">Já mapeadas</div>
-          <ul class="mp-lista" data-campo="mapear-lista" data-hef-alvo="html"><li><b>Frente de cima</b><span>Entrada 1 · Frente</span></li><li><b>Hub do monitor</b><span>Entrada 7 · Hub</span></li></ul>
-          <p class="mp-conta" data-campo="mapear-conta">2 entradas salvas.</p>
+          <ul class="mp-lista" data-campo="mapear-lista" data-hef-alvo="html"><li><b>Frente de cima</b><span>Entrada 1 · Frente</span></li><li><b>Entrada 2</b><span>Frente</span></li><li><b>Hub do monitor</b><span>Entrada 7 · Hub</span></li></ul>
+          <p class="mp-conta" data-campo="mapear-conta">3 entradas mapeadas.</p>
         </div>
       </div>
     </div>

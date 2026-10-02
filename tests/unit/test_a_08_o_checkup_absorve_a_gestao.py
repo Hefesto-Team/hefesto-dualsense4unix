@@ -198,10 +198,15 @@ def test_a_tela_do_mapear_pinta_a_foto_do_dono() -> None:
     assert parado["mapear-diz"] == pac.MAPEAR_DIZ["parado"]
     porta = {"rotulo": "Entrada 3", "usb": "2.0", "hub": "", "storm": 2,
              "lugar_no_gabinete": "Frente do gabinete"}
-    na_porta = pac.campos_do_mapear({"estado": "porta", "porta": porta, "feitas": 1})
+    # A CONTA É A DA LISTA DO DISCO desde 29/09/2026
+    # (O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01): o `feitas` da sessão dizia
+    # «nenhuma» com 15 entradas mapeadas. A régua dela é
+    # `test_o_mapear_lista_o_que_ja_foi_mapeado.py`.
+    na_porta = pac.campos_do_mapear({"estado": "porta", "porta": porta, "feitas": 0,
+                                     "portas": [{"numero": "3", "nome": ""}]})
     assert "Entrada 3" in na_porta["mapear-porta"] and "USB 2.0" in na_porta["mapear-porta"]
     assert "2 quedas" in na_porta["mapear-porta"]
-    assert na_porta["mapear-conta"].startswith("1 ")
+    assert na_porta["mapear-conta"] == "1 entrada mapeada."
 
 
 def test_salvar_a_porta_chama_o_dono_com_a_face() -> None:
@@ -280,21 +285,29 @@ def test_um_cartao_por_lugar_e_nada_abre_nem_fecha(arquivo: pathlib.Path) -> Non
     assert ".gc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))" in html
 
 
-def test_a_entrada_da_vez_sai_em_pares_e_a_lista_so_com_nome() -> None:
-    """MORDIDA: devolva a entrada sem nome à lista → reprova."""
+def test_a_entrada_da_vez_sai_em_pares_e_a_lista_e_das_numeradas() -> None:
+    """MORDIDA: tire a entrada sem nome da lista → reprova.
+
+    VIROU O CONTRÁRIO EM 29/09/2026 (O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01).
+    Esta régua nasceu do desenho de 26/09 («o Mapear em duas colunas») e
+    travava a lista «só com nome», sem decisão dela no `decisoes-dela.csv`. Com
+    as 15 entradas dela numeradas e sem nome, a lista dizia «Nenhuma ainda.», e
+    a frase que ela ditou diz que o nome é opcional. A entrada sem nome entra,
+    com a palavra do número em negrito. E «Nenhuma em 7 dias» com maiúscula.
+    """
     pac = _pac()
     porta = {"rotulo": "Entrada 3", "usb": "3.0", "hub": "", "storm": 0}
     fatos = pac.html_da_porta_medida(porta)
     assert fatos.startswith('<dl class="mp-fatos">')
     assert "<dt>Velocidade</dt><dd>USB 3.0</dd>" in fatos
-    assert "<dt>Quedas</dt><dd>nenhuma em 7 dias</dd>" in fatos
+    assert "<dt>Quedas</dt><dd>Nenhuma em 7 dias</dd>" in fatos
     assert "Onde fica" not in fatos, "o que não foi medido não entra"
     lista = pac.html_das_entradas_mapeadas([
         {"nome": "Frente de cima", "numero": "1", "lugar_no_gabinete": "Frente"},
         {"nome": "", "numero": "2", "rotulo": "Entrada 2", "lugar_no_gabinete": ""},
     ])
     assert "<b>Frente de cima</b><span>Entrada 1 · Frente</span>" in lista, lista
-    assert "Entrada 2" not in lista
+    assert "<li><b>Entrada 2</b><span></span></li>" in lista, lista
     assert pac.html_das_entradas_mapeadas([]) == '<li class="vazio">Nenhuma ainda.</li>'
     campos = pac.campos_do_mapear({"estado": "esperando", "portas": []})
     assert campos["mapear-estado"] == "esperando"

@@ -1288,7 +1288,12 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .mp-duas{display:grid;grid-template-columns:minmax(0,1.5fr) 1px minmax(0,1fr);gap:0 18px}
   .mp-duas::before{content:"";grid-column:2;grid-row:1;background:var(--border-sutil)}
   .mp-esq{grid-column:1;grid-row:1;display:flex;flex-direction:column;gap:8px;min-width:0}
-  .mp-dir{grid-column:3;grid-row:1;display:flex;flex-direction:column;gap:8px;min-width:0}
+  /* A LISTA ROLA, E A ALTURA É A DA ESQUERDA (29/09/2026,
+     O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01): com `height:0` a coluna da direita
+     não conta na altura da linha da grade, e o `min-height:100%` a estica até a
+     esquerda; as 15 entradas dela rolam por dentro em vez de empurrar o diálogo. */
+  .mp-dir{grid-column:3;grid-row:1;display:flex;flex-direction:column;gap:8px;min-width:0;
+          height:0;min-height:100%}
   .mp-rot{font-size:12px;font-weight:600;color:var(--rot-campo)}
   .mp-porta{border:1px solid var(--border-sutil);border-radius:7px;background:var(--app-bg);
             padding:4px 12px;min-height:42px}
@@ -1306,7 +1311,8 @@ CSS = CSS_GLIFO + CSS_POPUP + """
                   border-radius:7px;border:1px solid var(--border-forte);background:var(--app-bg);
                   color:var(--fg);font:inherit;font-size:12.5px}
   .mp-campos input:focus,.mp-campos select:focus{border-color:var(--purple);outline:none}
-  .mp-lista{list-style:none;margin:0;padding:0;border-top:1px solid var(--border-sutil)}
+  .mp-lista{list-style:none;margin:0;padding:0;border-top:1px solid var(--border-sutil);
+            flex:1 1 0;min-height:0;overflow-y:auto}
   .mp-lista li{display:flex;align-items:center;gap:8px;height:25.5px;font-size:12px;
                border-bottom:1px solid var(--border-sutil);min-width:0}
   .mp-lista li b{color:var(--fg);font-weight:600;white-space:nowrap}
@@ -3798,13 +3804,16 @@ _CALIB_PY = R / "src/hefesto_dualsense4unix/app/widgets/calibrar_entradas.py"
 from hefesto_dualsense4unix.integrations import entrada_a_entrada as _ee  # noqa: E402
 
 #: A CENA DO DESENHO é a do meio do fluxo: o DualSense acabou de chegar à
-#: terceira entrada, e duas já têm nome. O produto troca tudo pelo que a foto do
-#: dono disser no primeiro tique.
+#: terceira entrada, e três já estão mapeadas — duas com nome e uma que ela
+#: deixou vazia (29/09/2026, O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01: a lista é
+#: das numeradas). O produto troca tudo pelo que a foto do dono disser no
+#: primeiro tique.
 _MP_CENA = _pacote08.campos_do_mapear({
-    "estado": "porta", "feitas": 2,
+    "estado": "porta",
     "porta": {"rotulo": "Entrada 3", "usb": "3.0", "hub": False, "storm": 0,
               "lugar_no_gabinete": "Traseira, a segunda de cima"},
     "portas": [{"nome": "Frente de cima", "numero": "1", "lugar_no_gabinete": "Frente"},
+               {"nome": "", "numero": "2", "lugar_no_gabinete": "Frente"},
                {"nome": "Hub do monitor", "numero": "7", "lugar_no_gabinete": "Hub"}],
 })
 TELA_MAPEAR_PORTAS = f'''

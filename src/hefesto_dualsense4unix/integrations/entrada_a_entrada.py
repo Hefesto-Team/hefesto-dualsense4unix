@@ -440,7 +440,8 @@ class Pergunta:
 
 @dataclass(frozen=True)
 class Gravacao:
-    """O que um gesto dela fez no disco. ``motivo`` é ``""`` quando gravou.
+    """O que um gesto dela fez no disco. ``motivo`` é ``""`` quando gravou, e
+    quando não havia o que gravar (o Salvar vazio numa entrada numerada).
 
     ``entradas`` são TODOS os números que ganharam dono na resposta — o do
     aparelho e os do que pende dele; ``entrada`` é o do próprio aparelho.
@@ -2399,13 +2400,16 @@ class MapearAsPortas:
         leitura não apaga o Salvar que ela clicou antes: vale a porta da vez do
         clique, e nada se perde.
 
-        Levanta ``ValueError`` quando o gesto chega errado (nada a gravar, um
-        lugar que o produto não conhece) e
+        Levanta ``ValueError`` quando o gesto chega errado (um lugar que o
+        produto não conhece) e
         ``RuntimeError`` quando não há porta (nenhuma da vez, chave que não
         existe): o tratador da aba devolve os dois como recusa.
+
+        SEM NOME E SEM LUGAR NÃO É RECUSA (29/09/2026,
+        O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01): é o «deixe vazia para ela ser
+        enumerada» da frase dela. A porta sem número nasce numerada, fora de
+        toda face; a que já tem número não muda (:func:`_gravar_a_porta`).
         """
-        if nome is None and lugar is None:
-            raise ValueError("nada a gravar: nem nome nem lugar")
         with self._trava:
             sessao, da_vez = self._sessao, self._da_vez
         censo, lidas, adaptadores = self._ler_o_sys()
@@ -2627,9 +2631,13 @@ def _gravar_a_porta(
     com o número e o nome, fora de toda face: o produto não inventa face por
     ela. Até 28/09/2026 esse nome ia para ``lugares[L].nome``, um segundo
     registro (A-ENTRADA-TEM-UM-REGISTRO-SO-01).
+
+    NEM NOME NEM FACE (29/09/2026, O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01): a
+    porta sem número nasce numerada, sem nome e fora de toda face, pelo mesmo
+    caminho do «só o nome»; a numerada não tem o que gravar, e a resposta é uma
+    ``Gravacao`` que não gravou, sem recusa. Até aqui os dois casos levantavam
+    «nada a gravar» antes de olhar a porta, e a frase do Mapear prometia o vazio.
     """
-    if face is None and nome is None:
-        raise ValueError("nada a gravar: nem nome nem lugar")
     lidos = {e.no for e in lidas}
     no_sys = bool(porta.lugar and porta.nos and set(porta.nos) & lidos)
     if porta.numero is None and (not porta.lugar or (face is not None and not no_sys)):
@@ -2649,6 +2657,11 @@ def _gravar_a_porta(
             nome=nome,
         )
     numero = porta.numero
+    if face is None and nome is None:
+        return Gravacao(
+            porta.lugar, numero, _face_da_entrada(maquina.mapa, numero) or "", False, "",
+            (numero,),
+        )
     declaracao: dict[str, Any] = {}
     face_final = face or ""
     declarada = maquina.mapa.portas.get(numero)

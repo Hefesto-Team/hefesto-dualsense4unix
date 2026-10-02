@@ -7638,10 +7638,16 @@ def perfil_do_controle_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 #: não é estado do fluxo: é a foto que ainda espera o `/sys` — a primeira da
 #: vez, ou a leitura que o kernel está segurando porque o controle acabou de
 #: chegar (`entrada_a_entrada.FOLEGO_DA_LEITURA_S`).
+#: O `porta` é a frase que ela ditou em 29/09/2026 (O-MAPEAR-LISTA-O-QUE-JA-FOI-
+#: MAPEADO-01), com «porta» trocada por «entrada» pela D-A-PALAVRA-ENTRADA e o
+#: nome do botão da 08, «Mapa das Conexões». O «deixe vazia» é verdade: o Salvar
+#: com os dois campos vazios numera a entrada (`MapearAsPortas.gravar`).
 MAPEAR_DIZ = {
     "parado": "Conecte o DualSense por USB numa entrada do computador.",
     "esperando": "Conecte o DualSense por USB numa entrada do computador.",
-    "porta": "Entrada encontrada. Dê um nome e o lugar dela, e salve.",
+    "porta": ("Conecte um DualSense em cada entrada USB do seu dispositivo. Nomeie a "
+              "entrada (ou deixe vazia para ela ser enumerada). Ao final, valide e, "
+              "caso necessário, faça os ajustes na entrada no botão Mapa das Conexões."),
     "procurando": "Procurando…",
 }
 
@@ -7675,17 +7681,21 @@ def html_da_porta_medida(porta: dict[str, Any] | None) -> str:
     A lista é de fatos MEDIDOS: a entrada, a velocidade, se está direto no
     computador ou num hub, as quedas dos últimos 7 dias e o lugar que a medição
     deu. O que não foi medido não entra — a linha some, não vira travessão.
+
+    CADA VALOR COMEÇA COM MAIÚSCULA OU ALGARISMO (29/09/2026,
+    O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01): ela leu «num hub» e «nenhuma em 7
+    dias» minúsculos ao lado de «USB 3.0» e «Entrada 3».
     """
     if not porta:
         return '<i class="nada"></i>'
     fatos = [("Entrada", str(porta.get("rotulo") or ""))]
     if porta.get("usb"):
         fatos.append(("Velocidade", f"USB {porta['usb']}"))
-    fatos.append(("Ligação", f"num hub ({porta.get('hub_produto') or 'hub'})"
-                  if porta.get("hub") else "direto no computador"))
+    fatos.append(("Ligação", f"Num hub ({porta.get('hub_produto') or 'hub'})"
+                  if porta.get("hub") else "Direto no computador"))
     storm = porta.get("storm")
     if isinstance(storm, int) and not isinstance(storm, bool):
-        fatos.append(("Quedas", "nenhuma em 7 dias" if storm == 0
+        fatos.append(("Quedas", "Nenhuma em 7 dias" if storm == 0
                       else f"{storm} {'queda' if storm == 1 else 'quedas'} em 7 dias"))
     if porta.get("lugar_no_gabinete"):
         fatos.append(("Onde fica", str(porta["lugar_no_gabinete"])))
@@ -7693,8 +7703,14 @@ def html_da_porta_medida(porta: dict[str, Any] | None) -> str:
     return f'<dl class="mp-fatos">{pares}</dl>'
 
 
+def _mapeadas(portas: Any) -> list[dict[str, Any]]:
+    """As entradas do mapa que já têm número, na ordem do dono (`ler_o_mapa`:
+    as faces na ordem dela). Um dono só para a lista e para a conta."""
+    return [p for p in (portas or []) if isinstance(p, dict) and p.get("numero")]
+
+
 def html_das_entradas_mapeadas(portas: Any) -> str:
-    """As entradas que já têm nome, uma por linha: o nome e onde ela fica.
+    """As entradas já mapeadas, uma por linha: o nome e onde ela fica.
 
     O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-O-NOME-E-DA-POSICAO): a linha dizia
     «2 · Entrada 2 · pci-0000:…-usb-0:3» — o número gravado como nome, o
@@ -7702,22 +7718,45 @@ def html_das_entradas_mapeadas(portas: Any) -> str:
     face do gabinete («Frente do gabinete»), que é o que ela procura com os olhos.
     Ao lado da face vai a palavra do número, «Entrada 1 · Frente», como no
     desenho aprovado: o nome sozinho não diz em qual buraco ela está.
+
+    MAPEADA É A QUE TEM NÚMERO, E NÃO A QUE TEM NOME (29/09/2026,
+    O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01). O filtro pelo nome deixava a lista
+    em «Nenhuma ainda.» com 15 entradas numeradas no disco dela, e a frase que
+    ela ditou diz que o nome é opcional («ou deixe vazia para ela ser
+    enumerada»). Sem nome, a linha é a palavra do número em negrito e a face.
     """
-    nomeadas = [p for p in (portas or []) if isinstance(p, dict) and p.get("nome")]
-    if not nomeadas:
+    mapeadas = _mapeadas(portas)
+    if not mapeadas:
         return '<li class="vazio">Nenhuma ainda.</li>'
     perfil._com_o_src()
     from hefesto_dualsense4unix.integrations.entrada_a_entrada import rotulo_do_numero
 
     linhas = []
-    for porta in nomeadas:
-        nome = str(porta.get("nome") or porta.get("rotulo") or "")
-        numero = str(porta.get("numero") or "")
-        entrada = (rotulo_do_numero(numero) or "") if numero else ""
-        onde = " · ".join(x for x in (entrada, str(porta.get("lugar_no_gabinete") or "")) if x)
-        linhas.append(f"<li><b>{html.escape(nome)}</b>"
+    for porta in mapeadas:
+        numero = str(porta["numero"])
+        entrada = rotulo_do_numero(numero) or ""
+        face = str(porta.get("lugar_no_gabinete") or "")
+        nome = str(porta.get("nome") or "")
+        if nome:
+            titulo, onde = nome, " · ".join(x for x in (entrada, face) if x)
+        else:
+            titulo, onde = entrada, face
+        linhas.append(f"<li><b>{html.escape(titulo)}</b>"
                       f"<span>{html.escape(onde)}</span></li>")
     return "".join(linhas)
+
+
+def conta_das_mapeadas(portas: Any) -> str:
+    """«15 entradas mapeadas.» — a conta da MESMA lista do disco.
+
+    Até 29/09/2026 a conta era o `feitas` da sessão, e com 15 entradas no disco
+    a tela dizia «nenhuma» duas vezes (O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01).
+    Sem nenhuma, a lista já diz «Nenhuma ainda.», e a conta fica calada.
+    """
+    quantas = len(_mapeadas(portas))
+    if not quantas:
+        return ""
+    return f"{quantas} {'entrada mapeada' if quantas == 1 else 'entradas mapeadas'}."
 
 
 def campos_do_mapear(foto: dict[str, Any] | None = None) -> dict[str, str]:
@@ -7738,7 +7777,6 @@ def campos_do_mapear(foto: dict[str, Any] | None = None) -> dict[str, str]:
             foto = {"estado": "parado"}
     procurando = bool(foto.get("procurando"))
     estado = str(foto.get("estado") or "parado")
-    feitas = foto.get("feitas") or 0
     portas = foto.get("portas")
     return {
         "mapear-diz": MAPEAR_DIZ.get("procurando" if procurando else estado,
@@ -7747,8 +7785,7 @@ def campos_do_mapear(foto: dict[str, Any] | None = None) -> dict[str, str]:
         "mapear-porta": html_da_porta_medida(None if procurando else foto.get("porta")),
         "mapear-lista": (_monta().NADA_A_DIZER if procurando and portas is None
                          else html_das_entradas_mapeadas(portas)),
-        "mapear-conta": ("Nenhuma entrada salva ainda." if not feitas
-                         else f"{feitas} {'entrada salva' if feitas == 1 else 'entradas salvas'}."),
+        "mapear-conta": conta_das_mapeadas(portas),
     }
 
 
@@ -7772,7 +7809,12 @@ def mapear_gravar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     `lugar` é a FACE do gabinete (um dos `LUGARES_DA_PORTA`), nunca o lugar D3
     da porta; vazio mantém a face. `ValueError`/`RuntimeError` do dono são a
-    recusa dele (nada a gravar, ou não há porta da vez).
+    recusa dele (um lugar que o produto não conhece, ou não há porta da vez).
+
+    OS DOIS CAMPOS VAZIOS SÃO UM GESTO VÁLIDO (29/09/2026,
+    O-MAPEAR-LISTA-O-QUE-JA-FOI-MAPEADO-01): vão ao dono como `None`, e a porta
+    sem número nasce numerada. Vazio NÃO vira `nome=""`: no dono, `""` apaga o
+    nome, e a entrada revisitada perderia o nome dela em silêncio.
     """
     global _LOGICA
     forma_lida = o.get("forma")
