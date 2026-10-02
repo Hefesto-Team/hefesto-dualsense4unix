@@ -84,6 +84,7 @@ Apos o projeto sair de Alpha (v4.0+), considerar package review oficial:
 | `python3-structlog` | Logging |
 | `python3-platformdirs` | XDG paths |
 | `python3-filelock` | File locking |
+| `python3-pyyaml` | O `.yml` dos jogos do Lutris |
 | `python3-jeepney` | D-Bus async (cosmic backend) |
 
 ## Limitações conhecidas

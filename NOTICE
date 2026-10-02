@@ -119,7 +119,7 @@ licença e o próprio aviso. Licenças lidas dos metadados instalados:
 
   - obrigatórias: pydualsense (MIT), textual (MIT), typer (MIT), pydantic
     (MIT), evdev (BSD-3-Clause), structlog (MIT OR Apache-2.0), rich (MIT),
-    platformdirs (MIT), filelock (MIT);
+    platformdirs (MIT), filelock (MIT), PyYAML (MIT);
   - obrigatória, copyleft fraco: python-xlib (LGPL-2.0-or-later);
   - extra [emulation], copyleft forte: python-uinput (GPL-3.0-or-later);
   - extra [tray], copyleft fraco: PyGObject (LGPL-2.0-or-later);
