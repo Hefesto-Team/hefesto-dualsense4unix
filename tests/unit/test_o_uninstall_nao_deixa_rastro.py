@@ -410,7 +410,14 @@ def test_os_espelhos_do_desfazer() -> None:
     historico = allowlist - cura.PODEM_SER_DELA - NASCIDAS_DEPOIS_DO_REGISTRO
     assert historico == cura._DO_PRODUTO_SEM_REGISTRO
     assert cura._PASTA_DOS_OVERRIDES == m.PASTA_DOS_OVERRIDES
-    assert cura._PASTAS_DO_HEROIC == m.PASTAS_DO_HEROIC
+    #: As casas do Heroic da carona e do desfazer moram no censo desde 02/10/2026
+    #: (O-CENSO-RESPONDE-COMO-O-LANCADOR-RESPONDE-01): o espelho do inventário é
+    #: o dele, num lar sem XDG desviado.
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+    lar = Path("/lar")
+    casas = censo._casas("Heroic", censo._onde(lar))
+    assert tuple(str(config.relative_to(lar)) for config, _ in casas) == m.PASTAS_DO_HEROIC
 
 
 #: SÓ A BIBLIOTECA PADRÃO, e por recusa, não por sorte: o `python3` do sistema
