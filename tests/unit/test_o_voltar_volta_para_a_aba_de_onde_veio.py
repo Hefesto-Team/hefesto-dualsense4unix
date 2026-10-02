@@ -14,12 +14,18 @@ numa lista digitada), clica o link, clica o «← Voltar» e exige terminar na
 página que ELA abriu. E o caso sem origem: o mapa aberto direto vai para a
 reserva que o próprio `a.voltar` declara.
 
+E UMA ORIGEM QUE NÃO É A RESERVA (conferência de 02/10/2026). Desde 29/09 só a
+Conexões abre o mapa, e ela é também a reserva: voltar pela lista de volta e
+cair na reserva dão a MESMA página, e a régua ficava verde com o
+`document.referrer` devolvido ao dono (medido). Por isso uma viagem sai de uma
+aba que não é a reserva, indo ao mapa pelo endereço, e tem de voltar a ela.
+
 A PÁGINA LIDA: enquanto o mapa estiver declarado em trabalho no
 `mockup/DIVERGENCIAS.md` (a licença do portão `desenho-aprovado`), a régua lê a
 BANCADA; depois do `--publicar`, a publicada.
 
 A MORDIDA: devolver o `if (document.referrer)` ao `onclick` do dono reprova a
-Navegação e a Conexões (as duas voltam à Controles).
+viagem que sai de uma aba que não é a reserva (ela cai na reserva).
 
 Sem tela o WebKit não abre e a régua PULA: rode com `xvfb-run -a`.
 """
@@ -62,6 +68,12 @@ def _origens() -> list[str]:
     )
 
 
+def _fora_da_reserva() -> str:
+    """Uma aba que não é a reserva nem o mapa, a primeira por nome, do disco."""
+    return next(p.name for p in sorted(PASTA.glob("*.html"))
+                if p.name not in (MAPA, _reserva()) and not p.name.endswith(".dc.html"))
+
+
 def _reserva() -> str:
     """O `href` do «← Voltar», lido do mapa no disco."""
     achado = re.search(r'<a class="voltar" href="([^"]+)"',
@@ -73,6 +85,7 @@ def _reserva() -> str:
 CLICAR_O_LINK = (
     "(function(){var a=document.querySelector('a[href=\"ALVO\"]');"
     "if(!a){return 'sem link';} a.click(); return 'clicou';})()").replace("ALVO", MAPA)
+IR_AO_MAPA = f"(function(){{location.href='{MAPA}'; return 'clicou';}})()"
 CLICAR_O_VOLTAR = (
     "(function(){var a=document.querySelector('a.voltar');"
     "if(!a){return 'sem voltar';} a.click(); return 'clicou';})()")
@@ -89,27 +102,28 @@ def viagens() -> dict[str, dict]:
     if not Gtk.init_check(None)[0]:
         pytest.skip("sem sessão gráfica — o WebKit não abre (rode com xvfb-run -a)")
 
-    casos = [(o, True) for o in _origens()] + [(MAPA, False)]
+    casos = ([(o, "link") for o in _origens()] + [(MAPA, "direto")]
+             + [(_fora_da_reserva(), "endereco")])
     fora: dict[str, dict] = {}
     janela = Gtk.OffscreenWindow()
     janela.set_default_size(1600, 900)
-    vez = {"i": -1, "view": None, "fase": "", "reg": {}}
+    vez = {"i": -1, "view": None, "fase": "", "modo": "", "reg": {}}
 
     def proximo() -> bool:
         vez["i"] += 1
         if vez["i"] >= len(casos):
             Gtk.main_quit()
             return False
-        origem, por_link = casos[vez["i"]]
+        origem, modo = casos[vez["i"]]
         if vez["view"] is not None:
             janela.remove(vez["view"])
         view = WebKit2.WebView()
         view.connect("load-changed", carregou)
         janela.add(view)
         janela.show_all()
-        vez.update(view=view, fase="origem" if por_link else "mapa",
-                   reg={"cargas": []})
-        fora["(direto)" if not por_link else origem] = vez["reg"]
+        vez.update(view=view, fase="mapa" if modo == "direto" else "origem",
+                   modo=modo, reg={"cargas": []})
+        fora[{"direto": "(direto)", "endereco": "(endereço)"}.get(modo, origem)] = vez["reg"]
         view.load_uri((PASTA / origem).as_uri())
         return False
 
@@ -132,7 +146,8 @@ def viagens() -> dict[str, dict]:
         vez["reg"]["cargas"].append((view.get_uri() or "").rsplit("/", 1)[-1])
         if vez["fase"] == "origem":
             vez["fase"] = "mapa"
-            GLib.timeout_add(200, lambda: (rodar(CLICAR_O_LINK, "link"), False)[1])
+            ida = IR_AO_MAPA if vez["modo"] == "endereco" else CLICAR_O_LINK
+            GLib.timeout_add(200, lambda: (rodar(ida, "link"), False)[1])
         elif vez["fase"] == "mapa":
             vez["fase"] = "voltou"
             GLib.timeout_add(200, lambda: (rodar(CLICAR_O_VOLTAR, "voltar"), False)[1])
@@ -170,3 +185,16 @@ def test_o_mapa_aberto_direto_vai_para_a_reserva(viagens) -> None:
     assert reg.get("terminou_em") == _reserva(), (
         f"o mapa aberto direto foi a {reg.get('terminou_em')!r}, e a reserva "
         f"que o «← Voltar» declara é {_reserva()!r}")
+
+
+def test_o_voltar_volta_para_uma_aba_que_nao_e_a_reserva(viagens) -> None:
+    """A origem que distingue a lista de volta da reserva: sem ela, a régua de
+    cima é cega ao `document.referrer` (a única origem hoje é a reserva)."""
+    origem = _fora_da_reserva()
+    reg = viagens.get("(endereço)", {})
+    assert reg.get("link") == "clicou" and reg.get("voltar") == "clicou", (
+        json.dumps(reg, ensure_ascii=False))
+    assert reg.get("cargas", [])[1:2] == [MAPA], f"a ida ao mapa não aconteceu: {reg}"
+    assert reg.get("terminou_em") == origem, (
+        f"aberto a partir da {origem}, o «← Voltar» levou a {reg.get('terminou_em')!r} "
+        f"(a reserva é {_reserva()!r}) — cargas {reg.get('cargas')}")
