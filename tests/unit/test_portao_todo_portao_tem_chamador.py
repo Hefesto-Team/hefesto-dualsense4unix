@@ -122,7 +122,11 @@ _SEM_CHAMADOR_HOJE: dict[str, str] = {
         "`scripts/portoes.sh`, mais o passo correspondente no `ci.yml` (os dois, "
         "senão o `test_portao_a_lista_de_portoes_e_uma_so.py` reprova). "
         "A régua do próprio script é `tests/unit/test_a_bancada_de_bt_tem_regua.py`, "
-        "que roda na suíte e cobre as quatro réguas contra CSV de mentira."
+        "que roda na suíte e cobre as quatro réguas contra CSV de mentira.\n"
+        "REMEDIDO em 01/10/2026 (OS-PORTOES-QUE-NINGUEM-CHAMA-01): exit=1, "
+        "R1=18, R2=27, R3=7, R4=114 — 166 pendências (eram 183). As quatro "
+        "não zeraram, e a decisão de 01/09 fica: ele mede o DEGRAU, e entra "
+        "na camada `completo` no commit em que elas zerarem."
     ),
     "scripts/check_broadcast_proibido.py": (
         "MEDIDO em 25/08/2026 (AUDITORIA-DE-PERDA-01/C2). Nasceu em `826ee18` "
@@ -138,7 +142,19 @@ _SEM_CHAMADOR_HOJE: dict[str, str] = {
         "dos dois arquivos é posse desta frente na leva de 25/08 (o "
         "`portoes.sh` nasceu esta noite noutra frente, e o `ci.yml` é a "
         "superfície de integração com nove frentes em voo). É DÍVIDA "
-        "DECLARADA, não ausência calada."
+        "DECLARADA, não ausência calada.\n"
+        "REMEDIDO em 01/10/2026 (OS-PORTOES-QUE-NINGUEM-CHAMA-01), e a frase "
+        "«RODA VERDE» caiu: exit=1, com UMA rota de fan-out sem escopo, "
+        "`daemon/ipc_handlers.py::_handle_led_player_brightness_set` (o brilho "
+        "das luzes de número, nascido em `9a3738a2e`, 25/09): o «Todos» escreve "
+        "em cada conectado sem perguntar `get_output_target_uniq`/"
+        "`alvo_de_output_ausente`, que os irmãos `led.set` e `led.player_set` "
+        "perguntam pelo `_registrar_em_todos`. Ninguém o viu em seis dias porque "
+        "ninguém chama o portão desde 25/08, que é a razão desta entrada. Ligá-lo "
+        "agora reprovaria toda leva por um defeito que ela não criou; ele liga "
+        "no MESMO commit que fechar aquela rota (a cura no handler, ou a "
+        "exceção deliberada no `_EXCECOES_DELIBERADAS` do script, com a razão "
+        "escrita), e esse commit é de quem tem o `ipc_handlers.py` na posse."
     ),
 }
 
