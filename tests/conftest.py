@@ -3827,6 +3827,68 @@ os.environ.setdefault("PYTHONFAULTHANDLER", "1")
 
 
 # ---------------------------------------------------------------------------
+# O LIXO DO WEBKIT SE RECOLHE NO FIO DO GTK (02/10/2026)
+# ---------------------------------------------------------------------------
+#
+# Aqui, e não lá em cima, pelo motivo do bloco do segfault: daqui para baixo
+# nenhuma linha é citada. MEDIDO em 01 e 02/10/2026, num lote de 42 arquivos
+# vizinhos da aba Conexões, três vezes em três: o processo morre com `Fatal
+# Python error: Aborted`, e a pilha diz «Garbage-collecting» num fio da central
+# do rádio. O objeto do WebKit que um teste deixa num ciclo de referências (a
+# função que o sinal chama de volta, a célula que guarda a `view`) só sai na
+# coleta, e a coleta roda no fio que estiver alocando quando o limiar estoura:
+# um fio da central, fora do fio do GTK, onde o WebKit aborta ao soltar o
+# objeto. A `scripts/rodar-a-suite.sh` roda cada arquivo do WebKit em processo
+# próprio, e por isso a suíte não morria; o lote de vizinhos de quem confere,
+# sim, e levava junto a medida dos outros 41 arquivos.
+#
+# A CURA É NA BORDA, e não arquivo por arquivo: sessenta e quatro arquivos
+# abrem o WebKit, cada um com o próprio laço. Depois de todo teste de um
+# arquivo que diz `WebKit2` (o mesmo critério da `rodar-a-suite.sh`), e na
+# troca de arquivo com o WebKit já carregado no processo, a coleta roda AQUI,
+# no fio principal, e o GTK esgota o que a soltura deixou pendente. A régua é
+# `tests/unit/test_o_lixo_do_webkit_se_recolhe_no_fio_do_gtk.py`.
+_ARQUIVO_DO_WEBKIT: dict[str, bool] = {}
+
+
+def _e_arquivo_do_webkit(item: Any) -> bool:
+    caminho = str(getattr(item, "path", "") or "")
+    if caminho not in _ARQUIVO_DO_WEBKIT:
+        try:
+            _ARQUIVO_DO_WEBKIT[caminho] = "WebKit2" in Path(caminho).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            _ARQUIVO_DO_WEBKIT[caminho] = False
+    return _ARQUIVO_DO_WEBKIT[caminho]
+
+
+def _recolher_no_fio_do_gtk() -> None:
+    import gc
+
+    gc.collect()
+    # Só com o WebKit de verdade no processo: o GTK falso dos testes sem
+    # sessão gráfica não tem laço a esgotar.
+    if "gi.repository.WebKit2" not in sys.modules:
+        return
+    gtk = sys.modules.get("gi.repository.Gtk")
+    with contextlib.suppress(Exception):
+        while gtk is not None and gtk.events_pending():
+            gtk.main_iteration_do(False)
+
+
+@pytest.hookimpl(wrapper=True, specname="pytest_runtest_teardown")
+def pytest_runtest_teardown_do_webkit(item: Any, nextitem: Any) -> Iterator[None]:
+    try:
+        return (yield)
+    finally:
+        # Depois das fixtures do teste (e das do arquivo, no último dele).
+        troca_de_arquivo = nextitem is None or getattr(nextitem, "path", None) != getattr(
+            item, "path", None)
+        if _e_arquivo_do_webkit(item) or (
+                troca_de_arquivo and "gi.repository.WebKit2" in sys.modules):
+            _recolher_no_fio_do_gtk()
+
+
+# ---------------------------------------------------------------------------
 # LANCADOR-DE-MENTIRA (29/09/2026) — a suíte não abre nem fecha o lançador dela
 # ---------------------------------------------------------------------------
 #
