@@ -254,25 +254,60 @@ _ONDE: dict[str, tuple[str, str]] = {
 }
 
 
+#: OS LANÇADORES CUJA CONFIGURAÇÃO CAI NOS DADOS quando a pasta `config/` não
+#: existe. O Lutris 0.5.22 (`lutris/settings.py:21-27`, lido no Flatpak dela em
+#: 02/10/2026): `CONFIG_DIR` é `<config>/lutris` se essa pasta existir, e senão
+#: é o `DATA_DIR`, `<dados>/lutris` (*«we're deprecating ~/.config/lutris»*); e
+#: ele não cria a `config/`. Quem instala o Lutris hoje tem só a de dados.
+_CONFIG_CAI_NOS_DADOS = frozenset({"Lutris"})
+
+
+def _casas(lancador: str, lar: Path) -> tuple[tuple[Path, Path], ...]:
+    """``((config, dados), ...)`` deste lançador: o Flatpak primeiro, o nativo depois."""
+    app_id, sub = _ONDE.get(lancador, ("", ""))
+    if not sub:
+        return ()
+    caixa = lar / ".var/app" / app_id
+    return ((caixa / "config" / sub, caixa / "data" / sub),
+            (lar / ".config" / sub, lar / ".local/share" / sub))
+
+
+def _pasta_da_casa(lancador: str, config: Path, dados: Path) -> Path | None:
+    """A pasta de configuração numa casa, pela regra do lançador; ``None`` = não há."""
+    if config.is_dir():
+        return config
+    if lancador in _CONFIG_CAI_NOS_DADOS and dados.is_dir():
+        return dados
+    return None
+
+
 def _pasta_de_config(lancador: str, lar: Path) -> Path | None:
     """A pasta de configuração DESTE lançador, no flatpak ou no nativo.
 
     Devolve `None` quando nenhuma das duas existe — que é o `NUNCA_ABERTO`.
 
-    OS DOIS CAMINHOS SÃO TENTADOS SEMPRE, e não escolhidos pelo `.desktop`:
-    ela pode ter o flatpak instalado e a configuração vinda de uma instalação
-    nativa anterior (ou o contrário). Ler os dois custa dois `is_dir()`.
+    AS DUAS CASAS SÃO TENTADAS SEMPRE, e não escolhidas pelo `.desktop`: ela
+    pode ter o flatpak instalado e a configuração vinda de uma instalação
+    nativa anterior (ou o contrário). Em cada casa vale a regra do lançador
+    (:func:`_pasta_da_casa`): no Lutris, a `config/` e, sem ela, a de dados.
+    Medido num lar de mentira em 02/10/2026: com só a pasta de dados, o
+    nativo e o Flatpak diziam «nunca aberto», e o Lutris cheio de jogos.
     """
-    app_id, sub = _ONDE.get(lancador, ("", ""))
-    if not sub:
-        return None
-    for tentativa in (lar / ".var/app" / app_id / "config" / sub,
-                      lar / ".config" / sub):
-        if app_id and tentativa.is_dir():
-            return tentativa
-        if tentativa.is_dir():
-            return tentativa
+    for config, dados in _casas(lancador, lar):
+        achada = _pasta_da_casa(lancador, config, dados)
+        if achada is not None:
+            return achada
     return None
+
+
+def pasta_do_flatpak(lancador: str, lar: Path) -> Path | None:
+    """A pasta de configuração da casa FLATPAK deste lançador, pela mesma regra.
+
+    A camada do jogo excluído do Lutris só existe no Flatpak (o nativo não
+    ganha camada), e a casa dele é a que este censo lê: uma regra, um dono.
+    """
+    casas = _casas(lancador, lar)
+    return _pasta_da_casa(lancador, *casas[0]) if casas else None
 
 
 def _json(caminho: Path) -> object | None:
@@ -652,10 +687,14 @@ class _UmuDoLutris:
 
 def _lar_da_pasta(pasta: Path) -> Path:
     """O lar de uma pasta de configuração: o de antes do `.var/app/<id>` no
-    Flatpak, e o de antes do `.config` no nativo."""
+    Flatpak, e no nativo o de antes do `.config` ou do `.local/share` (a pasta
+    de dados, que o Lutris usa como configuração quando a `config/` não
+    existe, :data:`_CONFIG_CAI_NOS_DADOS`)."""
     partes = pasta.parts
     if ".var" in partes:
         return Path(*partes[:partes.index(".var")])
+    if partes[-3:-1] == (".local", "share"):
+        return pasta.parent.parent.parent
     return pasta.parent.parent
 
 
@@ -664,12 +703,14 @@ def _pasta_de_dados_do_lutris(pasta: Path) -> Path:
 
     No 0.5.22 (`settings.DATA_DIR`) os dados moram sempre em `data/lutris` no
     Flatpak e em `~/.local/share/lutris` no nativo; a configuração é a mesma
-    pasta só quando é o atalho para lá (o Flatpak dela, medido em 11/09/2026).
-    A de quem usa o Lutris desde antes do 0.5.17 é pasta própria, com `runners/`
-    e sem o `pga.db` (02/10/2026): por isso os dados vêm antes dela.
+    pasta quando é o atalho para lá (o Flatpak dela, medido em 11/09/2026) ou
+    quando a `config/` não existe (:func:`_pasta_de_config`). A de quem usa o
+    Lutris desde antes do 0.5.17 é pasta própria, com `runners/` e sem o
+    `pga.db` (02/10/2026): por isso os dados vêm antes dela. O lar é o de
+    :func:`_lar_da_pasta`, um dono só.
     """
-    dados = pasta.parent.parent / (
-        "data/lutris" if ".var" in pasta.parts else ".local/share/lutris")
+    casa_flatpak, casa_nativa = _casas("Lutris", _lar_da_pasta(pasta))
+    dados = (casa_flatpak if ".var" in pasta.parts else casa_nativa)[1]
     for tentativa in (dados, pasta):
         if (tentativa / "pga.db").is_file() or (tentativa / "runtime").is_dir():
             return tentativa

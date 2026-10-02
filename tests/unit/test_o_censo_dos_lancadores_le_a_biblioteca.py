@@ -291,3 +291,120 @@ def test_o_nativo_tambem_e_lido(tmp_path: pathlib.Path) -> None:
 
     assert b.estado == censo.LIDO
     assert [j.nome for j in b.jogos] == ["Nativo"]
+
+
+# ---------------------------------------------------------------------------
+# 4. O LUTRIS PELA REGRA DELE — O-CENSO-ACHA-O-LUTRIS-PELA-REGRA-DELE-01
+# ---------------------------------------------------------------------------
+#: A regra do Lutris 0.5.22, lida no `lutris/settings.py:21-27` do Flatpak dela
+#: (02/10/2026) e escrita aqui à mão, nunca derivada do censo: a configuração é
+#: `<config>/lutris` se essa pasta existir, e senão a de dados; o banco mora
+#: sempre nos dados (`DB_PATH`), e os `.yml` dos jogos na configuração
+#: (`GAME_CONFIG_DIR`).
+_LUTRIS_ID = "net.lutris.Lutris"
+_CASAS_DO_LUTRIS = {
+    "nativo-so-dados": (None, ".local/share/lutris"),
+    "flatpak-so-dados": (None, f".var/app/{_LUTRIS_ID}/data/lutris"),
+    "nativo-com-config": (".config/lutris", ".local/share/lutris"),
+    "flatpak-com-config": (f".var/app/{_LUTRIS_ID}/config/lutris",
+                           f".var/app/{_LUTRIS_ID}/data/lutris"),
+}
+
+
+def _banco_do_lutris(dados: pathlib.Path, *, versao: str = "ge-proton") -> None:
+    """O `pga.db` com as 23 colunas do 0.5.22 e um jogo da GOG pelo runner `wine`."""
+    import sqlite3
+
+    from tests.unit.test_a_exclusao_mora_na_camada_do_jogo import _ESQUEMA
+
+    dados.mkdir(parents=True, exist_ok=True)
+    con = sqlite3.connect(dados / "pga.db")
+    with con:
+        con.execute(_ESQUEMA)
+        con.execute(
+            "INSERT INTO games (name, slug, runner, executable, installed, configpath, "
+            "service, service_id) VALUES (?,?,?,?,?,?,?,?)",
+            ("Jogo X", "jogo-x", "wine", "/x/jogo.exe", 1, "jogo-x-1", "gog", "1441"))
+    con.close()
+    _escrever(dados / "runtime/umu-games/umu-games.json",
+              [{"store": "gog", "appid": "1441", "umu_id": "umu-70400"}])
+
+
+@pytest.mark.parametrize("casa", sorted(_CASAS_DO_LUTRIS))
+def test_o_lutris_e_lido_pela_regra_dele(tmp_path: pathlib.Path, casa: str) -> None:
+    """Só com a pasta de dados (o 0.5.22 não cria a `config/`), o censo lê.
+
+    **A MORDIDA:** a regra de antes (só a `config/`) — as casas «só dados»
+    dizem «nunca aberto» com o Lutris cheio de jogos.
+    """
+    config, dados = _CASAS_DO_LUTRIS[casa]
+    if config is not None:
+        (tmp_path / config).mkdir(parents=True)
+    _banco_do_lutris(tmp_path / dados)
+
+    b = censo.biblioteca_de("Lutris", lar=tmp_path)
+
+    assert b.estado == censo.LIDO, f"{casa}: o censo diz {b.estado}"
+    assert [(j.nome, j.classe_de_janela) for j in b.jogos] == [("Jogo X", "steam_app_70400")]
+    assert b.onde == tmp_path / (config or dados)
+
+
+def test_a_caixa_do_lutris_flatpak_tem_um_dono(tmp_path: pathlib.Path) -> None:
+    """Com só a `data/lutris` do Flatpak, a camada da exclusão e o censo acham
+    a mesma pasta; e a cópia da regra não mora mais na carona.
+
+    **A MORDIDA:** a cópia de volta no `cura_por_estrada` com só a `config/`
+    (ou o censo de antes) — as duas respostas divergem.
+    """
+    from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
+
+    _banco_do_lutris(tmp_path / _CASAS_DO_LUTRIS["flatpak-so-dados"][1])
+    _escrever(tmp_path / ".config/lutris/games/outro.yml", {})  # o nativo, que não conta
+
+    achada = cpe._pasta_do_lutris_flatpak(tmp_path)
+    assert achada == tmp_path / _CASAS_DO_LUTRIS["flatpak-so-dados"][1]
+    assert achada == censo._pasta_de_config("Lutris", tmp_path)
+    assert not hasattr(cpe, "_PASTAS_DO_LUTRIS_FLATPAK"), "a cópia da regra voltou à carona"
+
+
+def test_o_lar_do_nativo_so_com_dados_acha_o_proton(tmp_path: pathlib.Path) -> None:
+    """Com `~/.local/share/lutris`, o lar é o `~`, e o Proton da Steam se acha
+    em `~/.steam/steam/compatibilitytools.d` — o jogo vira `steam_app_<N>`.
+
+    **A MORDIDA:** o `parent.parent` de antes no `_lar_da_pasta` — o lar vira
+    `~/.local`, o Proton não se acha, e o jogo cai no «não sei».
+    """
+    dados = tmp_path / ".local/share/lutris"
+    _banco_do_lutris(dados)
+    (dados / "games").mkdir()
+    (dados / "games/jogo-x-1.yml").write_text("wine:\n  version: GE-Proton9-1\n",
+                                              encoding="utf-8")
+    proton = tmp_path / ".steam/steam/compatibilitytools.d/GE-Proton9-1/proton"
+    proton.parent.mkdir(parents=True)
+    proton.write_text("#!/usr/bin/env python3\n", encoding="utf-8")
+
+    jogos = censo.biblioteca_de("Lutris", lar=tmp_path).jogos
+
+    assert [j.classe_de_janela for j in jogos] == ["steam_app_70400"], (
+        "o Proton plantado no lar não foi achado: o lar do nativo saiu errado")
+
+
+def test_a_config_ganha_da_pasta_de_dados(tmp_path: pathlib.Path) -> None:
+    """Com as duas, os `.yml` dos jogos vêm da `config/` (`GAME_CONFIG_DIR`), e
+    o banco dos dados (`DB_PATH`). Cada pasta tem um `.yml` do jogo com um
+    `UMU_ID` diferente: vale o da `config/`.
+
+    **A MORDIDA:** inverter a ordem (os dados antes da `config/`) — vale o
+    `.yml` dos dados.
+    """
+    config, dados = (tmp_path / p for p in _CASAS_DO_LUTRIS["nativo-com-config"])
+    _banco_do_lutris(dados)
+    for pasta, umu in ((config, "umu-111"), (dados, "umu-222")):
+        (pasta / "games").mkdir(parents=True)
+        (pasta / "games/jogo-x-1.yml").write_text(
+            f"system:\n  env:\n    UMU_ID: {umu}\n", encoding="utf-8")
+
+    jogos = censo.biblioteca_de("Lutris", lar=tmp_path).jogos
+
+    assert [(j.classe_de_janela, j.configuracao) for j in jogos] == [
+        ("steam_app_111", config / "games/jogo-x-1.yml")]

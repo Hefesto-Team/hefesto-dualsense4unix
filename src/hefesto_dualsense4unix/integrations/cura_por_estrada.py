@@ -2169,13 +2169,6 @@ def tirar_o_nosso_da_caixa(
 #: A caixa do Lutris Flatpak.
 _LUTRIS_APP_ID = "net.lutris.Lutris"
 
-#: As pastas de configuração do Lutris Flatpak no lar: a `config/lutris` (no
-#: disco dela, um atalho para `data/lutris`, medido em 11/09/2026) e a
-#: `data/lutris`, que o 0.5.22 usa quando a `config/` não existe
-#: (`settings.CONFIG_DIR`).
-_PASTAS_DO_LUTRIS_FLATPAK = (f".var/app/{_LUTRIS_APP_ID}/config/lutris",
-                             f".var/app/{_LUTRIS_APP_ID}/data/lutris")
-
 #: O «NÃO VEIO» DE CADA LEITOR: o valor que o leitor de uma família de variáveis
 #: lê como se ela não tivesse vindo. Nunca nulo (o Lutris pula a chave nula).
 #:
@@ -2269,10 +2262,15 @@ def pares_da_camada_do_lutris(
 
 
 def _pasta_do_lutris_flatpak(lar: Path) -> Path | None:
-    for rel in _PASTAS_DO_LUTRIS_FLATPAK:
-        if (lar / rel).is_dir():
-            return lar / rel
-    return None
+    """A casa do Lutris Flatpak, que o censo acha pela regra do Lutris.
+
+    A regra mora no censo (`censo_dos_lancadores.pasta_do_flatpak`): a cópia
+    que morava aqui tentava a `config/` e a `data/` do Flatpak, o censo só a
+    `config/`, e as duas respostas divergiam na mesma máquina (02/10/2026).
+    """
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+    return censo.pasta_do_flatpak("Lutris", lar)
 
 
 def jogos_do_lutris_pela_janela(classe: str, lar: Path | None = None) -> list[Path]:
