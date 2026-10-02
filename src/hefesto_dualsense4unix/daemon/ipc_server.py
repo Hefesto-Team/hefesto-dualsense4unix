@@ -349,8 +349,8 @@ class IpcServer(IpcHandlersMixin):
             self._socket_inode = self.socket_path.stat().st_ino
         logger.info("ipc_server_listening", path=str(self.socket_path))
         # O-APP-RESPONDE-NA-HORA-01 (02/10/2026): o trabalho do lançamento sai
-        # do laço. Só o daemon sobe este servidor, então só ele arma o
-        # escrevente; a suíte, a CLI e os instrumentos escrevem na hora.
+        # do laço. Só os pedidos feitos DENTRO deste laço vão ao escrevente; os
+        # de outro fio ou de outro laço (a CLI, os instrumentos) escrevem na hora.
         laco = asyncio.get_running_loop()
 
         def devolver(acao: Callable[[], None]) -> None:
@@ -358,7 +358,7 @@ class IpcServer(IpcHandlersMixin):
             with contextlib.suppress(RuntimeError):
                 laco.call_soon_threadsafe(acao)
 
-        self._escrevente = launch_env.armar_o_escrevente(devolver)
+        self._escrevente = launch_env.armar_o_escrevente(devolver, laco)
 
     def _probe_socket_and_cleanup(self) -> None:
         """Probe ativo para distinguir socket vivo de resto-morto.

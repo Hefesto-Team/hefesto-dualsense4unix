@@ -56,6 +56,7 @@ outras coisas, e só elas: decidir a sessão da exceção
 """
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import datetime as _dt
 import itertools
@@ -2587,7 +2588,11 @@ def materialize_launch_env(daemon: DaemonProtocol) -> None:
     sempre. As 17 linhas que a chamam não mudam.
     """
     escrevente = _ESCREVENTE
-    no_fio = escrevente is not None and not getattr(_NA_HORA, "ligada", False)
+    no_fio = (
+        escrevente is not None
+        and not getattr(_NA_HORA, "ligada", False)
+        and escrevente.atende_aqui()
+    )
     foto = _a_foto_ou_nada(daemon, no_fio=no_fio)
     if foto is None:
         return
@@ -3006,8 +3011,15 @@ class EscreventeDoLancamento:
     `devolver` (o `call_soon_threadsafe` do laço que armou).
     """
 
-    def __init__(self, devolver: Callable[[Callable[[], None]], None]) -> None:
+    def __init__(
+        self,
+        devolver: Callable[[Callable[[], None]], None],
+        laco: asyncio.AbstractEventLoop | None = None,
+    ) -> None:
         self._devolver = devolver
+        #: O laço que armou: só os pedidos feitos DENTRO dele vão ao fio. Um
+        #: pedido de outro fio, ou de outro laço, escreve na hora, como sempre.
+        self._laco_que_armou = laco
         self._trava = threading.Lock()
         self._pendente: _FotoDoLancamento | None = None
         self._tem_pedido = threading.Event()
@@ -3018,6 +3030,20 @@ class EscreventeDoLancamento:
             target=self._laco, name="hefesto-lancamento", daemon=True
         )
         self._fio.start()
+
+    def atende_aqui(self) -> bool:
+        """Quem pede está no laço que armou? (Sem laço, sempre.)"""
+        if self._laco_que_armou is None:
+            return True
+        try:
+            return asyncio.get_running_loop() is self._laco_que_armou
+        except RuntimeError:
+            return False
+
+    def vivo(self) -> bool:
+        """O laço que armou ainda existe? Um laço fechado não recebe devolução."""
+        laco = self._laco_que_armou
+        return laco is None or not laco.is_closed()
 
     def pedir(self, foto: _FotoDoLancamento) -> None:
         """Guarda a foto mais nova e acorda o fio. Não espera a escrita."""
@@ -3059,12 +3085,20 @@ _NA_HORA = threading.local()
 
 def armar_o_escrevente(
     devolver: Callable[[Callable[[], None]], None],
+    laco: asyncio.AbstractEventLoop | None = None,
 ) -> EscreventeDoLancamento | None:
-    """Arma o escrevente do processo. Devolve-o, ou None se já havia um."""
+    """Arma o escrevente do processo. Devolve-o, ou None se já havia um vivo.
+
+    O de um laço que já fechou (o servidor que saiu sem `stop`) não segura o
+    lugar: ele para, e o novo entra.
+    """
     global _ESCREVENTE
-    if _ESCREVENTE is not None:
+    velho = _ESCREVENTE
+    if velho is not None and velho.vivo():
         return None
-    _ESCREVENTE = EscreventeDoLancamento(devolver)
+    _ESCREVENTE = EscreventeDoLancamento(devolver, laco)
+    if velho is not None:
+        velho.esvaziar_e_parar(teto_s=0.0)
     return _ESCREVENTE
 
 
