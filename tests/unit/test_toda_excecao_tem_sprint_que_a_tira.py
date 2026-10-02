@@ -302,6 +302,8 @@ NAO_SAO_DIVIDA: dict[str, str] = {
         "o dono da lista de frases banidas: os trechos são o dado"),
     "tests/unit/test_a_porta_que_a_casa_construiu_01.py::EXCECOES": (
         "arquivos que citam o nó e não o abrem, conferidos um a um"),
+    "tests/unit/test_a_trava_do_jogo_aberto_tem_um_dono.py::ISENTOS": (
+        "quem lê o sinal do jogo para o plano, e não para recriar o pad: cada linha diz por quê"),
     "tests/unit/test_aba02_a_borda_veste_o_controle_do_mapa.py::FORA_DO_DESENHO": _DADO_DE_TESTE,
     "tests/unit/test_abas_promovidas_so_crescem_p09.py::ABAS_PROMOVIDAS_ATE_HOJE": (
         "o conjunto de abas promovidas, que só cresce"),
