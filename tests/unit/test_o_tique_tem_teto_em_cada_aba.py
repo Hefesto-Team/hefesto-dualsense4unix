@@ -184,7 +184,7 @@ _load_uri = WebKit2.WebView.load_uri
 def load_uri(self, uri):
     if "a10_no_pedido" not in EV:
         EV["a10_no_pedido"] = ABA_10 in sys.modules
-        EV["pagina"] = uri.rsplit("/", 1)[-1]
+        EV["aba"] = uri.rsplit("/", 1)[-1]
     return _load_uri(self, uri)
 
 
@@ -242,7 +242,7 @@ def test_a_abertura_pede_a_pagina_antes_de_importar_as_abas(tmp_path: Path) -> N
                        text=True, timeout=90, env=ambiente, cwd=str(RAIZ))
     assert saida.exists(), f"o piloto não abriu (rc={r.returncode}):\n{r.stderr[-2000:]}"
     medida = json.loads(saida.read_text())
-    assert medida.get("pagina") == "01-jogar.html", medida
+    assert medida.get("aba") == "01-jogar.html", medida
     assert medida["a10_no_pedido"] is False, (
         "a janela pediu a página com as dez abas já importadas: a abertura "
         "esperou o import antes de mostrar qualquer coisa")

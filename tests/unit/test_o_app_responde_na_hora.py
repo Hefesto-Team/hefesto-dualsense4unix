@@ -629,10 +629,11 @@ class TestOServidorDizQuemOSegurou:
             asyncio.run(servidor._dispatch(pedido("teste.lento")))
             asyncio.run(servidor._dispatch(pedido("teste.ligeiro")))
         lentos = [r for r in registros if r.get("event") == "ipc_lento"]
-        assert [r["metodo"] for r in lentos] == ["teste.lento"], (
+        assert [r["metodo"] for r in lentos] == ["teste.lento"], (  # (noqa-acento) chave do diário
             f"as linhas `ipc_lento`: {lentos}")
         assert 250 <= lentos[0]["ms"] < 2000
-        assert set(lentos[0]) <= {"event", "metodo", "ms", "log_level"}, (
+        chaves = {"event", "metodo", "ms", "log_level"}  # (noqa-acento) chave do diário
+        assert set(lentos[0]) <= chaves, (
             f"a linha levou mais que o nome e o tempo: {lentos[0]}")
         assert "aa:bb:cc" not in repr(registros)
 
@@ -708,9 +709,9 @@ class TestAPerguntaAbandonadaNaoRoda:
 # ===========================================================================
 # R7 — o cliente do IPC não importa o servidor
 # ===========================================================================
-@pytest.mark.parametrize("modulo", ["hefesto_dualsense4unix.cli.ipc_client",
-                                    "hefesto_dualsense4unix.app.ipc_bridge"])
-def test_o_cliente_nao_importa_o_servidor(modulo: str) -> None:
+@pytest.mark.parametrize("cliente", ["hefesto_dualsense4unix.cli.ipc_client",
+                                     "hefesto_dualsense4unix.app.ipc_bridge"])
+def test_o_cliente_nao_importa_o_servidor(cliente: str) -> None:
     """A CLI, a bandeja e a janela importam o cliente; o servidor do daemon
     (e os handlers) não vêm junto.
 
@@ -718,10 +719,10 @@ def test_o_cliente_nao_importa_o_servidor(modulo: str) -> None:
     linhas aparecem no `-X importtime`.
     """
     ambiente = dict(os.environ, PYTHONPATH=str(RAIZ / "src"))
-    r = subprocess.run([sys.executable, "-X", "importtime", "-c", f"import {modulo}"],
+    r = subprocess.run([sys.executable, "-X", "importtime", "-c", f"import {cliente}"],
                        capture_output=True, text=True, timeout=120, env=ambiente,
                        cwd=str(RAIZ))
     assert r.returncode == 0, r.stderr[-1500:]
     servidor = [linha for linha in r.stderr.splitlines()
                 if linha.rstrip().endswith(("daemon.ipc_server", "daemon.ipc_handlers"))]
-    assert servidor == [], f"`{modulo}` importou o servidor do daemon:\n" + "\n".join(servidor)
+    assert servidor == [], f"`{cliente}` importou o servidor do daemon:\n" + "\n".join(servidor)
