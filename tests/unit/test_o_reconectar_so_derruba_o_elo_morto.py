@@ -106,6 +106,29 @@ def test_o_vivo_fica(
     ]
 
 
+def test_o_do_cabo_com_o_radio_fora_nao_e_chamado(
+    barramento: bm.BarramentoDeMentira, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O BlueZ diz que está fora e o kernel tem o HID (o DualSense no cabo): nem `Connect`.
+
+    MORDIDA: confira o kernel só quando o BlueZ diz `Connected` — o `Connect`
+    sai para um controle que está jogando pelo cabo.
+    """
+    barramento.emitir(
+        bd.Sinal(
+            "mudou",
+            caminho=bm.no_de(bm.CONTROLE),
+            interface=bd.APARELHO,
+            mudadas={"Connected": False},
+        )
+    )
+    _raiz(tmp_path, monkeypatch, bm.CONTROLE)
+    desfecho = radio.reconectar(bm.CONTROLE)
+
+    assert barramento.metodos() == [], f"o do cabo foi chamado: {barramento.metodos()}"
+    assert desfecho.estado == radio.ESTADO_JA_NO_AR
+
+
 # ---------------------------------------------------------------------------
 # 2. o morto cai (o caso de 22/09)
 # ---------------------------------------------------------------------------
