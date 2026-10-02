@@ -20,7 +20,7 @@ AMORTIZAÇÃO — lote A pago em 13/08/2026 (TESTE-HONESTO-01/E1, `:227-232`). S
 arquivos ganharam ``exigir_gi_real()`` no topo e saíram da allowlist:
 ``test_emulation_actions_modo_jogo``, ``test_daemon_status_initial``,
 ``test_lightbar_persist``, ``test_daemon_autostart``, ``test_compact_window`` e
-``test_emulation_mic_quirk``. Restam **onze**. A partir daqui a dívida tem
+``test_emulation_mic_quirk``. Restaram **onze**, pagos em 01/10/2026. A dívida tem
 ``TETO_DA_DIVIDA``, e ele **só desce** — é o que impede que alguém devolva um
 nome à lista para calar o portão.
 
@@ -50,35 +50,24 @@ ESTE_ARQUIVO = Path(__file__).resolve().name
 # DÍVIDA A PAGAR — NÃO É PERMISSÃO.
 #
 # Eram dezessete em 30/07/2026 (medido com o detector deste módulo, conferido
-# com o grep da sprint). O lote A saiu em 13/08/2026 e restaram estes onze.
+# com o grep da sprint). O lote A saiu em 13/08/2026 e restaram onze.
 # Tirar um nome daqui = aquele arquivo ganhou `exigir_gi_real()` e passou a
 # rodar também contra o GTK real. Acrescentar um nome aqui = o portão foi
 # desligado; não faça — e o `TETO_DA_DIVIDA` abaixo reprova quem tentar.
 # ---------------------------------------------------------------------------
-# sai com: AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01
-DIVIDA_GI_FALSO: frozenset[str] = frozenset(
-    {
-        "test_auto01_um_clique_em_vez_de_dez.py",
-        "test_daemon_status_matrix.py",
-        "test_mode_transition_um_dono.py",
-        "test_modo01_o_modo_jogo_liga_sozinho.py",
-        "test_profiles_editor_mode.py",
-        "test_profiles_gui_sync.py",
-        "test_proton_lock_button.py",
-        "test_rumble_actions.py",
-        "test_status_actions_reconnect.py",
-        "test_triggers_actions.py",
-        "test_vpad_degradation_banner.py",
-    }
-)
+# A dívida zerou em 01/10/2026 (AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01): os onze
+# ganharam `exigir_gi_real()` no topo. A lista fica, vazia, porque é ela que
+# o `TETO_DA_DIVIDA` vigia: um nome que volte a ela reprova pelo teto.
+DIVIDA_GI_FALSO: frozenset[str] = frozenset()
 
 #: TETO DA DÍVIDA — o número de nomes que a allowlist ainda pode ter. **Só
 #: desce.** Sem ele, a allowlist é uma lista que só cresce por descuido: bastava
 #: alguém acrescentar um nome para o portão calar, e a mensagem "NÃO acrescente"
 #: era só um pedido educado. Cada lote pago baixa este número junto.
 #:
-#: 17 em 30/07/2026 (medição original) → 11 em 13/08/2026 (lote A da E1).
-TETO_DA_DIVIDA = 11
+#: 17 em 30/07/2026 (medição original) → 11 em 13/08/2026 (lote A da E1)
+#: → 0 em 01/10/2026 (AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01).
+TETO_DA_DIVIDA = 0
 
 #: Nomes de guarda aceitos: a função do `tests/conftest.py` ou o marcador irmão.
 GUARDAS_ACEITAS = ("exigir_gi_real", "skip_sem_gi_real")
@@ -213,7 +202,7 @@ class TestPortaoDoGiFalso:
             "Nome novo na allowlist é o portão sendo desligado, não dívida "
             "nova legítima. Cure o arquivo com exigir_gi_real() (ou troque o "
             "stub cru pelo instalar_stubs_gi do tests/conftest.py) em vez de "
-            "subir o teto — ele só desce (17 em 30/07, 11 em 13/08)."
+            "subir o teto — ele só desce (17 em 30/07, 11 em 13/08, 0 em 01/10)."
         )
 
     def test_allowlist_nao_guarda_arquivo_ja_pago(self) -> None:

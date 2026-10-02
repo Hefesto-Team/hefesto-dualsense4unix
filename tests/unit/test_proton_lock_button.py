@@ -18,6 +18,15 @@ venv e, com o gi REAL disponível, NÃO instala stubs (GATE-SKIP-MASK-01).
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): a guarda vem ANTES de
+# qualquer plantio de `gi`. Sem PyGObject REAL este módulo rodava verde contra
+# widgets que são `object` no `lint-test`, e nunca entrava no job `gtk-real`,
+# que seleciona por `exigir_gi_real`. Agora ele pula com o motivo onde não há
+# GTK e roda contra o de verdade onde há.
+exigir_gi_real("o botão da trava do Proton")
+
 import contextlib
 import inspect
 import sys
