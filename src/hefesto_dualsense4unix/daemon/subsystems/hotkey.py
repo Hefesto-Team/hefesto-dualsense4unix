@@ -3796,10 +3796,11 @@ def _a_mesa_vazia_esquece_o_canal(daemon: Any) -> None:
     SIGTERM, que o laço atende. Foi o que o diário dela mostrou em 30/09 às
     01h13 e em 01/10 às 13h28 e às 19h05, os três logo depois do
     ``controller_disconnected reason=probe_offline`` do último controle, e o
-    que o daemon do produto repetiu num lar de mentira em 02/10: o
-    ``state_full`` mudo desde o primeiro segundo da mesa vazia, 40 s seguidos
-    (58 voltas do ``poll.tick`` onde cabiam 2.300), até um controle voltar, e
-    a pilha do fio do laço em ``canal_do_microfone_loop``.
+    que o daemon do produto repetiu num lar de mentira em 02/10, com o
+    instrumento da sprint lendo o ``state_full`` a cada segundo: mudo um
+    segundo depois do ``probe_offline`` e até o fim (75 s), os dois controles
+    de volta sem ``controller_connected``, o SIGTERM sem resposta em 10 s, e a
+    pilha do fio do laço em ``canal_do_microfone_loop``.
 
     **A CURA É O ESTADO DO BOOT**: sem controle não há conferência a fazer, e o
     relógio dela volta a ``None``, que é como o daemon nasce. A espera volta a

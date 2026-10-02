@@ -7,14 +7,15 @@ que voltou não foi aceito (nenhum ``controller_connected`` até o reinício) e 
 SIGTERM, que o laço atende, não foi atendido.
 
 **A CAUSA, medida em 02/10 com o daemon do produto num lar de mentira** (a
-mesa de rádio que se esvazia, o ``state_full`` lido a cada segundo): o
-``state_full`` emudeceu no primeiro segundo da mesa vazia e só voltou quando
-um controle voltou, e a pilha do fio do laço estava no
-``canal_do_microfone_loop``. A espera do canal (``_esperar_o_som_mudar``) não
-passa da hora da próxima conferência, a hora só anda na volta COM controle, e
-com a mesa vazia ela ficava no passado: prazo zero, e o ``esperar_async`` de
-prazo zero volta sem ceder o laço. A corrotina girava sem suspender, e o laço
-inteiro parava com ela.
+mesa de rádio que se esvazia, o ``state_full`` lido a cada segundo pelo
+instrumento da O-TRAVAMENTO-SE-SEPARA-UM-FATOR-POR-VEZ-01): o ``state_full``
+emudeceu um segundo depois do ``probe_offline`` do último controle e não
+voltou mais, nem com os dois controles de volta; o SIGTERM não foi atendido em
+10 s; e a pilha do fio do laço estava no ``canal_do_microfone_loop``. A espera
+do canal (``_esperar_o_som_mudar``) não passa da hora da próxima conferência,
+a hora só anda na volta COM controle, e com a mesa vazia ela ficava no
+passado: prazo zero, e o ``esperar_async`` de prazo zero volta sem ceder o
+laço. A corrotina girava sem suspender, e o laço inteiro parava com ela.
 
 **A RÉGUA** roda o laço do canal de produção num fio próprio, com uma batida
 de 10 ms ao lado, e mede a batida enquanto a mesa está vazia. Laço parado é
