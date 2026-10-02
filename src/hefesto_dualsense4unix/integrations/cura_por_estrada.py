@@ -220,8 +220,8 @@ CORRECOES_DA_CARONA: tuple[tuple[str, str], ...] = (("PROTON_USE_XALIA", "0"),)
 
 #: AS QUE, POSTAS POR ELA, MANDAM: a regra do lançador da Steam («quem já pôs
 #: `PROTON_USE_XALIA` manda»). Um valor que já está no arquivo e não é um dos
-#: nossos é dela: a carona não escreve por cima, não anota, e o desfazer não o
-#: toca (:func:`_sem_o_que_ela_pos`).
+#: nossos é dela: a carona não escreve por cima, não o anota como nosso, e o
+#: desfazer não o toca (:func:`_as_que_ela_pos`, :func:`_tomar`).
 DELA_MANDA: frozenset[str] = frozenset(k for k, _ in CORRECOES_DA_CARONA)
 
 #: Quantos valores nossos o registro lembra por chave. O último é o de agora;
@@ -682,22 +682,20 @@ def _devolver_chaves(pares: Pares, chaves: Iterable[str], entrada: Entrada,
     return pares
 
 
-def _sem_o_que_ela_pos(pares: Pares, ambiente: dict[str, str],
-                       entrada: Entrada) -> dict[str, str]:
-    """O ambiente deste arquivo sem as :data:`DELA_MANDA` que ela já pôs nele.
+def _as_que_ela_pos(pares: Pares, ambiente: dict[str, str],
+                    entrada: Entrada) -> frozenset[str]:
+    """As :data:`DELA_MANDA` do ambiente que ela já pôs neste arquivo.
 
     É dela o valor que está no arquivo e não é um dos nossos no registro: o que
-    ela pôs antes do Hefesto (sem marca) e o que ela trocou depois. Fora do
-    ambiente, a marca velha sai do registro pelo :func:`_devolver_chaves`, que
-    não tira valor que não é nosso.
+    ela pôs antes do Hefesto (sem marca) e o que ela trocou depois.
     """
-    fora = dict(ambiente)
+    dela: set[str] = set()
     for chave in DELA_MANDA & ambiente.keys():
         marca = entrada.chaves.get(chave)
         nossos = set(marca.valores) if marca is not None else set()
         if any(a == chave and b not in nossos for a, b in pares):
-            del fora[chave]
-    return fora
+            dela.add(chave)
+    return frozenset(dela)
 
 
 def _tomar(pares: Pares, ambiente: dict[str, str], entrada: Entrada) -> Pares:
@@ -706,9 +704,18 @@ def _tomar(pares: Pares, ambiente: dict[str, str], entrada: Entrada) -> Pares:
     Uma chave nossa que saiu do ambiente sai do arquivo (o Modo Nativo não tem
     `IGNORE`: um `IGNORE` congelado no Heroic deixava o jogo sem o controle
     que o Modo Nativo existe para mostrar). As de agora entram por cima, menos
-    as :data:`DELA_MANDA` que ela já pôs.
+    as :data:`DELA_MANDA` que ela já pôs (:func:`_as_que_ela_pos`).
+
+    **A DELA FICA, E A MARCA TAMBÉM.** O registro da lista global do Heroic é o
+    das cópias por jogo: com o valor dela na global, a carona ainda põe o nosso
+    na cópia que não tem a chave, e o desfazer e a exclusão só o reconhecem pela
+    marca da global. Sem a marca, o nosso ficava na cópia depois do uninstall e
+    entrava no jogo excluído. O «antes» de uma :data:`DELA_MANDA` é o valor que
+    estava no arquivo e só vale enquanto a chave estiver lá: quando o nosso
+    entra numa chave vazia, ele volta a ``None``, e o desfazer não devolve um
+    valor que ela já tirou.
     """
-    ambiente = _sem_o_que_ela_pos(pares, ambiente, entrada)
+    dela = _as_que_ela_pos(pares, ambiente, entrada)
     atual = dict(pares)
     pares = _devolver_chaves(
         pares, [k for k in entrada.chaves if k not in ambiente], entrada, _Contas())
@@ -718,12 +725,14 @@ def _tomar(pares: Pares, ambiente: dict[str, str], entrada: Entrada) -> Pares:
             #: A PRIMEIRA VEZ. Só as que podem ser dela guardam o «antes»: as
             #: demais são do produto, e um valor que já estava lá é presumido de
             #: uma versão que escrevia sem registro (ver o cabeçalho).
-            antes = atual.get(chave) if chave in PODEM_SER_DELA else None
+            antes = atual.get(chave) if chave in PODEM_SER_DELA | DELA_MANDA else None
             entrada.chaves[chave] = Marca([valor], antes)
         elif marca.valores[-1] != valor:
             marca.valores = (
                 [v for v in marca.valores if v != valor] + [valor])[-_VALORES_LEMBRADOS:]
-    return _por_por_cima(pares, ambiente)
+        if chave in DELA_MANDA and chave not in atual:
+            entrada.chaves[chave].antes = None
+    return _por_por_cima(pares, {k: v for k, v in ambiente.items() if k not in dela})
 
 
 def _desfazer_pares(pares: Pares, entrada: Entrada) -> tuple[Pares, _Contas]:
@@ -1270,8 +1279,11 @@ def _entrada_da_copia(entrada: Entrada) -> Entrada:
     o «antes» da lista global trocaria o que ela pôs. As do produto saem pelo
     valor nosso, como na lista global.
     """
+    #: O «antes» de uma :data:`DELA_MANDA` é o da lista global, e numa cópia o
+    #: desfazer o poria num jogo que nunca o teve: na cópia ela vale sem ele.
     return Entrada(HEROIC_CONFIG, chaves={
-        k: copy.deepcopy(m) for k, m in entrada.chaves.items() if k not in PODEM_SER_DELA})
+        k: Marca(list(m.valores), None) if k in DELA_MANDA else copy.deepcopy(m)
+        for k, m in entrada.chaves.items() if k not in PODEM_SER_DELA})
 
 
 def _desfazer_na_copia_do_jogo(alvo: Path, entrada: Entrada, feito: Desfeito) -> str | None:
