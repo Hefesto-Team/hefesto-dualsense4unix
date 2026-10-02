@@ -129,7 +129,7 @@ import stat
 import sys
 import tempfile
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import cast
 
@@ -889,6 +889,7 @@ def curar_todas_as_estradas(
     lar: Path | None = None,
     pasta_do_ambiente: Path | None = None,
     raiz_sistema: Path | None = None,
+    exclusao: NaExclusao | None = None,
 ) -> tuple[str, ...]:
     """Escreve o ambiente da ponte em TODA estrada que existir. O que escreveu.
 
@@ -925,7 +926,13 @@ def curar_todas_as_estradas(
     devolve nada e segue — e quem quiser a RAZÃO tem o `planejar`, que a diz.
 
     Devolve as chaves dos cartões em que escreveu, para o journal.
+
+    **A LISTA DE EXCLUSÃO MANDA AQUI TAMBÉM** (01/10/2026): a caixa de um
+    emulador excluído não recebe o ambiente, e a cópia de um jogo do Heroic
+    excluído volta a ficar sem o que é nosso — ver :class:`NaExclusao`.
+    ``exclusao`` existe para a régua; ``None`` lê a lista do dono.
     """
+    fora = _a_exclusao() if exclusao is None else exclusao
     escritos: list[str] = []
     for chave, atalhos in cartoes_com_estrada():
         try:
@@ -933,10 +940,17 @@ def curar_todas_as_estradas(
                              raiz_sistema)
             if plano.impedimento or not plano.estradas or not plano.ambiente:
                 continue
-            escrever_a_estrada(plano)
+            estradas = tuple(e for e in plano.estradas
+                             if e.app_id.casefold() not in fora.caixas)
+            if not estradas:
+                continue
+            escrever_a_estrada(replace(plano, estradas=estradas))
         except Exception:  # pragma: no cover - disco hostil; ver a docstring
             continue
         escritos.append(chave)
+    for copia in fora.copias:
+        with contextlib.suppress(Exception):
+            _sem_o_nosso_no_jogo(Path(copia.arquivo), copia.app, pasta_do_ambiente)
     return tuple(escritos)
 
 
@@ -1192,6 +1206,289 @@ def frase_do_desfeito(feito: Desfeito) -> str:
     if feito.apagado:
         partes.append("o arquivo nasceu com o Hefesto e saiu junto")
     return f"{feito.arquivo}: " + "; ".join(partes) if partes else ""
+
+
+# ── A EXCLUSÃO: o jogo e a caixa que ela tirou do Hefesto ──────────────────
+#
+# OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, a metade dos outros
+# lançadores (01/10/2026). O jogo excluído vê o controle como se o Hefesto não
+# estivesse instalado; fora da Steam, o que o Hefesto põe nele é ESTE ambiente.
+#
+# MEDIDO ANTES DA CURA, num lar de mentira: excluir o jogo do Heroic deixava o
+# `SDL_GAMECONTROLLER_IGNORE_DEVICES` e o `PROTON_DISABLE_HIDRAW` na cópia
+# dele, e excluir o RetroArch deixava os dois na caixa — que a carona da
+# transição seguinte reescrevia. Com a janela do excluído em foco o daemon
+# liga o Modo Nativo (sem controle virtual), e o jogo ficava sem controle
+# NENHUM: o físico escondido pelo ambiente, e o virtual desligado.
+#
+# A UNIDADE É A DA ESTRADA. O Heroic monta as opções de um jogo como
+# `{...globais, ...do jogo}` (`GameConfigV0.getSettings`, lido no fonte dele em
+# 01/10): a lista própria do jogo SUBSTITUI a global, e é por ela que um jogo
+# sai sozinho. A caixa do Flatpak é uma só para todos os jogos do emulador — e
+# o emulador já entra na lista inteiro, «todos os jogos».
+@dataclass(frozen=True)
+class CopiaDoJogo:
+    """O que a exclusão fez na cópia de UM jogo do Heroic — e como voltar."""
+
+    #: `<casa do Heroic>/GamesConfig/<app>.json`.
+    arquivo: str
+    #: O `app_name` do jogo, que é a chave dentro do arquivo.
+    app: str
+    #: O arquivo não existia: a volta o apaga, se ninguém mexeu nele.
+    nasceu: bool = False
+    #: O arquivo existia sem a chave do jogo.
+    sem_jogo: bool = False
+    #: O jogo seguia a lista GLOBAL: a volta tira a lista própria, e ele volta
+    #: a segui-la (com a carona que a mantém).
+    sem_lista: bool = False
+    #: A lista que valia para o jogo antes da exclusão, e a que ficou.
+    antes: tuple[tuple[str, str], ...] = ()
+    depois: tuple[tuple[str, str], ...] = ()
+    #: O prefixo PRÓPRIO do jogo (`winePrefix` da cópia), quando há: o device
+    #: KS e as camadas Vulkan moram lá.
+    prefixo: str = ""
+
+    def como_dado(self) -> dict[str, object]:
+        """O dicionário que vai ao JSON da lista de exclusão."""
+        return {"arquivo": self.arquivo, "app": self.app, "nasceu": self.nasceu,
+                "sem_jogo": self.sem_jogo, "sem_lista": self.sem_lista,
+                "antes": [list(p) for p in self.antes],
+                "depois": [list(p) for p in self.depois], "prefixo": self.prefixo}
+
+    @classmethod
+    def de_dado(cls, dado: object) -> CopiaDoJogo | None:
+        """A cópia lida do JSON; torta = ``None``."""
+        if not isinstance(dado, dict):
+            return None
+        arquivo, app = dado.get("arquivo"), dado.get("app")
+        if not isinstance(arquivo, str) or not isinstance(app, str) or not app:
+            return None
+
+        def pares(cru: object) -> tuple[tuple[str, str], ...]:
+            return tuple((str(p[0]), str(p[1])) for p in (cru if isinstance(cru, list) else ())
+                         if isinstance(p, list | tuple) and len(p) == 2)
+
+        prefixo = dado.get("prefixo")
+        return cls(arquivo, app, bool(dado.get("nasceu")), bool(dado.get("sem_jogo")),
+                   bool(dado.get("sem_lista")), pares(dado.get("antes")),
+                   pares(dado.get("depois")), prefixo if isinstance(prefixo, str) else "")
+
+
+@dataclass(frozen=True)
+class NaExclusao:
+    """O que a carona pula: as caixas excluídas e as cópias a manter limpas."""
+
+    #: Os `app-id` das caixas excluídas, em `casefold`.
+    caixas: frozenset[str] = frozenset()
+    copias: tuple[CopiaDoJogo, ...] = ()
+
+
+def _a_exclusao() -> NaExclusao:
+    """A lista do dono (`lista_de_exclusao`), lida tarde. Nunca levanta.
+
+    O import é tardio pelo mesmo motivo do cabeçalho: o desfazer do uninstall
+    roda este arquivo com o `python3` do sistema, e a lista puxa o pacote.
+    """
+    try:
+        from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
+
+        return lx.o_que_a_carona_pula()
+    except Exception:
+        return NaExclusao()
+
+
+def _sem_o_nosso_no_jogo(
+    alvo: Path, app: str, pasta_do_ambiente: Path | None = None,
+) -> tuple[str, CopiaDoJogo | None]:
+    """A cópia do jogo `app` com a lista própria, sem nada do que é nosso.
+
+    O que é nosso é o que o desfazer do uninstall tiraria da mesma cópia
+    (:func:`_desfazer_pares`, com o registro da casa sem as que podem ser
+    dela): é a lista do jogo «como se o Hefesto não estivesse instalado».
+    Status: ``"feito"`` | ``"nada"`` | ``"erro"``. Nunca levanta.
+    """
+    casa = alvo.parent.parent
+    nasceu = not alvo.exists()
+    try:
+        raiz = {} if nasceu else cast("object", json.loads(alvo.read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        return "erro", None
+    if not isinstance(raiz, dict):
+        return "erro", None
+    jogo = raiz.get(app)
+    sem_jogo = not isinstance(jogo, dict)
+    if not isinstance(jogo, dict):
+        jogo = {}
+    propria = jogo.get(CHAVE_DO_HEROIC)
+    sem_lista = not isinstance(propria, list)
+    if isinstance(propria, list):
+        pares = _pares_da_lista(propria)
+    else:
+        global_ = _ler_heroic(casa / "config.json")
+        if global_ is None:
+            return "erro", None
+        pares = _pares_do_heroic(global_)
+    entrada = ler_registro(pasta_do_ambiente).get(
+        str(casa / "config.json"), Entrada(HEROIC_CONFIG))
+    novos, _ = _desfazer_pares(pares, _entrada_da_copia(entrada))
+    prefixo = jogo.get("winePrefix")
+    copia = CopiaDoJogo(
+        str(alvo), app, nasceu, sem_jogo, sem_lista, tuple(pares), tuple(novos),
+        prefixo if isinstance(prefixo, str) else "")
+    if not sem_lista and novos == pares:
+        return "nada", copia
+    jogo[CHAVE_DO_HEROIC] = [{"key": k, "value": v} for k, v in novos]
+    raiz[app] = jogo
+    if nasceu:
+        #: A forma que o próprio Heroic grava (`flush` do `GameConfigV0`).
+        raiz.setdefault("version", "v0")
+        raiz.setdefault("explicit", True)
+    try:
+        _escrever_atomico(alvo, json.dumps(raiz, indent=2, ensure_ascii=False))
+    except OSError:
+        return "erro", None
+    return "feito", copia
+
+
+def jogos_do_heroic_pela_janela(classe: str, lar: Path | None = None) -> list[Path]:
+    """As cópias (`GamesConfig/<app>.json`) dos jogos do Heroic com esta janela.
+
+    Quem diz qual jogo anuncia qual janela é o censo
+    (`JogoDoLancador.classe_de_janela`); a casa é a que ele leu. O arquivo
+    pode ainda não existir: é onde a cópia nasce.
+    """
+    alvo = classe.strip()
+    if not alvo:
+        return []
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+    biblioteca = censo.biblioteca_de("Heroic", Path.home() if lar is None else lar)
+    if biblioteca.onde is None:
+        return []
+    pasta = biblioteca.onde / _PASTA_DOS_JOGOS_DO_HEROIC
+    vistos: list[Path] = []
+    for jogo in biblioteca.jogos:
+        if jogo.classe_de_janela == alvo and "/" not in jogo.chave:
+            arquivo = pasta / f"{jogo.chave}.json"
+            if arquivo not in vistos:
+                vistos.append(arquivo)
+    return vistos
+
+
+def tirar_o_nosso_do_jogo_do_heroic(
+    classe: str, *, lar: Path | None = None, pasta_do_ambiente: Path | None = None,
+) -> tuple[tuple[CopiaDoJogo, ...], str]:
+    """O jogo do Heroic com esta janela passa a ter a lista própria sem o nosso.
+
+    Devolve ``(o que fez, status)``: ``"feito"`` | ``"nada"`` | ``"erro"``.
+    Com erro numa cópia, as que já foram feitas voltam — tudo ou nada.
+    """
+    feitas: list[CopiaDoJogo] = []
+    status = "nada"
+    for alvo in jogos_do_heroic_pela_janela(classe, lar):
+        st, copia = _sem_o_nosso_no_jogo(alvo, alvo.stem, pasta_do_ambiente)
+        if st == "erro" or copia is None:
+            devolver_ao_jogo_do_heroic(feitas)
+            return (), "erro"
+        feitas.append(copia)
+        if st == "feito":
+            status = "feito"
+    return tuple(feitas), status
+
+
+def devolver_ao_jogo_do_heroic(copias: Iterable[CopiaDoJogo]) -> str:
+    """A volta: a cópia de cada jogo como estava antes da exclusão.
+
+    Se ninguém mexeu na cópia desde a exclusão, ela volta EXATA (a lista de
+    antes, ou nenhuma lista própria, ou nenhum arquivo). Se o Heroic ou ela
+    mexeu, o que mudou fica e só os pares que a exclusão tirou voltam, sem
+    passar por cima de uma chave que esteja lá. Status: ``"feito"`` |
+    ``"nada"`` | ``"erro"``. Nunca levanta.
+    """
+    status = "nada"
+    for copia in copias:
+        alvo = Path(copia.arquivo)
+        try:
+            raiz = cast("object", json.loads(alvo.read_text(encoding="utf-8")))
+        except FileNotFoundError:
+            continue
+        except (OSError, ValueError):
+            status = "erro"
+            continue
+        jogo = raiz.get(copia.app) if isinstance(raiz, dict) else None
+        if not isinstance(raiz, dict) or not isinstance(jogo, dict):
+            continue
+        atual = _pares_da_lista(jogo.get(CHAVE_DO_HEROIC))
+        intacta = isinstance(jogo.get(CHAVE_DO_HEROIC), list) and tuple(atual) == copia.depois
+        if intacta and copia.sem_lista:
+            del jogo[CHAVE_DO_HEROIC]
+        elif intacta:
+            jogo[CHAVE_DO_HEROIC] = [{"key": k, "value": v} for k, v in copia.antes]
+        else:
+            tem = {k for k, _ in atual}
+            voltam = [(k, v) for k, v in copia.antes
+                      if (k, v) not in copia.depois and k not in tem]
+            if not voltam:
+                continue
+            jogo[CHAVE_DO_HEROIC] = [{"key": k, "value": v} for k, v in atual + voltam]
+        try:
+            if intacta and copia.sem_jogo and not jogo:
+                del raiz[copia.app]
+                if copia.nasceu and set(raiz) <= {"version", "explicit"}:
+                    alvo.unlink()
+                    status = "feito"
+                    continue
+            _escrever_atomico(alvo, json.dumps(raiz, indent=2, ensure_ascii=False))
+        except OSError:
+            status = "erro"
+            continue
+        if status != "erro":
+            status = "feito"
+    return status
+
+
+def _override_da_caixa(app_id: str, lar: Path) -> Path:
+    return lar / _PASTA_DOS_OVERRIDES / app_id
+
+
+def tirar_o_nosso_da_caixa(
+    app_ids: Iterable[str], *, lar: Path | None = None,
+    pasta_do_ambiente: Path | None = None,
+) -> str:
+    """A caixa do Flatpak destes `app-id` sem o ambiente que é nosso.
+
+    É o desfazer do uninstall, recortado para estas caixas: o valor dela de
+    antes volta, o que ela mudou fica, o arquivo que nasceu com o Hefesto
+    sai. A entrada da caixa sai do registro: a carona não escreve numa caixa
+    excluída, e a volta («Tirar da lista») é a carona escrevendo de novo.
+    Status: ``"feito"`` | ``"nada"`` | ``"erro"``. Nunca levanta.
+    """
+    lar = Path.home() if lar is None else lar
+    try:
+        registro = ler_registro(pasta_do_ambiente)
+    except Exception:  # pragma: no cover - ler_registro já não levanta
+        return "erro"
+    mexeu_no_registro = False
+    status = "nada"
+    for app_id in dict.fromkeys(a for a in app_ids if "." in a):
+        alvo = _override_da_caixa(app_id, lar)
+        if not alvo.is_file():
+            continue
+        entrada = registro.get(str(alvo), Entrada(FLATPAK_OVERRIDE))
+        feito = _desfazer_no_arquivo(alvo, entrada)
+        if feito.erro:
+            return "erro"
+        if str(alvo) in registro:
+            del registro[str(alvo)]
+            mexeu_no_registro = True
+        if feito.tiradas or feito.devolvidas or feito.apagado:
+            status = "feito"
+    if mexeu_no_registro:
+        try:
+            gravar_registro(registro, pasta_do_ambiente)
+        except OSError:
+            return "erro"
+    return status
 
 
 def _pastas_do_ambiente_padrao(lar: Path) -> list[Path]:

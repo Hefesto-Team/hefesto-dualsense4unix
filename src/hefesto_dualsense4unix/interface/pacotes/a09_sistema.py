@@ -3908,7 +3908,7 @@ def corrigir_vulkan(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                 "Windows do Proton regrava esse ajuste ao sair, e a mudança seria "
                 "perdida.")
         resultados = cv.curar_todos(
-            religar=True, forcar=True, excluir=lista_de_exclusao.appids())
+            religar=True, forcar=True, excluir=lista_de_exclusao.ids_dos_prefixos())
     try:
         cv.gravar_camadas_da_steam_fora(ligar)
     except OSError as erro:

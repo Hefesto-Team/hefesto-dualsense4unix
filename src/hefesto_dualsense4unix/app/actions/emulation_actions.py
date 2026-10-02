@@ -2242,7 +2242,7 @@ class EmulationActionsMixin(WidgetAccessMixin):
                     return
                 resultados = cv.curar_todos(
                     religar=devolver, forcar=True,
-                    excluir=lista_de_exclusao.appids(),
+                    excluir=lista_de_exclusao.ids_dos_prefixos(),
                 )
             except Exception as exc:
                 logger.warning("cura_de_camadas_falhou", erro=str(exc))

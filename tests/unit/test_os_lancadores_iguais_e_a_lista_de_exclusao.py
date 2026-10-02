@@ -63,7 +63,13 @@ _APPID = "1088850"
 
 @pytest.fixture(autouse=True)
 def _config_de_mentira(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    # O `HOME` também, desde 01/10/2026: excluir um jogo mexe na cópia dele no
+    # Heroic e na caixa do emulador, que moram no lar — e o lar da sessão de
+    # teste espelha o dela por symlink. `_CHAVE` é o Guardiões, que o Heroic
+    # dela conhece.
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("HOME", str(tmp_path / "lar"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "lar" / ".local" / "state"))
     return tmp_path
 
 
@@ -86,7 +92,7 @@ def test_a_regua_nao_escreve_na_config_dela(_config_de_mentira: Path) -> None:
     """A trava das outras: se o desvio cair, as três listas apontariam para a
     configuração de verdade — e esta régua reprova ANTES de qualquer escrita."""
     for caminho in (slo.steam_input_allowlist_path(), proton_pin.fora_do_pino_path(),
-                    slo.sem_wrapper_path(), lx.caminho()):
+                    slo.sem_wrapper_path(), lx.caminho(), Path.home()):
         assert _config_de_mentira in caminho.parents, caminho
 
 
@@ -940,3 +946,204 @@ def test_criar_perfil_passa_pelo_gravador_da_aba_perfis(
     assert 'href="10-perfis.html"' in miolo, (
         "o confirmar do perfil não leva à aba Perfis — o perfil nasceria sem "
         "ela ver onde")
+
+
+# ---------------------------------------------------------------------------
+# A METADE DOS OUTROS LANÇADORES — 01/10/2026
+#
+# Medido antes da cura, num lar de mentira: excluir o jogo do Heroic deixava o
+# `SDL_GAMECONTROLLER_IGNORE_DEVICES` e o `PROTON_DISABLE_HIDRAW` na cópia
+# dele, e excluir o RetroArch deixava os dois na caixa do Flatpak (que a carona
+# da transição seguinte reescrevia). Com a janela excluída em foco o daemon
+# liga o Modo Nativo, sem controle virtual: o jogo ficava sem controle nenhum.
+# ---------------------------------------------------------------------------
+from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe  # noqa: E402
+
+_APP_DO_HEROIC = "63a665088eb1480298f1e57943b225d8"
+_NOSSOS_NO_HEROIC = (("PROTON_DISABLE_HIDRAW", "0x054c/0x0ce6"),
+           ("SDL_GAMECONTROLLER_IGNORE_DEVICES", "0x054c/0x0ce6"))
+_DELA_NO_HEROIC = (("MANGOHUD", "1"),)
+
+
+def _lista(pares: tuple[tuple[str, str], ...]) -> list[dict[str, str]]:
+    return [{"key": k, "value": v} for k, v in pares]
+
+
+def _chaves_do_jogo(arquivo: Path) -> list[str]:
+    jogo = json.loads(arquivo.read_text(encoding="utf-8"))[_APP_DO_HEROIC]
+    return [e["key"] for e in jogo["enviromentOptions"]]
+
+
+def _heroic_de_mentira(*, com_copia: bool) -> tuple[Path, Path]:
+    """O Heroic flatpak no lar de mentira, com o Guardiões na biblioteca.
+
+    A forma é a do disco dela (01/10): a lista global com o nosso e o dela,
+    e — com `com_copia` — a cópia do jogo que o Heroic tirou da global.
+    Devolve ``(casa, cópia do jogo)``.
+    """
+    casa = Path.home() / ".var/app/com.heroicgameslauncher.hgl/config/heroic"
+    (casa / "store_cache").mkdir(parents=True)
+    (casa / "config.json").write_text(json.dumps(
+        {"defaultSettings": {"enviromentOptions": _lista(_NOSSOS_NO_HEROIC + _DELA_NO_HEROIC)}}), encoding="utf-8")
+    (casa / "store_cache" / "umu.json").write_text(
+        json.dumps({f"legendary_{_APP_DO_HEROIC}": "umu-1088850"}), encoding="utf-8")
+    (casa / "store_cache" / "legendary_library.json").write_text(json.dumps(
+        {"library": [{"app_name": _APP_DO_HEROIC, "title": "Guardiões", "is_installed": True,
+                      "install": {"executable": "retail/gotg.exe"}}]}), encoding="utf-8")
+    prefixo = Path.home() / "Games/Heroic/Prefixes/Guardioes"
+    copia = casa / "GamesConfig" / f"{_APP_DO_HEROIC}.json"
+    if com_copia:
+        copia.parent.mkdir(parents=True)
+        copia.write_text(json.dumps(
+            {_APP_DO_HEROIC: {"enviromentOptions": _lista(_NOSSOS_NO_HEROIC + _DELA_NO_HEROIC),
+                              "winePrefix": str(prefixo)},
+             "version": "v0", "explicit": True}, indent=2), encoding="utf-8")
+    return casa, copia
+
+
+def test_excluir_o_jogo_do_heroic_tira_o_nosso_da_copia() -> None:
+    """ARRANQUE o `tirar_o_nosso_do_jogo_do_heroic` do `adicionar` e este teste
+    reprova: a cópia do jogo excluído seguiria escondendo o físico dele."""
+    _casa, copia = _heroic_de_mentira(com_copia=True)
+    assert lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões") == "adicionado"
+    assert _chaves_do_jogo(copia) == ["MANGOHUD"]
+    assert lx.prefixos_excluidos() == {(Path.home() / "Games/Heroic/Prefixes/Guardioes").resolve()}
+
+
+def test_o_jogo_sem_copia_ganha_a_lista_propria_e_a_volta_a_apaga() -> None:
+    """Sem cópia o jogo segue a lista GLOBAL — que a carona reescreve com o
+    nosso a cada transição. A exclusão lhe dá a lista própria (o Heroic monta
+    `{...globais, ...do jogo}`), e o «Tirar» apaga o arquivo que nasceu dela.
+    ARRANQUE o ramo `sem_lista` da volta e a cópia fica: o jogo, fora da
+    lista, continuaria sem o Hefesto."""
+    _casa, copia = _heroic_de_mentira(com_copia=False)
+    assert lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões") == "adicionado"
+    assert _chaves_do_jogo(copia) == ["MANGOHUD"]
+    assert lx.tirar(_CHAVE) == "removido"
+    assert not copia.exists(), "a cópia que nasceu da exclusão ficou depois do «Tirar»"
+
+
+def test_tirar_devolve_a_copia_byte_a_byte() -> None:
+    """ARRANQUE o `devolver_ao_jogo_do_heroic` do `tirar` e este teste reprova:
+    o jogo tirado da lista seguiria sem o ambiente do Hefesto."""
+    _casa, copia = _heroic_de_mentira(com_copia=True)
+    antes = json.loads(copia.read_text(encoding="utf-8"))
+    lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
+    assert lx.tirar(_CHAVE) == "removido"
+    assert json.loads(copia.read_text(encoding="utf-8")) == antes
+
+
+def test_a_volta_nao_passa_por_cima_do_que_ela_mudou() -> None:
+    """Ela trocou o `MANGOHUD` do jogo depois da exclusão: a volta repõe o
+    nosso e deixa o dela como está."""
+    _casa, copia = _heroic_de_mentira(com_copia=True)
+    lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
+    raiz = json.loads(copia.read_text(encoding="utf-8"))
+    raiz[_APP_DO_HEROIC]["enviromentOptions"] = _lista((("MANGOHUD", "0"),))
+    copia.write_text(json.dumps(raiz), encoding="utf-8")
+    lx.tirar(_CHAVE)
+    pares = {(e["key"], e["value"]) for e in
+             json.loads(copia.read_text(encoding="utf-8"))[_APP_DO_HEROIC]["enviromentOptions"]}
+    assert pares == {("MANGOHUD", "0"), *_NOSSOS_NO_HEROIC}
+
+
+def test_a_carona_mantem_a_copia_do_excluido_limpa(tmp_path: Path) -> None:
+    """O Heroic aberto regrava a cópia com o que tinha na memória quando ela
+    muda uma opção do jogo. A carona da transição seguinte a limpa de novo.
+    ARRANQUE o laço das cópias do `curar_todas_as_estradas` e este teste
+    reprova."""
+    casa, copia = _heroic_de_mentira(com_copia=True)
+    lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
+    raiz = json.loads(copia.read_text(encoding="utf-8"))
+    raiz[_APP_DO_HEROIC]["enviromentOptions"] = _lista(_NOSSOS_NO_HEROIC + _DELA_NO_HEROIC)
+    copia.write_text(json.dumps(raiz), encoding="utf-8")
+    amb = tmp_path / "launch_env"
+    amb.mkdir()
+    (amb / "default.env").write_text("SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6\n")
+    cpe.curar_todas_as_estradas(lar=Path.home(), pasta_do_ambiente=amb,
+                                raiz_sistema=tmp_path / "sistema")
+    assert _chaves_do_jogo(copia) == ["MANGOHUD"]
+    globais = [e["key"] for e in json.loads((casa / "config.json").read_text(
+        encoding="utf-8"))["defaultSettings"]["enviromentOptions"]]
+    assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" in globais, (
+        "o controle: a lista global dos outros jogos continua com o Hefesto")
+
+
+def _caixa_do_retroarch(tmp_path: Path) -> Path:
+    """O RetroArch flatpak instalado no lar de mentira, com o nosso na caixa."""
+    ativo = Path.home() / ".local/share/flatpak/app/org.libretro.RetroArch/current/active"
+    ativo.mkdir(parents=True)
+    (ativo / "metadata").write_text("[Application]\nname=org.libretro.RetroArch\n")
+    override = Path.home() / ".local/share/flatpak/overrides/org.libretro.RetroArch"
+    override.parent.mkdir(parents=True)
+    override.write_text("[Environment]\nSDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6\n")
+    amb = Path.home() / ".local/state/hefesto-dualsense4unix/launch_env"
+    amb.mkdir(parents=True)
+    (amb / "default.env").write_text("SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6\n")
+    return override
+
+
+_JANELAS_DO_RETROARCH = ("org.libretro.RetroArch", "retroarch", "com.libretro.RetroArch")
+
+
+def test_excluir_o_emulador_tira_o_ambiente_da_caixa(tmp_path: Path) -> None:
+    """ARRANQUE o `tirar_o_nosso_da_caixa` do `adicionar` e este teste
+    reprova: o emulador excluído abriria com o físico escondido."""
+    override = _caixa_do_retroarch(tmp_path)
+    assert lx.adicionar("emulador:retroarch", lancador="retroarch",
+                        nome="RetroArch — todos os jogos",
+                        janelas=_JANELAS_DO_RETROARCH) == "adicionado"
+    assert "IGNORE" not in (override.read_text() if override.exists() else "")
+
+
+def test_a_carona_nao_repoe_o_ambiente_na_caixa_excluida(tmp_path: Path) -> None:
+    """ARRANQUE o filtro das caixas do `curar_todas_as_estradas` e este teste
+    reprova: a transição seguinte devolveria o ambiente ao emulador excluído
+    (medido antes da cura: a carona escrevia em `retroarch`)."""
+    override = _caixa_do_retroarch(tmp_path)
+    lx.adicionar("emulador:retroarch", lancador="retroarch",
+                 nome="RetroArch — todos os jogos", janelas=_JANELAS_DO_RETROARCH)
+    escritos = cpe.curar_todas_as_estradas(lar=Path.home(), raiz_sistema=tmp_path / "sistema")
+    assert "retroarch" not in escritos
+    assert "IGNORE" not in (override.read_text() if override.exists() else "")
+    assert lx.tirar("emulador:retroarch") == "removido"
+    assert "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6" in override.read_text(), (
+        "fora da lista, a caixa não recebeu o ambiente de volta")
+
+
+def test_o_device_ks_nao_volta_ao_prefixo_do_jogo_excluido(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """ARRANQUE o filtro dos `prefixos_excluidos` da carona do device KS e este
+    teste reprova: a transição seguinte gravaria o device no jogo excluído."""
+    from hefesto_dualsense4unix.daemon import launch_env
+
+    _heroic_de_mentira(com_copia=True)
+    prefixo = Path.home() / "Games/Heroic/Prefixes/Guardioes"
+    (prefixo / "pfx").mkdir(parents=True)
+    (prefixo / "pfx" / "system.reg").write_text("WINE REGISTRY Version 2\n\n", encoding="utf-8")
+    monkeypatch.setattr(cv, "prefixos_dos_lancadores", lambda *a, **k: [prefixo])
+    monkeypatch.setattr(ks, "controles_do_registro",
+                        lambda *a, **k: [ks.Controle(pid=0x0CE6, bus=1, dev=7, usec=42)])
+    lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
+    assert launch_env._device_ks_nos_lancadores()["prefixos"] == 0
+    assert "HEFESTOKS" not in (prefixo / "pfx" / "system.reg").read_text(encoding="utf-8")
+    lx.tirar(_CHAVE)
+    assert launch_env._device_ks_nos_lancadores()["escritos"] == 1, (
+        "o controle: fora da lista, o prefixo volta a receber o device")
+
+
+def test_tirar_do_disco_tira_o_ks_do_prefixo_do_heroic(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """ARRANQUE os prefixos do Heroic do `tirar_do_disco` e este teste
+    reprova: o jogo excluído seguiria com o device KS que a carona gravou."""
+    _heroic_de_mentira(com_copia=True)
+    raiz = Path.home() / "Games/Heroic/Prefixes/Guardioes"
+    (raiz / "pfx").mkdir(parents=True)
+    texto = ks.texto_novo("WINE REGISTRY Version 2\n\n",
+                          [ks.Controle(pid=0x0CE6, bus=3, dev=28, usec=None)], 1)
+    (raiz / "pfx" / "system.reg").write_text(texto, encoding="utf-8")
+    monkeypatch.setattr(cv, "pastas_compatdata", lambda home=None: [])
+    assert _nossos_blocos_ks(raiz)
+    lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
+    assert lx.tirar_do_disco(_CHAVE) == "feito"
+    assert not _nossos_blocos_ks(raiz)

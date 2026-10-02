@@ -66,6 +66,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
+from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
 from hefesto_dualsense4unix.integrations import proton_pin
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 from hefesto_dualsense4unix.utils.leitura_pela_assinatura import LeituraPelaAssinatura
@@ -83,6 +84,9 @@ LISTAS: tuple[str, ...] = ("pino", "atalho")
 NOTA_DAS_LISTAS = "posto pela lista de exclusão do Hefesto"
 
 _STEAM_APP = re.compile(r"^steam_app_(\d+)$")
+
+#: A chave do emulador inteiro — a aba 07 a monta (`_chave_do_emulador`).
+PREFIXO_DO_EMULADOR = "emulador:"
 
 
 def caminho(config_home: Path | None = None) -> Path:
@@ -117,6 +121,10 @@ class Entrada:
     #: medido em 10/09/2026). Vazio para o jogo da Steam e do umu, cuja chave
     #: JÁ é a classe da janela.
     janelas: tuple[str, ...] = field(default_factory=tuple)
+    #: As cópias do Heroic que esta exclusão mexeu, com o «antes» de cada uma
+    #: (01/10/2026): o jogo do Heroic sai do ambiente pela lista própria, e o
+    #: «Tirar» a devolve. Vazio para quem o Heroic não conhece.
+    heroic: tuple[cpe.CopiaDoJogo, ...] = field(default_factory=tuple)
 
 
 # ---------------------------------------------------------------------------
@@ -156,6 +164,8 @@ def _ler_cru(destino: Path) -> list[Entrada]:
                 nota=str(j.get("nota", "")),
                 escritas=tuple(x for x in j.get("escritas", ()) if x in LISTAS),
                 janelas=tuple(str(x) for x in j.get("janelas", ()) if str(x).strip()),
+                heroic=tuple(c for c in (cpe.CopiaDoJogo.de_dado(x)
+                                         for x in j.get("heroic", ())) if c),
             )
             for j in jogos
         ]
@@ -163,10 +173,25 @@ def _ler_cru(destino: Path) -> list[Entrada]:
         raise _ArquivoTortoError(str(exc)) from exc
 
 
+def _como_dado(e: Entrada) -> dict[str, object]:
+    """A entrada como vai ao JSON — sem a chave ``heroic`` quando vazia.
+
+    Sem cópia do Heroic, a linha sai byte a byte como saía antes de 01/10: o
+    `hefesto-launch.sh` lê este arquivo linha a linha, e uma lista vazia a
+    mais não muda nada para ele, mas o arquivo de quem nunca excluiu um jogo
+    do Heroic não tem por que mudar.
+    """
+    dado: dict[str, object] = asdict(e)
+    dado.pop("heroic", None)
+    if e.heroic:
+        dado["heroic"] = [c.como_dado() for c in e.heroic]
+    return dado
+
+
 def _gravar(destino: Path, entradas: list[Entrada]) -> None:
     destino.parent.mkdir(parents=True, exist_ok=True)
     corpo = json.dumps(
-        {"formato": FORMATO, "jogos": [asdict(e) for e in entradas]},
+        {"formato": FORMATO, "jogos": [_como_dado(e) for e in entradas]},
         ensure_ascii=False, indent=2,
     ) + "\n"
     fd, provisorio = tempfile.mkstemp(dir=destino.parent, prefix=".lista_de_exclusao.")
@@ -207,6 +232,52 @@ def ler(config_home: Path | None = None) -> list[Entrada]:
         return []
 
 
+def e_caixa(chave: str) -> bool:
+    """A chave é de um emulador (``emulador:<cartão>``): um processo, uma caixa."""
+    return chave.strip().startswith(PREFIXO_DO_EMULADOR)
+
+
+def o_que_a_carona_pula(config_home: Path | None = None) -> cpe.NaExclusao:
+    """O que `cura_por_estrada.curar_todas_as_estradas` não escreve.
+
+    As caixas: as janelas das entradas de emulador (os `app-id` estão entre
+    elas). As cópias: as do Heroic, que a carona mantém sem o que é nosso.
+    """
+    entradas = ler(config_home)
+    return cpe.NaExclusao(
+        caixas=frozenset(j.casefold() for e in entradas if e_caixa(e.chave)
+                         for j in e.janelas),
+        copias=tuple(c for e in entradas for c in e.heroic))
+
+
+def prefixos_excluidos(config_home: Path | None = None) -> frozenset[Path]:
+    """Os prefixos próprios dos jogos excluídos do Heroic — o device KS não entra.
+
+    Caminho resolvido, porque quem compara (a carona do device KS) lê o mesmo
+    prefixo por outra fonte.
+    """
+    fora: set[Path] = set()
+    for e in ler(config_home):
+        for c in e.heroic:
+            if c.prefixo.strip():
+                try:
+                    fora.add(Path(c.prefixo).resolve())
+                except OSError:  # pragma: no cover - caminho impossível
+                    continue
+    return frozenset(fora)
+
+
+def ids_dos_prefixos(config_home: Path | None = None) -> list[str]:
+    """O que o botão Vulkan pula: os appids e a pasta do prefixo do Heroic.
+
+    `camadas_vulkan` chama de `appid` o NOME DA PASTA do prefixo — o número
+    na Steam, o título no Heroic. O botão compara por ele.
+    """
+    nomes = [Path(c.prefixo).name for e in ler(config_home) for c in e.heroic
+             if c.prefixo.strip()]
+    return list(dict.fromkeys([*appids(config_home), *nomes]))
+
+
 def appids(config_home: Path | None = None) -> list[str]:
     """Os appids da Steam (e do umu) excluídos — o que os donos por appid leem."""
     return [a for a in (appid_da_chave(e.chave) for e in ler(config_home)) if a]
@@ -243,12 +314,15 @@ def adicionar(
     config_home: Path | None = None,
     escritas_herdadas: tuple[str, ...] = (),
     janelas: tuple[str, ...] = (),
+    lar: Path | None = None,
 ) -> str:
     """Exclui o jogo. Status: ``"adicionado"`` | ``"ja_estava"`` |
     ``"chave_invalida"`` | ``"erro"``. Nunca levanta.
 
     `escritas_herdadas`: listas em que o jogo já estava e que passam a ser
     DESTA exclusão (o «Tirar» sai delas também). Vazio no uso normal.
+    `lar`: o `HOME` onde moram o Heroic e as caixas do Flatpak (``None`` = o
+    de verdade).
     """
     alvo = chave.strip()
     if not alvo:
@@ -263,6 +337,16 @@ def adicionar(
 
     escritas = list(escritas_herdadas)
     appid = appid_da_chave(alvo)
+
+    def desfazer_as_listas() -> None:
+        # Uma escrita que falhou desfaz as que já foram feitas: um jogo meio
+        # excluído é o estado que a D-2109-A-EXCLUSAO-E-TUDO-OU-NADA existe
+        # para não ter.
+        if appid is not None:
+            for feita in escritas:
+                if feita not in escritas_herdadas:
+                    _TIRAR[feita](appid)
+
     if appid is not None:
         for lista in LISTAS:
             if lista in escritas:
@@ -271,32 +355,39 @@ def adicionar(
             if status == "adicionado":
                 escritas.append(lista)
             elif status != "ja_estava":
-                # Uma escrita que falhou desfaz as que já foram feitas: um jogo
-                # meio excluído é o estado que a D-2109-A-EXCLUSAO-E-TUDO-OU-NADA
-                # existe para não ter.
-                for feita in escritas:
-                    if feita not in escritas_herdadas:
-                        _TIRAR[feita](appid)
+                desfazer_as_listas()
                 return "erro"
+
+    janelas_limpas = tuple(j.strip() for j in janelas if j.strip())
+    # FORA DA STEAM, O AMBIENTE (01/10/2026). O jogo do Heroic com esta janela
+    # ganha a lista própria sem o que é nosso; a caixa do emulador perde o
+    # ambiente inteiro. Ver `cura_por_estrada`, «A EXCLUSÃO».
+    copias: tuple[cpe.CopiaDoJogo, ...] = ()
+    if appid is not None:
+        copias, status = cpe.tirar_o_nosso_do_jogo_do_heroic(alvo, lar=lar)
+        if status == "erro":
+            desfazer_as_listas()
+            return "erro"
+    elif e_caixa(alvo) and cpe.tirar_o_nosso_da_caixa(janelas_limpas, lar=lar) == "erro":
+        return "erro"
 
     nova = Entrada(
         chave=alvo, lancador=lancador, nome=nome,
         quando=time.strftime("%Y-%m-%dT%H:%M:%S"), nota=nota,
         escritas=tuple(x for x in LISTAS if x in escritas),
-        janelas=tuple(j.strip() for j in janelas if j.strip()),
+        janelas=janelas_limpas,
+        heroic=copias,
     )
     try:
         _gravar(destino, [*atuais, nova])
     except OSError:
-        if appid is not None:
-            for feita in nova.escritas:
-                if feita not in escritas_herdadas:
-                    _TIRAR[feita](appid)
+        desfazer_as_listas()
+        cpe.devolver_ao_jogo_do_heroic(copias)
         return "erro"
     return "adicionado"
 
 
-def tirar(chave: str, *, config_home: Path | None = None) -> str:
+def tirar(chave: str, *, config_home: Path | None = None, lar: Path | None = None) -> str:
     """Devolve o jogo ao Hefesto. Status: ``"removido"`` | ``"nao_estava"`` |
     ``"erro"``. Nunca levanta.
 
@@ -317,10 +408,16 @@ def tirar(chave: str, *, config_home: Path | None = None) -> str:
         for lista in achada.escritas:
             if _TIRAR[lista](appid) not in ("removido", "nao_estava"):
                 return "erro"
+    if cpe.devolver_ao_jogo_do_heroic(achada.heroic) == "erro":
+        return "erro"
     try:
         _gravar(destino, [e for e in atuais if e.chave != alvo])
     except OSError:
         return "erro"
+    if e_caixa(alvo):
+        # A caixa volta pela carona: fora da lista, ela recebe o ambiente de
+        # agora — e, sem o ambiente publicado, na próxima transição.
+        cpe.curar_todas_as_estradas(lar=lar)
     return "removido"
 
 
@@ -355,7 +452,9 @@ def tirar_do_disco(chave: str) -> str:
         return "sem_appid"
     pino = proton_pin.destravar_um_jogo(appid)
     atalho = slo.tirar_o_atalho_dos_jogos([appid])
-    prefixo = _devolver_o_prefixo(appid)
+    do_heroic = [Path(c.prefixo) for e in ler() if e.chave == chave.strip()
+                 for c in e.heroic if c.prefixo.strip()]
+    prefixo = _devolver_o_prefixo(appid, do_heroic)
     razoes = {str(e.get("reason", "")) for e in atalho["errors"]}
     if pino.get("status") == "recusado" or razoes & _ESPERA_A_STEAM or prefixo == "ocupado":
         return "espera_a_steam"
@@ -366,7 +465,7 @@ def tirar_do_disco(chave: str) -> str:
     return "nada_a_tirar"
 
 
-def _devolver_o_prefixo(appid: str) -> str:
+def _devolver_o_prefixo(appid: str, do_heroic: list[Path] | None = None) -> str:
     """O prefixo Wine do jogo volta ao que era sem o Hefesto.
 
     Duas coisas moram lá, e as duas são nossas: o device KS da háptica
@@ -382,8 +481,9 @@ def _devolver_o_prefixo(appid: str) -> str:
     from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
 
     status = "nada"
-    for pasta in cv.pastas_compatdata():
-        raiz = pasta / appid
+    raizes = [(pasta / appid, appid) for pasta in cv.pastas_compatdata()]
+    raizes += [(raiz, raiz.name) for raiz in (do_heroic or [])]
+    for raiz, nome in raizes:
         if not (raiz / "pfx" / "system.reg").is_file():
             continue
         if ks.wineserver_do_prefixo_vivo(raiz / "pfx"):
@@ -391,7 +491,7 @@ def _devolver_o_prefixo(appid: str) -> str:
         try:
             tirado = ks.aplicar(raiz, controles=[])
             camadas = cv.aplicar_no_prefixo(
-                cv.prefixo_de_jogo(raiz, appid=appid), religar=True, pela_exclusao=True
+                cv.prefixo_de_jogo(raiz, appid=nome), religar=True, pela_exclusao=True
             )
         except OSError:
             return "erro"
@@ -407,13 +507,18 @@ def _devolver_o_prefixo(appid: str) -> str:
 __all__ = [
     "LISTAS",
     "NOTA_DAS_LISTAS",
+    "PREFIXO_DO_EMULADOR",
     "Entrada",
     "adicionar",
     "appid_da_chave",
     "appids",
     "caminho",
     "contem",
+    "e_caixa",
+    "ids_dos_prefixos",
     "ler",
+    "o_que_a_carona_pula",
+    "prefixos_excluidos",
     "tirar",
     "tirar_do_disco",
 ]

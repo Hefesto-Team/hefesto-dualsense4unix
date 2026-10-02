@@ -2530,9 +2530,18 @@ def _device_ks_nos_lancadores() -> dict[str, int]:
             controles_do_registro,
         )
 
+        from hefesto_dualsense4unix.integrations.lista_de_exclusao import (
+            prefixos_excluidos,
+        )
+
+        # O PREFIXO DO JOGO EXCLUÍDO FICA SEM O DEVICE (01/10/2026,
+        # OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01): a exclusão o tira, e
+        # esta carona o reporia na transição seguinte.
+        fora_da_exclusao = prefixos_excluidos()
         prefixos = [
             p for p in cv.prefixos_dos_lancadores()
             if (p / "pfx" / "system.reg").is_file()
+            and p.resolve() not in fora_da_exclusao
         ]
         fora["prefixos"] = len(prefixos)
         if not prefixos:
