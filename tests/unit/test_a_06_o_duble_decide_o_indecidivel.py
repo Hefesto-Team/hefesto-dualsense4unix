@@ -144,7 +144,11 @@ def _button_actions() -> dict[str, str]:
     de_fabrica = acoes.padrao()
     fora: dict[str, str] = {}
     for botao in acoes.BOTOES:
-        for token in acoes.ACOES:
+        # A LINHA DO PS SÓ DIGITA (01/10/2026): a lista dela é outra.
+        oferece = [t for t in acoes.ACOES
+                   if (acoes.o_ps_aceita(t) if botao == acoes.BOTAO_PS
+                       else t != acoes.TOKEN_SEM_TECLA)]
+        for token in oferece:
             if token != de_fabrica.get(botao):
                 fora[botao] = token
                 break

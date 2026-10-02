@@ -94,31 +94,13 @@ TOKEN_STEAM = "__STEAM__"
 TOKEN_SAIR_DO_JOGO = "__SAIR_DO_JOGO__"
 TOKEN_PROGRAMA = "__PROGRAMA__"
 TOKEN_NADA = "__NADA__"
-
-#: O DEGRAU DA MÁQUINA DO BOTÃO PS, traduzido para o vocabulário da tela.
-#:
-#: O PS tem DOIS donos, e a precedência entre eles é escrita: o perfil
-#: (`Profile.button_actions["ps"]`) vence, e o `DaemonConfig.ps_button_action`
-#: é o que vale para o perfil que não diz nada. Este mapa é a tradução de um
-#: para o outro — sem ele, a linha do PS na tela mostraria `— Nada —` sobre um
-#: botão que abre a Steam há meses.
-ACAO_DA_MAQUINA_PARA_TOKEN: dict[str, str] = {
-    "steam": TOKEN_STEAM,
-    "none": TOKEN_NADA,
-    "custom": TOKEN_PROGRAMA,
-}
-
-#: O QUE A MÁQUINA FAZ COM O PS QUANDO NINGUÉM MEXEU — o valor de fábrica de
-#: `DaemonConfig.ps_button_action` (`daemon/lifecycle.py`).
-#:
-#: ELE É CÓPIA, E A CÓPIA TEM RÉGUA. Este módulo é importável **sem daemon** por
-#: contrato (o docstring do topo o diz, e é o que o mantém no `core/`), então
-#: perguntar ao dono aqui dentro arrastaria `daemon/lifecycle.py` para dentro do
-#: gerador da tela. Quem pergunta ao dono é a RÉGUA —
-#: `tests/unit/test_o_ps_digita_e_continua_sendo_a_saida.py` compara este valor
-#: com o default do campo em `DaemonConfig` e reprova a divergência. É a regra
-#: da casa: quando um valor tem dono, a régua PERGUNTA ao dono.
-PS_DA_MAQUINA_DE_FABRICA = "steam"
+#: O DE FÁBRICA DA LINHA DO PS, e ele é só dela: nenhuma tecla. A LINHA DO PS SÓ
+#: DIGITA desde 01/10/2026 (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01,
+#: `D-0110-A-LINHA-DO-PS-SO-DIGITA`, por delegação, a validar por ela): o que o
+#: toque no PS faz no computador é o ⑥ da tabela dos gestos, um dono só
+#: (`D-2909-OS-GESTOS-SAO-DA-MAQUINA`). «Abrir a Steam» e «— Nada —» saíram da
+#: lista dele (:func:`por_grupo`), e a tecla acontece junto com o ⑥.
+TOKEN_SEM_TECLA = "__SEM_TECLA__"
 
 #: OS GRUPOS SÃO AS PALAVRAS DELA, da fala de 27/08/2026: *"no lado direito
 #: teríamos Função do teclado, Executar Comando, Mouse"*. A tela os usa como
@@ -170,7 +152,21 @@ ACOES: dict[str, tuple[str, str]] = {
     TOKEN_PROGRAMA: (GRUPO_COMANDO, "Escolher um programa…"),
 
     TOKEN_NADA: (GRUPO_NENHUM, "— Nada —"),
+    TOKEN_SEM_TECLA: (GRUPO_NENHUM, "— Sem tecla —"),
 }
+
+
+def o_ps_aceita(token: str) -> bool:
+    """O token cabe na linha do PS? Tecla (combos com ``+``), o teclado na tela, ou nada.
+
+    É a mesma pergunta que o daemon faz antes de digitar
+    (`daemon/subsystems/hotkey._o_ps_digita`): a linha só oferece o que o PS
+    sabe entregar.
+    """
+    if token == TOKEN_SEM_TECLA:
+        return True
+    teclado_na_tela = {TOKEN_TOGGLE_OSK, TOKEN_OPEN_OSK, TOKEN_CLOSE_OSK}
+    return all(p.startswith("KEY_") or p in teclado_na_tela for p in token.split("+"))
 
 #: OS TRÊS QUE A TELA OFERECE E O PRODUTO AINDA NÃO ATENDE. Eles ficam na lista
 #: de propósito — tirá-los da tela seria apagar uma promessa que ela aprovou —,
@@ -190,16 +186,24 @@ ORDEM_DOS_GRUPOS: tuple[str, ...] = (
     GRUPO_MOUSE, GRUPO_TECLADO, GRUPO_COMANDO, GRUPO_NENHUM)
 
 
-def por_grupo() -> list[tuple[str, list[str]]]:
+def por_grupo(botao: str | None = None) -> list[tuple[str, list[str]]]:
     """`[(grupo, [rótulo, …]), …]` — exatamente o que a tela desenha.
 
     A TELA NÃO GUARDA MAIS A LISTA. Ela era escrita no gerador da aba Navegação,
     ao lado desta, e as duas já divergiam em três linhas quando este módulo
     nasceu. Aqui há uma, e o gerador a lê.
+
+    Com ``botao=BOTAO_PS``, a lista da linha do PS: só o que ele digita
+    (:func:`o_ps_aceita`). As outras linhas não oferecem o «— Sem tecla —».
     """
+    def cabe(token: str) -> bool:
+        if botao == BOTAO_PS:
+            return o_ps_aceita(token)
+        return token != TOKEN_SEM_TECLA
+
     fora: list[tuple[str, list[str]]] = []
     for grupo in ORDEM_DOS_GRUPOS:
-        rotulos = [r for _t, (g, r) in ACOES.items() if g == grupo]
+        rotulos = [r for t, (g, r) in ACOES.items() if g == grupo and cabe(t)]
         if rotulos:
             fora.append((grupo, rotulos))
     return fora
@@ -245,19 +249,6 @@ def _do_teclado(botao: str) -> str | None:
     return "+".join(ligacao)
 
 
-def token_do_ps_da_maquina(ps_button_action: str | None = None) -> str:
-    """O que o degrau da MÁQUINA manda o PS fazer, no vocabulário da tela.
-
-    `None` quer dizer "ninguém informou", e aí vale o de fábrica do dono
-    (:data:`PS_DA_MAQUINA_DE_FABRICA`). Um valor que o dono não conhece cai no
-    mesmo lugar em vez de virar `KeyError`: a tela mostrando o de fábrica é
-    melhor que a aba inteira não gerando.
-    """
-    escolha = str(ps_button_action or PS_DA_MAQUINA_DE_FABRICA)
-    return ACAO_DA_MAQUINA_PARA_TOKEN.get(
-        escolha, ACAO_DA_MAQUINA_PARA_TOKEN[PS_DA_MAQUINA_DE_FABRICA])
-
-
 def acao_do_ps(escolhas: dict[str, str] | None) -> str | None:
     """O token que o PERFIL deu ao botão PS — `None` quando ele não disse nada.
 
@@ -284,13 +275,12 @@ def acao_do_ps(escolhas: dict[str, str] | None) -> str | None:
     return str(token) if token else None
 
 
-def padrao(ps_button_action: str | None = None) -> dict[str, str]:
+def padrao() -> dict[str, str]:
     """O que cada um dos 22 botões faz DE FÁBRICA, lido dos mapas do produto.
 
-    `ps_button_action` É O DEGRAU DA MÁQUINA, e ele é parâmetro porque o PS é o
-    único botão cujo de fábrica NÃO sai dos quatro mapas: ele sai de
-    `DaemonConfig.ps_button_action`. Quem tem a config passa; quem não tem
-    recebe o de fábrica do dono (:data:`PS_DA_MAQUINA_DE_FABRICA`).
+    O PS é o único cujo de fábrica NÃO sai dos quatro mapas: a linha dele só
+    digita, e o de fábrica dela é :data:`TOKEN_SEM_TECLA`. O que o toque nele
+    faz no computador é o ⑥ da tabela dos gestos, e não esta tabela.
 
     A ORDEM DE PRECEDÊNCIA É A DO PRODUTO, e não uma escolha deste módulo: o
     `UinputMouseDevice` só age quando a emulação de mouse está ligada, e é ele
@@ -327,11 +317,10 @@ def padrao(ps_button_action: str | None = None) -> dict[str, str]:
     fora[EIXO_ESQUERDO] = TOKEN_CURSOR
     fora[EIXO_DIREITO] = TOKEN_ROLAGEM
     # O PS NÃO ESTÁ EM NENHUM DOS QUATRO MAPAS — medido: nem `BUTTON_TO_UINPUT`,
-    # nem `DPAD_TO_KEY`, nem `EDGE_KEY_MAP`, nem `DEFAULT_BUTTON_BINDINGS`. O
-    # laço acima o deixaria em `__NADA__`, e a tela diria que o botão que abre a
-    # Steam há meses não faz nada. O de fábrica dele é o que ele FAZ, e quem
-    # responde é o dono.
-    fora[BOTAO_PS] = token_do_ps_da_maquina(ps_button_action)
+    # nem `DPAD_TO_KEY`, nem `EDGE_KEY_MAP`, nem `DEFAULT_BUTTON_BINDINGS`. A
+    # LINHA DELE SÓ DIGITA desde 01/10/2026 (:data:`TOKEN_SEM_TECLA`): o de
+    # fábrica dela é nenhuma tecla, e o ato do computador é o ⑥ dos gestos.
+    fora[BOTAO_PS] = TOKEN_SEM_TECLA
     return fora
 
 
@@ -554,7 +543,6 @@ def rotulo(token: str) -> str:
 _tabela_efetiva = tabela_efetiva
 
 __all__ = [
-    "ACAO_DA_MAQUINA_PARA_TOKEN",
     "ACOES",
     "BOTAO_PS",
     "BOTOES",
@@ -566,21 +554,21 @@ __all__ = [
     "GRUPO_NENHUM",
     "GRUPO_TECLADO",
     "ORDEM_DOS_GRUPOS",
-    "PS_DA_MAQUINA_DE_FABRICA",
     "SEM_ATENDENTE",
     "TOKEN_CURSOR",
     "TOKEN_NADA",
     "TOKEN_PROGRAMA",
     "TOKEN_ROLAGEM",
     "TOKEN_SAIR_DO_JOGO",
+    "TOKEN_SEM_TECLA",
     "TOKEN_STEAM",
     "acao_do_ps",  # (noqa-acento) nome de função
     "botoes_calados",  # (noqa-acento) nome de função
+    "o_ps_aceita",
     "padrao",  # (noqa-acento) nome de função
     "por_grupo",
     "resolver",
     "rotulo",
     "tabela_efetiva",
-    "token_do_ps_da_maquina",
     "token_do_rotulo",
 ]

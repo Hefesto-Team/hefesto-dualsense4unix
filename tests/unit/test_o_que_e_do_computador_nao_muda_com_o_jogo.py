@@ -690,3 +690,33 @@ def test_o_ps_da_linha_vai_para_a_tabela() -> None:
                                                    "cross": "KEY_BACKSPACE"}))
     opc.migrar_uma_vez()
     assert load_profile("Jogo X").button_actions == {"cross": "KEY_BACKSPACE"}
+
+
+# ---------------------------------------------------------------------------
+# O PS tem um lugar só para o que faz no computador (commit 5)
+# ---------------------------------------------------------------------------
+def test_a_linha_do_ps_so_digita() -> None:
+    """Régua 8: a lista da linha do PS não tem «Abrir a Steam» nem «— Nada —».
+
+    E `_a_metade_da_maquina` responde só pela tabela dos gestos: o token antigo
+    que um perfil guarde não decide mais o ato do computador.
+
+    MORDIDA: devolver o `__NADA__` ao `hotkey._a_metade_da_maquina` reprova.
+    """
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.core import acoes_de_botao as acoes
+    from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+    from hefesto_dualsense4unix.daemon.subsystems import hotkey
+
+    do_ps = {r for _g, rotulos in acoes.por_grupo(acoes.BOTAO_PS) for r in rotulos}
+    assert not do_ps & {"Abrir a Steam", "— Nada —"}, sorted(do_ps)
+    assert "— Sem tecla —" in do_ps
+    das_outras = {r for _g, rotulos in acoes.por_grupo() for r in rotulos}
+    assert "— Sem tecla —" not in das_outras and "Abrir a Steam" in das_outras
+
+    de_fabrica = SimpleNamespace(ps_button_action="steam")
+    for antigo in (acoes.TOKEN_NADA, acoes.TOKEN_STEAM):
+        assert hotkey._a_metade_da_maquina(de_fabrica, antigo) == ag.ABRIR_A_STEAM
+    calado = SimpleNamespace(declarada=True, faz=ag.NADA)
+    assert hotkey._a_metade_da_maquina(de_fabrica, acoes.TOKEN_STEAM, calado) == ag.NADA

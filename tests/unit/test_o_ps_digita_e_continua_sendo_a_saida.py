@@ -26,8 +26,6 @@ frouxo que a função real três vezes — este não é um deles.
 """
 from __future__ import annotations
 
-import dataclasses
-import typing
 from types import SimpleNamespace
 from typing import Any
 
@@ -181,51 +179,21 @@ def test_o_perfil_aceita_o_ps_sem_ninguem_editar_o_validador():
         _perfil(button_actions={"botao_que_nao_existe": "KEY_F11"})
 
 
-def test_o_de_fabrica_do_ps_e_o_que_ele_faz_e_nao_um_travessao():
-    """O PS não está em nenhum dos quatro mapas — o de fábrica dele vem do dono.
+def test_o_de_fabrica_da_linha_do_ps_e_nenhuma_tecla():
+    """A linha do PS só digita (01/10/2026): o de fábrica dela é «— Sem tecla —».
 
-    Sem isto o laço de `acoes.padrao()` o deixaria em `__NADA__`, e a tela diria
-    que o botão que abre a Steam há meses não faz nada.
+    O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01, `D-0110-A-LINHA-DO-PS-SO-DIGITA`
+    (por delegação, a validar por ela). Até ali o de fábrica dela era o degrau
+    da máquina (`DaemonConfig.ps_button_action`, «Abrir a Steam»), e o PS tinha
+    dois donos para o mesmo ato. O que o toque no PS faz no computador é o ⑥ da
+    tabela dos gestos; a linha não lê mais o degrau.
 
-    A MORDIDA: apague a linha `fora[BOTAO_PS] = ...` do fim de
-    `acoes.padrao()` — o PS volta a `— Nada —` e este caso reprova nomeando o
-    rótulo.
+    A MORDIDA: devolva `fora[BOTAO_PS] = TOKEN_STEAM` ao fim de `acoes.padrao()`
+    e este caso reprova nomeando o rótulo.
     """
-    assert acoes.padrao()["ps"] == acoes.TOKEN_STEAM, (
-        f"o de fábrica do PS saiu "
-        f"{acoes.rotulo(acoes.padrao()['ps'])!r}, e a máquina de fábrica abre "
-        f"a Steam.")
-    assert acoes.padrao("none")["ps"] == acoes.TOKEN_NADA
-    assert acoes.padrao("custom")["ps"] == acoes.TOKEN_PROGRAMA
-    # E o rótulo é o que ela lê na tela, não o token cru.
-    assert acoes.rotulo(acoes.padrao()["ps"]) == "Abrir a Steam"
-
-
-def test_a_regua_pergunta_ao_dono_qual_e_o_degrau_da_maquina():
-    """O de fábrica do PS tem DONO, e o dono é `DaemonConfig.ps_button_action`.
-
-    `core/acoes_de_botao` é importável SEM DAEMON por contrato — é o que o
-    mantém no `core/` e o que impede o gerador da tela de arrastar o daemon
-    inteiro. Então a cópia fica lá e a pergunta fica aqui.
-
-    A MORDIDA: troque `PS_DA_MAQUINA_DE_FABRICA` para `"none"` — este caso
-    reprova dizendo que a cópia e o dono discordam.
-    """
-    from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
-
-    campo = {c.name: c for c in dataclasses.fields(DaemonConfig)}["ps_button_action"]
-    assert campo.default == acoes.PS_DA_MAQUINA_DE_FABRICA, (
-        f"`acoes_de_botao` diz que a máquina faz "
-        f"{acoes.PS_DA_MAQUINA_DE_FABRICA!r} de fábrica e o dono "
-        f"(`DaemonConfig.ps_button_action`) diz {campo.default!r}.")
-
-    # E o mapa cobre TODOS os valores que o dono aceita: um valor novo no
-    # `Literal` sem token aqui faria a linha do PS mentir na tela.
-    aceitos = set(typing.get_args(
-        typing.get_type_hints(DaemonConfig)["ps_button_action"]))
-    assert aceitos == set(acoes.ACAO_DA_MAQUINA_PARA_TOKEN), (
-        f"o dono aceita {sorted(aceitos)} e a tradução para a tela cobre "
-        f"{sorted(acoes.ACAO_DA_MAQUINA_PARA_TOKEN)}.")
+    assert acoes.padrao()["ps"] == acoes.TOKEN_SEM_TECLA, (
+        f"o de fábrica da linha do PS saiu {acoes.rotulo(acoes.padrao()['ps'])!r}")
+    assert acoes.rotulo(acoes.padrao()["ps"]) == "— Sem tecla —"
 
 
 # ===========================================================================
@@ -433,12 +401,16 @@ def test_a_maquina_calada_continua_calando_o_ps_sem_perfil(steam):
     assert steam == []
 
 
-def test_o_nada_do_perfil_cala_as_duas_metades(steam):
-    """`— Nada —` na linha do PS é ela dizendo que o botão não faz nada.
+def test_o_nada_antigo_do_perfil_nao_cala_o_sexto(steam):
+    """O `— Nada —` que um perfil antigo guarde na linha do PS não cala mais nada.
 
-    É o espelho exato do `ps_button_action = "none"`: um fato, dois donos, e a
-    precedência escrita. A tabela mostrando `— Nada —` e o botão abrindo a
-    Steam seria a janela mentindo.
+    Desde 01/10/2026 (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01) a linha do
+    PS só digita, e o que o toque faz no computador é o ⑥ da tabela: um dono
+    só. O token antigo vira escolha sem atendente, e o ⑥ de fábrica (abrir a
+    Steam) acontece. A migração tira o token dos perfis.
+
+    A MORDIDA: devolva `if escolha == "__NADA__": return ag.NADA` ao
+    `hotkey._a_metade_da_maquina` e este caso reprova com a Steam fechada.
     """
     teclado, dev = _teclado()
     daemon = _daemon(teclado=teclado, escolha_do_perfil=acoes.TOKEN_NADA)
@@ -446,16 +418,16 @@ def test_o_nada_do_perfil_cala_as_duas_metades(steam):
     gesto()
     assert gesto.esperar(5.0)
     assert dev.emitidos == []
-    assert steam == []
+    assert steam == ["steam"]
 
 
-def test_o_steam_do_perfil_vence_a_maquina_calada(steam):
-    """E o contrário também: `Abrir a Steam` no perfil abre, com a máquina em `none`."""
+def test_o_steam_antigo_do_perfil_nao_vence_o_sexto(steam):
+    """E o contrário: o `Abrir a Steam` antigo da linha não abre com o ⑥ em «Nada»."""
     daemon = _daemon(acao_da_maquina="none", escolha_do_perfil=acoes.TOKEN_STEAM)
     gesto = hotkey.build_ps_solo_callback(daemon)
     gesto()
     assert gesto.esperar(5.0)
-    assert steam == ["steam"]
+    assert steam == []
 
 
 def test_a_escolha_sem_atendente_nao_digita_e_nao_cala_a_maquina(steam):

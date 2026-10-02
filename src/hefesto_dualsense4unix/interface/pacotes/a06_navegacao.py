@@ -720,7 +720,7 @@ def _nome_do_botao(botao: str) -> str:
     impedir, e a tela passaria a chamar o mesmo botão por dois nomes.
 
     O DANO HOJE É DE FORMA, e por isso não se força a cura: `acoes.resolver()`
-    (`core/acoes_de_botao.py:285`) pula os eixos, então eles nunca chegam ao
+    (`core/acoes_de_botao.resolver`) pula os eixos, então eles nunca chegam ao
     `sem_dono` — medido, trocando o `cross`: `sem_dono == ['l2']`. O único
     caminho que ainda os exporia é o `nao_reconhecidas` do "Guardar", que exige
     a tela oferecer um rótulo que o produto não conhece.
@@ -1640,9 +1640,10 @@ def _o_que_o_ps_faz(p: dict[str, Any]) -> str:
 
     ELA NASCE SÓ QUANDO HÁ O QUE DIZER, como as outras quatro. Sem escolha no
     perfil o PS é só o que sempre foi, e uma tira que fala sempre é uma tira que
-    ninguém lê. Com `— Nada —` também não há duas coisas: o `__NADA__` é o
-    espelho exato do `"none"` da máquina e cala as duas metades — está na tabela
-    de precedência de `hotkey._a_metade_da_maquina`.
+    ninguém lê. A linha do PS só digita desde 01/10/2026
+    (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): o `— Nada —` e o «Abrir a
+    Steam» saíram dela, e um perfil que ainda os guarde não ganha frase (a
+    migração os leva ao ⑥ dos gestos).
 
     A TIRA NÃO NOMEIA O ATO DA MÁQUINA, e a razão é medida: o estado que o
     daemon publica à tela **não traz `ps_button_action`** (`ipc_handlers` só o

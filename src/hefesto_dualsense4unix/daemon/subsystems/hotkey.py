@@ -170,10 +170,14 @@ def _a_metade_da_maquina(cfg: Any, escolha: str | None, do_computador: Any = Non
         ---------------------    -------------------------------------------
         None (perfil calado)     o ⑥
         tecla / teclado na tela  o ⑥ — *"digita SEM parar de abrir a Steam"*
-        `__NADA__`               nada
-        `__STEAM__`              abre a Steam
         qualquer outro token     o ⑥ + linha no journal: escolha que o PS
-                                 ainda não atende
+                                 não atende
+
+    A LINHA DO PS SÓ DIGITA desde 01/10/2026
+    (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01,
+    `D-0110-A-LINHA-DO-PS-SO-DIGITA`): o `__NADA__` e o `__STEAM__` dela
+    saíram, e o ⑥ é o único dono do que o PS faz no computador. Um perfil que
+    ainda os guarde cai na última linha da tabela (a migração os tira).
     """
     from hefesto_dualsense4unix.core import acoes_do_gesto as ag
 
@@ -184,10 +188,6 @@ def _a_metade_da_maquina(cfg: Any, escolha: str | None, do_computador: Any = Non
         da_maquina = {"steam": ag.ABRIR_A_STEAM, "none": ag.NADA}.get(degrau, degrau)
     if escolha is None:
         return da_maquina
-    if escolha == "__NADA__":
-        return ag.NADA
-    if escolha == "__STEAM__":
-        return ag.ABRIR_A_STEAM
     if not _o_ps_digita(escolha):
         logger.info("ps_solo_escolha_sem_atendente", token=escolha)
     return da_maquina

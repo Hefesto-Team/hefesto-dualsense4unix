@@ -1123,6 +1123,11 @@ def gl(*pids, sep="/", rot=None, tam=18):
 # regiões esquerda e direita do touchpad. Com a lista digitada, a tela não
 # conseguia sequer MOSTRAR o que três das suas vinte e uma linhas fazem.
 ACOES_UNI = por_grupo()
+#: A LISTA DA LINHA DO PS — só o que ele digita (01/10/2026,
+#: O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): o que o toque nele faz no
+#: computador é o ⑥ dos gestos, logo «Abrir a Steam» e «— Nada —» não estão
+#: nela. O de fábrica dela é «— Sem tecla —».
+ACOES_DO_PS = por_grupo("ps")
 
 # O REMAPEAMENTO: para qual botão do controle este botão passa a valer.
 #
@@ -1882,11 +1887,11 @@ BOTOES = [
     # ordem é o que faz a tabela e o produto se lerem em paralelo.
     #
     # ISTO REVERTE a decisão de 04/09 (*"o PS fica fora, e a razão vira dica"*),
-    # e a reversão é dela. O motor chegou primeiro (ONDA5-06-01): o PS tem valor
-    # de fábrica (`token_do_ps_da_maquina`), tem porta própria de resolução
-    # (`acoes_de_botao.acao_do_ps`) e tem atendente (`build_ps_solo_callback`).
-    # Sem aquele degrau, esta linha nasceria em `— Nada —` sobre o botão que
-    # abre a Steam há meses.
+    # e a reversão é dela. O motor chegou primeiro (ONDA5-06-01): o PS tem porta
+    # própria de resolução (`acoes_de_botao.acao_do_ps`) e tem atendente
+    # (`build_ps_solo_callback`). Desde 01/10/2026 a linha dele SÓ DIGITA
+    # (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01): o de fábrica dela é
+    # «— Sem tecla —», e o que o toque faz no computador é o ⑥ dos gestos.
     #
     # A ÚLTIMA ORAÇÃO DA FRASE DELA — *"e a tabela não avisa isso"* — é a TIRA,
     # não esta linha: quem a faz deixar de ser verdade é
@@ -2133,11 +2138,10 @@ VALEM_PARA = (
 D_DEFINICOES = ajuda(
     f"As <b>{len(BOTOES)} linhas</b> de cada botão: <b>o que ele faz</b> "
     "— mouse, tecla ou programa, na mesma lista.<br><br>"
-    "O <b>PS</b> faz duas coisas: continua sendo a saída de emergência — os "
-    f"{len(COMBOS)} gestos desta aba saem dele — e a tecla que você escolher "
-    "acontece <b>junto</b>, no toque curto e fora do jogo. Escolher "
-    "<b>— Nada —</b> cala o toque no PS: ele deixa de digitar e deixa de abrir "
-    "a Steam; os gestos continuam.<br><br>"
+    "O <b>PS</b> continua sendo a saída de emergência — os "
+    f"{len(COMBOS)} gestos desta aba saem dele. O que o toque nele faz no "
+    "computador é o <b>⑥</b> dos gestos; aqui ele só ganha uma tecla, que "
+    "acontece <b>junto</b>, no toque curto e fora do jogo.<br><br>"
     "Enquanto o touchpad for o ponteiro do computador, o clique dele não vira "
     "tecla — as três regiões ficam marcadas e a escolha fica guardada.<br><br>"
     + VALEM_PARA)
@@ -2563,7 +2567,7 @@ TELA_DEFINICOES = tela_de_botoes(
     "O que ele faz",
     chr(10).join(
         f'          <tr><td class="b">{b}</td>'
-        f'<td>{drop(ACOES_UNI, _PADRAO_DOS_BOTOES[i], gesto=LINHA_DE_BOTAO, linha=i, campo=f"{PREFIXO_DA_ACAO}{i}")}</td></tr>'
+        f'<td>{drop(ACOES_DO_PS if i == "ps" else ACOES_UNI, _PADRAO_DOS_BOTOES[i], gesto=LINHA_DE_BOTAO, linha=i, campo=f"{PREFIXO_DA_ACAO}{i}")}</td></tr>'
         for b, i in BOTOES),
     # A CONFIRMAÇÃO GANHOU A METADE QUE FALTAVA — 04/09/2026, e é o defeito §3-2
     # dito na tela. Ela dizia só *"as 21 linhas de o que cada botão faz"* e

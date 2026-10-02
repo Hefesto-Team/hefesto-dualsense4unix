@@ -877,7 +877,6 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     #
     # O NÚMERO CERTO JÁ ESTÁ MEDIDO — quem for dono do arquivo troca e apaga a
     # linha daqui (o `test_a_lista_de_pendentes_nao_vira_paisagem` cobra):
-    #   a06_navegacao.py:626  `core/acoes_de_botao.py:285`  -> `:338` (`resolver`)
     #   a06_navegacao.py:1161 `profiles/manager.py:570`     -> `:617`
     #   a06_navegacao.py:1175 `profiles/manager.py:614`     -> `:673`
     #   profiles/schema.py:1045 `daemon/subsystems/hotkey.py:1004` -> `:1234`
@@ -885,7 +884,10 @@ _CITACOES_PENDENTES: frozenset[str] = frozenset({
     # As outras QUATRO que a mesma sprint deslocou não estão aqui porque foram
     # CORRIGIDAS no lugar (`core/rumble.py`, `a02_controles.py` e duas em
     # `a08_conexoes.py`): fora do `nao_toca:`, o número se reescreve.
-    "interface/pacotes/a06_navegacao.py::core/acoes_de_botao.py:285",
+    # A DE `a06_navegacao.py` -> `core/acoes_de_botao.py:285` SAIU DAQUI EM
+    # 01/10/2026: a O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01 deslocou o
+    # `acoes_de_botao.py` e a pendência passou a "conferir" por acaso. O
+    # comentário agora nomeia o símbolo (`core/acoes_de_botao.resolver`).
     # A DA O-RADIO-CONECTA-ONDE-ELA-MANDA-02 SAIU DAQUI EM 26/09/2026: o
     # `AdaptadorDeclarado` deslocou o `utils/maquina.py`, a linha velha deixou
     # de estar em branco e a pendência passou a "conferir" por acaso. Quem
