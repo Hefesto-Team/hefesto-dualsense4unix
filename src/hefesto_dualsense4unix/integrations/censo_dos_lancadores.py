@@ -636,8 +636,14 @@ def _heroic(pasta: Path) -> BibliotecaDoLancador:
             continue
         itens = [it for it in itens if isinstance(it, dict)]
         registro, existe, erros_da_loja = _registro_do_heroic(pasta, arq)
+        #: O ACESSÓRIO NÃO É CONTRADIÇÃO: o «Galaxy Common Redistributables»
+        #: chega à biblioteca com `is_installed: true` e `install.is_dlc: true`
+        #: sem estar no registro (no disco dela, o único `true` da GOG), e a
+        #: conta ligada sem jogo baixado não tem registro. Ele não entra no
+        #: censo, e não pode calá-lo.
         if not existe and any(
-                it.get("is_installed") and _chave_do_heroic(it, ch_id) not in registro
+                it.get("is_installed") and not _e_dlc_na_biblioteca(it)
+                and _chave_do_heroic(it, ch_id) not in registro
                 for it in itens):
             erros_da_loja.append(f"{_REGISTROS_DO_HEROIC[arq][0]} não existe, e a "
                                  f"biblioteca diz que há jogo instalado")
@@ -671,6 +677,12 @@ def _heroic(pasta: Path) -> BibliotecaDoLancador:
 def _chave_do_heroic(item: dict[str, object], ch_id: str) -> str:
     """A chave de um item da biblioteca do Heroic (`app_name`, ou o `id` da Amazon)."""
     return str(item.get(ch_id) or item.get("app_name") or item.get("id") or "")
+
+
+def _e_dlc_na_biblioteca(item: dict[str, object]) -> bool:
+    """O item da biblioteca se declara acessório (`install.is_dlc`)."""
+    instalacao = item.get("install")
+    return isinstance(instalacao, dict) and bool(instalacao.get("is_dlc"))
 
 
 #: As colunas do `games` do `pga.db` que interessam, na ordem em que saem.
@@ -1123,6 +1135,24 @@ def bibliotecas_por_casa(lancador: str, lar: Path | None = None, *,
     return [_ler(lancador, pasta, onde) for pasta in _pastas_lidas(lancador, onde)]
 
 
+def _uma_vez_por_jogo(jogos: list[JogoDoLancador]) -> list[JogoDoLancador]:
+    """Cada jogo do Heroic uma vez, pela loja e pela chave, o instalado na frente.
+
+    **A BIBLIOTECA DO HEROIC É A DA CONTA (02/10/2026, conferência da
+    O-CENSO-RESPONDE-COMO-O-LANCADOR-RESPONDE-01).** Com os dois Heroic
+    instalados e a mesma conta nos dois, cada casa lista os mesmos jogos, e a
+    soma dizia «4 jogos na biblioteca» com dois na conta. O Lutris não entra:
+    cada `pga.db` é uma instalação. Quem escreve na casa do jogo (a carona, a
+    exclusão) lê cada casa (:func:`bibliotecas_por_casa`), e não esta soma.
+    """
+    fora: dict[tuple[str, str], JogoDoLancador] = {}
+    for jogo in jogos:
+        ja = fora.get((jogo.loja, jogo.chave))
+        if ja is None or (jogo.instalado and not ja.instalado):
+            fora[(jogo.loja, jogo.chave)] = jogo
+    return list(fora.values())
+
+
 def biblioteca_de(lancador: str, lar: Path | None = None, *,
                   xdg_config: Path | None = None, xdg_data: Path | None = None,
                   raiz_sistema: Path | None = None) -> BibliotecaDoLancador:
@@ -1157,6 +1187,8 @@ def biblioteca_de(lancador: str, lar: Path | None = None, *,
         return partes[0]
     lidas = [b for b in partes if b.estado == LIDO]
     jogos = [j for b in lidas for j in b.jogos]
+    if lancador == "Heroic":
+        jogos = _uma_vez_por_jogo(jogos)
     if lancador == "Lutris":
         jogos.sort(key=lambda j: (j.nome.casefold(), j.chave))
     return BibliotecaDoLancador(

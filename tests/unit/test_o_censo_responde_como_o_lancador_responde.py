@@ -588,3 +588,52 @@ def test_a_copia_avulsa_com_lar_dado_fica_no_lar(
     (prefixo / "pfx/system.reg").write_text("WINE REGISTRY Version 2\n")
 
     assert cv.prefixos_dos_lancadores(tmp_path) == [prefixo]
+
+
+# ---------------------------------------------------------------------------
+# 8 · O que a conferência achou (02/10/2026)
+# ---------------------------------------------------------------------------
+def test_o_redistribuivel_da_gog_sem_registro_nao_e_contradicao(tmp_path: Path) -> None:
+    """A conta da GOG ligada e nenhum jogo baixado: o Heroic instala o
+    «Galaxy Common Redistributables» sozinho, e a biblioteca o grava com
+    `is_installed: true` e `install.is_dlc: true` (no disco dela, o único
+    `true` da GOG), sem `gog_store/installed.json`. O acessório não é jogo e
+    não entra no censo; ele não pode virar a contradição que cala o censo.
+
+    MORDIDA: contar o acessório na contradição — o censo volta com erro, e a
+    lista de exclusão deixa de tirar morador em toda máquina nesse estado.
+    """
+    casa = tmp_path / HEROIC
+    _escrever(casa / "store_cache/gog_library.json", {"games": [
+        {"app_name": "gog-redist", "title": "Galaxy Common Redistributables",
+         "is_installed": True, "install": {"is_dlc": True}},
+        {"app_name": "g1", "title": "Só na conta", "is_installed": False}]})
+
+    b = censo.biblioteca_de("Heroic", lar=tmp_path)
+
+    assert b.erros == [], b.erros
+    assert [(j.chave, j.instalado) for j in b.jogos] == [("g1", False)]
+
+
+def test_os_dois_heroic_da_mesma_conta_nao_contam_em_dobro(maquina: dict[str, Path]) -> None:
+    """Os dois Heroic instalados, logados na mesma conta: a biblioteca de cada
+    casa é a da conta, e o cartão conta cada jogo uma vez, instalado se uma das
+    casas o tem instalado. A carona e a exclusão seguem lendo cada casa.
+
+    MORDIDA: somar as duas bibliotecas do Heroic como as do Lutris — o cartão
+    diz «4 jogos na biblioteca» com dois na conta.
+    """
+    lar = maquina["lar"]
+    nativo, caixa = lar / ".config/heroic", lar / HEROIC
+    for casa in (nativo, caixa):
+        _escrever(casa / "store_cache/legendary_library.json", {"library": [
+            {"app_name": "e1", "title": "Um"}, {"app_name": "e2", "title": "Dois"}]})
+    plantar_o_registro(nativo, [])
+    plantar_o_registro(caixa, ["e2"])
+    _comando(maquina, "heroic")
+    _flatpak_instalado(lar, "com.heroicgameslauncher.hgl")
+
+    b = censo.biblioteca_de("Heroic", lar=lar, raiz_sistema=maquina["raiz"])
+
+    assert b.resumo == "2 jogos na biblioteca · 1 instalado", b.resumo
+    assert len(censo.bibliotecas_por_casa("Heroic", lar, raiz_sistema=maquina["raiz"])) == 2
