@@ -108,11 +108,18 @@ def test_a_precedencia_campo_a_campo() -> None:
 
 
 def test_o_valor_de_fabrica_das_secoes_densas_segue_o_computador() -> None:
-    """O `leds` que o «Salvar» antigo gravava por extenso não é escolha (a resposta 4)."""
+    """O `leds` que o «Salvar» antigo gravava por extenso não é escolha (a resposta 4).
+
+    MORDIDA: tirar a guarda do valor de fábrica (`escolhas_globais_do_jogo`) faz o
+    `leds` denso sobrepor a luz do computador, e reprova.
+    """
+    from hefesto_dualsense4unix.profiles.schema import LedsConfig
+
     computador = _computador({"global": {"leds": {"lightbar": [10, 20, 200]}}})
-    jogo = _perfil(leds={})  # denso, tudo de fábrica
-    assert not opc.sobrepoe(jogo, "luz")
-    assert opc.perfil_que_vale(jogo, computador).leds.lightbar == (10, 20, 200)
+    for leds in ({}, LedsConfig().model_dump(mode="json")):  # vazio, e denso de fábrica
+        jogo = _perfil(leds=leds)
+        assert not opc.sobrepoe(jogo, "luz"), leds
+        assert opc.perfil_que_vale(jogo, computador).leds.lightbar == (10, 20, 200)
 
 
 def test_o_par_da_politica_anda_junto() -> None:
@@ -203,6 +210,31 @@ def test_o_gesto_roda_sobre_o_que_vale_e_so_a_diferenca_vai_ao_computador() -> N
     assert leds.lightbar == (1, 2, 3)
     assert "lightbar_brightness" not in leds.model_fields_set
     assert load_profile("Jogo X").model_dump(mode="json") == caminho_antes
+
+
+def test_o_gesto_le_o_que_vale_e_nao_o_cru() -> None:
+    """O gesto que parte do valor de agora parte do que VALE (o computador), não do cru.
+
+    MORDIDA: rodar o gesto sobre o perfil cru faz ele partir do preto, e o
+    computador recebe (1, 1, 1) em vez de (11, 21, 31).
+    """
+    save_profile(_perfil())
+    _computador({"controles": {P2: {"leds": {"lightbar": [10, 20, 30]}}}})
+
+    def um_a_mais(perfil: Profile) -> Profile:
+        cru = perfil.model_dump(mode="json", exclude_unset=True)
+        controles = dict(cru.get("controllers") or {})
+        entrada = dict(controles.get(P2) or {})
+        leds = dict(entrada.get("leds") or {})
+        leds["lightbar"] = [c + 1 for c in leds.get("lightbar") or (0, 0, 0)]
+        entrada["leds"] = leds
+        controles[P2] = entrada
+        cru["controllers"] = controles
+        return Profile.model_validate(cru)
+
+    onde, _novo = opc.gravar_pelo_gesto("luz", "Jogo X", um_a_mais, uniq=P2)
+    assert onde == opc.COMPUTADOR
+    assert opc.o_computador().controles[P2].leds.lightbar == (11, 21, 31)
 
 
 def test_so_neste_jogo_e_voltar_ao_do_computador() -> None:
