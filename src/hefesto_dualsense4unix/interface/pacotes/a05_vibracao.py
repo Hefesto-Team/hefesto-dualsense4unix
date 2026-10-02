@@ -2564,19 +2564,6 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(motivo)
 
 
-#: AS FUNÇÕES DA PONTE QUE ESTA ABA USA. A régua confere que existem — um nome
-#: inventado aparece aqui, e não na mão de quem clica.
-#:
-#: `rumble_policy_set_checked` SAIU EM 03/09/2026, e `profile_switch` entrou no
-#: lugar dele: a força deixou de ir por IPC global e passa a ir pelo PERFIL —
-#: `perfil.gravar_e_reaplicar` grava e manda o daemon reaplicar. É a decisão
-#: dela de construir por controle, vista do lado da ponte.
-#: **DOIS ENTRARAM EM 04/09/2026**, e os dois com decisão dela por trás:
-#: `rumble_motores_set` (a barra de cada motor, :func:`motor`) e
-#: `rumble_policy_set_checked` — que voltou em 04/09 como porta da linha de mesa
-#: e ficou SEM CHAMADOR nesta aba em 05/09, quando a linha saiu. Ele continua na
-#: `PONTE` porque a janela GTK o usa e porque tirá-lo daqui não tiraria um método
-#: do produto — só esconderia da régua que esta aba não o chama mais.
 FRASE_SEM_HAPTICA_NESTE_CONTROLE = (
     "este controle não tem a háptica por áudio agora. Veja se ele é um "
     "DualSense e se o som do Hefesto está no ar, na aba Sistema.")
@@ -2621,6 +2608,19 @@ def testar_haptica(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _BATEU_A_HAPTICA_EM[0] = _monotonic()
 
 
+#: AS FUNÇÕES DA PONTE QUE ESTA ABA USA. A régua confere que existem — um nome
+#: inventado aparece aqui, e não na mão de quem clica.
+#:
+#: `rumble_policy_set_checked` SAIU EM 03/09/2026, e `profile_switch` entrou no
+#: lugar dele: a força deixou de ir por IPC global e passa a ir pelo PERFIL —
+#: `perfil.gravar_e_reaplicar` grava e manda o daemon reaplicar. É a decisão
+#: dela de construir por controle, vista do lado da ponte.
+#: **DOIS ENTRARAM EM 04/09/2026**, e os dois com decisão dela por trás:
+#: `rumble_motores_set` (a barra de cada motor, :func:`motor`) e
+#: `rumble_policy_set_checked` — que voltou em 04/09 como porta da linha de mesa
+#: e ficou SEM CHAMADOR nesta aba em 05/09, quando a linha saiu. Ele continua na
+#: `PONTE` porque a janela GTK o usa e porque tirá-lo daqui não tiraria um método
+#: do produto — só esconderia da régua que esta aba não o chama mais.
 PONTE = {"chamar", "profile_switch", "rumble_set_checked",
          "rumble_stop", "rumble_stop_checked", "rumble_passthrough",
          "rumble_motores_set", "rumble_policy_set_checked", "haptica_testar"}

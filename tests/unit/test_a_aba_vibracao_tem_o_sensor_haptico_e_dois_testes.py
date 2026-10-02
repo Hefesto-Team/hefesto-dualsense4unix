@@ -372,6 +372,23 @@ class TestOsDoisTestes:
         assert ponte.nomes() == ["rumble_motores_set", "haptica_testar"]
         assert ponte.chamadas[-1] == ("haptica_testar", UNIQ, True)
 
+    def test_a_haptica_de_outra_coluna_cala_a_primeira(self) -> None:
+        """Um teste só na mesa: o «Háptica» do segundo controle cala o do primeiro.
+
+        MORDIDA: em ``testar_haptica``, tire o ``_calar_o_teste_da_haptica`` de
+        quem estava ligado → o primeiro segue tocando, e reprova.
+        """
+        outro = "aa:bb:cc:00:00:07"
+        ponte = _Ponte()
+        _clicar("testar-haptica", ponte)
+        ponte.chamadas.clear()
+        _clicar("testar-haptica", ponte, uniq=outro)
+        assert ponte.chamadas == [
+            ("haptica_testar", UNIQ, False),
+            ("haptica_testar", outro, True),
+        ]
+        assert a05.em_teste_da_haptica() == outro
+
     def test_sair_da_pagina_cala_o_teste_da_haptica(self) -> None:
         ponte = _Ponte()
         _clicar("testar-haptica", ponte)
