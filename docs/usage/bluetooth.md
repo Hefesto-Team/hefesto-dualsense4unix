@@ -6,8 +6,8 @@ que muda é o pareamento, e que o rádio tem um limite de controles por adaptado
 
 ## Parear pela aba Conexões
 
-1. Na aba **Conexões**, clique em **Conectar** no adaptador que vai receber o
-   controle.
+1. Na aba **Conexões**, abra o adaptador que vai receber o controle e ligue o
+   **Procurar**.
 2. No controle, segure **PS + Create** até a barra de luz piscar rápido.
 3. O controle aparece na lista. Clique em **Parear** na linha dele. Se não
    conectar, a linha diz «Não Conectou», e **Tentar de Novo** reabre a espera.

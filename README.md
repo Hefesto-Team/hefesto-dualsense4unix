@@ -81,7 +81,7 @@ Com o Secure Boot ligado, os módulos de kernel só carregam depois de você reg
 
 Depois, abra o Hefesto pelo menu de aplicativos ou com `hefesto-dualsense4unix-gui`. O serviço passa a subir sozinho no login.
 
-A primeira configuração é mais simples com o controle no cabo USB. Para parear por Bluetooth, use o botão Conectar na aba Conexões, segure PS + Create no controle e clique em Parear na linha dele.
+A primeira configuração é mais simples com o controle no cabo USB. Para parear por Bluetooth, ligue o Procurar na aba Conexões, segure PS + Create no controle e clique em Parear na linha dele.
 
 ### O que o instalador muda no sistema
 
