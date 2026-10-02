@@ -80,15 +80,24 @@ VISTAS = {"piso": PISO, "dela": olhar.VISTA_DELA, "tv-inteira": (olhar.LARG, olh
 #: O FIM SE ALCANÇA: rola o `.corpo` até o fim e pergunta se o último bloco
 #: cabe na caixa. Sem a rolagem por dentro, o que não cabe some cortado pela
 #: borda, calado — a caixa tem `overflow:hidden`.
+#:
+#: O ÚLTIMO BLOCO É O QUE ACABA MAIS EMBAIXO, e não o último do DOM (01/10/2026,
+#: O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01): a legenda do mapa subiu
+#: para a linha dos modos pela grade do `.corpo` e continua sendo o último filho.
+#: E o que se cobra é a BORDA DE BAIXO dele dentro da caixa: o último bloco
+#: agora é o palco inteiro, mais alto que a vista, e o topo dele fica acima
+#: da caixa com o `.corpo` rolado até o fim.
 FIM = """() => {
   const c = document.querySelector('.janela') || document.querySelector('.cx')
          || document.querySelector('.pagina');
   const miolo = c && c.querySelector(':scope > .corpo');
   if (!miolo) return {erro: 'a caixa não tem um .corpo que role por dentro'};
   miolo.scrollTop = miolo.scrollHeight;
-  const r = c.getBoundingClientRect(), u = miolo.lastElementChild.getBoundingClientRect();
-  return {alcancavel: u.bottom <= r.bottom + 1 && u.top >= r.top - 1,
-          bloco_do_fim: miolo.lastElementChild.className, embaixo: Math.round(u.bottom),
+  const fim = [...miolo.children].filter(e => e.getClientRects().length).reduce((a, b) =>
+    b.getBoundingClientRect().bottom > a.getBoundingClientRect().bottom ? b : a);
+  const r = c.getBoundingClientRect(), u = fim.getBoundingClientRect();
+  return {alcancavel: u.bottom <= r.bottom + 1 && u.bottom > r.top,
+          bloco_do_fim: fim.className, embaixo: Math.round(u.bottom),
           caixa_embaixo: Math.round(r.bottom),
           rola_por_dentro: miolo.scrollHeight > miolo.clientHeight};
 }"""

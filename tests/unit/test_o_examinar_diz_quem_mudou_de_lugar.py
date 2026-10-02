@@ -660,7 +660,7 @@ def test_o_ja_movi_das_sugestoes_tambem_rele(disco: Path) -> None:
         _js(aberta),
         _clicar('.modo[data-modo="ideal"]'),
         _LER_O_JA_MOVI,
-        _clicar("#painel #reexaminar"),
+        _clicar(_O_JA_MOVI),
         _LER,
     ])
     ja_movi, depois = lidas[2], lidas[4]
@@ -783,9 +783,17 @@ def test_declarar_o_hub_lido_nao_cria_outra_face(disco: Path) -> None:
     assert "de 7 entradas" in depois["painel"].lower(), depois["painel"]
 
 
-#: O gesto do «Já movi» das Sugestões — o segundo botão com o id `reexaminar`.
+#: O «Já movi» das Sugestões. Até 01/10/2026 ele era o segundo botão com o id
+#: `reexaminar`, o mesmo do «Examinar» do cabeçalho; desde a
+#: O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 ele é a classe `ja-movi`, e o
+#: id é só do cabeçalho. A página publicada recebe a classe no `--publicar` do
+#: mapa: até lá a régua acha o botão pelo id de antes, e depois, pela classe. O
+#: `#painel #reexaminar` sai daqui no mesmo commit do `--publicar`.
+_O_JA_MOVI = "#painel .ja-movi, #painel #reexaminar"
+
+#: O gesto do «Já movi» das Sugestões.
 _LER_O_JA_MOVI = (
-    "(function(){const b=document.querySelector('#painel #reexaminar');"
+    f"(function(){{const b=document.querySelector('{_O_JA_MOVI}');"
     "return b ? (b.dataset.gesto || '') : 'sem o botão';})()")
 
 

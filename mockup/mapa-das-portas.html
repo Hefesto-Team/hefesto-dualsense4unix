@@ -308,7 +308,7 @@
   .topo .examinar span { pointer-events: none; }
   /* a linha do exemplo já empurra o «Examinar» para a direita */
   .topo .quando + .examinar { margin-left: 0; }
-  .painel .fina { margin: .35rem 0 0; font-size: var(--text-sm); }
+  .painel span.fina { margin-left: .8rem; font-weight: 400; font-size: var(--text-sm); }
   /* o editor da entrada: o que tem nela e a velocidade dela */
   .palco { position: relative; }
   .rotulo .decl { display: inline-block; margin: .15rem 0 0 .4rem; padding: 0 .4rem;
@@ -359,13 +359,58 @@
   .topo > a[href="08-conexoes.html"] { position: static !important; }
   .modos { display: grid; grid-template-columns: repeat(3, 8.5rem); }
   .modos .modo { justify-content: center; text-align: center; }
-  .chapa.grade-tras { grid-template-columns: repeat(2, 17rem); }
-  .chapa.fileira { grid-template-columns: repeat(3, 17rem); }
+  /* AS ENTRADAS SE ARRUMAM SOZINHAS — 01/10/2026 (pedido d): quantas colunas de
+     17rem couberem, nas três formas; a Frente vira uma linha, e o hub, duas. */
+  .chapa.coluna, .chapa.grade-tras, .chapa.fileira {
+    display: grid; grid-template-columns: repeat(auto-fill, 17rem); gap: .55rem var(--space-md); }
+  /* A LEGENDA SOBE para a linha dos modos, à direita (pedido e) */
+  .pagina > .corpo { display: grid; grid-template-columns: auto minmax(0, 1fr);
+                     column-gap: var(--space-md); align-content: start; }
+  .pagina > .corpo > * { grid-column: 1 / -1; }
+  .pagina > .corpo > .modos { grid-column: 1; grid-row: 1; }
+  .pagina > .corpo > .legenda { grid-column: 2; grid-row: 1; justify-self: end;
+                                align-self: center; margin-top: 0; }
   .palco > .bandeja { margin-top: 29px; position: sticky; top: .5rem; }
+  /* «ATUALMENTE CONECTADO» ROLA POR DENTRO e acaba no fim da última face (pedido a).
+     Só com o palco em duas colunas: numa coluna só a bandeja tem linha própria,
+     e a altura da linha seria zero. */
+  @media (min-width: 901px) {
+    .palco > .bandeja { position: static; align-self: stretch; height: 0;
+                        min-height: calc(100% - 29px); box-sizing: border-box;
+                        display: flex; flex-direction: column; }
+    .palco > .bandeja .lista { flex: 1 1 0; min-height: 0; overflow-y: auto; }
+  }
+  @media (max-width: 900px) {
+    .palco > .bandeja .lista { max-height: 22rem; overflow-y: auto; }
+  }
+  /* O ADICIONAR NUMA LINHA: a pergunta e as escolhas lado a lado (pedido g) */
+  .painel > #chamada-mao { display: inline-block; margin: 0 var(--space-sm) 0 0;
+                           vertical-align: middle; }
+  .painel > #chamada-mao + .escolhas { display: inline-flex; vertical-align: middle; }
+  /* O «?» DA CASA: a razão de cada movimento das Sugestões mora nele (pedido f).
+     O `p.ajuda` da bandeja é outra peça: a regra mora só dentro da receita. */
+  .receita .ajuda { display: inline-grid; place-items: center; width: 17px; height: 17px;
+                    margin-left: .45rem; border-radius: 50%; border: 1px solid var(--color-rule);
+                    color: var(--color-ink-quiet); font-size: 11px; font-weight: 400;
+                    line-height: 1; cursor: help; position: relative; vertical-align: middle; }
+  .receita .ajuda:hover, .receita .ajuda:focus { border-color: var(--color-frio);
+                                                 color: var(--color-frio); outline: none; }
+  .receita .ajuda .dica { display: none; position: absolute; left: 22px; top: -4px;
+                          width: 26rem; z-index: 40; flex-direction: column; gap: .3rem;
+                          padding: .55rem .7rem; background: var(--color-paper-2);
+                          border: 1px solid var(--color-rule); border-radius: var(--radius-md);
+                          font-size: var(--text-xs); line-height: 1.5;
+                          color: var(--color-ink); text-align: left; }
+  .receita .ajuda:hover .dica, .receita .ajuda:focus .dica,
+  .receita .ajuda:focus-within .dica { display: flex; }
+  .receita .ajuda .dica > span { display: flex; gap: .4rem; align-items: baseline; }
+  .painel > p.ganho { margin: .5rem 0 0; display: flex; gap: .4rem; align-items: baseline;
+                      font-size: var(--text-sm); }
   @media (max-width: 640px) {
-    .chapa.fileira, .chapa.grade-tras { grid-template-columns: minmax(0, 1fr); }
+    .chapa.coluna, .chapa.fileira, .chapa.grade-tras { grid-template-columns: minmax(0, 1fr); }
     .modos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .palco > .bandeja { margin-top: 0; position: static; }
+    .pagina > .corpo > .legenda { grid-column: 1 / -1; grid-row: auto; justify-self: start; }
   }
 </style>
 </head>
@@ -396,7 +441,7 @@
     <div class="edita" id="edita" hidden></div>
     <div class="faces" id="faces"></div>
     <aside class="bandeja">
-      <h3>O que está plugado</h3>
+      <h3>Atualmente conectado</h3>
       <p class="ajuda" id="ajuda-bandeja"></p>
       <div class="lista" id="bandeja"></div>
     </aside>
@@ -739,7 +784,7 @@
         var notaAtual = (atual && !tomada) ? notaDe(ap, porNum(atual), plano, jaPostos).n : -Infinity;
         var razoes = melhorNota.nota.razoes.slice();
         if (tomada) razoes.unshift({ selo: "derivado",
-          txt: "a " + naFraseDe(atual) + " passou a ser do " + (acha(plano[atual]) || {}).tipo + ", entao este precisa de outro lugar" });
+          txt: "a " + naFraseDe(atual) + " passou a ser do " + (acha(plano[atual]) || {}).tipo + ", então este precisa de outro lugar" });
         motivo[ap.id] = {
           razoes: razoes,
           peso: melhorNota.nota.peso,
@@ -784,7 +829,7 @@
         var na = (atual && !tomada2) ? notaDe(a, porNum(atual), plano, []).n : -Infinity;
         var rz = n.razoes.slice();
         if (tomada2) rz.unshift({ selo: "derivado",
-          txt: "a " + naFraseDe(atual) + " passou a ser do " + (acha(plano[atual]) || {}).tipo + ", entao este precisa de outro lugar" });
+          txt: "a " + naFraseDe(atual) + " passou a ser do " + (acha(plano[atual]) || {}).tipo + ", então este precisa de outro lugar" });
         motivo[a.id] = { razoes: rz, peso: n.peso, ganho: tomada2 ? Infinity : (n.n - na), forcado: !!tomada2,
                          essencial: !!tomada2 || (n.peso === "essencial" && (n.n - na) >= 30) };
       });
@@ -838,7 +883,7 @@
       var na = tomada ? -Infinity : notaDe(a, pd, plano, []).n;
       var rz = n.razoes.slice();
       if (tomada) rz.unshift({ selo: "derivado",
-        txt: "a " + naFraseDe(de) + " passou a ser do " + (acha(plano[de]) || {}).tipo + ", entao este precisa de outro lugar" });
+        txt: "a " + naFraseDe(de) + " passou a ser do " + (acha(plano[de]) || {}).tipo + ", então este precisa de outro lugar" });
       else if (!volta) rz.unshift({ selo: "derivado", txt: PORQUE_A_VARIANTE_TIROU.replace("{de}", de) });
       motivo[a.id] = { razoes: rz, peso: n.peso,
         ganho: (tomada || !volta) ? Infinity : (n.n - na),
@@ -1206,13 +1251,12 @@
       var idPlano = ctx.plano[porta.n], idAgora = alocacao[porta.n];
       ap = idPlano ? acha(idPlano) : null;
       if (idPlano && idPlano !== idAgora) {
+        /* SÓ O VEREDITO — 01/10/2026 (pedido f): de onde e para onde já estão
+           na lista de cima. */
         estado = "chega"; vered = "vem para cá";
-        var de = portaDe(idPlano);
-        porque = de ? "estava na " + naFraseDe(de) : "ainda sem lugar";
       } else if (!idPlano && idAgora) {
         ap = acha(idAgora); estado = "sai"; vered = "sai daqui";
-        porque = "vai para a " + naFraseDe(portaDeEm(ctx.plano, idAgora));
-      } else if (idPlano) { estado = "fica"; vered = "fica"; porque = "já está certa"; }
+      } else if (idPlano) { estado = "fica"; vered = "fica"; }
     } else {
       var id = alocacao[porta.n];
       ap = id ? acha(id) : null;
@@ -1497,49 +1541,41 @@
     /* html é concatenado: o modo ideal empilha abas de variante + receita */
     if (modo === "ideal") {
       var qMelhor = qualidade({});
-      html += '<p class="chamada">Quatro arranjos possíveis. O melhor no papel pode não caber na sua escrivaninha — escolha o que cabe.</p>'
-        + '<div class="escolhas" style="margin-bottom:.9rem">'
+      /* O SUGESTÕES FALA MENOS — 01/10/2026 (pedido f): os botões dizem só o
+         arranjo, cada movimento é uma linha com as razões no «?», e da conta do
+         fim fica a linha do ganho não medido (D-LINHA-DO-GANHO-NAO-MEDIDO). */
+      html += '<div class="escolhas" style="margin-bottom:.9rem">'
         + VARIANTES.map(function (v) {
-            var n = receita(v.op).filter(function (m) { return !m.semNumero; }).length;
-            var c = consequencias(v.op), base = consequencias({});
-            var novas = c.filter(function (x) { return base.indexOf(x) === -1; });
             return '<button class="escolha" data-var="' + v.id + '" aria-pressed="' + (variante === v.id) + '">'
-              + "<span><b>" + v.rotulo + "</b><br><span style=\"font-size:.6875rem;color:var(--color-ink-faint)\">"
-              + n + " movimento" + (n === 1 ? "" : "s")
-              + (novas.length ? " · " + novas[0] : (v.id === "melhor" ? " · a referência" : " · sem perda"))
-              + "</span></span></button>";
+              + "<b>" + v.rotulo + "</b></button>";
           }).join("")
         + "</div>"
-        + '<p style="margin:-.4rem 0 .9rem;font-size:var(--text-sm);color:var(--color-ink-quiet)">'
-        + VARIANTES.filter(function (v) { return v.id === variante; })[0].desc
         + (function () {
             var c = consequencias(op), base = consequencias({});
             var novas = c.filter(function (x) { return base.indexOf(x) === -1; });
-            return novas.length ? '<br><b style="color:var(--color-lacuna)">O que se perde:</b> ' + novas.join("; ") + "." : "";
-          })()
-        + "</p>";
+            return novas.length ? '<p style="margin:-.4rem 0 .9rem;font-size:var(--text-sm);color:var(--color-ink-quiet)">'
+              + '<b style="color:var(--color-lacuna)">O que se perde:</b> ' + novas.join("; ") + ".</p>" : "";
+          })();
       var movs = receita(op);
       var reais = movs.filter(function (m) { return !m.semNumero; });
       if (!reais.length) {
         html += '<div class="nada-a-fazer"><b>Nada a mover.</b> Cada aparelho já está na entrada que eu escolheria: '
              + "o teclado numa entrada direta, o Wi-Fi longe dos dongles, e os três dongles no alto e separados.</div>";
       } else {
-        html += '<p class="chamada"><span class="grande">' + reais.length + " movimento" + (reais.length > 1 ? "s" : "") + "</span> e o seu arranjo fica no melhor que este hardware permite.</p>"
+        html += '<p class="chamada"><span class="grande">' + reais.length + " movimento" + (reais.length > 1 ? "s" : "") + "</span></p>"
              + '<ol class="receita">'
              + reais.map(function (m) {
-                 return "<li><div><h4>" + m.titulo + "</h4><ul>"
-                   + m.linhas.map(function (l) { return '<li><span class="selo ' + l.s + '">' + (l.s === "espec" ? "especificação" : l.s) + "</span><span>" + l.t + "</span></li>"; }).join("")
-                   + "</ul></div></li>";
+                 return "<li><div><h4>" + m.titulo + '<span class="ajuda" tabindex="0">?<span class="dica">'
+                   + m.linhas.map(function (l) { return '<span><span class="selo ' + l.s + '">' + (l.s === "espec" ? "especificação" : l.s) + "</span><span>" + l.t + "</span></span>"; }).join("")
+                   + "</span></span></h4></div></li>";
                }).join("")
              + "</ol>";
         var fim = movs.filter(function (m) { return m.semNumero; })[0];
-        if (fim) html += '<div class="nada-a-fazer" style="margin-top:.5rem"><b>' + fim.titulo + "</b><ul style=\"list-style:none;margin:.3rem 0 0;padding:0;display:flex;flex-direction:column;gap:.2rem\">"
-          + fim.linhas.map(function (l) { return '<li style="display:flex;gap:.4rem;align-items:baseline;font-size:var(--text-sm);color:var(--color-ink-quiet)"><span class="selo ' + l.s + '">' + l.s + "</span><span>" + l.t + "</span></li>"; }).join("") + "</ul></div>";
-        html += '<div class="acoes"><button class="btn forte" id="reexaminar"' + examinaNoProduto() + '>Já movi — veja o que mudou</button>'
-             +  '<button class="btn" id="voltar">Desfazer o que eu declarei</button></div>'
-             +  '<p style="margin:.5rem 0 0;font-size:var(--text-xs);color:var(--color-ink-faint)">'
-             +  'Eu <b>não presumo</b> que você seguiu a ordem à risca: leio o sistema de novo, vejo quem mudou de lugar '
-             +  'e pergunto em qual entrada cada um foi parar. Mapa que adivinha vira mapa que mente.</p>';
+        var ganho = fim ? fim.linhas.filter(function (l) { return /^<b>/.test(l.t); })[0] : null;
+        if (ganho) html += '<p class="ganho"><span class="selo ' + ganho.s + '">' + ganho.s + "</span><span>"
+          + ganho.t.replace(/<\/b>[\s\S]*$/, "</b>") + "</span></p>";
+        html += '<div class="acoes"><button class="btn forte ja-movi"' + examinaNoProduto() + '>Já movi — veja o que mudou</button>'
+             +  '<button class="btn" id="voltar">Desfazer o que eu declarei</button></div>';
       }
     } else if (modo === "reexame") {
       var mudou = reexame(leituraAnterior, leituraAtual);
@@ -1582,7 +1618,7 @@
       html += '<div class="acoes"><button class="btn" id="voltar-leitura">Fechar</button>'
         + '<button class="btn" id="ver-antes">Ver como o arranjo estava ' + (leituraAtual === "agora" ? "antes" : "agora") + "</button></div>";
     } else if (modo === "mao") {
-      html = '<p class="chamada" id="chamada-mao">O que você tem na mão agora?</p><div class="escolhas">'
+      html = '<p class="chamada" id="chamada-mao">O que você pretende conectar?</p><div class="escolhas">'
         + NA_MAO.map(function (m) { return '<button class="escolha" data-mao="' + m.id + '" aria-pressed="' + (naMao === m.id) + '"><i style="background:' + m.cor + '"></i>' + m.rotulo + "</button>"; }).join("")
         + "</div>";
       if (naMao && LICOES[naMao]) {
@@ -1596,14 +1632,14 @@
       var sem = semEntrada();
       html = '<p class="chamada">' + (pend
         ? '<span class="grande">' + pend + "</span> coisa" + (pend > 1 ? "s" : "") + " para mudar de lugar"
-        : "Nada a mudar de lugar") + "</p>"
-        + '<p class="fina">'
+        : "Nada a mudar de lugar")
+        + ' <span class="fina">'
         + (leituraAtual === "agora" ? "" : '<b style="color:var(--color-lacuna)">leitura antiga</b> · ')
         + Object.keys(MAPA).length + " de " + todasPortas().length + " entradas mapeadas"
         + (sem.length ? ' · <b style="color:var(--color-lacuna)">' + sem.length + " aparelho"
             + (sem.length > 1 ? "s" : "") + " fora do mapa</b>" : "")
         + (pend ? ' · clique em <b style="color:var(--color-ok)">Sugestões</b>' : "")
-        + "</p>";
+        + "</span></p>";
     }
     painel.innerHTML = html;
 
@@ -1714,7 +1750,7 @@
     var vb = ev.target.closest(".escolha[data-var]");
     if (vb) { variante = vb.getAttribute("data-var"); pintar(); return; }
 
-    if (ev.target.id === "reexaminar") {
+    if (ev.target.id === "reexaminar" || ev.target.classList.contains("ja-movi")) {
       /* relata a diferença; NÃO troca o que o mapa mostra. No produto quem
          abre o reexame é a leitura nova, que chega pelo `hefestoArranjo`. */
       if (doProduto()) return;

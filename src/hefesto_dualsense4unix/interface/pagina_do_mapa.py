@@ -2806,7 +2806,406 @@ EDICOES: tuple[Edicao, ...] = (
 #: igualdade reprova dizendo isto se a cópia do produto receber o desenho e as
 #: edições continuarem aqui. Vazia desde 26/09/2026: as doze do mapa das
 #: conexões foram publicadas pela O-MAPA-DAS-CONEXOES-NO-PRODUTO-01.
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
+    Edicao(
+        antes=(
+            '        : "Nada a mudar de lugar") + "</p>"\n'
+            '        + \'<p class="fina">\'\n'
+            '        + (leituraAtual === "agora" ? "" : \'<b style="color:var(--color-'
+            'lacuna)">leitura antiga</b> · \')\n'
+            '        + Object.keys(MAPA).length + " de " + todasPortas().length + " e'
+            'ntradas mapeadas"\n'
+            '        + (sem.length ? \' · <b style="color:var(--color-lacuna)">\' + sem'
+            '.length + " aparelho"\n'
+            '            + (sem.length > 1 ? "s" : "") + " fora do mapa</b>" : "")\n'
+            '        + (pend ? \' · clique em <b style="color:var(--color-ok)">Sugestõ'
+            'es</b>\' : "")\n'
+            '        + "</p>";\n'
+        ),
+        depois=(
+            '        : "Nada a mudar de lugar")\n'
+            '        + \' <span class="fina">\'\n'
+            '        + (leituraAtual === "agora" ? "" : \'<b style="color:var(--color-'
+            'lacuna)">leitura antiga</b> · \')\n'
+            '        + Object.keys(MAPA).length + " de " + todasPortas().length + " e'
+            'ntradas mapeadas"\n'
+            '        + (sem.length ? \' · <b style="color:var(--color-lacuna)">\' + sem'
+            '.length + " aparelho"\n'
+            '            + (sem.length > 1 ? "s" : "") + " fora do mapa</b>" : "")\n'
+            '        + (pend ? \' · clique em <b style="color:var(--color-ok)">Sugestõ'
+            'es</b>\' : "")\n'
+            '        + "</span></p>";\n'
+        ),
+        porque=(
+            '01/10/2026, O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 — o resumo d'
+            'o Atual numa linha: o «N de M entradas mapeadas» entra no mesmo parágraf'
+            'o da chamada, num `span.fina` (pedido c).'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '  .painel .fina { margin: .35rem 0 0; font-size: var(--text-sm); }\n'
+        ),
+        depois=(
+            '  .painel span.fina { margin-left: .8rem; font-weight: 400; font-size: v'
+            'ar(--text-sm); }\n'
+        ),
+        porque=(
+            '01/10/2026, O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 — a folha do'
+            ' resumo em uma linha (pedido c).'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '  .chapa.grade-tras { grid-template-columns: repeat(2, 17rem); }\n'
+            '  .chapa.fileira { grid-template-columns: repeat(3, 17rem); }\n'
+            '  .palco > .bandeja { margin-top: 29px; position: sticky; top: .5rem; }\n'
+            '  @media (max-width: 640px) {\n'
+            '    .chapa.fileira, .chapa.grade-tras { grid-template-columns: minmax(0,'
+            ' 1fr); }\n'
+            '    .modos { grid-template-columns: repeat(3, minmax(0, 1fr)); }\n'
+            '    .palco > .bandeja { margin-top: 0; position: static; }\n'
+            '  }\n'
+            '</style>\n'
+        ),
+        depois=(
+            '  /* AS ENTRADAS SE ARRUMAM SOZINHAS — 01/10/2026 (pedido d): quantas co'
+            'lunas de\n'
+            '     17rem couberem, nas três formas; a Frente vira uma linha, e o hub, '
+            'duas. */\n'
+            '  .chapa.coluna, .chapa.grade-tras, .chapa.fileira {\n'
+            '    display: grid; grid-template-columns: repeat(auto-fill, 17rem); gap:'
+            ' .55rem var(--space-md); }\n'
+            '  /* A LEGENDA SOBE para a linha dos modos, à direita (pedido e) */\n'
+            '  .pagina > .corpo { display: grid; grid-template-columns: auto minmax(0'
+            ', 1fr);\n'
+            '                     column-gap: var(--space-md); align-content: start; '
+            '}\n'
+            '  .pagina > .corpo > * { grid-column: 1 / -1; }\n'
+            '  .pagina > .corpo > .modos { grid-column: 1; grid-row: 1; }\n'
+            '  .pagina > .corpo > .legenda { grid-column: 2; grid-row: 1; justify-sel'
+            'f: end;\n'
+            '                                align-self: center; margin-top: 0; }\n'
+            '  .palco > .bandeja { margin-top: 29px; position: sticky; top: .5rem; }\n'
+            '  /* «ATUALMENTE CONECTADO» ROLA POR DENTRO e acaba no fim da última fac'
+            'e (pedido a).\n'
+            '     Só com o palco em duas colunas: numa coluna só a bandeja tem linha '
+            'própria,\n'
+            '     e a altura da linha seria zero. */\n'
+            '  @media (min-width: 901px) {\n'
+            '    .palco > .bandeja { position: static; align-self: stretch; height: 0'
+            ';\n'
+            '                        min-height: calc(100% - 29px); box-sizing: borde'
+            'r-box;\n'
+            '                        display: flex; flex-direction: column; }\n'
+            '    .palco > .bandeja .lista { flex: 1 1 0; min-height: 0; overflow-y: a'
+            'uto; }\n'
+            '  }\n'
+            '  @media (max-width: 900px) {\n'
+            '    .palco > .bandeja .lista { max-height: 22rem; overflow-y: auto; }\n'
+            '  }\n'
+            '  /* O ADICIONAR NUMA LINHA: a pergunta e as escolhas lado a lado (pedid'
+            'o g) */\n'
+            '  .painel > #chamada-mao { display: inline-block; margin: 0 var(--space-'
+            'sm) 0 0;\n'
+            '                           vertical-align: middle; }\n'
+            '  .painel > #chamada-mao + .escolhas { display: inline-flex; vertical-al'
+            'ign: middle; }\n'
+            '  /* O «?» DA CASA: a razão de cada movimento das Sugestões mora nele (p'
+            'edido f).\n'
+            '     O `p.ajuda` da bandeja é outra peça: a regra mora só dentro da rece'
+            'ita. */\n'
+            '  .receita .ajuda { display: inline-grid; place-items: center; width: 17'
+            'px; height: 17px;\n'
+            '                    margin-left: .45rem; border-radius: 50%; border: 1px'
+            ' solid var(--color-rule);\n'
+            '                    color: var(--color-ink-quiet); font-size: 11px; font'
+            '-weight: 400;\n'
+            '                    line-height: 1; cursor: help; position: relative; ve'
+            'rtical-align: middle; }\n'
+            '  .receita .ajuda:hover, .receita .ajuda:focus { border-color: var(--col'
+            'or-frio);\n'
+            '                                                 color: var(--color-frio'
+            '); outline: none; }\n'
+            '  .receita .ajuda .dica { display: none; position: absolute; left: 22px;'
+            ' top: -4px;\n'
+            '                          width: 26rem; z-index: 40; flex-direction: col'
+            'umn; gap: .3rem;\n'
+            '                          padding: .55rem .7rem; background: var(--color'
+            '-paper-2);\n'
+            '                          border: 1px solid var(--color-rule); border-ra'
+            'dius: var(--radius-md);\n'
+            '                          font-size: var(--text-xs); line-height: 1.5;\n'
+            '                          color: var(--color-ink); text-align: left; }\n'
+            '  .receita .ajuda:hover .dica, .receita .ajuda:focus .dica,\n'
+            '  .receita .ajuda:focus-within .dica { display: flex; }\n'
+            '  .receita .ajuda .dica > span { display: flex; gap: .4rem; align-items:'
+            ' baseline; }\n'
+            '  .painel > p.ganho { margin: .5rem 0 0; display: flex; gap: .4rem; alig'
+            'n-items: baseline;\n'
+            '                      font-size: var(--text-sm); }\n'
+            '  @media (max-width: 640px) {\n'
+            '    .chapa.coluna, .chapa.fileira, .chapa.grade-tras { grid-template-col'
+            'umns: minmax(0, 1fr); }\n'
+            '    .modos { grid-template-columns: repeat(3, minmax(0, 1fr)); }\n'
+            '    .palco > .bandeja { margin-top: 0; position: static; }\n'
+            '    .pagina > .corpo > .legenda { grid-column: 1 / -1; grid-row: auto; j'
+            'ustify-self: start; }\n'
+            '  }\n'
+            '</style>\n'
+        ),
+        porque=(
+            '01/10/2026, O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 — a folha qu'
+            'e faz a página caber na aba: as entradas se arrumam sozinhas (d), a lege'
+            'nda na linha dos modos (e), «Atualmente conectado» rolando até o fim da '
+            'última face (a), o Adicionar numa linha (g) e o «?» das razões (f).'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      <h3>O que está plugado</h3>\n'
+        ),
+        depois=(
+            '      <h3>Atualmente conectado</h3>\n'
+        ),
+        porque=(
+            '01/10/2026, O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 — o título d'
+            'a bandeja é o que ela pediu (pedido a).'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '<p class="chamada" id="chamada-mao">O que você tem na mão agora?</p>'
+        ),
+        depois=(
+            '<p class="chamada" id="chamada-mao">O que você pretende conectar?</p>'
+        ),
+        porque=(
+            '01/10/2026, O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 — a pergunta'
+            ' do Adicionar é a que ela ditou (pedido g).'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        if (tomada) razoes.unshift({ selo: "derivado",\n'
+            '          txt: "a " + naFraseDe(atual) + " passou a ser do " + (acha(pla'
+            'no[atual]) || {}).tipo + ", entao este precisa de outro lugar" });\n'
+        ),
+        depois=(
+            '        if (tomada) razoes.unshift({ selo: "derivado",\n'
+            '          txt: "a " + naFraseDe(atual) + " passou a ser do " + (acha(pla'
+            'no[atual]) || {}).tipo + ", então este precisa de outro lugar" });\n'
+        ),
+        porque=(
+            '01/10/2026, O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 — o acento q'
+            'ue o Title Case punha em maiúscula na tela (item 3).'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        if (tomada2) rz.unshift({ selo: "derivado",\n'
+            '          txt: "a " + naFraseDe(atual) + " passou a ser do " + (acha(pla'
+            'no[atual]) || {}).tipo + ", entao este precisa de outro lugar" });\n'
+        ),
+        depois=(
+            '        if (tomada2) rz.unshift({ selo: "derivado",\n'
+            '          txt: "a " + naFraseDe(atual) + " passou a ser do " + (acha(pla'
+            'no[atual]) || {}).tipo + ", então este precisa de outro lugar" });\n'
+        ),
+        porque=(
+            '01/10/2026, O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 — o acento q'
+            'ue o Title Case punha em maiúscula na tela (item 3).'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        txt: "a " + naFraseDe(de) + " passou a ser do " + (acha(plano[de'
+            ']) || {}).tipo + ", entao este precisa de outro lugar" });\n'
+        ),
+        depois=(
+            '        txt: "a " + naFraseDe(de) + " passou a ser do " + (acha(plano[de'
+            ']) || {}).tipo + ", então este precisa de outro lugar" });\n'
+        ),
+        porque=(
+            '01/10/2026, O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 — o acento q'
+            'ue o Title Case punha em maiúscula na tela (item 3).'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '      html += \'<p class="chamada">Quatro arranjos possíveis. O melhor no'
+            " papel pode não caber na sua escrivaninha — escolha o que cabe.</p>'\n"
+            '        + \'<div class="escolhas" style="margin-bottom:.9rem">\'\n'
+            '        + VARIANTES.map(function (v) {\n'
+            '            var n = receita(v.op).filter(function (m) { return !m.semNum'
+            'ero; }).length;\n'
+            '            var c = consequencias(v.op), base = consequencias({});\n'
+            '            var novas = c.filter(function (x) { return base.indexOf(x) ='
+            '== -1; });\n'
+            '            return \'<button class="escolha" data-var="\' + v.id + \'" aria'
+            '-pressed="\' + (variante === v.id) + \'">\'\n'
+            '              + "<span><b>" + v.rotulo + "</b><br><span style=\\"font-siz'
+            'e:.6875rem;color:var(--color-ink-faint)\\">"\n'
+            '              + n + " movimento" + (n === 1 ? "" : "s")\n'
+            '              + (novas.length ? " · " + novas[0] : (v.id === "melhor" ? '
+            '" · a referência" : " · sem perda"))\n'
+            '              + "</span></span></button>";\n'
+            '          }).join("")\n'
+            '        + "</div>"\n'
+            '        + \'<p style="margin:-.4rem 0 .9rem;font-size:var(--text-sm);colo'
+            'r:var(--color-ink-quiet)">\'\n'
+            '        + VARIANTES.filter(function (v) { return v.id === variante; })[0'
+            '].desc\n'
+            '        + (function () {\n'
+            '            var c = consequencias(op), base = consequencias({});\n'
+            '            var novas = c.filter(function (x) { return base.indexOf(x) ='
+            '== -1; });\n'
+            '            return novas.length ? \'<br><b style="color:var(--color-lacun'
+            'a)">O que se perde:</b> \' + novas.join("; ") + "." : "";\n'
+            '          })()\n'
+            '        + "</p>";\n'
+            '      var movs = receita(op);\n'
+            '      var reais = movs.filter(function (m) { return !m.semNumero; });\n'
+            '      if (!reais.length) {\n'
+            '        html += \'<div class="nada-a-fazer"><b>Nada a mover.</b> Cada apa'
+            "relho já está na entrada que eu escolheria: '\n"
+            '             + "o teclado numa entrada direta, o Wi-Fi longe dos dongles'
+            ', e os três dongles no alto e separados.</div>";\n'
+            '      } else {\n'
+            '        html += \'<p class="chamada"><span class="grande">\' + reais.lengt'
+            'h + " movimento" + (reais.length > 1 ? "s" : "") + "</span> e o seu arra'
+            'njo fica no melhor que este hardware permite.</p>"\n'
+            '             + \'<ol class="receita">\'\n'
+            '             + reais.map(function (m) {\n'
+            '                 return "<li><div><h4>" + m.titulo + "</h4><ul>"\n'
+            "                   + m.linhas.map(function (l) { return '<li><span class"
+            '="selo \' + l.s + \'">\' + (l.s === "espec" ? "especificação" : l.s) + "</s'
+            'pan><span>" + l.t + "</span></li>"; }).join("")\n'
+            '                   + "</ul></div></li>";\n'
+            '               }).join("")\n'
+            '             + "</ol>";\n'
+            '        var fim = movs.filter(function (m) { return m.semNumero; })[0];\n'
+            '        if (fim) html += \'<div class="nada-a-fazer" style="margin-top:.5'
+            'rem"><b>\' + fim.titulo + "</b><ul style=\\"list-style:none;margin:.3rem 0'
+            ' 0;padding:0;display:flex;flex-direction:column;gap:.2rem\\">"\n'
+            '          + fim.linhas.map(function (l) { return \'<li style="display:fle'
+            'x;gap:.4rem;align-items:baseline;font-size:var(--text-sm);color:var(--co'
+            'lor-ink-quiet)"><span class="selo \' + l.s + \'">\' + l.s + "</span><span>"'
+            ' + l.t + "</span></li>"; }).join("") + "</ul></div>";\n'
+            '        html += \'<div class="acoes"><button class="btn forte" id="reexam'
+            'inar"\' + examinaNoProduto() + \'>Já movi — veja o que mudou</button>\'\n'
+            '             +  \'<button class="btn" id="voltar">Desfazer o que eu decla'
+            "rei</button></div>'\n"
+            '             +  \'<p style="margin:.5rem 0 0;font-size:var(--text-xs);col'
+            'or:var(--color-ink-faint)">\'\n'
+            "             +  'Eu <b>não presumo</b> que você seguiu a ordem à risca: "
+            "leio o sistema de novo, vejo quem mudou de lugar '\n"
+            "             +  'e pergunto em qual entrada cada um foi parar. Mapa que "
+            "adivinha vira mapa que mente.</p>';\n"
+        ),
+        depois=(
+            '      /* O SUGESTÕES FALA MENOS — 01/10/2026 (pedido f): os botões dizem'
+            ' só o\n'
+            '         arranjo, cada movimento é uma linha com as razões no «?», e da '
+            'conta do\n'
+            '         fim fica a linha do ganho não medido (D-LINHA-DO-GANHO-NAO-MEDI'
+            'DO). */\n'
+            '      html += \'<div class="escolhas" style="margin-bottom:.9rem">\'\n'
+            '        + VARIANTES.map(function (v) {\n'
+            '            return \'<button class="escolha" data-var="\' + v.id + \'" aria'
+            '-pressed="\' + (variante === v.id) + \'">\'\n'
+            '              + "<b>" + v.rotulo + "</b></button>";\n'
+            '          }).join("")\n'
+            '        + "</div>"\n'
+            '        + (function () {\n'
+            '            var c = consequencias(op), base = consequencias({});\n'
+            '            var novas = c.filter(function (x) { return base.indexOf(x) ='
+            '== -1; });\n'
+            '            return novas.length ? \'<p style="margin:-.4rem 0 .9rem;font-'
+            'size:var(--text-sm);color:var(--color-ink-quiet)">\'\n'
+            '              + \'<b style="color:var(--color-lacuna)">O que se perde:</b'
+            '> \' + novas.join("; ") + ".</p>" : "";\n'
+            '          })();\n'
+            '      var movs = receita(op);\n'
+            '      var reais = movs.filter(function (m) { return !m.semNumero; });\n'
+            '      if (!reais.length) {\n'
+            '        html += \'<div class="nada-a-fazer"><b>Nada a mover.</b> Cada apa'
+            "relho já está na entrada que eu escolheria: '\n"
+            '             + "o teclado numa entrada direta, o Wi-Fi longe dos dongles'
+            ', e os três dongles no alto e separados.</div>";\n'
+            '      } else {\n'
+            '        html += \'<p class="chamada"><span class="grande">\' + reais.lengt'
+            'h + " movimento" + (reais.length > 1 ? "s" : "") + "</span></p>"\n'
+            '             + \'<ol class="receita">\'\n'
+            '             + reais.map(function (m) {\n'
+            '                 return "<li><div><h4>" + m.titulo + \'<span class="ajuda'
+            '" tabindex="0">?<span class="dica">\'\n'
+            "                   + m.linhas.map(function (l) { return '<span><span cla"
+            'ss="selo \' + l.s + \'">\' + (l.s === "espec" ? "especificação" : l.s) + "<'
+            '/span><span>" + l.t + "</span></span>"; }).join("")\n'
+            '                   + "</span></span></h4></div></li>";\n'
+            '               }).join("")\n'
+            '             + "</ol>";\n'
+            '        var fim = movs.filter(function (m) { return m.semNumero; })[0];\n'
+            '        var ganho = fim ? fim.linhas.filter(function (l) { return /^<b>/'
+            '.test(l.t); })[0] : null;\n'
+            '        if (ganho) html += \'<p class="ganho"><span class="selo \' + ganho'
+            '.s + \'">\' + ganho.s + "</span><span>"\n'
+            '          + ganho.t.replace(/<\\/b>[\\s\\S]*$/, "</b>") + "</span></p>";\n'
+            '        html += \'<div class="acoes"><button class="btn forte ja-movi"\' +'
+            " examinaNoProduto() + '>Já movi — veja o que mudou</button>'\n"
+            '             +  \'<button class="btn" id="voltar">Desfazer o que eu decla'
+            "rei</button></div>';\n"
+        ),
+        porque=(
+            '01/10/2026, O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 — o Sugestõe'
+            's fala menos: sem a chamada, a descrição e os subtítulos das variantes, '
+            'cada movimento numa linha com as razões no «?», a linha do ganho não med'
+            'ido curta e sem o parágrafo do «Já movi», que deixa de repetir o id do «'
+            'Examinar» (pedido f e item 4).'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '    if (ev.target.id === "reexaminar") {\n'
+        ),
+        depois=(
+            '    if (ev.target.id === "reexaminar" || ev.target.classList.contains("j'
+            'a-movi")) {\n'
+        ),
+        porque=(
+            '01/10/2026, O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 — o «Já movi'
+            '» das Sugestões responde pela classe, e o `#reexaminar` é só o do cabeça'
+            'lho (item 4).'
+        ),
+    ),
+    Edicao(
+        antes=(
+            '        estado = "chega"; vered = "vem para cá";\n'
+            '        var de = portaDe(idPlano);\n'
+            '        porque = de ? "estava na " + naFraseDe(de) : "ainda sem lugar";\n'
+            '      } else if (!idPlano && idAgora) {\n'
+            '        ap = acha(idAgora); estado = "sai"; vered = "sai daqui";\n'
+            '        porque = "vai para a " + naFraseDe(portaDeEm(ctx.plano, idAgora)'
+            ');\n'
+            '      } else if (idPlano) { estado = "fica"; vered = "fica"; porque = "j'
+            'á está certa"; }\n'
+        ),
+        depois=(
+            '        /* SÓ O VEREDITO — 01/10/2026 (pedido f): de onde e para onde já'
+            ' estão\n'
+            '           na lista de cima. */\n'
+            '        estado = "chega"; vered = "vem para cá";\n'
+            '      } else if (!idPlano && idAgora) {\n'
+            '        ap = acha(idAgora); estado = "sai"; vered = "sai daqui";\n'
+            '      } else if (idPlano) { estado = "fica"; vered = "fica"; }\n'
+        ),
+        porque=(
+            '01/10/2026, O-MAPA-DAS-CONEXOES-CABE-NA-ABA-E-FALA-MENOS-01 — no mapa do'
+            ' Sugestões cada entrada diz só o veredito (pedido f).'
+        ),
+    ),
+)
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:
