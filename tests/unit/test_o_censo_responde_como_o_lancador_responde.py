@@ -637,3 +637,99 @@ def test_os_dois_heroic_da_mesma_conta_nao_contam_em_dobro(maquina: dict[str, Pa
 
     assert b.resumo == "2 jogos na biblioteca · 1 instalado", b.resumo
     assert len(censo.bibliotecas_por_casa("Heroic", lar, raiz_sistema=maquina["raiz"])) == 2
+
+
+def _dois_heroic(maquina: dict[str, Path], monkeypatch: pytest.MonkeyPatch
+                 ) -> tuple[Path, Path, Path]:
+    """Os dois Heroic instalados no lar de verdade de mentira (``HOME``), cada
+    um com um jogo instalado e com o `umu.json` dele: N no nativo, C na caixa.
+    A global do nativo está sem o `PROTON_DISABLE_HIDRAW` e a cópia de N tem
+    tudo; a global da caixa tem tudo. Devolve ``(nativo, caixa, ponte)``."""
+    lar = maquina["lar"]
+    monkeypatch.setenv("HOME", str(lar))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(lar / ".config"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(lar / ".local/share"))
+    monkeypatch.setenv("XDG_STATE_HOME", str(lar / ".local/state"))
+    ponte = lar.parent / "launch_env"
+    ponte.mkdir()
+    (ponte / "default.env").write_text(
+        "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6\n"
+        "PROTON_DISABLE_HIDRAW=0x054c/0x0ce6\n")
+    tudo = [{"key": k, "value": v} for k, v in cpe.ambiente_da_carona(ponte).items()]
+    sem_o_hidraw = [p for p in tudo if p["key"] != "PROTON_DISABLE_HIDRAW"]
+    nativo, caixa = lar / ".config/heroic", lar / HEROIC
+    for casa, app, umu, globais in ((nativo, "nnnn", "umu-111", sem_o_hidraw),
+                                    (caixa, "cccc", "umu-222", tudo)):
+        _escrever(casa / "config.json", {"defaultSettings": {"enviromentOptions": globais}})
+        _escrever(casa / "store_cache/legendary_library.json", {"library": [
+            {"app_name": app, "title": f"Jogo {app[0].upper()}", "is_installed": True}]})
+        _escrever(casa / "store_cache/umu.json", {f"legendary_{app}": umu})
+        plantar_o_registro(casa, [app])
+    _escrever(nativo / "GamesConfig/nnnn.json", {"nnnn": {"enviromentOptions": tudo}})
+    _comando(maquina, "heroic")
+    _flatpak_instalado(lar, "com.heroicgameslauncher.hgl")
+    return nativo, caixa, ponte
+
+
+def test_com_os_dois_heroic_a_carona_e_a_janela_seguem_a_casa_do_jogo(
+        maquina: dict[str, Path], monkeypatch: pytest.MonkeyPatch) -> None:
+    """Os dois Heroic instalados: a carona tem uma estrada por casa, a cópia de
+    cada jogo é a da casa de onde ele veio, e a falta de cada casa só olha os
+    jogos dela (C, da caixa, não é cobrado pela global do nativo).
+
+    MORDIDAS: a carona só na primeira casa; a janela só na primeira casa; e a
+    falta medida com o Heroic inteiro — C acusa falta pela global do nativo.
+    """
+    nativo, caixa, ponte = _dois_heroic(maquina, monkeypatch)
+    lar, atalhos = maquina["lar"], ("com.heroicgameslauncher.hgl",)
+
+    estradas = cpe.estradas_do_cartao("heroic", atalhos, lar, maquina["raiz"])
+    assert {e.arquivo for e in estradas} == {nativo / "config.json", caixa / "config.json"}
+    assert cpe.jogos_do_heroic_pela_janela("steam_app_111", lar) == [
+        nativo / "GamesConfig/nnnn.json"]
+    assert cpe.jogos_do_heroic_pela_janela("steam_app_222", lar) == [
+        caixa / "GamesConfig/cccc.json"]
+    assert cpe.onde_falta_o_ambiente("heroic", atalhos, lar=lar, pasta_do_ambiente=ponte,
+                                     raiz_sistema=maquina["raiz"]) == ()
+
+
+def test_o_atalho_no_xdg_do_lar_acha_o_nativo(maquina: dict[str, Path]) -> None:
+    """O `net.lutris.Lutris.desktop` só em `$XDG_DATA_HOME/applications` do lar
+    (o atalho que a pessoa instalou para si, fora da lista do sistema): o
+    nativo está instalado, e vale a casa dele.
+
+    MORDIDA: procurar o atalho só nas pastas do sistema — «A biblioteca está
+    vazia.», lida na sobra do Flatpak.
+    """
+    lar = maquina["lar"]
+    nativo, _ = _misto(lar)
+    proprio = lar / ".local/share/applications"
+    proprio.mkdir(parents=True)
+    (proprio / f"{LUTRIS_ID}.desktop").write_text("[Desktop Entry]\n")
+
+    b = censo.biblioteca_de("Lutris", lar=lar, raiz_sistema=maquina["raiz"])
+
+    assert (b.onde, b.resumo) == (nativo, "2 jogos na biblioteca · 2 instalados")
+
+
+def test_a_carona_do_lutris_acha_o_proton_no_lar_de_quem_chama(tmp_path: Path) -> None:
+    """O jogo do Lutris Flatpak com uma versão de Proton que mora no lar dado:
+    a carona (`_pelo_proton_por_yml`) o diz pelo Proton, porque o lar vai junto
+    ao censo, que não o deduz mais do caminho.
+
+    MORDIDA: chamar o censo sem o lar — o Proton é procurado no lar de verdade,
+    e o jogo sai como se não abrisse pelo Proton.
+    """
+    from tests.unit.test_o_censo_dos_lancadores_le_a_biblioteca import _banco_do_lutris
+
+    versao = "GE-Proton-da-regua-0210"
+    dados = tmp_path / ".var/app" / LUTRIS_ID / "data/lutris"
+    _banco_do_lutris(dados)
+    yml = dados / "games/jogo-x-1.yml"
+    yml.parent.mkdir(parents=True)
+    yml.write_text(f"wine:\n  version: {versao}\n", encoding="utf-8")
+    proton = tmp_path / ".steam/steam/compatibilitytools.d" / versao / "proton"
+    proton.parent.mkdir(parents=True)
+    proton.write_text("#!/usr/bin/env python3\n", encoding="utf-8")
+
+    assert cpe._pelo_proton_por_yml(tmp_path) == {str(yml): True}
