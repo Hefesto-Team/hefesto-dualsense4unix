@@ -55,7 +55,6 @@ import onde  # noqa: E402
 import caixa_da_janela  # noqa: E402
 from hefesto_dualsense4unix.core.led_control import (  # noqa: E402
     player_led_pattern,
-    player_slot_color,
 )
 GLIFOS = R / "assets/glyphs"
 SVG = R / "src/hefesto_dualsense4unix/interface/ds_limpo.svg"
@@ -350,7 +349,7 @@ def sobe_a_letra(svg_txt):
     return svg_txt
 
 
-def controle(pecas):
+def controle(pecas, trocam=()):
     """O desenho — que É o arquivo dela — com os alvos do ponteiro por cima.
 
     Ela, 27/08/2026: "ué pq o svg que vc gerou do trabalho que eu fiz tá perfeito e
@@ -363,6 +362,14 @@ def controle(pecas):
 
       1. marca cada `glifo-*` com a classe que o cruzamento com a lista usa;
       2. gera, para cada peça, um ALVO transparente com a forma dela.
+
+    E, desde 01/10/2026 (O-MAPA-DO-CONTROLE-PISCA-E-SEGUE-O-REMAPEAMENTO-01),
+    duas coisas para o produto: o endereço da cor da barra de luz no
+    `#mp-lightbar`, e, para cada peça de ``trocam``, a MARCA DA TROCA — o
+    contorno de fora da peça, tracejado e escondido, que a folha mostra quando a
+    troca de botões alcança aquela peça. Ela é uma forma à parte, e não um
+    traço na peça: as peças são faixas e anéis, e traçá-las dá a linha dupla
+    que ela reprovou em 27/08.
     """
     x = sobe_a_letra(SVG.read_text())
     # ids únicos, para o desenho conviver com os glifos da lista à direita
@@ -389,6 +396,11 @@ def controle(pecas):
     # dois atributos iguais na mesma tag, e o navegador ignora o segundo em
     # silêncio — o dropdown mexeria num atributo que ninguém lê.
     x = x.replace("<svg ", '<svg class="ds" ', 1)
+    # A COR DA BARRA DE LUZ É DO APARELHO no produto (`luz-cor`, alvo `cor`): o
+    # tique escreve o `color` do grupo, e as tiras pintam com `currentColor`
+    # quando o banco de provas não pôs a cor dele (`--luz`).
+    x = x.replace('id="mp-lightbar"',
+                  'id="mp-lightbar" data-campo="luz-cor" data-hef-alvo="cor"', 1)
     if "data-colorway=" not in x[: x.index(">")]:
         x = x.replace("<svg ", '<svg data-colorway="cosmic-red" ', 1)
 
@@ -460,7 +472,14 @@ def controle(pecas):
                 break
         saida.insert(pos, a)
 
-    return x.replace("</svg>", "\n".join(t[2] for t in saida) + "\n</svg>", 1)
+    marcas = []
+    for pid in trocam:
+        # SÓ O CONTORNO: a tampa do analógico (a `<ellipse>` de dentro) faria a
+        # segunda volta tracejada no mesmo botão.
+        corpo = re.sub(r"<ellipse\b[^>]*/>", "", forma_cheia(x, pid))
+        if corpo:
+            marcas.append(f'  <g class="marca-troca m-{pid}">{corpo}</g>')
+    return x.replace("</svg>", "\n".join(marcas + [t[2] for t in saida]) + "\n</svg>", 1)
 
 def cores_do_csv():
     """Os 28 modelos do `cores-do-dualsense.csv`, agrupados por modelo.
@@ -486,12 +505,24 @@ ZONAS_NA_PROVA = ("casca_esq", "casca_dir", "painel", "touch", "botoes_face",
 
 
 def banco_de_provas():
-    """A barra de provas: cor do plástico, jogador e barra de luz.
+    """A barra de provas: cor do plástico, o controle e a barra de luz.
 
     Ela decide VENDO. Um CSV de 233 linhas não se confere lendo — se confere
     clicando no modelo e olhando o desenho. É por isso que esta barra existe, e é
     por isso que ela fica no topo do mapa e não numa página à parte.
+
+    O «JOGADOR» VIROU «CONTROLE» — 01/10/2026, O-MAPA-DO-CONTROLE-PISCA-E-SEGUE-
+    O-REMAPEAMENTO-01. Ela: *«Falta um filtro pro controle conectado que está
+    sendo visto ali.»* Os chips são os da mesa, com o gesto da fita das abas, e
+    o dono deles é o pacote (`a13_mapa_do_controle.chips_do_controle`): aqui
+    com a mesa do desenho, no produto com a de verdade. O `data-jogador` fica em
+    cada chip, e o «Nenhum» é o `data-jogador="0"`: é o que o portão das cores
+    clica.
     """
+    import monta
+    from pacotes import a13_mapa_do_controle as a13
+
+    primeiro = monta.MESA[0]
     modelos = cores_do_csv()
     ordem = sorted(modelos, key=lambda k: (modelos[k][0]["codigo_da_cor"], k))
     fabrica, especiais = [], []
@@ -507,9 +538,11 @@ def banco_de_provas():
         elif sem_hex:
             marca = f" · {ls[0]['acabamento']} em {len(sem_hex)}"
         rot = f"{ls[0]['nome']} · {cod}{marca}"
+        # O DESENHO NASCE COMO O PRIMEIRO CHIP DA MESA, e não num modelo
+        # escolhido aqui: o script da página aplica o chip aceso ao carregar.
         op = (f'<option value="{mid}"'
               + (' data-parcial="1"' if (faltam or sem_hex) else "")
-              + (" selected" if mid == "cosmic-red" else "")
+              + (" selected" if mid == primeiro["cor"] else "")
               + f">{rot}</option>")
         (especiais if cod[0] == "Z" else fabrica).append(op)
 
@@ -518,10 +551,7 @@ def banco_de_provas():
     # CENTRAL. Medido nesta casa em 11/08.
     padroes = {n: [i + 1 for i, on in enumerate(player_led_pattern(n)) if on]
                for n in range(1, 5)}
-    luzes = {n: "#%02x%02x%02x" % player_slot_color(n) for n in range(1, 5)}
-    botoes_p = "".join(
-        f'<button class="bt" data-jogador="{n}" title="padrão {"".join(map(str, padroes[n]))}">'
-        f"{n}</button>" for n in range(1, 5))
+    chips = a13.chips_do_controle(monta.MESA, str(primeiro["pref"]), vivo=False)
 
     barra_html = f"""  <div class="provas">
     <div class="prova">
@@ -532,8 +562,8 @@ def banco_de_provas():
       </select>
     </div>
     <div class="prova">
-      <div class="prova-rot">Jogador</div>
-      <div class="linha">{botoes_p}<button class="bt" data-jogador="0">Nenhum</button></div>
+      <div class="prova-rot">Controle<span class="papel" data-campo="{a13.PAPEL}" data-hef-alvo="html"></span></div>
+      <div class="linha" data-bloco="controles-do-mapa">{chips}</div>
     </div>
     <div class="prova">
       <div class="prova-rot">Barra de luz</div>
@@ -552,54 +582,80 @@ def banco_de_provas():
     # 14 exceções de `reading 'dataset'` no console, e a página parecia sã — o
     # dropdown estava lá, só não fazia nada. Régua que não lê o console não pega.
     script = f"""  <script>
-  // O PADRÃO E A COR SÃO DO PRODUTO — `core/led_control.py`. Copiar a tabela
+  // O PADRÃO DAS LÂMPADAS É DO PRODUTO — `core/led_control.py`. Copiar a tabela
   // para cá seria criar a segunda verdade que este mapa existe para matar.
   const PADRAO = {json.dumps(padroes)};
-  const LUZ_DO_JOGADOR = {json.dumps(luzes)};
   const PARCIAL = "hachurado = o acabamento não cabe num hexadecimal (iridescente, "
                 + "metálico, camuflado, arte); cinza chapado = zona sem amostragem.";
   const ds = document.querySelector("svg.ds");
   const barra = document.querySelector("#mp-lightbar");
   const nota = document.querySelector("#nota");
+  const cw = document.querySelector("#cw");
+  const cx = document.querySelector(".cx");
+  const chips = document.querySelector('[data-bloco="controles-do-mapa"]');
 
-  document.querySelector("#cw").addEventListener("change", e => {{
-    const op = e.target.selectedOptions[0];
-    ds.dataset.colorway = e.target.value;
-    nota.textContent = op.dataset.parcial ? PARCIAL : "\u00a0";
-  }});
+  function plastico(modelo) {{
+    if (modelo) {{ ds.dataset.colorway = modelo; cw.value = modelo; }}
+    else {{ delete ds.dataset.colorway; cw.value = ""; }}
+    const op = cw.selectedOptions[0];
+    nota.textContent = op && op.dataset.parcial ? PARCIAL : "\u00a0";
+  }}
+  cw.addEventListener("change", e => plastico(e.target.value));
 
-  function acende(n) {{
+  // A BARRA DE LUZ E O JOGADOR ANDAM JUNTOS no banco de provas (o chip do
+  // desenho leva a cor do jogador em `data-luz`), e é assim no aparelho: o PS5
+  // acende as duas coisas ao numerar um controle. No produto o chip não leva
+  // cor, e a barra fica com a do aparelho, que o tique pinta (`luz-cor`).
+  function acende(n, luz) {{
     for (let i = 1; i <= 5; i++)
       document.querySelector("#mp-led-jogador-" + i)
               .classList.toggle("led-on", (PADRAO[n] || []).includes(i));
-    if (n && LUZ_DO_JOGADOR[n]) {{
-      barra.style.setProperty("--luz", LUZ_DO_JOGADOR[n]);
-      document.querySelector("#luz").value = LUZ_DO_JOGADOR[n];
-    }} else {{
+    if (luz) {{
+      barra.style.setProperty("--luz", luz);
+      document.querySelector("#luz").value = luz;
+    }} else if (n) {{
       barra.style.removeProperty("--luz");
+    }} else {{
+      barra.style.setProperty("--luz", "var(--luz-apagada)");
     }}
-    document.querySelectorAll("[data-jogador]").forEach(b =>
-      b.classList.toggle("on", +b.dataset.jogador === n));
   }}
-  document.querySelectorAll("[data-jogador]").forEach(b =>
-    b.addEventListener("click", () => acende(+b.dataset.jogador)));
 
-  // A BARRA DE LUZ E O JOGADOR ANDAM JUNTOS, e é assim no aparelho: o PS5 acende
-  // as duas coisas ao numerar um controle. Mexer na cor à mão desfaz o vínculo —
-  // a barra passa a ser a escolhida, e as lâmpadas continuam onde estavam.
+  // O DESENHO SEGUE O CHIP: as lâmpadas pelo número do jogador, o plástico
+  // pelo modelo. O «Nenhum» é o desenho sem controle, e com ele o pisca não
+  // acende (`.sem-controle`). O «Cor do plástico» continua livre: escolher
+  // um modelo depois de um chip vale até o próximo chip.
+  function desenha(b) {{
+    if (b.hasAttribute("data-jogador")) acende(+b.dataset.jogador, b.dataset.luz);
+    if (b.hasAttribute("data-colorway")) plastico(b.dataset.colorway);
+    cx.classList.toggle("sem-controle", b.dataset.jogador === "0");
+  }}
+  // POR DELEGAÇÃO, porque o produto troca os chips a cada mudança da mesa: um
+  // ouvinte posto em cada botão ao carregar morreria com o bloco.
+  document.addEventListener("click", e => {{
+    const b = e.target.closest('[data-bloco="controles-do-mapa"] .bt');
+    if (!b) return;
+    chips.querySelectorAll(".bt").forEach(x => x.classList.toggle("on", x === b));
+    desenha(b);
+  }});
+  function segue() {{
+    const b = chips.querySelector(".bt.on[data-jogador]")
+           || chips.querySelector('.bt[data-jogador]:not([data-jogador="0"])');
+    if (b) desenha(b);
+  }}
+  new MutationObserver(segue).observe(chips, {{childList: true}});
+
   document.querySelector("#luz").addEventListener("input", e => {{
     barra.style.setProperty("--luz", e.target.value);
   }});
   document.querySelector("#luz-off").addEventListener("click", () => {{
-    barra.style.removeProperty("--luz");
+    barra.style.setProperty("--luz", "var(--luz-apagada)");
   }});
 
-  // O MAPA NASCE COM LUZ. Sem jogador escolhido, o lightbar e as cinco lâmpadas
-  // ficam na cor de apagado — que é o estado honesto de um controle sem luz, e
-  // some sobre o fundo escuro. Ela reparou na ausência antes, com estas mesmas
-  // duas peças: "faltou só os dois lightbar e os led de player". O apagado
-  // continua a um clique, no botão "Nenhum".
-  acende(1);
+  // O MAPA NASCE COM LUZ: o desenho do chip aceso. Sem jogador, o lightbar e as
+  // cinco lâmpadas ficam na cor de apagado — e ela reparou na ausência antes:
+  // "faltou só os dois lightbar e os led de player". O apagado continua a um
+  // clique, no botão "Nenhum".
+  segue();
   </script>
 """
     return barra_html, script
@@ -614,10 +670,31 @@ def banco_de_provas():
 # E ESTA NOTA MORA AQUI, e não dentro da f-string: comentário de HTML escrito lá
 # VIAJA para a página publicada. O mesmo vale para qualquer bilhete de projeto —
 # a folha do produto só apaga `.nota`, não comentário.
+def gestos_do_ps():
+    """Os seis gestos do PS, com o número da linha da tabela da Navegação.
+
+    O-MAPA-DO-CONTROLE-PISCA-E-SEGUE-O-REMAPEAMENTO-01: o mapa em comunhão com
+    a aba Navegação. A lista e o nome de cada peça são os do gerador dela
+    (`aba06.COMBOS`, `aba06.nome_de`), que o importa sem efeito.
+    """
+    import aba06
+
+    linhas = []
+    for n, pecas_do_gesto, faz in aba06.COMBOS:
+        botoes = " + ".join(aba06.nome_de(x) for x in pecas_do_gesto)
+        linhas.append(f'<li><span class="n">{n}</span>{botoes} · {faz}</li>')
+    return f'<ol class="gestos">{"".join(linhas)}</ol>'
+
+
 def main():
+    from pacotes import a13_mapa_do_controle as a13
+
     pecas = le_csv()
-    ds = controle(pecas)
+    ds = controle(pecas, trocam=a13.TROCAM)
     provas, script_provas = banco_de_provas()
+    # O que cada botão faz na Navegação com o perfil de fábrica: a dica de cada
+    # linha nasce com ele, e o produto a troca pela do perfil ativo no tique.
+    na_navegacao = a13._acoes({})
 
     # ---- as regras de cruzamento, geradas peça a peça ----
     regras = []
@@ -642,6 +719,19 @@ def main():
         if i not in SO_O_GLIFO_ACENDE:
             regras.append(f'.mapa:has(.a-{i}:hover) {alvo_css}'
                           f'{{fill:var(--pink) !important;stroke:var(--pink) !important}}')
+        # O PISCA — o botão apertado no controle acende a peça e o glifo, como o
+        # ponteiro. A classe `on` vem do produto (`aceso-<peça>`); com o
+        # «Nenhum» (`.sem-controle`) o desenho é o sem controle, e não acende.
+        if i in a13.PISCAM:
+            if i not in SO_O_GLIFO_ACENDE:
+                regras.append(f'.cx:not(.sem-controle) .mapa:has(.item-{i}.on) {alvo_css}'
+                              f'{{fill:var(--pink) !important;stroke:var(--pink) !important}}')
+            regras.append(f'.cx:not(.sem-controle) .mapa:has(.item-{i}.on) .s-{i}'
+                          f'{{color:var(--fg) !important;opacity:1}}')
+        # A TROCA NO DESENHO: a peça trocada ganha o contorno tracejado junto
+        # com a linha «No jogo» do item dela (a classe `tem`, `trocada-<peça>`).
+        if i in a13.TROCAM:
+            regras.append(f'.mapa:has(.item-{i} .troca.tem) .m-{i}{{display:inline}}')
 
     # ---- a lista da direita, por região ----
     blocos = []
@@ -655,11 +745,24 @@ def main():
             apel = f'<span class="ap">{p["apelidos"]}</span>' if p["apelidos"] not in ("-", "") else ""
             prop = ' <span class="prop">proposto</span>' if p["grau"] == "PROPOSTO" else ""
             nota = f'<span class="nota-peca" title="{p["nota"]}">i</span>' if p["nota"] else ""
+            pid = p["id"]
+            # OS ENDEREÇOS DO PRODUTO (`pacotes/a13_mapa_do_controle.py`): o
+            # pisca na linha inteira, o que o botão faz na Navegação na dica do
+            # nome, e a troca de botões numa linha que só aparece quando troca.
+            aceso = (f' data-campo="{a13.ACESO}{pid}" data-hef-alvo="classe"'
+                     if pid in a13.PISCAM else "")
+            acao = (f' data-campo="{a13.ACAO}{pid}" data-hef-alvo="atributo"'
+                    f' data-hef-atributo="title" title="{na_navegacao[a13.ACAO + pid]}"'
+                    if pid in a13.NA_NAVEGACAO else "")
+            troca = (f'<span class="troca" data-campo="{a13.TROCADA}{pid}" data-hef-alvo="classe"'
+                     f' data-hef-classe="tem">No jogo: <b data-campo="{a13.TROCA}{pid}"'
+                     f' data-hef-alvo="html"></b></span>' if pid in a13.TROCAM else "")
+            gestos = gestos_do_ps() if pid == "ps" else ""
             itens.append(
-                f'      <div class="item item-{p["id"]}">'
+                f'      <div class="item item-{pid}"{aceso}>'
                 f'<span class="gl">{g}</span>'
-                f'<span class="txt"><b>{p["nome"]}</b>{apel}{prop}'
-                f'<span class="id mono">{p["id"]}</span></span>{nota}</div>')
+                f'<span class="txt"{acao}><b>{p["nome"]}</b>{apel}{prop}{troca}'
+                f'<span class="id mono">{pid}</span></span>{nota}{gestos}</div>')
         blocos.append(f'    <div class="grupo">\n      <div class="grupo-rot">{titulo}</div>\n'
                       + "\n".join(itens) + "\n    </div>")
 
@@ -685,6 +788,10 @@ def main():
        derrubou — o Cosmic Red é #A51C48, distância 17. Fato errado, substituído.
        Quem precisa de UMA cor do casco lê `var(--z-casca-solida)`. */
     --luz-apagada:#3f4350; --led-apagado:#4a4f5c; --led-aceso:#e8ecf5;
+    /* O CONTROLE SEM PLÁSTICO LIDO (pelo rádio a cor não se lê): o chip dele
+       apaga o `data-colorway`, e o casco cai neste cinza, o mesmo cru do
+       `ds_limpo.svg`, em vez do preto de uma variável sem valor. */
+    --sem-plastico:#3a3f4b;
     /* Pilha do sistema: nada de fonte web, para o arquivo abrir sem rede.
        É a regra de scripts/paleta_da_casa.py, e vale aqui igual. */
     --f:ui-sans-serif,system-ui,"Cantarell","Segoe UI",Roboto,sans-serif;
@@ -762,11 +869,12 @@ def main():
      herdou o preto padrão do SVG. Aqui a folha alcança qualquer forma que viva
      dentro de um grupo de peça e não seja glifo. */
   .ds g[id^="mp-"]:not([id^="mp-glifo"]):not(.sobre):not(.alvo)
-    > :is(rect,path,circle,ellipse,polygon){{fill:var(--z-casca-solida)}}
+    > :is(rect,path,circle,ellipse,polygon){{fill:var(--z-casca-solida, var(--sem-plastico))}}
   /* O LIGHTBAR E O INDICADOR DE JOGADOR SÃO LUZ, e não plástico. Na cor do casco
      eles caíam sobre a borda do touchpad e sumiam — ela: "faltou só os dois
      lighbar e os led de player". Cor de luz, e aparecem. */
-  .ds #mp-lightbar *{{fill:var(--luz, var(--luz-apagada))}}
+  .ds #mp-lightbar{{color:var(--luz-apagada)}}
+  .ds #mp-lightbar *{{fill:var(--luz, currentColor)}}
   .ds #mp-led-jogador rect{{fill:var(--led-apagado)}}
   .ds #mp-led-jogador rect.led-on{{fill:var(--led-aceso)}}
   /* o PS não tem anel: a peça existe só para dar caixa e alvo, e quem se vê — e
@@ -776,7 +884,7 @@ def main():
   /* A PONTA DO PUNHO fechava em BICO: a borda externa e a interna do punho
      convergem num vértice agudo, e preenchidas isso vira uma farpa. O traço
      da mesma cor com junta redonda arredonda o vértice sem mudar o path. */
-  .ds #mp-corpo .peca,.ds #mp-corpo .corpo{{stroke:var(--z-casca-solida);stroke-width:.42;
+  .ds #mp-corpo .peca,.ds #mp-corpo .corpo{{stroke:var(--z-casca-solida, var(--sem-plastico));stroke-width:.42;
                       stroke-linejoin:round;stroke-linecap:round}}
   /* no MAPA as features aparecem — é o mapa das peças todas, não de uma aba */
   /* AS FEATURES SÓ APARECEM NO HOVER. Em repouso, as caixas tracejadas do
@@ -834,7 +942,7 @@ def main():
   .mapa:has(.a-feat-acelerometro:hover) #mp-feat-acelerometro,
   .mapa:has(.item-feat-bateria:hover) #mp-feat-bateria,
   .mapa:has(.a-feat-bateria:hover) #mp-feat-bateria{{opacity:1}}
-  .ds #mp-corpo .peca{{stroke:var(--z-casca-solida)}}
+  .ds #mp-corpo .peca{{stroke:var(--z-casca-solida, var(--sem-plastico))}}
   /* os glifos POR CIMA do desenho — a mesma peça, vista de dois jeitos */
   .sobre{{color:var(--texto-suave);opacity:.8;pointer-events:none}}
   /* OS GLIFOS DELA TRAZEM COR NO `style` INLINE, e style inline vence folha: no
@@ -891,6 +999,31 @@ def main():
               line-height:13px;text-align:center;border:1px solid var(--border-forte);
               color:var(--texto-mudo);cursor:help;font-family:var(--m)}}
   .nota-peca:hover{{border-color:var(--cyan);color:var(--cyan)}}
+  /* O PISCA, A TROCA E OS GESTOS — 01/10/2026, O-MAPA-DO-CONTROLE-PISCA-E-SEGUE-
+     O-REMAPEAMENTO-01. A linha acesa pelo botão apertado tem a cor do ponteiro.
+     O «No jogo» só aparece quando a troca de botões alcança a peça, e entra no
+     lugar do apelido, na MESMA linha: medido no piloto em 01/10/2026, uma linha
+     a mais embaixo do nome fazia a página rolar 18 px na janela ladrilhada
+     (1212 x 809), e ela pediu o mapa sem rolagem em 01/09. A marca tracejada no
+     desenho é a mesma notícia.
+     É uma CLASSE (`tem`), e não `:has(b:empty)`: medido no WebKitGTK em
+     01/10/2026, a regra com `:empty` dentro do `:has()` não se recalcula quando
+     o produto escreve o texto, e a linha ficava escondida com «Cruz» dentro. */
+  .item{{flex-wrap:wrap;row-gap:2px}}
+  .cx:not(.sem-controle) .item.on{{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}}
+  .item .troca{{font-size:11px;color:var(--orange);white-space:nowrap}}
+  .item:has(.troca.tem) .ap{{display:none}}
+  .item .troca:not(.tem){{display:none}}
+  .item .troca b{{font-weight:600}}
+  .item .gestos{{flex:0 0 100%;list-style:none;padding-left:37px;font-size:10.5px;
+                 line-height:1.4;color:var(--texto-mudo)}}
+  .item .gestos .n{{font-family:var(--m);color:var(--comment);margin-right:6px}}
+  .marca-troca{{display:none}}
+  .marca-troca *{{fill:none !important;stroke:var(--pink);stroke-width:.45;
+                 stroke-dasharray:1.1 .7;pointer-events:none}}
+  .papel .bolinha{{display:inline-block;width:6px;height:6px;border-radius:50%;
+                   background:var(--green);margin-right:4px;vertical-align:1px}}
+  .bt .pt,.papel .pt{{color:var(--comment);margin:0 1px;font-size:10px;vertical-align:1px}}
 
   /* A BARRA DE PROVAS. A gramática é a da lista da direita — mesmo rótulo em
      versalete, mesma família de caixa —, para a barra não parecer colada de

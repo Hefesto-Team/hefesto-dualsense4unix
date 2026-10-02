@@ -32,6 +32,7 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## mapa-do-controle.html
 - **01/10/2026** — o «← Voltar» volta para a aba de onde o mapa foi aberto (pergunta à lista de volta do WebView, e não ao `document.referrer`, que no WebKit vem vazio entre arquivos), e os dois botões da barra de provas começam com maiúscula, «Nenhum» e «Apagar» (O-VOLTAR-DO-MAPA-VOLTA-PARA-A-ABA-DE-ONDE-VEIO-01). Até publicar, o «Voltar» da página dela leva sempre à Controles, e a barra diz «nenhum» e «apagar».
+- **01/10/2026** — o mapa passa a ser do produto: o botão apertado no controle acende a peça e a linha dela (o pisca da Controles), a troca de botões do perfil aparece como «No jogo: Cruz» na linha e como contorno tracejado no desenho, o «Jogador» vira «Controle» com os chips da mesa (o gesto da fita das abas, mais «Todos» e «Nenhum»), o rótulo diz o papel do controle na Navegação, a barra de luz é a do aparelho, a dica de cada botão diz o que ele faz na Navegação, e o item do PS lista os seis gestos (O-MAPA-DO-CONTROLE-PISCA-E-SEGUE-O-REMAPEAMENTO-01). Até publicar, o mapa dela é o banco de provas de antes, sem nada do produto.
 
 ## calibrar-sensores.html
 - **28/09/2026** — a linha da Mira Virtual diz também o que vale para a Inclinação e para o Cursor do touchpad (NO-MODO-XBOX-TUDO-FUNCIONA-01). Até publicar, a Calibrar dela fala só da Mira Virtual, e os deslizantes já valem para os três.

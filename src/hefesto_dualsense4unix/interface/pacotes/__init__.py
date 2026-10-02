@@ -1877,6 +1877,9 @@ from . import (  # noqa: E402
     # A `a12` é a outra página avulsa, o «Mapa das Conexões»: só os gestos do
     # editor da entrada, pela mesma razão do AST. O-MAPA-DAS-CONEXOES-NO-PRODUTO-01.
     a12_mapa_das_portas,  # noqa: F401
+    # A `a13` é a terceira avulsa, o «Mapa do controle»: o pisca, a troca e os
+    # chips da fita. O-MAPA-DO-CONTROLE-PISCA-E-SEGUE-O-REMAPEAMENTO-01.
+    a13_mapa_do_controle,  # noqa: F401
     rodape,  # noqa: F401
 )
 
