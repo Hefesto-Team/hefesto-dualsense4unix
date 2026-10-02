@@ -111,14 +111,11 @@ GESTOS: dict[str, str] = {
     "que a janela antiga mostrava SÓ no estado `online_avulso`. Lê o pid do "
     "Hefesto improvisado, pede que ele saia, sobe a unit pelo systemd. As duas "
     "frases do recibo são `daemon_actions.MIGRAR_DEU_CERTO` e `MIGRAR_NAO_DEU`.",
-    "aplicar-aos-jogos": "`a09_sistema.aplicar_aos_jogos`, na ordem: os outros "
-    "lançadores primeiro — `integrations.cura_por_estrada.curar_todas_as_estradas` "
-    "(o Heroic, o Lutris e as caixas dos emuladores, sem fechar programa "
-    "nenhum) —, e depois a Steam: "
-    "`integrations.steam_launch_options.apply_wrapper_to_all_games` dentro de "
-    "uma janela de `with_steam_closed`. A pergunta do primeiro clique é "
-    "`daemon_actions._STEAM_APPLY_CORPO`. Na tela, «Aplicar soluções nos "
-    "lançadores».",
+    "aplicar-aos-jogos": "`a09_sistema.aplicar_aos_jogos`: primeiro os outros lançadores "
+    "(`integrations.cura_por_estrada.curar_todas_as_estradas`, sem fechar nada), depois "
+    "a Steam (`integrations.steam_launch_options.apply_wrapper_to_all_games` numa "
+    "janela de `with_steam_closed`); a pergunta é `daemon_actions._STEAM_APPLY_CORPO`. "
+    "Na tela, «Aplicar soluções nos lançadores».",
     # «Ver detalhes» SAIU — A-09-SISTEMA-EM-TRES-SECOES-01, 25/09/2026: o
     # registro passou a estar sempre à vista, e o gesto que sobra é o de copiar.
     "copiar-registro": "`a09_sistema.copiar_registro` — o texto inteiro do "

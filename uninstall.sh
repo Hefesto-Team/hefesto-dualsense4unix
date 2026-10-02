@@ -192,12 +192,6 @@ ESTADOS_DO_HEFESTO=("${ESTADO_DO_XDG}")
 if [[ "${HOME}/.local/state/${APP_ID}" != "${ESTADO_DO_XDG}" ]]; then
     ESTADOS_DO_HEFESTO+=("${HOME}/.local/state/${APP_ID}")
 fi
-# A LISTA DE EXCLUSÃO de cada casa da configuração
-# (`integrations/lista_de_exclusao.RELPATH`), e onde cada uma fica quando o
-# desfazer dos lançadores é adiado (O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01).
-LISTAS_DE_EXCLUSAO=()
-LISTAS_GUARDADAS_DE=()
-LISTAS_GUARDADAS_PARA=()
 
 # Default: remove udev rules + modules-load (espelha install.sh, que aplica por default).
 # Ver BUG-UNINSTALL-UDEV-DEFAULT-01 no cabeçalho.
@@ -2050,6 +2044,13 @@ else
         log "  ERRO: disable_steam_input.sh falhou — rode manualmente"
     fi
 fi
+
+# A LISTA DE EXCLUSÃO de cada casa da configuração
+# (`integrations/lista_de_exclusao.RELPATH`), e onde cada uma fica quando o
+# desfazer dos lançadores é adiado (O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01).
+LISTAS_DE_EXCLUSAO=()
+LISTAS_GUARDADAS_DE=()
+LISTAS_GUARDADAS_PARA=()
 
 # O AMBIENTE NOS OUTROS LANÇADORES (O-UNINSTALL-NAO-DEIXA-RASTRO-01, 25/09/2026).
 # O daemon escreve o ambiente da ponte no `config.json` do Heroic e no override
