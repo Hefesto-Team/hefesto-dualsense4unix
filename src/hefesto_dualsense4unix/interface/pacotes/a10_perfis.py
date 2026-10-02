@@ -331,7 +331,7 @@ COLUNAS_DA_LISTA = ("nome", "prioridade", "quando")
 #: COMO A TELA CHAMA CADA UMA. Os três rótulos são os do cabeçalho da tabela, e
 #: a frase do desfecho os repete — dizer *"ordenado por quando"* sobre uma
 #: coluna escrita `Funciona em` é a tela falando de uma coluna que não existe.
-_NOME_DA_COLUNA = {"nome": "Nome", "prioridade": "Prioridade",
+_NOME_DA_COLUNA = {"nome": "Nome", "prioridade": "Preferência",
                    "quando": "Funciona em"}
 
 
@@ -1229,9 +1229,9 @@ def _linha_da_lista(nome: str, prioridade: str, quando: str,
     seleção: uma verdade só, no atributo que a própria plataforma leu primeiro.
     """
     return (f'{_RECUO}<tr class="{"ativo" if ativo else ""}" '
-            f'data-hef-perfil="{_atr(nome)}" '
+            f'data-hef-perfil="{_atr(nome)}" data-hef-gesto="selecionar" '
             f'aria-selected="{"true" if escolhido else "false"}" title="{_atr(dica)}">'
-            f'<td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">'
+            f'<td data-hef="perfis.linha.nome">'
             f'{_texto(nome)}</td>'
             f'<td class="pri" data-hef="perfis.linha.prioridade">'
             f'{_texto(prioridade)}</td>'
@@ -2442,7 +2442,7 @@ from . import gesto  # noqa: E402
 
 @gesto("10-perfis.html", "selecionar")
 def selecionar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Abrir um perfil no editor. É o clique na CÉLULA DO NOME, na lista.
+    """Abrir um perfil no editor. É o clique em QUALQUER CÉLULA da linha.
 
     ELE NÃO FALA COM O DAEMON, e é o único desta aba que não fala — de
     propósito. Escolher uma linha não muda nada no aparelho; muda o ALVO dos
@@ -2452,24 +2452,19 @@ def selecionar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     valendo — o oposto da coluna ter um botão "Ativar".
 
     E ELE NÃO RESPONDE CALADO: o editor ao lado repinta no tique seguinte com a
-    prioridade daquele perfil (`editor.prioridade.n`). O campo Nome ainda não
+    preferência daquele perfil (`editor.prioridade.n`). O campo Nome ainda não
     acompanha, e o motivo está no relato — ele é um `<input>`, e a pintura
     escreve `textContent` nele, que não aparece.
 
-    `texto` é o nome VIVO porque a célula é a mesma que a pintura escreve
-    (`perfis.linha.nome`).
-
-    FATO SUBSTITUÍDO — 02/09/2026. Aqui estava escrito que ler o
-    `data-hef-perfil` da linha *"traria o nome do MOCKUP: a pintura troca o
-    texto e nunca reescreve o atributo"*. **Passou a reescrever, no mesmo commit
-    que escreveu a frase:** `_linha_da_lista` emite `data-hef-perfil` com o nome
-    vivo e o `blocos` troca o `<tbody>` inteiro. A escolha do `texto` continua
-    certa por outra razão, e é a que vale: é o `texto` que o ouvinte do piloto
-    manda para TODO gesto (`hefesto_vivo.py`, `texto: alvo.textContent`) — ler
-    um atributo obrigaria o piloto a saber que esta aba é especial.
+    O NOME VEM DA LINHA, desde 02/10/2026 (A-LINHA-INTEIRA-ABRE-O-PERFIL-01): o
+    gesto mora na `<tr>`, e o ouvinte do piloto manda o `dataset` inteiro do
+    alvo (`hefesto_vivo.py`, `Object.assign({}, d)`) — o `data-hef-perfil`
+    chega como `hefPerfil`, com o nome vivo que `_linha_da_lista` escreve. O
+    `texto` da linha seria as três células coladas («Pragmata80Steam · …»); ele
+    fica como volta para quem chama o gesto com `{"texto": nome}`.
     """
     global _ESCOLHIDO
-    nome = str(o.get("texto") or "").strip()
+    nome = str(o.get("hefPerfil") or o.get("texto") or "").strip()
     if not nome:
         raise ValueError("selecionar: o clique não trouxe o nome do perfil")
     _ESCOLHIDO = nome
@@ -3175,17 +3170,17 @@ def editor_prioridade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         novo = int(float(cru))
     except ValueError:
         raise RuntimeError(
-            f"a prioridade tem de ser um número, e o campo mandou “{cru}”. "
+            f"a preferência tem de ser um número, e o campo mandou “{cru}”. "
             f"Nada foi salvo.") from None
     if not PRIORIDADE_MINIMA <= novo <= PRIORIDADE_MAXIMA:
         raise RuntimeError(
-            f"prioridade {novo} está fora da faixa que o perfil aceita "
+            f"a preferência {novo} está fora da faixa que o perfil aceita "
             f"({PRIORIDADE_MINIMA} a {PRIORIDADE_MAXIMA}). Nada foi salvo.")
     prof = _o_perfil_no_disco(nome)
     if int(prof.priority or 0) == novo:
         return None
     _gravar(prof.model_copy(update={"priority": novo}), ctx, p)
-    resposta = _dizer(f"{mensagem_do_salvar(prof.name)} · prioridade {novo}")
+    resposta = _dizer(f"{mensagem_do_salvar(prof.name)} · preferência {novo}")
     pct = round(novo * 100 / PRIORIDADE_MAXIMA) if PRIORIDADE_MAXIMA else 0
     resposta["mesa"]["editor.prioridade"] = str(pct)
     resposta["mesa"]["editor.prioridade.n"] = str(novo)
@@ -3856,7 +3851,7 @@ def _nascer(ctx: Contexto, p: Any, regra: Any, base: str) -> str:
     prioridade = ProfilesActionsMixin._prioridade_acima_dos_catch_all(so_o_cache)
     _gravar(Profile(name=nome, match=regra, priority=prioridade), ctx, p)
     _ESCOLHIDO = nome
-    return (f"Perfil criado: {nome} · prioridade {prioridade}, acima dos "
+    return (f"Perfil criado: {nome} · preferência {prioridade}, acima dos "
             f"que valem sempre")
 
 

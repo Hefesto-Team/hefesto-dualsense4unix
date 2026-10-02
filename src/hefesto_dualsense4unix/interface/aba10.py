@@ -1217,7 +1217,7 @@ def icone_da_lupa() -> str:
     acha pelo mesmo seletor.
     """
     return ('<button type="button" class="icone-rot lupa" '
-            'title="Procura pelo nome, pela prioridade ou pelo jogo." '
+            'title="Procura pelo nome, pela preferência ou pelo jogo." '
             f'aria-label="Procurar um perfil">{LUPA}</button>')
 
 
@@ -1689,19 +1689,20 @@ def linha_do_perfil(nome, prioridade, quando, ativo, dica="", escolhido=False):
     disputa é dado — o mockup não tem nenhum, e um texto inventado aqui viraria
     a tela afirmando uma disputa que não existe.
 
-    O ENDEREÇO DO CLIQUE MORA NA CÉLULA DO NOME, e não na `<tr>` — 01/09/2026,
-    ao ligar os botões. A razão é medida, e são duas:
+    O ENDEREÇO DO CLIQUE É A LINHA INTEIRA — 02/10/2026,
+    A-LINHA-INTEIRA-ABRE-O-PERFIL-01. Pedido dela de 29/09: clicar em qualquer
+    campo da linha abre aquele perfil no editor. O gesto morava no `<td>` do
+    nome, e da «Preferência» e do «Funciona em» o `closest` do ouvinte do
+    piloto não achava nada, com o cursor de mão na linha inteira. Na `<tr>`,
+    toda célula sobe até ele.
 
-    1. **O ouvinte do piloto não enxerga a linha.** Ele casa
-       `[data-gesto],[data-hef-gesto],[data-papel],…` (`hefesto_vivo.py:1023`), e
-       a `<tr>` só tinha `data-hef-perfil`, que não está na lista. Clicar num
-       perfil não mandava nada a lugar nenhum.
-    2. **O nome VIVO só existe na célula.** O clique leva
-       `texto: alvo.textContent` — na `<tr>` isso seria "Ação90Jogo", os três
-       campos colados; na célula é o nome, e é o nome que o `profile.switch`
-       quer. E o `data-hef-perfil` da linha é do MOCKUP: a pintura escreve o
-       texto das células e nunca reescreve o atributo, então quem lesse o
-       atributo leria o perfil do desenho, não o do disco.
+    O NOME VIAJA NO `data-hef-perfil` da linha, e não no texto: o ouvinte manda
+    o `dataset` inteiro do alvo (`hefesto_vivo.py`, `Object.assign({}, d)`),
+    então o gesto recebe `hefPerfil` com o nome vivo (`_linha_da_lista`, no
+    pacote, emite o atributo com o nome do disco, e o `blocos` troca o
+    `<tbody>` inteiro). O `texto` da linha seria as três células coladas.
+    O fato que caiu: aqui se lia que o atributo era do MOCKUP e a pintura nunca
+    o reescrevia; deixou de valer em 02/09, quando a lista passou ao `blocos`.
 
     `data-hef-gesto` e não `data-gesto`: esta aba já tem 77 endereços nesse
     vocabulário, e o despachante aceita os três — inventar um quarto aqui seria
@@ -1720,9 +1721,9 @@ def linha_do_perfil(nome, prioridade, quando, ativo, dica="", escolhido=False):
     `<tbody>` assentar.
     """
     return (f'                <tr class="{"ativo" if ativo else ""}" '
-            f'data-hef-perfil="{nome}" '
+            f'data-hef-perfil="{nome}" data-hef-gesto="selecionar" '
             f'aria-selected="{"true" if escolhido else "false"}" title="{dica}">'
-            f'<td data-hef="perfis.linha.nome" data-hef-gesto="selecionar">{nome}</td>'
+            f'<td data-hef="perfis.linha.nome">{nome}</td>'
             f'<td class="pri" data-hef="perfis.linha.prioridade">{prioridade}</td>'
             # O `title` REPETE O TEXTO, e é a afordância que a régua da
             # janela estreita aceita — 11/09/2026. A PERFIS-LIMPA-01 deu
@@ -1828,13 +1829,35 @@ ROTEIRO = """
       var col = tab ? tab.querySelector('col[data-coluna="' + pux.dataset.coluna + '"]') : null;
       return {tabela: tab, col: col};
     }
+
+    // ---- o piso de cada coluna é o rótulo dela ------------------------------
+    // A-LINHA-INTEIRA-ABRE-O-PERFIL-01, 02/10/2026. Com a coluna nos 48 px que
+    // ela gravou, o cabeçalho saía «Pri…»: o `PISO` é um número só, e o rótulo
+    // pedia 80. O piso passa a ser o maior entre o `PISO` e o próprio rótulo
+    // (o `scrollWidth` do `<th>`: o texto, a seta da ordem e o preenchimento),
+    // medido no motor que pinta. O disco não muda; quem sobe é a tela.
+    function caber(th, col, px){
+      col.style.width = px + 'px';
+      var falta = th ? th.scrollWidth - th.clientWidth : 0;
+      if(falta > 0){ px = px + falta; col.style.width = px + 'px'; }
+      return px;
+    }
+    function ajustar(tab){
+      tab.querySelectorAll('th[data-coluna]').forEach(function(th){
+        var col = tab.querySelector('col[data-coluna="' + th.dataset.coluna + '"]');
+        if(!col || th.clientWidth >= th.scrollWidth) return;
+        var px = caber(th, col, Math.round(th.getBoundingClientRect().width));
+        var pux = th.querySelector('.puxador');
+        if(pux) pux.dataset.px = String(px);
+      });
+    }
     document.addEventListener('mousedown', function(ev){
       var pux = ev.target.closest ? ev.target.closest('.puxador') : null;
       if(!pux) return;
       var alvo = colDe(pux);
       if(!alvo.col) return;
       var th = pux.closest('th');
-      voo = {pux: pux, col: alvo.col, x: ev.clientX,
+      voo = {pux: pux, col: alvo.col, th: th, x: ev.clientX,
              largura: th ? th.getBoundingClientRect().width : 0};
       document.body.classList.add('arrastando');
       ev.preventDefault();
@@ -1844,7 +1867,7 @@ ROTEIRO = """
       var px = Math.round(voo.largura + (ev.clientX - voo.x));
       if(px < PISO) px = PISO;
       if(px > TETO) px = TETO;
-      voo.col.style.width = px + 'px';
+      px = caber(voo.th, voo.col, px);
       voo.pux.dataset.px = String(px);
     }, false);
     document.addEventListener('mouseup', function(){
@@ -1871,7 +1894,8 @@ ROTEIRO = """
         if(px < PISO) px = PISO;
         if(px > TETO) px = TETO;
         var col = tab.querySelector('col[data-coluna="' + pedaco[0] + '"]');
-        if(col) col.style.width = px + 'px';
+        var th = tab.querySelector('th[data-coluna="' + pedaco[0] + '"]');
+        if(col) px = caber(th, col, px);
         var pux = tab.querySelector('.puxador[data-coluna="' + pedaco[0] + '"]');
         if(pux) pux.dataset.px = String(px);
       });
@@ -1889,15 +1913,21 @@ ROTEIRO = """
       });
     }
     function tabelas(){ return document.querySelectorAll('table[data-tabela]'); }
-    function assentar(){ tabelas().forEach(function(t){ espalhar(t); medir(t); }); }
+    function assentar(){ tabelas().forEach(function(t){ espalhar(t); medir(t); ajustar(t); }); }
     // O OBSERVADOR VIGIA O ATRIBUTO, e só ele. Uma largura que volta do disco
     // chega por `data-larguras` (o pintor escreve o atributo), e é o único
     // caminho de fora para dentro — o `blocos` desta aba não toca o
     // `<colgroup>`. Vigiar o `<tbody>` seria acordar dez vezes por segundo
     // para não fazer nada.
+    //
+    // E A SETA DA ORDEM, que alarga o rótulo: o `data-ordem` que o pintor põe
+    // na seta faz a coluna estreita caber de novo no próprio rótulo (02/10).
     tabelas().forEach(function(t){
       new MutationObserver(function(){ espalhar(t); }).observe(
         t, {attributes: true, attributeFilter: ['data-larguras']});
+      var cabeca = t.querySelector('thead');
+      if(cabeca) new MutationObserver(function(){ ajustar(t); }).observe(
+        cabeca, {attributes: true, subtree: true, attributeFilter: ['data-ordem']});
     });
     if(document.readyState === 'loading'){
       document.addEventListener('DOMContentLoaded', assentar);
@@ -1955,7 +1985,7 @@ MIOLO = f'''
                      data-larguras="">
                 <colgroup><col data-coluna="nome"><col data-coluna="prioridade"><col data-coluna="quando"></colgroup>
                 <thead><tr>{cabeca("nome", "Nome", "10-perfis.lista")}{cabeca(
-                    "prioridade", "Prioridade", "10-perfis.lista", classe="pri")}{cabeca(
+                    "prioridade", "Preferência", "10-perfis.lista", classe="pri")}{cabeca(
                     "quando", "Funciona em", "10-perfis.lista", divisa=False)}</tr></thead>
                 <tbody data-hef="perfis.lista">
 {chr(10).join(linha_do_perfil(n, p, q, a, escolhido=n == PERFIL_DO_EDITOR) for n,p,q,a in PERFIS)}
@@ -2001,7 +2031,7 @@ MIOLO = f'''
                        data-hef-alvo="valor" value="Mortal Kombat"></span>
               </div>
               <div class="campo">
-                <span>Prioridade:</span>
+                <span>Preferência:</span>
                 <span class="val" data-hef="editor.prioridade.dica" title="{DICA_DA_PRIORIDADE}">
                   <!-- `data-hef-alvo="largura"` — 02/09/2026, e sem ele a barra
                        MENTIA de duas formas ao mesmo tempo. O pintor cai no
@@ -2035,7 +2065,7 @@ MIOLO = f'''
                        não devolver o punho ao valor do disco no meio do arrasto
                        dela, enquanto o número ao lado continua repintando a
                        cada tique. -->
-                  <span class="trilho"><span class="cheio" data-hef="editor.prioridade" data-hef-alvo="largura" style="width:{PCT_DO_DESENHO}%"></span><input type="range" class="desliza" min="{PRIORIDADE_MINIMA}" max="{PRIORIDADE_MAXIMA}" step="1" value="{PRI_DO_DESENHO}" aria-label="Prioridade" data-hef="editor.prioridade.escolha" data-hef-alvo="valor" data-hef-gesto="editor.prioridade"></span>
+                  <span class="trilho"><span class="cheio" data-hef="editor.prioridade" data-hef-alvo="largura" style="width:{PCT_DO_DESENHO}%"></span><input type="range" class="desliza" min="{PRIORIDADE_MINIMA}" max="{PRIORIDADE_MAXIMA}" step="1" value="{PRI_DO_DESENHO}" aria-label="Preferência" data-hef="editor.prioridade.escolha" data-hef-alvo="valor" data-hef-gesto="editor.prioridade"></span>
                   <span class="n" data-hef="editor.prioridade.n">{PRI_DO_DESENHO}</span>
                 </span>
               </div>
@@ -2325,17 +2355,20 @@ def _conferir(html: str) -> None:
                f"o título de bloco '{titulo}' não está na tela")
 
     # OS RÓTULOS COM DOIS PONTOS, e o cabeçalho por extenso.
-    for rot in ("Nome:", "Prioridade:", "Funciona em:", "Nome do Jogo:", "Estilo de Jogo:"):
+    for rot in ("Nome:", "Preferência:", "Funciona em:", "Nome do Jogo:", "Estilo de Jogo:"):
         exigir(f">{rot}</span>" in html, f"o rótulo '{rot}' não está na tela")
     # O CABEÇALHO POR EXTENSO — e a régua passou a ler o ELEMENTO, não a
     # colagem `class="pri">Priorização<`. Ela quebrou em 11/09/2026 quando o
     # `<th>` ganhou `data-coluna` e `title`: a palavra continuava na tela e a
     # régua acusava abreviação. É a forma que esta casa nomeia — *a régua digita
     # o que devia LER* —, e a cura é olhar o `<th>` da coluna inteira.
+    # A PALAVRA É «PREFERÊNCIA» desde 02/10/2026 (A-LINHA-INTEIRA-ABRE-O-
+    # PERFIL-01, pedido dela de 29/09 e a resposta 41: o rótulo do editor muda
+    # junto). O campo do disco segue `priority`.
     th_pri = re.search(r'<th class="pri"[^>]*>([^<]*)', html)
-    exigir(th_pri is not None, "o cabeçalho da Prioridade sumiu da tabela")
+    exigir(th_pri is not None, "o cabeçalho da Preferência sumiu da tabela")
     if th_pri:
-        exigir(th_pri.group(1).strip() == "Prioridade",
+        exigir(th_pri.group(1).strip() == "Preferência",
                f"o cabeçalho voltou a ser abreviado: {th_pri.group(1)!r}")
 
     # O FUNDO POR COLUNA — três regras, três cores. Se as três virarem uma só, a

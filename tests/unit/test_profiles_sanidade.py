@@ -291,7 +291,9 @@ def test_nome_proprio_com_match_any_levanta_aviso() -> None:
     )
     assert len(achados) == 1
     assert achados[0].gravidade == "aviso"
-    assert "prioridade 0" in achados[0].cura
+    # «Preferência» desde 02/10/2026: o relatório da aba Sistema diz a palavra
+    # da aba Perfis (A-LINHA-INTEIRA-ABRE-O-PERFIL-01).
+    assert "preferência 0" in achados[0].cura
 
 
 def test_catch_all_de_nome_proprio_no_piso_nao_e_nagueado() -> None:

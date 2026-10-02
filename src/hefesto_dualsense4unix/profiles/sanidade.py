@@ -176,12 +176,12 @@ def _catch_all_vence_especifico(perfis: Sequence[Profile]) -> list[Achado]:
                 regra="catch_all_vence_especifico",
                 gravidade="erro",
                 mensagem=(
-                    f"'{coringa.name}' vale para QUALQUER janela e está em "
-                    f"prioridade {coringa.priority} — igual ou acima de perfis "
+                    f"'{coringa.name}' vale para QUALQUER janela e está na "
+                    f"preferência {coringa.priority} — igual ou acima de perfis "
                     f"que têm alvo próprio: {nomes}"
                 ),
                 cura=(
-                    f"baixe a prioridade de '{coringa.name}' para 0 (é o fundo "
+                    f"baixe a preferência de '{coringa.name}' para 0 (é o fundo "
                     "de escala, o lugar de quem vale quando nada mais vale), ou "
                     "dê um alvo a ele na aba Perfis"
                 ),
@@ -238,7 +238,7 @@ def _catch_all_com_cara_de_jogo(perfis: Sequence[Profile]) -> list[Achado]:
             cura = (
                 f"se '{p.name}' é o perfil de um programa, abra a aba Perfis "
                 "com ele aberto e dê o alvo de volta; se é o seu perfil de "
-                f"desktop, o lugar dele é a prioridade 0 (hoje está em "
+                f"desktop, o lugar dele é a preferência 0 (hoje está em "
                 f"{p.priority}), e ali o aviso some"
             )
         achados.append(
@@ -351,7 +351,7 @@ def _prioridades_empatadas(perfis: Sequence[Profile]) -> list[Achado]:
                 regra="prioridades_empatadas",
                 gravidade="aviso",
                 mensagem=(
-                    f"{len(nomes)} perfis empatados na prioridade {prioridade} "
+                    f"{len(nomes)} perfis empatados na preferência {prioridade} "
                     "e disputando as mesmas janelas: "
                     + ", ".join(f"'{n}'" for n in nomes)
                 ),
@@ -382,12 +382,12 @@ def _prioridade_fora_da_faixa(perfis: Sequence[Profile]) -> list[Achado]:
                 regra="prioridade_fora_da_faixa",
                 gravidade="erro",
                 mensagem=(
-                    f"'{p.name}' está na prioridade {p.priority}, fora da faixa "
+                    f"'{p.name}' está na preferência {p.priority}, fora da faixa "
                     f"{PRIORIDADE_MINIMA}-{PRIORIDADE_MAXIMA} que a janela "
-                    "oferece — este número NÃO veio do controle de prioridade"
+                    "oferece — este número NÃO veio do controle de preferência"
                 ),
                 cura=(
-                    f"reabra '{p.name}' na aba Perfis e escolha a prioridade de "
+                    f"reabra '{p.name}' na aba Perfis e escolha a preferência de "
                     "novo; se você não editou o JSON à mão, confira o histórico "
                     f"com `hefesto-dualsense4unix profile historico {_slug(p)}`"  # (noqa-acento)
                 ),
@@ -413,7 +413,7 @@ def _catch_all_demais(perfis: Sequence[Profile]) -> list[Achado]:
                 + " — eles disputam entre si a mesma vaga"
             ),
             cura=(
-                "guarde UM perfil sem alvo (o de desktop, na prioridade 0) e dê "
+                "guarde UM perfil sem alvo (o de desktop, na preferência 0) e dê "
                 "alvo aos demais, ou declare os que só usa na mão com "
                 '`"match": {"type": "manual"}`'
             ),

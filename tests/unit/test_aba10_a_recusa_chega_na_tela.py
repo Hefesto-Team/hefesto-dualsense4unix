@@ -89,7 +89,9 @@ DELA = ("já é o perfil que está valendo",
         "MSG_ESCOLHA_O_JOGO",
         "escolha um Estilo de Jogo na lista",
         "está fora da faixa que o perfil aceita",
-        "a prioridade tem de ser um número")
+        # A ÚLTIMA MUDOU EM 02/10/2026: o campo se chama «Preferência» na tela
+        # (A-LINHA-INTEIRA-ABRE-O-PERFIL-01, a resposta 41 dela).
+        "a preferência tem de ser um número")
 
 
 class PonteDeMentira:

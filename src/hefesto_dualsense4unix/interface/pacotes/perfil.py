@@ -38,9 +38,6 @@ precisou delas, e a segunda cópia é a que esquece um dos tempos:
 * `com_a_carona()` (06/09/2026) — o atalho de inicialização que a Steam comeu,
   reposto de carona no gesto que ela já dá. Ver o docstring de cada uma.
 
-Depois delas, `a_volta_do_perfil()` (02/10/2026), que não escreve perfil: é o
-fim dos três botões do rodapé que gravam ou mandam perfil.
-
 E QUEM RESPONDE "QUAL PERFIL ESTÁ VALENDO" É `nome_do_ativo()` (06/09/2026,
 PERFIL-MODO-01): ele pergunta ao dono do §P1 em vez de ler
 `state["active_profile"]` cru, e `ativo()` cai nele quando o nome não vem. É a
