@@ -397,7 +397,8 @@ def test_a_config_ganha_da_pasta_de_dados(tmp_path: pathlib.Path) -> None:
     **A MORDIDA:** inverter a ordem (os dados antes da `config/`) — vale o
     `.yml` dos dados.
     """
-    config, dados = (tmp_path / p for p in _CASAS_DO_LUTRIS["nativo-com-config"])
+    config = tmp_path / ".config/lutris"
+    dados = tmp_path / ".local/share/lutris"
     _banco_do_lutris(dados)
     for pasta, umu in ((config, "umu-111"), (dados, "umu-222")):
         (pasta / "games").mkdir(parents=True)

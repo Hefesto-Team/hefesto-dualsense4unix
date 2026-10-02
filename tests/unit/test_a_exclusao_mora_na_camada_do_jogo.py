@@ -411,7 +411,7 @@ def _o_ks_no(prefixo: Path, monkeypatch: pytest.MonkeyPatch) -> bool:
     monkeypatch.setattr(ks, "controles_do_registro",
                         lambda *x, **k: [ks.Controle(pid=0x0CE6, bus=1, dev=7, usec=42)])
     launch_env._device_ks_nos_lancadores()
-    return "HEFESTOKS" in (prefixo / "pfx" / "system.reg").read_text()
+    return bool("HEFESTOKS" in (prefixo / "pfx" / "system.reg").read_text())
 
 
 def test_o_morador_que_saiu_do_disco_nao_divide_o_prefixo(
@@ -466,7 +466,7 @@ def test_sem_o_censo_nada_sai_e_o_diario_diz(_lar: Path) -> None:
 
     MORDIDA: usar o censo com erro — B sai, e o prefixo também.
     """
-    dividido, casa = _dividido_com_b_fora_do_disco(_lar)
+    _, casa = _dividido_com_b_fora_do_disco(_lar)
     (casa / "store_cache" / "gog_library.json").write_text(json.dumps({"games": "torto"}))
     lx._DIVIDIDOS_DITOS.clear()
     lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
@@ -683,12 +683,12 @@ def _padrao_do_script(compat_config: frozenset[str] = frozenset()) -> dict[str, 
     """O ambiente que o script do Proton monta quando a variável não vem."""
 
     class _Script:
-        env: dict[str, str] = {}
+        def __init__(self) -> None:
+            self.env: dict[str, str] = {}
+            self.compat_config = set(compat_config)
 
     script = _Script()
-    script.env = {}
-    script.compat_config = set(compat_config)  # type: ignore[attr-defined]
-    exec(compile(_RECORTE_DO_PROTON.read_text(encoding="utf-8"),  # noqa: S102
+    exec(compile(_RECORTE_DO_PROTON.read_text(encoding="utf-8"),
                  str(_RECORTE_DO_PROTON), "exec"), {"self": script})
     return script.env
 
