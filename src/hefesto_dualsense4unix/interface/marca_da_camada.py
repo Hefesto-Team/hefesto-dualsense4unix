@@ -5,9 +5,9 @@ a luz, a vibração, o mouse e o teclado têm um padrão do computador, e o perf
 do jogo só sobrepõe (`profiles/o_padrao_do_computador.SECOES`). O cabeçalho de
 cada um desses cartões diz onde o clique grava:
 
-- «Computador», com «Só neste jogo» ao lado quando há um jogo ativo;
-- o nome do jogo, com «Voltar ao do computador», quando o jogo o sobrepõe;
-- só «Computador», com o Freestyle ou sem perfil: o Freestyle não sobrepõe nada.
+- «PC», com «Só neste jogo» ao lado quando há um jogo ativo;
+- o nome do jogo, com «Voltar ao do PC», quando o jogo o sobrepõe;
+- só «PC», com o Freestyle ou sem perfil: o Freestyle não sobrepõe nada.
 
 A marca é estado, e nunca frase sobre o que acabou de acontecer. Os geradores
 da 02, da 04, da 05 e da 06 a desenham com :func:`bloco`; o pacote
@@ -18,15 +18,18 @@ from __future__ import annotations
 
 import html
 
-#: A palavra da marca quando o valor é do computador (a palavra dela; «mesa» é
-#: palavra banida na tela).
-COMPUTADOR = "Computador"
+#: A palavra da marca quando o valor é do computador. É «PC», a palavra da tela
+#: dela («Navega o PC», «Controlar o PC», «Áudio do PC»), e não «Computador»:
+#: MEDIDO na janela mínima (1212px), a palavra longa no cabeçalho do card da
+#: aba Controles cortava a frase do giroscópio em 15px, e a régua da janela
+#: estreita reprova corte no tamanho do desenho. «Mesa» é palavra banida.
+COMPUTADOR = "PC"
 
 #: Os dois gestos da marca, e os textos dos dois botões.
 SO_NESTE_JOGO = "so-neste-jogo"
 VOLTAR_AO_DO_COMPUTADOR = "voltar-ao-do-computador"
 TEXTO_SO_NESTE_JOGO = "Só neste jogo"
-TEXTO_VOLTAR = "Voltar ao do computador"
+TEXTO_VOLTAR = "Voltar ao do PC"
 
 #: As dicas dos dois botões (o `?` da casa é o `title`).
 DICA_SO_NESTE_JOGO = ("Guarda este cartão no perfil do jogo ativo. Daí em diante, "
@@ -46,13 +49,8 @@ def miolo(cartao: str, *, jogo: str = "", sobrepoe: bool = False) -> str:
     Freestyle ou sem perfil); ``sobrepoe`` diz se ele escolheu este cartão.
     """
     linha = html.escape(cartao, quote=True)
-    rotulo = ""
     if jogo and sobrepoe:
         dono = html.escape(jogo)
-        # O nome do jogo pode ser cortado com reticências numa coluna estreita;
-        # o `aria-label` guarda o nome inteiro (e não vira dica: seria a cópia
-        # exata do texto ao lado).
-        rotulo = f' aria-label="{html.escape(jogo, quote=True)}"'
         botao = (f'<a class="camada-volta" data-gesto="{VOLTAR_AO_DO_COMPUTADOR}" '
                  f'data-linha="{linha}" title="{html.escape(DICA_VOLTAR, quote=True)}">'
                  f"{TEXTO_VOLTAR}</a>")
@@ -65,7 +63,11 @@ def miolo(cartao: str, *, jogo: str = "", sobrepoe: bool = False) -> str:
     else:
         dono = COMPUTADOR
         botao = ""
-    return f'<span class="camada-dono"{rotulo}>{dono}</span>{botao}'
+    # A palavra pode ser cortada com reticências numa janela estreita; o
+    # `aria-label` guarda a palavra inteira (e não vira dica: seria a cópia
+    # exata do texto).
+    return (f'<span class="camada-dono" aria-label="{dono}">{dono}</span>'
+            f"{botao}")
 
 
 def bloco(cartao: str, *, jogo: str = "", sobrepoe: bool = False) -> str:

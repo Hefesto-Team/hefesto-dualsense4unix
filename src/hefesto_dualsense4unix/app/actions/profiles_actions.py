@@ -845,6 +845,19 @@ def nome_da_secao_da_ativacao(chave: str) -> str:
     return _NOMES_DAS_SECOES_DA_ATIVACAO.get(chave, chave)
 
 
+#: O QUE NÃO ENTRA NO «MENOS» — `D-0110-SO-A-FALHA-E-MENOS`, por delegação, a
+#: validar por ela (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01). Às 19h15 de
+#: 01/10 a janela escreveu «menos: button_actions, remapeamento, movimento e
+#: mais 8» sobre uma troca que deu certo: a seção que o perfil não diz vale o
+#: de fábrica ou o computador (`de_fabrica`, `do_computador`), a Mira que ela
+#: deixou desligada vai desligada (`desligado`), e o teclado que não existe
+#: nesta máquina não tem o que receber (`ignorado_sem_device`). Isso é o
+#: produto fazendo o que devia, e não perda. O `falhou*` e o `adiado_*` seguem
+#: no «menos»: o que caiu e o que ainda não chegou ao controle são falta
+#: (APLICAR-VERDADE-02).
+NAO_E_FALTA = frozenset({"de_fabrica", "do_computador", "desligado", "ignorado_sem_device"})
+
+
 def relato_da_ativacao(result: Any) -> dict[str, Any] | None:
     """O relatório do ``profile.switch`` no vocabulário que o rodapé já fala.
 
@@ -863,15 +876,10 @@ def relato_da_ativacao(result: Any) -> dict[str, Any] | None:
     if not isinstance(secoes, dict) or not secoes:
         return None
     aplicadas = [str(s) for s, estado in secoes.items() if str(estado) == "aplicado"]
-    # SÓ A FALHA É «MENOS» — `D-0110-SO-A-FALHA-E-MENOS`, por delegação, a
-    # validar por ela (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01). O
-    # `de_fabrica`, o `do_computador`, o `ignorado_*` e o `adiado_*` são o
-    # produto fazendo o que devia: a seção que o perfil não diz vale o
-    # computador ou o de fábrica, e isso não é perda.
     nao_entraram = {
         nome_da_secao_da_ativacao(str(s)): str(estado)
         for s, estado in secoes.items()
-        if str(estado) == "falhou"
+        if str(estado) != "aplicado" and str(estado) not in NAO_E_FALTA
     }
     return {"applied": aplicadas, "failed": nao_entraram}
 

@@ -1946,21 +1946,22 @@ def sensores_da_peca(c):
 #: (`pacotes/camada.py`). O corpo não tem altura a dar (24px de folga, e o
 #: assert é portão), então as duas moram em linhas que já existem:
 #:
-#: - A DOS SENSORES, no vão do cabeçalho do card aberto, antes do par de
-#:   sensores e pela mesma conta do `giro-no-jogo`. A linha FECHADA é a mais
-#:   apertada da mesa, e por isso ela só aparece com o card aberto. O
-#:   empurrão para a direita passa do par para a marca, sem mover o par: o que
-#:   fica à direita dele é a bateria, da mesma largura nas quatro linhas.
+#: - A DOS SENSORES, no vão do cabeçalho do card aberto, colada aos
+#:   interruptores e pela mesma conta do `giro-no-jogo`. A linha FECHADA é a
+#:   mais apertada da mesa, e por isso ela só aparece com o card aberto. O
+#:   empurrão para a direita passa do trio para a marca, sem mover o trio: o
+#:   que fica à direita dele é a bateria, da mesma largura nas quatro linhas.
+#:   Sem rótulo: com «Sensores» ao lado, a frase do giroscópio era cortada
+#:   na janela mínima, e a régua da janela estreita reprova corte no tamanho
+#:   do desenho.
 #: - A DO SOM, no fim do rótulo do Microfone, que é o topo da coluna do som
 #:   (o microfone em cima, o alto-falante embaixo).
 #:
 #: MEDIDO NA JANELA MÍNIMA (1212px, `ponte_da_tela.LARGURA_DO_DESENHO`): as
 #: duas no cabeçalho, com um jogo ativo, empurravam a bateria para uma segunda
 #: linha; por isso o som desceu para a coluna dele. Onde aperta, o nome do jogo
-#: encolhe com reticências e o botão fica inteiro. No rótulo do Microfone, abaixo
-#: de 1400px, a palavra sai e fica só o botão quando há um: «Só neste jogo» já
-#: diz que o valor é do computador, e «Voltar ao do computador», que é do jogo.
-MARCAS_DO_CARTAO = _marca.rotuladas((("sensores", "Sensores"),))
+#: encolhe com reticências e o botão fica inteiro.
+MARCAS_DO_CARTAO = _marca.bloco("sensores")
 MARCA_DO_SOM = _marca.bloco("som")
 
 
@@ -4028,14 +4029,11 @@ CSS += f"""
 #: A folha das marcas do som e dos sensores; o lugar e a razão estão em
 #: :data:`MARCAS_DO_CARTAO`.
 CSS += _marca.CSS + f"""
-  .faixa .camadas{{display:none}}
-  {_aberto(" .faixa .camadas")}{{display:inline-flex;flex:0 1 auto;min-width:0}}
-  {_aberto(" .faixa .camadas + .sensores-peca")}{{margin-left:0}}
-  .faixa .camada,.rot-linha > .camada{{min-width:0;flex:0 1 auto}}
-  .rot-linha > .camada{{margin-left:auto;font-weight:400}}
-  @media (max-width:1400px){{
-    .rot-linha > .camada > .camada-dono:has(+ a){{display:none}}
-  }}
+  .faixa > .camada{{display:none}}
+  {_aberto(" .faixa > .camada")}{{display:inline-flex;flex:0 1 auto;min-width:0;
+    margin-left:auto}}
+  {_aberto(" .faixa > .camada + .sensores-peca")}{{margin-left:0}}
+  .rot-linha > .camada{{min-width:0;flex:0 1 auto;margin-left:auto;font-weight:400}}
 """
 
 MIOLO = f'''

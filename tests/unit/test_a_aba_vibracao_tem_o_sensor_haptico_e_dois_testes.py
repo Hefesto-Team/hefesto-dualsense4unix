@@ -114,8 +114,14 @@ def _arvore(html: str) -> _Arvore:
 
 
 def _celulas_da_coluna(html: str) -> list[dict[str, str]]:
-    """Os filhos DIRETOS do ``.ctrl`` de uma coluna: as faixas da grade."""
-    return [dados for _tag, dados, pais in _arvore(html).elementos if len(pais) == 1]
+    """Os filhos DIRETOS do ``.ctrl`` de uma coluna: as faixas da grade.
+
+    A marca da camada (``.camada``, `interface/marca_da_camada.py`) é filha da
+    coluna e não é faixa: ela é ``position:absolute``, e a grade não lhe dá
+    célula. A leitura aqui é do HTML, sem a folha, e por isso a nomeia.
+    """
+    return [dados for _tag, dados, pais in _arvore(html).elementos
+            if len(pais) == 1 and "camada" not in dados.get("class", "").split()]
 
 
 def _faixas_da_grade() -> list[str]:
@@ -543,8 +549,13 @@ MEDIDA = r"""
 (function(){
   var m = document.querySelector('.janela > .miolo');
   var vib = document.querySelector('.vib');
+  // A última CÉLULA da coluna: um filho fora do fluxo (a marca da camada,
+  // `position:absolute`) não é célula da grade.
   var fundos = Array.prototype.map.call(vib.children, function(col){
-    return Math.round(col.lastElementChild.getBoundingClientRect().bottom);
+    var celulas = Array.prototype.filter.call(col.children, function(e){
+      return getComputedStyle(e).position !== 'absolute';
+    });
+    return Math.round(celulas[celulas.length - 1].getBoundingClientRect().bottom);
   });
   var mold = document.querySelector('[data-controle="p1"] .moldura');
   var linhas = Array.prototype.map.call(document.querySelectorAll('#vib-estado .est'), function(d){

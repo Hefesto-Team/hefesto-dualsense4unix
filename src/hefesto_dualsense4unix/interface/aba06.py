@@ -2181,7 +2181,7 @@ D_REMAPEAMENTO = ajuda(
 #: gosto: ela dizia **"Ligada — atalhos e teclado na tela"**, e "ligada"
 #: afirmava um alcance que o produto NÃO tem. O daemon já cala a emulação de
 #: desktop quando um jogo assume — `_jogo_no_controle_do_desktop`
-#: (`daemon/lifecycle.py:3497`, a cura da queixa dela de 29/07 *"aperto r1 e ele
+#: (`daemon/lifecycle.py:3518`, a cura da queixa dela de 29/07 *"aperto r1 e ele
 #: muda de app ao invés de funcionar no jogo"*) e o `gamepad_dispatched` do laço
 #: (`:4780`). O que o teclado emulado faz hoje **é** "só fora do jogo": a
 #: etiqueta é que mentia.
@@ -2838,7 +2838,7 @@ TELA_PONTO = f'''
 #: 01/10/2026. O mouse (as velocidades e as Definições) e o teclado (a função e
 #: as teclas) são cartões do computador: a marca diz de quem é o valor, e o
 #: pacote a reescreve a cada tique (`pacotes/camada.py`). A cena do desenho não
-#: tem perfil ativo («—» no topo), e por isso nasce «Computador».
+#: tem perfil ativo («—» no topo), e por isso nasce «PC».
 MARCAS_DA_ATIVACAO = "        " + _marca.rotuladas(
     (("mouse", "Mouse"), ("teclado", "Teclado")))
 

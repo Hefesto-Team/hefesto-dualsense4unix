@@ -299,7 +299,7 @@ def so_neste_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("*", _marca.VOLTAR_AO_DO_COMPUTADOR, grava="voltar_ao_do_computador")
 def voltar_ao_do_computador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """«Voltar ao do computador»: o jogo esquece este cartão, e vale o computador."""
+    """«Voltar ao do PC»: o jogo esquece este cartão, e vale o computador."""
     from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
 
     cartao, uniq, nome = _o_cartao_e_o_jogo(ctx, o)

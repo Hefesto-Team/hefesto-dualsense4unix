@@ -246,7 +246,7 @@ DIVIDAS: dict[str, int] = {
     "tests/unit/test_perfil_salva_tudo_cobertura_das_secoes.py::ISENTOS": 6,
     "tests/unit/test_perfil_salva_tudo_cobertura_das_secoes.py::_SEM_ESCRITOR_HOJE": 0,
     "tests/unit/test_perfil_salva_tudo_ida_e_volta.py::_QUEBRADAS_HOJE": 0,
-    "tests/unit/test_portao_o_par_com_metade_ligada.py::_CITACOES_PENDENTES": 3,
+    "tests/unit/test_portao_o_par_com_metade_ligada.py::_CITACOES_PENDENTES": 2,
     "tests/unit/test_portao_o_par_com_metade_ligada.py::_PAR_ACEITO": 1,
     "tests/unit/test_portao_todo_portao_tem_chamador.py::_SEM_CHAMADOR_HOJE": 3,
     "tests/unit/test_toda_fala_declarada_chega_a_tela.py::_FALA_SEM_TELA_HOJE": 0,
