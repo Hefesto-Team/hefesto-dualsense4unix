@@ -1701,16 +1701,16 @@ async def test_o_state_full_da_bandeja_nao_varre_a_cada_pergunta(
     monkeypatch.setattr(session, "config_dir", lambda ensure=False: tmp_path)
     daemon = Daemon(controller=FakeController(transport="usb"))
     daemon.config.coop_enabled = True
-    daemon._gamepad_device = _VpadDoStateFull(1)  # type: ignore[assignment]
+    daemon._gamepad_device = _VpadDoStateFull(1)
     mgr = CoopManager(daemon)
     mgr._players["aabbcc000002"] = _SecondaryPlayer(
         identity="aabbcc000002",
         evdev_path="/dev/input/event99",
         reader=SimpleNamespace(grab_state="held"),  # type: ignore[arg-type]
         player_index=2,
-        vpad=_VpadDoStateFull(2),
+        vpad=_VpadDoStateFull(2),  # type: ignore[arg-type]
     )
-    daemon._coop_manager = mgr  # type: ignore[assignment]
+    daemon._coop_manager = mgr
     h = _HandlersDoStateFull(daemon)
     with contando() as conta:
         for _ in range(20):
