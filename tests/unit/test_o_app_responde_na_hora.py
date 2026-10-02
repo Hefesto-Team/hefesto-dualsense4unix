@@ -601,6 +601,95 @@ class TestUmPedidoAMaisNoMaximo:
                 launch_env.desarmar_o_escrevente(launch_env._ESCREVENTE)
             laco_novo.close()
 
+    @pytest.mark.parametrize("freestyle", [True, False], ids=["freestyle", "sem-freestyle"])
+    def test_o_fio_escreve_os_mesmos_arquivos_que_a_escrita_na_hora(
+        self, sem_escrevente: None, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+        freestyle: bool,
+    ) -> None:
+        """O caminho do serviço de verdade (a foto no laço, `_OQueOFioLe` e a
+        parte de fora no fio) escreve os MESMOS arquivos que a escrita na hora,
+        com os perfis lidos do disco pelo loader real: o `default.env`, o do
+        jogo e o do perfil nativo fora da antecipação, com o Modo Freestyle
+        ligado (a máscara dele em cada jogo) e desligado.
+
+        MORDIDA: faça `_OQueOFioLe` dizer o Freestyle desligado
+        (`_StoreDaFoto(False)`) — a célula `freestyle` reprova com a máscara
+        do jogo no arquivo do fio.
+        """
+        from hefesto_dualsense4unix.profiles import loader
+        from hefesto_dualsense4unix.profiles.schema import (
+            MatchAny,
+            MatchCriteria,
+            Profile,
+            ProfileModeConfig,
+        )
+
+        monkeypatch.setenv(loader.SEED_SKIP_ENV_VAR, "1")
+        monkeypatch.setattr(loader, "_talvez_semear_jogos", lambda: None)
+        loader.save_profile(Profile(name=loader.NOME_DO_PADRAO, match=MatchAny(),
+                                    mode=ProfileModeConfig(kind="gamepad",
+                                                           gamepad_flavor="xbox")))
+        loader.save_profile(Profile(name="Jogo do Cabo",
+                                    match=MatchCriteria(window_class=["steam_app_1000007"]),
+                                    mode=ProfileModeConfig(kind="gamepad",
+                                                           gamepad_flavor="dualsense")))
+        loader.save_profile(Profile(name="Nativo pelo Titulo",
+                                    match=MatchCriteria(window_title_regex="Nativo.*"),
+                                    mode=ProfileModeConfig(kind="native")))
+        monkeypatch.setattr(launch_env, "steam_input_appids", lambda path=None: set())
+        monkeypatch.setattr(launch_env, "_permite_uhid", lambda daemon: True)
+        monkeypatch.setattr(launch_env, "_device_ks_nos_lancadores", lambda: {})
+        import hefesto_dualsense4unix.integrations.cura_por_estrada as cura
+
+        monkeypatch.setattr(cura, "curar_todas_as_estradas", lambda: {})
+
+        def daemon() -> Any:
+            return SimpleNamespace(
+                is_native_mode=lambda: False,
+                config=SimpleNamespace(gamepad_emulation_enabled=True,
+                                       gamepad_flavor="dualsense", coop_enabled=True),
+                _gamepad_device=SimpleNamespace(backend="uhid"),
+                _coop_manager=None, controller=SimpleNamespace(),
+                store=SimpleNamespace(window_detect_current_class=None,
+                                      freestyle_ligado=freestyle))
+
+        def arquivos(pasta: Path) -> dict[str, str]:
+            # a linha `# estado:` termina no relógio da escrita: ele sai da conta
+            return {a.name: "\n".join(linha.rsplit(" | ", 1)[0] if linha.startswith("# estado:")
+                                      else linha for linha in a.read_text().splitlines())
+                    for a in sorted(pasta.glob("*.env"))}
+
+        na_hora, no_fio = tmp_path / "na-hora", tmp_path / "no-fio"
+        na_hora.mkdir()
+        no_fio.mkdir()
+        monkeypatch.setattr(launch_env, "launch_env_dir", lambda ensure=False: na_hora)
+        d1 = daemon()
+        launch_env.materialize_launch_env(d1)  # type: ignore[arg-type]
+
+        monkeypatch.setattr(launch_env, "launch_env_dir", lambda ensure=False: no_fio)
+        d2 = daemon()
+        laco = asyncio.new_event_loop()
+        escrevente = launch_env.armar_o_escrevente(laco.call_soon_threadsafe, laco)
+        assert escrevente is not None
+        try:
+            async def pedir() -> None:
+                launch_env.materialize_launch_env(d2)  # type: ignore[arg-type]
+                while escrevente.escritas < 1:  # as devoluções voltam a este laço
+                    await asyncio.sleep(0.01)
+                await asyncio.sleep(0.05)
+
+            laco.run_until_complete(asyncio.wait_for(pedir(), 20))
+        finally:
+            launch_env.desarmar_o_escrevente(escrevente)
+            laco.close()
+        esperado, do_fio = arquivos(na_hora), arquivos(no_fio)
+        assert "steam_app_1000007.env" in esperado, esperado
+        mascara = "xbox" if freestyle else "dualsense"
+        assert f"perfil gamepad {mascara}" in esperado["steam_app_1000007.env"]
+        assert do_fio == esperado, (
+            f"o fio escreveu outra coisa que a escrita na hora:\n{do_fio}\n---\n{esperado}")
+        assert d2._launch_env_assinatura == d1._launch_env_assinatura
+
     def test_o_stop_com_uma_foto_pendente_escreve_e_sai_sem_esperar_o_teto(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
