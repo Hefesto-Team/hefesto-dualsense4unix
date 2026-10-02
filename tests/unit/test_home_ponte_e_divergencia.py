@@ -149,7 +149,7 @@ class _HomeStub:
         self._home_offline = False
         # O par foi RENOMEADO: era `_home_renumber_*`, virou `_home_reconciliar_*`
         # (o dublê desta frente nasceu de uma base anterior à renomeação). O
-        # `test_home_render_state.py:140` registra a mesma história.
+        # `test_home_render_state.py:151-153` registra a mesma história.
         self._home_reconciliar_btn = _FakeWidget()
         self._home_reconciliar_hint = _FakeWidget()
         # PONTE-NA-TELA-01

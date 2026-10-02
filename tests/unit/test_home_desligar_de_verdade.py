@@ -7,7 +7,7 @@ INÍCIO NÃO MENTE-01, §2.2i. O botão que PARA o produto, arma
 **nunca rodou dentro de um teste**. Os três arquivos que o citam fazem outra
 coisa:
 
-* ``test_home_render_state.py:357`` e ``:369`` **substituem** o método por um
+* ``test_home_render_state.py:379`` e ``:391`` **substituem** o método por um
   ``lambda`` — medem o dispatcher do botão único, não o desligar;
 * ``test_gui_dialogs_theme.py`` lê o **texto-fonte** dele com
   ``inspect.getsource`` procurando a classe de tema;
