@@ -302,10 +302,9 @@ modules:
       - install -Dm644 assets/appimage/Hefesto-Dualsense4Unix.png
           /app/share/icons/hicolor/256x256/apps/io.github.hefesto_team.hefesto_dualsense4unix.png
 
-      # Glyphs SVG dos botões do DualSense. Sem isto, ButtonGlyph não acha os
-      # assets dentro do sandbox (nem ~/.local/share nem /usr/share resolvem)
-      # e os glyphs da aba Status somem. O resolver olha sys.prefix/share
-      # (=/app no Flatpak) — ver gui/widgets/button_glyph.py.
+      # Glyphs SVG dos botões: sem leitor em execução desde que o widget GTK
+      # saiu (as páginas trazem o desenho inline); o passo fica em paridade com
+      # o install nativo até sair dos formatos juntos.
       - install -Dm644 -t /app/share/hefesto-dualsense4unix/glyphs/
           assets/glyphs/*.svg
 

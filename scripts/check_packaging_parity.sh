@@ -1962,8 +1962,7 @@ fi
 #
 # E O SINTOMA NÃO APONTA PARA A CAUSA, que é o motivo de isto virar portão em vez
 # de nota: sem o loader, `GdkPixbuf.Pixbuf.new_from_file_at_scale` devolve None
-# EM SILÊNCIO — o ícone some da bandeja e os 38 glifos da interface caem junto,
-# sem uma linha de erro no log (BUG-TRAY-ICONE-INVISIVEL-01, descrito em
+# EM SILÊNCIO — o ícone simbólico some da bandeja, sem uma linha de erro no log (BUG-TRAY-ICONE-INVISIVEL-01, descrito em
 # app/arranque.py). Ninguém liga a tela vazia ao pacote que faltou.
 #
 # A ÂNCORA É A PROMESSA, não o pacote — mesma disciplina da seção do teclado na
@@ -1971,10 +1970,10 @@ fi
 # loader em todo formato. Se um dia o desenho sair do produto, a seção cala por
 # direito (e é isso que a mantém quieta nos checkouts sintéticos dos testes deste
 # próprio portão, que trazem só `assets/` e `scripts/`).
-_SVG_PROMESSA="src/hefesto_dualsense4unix/gui/widgets/button_glyph.py"
+_SVG_PROMESSA="src/hefesto_dualsense4unix/app/tray.py"
 echo "== loader SVG do gdk-pixbuf (o que desenha) × o que cada formato declara =="
 if [[ ! -f "${_SVG_PROMESSA}" ]] \
-   || ! grep -q 'new_from_file_at_scale' "${_SVG_PROMESSA}" 2>/dev/null; then
+   || ! grep -q 'set_icon_theme_path' "${_SVG_PROMESSA}" 2>/dev/null; then
     echo "[ OK ] loader SVG: o produto não carrega SVG em execução neste checkout — nada a checar"
 else
     missing=()

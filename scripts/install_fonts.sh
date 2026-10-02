@@ -3,7 +3,7 @@
 #
 # POR QUE ISTO EXISTE
 # ------------------
-# O `gui/theme.css` pede "Space Grotesk" na interface e "JetBrains Mono" nos
+# A interface pede "Space Grotesk" na interface e "JetBrains Mono" nos
 # valores/logs — os nomes que o guia de identidade (`novo-layout/`) define. Numa
 # máquina limpa NENHUMA das duas existe: aqui, com 797 fontes instaladas, o
 # `fc-match` caía em Noto Sans para as DUAS. Ou seja, a interface nunca era a do
@@ -64,7 +64,7 @@ readonly LICENCAS=(
   "OFL-JetBrainsMono.txt|ofl/jetbrainsmono/OFL.txt"
 )
 
-# Famílias como o fontconfig as enxerga — é por este nome que o theme.css pede.
+# Famílias como o fontconfig as enxerga — é por este nome que a interface pede.
 readonly FAMILIA_UI="Space Grotesk"
 readonly FAMILIA_MONO="JetBrains Mono"
 

@@ -12,7 +12,7 @@ Decisão dela, 04/09/2026, meio-dia: *"sons do pc e sons do jogo. veja como
 fizemo no gtk."*  # noqa-acento: citação literal dela
 
 São DOIS caminhos independentes, e a janela antiga já sabia disso
-(`app/widgets/controller_card.CANAIS_DO_SPEAKER`):
+(`interface/cartao_do_controle.CANAIS_DO_SPEAKER`):
 
     Sons do jogo      o byte `OUTPUT_PATH_SEL` = 2. Só o que o jogo mandar ao
                       dispositivo do controle sai nele; a trilha fica na TV.

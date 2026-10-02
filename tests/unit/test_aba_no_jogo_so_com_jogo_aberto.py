@@ -47,7 +47,7 @@ import pytest
 
 from tests.conftest import exigir_gi_real
 
-exigir_gi_real("aba No jogo só com jogo aberto (importa interface.painel_no_jogo)")
+exigir_gi_real("aba No jogo só com jogo aberto")
 
 from hefesto_dualsense4unix.core.controller import ControllerState
 from hefesto_dualsense4unix.daemon.ipc_server import IpcServer

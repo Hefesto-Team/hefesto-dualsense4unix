@@ -99,10 +99,9 @@ if [[ -d "$HERE/locale" ]]; then
     cp -r "$HERE/locale"/. "$APPDIR/usr/share/locale/"
 fi
 
-# Glyphs SVG dos botoes (aba Status): NAO vao no wheel; o resolvedor de
-# button_glyph.py procura em sys.prefix/share/hefesto-dualsense4unix/glyphs.
-# Espelha o módulo hefesto do manifest Flatpak. Sem isto a aba Status abre
-# sem os icones de botao no AppImage GUI.
+# Glyphs SVG dos botões: sem leitor em execução desde que o widget GTK saiu
+# (as páginas trazem o desenho inline); espelha o manifest Flatpak até o
+# passo sair dos formatos juntos.
 if [[ -d "$HERE/assets/glyphs" ]]; then
     install -Dm644 -t "$APPDIR/usr/share/hefesto-dualsense4unix/glyphs/" \
         "$HERE/assets/glyphs/"*.svg

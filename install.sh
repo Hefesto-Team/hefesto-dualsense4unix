@@ -172,7 +172,7 @@
 #                         DEFAULT o venv já vem com os dev tools (gate local).
 #                         Use em CI/máquina enxuta que só precisa rodar o app.
 #   --no-fonts            pula as fontes da identidade visual (Space Grotesk +
-#                         JetBrains Mono, que o gui/theme.css pede). Por DEFAULT
+#                         JetBrains Mono, que a interface pede). Por DEFAULT
 #                         elas são instaladas em best-effort pelo
 #                         scripts/install_fonts.sh — pacote da distro primeiro,
 #                         download PINADO + SHA-256 só se não houver pacote.
@@ -3465,7 +3465,7 @@ fi
 # ---------------------------------------------------------------------------
 # FONTE-PADRAO-01, item 3. O `scripts/install_fonts.sh` existia, com download
 # pinado e SHA-256, e NINGUÉM o chamava: `grep -c fonts install.sh` dava 0. O
-# `gui/theme.css` pede "Space Grotesk" na interface e "JetBrains Mono" nos
+# A interface pede "Space Grotesk" na interface e "JetBrains Mono" nos
 # valores/logs, e numa máquina limpa nenhuma das duas existe — o fontconfig
 # substitui EM SILÊNCIO e a interface nunca é a do design.
 #

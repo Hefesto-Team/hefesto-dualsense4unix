@@ -130,7 +130,7 @@ def _o_que_o_aparelho_diz(piloto: hefesto_vivo.Piloto) -> dict[str, dict]:
     """Por lugar (`p1`…`p4`): a luz que o MOTOR afirma, e o número.
 
     QUEM RESPONDE NÃO É O PACOTE DA ABA, e é isso que faz esta medição valer:
-    ``app/widgets/controller_card.rotulo_lightbar`` é o dono da pergunta *"há
+    ``interface/cartao_do_controle.rotulo_lightbar`` é o dono da pergunta *"há
     cor a afirmar neste controle?"* — o mesmo que os cards da GUI estável usam —
     e ele devolve ``(ressalva, cor base)``. Perguntar ao pacote da 04 seria
     comparar o produto com ele mesmo: ele erraria o desenho e a resposta do
@@ -145,7 +145,7 @@ def _o_que_o_aparelho_diz(piloto: hefesto_vivo.Piloto) -> dict[str, dict]:
     dois lados desta medição falam do MESMO instante; montar um segundo contexto
     aqui compararia a tela de agora com a mesa de daqui a pouco.
     """
-    from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
+    from hefesto_dualsense4unix.interface.cartao_do_controle import rotulo_lightbar
 
     ctx = getattr(piloto, "_ctx_de_agora", None)
     if ctx is None:

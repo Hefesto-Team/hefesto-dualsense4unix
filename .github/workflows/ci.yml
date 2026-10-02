@@ -818,7 +818,7 @@ jobs:
             # do librsvg logo acima, e ela custou uma leva inteira em 19/08: os
             # testes de PIXEL (test_layout_orcamento_altura,
             # test_status_faixa_blocos) reprovavam SÓ aqui, e passavam em qualquer
-            # máquina de quem desenvolve. Medido: o theme.css pede "Space Grotesk"
+            # máquina de quem desenvolve. Medido: a interface pede "Space Grotesk"
             # no corpo e "JetBrains Mono" nos valores, o install.sh as INSTALA
             # (scripts/install_fonts.sh, opt-out --no-fonts), e este job — que monta
             # as dependências à mão e nunca roda o install — não as tinha. O

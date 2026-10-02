@@ -1,23 +1,4 @@
-"""Aplicação do tema Drácula ao Hefesto - DualSense4Unix via Gtk.CssProvider.
-
-Prioridade GTK_STYLE_PROVIDER_PRIORITY_APPLICATION (600) sobrepõe o tema
-do sistema (PRIORITY_THEME = 200) sem vazar para outras janelas GTK.
-
-Este módulo é o DONO ÚNICO do tamanho da fonte da interface (LEGIBILIDADE-01).
-A escala global tem dois canais, e são necessários os dois:
-
-* ``Gtk.Settings.gtk-font-name`` move a base HERDADA — os ~90% da janela que
-  não têm regra de tamanho nenhuma e caem no padrão do Pango (13,33px a 96
-  dpi). Sozinho ele não alcança as regras que declaram ``font-size`` em px.
-* O CSS é carregado por ``load_from_data`` depois de ter os ``font-size: Npx``
-  reescritos em memória. Sozinho ele não alcança o que não tem regra.
-
-Não existe terceira via: o GTK3 não tem variável de CSS (``@define-color`` só
-declara COR), não tem ``calc()``, e um token desconhecido não é ignorado — ele
-DERRUBA A CARGA DO ARQUIVO INTEIRO, deixando a janela com o tema claro do
-sistema e uma linha de log que não diz onde foi. O projeto já tropeçou nisso
-duas vezes com at-rules (``theme.css:105`` e ``:805``).
-"""
+"""O tema e a barra da sessão, adotados pela janela da interface (`interface/janela.py`)."""
 # ruff: noqa: E402
 from __future__ import annotations
 
