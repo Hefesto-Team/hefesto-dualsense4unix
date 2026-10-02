@@ -165,7 +165,7 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
     """O saldo da cura, e ele é a régua contra a recaída.
 
     Era 17 órfãos; em 01/09 ficou UM — `plugins`, que não é erro de ninguém: a
-    `gui/aba_sistema.py:68` já tinha medido que o IPC `plugin.list` existe e que
+    `interface/sistema.py:68` já tinha medido que o IPC `plugin.list` existe e que
     **só a CLI o chama**. Um número maior que este é alguém tendo voltado a
     escrever travessão em cima de dado que existe.
 

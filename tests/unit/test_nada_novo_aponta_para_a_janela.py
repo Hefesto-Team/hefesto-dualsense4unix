@@ -36,7 +36,7 @@ def casa(tmp_path, monkeypatch):
     pacote = tmp_path / "src" / "hefesto_dualsense4unix" / "interface"
     pacote.mkdir(parents=True)
     (pacote / "aba_qualquer.py").write_text(
-        "from hefesto_dualsense4unix.gui import ponte_da_tela\n", encoding="utf-8"
+        "from hefesto_dualsense4unix.interface import janela as ponte_da_tela\n", encoding="utf-8"
     )
     (tmp_path / "tests").mkdir()
     (tmp_path / "scripts").mkdir()
@@ -46,7 +46,7 @@ def casa(tmp_path, monkeypatch):
     inventario.write_text(
         _CABECALHO
         + _COLUNAS
-        + "src/hefesto_dualsense4unix/interface/aba_qualquer.py,1,gui.ponte_da_tela,"
+        + "src/hefesto_dualsense4unix/interface/aba_qualquer.py,1,interface.janela,"
         "import,1,quem cita? a interface nova,MOTOR-MUDA-DE-CASA,"
         "o piloto HTML fica e muda de endereço\n",
         encoding="utf-8",
@@ -85,8 +85,8 @@ def test_metade_1_a_lista_so_diminui_ocorrencia_a_mais_reprova(casa, capsys):
     modulo, raiz, _ = casa
     alvo = raiz / "src" / "hefesto_dualsense4unix" / "interface" / "aba_qualquer.py"
     alvo.write_text(
-        "from hefesto_dualsense4unix.gui import ponte_da_tela\n"
-        "from hefesto_dualsense4unix.gui import ponte_da_tela as segunda\n",
+        "from hefesto_dualsense4unix.interface import janela as ponte_da_tela\n"
+        "from hefesto_dualsense4unix.interface import janela as segunda\n",
         encoding="utf-8",
     )
 
@@ -163,7 +163,7 @@ def test_metade_2_par_repetido_reprova(casa, capsys):
     modulo, _, inventario = casa
     with inventario.open("a", encoding="utf-8") as destino:
         destino.write(
-            "src/hefesto_dualsense4unix/interface/aba_qualquer.py,1,gui.ponte_da_tela,"
+            "src/hefesto_dualsense4unix/interface/aba_qualquer.py,1,interface.janela,"
             "import,1,outra leitura,MOTOR-MUDA-DE-CASA,outra razão\n"
         )
 
@@ -244,9 +244,9 @@ def test_a_peneira_nao_muda_a_conta():
         "from hefesto_dualsense4unix.app import main as app_main",
         'MAIN_GLADE = GUI_DIR / "main.glade"',
         "# a paleta vem do gui/theme.css",
-        "from hefesto_dualsense4unix.gui import ponte_da_tela",
+        "from hefesto_dualsense4unix.interface import janela as ponte_da_tela",
         "hefesto_dualsense4unix.gui.widgets.button_glyph",
-        "# ver gui/aba_conexoes.py",
+        "# ver interface/conexoes.py",
         "python3 -m hefesto_dualsense4unix.app.main",
     ]
     for amostra in amostras:

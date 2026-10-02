@@ -1,14 +1,14 @@
-"""aba_sistema — a aba 09 no motor novo: do que o produto LÊ ao que a tela DIZ.
+"""sistema — a aba 09 no motor novo: do que o produto LÊ ao que a tela DIZ.
 
 A janela, as duas pontes e a guarda de carga são de todas as abas e moram em
-:mod:`hefesto_dualsense4unix.gui.ponte_da_tela`. **Este módulo é o que sobra
+:mod:`hefesto_dualsense4unix.interface.janela`. **Este módulo é o que sobra
 quando aquilo sai: a aba Sistema.** Ele traduz uma leitura da máquina no pacote
 que a página recebe numa chamada só, e não sabe o que é um ``WebView``.
 
-    from hefesto_dualsense4unix.gui import aba_sistema
+    from hefesto_dualsense4unix.interface import sistema
 
-    leitura = aba_sistema.Leitura(status="offline", state=None, ...)
-    janela.ponte.dizer("HEF.pinta", aba_sistema.pacote(leitura))
+    leitura = sistema.Leitura(status="offline", state=None, ...)
+    janela.ponte.dizer("HEF.pinta", sistema.pacote(leitura))
 
 POR QUE ELE É PURO, E ISSO NÃO É PREFERÊNCIA
 --------------------------------------------

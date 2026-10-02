@@ -344,7 +344,7 @@ def _do_exame() -> list[dict[str, Any]]:
 
     e o ``**i`` que vem DEPOIS sobrescreve a chave que a linha acabou de
     escrever: `a08_conexoes._linha` já emite ``selo``, tirado de
-    `gui.aba_conexoes.SELO_DO_ESTADO`, que é o dono da palavra. As duas palavras
+    `interface.conexoes.SELO_DO_ESTADO`, que é o dono da palavra. As duas palavras
     digitadas aqui — "RÁDIO" e "AVISO" — **nunca chegaram a uma tela**; o que
     chegava era o selo do exame, que tem quatro estados e inclui o **CERTO**.
     Fotografado na 01 em 02/09: o selo `CERTO` sob o cabeçalho laranja
@@ -622,7 +622,7 @@ def _aviso_da_ponte(state: dict[str, Any]) -> dict[str, str] | None:
     também: sem daemon não se afirma nada, que é a regra do `autoswitch_lock_
     text` e a razão de o `_estado_da_tela` não pintar sobre estado vazio.
 
-    O MARKUP NÃO CHEGA À TELA: `gui.aba_sistema.sem_markup` é o dono de tirá-lo
+    O MARKUP NÃO CHEGA À TELA: `interface.sistema.sem_markup` é o dono de tirá-lo
     (a `a09_sistema` já o usa), e sem ele o `<span foreground="#ffb86c">` iria
     LITERAL para o `textContent` — o piloto escreve texto, não HTML.
 
@@ -651,7 +651,7 @@ def _aviso_da_ponte(state: dict[str, Any]) -> dict[str, str] | None:
 
 def _sem_markup(frase: str) -> str:
     """O texto de uma frase do produto, sem o markup do Pango. UMA porta só."""
-    from hefesto_dualsense4unix.gui.aba_sistema import sem_markup
+    from hefesto_dualsense4unix.interface.sistema import sem_markup
 
     return sem_markup(frase)
 

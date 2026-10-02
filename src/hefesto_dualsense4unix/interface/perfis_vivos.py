@@ -40,7 +40,7 @@ LEITURA. Os gestos chegam ao Python, são registrados com o DONO REAL declarado
 em `perfis_web.DONOS_DOS_GESTOS` e ecoam de volta. Nenhum perfil dela é tocado.
 
 A JANELA, AS DUAS PONTES E A GUARDA DE CARGA são da biblioteca
-(`hefesto_dualsense4unix.gui.ponte_da_tela`), e o que decide o que a tela recebe
+(`hefesto_dualsense4unix.interface.janela`), e o que decide o que a tela recebe
 é `hefesto_dualsense4unix.app.actions.perfis_web` — os dois versionados. O que
 sobra aqui é a costura: quem lê o disco, quem lê o daemon, e o JavaScript da
 página.
@@ -61,7 +61,7 @@ import sys
 import time
 from typing import Any
 
-from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402  isort:skip
+from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402  isort:skip
 
 from gi.repository import GLib, Gtk  # noqa: E402
 

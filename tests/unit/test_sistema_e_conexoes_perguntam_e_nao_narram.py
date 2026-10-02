@@ -418,7 +418,7 @@ def test_o_exame_leva_a_coerencia_dos_perfis(perfis, monkeypatch) -> None:
 
     A MORDIDA: tire o `linhas.extend(linhas_dos_perfis(...))` de `_achados` e o
     primeiro `assert` reprova; tire a chave `FAIL` de
-    `gui/aba_sistema._SELO_DO_VEREDITO` e o segundo reprova (o achado grave
+    `interface/sistema._SELO_DO_VEREDITO` e o segundo reprova (o achado grave
     sairia como NOTA).
     """
     monkeypatch.setattr(a09._exame, "storm_report", lambda **k: [("[ OK ]", "base")])

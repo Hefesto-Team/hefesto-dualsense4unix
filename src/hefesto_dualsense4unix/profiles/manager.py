@@ -2160,7 +2160,7 @@ def fator_da_unidade(
 
     É o corpo da conta de :func:`_controllers_to_rumble_scales`, extraído em
     01/09/2026 porque a TELA precisava do mesmo número para dizer o que chega ao
-    motor (`gui.aba_conexoes.forca_no_motor`). Enquanto ele estivesse só dentro
+    motor (`interface.conexoes.forca_no_motor`). Enquanto ele estivesse só dentro
     do laço, a tela teria de reescrevê-lo — e o `?` da aba Conexões passou uma
     leva inteira afirmando "o global vale Sem teto" justamente por não ter de
     onde ler este denominador.

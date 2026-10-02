@@ -110,7 +110,7 @@ ISENTOS: dict[str, str] = {
 }
 
 _MOLDURA = (
-    "src/hefesto_dualsense4unix/gui/ponte_da_tela.py",
+    "src/hefesto_dualsense4unix/interface/janela.py",
     "src/hefesto_dualsense4unix/interface/ver.py",
 )
 _METODOS_DE_MOLDURA = re.compile(

@@ -23,7 +23,7 @@ O QUE ESTE ARQUIVO NÃO REESCREVE, e é a metade do trabalho
 ==========================================================
 
 * **A janela, as duas pontes e a guarda de carga** são de
-  `hefesto_dualsense4unix.gui.ponte_da_tela` — de todas as dez abas, com as
+  `hefesto_dualsense4unix.interface.janela` — de todas as dez abas, com as
   quatro armadilhas do WebKit2 4.1 pagas lá.
 * **A mesa** (um item por controle, com cor, transporte, jogador e máscara) é de
   `mesa_viva.mesa_do_estado`, que já é o dono dela para a Controles e para a
@@ -58,7 +58,7 @@ import sys
 import time
 from typing import Any
 
-from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402  isort:skip
+from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402  isort:skip
 
 from gi.repository import GLib, Gtk  # noqa: E402
 

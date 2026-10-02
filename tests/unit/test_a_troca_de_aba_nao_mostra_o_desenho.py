@@ -41,7 +41,7 @@ def test_a_folha_esconde_o_que_carrega_dado_e_so_isso() -> None:
 
 
 def test_o_roteiro_acende_e_tem_prazo() -> None:
-    from hefesto_dualsense4unix.gui import ponte_da_tela as pt
+    from hefesto_dualsense4unix.interface import janela as pt
 
     assert f"classList.add('{CLASSE_DA_ESPERA}')" in pt.ROTEIRO_DA_ESPERA
     assert f"classList.remove('{CLASSE_DA_ESPERA}')" in pt.ROTEIRO_DA_ESPERA
@@ -94,7 +94,7 @@ def _bombear(ate: Any, prazo: float) -> bool:
 
 class _Aba:
     def __init__(self, esperar: bool) -> None:
-        from hefesto_dualsense4unix.gui import ponte_da_tela
+        from hefesto_dualsense4unix.interface import janela as ponte_da_tela
         from hefesto_dualsense4unix.interface import onde
 
         arquivo = onde.pagina("04-iluminacao.html", publicado=True)
@@ -154,7 +154,7 @@ def test_a_pagina_nasce_sem_o_desenho_e_aparece_na_primeira_pintura() -> None:
 @pytest.mark.usefixtures("_tela_de_teste")
 def test_sem_pintura_a_pagina_aparece_no_prazo() -> None:
     """A rede de segurança: piloto travado não deixa a janela sem miolo."""
-    from hefesto_dualsense4unix.gui import ponte_da_tela as pt
+    from hefesto_dualsense4unix.interface import janela as pt
 
     aba = _Aba(esperar=True)
     try:

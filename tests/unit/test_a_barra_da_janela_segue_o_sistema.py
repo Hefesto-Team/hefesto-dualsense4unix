@@ -62,7 +62,7 @@ def test_a_barra_da_janela_fica_do_lado_do_sistema(gtk, sessao) -> None:
 
 def test_a_janela_do_produto_ja_nasce_com_a_barra_certa(gtk, sessao) -> None:
     """A cura corre onde a JANELA nasce, e não só quando alguém a chama."""
-    fonte = (RAIZ / "src/hefesto_dualsense4unix/gui/ponte_da_tela.py").read_text(
+    fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/janela.py").read_text(
         encoding="utf-8")
     assert "tema.adotar_a_barra_da_sessao()" in fonte, (
         "a `JanelaDaAba` não chama a cura da barra. Uma cura que ninguém liga "

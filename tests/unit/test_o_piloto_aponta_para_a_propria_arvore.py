@@ -96,7 +96,7 @@ def test_a_regua_do_mockup_nao_sai_verde_sobre_o_vazio() -> None:
 def test_a_janela_guarda_o_motivo_da_morte() -> None:
     """A outra metade, no dono: sem o atributo, o piloto não teria o que ler."""
     fonte = (
-        RAIZ / "src" / "hefesto_dualsense4unix" / "gui" / "ponte_da_tela.py"
+        RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "janela.py"
     ).read_text(encoding="utf-8")
     assert "self.morreu: str | None = None" in fonte
     assert "self.morreu = motivo" in fonte

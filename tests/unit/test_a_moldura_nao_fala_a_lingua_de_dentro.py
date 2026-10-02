@@ -17,7 +17,7 @@ O_QUE_ELE_LE = (
     "scripts/check_a_tela_nao_confessa.py",
     "src/hefesto_dualsense4unix/interface/frases_que_ela_baniu.py",
     "src/hefesto_dualsense4unix/interface/hefesto_vivo.py",
-    "src/hefesto_dualsense4unix/gui/ponte_da_tela.py",
+    "src/hefesto_dualsense4unix/interface/janela.py",
     "src/hefesto_dualsense4unix/app/tray.py",
     "src/hefesto_dualsense4unix/utils/identidade.py",
     "packaging/hefesto-dualsense4unix.desktop",

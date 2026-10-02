@@ -900,7 +900,7 @@ def _so_hex(chave: str) -> str:
 
 
 #: `portao_a_casa_sabe_e_o_produto_nao_faz` segue o fecho de import lendo o
-#: de tela que eles chamam (`app/telas/vibracao.py`, `gui/aba_sistema.py`,
+#: de tela que eles chamam (`app/telas/vibracao.py`, `interface/sistema.py`,
 from . import (  # noqa: E402
     a01_jogar,  # noqa: F401
     a02_controles,  # noqa: F401

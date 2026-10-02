@@ -3,7 +3,7 @@
 
 A página publicada `08-conexoes.html` num `WebKit2.WebView` dentro de uma janela
 GTK3, com o Python OUVINDO. **Este arquivo é fino de propósito**: a janela, as
-duas pontes e a guarda de carga são de `gui/ponte_da_tela.py`, e quem PINTA a
+duas pontes e a guarda de carga são de `interface/janela.py`, e quem PINTA a
 aba é o pacote `interface/pacotes/a08_conexoes.py`, pelo piloto das dez abas
 (`hefesto_vivo.py`). O que sobra aqui é o que só esta bancada tem: a prova do
 gesto, a foto e a régua de custo da leitura do estado.
@@ -11,7 +11,7 @@ gesto, a foto e a régua de custo da leitura do estado.
     ./conexoes_vivas.py --oculta --duble estado.json --segundos 20 --foto <pasta>/a.png
 
 A PINTURA DESTA BANCADA SAIU EM 28/09/2026. Ela pintava na gramática
-`data-v`/`data-g` de 26/08 (`gui/aba_conexoes.pintura`), que a página aprovada
+`data-v`/`data-g` de 26/08 (`interface/conexoes.pintura`), que a página aprovada
 não fala mais: nenhum endereço dela existia na página, e a remontagem trocava o
 `innerHTML` do acordeão e das colunas do exame pelo HTML velho. A tela pintada
 se olha pelo piloto — `hefesto_vivo.py --oculta --abre 08-conexoes.html` —,
@@ -42,7 +42,7 @@ gi.require_version("WebKit2", "4.1")
 
 from gi.repository import GLib, Gtk  # noqa: E402
 
-from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402
+from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402
 
 PAGINA = RAIZ_DEV / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "08-conexoes.html"  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
 TITULO_ESPERADO = "aba CONEXÕES"

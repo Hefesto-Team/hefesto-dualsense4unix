@@ -31,12 +31,12 @@ E o resto:
 
 **ESTA LEVA NÃO ESCREVE NADA, e a exceção é uma só.** Os doze gestos chegam ao
 Python, são registrados com o dono declarado em
-`hefesto_dualsense4unix.gui.aba_sistema.GESTOS` e **ecoam de volta**. O único
+`hefesto_dualsense4unix.interface.sistema.GESTOS` e **ecoam de volta**. O único
 que AGE é o `atualizar`, e ele só relê — nenhum perfil dela é tocado, nenhum
 `systemctl start/stop/restart` é disparado, nenhum byte vai a aparelho.
 
 A TRADUÇÃO NÃO MORA AQUI. Ela é produto e mora em
-`hefesto_dualsense4unix.gui.aba_sistema` — versionado, medido por `ruff` e
+`hefesto_dualsense4unix.interface.sistema` — versionado, medido por `ruff` e
 `mypy`, e viajando em worktree. O que sobra aqui é a JANELA, o TIQUE e as
 LEITURAS de verdade (soquete, `systemctl`, disco), que é justamente o que uma
 régua não deve precisar montar para medir a tela.
@@ -51,8 +51,8 @@ import sys
 import time
 from typing import Any
 
-from hefesto_dualsense4unix.gui import aba_sistema  # noqa: E402  isort:skip
-from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402  isort:skip
+from hefesto_dualsense4unix.interface import sistema as aba_sistema  # noqa: E402  isort:skip
+from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402  isort:skip
 
 from gi.repository import GLib, Gtk  # noqa: E402
 

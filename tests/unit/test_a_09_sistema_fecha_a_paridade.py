@@ -69,7 +69,7 @@ ESTADO = {
 
 from tests.conftest import exigir_gi_real
 
-exigir_gi_real("importa `gui.aba_sistema`, que carrega o GTK")
+exigir_gi_real("importa `interface.sistema`, que carrega o GTK")
 
 class JanelaDeMentira:
     """O dublê de `DaemonActionsMixin` — e ele NÃO fala com o systemd."""
@@ -157,7 +157,7 @@ def _pagina() -> str:
 
 #: `aba_sistema._ESTADO_DO_HEFESTO`, e o texto de cada um é o dela. Uma régua
 def _os_quatro() -> list[str]:
-    from hefesto_dualsense4unix.gui import aba_sistema as tela
+    from hefesto_dualsense4unix.interface import sistema as tela
 
     return list(tela._ESTADO_DO_HEFESTO)
 
@@ -187,7 +187,7 @@ def test_cada_estado_da_matriz_chega_ao_valor_da_tela(a09, estado):
     """
     import pacotes
 
-    from hefesto_dualsense4unix.gui import aba_sistema as tela
+    from hefesto_dualsense4unix.interface import sistema as tela
 
     calado = pacotes.Contexto(state={}, mesa=[], conectados=[], estados={})
     a09._JANELA_ANTIGA[:] = [JanelaDeMentira(status=estado)]
@@ -203,7 +203,7 @@ def test_cada_estado_da_matriz_chega_ao_valor_da_tela(a09, estado):
 
 def test_o_estado_avulso_nao_promete_que_ele_volta_sozinho(a09, ctx):
     """O `online_avulso` não pode sair com o texto e a cor do `online_systemd`."""
-    from hefesto_dualsense4unix.gui import aba_sistema as tela
+    from hefesto_dualsense4unix.interface import sistema as tela
 
     a09._JANELA_ANTIGA[:] = [JanelaDeMentira(status="online_avulso")]
     a09._LENTO.clear()
@@ -227,7 +227,7 @@ def test_o_endereco_que_era_desenho_existe_na_pagina(endereco):
 
 def test_o_interruptor_do_autostart_sai_do_systemd_e_nao_do_desenho(a09, ctx, monkeypatch):
     """`hefesto-autostart` acompanha `is-enabled` nos TRÊS desfechos."""
-    from hefesto_dualsense4unix.gui import aba_sistema as tela
+    from hefesto_dualsense4unix.interface import sistema as tela
 
     for cru, esperado in (("enabled", True), ("disabled", False), (None, None)):
         monkeypatch.setattr(a09, "_autostart", lambda cru=cru: cru)
@@ -331,7 +331,7 @@ def test_ver_os_plugins_saiu_da_aba_com_a_trava_dele(a09):
     """
     import pacotes
 
-    from hefesto_dualsense4unix.gui import aba_sistema as tela
+    from hefesto_dualsense4unix.interface import sistema as tela
 
     a09._JANELA_ANTIGA[:] = [JanelaDeMentira(status="offline")]
     a09._LENTO.clear()
@@ -347,7 +347,7 @@ def test_ver_detalhes_nao_obedece_a_trava_e_a_divergencia_e_declarada(a09):
 
     import pacotes
 
-    from hefesto_dualsense4unix.gui import aba_sistema as tela
+    from hefesto_dualsense4unix.interface import sistema as tela
 
     a09._JANELA_ANTIGA[:] = [JanelaDeMentira(status="offline")]
     a09._LENTO.clear()

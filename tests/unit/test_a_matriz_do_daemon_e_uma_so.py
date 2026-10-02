@@ -1,6 +1,6 @@
 """Os estados em que o Hefesto está DE PÉ têm um dono só, e a tela nova o lê.
 
-Medido em 05/09/2026: `gui/aba_sistema.DE_PE` era digitado como
+Medido em 05/09/2026: `interface/sistema.DE_PE` era digitado como
 ``("online_systemd", "online_avulso")`` e o comentário AFIRMAVA ser "a mesma
 matriz de ``daemon_actions._ESTADOS_COM_DAEMON_DE_PE``". Faltava ``iniciando``,
 e o dono guarda a razão de ele estar lá:
@@ -26,7 +26,7 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("importa `app.actions.daemon_actions`, que carrega o GTK")
 
 from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
-from hefesto_dualsense4unix.gui import aba_sistema
+from hefesto_dualsense4unix.interface import sistema as aba_sistema
 
 
 def test_a_tela_nova_le_a_matriz_do_dono():

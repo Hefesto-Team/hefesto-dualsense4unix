@@ -24,7 +24,7 @@ itens, pelo ``porque``::
     A parte do sistema que fala com o DualSense está carregada.
 
 **O SELO PERDIA UMA PALAVRA.** Ele saía de ``"AJUSTAR" if grave else "CERTO"``,
-e o ``Item`` tem QUATRO estados. ``gui.aba_conexoes.SELO_DO_ESTADO`` os mapeia
+e o ``Item`` tem QUATRO estados. ``interface.conexoes.SELO_DO_ESTADO`` os mapeia
 em TRÊS palavras, e a que sumia era a **NOTA** do ``nao_sei`` — a mesma que o
 desenho dela crava na quarta linha. Um "não deu para olhar" chegava à tela como
 "AJUSTAR": a tela afirmando um problema que ninguém mediu.

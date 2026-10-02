@@ -531,7 +531,7 @@ def test_nenhuma_das_frases_novas_fala_de_maquina() -> None:
     de_maquina = ("uinput", "hidraw", "vpad", "evdev", "uniq")
     minhas = [aba.SERVICO_CALADO, aba.SERVICO_DESLIGADO, aba.PRIMARIO_DICA,
               aba.MARCA_DO_PRIMARIO]
-    #: O MARKUP FICA, e não é descuido: quem o tira é `gui.aba_sistema.sem_markup`,
+    #: O MARKUP FICA, e não é descuido: quem o tira é `interface.sistema.sem_markup`,
     da_ponte = [
         home_actions.texto_da_ponte(cena)
         for cena in (

@@ -50,10 +50,10 @@ SO_HTML = (
     "mockup/",
 )
 
-#: pasta: ``interface/sistema_viva.py`` importa ``gui.aba_sistema``,
+#: pasta: ``interface/sistema_viva.py`` importa ``interface.sistema``,
 COMPARTILHADOS = frozenset({
-    "src/hefesto_dualsense4unix/gui/aba_sistema.py",
-    "src/hefesto_dualsense4unix/gui/aba_conexoes.py",
+    "src/hefesto_dualsense4unix/interface/sistema.py",
+    "src/hefesto_dualsense4unix/interface/conexoes.py",
     "src/hefesto_dualsense4unix/app/actions/perfis_web.py",
 })
 
@@ -188,7 +188,7 @@ def arquivos_do_lado(prefixos: tuple[str, ...]) -> list[Path]:
     """Os arquivos de um lado.
 
     Os COMPARTILHADOS ficam de FORA dos dois, e é de propósito: um símbolo de
-    ``gui/aba_sistema.py`` apareceria como "chegou ao HTML" sem ninguém ter
+    ``interface/sistema.py`` apareceria como "chegou ao HTML" sem ninguém ter
     escrito uma linha de interface, e a regra 6 acusaria quem está certo. Para
     ENDEREÇO eles são comuns (ninguém é acusado por citá-los); para PROCURAR
     SINAL, o lado HTML é ``interface/`` mais ``app/telas/``, e só.

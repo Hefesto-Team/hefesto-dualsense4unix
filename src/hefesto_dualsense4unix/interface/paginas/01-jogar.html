@@ -121,7 +121,7 @@
     font-family:'Space Grotesk',system-ui,sans-serif;
     /* O RECUO TEM DONO — `--recuo-do-corpo`, no `:root` de baixo. Ele entra
        DUAS vezes na conta da altura da `.janela` (em cima e embaixo), e era
-       justamente esse 16 que o `gui/ponte_da_tela.py` transcrevia à mão. */
+       justamente esse 16 que o `interface/janela.py` transcrevia à mão. */
     padding:var(--recuo-do-corpo); display:flex; flex-direction:column; align-items:center; gap:18px;
   }
   .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
@@ -166,7 +166,7 @@
      O `min()` faz o teto e o encolhimento na mesma linha; o `max-width:100%`
      abaixo continua por redundância barata. Abaixo de 1212px de documento nada
      mudou: quem segura o piso é o `set_size_request` da janela GTK
-     (`gui/ponte_da_tela.py`), e ele ficou MAIS carregado, não menos. O COSMIC
+     (`interface/janela.py`), e ele ficou MAIS carregado, não menos. O COSMIC
      que ladrilha não o lê (medido em 13/09/2026: janela de 816 px, a vista
      rola e o rodapé sai por baixo). */
   /* A JANELA TEM UMA ALTURA SÓ, nas dez abas. Ela, 27/08: "sair clicando entre
@@ -851,7 +851,7 @@
                     mais de mil pixels de vão.
 
        QUEM MANDA EM QUEM, depois desta linha: o CSS manda em quanto a `.janela`
-       usa da tela; o Python manda no PISO (`gui/ponte_da_tela.PISO_DA_VISTA`,
+       usa da tela; o Python manda no PISO (`interface/janela.PISO_DA_VISTA`,
        que é o `set_size_request` da janela). Nenhum dos dois copia o número do
        outro — era o que acontecia até hoje, e a cópia já tinha apodrecido. */
     --recuo-do-corpo:16px;

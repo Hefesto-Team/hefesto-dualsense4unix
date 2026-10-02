@@ -96,7 +96,7 @@ os dois é o assunto do `mockup/LEIA-PRIMEIRO.md`.
 | **`src/hefesto_dualsense4unix/interface/olhar.py`** | fotografa as dez páginas num Chrome headless e mede a moldura | **rotina, sempre** |
 | **`src/hefesto_dualsense4unix/interface/hefesto_vivo.py`** | o PILOTO: a janela GTK com o `WebView` e o daemon vivo dentro. `--oculta` desvia para um Xvfb; `--foto`, `--segundos` e `--prova-clique` dirigem por dentro | quando a pergunta é *"o produto FAZ?"* — é o único que roda o motor |
 | `src/hefesto_dualsense4unix/interface/ver.py` | o desenho aprovado dentro da janela GTK, sem dado nenhum | quando a pergunta é sobre o DESENHO, e ligar dado atrapalharia |
-| `src/hefesto_dualsense4unix/gui/ponte_da_tela.py` | a ponte JS: clica, lê o DOM e mede geometria por `run_javascript` | dentro do piloto, para validar sem tocar no mouse dela |
+| `src/hefesto_dualsense4unix/interface/janela.py` | a ponte JS: clica, lê o DOM e mede geometria por `run_javascript` | dentro do piloto, para validar sem tocar no mouse dela |
 
 Esta tabela tem portão: `tests/unit/test_a_tabela_dos_scripts_de_tela.py` confere
 que todo caminho citado aqui EXISTE, que o retratista está nomeado e que o

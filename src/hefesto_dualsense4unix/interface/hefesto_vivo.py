@@ -41,7 +41,7 @@ if __name__ != "__main__":
     from hefesto_dualsense4unix.interface.pacotes import ponte
 
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac  # noqa: E402
-from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402
+from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402
 
 #: A PRIMEIRA PÁGINA é a Jogar, que é a primeira da tira. Não é escolha de
 #: gosto: é a aba que o `.desktop` dela abre.
@@ -389,7 +389,7 @@ BOOTSTRAP = r"""
       // recebe o travessão de `dict.fromkeys(chaves, "—")`, e o `<select>` do
       // teto da vibração ficava em branco somando +1 por tique. A cura é aqui, e
       // não em cada aba lembrar-se dela — é o mesmo cuidado que
-      // `gui.aba_conexoes.teto_que_vale` já tomava do lado Python.
+      // `interface.conexoes.teto_que_vale` já tomava do lado Python.
       if(el.tagName === 'SELECT'){
         const tem = Array.prototype.some.call(el.options,
                                               function(o){ return o.value === t || o.text === t; });
@@ -856,7 +856,7 @@ BOOTSTRAP = r"""
   // AS DUAS METADES, e a segunda é opcional de propósito:
   //
   //   a CLASSE `hef-em-voo`   sempre. Mora na folha do módulo
-  //                           (`gui/ponte_da_tela.FOLHA_DA_CASA`), vale nas dez
+  //                           (`interface/janela.FOLHA_DA_CASA`), vale nas dez
   //                           abas sem republicar desenho, e não inventa texto.
   //   `data-hef-em-voo="…"`   quando a página publica um rótulo, ele entra no
   //                           lugar do original — *"Reaplicando…"* na `09`. O

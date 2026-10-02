@@ -30,7 +30,7 @@ larguras diferentes. Um teto de caracteres seria um PROXY, e um proxy fica verde
 sobre a frase larga do dia em que alguém trocar as palavras. Aqui a pergunta é
 feita ao motor que ela vai usar, com a fonte, o CSS e a largura reais.
 
-A JANELA É ``Gtk.OffscreenWindow`` de ``gui/ponte_da_tela.TAMANHO_OCULTA`` —
+A JANELA É ``Gtk.OffscreenWindow`` de ``interface/janela.TAMANHO_OCULTA`` —
 **importado, nunca digitado**. Ele é o MIOLO da janela do produto: a janela na
 tela pede ``TAMANHO_NA_TELA`` e a ``Gtk.HeaderBar`` come ``ALTURA_DA_BARRA`` do
 alto, então o que sobra para a página é exatamente ``TAMANHO_OCULTA`` — e uma
@@ -87,7 +87,7 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 from hefesto_dualsense4unix.app.telas import vibracao as _tela
 
 try:
-    from hefesto_dualsense4unix.gui.ponte_da_tela import (
+    from hefesto_dualsense4unix.interface.janela import (
         ALTURA_DA_BARRA,
         ALTURA_DO_DESENHO,
         LARGURA_DO_DESENHO,

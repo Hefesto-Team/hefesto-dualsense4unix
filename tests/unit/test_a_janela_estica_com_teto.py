@@ -24,7 +24,7 @@ que a largura voltar a ser FIXA, ou crescer sem limite.
 
 O PISO NÃO MUDOU, e é a parte que se lê errado
 -----------------------------------------------
-`gui/ponte_da_tela.LARGURA_DO_DESENHO` continua 1212 (`16+1180+16`), e continua
+`interface/janela.LARGURA_DO_DESENHO` continua 1212 (`16+1180+16`), e continua
 certo: 1180 é o ponto abaixo do qual as colunas em px do miolo não têm para onde
 encolher. O que mudou é que **o CSS não escreve mais esse número** — quem segura
 o piso agora é só o `set_size_request` da janela GTK. Esta régua mede isso de
@@ -145,7 +145,7 @@ def test_o_desenho_para_no_teto(medido: dict) -> None:
 
 def test_no_piso_a_janela_entrega_o_desenho_inteiro(medido: dict) -> None:
     """No piso de `ponte_da_tela.LARGURA_DO_DESENHO`, o desenho cabe inteiro."""
-    from hefesto_dualsense4unix.gui.ponte_da_tela import LARGURA_DO_DESENHO
+    from hefesto_dualsense4unix.interface.janela import LARGURA_DO_DESENHO
 
     assert LARGURA_DO_DESENHO == PISO, (
         f"o piso da janela virou {LARGURA_DO_DESENHO} e esta régua mede {PISO}")

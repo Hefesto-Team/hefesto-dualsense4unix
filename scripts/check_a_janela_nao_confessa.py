@@ -109,7 +109,7 @@ A_MOLDURA: dict[str, str] = {
     "interface/hefesto_vivo.py":
         "o piloto único, e é o que o lançador abre — quem passa `titulo` e "
         "`subtitulo` para a janela",
-    "gui/ponte_da_tela.py":
+    "interface/janela.py":
         "a dona da `Gtk.HeaderBar`: `set_title`, `set_subtitle` e o "
         "`Gtk.Window(title=…)` da janela oculta",
     "app/tray.py":

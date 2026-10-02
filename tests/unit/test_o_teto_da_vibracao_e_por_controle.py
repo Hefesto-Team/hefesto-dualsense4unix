@@ -67,7 +67,7 @@ UNIQ_FORJADO = "02:fe:00:00:00:33"
 
 def _bancada(**campos):
     """A `Vibracao` de referência: global vivo `balanceado`, nada mais declarado."""
-    from hefesto_dualsense4unix.gui.aba_conexoes import Vibracao
+    from hefesto_dualsense4unix.interface.conexoes import Vibracao
 
     return Vibracao(**{"a_viva": "balanceado", **campos})
 
@@ -128,7 +128,7 @@ def a08():
 
 @pytest.fixture
 def tela():
-    from hefesto_dualsense4unix.gui import aba_conexoes
+    from hefesto_dualsense4unix.interface import conexoes as aba_conexoes
 
     return aba_conexoes
 
@@ -800,7 +800,7 @@ def test_a_frase_do_orcamento_passa_pelo_dono_do_numero(tela, monkeypatch) -> No
     """`fala_do_teto` deriva de `core.rumble.teto_do_orcamento`, o dono declarado.
 
     ERA A QUARTA GRAFIA da regra "chave de orçamento → frase do teto", e a única
-    que não passava pelo dono: as outras três (`gui.aba_sistema.forca_do_perfil`,
+    que não passava pelo dono: as outras três (`interface.sistema.forca_do_perfil`,
     `secao_orcamento.celula_do_teto` e `_dica_da_bateria_longa`) já o chamavam.
     Medido com o dono mordido para 0,5: a aba Sistema dizia "50% da força" e esta
     aba dizia "30%" — duas abas do mesmo produto, dois números para o mesmo fato.
@@ -876,12 +876,12 @@ def test_o_select_do_piloto_nao_conta_pintura_sobre_valor_que_nao_e_opcao() -> N
 
 
 def test_a_camada_de_tela_desta_aba_continua_sem_gtk() -> None:
-    """A linha 1 de `gui/aba_conexoes.py` promete *"sem GTK"*, e o teto o quebrou."""
+    """A linha 1 de `interface/conexoes.py` promete *"sem GTK"*, e o teto o quebrou."""
     import subprocess
 
     codigo = (
         "import sys\n"
-        "from hefesto_dualsense4unix.gui import aba_conexoes as t\n"
+        "from hefesto_dualsense4unix.interface import conexoes as t\n"
         "t.opcoes_do_teto()\n"
         "t.fala_do_teto('economia')\n"
         "t.teto_que_vale(t.Vibracao(a_viva='balanceado'))\n"

@@ -876,7 +876,7 @@ class _JanelaDeMentira:
 def a09(monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
     from tests.conftest import exigir_gi_real
 
-    exigir_gi_real("importa `gui.aba_sistema`, que carrega o GTK")
+    exigir_gi_real("importa `interface.sistema`, que carrega o GTK")
     monkeypatch.syspath_prepend(str(RAIZ / "src/hefesto_dualsense4unix/interface"))
     from pacotes import a09_sistema as mod
 

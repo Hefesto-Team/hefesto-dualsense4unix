@@ -46,9 +46,9 @@ import pytest
 
 from tests.conftest import exigir_gi_real
 
-exigir_gi_real("importa `gui.aba_sistema`, que carrega o GTK")
+exigir_gi_real("importa `interface.sistema`, que carrega o GTK")
 
-from hefesto_dualsense4unix.gui.aba_sistema import GLIFO_INFO, GLIFO_OK
+from hefesto_dualsense4unix.interface.sistema import GLIFO_INFO, GLIFO_OK
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))

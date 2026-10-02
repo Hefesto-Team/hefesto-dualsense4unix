@@ -25,7 +25,7 @@ def _regua():  # type: ignore[no-untyped-def]
 
 
 def _estados() -> list[str]:
-    from hefesto_dualsense4unix.gui.aba_conexoes import SELO_DO_ESTADO
+    from hefesto_dualsense4unix.interface.conexoes import SELO_DO_ESTADO
 
     return list(SELO_DO_ESTADO)
 

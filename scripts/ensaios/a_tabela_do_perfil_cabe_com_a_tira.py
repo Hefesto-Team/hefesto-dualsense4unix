@@ -22,7 +22,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
 from gi.repository import GLib, Gtk
 
-from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba
+from hefesto_dualsense4unix.interface.janela import JanelaDaAba
 from hefesto_dualsense4unix.interface import onde
 
 ABA = "10-perfis.html"  # (noqa-acento) nome de arquivo

@@ -487,7 +487,7 @@ def medida(request: Any) -> dict[str, Any]:
     if not Gtk.init_check(None)[0]:
         pytest.skip("sem sessão gráfica — o WebKit não abre (rode no xvfb-run)")
     from hefesto_dualsense4unix.app.telas import vibracao as _tela
-    from hefesto_dualsense4unix.gui.ponte_da_tela import TAMANHO_OCULTA
+    from hefesto_dualsense4unix.interface.janela import TAMANHO_OCULTA
     from hefesto_dualsense4unix.interface import hefesto_vivo, onde
 
     pintar = ""

@@ -151,7 +151,7 @@ def test_as_fontes_com_outra_casa_nao_vao_a_09(monkeypatch: Any) -> None:
 
 def test_o_que_o_status_da_09_ja_diz_nao_se_repete_no_exame() -> None:
     """Pausa, detector cego e Freestyle: no canal, e fora da lista da 09."""
-    from hefesto_dualsense4unix.gui import aba_sistema
+    from hefesto_dualsense4unix.interface import sistema as aba_sistema
 
     estado = {**VIVO_NAVEGACAO, "paused": True, "freestyle_ligado": True,
               "window_detect_backend": "x11", "window_detect_seeing": False,
@@ -332,7 +332,7 @@ def test_a_lista_do_exame_da_09_recebe_os_avisos(monkeypatch: Any) -> None:
     """O aviso entra no fim da lista do exame, com o selo AVISO do desenho.
 
     O SELO NÃO SE DIGITA: o veredito é ``[WARN]`` e quem o traduz é
-    `gui/aba_sistema.exame`, o mesmo dono que traduz as linhas do `doctor`.
+    `interface/sistema.exame`, o mesmo dono que traduz as linhas do `doctor`.
 
     A MORDIDA: faça `_com_os_avisos` devolver o `exame` sem tocar e a frase da
     pausa some da lista — reprova na primeira asserção.

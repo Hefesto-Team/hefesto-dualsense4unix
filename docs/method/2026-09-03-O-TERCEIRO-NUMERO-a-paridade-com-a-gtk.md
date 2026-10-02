@@ -163,7 +163,7 @@ por controle.
 **A metade boa disso**: em vários pontos o dado JÁ é calculado certo e morre no
 caminho. O `a09_sistema` lê o autostart na faixa lenta e o achatamento joga
 fora; as `travas` da aba Sistema (quais gestos estão cinza, e por quê) são
-calculadas em `gui/aba_sistema.py` e não são reencaminhadas; `AVISOS_DA_TELA`
+calculadas em `interface/sistema.py` e não são reencaminhadas; `AVISOS_DA_TELA`
 tem as seis fontes puras da coluna Atenção da aba Início e quem as chama é a
 bancada, não o produto. **Boa parte da dívida é ponte entre dois arquivos que já
 existem, não código novo.**

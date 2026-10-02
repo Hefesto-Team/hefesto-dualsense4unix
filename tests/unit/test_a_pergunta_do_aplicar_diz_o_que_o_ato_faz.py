@@ -14,7 +14,7 @@ tem de nomear sai do que a carona ESCREVEU num lar de mentira.
 
 1. a pergunta nomeia cada lançador que o ato escreve;
 2. com um jogo aberto (a Steam recusa), a pergunta não promete «nada»;
-3. o contrato de dono do gesto (`gui/aba_sistema.GESTOS`) cita a carona e
+3. o contrato de dono do gesto (`interface/sistema.GESTOS`) cita a carona e
    não diz «só a Steam»;
 4. o backup só se promete onde ele existe;
 5. a pergunta fala a língua da tela;
@@ -41,7 +41,7 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.app.actions import daemon_actions as _daemon
-from hefesto_dualsense4unix.gui import aba_sistema
+from hefesto_dualsense4unix.interface import sistema as aba_sistema
 from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
 from hefesto_dualsense4unix.interface.pacotes import Contexto

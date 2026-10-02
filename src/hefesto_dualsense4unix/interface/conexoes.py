@@ -1,4 +1,4 @@
-"""aba_conexoes — as frases, os desenhos e as contas da aba 08, sem GTK."""
+"""conexoes — as frases, os desenhos e as contas da aba 08, sem GTK."""
 from __future__ import annotations
 
 import html
@@ -173,7 +173,7 @@ def por_cento(fracao: float) -> str:
     """`0.3` → `"30% da força"`. A ÚNICA grafia desta frase nesta casa.
 
     Ela existia em QUATRO — `secao_orcamento.celula_do_teto:379`,
-    `secao_orcamento._dica_da_bateria_longa:240`, `gui.aba_sistema
+    `secao_orcamento._dica_da_bateria_longa:240`, `interface.sistema
     .forca_do_perfil:417` e a que este arquivo digitou em 01/09/2026 —, e a
     quarta era a única que não passava pelo dono do NÚMERO. Aqui só a FORMA é
     própria; o número vem sempre de quem o calcula.

@@ -22,7 +22,7 @@ OS_TECNICOS = (
 )
 
 _MOLDURA_LIMPA = (
-    "src/hefesto_dualsense4unix/gui/ponte_da_tela.py",
+    "src/hefesto_dualsense4unix/interface/janela.py",
     "src/hefesto_dualsense4unix/interface/ver.py",
 )
 

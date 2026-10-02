@@ -97,7 +97,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
 
 _ROTEIROS_DE_PRODUCAO = ("install.sh", "uninstall.sh", "scripts/lib/camada_de_maquina.sh")
 
-#: `app/actions/perfis_web.py`, `gui/aba_sistema.py`) deixam de ser promessa sem
+#: `app/actions/perfis_web.py`, `interface/sistema.py`) deixam de ser promessa sem
 _PILOTO_DA_INTERFACE_NOVA = "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 
 _PASTA_DA_PONTE = "src/hefesto_dualsense4unix/interface"
@@ -198,7 +198,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "01/09/2026."
     ),
     "HEFESTO_SEM_JANELA": (
-        "A TRAVA DA TELA DELA (gui/ponte_da_tela.py:janela_proibida_na_tela). "
+        "A TRAVA DA TELA DELA (interface/janela.py:janela_proibida_na_tela). "
         "Quem a exporta não consegue abrir janela visível nesta máquina: a "
         "`JanelaDaAba` cai para `Gtk.OffscreenWindow` mesmo quando o chamador "
         "pediu janela na tela, e o visor `interface/ver.py` recusa dizendo. "
@@ -1217,7 +1217,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "(`hefesto_vivo.py`) não a chama: o pacote `a02_controles` monta o estado "
         "do card por outro caminho, e são duas verdades sobre o mesmo dado. Fecha "
         "quando o pacote da aba Controles delegar a ela, como o da Sistema já "
-        "delega a `gui/aba_sistema.pacote`. MEDIDO em 01/09/2026."
+        "delega a `interface/sistema.pacote`. MEDIDO em 01/09/2026."
     ),
     # `daemon.reload` que não chega ao serviço fazia a tela dizer **"Pronto."**
     # `app/textos_de_aplicacao.py::frase_do_desfecho` SAIU daqui em 25/08/2026,
@@ -2803,7 +2803,7 @@ class TestOPortaoMorde:
         self, tmp_path: Path
     ) -> None:
         """A mordida da BOCA da interface nova, nas duas pontas."""
-        chave = "gui/ponte_da_tela.py::JanelaDaAba"
+        chave = "interface/janela.py::JanelaDaAba"
         assert chave not in promessas_sem_caminho(), (
             f"{chave!r} está acusada na árvore viva — a boca da interface nova "
             "parou de abrir alcance, e o portão voltou a chamar de dívida a "

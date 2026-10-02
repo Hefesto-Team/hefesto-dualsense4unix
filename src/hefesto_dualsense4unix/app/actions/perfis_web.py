@@ -337,7 +337,7 @@ def pacote_da_aba(
     **UMA chamada por TIQUE, não por valor.** Com catorze perfis e quatro
     controles, uma chamada por valor seriam centenas de travessias de fronteira
     por segundo — a conta está em
-    :meth:`hefesto_dualsense4unix.gui.ponte_da_tela.PonteDaTela.dizer`.
+    :meth:`hefesto_dualsense4unix.interface.janela.PonteDaTela.dizer`.
     """
     incumbente = incumbente if incumbente is not None else ativo
     linhas = _linhas_da_lista(perfis, ativo, incumbente)

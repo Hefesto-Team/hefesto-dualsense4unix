@@ -105,7 +105,7 @@ def main() -> int:
     piloto = hv.Piloto(args)
 
     if a.sem_cura:
-        from hefesto_dualsense4unix.gui import ponte_da_tela
+        from hefesto_dualsense4unix.interface import janela as ponte_da_tela
 
         ponte_da_tela.RECARGAS_SEGUIDAS = 0
         piloto.tela.recargas = 0

@@ -14,7 +14,7 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("RÉGUA-DE-TELA-01 — a aba Controles dirigida por dentro")
 
-from hefesto_dualsense4unix.gui import ponte_da_tela
+from hefesto_dualsense4unix.interface import janela as ponte_da_tela
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "scripts"))

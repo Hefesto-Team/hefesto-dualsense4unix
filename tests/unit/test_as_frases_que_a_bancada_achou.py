@@ -20,7 +20,7 @@ exigir_gi_real("importa `app.actions.home_actions`, que carrega o GTK")
 from hefesto_dualsense4unix.app.actions.home_actions import (
     palavra_do_transporte as palavra,
 )
-from hefesto_dualsense4unix.gui import aba_conexoes as gestao
+from hefesto_dualsense4unix.interface import conexoes as gestao
 from tests.unit.test_a05_a_vibracao_aplica_e_fala import PonteDeMentira
 
 BANCADA = RAIZ / "mockup"
@@ -147,7 +147,7 @@ def _palavra_do_cartao(nome: str) -> str | None:
 
 def test_o_canto_da_gestao_nao_conta_mais() -> None:
     """A contagem saiu do canto da Gestão em 26/09/2026, a pedido dela; o dono
-    (`gui.aba_conexoes.texto_da_contagem`) segue medido logo abaixo."""
+    (`interface.conexoes.texto_da_contagem`) segue medido logo abaixo."""
     assert 'data-campo="conta-gestao"' not in _pagina("08-conexoes.html")
     palavras = [_palavra_do_cartao(n) for n, _ in _cartoes_da_gestao()]
     assert any(palavras), "nenhum nome da Gestão traz a palavra de transporte do dono"

@@ -568,7 +568,7 @@ def _perto(a: tuple[int, int, int], b: tuple[int, int, int], folga: int = 10) ->
 
 
 def _vistas() -> dict[str, tuple[int, int]]:
-    from hefesto_dualsense4unix.gui.ponte_da_tela import TAMANHO_OCULTA
+    from hefesto_dualsense4unix.interface.janela import TAMANHO_OCULTA
     from hefesto_dualsense4unix.interface.olhar import VISTA_DELA
 
     return {"janela": TAMANHO_OCULTA, "dela": VISTA_DELA}

@@ -14,7 +14,7 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("PONTE-DA-TELA-01 — a biblioteca das dez abas")
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-FONTE = RAIZ / "src" / "hefesto_dualsense4unix" / "gui" / "ponte_da_tela.py"
+FONTE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "janela.py"
 
 if not (os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY")):
     pytest.skip(
@@ -24,7 +24,7 @@ if not (os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY")):
     )
 
 try:
-    from hefesto_dualsense4unix.gui import ponte_da_tela
+    from hefesto_dualsense4unix.interface import janela as ponte_da_tela
 except (ImportError, ValueError) as _erro:  # pragma: no cover — sem WebKit
     pytest.skip(
         f"PONTE-DA-TELA-01: a biblioteca não importou ({_erro}). Falta "

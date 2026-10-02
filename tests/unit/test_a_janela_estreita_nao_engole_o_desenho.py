@@ -25,7 +25,7 @@ if not (os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY")):
     )
 
 try:
-    from hefesto_dualsense4unix.gui.ponte_da_tela import (
+    from hefesto_dualsense4unix.interface.janela import (
         ALTURA_DO_DESENHO,
         FOLHA_DA_CASA,
         LARGURA_DO_DESENHO,

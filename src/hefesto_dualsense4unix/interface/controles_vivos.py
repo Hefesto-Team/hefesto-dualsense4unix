@@ -75,9 +75,9 @@ interruptor sai daqui **sem reescrever regra nenhuma**: a regra já está em
 
 A JANELA, AS DUAS PONTES E A GUARDA DE CARGA SAÍRAM DAQUI em 29/08/2026: elas
 são de todas as abas, não desta, e agora moram em
-`hefesto_dualsense4unix.gui.ponte_da_tela` — com **as quatro armadilhas do
+`hefesto_dualsense4unix.interface.janela` — com **as quatro armadilhas do
 WebKit2 4.1** que este arquivo pagou, escritas lá em
-:data:`~hefesto_dualsense4unix.gui.ponte_da_tela.AS_QUATRO_ARMADILHAS`. O que
+:data:`~hefesto_dualsense4unix.interface.janela.AS_QUATRO_ARMADILHAS`. O que
 sobrou aqui é a ABA: a mesa, a pintura e os gestos.
 
 A armadilha que continua sendo deste arquivo, porque é da PINTURA e não da
@@ -97,7 +97,7 @@ import time
 from collections import deque
 from typing import Any
 
-from hefesto_dualsense4unix.gui.ponte_da_tela import JanelaDaAba  # noqa: E402  isort:skip
+from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402  isort:skip
 
 from gi.repository import GLib, Gtk, WebKit2  # noqa: E402
 

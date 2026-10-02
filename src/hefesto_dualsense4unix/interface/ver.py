@@ -89,7 +89,7 @@ def main() -> int:
         print("rode antes: src/hefesto_dualsense4unix/interface/regerar.py", file=sys.stderr)
         return 1
 
-    from hefesto_dualsense4unix.gui.ponte_da_tela import (
+    from hefesto_dualsense4unix.interface.janela import (
         SEM_JANELA_NA_TELA,
         janela_proibida_na_tela,
     )

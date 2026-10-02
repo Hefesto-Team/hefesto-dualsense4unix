@@ -13,7 +13,7 @@ from hefesto_dualsense4unix.profiles.trigger_presets import (
     FEEDBACK_POSITION_LABELS,
 )
 
-from hefesto_dualsense4unix.gui import ponte_da_tela as _ponte  # noqa: E402
+from hefesto_dualsense4unix.interface import janela as _ponte  # noqa: E402
 
 SPEC = {p.label: {q.label: q for q in p.params} for p in PRESETS}
 

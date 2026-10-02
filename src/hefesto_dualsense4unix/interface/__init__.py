@@ -27,6 +27,6 @@ matou a pasta `novo-layout/` em 31/08.
 NADA AQUI REESCREVE O PRODUTO. Os gestos falam com o daemon pelo
 `app/ipc_bridge.py`, e a pintura de três abas delega para as camadas de tela que
 já existiam e ninguém chamava (`app/telas/vibracao.py`,
-`app/actions/perfis_web.py`, `gui/aba_sistema.py`). O que saiu foi a JANELA
+`app/actions/perfis_web.py`, `interface/sistema.py`). O que saiu foi a JANELA
 GTK — os 74 handlers de `app/actions/` continuam sendo o motor.
 """

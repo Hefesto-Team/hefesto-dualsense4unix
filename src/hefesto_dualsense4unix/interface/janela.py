@@ -1,4 +1,4 @@
-"""ponte_da_tela — a janela, as duas pontes e a guarda de carga. UMA VEZ, para as dez abas."""
+"""janela — a janela, as duas pontes e a guarda de carga. UMA VEZ, para as dez abas."""
 from __future__ import annotations
 
 import json

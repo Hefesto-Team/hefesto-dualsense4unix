@@ -21,7 +21,7 @@ quem passa o dado é que muda:
     aba07.py (gerador)  →  a lista de REFERÊNCIA, que ela aprovou  →  mockup/
     a07_lancadores.py   →  o que o produto MEDE, a cada tique      →  a tela
 
-É o mesmo arranjo que a aba Conexões já provou (`gui/aba_conexoes.html_do_mapa`
+É o mesmo arranjo que a aba Conexões já provou (`interface/conexoes.html_do_mapa`
 serve o gerador e o pacote, e a página regerada saiu byte a byte igual à que ela
 aprovou). Sem ele, o desenho e o produto seriam dois donos do mesmo cartão — e o
 segundo dono envelhece calado.
@@ -227,7 +227,7 @@ def _e(txt: object) -> str:
 
     Um `appmanifest` com `&` ou `<` no nome quebraria a marcação do cartão, e um
     nome de jogo é conteúdo de terceiro — a mesma razão pela qual
-    `gui/aba_conexoes` escapa o rótulo do aparelho antes de o pôr na tela.
+    `interface/conexoes` escapa o rótulo do aparelho antes de o pôr na tela.
 
     O `quote=False` NÃO É RELAXAMENTO — é o que impede um LAÇO INFINITO na
     máquina dela, e a razão é o piloto: ele só reescreve quando

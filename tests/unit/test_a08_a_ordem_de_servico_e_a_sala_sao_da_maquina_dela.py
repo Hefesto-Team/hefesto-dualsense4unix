@@ -20,8 +20,8 @@ A CURA É PONTE, e o inventário é este — quatro donos que já existiam e que
 produto não chamava:
 
     `secao_exame.reexaminar` / `app.py:1180`   o exame COMPLETO ao ENTRAR na aba
-    `gui.aba_conexoes.texto_da_contagem`       "2 controles • 1 USB • 1 BT"
-    `gui.aba_conexoes.Controle.texto_da_bateria`  o `%` e o travessão
+    `interface.conexoes.texto_da_contagem`       "2 controles • 1 USB • 1 BT"
+    `interface.conexoes.Controle.texto_da_bateria`  o `%` e o travessão
     `secao_mesa._linha_declarada:671`          pré-selecionar o que ela gravou
     `secao_exame._desenhar_o_que_fazer`        as ordens vêm antes das conferências
 
@@ -178,7 +178,7 @@ def test_o_dono_ainda_nao_desenha_a_ordem_da_mesa() -> None:
     """A CATRACA DA SEGUNDA GRAFIA — e ela fica VERMELHA quando o dono curar."""
     p = _pacote()
     assert not p._dono_sabe_desenhar_a_ordem(), (
-        "`gui.aba_conexoes.html_da_ordem` já aguenta uma `Ordem` de verdade. "
+        "`interface.conexoes.html_da_ordem` já aguenta uma `Ordem` de verdade. "
         "ENTÃO APAGUE `a08_conexoes._card_da_ordem` e chame o dono em "
         "`_html_da_ordem` — a segunda grafia existia só por causa do defeito.")
 
@@ -321,7 +321,7 @@ def test_as_ordens_vem_antes_das_conferencias() -> None:
 
 
 def test_a_bateria_sem_leitura_vira_o_travessao_do_produto() -> None:
-    from hefesto_dualsense4unix.gui.aba_conexoes import TRACO
+    from hefesto_dualsense4unix.interface.conexoes import TRACO
 
     p = _pacote()
     assert p._texto_da_bateria(64) == "64%"
@@ -332,11 +332,11 @@ def test_a_bateria_sem_leitura_vira_o_travessao_do_produto() -> None:
 
 
 def test_a_contagem_e_do_dono() -> None:
-    """A frase inteira vem de `gui.aba_conexoes.texto_da_contagem`.
+    """A frase inteira vem de `interface.conexoes.texto_da_contagem`.
 
     Ela SAIU DO CANTO DA GESTÃO em 26/09/2026, a pedido dela; o dono segue
     escrevendo a frase para quem a mostra."""
-    from hefesto_dualsense4unix.gui import aba_conexoes as tela
+    from hefesto_dualsense4unix.interface import conexoes as tela
 
     controles = [
         tela.Controle(uniq="aa:bb:cc:00:00:01", jogador=1, via="usb", bateria=88),
@@ -382,7 +382,7 @@ def test_o_pacote_liga_os_cinco_enderecos() -> None:
     fio dá verde sobre um fio solto — é o defeito de régua que esta casa mais
     paga, e ele foi cometido de novo aqui.
     """
-    from hefesto_dualsense4unix.gui.aba_conexoes import TRACO
+    from hefesto_dualsense4unix.interface.conexoes import TRACO
 
     p = _pacote()
     saiu = p.pacote(_ctx())

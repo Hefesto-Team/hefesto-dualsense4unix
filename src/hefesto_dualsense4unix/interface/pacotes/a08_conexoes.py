@@ -36,7 +36,7 @@ from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from . import TODOS_OS_LUGARES, Contexto, perfil, registrar
 
 if TYPE_CHECKING:
-    from hefesto_dualsense4unix.gui.aba_conexoes import Vibracao
+    from hefesto_dualsense4unix.interface.conexoes import Vibracao
 
 #: `state_full` (`radio_ar`, `radio_governador`), que o daemon publica.
 SEM_DONO: dict[str, str] = {}
@@ -175,7 +175,7 @@ def _a_pergunta() -> str:
     """A primeira opção do "— O que é? —" — a pergunta em si."""
     try:
         perfil._com_o_src()
-        from hefesto_dualsense4unix.gui.aba_conexoes import RESPOSTAS_DO_VIZINHO
+        from hefesto_dualsense4unix.interface.conexoes import RESPOSTAS_DO_VIZINHO
 
         return str(RESPOSTAS_DO_VIZINHO[0])
     except Exception:
@@ -558,14 +558,14 @@ def _frase_do_selo(estado: str) -> str:
 
 
 def _selo_do_estado(estado: str) -> tuple[str, str]:
-    """``(a classe CSS, a palavra)`` do selo — do dono, `gui.aba_conexoes`.
+    """``(a classe CSS, a palavra)`` do selo — do dono, `interface.conexoes`.
 
     O MAPA TEM UM DONO e ele já traduzia os quatro estados do `exame_da_mesa`
     para as três palavras que o desenho dela crava. Ele mora na camada de tela
     porque é vocabulário, e não máquina — o próprio módulo do exame diz que
     "responde por máquina, não por vocabulário".
 
-    O IMPORT É TARDIO pela razão de sempre neste arquivo: `gui.aba_conexoes`
+    O IMPORT É TARDIO pela razão de sempre neste arquivo: `interface.conexoes`
     puxa a cadeia de tela, e o topo deste módulo tem de continuar importável
     numa árvore sem `src/` no caminho.
 
@@ -575,10 +575,10 @@ def _selo_do_estado(estado: str) -> tuple[str, str]:
     podia estar melhor"*. **A COR já saiu** (ver `selo-estado`, na
     :func:`pacote`, e a regra `.selo.grave` do gerador); a PALAVRA é dela, e
     trocá-la aqui seria escolher no lugar dela. Quando ela disser, quem muda é
-    `gui.aba_conexoes.SELO_DO_ESTADO`, e o mapa é um só.
+    `interface.conexoes.SELO_DO_ESTADO`, e o mapa é um só.
     """
     perfil._com_o_src()
-    from hefesto_dualsense4unix.gui.aba_conexoes import SELO_DO_ESTADO
+    from hefesto_dualsense4unix.interface.conexoes import SELO_DO_ESTADO
 
     return SELO_DO_ESTADO.get(estado, _SELO_DESCONHECIDO)
 
@@ -615,7 +615,7 @@ def _dica_da_linha(item: Any) -> str:
 
     E O TEXTO É ESCAPADO ANTES: o alvo é `html`, então um `&` ou um `<` vindo do
     exame viraria marcação. O escapador é o da camada de tela desta aba
-    (`gui.aba_conexoes._e`), o mesmo que o gerador do desenho usa.
+    (`interface.conexoes._e`), o mesmo que o gerador do desenho usa.
 
     UMA ORDEM DA MESA NÃO TEM VERBETE, E TINHA DE TER O DELA — 02/09/2026, e
     este era o achado de pé desta aba: *"o `?` de uma linha sem verbete e sem
@@ -664,7 +664,7 @@ def _dica_da_linha(item: Any) -> str:
             DICAS_DAS_LINHAS,
             PREFIXO_DA_CURA,
         )
-        from hefesto_dualsense4unix.gui.aba_conexoes import _e
+        from hefesto_dualsense4unix.interface.conexoes import _e
         from hefesto_dualsense4unix.integrations.exame_da_mesa import (
             ROTULOS_DA_ORDEM,
         )
@@ -692,9 +692,9 @@ def _dica_da_linha(item: Any) -> str:
 
 
 def _dono_sabe_desenhar_a_ordem() -> bool:
-    """O `gui.aba_conexoes.html_da_ordem` já aguenta uma `Ordem` de verdade?"""
+    """O `interface.conexoes.html_da_ordem` já aguenta uma `Ordem` de verdade?"""
     perfil._com_o_src()
-    from hefesto_dualsense4unix.gui import aba_conexoes as _tela
+    from hefesto_dualsense4unix.interface import conexoes as _tela
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import (
         DERIVADO_DA_CONTA,
         Linha,
@@ -715,7 +715,7 @@ def _linha_da_sugestao(n: int, faca: str, de: str = "", para: str = "",
                        *, de_html: str = "", para_html: str = "") -> str:
     """UMA linha da Sugestão de Conexão: o número, a instrução e o de→para."""
     perfil._com_o_src()
-    from hefesto_dualsense4unix.gui.aba_conexoes import _e
+    from hefesto_dualsense4unix.interface.conexoes import _e
 
     esquerda = de_html or _e(de)
     direita = para_html or _e(para)
@@ -741,7 +741,7 @@ def _a_entrada_na_frase(numero: str, *, em: bool = False, maiuscula: bool = Fals
 def _card_da_ordem(ordem: Any, n: int = 1) -> str:
     """A linha de UMA ordem de serviço: a instrução, e o de→para quando há destino."""
     perfil._com_o_src()
-    from hefesto_dualsense4unix.gui.aba_conexoes import TRACO
+    from hefesto_dualsense4unix.interface.conexoes import TRACO
     from hefesto_dualsense4unix.integrations import mapa_das_portas
     from hefesto_dualsense4unix.integrations.entrada_a_entrada import rotulo_do_numero
 
@@ -777,7 +777,7 @@ def _instrucao_do_item(item: Any) -> str:
 def _sugestoes_do_exame(vivos: list[Any]) -> list[tuple[str, Any]]:
     """``(instrução, ordem ou None)`` de cada AJUSTAR do exame que ela não calou.
 
-    AJUSTAR é a palavra do dono (`gui.aba_conexoes.SELO_DO_ESTADO`), a mesma da
+    AJUSTAR é a palavra do dono (`interface.conexoes.SELO_DO_ESTADO`), a mesma da
     pílula à esquerda: a caixa diz o que fazer de cada linha que pede ajuste.
     """
     saida: list[tuple[str, Any]] = []
@@ -794,7 +794,7 @@ def _sugestoes_do_exame(vivos: list[Any]) -> list[tuple[str, Any]]:
 def _sugestao_da_central(cena: dict[str, Any] | None) -> tuple[str, str, str] | None:
     """A proposta da central (`radio_central.proposta`) como linha da caixa."""
     perfil._com_o_src()
-    from hefesto_dualsense4unix.gui.aba_conexoes import _e
+    from hefesto_dualsense4unix.interface.conexoes import _e
 
     proposta = (cena or {}).get("proposta") or {}
     aparelhos = (cena or {}).get("aparelhos") or ()
@@ -845,7 +845,7 @@ def _sobraram(quantos: int, cabem: int, um: str, muitos: str) -> str:
     if quantos <= cabem:
         return ""
     perfil._com_o_src()
-    from hefesto_dualsense4unix.gui.aba_conexoes import _e
+    from hefesto_dualsense4unix.interface.conexoes import _e
     from hefesto_dualsense4unix.utils.i18n import _
 
     n = quantos - cabem
@@ -932,7 +932,7 @@ def _linha(item: Any) -> dict[str, Any]:
     montava as duas à mão, e as duas erravam:
 
     * o selo saía de um `"AJUSTAR" if grave else "CERTO"`, e o `Item` tem
-      QUATRO estados. `gui.aba_conexoes.SELO_DO_ESTADO` os mapeia em TRÊS
+      QUATRO estados. `interface.conexoes.SELO_DO_ESTADO` os mapeia em TRÊS
       palavras, e a que sumia era a **NOTA** do `nao_sei` — a mesma que o
       desenho dela crava na quarta linha do Check-up. Um "não deu para olhar"
       chegava à tela como "AJUSTAR", que é a tela afirmando um problema que
@@ -1076,7 +1076,7 @@ def _confissao_do_mapa() -> dict[str, str]:
 def _html_do_mapa() -> str:
     """As faces do gabinete DELA, desenhadas pelo produto.
 
-    O DESENHO É UM SÓ (`gui/aba_conexoes.html_do_mapa`) e o gerador do mockup
+    O DESENHO É UM SÓ (`interface/conexoes.html_do_mapa`) e o gerador do mockup
     usa o MESMO — a diferença é o dado: lá é a cena de bancada, aqui é o que ela
     declarou. Foi assim que a extração se provou fiel: a página regerada saiu
     byte a byte igual à que ela aprovou.
@@ -1088,7 +1088,7 @@ def _html_do_mapa() -> str:
     """
     perfil._com_o_src()
     from hefesto_dualsense4unix.app.widgets import mapa_da_mesa as mm
-    from hefesto_dualsense4unix.gui import aba_conexoes as _tela
+    from hefesto_dualsense4unix.interface import conexoes as _tela
 
     logica = _logica_do_mapa()
     bancada = _bancada()
@@ -1129,7 +1129,7 @@ def _html_dos_aparelhos() -> str:
     """O que o censo achou — o PRIMEIRO tempo do gesto de dois tempos."""
     perfil._com_o_src()
     from hefesto_dualsense4unix.app.widgets import mapa_da_mesa as mm
-    from hefesto_dualsense4unix.gui.aba_conexoes import _e
+    from hefesto_dualsense4unix.interface.conexoes import _e
 
     censo = _censo()
     if censo is None:
@@ -1207,7 +1207,7 @@ def _html_dos_externos(ctx: Contexto) -> str:
         """Escapa para HTML — pelo `html.escape` da biblioteca, e não pelo `_e`
         da janela GTK.
 
-        `gui.aba_conexoes._e` é exatamente esta linha, e importá-lo seria uma
+        `interface.conexoes._e` é exatamente esta linha, e importá-lo seria uma
         citação NOVA para uma janela que está saindo (`D-0609-GTK-LEVA-INTEIRA`):
         o portão `nada-aponta-para-a-janela` reprovou a primeira volta desta
         sprint por isso, e a regra é que aquela lista só diminui. **O que se
@@ -1514,7 +1514,7 @@ def escopo_do_botao_do_mic(estado: Any) -> str:
 def _texto_da_bateria(bruto: Any) -> str:
     """`100%`, ou o travessão do produto quando ninguém leu.
 
-    O DONO É `gui.aba_conexoes.Controle.texto_da_bateria`, e é ele que decide
+    O DONO É `interface.conexoes.Controle.texto_da_bateria`, e é ele que decide
     que a ausência vira **travessão** e não zero: *"sem fonte, escreve `— %` em
     vez de um número herdado"* é a regra que a janela estável já segue
     (`status_actions._set_battery_text`).
@@ -1525,7 +1525,7 @@ def _texto_da_bateria(bruto: Any) -> str:
     grafia é justamente o caso do `None`.
     """
     perfil._com_o_src()
-    from hefesto_dualsense4unix.gui.aba_conexoes import Controle
+    from hefesto_dualsense4unix.interface.conexoes import Controle
 
     n = int(bruto) if isinstance(bruto, int | float) else None
     return Controle(uniq="", jogador=0, via="", bateria=n).texto_da_bateria
@@ -1586,7 +1586,7 @@ def _teto_do_controle(
 ) -> tuple[str | None, str]:
     """``(o que o CAMPO mostra, a frase do ?)`` para UM controle.
 
-    `vibracao` é a `gui.aba_conexoes.Vibracao` com o que vale para a mesa
+    `vibracao` é a `interface.conexoes.Vibracao` com o que vale para a mesa
     INTEIRA — o global do perfil, o global VIVO do daemon e o orçamento —, e
     esta função só lhe acrescenta o override desta peça. Os três eram um
     argumento `orcamento` só até 01/09/2026, e a tela reportava o errado: o `?`
@@ -1607,7 +1607,7 @@ def _teto_do_controle(
     POLÍTICA QUE O CAMPO NÃO SABE MOSTRAR VIRA `sem_dono`, NÃO uma opção
     errada. O `<select>` mostra três coisas e `ControllerRumbleOverride` aceita
     quatro políticas; só o `economia` tem opção no campo
-    (`gui.aba_conexoes.rotulo_da_politica` diz por quê). Um perfil escrito pela
+    (`interface.conexoes.rotulo_da_politica` diz por quê). Um perfil escrito pela
     janela estável — `app/actions/rumble_actions.py:756` — ou editado à mão
     guarda uma das outras três.
 
@@ -1628,7 +1628,7 @@ def _teto_do_controle(
     O caso **é alcançável hoje**, e por isso continua tendo de estar escrito —
     a razão da nota não mudou, só o fato que a sustentava.
     """
-    from hefesto_dualsense4unix.gui import aba_conexoes as _tela
+    from hefesto_dualsense4unix.interface import conexoes as _tela
 
     chave = _so_hex(uniq)
     dele = overrides.get(chave) or overrides.get(uniq) or {}
@@ -1902,7 +1902,7 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
     global_do_perfil = ((perfil_ativo.get("rumble") or {}).get("policy")
                         if perfil_ativo else None)
     orcamento, mesa_respondeu = _orcamento_da_mesa()
-    from hefesto_dualsense4unix.gui.aba_conexoes import Vibracao
+    from hefesto_dualsense4unix.interface.conexoes import Vibracao
 
     vibracao = Vibracao(
         do_perfil=global_do_perfil,
@@ -1977,7 +1977,7 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
         # (`SELO_DO_ESTADO`).
         # `data-hef-alvo="classe" data-hef-classe="grave"
         **_selos_por_estado(itens),
-        # do produto. Ela nasceu no docstring de `gui.aba_conexoes.html_do_exame`
+        # do produto. Ela nasceu no docstring de `interface.conexoes.html_do_exame`
         # energia."* e *"A parte do sistema que fala com o DualSense está
         "achado": [i["porque"] for i in itens],
         "achado-explica": [i["dica"] for i in itens],
@@ -2011,7 +2011,7 @@ from .a02_controles import mudo as _o_mudo_da_aba_02  # noqa: E402
 # `integrations/gesto_de_reconexao.py`, que roda `busctl` e não passa pelo
 # de quem faça. O `gesto_de_reconexao` faz, é puro, mascara o endereço e devolve
 SEM_GESTO: dict[str, str] = {
-    # (`gui/aba_conexoes.html_do_mapa`) e o motor de verdade
+    # (`interface/conexoes.html_do_mapa`) e o motor de verdade
     # (`arranjo_da_mesa.julgar`, pelo `veredito_do_quadrado`). Com alvo real, os
     "novo-hub":
         "ele é o único dos sete que sobra, e por duas razões que não são de "
@@ -2448,7 +2448,7 @@ def teto_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     está inerte quando ela é o oposto, e deixaria de conferir o que o motor
     recebe.
     """
-    from hefesto_dualsense4unix.gui import aba_conexoes as _tela
+    from hefesto_dualsense4unix.interface import conexoes as _tela
 
     uniq = _uniq(o)
     if not uniq:

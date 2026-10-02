@@ -16,7 +16,7 @@ from monta import (  # noqa: E402
 import onde  # noqa: E402
 from onde import RAIZ as R  # noqa: E402
 
-from hefesto_dualsense4unix.gui import ponte_da_tela as _ponte  # noqa: E402
+from hefesto_dualsense4unix.interface import janela as _ponte  # noqa: E402
 
 from hefesto_dualsense4unix.integrations.camadas_vulkan import (  # noqa: E402
     frase_do_estado as _frase_do_vulkan,
@@ -84,8 +84,8 @@ def _constantes(caminho, nomes):
 ORC = _constantes(R / "src/hefesto_dualsense4unix/app/actions/config/secao_orcamento.py",
                   {"PERFIS", "ROTULOS_DOS_PERFIS", "TETO_POR_PERFIL", "LINHAS_DO_TETO"})
 
-#: `src/hefesto_dualsense4unix/gui/aba_sistema.py` — que é versionado, viaja em
-_CONTRATO = _constantes(R / "src/hefesto_dualsense4unix/gui/aba_sistema.py",
+#: `src/hefesto_dualsense4unix/interface/sistema.py` — que é versionado, viaja em
+_CONTRATO = _constantes(R / "src/hefesto_dualsense4unix/interface/sistema.py",
                         {"ENDERECOS", "GESTOS"})
 ENDERECOS = _CONTRATO["ENDERECOS"]
 GESTOS = _CONTRATO["GESTOS"]
@@ -118,7 +118,7 @@ def _gesto(nome):
 #: POR QUE NÃO UMA ENTRADA EM `aba_sistema.ENDERECOS`: aquele dicionário é o
 #: a fonte do dado (`state_full["paused"]`, `storm_report:755`). A razão do
 #: cinza não é um valor novo do produto: é a MESMA `aba_sistema.travas()` que a
-#: `gui/aba_sistema.py` está FORA da posse desta frente, e por isso a derivação
+#: `interface/sistema.py` está FORA da posse desta frente, e por isso a derivação
 SUFIXO_DA_RAZAO = "-razao"
 
 
@@ -370,7 +370,7 @@ def _botoes_bateria():
         for p in ORC["PERFIS"])
 
 
-# (`gui/aba_sistema.status_do_*`) — o teste da forma compara as duas.
+# (`interface/sistema.status_do_*`) — o teste da forma compara as duas.
 _NO_RADIO = len(BT)
 STATUS = [
     linha("LIGADO", "ok", "✓", "Serviço", ident="hefesto-estado",

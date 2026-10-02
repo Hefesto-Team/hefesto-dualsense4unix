@@ -76,7 +76,7 @@ def test_as_cinco_de_coluna_entraram_em_avisos_da_tela() -> None:
 def test_a_divergencia_nao_aponta_de_app_para_a_janela() -> None:
     """O PORTÃO QUE MOVEU ESTA FONTE, e a régua guarda a razão de ela ter mudado."""
     fonte = pathlib.Path(painel.__file__).read_text(encoding="utf-8")
-    assert "gui.aba_sistema" not in fonte, (
+    assert "interface.sistema" not in fonte, (
         "`app/actions/jogar/painel.py` voltou a apontar para a janela GTK. "
         "Quem precisa de `sem_markup` é o pacote da aba, por `_sem_markup` — "
         "que existe para a citação continuar sendo UMA.")

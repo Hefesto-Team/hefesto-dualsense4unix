@@ -15,7 +15,7 @@ from monta import (DS, MESA, CONECTADOS, CSS_GLIFO, CSS_POPUP, TRAVESSAO,  # noq
 # geradores 08 e 09 pararam de RODAR por isso, calados até alguém tentar:
 from onde import RAIZ as R  # noqa: E402
 
-from hefesto_dualsense4unix.gui import aba_conexoes as _aba_conexoes  # noqa: E402
+from hefesto_dualsense4unix.interface import conexoes as _aba_conexoes  # noqa: E402
 from hefesto_dualsense4unix.integrations import entrada_a_entrada as _entrada_a_entrada  # noqa: E402,E501
 
 from pacotes import a08_conexoes as _pacote08  # noqa: E402
@@ -573,7 +573,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
      a pílula laranja sem uma linha de diferença no resto.
 
      A PALAVRA AINDA É "AJUSTAR", e isso é espera DELA: `SELO_DO_ESTADO`
-     (`gui/aba_conexoes.py`) manda os dois estados para a mesma palavra, e o
+     (`interface/conexoes.py`) manda os dois estados para a mesma palavra, e o
      texto do quarto selo ela ainda não disse. Esta leva entrega a cor. */
   .selo.grave{background:var(--red);color:var(--app-bg)}
   /* O VERMELHO CONTINUA MANDANDO, e a regra abaixo é o que garante isso quando
@@ -1297,7 +1297,7 @@ def exame(estado, txt, dica, linha=0):
     """Uma linha do exame: o selo, o que ele achou, o `?` e o gesto de ignorar.
 
     `estado` É O ESTADO DO EXAME, e não mais a classe CSS — 03/09/2026. A classe
-    e a palavra saem de `gui.aba_conexoes.SELO_DO_ESTADO`, que é o dono do mapa e
+    e a palavra saem de `interface.conexoes.SELO_DO_ESTADO`, que é o dono do mapa e
     já era quem o produto consultava; digitá-las aqui era a segunda grafia, a que
     fica para trás no dia em que a primeira mudar. O desenho passa a dizer o que
     a linha É, e a folha de estilo diz como isso se parece.
@@ -1880,7 +1880,7 @@ def face_dos_hubs():
             </div>'''
 
 
-#: O DESENHO É DO PRODUTO desde 01/09/2026 — `gui/aba_conexoes.html_do_mapa`.
+#: O DESENHO É DO PRODUTO desde 01/09/2026 — `interface/conexoes.html_do_mapa`.
 MAPA_DESENHADO = _aba_conexoes.html_do_mapa(
     [{"nome": nome, "portas": numeros} for nome, numeros in FACES],
     quem_esta=QUEM_ESTA,

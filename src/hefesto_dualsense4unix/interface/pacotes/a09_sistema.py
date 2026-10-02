@@ -13,7 +13,7 @@ tudo isso é do `doctor` e do instalador, não do `state_full`.
 
 A MEIA LIGAÇÃO DE 01/09, MEDIDA E FECHADA EM 02/09/2026
 -------------------------------------------------------
-O `pacote()` delegava para `gui/aba_sistema.pacote` — mas o `_leitura()` que o
+O `pacote()` delegava para `interface/sistema.pacote` — mas o `_leitura()` que o
 alimentava preenchia TRÊS dos sete campos do `Leitura` (`status`, `autostart`,
 `state`). Os outros quatro chegavam `None`, e a camada do produto faz a coisa
 certa com `None`: devolve o traço. **Só que a página não é branca — ela é o
@@ -31,7 +31,7 @@ mockup, e ele é convincente:
     [23:41:02] daemon pronto …     não há registro nenhum sendo lido
 
 As quatro últimas eram o desenho FALANDO PELA MÁQUINA. É o defeito que o
-docstring de `gui/aba_sistema.py` nomeia como o mais caro possível nesta aba.
+docstring de `interface/sistema.py` nomeia como o mais caro possível nesta aba.
 
 O `Perfil ativo` era pior que falta: **este pacote o APAGAVA.** Ele emitia a
 chave `perfil` com o rótulo do PERFIL DE BATERIA, e `perfil` é o endereço do
@@ -56,11 +56,11 @@ from hefesto_dualsense4unix.app.actions import daemon_actions as _daemon
 from hefesto_dualsense4unix.app.actions import emulation_actions as _emulacao
 from hefesto_dualsense4unix.app.actions.config import secao_orcamento as _orcamento
 
-# no topo não custa nada aqui: este módulo já traz `gui.aba_sistema` logo abaixo.
+# no topo não custa nada aqui: este módulo já traz `interface.sistema` logo abaixo.
 from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
 from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
 from hefesto_dualsense4unix.core import formas_do_endereco as _formas
-from hefesto_dualsense4unix.gui import aba_sistema as _tela
+from hefesto_dualsense4unix.interface import sistema as _tela
 from hefesto_dualsense4unix.integrations import storm_doctor as _exame
 from hefesto_dualsense4unix.interface import onde as _onde
 from hefesto_dualsense4unix.utils import maquina as _maquina
@@ -77,10 +77,10 @@ from . import (
 from . import confirmacao as _confirmacao
 
 #: CORRIGIDO EM 01/09/2026. "versoes" e "consertos" tinham dono e viraram  # (noqa-acento) id
-#: `gui/aba_sistema.py:68` já a tinha medido e escrito:
+#: `interface/sistema.py:68` já a tinha medido e escrito:
 SEM_DONO: dict[str, str] = {
     "plugins": "o IPC `plugin.list` existe e só a CLI o chama — não há botão no "
-               "produto de hoje (medido em `gui/aba_sistema.py:68`)",
+               "produto de hoje (medido em `interface/sistema.py:68`)",
 }
 
 #: CADUCA — não errada quando foi escrita, caduca. Ela dizia *"a pintura não tem
@@ -333,7 +333,7 @@ def _achados(state: dict[str, Any] | None,
     return linhas
 
 
-#: A camada do produto traduz os três vereditos (`gui/aba_sistema`), e `INFO`
+#: A camada do produto traduz os três vereditos (`interface/sistema`), e `INFO`
 SELO_INFORMATIVO = "[INFO]"
 
 
@@ -1091,10 +1091,10 @@ def _com_quem_esta_na_frente(valor: Any, state: Any) -> str | None:
 
 @registrar("09-sistema.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
-    """DELEGA para `gui/aba_sistema.pacote` — a camada do PRODUTO.
+    """DELEGA para `interface/sistema.pacote` — a camada do PRODUTO.
 
     ELA JÁ EXISTIA E NUNCA TINHA SIDO LIGADA: dezoito nomes públicos em
-    `gui/aba_sistema.py`, e o `casa-sabe` os listava como promessa sem caminho.
+    `interface/sistema.py`, e o `casa-sabe` os listava como promessa sem caminho.
     E ela foi escrita PARA ESTA PÁGINA — as chaves que devolve são os
     `data-campo` daqui: `hefesto-estado`, `hefesto-pausa`,
     `hefesto-troca-de-perfil`, `hefesto-ambiente`.
@@ -1165,7 +1165,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     return fora
 
 
-#: o traduz em selo, classe e glifo é o dono da tradução (`gui/aba_sistema.
+#: o traduz em selo, classe e glifo é o dono da tradução (`interface/sistema.
 VEREDITO_DO_AVISO = "[WARN]"
 
 
@@ -1182,7 +1182,7 @@ def _avisos_do_produto(ctx: Contexto) -> list[dict[str, Any]]:
     (`a01_jogar.FONTES_DO_PAINEL_COM_OUTRA_CASA`).
 
     QUEM ESCOLHE E ORDENA É O DONO DO CANAL (`a01_jogar.coluna_de_atencao`),
-    e quem traduz o veredito em selo é `gui/aba_sistema.exame` — nenhuma das
+    e quem traduz o veredito em selo é `interface/sistema.exame` — nenhuma das
     duas contas se refaz aqui. Uma fonte que levanta não apaga o exame: vira
     uma linha que diz qual não respondeu, como as fontes do canal já fazem.
 
@@ -1415,7 +1415,7 @@ def _trava(ctx: Contexto, nome: str,
 
 #: `aba_sistema.travas()` tranca o `ver-detalhes` com a frase *"O serviço está
 #: não tem regra de sensibilidade, e `_aplicar_sensibilidade_ligar_desligar` só
-#: `gui/aba_sistema.travas()`, que é a camada do produto e território de outra
+#: `interface/sistema.travas()`, que é a camada do produto e território de outra
 TRAVA_QUE_NAO_VALE_AQUI: dict[str, str] = {
     "parar-ou-retomar": "`travas()` o tranca com o serviço desligado, dizendo *'O "
                 "serviço já está desligado'* — e isso era verdade até 03/09/2026, "
@@ -1432,7 +1432,7 @@ def retomar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Sair da pausa. `daemon.resume` — e só quando HÁ pausa de que sair.
 
     ELE TINHA UM CHAMADOR EM TODO O `src/` — o terminal (`cli/app.py:373`), como
-    a `gui/aba_sistema.py:54` já tinha medido: *"a pausa fica gravada em disco e
+    a `interface/sistema.py:54` já tinha medido: *"a pausa fica gravada em disco e
     sobrevive a desligar o computador; até hoje só o terminal saía dela."* Este
     é o segundo, e é uma tela.
 
@@ -1557,7 +1557,7 @@ def perfil_da_mesa(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     eles — `_sob_o_teto`, nunca produto —, então gravar a escolha dela como
     política apagaria a política por controle que as outras abas escrevem. Quem
     é dono desta escolha é o `orcamento.teto` do `maquina.json`, e o contrato do
-    produto diz o mesmo: `gui/aba_sistema.GESTOS["perfil-da-mesa"]` aponta para
+    produto diz o mesmo: `interface/sistema.GESTOS["perfil-da-mesa"]` aponta para
     `secao_orcamento._ao_escolher:468`, que monta `{"orcamento": {"teto": …}}`.
 
     O QUE MUDA EM RELAÇÃO À JANELA ANTIGA, e é decisão dela: lá o

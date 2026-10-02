@@ -16,7 +16,7 @@ e é por isso que o nome cabe num botão que faz os dois.
 
 **[02] — apagado e ainda assim responde.** Três botões desta página ficam sem
 trabalho a fazer, e a conta de quem está sem já existia no produto
-(`gui/aba_sistema.travas()`, com o motivo em português). O que faltava era a
+(`interface/sistema.travas()`, com o motivo em português). O que faltava era a
 metade do desenho. `disabled` mataria o clique, e o clique é o único caminho de
 quem chega pelo controle até a razão.
 
@@ -77,9 +77,9 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 from tests.conftest import exigir_gi_real
 
-exigir_gi_real("importa `gui.aba_sistema`, que carrega o GTK")
+exigir_gi_real("importa `interface.sistema`, que carrega o GTK")
 
-from hefesto_dualsense4unix.gui import aba_sistema as _tela
+from hefesto_dualsense4unix.interface import sistema as _tela
 from hefesto_dualsense4unix.interface import monta as _monta
 from hefesto_dualsense4unix.interface import onde as _onde
 from hefesto_dualsense4unix.interface.pacotes import (

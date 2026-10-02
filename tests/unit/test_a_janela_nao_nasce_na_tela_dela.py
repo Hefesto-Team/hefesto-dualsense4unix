@@ -15,7 +15,7 @@ _TESTES = _RAIZ / "tests"
 
 def test_a_trava_le_o_ambiente(monkeypatch: pytest.MonkeyPatch) -> None:
     """MORDE: sem ler o ambiente a cada chamada, a trava vira estado congelado."""
-    from hefesto_dualsense4unix.gui.ponte_da_tela import (
+    from hefesto_dualsense4unix.interface.janela import (
         SEM_JANELA_NA_TELA,
         janela_proibida_na_tela,
     )
@@ -35,7 +35,7 @@ def test_a_trava_le_o_ambiente(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_o_construtor_escolhe_a_oculta_quando_o_ambiente_proibe() -> None:
     """O CORAÇÃO DA CURA, lido no fonte: a decisão vem ANTES do `if oculta`."""
-    caminho = _RAIZ / "src/hefesto_dualsense4unix/gui/ponte_da_tela.py"
+    caminho = _RAIZ / "src/hefesto_dualsense4unix/interface/janela.py"
     fonte = caminho.read_text(encoding="utf-8")
 
     arvore = ast.parse(fonte)
@@ -79,7 +79,7 @@ def test_o_construtor_escolhe_a_oculta_quando_o_ambiente_proibe() -> None:
 def test_sem_a_variavel_o_produto_abre_como_sempre() -> None:
     """MORDE: uma trava que vale SEMPRE tira a janela de quem usa o produto."""
     fonte = (
-        _RAIZ / "src/hefesto_dualsense4unix/gui/ponte_da_tela.py"
+        _RAIZ / "src/hefesto_dualsense4unix/interface/janela.py"
     ).read_text(encoding="utf-8")
 
     assert "if not oculta and janela_proibida_na_tela():" in fonte, (

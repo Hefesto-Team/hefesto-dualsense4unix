@@ -12,7 +12,7 @@ estava certa; o que faltava era a aba pintar o gabinete dela.
 
 AS QUATRO COISAS QUE ESTA RÉGUA COBRA:
 
-1. **O desenho é UM SÓ.** `gui/aba_conexoes.html_do_mapa` desenha, e o gerador
+1. **O desenho é UM SÓ.** `interface/conexoes.html_do_mapa` desenha, e o gerador
    do mockup usa o MESMO. Foi assim que a extração se provou fiel — a página
    regerada saiu byte a byte igual à que ela aprovou.
 2. **O veredito vem do MOTOR.** O gerador tinha uma reescrita à mão do
@@ -89,7 +89,7 @@ def test_o_gerador_do_mockup_usa_o_desenho_do_produto() -> None:
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/aba08.py").read_text(
         encoding="utf-8")
     assert "_aba_conexoes.html_do_mapa(" in fonte, (
-        "o gerador da aba Conexões parou de usar `gui/aba_conexoes.html_do_mapa`. "
+        "o gerador da aba Conexões parou de usar `interface/conexoes.html_do_mapa`. "
         "Com dois desenhos, o que ela aprova e o que ela usa deixam de ser o "
         "mesmo — e ninguém compara.")
 
@@ -97,7 +97,7 @@ def test_o_gerador_do_mockup_usa_o_desenho_do_produto() -> None:
 def test_o_mapa_vazio_diz_que_esta_vazio() -> None:
     """Caixa em branco é indistinguível de "isto quebrou"."""
     from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import ROTULO_SEM_FACE
-    from hefesto_dualsense4unix.gui.aba_conexoes import html_do_mapa
+    from hefesto_dualsense4unix.interface.conexoes import html_do_mapa
 
     saiu = html_do_mapa([], quem_esta={}, extensoes={},
                         veredito_de=lambda n, e: ("", "", ""),
@@ -110,7 +110,7 @@ def test_o_mapa_vazio_diz_que_esta_vazio() -> None:
 
 def test_cada_quadrado_leva_o_endereco_da_entrada() -> None:
     """Sem `data-entrada`, o clique não diz em qual buraco ela clicou."""
-    from hefesto_dualsense4unix.gui.aba_conexoes import html_do_mapa
+    from hefesto_dualsense4unix.interface.conexoes import html_do_mapa
 
     saiu = html_do_mapa(
         [{"nome": "Traseira", "portas": ["1", "2"]}],

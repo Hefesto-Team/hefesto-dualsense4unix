@@ -20,7 +20,7 @@ O que NÃO mora aqui, de propósito
   o dono dela para a aba Controles e para a fita. Reescrevê-la aqui criaria o
   segundo dono do mesmo valor — o defeito que a fita viva de 27/08 pagou.
 * **A janela e as duas pontes** são de
-  :mod:`hefesto_dualsense4unix.gui.ponte_da_tela`, e são de todas as dez abas.
+  :mod:`hefesto_dualsense4unix.interface.janela`, e são de todas as dez abas.
 * **A pintura** é do piloto: quem escreve no DOM escreve por TIPO, e isso é
   código de tela.
 

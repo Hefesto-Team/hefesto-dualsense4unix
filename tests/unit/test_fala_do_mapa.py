@@ -149,7 +149,7 @@ _COPIAS_DECLARADAS: dict[str, str] = {
         "`_virgula`, dono do texto OS_DOIS_RELOGIOS. Fora da posse da L3-F "
         "(26/08/2026); relatado em docs/process/agentes/2026-08-26/LEVA-3-F.md"
     ),
-    "gui/aba_conexoes.py": (
+    "interface/conexoes.py": (
         "03/09/2026 — NÃO É A MESMA CONTA. A linha monta a razão "
         "`balanceado/max` com TRÊS casas (`:.3f`) e dois `:g`, dentro da "
         "mensagem de um `ValueError` que explica por que a opção sem teto não "

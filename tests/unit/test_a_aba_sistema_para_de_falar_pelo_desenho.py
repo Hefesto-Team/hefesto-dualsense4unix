@@ -2,7 +2,7 @@
 """A RÉGUA DA ABA SISTEMA: onde o pacote cala, quem fala é o MOCKUP.
 
 POR QUE ELA EXISTE, e é o defeito medido em 02/09/2026 com a janela aberta e o
-daemon vivo: o `pacote()` desta aba DELEGA para `gui/aba_sistema.pacote`, que
+daemon vivo: o `pacote()` desta aba DELEGA para `interface/sistema.pacote`, que
 sabe responder os doze endereços da página. Só que o `Leitura` que o alimentava
 preenchia **três dos sete campos**. Os outros quatro chegavam `None`, a camada
 do produto devolvia o traço honesto — e o traço nunca chegava à tela, porque o
@@ -178,7 +178,7 @@ def test_o_pacote_nao_apaga_o_perfil_do_cabecalho(a09, ctx):
 def test_tudo_o_que_o_pacote_emite_e_endereco_desta_pagina(a09, ctx):
     """Nenhuma chave com nome de CAMADA — só endereço da tela, ou DECLARADO.
 
-    `frase`, `autostart` e `registro` são os nomes que `gui/aba_sistema.pacote`
+    `frase`, `autostart` e `registro` são os nomes que `interface/sistema.pacote`
     usa internamente; os da página são `bateria-frase`, `hefesto-autostart` e
     `registro-texto`. Emitir os primeiros escreve em lugar nenhum e esconde o
     fato de que os segundos não estão sendo escritos.
@@ -191,7 +191,7 @@ def test_tudo_o_que_o_pacote_emite_e_endereco_desta_pagina(a09, ctx):
     """
     import pacotes
 
-    from hefesto_dualsense4unix.gui import aba_sistema
+    from hefesto_dualsense4unix.interface import sistema as aba_sistema
 
     conhecidos = (set(aba_sistema.ENDERECOS) | _campos_da_pagina()
                   | set(a09.SEM_ALVO_NA_PAGINA) | set(a09.ESPERA_A_PUBLICACAO))
@@ -227,7 +227,7 @@ def test_a_contagem_do_exame_saiu_dos_dois_lados(a09, ctx):
     teste reprova pelo pacote; devolva a chave em `aba_sistema.ENDERECOS` e
     ele reprova pelo contrato.
     """
-    # o `gui.aba_sistema` pelo apelido que o próprio pacote já traz: um segundo
+    # o `interface.sistema` pelo apelido que o próprio pacote já traz: um segundo
     tela = a09._tela
 
     assert "exame-contagem" not in tela.ENDERECOS

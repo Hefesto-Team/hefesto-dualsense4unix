@@ -427,7 +427,7 @@ def texto_do_alcance_da_intensidade(state: dict[str, Any]) -> str | None:
     disponíveis: quebrava em DUAS sublinhas, o quadro passava a rolar 40 px e a
     segunda metade — *"que você fixar aqui embaixo."* — ficava CORTADA pela
     borda de baixo do miolo. Medido no WebKit da janela do produto (1180x757,
-    ``gui/ponte_da_tela.TAMANHO_NA_TELA``), com a mesa dela e ``vpads == 0``.
+    ``interface/janela.TAMANHO_NA_TELA``), com a mesa dela e ``vpads == 0``.
 
     A frase de hoje tem 162 caracteres, ocupa 942 px e cabe em UMA sublinha. As
     quatro informações continuam lá: o que não está acontecendo, por quê, o que

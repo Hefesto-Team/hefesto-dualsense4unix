@@ -15,7 +15,7 @@ _gi.require_version("Gtk", "3.0")
 _gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk
 
-from hefesto_dualsense4unix.gui import ponte_da_tela
+from hefesto_dualsense4unix.interface import janela as ponte_da_tela
 
 
 def _barra_de_verdade() -> tuple[Any, dict[str, Any]]:
@@ -96,7 +96,7 @@ def test_os_tres_botoes_tem_nome_acessivel_em_portugues() -> None:
 _SONDA_DO_LOCALE = """
 from hefesto_dualsense4unix.utils.tela_de_mentira import garantir_tela_de_mentira
 garantir_tela_de_mentira(anunciar=False)
-from hefesto_dualsense4unix.gui.ponte_da_tela import montar_a_barra
+from hefesto_dualsense4unix.interface.janela import montar_a_barra
 barra, botoes = montar_a_barra("Hefesto", "", lambda *_: None)
 for gesto in ("fechar", "maximizar", "minimizar"):
     print(gesto, botoes[gesto].get_accessible().get_name(), sep="=")
