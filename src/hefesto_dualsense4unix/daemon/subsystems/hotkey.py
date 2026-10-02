@@ -1268,7 +1268,7 @@ async def canal_do_microfone_loop(daemon: DaemonProtocol) -> None:
         await _esperar_o_som_mudar(CANAL_TTL_S, daemon)
         uniqs = _uniqs_conectados(daemon)
         if not uniqs:
-            _CANAL_POR_UNIQ.clear()
+            _a_mesa_vazia_esquece_o_canal(daemon)
             continue
         for uniq in uniqs:
             if daemon._is_stopping():
@@ -3771,6 +3771,45 @@ async def mic_do_jogo_loop(daemon: DaemonProtocol) -> None:
                 logger.warning("mic_mudo_do_jogo_falhou", uniq=chave, err=str(exc))
     finally:
         daemon.bus.unsubscribe(EventTopic.MIC_DO_JOGO, queue)
+
+
+# ---------------------------------------------------------------------------
+# A MESA VAZIA NÃO TEM CONFERÊNCIA — o achado de 02/10/2026, provado com o
+# instrumento da O-TRAVAMENTO-SE-SEPARA-UM-FATOR-POR-VEZ-01
+#
+# NO FIM DO MÓDULO pela razão do bloco do retrato: o mapa cita linhas daqui.
+# ---------------------------------------------------------------------------
+
+
+def _a_mesa_vazia_esquece_o_canal(daemon: Any) -> None:
+    """Com a mesa vazia, o canal esquece as leituras E o relógio da conferência.
+
+    **O LAÇO DO SERVIÇO PARAVA QUANDO O ÚLTIMO CONTROLE SAÍA.** A espera do
+    canal (:func:`_esperar_o_som_mudar`) não passa da hora da próxima
+    conferência, e a hora sai de ``_canal_conferido_em``, que só a volta COM
+    controle avança (:func:`_conferir_no_prazo`). Com a mesa vazia a volta
+    pulava a conferência, a hora ficava no passado, a espera virava prazo
+    zero, e o ``esperar_async`` de prazo zero volta sem ceder o laço: a
+    corrotina girava sem um ``await`` que suspendesse, e o laço inteiro do
+    serviço parava com ela. Sem IPC (a janela dela travada), sem o
+    ``reconnect_loop`` (o controle que voltava não era aceito) e sem o
+    SIGTERM, que o laço atende. Foi o que o diário dela mostrou em 30/09 às
+    01h13 e em 01/10 às 13h28 e às 19h05, os três logo depois do
+    ``controller_disconnected reason=probe_offline`` do último controle, e o
+    que o daemon do produto repetiu num lar de mentira em 02/10: o
+    ``state_full`` mudo desde o primeiro segundo da mesa vazia, 40 s seguidos
+    (58 voltas do ``poll.tick`` onde cabiam 2.300), até um controle voltar, e
+    a pilha do fio do laço em ``canal_do_microfone_loop``.
+
+    **A CURA É O ESTADO DO BOOT**: sem controle não há conferência a fazer, e o
+    relógio dela volta a ``None``, que é como o daemon nasce. A espera volta a
+    ser o prazo inteiro (ou o evento do som), e o controle que chega é
+    conferido na primeira volta, como depois de uma mesa vazia longa já era.
+    Vale para o cabo e para o rádio, de um a quatro: a mesa vazia é uma só.
+    """
+    _CANAL_POR_UNIQ.clear()
+    with contextlib.suppress(Exception):  # daemon de mentira sem atributo livre
+        daemon._canal_conferido_em = None
 
 
 __all__ = [
