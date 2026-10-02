@@ -230,7 +230,6 @@ from __future__ import annotations
 import contextlib
 import ctypes
 import fcntl
-import hashlib
 import os
 import shutil
 import subprocess
@@ -757,6 +756,10 @@ def marca_do_aparelho(uniq: str | None) -> str:
     são hex. O mesmo aparelho dá a mesma marca em toda volta, todo restart e
     os dois transportes; o número do jogador não entra nela.
     """
+    # O IMPORT É AQUI, e não no topo: uma linha a mais no cabeçalho andaria as
+    # citações `arquivo:linha` deste arquivo que moram nas planilhas.
+    import hashlib
+
     digitos = "".join(ch for ch in str(uniq or "").lower() if ch in "0123456789abcdef")
     if len(digitos) < _HEX_MINIMOS_DA_MARCA:
         return ""
