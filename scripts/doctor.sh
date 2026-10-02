@@ -5259,18 +5259,18 @@ check_bt_sdp_cache_envenenado() {
         info "sem sudo sem senha — não leio o cache SDP (confira: sudo grep -L ServiceRecords /var/lib/bluetooth/*/cache/*)"
         return
     fi
-    local achou=0 info_f devdir mac adpdir cache
-    while IFS= read -r info_f; do
-        [[ -z "${info_f}" ]] && continue
-        devdir="$(dirname "${info_f}")"
-        mac="$(basename "${devdir}")"
-        adpdir="$(dirname "${devdir}")"
-        cache="${adpdir}/cache/${mac}"
-        # Só device de perfil HID (0x1124 = HumanInterfaceDevice).
-        sudo -n grep -qi '^Services=.*00001124-0000-1000-8000-00805f9b34fb' "${info_f}" 2>/dev/null || continue
-        # Cache ausente é SÃO: o BlueZ refaz o browse na próxima conexão.
-        sudo -n test -f "${cache}" 2>/dev/null || continue
-        sudo -n grep -q '^\[ServiceRecords\]' "${cache}" 2>/dev/null && continue
+    # O endereço não vai ao argv do sudo (O-SUDO-NAO-GRAVA-O-ENDERECO-NO-DIARIO-01): o
+    # sudo registra a linha de comando, e o caminho de um bond é o endereço. O texto é
+    # fixo, o root expande o curinga, e o controle volta pela saída. Só o perfil HID
+    # (0x1124); o cache ausente é são (o BlueZ refaz o browse na próxima conexão).
+    local achou=0 mac
+    local -r _sem_service_records='for i in /var/lib/bluetooth/*/*/info; do
+        grep -qi "^Services=.*00001124-0000-1000-8000-00805f9b34fb" "$i" || continue
+        d=${i%/info}; m=${d##*/}; c=${d%/*}/cache/$m
+        [ -f "$c" ] || continue; grep -q "^\[ServiceRecords\]" "$c" || echo "$m"
+    done'
+    while IFS= read -r mac; do
+        [[ -z "${mac}" ]] && continue
         achou=1
         # LEITURA SEM SUCESSOR VIVO (MIGRACAO-BLUEZ-DEPRECIADOS-01, 19/08/2026):
         # o `sdptool browse` é o único jeito de perguntar SDP DIRETO ao controle
@@ -5286,7 +5286,7 @@ check_bt_sdp_cache_envenenado() {
             _como_distinguir="NÃO DÁ para distinguir as duas causas nesta máquina: o browse SDP sob demanda só existia no 'sdptool', que o BlueZ depreciou e não está instalado aqui (pacote bluez-deprecated / bluez-deprecated-tools), e btmgmt/bluetoothctl não o substituem. Faça o barato primeiro: o watchdog tenta Connect() a cada 2 min — se em dois ticks o [ServiceRecords] não aparecer, trate como stack do controle travado (nem re-parear resolve): reset de hardware do controle (furinho atrás, ~5 s com um clipe)"
         fi
         fail "cache SDP de ${mac} SEM [ServiceRecords] — o perfil HID não sobe (controle 'Conectado' e sem input). ${_como_distinguir}"
-    done < <(sudo -n find /var/lib/bluetooth -mindepth 3 -maxdepth 3 -type f -name info 2>/dev/null | sort)
+    done < <(sudo -n sh -c "${_sem_service_records}" 2>/dev/null)
     [[ "${achou}" -eq 0 ]] && pass "cache SDP íntegro em todos os controles com bond (todos têm [ServiceRecords])"
 }
 

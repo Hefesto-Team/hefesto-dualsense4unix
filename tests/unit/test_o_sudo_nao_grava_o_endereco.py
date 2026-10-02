@@ -20,7 +20,10 @@ AS CINCO RÉGUAS:
    pedido usa (a regra nova passa; a meia-instalação, a ponte nova com a regra
    velha, não);
 4. o registro da ponte não leva endereço, e o diário do root guarda o dado;
-5. a régua da máquina não lê o UUID como endereço, e a varredura segue lendo.
+5. a régua da máquina não lê o UUID como endereço, e a varredura segue lendo;
+6. o doctor, que lê o BlueZ em disco como root, também não põe o endereço no
+   argv do sudo (o caminho de um bond É o endereço), e segue achando o cache
+   sem ``[ServiceRecords]`` de cada controle.
 
 O ENDEREÇO DE MENTIRA é da faixa forjada ``e8:47:3a`` com os octetos 4 e 5 não
 nulos: é o que deixa a régua achar os PEDAÇOS pelo dono
@@ -898,3 +901,82 @@ def test_o_uuid_v1_com_o_endereco_do_lar_acusa(lar: Path, tmp_path: Path) -> Non
     linha = f"sessao={_uuid(controle.replace(':', ''), versao='1')}"
     codigo, saida = _medir(lar, linha, tmp_path)
     assert codigo == 1, saida
+
+
+# ---------------------------------------------------------------------------
+# 6. o doctor lê o BlueZ em disco sem pôr o endereço no argv do sudo
+# ---------------------------------------------------------------------------
+
+#: O sudo de mentira do doctor: anota o argv, tira o ``-n``, troca o
+#: ``/var/lib/bluetooth`` pela árvore de mentira e roda. Sai com 97 sem a árvore
+#: (a guarda que sai: sem ela, o curinga do doctor leria a raiz).
+SUDO_QUE_ANOTA = """#!/usr/bin/env bash
+[[ -d "${HEFESTO_TESTE_BLUEZ:-}" ]] || exit 97
+printf '%s\\n' "$*" >> "${HEFESTO_TESTE_SUDO_ANOTADO}"
+args=()
+for a in "$@"; do
+    [[ "$a" == "-n" ]] && continue
+    args+=("${a//\\/var\\/lib\\/bluetooth/${HEFESTO_TESTE_BLUEZ}}")
+done
+exec "${args[@]}"
+"""
+
+_INFO_HID = (
+    "[General]\nName=DualSense\nServices=00001124-0000-1000-8000-00805f9b34fb;\n\n"
+    "[LinkKey]\nKey=00\n"
+)
+
+
+def test_o_doctor_le_o_cache_sdp_sem_endereco_no_argv(tmp_path: Path) -> None:
+    """Os quatro controles nos dois adaptadores: dois com o cache sem
+    ``[ServiceRecords]``, um são e um sem cache. O doctor acusa os dois, e nenhum
+    argv que o sudo anotou tem pedaço de endereço.
+
+    Medido em 02/10 no diário da máquina: desde 17/09, 181 rodadas do doctor
+    deixaram ``COMMAND=/usr/bin/test -f /var/lib/bluetooth/<adaptador>/cache/<controle>``
+    na etiqueta ``sudo``, depois de a ponte já mandar o endereço pelo stdin.
+
+    MORDIDA: o laço de antes (um ``sudo -n grep``/``test`` por arquivo) reprova o
+    argv; um texto fixo que não devolve o controle reprova a acusação.
+    """
+    bluez = tmp_path / "bluetooth"
+    controles = list(CONTROLES.items())
+    estado_do_cache = ("envenenado", "envenenado", "sao", "sem")
+    for (controle, adaptador), estado in zip(controles, estado_do_cache, strict=True):
+        pasta = bluez / adaptador.upper() / controle.upper()
+        pasta.mkdir(parents=True)
+        (pasta / "info").write_text(_INFO_HID, encoding="utf-8")
+        cache = bluez / adaptador.upper() / "cache"
+        cache.mkdir(exist_ok=True)
+        if estado == "envenenado":
+            (cache / controle.upper()).write_text("[General]\nName=DualSense\n", encoding="utf-8")
+        elif estado == "sao":
+            (cache / controle.upper()).write_text(
+                "[General]\nName=DualSense\n\n[ServiceRecords]\n0x00010000=00\n",
+                encoding="utf-8",
+            )
+    bin_ = tmp_path / "bin"
+    bin_.mkdir()
+    sudo = bin_ / "sudo"
+    sudo.write_text(SUDO_QUE_ANOTA, encoding="utf-8")
+    sudo.chmod(0o755)
+    anotado = tmp_path / "sudo.txt"
+    feito = subprocess.run(
+        ["bash", "-c", 'set --; source "$DOCTOR_SH"; check_bt_sdp_cache_envenenado'],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+        env={
+            "PATH": f"{bin_}{os.pathsep}/usr/bin{os.pathsep}/bin",
+            "HOME": str(tmp_path / "lar-vazio"),
+            "DOCTOR_SH": str(RAIZ / "scripts" / "doctor.sh"),
+            "HEFESTO_TESTE_BLUEZ": str(bluez),
+            "HEFESTO_TESTE_SUDO_ANOTADO": str(anotado),
+        },
+    )
+    chamadas = anotado.read_text(encoding="utf-8") if anotado.exists() else ""
+    assert "/var/lib/bluetooth" in chamadas, f"o doctor não leu o BlueZ pelo sudo: {feito.stdout}"
+    assert _achados(chamadas) == [], f"endereço no argv do sudo do doctor: {_achados(chamadas)}"
+    acusados = [c for c, _ in controles if f"cache SDP de {c.upper()} SEM" in feito.stdout]
+    assert acusados == [c for c, _ in controles[:2]], feito.stdout

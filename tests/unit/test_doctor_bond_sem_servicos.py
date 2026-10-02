@@ -13,7 +13,7 @@ tem um filtro de elegibilidade que o torna cego a este caso, de propósito para
 outro (SDP-CACHE-01):
 
     # Só device de perfil HID (0x1124 = HumanInterfaceDevice).
-    grep -qi '^Services=.*00001124-...' "${info_f}" || continue
+    grep -qi "^Services=.*00001124-..." "$i" || continue
 
 Ele **só examina quem já tem `Services=` no `info`**. Um device sem `Services=`
 nenhum — o pior caso — é pulado antes de ser olhado. O check enxerga o device
