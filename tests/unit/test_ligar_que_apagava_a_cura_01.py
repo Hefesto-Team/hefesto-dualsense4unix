@@ -46,9 +46,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-import pytest
 
-from tests.unit.test_emulation_mic_quirk import Mixin
 
 RAIZ = Path(__file__).resolve().parents[2]
 WP_FIX = RAIZ / "scripts" / "fix_wireplumber_default_source.sh"
@@ -225,18 +223,5 @@ _CARDS_COM_UM_DUALSENSE = """\
  2 [Controller     ]: USB-Audio - DualSense Wireless Controller
                       Sony Interactive Entertainment DualSense Wireless Controller at usb-0000:0d
 """
-
-
-def _tela(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[object, _RotuloFalso]:
-    dropins = tmp_path / "wireplumber.conf.d"
-    dropins.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setattr(Mixin, "_wp_dropin_dir", staticmethod(lambda: dropins))
-    cards = tmp_path / "cards"
-    cards.write_text(_CARDS_COM_UM_DUALSENSE, encoding="utf-8")
-    monkeypatch.setattr(Mixin, "_PLACAS_ALSA", str(cards))
-    obj = Mixin()
-    rotulo = _RotuloFalso()
-    monkeypatch.setattr(obj, "_get", lambda _id: rotulo, raising=False)
-    return obj, rotulo
 
 

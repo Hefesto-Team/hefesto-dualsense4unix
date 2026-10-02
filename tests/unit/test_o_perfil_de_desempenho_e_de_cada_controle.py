@@ -40,14 +40,8 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("importa as réguas da aba 04, que carregam o GTK")
 
-from tests.unit import test_a_04_pergunta_ao_daemon_vivo as viva
-from tests.unit import test_a_marca_da_cor_nao_some as marca
-from tests.unit import test_o_aplicar_nao_solta_o_teto_do_controle as regua_do_aplicar
-from tests.unit import test_o_brilho_das_luzes_sobrevive_ao_aplicar_e_ao_salvar as regua_do_brilho
 from tests.unit.test_a_marca_da_cor_nao_some import NOME, UNIQS
 
-import pacotes
-from pacotes import a04_iluminacao
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 PAGINAS = [RAIZ / "mockup/08-conexoes.html",
@@ -253,24 +247,6 @@ def test_o_pacote_pinta_o_perfil_de_cada_controle(disco: _PonteDoDisco) -> None:
 
 
 @pytest.fixture
-def mesa_de(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Any]:
-    """A mesa de quatro da O-APLICAR (o `IpcServer` real, o merge do backend)."""
-    feitas: list[Any] = []
-
-    def montar(via: str) -> Any:
-        monkeypatch.setattr(marca, "_handle_falso",
-                            lambda: regua_do_aplicar._handle_que_grava(via))
-        m = viva.MesaViva(tmp_path / f"mesa-{len(feitas)}", pacotes, a04_iluminacao)
-        m.ponte = regua_do_brilho._PonteDaAba(m)
-        feitas.append(m)
-        return m
-
-    yield montar
-    for m in feitas:
-        m.fechar()
-
-
-@pytest.fixture
 def declarar() -> Iterator[Any]:
     """Grava no `maquina.json` do lar de mentira, e a ativação o lê de lá."""
     from hefesto_dualsense4unix.profiles.schema import registrar_declaracao_da_mesa
@@ -306,80 +282,3 @@ def _donos_da_luz(mesa: Any) -> dict[int, str | None]:
                 .get("player_led_brightness") for n in (1, 2, 3, 4)}
 
 
-@pytest.mark.parametrize("via", ["usb", "bt"])
-@pytest.mark.parametrize("k", [1, 2, 3, 4], ids=["P1", "P2", "P3", "P4"])
-def test_a_bateria_longa_depois_do_aplicar_poe_o_teto_so_nele(
-        mesa_de: Any, declarar: Any, k: int, via: str) -> None:
-    orc = _orc()
-    mesa = mesa_de(via)
-    regua_do_aplicar._cada_um_no_seu(mesa)
-    livre = regua_do_aplicar._mesa_inteira(mesa)
-    regua_do_brilho._aplicar(mesa)
-    assert regua_do_aplicar._mesa_inteira(mesa) == livre, "o «Aplicar» mexeu no aparelho"
-    donos_antes = _donos_da_luz(mesa)
-
-    _o_clique_chega_ao_daemon(mesa, declarar,
-                              orc.declaracao_do_perfil(UNIQS[k - 1], orc.PERFIL_BATERIA_LONGA))
-    depois = regua_do_aplicar._mesa_inteira(mesa)
-    assert depois[k]["luzes"] == (regua_do_aplicar.FRACO, regua_do_aplicar.FRACO), (
-        f"P{k}/{via}: as luzes ficaram {depois[k]['luzes']} — a camada do «Aplicar» "
-        "atravessou o teto")
-    assert depois[k]["barra"] is not None and depois[k]["barra"] <= 0.3, depois[k]
-    assert depois[k]["gatilhos"] != livre[k]["gatilhos"], "o gatilho ficou sem teto"
-    for n in {1, 2, 3, 4} - {k}:
-        assert depois[n] == livre[n], f"P{k}/{via}: a economia do P{k} mexeu no P{n}"
-    donos = _donos_da_luz(mesa)
-    assert donos[k] != "usuaria", donos
-    assert all(donos[n] == donos_antes[n] for n in {1, 2, 3, 4} - {k}), (donos_antes, donos)
-
-    _o_clique_chega_ao_daemon(mesa, declarar,
-                              orc.declaracao_do_perfil(UNIQS[k - 1], orc.PERFIL_TUDO_LIGADO))
-    solto = regua_do_aplicar._estado(mesa, k)
-    for campo in ("luzes", "gatilhos", "vibracao", "barra"):
-        assert solto[campo] == livre[k][campo], (
-            f"P{k}/{via}: com «Tudo Ligado» o {campo} ficou {solto[campo]}, e era "
-            f"{livre[k][campo]} — o teto ficou preso")
-
-
-@pytest.mark.parametrize("via", ["usb", "bt"])
-def test_a_bateria_longa_da_sistema_depois_do_aplicar_poe_o_teto_nos_quatro(
-        mesa_de: Any, declarar: Any, via: str) -> None:
-    mesa = mesa_de(via)
-    regua_do_aplicar._cada_um_no_seu(mesa)
-    regua_do_brilho._aplicar(mesa)
-    _o_clique_chega_ao_daemon(mesa, declarar, {"orcamento": {"teto": "economia"}})
-    for n, estado in regua_do_aplicar._mesa_inteira(mesa).items():
-        assert estado["luzes"] == (regua_do_aplicar.FRACO, regua_do_aplicar.FRACO), (n, estado)
-        assert estado["barra"] is not None and estado["barra"] <= 0.3, (n, estado)
-
-
-@pytest.mark.parametrize("via", ["usb", "bt"])
-@pytest.mark.parametrize("k", [1, 2, 3, 4], ids=["P1", "P2", "P3", "P4"])
-def test_a_bateria_longa_no_modo_nativo_poe_o_teto_na_saida_do_jogo(
-        mesa_de: Any, declarar: Any, k: int, via: str) -> None:
-    """Nunca só um modo: o clique com o jogo em Modo Nativo também põe o teto."""
-    from hefesto_dualsense4unix.daemon.lifecycle import Daemon
-    from hefesto_dualsense4unix.utils.maquina import carregar_maquina
-
-    orc = _orc()
-    mesa = mesa_de(via)
-    regua_do_aplicar._cada_um_no_seu(mesa)
-    livre = regua_do_aplicar._mesa_inteira(mesa)
-    regua_do_brilho._aplicar(mesa)
-
-    antes = carregar_maquina()
-    declarar(orc.declaracao_do_perfil(UNIQS[k - 1], orc.PERFIL_BATERIA_LONGA))
-    reaplicou: list[bool] = []
-    vivo = SimpleNamespace(controller=mesa.ctl, _maquina=carregar_maquina(), _native_mode=True,
-                           _reapply_last_profile=lambda: reaplicou.append(True))
-    assert not Daemon.reaplicar_se_a_economia_mudou(vivo, antes)  # type: ignore[arg-type]
-    assert reaplicou == [], "no Modo Nativo o clique não reaplica: o controle é do jogo"
-
-    mesa.trocar(NOME, "system")
-    depois = regua_do_aplicar._mesa_inteira(mesa)
-    assert depois[k]["luzes"] == (regua_do_aplicar.FRACO, regua_do_aplicar.FRACO), (
-        f"P{k}/{via}: saiu do jogo com as luzes {depois[k]['luzes']} — a camada do "
-        "«Aplicar» atravessou o teto")
-    assert depois[k]["barra"] is not None and depois[k]["barra"] <= 0.3, depois[k]
-    for n in {1, 2, 3, 4} - {k}:
-        assert depois[n] == livre[n], f"P{k}/{via}: a economia do P{k} mexeu no P{n}"

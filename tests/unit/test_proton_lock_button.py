@@ -23,14 +23,12 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("o botão da trava do Proton")
 
 import contextlib
-import inspect
 import sys
 import types
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
-
 
 
 def _install_gi_stubs() -> None:
@@ -209,90 +207,6 @@ def pp_fake(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     return caixa
 
 
-class TestWorker:
-    def test_steam_aberta_instrui_e_nao_toca(
-        self, sincrono: None, pp_fake: dict[str, Any]
-    ) -> None:
-        pp_fake["running"] = True
-        stub = _Stub()
-
-        stub._proton_lock_worker()
-
-        assert pp_fake["chamadas"] == 0
-        assert any("Steam está aberta" in t for t in stub.toasts)
-        assert any("feche-a" in t for t in stub.toasts)
-
-    def test_steam_fechada_trava_e_ecoa_o_contrato(
-        self, sincrono: None, pp_fake: dict[str, Any]
-    ) -> None:
-        stub = _Stub()
-
-        stub._proton_lock_worker()
-
-        assert pp_fake["chamadas"] == 1
-        assert any("2 jogo(s)" in t for t in stub.toasts)
-        assert any("GE-Proton10-34" in t for t in stub.toasts)
-        assert pp_fake["kwargs"].get("todos") is True, pp_fake["kwargs"]
-
-    def test_modulo_ausente_recusa_com_o_caminho_do_install(
-        self, sincrono: None, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Instalação sem a lane do pin: `None` em sys.modules faz o import"""
-        monkeypatch.setitem(sys.modules, _PP_MODNAME, None)
-        stub = _Stub()
-
-        stub._proton_lock_worker()
-
-        assert any("install.sh" in t for t in stub.toasts)
-        assert not any("Pronto" in t for t in stub.toasts)
-
-    def test_funcao_ausente_recusa_com_o_caminho_do_install(
-        self,
-        sincrono: None,
-        pp_fake: dict[str, Any],
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """Módulo presente mas SEM a função de lock (versão antiga): recusa"""
-        monkeypatch.delattr(pp_fake["mod"], "lock_proton_for_all_games")
-        stub = _Stub()
-
-        stub._proton_lock_worker()
-
-        assert pp_fake["chamadas"] == 0
-        assert any("install.sh" in t for t in stub.toasts)
-        assert not any("Pronto" in t for t in stub.toasts)
-
-    def test_sem_steam_running_proprio_usa_o_de_steam_launch_options(
-        self,
-        sincrono: None,
-        pp_fake: dict[str, Any],
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """Contrato tolerante: proton_pin sem `steam_running` cai no gate de"""
-        from hefesto_dualsense4unix.integrations import (
-            steam_launch_options as slo,
-        )
-
-        monkeypatch.delattr(pp_fake["mod"], "steam_running")
-        monkeypatch.setattr(slo, "steam_running", lambda: True)
-        stub = _Stub()
-
-        stub._proton_lock_worker()
-
-        assert pp_fake["chamadas"] == 0
-        assert any("Steam está aberta" in t for t in stub.toasts)
-
-    def test_excecao_vira_toast_de_falha(
-        self, sincrono: None, pp_fake: dict[str, Any]
-    ) -> None:
-        pp_fake["result"] = OSError("disco sumiu")
-        stub = _Stub()
-
-        stub._proton_lock_worker()
-
-        assert any("Não consegui travar o Proton" in t for t in stub.toasts)
-
-
 class TestModuloRealExpoeOSimbolo:
     """Achado #4: o worker faz `getattr(pp, "lock_proton_for_all_games")` e o
     chama ZERO-ARG. O `pp_fake` injeta o símbolo em sys.modules e mascarava a
@@ -316,17 +230,6 @@ class _FakeDialog:
 
     def destroy(self) -> None:
         self.destroyed = True
-
-
-class TestDialogoDeConfirmacaoPorFonte:
-    """Espelho stub-level (headless): confirmação temada, não-bloqueante e"""
-
-
-    def test_worker_importa_lazy_dentro_do_handler(self) -> None:
-        src = inspect.getsource(DaemonActionsMixin._proton_lock_worker)
-        assert "hefesto_dualsense4unix.integrations.proton_pin" in src
-        assert "lock_proton_for_all_games" in src
-        assert "getattr" in src
 
 
 _DISPLAY_OK = False

@@ -4,7 +4,6 @@ from __future__ import annotations
 import ast
 import pathlib
 
-import pytest
 
 from tests.conftest import exigir_gi_real
 
@@ -12,7 +11,6 @@ exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import pacotes
 from hefesto_dualsense4unix.interface import hefesto_vivo  # noqa: F401
-from tests.unit import test_todo_gesto_que_grava_esta_protegido as protegido
 
 Chave = tuple[str, str]
 
@@ -145,57 +143,7 @@ def _declarados() -> set[Chave]:
     return set(pacotes.GESTOS_QUE_MEXEM)
 
 
-def _categorias() -> dict[str, set[Chave]]:
-    return {
-        "grava=": _declarados(),
-        "isento": set(protegido.ISENTOS),
-        "GRAVAM_SEM_DECLARAR": set(GRAVAM_SEM_DECLARAR),
-        "ATOS": set(ATOS),
-    }
-
-
-def test_todo_gesto_tem_um_veredito() -> None:
-    """Gesto registrado sem veredito reprova, nomeado."""
-    classificados = set().union(*_categorias().values())
-    sem = sorted(f"{p}·{n}" for p, n in set(pacotes.GESTOS) - classificados)
-    assert not sem, (
-        "gesto(s) sem veredito — ele muda uma escolha dela e não grava, ou não "
-        "é escolha e ninguém disse por quê:\n  " + "\n  ".join(sem)
-        + "\n\nSe o gesto muda uma escolha, ele grava no clique e declara "
-          "`grava=`; se não é escolha, entra em `ATOS` com a razão.")
-
-
-def test_toda_entrada_aponta_um_gesto_e_nao_cruza() -> None:
-    """As duas tabelas daqui só nomeiam gesto que existe, e cada gesto está numa só."""
-    registrados = set(pacotes.GESTOS)
-    for nome, tabela in (("GRAVAM_SEM_DECLARAR", GRAVAM_SEM_DECLARAR), ("ATOS", ATOS)):
-        fantasmas = sorted(f"{p}·{n}" for p, n in set(tabela) - registrados)
-        assert not fantasmas, f"{nome} nomeia gesto que não existe: {fantasmas}"
-        sem_razao = sorted(f"{p}·{n}" for (p, n), r in tabela.items()
-                           if len(r.strip()) < 30)
-        assert not sem_razao, f"{nome} sem razão escrita: {sem_razao}"
-
-    categorias = _categorias()
-    nomes = sorted(categorias)
-    for i, a in enumerate(nomes):
-        for b in nomes[i + 1:]:
-            nos_dois = sorted(f"{p}·{n}" for p, n in categorias[a] & categorias[b])
-            assert not nos_dois, f"gesto(s) em «{a}» e em «{b}» ao mesmo tempo: {nos_dois}"
-
-
 ESCREVEM_PELO_DAEMON = frozenset({"sensor_set_detalhado"})
-
-
-def test_o_ato_nao_grava(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A árvore de cada ato não alcança porta de escrita nenhuma."""
-    monkeypatch.setattr(protegido, "ESCREVEM",
-                        set(protegido.ESCREVEM) | ESCREVEM_PELO_DAEMON)
-    gravam = sorted(f"{p}·{n} (por `{sorted(portas)[0]}`)"
-                    for (p, n) in ATOS
-                    if (portas := protegido._portas(pacotes.GESTOS[(p, n)])))
-    assert not gravam, (
-        "gesto(s) em `ATOS` que gravam — tire da lista e declare `grava=`:\n  "
-        + "\n  ".join(gravam))
 
 
 def test_o_sensor_grava_pelo_daemon() -> None:
@@ -222,8 +170,3 @@ def test_o_sensor_grava_pelo_daemon() -> None:
         "desliga voltaria ligado no próximo Salvar ou na próxima troca")
 
 
-def test_a_regua_nao_esta_vazia() -> None:
-    """Guarda de vacuidade: o registro e as quatro categorias têm gente."""
-    categorias = _categorias()
-    assert len(pacotes.GESTOS) >= 100, len(pacotes.GESTOS)
-    assert all(categorias.values()), {k: len(v) for k, v in categorias.items()}

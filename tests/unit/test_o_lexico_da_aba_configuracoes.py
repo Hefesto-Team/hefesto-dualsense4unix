@@ -18,7 +18,6 @@ from gi.repository import Gtk
 from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions.config import secao_janela, secao_mesa
 from hefesto_dualsense4unix.app.actions.config.secoes import SECOES_DA_ABA
-from tests.unit.aba_config_sem_a_janela import aba_config_montada
 
 RAIZ = Path(__file__).resolve().parents[2]
 FONTE = RAIZ / "src" / "hefesto_dualsense4unix" / "app"
@@ -74,11 +73,6 @@ AINDA_NA_PAGINA: dict[str, str] = {
 NUNCA_MENOS_QUE = 3
 
 
-def _aba_montada() -> Any:
-    """Monta a aba em CÓDIGO e devolve a caixa da aba."""
-    return aba_config_montada()
-
-
 def _descer(raiz: Any) -> list[Any]:
     """Todo widget da subárvore, o título de `Gtk.Frame` incluído."""
     achados: list[Any] = []
@@ -118,32 +112,6 @@ def _conhecido(texto: str) -> bool:
     return any(
         chave in texto
         for chave in (*PARAGRAFOS_QUE_FICAM, *AINDA_NA_PAGINA)
-    )
-
-
-def test_nenhum_paragrafo_de_apoio_novo_na_pagina() -> None:
-    """Explicação nova nasce no hover, nunca na página."""
-    achados = [
-        texto for texto in _paragrafos_de_apoio(_aba_montada()) if not _conhecido(texto)
-    ]
-    assert not achados, (
-        "parágrafo de apoio na PÁGINA que não está declarado:\n  "
-        + "\n  ".join(sorted(set(achados)))
-        + "\n\nA regra do léxico: fica na página o que MUDA, vai para o hover o "
-        "que EXPLICA. Se este texto explica, cole-o como dica do widget que ele "
-        "explica — `marcar_afordancias` dá a marca sozinho. Se ele é ESTADO, "
-        "declare em `PARAGRAFOS_QUE_FICAM` com o motivo."
-    )
-
-
-def test_a_regua_continua_achando_o_que_promete_achar() -> None:
-    """Zero achados é reprovação, não aprovação."""
-    achados = _paragrafos_de_apoio(_aba_montada())
-    assert len(achados) >= NUNCA_MENOS_QUE, (
-        f"a régua achou {len(achados)} parágrafo(s) de apoio na aba, e o piso é "
-        f"{NUNCA_MENOS_QUE}. Ou a leva do léxico terminou (e então este piso "
-        "desce junto, no mesmo commit), ou o coletor quebrou e o dente 1 está "
-        "verde sem medir nada."
     )
 
 

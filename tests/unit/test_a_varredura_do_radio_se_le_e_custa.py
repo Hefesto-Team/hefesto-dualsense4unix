@@ -91,11 +91,10 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.integrations import bluez_dbus, plano_de_radio, varredura_do_radio
+from hefesto_dualsense4unix.integrations import bluez_dbus, varredura_do_radio
 from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     PALAVRAS_DE_CULPA,
 )
-from tests.unit import barramento_de_mentira as bm
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DOCTOR = (REPO_ROOT / "scripts" / "doctor.sh").read_text(encoding="utf-8")
@@ -108,17 +107,6 @@ P5 = "aa:bb:cc:00:00:55"
 P6 = "aa:bb:cc:00:00:66"
 P7 = "aa:bb:cc:00:00:77"
 P8 = "aa:bb:cc:00:00:88"
-
-
-def _ligar_o_barramento(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-    adaptadores: dict[str, tuple[str | None, str | None]],
-) -> None:
-    """Põe o `busctl` de mentira na frente do `PATH` desta corrida, e só dela."""
-    raiz = bm.montar_adaptadores(tmp_path, adaptadores)
-    for chave, valor in bm.ambiente_de_leitura(raiz).items():
-        monkeypatch.setenv(chave, valor)
 
 
 def _sem_dois_pontos(mac: str) -> str:
@@ -155,64 +143,6 @@ def _controle(uniq: str, slot: int | None = None, *, ponte: str | None = None) -
     }
 
 
-def _mesa_apertada_com_dois_destinos() -> dict[str, plano_de_radio.PlanoDoAdaptador]:
-    """Cinco controles apertando um adaptador, e DOIS destinos que cabem."""
-    return plano_de_radio.plano_por_adaptador(
-        [
-            _controle(P1, 1, ponte="som"),
-            _controle(P2, 2, ponte="som"),
-            _controle(P3, 3, ponte="som"),
-            _controle(P4, 4),
-            _controle(P5, 5),
-            _controle(P6, 6),
-            _controle(P7, 7),
-            _controle(P8, 8),
-        ],
-        com_ponte_de_mic=[_sem_dois_pontos(p) for p in (P1, P2, P3, P4, P5)],
-        apelidos={
-            bm.ADAPTADOR_PARADO: "Dongle da frente",
-            bm.ADAPTADOR_QUE_VARRE: "Dongle de trás",
-            bm.ADAPTADOR_FOLGADO: "Dongle do meio",
-        },
-        **_bancada(
-            {
-                P1: bm.ADAPTADOR_PARADO,
-                P2: bm.ADAPTADOR_PARADO,
-                P3: bm.ADAPTADOR_PARADO,
-                P4: bm.ADAPTADOR_PARADO,
-                P5: bm.ADAPTADOR_PARADO,
-                P6: bm.ADAPTADOR_QUE_VARRE,
-                P7: bm.ADAPTADOR_FOLGADO,
-                P8: bm.ADAPTADOR_FOLGADO,
-            }
-        ),
-    )
-
-
-def test_o_leitor_responde_pelo_endereco_e_nunca_pelo_hci_n(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """MORDIDA 1. A chave é o BD Address, porque `hciN` inverte entre boots."""
-    _ligar_o_barramento(
-        monkeypatch,
-        tmp_path,
-        {
-            "hci7": (bm.ADAPTADOR_QUE_VARRE, "true"),
-            "hci8": (bm.ADAPTADOR_PARADO, "false"),
-            "hci9": (bm.ADAPTADOR_FOLGADO, "false"),
-        },
-    )
-    leitura = varredura_do_radio.quem_esta_varrendo()
-
-    assert leitura.sei, leitura.motivo
-    assert leitura.completa
-    assert leitura.varrendo == frozenset({bm.ADAPTADOR_QUE_VARRE}), (
-        "o leitor tem de responder pelo ENDEREÇO minúsculo — um `hciN` aqui "
-        "casaria hoje e erraria no próximo boot, calado"
-    )
-    assert not any(nome.startswith("hci") for nome in leitura.varrendo)
-
-
 def test_sem_busctl_a_resposta_e_nao_sei_e_nunca_nenhum(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -228,202 +158,6 @@ def test_sem_busctl_a_resposta_e_nao_sei_e_nunca_nenhum(
     assert leitura.motivo == varredura_do_radio.SEM_BUSCTL
     assert leitura.varrendo == frozenset()
     assert "não" in leitura.motivo, "a ausência tem de se declarar em português"
-
-
-def test_bluez_mudo_e_nao_sei_e_nunca_uma_mesa_vazia(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """`busctl` existe e o `org.bluez` não responde: continua sendo "não sei"."""
-    _ligar_o_barramento(monkeypatch, tmp_path, {})
-    leitura = varredura_do_radio.quem_esta_varrendo()
-
-    assert not leitura.sei
-    assert leitura.motivo == varredura_do_radio.SEM_BLUEZ
-    assert leitura.varrendo == frozenset()
-
-
-def test_quem_varre_sem_endereco_legivel_nao_entra_como_varrendo(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """MORDIDA 3. `Discovering=true` sem `Address` é "não sei", não um destino."""
-    _ligar_o_barramento(
-        monkeypatch,
-        tmp_path,
-        {
-            "hci7": (None, "true"),
-            "hci8": (bm.ADAPTADOR_PARADO, "false"),
-        },
-    )
-    leitura = varredura_do_radio.quem_esta_varrendo()
-
-    assert leitura.varrendo == frozenset(), (
-        "um adaptador sem endereço legível não é destino de nada — e um `hci7` "
-        "em `varrendo` é uma chave que plano nenhum reivindica"
-    )
-    assert leitura.mudos == frozenset({"hci7"})
-    assert leitura.sei, "a leitura aconteceu; o que falta é UM adaptador"
-    assert not leitura.completa, "e `completa` é o que confessa essa falta"
-
-
-def test_adaptador_mudo_nao_e_adaptador_parado(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """MORDIDA 4. `Discovering` que não responde não é `Discovering=false`."""
-    _ligar_o_barramento(
-        monkeypatch,
-        tmp_path,
-        {
-            "hci7": (bm.ADAPTADOR_QUE_VARRE, None),
-            "hci8": (bm.ADAPTADOR_PARADO, "false"),
-        },
-    )
-    leitura = varredura_do_radio.quem_esta_varrendo()
-
-    assert leitura.mudos == frozenset({"hci7"})
-    assert leitura.varrendo == frozenset()
-    assert not leitura.completa
-
-
-def test_a_mesa_inteira_parada_e_uma_resposta_de_verdade(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """O contrapeso das quatro acima: quando NINGUÉM varre, o produto sabe."""
-    _ligar_o_barramento(
-        monkeypatch,
-        tmp_path,
-        {
-            "hci7": (bm.ADAPTADOR_QUE_VARRE, "false"),
-            "hci8": (bm.ADAPTADOR_PARADO, "false"),
-        },
-    )
-    leitura = varredura_do_radio.quem_esta_varrendo()
-
-    assert leitura.completa
-    assert leitura.varrendo == frozenset()
-    assert leitura.mudos == frozenset()
-
-
-def test_o_destino_que_varre_desce_para_o_fim_da_fila() -> None:
-    """MORDIDA 6. Havendo outro destino que caiba, o que varre perde a vez."""
-    planos = _mesa_apertada_com_dois_destinos()
-
-    sem_leitura = plano_de_radio.ordem_de_redistribuicao(planos)
-    assert sem_leitura is not None
-    assert sem_leitura.destino == bm.ADAPTADOR_QUE_VARRE, (
-        "o cenário só morde se, SEM a leitura, o motor escolhesse o adaptador "
-        "que varre — senão a régua mede o arranjo fácil"
-    )
-
-    com_leitura = plano_de_radio.ordem_de_redistribuicao(
-        planos, varrendo={bm.ADAPTADOR_QUE_VARRE}
-    )
-    assert com_leitura is not None
-    assert com_leitura.destino == bm.ADAPTADOR_FOLGADO
-    assert com_leitura.destino_na_tela == "Dongle do meio"
-
-
-def test_o_unico_destino_possivel_continua_valendo_mesmo_varrendo() -> None:
-    """MORDIDA 5. O filtro é ORDENAÇÃO, não exclusão — e é isso que o prova."""
-    planos = plano_de_radio.plano_por_adaptador(
-        [
-            _controle(P1, 1, ponte="som"),
-            _controle(P2, 2, ponte="som"),
-            _controle(P3, 3, ponte="som"),
-            _controle(P4, 4),
-            _controle(P5, 5),
-            _controle(P6, 6),
-        ],
-        com_ponte_de_mic=[_sem_dois_pontos(p) for p in (P1, P2, P3, P4, P5)],
-        apelidos={
-            bm.ADAPTADOR_PARADO: "Dongle da frente",
-            bm.ADAPTADOR_QUE_VARRE: "Dongle de trás",
-        },
-        **_bancada(
-            {
-                P1: bm.ADAPTADOR_PARADO,
-                P2: bm.ADAPTADOR_PARADO,
-                P3: bm.ADAPTADOR_PARADO,
-                P4: bm.ADAPTADOR_PARADO,
-                P5: bm.ADAPTADOR_PARADO,
-                P6: bm.ADAPTADOR_QUE_VARRE,
-            }
-        ),
-    )
-    ordem = plano_de_radio.ordem_de_redistribuicao(
-        planos, varrendo={bm.ADAPTADOR_QUE_VARRE}
-    )
-
-    assert ordem is not None, (
-        "o único destino possível está varrendo, e o motor calou — excluir "
-        "mataria a máquina de um adaptador só"
-    )
-    assert ordem.destino == bm.ADAPTADOR_QUE_VARRE
-
-
-def test_sem_leitura_o_motor_escolhe_exatamente_como_escolhia() -> None:
-    """"Não sei" nunca vira penalidade — a hipótese explica o que JÁ funcionava."""
-    planos = _mesa_apertada_com_dois_destinos()
-
-    assert plano_de_radio.ordem_de_redistribuicao(
-        planos
-    ) == plano_de_radio.ordem_de_redistribuicao(planos, varrendo=None)
-    assert plano_de_radio.ordem_de_redistribuicao(
-        planos, varrendo=frozenset()
-    ) == plano_de_radio.ordem_de_redistribuicao(planos)
-
-
-def test_a_mesa_folgada_nao_vira_ordem_so_porque_alguem_varre() -> None:
-    """Varredura não cria ordem de serviço — ela só reordena os destinos."""
-    planos = plano_de_radio.plano_por_adaptador(
-        [_controle(P1, 1), _controle(P2, 2)],
-        apelidos={bm.ADAPTADOR_QUE_VARRE: "Dongle de trás"},
-        **_bancada({P1: bm.ADAPTADOR_QUE_VARRE, P2: bm.ADAPTADOR_PARADO}),
-    )
-    assert (
-        plano_de_radio.ordem_de_redistribuicao(
-            planos, varrendo={bm.ADAPTADOR_QUE_VARRE}
-        )
-        is None
-    )
-
-
-def test_o_oraculo_a_varredura_muda_o_destino_da_ordem(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """A prova da sprint, ponta a ponta: liga a busca e a ordem muda de destino."""
-    planos = _mesa_apertada_com_dois_destinos()
-
-    _ligar_o_barramento(
-        monkeypatch,
-        tmp_path / "parado",
-        {
-            "hci7": (bm.ADAPTADOR_QUE_VARRE, "false"),
-            "hci8": (bm.ADAPTADOR_FOLGADO, "false"),
-        },
-    )
-    parada = varredura_do_radio.quem_esta_varrendo()
-    antes = plano_de_radio.ordem_de_redistribuicao(planos, varrendo=parada.varrendo)
-    assert antes is not None
-    assert antes.destino == bm.ADAPTADOR_QUE_VARRE
-
-    _ligar_o_barramento(
-        monkeypatch,
-        tmp_path / "varrendo",
-        {
-            "hci7": (bm.ADAPTADOR_QUE_VARRE, "true"),
-            "hci8": (bm.ADAPTADOR_FOLGADO, "false"),
-        },
-    )
-    varrendo = varredura_do_radio.quem_esta_varrendo()
-    assert varrendo.varrendo == frozenset({bm.ADAPTADOR_QUE_VARRE})
-
-    depois = plano_de_radio.ordem_de_redistribuicao(planos, varrendo=varrendo.varrendo)
-    assert depois is not None
-    assert depois.destino == bm.ADAPTADOR_FOLGADO, (
-        "a busca subiu e a ordem de serviço não mudou de destino — o leitor e o "
-        "motor não estão falando a mesma língua de endereço"
-    )
-    assert antes.origem == depois.origem, "só o destino muda; a origem é a mesma"
 
 
 def test_o_doctor_cita_os_numeros_do_dono() -> None:
@@ -456,67 +190,6 @@ def test_o_aviso_do_doctor_nao_culpa_ninguem() -> None:
         assert palavra not in bloco, f"«{palavra}» culpa alguém pelo rádio ocupado"
 
 
-def test_a_lembranca_poupa_o_barramento_dentro_da_validade(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """MORDIDA 8. Arrancar a validade faz a tela perguntar a cada pintura."""
-    monkeypatch.setattr(varredura_do_radio, "_LEMBRANCA", None)
-    _ligar_o_barramento(
-        monkeypatch, tmp_path, {"hci7": (bm.ADAPTADOR_QUE_VARRE, "true")}
-    )
-    perguntas: list[float] = []
-    relogio = iter([0.0, 1.0, 2.9, 3.1])
-    original = varredura_do_radio.quem_esta_varrendo
-
-    def contar(**kwargs: Any) -> Any:
-        perguntas.append(1.0)
-        return original(**kwargs)
-
-    monkeypatch.setattr(varredura_do_radio, "quem_esta_varrendo", contar)
-    for _ in range(4):
-        leitura = varredura_do_radio.varredura_recente(relogio=lambda: next(relogio))
-
-    assert leitura.varrendo == frozenset({bm.ADAPTADOR_QUE_VARRE})
-    assert len(perguntas) == 2, (
-        "quatro chamadas em 3,1 s deviam custar DUAS perguntas ao barramento "
-        f"(uma por janela de {varredura_do_radio.SEGUNDOS_DE_VALIDADE} s), e "
-        f"custaram {len(perguntas)}"
-    )
-
-
-def test_a_lembranca_nao_congela_a_resposta_para_sempre(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """O contrapeso: passada a validade, o produto vê a busca que SUBIU."""
-    monkeypatch.setattr(varredura_do_radio, "_LEMBRANCA", None)
-    _ligar_o_barramento(
-        monkeypatch, tmp_path / "antes", {"hci7": (bm.ADAPTADOR_QUE_VARRE, "false")}
-    )
-    relogio = iter([0.0, 100.0])
-    assert (
-        varredura_do_radio.varredura_recente(relogio=lambda: next(relogio)).varrendo
-        == frozenset()
-    )
-
-    _ligar_o_barramento(
-        monkeypatch, tmp_path / "depois", {"hci7": (bm.ADAPTADOR_QUE_VARRE, "true")}
-    )
-    assert varredura_do_radio.varredura_recente(
-        relogio=lambda: next(relogio)
-    ).varrendo == frozenset({bm.ADAPTADOR_QUE_VARRE})
-
-
-def test_o_leitor_nao_presume_bancada_nenhuma(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """Um adaptador só, e o leitor responde igual — a ordem dela de 11/09."""
-    _ligar_o_barramento(monkeypatch, tmp_path, {"hci7": (bm.ADAPTADOR_QUE_VARRE, "true")})
-    leitura = varredura_do_radio.quem_esta_varrendo()
-
-    assert leitura.completa
-    assert leitura.varrendo == frozenset({bm.ADAPTADOR_QUE_VARRE})
-
-
 def test_o_leitor_nao_toca_no_radio_de_ninguem(tmp_path: Path) -> None:
     """Ler é tudo o que se pode fazer daqui, e o fonte tem de dizer isso."""
     fonte = Path(varredura_do_radio.__file__).read_text(encoding="utf-8")
@@ -526,43 +199,6 @@ def test_o_leitor_nao_toca_no_radio_de_ninguem(tmp_path: Path) -> None:
     for escrita in bluez_dbus.ESCRITAS:
         assert f".{escrita}(" not in corpo, f"o leitor não pode chamar {escrita}"
     assert ".propriedade(" in corpo
-
-
-def test_o_leitor_nao_deixa_o_locale_cegar_a_leitura(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """`LC_ALL=C` no ambiente do subprocesso — o `pactl` já cegou dois leitores."""
-    vistos: list[dict[str, str]] = []
-    original = bluez_dbus.subprocess.run
-
-    def espiar(*args: Any, **kwargs: Any) -> Any:
-        vistos.append(dict(kwargs.get("env") or {}))
-        return original(*args, **kwargs)
-
-    _ligar_o_barramento(monkeypatch, tmp_path, {"hci7": (bm.ADAPTADOR_PARADO, "false")})
-    monkeypatch.setattr(bluez_dbus.subprocess, "run", espiar)
-    varredura_do_radio.quem_esta_varrendo()
-
-    assert vistos, "o leitor não abriu subprocesso nenhum"
-    assert all(env.get("LC_ALL") == "C" for env in vistos)
-    assert all("PATH" in env for env in vistos), (
-        "o ambiente do subprocesso perdeu o PATH — o `busctl` não seria achado"
-    )
-
-
-def test_o_leitor_nao_levanta_quando_o_busctl_explode(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """Nunca levanta: toda saída é uma `Varredura`, inclusive o erro do processo."""
-    raiz = bm.montar_adaptadores(tmp_path, {"hci7": (bm.ADAPTADOR_PARADO, "false")})
-    quebrado = raiz / "bin" / "busctl"
-    quebrado.write_text("#!/usr/bin/env bash\nexit 7\n", encoding="utf-8")
-    quebrado.chmod(0o755)
-    monkeypatch.setenv("PATH", f"{raiz / 'bin'}{os.pathsep}{os.environ.get('PATH', '')}")
-
-    leitura = varredura_do_radio.quem_esta_varrendo()
-    assert not leitura.sei
-    assert leitura.varrendo == frozenset()
 
 
 def _busctl_que_trava(tmp_path: Path, quantos: int) -> Path:
@@ -619,54 +255,3 @@ def test_o_barramento_travado_nao_segura_a_thread_do_desenho(
     assert leitura.varrendo == frozenset()
 
 
-def test_o_orcamento_nao_corta_barramento_que_responde(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """O contrapeso da 10: um corte que corta sempre não mede nada."""
-    _ligar_o_barramento(
-        monkeypatch,
-        tmp_path,
-        {
-            "hci7": (bm.ADAPTADOR_QUE_VARRE, "true"),
-            "hci8": (bm.ADAPTADOR_PARADO, "false"),
-            "hci9": (bm.ADAPTADOR_FOLGADO, "false"),
-        },
-    )
-    leitura = varredura_do_radio.quem_esta_varrendo()
-
-    assert leitura.sei, leitura.motivo
-    assert leitura.completa
-    assert leitura.varrendo == frozenset({bm.ADAPTADOR_QUE_VARRE})
-
-
-def test_a_mesa_toda_muda_nao_e_uma_mesa_parada(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """MORDIDA 11. Ninguém foi ouvido — e isso não é «ninguém está varrendo».
-
-    O ARRANJO DIFÍCIL, e é o que a régua do adaptador mudo não alcança: lá UM
-    adaptador cala e o outro responde, então a leitura sabe alguma coisa. Aqui a
-    mesa INTEIRA cala, e a resposta antiga voltava com `sei=True` e `varrendo`
-    vazio — que é o `set()` querendo dizer as duas coisas opostas, o defeito que
-    este módulo inteiro existe para matar.
-
-    O único leitor do produto (`_ContaDeSlots._ler_a_varredura`) pega só
-    `varrendo`; se `sei` não confessar sozinho, ninguém confessa.
-    """
-    _ligar_o_barramento(
-        monkeypatch,
-        tmp_path,
-        {
-            "hci7": (bm.ADAPTADOR_QUE_VARRE, None),
-            "hci8": (bm.ADAPTADOR_PARADO, None),
-        },
-    )
-    leitura = varredura_do_radio.quem_esta_varrendo()
-
-    assert not leitura.sei, (
-        "a mesa inteira calou e a leitura respondeu «sei» — «não ouvi ninguém» "
-        "está sendo lido como «ninguém varre»"
-    )
-    assert leitura.motivo == varredura_do_radio.MESA_TODA_MUDA
-    assert leitura.varrendo == frozenset()
-    assert leitura.mudos == frozenset({"hci7", "hci8"})

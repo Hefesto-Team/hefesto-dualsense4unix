@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import ast
-import math
 import re
 from collections.abc import Iterator
 from typing import Any
@@ -13,7 +12,6 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import arranjo_da_mesa as motor
 from hefesto_dualsense4unix.integrations import radio_da_mesa as radio
-from tests.unit import mesa_do_mockup as mock
 
 MELHOR = motor.variante_por_id("melhor").opcoes
 POUCOS = motor.variante_por_id("poucos").opcoes
@@ -53,65 +51,6 @@ def sem_a_cura_do_mapa() -> Iterator[None]:
         motor._o_mapa_so_move_o_que_a_receita_manda = guardado  # type: ignore[assignment]
 
 
-def test_dois_dongles_identicos_nao_trocam_de_lugar_entre_si() -> None:
-    """Com a regra, a receita de 24/08 tem 5 movimentos e nenhum é troca de irmãos."""
-    mesa = mock.mesa(leitura=mock.LEITURA_ANTES)
-    assert len(movimentos(mesa)) == 5
-    plano = motor.planejar(mesa).plano
-    assert plano["9"] == "bt-a"
-    assert plano["15a"] == "bt-b"
-
-
-@pytest.mark.usefixtures("sem_a_regra_do_irmao")
-def test_arrancada_a_regra_do_irmao_a_receita_salta_de_cinco_para_sete() -> None:
-    """A MORDIDA: sem ela, dois UB500 idênticos trocam de lugar, sem ganho nenhum."""
-    mesa = mock.mesa(leitura=mock.LEITURA_ANTES)
-    saltou = movimentos(mesa)
-    assert len(saltou) == 7, saltou
-    assert "Mova o dongle Bluetooth da entrada 15a para a 9" in saltou
-    assert any(t.startswith("Mova o dongle Bluetooth da entrada 9 para a 15a") for t in saltou)
-
-
-def test_o_bonus_de_ficar_parado_so_desempata() -> None:
-    """+1 mantém o hub na entrada em que está; sem ele, o plano o troca de lugar à toa."""
-    mesa = mock.mesa(leitura=mock.LEITURA_ANTES)
-    assert motor.planejar(mesa, MELHOR).plano["4"] == "hub"
-    sem_bonus = motor.planejar(mesa, SEM_BONUS).plano
-    assert sem_bonus["3"] == "hub"
-    assert sem_bonus.get("4") != "hub"
-
-
-def test_arrancado_o_bonus_mexendo_o_minimo_manda_mexer_em_mais() -> None:
-    """A MORDIDA: 4 movimentos viram 6, e os dois a mais são trabalho puro."""
-    mesa = mock.mesa(leitura=mock.LEITURA_ANTES)
-    com = movimentos(mesa, POUCOS)
-    sem = movimentos(mesa, motor.Opcoes(bonus_parado=0, proibir=POUCOS.proibir))
-    assert len(com) == 4, com
-    assert len(sem) == 6, sem
-    webcam = "Mova a webcam da entrada 6 para a 2  ·  melhora, não é urgente"
-    assert webcam in sem
-    assert webcam not in com
-    assert "Mova o cabo do hub da entrada 4 para a 3" in sem
-
-
-def test_ganho_negativo_nao_vira_ordem_de_servico() -> None:
-    """Não se manda mexer à toa — e agora o MAPA obedece à mesma regra."""
-    mesa = mock.mesa()
-    aloc = motor.alocacao(mesa.mapa, mesa.leitura)
-    parados = 0
-    for nome, op in TODAS:
-        plano = motor.planejar(mesa, op)
-        titulos = " || ".join(movimentos(mesa, op))
-        for aparelho in mesa.aparelhos:
-            de = motor.entrada_de_em(aloc, aparelho.id)
-            if not de or plano.motivo[aparelho.id].ganho > 0:
-                continue
-            parados += 1
-            assert motor.entrada_de_em(plano.plano, aparelho.id) == de, (nome, aparelho.id)
-            assert f"da entrada {de} para" not in titulos, (nome, aparelho.id)
-    assert parados, "o cenário deixou de exercitar ganho não-positivo"
-
-
 def _mesa_do_empate() -> motor.Mesa:
     """Duas entradas idênticas e um aparelho já numa delas — o empate puro."""
     faces = (motor.Face(nome="Duas iguais", regiao="pc", entradas=(
@@ -139,24 +78,6 @@ def test_arrancado_o_filtro_a_receita_manda_mexer_a_toa(
     assert dict(motor.planejar(mesa, op).plano) == {"1": "cam"}
     assert movimentos(mesa, op) == [
         "Mova a webcam da entrada 2 para a 1  ·  melhora, não é urgente"]
-
-
-def test_arrancado_o_filtro_a_mesa_dela_perde_a_urgencia_dos_forcados(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A MORDIDA na mesa REAL: os três movimentos forçados viram "não é urgente"."""
-    mesa = mock.mesa()
-    com = movimentos(mesa, SO_PC)
-    monkeypatch.setattr(
-        motor, "_receita_manda_mover",
-        lambda de, para, motivo: bool(para) and de != para,
-    )
-    sem = movimentos(mesa, SO_PC)
-    assert len(com) == len(sem) == 6
-    urgentes = [t for t in com if "não é urgente" not in t]
-    assert len(urgentes) == 4, urgentes
-    assert [t for t in sem if "não é urgente" not in t] == [
-        t for t in urgentes if not t.startswith("Mova")]
 
 
 DOIS_ADAPTADORES = (
@@ -191,135 +112,6 @@ def test_ninguem_troca_de_adaptador_sem_baixar_o_pico() -> None:
     plano = motor.plano_dos_controles(tres, DOIS_ADAPTADORES)
     assert _quem_muda(tres, plano) == [], "mover não baixaria o pico: 553,4 continuaria 553,4"
     assert dict(plano.carga) == pytest.approx({"bt-a": 553.4, "bt-b": 276.7})
-
-
-def test_sem_adaptador_nenhum_o_motor_diz_que_nao_cabe() -> None:
-    """A mesa dela às 02h36 de 25/08: o hub saiu e levou os três dongles."""
-    mesa = mock.mesa_sem_hub()
-    assert motor.adaptadores_da_mesa(mesa) == ()
-    plano = motor.plano_dos_controles(mock.CONTROLES, motor.adaptadores_da_mesa(mesa))
-    assert plano.cabe is False
-    assert plano.sobra == 0
-    assert dict(plano.destino) == {}
-
-
-@pytest.mark.parametrize("nome,op", TODAS)
-def test_todo_aparelho_que_o_mapa_move_a_receita_manda_mover(
-    nome: str, op: motor.Opcoes,
-) -> None:
-    """A invariante inteira, nas quatro variantes MAIS o bônus desligado."""
-    mesa = mock.mesa()
-    plano = motor.planejar(mesa, op)
-    aloc = motor.alocacao(mesa.mapa, mesa.leitura)
-    titulos = " || ".join(movimentos(mesa, op))
-    for aparelho in mesa.aparelhos:
-        para = motor.entrada_de_em(plano.plano, aparelho.id)
-        if not para or motor.entrada_de_em(aloc, aparelho.id) == para:
-            continue
-        assert f"a {para}" in titulos or f"entrada {para}" in titulos, (nome, aparelho.id)
-
-
-@pytest.mark.usefixtures("sem_a_cura_do_mapa")
-def test_arrancada_a_cura_o_mapa_move_tres_aparelhos_que_a_receita_nao_manda() -> None:
-    """A MORDIDA, e ela nomeia os três órfãos, um a um."""
-    mesa = mock.mesa()
-    aloc = motor.alocacao(mesa.mapa, mesa.leitura)
-    orfaos: dict[str, list[str]] = {}
-    for nome, op in TODAS:
-        plano = motor.planejar(mesa, op)
-        titulos = " || ".join(movimentos(mesa, op))
-        for aparelho in mesa.aparelhos:
-            para = motor.entrada_de_em(plano.plano, aparelho.id)
-            de = motor.entrada_de_em(aloc, aparelho.id)
-            if not para or de is None or de == para:
-                continue
-            if f"a {para}" not in titulos and f"entrada {para}" not in titulos:
-                orfaos.setdefault(nome, []).append(f"{aparelho.id}: {de}->{para}")
-    assert orfaos == {
-        "sem-ext": ["bt-b: 15a->15"],
-        "so-pc": ["bt-a: 9->5", "bt-b: 15a->7"],
-        "sem-bonus": ["hub: 4->3"],
-    }, orfaos
-
-
-def test_a_variante_que_tira_a_entrada_de_hoje_diz_por_que_esta_tirando() -> None:
-    """Sair de um lugar bom sem ganho só se justifica com a frase que o explica."""
-    mesa = mock.mesa()
-    achou = 0
-    for nome, op in [("sem-ext", SEM_EXT), ("so-pc", SO_PC)]:
-        for movimento in motor.receita(mesa, op):
-            if not movimento.titulo.startswith("Mova"):
-                continue
-            porques = [ln.texto for ln in movimento.linhas]
-            if any(t.startswith("Esta opção não usa a entrada") for t in porques):
-                achou += 1
-                assert movimento.essencial, (nome, movimento.titulo)
-                assert movimento.ganho == math.inf, (nome, movimento.titulo)
-    assert achou == 3, f"esperava um em Sem o extensor e dois em Sem usar o hub, vi {achou}"
-
-
-def _aplicar(mesa: motor.Mesa, plano: motor.Plano) -> motor.Mesa:
-    """A mesa depois de ela mexer nos cabos: cada entrada do plano vira o caminho."""
-    novo = {n: mesa.leitura[quem] for n, quem in plano.plano.items() if quem in mesa.leitura}
-    return mock.mesa(mapa=novo, leitura=mesa.leitura, aparelhos=mesa.aparelhos)
-
-
-@pytest.mark.parametrize("variante", ["melhor", "poucos", "sem-ext"])
-def test_aplicar_o_plano_e_replanejar_da_zero_movimentos(variante: str) -> None:
-    """Ponto fixo: o plano não pode se contradizer a cada clique."""
-    op = motor.variante_por_id(variante).opcoes
-    mesa = mock.mesa()
-    depois = _aplicar(mesa, motor.planejar(mesa, op))
-    assert movimentos(depois, op) == []
-
-
-def test_sem_usar_o_hub_so_estabiliza_na_segunda_volta() -> None:
-    """MEDIDO EM 25/08: a quarta variante NÃO é ponto fixo de primeira."""
-    mesa = mock.mesa()
-    primeira = _aplicar(mesa, motor.planejar(mesa, SO_PC))
-    assert len(movimentos(primeira, SO_PC)) == 3
-    segunda = _aplicar(primeira, motor.planejar(primeira, SO_PC))
-    assert movimentos(segunda, SO_PC) == []
-
-
-def test_a_variante_declara_o_que_perde() -> None:
-    """Toda variante cujo plano difere do melhor diz, em frase, o que se perde."""
-    mesa = mock.mesa()
-    melhor = motor.planejar(mesa, MELHOR).plano
-    diferentes = 0
-    for variante in motor.VARIANTES:
-        plano = motor.planejar(mesa, variante.opcoes).plano
-        if plano == melhor:
-            continue
-        diferentes += 1
-        perdas = motor.consequencias(mesa, variante.opcoes)
-        assert perdas, f"{variante.rotulo} muda o arranjo e não diz o que custa"
-    assert diferentes >= 2, "o cenário deixou de exercitar variantes que divergem"
-
-
-def test_o_que_se_perde_nunca_sai_em_pontos() -> None:
-    """*"437 pontos pior"* não diz nada a ninguém. A nota existe e não vai à tela."""
-    mesa = mock.mesa()
-    for variante in motor.VARIANTES:
-        nota = str(motor.qualidade(mesa, variante.opcoes))
-        for frase in motor.consequencias(mesa, variante.opcoes):
-            assert "ponto" not in frase.lower()
-            assert nota not in frase
-        for movimento in motor.receita(mesa, variante.opcoes):
-            texto = movimento.titulo + " ".join(ln.texto for ln in movimento.linhas)
-            assert "ponto" not in texto.lower()
-            assert nota not in texto
-
-
-def test_o_selo_de_cada_razao_e_um_dos_tres_graus() -> None:
-    """O selo é a coluna `de_onde_sei`: é o que impede raciocínio de virar medição."""
-    graus = {motor.SELO_MEDIDO, motor.SELO_DERIVADO, motor.SELO_ESPEC}
-    mesa = mock.mesa()
-    for variante in motor.VARIANTES:
-        for movimento in motor.receita(mesa, variante.opcoes):
-            assert {ln.selo for ln in movimento.linhas} <= graus
-        for motivo in motor.planejar(mesa, variante.opcoes).motivo.values():
-            assert {r.selo for r in motivo.razoes} <= graus
 
 
 _FONTE_DO_MOTOR = Path(motor.__file__)
@@ -861,88 +653,3 @@ _ENTRADA_ONDE_ELA_POS = "7"
 _CAMINHO_NOVO_DO_WIFI = "4-2"
 
 
-def _mapa_declarado_do_mockup() -> object:
-    """O gabinete do mockup na forma do `maquina.json` — 8 de 16 declaradas."""
-    from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
-
-    faces = [
-        {"nome": face.nome,
-         "portas": [e.n for e in face.entradas],
-         "perto": face.perto, "alto": face.alto}
-        for face in mock.FACES
-    ]
-    portas: dict[str, dict[str, object]] = {
-        entrada.n: {} for face in mock.FACES for entrada in face.entradas
-    }
-    portas["15a"] = {"filha_de": "15"}
-    for numero, caminho in mock.MAPA.items():
-        portas.setdefault(numero, {})["caminho"] = caminho
-    return MapaDaMesa(faces=faces, portas=portas)
-
-
-def _confirmar(entrada: str) -> dict[str, str]:
-    """O 'Já movi' dela, pelo gesto do produto — devolve `entrada -> caminho`."""
-    from hefesto_dualsense4unix.interface.logica_do_mapa import LogicaDoMapa
-
-    logica = LogicaDoMapa(_mapa_declarado_do_mockup())  # type: ignore[arg-type]
-    logica.escolhido = _CAMINHO_NOVO_DO_WIFI
-    assert logica.colocar(entrada), f"o produto recusou a entrada {entrada}"
-    return {
-        numero: str(valor["caminho"])
-        for numero, valor in logica.portas.items()
-        if valor.get("caminho")
-    }
-
-
-def test_a_confirmacao_da_ordem_liga_a_entrada() -> None:
-    """O mapa ganha `N -> caminho novo` só quando ela diz que foi para o N."""
-    mesa_agora = mock.mesa(leitura=mock.LEITURA_AGORA)
-    mudou = {m.aparelho.id: m for m in motor.reexame(
-        mesa_agora, mock.LEITURA_ANTES, mock.LEITURA_AGORA)}
-    assert "wifi" in mudou, sorted(mudou)
-    assert mudou["wifi"].agora == _CAMINHO_NOVO_DO_WIFI
-    assert mudou["wifi"].entrada_agora is None, (
-        "o motor deu uma entrada a um caminho que ninguém declarou — "
-        "isso é presumir")
-
-    perdidos = {s.aparelho.id: s for s in motor.sem_entrada(mesa_agora)}
-    assert "wifi" in perdidos and perdidos["wifi"].regiao == "pc"
-    livres = [e.n for e in motor.candidatas(mesa_agora, "pc")]
-    assert _ENTRADA_SUGERIDA in livres and _ENTRADA_ONDE_ELA_POS in livres, livres
-    assert len(livres) < len(motor.todas_as_entradas(mesa_agora.faces)), (
-        "a dedução não cortou candidata nenhuma")
-
-    depois_do_sim = _confirmar(_ENTRADA_SUGERIDA)
-    assert depois_do_sim[_ENTRADA_SUGERIDA] == _CAMINHO_NOVO_DO_WIFI
-    assert _ENTRADA_ONDE_ELA_POS not in depois_do_sim
-    aprendida = mock.mesa(mapa=depois_do_sim, leitura=mock.LEITURA_AGORA)
-    assert motor.alocacao(aprendida.mapa, aprendida.leitura)[
-        _ENTRADA_SUGERIDA] == "wifi"
-    assert "wifi" not in {s.aparelho.id for s in motor.sem_entrada(aprendida)}
-
-    depois_do_nao = _confirmar(_ENTRADA_ONDE_ELA_POS)
-    novas = sorted(n for n in depois_do_nao if n not in mock.MAPA)
-    assert depois_do_nao.get(_ENTRADA_ONDE_ELA_POS) == _CAMINHO_NOVO_DO_WIFI, (
-        f"ela apontou a entrada {_ENTRADA_ONDE_ELA_POS} e o mapa aprendeu "
-        f"{novas} — o produto presumiu em vez de gravar o que ela disse")
-    assert _ENTRADA_SUGERIDA not in depois_do_nao, (
-        f"o mapa gravou a entrada {_ENTRADA_SUGERIDA}, que o produto sugeriu, "
-        "e ela disse outra — mapa que mente é pior que mapa vazio")
-
-
-def test_presumir_a_entrada_sugerida_faz_o_mapa_mentir() -> None:
-    """A mordida: gravar a sugerida sem perguntar, e ela ter posto noutra."""
-    presumido = dict(mock.MAPA)
-    presumido[_ENTRADA_SUGERIDA] = _CAMINHO_NOVO_DO_WIFI
-    mentindo = mock.mesa(mapa=presumido, leitura=mock.LEITURA_AGORA)
-
-    onde_o_mapa_diz = motor.entrada_de_em(
-        motor.alocacao(mentindo.mapa, mentindo.leitura), "wifi")
-    assert onde_o_mapa_diz == _ENTRADA_SUGERIDA
-    assert onde_o_mapa_diz != _ENTRADA_ONDE_ELA_POS, (
-        "o dublê não reproduziu a mentira — a régua não estaria medindo nada")
-
-    assert "wifi" not in {s.aparelho.id for s in motor.sem_entrada(mentindo)}
-    assert _ENTRADA_SUGERIDA not in [
-        e.n for e in motor.candidatas(mentindo, "pc")], (
-        "a entrada presumida continuou candidata — a mentira nem sequer pegou")

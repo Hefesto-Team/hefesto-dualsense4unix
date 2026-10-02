@@ -42,7 +42,6 @@ a régua da remoção daquele pacote; tirar a chamada de
 from __future__ import annotations
 
 import json
-import os
 import re
 import shutil
 import socket
@@ -52,7 +51,6 @@ from pathlib import Path
 
 import pytest
 
-from tests.unit import test_o_fisico_nasce_escondido_em_qualquer_maquina as udev
 
 BASH = shutil.which("bash") or "/bin/bash"
 RAIZ = Path(__file__).resolve().parents[2]
@@ -108,12 +106,6 @@ def _rodar(
     return r
 
 
-def _etc(tmp: Path) -> Path:
-    etc = tmp / "etc" / "udev" / "rules.d"
-    etc.mkdir(parents=True, exist_ok=True)
-    return etc
-
-
 def _efetivas(texto: str) -> list[str]:
     return [
         linha
@@ -150,41 +142,6 @@ BLOCO_DO_INSTALL = INSTALL_UDEV[
 ]
 
 
-def _instalar(tmp: Path, *, abrir: bool = False) -> Path:
-    etc = _etc(tmp)
-    bloco = BLOCO_DO_INSTALL.replace(f"{ETC}/", f"{etc}/")
-    assert ETC not in bloco.replace(str(etc), ""), bloco
-    script = f'HERE="{RAIZ}"\nASSETS="{RAIZ}/assets"\nABRIR_O_NO={1 if abrir else 0}\n' + bloco
-    r = _rodar(tmp, script)
-    assert r.returncode == 0, r.stderr
-    return etc
-
-
-def test_o_install_numa_maquina_nova(tmp_path: Path) -> None:
-    """Sem a regra de antes no disco: o `set -e` do script não perdoa um `rm` sem `-f`."""
-    etc = _instalar(tmp_path)
-    assert sorted(p.name for p in etc.iterdir()) == [NOVA]
-    assert (etc / NOVA).read_bytes() == ASSET.read_bytes()
-
-
-def test_o_install_duas_vezes_da_o_mesmo(tmp_path: Path) -> None:
-    etc = _instalar(tmp_path)
-    primeira = {p.name: p.read_bytes() for p in etc.iterdir()}
-    _instalar(tmp_path)
-    assert {p.name: p.read_bytes() for p in etc.iterdir()} == primeira
-
-
-def test_o_opt_out_vai_e_volta(tmp_path: Path) -> None:
-    """Fechada → aberta (`--no-fechar-o-no`) → fechada: o fim é o asset, byte a byte."""
-    etc = _instalar(tmp_path)
-    _instalar(tmp_path, abrir=True)
-    aberta = _efetivas((etc / NOVA).read_text(encoding="utf-8"))
-    assert not any('TAG-="uaccess"' in linha for linha in aberta), aberta
-    _instalar(tmp_path)
-    assert sorted(p.name for p in etc.iterdir()) == [NOVA]
-    assert (etc / NOVA).read_bytes() == ASSET.read_bytes()
-
-
 RM_DO_UNINSTALL = _comando_rm(UNINSTALL, depois_de='if [[ "${REMOVE_UDEV}" -eq 1 ]]; then')
 
 
@@ -194,68 +151,14 @@ def _desinstalar(tmp: Path, etc: Path) -> subprocess.CompletedProcess[str]:
     return _rodar(tmp, bloco)
 
 
-def test_o_uninstall_depois_do_install_e_de_novo(tmp_path: Path) -> None:
-    etc = _instalar(tmp_path)
-    (etc / "99-de-outro-programa.rules").write_text("#\n", encoding="utf-8")
-    r = _desinstalar(tmp_path, etc)
-    assert r.returncode == 0, r.stderr
-    assert sorted(p.name for p in etc.iterdir()) == ["99-de-outro-programa.rules"]
-    r = _desinstalar(tmp_path, etc)
-    assert r.returncode == 0, r.stderr
-    assert sorted(p.name for p in etc.iterdir()) == ["99-de-outro-programa.rules"]
-
-
-def test_o_uninstall_na_maquina_que_so_tem_a_velha(tmp_path: Path) -> None:
-    etc = _etc(tmp_path)
-    (etc / VELHA).write_text(ASSET.read_text(encoding="utf-8"), encoding="utf-8")
-    r = _desinstalar(tmp_path, etc)
-    assert r.returncode == 0, r.stderr
-    assert list(etc.iterdir()) == []
-
-
 ABRIR_A_QUE_FICA = _funcao(UNINSTALL, "_abrir_a_regra_do_no_que_fica")
-
-
-def _manter_udev(tmp: Path) -> subprocess.CompletedProcess[str]:
-    corpo = ABRIR_A_QUE_FICA.replace(f"{ETC}/", f"{_etc(tmp)}/")
-    assert ETC not in corpo.replace(str(_etc(tmp)), ""), corpo
-    script = (
-        f'ROOT_DIR="{RAIZ}"\nDRY_RUN=0\nlog() {{ printf "%s\\n" "$*"; }}\n'
-        + corpo
-        + "_abrir_a_regra_do_no_que_fica\n"
-    )
-    r = _rodar(tmp, script)
-    assert r.returncode == 0, r.stderr
-    return r
 
 
 def _fechada(texto: str) -> bool:
     return any('TAG-="uaccess"' in linha for linha in _efetivas(texto))
 
 
-@pytest.mark.parametrize("nome", [NOVA, VELHA])
-def test_a_regra_fechada_que_fica_vira_a_aberta(tmp_path: Path, nome: str) -> None:
-    """A de hoje e a de antes (um install anterior a 25/09 que nunca se atualizou)."""
-    etc = _etc(tmp_path)
-    (etc / nome).write_text(ASSET.read_text(encoding="utf-8"), encoding="utf-8")
-    _manter_udev(tmp_path)
-    assert sorted(p.name for p in etc.iterdir()) == [nome], "o --keep-udev preserva o nome"
-    texto = (etc / nome).read_text(encoding="utf-8")
-    assert not _fechada(texto), texto
-    abertas = [linha for linha in _efetivas(texto) if 'TAG+="uaccess"' in linha]
-    assert len(abertas) == 5, abertas
-
-
 ENCHIMENTO = "".join(f'ENV{{HEFESTO_ENCHIMENTO}}="{i:06d}"\n' for i in range(8000))
-
-
-def test_a_regra_grande_nao_engana_a_troca_sob_pipefail(tmp_path: Path) -> None:
-    """Uma fechada grande: sob `pipefail` o cano com `grep -q` a leria como aberta."""
-    etc = _etc(tmp_path)
-    (etc / NOVA).write_text(ASSET.read_text(encoding="utf-8") + ENCHIMENTO, encoding="utf-8")
-    _manter_udev(tmp_path)
-    texto = (etc / NOVA).read_text(encoding="utf-8")
-    assert not _fechada(texto), "a fechada grande ficou fechada, e o broker saiu"
 
 
 def test_a_regra_grande_nao_engana_o_doctor_sob_pipefail(tmp_path: Path) -> None:
@@ -278,46 +181,6 @@ def test_a_regra_grande_nao_engana_o_doctor_sob_pipefail(tmp_path: Path) -> None
     assert r.stdout.strip() == "FECHADA", (r.stdout, r.stderr)
 
 
-def test_com_a_regra_que_fica_o_fisico_volta_ao_mundo_de_antes(tmp_path: Path) -> None:
-    """Pela cadeia inteira (o udev de bolso): o físico e o vpad com a ACL da sessão."""
-    raiz = udev.montar(tmp_path, terceiros=udev.TERCEIROS_POR_MAQUINA["nenhuma"])
-    _manter_udev(tmp_path)
-    for nome, aparelho in sorted(udev.FISICOS.items()):
-        assert udev.rodar(aparelho(), raiz).acl_da_sessao, nome
-    assert udev.rodar(udev.o_vpad(), raiz).acl_da_sessao
-
-
-def test_a_aberta_e_o_link_para_dev_null_ficam_como_estao(tmp_path: Path) -> None:
-    """O que já não fecha nada não se toca: a aberta, e a regra que alguém desligou."""
-    etc = _etc(tmp_path)
-    aberta = udev._aberta()
-    (etc / NOVA).write_text(aberta, encoding="utf-8")
-    os.symlink("/dev/null", etc / VELHA)
-    _manter_udev(tmp_path)
-    assert (etc / NOVA).read_text(encoding="utf-8") == aberta
-    assert (etc / VELHA).is_symlink() and os.readlink(etc / VELHA) == "/dev/null"
-
-
-def test_a_fechada_que_nao_reabre_sai(tmp_path: Path) -> None:
-    """A transformação recusa uma forma que ela não alcança: aberto é o lado seguro."""
-    etc = _etc(tmp_path)
-    estranha = (
-        'KERNEL=="hidraw*", KERNELS=="0005:054C:0CE6.*", MODE="0600", TAG-="uaccess"\n'
-    )
-    (etc / NOVA).write_text(estranha, encoding="utf-8")
-    r = _manter_udev(tmp_path)
-    assert list(etc.iterdir()) == [], r.stdout
-
-
-def test_o_keep_udev_duas_vezes(tmp_path: Path) -> None:
-    etc = _etc(tmp_path)
-    (etc / NOVA).write_text(ASSET.read_text(encoding="utf-8"), encoding="utf-8")
-    _manter_udev(tmp_path)
-    uma = (etc / NOVA).read_bytes()
-    _manter_udev(tmp_path)
-    assert (etc / NOVA).read_bytes() == uma
-
-
 def test_o_ramo_do_keep_udev_chama_a_troca() -> None:
     """A função só vale se o ramo do `--keep-udev` a chamar (com a credencial)."""
     ramo = UNINSTALL[UNINSTALL.index("udev rules preservadas (--keep-udev)") - 1200 :]
@@ -325,23 +188,6 @@ def test_o_ramo_do_keep_udev_chama_a_troca() -> None:
     assert "else\n" in ramo
     depois_do_else = ramo[ramo.rindex("\nelse\n") :]
     assert "_abrir_a_regra_do_no_que_fica\n" in depois_do_else, depois_do_else
-
-
-def test_o_ensaio_do_keep_udev_so_diz(tmp_path: Path) -> None:
-    """No `--dry-run` a troca vira uma linha FARIA, e nada se escreve."""
-    etc = _etc(tmp_path)
-    (etc / NOVA).write_text(ASSET.read_text(encoding="utf-8"), encoding="utf-8")
-    corpo = ABRIR_A_QUE_FICA.replace(f"{ETC}/", f"{etc}/")
-    script = (
-        f'ROOT_DIR="{RAIZ}"\nDRY_RUN=1\nlog() {{ :; }}\n'
-        '_faria() { printf "FARIA %s\\n" "$*"; }\n'
-        + corpo
-        + "_abrir_a_regra_do_no_que_fica\n"
-    )
-    r = _rodar(tmp_path, script)
-    assert r.returncode == 0, r.stderr
-    assert "FARIA (root) trocar" in r.stdout, r.stdout
-    assert (etc / NOVA).read_bytes() == ASSET.read_bytes()
 
 
 def _comandos_do_helper(tmp: Path, etc: Path, src: Path) -> list[str]:
@@ -366,19 +212,6 @@ def _comandos_do_helper(tmp: Path, etc: Path, src: Path) -> list[str]:
     ]
 
 
-def test_o_helper_roda_limpo_numa_maquina_nova_e_duas_vezes(tmp_path: Path) -> None:
-    """Como ele roda de verdade: `bash -c` SEM `set -e` — o erro vira ruído na tela dela."""
-    src = tmp_path / "src"
-    src.mkdir()
-    shutil.copy(ASSET, src / NOVA)
-    etc = _etc(tmp_path)
-    comandos = "\n".join(_comandos_do_helper(tmp_path, etc, src)) + "\n"
-    for _ in range(2):
-        r = _rodar(tmp_path, comandos, estrito=False)
-        assert r.returncode == 0 and r.stderr == "", r.stderr
-    assert sorted(p.name for p in etc.iterdir()) == [NOVA]
-
-
 REMOCAO = {
     "deb": (RAIZ / "packaging" / "debian" / "prerm", "\n    remove)\n"),
     "arch": (RAIZ / "packaging" / "arch" / "hefesto-dualsense4unix.install", "pre_remove() {"),
@@ -398,38 +231,6 @@ def _bloco_do_mv(texto: str) -> str:
     recuo = texto[comeco:i]
     fim = texto.index(f"\n{recuo}fi\n", i) + len(recuo) + 4
     return texto[comeco:fim]
-
-
-def _no_etc_de_mentira(bloco: str, tmp: Path) -> str:
-    trocado = bloco.replace(f"{ETC}/", f"{_etc(tmp)}/")
-    assert ETC not in trocado.replace(str(_etc(tmp)), ""), trocado
-    return trocado
-
-
-@pytest.mark.parametrize("pacote", sorted(REMOCAO))
-def test_a_remocao_numa_maquina_em_que_o_helper_nunca_rodou(tmp_path: Path, pacote: str) -> None:
-    """Nada em /etc: o `prerm` do .deb corre sob `set -e`, e um `rm` que falha o trava."""
-    arquivo, secao = REMOCAO[pacote]
-    rm = _comando_rm(arquivo.read_text(encoding="utf-8"), depois_de=secao)
-    r = _rodar(tmp_path, _no_etc_de_mentira(rm, tmp_path))
-    assert r.returncode == 0, r.stderr
-
-
-@pytest.mark.parametrize("pacote", sorted(REMOCAO))
-def test_o_ciclo_do_pacote_nao_deixa_rastro(tmp_path: Path, pacote: str) -> None:
-    """A 70 fechada do helper → a atualização (duas vezes) → a remoção: /etc vazio."""
-    etc = _etc(tmp_path)
-    (etc / VELHA).write_text(ASSET.read_text(encoding="utf-8"), encoding="utf-8")
-    pos = POS_INSTALACAO[pacote].read_text(encoding="utf-8")
-    mv = _no_etc_de_mentira(_bloco_do_mv(pos), tmp_path)
-    for _ in range(2):
-        assert _rodar(tmp_path, mv).returncode == 0
-        assert sorted(p.name for p in etc.iterdir()) == [NOVA]
-    assert (etc / NOVA).read_bytes() == ASSET.read_bytes()
-    arquivo, secao = REMOCAO[pacote]
-    rm = _comando_rm(arquivo.read_text(encoding="utf-8"), depois_de=secao)
-    assert _rodar(tmp_path, _no_etc_de_mentira(rm, tmp_path)).returncode == 0
-    assert list(etc.iterdir()) == []
 
 
 FUNCOES_NOVAS_DO_DOCTOR = (

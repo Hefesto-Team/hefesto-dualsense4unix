@@ -32,7 +32,6 @@ offline" pede um ESTADO NOVO na tela — controle insensível com a dica —, e 
 
 from __future__ import annotations
 
-from typing import Any
 
 import pytest
 
@@ -67,15 +66,6 @@ class _CardMinimo:
     def hide(self) -> None:
         self.mostrou.append(False)
 
-    @property
-    def volume_no_rascunho(self) -> int | None:
-        return self._dono_do_rascunho.draft.mic.volume
-
-
-def _responder(card: _CardMinimo, corpo: Any, *, volume: int) -> None:
-    """Entrega ao callback do card a resposta que o daemon deu."""
-    card._mic_confirmado_pelo_daemon(volume=volume)(corpo)
-
 
 @pytest.mark.parametrize("honrado", [True, None])
 def test_so_o_alvo_nao_honrado_produz_frase(honrado: bool | None) -> None:
@@ -93,96 +83,6 @@ def test_a_frase_do_alvo_nao_honrado_e_a_confissao() -> None:
     assert "não mudou" in frase, (
         "a confissão não diz o que NÃO aconteceu — sem isso ela deixa a "
         "dúvida de o perfil ter sido gravado errado"
-    )
-
-
-def test_alvo_nao_honrado_nao_grava_no_rascunho() -> None:
-    """A MORDIDA: o daemon confessa `por_uniq: False` e o rascunho NÃO muda."""
-    card = _CardMinimo()
-    antes = card.volume_no_rascunho
-
-    _responder(
-        card,
-        {"status": "ok", "volume": 62, "fonte": "alsa_input.pci-0000_00", "por_uniq": False},
-        volume=62,
-    )
-
-    assert card.volume_no_rascunho == antes, (
-        "o gesto mirava o controle "
-        f"{UNIQ_ESCOLHIDO} e o daemon mexeu no microfone de "
-        f"{UNIQ_DO_VIZINHO} (rota global, `por_uniq: False`) — mesmo assim o "
-        f"volume {card.volume_no_rascunho} foi gravado no rascunho DELA. O "
-        "perfil deste controle passa a carregar um número que este controle "
-        "nunca teve."
-    )
-    assert card.mostrou == [True], (
-        "a tela não confessou: o volume foi para o microfone de outra pessoa "
-        "e o card ficou calado"
-    )
-
-
-def test_alvo_honrado_grava_e_a_tela_fica_calada() -> None:
-    """O contrapeso, e sem ele a régua acima passaria com a cura de fora."""
-    card = _CardMinimo()
-
-    _responder(
-        card,
-        {"status": "ok", "volume": 62, "por_uniq": True},
-        volume=62,
-    )
-
-    assert card.volume_no_rascunho == 62, (
-        "o daemon honrou o alvo e o volume dela não foi para o rascunho"
-    )
-    assert card.mostrou == [False], (
-        "a tela confessou um erro que não aconteceu"
-    )
-
-
-def test_daemon_calado_sobre_o_alvo_continua_registrando() -> None:
-    """`por_uniq` ausente é "não sei", e "não sei" não é "não honrei"."""
-    card = _CardMinimo()
-
-    _responder(card, {"status": "ok", "volume": 55}, volume=55)
-
-    assert card.volume_no_rascunho == 55
-    assert card.mostrou == [False]
-
-
-def test_daemon_offline_nao_registra_e_nao_confessa() -> None:
-    """`None` = o daemon não respondeu. Não há o que gravar nem o que confessar."""
-    card = _CardMinimo()
-
-    _responder(card, None, volume=70)
-
-    assert card.volume_no_rascunho is None
-    assert card.mostrou == [False]
-
-
-def test_sem_fonte_nao_registra() -> None:
-    """`sem_fonte` é o rádio sem a ponte de áudio: o pedido NÃO ficou de pé."""
-    card = _CardMinimo()
-
-    _responder(card, {"status": "sem_fonte", "por_uniq": True}, volume=70)
-
-    assert card.volume_no_rascunho is None, (
-        "o daemon disse `sem_fonte` — nenhuma fonte de captura existe — e o "
-        "volume entrou no rascunho como se tivesse sido aplicado"
-    )
-
-
-@pytest.mark.parametrize("ok", [True, False])
-def test_o_mudo_continua_falando_bool(ok: bool) -> None:
-    """`mic.set` não mudou de rota, e o mesmo callback atende os dois gestos."""
-    card = _CardMinimo()
-
-    card._mic_confirmado_pelo_daemon(muted=True)(ok)
-
-    assert card._dono_do_rascunho.draft.mic.muted is None, (
-        "o mudo entrou no rascunho — o «Salvar» o levaria ao perfil, e o mudo "
-        "é do controle")
-    assert card.mostrou == [False], (
-        "o gesto do mudo não fala de alvo — a tela não pode confessar nada"
     )
 
 

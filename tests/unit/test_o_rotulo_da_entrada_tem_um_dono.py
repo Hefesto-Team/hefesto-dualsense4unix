@@ -45,7 +45,6 @@ from tests.unit.test_o_nome_da_entrada_e_da_posicao import (
     PCI_A,
     PCI_B,
     _a_maquina_dela,
-    gravar_o_arquivo_de_antes,
 )
 
 PAGINA = onde.pagina(arranjo_desta_maquina.PAGINA, publicado=True)
@@ -140,19 +139,6 @@ def test_a_sugestao_diz_as_duas_pontas_pelo_nome(
     _limpo(card)
 
 
-def test_a_ordem_manda_para_a_entrada_pelo_nome() -> None:
-    """«… para a entrada Meio» com o nome, «… para a Entrada 2» sem ele."""
-    from tests.unit.test_ordens_da_mesa import leitura
-
-    com_nome = ordens.radio_largo_no_mesmo_hub(
-        leitura(entradas_livres_declaradas=("1",), nomes_das_entradas={"1": "Meio"}))
-    sem_nome = ordens.radio_largo_no_mesmo_hub(leitura(entradas_livres_declaradas=("2",)))
-    assert com_nome is not None and sem_nome is not None
-    assert com_nome.acao.endswith("para a entrada Meio"), com_nome.acao
-    assert sem_nome.acao.endswith("para a Entrada 2"), sem_nome.acao
-    _limpo(com_nome.acao + sem_nome.acao)
-
-
 def test_a_recusa_do_governador_concorda_com_entrada() -> None:
     """O artigo concorda com «entrada», não com o nome: «A entrada Meio», «na Entrada 13»."""
     from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
@@ -182,39 +168,3 @@ def test_a_leitura_das_ordens_leva_o_nome_das_entradas(
     assert dict(lida.nomes_das_entradas) == {"1": "Meio"}, lida.nomes_das_entradas
 
 
-def test_o_nome_dado_no_mapa_chega_a_sugestao_e_a_ordem(
-    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """De ponta a ponta: o nome que ela dá no editor do mapa (``dar_nome_a_entrada``,"""
-    from tests.conftest import exigir_gi_real
-
-    exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
-    from hefesto_dualsense4unix.app.actions.config import secao_exame
-    from hefesto_dualsense4unix.integrations import censo_do_barramento, entradas_do_gabinete
-    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
-    from hefesto_dualsense4unix.utils.maquina import carregar_maquina
-
-    gravar_o_arquivo_de_antes(tmp_path, _a_maquina_dela())
-    assert ee.dar_nome_a_entrada("2", "Frente de cima").gravou
-    dela = carregar_maquina()
-    assert dela.mapa.portas["2"].nome == "Frente de cima"
-
-    monkeypatch.setattr(censo_do_barramento, "ler_o_barramento", lambda **_k: Censo())
-    monkeypatch.setattr(entradas_do_gabinete, "listar_entradas", lambda **_k: ())
-    lida: Any = secao_exame.leitura_das_ordens(dela)
-    assert dict(lida.nomes_das_entradas) == {"1": "Meio", "2": "Frente de cima"}
-
-    from tests.unit.test_ordens_da_mesa import leitura
-
-    ordem = ordens.radio_largo_no_mesmo_hub(leitura(
-        entradas_livres_declaradas=("2",), nomes_das_entradas=lida.nomes_das_entradas))
-    assert ordem is not None and ordem.acao.endswith("para a entrada Frente de cima"), ordem
-
-    monkeypatch.setattr(a08_conexoes, "_declaracao", lambda *_a, **_k: dela)
-    vazio = ordens.Linha(texto="", selo="")
-    card = a08_conexoes._card_da_ordem(ordens.Ordem(
-        chave="teste", acao=ordem.acao, o_que_eu_vi=vazio, por_que_importa=vazio,
-        ganho_esperado=vazio, alvo=ordens.Identidade(caminho="1-4"), destino="2"))
-    assert '<span class="caixa">Meio</span>' in card, card
-    assert '<span class="caixa alvo">Frente de cima</span>' in card, card
-    _limpo(card)

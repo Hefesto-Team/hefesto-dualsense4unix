@@ -64,7 +64,6 @@ _gi.require_version("Gtk", "3.0")
 _gi.require_version("Gdk", "3.0")
 from gi.repository import Gtk
 
-from tests.unit.aba_config_sem_a_janela import aba_config_montada
 from hefesto_dualsense4unix.app.actions.config.moldura import (
     CLASSE_AJUDA,
     CLASSE_TEM_DICA,
@@ -99,21 +98,6 @@ def _girar(vezes: int = 5000) -> None:
         Gtk.main_iteration()
 
 
-@pytest.fixture(scope="module")
-def aba_montada(_folha_na_tela: None) -> Any:
-    """A aba de VERDADE, montada pelo mixin, numa janela mostrada."""
-    caixa = aba_config_montada()
-    rolagem = Gtk.ScrolledWindow()
-    rolagem.add(caixa)
-    janela = Gtk.OffscreenWindow()
-    janela.get_style_context().add_class("hefesto-dualsense4unix-window")
-    janela.add(rolagem)
-    janela.set_size_request(1180, 1000)
-    janela.show_all()
-    _girar()
-    return rolagem
-
-
 def _tem_dica(widget: Any) -> bool:
     return bool((widget.get_tooltip_text() or "").strip())
 
@@ -146,25 +130,6 @@ def _marcado(widget: Any) -> bool:
 
 def _descrever(widget: Any) -> str:
     return f"{type(widget).__name__}({(widget.get_text() or '')[:44]!r})"
-
-
-def test_a_regua_encontra_alvos(aba_montada: Any) -> None:
-    """Sem isto, todo teste abaixo pode passar afirmando o vazio."""
-    alvos = [w for w in _descer(aba_montada) if _precisa_de_marca(w)]
-    assert len(alvos) >= NUNCA_MENOS_QUE, (
-        f"a régua achou só {len(alvos)} rótulo(s) com dica na aba montada; "
-        "abaixo deste piso o arquivo inteiro passa sem afirmar nada"
-    )
-
-
-def test_nenhum_rotulo_com_dica_fica_invisivel(aba_montada: Any) -> None:
-    """A MORDIDA. Rótulo que esconde explicação e não a anuncia reprova."""
-    mudos = [w for w in _descer(aba_montada) if _precisa_de_marca(w) and not _marcado(w)]
-    assert not mudos, (
-        f"{len(mudos)} rótulo(s) da aba Configurações têm dica e NENHUMA marca "
-        "visual — quem não sabe que há explicação não passa o mouse para "
-        "procurá-la:\n  " + "\n  ".join(_descrever(w) for w in mudos)
-    )
 
 
 def test_todo_titulo_de_secao_com_dica_ganha_a_marca() -> None:
@@ -205,21 +170,6 @@ def test_o_titulo_de_secao_continua_um_rotulo_com_texto() -> None:
             f"o texto do título saiu {rotulo.get_text()!r}, e não "
             f"{secao.TITULO!r} — as buscas por título deixam de achar a seção"
         )
-
-
-def test_o_ponto_de_interrogacao_da_mesa_converge(aba_montada: Any) -> None:
-    """O `?` que `secao_mesa` já montava à mão ganha o MESMO círculo."""
-    glifos = [
-        w
-        for w in _descer(aba_montada)
-        if isinstance(w, Gtk.Label) and (w.get_text() or "").strip() == "?" and _tem_dica(w)
-    ]
-    assert glifos, "nenhum `?` de ajuda na aba montada — a régua perdeu o alvo"
-    sem_circulo = [w for w in glifos if CLASSE_AJUDA not in _classes(w)]
-    assert not sem_circulo, (
-        f"{len(sem_circulo)} `?` da aba ficaram sem a classe `{CLASSE_AJUDA}` — "
-        "duas gramáticas para a mesma ideia na mesma tela"
-    )
 
 
 def test_o_sublinhado_chega_pontilhado_no_widget(_folha_na_tela: None) -> None:

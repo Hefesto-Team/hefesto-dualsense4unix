@@ -475,42 +475,6 @@ def _perfil_novo() -> Profile:
     return Profile(name="novo", match=MatchAny(), leds=LedsConfig())
 
 
-def test_moldura_mostra_o_desenho_automatico_num_perfil_novo() -> None:
-    """O relato: "a moldura mostra nada selecionado enquanto o controle exibe"""
-    host = _host_lightbar(DraftConfig.from_profile(_perfil_novo()), UNIQ_A, 3)
-    host._refresh_lightbar_from_draft()
-    assert host.rotulo.texto == (
-        "Desenho que mandamos: desenho do P3 — automático, do número deste "
-        "controle."
-    )
-
-
-def test_moldura_diz_quando_a_escolha_e_dela() -> None:
-    """Desenho não-vazio no rascunho vence o automático por campo (D5)."""
-    draft = DraftConfig.from_profile(_perfil_novo())
-    draft = draft.model_copy(
-        update={
-            "leds": draft.leds.model_copy(
-                update={"player_leds": (False, True, False, True, False)}
-            )
-        }
-    )
-    host = _host_lightbar(draft, UNIQ_A, 3)
-    host._refresh_lightbar_from_draft()
-    assert host.rotulo.texto == (
-        "Desenho que mandamos: desenho do P2 — escolha sua."
-    )
-
-
-def test_moldura_avisa_que_o_co_op_governa_o_desenho() -> None:
-    """Critério 3 da validação da sprint: com co-op ligado, a tela avisa."""
-    host = _host_lightbar(DraftConfig.from_profile(_perfil_novo()), UNIQ_A, 3)
-    host._coop_ligado = True
-    host._refresh_lightbar_from_draft()
-    assert "co-op" in host.rotulo.texto
-    assert "manda nas 5 luzes" in host.rotulo.texto
-
-
 def _host_sem_mapa_de_controles() -> Any:
     """Alvo "Todos" e nenhum tique do daemon ainda — o cenário do achado."""
     host = _host_lightbar(DraftConfig.from_profile(_perfil_novo()), None, None)

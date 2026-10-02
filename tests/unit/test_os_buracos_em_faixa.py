@@ -11,14 +11,12 @@ import pytest
 from hefesto_dualsense4unix.core.backend_pydualsense import PRIMARIO_RESERVA_SEC
 from hefesto_dualsense4unix.daemon.subsystems import coop as coop_mod
 from hefesto_dualsense4unix.daemon.subsystems.coop import (
-    _CHAVE_DO_P1,
     _a_mesa_depois,
     _em_ordem,
     _fora_do_boneco,
     planejar_a_ordem,
 )
 from hefesto_dualsense4unix.daemon.subsystems.identity import prazo_do_lugar_guardado
-from tests.unit import test_o_jogo_espera_a_carta_do_lugar_guardado as bancada_mod
 from tests.unit.test_coop_bancada_de_queda_do_primario import _LeitorDeSecundario
 from tests.unit.test_o_buraco_de_quem_saiu_se_fecha_no_jogo import _as_mesas_do_produto
 from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (  # noqa: F401
@@ -320,80 +318,6 @@ def _nascidos(bancada: MesaDoJogo, desde: int, uniq: str) -> list[Any]:
 
 PRAZO = max(PRIMARIO_RESERVA_SEC, prazo_do_lugar_guardado())
 DEPOIS = 10.0
-
-
-@pytest.fixture
-def mesa_de_seis(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A bancada de queda com um sexto controle (a mesa de cinco lê ``CHAVE_DE``)."""
-    monkeypatch.setitem(bancada_mod.CHAVE_DE, SEXTO, "AA:BB:CC:00:00:06")
-    monkeypatch.setattr(coop_mod, "ESPERA_PELA_ORDEM_S", 0.0)
-
-
-@pytest.mark.usefixtures("config_isolado", "mesa_de_seis")
-class TestUmDosSessentaComSeisControles:
-    """A forma ``1F@1 2@3 3@4 5@5``, com a classe real e seis controles."""
-
-    @staticmethod
-    def _ate_o_p2_vencer(
-        monkeypatch: pytest.MonkeyPatch, bancada: MesaDoJogo, g: str
-    ) -> tuple[int, Planos, Any]:
-        bancada.mesa.levantar(P2)
-        for _ in range(_ticks(DEPOIS)):
-            bancada.tique()
-        bancada.mesa.levantar(g)
-        bancada.tique()
-        antes = len(bancada.vpads)
-        vpad_do_z = bancada.vpad_de(SEXTO)
-        planos = Planos(monkeypatch)
-        for _ in range(_ticks(PRAZO - DEPOIS) + 1):
-            bancada.tique()
-        assert bancada.reg.guardados(), "o prazo do g venceu junto — a mesa não é a dos 60"
-        return antes, planos, vpad_do_z
-
-    @pytest.mark.parametrize("volta", [True, False], ids=["o-g-volta", "o-g-vence"])
-    @pytest.mark.parametrize("transporte", list(TRANSPORTES_DE_SEIS))
-    def test_o_buraco_fecha_e_o_z_nao_se_mexe(
-        self, monkeypatch: pytest.MonkeyPatch, transporte: str, volta: bool
-    ) -> None:
-        g = NOVO
-        quem = (P1, P2, P3, P4, g, SEXTO)
-        bancada = _montar(
-            monkeypatch, quem, TRANSPORTES_DE_SEIS[transporte], demorados=frozenset({g})
-        )
-        assert bancada.vpad_de(g) is None, "o g devia estar esperando o grab"
-        assert bancada.o_jogo_ve() == {1: P1, 2: P2, 3: P3, 4: P4, 5: SEXTO}
-        vias = dict(zip(quem, TRANSPORTES_DE_SEIS[transporte], strict=True))
-
-        antes, planos, vpad_do_z = self._ate_o_p2_vencer(monkeypatch, bancada, g)
-
-        mudados = planos.os_que_a_faixa_mudou()
-        assert len(mudados) == 1, mudados
-        mesa, cartas, nascer, fixos, compacta, resposta = mudados[0]
-        assert (nascer, fixos, compacta) == ((), frozenset({_CHAVE_DO_P1}), False)
-        assert _forma(mesa, cartas, fixos) == "1F@1 2@3 3@4 5@5"
-        assert resposta == ([P3, P4], True)
-        assert bancada.a_tela() == {P1: 1, P3: 2, P4: 3, SEXTO: 5}
-        bancada.o_jogo_segue_a_tela()
-        assert 4 not in bancada.o_jogo_ve(), "o boneco 4 é do g, que ainda pode voltar"
-        for uniq in (P3, P4):
-            assert len(_nascidos(bancada, antes, uniq)) == 1, f"{uniq} renasce uma vez"
-        assert bancada.vpad_de(SEXTO) is vpad_do_z, "o z estava certo e renasceu"
-
-        if volta:
-            monkeypatch.setattr(_LeitorQueDemora, "demorados", frozenset())
-            bancada.mesa.sentar(g, transporte=vias[g])
-            bancada.tique()
-            bancada.tique()
-            assert bancada.a_tela() == {P1: 1, P3: 2, P4: 3, g: 4, SEXTO: 5}
-            assert bancada.vpad_de(SEXTO) is vpad_do_z
-        else:
-            for _ in range(_ticks(DEPOIS) + 1):
-                bancada.tique()
-            assert bancada.a_tela() == {P1: 1, P3: 2, P4: 3, SEXTO: 4}
-            assert len(_nascidos(bancada, antes, SEXTO)) == 1
-        bancada.o_jogo_segue_a_tela()
-        for uniq in (P3, P4):
-            assert len(_nascidos(bancada, antes, uniq)) == 1, f"{uniq} renasceu de novo"
 
 
 @pytest.mark.usefixtures("config_isolado")

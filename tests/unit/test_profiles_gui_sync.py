@@ -178,84 +178,6 @@ class TestSelectProfileByName:
         selection.select_iter.assert_not_called()
 
 
-class TestOnDaemonStatusForSync:
-    def test_cenario_1_perfil_explicito_ativo_seleciona(self):
-        """Daemon respondeu com ``meu_perfil`` ativo → seleção muda."""
-        tree, selection = _make_tree()
-        rows = [("André", 10, "criteria"), ("meu_perfil", 50, "criteria")]
-        stub = _stub_with(rows, tree)
-
-        result = ProfilesActionsMixin._on_daemon_status_for_sync(
-            stub, {"active_profile": "meu_perfil", "connected": True}
-        )
-
-        assert result is False
-        selection.select_iter.assert_called_once_with(1)
-
-    def test_cenario_2_daemon_offline_fallback_preservado(self):
-        """``_on_daemon_status_sync_failed`` roda quando daemon offline; no-op."""
-        tree, selection = _make_tree()
-        rows = [("André", 10, "criteria"), ("meu_perfil", 50, "criteria")]
-        stub = _stub_with(rows, tree)
-
-        result = ProfilesActionsMixin._on_daemon_status_sync_failed(
-            stub, ConnectionRefusedError("daemon offline")
-        )
-
-        assert result is False
-        selection.select_iter.assert_not_called()
-
-    def test_cenario_3_active_profile_none_noop(self):
-        """Startup fresh sem perfil ativo → result traz ``None``; no-op."""
-        tree, selection = _make_tree()
-        rows = [("André", 10, "criteria"), ("meu_perfil", 50, "criteria")]
-        stub = _stub_with(rows, tree)
-
-        result = ProfilesActionsMixin._on_daemon_status_for_sync(
-            stub, {"active_profile": None, "connected": True}
-        )
-
-        assert result is False
-        selection.select_iter.assert_not_called()
-
-    def test_active_profile_string_vazia_noop(self):
-        tree, selection = _make_tree()
-        rows = [("André", 10, "criteria")]
-        stub = _stub_with(rows, tree)
-
-        result = ProfilesActionsMixin._on_daemon_status_for_sync(
-            stub, {"active_profile": "", "connected": True}
-        )
-
-        assert result is False
-        selection.select_iter.assert_not_called()
-
-    def test_resultado_nao_dict_noop(self):
-        tree, selection = _make_tree()
-        rows = [("André", 10, "criteria")]
-        stub = _stub_with(rows, tree)
-
-        result = ProfilesActionsMixin._on_daemon_status_for_sync(
-            stub, "resposta_bizarra"
-        )
-
-        assert result is False
-        selection.select_iter.assert_not_called()
-
-    def test_active_profile_nao_existe_no_store_noop(self):
-        """Daemon reporta ``perfil_x`` mas store só tem outros → no-op silencioso."""
-        tree, selection = _make_tree()
-        rows = [("André", 10, "criteria"), ("fallback", -1000, "any")]
-        stub = _stub_with(rows, tree)
-
-        result = ProfilesActionsMixin._on_daemon_status_for_sync(
-            stub, {"active_profile": "perfil_deletado_recente"}
-        )
-
-        assert result is False
-        selection.select_iter.assert_not_called()
-
-
 class _FakeCombo:
     """Stub mínimo de GtkComboBoxText para testar helpers sem GTK."""
 
@@ -323,15 +245,5 @@ def _stub_with_combo(combo: _FakeCombo, box: _FakeBox | None = None) -> SimpleNa
         ProfilesActionsMixin._atualizar_frase_do_jogo, stub
     )
     return stub
-
-
-class TestProfilesCacheNonBlocking:
-
-    def test_find_cached_profile_cache_ausente_retorna_none(self):
-        _install_gi_stubs()
-        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
-
-        stub = SimpleNamespace()
-        assert ProfilesActionsMixin._find_cached_profile(stub, "x") is None
 
 

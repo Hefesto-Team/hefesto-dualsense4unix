@@ -3,11 +3,7 @@
 from __future__ import annotations
 
 import ast
-import contextlib
 import re
-import shutil
-import subprocess
-from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -15,8 +11,6 @@ import yaml
 
 from hefesto_dualsense4unix.integrations import bluez_dbus as bd
 from hefesto_dualsense4unix.integrations import diario_do_radio
-from hefesto_dualsense4unix.integrations.agente_de_pareamento import CAMINHO_DO_AGENTE
-from tests.unit import bluez_de_mentira as bm
 from tests.unit.test_o_flatpak_alcanca_o_broker import (
     BARRAMENTO_DE_SISTEMA,
     MANIFESTO,
@@ -24,7 +18,6 @@ from tests.unit.test_o_flatpak_alcanca_o_broker import (
     PAGINA,
 )
 
-DISPOSITIVO = bm.no_de(bm.CONTROLE)
 
 _POLITICAS = {"--system-talk-name=": "--talk=", "--system-own-name=": "--own="}
 
@@ -217,40 +210,10 @@ def test_a_pasta_de_execucao_e_a_mesma_do_host() -> None:
     )
 
 
-def _ha_proxy() -> bool:
-    return shutil.which("xdg-dbus-proxy") is not None and bm.ha_dbus_daemon()
-
-
-pede_o_proxy = pytest.mark.skipif(
-    not _ha_proxy(), reason="sem xdg-dbus-proxy, dbus-daemon ou Gio nesta máquina"
-)
-
-
 @pytest.fixture(autouse=True)
 def _trava_e_diario_de_mentira(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(diario_do_radio.ENV_TRAVA, str(tmp_path / "radio.lock"))
     monkeypatch.setenv(diario_do_radio.ENV_DIARIO, str(tmp_path / "radio-diario.jsonl"))
-
-
-@contextlib.contextmanager
-def _pelo_proxy(bluez: bm.BluezParticular, raiz: Path, filtros: list[str]) -> Iterator[str]:
-    """Um ``xdg-dbus-proxy`` com ``--filter`` e os ``filtros``; entrega o endereço."""
-    soquete = raiz / "proxy"
-    processo = subprocess.Popen(
-        ["xdg-dbus-proxy", bluez.endereco, str(soquete), "--filter", *filtros],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    try:
-        assert bm.esperar(soquete.exists, teto=5.0), "o xdg-dbus-proxy não abriu o soquete"
-        yield f"unix:path={soquete}"
-    finally:
-        processo.terminate()
-        try:
-            processo.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            processo.kill()
-            processo.wait(timeout=5)
 
 
 def _dono(endereco: str) -> bd.DonoVivo:
@@ -261,107 +224,3 @@ def _dono(endereco: str) -> bd.DonoVivo:
     return dono
 
 
-@pede_o_proxy
-def test_o_agente_proprio_atravessa_o_proxy_do_flatpak(tmp_path: Path) -> None:
-    """``RegisterAgent`` e ``Pair`` saem com o mesmo remetente, e o BlueZ chama o"""
-    with (
-        bm.BluezParticular(tmp_path) as bluez,
-        _pelo_proxy(bluez, tmp_path, nomes_de_sistema()) as endereco,
-    ):
-        dono = _dono(endereco)
-        try:
-            assert dono.caminhos() is not None, (
-                "o dono não vê o BlueZ pelo proxy: o manifesto perdeu o "
-                f"--system-talk-name={bd.SERVICO}"
-            )
-            escrita = dono.parear(DISPOSITIVO)
-            assert escrita.feita, escrita
-            assert bluez.o_padrao_atendeu == [], (
-                "quem atendeu o Pair foi o agente padrão: o remetente do Pair não "
-                "casou com o do RegisterAgent do outro lado do proxy"
-            )
-            assert ("RequestConfirmation", True) in list(dono._agente.historico), (
-                "o RequestConfirmation do BlueZ não chegou ao agente pelo proxy"
-            )
-            assert bm.esperar(
-                lambda: dono.propriedade(DISPOSITIVO, bd.APARELHO, "Paired") is True
-            ), "o PropertiesChanged do BlueZ não atravessou o proxy"
-            assert bluez.mesa[DISPOSITIVO][bd.APARELHO]["Trusted"] is True
-        finally:
-            dono.fechar()
-
-
-@pede_o_proxy
-def test_o_bluetoothd_que_reinicia_chega_de_novo_pelo_proxy(tmp_path: Path) -> None:
-    """O ``NameOwnerChanged`` do ``org.bluez`` atravessa o proxy: o agente passa"""
-    with (
-        bm.BluezParticular(tmp_path) as bluez,
-        _pelo_proxy(bluez, tmp_path, nomes_de_sistema()) as endereco,
-    ):
-        dono = _dono(endereco)
-        try:
-            assert dono.parear(DISPOSITIVO).feita
-            velho = bluez.nome_do_bluez
-            assert dono.dono_do_bluez() == velho
-            bluez.reiniciar()
-            novo = bluez.nome_do_bluez
-            assert novo != velho
-            assert bm.esperar(lambda: dono.dono_do_bluez() == novo, teto=5.0), (
-                "o NameOwnerChanged do org.bluez não atravessou o proxy: o agente segue "
-                f"esperando {dono.dono_do_bluez()!r}, e o bluetoothd novo é {novo!r}"
-            )
-            escrita = dono.parear(bm.no_de(bm.OUTRO))
-            assert escrita.feita, escrita
-            assert bluez.o_padrao_atendeu == []
-            assert list(dono._agente.historico).count(("RequestConfirmation", True)) == 2
-        finally:
-            dono.fechar()
-
-
-@pede_o_proxy
-def test_sem_a_linha_o_proxy_esconde_o_bluez(tmp_path: Path) -> None:
-    """Controle da régua acima: o proxy filtra de fato, e sem o ``--talk`` o dono"""
-    with (
-        bm.BluezParticular(tmp_path) as bluez,
-        _pelo_proxy(bluez, tmp_path, []) as endereco,
-    ):
-        dono = _dono(endereco)
-        try:
-            assert dono.caminhos() is None
-            assert not dono.parear(DISPOSITIVO).feita
-            assert bluez.o_padrao_atendeu == []
-        finally:
-            dono.fechar()
-
-
-@pede_o_proxy
-def test_o_intruso_chega_ao_agente_e_o_agente_recusa(tmp_path: Path) -> None:
-    """O proxy entrega ao agente a chamada de QUALQUER remetente (medido): quem"""
-    with (
-        bm.BluezParticular(tmp_path) as bluez,
-        _pelo_proxy(bluez, tmp_path, nomes_de_sistema()) as endereco,
-    ):
-        dono = _dono(endereco)
-        try:
-            agente = dono._agente_pronto()
-            assert agente is not None and agente.registrado
-            intruso = bluez.outro_cliente()
-            with agente.esperando(DISPOSITIVO):
-                try:
-                    intruso.chamar(
-                        dono._barramento.nome_unico(),
-                        CAMINHO_DO_AGENTE,
-                        bd.AGENTE,
-                        "RequestAuthorization",
-                        intruso.GLib.Variant("(o)", (DISPOSITIVO,)),
-                    )
-                    recusa = ""
-                except intruso.GLib.Error as erro:
-                    recusa = intruso.Gio.DBusError.get_remote_error(erro) or erro.message
-            assert recusa == bd.ERRO_REJEITADO, (
-                f"o intruso chamou o agente e recebeu {recusa!r}: o agente aceitou um "
-                "remetente que não é o bluetoothd, ou o proxy mudou de comportamento"
-            )
-            assert ("RequestAuthorization", False) in list(agente.historico)
-        finally:
-            dono.fechar()

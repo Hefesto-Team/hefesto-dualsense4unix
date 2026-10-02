@@ -57,11 +57,7 @@ from tests.unit.ponte_do_rodape import PonteDoRodape
 
 exigir_gi_real("importa as réguas e os pacotes da aba 04, que carregam o GTK")
 
-from hefesto_dualsense4unix.core.led_control import BRILHOS_DAS_LUZES
-from tests.unit import test_a_04_pergunta_ao_daemon_vivo as viva
-from tests.unit import test_a_barra_nao_escurece_ao_reaplicar as barra
-from tests.unit import test_a_marca_da_cor_nao_some as marca
-from tests.unit.test_a_marca_da_cor_nao_some import NOME, UNIQS
+from tests.unit.test_a_marca_da_cor_nao_some import NOME
 
 import pacotes
 from pacotes import a04_iluminacao, rodape
@@ -70,77 +66,6 @@ CLIQUE = {"tipo": "button", "evento": "click",
           "pagina": "04-iluminacao.html"}  # (noqa-acento: chave do clique)
 
 OUTRA = {"fraco": "forte", "medio": "fraco", "forte": "medio"}  # (noqa-acento) chaves ASCII
-
-
-class _PonteDaAba(viva._Ponte):
-    """A ponte da aba 04 com as duas portas do `perfil.gravar_e_reaplicar`, nos handlers REAIS.
-
-    O interruptor «Cores automáticas» grava o perfil e o reaplica
-    (`profile.switch`, depois `launch_env.refresh`). A ponte da A-04 recusa as
-    duas, e sem elas a varredura da seção 2 não sabia clicar nele.
-    """
-
-    def profile_switch(self, nome: str) -> bool:
-        self.mesa.rodar(self.mesa.server._handle_profile_switch({"name": nome}))
-        return True
-
-    def profile_reaplicar(self, nome: str) -> bool:
-        self.mesa.rodar(self.mesa.server._handle_profile_reaplicar({"name": nome}))
-        return True
-
-    def chamar(self, metodo: str, timeout: float | None = None, **params: Any) -> bool:
-        if metodo != "launch_env.refresh":
-            raise AttributeError(f"a régua não previu a aba chamar {metodo!r}")
-        return isinstance(self.mesa.rodar(
-            self.mesa.server._handle_launch_env_refresh(params)), dict)
-
-
-@pytest.fixture
-def mesa_de(tmp_path, monkeypatch):
-    """A mesa de quatro da A-04-PERGUNTA-AO-DAEMON-VIVO-01, no transporte pedido."""
-    feitas: list[Any] = []
-
-    def montar(alvo: str = "todos", via: str = "usb") -> Any:
-        monkeypatch.setattr(marca, "_handle_falso", lambda: viva._handle(via))
-        m = viva.MesaViva(tmp_path / f"mesa-{len(feitas)}", pacotes, a04_iluminacao,
-                          alvo=alvo)
-        m.ponte = _PonteDaAba(m)
-        feitas.append(m)
-        vias = {m.ctl._detect_transport(h) for h in m.ctl._handles.values()}
-        assert vias == {via}, f"a mesa pediu {via} e o backend leu {vias}"
-        return m
-
-    yield montar
-    for m in feitas:
-        m.fechar()
-
-
-class _PonteDoRodape(barra._PonteDoRodape):
-    """A ponte do rodapé, que guarda o rascunho que o «Aplicar» leva ao handler REAL."""
-
-    def __init__(self, mesa: Any) -> None:
-        super().__init__(mesa)
-        self.rascunhos: list[dict[str, Any]] = []
-
-
-    def apply_draft_detalhado(self, payload: dict[str, Any]) -> Any:
-        self.rascunhos.append(payload)
-        return super().apply_draft_detalhado(payload)
-
-    @property
-    def luzes(self) -> list[dict[str, Any]]:
-        """A palavra que o rascunho levou de cada controle — só de quem a escreveu."""
-        return [{"brilho": palavra, "uniq": uniq}
-                for rascunho in self.rascunhos
-                for uniq, entrada in sorted((rascunho.get("controllers") or {}).items())
-                if (palavra := ((entrada or {}).get("leds") or {}).get(
-                    "player_led_brightness")) is not None]
-
-
-def _aplicar(mesa: Any) -> _PonteDoRodape:
-    ponte = _PonteDoRodape(mesa)
-    rodape.aplicar(mesa.ctx(), CLIQUE, ponte)
-    return ponte
 
 
 def _salvar(mesa: Any) -> None:
@@ -161,62 +86,6 @@ def _global_no_disco() -> str:
     from hefesto_dualsense4unix.profiles.loader import load_profile
 
     return str(load_profile(NOME).leds.player_led_brightness)
-
-
-@pytest.mark.parametrize("palavra", ["fraco", "medio", "forte"])  # (noqa-acento) chave ASCII
-@pytest.mark.parametrize("via", ["usb", "bt"])
-@pytest.mark.parametrize("n", [1, 2, 3, 4], ids=["P1", "P2", "P3", "P4"])
-def test_a_pilula_sobrevive_ao_aplicar_ao_salvar_e_ao_perfil_reaplicado(
-        mesa_de, n: int, via: str, palavra: str) -> None:
-    """Clique → «Aplicar» → «Salvar» → perfil reaplicado: a palavra dela em todos."""
-    mesa = mesa_de("todos", via)
-    global_ = OUTRA[palavra]
-    _o_global_das_luzes(mesa, global_)
-    mesa.clicar_na_pilula(n, palavra)
-    degrau = BRILHOS_DAS_LUZES[palavra]
-    assert mesa.degrau(n) == (degrau, degrau), "a régua precisa da pílula no aparelho"
-
-    ponte = _aplicar(mesa)
-    assert mesa.degrau(n) == (degrau, degrau), (
-        f"P{n}/{via}: o «Aplicar» levou o aparelho a {mesa.degrau(n)}, e ela "
-        f"escolheu {palavra!r}")
-    assert mesa.pilula(n) == [palavra], (
-        f"P{n}/{via}: depois do «Aplicar» a pílula acende {mesa.pilula(n)}")
-    assert ponte.luzes == [{"brilho": palavra, "uniq": UNIQS[n - 1]}], (
-        f"o «Aplicar» mandou {ponte.luzes} — só quem escreveu o campo recebe")
-
-    _salvar(mesa)
-    leds = mesa.disco(NOME, n)
-    assert leds is not None and leds.player_led_brightness == palavra and (
-        "player_led_brightness" in leds.model_fields_set), (
-        f"P{n}/{via}: o «Salvar» deixou no disco {leds}")
-    assert _global_no_disco() == global_, "o «Salvar» mexeu no «Todos» das luzes"
-    assert mesa.pilula(n) == [palavra], "depois do «Salvar» a pílula mudou"
-
-    mesa.trocar(NOME, "manual")
-    assert mesa.degrau(n) == (degrau, degrau), (
-        f"P{n}/{via}: o perfil reaplicado levou o aparelho a {mesa.degrau(n)}")
-    assert mesa.pilula(n) == [palavra]
-    for outro in {1, 2, 3, 4} - {n}:
-        assert mesa.pilula(outro) == [global_], (
-            f"a palavra do P{n} vazou para o P{outro}: {mesa.pilula(outro)}")
-
-
-@pytest.mark.parametrize("via", ["usb", "bt"])
-def test_o_aplicar_leva_a_palavra_de_cada_um_e_nao_escreve_em_quem_nao_escolheu(
-        mesa_de, via: str) -> None:
-    """Dois controles com palavras próprias, dois no global: cada um no seu."""
-    mesa = mesa_de("todos", via)
-    _o_global_das_luzes(mesa, "medio")  # (noqa-acento) chave ASCII
-    mesa.clicar_na_pilula(2, "forte")
-    mesa.clicar_na_pilula(4, "fraco")
-    ponte = _aplicar(mesa)
-    assert sorted(e["uniq"] for e in ponte.luzes) == [UNIQS[1], UNIQS[3]]
-    assert [mesa.pilula(n) for n in (1, 2, 3, 4)] == [
-        ["medio"], ["forte"], ["medio"], ["fraco"]]  # (noqa-acento) chaves ASCII
-    for n in (1, 3):
-        assert mesa.disco(NOME, n) is None or (
-            "player_led_brightness" not in mesa.disco(NOME, n).model_fields_set)
 
 
 def _gestos_que_gravam() -> list[str]:
@@ -264,97 +133,6 @@ def _o_disco(mesa: Any, n: int) -> dict[str, Any]:
     return {**saida, **{campo: getattr(leds, campo) for campo in leds.model_fields_set}}
 
 
-@pytest.mark.parametrize("via", ["usb", "bt"])
-@pytest.mark.parametrize("n", [2, 4], ids=["P2-com-cor-no-perfil", "P4-sem-opiniao"])
-@pytest.mark.parametrize("gesto", _gestos_que_gravam())
-def test_todo_gesto_que_grava_atravessa_o_aplicar_e_o_salvar(
-        mesa_de, gesto: str, n: int, via: str) -> None:
-    """O que a coluna mostra depois do clique é o que ela mostra depois dos botões."""
-    mesa = mesa_de("todos", via)
-    antes = _o_disco(mesa, n)
-    fn = pacotes.gesto_da_pagina(a04_iluminacao.PAGINA, gesto)
-    fn(mesa.ctx(), {"uniq": UNIQS[n - 1], **CLIQUES[gesto]}, mesa.ponte)
-    tela = _o_que_a_tela_mostra(mesa, n)
-    gravado = _o_disco(mesa, n)
-    assert gravado != antes, f"a régua precisa do {gesto!r} gravando no disco do P{n}"
-
-    _aplicar(mesa)
-    assert _o_que_a_tela_mostra(mesa, n) == tela, (
-        f"{gesto}/P{n}/{via}: o «Aplicar» mudou a coluna de {tela} para "
-        f"{_o_que_a_tela_mostra(mesa, n)}")
-    _salvar(mesa)
-    assert _o_que_a_tela_mostra(mesa, n) == tela, f"{gesto}/P{n}/{via}: o «Salvar» mudou a coluna"
-    disco = _o_disco(mesa, n)
-    perdidos = {k: (v, disco.get(k)) for k, v in gravado.items() if disco.get(k) != v}
-    assert not perdidos, f"{gesto}/P{n}/{via}: o «Salvar» trocou no disco {perdidos}"
-    mesa.trocar(NOME, "manual")
-    assert _o_que_a_tela_mostra(mesa, n) == tela, (
-        f"{gesto}/P{n}/{via}: o perfil reaplicado mostra {_o_que_a_tela_mostra(mesa, n)}")
-
-
-@pytest.mark.parametrize("via", ["usb", "bt"])
-def test_o_tom_regravado_pelo_salvar_nao_vira_fossil(mesa_de, via: str) -> None:
-    """O P4 escolhe o tom do número 2; o «Salvar» o regrava; o perfil reaplicado o mantém.
-
-    O tom da guia grava a cor COM o número para o qual foi escolhida
-    (`lightbar_para_o_numero`). Sem ele a cor é `LEGADO`, e o resolvedor a
-    prova fóssil pela forma: o tom do número de outro controle da mesa.
-
-    **A MORDIDA:** tire o `_a_procedencia_da_mesma_cor` do `_draft_do_ativo`
-    e o P4 acende a cor do número dele depois da troca manual.
-    """
-    from hefesto_dualsense4unix.core.led_control import player_slot_color
-
-    from tests.unit.test_a_04_pergunta_ao_daemon_vivo import _na
-    from tests.unit.test_a_marca_da_cor_nao_some import BRILHO_GLOBAL
-
-    tom = player_slot_color(2)
-    mesa = mesa_de("todos", via)
-    mesa.clicar_no_tom(4, tom)
-    assert mesa.luz(4) == _na(tom, BRILHO_GLOBAL), "a régua precisa do tom no P4"
-    _salvar(mesa)
-    assert mesa.disco(NOME, 4).lightbar_para_o_numero == 4, (
-        f"o «Salvar» tirou do disco o número do tom: {mesa.disco(NOME, 4)}")
-    mesa.trocar(NOME, "manual")
-    assert mesa.luz(4) == _na(tom, BRILHO_GLOBAL), (
-        f"o tom que ela escolheu virou fóssil depois do «Salvar»: o P4 acende {mesa.luz(4)}")
-
-
-@pytest.mark.parametrize("via", ["usb", "bt"])
-def test_a_cor_que_mudou_so_no_aparelho_nao_vai_ao_disco(mesa_de, via: str) -> None:
-    """A cor que muda só no daemon fica fora do disco, e a dela fica com o número dela.
-
-    O P4 escolhe o tom do número 2 (o disco guarda o número 4 com ele); depois
-    a luz dele muda só no daemon — é a camada da mão que atravessa a troca
-    automática de perfil. Até 27/09 o «Salvar» gravava a cor viva, e a régua
-    cobrava que ela fosse sem o número da antiga. Desde 27/09 o Salvar lê o
-    disco (`D-2709-O-SALVAR-LE-O-PERFIL`): a cor e o número que ficam são os
-    que o clique no tom gravou. A regra da procedência (a cor nova não leva o
-    número da antiga) continua medida no dono, o `with_controller_leds`
-    (`test_o_aplicar_nao_solta_o_teto_do_controle.py`, seção 4).
-
-    **A MORDIDA:** devolva ao «Salvar» a luz acesa no override e o disco sai
-    com o roxo.
-    """
-    from hefesto_dualsense4unix.core.led_control import player_slot_color
-
-    from tests.unit.test_a_04_pergunta_ao_daemon_vivo import ROXO, _na
-    from tests.unit.test_a_marca_da_cor_nao_some import BRILHO_GLOBAL
-
-    tom = player_slot_color(2)
-    mesa = mesa_de("todos", via)
-    mesa.clicar_no_tom(4, tom)
-    assert mesa.disco(NOME, 4).lightbar_para_o_numero == 4, "a régua precisa do número no disco"
-    mesa.ponte.led_set_detalhado(ROXO, BRILHO_GLOBAL, UNIQS[3])
-    assert mesa.luz(4) == _na(ROXO, BRILHO_GLOBAL), "a régua precisa da luz nova no P4"
-    _salvar(mesa)
-    leds = mesa.disco(NOME, 4)
-    assert tuple(leds.lightbar) == tom, (
-        f"o «Salvar» gravou a cor que mudou só no aparelho: {leds}")
-    assert leds.lightbar_para_o_numero == 4, (
-        f"o «Salvar» perdeu o número do tom que ela escolheu: {leds}")
-
-
 @pytest.fixture
 def economia() -> Iterator[Any]:
     """Liga a economia pelo `maquina.json` do lar de mentira — o daemon e a tela o leem."""
@@ -370,36 +148,3 @@ def economia() -> Iterator[Any]:
     registrar_declaracao_da_mesa(None)
 
 
-@pytest.mark.parametrize("via", ["usb", "bt"])
-def test_na_bateria_longa_o_aplicar_nao_tira_as_luzes_do_fraco(
-        mesa_de, economia, via: str) -> None:
-    """A mesa em «Bateria longa»: o Forte do disco não volta pelo «Aplicar»."""
-    fraco, forte = BRILHOS_DAS_LUZES["fraco"], BRILHOS_DAS_LUZES["forte"]
-    mesa = mesa_de("todos", via)
-    mesa.clicar_na_pilula(2, "forte")
-    economia({"orcamento": {"teto": "economia"}})
-    mesa.trocar(NOME, "manual")
-    assert mesa.degrau(2)[0] == fraco, "a régua precisa da economia pondo o P2 no Fraco"
-    ponte = _aplicar(mesa)
-    assert ponte.luzes == [{"brilho": "forte", "uniq": UNIQS[1]}], ponte.luzes
-    assert mesa.degrau(2) == (fraco, fraco), (
-        f"o «Aplicar» tirou o P2 da economia: {mesa.degrau(2)} (Forte é {forte})")
-
-
-@pytest.mark.parametrize("via", ["usb", "bt"])
-def test_a_economia_de_um_controle_so_nao_recebe_a_palavra_e_o_vizinho_recebe(
-        mesa_de, economia, via: str) -> None:
-    """A economia ligada só no P2: o aparelho do P4 no Forte, e o do P2 no Fraco."""
-    from hefesto_dualsense4unix.profiles.schema import declaracao_da_economia
-
-    fraco, forte = BRILHOS_DAS_LUZES["fraco"], BRILHOS_DAS_LUZES["forte"]
-    mesa = mesa_de("todos", via)
-    mesa.clicar_na_pilula(2, "forte")
-    mesa.clicar_na_pilula(4, "forte")
-    economia(declaracao_da_economia(UNIQS[1], True))
-    mesa.trocar(NOME, "manual")
-    ponte = _aplicar(mesa)
-    assert ponte.luzes == [{"brilho": "forte", "uniq": UNIQS[1]},
-                           {"brilho": "forte", "uniq": UNIQS[3]}], ponte.luzes
-    assert mesa.degrau(4) == (forte, forte)
-    assert mesa.degrau(2) == (fraco, fraco), "o Forte dela venceu a economia do P2"

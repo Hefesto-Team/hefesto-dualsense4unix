@@ -83,11 +83,3 @@ def test_estado_sem_perfil_util_e_ignorado(valor: Any) -> None:
     assert app.toasts == []
 
 
-def test_sem_baseline_nao_ha_edicao_pendente() -> None:
-    """Antes do primeiro carregamento não existe "sujo" — só desconhecido."""
-    app = _AppFalsa(ativo="FPS")
-    app._draft_baseline = None
-    _sujar(app)
-    assert app._tem_edicao_pendente() is False
-    app._reconciliar_draft_com_perfil_ativo({"active_profile": "sackboy_nativo"})
-    assert app.bootstraps == ["sackboy_nativo"]

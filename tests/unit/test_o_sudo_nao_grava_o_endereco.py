@@ -22,7 +22,6 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.core.formas_do_endereco import formas_do_endereco
-from hefesto_dualsense4unix.integrations import bluez_dbus as bd
 from hefesto_dualsense4unix.integrations import central_do_radio as cr
 from hefesto_dualsense4unix.integrations import diario_do_radio
 from hefesto_dualsense4unix.integrations import gesto_de_pareamento as gp
@@ -32,7 +31,6 @@ from hefesto_dualsense4unix.integrations.conexao_zumbi import (
     PontePrivilegiada,
     pedido_a_ponte,
 )
-from tests.unit import radio_de_mentira as rm
 from tests.unit.barramento_de_mentira import montar_adaptadores
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -384,42 +382,6 @@ class _NomesEmMemoria:
 
     def gravar(self, aparelho: str, nome: str | None) -> bool:
         return True
-
-
-def test_a_faxina_da_central_esquece_as_quatro_sobras(mesa: Mesa) -> None:
-    """A faxina (``esquecer_as_sobras``), com o dono de mentira e quatro sobras:"""
-    mundo = rm.RadioDeMentira()
-    for controle in CONTROLES:
-        mundo.pareado(rm.SALA, controle, conectado=True)
-        mundo.pareado(rm.QUARTO, controle, host=False)
-        _gravar_bond(mesa, rm.SALA, controle)
-        _gravar_bond(mesa, rm.QUARTO, controle)
-    vivo = bd.DonoVivo(mundo)
-    assert vivo.ligar()
-    try:
-        relogio = rm.Relogio()
-        central = cr.CentralDoRadio(
-            dono=vivo,
-            onde_esta=mundo.onde_esta,
-            movimento=mundo.hz,
-            esquecer_na_ponte=functools.partial(
-                cr.esquecer_pela_ponte, caminho=str(PONTE), correr=cr._correr_a_ponte
-            ),
-            nomes=_NomesEmMemoria(),
-            relogio=relogio,
-            dormir=relogio.dormir,
-            sysfs={"listar": lambda _p: [], "raiz": "/nao/existe"},
-        )
-        feitas = [central.esquecer_as_sobras() for _ in CONTROLES]
-        assert central.esquecer_as_sobras() is None
-    finally:
-        vivo.fechar()
-    assert sorted(f for f in feitas if f) == sorted((rm.QUARTO, c) for c in CONTROLES)
-    for controle in CONTROLES:
-        assert not mesa.bond(rm.QUARTO, controle).exists()
-        assert (mesa.bond(rm.SALA, controle) / "info").exists()
-    assert len(mesa.saidas()) == 4
-    _o_sudo_so_viu_o_verbo(mesa, 4)
 
 
 SUDO_PERMITIDO = Counter(

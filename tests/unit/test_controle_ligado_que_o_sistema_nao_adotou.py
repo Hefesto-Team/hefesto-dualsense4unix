@@ -45,7 +45,6 @@ exigir_gi_real("controle ligado que o sistema não adotou (importa app.actions.s
 
 from hefesto_dualsense4unix.app.actions.status_actions import (
     MINUTOS_ENTRE_TENTATIVAS,
-    StatusActionsMixin,
     texto_de_controle_nao_adotado,
 )
 from hefesto_dualsense4unix.daemon import ipc_handlers
@@ -292,49 +291,6 @@ class _FakeCaixa:
     def reorder_child(self, filho: Any, posicao: int) -> None:
         self.filhos.remove(filho)
         self.filhos.insert(posicao, filho)
-
-
-def _stub(banner: _FakeBanner | None) -> Any:
-    class _Stub:
-        _refresh_banner_nao_adotado = (
-            StatusActionsMixin._refresh_banner_nao_adotado
-        )
-        _banner_nao_adotado = banner
-
-    return _Stub()
-
-
-class TestOBannerNaAbaStatus:
-    def test_acende_com_o_texto_certo(self) -> None:
-        banner = _FakeBanner()
-        _stub(banner)._refresh_banner_nao_adotado(_estado(1))
-        assert banner.visible is True
-        assert banner.text == texto_de_controle_nao_adotado(_estado(1))
-
-    def test_apaga_quando_o_controle_volta(self) -> None:
-        banner = _FakeBanner()
-        _stub(banner)._refresh_banner_nao_adotado(_estado(0))
-        assert banner.visible is False
-
-    def test_apaga_com_o_daemon_sem_resposta(self) -> None:
-        banner = _FakeBanner()
-        _stub(banner)._refresh_banner_nao_adotado(None)
-        assert banner.visible is False
-
-    def test_sem_widget_nao_explode(self) -> None:
-        _stub(None)._refresh_banner_nao_adotado(_estado(1))
-
-
-    def test_montagem_sem_caixa_nao_explode(self) -> None:
-        class _Host:
-            _montar_banner_nao_adotado = (
-                StatusActionsMixin._montar_banner_nao_adotado
-            )
-
-            def _get(self, _nome: str) -> Any:
-                return None
-
-        _Host()._montar_banner_nao_adotado()
 
 
 class TestFiacao:

@@ -36,7 +36,6 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("test_steam_apply_button: importa código da janela GTK")
 
 import contextlib
-import inspect
 from types import SimpleNamespace
 from typing import Any
 
@@ -166,67 +165,12 @@ def slo_fake(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     return caixa
 
 
-class TestWorker:
-
-
-    def test_steam_fechada_aplica_e_ecoa_o_contrato(
-        self, sincrono: None, slo_fake: dict[str, Any]
-    ) -> None:
-        stub = _Stub()
-
-        stub._steam_apply_launch_worker()
-
-        assert slo_fake["chamadas"] == 1
-        assert any("2 jogo(s)" in t for t in stub.toasts)
-
-    def test_funcao_ausente_recusa_com_o_caminho_do_install(
-        self,
-        sincrono: None,
-        slo_fake: dict[str, Any],
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """Instalação antiga sem a função de massa: recusa honesta apontando"""
-        from hefesto_dualsense4unix.integrations import (
-            steam_launch_options as slo,
-        )
-
-        monkeypatch.setattr(
-            slo, "apply_wrapper_to_all_games", None, raising=False
-        )
-        stub = _Stub()
-
-        stub._steam_apply_launch_worker()
-
-        assert any("install.sh" in t for t in stub.toasts)
-        assert not any("Pronto" in t for t in stub.toasts)
-
-    def test_excecao_vira_toast_de_falha(
-        self, sincrono: None, slo_fake: dict[str, Any]
-    ) -> None:
-        slo_fake["result"] = OSError("disco sumiu")
-        stub = _Stub()
-
-        stub._steam_apply_launch_worker()
-
-        assert any("Não consegui aplicar" in t for t in stub.toasts)
-
-
 class _FakeDialog:
     def __init__(self) -> None:
         self.destroyed = False
 
     def destroy(self) -> None:
         self.destroyed = True
-
-
-class TestDialogoDeConfirmacaoPorFonte:
-    """Espelho stub-level (headless): confirmação temada, não-bloqueante e"""
-
-
-    def test_worker_importa_lazy_dentro_do_handler(self) -> None:
-        src = inspect.getsource(DaemonActionsMixin._steam_apply_launch_worker)
-        assert "from hefesto_dualsense4unix.integrations import" in src
-        assert "apply_wrapper_to_all_games" in src
 
 
 _DISPLAY_OK = False

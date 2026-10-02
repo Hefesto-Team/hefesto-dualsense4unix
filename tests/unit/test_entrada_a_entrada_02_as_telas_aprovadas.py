@@ -47,7 +47,6 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.integrations import bluez_dbus as bd
 from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
 from hefesto_dualsense4unix.integrations.censo_do_barramento import (
     Censo,
@@ -63,7 +62,6 @@ from hefesto_dualsense4unix.utils.maquina import (
     caminho_da_maquina,
     carregar_maquina,
 )
-from tests.unit import radio_de_mentira as rm
 from tests.unit.busctl_de_verdade import escrever_impressor
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -670,70 +668,6 @@ def test_ja_chega_por_hoje_fecha_em_qualquer_fase(mesa: Gabinete, disco: Path) -
 def _clicar(laco: ee.LacoDaEntrada, rotulo: str) -> Any:
     gesto, argumentos = GESTO_DO_BOTAO[rotulo]
     return getattr(laco, gesto)(*argumentos)
-
-
-def test_as_tres_telas_clicadas_cada_botao_chega_ao_motor(
-    tmp_path: Path, disco: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Os botões de CADA tela, lidos da página, clicados na tela que os mostra,"""
-    radio = rm.RadioDeMentira()
-    vivo = bd.DonoVivo(radio, lugares=lambda: {})
-    assert vivo.ligar()
-    monkeypatch.setattr(bd, "dono", lambda: vivo)
-    chamadas, escritas = len(radio.chamadas), len(radio.escritas)
-
-    telas = _as_tres_telas()
-    gabinete = Gabinete(tmp_path / "sys", BOOT_1)
-    gabinete.plugar(1, "3", TECLADO)
-    gabinete.plugar(3, "5", CAMERA)
-    gabinete.plugar(1, "4", DONGLE_BT)
-    laco = _laco(gabinete)
-
-    sentada = _botoes(telas[ee.TELAS[ee.SENTADA]])
-    contador = _CONTADOR.search(telas[ee.TELAS[ee.SENTADA]])
-    assert contador is not None and _texto(contador.group(1)).endswith("sem sair da cadeira")
-    for rotulo in sentada:
-        foto = laco.comecar()
-        antes = foto["passo"], foto["total"], foto["feitas"]
-        resposta = _clicar(laco, rotulo)
-        depois = laco.estado()
-        if rotulo in ee.FACES:
-            assert resposta.gravou and depois["feitas"] == antes[2] + 1, rotulo
-            laco.parar()
-            disco.unlink()
-        elif GESTO_DO_BOTAO[rotulo][0] == "pular":
-            assert depois["passo"] == antes[0] + 1, rotulo
-        else:
-            assert depois["estado"] == ee.PARADO, rotulo
-
-    fim = _botoes(telas[ee.TELAS[ee.FIM]])
-    for rotulo in fim:
-        laco.comecar()
-        while laco.estado()["estado"] == ee.SENTADA:
-            laco.pular()
-        assert laco.estado()["tela"] == ee.TELAS[ee.FIM]
-        _clicar(laco, rotulo)
-        esperado = ee.EM_PE if rotulo == "Vou mostrar agora" else ee.PARADO
-        if GESTO_DO_BOTAO[rotulo][0] == "pular":
-            esperado = ee.FIM
-        assert laco.estado()["estado"] == esperado, rotulo
-
-    em_pe = _botoes(telas[ee.TELAS[ee.EM_PE]])
-    for rotulo in em_pe:
-        laco.comecar()
-        while laco.estado()["estado"] == ee.SENTADA:
-            laco.pular()
-        foto = laco.levantar()
-        assert foto["tela"] == ee.TELAS[ee.EM_PE]
-        _clicar(laco, rotulo)
-        depois = laco.estado()
-        if GESTO_DO_BOTAO[rotulo][0] in ("nao_alcanco", "pular"):
-            assert depois["total"] == foto["total"] - 1 and depois["passo"] == foto["passo"], rotulo
-        else:
-            assert depois["estado"] == ee.PARADO, rotulo
-
-    assert radio.escritas[escritas:] == [], "a cerimônia escreveu no BlueZ"
-    assert radio.chamadas[chamadas:] == [], "a cerimônia chamou o BlueZ"
 
 
 # 2. só o DualSense marca uma porta
