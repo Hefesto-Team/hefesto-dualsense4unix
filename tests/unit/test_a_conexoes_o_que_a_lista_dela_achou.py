@@ -244,7 +244,7 @@ def test_o_conectar_mostra_chegando_quem_volta_pelo_pareamento_antigo(
     dela. O «Conectar» acaba «chegou» onde ele chegou, sem apagar nada.
 
     MORDIDA: tire a pergunta ``_quem_voltou_sozinho`` do
-    :meth:`_esperar_um_controle_novo` — o «Conectar» fica procurando até a
+    :meth:`_esperar_a_escolha_dela` — o «Conectar» fica procurando até a
     janela fechar e acaba «não chegou» com o controle já ligado.
     """
     mundo, _dono, central = mesa(controles)
@@ -264,10 +264,12 @@ def test_o_conectar_mostra_chegando_quem_volta_pelo_pareamento_antigo(
 
 def test_o_conectar_ainda_pareia_quem_segura_ps_create(mesa: Any, relogio: rm.Relogio) -> None:
     """O caminho de sempre continua: um controle novo, em modo de parear, chega
-    pela janela — e o que já estava ligado não é confundido com ele."""
+    pela janela quando ela clica em «Parear» na linha dele
+    (O-PAREAR-ESPERA-O-CLIQUE-01) — e o que já estava ligado não é confundido
+    com ele."""
     mundo, _dono, central = mesa(3)
     mundo.fisicos[ROXO] = rm.Fisico(ROXO, rm.CLASSE_DE_CONTROLE)
-    relogio.agendar(2.0, lambda: mundo.segurar_ps_create(ROXO))
+    rm.ela_pareia(relogio, mundo, central, ROXO)
 
     feito = central.conectar(QUARTO)
 
@@ -1067,7 +1069,7 @@ def test_o_controle_que_o_daemon_nao_le_chega_pelo_hid_phys(
     else:
         mundo.fisicos[OUTRO_CONTROLE] = rm.Fisico(OUTRO_CONTROLE, rm.CLASSE_DE_CONTROLE,
                                                   modalias=modalias)
-        relogio.agendar(2.0, lambda: mundo.segurar_ps_create(OUTRO_CONTROLE))
+        rm.ela_pareia(relogio, mundo, central, OUTRO_CONTROLE)
         feito = central.conectar(QUARTO)
 
     assert mundo.hz(rm.uniq(OUTRO_CONTROLE)) is None, "o daemon não mede este controle"

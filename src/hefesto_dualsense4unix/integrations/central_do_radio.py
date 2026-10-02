@@ -83,8 +83,12 @@ levando a busca junto. A janela fecha onde estava e recomeça no destino novo
 mesmo controle.
 
 O «CONECTAR» (D8) é o mesmo caminho sem alvo: a janela abre no destino com
-mais vaga de ponte (:func:`plano_de_radio.ordem_dos_destinos`), e o controle
-que aparecer nela é o que ela está segurando. E O CONTROLE QUE VOLTA PELO
+mais vaga de ponte (:func:`plano_de_radio.ordem_dos_destinos`), e NADA PAREIA
+SEM O CLIQUE DELA (O-PAREAR-ESPERA-O-CLIQUE-01, D-3009-O-PAREAR-E-O-CLIQUE-DELA,
+quem coordena, 30/09/2026, a validar por ela): a janela pareia o aparelho que
+ela escolheu no «Parear» da linha dele (:meth:`CentralDoRadio._a_escolha_dela`),
+e só um que a janela viu. Até 30/09 ela pareava o primeiro controle que
+aparecesse, em meio segundo, antes de a tela o mostrar. E O CONTROLE QUE VOLTA PELO
 PAREAMENTO ANTIGO também chega (a foto 2 da lista dela de 25/09: *«conectou com
 algum mas não apareceu na lista»*): quem ela liga só com o PS reconecta no
 adaptador que já tinha a chave dele, sem passar pela janela. O controle que se
@@ -114,8 +118,8 @@ vale, e aí nada sai: a sobra espera ele conectar pelo rádio.
 O QUE ESTE MÓDULO NÃO FAZ
 =========================
 Não fala com a tela (nada de recado, R8), não move a webcam (não é do rádio)
-e nunca apaga em lote. No «Conectar» pareia UM controle — o primeiro que
-aparece na janela, pela classe —, e o segundo fica para a próxima.
+e nunca apaga em lote. No «Conectar» pareia UM aparelho — o que ela escolheu
+na lista —, e nenhum sem o clique dela.
 """
 
 from __future__ import annotations
@@ -707,6 +711,12 @@ class CentralDoRadio:
         #: fio dele ainda não atendeu (:meth:`_mudar_o_destino`). Um, como o
         #: movimento; ``None`` = nenhum.
         self._destino_pedido: str | None = None
+        #: O «Parear» dela na lista do «Conectar» (:meth:`_a_escolha_dela`): o
+        #: endereço que a janela de agora pareia, e os endereços que ela já viu
+        #: (os VISTOS) — a escolha só vale para um deles. Os dois são da janela:
+        #: ela fechou, ou foi para outro adaptador, e eles zeram.
+        self._escolha: str | None = None
+        self._vistos_na_janela: frozenset[str] = frozenset()
         #: ``{(adaptador, aparelho)}``: as meias chaves que um «não chegou» não
         #: pôde tirar (a trava de outro motor, ou um erro no meio). Saem na
         #: primeira vez em que a central segura a trava (:meth:`_pagar_as_meias_chaves`).
@@ -801,6 +811,7 @@ class CentralDoRadio:
         """
         with self._tranca:
             self._destino_pedido = None
+            self._escolha, self._vistos_na_janela = None, frozenset()
         return self._guardar(movimento)
 
     def _sair_do_gesto(self, movimento: Movimento, **mudancas: Any) -> Movimento | None:
@@ -1023,7 +1034,9 @@ class CentralDoRadio:
         outro aparelho, ou deste já depois do gesto — a recusa sai na hora, sem
         fio e sem esperar a trava. O mesmo pedido de novo devolve o mesmo
         movimento (a idempotência da MOVER); o deste aparelho para outro destino,
-        ainda antes do gesto, leva a busca junto (:meth:`_mudar_o_destino`).
+        ainda antes do gesto, leva a busca junto (:meth:`_mudar_o_destino`); e o
+        de um aparelho que a busca do «Conectar» viu, no destino dela, é o
+        «Parear» dela na lista (:meth:`_a_escolha_dela`).
         """
         alvo = endereco_de(aparelho)
         if alvo is None:
@@ -1033,6 +1046,9 @@ class CentralDoRadio:
         mudou = self._mudar_o_destino(alvo, destino)
         if mudou is not None:
             return mudou
+        escolhido = self._a_escolha_dela(alvo, destino)
+        if escolhido is not None:
+            return escolhido
         repetido = self._o_mesmo_em_curso(alvo, destino)
         if repetido is not None:
             return repetido
@@ -1046,8 +1062,9 @@ class CentralDoRadio:
         """O «Conectar» da tela: o mesmo fio de :meth:`comecar_a_mover`, sem alvo.
 
         O movimento nasce com :data:`CONECTANDO` no lugar do endereço — ainda não
-        se sabe QUEM vai chegar, só ONDE (a D8) — e ganha o endereço quando o
-        controle aparece na janela. Um por vez, como o :meth:`comecar_a_mover`.
+        se sabe QUEM vai chegar, só ONDE (a D8) — e ganha o endereço quando ela
+        escolhe, na lista, um aparelho que a janela viu
+        (:meth:`_a_escolha_dela`). Um por vez, como o :meth:`comecar_a_mover`.
 
         É também o pedido do CHIP do «Procurando» (a tela manda o mesmo
         ``radio.mover`` sem aparelho): com a busca de pé noutro adaptador, ela vai
@@ -1142,6 +1159,36 @@ class CentralDoRadio:
         logger.info("central_o_destino_segue_a_caixa", aparelho=mascarar(agora.aparelho),
                     de=mascarar(agora.destino), para=mascarar(novo))
         return self._com_o_destino_pedido(agora, novo)
+
+    def _a_escolha_dela(self, alvo: str, destino: str | None) -> Movimento | None:
+        """O «Parear» dela na lista do «Conectar»: a escolha, e não outro movimento.
+
+        O-PAREAR-ESPERA-O-CLIQUE-01 (D-3009-O-PAREAR-E-O-CLIQUE-DELA, quem
+        coordena, 30/09/2026, a validar por ela). Com o «Conectar» em curso
+        ainda antes do aparelho (:data:`PASSOS_EM_QUE_O_DESTINO_MUDA`), o pedido
+        com aparelho, NO DESTINO DA BUSCA e de um endereço que a janela de agora
+        já viu, é ela escolhendo quem a janela pareia: a escolha fica guardada
+        (a última vence, como o último chip) e volta o movimento em curso. O fio
+        da janela a atende (:meth:`_esperar_a_escolha_dela`).
+
+        Outro destino, ou um endereço que a janela não viu, não é escolha: o
+        pedido segue o caminho de sempre, e a recusa do um por vez fica. É o que
+        impede um «Mover» ou um «Equilibrar» que chega entre dois tiques de
+        virar, calado, a escolha de um controle que está ligado noutro adaptador
+        e nunca vai aparecer nesta janela. ``None`` quando não é escolha.
+        """
+        pedido = endereco_de(destino) if destino else None
+        if pedido is None or self._parar.is_set():
+            return None
+        with self._tranca:
+            atual = self._movimentos.get(CONECTANDO)
+            if (atual is None or not atual.em_curso
+                    or atual.passo not in PASSOS_EM_QUE_O_DESTINO_MUDA
+                    or atual.destino != pedido or alvo not in self._vistos_na_janela):
+                return None
+            self._escolha = alvo
+        logger.info("central_ela_escolheu", aparelho=mascarar(alvo), adaptador=mascarar(pedido))
+        return atual
 
     def _tomar_o_destino_pedido(
         self, movimento: Movimento, *, recomecar: bool = False
@@ -1265,6 +1312,9 @@ class CentralDoRadio:
         mudou = self._mudar_o_destino(alvo, destino)
         if mudou is not None:
             return mudou
+        escolhido = self._a_escolha_dela(alvo, destino)
+        if escolhido is not None:
+            return escolhido
         repetido = self._o_mesmo_em_curso(alvo, destino)
         if repetido is not None:
             return repetido
@@ -1302,13 +1352,14 @@ class CentralDoRadio:
         *,
         _ao_pegar_a_trava: Callable[[], None] | None = None,
     ) -> Movimento:
-        """O «Conectar» (D8): um controle NOVO no destino com mais vaga de ponte.
+        """O «Conectar» (D8): um aparelho no destino com mais vaga de ponte.
 
-        A janela abre no destino da D8 (ou no pedido), e o controle que aparecer
-        nela — um controle pela CLASSE, que não estava lá antes da janela, sem
-        bond ali — é o que ela está segurando em PS + Create. Se ele tinha bond
-        em outro adaptador, é um mover: a origem sai depois do «chegou», como no
-        :meth:`mover`. Síncrono, como o :meth:`mover`; nunca levanta.
+        A janela abre no destino da D8 (ou no pedido), e pareia o aparelho que
+        ela ESCOLHER na lista, entre os que a janela viu
+        (:meth:`_a_escolha_dela`); sem o clique dela, nada pareia, e a janela
+        acaba sem gesto. Se ele tinha bond em outro adaptador, é um mover: a
+        origem sai depois do «chegou», como no :meth:`mover`. Síncrono, como o
+        :meth:`mover`; nunca levanta.
         """
         from hefesto_dualsense4unix.integrations.diario_do_radio import TravaOcupadaError
 
@@ -1358,12 +1409,8 @@ class CentralDoRadio:
         movimento = replace(movimento, destino=pedido or "")
         if pedido is None or pedido not in por_endereco:
             return self._acabou(movimento, NAO_CHEGOU, MOTIVO_SEM_DESTINO)
-        adaptador = por_endereco[pedido]
-        # O que o destino JÁ conhecia antes da janela não é quem ela está
-        # segurando: a busca de agora é que o faz aparecer.
-        antes = frozenset(a.endereco for a in dono.aparelhos(adaptador=adaptador.caminho) or ())
         return self._parear_e_conferir(
-            self._guardar(movimento), dono, adaptador, antes=antes,
+            self._guardar(movimento), dono, por_endereco[pedido], conectar=True,
             ligados_antes=self._controles_conectados(dono),
         )
 
@@ -1554,14 +1601,14 @@ class CentralDoRadio:
         dono: bluez_dbus.LeitorDoBluez,
         adaptador: bluez_dbus.AdaptadorDoBluez,
         *,
-        antes: frozenset[str] | None = None,
+        conectar: bool = False,
         ligados_antes: frozenset[str] = frozenset(),
     ) -> Movimento:
         """APLICAR e CONFERIR: a janela só no destino, o gesto, o ``Pair``, o
-        nome dela, o ``Connect``; depois o ``HID_PHYS``. ``antes`` diz que é um
-        «Conectar»: o alvo é o controle novo que aparecer na janela — ou o que
-        voltar pelo pareamento antigo (``ligados_antes`` são os que já estavam
-        conectados quando a janela abriu, e esses não são o dela).
+        nome dela, o ``Connect``; depois o ``HID_PHYS``. ``conectar`` diz que é
+        um «Conectar»: o alvo é o aparelho que ela escolher na lista — ou o
+        controle que voltar pelo pareamento antigo (``ligados_antes`` são os que
+        já estavam conectados quando a janela abriu, e esses não são o dela).
 
         UMA JANELA POR DESTINO, E O DESTINO É O ÚLTIMO QUE ELA PEDIU
         (O-CONECTAR-SEGUE-A-CAIXA-QUE-ELA-ABRIU-01): o pedido que chega antes de
@@ -1572,13 +1619,11 @@ class CentralDoRadio:
         while True:
             pedido = self._tomar_o_destino_pedido(movimento, recomecar=fechou)
             if pedido is not None:
-                ida = self._ir_para(pedido, dono, conectar=antes is not None)
+                ida = self._ir_para(pedido, dono, conectar=conectar)
                 if isinstance(ida, Movimento):
                     return ida
-                movimento, adaptador, antes_la = ida
-                if antes is not None:
-                    antes = antes_la
-            desfecho = self._uma_janela(movimento, dono, adaptador, antes=antes,
+                movimento, adaptador = ida
+            desfecho = self._uma_janela(movimento, dono, adaptador, conectar=conectar,
                                         ligados_antes=ligados_antes)
             fechou = desfecho is None
             if desfecho is None:
@@ -1605,7 +1650,7 @@ class CentralDoRadio:
         dono: bluez_dbus.LeitorDoBluez,
         adaptador: bluez_dbus.AdaptadorDoBluez,
         *,
-        antes: frozenset[str] | None,
+        conectar: bool,
         ligados_antes: frozenset[str],
     ) -> Movimento | None:
         """A janela num destino: o gesto, o ``Pair``, o nome dela e o ``Connect``.
@@ -1613,9 +1658,11 @@ class CentralDoRadio:
         Devolve o movimento pareado (ainda «esperando», para o CONFERIR), o
         movimento acabado, ou ``None`` quando ela pediu outro destino antes de o
         aparelho aparecer — a janela daqui fecha no ``finally``, como fecha
-        sempre.
+        sempre, e a escolha e os VISTOS dela zeram junto.
         """
         restaurar = self._preparar_o_adaptador(dono, adaptador)
+        with self._tranca:
+            self._escolha, self._vistos_na_janela = None, frozenset()
         janela = self._abrir_janela(adaptador.endereco, self._segundos, dono)
         try:
             motivo = janela.abrir_a_janela()
@@ -1624,10 +1671,9 @@ class CentralDoRadio:
                 return self._sem_chegar_do_gesto(movimento, MOTIVO_SEM_JANELA)
             movimento = self._guardar(replace(movimento, passo=PASSO_GESTO))
             comeco = self._relogio()
-            if antes is not None:
-                achado = self._esperar_um_controle_novo(
-                    janela, antes, dono, ligados_antes, comeco=comeco
-                )
+            if conectar:
+                achado = self._esperar_a_escolha_dela(janela, dono, ligados_antes,
+                                                      comeco=comeco)
                 if achado is None:
                     return self._sem_gesto(movimento, janela, comeco)
                 endereco, pelo_antigo = achado
@@ -1650,6 +1696,8 @@ class CentralDoRadio:
             self._conectar(dono, movimento.aparelho, movimento.destino)
             return movimento
         finally:
+            with self._tranca:
+                self._escolha, self._vistos_na_janela = None, frozenset()
             janela.fechar()
             restaurar()
 
@@ -1673,45 +1721,52 @@ class CentralDoRadio:
 
     def _ir_para(
         self, movimento: Movimento, dono: bluez_dbus.LeitorDoBluez, *, conectar: bool
-    ) -> Movimento | tuple[Movimento, bluez_dbus.AdaptadorDoBluez, frozenset[str]]:
+    ) -> Movimento | tuple[Movimento, bluez_dbus.AdaptadorDoBluez]:
         """O destino que ela pediu (:meth:`_tomar_o_destino_pedido`), antes da janela de lá.
 
-        * No «Conectar», o que o destino novo já conhecia é o ``antes`` de lá.
+        * No «Conectar», nada a fazer antes: a janela de lá recomeça a lista, e
+          a escolha dela, do zero.
         * No «Mover», o objeto velho do controle no destino novo sai como sai no
           primeiro (a R6, :meth:`_tirar_o_velho_do_destino`); as origens já
           saíram antes da primeira janela.
 
-        Devolve ``(movimento, adaptador, antes)``, ou o movimento acabado quando
-        o destino saiu da máquina no meio (:data:`MOTIVO_SEM_DESTINO`).
+        Devolve ``(movimento, adaptador)``, ou o movimento acabado quando o
+        destino saiu da máquina no meio (:data:`MOTIVO_SEM_DESTINO`).
         """
         novo = movimento.destino
         adaptador = next((a for a in dono.adaptadores() or () if a.endereco == novo), None)
         if adaptador is None:
             return self._acabou(movimento, NAO_CHEGOU, MOTIVO_SEM_DESTINO)
         if conectar:
-            antes = frozenset(a.endereco for a in dono.aparelhos(adaptador=adaptador.caminho) or ())
-            return movimento, adaptador, antes
+            return movimento, adaptador
         foto = _ler(dono, movimento.aparelho)
         if foto is not None:
             self._tirar_o_velho_do_destino(dono, movimento.aparelho, novo,
                                            foto.do_aparelho.get(novo))
-        return movimento, adaptador, frozenset()
+        return movimento, adaptador
 
     def _quem_chegou(
         self, movimento: Movimento, achado: str, dono: bluez_dbus.LeitorDoBluez
     ) -> Movimento | None:
         """O «Conectar» ganha o endereço e vai para o ``Pair``: sai a chave
-        :data:`CONECTANDO`, entra o controle, com as origens que ele tinha em
-        OUTROS adaptadores. ``None`` se ela pediu outro destino antes
-        (:meth:`_sair_do_gesto`)."""
+        :data:`CONECTANDO`, entra o aparelho que ela escolheu, com as origens
+        que ele tinha em OUTROS adaptadores. ``None`` se ela pediu outro destino
+        antes (:meth:`_sair_do_gesto`).
+
+        O QUE ELE É, A CLASSE DIZ (:meth:`_e_controle`): a escolha vale para
+        qualquer aparelho da janela (a D6 de 22/09: todo aparelho Bluetooth age
+        daqui), e o CONFERIR de quem não é controle é o do «Mover»
+        (:meth:`_chegou`, pelo ``Connected`` do BlueZ). Até 30/09 ele nascia
+        controle sempre, porque a janela só pegava controle."""
         foto = _ler(dono, achado)
         origens = tuple(sorted(
             e for e, a in (foto.do_aparelho.items() if foto is not None else ())
             if e != movimento.destino and a.pareado
         ))
         quem = self._quem_e(foto, dono, exceto=movimento.destino) if foto is not None else {}
-        return self._sair_do_gesto(movimento, aparelho=achado, origens=origens, e_controle=True,
-                                   passo=PASSO_PAREANDO, **quem)
+        e_controle = self._e_controle(foto, achado) if foto is not None else True
+        return self._sair_do_gesto(movimento, aparelho=achado, origens=origens,
+                                   e_controle=e_controle, passo=PASSO_PAREANDO, **quem)
 
     def _voltou_pelo_antigo(
         self, movimento: Movimento, achado: str, dono: bluez_dbus.LeitorDoBluez
@@ -1843,39 +1898,46 @@ class CentralDoRadio:
                 return False
             self._dormir(PASSO_S)
 
-    def _esperar_um_controle_novo(
+    def _esperar_a_escolha_dela(
         self,
         janela: Janela,
-        antes: frozenset[str],
         dono: bluez_dbus.LeitorDoBluez,
         ligados_antes: frozenset[str],
         *,
         comeco: float,
     ) -> tuple[str, bool] | None:
-        """O «Conectar»: ``(endereço, pelo_antigo)`` do controle dela, ou ``None``.
+        """O «Conectar»: ``(endereço, pelo_antigo)`` do aparelho dela, ou ``None``.
 
-        Dois jeitos de ele aparecer, e os dois são ela segurando o controle:
+        Dois jeitos de ele chegar:
 
-        * na JANELA — o primeiro CONTROLE (pela classe) que a busca achou e que
-          o destino não conhecia antes dela (``pelo_antigo`` falso);
+        * na JANELA, pelo clique dela — o «Parear» (ou o «Conectar», de quem o
+          destino já conhece) da linha dele, que :meth:`_a_escolha_dela` guarda;
+          vale quando o endereço escolhido está entre os que a janela viu
+          (``pelo_antigo`` falso). Para ele, os filtros de adivinhar de antes
+          (o que o destino já conhecia, o já pareado, a classe) não valem: ela
+          disse quem é;
         * CONECTADO em qualquer adaptador, sem ter estado conectado quando a
           janela abriu — ela o ligou só com o PS, e ele voltou pelo pareamento
           antigo (``pelo_antigo`` verdadeiro). Quem diz que ele chegou é o
-          kernel (``HID_PHYS``), como no CONFERIR.
+          kernel (``HID_PHYS``), como no CONFERIR. Isso não é parear: é ele
+          ligando onde já tem a chave dele.
 
-        Um por vez: o segundo fica para a próxima.
+        NADA PAREIA SEM O CLIQUE DELA (O-PAREAR-ESPERA-O-CLIQUE-01): até 30/09
+        este fio devolvia o primeiro controle que a busca achasse, a cada meio
+        segundo, e a tela, que lê o BlueZ a cada 3 s, nunca o mostrava na lista
+        — e o controle com a chave só do lado dele, que chama o adaptador
+        sozinho, era pareado de novo sem modo de parear (o 01:23:40 da madrugada
+        dela). Cada volta guarda os VISTOS da janela, para a escolha.
         """
         fim = comeco + self._segundos
         while True:
-            for candidato in janela.candidatos():
-                endereco = getattr(candidato, "endereco", "")
-                if (
-                    endereco
-                    and endereco not in antes
-                    and not getattr(candidato, "ja_pareado", False)
-                    and e_controle(getattr(candidato, "classe", None))
-                ):
-                    return str(endereco), False
+            vistos = frozenset(str(getattr(c, "endereco", "") or "")
+                               for c in janela.candidatos()) - {""}
+            with self._tranca:
+                self._vistos_na_janela = vistos
+                escolha = self._escolha
+            if escolha is not None and escolha in vistos:
+                return escolha, False
             voltou = self._quem_voltou_sozinho(dono, ligados_antes)
             if voltou:
                 return voltou, True

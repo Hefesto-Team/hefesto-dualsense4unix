@@ -57,7 +57,6 @@ from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, FONE, QUARTO, ROXO, SALA, VARANDA, VERMELHO
 from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
     Bancada,
-    ela_segura_ps_create,
     id_da_tela,
     preparar_a_tela,
     preparar_o_diario,
@@ -120,12 +119,13 @@ def _esquecer_em_todos(bancada: Bancada) -> None:
 
 
 def _conectar_em(bancada: Bancada, destino: str, quem: str) -> cr.Movimento:
-    """Ela abre ``destino``, clica «Conectar» e segura PS + Create em ``quem``."""
+    """Ela abre ``destino``, clica «Conectar», segura PS + Create em ``quem`` e
+    clica em «Parear» na linha dele (O-PAREAR-ESPERA-O-CLIQUE-01)."""
     bancada.cena()
     if bancada.cena().get("aberto") != id_da_tela(destino):
         bancada.gesto("abrir-adaptador", alvo=id_da_tela(destino))
     bancada.cena()
-    ela_segura_ps_create(bancada.mundo, bancada.relogio, quem)
+    rm.ela_pareia(bancada.relogio, bancada.mundo, bancada.central, quem)
     bancada.gesto("conectar-aparelho")
     bancada.esperar_a_central()
     return next(m for m in bancada.central.movimentos() if m.destino == destino)

@@ -6146,6 +6146,11 @@ def _e_nome_de_fabrica(nome: str) -> bool:
     return any(nome.startswith(f) for f in _NOMES_DE_FABRICA)
 
 
+#: O ``Alias`` que o BlueZ dá a quem não anuncia nome: o próprio endereço, com
+#: hífens (``AA-BB-CC-00-00-31``). Não é nome, e a tela nunca mostra endereço.
+_ALIAS_QUE_E_ENDERECO = re.compile(r"[0-9A-Fa-f]{2}([-:_][0-9A-Fa-f]{2}){5}")
+
+
 def _nomes_por_endereco(aparelhos_bz: tuple[Any, ...]) -> dict[str, str]:
     """O nome que ela deu a cada controle, pelo ENDEREÇO — um só por aparelho.
 
@@ -6154,14 +6159,18 @@ def _nomes_por_endereco(aparelhos_bz: tuple[Any, ...]) -> dict[str, str]:
     pareado em dois adaptadores, a tela podia ler o objeto velho, com outro
     nome ou nenhum (a lista dela de 25/09, passo a2 — *«O vermelho era P4,
     reconectou como P3, e a tela mostrava o nome errado»*). Vale o do objeto
-    CONECTADO; sem nome ali, o de qualquer outro; nome de fábrica não é nome.
+    CONECTADO; sem nome ali, o de qualquer outro; nome de fábrica não é nome,
+    e o endereço que o BlueZ põe no ``Alias`` de quem não anuncia nome também
+    não (O-PAREAR-ESPERA-O-CLIQUE-01: a lista do «Conectar» mostra quem a busca
+    achou, e muitos chegam sem nome).
     <!-- noqa-acento: citação literal dela -->
     """
     nomes: dict[str, str] = {}
     for a in sorted(aparelhos_bz, key=lambda a: getattr(a, "conectado", None) is not True):
         nome = str(getattr(a, "nome", "") or "").strip()
         endereco = _mac(getattr(a, "endereco", ""))
-        if nome and endereco and not _e_nome_de_fabrica(nome) and endereco not in nomes:
+        if (nome and endereco and not _e_nome_de_fabrica(nome)
+                and not _ALIAS_QUE_E_ENDERECO.fullmatch(nome) and endereco not in nomes):
             nomes[endereco] = nome
     return nomes
 
@@ -6877,19 +6886,31 @@ def _perto(aparelhos_bz: tuple[Any, ...], adaptadores_bz: tuple[Any, ...],
     ``buscas`` é ``{adaptador: quem busca ali}`` — a identidade da busca do
     Hefesto em cada adaptador; quando ela muda, a ordem daquele adaptador
     recomeça (:func:`_na_ordem_da_chegada`).
+
+    QUEM É CONTROLE, E O NOME DA LINHA (O-PAREAR-ESPERA-O-CLIQUE-01): o tipo
+    pergunta à classe, ao ``Icon`` e só então ao ``Modalias``
+    (:func:`_e_controle_do_bluez`, o mesmo dono da central) — antes de parear,
+    o BlueZ não tem o ``Modalias`` do DualSense, e a linha dele caía no
+    desenho genérico. O nome é o que ela deu ou o que o aparelho anuncia
+    (:func:`_nomes_por_endereco`); sem ele, «DualSense» ou a palavra do tipo.
+    Nunca o endereço.
     """
     ligados = {_so_hex(a["id"]) for a in ja}
     adaptador_de = {str(getattr(a, "caminho", "")): _mac(a.endereco) for a in adaptadores_bz}
+    nomes = _nomes_por_endereco(aparelhos_bz)
     vistos: dict[tuple[str, str], dict[str, Any]] = {}
     for a in aparelhos_bz:
         onde = adaptador_de.get(str(a.adaptador), "")
         if not onde or a.conectado or a.rssi is None or _so_hex(a.endereco) in ligados:
             continue
+        tipo = ("controle" if _e_controle_do_bluez(a)
+                else _tipo_do_aparelho(getattr(a, "icone", ""), a.classe))
         vistos[(onde, _mac(a.endereco))] = {
-            "id": _mac(a.endereco), "adaptador": onde, "nome": a.nome or _mac(a.endereco),
-            "tipo": ("controle" if "054C" in str(a.modalias).upper()
-                     else _tipo_do_aparelho(getattr(a, "icone", ""), a.classe)),
-            "forca": a.rssi, "conhecido": bool(a.pareado),
+            "id": _mac(a.endereco), "adaptador": onde,
+            "nome": nomes.get(_mac(a.endereco)) or (
+                "DualSense" if tipo == "controle"
+                else PALAVRA_DO_TIPO.get(tipo, "aparelho").capitalize()),
+            "tipo": tipo, "forca": a.rssi, "conhecido": bool(a.pareado),
         }
     return _na_ordem_da_chegada(vistos, dict(buscas or {}))
 
@@ -7201,25 +7222,53 @@ def ligar_mesmo_assim(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("08-conexoes.html", "conectar-aparelho", grava="radio.mover")
 def conectar_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Conectar»: sem alvo, a janela abre no adaptador ABERTO na lista (sem
-    nenhum aberto, no da D8 — :func:`_destino_do_conectar`) e o controle que ela
-    segurar chega; com alvo (um achado que o destino já conhece), é Mover."""
+    """«Conectar»: sem alvo, a busca abre no adaptador ABERTO na lista (sem
+    nenhum aberto, no da D8 — :func:`_destino_do_conectar`), e a lista mostra
+    quem ela acha; com alvo (um achado que o destino já conhece), é a escolha
+    dela na busca de pé (:func:`_escolher_na_busca`), ou, sem busca, um Mover."""
+    alvo = str(o.get("alvo") or "")
+    if alvo and (escolha := _escolher_na_busca(p, alvo)) is not None:
+        return escolha
     destino = str(_CENA_NA_TELA.get("destino_do_conectar") or "")
     if not destino:
         raise RuntimeError("não há adaptador Bluetooth para conectar")
-    feito = _mover(p, str(o.get("alvo") or "") or None, destino)
+    feito = _mover(p, alvo or None, destino)
     # A CAIXA DO DESTINO FICA ABERTA DEPOIS: o «Segure PS + Create», o «Não
     # Conectou» e a piscada da chegada moram nela, e é onde ela olha.
     _abrir_na_tela(destino)
     return feito
 
 
+def _escolher_na_busca(p: Any, alvo: str) -> dict[str, Any] | None:
+    """O clique dela numa linha do «Conectar» com a busca de pé: a ESCOLHA.
+
+    O-PAREAR-ESPERA-O-CLIQUE-01 (D-3009-O-PAREAR-E-O-CLIQUE-DELA, quem
+    coordena, 30/09/2026, a validar por ela): a busca não pareia ninguém
+    sozinha, e o «Parear» da linha diz à central QUEM a janela pareia. O
+    destino é o adaptador em que a busca ESTÁ (:func:`_onde_espera`, o do chip
+    aceso), e não a caixa aberta, que pode ser outra. Vai sem a trava da tela,
+    como o chip: quem sabe se a escolha vale (o aparelho que a janela viu, no
+    destino dela) é a central, e a recusa faz o botão tremer. ``None`` sem
+    busca de pé: aí é o «Mover» daquele aparelho, como sempre.
+    """
+    busca = _onde_espera(_CENA_NA_TELA.get("lugares") or [], _CENA_NA_TELA.get("aparelhos") or [])
+    if not busca:
+        return None
+    feito = _pedir_ao_radio(p, alvo, busca)
+    _abrir_na_tela(busca)
+    return feito
+
+
 @gesto("08-conexoes.html", "parear-aparelho", grava="radio.mover")
 def parear_aparelho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Parear» um aparelho que o rádio achou, no destino escolhido."""
+    """«Parear» um aparelho que o rádio achou: com a busca de pé, a escolha
+    dela (:func:`_escolher_na_busca`); sem, o «Mover» dele para o destino."""
     alvo = str(o.get("alvo") or "")
     if not alvo:
         raise ValueError("o clique não disse qual aparelho")
+    escolha = _escolher_na_busca(p, alvo)
+    if escolha is not None:
+        return escolha
     return _mover(p, alvo, str(_CENA_NA_TELA.get("destino_do_conectar") or ""))
 
 
@@ -7267,12 +7316,12 @@ def tentar_de_novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     nenhum outro. A linha «Não Conectou» sai quando a central aceita; recusada,
     ela fica, e o botão treme.
 
-    O «CONECTAR» É DE CONTROLE (o conferente, 26/09/2026): a janela dele só
-    aceita quem a CLASSE diz controle (`central_do_radio._esperar_um_controle_novo`).
-    O «Não Conectou» de um fone ou de um teclado que ela moveu abria, aqui, uma
-    janela que nunca o acharia e segurava o rádio pelo tempo dela. Para quem
-    não é controle, tentar de novo é o MESMO mover, do mesmo aparelho para o
-    mesmo adaptador; a central diz na hora se ainda o conhece.
+    O «Não Conectou» de um CONTROLE abre a busca naquele adaptador, e ela
+    espera o clique dela no «Parear» da linha dele
+    (`central_do_radio._esperar_a_escolha_dela`, O-PAREAR-ESPERA-O-CLIQUE-01).
+    O de um fone ou de um teclado que ela moveu já nomeia o aparelho: tentar de
+    novo é o MESMO mover, do mesmo aparelho para o mesmo adaptador, e a central
+    diz na hora se ainda o conhece.
     """
     lug = _lugar_na_tela(o)
     lid = str(lug["id"])

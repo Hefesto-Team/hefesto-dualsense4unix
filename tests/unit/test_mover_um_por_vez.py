@@ -101,6 +101,13 @@ def _ela_segura_ps_create(mundo: rm.RadioDeMentira, relogio: rm.Relogio, aparelh
     relogio.agendar(2.0, lambda: mundo.segurar_ps_create(aparelho))
 
 
+def _ela_pareia(mundo: rm.RadioDeMentira, relogio: rm.Relogio, central: cr.CentralDoRadio,
+                aparelho: str) -> None:
+    """O «Conectar»: ela segura PS + Create e clica em «Parear» na linha dele
+    (O-PAREAR-ESPERA-O-CLIQUE-01 — sem o clique, nada pareia)."""
+    rm.ela_pareia(relogio, mundo, central, aparelho)
+
+
 # ---------------------------------------------------------------------------
 # 1. esquece só ele, uma lápide, a janela só no destino
 # ---------------------------------------------------------------------------
@@ -208,7 +215,7 @@ def test_o_parear_que_falha_deixa_o_controle_sem_casa_e_o_conectar_o_traz(
     # O «Conectar» o traz: PS + Create, e ele chega.
     mundo.pair_falha = False
     mundo.desligar(VERMELHO)
-    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+    _ela_pareia(mundo, relogio, central, VERMELHO)
     volta = central.conectar(VARANDA)
     assert (volta.estado, volta.aparelho, volta.destino) == (cr.CHEGOU, VERMELHO, VARANDA)
 
@@ -577,12 +584,12 @@ def test_a_d8_nunca_escolhe_o_adaptador_em_que_ele_ja_esta(
 def test_o_conectar_pareia_o_controle_novo_no_destino_da_d8(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """O «Conectar» sem destino: a D8 escolhe, e o controle que aparece é o dela.
+    """O «Conectar» sem destino: a D8 escolhe, e o controle que ela escolhe chega.
 
     A sala tem duas pontes; a varanda, um controle sem ponte; o quarto, nada —
     ganha o quarto (mesma vaga que a varanda, menos controles). O fone da
-    vizinha em modo de pareamento aparece na mesma janela e fica de fora: não é
-    controle pela classe.
+    vizinha em modo de pareamento aparece na mesma janela e fica de fora: ela
+    clicou no controle (O-PAREAR-ESPERA-O-CLIQUE-01).
     """
     mundo.pareado(VARANDA, rm.ROXO)
     mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
@@ -594,7 +601,7 @@ def test_o_conectar_pareia_o_controle_novo_no_destino_da_d8(
         _controle(AZUL, SALA, "som"),
         _controle(rm.ROXO, VARANDA),
     ])
-    _ela_segura_ps_create(mundo, relogio, VERDE)
+    _ela_pareia(mundo, relogio, central, VERDE)
 
     feito = central.conectar()
 
@@ -613,7 +620,7 @@ def test_o_conectar_de_quem_morava_em_outro_adaptador_e_um_mover(
     lista dela) e o pareia pelo «Conectar»: a sala sai depois do «chegou»."""
     central = _central(dono, mundo, relogio)
     mundo.desligar(VERMELHO)
-    _ela_segura_ps_create(mundo, relogio, VERMELHO)
+    _ela_pareia(mundo, relogio, central, VERMELHO)
 
     feito = central.conectar(QUARTO)
 
@@ -626,17 +633,19 @@ def test_o_conectar_de_quem_morava_em_outro_adaptador_e_um_mover(
 def test_o_conectar_ignora_o_que_o_destino_ja_conhecia(
     diario: Path, mundo: rm.RadioDeMentira, dono: bd.DonoVivo, relogio: rm.Relogio
 ) -> None:
-    """Uma sobra de busca antiga no quarto não é quem ela está segurando.
+    """Uma sobra de busca antiga no quarto não é quem ela está segurando: ela
+    está na lista, e o clique dela é no verde.
 
-    MORDIDA: tire o ``endereco not in antes`` — o ``Pair`` vai para a sobra,
-    que não está pareando, e esta régua reprova.
+    MORDIDA: devolva à janela o primeiro controle que ela achar, sem a escolha
+    dela (O-PAREAR-ESPERA-O-CLIQUE-01) — o ``Pair`` vai para a sobra, que não
+    está pareando, e esta régua reprova.
     """
     sobra = rm.Fisico("aa:bb:cc:00:00:5a", rm.CLASSE_DE_CONTROLE)
     mundo.fisicos[sobra.endereco] = sobra
     mundo._achar(QUARTO, sobra)
     mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
     central = _central(dono, mundo, relogio)
-    _ela_segura_ps_create(mundo, relogio, VERDE)
+    _ela_pareia(mundo, relogio, central, VERDE)
 
     feito = central.conectar(QUARTO)
 
@@ -849,7 +858,7 @@ async def test_o_ipc_sem_aparelho_e_o_conectar(
 
     mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
     central = _central(dono, mundo, relogio)
-    _ela_segura_ps_create(mundo, relogio, VERDE)
+    _ela_pareia(mundo, relogio, central, VERDE)
     handlers = _handlers(SimpleNamespace(_central_do_radio=central))
 
     resposta = await handlers._handle_radio_mover({"destino": QUARTO})

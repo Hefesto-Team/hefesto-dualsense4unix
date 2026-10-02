@@ -55,7 +55,6 @@ from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
     Bancada,
     BuscaDePe,
     PonteQueVaiAoDaemon,
-    ela_segura_ps_create,
     id_da_tela,
     mundo_da_madrugada,
     onde_buscou,
@@ -197,7 +196,7 @@ def test_o_chip_leva_a_busca_do_conectar_para_o_adaptador_dele(
     assert (resposta["movimento"]["aparelho"], resposta["movimento"]["destino"]) == (
         cr.CONECTANDO, chip)
 
-    mesa.relogio.agendar(2.0, lambda: mesa.mundo.segurar_ps_create(VERDE))
+    rm.ela_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
     busca.soltar()
     (fim,) = mesa.esperar()
     assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, chip), fim
@@ -233,7 +232,7 @@ def test_a_janela_e_o_prazo_recomecam_no_destino_novo(diario: Path, fechar: list
 
     assert mesa.chip(VARANDA)["status"] == "ok"
     mesa.mundo.pair_mente = True
-    mesa.relogio.agendar(25.0, lambda: mesa.mundo.segurar_ps_create(VERDE))
+    rm.ela_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE, depois_de=25.0)
     busca.soltar()
     fio.join(timeout=15.0)
 
@@ -263,7 +262,7 @@ def test_o_ultimo_clique_dela_vence(
     assert mesa.chip(onde_busca)["status"] == "ok"
     assert mesa.chip(chip)["status"] == "ok"
     assert mesa.chip(terceiro)["status"] == "ok"
-    mesa.relogio.agendar(2.0, lambda: mesa.mundo.segurar_ps_create(VERDE))
+    rm.ela_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
     busca.soltar()
     (fim,) = mesa.esperar()
     assert (fim.estado, fim.destino) == (cr.CHEGOU, terceiro), fim
@@ -287,7 +286,7 @@ def test_o_chip_no_ultimo_instante_da_janela_ainda_leva_a_busca(
     mesa.relogio.agora = antes.comecou + gp.SEGUNDOS_DA_JANELA
 
     assert mesa.chip(QUARTO)["status"] == "ok"
-    mesa.relogio.agendar(2.0, lambda: mesa.mundo.segurar_ps_create(VERDE))
+    rm.ela_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
     busca.soltar()
     (fim,) = mesa.esperar()
     assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, QUARTO), fim
@@ -313,6 +312,8 @@ def test_o_controle_que_aparece_junto_com_o_chip_pareia_no_adaptador_do_chip(
     assert mesa.chip(QUARTO)["status"] == "ok"
     mesa.mundo.segurar_ps_create(VERDE)
     assert mesa.mundo.objeto(SALA, VERDE) is not None, "a janela da sala não o achou"
+    # O clique dela no «Parear» do verde, na lista do quarto, onde a busca está.
+    mesa.relogio.agendar(1.0, rm.o_clique_no_parear(mesa.central, VERDE))
     busca.soltar()
     (fim,) = mesa.esperar()
     assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, QUARTO), fim
@@ -373,7 +374,7 @@ def test_voltar_ao_chip_da_busca_desfaz_o_pedido(diario: Path, fechar: list[Any]
 
     assert mesa.chip(VARANDA)["status"] == "ok"
     assert mesa.chip(QUARTO)["status"] == "ok"
-    mesa.relogio.agendar(2.0, lambda: mesa.mundo.segurar_ps_create(VERDE))
+    rm.ela_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
     busca.soltar()
     (fim,) = mesa.esperar()
     assert (fim.estado, fim.destino) == (cr.CHEGOU, QUARTO), fim
@@ -406,7 +407,7 @@ def test_o_pedido_que_a_busca_nao_atendeu_nao_vale_para_a_proxima(
     assert (voltou.estado, voltou.motivo, voltou.aparelho) == (
         cr.CHEGOU, cr.MOTIVO_PELO_PAREAMENTO_ANTIGO, ROXO), voltou
 
-    mesa.relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERDE))
+    rm.ela_pareia(mesa.relogio, mundo, mesa.central, VERDE)
     fim = mesa.central.conectar(VARANDA)
     assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, VARANDA), fim
     assert onde_buscou(mundo) == [rm.HCIS[SALA], rm.HCIS[VARANDA]]
@@ -616,7 +617,7 @@ def test_depois_do_gesto_o_destino_nao_muda(diario: Path, fechar: list[Any], pas
 def _o_verde_pareou_e_nao_conectou(mesa: Mesa, destino: str) -> cr.Movimento:
     """O ``Pair`` do verde dá e ele não conecta (o branco do diário dela)."""
     mesa.mundo.pair_mente = True
-    mesa.relogio.agendar(2.0, lambda: mesa.mundo.segurar_ps_create(VERDE))
+    rm.ela_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
     feito = mesa.central.conectar(destino)
     assert (feito.estado, feito.passo, feito.aparelho) == (
         cr.ESPERANDO, cr.PASSO_CONFERINDO, VERDE)
@@ -707,8 +708,9 @@ def test_a_meia_chave_devida_sai_antes_do_conectar_seguinte_ali(
     mesmo adaptador. Com a chave devida, ele a tira ANTES de abrir a janela, e
     o verde — agora segurando PS + Create de novo — chega.
 
-    MORDIDA: tire o pagamento do começo do movimento — o destino já «conhece» o
-    verde, a janela o ignora, e o «Conectar» acaba «não chegou» (``sem_gesto``).
+    MORDIDA: tire o pagamento do começo do movimento — o destino guarda a chave
+    velha do verde, o «Parear» dela volta «já pareado», o ``Connect`` não dá, e
+    ele não chega.
     """
     mesa = Mesa(mundo_da_madrugada(), prazo_da_trava_s=0.2)
     fechar.append(mesa.fechar)
@@ -718,7 +720,7 @@ def test_a_meia_chave_devida_sai_antes_do_conectar_seguinte_ali(
     assert mesa.de(VERDE).estado == cr.NAO_CHEGOU
 
     mesa.mundo.pair_mente = False
-    mesa.relogio.agendar(2.0, lambda: mesa.mundo.segurar_ps_create(VERDE))
+    rm.ela_pareia(mesa.relogio, mesa.mundo, mesa.central, VERDE)
     fim = mesa.central.conectar(destino)
     assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, destino), fim
     assert mesa.mundo.lapides == [(destino, VERDE)]
@@ -747,7 +749,7 @@ def test_o_falhou_depois_do_pair_tira_a_meia_chave(
 
     mesa.central._dar_o_nome = quebrou  # type: ignore[method-assign]
     alvo = VERDE if quem == "conectar" else VERMELHO
-    mesa.relogio.agendar(2.0, lambda: mundo.segurar_ps_create(alvo))
+    rm.ela_pareia(mesa.relogio, mundo, mesa.central, alvo)
     fim = (mesa.central.conectar(destino) if quem == "conectar"
            else mesa.central.mover(VERMELHO, destino))
     assert (fim.estado, fim.motivo, fim.aparelho) == (cr.NAO_CHEGOU, cr.MOTIVO_FALHOU, alvo)
@@ -918,12 +920,13 @@ def test_o_mover_que_muda_de_destino_tira_a_sobra_dele_no_destino_novo(
 def test_o_conectar_que_muda_de_destino_ignora_o_que_o_destino_novo_ja_conhecia(
     diario: Path, fechar: list[Any],
 ) -> None:
-    """O ``antes`` é o do destino de lá: o roxo que a varanda já tinha visto
-    numa busca antiga (sem chave) não é quem ela está segurando, e o verde é.
+    """O roxo que a varanda já tinha visto numa busca antiga (sem chave) está
+    na lista de lá, e não é quem ela está segurando: ela clica no verde, e só
+    ele pareia (O-PAREAR-ESPERA-O-CLIQUE-01).
 
-    MORDIDA: deixe no ``_ir_para`` o ``antes`` do destino de antes — a janela
-    da varanda pega o roxo, e o ``Pair`` vai a um controle que não está
-    pareando.
+    MORDIDA: devolva à janela o primeiro controle que ela achar, sem a escolha
+    dela — a janela da varanda pega o roxo, e o ``Pair`` vai a um controle que
+    não está pareando.
     """
     mundo = mundo_da_madrugada()
     mundo.fisicos[ROXO] = rm.Fisico(ROXO, rm.CLASSE_DE_CONTROLE)
@@ -936,7 +939,7 @@ def test_o_conectar_que_muda_de_destino_ignora_o_que_o_destino_novo_ja_conhecia(
     _o_conectar_no_gesto(mesa, busca, QUARTO)
 
     assert mesa.chip(VARANDA)["status"] == "ok"
-    mesa.relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERDE))
+    rm.ela_pareia(mesa.relogio, mundo, mesa.central, VERDE)
     busca.soltar()
     (fim,) = mesa.esperar()
     assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, VARANDA), fim
@@ -980,7 +983,7 @@ def test_o_clique_de_volta_pela_tela_desfaz_o_pedido_que_a_busca_ainda_nao_levou
             "armou": True}
         assert bancada.ponte.chamadas[-1] == (
             "radio.mover", {"destino": id_da_tela(onde_busca)}), "o clique de volta não chegou"
-        ela_segura_ps_create(mundo, relogio, VERDE)
+        rm.ela_pareia(relogio, mundo, bancada.central, VERDE)
         busca.soltar()
         bancada.esperar_a_central()
         assert onde_buscou(mundo) == [rm.HCIS[onde_busca]], "a busca foi para o chip desfeito"

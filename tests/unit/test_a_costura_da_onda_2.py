@@ -228,7 +228,8 @@ def test_dois_conectar_quase_juntos_abrem_uma_janela_so(
     arrancou a segunda olhada do :meth:`CentralDoRadio.conectar` sem nenhuma
     régua reprovar. Dois «Conectar» quase juntos, para o quarto e para a
     varanda: os dois passam pela primeira olhada e esperam a trava. O que
-    ganha abre a janela, e um controle novo aparece e fica «esperando». O
+    ganha abre a janela, um controle novo aparece, ela clica em «Parear» na
+    linha dele (O-PAREAR-ESPERA-O-CLIQUE-01), e ele fica «esperando». O
     outro, já com a trava na mão, olha de novo e recusa.
 
     MORDIDA: tire do :meth:`CentralDoRadio.conectar` a segunda olhada — o
@@ -238,7 +239,7 @@ def test_dois_conectar_quase_juntos_abrem_uma_janela_so(
     mundo.pair_mente = True
     # Um controle que ainda não tem bond em lugar nenhum.
     mundo.fisicos[VERDE] = rm.Fisico(VERDE, rm.CLASSE_DE_CONTROLE)
-    relogio.agendar(2.0, lambda: mundo.segurar_ps_create(VERDE))
+    rm.ela_pareia(relogio, mundo, central, VERDE)
 
     chegaram = threading.Semaphore(0)
     de_verdade = bd.na_trava

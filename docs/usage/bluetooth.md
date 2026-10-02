@@ -9,8 +9,8 @@ que muda é o pareamento, e que o rádio tem um limite de controles por adaptado
 1. Na aba **Conexões**, clique em **Conectar** no adaptador que vai receber o
    controle.
 2. No controle, segure **PS + Create** até a barra de luz piscar rápido.
-3. O controle aparece na lista e conecta. Se não conectar, a linha diz «Não
-   Conectou», e **Tentar de Novo** reabre a espera.
+3. O controle aparece na lista. Clique em **Parear** na linha dele. Se não
+   conectar, a linha diz «Não Conectou», e **Tentar de Novo** reabre a espera.
 
 Nas próximas vezes, um toque no PS liga o controle e ele volta sozinho.
 

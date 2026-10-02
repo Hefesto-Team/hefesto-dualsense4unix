@@ -68,7 +68,6 @@ from tests.unit.radio_de_mentira import (
 )
 from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
     Bancada,
-    ela_segura_ps_create,
     id_da_tela,
     mundo_da_madrugada,
     onde_buscou,
@@ -257,7 +256,7 @@ def test_o_branco_perde_a_meia_chave_so_ali_e_tenta_de_novo_no_mesmo_adaptador(
         bancada.cena()
         bancada.gesto("escolher-adaptador", alvo=id_da_tela(destino))
         bancada.cena()
-        ela_segura_ps_create(mundo, relogio, VERDE)
+        rm.ela_pareia(relogio, mundo, bancada.central, VERDE)
         bancada.gesto("conectar-aparelho")
         bancada.esperar_a_central()
         (feito,) = [m for m in bancada.central.movimentos() if m.estado == cr.NAO_CHEGOU]
@@ -280,7 +279,7 @@ def test_o_branco_perde_a_meia_chave_so_ali_e_tenta_de_novo_no_mesmo_adaptador(
 
         # «Tentar de Novo»: agora ele conecta.
         mundo.pair_mente = False
-        ela_segura_ps_create(mundo, relogio, VERDE)
+        rm.ela_pareia(relogio, mundo, bancada.central, VERDE)
         assert bancada.gesto("tentar-de-novo", alvo=id_da_tela(destino)) == {"armou": True}
         bancada.esperar_a_central()
         assert onde_buscou(mundo) == [rm.HCIS[destino]] * 2
@@ -313,7 +312,7 @@ def test_o_controle_que_o_pair_conecta_nao_recebe_connect(
         bancada.cena()
         bancada.gesto("abrir-adaptador", alvo=id_da_tela(QUARTO))
         bancada.cena()
-        ela_segura_ps_create(mundo, relogio, VERDE)
+        rm.ela_pareia(relogio, mundo, bancada.central, VERDE)
         bancada.gesto("conectar-aparelho")
         bancada.esperar_a_central()
         assert mundo.onde_esta(rm.uniq(VERDE)) == QUARTO
@@ -587,14 +586,13 @@ def test_com_a_janela_fechada_a_central_tira_a_meia_chave_no_nao_chegou(
     sala ficam.
 
     MORDIDA: faça ``_esquecer_a_meia_chave`` devolver ``False`` sem esquecer — a
-    chave fica no adaptador, e o próximo «Conectar» ali nem veria o branco (o
-    destino já o «conhece»).
+    chave fica no adaptador, e esta régua reprova.
     """
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     mundo.pair_mente = True
     central, dono = _central_sem_tela(mundo, relogio)
     try:
-        ela_segura_ps_create(mundo, relogio, VERDE)
+        rm.ela_pareia(relogio, mundo, central, VERDE)
         feito = central.conectar(destino)
         assert (feito.estado, feito.passo, feito.aparelho) == (
             cr.ESPERANDO, cr.PASSO_CONFERINDO, VERDE)
@@ -629,7 +627,7 @@ def test_o_prazo_que_vence_na_conferencia_fecha_na_hora(diario: Path) -> None:
     mundo.pair_mente = True
     central, dono = _central_sem_tela(mundo, relogio, prazo_do_pendente_s=prazo)
     try:
-        ela_segura_ps_create(mundo, relogio, VERDE)
+        rm.ela_pareia(relogio, mundo, central, VERDE)
         comeco = relogio.agora
         feito = central.conectar(QUARTO)
         assert (feito.estado, feito.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_PRAZO)
@@ -710,7 +708,7 @@ def test_o_que_volta_para_a_origem_leva_embora_a_meia_chave_do_destino(
     mundo.pair_mente = True
     central, dono = _central_sem_tela(mundo, relogio)
     try:
-        ela_segura_ps_create(mundo, relogio, VERDE)
+        rm.ela_pareia(relogio, mundo, central, VERDE)
         feito = central.conectar(destino)
         assert (feito.estado, feito.passo, feito.aparelho) == (
             cr.ESPERANDO, cr.PASSO_CONFERINDO, VERDE)
@@ -747,7 +745,7 @@ def test_no_nao_chegou_quem_esta_no_ar_no_destino_nao_perde_a_chave(
     mundo.pair_mente = True
     central, dono = _central_sem_tela(mundo, relogio)
     try:
-        ela_segura_ps_create(mundo, relogio, VERDE)
+        rm.ela_pareia(relogio, mundo, central, VERDE)
         feito = central.conectar(destino)
         assert (feito.estado, feito.passo) == (cr.ESPERANDO, cr.PASSO_CONFERINDO)
         if quem_diz == "o-bluez":

@@ -132,6 +132,9 @@ class Fisico:
     #: Tem hidraw no rádio? ``None`` = pela classe (periférico, maior ``0x05``);
     #: o aparelho de baixo consumo, que não tem classe, diz aqui.
     hid: bool | None = None
+    #: Chamando o host que ELE guarda, que esqueceu a chave dele
+    #: (:meth:`RadioDeMentira.chamar_o_host`): o ``Pair`` daquele host dá.
+    chamando: bool = False
 
     @property
     def modalias_publicado(self) -> str:
@@ -298,6 +301,33 @@ class RadioDeMentira:
             if caminho in self.mesa:
                 fisico.conectado_em = fisico.host
                 self._mudar(caminho, bd.APARELHO, "Connected", True)
+
+    def chamar_o_host(self, aparelho: str, *, rssi: int | None = None) -> None:
+        """Ela liga só com o PS um controle cujo host ESQUECEU a chave dele.
+
+        O 01:23:40 da madrugada dela de 30/09 (O-PAREAR-ESPERA-O-CLIQUE-01, a
+        causa 4): o adaptador perdeu a metade dele da chave (o X, o COSMIC, ou a
+        central depois de um ``Connect`` que falhou), e o controle guardou a
+        dele. Ligado só com o PS, sem piscar rápido, ele chama o host que
+        guarda; sem a chave lá, não conecta, e o BlueZ cria o objeto dele sob
+        aquele adaptador, sem ``Paired``. O ``Pair`` daquele host dá (o controle
+        aceita quem ele guarda). Com a chave lá, é o :meth:`apertar_ps`.
+
+        O ``RSSI`` desse objeto NÃO está medido (a prova 0 b da sprint): a
+        régua diz qual quer, e sem ele o objeto nasce sem sinal.
+        """
+        with self.tranca:
+            fisico = self.fisicos[aparelho]
+            if not fisico.host or fisico.conectado_em:
+                return
+            caminho = no_de(fisico.host, aparelho)
+            if self.mesa.get(caminho, {}).get(bd.APARELHO, {}).get("Paired"):
+                self.apertar_ps(aparelho)
+                return
+            fisico.chamando = True
+            self._achar(fisico.host, fisico)
+            if rssi is not None:
+                self._mudar(caminho, bd.APARELHO, "RSSI", rssi)
 
     def onde_esta(self, u: str) -> str:
         """O ``HID_PHYS``: o adaptador em que o aparelho HID está conectado agora.
@@ -503,7 +533,9 @@ class RadioDeMentira:
             self.linha_do_tempo.append(("Pair", adaptador, aparelho))
             if propriedades.get("Paired"):
                 return bd.Escrita(False, bd.ERRO_JA_EXISTE)
-            if self.pair_falha or fisico is None or not fisico.pareando:
+            aceita = fisico is not None and (
+                fisico.pareando or (fisico.chamando and fisico.host == adaptador))
+            if self.pair_falha or not aceita:
                 return bd.Escrita(False, "org.bluez.Error.AuthenticationFailed")
             recusa = self._perguntar_ao_agente(caminho)
             if recusa is not None:
@@ -514,7 +546,7 @@ class RadioDeMentira:
                 self._mudar(caminho, bd.APARELHO, "Modalias", fisico.modalias_publicado)
             if self.pair_mente:
                 return bd.Escrita(True, resposta=())
-            fisico.pareando = False
+            fisico.pareando = fisico.chamando = False
             if fisico.host and fisico.host != adaptador:
                 if fisico.host in fisico.antigos:
                     fisico.antigos.remove(fisico.host)
@@ -554,6 +586,30 @@ class RadioDeMentira:
             return bd.Escrita(False, recusa.nome, recusa.mensagem)
         self.o_nosso_atendeu.append(caminho)
         return None
+
+
+def o_clique_no_parear(central: Any, aparelho: str) -> Callable[[], None]:
+    """O clique dela no «Parear» da linha de ``aparelho``, como a tela o manda.
+
+    O-PAREAR-ESPERA-O-CLIQUE-01: o ``radio.mover`` com o aparelho e o
+    adaptador em que a busca do «Conectar» ESTÁ — o que a central publica, e
+    que a tela lê (``a08_conexoes._onde_espera``). Sem busca de pé não há lista,
+    e não há clique.
+    """
+    def clicar() -> None:
+        busca = next((m.destino for m in central.movimentos()
+                      if m.aparelho == "" and m.em_curso), "")
+        if busca:
+            central.comecar_a_mover(aparelho, busca)
+    return clicar
+
+
+def ela_pareia(relogio: Relogio, mundo: RadioDeMentira, central: Any, aparelho: str,
+               depois_de: float = 2.0) -> None:
+    """Ela segura PS + Create aos ``depois_de`` segundos e, um segundo depois —
+    a linha dele já na lista —, clica em «Parear» (:func:`o_clique_no_parear`)."""
+    relogio.agendar(depois_de, lambda: mundo.segurar_ps_create(aparelho))
+    relogio.agendar(depois_de + 1.0, o_clique_no_parear(central, aparelho))
 
 
 class Relogio:

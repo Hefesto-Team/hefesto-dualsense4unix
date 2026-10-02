@@ -263,7 +263,9 @@ def test_abrir_o_adaptador_e_conectar_pareia_nele(
             bancada.gesto("abrir-adaptador", alvo=id_da_tela(destino))
         assert bancada.cena()["destino_do_conectar"] == id_da_tela(destino)
 
-        ela_segura_ps_create(mundo, relogio, VERDE)
+        # PS + Create, e o clique dela no «Parear» da linha do verde
+        # (O-PAREAR-ESPERA-O-CLIQUE-01: sem o clique, nada pareia).
+        rm.ela_pareia(relogio, mundo, bancada.central, VERDE)
         assert bancada.gesto("conectar-aparelho") == {"armou": True}
         bancada.esperar_a_central()
 
@@ -333,7 +335,8 @@ def test_com_a_janela_aberta_o_chip_de_outro_adaptador_leva_a_busca(
     """Com a busca de pé no quarto, o chip da varanda PEDE ao rádio a busca
     para lá, e a central a leva (O-CONECTAR-SEGUE-A-CAIXA-QUE-ELA-ABRIU-01): a
     janela do quarto fecha, a da varanda abre inteira, e o verde que ela segura
-    depois chega na varanda — o adaptador que ela escolheu por último.
+    e escolhe na lista depois chega na varanda — o adaptador que ela escolheu
+    por último.
 
     A CENTRAL É A REAL (A-CAIXA-FICA-ONDE-ELA-ABRIU-01): até 28/09 esta régua
     publicava um movimento de mentira com a central real parada, e o chip
@@ -355,7 +358,7 @@ def test_com_a_janela_aberta_o_chip_de_outro_adaptador_leva_a_busca(
         assert bancada.ponte.chamadas[-1] == ("radio.mover", {"destino": id_da_tela(VARANDA)})
         assert a08._CENA_NA_TELA["destino_do_conectar"] == id_da_tela(VARANDA)
 
-        ela_segura_ps_create(mundo, relogio, VERDE)
+        rm.ela_pareia(relogio, mundo, bancada.central, VERDE)
         busca.soltar()
         bancada.esperar_a_central()
         assert onde_buscou(mundo) == [rm.HCIS[QUARTO], rm.HCIS[VARANDA]]

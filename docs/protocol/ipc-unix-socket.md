@@ -581,9 +581,9 @@ O motor é `integrations/central_do_radio.py`: pareia no destino, confere pelo
 |---------------|----------------------------------------------|---------------------------------------------|
 | `radio.mover` | `{aparelho?: "aa:bb:…" ou uniq, destino?: "aa:bb:…"}` | `{status, movimento}` ou `{status: "sem_central"}` |
 
-Sem `aparelho` é o «Conectar»: a janela abre no adaptador que a D8 escolhe (mais
-vaga de ponte; no empate, menos controles; quem está varrendo por último), e o
-controle que ela segurar em PS + Create é o que chega. Sem `destino`, a D8 escolhe
+Sem `aparelho` é o «Conectar»: a busca abre no adaptador da D8 (mais vaga de ponte; no
+empate, menos controles; quem varre por último), e nada pareia sem o clique dela: com
+`aparelho` que a janela viu, no destino da busca, é o «Parear» dela. Sem `destino`, a D8 escolhe
 também no mover. `status: "ocupado"` é a recusa, e ela tem duas causas: OUTRO
 movimento está em curso, ou outro motor segurou a trava do rádio por mais de 5 s.
 Um por vez vale também para o arrastar e para o «Conectar»
