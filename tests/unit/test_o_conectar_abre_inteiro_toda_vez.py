@@ -19,6 +19,7 @@ Faixa sintética da casa: ``aa:bb:cc``, octetos 4 e 5 zerados.
 
 from __future__ import annotations
 
+import gc
 import re
 import time
 from typing import Any
@@ -469,6 +470,15 @@ def painel_no_webkit() -> list[dict[str, Any]]:
     finally:
         GLib.source_remove(guarda)
         janela.destroy()
+        # O LIXO DO WEBKIT SE RECOLHE NO FIO DO GTK, aqui: o `connect` deixa um
+        # ciclo (a vista, o tratador e o fecho dele), e a coleta que o achasse
+        # num fio da central de um teste seguinte finalizaria a vista fora do
+        # fio dela — e o processo da suíte morre com «Fatal Python error:
+        # Aborted» (medido em 02/10/2026 num lote de vizinhos da 08).
+        view = janela = None
+        gc.collect()
+        while Gtk.events_pending():
+            Gtk.main_iteration_do(False)
     assert len(saiu) == len(PASSOS_DO_PAINEL), f"o WebKit parou no passo {len(saiu)}: {saiu}"
     erros = [s for s in saiu if s.startswith("ERRO")]
     assert not erros, erros

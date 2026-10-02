@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import ast
 import copy
+import gc
 import json
 import re
 from pathlib import Path
@@ -344,6 +345,15 @@ def _rodar_no_webkit(sala: str) -> dict[str, Any]:
     finally:
         GLib.source_remove(guarda)
         janela.destroy()
+        # O LIXO DO WEBKIT SE RECOLHE NO FIO DO GTK, aqui: o `connect` deixa um
+        # ciclo (a vista, o tratador e o fecho dele), e a coleta que o achasse
+        # num fio da central de um teste seguinte finalizaria a vista fora do
+        # fio dela — e o processo da suíte morre com «Fatal Python error:
+        # Aborted» (medido em 02/10/2026 num lote de vizinhos da 08).
+        view = janela = None
+        gc.collect()
+        while Gtk.events_pending():
+            Gtk.main_iteration_do(False)
     assert saiu, "o WebKit não respondeu em 30 s"
     assert not saiu[0].startswith("ERRO"), saiu[0]
     dados = json.loads(saiu[0])
