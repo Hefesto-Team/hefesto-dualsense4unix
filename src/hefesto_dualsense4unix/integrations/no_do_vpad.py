@@ -321,15 +321,15 @@ def resolver_no_do_vpad(
 def no_ainda_vale(no: dict[str, Any]) -> bool:
     """O bloco cacheado ainda descreve o MESMO nó? (`stat` de 1 syscall)
 
-    O cache por TTL desta casa tem 2 s, e 2 s de caminho velho é exatamente a
-    mentira que o inode existe para impedir. Esta conferência custa um `stat` e
-    fecha a janela: se o `event22` de agora tem outro inode — porque o vpad
-    morreu e voltou, ou porque o número foi reciclado para outro aparelho —, o
-    bloco é descartado na hora.
+    O cache do daemon vale até um nó nascer ou sumir (com o dono do evento) ou
+    2 s (sem ele), e caminho velho é exatamente a mentira que o inode existe
+    para impedir. Esta conferência custa um `stat` e fecha a janela: se o
+    `event22` de agora tem outro inode — porque o vpad morreu e voltou, ou
+    porque o número foi reciclado para outro aparelho —, o bloco sai na hora.
 
     **Ela cobre um buraco só, e é de propósito.** Bloco sem `evdev` devolve
     `True`: um bloco que não afirma caminho nenhum não tem caminho a
-    envelhecer, e nada a reconferir. Quem cobre o nó que APARECEU é o TTL —
+    envelhecer, e nada a reconferir. Quem cobre o nó que APARECEU é o evento (ou o TTL) —
     reprovar aqui faria a varredura inteira rodar a 10 Hz justamente no caso
     mais comum (vpad de uinput, vpad ainda nascendo, máquina sem controle), que
     é o oposto do motivo de o cache existir.
@@ -341,7 +341,7 @@ def no_ainda_vale(no: dict[str, Any]) -> bool:
     """
     evdev = no.get("evdev")
     if not isinstance(evdev, str) or not evdev:
-        return True  # nada afirmado: só o TTL manda aqui
+        return True  # nada afirmado: só o evento (ou o TTL) manda aqui
     if _inode(evdev) != no.get("ino"):
         return False
     hidraw = no.get("hidraw")
