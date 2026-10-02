@@ -811,3 +811,38 @@ def test_a_contagem_e_na_borda_e_sobrevive_a_queda() -> None:
     leitor._handle_event(_Evento(ecodes.EV_ABS, ecodes.ABS_HAT0X, 1), ecodes)
     leitor._handle_event(_Evento(ecodes.EV_ABS, ecodes.ABS_HAT0Y, -1), ecodes)
     assert leitor.snapshot().apertos == {"r3": 2, "dpad_right": 1, "dpad_up": 1}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Régua 4c: o aperto curto passa pela troca do perfil (conferência de 02/10)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _o_report_tem_o_btn(btn: str, report: bytes) -> bool:
+    """O BTN_* está apertado no report, pela leitura do driver."""
+    apertados, _vetor = _esperado_le_o_report(_esperado_driver_lido(), report)
+    return btn in apertados
+
+
+@pytest.mark.parametrize("jogador", [1, 2, 3, 4])
+def test_regua_4c_o_aperto_curto_chega_com_a_troca_do_perfil(
+    jogador: int, fazer_uhid: Callable[[int], tuple[UhidDualSense, list[bytes]]]
+) -> None:
+    """Com a troca L3 ↔ R3 no perfil, o R3 de 10 ms entre dois tiques chega ao
+    jogo como L3, e o R3 nunca aparece: a troca vale para o aperto que já
+    soltou como para os outros (a sprint, «A ordem no tique»).
+
+    Mordidas (conferência de 02/10): tirar a troca do quadro dos soltos no
+    `dispatch_gamepad` reprova só o P1; no `forward_all`, só P2 a P4."""
+    from hefesto_dualsense4unix.core.remapeamento_de_botao import definir_ativo
+
+    mesa, reports = _mesa_uhid(fazer_uhid)
+    definir_ativo(mesa.daemon.store, {"l3": "r3", "r3": "l3"})
+    mesa.tique()
+    mesa.tique()
+    inicio = len(reports[jogador])
+    _o_aperto_curto(mesa, jogador, "r3")
+    mesa.tique()
+    novos = reports[jogador][inicio:]
+    assert [_o_report_tem_o_btn("BTN_THUMBL", r) for r in novos] == [True, False]
+    assert not any(_o_report_tem_o_btn("BTN_THUMBR", r) for r in novos), "o R3 cru chegou"
