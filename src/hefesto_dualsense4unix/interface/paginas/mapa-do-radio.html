@@ -291,6 +291,13 @@
                      font-size: 11px; color: var(--texto-mudo); }
   .canais-do-lugar .i { font-size: 14px; }
   .canais-do-lugar.apertado { color: var(--orange); }
+  /* O «N/79» TEM A COR DO PISO DO SALTO (O-HZ-TEM-A-COR-DA-DISTANCIA-01, parte
+     B): verde com o salto calmo (60 ou mais), branco fugindo de vizinho,
+     vermelho no piso da especificação (20 ou menos). O «N/2» das pontes não
+     tem nível, e segue o `apertado`. */
+  .canais-do-lugar[data-nivel="liso"] { color: var(--green); }
+  .canais-do-lugar[data-nivel="medio"] { color: var(--fg); }
+  .canais-do-lugar[data-nivel="engasga"] { color: var(--red); font-weight: 600; }
 
   .trilho {
     position: relative; height: 10px; border-radius: 5px; overflow: hidden; opacity: .88;
@@ -802,10 +809,21 @@
   .vaga-ponte.cheia { border-style: solid; }
   .vaga-ponte.alem  { border: 1px solid var(--orange); }
   .vaga-ponte.reservada { animation: pisca 1.4s var(--ease) infinite; }
-  /* O MOVIMENTO QUE CAIU FICA LARANJA — nunca vermelho: rádio cheio é
-     reversível (regra de `radio_da_mesa.py`). */
-  .parte.movimento.pouco { border-color: var(--orange); }
-  .parte.movimento.pouco .hz { color: var(--orange); font-weight: 600; opacity: 1; }
+  /* O HZ TEM A COR DO QUE CHEGA AO JOGO (O-HZ-TEM-A-COR-DA-DISTANCIA-01, parte
+     A): verde a partir do teto do pad virtual (o que o USB dá), branco no meio,
+     vermelho abaixo do engasgo — pedido dela pelo nome; o medidor de ocupação
+     continua sem vermelho. A cor não é o único sinal: o glifo perde um par de
+     arcos no branco e no sem número, e os dois no vermelho. Opacidade 1: a
+     0,8 o vermelho sobre o painel cai abaixo de 4,5:1. */
+  .parte.movimento .nivel { display: inline-flex; align-items: center; }
+  .parte.movimento .hz { opacity: 1; color: var(--texto-mudo); }
+  .parte.movimento[data-nivel="liso"] .hz { color: var(--green); }
+  .parte.movimento[data-nivel="medio"] .hz { color: var(--fg); }
+  .parte.movimento[data-nivel="engasga"] { border-color: var(--red); }
+  .parte.movimento[data-nivel="engasga"] .hz { color: var(--red); font-weight: 600; }
+  .parte.movimento:not([data-nivel]),
+  .parte.movimento[data-nivel="medio"] { --arco-2: 0; }
+  .parte.movimento[data-nivel="engasga"] { --arco-1: 0; --arco-2: 0; }
   .fatias.alem { color: var(--orange); font-weight: 600; }
   .vaga.alem { border-color: var(--orange) !important; }
   /* R1 — ESPERANDO PS + CREATE. É estado, não recado: sem ele a pessoa não
@@ -1040,7 +1058,7 @@
   <symbol id="i-mapa" viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><path d="M2.5 9.5h19M8 9.5v10M15 4.5v15"/></symbol>
   <symbol id="i-uma-a-uma" viewBox="0 0 24 24"><rect x="2.5" y="8" width="7" height="8" rx="2"/><rect x="14.5" y="8" width="7" height="8" rx="2"/><path d="M9.5 12h5"/><path d="M18 3.5v3M18 17.5v3"/></symbol>
   <symbol id="i-lampada" viewBox="0 0 24 24"><path d="M9 18h6M10 21.5h4"/><path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.5.4.8 1 .8 1.6V18h6v-2.1c0-.6.3-1.2.8-1.6A6.5 6.5 0 0 0 12 2.5z"/></symbol>
-  <symbol id="i-sinal" viewBox="0 0 24 24"><path d="M12 20V9"/><circle cx="12" cy="6.5" r="2"/><path d="M7.6 13.5a6 6 0 0 1 0-8.5M16.4 13.5a6 6 0 0 0 0-8.5"/></symbol>
+  <symbol id="i-sinal" viewBox="0 0 24 24"><path d="M12 20V9"/><circle cx="12" cy="6.5" r="2"/><path style="opacity: var(--arco-1, 1)" d="M7.6 13.5a6 6 0 0 1 0-8.5M16.4 13.5a6 6 0 0 0 0-8.5"/><path style="opacity: var(--arco-2, 1)" d="M5.3 15.9a9.5 9.5 0 0 1 0-13.3M18.7 15.9a9.5 9.5 0 0 0 0-13.3"/></symbol>
   <symbol id="i-varrendo" viewBox="0 0 24 24"><path d="M12 12 4.6 7.7a8.5 8.5 0 1 1 0 8.6"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></symbol>
   <symbol id="i-manda" viewBox="0 0 24 24"><path d="M4 12h15"/><path d="M13.5 6.5 19.5 12l-6 5.5"/></symbol>
   <symbol id="i-recebe" viewBox="0 0 24 24"><path d="M20 12H5"/><path d="M10.5 6.5 4.5 12l6 5.5"/></symbol>
@@ -1427,9 +1445,28 @@ const usoDe = lid => moradoresDe(lid).reduce((s, a) => s + custoDe(a), 0);
 const PONTES_POR_ADAPTADOR = 2;   // medido: duas viveram 63 min no mesmo adaptador
 const MARGINAL_DA_PONTE = 187.5;
 const PARTE_DA_VOZ = HZ.voz / (HZ.voz + HZ.movimento_mic);
-/* ABAIXO DE 125 Hz o giroscópio passa de 8 ms entre leituras — o número fica
-   laranja. Corte de desenho, não medido; a bancada decide o de verdade. */
+/* OS NÍVEIS DO MOVIMENTO (O-HZ-TEM-A-COR-DA-DISTANCIA-01): abaixo de 125 Hz o
+   giroscópio passa de 8 ms entre leituras (vermelho; corte de desenho, não
+   medido); a partir de 250 chega tudo o que o pad virtual entrega ao jogo
+   (verde); no meio, branco. O dono é `radio_da_mesa.py`, e a paridade trava os
+   dois números. */
 const HZ_QUE_ENGASGA = 125;
+const HZ_DO_JOGO = 250;
+const nivelDoMovimento = hz => (typeof hz !== 'number' || Number.isNaN(hz)) ? ''
+  : hz >= HZ_DO_JOGO ? 'liso' : hz >= HZ_QUE_ENGASGA ? 'medio' : 'engasga';
+const DICA_DO_MOVIMENTO = {
+  liso: 'Movimento por segundo: chega tudo o que o jogo usa',
+  medio: 'Movimento por segundo: chega menos que pelo USB',
+  engasga: 'Movimento por segundo: engasga',
+  '': 'Movimento por segundo',
+};
+/* OS NÍVEIS DOS CANAIS (parte B): o piso do salto de frequência é 20 dos 79
+   (a especificação); de 60 para cima, o salto está calmo. O dono é
+   `ar_do_adaptador.py`. */
+const CANAIS_MINIMOS_DO_AFH = 20;
+const CANAIS_CALMOS = 60;
+const nivelDosCanais = c => c >= CANAIS_CALMOS ? 'liso'
+  : c > CANAIS_MINIMOS_DO_AFH ? 'medio' : 'engasga';
 
 const ligadosEm = lid => moradoresDe(lid).filter(a => !a.esperando);
 /* AS PONTES DE UM ADAPTADOR contam quem está esperando PS + Create: a vaga
@@ -1797,11 +1834,13 @@ function pintar() {
 
     const canais = canaisDe(lug.id);
     const ch = document.createElement('span');
-    ch.className = 'canais-do-lugar' + (canais < CANAIS_DO_BT ? ' apertado' : '');
+    ch.className = 'canais-do-lugar';
+    ch.dataset.nivel = nivelDosCanais(canais);
     ch.appendChild(icone('i-radio'));
     ch.append(canais + '/' + CANAIS_DO_BT);
-    ch.title = canais === CANAIS_DO_BT ? 'Usa os ' + CANAIS_DO_BT + ' canais'
-      : 'Evita ' + (CANAIS_DO_BT - canais) + ' dos ' + CANAIS_DO_BT + ' canais (vizinhos)';
+    ch.title = (canais === CANAIS_DO_BT ? 'Usa os ' + CANAIS_DO_BT + ' canais'
+      : 'Evita ' + (CANAIS_DO_BT - canais) + ' dos ' + CANAIS_DO_BT + ' canais (vizinhos)')
+      + (ch.dataset.nivel === 'engasga' ? '. Usa o mínimo que o rádio aceita' : '');
     ch.setAttribute('role', 'img');
     ch.setAttribute('aria-label', ch.title);
     conta.appendChild(ch);
@@ -2195,9 +2234,16 @@ function linhaDe(ap) {
     v1.title = 'O que o controle manda';
 
     const mov = document.createElement('span');
-    mov.className = 'parte movimento' + (hz.mov < HZ_QUE_ENGASGA ? ' pouco' : '');
+    mov.className = 'parte movimento';
+    const nivel = nivelDoMovimento(hz.mov);
+    if (nivel) mov.dataset.nivel = nivel;
     mov.style.flex = Math.max(hz.mov, 40) + ' 1 0';
-    mov.appendChild(icone('i-sinal'));
+    const sinal = document.createElement('span');
+    sinal.className = 'nivel';
+    sinal.setAttribute('role', 'img');
+    sinal.title = DICA_DO_MOVIMENTO[nivel];
+    sinal.appendChild(icone('i-sinal'));
+    mov.appendChild(sinal);
     const hz1 = document.createElement('span');
     hz1.className = 'hz';
     hz1.dataset.campo = 'hz-movimento';
@@ -2206,8 +2252,7 @@ function linhaDe(ap) {
     mov.appendChild(hz1);
     /* R10 — O NÚMERO É O DE AGORA, contado; a dica diz de onde ele vem e o
        que o move, sem prometer conta. */
-    mov.title = 'Movimento: ' + Math.round(hz.mov) + ' por segundo' +
-      (hz.mov < HZ_QUE_ENGASGA ? ' (baixo)' : '');
+    mov.title = 'Movimento: ' + Math.round(hz.mov) + ' por segundo';
 
     /* OS PASSAGEIROS viajam dentro do relatório de movimento, e por isso ficam
        DENTRO desta parte: é onde eles de fato andam. */

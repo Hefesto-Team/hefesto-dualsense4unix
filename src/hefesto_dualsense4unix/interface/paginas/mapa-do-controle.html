@@ -17,6 +17,10 @@
        derrubou — o Cosmic Red é #A51C48, distância 17. Fato errado, substituído.
        Quem precisa de UMA cor do casco lê `var(--z-casca-solida)`. */
     --luz-apagada:#3f4350; --led-apagado:#4a4f5c; --led-aceso:#e8ecf5;
+    /* O CONTROLE SEM PLÁSTICO LIDO (pelo rádio a cor não se lê): o chip dele
+       apaga o `data-colorway`, e o casco cai neste cinza, o mesmo cru do
+       `ds_limpo.svg`, em vez do preto de uma variável sem valor. */
+    --sem-plastico:#3a3f4b;
     /* Pilha do sistema: nada de fonte web, para o arquivo abrir sem rede.
        É a regra de scripts/paleta_da_casa.py, e vale aqui igual. */
     --f:ui-sans-serif,system-ui,"Cantarell","Segoe UI",Roboto,sans-serif;
@@ -97,11 +101,12 @@
      herdou o preto padrão do SVG. Aqui a folha alcança qualquer forma que viva
      dentro de um grupo de peça e não seja glifo. */
   .ds g[id^="mp-"]:not([id^="mp-glifo"]):not(.sobre):not(.alvo)
-    > :is(rect,path,circle,ellipse,polygon){fill:var(--z-casca-solida)}
+    > :is(rect,path,circle,ellipse,polygon){fill:var(--z-casca-solida, var(--sem-plastico))}
   /* O LIGHTBAR E O INDICADOR DE JOGADOR SÃO LUZ, e não plástico. Na cor do casco
      eles caíam sobre a borda do touchpad e sumiam — ela: "faltou só os dois
      lighbar e os led de player". Cor de luz, e aparecem. */
-  .ds #mp-lightbar *{fill:var(--luz, var(--luz-apagada))}
+  .ds #mp-lightbar{color:var(--luz-apagada)}
+  .ds #mp-lightbar *{fill:var(--luz, currentColor)}
   .ds #mp-led-jogador rect{fill:var(--led-apagado)}
   .ds #mp-led-jogador rect.led-on{fill:var(--led-aceso)}
   /* o PS não tem anel: a peça existe só para dar caixa e alvo, e quem se vê — e
@@ -111,7 +116,7 @@
   /* A PONTA DO PUNHO fechava em BICO: a borda externa e a interna do punho
      convergem num vértice agudo, e preenchidas isso vira uma farpa. O traço
      da mesma cor com junta redonda arredonda o vértice sem mudar o path. */
-  .ds #mp-corpo .peca,.ds #mp-corpo .corpo{stroke:var(--z-casca-solida);stroke-width:.42;
+  .ds #mp-corpo .peca,.ds #mp-corpo .corpo{stroke:var(--z-casca-solida, var(--sem-plastico));stroke-width:.42;
                       stroke-linejoin:round;stroke-linecap:round}
   /* no MAPA as features aparecem — é o mapa das peças todas, não de uma aba */
   /* AS FEATURES SÓ APARECEM NO HOVER. Em repouso, as caixas tracejadas do
@@ -169,7 +174,7 @@
   .mapa:has(.a-feat-acelerometro:hover) #mp-feat-acelerometro,
   .mapa:has(.item-feat-bateria:hover) #mp-feat-bateria,
   .mapa:has(.a-feat-bateria:hover) #mp-feat-bateria{opacity:1}
-  .ds #mp-corpo .peca{stroke:var(--z-casca-solida)}
+  .ds #mp-corpo .peca{stroke:var(--z-casca-solida, var(--sem-plastico))}
   /* os glifos POR CIMA do desenho — a mesma peça, vista de dois jeitos */
   .sobre{color:var(--texto-suave);opacity:.8;pointer-events:none}
   /* OS GLIFOS DELA TRAZEM COR NO `style` INLINE, e style inline vence folha: no
@@ -226,6 +231,31 @@
               line-height:13px;text-align:center;border:1px solid var(--border-forte);
               color:var(--texto-mudo);cursor:help;font-family:var(--m)}
   .nota-peca:hover{border-color:var(--cyan);color:var(--cyan)}
+  /* O PISCA, A TROCA E OS GESTOS — 01/10/2026, O-MAPA-DO-CONTROLE-PISCA-E-SEGUE-
+     O-REMAPEAMENTO-01. A linha acesa pelo botão apertado tem a cor do ponteiro.
+     O «No jogo» só aparece quando a troca de botões alcança a peça, e entra no
+     lugar do apelido, na MESMA linha: medido no piloto em 01/10/2026, uma linha
+     a mais embaixo do nome fazia a página rolar 18 px na janela ladrilhada
+     (1212 x 809), e ela pediu o mapa sem rolagem em 01/09. A marca tracejada no
+     desenho é a mesma notícia.
+     É uma CLASSE (`tem`), e não `:has(b:empty)`: medido no WebKitGTK em
+     01/10/2026, a regra com `:empty` dentro do `:has()` não se recalcula quando
+     o produto escreve o texto, e a linha ficava escondida com «Cruz» dentro. */
+  .item{flex-wrap:wrap;row-gap:2px}
+  .cx:not(.sem-controle) .item.on{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
+  .item .troca{font-size:11px;color:var(--orange);white-space:nowrap}
+  .item:has(.troca.tem) .ap{display:none}
+  .item .troca:not(.tem){display:none}
+  .item .troca b{font-weight:600}
+  .item .gestos{flex:0 0 100%;list-style:none;padding-left:37px;font-size:10.5px;
+                 line-height:1.4;color:var(--texto-mudo)}
+  .item .gestos .n{font-family:var(--m);color:var(--comment);margin-right:6px}
+  .marca-troca{display:none}
+  .marca-troca *{fill:none !important;stroke:var(--pink);stroke-width:.45;
+                 stroke-dasharray:1.1 .7;pointer-events:none}
+  .papel .bolinha{display:inline-block;width:6px;height:6px;border-radius:50%;
+                   background:var(--green);margin-right:4px;vertical-align:1px}
+  .bt .pt,.papel .pt{color:var(--comment);margin:0 1px;font-size:10px;vertical-align:1px}
 
   /* A BARRA DE PROVAS. A gramática é a da lista da direita — mesmo rótulo em
      versalete, mesma família de caixa —, para a barra não parecer colada de
@@ -240,16 +270,18 @@
   .prova-rot{font-size:10.5px;color:var(--comment);
               letter-spacing:.6px;line-height:1}
   .prova .linha{display:flex;gap:6px;align-items:center}
+  /* Os chips levam o nome do controle: na janela estreita eles descem de linha. */
+  .prova [data-bloco="controles-do-mapa"]{flex-wrap:wrap}
   .ct{height:28px;background:var(--elevated);color:var(--fg);
        border:1px solid var(--border-forte);border-radius:6px;
        padding:0 8px;font-family:var(--f);font-size:12px}
   .ct-cor{width:44px;padding:2px;cursor:pointer}
   /* OS QUATRO NÚMEROS SÃO UMA FAMÍLIA, e família tem a mesma largura. O
-     "nenhum" e o "apagar" são outro papel — palavra, não número — e por isso
+     "Nenhum" e o "Apagar" são outro papel — palavra, não número — e por isso
      medem o que a palavra pede. */
   .bt{height:28px;min-width:30px;padding:0 9px;background:var(--elevated);
        color:var(--texto-suave);border:1px solid var(--border-forte);
-       border-radius:6px;font-family:var(--f);font-size:12px;cursor:pointer}
+       border-radius:6px;font-family:var(--f);font-size:12px;cursor:pointer;white-space:nowrap}
   .bt:hover{border-color:var(--pink);color:var(--fg)}
   .bt.on{border-color:var(--pink);background:rgba(255,121,198,.14);color:var(--fg)}
   .prova-nota{margin-left:auto;align-self:center;padding:0 18px;max-width:460px;
@@ -262,8 +294,7 @@
      pra cá. Mas e o botão pra voltar?"*. Não havia: `grep href` no mapa gerado
      devolvia ZERO. Quem entrava aqui só saía pelo botão do navegador — e o
      mockup abre como ARQUIVO, onde nem sempre há um.
-     O destino não é chute: `grep -l mapa-do-controle.html layout/*.html`
-     devolve UMA aba, a Navegação. Cada mapa tem uma origem só. */
+     O destino é a aba de onde ela veio (o dono é o `caixa_da_janela.voltar`). */
   .voltar{position:absolute;left:0;top:2px;display:inline-flex;align-items:center;gap:6px;
            padding:5px 11px;border-radius:7px;text-decoration:none;
            border:1px solid var(--border-forte);background:var(--panel);
@@ -277,94 +308,147 @@
   .mapa:has(.a-triangle:hover) .item-triangle{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-triangle:hover) .s-triangle{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-triangle:hover) #mp-triangle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-triangle.on) #mp-triangle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-triangle.on) .s-triangle{color:var(--fg) !important;opacity:1}
+  .mapa:has(.item-triangle .troca.tem) .m-triangle{display:inline}
   .mapa:has(.item-circle:hover) #mp-circle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-circle:hover) .s-circle{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-circle:hover) .item-circle{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-circle:hover) .s-circle{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-circle:hover) #mp-circle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-circle.on) #mp-circle :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-circle.on) .s-circle{color:var(--fg) !important;opacity:1}
+  .mapa:has(.item-circle .troca.tem) .m-circle{display:inline}
   .mapa:has(.item-square:hover) #mp-square :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-square:hover) .s-square{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-square:hover) .item-square{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-square:hover) .s-square{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-square:hover) #mp-square :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-square.on) #mp-square :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-square.on) .s-square{color:var(--fg) !important;opacity:1}
+  .mapa:has(.item-square .troca.tem) .m-square{display:inline}
   .mapa:has(.item-cross:hover) #mp-cross :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-cross:hover) .s-cross{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-cross:hover) .item-cross{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-cross:hover) .s-cross{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-cross:hover) #mp-cross :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-cross.on) #mp-cross :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-cross.on) .s-cross{color:var(--fg) !important;opacity:1}
+  .mapa:has(.item-cross .troca.tem) .m-cross{display:inline}
   .mapa:has(.item-dpad_up:hover) #mp-dpad_up :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-dpad_up:hover) .s-dpad_up{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-dpad_up:hover) .item-dpad_up{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-dpad_up:hover) .s-dpad_up{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-dpad_up:hover) #mp-dpad_up :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-dpad_up.on) #mp-dpad_up :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-dpad_up.on) .s-dpad_up{color:var(--fg) !important;opacity:1}
+  .mapa:has(.item-dpad_up .troca.tem) .m-dpad_up{display:inline}
   .mapa:has(.item-dpad_right:hover) #mp-dpad_right :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-dpad_right:hover) .s-dpad_right{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-dpad_right:hover) .item-dpad_right{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-dpad_right:hover) .s-dpad_right{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-dpad_right:hover) #mp-dpad_right :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-dpad_right.on) #mp-dpad_right :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-dpad_right.on) .s-dpad_right{color:var(--fg) !important;opacity:1}
+  .mapa:has(.item-dpad_right .troca.tem) .m-dpad_right{display:inline}
   .mapa:has(.item-dpad_down:hover) #mp-dpad_down :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-dpad_down:hover) .s-dpad_down{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-dpad_down:hover) .item-dpad_down{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-dpad_down:hover) .s-dpad_down{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-dpad_down:hover) #mp-dpad_down :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-dpad_down.on) #mp-dpad_down :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-dpad_down.on) .s-dpad_down{color:var(--fg) !important;opacity:1}
+  .mapa:has(.item-dpad_down .troca.tem) .m-dpad_down{display:inline}
   .mapa:has(.item-dpad_left:hover) #mp-dpad_left :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-dpad_left:hover) .s-dpad_left{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-dpad_left:hover) .item-dpad_left{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-dpad_left:hover) .s-dpad_left{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-dpad_left:hover) #mp-dpad_left :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-dpad_left.on) #mp-dpad_left :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-dpad_left.on) .s-dpad_left{color:var(--fg) !important;opacity:1}
+  .mapa:has(.item-dpad_left .troca.tem) .m-dpad_left{display:inline}
   .mapa:has(.item-l1:hover) #mp-l1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-l1:hover) .s-l1{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-l1:hover) .item-l1{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-l1:hover) .s-l1{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-l1:hover) #mp-l1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-l1.on) #mp-l1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-l1.on) .s-l1{color:var(--fg) !important;opacity:1}
+  .mapa:has(.item-l1 .troca.tem) .m-l1{display:inline}
   .mapa:has(.item-r1:hover) #mp-r1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-r1:hover) .s-r1{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-r1:hover) .item-r1{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-r1:hover) .s-r1{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-r1:hover) #mp-r1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-r1.on) #mp-r1 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-r1.on) .s-r1{color:var(--fg) !important;opacity:1}
+  .mapa:has(.item-r1 .troca.tem) .m-r1{display:inline}
   .mapa:has(.item-l2:hover) #mp-l2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-l2:hover) .s-l2{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-l2:hover) .item-l2{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-l2:hover) .s-l2{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-l2:hover) #mp-l2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-l2.on) #mp-l2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-l2.on) .s-l2{color:var(--fg) !important;opacity:1}
+  .mapa:has(.item-l2 .troca.tem) .m-l2{display:inline}
   .mapa:has(.item-r2:hover) #mp-r2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-r2:hover) .s-r2{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-r2:hover) .item-r2{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-r2:hover) .s-r2{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-r2:hover) #mp-r2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-r2.on) #mp-r2 :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-r2.on) .s-r2{color:var(--fg) !important;opacity:1}
+  .mapa:has(.item-r2 .troca.tem) .m-r2{display:inline}
   .mapa:has(.item-stick_l:hover) #mp-stick_l :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-stick_l:hover) .s-stick_l{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-stick_l:hover) .item-stick_l{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-stick_l:hover) .s-stick_l{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-stick_l:hover) #mp-stick_l :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-stick_l.on) #mp-stick_l :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-stick_l.on) .s-stick_l{color:var(--fg) !important;opacity:1}
+  .mapa:has(.item-stick_l .troca.tem) .m-stick_l{display:inline}
   .mapa:has(.item-stick_r:hover) #mp-stick_r :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-stick_r:hover) .s-stick_r{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-stick_r:hover) .item-stick_r{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-stick_r:hover) .s-stick_r{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-stick_r:hover) #mp-stick_r :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-stick_r.on) #mp-stick_r :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-stick_r.on) .s-stick_r{color:var(--fg) !important;opacity:1}
+  .mapa:has(.item-stick_r .troca.tem) .m-stick_r{display:inline}
   .mapa:has(.item-share:hover) #mp-share :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-share:hover) .s-share{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-share:hover) .item-share{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-share:hover) .s-share{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-share:hover) #mp-share :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-share.on) #mp-share :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-share.on) .s-share{color:var(--fg) !important;opacity:1}
+  .mapa:has(.item-share .troca.tem) .m-share{display:inline}
   .mapa:has(.item-options:hover) #mp-options :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-options:hover) .s-options{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-options:hover) .item-options{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-options:hover) .s-options{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-options:hover) #mp-options :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-options.on) #mp-options :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-options.on) .s-options{color:var(--fg) !important;opacity:1}
+  .mapa:has(.item-options .troca.tem) .m-options{display:inline}
   .mapa:has(.item-touchpad:hover) #mp-touchpad :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-touchpad:hover) .s-touchpad{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-touchpad:hover) .item-touchpad{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-touchpad:hover) .s-touchpad{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-touchpad:hover) #mp-touchpad :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-touchpad.on) #mp-touchpad :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-touchpad.on) .s-touchpad{color:var(--fg) !important;opacity:1}
   .mapa:has(.item-ps:hover) .s-ps{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-ps:hover) .item-ps{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-ps:hover) .s-ps{color:var(--fg) !important;opacity:1}
+  .cx:not(.sem-controle) .mapa:has(.item-ps.on) .s-ps{color:var(--fg) !important;opacity:1}
   .mapa:has(.item-mic:hover) #mp-mic :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-mic:hover) .s-mic{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-mic:hover) .item-mic{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
   .mapa:has(.a-mic:hover) .s-mic{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-mic:hover) #mp-mic :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-mic.on) #mp-mic :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
+  .cx:not(.sem-controle) .mapa:has(.item-mic.on) .s-mic{color:var(--fg) !important;opacity:1}
   .mapa:has(.item-alto-falante:hover) #mp-alto-falante :is(.peca, rect, circle, path, ellipse){fill:var(--pink) !important;stroke:var(--pink) !important}
   .mapa:has(.item-alto-falante:hover) .s-alto-falante{color:var(--fg) !important;opacity:1}
   .mapa:has(.a-alto-falante:hover) .item-alto-falante{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}
@@ -416,14 +500,11 @@
 
 <div class="cx">
   <div class="topo">
-    <!-- O VOLTAR VOLTA PARA DE ONDE VEIO. Medido em 31/08/2026: DUAS abas
-         abrem este mapa — a Controles (o botão novo, pedido dela) e a
-         Navegação (`a.porta`). Um destino fixo estaria errado para metade de
-         quem chega. O `href` é o fallback de quem abre o arquivo direto, com
-         duplo clique, que é como ela abre. -->
-    <a class="voltar" href="02-controles.html"
-       onclick="if (document.referrer) { history.back(); return false }"
-       title="Volta para a aba anterior.">← Voltar</a>
+    <!-- O VOLTAR VOLTA PARA DE ONDE VEIO. Desde 29/09/2026 só a Conexões abre
+         este mapa (a Controles e a Navegação o perderam, por ordem dela), e por
+         isso ela é a reserva de quem abre o arquivo direto. O dono é o
+         `caixa_da_janela.voltar`, que pergunta à lista de volta do WebView. -->
+    <a class="voltar" href="08-conexoes.html" onclick="if (history.length > 1) { history.back(); return false }" title="Volta para a aba anterior.">← Voltar</a>
     <h1><span class="p">O mapa do controle</span> — o nome de cada peça</h1>
     <!-- A LINHA DE INSTRUÇÃO SAIU — decisão dela, 31/08/2026: *"passe o mouse
          num glifo e a peça acende no desenho · passe na peça e o glifo acende
@@ -442,14 +523,14 @@
       </select>
     </div>
     <div class="prova">
-      <div class="prova-rot">Jogador</div>
-      <div class="linha"><button class="bt" data-jogador="1" title="padrão 3">1</button><button class="bt" data-jogador="2" title="padrão 24">2</button><button class="bt" data-jogador="3" title="padrão 135">3</button><button class="bt" data-jogador="4" title="padrão 1245">4</button><button class="bt" data-jogador="0">nenhum</button></div>
+      <div class="prova-rot">Controle<span class="papel" data-campo="papel" data-hef-alvo="html"></span></div>
+      <div class="linha" data-bloco="controles-do-mapa"><button class="bt" data-gesto="escolher-na-fita" data-pref="todos" data-controle="">Todos</button><button class="bt on" data-jogador="1" data-colorway="cosmic-red" data-luz="#0000ff" data-gesto="escolher-na-fita" data-pref="p1" data-controle="">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> <span class="via">USB</span></button><button class="bt" data-jogador="2" data-colorway="starlight-blue" data-luz="#ff0000" data-gesto="escolher-na-fita" data-pref="p2" data-controle="">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> <span class="via">BT</span></button><button class="bt" data-jogador="3" data-colorway="galactic-purple" data-luz="#00ff00" data-gesto="escolher-na-fita" data-pref="p3" data-controle="">P3 <span class="pt">•</span> Galactic Purple <span class="pt">•</span> <span class="via">BT</span></button><button class="bt" data-jogador="4" data-colorway="white" data-luz="#ff0080" data-gesto="escolher-na-fita" data-pref="p4" data-controle="">P4 <span class="pt">•</span> White <span class="pt">•</span> <span class="via">USB</span></button><button class="bt" data-jogador="0">Nenhum</button></div>
     </div>
     <div class="prova">
       <div class="prova-rot">Barra de luz</div>
       <div class="linha">
         <input type="color" id="luz" class="ct ct-cor" value="#0000ff">
-        <button class="bt" id="luz-off">apagar</button>
+        <button class="bt" id="luz-off">Apagar</button>
       </div>
     </div>
     <div class="prova-nota" id="nota">&nbsp;</div>
@@ -1059,7 +1140,7 @@
   </g>
   <g id="mp-grupo-luzes" style="filter: none" transform="matrix(1.001104, 0, 0, 0.93262, 0.350011, 3.648825)">
     <title>LUZES</title>
-    <g id="mp-lightbar" data-feature="lightbar" data-posicao="ladeia-o-touchpad" transform="matrix(1, 0, 0, 1.035127, 0, -1.02738)">
+    <g id="mp-lightbar" data-campo="luz-cor" data-hef-alvo="cor" data-feature="lightbar" data-posicao="ladeia-o-touchpad" transform="matrix(1, 0, 0, 1.035127, 0, -1.02738)">
       <title>Lightbar (duas tiras, uma de cada lado do touchpad)</title>
       <path class="peca" fill-rule="evenodd" d="M 41.266 29.248 L 40.882 30.248 L 40.748 31.248 L 40.738 32.248 L 40.793 33.248 L 40.929 34.248 L 41.093 35.248 L 41.247 36.248 L 41.41 37.248 L 41.574 38.248 L 41.728 39.248 L 41.892 40.248 L 42.057 41.248 L 42.213 42.248 L 42.38 43.248 L 42.548 44.248 L 42.709 45.248 L 42.881 46.248 L 43.058 47.248 L 43.317 48.248 L 43.755 49.248 L 44.822 49.248 L 44.385 48.248 L 44.126 47.248 L 43.948 46.248 L 43.776 45.248 L 43.615 44.248 L 43.448 43.248 L 43.28 42.248 L 43.124 41.248 L 42.96 40.248 L 42.795 39.248 L 42.641 38.248 L 42.478 37.248 L 42.314 36.248 L 42.16 35.248 L 41.997 34.248 L 41.86 33.248 L 41.806 32.248 L 41.815 31.248 L 41.95 30.248 L 42.335 29.248 L 41.266 29.248 Z" style="stroke-width: 2.03409px; filter: url(&quot;#mp-outline-filter-2&quot;)" fill="#3a3f4b">
         <title>Lightbar — tira esquerda</title>
@@ -1092,6 +1173,22 @@
       <title>Glifo — Analógico Direito</title>
       <text style="dominant-baseline: central; font-family: Zrnic; font-size: 11px; font-weight: 700; text-anchor: middle; white-space: pre" x="15.971" y="17.025">R</text>
     </g>
+  <g class="marca-troca m-cross"><path d="M 95.5 55.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/></g>
+  <g class="marca-troca m-circle"><path d="M 103.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/></g>
+  <g class="marca-troca m-square"><path d="M 87.5 47.963 a 3.5 3.5 0 1 1 7 0 a 3.5 3.5 0 0 1 -7 0"/></g>
+  <g class="marca-troca m-triangle"><path d="M 95.5 39.963 C 95.5 37.269 98.417 35.585 100.75 36.932 C 101.833 37.557 102.5 38.713 102.5 39.963 C 102.5 42.657 99.583 44.341 97.25 42.994 C 96.167 42.369 95.5 41.213 95.5 39.963"/></g>
+  <g class="marca-troca m-l1"><g transform="translate(0 25.6400) scale(1 0.96657) translate(0 -25.6400) matrix(-1, 0, 0, 1, 128.089752, 0.014236)"><path d="M 94.013 26.506 L 98.913 26.506 C 100.322 26.506 101.463 27.494 101.463 28.712 C 101.463 29.93 100.322 30.918 98.913 30.918 L 92.792 31.331 C 91.514 31.353 91.463 29.93 91.463 28.712 C 91.463 27.494 92.605 26.506 94.013 26.506 Z" transform="matrix(0.982871, 0.184294, -0.184294, 0.982871, -0.038083, -0.003536)" style="transform-box: fill-box; transform-origin: 50% 50%"/></g></g>
+  <g class="marca-troca m-r1"><g transform="translate(0 25.6200) scale(1 0.96813) translate(0 -25.6200)"><path d="M 94.013 26.506 L 98.913 26.506 C 100.322 26.506 101.463 27.494 101.463 28.712 C 101.463 29.93 100.322 30.918 98.913 30.918 L 92.792 31.331 C 91.514 31.353 91.463 29.93 91.463 28.712 C 91.463 27.494 92.605 26.506 94.013 26.506 Z" transform="matrix(0.982871, 0.184294, -0.184294, 0.982871, -0.038083, -0.003536)" style="transform-box: fill-box; transform-origin: 50% 50%"/></g></g>
+  <g class="marca-troca m-l2"><g transform="matrix(-1, 0, 0, 1, 128.089752, 0.014236)"><path d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)" style="transform-box: fill-box; transform-origin: 50% 50%"/></g></g>
+  <g class="marca-troca m-r2"><path d="M 101.323 29.18 L 106.723 29.18 C 107.662 29.18 108.217 30.669 108.252 30.894 C 108.287 31.119 108.63 32.476 107.73 32.54 L 101.047 32.503 C 100.108 32.503 100.447 31.702 100.447 30.763 C 100.447 29.824 100.384 29.18 101.323 29.18 Z" transform="matrix(0.958223, 0.286023, -0.286023, 0.958223, 0, -0.000001)" style="transform-box: fill-box; transform-origin: 50% 50%"/></g>
+  <g class="marca-troca m-stick_l"><g transform="matrix(1, 0, 0, 1, 2.116542, -0.779778)"><path d="M 37.500 64.463 a 8.000 8.000 0 1 0 16.000 0 a 8.000 8.000 0 1 0 -16.000 0 Z"/></g></g>
+  <g class="marca-troca m-stick_r"><g transform="matrix(1, 0, 0, 1, 2.116542, -0.779778)"><path d="M 70.5 64.463 C 70.5 70.621 77.167 74.47 82.5 71.391 C 84.975 69.962 86.5 67.321 86.5 64.463 C 86.5 58.305 79.833 54.456 74.5 57.535 C 72.025 58.964 70.5 61.605 70.5 64.463 Z"/></g></g>
+  <g class="marca-troca m-dpad_up"><path d="M 30.095 46.527 C 29.502 47.16 28.498 47.16 27.905 46.527 L 25.905 44.394 C 25.645 44.116 25.5 43.749 25.5 43.368 L 25.5 39.963 C 25.5 39.135 26.172 38.463 27 38.463 L 31 38.463 C 31.828 38.463 32.5 39.135 32.5 39.963 L 32.5 43.368 C 32.5 43.749 32.355 44.116 32.094 44.394 L 30.095 46.527 Z"/></g>
+  <g class="marca-troca m-dpad_down"><path d="M 27.905 51.399 a 1.5 1.5 0 0 1 2.19 0 l 2 2.134 a 1.5 1.5 0 0 1 0.405 1.026 v 3.404 a 1.5 1.5 0 0 1 -1.5 1.5 h -4 a 1.5 1.5 0 0 1 -1.5 -1.5 V 54.56 a 1.5 1.5 0 0 1 0.406 -1.026 Z"/></g>
+  <g class="marca-troca m-dpad_left"><path d="M 26.564 47.868 C 27.197 48.461 27.197 49.465 26.564 50.058 L 24.43 52.058 C 24.152 52.318 23.785 52.463 23.404 52.463 L 20 52.463 C 19.172 52.463 18.5 51.791 18.5 50.963 L 18.5 46.963 C 18.5 46.135 19.172 45.463 20 45.463 L 23.404 45.463 C 23.785 45.463 24.152 45.608 24.43 45.869 L 26.564 47.868 Z"/></g>
+  <g class="marca-troca m-dpad_right"><path d="M 31.436 50.058 a 1.5 1.5 0 0 1 0 -2.19 l 2.133 -2 a 1.5 1.5 0 0 1 1.026 -0.405 H 38 a 1.5 1.5 0 0 1 1.5 1.5 v 4 a 1.5 1.5 0 0 1 -1.5 1.5 h -3.404 a 1.5 1.5 0 0 1 -1.026 -0.406 Z"/></g>
+  <g class="marca-troca m-options"><rect x="-37.043" y="-26.122" width="1.796" height="3.685" rx="1" ry="1" transform="matrix(-0.984808, -0.173648, -0.173648, 0.984808, 125.210805, 60.11082)" style="transform-origin: -36.145px -24.279px"/></g>
+  <g class="marca-troca m-share"><rect x="37.043" y="26.122" width="1.796" height="3.685" rx="1" ry="1" transform="matrix(0.984808, -0.173648, 0.173648, 0.984808, 0.740345, 7.866827)" style="transform-box: fill-box; transform-origin: 50% 50%"/></g>
   <g class="alvo a-corpo"><path d="M 31.988 29.976 c 4.338 -0.492 8.454 -0.567 10.927 -0.484 a 0.5 0.5 0 0 1 0.105 0.985 c -0.486 0.122 -0.833 0.633 -1.017 1.493 c -0.175 0.817 -0.157 1.758 -0.081 2.38 c 0.33 1.664 1.178 6.225 1.96 11.341 c 0.81 5.291 -1.34 9.03 -2.59 10.287 v 0.001 c -1.67 1.68 -3.4 3.42 -5.826 6.837 c -2.47 3.479 -6.002 11.309 -9.178 18.944 c -2.387 5.736 -4.554 11.315 -5.9 14.777 c -0.44 1.135 -0.793 2.042 -1.036 2.653 l -0.017 0.038 l -0.076 0.158 c -0.088 0.188 -0.199 0.42 -0.347 0.655 l 3.12 0.422 c 0.543 -0.004 0.956 -0.109 1.301 -0.3 c 0.356 -0.196 0.676 -0.501 1 -0.956 c 0.56 -0.786 1.07 -1.92 1.78 -3.493 l 0.432 -0.958 c 1.208 -2.657 2.445 -5.838 3.515 -8.588 l 0.093 -0.239 a 190 190 0 0 1 1.468 -3.702 c 0.418 -1.006 0.784 -1.813 1.06 -2.23 c 0.7 -1.058 1.729 -2.597 3.492 -3.677 c 1.774 -1.086 4.236 -1.676 7.754 -0.983 h 40.07 c 2.805 -0.695 5.28 -0.355 7.32 0.81 c 2.049 1.17 3.613 3.143 4.645 5.624 c 1.189 2.86 1.943 4.997 2.648 7.039 l 0.2 0.578 c 0.632 1.836 1.254 3.639 2.154 5.89 q 0.14 0.35 0.274 0.696 c 0.463 1.19 0.9 2.31 1.572 3.161 c 0.389 0.493 0.845 0.874 1.413 1.11 c 0.566 0.234 1.279 0.338 2.204 0.223 l 2.647 -0.449 c -0.141 -0.228 -0.247 -0.452 -0.333 -0.633 l -0.077 -0.158 l -0.016 -0.038 c -0.243 -0.61 -0.596 -1.518 -1.037 -2.653 c -1.345 -3.462 -3.512 -9.04 -5.899 -14.777 c -3.176 -7.635 -6.708 -15.465 -9.178 -18.944 c -2.426 -3.417 -4.157 -5.158 -5.825 -6.837 h -0.002 c -1.25 -1.258 -3.398 -4.997 -2.59 -10.288 c 0.783 -5.116 1.63 -9.677 1.961 -11.342 c 0.075 -0.621 0.094 -1.562 -0.08 -2.379 c -0.185 -0.86 -0.532 -1.37 -1.018 -1.493 a 0.5 0.5 0 0 1 0.105 -0.985 c 2.473 -0.083 6.589 -0.008 10.927 0.484 c 4.328 0.49 8.927 1.402 12.334 3.015 a 0.5 0.5 0 0 1 0.228 0.218 c 2.635 4.97 8.471 18.727 10.833 34.172 c 1.475 9.65 1.358 17.23 0.24 22.728 c -1.112 5.468 -3.24 8.991 -5.9 10.329 c -1.724 0.867 -2.9 0.956 -3.742 0.504 l -0.09 -0.052 l -3.331 0.566 l -0.022 0.003 c -1.069 0.134 -1.964 0.023 -2.722 -0.291 c -0.757 -0.313 -1.343 -0.816 -1.814 -1.413 c -0.775 -0.98 -1.276 -2.27 -1.736 -3.457 q -0.128 -0.331 -0.254 -0.65 c -0.91 -2.274 -1.539 -4.098 -2.171 -5.933 l -0.2 -0.579 c -0.703 -2.034 -1.449 -4.148 -2.627 -6.98 c -0.968 -2.33 -2.404 -4.106 -4.216 -5.14 c -1.805 -1.031 -4.03 -1.354 -6.642 -0.695 a 0.5 0.5 0 0 1 -0.122 0.016 h -40.18 a 0.5 0.5 0 0 1 -0.098 -0.01 c -3.334 -0.666 -5.547 -0.096 -7.084 0.846 c -1.557 0.953 -2.48 2.318 -3.181 3.376 c -0.214 0.323 -0.544 1.035 -0.97 2.062 c -0.42 1.01 -0.915 2.28 -1.46 3.68 l -0.097 0.25 c -1.067 2.743 -2.313 5.946 -3.533 8.63 l -0.42 0.929 c -0.704 1.568 -1.265 2.814 -1.888 3.688 c -0.38 0.534 -0.806 0.961 -1.331 1.251 c -0.529 0.291 -1.124 0.424 -1.816 0.424 l -0.067 -0.004 l -3.916 -0.53 l -0.022 0.013 c -0.842 0.452 -2.018 0.363 -3.742 -0.504 c -2.66 -1.338 -4.788 -4.86 -5.9 -10.33 c -1.118 -5.497 -1.235 -13.077 0.24 -22.727 c 2.363 -15.445 8.198 -29.203 10.833 -34.172 a 0.5 0.5 0 0 1 0.228 -0.218 c 3.407 -1.613 8.006 -2.524 12.334 -3.015"/></g>
   <g class="alvo a-feat-rumble-esquerdo"><g transform="matrix(0.992202, 0, 0, 1, 0.180438, 0)"><path d="M 32.051 29.975 C 36.433 29.484 40.591 29.409 43.089 29.492 C 43.473 29.506 43.698 29.936 43.493 30.265 C 43.425 30.376 43.317 30.456 43.191 30.487 C 42.694 30.611 42.346 31.123 42.16 31.977 C 41.985 32.791 42.004 33.729 42.08 34.348 C 42.413 36.014 43.269 40.57 44.06 45.684 C 44.879 50.977 42.705 54.717 41.441 55.974 L 41.441 55.975 C 39.755 57.653 38.007 59.393 35.555 62.808 C 33.06 66.283 29.492 74.107 26.283 81.737 C 23.872 87.47 21.683 93.044 20.323 96.504 C 19.971 97.402 19.617 98.299 19.259 99.195 L 19.182 99.353 C 18.964 99.807 18.618 100.528 17.904 100.908 C 17.061 101.357 15.88 101.271 14.138 100.404 C 11.453 99.068 9.301 95.547 8.177 90.078 C 7.047 84.581 6.929 77.004 8.42 67.36 C 10.807 51.922 16.703 38.172 19.366 33.205 C 19.417 33.109 19.497 33.033 19.595 32.987 C 23.035 31.376 27.678 30.466 32.051 29.975"/></g></g>
   <g class="alvo a-feat-rumble-direito"><g transform="matrix(0.987771, 0, 0, 0.998314, 1.473548, 0.129608)"><path d="M 95.741 29.895 C 91.356 29.402 87.194 29.327 84.693 29.41 C 84.309 29.424 84.083 29.855 84.287 30.185 C 84.356 30.296 84.465 30.376 84.591 30.408 C 85.089 30.532 85.437 31.046 85.622 31.902 C 85.799 32.718 85.779 33.659 85.703 34.28 C 84.968 38.054 84.307 41.843 83.722 45.645 C 82.903 50.953 85.078 54.702 86.343 55.962 L 86.343 55.963 C 88.031 57.646 89.781 59.39 92.234 62.814 C 94.731 66.299 98.302 74.144 101.514 81.794 C 103.928 87.543 106.119 93.131 107.48 96.6 C 107.832 97.501 108.187 98.4 108.546 99.298 L 108.622 99.457 C 108.84 99.913 109.187 100.637 109.9 101.016 C 110.745 101.466 111.928 101.38 113.671 100.511 C 116.358 99.171 118.512 95.641 119.637 90.158 C 120.768 84.646 120.887 77.05 119.394 67.378 C 117.005 51.9 111.103 38.113 108.439 33.133 C 108.388 33.037 108.307 32.96 108.209 32.914 C 104.765 31.299 100.117 30.386 95.741 29.895"/></g></g>
@@ -1122,115 +1219,115 @@
     <div class="lado-lista">
     <div class="grupo">
       <div class="grupo-rot">Botões da face</div>
-      <div class="item item-triangle"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <div class="item item-triangle" data-campo="aceso-triangle" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <polygon points="16,6 27,25 5,25" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-</svg></span><span class="txt"><b>Triângulo</b><span class="ap">△</span><span class="id mono">triangle</span></span></div>
-      <div class="item item-circle"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+</svg></span><span class="txt" data-campo="acao-triangle" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Botão direito"><b>Triângulo</b><span class="ap">△</span><span class="troca" data-campo="trocada-triangle" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-triangle" data-hef-alvo="html"></b></span><span class="id mono">triangle</span></span></div>
+      <div class="item item-circle" data-campo="aceso-circle" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
-</svg></span><span class="txt"><b>Círculo</b><span class="ap">○</span><span class="id mono">circle</span></span></div>
-      <div class="item item-square"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+</svg></span><span class="txt" data-campo="acao-circle" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Enter"><b>Círculo</b><span class="ap">○</span><span class="troca" data-campo="trocada-circle" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-circle" data-hef-alvo="html"></b></span><span class="id mono">circle</span></span></div>
+      <div class="item item-square" data-campo="aceso-square" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="7" y="7" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-</svg></span><span class="txt"><b>Quadrado</b><span class="ap">□</span><span class="id mono">square</span></span></div>
-      <div class="item item-cross"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+</svg></span><span class="txt" data-campo="acao-square" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Esc"><b>Quadrado</b><span class="ap">□</span><span class="troca" data-campo="trocada-square" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-square" data-hef-alvo="html"></b></span><span class="id mono">square</span></span></div>
+      <div class="item item-cross" data-campo="aceso-cross" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span><span class="txt"><b>Cruz</b><span class="ap">X|cruz|equis</span><span class="id mono">cross</span></span></div>
+</svg></span><span class="txt" data-campo="acao-cross" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Botão esquerdo"><b>Cruz</b><span class="ap">X|cruz|equis</span><span class="troca" data-campo="trocada-cross" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-cross" data-hef-alvo="html"></b></span><span class="id mono">cross</span></span></div>
     </div>
     <div class="grupo">
       <div class="grupo-rot">Direcional</div>
-      <div class="item item-dpad_up"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <div class="item item-dpad_up" data-campo="aceso-dpad_up" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <polygon points="16,5 24,16 19,16 19,27 13,27 13,16 8,16" fill="currentColor"/>
-</svg></span><span class="txt"><b>D-pad Cima</b><span class="ap">↑</span><span class="id mono">dpad_up</span></span></div>
-      <div class="item item-dpad_right"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+</svg></span><span class="txt" data-campo="acao-dpad_up" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Seta para cima"><b>D-pad Cima</b><span class="ap">↑</span><span class="troca" data-campo="trocada-dpad_up" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-dpad_up" data-hef-alvo="html"></b></span><span class="id mono">dpad_up</span></span></div>
+      <div class="item item-dpad_right" data-campo="aceso-dpad_right" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <polygon points="27,16 16,8 16,13 5,13 5,19 16,19 16,24" fill="currentColor"/>
-</svg></span><span class="txt"><b>D-pad Direita</b><span class="ap">→</span><span class="id mono">dpad_right</span></span></div>
-      <div class="item item-dpad_down"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+</svg></span><span class="txt" data-campo="acao-dpad_right" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Seta para a direita"><b>D-pad Direita</b><span class="ap">→</span><span class="troca" data-campo="trocada-dpad_right" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-dpad_right" data-hef-alvo="html"></b></span><span class="id mono">dpad_right</span></span></div>
+      <div class="item item-dpad_down" data-campo="aceso-dpad_down" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <polygon points="16,27 8,16 13,16 13,5 19,5 19,16 24,16" fill="currentColor"/>
-</svg></span><span class="txt"><b>D-pad Baixo</b><span class="ap">↓</span><span class="id mono">dpad_down</span></span></div>
-      <div class="item item-dpad_left"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+</svg></span><span class="txt" data-campo="acao-dpad_down" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Seta para baixo"><b>D-pad Baixo</b><span class="ap">↓</span><span class="troca" data-campo="trocada-dpad_down" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-dpad_down" data-hef-alvo="html"></b></span><span class="id mono">dpad_down</span></span></div>
+      <div class="item item-dpad_left" data-campo="aceso-dpad_left" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <polygon points="5,16 16,8 16,13 27,13 27,19 16,19 16,24" fill="currentColor"/>
-</svg></span><span class="txt"><b>D-pad Esquerda</b><span class="ap">←</span><span class="id mono">dpad_left</span></span></div>
+</svg></span><span class="txt" data-campo="acao-dpad_left" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Seta para a esquerda"><b>D-pad Esquerda</b><span class="ap">←</span><span class="troca" data-campo="trocada-dpad_left" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-dpad_left" data-hef-alvo="html"></b></span><span class="id mono">dpad_left</span></span></div>
     </div>
     <div class="grupo">
       <div class="grupo-rot">Ombros</div>
-      <div class="item item-l1"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <div class="item item-l1" data-campo="aceso-l1" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text>
-</svg></span><span class="txt"><b>L1</b><span class="id mono">l1</span></span><span class="nota-peca" title="Ombro, o de CIMA, e ele ENCOSTA no casco — ela, 27/08: 'aumenta a altura vertical ... pra que toquem o controle'.">i</span></div>
-      <div class="item item-r1"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+</svg></span><span class="txt" data-campo="acao-l1" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Alt + Shift + Tab"><b>L1</b><span class="troca" data-campo="trocada-l1" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-l1" data-hef-alvo="html"></b></span><span class="id mono">l1</span></span><span class="nota-peca" title="Ombro, o de CIMA, e ele ENCOSTA no casco — ela, 27/08: 'aumenta a altura vertical ... pra que toquem o controle'.">i</span></div>
+      <div class="item item-r1" data-campo="aceso-r1" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="4" y="10" width="24" height="14" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="21" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text>
-</svg></span><span class="txt"><b>R1</b><span class="id mono">r1</span></span><span class="nota-peca" title="Ombro, o de CIMA, encostado no casco.">i</span></div>
+</svg></span><span class="txt" data-campo="acao-r1" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Alt + Tab"><b>R1</b><span class="troca" data-campo="trocada-r1" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-r1" data-hef-alvo="html"></b></span><span class="id mono">r1</span></span><span class="nota-peca" title="Ombro, o de CIMA, encostado no casco.">i</span></div>
     </div>
     <div class="grupo">
       <div class="grupo-rot">Gatilhos</div>
-      <div class="item item-l2"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <div class="item item-l2" data-campo="aceso-l2" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="10" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-</svg></span><span class="txt"><b>L2</b><span class="ap">gatilho adaptativo esquerdo</span><span class="id mono">l2</span></span><span class="nota-peca" title="Gatilho adaptativo, e é o de BAIXO.">i</span></div>
-      <div class="item item-r2"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+</svg></span><span class="txt" data-campo="acao-l2" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Botão esquerdo"><b>L2</b><span class="ap">gatilho adaptativo esquerdo</span><span class="troca" data-campo="trocada-l2" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-l2" data-hef-alvo="html"></b></span><span class="id mono">l2</span></span><span class="nota-peca" title="Gatilho adaptativo, e é o de BAIXO.">i</span></div>
+      <div class="item item-r2" data-campo="aceso-r2" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="4" y="4" width="24" height="18" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"/>
   <text x="9" y="16" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text>
   <line x1="16" y1="24" x2="16" y2="30" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <polyline points="12,27 16,31 20,27" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-</svg></span><span class="txt"><b>R2</b><span class="ap">gatilho adaptativo direito</span><span class="id mono">r2</span></span><span class="nota-peca" title="Gatilho adaptativo, e é o de BAIXO.">i</span></div>
+</svg></span><span class="txt" data-campo="acao-r2" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Botão direito"><b>R2</b><span class="ap">gatilho adaptativo direito</span><span class="troca" data-campo="trocada-r2" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-r2" data-hef-alvo="html"></b></span><span class="id mono">r2</span></span><span class="nota-peca" title="Gatilho adaptativo, e é o de BAIXO.">i</span></div>
     </div>
     <div class="grupo">
       <div class="grupo-rot">Analógicos</div>
-      <div class="item item-stick_l"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <div class="item item-stick_l" data-campo="aceso-stick_l" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
-</svg></span><span class="txt"><b>Analógico Esquerdo</b><span class="ap">L3</span><span class="id mono">stick_l</span></span><span class="nota-peca" title="UMA volta, não três: 'os analógicos tem várias voltas ao invés de uma'. Clique e direção são duas entradas na mesma peça.">i</span></div>
-      <div class="item item-stick_r"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+</svg></span><span class="txt" data-campo="acao-stick_l" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Movimento do cursor (direção) · Abrir e fechar o teclado na tela (clique)"><b>Analógico Esquerdo</b><span class="ap">L3</span><span class="troca" data-campo="trocada-stick_l" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-stick_l" data-hef-alvo="html"></b></span><span class="id mono">stick_l</span></span><span class="nota-peca" title="UMA volta, não três: 'os analógicos tem várias voltas ao invés de uma'. Clique e direção são duas entradas na mesma peça.">i</span></div>
+      <div class="item item-stick_r" data-campo="aceso-stick_r" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
-</svg></span><span class="txt"><b>Analógico Direito</b><span class="ap">R3</span><span class="id mono">stick_r</span></span><span class="nota-peca" title="UMA volta, não três. Clique e direção são duas entradas na mesma peça.">i</span></div>
+</svg></span><span class="txt" data-campo="acao-stick_r" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Rolagem vertical e horizontal (direção) · Botão do meio (clique)"><b>Analógico Direito</b><span class="ap">R3</span><span class="troca" data-campo="trocada-stick_r" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-stick_r" data-hef-alvo="html"></b></span><span class="id mono">stick_r</span></span><span class="nota-peca" title="UMA volta, não três. Clique e direção são duas entradas na mesma peça.">i</span></div>
     </div>
     <div class="grupo">
       <div class="grupo-rot">Centro</div>
-      <div class="item item-share"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <div class="item item-share" data-campo="aceso-share" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <line x1="16" y1="7" x2="16" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
   <line x1="8"  y1="11" x2="12.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
   <line x1="24" y1="11" x2="19.5" y2="21" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
-</svg></span><span class="txt"><b>Share</b><span class="ap">Create|Select</span><span class="id mono">share</span></span><span class="nota-peca" title="CORRIGIDO 27/08: era o id `l2` no SVG. Fica à esquerda do touchpad, colado nele.">i</span></div>
-      <div class="item item-options"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+</svg></span><span class="txt" data-campo="acao-share" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: PrintScreen"><b>Share</b><span class="ap">Create|Select</span><span class="troca" data-campo="trocada-share" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-share" data-hef-alvo="html"></b></span><span class="id mono">share</span></span><span class="nota-peca" title="CORRIGIDO 27/08: era o id `l2` no SVG. Fica à esquerda do touchpad, colado nele.">i</span></div>
+      <div class="item item-options" data-campo="aceso-options" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <line x1="7" y1="10" x2="25" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="7" y1="16" x2="25" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   <line x1="7" y1="22" x2="25" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span><span class="txt"><b>Options</b><span class="ap">Start|Menu</span><span class="id mono">options</span></span><span class="nota-peca" title="CORRIGIDO 27/08: era o id `r2` no SVG. Fica à direita do touchpad, colado nele.">i</span></div>
-      <div class="item item-touchpad"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+</svg></span><span class="txt" data-campo="acao-options" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Super (tecla Windows)"><b>Options</b><span class="ap">Start|Menu</span><span class="troca" data-campo="trocada-options" data-hef-alvo="classe" data-hef-classe="tem">No jogo: <b data-campo="troca-options" data-hef-alvo="html"></b></span><span class="id mono">options</span></span><span class="nota-peca" title="CORRIGIDO 27/08: era o id `r2` no SVG. Fica à direita do touchpad, colado nele.">i</span></div>
+      <div class="item item-touchpad" data-campo="aceso-touchpad" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="3" y="8" width="26" height="16" rx="4" ry="4" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="11" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="16" cy="16" r="1.5" fill="currentColor"/>
   <circle cx="21" cy="16" r="1.5" fill="currentColor"/>
-</svg></span><span class="txt"><b>Touchpad</b><span class="id mono">touchpad</span></span><span class="nota-peca" title="1920x1080, DOIS pontos de toque, cada um com id e flag de contato. Clique esquerdo, direito e central.">i</span></div>
-      <div class="item item-ps"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+</svg></span><span class="txt" data-campo="acao-touchpad" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Backspace (clique esquerdo) · Delete (clique direito) · Enter (clique central)"><b>Touchpad</b><span class="id mono">touchpad</span></span><span class="nota-peca" title="1920x1080, DOIS pontos de toque, cada um com id e flag de contato. Clique esquerdo, direito e central.">i</span></div>
+      <div class="item item-ps" data-campo="aceso-ps" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <g transform="translate(16 16) scale(0.99425) translate(-16.0925 -16.0)">
     <path fill="currentColor" d="M 1.348 21.736 C 0.195 22.543 0.408 23.935 3.04 24.805 C 5.671 25.675 8.73 25.855 11.422 25.371 C 11.345 25.371 11.575 25.371 11.422 25.371 L 11.422 22.624 L 8.807 23.513 C 7.807 23.835 6.807 23.916 5.808 23.675 C 5.039 23.432 5.192 22.947 6.115 22.543 L 11.422 20.604 L 11.422 17.616 L 4.039 20.282 C 3.117 20.604 2.193 21.09 1.348 21.736 Z M 19.188 9.619 L 19.188 17.455 C 22.34 19.07 24.801 17.455 24.801 13.254 C 24.801 8.973 23.34 7.034 19.111 5.5 C 16.881 4.692 14.574 3.965 12.267 3.48 L 12.267 26.825 L 17.65 28.521 L 17.65 8.892 C 17.65 8.004 17.65 7.358 18.266 7.599 C 19.111 7.842 19.188 8.731 19.188 9.619 Z M 29.184 19.878 C 26.955 19.07 24.571 18.746 22.263 18.989 C 20.982 19.073 19.78 19.455 18.573 19.878 L 18.573 23.028 L 23.571 21.09 C 24.571 20.766 25.571 20.685 26.57 20.928 C 27.339 21.171 27.185 21.655 26.262 22.059 L 18.573 25.047 L 18.573 28.116 L 29.184 23.997 C 29.954 23.675 30.645 23.27 31.261 22.624 C 31.799 21.817 31.568 20.685 29.184 19.878 Z"/>
   </g>
-</svg></span><span class="txt"><b>PS</b><span class="ap">botão home</span><span class="id mono">ps</span></span><span class="nota-peca" title="O glifo É o botão: sem anel em volta, decisão dela em 27/08.">i</span></div>
+</svg></span><span class="txt" data-campo="acao-ps" data-hef-alvo="atributo" data-hef-atributo="title" title="Na Navegação: Abrir a Steam"><b>PS</b><span class="ap">botão home</span><span class="id mono">ps</span></span><span class="nota-peca" title="O glifo É o botão: sem anel em volta, decisão dela em 27/08.">i</span><ol class="gestos"><li><span class="n">1</span>PS + Options · Suspender mouse e teclado</li><li><span class="n">2</span>PS + D-pad Cima · Próximo perfil</li><li><span class="n">3</span>PS + D-pad Baixo · Perfil anterior</li><li><span class="n">4</span>PS + R3 · Próximo Modo</li><li><span class="n">5</span>PS + L3 · Próxima Máscara</li><li><span class="n">6</span>PS · Abrir a Steam</li></ol></div>
     </div>
     <div class="grupo">
       <div class="grupo-rot">Sensores</div>
@@ -1268,7 +1365,7 @@
     </div>
     <div class="grupo">
       <div class="grupo-rot">Áudio</div>
-      <div class="item item-mic"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+      <div class="item item-mic" data-campo="aceso-mic" data-hef-alvo="classe"><span class="gl"><svg width="26" height="26" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
   <rect x="11" y="4" width="10" height="15" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/>
   <path d="M7,17 Q7,25 16,25 Q25,25 25,17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -1326,54 +1423,92 @@
 </div>
 
   <script>
-  // O PADRÃO E A COR SÃO DO PRODUTO — `core/led_control.py`. Copiar a tabela
+  // O PADRÃO DAS LÂMPADAS É DO PRODUTO — `core/led_control.py`. Copiar a tabela
   // para cá seria criar a segunda verdade que este mapa existe para matar.
   const PADRAO = {"1": [3], "2": [2, 4], "3": [1, 3, 5], "4": [1, 2, 4, 5]};
-  const LUZ_DO_JOGADOR = {"1": "#0000ff", "2": "#ff0000", "3": "#00ff00", "4": "#ff0080"};
   const PARCIAL = "hachurado = o acabamento não cabe num hexadecimal (iridescente, "
                 + "metálico, camuflado, arte); cinza chapado = zona sem amostragem.";
   const ds = document.querySelector("svg.ds");
   const barra = document.querySelector("#mp-lightbar");
   const nota = document.querySelector("#nota");
+  const cw = document.querySelector("#cw");
+  const cx = document.querySelector(".cx");
+  const chips = document.querySelector('[data-bloco="controles-do-mapa"]');
 
-  document.querySelector("#cw").addEventListener("change", e => {
-    const op = e.target.selectedOptions[0];
-    ds.dataset.colorway = e.target.value;
-    nota.textContent = op.dataset.parcial ? PARCIAL : " ";
-  });
+  function plastico(modelo) {
+    if (modelo) { ds.dataset.colorway = modelo; cw.value = modelo; }
+    else { delete ds.dataset.colorway; cw.value = ""; }
+    const op = cw.selectedOptions[0];
+    nota.textContent = op && op.dataset.parcial ? PARCIAL : " ";
+  }
+  cw.addEventListener("change", e => plastico(e.target.value));
 
-  function acende(n) {
+  // A BARRA DE LUZ E O JOGADOR ANDAM JUNTOS no banco de provas (o chip do
+  // desenho leva a cor do jogador em `data-luz`), e é assim no aparelho: o PS5
+  // acende as duas coisas ao numerar um controle. No produto o chip não leva
+  // cor, e a barra fica com a do aparelho, que o tique pinta (`luz-cor`).
+  function acende(n, luz) {
     for (let i = 1; i <= 5; i++)
       document.querySelector("#mp-led-jogador-" + i)
               .classList.toggle("led-on", (PADRAO[n] || []).includes(i));
-    if (n && LUZ_DO_JOGADOR[n]) {
-      barra.style.setProperty("--luz", LUZ_DO_JOGADOR[n]);
-      document.querySelector("#luz").value = LUZ_DO_JOGADOR[n];
-    } else {
+    if (luz) {
+      barra.style.setProperty("--luz", luz);
+      document.querySelector("#luz").value = luz;
+    } else if (n) {
       barra.style.removeProperty("--luz");
+    } else {
+      barra.style.setProperty("--luz", "var(--luz-apagada)");
     }
-    document.querySelectorAll("[data-jogador]").forEach(b =>
-      b.classList.toggle("on", +b.dataset.jogador === n));
   }
-  document.querySelectorAll("[data-jogador]").forEach(b =>
-    b.addEventListener("click", () => acende(+b.dataset.jogador)));
 
-  // A BARRA DE LUZ E O JOGADOR ANDAM JUNTOS, e é assim no aparelho: o PS5 acende
-  // as duas coisas ao numerar um controle. Mexer na cor à mão desfaz o vínculo —
-  // a barra passa a ser a escolhida, e as lâmpadas continuam onde estavam.
+  // O DESENHO SEGUE O CHIP: as lâmpadas pelo número do jogador, o plástico
+  // pelo modelo. O «Nenhum» é o desenho sem controle, e com ele o pisca não
+  // acende (`.sem-controle`). O «Cor do plástico» continua livre: escolher
+  // um modelo depois de um chip vale até o próximo chip.
+  // O «Todos» não é UM controle: o desenho dele é o do primeiro da mesa, o
+  // mesmo de quem o produto pinta a barra (`luz-cor`). Sem isso, as lâmpadas e
+  // o plástico ficavam os do chip anterior.
+  function primeiro() {
+    return chips.querySelector('.bt[data-jogador]:not([data-jogador="0"])');
+  }
+  function desenha(b) {
+    const d = b.hasAttribute("data-jogador") ? b : (primeiro() || b);
+    if (d.hasAttribute("data-jogador")) acende(+d.dataset.jogador, d.dataset.luz);
+    if (d.hasAttribute("data-colorway")) plastico(d.dataset.colorway);
+    cx.classList.toggle("sem-controle", d.dataset.jogador === "0");
+  }
+  // POR DELEGAÇÃO, porque o produto troca os chips a cada mudança da mesa: um
+  // ouvinte posto em cada botão ao carregar morreria com o bloco.
+  document.addEventListener("click", e => {
+    const b = e.target.closest('[data-bloco="controles-do-mapa"] .bt');
+    if (!b) return;
+    chips.querySelectorAll(".bt").forEach(x => x.classList.toggle("on", x === b));
+    desenha(b);
+  });
+  // A MESA SEM CONTROLE é o «Nenhum»: o bloco do produto chega só com ele, e
+  // o desenho não pode ficar com as lâmpadas e a barra do chip da bancada.
+  function segue() {
+    let b = chips.querySelector(".bt.on[data-jogador]") || primeiro();
+    if (!b) {
+      b = chips.querySelector('.bt[data-jogador="0"]');
+      if (b && !chips.querySelector(".bt.on")) b.classList.add("on");
+    }
+    if (b) desenha(b);
+  }
+  new MutationObserver(segue).observe(chips, {childList: true});
+
   document.querySelector("#luz").addEventListener("input", e => {
     barra.style.setProperty("--luz", e.target.value);
   });
   document.querySelector("#luz-off").addEventListener("click", () => {
-    barra.style.removeProperty("--luz");
+    barra.style.setProperty("--luz", "var(--luz-apagada)");
   });
 
-  // O MAPA NASCE COM LUZ. Sem jogador escolhido, o lightbar e as cinco lâmpadas
-  // ficam na cor de apagado — que é o estado honesto de um controle sem luz, e
-  // some sobre o fundo escuro. Ela reparou na ausência antes, com estas mesmas
-  // duas peças: "faltou só os dois lightbar e os led de player". O apagado
-  // continua a um clique, no botão "nenhum".
-  acende(1);
+  // O MAPA NASCE COM LUZ: o desenho do chip aceso. Sem jogador, o lightbar e as
+  // cinco lâmpadas ficam na cor de apagado — e ela reparou na ausência antes:
+  // "faltou só os dois lightbar e os led de player". O apagado continua a um
+  // clique, no botão "Nenhum".
+  segue();
   </script>
 
 </body>
