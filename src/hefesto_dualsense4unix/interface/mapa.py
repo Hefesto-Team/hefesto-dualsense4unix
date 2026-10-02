@@ -1076,11 +1076,11 @@ def main():
 
 <div class="cx">
   <div class="topo">
-    <!-- O VOLTAR VOLTA PARA DE ONDE VEIO: três abas abrem este mapa (a
-         Controles, a Navegação e a Conexões). O dono é o
-         `caixa_da_janela.voltar`, que pergunta à lista de volta do WebView;
-         o `href` é a reserva de quem abre o arquivo direto. -->
-    {caixa_da_janela.voltar("02-controles.html")}
+    <!-- O VOLTAR VOLTA PARA DE ONDE VEIO. Desde 29/09/2026 só a Conexões abre
+         este mapa (a Controles e a Navegação o perderam, por ordem dela), e por
+         isso ela é a reserva de quem abre o arquivo direto. O dono é o
+         `caixa_da_janela.voltar`, que pergunta à lista de volta do WebView. -->
+    {caixa_da_janela.voltar("08-conexoes.html")}
     <h1><span class="p">O mapa do controle</span> — o nome de cada peça</h1>
     <!-- A LINHA DE INSTRUÇÃO SAIU — decisão dela, 31/08/2026: *"passe o mouse
          num glifo e a peça acende no desenho · passe na peça e o glifo acende
