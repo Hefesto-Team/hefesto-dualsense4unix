@@ -3263,6 +3263,11 @@ def dispatch_gamepad(
     device = daemon._gamepad_device
     if device is None:
         return
+    # O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01: os botões do JOGO saem do retrato que
+    # este tique lê do leitor do primário, junto com a contagem de apertos da
+    # MESMA leitura; o aperto que começou e acabou entre dois tiques volta pela
+    # contagem (`_apertos_do_primario`, no fim do módulo).
+    buttons_pressed, soltos = _apertos_do_primario(daemon, device, buttons_pressed)
     # UDP-TRIGGER-THRESHOLD-01: a deadzone que um mod DSX pediu na porta 6969
     # (`TriggerThreshold`) vale AQUI — na fronteira entre o controle físico e o
     # pad emulado, o mesmo ponto em que o DSX a aplica. Corte seco, sem
@@ -3317,6 +3322,13 @@ def dispatch_gamepad(
                 botoes=da_mao,
             )
         device.forward_analog(lx=lx, ly=ly, rx=rx, ry=ry, l2=l2, r2=r2)
+        if soltos:
+            # Primeiro o quadro com o aperto que já soltou, na MÃO e com a troca
+            # do perfil; depois o de agora. Só o conjunto de botões sai duas vezes.
+            com_soltos = da_mao | soltos
+            if troca:
+                com_soltos = traduzir_remapeamento(com_soltos, l2, r2, troca)[0]
+            device.forward_buttons(com_soltos)
         device.forward_buttons(botoes)
         # FEAT-VPAD-FF-PASSTHROUGH-01: drena o FF (rumble do jogo) do vpad e
         # repassa ao controle físico. getattr defensivo: fakes/devices sem
@@ -3709,6 +3721,114 @@ def _esquecer_o_numero_do_jogo(daemon: Any, target_uniq: str | None) -> None:
     marcas = getattr(daemon, _ATRIBUTO_DO_NUMERO_DO_JOGO, None)
     if isinstance(marcas, dict):
         marcas.pop(target_uniq, None)
+
+
+# ---------------------------------------------------------------------------
+# O APERTO QUE JÁ SOLTOU — O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01 (02/10/2026)
+# ---------------------------------------------------------------------------
+#
+# O caminho do botão até o jogo é um retrato por tique (16,7 ms a 60 Hz), sem
+# memória do que aconteceu entre dois retratos: medido com o leitor de verdade,
+# um aperto de 10 ms some em 4 de 10 fases, um de 5 ms em 7 de 10. O leitor
+# conta as bordas (`EvdevSnapshot.apertos`), e quem entrega ao jogo compara com
+# a contagem que já viu: o nome cuja contagem cresceu e que não está apertado
+# agora é um aperto que já soltou, e o tique o entrega antes do de agora. Os
+# dois laços chamam daqui: o do P1 (`dispatch_gamepad`) e o dos jogadores 2 a
+# 4 (`coop.CoopManager.forward_all`). No fim do módulo para as citações de cima
+# não andarem.
+
+
+class ApertosVistos:
+    """A contagem de apertos que um pad virtual já recebeu, por par (leitor, pad).
+
+    O REBASE, que segura a entrada fantasma: a contagem vista se refaz, sem
+    virar aperto, quando o leitor ou o pad virtual muda (o pad que acabou de
+    nascer, o que o arming recriou), quando a contagem desce (leitor novo) ou
+    quando o `daemon._input_ready_at` mudou desde a última entrega (quem arma o
+    assentamento da conexão, o BUG-DAEMON-CONNECT-GHOST-INPUT-01). Sem isso, o
+    aperto feito durante o assentamento, ou antes de o pad do co-op nascer,
+    chegaria ao jogo no primeiro tique depois — a entrada fantasma que o grace
+    existe para matar.
+
+    Dois apertos do mesmo botão no mesmo tique viram um (decisão técnica: a
+    mão não faz dois apertos em 16 ms).
+    """
+
+    __slots__ = ("contagem", "leitor", "pad", "pronto_em")
+
+    def __init__(self) -> None:
+        self.leitor: Any = None
+        self.pad: Any = None
+        self.pronto_em: Any = None
+        self.contagem: dict[str, int] = {}
+
+    def soltos(
+        self,
+        *,
+        leitor: Any,
+        pad: Any,
+        pronto_em: Any,
+        apertos: Any,
+        apertados: frozenset[str],
+    ) -> frozenset[str]:
+        """Os nomes que foram apertados E soltos desde a última entrega."""
+        contagem = apertos if isinstance(apertos, dict) else {}
+        mesmo_par = (
+            leitor is self.leitor and pad is self.pad and pronto_em == self.pronto_em
+        )
+        antes = self.contagem
+        self.leitor, self.pad, self.pronto_em, self.contagem = leitor, pad, pronto_em, contagem
+        if not mesmo_par or not contagem:
+            return frozenset()
+        if any(contagem.get(nome, 0) < vezes for nome, vezes in antes.items()):
+            return frozenset()  # a contagem desceu: é outro leitor
+        return frozenset(
+            nome
+            for nome, vezes in contagem.items()
+            if vezes > antes.get(nome, 0) and nome not in apertados
+        )
+
+
+#: Onde a contagem vista do P1 fica, no próprio daemon.
+_ATRIBUTO_DOS_APERTOS_DO_P1 = "_apertos_vistos_do_p1"
+
+
+def _apertos_do_primario(
+    daemon: Any, device: Any, buttons_pressed: frozenset[str]
+) -> tuple[frozenset[str], frozenset[str]]:
+    """(os botões de agora, os que já soltaram), lidos do retrato do primário.
+
+    O leitor é o que o `poll.evdev_buttons_once` lê (`controller._evdev`), e a
+    contagem e o conjunto saem da MESMA leitura: com o conjunto de uma leitura
+    e a contagem de outra, um aperto que chegou entre as duas viraria «já
+    soltou» e depois «apertado» — dois apertos no jogo. Sem leitor disponível
+    (o FakeController, os dublês) os botões são os que o laço passou e nada
+    volta pela contagem. Nunca levanta.
+    """
+    try:
+        leitor = getattr(getattr(daemon, "controller", None), "_evdev", None)
+        if leitor is None or not leitor.is_available():
+            return buttons_pressed, frozenset()
+        retrato = leitor.snapshot()
+        apertados = getattr(retrato, "buttons_pressed", None)
+        apertos = getattr(retrato, "apertos", None)
+        if not isinstance(apertados, frozenset) or not isinstance(apertos, dict):
+            return buttons_pressed, frozenset()
+        vistos = getattr(daemon, _ATRIBUTO_DOS_APERTOS_DO_P1, None)
+        if not isinstance(vistos, ApertosVistos):
+            vistos = ApertosVistos()
+            setattr(daemon, _ATRIBUTO_DOS_APERTOS_DO_P1, vistos)
+        soltos = vistos.soltos(
+            leitor=leitor,
+            pad=device,
+            pronto_em=getattr(daemon, "_input_ready_at", None),
+            apertos=apertos,
+            apertados=apertados,
+        )
+        return apertados, soltos
+    except Exception as exc:  # a rota do jogo nunca cai por uma conta
+        logger.debug("apertos_do_primario_falhou", err=str(exc))
+        return buttons_pressed, frozenset()
 
 
 __all__ = [

@@ -60,6 +60,10 @@ class EvdevSnapshot:
     rx: int = 128
     ry: int = 128
     buttons_pressed: frozenset[str] = field(default_factory=frozenset)
+    #: O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01: quantas vezes cada nome passou de
+    #: solto a apertado, contado na BORDA (o contador de bordas é UM só). Só
+    #: cresce; quem entrega ao jogo compara com a contagem que já viu.
+    apertos: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -1841,6 +1845,7 @@ class EvdevReader(_EvdevReconnectLoop):
         self._dpad_x = 0
         self._dpad_y = 0
         self._pressed: set[str] = set()
+        self._apertos: dict[str, int] = {}
         self._active_dev: Any = None
         # `_grab`/`_grab_state` nascem no `super().__init__()` — a máquina de
         # EVIOCGRAB subiu para `_EvdevReconnectLoop` na SENSOR-DE-VERDADE-01,
@@ -1884,6 +1889,7 @@ class EvdevReader(_EvdevReconnectLoop):
                 rx=self._snapshot.rx,
                 ry=self._snapshot.ry,
                 buttons_pressed=self._snapshot.buttons_pressed,
+                apertos=self._snapshot.apertos,
             )
 
     # Hooks do loop base ------------------------------------------------
@@ -2148,6 +2154,8 @@ class EvdevReader(_EvdevReconnectLoop):
             return
         with self._lock:
             if value == 1:
+                if name not in self._pressed:
+                    self._contar_o_aperto(name)
                 self._pressed.add(name)
             elif value == 0:
                 self._pressed.discard(name)
@@ -2183,6 +2191,7 @@ class EvdevReader(_EvdevReconnectLoop):
         return None
 
     def _refresh_dpad_buttons(self) -> None:
+        antes = set(self._pressed)
         for d in ("dpad_up", "dpad_down", "dpad_left", "dpad_right"):
             self._pressed.discard(d)
         if self._dpad_y < 0:
@@ -2193,14 +2202,28 @@ class EvdevReader(_EvdevReconnectLoop):
             self._pressed.add("dpad_left")
         elif self._dpad_x > 0:
             self._pressed.add("dpad_right")
+        for direcao in sorted(self._pressed - antes):
+            self._contar_o_aperto(direcao)
         self._sync_buttons_to_snapshot()
 
+    def _contar_o_aperto(self, nome: str) -> None:
+        """Uma borda de solto a apertado (O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01).
+
+        Chamado sob a trava, na BORDA do evento, e não na leitura do retrato: o
+        aperto de 10 ms que começa e acaba entre dois tiques não chega a
+        nenhuma leitura, mas passa por aqui. O dicionário é trocado, nunca
+        mudado no lugar: quem já leu um retrato segura uma contagem acabada.
+        """
+        self._apertos = {**self._apertos, nome: self._apertos.get(nome, 0) + 1}
+
     def _sync_buttons_to_snapshot(self) -> None:
-        self._snapshot = self._with(buttons_pressed=frozenset(self._pressed))
+        self._snapshot = self._with(
+            buttons_pressed=frozenset(self._pressed), apertos=self._apertos
+        )
 
     def _with(self, **changes: Any) -> EvdevSnapshot:
         current = self._snapshot
-        fields = ("l2_raw", "r2_raw", "lx", "ly", "rx", "ry", "buttons_pressed")
+        fields = ("l2_raw", "r2_raw", "lx", "ly", "rx", "ry", "buttons_pressed", "apertos")
         values = {f: changes.get(f, getattr(current, f)) for f in fields}
         return EvdevSnapshot(**values)
 

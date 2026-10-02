@@ -1703,6 +1703,7 @@ class UhidDualSense:
             self._audio_do_jogo_amostra = None
             self._axes = _AXES_NEUTRAL
             self._buttons = frozenset()
+            self._pendentes = frozenset()
             self._last_body = None
             self._seq = 0
             # GYRO-01: o espelho de motion morre junto com o device — a
@@ -1785,8 +1786,15 @@ class UhidDualSense:
         """
         if self._fd is None:
             return
-        self._buttons = frozenset(pressed)
-        self._emit_if_changed()
+        with self._lock:
+            # O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01: o nome que ENTRA fica pendente
+            # até sair num report. Com o espelho ligado quem emite é o leitor do
+            # report cru, e o aperto que já soltou (o tique entrega `apertados |
+            # soltos` e logo `apertados`) seria apagado antes de sair.
+            novos = frozenset(pressed) - self._buttons
+            self._pendentes = self._pendentes | novos
+            self._buttons = frozenset(pressed)
+            self._emit_if_changed()
 
     def forward_motion(self, window: bytes) -> None:
         """Espelha a janela de MOTION do físico (25 B = payload[15:40]) e emite.
@@ -2024,6 +2032,7 @@ class UhidDualSense:
             body[_SEQ_OFFSET] = self._seq
             if not self.send_report(bytes([_INPUT_REPORT_USB]) + bytes(body)):
                 return False
+            self._pendentes = frozenset()  # o aperto pendente saiu neste report
             self._abrir_a_janela_do_eco(body)
             return True
 
@@ -2043,7 +2052,7 @@ class UhidDualSense:
         # de sair fixo. Ver `_STATUS1_OFFSET`.
         body[_STATUS1_OFFSET] = self._status1_byte
         body[0:6] = bytes(self._axes)
-        pressed = self._buttons
+        pressed = self._buttons | self._pendentes
         body[_BUTTONS0_OFFSET] = self._dpad_hat(pressed) | _bitmask(pressed, _BUTTONS0_BITS)
         body[_BUTTONS1_OFFSET] = _bitmask(pressed, _BUTTONS1_BITS)
         buttons2 = _bitmask(pressed, _BUTTONS2_BITS)
@@ -3122,6 +3131,13 @@ class UhidDualSense:
         self._mic_solta_a_entregar = False
         self._as_janelas_do_eco().clear()
         self._mic_bit_que_saiu = False
+
+    #: O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01 (02/10/2026): os nomes que entraram
+    #: no `forward_buttons` e ainda não saíram num report — `_encode_body` usa
+    #: `_buttons | _pendentes`, e o envio que deu certo esvazia. Campo de
+    #: padrão imutável no fim da classe, para nenhuma linha acima andar e o
+    #: pad montado por `__new__` nascer sem pendência.
+    _pendentes: frozenset[str] = frozenset()
 
 
 # ---------------------------------------------------------------------------

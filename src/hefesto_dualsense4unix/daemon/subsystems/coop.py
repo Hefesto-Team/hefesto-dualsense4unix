@@ -2371,6 +2371,15 @@ class CoopManager:
                 snap = player.reader.snapshot()
                 botoes, l2, r2 = snap.buttons_pressed, snap.l2_raw, snap.r2_raw
                 lx, ly, rx, ry = snap.lx, snap.ly, snap.rx, snap.ry
+                # O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01: o aperto que começou e
+                # acabou entre dois tiques volta pela contagem do MESMO retrato.
+                soltos = self._apertos_vistos_de(player.identity).soltos(
+                    leitor=player.reader,
+                    pad=player.vpad,
+                    pronto_em=getattr(self._daemon, "_input_ready_at", None),
+                    apertos=getattr(snap, "apertos", None),
+                    apertados=botoes,
+                )
                 if marcas is not None:  # a MÃO dele, antes da troca e da mira
                     marcas.anotar(
                         player.identity, botoes=botoes, lx=lx, ly=ly, rx=rx, ry=ry, l2=l2, r2=r2
@@ -2400,6 +2409,7 @@ class CoopManager:
                         ry=ry,
                         botoes=botoes,
                     )
+                da_mao = botoes
                 if troca:
                     botoes, l2, r2 = traduzir_remapeamento(botoes, l2, r2, troca)
                 player.vpad.forward_analog(
@@ -2410,6 +2420,13 @@ class CoopManager:
                     l2=l2,
                     r2=r2,
                 )
+                if soltos:
+                    # O quadro do aperto que já soltou vem antes, na MÃO e com a
+                    # troca do perfil; depois o de agora (como o do P1).
+                    com_soltos = da_mao | soltos
+                    if troca:
+                        com_soltos = traduzir_remapeamento(com_soltos, l2, r2, troca)[0]
+                    player.vpad.forward_buttons(com_soltos)
                 player.vpad.forward_buttons(botoes)
                 # FEAT-VPAD-FF-PASSTHROUGH-01: rumble do jogo deste jogador.
                 # getattr defensivo: fakes/vpads sem pump_ff degradam sem crash.
@@ -3093,6 +3110,22 @@ class CoopManager:
         )
         return self._publicar_camada_coop(padroes, escrever=escrever)
 
+    # -- o aperto que já soltou (O-BOTAO-CHEGA-AO-JOGO-COMO-ELE-E-01) ---------
+
+    #: A contagem de apertos que cada pad virtual já recebeu, por jogador.
+    #: Default de CLASSE, como o `_nomes_velhos_ditos`: a suíte monta gerente
+    #: por `__new__`.
+    _apertos_vistos: dict[str, Any] | None = None
+
+    def _apertos_vistos_de(self, identity: str) -> Any:
+        """O `gamepad.ApertosVistos` deste jogador, criado na primeira entrega."""
+        if self._apertos_vistos is None:
+            self._apertos_vistos = {}
+        vistos = self._apertos_vistos.get(identity)
+        if vistos is None:
+            vistos = self._apertos_vistos[identity] = ApertosVistos()
+        return vistos
+
 
 # F1-REMAPEAR (13/09/2026): o import da troca de botões mora AQUI, depois da
 # classe, e não no topo, de propósito. No topo ele empurrava os métodos que o
@@ -3109,6 +3142,7 @@ from hefesto_dualsense4unix.core.roteador_de_movimento import (  # noqa: E402
     ativo as roteador_ativo,
 )
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (  # noqa: E402
+    ApertosVistos,
     aplicar_o_movimento,
     aplicar_o_toque,
     ralos_do_mic,
