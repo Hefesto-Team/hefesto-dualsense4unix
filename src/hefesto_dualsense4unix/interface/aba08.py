@@ -3822,9 +3822,9 @@ TELA_MAPEAR_PORTAS = f'''
     <div class="tn-topo">
       <span class="tn-tit">{MAPEAR_ENTRADAS}</span>
       {ajuda("Use o mesmo DualSense em todas: ligue o cabo numa entrada, espere o Hefesto "
-             "mostrar o que mediu dela, dê um <b>nome</b> e o <b>lugar</b>, e salve. Depois "
-             "passe o cabo para a próxima. O nome e o lugar aparecem no Check-up e em "
-             "<b>Rádio e Adaptadores</b>.")}
+             "mostrar o que mediu dela e salve; o <b>nome</b> e o <b>lugar</b> são opcionais. "
+             "Depois passe o cabo para a próxima. O nome e o lugar aparecem na "
+             "<b>Gestão de Controles</b> e em <b>Rádio e Adaptadores</b>.")}
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="tn-corpo mp" id="mp-forma">

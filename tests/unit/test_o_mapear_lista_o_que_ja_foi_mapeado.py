@@ -160,6 +160,21 @@ def test_a_frase_da_entrada_encontrada_e_a_dela() -> None:
     assert FRASE_DELA in bancada, "a cena do desenho não traz a frase — regere a bancada"
 
 
+def test_a_dica_do_mapear_nao_desdiz_a_frase() -> None:
+    """A dica «?» do diálogo mandava «dê um nome e o lugar, e salve» ao lado da
+    frase dela, que diz que o nome é opcional, e chamava a Gestão de Controles
+    pelo nome velho, «Check-up» (conferência, 02/10/2026).
+
+    MORDIDA: devolva a dica de antes no ``TELA_MAPEAR_PORTAS`` e regere → reprova.
+    """
+    bancada = (RAIZ / "mockup/08-conexoes.html").read_text(encoding="utf-8")
+    inicio = bancada.index('id="mapear-portas"')
+    topo = bancada[inicio:bancada.index('id="mp-forma"', inicio)]
+    dica = topo[topo.index('class="dica">'):]
+    assert "opcionais" in dica, f"a dica do Mapear ainda manda dar nome e lugar: {dica[:300]}"
+    assert "Check-up" not in dica and "Gestão de Controles" in dica, dica[:300]
+
+
 # ---------------------------------------------------------------------------
 # 5. o Salvar vazio numera, e não apaga
 # ---------------------------------------------------------------------------
