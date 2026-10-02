@@ -4643,7 +4643,7 @@ def luz_nao_acende(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 # bancada e a tela dela serem a mesma forma.
 #
 # O QUE MUDA DE TIQUE A TIQUE NÃO ENTRA NO HTML DA SALA: os Hz vão em listas
-# próprias (`hz-movimento`, `hz-voz`, `hz-pouco`), distribuídas pela ordem do
+# próprias (`hz-movimento`, `hz-voz`, `hz-nivel`, `hz-dica`), distribuídas pela ordem do
 # DOM. Com eles dentro, a sala seria reescrita a cada tique e levaria junto o
 # campo em que ela estivesse digitando.
 import threading  # noqa: E402
@@ -4652,6 +4652,13 @@ from collections.abc import Callable  # noqa: E402
 from hefesto_dualsense4unix.integrations import (  # noqa: E402
     central_do_radio as _central_do_radio,
 )
+from hefesto_dualsense4unix.integrations.ar_do_adaptador import (  # noqa: E402
+    CANAIS_DO_BT,
+    NIVEL_ENGASGA,
+    NIVEL_LISO,
+    NIVEL_MEDIO,
+    nivel_dos_canais,
+)
 from hefesto_dualsense4unix.integrations.radio_da_mesa import (  # noqa: E402
     FATIAS_DA_PONTE,
     HZ_AUDIO_COM_MIC,
@@ -4659,6 +4666,8 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (  # noqa: E402
     HZ_INPUT_COM_MIC,
     HZ_INPUT_SEM_MIC,
     N_MAX_PONTES,
+    SEGURA_O_NIVEL_S,
+    nivel_do_movimento,
 )
 
 #: Quantas pontes de som ou vibração um adaptador aguenta — o dono é
@@ -4669,12 +4678,20 @@ PONTES_POR_ADAPTADOR = N_MAX_PONTES
 #: fatias por relatório, menos a do escravo, vezes `HZ_DA_PONTE`. É o
 #: `MARGINAL_DA_PONTE = 187.5` do desenho aprovado.
 MARGINAL_DA_PONTE = (FATIAS_DA_PONTE - 1) * HZ_DA_PONTE
-#: Os 79 canais do Bluetooth clássico em 2,4 GHz.
-CANAIS_DO_BT = 79
-#: Abaixo disto o giroscópio passa de 8 ms entre leituras e o número fica
-#: laranja. É o corte do desenho aprovado (`HZ_QUE_ENGASGA`), declarado lá como
-#: «corte de desenho, não medido»; a bancada dela decide o de verdade.
-HZ_QUE_ENGASGA = 125.0
+#: OS CORTES DA COR TÊM DONO, e não é a tela (O-HZ-TEM-A-COR-DA-DISTANCIA-01):
+#: o do Hz é o `radio_da_mesa` (:data:`HZ_QUE_ENGASGA`, :data:`HZ_DO_JOGO`, e o
+#: veredito `nivel_do_movimento`), e o dos 79 canais é o `ar_do_adaptador`
+#: (:data:`CANAIS_DO_BT` e `nivel_dos_canais`). A tela só pinta o nível.
+#: A DICA DO GLIFO DO MOVIMENTO, por nível: o que chega ao jogo, e nunca a causa
+#: (`radio_da_mesa.PALAVRAS_DE_CULPA`). A palavra do transporte é USB.
+DICA_DO_MOVIMENTO = {
+    NIVEL_LISO: "Movimento por segundo: chega tudo o que o jogo usa",
+    NIVEL_MEDIO: "Movimento por segundo: chega menos que pelo USB",
+    NIVEL_ENGASGA: "Movimento por segundo: engasga",
+    "": "Movimento por segundo",
+}
+#: O que a dica dos «N/79» acrescenta no piso do salto de frequência.
+PISO_DOS_CANAIS = ". Usa o mínimo que o rádio aceita"
 #: As larguras da linha de um controle, na proporção do desenho aprovado e em
 #: constantes do dono: o que o controle manda (2 fatias por relatório), o que o
 #: microfone acrescenta, e a ponte (a fatia do escravo junto).
@@ -4990,9 +5007,13 @@ def _canais_de(cena: dict[str, Any], lid: str) -> int | None:
 # -- a linha de um aparelho -------------------------------------------------
 
 
-def _e_pouco(hz: Any) -> bool:
-    """Movimento abaixo do que o jogo sente como liso — a parte fica laranja."""
-    return isinstance(hz, (int, float)) and not isinstance(hz, bool) and hz < HZ_QUE_ENGASGA
+def _nivel_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool) -> str:
+    """O nível do movimento desta linha: o do Hz no desenho (que não tem tique),
+    e o que :func:`campos_da_secao` decidiu para o tique (``cena["niveis"]``,
+    com o «segura») na sala que nasce agora."""
+    if com_hz:
+        return nivel_do_movimento(ap.get("hz_mov"))
+    return str((cena.get("niveis") or {}).get(str(ap.get("id")), ""))
 
 
 def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool) -> str:
@@ -5009,7 +5030,11 @@ def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool) -
         for ic, rot in PASSAGEIROS)
     voz = (f'<span class="hz" data-campo="hz-voz" data-alvo="{aid}">'
            f'{_x(_hz(ap.get("hz_voz"))) if com_hz else ""}</span>') if mic else ""
-    pouco = " pouco" if com_hz and _e_pouco(ap.get("hz_mov")) else ""
+    # O NÍVEL POUSA NA PARTE MOVIMENTO (O-HZ-TEM-A-COR-DA-DISTANCIA-01): o
+    # `data-nivel` pinta o número e tira os arcos do glifo; sem número, a parte
+    # não tem o atributo. A dica do glifo diz o nível em palavras.
+    nivel = _nivel_da_linha(ap, cena, com_hz)
+    no_nivel = f' data-nivel="{nivel}"' if nivel else ""
     nome = _x(ap.get("nome") or ap.get("rotulo") or "")
     botoes_da_ponte = []
     for k in ("som", "haptica"):
@@ -5031,10 +5056,12 @@ def _linha_do_controle(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool) -
         f'{_ic("manda", "seta")}'
         f'<div class="vaga entrada fixa partida" style="flex:{manda} 0 0" '
         'title="O que o controle manda">'
-        f'<span class="parte movimento{pouco}" data-campo="hz-pouco" data-hef-alvo="classe" '
-        f'data-hef-classe="pouco" data-alvo="{aid}" style="flex:{mov_flex} 1 0" '
-        'title="Movimento por segundo">'
-        f'{_ic("sinal")}<span class="hz" data-campo="hz-movimento" data-alvo="{aid}">'
+        '<span class="parte movimento" data-campo="hz-nivel" data-hef-alvo="atributo" '
+        f'data-hef-atributo="data-nivel" data-alvo="{aid}"{no_nivel} '
+        f'style="flex:{mov_flex} 1 0" title="Movimento por segundo">'
+        '<span class="nivel" role="img" data-campo="hz-dica" data-hef-alvo="atributo" '
+        f'data-hef-atributo="title" data-alvo="{aid}" title="{_x(DICA_DO_MOVIMENTO[nivel])}">'
+        f'{_ic("sinal")}</span><span class="hz" data-campo="hz-movimento" data-alvo="{aid}">'
         f'{_x(_hz(ap.get("hz_mov"))) if com_hz else ""}</span>{passageiros}</span>'
         f'<button class="parte voz selo-mic" style="flex:{voz_flex}" '
         f'aria-pressed="{str(mic).lower()}" aria-label="Microfone de {nome}" '
@@ -5262,10 +5289,14 @@ def _conta_do_lugar(lug: dict[str, Any], cena: dict[str, Any]) -> str:
               f'role="img" title="{dica}" aria-label="{dica}">{_ic("som")}{n}/{maximo}</span>']
     canais = _canais_de(cena, str(lug["id"]))
     if canais is not None:
+        # O «N/79» TEM A COR DO PISO DO SALTO (O-HZ-TEM-A-COR-DA-DISTANCIA-01,
+        # parte B): o nível é do `ar_do_adaptador`, e o laranja de todo canal
+        # evitado saiu — ele acendia igual no 74 e no 20.
+        nivel = nivel_dos_canais(canais)
         dica = (f"Usa os {CANAIS_DO_BT} canais" if canais == CANAIS_DO_BT else
                 f"Evita {CANAIS_DO_BT - canais} dos {CANAIS_DO_BT} canais (vizinhos)")
-        apertado = " apertado" if canais < CANAIS_DO_BT else ""
-        partes.append(f'<span class="canais-do-lugar{apertado}" '
+        dica += PISO_DOS_CANAIS if nivel == NIVEL_ENGASGA else ""
+        partes.append(f'<span class="canais-do-lugar" data-nivel="{nivel}" '
                       f'role="img" title="{dica}" aria-label="{dica}">'
                       f'{_ic("radio")}{canais}/{CANAIS_DO_BT}</span>')
     livres = maximo - n
@@ -5932,8 +5963,9 @@ _SALA_NA_TELA: dict[str, str] = {}
 
 
 def _sem_o_que_pisca(cena: dict[str, Any]) -> dict[str, Any]:
-    """A cena sem a varredura, a busca e o «ocupado» — o que as listas acendem."""
-    return {**cena, "ocupado": False,
+    """A cena sem a varredura, a busca, o «ocupado» e o nível do movimento — o
+    que as listas acendem."""
+    return {**cena, "ocupado": False, "niveis": {},
             "lugares": [{**lug, "varrendo": False, "conectando": False}
                         for lug in cena.get("lugares") or ()]}
 
@@ -5956,13 +5988,54 @@ def _sala_estavel(cena: dict[str, Any]) -> str:
     return _SALA_NA_TELA["html"]
 
 
-def campos_da_secao(cena: dict[str, Any]) -> dict[str, Any]:
+#: O NÍVEL QUE A TELA MOSTRA, por controle (``uniq``): ``(nível, a última hora
+#: em que uma janela veio nele ou abaixo)``. É o «segura» de
+#: :func:`_nivel_seguro`; um controle que sai da cena sai daqui.
+_NIVEL_NA_TELA: dict[str, tuple[str, float]] = {}
+#: O relógio do «segura». Injetável: a régua o troca.
+_RELOGIO_DO_NIVEL: Callable[[], float] = time.monotonic
+_ORDEM_DO_NIVEL = {"": -1, NIVEL_ENGASGA: 0, NIVEL_MEDIO: 1, NIVEL_LISO: 2}
+
+
+def _nivel_seguro(uniq: str, nivel: str, agora: float) -> str:
+    """A COR PIORA NA HORA E MELHORA DEVAGAR (O-HZ-TEM-A-COR-DA-DISTANCIA-01).
+
+    O rádio vem em rajadas, e pela janela de 1 s a cor piscaria. A janela que
+    cai abaixo do nível mostrado muda a cor na hora; a volta a um nível melhor
+    só vem com :data:`SEGURA_O_NIVEL_S` segundos sem nenhuma janela no nível
+    mostrado ou abaixo dele. O sem número (``""``) não se segura. Por
+    ``uniq``: um controle engasgando não segura a cor do vizinho.
+    """
+    antes = _NIVEL_NA_TELA.get(uniq)
+    if (antes is None or not nivel or not antes[0]
+            or _ORDEM_DO_NIVEL[nivel] <= _ORDEM_DO_NIVEL[antes[0]]
+            or agora - antes[1] >= SEGURA_O_NIVEL_S):
+        _NIVEL_NA_TELA[uniq] = (nivel, agora)
+        return nivel
+    return antes[0]
+
+
+def campos_da_secao(cena: dict[str, Any], *, segurar: bool = False) -> dict[str, Any]:
     """O que o pacote emite para a seção, NA ORDEM: a sala antes dos Hz e das
-    marcas, porque eles pousam nos elementos que a sala acabou de escrever."""
+    marcas, porque eles pousam nos elementos que a sala acabou de escrever.
+
+    ``segurar``: o tique da tela (:func:`campos_do_radio`) segura o nível do
+    movimento (:func:`_nivel_seguro`); o desenho, que não tem tique, passa sem
+    memória."""
     controles = [a for lug in cena.get("lugares", ()) for a in _moradores(cena, str(lug["id"]))
                  if a.get("tipo") == "controle" and not a.get("esperando") and _no_ar(a)]
     com_mic = [a for a in controles if a.get("mic")]
     lugares = list(cena.get("lugares") or ())
+    agora = _RELOGIO_DO_NIVEL()
+    niveis = [_nivel_seguro(str(a["id"]), nivel_do_movimento(a.get("hz_mov")), agora)
+              if segurar else nivel_do_movimento(a.get("hz_mov")) for a in controles]
+    if segurar:
+        for saiu in set(_NIVEL_NA_TELA) - {str(a["id"]) for a in controles}:
+            del _NIVEL_NA_TELA[saiu]
+    # A SALA QUE NASCE AGORA já vem com o nível deste tique: o piloto só manda
+    # de novo a lista que mudou, e uma sala refeita com o nível parado ficaria
+    # sem cor até ele mudar.
+    cena = {**cena, "niveis": {str(a["id"]): n for a, n in zip(controles, niveis, strict=True)}}
     return {
         "conta-de-adaptadores": html_da_conta_do_radio(cena),
         "radio-sala": _sala_estavel(cena),
@@ -5974,7 +6047,8 @@ def campos_da_secao(cena: dict[str, Any]) -> dict[str, Any]:
         "radio-procurando": str(cena.get("procurando") or TRAVESSAO_DO_PROCURAR),
         "radio-moldes": html_dos_moldes(cena),
         "hz-movimento": [_hz(a.get("hz_mov")) for a in controles],
-        "hz-pouco": ["sim" if _e_pouco(a.get("hz_mov")) else "" for a in controles],
+        "hz-nivel": niveis,
+        "hz-dica": [DICA_DO_MOVIMENTO[n] for n in niveis],
         "hz-voz": [_hz(a.get("hz_voz")) for a in com_mic],
         "espectro-canais": html_dos_canais(cena),
         "espectro-fora-da-faixa": html_fora_da_faixa(cena),
@@ -7111,7 +7185,7 @@ def campos_do_radio(ctx: Contexto) -> dict[str, Any]:
     global _CENA_NA_TELA
     cena = cena_do_radio(ctx)
     _CENA_NA_TELA = cena
-    campos = campos_da_secao(cena)
+    campos = campos_da_secao(cena, segurar=True)
     with contextlib.suppress(Exception):
         campos.update(_campos_da_cerimonia())
     return campos

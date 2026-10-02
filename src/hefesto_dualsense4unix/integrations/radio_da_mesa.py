@@ -107,7 +107,13 @@ from typing import Any
 
 from hefesto_dualsense4unix.app.fala_do_mapa import Numero
 from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
+from hefesto_dualsense4unix.core.physical_report_reader import MOTION_EMIT_MAX_HZ
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+from hefesto_dualsense4unix.integrations.ar_do_adaptador import (
+    NIVEL_ENGASGA,
+    NIVEL_LISO,
+    NIVEL_MEDIO,
+)
 
 #: Fatias de tempo por segundo do Bluetooth Classic — 625 µs cada. É
 #: ESPECIFICAÇÃO, não medição desta máquina; ver o cabeçalho.
@@ -550,6 +556,47 @@ FATIAS_POR_RELATORIO_DE_ENTRADA = 2
 MODOS_DA_PONTE = frozenset({"som", "haptica"})
 
 
+# -- O NÍVEL DO MOVIMENTO (O-HZ-TEM-A-COR-DA-DISTANCIA-01, 30/09/2026) --------
+# O pedido dela, com a aba Conexões aberta e os quatro no rádio:
+# *«naquela sessão do hertz eles precisam ter os
+# numeros com fontes mudando de cores do vermelho <!-- noqa-acento: citação literal dela -->
+# branco e verde pra indicar o quão bom a sua
+# distancia tá daquele conector.»* <!-- noqa-acento: citação literal dela -->
+# O Hz é o que CHEGA ao jogo (ele cai com o vizinho, com a
+# voz, com o Wi-Fi e com a distância); a cor diz quanto chega, e não por quê
+# (:data:`PALAVRAS_DE_CULPA`). O vermelho daqui é pedido dela pelo nome, e vale
+# só para o Hz e para os canais: o medidor de OCUPAÇÃO continua sem vermelho.
+# D-3009-O-HZ-SE-PINTA-PELO-QUE-O-JOGO-RECEBE, quem coordena, 30/09/2026, a
+# validar por ela.
+
+#: Abaixo disto o giroscópio passa de 8 ms entre leituras: o engasgo que ela
+#: sente na mão. Corte de desenho, não medido; a bancada dela decide o de
+#: verdade, e trocar é esta linha.
+HZ_QUE_ENGASGA = 1000.0 / 8
+#: O teto do movimento que o pad virtual entrega ao jogo — e o que o USB dá em
+#: qualquer modo. Daqui para cima o jogo não perde nada que o USB daria.
+HZ_DO_JOGO = MOTION_EMIT_MAX_HZ
+#: A cor piora na hora e melhora devagar: a volta ao nível melhor espera isto,
+#: em segundos, sem nenhuma janela no nível de antes. O rádio vem em rajadas,
+#: e pela janela de 1 s a cor piscaria. O número em si é o de agora (R10).
+SEGURA_O_NIVEL_S = 3.0
+
+
+def nivel_do_movimento(hz: object) -> str:
+    """O nível do Hz de movimento de um controle: ``liso`` a partir de
+    :data:`HZ_DO_JOGO`, ``engasga`` abaixo de :data:`HZ_QUE_ENGASGA` (o ``0.0``
+    também) e o :data:`NIVEL_MEDIO` entre os dois. ``""`` = sem número (``None``, um
+    ``bool``, o que não é número). Vale para qualquer transporte e modo: o Hz
+    é do nó físico, antes do pad virtual."""
+    if isinstance(hz, bool) or not isinstance(hz, int | float) or hz != hz:
+        return ""
+    if hz >= HZ_DO_JOGO:
+        return NIVEL_LISO
+    if hz >= HZ_QUE_ENGASGA:
+        return NIVEL_MEDIO
+    return NIVEL_ENGASGA
+
+
 def palavra_das_pontes(pontes: int, n_max: int = N_MAX_PONTES) -> str:
     """As três palavras de sempre, agora lendo PONTES contra ``n_max``.
 
@@ -735,14 +782,20 @@ __all__ = [
     "FATIAS_POR_RELATORIO_DE_ENTRADA",
     "HZ_AUDIO_COM_MIC",
     "HZ_DA_PONTE",
+    "HZ_DO_JOGO",
     "HZ_INPUT_COM_MIC",
     "HZ_INPUT_SEM_MIC",
+    "HZ_QUE_ENGASGA",
     "MODOS_DA_PONTE",
+    "NIVEL_ENGASGA",
+    "NIVEL_LISO",
+    "NIVEL_MEDIO",
     "N_MAX_PONTES",
     "PALAVRAS_DE_CULPA",
     "PALAVRA_APERTADA",
     "PALAVRA_CHEIA",
     "PALAVRA_FOLGADA",
+    "SEGURA_O_NIVEL_S",
     "SEM_ADAPTADOR",
     "SLOTS_POR_RELATORIO",
     "SLOTS_POR_SEGUNDO",
@@ -750,6 +803,7 @@ __all__ = [
     "Ocupacao",
     "OrcamentoDoAdaptador",
     "adaptador_por_uniq",
+    "nivel_do_movimento",
     "ocupacao_por_adaptador",
     "orcamento_por_adaptador",
     "palavra_da_ocupacao",

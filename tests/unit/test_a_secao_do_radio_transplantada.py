@@ -17,7 +17,9 @@ e cada caso diz a mordida que o derruba.
 3. **Todo gesto tem dono** — inclusive os que moram dentro de `<template>`
    (as janelas que a página abre), ou declarado em `SEM_GESTO` com a razão.
 4. **A paridade com o desenho**: `PONTES_POR_ADAPTADOR` e `MARGINAL_DA_PONTE`
-   do desenho são os do dono (`radio_da_mesa`).
+   do desenho são os do dono (`radio_da_mesa`), e os cortes da cor
+   (`HZ_QUE_ENGASGA`, `HZ_DO_JOGO`, `CANAIS_MINIMOS_DO_AFH`, `CANAIS_CALMOS`)
+   também — O-HZ-TEM-A-COR-DA-DISTANCIA-01.
 5. **«fatia» não chega à tela** — nem no texto, nem em `title`, nem em classe.
 6. **A sala é estável entre tiques** (os Hz moram em listas próprias) **e as
    listas caem nos elementos certos** (a ordem do DOM é a ordem da lista).
@@ -163,6 +165,9 @@ def mesa(a08: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setattr(a08, "_FUNDO", {})
     monkeypatch.setattr(a08, "_ABERTO", {})
     monkeypatch.setattr(a08, "_CENA_NA_TELA", {})
+    # O «segura» da cor do Hz lembra por `uniq`, e os desta mesa são os mesmos
+    # em todo teste: cada um começa sem lembrança.
+    monkeypatch.setattr(a08, "_NIVEL_NA_TELA", {})
     vizinho = RadioUsb(no="/bancada/usb/3-5", vid="046d", pid="08e5", busnum=3,
                        devpath="5", controlador_pci=PCI)
     monkeypatch.setattr(a08, "_mesa_do_radio",
@@ -298,7 +303,9 @@ def test_todo_gesto_da_secao_tem_dono(mesa: Any) -> None:
 # 4. A paridade com o desenho aprovado
 # ---------------------------------------------------------------------------
 def test_as_constantes_do_desenho_sao_as_do_dono(a08: Any) -> None:
-    """MORDIDA: mude `radio_da_mesa.N_MAX_PONTES` para 3."""
+    """MORDIDAS: mude `radio_da_mesa.N_MAX_PONTES` para 3; ponha 120 no
+    `HZ_QUE_ENGASGA` do JS do desenho (O-HZ-TEM-A-COR-DA-DISTANCIA-01)."""
+    from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
     from hefesto_dualsense4unix.integrations import radio_da_mesa as dono
 
     assert a08.PONTES_POR_ADAPTADOR == dono.N_MAX_PONTES
@@ -309,6 +316,16 @@ def test_as_constantes_do_desenho_sao_as_do_dono(a08: Any) -> None:
     assert pontes and marginal, "o desenho aprovado perdeu as duas constantes"
     assert float(pontes.group(1)) == a08.PONTES_POR_ADAPTADOR
     assert float(marginal.group(1)) == a08.MARGINAL_DA_PONTE
+    # OS CORTES DA COR, contra os donos (o JS do desenho repete os números).
+    for nome, valor in (("HZ_QUE_ENGASGA", dono.HZ_QUE_ENGASGA),
+                        ("HZ_DO_JOGO", dono.HZ_DO_JOGO),
+                        ("CANAIS_MINIMOS_DO_AFH", ar.CANAIS_MINIMOS_DO_AFH),
+                        ("CANAIS_CALMOS", ar.CANAIS_CALMOS),
+                        ("CANAIS_DO_BT", ar.CANAIS_DO_BT)):
+        achado = re.search(rf"const {nome} = ([\d.]+);", desenho)
+        assert achado, f"o desenho perdeu o `{nome}`"
+        assert float(achado.group(1)) == valor, (
+            f"o `{nome}` do desenho é {achado.group(1)}, e o do dono é {valor}")
 
 
 # ---------------------------------------------------------------------------
@@ -361,10 +378,16 @@ def test_as_listas_de_hz_caem_nos_elementos_certos(mesa: Any) -> None:
     for alvo, valor in zip(ordem, campos["hz-movimento"], strict=True):
         assert valor.startswith(esperado[alvo]), (
             f"o Hz de {alvo} caiu no elemento de outro: {valor!r}")
-    pouco = [a["data-alvo"] for _t, a in _ler(campos["radio-sala"]).elementos
-             if a.get("data-campo") == "hz-pouco"]
-    assert pouco == ordem
-    assert campos["hz-pouco"] == ["", "sim", ""], campos["hz-pouco"]
+    # MUDOU NA O-HZ-TEM-A-COR-DA-DISTANCIA-01: o `hz-pouco` (o laranja abaixo
+    # de 125) virou os três níveis (`hz-nivel`) e a dica do glifo (`hz-dica`),
+    # nos mesmos elementos e na mesma ordem.
+    for campo in ("hz-nivel", "hz-dica"):
+        alvos = [a["data-alvo"] for _t, a in _ler(campos["radio-sala"]).elementos
+                 if a.get("data-campo") == campo]
+        assert alvos == ordem, (campo, alvos)
+        assert len(campos[campo]) == 3, campos[campo]
+    assert campos["hz-nivel"] == ["liso", "engasga", "medio"], (  # (noqa-acento): de máquina
+        campos["hz-nivel"])
     voz = [a["data-alvo"] for _t, a in _ler(campos["radio-sala"]).elementos
            if a.get("data-campo") == "hz-voz"]
     assert voz == [U1] and len(campos["hz-voz"]) == 1
@@ -529,12 +552,25 @@ def test_o_pedido_do_governador_vira_a_janela_de_duas_saidas(mesa: Any) -> None:
 # ---------------------------------------------------------------------------
 # 8. «Além do limite» é laranja, nunca vermelho
 # ---------------------------------------------------------------------------
+#: ONDE O VERMELHO PODE MORAR NA SEÇÃO: o nível «engasga» do Hz e dos «N/79»,
+#: por pedido dela (O-HZ-TEM-A-COR-DA-DISTANCIA-01, a parte A e a B). O resto —
+#: o «além do limite», a ocupação, as pontes — continua sem vermelho.
+_O_VERMELHO_PEDIDO = ('.parte.movimento[data-nivel="engasga"]',
+                      '.canais-do-lugar[data-nivel="engasga"]')
+
+
 def test_alem_do_limite_e_laranja_nunca_vermelho(mesa: Any) -> None:
-    """MORDIDA: troque `var(--orange)` por `var(--red)` numa regra `.alem`."""
+    """MORDIDA: troque `var(--orange)` por `var(--red)` numa regra `.alem`.
+
+    MUDOU NA O-HZ-TEM-A-COR-DA-DISTANCIA-01: o vermelho entrou, por pedido
+    dela pelo nome, SÓ no nível «engasga» do Hz e dos canais
+    (:data:`_O_VERMELHO_PEDIDO`); em toda outra regra da seção ele continua
+    proibido."""
     regras = re.findall(r"(\.radio [^{}]*)\{([^}]*)\}", _pagina())
     assert regras, "a folha da seção sumiu da página"
     for seletor, corpo in regras:
-        assert "var(--red)" not in corpo, f"vermelho na seção: {seletor}"
+        pedido = all(any(p in sel for p in _O_VERMELHO_PEDIDO) for sel in seletor.split(","))
+        assert pedido or "var(--red)" not in corpo, f"vermelho na seção: {seletor}"
         if ".alem" in seletor:
             assert "var(--orange)" in corpo, f"`.alem` sem o laranja: {seletor}"
     sala = _campos(mesa)["radio-sala"]

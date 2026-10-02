@@ -116,6 +116,22 @@ JANELA_MAXIMA_S = 5.0
 OPCODE_LER_MAPA_AFH = (0x05 << 10) | 0x0006
 #: Os 79 canais do BR/EDR, de 2.402 a 2.480 MHz.
 CANAIS_DO_BT = 79
+#: O PISO DO SALTO DE FREQUÊNCIA: a especificação do BR/EDR (Core Spec, Vol 2,
+#: Part B, o AFH) manda o salto usar pelo menos 20 dos 79 canais (N_min). Com
+#: 59 evitados, o adaptador não tem mais canal limpo para onde fugir — os três
+#: colapsos de 29/09 caíram ali, e o piso também veio sem colapso.
+CANAIS_MINIMOS_DO_AFH = 20
+#: Daqui para cima o salto está calmo (evita até 19): quatro dos sete retratos
+#: sem colapso de 29/09 evitaram de 5 a 16. Corte de desenho, de uma noite
+#: (D-3009-OS-CANAIS-SE-PINTAM-PELO-PISO-DO-SALTO, quem coordena, 30/09/2026, a
+#: validar por ela).
+CANAIS_CALMOS = 60
+#: OS TRÊS NÍVEIS DA TELA, os mesmos do Hz (`radio_da_mesa.nivel_do_movimento`)
+#: e dos «N/79» (:func:`nivel_dos_canais`): o nome é de máquina, e a dica diz o
+#: fato de cada um. Moram aqui porque este módulo não importa nada da casa.
+NIVEL_LISO = "liso"
+NIVEL_MEDIO = "medio"  # (noqa-acento): nome de máquina, o valor do `data-nivel`
+NIVEL_ENGASGA = "engasga"
 #: Quanto se espera o ``Command Complete``. O controlador responde em
 #: milissegundos; meio segundo cobre o adaptador ocupado sem prender ninguém.
 PRAZO_DO_AFH_S = 0.5
@@ -655,15 +671,38 @@ if __name__ == "__main__":  # pragma: no cover - bancada
     raise SystemExit(main())
 
 
+def nivel_dos_canais(usados: object) -> str:
+    """O nível do «N/79» de um adaptador, pelo piso do salto
+    (O-HZ-TEM-A-COR-DA-DISTANCIA-01, parte B).
+
+    ``liso`` com o salto calmo (:data:`CANAIS_CALMOS` ou mais), ``engasga`` no
+    piso da especificação (:data:`CANAIS_MINIMOS_DO_AFH` ou menos) e o
+    :data:`NIVEL_MEDIO` entre os dois. O vermelho afirma o PISO, e não o engasgo: ele também veio
+    sem colapso. ``""`` quando não há contagem (o «não sei»).
+    """
+    if isinstance(usados, bool) or not isinstance(usados, int):
+        return ""
+    if usados >= CANAIS_CALMOS:
+        return NIVEL_LISO
+    if usados > CANAIS_MINIMOS_DO_AFH:
+        return NIVEL_MEDIO
+    return NIVEL_ENGASGA
+
+
 __all__ = [
     "ADAPTADOR_DESLIGADO",
     "ADAPTADOR_SUMIU",
+    "CANAIS_CALMOS",
     "CANAIS_DO_BT",
+    "CANAIS_MINIMOS_DO_AFH",
     "CONEXOES_ILEGIVEIS",
     "CONTADOR_PARADO",
     "CONTADOR_RECOMECOU",
     "IOCTL_FALHOU",
     "JANELA_S",
+    "NIVEL_ENGASGA",
+    "NIVEL_LISO",
+    "NIVEL_MEDIO",
     "OPCODE_LER_MAPA_AFH",
     "PRIMEIRA_LEITURA",
     "SEM_BLUETOOTH",
@@ -681,5 +720,6 @@ __all__ = [
     "main",
     "mapa_afh_da_resposta",
     "mapas_afh_do_adaptador",
+    "nivel_dos_canais",
     "resposta_de_erro_do_afh",
 ]

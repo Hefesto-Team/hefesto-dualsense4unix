@@ -4943,7 +4943,8 @@ if __name__ == "__main__":
     for _campo in sorted(_EMITIDOS - _NA_PAGINA):
         _exigir(False, f"o pacote emite `{_campo}` e a página não tem onde pintá-lo")
     _DA_SECAO = set(re.findall(r'data-campo="([^"]+)"', _SECAO))
-    for _campo in sorted(_DA_SECAO - _EMITIDOS - {"hz-movimento", "hz-voz", "hz-pouco"}):
+    for _campo in sorted(_DA_SECAO - _EMITIDOS - {"hz-movimento", "hz-voz", "hz-nivel",
+                                                  "hz-dica"}):
         _exigir(False, f"a seção tem o endereço `{_campo}` e o pacote não o emite")
     _ANCORAS = re.findall(r'<a [^>]*href="#(mapear-[\w-]+)"[^>]*>', _HTML)
     for _a in re.findall(r'<a [^>]*href="#mapear-entrada(?:s|-a-entrada)"[^>]*>', _HTML):
