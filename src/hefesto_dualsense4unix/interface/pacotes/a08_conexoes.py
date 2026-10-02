@@ -7559,7 +7559,7 @@ def aparelho_menu(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     if _CENA_NA_TELA.get("ocupado"):
         raise RuntimeError("esperando um controle chegar")
     if not _o_adaptador_foi_descrito(ap):
-        raise RuntimeError("o adaptador ainda não foi descrito")
+        raise RuntimeError("esperando o Bluetooth do sistema descrever o adaptador")
     return _so_abre()
 
 
