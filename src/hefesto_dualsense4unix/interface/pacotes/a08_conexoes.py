@@ -7539,15 +7539,27 @@ def dispensar_linha(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return _tirar_a_linha(p, ap)
 
 
+def _o_adaptador_foi_descrito(ap: dict[str, Any]) -> bool:
+    """O menu do «⋮» só nasce no adaptador que o BlueZ já descreveu (``sabido``,
+    :func:`_moldes_de_esquecer`): a pergunta do «Esquecer» diz o nome dele."""
+    lug = next((lug for lug in _CENA_NA_TELA.get("lugares", ())
+                if str(lug.get("id")) == str(ap.get("lugar"))), None)
+    return lug is not None and bool(lug.get("sabido", True))
+
+
 @gesto("08-conexoes.html", "aparelho-menu")
 def aparelho_menu(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O «⋮» da linha: a página abre o menu (o «Esquecer»), e nada muda aqui.
-    Com um controle esperando PS + Create, treme — o mesmo um por vez do «Mover»."""
+    Com um controle esperando PS + Create, treme — o mesmo um por vez do «Mover».
+    Treme também enquanto o BlueZ não descreveu o adaptador da linha: ali o
+    menu não tem molde, e o clique não abriria nada."""
     ap = _linha_na_tela(o)
     if not _tem_menu(ap):
         raise ValueError("esta linha não tem o que esquecer")
     if _CENA_NA_TELA.get("ocupado"):
         raise RuntimeError("esperando um controle chegar")
+    if not _o_adaptador_foi_descrito(ap):
+        raise RuntimeError("o adaptador ainda não foi descrito")
     return _so_abre()
 
 

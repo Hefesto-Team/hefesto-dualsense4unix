@@ -478,6 +478,39 @@ def test_a_linha_nao_conectou_nao_tem_esquecer(
         casa.fechar()
 
 
+@pytest.mark.parametrize("descrito", [True, False], ids=["descrito", "sem_o_bluez"])
+def test_todo_menu_abre_ou_treme(
+    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, descrito: bool,
+) -> None:
+    """O «⋮» de cada linha abre o menu dele, ou treme: nunca um clique que não
+    faz nada. MEDIDO na prova de tela de 02/10, no lar de mentira sem o BlueZ:
+    o «⋮» estava na linha, o molde do menu não (o adaptador não descrito não
+    tem pergunta de «Esquecer»), e o clique não abria nada nem tremia.
+
+    MORDIDA: sem a guarda do adaptador descrito no ``aparelho-menu``, o gesto
+    arma sem molde nenhum, e a régua reprova no caso ``sem_o_bluez``."""
+    casa = Casa(a08, monkeypatch, _a_caixa_cheia())
+    try:
+        campos = casa.tique()
+        menus = re.findall(r'data-gesto="aparelho-menu" data-alvo="([^"]+)" '
+                           r'data-lugar="([^"]*)"', campos["radio-sala"])
+        assert menus, "a sala não tem «⋮» nenhum"
+        cena = dict(casa.a08._CENA_NA_TELA)
+        cena["lugares"] = [{**lug, "sabido": descrito} for lug in cena["lugares"]]
+        monkeypatch.setattr(casa.a08, "_CENA_NA_TELA", cena)
+        moldes = casa.a08.html_dos_moldes(cena)
+        for alvo, lugar in menus:
+            tem_molde = f'data-painel="menu" data-alvo="{alvo}|{lugar}"' in moldes
+            assert tem_molde is descrito, (alvo, lugar)
+            if tem_molde:
+                assert casa.gesto("aparelho-menu", alvo=alvo, lugar=lugar) == {"armou": True}
+            else:
+                with pytest.raises(RuntimeError):
+                    casa.gesto("aparelho-menu", alvo=alvo, lugar=lugar)
+    finally:
+        casa.fechar()
+
+
 # ---------------------------------------------------------------------------
 # 5. a casa se limpa sozinha, e nunca leva a única chave
 # ---------------------------------------------------------------------------
