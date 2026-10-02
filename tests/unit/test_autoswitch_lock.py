@@ -348,7 +348,14 @@ class TestPersistencia:
             config=config,
         )
         task = asyncio.create_task(daemon.run())
-        await asyncio.sleep(0.06)
+        # ESPERA A CONDIÇÃO, E NÃO UM RELÓGIO: o boot passou a semear o padrão
+        # do computador uma vez (`o_padrao_do_computador.migrar_uma_vez`, ~25 ms
+        # num lar novo, que a suíte cria a cada teste), e os 60 ms fixos de antes
+        # reprovavam de vez em quando num lote carregado.
+        for _ in range(200):
+            if daemon.store.active_profile == loader_module.NOME_DO_PADRAO:
+                break
+            await asyncio.sleep(0.01)
         try:
             assert daemon.store.freestyle_ligado is True
             assert daemon.store.active_profile == loader_module.NOME_DO_PADRAO
