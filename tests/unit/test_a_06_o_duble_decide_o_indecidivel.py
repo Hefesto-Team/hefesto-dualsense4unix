@@ -174,6 +174,24 @@ PERFIL = {"name": "Dublê da Navegação", "button_actions": _button_actions(),
           "key_bindings": {"l1": ["KEY_F11"]}, "remapeamento": _remapeamento()}
 
 
+def _gestos_da_maquina() -> dict[str, dict[str, str]]:
+    """Um script para CADA um dos seis gestos — 02/10/2026, conferência final dos gestos.
+
+    A tabela «Os gestos do controle» ganhou doze endereços (`faz-<gesto>` e
+    `script-<gesto>`, OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01), e o desenho
+    crava o de fábrica nas seis listas e «Escolher um script…» nas seis opções
+    do script. Um dublê sem tabela concordaria com o desenho nos doze: com a
+    06 publicada, todos INDECIDIVEIS (medido simulando o `--publicar 06`). Com
+    um script em cada gesto, a lista e a opção dizem o nome do arquivo, que o
+    desenho não tem. A tabela é lida do `maquina.json` (`a06_navegacao._a_maquina`),
+    e não do perfil: é da máquina (`D-2909-OS-GESTOS-SAO-DA-MAQUINA`).
+    """
+    from hefesto_dualsense4unix.core.acoes_do_gesto import GESTOS, SCRIPT
+
+    return {g: {"faz": SCRIPT, "script": f"/opt/duble/gesto-{n}.sh"}
+            for n, g in enumerate(GESTOS, 1)}
+
+
 def _no_mundo_de(monkeypatch, publicado: bool):
     """`(cravados, declarados)` NA PÁGINA QUE ESTIVER CARREGADA.
 
@@ -196,6 +214,8 @@ def _no_mundo_de(monkeypatch, publicado: bool):
     from hefesto_dualsense4unix.interface import mesa_viva, onde, regua_do_mockup
 
     monkeypatch.setattr(perfil, "ativo", lambda nome: dict(PERFIL) if nome else {})
+    monkeypatch.setattr(a06_navegacao, "_a_maquina",
+                        lambda: {"gestos": _gestos_da_maquina()})
     monkeypatch.setattr(
         a06_navegacao, "_o_que_a_pagina_oferece",
         lambda: frozenset(_opcoes_da_pagina(publicado, "teclado-estado") or ()))
@@ -426,6 +446,14 @@ def test_todo_valor_do_duble_existe_como_opcao(monkeypatch, publicado):
         assert oferece is not None, (
             f"{campo.endereco}: a página {onde_estou} não tem `<select>`, "
             "`<input type=range>` nem `<input type=text>` com esse endereço")
+        if campo.chave.startswith("faz-"):
+            # A OPÇÃO DO SCRIPT É PINTADA ANTES DA LISTA, na mesma pintura
+            # (`a06_navegacao._o_que_os_gestos_fazem`): o nome do arquivo
+            # escolhido passa a ser uma `<option>` daquela lista quando o valor
+            # chega. A página estática não o tem; a pintura, sim.
+            script = declarados.get(("", "script-" + campo.chave[len("faz-"):]))
+            if script is not None:
+                oferece = set(oferece) | {str(script)}
         assert valor in oferece, (
             f"{campo.endereco}: na página {onde_estou} o dublê manda {valor!r} "
             f"e a lista oferece {sorted(oferece)} — o `escrever()` devolveria 0 "
