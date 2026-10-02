@@ -2645,6 +2645,28 @@ _PERFIS_PELA_ASSINATURA: LeituraPelaAssinatura[Profile] = LeituraPelaAssinatura(
 )
 _ode.ao_desarmar(_PERFIS_PELA_ASSINATURA.esquecer)
 
+#: O-APP-RESPONDE-NA-HORA-01, cura 1 (02/10/2026): a leitura pela assinatura
+#: vale também no processo que a LIGA sozinho, sem o dono do evento armado. É
+#: a janela: ela relia os 29 perfis dela, com um `FileLock` cada, dez vezes por
+#: segundo. O dono do evento não se arma lá, porque armado ele alongaria para
+#: 60 s o «não há jogo» que a aba do jogo lê (quem o invalida é o autoswitch,
+#: que mora no daemon). Um perfil gravado pela janela, pelo daemon ou à mão muda
+#: a assinatura e é relido, com a regra do arquivo recém-gravado.
+_LEITURA_LIGADA_PELO_PROCESSO = False
+
+
+def ligar_a_leitura_pela_assinatura() -> None:
+    """Liga a leitura dos perfis pela assinatura neste processo (a janela, ao subir)."""
+    global _LEITURA_LIGADA_PELO_PROCESSO
+    _LEITURA_LIGADA_PELO_PROCESSO = True
+
+
+def desligar_a_leitura_pela_assinatura() -> None:
+    """Desliga a leitura pela assinatura e esquece o guardado (a janela, ao sair)."""
+    global _LEITURA_LIGADA_PELO_PROCESSO
+    _LEITURA_LIGADA_PELO_PROCESSO = False
+    _PERFIS_PELA_ASSINATURA.esquecer()
+
 
 def load_all_profiles() -> list[Profile]:
     """Lê todos os perfis JSON do diretório, pulando os inválidos com warning.
@@ -2658,13 +2680,15 @@ def load_all_profiles() -> list[Profile]:
     `stat` mudou é relido e revalidado, com o `FileLock` só nele
     (`utils/leitura_pela_assinatura.py`). Cada perfil devolvido é uma cópia:
     quem muda o objeto não muda a carga seguinte. O inválido não se guarda, e o
-    aviso sai a cada carga, como antes. Sem o dono, a leitura de sempre.
+    aviso sai a cada carga, como antes. Sem o dono, a leitura de sempre — a
+    não ser que o processo a tenha ligado (`ligar_a_leitura_pela_assinatura`,
+    a janela; O-APP-RESPONDE-NA-HORA-01).
     """
     _maybe_seed_presets()
     _talvez_semear_jogos()
     directory = profiles_dir(ensure=True)
     profiles: list[Profile] = []
-    pela_assinatura = _ode.armado()
+    pela_assinatura = _ode.armado() or _LEITURA_LIGADA_PELO_PROCESSO
     vistos: list[str] = []
     for path in sorted(directory.glob("*.json")):
         try:

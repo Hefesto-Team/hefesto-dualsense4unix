@@ -108,7 +108,7 @@ from __future__ import annotations
 import sys
 import time
 from collections.abc import Callable
-from typing import Any
+from typing import Any, NamedTuple
 
 # O IMPORT É DE MÓDULO, e não de dentro da função — 01/09/2026. O
 # `portao_a_casa_sabe_e_o_produto_nao_faz` segue o fecho de IMPORT a partir do
@@ -1328,7 +1328,7 @@ def _html_da_lista(lista: list[dict[str, Any]], vazia: str,
         for x in lista)
 
 
-def _html_dos_jogos(procedencia: str = "") -> str:
+def _html_dos_jogos(procedencia: str = "", foto: _FotoDoCatalogo | None = None) -> str:
     """As `<option>` do `<datalist>` — os jogos DESTA máquina, do disco dela.
 
     **E DAQUELE LANÇADOR, desde 11/09/2026** (C4-FUNCIONA-EM, §3): com
@@ -1377,8 +1377,10 @@ def _html_dos_jogos(procedencia: str = "") -> str:
     NUNCA LEVANTA, pela mesma razão de `_jogo_reconhecido`: isto é PINTURA, a
     duas vezes por segundo, sobre a biblioteca dela. Uma exceção lendo um
     `.desktop` estragado derrubaria a aba inteira por causa de uma sugestão.
+
+    `foto` é a do tique (`_foto_do_catalogo`); sem ela, a pergunta de sempre.
     """
-    jogos = _ofertas_de_jogos()
+    jogos = _ofertas_de(foto)
     if procedencia and procedencia not in _PROCEDENCIAS_SEM_JOGO:
         # **A LISTA SEGUE O CAMPO DE CIMA** — §3 da C4-FUNCIONA-EM. Escolhido
         # «Heroic», o campo de baixo oferece os jogos DO HEROIC, e é isso que
@@ -1403,7 +1405,7 @@ _PROCEDENCIAS_SEM_JOGO = frozenset(
     {PROCEDENCIA_DA_NAVEGACAO, PROCEDENCIA_DE_QUALQUER_JOGO})
 
 
-def _ofertas_de_jogos() -> list[Any]:
+def _ofertas_de_jogos(nomes: dict[str, str] | None = None) -> list[Any]:
     """Os jogos DESTA máquina, das duas origens — a leitura que dois campos usam.
 
     Ela era o miolo de `_html_dos_jogos` e saiu para fora em 11/09/2026 porque
@@ -1419,6 +1421,9 @@ def _ofertas_de_jogos() -> list[Any]:
     NUNCA LEVANTA, pela mesma razão de `_jogo_reconhecido`: isto é PINTURA, a
     duas vezes por segundo, sobre a biblioteca dela. Uma exceção lendo um
     `.desktop` estragado derrubaria a aba inteira por causa de uma sugestão.
+
+    `nomes` é o que a foto do tique já perguntou (`_foto_do_catalogo`): sem ele
+    a assinatura da Steam seria conferida duas vezes na mesma foto.
     """
     try:
         from hefesto_dualsense4unix.integrations.jogos_locais import (
@@ -1427,7 +1432,8 @@ def _ofertas_de_jogos() -> list[Any]:
             ofertas_do_campo_do_jogo,
         )
 
-        nomes = _nomes_dos_jogos()
+        if nomes is None:
+            nomes = _nomes_dos_jogos()
         # A LISTA DE FORA DA STEAM É MEMOIZADA NO DONO, e não aqui: é o mesmo
         # caderno que `nomes_das_janelas` usa para o rótulo, então as duas
         # chamadas do mesmo tique custam UMA leitura de disco.
@@ -1438,6 +1444,45 @@ def _ofertas_de_jogos() -> list[Any]:
             de_janela))
     except Exception:
         return []
+
+
+class _FotoDoCatalogo(NamedTuple):
+    """O catálogo de jogos desta máquina, perguntado UMA vez por tique.
+
+    O-APP-RESPONDE-NA-HORA-01, cura 1 (02/10/2026). A coluna «Funciona em»
+    traduz cada linha (`_quando_usar`), e cada tradução perguntava ao catálogo
+    por conta própria: com os 29 perfis dela, 59 consultas às ofertas e 88 à
+    assinatura da Steam por tique, cada uma abrindo o `libraryfolders.vdf`
+    (medido no lar de mentira: 38 a 42 ms por tique, 40% de um núcleo com a
+    janela parada nesta aba). O `pacote` tira esta foto no começo e a passa a
+    quem traduz.
+
+    Nada se guarda entre tiques: a foto do tique seguinte confere a assinatura
+    de novo, e um jogo instalado agora aparece no tique seguinte, como antes.
+    Fora do `pacote` (os gestos), quem pergunta segue perguntando na hora.
+    """
+
+    nomes: dict[str, str]
+    ofertas: list[Any]
+
+
+def _foto_do_catalogo() -> _FotoDoCatalogo:
+    """As duas perguntas ao catálogo, uma vez cada — e nunca levanta."""
+    try:
+        nomes = _nomes_dos_jogos()
+    except Exception:
+        nomes = {}
+    return _FotoDoCatalogo(nomes=nomes, ofertas=_ofertas_de_jogos(nomes))
+
+
+def _ofertas_de(foto: _FotoDoCatalogo | None) -> list[Any]:
+    """As ofertas da foto do tique, ou a pergunta de sempre sem ela."""
+    return foto.ofertas if foto is not None else _ofertas_de_jogos()
+
+
+def _nomes_de(foto: _FotoDoCatalogo | None) -> dict[str, str]:
+    """Os nomes da Steam da foto do tique, ou a pergunta de sempre sem ela."""
+    return foto.nomes if foto is not None else _nomes_dos_jogos()
 
 
 def _procedencia_do_jogo(jogo: Any) -> str:
@@ -1495,7 +1540,7 @@ ORDEM_DOS_LANCADORES = (PROCEDENCIA_DA_STEAM, "Heroic", "Lutris", "RetroArch",
                         "Dolphin", "mGBA")
 
 
-def _procedencias_da_maquina() -> list[str]:
+def _procedencias_da_maquina(foto: _FotoDoCatalogo | None = None) -> list[str]:
     """Os lançadores que ESTA máquina tem — a lista que o campo oferece.
 
     **NÃO É DIGITADA**, e é a metade da §2 da sprint que mais importa: a lista
@@ -1512,12 +1557,12 @@ def _procedencias_da_maquina() -> list[str]:
     campo promete é *"escolha de onde o jogo vem e eu te mostro os jogos"* —
     então quem entra é quem tem jogo com endereço.
     """
-    achadas = {_procedencia_do_jogo(j) for j in _ofertas_de_jogos()}
+    achadas = {_procedencia_do_jogo(j) for j in _ofertas_de(foto)}
     conhecidas = [n for n in ORDEM_DOS_LANCADORES if n in achadas]
     return conhecidas + sorted(achadas - set(ORDEM_DOS_LANCADORES))
 
 
-def _lancador_da_chave(chave: str) -> str:
+def _lancador_da_chave(chave: str, foto: _FotoDoCatalogo | None = None) -> str:
     """De qual lançador vem o jogo com ESTA `wm_class` (ou nome de programa).
 
     É a ponte que `simple_match.procedencia_do_match` pede, e ela mora aqui
@@ -1552,7 +1597,7 @@ def _lancador_da_chave(chave: str) -> str:
     try:
         from hefesto_dualsense4unix.integrations.jogos_locais import jogo_da_janela
 
-        achado = jogo_da_janela(chave, _ofertas_de_jogos())
+        achado = jogo_da_janela(chave, _ofertas_de(foto))
     except Exception:
         return residual
     return _procedencia_do_jogo(achado) if achado is not None else residual
@@ -1595,8 +1640,8 @@ def _jogo_da_procedencia(procedencia: str, texto: str) -> Any:
     return None
 
 
-def _com_a_procedencia(lista: list[dict[str, Any]],
-                       todos: list[Any]) -> list[dict[str, Any]]:
+def _com_a_procedencia(lista: list[dict[str, Any]], todos: list[Any],
+                       foto: _FotoDoCatalogo | None = None) -> list[dict[str, Any]]:
     """A coluna «Funciona em» de cada linha, traduzida — ver `_quando_usar`.
 
     **ANTES DO FILTRO E DA ORDEM, e a ordem das três é o contrato.** A lupa
@@ -1624,12 +1669,12 @@ def _com_a_procedencia(lista: list[dict[str, Any]],
             continue
         nova = dict(linha)
         nova["quando"] = _quando_usar(getattr(prof, "match", None),
-                                      str(linha.get("quando") or ""))
+                                      str(linha.get("quando") or ""), foto)
         fora.append(nova)
     return fora
 
 
-def _nome_no_catalogo(chave: str) -> str:
+def _nome_no_catalogo(chave: str, foto: _FotoDoCatalogo | None = None) -> str:
     """O NOME do jogo com esta chave de janela, ou `""` — nunca levanta.
 
     Extraído de `_nome_e_codigo` em 21/09/2026 porque passou a ter DOIS
@@ -1639,13 +1684,13 @@ def _nome_no_catalogo(chave: str) -> str:
     try:
         from hefesto_dualsense4unix.integrations.jogos_locais import jogo_da_janela
 
-        achado = jogo_da_janela(chave, _ofertas_de_jogos())
+        achado = jogo_da_janela(chave, _ofertas_de(foto))
     except Exception:
         return ""
     return str(getattr(achado, "nome", "") or "") if achado is not None else ""
 
 
-def _nome_e_codigo(chave: str) -> tuple[str, str]:
+def _nome_e_codigo(chave: str, foto: _FotoDoCatalogo | None = None) -> tuple[str, str]:
     """``(nome do jogo, código)`` para o que o perfil guarda — item 12 dela.
 
     A queixa é da foto 9, palavras dela: *"aqui por exemplo deveria
@@ -1681,16 +1726,16 @@ def _nome_e_codigo(chave: str) -> tuple[str, str]:
         return ("", "")
     appid = normalize_appid(chave)
     if appid is not None:
-        da_steam = _nomes_dos_jogos().get(appid, "")
+        da_steam = _nomes_de(foto).get(appid, "")
         if da_steam:
             return (da_steam, appid)
-        do_lancador = _nome_no_catalogo(f"steam_app_{appid}")
+        do_lancador = _nome_no_catalogo(f"steam_app_{appid}", foto)
         return (do_lancador, "") if do_lancador else ("", appid)
-    do_catalogo = _nome_no_catalogo(chave)
+    do_catalogo = _nome_no_catalogo(chave, foto)
     return (do_catalogo, "") if do_catalogo else ("", chave)
 
 
-def _quando_usar(match: Any, base: str) -> str:
+def _quando_usar(match: Any, base: str, foto: _FotoDoCatalogo | None = None) -> str:
     """A coluna «Funciona em» na MESMA língua do campo do editor.
 
     **A TELA DIZIA DUAS COISAS SOBRE O MESMO PERFIL — 11/09/2026.** O campo
@@ -1715,17 +1760,18 @@ def _quando_usar(match: Any, base: str) -> str:
       programa», «Só no manual»), e inventar uma procedência aqui seria o
       mesmo R-12 pelo avesso que o cadeado do campo existe para impedir.
     """
-    procedencia, _recado = _procedencia_e_recado(match)
+    procedencia, _recado = _procedencia_e_recado(match, foto=foto)
     if not procedencia or procedencia == PROCEDENCIA_DE_QUALQUER_JOGO:
         return base
     from hefesto_dualsense4unix.profiles.simple_match import simple_extra
 
-    nome, codigo = _nome_e_codigo(simple_extra(match) if match is not None else "")
+    nome, codigo = _nome_e_codigo(simple_extra(match) if match is not None else "", foto)
     return SEPARADOR_DA_PROCEDENCIA.join(
         p for p in (procedencia, nome, codigo) if p)
 
 
-def _procedencia_e_recado(match: Any, recado_do_produto: Any = "") -> tuple[str, str]:
+def _procedencia_e_recado(match: Any, recado_do_produto: Any = "",
+                          foto: _FotoDoCatalogo | None = None) -> tuple[str, str]:
     """``(procedência, recado)`` do campo «Funciona em:» — e nunca os dois cheios.
 
     Procedência vazia quer dizer o que o `ambiente_travado` do produto sempre
@@ -1742,7 +1788,9 @@ def _procedencia_e_recado(match: Any, recado_do_produto: Any = "") -> tuple[str,
     """
     from hefesto_dualsense4unix.profiles.simple_match import procedencia_do_match
 
-    procedencia = procedencia_do_match(match, _lancador_da_chave)
+    procedencia = procedencia_do_match(
+        match, _lancador_da_chave if foto is None
+        else (lambda chave: _lancador_da_chave(chave, foto)))
     if procedencia:
         return (procedencia, "")
     return ("", str(recado_do_produto or ""))
@@ -2004,6 +2052,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # uma linha com «Ativar» aqui o ofereceria como perfil a escolher. O
         # dono da oferta é `profiles.manager.os_perfis_de_escolher`.
         todos = os_perfis_de_escolher(load_all_profiles())
+        # O CATÁLOGO DE JOGOS TAMBÉM, numa foto só — O-APP-RESPONDE-NA-HORA-01,
+        # cura 1. Quem traduz a coluna «Funciona em», o rótulo do campo do
+        # jogo e as duas listas do editor recebem a foto em vez de perguntar;
+        # ver `_FotoDoCatalogo`.
+        foto = _foto_do_catalogo()
         # O DISCO É LIDO UMA VEZ POR TIQUE, e `_valendo` recebe a lista em vez
         # de relê-la: ele resolve o nome que vale contra os perfis que existem
         # (ver a docstring dele), e são 33 arquivos a cada 500 ms.
@@ -2030,7 +2083,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # `lista`. Aplicar o filtro só numa delas é o defeito que a §6 da sprint
     # descreve — o pintor distribui as três listas pela ordem do DOCUMENTO, e
     # duas ordens diferentes põem o nome de um perfil na linha de outro.
-    lista = _ordenada(_filtrada(_com_a_procedencia(bruto.get("lista") or [], todos)))
+    lista = _ordenada(_filtrada(_com_a_procedencia(bruto.get("lista") or [], todos, foto)))
     editor = bruto.get("editor") or {}
     fora = {
         "perfis.conta": bruto.get("conta", "—"),
@@ -2164,7 +2217,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     #
     # ELE NÃO ENTRA EM `CAMPOS_QUE_ELA_DIGITA`: ninguém digita dentro de um
     # rótulo, e omiti-lo do tique o congelaria no que o perfil anterior dizia.
-    rotulo, alerta = _jogo_reconhecido(str(editor.get("jogo") or ""))
+    rotulo, alerta = _jogo_reconhecido(str(editor.get("jogo") or ""), foto)
     fora["editor.jogo.rotulo"] = rotulo
     fora["editor.jogo.alerta"] = "sim" if alerta else ""
 
@@ -2349,7 +2402,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     # `_procedencia_e_recado`, e o recado do produto só entra quando ela
     # também não sabe.
     procedencia, recado = _procedencia_e_recado(
-        getattr(alvo, "match", None), editor.get("ambiente_recado"))
+        getattr(alvo, "match", None), editor.get("ambiente_recado"), foto)
     fora["editor.ambiente"] = procedencia
     fora["editor.ambiente.travado"] = not procedencia
     fora["editor.ambiente.recado"] = recado
@@ -2362,7 +2415,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # nenhum sobram «Navegação» e «Qualquer jogo» — sem linha vazia e sem
         # erro. Ver `_procedencias_da_maquina` e `oferta_do_funciona_em`.
         SELETOR_DO_AMBIENTE: _html_do_ambiente(
-            oferta_do_funciona_em(_procedencias_da_maquina(), procedencia),
+            oferta_do_funciona_em(_procedencias_da_maquina(foto), procedencia),
             procedencia),
         # A LISTA DOS JOGOS DESTA MÁQUINA — PERFIL-MODO-01, Passo 3. Ela sai
         # SEMPRE, inclusive vazia: uma biblioteca que encolheu (jogo
@@ -2373,7 +2426,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         # os jogos do Heroic. É o efeito que ela pediu com todas as letras —
         # *"Isso deveria ajudar a identificar mais rápido o nome do
         # jogo depois"*.
-        SELETOR_DOS_JOGOS: _html_dos_jogos(procedencia),
+        SELETOR_DOS_JOGOS: _html_dos_jogos(procedencia, foto),
     }
     fora["cobertura"] = {"pintados": len(fora) + len(lista) * 3, "sem_dono": 0}
     return fora
@@ -2859,7 +2912,7 @@ def _forma_do_que_ela_escolheu(texto: str) -> str:
     return achado.forma if achado is not None else "game"
 
 
-def _jogo_reconhecido(texto: str) -> tuple[str, bool]:
+def _jogo_reconhecido(texto: str, foto: _FotoDoCatalogo | None = None) -> tuple[str, bool]:
     """``(frase, é_alerta)`` para o campo do jogo — a decisão da janela estável.
 
     JOGO-QUE-SE-DIZ-01. `851100` sozinho não diz nada a ninguém, nem a ela daqui
@@ -2906,7 +2959,7 @@ def _jogo_reconhecido(texto: str) -> tuple[str, bool]:
             nomes_das_janelas,
         )
 
-        decisao = frase_do_campo_do_jogo(texto, _nomes_dos_jogos(),
+        decisao = frase_do_campo_do_jogo(texto, _nomes_de(foto),
                                          nomes_das_janelas())
     except Exception:
         return ("", False)
