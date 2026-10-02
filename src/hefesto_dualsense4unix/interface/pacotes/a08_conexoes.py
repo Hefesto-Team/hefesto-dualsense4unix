@@ -664,10 +664,10 @@ def _dica_da_linha(item: Any) -> str:
             DICAS_DAS_LINHAS,
             PREFIXO_DA_CURA,
         )
-        from hefesto_dualsense4unix.interface.conexoes import _e
         from hefesto_dualsense4unix.integrations.exame_da_mesa import (
             ROTULOS_DA_ORDEM,
         )
+        from hefesto_dualsense4unix.interface.conexoes import _e
         from hefesto_dualsense4unix.utils.i18n import _
 
         chave = str(getattr(item, "chave", ""))
@@ -694,12 +694,12 @@ def _dica_da_linha(item: Any) -> str:
 def _dono_sabe_desenhar_a_ordem() -> bool:
     """O `interface.conexoes.html_da_ordem` já aguenta uma `Ordem` de verdade?"""
     perfil._com_o_src()
-    from hefesto_dualsense4unix.interface import conexoes as _tela
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import (
         DERIVADO_DA_CONTA,
         Linha,
         Ordem,
     )
+    from hefesto_dualsense4unix.interface import conexoes as _tela
 
     frase = Linha(texto="x", selo=DERIVADO_DA_CONTA)
     prova = Ordem(chave="prova", acao="x", o_que_eu_vi=frase,
@@ -741,9 +741,9 @@ def _a_entrada_na_frase(numero: str, *, em: bool = False, maiuscula: bool = Fals
 def _card_da_ordem(ordem: Any, n: int = 1) -> str:
     """A linha de UMA ordem de serviço: a instrução, e o de→para quando há destino."""
     perfil._com_o_src()
-    from hefesto_dualsense4unix.interface.conexoes import TRACO
     from hefesto_dualsense4unix.integrations import mapa_das_portas
     from hefesto_dualsense4unix.integrations.entrada_a_entrada import rotulo_do_numero
+    from hefesto_dualsense4unix.interface.conexoes import TRACO
 
     destino = str(getattr(ordem, "destino", "") or "")
     caminho = str(getattr(getattr(ordem, "alvo", None), "caminho", "") or "")

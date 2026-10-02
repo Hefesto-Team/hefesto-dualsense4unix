@@ -60,9 +60,9 @@ from hefesto_dualsense4unix.app.actions.config import secao_orcamento as _orcame
 from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
 from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
 from hefesto_dualsense4unix.core import formas_do_endereco as _formas
-from hefesto_dualsense4unix.interface import sistema as _tela
 from hefesto_dualsense4unix.integrations import storm_doctor as _exame
 from hefesto_dualsense4unix.interface import onde as _onde
+from hefesto_dualsense4unix.interface import sistema as _tela
 from hefesto_dualsense4unix.utils import maquina as _maquina
 
 from . import (
