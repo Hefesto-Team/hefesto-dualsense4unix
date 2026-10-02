@@ -30,69 +30,20 @@ nomeia.
 """
 from __future__ import annotations
 
-import sys
+from tests.conftest import exigir_gi_real
+
+# O-GI-FALSO-SO-DEPOIS-DA-GUARDA-01 (02/10/2026): a guarda vem ANTES de qualquer
+# import da janela. Este arquivo plantava um `gi` falso no topo com o marcador
+# `skip_sem_gi_real`, que pula o teste e não a importação: sem o GTK, a coleta
+# deixava 15 módulos da janela construídos sobre a mentira para o arquivo
+# seguinte. Agora ele pula inteiro onde não há GTK real, e com o GTK real não
+# havia o que plantar.
+exigir_gi_real("p3: o Salvar solta a thread")
+
 import time
-import types
 from typing import Any
 
 import pytest
-
-
-from tests.conftest import skip_sem_gi_real
-
-
-def _instalar_gi_falso() -> None:
-    """GTK de mentira: nada aqui desenha, e a suíte não pode criar janela."""
-    existente = sys.modules.get("gi")
-    if existente is None or getattr(existente, "__spec__", None) is not None:
-        try:
-            import gi
-
-            gi.require_version("Gtk", "3.0")
-            from gi.repository import Gtk  # noqa: F401
-
-            return
-        except Exception:  # pragma: no cover — ambientes sem GTK
-            pass
-
-    gi_mod = types.ModuleType("gi")
-    gi_mod.require_version = lambda *_a, **_kw: None  # type: ignore[attr-defined]
-    repo_mod = types.ModuleType("gi.repository")
-    gtk_mod = types.ModuleType("gi.repository.Gtk")
-    glib_mod = types.ModuleType("gi.repository.GLib")
-    gobject_mod = types.ModuleType("gi.repository.GObject")
-    for nome in (
-        "Builder", "Window", "Button", "CheckButton", "ComboBoxText", "Switch",
-        "TreeView", "TreeViewColumn", "CellRendererText", "ListStore",
-        "TreeSelection", "TreePath", "Box", "Label", "Frame", "Entry",
-        "RadioButton", "Scale", "Stack", "MessageDialog", "MessageType",
-        "ButtonsType", "ResponseType", "Grid", "Align",
-    ):
-        setattr(gtk_mod, nome, object)
-    glib_mod.timeout_add = lambda *_a, **_kw: 0  # type: ignore[attr-defined]
-    glib_mod.idle_add = lambda fn, *a: fn(*a)  # type: ignore[attr-defined]
-    gobject_mod.TYPE_STRING = "str"  # type: ignore[attr-defined]
-    gobject_mod.TYPE_INT = "int"  # type: ignore[attr-defined]
-    repo_mod.Gtk = gtk_mod  # type: ignore[attr-defined]
-    repo_mod.GLib = glib_mod  # type: ignore[attr-defined]
-    repo_mod.GObject = gobject_mod  # type: ignore[attr-defined]
-    sys.modules["gi"] = gi_mod
-    sys.modules["gi.repository"] = repo_mod
-    sys.modules["gi.repository.Gtk"] = gtk_mod
-    sys.modules["gi.repository.GLib"] = glib_mod
-    sys.modules["gi.repository.GObject"] = gobject_mod
-
-
-# GUARDA-GI-REAL-01 (posto na integração de 25/08/2026): este arquivo planta um
-# `gi` FALSO para medir o handler sem GTK de verdade. Sem uma guarda declarada
-# ele rodaria verde contra widgets de mentira no job `lint-test` e NUNCA entraria
-# no `gtk-real`, que seleciona os arquivos de interface por
-# `grep -rlE 'exigir_gi_real|skip_sem_gi_real'`. O marcador abaixo é o que o
-# portão `test_guarda_gi_falso_precisa_de_exigir_gi_real` aceita por AST —
-# menção em comentário não vale, e é de propósito.
-pytestmark = skip_sem_gi_real
-
-_instalar_gi_falso()
 
 from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
