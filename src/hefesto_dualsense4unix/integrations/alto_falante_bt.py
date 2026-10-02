@@ -1521,10 +1521,23 @@ VOLTA_DA_SEQUENCIA = 16
 #: `pw-record` primeiro por ser o nativo do PipeWire (o `parec` passa pela
 #: camada de compatibilidade Pulse e já mordeu esta casa uma vez, no
 #: `sink_properties` cortado no espaço).
+#:
+#: **O `--raw` DO `pw-record` É O QUE FAZ O `stdout` SER SÓ PCM** — 02/10/2026,
+#: a queixa dela de 01/10 (*háptica por áudio não funcionou no BT*). Sem ele, o
+#: `pw-record` escreve um cabeçalho AU de 24 bytes antes do PCM. Medido num
+#: PipeWire 1.6.8 privado (o mesmo binário da máquina dela, sem tocar no
+#: servidor dela): `64 6e 73 2e 18 00 00 00 ff ff ff ff 03 00 00 00 80 bb 00 00
+#: 04 00 00 00`, 11 bytes não nulos, e o PCM depois dele; com `--raw`, o PCM
+#: começa no byte 0. Cada gravador novo entregava esses bytes como o primeiro
+#: bloco do monitor, e o :data:`OUVIDO` os ouvia como SINAL por um segundo
+#: inteiro. A ponte que subia em háptica dava o alto-falante por tocando, e
+#: descia em 10 a 18 ms: no modo Xbox o rumble voltava aos motores do HID, sem
+#: o ganho da háptica; com o jogo mandando háptica, a ponte alternava entre o
+#: som e a háptica a cada segundo, sem um bloco háptico no ar.
 GRAVADORES_DO_MONITOR: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "pw-record",
-        ("--target={fonte}", "--rate={taxa}", "--channels={canais}",
+        ("--raw", "--target={fonte}", "--rate={taxa}", "--channels={canais}",
          "--format=s16", "--latency={latencia_ms}ms", "-P", "node.name={rotulo}",
          "-"),
     ),
