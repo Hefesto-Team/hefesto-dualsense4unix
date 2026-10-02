@@ -379,6 +379,102 @@ def test_o_lancamento_de_jogo_com_perfil_solta_a_trava_e_diz() -> None:
     assert session.load_last_profile() == AVATAR, "o lançamento virou escolha dela"
 
 
+def test_o_jogo_que_fecha_solta_a_trava_no_tique_e_reabrir_volta_ao_perfil_dele(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O jogo em cena fecha com o terminal em foco, e reabre: o perfil dele volta.
+
+    Conferência de 02/10/2026. O fechamento só soltava a trava quando uma troca
+    era TENTADA, e no terminal o candidato é a escolha dela, que já vale: a
+    trava ficava armada, e o mesmo jogo reaberto era segurado para sempre (o
+    «nome do jogo que a mão tirou» o isentava). Medido nesta régua: o PRAGMATA
+    reaberto ficava no Avatar, sem linha no diário.
+
+    MORDIDA: tire a soltura por tique de `_acompanhar_a_trava_da_mao` e o jogo
+    reaberto fica no Avatar, sem a linha `o_jogo_em_cena_fechou`.
+    """
+    import time
+
+    relogio = [1000.0]
+    monkeypatch.setattr(time, "monotonic", lambda: relogio[0])
+    _o_disco()
+    session.save_freestyle_ligado(False)
+    store = StateStore()
+    gerente, _pedidos = _gerente_que_anota(store)
+    vivo: list[int | None] = [APPID_DO_JOGO]
+    vigia = _vigia(gerente, store, vivo)
+    jogo = {"wm_class": JANELA_DO_JOGO, "wm_name": JOGO}
+
+    _ticar(vigia, jogo, 0.0, 1.0)
+    gerente.activate(AVATAR, origin="manual")
+    with structlog.testing.capture_logs() as linhas:
+        for t in (1.5, 2.0, 30.0):
+            relogio[0] = 1000.0 + t
+            vigia._tick(jogo, t)
+        assert store.active_profile == AVATAR, "a janela do jogo vivo tirou a escolha à mão"
+        vivo[0] = None
+        for t in (31.0, 31.5, 120.0):
+            relogio[0] = 1000.0 + t
+            vigia._tick(TERMINAL, t)
+        assert _soltas(linhas) == ["o_jogo_em_cena_fechou"], "o jogo fechou e a trava ficou"
+        assert store.active_profile == AVATAR, "a escolha à mão caiu no terminal"
+        vivo[0] = APPID_DO_JOGO
+        for t in (200.0, 200.5, 201.0, 201.5):
+            relogio[0] = 1000.0 + t
+            vigia._tick(jogo, t)
+
+    assert store.active_profile == JOGO, "o jogo reaberto não voltou ao perfil dele"
+
+
+def test_o_perfil_de_jogo_que_a_mao_tirou_sem_o_jogo_aberto_nao_segura_nada(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A escolha era um perfil de jogo (o Avatar) sem o jogo aberto, e ela ativa outro.
+
+    Conferência de 02/10/2026. O perfil que a mão tirou só é «o jogo em cena»
+    quando o jogo está aberto. Antes, todo perfil com regra `steam_app_<N>` que
+    a mão tirava virava «o jogo dela», e daí saíam dois defeitos:
+
+    - a janela do navegador (regra própria, não é jogo) soltava a trava com o
+      motivo `o_jogo_em_cena_fechou` — a troca à mão caía por TROCA DE JANELA,
+      com um motivo falso no diário;
+    - abrir o próprio Avatar não trocava para o perfil dele: a trava o isentava
+      como «o jogo que a mão tirou».
+
+    MORDIDA: grave o `_jogo_da_trava` sem perguntar se o jogo está em cena e as
+    duas metades reprovam.
+    """
+    import time
+
+    relogio = [1000.0]
+    monkeypatch.setattr(time, "monotonic", lambda: relogio[0])
+    _o_disco()
+    session.save_freestyle_ligado(False)
+    store = StateStore()
+    gerente, _pedidos = _gerente_que_anota(store)
+    gerente.activate(AVATAR, origin="system")  # o boot restaurando a escolha
+    vivo: list[int | None] = [None]
+    vigia = _vigia(gerente, store, vivo)
+    _ticar(vigia, TERMINAL, 0.0, 1.0)
+    gerente.activate(JOGO, origin="manual")
+    navegador = {"wm_class": "firefox", "wm_name": "Mozilla Firefox"}
+    avatar = {"wm_class": JANELA_DO_AVATAR, "wm_name": AVATAR}
+
+    with structlog.testing.capture_logs() as linhas:
+        for t in (2.0, 2.5, 60.0, 600.0):
+            relogio[0] = 1000.0 + t
+            vigia._tick(navegador, t)
+        assert store.active_profile == JOGO, "a troca à mão caiu pela janela do navegador"
+        assert _soltas(linhas) == [], "a trava soltou sem evento"
+        vivo[0] = 2424420
+        for t in (601.0, 601.5, 602.0):
+            relogio[0] = 1000.0 + t
+            vigia._tick(avatar, t)
+
+    assert _soltas(linhas) == ["jogo_com_perfil_em_foco"]
+    assert store.active_profile == AVATAR, "o jogo aberto não trocou para o perfil dele"
+
+
 # =============================================================================
 # RÉGUA 4 — só a mão escreve a escolha
 # =============================================================================

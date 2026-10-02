@@ -363,6 +363,13 @@ class AutoSwitcher:
     _jogo_da_trava: str | None = None
     _appids_da_trava: frozenset[int] = frozenset()
     _antes_da_mao: str | None = None
+    # O perfil ativo quando o episódio foi lido (a troca à mão seguinte o relê),
+    # se o wrapper já viu o jogo em cena vivo, e a última janela de verdade
+    # (nem a do Hefesto, nem a leitura cega): é ela que diz o jogo em cena
+    # quando o wrapper não sabe. Conferência de 02/10/2026.
+    _ativo_da_trava: str | None = None
+    _jogo_da_trava_visto_vivo: bool = False
+    _ultima_janela: str = ""
 
     def disabled(self) -> bool:
         return os.environ.get("HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT") == "1"
@@ -554,6 +561,7 @@ class AutoSwitcher:
 
         resumed = self._info_gap_active
         self._info_gap_active = False
+        self._ultima_janela = str(info.get("wm_class") or "")
 
         # A LISTA DE EXCLUSÃO VEM ANTES DE TUDO — E3 da
         # OS-LANCADORES-IGUAIS-E-A-LISTA-DE-EXCLUSAO-01, 21/09/2026. A janela
@@ -1055,14 +1063,32 @@ class AutoSwitcher:
             self._stop_event.set()
 
     def _acompanhar_a_trava_da_mao(self) -> None:
-        """Guarda, no começo de cada episódio da trava, o que estava em cena.
+        """Guarda, a cada troca à mão, o jogo em cena; e solta a trava quando ele fecha.
 
         A trava da troca à mão (`profiles.manager.armar_a_trava_da_mao`) é
         armada pela ativação à mão, sem prazo. O que este autoswitch precisa
-        saber para soltá-la no evento certo é o perfil que a mão dela TIROU —
-        o do jogo em cena, quando era um —, e ele é o `anterior` da
-        sincronização de crença do mesmo tique (`_perfil_corrente`). Chamado
-        logo depois dela, no começo do `_tique`.
+        saber para soltá-la no evento certo é o JOGO EM CENA que a mão dela
+        tirou: o `anterior` da sincronização de crença do mesmo tique
+        (`_perfil_corrente`), mas só quando ele é a regra de um jogo da Steam
+        que está aberto — o wrapper o diz vivo, ou, quando o wrapper não sabe,
+        a última janela de verdade era a dele. Chamado logo depois da
+        sincronização, no começo do `_tique`.
+
+        CONFERÊNCIA DE 02/10/2026, dois defeitos medidos nas réguas:
+
+        - o perfil de jogo que a mão tirava SEM o jogo aberto (a escolha dela
+          no Avatar, fora do jogo) virava «o jogo dela»: a janela do navegador
+          soltava a trava com o motivo `o_jogo_em_cena_fechou`, e abrir o
+          próprio Avatar não trocava para o perfil dele;
+        - o jogo em cena que fechava só soltava a trava quando uma troca era
+          tentada. No terminal o candidato é a escolha dela, que já vale, e
+          nada era tentado: a trava ficava, e o mesmo jogo reaberto era
+          segurado para sempre. Agora o fechamento que o wrapper vê solta a
+          trava no tique em que acontece, com a linha.
+
+        Outra troca à mão no mesmo episódio relê o que a mão tirou, e guarda o
+        jogo em cena que já estava guardado: trocar duas vezes dentro do jogo
+        não o esquece.
         """
         store = self.store
         if store is None:
@@ -1072,14 +1098,43 @@ class AutoSwitcher:
         except Exception:
             armada = False
         if not armada:
-            self._trava_vista = False
+            self._esquecer_o_jogo_da_trava()
             return
-        if self._trava_vista:
+        if not self._trava_vista or self._current_profile != self._ativo_da_trava:
+            self._trava_vista = True
+            self._ativo_da_trava = self._current_profile
+            if self._jogo_da_trava is None:
+                self._guardar_o_jogo_em_cena(self._antes_da_mao)
             return
-        self._trava_vista = True
-        jogo = self._antes_da_mao
+        if not (self._appids_da_trava and self._jogo_da_trava_visto_vivo):
+            return
+        vivo = self._appid_do_jogo_vivo()
+        if vivo is not None and vivo in self._appids_da_trava:
+            return
+        jogo = self._jogo_da_trava or ""
+        self._esquecer_o_jogo_da_trava()
+        soltar_a_trava_da_mao(store, "o_jogo_em_cena_fechou", jogo=jogo, candidato="")
+
+    def _guardar_o_jogo_em_cena(self, jogo: str | None) -> None:
+        """O perfil que a mão tirou é o de um jogo ABERTO? Só então ele é guardado."""
+        appids = self._appids_do_perfil_corrente(jogo) if jogo else frozenset()
+        if not appids:
+            return
+        vivo = self._appid_do_jogo_vivo()
+        visto_vivo = vivo is not None and vivo in appids
+        em_foco = self._ultima_janela in {f"steam_app_{a}" for a in appids}
+        if not (visto_vivo or (vivo is None and em_foco)):
+            return
         self._jogo_da_trava = jogo
-        self._appids_da_trava = self._appids_do_perfil_corrente(jogo) if jogo else frozenset()
+        self._appids_da_trava = appids
+        self._jogo_da_trava_visto_vivo = visto_vivo
+
+    def _esquecer_o_jogo_da_trava(self) -> None:
+        self._trava_vista = False
+        self._ativo_da_trava = None
+        self._jogo_da_trava = None
+        self._appids_da_trava = frozenset()
+        self._jogo_da_trava_visto_vivo = False
 
     def _a_trava_da_mao_segura(
         self,
@@ -1097,11 +1152,13 @@ class AutoSwitcher:
         dois eventos que só a janela mostra:
 
         - **o jogo que estava em cena fechou** — o perfil que a mão dela tirou
-          era a regra de um jogo da Steam (`_appids_da_trava`), a janela em
-          foco não é a dele, e o wrapper não o diz vivo
-          (`jogo_do_wrapper_vivo`). LIMITE, declarado: o jogo aberto sem o
-          wrapper não tem quem o diga vivo, e conta como fechado quando sai do
-          foco para uma janela com outro perfil;
+          era a regra de um jogo da Steam aberto (`_appids_da_trava`, ver
+          `_acompanhar_a_trava_da_mao`), a janela em foco não é a dele, e o
+          wrapper não o diz vivo (`jogo_do_wrapper_vivo`). Com o wrapper, o
+          fechamento já soltou a trava no tique dele; aqui sobra o LIMITE,
+          declarado: o jogo aberto sem o wrapper não tem quem o diga vivo, e
+          conta como fechado quando sai do foco para uma janela com outro
+          perfil;
         - **outro jogo com perfil em foco** — o candidato é a regra do jogo da
           janela, ou um perfil que se declara de jogo, e não é o que a mão dela
           tirou. A escolha dela nunca conta como «outro jogo».
@@ -1116,6 +1173,7 @@ class AutoSwitcher:
         if self._appids_da_trava and name != jogo:
             vivo = self._appid_do_jogo_vivo()
             if vivo is None or vivo not in self._appids_da_trava:
+                self._esquecer_o_jogo_da_trava()
                 soltar_a_trava_da_mao(
                     store, "o_jogo_em_cena_fechou", jogo=jogo or "", candidato=name
                 )
