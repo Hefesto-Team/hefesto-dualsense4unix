@@ -12,7 +12,7 @@ from collections.abc import Callable
 from typing import Any
 
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
-from hefesto_dualsense4unix.daemon.ipc_server import CODE_INVALID_PARAMS
+from hefesto_dualsense4unix.daemon.protocolo_do_ipc import CODE_INVALID_PARAMS
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)

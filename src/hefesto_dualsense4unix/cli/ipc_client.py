@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from hefesto_dualsense4unix.daemon.ipc_server import PROTOCOL_VERSION
+from hefesto_dualsense4unix.daemon.protocolo_do_ipc import PROTOCOL_VERSION
 from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
 
 _LOG = logging.getLogger(__name__)
