@@ -15,12 +15,15 @@ AS RÉGUAS (a sprint as numera):
 
 1. toda célula leva ao perfil da linha (WebKit, o seletor LIDO do piloto);
 2. o gesto escolhe pelo nome da linha (`hefPerfil`), não pelo texto colado;
-3. o rótulo cabe na largura dela (`prioridade:48`);
+3. o rótulo cabe na largura dela (`prioridade:48`), e cabe também nos outros
+   dois caminhos do roteiro: o arraste até o piso e a seta da ordem;
 4. uma palavra só: a página, o pacote, os desfechos e o relatório da sanidade.
 
 AS MORDIDAS (medidas na entrega): o gesto de volta ao `<td>` do nome (a 1
 reprova nomeando a coluna); o `selecionar` lendo só o `texto` (a 2); o `PISO`
-fixo de volta no roteiro (a 3 mostra o 80 contra o 48); o «Prioridade:» de volta
+fixo de volta no roteiro (a 3 mostra o 80 contra o 48), e na conferência o
+mesmo `PISO` fixo só no arraste e o observador da seta sem o `ajustar` (cada
+um reprova a régua do seu caminho); o «Prioridade:» de volta
 ao rótulo do editor, e à parte o «· prioridade N» do desfecho (a 4).
 """
 from __future__ import annotations
@@ -316,6 +319,68 @@ def test_o_rotulo_cabe_na_largura_que_ela_gravou(tela: Any) -> None:
     assert medida["scroll"] <= medida["client"], (
         f"o rótulo foi cortado: pede {medida['scroll']} px numa coluna de "
         f"{medida['client']}")
+
+
+#: O ARRASTE DA DIVISA, pelos mesmos eventos que o mouse dela dispara: a alça
+#: da «Preferência» vai 600 px para a esquerda, até o `PISO`, e solta.
+ARRASTAR_ATE_O_PISO = r"""
+(function(){
+  var t = document.querySelector('table[data-tabela]');
+  var pux = t.querySelector('.puxador[data-coluna="prioridade"]');
+  var x = pux.getBoundingClientRect().left + 1;
+  pux.dispatchEvent(new MouseEvent('mousedown', {bubbles: true, clientX: x}));
+  document.dispatchEvent(new MouseEvent('mousemove', {bubbles: true, clientX: x - 600}));
+  var no_voo = parseInt(pux.dataset.px, 10);
+  document.dispatchEvent(new MouseEvent('mouseup', {bubbles: true, clientX: x - 600}));
+  return JSON.stringify({no_voo: no_voo});
+})()
+"""
+
+
+def test_o_rotulo_cabe_no_arraste_ate_o_piso(tela: Any) -> None:
+    """O piso por rótulo vale no ARRASTE também (o item 4 da cura).
+
+    A régua de cima mede só a largura que volta do disco (`espalhar`); o
+    arraste tem caminho próprio no roteiro (`mousemove`), e sem esta régua ele
+    podia voltar ao `PISO` fixo com as outras verdes.
+    """
+    # A largura de partida vai antes, num passo próprio: o observador do
+    # `data-larguras` responde depois do roteiro, e repintaria por cima do arraste.
+    tela.executar(
+        "(function(){document.querySelector('table[data-tabela]')"
+        ".setAttribute('data-larguras','nome:380·prioridade:200');return 'ok';})()")
+    tela.avancar(0.2)
+    arrasto = json.loads(tela.executar(ARRASTAR_ATE_O_PISO))
+    tela.avancar(0.2)
+    medida = json.loads(tela.executar(LER_O_CABECALHO))
+    assert medida["texto"] == "Preferência", medida
+    assert medida["scroll"] <= medida["client"], (
+        f"o arraste cortou o rótulo: pede {medida['scroll']} px numa coluna de "
+        f"{medida['client']}")
+    assert arrasto["no_voo"] >= medida["scroll"], (
+        f"a alça anota {arrasto['no_voo']} px, menos que o rótulo pede "
+        f"({medida['scroll']}): é esse número que o soltar grava")
+
+
+def test_o_rotulo_cabe_com_a_seta_da_ordem(tela: Any) -> None:
+    """A seta da ordem alarga o rótulo, e a coluna estreita cabe de novo."""
+    # Em dois passos: o `data-larguras` primeiro (e o observador dele assenta),
+    # e só depois a seta, que é quem tem de fazer a coluna caber de novo.
+    tela.executar(
+        "(function(){document.querySelector('table[data-tabela]')"
+        ".setAttribute('data-larguras','nome:380·prioridade:48');return 'ok';})()")
+    tela.avancar(0.2)
+    tela.executar(
+        "(function(){document.querySelector('.ordena[data-coluna=\"prioridade\"]')"
+        ".setAttribute('data-ordem','↓');return 'ok';})()")
+    tela.avancar(0.3)
+    medida = json.loads(tela.executar(LER_O_CABECALHO))
+    tela.executar(
+        "(function(){document.querySelector('.ordena[data-coluna=\"prioridade\"]')"
+        ".removeAttribute('data-ordem');return 'ok';})()")
+    assert medida["scroll"] <= medida["client"], (
+        f"com a seta, o rótulo foi cortado: pede {medida['scroll']} px numa "
+        f"coluna de {medida['client']}")
 
 
 def test_a_pagina_nao_diz_a_palavra_velha(tela: Any) -> None:
