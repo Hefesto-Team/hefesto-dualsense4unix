@@ -411,15 +411,64 @@ def test_9_o_daemon_mudo_sai_da_janela_e_nao_para_o_instrumento(inst: Any) -> No
 
     fio = threading.Thread(target=aceitar, daemon=True)
     fio.start()
+    # A pergunta vai num fio próprio: sem o prazo ela nunca volta, e a régua tem
+    # de REPROVAR, e não pendurar a suíte junto com o instrumento.
+    lido: list[Any] = []
+    pergunta = threading.Thread(
+        target=lambda: lido.append(inst.estado_pelo_ipc(0.3, caminho)), daemon=True)
     comeco = time.monotonic()
-    resposta = inst.estado_pelo_ipc(0.3, caminho)
+    pergunta.start()
+    pergunta.join(2.0)
     passou = time.monotonic() - comeco
+    preso = pergunta.is_alive()
     for conexao in presos:
-        conexao.close()
+        conexao.close()  # solta a pergunta presa, se houver
+    pergunta.join(2.0)
     caminho.unlink(missing_ok=True)
     pasta.rmdir()
-    assert resposta is None
-    assert passou < 2.0, f"o state_full de um daemon parado prendeu o instrumento {passou:.1f} s"
+    assert not preso, f"o state_full de um daemon parado prendeu o instrumento {passou:.1f} s"
+    assert lido == [None]
+
+
+def test_9b_o_daemon_que_responde_chega_inteiro(inst: Any) -> None:
+    """A outra metade da nona: o ``None`` tem de ser do daemon mudo, e não da porta.
+
+    Sem esta, uma porta que sempre devolve ``None`` (o método com outro nome, o
+    cliente chamado errado) passaria na nona, e na bancada TODA janela sairia
+    «o daemon não respondeu» — o instrumento respondendo sobre a própria porta,
+    e não sobre o daemon. O dublê fala o protocolo do soquete (uma linha de
+    JSON-RPC de cada lado) e só responde ao ``daemon.state_full``.
+    """
+    pasta = Path(tempfile.mkdtemp(prefix="tfr-"))
+    caminho = pasta / "s.sock"
+    servidor = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    servidor.bind(str(caminho))
+    servidor.listen(8)
+    estado = _estado(_controle(VERMELHO, 300), tique=7)
+
+    def responder() -> None:
+        with servidor:
+            servidor.settimeout(5.0)
+            try:
+                conexao, _ = servidor.accept()
+            except OSError:
+                return
+            with conexao:
+                pedido = json.loads(conexao.makefile("rb").readline())
+                if pedido.get("method") == "daemon.state_full":
+                    corpo = {"jsonrpc": "2.0", "id": pedido["id"], "result": estado}
+                else:
+                    corpo = {"jsonrpc": "2.0", "id": pedido["id"],
+                             "error": {"code": -32601, "message": "método desconhecido"}}
+                conexao.sendall(json.dumps(corpo).encode() + b"\n")
+
+    fio = threading.Thread(target=responder, daemon=True)
+    fio.start()
+    resposta = inst.estado_pelo_ipc(0.8, caminho)
+    fio.join(5.0)
+    caminho.unlink(missing_ok=True)
+    pasta.rmdir()
+    assert resposta == estado, "o daemon respondeu, e o instrumento leu «não respondeu»"
 
 
 def test_o_laco_da_janela_fecha_uma_linha_por_janela(inst: Any, tmp_path: Path) -> None:
