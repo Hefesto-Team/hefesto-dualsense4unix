@@ -248,19 +248,43 @@ _MARCA_DA_ESCOLHA = ".a_escolha_dela_migrada"
 _COPIA_DA_SESSAO = "session-antes-da-escolha.json"
 
 
+def _so_o_freestyle_na_pasta() -> bool:
+    """A pasta dos perfis não tem perfil além do Freestyle? Nunca levanta.
+
+    É a outra metade do «máquina nova» do item 7: o Freestyle é o único perfil
+    do install. Lê os nomes dos arquivos, e não os perfis, porque quem pergunta
+    roda dentro da semeadura (`load_all_profiles` a chamaria de novo). Na dúvida
+    (pasta ilegível), `False`: o botão não acende, que é o lado reversível.
+    """
+    from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
+
+    try:
+        return all(_e_o_freestyle(arq.stem) for arq in profiles_dir().glob("*.json"))
+    except OSError:
+        return False
+
+
 def migrar_a_escolha_dela() -> str | None:
     """Uma vez só, com marca: a máquina nova e a sessão que apontava o Freestyle.
 
     Itens 7 e 8 da `D-2909-O-HEFESTO-ABRE-NA-ESCOLHA-DELA`:
 
-    - **a máquina nova** (sem `session.json` e sem nunca ter gravado o flag)
-      nasce com o botão aceso: o Freestyle é o único perfil do install, e o
-      chip diz o que o botão diz. Decidido por ela em 29/09, ~20h35 («Nasce
-      aceso»). O preço, escrito: o primeiro perfil de jogo que a pessoa criar
-      não entra sozinho enquanto o botão estiver aceso;
+    - **a máquina nova** (sem `session.json`, sem nunca ter gravado o flag e
+      sem perfil além do Freestyle na pasta) nasce com o botão aceso: o
+      Freestyle é o único perfil do install, e o chip diz o que o botão diz.
+      Decidido por ela em 29/09, ~20h35 («Nasce aceso»). O preço, escrito: o
+      primeiro perfil de jogo que a pessoa criar não entra sozinho enquanto o
+      botão estiver aceso;
     - **a sessão apontando o Freestyle com o modo desligado** vira «sem
       escolha», com o arquivo copiado antes (`_COPIA_DA_SESSAO`). Acender o
       botão calaria os perfis de jogo dessa pessoa, que hoje entram sozinhos.
+
+    A PASTA ENTRA NA CONTA DA MÁQUINA NOVA (conferência final de 02/10/2026).
+    Sem `session.json` também está quem atualiza sem nunca ter ativado um
+    perfil à mão: os perfis de jogo dessa pessoa entram sozinhos pela janela, e
+    acender o botão os calaria todos, pela mesma razão do segundo caso. Com
+    perfil próprio na pasta, a máquina não é nova, e nada muda: fora do jogo
+    fica «sem escolha» (item 10), e o jogo continua entrando.
 
     Quem chama é a semeadura (`profiles.loader._maybe_seed_presets`), DEPOIS das
     duas renomeações do perfil padrão, que podem ter acabado de escrever o
@@ -283,7 +307,7 @@ def migrar_a_escolha_dela() -> str | None:
                 _o_cadeado_antigo_vira_freestyle(base)
             sessao = base / _SESSION_FILE
             flag = base / _FREESTYLE_LIGADO_FLAG_FILE
-            if not sessao.exists() and not flag.exists():
+            if not sessao.exists() and not flag.exists() and _so_o_freestyle_na_pasta():
                 save_freestyle_ligado(True)
                 desfecho = "maquina_nova_nasce_acesa"
             elif not flag.exists() and _e_o_freestyle(load_last_profile()):

@@ -632,6 +632,24 @@ def test_a_maquina_nova_nasce_acesa_uma_vez_so() -> None:
     assert session.load_freestyle_ligado() is False
 
 
+def test_sem_sessao_com_perfil_de_jogo_na_pasta_o_botao_nao_acende() -> None:
+    """Quem atualiza sem nunca ter ativado à mão: o jogo dele continua entrando.
+
+    A máquina nova é a que só tem o Freestyle na pasta (item 7). Sem
+    `session.json`, mas com um perfil de jogo, o botão aceso calaria esse jogo
+    (o Freestyle ligado manda em tudo), e o autoswitch dele parava no update.
+
+    MORDIDA: tire `_so_o_freestyle_na_pasta()` da condição da máquina nova e o
+    desfecho vira `maquina_nova_nasce_acesa`, com o botão aceso.
+    """
+    _perfil(JOGO, JANELA_DO_JOGO)
+
+    assert session.migrar_a_escolha_dela() == "nada_a_mudar"
+
+    assert session.load_freestyle_ligado() is False
+    assert session.a_escolha_dela() is None
+
+
 def test_a_sessao_no_freestyle_apagado_vira_sem_escolha_com_a_copia() -> None:
     """A sessão apontando o Freestyle com o botão apagado: «sem escolha», com a cópia."""
     _o_disco()

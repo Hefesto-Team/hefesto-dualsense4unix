@@ -79,8 +79,10 @@ MESA: tuple[tuple[str, str], ...] = (
 JANELA_DO_JOGO = "steam_app_1599660"
 JOGO = "Sackboy"
 
-#: Os três caminhos da sessão que a sprint nomeia.
-CAMINHOS = ("sessao-vazia", "sessao-com-perfil-de-janela", "sessao-com-o-freestyle")
+#: Os três caminhos da sessão que a sprint nomeia, e o quarto da conferência
+#: final de 02/10/2026: sem sessão, mas com um perfil de jogo na pasta.
+CAMINHOS = ("sessao-vazia", "sessao-com-perfil-de-janela", "sessao-com-o-freestyle",
+            "sessao-vazia-com-perfil-de-jogo")
 
 #: Offsets do bloco de gatilho DENTRO do common: (modo, primeira das seis forças,
 #: a sétima avulsa). Os mesmos da `test_paridade_transporte_gatilhos.py`.
@@ -152,9 +154,12 @@ def _prepara_a_sessao(caminho: str) -> None:
     A ORDEM É A DO DISCO DE QUEM ATUALIZA: a sessão e o perfil do jogo já
     existem quando a semeadura roda a migração da escolha
     (`utils.session.migrar_a_escolha_dela`), que espelha a escolha no
-    marcador. Sem sessão nenhuma, é a máquina nova, e o botão nasce aceso.
+    marcador. Sem sessão nenhuma e só com o Freestyle na pasta, é a máquina
+    nova, e o botão nasce aceso; sem sessão e com um perfil de jogo na pasta, é
+    quem atualiza sem nunca ter ativado um perfil à mão, e nada acende.
     """
-    _o_jogo_de_janela()
+    if caminho != "sessao-vazia":
+        _o_jogo_de_janela()
     if caminho == "sessao-com-perfil-de-janela":
         session.save_last_profile(JOGO)
         session.save_active_marker(JOGO)
@@ -193,11 +198,14 @@ def _o_estado_do_boot(store: StateStore) -> tuple[str | None, str | None]:
 
 #: O que o boot deixa valendo em cada caminho da sessão, desde 01/10/2026: a
 #: máquina nova nasce com o botão aceso (Freestyle); a escolha dela com regra de
-#: janela volta; a sessão que apontava o Freestyle desligado é «sem escolha».
+#: janela volta; a sessão que apontava o Freestyle desligado é «sem escolha»; e
+#: quem atualiza sem sessão, com um perfil de jogo na pasta, também (o botão
+#: aceso calaria o jogo dele, que entra sozinho pela janela).
 VALE_NO_BOOT = {
     "sessao-vazia": (loader.NOME_DO_PADRAO, True),
     "sessao-com-perfil-de-janela": (JOGO, False),
     "sessao-com-o-freestyle": (None, False),
+    "sessao-vazia-com-perfil-de-jogo": (None, False),
 }
 
 
@@ -214,7 +222,10 @@ def test_o_boot_deixa_valendo_o_que_ela_escolheu_nos_quatro(
       célula `sessao-com-perfil-de-janela` reprova sem o Sackboy;
     - devolva `"mode": "Off"` aos gatilhos do `freestyle.json` de fábrica e a
       célula `sessao-vazia` reprova no byte, nos quatro controles e nos dois
-      transportes.
+      transportes;
+    - tire a pasta da conta da máquina nova (`_so_o_freestyle_na_pasta`, em
+      `utils.session.migrar_a_escolha_dela`) e a célula
+      `sessao-vazia-com-perfil-de-jogo` reprova com o Freestyle aceso.
     """
     _prepara_a_sessao(caminho)
     controle, pecas = _mesa_de_quatro(fabrica_de_bancada)
