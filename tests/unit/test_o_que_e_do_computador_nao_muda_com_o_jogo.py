@@ -527,3 +527,166 @@ def test_o_daemon_grava_a_barra_do_motor_pelo_dono(ativo: str | None) -> None:
     assert corpo["status"] == "ok" and corpo["onde"] == opc.COMPUTADOR, corpo
     assert caminho.read_bytes() == antes
     assert opc.o_computador().controles[P1].rumble.motor_forte_pct == 40
+
+
+# ---------------------------------------------------------------------------
+# A migração, uma vez (commit 4)
+# ---------------------------------------------------------------------------
+CONTROLES_DA_CASA = [f"aabbcc0000{n:02x}" for n in range(1, 5)]
+
+
+def _freestyle_da_forma_dela() -> Profile:
+    """O Freestyle com todas as seções, valores sintéticos."""
+    return Profile.model_validate({
+        "name": "Freestyle", "match": {"type": "any"},
+        "leds": {"lightbar": [10, 20, 200], "lightbar_brightness": 0.6},
+        "rumble": {"policy": "max"},
+        "speaker": {"volume": 150, "muted": False},
+        "mouse": {"enabled": False, "speed": 9, "scroll_speed": 3},
+        "button_actions": {"cross": "KEY_ENTER", "ps": "__NADA__"},
+        "key_bindings": {"r1": ["KEY_F11"]},
+        "teclado_emulado": True,
+        "controllers": {
+            c: {"leds": {"lightbar": [0, 255, 0]}, "speaker": {"volume": 90},
+                "mic": {"volume": 70}, "rumble": {"motor_forte_pct": 60},
+                **({"sensores": {"giroscopio": False}} if i == 0 else {})}
+            for i, c in enumerate(CONTROLES_DA_CASA[:2])
+        },
+    })
+
+
+def _os_vinte_e_oito() -> list[Profile]:
+    """Os outros 28 perfis, na forma das contagens da sprint (§2), valores sintéticos.
+
+    Dez com ``leds`` e ``rumble`` globais (iguais ao Freestyle, de fábrica, ou
+    diferentes), oito com ``mouse``, um com ``teclado_emulado``, nove com
+    ``controllers`` (29 entradas com luz; som, microfone, motor e sensores em
+    parte delas).
+    """
+    import random
+
+    sorte = random.Random(110)
+    perfis: list[Profile] = []
+    entradas = 0
+    for i in range(28):
+        dados: dict[str, Any] = {"name": f"Jogo {i:02d}",
+                                 "match": {"type": "criteria", "window_class": [f"j{i}"]}}
+        if i < 10:
+            dados["leds"] = sorte.choice([
+                {"lightbar": [10, 20, 200], "lightbar_brightness": 0.6},  # = Freestyle
+                {},  # de fábrica, por extenso
+                {"lightbar": [255, 0, 0]},  # do jogo
+            ])
+            dados["rumble"] = sorte.choice([{"policy": "max"}, {},
+                                            {"policy": "custom", "custom_mult": 1.3}])
+        if 10 <= i < 18:
+            dados["mouse"] = {"enabled": True, "speed": sorte.choice([9, 6, 11]),
+                              "scroll_speed": sorte.choice([3, 1])}
+        if i == 18:
+            dados["teclado_emulado"] = True
+        if 19 <= i < 28:
+            controles: dict[str, Any] = {}
+            quantos = 4 if i < 21 else 3
+            for c in CONTROLES_DA_CASA[:quantos]:
+                if entradas >= 29:
+                    break
+                entradas += 1
+                entrada: dict[str, Any] = {"leds": sorte.choice([
+                    {"lightbar": [0, 255, 0]}, {"lightbar": [9, 9, 9]},
+                    {"lightbar_brightness": 0.2}])}
+                if sorte.random() < 0.9:
+                    entrada["speaker"] = sorte.choice([{"volume": 90}, {"volume": 40}])
+                    entrada["mic"] = sorte.choice([{"volume": 70}, {"volume": 30}])
+                if sorte.random() < 0.55:
+                    entrada["rumble"] = sorte.choice([{"motor_forte_pct": 60},
+                                                      {"motor_fraco_pct": 20}])
+                if sorte.random() < 0.15:
+                    entrada["sensores"] = {"giroscopio": False}
+                controles[c] = entrada
+            dados["controllers"] = controles
+        perfis.append(Profile.model_validate(dados))
+    return perfis
+
+
+def test_a_migracao_nao_muda_nenhum_valor_efetivo() -> None:
+    """Régua 5: depois da migração, cada perfil vale o mesmo que valia, campo a campo.
+
+    A comparação lê o ``.antes-do-computador`` (a cópia que a migração fez
+    ANTES de reescrever), e nunca o arquivo que ela reescreveu: medir contra a
+    própria saída é a trava que não trava nada. Isentos, pela resposta 4 dela,
+    os campos de luz e vibração globais guardados com o valor de fábrica.
+
+    MORDIDAS: apagar a sobreposição diferente (``ceder_ao_computador`` aceitar
+    todo grupo) reprova; e a migração não deixar a cópia reprova.
+    """
+    from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
+
+    perfis = [_freestyle_da_forma_dela(), *_os_vinte_e_oito()]
+    caminhos = {p.name: save_profile(p) for p in perfis}
+    antes = {nome: caminho.read_bytes() for nome, caminho in caminhos.items()}
+
+    saidas = opc.migrar_uma_vez()
+    assert saidas is not None and saidas, "a migração não tirou nada de ninguém"
+    computador = opc.o_computador()
+    assert computador.migrado is True
+    assert computador.global_.leds.lightbar == (10, 20, 200)
+    assert computador.global_.button_actions == {"cross": "KEY_ENTER"}
+
+    vazio = m.ComputadorDeclarado()
+    for nome, caminho in caminhos.items():
+        copia = caminho.with_name(caminho.name + opc.SUFIXO_DA_COPIA)
+        if nome not in saidas:
+            assert caminho.read_bytes() == antes[nome], f"{nome} mudou sem constar"
+            continue
+        assert copia.exists(), f"{nome} foi reescrito sem a cópia de antes"
+        de_antes = Profile.model_validate(json.loads(copia.read_text(encoding="utf-8")))
+        depois = load_profile(nome)
+        valia = opc.efetivo(de_antes, vazio)
+        vale = opc.efetivo(depois, computador)
+        isentos = {k for k in valia if k[0] == "global" and len(k) == 3
+                   and k[1] in ("leds", "rumble")
+                   and k not in {("global", s, c) for s in ("leds", "rumble")
+                                 for c in opc.escolhas_globais_do_jogo(de_antes, s)}}
+        for k in opc._escolhas(de_antes):
+            if k in isentos:
+                continue
+            assert vale.get(k) == valia.get(k), (
+                f"{nome}: {k} valia {valia.get(k)!r}, vale {vale.get(k)!r}")
+        # O PS solo que a linha guardava foi para o ⑥ da tabela (`_sem_o_ps_da_tabela`).
+        de_antes = de_antes.model_copy(update={
+            "button_actions": opc._sem_o_ps_da_tabela(de_antes.button_actions) or None})
+        assert opc.efetivo(de_antes, computador) == vale, f"{nome} mudou com o mesmo computador"
+    freestyle = load_profile("Freestyle")
+    assert freestyle.controllers is None
+    assert freestyle.button_actions is None
+    assert not list(profiles_dir().glob("*.json.antes-do-computador.json"))
+
+
+def test_a_migracao_roda_uma_vez() -> None:
+    """A marca segura: a segunda partida não semeia nem tira de novo."""
+    save_profile(_freestyle_da_forma_dela())
+    assert opc.migrar_uma_vez() is not None
+    assert opc.migrar_uma_vez() is None
+
+
+def test_sem_freestyle_o_computador_nasce_das_velocidades_de_agora(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from hefesto_dualsense4unix.utils import session
+
+    monkeypatch.setattr(session, "load_mouse_preference", lambda: (True, 11, 4))
+    save_profile(_perfil("Jogo X", mouse={"enabled": True, "speed": 11, "scroll_speed": 4}))
+    opc.migrar_uma_vez()
+    computador = opc.o_computador()
+    assert (computador.global_.mouse.speed, computador.global_.mouse.scroll_speed) == (11, 4)
+    jogo = load_profile("Jogo X")
+    assert not opc.escolhas_globais_do_jogo(jogo, "mouse"), "a velocidade igual ficou no jogo"
+    assert jogo.mouse is not None and jogo.mouse.enabled is True
+
+
+def test_o_ps_da_linha_vai_para_a_tabela() -> None:
+    """O ``__NADA__`` do PS na linha das Definições sai do perfil (é do ⑥)."""
+    save_profile(_perfil("Jogo X", button_actions={"ps": "__STEAM__",
+                                                   "cross": "KEY_BACKSPACE"}))
+    opc.migrar_uma_vez()
+    assert load_profile("Jogo X").button_actions == {"cross": "KEY_BACKSPACE"}

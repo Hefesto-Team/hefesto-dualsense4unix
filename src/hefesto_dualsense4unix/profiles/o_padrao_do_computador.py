@@ -659,6 +659,340 @@ def gravar_pelo_gesto(
 
 
 # ---------------------------------------------------------------------------
+# A migração, uma vez
+# ---------------------------------------------------------------------------
+#: O sufixo da cópia de cada perfil que a migração reescreve, ao lado do
+#: original (a forma dos ``maquina.json.antes-de-*``).
+SUFIXO_DA_COPIA = ".antes-do-computador"
+
+#: Os atos do PS solo que a linha das Definições guardava e que são do ⑥ da
+#: tabela dos gestos desde a OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01.
+_PS_QUE_E_DA_TABELA: frozenset[str] = frozenset({"__NADA__", "__STEAM__"})
+
+
+def _sem_o_ps_da_tabela(acoes: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    if acoes is None:
+        return None
+    return {b: a for b, a in acoes.items() if not (b == "ps" and a in _PS_QUE_E_DA_TABELA)}
+
+
+def efetivo(perfil: Profile, computador: Any) -> dict[tuple[str, ...], Any]:
+    """O valor que cada campo do :data:`SECOES` TEM para o aparelho. Para comparar.
+
+    A vista põe o computador por baixo; o campo de um controle sem escolha
+    própria herda a seção global do mesmo nome (é o que o aplicador faz), e
+    os que não têm global (as barras dos motores, os sensores) ficam ``None``,
+    que é o de fábrica deles.
+    """
+    vista = perfil_que_vale(perfil, computador)
+    saida: dict[tuple[str, ...], Any] = {}
+    for secao in ("leds", "rumble", "speaker", "mic", "mouse"):
+        modelo = getattr(vista, secao, None)
+        dados = modelo.model_dump(mode="json") if modelo is not None else {}
+        for campo, valor in dados.items():
+            saida[("global", secao, campo)] = valor
+    for secao in ("button_actions", "key_bindings", "teclado_emulado"):
+        saida[("global", secao)] = getattr(vista, secao, None)
+    identidades = set(_entradas_por_chave(perfil.controllers)) | set(computador.controles)
+    vistos = _entradas_por_chave(vista.controllers)
+    for identidade in sorted(identidades):
+        entrada = (vista.controllers or {}).get(vistos.get(identidade, ""))
+        for secao, campos in _CAMPOS_DO_CONTROLE.items():
+            proprio = getattr(entrada, secao, None) if entrada is not None else None
+            escritos = proprio.model_dump(mode="json", exclude_unset=True) if proprio else {}
+            do_global = getattr(vista, secao, None)
+            herdado = do_global.model_dump(mode="json") if do_global is not None else {}
+            for campo in campos:
+                valor = escritos.get(campo)
+                saida[("controle", identidade, secao, campo)] = (
+                    valor if valor is not None else herdado.get(campo))
+    return saida
+
+
+def _escolhas(perfil: Profile) -> set[tuple[str, ...]]:
+    """As chaves de :func:`efetivo` que o jogo escolheu (o que tem de sobreviver)."""
+    saida: set[tuple[str, ...]] = set()
+    for secao in ("leds", "rumble", "speaker", "mic", "mouse"):
+        saida |= {("global", secao, c) for c in escolhas_globais_do_jogo(perfil, secao)}
+    for secao in ("button_actions", "key_bindings", "teclado_emulado"):
+        if escolhas_globais_do_jogo(perfil, secao):
+            saida.add(("global", secao))
+    for original in perfil.controllers or {}:
+        identidade = chave(original)
+        if identidade is None:
+            continue
+        for secao in _CAMPOS_DO_CONTROLE:
+            saida |= {("controle", identidade, secao, c)
+                      for c in escolhas_do_controle_do_jogo(perfil, original, secao)}
+    return saida
+
+
+def _candidatos(perfil: Profile) -> list[tuple[tuple[str, ...], ...]]:
+    """O que pode sair do perfil, um grupo por vez (o par anda junto)."""
+    grupos: list[tuple[tuple[str, ...], ...]] = []
+    for secao in ("leds", "rumble", "speaker", "mouse"):
+        escolhidos = set(escolhas_globais_do_jogo(perfil, secao))
+        for par in PARES.get(secao, ()):
+            if escolhidos & set(par):
+                grupos.append(tuple(("global", secao, c) for c in par))
+                escolhidos -= set(par)
+        grupos += [(("global", secao, c),) for c in sorted(escolhidos)]
+    for secao in ("button_actions", "key_bindings", "teclado_emulado"):
+        if escolhas_globais_do_jogo(perfil, secao):
+            grupos.append((("global", secao),))
+    for original in perfil.controllers or {}:
+        identidade = chave(original)
+        if identidade is None:
+            continue
+        for secao in _CAMPOS_DO_CONTROLE:
+            escolhidos = set(escolhas_do_controle_do_jogo(perfil, original, secao))
+            for par in PARES.get(secao, ()):
+                if escolhidos & set(par):
+                    grupos.append(tuple(("controle", identidade, secao, c) for c in par))
+                    escolhidos -= set(par)
+            grupos += [(("controle", identidade, secao, c),) for c in sorted(escolhidos)]
+    return grupos
+
+
+def _sem(perfil: Profile, grupo: Iterable[tuple[str, ...]]) -> Profile:
+    """O perfil sem os campos do grupo (``None`` é «sem opinião» no esquema)."""
+    cru: dict[str, Any] = perfil.model_dump(mode="json", exclude_unset=True)
+    for chave_ in grupo:
+        if chave_[0] == "global" and len(chave_) == 2:
+            cru.pop(chave_[1], None)
+        elif chave_[0] == "global":
+            _, secao, campo = chave_
+            atual = dict(cru.get(secao) or {})
+            if secao in _DENSAS and campo in _DENSAS[secao]:
+                atual[campo] = _DENSAS[secao][campo]
+            else:
+                atual.pop(campo, None)
+            if atual:
+                cru[secao] = atual
+            else:
+                cru.pop(secao, None)
+        else:
+            _, identidade, secao, campo = chave_
+            controles = dict(cru.get("controllers") or {})
+            original = _entradas_por_chave(controles).get(identidade)
+            if original is None:
+                continue
+            entrada = dict(controles[original])
+            atual = dict(entrada.get(secao) or {})
+            atual.pop(campo, None)
+            if atual:
+                entrada[secao] = atual
+            else:
+                entrada.pop(secao, None)
+            if entrada:
+                controles[original] = entrada
+            else:
+                controles.pop(original)
+            cru["controllers"] = controles or None
+    return Profile.model_validate(cru)
+
+
+def ceder_ao_computador(perfil: Profile, computador: Any) -> tuple[Profile, int]:
+    """O perfil sem o que já vale igual pelo computador. Devolve ``(perfil, saíram)``.
+
+    Um grupo (o campo, ou o par) só sai se, sem ele, NENHUM valor efetivo
+    deste perfil muda com este computador (:func:`efetivo`, campo a campo, em
+    todo controle): a régua é o valor que o aparelho recebe, e não o campo que
+    sai. O Freestyle não sobrepõe nada, e perde o que o computador guarda
+    (o computador nasceu dele); o microfone global fica, porque o computador
+    não guarda microfone global.
+    """
+    if e_o_freestyle(perfil.name):
+        cru = perfil.model_dump(mode="json", exclude_unset=True)
+        saiu = 0
+        for secao in ("leds", "rumble", "speaker", "button_actions", "key_bindings",
+                      "teclado_emulado"):
+            saiu += secao in cru
+            cru.pop(secao, None)
+        if isinstance(cru.get("mouse"), dict):
+            saiu += sum(c in cru["mouse"] for c in ("speed", "scroll_speed"))
+            cru["mouse"] = {k: v for k, v in cru["mouse"].items()
+                            if k not in ("speed", "scroll_speed")}
+        controles = {}
+        for original, entrada in dict(cru.get("controllers") or {}).items():
+            resto = {s: v for s, v in dict(entrada).items() if s not in _CAMPOS_DO_CONTROLE}
+            saiu += len(dict(entrada)) - len(resto)
+            if resto:
+                controles[original] = resto
+        cru["controllers"] = controles or None
+        return Profile.model_validate(cru), saiu
+    antes = efetivo(perfil, computador)
+    atual = perfil
+    saiu = 0
+    for grupo in _candidatos(perfil):
+        tentativa = _sem(atual, grupo)
+        if efetivo(tentativa, computador) == antes:
+            atual = tentativa
+            saiu += len(grupo)
+    return atual, saiu
+
+
+def semente_do_freestyle(freestyle: Profile | None) -> dict[str, Any]:
+    """O documento do computador que nasce do Freestyle (o que ele escreveu).
+
+    Sem Freestyle, só as velocidades do ``mouse_emulation.flag``.
+    """
+    do_global: dict[str, Any] = {}
+    controles: dict[str, Any] = {}
+    if freestyle is not None:
+        for secao in ("leds", "rumble", "speaker"):
+            modelo = getattr(freestyle, secao, None)
+            if modelo is None or secao not in freestyle.model_fields_set:
+                continue
+            dados = modelo.model_dump(mode="json", exclude_unset=True)
+            fabrica = _DENSAS.get(secao, {})
+            escolhidos = {c for c, v in dados.items()
+                          if v is not None and (c not in fabrica or v != fabrica[c])}
+            escolhidos = _expandir_pares(secao, escolhidos)
+            if escolhidos:
+                do_global[secao] = {c: dados.get(c) for c in escolhidos}
+        mouse = freestyle.mouse
+        if mouse is not None:
+            do_global["mouse"] = {"speed": mouse.speed, "scroll_speed": mouse.scroll_speed}
+        acoes = _sem_o_ps_da_tabela(freestyle.button_actions)
+        if acoes:
+            do_global["button_actions"] = acoes
+        if freestyle.key_bindings is not None:
+            do_global["key_bindings"] = freestyle.key_bindings
+        if freestyle.teclado_emulado is not None:
+            do_global["teclado_emulado"] = freestyle.teclado_emulado
+        for original, entrada in (freestyle.controllers or {}).items():
+            identidade = chave(original)
+            if identidade is None:
+                continue
+            dados_entrada = {
+                secao: {c: v for c, v in valor.model_dump(mode="json",
+                                                           exclude_unset=True).items()
+                        if v is not None}
+                for secao in _CAMPOS_DO_CONTROLE
+                if (valor := getattr(entrada, secao, None)) is not None
+            }
+            dados_entrada = {s: v for s, v in dados_entrada.items() if v}
+            if dados_entrada:
+                controles[identidade] = dados_entrada
+    if "mouse" not in do_global:
+        # Sem Freestyle (ou sem a seção dele), as velocidades de agora.
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.utils.session import load_mouse_preference
+
+            _ligada, speed, scroll = load_mouse_preference()
+            mouse_ = {c: v for c, v in (("speed", speed), ("scroll_speed", scroll))
+                      if v is not None}
+            if mouse_:
+                do_global["mouse"] = mouse_
+    documento: dict[str, Any] = {}
+    if do_global:
+        documento["global"] = do_global
+    if controles:
+        documento["controles"] = controles
+    return documento
+
+
+def _por_baixo(existente: dict[str, Any], semente: Mapping[str, Any]) -> dict[str, Any]:
+    """A semente só onde o computador ainda não diz nada (um clique já dado vence)."""
+    saida = dict(existente)
+    for chave_, valor in semente.items():
+        if isinstance(valor, Mapping) and isinstance(saida.get(chave_), Mapping):
+            saida[chave_] = _por_baixo(dict(saida[chave_]), valor)
+        elif chave_ not in saida or saida[chave_] is None:
+            saida[chave_] = valor
+    return saida
+
+
+def _contar(semente: Mapping[str, Any]) -> int:
+    """Quantos campos a semente leva (o número do diário)."""
+    total = 0
+    for valor in (semente.get("global") or {}).values():
+        total += len(valor) if isinstance(valor, Mapping) else 1
+    for entrada in (semente.get("controles") or {}).values():
+        total += sum(len(v) for v in entrada.values())
+    return total
+
+
+def migrar_uma_vez() -> dict[str, int] | None:
+    """O computador nasce do Freestyle, e cada perfil perde o que já vale igual.
+
+    Uma vez: a marca é ``computador.migrado`` no ``maquina.json``. Cada perfil
+    reescrito ganha antes a cópia ``<perfil>.json.antes-do-computador`` ao
+    lado (e a versão do ``.historico``, que o ``save_profile`` guarda). Perfil
+    que é cópia intocada de fábrica não é reescrito: a atualização da fábrica
+    continua o alcançando. Devolve ``{perfil: campos que saíram}``, ou ``None``
+    quando não rodou.
+    """
+    from pathlib import Path
+
+    from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.utils.maquina import gravar_o_computador
+    from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
+
+    computador = o_computador()
+    if computador.migrado:
+        return None
+    pasta = profiles_dir(ensure=True)
+    perfis: list[tuple[Path, Profile, dict[str, Any]]] = []
+    for caminho in sorted(pasta.glob("*.json")):
+        dados = loader._dados_crus_do_perfil(caminho)
+        if dados is None:
+            continue
+        try:
+            perfis.append((caminho, Profile.model_validate(dados), dados))
+        except Exception:
+            logger.warning("computador_pulou_perfil_torto", arquivo=caminho.name)
+    freestyle = next((p for _c, p, _d in perfis if e_o_freestyle(p.name)), None)
+    semente = semente_do_freestyle(freestyle)
+    documento = _por_baixo(computador.model_dump(mode="json"), semente)
+    if not gravar_o_computador(documento):
+        logger.warning("computador_nao_semeado")
+        return None
+    computador = o_computador()
+    logger.info("computador_semeado", de="freestyle" if freestyle else "mouse_emulation",
+                campos=_contar(semente))
+    saidas: dict[str, int] = {}
+    for caminho, perfil, dados in perfis:
+        if loader._e_copia_de_fabrica(caminho, dados):
+            continue
+        try:
+            novo, saiu = ceder_ao_computador(perfil, computador)
+        except Exception as exc:
+            logger.warning("perfil_nao_cedeu_ao_computador", perfil=perfil.name,
+                           err=str(exc)[:200])
+            continue
+        acoes = novo.button_actions
+        if acoes is not None and acoes.get("ps") in _PS_QUE_E_DA_TABELA:
+            novo = novo.model_copy(update={"button_actions": _sem_o_ps_da_tabela(acoes) or None})
+            saiu += 1
+            logger.info("ps_do_perfil_foi_para_a_tabela", perfil=perfil.name)
+        if not saiu:
+            continue
+        if loader._profile_path(novo) != caminho:
+            # O nome não dá este arquivo: gravar criaria um segundo perfil.
+            logger.warning("perfil_nao_cedeu_ao_computador", perfil=perfil.name,
+                           err="o nome do perfil não é o do arquivo")
+            continue
+        copia = caminho.with_name(caminho.name + SUFIXO_DA_COPIA)
+        try:
+            if not copia.exists():
+                copia.write_bytes(caminho.read_bytes())
+            loader.save_profile(novo, origem="migracao-do-computador")
+        except (OSError, ValueError) as exc:
+            logger.warning("perfil_nao_cedeu_ao_computador", perfil=perfil.name,
+                           err=str(exc)[:200])
+            continue
+        saidas[perfil.name] = saiu
+        logger.info("perfil_cedeu_ao_computador", perfil=perfil.name, campos=saiu,
+                    ficaram=len(_escolhas(novo)))
+    documento = o_computador().model_dump(mode="json")
+    documento["migrado"] = True
+    gravar_o_computador(documento)
+    return saidas
+
+
+# ---------------------------------------------------------------------------
 # Os três gestos do cartão
 # ---------------------------------------------------------------------------
 def _identidades(perfil: Profile, uniq: object) -> list[str]:
@@ -796,18 +1130,22 @@ __all__ = [
     "JOGO",
     "PARES",
     "SECOES",
+    "SUFIXO_DA_COPIA",
     "OFreestyleNaoSobrepoeError",
     "Secao",
     "carregar_o_que_vale",
+    "ceder_ao_computador",
     "chave",
     "chave_no_perfil",
     "computador_vazio",
     "e_o_freestyle",
+    "efetivo",
     "escolhas_do_controle_do_jogo",
     "escolhas_globais_do_jogo",
     "gravar",
     "gravar_pelo_gesto",
     "marca",
+    "migrar_uma_vez",
     "o_computador",
     "o_que_mudou",
     "o_que_vale",
@@ -816,6 +1154,7 @@ __all__ = [
     "perfil_vazio",
     "restaurar_o_computador",
     "selo_da_maquina",
+    "semente_do_freestyle",
     "so_neste_jogo",
     "sobrepoe",
     "velocidades_do_computador",

@@ -1343,7 +1343,15 @@ class Daemon:
             uniqs_declarados,
             uniqs_recusados,
         )
+
+        # O PADRÃO DO COMPUTADOR NASCE DO FREESTYLE, uma vez
+        # (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01, 01/10/2026): depois das
+        # renomeações do perfil de fora do jogo, e antes de a memória ler o
+        # `maquina.json` que ela escreve.
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import migrar_uma_vez
         from hefesto_dualsense4unix.utils.maquina import carregar_maquina
+        with contextlib.suppress(Exception):
+            migrar_uma_vez()
         self._maquina = carregar_maquina()
         # CONFIG-05 (22/08/2026): o primeiro consumidor da declaração, e é o
         # teto de orçamento. A config leva a FONTE, não o valor — o `lambda`
