@@ -220,7 +220,7 @@ def daemon_status_basic() -> dict[str, Any] | None:
 
 
 def profile_list() -> list[dict[str, Any]]:
-    """Lista perfis. Preferência: daemon (traz 'active'); fallback: disco."""
+    """Os perfis a escolher, sem o Freestyle (02/10). Daemon primeiro; reserva: disco."""
     ok, result = _safe_call("profile.list")
     if ok and isinstance(result, dict):
         profiles = list(result.get("profiles", []))
@@ -229,7 +229,7 @@ def profile_list() -> list[dict[str, Any]]:
 
     try:
         from hefesto_dualsense4unix.profiles.loader import load_all_profiles
-
+        from hefesto_dualsense4unix.profiles.manager import os_perfis_de_escolher
         return [
             {
                 "name": p.name,
@@ -237,7 +237,7 @@ def profile_list() -> list[dict[str, Any]]:
                 "match_type": p.match.type,
                 "active": False,
             }
-            for p in load_all_profiles()
+            for p in os_perfis_de_escolher(load_all_profiles())
         ]
     except (FileNotFoundError, PermissionError, OSError) as exc:
         # PROFILE-LOADER-UX-01: load_all_profiles agora pula perfis corrompidos

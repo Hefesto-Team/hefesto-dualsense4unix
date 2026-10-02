@@ -385,6 +385,36 @@ def test_a_roda_do_ps_e_d_pad_nao_passa_pelo_freestyle(aceso: bool, sentido: int
     assert store.freestyle_ligado is False
 
 
+@pytest.mark.parametrize("daemon", ["fora-do-ar", "lista-vazia"])
+def test_a_lista_da_ponte_nao_oferece_o_freestyle(
+    daemon: str, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A `ipc_bridge.profile_list`: o daemon fora do ar, ou a lista vazia da máquina nova.
+
+    Conferência final de 02/10/2026. As duas caem na reserva do disco: fora do
+    ar, pelo erro; com o `profile.list` vazio (o Freestyle sozinho na pasta, que
+    não é oferta), pelo `if profiles` da ponte. A reserva oferece o que o daemon
+    oferece.
+
+    MORDIDA: troque o `os_perfis_de_escolher(load_all_profiles())` da reserva de
+    `app.ipc_bridge.profile_list` por `load_all_profiles()` e as duas células
+    reprovam com o Freestyle na lista.
+    """
+    from hefesto_dualsense4unix.app import ipc_bridge
+
+    def _fora_do_ar(*_a: Any, **_k: Any) -> Any:
+        raise FileNotFoundError("sem socket nesta régua")
+
+    _o_disco()
+    resposta = _fora_do_ar if daemon == "fora-do-ar" else (lambda *_a, **_k: {"profiles": []})
+    monkeypatch.setattr(ipc_bridge, "_run_call", resposta)
+
+    nomes = [p["name"] for p in ipc_bridge.profile_list()]
+
+    assert AVATAR in nomes
+    assert FREESTYLE not in nomes, nomes
+
+
 def test_a_tui_sem_daemon_nao_lista_o_freestyle(monkeypatch: pytest.MonkeyPatch) -> None:
     """A TUI com o daemon fora do ar lê o disco, e lê a mesma oferta do daemon.
 
