@@ -568,7 +568,7 @@ def test_sem_tocador_na_maquina_o_hid_segue_sozinho(processos: Any) -> None:
 
 
 @pytest.mark.parametrize("lugar", [1, 2, 3, 4])
-def test_no_cabo_o_rumble_de_cada_um_abre_so_os_motores_dele(mundo: _Mundo, lugar: int) -> None:
+def test_no_cabo_o_rumble_de_cada_lugar_abre_so_os_motores_dele(mundo: _Mundo, lugar: int) -> None:
     """Quatro no cabo, ninguém mexeu: o rumble do jogador N abre só os motores do laço dele.
 
     Antes do caminho, o HID leva o par; com o portão aberto, a volta reaplica
