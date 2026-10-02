@@ -847,6 +847,51 @@ class TestOVigiaEsperaAEscritaEmVoo:
         assert escrevente.escritas == 1
 
 
+class TestOServicoQueSaiTiraOSocket:
+    def test_o_stop_com_teto_tira_o_socket_mesmo_com_a_escrita_em_voo(
+        self, sem_escrevente: None, pasta_curta: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """O `shutdown` do serviço (`daemon/connection.py`) derruba o IPC com
+        teto de 2 s, e as bordas do próprio shutdown (o co-op, o vpad) acabaram
+        de pedir a escrita do lançamento ao fio. Com a escrita mais longa que o
+        teto, o socket sai do disco do mesmo jeito: a espera pelo escrevente
+        vem depois da limpeza do socket, que era tudo o que o `stop` fazia.
+
+        MORDIDA: devolva a espera pelo escrevente para antes da limpeza do
+        socket em `IpcServer.stop` — o teto cancela o `stop` no meio, e o
+        socket fica no disco.
+        """
+        entrou = threading.Event()
+        solta = threading.Event()
+
+        def lenta(_foto: Any, _devolver: Any) -> None:
+            entrou.set()
+            solta.wait(10)
+
+        monkeypatch.setattr(launch_env, "_foto_do_lancamento",
+                            lambda _daemon, *, no_fio: _foto())
+        monkeypatch.setattr(launch_env, "_a_parte_de_fora", lenta)
+        servidor = _servidor(pasta_curta, daemon=SimpleNamespace())
+        laco = asyncio.new_event_loop()
+        try:
+            async def subir_pedir_e_sair() -> bool:
+                await servidor.start()
+                assert servidor.socket_path.exists()
+                launch_env.materialize_launch_env(SimpleNamespace())  # type: ignore[arg-type]
+                assert await asyncio.to_thread(entrou.wait, 10), "a escrita não começou"
+                with contextlib.suppress(TimeoutError):
+                    await asyncio.wait_for(servidor.stop(), timeout=0.5)
+                return servidor.socket_path.exists()
+
+            ficou = laco.run_until_complete(subir_pedir_e_sair())
+        finally:
+            solta.set()
+            laco.close()
+        assert not ficou, (
+            "o socket ficou no disco: o teto do shutdown cancelou o `stop` "
+            "esperando a escrita do lançamento, antes da limpeza")
+
+
 # ===========================================================================
 # R5 — o servidor diz quem o segurou
 # ===========================================================================

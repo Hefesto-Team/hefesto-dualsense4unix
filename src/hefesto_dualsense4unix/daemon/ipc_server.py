@@ -412,13 +412,20 @@ class IpcServer(IpcHandlersMixin):
             with contextlib.suppress(Exception):
                 await self._server.wait_closed()
             self._server = None
+        self._tirar_o_socket()
         # O-APP-RESPONDE-NA-HORA-01: as próximas materializações são na hora, e
-        # a pendente é escrita antes de o serviço sair (fora do laço).
+        # a pendente é escrita antes de o serviço sair (fora do laço). DEPOIS do
+        # socket, e é de propósito: o `shutdown` (`daemon/connection.py`) chama
+        # este `stop` com teto de 2 s, e as bordas do próprio shutdown (o co-op,
+        # o vpad) acabaram de pedir a escrita ao fio. A espera que estoura o
+        # teto cancela só ela, e a escrita segue no fio.
         escrevente, self._escrevente = self._escrevente, None
         if escrevente is not None:
             with contextlib.suppress(Exception):
                 await asyncio.to_thread(launch_env.desarmar_o_escrevente, escrevente)
 
+    def _tirar_o_socket(self) -> None:
+        """Remove o socket do disco só se ainda formos o owner (o inode do `start`)."""
         if self._socket_inode is None:
             return
         try:
