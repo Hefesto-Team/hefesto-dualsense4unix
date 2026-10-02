@@ -671,7 +671,7 @@ o degrau anterior deixou passar.
 **Quem ganha o ambiente.** O degrau 4 vem **depois** do 3: a Steam monta o
 ambiente do processo e o wrapper roda dentro dele, sobrescrevendo com `env(1)`
 as variáveis que exporta. Logo, para as **sete** variáveis da
-`ENV_ALLOWLIST` em `daemon/launch_env.py:82-90`, **o wrapper vence a Steam**. Para qualquer
+`ENV_ALLOWLIST` em `daemon/launch_env.py:83-91`, **o wrapper vence a Steam**. Para qualquer
 outra — e `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD` é uma delas, porque
 **não está na allowlist** — vale o que a Steam pôs. **GRAU: ALTA** para o
 mecanismo (`env(1)` e a allowlist por NOME de variável em
