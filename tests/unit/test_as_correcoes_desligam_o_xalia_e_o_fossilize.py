@@ -465,3 +465,31 @@ def test_o_excluido_que_segue_a_global_dela_fica_com_o_zero_dela(casa: Path) -> 
         assert copia.get(_XALIA) == "0", f"o jogo excluído A perdeu o 0 dela: {copia}"
         assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in copia, "o excluído levou o nosso"
         _carona(casa)
+
+
+def test_o_recibo_do_uninstall_nao_diz_que_ela_mudou_o_que_ja_era_dela(casa: Path) -> None:
+    """O `1` dela na global antes do Hefesto fica, e o recibo não diz «mudou depois».
+
+    O Hefesto nunca escreveu por cima dele (o dela manda), então a frase
+    «ficaram as que você mudou depois do Hefesto» era falsa. Quando ela troca o
+    nosso `0` depois, a frase continua. MORDIDA: em `_devolver_chaves`, conte em
+    `ficaram` toda chave presente, e esta reprova pela global com o `1` de antes.
+    """
+    heroic = _heroic(casa, {})
+    _global_dela(heroic, "1")
+    _carona(casa)
+    feitos, _ = cpe.desfazer_as_estradas([_pasta()], casa)
+    assert _lista_global(heroic)[_XALIA] == "1"
+    recibo = " ".join(cpe.frase_do_desfeito(f) for f in feitos)
+    assert "mudou depois do Hefesto" not in recibo, recibo
+
+
+def test_o_recibo_do_uninstall_diz_quando_ela_trocou_o_nosso(casa: Path) -> None:
+    """Ela troca o nosso `0` por `1` depois da carona: o recibo diz que ficou o dela."""
+    heroic = _heroic(casa, {})
+    _carona(casa)
+    _trocar_o_nosso(heroic / "config.json")
+    feitos, _ = cpe.desfazer_as_estradas([_pasta()], casa)
+    assert _lista_global(heroic)[_XALIA] == "1"
+    recibo = " ".join(cpe.frase_do_desfeito(f) for f in feitos)
+    assert f"mudou depois do Hefesto: {_XALIA}" in recibo, recibo

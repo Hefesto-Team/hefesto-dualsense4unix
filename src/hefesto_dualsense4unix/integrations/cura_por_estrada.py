@@ -661,7 +661,10 @@ def _devolver_chaves(pares: Pares, chaves: Iterable[str], entrada: Entrada,
         marca = entrada.chaves.pop(chave)
         nossos = set(marca.valores)
         if not any(a == chave and b in nossos for a, b in pares):
-            if any(a == chave for a, _ in pares):
+            #: O valor de antes de uma :data:`DELA_MANDA` nunca foi trocado pelo
+            #: Hefesto: é dela desde antes, e não «mudou depois».
+            if any(a == chave and not (chave in DELA_MANDA and b == marca.antes)
+                   for a, b in pares):
                 contas.ficaram.append(chave)
             continue
         #: Um valor que não é nosso na mesma chave é dela, e o de antes não volta
