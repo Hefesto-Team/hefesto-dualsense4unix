@@ -26,6 +26,14 @@ lidos como da máquina *pelo que fazem hoje*; a leitura é minha, e a decisão
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
+# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
+# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
+# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
+exigir_gi_real("test_t14_cada_gesto_da_aba_sistema_declara_dono: importa código da janela GTK")
+
 from pathlib import Path
 
 import pytest

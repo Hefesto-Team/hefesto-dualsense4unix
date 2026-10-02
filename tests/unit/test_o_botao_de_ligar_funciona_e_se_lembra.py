@@ -57,6 +57,14 @@ onze réguas desta casa reprovaram a melhora em vez do defeito, em 26/08:
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
+# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
+# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
+# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
+exigir_gi_real("test_o_botao_de_ligar_funciona_e_se_lembra: importa código da janela GTK")
+
 import pathlib
 import re
 

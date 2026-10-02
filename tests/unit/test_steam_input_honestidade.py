@@ -22,6 +22,14 @@ execução que não tocou em nada. Este arquivo trava as três pernas da cura:
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
+# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
+# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
+# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
+exigir_gi_real("test_steam_input_honestidade: importa código da janela GTK")
+
 import os
 import shutil
 import subprocess

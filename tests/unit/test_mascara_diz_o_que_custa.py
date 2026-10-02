@@ -23,6 +23,14 @@ Este arquivo trava a frase e trava o que ela NÃO pode dizer.
 
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
+# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
+# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
+# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
+exigir_gi_real("test_mascara_diz_o_que_custa: importa código da janela GTK")
+
 from hefesto_dualsense4unix.app.actions.home_actions import (
     TEXTO_CUSTO_MASCARA_XBOX,
     texto_do_custo_da_mascara,

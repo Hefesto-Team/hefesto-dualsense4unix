@@ -33,6 +33,14 @@ DADO (`Profile.mode` sobrevive à retirada, e o perfil novo nasce sem a seção)
 """
 from __future__ import annotations
 
+from tests.conftest import exigir_gi_real
+
+# AS-ONZE-REGUAS-DO-GTK-DE-MENTIRA-01 (01/10/2026): este módulo importa código
+# que faz `import gi` e só coletava no `lint-test` porque um dos onze arquivos
+# do GTK de mentira, colhido antes, deixava esse código no `sys.modules`
+# montado sobre um `gi` falso. Com os onze guardados, a guarda vem aqui também.
+exigir_gi_real("test_o_quadro_do_modo_nao_descreve_o_que_perde: importa código da janela GTK")
+
 import pytest
 
 from hefesto_dualsense4unix.app.actions.home_actions import (
