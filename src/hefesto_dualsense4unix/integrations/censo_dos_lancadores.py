@@ -35,11 +35,14 @@ ONDE A BIBLIOTECA MORA, medido na máquina dela em 09/09/2026
 -------------------------------------------------------------
 
 Um flatpak guarda tudo em ``~/.var/app/<app-id>/``: ``config/`` faz as vezes de
-``~/.config`` e ``data/`` de ``~/.local/share``. O nativo usa os dois de sempre.
-**Este módulo procura nos DOIS**, e a ordem é flatpak-primeiro só porque é onde
-os dela estão; achar o nativo primeiro daria o mesmo resultado.
+``~/.config`` e ``data/`` de ``~/.local/share``, e dentro da caixa o XDG é sempre
+esse. O nativo segue o XDG como o lançador segue: ``$XDG_CONFIG_HOME`` e
+``$XDG_DATA_HOME``, e sem eles ``~/.config`` e ``~/.local/share`` (:class:`_Onde`).
+**Este módulo procura nos DOIS**, e com as duas casas no disco vale a do
+programa instalado (:func:`_pastas_lidas`): a outra pode ser sobra.
 
     Heroic     config/heroic/store_cache/{legendary,gog,nile}_library.json
+               e o registro dos instalados de cada loja (_REGISTROS_DO_HEROIC)
     Lutris     config/lutris/games/*.yml
     RetroArch  config/retroarch/playlists/*.lpl
     Dolphin    config/dolphin-emu/Dolphin.ini  (ISOPath0..N)
@@ -191,8 +194,10 @@ class JogoDoLancador:
         **O FILTRO É UM CAMPO DECLARADO, e não uma lista de nomes** — que é a
         diferença desta régua para a `jogos_locais.e_ferramenta_da_steam`, onde
         campo não existe e o filtro tem de ser por nome. Aqui a Epic e a GOG
-        gravam ``install.is_dlc`` no próprio arquivo de biblioteca, e é ele que
-        manda.
+        gravam ``install.is_dlc`` no próprio arquivo de biblioteca, e o
+        registro dos instalados também: o jogo instalado depois da última
+        releitura não tem ``install`` na biblioteca, e o campo vem do registro
+        (:func:`_heroic`).
 
         MEDIDO NO DISCO DELA EM 10/09/2026, e o número da sprint estava velho:
         o enunciado dizia *"dos 37, um é `gog-redist` … São 36 jogos"*. São
@@ -207,9 +212,10 @@ class JogoDoLancador:
 class BibliotecaDoLancador:
     """O que se sabe da biblioteca de UM lançador.
 
-    `estado` é um dos três acima. `onde` é a pasta que foi lida (ou a que se
-    procurou, quando `NUNCA_ABERTO`) — a tela a mostra, porque *"achei aqui"*
-    sem o caminho não deixa ela conferir nada.
+    `estado` é um dos três acima. `onde` é a pasta que foi lida (a primeira,
+    quando os dois programas estão instalados e as duas casas se somam) — a
+    tela a mostra, porque *"achei aqui"* sem o caminho não deixa ela conferir
+    nada.
     """
 
     lancador: str
@@ -268,14 +274,64 @@ _ONDE: dict[str, tuple[str, str]] = {
 _CONFIG_CAI_NOS_DADOS = frozenset({"Lutris"})
 
 
-def _casas(lancador: str, lar: Path) -> tuple[tuple[Path, Path], ...]:
-    """``((config, dados), ...)`` deste lançador: o Flatpak primeiro, o nativo depois."""
+@dataclass(frozen=True)
+class _Onde:
+    """Onde o censo procura: o lar, as duas pastas do XDG dele e a raiz do Flatpak.
+
+    **O XDG ANDA JUNTO COM O LAR (02/10/2026,
+    O-CENSO-RESPONDE-COMO-O-LANCADOR-RESPONDE-01).** O Lutris nativo guarda a
+    casa em `GLib.get_user_config_dir()` e `get_user_data_dir()`
+    (`settings.py:21-22` do 0.5.22), e o Heroic nativo no `appData` do Electron:
+    os dois seguem o `XDG_CONFIG_HOME` e o `XDG_DATA_HOME`. Medido num lar de
+    mentira com os dois XDG fora do padrão: o censo de casa fixa dizia «Abra
+    Lutris uma vez…» e «Abra Heroic uma vez…» com os dois cheios.
+
+    O lar de verdade (``lar=None``) lê o XDG do ambiente; quem passa um lar de
+    mentira passa o XDG dele, ou fica com o `<lar>/.config` e o
+    `<lar>/.local/share`. Ler o ambiente com um lar explícito faria a régua de
+    lar de mentira ler a casa de outro lugar (a suíte isola o XDG num
+    `tmp_path/.xdg/`) e passar vazia. Valor relativo não vale, como na spec do
+    XDG e no `uninstall.sh`.
+    """
+
+    lar: Path
+    config: Path
+    dados: Path
+    #: A instalação do Flatpak do SISTEMA (``None`` = `/var/lib/flatpak`), que
+    #: o `sandbox_dos_lancadores` lê ao lado da do usuário.
+    raiz_sistema: Path | None = None
+
+
+def _do_ambiente(variavel: str) -> Path | None:
+    """A pasta desta variável do XDG, quando o ambiente a dá absoluta."""
+    valor = os.environ.get(variavel, "").strip()
+    return Path(valor) if os.path.isabs(valor) else None
+
+
+def _onde(lar: Path | None = None, xdg_config: Path | None = None,
+          xdg_data: Path | None = None, raiz_sistema: Path | None = None) -> _Onde:
+    """O :class:`_Onde` de quem chama: o lar de verdade com o XDG do ambiente,
+    ou o lar dado com o XDG dado (e sem ele, o padrão dentro do lar)."""
+    if lar is None:
+        lar = Path.home()
+        xdg_config = xdg_config or _do_ambiente("XDG_CONFIG_HOME")
+        xdg_data = xdg_data or _do_ambiente("XDG_DATA_HOME")
+    return _Onde(lar, xdg_config or lar / ".config", xdg_data or lar / ".local/share",
+                 raiz_sistema)
+
+
+def _casas(lancador: str, onde: _Onde) -> tuple[tuple[Path, Path], ...]:
+    """``((config, dados), ...)`` deste lançador: o Flatpak primeiro, o nativo depois.
+
+    A do Flatpak não segue o XDG de fora: dentro da caixa ele é sempre
+    `~/.var/app/<id>/{config,data}`.
+    """
     app_id, sub = _ONDE.get(lancador, ("", ""))
     if not sub:
         return ()
-    caixa = lar / ".var/app" / app_id
+    caixa = onde.lar / ".var/app" / app_id
     return ((caixa / "config" / sub, caixa / "data" / sub),
-            (lar / ".config" / sub, lar / ".local/share" / sub))
+            (onde.config / sub, onde.dados / sub))
 
 
 def _pasta_da_casa(lancador: str, config: Path, dados: Path) -> Path | None:
@@ -287,32 +343,154 @@ def _pasta_da_casa(lancador: str, config: Path, dados: Path) -> Path | None:
     return None
 
 
-def _pasta_de_config(lancador: str, lar: Path) -> Path | None:
-    """A pasta de configuração DESTE lançador, no flatpak ou no nativo.
+def _pastas_lidas(lancador: str, onde: _Onde) -> tuple[Path, ...]:
+    """As pastas de configuração que o censo lê, pela regra das duas casas.
 
-    Devolve `None` quando nenhuma das duas existe — que é o `NUNCA_ABERTO`.
+    Em cada casa vale a regra do lançador (:func:`_pasta_da_casa`): no Lutris, a
+    `config/` e, sem ela, a de dados. Vazio é o `NUNCA_ABERTO`.
 
-    AS DUAS CASAS SÃO TENTADAS SEMPRE, e não escolhidas pelo `.desktop`: ela
-    pode ter o flatpak instalado e a configuração vinda de uma instalação
-    nativa anterior (ou o contrário). Em cada casa vale a regra do lançador
-    (:func:`_pasta_da_casa`): no Lutris, a `config/` e, sem ela, a de dados.
-    Medido num lar de mentira em 02/10/2026: com só a pasta de dados, o
-    nativo e o Flatpak diziam «nunca aberto», e o Lutris cheio de jogos.
+    **COM AS DUAS CASAS NO DISCO, VALE A DO PROGRAMA INSTALADO (02/10/2026, por
+    delegação, a validar por ela).** A primeira pasta que existia ganhava, o
+    Flatpak antes do nativo. Medido num lar de mentira: o Lutris nativo com dois
+    jogos e a pasta do Flatpak com o banco vazio (o Flatpak aberto uma vez, ou a
+    sobra de um `flatpak uninstall` sem `--delete-data`), e o cartão dizia «A
+    biblioteca está vazia.»; os dois jogos sumiam do cartão, da lista de
+    exclusão e da chave de janela. Cada lançador responde pela casa dele, e o que
+    ela abre é um programa instalado, não uma pasta (:func:`_instalacoes`). Com
+    os dois instalados, as duas casas se somam, como o «Dolphin · mGBA»; com
+    nenhum, a regra de antes (o Flatpak primeiro). Com uma casa só não há o que
+    escolher, e o disco não é olhado.
     """
-    for config, dados in _casas(lancador, lar):
-        achada = _pasta_da_casa(lancador, config, dados)
-        if achada is not None:
-            return achada
-    return None
+    achadas = [(i, pasta) for i, (config, dados) in enumerate(_casas(lancador, onde))
+               if (pasta := _pasta_da_casa(lancador, config, dados)) is not None]
+    if len(achadas) < 2:
+        return tuple(pasta for _, pasta in achadas)
+    instalados = _instalacoes(lancador, onde)
+    escolhidas = tuple(pasta for i, pasta in achadas if instalados[i])
+    return escolhidas or (achadas[0][1],)
 
 
-def pasta_do_flatpak(lancador: str, lar: Path) -> Path | None:
+def _instalacoes(lancador: str, onde: _Onde) -> tuple[bool, bool]:
+    """``(o Flatpak está instalado, o nativo está instalado)`` — e nunca levanta.
+
+    O Flatpak, pelo dono que já responde isso
+    (`sandbox_dos_lancadores.app_ids_instalados`: a instalação do usuário e a do
+    sistema). O nativo, pelas agulhas com que a aba Lançadores acha o programa
+    (:func:`_instalado_no_nativo`).
+    """
+    app_id, _sub = _ONDE[lancador]
+    try:
+        from hefesto_dualsense4unix.integrations import sandbox_dos_lancadores as caixa
+
+        no_flatpak = bool(caixa.app_ids_instalados((app_id,), onde.lar, onde.raiz_sistema))
+    except Exception:
+        no_flatpak = False
+    try:
+        nativo = _instalado_no_nativo(lancador, onde)
+    except Exception:
+        nativo = False
+    return no_flatpak, nativo
+
+
+def _agulhas_do_nativo(lancador: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """``(atalhos, comandos)`` do programa nativo deste lançador.
+
+    As agulhas são as que o cartão já usa para achar o lançador
+    (`desenho_dos_lancadores.SEM_FONTE`, módulo de dados puro, só lido): um
+    segundo lugar com os nomes envelheceria calado. No cartão de dois programas
+    («Dolphin · mGBA»), as de cada um são o `app-id` dele e os nomes que começam
+    pela subpasta dele (`dolphin-emu`, `mgba-qt`, `mgba`).
+    """
+    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
+
+    cartao = next((c for c, nomes in _DO_CARTAO.items() if lancador in nomes), "")
+    item = next((s for s in desenho.SEM_FONTE if s.chave == cartao), None)
+    if item is None:
+        return (), ()
+    if len(_DO_CARTAO[cartao]) == 1:
+        return item.atalhos, item.comandos
+    app_id, sub = _ONDE[lancador]
+
+    def dele(nome: str) -> bool:
+        return nome == app_id or nome.casefold().startswith(sub.casefold())
+
+    return (tuple(a for a in item.atalhos if dele(a)),
+            tuple(c for c in item.comandos if dele(c)))
+
+
+def _e_dos_exports_do_flatpak(pasta: Path) -> bool:
+    """A pasta de `.desktop` que o Flatpak exporta (`…/flatpak/exports/share/applications`)."""
+    partes = pasta.parts
+    return any(partes[i:i + 2] == ("flatpak", "exports") for i in range(len(partes) - 1))
+
+
+def _instalado_no_nativo(lancador: str, onde: _Onde) -> bool:
+    """O programa nativo deste lançador está instalado nesta máquina?
+
+    Como o procurador da aba Lançadores acha o programa: o `.desktop` numa pasta
+    de atalhos (`jogos_locais.pastas_de_atalhos`, mais a `applications` do XDG
+    deste lar), ou o comando no `PATH`. **A pasta de exports do Flatpak não
+    conta:** o `net.lutris.Lutris.desktop` tem o mesmo nome nas duas
+    instalações, e é a pasta que diz qual. **E o `PATH` sozinho não basta:** o
+    censo também roda no serviço, com o `PATH` do systemd de usuário, e a
+    distribuição põe o `lutris` e a `steam` em `/usr/games`; o `.desktop` é o
+    que acha o nativo ali.
+    """
+    import shutil
+
+    atalhos, comandos = _agulhas_do_nativo(lancador)
+    try:
+        from hefesto_dualsense4unix.integrations import jogos_locais as jl
+
+        do_motor = list(jl.pastas_de_atalhos())
+    except Exception:
+        do_motor = []
+    pastas = list(dict.fromkeys([onde.dados / "applications", *do_motor]))
+    for pasta in pastas:
+        if _e_dos_exports_do_flatpak(pasta):
+            continue
+        for stem in atalhos:
+            with contextlib.suppress(OSError):
+                if (pasta / f"{stem}.desktop").is_file():
+                    return True
+    return any(shutil.which(comando) for comando in comandos)
+
+
+def _pasta_de_config(lancador: str, lar: Path | None = None) -> Path | None:
+    """A primeira pasta que o censo lê deste lançador (:func:`_pastas_lidas`);
+    `None` é o `NUNCA_ABERTO`."""
+    pastas = _pastas_lidas(lancador, _onde(lar))
+    return pastas[0] if pastas else None
+
+
+def pastas_lidas(lancador: str, lar: Path | None = None, *,
+                 xdg_config: Path | None = None, xdg_data: Path | None = None,
+                 raiz_sistema: Path | None = None) -> tuple[Path, ...]:
+    """As pastas de configuração que o censo lê deste lançador — a regra das
+    duas casas (:func:`_pastas_lidas`). Quem escreve na casa do lançador (a
+    carona do Heroic) escreve nestas, e em nenhuma outra."""
+    return _pastas_lidas(lancador, _onde(lar, xdg_config, xdg_data, raiz_sistema))
+
+
+def pastas_que_existem(lancador: str, lar: Path | None = None, *,
+                       xdg_config: Path | None = None,
+                       xdg_data: Path | None = None) -> tuple[Path, ...]:
+    """Toda pasta de configuração deste lançador que existe, instalado ou não.
+
+    É a rede do desfazer: o `uninstall.sh` tira o que é nosso de toda casa,
+    porque desinstalar o lançador não leva a casa dele.
+    """
+    return tuple(pasta for config, dados in _casas(lancador, _onde(lar, xdg_config, xdg_data))
+                 if (pasta := _pasta_da_casa(lancador, config, dados)) is not None)
+
+
+def pasta_do_flatpak(lancador: str, lar: Path | None = None) -> Path | None:
     """A pasta de configuração da casa FLATPAK deste lançador, pela mesma regra.
 
     A camada do jogo excluído do Lutris só existe no Flatpak (o nativo não
     ganha camada), e a casa dele é a que este censo lê: uma regra, um dono.
     """
-    casas = _casas(lancador, lar)
+    casas = _casas(lancador, _onde(lar))
     return _pasta_da_casa(lancador, *casas[0]) if casas else None
 
 
@@ -328,27 +506,110 @@ def _json(caminho: Path) -> object | None:
         return None
 
 
+#: O REGISTRO DOS INSTALADOS DE CADA LOJA, relativo à casa do Heroic — o arquivo
+#: que o próprio Heroic lê para responder «instalado» (o `refreshInstalled` de
+#: cada loja, lido no `app.asar` do 2.22.3 dela em 02/10/2026, `main.js`):
+#:
+#: * Epic: as chaves do `legendary/installed.json` (`:40153-40176`), mais os
+#:   pares ``[app_name, plataforma]`` do `third-party-installed.json`, que só
+#:   existe com jogo de loja de terceiro (`:39169-39187`);
+#: * GOG: o `appName` de cada item de ``installed`` (`:38515-38524`);
+#: * Amazon: o `id` de cada item da lista (`:41557-41575`).
+#:
+#: O primeiro de cada loja é o que tem de existir; o segundo da Epic, não.
+_REGISTROS_DO_HEROIC: dict[str, tuple[str, ...]] = {
+    "legendary": ("legendaryConfig/legendary/installed.json",
+                  "legendaryConfig/legendary/third-party-installed.json"),
+    "gog": ("gog_store/installed.json",),
+    "nile": ("nile_config/nile/installed.json",),
+}
+
+
+def _itens_do_registro(arq: str, rel: str, dado: object) -> dict[str, dict[str, object]] | None:
+    """``{chave: o que o registro diz do jogo}`` na forma que o Heroic grava;
+    ``None`` = o arquivo não tem a forma (o registro torto)."""
+    fora: dict[str, dict[str, object]] = {}
+    if rel.endswith("third-party-installed.json"):
+        if not isinstance(dado, list):
+            return None
+        for par in dado:
+            if isinstance(par, list) and par and isinstance(par[0], str) and par[0]:
+                fora[par[0]] = {"app_name": par[0]}
+        return fora
+    if arq == "legendary":
+        if not isinstance(dado, dict):
+            return None
+        return {str(k): (v if isinstance(v, dict) else {}) for k, v in dado.items()}
+    if arq == "gog":
+        lista = dado.get("installed", []) if isinstance(dado, dict) else None
+        campo = "appName"
+    else:
+        lista, campo = dado, "id"
+    if not isinstance(lista, list):
+        return None
+    for item in lista:
+        chave = item.get(campo) if isinstance(item, dict) else None
+        if isinstance(chave, str) and chave:
+            fora[chave] = item
+    return fora
+
+
+def _registro_do_heroic(pasta: Path, arq: str
+                        ) -> tuple[dict[str, dict[str, object]], bool, list[str]]:
+    """``(os instalados desta loja, o registro dela existe, erros)``.
+
+    O registro ausente é «nenhum instalado nesta loja», como o Heroic responde.
+    O torto (não abre, ou não tem a forma) é erro: quem o lê como vazio tiraria
+    morador do prefixo por um arquivo que ninguém entendeu.
+    """
+    instalados: dict[str, dict[str, object]] = {}
+    erros: list[str] = []
+    principal, *outros = _REGISTROS_DO_HEROIC[arq]
+    existe = (pasta / principal).exists()
+    for rel in (principal, *outros):
+        alvo = pasta / rel
+        if not alvo.exists():
+            continue
+        itens = _itens_do_registro(arq, rel, _json(alvo))
+        if itens is None:
+            erros.append(f"{rel} não se lê na forma que o Heroic grava")
+            continue
+        for chave, dado in itens.items():
+            instalados.setdefault(chave, dado)
+    return instalados, existe, erros
+
+
 def _heroic(pasta: Path) -> BibliotecaDoLancador:
     """As TRÊS lojas do Heroic — Epic (legendary), GOG e Amazon (nile).
 
     **A Epic fica aqui dentro**, decisão dela de 08/09/2026: *"dentro
     heróic"*. Ela não ganha cartão próprio.  # noqa-acento: citação dela
 
-    O INSTALADO SAI DO `*_install_info.json`, e não SÓ de um campo da
-    biblioteca: o arquivo de biblioteca lista o que a CONTA tem, e é por isso
-    que o disco dela dizia 37 com zero instalados — a leitura certa sobre um
-    estado que parecia defeito.
+    OS JOGOS SAEM DA BIBLIOTECA (`store_cache/*_library.json`), que lista o
+    que a CONTA tem; é por isso que o disco dela dizia 37 com zero instalados.
 
-    **AS DUAS FONTES SE SOMAM DESDE 10/09/2026, e o motivo é medido.** Com um
-    jogo baixado, o `legendary_library.json` passa a dizer ``is_installed:
-    true`` e a trazer o `install.executable` — que é a CHAVE de janela (ver
-    `JogoDoLancador.classe_de_janela`). Ler só o `install_info` continuaria
-    certo sobre "está no disco?" e jogaria fora a chave; ler só a biblioteca
-    perderia o caso dela de 09/09, em que o `install_info` era quem sabia.
-    Então lê-se os dois, e o instalado é a UNIÃO.
+    **O INSTALADO SAI DO REGISTRO DE CADA LOJA (02/10/2026,
+    O-CENSO-RESPONDE-COMO-O-LANCADOR-RESPONDE-01)**, o mesmo que o Heroic lê
+    (:data:`_REGISTROS_DO_HEROIC`). Os dois arquivos que respondiam antes não
+    são isso: a biblioteca é cache da conta (o `refresh()` da GOG grava todo
+    jogo com `is_installed: false`, e na Epic a marca é a do momento da
+    releitura), e o `*_install_info.json` é o cache do diálogo de instalar (todo
+    jogo cujo diálogo ela abriu, instalado ou não; o «Limpar cache» o esvazia).
+    Medido num lar de mentira: com A excluído e E e G instalados no mesmo
+    prefixo, o censo dizia E e G fora, e a lista de exclusão tirava o device KS
+    do prefixo sem ela ter excluído nenhum dos dois.
 
-    **E O QUE É ACESSÓRIO NÃO ENTRA**, pela mesma leitura: `install.is_dlc`.
-    Ver `JogoDoLancador.e_acessorio` para os oito medidos no disco dela.
+    **O REGISTRO QUE NÃO RESPONDE VIRA ERRO** (por delegação, a validar por
+    ela): o torto, e o ausente com a biblioteca dizendo `is_installed: true`
+    naquela loja (o Heroic grava `{}` ou `[]` quando o último jogo sai, e não
+    apaga o arquivo; a ausência com um instalado é outra forma de disco). O
+    censo com erro não tira ninguém do prefixo (`lista_de_exclusao`), e naquela
+    loja o instalado fica o da biblioteca, o melhor que se tem.
+
+    O `install_path`, o `executable` e o `is_dlc` vêm da biblioteca e, quando
+    ela não os tem, do registro (o jogo instalado depois da releitura não tem
+    `install` na biblioteca, e sem o `is_dlc` do registro a DLC dele contaria
+    como jogo). **E O QUE É ACESSÓRIO NÃO ENTRA** (`JogoDoLancador.e_acessorio`).
     """
     cache = pasta / "store_cache"
     jogos: list[JogoDoLancador] = []
@@ -373,42 +634,43 @@ def _heroic(pasta: Path) -> BibliotecaDoLancador:
         if not isinstance(itens, list):
             erros.append(f"{arq}_library.json não traz `{campo}` como lista")
             continue
-        instalados = _instalados_do_heroic(cache / f"{arq}_install_info.json")
+        itens = [it for it in itens if isinstance(it, dict)]
+        registro, existe, erros_da_loja = _registro_do_heroic(pasta, arq)
+        if not existe and any(
+                it.get("is_installed") and _chave_do_heroic(it, ch_id) not in registro
+                for it in itens):
+            erros_da_loja.append(f"{_REGISTROS_DO_HEROIC[arq][0]} não existe, e a "
+                                 f"biblioteca diz que há jogo instalado")
+        erros.extend(erros_da_loja)
         for it in itens:
-            if not isinstance(it, dict):
-                continue
-            chave = str(it.get(ch_id) or it.get("app_name") or it.get("id") or "")
+            chave = _chave_do_heroic(it, ch_id)
             if not chave:
                 continue
             instalacao = it.get("install")
             instalacao = instalacao if isinstance(instalacao, dict) else {}
+            do_registro = registro.get(chave)
+            dele = do_registro if isinstance(do_registro, dict) else {}
+            caminho = (instalacao.get("install_path") or dele.get("install_path")
+                       or dele.get("path"))
             jogo = JogoDoLancador(
                 chave=chave,
                 nome=str(it.get(ch_nome) or it.get("title") or chave),
                 loja=loja,
-                instalado=chave in instalados or bool(it.get("is_installed")),
-                caminho=(Path(str(instalacao["install_path"]))
-                         if instalacao.get("install_path") else None),
-                executavel=str(instalacao.get("executable") or ""),
+                instalado=do_registro is not None or (
+                    bool(erros_da_loja) and bool(it.get("is_installed"))),
+                caminho=Path(str(caminho)) if caminho else None,
+                executavel=str(instalacao.get("executable") or dele.get("executable") or ""),
                 umu_id=umu.get(chave, ""),
-                dlc=bool(instalacao.get("is_dlc")))
+                dlc=bool(instalacao.get("is_dlc") or dele.get("is_dlc")))
             if jogo.e_acessorio:
                 continue
             jogos.append(jogo)
     return BibliotecaDoLancador("Heroic", LIDO, pasta, jogos, erros)
 
 
-def _instalados_do_heroic(caminho: Path) -> set[str]:
-    """As chaves que o `*_install_info.json` declara instaladas.
-
-    QUEDA VAZIA E CALADA: sem o arquivo, ninguém está instalado — que é
-    exatamente o estado dela em 09/09/2026. Um `erro` aqui poria uma frase de
-    falha sobre um lançador que só não tem jogo baixado.
-    """
-    dado = _json(caminho)
-    if isinstance(dado, dict):
-        return {str(k) for k in dado}
-    return set()
+def _chave_do_heroic(item: dict[str, object], ch_id: str) -> str:
+    """A chave de um item da biblioteca do Heroic (`app_name`, ou o `id` da Amazon)."""
+    return str(item.get(ch_id) or item.get("app_name") or item.get("id") or "")
 
 
 #: As colunas do `games` do `pga.db` que interessam, na ordem em que saem.
@@ -422,15 +684,21 @@ def _instalados_do_heroic(caminho: Path) -> set[str]:
 #: **02/10/2026 (A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01): o degrau 1 (o umu-id)
 #: passou a ter leitor no Lutris também** — ver `_UmuDoLutris`. A frase que
 #: ficava aqui dizia que ele «só tem leitor no Heroic».
+#:
+#: O `configpath` é o nome do `games/<configpath>.yml` do jogo (`lutris/game.py`,
+#: `game_config_id`), e só a exclusão o usa.
 _COLUNAS_DO_LUTRIS = ("name", "slug", "executable", "directory", "installed",
-                      "runner", "service", "service_id")
+                      "runner", "service", "service_id", "configpath")
 
-#: AS COLUNAS QUE PODEM FALTAR, e entram como `NULL` quando faltam. O
-#: `configpath` existe no `pga.db` dela (lido no disco em 02/10/2026) e é o nome
-#: do `games/<configpath>.yml` do jogo (`lutris/game.py`, `game_config_id`); um
-#: banco que não o tenha não pode derrubar a biblioteca inteira por uma coluna
-#: que só a exclusão usa.
-_COLUNAS_OPCIONAIS_DO_LUTRIS = ("configpath",)
+#: AS ÚNICAS COLUNAS EXIGIDAS: sem o `name` e o `slug` não há jogo. As outras que
+#: faltarem entram como `NULL` (02/10/2026,
+#: O-CENSO-RESPONDE-COMO-O-LANCADOR-RESPONDE-01). Medido num lar de mentira com
+#: um banco sem `service`, `service_id` e `discord_id`: o `SELECT` caía com «no
+#: such column: service», e o cartão dizia «A biblioteca está vazia.» com dois
+#: jogos no banco. O Lutris 0.5.22 acrescenta as colunas que faltam ao abrir
+#: (`database/schema.py:113-144`, `migrate`); o caso é o banco que nenhum Lutris
+#: novo abriu, e o censo, que abre em `mode=ro`, não migra o banco de ninguém.
+_COLUNAS_EXIGIDAS_DO_LUTRIS = ("name", "slug")
 
 #: O RUNNER QUE PASSA PELO UMU. No Lutris 0.5.22 (lido no fonte instalado nela,
 #: `runners/wine.py:1275-1281`), só o runner `wine` pede o `GAMEID` ao
@@ -451,7 +719,8 @@ _VERSAO_PADRAO_DO_LUTRIS = "ge-proton"
 _SERVICO_DA_STEAM = "steam"
 
 
-def _lutris(pasta: Path) -> BibliotecaDoLancador:
+def _lutris(pasta: Path, lar: Path | None = None, *,
+            onde: _Onde | None = None) -> BibliotecaDoLancador:
     """A biblioteca do Lutris — do `pga.db`, que é onde ela mora.
 
     **O LEITOR ANTIGO OLHAVA O ARQUIVO ERRADO, e o sintoma era a AUSÊNCIA de
@@ -507,12 +776,18 @@ def _lutris(pasta: Path) -> BibliotecaDoLancador:
     está em :class:`_UmuDoLutris`, com as condições do Lutris (o runner `wine`
     e uma versão que seja Proton). A janela de um jogo do Lutris continua sem
     leitura em aparelho nenhum desta casa (o Lutris dela segue vazio).
+
+    :param lar: o lar de quem chama (o padrão é o de verdade, com o XDG do
+        ambiente): é nele que se procura o Proton e a pasta de dados do nativo.
+        O lar não se deduz do caminho da pasta (02/10/2026): com o XDG
+        desviado para `/dados`, a dedução dava `/`.
     """
+    onde = _onde(lar) if onde is None else onde
     jogos: list[JogoDoLancador] = []
     erros: list[str] = []
     vistos: set[str] = set()
     ymls_vistos: set[str] = set()
-    umu = _UmuDoLutris(pasta)
+    umu = _UmuDoLutris(pasta, onde)
     banco = Path(umu._conf.get("pga_path") or umu._dados / "pga.db")
     if banco.is_file():
         try:
@@ -523,10 +798,12 @@ def _lutris(pasta: Path) -> BibliotecaDoLancador:
             with contextlib.closing(conexao):
                 try:
                     tem = {str(c[1]) for c in conexao.execute("PRAGMA table_info(games)")}
-                    colunas = ", ".join(
-                        [*_COLUNAS_DO_LUTRIS,
-                         *(c if c in tem else f"NULL AS {c}"
-                           for c in _COLUNAS_OPCIONAIS_DO_LUTRIS)])
+                    faltam = [c for c in _COLUNAS_EXIGIDAS_DO_LUTRIS if c not in tem]
+                    if faltam:
+                        raise sqlite3.OperationalError(
+                            "sem a coluna " + ", ".join(faltam) if tem else "sem a tabela")
+                    colunas = ", ".join(c if c in tem else f"NULL AS {c}"
+                                        for c in _COLUNAS_DO_LUTRIS)
                     linhas = list(
                         conexao.execute(f"SELECT {colunas} FROM games"))
                 except sqlite3.Error as erro:
@@ -631,9 +908,10 @@ class _UmuDoLutris:
     Uma leitura só do `umu-games.json` e do `runners/wine.yml` por biblioteca.
     """
 
-    def __init__(self, pasta: Path) -> None:
+    def __init__(self, pasta: Path, onde: _Onde) -> None:
         self.pasta = pasta
-        self._dados = _pasta_de_dados_do_lutris(pasta)
+        self._lar = onde.lar
+        self._dados = _pasta_de_dados_do_lutris(pasta, onde)
         self._conf = _conf_do_lutris(pasta)
         self._tabela: dict[tuple[str, str], str] | None = None
         self._versao_do_runner: str | None = None
@@ -675,7 +953,7 @@ class _UmuDoLutris:
     def _e_proton(self, versao: str) -> bool:
         """`proton.is_proton_version`: uma pasta com o script `proton` dentro."""
         runners = Path(self._conf.get("runner_dir") or self._dados / "runners")
-        lar = _lar_da_pasta(self.pasta)
+        lar = self._lar
         locais = [runners / "wine"]
         for steam in (".steam/steam", ".local/share/Steam",
                       ".var/app/com.valvesoftware.Steam/.local/share/Steam"):
@@ -715,32 +993,20 @@ class _UmuDoLutris:
         return achado or ""
 
 
-def _lar_da_pasta(pasta: Path) -> Path:
-    """O lar de uma pasta de configuração: o de antes do `.var/app/<id>` no
-    Flatpak, e no nativo o de antes do `.config` ou do `.local/share` (a pasta
-    de dados, que o Lutris usa como configuração quando a `config/` não
-    existe, :data:`_CONFIG_CAI_NOS_DADOS`)."""
-    partes = pasta.parts
-    if ".var" in partes:
-        return Path(*partes[:partes.index(".var")])
-    if partes[-3:-1] == (".local", "share"):
-        return pasta.parent.parent.parent
-    return pasta.parent.parent
-
-
-def _pasta_de_dados_do_lutris(pasta: Path) -> Path:
+def _pasta_de_dados_do_lutris(pasta: Path, onde: _Onde) -> Path:
     """A pasta de dados do Lutris (o `pga.db`, o `runtime/`), pela regra dele.
 
     No 0.5.22 (`settings.DATA_DIR`) os dados moram sempre em `data/lutris` no
-    Flatpak e em `~/.local/share/lutris` no nativo; a configuração é a mesma
+    Flatpak e em `$XDG_DATA_HOME/lutris` no nativo; a configuração é a mesma
     pasta quando é o atalho para lá (o Flatpak dela, medido em 11/09/2026) ou
-    quando a `config/` não existe (:func:`_pasta_de_config`). A de quem usa o
+    quando a `config/` não existe (:func:`_pastas_lidas`). A de quem usa o
     Lutris desde antes do 0.5.17 é pasta própria, com `runners/` e sem o
-    `pga.db` (02/10/2026): por isso os dados vêm antes dela. O lar é o de
-    :func:`_lar_da_pasta`, um dono só.
+    `pga.db` (02/10/2026): por isso os dados vêm antes dela. A casa é a de
+    quem chama (:class:`_Onde`), e não deduzida do caminho: com o
+    `XDG_DATA_HOME` desviado, a dedução procurava o banco na casa errada e
+    caía na pasta de configuração.
     """
-    casa_flatpak, casa_nativa = _casas("Lutris", _lar_da_pasta(pasta))
-    dados = (casa_flatpak if ".var" in pasta.parts else casa_nativa)[1]
+    dados = next((d for c, d in _casas("Lutris", onde) if pasta in (c, d)), pasta)
     for tentativa in (dados, pasta):
         if (tentativa / "pga.db").is_file() or (tentativa / "runtime").is_dir():
             return tentativa
@@ -835,31 +1101,67 @@ _LEITORES = {"Heroic": _heroic, "Lutris": _lutris, "RetroArch": _retroarch,
              "Dolphin": _dolphin, "mGBA": _mgba}
 
 
-def biblioteca_de(lancador: str, lar: Path | None = None) -> BibliotecaDoLancador:
+def _ler(lancador: str, pasta: Path, onde: _Onde) -> BibliotecaDoLancador:
+    """O leitor deste lançador sobre UMA pasta — e nunca levanta por disco."""
+    try:
+        if lancador == "Lutris":
+            return _lutris(pasta, onde=onde)
+        return _LEITORES[lancador](pasta)
+    except OSError as erro:
+        return BibliotecaDoLancador(lancador, ILEGIVEL, pasta, [], [str(erro)])
+
+
+def bibliotecas_por_casa(lancador: str, lar: Path | None = None, *,
+                         xdg_config: Path | None = None, xdg_data: Path | None = None,
+                         raiz_sistema: Path | None = None) -> list[BibliotecaDoLancador]:
+    """A biblioteca de cada pasta que o censo lê (:func:`pastas_lidas`), cada uma
+    com o `onde` dela — para quem escreve na casa do jogo (a carona do Heroic
+    escreve no `GamesConfig` da casa de onde o jogo veio). Vazio = nenhuma."""
+    if lancador not in _LEITORES:
+        return []
+    onde = _onde(lar, xdg_config, xdg_data, raiz_sistema)
+    return [_ler(lancador, pasta, onde) for pasta in _pastas_lidas(lancador, onde)]
+
+
+def biblioteca_de(lancador: str, lar: Path | None = None, *,
+                  xdg_config: Path | None = None, xdg_data: Path | None = None,
+                  raiz_sistema: Path | None = None) -> BibliotecaDoLancador:
     """O que este lançador tem na biblioteca — ou por que não se sabe.
 
     **NUNCA LEVANTA.** A aba pinta a cada tique; uma exceção aqui apagaria a
     coluna inteira por um `.json` truncado. O que não se pôde ler vira
     `ILEGIVEL` com o motivo, que a tela mostra.
 
+    Com os dois programas instalados, as duas casas se somam
+    (:func:`_pastas_lidas`), e cada jogo leva a dele (o `configuracao` do
+    Lutris aponta o `.yml` da casa certa).
+
     :param lar: o `HOME` a inspecionar. O padrão é o de verdade; a régua passa
         um lar de mentira — é o que permite medir os cinco leitores sem ter os
         cinco lançadores instalados.
+    :param xdg_config: o `XDG_CONFIG_HOME` deste lar (:class:`_Onde`).
+    :param xdg_data: o `XDG_DATA_HOME` deste lar.
+    :param raiz_sistema: a instalação do Flatpak do sistema; a régua passa uma
+        de mentira, para a resposta não depender da máquina em que roda.
     """
-    lar = Path.home() if lar is None else lar
-    leitor = _LEITORES.get(lancador)
-    if leitor is None:
+    if lancador not in _LEITORES:
         #: NÃO É `NUNCA_ABERTO`: quem não tem leitor pode simplesmente não ter
         #: biblioteca — é o caso do «Flatpak», que é o runtime dos outros. Ver
         #: `SEM_BIBLIOTECA`.
         return BibliotecaDoLancador(lancador, SEM_BIBLIOTECA, None, [], [])
-    pasta = _pasta_de_config(lancador, lar)
-    if pasta is None:
+    partes = bibliotecas_por_casa(lancador, lar, xdg_config=xdg_config,
+                                  xdg_data=xdg_data, raiz_sistema=raiz_sistema)
+    if not partes:
         return BibliotecaDoLancador(lancador, NUNCA_ABERTO, None, [], [])
-    try:
-        return leitor(pasta)
-    except OSError as erro:
-        return BibliotecaDoLancador(lancador, ILEGIVEL, pasta, [], [str(erro)])
+    if len(partes) == 1:
+        return partes[0]
+    lidas = [b for b in partes if b.estado == LIDO]
+    jogos = [j for b in lidas for j in b.jogos]
+    if lancador == "Lutris":
+        jogos.sort(key=lambda j: (j.nome.casefold(), j.chave))
+    return BibliotecaDoLancador(
+        lancador, LIDO if lidas else partes[0].estado,
+        (lidas or partes)[0].onde, jogos, [e for b in partes for e in b.erros])
 
 
 #: **A CHAVE DO CARTÃO NÃO É O NOME DO LANÇADOR**, e ignorar isso deu cartão
@@ -967,8 +1269,12 @@ _FONTES: dict[str, tuple[str, ...]] = {
     #: novo do Heroic não invalidaria o caderno pela chave, e a aba Perfis
     #: (que é PINTURA num processo longo) congelaria a resposta até ela
     #: reiniciar o produto — o mesmo defeito que a nota acima descreve.
-    "Heroic": ("store_cache/*_library.json", "store_cache/*_install_info.json",
-               "store_cache/umu.json"),
+    #: Os REGISTROS DE CADA LOJA entraram em 02/10/2026, no lugar do
+    #: `*_install_info.json`: é deles que sai o instalado
+    #: (:data:`_REGISTROS_DO_HEROIC`), e sem eles a aba Perfis seguiria com a
+    #: resposta velha depois de uma instalação.
+    "Heroic": ("store_cache/*_library.json", "store_cache/umu.json",
+               *(rel for rels in _REGISTROS_DO_HEROIC.values() for rel in rels)),
     #: O `-wal` ENTRA, e é requisito e não zelo: em modo WAL o sqlite escreve
     #: as linhas novas no `pga.db-wal` e pode não tocar no `pga.db`. Quem lê
     #: em `mode=ro` enxerga os dois; a impressão tem de enxergar os dois.
@@ -996,7 +1302,7 @@ def _impressao(caminho: Path) -> tuple[str, int, int]:
     `legendary_library.json` que ganha um jogo muda de tamanho sempre.
 
     Ausente entra com ``-1`` em vez de sumir da lista: instalar o Lutris (ou
-    baixar o primeiro jogo, que é quando o `*_install_info.json` nasce)
+    baixar o primeiro jogo de uma loja, que é quando o registro dela nasce)
     também tem de contar como mudança.
     """
     try:
@@ -1007,7 +1313,8 @@ def _impressao(caminho: Path) -> tuple[str, int, int]:
 
 
 def assinatura_das_bibliotecas(
-    lar: Path | None = None,
+    lar: Path | None = None, *,
+    xdg_config: Path | None = None, xdg_data: Path | None = None,
 ) -> tuple[tuple[str, int, int], ...]:
     """Impressão BARATA das cinco bibliotecas — **do que se LÊ**, não da pasta.
 
@@ -1031,30 +1338,36 @@ def assinatura_das_bibliotecas(
     depois também é mudança.
     """
     linhas: list[tuple[str, int, int]] = []
-    lar = Path.home() if lar is None else lar
+    onde = _onde(lar, xdg_config, xdg_data)
     for nome in _LEITORES:
-        pasta = _pasta_de_config(nome, lar)
-        if pasta is None:
+        pastas = _pastas_lidas(nome, onde)
+        if not pastas:
             linhas.append((nome, -1, -1))
-            continue
-        linhas.append(_impressao(pasta))
-        for padrao in _FONTES.get(nome, ()):
-            if "*" not in padrao:
-                linhas.append(_impressao(pasta / padrao))
-                continue
-            sub, _, molde = padrao.rpartition("/")
-            onde = pasta / sub if sub else pasta
-            linhas.append(_impressao(onde))
-            try:
-                achados = sorted(onde.glob(molde))
-            except OSError:  # pragma: no cover - pasta ilegível
-                achados = []
-            linhas.extend(_impressao(a) for a in achados)
-        if nome == "Lutris":
-            dados = _pasta_de_dados_do_lutris(pasta)
-            if dados.resolve() != pasta.resolve():
-                linhas.extend(_impressao(dados / rel) for rel in _FONTES_DOS_DADOS_DO_LUTRIS)
+        for pasta in pastas:
+            linhas.extend(_impressoes_da_pasta(nome, pasta, onde))
     return tuple(linhas)
+
+
+def _impressoes_da_pasta(nome: str, pasta: Path, onde: _Onde) -> list[tuple[str, int, int]]:
+    """A impressão de UMA pasta que o censo lê: ela e o que :data:`_FONTES` diz."""
+    linhas = [_impressao(pasta)]
+    for padrao in _FONTES.get(nome, ()):
+        if "*" not in padrao:
+            linhas.append(_impressao(pasta / padrao))
+            continue
+        sub, _, molde = padrao.rpartition("/")
+        alvo = pasta / sub if sub else pasta
+        linhas.append(_impressao(alvo))
+        try:
+            achados = sorted(alvo.glob(molde))
+        except OSError:  # pragma: no cover - pasta ilegível
+            achados = []
+        linhas.extend(_impressao(a) for a in achados)
+    if nome == "Lutris":
+        dados = _pasta_de_dados_do_lutris(pasta, onde)
+        if dados.resolve() != pasta.resolve():
+            linhas.extend(_impressao(dados / rel) for rel in _FONTES_DOS_DADOS_DO_LUTRIS)
+    return linhas
 
 
 def sabe_ler(lancador: str) -> bool:
