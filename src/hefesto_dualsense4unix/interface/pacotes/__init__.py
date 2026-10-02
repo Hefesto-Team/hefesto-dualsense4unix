@@ -116,6 +116,14 @@ class Contexto:
     #: importaria para ACUSAR ausência, e nenhuma das duas abas acusa. É a
     #: mesma decisão escrita em `home_actions.externos_na_mesa`, que é o dono.
     externos: list[dict[str, Any]] = field(default_factory=list)
+    #: QUEM A FITA ESCOLHEU, JÁ RESOLVIDO — O-MAPA-DO-CONTROLE-PISCA-E-SEGUE-O-
+    #: REMAPEAMENTO-01, 01/10/2026. `"p1"`…`"p4"` ou `"todos"`; `""` é o
+    #: contexto que não disse (uma régua que não monta a fita). Quem responde é
+    #: o dono da escolha e da queda, `hefesto_vivo._pref_escolhido`, ao montar
+    #: o contexto: o pacote recebe a resposta, e não a pergunta. Ler o
+    #: `ESCOLHA_DA_FITA` de dentro de um pacote cairia na armadilha dos dois
+    #: nomes do `hefesto_vivo`, cada um com a sua escolha.
+    escolhido: str = ""
 
     def por_uniq(self, uniq: str) -> dict[str, Any]:
         """A entrada do daemon daquele controle, ou `{}` — nunca levanta.
