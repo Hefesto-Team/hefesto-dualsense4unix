@@ -2101,7 +2101,7 @@ _guardar_as_listas_para_depois() {
 _args_das_listas_de_depois() {
     local _l
     for _l in "${LISTAS_GUARDADAS_PARA[@]}"; do
-        printf ' --lista-de-exclusao %s' "${_l}"
+        printf ' --lista-de-exclusao %q' "${_l}"
     done
 }
 if [[ -f "${CURA_POR_ESTRADA_PY}" ]] && command -v python3 >/dev/null 2>&1; then
