@@ -340,7 +340,16 @@ NAO_SAO_DIVIDA: dict[str, str] = {
 
 #: As listas de dívida em arquivo que outra sprint tem na mão nesta onda:
 #: `(a sprint que as anota, por quê)`. Sai daqui quando as entradas ganham dona.
-PENDENTES: dict[str, tuple[str, str]] = {}
+PENDENTES: dict[str, tuple[str, str]] = {
+    # 02/10/2026: o espelho dos `SEM_GESTO` da 06 e da 08 (a régua dos sem dono
+    # só diminuírem). O `navegacao-interna` sai com a sprint abaixo; os outros
+    # cinco (`modo-steam` da 06, `custo-*` e `novo-hub` da 08) não têm sprint
+    # (§11 da O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01), e a lista passa a
+    # `DIVIDAS` quando quem coordena escrever a da onda da 08.
+    "tests/unit/test_cada_gesto_diz_de_quem_e.py::SEM_DONO_PERMITIDOS": (
+        "A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01",
+        "cinco das seis entradas esperam a sprint da onda da 08 para ganhar dona"),
+}
 
 
 # ---------------------------------------------------------------------------
