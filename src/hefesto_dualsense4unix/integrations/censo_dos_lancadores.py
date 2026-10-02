@@ -1133,8 +1133,8 @@ def biblioteca_de(lancador: str, lar: Path | None = None, *,
     `ILEGIVEL` com o motivo, que a tela mostra.
 
     Com os dois programas instalados, as duas casas se somam
-    (:func:`_pastas_lidas`), e cada jogo leva a dele (o `configuracao` do
-    Lutris aponta o `.yml` da casa certa).
+    (:func:`_pastas_lidas`), e cada jogo leva a dele (o `.yml` de cada jogo do
+    Lutris é o da casa de onde ele veio).
 
     :param lar: o `HOME` a inspecionar. O padrão é o de verdade; a régua passa
         um lar de mentira — é o que permite medir os cinco leitores sem ter os
