@@ -2189,22 +2189,36 @@ _LUTRIS_APP_ID = "net.lutris.Lutris"
 #:   delegação, a validar por ela: sem a medida, o jogo excluído do Lutris herda
 #:   da caixa o cache de shader, que não toca o controle. Com um «antes» dela no
 #:   registro da caixa, o `.yml` leva o dela;
-#: * o ``PROTON_USE_XALIA`` FICA FORA (:data:`_SEM_NAO_VEIO`): ele não tem valor
-#:   de «não veio».
+#: * o ``PROTON_USE_XALIA`` não tem UM valor de «não veio»: ele depende do jogo
+#:   (:data:`_NAO_VEIO_POR_JOGO`).
 _NAO_VEIO: tuple[tuple[str, str], ...] = (("SDL_", ""), ("PROTON_", ""))
 
-#: AS QUE NÃO TÊM VALOR DE «NÃO VEIO», e o jogo excluído do Lutris Flatpak fica
-#: com o da caixa. MEDIDO em 02/10/2026 no GE-Proton 11-7 e no 10-34 instalados
-#: nela, só leitura: o script decide o xalia por PRESENÇA (`if
-#: "PROTON_USE_XALIA" not in self.env`, `proton:2527` no 11-7, `:2093` no
-#: 10-34), e quem sobe o `xalia.exe` é o `explorer.exe` do Wine dele, que lê a
-#: variável por `GetEnvironmentVariableW` e só a sobe com um valor não vazio e
-#: diferente de `0` (`manage_desktop`, desmontado do binário do 11-7). O vazio
-#: dá zero caracteres: `''` desliga como o `0`. O `1` ligaria o xalia em
-#: toda janela (sem o `XALIA_SUPPORTED_ONLY` que o script põe) e também no runner
-#: `wine`, que sem o Hefesto não o liga. Por delegação, a validar por ela: o
-#: excluído do Lutris fica sem o xalia, como os outros jogos da caixa.
-_SEM_NAO_VEIO: frozenset[str] = frozenset({"PROTON_USE_XALIA"})
+#: O «NÃO VEIO» QUE DEPENDE DO JOGO — 02/10/2026,
+#: O-JOGO-EXCLUIDO-DO-LUTRIS-VOLTA-AO-XALIA-DO-PROTON-01. Lido no GE-Proton 11-7
+#: (`proton:2527-2533`) e no 10-34 (`:2093-2099`) instalados nela, só leitura: se
+#: `PROTON_USE_XALIA` não veio, o script põe `0` quando o appid está em
+#: `noxalia` e, senão, põe `1` E `XALIA_SUPPORTED_ONLY=1` (a menos que a
+#: configuração de compatibilidade traga `xalia`). Quem lê o
+#: `XALIA_SUPPORTED_ONLY` é o próprio xalia (`share/xalia/main.gudl:1477-1479`).
+#: Logo o par é o padrão do jogo que abre pelo script do Proton; com o driver
+#: Wayland, o script põe `0` por cima de qualquer valor (11-7 `:2621-2623`), como
+#: no padrão. O Wine sem o script do Proton não põe a variável, e o
+#: `explorer.exe` sem ela não sobe o xalia: ali o `0` da caixa É o padrão, e a
+#: camada não cobre nada. Quem diz por qual dos dois o jogo abre é o censo
+#: (`JogoDoLancador.pelo_proton`). Por delegação, a validar por ela; o preço: um
+#: jogo cujo appid o script põe em `noxalia` (cinco da Steam no 11-7,
+#: `:1752-1761`) recebe o xalia, porque com a variável presente o script não
+#: decide. O diário diz `camada_do_lutris_xalia par=1` com o jogo.
+_NAO_VEIO_POR_JOGO: dict[str, tuple[tuple[str, str], ...]] = {
+    "PROTON_USE_XALIA": (("PROTON_USE_XALIA", "1"), ("XALIA_SUPPORTED_ONLY", "1")),
+}
+
+#: As chaves sem UM valor de «não veio» (:func:`nao_veio` devolve ``None``).
+_SEM_NAO_VEIO: frozenset[str] = frozenset(_NAO_VEIO_POR_JOGO)
+
+#: O par do xalia, que entra e sai junto: as chaves que a camada põe por ele.
+_PAR_DO_XALIA: frozenset[str] = frozenset(
+    k for pares in _NAO_VEIO_POR_JOGO.values() for k, _ in pares)
 
 
 def nao_veio(chave: str) -> str | None:
@@ -2233,32 +2247,57 @@ def _yaml() -> ModuleType | None:
 
 
 def pares_da_camada_do_lutris(
-    lar: Path | None = None, pasta_do_ambiente: Path | None = None,
+    lar: Path | None = None, pasta_do_ambiente: Path | None = None, *,
+    pelo_proton: bool = False,
 ) -> dict[str, str]:
     """O que o `.yml` de um jogo excluído do Lutris Flatpak precisa cobrir.
 
     Cada chave que o desfazer tiraria da caixa (:func:`_desfazer_pares`, a mesma
     conta da cópia do Heroic), no valor que o jogo veria sem o Hefesto: o
     «antes» do registro da caixa quando ela tinha um, e quando não tinha, o
-    :func:`nao_veio` do leitor. Caixa sem o nosso, ou ilegível = ``{}``.
+    :func:`nao_veio` do leitor — e, nas que dependem do jogo
+    (:data:`_NAO_VEIO_POR_JOGO`), o padrão do script do Proton quando o jogo
+    abre por ele (``pelo_proton``). Caixa sem o nosso, ou ilegível = ``{}``.
     """
+    base, por_jogo = _a_camada_da_caixa(lar, pasta_do_ambiente)
+    return _com_o_padrao_do_jogo(base, por_jogo, pelo_proton=pelo_proton)
+
+
+def _com_o_padrao_do_jogo(base: dict[str, str], por_jogo: frozenset[str], *,
+                          pelo_proton: bool) -> dict[str, str]:
+    """A camada da caixa com o «não veio» das chaves que dependem do jogo."""
+    fora = dict(base)
+    if pelo_proton:
+        for chave in sorted(por_jogo):
+            fora.update(dict(_NAO_VEIO_POR_JOGO[chave]))
+    return fora
+
+
+def _a_camada_da_caixa(
+    lar: Path | None, pasta_do_ambiente: Path | None,
+) -> tuple[dict[str, str], frozenset[str]]:
+    """``(os pares de todo jogo, as chaves nossas da caixa que dependem do jogo)``."""
     lar = Path.home() if lar is None else lar
     caixa = _override_da_caixa(_LUTRIS_APP_ID, lar)
     cfg = _ler_override(caixa)
     if cfg is None or not cfg.has_section("Environment"):
-        return {}
+        return {}, frozenset()
     entrada = ler_registro(pasta_do_ambiente).get(str(caixa), Entrada(FLATPAK_OVERRIDE))
     novos, contas = _desfazer_pares(list(cfg.items("Environment")), copy.deepcopy(entrada))
     devolvidos = dict(novos)
     fora: dict[str, str] = {}
+    por_jogo: set[str] = set()
     for chave in contas.tiradas:
         if chave in contas.devolvidas and chave in devolvidos:
             fora[chave] = devolvidos[chave]
             continue
+        if chave in _NAO_VEIO_POR_JOGO:
+            por_jogo.add(chave)
+            continue
         valor = None if chave in PODEM_SER_DELA else nao_veio(chave)
         if valor is not None:
             fora[chave] = valor
-    return fora
+    return fora, frozenset(por_jogo)
 
 
 def _pasta_do_lutris_flatpak(lar: Path) -> Path | None:
@@ -2271,6 +2310,25 @@ def _pasta_do_lutris_flatpak(lar: Path) -> Path | None:
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
     return censo.pasta_do_flatpak("Lutris", lar)
+
+
+def _pelo_proton_por_yml(lar: Path | None) -> dict[str, bool]:
+    """``{.yml do jogo: abre pelo Proton}`` no Lutris Flatpak, pelo censo."""
+    pasta = _pasta_do_lutris_flatpak(Path.home() if lar is None else lar)
+    if pasta is None:
+        return {}
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+    return {str(j.configuracao): j.pelo_proton for j in censo._lutris(pasta).jogos
+            if j.configuracao is not None}
+
+
+def _dizer_o_par(alvo: Path, par: int) -> None:
+    """A linha do diário: o `.yml` deste jogo recebeu (1) ou perdeu (0) o par do xalia."""
+    with contextlib.suppress(Exception):
+        from hefesto_dualsense4unix.utils.logging_config import get_logger
+
+        get_logger(__name__).info("camada_do_lutris_xalia", par=par, jogo=alvo.stem)
 
 
 def jogos_do_lutris_pela_janela(classe: str, lar: Path | None = None) -> list[Path]:
@@ -2298,12 +2356,15 @@ def jogos_do_lutris_pela_janela(classe: str, lar: Path | None = None) -> list[Pa
 
 def _com_o_nosso_no_yml(
     texto: str, pares: dict[str, str], moldura: tuple[str, ...] = (),
+    ja_nossos: tuple[tuple[str, str], ...] = (),
 ) -> tuple[str, tuple[tuple[str, str], ...], tuple[str, ...]] | None:
     """O `.yml` com os pares em `system.env`, sem passar por cima de chave dela.
 
     Devolve ``(texto, os pares postos, a moldura)``; ``None`` = o arquivo não é
     um dicionário que o Lutris leria (não se reescreve por cima). Uma chave que
-    já está no `system.env` é dela (ou da exclusão, de antes) e fica.
+    já está no `system.env` é dela (ou da exclusão, de antes) e fica. O par do
+    xalia (:data:`_PAR_DO_XALIA`) entra junto ou não entra: com uma das duas
+    posta por ela (fora de ``ja_nossos``), o que é dela manda e o par fica fora.
     """
     yaml = _yaml()
     if yaml is None:
@@ -2327,6 +2388,9 @@ def _com_o_nosso_no_yml(
         nova.append("env")
     if not isinstance(env, dict):
         return None
+    nossos = set(ja_nossos)
+    if any(k in env and (k, str(env[k])) not in nossos for k in _PAR_DO_XALIA):
+        pares = {k: v for k, v in pares.items() if k not in _PAR_DO_XALIA}
     postos = tuple((k, v) for k, v in sorted(pares.items()) if k not in env)
     if not postos:
         return texto, (), moldura
@@ -2352,6 +2416,8 @@ def _cobrir_no_yml(alvo: Path, pares: dict[str, str]) -> YmlDoJogo | None:
             _escrever_atomico(alvo, novo)
         except OSError:
             return None
+    if _PAR_DO_XALIA & {k for k, _ in postos}:
+        _dizer_o_par(alvo, 1)
     return YmlDoJogo(str(alvo), texto, _sha(novo), postos, moldura)
 
 
@@ -2368,9 +2434,11 @@ def tirar_o_nosso_do_jogo_do_lutris(
     ymls = jogos_do_lutris_pela_janela(classe, lar)
     if not ymls:
         return (), "nada"
-    pares = pares_da_camada_do_lutris(lar, pasta_do_ambiente)
+    base, por_jogo = _a_camada_da_caixa(lar, pasta_do_ambiente)
+    proton = _pelo_proton_por_yml(lar)
     feitos: list[YmlDoJogo] = []
     for alvo in ymls:
+        pares = _com_o_padrao_do_jogo(base, por_jogo, pelo_proton=proton.get(str(alvo), False))
         yml = _cobrir_no_yml(alvo, pares)
         if yml is None:
             devolver_ao_jogo_do_lutris(feitos)
@@ -2382,9 +2450,12 @@ def tirar_o_nosso_do_jogo_do_lutris(
 def _manter_o_yml(yml: YmlDoJogo, pares: dict[str, str]) -> YmlDoJogo | None:
     """A carona mantém o `.yml` do excluído cobrindo a caixa de agora.
 
-    Só acrescenta, e o que falta se lê no ARQUIVO, não no registro: o uninstall
+    Acrescenta, e o que falta se lê no ARQUIVO, não no registro: o uninstall
     que guarda a configuração devolve o `.yml` e deixa a entrada, e o install de
     depois deixava o excluído sem a camada (medido em 02/10/2026).
+    **O PAR DO XALIA SEGUE O JOGO** (02/10/2026): ele também SAI, quando o jogo
+    deixa de abrir pelo Proton (ela trocou o Wine dele) ou o xalia da caixa
+    deixa de ser nosso; sai só o par que ainda tem o valor nosso.
     Devolve o registro novo quando escreveu, ``None`` quando não mudou nada ou
     não pôde. Se ela mexeu no arquivo desde a última escrita nossa, a volta
     exata deixa de valer (``antes=None``); o arquivo igual ao «antes» a mantém.
@@ -2394,18 +2465,29 @@ def _manter_o_yml(yml: YmlDoJogo, pares: dict[str, str]) -> YmlDoJogo | None:
         texto = alvo.read_text(encoding="utf-8")
     except OSError:
         return None
-    feito = _com_o_nosso_no_yml(texto, pares, yml.moldura) if pares else None
+    if not pares:
+        return None
+    velhos = tuple((k, v) for k, v in yml.pares if k in _PAR_DO_XALIA and k not in pares)
+    base = _sem_os_pares_no_yml(texto, replace(yml, pares=velhos)) if velhos else texto
+    if base is None:
+        return None
+    ja_nossos = tuple(p for p in yml.pares if p not in velhos)
+    feito = _com_o_nosso_no_yml(base, pares, yml.moldura, ja_nossos)
     if feito is None:
         return None
     novo, postos, moldura = feito
-    if not postos:
+    if novo == texto:
         return None
     try:
         _escrever_atomico(alvo, novo)
     except OSError:
         return None
+    if velhos:
+        _dizer_o_par(alvo, 0)
+    if _PAR_DO_XALIA & {k for k, _ in postos}:
+        _dizer_o_par(alvo, 1)
     antes = yml.antes if _sha(texto) == yml.depois or texto == yml.antes else None
-    todos = tuple({**dict(yml.pares), **dict(postos)}.items())
+    todos = tuple({**dict(ja_nossos), **dict(postos)}.items())
     return YmlDoJogo(yml.arquivo, antes, _sha(novo), todos, moldura)
 
 
@@ -2486,10 +2568,13 @@ def _manter_os_ymls(ymls: Iterable[YmlDoJogo], lar: Path | None,
     lista = list(ymls)
     if not lista:
         return []
-    pares = pares_da_camada_do_lutris(lar, pasta_do_ambiente)
+    base, por_jogo = _a_camada_da_caixa(lar, pasta_do_ambiente)
+    proton = _pelo_proton_por_yml(lar) if por_jogo else {}
     mudados: list[YmlDoJogo] = []
     for yml in lista:
         with contextlib.suppress(Exception):
+            pares = _com_o_padrao_do_jogo(
+                base, por_jogo, pelo_proton=proton.get(yml.arquivo, False))
             novo = _manter_o_yml(yml, pares)
             if novo is not None:
                 mudados.append(novo)

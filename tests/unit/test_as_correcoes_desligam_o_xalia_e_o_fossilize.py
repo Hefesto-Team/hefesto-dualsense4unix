@@ -35,6 +35,7 @@ from tests.unit.test_a_exclusao_mora_na_camada_do_jogo import (
     _heroic,
     _janela,
     _lutris_flatpak,
+    _lutris_flatpak_pelo_wine,
 )
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -288,21 +289,22 @@ def test_o_jogo_excluido_do_heroic_nao_recebe(casa: Path) -> None:
         _carona(casa)
 
 
-def test_o_jogo_excluido_do_lutris_herda_a_caixa(casa: Path) -> None:
-    """O `.yml` do excluído não cobre o xalia: não há valor que o Proton leia como «não veio».
+def test_o_jogo_excluido_do_lutris_pelo_wine_herda_a_caixa(casa: Path) -> None:
+    """O excluído pelo Wine sem Proton fica com o `0` da caixa, que é o padrão ali.
 
-    Medido em 02/10 no GE-Proton 11-7 e no 10-34 instalados nela (só leitura):
-    o script decide por presença (`if "PROTON_USE_XALIA" not in self.env`,
-    `proton:2527` no 11-7), e o `explorer.exe` do Wine dele só sobe o xalia
-    quando `GetEnvironmentVariableW` devolve um valor diferente de `0`; o vazio
-    devolve zero caracteres. `''` desliga como o `0`, e `1` ligaria o xalia
-    em toda janela (sem o `XALIA_SUPPORTED_ONLY`) e no runner `wine`, que sem o
-    Hefesto não o liga. O jogo excluído fica com o `0` da caixa.
+    Lido em 02/10 no GE-Proton 11-7 e no 10-34 instalados nela (só leitura): o
+    script do Proton decide o xalia por presença (`proton:2527-2533` no 11-7) e,
+    sem a variável, põe o par `PROTON_USE_XALIA=1` + `XALIA_SUPPORTED_ONLY=1`;
+    o Wine sem o script não põe nada, e o `explorer.exe` sem a variável não sobe
+    o xalia. O excluído pelo Proton recebe o par
+    (O-JOGO-EXCLUIDO-DO-LUTRIS-VOLTA-AO-XALIA-DO-PROTON-01, as réguas em
+    `test_a_exclusao_mora_na_camada_do_jogo.py`); este, pelo Wine, nada.
 
-    MORDIDA: tire o `PROTON_USE_XALIA` de `_SEM_NAO_VEIO`, e o `''` entra no `.yml`.
+    MORDIDA: tire o `PROTON_USE_XALIA` de `_NAO_VEIO_POR_JOGO`, e o `''` do
+    prefixo `PROTON_` entra no `.yml`.
     """
     lx = lista_de_exclusao
-    yml = _lutris_flatpak(casa)
+    yml = _lutris_flatpak_pelo_wine(casa)
     _carona(casa)
     assert lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=casa) == "adicionado"
     env = _env_do_yml(yml)

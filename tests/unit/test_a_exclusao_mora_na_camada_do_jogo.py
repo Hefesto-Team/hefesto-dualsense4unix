@@ -650,3 +650,165 @@ def test_a_assinatura_ve_o_banco_dos_dados(_lar: Path) -> None:
                     "VALUES ('Outro', 'outro', 'linux', 1)")
     con.close()
     assert censo.assinatura_das_bibliotecas(_lar) != antes
+
+
+# ---------------------------------------------------------------------------
+# 10 · O excluído do Lutris volta ao xalia do Proton
+#      (O-JOGO-EXCLUIDO-DO-LUTRIS-VOLTA-AO-XALIA-DO-PROTON-01)
+# ---------------------------------------------------------------------------
+_XALIA = "PROTON_USE_XALIA"
+_SO_SUPORTADAS = "XALIA_SUPPORTED_ONLY"
+#: O recorte do script do GE-Proton 11-7 (`proton:2527-2533`), guardado como dado
+#: de teste com a versão no nome. Nunca o Proton instalado na máquina do teste:
+#: com ele, a régua mediria a máquina.
+_RECORTE_DO_PROTON = RAIZ / "tests/fixtures/proton/GE-Proton11-7-o-padrao-do-xalia.txt"
+_YML_PELO_WINE = _YML_DO_JOGO.replace("version: ge-proton", "version: wine-ge-8-26-x86_64")
+
+
+def _lutris_flatpak_pelo_wine(lar: Path) -> Path:
+    """O jogo da Steam no Lutris Flatpak, por um Wine que não é Proton.
+
+    Sem o umu, o jogo só tem janela conhecida pelo degrau 2 (`service` da
+    Steam, `steam_app_<N>`): é o jogo pelo Wine que a lista alcança.
+    """
+    yml = _lutris_flatpak(lar, yml=_YML_PELO_WINE)
+    con = sqlite3.connect(lar / ".var/app" / _LUTRIS / "data/lutris/pga.db")
+    with con:
+        con.execute("UPDATE games SET service = 'steam', service_id = '70400'")
+    con.close()
+    return yml
+
+
+def _padrao_do_script(compat_config: frozenset[str] = frozenset()) -> dict[str, str]:
+    """O ambiente que o script do Proton monta quando a variável não vem."""
+
+    class _Script:
+        env: dict[str, str] = {}
+
+    script = _Script()
+    script.env = {}
+    script.compat_config = set(compat_config)  # type: ignore[attr-defined]
+    exec(compile(_RECORTE_DO_PROTON.read_text(encoding="utf-8"),  # noqa: S102
+                 str(_RECORTE_DO_PROTON), "exec"), {"self": script})
+    return script.env
+
+
+def _o_xalia_do(yml: Path) -> dict[str, object]:
+    env = _env_do_yml(yml)
+    return {k: env[k] for k in (_XALIA, _SO_SUPORTADAS) if k in env}
+
+
+def test_o_jogo_pelo_proton_ganha_o_par(_lar: Path) -> None:
+    """O jogo do Lutris Flatpak pela versão padrão (`ge-proton`, pelo umu e pelo
+    script do Proton): a camada põe o par, e o diário diz qual jogo.
+
+    MORDIDA: o xalia de volta ao «fica fora» de antes (sem o padrão por jogo
+    em `pares_da_camada_do_lutris`) — sem o par, o jogo excluído fica com o `0`
+    da caixa, e o excluído da Steam e o do Heroic não.
+    """
+    yml = _lutris_flatpak(_lar)
+    _carona(_lar)
+    with structlog.testing.capture_logs() as diario:
+        assert lx.adicionar(_JANELA, lancador="lutris", nome="Recettear",
+                            lar=_lar) == "adicionado"
+    assert _o_xalia_do(yml) == {_XALIA: "1", _SO_SUPORTADAS: "1"}, yml.read_text()
+    linhas = [x for x in diario if x.get("event") == "camada_do_lutris_xalia"]
+    assert linhas and linhas[0]["par"] == 1 and linhas[0]["jogo"] == yml.stem, diario
+
+
+def test_o_par_e_o_padrao_do_script_do_proton(_lar: Path) -> None:
+    """O par que a camada põe é o que o script do GE-Proton 11-7 poria sozinho
+    para um appid fora do `noxalia` — lido no recorte, não no escritor.
+
+    MORDIDA: `XALIA_SUPPORTED_ONLY=0` no par — o xalia subiria em toda janela.
+    """
+    padrao = _padrao_do_script()
+    assert padrao == {_XALIA: "1", _SO_SUPORTADAS: "1"}, padrao
+    assert _padrao_do_script(frozenset({"noxalia"})) == {_XALIA: "0"}
+    yml = _lutris_flatpak(_lar)
+    _carona(_lar)
+    lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
+    assert _o_xalia_do(yml) == padrao
+
+
+def test_o_jogo_pelo_wine_fica_com_o_da_caixa(_lar: Path) -> None:
+    """Uma versão do Wine que não é Proton não passa pelo script: sem a
+    variável, o `explorer.exe` não sobe o xalia, e o `0` da caixa é o padrão.
+
+    MORDIDA: o par para todo jogo (sem perguntar ao censo `pelo_proton`).
+    """
+    yml = _lutris_flatpak_pelo_wine(_lar)
+    assert not censo.biblioteca_de("Lutris", _lar).jogos[0].pelo_proton
+    _carona(_lar)
+    lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
+    env = _env_do_yml(yml)
+    assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" in env, "a exclusão não cobriu a caixa"
+    assert _o_xalia_do(yml) == {}, yml.read_text()
+
+
+def test_o_par_segue_o_wine_do_jogo(_lar: Path) -> None:
+    """Ela troca o Wine do jogo excluído (Proton → Wine) e a carona passa: o
+    par sai; e volta quando ela troca de novo.
+
+    MORDIDA: o «só acrescenta» de antes no `_manter_o_yml` — o par fica.
+    """
+    yml = _lutris_flatpak(_lar)
+    _carona(_lar)
+    lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
+    assert _o_xalia_do(yml) == {_XALIA: "1", _SO_SUPORTADAS: "1"}
+
+    def trocar(versao: str) -> None:
+        dado = yaml.safe_load(yml.read_text())
+        dado["wine"]["version"] = versao
+        yml.write_text(yaml.safe_dump(dado, default_flow_style=False))
+
+    trocar("wine-ge-8-26-x86_64")
+    _carona(_lar)
+    assert _o_xalia_do(yml) == {}, f"o par ficou no jogo pelo Wine:\n{yml.read_text()}"
+    assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" in _env_do_yml(yml)
+    trocar("ge-proton")
+    _carona(_lar)
+    assert _o_xalia_do(yml) == {_XALIA: "1", _SO_SUPORTADAS: "1"}
+    assert lx.tirar(_JANELA, lar=_lar) == "removido"
+    assert _o_xalia_do(yml) == {}
+
+
+def test_tirar_da_lista_tira_as_duas(_lar: Path) -> None:
+    """Ela mexe no `.yml` depois da exclusão (a volta passa a ser pelos pares):
+    o «Tirar da lista» tira as duas chaves do par, e o que é dela fica.
+
+    MORDIDA: o registro sem o `XALIA_SUPPORTED_ONLY` — a chave fica no arquivo.
+    """
+    yml = _lutris_flatpak(_lar)
+    _carona(_lar)
+    lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
+    dado = yaml.safe_load(yml.read_text())
+    dado["system"]["env"]["DXVK_HUD"] = "fps"
+    yml.write_text(yaml.safe_dump(dado, default_flow_style=False))
+    assert lx.tirar(_JANELA, lar=_lar) == "removido"
+    assert _env_do_yml(yml) == {"MANGOHUD": "1", "DXVK_HUD": "fps"}, yml.read_text()
+
+
+@pytest.mark.parametrize("onde", ["no-yml", "na-caixa"])
+def test_o_xalia_que_ela_pos_manda(_lar: Path, onde: str) -> None:
+    """Com o `PROTON_USE_XALIA` posto por ela (no `.yml` do jogo, ou na caixa),
+    a camada não põe o par, nem a metade dele: o `1` dela não ganha o
+    `XALIA_SUPPORTED_ONLY` nosso.
+
+    MORDIDA: o par sem o «junto ou nada» do `_com_o_nosso_no_yml` — o `.yml`
+    dela ganha a metade que faltava.
+    """
+    if onde == "no-yml":
+        yml = _lutris_flatpak(_lar, yml=_YML_DO_JOGO.replace(
+            "    MANGOHUD: '1'\n", "    MANGOHUD: '1'\n    PROTON_USE_XALIA: '1'\n"))
+    else:
+        yml = _lutris_flatpak(_lar)
+        _caixa(_lar).parent.mkdir(parents=True, exist_ok=True)
+        _caixa(_lar).write_text(f"[Environment]\n{_XALIA}=1\n")
+    _carona(_lar)
+    lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
+    _carona(_lar)
+    esperado = {_XALIA: "1"} if onde == "no-yml" else {}
+    assert _o_xalia_do(yml) == esperado, yml.read_text()
+    if onde == "na-caixa":
+        assert _nossas_na_caixa(_lar) and f"{_XALIA}=1" in _caixa(_lar).read_text()

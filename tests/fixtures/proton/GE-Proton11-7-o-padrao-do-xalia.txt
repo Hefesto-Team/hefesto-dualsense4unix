@@ -1,0 +1,10 @@
+# GE-Proton11-7 (x86_64), o script `proton`, linhas 2527-2533, copiadas sem mudança além
+# do recuo (só leitura no disco dela, 02/10/2026; md5 do script: b82a5ec8d69b3db35b8f714c97e44bdb).
+# É o padrão do xalia quando a variável não vem. Licença do Proton: BSD-3-Clause.
+if "PROTON_USE_XALIA" not in self.env:
+    if "noxalia" in self.compat_config:
+        self.env["PROTON_USE_XALIA"] = "0"
+    else:
+        self.env["PROTON_USE_XALIA"] = "1"
+        if "xalia" not in self.compat_config:
+            self.env["XALIA_SUPPORTED_ONLY"] = "1"

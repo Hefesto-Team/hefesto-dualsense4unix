@@ -134,6 +134,12 @@ class JogoDoLancador:
     #: 02/10/2026). É a camada que só este jogo lê, e é nela que a exclusão
     #: escreve (`cura_por_estrada`, «A CAMADA DO JOGO DO LUTRIS»).
     configuracao: Path | None = None
+    #: O JOGO ABRE PELO SCRIPT DO PROTON (02/10/2026,
+    #: O-JOGO-EXCLUIDO-DO-LUTRIS-VOLTA-AO-XALIA-DO-PROTON-01): no Lutris, o
+    #: runner `wine` com a versão padrão ou com um Proton (`_UmuDoLutris`, a
+    #: mesma conta do umu-id). O padrão do xalia é do script do Proton, e o Wine
+    #: sem ele não sobe o xalia: a camada do jogo excluído depende disto.
+    pelo_proton: bool = False
 
     @property
     def classe_de_janela(self) -> str:
@@ -554,7 +560,9 @@ def _lutris(pasta: Path) -> BibliotecaDoLancador:
                                             str(id_do_servico or ""), yml)
                                 if instalado else ""),
                         appid_da_steam=da_steam,
-                        configuracao=yml))
+                        configuracao=yml,
+                        pelo_proton=bool(instalado) and umu.pelo_proton(
+                            str(runner or ""), yml)))
     games = pasta / "games"
     if games.is_dir():
         for p in sorted(games.glob("*.yml")):
@@ -625,6 +633,15 @@ class _UmuDoLutris:
         self._tabela: dict[tuple[str, str], str] | None = None
         self._versao_do_runner: str | None = None
         self._leu_o_runner = False
+        self._ymls: dict[Path, dict[str, object] | None] = {}
+
+    def _yml(self, yml: Path | None) -> dict[str, object] | None:
+        """O `.yml` do jogo, lido uma vez por biblioteca."""
+        if yml is None:
+            return None
+        if yml not in self._ymls:
+            self._ymls[yml] = _ler_yml(yml)
+        return self._ymls[yml]
 
     def _umu_games(self) -> dict[tuple[str, str], str]:
         if self._tabela is not None:
@@ -660,18 +677,26 @@ class _UmuDoLutris:
             locais += [lar / steam / "compatibilitytools.d", lar / steam / "steamapps/common"]
         return any((onde / versao / "proton").is_file() for onde in locais)
 
-    def do_jogo(self, runner: str, servico: str, appid: str, yml: Path | None) -> str:
-        """O `umu-<N>` deste jogo, ou ``""``."""
+    def pelo_proton(self, runner: str, yml: Path | None) -> bool:
+        """O jogo abre pelo umu, e com ele pelo script do Proton?
+
+        O runner `wine` com a versão padrão (`ge-proton`, que o umu resolve) ou
+        com uma versão que é um Proton instalado (`is_proton_path` no 0.5.22).
+        """
         if runner.strip() != _RUNNER_DO_UMU:
-            return ""
-        dado = _ler_yml(yml) if yml is not None else None
+            return False
         versao: str | None = None
-        for nivel in (_secao(dado, "wine", "version"), self._do_runner()):
+        for nivel in (_secao(self._yml(yml), "wine", "version"), self._do_runner()):
             if nivel and str(nivel) != _VERSAO_PADRAO_DO_LUTRIS:
                 versao = str(nivel)
                 break
-        if versao is not None and not self._e_proton(versao):
+        return versao is None or self._e_proton(versao)
+
+    def do_jogo(self, runner: str, servico: str, appid: str, yml: Path | None) -> str:
+        """O `umu-<N>` deste jogo, ou ``""``."""
+        if not self.pelo_proton(runner, yml):
             return ""
+        dado = self._yml(yml)
         proprio = _secao(dado, "system", "env", "UMU_ID")
         if isinstance(proprio, str) and proprio.strip():
             return proprio.strip()
