@@ -59,7 +59,7 @@ class _CoopFalso:
         self.syncs: list[bool] = []
         self.disables = 0
 
-    def sync(self, *, force: bool = False) -> None:
+    def sync(self, *, force: bool = False, origem: str | None = None) -> None:
         self.syncs.append(force)
 
     def disable(self) -> None:

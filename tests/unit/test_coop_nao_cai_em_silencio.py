@@ -74,7 +74,7 @@ class _CoopDublado:
             raise RuntimeError("uinput sumiu no meio do teardown")
         self._players.clear()
 
-    def sync(self, *, force: bool = False) -> None:
+    def sync(self, *, force: bool = False, origem: str | None = None) -> None:
         self.syncs.append(force)
 
     def player_count(self) -> int:

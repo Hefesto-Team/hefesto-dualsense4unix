@@ -183,7 +183,7 @@ def bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[_Bancada]:
     monkeypatch.setattr(
         coop_mod,
         "get_coop_manager",
-        lambda d: SimpleNamespace(sync=lambda force=False: None),
+        lambda d: SimpleNamespace(sync=lambda force=False, origem=None: None),
     )
     monkeypatch.setattr(launch_env, "materialize_launch_env", lambda d: None)
     em._zerar_registro_de_mascaras()

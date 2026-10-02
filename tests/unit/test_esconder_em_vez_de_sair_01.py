@@ -78,7 +78,7 @@ class _CoopFalso:
         self.desligado += 1
         self._players.clear()
 
-    def sync(self, *, force: bool = False) -> None:
+    def sync(self, *, force: bool = False, origem: str | None = None) -> None:
         return None
 
 

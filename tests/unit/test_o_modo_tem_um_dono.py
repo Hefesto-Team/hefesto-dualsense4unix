@@ -170,7 +170,8 @@ def _bancada(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setattr(gp, "stop_gamepad_emulation", _parar)
     monkeypatch.setattr(coop_mod, "numero_do_nome_do_primario", lambda d, fallback=1: 1)
     monkeypatch.setattr(
-        coop_mod, "get_coop_manager", lambda d: SimpleNamespace(sync=lambda force=False: None)
+        coop_mod, "get_coop_manager",
+        lambda d: SimpleNamespace(sync=lambda force=False, origem=None: None),
     )
     monkeypatch.setattr(session, "save_gamepad_emulation", lambda *a, **k: None)
     monkeypatch.setattr(session, "load_gamepad_preference", lambda: (None, None))

@@ -1065,7 +1065,7 @@ class _CoopDaEspera:
             P3: SimpleNamespace(buttons_pressed=frozenset({"square"})),
         }
 
-    def sync(self, *, force: bool = False) -> None:
+    def sync(self, *, force: bool = False, origem: str | None = None) -> None:
         return None
 
     def forward_all(self) -> None:

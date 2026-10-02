@@ -33,7 +33,7 @@ class _CoopEspiao:
     def __init__(self) -> None:
         self.syncs: list[bool] = []
 
-    def sync(self, *, force: bool = False) -> None:
+    def sync(self, *, force: bool = False, origem: str | None = None) -> None:
         self.syncs.append(force)
 
     def disable(self) -> None: ...

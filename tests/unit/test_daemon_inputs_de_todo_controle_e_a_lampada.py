@@ -78,7 +78,7 @@ class _CoopEspiao:
         self._diario = diario
         self.chamadas: list[bool] = []
 
-    def sync(self, *, force: bool = False) -> None:
+    def sync(self, *, force: bool = False, origem: str | None = None) -> None:
         self.chamadas.append(force)
         self._diario.append("coop.sync")
 
@@ -332,7 +332,7 @@ class TestARepinturaNaoDerrubaARenumeracao:
         server, daemon, _coop, diario = _servidor(config_isolado, ds)
 
         class _CoopQuebrado:
-            def sync(self, *, force: bool = False) -> None:
+            def sync(self, *, force: bool = False, origem: str | None = None) -> None:
                 raise RuntimeError("uhid morreu no meio")
 
         daemon._coop_manager = _CoopQuebrado()
