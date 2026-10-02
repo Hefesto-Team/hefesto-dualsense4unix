@@ -4301,7 +4301,7 @@ MIOLO = f'''
              refaz o exame e relê os controles), e as quatro colunas são as dos
              cartões embaixo: cada botão fica em cima de um cartão. -->
         <div class="ferramentas">
-          <a class="btn" href="#mapear-portas" title="{MAPEAR_ENTRADAS} — ligue o DualSense em cada entrada, uma por vez, e dê nome e lugar a cada uma">
+          <a class="btn" href="#mapear-portas" title="{MAPEAR_ENTRADAS} — ligue o DualSense em cada entrada, uma por vez; o nome e o lugar são opcionais">
             <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg> {MAPEAR_ENTRADAS}</a>
           <button class="btn" data-gesto="examinar-portas" title="{EXAMINAR_PORTAS} — refaz o exame das entradas, da energia e do Bluetooth, e relê o estado de cada controle">
             <svg class="i" aria-hidden="true"><use href="#rd-reexaminar"/></svg> {EXAMINAR_PORTAS}</button>

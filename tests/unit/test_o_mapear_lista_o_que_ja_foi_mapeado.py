@@ -170,6 +170,8 @@ def test_a_dica_do_mapear_nao_desdiz_a_frase() -> None:
     pelo nome velho, «Check-up» (conferência, 02/10/2026).
 
     MORDIDA: devolva a dica de antes no ``TELA_MAPEAR_PORTAS`` e regere → reprova.
+    Ou devolva o «e dê nome e lugar a cada uma» à dica do botão que abre o
+    diálogo (``aba08.py``, o ``href="#mapear-portas"``) e regere → reprova.
     """
     bancada = (RAIZ / "mockup/08-conexoes.html").read_text(encoding="utf-8")
     inicio = bancada.index('id="mapear-portas"')
@@ -177,6 +179,12 @@ def test_a_dica_do_mapear_nao_desdiz_a_frase() -> None:
     dica = topo[topo.index('class="dica">'):]
     assert "opcionais" in dica, f"a dica do Mapear ainda manda dar nome e lugar: {dica[:300]}"
     assert "Check-up" not in dica and "Gestão de Controles" in dica, dica[:300]
+    # O BOTÃO QUE ABRE O DIÁLOGO dizia o mesmo na dica dele, «e dê nome e lugar a cada
+    # uma» (conferência final, 02/10/2026): a correção que fica num lugar só deixa as
+    # duas versões vivas.
+    botao = bancada[bancada.index('href="#mapear-portas"'):]
+    botao = botao[:botao.index(">")]
+    assert "dê nome e lugar" not in botao and "opcionais" in botao, botao
 
 
 # ---------------------------------------------------------------------------
