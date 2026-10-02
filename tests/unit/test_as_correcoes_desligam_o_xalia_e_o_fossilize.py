@@ -493,3 +493,38 @@ def test_o_recibo_do_uninstall_diz_quando_ela_trocou_o_nosso(casa: Path) -> None
     assert _lista_global(heroic)[_XALIA] == "1"
     recibo = " ".join(cpe.frase_do_desfeito(f) for f in feitos)
     assert f"mudou depois do Hefesto: {_XALIA}" in recibo, recibo
+
+
+@pytest.mark.parametrize("jogadores", [1, 2, 3, 4])
+def test_o_xalia_chega_em_todo_modo_e_de_um_a_quatro(casa: Path, jogadores: int) -> None:
+    """DualSense, Xbox, Navegação e Nativo, de um a quatro jogadores: o `0` fica em todos.
+
+    O `default.env` de cada modo sai do dono (`launch_env.compose_env`), e a
+    carona roda a cada troca. O `IGNORE` segue o modo; o xalia não depende dele.
+    MORDIDA: em `ambiente_da_carona`, junte as correções só quando a ponte traz
+    o `SDL_GAMECONTROLLER_IGNORE_DEVICES`, e esta reprova na Navegação.
+    """
+    from hefesto_dualsense4unix.daemon import launch_env
+
+    heroic = _heroic(casa, {"A": {"enviromentOptions": [{"key": "MANGOHUD", "value": "1"}]}})
+    _lutris_flatpak(casa)
+    _flatpak(casa, _RETROARCH)
+    gamepad = {"native_mode": False, "emulation_enabled": True, "fisicos": jogadores}
+    modos = {
+        "DualSense": {**gamepad, "flavor": "dualsense", "backends": ["uhid"] * jogadores},
+        "Xbox": {**gamepad, "flavor": "xbox", "backends": ["uinput"] * jogadores},
+        "Navegação": {"native_mode": False, "emulation_enabled": False, "flavor": "dualsense",
+                      "backends": [], "fisicos": jogadores},
+        "Nativo": {"native_mode": True, "emulation_enabled": False, "flavor": "dualsense",
+                   "backends": [], "fisicos": jogadores},
+    }
+    for modo, estado in modos.items():
+        env = launch_env.compose_env(**estado)
+        (_pasta() / "default.env").write_text("".join(f"{k}={v}\n" for k, v in env.items()))
+        _carona(casa)
+        onde = {"a global do Heroic": _lista_global(heroic),
+                "a cópia de A": _lista_do_jogo(heroic, "A") or {},
+                "a caixa do Lutris": _override(casa, "net.lutris.Lutris"),
+                "a caixa do RetroArch": _override(casa, _RETROARCH)}
+        for nome, ambiente in onde.items():
+            assert ambiente.get(_XALIA) == "0", f"{modo}, {jogadores} jogador(es): {nome} {ambiente}"
