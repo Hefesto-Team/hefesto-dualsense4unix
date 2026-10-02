@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import os
 import signal
+import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -98,15 +100,20 @@ class Mesa:
 
 
 @pytest.fixture
-def mesa(tmp_path: Path) -> Mesa:
+def mesa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Mesa:
     lar = tmp_path / "lar"
     lar.mkdir()
-    return Mesa(tmp_path / "proc", lar)
+    mesa = Mesa(tmp_path / "proc", lar)
+    # O `steam -shutdown` cai no dublê: o `subprocess` do módulo é este.
+    monkeypatch.setattr(slo, "subprocess", SimpleNamespace(
+        Popen=mesa.abrir, DEVNULL=subprocess.DEVNULL))
+    monkeypatch.setattr(slo, "shutil", SimpleNamespace(which=lambda n: f"/usr/bin/{n}"))
+    return mesa
 
 
 def _parar(mesa: Mesa) -> bool:
     return slo.stop_steam(proc=mesa.raiz, lar=mesa.lar, dormir=mesa.dormir,
-                          sinalizar=mesa.sinalizar, abrir=mesa.abrir)
+                          sinalizar=mesa.sinalizar)
 
 
 # ---------------------------------------------------------------------------

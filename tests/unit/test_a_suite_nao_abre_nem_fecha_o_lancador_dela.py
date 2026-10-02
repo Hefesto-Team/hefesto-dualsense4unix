@@ -171,20 +171,17 @@ class _TempoSemEspera:
         return getattr(time, nome)
 
 
-def _steam_aberta_ate_o_kill() -> bool:
-    """`steam_running` como a medida o viu: de pé até a conferência depois do
-    `TERM`, e «fechada» a partir da que vem depois do `KILL` (a janela das
-    02:10:29 às 02:10:31, com o cliente dela ainda sem o webhelper)."""
+def _steam_aberta_ate_o_shutdown() -> bool:
+    """`steam_running` de uma Steam que atende o `-shutdown`: de pé até o
+    livro trazer o pedido. Desde A-STEAM-SO-SE-DA-POR-FECHADA-QUANDO-FECHOU-01
+    o fallback não manda `pkill` pelo nome (o que derrubou o webhelper dela em
+    29/09): o sinal vai por PID conferido, só à Steam deste `HOME`."""
     linhas, _ = conftest._ler_o_livro(conftest._LIVRO_LIDO[0])
-    return not any(linha.startswith("pkill -KILL") for _, linha in linhas)
+    return not any(linha.startswith("steam -shutdown") for _, linha in linhas)
 
 
 ATOS_DO_REINICIAR = (
     "steam -shutdown",
-    "pkill -TERM -f steamrt64/steam",
-    "pkill -TERM -x steamwebhelper",
-    "pkill -KILL -f steamrt64/steam",
-    "pkill -KILL -x steamwebhelper",
     "steam",
 )
 
@@ -223,7 +220,7 @@ def test_o_reiniciar_chega_aos_dois_atos_so_pelo_duble(
     monkeypatch.setattr(rl, "jogo_aberto", lambda: False)
     monkeypatch.setattr(rl, "abertos", lambda: [rl.LANCADORES[0]])
     monkeypatch.setattr(slo, "time", _TempoSemEspera())
-    monkeypatch.setattr(slo, "steam_running", _steam_aberta_ate_o_kill)
+    monkeypatch.setattr(slo, "steam_running", _steam_aberta_ate_o_shutdown)
     olho = espiao()
 
     estado: dict[str, Any] = ESTADO

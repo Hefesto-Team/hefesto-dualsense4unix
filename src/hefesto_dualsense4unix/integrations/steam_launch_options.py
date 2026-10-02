@@ -1615,11 +1615,10 @@ def start_steam_game(appid: int) -> bool:
 
 def stop_steam(
     *,
-    proc: Path = PROC,
+    proc: Path | None = None,
     lar: Path | None = None,
-    dormir: Callable[[float], None] = time.sleep,
-    sinalizar: Callable[[int, int], None] = os.kill,
-    abrir: Callable[..., Any] = subprocess.Popen,
+    dormir: Callable[[float], None] | None = None,
+    sinalizar: Callable[[int, int], None] | None = None,
 ) -> bool:
     """Fecha a Steam DESTE lar. True = nenhum processo dela de pé.
 
@@ -1627,10 +1626,21 @@ def stop_steam(
     recebe), até 30 s de espera, e o fallback por PID CONFERIDO: o sinal vai
     a cada processo da Steam deste lar, relido na hora e com a mesma hora de
     nascimento. A Steam de outro lar não se toca, e então ela «está fechada»
-    para quem pergunta. Os parâmetros são as costuras da régua.
+    para quem pergunta.
+
+    As costuras (`proc`, `lar`, `dormir`, `sinalizar`) se resolvem NA HORA:
+    sem `proc` nem `lar`, «de pé» é a pergunta única do módulo,
+    `steam_running`, e quem troca o `time` ou o `subprocess` do módulo
+    continua valendo.
     """
-    def de_pe() -> list[ProcessoDaSteam]:
-        return steam_deste_lar(proc, lar)
+    pasta = PROC if proc is None else proc
+    esperar = time.sleep if dormir is None else dormir
+    tiro = os.kill if sinalizar is None else sinalizar
+
+    def de_pe() -> bool:
+        if proc is None and lar is None:
+            return steam_running()
+        return bool(steam_deste_lar(pasta, lar))
 
     if not de_pe():
         return True
@@ -1638,27 +1648,27 @@ def stop_steam(
         # O mesmo ambiente das outras chamadas à Steam: toda chamada a ela sai
         # deste módulo sem o interpretador de quem chamou, e a régua de
         # AMBIENTE-DO-JOGO-01 cobra isso de cada `Popen` do arquivo.
-        abrir(
+        subprocess.Popen(
             ["steam", "-shutdown"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             env=ambiente_limpo(os.environ),
         )
         for _ in range(15):
-            dormir(2)
+            esperar(2)
             if not de_pe():
                 break
     if de_pe():
         for sig in (signal.SIGTERM, signal.SIGKILL):
-            for alvo in de_pe():
-                if _inicio(proc / str(alvo.pid)) != alvo.inicio:
+            for alvo in steam_deste_lar(pasta, lar):
+                if _inicio(pasta / str(alvo.pid)) != alvo.inicio:
                     continue
                 with contextlib.suppress(ProcessLookupError, PermissionError):
-                    sinalizar(alvo.pid, sig)
-            dormir(3)
+                    tiro(alvo.pid, sig)
+            esperar(3)
             if not de_pe():
                 break
-    dormir(2)  # margem para a Steam terminar de gravar o vdf
+    esperar(2)  # margem para a Steam terminar de gravar o vdf
     return not de_pe()
 
 

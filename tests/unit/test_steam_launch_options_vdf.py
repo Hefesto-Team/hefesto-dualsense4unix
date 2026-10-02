@@ -768,7 +768,7 @@ def test_apply_wrapper_to_all_games_pula_vdf_de_sandbox(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 # Débito coberto aqui: `stop_steam` só aparecia em teste MOCKADO INTEIRO
 # (`monkeypatch.setattr(slo, "stop_steam", lambda: ...)`), então o corpo real —
-# loop `range(15)` de `sleep(2)`, fallback `pkill -TERM`/`-KILL`, `return not
+# loop `range(15)` de `sleep(2)`, fallback `TERM`/`KILL` por PID, `return not
 # steam_running()` — nunca rodava. E é justamente esse corpo que MATA processo
 # da usuária: ele precisa de rede de segurança antes de a GUI passar a
 # chamá-lo. Relógio e subprocess falsos: nenhum processo real é tocado, e a
@@ -827,6 +827,9 @@ def _prepara_stop_steam(monkeypatch, *, vivo_por: int, com_steam_no_path=True):
     monkeypatch.setattr(slo, "time", relogio)
     monkeypatch.setattr(slo, "subprocess", subproc)
     monkeypatch.setattr(slo, "steam_running", _steam_running)
+    # Os alvos do sinal saem do `/proc`; aqui, nenhum — a régua não lê a
+    # máquina de quem roda.
+    monkeypatch.setattr(slo, "steam_deste_lar", lambda *_a, **_k: [])
     monkeypatch.setattr(
         slo,
         "shutil",
@@ -857,45 +860,51 @@ def test_stop_steam_usa_shutdown_e_nao_escala_para_pkill(monkeypatch):
     assert relogio.dormido == [2, 2]
 
 
-def test_stop_steam_escala_para_pkill_term_depois_kill(monkeypatch):
-    """A Steam resiste às 15 voltas: TERM primeiro, KILL depois — e o
-    webhelper SEMPRE por nome exato (-x), nunca -f (o falso-positivo do
-    earlyoom, que o pkill mataria)."""
+def test_stop_steam_escala_por_pid_e_nunca_pelo_nome(monkeypatch):
+    """A Steam resiste às 15 voltas: TERM primeiro, KILL depois, a cada PID
+    da Steam DESTE lar (A-STEAM-SO-SE-DA-POR-FECHADA-QUANDO-FECHOU-01). Nenhum
+    `pkill`: pelo nome, o `-x steamwebhelper` derrubava o webhelper da Steam
+    de qualquer `HOME` — inclusive a dela, quando quem pedia era a suíte."""
     relogio, subproc, _ = _prepara_stop_steam(monkeypatch, vivo_por=100)
+    alvo = slo.ProcessoDaSteam(4242, "cliente", "/lar", "77")
+    monkeypatch.setattr(slo, "steam_deste_lar", lambda *_a, **_k: [alvo])
+    monkeypatch.setattr(slo, "_inicio", lambda _pasta: "77")
+    sinais: list[tuple[int, int]] = []
 
-    assert slo.stop_steam() is False  # honesto: não fechou
+    assert slo.stop_steam(sinalizar=lambda pid, sig: sinais.append((pid, sig))) is False
 
     assert subproc.popen == [["steam", "-shutdown"]]
-    assinaturas = [" ".join(a) for a in subproc.run_args]
-    assert "pkill -TERM -f steamrt64/steam" in assinaturas
-    assert "pkill -TERM -x steamwebhelper" in assinaturas
-    assert "pkill -KILL -f steamrt64/steam" in assinaturas
-    assert "pkill -KILL -x steamwebhelper" in assinaturas
-    assert not any("-f steamwebhelper" in a for a in assinaturas)
+    assert subproc.run_args == []  # zero pkill, em qualquer volta
+    assert sinais == [(4242, slo.signal.SIGTERM), (4242, slo.signal.SIGKILL)]
     # 15 voltas de 2 s + 2 escalações de 3 s + margem final de 2 s.
     assert relogio.dormido == [2] * 15 + [3, 3, 2]
 
 
 def test_stop_steam_para_no_term_quando_ele_resolve(monkeypatch):
-    _, subproc, _ = _prepara_stop_steam(monkeypatch, vivo_por=17)
+    relogio, subproc, _ = _prepara_stop_steam(monkeypatch, vivo_por=17)
+    sinais: list[tuple[int, int]] = []
+    alvo = slo.ProcessoDaSteam(4242, "cliente", "/lar", "77")
+    monkeypatch.setattr(slo, "steam_deste_lar", lambda *_a, **_k: [alvo])
+    monkeypatch.setattr(slo, "_inicio", lambda _pasta: "77")
 
-    assert slo.stop_steam() is True
+    assert slo.stop_steam(sinalizar=lambda pid, sig: sinais.append((pid, sig))) is True
 
-    assinaturas = [" ".join(a) for a in subproc.run_args]
-    assert "pkill -TERM -f steamrt64/steam" in assinaturas
-    assert not any("-KILL" in a for a in assinaturas)
+    assert subproc.run_args == []
+    assert sinais == [(4242, slo.signal.SIGTERM)]  # o KILL nem é cogitado
+    assert relogio.dormido == [2] * 15 + [3, 2]
 
 
-def test_stop_steam_sem_binario_steam_vai_direto_ao_pkill(monkeypatch):
+def test_stop_steam_sem_binario_steam_vai_direto_ao_sinal(monkeypatch):
     """Steam Flatpak/Snap sem `steam` no PATH: não há shutdown gracioso."""
-    _, subproc, _ = _prepara_stop_steam(
+    relogio, subproc, _ = _prepara_stop_steam(
         monkeypatch, vivo_por=100, com_steam_no_path=False
     )
 
     assert slo.stop_steam() is False
 
     assert subproc.popen == []  # nada de `steam -shutdown`
-    assert subproc.run_args  # o fallback rodou
+    assert subproc.run_args == []  # e nada de `pkill`
+    assert relogio.dormido == [3, 3, 2]  # o fallback rodou
 
 
 # --- with_steam_closed: a janela consentida que a GUI usa -------------------
