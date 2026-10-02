@@ -192,6 +192,12 @@ ESTADOS_DO_HEFESTO=("${ESTADO_DO_XDG}")
 if [[ "${HOME}/.local/state/${APP_ID}" != "${ESTADO_DO_XDG}" ]]; then
     ESTADOS_DO_HEFESTO+=("${HOME}/.local/state/${APP_ID}")
 fi
+# A LISTA DE EXCLUSÃO de cada casa da configuração
+# (`integrations/lista_de_exclusao.RELPATH`), e onde cada uma fica quando o
+# desfazer dos lançadores é adiado (O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01).
+LISTAS_DE_EXCLUSAO=()
+LISTAS_GUARDADAS_DE=()
+LISTAS_GUARDADAS_PARA=()
 
 # Default: remove udev rules + modules-load (espelha install.sh, que aplica por default).
 # Ver BUG-UNINSTALL-UDEV-DEFAULT-01 no cabeçalho.
@@ -1982,53 +1988,6 @@ for appimg_dir in "${HOME}/Aplicativos" "${HOME}/Applications" "${HOME}/Download
     done
 done
 
-# Configs e dados do user. PRESERVADOS por padrão; --purge-config apaga (com
-# backup antes). Cobre o caminho atual (longo) E o legado curto (~/.config/
-# hefesto), onde versões pré-rename gravavam perfis/sessão/preferências.
-#
-# E COBRE O XDG (O-UNINSTALL-NAO-DEIXA-RASTRO-01, 25/09/2026): o produto lê e
-# grava a configuração, os dados e o cache pelo `platformdirs`, que honra o
-# XDG_CONFIG_HOME, o XDG_DATA_HOME e o XDG_CACHE_HOME; o install grava parte no
-# lar. As duas casas entram (a repetida some na segunda volta, porque a pasta
-# já saiu), e o backup mora onde o produto procura a configuração — é lá que o
-# «limpa?» o reconhece como de propósito.
-_cfg_do_xdg="${XDG_CONFIG_HOME:-${HOME}/.config}"
-_dados_do_xdg="${XDG_DATA_HOME:-${HOME}/.local/share}"
-_cache_do_xdg="${XDG_CACHE_HOME:-${HOME}/.cache}"
-if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
-    backup_dir="${_cfg_do_xdg}/hefesto-dualsense4unix.backup-$(date +%s)"
-    backed_up=0
-    for path in \
-        "${_cfg_do_xdg}/hefesto-dualsense4unix" \
-        "${HOME}/.config/hefesto-dualsense4unix" \
-        "${_dados_do_xdg}/hefesto-dualsense4unix" \
-        "${HOME}/.local/share/hefesto-dualsense4unix" \
-        "${_cache_do_xdg}/hefesto-dualsense4unix" \
-        "${HOME}/.cache/hefesto-dualsense4unix" \
-        "${_cfg_do_xdg}/hefesto" \
-        "${HOME}/.config/hefesto" \
-        "${_dados_do_xdg}/hefesto" \
-        "${HOME}/.local/share/hefesto" \
-        "${_cache_do_xdg}/hefesto" \
-        "${HOME}/.cache/hefesto"; do
-        if [[ -d "$path" ]]; then
-            mkdir -p "${backup_dir}"
-            rel="${path#"${HOME}"/}"
-            cp -a "$path" "${backup_dir}/${rel//\//_}" 2>/dev/null || true
-            backed_up=1
-            log "removendo ${path}"
-            rm -rf "$path"
-        fi
-    done
-    [[ "${backed_up}" -eq 1 ]] && log "backup da config em ${backup_dir}"
-else
-    log "configs preservadas (default): ~/.config/hefesto + ~/.config/hefesto-dualsense4unix"
-    log "  (use --purge-config para apagar, com backup automático)"
-    # paused.flag (FEAT-DAEMON-PAUSE-RESUME-01) fica em ~/.config/hefesto-dualsense4unix/
-    # e e propositalmente preservado junto com a config, para o usuário retomar
-    # do mesmo estado se reinstalar. Use --purge-config para apagá-lo também.
-fi
-
 # BUG-UNINSTALL-LOCALE-NOT-REMOVED-01 (fix): catalogos .mo do install.sh
 # step 4d (FEAT-I18N-CATALOGS-01) ficavam orfaos em ~/.local/share/locale/
 # <lang>/LC_MESSAGES/. Removemos so o nosso domain (`hefesto-dualsense4unix.mo`),
@@ -2107,13 +2066,51 @@ fi
 # própria ficava com o IGNORE. Roda ANTES de o launch_env sair, porque o
 # registro mora nele; com um arquivo que não abriu, ou sem python3, o registro
 # FICA para o desfazer de depois.
+#
+# E DEVOLVE ANTES O JOGO EXCLUÍDO (O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01,
+# 02/10/2026). A lista de exclusão também escreve nos lançadores (a lista
+# própria do jogo do Heroic, o `.yml` do jogo do Lutris Flatpak), e a anotação
+# de como voltar mora na configuração. O --purge-config rodava ANTES deste
+# bloco e apagava a lista antes de alguém poder lê-la; medido num lar de
+# mentira, o jogo do Heroic que seguia a global saía do uninstall com uma lista
+# própria. Agora a configuração sai DEPOIS (o bloco dela vem depois do Proton
+# pinado), e este bloco passa a lista de cada casa. Com o desfazer adiado, a
+# lista FICA para o desfazer de depois: na configuração, se ela fica; ao lado
+# do registro das estradas, no launch_env, se o --purge-config a apaga.
 CURA_POR_ESTRADA_PY="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/cura_por_estrada.py"
 _estradas_desfeitas=0
+for _cfg in "${XDG_CONFIG_HOME:-${HOME}/.config}" "${HOME}/.config"; do
+    _lista="${_cfg}/hefesto-dualsense4unix/lista_de_exclusao.json"
+    [[ -f "${_lista}" ]] || continue
+    [[ " ${LISTAS_DE_EXCLUSAO[*]} " == *" ${_lista} "* ]] && continue
+    LISTAS_DE_EXCLUSAO+=("${_lista}")
+done
+_guardar_as_listas_para_depois() {
+    local _i=0 _l
+    for _l in "${LISTAS_DE_EXCLUSAO[@]}"; do
+        _i=$((_i + 1))
+        LISTAS_GUARDADAS_DE+=("${_l}")
+        if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
+            LISTAS_GUARDADAS_PARA+=("${ESTADOS_DO_HEFESTO[0]}/launch_env/lista_de_exclusao-${_i}.json")
+        else
+            LISTAS_GUARDADAS_PARA+=("${_l}")
+        fi
+    done
+}
+_args_das_listas_de_depois() {
+    local _l
+    for _l in "${LISTAS_GUARDADAS_PARA[@]}"; do
+        printf ' --lista-de-exclusao %s' "${_l}"
+    done
+}
 if [[ -f "${CURA_POR_ESTRADA_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     log "tirando dos lançadores (Heroic e as cópias por jogo dele, overrides do Flatpak) só o ambiente que o Hefesto escreveu"
     _args_das_estradas=(--desfazer --lar "${HOME}")
     for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
         _args_das_estradas+=(--pasta-do-ambiente "${_estado}/launch_env")
+    done
+    for _lista in "${LISTAS_DE_EXCLUSAO[@]}"; do
+        _args_das_estradas+=(--lista-de-exclusao "${_lista}")
     done
     _rc_das_estradas=0
     _saida_das_estradas="$(python3 "${CURA_POR_ESTRADA_PY}" "${_args_das_estradas[@]}" 2>&1)" \
@@ -2124,12 +2121,14 @@ if [[ -f "${CURA_POR_ESTRADA_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     if [[ "${_rc_das_estradas}" -eq 0 ]]; then
         _estradas_desfeitas=1
     else
-        log "  ADIADO: feche o lançador e rode: python3 ${CURA_POR_ESTRADA_PY} --desfazer"
-        log "  (o registro do que é do Hefesto fica em launch_env/estradas.json até lá)"
+        _guardar_as_listas_para_depois
+        log "  ADIADO: feche o lançador e rode: python3 ${CURA_POR_ESTRADA_PY} --desfazer$(_args_das_listas_de_depois)"
+        log "  (o registro do que é do Hefesto fica em launch_env/estradas.json, e a lista de exclusão com ele, até lá)"
     fi
 else
+    _guardar_as_listas_para_depois
     log "cura_por_estrada.py ausente ou sem python3 — o ambiente do Hefesto pode ter ficado no Heroic e nos overrides do Flatpak"
-    log "  (o registro fica em launch_env/estradas.json; rode depois: python3 <repositório>/src/hefesto_dualsense4unix/integrations/cura_por_estrada.py --desfazer)"
+    log "  (o registro fica em launch_env/estradas.json, e a lista de exclusão com ele; rode depois: python3 <repositório>/src/hefesto_dualsense4unix/integrations/cura_por_estrada.py --desfazer$(_args_das_listas_de_depois))"
 fi
 
 # PLAT-01: destrava o CompatToolMapping do Proton pinado — SÓ o que NÓS
@@ -2151,6 +2150,69 @@ if [[ -f "${PROTON_PIN_PY}" ]] && command -v python3 >/dev/null 2>&1; then
     log "  o Proton extraído (compatibilitytools.d) FICA — é dado do usuário"
 else
     log "proton_pin.py ausente ou sem python3 — pulei o destravamento do Proton pinado"
+fi
+
+# Configs e dados do user. PRESERVADOS por padrão; --purge-config apaga (com
+# backup antes). Cobre o caminho atual (longo) E o legado curto (~/.config/
+# hefesto), onde versões pré-rename gravavam perfis/sessão/preferências.
+#
+# E COBRE O XDG (O-UNINSTALL-NAO-DEIXA-RASTRO-01, 25/09/2026): o produto lê e
+# grava a configuração, os dados e o cache pelo `platformdirs`, que honra o
+# XDG_CONFIG_HOME, o XDG_DATA_HOME e o XDG_CACHE_HOME; o install grava parte no
+# lar. As duas casas entram (a repetida some na segunda volta, porque a pasta
+# já saiu), e o backup mora onde o produto procura a configuração — é lá que o
+# «limpa?» o reconhece como de propósito.
+#
+# E VEM DEPOIS DO DESFAZER DOS LANÇADORES (O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01,
+# 02/10/2026): a lista de exclusão mora aqui, e é ela que diz como devolver o
+# jogo excluído. Com o desfazer adiado, ela vai antes para o launch_env, ao
+# lado do registro das estradas; o backup segue igual.
+_cfg_do_xdg="${XDG_CONFIG_HOME:-${HOME}/.config}"
+_dados_do_xdg="${XDG_DATA_HOME:-${HOME}/.local/share}"
+_cache_do_xdg="${XDG_CACHE_HOME:-${HOME}/.cache}"
+if [[ "${KEEP_CONFIG}" -eq 0 ]]; then
+    backup_dir="${_cfg_do_xdg}/hefesto-dualsense4unix.backup-$(date +%s)"
+    backed_up=0
+    for _i in "${!LISTAS_GUARDADAS_DE[@]}"; do
+        _de="${LISTAS_GUARDADAS_DE[${_i}]}"
+        _para="${LISTAS_GUARDADAS_PARA[${_i}]}"
+        [[ "${_de}" == "${_para}" || ! -f "${_de}" ]] && continue
+        mkdir -p "$(dirname "${_para}")"
+        if cp -a "${_de}" "${_para}"; then
+            log "a lista de exclusão fica em ${_para} até o desfazer dos lançadores"
+        else
+            log "não consegui guardar a lista de exclusão em ${_para} — ela está no backup da config"
+        fi
+    done
+    for path in \
+        "${_cfg_do_xdg}/hefesto-dualsense4unix" \
+        "${HOME}/.config/hefesto-dualsense4unix" \
+        "${_dados_do_xdg}/hefesto-dualsense4unix" \
+        "${HOME}/.local/share/hefesto-dualsense4unix" \
+        "${_cache_do_xdg}/hefesto-dualsense4unix" \
+        "${HOME}/.cache/hefesto-dualsense4unix" \
+        "${_cfg_do_xdg}/hefesto" \
+        "${HOME}/.config/hefesto" \
+        "${_dados_do_xdg}/hefesto" \
+        "${HOME}/.local/share/hefesto" \
+        "${_cache_do_xdg}/hefesto" \
+        "${HOME}/.cache/hefesto"; do
+        if [[ -d "$path" ]]; then
+            mkdir -p "${backup_dir}"
+            rel="${path#"${HOME}"/}"
+            cp -a "$path" "${backup_dir}/${rel//\//_}" 2>/dev/null || true
+            backed_up=1
+            log "removendo ${path}"
+            rm -rf "$path"
+        fi
+    done
+    [[ "${backed_up}" -eq 1 ]] && log "backup da config em ${backup_dir}"
+else
+    log "configs preservadas (default): ~/.config/hefesto + ~/.config/hefesto-dualsense4unix"
+    log "  (use --purge-config para apagar, com backup automático)"
+    # paused.flag (FEAT-DAEMON-PAUSE-RESUME-01) fica em ~/.config/hefesto-dualsense4unix/
+    # e e propositalmente preservado junto com a config, para o usuário retomar
+    # do mesmo estado se reinstalar. Use --purge-config para apagá-lo também.
 fi
 
 # DEDUP-04/DEDUP-05 (INCONDICIONAL, sem flag — o índice da onda manda): remove
@@ -2235,16 +2297,24 @@ rmdir "${HOME}/.local/share/hefesto-dualsense4unix/bin" 2>/dev/null || true
 # install cria a do lar. O REGISTRO DAS ESTRADAS (`estradas.json`) mora aqui e
 # FICA quando o desfazer dos lançadores foi adiado (lá em cima): sem ele, o
 # desfazer de depois não saberia o que é nosso no Heroic e no Flatpak.
+# A LISTA DE EXCLUSÃO de um desfazer adiado com --purge-config também mora
+# aqui (`lista_de_exclusao-<n>.json`, O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01).
 for _estado in "${ESTADOS_DO_HEFESTO[@]}"; do
     [[ -d "${_estado}/launch_env" ]] || continue
-    if [[ "${_estradas_desfeitas}" -eq 1 || ! -e "${_estado}/launch_env/estradas.json" ]]; then
+    _fica_para_depois=0
+    if [[ "${_estradas_desfeitas}" -eq 0 ]]; then
+        for _le in "${_estado}/launch_env"/estradas.json "${_estado}/launch_env"/lista_de_exclusao-*.json; do
+            [[ -e "${_le}" ]] && _fica_para_depois=1
+        done
+    fi
+    if [[ "${_fica_para_depois}" -eq 0 ]]; then
         log "removendo materialização de launch (${_estado}/launch_env)"
         rm -rf "${_estado}/launch_env"
     else
-        log "removendo materialização de launch (${_estado}/launch_env) — menos o registro das estradas, que fica até o desfazer"
+        log "removendo materialização de launch (${_estado}/launch_env) — menos o registro das estradas e a lista de exclusão, que ficam até o desfazer"
         for _le in "${_estado}/launch_env"/* "${_estado}/launch_env"/.[!.]*; do
             [[ -e "${_le}" || -L "${_le}" ]] || continue
-            [[ "${_le##*/}" == "estradas.json" ]] && continue
+            case "${_le##*/}" in estradas.json|lista_de_exclusao-*.json) continue ;; esac
             rm -rf "${_le}"
         done
     fi

@@ -1152,6 +1152,8 @@ class Desfeito:
     #: Não abriu, ou não gravou: não se reescreve por cima (ver
     #: :func:`_ler_heroic`), e o registro fica para a próxima vez.
     erro: str = ""
+    #: O jogo excluído voltou a ser como era antes da exclusão (02/10/2026).
+    voltou: bool = False
 
 
 def estradas_possiveis(lar: Path) -> list[tuple[Path, str]]:
@@ -1331,8 +1333,127 @@ def _desfazer_no_arquivo(alvo: Path, entrada: Entrada, *, copia_do_jogo: bool = 
     return feito
 
 
+#: O ARQUIVO DA LISTA DE EXCLUSÃO, dentro da configuração — o mesmo
+#: `lista_de_exclusao.RELPATH`, repetido aqui porque o desfazer roda com o
+#: `python3` do sistema e a lista puxa o pacote. Uma régua segura os dois iguais
+#: (`test_o_uninstall_devolve_o_jogo_excluido.py`).
+RELPATH_DA_LISTA = "hefesto-dualsense4unix/lista_de_exclusao.json"
+
+
+def _ler_a_lista_crua(arquivo: Path) -> tuple[list[CopiaDoJogo], list[YmlDoJogo]] | None:
+    """As cópias do Heroic e os `.yml` do Lutris que a lista anotou, lida como JSON cru.
+
+    Ausente = ``([], [])``; existe e não se lê = ``None``. Só biblioteca padrão:
+    quem a lê aqui é o desfazer do uninstall.
+    """
+    try:
+        texto = arquivo.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return [], []
+    except OSError:
+        return None
+    try:
+        dado = cast("object", json.loads(texto))
+    except ValueError:
+        return None
+    jogos = dado.get("jogos") if isinstance(dado, dict) else None
+    if not isinstance(jogos, list):
+        return None
+    copias: list[CopiaDoJogo] = []
+    ymls: list[YmlDoJogo] = []
+    for jogo in jogos:
+        if not isinstance(jogo, dict):
+            continue
+        heroic, lutris = jogo.get("heroic"), jogo.get("lutris")
+        copias += [c for c in (CopiaDoJogo.de_dado(x)
+                               for x in (heroic if isinstance(heroic, list) else ())) if c]
+        ymls += [y for y in (YmlDoJogo.de_dado(x)
+                             for x in (lutris if isinstance(lutris, list) else ())) if y]
+    return copias, ymls
+
+
+def _sem_o_cache_que_a_exclusao_copiou(copia: CopiaDoJogo, entrada: Entrada) -> list[str]:
+    """A cópia que a exclusão CRIOU da lista global perde o cache de shader nosso.
+
+    Numa cópia por jogo o `__GL_SHADER_*` é lido como «pode ser dela»
+    (:func:`_entrada_da_copia`), mas numa cópia que a exclusão criou da global
+    (`sem_lista`) ele veio da global, com o valor que a carona pôs lá. Medido
+    na O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01: os dois ficavam no jogo depois do
+    uninstall. Só sai o par que ainda tem o valor que a exclusão copiou e que o
+    registro da casa diz que é nosso; o «antes» dela volta no lugar. Devolve as
+    chaves tiradas. Nunca levanta.
+    """
+    alvo = Path(copia.arquivo)
+    try:
+        raiz = cast("object", json.loads(alvo.read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        return []
+    jogo = raiz.get(copia.app) if isinstance(raiz, dict) else None
+    lista = jogo.get(CHAVE_DO_HEROIC) if isinstance(jogo, dict) else None
+    if not isinstance(raiz, dict) or not isinstance(jogo, dict) or not isinstance(lista, list):
+        return []
+    pares = _pares_da_lista(lista)
+    copiados = set(copia.depois)
+    chaves = [k for k, m in entrada.chaves.items() if k in PODEM_SER_DELA and any(
+        a == k and (a, b) in copiados and b in m.valores for a, b in pares)]
+    if not chaves:
+        return []
+    contas = _Contas()
+    novos = _devolver_chaves(pares, chaves, copy.deepcopy(entrada), contas)
+    jogo[CHAVE_DO_HEROIC] = [{"key": k, "value": v} for k, v in novos]
+    try:
+        _escrever_atomico(alvo, json.dumps(raiz, indent=2, ensure_ascii=False))
+    except OSError:
+        return []
+    return contas.tiradas
+
+
+def _devolver_os_excluidos(listas: Iterable[Path],
+                           registro: dict[str, Entrada]) -> list[Desfeito]:
+    """A volta de cada jogo excluído fora da Steam, antes de tirar o nosso.
+
+    A mesma volta do «Tirar da lista» (:func:`devolver_ao_jogo_do_heroic` e
+    :func:`devolver_ao_jogo_do_lutris`): exata se ninguém mexeu, ou só os
+    pares da exclusão. O `.yml` mexido sem o PyYAML fica, e é sobra.
+    """
+    feitos: list[Desfeito] = []
+    for arquivo in dict.fromkeys(listas):
+        lido = _ler_a_lista_crua(arquivo)
+        if lido is None:
+            feitos.append(Desfeito(arquivo, erro="não consegui ler a lista de exclusão — "
+                                   "os jogos excluídos ficam para o desfazer de depois"))
+            continue
+        copias, ymls = lido
+        for copia in copias:
+            feito = Desfeito(Path(copia.arquivo))
+            status = devolver_ao_jogo_do_heroic([copia])
+            if status == "erro":
+                feito.erro = ("não consegui devolver o jogo excluído — fica para o "
+                              "desfazer de depois")
+            feito.voltou = status == "feito"
+            if copia.sem_lista:
+                casa = str(Path(copia.arquivo).parent.parent / "config.json")
+                feito.tiradas = _sem_o_cache_que_a_exclusao_copiou(
+                    copia, registro.get(casa, Entrada(HEROIC_CONFIG)))
+            feitos.append(feito)
+        for yml in ymls:
+            feito = Desfeito(Path(yml.arquivo))
+            status = devolver_ao_jogo_do_lutris([yml])
+            if status == "ficou":
+                feito.erro = ("ela mexeu nele depois da exclusão, e sem o PyYAML eu não "
+                              "escrevo YAML à mão — fica para o desfazer de depois")
+            elif status == "erro":
+                feito.erro = ("não consegui devolver o jogo excluído — fica para o "
+                              "desfazer de depois")
+            feito.voltou = status == "feito"
+            feitos.append(feito)
+    return feitos
+
+
 def desfazer_as_estradas(pastas_do_ambiente: Iterable[Path],
-                         lar: Path | None = None) -> tuple[list[Desfeito], bool]:
+                         lar: Path | None = None,
+                         listas_de_exclusao: Iterable[Path] = (),
+                         ) -> tuple[list[Desfeito], bool]:
     """Tira de todo lançador o que o Hefesto escreveu. ``(o que fez, completo)``.
 
     Os arquivos vêm do registro de cada pasta (a do ``XDG_STATE_HOME`` e a do
@@ -1342,6 +1463,15 @@ def desfazer_as_estradas(pastas_do_ambiente: Iterable[Path],
     da mesma casa. Completo, o registro sai; com um arquivo que não abriu, o
     que é dele fica anotado na primeira pasta, para o desfazer de novo — e a
     resposta é ``False``.
+
+    **O JOGO EXCLUÍDO VOLTA PRIMEIRO — 02/10/2026,
+    O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01.** A exclusão também escreve nos
+    arquivos dos lançadores (a lista própria do jogo do Heroic, o `.yml` do
+    jogo do Lutris Flatpak), e a anotação da volta mora na lista de exclusão.
+    Medido num lar de mentira: sem ela, o jogo do Heroic que seguia a global
+    saía do uninstall com uma lista própria (e o cache de shader nosso
+    dentro), e não seguia mais a global dela. Cada `listas_de_exclusao` é lida
+    como JSON cru, e a volta de cada jogo vem antes de tirar o nosso.
     """
     lar = Path.home() if lar is None else lar
     pastas = list(pastas_do_ambiente)
@@ -1352,7 +1482,7 @@ def desfazer_as_estradas(pastas_do_ambiente: Iterable[Path],
     alvos = dict(registro)
     for arquivo, tipo in estradas_possiveis(lar):
         alvos.setdefault(str(arquivo), Entrada(tipo))
-    feitos: list[Desfeito] = []
+    feitos: list[Desfeito] = _devolver_os_excluidos(listas_de_exclusao, registro)
     sobrou: dict[str, Entrada] = {}
     for caminho, entrada in alvos.items():
         feito = _desfazer_no_arquivo(Path(caminho), entrada)
@@ -1387,6 +1517,8 @@ def frase_do_desfeito(feito: Desfeito) -> str:
                       + ", ".join(feito.ficaram))
     if feito.apagado:
         partes.append("o arquivo nasceu com o Hefesto e saiu junto")
+    if feito.voltou:
+        partes.insert(0, "o jogo excluído voltou a ser como era antes da exclusão")
     return f"{feito.arquivo}: " + "; ".join(partes) if partes else ""
 
 
@@ -1648,7 +1780,14 @@ def devolver_ao_jogo_do_heroic(copias: Iterable[CopiaDoJogo]) -> str:
         if not isinstance(raiz, dict) or not isinstance(jogo, dict):
             continue
         atual = _pares_da_lista(jogo.get(CHAVE_DO_HEROIC))
-        intacta = isinstance(jogo.get(CHAVE_DO_HEROIC), list) and tuple(atual) == copia.depois
+        tem_lista = isinstance(jogo.get(CHAVE_DO_HEROIC), list)
+        #: JÁ VOLTOU (02/10/2026, O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01): o
+        #: desfazer adiado do uninstall roda de novo sobre a mesma lista, e a
+        #: volta parcial reporia na cópia os pares que a exclusão tirou.
+        if (copia.sem_lista and not tem_lista) or (
+                not copia.sem_lista and tem_lista and tuple(atual) == copia.antes):
+            continue
+        intacta = tem_lista and tuple(atual) == copia.depois
         if intacta and copia.sem_lista:
             del jogo[CHAVE_DO_HEROIC]
         elif intacta:
@@ -2020,6 +2159,8 @@ def devolver_ao_jogo_do_lutris(ymls: Iterable[YmlDoJogo]) -> str:
         except OSError:
             status = "erro"
             continue
+        if yml.antes is not None and _sha(texto) == _sha(yml.antes):
+            continue  # já voltou: o desfazer adiado roda de novo sobre a lista
         if _sha(texto) == yml.depois and yml.antes is not None:
             novo = yml.antes
         else:
@@ -2081,6 +2222,14 @@ def _pastas_do_ambiente_padrao(lar: Path) -> list[Path]:
     return fora
 
 
+def _listas_de_exclusao_padrao(lar: Path) -> list[Path]:
+    """A lista de exclusão pela regra do XDG — e a do lar, se for outra."""
+    xdg = os.environ.get("XDG_CONFIG_HOME", "").strip()
+    casas = [Path(xdg)] if os.path.isabs(xdg) else []
+    casas.append(lar / ".config")
+    return list(dict.fromkeys(casa / RELPATH_DA_LISTA for casa in casas))
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """`--desfazer`: o passo do `uninstall.sh`. Sai 0 completo, 1 com sobra."""
     p = argparse.ArgumentParser(
@@ -2092,17 +2241,31 @@ def main(argv: Sequence[str] | None = None) -> int:
     p.add_argument("--lar", default=None, help="o lar (padrão: $HOME)")
     p.add_argument("--pasta-do-ambiente", action="append", default=None,
                    help="a pasta launch_env com o registro (repita para as duas)")
+    p.add_argument("--lista-de-exclusao", action="append", default=None,
+                   help="a lista de exclusão, para devolver antes os jogos excluídos "
+                        "(repita para as duas; padrão: a do XDG e a do lar)")
     a = p.parse_args(argv)
     lar = Path(a.lar) if a.lar else Path.home()
     pastas = ([Path(x) for x in a.pasta_do_ambiente] if a.pasta_do_ambiente
               else _pastas_do_ambiente_padrao(lar))
-    feitos, completo = desfazer_as_estradas(pastas, lar)
+    listas = ([Path(x) for x in a.lista_de_exclusao] if a.lista_de_exclusao
+              else _listas_de_exclusao_padrao(lar))
+    feitos, completo = desfazer_as_estradas(pastas, lar, listas)
     if completo:
         #: O DESFAZER QUE FICOU PARA DEPOIS deixou a pasta de estado de pé SÓ
         #: pelo registro (o uninstall apagou o resto): terminado ele, ela sai.
         #: Só `rmdir` — uma pasta com qualquer outra coisa dentro fica, e é o
         #: passo dela que a nomeia. No uninstall de uma vez, o `default.env`
         #: ainda está ali e nada sai daqui.
+        #:
+        #: A LISTA DE EXCLUSÃO QUE O UNINSTALL GUARDOU NO `launch_env` (com o
+        #: --purge-config e o desfazer adiado, O-UNINSTALL-DEVOLVE-O-JOGO-EXCLUIDO-01)
+        #: só existe para este desfazer: terminado ele, ela sai. A da
+        #: configuração nunca sai daqui.
+        for lista in listas:
+            if lista.parent.name == "launch_env" and lista.name.startswith("lista_de_exclusao"):
+                with contextlib.suppress(OSError):
+                    lista.unlink()
         for pasta in pastas:
             if pasta.name != "launch_env":
                 continue
