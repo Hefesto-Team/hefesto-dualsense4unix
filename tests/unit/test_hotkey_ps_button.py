@@ -372,6 +372,10 @@ def test_start_hotkey_manager_instancia_e_chama_steam(monkeypatch):
 
     assert daemon._hotkey_manager is not None
     daemon._hotkey_manager.on_ps_solo()
+    # A Steam abre no FIO do gesto (TODO-PROGRAMA-DO-DAEMON-NASCE-FORA-DO-SERVICO-01),
+    # e o fio pergunta antes se há jogo aberto (OS-GESTOS-DO-CONTROLE-01, §14):
+    # sem esperar, a régua lia a lista antes de o fio correr.
+    assert daemon._hotkey_manager.on_ps_solo.esperar(5.0)
     assert called == ["steam"]
 
 
@@ -391,6 +395,7 @@ def test_start_hotkey_manager_none_nao_chama_steam(monkeypatch):
     )
     daemon._start_hotkey_manager()
     daemon._hotkey_manager.on_ps_solo()
+    assert daemon._hotkey_manager.on_ps_solo.esperar(5.0)
 
     assert called == []
 

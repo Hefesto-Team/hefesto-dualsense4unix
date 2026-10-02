@@ -368,7 +368,12 @@ class TestAsOnzeFrasesObedecemAInstalacao:
 
         monkeypatch.setattr(cmd_tray.subprocess, "Popen", _sem_lancador)
         tinta = io.StringIO()
-        monkeypatch.setattr(cmd_tray, "console", Console(file=tinta, width=400))
+        # O «Abrir painel» mora em `app/actions/atos_da_bandeja` desde 01/10/2026
+        # (OS-GESTOS-DO-CONTROLE-01): o `cmd_tray` o importa, e quem fala é o
+        # console do dono.
+        from hefesto_dualsense4unix.app.actions import atos_da_bandeja
+
+        monkeypatch.setattr(atos_da_bandeja, "console", Console(file=tinta, width=400))
 
         cmd_tray._abrir_o_painel()
         return tinta.getvalue()

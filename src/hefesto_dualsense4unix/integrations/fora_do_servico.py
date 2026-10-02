@@ -345,11 +345,17 @@ def argv_da_unidade(
     unidade: str,
     forma: str,
     oom: int | None,
+    teto_s: int | None = None,
 ) -> list[str]:
     """A linha do ``systemd-run`` que abre ``argv`` numa unidade própria.
 
     O ``$`` do comando vira ``$$``: o gerenciador expande ``$NOME`` no
     ``ExecStart`` de todo serviço, e um argumento da pessoa não é variável.
+
+    ``teto_s`` é o script do gesto (``rodar_e_esperar``): a linha passa a
+    ESPERAR a unidade (``--wait``, sem ``--quiet``, que é o que deixa o resumo
+    do fim dizer que a unidade rodou) e o gerenciador a para no teto
+    (``RuntimeMaxSec``). Sem ele, a linha de sempre.
     """
     cmd = [
         "systemd-run",
@@ -357,7 +363,12 @@ def argv_da_unidade(
         f"--unit={unidade}",
         f"--description={os.path.basename(argv[0])}, aberto pelo Hefesto",
         "--collect",
-        "--quiet",
+    ]
+    if teto_s is None:
+        cmd.append("--quiet")
+    else:
+        cmd.extend(["--wait", f"--property=RuntimeMaxSec={int(teto_s)}"])
+    cmd += [
         "--property=Type=exec",
         f"--property={forma}",
         # O `DEVNULL` do `Popen` de sempre: sem isto a saída do aplicativo iria
@@ -472,6 +483,165 @@ def abrir(
         erro_dito = (feito.stderr or "").strip().splitlines()
         tentativas.append(f"{forma}: rc={feito.returncode} {erro_dito[-1] if erro_dito else ''}")
     return _pelo_popen(f"o systemd-run recusou ({ctx.herdaria})", tuple(tentativas))
+
+
+# ---------------------------------------------------------------------------
+# O SCRIPT DO GESTO — OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01 (01/10/2026)
+#
+# O `abrir` não serve para ele, por dois motivos medidos no código: espera o
+# `systemd-run` só `ESPERA_DO_SYSTEMD_RUN_S`, e com `--wait` o `systemd-run` só
+# volta quando o script termina; e lê código diferente de zero como recusa do
+# gerenciador e tenta a segunda forma de viver e depois o `Popen` — com
+# `--wait` esse código é o do SCRIPT, e um script que sai com 3 rodaria três
+# vezes. Esta função separa «o gerenciador recusou» de «o script saiu com N»
+# pelo resumo que o `--wait` escreve ao fim («Finished with result: …»).
+# ---------------------------------------------------------------------------
+
+#: A folga além do teto: o gerenciador para a unidade no teto, e o
+#: `systemd-run --wait` ainda precisa voltar e contar.
+FOLGA_DO_TETO_S = 5.0
+
+_O_FIM_DA_UNIDADE = re.compile(r"Finished with result:\s*(\S+)")
+
+
+@dataclass(frozen=True)
+class Desfecho:
+    """Como o programa esperado terminou.
+
+    ``rodou`` diz que a unidade (ou o processo) nasceu; ``saiu_com`` é o código
+    de saída quando ele terminou sozinho; ``estourou`` é o teto vencido, e
+    quem parou foi o gerenciador (ou o grupo de processos morto aqui).
+    """
+
+    rodou: bool
+    saiu_com: int | None
+    estourou: bool
+    caminho: str  # "unidade" | "popen" | "nenhum"
+    motivo: str = ""
+    tentativas: tuple[str, ...] = field(default_factory=tuple)
+
+
+def _executar_esperando(teto_s: float) -> Executar:
+    def _run(cmd: Sequence[str], env: Mapping[str, str]) -> subprocess.CompletedProcess[str]:
+        if _a_suite_esta_rodando():
+            raise OSError("a suíte está no ar e este é o gerenciador de verdade")
+        return subprocess.run(
+            list(cmd),
+            capture_output=True,
+            text=True,
+            timeout=teto_s + FOLGA_DO_TETO_S,
+            env=dict(env),
+            stdin=subprocess.DEVNULL,
+            check=False,
+        )
+
+    return _run
+
+
+def _esperar_pelo_popen(
+    argv: Sequence[str],
+    env: Mapping[str, str],
+    teto_s: float,
+    abrir_direto: Callable[..., Any],
+    motivo: str,
+    tentativas: tuple[str, ...],
+) -> Desfecho:
+    """O caminho sem gerenciador: o ``Popen`` com o mesmo teto.
+
+    ``start_new_session`` dá ao script um grupo de processos próprio, e é o
+    grupo inteiro que morre no teto — os filhos que ele deixou vão junto.
+    """
+    try:
+        processo = abrir_direto(
+            list(argv),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+            env=dict(env),
+        )
+    except OSError as erro:
+        return Desfecho(False, None, False, "nenhum", str(erro), tentativas)
+    try:
+        codigo = processo.wait(timeout=teto_s)
+    except subprocess.TimeoutExpired:
+        for sinal in (15, 9):
+            with contextlib.suppress(OSError):
+                os.killpg(processo.pid, sinal)
+            try:
+                processo.wait(timeout=2.0)
+                break
+            except subprocess.TimeoutExpired:
+                continue
+        return Desfecho(True, None, True, "popen", motivo, tentativas)
+    return Desfecho(True, int(codigo), False, "popen", motivo, tentativas)
+
+
+def rodar_e_esperar(
+    argv: Sequence[str],
+    *,
+    env: Mapping[str, str],
+    teto_s: float,
+    aplicativo: str | None = None,
+    contexto: Contexto | None = None,
+    executar: Executar | None = None,
+    popen: Callable[..., Any] | None = None,
+) -> Desfecho:
+    """Roda ``argv`` fora do serviço, ESPERA ele terminar, e diz como terminou.
+
+    Sem shell: ``argv`` é a lista, e o caminho do script é um argumento só.
+    Uma chamada ao gerenciador por forma de viver, e só a RECUSA do
+    gerenciador (sem o resumo do fim) passa à forma seguinte; o script que
+    rodou e saiu com N é um desfecho, nunca uma nova tentativa.
+
+    Sob a suíte, nem o gerenciador nem o ``Popen`` de verdade: quem testa
+    injeta ``executar`` e ``popen``.
+    """
+    argv = list(argv)
+    ctx = contexto if contexto is not None else contexto_atual()
+    if popen is None and _a_suite_esta_rodando():
+        abrir_direto: Callable[..., Any] = _recusar_sob_a_suite
+    else:
+        abrir_direto = popen if popen is not None else subprocess.Popen
+    if ctx.herdaria is None:
+        return _esperar_pelo_popen(argv, env, teto_s, abrir_direto,
+                                   "quem chama já é da pessoa", ())
+    if not ctx.gerenciador:
+        return _esperar_pelo_popen(argv, env, teto_s, abrir_direto,
+                                   f"sem systemd de usuário ({ctx.herdaria})", ())
+
+    run = executar if executar is not None else _executar_esperando(teto_s)
+    do_setenv, _fora = ambiente_da_unidade(env)
+    tentativas: list[str] = []
+    for forma in FORMAS_DE_VIVER:
+        unidade = nome_da_unidade(aplicativo or argv[0])
+        cmd = argv_da_unidade(
+            argv, do_setenv, unidade=unidade, forma=forma,
+            oom=ctx.oom_do_gerenciador, teto_s=int(teto_s),
+        )
+        try:
+            feito = run(cmd, env)
+        except subprocess.TimeoutExpired:
+            return Desfecho(True, None, True, "unidade", ctx.herdaria,
+                            (*tentativas, f"{forma}: sem resposta"))
+        except OSError as erro:
+            tentativas.append(f"{forma}: {erro}")
+            break
+        fim = _O_FIM_DA_UNIDADE.search(feito.stderr or "")
+        if feito.returncode == 0:
+            return Desfecho(True, 0, False, "unidade", ctx.herdaria, tuple(tentativas))
+        if fim is not None:
+            estourou = fim.group(1) == "timeout"
+            return Desfecho(True, None if estourou else int(feito.returncode),
+                            estourou, "unidade", ctx.herdaria, tuple(tentativas))
+        erro_dito = (feito.stderr or "").strip().splitlines()
+        tentativas.append(f"{forma}: rc={feito.returncode} {erro_dito[-1] if erro_dito else ''}")
+    return _esperar_pelo_popen(argv, env, teto_s, abrir_direto,
+                               f"o systemd-run recusou ({ctx.herdaria})", tuple(tentativas))
+
+
+def _recusar_sob_a_suite(*_args: Any, **_kwargs: Any) -> Any:
+    raise OSError("a suíte está no ar e este é o Popen de verdade")
 
 
 #: Onde o kernel publica os processos de cada unidade. Módulo-nível para a
@@ -663,6 +833,7 @@ __all__ = [
     "VARIAVEIS_DA_UNIDADE",
     "Abertura",
     "Contexto",
+    "Desfecho",
     "FioDeTrabalho",
     "abrir",
     "ambiente_da_unidade",
@@ -672,4 +843,5 @@ __all__ = [
     "nome_da_unidade",
     "oom_do_gerenciador",
     "pids_da_unidade",
+    "rodar_e_esperar",
 ]

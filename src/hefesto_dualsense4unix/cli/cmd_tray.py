@@ -53,16 +53,21 @@ from typing import Any
 import typer
 from rich.console import Console
 
-from hefesto_dualsense4unix.utils import identidade
-from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
+# OS ATOS DA BANDEJA MORAM EM `app/actions/atos_da_bandeja.py` desde 01/10/2026
+# (OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01): o gesto do controle chama os
+# mesmos três, e um dono só é o que impede a quarta cópia de divergir. Os
+# nomes de cá continuam respondendo — são os MESMOS objetos (`is`).
+from hefesto_dualsense4unix.app.actions.atos_da_bandeja import (
+    LANCADOR_DO_PAINEL as LANCADOR_DO_PAINEL,
+)
+from hefesto_dualsense4unix.app.actions.atos_da_bandeja import (
+    abrir_o_painel as _abrir_o_painel,
+)
+from hefesto_dualsense4unix.app.actions.atos_da_bandeja import (
+    mexer_no_servico as _servico,
+)
 
 console = Console()
-
-#: O LANÇADOR QUE O `install.sh` ESCREVE, e abre a mesma janela que o atalho
-#: do menu dela. Apontar para o `run.sh` da árvore seria amarrar o tray a um
-#: caminho de desenvolvimento; apontar para o binário instalado é o que faz o
-#: «Abrir painel» funcionar em qualquer computador.
-LANCADOR_DO_PAINEL = "hefesto-dualsense4unix-gui"
 
 
 def _chamar(metodo: str, argumentos: dict[str, Any] | None = None) -> Any:
@@ -83,32 +88,6 @@ def _chamar(metodo: str, argumentos: dict[str, Any] | None = None) -> Any:
         return asyncio.run(_ir())
     except (FileNotFoundError, ConnectionError, IpcError, OSError, RuntimeError):
         return None
-
-
-def _abrir_o_painel() -> None:
-    """O «Abrir painel» — a diferença que mais pesa entre os dois trays.
-
-    `setsid` E `start_new_session` PORQUE O TRAY PODE MORRER DEPOIS: sem
-    desligar a sessão de processos, fechar o tray fecharia a janela que ele
-    abriu. É o mesmo desenho do lançador que o `install.sh` escreve.
-    """
-    try:
-        # O LANÇADOR É NOSSO e não recebe argumento de fora — nada a escapar.
-        subprocess.Popen(
-            [LANCADOR_DO_PAINEL],
-            start_new_session=True,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except FileNotFoundError:
-        # BG-INSTALL-01 (20/09/2026): esta frase nasceu com o tray, em
-        # 19/09, escrita de dentro de um checkout — e cravava o instalador.
-        # Em cinco dos seis formatos deste produto (`.deb`, `.rpm`, Arch, Nix
-        # e o pip) o arquivo não está na máquina de quem está lendo, e o
-        # conselho vira impossível. Quem sabe o gesto desta instalação é o
-        # `utils/repo_files`, que responde pelo formato REAL dela.
-        console.print(
-            f"[yellow]não achei `{LANCADOR_DO_PAINEL}` no PATH[/] — "
-            f"o lançador do painel não veio nesta instalação; "
-            f"{como_atualizar_esta_instalacao()}.")
 
 
 def _listar_perfis() -> list[dict[str, Any]]:
@@ -201,50 +180,6 @@ def _reconectar_os_controles() -> bool:
     primeiro = _chamar("coop.sync") is not None
     segundo = _chamar("identity.renumber") is not None
     return primeiro and segundo
-
-
-def _servico(verbo: str) -> bool:
-    """`restart` · `stop` · `start` pela unit desta instalação.
-
-    **QUEM EXECUTA É A CAMADA DE PRODUTO**, `DaemonActionsMixin`, do mesmo jeito
-    que a aba Sistema a chama (`a09_sistema._systemctl`): o `reset-failed`
-    antes de `start`/`restart` não é zelo — sem ele o `StartLimitBurst` recusa
-    o segundo clique e a bandeja receberia "não consegui" sobre uma unit sã.
-
-    **A UNIT NÃO SE DIGITA** — vem de `utils/identidade`. Uma literal do `-dev`
-    já sobreviveu a uma purga e fez a tela afirmar `not-found` sobre uma unit
-    `enabled` (01/09/2026).
-    """
-    from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
-
-    unit = identidade.atual().unit_daemon
-    janela = DaemonActionsMixin()
-    if verbo in ("start", "restart"):
-        janela._invoke_systemctl(["reset-failed", unit], check=False)
-    resultado = janela._invoke_systemctl([verbo, unit], capture=True)
-    pegou = getattr(resultado, "returncode", -1) == 0
-    if verbo == "restart" and pegou:
-        _repor_o_lancador()
-    return pegou
-
-
-def _repor_o_lancador() -> None:
-    """O «Reiniciar» da bandeja repõe o lançador, como o da aba Sistema.
-
-    **É O MESMO ATO E O MESMO DONO** (`reposicao_dos_lancadores.repor`) — e tem
-    de ser: a decisão dela de 21/09/2026 é sobre o REINICIAR, não sobre a aba
-    Sistema. Um «Reiniciar» na bandeja que não repusesse o lançador seria o
-    mesmo botão fazendo duas coisas diferentes conforme de onde se clica.
-
-    NUNCA LEVANTA: o `restart` já deu `rc=0`, e o tray não cai por um clique.
-    O recibo vai ao registro, que é onde a bandeja tem onde falar.
-    """
-    from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
-
-    try:
-        console.print(rl.frase_do_recibo(rl.repor()))
-    except Exception as erro:  # ver a docstring
-        console.print(f"[yellow]não consegui repor o lançador:[/] {erro}")
 
 
 def tray_cmd() -> None:

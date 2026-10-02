@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import contextvars
 import os
 import subprocess as _sp
 import threading
@@ -155,55 +156,73 @@ def _digitar_o_ps(daemon: Any, token: str) -> bool:
     return True
 
 
-def _a_metade_da_maquina(cfg: Any, escolha: str | None) -> str:
-    """Qual dos três atos da máquina o toque no PS dispara: steam·none·custom.
+def _a_metade_da_maquina(cfg: Any, escolha: str | None, do_computador: Any = None) -> str:
+    """Qual ato do computador o toque no PS dispara: um token do ⑥, ou ``custom``.
 
-    A PRECEDÊNCIA DA CASA, em uma tabela — e ela vem ANTES do antigo
-    `if cfg.ps_button_action == "none": return`, que era a primeira porta. Se o
-    `"none"` continuasse sendo a primeira porta, um perfil que escolheu `Enter`
-    para o PS ficaria mudo por causa de uma config de máquina que ela nunca viu.
+    O ATO DO COMPUTADOR É O ⑥ DA TABELA DOS GESTOS (OS-GESTOS-DO-CONTROLE-01,
+    01/10/2026): ``do_computador`` é a ``EscolhaDoGesto`` do PS sozinho, lida
+    do ``maquina.json`` em memória. Sem declaração, vale o degrau antigo
+    (``cfg.ps_button_action``: ``steam`` → ``abrir_a_steam``, ``none`` →
+    ``nada``, ``custom`` → o ``ps_button_command``), que é o de fábrica e o do
+    ambiente. A precedência do perfil vem por cima, como antes:
 
-        escolha do perfil        o que a máquina faz
+        escolha do perfil        o que o computador faz
         ---------------------    -------------------------------------------
-        None (perfil calado)     `cfg.ps_button_action`, intocado
-        tecla / teclado na tela  `cfg.ps_button_action` — *"digita SEM parar
-                                 de abrir a Steam"*, a palavra dela na 06-Q3
-        `__NADA__`               nada. É ela dizendo que este botão não faz
-                                 nada, e é o espelho exato do `"none"`
-        `__STEAM__`              abre a Steam, mesmo com a máquina em `"none"`
-        qualquer outro token     `cfg.ps_button_action` + linha no journal:
-                                 escolha que o PS ainda não atende
-
-    `__PROGRAMA__` FICA NA TERCEIRA LINHA DE PROPÓSITO, e é dívida declarada: o
-    caminho do programa existe (`DaemonConfig.ps_button_command`), mas mora na
-    MÁQUINA e não no perfil. Fazê-lo disparar aqui daria à escolha do perfil o
-    comando de outro dono — um fato com dois donos, que é a família que esta
-    casa persegue. Fechar isso é dar campo de CAMINHO ao perfil, e é sprint
-    própria.
+        None (perfil calado)     o ⑥
+        tecla / teclado na tela  o ⑥ — *"digita SEM parar de abrir a Steam"*
+        `__NADA__`               nada
+        `__STEAM__`              abre a Steam
+        qualquer outro token     o ⑥ + linha no journal: escolha que o PS
+                                 ainda não atende
     """
-    da_maquina = str(getattr(cfg, "ps_button_action", "steam"))
+    from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+
+    if do_computador is not None and getattr(do_computador, "declarada", False):
+        da_maquina = str(do_computador.faz)
+    else:
+        degrau = str(getattr(cfg, "ps_button_action", "steam"))
+        da_maquina = {"steam": ag.ABRIR_A_STEAM, "none": ag.NADA}.get(degrau, degrau)
     if escolha is None:
         return da_maquina
     if escolha == "__NADA__":
-        return "none"
+        return ag.NADA
     if escolha == "__STEAM__":
-        return "steam"
+        return ag.ABRIR_A_STEAM
     if not _o_ps_digita(escolha):
         logger.info("ps_solo_escolha_sem_atendente", token=escolha)
     return da_maquina
 
 
-def _a_acao_da_maquina(da_maquina: str, comando: Any) -> None:
-    """A metade do PS que fala com o sistema: a Steam, ou o programa dela.
+def _a_acao_da_maquina(da_maquina: str, comando: Any, **ato: Any) -> None:
+    """A metade do PS que fala com o sistema: o ⑥ da tabela, ou o programa dela.
 
     Corre no ``FioDeTrabalho`` do gesto, nunca no laço de leitura: o
     ``pgrep`` e o ``wmctrl`` do ``open_or_focus_steam`` e o ``systemd-run``
     do ``fora_do_servico.abrir`` esperam processos de fora (teto de 2 s cada).
+
+    COM UM JOGO ABERTO, O PS SOZINHO É DO JOGO (``D-0110-NO-JOGO-O-PS-SOZINHO-E-DO-JOGO``,
+    dela em 01/10, ~23h55): antes de qualquer ato do ⑥, o jogo do wrapper vivo
+    (:func:`_jogo_aberto_agora`) — o sinal que o autoswitch usou para recusar a
+    troca nos 17 toques da noite dela. Ele lê disco e ``/proc``, e por isso
+    mora aqui, no fio, e não no laço (REVIEW-M5-PGREP-BLOCK-01).
     """
-    if da_maquina == "steam":
+    appid = _jogo_aberto_agora()
+    if appid is not None:
+        logger.info("hotkey_ps_solo_skip_jogo_vivo", appid=appid, sinal="wrapper")
+        return
+    from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+
+    logger.info("gesto_fez", gesto=ag.GESTO_DO_PS, acao=da_maquina, **_de_quem(ato.get("quem")))
+    if da_maquina == ag.ABRIR_A_STEAM:
         from hefesto_dualsense4unix.integrations.steam_launcher import open_or_focus_steam
 
         open_or_focus_steam()
+        return
+    if da_maquina != "custom":
+        atos = ato.get("atos")
+        if atos is not None:
+            atos.fazer_pelo_ps(da_maquina, ato.get("escolha"), ato.get("quem"),
+                               ato.get("laco"), ato.get("contexto"))
         return
     # STEAM-FORA-DO-SERVICO-01: o programa dela nasce FORA do serviço do
     # daemon, como a Steam — senão herda o nice e o oom dele e morre no
@@ -243,7 +262,7 @@ class _GestoDoPs:
         return self.fio.esperar(teto)
 
 
-def build_ps_solo_callback(daemon: DaemonProtocol) -> Any:
+def build_ps_solo_callback(daemon: DaemonProtocol, atos: Any = None) -> Any:
     """Cria o callback on_ps_solo que lê self.config em runtime (REFACTOR-DAEMON-RELOAD-01).
 
     Leitura em runtime — não em closure — para que reload_config funcione sem
@@ -267,18 +286,28 @@ def build_ps_solo_callback(daemon: DaemonProtocol) -> Any:
     em 27/09 (auditoria, 02 achado 9): cada toque segurava o laço dos quatro
     controles por cerca de 11 ms, com teto de 2 s no ``pgrep`` e de 2 s por
     forma no ``systemd-run``.
+
+    O QUE ELE FAZ É O ⑥ DA TABELA DOS GESTOS (OS-GESTOS-DO-CONTROLE-01): o
+    ``maquina.json`` em memória, e não um ato cravado. ``atos`` é quem atende
+    os atos que não são a Steam (:class:`_AtosDoGesto`); sem ele, nasce aqui
+    na primeira vez que for preciso. COM UM JOGO NA FRENTE, O ⑥ NÃO DISPARA
+    (``D-0110-NO-JOGO-O-PS-SOZINHO-E-DO-JOGO``): ``display_authority == "game"``
+    aqui, em memória, e o jogo do wrapper vivo no fio (:func:`_a_acao_da_maquina`).
+    A tecla do perfil segue: ela é do jogo, e não rouba o foco.
     """
     fio = fora_do_servico.FioDeTrabalho(
         "hefesto-acao-do-ps",
         ao_falhar=lambda erro: logger.warning("hotkey_ps_solo_acao_falhou", err=str(erro)),
     )
+    quem_atende: list[Any] = [atos]
 
     def _on_ps_solo() -> None:
         cfg = daemon.config
         escolha = acao_do_ps_do_perfil(daemon)
         digita = _o_ps_digita(escolha)
-        da_maquina = _a_metade_da_maquina(cfg, escolha)
-        if da_maquina == "none" and not digita:
+        do_computador = _o_ps_do_computador(daemon)
+        da_maquina = _a_metade_da_maquina(cfg, escolha, do_computador)
+        if da_maquina == _NADA_DO_GESTO and not digita:
             return
         # FEAT-PARITY-REVIEW-01 + M5: com o controle dedicado a um JOGO, o PS já
         # vai cru como BTN_MODE (guide/overlay) e disparar TAMBÉM a ação de sistema
@@ -301,18 +330,22 @@ def build_ps_solo_callback(daemon: DaemonProtocol) -> Any:
         # depois dela chega à Steam.
         if digita and escolha is not None:
             _digitar_o_ps(daemon, escolha)
+        if da_maquina == _NADA_DO_GESTO:
+            return
+        if getattr(daemon, "display_authority", None) == "game":
+            logger.info("hotkey_ps_solo_skip_jogo_vivo", sinal="autoridade")
+            return
         comando: Any = None
         if da_maquina == "custom":
             comando = cfg.ps_button_command
             if not comando:
                 logger.warning("hotkey_ps_solo_custom_sem_comando")
                 return
-        elif da_maquina != "steam":
-            return
+        ato = _o_ato_do_ps_para_o_fio(daemon, quem_atende, do_computador)
         # O LAÇO SÓ DISPARA: a Steam e o programa dela esperam processos de
         # fora, e quem espera é o fio. Um toque em voo por vez — o segundo,
         # com o primeiro ainda abrindo, abriria outra Steam.
-        if not fio.disparar(lambda: _a_acao_da_maquina(da_maquina, comando)):
+        if not fio.disparar(lambda: _a_acao_da_maquina(da_maquina, comando, **ato)):
             logger.info("hotkey_ps_solo_acao_em_voo", acao=da_maquina)
 
     return _GestoDoPs(fazer=_on_ps_solo, fio=fio)
@@ -1108,13 +1141,19 @@ def start_hotkey_manager(daemon: DaemonProtocol) -> None:
         prev_profile=DEFAULT_COMBO_PREV,
         next_bridge=DEFAULT_COMBO_PONTE,  # FEAT-HOTKEY-PONTE-CYCLE-01: PS+R3; o PS+L3 é default
     )
+    # OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01 (01/10/2026): cada lugar do
+    # gerente chama o ato que a TABELA DA MÁQUINA diz (`_AtosDoGesto`), lida em
+    # memória a cada gesto. Os atendentes são os de sempre, montados uma vez;
+    # o que muda por gesto é só qual deles se chama. O long-press do PS (desligado
+    # de fábrica) divide o lugar com o PS + Options, como sempre dividiu.
+    atos = _AtosDoGesto(daemon)
     daemon._hotkey_manager = HotkeyManager(
-        on_ps_solo=build_ps_solo_callback(daemon),
-        on_ps_long_press=build_ps_long_press_callback(daemon),
-        on_next=build_profile_cycle_callback(daemon, +1),
-        on_prev=build_profile_cycle_callback(daemon, -1),
-        on_next_bridge=build_next_bridge_callback(daemon),
-        on_next_mask=build_next_mask_callback(daemon),
+        on_ps_solo=build_ps_solo_callback(daemon, atos),
+        on_ps_long_press=atos.callback("ps_options"),
+        on_next=atos.callback("ps_cima"),
+        on_prev=atos.callback("ps_baixo"),
+        on_next_bridge=atos.callback("ps_r3"),
+        on_next_mask=atos.callback("ps_l3"),
         config=hotkey_config,
     )
     logger.info(
@@ -1123,6 +1162,7 @@ def start_hotkey_manager(daemon: DaemonProtocol) -> None:
         ps_long_press_ms=hotkey_config.ps_long_press_ms,
         next_prev_combos="ps+dpad_up / ps+dpad_down",
         ponte_combo="ps+r3", mascara_combo="ps+l3",
+        gestos=atos.resumo(),
     )
 
 
@@ -3811,6 +3851,326 @@ def _a_mesa_vazia_esquece_o_canal(daemon: Any) -> None:
     _CANAL_POR_UNIQ.clear()
     with contextlib.suppress(Exception):  # daemon de mentira sem atributo livre
         daemon._canal_conferido_em = None
+
+
+# ---------------------------------------------------------------------------
+# OS GESTOS FAZEM O QUE A TABELA DIZ — OS-GESTOS-DO-CONTROLE-FAZEM-O-QUE-DIZEM-01
+# (01/10/2026)
+#
+# NO FIM DO MÓDULO pela razão escrita acima do canal do microfone: o mapa cita
+# linhas deste arquivo, e código novo lá em cima envelhece as citações.
+#
+# A tabela é `core/acoes_do_gesto.tabela(daemon._maquina)`, lida EM MEMÓRIA a
+# cada gesto: o `machine.declare` grava o `maquina.json` e relê o `_maquina` no
+# mesmo pedido, então a escolha vale no gesto seguinte, sem disco no laço.
+# ---------------------------------------------------------------------------
+
+#: O token do «— Nada —», comparado no laço do PS sem importar o vocabulário ali.
+_NADA_DO_GESTO = "nada"
+
+
+def _de_quem(quem: str | None) -> dict[str, str]:
+    """O campo `de` do diário: o controle do gesto, quando se sabe qual."""
+    return {"de": quem} if quem else {}
+
+
+def _o_ps_do_computador(daemon: Any) -> Any:
+    """A ``EscolhaDoGesto`` do PS sozinho, do ``maquina.json`` em memória."""
+    from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+
+    return ag.tabela(getattr(daemon, "_maquina", None))[ag.GESTO_DO_PS]
+
+
+def _jogo_aberto_agora() -> int | None:
+    """O appid do jogo do wrapper que está rodando agora, ou None. Nunca levanta.
+
+    É o ``profiles/autoswitch.jogo_do_wrapper_vivo``, o sinal que o autoswitch
+    usou para recusar a troca nos 17 toques da noite de 01/10. Ele lê disco e
+    ``/proc``: só se chama do fio do gesto.
+    """
+    try:
+        from hefesto_dualsense4unix.profiles.autoswitch import jogo_do_wrapper_vivo
+
+        return jogo_do_wrapper_vivo()
+    except Exception as exc:  # defensivo: a pergunta não derruba o gesto
+        logger.debug("jogo_aberto_ilegivel", err=str(exc))
+        return None
+
+
+def _o_laco_de_agora() -> asyncio.AbstractEventLoop | None:
+    try:
+        return asyncio.get_running_loop()
+    except RuntimeError:
+        return None
+
+
+def _o_ato_do_ps_para_o_fio(
+    daemon: Any, quem_atende: list[Any], do_computador: Any
+) -> dict[str, Any]:
+    """O que o fio do PS precisa para fazer o ⑥ fora do laço.
+
+    O ``quem`` e o contexto são lidos AQUI, no laço: o fio é outra thread, e a
+    pergunta «de quem é o gesto» (``hotkey_daemon.quem_faz_o_gesto``) só vale
+    dentro do ``observe``. O laço vai junto para os atos que são dele (trocar
+    de perfil, de modo, de máscara, suspender o mouse).
+    """
+    from hefesto_dualsense4unix.integrations.hotkey_daemon import quem_faz_o_gesto
+
+    if quem_atende[0] is None:
+        quem_atende[0] = _AtosDoGesto(daemon)
+    return {
+        "atos": quem_atende[0],
+        "escolha": do_computador,
+        "quem": quem_faz_o_gesto(),
+        "laco": _o_laco_de_agora(),
+        "contexto": contextvars.copy_context(),
+    }
+
+
+class _AtosDoGesto:
+    """Quem atende cada ato da tabela. Montado UMA vez, no ``start_hotkey_manager``.
+
+    Os atendentes são os de antes da tabela, sem cópia: o ciclo de perfil, o de
+    modo e o de máscara (``build_*``), a suspensão do mouse e do teclado
+    (``set_emulation_suppressed``), a Steam (``open_or_focus_steam``), e os
+    novos — os três da bandeja (``app/actions/atos_da_bandeja``, num processo
+    de fora, porque reiniciar o serviço de dentro dele mataria o pedido no
+    meio) e o script dela (:func:`_rodar_o_script_do_gesto`).
+
+    Os que esperam processo de fora (a Steam, a bandeja, o script) correm num
+    ``FioDeTrabalho`` POR GESTO: um por vez em cada gesto, e o laço dos quatro
+    controles nunca espera.
+    """
+
+    def __init__(self, daemon: Any) -> None:
+        self.daemon = daemon
+        self._corrotinas: dict[str, Any] = {
+            "perfil_seguinte": build_profile_cycle_callback(daemon, +1),
+            "perfil_anterior": build_profile_cycle_callback(daemon, -1),
+            "modo_seguinte": build_next_bridge_callback(daemon),
+            "mascara_seguinte": build_next_mask_callback(daemon),
+        }
+        self._fios: dict[str, fora_do_servico.FioDeTrabalho] = {}
+
+    def escolha(self, gesto: str) -> Any:
+        from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+
+        return ag.tabela(getattr(self.daemon, "_maquina", None))[gesto]
+
+    def resumo(self) -> dict[str, str]:
+        """Gesto -> ato, para o diário do início."""
+        from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+
+        return {g: e.faz for g, e in ag.tabela(getattr(self.daemon, "_maquina", None)).items()}
+
+    def _fio(self, gesto: str) -> fora_do_servico.FioDeTrabalho:
+        fio = self._fios.get(gesto)
+        if fio is None:
+            fio = self._fios[gesto] = fora_do_servico.FioDeTrabalho(
+                f"hefesto-gesto-{gesto}",
+                ao_falhar=lambda erro: logger.warning(
+                    "gesto_falhou", gesto=gesto, err=str(erro)),
+            )
+        return fio
+
+    def callback(self, gesto: str) -> Any:
+        """O que o ``HotkeyManager`` chama para ``gesto``: lê a tabela e faz.
+
+        Devolve o que o atendente devolve — a corrotina do ciclo de perfil, de
+        modo e de máscara vira tarefa no ``HotkeyManager._fire``, como antes.
+        """
+        from hefesto_dualsense4unix.integrations.hotkey_daemon import quem_faz_o_gesto
+
+        def _ato() -> Any:
+            escolha = self.escolha(gesto)
+            quem = quem_faz_o_gesto()
+            logger.info("gesto_fez", gesto=gesto, acao=escolha.faz, **_de_quem(quem))
+            return self.fazer(gesto, escolha, quem)
+
+        _ato.__name__ = f"ato_do_gesto_{gesto}"
+        return _ato
+
+    def fazer(self, gesto: str, escolha: Any, quem: str | None) -> Any:
+        """Faz o ato no laço; o que espera processo de fora vai ao fio do gesto."""
+        faz = escolha.faz
+        if faz == _NADA_DO_GESTO:
+            return None
+        if faz == "suspender_mouse_e_teclado":
+            self.daemon.set_emulation_suppressed()
+            return None
+        if faz == "sair_do_modo_jogo":
+            self.daemon.set_emulation_suppressed(False)
+            return None
+        corrotina = self._corrotinas.get(faz)
+        if corrotina is not None:
+            return corrotina()
+        if not self._fio(gesto).disparar(lambda: self.fazer_no_fio(gesto, escolha, quem)):
+            logger.info("gesto_em_voo", gesto=gesto, acao=faz)
+        return None
+
+    def fazer_no_fio(self, gesto: str, escolha: Any, quem: str | None) -> None:
+        """Os atos que esperam processo de fora: a Steam, a bandeja e o script."""
+        faz = escolha.faz
+        if faz == "abrir_a_steam":
+            from hefesto_dualsense4unix.integrations.steam_launcher import open_or_focus_steam
+
+            open_or_focus_steam()
+            return
+        ato_da_bandeja = _ATO_DA_BANDEJA.get(faz)
+        if ato_da_bandeja is not None:
+            _abrir_o_ato_da_bandeja(ato_da_bandeja, gesto)
+            return
+        if faz == "script":
+            _rodar_o_script_do_gesto(self.daemon, gesto, escolha.script, quem)
+            return
+        logger.warning("gesto_sem_atendente", gesto=gesto, acao=faz)
+
+    def fazer_pelo_ps(
+        self,
+        faz: str,
+        escolha: Any,
+        quem: str | None,
+        laco: asyncio.AbstractEventLoop | None,
+        contexto: contextvars.Context | None,
+    ) -> None:
+        """O ⑥ que não é a Steam, já no fio do PS e depois da guarda do jogo.
+
+        Os atos do LAÇO (perfil, modo, máscara, mouse) voltam a ele com o
+        contexto do gesto — é por ele que o PS + L3 pergunta de quem é o
+        cartão. Os de fora correm aqui mesmo, no fio do PS.
+        """
+        from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+
+        if faz not in self._corrotinas and faz not in (
+            "suspender_mouse_e_teclado", "sair_do_modo_jogo"
+        ):
+            self.fazer_no_fio(ag.GESTO_DO_PS, escolha, quem)
+            return
+        ctx = contexto if contexto is not None else contextvars.copy_context()
+
+        def _no_laco() -> None:
+            resultado = self.fazer(ag.GESTO_DO_PS, escolha, quem)
+            if asyncio.iscoroutine(resultado):
+                asyncio.get_running_loop().create_task(resultado, context=ctx)
+
+        if laco is not None and not laco.is_closed():
+            laco.call_soon_threadsafe(_no_laco, context=ctx)
+            return
+        resultado = ctx.run(self.fazer, ag.GESTO_DO_PS, escolha, quem)
+        if asyncio.iscoroutine(resultado):
+            ctx.run(asyncio.run, resultado)
+
+
+#: Os três atos da bandeja que o gesto alcança, no verbo do `__main__` de
+#: `app/actions/atos_da_bandeja`. «Ativar o serviço» não está aqui de propósito:
+#: parado, o serviço não ouve o gesto (D-2909-PARAR-O-SERVICO-NAO-VOLTA-PELO-CONTROLE).
+_ATO_DA_BANDEJA: dict[str, str] = {
+    "abrir_o_hefesto": "abrir",
+    "reiniciar_o_servico": "reiniciar",
+    "parar_o_servico": "parar",
+}
+
+
+def _abrir_o_ato_da_bandeja(ato: str, gesto: str) -> None:
+    """Roda o ato da bandeja NOUTRO processo, fora do serviço.
+
+    ``reiniciar`` e ``parar`` matariam o daemon no meio do pedido se ele
+    chamasse o ``systemctl`` de dentro de si; o processo novo nasce fora do
+    grupo do serviço (``fora_do_servico.abrir``), que o restart derruba.
+    """
+    from hefesto_dualsense4unix.app.actions.atos_da_bandeja import argv_do_ato
+    from hefesto_dualsense4unix.integrations.ambiente_do_jogo import ambiente_limpo
+
+    try:
+        abertura = fora_do_servico.abrir(
+            argv_do_ato(ato), env=ambiente_limpo(os.environ),
+            aplicativo=f"hefesto-{ato}", popen=_sp.Popen,
+        )
+    except Exception as exc:
+        logger.warning("gesto_da_bandeja_falhou", gesto=gesto, ato=ato, err=str(exc))
+        return
+    logger.info("gesto_da_bandeja_aberto", gesto=gesto, ato=ato,
+                caminho=abertura.caminho, unidade=abertura.unidade)
+
+
+def _quem_e_por_onde(daemon: Any, quem: str | None) -> tuple[int | None, str | None]:
+    """O número do jogador e o transporte (`usb`/`bt`) de quem fez o gesto.
+
+    O número é a conta da casa (``subsystems/base.numero_do_assento_na_mesa``),
+    a mesma do cartão da tela; sem MAC (o backend de mentira), o primário.
+    Nunca levanta: o script roda sem as duas variáveis, e não deixa de rodar.
+    """
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+    from hefesto_dualsense4unix.daemon.subsystems.base import numero_do_assento_na_mesa
+
+    try:
+        lista = getattr(getattr(daemon, "controller", None), "describe_controllers", None)
+        conectados = [c for c in (lista() if callable(lista) else []) if c.get("connected")]
+    except Exception as exc:
+        logger.debug("gesto_sem_a_mesa", err=str(exc))
+        return None, None
+    chave = norm_mac(quem) if quem else None
+    dele = next((c for c in conectados
+                 if chave and norm_mac(str(c.get("uniq") or "")) == chave), None)
+    if dele is None:
+        dele = next((c for c in conectados if c.get("is_primary")), None)
+    if dele is None:
+        return None, None
+    jogador = None
+    if dele.get("uniq"):
+        with contextlib.suppress(Exception):
+            jogador = numero_do_assento_na_mesa(conectados, str(dele["uniq"]), daemon=daemon)
+    transporte = dele.get("transport")
+    return jogador, (str(transporte) if transporte in ("usb", "bt") else None)
+
+
+def _o_script_falhou(nome: str, motivo: str, gesto: str) -> None:
+    """O recado de quando o script não rodou ou falhou: fora da janela e no diário."""
+    from hefesto_dualsense4unix.integrations.desktop_notifications import notify
+
+    logger.warning("gesto_script_falhou", gesto=gesto, script=nome, motivo=motivo)
+    with contextlib.suppress(Exception):
+        notify(summary="O script do controle não rodou", body=f"{nome}: {motivo}.",
+               icon="dialog-warning", timeout_ms=6000)
+
+
+def _rodar_o_script_do_gesto(
+    daemon: Any, gesto: str, caminho: str | None, quem: str | None
+) -> None:
+    """Roda o script que ela escolheu para ``gesto``, com as seis guardas.
+
+    ``D-2909-O-SCRIPT-E-UM-ARQUIVO-ESCOLHIDO`` (dela, 29/09): conferido de novo
+    aqui (o arquivo pode ter mudado de dono ou sumido desde a escolha); rodado
+    como ela, sem shell (o caminho é UM argumento), fora do serviço e com teto
+    (``fora_do_servico.rodar_e_esperar``); e, se falhar, o recado. Recebe quem
+    fez o gesto (1 a 4) e por onde, em duas variáveis; o endereço, nunca.
+    """
+    from hefesto_dualsense4unix.core import acoes_do_gesto as ag
+    from hefesto_dualsense4unix.integrations.ambiente_do_jogo import ambiente_limpo
+
+    nome = ag.nome_do_script(caminho)
+    motivo = ag.conferir_o_script(caminho or "")
+    if motivo is not None:
+        _o_script_falhou(nome, motivo, gesto)
+        return
+    real = os.path.realpath(str(caminho))
+    env = ambiente_limpo(os.environ)
+    jogador, transporte = _quem_e_por_onde(daemon, quem)
+    if jogador is not None:
+        env[ag.VARIAVEL_DO_JOGADOR] = str(jogador)
+    if transporte is not None:
+        env[ag.VARIAVEL_DO_TRANSPORTE] = transporte
+    desfecho = fora_do_servico.rodar_e_esperar(
+        [real], env=env, teto_s=ag.TETO_DO_SCRIPT_S, aplicativo=nome)
+    if desfecho.estourou:
+        _o_script_falhou(nome, f"passou de {ag.TETO_DO_SCRIPT_S} s e foi parado", gesto)
+    elif not desfecho.rodou:
+        _o_script_falhou(nome, "não consegui rodar", gesto)
+    elif desfecho.saiu_com not in (0, None):
+        _o_script_falhou(nome, f"saiu com o código {desfecho.saiu_com}", gesto)
+    else:
+        logger.info("gesto_script_rodou", gesto=gesto, script=nome,
+                    caminho=desfecho.caminho, jogador=jogador, transporte=transporte)
 
 
 __all__ = [
