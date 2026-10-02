@@ -194,7 +194,7 @@ rascunho; o Salvar regrava o mesmo rascunho, normalizado, com a prioridade que
 o disco já tinha, o que o torna idempotente (salvar duas vezes dá o mesmo
 sha256). Os símbolos da sobreposição saíram e o `rodape.py` foi de 735 para
 340 linhas. O editor da aba 10 grava o campo editado sobre o disco
-(`interface/pacotes/a10_perfis.py:2613`, `_o_perfil_no_disco`).
+(`interface/pacotes/a10_perfis.py:2630`, `_o_perfil_no_disco`).
 
 **As réguas.** `tests/unit/test_o_salvar_e_o_aplicar_leem_so_o_perfil.py`
 monta P1 a P4 (dois no cabo, dois no rádio) com o aparelho divergindo do disco

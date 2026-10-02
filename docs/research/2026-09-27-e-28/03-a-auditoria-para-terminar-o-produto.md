@@ -128,7 +128,7 @@ de história.
 
 - **O Freestyle como camada deixaria sem destino tudo que se grava fora do
   jogo.** Há três resolvedores do perfil que recebe a gravação
-  (`interface/pacotes/perfil.py:97`, `rodape.py:609`, `profiles/manager.py:2609`).
+  (`interface/pacotes/perfil.py:97`, `rodape.py:627`, `profiles/manager.py:2609`).
   Sem perfil ativo, 5 escritores calam, 10 recusam mandando à aba Perfis e 5
   escritas do daemon viram `sem_perfil`. A posse da
   `O-FREESTYLE-E-UMA-CAMADA-SO-01` cobre 8 dos 24 arquivos que dependem do
@@ -183,7 +183,7 @@ sete alternâncias repetem).
   deslizantes 12 px; o mínimo da WCAG 2.5.8 é 24×24.
 
 Médios: o «Remover» da aba Perfis apaga com um clique duplo em menos de 8 s
-sem conferir o rótulo armado (`a10_perfis.py:4023-4030`), e a volta só existe
+sem conferir o rótulo armado (`a10_perfis.py:4040-4030`), e a volta só existe
 na linha de comando; não há `:focus-visible` na casa; três vocabulários para
 força e bateria; letra de 10 a 14 px sem zoom (415 declarações entre 10 e
 12 px contra 37 de 14 px ou mais).
