@@ -527,4 +527,5 @@ def test_o_xalia_chega_em_todo_modo_e_de_um_a_quatro(casa: Path, jogadores: int)
                 "a caixa do Lutris": _override(casa, "net.lutris.Lutris"),
                 "a caixa do RetroArch": _override(casa, _RETROARCH)}
         for nome, ambiente in onde.items():
-            assert ambiente.get(_XALIA) == "0", f"{modo}, {jogadores} jogador(es): {nome} {ambiente}"
+            assert ambiente.get(_XALIA) == "0", (
+                f"{modo}, {jogadores} jogador(es): {nome} {ambiente}")
