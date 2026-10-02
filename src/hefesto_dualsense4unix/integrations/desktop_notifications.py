@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import contextlib
 import os
-import time
 from typing import Any
 
 from hefesto_dualsense4unix.utils import identidade
@@ -18,28 +17,6 @@ _NOTIFICATIONS_IFACE = "org.freedesktop.Notifications"
 _DBUS_TIMEOUT_SECONDS = 2.0
 
 _announced_once: set[str] = set()
-
-_THROTTLE_MIN_INTERVAL_SEC: float = float(
-    os.environ.get("HEFESTO_DUALSENSE4UNIX_NOTIFY_THROTTLE_SEC", "30")
-)
-
-_last_emit_at: dict[str, float] = {}
-
-
-def _throttle_passes(throttle_key: str) -> bool:
-    """True se a chave NÃO foi emitida nos últimos `_THROTTLE_MIN_INTERVAL_SEC`."""
-    now = time.monotonic()
-    last = _last_emit_at.get(throttle_key, 0.0)
-    if now - last < _THROTTLE_MIN_INTERVAL_SEC:
-        return False
-    _last_emit_at[throttle_key] = now
-    return True
-
-
-def reset_throttle_cache() -> None:
-    """Limpa o cache de throttling — útil em testes."""
-    _last_emit_at.clear()
-
 
 def notify(
     summary: str,
@@ -137,109 +114,6 @@ def statusnotifierwatcher_available() -> bool:
                 conn.close()
 
 
-_ENV_NOTIFICATIONS_ENABLED = "HEFESTO_DUALSENSE4UNIX_DESKTOP_NOTIFICATIONS"
-
-
-def _notifications_enabled() -> bool:
-    """Lê env var no momento da chamada (re-avalia a cada notify)."""
-    return os.environ.get(_ENV_NOTIFICATIONS_ENABLED, "").strip() in ("1", "true", "yes")
-
-
-def notify_controller_connected(transport: str) -> bool:
-    if not _notifications_enabled():
-        return False
-    if not _throttle_passes("controller_connected"):
-        return False
-    tr_label = {"usb": "USB", "bt": "Bluetooth"}.get(transport.lower(), transport)
-    return notify(
-        summary="Controle conectado",
-        body=f"DualSense detectado via {tr_label}.",
-        icon="input-gaming",
-        timeout_ms=3000,
-    )
-
-
-def notify_controller_disconnected(reason: str = "") -> bool:
-    if not _notifications_enabled():
-        return False
-    if not _throttle_passes("controller_disconnected"):
-        return False
-    body = "DualSense desconectado." if not reason else f"DualSense desconectado ({reason})."
-    return notify(
-        summary="Controle desconectado",
-        body=body,
-        icon="input-gaming",
-        timeout_ms=3000,
-        actions=[("open", "Abrir Hefesto")],
-    )
-
-
-def notify_battery_low(pct: int, threshold: int = 15) -> bool:
-    """Emite uma vez por queda abaixo do threshold (dedup via once_key dinâmica)."""
-    if not _notifications_enabled():
-        return False
-    if pct > threshold:
-        return False
-    return notify(
-        summary="Bateria baixa do DualSense",
-        body=f"Bateria em {pct}%. Conecte via USB para carregar.",
-        icon="battery-caution",
-        timeout_ms=8000,
-        once_key=f"battery_low_below_{threshold}",
-        actions=[("open", "Abrir Hefesto")],
-    )
-
-
-def notify_battery_recovered(pct: int, threshold: int = 30) -> None:
-    """Reseta o cache de battery_low quando bateria volta a subir acima do"""
-    if pct >= threshold:
-        _announced_once.discard(f"battery_low_below_{threshold - 15}")
-        _announced_once.discard("battery_low_below_15")
-
-
-def notify_profile_activated(name: str) -> bool:
-    if not _notifications_enabled():
-        return False
-    return notify(
-        summary="Perfil ativado",
-        body=f"Hefesto trocou para o perfil: {name}.",
-        icon="input-gaming",
-        timeout_ms=2000,
-    )
-
-
-def notify_config_errors(invalid: list[tuple[str, str]]) -> bool:
-    """Avisa, uma vez por boot, que há perfis com configuração inválida"""
-    if not _notifications_enabled() or not invalid:
-        return False
-    names = ", ".join(name for name, _err in invalid[:3])
-    extra = "…" if len(invalid) > 3 else ""
-    return notify(
-        summary="Perfis com configuração inválida",
-        body=(
-            f"{len(invalid)} perfil(is) ignorado(s): {names}{extra}. "
-            "Rode 'hefesto-dualsense4unix doctor' ou corrija/exclua o arquivo."
-        ),
-        icon="dialog-warning",
-        timeout_ms=8000,
-        once_key="config_errors",
-    )
-
-
-def notify_system_warnings(warnings: list[str]) -> bool:
-    """Avisa uma vez por boot sobre problemas de infra detectados"""
-    if not _notifications_enabled() or not warnings:
-        return False
-    body = "; ".join(warnings[:2]) + ("…" if len(warnings) > 2 else "")
-    return notify(
-        summary="Hefesto: reparo recomendado",
-        body=body,
-        icon="dialog-warning",
-        timeout_ms=10000,
-        once_key="system_warnings",
-    )
-
-
 def notify_emulation_suppressed(suppressed: bool) -> bool:
     """Avisa que o modo jogo foi ligado/desligado (emulação de mouse/teclado)."""
     if suppressed:
@@ -284,18 +158,10 @@ def notify_teclado_na_tela_aberto() -> bool:
 __all__ = [
     "AVISO_DE_VERDADE_NA_SUITE",
     "notify",
-    "notify_battery_low",
-    "notify_battery_recovered",
-    "notify_config_errors",
-    "notify_controller_connected",
-    "notify_controller_disconnected",
     "notify_emulation_suppressed",
-    "notify_profile_activated",
-    "notify_system_warnings",
     "notify_teclado_na_tela_aberto",
     "notify_teclado_na_tela_ausente",
     "reset_once_cache",
-    "reset_throttle_cache",
     "statusnotifierwatcher_available",
 ]
 

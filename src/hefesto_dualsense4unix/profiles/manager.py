@@ -349,15 +349,6 @@ class ProfileManager:
             soltar_a_trava_da_mao(
                 self.store, "lancamento_de_jogo_com_perfil", perfil=profile.name
             )
-        if reaplicacao:
-            return profile
-        try:
-            from hefesto_dualsense4unix.integrations.desktop_notifications import (
-                notify_profile_activated,
-            )
-            notify_profile_activated(profile.name)
-        except Exception:
-            pass
         return profile
 
     def apply(

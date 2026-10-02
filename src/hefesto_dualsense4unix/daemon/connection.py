@@ -675,11 +675,6 @@ async def reconnect_loop(
                             return upgrade_primary_vpad_to_uhid(daemon)
 
                     await daemon._run_blocking(_promover_vpad)
-                with contextlib.suppress(Exception):
-                    from hefesto_dualsense4unix.integrations.desktop_notifications import (
-                        notify_controller_connected,
-                    )
-                    notify_controller_connected(transport or "usb")
                 if not restored:
                     with contextlib.suppress(Exception):
                         await _restore_last_profile(daemon)
@@ -696,11 +691,6 @@ async def reconnect_loop(
                     EventTopic.CONTROLLER_DISCONNECTED, {"reason": "probe_offline"}
                 )
                 logger.info("controller_disconnected", reason="probe_offline")
-                with contextlib.suppress(Exception):
-                    from hefesto_dualsense4unix.integrations.desktop_notifications import (
-                        notify_controller_disconnected,
-                    )
-                    notify_controller_disconnected("probe offline")
                 was_connected = False
             elif alvos_agora is not None:
                 await anunciar_bordas_por_alvo(daemon, alvos_antes, alvos_agora)

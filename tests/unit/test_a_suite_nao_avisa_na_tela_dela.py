@@ -31,10 +31,8 @@ _AVISOS_DE_GESTO = (
 def _caches_zerados() -> Iterator[None]:
     """O `once_key` de um caso não pode calar o seguinte e fingir a cura."""
     avisos.reset_once_cache()
-    avisos.reset_throttle_cache()
     yield
     avisos.reset_once_cache()
-    avisos.reset_throttle_cache()
 
 
 _JEEPNEY_DE_MENTIRA = textwrap.dedent(

@@ -84,6 +84,8 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
     except (OSError, ValueError):
         logger.warning("daemon_nice_unavailable")
 
+    from hefesto_dualsense4unix.utils import session
+
     controller = build_controller()
     config = DaemonConfig(
         poll_hz=poll_hz or int(os.getenv("HEFESTO_DUALSENSE4UNIX_POLL_HZ", "60")),
@@ -95,6 +97,7 @@ def run_daemon(poll_hz: int | None = None, auto_reconnect: bool = True) -> int:
         keyboard_emulation_enabled=(
             os.getenv("HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION", "1") != "0"
         ),
+        plugins_enabled=session.load_plugins_enabled(),
     )
     daemon = Daemon(controller=controller, config=config)
 

@@ -426,6 +426,7 @@ CLASSIFICACAO: dict[str, tuple[str, str]] = {
     "native_mode.flag": (CASA, "o modo nativo"),
     "mouse_emulation.flag": (CASA, "a emulação de mouse"),
     "keyboard_emulation.flag": (CASA, "a emulação de teclado"),
+    "plugins.flag": (CASA, "os plugins ligados pela mão (`hefesto plugin ligar`)"),
     "gamepad_emulation.flag": (CASA, "a emulação de gamepad"),
     "gamepad_disabled.flag": (CASA, "a emulação de gamepad desligada"),
     "gamepad_caminho.flag": (CASA, "o caminho do gamepad"),

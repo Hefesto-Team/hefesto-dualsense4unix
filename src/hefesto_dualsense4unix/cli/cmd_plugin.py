@@ -59,6 +59,31 @@ def cmd_list() -> None:
     console.print(tabela)
 
 
+@app.command("ligar")
+def cmd_ligar() -> None:
+    """Liga os plugins na próxima subida do daemon (eles rodam com os privilégios dele)."""
+    from hefesto_dualsense4unix.utils.session import save_plugins_enabled
+
+    if not save_plugins_enabled(True):
+        console.print("[red]Não consegui gravar a escolha na pasta de configuração.[/red]")
+        raise typer.Exit(code=1)
+    console.print(
+        "Plugins ligados. Valem quando o serviço do Hefesto subir de novo; "
+        "só ligue plugins de quem você confia."
+    )
+
+
+@app.command("desligar")
+def cmd_desligar() -> None:
+    """Desliga os plugins na próxima subida do daemon (o padrão)."""
+    from hefesto_dualsense4unix.utils.session import save_plugins_enabled
+
+    if not save_plugins_enabled(False):
+        console.print("[red]Não consegui gravar a escolha na pasta de configuração.[/red]")
+        raise typer.Exit(code=1)
+    console.print("Plugins desligados. Vale quando o serviço do Hefesto subir de novo.")
+
+
 @app.command("reload")
 def cmd_reload() -> None:
     """Recarrega plugins do disco no daemon em execução."""

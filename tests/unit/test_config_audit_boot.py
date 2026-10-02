@@ -30,16 +30,3 @@ def test_audit_profiles_detecta_corrompido(
     assert all("ok" not in n for n in nomes)
 
 
-def test_notify_config_errors_vazio_nao_notifica(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    from hefesto_dualsense4unix.integrations import desktop_notifications as dn
-
-    called: list[object] = []
-    monkeypatch.setattr(dn, "_notifications_enabled", lambda: True)
-    monkeypatch.setattr(dn, "notify", lambda *a, **k: called.append((a, k)) or True)
-
-    assert dn.notify_config_errors([]) is False
-    assert called == []
-    assert dn.notify_config_errors([("x.json", "erro")]) is True
-    assert len(called) == 1

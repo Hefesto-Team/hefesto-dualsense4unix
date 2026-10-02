@@ -325,7 +325,7 @@ async def test_start_carrega_plugins_e_chama_on_load(tmp_path: Path) -> None:
     ctx = DaemonContext(controller=ctrl, bus=bus, store=store, config=cfg)
 
     ps = PluginsSubsystem()
-    env_patch = {"HEFESTO_DUALSENSE4UNIX_PLUGINS_DIR": str(tmp_path), "HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED": "1"}  # noqa: E501
+    env_patch = {"HEFESTO_DUALSENSE4UNIX_PLUGINS_DIR": str(tmp_path)}
     with patch.dict("os.environ", env_patch):
         await ps.start(ctx)
 

@@ -70,14 +70,17 @@ variavel tem precedência sobre o caminho acima.
 
 ### Ativação
 
-Por padrão, plugins sao desativados (`plugins_enabled = False` em `DaemonConfig`).
-Ativar via:
+Por padrão, plugins são desativados (`plugins_enabled = False` em `DaemonConfig`).
+A mão que os liga é um verbo do CLI, sem botão na tela:
 
-- Variavel de ambiente: `HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED=1`
-- `plugins_enabled = True` no `DaemonConfig` (no código)
+```bash
+hefesto-dualsense4unix plugin ligar      # grava plugins.flag na pasta de configuração
+hefesto-dualsense4unix plugin desligar
+```
 
-As duas so sao lidas na **subida** do daemon — ver a nota de verificação no
-rodape antes de tentar ligar plugins num daemon já rodando.
+A escolha só é lida na **subida** do daemon: vale quando o serviço subir de
+novo. A variável `HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED`, que nada escrevia,
+saiu em 02/10/2026.
 
 ---
 
@@ -152,8 +155,8 @@ ligava plugin nenhum. O que foi corrigido no corpo acima, item a item:
   configuração nenhum — nem esse, nem `daemon.toml`
   (BUG-DAEMON-TOML-DEAD-01). A receita era morta na origem.
 - Variavel de ambiente: era `HEFESTO_PLUGINS_ENABLED`, que tem **zero**
-  ocorrências em `src/`. A real é `HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED=1`,
-  lida em `daemon/subsystems/plugins.py` (`PluginsSubsystem.is_enabled`).
+  ocorrências em `src/`. A ativação hoje é `hefesto-dualsense4unix plugin ligar`
+  (o `plugins.flag`, lido na subida por `daemon/main.py`).
 - Diretório de plugins: era `~/.config/hefesto/plugins/`, o layout curto
   legado. O real é `~/.config/hefesto-dualsense4unix/plugins/`
   (`_default_plugins_dir` em `daemon/subsystems/plugins.py`), com override por
@@ -162,14 +165,12 @@ ligava plugin nenhum. O que foi corrigido no corpo acima, item a item:
   que não existe. O real é `from hefesto_dualsense4unix.plugin_api import
   Plugin, PluginContext`, exatamente como o `__init__.py` do pacote documenta.
 
-Uma limitação a mais, medida agora e que a ADR não previa: **os dois switches
-só valem na subida do daemon**. `_start_plugins` é chamado uma vez, na
+Uma limitação a mais, medida agora e que a ADR não previa: **a escolha só vale
+na subida do daemon**. `_start_plugins` é chamado uma vez, na
 sequência de start (`daemon/lifecycle.py`), e `reload_config` não reinicia
 subsistemas — então `daemon.reload` com `plugins_enabled: true` troca o campo
 do `DaemonConfig` e **não** carrega plugin num daemon já rodando. Mesma forma do
-achado da ADR-016 sobre métricas. Como o daemon roda sob `systemd --user`,
-exportar a variavel num terminal também não o alcança: ela precisa estar no
-ambiente da unit.
+achado da ADR-016 sobre métricas.
 
 `plugins_enabled` **existe** de fato em `DaemonConfig`
 (`daemon/lifecycle.py`), e o `PluginsSubsystem` está registrado em

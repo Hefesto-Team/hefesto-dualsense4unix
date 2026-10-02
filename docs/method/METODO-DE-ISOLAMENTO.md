@@ -469,8 +469,8 @@ PyGObject tem `timeout_add`, `idle_add` e `source_remove` — e **não** tinha
 
 **O que isto decide:** se o dublê cobre a superfície que o produto de fato usa.
 
-**A cura:** `src/hefesto_dualsense4unix/utils/markup.py` — o escape passa a ter
-piso próprio, e o GLib continua fazendo o trabalho quando está inteiro. Note o
+**A cura** (o módulo do escape saiu com a janela GTK em 02/10/2026, e a
+interface nova escapa no próprio HTML): o escape passou a ter piso próprio, e o GLib continua fazendo o trabalho quando está inteiro. Note o
 que **não** foi feito: proteger a chamada com `hasattr` teria trocado a exceção
 por markup quebrado, que é pior — o teste afirma que o escape **acontece**.
 

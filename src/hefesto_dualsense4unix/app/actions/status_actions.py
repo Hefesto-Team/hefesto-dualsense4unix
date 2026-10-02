@@ -1,27 +1,10 @@
-"""Aba Status: polling ao vivo de daemon.state_full + update dos widgets.
+"""O que sobrou da aba Status da janela GTK: leituras do ``state_full``.
 
-Inclui a máquina de estado de reconnect (UX-RECONNECT-01): um tick dedicado
-a cada 2s (`RECONNECT_POLL_INTERVAL_S`) observa o IPC e move o header entre
-três estados visuais — `online`, `reconnecting`, `offline`. O polling rápido
-dos widgets de live-state é independente e preserva a fluidez da aba Status.
-
-Redesign STATUS-02 (aba Status vira 1 card por controle):
-  - O Glade da aba tem só o frame "Estado" + um GtkScrolledWindow com o GRID
-    `status_players_slot`; os cards (`ControllerCard`) são montados por
-    código, um por controle CONECTADO do bloco `controllers` do state_full.
-    STATUS-GRID-2COL-01: o slot é um GtkGrid de DUAS colunas (era um box
-    vertical). Empilhados, dois controles somavam altura e a aba só cabia
-    com rolagem; lado a lado eles dividem a mesma faixa vertical.
-  - Reconstrução de cards SÓ quando o conjunto `(index, uniq)` muda
-    (2 ticks com o mesmo conjunto = os MESMOS widgets, sem rebuild); a
-    entrada-placeholder offline é filtrada por `connected`
-    (HARM-CARD-FANTASMA-01) e não vira card fantasma.
-  - O tick rápido distribui `controllers[i]` para o card i; o diff por
-    seção vive dentro do card (`ControllerCard.update`).
-  - Gate de timers (aceite do STATUS-02): NENHUMA ocorrência NOVA de
-    timeout/idle do GLib em relação ao baseline da mixin — 2 periódicos em
-    ms (100/500), 1 periódico em segundos (reconnect), 1 one-shot de 5 s e
-    2 idle one-shot. `tests/unit/test_status_cards.py` trava esse diff.
+A janela, os cards e a máquina de reconexão saíram em 02/10/2026
+(A-DIETA-DO-CODIGO-01). Ficam as leituras que a interface reusa:
+:func:`texto_de_controle_nao_adotado` e os ``staticmethod`` de
+:class:`StatusActionsMixin` (``_por_numero_de_identidade``,
+``_connected_controllers``, ``_bateria_da_mesa``).
 """
 # ruff: noqa: E402
 from __future__ import annotations

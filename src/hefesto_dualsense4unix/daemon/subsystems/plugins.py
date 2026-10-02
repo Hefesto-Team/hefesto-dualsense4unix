@@ -145,10 +145,8 @@ class PluginsSubsystem:
         self._entries.clear()
 
     def is_enabled(self, config: DaemonConfig) -> bool:
-        """Habilitado se plugins_enabled=True ou HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED=1."""
-        env_force = os.environ.get("HEFESTO_DUALSENSE4UNIX_PLUGINS_ENABLED", "0") == "1"
-        cfg_enabled = bool(getattr(config, "plugins_enabled", False))
-        return cfg_enabled or env_force
+        """Habilitado só com ``plugins_enabled`` — a mão é ``hefesto plugin ligar``."""
+        return bool(getattr(config, "plugins_enabled", False))
 
 
     def tick(self, state: ControllerState, active_profile: str | None = None) -> None:

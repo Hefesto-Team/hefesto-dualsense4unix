@@ -472,6 +472,37 @@ def load_keyboard_preference() -> bool | None:
 # `DaemonConfig.keyboard_emulation_enabled = True`, e o boot só o sobrescreve
 
 
+_PLUGINS_FLAG_FILE = "plugins.flag"
+
+
+def save_plugins_enabled(enabled: bool) -> bool:
+    """Grava a escolha de ligar os plugins (``hefesto plugin ligar|desligar``).
+
+    Plugin de terceiro roda com os privilégios do daemon: ligado só pela mão
+    de quem o instalou, e desligado é o padrão (OS-INTERRUPTORES-QUE-NINGUEM-LIGA-01,
+    02/10/2026). Vale na próxima subida do daemon. ``False`` = não gravou.
+    """
+    try:
+        flag = config_dir(ensure=True) / _PLUGINS_FLAG_FILE
+        flag.write_text(json.dumps({"enabled": bool(enabled)}) + "\n", encoding="utf-8")
+    except Exception as exc:
+        logger.debug("plugins_flag_save_failed", err=str(exc))
+        return False
+    return True
+
+
+def load_plugins_enabled() -> bool:
+    """A escolha gravada por :func:`save_plugins_enabled`; sem arquivo, desligado."""
+    try:
+        flag = config_dir() / _PLUGINS_FLAG_FILE
+        if not flag.exists():
+            return False
+        data = json.loads(flag.read_text(encoding="utf-8") or "{}")
+    except Exception:
+        return False
+    return isinstance(data, dict) and data.get("enabled") is True
+
+
 _GAMEPAD_EMULATION_FLAG_FILE = "gamepad_emulation.flag"
 
 _GAMEPAD_DISABLED_FLAG_FILE = "gamepad_disabled.flag"
@@ -635,6 +666,7 @@ __all__ = [
     "load_mouse_emulation",
     "load_mouse_preference",
     "load_paused_state",
+    "load_plugins_enabled",
     "migrar_a_escolha_dela",
     "read_active_marker",
     "resolve_boot_profile",
@@ -647,4 +679,5 @@ __all__ = [
     "save_last_profile",
     "save_mouse_emulation",
     "save_paused_state",
+    "save_plugins_enabled",
 ]
