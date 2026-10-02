@@ -230,12 +230,14 @@ def main() -> int:
             lido.append(medida)
             GLib.timeout_add(600, proximo)
 
-        # A SELEÇÃO DA LINHA é por texto, e o `selecionar` mora na célula do
-        # nome — o `[data-hef-gesto]` genérico pegaria a primeira linha da
-        # lista, que pode ser a outra.
+        # A SELEÇÃO DA LINHA é pelo nome que a linha carrega: o `[data-hef-gesto]`
+        # genérico pegaria a primeira linha da lista, que pode ser a outra. Desde
+        # 02/10/2026 o `selecionar` mora na `<tr>` (A-LINHA-INTEIRA-ABRE-O-PERFIL-01),
+        # e o texto dela é o das três células coladas; o nome vem do
+        # `data-hef-perfil`, o mesmo que o gesto lê.
         alvo = (f"(function(){{const c=[...document.querySelectorAll("
                 f"'[data-hef-gesto=\"selecionar\"]')].find(x=>"
-                f"(x.textContent||'').trim()==={ALVO!r});"
+                f"x.dataset.hefPerfil==={ALVO!r});"
                 f"if(!c) return 'NAO ACHEI A LINHA'; c.click(); return 'ok';}})()"
                 if gesto == "selecionar"
                 else f"window.__ensaio.mandar({gesto!r}, "
