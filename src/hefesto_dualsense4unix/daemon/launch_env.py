@@ -3109,8 +3109,13 @@ class EscreventeDoLancamento:
                 finally:
                     # DEPOIS das devoluções da foto, na mesma fila do laço: a
                     # escrita pousou (ou falhou, e o recibo ficou o de antes).
+                    # A ordem vai no padrão do `def`, e não pelo laço: a volta
+                    # roda depois, e a variável já seria a da foto seguinte.
+                    def pousou(ordem: int = foto.ordem) -> None:
+                        self._pousou(ordem)
+
                     with contextlib.suppress(Exception):
-                        self._devolver(lambda ordem=foto.ordem: self._pousou(ordem))
+                        self._devolver(pousou)
             if not parar:
                 continue
             # PARANDO, O FIO NÃO VOLTA A ESPERAR: o evento já foi consumido, e
