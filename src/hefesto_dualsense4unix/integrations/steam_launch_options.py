@@ -58,10 +58,12 @@ import difflib
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import time
 from collections.abc import Callable, Collection, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -1002,21 +1004,146 @@ def appid_needs_wrapper(appid: str, home: Path | None = None) -> bool:
     return True
 
 
-def steam_running() -> bool:
-    """Detecção idêntica à do disable_steam_input.sh (pgrep, nunca -f solto).
+# ── A STEAM DESTE LAR — A-STEAM-SO-SE-DA-POR-FECHADA-QUANDO-FECHOU-01 ──────
+#
+# MEDIDO (29/09 e 01/10/2026). A pergunta «a Steam está aberta?» era `pgrep -af
+# steamrt64/steam` OU `pgrep -x steamwebhelper`. O cliente desta instalação é o
+# `ubuntu12_32/steam`, que o primeiro não casa: só o webhelper respondia. O
+# fallback do fechar matava o webhelper pelo NOME, o cliente o relançava ~9 s
+# depois, e a conferência caía na janela entre os dois. Num dublê com a
+# semântica do `pgrep` real, o `stop_steam` devolveu `True` em 35 s com o
+# cliente vivo; no diário dela, cinco de seis corridas. E o nome não sabe de
+# quem é a Steam: a suíte (HOME trocado) matava o webhelper DELA.
+#
+# A PERGUNTA AGORA É AO `/proc`, uma só, e tem duas partes:
+# * QUEM: o cliente (o `steam` do runtime, ou o pid que o webhelper carrega em
+#   `-steampid=`) e o webhelper, deste usuário;
+# * DE QUEM: o `HOME` do processo é o de quem pergunta (ou fica dentro dele, como
+#   o da Snap). A Steam de outro lar «não é minha»: não se fecha, não se mata,
+#   e o «abrir» não abre uma segunda por cima dela.
+PROC = Path("/proc")
 
-    `steamrt64/steam` casa pelo PATH do runtime; `steamwebhelper` por nome
-    EXATO (-x) — o -f pegaria qualquer processo que apenas MENCIONE o nome
-    (ex.: earlyoom), o falso-positivo histórico.
+#: As pastas do binário do cliente: `ubuntu12_32/steam` (o desta máquina) e
+#: `steamrt64/steam` (o cliente de 64 bits).
+_PASTAS_DO_CLIENTE = frozenset({"ubuntu12_32", "steamrt64"})
+
+
+@dataclass(frozen=True)
+class ProcessoDaSteam:
+    """Um processo da Steam deste usuário."""
+
+    pid: int
+    #: ``"cliente"`` ou ``"webhelper"``.
+    papel: str
+    #: O `HOME` do ambiente dele; ``""`` = não se leu.
+    lar: str
+    #: O campo 22 do `stat` (a hora em que nasceu): o pid se confere por ele
+    #: antes do sinal, e um pid reciclado não leva o tiro.
+    inicio: str
+
+
+def _texto(arquivo: Path) -> str:
+    try:
+        return arquivo.read_bytes().decode("utf-8", "replace")
+    except OSError:
+        return ""
+
+
+def _uid_real(pasta: Path) -> int | None:
+    for linha in _texto(pasta / "status").splitlines():
+        if linha.startswith("Uid:"):
+            campos = linha.split()
+            return int(campos[1]) if len(campos) > 1 and campos[1].isdigit() else None
+    return None
+
+
+def _inicio(pasta: Path) -> str:
+    stat_ = _texto(pasta / "stat")
+    depois = stat_.rpartition(")")[2].split()
+    return depois[19] if len(depois) > 19 else ""
+
+
+def _lar_do_processo(pasta: Path) -> str:
+    for item in _texto(pasta / "environ").split("\0"):
+        if item.startswith("HOME="):
+            return item[5:]
+    return ""
+
+
+def processos_da_steam(proc: Path = PROC) -> list[ProcessoDaSteam]:
+    """O cliente e os webhelpers da Steam DESTE usuário, com o `HOME` de cada um.
+
+    Só lê. Nunca levanta: um `/proc` que não se lê responde lista vazia.
     """
-    for args in (["pgrep", "-af", "steamrt64/steam"], ["pgrep", "-x", "steamwebhelper"]):
-        try:
-            proc = subprocess.run(args, capture_output=True, timeout=5, check=False)
-        except (OSError, subprocess.SubprocessError):
+    uid = os.getuid()
+    achados: dict[int, ProcessoDaSteam] = {}
+    referidos: set[int] = set()
+    try:
+        pastas = [x for x in proc.iterdir() if x.name.isdigit()]
+    except OSError:
+        return []
+    for pasta in pastas:
+        if _uid_real(pasta) != uid:
             continue
-        if proc.returncode == 0:
-            return True
-    return False
+        comm = _texto(pasta / "comm").strip()
+        argv = [a for a in _texto(pasta / "cmdline").split("\0") if a]
+        if comm == "steamwebhelper":
+            papel = "webhelper"
+            referidos.update(int(a.split("=", 1)[1]) for a in argv
+                             if a.startswith("-steampid=") and a.split("=", 1)[1].isdigit())
+        elif comm == "steam" and argv and Path(argv[0]).parent.name in _PASTAS_DO_CLIENTE:
+            papel = "cliente"
+        else:
+            continue
+        achados[int(pasta.name)] = ProcessoDaSteam(
+            int(pasta.name), papel, _lar_do_processo(pasta), _inicio(pasta))
+    #: O PID QUE O WEBHELPER CARREGA É O CLIENTE, seja qual for o caminho dele.
+    for pid in referidos - set(achados):
+        pasta = proc / str(pid)
+        if _uid_real(pasta) == uid:
+            achados[pid] = ProcessoDaSteam(pid, "cliente", _lar_do_processo(pasta),
+                                           _inicio(pasta))
+    return sorted(achados.values(), key=lambda x: (x.papel != "cliente", x.pid))
+
+
+def do_meu_lar(lar_do_processo: str, lar: Path | None = None) -> bool:
+    """O `HOME` deste processo é o de quem pergunta (ou fica dentro dele)?
+
+    Dentro dele é a Steam da Snap (`~/snap/steam/…`). Um `HOME` que não se
+    leu não é meu: o que não se confere não se mata.
+    """
+    if not lar_do_processo:
+        return False
+    meu = Path.home() if lar is None else lar
+    try:
+        dele, meu = Path(lar_do_processo).resolve(), meu.resolve()
+    except OSError:  # pragma: no cover - caminho impossível
+        return False
+    return dele == meu or meu in dele.parents
+
+
+def e_deste_lar(pid: int, proc: Path = PROC, lar: Path | None = None) -> bool:
+    """Este processo é deste usuário e deste `HOME`? — a conferência antes do sinal.
+
+    A mesma pergunta serve aos outros lançadores (`reposicao_dos_lancadores`).
+    """
+    pasta = proc / str(pid)
+    return _uid_real(pasta) == os.getuid() and do_meu_lar(_lar_do_processo(pasta), lar)
+
+
+def steam_deste_lar(proc: Path = PROC, lar: Path | None = None) -> list[ProcessoDaSteam]:
+    """Os processos da Steam do `HOME` de quem pergunta."""
+    return [x for x in processos_da_steam(proc) if do_meu_lar(x.lar, lar)]
+
+
+def steam_running() -> bool:
+    """A Steam DESTE lar está aberta? O cliente, ou o webhelper que ele pôs de pé.
+
+    É A PERGUNTA SÓ, e todos a fazem: o `stop_steam`, o `with_steam_closed`, o
+    `reopen_steam`, o «abrir ou focar» e o «Reiniciar o serviço». O
+    `disable_steam_input.sh` tem a dele, em shell.
+    """
+    return bool(steam_deste_lar())
 
 
 #: Agulha que identifica a cmdline de launch da Steam. `reaper SteamLaunch
@@ -1486,41 +1613,53 @@ def start_steam_game(appid: int) -> bool:
     return False
 
 
-def stop_steam() -> bool:
-    """Fecha a Steam (steam -shutdown, espera até 30 s). True = fechada."""
-    if not steam_running():
+def stop_steam(
+    *,
+    proc: Path = PROC,
+    lar: Path | None = None,
+    dormir: Callable[[float], None] = time.sleep,
+    sinalizar: Callable[[int, int], None] = os.kill,
+    abrir: Callable[..., Any] = subprocess.Popen,
+) -> bool:
+    """Fecha a Steam DESTE lar. True = nenhum processo dela de pé.
+
+    `steam -shutdown` com o ambiente de quem pede (é a Steam deste `HOME` que o
+    recebe), até 30 s de espera, e o fallback por PID CONFERIDO: o sinal vai
+    a cada processo da Steam deste lar, relido na hora e com a mesma hora de
+    nascimento. A Steam de outro lar não se toca, e então ela «está fechada»
+    para quem pergunta. Os parâmetros são as costuras da régua.
+    """
+    def de_pe() -> list[ProcessoDaSteam]:
+        return steam_deste_lar(proc, lar)
+
+    if not de_pe():
         return True
     if shutil.which("steam") is not None:
         # O mesmo ambiente das outras chamadas à Steam: toda chamada a ela sai
         # deste módulo sem o interpretador de quem chamou, e a régua de
         # AMBIENTE-DO-JOGO-01 cobra isso de cada `Popen` do arquivo.
-        subprocess.Popen(
+        abrir(
             ["steam", "-shutdown"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             env=ambiente_limpo(os.environ),
         )
         for _ in range(15):
-            time.sleep(2)
-            if not steam_running():
+            dormir(2)
+            if not de_pe():
                 break
-    if steam_running():
-        # Fallback do precedente: TERM/KILL nos processos do runtime. O
-        # webhelper por nome EXATO (-x), nunca -f (earlyoom cita o nome).
-        for sig in ("-TERM", "-KILL"):
-            subprocess.run(
-                ["pkill", sig, "-f", "steamrt64/steam"],
-                capture_output=True, check=False,
-            )
-            subprocess.run(
-                ["pkill", sig, "-x", "steamwebhelper"],
-                capture_output=True, check=False,
-            )
-            time.sleep(3)
-            if not steam_running():
+    if de_pe():
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            for alvo in de_pe():
+                if _inicio(proc / str(alvo.pid)) != alvo.inicio:
+                    continue
+                with contextlib.suppress(ProcessLookupError, PermissionError):
+                    sinalizar(alvo.pid, sig)
+            dormir(3)
+            if not de_pe():
                 break
-    time.sleep(2)  # margem para a Steam terminar de gravar o vdf
-    return not steam_running()
+    dormir(2)  # margem para a Steam terminar de gravar o vdf
+    return not de_pe()
 
 
 def reopen_steam() -> bool:
@@ -1549,6 +1688,10 @@ def reopen_steam() -> bool:
     `fora_do_servico.abrir` — de dentro de um serviço (a bandeja do autostart
     é um), numa unidade própria; do terminal ou do painel, pelo `Popen`.
     """
+    if steam_running():
+        # A STEAM DESTE LAR JÁ ESTÁ DE PÉ (01/10/2026): o cliente voltou sozinho,
+        # ou nunca fechou. Um segundo `steam` só repassaria o comando a ela.
+        return True
     for cmd in (["steam"], ["xdg-open", "steam://open/main"]):
         if shutil.which(cmd[0]) is None:
             continue

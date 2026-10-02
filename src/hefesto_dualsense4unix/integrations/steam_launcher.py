@@ -5,8 +5,13 @@ Contrato:
   - Se o binário `steam` não existir no PATH, loga warning uma vez e retorna
     imediatamente nas chamadas subsequentes ate que o processo do daemon
     seja reiniciado. Evita poluir log com tentativas repetidas.
-  - Se `pgrep -x steam` localiza PID, usa `wmctrl -lx` para achar a janela
-    com WM_CLASS casando `steam.Steam` e chama `wmctrl -ia <id>`.
+  - Se `pgrep -x steam` localiza o cliente e ele é DESTE lar, usa `wmctrl -lx`
+    para achar a janela com WM_CLASS casando `steam.Steam` e chama `wmctrl
+    -ia <id>`; sem janela (a Steam na bandeja) ou sem `wmctrl`, o `steam`
+    repassa o pedido à Steam deste lar, que se mostra.
+  - Se a Steam de pé é de OUTRO lar (outro `HOME`: a suíte, o `sudo`), nada
+    se abre: um segundo `steam` por cima dela disputaria o barramento da
+    sessão com a dela (medido em 29/09, 17 trocas do serviço em 33 s).
   - Se o processo não esta rodando, abre `steam` por `fora_do_servico.abrir`
     (STEAM-FORA-DO-SERVICO-01): de dentro do serviço do daemon, numa unidade
     própria do gerenciador de usuário (nice 0, oom do gerenciador, e viva
@@ -60,10 +65,22 @@ def _warn_steam_missing_once() -> None:
     logger.warning("steam_binary_not_found", hint="instalar steam ou configurar PATH")
 
 
+def _steam_de_outro_lar() -> bool:
+    """A Steam de pé é toda de outro `HOME`? Quem responde é o dono da pergunta
+    (`steam_launch_options`, pelo `/proc`). Nenhuma lida = não se sabe = não."""
+    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+
+    todas = slo.processos_da_steam()
+    return bool(todas) and not any(slo.do_meu_lar(x.lar) for x in todas)
+
+
 def _steam_running(
     pgrep_runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
 ) -> bool:
-    """Retorna True se `pgrep -x steam` achar processo. Nunca levanta."""
+    """Há um cliente da Steam (`pgrep -x steam`) de pé? Nunca levanta.
+
+    Diz SE há; DE QUEM é, pergunta-se depois (:func:`_steam_de_outro_lar`).
+    """
     runner = pgrep_runner or _default_pgrep
     try:
         proc = runner([PGREP_BINARY, "-x", STEAM_BINARY])
@@ -207,6 +224,13 @@ def open_or_focus_steam(
 
     try:
         if _steam_running(pgrep_runner=pgrep_runner):
+            # A STEAM DE OUTRO LAR NÃO É ABERTA NEM FOCADA (01/10/2026,
+            # A-STEAM-SO-SE-DA-POR-FECHADA-QUANDO-FECHOU-01): um `steam` com
+            # este `HOME` por cima dela nasce como segunda Steam. Com o
+            # `pgrep_runner` da régua, o lar não entra na conta.
+            if pgrep_runner is None and _steam_de_outro_lar():
+                logger.info("ps_button_action_steam", outcome="steam_de_outro_lar")
+                return False
             focused = _focus_steam_window(wmctrl_runner=wmctrl_runner)
             if focused:
                 logger.info("ps_button_action_steam", outcome="focused")

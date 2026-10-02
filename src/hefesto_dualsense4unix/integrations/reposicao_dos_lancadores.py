@@ -160,7 +160,15 @@ def pids_de(lancador: Lancador) -> list[int]:
     # nenhuma das duas perguntas pode devolvê-lo, e a terceira que puder tem de
     # esbarrar aqui antes de chegar ao `os.kill`.
     achados.discard(os.getpid())
-    return sorted(achados)
+    # SÓ O LANÇADOR DESTE LAR — 01/10/2026,
+    # A-STEAM-SO-SE-DA-POR-FECHADA-QUANDO-FECHOU-01. O `pgrep -x` casa o nome
+    # em qualquer `HOME` e de qualquer usuário: com o `HOME` trocado (a suíte,
+    # o `sudo`) a foto via o lançador DELA, o fechar mirava a Steam dela, e o
+    # reabrir punha uma segunda por cima. O processo de outro lar não está
+    # «aberto» para quem pergunta, e não leva sinal.
+    from hefesto_dualsense4unix.integrations.steam_launch_options import e_deste_lar
+
+    return sorted(pid for pid in achados if e_deste_lar(pid))
 
 
 def esta_aberto(lancador: Lancador) -> bool:
