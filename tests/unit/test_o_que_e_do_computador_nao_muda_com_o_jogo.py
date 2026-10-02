@@ -476,17 +476,21 @@ LEITORES_DO_QUE_E_DO_JOGO: dict[tuple[str, str], str] = {
     ("daemon/connection.py", "perfil_que_o_boot_restaura"):
         "o boot lê só o `match` e o `mode`, que são do jogo",
     ("profiles/manager.py", "get"): "o perfil cru, para quem edita",
+    ("cli/cmd_profile.py", "cmd_show"): "mostra o arquivo cru, que é o que se edita",
 }
 
 
 def test_todo_leitor_le_a_vista() -> None:
-    """Todo `load_profile(` do daemon e do gerente: escritor, leitor do jogo, ou a vista.
+    """Todo `load_profile(` do daemon, do gerente e da CLI: escritor, leitor do jogo, ou a vista.
 
     Um escritor só conta se a MESMA função chama `save_profile(` — a lista não
-    se mede contra ela mesma.
+    se mede contra ela mesma. A CLI entrou na conferência final de 02/10/2026:
+    o `profile activate` com o daemon fora aplica pelo `ProfileManager.apply`, e
+    aplicava o perfil cru.
 
     MORDIDA: devolver o `load_profile` cru ao `gamepad._motores_do_perfil_ativo`
-    (sem o `o_que_vale`) deixa um leitor sem classe.
+    (sem o `o_que_vale`) deixa um leitor sem classe; o mesmo com o
+    `manager.apply(profile)` cru do `cmd_profile.cmd_activate`.
     """
     import ast
     from pathlib import Path
@@ -494,7 +498,8 @@ def test_todo_leitor_le_a_vista() -> None:
     import hefesto_dualsense4unix
 
     raiz = Path(hefesto_dualsense4unix.__file__).parent
-    arquivos = [*sorted((raiz / "daemon").rglob("*.py")), raiz / "profiles" / "manager.py"]
+    arquivos = [*sorted((raiz / "daemon").rglob("*.py")), raiz / "profiles" / "manager.py",
+                raiz / "cli" / "cmd_profile.py"]
     sem_classe: list[str] = []
     vistos: set[tuple[str, str]] = set()
     for arquivo in arquivos:

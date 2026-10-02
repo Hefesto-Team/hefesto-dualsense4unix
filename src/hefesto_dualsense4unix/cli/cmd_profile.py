@@ -142,11 +142,15 @@ def cmd_activate(name: str) -> None:
     try:
         from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
         from hefesto_dualsense4unix.profiles.manager import ProfileManager
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
 
         controller = PyDualSenseController()
         controller.connect()
         manager = ProfileManager(controller=controller)
-        manager.apply(profile)
+        # A VISTA, como a ativação do daemon (O-QUE-E-DO-COMPUTADOR-NAO-MUDA-
+        # COM-O-JOGO-01): sem ela, o fallback acendia a luz e a vibração de
+        # fábrica no lugar das do computador.
+        manager.apply(o_que_vale(profile))
         controller.disconnect()
         console.print(f"[green]perfil aplicado no controle: {name}[/green]")
     except Exception as exc:
