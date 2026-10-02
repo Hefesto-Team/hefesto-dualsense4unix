@@ -335,18 +335,22 @@ def _resolvido(caminho: str | Path) -> Path | None:
 
 
 def _o_censo_do_heroic(casa: Path) -> BibliotecaDoLancador | None:
-    """A biblioteca que o censo lê nesta casa do Heroic; ``None`` = não leu.
-
-    Não leu: o censo levantou, voltou com erro, ou sem jogo nenhum (a casa
-    sem biblioteca). Quem pergunta trata o ``None`` como «não sei».
-    """
+    """A biblioteca que o censo lê nesta casa do Heroic; ``None`` = o censo levantou."""
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
     try:
-        biblioteca = censo._heroic(casa)
+        return censo._heroic(casa)
     except Exception:
         return None
-    return biblioteca if biblioteca.jogos and not biblioteca.erros else None
+
+
+def _responde_pelo_instalado(biblioteca: BibliotecaDoLancador | None) -> bool:
+    """O censo leu jogo e voltou sem erro: só então ele TIRA morador.
+
+    O censo com erro ainda SOMA, na terceira fonte, como sempre somou: a
+    sprint prometeu, sem o censo, o comportamento de antes (02/10/2026).
+    """
+    return biblioteca is not None and bool(biblioteca.jogos) and not biblioteca.erros
 
 
 def _moradores(prefixo: Path, casa: Path) -> set[str]:
@@ -377,8 +381,9 @@ def _moradores_e_o_censo(prefixo: Path, casa: Path) -> tuple[set[str], bool]:
     fica dividido. Sem o censo, nada sai, e o diário diz ``sem_censo=1``.
     """
     biblioteca = _o_censo_do_heroic(casa)
+    leu = _responde_pelo_instalado(biblioteca)
     desinstalados = ({j.chave for j in biblioteca.jogos if not j.instalado}
-                     if biblioteca is not None else set())
+                     if leu and biblioteca is not None else set())
     fora: set[str] = set()
     try:
         anotados = json.loads((prefixo / _MORADORES_DO_HEROIC).read_text(encoding="utf-8"))
@@ -413,7 +418,7 @@ def _moradores_e_o_censo(prefixo: Path, casa: Path) -> tuple[set[str], bool]:
     if e_o_global and biblioteca is not None:
         fora.update(j.chave for j in biblioteca.jogos
                     if j.instalado and j.chave not in com_copia)
-    return fora - desinstalados, biblioteca is not None
+    return fora - desinstalados, leu
 
 
 def prefixos_excluidos(config_home: Path | None = None) -> frozenset[Path]:

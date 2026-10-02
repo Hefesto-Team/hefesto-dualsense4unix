@@ -476,6 +476,55 @@ def test_sem_o_censo_nada_sai_e_o_diario_diz(_lar: Path) -> None:
     assert linhas and linhas[0].get("sem_censo") == 1, diario
 
 
+def test_a_loja_sem_conta_nao_desliga_o_censo(
+        _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A loja em que ela nunca entrou não é biblioteca torta.
+
+    O Heroic 2.22.3 grava `{}` na biblioteca da loja sem conta: lido no disco
+    dela em 02/10/2026, só leitura, o `nile_library.json` (Amazon) é `{}`. O
+    censo dizia «não traz `library` como lista», a lista de exclusão lia isso
+    como «censo com erro», e a cura do morador que saiu do disco não valia em
+    máquina nenhuma com uma loja sem conta — a dela inclusive.
+
+    MORDIDA: o `{}` volta a ser erro no `censo_dos_lancadores._heroic` — o
+    prefixo segue dividido por B, que saiu do disco, e A, excluído, fica com o
+    device KS.
+    """
+    dividido, casa = _dividido_com_b_fora_do_disco(_lar)
+    (casa / "store_cache" / "nile_library.json").write_text("{}")
+    assert censo._heroic(casa).erros == [], "a loja sem conta virou erro do censo"
+    assert lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar) == "adicionado"
+    assert lx.prefixos_excluidos() == frozenset({dividido.resolve()}), (
+        "com a Amazon sem conta, B (fora do disco) seguiu morando no prefixo de A")
+    assert not _o_ks_no(dividido, monkeypatch), "a carona do KS escreveu no prefixo de A"
+
+
+def test_com_o_censo_torto_o_prefixo_global_segue_somando_quem_esta_instalado(
+        _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Com a biblioteca de uma loja torta, «nada sai» — e o que entrava continua entrando.
+
+    O jogo instalado sem cópia própria mora no prefixo global, e quem o diz é o
+    censo (`_moradores`, a terceira fonte, desde antes desta sprint). A sprint
+    prometeu, para o censo com erro, «o comportamento de hoje»; a primeira
+    versão parou de somar esse morador quando qualquer loja voltava com erro, e
+    o prefixo global saía do device KS com C, que ela não excluiu, dentro.
+
+    MORDIDA: a terceira fonte só com o censo sem erro — C deixa de morar, o
+    prefixo sai, e C perde a háptica.
+    """
+    global_ = _prefixo(_lar / "Games/Heroic/Prefixes/default")
+    casa = _heroic(_lar, {"A": {"winePrefix": str(global_)}, "C": {}})
+    dado = json.loads((casa / "config.json").read_text())
+    dado["defaultSettings"]["winePrefix"] = str(global_)
+    (casa / "config.json").write_text(json.dumps(dado))
+    (casa / "store_cache" / "gog_library.json").write_text(json.dumps({"games": "torto"}))
+    assert censo._heroic(casa).erros, "a régua precisa do censo com erro"
+    assert lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar) == "adicionado"
+    assert lx.prefixos_excluidos() == frozenset(), (
+        "C, instalado e sem cópia, deixou de morar no prefixo global")
+    assert _o_ks_no(global_, monkeypatch), "C, que ela não excluiu, perdeu o device KS"
+
+
 # ---------------------------------------------------------------------------
 # 5 · O nome não basta
 # ---------------------------------------------------------------------------

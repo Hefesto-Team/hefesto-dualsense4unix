@@ -364,6 +364,11 @@ def _heroic(pasta: Path) -> BibliotecaDoLancador:
         dado = _json(cache / f"{arq}_library.json")
         if dado is None:
             continue
+        # A LOJA SEM CONTA NÃO É BIBLIOTECA TORTA (02/10/2026): o Heroic grava
+        # `{}` na biblioteca da loja em que ninguém entrou (o `nile_library.json`
+        # dela, lido só para leitura). Torta é a chave que vem e não é lista.
+        if isinstance(dado, dict) and campo not in dado:
+            continue
         itens = dado.get(campo) if isinstance(dado, dict) else None
         if not isinstance(itens, list):
             erros.append(f"{arq}_library.json não traz `{campo}` como lista")
