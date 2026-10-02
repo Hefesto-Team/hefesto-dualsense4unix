@@ -1,7 +1,8 @@
 """O «Conectar» abre inteiro toda vez — O-CONECTAR-ABRE-INTEIRO-TODA-VEZ-01.
 
-A queixa dela, de 30/09/2026: *«lista do painel que nao atualizava»* — e só
-fechar e abrir o painel do «+ Conectar» a trazia de volta. Medido na bancada: o
+A queixa dela, de 30/09/2026:
+*«lista do painel que nao atualizava»* <!-- noqa-acento: citação literal dela -->
+— e só fechar e abrir o painel do «+ Conectar» a trazia de volta. Medido na bancada: o
 molde do «Conectar» mudava a cada leitura do BlueZ (3 s), porque o sinal de
 quem está perto mora nele, e o painel aberto se esvaziava e se enchia de novo;
 a lista se reordenava pelo sinal; a varredura e a busca refaziam a sala
