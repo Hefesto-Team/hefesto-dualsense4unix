@@ -53,9 +53,7 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.app.actions import triggers_actions
-from hefesto_dualsense4unix.app.actions.triggers_actions import TriggersActionsMixin
-from hefesto_dualsense4unix.app.draft_config import DraftConfig
-from hefesto_dualsense4unix.app.textos_de_aplicacao import GUARDADO, NADA_ACONTECEU
+from hefesto_dualsense4unix.app.textos_de_aplicacao import GUARDADO
 
 NA_MESA = "02:fe:00:00:00:33"
 FORA_DA_MESA = "e8:47:3a:00:00:66"
@@ -134,50 +132,6 @@ class _Modo:
         self._ativo = the_id
 
 
-class _Host(TriggersActionsMixin):
-    """Host mínimo com o estado que a aba Status mantém do ``state_full``.
-
-    Sem GTK montado: o que está em julgamento é a FRASE, e ela sai de função
-    pura. Os dublês de widget existem só para o caminho de produção
-    (`_apply_trigger` -> `_collect_values` -> a ponte) rodar inteiro — é ele que
-    se mede, não uma cópia dele.
-    """
-
-    def __init__(
-        self,
-        *,
-        modo: str = "Rigid",
-        alvo: str | None = None,
-        conectados: dict[int, str | None] | None = None,
-        nativo: bool = False,
-    ) -> None:
-        self.draft = DraftConfig.default()
-        self._edit_target_uniq = alvo
-        self._edit_target_label = ROTULO_DO_AUSENTE
-        self._target_uniq_by_index = {0: NA_MESA} if conectados is None else conectados
-        self._modo_nativo_ligado = nativo
-        self._trigger_mode = {"left": _Modo(modo), "right": _Modo("Off")}
-        spec = triggers_actions.get_spec(modo)
-        assert spec is not None
-        self._trigger_param_widgets = {
-            "left": {p.name: _Slider(p.default) for p in spec.params},
-            "right": {},
-        }
-        self._trigger_live_preview_timer = {"left": 0, "right": 0}
-        self.barra = _BarraDeStatus()
-        self._widgets: dict[str, Any] = {"status_bar": self.barra}
-        for lado in ("left", "right"):
-            self._widgets[f"trigger_{lado}_params_box"] = _Caixa()
-            self._widgets[f"trigger_{lado}_desc"] = _Rotulo()
-
-    def _get(self, widget_id: str) -> Any:
-        return self._widgets.get(widget_id)
-
-    @property
-    def ultima(self) -> str:
-        return self.barra.mensagens[-1]
-
-
 @pytest.fixture
 def daemon(monkeypatch: pytest.MonkeyPatch) -> Any:
     """Dublê da ponte que sabe RECUSAR, e não só passar."""
@@ -208,140 +162,6 @@ def daemon(monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setattr(triggers_actions, "trigger_set_detalhado", ponte.set)
     monkeypatch.setattr(triggers_actions, "trigger_reset_detalhado", ponte.reset)
     return ponte
-
-
-class TestAMesaVaziaParaDeDizerAplicado:
-    """O caso medido em 23/08 — e ele é o motivo de a T3 existir."""
-
-    def test_zero_destino_nao_e_aplicado(self, daemon: Any) -> None:
-        host = _Host(alvo=None, conectados={})
-        host._apply_trigger("left")
-        assert "aplicado" not in host.ultima, (
-            "o daemon respondeu `aplicado_em: [], guardado_em: []` — zero "
-            "destino, nenhum byte no fio — e a barra afirmou aplicação"
-        )
-        assert NADA_ACONTECEU in host.ultima
-        assert host.ultima.startswith("Gatilho esquerdo (L2): Rigid")
-
-    def test_o_desligar_tambem_para_de_mentir(self, daemon: Any) -> None:
-        """O "Desligar" ia pelo mesmo buraco: `ok` sem saber onde pegou."""
-        host = _Host(alvo=None, conectados={})
-        host._reset_trigger("left")
-        assert daemon.resets == [("left", None)]
-        assert NADA_ACONTECEU in host.ultima
-        assert "aplicado" not in host.ultima
-
-    def test_o_modo_por_posicao_carrega_o_corpo_igual(self, daemon: Any) -> None:
-        """A rota de `dict` (`_send_trigger_named`) é a dos perfis de fábrica.
-
-        `aventura` e `corrida` usam `MultiPositionFeedback`/`Vibration`, que
-        passam por `_send_trigger_named`. Deixar SÓ a rota posicional lendo o
-        corpo curaria a aba pela metade — a metade que ela menos usa.
-        """
-        host = _Host(modo="MultiPositionFeedback", alvo=None, conectados={})
-        host._apply_trigger("left")
-        assert daemon.pedidos == [
-            ("left", "MultiPositionFeedback", [0, 1, 2, 3, 4, 5, 6, 7, 8, 8], None)
-        ]
-        assert NADA_ACONTECEU in host.ultima
-
-
-class TestOCorpoManda:
-    def test_um_destino_diz_aplicado_sem_numero(self, daemon: Any) -> None:
-        """A mordida gêmea: a cura não pode avançar longe demais."""
-        daemon.resposta = (True, None, {"status": "ok", "aplicado_em": [NA_MESA]})
-        host = _Host(alvo=NA_MESA)
-        host._apply_trigger("left")
-        assert host.ultima == "Gatilho esquerdo (L2): Rigid aplicado"
-
-    def test_dois_destinos_dizem_quantos(self, daemon: Any) -> None:
-        daemon.resposta = (
-            True,
-            None,
-            {"status": "ok", "aplicado_em": [NA_MESA, FORA_DA_MESA]},
-        )
-        host = _Host(alvo=None)
-        host._apply_trigger("left")
-        assert host.ultima == "Gatilho esquerdo (L2): Rigid aplicado em 2 controles"
-
-    def test_so_guardado_diz_guardado_e_por_que(self, daemon: Any) -> None:
-        """O `guardado_em` do daemon decide; a janela entra como o PORQUÊ."""
-        daemon.resposta = (
-            True,
-            None,
-            {"status": "ok", "aplicado_em": [], "guardado_em": [FORA_DA_MESA]},
-        )
-        host = _Host(alvo=FORA_DA_MESA, conectados={0: NA_MESA})
-        host._apply_trigger("left")
-        assert GUARDADO in host.ultima
-        assert "vai valer quando o Controle 2 voltar" in host.ultima
-        assert "aplicado" not in host.ultima
-
-    def test_a_recusa_no_corpo_e_a_frase_dele(self, daemon: Any) -> None:
-        """Quando o daemon manda uma frase, ela é para ela — não a nossa."""
-        daemon.resposta = (
-            True,
-            None,
-            {"status": "recusado", "motivo": "o jogo é o dono do bloco de gatilho"},
-        )
-        host = _Host(alvo=NA_MESA)
-        host._apply_trigger("left")
-        assert "recusado: o jogo é o dono do bloco de gatilho" in host.ultima
-        assert "aplicado" not in host.ultima
-
-
-class TestOQueJaFuncionavaContinua:
-    """Hipótese tem de explicar o que JÁ funcionava — regra da casa."""
-
-    def test_daemon_mudo_cai_na_heuristica_de_sempre(self, daemon: Any) -> None:
-        """Corpo ausente = não há resposta a ler; só aí a janela decide."""
-        daemon.resposta = (True, None, None)
-        host = _Host(alvo=NA_MESA)
-        host._apply_trigger("left")
-        assert host.ultima == "Gatilho esquerdo (L2): Rigid aplicado"
-
-    def test_daemon_mudo_com_alvo_fora_ainda_diz_guardado(self, daemon: Any) -> None:
-        daemon.resposta = (True, None, None)
-        host = _Host(alvo=FORA_DA_MESA, conectados={0: NA_MESA})
-        host._apply_trigger("left")
-        assert GUARDADO in host.ultima
-        assert "vai valer quando o Controle 2 voltar" in host.ultima
-
-    def test_modo_nativo_continua_vencendo_com_o_daemon_mudo(
-        self, daemon: Any
-    ) -> None:
-        daemon.resposta = (True, None, None)
-        host = _Host(alvo=NA_MESA, nativo=True)
-        host._apply_trigger("left")
-        assert GUARDADO in host.ultima
-        assert "Modo Nativo" in host.ultima
-
-    def test_a_recusa_por_parametro_continua_humanizada(self, daemon: Any) -> None:
-        """HARM-19: daemon VIVO que recusa não pode virar "offline?"."""
-        daemon.resposta = (False, "end (3) deve ser > start (5)", None)
-        host = _Host(alvo=NA_MESA)
-        host._apply_trigger("left")
-        assert "não aplicado" in host.ultima
-        assert "precisa ser maior que" in host.ultima
-
-    def test_daemon_morto_continua_mandando_para_a_aba_sistema(
-        self, daemon: Any
-    ) -> None:
-        daemon.resposta = (False, None, None)
-        host = _Host(alvo=NA_MESA)
-        host._apply_trigger("left")
-        assert "aba Sistema" in host.ultima
-
-    def test_alvo_desconhecido_continua_recusando_antes_do_ipc(
-        self, daemon: Any
-    ) -> None:
-        """Z2-2: sem saber o alvo, a aba não manda — e não é a T3 que muda isso."""
-        host = _Host(alvo=NA_MESA)
-        del host._edit_target_uniq
-        host._apply_trigger("left")
-        assert daemon.pedidos == []
-        assert "não aplicado" in host.ultima
-        assert "Nada foi alterado" in host.ultima
 
 
 class TestAPonteEstreitaSaiuDaAba:

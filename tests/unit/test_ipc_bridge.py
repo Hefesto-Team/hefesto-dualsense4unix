@@ -201,15 +201,6 @@ class TestApplyDraftDetalhado:
         with patch.object(ipc_bridge, "_run_call", return_value="ok"):
             assert ipc_bridge.apply_draft_detalhado({"leds": {}}) is None
 
-    def test_aplicacao_confirmada_e_o_dono_unico_da_regra_r18(self):
-        """A mesma leitura do payload para os dois caminhos — sem ``failed``"""
-        confirmada = ipc_bridge.aplicacao_confirmada
-        assert confirmada({"status": "ok", "applied": ["leds"]}) is True
-        assert confirmada({"status": "ok", "applied": []}) is False
-        assert confirmada({"status": "ok"}) is True
-        assert confirmada({"status": "erro", "applied": ["leds"]}) is False
-        assert confirmada(None) is False
-        assert confirmada(True) is False
 
     def test_daemon_state_full_offline_none(self):
         with patch.object(ipc_bridge, "_run_call", side_effect=self.OFFLINE_EXC):
@@ -350,7 +341,7 @@ _QUEM_FICOU_NO_LUGAR: dict[str, str] = {
 _SEM_TRAVESSIA_DECLARADA: dict[str, str] = {
     "alvo_honrado": (
         "MIC-DA-MESA-CHEIA-01: lê o `por_uniq` do daemon. Lápide em "
-        "`_SEM_CAMINHO_HOJE`; fecha em app/widgets/controller_card.py, e o "
+        "`_SEM_CAMINHO_HOJE`; fecha em interface/cartao_do_controle.py, e o "
         "estado novo de tela que ela pede é DESENHO — a palavra é dela."
     ),
     "led_set": (

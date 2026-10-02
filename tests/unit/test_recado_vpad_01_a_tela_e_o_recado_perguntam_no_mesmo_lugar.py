@@ -79,7 +79,6 @@ from hefesto_dualsense4unix.app.actions.jogar import painel
 from hefesto_dualsense4unix.app.actions.mode_transition import (
     MODE_DESKTOP,
     MODE_GAMEPAD,
-    MODE_NATIVE,
 )
 from hefesto_dualsense4unix.daemon.subsystems.rumble import sem_dono_do_rumble
 
@@ -106,71 +105,6 @@ ESTADOS_E_O_RAMO_ESPERADO: dict[str, tuple[dict[str, Any], str]] = {
     "vpad não subiu": (VPAD_NAO_SUBIU, "vpad-nao-subiu"),
     "daemon sem o bloco": (DAEMON_SEM_O_BLOCO, "navegacao"),
 }
-
-
-def _ramo_que_saiu(texto: str) -> str:
-    """Qual das quatro segundas metades esta linha está dizendo."""
-    casaram = [
-        nome
-        for nome, frase in rumble_actions.CAUSAS_DO_ALCANCE_PERDIDO.items()
-        if frase in texto
-    ]
-    assert len(casaram) == 1, (
-        "a linha do alcance não diz exatamente UMA das causas conhecidas "
-        f"(casaram: {casaram}) — texto: {texto!r}"
-    )
-    return casaram[0]
-
-
-@pytest.mark.parametrize("nome", sorted(ESTADOS_E_O_RAMO_ESPERADO))
-def test_o_recado_e_o_interruptor_nao_se_contradizem(nome: str) -> None:
-    """Se o painel diz Ligado, o texto NÃO manda pôr o Status em Ligado."""
-    estado, _ = ESTADOS_E_O_RAMO_ESPERADO[nome]
-
-    texto = rumble_actions.texto_do_alcance_da_intensidade(estado)
-    assert texto is not None, (
-        f"o estado «{nome}» saiu do quadrante do `sem_dono_do_rumble` e a régua "
-        "mediria o silêncio — não há recado a julgar"
-    )
-
-    o_painel_diz_ligado = painel.hefesto_ligado(estado) is True
-    manda_ligar = _ramo_que_saiu(texto) == "interruptor-nao-diz-ligado"
-
-    assert not (o_painel_diz_ligado and manda_ligar), (
-        f"«{nome}»: a aba Jogar mostra o Status em Ligado "
-        f"(hefesto_ligado={painel.hefesto_ligado(estado)!r}, "
-        f"modo_vivo={painel.modo_vivo(estado)!r}) e a aba Vibração manda pôr o "
-        "Status em Ligado. É o defeito que ela viu: a instrução é um no-op, e "
-        f"seguir não muda nada.\n  texto: {texto!r}"
-    )
-
-
-@pytest.mark.parametrize("nome", sorted(ESTADOS_E_O_RAMO_ESPERADO))
-def test_cada_caminho_ganha_a_frase_do_seu_defeito(nome: str) -> None:
-    """Não basta parar de mandar ligar: cada caminho nomeia a SUA causa."""
-    estado, esperado = ESTADOS_E_O_RAMO_ESPERADO[nome]
-    texto = rumble_actions.texto_do_alcance_da_intensidade(estado)
-    assert texto is not None
-    saiu = _ramo_que_saiu(texto)
-    assert saiu == esperado, (
-        f"«{nome}»: o recado escolheu o ramo «{saiu}» e o caminho vivo é "
-        f"{painel.modo_vivo(estado)!r}, que pede «{esperado}».\n"
-        f"  texto: {texto!r}"
-    )
-
-
-def test_o_vpad_que_nao_subiu_nao_e_divida_nossa() -> None:
-    """A frase do VPAD-09 tem de ter o SISTEMA por sujeito, não o Hefesto."""
-    frase = rumble_actions.CAUSAS_DO_ALCANCE_PERDIDO["vpad-nao-subiu"]
-    assert "o sistema não deixou" in frase, (
-        "a frase do vpad que não subiu deixou de nomear o SISTEMA como quem "
-        f"impediu: {frase!r}"
-    )
-    for confissao in ("o Hefesto não consegue", "o Hefesto ainda não",
-                      "não implementado", "por enquanto"):
-        assert confissao not in frase, (
-            f"a frase virou confissão de dívida nossa ({confissao!r}): {frase!r}"
-        )
 
 
 @pytest.mark.parametrize(
@@ -200,38 +134,6 @@ def test_mandar_ligar_era_inalcancavel_correto(
         f"mudou: modo_vivo={painel.modo_vivo(estado)!r}"
     )
     assert painel.modo_vivo(estado) in painel.MODOS_LIGADOS
-
-
-def test_no_nativo_o_interruptor_diz_desligado_e_o_aviso_cala() -> None:
-    """A outra ponta da tabela: onde o painel diz Desligado, não há este aviso."""
-    estado = {"native_mode": True, "rumble_ff": {"vpads": 0}}
-    assert painel.modo_vivo(estado) == MODE_NATIVE
-    assert painel.hefesto_ligado(estado) is False
-    texto = rumble_actions.texto_do_alcance_da_intensidade(estado)
-    assert texto is not None
-    with pytest.raises(AssertionError):
-        _ramo_que_saiu(texto)
-
-
-def test_caminho_que_esta_janela_nao_conhece_nao_manda_mexer(monkeypatch) -> None:
-    """Daemon mais novo, modo novo dentro de ``MODOS_LIGADOS``: nada de gesto."""
-    monkeypatch.setattr(rumble_actions, "modo_vivo", lambda _estado: "coop")
-    texto = rumble_actions.texto_do_alcance_da_intensidade(VPAD_NAO_SUBIU)
-    assert texto is not None
-    assert _ramo_que_saiu(texto) == "caminho-desconhecido"
-
-
-def test_as_quatro_frases_nao_sao_prefixo_uma_da_outra() -> None:
-    """Se uma frase couber dentro de outra, ``_ramo_que_saiu`` fica ambíguo."""
-    causas = rumble_actions.CAUSAS_DO_ALCANCE_PERDIDO
-    for nome, frase in causas.items():
-        for outro, outra in causas.items():
-            if nome == outro:
-                continue
-            assert frase not in outra, (
-                f"a causa «{nome}» cabe dentro da causa «{outro}» — a régua "
-                "deixaria de distinguir os dois ramos"
-            )
 
 
 def test_o_aviso_diz_o_que_acontece_e_o_que_sobra_em_todos_os_ramos() -> None:

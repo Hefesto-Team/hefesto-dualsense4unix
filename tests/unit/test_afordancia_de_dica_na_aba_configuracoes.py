@@ -62,7 +62,7 @@ import pytest
 _gi = pytest.importorskip("gi", reason="precisa de PyGObject")
 _gi.require_version("Gtk", "3.0")
 _gi.require_version("Gdk", "3.0")
-from gi.repository import Gdk, Gtk
+from gi.repository import Gtk
 
 from tests.unit.aba_config_sem_a_janela import aba_config_montada
 from hefesto_dualsense4unix.app.actions.config.moldura import (
@@ -70,7 +70,6 @@ from hefesto_dualsense4unix.app.actions.config.moldura import (
     CLASSE_TEM_DICA,
 )
 from hefesto_dualsense4unix.app.actions.config.secoes import SECOES_DA_ABA
-from hefesto_dualsense4unix.app.constants import GUI_DIR
 
 NUNCA_MENOS_QUE = 12
 
@@ -83,21 +82,6 @@ def _gtk_pronto() -> bool:
 
 
 pytestmark = pytest.mark.skipif(not _gtk_pronto(), reason="sem GTK/display utilizável")
-
-
-@pytest.fixture(scope="module")
-def _folha_na_tela() -> Iterator[None]:
-    """A `theme.css` de verdade, aplicada pela tela, e desfeita no fim."""
-    tela = Gdk.Screen.get_default()
-    provider = Gtk.CssProvider()
-    provider.load_from_data((GUI_DIR / "theme.css").read_bytes())
-    if tela is not None:
-        Gtk.StyleContext.add_provider_for_screen(
-            tela, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        )
-    yield
-    if tela is not None:
-        Gtk.StyleContext.remove_provider_for_screen(tela, provider)
 
 
 def _descer(widget: Any) -> Iterator[Any]:

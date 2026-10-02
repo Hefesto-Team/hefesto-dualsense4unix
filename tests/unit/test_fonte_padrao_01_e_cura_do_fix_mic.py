@@ -819,10 +819,3 @@ class TestInstallChamaAsFontes:
             "# 4e. Fontes da identidade visual"
         ) < TEXTO_INSTALL.index("# 5. Symlink")
 
-    def test_o_theme_css_ainda_pede_as_duas_familias(self) -> None:
-        """Se um dia o CSS parar de pedir, este passo perde o motivo — e o"""
-        css = (
-            RAIZ / "src" / "hefesto_dualsense4unix" / "gui" / "theme.css"
-        ).read_text(encoding="utf-8")
-        assert "Space Grotesk" in css
-        assert "JetBrains Mono" in css

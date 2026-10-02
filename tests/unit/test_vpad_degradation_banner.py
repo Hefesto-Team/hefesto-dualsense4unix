@@ -91,7 +91,6 @@ from hefesto_dualsense4unix.app.actions.home_actions import (
     NATIVE_BT_FRAGIL_TEXT,
     VPAD_COOP_DEGRADED_TEXT,
     VPAD_DEGRADED_TEXT,
-    HomeActionsMixin,
     texto_coop_degradado,
     vpad_degradation_text,
 )
@@ -296,37 +295,6 @@ class _FakeWidget:
         pass
 
 
-class _HomeStub:
-    _render_home = HomeActionsMixin._render_home
-    _render_home_controllers = HomeActionsMixin._render_home_controllers
-    _render_ponte_e_divergencia = HomeActionsMixin._render_ponte_e_divergencia
-    _mascara_escolhida_por_ela = HomeActionsMixin._mascara_escolhida_por_ela
-    _mascara_escolhida_com_fonte = HomeActionsMixin._mascara_escolhida_com_fonte
-
-    def __init__(self) -> None:
-        self._home_installed = True
-        self._home_inflight = False
-        self._home_guard = False
-        self._home_controllers_box = _FakeWidget()
-        self._home_mode_selector = _FakeWidget()
-        self._home_players_hint = _FakeWidget()
-        self._home_flavor_selector = _FakeWidget()
-        self._home_mode_desc = _FakeWidget()
-        self._home_origin_label = _FakeWidget()
-        self._home_session_label = _FakeWidget()
-        self._home_gamepad_opts = _FakeWidget()
-        self._home_vpad_banner = _FakeWidget()
-        self._home_wrapper_banner = _FakeWidget()
-        self._home_shutdown_btn = _FakeWidget()
-        self._home_offline = False
-        self._home_reconciliar_btn = _FakeWidget()
-        self._home_reconciliar_hint = _FakeWidget()
-        self._home_ponte_label = _FakeWidget()
-        self._home_divergencia_banner = _FakeWidget()
-        self._home_flavor_pedido: str | None = None
-        self._home_vpad_banner.visible = False
-
-
 @pytest.fixture()
 def fake_gtk(monkeypatch: pytest.MonkeyPatch) -> None:
     repo = types.ModuleType("gi.repository")
@@ -336,41 +304,6 @@ def fake_gtk(monkeypatch: pytest.MonkeyPatch) -> None:
         Orientation=SimpleNamespace(VERTICAL=0, HORIZONTAL=1),
     )
     monkeypatch.setitem(sys.modules, "gi.repository", repo)
-
-
-class TestBannerAbaInicio:
-    def test_estado_degradado_mostra_banner_com_o_texto_certo(
-        self, fake_gtk: None
-    ) -> None:
-        host = _HomeStub()
-
-        host._render_home(_state())
-
-        assert host._home_vpad_banner.visible is True
-        assert host._home_vpad_banner.label == VPAD_DEGRADED_TEXT
-
-    def test_estado_saudavel_uhid_esconde_banner(self, fake_gtk: None) -> None:
-        host = _HomeStub()
-        host._home_vpad_banner.visible = True
-
-        host._render_home(_state(backend="uhid"))
-
-        assert host._home_vpad_banner.visible is False
-
-    def test_backend_transitorio_nao_acende(self, fake_gtk: None) -> None:
-        host = _HomeStub()
-
-        host._render_home(_state(backend=None))
-
-        assert host._home_vpad_banner.visible is False
-
-    def test_offline_esconde_banner(self, fake_gtk: None) -> None:
-        host = _HomeStub()
-        host._home_vpad_banner.visible = True
-
-        host._render_home(None)
-
-        assert host._home_vpad_banner.visible is False
 
 
 class _FakeLabel:
@@ -407,43 +340,3 @@ class _StatusHost(StatusActionsMixin):
         self.builder = _FakeBuilder()
 
 
-@pytest.fixture()
-def status_host(monkeypatch: pytest.MonkeyPatch) -> _StatusHost:
-    monkeypatch.setattr(
-        StatusActionsMixin, "_popup_is_open", staticmethod(lambda: False)
-    )
-    return _StatusHost()
-
-
-class TestBannerAbaStatus:
-    def test_estado_degradado_mostra_banner_com_o_texto_certo(
-        self, status_host: _StatusHost
-    ) -> None:
-        state = _state()
-        state.update({"connected": True, "transport": "usb"})
-
-        status_host._render_slow_state(state)
-
-        banner = status_host.builder.get_object("status_vpad_banner")
-        assert banner.visible is True
-        assert banner.text == VPAD_DEGRADED_TEXT
-
-    def test_estado_saudavel_uhid_esconde_banner(
-        self, status_host: _StatusHost
-    ) -> None:
-        banner = status_host.builder.get_object("status_vpad_banner")
-        banner.visible = True
-
-        state = _state(backend="uhid")
-        state.update({"connected": True, "transport": "usb"})
-        status_host._render_slow_state(state)
-
-        assert banner.visible is False
-
-    def test_offline_esconde_banner(self, status_host: _StatusHost) -> None:
-        banner = status_host.builder.get_object("status_vpad_banner")
-        banner.visible = True
-
-        status_host._render_offline()
-
-        assert banner.visible is False

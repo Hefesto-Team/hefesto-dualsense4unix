@@ -212,7 +212,7 @@ def test_o_gerador_e_o_pacote_dizem_a_mesma_frase() -> None:
 
 def _com_lacunas(monkeypatch: Any, quantas: int) -> dict[str, str]:
     """O que o pacote emite quando a bancada dela tem `quantas` lacunas."""
-    from hefesto_dualsense4unix.app.widgets import mapa_da_mesa
+    from hefesto_dualsense4unix.interface import logica_do_mapa as mapa_da_mesa
 
     pac = _pacote()
     monkeypatch.setattr(pac, "_bancada", lambda: object())

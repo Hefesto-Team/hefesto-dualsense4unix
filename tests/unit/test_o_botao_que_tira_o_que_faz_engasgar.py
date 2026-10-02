@@ -78,7 +78,6 @@ _GI_REAL = exigir_gi_real(
 from hefesto_dualsense4unix.app.actions import emulation_actions
 from hefesto_dualsense4unix.app.actions.emulation_actions import (
     EmulationActionsMixin,
-    frase_do_censo,
     frase_do_resultado,
 )
 
@@ -205,16 +204,6 @@ def test_o_exame_do_desenho_diz_a_frase_que_o_produto_pinta() -> None:
             f"{cv.frase_do_estado(acesa)!r}")
 
 
-def test_o_handler_esta_registrado_no_dono_de_hoje() -> None:
-    """Sem o `@gesto`, o clique não chega a lugar nenhum — o P desta sprint."""
-    registros = _registros_de_gesto(DONO)
-    assert (PAGINA, GESTO) in registros, (
-        f"nenhuma função de `{DONO.name}` está decorada com "
-        f'`@gesto("{PAGINA}", "{GESTO}")`. É a linha que substituiu o mapa de '
-        "handlers de `app/app.py`, apagado com a janela GTK; sem ela o botão "
-        "volta a ser desenho.")
-
-
 def test_o_registro_vivo_entrega_o_clique_a_esse_handler() -> None:
     """A outra metade, e ela morde sozinha: o decorador tem de ter RODADO."""
     from hefesto_dualsense4unix.interface import pacotes
@@ -250,71 +239,6 @@ def _camada(
 
 def _prefixo(rotulo: str, *camadas: Any) -> Any:
     return SimpleNamespace(rotulo=rotulo, camadas=camadas)
-
-
-class TestFraseDoCenso:
-    def test_sem_prefixo_nenhum_diz_que_nao_ha_o_que_tirar(self) -> None:
-        texto, tem_sobra, tem_devolucao = frase_do_censo([])
-        assert "não há o que tirar" in texto.lower()
-        assert (tem_sobra, tem_devolucao) == (False, False)
-
-    def test_sem_biblioteca_nao_finge_que_olhou(self) -> None:
-        """"Não achei nada" e "não consegui olhar" NÃO podem dar a mesma frase."""
-        texto, tem_sobra, tem_devolucao = frase_do_censo([], bibliotecas=0)
-        assert (tem_sobra, tem_devolucao) == (False, False)
-        assert "não consegui abrir a lista" in texto.lower()
-        assert "não há o que tirar" not in texto.lower(), (
-            "sem biblioteca o produto não pode afirmar que os jogos estão limpos"
-        )
-        assert texto != frase_do_censo([])[0]
-
-    def test_camada_ligada_vira_candidata_com_o_nome_do_jogo(self) -> None:
-        texto, tem_sobra, tem_devolucao = frase_do_censo(
-            [_prefixo("Jogo Bonito (222)", _camada("EOSOverlayVkLayer-Win64.json"))]
-        )
-        assert "Jogo Bonito (222)" in texto
-        assert "EOSOverlayVkLayer-Win64.json" in texto
-        assert tem_sobra is True
-        assert tem_devolucao is False
-
-    def test_o_arquivo_ausente_e_dito_e_nao_vira_ligada_seco(self) -> None:
-        """O estado real da máquina dela: registrada e sem arquivo no disco."""
-        texto, tem_sobra, _ = frase_do_censo(
-            [_prefixo("Jogo (1)", _camada("EOSOverlayVkLayer-Win64.json", presente=False))]
-        )
-        assert "não está no disco" in texto
-        assert tem_sobra is True
-
-    def test_preservada_aparece_com_o_dono_e_nao_e_candidata(self) -> None:
-        texto, tem_sobra, _ = frase_do_censo(
-            [_prefixo("Jogo (1)", _camada("mangohud.json", preservada="MangoHud"))]
-        )
-        assert "fica: MangoHud" in texto
-        assert tem_sobra is False
-
-    def test_o_driver_nunca_aparece_no_relatorio(self) -> None:
-        """Ele não é escolha da pessoa; mostrar convida ao clique errado."""
-        texto, tem_sobra, _ = frase_do_censo(
-            [_prefixo("Jogo (1)", _camada("winevulkan.json", driver=True))]
-        )
-        assert "winevulkan" not in texto
-        assert tem_sobra is False
-
-    def test_ja_desligada_habilita_a_devolucao(self) -> None:
-        _, tem_sobra, tem_devolucao = frase_do_censo(
-            [_prefixo("Jogo (1)", _camada("overlay.json", ligada=False))]
-        )
-        assert (tem_sobra, tem_devolucao) == (False, True)
-
-    def test_o_rodape_nao_poe_a_camada_na_frente_do_quadro(self) -> None:
-        """ARRANQUE o rodapé de 26/09/2026 e este teste reprova."""
-        texto, tem_sobra, _ = frase_do_censo(
-            [_prefixo("Jogo (1)", _camada("EOSOverlayVkLayer-Win64.json"))]
-        )
-        assert tem_sobra is True
-        assert "não cura engasgo" in texto, texto
-        for velho in ("frente de cada quadro", "Sackboy", "resolve"):
-            assert velho not in texto, (velho, texto)
 
 
 def _resultado(**kw: Any) -> Any:
@@ -405,48 +329,3 @@ def modulos_falsos(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     return caixa
 
 
-class TestWorker:
-    def test_jogo_aberto_recusa_e_nao_toca_em_nada(
-        self, sincrono: None, modulos_falsos: dict[str, Any]
-    ) -> None:
-        """O Wine regrava o registro ao sair — escrever agora é perder calado."""
-        modulos_falsos["jogo_aberto"] = True
-        stub = _Stub()
-
-        stub._camadas_worker(devolver=False)
-
-        assert modulos_falsos["chamadas"] == []
-        assert any("jogo aberto" in t for t in stub.toasts)
-
-    def test_o_clique_forca_porque_a_vontade_da_gui_prevalece(
-        self, sincrono: None, modulos_falsos: dict[str, Any]
-    ) -> None:
-        stub = _Stub()
-
-        stub._camadas_worker(devolver=False)
-
-        assert modulos_falsos["chamadas"] == [
-            {"religar": False, "forcar": True, "excluir": ("1599660",)}]
-
-    def test_devolver_chega_ao_modulo_como_religar(
-        self, sincrono: None, modulos_falsos: dict[str, Any]
-    ) -> None:
-        stub = _Stub()
-
-        stub._camadas_worker(devolver=True)
-
-        assert modulos_falsos["chamadas"] == [
-            {"religar": True, "forcar": True, "excluir": ("1599660",)}]
-
-    def test_falha_do_modulo_vira_frase_e_nao_traceback(
-        self, sincrono: None, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        import hefesto_dualsense4unix.integrations as pacote
-
-        monkeypatch.setitem(sys.modules, _CV_MODNAME, None)
-        monkeypatch.delattr(pacote, "camadas_vulkan", raising=False)
-        stub = _Stub()
-
-        stub._camadas_worker(devolver=False)
-
-        assert any("Não consegui" in t for t in stub.toasts)

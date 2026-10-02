@@ -42,7 +42,6 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.app.actions import home_actions
-from hefesto_dualsense4unix.app.actions.home_actions import HomeActionsMixin
 
 RAIZ = Path(__file__).resolve().parents[2]
 FIXTURE_MEDIDA = RAIZ / "tests" / "fixtures" / "state_full_mesa_vazia_medida.json"
@@ -116,47 +115,6 @@ class _Widget:
         pass
 
 
-class _HomeStub:
-    _render_home = HomeActionsMixin._render_home
-    _render_home_controllers = HomeActionsMixin._render_home_controllers
-    _render_ponte_e_divergencia = HomeActionsMixin._render_ponte_e_divergencia
-    _mascara_escolhida_por_ela = HomeActionsMixin._mascara_escolhida_por_ela
-    _mascara_escolhida_com_fonte = HomeActionsMixin._mascara_escolhida_com_fonte
-
-    def __init__(self) -> None:
-        self._home_installed = True
-        self._home_guard = False
-        self._home_inflight = False
-        self._home_flavor_pedido: str | None = None
-        self._escolha_pendente: dict[str, str] | None = None
-        self._modo_vigente_do_daemon: str | None = None
-        self._mascara_vigente_do_daemon: str | None = None
-        for nome in (
-            "_home_mode_selector",
-            "_home_flavor_selector",
-            "_home_mode_desc",
-            "_home_origin_label",
-            "_home_session_label",
-            "_home_players_hint",
-            "_home_gamepad_opts",
-            "_home_controllers_box",
-            "_home_vpad_banner",
-            "_home_wrapper_banner",
-            "_home_shutdown_btn",
-            "_home_reconciliar_btn",
-            "_home_reconciliar_hint",
-            "_home_ponte_label",
-            "_home_divergencia_banner",
-            "_home_autoswitch_lock",
-            "_home_autoswitch_lock_hint",
-        ):
-            setattr(self, nome, _Widget())
-        self._home_offline = False
-
-    def _status_toast(self, _contexto: str, _msg: str) -> None:
-        pass
-
-
 @pytest.fixture()
 def fake_gtk(monkeypatch: pytest.MonkeyPatch) -> None:
     repo = types.ModuleType("gi.repository")
@@ -177,53 +135,6 @@ class TestAPausaChegaNaPrimeiraAba:
         assert home_actions.texto_da_pausa({"paused": 1}) is None
         assert home_actions.texto_da_pausa(None) is None
 
-    def test_em_pausa_a_descricao_nao_promete_luz_nem_vibracao(
-        self, fake_gtk: None
-    ) -> None:
-        """A MORDIDA da I4, literal do §5 da sprint."""
-        host = _HomeStub()
-        estado = {
-            "connected": True,
-            "paused": True,
-            "native_mode": False,
-            "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
-            "controllers": [
-                {"index": 0, "connected": True, "transport": "usb",
-                 "is_primary": True}
-            ],
-        }
-
-        host._render_home(estado)
-
-        descricao = host._home_mode_desc.get_text()
-        assert "acende as luzes" not in descricao, (
-            f"com o Hefesto em pausa a aba continua prometendo o caminho "
-            f"feliz: {descricao!r}"
-        )
-        assert "pausa" in descricao.lower(), (
-            "a aba calou sobre a pausa em vez de dizê-la — calar é o estado "
-            "anterior, não a cura"
-        )
-
-    def test_sem_pausa_a_descricao_do_modo_volta_inteira(
-        self, fake_gtk: None
-    ) -> None:
-        """A régua sabe dizer NÃO: sem pausa, a promessa do modo continua."""
-        host = _HomeStub()
-        estado = {
-            "connected": True,
-            "paused": False,
-            "native_mode": False,
-            "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},
-            "controllers": [
-                {"index": 0, "connected": True, "transport": "usb",
-                 "is_primary": True}
-            ],
-        }
-
-        host._render_home(estado)
-
-        assert "acende as luzes" in host._home_mode_desc.get_text()
 
     def test_a_pausa_do_produto_e_lida_do_mesmo_campo_da_aba_emulacao(
         self,
@@ -389,35 +300,6 @@ class TestOCadeadoDizQuandoEstaCego:
         assert home_actions.texto_do_cadeado_cego({"window_detect_seeing": True}) == ""
         assert home_actions.texto_do_cadeado_cego({"window_detect_seeing": False})
 
-    def test_o_payload_medido_faz_a_linha_falar(self, fake_gtk: None) -> None:
-        """A MORDIDA da I11, literal do §5: com o payload do §2.1 a linha fala.
-
-        Arranque a consulta a `window_detect_seeing` (faça
-        `texto_do_cadeado_cego` devolver `""` sempre) e este teste reprova — a
-        linha volta a ser vazia, que é o estado de hoje na máquina dela.
-        """
-        host = _HomeStub()
-
-        host._render_home(_payload_medido())
-
-        linha = host._home_autoswitch_lock_hint
-        assert linha.get_visible() is True
-        assert linha.get_text().strip(), (
-            "a linha do cadeado continua vazia com o detector cego — a aba não "
-            "diz nem que o mecanismo existe, nem que ele parou"
-        )
-
-    def test_com_o_detector_enxergando_e_o_cadeado_solto_a_linha_cala(
-        self, fake_gtk: None
-    ) -> None:
-        """Sem nada a dizer, a linha some — é o comportamento normal."""
-        host = _HomeStub()
-        estado = _payload_medido()
-        estado["window_detect_seeing"] = True
-
-        host._render_home(estado)
-
-        assert host._home_autoswitch_lock_hint.get_visible() is False
 
     def test_o_cadeado_ligado_continua_dizendo_o_que_dizia(self) -> None:
         """A frase antiga não foi substituída: as duas metades convivem."""
@@ -426,19 +308,6 @@ class TestOCadeadoDizQuandoEstaCego:
         )
         assert "Modo Freestyle ligado" in texto
         assert "pragmata" in texto
-
-    def test_a_frase_do_cadeado_nao_vai_para_o_rodape(self, fake_gtk: None) -> None:
-        """O toast do rodapé segue falando SÓ do cadeado (AVISO-VIVO-01)."""
-        toasts: list[str] = []
-        host = _HomeStub()
-        host._status_toast = lambda _c, msg: toasts.append(msg)  # type: ignore[method-assign]
-        host._home_lock_toast = None
-
-        host._render_home(_payload_medido())
-
-        assert all(
-            home_actions.TEXTO_DETECTOR_CEGO not in msg for msg in toasts
-        ), f"a cegueira do detector vazou para o rodapé: {toasts}"
 
 
 class _Rascunho:
@@ -449,100 +318,7 @@ class _Rascunho:
 
 
 class TestNinguemEAcusadoDeGestoQueNaoDeu:
-    def test_mascara_vinda_do_perfil_nao_diz_voce_escolheu(
-        self, fake_gtk: None
-    ) -> None:
-        """A MORDIDA da I3, segunda metade do §5."""
-        host = _HomeStub()
-        host.draft = _Rascunho("xbox")  # type: ignore[attr-defined]
 
-        host._render_home(
-            {
-                "connected": True,
-                "native_mode": False,
-                "gamepad_emulation": {
-                    "enabled": True,
-                    "flavor": "dualsense",
-                    "backend": "uhid",
-                },
-                "controllers": [
-                    {"index": 0, "connected": True, "transport": "usb",
-                     "is_primary": True}
-                ],
-            }
-        )
-
-        banner = host._home_divergencia_banner
-        assert banner.get_visible() is True
-        assert "você escolheu" not in banner.get_text(), (
-            f"a aba acusou um gesto que ela não deu: {banner.get_text()!r}. O "
-            "perfil entra sozinho pelo autoswitch — quatro dos perfis desta "
-            "casa pedem xbox."
-        )
-        assert "perfil" in banner.get_text().lower()
-
-    def test_gesto_dela_continua_dizendo_voce_escolheu(
-        self, fake_gtk: None
-    ) -> None:
-        """A régua sabe dizer SIM. O gesto dela é gesto dela."""
-        host = _HomeStub()
-        host._home_flavor_pedido = "xbox"
-
-        host._render_home(
-            {
-                "connected": True,
-                "native_mode": False,
-                "gamepad_emulation": {
-                    "enabled": True,
-                    "flavor": "dualsense",
-                    "backend": "uhid",
-                },
-                "controllers": [
-                    {"index": 0, "connected": True, "transport": "usb",
-                     "is_primary": True}
-                ],
-            }
-        )
-
-        assert "você escolheu" in host._home_divergencia_banner.get_text()
-
-    def test_o_alarme_do_daemon_ganha_leitor_e_nomeia_o_perfil(
-        self, fake_gtk: None
-    ) -> None:
-        """A MORDIDA da I3, primeira metade do §5."""
-        host = _HomeStub()
-
-        host._render_home(
-            {
-                "connected": True,
-                "native_mode": False,
-                "gamepad_emulation": {
-                    "enabled": True,
-                    "flavor": "dualsense",
-                    "backend": "uhid",
-                    "mascara_divergente": {
-                        "appid": 1234560,
-                        "profile": "Pragmata",
-                        "mascara_perfil": "xbox",
-                        "mascara_viva": "dualsense",
-                        "motivo": "mascara_diferente",
-                        "em_cena": True,
-                    },
-                },
-                "controllers": [
-                    {"index": 0, "connected": True, "transport": "usb",
-                     "is_primary": True}
-                ],
-                "game_signal": {"authority": "game"},
-            }
-        )
-
-        frase = host._home_divergencia_banner.get_text()
-        assert "Pragmata" in frase, (
-            f"o alarme do daemon nomeava o perfil em cena e a frase saiu "
-            f"genérica: {frase!r}"
-        )
-        assert "você escolheu" not in frase
 
     def test_o_leitor_do_alarme_recusa_payload_que_nao_e_o_contrato(self) -> None:
         """Régua que só sabe aceitar não é régua."""

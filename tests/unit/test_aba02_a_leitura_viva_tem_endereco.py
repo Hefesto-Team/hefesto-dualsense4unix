@@ -149,7 +149,7 @@ def test_os_glifos_acendem_os_apertados_e_apagam_o_resto(a02):
 
 def test_o_limiar_de_l2_e_o_do_produto_e_nao_um_maior_que_zero(a02):
     """`> 0` acenderia o glifo com o dedo apenas encostado no gatilho."""
-    from hefesto_dualsense4unix.app.widgets.controller_card import L2_R2_THRESHOLD
+    from hefesto_dualsense4unix.interface.cartao_do_controle import L2_R2_THRESHOLD
 
     entrada = {"inputs": {"buttons": [], "l2_raw": L2_R2_THRESHOLD}}
     assert a02.leitura_viva(entrada)["glifo-l2"] == ""
@@ -173,7 +173,7 @@ def test_os_gatilhos_dizem_a_frase_da_gtk_e_a_barra_acompanha(a02):
 
 def test_os_analogicos_usam_a_frase_do_produto(a02):
     """`_markup_xy` é o dono, e o `<br>` é a quebra que a tela dela usa."""
-    from hefesto_dualsense4unix.app.widgets.controller_card import _markup_xy
+    from hefesto_dualsense4unix.interface.cartao_do_controle import _markup_xy
 
     v = a02.leitura_viva(CABO)
     assert v["xy-l"] == _markup_xy(125, 121).replace("\n", "<br>")
@@ -192,7 +192,7 @@ def test_o_zero_do_analogico_e_o_extremo_e_nao_o_centro(a02):
 
 def test_os_sensores_usam_a_grafia_de_largura_fixa_da_gtk(a02):
     """Sete caracteres, `+7.1f` no giro e `+7.2f` no g — o painel não respira."""
-    from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_eixo, texto_eixo_g
+    from hefesto_dualsense4unix.interface.sensores import texto_eixo, texto_eixo_g
 
     v = a02.leitura_viva(CABO)
     assert v["giro-y"] == texto_eixo(-412.0)

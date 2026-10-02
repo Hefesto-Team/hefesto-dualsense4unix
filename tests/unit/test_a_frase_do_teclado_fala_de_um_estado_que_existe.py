@@ -206,49 +206,6 @@ def test_o_montador_do_bloqueio_continua_tendo_um_dono_so() -> None:
     )
 
 
-def test_toda_frase_do_teclado_fala_de_um_estado_que_o_daemon_produz() -> None:
-    """A régua de classe."""
-    alcancaveis = valores_que_o_daemon_consegue_publicar()
-    assert alcancaveis, "a régua não achou NENHUM valor produzível — ela cegou"
-
-    mortas = [
-        chave
-        for chave in ea.BLOQUEIO_DO_TECLADO_EM_PORTUGUES
-        if chave not in alcancaveis
-        and chave not in ea.BLOQUEIO_SEM_CAMINHO_DE_PRODUCAO
-    ]
-    assert not mortas, (
-        "frase de tela para um estado que nenhum caminho de produção alcança, "
-        "e sem declaração em BLOQUEIO_SEM_CAMINHO_DE_PRODUCAO:\n"
-        + "\n".join(f"  {c!r}" for c in mortas)
-        + f"\n(alcançáveis hoje: {sorted(alcancaveis)})"
-    )
-
-
-def test_a_declaracao_de_morte_nao_sobrevive_a_propria_cura() -> None:
-    """A metade que avisa sozinha se alguma frente RELIGAR a suspensão."""
-    alcancaveis = valores_que_o_daemon_consegue_publicar()
-    ressuscitadas = [
-        chave for chave in ea.BLOQUEIO_SEM_CAMINHO_DE_PRODUCAO if chave in alcancaveis
-    ]
-    assert not ressuscitadas, (
-        "declaração obsoleta em BLOQUEIO_SEM_CAMINHO_DE_PRODUCAO: "
-        f"{ressuscitadas}. O estado voltou a ser alcançável — APAGUE a entrada, "
-        "e confira se a frase da tela ainda descreve o que acontece hoje "
-        "(EMULACAO-UM-DONO-SO-01/E15)."
-    )
-
-
-def test_toda_declaracao_de_morte_aponta_o_dono_da_decisao() -> None:
-    """Declaração sem razão escrita é paisagem — vira "sempre foi assim"."""
-    for chave, razao in ea.BLOQUEIO_SEM_CAMINHO_DE_PRODUCAO.items():
-        assert chave in ea.BLOQUEIO_DO_TECLADO_EM_PORTUGUES, (
-            f"{chave!r} está declarada morta e não é frase de tela nenhuma"
-        )
-        assert "MEDIDO em" in razao, f"{chave}: razão sem data de medição"
-        assert re.search(r"\d{2}/\d{2}/\d{4}", razao), f"{chave}: sem data"
-
-
 def test_a_frase_viva_de_pausa_continua_dizendo_que_nao_foi_desligado() -> None:
     """O invariante que o daemon deixou por escrito, e o E15 não pode quebrar."""
     viva = ea.BLOQUEIO_DO_TECLADO_EM_PORTUGUES["modo_jogo"]

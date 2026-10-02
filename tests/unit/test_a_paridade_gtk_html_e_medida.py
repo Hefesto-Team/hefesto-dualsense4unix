@@ -129,12 +129,6 @@ def test_o_dublê_intacto_passa(regua, tmp_path) -> None:
     assert _com(regua, tmp_path) == []
 
 
-def test_recusa_endereco_de_arquivo_que_nao_existe(regua, tmp_path) -> None:
-    falhas = _com(regua, tmp_path,
-                  gtk_onde="src/hefesto_dualsense4unix/app/actions/inventado.py:10")
-    assert "endereco-morto" in _familias(falhas), falhas
-
-
 def test_recusa_linha_alem_do_fim_do_arquivo(regua, tmp_path) -> None:
     falhas = _com(regua, tmp_path,
                   gtk_onde="src/hefesto_dualsense4unix/app/actions/rumble_actions.py:999999")

@@ -31,7 +31,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from hefesto_dualsense4unix.app.widgets.controller_card import (
+from hefesto_dualsense4unix.interface.cartao_do_controle import (
     ROTULO_LIGHTBAR_SEGURADA,
     rotulo_lightbar,
 )

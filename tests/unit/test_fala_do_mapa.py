@@ -8,13 +8,11 @@ import pytest
 
 from hefesto_dualsense4unix.app.fala_do_mapa import (
     AFIRMA_NADA,
-    AFIRMA_NAO_ACIONA,
     NAO_MEDIDO,
     Fala,
     Numero,
     Pendencia,
     formata_pt_br,
-    frase_de_exibicao,
 )
 
 
@@ -101,29 +99,6 @@ def test_fala_texto_vazio_recusado() -> None:
         Fala(chave="a@b", lado="radio", aba="Status", texto="   ", afirma=AFIRMA_NADA, porque="x")
 
 
-def test_fala_valida_com_placeholder_constroi_e_exibe_frase_unica() -> None:
-    fala = Fala(
-        chave="audio.saida_dedicada@dualsense",
-        lado="radio",
-        aba="Status",
-        texto=NAO_MEDIDO,
-        afirma=AFIRMA_NADA,
-        pendente=_pendencia(),
-    )
-    assert frase_de_exibicao(fala) == "Ainda não medimos isto no rádio."
-
-
-def test_fala_valida_com_texto_escrito() -> None:
-    fala = Fala(
-        chave="identidade.cor_do_aparelho@dualsense",
-        lado="radio",
-        aba="Início",
-        texto="No rádio o controle recusa o pedido da cor. Escolha na lista.",
-        afirma=AFIRMA_NAO_ACIONA,
-    )
-    assert frase_de_exibicao(fala) == fala.texto
-
-
 def test_numero_e_formata_pt_br() -> None:
     n = Numero(
         constante="HZ_INPUT_SEM_MIC",
@@ -145,7 +120,7 @@ _DONO = "app/fala_do_mapa.py"
 
 #: `portao_a_casa_sabe_e_o_produto_nao_faz.py`: registro que sobrevive à cura
 _COPIAS_DECLARADAS: dict[str, str] = {
-    "app/widgets/calibrar_entradas.py": (
+    "interface/calibracao_das_entradas.py": (
         "`_virgula`, dono do texto OS_DOIS_RELOGIOS. Fora da posse da L3-F "
         "(26/08/2026); relatado em docs/process/agentes/2026-08-26/LEVA-3-F.md"
     ),

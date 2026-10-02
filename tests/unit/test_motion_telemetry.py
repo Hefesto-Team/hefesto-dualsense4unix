@@ -26,7 +26,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto_dualsense4unix.app.widgets.controller_card import texto_motion
+from hefesto_dualsense4unix.interface.cartao_do_controle import texto_motion
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient
 from hefesto_dualsense4unix.core.physical_report_reader import PhysicalReportReader
 from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
@@ -372,7 +372,7 @@ class TestFiacaoNoCard:
     """Contrato de fonte (padrão do repo): o widget REAL e o stub consomem a"""
 
     def _fonte(self) -> str:
-        from hefesto_dualsense4unix.app.widgets import controller_card
+        from hefesto_dualsense4unix.interface import cartao_do_controle as controller_card
 
         return Path(controller_card.__file__).read_text(encoding="utf-8")
 

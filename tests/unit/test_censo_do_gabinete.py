@@ -9,7 +9,6 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("importa `app.actions.config`, que carrega o GTK")
 
-from hefesto_dualsense4unix.app.actions.config import secao_mesa
 from hefesto_dualsense4unix.integrations import censo_do_gabinete as cg
 from hefesto_dualsense4unix.integrations.censo_do_barramento import Aparelho, Censo
 from hefesto_dualsense4unix.integrations.entradas_do_gabinete import NoDeEntrada
@@ -532,93 +531,3 @@ def _entradas(hub, quantas, *, encaixe="hotplug"):
     )
 
 
-def test_a_aba_mostra_a_divergencia_em_vez_de_escolher():
-    """**A MORDIDA.** BIOS 5, barramento 8: a seção publica AS DUAS e a pergunta.
-
-    É o §7.4 chegando à tela. O censo já grava as duas contagens e a pergunta
-    desde 25/08/2026; o que faltava era alguém publicá-las.
-
-    ARRANCANDO a cura — fazendo ``_linhas_do_gabinete`` eleger uma fonte, que é
-    o que qualquer "simplificação" faria — este teste reprova imprimindo o
-    número que sumiu da tela.
-    """
-    contagens = cg.declarar_divergencia(firmware=5, soquetes=None, buracos=8)
-    assert contagens["divergem"] is True
-    linhas = secao_mesa._linhas_do_gabinete({"contagens": contagens})
-    juntas = " | ".join(linhas)
-    contadas = [linha for linha in linhas if linha != contagens["pergunta"]]
-    for numero in ("5", "8"):
-        assert any(numero in linha for linha in contadas), (
-            f"a seção deixou de publicar a contagem {numero}: {juntas!r}. "
-            "Com as fontes em briga a aba mostra AS DUAS — escolher uma "
-            "desenha um gabinete que ninguém tem"
-        )
-    assert contagens["pergunta"] in linhas, (
-        "a pergunta sumiu da tela. Divergência declarada e escondida é a "
-        f"mesma coisa que divergência não declarada: {juntas!r}"
-    )
-
-
-def test_sem_gabinete_gravado_a_secao_fala_como_antes():
-    """A outra metade da régua: ela precisa saber ficar CALADA."""
-    assert secao_mesa._linhas_do_gabinete({}) == ()
-    assert secao_mesa._linhas_do_gabinete({"contagens": "lixo de outra versão"}) == ()
-
-
-def test_a_resposta_dela_entra_na_tela_e_cala_a_pergunta():
-    """Respondido uma vez, o produto para de perguntar — e mostra o que ela disse."""
-    censo = censo_desta_bancada()
-    guardado = cg.preservar_o_que_ela_disse(
-        censo, _censo_com_a_palavra_dela(), dict(PLACA_DESTA_BANCADA)
-    )
-    linhas = secao_mesa._linhas_do_gabinete(guardado)
-    assert any("8" in linha for linha in linhas)
-    assert cg.pergunta_pendente(guardado) == ""
-    assert not any(linha.endswith("?") for linha in linhas), linhas
-
-
-def test_o_hub_em_comum_so_vira_conselho_com_buraco_livre_em_outra_pci():
-    """**A MORDIDA.** O fato nasce sempre; o conselho, só com para onde mandar."""
-    mesa, censo = _bancada_dos_tres_adaptadores()
-
-    fato, por_que, conselho = secao_mesa._frase_do_hub_em_comum(
-        mesa, censo, _entradas("3-3", 2)
-    )
-    assert "3" in fato, (
-        f"o fato do hub em comum não nasceu: {fato!r}. Comparar o pai diria "
-        "que os três não estão juntos, e diria errado"
-    )
-    assert por_que
-    assert conselho == "", (
-        "nasceu conselho sem para onde mandar. Mudar de buraco dentro do mesmo "
-        f"hub não muda o caminho que ele divide: {conselho!r}"
-    )
-
-    _, _, com_destino = secao_mesa._frase_do_hub_em_comum(
-        mesa, censo, _entradas("3-3", 2) + _entradas("usb1", 2)
-    )
-    assert "2" in com_destino, (
-        f"o conselho não nasceu com dois buracos livres em {_PCI_DA_PLACA}: "
-        f"{com_destino!r}"
-    )
-
-    for frase in (fato, por_que, com_destino):
-        assert "atrapalh" not in frase.lower(), frase
-
-
-def test_o_conselho_do_hub_ignora_o_buraco_que_a_mao_nao_alcanca():
-    """``connect_type`` que não é ``hotplug`` é conector soldado dentro da caixa."""
-    mesa, censo = _bancada_dos_tres_adaptadores()
-    _, _, conselho = secao_mesa._frase_do_hub_em_comum(
-        mesa, censo, _entradas("usb1", 3, encaixe="unknown")
-    )
-    assert conselho == ""
-
-
-def test_um_adaptador_sozinho_nao_tem_hub_em_comum():
-    """Menos de dois não tem "em comum" nenhum — e a linha some inteira."""
-    mesa, censo = _bancada_dos_tres_adaptadores()
-    sozinho = Mesa(adaptadores=mesa.adaptadores[:1])
-    assert secao_mesa._frase_do_hub_em_comum(
-        sozinho, censo, _entradas("usb1", 4)
-    ) == ("", "", "")

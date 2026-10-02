@@ -475,7 +475,7 @@ def test_o_brilho_guardado_diz_uma_frase_curta_e_nao_recusa(pac, a04):
 
 def test_a_frase_curta_carrega_a_causa_do_motor(pac, a04):
     """Encolher não é perder o porquê: a causa continua vindo do dono."""
-    from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
+    from hefesto_dualsense4unix.interface.cartao_do_controle import rotulo_lightbar
 
     _semear()
     disputado = dict(P1, lightbar_disputada=True)

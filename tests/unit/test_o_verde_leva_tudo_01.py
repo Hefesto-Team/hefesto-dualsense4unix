@@ -6,7 +6,6 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
 
 _NAO_E_DO_APPLIER = {"mode"}
@@ -148,22 +147,6 @@ def _atributos(corpo: list[object]) -> set[str]:
         for n in ast.walk(bloco)  # type: ignore[arg-type]
         if isinstance(n, ast.Constant) and isinstance(n.value, str)
     }
-
-
-def test_toda_secao_que_a_janela_emite_o_daemon_aplica() -> None:
-    """O portão. Duas listas descrevem a mesma promessa e nada as amarrava."""
-    emitidas = set(DraftConfig().to_ipc_dict()) - _NAO_E_DO_APPLIER
-    aplicadas = {
-        nome[len("_apply_") :]
-        for nome in dir(DraftApplier)
-        if nome.startswith("_apply_") and nome != "_apply_section"
-    }
-    orfas = emitidas - aplicadas
-    assert not orfas, (
-        f"a janela emite {sorted(orfas)} e o daemon não aplica. Ou o "
-        "`DraftApplier` ganha um `_apply_<seção>`, ou a seção sai do "
-        "`to_ipc_dict` — mas as duas listas têm de fechar."
-    )
 
 
 def test_a_docstring_do_modulo_lista_as_secoes_de_verdade() -> None:

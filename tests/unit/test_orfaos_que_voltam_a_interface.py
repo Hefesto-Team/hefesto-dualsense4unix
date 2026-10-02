@@ -44,13 +44,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto_dualsense4unix.app.widgets.controller_card import (
-    SITUACAO_CHEGANDO,
-    SITUACAO_NUNCA,
-    SITUACAO_PARADO,
-    estado_do_recurso,
-    motores_no_fisico,
-)
+from hefesto_dualsense4unix.interface.cartao_do_controle import motores_no_fisico
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient
 from hefesto_dualsense4unix.core.ds_output_report import (
     BT_INPUT_CRC_SEED,
@@ -592,84 +586,8 @@ def _estado(**vpad: Any) -> dict[str, Any]:
     return {"rumble_ff": {"per_vpad": [item]}}
 
 
-class TestOGiroscopioSeparaPararDeNuncaTerComecado:
-    def test_sem_espelho_e_sem_historico_e_nunca(self) -> None:
-        estado = estado_do_recurso(
-            "giroscopio", _entry(), _estado(motion_streaming=False, motion_forwards=0)
-        )
-        assert estado is not None
-        assert estado.situacao == SITUACAO_NUNCA
-
-    def test_sem_espelho_mas_com_historico_e_parado(self) -> None:
-        """MORDIDA: apagar a leitura de `motion_forwards`."""
-        estado = estado_do_recurso(
-            "giroscopio", _entry(), _estado(motion_streaming=False, motion_forwards=812)
-        )
-        assert estado is not None
-        assert estado.situacao == SITUACAO_PARADO
-
-    def test_com_espelho_vivo_continua_chegando(self) -> None:
-        estado = estado_do_recurso(
-            "giroscopio",
-            _entry(),
-            _estado(motion_streaming=True, motion_hz=248.0, motion_forwards=10),
-        )
-        assert estado is not None
-        assert estado.situacao == SITUACAO_CHEGANDO
-        assert "248" in estado.frase
-
-
-class TestOCliqueSeguradoNaoViraParado:
-    def test_clique_velho_e_solto_e_parado(self) -> None:
-        estado = estado_do_recurso(
-            "touchpad",
-            _entry(),
-            _estado(visto_ha_s={"touchpad_click": 9.0}, touchpad_pressionado=False),
-        )
-        assert estado is not None
-        assert estado.situacao == SITUACAO_PARADO
-
-    def test_clique_velho_mas_ainda_apertado_e_chegando(self) -> None:
-        """MORDIDA: apagar a leitura de `touchpad_pressionado`."""
-        estado = estado_do_recurso(
-            "touchpad",
-            _entry(),
-            _estado(visto_ha_s={"touchpad_click": 9.0}, touchpad_pressionado=True),
-        )
-        assert estado is not None
-        assert estado.situacao == SITUACAO_CHEGANDO
-
-    def test_o_estado_vivo_nunca_rebaixa(self) -> None:
-        """Ele só PROMOVE: sem carimbo nenhum e sem dedo, segue "nunca"."""
-        estado = estado_do_recurso(
-            "touchpad", _entry(), _estado(touchpad_pressionado=False)
-        )
-        assert estado is not None
-        assert estado.situacao == SITUACAO_NUNCA
-
-
 class TestAVibracaoMostraOQueFoiAosMotores:
-    def test_o_par_entra_na_frase(self) -> None:
-        """MORDIDA: apagar o bloco de `motores_no_fisico` do `estado_do_recurso`."""
-        estado = estado_do_recurso(
-            "vibracao",
-            _entry(),
-            _estado(
-                visto_ha_s={"rumble": 0.2},
-                rumble_no_fisico=[120, 60],
-                rumble_no_fisico_ha_s=0.2,
-            ),
-        )
-        assert estado is not None
-        assert estado.situacao == SITUACAO_CHEGANDO
-        assert "120/60" in estado.frase
 
-    def test_sem_escrita_nenhuma_a_frase_nao_ganha_numero(self) -> None:
-        estado = estado_do_recurso(
-            "vibracao", _entry(), _estado(visto_ha_s={"rumble": 0.2})
-        )
-        assert estado is not None
-        assert estado.frase == "vibração"
 
     def test_numero_velho_nao_entra(self) -> None:
         """Um par congelado ao lado da palavra "chegando" é a mentira confortável."""

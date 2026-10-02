@@ -85,7 +85,7 @@ def bancada():
 
 def test_estado_da_tira_separa_os_tres_pelos_cinco_ramos(a04):
     """Cada ramo do motor cai no estado certo, e "não sei" não vira "apagada"."""
-    from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
+    from hefesto_dualsense4unix.interface.cartao_do_controle import rotulo_lightbar
 
     def estado(entrada, state=None):
         return a04.estado_da_tira(rotulo_lightbar(entrada, state or {})[0])

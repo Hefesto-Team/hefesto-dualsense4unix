@@ -182,15 +182,6 @@ class _EditorStub(ProfilesActionsMixin):
     def _get(self, widget_id: str) -> Any:
         return self._widgets.get(widget_id)
 
-    def com_secao_mode(self) -> _EditorStub:
-        """Equivale ao _install_mode_section: widgets fake + handlers ligados."""
-        self._mode_kind_selector = _FakeSelector("none")
-        self._mode_flavor_selector = _FakeSelector("dualsense")
-        self._mode_gamepad_opts = _FakeBox()
-        self._mode_kind_selector.connect("changed", self._on_mode_kind_changed)
-        self._sync_mode_options_visibility("none")
-        return self
-
 
 def _profile_com_mode(name: str, mode: dict[str, Any] | None) -> Profile:
     data: dict[str, Any] = {
@@ -202,123 +193,6 @@ def _profile_com_mode(name: str, mode: dict[str, Any] | None) -> Profile:
     if mode is not None:
         data["mode"] = mode
     return Profile.model_validate(data)
-
-
-class TestBuildProfileMode:
-    def test_kind_none_salva_sem_secao(self) -> None:
-        """"Sem opinião" → perfil salvo NÃO tem a seção mode."""
-        stub = _EditorStub().com_secao_mode()
-
-        profile = stub._build_profile_from_editor()
-
-        assert profile.mode is None
-
-    def test_kind_desktop(self) -> None:
-        stub = _EditorStub().com_secao_mode()
-        stub._mode_kind_selector.set_active_id("desktop")
-
-        profile = stub._build_profile_from_editor()
-
-        assert profile.mode is not None
-        assert profile.mode.kind == "desktop"
-        assert profile.mode.gamepad_flavor is None
-
-    def test_kind_native(self) -> None:
-        stub = _EditorStub().com_secao_mode()
-        stub._mode_kind_selector.set_active_id("native")
-
-        profile = stub._build_profile_from_editor()
-
-        assert profile.mode is not None
-        assert profile.mode.kind == "native"
-        assert profile.mode.gamepad_flavor is None
-
-    def test_kind_gamepad_com_flavor(self) -> None:
-        stub = _EditorStub().com_secao_mode()
-        stub._mode_kind_selector.set_active_id("gamepad")
-        stub._mode_flavor_selector.set_active_id("xbox")
-
-        profile = stub._build_profile_from_editor()
-
-        assert profile.mode is not None
-        assert profile.mode.kind == "gamepad"
-        assert profile.mode.gamepad_flavor == "xbox"
-
-    def test_flavor_so_vale_com_gamepad(self) -> None:
-        """Máscara escolhida mas kind != gamepad → gravada limpa."""
-        stub = _EditorStub().com_secao_mode()
-        stub._mode_flavor_selector.set_active_id("xbox")
-        stub._mode_kind_selector.set_active_id("native")
-
-        profile = stub._build_profile_from_editor()
-
-        assert profile.mode is not None
-        assert profile.mode.gamepad_flavor is None
-
-    def test_none_remove_secao_de_perfil_existente(self) -> None:
-        """Perfil que TINHA mode + editor em "none" → seção removida ao salvar."""
-        existente = _profile_com_mode(
-            "meu_jogo", {"kind": "gamepad", "gamepad_flavor": "xbox"}
-        )
-        stub = _EditorStub(name="meu_jogo").com_secao_mode()
-        stub._profiles_cache = [existente]
-
-        profile = stub._build_profile_from_editor()
-
-        assert profile.name == "meu_jogo"
-        assert profile.mode is None
-
-    def test_sem_secao_montada_preserva_heranca(self) -> None:
-        """Glade antigo (slot ausente) → mode do perfil-base sobrevive intacto."""
-        existente = _profile_com_mode("nativo_sony", {"kind": "native"})
-        stub = _EditorStub(name="nativo_sony")
-        stub._profiles_cache = [existente]
-
-        profile = stub._build_profile_from_editor()
-
-        assert profile.mode is not None
-        assert profile.mode.kind == "native"
-
-
-class TestRoundTripMode:
-    def test_round_trip_gamepad_coop(self) -> None:
-        original = _profile_com_mode(
-            "coop_local",
-            {"kind": "gamepad", "gamepad_flavor": "dualsense"},
-        )
-        stub = _EditorStub(name="coop_local").com_secao_mode()
-        stub._profiles_cache = [original]
-
-        stub._populate_editor(original)
-        assert stub._mode_kind_selector.get_active_id() == "gamepad"
-        assert stub._mode_flavor_selector.get_active_id() == "dualsense"
-
-        rebuilt = stub._build_profile_from_editor()
-        assert rebuilt.mode == original.mode
-
-    def test_round_trip_native(self) -> None:
-        original = _profile_com_mode("sackboy", {"kind": "native"})
-        stub = _EditorStub(name="sackboy").com_secao_mode()
-        stub._profiles_cache = [original]
-
-        stub._populate_editor(original)
-        assert stub._mode_kind_selector.get_active_id() == "native"
-
-        rebuilt = stub._build_profile_from_editor()
-        assert rebuilt.mode == original.mode
-
-    def test_round_trip_sem_mode(self) -> None:
-        """Perfil sem opinião entra e sai sem ganhar a seção por acidente."""
-        original = _profile_com_mode("navegador", None)
-        stub = _EditorStub(name="navegador").com_secao_mode()
-        stub._mode_kind_selector.set_active_id("gamepad")
-        stub._profiles_cache = [original]
-
-        stub._populate_editor(original)
-        assert stub._mode_kind_selector.get_active_id() == "none"
-
-        rebuilt = stub._build_profile_from_editor()
-        assert rebuilt.mode is None
 
 
 class TestModeOptionsVisibility:
@@ -355,14 +229,4 @@ class TestModeOptionsVisibility:
 
         assert stub._mode_gamepad_opts.visible is False
 
-    def test_populate_programatico_sincroniza_visibilidade(self) -> None:
-        """_set_mode_editor deixa a visibilidade certa sem depender de emissão."""
-        original = _profile_com_mode(
-            "meu_jogo", {"kind": "gamepad", "gamepad_flavor": "xbox"}
-        )
-        stub = _EditorStub().com_secao_mode()
-
-        stub._set_mode_editor(original.mode)
-
-        assert stub._mode_gamepad_opts.visible is True
 

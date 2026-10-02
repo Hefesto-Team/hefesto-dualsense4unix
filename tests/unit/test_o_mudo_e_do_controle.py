@@ -227,18 +227,6 @@ class TestUmEscritor:
         assert (profiles_dir() / "bancada.json").read_bytes() == antes
         assert maquina.mudo_do_microfone(uniq) is True
 
-    def test_o_rascunho_nao_escreve_o_mudo(self) -> None:
-        """O «Salvar» da tela não é escritor do mudo: nem cria, nem apaga."""
-        chave = "aabbcc000033"
-        draft = DraftConfig.from_profile(Profile(name="x", match=MatchManual()))
-        pedido = draft.effective_mic_for(chave).model_copy(update={"muted": True})
-
-        depois = draft.with_controller_mic(chave, pedido)
-
-        assert depois.controller_override(chave) is None, (
-            "o rascunho escreveu o mudo do microfone num override do perfil"
-        )
-        assert "muted" not in (depois.with_mic(volume=40, muted=True).to_ipc_dict()["mic"] or {})
 
     def test_o_mudo_de_antes_da_migracao_atravessa_o_rascunho(self) -> None:
         """Um `muted` que a peça ainda carregue no disco não some num «Salvar»."""

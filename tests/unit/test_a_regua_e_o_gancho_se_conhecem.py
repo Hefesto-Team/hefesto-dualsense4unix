@@ -65,7 +65,7 @@ def _aviso() -> str:
     portao = _carregar(PORTAO)
     return portao._bloco(
         RAIZ,
-        ["src/hefesto_dualsense4unix/app/widgets/controller_card.py"],
+        ["src/hefesto_dualsense4unix/interface/cartao_do_controle.py"],
         ["Controles"],
     )
 

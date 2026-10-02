@@ -70,7 +70,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 from hefesto_dualsense4unix.app import audio_saida
-from hefesto_dualsense4unix.app.widgets.controller_card import (
+from hefesto_dualsense4unix.interface.cartao_do_controle import (
     frase_do_alvo_do_mic,
 )
 

@@ -10,7 +10,6 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.app.widgets.painel_no_jogo import aviso_do_perfil
 from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 from hefesto_dualsense4unix.profiles.porque_nao_entrou import (
     campos_reprovados,
@@ -190,52 +189,6 @@ def test_varios_valores_exigidos_saem_com_ou() -> None:
     )[0]
     frase = frase_do_perfil_que_nao_entrou(achado)
     assert '"NieR.exe", "Sifu.exe" ou "HiFiRush.exe"' in frase
-
-
-def test_a_aba_mostra_a_frase_e_diz_qual_perfil_valeu() -> None:
-    """Morde em `aviso_do_perfil`. Arranque: não anexar o `active_profile`."""
-    aviso = aviso_do_perfil(
-        {
-            "active_profile": "fallback",
-            "perfil_do_jogo_que_nao_entrou": [
-                {"nome": "Pragmata", "frase": 'O seu perfil "Pragmata" não entrou: X.'}
-            ],
-        }
-    )
-    assert aviso is not None
-    assert 'O seu perfil "Pragmata" não entrou' in aviso
-    assert 'Enquanto isso, vale o perfil "fallback".' in aviso
-
-
-def test_a_aba_cala_quando_nao_ha_o_que_dizer() -> None:
-    """Lista vazia, chave ausente e estado sem daemon: nada na tela."""
-    assert aviso_do_perfil(None) is None
-    assert aviso_do_perfil({}) is None
-    assert aviso_do_perfil({"perfil_do_jogo_que_nao_entrou": []}) is None
-    assert aviso_do_perfil({"perfil_do_jogo_que_nao_entrou": "não é uma lista"}) is None
-
-
-def test_duas_regras_do_mesmo_jogo_aparecem_as_duas() -> None:
-    """Ela teve ``Pragmata`` e ``Pragmata2`` no disco em 01/08."""
-    aviso = aviso_do_perfil(
-        {
-            "active_profile": "fallback",
-            "perfil_do_jogo_que_nao_entrou": [
-                {"nome": "Pragmata", "frase": "A."},
-                {"nome": "Pragmata2", "frase": "B."},
-            ],
-        }
-    )
-    assert aviso is not None
-    assert aviso.splitlines()[:2] == ["A.", "B."]
-
-
-def test_sem_perfil_ativo_o_aviso_sai_sem_o_fecho() -> None:
-    """Daemon sem perfil ativo: afirma o que sabe e cala sobre o resto."""
-    aviso = aviso_do_perfil(
-        {"perfil_do_jogo_que_nao_entrou": [{"nome": "P", "frase": "A."}]}
-    )
-    assert aviso == "A."
 
 
 class _StoreDublado:

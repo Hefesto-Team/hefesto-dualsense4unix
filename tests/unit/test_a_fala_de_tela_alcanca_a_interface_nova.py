@@ -19,8 +19,6 @@ RAIZES_ATE_HOJE: tuple[str, ...] = (
     "src/hefesto_dualsense4unix/interface",
 )
 
-PISO_ATE_HOJE: dict[str, int] = {"raizes": 2, "falas": 1, "numeros": 3, "abas": 0}
-
 
 def _modulo_do_portao() -> ModuleType:
     """O roteiro carregado como módulo — para exercer as funções puras."""
@@ -76,41 +74,6 @@ def test_o_alcance_da_regua_so_cresce() -> None:
         "nome, troque nos DOIS lugares; se a decisão foi outra, ela tem de "
         f"sair também deste arquivo, com data e razão. Hoje: {no_roteiro}"
     )
-
-
-def test_o_piso_da_regua_so_sobe() -> None:
-    """`PISO_DA_REGUA` nunca fica abaixo do literal deste arquivo."""
-    no_roteiro = _constante_por_ast("PISO_DA_REGUA")
-    assert isinstance(no_roteiro, dict)
-    baixaram = {
-        nome: (no_roteiro.get(nome), valor)
-        for nome, valor in PISO_ATE_HOJE.items()
-        if no_roteiro.get(nome, 0) < valor
-    }
-    assert not baixaram, (
-        f"o piso do roteiro caiu abaixo do medido em 06/09/2026: {baixaram} "
-        "(roteiro, este arquivo). NÃO baixe o piso para ficar verde — descubra "
-        "o que encolheu. É a mesma regra de `test_o_mapa_nunca_encolhe.py`."
-    )
-
-
-def test_o_piso_compara_e_nao_tem_a_resposta_cravada() -> None:
-    """A régua muda de resposta quando o conjunto muda — os quatro casos."""
-    valida = _modulo_do_portao().valida_piso_da_regua
-    piso = {"raizes": 2, "falas": 1, "numeros": 3, "abas": 1}
-
-    assert valida({"raizes": 2, "falas": 1, "numeros": 3, "abas": 1}, piso) == []
-    assert valida({"raizes": 9, "falas": 9, "numeros": 9, "abas": 9}, piso) == [], (
-        "crescer tem de PASSAR — régua que reprova quem melhora é o defeito "
-        "que onze réguas desta casa já tiveram"
-    )
-
-    encolheu = valida({"raizes": 1, "falas": 1, "numeros": 3, "abas": 1}, piso)
-    assert len(encolheu) == 1 and "raizes" in encolheu[0], encolheu
-
-    tudo = valida({"raizes": 0, "falas": 0, "numeros": 0, "abas": 0}, piso)
-    assert len(tudo) == 4, tudo
-    assert all("NÃO baixe o piso" in problema for problema in tudo), tudo
 
 
 def test_a_arvore_de_mentira_nao_e_o_produto_e_a_de_verdade_e() -> None:
@@ -245,101 +208,6 @@ def test_a_regua_ve_a_tela_nova_e_cega_de_novo_com_a_raiz_unica(tmp_path: Path) 
     assert depois.get("src/hefesto_dualsense4unix/app", 0) == antes.get(
         "src/hefesto_dualsense4unix/app", 0
     ), "acrescentar `interface/` não pode mudar o que a régua via em `app/`"
-
-
-def test_a_raiz_unica_reprova_pelo_piso_do_alcance(tmp_path: Path) -> None:
-    """A outra ponta da mesma mordida: encurtar `RAIZES_DE_TELA` é `rc=1`."""
-    raiz = _produto_de_mentira(tmp_path, {})
-    portao = _portao_com(
-        raiz,
-        piso={"raizes": 2, "falas": 0, "numeros": 0, "abas": 0},
-        raizes=("src/hefesto_dualsense4unix/app",),
-    )
-    processo = _roda(portao, raiz, "--all")
-    assert processo.returncode == 1, processo.stdout
-    assert "ENCOLHEU" in processo.stdout, processo.stdout
-    assert "raizes: a régua mede 1 e o piso é 2" in processo.stdout, processo.stdout
-
-
-def test_a_fala_declarada_na_tela_nova_e_vista(tmp_path: Path) -> None:
-    """O outro lado do alcance: uma `Fala` em `interface/` passa a contar."""
-    declarada = '''\
-"""Uma tela nova de mentira."""
-from __future__ import annotations
-
-from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_ACIONA, Fala
-
-DICA = Fala(
-    chave="audio.alto_falante@dualsense",
-    lado="radio",
-    aba="Conexões",
-    texto="O alto-falante toca também por rádio.",
-    afirma=AFIRMA_ACIONA,
-)
-'''
-    raiz = _produto_de_mentira(tmp_path, {"pacotes/a08_conexoes.py": declarada})
-    portao = _portao_com(raiz, piso={"raizes": 2, "falas": 1, "numeros": 0, "abas": 0})
-    processo = _roda(portao, raiz, "--all")
-    assert processo.returncode == 0, processo.stdout
-    assert "1 `Fala` declarada(s)" in processo.stdout, processo.stdout
-
-
-def test_despromover_uma_aba_reprova_dizendo_o_piso(tmp_path: Path) -> None:
-    """A MORDIDA: duas abas promovidas, o piso em 2, uma sai — `rc=1`."""
-    raiz = _produto_de_mentira(tmp_path, {})
-    portao = _portao_com(
-        raiz,
-        abas={"Início"},
-        arquivos_da_aba={"Início": ("aba_inicio.py",)},
-        piso={"raizes": 2, "falas": 0, "numeros": 0, "abas": 2},
-    )
-    processo = _roda(portao, raiz, "--all")
-    assert processo.returncode == 1, processo.stdout
-    assert "ENCOLHEU" in processo.stdout, processo.stdout
-    assert "abas: a régua mede 1 e o piso é 2" in processo.stdout, processo.stdout
-    assert "ABAS_COM_FALA_DECLARADA" in processo.stdout, processo.stdout
-
-
-def test_promover_mais_uma_aba_passa_e_o_piso_nao_pune(tmp_path: Path) -> None:
-    """A SEGUNDA MORDIDA: acrescentar uma aba PASSA."""
-    raiz = _produto_de_mentira(tmp_path, {})
-    portao = _portao_com(
-        raiz,
-        abas={"Início", "Status", "Conexões"},
-        arquivos_da_aba={
-            "Início": ("aba_inicio.py",),
-            "Status": ("aba_inicio.py",),
-            "Conexões": ("aba_inicio.py",),
-        },
-        piso={"raizes": 2, "falas": 0, "numeros": 0, "abas": 2},
-    )
-    processo = _roda(portao, raiz, "--all")
-    assert processo.returncode == 0, processo.stdout
-    assert "ENCOLHEU" not in processo.stdout, processo.stdout
-    assert "3 aba(s) promovida(s)" in processo.stdout, processo.stdout
-
-
-def test_a_aba_promovida_pode_morar_na_tela_nova(tmp_path: Path) -> None:
-    """`ARQUIVOS_DA_ABA` passa a achar o arquivo em QUALQUER raiz de tela."""
-    raiz = _produto_de_mentira(tmp_path, {"aba_conexoes.py": _ABA_SEM_TRANSPORTE})
-    portao = _portao_com(
-        raiz,
-        abas={"Conexões"},
-        arquivos_da_aba={"Conexões": ("aba_conexoes.py",)},
-        piso={"raizes": 2, "falas": 0, "numeros": 0, "abas": 0},
-    )
-    processo = _roda(portao, raiz, "--all")
-    assert processo.returncode == 0, processo.stdout
-
-    sumido = _portao_com(
-        raiz,
-        abas={"Conexões"},
-        arquivos_da_aba={"Conexões": ("aba_que_ninguem_escreveu.py",)},
-        piso={"raizes": 2, "falas": 0, "numeros": 0, "abas": 0},
-    )
-    ausente = _roda(sumido, raiz, "--all")
-    assert ausente.returncode == 1, ausente.stdout
-    assert "não existe" in ausente.stdout, ausente.stdout
 
 
 def test_o_portao_de_hoje_esta_no_piso_e_diz_qual_e() -> None:

@@ -67,7 +67,7 @@ def a08():
 @pytest.fixture(autouse=True)
 def rascunho_limpo(a08, monkeypatch):
     """Um rascunho novo por caso, e NUNCA o disco dela."""
-    from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import LogicaDoMapa
+    from hefesto_dualsense4unix.interface.logica_do_mapa import LogicaDoMapa
     from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
 
     monkeypatch.setattr(a08, "_LOGICA", LogicaDoMapa(MapaDaMesa()), raising=False)
@@ -96,7 +96,7 @@ def test_o_gerador_do_mockup_usa_o_desenho_do_produto() -> None:
 
 def test_o_mapa_vazio_diz_que_esta_vazio() -> None:
     """Caixa em branco é indistinguível de "isto quebrou"."""
-    from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import ROTULO_SEM_FACE
+    from hefesto_dualsense4unix.interface.logica_do_mapa import ROTULO_SEM_FACE
     from hefesto_dualsense4unix.interface.conexoes import html_do_mapa
 
     saiu = html_do_mapa([], quem_esta={}, extensoes={},

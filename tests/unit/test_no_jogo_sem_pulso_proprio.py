@@ -9,7 +9,7 @@ exigir_gi_real("test_no_jogo_sem_pulso_proprio: importa código da janela GTK")
 import re
 from pathlib import Path
 
-from hefesto_dualsense4unix.app.widgets import painel_no_jogo as pnj_mod
+from hefesto_dualsense4unix.interface import painel_no_jogo as pnj_mod
 
 _AGENDADORES = (
     r"GLib\.timeout_add\(",

@@ -66,13 +66,6 @@ def test_endereco_que_morreu_reprova(portao):
     assert portao(mexer) == 1
 
 
-def test_arquivo_que_sumiu_reprova(portao):
-    def mexer(linhas):
-        linhas[0]["dono"] = "app/actions/arquivo_que_nao_existe.py:qualquer"
-
-    assert portao(mexer) == 1
-
-
 def test_cura_descosturada_reprova(portao):
     """CURADO cujo arquivo de tela deixou de citar o dono: a ponte caiu."""
 

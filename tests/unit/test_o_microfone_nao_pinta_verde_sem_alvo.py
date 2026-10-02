@@ -92,33 +92,6 @@ def _tela(
     return obj, rotulo
 
 
-def test_sem_placa_do_controle_a_tela_nao_escreve_ligado_em_verde(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """O caso exato do defeito: drop-ins no lugar, alvo nenhum."""
-    obj, rotulo = _tela(tmp_path, monkeypatch, CARDS_SEM_DUALSENSE)
-    obj._wp_dropin_dir().joinpath(PROMOTOR).write_text("x", encoding="utf-8")
-
-    assert obj._mic_state() == Mixin.MIC_SEM_ALVO, (
-        "a aba concluiu 'Ligado' sem ter olhado se existe microfone a ligar"
-    )
-    obj._refresh_mic_status()
-    assert "#50fa7b" not in rotulo.markup, f"verde sem alvo: {rotulo.markup}"
-    assert "Ligado" not in rotulo.markup, rotulo.markup
-
-
-def test_com_placa_do_controle_o_verde_volta(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """O contrapeso, sem o qual "curar" viraria nunca mais dizer Ligado."""
-    obj, rotulo = _tela(tmp_path, monkeypatch, CARDS_COM_DUALSENSE)
-    obj._wp_dropin_dir().joinpath(PROMOTOR).write_text("x", encoding="utf-8")
-
-    assert obj._mic_state() == Mixin.MIC_LIGADO
-    obj._refresh_mic_status()
-    assert rotulo.markup == '<span foreground="#50fa7b">Ligado</span>', rotulo.markup
-
-
 @pytest.mark.parametrize(
     ("cards", "esperado"),
     [
@@ -134,77 +107,6 @@ def test_o_alvo_nao_apaga_o_que_a_nossa_configuracao_ja_sabia(
     obj._wp_dropin_dir().joinpath(PROMOTOR).write_text("x", encoding="utf-8")
     obj._wp_dropin_dir().joinpath(DISABLE_SRC).write_text("x", encoding="utf-8")
     assert obj._mic_state() == esperado
-
-
-def test_sem_promotor_continua_sendo_sem_promotor_mesmo_sem_placa(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A outra metade da mesma regra — a LIGAR-QUE-APAGAVA-A-CURA-01 fica de pé."""
-    obj, rotulo = _tela(tmp_path, monkeypatch, CARDS_SEM_DUALSENSE)
-    assert obj._mic_state() == Mixin.MIC_SEM_PROMOTOR
-    obj._refresh_mic_status()
-    assert "sem prioridade" in rotulo.markup, rotulo.markup
-
-
-def test_a_frase_nao_conclui_que_o_aparelho_esta_mudo(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A régua mede a ROTA, e a frase não pode falar do APARELHO."""
-    obj, rotulo = _tela(tmp_path, monkeypatch, CARDS_SEM_DUALSENSE)
-    obj._wp_dropin_dir().joinpath(PROMOTOR).write_text("x", encoding="utf-8")
-    obj._refresh_mic_status()
-    dica = rotulo.tooltip
-
-    assert "placa de áudio" in dica, (
-        f"a dica parou de dizer o que a régua realmente olhou: {dica!r}"
-    )
-    for proibido in (
-        "não funciona",
-        "não capta",
-        "está mudo",
-        "sem microfone no controle",
-    ):
-        assert proibido not in dica, (
-            f"a dica conclui sobre o APARELHO a partir de uma medição de ROTA "
-            f"({proibido!r}): {dica!r}"
-        )
-    assert "cabo" in dica and "Atualizar" in dica, dica
-
-
-def test_toda_dica_do_microfone_diz_de_qual_microfone_se_trata(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """E4, metade de tela: a palavra "microfone" ganha sobrenome.
-
-    Em TODOS os quatro estados, não só no novo — o escopo não muda com o
-    estado, e uma frase que só aparece num ramo é uma frase que a maioria das
-    visitas não lê.
-
-    ARRANQUE A CURA: tire o `ESCOPO_DO_MICROFONE_DESTA_ABA` do
-    `set_tooltip_text` e este caso REPROVA nos quatro.
-    """
-    vistos = set()
-    for cards, arquivos in (
-        (CARDS_COM_DUALSENSE, (PROMOTOR,)),
-        (CARDS_SEM_DUALSENSE, (PROMOTOR,)),
-        (CARDS_COM_DUALSENSE, ()),
-        (CARDS_COM_DUALSENSE, (PROMOTOR, DISABLE_SRC)),
-    ):
-        pasta = tmp_path / f"caso{len(vistos)}"
-        obj, rotulo = _tela(pasta, monkeypatch, cards)
-        for nome in arquivos:
-            obj._wp_dropin_dir().joinpath(nome).write_text("x", encoding="utf-8")
-        vistos.add(obj._mic_state())
-        obj._refresh_mic_status()
-        assert Mixin.ESCOPO_DO_MICROFONE_DESTA_ABA in rotulo.tooltip, (
-            f"estado {obj._mic_state()!r} sem o escopo na dica: {rotulo.tooltip!r}"
-        )
-    assert vistos == {
-        Mixin.MIC_LIGADO,
-        Mixin.MIC_SEM_ALVO,
-        Mixin.MIC_SEM_PROMOTOR,
-        Mixin.MIC_SUPRIMIDO,
-    }, f"os quatro estados não foram exercidos: {vistos}"
 
 
 def test_o_escopo_nomeia_as_outras_duas_superficies_do_mesmo_nome() -> None:

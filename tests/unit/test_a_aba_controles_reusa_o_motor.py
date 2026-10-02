@@ -7,7 +7,7 @@ POR QUE ELA EXISTE. LEI 0 da migração, palavra dela em 02/09/2026:
     o que fizemos na versão estável pra ela funcionar no html. Não temos que
     recriar nada."*
 
-`app/widgets/controller_card.py` tem **26 funções públicas de módulo** — 5.951
+`interface/cartao_do_controle.py` tem **26 funções públicas de módulo** — 5.951
 linhas de texto de tela que a GTK já provou. Medido em 02/09/2026, a interface
 nova alcançava DUAS (`rotulo_lightbar`, pela aba Iluminação, e
 `texto_degradacao`, pelo `pacotes/__init__.py`), e **esta aba, a mais servida
@@ -90,7 +90,7 @@ def a02():
 
 @pytest.fixture(scope="module")
 def motor():
-    from hefesto_dualsense4unix.app.widgets import controller_card
+    from hefesto_dualsense4unix.interface import cartao_do_controle as controller_card
 
     return controller_card
 
@@ -217,7 +217,7 @@ def test_sem_leitura_de_audio_o_microfone_nao_chuta(pac, a02):
 
     MORDE: apagar a guarda faz `chamadas` virar `[("mic_set", (True,), ...)]`.
     """
-    from hefesto_dualsense4unix.app.widgets.controller_card import DICA_MIC_SEM_LEITURA
+    from hefesto_dualsense4unix.interface.cartao_do_controle import DICA_MIC_SEM_LEITURA
 
     sem_audio = {k: v for k, v in BASE.items() if k != "audio"}
     ctx = pac.Contexto(state={}, mesa=[], conectados=[sem_audio], estados={})
@@ -417,7 +417,7 @@ def test_a_palavra_do_touchpad_e_a_do_produto(pac, a02):
 
     MORDE: redigitar `"Tocando"` no pacote reprova nas duas linhas.
     """
-    from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_toques
+    from hefesto_dualsense4unix.interface.sensores import texto_toques
 
     solto = _card(pac, a02, {**BASE, "inputs": {
         "touchpad": TOUCHPAD_COMO_O_DAEMON_PUBLICA}})
@@ -473,7 +473,7 @@ def test_o_pontinho_so_acende_com_toque(a02):
 
 def test_o_rotulo_do_sem_toque_nao_e_digitado_aqui(a02):
     """"Sem toque" tem UM dono, e é `sensor_widgets.texto_toques`."""
-    from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_toques
+    from hefesto_dualsense4unix.interface.sensores import texto_toques
 
     assert a02.texto_toques is texto_toques, (
         "a aba deixou de importar o dono da palavra e voltou a digitá-la")
@@ -502,7 +502,7 @@ def test_a_aba_chama_o_motor_em_vez_de_reescreve_lo(a02, motor):
     exatamente o que a LEI 0 proíbe) reprova aqui nomeando qual.
     """
     from hefesto_dualsense4unix.app.actions.home_actions import mascara_viva
-    from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
+    from hefesto_dualsense4unix.interface.sensores import (
         texto_toques,
         texto_volume,
     )
@@ -706,7 +706,7 @@ def test_ha_pagina_com_o_ponto_para_medir():
     ids=[r for r, _ in PAGINAS_COM_O_PONTO])
 def test_o_ponto_do_touchpad_obedece_a_classe_na_tela(arquivo: pathlib.Path):
     """A classe DECIDE (0 sem ela, 1 com ela) e a cena fixa não se contradiz."""
-    from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_toques
+    from hefesto_dualsense4unix.interface.sensores import texto_toques
 
     from playwright.sync_api import sync_playwright
 

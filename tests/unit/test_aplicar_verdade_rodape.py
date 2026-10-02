@@ -6,14 +6,10 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("aplicar verdade rodape")
 
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto_dualsense4unix.app.actions import footer_actions
-from hefesto_dualsense4unix.app.actions.footer_actions import FooterActionsMixin
-from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.core.controller import ControllerState
 from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
 from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
@@ -67,40 +63,6 @@ def server(tmp_path: Path) -> IpcServer:
         socket_path=tmp_path / "aplicar_verdade.sock",
         daemon=_fake_daemon(),
     )
-
-
-class _FooterStub(FooterActionsMixin):
-    """Mixin do rodapé sem GTK: widgets ausentes e statusbar em memória."""
-
-    def __init__(self) -> None:
-        self.draft = DraftConfig.default()
-        self.toasts: list[str] = []
-
-    def _get(self, widget_id: str) -> Any:
-        return None
-
-    def _status_toast(self, _context: str, msg: str) -> None:
-        self.toasts.append(msg)
-
-
-def _aplicar(
-    monkeypatch: pytest.MonkeyPatch, resultado: Any
-) -> _FooterStub:
-    """Roda `on_apply_draft` com o daemon respondendo `resultado`."""
-    stub = _FooterStub()
-
-    def _fake(
-        _method: str,
-        _params: Any,
-        on_success: Any = None,
-        on_failure: Any = None,
-        **_kw: Any,
-    ) -> None:
-        on_success(resultado)
-
-    monkeypatch.setattr(footer_actions.ipc_bridge, "call_async", _fake)
-    stub.on_apply_draft()
-    return stub
 
 
 class TestApplierRegistraAFalha:
@@ -178,117 +140,3 @@ class TestHandlerDevolveFailed:
         assert resposta["failed"] == {}
 
 
-class TestRodapeNaoMenteMais:
-    def test_parte_falhou_nomeia_as_secoes(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        stub = _aplicar(
-            monkeypatch,
-            {
-                "status": "ok",
-                "applied": ["leds"],
-                "failed": {"triggers": "boom", "rumble": "boom"},
-            },
-        )
-
-        msg = stub.toasts[-1]
-        assert MSG_SUCESSO not in stub.toasts
-        assert "gatilhos" in msg
-        assert "vibração" in msg
-
-    def test_nada_aplicou_nao_promete_sucesso(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        stub = _aplicar(
-            monkeypatch,
-            {
-                "status": "ok",
-                "applied": [],
-                "failed": {
-                    "leds": "boom",
-                    "triggers": "boom",
-                    "controllers": "boom",
-                    "rumble": "boom",
-                    "mouse": "boom",
-                    "keyboard": "boom",
-                    "mic": "boom",
-                },
-            },
-        )
-
-        assert MSG_SUCESSO not in stub.toasts
-        assert "Nada foi aplicado" in stub.toasts[-1]
-
-    def test_texto_cabe_na_statusbar(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Meia tela trunca com reticências: a lista longa vira "e mais N"."""
-        stub = _aplicar(
-            monkeypatch,
-            {
-                "status": "ok",
-                "applied": ["leds"],
-                "failed": {
-                    "triggers": "boom",
-                    "controllers": "boom",
-                    "rumble": "boom",
-                    "mouse": "boom",
-                    "keyboard": "boom",
-                    "mic": "boom",
-                },
-            },
-        )
-
-        msg = stub.toasts[-1]
-        assert MSG_SUCESSO not in stub.toasts
-        assert "e mais 3" in msg
-        assert len(msg) <= 80
-
-    def test_secao_desconhecida_aparece_com_o_nome_tecnico(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Daemon mais novo que a GUI: melhor termo estranho que omissão."""
-        stub = _aplicar(
-            monkeypatch,
-            {"status": "ok", "applied": ["leds"], "failed": {"haptics": "boom"}},
-        )
-
-        assert MSG_SUCESSO not in stub.toasts
-        assert "haptics" in stub.toasts[-1]
-
-    def test_tudo_aplicou_mantem_a_frase_de_sempre(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        stub = _aplicar(
-            monkeypatch,
-            {"status": "ok", "applied": ["leds", "rumble"], "failed": {}},
-        )
-
-        assert stub.toasts[-1] == MSG_SUCESSO
-
-
-class TestCaminhosPreservados:
-    def test_daemon_antigo_sem_os_campos_novos(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Sem `applied`/`failed` não há do que desconfiar: segue sucesso."""
-        stub = _aplicar(monkeypatch, {"status": "ok"})
-
-        assert stub.toasts[-1] == MSG_SUCESSO
-
-    def test_resultado_booleano_verdadeiro(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        stub = _aplicar(monkeypatch, True)
-
-        assert stub.toasts[-1] == MSG_SUCESSO
-
-    def test_resultado_booleano_falso(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        stub = _aplicar(monkeypatch, False)
-
-        assert stub.toasts[-1] == "ERRO ao aplicar perfil (daemon offline?)."
-
-    def test_status_diferente_de_ok_continua_erro(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        stub = _aplicar(monkeypatch, {"status": "failed"})
-
-        assert stub.toasts[-1] == "ERRO ao aplicar perfil (daemon offline?)."

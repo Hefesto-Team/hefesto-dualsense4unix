@@ -11,11 +11,9 @@ multi-dimensional da interface:
 """
 from __future__ import annotations
 
-from types import SimpleNamespace
 
 import pytest
 
-from tests.conftest import skip_sem_gi_real
 from hefesto_dualsense4unix.app.draft_config import (
     DraftConfig,
     TriggerDraft,
@@ -78,70 +76,4 @@ class TestDraftMultiPosRoundTrip:
         assert recovered.triggers.left.mode == "MultiPositionFeedback"
         assert recovered.triggers.left.params == flat
 
-    def test_to_ipc_dict_preserva_params_planos(self) -> None:
-        flat = (1, 2, 3, 4, 5, 6, 7, 0)
-        draft = DraftConfig.default().model_copy(
-            update={
-                "triggers": TriggersDraft(
-                    right=TriggerDraft(mode="Custom", params=flat),
-                )
-            }
-        )
-        ipc = draft.to_ipc_dict()
-        assert ipc["triggers"]["right"]["params"] == list(flat)
-        eff = build_from_name("Custom", ipc["triggers"]["right"]["params"])
-        assert eff.mode == 1
 
-
-@skip_sem_gi_real
-def test_gui_dialogs_confirm_delete_profile_exportado() -> None:
-    from hefesto_dualsense4unix.app import gui_dialogs
-
-    assert hasattr(gui_dialogs, "confirm_delete_profile")
-    assert "confirm_delete_profile" in gui_dialogs.__all__
-
-
-@skip_sem_gi_real
-def test_restore_dialog_nao_cita_navegacao(monkeypatch: pytest.MonkeyPatch) -> None:
-    """BUG-RESTORE-DIALOG-WRONG-PROFILE-01: o texto EXIBIDO não cita 'Navegação'."""
-    from hefesto_dualsense4unix.app import gui_dialogs
-
-    exibidos: list[str] = []
-
-    class _DialogoFalso:
-        def __init__(self, **kwargs: object) -> None:
-            self.kwargs = kwargs
-
-        def format_secondary_text(self, texto: str) -> None:
-            exibidos.append(texto)
-
-        def add_button(self, *_args: object) -> None:
-            pass
-
-        def set_default_response(self, *_args: object) -> None:
-            pass
-
-        def run(self) -> object:
-            return gui_dialogs.Gtk.ResponseType.CANCEL
-
-        def destroy(self) -> None:
-            pass
-
-    gtk_falso = SimpleNamespace(
-        MessageDialog=_DialogoFalso,
-        MessageType=gui_dialogs.Gtk.MessageType,
-        ButtonsType=gui_dialogs.Gtk.ButtonsType,
-        ResponseType=gui_dialogs.Gtk.ResponseType,
-    )
-    monkeypatch.setattr(gui_dialogs, "Gtk", gtk_falso)
-
-    assert gui_dialogs.confirm_restore_default(None) is False
-
-    (secundario,) = exibidos
-    assert "Navegação" not in secundario
-    from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
-
-    assert f"'{NOME_DO_PADRAO}'" in secundario
-    assert "Personalizado" not in secundario
-    assert "meu_perfil" not in secundario
-    assert "aplica-se a todos os apps" in secundario

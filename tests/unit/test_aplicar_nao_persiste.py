@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import ast
 import re
-from functools import lru_cache
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -23,82 +21,6 @@ GRAVACOES = (
     r"\bshutil\.(copy|move)",
     r"\bopen\s*\([^)]*[\"'][wax]",
 )
-
-
-CAMINHO_DO_APLICAR = ("on_apply_draft", "_aplicar_escolha_pendente", "_apply_draft_agora")
-
-
-MIXIN = "FooterActionsMixin"
-
-
-@lru_cache(maxsize=1)
-def _classe_do_rodape() -> tuple[str, ast.ClassDef]:
-    """O texto do arquivo e o nó da classe — parseados uma vez só."""
-    texto = FOOTER_ACTIONS_PY.read_text(encoding="utf-8")
-    for no in ast.parse(texto).body:
-        if isinstance(no, ast.ClassDef) and no.name == MIXIN:
-            return texto, no
-    raise AssertionError(
-        f"`{MIXIN}` sumiu de {FOOTER_ACTIONS_PY.name} — se o rodapé mudou de casa, "
-        "estes testes precisam saber para onde, senão passam a não vigiar nada"
-    )
-
-
-def _fonte(nome: str) -> str:
-    """Fonte do método SEM a docstring — senão a prosa satisfaz a asserção sozinha."""
-    texto, classe = _classe_do_rodape()
-    for no in classe.body:
-        if isinstance(no, ast.FunctionDef | ast.AsyncFunctionDef) and no.name == nome:
-            fonte = ast.get_source_segment(texto, no) or ""
-            doc = ast.get_docstring(no)
-            return fonte.replace(doc, "", 1) if doc else fonte
-    raise AssertionError(
-        f"`{MIXIN}.{nome}` não existe mais — o caminho do botão mudou e ninguém "
-        "atualizou este teste, que a partir daqui vigiaria um método fantasma"
-    )
-
-
-def test_aplicar_nao_escreve_em_disco() -> None:
-    for nome in CAMINHO_DO_APLICAR:
-        fonte = _fonte(nome)
-        for padrao in GRAVACOES:
-            assert not re.search(padrao, fonte), (
-                f"`{nome}` passou a gravar ({padrao!r}) — a tabela dos botões de "
-                "docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md afirma que o Aplicar "
-                "NÃO persiste, e é por essa linha que se decide fechar a janela"
-            )
-
-
-def test_aplicar_despacha_pelo_ipc() -> None:
-    fonte = _fonte("_apply_draft_agora")
-    assert '"profile.apply_draft"' in fonte, (
-        "o Aplicar é definido por despachar `profile.apply_draft` ao daemon (e a "
-        "asserção lê o CÓDIGO, não a docstring); sem isso a tabela do documento "
-        "descreve outro botão"
-    )
-
-
-FUNIL = "_gravar_perfil_async"
-
-QUEM_GRAVA_E_POR_ONDE = {
-    "on_save_profile": "_persist_profile_async",
-    "on_import_profile": "_import_save_async",
-    "on_restore_default": FUNIL,
-}
-
-
-def test_os_outros_tres_gravam_pelo_funil() -> None:
-    """A outra metade da frase: os três REALMENTE persistem (e pelo funil único)."""
-    for nome, degrau in QUEM_GRAVA_E_POR_ONDE.items():
-        assert re.search(rf"\b{degrau}\s*\(", _fonte(nome)), (
-            f"`{nome}` deixou de chamar `{degrau}` — a tabela de "
-            "docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md promete 'sim' para ele"
-        )
-        if degrau == FUNIL:
-            continue
-        assert re.search(rf"\b{FUNIL}\s*\(", _fonte(degrau)), (
-            f"`{degrau}` deixou de passar pelo funil `{FUNIL}` — GRAVA-POR-UM-FUNIL-01"
-        )
 
 
 def test_o_documento_nao_promete_persistencia_no_aplicar() -> None:

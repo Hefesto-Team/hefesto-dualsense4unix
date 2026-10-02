@@ -16,7 +16,7 @@ from unittest.mock import MagicMock
 import pytest
 from pydantic import ValidationError
 
-from hefesto_dualsense4unix.app.draft_config import DraftConfig, MicDraft
+from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.profiles.schema import (
     MatchAny,
     Profile,
@@ -104,46 +104,10 @@ class TestDraft:
         salvo = DraftConfig.from_profile(origem).to_profile("p")
         assert salvo.mic is None
 
-    def test_to_ipc_dict_so_emite_quando_tocado(self) -> None:
-        """Mesma regra do mouse: "Aplicar" de outra aba não mexe no botão."""
-        limpo = DraftConfig.default()
-        assert limpo.to_ipc_dict()["mic"] is None
-
-        tocado = limpo.model_copy(
-            update={"mic": MicDraft(button_toggles_system=False, dirty=True)}
-        )
-        assert tocado.to_ipc_dict()["mic"] == {
-            "button_toggles_system": False,
-            "volume": None,
-        }
-
 
 class TestGatePorCampo:
     """MIC-GATE-POR-CAMPO-01 (22/08/2026) — o gate era por SEÇÃO."""
 
-    def test_o_gesto_do_volume_nao_arrasta_o_botao_junto(self) -> None:
-        """O molde é o `rota` do alto-falante: sem opinião, a chave não viaja."""
-        depois_do_slider = DraftConfig.default().with_mic(volume=70)
-        secao = depois_do_slider.to_ipc_dict()["mic"]
-
-        assert secao == {"volume": 70}, (
-            f"a seção do microfone saiu como {secao!r} — o gesto do volume "
-            "levou junto um campo que ninguém escolheu"
-        )
-
-    def test_o_aplicar_do_volume_nao_derruba_o_flag_vivo_do_daemon(self) -> None:
-        """A ponta que dói: a config VIVA do daemon, escrita pelas costas dela."""
-        applier, daemon = _applier()
-        daemon.config.mic_button_toggles_system = False
-
-        payload = DraftConfig.default().with_mic(volume=70).to_ipc_dict()
-        aplicadas = applier.apply({"mic": payload["mic"]})
-
-        assert daemon.config.mic_button_toggles_system is False, (
-            "o Aplicar religou o botão de mic do sistema — o gesto foi no "
-            "controle deslizante do volume"
-        )
-        assert "mic" in aplicadas, "sem opinião não é FALHA — é nada a fazer"
 
     def test_a_chave_nula_e_silencio_e_nao_falha_a_secao(self) -> None:
         """Nulo explícito é "sem opinião", não payload torto."""
@@ -156,34 +120,6 @@ class TestGatePorCampo:
         assert "mic" in aplicadas
         assert applier.failed == {}
         assert daemon.config.mic_button_toggles_system is True
-
-    def test_com_opiniao_a_chave_viaja_e_e_aplicada(self) -> None:
-        """A outra metade: quem escolher o campo continua sendo obedecido."""
-        draft = DraftConfig.default().model_copy(
-            update={"mic": MicDraft(button_toggles_system=False, dirty=True)}
-        )
-        applier, daemon = _applier()
-
-        applier.apply({"mic": draft.to_ipc_dict()["mic"]})
-
-        assert daemon.config.mic_button_toggles_system is False
-
-    def test_o_disco_continua_lembrando_do_que_ela_desligou(self) -> None:
-        """Sem opinião no rascunho não pode virar `False` no arquivo."""
-        salvo = DraftConfig.default().with_mic(volume=70).to_profile("p")
-        assert salvo.mic is not None
-        assert salvo.mic.button_toggles_system is True
-        assert salvo.mic.volume == 70
-
-        de_volta = DraftConfig.from_profile(
-            Profile(
-                name="live",
-                match=MatchAny(),
-                mic=ProfileMicConfig(button_toggles_system=False, volume=40),
-            )
-        )
-        assert de_volta.mic.button_toggles_system is False
-        assert de_volta.to_profile("live").mic.button_toggles_system is False
 
 
 class TestApplier:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pathlib
 
-from hefesto_dualsense4unix.app.widgets import calibrar_entradas as cal
+from hefesto_dualsense4unix.interface import calibracao_das_entradas as cal
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 ARRANJO = RAIZ / "src/hefesto_dualsense4unix/integrations/arranjo_da_mesa.py"

@@ -1,7 +1,6 @@
 """tests/unit/test_button_glyph.py — testes do widget ButtonGlyph e SVGs."""
 from __future__ import annotations
 
-import contextlib
 import pathlib
 import xml.dom.minidom
 
@@ -63,66 +62,3 @@ def _tem_gtk() -> bool:
         return False
 
 
-def test_button_glyph_instancia() -> None:
-    """ButtonGlyph('cross') instancia sem excecao."""
-    if not _tem_gtk():
-        pytest.skip("GTK3 não disponivel neste ambiente")
-    from hefesto_dualsense4unix.gui.widgets.button_glyph import ButtonGlyph
-    glyph = ButtonGlyph("cross")
-    assert glyph is not None
-
-
-def test_button_glyph_set_pressed_altera_flag() -> None:
-    """set_pressed(True) altera is_pressed para True."""
-    from hefesto_dualsense4unix.gui.widgets.button_glyph import ButtonGlyph
-    glyph = ButtonGlyph("cross")
-    assert not glyph.is_pressed
-    glyph.set_pressed(True)
-    assert glyph.is_pressed
-
-
-def test_button_glyph_set_pressed_dispara_queue_draw() -> None:
-    """set_pressed(True) aciona queue_draw quando o estado muda."""
-    from hefesto_dualsense4unix.gui.widgets import button_glyph as mod
-    chamadas: list[object] = []
-
-    glyph = mod.ButtonGlyph("circle")
-    original_qd = glyph.queue_draw
-
-    def _qd_rastreado() -> None:
-        chamadas.append(True)
-        with contextlib.suppress(Exception):
-            original_qd()
-
-    glyph.queue_draw = _qd_rastreado  # type: ignore[method-assign]
-    glyph.set_pressed(True)
-
-    if not chamadas:
-        assert glyph.is_pressed, (
-            "set_pressed(True) não alterou _pressed nem chamou queue_draw"
-        )
-    else:
-        assert len(chamadas) == 1, "queue_draw devia ter sido chamado 1x"
-
-
-def test_button_glyph_set_pressed_idempotente() -> None:
-    """set_pressed com mesmo valor não muda o estado."""
-    from hefesto_dualsense4unix.gui.widgets.button_glyph import ButtonGlyph
-    glyph = ButtonGlyph("square")
-    glyph.set_pressed(False)
-    glyph.set_pressed(False)
-    assert not glyph.is_pressed
-
-
-def test_button_glyph_labels_cobre_todos_os_glyphs() -> None:
-    """BUTTON_GLYPH_LABELS contem entrada para cada glyph esperado."""
-    from hefesto_dualsense4unix.gui.widgets.button_glyph import BUTTON_GLYPH_LABELS
-    ausentes = [g for g in GLYPHS_ESPERADOS if g not in BUTTON_GLYPH_LABELS]
-    assert not ausentes, f"Glyphs sem label PT-BR: {ausentes}"
-
-
-def test_button_glyph_labels_valores_nao_vazios() -> None:
-    """Nenhum label PT-BR e vazio."""
-    from hefesto_dualsense4unix.gui.widgets.button_glyph import BUTTON_GLYPH_LABELS
-    vazios = [k for k, v in BUTTON_GLYPH_LABELS.items() if not v.strip()]
-    assert not vazios, f"Labels vazios: {vazios}"

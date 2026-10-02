@@ -153,40 +153,7 @@ class _Janela(pa.ProfilesActionsMixin):
         self.recarregou += 1
 
 
-def _sem_dialogo(janela: _Janela, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Intercepta o diálogo de descarte (nenhum GTK sobe no teste)."""
-    import hefesto_dualsense4unix.app.gui_dialogs as gd
-
-    monkeypatch.setattr(
-        gd,
-        "confirm_discard_pending_edits",
-        lambda parent, ativado, editando=None: (
-            janela.perguntou.append((ativado, editando))
-            or janela.resposta_descartar
-        ),
-        raising=False,
-    )
-
-
 class TestOTimeoutDaAtivacao:
-    def test_ativar_pede_a_folga_e_nao_o_timeout_de_leitura(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A mordida direta: sem `timeout_s`, a chamada herda os 250 ms."""
-        chamadas: list[dict[str, Any]] = []
-        monkeypatch.setattr(pa, "call_async", lambda **kw: chamadas.append(kw))
-        janela = _Janela()
-
-        janela.on_profile_activate(None)
-
-        assert len(chamadas) == 1
-        assert chamadas[0]["method"] == "profile.switch"
-        folga = chamadas[0]["timeout_s"]
-        assert folga >= 1.5, (
-            "o handler `profile.switch` leva ~1,2 s: menos que isso volta a "
-            "transformar toda ativação em 'Falha (daemon offline?)'"
-        )
-        assert folga == ipc_bridge.PROFILE_SWITCH_TIMEOUT_S
 
     def test_a_folga_e_maior_que_a_leitura(self) -> None:
         assert ipc_bridge.PROFILE_SWITCH_TIMEOUT_S > 0.25
@@ -239,93 +206,6 @@ class TestOAppletEspelhaAJanela:
         assert int(achado.group(1)) <= 250
 
 
-class TestAtivarRefazAsAbas:
-    def test_ativar_recarrega_as_abas_do_perfil_ativado(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Sem edição pendente, a ativação repinta tudo sem perguntar nada."""
-        janela = _Janela(pendente=False)
-        _sem_dialogo(janela, monkeypatch)
-
-        janela._on_profile_switch_success("vitoria", RESPOSTA_INTEIRA)
-
-        assert janela.recarregou == 1, (
-            "as abas seguiram no perfil anterior — a queixa literal dela"
-        )
-        assert janela.perguntou == [], "sem edição pendente não há o que perguntar"
-
-    def test_com_edicao_pendente_a_decisao_e_dela(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Recarregar por baixo de uma edição é perda de trabalho (R-08)."""
-        janela = _Janela(pendente=True, editando="Pragmata")
-        _sem_dialogo(janela, monkeypatch)
-        janela.resposta_descartar = False
-
-        janela._on_profile_switch_success("vitoria", RESPOSTA_INTEIRA)
-
-        assert janela.perguntou == [("vitoria", "Pragmata")]
-        assert janela.recarregou == 0, "ela mandou MANTER e o trabalho sumiu"
-        assert any("não salvas" in t for t in janela.toasts), (
-            "manter as alterações sem dizer nada deixa as abas mentindo calado"
-        )
-
-    def test_ela_pode_mandar_descartar(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        janela = _Janela(pendente=True, editando="Pragmata")
-        _sem_dialogo(janela, monkeypatch)
-        janela.resposta_descartar = True
-
-        janela._on_profile_switch_success("vitoria", RESPOSTA_INTEIRA)
-
-        assert janela.perguntou == [("vitoria", "Pragmata")]
-        assert janela.recarregou == 1
-
-    def test_sem_recarregador_ainda_repinta_o_que_esta_em_memoria(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Dublê/mixin sozinho: cai no `_refresh_all_tabs`, nunca em nada."""
-        refeitas: list[Any] = []
-        monkeypatch.setattr(fa, "_refresh_all_tabs", refeitas.append)
-        janela = _Janela(pendente=False)
-        monkeypatch.delattr(_Janela, "_bootstrap_draft_async")
-
-        janela._recarregar_as_abas_do_perfil_ativo()
-
-        assert refeitas == [janela]
-
-    def test_o_dialogo_novo_nasce_com_o_tema_do_app(self) -> None:
-        """GUI-05/P5: diálogo sem a classe abre CLARO no COSMIC (XWayland)."""
-        import inspect
-
-        from hefesto_dualsense4unix.app import gui_dialogs
-
-        src = inspect.getsource(gui_dialogs.confirm_discard_pending_edits)
-        assert "_apply_app_theme(" in src
-
-    def test_o_default_do_dialogo_e_manter_o_que_ela_nao_salvou(self) -> None:
-        """Um Enter distraído não pode custar edição não salva."""
-        import inspect
-
-        from hefesto_dualsense4unix.app import gui_dialogs
-
-        src = inspect.getsource(gui_dialogs.confirm_discard_pending_edits)
-        assert "set_default_response(Gtk.ResponseType.CANCEL)" in src
-
-    def test_o_negrito_e_a_selecao_continuam_acontecendo(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A cura nova não pode custar o comportamento que já existia."""
-        janela = _Janela(pendente=False)
-        _sem_dialogo(janela, monkeypatch)
-
-        janela._on_profile_switch_success("vitoria", RESPOSTA_INTEIRA)
-
-        assert janela.negritos == ["vitoria"]
-        assert janela.sincronizados == 1
-
-
 class TestAJanelaLeORelatorio:
     def test_tudo_aplicado_mantem_a_frase_de_sempre(self) -> None:
         assert pa.mensagem_de_ativacao("vitoria", RESPOSTA_INTEIRA) == (
@@ -376,27 +256,4 @@ class TestAJanelaLeORelatorio:
         )
         assert relato == {"applied": [], "failed": {"telepatia": "falhou"}}
 
-    def test_o_toast_da_ativacao_carrega_o_relatorio(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """O caminho público: é o `_result` que era jogado fora."""
-        janela = _Janela(pendente=False)
-        _sem_dialogo(janela, monkeypatch)
 
-        janela._on_profile_switch_success("vitoria", RESPOSTA_COM_MODO_ADIADO)
-
-        assert any("modo" in t for t in janela.toasts)
-
-    def test_o_callback_do_ativar_repassa_a_resposta(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A fiação: `lambda _result:` descartava o relatório antes de chegar aqui."""
-        capturado: list[Any] = []
-        monkeypatch.setattr(pa, "call_async", lambda **kw: capturado.append(kw))
-        janela = _Janela(pendente=False)
-        _sem_dialogo(janela, monkeypatch)
-
-        janela.on_profile_activate(None)
-        capturado[0]["on_success"](RESPOSTA_COM_MODO_ADIADO)
-
-        assert any("modo" in t for t in janela.toasts)

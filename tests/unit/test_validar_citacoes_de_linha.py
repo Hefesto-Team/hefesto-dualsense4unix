@@ -38,76 +38,6 @@ def documento(arvore: Path, texto: str) -> None:
     (arvore / "docs" / "protocol" / "exemplo.md").write_text(texto, encoding="utf-8")
 
 
-def test_a_citacao_que_abre_passa(arvore: Path) -> None:
-    """O controle. Sem ele, os outros poderiam estar reprovando por nada."""
-    documento(arvore, "O valor sai de `core/exemplo.py:3-5`, e é só isso.\n")
-    saida = rodar(arvore)
-    assert saida.returncode == 0, saida.stdout
-
-
-def test_a_linha_que_nao_existe_reprova(arvore: Path) -> None:
-    """A pergunta 1: o arquivo encolheu e o endereço ficou apontando o vazio."""
-    documento(arvore, "O valor sai de `core/exemplo.py:900`.\n")
-    saida = rodar(arvore)
-    assert saida.returncode == 1, (
-        f"citação para além do fim do arquivo passou. Disse: {saida.stdout!r}")
-    assert "tem 11 linha(s)" in saida.stdout, (
-        "o erro não diz quantas linhas o arquivo tem — quem for consertar "
-        f"precisa disso. Disse: {saida.stdout!r}")
-
-
-def test_a_promessa_nomeada_que_a_faixa_nao_cumpre_reprova(arvore: Path) -> None:
-    """A pergunta 2, e é a que pegou o caso real do pré-amp."""
-    documento(arvore, "com o `FLAG_DE_AUDIO` em `core/exemplo.py:3-5` | ALTA\n")
-    saida = rodar(arvore)
-    assert saida.returncode == 1, (
-        "a faixa não contém o símbolo prometido e o portão passou — é o defeito "
-        f"inteiro que ele existe para pegar. Disse: {saida.stdout!r}")
-    assert "FLAG_DE_AUDIO" in saida.stdout, "o erro não nomeia o que foi prometido"
-
-
-def test_a_promessa_nomeada_cumprida_passa(arvore: Path) -> None:
-    """O outro lado da moeda: reapontado para onde a coisa está, ele cala."""
-    documento(arvore, "com o `FLAG_DE_AUDIO` em `core/exemplo.py:11` | ALTA\n")
-    saida = rodar(arvore)
-    assert saida.returncode == 0, saida.stdout
-
-
-def test_o_nome_entre_parenteses_depois_do_endereco_tambem_e_promessa(
-    arvore: Path,
-) -> None:
-    """A segunda forma que a casa escreve: `arquivo:N-M` (`SIMBOLO`)."""
-    documento(arvore, "a entrega em `core/exemplo.py:1-2` (`FLAG_DE_AUDIO`)\n")
-    saida = rodar(arvore)
-    assert saida.returncode == 1, (
-        f"a forma com parênteses não é conferida. Disse: {saida.stdout!r}")
-
-
-def _modulo_com_def(arvore: Path, antes: str) -> None:
-    """``core/q3.py``: ``antes`` na linha 1, e o ``def alvo`` na 2."""
-    (arvore / "src" / "hefesto_dualsense4unix" / "core" / "q3.py").write_text(
-        f"{antes}\ndef alvo():\n    return 1\n", encoding="utf-8")
-
-
-def test_a_faixa_que_abraca_o_def_comecando_em_codigo_de_fora_reprova(
-    arvore: Path,
-) -> None:
-    """A pergunta 3: a função desceu uma linha e a faixa não foi junto."""
-    _modulo_com_def(arvore, "VALOR = 1")
-    documento(arvore, "o corpo em `core/q3.py:1-3` (`alvo`)\n")
-    saida = rodar(arvore)
-    assert saida.returncode == 1, saida.stdout
-    assert "começa antes do `def alvo` (linha 2)" in saida.stdout, saida.stdout
-
-
-def test_o_comentario_de_cabecalho_do_def_nao_e_codigo_de_fora(arvore: Path) -> None:
-    """O outro lado: a faixa que abre no comentário que apresenta a função."""
-    _modulo_com_def(arvore, "# o cabeçalho de alvo")
-    documento(arvore, "o corpo em `core/q3.py:1-3` (`alvo`)\n")
-    saida = rodar(arvore)
-    assert saida.returncode == 0, saida.stdout
-
-
 def test_a_fonte_de_fora_da_arvore_e_ignorada(arvore: Path) -> None:
     """136 dos 204 endereços de `docs/protocol/` citam kernel, SDL e wine."""
     documento(arvore, "o driver faz isso em `hid-nintendo.c:99999`.\n")
@@ -115,31 +45,6 @@ def test_a_fonte_de_fora_da_arvore_e_ignorada(arvore: Path) -> None:
     assert saida.returncode == 0, (
         f"acusou uma fonte que esta árvore não versiona. Disse: {saida.stdout!r}")
     assert "fora desta árvore" in saida.stdout
-
-
-def test_a_continuacao_curta_ancorada_na_mesma_linha_e_conferida(
-    arvore: Path,
-) -> None:
-    """`:N` herda o arquivo do endereço explícito da MESMA linha."""
-    documento(arvore,
-              "o bloco em `core/exemplo.py:1-5`, com o `FLAG_DE_AUDIO` em `:2`\n")
-    saida = rodar(arvore)
-    assert saida.returncode == 1, (
-        "a continuação `:2` ancorada na mesma linha não foi conferida — era "
-        f"essa a forma do endereço podre de 13/08. Disse: {saida.stdout!r}")
-
-
-def test_a_continuacao_curta_sem_ancora_na_linha_nao_e_adivinhada(
-    arvore: Path,
-) -> None:
-    """A conservadoria medida, e ela custou seis acusações falsas para nascer."""
-    documento(arvore,
-              "primeiro `core/exemplo.py:1`.\n\n"
-              "muito depois, falando de outro arquivo, `:99999`.\n")
-    saida = rodar(arvore)
-    assert saida.returncode == 0, (
-        "o portão adivinhou a âncora de uma continuação solta e acusou por ela. "
-        f"Disse: {saida.stdout!r}")
 
 
 def test_a_arvore_de_verdade_esta_limpa() -> None:

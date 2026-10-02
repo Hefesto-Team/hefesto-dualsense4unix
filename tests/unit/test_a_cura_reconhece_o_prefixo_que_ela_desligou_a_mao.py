@@ -9,7 +9,6 @@ from pathlib import Path
 
 import pytest
 
-from hefesto_dualsense4unix.app.actions.emulation_actions import frase_do_censo
 from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
 
 WIN64 = (
@@ -78,19 +77,6 @@ def test_a_camada_renomeada_a_mao_esta_ligada_no_registro_e_ausente_no_disco(
         assert camada.e_sobra is True, (
             "entrada viva no registro continua sendo trabalho para a cura"
         )
-
-
-def test_o_produto_diz_pendurada_e_nao_ligada_seco(prefixo_dela: Path) -> None:
-    """A frase da tela não pode achatar os dois estados num só."""
-    prefixo = cv.prefixo_de_jogo(prefixo_dela, appid="1599660")
-    texto, tem_sobra, _tem_devolucao = frase_do_censo([prefixo])
-    assert tem_sobra is True
-    assert "o arquivo não está no disco" in texto
-    for linha in texto.splitlines():
-        if "EOSOverlayVkLayer" in linha:
-            assert not linha.rstrip().endswith("— ligada"), (
-                "camada sem manifesto no disco descrita como 'ligada' seco: " + linha
-            )
 
 
 def test_curar_desliga_as_duas_entradas_sem_tocar_nos_arquivos_dela(

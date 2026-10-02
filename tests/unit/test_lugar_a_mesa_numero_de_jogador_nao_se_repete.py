@@ -55,14 +55,13 @@ Nenhum endereço real: todos os aparelhos usam a faixa forjada `aa:bb:cc:…`
 """
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import pytest
 
 from hefesto_dualsense4unix.core import external_leds, sysfs_leds
-from hefesto_dualsense4unix.core.led_control import player_led_pattern, player_slot_color
+from hefesto_dualsense4unix.core.led_control import player_led_pattern
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager
 from hefesto_dualsense4unix.daemon.subsystems.external_identity import (
     ExternalIdentityRegistry,
@@ -93,38 +92,6 @@ class Lampada:
     _raiz: Path = field(repr=False, default=Path())
 
 
-    def criar(self, raiz: Path) -> None:
-        self._raiz = raiz
-        leds = raiz / "leds"
-        if self.especie == "dualsense":
-            hid = raiz / "devices" / self.prefixo
-            (hid / "leds" / f"{self.prefixo}:rgb:indicator").mkdir(parents=True)
-            (hid / "uevent").write_text(
-                f"HID_UNIQ={self.identidade}\n", encoding="utf-8"
-            )
-            os.symlink(
-                hid / "leds" / f"{self.prefixo}:rgb:indicator",
-                leds / f"{self.prefixo}:rgb:indicator",
-            )
-            for i in range(1, 6):
-                (leds / f"{self.prefixo}:white:player-{i}").mkdir()
-        elif self.especie == "nintendo":
-            for i in range(1, 5):
-                alvo = leds / f"{self.prefixo}:green:player-{i}" / "brightness"
-                alvo.parent.mkdir()
-                alvo.write_text("0", encoding="ascii")
-            azul = leds / f"{self.prefixo}:blue:player-5" / "brightness"
-            azul.parent.mkdir()
-            azul.write_text("0", encoding="ascii")
-        elif self.especie == "ds4":
-            for cor in ("red", "green", "blue", "global"):
-                alvo = leds / f"{self.prefixo}:{cor}" / "brightness"
-                alvo.parent.mkdir()
-                alvo.write_text("0", encoding="ascii")
-        else:  # pragma: no cover - erro de escrita do teste
-            raise AssertionError(f"espécie de lâmpada desconhecida: {self.especie}")
-
-
     def acender(self, numero: int) -> None:
         raiz = str(self._raiz / "leds")
         if self.especie == "dualsense":
@@ -135,31 +102,6 @@ class Lampada:
             assert external_leds.write_player_number(self.prefixo, numero, raiz)
         else:
             assert external_leds.write_lightbar_slot(self.prefixo, numero, raiz)
-
-
-    def numero_aceso(self) -> int | None:
-        """Decodifica o número lendo os nós — ``None`` = padrão de ninguém."""
-        raiz = str(self._raiz / "leds")
-        if self.especie == "dualsense":
-            nodes = sysfs_leds.discover()
-            bits = nodes[sysfs_leds.norm_mac(self.identidade) or ""].get_players()
-            if bits is None:
-                return None
-            for n in range(1, 9):
-                if tuple(bits) == player_led_pattern(n):
-                    return n
-            return None
-        if self.especie == "nintendo":
-            lido = external_leds.read_player_pattern(self.prefixo, raiz)
-            return lido if isinstance(lido, int) and lido >= 1 else None
-        cor = tuple(
-            int((self._raiz / "leds" / f"{self.prefixo}:{c}" / "brightness").read_text())
-            for c in ("red", "green", "blue")
-        )
-        for n in range(1, 9):
-            if cor == player_slot_color(n):
-                return n
-        return None
 
 
 @dataclass

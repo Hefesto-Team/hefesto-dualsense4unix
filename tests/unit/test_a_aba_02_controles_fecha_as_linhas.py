@@ -23,7 +23,7 @@ import mesa_viva
 
 import aba02 as a02_gerador
 from hefesto_dualsense4unix.app import audio_saida
-from hefesto_dualsense4unix.app.widgets.controller_card import (
+from hefesto_dualsense4unix.interface.cartao_do_controle import (
     TEXTO_MIC_ALVO_NAO_HONRADO,
     rotulo_lightbar,
 )
@@ -225,7 +225,7 @@ def test_com_a_cor_conhecida_o_hover_explica_de_quem_e_a_cor() -> None:
 
 def test_a_razao_do_microfone_e_a_do_motor() -> None:
     """A frase do `?` é a MESMA que o gesto levanta — e não uma cópia dela."""
-    from hefesto_dualsense4unix.app.widgets.controller_card import acao_mic
+    from hefesto_dualsense4unix.interface.cartao_do_controle import acao_mic
 
     sem_leitura = {**BASE, "audio": {}}
     assert a02.porques_do_som(sem_leitura)["mic-porque"] == acao_mic(
@@ -769,33 +769,8 @@ def test_nenhum_botao_de_som_promete_botao_nesta_tela() -> None:
 from hefesto_dualsense4unix.app.actions.home_actions import (
     palavra_do_transporte,
 )
-from hefesto_dualsense4unix.app.widgets.controller_card import (
-    _HZ_MAIS_LARGO,
-    resumo_do_que_chega_ao_jogo,
-    texto_motion,
-)
+from hefesto_dualsense4unix.interface.cartao_do_controle import texto_motion
 
-
-def _a_frase_mais_larga_do_giroscopio() -> str:
-    """O PIOR CASO, PERGUNTADO AO DONO — nunca digitado aqui.
-
-    `texto_motion` tem três formas (o hertz, o Modo Nativo e a máscara Xbox) e
-    nenhuma constante de "frase mais larga", como a linha da verdade tem. Então
-    a régua monta as TRÊS CENAS e deixa o dono responder qual é a maior. O hertz
-    entra no maior valor que o próprio dono sabe imprimir (`_HZ_MAIS_LARGO`, os
-    quatro dígitos que ele reserva para um pico de IMU) — o número também é
-    dele.
-    """
-    largo = float(_HZ_MAIS_LARGO)
-    cenas = [
-        ({**BASE}, {"rumble_ff": {"per_vpad": [
-            {"player": 1, "motion_streaming": True, "motion_hz": largo}]}}),
-        ({**BASE}, {"native_mode": True}),
-        ({**BASE}, {"gamepad_emulation": {"flavor": "xbox"}}),
-    ]
-    frases = [f for f in (texto_motion(e, g) for e, g in cenas) if f]
-    assert len(frases) == len(cenas), "uma das três formas do dono calou"
-    return max(frases, key=len)
 
 def _com_vpad(hz: float | None = 250.0, **extra: Any) -> dict[str, Any]:
     item: dict[str, Any] = {"player": 1, "motion_streaming": True}
@@ -876,35 +851,6 @@ def test_o_hertz_da_linha_e_medido_e_nunca_cravado() -> None:
     assert "0 Hz" not in zero, (
         "com o espelho parado o cartão anunciou '~0 Hz' — uma frequência de "
         f"zero não é medida, é ausência: {zero!r}")
-
-
-def test_a_linha_da_verdade_continua_fora_do_cartao() -> None:
-    """A decisão dela de 17/08/2026, e esta régua é o que a segura.
-
-    *"remover guia dos status em tempo real"* — `resumo_do_que_chega_ao_jogo`
-    saiu da tela da GTK naquele dia (SEM-BARRA-DA-VERDADE-01) e continua criada,
-    alimentada e nunca empacotada (`controller_card.py:1688`). A sprint
-    CONTROLES-VERDADE-01 pedia para reconstruí-la aqui; a célula inteira do
-    `paridade-gtk-html.csv:56` diz que isso *"seria reintroduzir o que ela
-    mandou tirar"*, e o enunciado foi corrigido em vez de cumprido.
-
-    ELA CONTINUA VIVA NO MOTOR, e isso é de propósito: decisão medida não se
-    apaga, e o dia em que ela pedir a linha de volta o dono está de pé.
-
-    MORDE: emita `resumo_do_que_chega_ao_jogo` em qualquer campo do cartão e
-    esta régua reprova — que é o único aviso que existe contra desfazer uma
-    decisão dela por leitura de meia célula.
-    """
-    estado = _com_vpad(250.0)
-    frase_removida = resumo_do_que_chega_ao_jogo({**BASE}, estado)
-    assert frase_removida, "o dublê não acordou o dono — a régua mediria o vazio"
-    campos = _card({}, state=estado)
-    achados = [k for k, v in campos.items()
-               if isinstance(v, str) and v and v == frase_removida]
-    assert not achados, (
-        f"a linha que ela mandou tirar em 17/08/2026 voltou ao cartão, em "
-        f"{achados!r} — `paridade-gtk-html.csv:56` avisa que reconstruí-la aqui "
-        f"é reintroduzir o que ela removeu")
 
 
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
@@ -1013,60 +959,3 @@ A_LINHA_DO_GIRO_NA_TELA = r"""
 """
 
 
-@pytest.fixture(scope="module")
-def giro_na_tela() -> dict[str, Any]:
-    if not CHROME.exists():
-        pytest.skip("sem o Chrome do sistema — a régua não tem motor")
-    from playwright.sync_api import sync_playwright
-
-    alvo = onde.pagina("02-controles.html")
-    with sync_playwright() as pw:
-        navegador = pw.chromium.launch(executable_path=str(CHROME),
-                                       args=["--no-sandbox"])
-        try:
-            pg = navegador.new_page(viewport={"width": 1180, "height": 900})
-            pg.goto(alvo.as_uri())
-            saida = pg.evaluate(A_LINHA_DO_GIRO_NA_TELA,
-                                _a_frase_mais_larga_do_giroscopio())
-        finally:
-            navegador.close()
-    return dict(saida)
-
-
-def test_sem_frase_a_linha_do_giroscopio_esconde(giro_na_tela: dict[str, Any]) -> None:
-    """"Sem rótulo, esconde" é contrato, e não economia de pixel."""
-    assert not giro_na_tela.get("ausente"), (
-        "o elemento da linha do giroscópio não está no desenho")
-    assert giro_na_tela["com"]["display"] != "none", (
-        "a linha do giroscópio não aparece nem COM frase — o card aberto ficou "
-        "sem o único número que diz se o giroscópio chega ao jogo AGORA")
-    assert giro_na_tela["sem"]["display"] == "none", (
-        "sem `title` a linha continuou ocupando o cabeçalho: o produto remove "
-        "o atributo quando não há o que dizer, e a folha tem de acompanhar")
-
-
-def test_a_frase_mais_larga_do_dono_cabe_em_uma_linha(
-        giro_na_tela: dict[str, Any]) -> None:
-    """A maior frase que o dono sabe montar, dentro de um cabeçalho de uma linha."""
-    est = giro_na_tela["esticado"]
-    assert est["linhas"] < 1.25, (
-        f"a frase mais larga do dono ocupou {est['linhas']:.1f} linhas no "
-        f"cabeçalho — ele tem uma só, de altura fixa, e o resto vaza por baixo")
-    assert est["no_jogo"]["direita"] <= est["faixa"]["direita"] + 1, (
-        f"a linha do giroscópio passou da faixa em "
-        f"{est['verdade']['direita'] - est['faixa']['direita']:.1f}px")
-
-
-def test_a_frase_e_o_hover_sao_um_endereco_so(
-        giro_na_tela: dict[str, Any]) -> None:
-    """Dois elementos, o MESMO `data-campo` — e nunca dois campos."""
-    assert giro_na_tela["um_endereco_so"] == 2, (
-        f"a linha do giroscópio tem {giro_na_tela['um_endereco_so']} elementos "
-        f"com o endereço `giro-no-jogo`; são dois — o que veste o "
-        f"`data-no-jogo` e o que recebe o texto")
-    assert giro_na_tela["titulo"] is None, (
-        f"a linha do giroscópio voltou a ter um `title` "
-        f"({giro_na_tela['titulo']!r}) repetindo o texto que está ao lado dele")
-    assert giro_na_tela["rotulo"] == giro_na_tela["com"]["texto"], (
-        f"o `aria-label` não é a frase do texto: "
-        f"{giro_na_tela['rotulo']!r} contra {giro_na_tela['com']['texto']!r}")

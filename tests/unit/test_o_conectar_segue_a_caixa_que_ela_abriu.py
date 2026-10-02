@@ -16,12 +16,9 @@ from hefesto_dualsense4unix.integrations import diario_do_radio
 from hefesto_dualsense4unix.integrations import gesto_de_pareamento as gp
 from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VARANDA, VERDE, VERMELHO
-from tests.unit.test_a_caixa_fica_onde_ela_abriu import CHIP, _cartao
 from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
-    Bancada,
     BuscaDePe,
     PonteQueVaiAoDaemon,
-    id_da_tela,
     mundo_da_madrugada,
     onde_buscou,
     onde_pareou,
@@ -324,43 +321,6 @@ def test_o_pedido_que_a_busca_nao_atendeu_nao_vale_para_a_proxima(
     fim = mesa.central.conectar(VARANDA)
     assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, VARANDA), fim
     assert onde_buscou(mundo) == [rm.HCIS[SALA], rm.HCIS[VARANDA]]
-
-
-@pytest.mark.parametrize(("onde_busca", "chip"), PARES)
-def test_a_tela_mostra_a_busca_no_adaptador_do_chip(
-    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde_busca: str, chip: str,
-) -> None:
-    """O que ela vê, pela tela de verdade (o pacote da 08, o gesto do chip, o"""
-    mundo = mundo_da_madrugada()
-    relogio = rm.Relogio()
-    bancada = Bancada(a08, monkeypatch, mundo, relogio)
-    busca = BuscaDePe(relogio)
-    try:
-        bancada.cena()
-        bancada.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca))
-        bancada.cena()
-        assert bancada.gesto("radio-procurar") == {"armou": True}
-        assert busca.dentro.wait(5.0), "a central não abriu a janela"
-
-        bancada.cena()
-        assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(chip)) == {"armou": True}
-        assert bancada.ponte.chamadas[-1] == ("radio.mover", {"destino": id_da_tela(chip)})
-        de_pe = BuscaDePe(relogio)
-        busca.soltar()
-        assert de_pe.dentro.wait(5.0), "a janela nova não abriu"
-        busca = de_pe
-        assert onde_buscou(mundo) == [rm.HCIS[onde_busca], rm.HCIS[chip]]
-
-        campos = bancada.tique()
-        cena = dict(a08._CENA_NA_TELA)
-        assert cena["ocupado"] is True
-        assert cena["aberto"] == cena["destino_do_conectar"] == id_da_tela(chip)
-        acesos = [lid for aceso, lid in CHIP.findall(campos["radio-moldes"]) if aceso == "true"]
-        assert acesos == [id_da_tela(chip)]
-        _a_busca_acende_so_no(campos, a08, chip)
-    finally:
-        busca.soltar()
-        bancada.fechar()
 
 
 @pytest.mark.parametrize(("destino", "chip"), MOVERES)
@@ -751,52 +711,6 @@ def test_o_conectar_que_muda_de_destino_ignora_o_que_o_destino_novo_ja_conhecia(
     (fim,) = mesa.esperar()
     assert (fim.estado, fim.aparelho, fim.destino) == (cr.CHEGOU, VERDE, VARANDA), fim
     assert [bd.endereco_do_aparelho(c) for c, _a in mundo.metodos("Pair")] == [VERDE]
-
-
-@pytest.mark.parametrize(("onde_busca", "chip"), PARES)
-def test_o_clique_de_volta_pela_tela_desfaz_o_pedido_que_a_busca_ainda_nao_levou(
-    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, onde_busca: str, chip: str,
-) -> None:
-    """O último clique dela vence também pela TELA. Entre o chip aceito e o fio"""
-    mundo = mundo_da_madrugada()
-    relogio = rm.Relogio()
-    bancada = Bancada(a08, monkeypatch, mundo, relogio)
-    busca = BuscaDePe(relogio)
-    try:
-        bancada.cena()
-        bancada.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca))
-        bancada.cena()
-        assert bancada.gesto("radio-procurar") == {"armou": True}
-        assert busca.dentro.wait(5.0), "a central não abriu a janela"
-        bancada.cena()
-        assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(chip)) == {"armou": True}
-
-        campos = bancada.tique()
-        _a_busca_acende_so_no(campos, a08, chip)
-
-        assert bancada.gesto("escolher-adaptador", alvo=id_da_tela(onde_busca)) == {
-            "armou": True}
-        assert bancada.ponte.chamadas[-1] == (
-            "radio.mover", {"destino": id_da_tela(onde_busca)}), "o clique de volta não chegou"
-        rm.ela_pareia(relogio, mundo, bancada.central, VERDE)
-        busca.soltar()
-        bancada.esperar_a_central()
-        assert onde_buscou(mundo) == [rm.HCIS[onde_busca]], "a busca foi para o chip desfeito"
-        assert onde_pareou(mundo) == [rm.HCIS[onde_busca]]
-        assert bancada.cena()["aberto"] == id_da_tela(onde_busca)
-    finally:
-        busca.soltar()
-        bancada.fechar()
-
-
-def _a_busca_acende_so_no(campos: dict[str, Any], a08: Any, adaptador: str) -> None:
-    """A pílula «Segure PS + Create» mora em toda caixa, escondida, e acende só"""
-    ids = [lug["id"] for lug in a08._CENA_NA_TELA["lugares"]]
-    assert campos["radio-conectando"] == [
-        "sim" if lid == id_da_tela(adaptador) else "" for lid in ids]
-    for outro in TRES:
-        cartao = _cartao(campos["radio-sala"], id_da_tela(outro))
-        assert ("buscando" in cartao.split('"', 2)[1].split()) == (outro == adaptador), outro
 
 
 def _o_bluetoothd_sai(mundo: rm.RadioDeMentira) -> None:

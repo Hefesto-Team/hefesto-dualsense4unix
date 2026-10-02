@@ -13,7 +13,7 @@ import pytest
 
 import hefesto_dualsense4unix.core.escritor_cru as _escritor_cru
 import hefesto_dualsense4unix.daemon.connection as conn_mod
-from hefesto_dualsense4unix.app.widgets.controller_card import (
+from hefesto_dualsense4unix.interface.cartao_do_controle import (
     ROTULO_LIGHTBAR_SEGURADA,
     rotulo_lightbar,
 )

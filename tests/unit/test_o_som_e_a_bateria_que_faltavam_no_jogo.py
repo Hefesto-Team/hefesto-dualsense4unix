@@ -45,13 +45,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto_dualsense4unix.app.widgets.controller_card import (
-    SITUACAO_CHEGANDO,
-    SITUACAO_NUNCA,
-    SITUACAO_PARADO,
-    estado_do_recurso,
-    resumo_do_que_chega_ao_jogo,
-)
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient
 from hefesto_dualsense4unix.core.ds_output_report import (
     BT_INPUT_CRC_SEED,
@@ -222,67 +215,6 @@ def _pedido_de_vibracao(ha_s: float = 0.2) -> list[dict[str, Any]]:
             "ramo": "v1",
         }
     ]
-
-
-class TestOSomDoJogoNaLinhaDeRecursos:
-    def test_som_chegando_agora(self) -> None:
-        """MORDIDA: apagar a entrada `alto_falante` de `_CATEGORIA_DO_RECURSO`."""
-        estado = estado_do_recurso(
-            "alto_falante", _entry(), _estado(visto_ha_s={"audio_do_jogo": 0.4})
-        )
-        assert estado is not None
-        assert estado.situacao == SITUACAO_CHEGANDO
-        assert estado.frase == "som do controle"
-
-    def test_som_que_parou(self) -> None:
-        """O carimbo velho — o caso medido ao vivo hoje (`audio_do_jogo: 5032.8`)."""
-        estado = estado_do_recurso(
-            "alto_falante", _entry(), _estado(visto_ha_s={"audio_do_jogo": 5032.8})
-        )
-        assert estado is not None
-        assert estado.situacao == SITUACAO_PARADO
-
-    def test_ninguem_com_a_sessao_aberta_mandou_audio(self) -> None:
-        """Categoria ausente = ninguém com a sessão aberta mandou bytes de áudio."""
-        estado = estado_do_recurso("alto_falante", _entry(), _estado())
-        assert estado is not None
-        assert estado.situacao == SITUACAO_NUNCA
-
-    def test_a_frase_nao_carrega_o_volume(self) -> None:
-        """Decisão dela: a linha diz que o som chega, não em que volume."""
-        estado = estado_do_recurso(
-            "alto_falante",
-            _entry(),
-            _estado(
-                visto_ha_s={"audio_do_jogo": 0.1},
-                audio_do_jogo_amostra={"alto_falante": 100, "rota": 48},
-            ),
-        )
-        assert estado is not None
-        assert not any(d.isdigit() for d in estado.frase)
-
-    def test_a_linha_inteira_mostra_o_som(self) -> None:
-        """A entrega que ela vê: o som na MESMA lista, com o mesmo desenho."""
-        frase = resumo_do_que_chega_ao_jogo(
-            _entry(),
-            _estado(
-                visto_ha_s={"audio_do_jogo": 0.4, "rumble": 0.2},
-                ff_ultimos_reports=_pedido_de_vibracao(0.2),
-                motion_streaming=False,
-                motion_forwards=0,
-            ),
-        )
-        assert frase is not None
-        assert "No jogo agora: vibração, som do controle" in frase
-
-    def test_a_categoria_e_a_mesma_dos_dois_lados(self) -> None:
-        """O reader e o vpad falam do MESMO carimbo, e é o teste que os prende."""
-        from hefesto_dualsense4unix.app.widgets import controller_card
-
-        assert (
-            controller_card._CATEGORIA_DO_RECURSO["alto_falante"]
-            == uhid_gamepad.ATIVIDADE_AUDIO_DO_JOGO
-        )
 
 
 class TestExtrairABateriaDoReportCru:

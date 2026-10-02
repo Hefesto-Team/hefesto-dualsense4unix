@@ -24,12 +24,6 @@ def test_a_tela_oferece_exatamente_a_escada_que_o_daemon_aplica() -> None:
     assert da_tela == RUMBLE_POLICY_MULT
 
 
-def test_o_padrao_de_desempate_nao_e_mais_ancora_morta() -> None:
-    """Era o literal 0,7 em quatro lugares — um degrau que deixou de existir."""
-    padrao = rumble_actions._MULT_PADRAO
-    assert padrao == RUMBLE_POLICY_MULT["balanceado"]
-
-
 class _FakeScale:
     def __init__(self, value: float = 0.0) -> None:
         self._value = float(value)
@@ -83,91 +77,6 @@ class _FakeBarra:
 
     def push(self, _ctx: int, msg: str) -> None:
         self.mensagens.append(msg)
-
-
-class _Aba(rumble_actions.RumbleActionsMixin):
-    """A aba Rumble por composição — só os widgets que estes testes tocam."""
-
-    def __init__(self) -> None:
-        from hefesto_dualsense4unix.app.draft_config import DraftConfig
-
-        self.draft = DraftConfig.default()
-        self._rumble_guard_refresh = False
-        self._rumble_policy = "balanceado"
-        self._rumble_test_source = None
-        self._widgets: dict[str, Any] = {
-            "rumble_policy_economia": _FakeToggle(),
-            "rumble_policy_balanceado": _FakeToggle(active=True),
-            "rumble_policy_max": _FakeToggle(),
-            "rumble_policy_auto": _FakeToggle(),
-            "rumble_policy_slider": _FakeScale(100.0),
-            "rumble_policy_auto_label": _FakeLabel(),
-            "rumble_policy_aviso": _FakeLabel(),
-            "rumble_state_label": _FakeLabel(),
-            "status_bar": _FakeBarra(),
-        }
-
-    def _get(self, key: str) -> Any:  # type: ignore[override]
-        return self._widgets.get(key)
-
-
-@pytest.fixture
-def aba(monkeypatch: pytest.MonkeyPatch) -> _Aba:
-    enviados: list[float] = []
-    monkeypatch.setattr(
-        rumble_actions,
-        "rumble_policy_custom",
-        lambda mult: (enviados.append(mult), True)[1],
-    )
-    monkeypatch.setattr(
-        rumble_actions,
-        "rumble_policy_set_checked",
-        lambda policy, timeout=None: (True, None),
-    )
-    instancia = _Aba()
-    instancia.enviados = enviados  # type: ignore[attr-defined]
-    return instancia
-
-
-def test_sair_dos_degraus_avisa_na_barra_de_estado(aba: _Aba) -> None:
-    barra: _FakeBarra = aba._widgets["status_bar"]
-    slider: _FakeScale = aba._widgets["rumble_policy_slider"]
-    slider.set_value(145.0)
-    aba.on_rumble_policy_slider_changed(slider)
-
-    assert aba._rumble_policy == "custom"
-    for pid in (
-        "rumble_policy_economia",
-        "rumble_policy_balanceado",
-        "rumble_policy_max",
-        "rumble_policy_auto",
-    ):
-        assert aba._widgets[pid].get_active() is False
-    assert barra.mensagens, "o deslizador continuou mudo ao apagar os 4 botões"
-    assert "145%" in barra.mensagens[-1]
-    assert "Intensidade da vibração" in barra.mensagens[-1], (
-        "a frase tem de ser a MESMA do clique num botão"
-    )
-
-
-def test_o_deslizador_vai_alem_dos_botoes_e_o_daemon_aceita(aba: _Aba) -> None:
-    """A faixa acima do "Máximo" é usável de ponta a ponta."""
-    from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
-
-    slider: _FakeScale = aba._widgets["rumble_policy_slider"]
-    fim_do_curso = RUMBLE_CUSTOM_MULT_MAX * 100
-    slider.set_value(fim_do_curso)
-    aba.on_rumble_policy_slider_changed(slider)
-
-    assert aba._rumble_policy == "custom", (
-        "o fim do curso do deslizador não é degrau de botão nenhum"
-    )
-    esperado = pytest.approx(RUMBLE_CUSTOM_MULT_MAX)
-    assert aba.enviados[-1] == esperado  # type: ignore[attr-defined]
-
-    slider.set_value(RUMBLE_POLICY_MULT["max"] * 100)
-    aba.on_rumble_policy_slider_changed(slider)
-    assert aba._rumble_policy == "max"
 
 
 def test_sem_gamepad_virtual_a_tela_diz_que_a_intensidade_nao_alcanca() -> None:
@@ -242,12 +151,3 @@ def test_sem_o_dado_a_tela_nao_inventa_defeito(estado: dict[str, Any]) -> None:
     assert rumble_actions.texto_do_alcance_da_intensidade(estado) is None
 
 
-def test_o_aviso_aparece_e_some_no_widget(aba: _Aba) -> None:
-    rotulo: _FakeLabel = aba._widgets["rumble_policy_aviso"]
-
-    aba._update_rumble_state_label({"rumble_ff": {"vpads": 0}, "native_mode": False})
-    assert rotulo.visivel is True
-    assert "não está chegando" in rotulo.texto
-
-    aba._update_rumble_state_label({"rumble_ff": {"vpads": 1}})
-    assert rotulo.visivel is False

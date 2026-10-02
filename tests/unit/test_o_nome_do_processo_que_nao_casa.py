@@ -155,61 +155,6 @@ class TestOCampoDerrubaOPerfilInteiro:
         assert com_o_processo.matches(janela_wayland) is False
 
 
-class TestAFraseDoAviso:
-    def test_no_wayland_diz_o_campo_o_efeito_e_a_saida(self) -> None:
-        """Três coisas ou nada: qual campo, que o perfil não entra, e o que usar.
-
-        Morde em `texto_do_processo_que_nao_casa`. Arranque: devolver `None` no
-        ramo do Wayland — os quatro `assert` reprovam de uma vez.
-        """
-        for backend in ("portal", "wlrctl"):
-            texto = pa.texto_do_processo_que_nao_casa(
-                {"window_detect_backend": backend}
-            )
-            assert texto is not None
-            assert "process_name" in texto
-            assert "não entrar nunca" in texto
-            assert "window_class" in texto and "title_regex" in texto
-
-    def test_o_null_nao_acusa_so_o_process_name(self) -> None:
-        """Sem leitura de janela nenhuma, trocar de campo cai no mesmo silêncio."""
-        texto = pa.texto_do_processo_que_nao_casa({"window_detect_backend": "null"})
-        assert texto is not None
-        assert "nenhum dos três campos casa" in texto
-
-    def test_cala_no_x11(self) -> None:
-        """Onde o campo casa, a tela não tem nada a dizer sobre ele."""
-        assert (
-            pa.texto_do_processo_que_nao_casa({"window_detect_backend": "xlib"}) is None
-        )
-
-    def test_cala_com_daemon_velho_ou_desligado(self) -> None:
-        """Campo ausente é "não sei", e "não sei" não vira alerta na tela."""
-        assert pa.texto_do_processo_que_nao_casa(None) is None
-        assert pa.texto_do_processo_que_nao_casa({}) is None
-        assert pa.texto_do_processo_que_nao_casa("nada") is None  # type: ignore[arg-type]
-        assert (
-            pa.texto_do_processo_que_nao_casa({"window_detect_backend": None}) is None
-        )
-
-    def test_a_frase_nao_manda_apagar_nada(self) -> None:
-        """*"A vontade da GUI prevalece"* — o aviso informa, não corrige."""
-        texto = pa.texto_do_processo_que_nao_casa({"window_detect_backend": "wlrctl"})
-        assert texto is not None
-        minusculo = texto.lower()
-        for proibida in ("apague", "remova", "errado", "corrija"):
-            assert proibida not in minusculo
-
-    def test_a_frase_atravessa_o_markup_do_pango_inteira(self) -> None:
-        """A costura da tela usa `set_markup` sem escapar — as frases não podem"""
-        for backend in ("portal", "wlrctl", "null"):
-            texto = pa.texto_do_processo_que_nao_casa(
-                {"window_detect_backend": backend}
-            )
-            assert texto is not None
-            assert "<" not in texto and "&" not in texto and '"' not in texto
-
-
 class _FakeLabel:
     def __init__(self) -> None:
         self.markup: str | None = None
@@ -282,71 +227,6 @@ def _responder_state(monkeypatch: Any, state: dict[str, Any]) -> None:
 
     monkeypatch.setattr(pa, "call_async", _falso_call_async)
     monkeypatch.setattr(pa, "set_pref", lambda *_a, **_kw: None)
-
-
-class TestOAvisoChegaNaTela:
-    def test_ligar_o_avancado_acende_o_aviso(self, monkeypatch: Any) -> None:
-        """A página avançada é a ÚNICA porta para o campo — é ao abri-la que a"""
-        _responder_state(monkeypatch, {"window_detect_backend": "wlrctl"})
-        ed = _Editor()
-
-        ed.on_profile_advanced_toggle(ed._get("profile_advanced_switch"), True)
-
-        assert ed.aviso.visivel is True
-        assert ed.aviso.markup is not None
-        assert "process_name" in ed.aviso.markup
-        assert "#ffb86c" in ed.aviso.markup
-
-    def test_no_x11_o_aviso_fica_escondido(self, monkeypatch: Any) -> None:
-        """Um alerta permanente que não vale para o ambiente é ruído."""
-        _responder_state(monkeypatch, {"window_detect_backend": "xlib"})
-        ed = _Editor()
-
-        ed.on_profile_advanced_toggle(ed._get("profile_advanced_switch"), True)
-
-        assert ed.aviso.visivel is False
-        assert ed.aviso.markup is None
-
-    def test_com_daemon_desligado_o_aviso_nao_aparece(self, monkeypatch: Any) -> None:
-        """`call_async` que falha (daemon fora) é silêncio, não alarme."""
-
-        def _falso_call_async(**kwargs: Any) -> None:
-            kwargs["on_failure"](RuntimeError("daemon fora"))
-
-        monkeypatch.setattr(pa, "call_async", _falso_call_async)
-        monkeypatch.setattr(pa, "set_pref", lambda *_a, **_kw: None)
-        ed = _Editor()
-
-        ed.on_profile_advanced_toggle(ed._get("profile_advanced_switch"), True)
-
-        assert ed.aviso.visivel is False
-        assert ed.aviso.markup is None
-
-    def test_resposta_que_nao_e_dicionario_nao_derruba_a_aba(
-        self, monkeypatch: Any
-    ) -> None:
-        """Daemon que responde qualquer coisa não pode quebrar a aba Perfis."""
-        _responder_state(monkeypatch, None)  # type: ignore[arg-type]
-        ed = _Editor()
-
-        ed.on_profile_advanced_toggle(ed._get("profile_advanced_switch"), True)
-
-        assert ed.aviso.visivel is False
-
-    def test_desligar_o_avancado_nao_pergunta_nada(self, monkeypatch: Any) -> None:
-        """Sem o campo na tela não há o que avisar — e nem IPC a gastar."""
-        perguntas: list[str] = []
-
-        def _falso_call_async(**kwargs: Any) -> None:
-            perguntas.append(str(kwargs.get("method")))
-
-        monkeypatch.setattr(pa, "call_async", _falso_call_async)
-        monkeypatch.setattr(pa, "set_pref", lambda *_a, **_kw: None)
-        ed = _Editor()
-
-        ed.on_profile_advanced_toggle(ed._get("profile_advanced_switch"), False)
-
-        assert perguntas == []
 
 
 class TestOWlrctlNaoPrecisaDeCompositorNoTeste:

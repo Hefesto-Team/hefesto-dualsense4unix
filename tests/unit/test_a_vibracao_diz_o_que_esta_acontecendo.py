@@ -115,48 +115,6 @@ def test_as_frases_sao_as_do_produto(estado, orcamento, monkeypatch):
         "nenhum assina, e ela vai para o desenho que ELA olha.")
 
 
-@pytest.mark.parametrize("estado", [
-    # os dois ramos vivos de `texto_dos_pedidos_de_vibracao`: a soma e o
-    {"rumble_policy": "balanceado",
-     "rumble_ff": {"plays": 12, "nao_nulos": 12, "vpads": 1}},
-    {"rumble_policy": "balanceado",
-     "rumble_ff": {"plays": 4, "nao_nulos": 0, "vpads": 4, "per_vpad": [
-         {"player": 1, "ff_play_count": 2, "ff_nao_nulo_count": 0},
-         {"player": 2, "ff_play_count": 2, "ff_nao_nulo_count": 0},
-     ]}},
-])
-def test_a_contagem_de_pedidos_do_jogo_nao_volta(estado, monkeypatch):
-    """A frase do pé do quadro saiu, e esta é a mordida que a segura fora.
-
-    **ORDEM DELA, 07/09/2026**, olhando a aba com os quatro DualSense na mesa:
-    *"Vibração remove essa última frase também."* A frase era::
-
-        o jogo pediu vibração — Jogador 1: 2x, todas com força zero · Jogador 2:
-        2x, todas com força zero · Jogador 3: nenhuma · Jogador 4: 2x, todas com
-        força zero
-
-    **O QUE ESTA RÉGUA NÃO DIZ**, e é a metade que importa: ela não manda a
-    frase morrer. ``rumble_actions.texto_dos_pedidos_de_vibracao`` e
-    ``_pedidos_por_jogador`` continuam vivos e continuam tendo chamador na
-    janela estável (``_update_rumble_state_label``) — o que esta ABA deixou de
-    fazer é PERGUNTAR. Por isso o esperado é LIDO do produto: se um dia ela
-    pedir a informação de volta, é aqui que se lê onde ela estava.
-
-    MORDIDA: devolva ``linhas.append((…, pedidos))`` a ``textos_do_estado`` e
-    os dois casos reprovam, nomeando a frase que voltou.
-    """
-    monkeypatch.setattr(_tela, "_orcamento_da_maquina", lambda: None)
-    a_contagem = _ra.texto_dos_pedidos_de_vibracao(estado)
-    assert a_contagem, (
-        "o dublê ficou mudo no lado do produto: esta régua mediria o vazio e "
-        "daria verde sobre qualquer coisa")
-    ditas = [frase for _tom, frase in _tela.textos_do_estado(estado)]
-    assert a_contagem not in ditas, (
-        f"a contagem de pedidos do jogo voltou à faixa de estado: "
-        f"{a_contagem!r}. Ela saiu por ordem dela em 07/09/2026 — ver "
-        f"`app/telas/vibracao.SEM_A_CONTAGEM_DE_PEDIDOS`.")
-
-
 def test_o_alerta_de_alcance_e_alerta():
     """O aviso de que a intensidade não chega tem de sair com o TOM de alerta."""
     tons = dict((frase, tom) for tom, frase in _tela.textos_do_estado(SEM_VPAD))

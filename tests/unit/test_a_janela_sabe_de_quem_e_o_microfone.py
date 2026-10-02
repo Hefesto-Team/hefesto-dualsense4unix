@@ -41,7 +41,7 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("a janela sabe de quem é o microfone")
 
 from hefesto_dualsense4unix.app.draft_config import DraftConfig
-from hefesto_dualsense4unix.app.widgets.controller_card import (
+from hefesto_dualsense4unix.interface.cartao_do_controle import (
     TEXTO_MIC_ALVO_NAO_HONRADO,
     frase_do_alvo_do_mic,
 )
@@ -60,18 +60,6 @@ class _JanelaDeRascunho:
 class _CardMinimo:
     """O card sem GTK: só o callback e o que ele toca."""
 
-    def __init__(self) -> None:
-        from hefesto_dualsense4unix.app.widgets.controller_card import (
-            ControllerCard,
-        )
-
-        self._dono_do_rascunho = _JanelaDeRascunho()
-        self.mostrou: list[bool] = []
-        self._mic_aviso_alvo = self
-        self._mic_confirmado_pelo_daemon = (
-            ControllerCard._mic_confirmado_pelo_daemon.__get__(self)
-        )
-        self._dizer_alvo_do_mic = ControllerCard._dizer_alvo_do_mic.__get__(self)
 
     def show(self) -> None:
         self.mostrou.append(True)
@@ -198,97 +186,3 @@ def test_o_mudo_continua_falando_bool(ok: bool) -> None:
     )
 
 
-def _card_com_endereco(monkeypatch: pytest.MonkeyPatch, corpo: Any) -> Any:
-    """Monta o card real, com endereço, e planta a resposta do daemon."""
-    import gi
-
-    gi.require_version("Gtk", "3.0")
-    from gi.repository import Gtk
-
-    from hefesto_dualsense4unix.app import ipc_bridge
-    from hefesto_dualsense4unix.app.widgets.controller_card import ControllerCard
-
-    if not Gtk.init_check()[0]:
-        pytest.skip("sem GTK/display utilizável")
-
-    pedidos: list[dict[str, Any]] = []
-    monkeypatch.setattr(
-        ipc_bridge,
-        "run_in_thread",
-        lambda fn, on_success=None, on_failure=None: (
-            on_success(fn()) if on_success is not None else fn()
-        ),
-    )
-    monkeypatch.setattr(
-        ipc_bridge,
-        "mic_volume_set_detalhado",
-        lambda **kw: (pedidos.append(kw), corpo)[1],
-    )
-    monkeypatch.setattr(
-        ipc_bridge,
-        "mic_volume_set",
-        lambda **kw: pedidos.append({"ROTA_VELHA": kw}) or True,
-    )
-
-    card = ControllerCard(compact=False)
-    janela_gtk = Gtk.OffscreenWindow()
-    janela_gtk.add(card)
-    janela_gtk.set_size_request(1180, 700)
-    janela_gtk.show_all()
-    card._janela_do_teste = janela_gtk
-    card.update(
-        {
-            "index": 0,
-            "connected": True,
-            "uniq": UNIQ_ESCOLHIDO,
-            "transport": "usb",
-            "inputs": {},
-        },
-        {},
-        None,
-    )
-    card.definir_dono_do_rascunho(_JanelaDeRascunho())
-    return card, pedidos
-
-
-def test_o_gesto_inteiro_recusa_o_alvo_do_vizinho(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A MORDIDA da ROTA: o card pergunta pelo alvo, e desiste quando erra."""
-    card, pedidos = _card_com_endereco(
-        monkeypatch, {"status": "ok", "volume": 62, "por_uniq": False}
-    )
-
-    card._mic_escala.set_value(62)
-    card._enviar_volume_do_mic()
-
-    assert pedidos and "ROTA_VELHA" not in pedidos[0], (
-        f"o gesto saiu pela rota que apaga o `por_uniq`: {pedidos}. Sem o "
-        "corpo, a janela não tem como saber que mexeu no microfone de "
-        f"{UNIQ_DO_VIZINHO} em vez do de {UNIQ_ESCOLHIDO}."
-    )
-    assert pedidos[0].get("uniq") == UNIQ_ESCOLHIDO
-    assert card._dono_do_rascunho.draft.mic.volume is None, (
-        f"o daemon não honrou o alvo {UNIQ_ESCOLHIDO} e o volume 62 foi "
-        "gravado no rascunho DELA assim mesmo"
-    )
-    assert card._mic_aviso_alvo.get_visible(), (
-        "a confissão não apareceu na tela: o volume dela foi para o microfone "
-        "de outra pessoa e o card não disse nada"
-    )
-
-
-def test_o_gesto_inteiro_registra_quando_o_alvo_e_honrado(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """O contrapeso no card real: honrado grava, e o aviso continua escondido."""
-    card, pedidos = _card_com_endereco(
-        monkeypatch, {"status": "ok", "volume": 62, "por_uniq": True}
-    )
-
-    card._mic_escala.set_value(62)
-    card._enviar_volume_do_mic()
-
-    assert pedidos and "ROTA_VELHA" not in pedidos[0]
-    assert card._dono_do_rascunho.draft.mic.volume == 62
-    assert not card._mic_aviso_alvo.get_visible()

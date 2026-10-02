@@ -394,56 +394,6 @@ def test_o_aviso_do_jogo_sem_atalho_acende_na_coluna(duas_listas_vazias: Any) ->
         "o texto da coluna deixou de ser o do dono")
 
 
-@pytest.mark.parametrize("qual", ["dispensa", "tirar-daqui"])
-def test_as_duas_recusas_dela_calam_a_coluna_atencao(
-    duas_listas_vazias: Any, qual: str
-) -> None:
-    """07-Q3, palavra dela em 05/09/2026: *"As duas recusas calam tudo"*.
-
-    Ela tem DOIS jeitos de dizer *"eu sei, deixa assim"* — «Não perguntar para
-    este jogo» (`launch_dialog_dismissed.json`) e «Tirar daqui»
-    (`jogos_sem_wrapper.txt`) — e até 05/09 o cartão da aba Lançadores
-    respeitava os dois enquanto esta coluna não consultava lista nenhuma. Ela
-    clicava, o aviso sumia de uma tela e continuava na outra: **um aviso que
-    sobrevive à resposta dela ensina que o botão não obedece.**
-
-    MORDIDA: tire o `if ela_ja_respondeu_sobre(...)` de
-    `home_actions.aviso_do_wrapper` e os dois casos reprovam — os dois, porque
-    o parâmetro cobre as DUAS listas, que era metade do defeito.
-
-    """
-    lwd, slo = duas_listas_vazias
-    if qual == "dispensa":
-        lwd.add_dismissed_appid("570")
-    else:
-        slo.marcar_jogo_sem_wrapper("570")
-
-    selos, textos = _coluna(_ctx(VIVO_JOGO_SEM_ATALHO))
-    assert selos == [], f"a recusa «{qual}» não calou a coluna Atenção: {selos!r}"
-    assert textos == []
-
-
-def test_a_recusa_de_outro_jogo_nao_cala_este(duas_listas_vazias: Any) -> None:
-    """Calar demais é pior que não calar: o filtro é POR APPID."""
-    lwd, _slo = duas_listas_vazias
-    lwd.add_dismissed_appid("730")
-    selos, _textos = _coluna(_ctx(VIVO_JOGO_SEM_ATALHO))
-    assert selos == ["JOGO"], (
-        "a recusa de OUTRO jogo calou o aviso deste — o filtro perdeu o appid")
-
-
-def test_sem_appid_o_aviso_continua(duas_listas_vazias: Any) -> None:
-    """Decisão escrita (`a07_lancadores.py:445-451`), e ela vale nas duas telas."""
-    lwd, slo = duas_listas_vazias
-    lwd.add_dismissed_appid("570")
-    slo.marcar_jogo_sem_wrapper("570")
-    sem_janela = {k: v for k, v in VIVO_JOGO_SEM_ATALHO.items()
-                  if k != "window_detect_last_class"}
-    selos, _textos = _coluna(_ctx(sem_janela))
-    assert selos == ["JOGO"], (
-        "sem appid o aviso sumiu — o silêncio passou na frente da afirmação do daemon")
-
-
 def test_a_bancada_desta_aba_abre_a_pagina_que_a_aba_publica() -> None:
     """A BANCADA desta aba mediu o VAZIO — medido em 06/09/2026, ONDA5-07-03."""
     jogar_vivo = pytest.importorskip(

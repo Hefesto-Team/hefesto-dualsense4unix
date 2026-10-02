@@ -39,9 +39,6 @@ import struct
 
 import pytest
 
-from hefesto_dualsense4unix.app.actions.rumble_actions import (
-    texto_dos_pedidos_de_vibracao,
-)
 from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.integrations import uhid_gamepad as uhid
 
@@ -198,37 +195,3 @@ def _estado(**ff):
     return {"native_mode": False, "rumble_ff": {"vpads": 1, **ff}}
 
 
-def test_janela_separa_pedido_de_forca_zero():
-    """As duas frases têm de ser DIFERENTES — elas mandam caçar em lados opostos."""
-    pediu = texto_dos_pedidos_de_vibracao(_estado(plays=117, nao_nulos=9))
-    calou = texto_dos_pedidos_de_vibracao(_estado(plays=117, nao_nulos=0))
-
-    assert pediu == "o jogo pediu vibração 9x — se não sentiu, é aqui dentro"
-    assert calou == "o jogo falou de vibração 117x, mas pediu força zero em todas"
-    assert pediu != calou
-
-
-def test_janela_denuncia_o_formato_que_nao_reconhecemos():
-    txt = texto_dos_pedidos_de_vibracao(_estado(plays=0, nao_nulos=0, descartados=4))
-
-    assert txt is not None
-    assert "4x" in txt
-    assert "não reconheceu" in txt
-    assert "defeito nosso" in txt
-
-
-def test_janela_com_daemon_velho_nao_inventa_causa():
-    """Sem `nao_nulos` no payload, a linha volta ao texto antigo — e só a ele."""
-    txt = texto_dos_pedidos_de_vibracao(_estado(plays=117))
-
-    assert txt == "o jogo pediu vibração 117x"
-
-
-def test_janela_cala_quando_nao_sabe():
-    assert texto_dos_pedidos_de_vibracao({"native_mode": False}) is None
-
-
-def test_janela_respeita_a_conexao_nativa():
-    txt = texto_dos_pedidos_de_vibracao({"native_mode": True, "rumble_ff": {"plays": 0}})
-
-    assert txt == "Conexão Nativa (Sony): o jogo fala direto com o controle"

@@ -5,7 +5,6 @@ from __future__ import annotations
 import ast
 import io
 import re
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +16,6 @@ exigir_gi_real("importa `app.actions.mouse_actions`, que carrega o GTK")
 
 from rich.console import Console
 
-from hefesto_dualsense4unix.app.actions import emulation_actions, mouse_actions
 from hefesto_dualsense4unix.integrations import storm_doctor
 from hefesto_dualsense4unix.utils import repo_files
 
@@ -141,44 +139,6 @@ class TestAsOnzeFrasesObedecemAInstalacao:
         assert repo_files.esta_instalacao_e_um_checkout() is True
 
 
-    def test_desligar_steam_input_sem_script(self, sem_checkout: None) -> None:
-        frase = emulation_actions.format_steam_input_result(status="sem_script")
-
-        assert "install.sh" not in frase, frase
-        assert repo_files.FRASE_DE_ATUALIZAR[False] in frase, frase
-
-    def test_desligar_steam_input_no_checkout_nao_mudou(
-        self, com_checkout: None
-    ) -> None:
-        """A cura não podia piorar o caso que já funcionava."""
-        frase = emulation_actions.format_steam_input_result(status="sem_script")
-
-        assert "./install.sh" in frase, frase
-
-
-    @staticmethod
-    def _pintar_a_aba_mouse(monkeypatch: pytest.MonkeyPatch) -> str:
-        """Roda `_refresh_mouse_view` no ramo "falta o módulo `uinput`"."""
-        monkeypatch.setitem(sys.modules, "uinput", None)
-
-        class _Label:
-            markup = ""
-
-            def set_markup(self, texto: str) -> None:
-                _Label.markup = texto
-
-        class _Host(mouse_actions.MouseActionsMixin):
-            _mouse_virtual_no_ar = None
-
-            def __init__(self) -> None:
-                pass
-
-            def _get(self, _widget_id: str) -> object:
-                return _Label()
-
-        _Host()._refresh_mouse_view()
-        return _Label.markup
-
     def test_a_aba_mouse_sem_o_modulo(
         self, sem_checkout: None, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -278,35 +238,6 @@ class TestAsOnzeFrasesObedecemAInstalacao:
         monkeypatch.setattr(da, "BASES_DE_INSTALACAO", (clone,))
         assert da.esta_instalacao_e_um_checkout() is True
 
-    @staticmethod
-    def _dica_do_botao_cinza(monkeypatch: pytest.MonkeyPatch) -> str:
-        """A dica do «Reiniciar daemon» quando NENHUMA unit está instalada."""
-        from hefesto_dualsense4unix.app.actions import daemon_actions as da
-
-        class _Botao:
-            dica = ""
-
-            def set_sensitive(self, _valor: bool) -> None:
-                pass
-
-            def set_tooltip_text(self, texto: str) -> None:
-                _Botao.dica = texto
-
-        class _SemUnit:
-            def detect_installed_unit(self) -> None:
-                return None
-
-        monkeypatch.setattr(da, "ServiceInstaller", _SemUnit)
-
-        class _Host(da.DaemonActionsMixin):
-            def __init__(self) -> None:
-                pass
-
-            def _get(self, _widget_id: str) -> object:
-                return _Botao()
-
-        _Host()._sync_restart_daemon_button_sensitivity()
-        return _Botao.dica
 
     def test_a_dica_do_botao_cinza(
         self, daemon_sem_checkout: None, monkeypatch: pytest.MonkeyPatch
@@ -324,22 +255,6 @@ class TestAsOnzeFrasesObedecemAInstalacao:
 
         assert "./install.sh" in dica, dica
 
-    @staticmethod
-    def _recado_sem_systemctl() -> str:
-        """O recado de «este computador não tem `systemctl`»."""
-        from hefesto_dualsense4unix.app.actions import daemon_actions as da
-
-        class _Host(da.DaemonActionsMixin):
-            recado = ""
-
-            def __init__(self) -> None:
-                pass
-
-            def _show_restart_error(self, message: str) -> None:
-                _Host.recado = message
-
-        _Host()._on_service_restart_done(-1, "", "missing")
-        return _Host.recado
 
     def test_o_recado_sem_systemctl(self, daemon_sem_checkout: None) -> None:
         recado = self._recado_sem_systemctl()
@@ -355,12 +270,6 @@ class TestAsOnzeFrasesObedecemAInstalacao:
 
         assert "./install.sh" in recado, recado
 
-
-    @staticmethod
-    def _dica_do_canal_sem_a_regra() -> str:
-        from hefesto_dualsense4unix.app.widgets import controller_card
-
-        return controller_card.dica_canal_sem_a_regra()
 
     def test_a_dica_do_canal_sem_a_regra(self, sem_checkout: None) -> None:
         dica = self._dica_do_canal_sem_a_regra()

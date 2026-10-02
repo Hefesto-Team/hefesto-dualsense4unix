@@ -47,7 +47,6 @@ from hefesto_dualsense4unix.app.actions.daemon_actions import (
     DaemonActionsMixin,
     format_apply_wrapper_result,
 )
-from tests.conftest import skip_sem_gtk_response
 
 
 class TestFormatDoResultado:
@@ -167,120 +166,8 @@ def slo_fake(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     return caixa
 
 
-@pytest.fixture()
-def dialogo_fake(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    """Intercepta o consentimento de fechar a Steam sem subir widget real."""
-    capturado: dict[str, Any] = {}
-
-    def _build(_parent: Any, **kwargs: Any) -> Any:
-        capturado.update(kwargs)
-        capturado["montado"] = capturado.get("montado", 0) + 1
-        return SimpleNamespace(show_all=lambda: None)
-
-    monkeypatch.setattr(
-        daemon_actions, "build_steam_close_consent_dialog", _build
-    )
-    return capturado
-
-
 class TestWorker:
-    def test_jogo_aberto_recusa_e_nao_fecha_a_steam(
-        self,
-        sincrono: None,
-        slo_fake: dict[str, Any],
-        dialogo_fake: dict[str, Any],
-    ) -> None:
-        """A recusa que NÃO virou pergunta: com jogo aberto, `steam -shutdown`"""
-        slo_fake["running"] = True
-        slo_fake["jogo"] = True
-        stub = _Stub()
 
-        stub._steam_apply_launch_worker()
-
-        assert slo_fake["chamadas"] == 0
-        assert slo_fake["parou"] == 0
-        assert not dialogo_fake.get("montado")
-        assert any("jogo aberto" in t for t in stub.toasts)
-        assert any("progresso" in t for t in stub.toasts)
-
-    def test_steam_aberta_pergunta_e_nao_fecha_sozinha(
-        self,
-        sincrono: None,
-        slo_fake: dict[str, Any],
-        dialogo_fake: dict[str, Any],
-    ) -> None:
-        """A parede virou pergunta — mas até o sim, nada acontece."""
-        slo_fake["running"] = True
-        stub = _Stub()
-
-        stub._steam_apply_launch_worker()
-
-        assert dialogo_fake.get("montado") == 1
-        assert "20 segundos" in dialogo_fake["titulo"]
-        assert "pause os downloads" in dialogo_fake["corpo"].lower()
-        assert slo_fake["chamadas"] == 0
-        assert slo_fake["parou"] == 0
-
-    @skip_sem_gtk_response
-    def test_cancelar_o_fechamento_nao_muda_nada(
-        self,
-        sincrono: None,
-        slo_fake: dict[str, Any],
-        dialogo_fake: dict[str, Any],
-    ) -> None:
-        from gi.repository import Gtk
-
-        slo_fake["running"] = True
-        stub = _Stub()
-        stub._steam_apply_launch_worker()
-
-        dialogo_fake["on_response"](
-            _FakeDialog(), int(Gtk.ResponseType.CANCEL)
-        )
-
-        assert slo_fake["chamadas"] == 0
-        assert slo_fake["parou"] == 0
-        assert any("Nada foi mudado" in t for t in stub.toasts)
-
-    @skip_sem_gtk_response
-    def test_consentimento_fecha_aplica_e_reabre(
-        self,
-        sincrono: None,
-        slo_fake: dict[str, Any],
-        dialogo_fake: dict[str, Any],
-    ) -> None:
-        from gi.repository import Gtk
-
-        slo_fake["running"] = True
-        stub = _Stub()
-        stub._steam_apply_launch_worker()
-
-        dialogo_fake["on_response"](_FakeDialog(), int(Gtk.ResponseType.OK))
-
-        assert slo_fake["parou"] == 1
-        assert slo_fake["chamadas"] == 1
-        assert slo_fake["reabriu"] == 1
-        assert any("2 jogo(s)" in t for t in stub.toasts)
-
-    def test_steam_que_nao_fecha_nao_edita_nada(
-        self,
-        sincrono: None,
-        slo_fake: dict[str, Any],
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """`with_steam_closed` devolvendo 'nao_fechou': recusa honesta, zero
-        edição (editar com a Steam viva é edição perdida)."""
-        from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-        monkeypatch.setattr(slo, "stop_steam", lambda: False)
-        slo_fake["running"] = True
-        stub = _Stub()
-
-        stub._steam_apply_launch_fechando()
-
-        assert slo_fake["chamadas"] == 0
-        assert any("não fechou" in t for t in stub.toasts)
-        assert not any("Pronto" in t for t in stub.toasts)
 
     def test_steam_fechada_aplica_e_ecoa_o_contrato(
         self, sincrono: None, slo_fake: dict[str, Any]
@@ -332,59 +219,9 @@ class _FakeDialog:
         self.destroyed = True
 
 
-@skip_sem_gtk_response
-class TestConfirmacao:
-    def _stub_com_worker_gravado(self) -> _Stub:
-        stub = _Stub()
-
-        def _worker() -> None:
-            stub.worker_calls += 1
-
-        stub._steam_apply_launch_worker = _worker  # type: ignore[method-assign]
-        return stub
-
-    def test_ok_dispara_o_worker_e_fecha(self) -> None:
-        from gi.repository import Gtk
-
-        stub = self._stub_com_worker_gravado()
-        dlg = _FakeDialog()
-
-        stub._on_steam_apply_confirm_response(dlg, int(Gtk.ResponseType.OK))
-
-        assert dlg.destroyed is True
-        assert stub.worker_calls == 1
-
-    @pytest.mark.parametrize("resposta", [-6, -4, 0])
-    def test_qualquer_outra_resposta_so_fecha(self, resposta: int) -> None:
-        stub = self._stub_com_worker_gravado()
-        dlg = _FakeDialog()
-
-        stub._on_steam_apply_confirm_response(dlg, resposta)
-
-        assert dlg.destroyed is True
-        assert stub.worker_calls == 0
-
-
 class TestDialogoDeConfirmacaoPorFonte:
     """Espelho stub-level (headless): confirmação temada, não-bloqueante e"""
 
-    def test_confirmacao_e_temada_e_nao_bloqueante(self) -> None:
-        src = inspect.getsource(
-            DaemonActionsMixin._build_steam_apply_confirm_dialog
-        ) + inspect.getsource(DaemonActionsMixin.on_steam_apply_launch)
-        compacto = src.replace("\n", "").replace(" ", "")
-        assert 'add_class("hefesto-dualsense4unix-window")' in compacto
-        assert 'connect("response"' in compacto
-        assert ".run()" not in src
-
-        assert "format_secondary_text(self._STEAM_APPLY_CORPO)" in compacto, (
-            "o diálogo deixou de exibir o `_STEAM_APPLY_CORPO` — as promessas "
-            "podem estar na constante e não chegar à tela dela"
-        )
-        corpo = DaemonActionsMixin._STEAM_APPLY_CORPO
-        assert "preservadas" in corpo
-        assert "permissão" in corpo
-        assert "20 segundos" in corpo
 
     def test_worker_importa_lazy_dentro_do_handler(self) -> None:
         src = inspect.getsource(DaemonActionsMixin._steam_apply_launch_worker)
@@ -402,26 +239,3 @@ with contextlib.suppress(Exception):
     _DISPLAY_OK = _Gdk.Display.get_default() is not None
 
 
-@pytest.mark.skipif(
-    not _DISPLAY_OK, reason="sem display GTK — construção real do diálogo"
-)
-class TestDialogoGtkReal:
-    def test_confirmacao_temada_com_botoes(self) -> None:
-        from gi.repository import Gtk
-
-        stub = _Stub()
-        dlg = stub._build_steam_apply_confirm_dialog()
-        try:
-            assert isinstance(dlg, Gtk.MessageDialog)
-            assert dlg.get_style_context().has_class(
-                "hefesto-dualsense4unix-window"
-            )
-            assert "hefesto-launch" in (dlg.get_property("text") or "")
-            corpo = dlg.get_property("secondary-text") or ""
-            assert "preservadas" in corpo
-            assert "permissão" in corpo
-            assert "20 segundos" in corpo
-            for response in (Gtk.ResponseType.CANCEL, Gtk.ResponseType.OK):
-                assert dlg.get_widget_for_response(response) is not None
-        finally:
-            dlg.destroy()

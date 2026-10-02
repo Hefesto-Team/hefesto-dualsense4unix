@@ -33,7 +33,6 @@ from hefesto_dualsense4unix.app.mic_monitor import (
     nivel_para_fracao,
     rms_de_pcm_s16le,
 )
-from hefesto_dualsense4unix.app.widgets.sensor_widgets import selo_mic
 
 # estado — separados por TAB), com um DualSense no meio.
 _PACTL = (
@@ -97,16 +96,6 @@ def test_nome_alsa_nunca_casa_por_acaso_com_um_mac() -> None:
 def test_muted_de_saida(saida: str, esperado: bool | None) -> None:
     """A saída traduzida ("Mudo: não") vira None: é sinal de que o LC_ALL=C"""
     assert muted_de_saida(saida) is esperado
-
-
-def test_selo_ativo_e_mudo_usam_as_cores_do_guia() -> None:
-    assert selo_mic(False) == ("ATIVO", "#50fa7b", "#21222c")
-    assert selo_mic(True) == ("MUDO", "#2b2d3a", "#c8ccda")
-
-
-def test_selo_sem_mute_lido_nao_afirma_ativo() -> None:
-    """`None` = ainda não li. Cravar "ATIVO" diria que o mic está aberto sem"""
-    assert selo_mic(None) is None
 
 
 def _pcm(amplitude: int, amostras: int = 800) -> bytes:

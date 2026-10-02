@@ -293,30 +293,6 @@ def test_a_bateria_longa_atravessa_o_aplicar_e_o_salvar(mesa_de, economia, via: 
             f"mesa/{via}: o P{n} ficou em {solto} depois da «Bateria longa»")
 
 
-def test_o_rascunho_leva_as_luzes_de_numero_de_quem_as_escreveu() -> None:
-    """`to_ipc_dict` com o «Todos» em `leds`, e a palavra só de quem a escreveu."""
-    from hefesto_dualsense4unix.app.draft_config import DraftConfig
-    from hefesto_dualsense4unix.profiles.schema import (
-        ControllerOverrides,
-        LedsConfig,
-        MatchAny,
-        Profile,
-    )
-
-    forte = LedsConfig(player_led_brightness="forte")
-    prof = Profile(name="regua", match=MatchAny(),
-                   leds=LedsConfig(player_led_brightness="medio"),  # (noqa-acento) chave ASCII
-                   controllers={
-                       UNIQS[1]: ControllerOverrides(leds=forte),
-                       UNIQS[2]: ControllerOverrides(leds=LedsConfig(lightbar=(0, 255, 255))),
-                   })
-    ipc = DraftConfig.from_profile(prof).to_ipc_dict()
-    assert ipc["leds"]["player_led_brightness"] == "medio"  # (noqa-acento) chave ASCII
-    assert ipc["controllers"][UNIQS[1]]["leds"] == {"player_led_brightness": "forte"}
-    assert "player_led_brightness" not in ipc["controllers"][UNIQS[2]]["leds"], (
-        "o P3 não escreveu a palavra, e o rascunho a inventou")
-
-
 def test_sem_economia_o_aplicar_e_o_de_antes() -> None:
     """Nenhuma economia declarada: a vista é o MESMO rascunho, byte a byte."""
     from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
@@ -327,30 +303,6 @@ def test_sem_economia_o_aplicar_e_o_de_antes() -> None:
     rascunho: dict[str, Any] = {"leds": {"lightbar_brightness": 1.0}, "controllers": None}
     assert applier._com_o_teto_da_economia(rascunho) is rascunho
     assert applier._em_economia == frozenset()
-
-
-def test_a_mesma_cor_regravada_guarda_o_numero_e_a_outra_nao() -> None:
-    """`with_controller_leds` leva o `lightbar_para_o_numero` só da MESMA cor."""
-    from hefesto_dualsense4unix.app.draft_config import DraftConfig
-    from hefesto_dualsense4unix.profiles.schema import (
-        ControllerOverrides,
-        LedsConfig,
-        MatchAny,
-        Profile,
-    )
-
-    tom = (255, 128, 0)
-    prof = Profile(name="regua", match=MatchAny(), controllers={UNIQS[3]: ControllerOverrides(
-        leds=LedsConfig(lightbar=tom, lightbar_para_o_numero=2))})
-    draft = DraftConfig.from_profile(prof)
-    base = draft.effective_leds_for(UNIQS[3])
-    igual = draft.with_controller_leds(UNIQS[3], base.model_copy(update={"lightbar_rgb": tom}))
-    assert igual.controller_override(UNIQS[3]).leds.lightbar_para_o_numero == 2
-    outra = draft.with_controller_leds(
-        UNIQS[3], base.model_copy(update={"lightbar_rgb": (0, 255, 255)}))
-    leds = outra.controller_override(UNIQS[3]).leds
-    assert "lightbar_para_o_numero" not in leds.model_fields_set, (
-        f"a cor nova saiu com o número da antiga: {leds}")
 
 
 def test_o_rodape_nao_escreve_no_rascunho_pela_porta_privada() -> None:
@@ -401,30 +353,6 @@ def test_na_bateria_longa_quem_herda_o_global_fica_no_teto_depois_do_aplicar(
         assert esperado[n]["luzes"] == (FRACO, FRACO), (n, esperado[n])
         assert max(esperado[n]["luz"]) <= 255 * fator_do_brilho(0.3), (n, esperado[n])
     _o_aplicar_nao_mexe_e_nao_pisca(mesa, esperado, f"herda/{via}")
-
-
-@pytest.mark.parametrize("via", ["usb", "bt"])
-def test_sem_mapa_no_perfil_o_aplicar_da_economia_devolve_o_disco_e_nao_pisca(
-        mesa_de, economia, via: str) -> None:
-    """Perfil sem opinião por controle e a economia no P2: o «Aplicar» é o disco."""
-    from hefesto_dualsense4unix.app.draft_config import DraftConfig
-    from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
-    from hefesto_dualsense4unix.profiles.schema import declaracao_da_economia
-
-    from tests.unit.test_a_04_pergunta_ao_daemon_vivo import ROXO, _na
-    from tests.unit.test_a_marca_da_cor_nao_some import BRILHO_GLOBAL
-
-    mesa = mesa_de(via)
-    save_profile(load_profile(NOME).model_copy(update={"controllers": {}}), origem="regua")
-    assert DraftConfig.from_profile(load_profile(NOME)).to_ipc_dict()["controllers"] is None, (
-        "a régua precisa de um perfil sem mapa por controle")
-    economia(declaracao_da_economia(UNIQS[1], True))
-    mesa.trocar(NOME, "manual")
-    esperado = _mesa_inteira(mesa)
-    assert esperado[2]["luzes"] == (FRACO, FRACO), "a régua precisa do P2 em economia"
-    mesa.ponte.led_set_detalhado(ROXO, BRILHO_GLOBAL, UNIQS[2])
-    assert mesa.luz(3) == _na(ROXO, BRILHO_GLOBAL), "a régua precisa do roxo no P3"
-    _o_aplicar_nao_mexe_e_nao_pisca(mesa, esperado, f"sem-mapa/{via}")
 
 
 def test_o_alto_falante_do_controle_em_economia_viaja_no_aplicar() -> None:

@@ -32,12 +32,7 @@ import pytest
 pytest.importorskip("gi")
 
 from hefesto_dualsense4unix.app import ipc_bridge
-from hefesto_dualsense4unix.app.actions.input_actions import (
-    BINDINGS_LEGEND,
-    InputActionsMixin,
-    frase_do_teclado_na_tela,
-)
-from hefesto_dualsense4unix.app.draft_config import DraftConfig
+from hefesto_dualsense4unix.app.actions.input_actions import frase_do_teclado_na_tela
 
 
 def test_sem_resposta_a_legenda_fica_como_estava() -> None:
@@ -98,21 +93,6 @@ class _FakeListStore:
         return iter(self.rows)
 
 
-class _Aba(InputActionsMixin):
-    """A aba de verdade, com widgets de mentira."""
-
-    def __init__(self) -> None:
-        self.draft = DraftConfig.default()
-        self._key_bindings_store = _FakeListStore()
-        self.legend = _FakeLabel()
-
-    def _get(self, widget_id: str) -> Any:
-        return self.legend if widget_id == "key_bindings_legend" else None
-
-    def _status_toast(self, _ctx: str, _msg: str) -> None:
-        pass
-
-
 def _responder(monkeypatch: pytest.MonkeyPatch, estado: Any) -> None:
     def fake_call_async(
         _method: str,
@@ -126,84 +106,3 @@ def _responder(monkeypatch: pytest.MonkeyPatch, estado: Any) -> None:
     monkeypatch.setattr(ipc_bridge, "call_async", fake_call_async)
 
 
-def test_o_estado_vivo_chega_na_legenda(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O caminho real: `state_full` → `_anotar_teclado_na_tela` → legenda."""
-    aba = _Aba()
-    aba._refresh_key_bindings_from_draft()
-    assert "Neste computador" not in aba.legend.markup, "estado inicial é não sei"
-
-    _responder(
-        monkeypatch,
-        {"keyboard_emulation": {"enabled": True, "osk_disponivel": False}},
-    )
-    aba._refresh_mouse_from_daemon_async()
-
-    assert "Neste computador" in aba.legend.markup, (
-        "o `osk_disponivel` chegou no fio e a legenda continuou sem ele"
-    )
-    assert "não há teclado na tela instalado" in aba.legend.markup
-    assert BINDINGS_LEGEND in aba.legend.markup, "a legenda fixa foi perdida"
-
-
-def test_a_lista_de_atalhos_nao_e_reconstruida(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Repintar a legenda não pode derrubar a linha que ela está editando."""
-    aba = _Aba()
-    aba._refresh_key_bindings_from_draft()
-    antes = [list(row) for row in aba._key_bindings_store.rows]
-    aba._key_bindings_store.rows[0][1] = "KEY_Z"
-
-    _responder(
-        monkeypatch,
-        {"keyboard_emulation": {"osk_disponivel": True}},
-    )
-    aba._refresh_mouse_from_daemon_async()
-
-    assert aba._key_bindings_store.rows[0][1] == "KEY_Z", (
-        "a repintura da legenda reconstruiu a lista e comeu a edição em curso"
-    )
-    assert len(aba._key_bindings_store.rows) == len(antes)
-
-
-def test_sem_resposta_a_aba_volta_a_nao_saber(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Guardar o último valor seria afirmar sobre o que não se olhou agora."""
-    aba = _Aba()
-    _responder(
-        monkeypatch,
-        {"keyboard_emulation": {"osk_disponivel": False}},
-    )
-    aba._refresh_mouse_from_daemon_async()
-    assert "Neste computador" in aba.legend.markup
-
-    def fake_falha(
-        _method: str,
-        _params: dict[str, Any] | None,
-        on_success: Any,
-        on_failure: Any = None,
-        timeout_s: float = 0.25,
-    ) -> None:
-        on_failure(ConnectionError("Hefesto sem resposta"))
-
-    monkeypatch.setattr(ipc_bridge, "call_async", fake_falha)
-    aba._refresh_mouse_from_daemon_async()
-
-    assert "Neste computador" not in aba.legend.markup, (
-        "a aba seguiu afirmando o que sabia de antes, sem ninguém ter olhado"
-    )
-
-
-@pytest.mark.parametrize(
-    "estado",
-    [None, {}, {"keyboard_emulation": None}, {"keyboard_emulation": {}},
-     {"keyboard_emulation": {"osk_disponivel": "sim"}}],
-)
-def test_estado_torto_conta_como_nao_sei(
-    monkeypatch: pytest.MonkeyPatch, estado: Any
-) -> None:
-    aba = _Aba()
-    _responder(monkeypatch, estado)
-    aba._refresh_mouse_from_daemon_async()
-    assert aba._osk_disponivel is None

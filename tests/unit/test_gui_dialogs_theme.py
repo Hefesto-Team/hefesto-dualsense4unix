@@ -6,11 +6,9 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("gui dialogs theme")
 
 import contextlib
-import inspect
 import re
 from pathlib import Path
 
-import pytest
 
 
 _APP_DIR = (
@@ -31,47 +29,6 @@ def _tem_tema(src: str) -> bool:
     return any(mark in compacto for mark in _THEME_MARKS)
 
 
-def _funcoes_com_dialogo() -> list[tuple[str, str]]:
-    """(nome, fonte) de cada função/método do app que constrói um diálogo."""
-    from hefesto_dualsense4unix.app import gui_dialogs
-    from hefesto_dualsense4unix.app.actions.daemon_actions import (
-        DaemonActionsMixin,
-    )
-    from hefesto_dualsense4unix.app.actions.home_actions import HomeActionsMixin
-    from hefesto_dualsense4unix.app.actions.launch_wrapper_dialog import (
-        LaunchWrapperDialogMixin,
-    )
-
-    alvos = [
-        gui_dialogs.prompt_profile_name,
-        gui_dialogs.prompt_overwrite_existing,
-        gui_dialogs.confirm_downgrade_match_to_any,
-        gui_dialogs.prompt_import_conflict,
-        gui_dialogs.confirm_restore_default,
-        gui_dialogs.confirm_delete_profile,
-        gui_dialogs.show_external_controller,
-        LaunchWrapperDialogMixin._build_wrapper_dialog,
-        HomeActionsMixin._on_home_shutdown_clicked,
-        DaemonActionsMixin._show_restart_error,
-        DaemonActionsMixin._build_steam_apply_confirm_dialog,
-    ]
-    return [(fn.__qualname__, inspect.getsource(fn)) for fn in alvos]
-
-
-@pytest.mark.parametrize(
-    ("nome", "src"),
-    _funcoes_com_dialogo(),
-    ids=[nome for nome, _ in _funcoes_com_dialogo()],
-)
-def test_cada_dialogo_conhecido_aplica_a_classe_de_tema(
-    nome: str, src: str
-) -> None:
-    assert _tem_tema(src), (
-        f"{nome} constrói um diálogo sem a classe de tema "
-        "(.hefesto-dualsense4unix-window) — ele abriria CLARO no COSMIC"
-    )
-
-
 def test_varredura_nenhum_modulo_do_app_cria_dialogo_sem_tema() -> None:
     """Guarda de regressão: módulo do app/ que constrói Gtk.MessageDialog ou"""
     padrao = re.compile(r"Gtk\.(MessageDialog|Dialog)\(")
@@ -86,39 +43,6 @@ def test_varredura_nenhum_modulo_do_app_cria_dialogo_sem_tema() -> None:
     )
 
 
-def test_helper_do_tema_aplica_a_classe_canonica() -> None:
-    """Espelho stub-level do helper: um fake de diálogo recebe a classe."""
-    from hefesto_dualsense4unix.app.gui_dialogs import _apply_app_theme
-
-    class _Ctx:
-        def __init__(self) -> None:
-            self.classes: list[str] = []
-
-        def add_class(self, name: str) -> None:
-            self.classes.append(name)
-
-    class _FakeDialog:
-        def __init__(self) -> None:
-            self.ctx = _Ctx()
-
-        def get_style_context(self) -> _Ctx:
-            return self.ctx
-
-    dlg = _FakeDialog()
-    _apply_app_theme(dlg)
-    assert dlg.ctx.classes == ["hefesto-dualsense4unix-window"]
-
-
-def test_helper_do_tema_nao_propaga_excecao_de_stub() -> None:
-    """Style context quebrado (stub de teste) não pode derrubar o diálogo."""
-    from hefesto_dualsense4unix.app.gui_dialogs import _apply_app_theme
-
-    class _SemStyle:
-        pass
-
-    _apply_app_theme(_SemStyle())
-
-
 _NINTENDO_USB = {
     "name": "Nintendo Co., Ltd. Pro Controller",
     "vid": "057e",
@@ -127,39 +51,6 @@ _NINTENDO_USB = {
     "driver": "nintendo",
 }
 _DESCONHECIDO = {"name": "Marca Xpto Pad", "vid": "abcd", "pid": "0001", "bus": "usb"}
-
-
-def test_ficha_monta_o_segmentado_e_o_subtitulo() -> None:
-    """Espelho por fonte (headless): a ficha empacota a linha do segmentado"""
-    from hefesto_dualsense4unix.app import gui_dialogs
-
-    src = inspect.getsource(gui_dialogs.show_external_controller)
-    assert "_external_mode_row(" in src
-    assert "mode_guidance(" in src
-
-
-def test_ficha_tolera_slot_none_com_traco_honesto() -> None:
-    """NUMA-05 — espelho por fonte (headless, sem GTK real): a ficha do"""
-    from hefesto_dualsense4unix.app import gui_dialogs
-
-    src = inspect.getsource(gui_dialogs.show_external_controller)
-    assert "slot_label(" in src, "a ficha não usa mais o formatador honesto"
-    compacto = re.sub(r"\s+", "", src)
-    assert "ifslotisnotNone:" not in compacto, (
-        "o guard condicional antigo voltou — a linha some com slot=None"
-    )
-
-
-def test_external_mode_row_e_read_only_por_construcao() -> None:
-    """Espelho por fonte (headless): insensitive + tooltip + sem popup."""
-    from hefesto_dualsense4unix.app import gui_dialogs
-
-    src = inspect.getsource(gui_dialogs._external_mode_row)
-    assert "SegmentedSelector" in src
-    assert "ComboBox" not in src
-    assert "set_sensitive(False)" in src
-    assert "MODE_SELECTOR_TOOLTIP" in src
-    assert "MODE_SELECTOR_SUBTITLE" in src
 
 
 _DISPLAY_OK = False
@@ -172,28 +63,3 @@ with contextlib.suppress(Exception):
     _DISPLAY_OK = _Gdk.Display.get_default() is not None
 
 
-@pytest.mark.skipif(
-    not _DISPLAY_OK, reason="sem display GTK — montagem real do segmentado"
-)
-class TestFichaGtkReal:
-    def test_segmentado_marca_o_modo_e_nao_e_clicavel(self) -> None:
-        from hefesto_dualsense4unix.app.actions.external_controllers import (
-            MODE_SELECTOR_SUBTITLE,
-            MODE_SELECTOR_TOOLTIP,
-        )
-        from hefesto_dualsense4unix.app.gui_dialogs import _external_mode_row
-
-        montado = _external_mode_row(_NINTENDO_USB)
-        assert montado is not None
-        row, sub = montado
-        chave, seletor = row.get_children()
-        assert "O jogo vê como" in chave.get_text()
-        assert seletor.get_active_id() == "nintendo"
-        assert seletor.get_sensitive() is False
-        assert seletor.get_tooltip_text() == MODE_SELECTOR_TOOLTIP
-        assert sub.get_text() == MODE_SELECTOR_SUBTITLE
-
-    def test_controle_sem_dois_modos_nao_monta_nada(self) -> None:
-        from hefesto_dualsense4unix.app.gui_dialogs import _external_mode_row
-
-        assert _external_mode_row(_DESCONHECIDO) is None

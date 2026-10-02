@@ -3,10 +3,6 @@
 from __future__ import annotations
 
 import os
-import shutil
-import subprocess
-import sys
-import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -516,100 +512,6 @@ def _sprint_de_papel(nome: str, arquivo: str) -> str:
             "",
         ]
     )
-
-
-@_SEM_O_SCRIPT_DA_COLISAO
-def test_o_achado_da_colisao_tem_linha_propria(tmp_path: Path) -> None:
-    """MORDIDA. ``grep '^FALHA'`` tem de achar a colisão na saída do script."""
-    assert SCRIPT_DA_COLISAO.exists(), SCRIPT_DA_COLISAO
-
-    pasta = Path(tempfile.mkdtemp(dir=RAIZ, prefix=".colisao-de-mentira-"))
-    saida = tmp_path / "saida.txt"
-    try:
-        (pasta / "2026-08-26-UMA-01-a-primeira.md").write_text(
-            _sprint_de_papel("UMA-01", "src/hefesto_dualsense4unix/app/disputado.py"),
-            encoding="utf-8",
-        )
-        (pasta / "2026-08-26-OUTRA-01-a-segunda.md").write_text(
-            _sprint_de_papel("OUTRA-01", "src/hefesto_dualsense4unix/app/disputado.py"),
-            encoding="utf-8",
-        )
-        for i in range(276):
-            nome = f"2026-08-2{i % 10}-DIVIDA-{i:03d}-" + "e" * (10 + i % 37) + ".md"
-            (pasta / nome).write_text(
-                f"# uma sprint sem frontmatter, a de número {i}\n", encoding="utf-8"
-            )
-
-        with saida.open("w", encoding="utf-8") as arquivo:
-            rc = subprocess.run(
-                [sys.executable, str(SCRIPT_DA_COLISAO), "--pasta", str(pasta)],
-                stdout=arquivo,
-                stderr=arquivo,
-                cwd=str(RAIZ),
-                check=False,
-            ).returncode
-    finally:
-        shutil.rmtree(pasta, ignore_errors=True)
-
-    texto = saida.read_text(encoding="utf-8")
-    assert rc == 1, f"a colisão plantada tinha de reprovar; rc={rc}\n{texto[:2000]}"
-
-    comecos = [linha for linha in texto.splitlines() if linha.startswith("FALHA")]
-    assert len(comecos) >= 1, (
-        "`grep -c '^FALHA'` devolveu ZERO numa saída que reprova com rc=1 — o "
-        "achado saiu colado no fim de outra linha, e quem lê a saída não o "
-        "encontra. As linhas que CONTÊM 'FALHA':\n"
-        + "\n".join(
-            repr(linha) for linha in texto.splitlines() if "FALHA" in linha
-        )[:2000]
-    )
-    acusacao = next(
-        (linha for linha in texto.splitlines() if " x " in linha and "UMA-01" in linha),
-        "",
-    )
-    assert "OUTRA-01" in acusacao and "UMA-01" in acusacao, (
-        "a falha não nomeia o par que colidiu:\n" + texto[:2000]
-    )
-    assert "disputado.py" in acusacao, "a falha não nomeia o arquivo disputado"
-
-    indice_falha = texto.index("\nFALHA")
-    indice_divida = texto.index("DÍVIDA —")
-    assert indice_falha < indice_divida, (
-        "a dívida foi impressa EM VOLTA da falha: o achado ficou no fim de 300 "
-        "linhas de contexto, que é o mesmo defeito por outro caminho"
-    )
-
-
-@_SEM_O_SCRIPT_DA_COLISAO
-def test_o_script_da_colisao_nao_engole_a_falha_quando_nao_ha_divida(
-    tmp_path: Path,
-) -> None:
-    """Sem dívida nenhuma, o bloco de falha continua começando linha."""
-    pasta = Path(tempfile.mkdtemp(dir=RAIZ, prefix=".colisao-de-mentira-"))
-    saida = tmp_path / "saida.txt"
-    try:
-        (pasta / "2026-08-26-UMA-01-a-primeira.md").write_text(
-            _sprint_de_papel("UMA-01", "src/hefesto_dualsense4unix/app/disputado.py"),
-            encoding="utf-8",
-        )
-        (pasta / "2026-08-26-OUTRA-01-a-segunda.md").write_text(
-            _sprint_de_papel("OUTRA-01", "src/hefesto_dualsense4unix/app/disputado.py"),
-            encoding="utf-8",
-        )
-        with saida.open("w", encoding="utf-8") as arquivo:
-            rc = subprocess.run(
-                [sys.executable, str(SCRIPT_DA_COLISAO), "--pasta", str(pasta)],
-                stdout=arquivo,
-                stderr=arquivo,
-                cwd=str(RAIZ),
-                check=False,
-            ).returncode
-    finally:
-        shutil.rmtree(pasta, ignore_errors=True)
-
-    texto = saida.read_text(encoding="utf-8")
-    assert rc == 1, texto[:2000]
-    assert any(linha.startswith("FALHA") for linha in texto.splitlines()), texto[:2000]
 
 
 if __name__ == "__main__":  # pragma: no cover — a medição, sem pytest

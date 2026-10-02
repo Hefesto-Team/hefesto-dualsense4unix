@@ -136,20 +136,6 @@ def test_a_regua_le_o_mapa_e_nao_um_veredito_cravado() -> None:
     assert tem_lastro_nos_dois({"cabo": medido, "radio": parcial}) is False
 
 
-def test_a_celula_da_vibracao_ganhou_lastro_e_a_ressalva_saiu_junto() -> None:
-    """INVERTIDO EM 05/09/2026, e a régua velha mandou inverter."""
-    celula = _fatos_do_mapa()["vibracao.rumble.passthrough@dualsense"]
-    assert tem_lastro_nos_dois(celula), (
-        "a vibração perdeu o lastro no mapa — se isso for verdade, a ressalva "
-        "tem de VOLTAR a `RESSALVA_DE_TRANSPORTE` e às frases da aba, senão a "
-        "tela afirma o que o mapa não sustenta. O mapa hoje diz: " + repr(celula)
-    )
-    assert not _declaracao("RESSALVA_DE_TRANSPORTE"), (
-        "a vibração tem lastro nos dois transportes e ainda há ressalva "
-        "declarada — ressalva que sobrevive à dívida é fato errado na tela"
-    )
-
-
 def test_o_giroscopio_e_a_lightbar_seguem_com_lastro_para_serem_afirmados() -> None:
     """O outro lado da mesma régua: o que a tela PODE dizer."""
     fatos = _fatos_do_mapa()
@@ -167,72 +153,6 @@ _MANDA_MARCAR = re.compile(r"\bmarqu(?:e|em)\b|\bmarcar\b|\bmarcando\b", re.IGNO
 _A_MARCA_POR_JOGO = "Esconder os controles físicos"
 
 
-_ESCOADOUROS_DE_RECIBO: dict[str, tuple[int, ...]] = {
-    "_toast_emulation": (0,),
-    "_apply_mode": (2,),
-}
-
 _BURACO = "{}"
 
 
-def _texto_do_no(no: ast.expr, ressalvas: dict[str, str]) -> str | None:
-    """A expressão remontada como a pessoa a LÊ, ou None se não for texto."""
-    if isinstance(no, ast.Constant):
-        return no.value if isinstance(no.value, str) else None
-    if isinstance(no, ast.Subscript):
-        alvo, chave = no.value, no.slice
-        if (
-            isinstance(alvo, ast.Name)
-            and alvo.id == "RESSALVA_DE_TRANSPORTE"
-            and isinstance(chave, ast.Constant)
-            and isinstance(chave.value, str)
-        ):
-            return ressalvas.get(chave.value, _BURACO)
-        return None
-    if isinstance(no, ast.JoinedStr):
-        pedacos: list[str] = []
-        for pedaco in no.values:
-            texto = _texto_do_no(pedaco, ressalvas) if not isinstance(
-                pedaco, ast.FormattedValue
-            ) else None
-            pedacos.append(texto if texto is not None else _BURACO)
-        return "".join(pedacos)
-    if isinstance(no, ast.BinOp) and isinstance(no.op, ast.Add):
-        esquerda = _texto_do_no(no.left, ressalvas)
-        direita = _texto_do_no(no.right, ressalvas)
-        if esquerda is None and direita is None:
-            return None
-        return (esquerda or _BURACO) + (direita or _BURACO)
-    return None
-
-
-def _recibos_do_handler(handler: str, ressalvas: dict[str, str]) -> list[str]:
-    """Os textos de recibo que o handler manda para a barra de estado."""
-    arvore = ast.parse(_ACOES.read_text(encoding="utf-8"), filename=str(_ACOES))
-    corpo: ast.FunctionDef | None = None
-    for no in ast.walk(arvore):
-        if isinstance(no, ast.FunctionDef) and no.name == handler:
-            corpo = no
-            break
-    assert corpo is not None, (
-        f"o glade liga o botão ao handler {handler!r}, que não existe em "
-        f"{_ACOES.relative_to(_RAIZ)}"
-    )
-    saida: list[str] = []
-    for no in ast.walk(corpo):
-        if not isinstance(no, ast.Call) or not isinstance(no.func, ast.Attribute):
-            continue
-        posicoes = _ESCOADOUROS_DE_RECIBO.get(no.func.attr)
-        if posicoes is None:
-            continue
-        for indice in posicoes:
-            if indice < len(no.args):
-                texto = _texto_do_no(no.args[indice], ressalvas)
-                if texto and texto.replace(_BURACO, "").strip():
-                    saida.append(texto)
-        for nomeado in no.keywords:
-            if nomeado.arg in ("msg", "texto"):
-                texto = _texto_do_no(nomeado.value, ressalvas)
-                if texto and texto.replace(_BURACO, "").strip():
-                    saida.append(texto)
-    return saida

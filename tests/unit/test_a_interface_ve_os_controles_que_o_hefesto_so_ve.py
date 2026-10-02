@@ -363,10 +363,3 @@ def test_o_tique_pergunta_sozinho_pelos_externos() -> None:
     assert chamadas == ["controller.list"]
 
 
-def test_o_teto_de_tempo_e_o_da_janela_antiga() -> None:
-    """Um número para a mesma pergunta — o da GTK, não um segundo escolhido aqui."""
-    from hefesto_dualsense4unix.app.actions.home_actions import HomeActionsMixin
-    from hefesto_dualsense4unix.interface import hefesto_vivo
-
-    assert (hefesto_vivo.Piloto.SEGUNDOS_ENTRE_LEITURAS_DOS_EXTERNOS
-            == HomeActionsMixin.EXTERNOS_THROTTLE_S)

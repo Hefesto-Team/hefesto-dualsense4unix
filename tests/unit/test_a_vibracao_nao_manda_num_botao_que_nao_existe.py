@@ -77,7 +77,6 @@ import ast
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -85,12 +84,6 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("importa `app.actions.rumble_actions`, que carrega o GTK")
 
-from hefesto_dualsense4unix.app.actions.rumble_actions import (
-    BTN_GIVE_BACK_TO_GAME,
-    COMO_DEVOLVER_AO_JOGO,
-    RumbleActionsMixin,
-    texto_do_alcance_da_intensidade,
-)
 from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -162,17 +155,6 @@ class _RotuloEspiao:
         self.markup = texto
 
 
-class _HostDaVibracao(RumbleActionsMixin):
-    """O mínimo para o rótulo de estado pintar — o mesmo molde do"""
-
-    def __init__(self) -> None:
-        self.rotulo = _RotuloEspiao()
-        self._widgets: dict[str, Any] = {"rumble_state_label": self.rotulo}
-
-    def _get(self, widget_id: str) -> Any:
-        return self._widgets.get(widget_id)
-
-
 class _BadgeEspiao:
     def __init__(self) -> None:
         self.markup = ""
@@ -195,68 +177,6 @@ class _BadgeEspiao:
 class _HostDoBanner(StatusActionsMixin):
     def __init__(self) -> None:
         self._rumble_badge = _BadgeEspiao()
-
-
-def frases_do_produto() -> list[tuple[str, str]]:
-    """``[(onde, frase)]`` — o que a tela mostraria, obtido do produto."""
-    saida: list[tuple[str, str]] = []
-
-    host = _HostDaVibracao()
-    for nome, ativo in (("silêncio", [0, 0]), ("fixa", [160, 220])):
-        host._update_rumble_state_label(
-            {"rumble_passthrough": False, "rumble_active": ativo}
-        )
-        saida.append((f"o rótulo de estado da vibração ({nome})", host.rotulo.markup))
-
-    banner = _HostDoBanner()
-    for nome, ativo in (("silêncio", [0, 0]), ("fixa", [160, 220])):
-        banner._update_rumble_badge({"rumble_active": ativo})
-        saida.append(
-            (f"a dica do aviso de vibração travada ({nome})",
-             banner._rumble_badge.tooltip)
-        )
-
-    alcance = texto_do_alcance_da_intensidade(
-        {"rumble_ff": {"vpads": 0}, "native_mode": False}
-    )
-    assert alcance, (
-        "sem gamepad virtual e sem Conexão Nativa o produto TEM o que dizer — "
-        "uma frase vazia aqui significa que a régua deixou de medir a única "
-        "destas que chega à aba Vibração hoje."
-    )
-    saida.append(("o aviso de alcance da intensidade (aba Vibração)", alcance))
-    return saida
-
-
-def test_o_produto_so_manda_clicar_em_botao_que_existe() -> None:
-    """MORDE: devolva ``ROTULO_QUE_SAIU_COM_A_JANELA`` ao dono e este reprova."""
-    rotulos = rotulos_clicaveis()
-    culpas = [
-        _acusacao(onde, frase, alvo)
-        for onde, frase in frases_do_produto()
-        for alvo in alvos_de_clique(frase)
-        if alvo not in rotulos
-    ]
-    assert not culpas, "\n\n".join(culpas)
-
-
-def test_o_rotulo_da_janela_aposentada_nao_volta() -> None:
-    """A agulha, dita pelo nome: o rótulo do botão que saiu com a janela GTK"""
-    assert ROTULO_QUE_SAIU_COM_A_JANELA not in rotulos_clicaveis(), (
-        "o botão voltou às páginas — se ele existe de novo, esta régua e o "
-        "valor de `BTN_GIVE_BACK_TO_GAME` mudam juntos."
-    )
-    for onde, frase in frases_do_produto():
-        assert ROTULO_QUE_SAIU_COM_A_JANELA not in frase, (
-            f"{onde} voltou a citar o botão da janela aposentada: {frase!r}"
-        )
-
-
-def test_o_dono_do_rotulo_aponta_para_um_botao_que_existe() -> None:
-    """A fiação: a frase pronta do dono cita o rótulo, e o rótulo está na tela."""
-    assert BTN_GIVE_BACK_TO_GAME in rotulos_clicaveis()
-    assert f"“{BTN_GIVE_BACK_TO_GAME}”" in COMO_DEVOLVER_AO_JOGO
-    assert "aba Vibração" in COMO_DEVOLVER_AO_JOGO
 
 
 def _ids_dos_docstrings(arvore: ast.Module) -> set[int]:
@@ -366,84 +286,3 @@ def test_o_docstring_nao_e_tela_e_a_lapide_pode_citar_o_rotulo_morto() -> None:
     assert ROTULO_QUE_SAIU_COM_A_JANELA not in achados
 
 
-def test_o_aplicar_do_rodape_nao_retrava_a_vibracao() -> None:
-    """A linha 182 do CSV da paridade CAIU por medição — esta é a régua dela.
-
-    O enunciado: *"se o perfil no disco tiver ``rumble.weak/strong`` não-zero,
-    um «Aplicar» do rodapé re-manda esses valores e re-trava a vibração que o
-    «Parar» da coluna acabou de soltar"*. Medido em 06/09/2026, os TRÊS
-    degraus do caminho recusam o sintoma, e esta régua guarda os três:
-
-    1. **o perfil no disco não pode ter esses campos.** ``RumbleConfig`` tem
-       ``extra="forbid"`` e três campos (``passthrough``, ``policy``,
-       ``custom_mult``); ``{"weak": 160}`` sai com *Extra inputs are not
-       permitted*;
-    2. **o draft do «Aplicar» nasce zerado, e não do disco.**
-       ``DraftConfig.from_profile`` constrói ``RumbleDraft()`` sem tocar em
-       ``weak``/``strong`` — o comentário dele já dizia *"weak/strong não
-       persistem no perfil (teste de motores)"*. O ``rodape.aplicar`` da
-       interface nova chama ``_draft_do_ativo(nome)`` **sem** o ``ctx``, então
-       nem o estado vivo entra: a seção que viaja é sempre ``{0, 0}``;
-    3. **e ``{0, 0}`` no «Aplicar» é o oposto de travar.** É a
-       ``BUG-RUMBLE-APPLY-KILLS-GAME-01``, escrita no próprio
-       ``ipc_draft_applier._apply_rumble``: com o par zerado ele faz
-       ``rumble_active = None`` (passthrough) e manda ``set_rumble(0, 0)`` uma
-       vez, para SOLTAR um rumble contínuo anterior.
-
-    Medido com ``rumble_active = (160, 220)`` — a vibração travada em valor
-    não-zero, o pior caso do enunciado: depois da seção o daemon fica em
-    ``rumble_active = None``. Ele solta; não re-trava.
-
-    **A quarta perna, que o enunciado nem cita**, é a mesma resposta:
-    ``passthrough=False`` no disco também não re-trava, porque
-    ``Daemon.apply_profile_rumble_passthrough`` abre com ``if not passthrough:
-    return``.
-    """
-    from hefesto_dualsense4unix.app.draft_config import DraftConfig
-    from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
-    from hefesto_dualsense4unix.profiles.schema import (
-        MatchAny,
-        Profile,
-        RumbleConfig,
-    )
-
-    with pytest.raises(Exception, match=r"[Ee]xtra"):
-        RumbleConfig.model_validate({"weak": 160, "strong": 220})
-
-    perfil = Profile(
-        name="ensaio-da-regua",
-        match=MatchAny(type="any"),
-        rumble=RumbleConfig(passthrough=False, policy="max"),
-    )
-    secao = DraftConfig.from_profile(perfil).to_ipc_dict()["rumble"]
-    assert secao == {"weak": 0, "strong": 0}, (
-        f"o «Aplicar» passou a mandar {secao} — se o par voltar a vir do "
-        "disco, o sintoma da ABAS-04 volta com ele."
-    )
-
-    class _Config:
-        rumble_active: Any = (160, 220)
-        rumble_active_uniq: Any = "aa:bb:cc:00:00:01"
-        rumble_policy = None
-        rumble_policy_custom_mult = None
-        native_mode = False
-
-    class _Daemon:
-        config = _Config()
-        native_mode = False
-
-    class _Controle:
-        def __init__(self) -> None:
-            self.escritas: list[tuple[int, int]] = []
-
-        def set_rumble(self, weak: int, strong: int) -> None:
-            self.escritas.append((weak, strong))
-
-    daemon, controle = _Daemon(), _Controle()
-    DraftApplier(controller=controle, store=None, daemon=daemon)._apply_rumble(secao)
-
-    assert daemon.config.rumble_active is None, (
-        "o «Aplicar» re-travou a vibração — é o sintoma que a linha 182 "
-        "descrevia, e ele voltou."
-    )
-    assert controle.escritas == [(0, 0)]

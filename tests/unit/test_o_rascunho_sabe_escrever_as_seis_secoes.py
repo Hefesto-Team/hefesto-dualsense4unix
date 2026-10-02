@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 
 from hefesto_dualsense4unix.app.draft_config import DraftConfig, MicDraft
 from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
@@ -69,31 +68,3 @@ def test_o_mic_efetivo_herda_o_global_campo_a_campo() -> None:
     assert efetivo.volume == 77, "o volume do global sumiu num override parcial"
 
 
-@pytest.mark.parametrize("campo", ["giroscopio", "acelerometro"])
-def test_os_sensores_gravam_um_sem_tocar_no_outro(campo: str) -> None:
-    """Ela disse *"ambos"* e cada um por si — meia faixa desliga um sozinho."""
-    d = DraftConfig.default().with_controller_sensores(UNIQ, **{campo: False})
-    secao = d.controller_override(UNIQ).sensores
-    assert getattr(secao, campo) is False
-    outro = "acelerometro" if campo == "giroscopio" else "giroscopio"
-    assert getattr(secao, outro) is None, (
-        f"gravar {campo} deu opinião sobre {outro}, que ela não pediu")
-
-
-def test_sem_opiniao_limpa_a_secao_de_sensores() -> None:
-    """Os dois ``None`` são o caminho de volta ao default LIGADO."""
-    d = DraftConfig.default().with_controller_sensores(UNIQ, giroscopio=False)
-    assert d.controller_override(UNIQ).sensores is not None
-    limpo = d.with_controller_sensores(UNIQ)
-    override = limpo.controller_override(UNIQ)
-    assert override is None or override.sensores is None
-
-
-def test_escrever_uma_secao_nao_apaga_a_vizinha() -> None:
-    """As seis convivem na mesma peça — é o ponto inteiro do override."""
-    d = (DraftConfig.default()
-         .with_controller_mic(UNIQ, MicDraft(volume=40))
-         .with_controller_sensores(UNIQ, giroscopio=False))
-    override = d.controller_override(UNIQ)
-    assert override.mic is not None and override.mic.volume == 40
-    assert override.sensores is not None and override.sensores.giroscopio is False

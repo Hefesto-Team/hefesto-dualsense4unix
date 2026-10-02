@@ -4,19 +4,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from hefesto_dualsense4unix.app.actions.external_controllers import (
-    ID_DE_NAO_SEI,
-    ID_DE_OUTRA_COR,
-    MODOS_DO_APARELHO,
-    chave_de_maquina,
-    cores_do_plastico_items,
-    declaracoes_do_aparelho,
-    dicas_das_cores,
-    input_mode,
-    marca_e_via,
-    modo_deduzido,
-    nome_oficial_da_cor,
-)
+from hefesto_dualsense4unix.app.actions.external_controllers import chave_de_maquina
 from hefesto_dualsense4unix.integrations.cor_do_plastico import (
     NOMES_DE_FABRICA,
     TONS,
@@ -48,88 +36,6 @@ _DESCONHECIDO = {
 }
 
 
-class TestTodoCampoNasceSemValor:
-    def test_todo_campo_nasce_sem_valor(self) -> None:
-        """Sem declaração gravada, TODO campo vale `None` — nos três aparelhos."""
-        for entrada in (_8BITDO_SWITCH, _PRO_GENUINO, _DESCONHECIDO):
-            campos = declaracoes_do_aparelho(entrada)
-            assert campos, "um controle não-Sony tem pelo menos duas declarações"
-            for chave, rotulo, valor in campos:
-                assert valor is None, (
-                    f"{chave!r} nasceu valendo {valor!r} em {entrada['name']!r}. "
-                    "Default chutado é pior que campo vazio: parece informação."
-                )
-                assert rotulo[:1].isupper(), f"{rotulo!r} não começa com maiúscula"
-
-    def test_o_adotado_nao_pergunta_o_desenho_dos_botoes(self) -> None:
-        """DualSense tem UM desenho de botão. Perguntar seria pergunta sem objeto."""
-        chaves = [c for c, _r, _v in declaracoes_do_aparelho(_PRO_GENUINO, adotado=True)]
-        assert chaves == ["cor"]
-
-    def test_declaracao_gravada_aparece(self) -> None:
-        """Instrumento válido: com valor gravado, o campo NÃO devolve `None`."""
-        campos = dict(
-            (chave, valor)
-            for chave, _rotulo, valor in declaracoes_do_aparelho(
-                _8BITDO_SWITCH, declarado={"botoes": "nintendo", "cor": "Cosmic Red"}
-            )
-        )
-        assert campos == {"botoes": "nintendo", "cor": "Cosmic Red"}
-
-    def test_valor_vazio_continua_sendo_nao_sei(self) -> None:
-        """String vazia no disco não é escolha de ninguém — é ausência."""
-        campos = dict(
-            (chave, valor)
-            for chave, _rotulo, valor in declaracoes_do_aparelho(
-                _8BITDO_SWITCH, declarado={"botoes": "", "cor": None}
-            )
-        )
-        assert campos == {"botoes": None, "cor": None}
-
-
-class TestOModoEDeduzido:
-    """T1 e T3: quatro modos, deduzidos e mostrados, nunca declarados."""
-
-    def test_o_modo_nao_esta_entre_as_declaracoes(self) -> None:
-        chaves = [c for c, _r, _v in declaracoes_do_aparelho(_8BITDO_SWITCH)]
-        assert "modo" not in chaves, (
-            "o modo voltou a ser campo declarado. Ele é DEDUZIDO (T1): uma "
-            "declaração por identidade nasce órfã, porque o MAC do 8BitDo MUDA "
-            "com o modo que a declaração descreve."
-        )
-
-    def test_sao_quatro_modos_e_os_quatro_da_canonica(self) -> None:
-        assert [ident for ident, _ in MODOS_DO_APARELHO] == [
-            "dinput",
-            "xinput",
-            "switch",
-            "macos",
-        ]
-
-    def test_todo_rotulo_de_modo_comeca_em_maiuscula(self) -> None:
-        """O portão de redação da aba cobra isto — e "macOS" o reprovaria."""
-        for _ident, rotulo in MODOS_DO_APARELHO:
-            assert rotulo[:1].isupper(), rotulo
-
-    def test_deduz_os_quatro(self) -> None:
-        assert modo_deduzido(_8BITDO_SWITCH) == "switch"
-        assert modo_deduzido({"vid": "045e", "pid": "028e"}) == "xinput"
-        assert modo_deduzido({"vid": "2dc8", "pid": "6001"}) == "dinput"
-        assert modo_deduzido({"vid": "054c", "pid": "05c4"}) == "macos"
-
-    def test_modo_desconhecido_e_vazio_e_nao_um_chute(self) -> None:
-        assert modo_deduzido(_DESCONHECIDO) == ""
-
-    def test_a_ficha_do_controle_continua_dizendo_o_que_dizia(self) -> None:
-        """`input_mode` virou projeção de `modo_deduzido` e NÃO mudou de resposta."""
-        assert input_mode(_8BITDO_SWITCH) == "nintendo"
-        assert input_mode({"vid": "045e", "pid": "028e"}) == "xbox"
-        assert input_mode({"vid": "0000", "driver": "xpad"}) == "xbox"
-        assert input_mode({"vid": "2dc8", "pid": "6001"}) == "outro"
-        assert input_mode({"vid": "054c", "driver": "playstation"}) == "outro"
-        assert input_mode(_DESCONHECIDO) == "outro"
-
-
 class TestAChaveDoDisco:
     def test_endereco_forjado_nao_vira_chave(self) -> None:
         """O `02:` que o nosso DKMS sintetiza não pode indexar o `maquina.json`."""
@@ -143,31 +49,6 @@ class TestAChaveDoDisco:
     def test_sem_endereco_nao_ha_chave(self) -> None:
         assert chave_de_maquina({"name": "sem endereço"}) is None
         assert chave_de_maquina({"uniq": "/dev/hidraw3"}) is None
-
-
-class TestAListaDeCor:
-    def test_oito_botoes_seis_cores_outra_e_nao_sei(self) -> None:
-        """O oitavo entrou em 23/08/2026: sem ele, "não sei" não era resposta."""
-        itens = cores_do_plastico_items()
-        assert len(itens) == 8
-        assert [ident for ident, _ in itens[:6]] == ["00", "01", "02", "03", "04", "05"]
-        assert itens[6][0] == ID_DE_OUTRA_COR
-        assert itens[-1][0] == ID_DE_NAO_SEI
-
-    def test_todo_rotulo_de_cor_comeca_em_maiuscula(self) -> None:
-        for _ident, rotulo in cores_do_plastico_items():
-            assert rotulo[:1].isupper(), rotulo
-
-    def test_a_dica_de_cada_cor_e_o_nome_de_fabrica(self) -> None:
-        """O rótulo é o que ela lê; a dica é o que está escrito na caixa."""
-        dicas = dicas_das_cores()
-        assert dicas["02"] == "Cosmic Red"
-        assert dicas["05"] == "Starlight Blue"
-        assert dicas[ID_DE_OUTRA_COR].startswith("Para um modelo fora da lista")
-
-    def test_o_que_vai_para_o_disco_e_o_nome_e_nao_o_codigo(self) -> None:
-        assert nome_oficial_da_cor("02") == "Cosmic Red"
-        assert nome_oficial_da_cor(ID_DE_OUTRA_COR) is None
 
 
 class TestATabelaDeCores:
@@ -282,10 +163,3 @@ class TestARespostaDoAparelho:
         assert decodificar(bytes([0x81, 1, 19, 2]) + b"curto") is None
 
 
-class TestOSubtitulo:
-    def test_a_via_sai_como_no_desenho(self) -> None:
-        assert marca_e_via(_8BITDO_SWITCH) == "Nintendo · Bluetooth"
-        assert marca_e_via({"bus": "usb"}, marca="Sony") == "Sony · cabo"
-
-    def test_sem_barramento_sobra_so_a_marca(self) -> None:
-        assert marca_e_via({}, marca="Sony") == "Sony"

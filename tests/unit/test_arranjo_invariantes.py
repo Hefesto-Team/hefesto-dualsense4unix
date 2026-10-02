@@ -882,7 +882,7 @@ def _mapa_declarado_do_mockup() -> object:
 
 def _confirmar(entrada: str) -> dict[str, str]:
     """O 'Já movi' dela, pelo gesto do produto — devolve `entrada -> caminho`."""
-    from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import LogicaDoMapa
+    from hefesto_dualsense4unix.interface.logica_do_mapa import LogicaDoMapa
 
     logica = LogicaDoMapa(_mapa_declarado_do_mockup())  # type: ignore[arg-type]
     logica.escolhido = _CAMINHO_NOVO_DO_WIFI

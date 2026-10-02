@@ -49,18 +49,6 @@ def test_o_titulo_da_secao_e_o_rotulo_do_rodape_sao_a_mesma_palavra() -> None:
     )
 
 
-def test_a_chave_do_disco_nunca_e_renomeada_junto_com_o_rotulo() -> None:
-    """Renomear a chave `orcamento` é renomear campo de disco DELA."""
-    from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
-
-    assert "orcamento" in ipc_bridge._CAMPOS_DA_MAQUINA
-    assert "orcamento" in MaquinaConfig.model_fields
-    assert set(secao_orcamento.TETO_POR_PERFIL.values()) <= {
-        *secao_orcamento.CHAVES,
-        None,
-    }
-
-
 def test_nenhuma_dica_promete_o_que_o_botao_nao_faz() -> None:
     """MORDIDA 1. Sem teto, a dica não pode conter verbo de efeito."""
     achados = []
@@ -109,37 +97,6 @@ def test_a_tabela_tem_uma_coluna_por_opcao_oferecida() -> None:
     assert not faltando, f"a tabela deixou de ter coluna para: {faltando}"
     assert secao_orcamento.COLUNAS[:2] == ("O que", "Vem de")
     assert len(secao_orcamento.COLUNAS) == len(oferecidos) + 2
-
-
-def test_a_celula_sem_ponto_de_aplicacao_nao_diz_sem_teto() -> None:
-    """"Sem teto" é AFIRMAÇÃO sobre um limite; "não há por onde" é outra coisa."""
-    sem_ponto = next(
-        linha for linha in secao_orcamento.LINHAS_DO_TETO if not linha.tem_ponto
-    )
-    for perfil in secao_orcamento.PERFIS:
-        celula = secao_orcamento.celula_do_perfil(perfil, sem_ponto)
-        assert celula == secao_orcamento.SEM_PONTO_DE_APLICACAO
-        assert celula != secao_orcamento.SEM_TETO
-
-
-def test_a_celula_da_vibracao_continua_derivada_do_daemon() -> None:
-    """O número da vibração sai da conta do daemon, nunca digitado aqui."""
-    vibracao = secao_orcamento.LINHAS_DO_TETO[0]
-    assert vibracao.tem_ponto
-    bateria = secao_orcamento.celula_do_perfil(
-        secao_orcamento.PERFIL_BATERIA_LONGA, vibracao
-    )
-    teto = teto_do_orcamento("economia")
-    assert teto is not None
-    assert f"{round(teto * 100)}%" in bateria
-    assert (
-        secao_orcamento.celula_do_perfil(secao_orcamento.PERFIL_TUDO_LIGADO, vibracao)
-        == secao_orcamento.SEM_TETO
-    )
-    assert (
-        secao_orcamento.celula_do_perfil(secao_orcamento.PERFIL_EU_ESCOLHO, vibracao)
-        == secao_orcamento.CADA_ABA_MANDA
-    )
 
 
 def test_a_frase_do_alcance_deriva_da_tabela(
@@ -256,20 +213,3 @@ def test_a_migracao_e_um_para_um_e_nao_perde_nada(gravado: str, esperado: str) -
     )
 
 
-def test_o_disco_nao_muda_de_esquema() -> None:
-    """Tirar `"auto"` do `Literal` faria o pydantic recusar o DOCUMENTO INTEIRO."""
-    from typing import get_args
-
-    from hefesto_dualsense4unix.utils.maquina import OrcamentoDeclarado
-
-    do_schema = {
-        valor
-        for ramo in get_args(OrcamentoDeclarado.model_fields["teto"].annotation)
-        for valor in get_args(ramo)
-        if isinstance(valor, str)
-    }
-    assert do_schema == set(secao_orcamento.CHAVES)
-    assert "auto" in do_schema, (
-        "quem já declarou `auto` continua sendo LIDO; tirar o valor do Literal "
-        "transformaria o `maquina.json` dela em 'não consegui gravar'"
-    )

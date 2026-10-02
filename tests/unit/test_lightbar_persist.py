@@ -85,7 +85,6 @@ def _install_gi_stubs() -> None:
 
 _install_gi_stubs()
 
-from hefesto_dualsense4unix.app.actions.lightbar_actions import LightbarActionsMixin
 from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
@@ -144,67 +143,6 @@ def test_brightness_default_1(isolated_profiles_dir: Path) -> None:
 # Testes do _build_profile_from_editor: inclui _pending_brightness
 
 
-def test_build_profile_inclui_pending_brightness(isolated_profiles_dir: Path) -> None:
-    """_build_profile_from_editor lê _pending_brightness e inclui no perfil."""
-    base_profile = _mk_profile("meu_perfil", brightness=0.8)
-    save_profile(base_profile)
-
-    instance = _make_profiles_instance(pending_brightness=0.35)
-
-    def fake_get(widget_id: str) -> MagicMock:
-        m = MagicMock()
-        if widget_id == "profile_name_entry":
-            m.get_text.return_value = "meu_perfil"
-        elif widget_id == "profile_priority_scale":
-            m.get_value.return_value = 5.0
-        elif widget_id == "profile_radio_any":
-            m.get_active.return_value = True
-        elif widget_id == "profile_simple_custom_name":
-            m.get_text.return_value = ""
-        return m
-
-    instance._get = fake_get  # type: ignore[attr-defined]
-
-    result = instance._build_profile_from_editor()
-    assert result.leds.lightbar_brightness == pytest.approx(0.35)
-
-
-def test_build_profile_sem_existente_usa_pending(isolated_profiles_dir: Path) -> None:
-    """Perfil novo (sem existente no disco) usa _pending_brightness."""
-    instance = _make_profiles_instance(pending_brightness=0.6)
-
-    def fake_get(widget_id: str) -> MagicMock:
-        m = MagicMock()
-        if widget_id == "profile_name_entry":
-            m.get_text.return_value = "perfil_novo"
-        elif widget_id == "profile_priority_scale":
-            m.get_value.return_value = 0.0
-        elif widget_id == "profile_radio_any":
-            m.get_active.return_value = True
-        elif widget_id == "profile_simple_custom_name":
-            m.get_text.return_value = ""
-        return m
-
-    instance._get = fake_get  # type: ignore[attr-defined]
-
-    result = instance._build_profile_from_editor()
-    assert result.leds.lightbar_brightness == pytest.approx(0.6)
-
-
 # Teste do guard de refresh: on_lightbar_brightness_changed
 
 
-def test_refresh_guard_previne_loop() -> None:
-    """on_lightbar_brightness_changed retorna imediatamente com guard ativo."""
-    instance = LightbarActionsMixin.__new__(LightbarActionsMixin)
-    instance._current_brightness = 0.5  # type: ignore[attr-defined]
-    instance._pending_brightness = 0.5  # type: ignore[attr-defined]
-    instance._refresh_guard = True
-
-    scale_mock = MagicMock()
-    scale_mock.get_value.return_value = 80.0
-
-    instance.on_lightbar_brightness_changed(scale_mock)
-
-    assert instance._current_brightness == pytest.approx(0.5)  # type: ignore[attr-defined]
-    assert instance._pending_brightness == pytest.approx(0.5)  # type: ignore[attr-defined]

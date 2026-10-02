@@ -466,7 +466,7 @@ def test_o_giroscopio_desligado_nao_diz_que_flui(entrada: dict[str, Any], jogado
     MORDIDA: tire a guarda `giroscopio_ligado is False` de `texto_motion` e os
     dois casos reprovam.
     """
-    from hefesto_dualsense4unix.app.widgets.controller_card import texto_motion
+    from hefesto_dualsense4unix.interface.cartao_do_controle import texto_motion
 
     estado = _com_espelho(jogador)
     ligado = {**entrada, "sensores": {"giroscopio_ligado": True}}
@@ -478,7 +478,7 @@ def test_o_giroscopio_desligado_nao_diz_que_flui(entrada: dict[str, Any], jogado
 
 def test_na_mascara_xbox_o_giroscopio_desligado_nao_diz_que_segue_ativo() -> None:
     """A frase da máscara Xbox termina em «no Hefesto ele segue ativo», e ao"""
-    from hefesto_dualsense4unix.app.widgets.controller_card import (
+    from hefesto_dualsense4unix.interface.cartao_do_controle import (
         _FRASE_MASCARA_XBOX,
         texto_motion,
     )
@@ -532,7 +532,7 @@ def test_no_nativo_a_aba_04_desenha_a_tira_na_cor() -> None:
     """A aba 04 desenhava a tira tracejada do «não sei» no Nativo. Com a barra"""
     from pacotes import a04_iluminacao as a04
 
-    from hefesto_dualsense4unix.app.widgets.controller_card import rotulo_lightbar
+    from hefesto_dualsense4unix.interface.cartao_do_controle import rotulo_lightbar
 
     recado, base = rotulo_lightbar(dict(_ACESA), {"native_mode": True})
     assert (recado, base) == (None, (0, 0, 255))

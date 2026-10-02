@@ -131,40 +131,6 @@ def test_todo_passo_que_define_modo_declara_origem_manual() -> None:
                 )
 
 
-def test_o_desligado_virou_modo_nativo_e_saiu_da_fileira() -> None:
-    """A LÁPIDE do quarto botão, e ela é uma régua — não um comentário.
-
-    Esta régua nasceu (29/08) exigindo o contrário: que o botão ``desligado``
-    estivesse na fileira **sem** dono, dizendo o porquê. Ele não tinha leitor —
-    ``mode_of_state`` devolve TRÊS valores, nunca um quarto — e estava aberto
-    como MIGRA-JOGAR-06.
-
-    **31/08/2026, ela redesenhou o Modo de conexão e a resposta veio pela
-    forma:** *Desligado = Modo Nativo, "o DualSense da forma como veio ao
-    mundo"*. O botão órfão sumiu do desenho, e a posição Desligado do
-    interruptor endereça ``MODE_NATIVE`` — que lê e escreve. A MIGRA-JOGAR-06
-    fechou **sem uma linha de produto nova**.
-
-    **A mordida:** devolva ``Modo(MODO_DESLIGADO, …)`` a ``MODOS_DA_TELA`` e as
-    duas primeiras asserções caem; devolva o ``data-modo="desligado"`` ao
-    desenho e a terceira cai junto com a régua da fileira.
-    """
-    fileira = {m.chave for m in painel.MODOS_DA_TELA}
-    assert painel.MODO_DESLIGADO not in fileira, (
-        "o botão órfão voltou à fileira — ele é uma lápide, não um endereço"
-    )
-    assert painel.MODO_DESLIGADO not in painel.ESCRITOR_DOS_MODOS
-    assert painel.MODO_DESLIGADO not in modos_do_desenho()
-
-    assert painel.plano_do_modo(painel.MODO_DESLIGADO) is None
-    assert painel.porque_nao_aplica(painel.MODO_DESLIGADO)
-    assert "SEM LINHA" in painel.escritor_do_modo(painel.MODO_DESLIGADO)
-
-    assert mode_transition.MODE_NATIVE in fileira
-    assert mode_transition.MODE_NATIVE in painel.ESCRITOR_DOS_MODOS
-    assert painel.plano_do_modo(mode_transition.MODE_NATIVE)
-
-
 def test_gesto_de_endereco_inventado_nao_derruba_nem_aplica() -> None:
     """Um ``data-modo`` que o gerador não escreve chega pelo DOM adulterado."""
     assert painel.plano_do_modo("modo-que-nao-existe") is None
@@ -231,28 +197,6 @@ def test_o_algarismo_do_circulo_e_derivado_da_escada(
     assert depois["navegacao"] == painel.SEM_ALGARISMO
 
 
-def _degraus_sem_lugar_na_tela(painel_: object) -> list[object]:
-    """Os degraus da ``ESCADA`` que a tela não mostra em lugar nenhum."""
-    from hefesto_dualsense4unix.integrations import ponte_escada
-
-    nomeadas = {c.ponte for c in painel_.CHIPS_DA_ESCADA if c.ponte is not None}  # type: ignore[attr-defined]
-    nomeadas |= set(painel_.PONTES_DO_INTERRUPTOR)  # type: ignore[attr-defined]
-    return [d for d in ponte_escada.ESCADA if d.ponte not in nomeadas]
-
-
-def test_a_escada_nao_deve_mais_nada_a_tela(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Todo degrau da escada tem onde aparecer — desde 31/08/2026."""
-    from hefesto_dualsense4unix.integrations import ponte_escada
-
-    assert _degraus_sem_lugar_na_tela(painel) == []
-
-    monkeypatch.setattr(painel, "PONTES_DO_INTERRUPTOR", frozenset())
-    orfaos = _degraus_sem_lugar_na_tela(painel)
-    assert [d.ponte for d in orfaos] == [ponte_escada.Ponte(ponte_escada.KIND_NATIVE)], (
-        "sem a linha do interruptor a régua acusa o Nativo — e a acusação é FALSA"
-    )
-
-
 def test_sem_degrau_e_sem_dono_sao_perguntas_diferentes() -> None:
     """A Navegação separa as duas, e pintar uma pela outra mente na tela."""
     sem_degrau = [c.chave for c in painel.CHIPS_DA_ESCADA
@@ -285,14 +229,6 @@ def test_as_conferencias_sairam_do_produto() -> None:
                  "degraus_sem_chip", "degrau_vivo", "nome_do_perfil"):
         assert not hasattr(painel, nome), (
             f"`painel.{nome}` voltou ao produto sem tela que a pergunte")
-
-
-def test_a_recusa_do_botao_sem_escritor_e_a_do_dono() -> None:
-    """A frase com que o gesto recusa é a de ``escritor_do_modo`` — uma só."""
-    for chave in (painel.MODO_DESLIGADO, "modo-que-nao-existe"):
-        assert painel.porque_nao_aplica(chave) == painel.escritor_do_modo(chave)
-    for chave in painel.ESCRITOR_DOS_MODOS:
-        assert painel.porque_nao_aplica(chave) == ""
 
 
 def test_a_lembranca_tem_um_lugar_so_e_e_o_do_produto(

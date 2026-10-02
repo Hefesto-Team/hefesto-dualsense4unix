@@ -22,18 +22,12 @@ from hefesto_dualsense4unix.app.actions.config.secao_controles import (
     DICA_MIC_NO_RADIO,
     DICA_MIC_SEM_CANAL,
     DICA_MIC_SEM_ENDERECO,
-    TEXTO_DO_MIC,
-    _BlocoDoMicrofone,
-    _PainelDosControles,
     dica_do_microfone,
     frase_da_capacidade_do_mic,
     pode_ligar_o_mic,
     tem_canal_de_captura,
 )
-from hefesto_dualsense4unix.app.widgets.external_card import (
-    DadosDoControle,
-    ExternalCard,
-)
+from hefesto_dualsense4unix.interface.dados_do_controle import DadosDoControle
 from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     HZ_AUDIO_COM_MIC,
     HZ_INPUT_COM_MIC,
@@ -69,25 +63,6 @@ def _assentar() -> None:
         Gtk.main_iteration()
 
 
-def _card_com_o_bloco(dados: DadosDoControle, *, ligado: bool = False) -> tuple[
-    Any, _BlocoDoMicrofone, list[tuple[str, bool]]
-]:
-    """Um card de produção com o bloco encaixado, numa janela offscreen."""
-    cliques: list[tuple[str, bool]] = []
-    card = ExternalCard(dados)
-    bloco = _BlocoDoMicrofone(
-        dados,
-        ligado=ligado,
-        ao_alternar=lambda chave, valor: cliques.append((chave, valor)),
-    )
-    bloco.encaixar(card)
-    janela = Gtk.OffscreenWindow()
-    janela.add(card)
-    janela.show_all()
-    _assentar()
-    return card, bloco, cliques
-
-
 def _rotulos(widget: Any, achados: list[str] | None = None) -> list[str]:
     """Todo texto visível na árvore — é assim que se pergunta "está na tela?"."""
     achados = [] if achados is None else achados
@@ -104,26 +79,7 @@ def _rotulos(widget: Any, achados: list[str] | None = None) -> list[str]:
 
 
 class TestOInterruptorEstaNaTela:
-    def test_o_dualsense_no_radio_ganha_o_interruptor_e_ele_e_clicavel(self) -> None:
-        card, bloco, _ = _card_com_o_bloco(_dados())
 
-        assert TEXTO_DO_MIC in _rotulos(card), (
-            "o interruptor de microfone não aparece no card: a ponte volta a "
-            "só subir por variável de ambiente"
-        )
-        assert bloco.botao.get_sensitive() is True
-
-    def test_no_cabo_o_interruptor_esta_aceso_e_a_dica_so_informa(self) -> None:
-        """A queixa 15 dela, em forma de régua — 04/09/2026."""
-        card, bloco, _ = _card_com_o_bloco(_dados(no_cabo=True))
-
-        assert TEXTO_DO_MIC in _rotulos(card), "o interruptor SUMIU no cabo"
-        assert bloco.botao.get_sensitive() is True, (
-            "o interruptor de microfone nasceu APAGADO no cabo — é a frase "
-            "invertida da queixa 15 dela de volta, e o CSV desta casa diz o "
-            "contrário: audio.microfone tem cabo_aciona=sim"
-        )
-        assert bloco.botao.get_tooltip_text() == DICA_MIC_NO_CABO
 
     def test_a_dica_do_cabo_informa_e_nao_recusa(self) -> None:
         """A frase do cabo é CAPACIDADE, não advertência — e ela dizia o inverso."""
@@ -156,15 +112,6 @@ class TestOInterruptorEstaNaTela:
         assert "este controle" in DICA_MIC_NO_RADIO
         assert "desligado" in DICA_MIC_NO_RADIO
 
-    def test_o_valor_inicial_nao_declara_nada_sozinho(self) -> None:
-        """`set_active` EMITE "toggled". Com o handler já ligado, abrir a janela"""
-        _card, _bloco, cliques = _card_com_o_bloco(_dados(), ligado=True)
-        assert cliques == []
-
-    def test_um_card_ligado_nasce_marcado(self) -> None:
-        _card, bloco, _ = _card_com_o_bloco(_dados(), ligado=True)
-        assert bloco.botao.get_active() is True
-
 
 class _HostFalso:
     """O `HefestoApp` reduzido ao que a seção lê — sem GTK e sem daemon."""
@@ -175,36 +122,6 @@ class _HostFalso:
         self._controles_leitor = lambda: {"controllers": controles, "external": []}
         self._cor_do_plastico_leitor = lambda _u: None
         self._mesa_limpa_leitor = lambda: False
-
-
-def _painel_montado(
-    monkeypatch: pytest.MonkeyPatch, controles: list[dict[str, Any]],
-    declarado: dict[str, Any] | None = None,
-) -> tuple[_PainelDosControles, _HostFalso, Any]:
-    """A seção montada pelo MÉTODO DE PRODUÇÃO, com o disco fora do caminho."""
-    from hefesto_dualsense4unix.utils.maquina import ControleDeclarado, MaquinaConfig
-
-    monkeypatch.setattr(
-        secao_controles,
-        "carregar_maquina",
-        lambda: MaquinaConfig(
-            controles={
-                chave: ControleDeclarado(**campos)
-                for chave, campos in (declarado or {}).items()
-            }
-        ),
-    )
-    monkeypatch.setattr(secao_controles, "run_in_thread", lambda *a, **k: None)
-
-    host = _HostFalso(controles)
-    painel = _PainelDosControles(host)
-    caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-    janela = Gtk.OffscreenWindow()
-    janela.add(caixa)
-    painel.montar(caixa)
-    janela.show_all()
-    _assentar()
-    return painel, host, caixa
 
 
 def _entrada(uniq: str, *, transporte: str = "bt") -> dict[str, Any]:
@@ -220,44 +137,7 @@ def _entrada(uniq: str, *, transporte: str = "bt") -> dict[str, Any]:
 
 
 class TestOGesto:
-    def test_ligar_escreve_no_rascunho_e_nao_no_disco(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """O clique acumula; quem grava é o "Aplicar" do rodapé (`D-A4`)."""
-        painel, host, _caixa = _painel_montado(monkeypatch, [_entrada(UM)])
-        bloco = painel._microfones[UM]
 
-        bloco.botao.set_active(True)
-
-        assert host._maquina_pendente == {"controles": {UM: {"microfone": True}}}
-
-    def test_desligar_volta_para_nao_sei_e_nao_grava_um_false(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A mordida que mais importa deste arquivo."""
-        painel, host, _caixa = _painel_montado(
-            monkeypatch, [_entrada(UM)], declarado={UM: {"microfone": True}}
-        )
-        bloco = painel._microfones[UM]
-        assert bloco.botao.get_active() is True, "o card não leu o que estava no disco"
-
-        bloco.botao.set_active(False)
-
-        assert host._maquina_pendente == {"controles": {UM: {"microfone": None}}}
-
-    def test_ligar_um_nao_liga_o_outro(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A decisão dela, do lado da tela: quatro independentes."""
-        painel, host, _caixa = _painel_montado(
-            monkeypatch, [_entrada(UM), _entrada(DOIS)]
-        )
-        assert set(painel._microfones) == {UM, DOIS}
-
-        painel._microfones[DOIS].botao.set_active(True)
-
-        assert host._maquina_pendente == {"controles": {DOIS: {"microfone": True}}}
-        assert painel._microfones[UM].botao.get_active() is False
 
     def test_a_secao_nao_manda_ipc_nenhum_no_clique(self) -> None:
         """Nenhum `machine.declare` e nenhuma chamada a `dualsense_bt_audio`."""
@@ -285,29 +165,6 @@ class TestOGesto:
             "não pode subir um microfone a um clique de distância enquanto a "
             "posse do hidraw não for arbitrada"
         )
-
-    def test_o_interruptor_so_aparece_em_dualsense_adotado(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A ponte é Opus tunelado num report HID da Sony (`0x31`/`0x32`)."""
-        painel, _host, _caixa = _painel_montado(monkeypatch, [_entrada(UM)])
-        painel._aplicar(
-            {
-                "controllers": [],
-                "external": [
-                    {
-                        "uniq": "e8:47:3a:00:00:07",
-                        "name": "Nintendo Co., Ltd. Pro Controller",
-                        "vid": "057e",
-                        "pid": "2009",
-                        "bus": "bluetooth",
-                        "driver": "nintendo",
-                        "identity": OITO_BITDO,
-                    }
-                ],
-            }
-        )
-        assert painel._microfones == {}
 
 
 class TestAFraseDeCapacidade:
@@ -350,12 +207,3 @@ class TestAFraseDeCapacidade:
                 "nº 1 desta casa, e ela já foi derrubada uma vez"
             )
 
-    def test_a_frase_aparece_uma_unica_vez_na_secao(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """São 208px de largura por card: a mesma frase cinco vezes vira ruído."""
-        _painel, _host, caixa = _painel_montado(
-            monkeypatch, [_entrada(UM), _entrada(DOIS)]
-        )
-        frase = frase_da_capacidade_do_mic()
-        assert _rotulos(caixa).count(frase) == 1

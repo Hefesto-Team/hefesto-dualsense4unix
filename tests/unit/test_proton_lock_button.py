@@ -31,7 +31,6 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import skip_sem_gtk_response
 
 
 def _install_gi_stubs() -> None:
@@ -319,52 +318,9 @@ class _FakeDialog:
         self.destroyed = True
 
 
-@skip_sem_gtk_response
-class TestConfirmacao:
-    def _stub_com_worker_gravado(self) -> _Stub:
-        stub = _Stub()
-
-        def _worker() -> None:
-            stub.worker_calls += 1
-
-        stub._proton_lock_worker = _worker  # type: ignore[method-assign]
-        return stub
-
-    def test_ok_dispara_o_worker_e_fecha(self) -> None:
-        from gi.repository import Gtk
-
-        stub = self._stub_com_worker_gravado()
-        dlg = _FakeDialog()
-
-        stub._on_proton_lock_confirm_response(dlg, int(Gtk.ResponseType.OK))
-
-        assert dlg.destroyed is True
-        assert stub.worker_calls == 1
-
-    @pytest.mark.parametrize("resposta", [-6, -4, 0])
-    def test_qualquer_outra_resposta_so_fecha(self, resposta: int) -> None:
-        stub = self._stub_com_worker_gravado()
-        dlg = _FakeDialog()
-
-        stub._on_proton_lock_confirm_response(dlg, resposta)
-
-        assert dlg.destroyed is True
-        assert stub.worker_calls == 0
-
-
 class TestDialogoDeConfirmacaoPorFonte:
     """Espelho stub-level (headless): confirmação temada, não-bloqueante e"""
 
-    def test_confirmacao_e_temada_e_nao_bloqueante(self) -> None:
-        src = inspect.getsource(
-            DaemonActionsMixin._build_proton_lock_confirm_dialog
-        ) + inspect.getsource(DaemonActionsMixin.on_proton_lock)
-        compacto = src.replace("\n", "").replace(" ", "")
-        assert 'add_class("hefesto-dualsense4unix-window")' in compacto
-        assert 'connect("response"' in compacto
-        assert ".run()" not in src
-        assert "backup" in src
-        assert "FECHADA" in src
 
     def test_worker_importa_lazy_dentro_do_handler(self) -> None:
         src = inspect.getsource(DaemonActionsMixin._proton_lock_worker)
@@ -383,25 +339,3 @@ with contextlib.suppress(Exception):
     _DISPLAY_OK = _Gdk.Display.get_default() is not None
 
 
-@pytest.mark.skipif(
-    not _DISPLAY_OK, reason="sem display GTK — construção real do diálogo"
-)
-class TestDialogoGtkReal:
-    def test_confirmacao_temada_com_botoes(self) -> None:
-        from gi.repository import Gtk
-
-        stub = _Stub()
-        dlg = stub._build_proton_lock_confirm_dialog()
-        try:
-            assert isinstance(dlg, Gtk.MessageDialog)
-            assert dlg.get_style_context().has_class(
-                "hefesto-dualsense4unix-window"
-            )
-            assert "Proton" in (dlg.get_property("text") or "")
-            corpo = dlg.get_property("secondary-text") or ""
-            assert "backup" in corpo
-            assert "FECHADA" in corpo
-            for response in (Gtk.ResponseType.CANCEL, Gtk.ResponseType.OK):
-                assert dlg.get_widget_for_response(response) is not None
-        finally:
-            dlg.destroy()

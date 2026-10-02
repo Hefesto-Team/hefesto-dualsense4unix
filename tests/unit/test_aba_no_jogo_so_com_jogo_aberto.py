@@ -47,9 +47,8 @@ import pytest
 
 from tests.conftest import exigir_gi_real
 
-exigir_gi_real("aba No jogo só com jogo aberto (importa app.widgets.painel_no_jogo)")
+exigir_gi_real("aba No jogo só com jogo aberto (importa interface.painel_no_jogo)")
 
-from hefesto_dualsense4unix.app.widgets.painel_no_jogo import jogo_steam_aberto
 from hefesto_dualsense4unix.core.controller import ControllerState
 from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
 from hefesto_dualsense4unix.daemon.lifecycle import Daemon
@@ -59,29 +58,6 @@ from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
 
 PRAGMATA = 3357650
-
-
-def test_com_jogo_aberto_a_resposta_e_sim() -> None:
-    """O caso que faz a aba aparecer."""
-    estado = {"jogo_steam": {"lido": True, "appid": PRAGMATA}}
-
-    assert jogo_steam_aberto(estado) is True
-
-
-def test_ainda_nao_perguntei_nao_e_nao_ha_jogo() -> None:
-    """O TRI-ESTADO, que é a razão de o `lido` existir."""
-    ainda_nao = {"jogo_steam": {"lido": False, "appid": None}}
-    nao_ha = {"jogo_steam": {"lido": True, "appid": None}}
-
-    assert jogo_steam_aberto(ainda_nao) is None
-    assert jogo_steam_aberto(nao_ha) is False
-
-
-def test_daemon_velho_e_daemon_desligado_nao_decidem_nada() -> None:
-    """Silêncio nunca vira "não há jogo"."""
-    assert jogo_steam_aberto({"connected": True}) is None
-    assert jogo_steam_aberto(None) is None
-    assert jogo_steam_aberto({"jogo_steam": "sim"}) is None
 
 
 def test_o_store_nasce_sem_ter_perguntado() -> None:
@@ -253,12 +229,3 @@ async def test_o_state_full_leva_o_tri_estado_inteiro(ipc_server: IpcServer) -> 
     assert sem_jogo["jogo_steam"] == {"lido": True, "appid": None}
 
 
-async def test_a_ponta_a_ponta_o_state_full_faz_a_janela_decidir(
-    ipc_server: IpcServer,
-) -> None:
-    """O que o daemon publica é exatamente o que a janela sabe ler."""
-    ipc_server.store.set_steam_jogo_appid(PRAGMATA)
-    assert jogo_steam_aberto(await ipc_server._handle_daemon_state_full({})) is True
-
-    ipc_server.store.set_steam_jogo_appid(None)
-    assert jogo_steam_aberto(await ipc_server._handle_daemon_state_full({})) is False

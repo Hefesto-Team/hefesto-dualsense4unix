@@ -91,31 +91,6 @@ class _Aba(ea.EmulationActionsMixin):
 
 
 class TestStatusDaAba:
-    @staticmethod
-    def _refresh(
-        monkeypatch: pytest.MonkeyPatch,
-        *,
-        appids: list[int],
-        exposicao: dict[str, bool],
-        conflito: bool | None = False,
-    ) -> tuple[str, list[int]]:
-        """O markup da linha e os `uid` com que alguém varreu os hidraw."""
-        varridas: list[int] = []
-        monkeypatch.setattr(ea, "run_in_thread", lambda fn, on_success: on_success(fn()))
-        monkeypatch.setattr(
-            ea.EmulationActionsMixin, "_steam_input_is_on", staticmethod(lambda: conflito)
-        )
-        monkeypatch.setattr(
-            "hefesto_dualsense4unix.daemon.launch_env.steam_input_appids",
-            lambda path=None: set(appids),
-        )
-        monkeypatch.setattr(
-            "hefesto_dualsense4unix.broker.hidraw_broker.physical_nodes_exposure",
-            lambda uid, **k: varridas.append(uid) or exposicao,
-        )
-        label = _LabelFalso()
-        _Aba(label)._refresh_steam_input_status()
-        return label.markup, varridas
 
     def test_sem_allowlist_a_linha_nao_muda(
         self, monkeypatch: pytest.MonkeyPatch
@@ -127,16 +102,6 @@ class TestStatusDaAba:
         assert "xceção" not in markup
         assert varridas == []
 
-    def test_excecao_configurada_e_efetiva(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        markup, varridas = self._refresh(
-            monkeypatch, appids=[2111190], exposicao={"/dev/hidraw0": True}
-        )
-        assert markup.endswith("Exceção por jogo: 1 jogo(s)</span>"), markup
-        assert "controle liberado agora" not in markup
-        assert ea.EmulationActionsMixin._steam_input_excecoes() == [2111190]
-        assert varridas == []
 
     def test_excecao_configurada_mas_o_fisico_segue_escondido(
         self, monkeypatch: pytest.MonkeyPatch

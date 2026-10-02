@@ -69,7 +69,7 @@ def a02():
 
 def test_a_rota_vem_do_byte_do_aparelho(a02):
     """Os dois bytes que estes dois botões significam, PERGUNTADOS ao dono."""
-    from hefesto_dualsense4unix.app.widgets.controller_card import (
+    from hefesto_dualsense4unix.interface.cartao_do_controle import (
         CANAL_SONS_DO_JOGO,
         CANAL_TODO_O_PC,
         ROTA_DO_CANAL,
@@ -103,7 +103,7 @@ def test_a_rota_nao_confunde_booleano_com_byte(a02):
 
 def test_a_rota_sai_do_mesmo_bloco_que_o_volume(a02):
     """A régua ANTI-DERIVA das duas leituras da mesma regra."""
-    from hefesto_dualsense4unix.app.widgets.controller_card import speaker_do_entry
+    from hefesto_dualsense4unix.interface.cartao_do_controle import speaker_do_entry
 
     casos = {
         "de fora": {"speaker": {"volume": 102, "muted": False, "rota": 2}},
@@ -301,7 +301,7 @@ def test_o_pacote_emite_os_dois_acesos_para_a_pagina_publicada(a02, monkeypatch)
 
 def test_a_bateria_escreve_o_numero_com_a_grafia_da_gtk(a02, monkeypatch):
     """`85 %`, com espaço — e o card mostrava as DUAS gramáticas ao mesmo tempo."""
-    from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_volume
+    from hefesto_dualsense4unix.interface.sensores import texto_volume
     from pacotes import Contexto
 
     monkeypatch.setattr(a02, "_ENDERECOS", None)

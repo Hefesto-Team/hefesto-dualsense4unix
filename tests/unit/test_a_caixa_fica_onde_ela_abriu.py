@@ -14,7 +14,6 @@ from hefesto_dualsense4unix.integrations import central_do_radio as cr
 from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import QUARTO, SALA, VARANDA, VERDE, VERMELHO
 from tests.unit.test_o_conectar_pareia_no_adaptador_escolhido import (
-    JOGADORES,
     Bancada,
     BuscaDePe,
     id_da_tela,
@@ -69,30 +68,6 @@ def _cartao(sala: str, lid: str) -> str:
     inicio = max(c for c in comecos if c < sala.index(f'data-id="{lid}"'))
     fim = next((c for c in comecos if c > inicio), len(sala))
     return sala[inicio:fim]
-
-
-@pytest.mark.parametrize("jogadores", sorted(JOGADORES))
-@pytest.mark.parametrize(("onde_busca", "onde_ela_abre"), PARES)
-def test_a_caixa_que_ela_abriu_fica_com_a_busca_noutro_adaptador(
-    diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch,
-    onde_busca: str, onde_ela_abre: str, jogadores: str,
-) -> None:
-    """A cena da foto 34: a busca de pé num adaptador, e o clique dela no ▶ de"""
-    mundo, relogio = mundo_com(TRES), rm.Relogio()
-    bancada = Bancada(a08, monkeypatch, mundo, relogio, ordem=TRES,
-                      jogadores=JOGADORES[jogadores])
-    busca = BuscaDePe(relogio)
-    try:
-        _a_busca_abre_em(bancada, busca, onde_busca)
-        bancada.gesto("abrir-adaptador", alvo=id_da_tela(onde_ela_abre))
-        abertos = [bancada.cena()["aberto"] for _ in range(TIQUES)]
-        assert abertos == [id_da_tela(onde_ela_abre)] * TIQUES, "o tique desfez o clique dela"
-        sala = bancada.tique()["radio-sala"]
-        assert 'class="lugar aberto"' in _cartao(sala, id_da_tela(onde_ela_abre))
-        assert onde_buscou(mundo) == [rm.HCIS[onde_busca]], "a busca saiu do lugar"
-    finally:
-        busca.soltar()
-        bancada.fechar()
 
 
 @pytest.mark.parametrize("ordem", [TRES, (VARANDA, SALA, QUARTO), (QUARTO, VARANDA, SALA)])

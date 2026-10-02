@@ -18,12 +18,8 @@ from hefesto_dualsense4unix.app.actions.config import (
     secao_orcamento,
 )
 
-from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app import ipc_bridge
-from hefesto_dualsense4unix.app.actions import footer_actions
-from hefesto_dualsense4unix.app.actions.footer_actions import FooterActionsMixin
-from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.core.controller import ControllerState
 from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
@@ -63,32 +59,6 @@ class _Servidor(IpcHandlersMixin):
 
     def __init__(self) -> None:
         self.daemon = SimpleNamespace(_maquina=MaquinaConfig())  # type: ignore[assignment]
-
-
-class _Rodape(FooterActionsMixin):
-    """O rodapé com uma ``Gtk.Statusbar`` REAL — sem ``_status_toast`` de mentira.
-
-    A barra de verdade é o ponto, e a razão está em
-    ``test_a3_o_aplicar_responde_no_rodape.py``: um dublê que só CRESCE não
-    enxerga a frase que é apagada no mesmo tique do GTK. A afirmação daqui é
-    sobre o texto FINAL do rótulo.
-    """
-
-    def __init__(self, declaracao: dict[str, Any]) -> None:
-        self.draft = DraftConfig.default()
-        self.barra = Gtk.Statusbar()
-        self._maquina_pendente: dict[str, Any] | None = dict(declaracao)
-
-    def _get(self, widget_id: str) -> Any:
-        return self.barra if widget_id == "status_bar" else None
-
-    def pegar_carona_no_gesto(self, _gesto: str) -> None:
-        pass
-
-    @property
-    def texto_da_barra(self) -> str:
-        rotulo = self.barra.get_message_area().get_children()[0]
-        return str(rotulo.get_text())
 
 
 def _estado() -> ControllerState:
@@ -234,68 +204,6 @@ def test_corpo_torto_do_daemon_nao_derruba_o_aplicar(
     assert ipc_bridge.machine_declare_detalhado({"mesa": {"linha_de_visada": "livre"}})[2] == (
         ROTULO_DO_ORCAMENTO,
     )
-
-
-def test_a_frase_do_descarte_chega_ao_rotulo_do_rodape(
-    arquivo: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Disco corrompido + declaração nova → o rótulo NOMEIA o que se perdeu."""
-    _corromper(arquivo)
-    servidor = _Servidor()
-
-    def _pelo_handler(metodo: str, params: Any, **_kw: Any) -> tuple[bool, Any]:
-        assert metodo == "machine.declare"
-        return True, asyncio.run(servidor._handle_machine_declare(params))
-
-    monkeypatch.setattr(ipc_bridge, "_safe_call", _pelo_handler)
-    monkeypatch.setattr(
-        footer_actions.ipc_bridge,
-        "call_async",
-        lambda *_a, on_success=None, **_k: on_success(
-            {"status": "ok", "applied": ["leds"]}
-        ),
-    )
-
-    rodape = _Rodape({"mesa": {"linha_de_visada": "livre"}})
-    rodape.on_apply_draft()
-
-    texto = rodape.texto_da_barra
-    assert ROTULO_DO_ORCAMENTO in texto, (
-        "a pessoa tem de saber O QUE se perdeu; o rótulo diz " f"{texto!r}"
-    )
-    assert "descartou" in texto
-    assert "aplicado" in texto, (
-        "o recado do descarte não pode COMER o resultado da aplicação — é o "
-        "contrato aditivo do `_recado_da_maquina` (A3)"
-    )
-    assert rodape._maquina_pendente is None, "gravou: a pendência sai"
-
-
-def test_sem_descarte_o_rodape_nao_inventa_aviso(
-    arquivo: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Disco são → a frase de sempre, sem uma palavra sobre descarte."""
-    servidor = _Servidor()
-    monkeypatch.setattr(
-        ipc_bridge,
-        "_safe_call",
-        lambda _m, params, **_k: (
-            True,
-            asyncio.run(servidor._handle_machine_declare(params)),
-        ),
-    )
-    monkeypatch.setattr(
-        footer_actions.ipc_bridge,
-        "call_async",
-        lambda *_a, on_success=None, **_k: on_success({"status": "ok"}),
-    )
-
-    rodape = _Rodape({"mesa": {"linha_de_visada": "livre"}})
-    rodape.on_apply_draft()
-
-    texto = rodape.texto_da_barra
-    assert "Configurações gravadas." in texto
-    assert "descart" not in texto
 
 
 def test_todo_campo_do_schema_tem_rotulo_de_tela() -> None:

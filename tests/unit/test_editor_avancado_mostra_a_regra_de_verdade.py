@@ -47,9 +47,7 @@ pytest.importorskip("gi")
 
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
 from hefesto_dualsense4unix.profiles.schema import (
-    MatchAny,
     MatchCriteria,
-    MatchManual,
     Profile,
 )
 
@@ -163,42 +161,6 @@ class _FakeSelector:
 class Editor(pa.ProfilesActionsMixin):
     """Editor com os métodos REAIS do mixin sobre widgets falsos."""
 
-    def __init__(self, cache: list[Profile] | None = None) -> None:
-        self._widgets: dict[str, Any] = {
-            "profile_name_entry": _FakeEntry(""),
-            "profile_priority_scale": _FakeScale(0),
-            "profile_simple_custom_name": _FakeEntry(""),
-            "profile_window_class_entry": _FakeEntry(""),
-            "profile_title_regex_entry": _FakeEntry(""),
-            "profile_process_name_entry": _FakeEntry(""),
-            "profile_game_entry_box": _FakeBox(),
-            "profile_editor_stack": _FakeStack(),
-            "profile_advanced_switch": _FakeSwitch(),
-            "main_window": object(),
-        }
-        self._profiles_cache: list[Profile] = list(cache or [])
-        self._duplicate_source = None
-        self._new_profile = False
-        self._mode_advanced = False
-        self._suppress_advanced_toggle = False
-        self._mode_kind_selector = None
-        self._aplica_a = _FakeSelector("any")
-        self._aplica_a.connect("changed", self._on_aplica_a_changed)
-        self._widgets["profile_priority_scale"].connect(
-            "value-changed", self._on_prioridade_tocada
-        )
-        self.selecionado: str | None = None
-        self.toasts: list[str] = []
-        self.salvos: list[Profile] = []
-        self.overwrite_perguntado: list[str] = []
-        self.downgrade_perguntado: list[tuple[str, str | None]] = []
-        self.manual_perguntado: list[tuple[str, str | None]] = []
-        self.prioridade_perguntada: list[tuple[str, int, int]] = []
-        self.resposta_overwrite = True
-        self.resposta_downgrade = True
-        self.resposta_manual = True
-        self.resposta_prioridade = True
-
 
     def _get(self, widget_id: str) -> Any:
         return self._widgets.get(widget_id)
@@ -229,67 +191,11 @@ class Editor(pa.ProfilesActionsMixin):
             self._get("profile_process_name_entry").get_text(),
         )
 
-    def ligar_o_avancado(self) -> None:
-        """O gesto dela: mover o switch "Modo avançado" para LIGADO."""
-        switch = self._get("profile_advanced_switch")
-        switch.set_active(True)
-        self.on_profile_advanced_toggle(switch, True)
-
-    def desligar_o_avancado(self) -> None:
-        switch = self._get("profile_advanced_switch")
-        switch.set_active(False)
-        self.on_profile_advanced_toggle(switch, False)
-
 
 @pytest.fixture(autouse=True)
 def _sem_preferencia_no_disco(monkeypatch: pytest.MonkeyPatch) -> None:
     """`on_profile_advanced_toggle` persiste a preferência — aqui não escreve."""
     monkeypatch.setattr(pa, "set_pref", lambda *_a, **_kw: None)
-
-
-def ligar_o_save(editor: Editor, monkeypatch: pytest.MonkeyPatch) -> None:
-    """`on_profile_save` real com disco, IPC e diálogos interceptados."""
-    import hefesto_dualsense4unix.app.gui_dialogs as gd
-
-    monkeypatch.setattr(
-        gd,
-        "prompt_overwrite_existing",
-        lambda parent, name: (
-            editor.overwrite_perguntado.append(name) or editor.resposta_overwrite
-        ),
-        raising=False,
-    )
-    monkeypatch.setattr(
-        gd,
-        "confirm_downgrade_match_to_any",
-        lambda parent, name, regra_atual=None: (
-            editor.downgrade_perguntado.append((name, regra_atual))
-            or editor.resposta_downgrade
-        ),
-        raising=False,
-    )
-    monkeypatch.setattr(
-        gd,
-        "confirm_downgrade_match_to_manual",
-        lambda parent, name, regra_atual=None: (
-            editor.manual_perguntado.append((name, regra_atual))
-            or editor.resposta_manual
-        ),
-        raising=False,
-    )
-    monkeypatch.setattr(
-        gd,
-        "confirm_downgrade_priority",
-        lambda parent, name, de, para: (
-            editor.prioridade_perguntada.append((name, de, para))
-            or editor.resposta_prioridade
-        ),
-        raising=False,
-    )
-    monkeypatch.setattr(pa, "save_profile", lambda p: editor.salvos.append(p))
-    monkeypatch.setattr(pa, "delete_profile", lambda n: None)
-    monkeypatch.setattr(pa, "active_profile_name", lambda: None)
-    monkeypatch.setattr(pa, "call_async", lambda **_kw: None)
 
 
 def perfil_dela() -> Profile:
@@ -317,166 +223,6 @@ def perfil_complexo() -> Profile:
     )
 
 
-class TestOAvancadoMostraORegraDoPerfilAberto:
-    def test_ligar_o_avancado_mostra_o_criterio_que_esta_no_arquivo(self) -> None:
-        """A foto dela, clique a clique.
-
-        Perfil do jogo aberto (página simples, "Jogo da Steam" + 3357650) →
-        mover o switch "Modo avançado" → os três campos têm de mostrar o que o
-        arquivo diz, não os textos-fantasma do glade.
-
-        MORDIDA: arranque a chamada de `_mostrar_a_regra_nos_campos_crus` em
-        `on_profile_advanced_toggle` (o corpo volta a ser só
-        `_apply_editor_mode`) e as duas primeiras asserções reprovam — que é
-        exatamente o estado fotografado.
-        """
-        perfil = perfil_dela()
-        editor = Editor(cache=[perfil])
-        editor._populate_editor(perfil)
-
-        assert editor._selected_simple_choice() == "steam_game"
-        assert editor._get("profile_simple_custom_name").get_text() == APPID
-
-        editor.ligar_o_avancado()
-
-        assert editor._get("profile_editor_stack").visible_child == "avancado"
-        assert editor.campos_crus() == (WM_JOGO, "", "PRAGMATA.exe")
-
-    def test_o_avancado_nao_mostra_a_regra_do_perfil_anterior(self) -> None:
-        """Perfil complexo aberto, depois o do jogo: os crus não podem ficar rançosos."""
-        jogo = perfil_dela()
-        editor = Editor(cache=[perfil_complexo(), jogo])
-        editor._populate_editor(perfil_complexo())
-        assert editor.campos_crus() == ("firefox", "YouTube", "")
-
-        editor._populate_editor(jogo)
-        editor.ligar_o_avancado()
-
-        assert editor.campos_crus() == (WM_JOGO, "", "PRAGMATA.exe")
-
-    def test_desligar_e_religar_nao_apaga_a_regra_complexa(self) -> None:
-        """A cura não pode comer a regra que o avançado já mostrava.
-
-        Um match complexo abre JÁ no avançado. Desligar o switch põe a página
-        simples na frente com "Qualquer" (é o que `_populate_editor` deixa
-        selecionado), e religar não pode traduzir esse "Qualquer" de volta para
-        os campos crus — seria a cura apagando `firefox`/`YouTube`.
-
-        MORDIDA: trocar o `_regra_real_do_perfil_aberto` por um
-        `from_simple_choice` seco da página simples faz os três campos virarem
-        `("", "", "")` aqui.
-        """
-        perfil = perfil_complexo()
-        editor = Editor(cache=[perfil])
-        editor._populate_editor(perfil)
-        assert editor._mode_advanced is True
-
-        editor.desligar_o_avancado()
-        editor.ligar_o_avancado()
-
-        assert editor.campos_crus() == ("firefox", "YouTube", "")
-
-    def test_o_avancado_mostra_o_que_ela_acabou_de_escolher_na_simples(self) -> None:
-        """Editar na página simples e ligar o avançado mostra o valor NOVO."""
-        perfil = perfil_dela()
-        editor = Editor(cache=[perfil])
-        editor._populate_editor(perfil)
-
-        editor._get("profile_simple_custom_name").set_text("1599660")
-        editor.ligar_o_avancado()
-
-        assert editor.campos_crus() == ("steam_app_1599660", "", "")
-
-    def test_perfil_novo_sem_alvo_nao_inventa_criterio(self) -> None:
-        """"Novo perfil" + "Qualquer" + avançado: três campos vazios, e é a verdade."""
-        anterior = perfil_complexo()
-        editor = Editor(cache=[anterior])
-        editor._populate_editor(anterior)
-        editor.on_profile_new(None)
-
-        editor.ligar_o_avancado()
-
-        assert editor.campos_crus() == ("", "", "")
-
-
-class TestLigarOAvancadoNaoContaComoGestoDela:
-    def test_ligar_o_avancado_e_salvar_preserva_a_regra_do_disco(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A guarda SALVAR-NAO-REBAIXA-01 não pode cair por causa da cura.
-
-        `_regra_foi_mexida` compara a fotografia tirada na abertura com a de
-        agora — e a cura ESCREVE nos campos crus. Sem retirar a fotografia
-        depois de escrever, o simples ato de ligar o switch passaria a contar
-        como "ela mexeu na regra", desarmando a guarda que existe desde 27/07.
-
-        MORDIDA: apague o `self._assinatura_da_regra_ao_abrir = ...` do
-        `_mostrar_a_regra_nos_campos_crus` e `_regra_foi_mexida()` volta a
-        responder True aqui.
-        """
-        perfil = perfil_dela()
-        editor = Editor(cache=[perfil])
-        editor.selecionado = perfil.name
-        editor._populate_editor(perfil)
-        ligar_o_save(editor, monkeypatch)
-
-        editor.ligar_o_avancado()
-
-        assert editor._regra_foi_mexida() is False
-        editor.on_profile_save(None)
-        assert len(editor.salvos) == 1
-        assert editor.salvos[0].match == perfil.match
-        assert editor.salvos[0].priority == 200
-
-    def test_editar_um_campo_cru_depois_de_ligar_continua_contando(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A fotografia retirada não pode virar cadeado: mexer conta."""
-        perfil = perfil_dela()
-        editor = Editor(cache=[perfil])
-        editor.selecionado = perfil.name
-        editor._populate_editor(perfil)
-        ligar_o_save(editor, monkeypatch)
-
-        editor.ligar_o_avancado()
-        editor._get("profile_process_name_entry").set_text("Pragmata-Win64.exe")
-
-        assert editor._regra_foi_mexida() is True
-        editor.on_profile_save(None)
-        assert len(editor.salvos) == 1
-        salvo = editor.salvos[0].match
-        assert isinstance(salvo, MatchCriteria)
-        assert salvo.window_class == [WM_JOGO]
-        assert salvo.process_name == ["Pragmata-Win64.exe"]
-
-    def test_editar_na_simples_e_so_depois_ligar_o_avancado_grava_o_valor_dela(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """O gesto na página simples sobrevive à ida para o avançado.
-
-        Ela troca o número do jogo, olha o avançado para conferir, salva. O que
-        vai para o disco é o número NOVO — a fotografia só é retirada quando ela
-        ainda não tinha mexido em nada.
-
-        MORDIDA: retirar a fotografia incondicionalmente em
-        `_mostrar_a_regra_nos_campos_crus` grava `steam_app_3357650` aqui.
-        """
-        perfil = perfil_dela()
-        editor = Editor(cache=[perfil])
-        editor.selecionado = perfil.name
-        editor._populate_editor(perfil)
-        ligar_o_save(editor, monkeypatch)
-
-        editor._get("profile_simple_custom_name").set_text("1599660")
-        editor.ligar_o_avancado()
-        editor.on_profile_save(None)
-
-        assert len(editor.salvos) == 1
-        salvo = editor.salvos[0].match
-        assert isinstance(salvo, MatchCriteria)
-        assert salvo.window_class == ["steam_app_1599660"]
-
-
 class TestOQueContinuaComoEstava:
     def test_o_toggle_continua_trocando_a_pagina_e_persistindo_a_preferencia(
         self, monkeypatch: pytest.MonkeyPatch
@@ -497,61 +243,4 @@ class TestOQueContinuaComoEstava:
         assert editor._get("profile_editor_stack").visible_child == "simples"
         assert gravado == [("advanced_editor", True), ("advanced_editor", False)]
 
-    def test_toggle_programatico_nao_mexe_em_campo_nenhum(self) -> None:
-        """`_suppress_advanced_toggle` continua sendo o portão de tudo.
 
-        `_populate_editor` chama `switch.set_active` e o GTK dispara o handler;
-        com a marca armada ele tem de sair na primeira linha — sem trocar
-        página, sem persistir preferência e, agora, sem escrever nos campos.
-
-        MORDIDA: pôr o `_mostrar_a_regra_nos_campos_crus()` ACIMA do
-        `if self._suppress_advanced_toggle: return False` reprova aqui — a
-        repintura programática apagaria o `firefox` que o populate acabou de
-        escrever.
-        """
-        editor = Editor()
-        editor._suppress_advanced_toggle = True
-        editor._get("profile_window_class_entry").set_text("firefox")
-
-        editor.on_profile_advanced_toggle(
-            editor._get("profile_advanced_switch"), True
-        )
-
-        assert editor._mode_advanced is False
-        assert editor.campos_crus() == ("firefox", "", "")
-
-    def test_perfil_so_manual_continua_abrindo_com_os_tres_campos_vazios(self) -> None:
-        """R-12 item 3: o round-trip do perfil manual não pode ganhar alvo.
-
-        `MatchManual` cai em `detect_simple_preset` → None, abre no avançado com
-        os três campos em branco, e é assim que o `_build_profile_from_editor`
-        volta a gravá-lo como manual. Ligar/desligar o switch não pode inventar
-        critério nenhum.
-
-        MORDIDA: fazer `_mostrar_a_regra_nos_campos_crus` cair na página
-        simples quando a regra é `MatchManual` (que o seletor "Aplica a" não
-        sabe exprimir) traria um preset de fábrica para estes campos.
-        """
-        perfil = Profile(name="Só na mão", match=MatchManual(), priority=10)
-        editor = Editor(cache=[perfil])
-        editor._populate_editor(perfil)
-        assert editor.campos_crus() == ("", "", "")
-
-        editor.desligar_o_avancado()
-        editor.ligar_o_avancado()
-
-        assert editor.campos_crus() == ("", "", "")
-
-    def test_perfil_sempre_abre_o_avancado_sem_criterio(self) -> None:
-        """`MatchAny` não tem o que mostrar no avançado — e não pode mentir.
-
-        MORDIDA: um `_mostrar_a_regra_nos_campos_crus` que pulasse o `getattr`
-        tolerante e lesse `regra.window_class` direto estouraria aqui com
-        `AttributeError` (`MatchAny` não tem os três campos).
-        """
-        perfil = Profile(name="vitoria", match=MatchAny(), priority=100)
-        editor = Editor(cache=[perfil])
-        editor._populate_editor(perfil)
-        editor.ligar_o_avancado()
-
-        assert editor.campos_crus() == ("", "", "")

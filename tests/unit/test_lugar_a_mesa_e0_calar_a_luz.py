@@ -235,28 +235,6 @@ class TestACapacidadeNaoFoiEnterrada:
             f"{INST_PRO}:blue:player-5/brightness": "1",
         }
 
-    def test_write_lightbar_slot_continua_pintando_a_cor_do_slot(
-        self, tmp_path: Path
-    ) -> None:
-        """Chamada direta: a lightbar do 8BitDo em modo DS4 ainda sabe a cor."""
-        from hefesto_dualsense4unix.core.led_control import player_slot_color
-
-        raiz = tmp_path / "leds"
-        for canal in ("red", "green", "blue", "global"):
-            no = raiz / f"input99:{canal}" / "brightness"
-            no.parent.mkdir(parents=True, exist_ok=True)
-            no.write_text("0", encoding="ascii")
-
-        assert leds_mod.write_lightbar_slot("input99", 2, str(raiz)) is True
-
-        r, g, b = player_slot_color(2)
-        lido = _retrato(raiz)
-        assert (
-            lido["input99:red/brightness"],
-            lido["input99:green/brightness"],
-            lido["input99:blue/brightness"],
-        ) == (str(r), str(g), str(b))
-        assert lido["input99:global/brightness"] == "1"
 
     def test_uma_linha_devolve_a_luz_no_mesmo_tick(
         self, monkeypatch: pytest.MonkeyPatch, sysfs_de_led: Path

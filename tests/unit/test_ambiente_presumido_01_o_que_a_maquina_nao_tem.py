@@ -93,30 +93,6 @@ class TestSqueekboardEMaliit:
         assert keyboard.osk_disponivel_no_sistema() is False
 
 
-class TestDescreverTecladoNaTela:
-    def test_ausente_do_payload_e_terceiro_estado(self) -> None:
-        assert "não consegui ler" in ambiente_na_tela.descrever_teclado_na_tela({})
-
-    def test_state_nao_e_dict_e_terceiro_estado(self) -> None:
-        assert "não consegui ler" in ambiente_na_tela.descrever_teclado_na_tela(None)
-
-    def test_disponivel_true(self) -> None:
-        texto = ambiente_na_tela.descrever_teclado_na_tela({"osk_disponivel": True})
-        assert "instalado" in texto
-
-    def test_disponivel_false(self) -> None:
-        texto = ambiente_na_tela.descrever_teclado_na_tela({"osk_disponivel": False})
-        assert "nenhum programa" in texto.lower()
-
-    def test_nenhuma_frase_menciona_transporte(self) -> None:
-        """Regra de §7 da sprint: nada de cabo/rádio/Bluetooth/sem fio."""
-        proibidas = ("cabo", "rádio", "radio", "bluetooth", "sem fio")
-        for payload in ({}, {"osk_disponivel": True}, {"osk_disponivel": False}):
-            texto = ambiente_na_tela.descrever_teclado_na_tela(payload).lower()
-            for termo in proibidas:
-                assert termo not in texto, f"{termo!r} vazou para {texto!r}"
-
-
 class TestOQueEstaFraseNaoAlcancaNoStateFullDeVerdade:
     """MEDIDO em 26/08/2026 (LEVA-3-D): esta frase NÃO pode ser pendurada.
 
@@ -168,17 +144,6 @@ class TestOQueEstaFraseNaoAlcancaNoStateFullDeVerdade:
         )
         assert state["keyboard_emulation"]["osk_disponivel"] is True
 
-    def test_contra_o_payload_real_a_frase_diz_que_nao_conseguiu_ler(self) -> None:
-        """A MORDIDA: a máquina TEM teclado na tela e a frase não vê."""
-        texto = ambiente_na_tela.descrever_teclado_na_tela(self.PAYLOAD_REAL)
-        assert "não consegui ler" in texto, (
-            "`descrever_teclado_na_tela` passou a alcançar "
-            "`keyboard_emulation.osk_disponivel`. Ela agora DIZ a verdade — e "
-            "por isso passa a competir com "
-            "`input_actions.frase_do_teclado_na_tela`, que ocupa o mesmo "
-            "gancho desde 25/08. ESCOLHA uma das duas e apague a outra; a "
-            f"frase de hoje é {texto!r}"
-        )
 
     def test_o_gancho_do_l3_ja_tem_dono_e_nao_e_esta_funcao(self) -> None:
         """Quem fala do teclado na tela na legenda do L3 é a frente da Navegação."""
@@ -239,31 +204,6 @@ class TestDescreverDisplayGrafico:
         )
         for payload in casos:
             texto = ambiente_na_tela.descrever_display_grafico(payload).lower()
-            for termo in proibidas:
-                assert termo not in texto, f"{termo!r} vazou para {texto!r}"
-
-
-class TestDescreverSteamEncontrada:
-    def test_ausente_do_payload_e_terceiro_estado(self) -> None:
-        assert "não consegui ler" in ambiente_na_tela.descrever_steam_encontrada({})
-
-    def test_layout_achado(self) -> None:
-        texto = ambiente_na_tela.descrever_steam_encontrada(
-            {"steam_layout_achado": "flatpak"}
-        )
-        assert "encontrada" in texto.lower()
-        assert "flatpak" in texto.lower()
-
-    def test_layout_ausente_mas_chave_presente(self) -> None:
-        texto = ambiente_na_tela.descrever_steam_encontrada(
-            {"steam_layout_achado": None}
-        )
-        assert "não encontrada" in texto.lower()
-
-    def test_nenhuma_frase_menciona_transporte(self) -> None:
-        proibidas = ("cabo", "rádio", "radio", "bluetooth", "sem fio")
-        for payload in ({}, {"steam_layout_achado": "flatpak"}, {"steam_layout_achado": None}):
-            texto = ambiente_na_tela.descrever_steam_encontrada(payload).lower()
             for termo in proibidas:
                 assert termo not in texto, f"{termo!r} vazou para {texto!r}"
 

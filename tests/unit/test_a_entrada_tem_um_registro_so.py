@@ -122,18 +122,6 @@ def test_a_gravacao_serve_ao_pydantic_que_o_pacote_pede(
     assert '"caminho"' not in alvo.read_text(encoding="utf-8")
 
 
-def test_o_rascunho_do_mapa_le_o_caminho_e_a_volta_nao_muda_nada() -> None:
-    """A ``LogicaDoMapa`` (o rascunho da aba Conexões) lê o ``caminho`` do"""
-    from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import LogicaDoMapa
-
-    documento = MaquinaConfig.model_validate(migrar_o_documento(_a_maquina_dela()))
-    logica = LogicaDoMapa(documento.mapa)
-    assert logica.caminho_em("7") == "1-5"
-    assert logica.entrada_do_caminho("3-1.1.4") == "9"
-    volta = MaquinaConfig.model_validate({"mapa": logica.como_documento()})
-    assert volta.mapa == documento.mapa
-
-
 def test_a_migracao_roda_ao_carregar_inteira_e_uma_vez(tmp_path: Path) -> None:
     """PROVA 2: a primeira leitura migra e regrava; a cópia de antes fica ao"""
     alvo = _gravar_o_arquivo_de_antes(tmp_path, _a_maquina_dela())

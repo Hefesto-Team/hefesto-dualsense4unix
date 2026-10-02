@@ -34,9 +34,7 @@ import subprocess
 from pathlib import Path
 
 from tests.unit.test_haptica_nativa_01_o_ucm_do_dualsense import (
-    NOME_MEDIDO,
     _arvore_ucm,
-    _cards,
     _ganchos,
     _mesa,
     _rodar,
@@ -67,21 +65,6 @@ def _doctor_sem_ucm(tmp_path: Path, cards: Path) -> str:
         },
     )
     return r.stdout + r.stderr
-
-
-def test_sem_ucm_conf_com_dualsense_no_cabo_e_aviso(tmp_path: Path) -> None:
-    """A MORDIDA: volte ao `info` incondicional e esta régua reprova."""
-    saida = _doctor_sem_ucm(tmp_path, _cards(tmp_path, NOME_MEDIDO))
-    assert "[WARN] DualSense no cabo e sem" in saida
-    assert "alsa-ucm-conf" in saida
-    assert "esta distro não usa UCM" not in saida
-    assert "Depois de instalar o pacote, rode scripts/doctor.sh --fix" in saida
-
-
-def test_sem_ucm_conf_e_sem_dualsense_continua_informacao(tmp_path: Path) -> None:
-    saida = _doctor_sem_ucm(tmp_path, _cards(tmp_path))
-    assert "[WARN]" not in saida
-    assert "esta distro não usa UCM" in saida
 
 
 def _corpo(nome: str) -> str:

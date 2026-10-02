@@ -6,7 +6,6 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("diálogo que não mata a janela")
 
 import ast
-import inspect
 import json
 import os
 import shutil
@@ -320,116 +319,8 @@ def test_o_portao_pegaria_um_dialogo_novo_com_run_cru(tmp_path: Path) -> None:
     assert "aviso_novo.py::confirmar_algo" not in _AUTORIZADOS_A_BLOQUEAR
 
 
-def test_todo_dialogo_publico_da_casa_passa_pelo_envelope() -> None:
-    """Não curar um caso e deixar nove irmãos de pé."""
-    from hefesto_dualsense4unix.app import gui_dialogs
-    from hefesto_dualsense4unix.app.actions import footer_actions, profiles_actions
-
-    alvos = [
-        gui_dialogs.prompt_profile_name,
-        gui_dialogs.prompt_overwrite_existing,
-        gui_dialogs.confirm_downgrade_match_to_any,
-        gui_dialogs.confirm_downgrade_priority,
-        gui_dialogs.confirm_discard_pending_edits,
-        gui_dialogs.prompt_import_conflict,
-        gui_dialogs.confirm_restore_default,
-        gui_dialogs.confirm_delete_profile,
-        gui_dialogs.show_external_controller,
-        profiles_actions.dialogo_renomear_ou_copiar,
-        footer_actions.FooterActionsMixin.on_import_profile,
-    ]
-    assert len(alvos) == 11, "a leva mediu DEZ diálogos + o seletor de arquivo"
-    faltando = [
-        fn.__qualname__
-        for fn in alvos
-        if "executar_dialogo(" not in inspect.getsource(fn)
-    ]
-    assert faltando == [], (
-        f"diálogos que não passam pelo envelope da casa: {faltando}"
-    )
-
-
 _AUTORIZADOS_A_MOSTRAR_MODAL = frozenset({
     "gui_dialogs.py::_mostrar_e_vigiar",
 })
 
 
-def _dialogos_modais_mostrados_crus(
-    caminho: Path, raiz: Path | None = None
-) -> dict[str, list[int]]:
-    """Acha `Gtk.MessageDialog(... modal=True ...)` cujo `show()` é cru."""
-    relativo = caminho.relative_to(raiz or _APP).as_posix()
-    arvore = ast.parse(caminho.read_text(encoding="utf-8"), filename=str(caminho))
-    achados: dict[str, list[int]] = {}
-
-    def _tem_modal_true(no: ast.Call) -> bool:
-        return any(
-            kw.arg == "modal"
-            and isinstance(kw.value, ast.Constant)
-            and kw.value.value is True
-            for kw in no.keywords
-        )
-
-    def _delega_ao_envelope(no: ast.AST) -> bool:
-        """A função entrega o diálogo ao envelope? Então o `show_all` é preparo."""
-        for f in ast.walk(no):
-            if isinstance(f, ast.Call):
-                alvo = f.func.attr if isinstance(f.func, ast.Attribute) else (
-                    f.func.id if isinstance(f.func, ast.Name) else ""
-                )
-                if alvo in {"executar_dialogo", "mostrar_dialogo_assincrono"}:
-                    return True
-        return False
-
-    for no in ast.walk(arvore):
-        if not isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            continue
-        chave = f"{relativo}::{no.name}"
-        if chave in _AUTORIZADOS_A_MOSTRAR_MODAL:
-            continue
-        modais = [f for f in ast.walk(no) if isinstance(f, ast.Call) and _tem_modal_true(f)]
-        if not modais:
-            continue
-        if _delega_ao_envelope(no):
-            continue
-        mostras = [
-            f.lineno
-            for f in ast.walk(no)
-            if isinstance(f, ast.Call)
-            and isinstance(f.func, ast.Attribute)
-            and f.func.attr in {"show", "show_all"}
-            and ast.unparse(f.func.value).split(".")[0]
-            not in _RECEPTORES_QUE_NAO_SAO_DIALOGO
-        ]
-        if mostras:
-            achados[chave] = sorted(mostras)
-    return achados
-
-
-def test_nenhum_dialogo_modal_e_mostrado_fora_do_envelope() -> None:
-    """O par que a primeira cura não viu: modal + show, sem `run()`."""
-    ofensores: dict[str, list[int]] = {}
-    for caminho in sorted(_APP.rglob("*.py")):
-        ofensores.update(_dialogos_modais_mostrados_crus(caminho))
-
-    assert ofensores == {}, (
-        "diálogo modal mostrado fora do envelope: "
-        f"{ofensores} — use `gui_dialogs.mostrar_dialogo_assincrono(...)`. "
-        "Não bloquear não salva: quem prende a janela dela é a modalidade"
-    )
-
-
-def test_o_portao_pegaria_um_modal_mostrado_cru(tmp_path: Path) -> None:
-    """A mordida do portão novo, com arquivo forjado."""
-    forjado = tmp_path / "acoes_novas.py"
-    forjado.write_text(
-        "from gi.repository import Gtk\n"
-        "def pergunta_nova(janela):\n"
-        "    d = Gtk.MessageDialog(transient_for=janela, modal=True, text='oi')\n"
-        "    d.connect('response', lambda *a: None)\n"
-        "    d.show()\n",
-        encoding="utf-8",
-    )
-    achados = _dialogos_modais_mostrados_crus(forjado, raiz=tmp_path)
-    assert achados, "o portão novo não pegou um modal mostrado cru"
-    assert "acoes_novas.py::pergunta_nova" in achados

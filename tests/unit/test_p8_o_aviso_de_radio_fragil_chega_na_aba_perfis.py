@@ -7,7 +7,6 @@ exigir_gi_real("p8: o aviso de rádio frágil na aba Perfis")
 
 from typing import Any
 
-import pytest
 
 from hefesto_dualsense4unix.app.actions import home_actions as ha
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
@@ -22,21 +21,7 @@ SEM_SABER_QUEM: dict[str, Any] = {"native_bt_fragil": True}
 
 
 class TestAFraseEAMesmaDaInicio:
-    def test_no_modo_nativo_a_frase_e_identica_a_da_aba_inicio(self) -> None:
-        """MORDE o reuso: semelhante não serve, tem de ser a mesma string."""
-        do_editor = pa.frase_do_radio_fragil_no_modo("native", DOIS_NO_RADIO)
-        da_inicio = ha.texto_native_bt_fragil([2, 3])
-        assert do_editor == da_inicio
 
-    def test_e_ela_nomeia_os_controles_do_radio(self) -> None:
-        frase = pa.frase_do_radio_fragil_no_modo("native", DOIS_NO_RADIO)
-        assert frase is not None
-        assert "2" in frase and "3" in frase
-
-    def test_daemon_que_nao_sabe_quem_ainda_acende_o_generico(self) -> None:
-        """Não saber QUEM não pode virar não avisar."""
-        do_editor = pa.frase_do_radio_fragil_no_modo("native", SEM_SABER_QUEM)
-        assert do_editor == ha.NATIVE_BT_FRAGIL_TEXT
 
     def test_a_inicio_continua_dizendo_exatamente_o_que_dizia(self) -> None:
         """O dono novo não pode mudar o banner da outra aba.
@@ -47,23 +32,6 @@ class TestAFraseEAMesmaDaInicio:
         assert ha.vpad_degradation_text(DOIS_NO_RADIO) == ha.texto_native_bt_fragil(
             [2, 3]
         )
-
-
-class TestForaDoModoNativoOEditorCala:
-    @pytest.mark.parametrize("kind", ["none", "desktop", "gamepad"])
-    def test_os_outros_tres_modos_nao_dizem_nada(self, kind: str) -> None:
-        """MORDE o gatilho: o aviso em todo modo é ruído em três telas de quatro."""
-        assert pa.frase_do_radio_fragil_no_modo(kind, DOIS_NO_RADIO) is None
-
-    def test_radio_saudavel_no_modo_nativo_nao_diz_nada(self) -> None:
-        assert (
-            pa.frase_do_radio_fragil_no_modo("native", {"native_bt_fragil": False})
-            is None
-        )
-
-    def test_daemon_calado_nao_diz_nada(self) -> None:
-        """Sem resposta o cache é `None` — e `None` é silêncio, não "está ok"."""
-        assert pa.frase_do_radio_fragil_no_modo("native", None) is None
 
 
 class _Rotulo:
@@ -102,69 +70,3 @@ class _Aba(pa.ProfilesActionsMixin):  # type: ignore[misc]
         self._mode_gamepad_opts = None
 
 
-class TestALinhaChegaNaSecaoModo:
-    def test_escolher_o_nativo_com_radio_fragil_acende_a_linha(self) -> None:
-        """MORDE a costura: a frase certa e o rótulo mudo não curam nada."""
-        aba = _Aba("native")
-        aba._estado_do_radio = DOIS_NO_RADIO
-
-        aba._sincronizar_aviso_do_radio("native")
-
-        assert aba._aviso_do_radio_fragil.visivel is True
-        assert "limite do SDL" in aba._aviso_do_radio_fragil.markup
-
-    def test_sair_do_nativo_apaga_a_linha(self) -> None:
-        aba = _Aba("native")
-        aba._estado_do_radio = DOIS_NO_RADIO
-        aba._sincronizar_aviso_do_radio("native")
-
-        aba._sincronizar_aviso_do_radio("gamepad")
-
-        assert aba._aviso_do_radio_fragil.visivel is False
-        assert aba._aviso_do_radio_fragil.markup == ""
-
-    def test_a_resposta_do_daemon_repinta_a_linha_sozinha(self) -> None:
-        """Ela escolhe o modo, o daemon responde depois — e a linha acende."""
-        aba = _Aba("native")
-
-        assert aba._ao_chegar_o_estado_do_radio(DOIS_NO_RADIO) is False
-
-        assert aba._aviso_do_radio_fragil.visivel is True
-
-    def test_resposta_estranha_nao_apaga_o_que_ja_se_sabia(self) -> None:
-        aba = _Aba("native")
-        aba._estado_do_radio = DOIS_NO_RADIO
-
-        aba._ao_chegar_o_estado_do_radio(None)
-
-        assert aba._estado_do_radio == DOIS_NO_RADIO
-
-    def test_a_pergunta_vai_ao_state_full_e_so_no_modo_nativo(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """MEDIDO: `native_bt_fragil` mora no `state_full`, não no `status`.
-
-        E a pergunta só sai quando ela escolhe o Modo Nativo — um poller a mais
-        nesta janela seria custo permanente por uma linha que quase nunca
-        acende.
-        """
-        pedidos: list[str] = []
-        monkeypatch.setattr(
-            pa,
-            "call_async",
-            lambda method, params=None, on_success=None, on_failure=None,
-            **_kw: pedidos.append(method),
-        )
-        aba = _Aba("native")
-
-        aba._on_mode_kind_changed(_Seletor("gamepad"))
-        assert pedidos == [], "perguntou fora do Modo Nativo"
-
-        aba._on_mode_kind_changed(_Seletor("native"))
-        assert pedidos == ["daemon.state_full"]
-
-    def test_sem_o_rotulo_nada_estoura(self) -> None:
-        """Glade antigo, seção não montada: o editor segue funcional."""
-        aba = _Aba("native")
-        aba._aviso_do_radio_fragil = None  # type: ignore[assignment]
-        aba._sincronizar_aviso_do_radio("native")

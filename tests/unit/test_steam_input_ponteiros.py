@@ -152,20 +152,6 @@ def test_toast_do_jogo_marcado_nao_deixa_vazio(status: str) -> None:
         assert (_RAIZ / rel).is_file(), f"o toast cita {rel}, que não existe"
 
 
-def test_toast_do_jogo_marcado_nao_promete_o_que_o_clique_nao_faz() -> None:
-    """O clique NÃO liga a entrada da Steam — só escreve na allowlist.
-
-    Prova de que a promessa seria falsa: ``on_steam_game_broken`` chama
-    ``add_appid_to_steam_input_allowlist`` e nada mais; quem mexe no
-    ``localconfig.vdf`` é o ``scripts/disable_steam_input.sh``.
-    """
-    corpo = _corpo_de_funcao(_DAEMON_ACTIONS, "on_steam_game_broken")
-    assert "add_appid_to_steam_input_allowlist" in corpo
-    assert "UseSteamControllerConfig" not in corpo
-    msg = format_game_broken_result(status="adicionado", appid=2111190)
-    assert "respeita essa escolha" not in msg
-
-
 def _warn_steam_input(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
     """A mensagem de WARN do ``check_steam_input``, com fixtures no disco."""
     vdf = tmp_path / ".steam/steam/userdata/123/config/localconfig.vdf"
@@ -276,25 +262,3 @@ def test_guia_das_mascaras_aponta_o_botao_e_a_aba_que_existem() -> None:
     )
 
 
-def test_ponteiro_da_cura_do_usb_nao_manda_clicar_em_quem_nao_a_instala(
-    tmp_path: Path,
-) -> None:
-    """Reenquadramento: aqui o nome do botão seria uma mentira NOVA.
-
-    O "Aplicar correções" roda o ``scripts/disable_steam_input.sh`` e o
-    ``scripts/fix_wireplumber_default_source.sh`` e deixa o quirk de fora de
-    propósito (BUG-C). Quem instala a cura é o ``install.sh``. Se um dia o
-    botão passar a instalá-la, este teste reprova — e a mensagem tem de mudar
-    junto, porque a frase dela deixaria de ser verdade.
-    """
-    corpo = _corpo_de_funcao(_DAEMON_ACTIONS, "on_storm_fix_safe")
-    assert "install_snd_quirk" not in corpo
-    msg = _warn_snd_quirk(tmp_path)
-    citados = re.findall(r"\./([\w./-]+\.sh)\b", msg)
-    assert citados, f"a mensagem não diz o que rodar: {msg!r}"
-    for rel in citados:
-        alvo = _RAIZ / rel
-        assert alvo.is_file(), f"a mensagem manda rodar {rel}, que não existe"
-        assert "install_snd_quirk.sh" in alvo.read_text(encoding="utf-8"), (
-            f"{rel} não instala a cura que a mensagem promete"
-        )

@@ -941,67 +941,6 @@ def sem_ipc(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     return chamadas
 
 
-class TestPerfilDeJogoNasceComModo:
-    def test_jogo_da_steam_pre_seleciona_o_modo_jogo(
-        self, sem_ipc: list[str]
-    ) -> None:
-        """O caminho que a interface oferecia como solução não solucionava: o"""
-        editor = _editor_novo("steam_game")
-
-        editor._on_aplica_a_changed(editor._aplica_a)
-
-        assert editor._mode_kind_selector.get_active_id() == "gamepad"
-
-    def test_jogo_especifico_tambem(self, sem_ipc: list[str]) -> None:
-        editor = _editor_novo("game")
-
-        editor._on_aplica_a_changed(editor._aplica_a)
-
-        assert editor._mode_kind_selector.get_active_id() == "gamepad"
-
-    def test_preserva_a_mascara_corrente_do_seletor(
-        self, sem_ipc: list[str]
-    ) -> None:
-        """Pré-selecionar uma máscara diferente da que está de pé faria o perfil"""
-        editor = _editor_novo("steam_game")
-        editor._mode_flavor_selector.set_active_id("dualsense")
-
-        editor._on_aplica_a_changed(editor._aplica_a)
-
-        assert editor._mode_flavor_selector.get_active_id() == "dualsense"
-
-    def test_contexto_de_desktop_nao_pre_seleciona_nada(
-        self, sem_ipc: list[str]
-    ) -> None:
-        editor = _editor_novo("browser")
-
-        editor._on_aplica_a_changed(editor._aplica_a)
-
-        assert editor._mode_kind_selector.get_active_id() == "none"
-
-    def test_perfil_ja_salvo_nao_tem_o_modo_reescrito(
-        self, sem_ipc: list[str]
-    ) -> None:
-        """Trocar o "Aplica a" de um perfil existente não pode apagar a escolha"""
-        editor = _editor_novo("steam_game")
-        editor._new_profile = False
-
-        editor._on_aplica_a_changed(editor._aplica_a)
-
-        assert editor._mode_kind_selector.get_active_id() == "none"
-
-    def test_modo_escolhido_a_mao_nao_e_sobrescrito(
-        self, sem_ipc: list[str]
-    ) -> None:
-        """`desktop`/`native` escolhidos à mão são opinião dela, não campo vazio."""
-        editor = _editor_novo("steam_game")
-        editor._mode_kind_selector.set_active_id("native")
-
-        editor._on_aplica_a_changed(editor._aplica_a)
-
-        assert editor._mode_kind_selector.get_active_id() == "native"
-
-
 class TestPresetsDeJogoNascemComModo:
     """Dos 12 presets, 10 não tinham seção `mode` — inclusive o `fps`, que"""
 

@@ -264,83 +264,12 @@ class TestAsDuasCamadasNaoSeMisturam:
 class TestOMicChegaAoRascunho:
     """A metade de CIMA do caminho: o dedo dela chega ao rascunho do perfil?"""
 
-    def test_o_mic_faz_ida_e_volta_com_o_volume_e_sem_o_mudo(self) -> None:
-        """A trava do ``to_profile``: o volume chega ao arquivo, o mudo não."""
-        from hefesto_dualsense4unix.app.draft_config import DraftConfig
-
-        draft = DraftConfig().with_mic(volume=70, muted=True)
-        perfil = draft.to_profile("gravando")
-        assert perfil.mic is not None, (
-            "a seção `mic` não existe no perfil — o gesto dela morreu no "
-            "rascunho"
-        )
-        assert perfil.mic.volume == 70, (
-            f"o volume do microfone é {perfil.mic.volume!r} — ela deixou 70"
-        )
-        assert perfil.mic.muted is None, (
-            f"o mudo do microfone chegou ao perfil ({perfil.mic.muted!r}) — "
-            "ele é do controle"
-        )
 
     def test_perfil_sem_secao_mic_continua_sem_ganhar_uma(self) -> None:
         """Perfil legado faz round-trip sem ganhar seção fantasma."""
         from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
         assert DraftConfig().to_profile("intocado").mic is None
-
-    def test_um_gesto_nao_apaga_o_campo_do_outro(self) -> None:
-        """O volume não apaga o que o disco já dizia do mudo."""
-        from hefesto_dualsense4unix.app.draft_config import DraftConfig
-        from hefesto_dualsense4unix.profiles.schema import (
-            MatchAny,
-            Profile,
-            ProfileMicConfig,
-        )
-
-        de_antes = Profile(name="de_antes", match=MatchAny(),
-                           mic=ProfileMicConfig(button_toggles_system=True,
-                                                muted=True, volume=70))
-        draft = DraftConfig.from_profile(de_antes).with_mic(volume=40)
-        assert draft.mic.muted is True
-        assert draft.mic.volume == 40
-
-    def test_liberar_apaga_o_mudo_e_preserva_o_volume(self) -> None:
-        """"Liberar" devolve a posse do registrador ao ``hid-playstation``."""
-        from hefesto_dualsense4unix.app.draft_config import DraftConfig
-
-        draft = DraftConfig().with_mic(volume=55, muted=True)
-        solto = draft.with_mic(soltar_mudo=True)
-        assert solto.mic.muted is None
-        assert solto.mic.volume == 55
-        perfil = solto.to_profile("liberado")
-        assert perfil.mic is not None and perfil.mic.muted is None
-
-    def test_o_escritor_e_calado_quando_nao_ha_rascunho(self) -> None:
-        """Card avulso (teste de geometria) não tem ``draft`` — e sai calado."""
-        from hefesto_dualsense4unix.app.draft_config import (
-            registrar_microfone_no_rascunho,
-        )
-
-        class _JanelaSemRascunho:
-            pass
-
-        janela = _JanelaSemRascunho()
-        registrar_microfone_no_rascunho(janela, volume=10)
-        assert not hasattr(janela, "draft")
-
-    def test_gesto_sem_opiniao_nao_cria_secao_fantasma(self) -> None:
-        """Um callback sem nada a dizer não marca a seção como tocada."""
-        from hefesto_dualsense4unix.app.draft_config import (
-            DraftConfig,
-            registrar_microfone_no_rascunho,
-        )
-
-        class _Janela:
-            draft = DraftConfig()
-
-        janela = _Janela()
-        registrar_microfone_no_rascunho(janela)
-        assert janela.draft.to_profile("nada").mic is None
 
 
 _ROTAS_DE_ATIVACAO: tuple[str, ...] = (

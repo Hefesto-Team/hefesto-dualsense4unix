@@ -417,26 +417,6 @@ def test_uma_peca_torta_nao_derruba_as_outras() -> None:
     assert rot.da_peca(store, _P3, ativo) is not None, "a peça certa pagou pela torta"
 
 
-def test_o_rascunho_grava_a_mira_da_peca_sem_apagar_o_resto() -> None:
-    """`DraftConfig.with_controller_movimento`: o que ela mexeu, e só isso."""
-    from hefesto_dualsense4unix.app.draft_config import DraftConfig
-
-    d = DraftConfig.default().with_controller_movimento("aabbcc000003", ligada=True)
-    secao = d.controller_override("aabbcc000003").movimento
-    assert secao.destino == "analogico_direito"
-    assert secao.model_fields_set == {"destino"}, (
-        "o chip materializou campos que ela não escreveu — a peça deixaria de "
-        "herdar a sensibilidade do perfil")
-    d = d.with_controller_movimento("aabbcc000003", zona_morta_graus_s=20.0)
-    secao = d.controller_override("aabbcc000003").movimento
-    assert secao.destino == "analogico_direito" and secao.zona_morta_graus_s == 20.0
-    perfil = d.to_profile("com mira")
-    assert perfil.controllers["aabbcc000003"].movimento.zona_morta_graus_s == 20.0
-    d = d.with_controller_movimento("aabbcc000003")
-    assert d.controller_override("aabbcc000003") is None, (
-        "os três `None` não devolveram a peça ao perfil")
-
-
 def _mesa_de_quatro_de_verdade(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, transporte: str,
     perfil: Profile, *, antes: Profile | None = None, hub: SensorHub | None = None,

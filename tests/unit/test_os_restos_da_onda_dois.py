@@ -2,11 +2,7 @@
 """OS RESTOS DA ONDA DOIS — RESTOS-DA-ONDA-DOIS-01, 13/09/2026."""
 from __future__ import annotations
 
-import contextlib
 import html
-import inspect
-import io
-import json
 import pathlib
 import re
 import sys
@@ -103,166 +99,11 @@ def _pagina(nome: str, publicado: bool) -> str:
     return onde.pagina(nome, publicado=publicado).read_text(encoding="utf-8")
 
 
-@pytest.fixture(scope="module")
-def na_02() -> dict[str, Any]:
-    """Abre o piloto DE VERDADE, oculto, na 02, com a mesa dublê de três."""
-    gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
-    gi.require_version("Gtk", "3.0")
-    gi.require_version("WebKit2", "4.1")
-    from gi.repository import GLib, Gtk
-
-    if not Gtk.init_check(None)[0]:
-        pytest.skip("sem sessão gráfica — o WebKit não abre")
-
-    import argparse
-    import time as _time
-
-    import hefesto_vivo as hv
-    from hefesto_dualsense4unix.app.widgets.controller_card import (
-        TEXTO_AUDIO_SEM_ENDERECO,
-    )
-
-    guardado = hv.mesa_viva.estado_do_daemon
-    hv.mesa_viva.estado_do_daemon = lambda *a, **k: ESTADO_02  # type: ignore[assignment]
-    args = argparse.Namespace(
-        oculta=True, segundos=0.0, passear=False, parada=900, foto="",
-        abre=PAGINA_02, prova_no_aparelho=False, entre=2500, espera=1200,
-        incluir_perigosos=False, prova_clique="", sem_cor=True, sem_ondas=True,
-        prova_de_mockup=False, voltas_por_aba=8, teto_de_mockup=-1,
-        sem_cravado=False, sem_selo=False, conta_mutacoes=0,
-    )
-    piloto = hv.Piloto(args)
-    fora: dict[str, Any] = {"faltou": {}}
-    no_ar = {"sim": True}
-    diario = io.StringIO()
-    comeco = {"t": 0.0}
-
-    def esperar(marco: str, pergunta: str, achar, depois, o_que: str) -> None:
-        """UMA espera por condição: pergunta, e só segue quando `achar` achar."""
-        desde = _time.monotonic()
-
-        def perguntar() -> bool:
-            if no_ar["sim"]:
-                piloto.ponte.perguntar(pergunta, respondeu)
-            return False
-
-        def respondeu(valor, erro) -> None:
-            if not no_ar["sim"]:
-                return
-            lido = None
-            if erro is None and valor is not None:
-                try:
-                    lido = json.loads(str(valor))
-                except ValueError:
-                    lido = None
-            achado = None if lido is None else achar(lido)
-            if achado is not None:
-                fora[marco] = achado
-                depois()
-            elif _time.monotonic() - desde >= TETO_S:
-                fora["faltou"][marco] = (f"{o_que} — não chegou em {TETO_S:.0f} s; a "
-                                         f"última leitura foi {lido!r}")[:600]
-                depois()
-            else:
-                GLib.timeout_add(PASSO_MS, perguntar)
-
-        perguntar()
-
-    def pintados(lido: object) -> object:
-        if not isinstance(lido, list):
-            return None
-        return lido if sum(1 for m in lido if m.get("bateria") == "64 %") >= 3 else None
-
-    def fim() -> None:
-        fora["fim"] = True
-        Gtk.main_quit()
-
-    def ler_a_frase() -> None:
-        esperar("tela", LER_A_TELA % json.dumps(TEXTO_AUDIO_SEM_ENDERECO),
-                lambda lido: lido, fim, "a leitura da frase de «sem endereço»")
-
-    def um_tique_depois() -> bool:
-        esperar("molduras", LER_AS_MOLDURAS, pintados, ler_a_frase,
-                "as molduras de som depois de mais um tique")
-        return False
-
-    def comecar() -> bool:
-        if not piloto.tela.na_aba:
-            return True
-        if not comeco["t"]:
-            comeco["t"] = _time.monotonic()
-            piloto._ir(PAGINA_02)
-            return True
-        if not (piloto.pagina == PAGINA_02 and piloto.pronto):
-            if _time.monotonic() - comeco["t"] >= TETO_DA_PAGINA_S:
-                fora["faltou"]["abertura"] = f"a {PAGINA_02} não ficou de pé"
-                fim()
-                return False
-            return True
-        esperar("pintados", LER_AS_MOLDURAS, pintados,
-                lambda: GLib.timeout_add(1200, um_tique_depois),
-                "os três cartões pintados pelo tique")
-        return False
-
-    GLib.timeout_add(300, comecar)
-    guarda = GLib.timeout_add(int(TETO_DO_ROTEIRO_S * 1000), Gtk.main_quit)
-    try:
-        limite = _time.monotonic() + TETO_DO_ROTEIRO_S
-        with contextlib.redirect_stderr(diario):
-            while "fim" not in fora and _time.monotonic() < limite:
-                Gtk.main()
-    finally:
-        no_ar["sim"] = False
-        with contextlib.suppress(Exception):
-            GLib.source_remove(guarda)
-        piloto.pronto = False
-        piloto.tela.janela.destroy()
-        hv.mesa_viva.estado_do_daemon = guardado  # type: ignore[assignment]
-    assert "fim" in fora, (
-        f"o roteiro não chegou ao fim — voltou {sorted(fora)}, faltou {fora['faltou']}")
-    return fora
-
-
 def _marco(medido: dict[str, Any], marco: str) -> Any:
     falta = medido["faltou"].get(marco)
     assert falta is None, f"o marco `{marco}` não chegou: {falta}"
     assert marco in medido, f"o roteiro não passou por `{marco}`: {sorted(medido)}"
     return medido[marco]
-
-
-def _cartao(na_02: dict[str, Any], pref: str) -> dict[str, Any]:
-    achados = [m for m in _marco(na_02, "molduras") if m.get("controle") == pref]
-    assert len(achados) == 1, (pref, na_02["molduras"])
-    return achados[0]
-
-
-def test_a_02_o_alto_falante_sem_endereco_apaga_no_webkit(na_02: dict[str, Any]) -> None:
-    """Sem endereço, todo comando de som deste cartão iria para o controle primário."""
-    from hefesto_dualsense4unix.interface.pacotes.a02_controles import MIC_SEM_ALVO
-
-    p2 = _cartao(na_02, "p2")
-    assert p2["alto_apagado"] == MIC_SEM_ALVO, (
-        f"a moldura do alto-falante do controle sem endereço não veste o cinza: {p2}")
-    assert p2["alto_vol"] < 1 and p2["alto_rota"] < 1, p2
-    assert p2["alto_cursor_deslizante"] == "not-allowed", p2
-    assert p2["alto_cursor_rota"] == "not-allowed", p2
-    assert p2["alto_title"] is None and p2["alto_dica"] is None, (
-        f"a moldura do alto-falante carrega uma frase: {p2}")
-
-
-@pytest.mark.parametrize("pref", ["p1", "p3"])
-def test_a_02_os_cartoes_com_endereco_ficam_acesos(na_02: dict[str, Any], pref: str) -> None:
-    """A metade contrária: a guarda é POR CARTÃO, e apagar o vizinho seria pior."""
-    cartao = _cartao(na_02, pref)
-    assert cartao["alto_apagado"] is None, cartao
-    assert cartao["alto_vol"] == 1 and cartao["alto_rota"] == 1, cartao
-    assert cartao["alto_cursor_deslizante"] == "pointer", cartao
-
-
-def test_a_02_a_frase_sem_endereco_nao_chega_a_tela(na_02: dict[str, Any]) -> None:
-    """A frase de aviso não chega à tela em forma nenhuma — nem como dica."""
-    assert _marco(na_02, "tela") == {"recados": 0, "visivel": False, "dica": 0,
-                                     "title": 0}
 
 
 def _seletores_de_som(doc: str) -> list[str]:
@@ -303,15 +144,6 @@ def test_a_06_a_marca_sai_da_troca_e_fica_nas_definicoes(publicado: bool) -> Non
         assert len(celulas) == 3, (ident, len(celulas))
         marcadas = ["marca-nao-dispara" in c for c in celulas]
         assert marcadas == [com_marca] * 3, (ident, marcadas)
-
-
-def test_a_07_a_assinatura_do_status_nao_pede_o_efetiva() -> None:
-    """O valor sem leitor saiu da assinatura, e o nome antigo da leitura saiu junto."""
-    from hefesto_dualsense4unix.app.actions import emulation_actions as ea
-
-    assert list(inspect.signature(ea.markup_status_steam_input).parameters) == [
-        "on", "jogos", "excecoes"]
-    assert not hasattr(ea.EmulationActionsMixin, "_steam_input_excecao_status")
 
 
 DIGITO = re.compile(r"\d")

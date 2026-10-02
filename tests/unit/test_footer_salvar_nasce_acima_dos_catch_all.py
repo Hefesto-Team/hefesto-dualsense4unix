@@ -144,39 +144,7 @@ def test_o_rodape_passa_a_prioridade_calculada_ao_to_profile() -> None:
     )
 
 
-def test_o_piso_do_fallback_nao_pode_ser_zero() -> None:
-    """O fallback do `getattr` existe para dublê de teste e composição degradada."""
-    from tests.conftest import exigir_gi_real
-
-    exigir_gi_real("piso do rodapé")
-    from hefesto_dualsense4unix.app.actions.footer_actions import FooterActionsMixin
-
-    piso = FooterActionsMixin._PISO_ACIMA_DOS_CATCH_ALL
-    catch_alls = [p.priority for p in DISCO_DELA if p.e_catch_all]
-    regras = [p.priority for p in DISCO_DELA if not p.e_catch_all]
-
-    assert piso > max(catch_alls), (
-        f"piso {piso} não vence o maior catch-all dela ({max(catch_alls)})"
-    )
-    assert piso < min(regras), (
-        f"piso {piso} atropelaria a regra de jogo mais baixa ({min(regras)})"
-    )
-
-
 def _tem_atributo_publico(obj: Any, nome: str) -> bool:
     return hasattr(obj, nome)
 
 
-def test_o_metodo_de_calculo_segue_alcancavel_pelo_mixin_do_rodape() -> None:
-    """`FooterActionsMixin` e `ProfilesActionsMixin` são irmãos no `HefestoApp`."""
-    from tests.conftest import exigir_gi_real
-
-    exigir_gi_real("composição dos mixins")
-    from hefesto_dualsense4unix.app.actions.footer_actions import FooterActionsMixin
-    from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
-
-    class _Composto(ProfilesActionsMixin, FooterActionsMixin):
-        pass
-
-    assert _tem_atributo_publico(_Composto, "_prioridade_acima_dos_catch_all")
-    assert _tem_atributo_publico(_Composto, "_persist_profile_async")

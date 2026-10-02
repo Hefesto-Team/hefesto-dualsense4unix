@@ -59,19 +59,3 @@ def test_o_numero_publicado_no_specs_e_o_numero_de_agora():
     )
 
 
-def test_a_mordida_a_contagem_responde_ao_conteudo():
-    """Troque a fonte citada e a conta tem de mudar de balde."""
-    mod = _gerador()
-    molde = {c: "" for c in ("cabo_de_onde_sei", "radio_de_onde_sei", "fonte_externa",
-                             "cabo_codigo_ref", "radio_codigo_ref",
-                             "cabo_evidencia", "radio_evidencia")}
-
-    def conta(codigo_ref: str) -> dict[str, int]:
-        lin = dict(molde, cabo_de_onde_sei="inferido-do-codigo",
-                   cabo_codigo_ref=codigo_ref)
-        return mod.procedencia_do_inferido([lin])
-
-    assert conta("assets/dkms/hid-nintendo/hid-nintendo.c:120")["driver"] == 1
-    assert conta("core/backend_pydualsense.py:479")["nosso"] == 1
-    assert conta("assets/dkms/hid-nintendo/hid-nintendo.c; core/mouse_emulation.py")["os_dois"] == 1
-    assert conta("")["sem_referencia"] == 1

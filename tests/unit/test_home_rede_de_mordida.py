@@ -166,11 +166,6 @@ def test_as_tres_reguas_concordam_no_payload_medido() -> None:
     assert problema is None, problema
 
 
-_SIMBOLOS_QUE_PRECISAM_DE_CHAMADOR = (
-    "desfecho_da_troca",
-    "toast_da_troca_de_mascara",
-)
-
 _MODULO_DE_ORIGEM = "app/actions/home_actions.py"
 
 
@@ -227,31 +222,6 @@ def _escritores_com_valor(campo: str) -> list[str]:
                     achados.append(relativo)
                     break
     return sorted(set(achados))
-
-
-def test_as_duas_funcoes_do_desfecho_tem_chamador_de_producao() -> None:
-    """I1: elas existem desde 19/08 e ninguém as chamava fora de `tests/`."""
-    orfas = {
-        nome: _chamadores(nome)
-        for nome in _SIMBOLOS_QUE_PRECISAM_DE_CHAMADOR
-    }
-    sem_caminho = [nome for nome, onde in orfas.items() if not onde]
-    assert not sem_caminho, (
-        f"sem chamador de produção: {sem_caminho}. Elas são a cura escrita e "
-        "nunca ligada — o defeito-mãe desta casa. Quem as chama é o rodapé, no "
-        "`_transicao_de_modo`, onde a resposta do daemon chega e hoje é "
-        "descartada."
-    )
-
-
-def test_a_escolha_recusada_dela_tem_quem_a_grave() -> None:
-    """I2: `_home_flavor_pedido` é a única memória de um pedido não atendido."""
-    escritores = _escritores_com_valor("_home_flavor_pedido")
-    assert escritores, (
-        "ninguém grava `_home_flavor_pedido` com valor em `src/`. A escolha "
-        "que o daemon recusou não sobrevive ao próximo tique — e a linha de "
-        "divergência, que é quem a contaria, não tem o que ler."
-    )
 
 
 def test_a_varredura_de_chamador_sabe_dizer_nao() -> None:

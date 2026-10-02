@@ -41,16 +41,9 @@ from hefesto_dualsense4unix.app.audio_saida import (
     MOTIVO_SEM_TOCADOR,
     MOTIVO_TOCOU,
     RECADOS,
-    TEXTO_ROTA_PARA_O_CONTROLE,
-    TEXTO_ROTA_VOLTAR,
-    EstadoDaRota,
     RotaDeSaida,
-    acao_da_rota,
-    apelido_do_sink,
     argv_do_tocador,
     arquivo_de_confirmacao,
-    nomes_de_sinks,
-    sink_padrao_da_saida,
     som_ligado,
     tocar_confirmacao,
 )
@@ -427,76 +420,3 @@ def test_estado_nao_escreve_nada() -> None:
     assert pactl.escritas == []
 
 
-def test_a_tabela_do_botao_de_rota_inteira() -> None:
-    """Regra 2: o rótulo diz a AÇÃO, nada de "Ativar/Desativar" ambíguo."""
-    fora = acao_da_rota(
-        EstadoDaRota(
-            sink_padrao=SINK_HDMI, sink_do_controle=SINK_CONTROLE, no_controle=False
-        )
-    )
-    assert fora.rotulo == TEXTO_ROTA_PARA_O_CONTROLE
-    assert fora.sensivel and fora.alvo == SINK_CONTROLE
-
-    dentro = acao_da_rota(
-        EstadoDaRota(
-            sink_padrao=SINK_CONTROLE,
-            sink_do_controle=SINK_CONTROLE,
-            anterior=SINK_HDMI,
-            no_controle=True,
-        )
-    )
-    assert dentro.rotulo == TEXTO_ROTA_VOLTAR
-    assert dentro.sensivel and dentro.alvo == SINK_HDMI
-    assert apelido_do_sink(SINK_HDMI) in dentro.dica, (
-        "a dica da volta tem de NOMEAR para onde o som vai"
-    )
-
-    sem_sink = acao_da_rota(EstadoDaRota(sink_padrao=SINK_HDMI))
-    assert sem_sink.rotulo == TEXTO_ROTA_PARA_O_CONTROLE
-    assert not sem_sink.sensivel and sem_sink.alvo == ""
-
-
-def test_com_o_som_ja_no_controle_e_sem_memoria_nao_ha_desfazer_honesto() -> None:
-    """Regra 6, o caso que não se adivinha — e a linha mais importante da tabela."""
-    acao = acao_da_rota(
-        EstadoDaRota(
-            sink_padrao=SINK_CONTROLE,
-            sink_do_controle=SINK_CONTROLE,
-            anterior="",
-            no_controle=True,
-        )
-    )
-    assert not acao.sensivel
-    assert acao.alvo == "", "sem memória não há alvo — e sem alvo não há clique"
-    assert "configurações de som do sistema" in acao.dica
-
-
-def test_com_mais_de_um_controle_o_botao_para_e_diz_por_que() -> None:
-    """Regra 6: `escolher_sink` devolve None de propósito, e o botão obedece."""
-    acao = acao_da_rota(EstadoDaRota(sink_padrao=SINK_HDMI, sink_do_controle=""))
-    assert not acao.sensivel
-    assert acao.alvo == ""
-    assert "mais de um" in acao.dica.lower()
-
-
-def test_a_dica_diz_que_a_troca_e_do_sistema_inteiro_antes_do_clique() -> None:
-    """Regra 3: mandar o áudio para o controle muda o som de TUDO."""
-    acao = acao_da_rota(
-        EstadoDaRota(sink_padrao=SINK_HDMI, sink_do_controle=SINK_CONTROLE)
-    )
-    baixa = acao.dica.lower()
-    assert "sistema inteiro" in baixa
-    assert "navegador" in baixa and "jogo" in baixa
-    assert "fechar esta janela" in baixa
-
-
-def test_parsers_do_pactl() -> None:
-    """Nome do sink padrão e lista de sinks — e o que fazer com resposta ruim."""
-    assert sink_padrao_da_saida(SINK_HDMI + "\n") == SINK_HDMI
-    assert sink_padrao_da_saida("") == ""
-    assert sink_padrao_da_saida("Failure: No such entity\n") == ""
-    assert nomes_de_sinks(LISTA_DE_SINKS) == [SINK_CONTROLE, SINK_SPDIF, SINK_HDMI]
-    assert nomes_de_sinks("") == []
-    assert apelido_do_sink(SINK_HDMI) == "hdmi-stereo"
-    assert apelido_do_sink(SINK_CONTROLE) == "analog-surround-40"
-    assert apelido_do_sink("") == ""

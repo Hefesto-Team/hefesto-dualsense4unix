@@ -28,57 +28,6 @@ def _make_tray(on_state: Any) -> Any:
     )
 
 
-def test_tray_suffix_dois_controles() -> None:
-    tray = _make_tray(
-        lambda: _state(
-            {"connected": True, "transport": "bt", "is_primary": True},
-            {"connected": True, "transport": "usb"},
-        )
-    )
-    assert tray._controllers_suffix() == " · 2 controles (BT + USB)"
-
-
-def test_tray_suffix_um_controle_vazio() -> None:
-    tray = _make_tray(
-        lambda: _state({"connected": True, "transport": "usb", "is_primary": True})
-    )
-    assert tray._controllers_suffix() == ""
-
-
-def test_tray_suffix_ignora_desconectados() -> None:
-    tray = _make_tray(
-        lambda: _state(
-            {"connected": True, "transport": "bt", "is_primary": True},
-            {"connected": False, "transport": "usb"},
-        )
-    )
-    assert tray._controllers_suffix() == ""
-
-
-def test_tray_suffix_sem_on_state() -> None:
-    tray = _make_tray(None)
-    assert tray._controllers_suffix() == ""
-
-
-def test_tray_suffix_daemon_antigo_sem_bloco() -> None:
-    # Daemon antigo: state_full sem a chave `controllers`.
-    tray = _make_tray(lambda: {"connected": True, "transport": "usb"})
-    assert tray._controllers_suffix() == ""
-
-
-def test_tray_suffix_tolera_excecao_de_ipc() -> None:
-    def _boom() -> dict[str, Any]:
-        raise RuntimeError("daemon offline")
-
-    tray = _make_tray(_boom)
-    assert tray._controllers_suffix() == ""
-
-
-def test_tray_suffix_estado_none() -> None:
-    tray = _make_tray(lambda: None)
-    assert tray._controllers_suffix() == ""
-
-
 def test_status_connected_controllers_filtra_e_ordena() -> None:
     from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
 
@@ -95,16 +44,6 @@ def test_status_connected_controllers_daemon_antigo() -> None:
     from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
 
     assert StatusActionsMixin._connected_controllers({"connected": True}) == []
-
-
-def test_status_controllers_transports_label() -> None:
-    from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
-
-    conectados = [
-        {"connected": True, "transport": "bt", "is_primary": True},
-        {"connected": True, "transport": "usb"},
-    ]
-    assert StatusActionsMixin._controllers_transports(conectados) == "BT + USB"
 
 
 class _FakeBox:
@@ -127,101 +66,3 @@ class _FakeBox:
         pass
 
 
-def _mixin_with_selector(monkeypatch: Any) -> tuple[Any, list[Any], list[int]]:
-    from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
-
-    obj = StatusActionsMixin.__new__(StatusActionsMixin)
-    obj._target_combo = _FakeBox()
-    obj._target_combo_rows = []
-    obj._target_combo_updating = False
-    obj._target_combo_visible = False
-    obj._target_combo_active = -1
-    obj._target_buttons = []
-    rebuilds: list[Any] = []
-    actives: list[int] = []
-    monkeypatch.setattr(
-        StatusActionsMixin,
-        "_rebuild_target_buttons",
-        lambda self, box, rows: rebuilds.append(rows),
-    )
-    monkeypatch.setattr(
-        StatusActionsMixin,
-        "_set_target_active",
-        lambda self, pos: actives.append(pos),
-    )
-    return obj, rebuilds, actives
-
-
-def test_seletor_idempotente_nao_reconstroi(monkeypatch: Any) -> None:
-    """Refresh repetido com o MESMO estado não reconstrói os botões nem re-mostra."""
-    obj, rebuilds, _actives = _mixin_with_selector(monkeypatch)
-    state = _state(
-        {"index": 0, "connected": True, "transport": "bt", "is_primary": True},
-        {"index": 1, "connected": True, "transport": "usb"},
-    )
-    state["output_target_index"] = None
-
-    obj._refresh_controller_target_combo(state)
-    assert len(rebuilds) == 1
-    assert obj._target_combo.shown == 1
-
-    for _ in range(5):
-        obj._refresh_controller_target_combo(state)
-    assert len(rebuilds) == 1
-    assert obj._target_combo.shown == 1
-
-
-def test_short_target_label() -> None:
-    from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
-
-    f = StatusActionsMixin._short_target_label
-    assert f("Todos os controles") == "Todos"
-    assert f("Controle 1 — BT") == "Sony 1 · BT"
-    assert f("Controle 2 — USB") == "Sony 2 · USB"
-
-
-def test_render_pausa_enquanto_popup_aberto(monkeypatch: Any) -> None:
-    """Com um popup aberto (grab GTK ativo), os renders NÃO tocam widgets."""
-    from hefesto_dualsense4unix.app.actions import status_actions as sa
-
-    obj = sa.StatusActionsMixin.__new__(sa.StatusActionsMixin)
-    toques: list[str] = []
-    obj._get = lambda name: toques.append(name) or None  # type: ignore[attr-defined,assignment]
-
-    monkeypatch.setattr(sa.StatusActionsMixin, "_popup_is_open", staticmethod(lambda: True))
-    obj._render_live_state({"connected": True})
-    obj._render_slow_state({"connected": True})
-    assert toques == []
-
-
-def test_seletor_com_um_controle_mostra_botao_proprio(monkeypatch: Any) -> None:
-    """SELETOR-UNO-01 (22/07, pedido da mantenedora): com UM DualSense o
-    seletor NÃO some — mostra o botão do próprio controle com número e via
-    (chip "Sony 1 · USB" via ``_short_target_label``), SEM a linha "Todos".
-
-    R-16 (auditoria 23/07): a UI segue exatamente como ela pediu; o que mudou é
-    o ÍNDICE que a linha carrega. Era ``None`` (= broadcast global), sob a
-    premissa "com um controle só, Todos e ele são a mesma coisa". Não são: o
-    override por-MAC sobrevive ao replug e à troca de perfil, a escrita global
-    não. Era essa premissa que deixava a edição por-controle DESLIGADA quando
-    só um DualSense tinha nó no kernel (estado medido em 23/07, com o roxo sem
-    uhid) — sem nenhuma mensagem dizendo isso."""
-    obj, rebuilds, _actives = _mixin_with_selector(monkeypatch)
-    state = _state(
-        {"index": 0, "connected": True, "transport": "usb", "is_primary": True}
-    )
-    obj._refresh_controller_target_combo(state)
-    assert obj._target_combo.shown == 1
-    assert obj._target_combo_visible is True
-    assert rebuilds[-1] == [("Controle 1 — USB", 0)]
-
-
-def test_seletor_some_sem_nenhum_controle(monkeypatch: Any) -> None:
-    obj, _rebuilds, _actives = _mixin_with_selector(monkeypatch)
-    obj._target_combo_visible = True
-    state = _state()
-    obj._refresh_controller_target_combo(state)
-    assert obj._target_combo.hidden == 1
-    assert obj._target_combo_visible is False
-    obj._refresh_controller_target_combo(state)
-    assert obj._target_combo.hidden == 1

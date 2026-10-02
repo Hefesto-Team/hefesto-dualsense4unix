@@ -122,10 +122,6 @@ class _PonteDoRodape(barra._PonteDoRodape):
         super().__init__(mesa)
         self.rascunhos: list[dict[str, Any]] = []
 
-    def profile_reaplicar(self, nome: str) -> Any:
-        """O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01: o «Aplicar» manda o nome."""
-        self.rascunhos.append(_o_perfil_que_o_daemon_le(nome))
-        return super().profile_reaplicar(nome)
 
     def apply_draft_detalhado(self, payload: dict[str, Any]) -> Any:
         self.rascunhos.append(payload)
@@ -139,14 +135,6 @@ class _PonteDoRodape(barra._PonteDoRodape):
                 for uniq, entrada in sorted((rascunho.get("controllers") or {}).items())
                 if (palavra := ((entrada or {}).get("leds") or {}).get(
                     "player_led_brightness")) is not None]
-
-
-def _o_perfil_que_o_daemon_le(nome: str) -> dict[str, Any]:
-    """O perfil do disco na forma do rascunho: o que o `profile.reaplicar` aplica."""
-    from hefesto_dualsense4unix.app.draft_config import DraftConfig
-    from hefesto_dualsense4unix.profiles.loader import load_profile
-
-    return DraftConfig.from_profile(load_profile(nome)).to_ipc_dict()
 
 
 def _aplicar(mesa: Any) -> _PonteDoRodape:
@@ -365,30 +353,6 @@ def test_a_cor_que_mudou_so_no_aparelho_nao_vai_ao_disco(mesa_de, via: str) -> N
         f"o «Salvar» gravou a cor que mudou só no aparelho: {leds}")
     assert leds.lightbar_para_o_numero == 4, (
         f"o «Salvar» perdeu o número do tom que ela escolheu: {leds}")
-
-
-@pytest.mark.parametrize("via", ["usb", "bt"])
-def test_sem_resposta_do_daemon_o_aplicar_recusa_dizendo(mesa_de, via: str) -> None:
-    """O daemon calado: o «Aplicar» recusa com a frase do motor, com ou sem a palavra."""
-    import re
-
-    class _Calada(_PonteDoRodape):
-        def profile_reaplicar(self, nome: str) -> Any:
-            self.rascunhos.append(_o_perfil_que_o_daemon_le(nome))
-            return None
-
-    mesa = mesa_de("todos", via)
-    frase = re.escape(a04_iluminacao.sem_resposta_do_daemon())
-    calada = _Calada(mesa)
-    with pytest.raises(RuntimeError, match=frase):
-        rodape.aplicar(mesa.ctx(), CLIQUE, calada)
-    assert calada.luzes == [], "sem palavra no perfil, o rascunho levou uma"
-
-    mesa.clicar_na_pilula(2, "forte")
-    calada = _Calada(mesa)
-    with pytest.raises(RuntimeError, match=frase):
-        rodape.aplicar(mesa.ctx(), CLIQUE, calada)
-    assert calada.luzes == [{"brilho": "forte", "uniq": UNIQS[1]}], calada.luzes
 
 
 @pytest.fixture

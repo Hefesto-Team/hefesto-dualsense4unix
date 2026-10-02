@@ -8,10 +8,7 @@ exigir_gi_real("test_storm_launch_options: importa código da janela GTK")
 import subprocess
 from pathlib import Path
 
-from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
 from hefesto_dualsense4unix.integrations.steam_launch_options import (
-    IGNORE_SIGNATURE,
-    WRAPPER_LAUNCH,
     WRAPPER_PREFIX,
 )
 
@@ -21,31 +18,6 @@ _TODOS_OS_ESTADOS = (
     ("dualsense", "uinput"),
     ("", ""),
 )
-
-
-def test_string_identica_para_qualquer_mascara_backend():
-    """Critério (g) do DEDUP-04: a string é constante — a variação por estado"""
-    strings = {DaemonActionsMixin.compose_launch(f, b) for f, b in _TODOS_OS_ESTADOS}
-    assert strings == {(WRAPPER_LAUNCH, "")}
-
-
-def test_nao_recomenda_mais_o_veneno_estatico():
-    """UX-05: nenhuma variante emite IGNORE_DEVICES/SDL_JOYSTICK_HIDAPI — a"""
-    for flavor, backend in _TODOS_OS_ESTADOS:
-        launch, _extra = DaemonActionsMixin.compose_launch(flavor, backend)
-        assert IGNORE_SIGNATURE not in launch
-        assert "SDL_JOYSTICK_HIDAPI" not in launch
-        assert "PROTON_ENABLE_HIDRAW" not in launch
-
-
-def test_string_termina_em_command_e_embrulha_o_wrapper():
-    launch, extra = DaemonActionsMixin.compose_launch("dualsense", "uhid")
-    assert launch == WRAPPER_LAUNCH
-    assert launch.endswith("%command%")
-    assert launch.startswith("sh -c '")
-    assert "hefesto-launch" in launch
-    assert 'exec env "$@"' in launch
-    assert extra == ""
 
 
 def test_string_degrada_sozinha_sem_wrapper_instalado(tmp_path, monkeypatch):

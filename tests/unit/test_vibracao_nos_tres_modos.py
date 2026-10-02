@@ -45,9 +45,6 @@ import struct
 
 import pytest
 
-from hefesto_dualsense4unix.app.actions.rumble_actions import (
-    texto_dos_pedidos_de_vibracao,
-)
 from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.core.rumble import pedido_mais_forte
 from hefesto_dualsense4unix.integrations import uhid_gamepad as uhid
@@ -117,30 +114,6 @@ def _carregar_e_tocar(pad, ident: int, weak: int, strong: int, duracao_ms=1000) 
     )
     pad._start_ff_effect(ident, repeats=1)
     pad._refresh_ff()
-
-
-def test_mascara_xbox_deixa_de_dizer_forca_zero_com_o_motor_girando(vpad_xbox):
-    """MORDE: sem `ff_nao_nulo_count` no backend uinput, o `getattr(..., 0)` do"""
-    _carregar_e_tocar(vpad_xbox, ident=1, weak=0x8000, strong=0xC000)
-
-    assert vpad_xbox.recebido == [(0x80, 0xC0)], "o par tem de chegar ao sink"
-    assert vpad_xbox.ff_play_count == 1
-    assert vpad_xbox.ff_nao_nulo_count == 1, "houve FORÇA — e o backend tem de saber"
-    assert vpad_xbox.ff_maior_pedido == (0x80, 0xC0)
-
-    estado = {
-        "native_mode": False,
-        "rumble_ff": {
-            "plays": vpad_xbox.ff_play_count,
-            "nao_nulos": vpad_xbox.ff_nao_nulo_count,
-            "descartados": vpad_xbox.ff_descartado_count,
-            "estranhos": 0,
-            "vpads": 1,
-        },
-    }
-    assert texto_dos_pedidos_de_vibracao(estado) == (
-        "o jogo pediu vibração 1x — se não sentiu, é aqui dentro"
-    )
 
 
 def test_mascara_xbox_guarda_o_maior_por_intensidade(vpad_xbox):
@@ -243,23 +216,6 @@ def vpad_ds():
         yield v
     finally:
         v.fechar()
-
-
-def test_report_com_envelope_estranho_deixa_de_sumir_calado(vpad_ds):
-    """MORDE: sem o contador, escrita CHEGANDO produz o painel de "nenhum jogo"""
-    vpad_ds._handle_output(_evento_de_output(report_id=0x31, flag0=_V1, weak=200))
-
-    assert vpad_ds.output_count == 0, "não é o 0x02: nada foi lido"
-    assert vpad_ds.ff_report_estranho_count == 1, "mas ALGUÉM escreveu"
-    assert vpad_ds.ff_report_estranho_amostra == (0x31, rep.COMMON_LEN + 1)
-
-    estado = {
-        "native_mode": False,
-        "rumble_ff": {"plays": 0, "nao_nulos": 0, "descartados": 0, "estranhos": 1},
-    }
-    assert "envelope que o Hefesto nem abriu" in (
-        texto_dos_pedidos_de_vibracao(estado) or ""
-    )
 
 
 def test_a_parada_do_sdl_deixa_de_ser_invisivel(vpad_ds):

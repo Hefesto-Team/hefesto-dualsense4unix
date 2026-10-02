@@ -230,7 +230,7 @@ def test_a_face_fora_das_quatro_e_recusada(boot_1: SysfsDeMentira, disco: Path) 
 
 def test_as_quatro_respostas_sao_as_da_janela_de_hoje() -> None:
     """As quatro moram também em ``calibrar_entradas`` (o gerador da aba 08 as"""
-    from hefesto_dualsense4unix.app.widgets import calibrar_entradas as janela
+    from hefesto_dualsense4unix.interface import calibracao_das_entradas as janela
 
     assert janela.FACES == ee.FACES
     assert janela.FACE_QUE_E_PERTO == ee.FACE_QUE_E_PERTO

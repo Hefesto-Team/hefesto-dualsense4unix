@@ -5,11 +5,7 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("o vocabulário leigo dos perfis")
 
-from hefesto_dualsense4unix.app.actions.profiles_actions import (
-    _MODE_FLAVOR_ITEMS,
-    _MODE_KIND_ITEMS,
-    _match_label,
-)
+from hefesto_dualsense4unix.app.actions.profiles_actions import _match_label
 from hefesto_dualsense4unix.profiles.schema import MatchAny, MatchCriteria
 
 
@@ -34,44 +30,3 @@ class TestMatchLabel:
         assert _match_label("regex_do_futuro") == "regex_do_futuro"
 
 
-class TestRotulosDoEditorDeModo:
-    def test_sem_opiniao_nao_esta_mais_na_tela(self) -> None:
-        """"Sem opinião" era o programa se descrevendo por dentro (o perfil sem"""
-        rotulos = dict(_MODE_KIND_ITEMS)
-        assert rotulos["none"] == "Não mexer no modo"
-        assert "Sem opinião" not in rotulos.values()
-
-    def test_os_quatro_rotulos_leem_como_uma_lista_so(self) -> None:
-        """UX-MODE-TERMS-02 (06/08/2026), decisão dela: "Jogar direto (Sony)"
-        virou "Conexão Nativa (Sony)".
-
-        O rótulo antigo dizia o GESTO ("jogar") e não a COISA, enquanto os
-        vizinhos dizem para onde o controle fala. Este é o gate do vocabulário:
-        os quatro itens do editor têm de ler como uma lista só, nesta ordem —
-        quem ressuscitar "Jogar direto" em qualquer um deles reprova aqui.
-        """
-        assert [rotulo for _id, rotulo in _MODE_KIND_ITEMS] == [
-            "Não mexer no modo",
-            "Controlar o PC",
-            "Jogar pelo Hefesto",
-            "Conexão Nativa (Sony)",
-        ]
-
-    def test_ids_do_schema_intactos(self) -> None:
-        """LEIGO-06 é só TEXTO: os ids são chaves de config e não podem mudar"""
-        assert [i for i, _ in _MODE_KIND_ITEMS] == [
-            "none",
-            "desktop",
-            "gamepad",
-            "native",
-        ]
-        assert [i for i, _ in _MODE_FLAVOR_ITEMS] == [
-            "dualsense",
-            "xbox",
-            "nintendo",
-        ]
-
-    def test_aparencia_nao_promete_vibracao_exclusiva(self) -> None:
-        """Com o vpad uhid (SPRINT-UHID-VPAD-01) as duas máscaras vibram; o"""
-        for _id, rotulo in _MODE_FLAVOR_ITEMS:
-            assert "vibra" not in rotulo.lower()

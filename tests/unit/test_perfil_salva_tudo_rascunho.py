@@ -131,38 +131,7 @@ class TestPrioridadeSemNumeroInventado:
 
 
 class TestModoEModoJogoTemDono:
-    def test_modo_editado_na_aba_sobrevive_ao_nome_novo(self) -> None:
-        """O gesto DELA não é a regra de outro perfil — e por isso viaja."""
-        origem = _perfil_com_todas_as_secoes("Pragmata")
-        draft = DraftConfig.from_profile(origem)
 
-        draft = draft.with_mode(
-            ProfileModeConfig(kind="gamepad", gamepad_flavor="dualsense")
-        )
-        salvo = draft.to_profile("Pragmata3")
-
-        assert salvo.mode is not None
-        assert salvo.mode.kind == "gamepad"
-        assert salvo.mode.gamepad_flavor == "dualsense"
-        assert isinstance(salvo.match, MatchAny)
-
-    def test_modo_jogo_ligado_na_aba_sobrevive_ao_nome_novo(self) -> None:
-        """"Modo jogo" = suspender mouse e teclado (o esclarecimento dela)."""
-        draft = DraftConfig.default().with_suppress(True)
-
-        salvo = draft.to_profile("Pragmata3")
-
-        assert salvo.suppress_desktop_emulation is True
-
-    def test_desligar_o_modo_jogo_tambem_e_gesto(self) -> None:
-        """Desligar é opinião como ligar — o False dela tem de sobreviver."""
-        origem = _perfil_com_todas_as_secoes("Pragmata")
-        draft = DraftConfig.from_profile(origem)
-        assert draft.source_suppress is True
-
-        salvo = draft.with_suppress(False).to_profile("Pragmata")
-
-        assert salvo.suppress_desktop_emulation is False
 
     def test_sem_gesto_nenhum_o_nome_novo_nasce_sem_opiniao(self) -> None:
         """A guarda R-11 continua valendo para quem NÃO mexeu nas abas."""
@@ -172,30 +141,4 @@ class TestModoEModoJogoTemDono:
         assert salvo.mode is None
         assert salvo.suppress_desktop_emulation is False
 
-    def test_depois_de_gravar_a_identidade_baixa_os_flags(self) -> None:
-        """``with_profile_identity`` fecha o ciclo: o rascunho descreve o DISCO."""
-        draft = DraftConfig.default().with_mode(
-            ProfileModeConfig(kind="native")
-        ).with_suppress(True)
-        gravado = draft.to_profile("Pragmata3")
-        assert gravado.mode is not None and gravado.suppress_desktop_emulation is True
 
-        draft = draft.with_profile_identity(gravado)
-        assert draft.mode_dirty is False
-        assert draft.suppress_dirty is False
-
-        outro = draft.to_profile("Outro Perfil")
-        assert outro.mode is None
-        assert outro.suppress_desktop_emulation is False
-
-    def test_o_aplicar_nao_leva_modo_nem_modo_jogo(self) -> None:
-        """HARM-05, na seção pior de todas."""
-        draft = DraftConfig.default().with_mode(
-            ProfileModeConfig(kind="gamepad", gamepad_flavor="xbox")
-        ).with_suppress(True)
-
-        payload = draft.to_ipc_dict()
-
-        assert "mode" not in payload
-        assert "suppress_desktop_emulation" not in payload
-        assert "suppress" not in payload

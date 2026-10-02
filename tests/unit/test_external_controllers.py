@@ -2,22 +2,13 @@
 from __future__ import annotations
 
 from hefesto_dualsense4unix.app.actions.external_controllers import (
-    MODE_SELECTOR_ITEMS,
-    MODE_SELECTOR_SUBTITLE,
-    MODE_SELECTOR_TOOLTIP,
     brand_of,
-    button_labels_for,
-    detail_rows,
     external_key,
     external_slot,
     friendly_type,
-    input_mode,
-    mode_guidance,
-    mode_selector_state,
     nintendo_bt_warning,
     slot_label,
     slot_of,
-    transport_label,
 )
 
 _8BITDO_CABO = {
@@ -61,32 +52,6 @@ class TestFriendlyType:
         assert friendly_type(_DESCONHECIDO) == "Marca Xpto Pad"
 
 
-class TestTransport:
-    def test_usb(self) -> None:
-        assert transport_label(_8BITDO_CABO) == "Cabo (USB)"
-
-    def test_bluetooth(self) -> None:
-        assert transport_label(_8BITDO_BT) == "Bluetooth"
-
-
-class TestBotaoCurto:
-    """O rótulo curto é o do botão que existe, antes de o daemon numerar.
-
-    Estes dois casos mediam o `short_button_label`, o rótulo de um seletor de
-    topo que nunca nasceu; ele saiu em 28/09/2026 (sem botão novo). O mesmo
-    rótulo sai de `button_labels_for` enquanto o daemon ainda não deu número
-    ao externo (`player_slot` presente e `None`), e é ele que fica medido.
-    """
-
-    def test_nintendo_cabo(self) -> None:
-        sem_numero = {**_8BITDO_CABO, "player_slot": None}
-        assert button_labels_for([sem_numero]) == ["Nintendo · cabo"]
-
-    def test_nintendo_bt(self) -> None:
-        sem_numero = {**_8BITDO_BT, "player_slot": None}
-        assert button_labels_for([sem_numero]) == ["Nintendo · BT"]
-
-
 class TestMarcaPorOUI:
     """O OUI do MAC desambigua o 8BitDo-em-modo-DS4 do DualShock4 Sony real."""
 
@@ -105,10 +70,6 @@ class TestMarcaPorOUI:
         assert brand_of(_8BITDO_DS4) == "8BitDo"
         assert friendly_type(_8BITDO_DS4) == "8BitDo"
 
-    def test_botao_e_slot_do_8bitdo_ds4(self, monkeypatch) -> None:
-        self._com_oui_sintetico(monkeypatch)
-        # com 2 DualSense conectados, o externo é o Controle 3.
-        assert button_labels_for([_8BITDO_DS4], dualsense_count=2) == ["8BitDo 3 · BT"]
 
     def test_ds4_sony_genuino_continua_sony(self, monkeypatch) -> None:
         self._com_oui_sintetico(monkeypatch)
@@ -143,91 +104,6 @@ class TestAvisoBluetooth:
         assert nintendo_bt_warning({**_XBOX, "bus": "bluetooth"}) is None
 
 
-class TestFicha:
-    def test_detail_rows_tem_o_essencial(self) -> None:
-        rows = dict(detail_rows(_8BITDO_CABO))
-        assert rows["Controle"] == "Pro Controller (modo Switch)"
-        assert rows["Como conectou"] == "Cabo (USB)"
-        assert rows["Driver do Linux"] == "nintendo"
-        assert "não mexe" in rows["Gerenciado por"]
-
-    def test_detail_rows_sem_caminho_cru_de_dev(self) -> None:
-        texto = " ".join(v for _, v in detail_rows(_8BITDO_CABO))
-        assert "/dev/" not in texto
-
-
-class TestModo:
-    def test_input_mode_nintendo(self) -> None:
-        assert input_mode(_8BITDO_CABO) == "nintendo"
-
-    def test_input_mode_xbox(self) -> None:
-        assert input_mode(_XBOX) == "xbox"
-        assert input_mode({"vid": "0000", "driver": "xpad"}) == "xbox"
-
-    def test_input_mode_outro(self) -> None:
-        assert input_mode(_DESCONHECIDO) == "outro"
-
-    def test_guidance_nintendo_aponta_xbox_como_estavel(self) -> None:
-        guia = mode_guidance(_8BITDO_CABO)
-        assert guia is not None
-        atual, orient = guia
-        assert atual == "Nintendo (modo Switch)"
-        assert "Xbox" in orient
-        # dedicado (nintendo_bt_warning), não repetido aqui.
-        assert len(orient) < 120
-
-    def test_guidance_xbox_menciona_gyro(self) -> None:
-        guia = mode_guidance(_XBOX)
-        assert guia is not None
-        atual, orient = guia
-        assert atual == "Xbox (X-input)"
-        assert "giroscópio" in orient or "gyro" in orient
-
-    def test_guidance_none_para_controle_sem_dois_modos(self) -> None:
-        assert mode_guidance(_DESCONHECIDO) is None
-
-    def test_detail_rows_nao_duplica_o_modo(self) -> None:
-        """GUI-05/P4: a linha "O jogo vê como" saiu da grade — o modo mora no"""
-        rows = dict(detail_rows(_8BITDO_CABO))
-        assert "O jogo vê como" not in rows
-
-
-class TestSeletorSegmentadoReadOnly:
-    """GUI-05/P4: camada PURA do segmentado read-only da ficha (Nintendo|Xbox)."""
-
-    def test_itens_casam_com_input_mode(self) -> None:
-        assert [iid for iid, _ in MODE_SELECTOR_ITEMS] == ["nintendo", "xbox"]
-
-    def test_nintendo_marca_nintendo(self) -> None:
-        estado = mode_selector_state(_8BITDO_CABO)
-        assert estado is not None
-        itens, ativo = estado
-        assert itens == MODE_SELECTOR_ITEMS
-        assert ativo == "nintendo"
-
-    def test_xbox_marca_xbox(self) -> None:
-        estado = mode_selector_state(_XBOX)
-        assert estado is not None
-        assert estado[1] == "xbox"
-
-    def test_outro_nao_tem_seletor(self) -> None:
-        assert mode_selector_state(_DESCONHECIDO) is None
-
-    def test_mesmo_gate_do_mode_guidance(self) -> None:
-        for entry in (_8BITDO_CABO, _8BITDO_BT, _XBOX, _DESCONHECIDO):
-            assert (mode_selector_state(entry) is None) == (
-                mode_guidance(entry) is None
-            )
-
-    def test_subtitulo_diz_que_a_troca_e_fisica(self) -> None:
-        assert "física" in MODE_SELECTOR_SUBTITLE
-        assert "manual" in MODE_SELECTOR_SUBTITLE
-
-    def test_tooltip_explica_o_read_only(self) -> None:
-        assert "leitura" in MODE_SELECTOR_TOOLTIP.lower()
-        assert "software" in MODE_SELECTOR_TOOLTIP
-
-
 class TestChave:
     def test_usa_uniq_quando_ha(self) -> None:
         assert external_key(_8BITDO_CABO) == "AA:BB:CC:00:00:03"
@@ -243,23 +119,6 @@ class TestSlotGlobalDosBotoes:
         assert external_slot(2, 1) == 4
         # sem DualSense -> 1, 2.
         assert external_slot(0, 0) == 1
-
-    def test_labels_numeram_pelo_slot_global(self) -> None:
-        externals = [_8BITDO_CABO, {**_8BITDO_CABO, "uniq": "AA:BB:CC:00:00:04"}]
-        # com 2 DualSense conectados: os externos viram Controle 3 e 4.
-        assert button_labels_for(externals, dualsense_count=2) == [
-            "Nintendo 3 · cabo",
-            "Nintendo 4 · cabo",
-        ]
-
-    def test_labels_sem_dualsense_comecam_em_1(self) -> None:
-        assert button_labels_for([_8BITDO_CABO], dualsense_count=0) == ["Nintendo 1 · cabo"]
-
-    def test_labels_tipos_diferentes_seguem_o_slot(self) -> None:
-        assert button_labels_for([_8BITDO_CABO, _XBOX], dualsense_count=2) == [
-            "Nintendo 3 · cabo",
-            "Xbox 4 · cabo",
-        ]
 
 
 class TestSlotOfFimDoPosicional:
@@ -307,7 +166,3 @@ class TestSlotLabel:
         assert slot_label(None) == "—"
 
 
-class TestButtonLabelsForToleraSlotNone:
-    def test_none_omite_o_slot_no_rotulo(self) -> None:
-        entry = {**_8BITDO_CABO, "player_slot": None}
-        assert button_labels_for([entry], dualsense_count=2) == ["Nintendo · cabo"]

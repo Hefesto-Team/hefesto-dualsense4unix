@@ -475,22 +475,6 @@ def test_a_economia_atravessa_o_disco() -> None:
     assert controles_em_economia() == frozenset({UNIQS[3]})
 
 
-def test_a_tabela_do_teto_diz_de_cada_peca_o_que_a_economia_faz() -> None:
-    """A «Bateria longa» na tabela do teto: cada linha com ponto diz a SUA frase."""
-    pytest.importorskip("gi")
-    from hefesto_dualsense4unix.app.actions.config import secao_orcamento as orc
-
-    pecas = {p.nome: p for p in A_ECONOMIA_EM_CADA_PECA}
-    for linha in orc.LINHAS_DO_TETO:
-        if not linha.tem_ponto or linha.nome == "Vibração":
-            continue
-        assert linha.nome in pecas and pecas[linha.nome].ponto_de_aplicacao, linha.nome
-        longa = orc.celula_do_perfil(orc.PERFIL_BATERIA_LONGA, linha)
-        assert longa == pecas[linha.nome].o_que_faz, (linha.nome, longa)
-        assert orc.celula_do_perfil(orc.PERFIL_TUDO_LIGADO, linha) == orc.SEM_TETO
-        assert orc.celula_do_perfil(orc.PERFIL_EU_ESCOLHO, linha) == orc.CADA_ABA_MANDA
-
-
 @pytest.mark.asyncio
 async def test_o_daemon_registra_a_declaracao_no_boot_e_solta_ao_parar(
     monkeypatch: pytest.MonkeyPatch,

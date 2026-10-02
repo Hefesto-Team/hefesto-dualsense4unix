@@ -52,7 +52,6 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("o botão A luz não acende do card externo")
 
 import os
-from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -77,7 +76,7 @@ from hefesto_dualsense4unix.app.actions.config.secao_controles import (
     pode_derrubar,
     uniq_normalizado,
 )
-from hefesto_dualsense4unix.app.widgets.external_card import DadosDoControle
+from hefesto_dualsense4unix.interface.dados_do_controle import DadosDoControle
 
 #: Um DualSense no rádio. MAC na faixa sintética `aa:bb:cc` que o portão de
 NO_RADIO = DadosDoControle(
@@ -275,191 +274,11 @@ class TestNormalizacaoDoEndereco:
 
 gi = pytest.importorskip("gi", reason="o bloco na tela precisa de PyGObject")
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
 
 CABECA = pytest.mark.skipif(
     not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"),
     reason="sem display: rode com xvfb-run -a",
 )
-
-
-def _bloco_num_card(
-    dados: DadosDoControle, **kwargs: Any
-) -> tuple[Any, Any, list[Any]]:
-    """Monta um card de verdade, encaixa o bloco, e faz o `show_all` da seção."""
-    from hefesto_dualsense4unix.app.actions.config.secao_controles import _BlocoDaLuz
-    from hefesto_dualsense4unix.app.widgets.external_card import ExternalCard
-
-    opcoes: dict[str, Any] = {
-        "ao_derrubar": lambda _alvo: None,
-        "ao_voltar": lambda: None,
-        "agendar": lambda _passo: None,
-        "correr": lambda _fn, _pronto: None,
-    }
-    opcoes.update(kwargs)
-    card = ExternalCard(dados)
-    bloco = _BlocoDaLuz(dados, **opcoes)
-    bloco.encaixar(card)
-    janela = Gtk.OffscreenWindow()
-    janela.add(card)
-    janela.show_all()
-    return bloco, card, card.get_child().get_children()
-
-
-@CABECA
-class TestOBlocoNaTela:
-    def test_o_botao_entra_antes_do_espacador_e_do_jogador(self) -> None:
-        """O desenho põe o botão ACIMA de "Jogador:", nunca depois."""
-        bloco, _card, filhos = _bloco_num_card(NO_RADIO)
-        assert bloco.caixa in filhos
-        assert filhos.index(bloco.caixa) == len(filhos) - 3
-
-    def test_no_radio_nasce_clicavel_e_no_cabo_nasce_apagado(self) -> None:
-        vivo, _c1, _f1 = _bloco_num_card(NO_RADIO)
-        morto, _c2, _f2 = _bloco_num_card(NO_CABO)
-        assert vivo.botao.get_sensitive() is True
-        assert morto.botao.get_sensitive() is False
-        assert morto.botao.get_tooltip_text() == DICA_NO_CABO
-
-    def test_o_card_do_cabo_mostra_o_botao(self) -> None:
-        """*"sempre visível"* — apagado é diferente de ausente."""
-        bloco, _card, filhos = _bloco_num_card(NO_CABO)
-        assert bloco.caixa in filhos
-        assert bloco.botao.get_visible() is True
-
-    def test_o_show_all_da_secao_nao_revela_o_estado_de_espera(self) -> None:
-        """Sem o `no_show_all`, o card nasceria pedindo o botão PS sozinho."""
-        bloco, _card, _filhos = _bloco_num_card(NO_RADIO)
-        assert bloco.aviso.get_visible() is False
-        assert bloco.contagem.get_visible() is False
-        assert bloco.cancelar.get_visible() is False
-
-    def test_o_clique_entra_no_estado_dois_do_desenho(self) -> None:
-        """Some "Cor:" e "Jogador:", entra o pedido do PS. O espaçador FICA."""
-        derrubados: list[str] = []
-
-        def _derrubar(alvo: str) -> Any:
-            derrubados.append(alvo)
-            return _CaiuDeVerdade()
-
-        bloco, _card, filhos = _bloco_num_card(
-            NO_RADIO,
-            ao_derrubar=_derrubar,
-            correr=lambda fn, pronto: pronto(fn()),
-        )
-        bloco.botao.clicked()
-        assert derrubados == [NO_RADIO.uniq]
-        assert bloco.botao.get_visible() is False
-        assert bloco.aviso.get_visible() is True
-        assert bloco.cancelar.get_visible() is True
-        assert filhos[-1].get_visible() is False
-        assert filhos[-2].get_visible() is True
-
-    def test_o_gesto_que_nao_derrubou_nao_manda_apertar_ps(self) -> None:
-        """"não consegui falar com o Bluetooth" não pode virar espera."""
-        bloco, _card, _filhos = _bloco_num_card(
-            NO_RADIO,
-            ao_derrubar=lambda _a: _NaoDeu(),
-            correr=lambda fn, pronto: pronto(fn()),
-        )
-        bloco.botao.clicked()
-        assert bloco.aviso.get_visible() is False
-        assert bloco.botao.get_visible() is True
-        assert "continua pareado" in bloco.recado.get_text()
-
-    def test_quando_o_controle_volta_o_card_volta_ao_normal(self) -> None:
-        voltas: list[int] = []
-        passos: list[Any] = []
-        bloco, _card, filhos = _bloco_num_card(
-            NO_RADIO,
-            ao_derrubar=lambda _a: _CaiuDeVerdade(),
-            ao_voltar=lambda: voltas.append(1),
-            agendar=lambda passo: passos.append(passo) or 7,
-            correr=lambda fn, pronto: pronto(fn()),
-        )
-        bloco.botao.clicked()
-        assert passos, "a contagem tem de ter sido agendada"
-        bloco._espera = EsperaPeloPS(
-            NO_RADIO.uniq, total_s=9, sonda=_SondaDeMentira([set(), {ALVO}])
-        )
-        assert passos[0]() is True
-        assert passos[0]() is False
-        assert voltas == [1], "o card tem de reler a mesa quando ele volta"
-        assert bloco.botao.get_visible() is True
-        assert filhos[-1].get_visible() is True
-
-    def test_cancelar_volta_ao_repouso_sem_recado(self) -> None:
-        bloco, _card, filhos = _bloco_num_card(
-            NO_RADIO,
-            ao_derrubar=lambda _a: _CaiuDeVerdade(),
-            correr=lambda fn, pronto: pronto(fn()),
-        )
-        bloco.botao.clicked()
-        bloco.cancelar.clicked()
-        assert bloco.botao.get_visible() is True
-        assert bloco.aviso.get_visible() is False
-        assert bloco.recado.get_visible() is False
-        assert filhos[-1].get_visible() is True
-
-
-@CABECA
-class TestARazaoSaiuDoCard:
-    """O card não ganha linha de razão, nem com a conexão condenada no payload."""
-
-    def test_o_bloco_tem_so_o_botao_e_a_espera(self) -> None:
-        bloco, _card, _filhos = _bloco_num_card(NO_RADIO)
-        assert not hasattr(bloco, "razao")
-        assert bloco.caixa.get_children() == [
-            bloco.botao, bloco.aviso, bloco.contagem, bloco.cancelar, bloco.recado]
-
-    def test_o_nascimento_condenado_do_payload_nao_chega_ao_card(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        from hefesto_dualsense4unix.app.actions.config import (
-            secao_controles as sc,
-        )
-        from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
-
-        monkeypatch.setattr(sc, "carregar_maquina", lambda: MaquinaConfig())
-        monkeypatch.setattr(sc, "run_in_thread", lambda *_a, **_k: None)
-
-        host = SimpleNamespace(
-            _maquina_pendente=None,
-            _edit_target_uniq=None,
-            _cor_do_plastico_leitor=lambda _u: None,
-        )
-        painel = sc._PainelDosControles(host)
-        caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        janela = Gtk.OffscreenWindow()
-        janela.add(caixa)
-        painel.montar(caixa)
-        janela.show_all()
-
-        painel._aplicar(
-            {
-                "controllers": [
-                    {
-                        "uniq": NO_RADIO.uniq,
-                        "transport": "bluetooth",
-                        "connected": True,
-                        "player_slot": 2,
-                        "name": "Sony Interactive Entertainment Wireless Controller",
-                        "vid": "054c",
-                        "pid": "0ce6",
-                        "nascimento": _CONDENADO,
-                    }
-                ],
-                "external": [],
-            }
-        )
-
-        blocos = list(painel._luzes.values())
-        assert blocos, "nenhum bloco da luz foi pendurado"
-        textos = [w.get_text() for w in blocos[0].caixa.get_children()
-                  if isinstance(w, Gtk.Label)]
-        assert not [x for x in textos if _CONDENADO["porque"] in x], (
-            f"o veredito do payload voltou a chegar ao card: {textos!r}")
-        assert not hasattr(painel, "_nascimentos")
 
 
 class _CaiuDeVerdade:

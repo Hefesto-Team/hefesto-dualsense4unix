@@ -383,28 +383,6 @@ def test_o_cadeado_continua_na_tela_com_o_hefesto_desligado() -> None:
         f"dela é 'Player N, como está hoje' — o esmaecido só muda a cor")
 
 
-def test_o_aviso_do_nativo_continua_fora_por_decisao_dela() -> None:
-    """A decisão [01] pede uma frase que ELA MANDOU TIRAR — e ela ganha."""
-    from hefesto_dualsense4unix.app.actions import home_actions
-
-    nativo = home_actions._MODE_DESCRIPTIONS["native"]
-    assert nativo == (
-        "Modo Nativo: o Hefesto sai do meio e o jogo fala direto com o "
-        "controle."), (
-        f"a descrição do Modo Nativo na janela antiga divergiu da interface "
-        f"nova ({nativo!r}). Desde 06/09 as duas dizem a MESMA coisa, que é a "
-        f"regra de 31/08 dela: 'Desligado põe o Nativo online', e nada além")
-
-    ctx = _ctx([], native_mode=True,
-               gamepad_emulation={"enabled": False, "flavor": "dualsense"})
-    textos = [str(a.get("texto") or "") for a in aba._avisos(ctx)]
-    assert not any("derrubam o controle" in t for t in textos), (
-        "o aviso do Modo Nativo entrou na coluna Atenção. Ela mandou tirá-lo "
-        "desta aba em 31/08 — 'qualquer coisa fora isso tá incorreta' — e "
-        "ensaio nenhum desta casa mede quantos jogos derrubam o controle. "
-        "Se a decisão mudou, ela muda com o olho DELA, não por baixo do gerador")
-
-
 def test_o_marcador_do_primario_anda_e_o_alvo_da_fita_nao() -> None:
     """Passo 3 — dois controles, um primário; troque e o marcador muda de cartão.
 

@@ -40,16 +40,7 @@ from hefesto_dualsense4unix.app.mic_monitor import (
     fontes_dualsense,
     sufixo_da_ponte_bt,
 )
-from hefesto_dualsense4unix.app.widgets import controller_card
-from hefesto_dualsense4unix.app.widgets.controller_card import (
-    TEXTO_BOTAO_MIC_ATIVAR,
-    TEXTO_BOTAO_MIC_DEVOLVER,
-    TEXTO_BOTAO_MIC_SEM_LEITURA,
-    TEXTO_BOTAO_MIC_SILENCIAR,
-    AcaoMic,
-    ControllerCard,
-    acao_mic,
-)
+from hefesto_dualsense4unix.interface.cartao_do_controle import TEXTO_BOTAO_MIC_ATIVAR, TEXTO_BOTAO_MIC_DEVOLVER, TEXTO_BOTAO_MIC_SEM_LEITURA, TEXTO_BOTAO_MIC_SILENCIAR, AcaoMic, acao_mic
 
 RAIZ = Path(__file__).resolve().parents[2]
 INSTALL = RAIZ / "install.sh"
@@ -251,112 +242,6 @@ class TestAcaoDoBotaoDeMicrofone:
             TEXTO_BOTAO_MIC_DEVOLVER,
             TEXTO_BOTAO_MIC_SILENCIAR,
         ]
-
-
-@pytest.mark.skipif(
-    not controller_card._GTK_DISPONIVEL, reason="sem GTK3 real neste ambiente"
-)
-class TestFiacaoDoBotaoNoCard:
-    """O DEFEITO (C): o método existia e ninguém o chamava."""
-
-    def _card_com(
-        self, monkeypatch: pytest.MonkeyPatch, entry: dict[str, Any]
-    ) -> tuple[Any, list[tuple[Any, ...]]]:
-        pedidos: list[tuple[Any, ...]] = []
-
-        def _mic_set(muted: bool | None, uniq: str | None = None) -> bool:
-            pedidos.append((muted, uniq))
-            return True
-
-        monkeypatch.setattr(controller_card.ipc_bridge, "mic_set", _mic_set)
-        monkeypatch.setattr(
-            controller_card.ipc_bridge,
-            "run_in_thread",
-            lambda fn, on_success, on_failure=None: on_success(fn()),
-        )
-        card = ControllerCard(compact=False)
-        card.update(entry, {})
-        return card, pedidos
-
-    def test_o_clique_chega_no_mic_set_com_o_uniq_do_card(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        card, pedidos = self._card_com(
-            monkeypatch,
-            {
-                "uniq": "AA:BB:CC:DD:EE:FF",
-                "audio": {"mic_mudo": True, "mic_mudo_desejado": None},
-            },
-        )
-        card._mic_botao.clicked()
-        assert pedidos == [(False, "AA:BB:CC:DD:EE:FF")], (
-            "o botão precisa mandar DESMUTAR e ir só no controle deste card — "
-            "sem o uniq o daemon aplicaria no primário e com quatro controles "
-            "isso mutaria o microfone de outra pessoa"
-        )
-
-    def test_o_clique_no_estado_ativo_manda_mutar(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        card, pedidos = self._card_com(
-            monkeypatch,
-            {"uniq": "AA:BB:CC:11:22:33", "audio": {"mic_mudo": False}},
-        )
-        card._mic_botao.clicked()
-        assert pedidos == [(True, "AA:BB:CC:11:22:33")]
-
-    def test_o_clique_com_posse_nossa_devolve_o_botao_fisico(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        card, pedidos = self._card_com(
-            monkeypatch,
-            {
-                "uniq": "AA:BB:CC:11:22:33",
-                "audio": {"mic_mudo": False, "mic_mudo_desejado": False},
-            },
-        )
-        card._mic_botao.clicked()
-        assert pedidos == [(None, "AA:BB:CC:11:22:33")]
-
-    def test_sem_leitura_o_botao_esta_insensivel_e_nao_manda_nada(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        card, pedidos = self._card_com(monkeypatch, {"uniq": "AA:BB:CC:11:22:33"})
-        assert card._mic_botao.get_sensitive() is False
-        card._mic_botao.clicked()
-        assert pedidos == []
-
-    def test_o_bloco_do_mic_continua_sempre_visivel(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """MIC-PRESENTE-01 não pode ser desfeita por esta entrega."""
-        card, _ = self._card_com(monkeypatch, {"uniq": "AA:BB:CC:11:22:33"})
-        card.show_all()
-        assert card._mic_box.get_visible() is True
-        assert card._mic_botao.get_visible() is True
-        card.reset_inputs()
-        assert card._mic_box.get_visible() is True
-        assert card._mic_botao.get_visible() is True
-        assert card._mic_botao_rotulo.get_text() == TEXTO_BOTAO_MIC_SEM_LEITURA
-
-    def test_o_botao_reflete_a_leitura_do_daemon_e_nao_o_que_mandamos(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Guardar o valor mandado como leitura é o hábito que a sprint veta."""
-        card, _ = self._card_com(
-            monkeypatch,
-            {"uniq": "AA:BB:CC:11:22:33", "audio": {"mic_mudo": True}},
-        )
-        card._mic_botao.clicked()
-        assert card._mic_botao_rotulo.get_text() == TEXTO_BOTAO_MIC_ATIVAR
-        card.update(
-            {
-                "uniq": "AA:BB:CC:11:22:33",
-                "audio": {"mic_mudo": False, "mic_mudo_desejado": False},
-            },
-            {},
-        )
-        assert card._mic_botao_rotulo.get_text() == TEXTO_BOTAO_MIC_DEVOLVER
 
 
 _PACTL_DOIS_CONTROLES_POR_BT = (

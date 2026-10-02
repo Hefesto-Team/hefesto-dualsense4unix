@@ -43,10 +43,6 @@ gi = pytest.importorskip("gi")
 gi.require_version("Gdk", "3.0")
 gi.require_version("Gtk", "3.0")
 
-from hefesto_dualsense4unix.app.actions.lightbar_actions import (
-    _PREFIXO_DESENHO,
-    texto_do_desenho_aceso,
-)
 
 RAIZ = Path(__file__).resolve().parents[2]
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
@@ -79,17 +75,6 @@ def _o_mapa_registra_canal_de_leitura() -> bool:
     )
 
 
-def _todas_as_frases() -> dict[str, str]:
-    return {
-        "co-op ligado": texto_do_desenho_aceso((False,) * 5, 1, coop_ligado=True),
-        "escolha dela": texto_do_desenho_aceso(
-            (False, True, False, True, False), 3
-        ),
-        "automático com número": texto_do_desenho_aceso((False,) * 5, 3),
-        "automático sem número": texto_do_desenho_aceso((False,) * 5, None),
-    }
-
-
 def test_o_mapa_continua_sem_canal_de_leitura_de_led_de_jogador() -> None:
     """A premissa da régua, cobrada em voz alta."""
     linha = _linha_do_mapa(CHAVE_DA_LEITURA)
@@ -101,34 +86,3 @@ def test_o_mapa_continua_sem_canal_de_leitura_de_led_de_jogador() -> None:
     )
 
 
-def test_nenhuma_frase_do_desenho_afirma_estado_da_barra() -> None:
-    """A MORDIDA do L5: devolva o "Aceso agora:" e veja as quatro reprovarem."""
-    for onde, frase in _todas_as_frases().items():
-        baixa = frase.lower()
-        for palavra in PALAVRAS_QUE_AFIRMAM_ESTADO:
-            assert palavra not in baixa, (
-                f"a frase de “{onde}” afirma estado da barra ({palavra!r}): "
-                f"{frase!r}. O mapa mede {CHAVE_DA_LEITURA} com "
-                "`cabo_aceita = não` e `radio_aceita = não` — não há canal de "
-                "leitura em transporte nenhum, e a função é PURA do rascunho. "
-                "Diga o que o produto MANDOU, nunca o que a lâmpada faz."
-            )
-
-
-def test_as_quatro_bifurcacoes_saem_pelo_mesmo_prefixo() -> None:
-    """Uma porta só, para a régua não ter por onde escapar."""
-    for onde, frase in _todas_as_frases().items():
-        assert frase.startswith(f"{_PREFIXO_DESENHO}: "), (
-            f"a frase de “{onde}” não sai pelo prefixo declarado "
-            f"({_PREFIXO_DESENHO!r}): {frase!r}"
-        )
-
-
-def test_o_proprio_prefixo_nao_afirma_estado() -> None:
-    """O prefixo é a única porta — então é ele que carrega a promessa."""
-    baixo = _PREFIXO_DESENHO.lower()
-    for palavra in PALAVRAS_QUE_AFIRMAM_ESTADO:
-        assert palavra not in baixo, (
-            f"o prefixo {_PREFIXO_DESENHO!r} afirma estado da barra "
-            f"({palavra!r}) — e ele responde pelas quatro frases de uma vez"
-        )

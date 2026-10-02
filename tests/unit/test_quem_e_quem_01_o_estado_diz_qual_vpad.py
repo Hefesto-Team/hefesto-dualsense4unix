@@ -323,7 +323,7 @@ class TestADicaDoCardDizQualVpad:
 
     def test_o_card_do_controle_diz_qual_vpad_ele_alimenta(self) -> None:
         """A MORDIDA da tela: sem a dica, o card diz "Controle 2 — USB ·"""
-        from hefesto_dualsense4unix.app.widgets.controller_card import dica_do_titulo
+        from hefesto_dualsense4unix.interface.cartao_do_controle import dica_do_titulo
 
         dica = dica_do_titulo({"uniq": P2, "index": 1}, self._estado())
 
@@ -333,19 +333,19 @@ class TestADicaDoCardDizQualVpad:
 
     def test_controle_fora_da_mesa_de_jogadores_nao_ganha_dica(self) -> None:
         """Cura exagerada reprova: quem não alimenta vpad nenhum não recebe"""
-        from hefesto_dualsense4unix.app.widgets.controller_card import dica_do_titulo
+        from hefesto_dualsense4unix.interface.cartao_do_controle import dica_do_titulo
 
         assert dica_do_titulo({"uniq": P4, "index": 3}, self._estado()) is None
 
     def test_daemon_antigo_sem_a_lista_cala(self) -> None:
         """Sem `coop.mesa` no payload, nada a dizer — e nada quebra."""
-        from hefesto_dualsense4unix.app.widgets.controller_card import dica_do_titulo
+        from hefesto_dualsense4unix.interface.cartao_do_controle import dica_do_titulo
 
         assert dica_do_titulo({"uniq": P2}, {"coop": {"players": 4}}) is None
 
     def test_aguardando_grab_tem_frase_propria(self) -> None:
         """"Ainda não" e "não sei" são respostas diferentes."""
-        from hefesto_dualsense4unix.app.widgets.controller_card import (
+        from hefesto_dualsense4unix.interface.cartao_do_controle import (
             DICA_TITULO_SEM_VPAD,
             dica_do_titulo,
         )
@@ -359,7 +359,7 @@ class TestADicaDoCardDizQualVpad:
 
     def test_a_divergencia_de_nome_aparece_na_dica(self) -> None:
         """E3 na tela: quem for conferir card↔dispositivo procura pelo NOME, e"""
-        from hefesto_dualsense4unix.app.widgets.controller_card import dica_do_titulo
+        from hefesto_dualsense4unix.interface.cartao_do_controle import dica_do_titulo
 
         estado = self._estado()
         estado["coop"]["mesa"][0].update(

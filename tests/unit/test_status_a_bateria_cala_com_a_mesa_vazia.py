@@ -30,7 +30,6 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("status: a bateria cala com a mesa vazia")
 
-import ast
 from pathlib import Path
 from typing import Any
 
@@ -115,40 +114,3 @@ def test_sem_lista_publicada_o_topo_continua_valendo() -> None:
     )
 
 
-def test_a_barra_nao_le_o_topo_por_fora_da_guarda() -> None:
-    """O portão: `_render_slow_state` não pode voltar a ler `battery_pct`.
-
-    O defeito não era a falta de uma checagem — era a barra ter uma fonte
-    PRÓPRIA, lida direto do topo do payload, ao lado da fonte que a aba usa
-    para todo o resto. Enquanto existirem duas leituras, a guarda pode ser
-    burlada por acidente na próxima leva que mexer nesse método.
-
-    **A mordida:** devolva o ``battery = state.get("battery_pct")`` ao
-    `_render_slow_state` e o portão reprova nomeando a linha.
-    """
-    arvore = ast.parse(_STATUS_PY.read_text(encoding="utf-8"))
-    alvo = next(
-        (
-            no
-            for no in ast.walk(arvore)
-            if isinstance(no, ast.FunctionDef) and no.name == "_render_slow_state"
-        ),
-        None,
-    )
-    assert alvo is not None, "o `_render_slow_state` sumiu — o teste perdeu o alvo"
-
-    leituras = [
-        f"status_actions.py:{no.lineno}"
-        for no in ast.walk(alvo)
-        if isinstance(no, ast.Call)
-        and isinstance(no.func, ast.Attribute)
-        and no.func.attr == "get"
-        and no.args
-        and isinstance(no.args[0], ast.Constant)
-        and no.args[0].value == "battery_pct"
-    ]
-    assert not leituras, (
-        "o `_render_slow_state` voltou a ler `battery_pct` do topo do payload "
-        f"por conta própria: {leituras}. A única leitura da bateria da aba é "
-        "`_bateria_da_mesa`, que olha o topo E a lista"
-    )

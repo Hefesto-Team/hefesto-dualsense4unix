@@ -181,23 +181,6 @@ def test_a_pintura_do_aviso_nao_toca_o_disco(a07, monkeypatch):
     assert a07.aviso_do_jogo_aberto(SEM_WRAPPER, None)[1] == "3357650"
 
 
-# deles com eles. A lista de dispensados continua lida (`calados`), e quem já
-def test_voltar_a_perguntar_tira_do_arquivo_de_verdade(a07):
-    """Contra o `launch_dialog_dismissed.json` do lar de mentira: o arquivo muda.
-
-    A MORDIDA: troque o `remove_dismissed_appid` do gesto por um `True` e este
-    teste reprova — o gesto diria que desfez e o jogo ficaria dispensado.
-    """
-    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
-
-    lwd.add_dismissed_appid("3357650")
-    assert "3357650" in lwd.load_dismissed_appids(), "o lar de mentira não gravou"
-    _gesto("voltar-a-perguntar")(_ctx(), {"v": "3357650"}, None)
-    assert "3357650" not in lwd.load_dismissed_appids(), (
-        "o gesto disse que desfez e o `launch_dialog_dismissed.json` continua "
-        "com o appid")
-
-
 def test_a_escada_alcanca_o_jogo_que_ela_ja_fechou(a07, monkeypatch):
     """O caso REAL do botão: o jogo não funcionou, ela fechou, e só então veio."""
     from hefesto_dualsense4unix.daemon import launch_env

@@ -537,48 +537,6 @@ def test_a_classe_de_uma_janela_fecha_o_round_trip() -> None:
         "trocaria pelo genérico “Revise os campos do perfil”")
 
 
-def test_toda_forma_que_o_produto_escreve_tem_rotulo_nas_duas_telas() -> None:
-    """Nenhuma forma nasce órfã de rótulo — e a que não tem, se DECLARA."""
-    from hefesto_dualsense4unix.app.actions import profiles_actions as pa
-    from hefesto_dualsense4unix.profiles.schema import MatchCriteria
-    from hefesto_dualsense4unix.profiles.simple_match import (
-        SIMPLE_MATCH_PRESETS,
-        simple_extra,
-    )
-
-    formas = tuple(SIMPLE_MATCH_PRESETS) + FORMAS_FORA_DO_DICIONARIO
-    na_gtk = dict(pa._APLICA_A_ITEMS)
-    orfas = [f for f in formas
-             if f not in na_gtk
-             or (f not in perfis_web.AMBIENTE_DO_PRESET
-                 and f not in perfis_web.FORA_DO_DESENHO)]
-    assert not orfas, (
-        f"as formas {orfas} o produto sabe ESCREVER e alguma tela não sabe "
-        f"MOSTRAR, sem declaração nenhuma. Um perfil gravado assim abre com o "
-        f"seletor travado — e ninguém fica sabendo por quê. Dê rótulo em "
-        f"`AMBIENTE_DO_PRESET` e em `_APLICA_A_ITEMS`, ou declare a ausência "
-        f"em `FORA_DO_DESENHO`, com a razão.")
-    assert not (set(perfis_web.AMBIENTE_DO_PRESET)
-                & set(perfis_web.FORA_DO_DESENHO)), (
-        "uma forma está nas duas tabelas — com rótulo E declarada ausente")
-
-    exemplos = {
-        "game": MatchCriteria(process_name=["eldenring"]),
-        "steam_game": MatchCriteria(window_class=["steam_app_1599660"]),
-        "janela": MatchCriteria(window_class=["GrimFandango"]),
-    }
-    for chave, match in exemplos.items():
-        if simple_extra(match):
-            assert chave in pa._IDS_COM_CAMPO_LIVRE, (
-                f"a forma {chave!r} guarda um valor que `simple_extra` devolve "
-                f"({simple_extra(match)!r}) e o editor não abre o campo livre "
-                f"para ela — a tela mostraria vazio sobre a regra do disco")
-        assert chave in pa._RADIO_IDS, (
-            f"a forma {chave!r} não está em `_RADIO_IDS`: `_select_radio` cai "
-            f"em “any” e o perfil abre dizendo “Qualquer”, que é o "
-            f"rebaixamento que o R-12 existe para impedir")
-
-
 def test_o_detectar_cumpre_o_que_o_title_promete(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

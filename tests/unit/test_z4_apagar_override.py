@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any, ClassVar
 from unittest.mock import MagicMock
 
-from hefesto_dualsense4unix.app.draft_config import DraftConfig, LedsDraft
 from hefesto_dualsense4unix.daemon.ipc_draft_applier import DraftApplier
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 
@@ -74,82 +73,6 @@ class TestAMordidaDoQueFazOZeroJaFuncionar:
             controller.reset_output_overrides.assert_not_called()
         finally:
             mod.DraftApplier._apply_section = original  # type: ignore[method-assign]
-
-
-class TestAJanelaEmiteVazioQuandoOUltimoOverrideCai:
-    """T8 — `_controllers_to_ipc` e o gêmeo `with_override_fields_cleared`."""
-
-    def test_draft_default_sem_overrides_emite_none(self) -> None:
-        d = DraftConfig.default()
-        assert d.to_ipc_dict().get("controllers") is None
-
-    def test_apagar_o_unico_override_por_campo_emite_vazio(self) -> None:
-        d = DraftConfig.default().with_controller_leds(
-            _UNIQ, LedsDraft(lightbar_rgb=(10, 20, 30))
-        )
-        assert list((d.to_ipc_dict().get("controllers") or {}).keys()) == [_UNIQ]
-
-        d2 = d.with_controller_fields_cleared(
-            _UNIQ, "leds", {"lightbar", "lightbar_brightness"}
-        )
-        assert d2.source_controllers is None, (
-            "o mapa some do MODELO (correto — sem chave fantasma no perfil "
-            f"salvo), mas ficou {d2.source_controllers!r}"
-        )
-        assert d2.to_ipc_dict().get("controllers") == {}, (
-            f"a chave `controllers` no IPC saiu {d2.to_ipc_dict().get('controllers')!r}"
-            " — deveria ser `{}` (apague os overrides), não `None` "
-            "(sem opinião) nem ausente"
-        )
-
-    def test_apagar_pela_variante_todos_tambem_emite_vazio(self) -> None:
-        """O gêmeo `with_override_fields_cleared` — o MESMO defeito, ponto B."""
-        d = DraftConfig.default().with_controller_leds(
-            _UNIQ, LedsDraft(lightbar_rgb=(10, 20, 30))
-        )
-        d2 = d.with_override_fields_cleared("leds", {"lightbar", "lightbar_brightness"})
-        assert d2.source_controllers is None
-        assert d2.to_ipc_dict().get("controllers") == {}, (
-            "with_override_fields_cleared (a variante 'Todos') não marcou o "
-            "esvaziamento — a chave saiu "
-            f"{d2.to_ipc_dict().get('controllers')!r}"
-        )
-
-    def test_gravar_um_override_novo_desarma_a_flag(self) -> None:
-        """Depois de apagar, gravar de novo volta ao comportamento normal —"""
-        d = DraftConfig.default().with_controller_leds(
-            _UNIQ, LedsDraft(lightbar_rgb=(10, 20, 30))
-        )
-        d2 = d.with_controller_fields_cleared(
-            _UNIQ, "leds", {"lightbar", "lightbar_brightness"}
-        )
-        assert d2.controllers_esvaziados_nesta_edicao is True
-
-        d3 = d2.with_controller_leds(_UNIQ, LedsDraft(lightbar_rgb=(1, 2, 3)))
-        assert d3.controllers_esvaziados_nesta_edicao is False
-        assert list((d3.to_ipc_dict().get("controllers") or {}).keys()) == [_UNIQ]
-
-    def test_ciclo_fim_a_fim_apagar_salvar_fechar_reabrir(self) -> None:
-        """A mordida-âncora da sprint (aceite §9, item 3): grave, apague,"""
-        d = DraftConfig.default().with_controller_leds(
-            _UNIQ, LedsDraft(lightbar_rgb=(10, 20, 30))
-        )
-        perfil_com_override = d.to_profile("z4-t8", priority=1)
-        assert perfil_com_override.controllers, "setup inválido: sem override"
-
-        d2 = d.with_controller_fields_cleared(
-            _UNIQ, "leds", {"lightbar", "lightbar_brightness"}
-        )
-        perfil_salvo = d2.to_profile("z4-t8", priority=1)
-        assert perfil_salvo.controllers is None, (
-            f"o override sobreviveu no ARQUIVO: {perfil_salvo.controllers!r}"
-        )
-
-        applier, controller, _store = _applier()
-        applier.apply({"controllers": d2.to_ipc_dict()["controllers"]})
-        controller.reset_output_overrides.assert_called_once()
-        (arg,) = controller.reset_output_overrides.call_args.args
-        assert not arg, f"o daemon recebeu {arg!r} — deveria limpar tudo"
 
 
 class TestOCensoDasOutrasSecoes:

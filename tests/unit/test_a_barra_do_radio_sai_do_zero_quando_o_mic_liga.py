@@ -37,7 +37,6 @@ AS MORDIDAS, EXERCIDAS EM 23/08/2026 — a saída real está no relatório da le
 """
 from __future__ import annotations
 
-import contextlib
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -50,7 +49,6 @@ from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
 from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     HZ_AUDIO_COM_MIC,
-    HZ_INPUT_COM_MIC,
     HZ_INPUT_SEM_MIC,
     ocupacao_por_adaptador,
 )
@@ -235,34 +233,8 @@ class TestOStateFullDizDeQuemEACadaPonte:
         assert bloco["motivo"] == bt_mic.MOTIVO_SEM_A_GUARDA
 
 
-def _com_mic_da_secao(estado: dict[str, Any]) -> frozenset[str]:
-    """O que a seção "A mesa" extrai do `state_full`, pelo código de produção.
-
-    Chamado no objeto real e não reimplementado aqui: uma cópia da regra num
-    teste é a segunda verdade que esta casa já pagou para não ter.
-    """
-    from hefesto_dualsense4unix.app.actions.config.secao_mesa import _PainelDaMesa
-
-    painel = _PainelDaMesa.__new__(_PainelDaMesa)
-    painel._controles = []
-    painel._com_mic = frozenset()
-    with contextlib.suppress(Exception):
-        painel._aplicar_estado(estado)
-    return painel._com_mic
-
-
 class TestABarraSeMexe:
-    def test_a_secao_da_mesa_le_a_terceira_chave(self) -> None:
-        estado = {
-            "controllers": _controles(),
-            "bt_mic": {"enabled": True, "running": True, "uniqs": [DOIS, TRES]},
-        }
-        assert _com_mic_da_secao(estado) == frozenset({DOIS, TRES})
 
-    def test_daemon_sem_a_chave_vira_conjunto_vazio_e_nao_exceção(self) -> None:
-        """Daemon mais velho que a janela é o caso normal num install editable."""
-        estado = {"controllers": _controles(), "bt_mic": {"enabled": False}}
-        assert _com_mic_da_secao(estado) == frozenset()
 
     def test_o_controle_negativo_a_coluna_de_audio_e_zero_nos_tres(self) -> None:
         """A linha de base de 22/08: quatro no rádio, nenhuma ponte."""
@@ -279,36 +251,6 @@ class TestABarraSeMexe:
             2 * HZ_INPUT_SEM_MIC
         )
 
-    def test_a_coluna_de_audio_sai_do_zero_quando_a_ponte_sobe(self) -> None:
-        """O aceite da E2, ligado ao `state_full` pela função da seção.
-
-        A cadeia inteira, sem atalho: o payload do daemon entra, a seção extrai
-        os `uniq`, e o medidor pinta a fatia ciana no adaptador certo.
-        """
-        estado = {
-            "controllers": _controles(),
-            "bt_mic": {"enabled": True, "running": True, "uniqs": sorted(MESA)},
-        }
-        listar, ler = _bancada()
-
-        ocupacoes = ocupacao_por_adaptador(
-            estado["controllers"],
-            com_ponte_de_mic=_com_mic_da_secao(estado),
-            listar=listar,
-            ler=ler,
-        )
-
-        for endereco, ocupacao in ocupacoes.items():
-            assert ocupacao.slots_audio > 0, (
-                f"{endereco} continua com áudio zero mesmo com a ponte de pé"
-            )
-            assert ocupacao.com_microfone == ocupacao.controles
-        assert ocupacoes[ADAPTADOR_B].slots_audio == pytest.approx(
-            2 * HZ_AUDIO_COM_MIC
-        )
-        assert ocupacoes[ADAPTADOR_B].slots_input == pytest.approx(
-            2 * HZ_INPUT_COM_MIC
-        )
 
     def test_com_os_quatro_microfones_o_pior_radio_continua_abaixo_do_teto(
         self,

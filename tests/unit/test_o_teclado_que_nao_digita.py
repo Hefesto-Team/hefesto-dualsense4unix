@@ -11,16 +11,8 @@ import pytest
 
 pytest.importorskip("gi")
 
-from hefesto_dualsense4unix.app.actions.input_actions import (
-    BINDINGS_LEGEND,
-    BOTOES_JA_DO_MOUSE,
-    CANONICAL_BUTTONS,
-    InputActionsMixin,
-    frase_dos_botoes_sem_tecla,
-)
 from hefesto_dualsense4unix.core.keyboard_mappings import (
     DEFAULT_BUTTON_BINDINGS,
-    is_virtual_token,
 )
 
 _TECLAS_QUE_DIGITAM: frozenset[str] = frozenset(
@@ -41,61 +33,6 @@ def test_nenhum_atalho_de_fabrica_digita_caractere() -> None:
         "algum binding de fábrica passou a digitar caractere — a legenda da aba "
         f"ainda promete o contrário: {digitam}"
     )
-
-
-def test_o_unico_caminho_de_fabrica_para_escrever_e_o_teclado_na_tela() -> None:
-    """Só l3/r3 usam token virtual — é o teclado na tela, e ele é externo."""
-    virtuais = {
-        botao
-        for botao, tokens in DEFAULT_BUTTON_BINDINGS.items()
-        if any(is_virtual_token(token) for token in tokens)
-    }
-    assert virtuais == {"l3", "r3"}
-    assert "teclado na tela" in BINDINGS_LEGEND
-    assert "onboard" in BINDINGS_LEGEND
-    assert "wvkbd-mobintl" in BINDINGS_LEGEND
-
-
-def test_a_frase_nomeia_os_botoes_sem_tecla_dos_defaults() -> None:
-    """Com o mapa de fábrica, os onze órfãos aparecem pelo nome humano."""
-    frase = frase_dos_botoes_sem_tecla(dict(DEFAULT_BUTTON_BINDINGS))
-    for esperado in ("X (Cruz)", "Círculo", "Triângulo", "Quadrado", "Botão PS"):
-        assert esperado in frase, f"{esperado!r} sumiu da frase: {frase!r}"
-    assert "L1" not in frase
-    assert "Options" not in frase
-    assert "Touchpad" not in frase
-
-
-def test_a_frase_avisa_que_o_botao_ja_e_do_mouse() -> None:
-    """Dois donos do mesmo botão: a tela passa a dizer antes, não depois."""
-    frase = frase_dos_botoes_sem_tecla(dict(DEFAULT_BUTTON_BINDINGS))
-    assert "já são do mouse" in frase
-    assert "as duas coisas ao mesmo tempo" in frase
-
-
-def test_a_frase_diz_o_que_fazer_quando_tudo_esta_mudo() -> None:
-    """`key_bindings == {}` era lista vazia sem uma palavra — parecia defeito."""
-    frase = frase_dos_botoes_sem_tecla({})
-    assert "nenhum botão digita nada agora" in frase
-    assert "Voltar ao padrão" in frase
-
-
-def test_a_frase_cala_quando_todo_botao_tem_tecla() -> None:
-    """Nada a dizer é melhor que uma linha vazia na tela."""
-    completo = {botao: ("KEY_A",) for botao in CANONICAL_BUTTONS}
-    assert frase_dos_botoes_sem_tecla(completo) == ""
-
-
-def test_botoes_do_mouse_saem_do_uinput_mouse_e_nao_de_copia_a_mao() -> None:
-    """A lista de "já é do mouse" acompanha o device, não uma cópia envelhecida."""
-    from hefesto_dualsense4unix.integrations.uinput_mouse import (
-        BUTTON_TO_UINPUT,
-        DPAD_TO_KEY,
-        EDGE_KEY_MAP,
-    )
-
-    esperado = frozenset({*BUTTON_TO_UINPUT, *DPAD_TO_KEY, *EDGE_KEY_MAP, "l2", "r2"})
-    assert esperado == BOTOES_JA_DO_MOUSE
 
 
 class _FakeLabel:
@@ -134,44 +71,3 @@ class _FakeMixin:
         return self.legend if key == "key_bindings_legend" else None
 
 
-def _build_mixin() -> Any:
-    instance = _FakeMixin()
-    for name in (
-        "_resolve_effective_bindings",
-        "_refresh_key_bindings_from_draft",
-        "_atualizar_legenda",
-    ):
-        setattr(
-            instance,
-            name,
-            InputActionsMixin.__dict__[name].__get__(instance, type(instance)),
-        )
-    return instance
-
-
-def test_o_refresh_pinta_a_legenda_com_os_orfaos() -> None:
-    """O caminho real (refresh do rascunho) chega à tela, não só a função pura."""
-    mixin = _build_mixin()
-    mixin._refresh_key_bindings_from_draft()
-    assert BINDINGS_LEGEND in mixin.legend.markup
-    assert "Sem tecla (não digitam nada)" in mixin.legend.markup
-    assert "X (Cruz)" in mixin.legend.markup
-
-
-def test_o_refresh_reescreve_a_legenda_quando_o_rascunho_muda() -> None:
-    """Pintar só na instalação do TreeView deixaria a frase mentindo depois."""
-    mixin = _build_mixin()
-    mixin._refresh_key_bindings_from_draft()
-    assert "X (Cruz)" in mixin.legend.markup
-    mixin.draft = mixin.draft.model_copy(
-        update={"key_bindings": {botao: ["KEY_A"] for botao in CANONICAL_BUTTONS}}
-    )
-    mixin._refresh_key_bindings_from_draft()
-    assert "Sem tecla" not in mixin.legend.markup
-
-
-def test_o_refresh_nao_quebra_sem_a_legenda_no_glade() -> None:
-    """Glade sem o rótulo (janela reduzida, teste) segue funcionando."""
-    mixin = _build_mixin()
-    mixin.legend = None  # type: ignore[assignment]
-    mixin._refresh_key_bindings_from_draft()

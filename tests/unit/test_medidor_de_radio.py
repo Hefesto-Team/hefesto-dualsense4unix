@@ -4,7 +4,7 @@ Este arquivo é PURO de propósito: nenhuma linha importa `gi`. A aritmética do
 medidor, o casamento por `HID_PHYS` e as três palavras de ocupação não precisam
 de GTK para existir, e um arquivo que exigisse PyGObject perderia a coleta
 headless — que é onde a maioria das rodadas acontece. O que é de widget mora em
-`app/widgets/sensor_widgets.py` e entra aqui só pela regra pura de saturação da
+`interface/sensores.py` e entra aqui só pela regra pura de saturação da
 barra (`fatias_da_barra`), que o módulo expõe fora do ramo do GTK.
 
 A MORDIDA, feita em 22/08/2026 e registrada aqui porque teste que passa com a
@@ -34,14 +34,6 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("importa `app.actions.config`, que carrega o GTK")
 
-from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
-    _medidores_da_mesa,
-    _rotulo_do_medidor,
-    _selo_da_ocupacao,
-    _texto_acessivel,
-)
-from hefesto_dualsense4unix.app.widgets.sensor_widgets import fatias_da_barra
-from hefesto_dualsense4unix.integrations.mesa_de_radio import Adaptador, Mesa
 from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     CORTE_APERTADA,
     CORTE_FOLGADA,
@@ -51,10 +43,8 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     PALAVRA_APERTADA,
     PALAVRA_CHEIA,
     PALAVRA_FOLGADA,
-    PALAVRAS_DE_CULPA,
     SEM_ADAPTADOR,
     SLOTS_POR_SEGUNDO,
-    Ocupacao,
     adaptador_por_uniq,
     ocupacao_por_adaptador,
     palavra_da_ocupacao,
@@ -313,32 +303,6 @@ def test_o_conjunto_de_pontes_casa_mesmo_escrito_com_dois_pontos() -> None:
     assert por_mac.slots_audio > 0
 
 
-def test_a_fracao_crua_passa_de_um_e_quem_satura_e_a_barra() -> None:
-    """Estourar o teto é o que a barra existe para saber dizer."""
-    listar, ler = _bancada(
-        {
-            f"hidraw{i}": {"HID_UNIQ": f"aa:bb:cc:00:00:{i:02x}", "HID_PHYS": ADAPTADOR_1}
-            for i in range(7)
-        }
-    )
-
-    barra = ocupacao_por_adaptador(
-        [_controle(f"aabbcc0000{i:02x}") for i in range(7)], listar=listar, ler=ler
-    )[ADAPTADOR_1]
-
-    assert barra.slots_total == pytest.approx(7 * HZ_INPUT_SEM_MIC)
-    assert barra.fracao_total > 1.0
-    assert barra.rotulo == PALAVRA_CHEIA
-    assert fatias_da_barra(barra.fracao_input, barra.fracao_audio) == (1.0, 0.0)
-
-
-def test_a_fatia_de_audio_comeca_onde_a_de_entrada_termina() -> None:
-    """Uma trilha, duas fatias: as duas somadas nunca passam de 1,0."""
-    assert fatias_da_barra(0.3, 0.2) == pytest.approx((0.3, 0.2))
-    assert fatias_da_barra(0.9, 0.4) == pytest.approx((0.9, 0.1))
-    assert fatias_da_barra(-1.0, -1.0) == (0.0, 0.0)
-
-
 def test_as_tres_palavras_e_os_dois_cortes() -> None:
     """Folgada até 60 %, Apertada até 85 %, Cheia acima. Decisão R3."""
     assert palavra_da_ocupacao(0.0) == PALAVRA_FOLGADA
@@ -349,71 +313,3 @@ def test_as_tres_palavras_e_os_dois_cortes() -> None:
     assert palavra_da_ocupacao(3.0) == PALAVRA_CHEIA
 
 
-def test_nenhuma_palavra_do_medidor_carrega_culpa() -> None:
-    """A fronteira que a tela não atravessa, como portão."""
-    textos = [
-        PALAVRA_FOLGADA,
-        PALAVRA_APERTADA,
-        PALAVRA_CHEIA,
-        _rotulo_do_medidor(ADAPTADOR_1),
-        _rotulo_do_medidor(SEM_ADAPTADOR),
-        _selo_da_ocupacao(Ocupacao(slots_input=7 * HZ_INPUT_SEM_MIC)),
-        _texto_acessivel(Ocupacao(slots_input=7 * HZ_INPUT_SEM_MIC)),
-    ]
-
-    achados = [
-        f"{texto!r} contém {culpa!r}"
-        for texto in textos
-        for culpa in PALAVRAS_DE_CULPA
-        if culpa in texto.lower()
-    ]
-
-    assert not achados, (
-        "o medidor fala de OCUPAÇÃO, nunca de culpa:\n  " + "\n  ".join(achados)
-    )
-
-
-def test_o_selo_diz_de_onde_veio_o_numero() -> None:
-    """O selo é procedência, não enfeite: as 1.600 fatias são especificação."""
-    barra = Ocupacao(slots_input=2 * HZ_INPUT_SEM_MIC, slots_audio=HZ_AUDIO_COM_MIC)
-
-    assert _selo_da_ocupacao(barra) == "627/1600 · derivado da especificação"
-    assert _texto_acessivel(barra) == "627 de 1600"
-
-
-def test_o_rotulo_e_o_endereco_e_nunca_o_hci() -> None:
-    """`hci0` inverte entre boots; endereço, não (decisão M1)."""
-    assert _rotulo_do_medidor(ADAPTADOR_1) == f"Rádio em uso · {ADAPTADOR_1}"
-    assert _rotulo_do_medidor(SEM_ADAPTADOR) == "Rádio em uso · Não sei"
-    assert "hci" not in _rotulo_do_medidor(ADAPTADOR_1)
-
-
-def test_sem_controle_no_radio_cada_adaptador_ganha_uma_barra_em_zero() -> None:
-    """O estado desta bancada: adaptadores de pé, todos os controles no cabo."""
-    mesa = Mesa(
-        adaptadores=(
-            Adaptador(interface="hci0", no="1-1", vid="0a12", pid="0001"),
-            Adaptador(interface="hci1", no="1-2", vid="8087", pid="0033"),
-        )
-    )
-
-    barras = _medidores_da_mesa(mesa, {})
-
-    assert [nome for nome, _ in barras] == ["0a12:0001", "8087:0033"]
-    assert all(barra.slots_total == 0.0 for _nome, barra in barras)
-    assert all(barra.rotulo == PALAVRA_FOLGADA for _nome, barra in barras)
-
-
-def test_com_controle_no_radio_a_barra_e_por_endereco() -> None:
-    """Quem sabe o endereço é o `HID_PHYS`, e é ele que nomeia a barra."""
-    mesa = Mesa(adaptadores=(Adaptador(interface="hci0", no="1-1"),))
-    ocupacoes = {ADAPTADOR_2: Ocupacao(slots_input=HZ_INPUT_SEM_MIC, controles=1)}
-
-    barras = _medidores_da_mesa(mesa, ocupacoes)
-
-    assert [nome for nome, _ in barras] == [ADAPTADOR_2]
-
-
-def test_sem_adaptador_e_sem_controle_nao_ha_barra_nenhuma() -> None:
-    """A linha "Nenhum adaptador Bluetooth encontrado" já disse tudo."""
-    assert _medidores_da_mesa(Mesa(), {}) == []

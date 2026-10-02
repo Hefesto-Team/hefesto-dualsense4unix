@@ -740,80 +740,6 @@ def test_o_governador_pergunta_o_nome_ao_dono_da_entrada(
     )
 
 
-def test_a_secao_mesa_pergunta_o_nome_ao_dono_da_entrada(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A coluna «Onde está» diz o nome que o dono diz — e a procedência continua"""
-    from tests.conftest import exigir_gi_real
-
-    exigir_gi_real("a coluna 'Onde está' da secao_mesa")
-    from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
-        _onde_esta_o_adaptador,
-        _onde_esta_o_radio,
-    )
-    from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
-    from hefesto_dualsense4unix.integrations.mesa_de_radio import Adaptador, RadioUsb
-    from hefesto_dualsense4unix.utils.maquina import MapaDaMesa, PortaDeclarada
-
-    dono_do_nome = _DonoDoNome({"3-1.2": "Sala", "4-4": "Rack da TV"})
-    monkeypatch.setattr(ee, "nome_da_porta", dono_do_nome)
-    mapa = MapaDaMesa(
-        portas={"9": PortaDeclarada(caminho="3-1.2"), "7": PortaDeclarada(caminho="4-4")}
-    )
-    adaptador = Adaptador(
-        interface="hci0", no="/mentira/3-1.2", vid="2357", pid="0604", busnum=3,
-        devpath="1.2", painel="right",
-    )
-    wifi = RadioUsb(no="/mentira/4-4", vid="2357", pid="012d", busnum=4, devpath="4")
-
-    texto, dica = _onde_esta_o_adaptador(adaptador, mapa)
-    assert texto == "Sala"
-    assert dica is not None and "entrada 9" in dica and "3-1.2" in dica
-    assert _onde_esta_o_radio(wifi, None, mapa) == "Rack da TV"
-    assert dono_do_nome.perguntas == ["3-1.2", "4-4"]
-    assert _onde_esta_o_adaptador(adaptador) == ("Barramento 3, porta 1.2 · Direita", None)
-
-
-def test_a_frase_e_a_coluna_dizem_o_mesmo_nome_da_mesma_porta(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A MESMA porta, as duas telas, o MESMO nome — com o dono de verdade."""
-    from tests.conftest import exigir_gi_real
-
-    exigir_gi_real("a coluna 'Onde está' da secao_mesa")
-    from hefesto_dualsense4unix.app.actions.config import secao_mesa
-    from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
-    from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
-    from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
-    from hefesto_dualsense4unix.integrations import mesa_de_radio
-    from hefesto_dualsense4unix.utils import maquina
-
-    pci = "0000:0c:00.3"
-    no_extensor = mesa_de_radio.Adaptador(
-        interface="hci3", no="/mentira/3-4.1.4", vid="2357", pid="0604", busnum=3,
-        devpath="4.1.4", controlador_pci=pci,
-    )
-    documento = maquina.MaquinaConfig(
-        mapa=maquina.MapaDaMesa(portas={"9": maquina.PortaDeclarada(
-            lugar=maquina.lugar_de(pci, "4.1.4"), nome="Extensor à esquerda")}),
-    )
-    monkeypatch.setattr(ee, "carregar_maquina", lambda: documento)
-    monkeypatch.setattr(secao_mesa, "carregar_maquina", lambda: documento)
-    monkeypatch.setattr(ee, "_controladores_do_sistema", lambda: {3: pci})
-    monkeypatch.setattr(bd, "a_suite_esta_rodando", lambda: False)
-    monkeypatch.setattr(bd, "enderecos_pelo_kernel", lambda *_a, **_k: {})
-    monkeypatch.setattr(mesa_de_radio, "adaptadores_bluetooth", lambda **_k: [no_extensor])
-    amostra = {ADAPTADOR_A: ar.ArDoAdaptador(hci=3, endereco=ADAPTADOR_A)}
-
-    na_frase = gov.nome_da_porta(ADAPTADOR_A, amostra=amostra)
-    na_coluna, _dica = secao_mesa._onde_esta_o_adaptador(no_extensor, documento.mapa)
-
-    assert na_frase == "Extensor à esquerda"
-    assert na_coluna == na_frase, (
-        f"a frase diz {na_frase!r} e a coluna diz {na_coluna!r} sobre a mesma porta"
-    )
-
-
 #: ``utils/rotulo_da_entrada.py``, só stdlib, para as ordens compor dali sem o
 _O_DONO = "utils/rotulo_da_entrada.py"
 _OS_QUE_PODEM = {
@@ -821,12 +747,12 @@ _OS_QUE_PODEM = {
     (_O_DONO, "define a palavra"): "é o dono (D-2609-O-NOME-E-DA-POSICAO)",
     (_O_DONO, "compõe com a palavra"): "é o dono (D-2609-O-NOME-E-DA-POSICAO)",
     # sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01 (a cópia da palavra é um segundo dono)
-    ("app/widgets/calibrar_entradas.py", "define a palavra"): (
+    ("interface/calibracao_das_entradas.py", "define a palavra"): (
         "a cópia que o gerador da aba 08 lê por AST — não importa do dono sem "
         "quebrar o gerador; travada junto por test_entrada_a_entrada_grava.py"
     ),
     # fica: o contador da calibração conta passos, não nomeia uma entrada
-    ("app/widgets/calibrar_entradas.py", "tem um modelo de .format"): (
+    ("interface/calibracao_das_entradas.py", "tem um modelo de .format"): (
         "o contador da calibração («entrada 3 de 7») conta PASSOS, não nomeia uma "
         "entrada; e `app/widgets/` está fora da posse da O-MAPA-QUE-ELA-CORRIGE-01"
     ),

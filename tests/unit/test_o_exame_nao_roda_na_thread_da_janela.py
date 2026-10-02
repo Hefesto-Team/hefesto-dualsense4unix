@@ -11,11 +11,7 @@ exigir_gi_real("o exame fora da thread do GTK")
 
 _gi = pytest.importorskip("gi", reason="precisa de PyGObject")
 _gi.require_version("Gtk", "3.0")
-from gi.repository import GLib
 
-from hefesto_dualsense4unix.app.actions.config.secao_exame import (
-    PainelDoExame,
-)
 from hefesto_dualsense4unix.integrations.exame_da_mesa import (
     ESTADO_CERTO,
     Item,
@@ -45,35 +41,6 @@ class _ExecutorAdiado:
 class _Bancada:
     """O painel, o executor adiado e as duas espiãs, montados juntos."""
 
-    def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        from hefesto_dualsense4unix.app import ipc_bridge
-        from hefesto_dualsense4unix.integrations import exame_da_mesa
-
-        self.painel = PainelDoExame()
-        self.executor = _ExecutorAdiado()
-        self.exames: list[str] = []
-        self.postados: list[tuple[Any, tuple[Any, ...]]] = []
-        self.aplicados: list[tuple[Any, ...]] = []
-
-        monkeypatch.setattr(ipc_bridge, "_get_executor", lambda: self.executor)
-        monkeypatch.setattr(
-            exame_da_mesa,
-            "exame",
-            lambda **_k: (self.exames.append("exame"), ITENS)[1],
-        )
-        monkeypatch.setattr(exame_da_mesa, "veredito", lambda _itens: ESTADO_CERTO)
-        monkeypatch.setattr(
-            GLib,
-            "idle_add",
-            lambda funcao, *args, **_k: self.postados.append((funcao, args)),
-        )
-        original = self.painel.aplicar
-
-        def _aplicar_espiado(*args: Any) -> bool:
-            self.aplicados.append(args)
-            return original(*args)
-
-        self.painel.aplicar = _aplicar_espiado  # type: ignore[method-assign]
 
     def rodar_o_worker(self) -> None:
         """Roda o que foi para o executor — o que a thread de verdade faria."""
@@ -107,21 +74,6 @@ class TestOExameVaiParaOWorker:
         bancada.rodar_o_worker()
 
         assert bancada.exames == ["exame"]
-
-    def test_sem_executor_a_janela_nao_cai_e_o_painel_destrava(
-        self, bancada: _Bancada, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Sem worker não há exame — mas também não há painel travado."""
-        from hefesto_dualsense4unix.app import ipc_bridge
-
-        def _sem_executor() -> Any:
-            raise RuntimeError("interpretador encerrando")
-
-        monkeypatch.setattr(ipc_bridge, "_get_executor", _sem_executor)
-
-        bancada.painel.reexaminar()
-
-        assert bancada.painel._examinando is False
 
 
 class TestOResultadoVoltaPelaThreadDoGtk:

@@ -400,52 +400,6 @@ def test_o_nome_do_arquivo_e_o_mesmo_dos_dois_lados() -> None:
     assert audio_saida.NOME_REGRA_NUNCA_DORME == NOME == DROPIN.name
 
 
-def test_a_tela_denuncia_a_cura_arrancada() -> None:
-    """Com a regra fora do lugar, "acordado agora" não vale como "curado"."""
-    acordado_por_acaso = {SINKS_DO_CONTROLE[0]: "RUNNING"}
-    assert (
-        audio_saida.texto_do_sono(False, acordado_por_acaso)
-        == audio_saida.TEXTO_SONO_PODE_DORMIR
-    )
-
-
-def test_a_tela_le_os_quatro_estados() -> None:
-    """Os quatro que existem, e nenhum a mais."""
-    assert audio_saida.texto_do_sono(True, {}) == audio_saida.TEXTO_SONO_SEM_PLACA
-    assert (
-        audio_saida.texto_do_sono(True, {SINKS_DO_CONTROLE[0]: "SUSPENDED"})
-        == audio_saida.TEXTO_SONO_ATRASADO
-    )
-    assert (
-        audio_saida.texto_do_sono(
-            True, {SINKS_DO_CONTROLE[0]: "IDLE", SINKS_DO_CONTROLE[1]: "RUNNING"}
-        )
-        == audio_saida.TEXTO_SONO_ACORDADO
-    )
-    assert (
-        audio_saida.texto_do_sono(
-            True, {SINKS_DO_CONTROLE[0]: "IDLE", SINKS_DO_CONTROLE[1]: "SUSPENDED"}
-        )
-        == audio_saida.TEXTO_SONO_ATRASADO
-    ), "com DOIS controles, um dormindo já é um som que se perde"
-
-
-def test_a_leitura_do_pactl_pega_o_estado_e_ignora_o_resto_da_casa() -> None:
-    """Formato tabulado real, copiado de `pactl list sinks short` desta máquina."""
-    saida = (
-        "19595\talsa_output.pci-0000_0c_00.4.iec958-stereo\tPipeWire"
-        "\ts32le 2ch 48000Hz\tSUSPENDED\n"
-        "33286\talsa_output.pci-0000_0a_00.1.hdmi-stereo\tPipeWire\ts16le 2ch 48000Hz\tIDLE\n"
-        f"35872\t{SINKS_DO_CONTROLE[1]}\tPipeWire\ts16le 4ch 48000Hz\tSUSPENDED\n"
-        f"38849\t{SINKS_DO_CONTROLE[0]}\tPipeWire\ts16le 4ch 48000Hz\tRUNNING\n"
-    )
-    estados = audio_saida.sono_dos_sinks_do_controle(saida)
-    assert estados == {
-        SINKS_DO_CONTROLE[1]: "SUSPENDED",
-        SINKS_DO_CONTROLE[0]: "RUNNING",
-    }
-
-
 def test_o_caminho_da_regra_sai_do_home_e_nao_de_um_literal(tmp_path: Path) -> None:
     """A tela procura o arquivo onde o instalador o põe, em qualquer HOME."""
     esperado = tmp_path / ".config" / "wireplumber" / "wireplumber.conf.d" / NOME

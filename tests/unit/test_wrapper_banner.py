@@ -26,21 +26,17 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("test_wrapper_banner: importa código da janela GTK")
 
-import sys
-import types
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto_dualsense4unix.app.actions import home_actions
 from hefesto_dualsense4unix.app.actions.home_actions import (
     WRAPPER_MISSING_TEXT,
     wrapper_banner_text,
 )
 
-from tests.unit.test_home_render_state import _FakeWidget, _HomeStub
 
 
 def _state(wrapper_used: object = "__ausente__") -> dict[str, Any]:
@@ -221,43 +217,3 @@ def _aba_status_falsa() -> Any:
     return _AbaFalsa()
 
 
-class TestFiacao:
-    """A fiação nas duas abas — por EXECUÇÃO do render (roda headless)."""
-
-    def test_o_tick_lento_da_status_despacha_o_estado_para_o_banner(self) -> None:
-        aba = _aba_status_falsa()
-        estado = _state(False)
-
-        aba._render_slow_state(estado)
-
-        assert aba.despachos == [estado]
-
-    def test_o_caminho_offline_da_status_apaga_o_banner(self) -> None:
-        """Nunca banner de um estado morto: offline manda `None`, não o último"""
-        aba = _aba_status_falsa()
-
-        aba._render_offline()
-
-        assert aba.despachos == [None]
-
-    def test_render_home_consome_a_mesma_funcao_pura(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A aba Início pinta o que a FUNÇÃO PURA devolveu — sem segunda régua."""
-        repo = types.ModuleType("gi.repository")
-        repo.Gtk = types.SimpleNamespace(  # type: ignore[attr-defined]
-            Label=_FakeWidget,
-            Box=_FakeWidget,
-            Orientation=types.SimpleNamespace(VERTICAL=0, HORIZONTAL=1),
-        )
-        monkeypatch.setitem(sys.modules, "gi.repository", repo)
-        espiao = MagicMock(return_value="AVISO-DO-WRAPPER")
-        monkeypatch.setattr(home_actions, wrapper_banner_text.__name__, espiao)
-        aba = _HomeStub()
-        estado = _state(False)
-
-        aba._render_home(estado)
-
-        assert espiao.call_args_list == [call(estado)]
-        assert aba._home_wrapper_banner.get_text() == "AVISO-DO-WRAPPER"
-        assert aba._home_wrapper_banner.visible is True

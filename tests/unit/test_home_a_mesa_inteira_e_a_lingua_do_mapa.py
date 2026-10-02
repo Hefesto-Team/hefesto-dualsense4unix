@@ -50,7 +50,6 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.app.actions import home_actions
-from hefesto_dualsense4unix.app.actions.home_actions import HomeActionsMixin
 
 RAIZ = Path(__file__).resolve().parents[2]
 FIXTURE_EXTERNOS = RAIZ / "tests" / "fixtures" / "inventario_externos.json"
@@ -123,45 +122,6 @@ class _Widget:
         pass
 
 
-class _HomeStub:
-    _render_home = HomeActionsMixin._render_home
-    _render_home_controllers = HomeActionsMixin._render_home_controllers
-    _render_ponte_e_divergencia = HomeActionsMixin._render_ponte_e_divergencia
-    _mascara_escolhida_por_ela = HomeActionsMixin._mascara_escolhida_por_ela
-    _mascara_escolhida_com_fonte = HomeActionsMixin._mascara_escolhida_com_fonte
-
-    def __init__(self) -> None:
-        self._home_installed = True
-        self._home_guard = False
-        self._home_inflight = False
-        self._home_flavor_pedido: str | None = None
-        self._escolha_pendente: dict[str, str] | None = None
-        self._modo_vigente_do_daemon: str | None = None
-        self._mascara_vigente_do_daemon: str | None = None
-        for nome in (
-            "_home_mode_selector",
-            "_home_flavor_selector",
-            "_home_mode_desc",
-            "_home_origin_label",
-            "_home_session_label",
-            "_home_players_hint",
-            "_home_gamepad_opts",
-            "_home_controllers_box",
-            "_home_vpad_banner",
-            "_home_wrapper_banner",
-            "_home_shutdown_btn",
-            "_home_reconciliar_btn",
-            "_home_reconciliar_hint",
-            "_home_ponte_label",
-            "_home_divergencia_banner",
-        ):
-            setattr(self, nome, _Widget())
-        self._home_offline = False
-
-    def _status_toast(self, _c: str, _m: str) -> None:
-        pass
-
-
 @pytest.fixture()
 def fake_gtk(monkeypatch: pytest.MonkeyPatch) -> None:
     repo = types.ModuleType("gi.repository")
@@ -204,84 +164,8 @@ def _estado_da_mesa_mista() -> dict[str, Any]:
     }
 
 
-def _textos_dos_cards(host: _HomeStub) -> list[str]:
-    return [
-        str(filho.texto)
-        for card in host._home_controllers_box.get_children()
-        for filho in ([card, *card.get_children()])
-        if getattr(filho, "texto", "")
-    ]
-
-
 class TestAContaDaMesaContaQuemEstaNaMesa:
-    def test_dois_dualsense_e_um_externo_nao_dizem_dois_controles(self) -> None:
-        """A MORDIDA da I5, primeira metade do §5."""
-        frase = home_actions._format_players_hint(
-            _dois_dualsense(), [_um_externo()]
-        )
 
-        assert "2 controles" not in frase, (
-            f"a primeira tela continua contando só quem ela adotou: {frase!r}"
-        )
-        assert frase.startswith("3 controles")
-
-    def test_a_frase_nao_promete_que_o_externo_e_um_jogador(self) -> None:
-        """O §6 da sprint proíbe, e a proibição tem lastro no mapa de canais."""
-        frase = home_actions._format_players_hint(
-            _dois_dualsense(), [_um_externo()]
-        )
-
-        assert "3 jogadores" not in frase
-        assert "só vê" in frase
-
-    def test_sem_externo_a_frase_antiga_fica_inteira(self) -> None:
-        """A régua sabe dizer NÃO. Mesa só de DualSense não mudou uma vírgula."""
-        assert (
-            home_actions._format_players_hint(_dois_dualsense())
-            == "2 controles = 2 jogadores"
-        )
-
-    def test_o_frame_desenha_tres_cards(self, fake_gtk: None) -> None:
-        """A MORDIDA da I5, segunda metade do §5: 2 DualSense + 1 externo = 3.
-
-        Arranque a leitura de `external` (`externos_na_mesa`) e o frame volta a
-        ter dois cards com três aparelhos na mesa.
-        """
-        host = _HomeStub()
-
-        host._render_home(_estado_da_mesa_mista())
-
-        cards = host._home_controllers_box.get_children()
-        assert len(cards) == 3, (
-            f"o frame Controles desenhou {len(cards)} cards para uma mesa de "
-            "três. A aba Configurações mostra os três desde a 8BIT-01."
-        )
-
-    def test_o_card_do_externo_diz_a_marca_e_que_o_hefesto_so_ve(
-        self, fake_gtk: None
-    ) -> None:
-        """O que a pessoa procura ao ver um controle que não acende."""
-        host = _HomeStub()
-
-        host._render_home(_estado_da_mesa_mista())
-
-        textos = " | ".join(_textos_dos_cards(host))
-        assert "só vê" in textos
-        assert "Controle" in textos
-
-    def test_um_externo_sozinho_tira_a_aba_do_nenhum_controle(
-        self, fake_gtk: None
-    ) -> None:
-        """Só o 8BitDo na mesa deixou de ser "Nenhum controle conectado."."""
-        host = _HomeStub()
-        estado = _estado_da_mesa_mista()
-        estado["controllers"] = []
-
-        host._render_home(estado)
-
-        textos = _textos_dos_cards(host)
-        assert "Nenhum controle conectado." not in textos
-        assert len(host._home_controllers_box.get_children()) == 1
 
     def test_o_payload_manda_e_o_cache_e_o_degrau_de_tras(self) -> None:
         """`state_full` NÃO publica `external` hoje — medido por leitura.
@@ -363,48 +247,6 @@ class TestOCardFalaALinguaDoMapa:
         )
         assert "?" not in home_actions.palavra_do_transporte(None)
 
-    def test_o_card_do_adotado_e_o_do_externo_falam_igual(
-        self, fake_gtk: None
-    ) -> None:
-        """Dois dialetos lado a lado no MESMO frame seria o defeito de novo."""
-        host = _HomeStub()
-
-        host._render_home(_estado_da_mesa_mista())
-
-        textos = " | ".join(_textos_dos_cards(host))
-        assert "Bluetooth" not in textos
-        assert home_actions.palavra_do_transporte("usb") in textos
-        assert home_actions.palavra_do_transporte("bt") in textos
-
-    @pytest.mark.xfail(
-        strict=True,
-        reason=(
-            "as outras três superfícies são de outros donos nesta leva: "
-            "`external_controllers.transport_label` (Cabo (USB)/Bluetooth), "
-            "`config/secao_mesa.py` (Rádio em uso) e a aba Status. MEDIDO em "
-            "24/08/2026, §2.2h da sprint. Quando as três falarem a língua do "
-            "mapa este teste PASSA e o strict reprova — que é o gatilho para "
-            "apagar o xfail."
-        ),
-    )
-    def test_as_quatro_superficies_dizem_as_mesmas_palavras(self) -> None:
-        """O contrato inteiro da I9: um vocabulário só, o do mapa."""
-        from hefesto_dualsense4unix.app.actions.external_controllers import (
-            transport_label,
-        )
-
-        dialetos = {
-            "Início": {
-                home_actions.palavra_do_transporte("usb"),
-                home_actions.palavra_do_transporte("bt"),
-            },
-            "externos": {
-                transport_label({"bus": "usb"}),
-                transport_label({"bus": "bluetooth"}),
-            },
-        }
-        assert dialetos["Início"] == dialetos["externos"], dialetos
-
 
 class TestOAvisoDeGrabFalaComEla:
     """25/08/2026 — a metade da I9 que a ``ESCONDE-SÓ-O-HIDRAW-01`` destravou."""
@@ -458,27 +300,3 @@ class TestOAvisoDeGrabFalaComEla:
             is None
         )
 
-    def test_o_card_leva_a_linha_e_o_porque_no_hover(self, fake_gtk: None) -> None:
-        """A MORDIDA do hover: arranque o `set_tooltip_text` e isto reprova.
-
-        A fileira tem até quatro cards e o aviso mora DENTRO de um deles — o
-        porquê inteiro na tela roubaria a largura dos vizinhos. O hover é o
-        mesmo desenho da fita apagada do cabeçalho, do mesmo dia.
-        """
-        host = _HomeStub()
-        estado = _estado_da_mesa_mista()
-        estado["primary_grab_state"] = "failed"
-
-        host._render_home(estado)
-
-        avisos = [
-            filho
-            for card in host._home_controllers_box.get_children()
-            for filho in card.get_children()
-            if getattr(filho, "texto", "") == home_actions.AVISO_DE_GRAB_LINHA
-        ]
-        assert len(avisos) == 1, "o aviso de duplicação não saiu no card do primário"
-        assert avisos[0].dica == home_actions.AVISO_DE_GRAB_PORQUE, (
-            "o card mostra a linha e não carrega o porquê. Sem o hover, a frase "
-            "diz o que aconteceu e não diz o que fazer."
-        )

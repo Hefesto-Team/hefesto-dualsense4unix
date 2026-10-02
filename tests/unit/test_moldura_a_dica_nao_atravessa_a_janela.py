@@ -13,16 +13,9 @@ import pytest
 _gi = pytest.importorskip("gi", reason="precisa de PyGObject")
 _gi.require_version("Gtk", "3.0")
 _gi.require_version("Gdk", "3.0")
-from gi.repository import Gdk, Gtk
+from gi.repository import Gtk
 
-from hefesto_dualsense4unix.app.actions.config.mixin import ConfigActionsMixin
-from hefesto_dualsense4unix.app.constants import GUI_DIR
 from tests.unit.aba_config_sem_a_janela import aba_config_montada
-from hefesto_dualsense4unix.app.theme import (
-    ESCALA_PADRAO,
-    escalar_css,
-    escalar_nome_da_fonte,
-)
 
 LARGURA_DA_MEDIDA = 1868
 
@@ -37,38 +30,6 @@ def _gtk_pronto() -> bool:
 
 
 pytestmark = pytest.mark.skipif(not _gtk_pronto(), reason="sem GTK/display utilizável")
-
-
-@pytest.fixture(autouse=True, scope="module")
-def _tema_na_escala_que_sai() -> Iterator[None]:
-    """Aplica o tema pelos dois canais de `apply_theme`, e desfaz."""
-
-    delta = ESCALA_PADRAO
-    tela = Gdk.Screen.get_default()
-    provider = Gtk.CssProvider()
-    bruto = (GUI_DIR / "theme.css").read_text(encoding="utf-8")
-    provider.load_from_data(escalar_css(bruto, delta).encode("utf-8"))
-    if tela is not None:
-        Gtk.StyleContext.add_provider_for_screen(
-            tela, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-        )
-    settings = Gtk.Settings.get_default()
-    anterior = None
-    if settings is not None and delta:
-        anterior = settings.get_property("gtk-font-name")
-        settings.set_property(
-            "gtk-font-name", escalar_nome_da_fonte(anterior or "", delta)
-        )
-    yield
-    if settings is not None and anterior is not None:
-        settings.set_property("gtk-font-name", anterior)
-    if tela is not None:
-        Gtk.StyleContext.remove_provider_for_screen(tela, provider)
-
-
-class _HospedeiroDaAba(ConfigActionsMixin):
-    def __init__(self, builder: Gtk.Builder) -> None:
-        self.builder = builder
 
 
 def _descer(widget: Any) -> Iterator[Any]:

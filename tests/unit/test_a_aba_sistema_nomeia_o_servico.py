@@ -220,26 +220,3 @@ class TestOQueFicaComOHefesto:
         )
 
 
-class TestQuemNaoRespondeuEOServico:
-    """Estas três caem na COLUNA DE VALORES da aba, dentro da faixa "O serviço"."""
-
-    @pytest.mark.parametrize(
-        "funcao",  # (noqa-acento): nome do parâmetro, casado por pytest
-        [
-            ambiente_na_tela.descrever_teclado_na_tela,
-            ambiente_na_tela.descrever_display_grafico,
-            ambiente_na_tela.descrever_steam_encontrada,
-        ],
-    )
-    def test_o_ramo_de_nao_consegui_ler_culpa_o_servico(self, funcao: Any) -> None:
-        texto = funcao({})
-        assert "não consegui ler" in texto, (
-            f"{funcao.__name__} deixou de ter o ramo honesto de 'não consegui "
-            f"ler' — a frase de hoje é {texto!r}"
-        )
-        assert PALAVRA not in texto, (
-            f"{funcao.__name__} diz {texto!r}. O que pode estar desligado é o "
-            "SERVIÇO — é ele que o systemd para e que deixa de responder ao "
-            "IPC. E esta frase vai para a coluna de valores da aba Sistema, "
-            "debaixo da faixa que diz 'O serviço'."
-        )

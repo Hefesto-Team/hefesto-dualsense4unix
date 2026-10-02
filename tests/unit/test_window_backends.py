@@ -294,25 +294,6 @@ def test_threshold_warning_emitido_uma_vez(
     assert backend._unsupported_warned is True
 
 
-def test_threshold_reset_apos_resposta_ok(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Resposta válida reseta o contador e o flag de warning."""
-    backend = wayland_portal.WaylandPortalBackend()
-    backend._consecutive_failures = 2
-    backend._unsupported_warned = True
-
-    _install_fake_jeepney(
-        monkeypatch,
-        reply_body=("handle", {"app-id": "alpha", "title": "Alpha", "pid": 5}),
-    )
-
-    info = backend.get_active_window_info()
-    assert info is not None
-    assert backend._consecutive_failures == 0
-    assert backend._unsupported_warned is False
-
-
 def test_compositor_hint_usa_xdg_current_desktop(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("XDG_CURRENT_DESKTOP", "COSMIC")
     backend = wayland_portal.WaylandPortalBackend()

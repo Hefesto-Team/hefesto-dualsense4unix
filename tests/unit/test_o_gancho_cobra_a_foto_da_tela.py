@@ -24,7 +24,7 @@ def _carregar():
 
 portao = _carregar()
 
-UMA_ABA = "src/hefesto_dualsense4unix/app/widgets/controller_card.py"
+UMA_ABA = "src/hefesto_dualsense4unix/interface/cartao_do_controle.py"
 UMA_PAGINA = "src/hefesto_dualsense4unix/interface/paginas/09-sistema.html"
 O_RETRATO = "src/hefesto_dualsense4unix/interface/olhar.py"
 UMA_FOTO = "docs/usage/assets/aba-01-jogar.png"

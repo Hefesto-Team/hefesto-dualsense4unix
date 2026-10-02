@@ -11,11 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from hefesto_dualsense4unix.app.actions.emulation_actions import (
-    STEAM_NAO_ENCONTRADA,
-    EmulationActionsMixin,
-    markup_status_steam_input,
-)
+from hefesto_dualsense4unix.app.actions.emulation_actions import EmulationActionsMixin
 from hefesto_dualsense4unix.integrations import proton_pin
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 from hefesto_dualsense4unix.integrations import storm_doctor as sd
@@ -73,13 +69,6 @@ class TestOsQuatroLayouts:
         """Um quinto layout tem de passar por aqui — e pela frase da tela."""
         assert set(_LAYOUTS.values()) == set(slo.RAIZES_STEAM_RELATIVAS)
 
-    @pytest.mark.parametrize("nome", sorted(_LAYOUTS))
-    def test_o_cartao_da_aba_acha_o_steam_input_ligado(
-        self, nome: str, home_isolado: Path
-    ) -> None:
-        """O defeito medido: em três dos quatro isto devolvia None ("não achei")."""
-        _casa_com_steam(home_isolado, _LAYOUTS[nome])
-        assert EmulationActionsMixin._steam_input_is_on() is True
 
     @pytest.mark.parametrize("nome", sorted(_LAYOUTS))
     def test_o_cartao_nomeia_o_jogo_em_qualquer_layout(
@@ -110,21 +99,6 @@ class TestOsQuatroLayouts:
         _casa_com_steam(home_isolado, _LAYOUTS["flatpak"], appid="1000")
         assert len(slo.raizes_de_jogos(home_isolado)) == 2
         assert EmulationActionsMixin._steam_input_appids_ligados() == [_SACKBOY, "1000"]
-
-
-class TestAusenciaSeDeclara:
-    def test_sem_steam_nenhuma_o_cartao_continua_dizendo_nao_sei(
-        self, home_isolado: Path
-    ) -> None:
-        assert EmulationActionsMixin._steam_input_is_on() is None
-        assert slo.raizes_de_jogos(home_isolado) == []
-
-    def test_a_tela_diz_onde_procurou(self) -> None:
-        """O cinza seco fazia a pessoa concluir que não tem Steam instalada."""
-        markup = markup_status_steam_input(None, [], [])
-        assert STEAM_NAO_ENCONTRADA in markup
-        assert "procurei em" in markup
-        assert "Flatpak" in markup and "Snap" in markup
 
 
 class TestAllowlistNoMesmoArquivo:

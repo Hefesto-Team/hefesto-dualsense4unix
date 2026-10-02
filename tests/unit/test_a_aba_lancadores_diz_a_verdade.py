@@ -798,31 +798,6 @@ def test_os_jogos_dispensados_do_lembrete_aparecem_na_lista(desenho):
     _gesto("voltar-a-perguntar")
 
 
-def test_voltar_a_perguntar_escreve_no_arquivo_de_verdade(ctx):
-    """O par completo da dispensa, contra o JSON do lar de mentira.
-
-    O `conftest.py` desta casa desvia `HOME` e os quatro `XDG_*`, então este
-    teste escreve num arquivo temporário — nunca no dela. É a prova mais forte
-    que este botão pode ter: não *"a função foi chamada"*, mas **o arquivo
-    mudou**.
-
-    A MORDIDA: troque o corpo de `remove_dismissed_appid` por `return True` e
-    este teste reprova — o botão diria que desfez, e o jogo continuaria
-    dispensado para sempre.
-    """
-    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
-
-    assert lwd.load_dismissed_appids() == set(), "o lar de mentira nasceu sujo"
-
-    lwd.add_dismissed_appid("1070560")
-    assert "1070560" in lwd.load_dismissed_appids()
-
-    _gesto("voltar-a-perguntar")(ctx, {"v": "1070560"}, None)
-    assert "1070560" not in lwd.load_dismissed_appids(), (
-        "o gesto disse que aplicou e o `launch_dialog_dismissed.json` continua "
-        "com o appid — o lembrete fica desligado para sempre")
-
-
 def test_voltar_a_perguntar_recusa_dizendo_quando_o_arquivo_nao_aceita(
         ctx, monkeypatch):
     """Um clique que falha calado é o defeito mais caro desta casa.
@@ -840,17 +815,6 @@ def test_voltar_a_perguntar_recusa_dizendo_quando_o_arquivo_nao_aceita(
     monkeypatch.setattr(lwd, "remove_dismissed_appid", lambda a: False)
     with pytest.raises(RuntimeError, match="lembrete continua desligado"):
         _gesto("voltar-a-perguntar")(ctx, {"v": "4242"}, None)
-
-
-def test_remover_um_appid_que_nao_estava_na_lista_devolve_falso():
-    """`False` também quando não havia o que remover — e é a mesma verdade."""
-    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
-
-    assert lwd.remove_dismissed_appid("999999") is False
-    lwd.add_dismissed_appid("111")
-    assert lwd.remove_dismissed_appid("111") is True
-    assert lwd.remove_dismissed_appid("111") is False, (
-        "o segundo clique na mesma linha disse que desfez de novo")
 
 
 def test_a_ponte_confirmada_chega_ao_contador(desenho):

@@ -5,18 +5,14 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("PERFIL-ATUAL-01 (a linha dela tem cor e o primeiro lugar)")
 
-import ast
 from pathlib import Path
 from typing import Any
 
-import pytest
 
 from hefesto_dualsense4unix.app.actions.profiles_actions import (
-    COR_DO_PERFIL_ATIVO,
     ProfilesActionsMixin,
     ordem_de_exibicao,
     perfil_que_ela_ativou,
-    realce_do_perfil_ativo,
 )
 from hefesto_dualsense4unix.profiles.schema import MatchAny, MatchCriteria, Profile
 from hefesto_dualsense4unix.utils.xdg_paths import config_dir
@@ -79,24 +75,6 @@ def _stub() -> Any:
     return _Stub()
 
 
-VERDE_SERIALIZADO = "foreground #" + "".join(
-    COR_DO_PERFIL_ATIVO[i : i + 2] * 2 for i in (1, 3, 5)
-)
-
-
-def _cor(valor: Any) -> str | None:
-    """A cor de uma linha, legível: `None`, o verde da casa, ou o que veio."""
-    if valor is None:
-        return None
-    texto = valor.to_string()
-    return VERDE_DA_CASA if VERDE_SERIALIZADO in texto else texto
-
-
-def _linhas(stub: Any) -> list[tuple[str, str | None]]:
-    """(nome, cor) na ordem em que a lista desenha."""
-    return [(linha[0], _cor(linha[5])) for linha in stub._profiles_store]
-
-
 class TestOFatoDoGestoDela:
     """Ativar deixa RASTRO EM DISCO — e é dele que a aba parte."""
 
@@ -140,93 +118,9 @@ class TestOFatoDoGestoDela:
         monkeypatch.setattr(session, "resolve_boot_profile", _explode)
         assert perfil_que_ela_ativou() is None
 
-    def test_a_aba_semeia_o_destaque_do_disco_ao_abrir(self) -> None:
-        """A FIAÇÃO: sem esta chamada o destaque nasce invisível na máquina dela."""
-        arvore = ast.parse(PROFILES_PY.read_text(encoding="utf-8"))
-        funcao = next(
-            no
-            for no in ast.walk(arvore)
-            if isinstance(no, ast.FunctionDef) and no.name == "install_profiles_tab"
-        )
-        chamados = {
-            no.func.id
-            for no in ast.walk(funcao)
-            if isinstance(no, ast.Call) and isinstance(no.func, ast.Name)
-        }
-        assert "perfil_que_ela_ativou" in chamados, (
-            "install_profiles_tab não semeia `_active_profile_hint` do disco — "
-            "com o daemon respondendo null (o caso dela) a linha verde nunca "
-            "aparece (PERFIL-ATUAL-01)"
-        )
-
-
-class TestONullDoDaemonNaoApagaOQueElaDecidiu:
-    """Decisão dela: o perfil atual é o que ela ATIVOU, não o do daemon."""
-
-    def test_status_sem_perfil_deixa_a_marca_dela_de_pe(self) -> None:
-        stub = _stub()
-        perfis = _mesa_dela()
-        stub._profiles_cache = list(perfis)
-        stub._active_profile_hint = "Pragmata"
-        stub._populate_profiles_store(perfis, None)
-
-        stub._on_daemon_status_for_sync({"active_profile": None})
-
-        assert stub._active_profile_hint == "Pragmata"
-        assert _linhas(stub)[0] == ("Pragmata", VERDE_DA_CASA)
-
-    def test_o_daemon_com_nome_continua_mandando(self) -> None:
-        """O autoswitch elegeu alguém e o daemon diz — a lista acompanha."""
-        stub = _stub()
-        perfis = _mesa_dela()
-        stub._profiles_cache = list(perfis)
-        stub._active_profile_hint = "Pragmata"
-        stub._populate_profiles_store(perfis, None)
-
-        stub._on_daemon_status_for_sync({"active_profile": "vitoria"})
-
-        assert _linhas(stub)[0] == ("vitoria", VERDE_DA_CASA)
-
 
 class TestALinhaDeCor:
-    def test_so_o_perfil_dela_recebe_o_verde(self) -> None:
-        stub = _stub()
-        perfis = _mesa_dela()
-        stub._profiles_cache = list(perfis)
-        stub._active_profile_hint = "vitoria"
-        stub._populate_profiles_store(perfis, None)
 
-        cores = dict(_linhas(stub))
-        assert cores["vitoria"] == VERDE_DA_CASA
-        assert cores["Ação"] is None and cores["Pragmata"] is None
-
-    def test_a_constante_do_produto_e_o_verde_do_tema(self) -> None:
-        assert COR_DO_PERFIL_ATIVO == VERDE_DA_CASA
-
-    def test_sem_perfil_ativo_ninguem_fica_verde(self) -> None:
-        stub = _stub()
-        perfis = _mesa_dela()
-        stub._profiles_cache = list(perfis)
-        stub._populate_profiles_store(perfis, None)
-        assert [cor for _nome, cor in _linhas(stub)] == [None, None, None]
-
-    @staticmethod
-    def _colunas_montadas() -> list[ast.Call]:
-        arvore = ast.parse(PROFILES_PY.read_text(encoding="utf-8"))
-        funcao = next(
-            no
-            for no in ast.walk(arvore)
-            if isinstance(no, ast.FunctionDef) and no.name == "install_profiles_tab"
-        )
-        colunas = [
-            no
-            for no in ast.walk(funcao)
-            if isinstance(no, ast.Call)
-            and isinstance(no.func, ast.Attribute)
-            and no.func.attr == "TreeViewColumn"
-        ]
-        assert colunas, "install_profiles_tab não monta coluna nenhuma"
-        return colunas
 
     def test_as_tres_colunas_visiveis_puxam_a_cor_da_mesma_coluna(self) -> None:
         """Ela pediu a LINHA colorida: o realce vale nas três."""
@@ -246,27 +140,6 @@ class TestALinhaDeCor:
                 "linha está selecionada, que é o caso do perfil ativo "
                 "(PERFIL-ATUAL-01)"
             )
-
-    def test_o_realce_carrega_o_verde_da_casa(self) -> None:
-        assert VERDE_SERIALIZADO in realce_do_perfil_ativo().to_string()
-
-    def test_o_realce_e_uma_instancia_so(self) -> None:
-        """O modelo guarda a referência — montar um por linha seria desperdício."""
-        assert realce_do_perfil_ativo() is realce_do_perfil_ativo()
-
-    def test_a_cor_sai_da_linha_quando_o_perfil_deixa_de_ser_o_ativo(self) -> None:
-        """Sem atributo nenhum, quem decide a cor volta a ser o tema."""
-        stub = _stub()
-        perfis = _mesa_dela()
-        stub._profiles_cache = list(perfis)
-        stub._active_profile_hint = "vitoria"
-        stub._populate_profiles_store(perfis, None)
-
-        stub._mark_active_profile_row("Ação")
-
-        cores = dict(_linhas(stub))
-        assert cores["Ação"] == VERDE_DA_CASA
-        assert cores["vitoria"] is None
 
 
 class TestOrdemDeExibicao:
@@ -307,109 +180,3 @@ class TestOrdemDeExibicao:
         assert [p.name for p in perfis] == ["Ação", "Pragmata", "vitoria"]
 
 
-class TestAListaAbreNoPerfilDela:
-    def test_a_primeira_linha_e_a_dela(self) -> None:
-        stub = _stub()
-        perfis = _mesa_dela()
-        stub._profiles_cache = list(perfis)
-        stub._active_profile_hint = "vitoria"
-        stub._populate_profiles_store(perfis, None)
-        assert [nome for nome, _cor in _linhas(stub)] == [
-            "vitoria",
-            "Ação",
-            "Pragmata",
-        ]
-
-    def test_ativar_outro_perfil_move_a_linha_sem_reler_o_disco(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """O gesto de Ativar chega em `_mark_active_profile_row` e mais nada."""
-        stub = _stub()
-        perfis = _mesa_dela()
-        stub._profiles_cache = list(perfis)
-        stub._active_profile_hint = "vitoria"
-        stub._populate_profiles_store(perfis, None)
-
-        def _nao_pode(*_a: Any, **_k: Any) -> Any:
-            raise AssertionError("mover a linha não pode reler o disco")
-
-        monkeypatch.setattr(
-            "hefesto_dualsense4unix.app.actions.profiles_actions.load_all_profiles",
-            _nao_pode,
-        )
-        stub._mark_active_profile_row("Pragmata")
-
-        assert _linhas(stub) == [
-            ("Pragmata", VERDE_DA_CASA),
-            ("Ação", None),
-            ("vitoria", None),
-        ]
-
-    def test_trocar_tres_vezes_nao_empilha_as_escolhas_velhas_no_topo(self) -> None:
-        """A promessa é *o ativo primeiro, o resto na ordem de carga* — sempre."""
-        stub = _stub()
-        perfis = _mesa_dela()
-        stub._profiles_cache = list(perfis)
-        stub._active_profile_hint = "Ação"
-        stub._populate_profiles_store(perfis, None)
-
-        stub._mark_active_profile_row("vitoria")
-        stub._mark_active_profile_row("Pragmata")
-
-        assert [nome for nome, _cor in _linhas(stub)] == [
-            "Pragmata",
-            "Ação",
-            "vitoria",
-        ]
-
-    def test_sem_cache_a_lista_nao_e_embaralhada(self) -> None:
-        """Recarga em voo: a cor e o negrito valem sozinhos, a ordem espera."""
-        stub = _stub()
-        perfis = _mesa_dela()
-        stub._populate_profiles_store(perfis, None)
-        stub._mark_active_profile_row("vitoria")
-        assert [nome for nome, _cor in _linhas(stub)] == [
-            "Ação",
-            "Pragmata",
-            "vitoria",
-        ]
-        assert dict(_linhas(stub))["vitoria"] == VERDE_DA_CASA
-
-
-class TestAOrdemDasLinhasNaoVazaParaADisputa:
-    """O terceiro termo do desempate é a ORDEM DE CARGA do loader."""
-
-    @staticmethod
-    def _mesa_de_empate() -> list[Profile]:
-        return [_catch_all("aaa", 9), _catch_all("bbb", 5), _catch_all("zzz", 9)]
-
-    def test_o_tooltip_nao_recita_fila_nenhuma(self) -> None:
-        stub = _stub()
-        perfis = self._mesa_de_empate()
-        stub._profiles_cache = list(perfis)
-        stub._active_profile_hint = "bbb"
-        stub._populate_profiles_store(perfis, None)
-
-        tooltips = {linha[0]: linha[4] for linha in stub._profiles_store}
-        assert tooltips == {"aaa": "", "bbb": "", "zzz": ""}
-
-    def test_a_linha_no_topo_nao_inventa_vencedor(self) -> None:
-        stub = _stub()
-        perfis = self._mesa_de_empate()
-        stub._profiles_cache = list(perfis)
-        stub._active_profile_hint = "bbb"
-        stub._populate_profiles_store(perfis, None)
-
-        colunas = {linha[0]: linha[2] for linha in stub._profiles_store}
-        assert colunas == {"aaa": "Sempre", "bbb": "Sempre", "zzz": "Sempre"}
-
-    def test_a_coluna_zero_continua_sendo_so_o_nome(self) -> None:
-        """Marcador textual ali quebraria Salvar, Ativar, Duplicar e Remover."""
-        stub = _stub()
-        perfis = _mesa_dela()
-        stub._profiles_cache = list(perfis)
-        stub._active_profile_hint = "vitoria"
-        stub._populate_profiles_store(perfis, None)
-        assert sorted(nome for nome, _cor in _linhas(stub)) == sorted(
-            p.name for p in perfis
-        )

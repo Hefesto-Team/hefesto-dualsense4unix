@@ -136,7 +136,7 @@ TOUCHPAD_PUBLICADO = {
 def test_o_touchpad_deixou_de_ser_constante(pac, a02):
     """"Sem toque" era literal no código: um dedo não mudava um pixel."""
     import mesa_viva
-    from hefesto_dualsense4unix.app.widgets.sensor_widgets import texto_toques
+    from hefesto_dualsense4unix.interface.sensores import texto_toques
 
     tocando = _card(pac, a02, {**BASE, "inputs": {
         "touchpad": {**TOUCHPAD_PUBLICADO, "touching": True}}})
@@ -201,7 +201,7 @@ def test_a_aba_controles_nao_deixa_endereco_da_pagina_sem_pintor():
 def test_o_gerador_le_o_texto_de_tela_do_pacote(a02):
     """O `aba02.py` não pode ter uma SEGUNDA cópia das mesmas palavras."""
     import aba02
-    from hefesto_dualsense4unix.app.widgets import sensor_widgets
+    from hefesto_dualsense4unix.interface import sensores as sensor_widgets
 
     donos = {"ROTULO_DO_CLIQUE": a02, "CLICADO": a02, "texto_toques": sensor_widgets}
     achados = [n for n in donos if hasattr(aba02, n)]

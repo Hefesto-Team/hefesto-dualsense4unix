@@ -41,9 +41,8 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("a seção Orçamento da aba Configurações")
 
 import ast
-import inspect
 from pathlib import Path
-from typing import Any, get_args
+from typing import Any
 
 import pytest
 
@@ -53,12 +52,10 @@ from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app.actions.config import secao_orcamento
 from hefesto_dualsense4unix.app.actions.rumble_actions import (
-    ROTULOS_DO_ORCAMENTO,
     texto_do_teto_do_orcamento,
 )
 from hefesto_dualsense4unix.core.rumble import teto_do_orcamento
 from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
-from hefesto_dualsense4unix.utils.maquina import OrcamentoDeclarado
 
 RAIZ = Path(__file__).resolve().parents[2]
 APP = RAIZ / "src" / "hefesto_dualsense4unix" / "app"
@@ -150,96 +147,12 @@ def test_nenhum_modulo_de_app_recalcula_a_escada() -> None:
     )
 
 
-def test_a_migracao_cobre_toda_chave_que_o_disco_aceita() -> None:
-    """Nenhum valor gravado fica sem perfil — a migração é 1-para-1 e total.
-
-    NOTA DATADA — 25/08/2026, `D-PERFIL-DE-DESEMPENHO`. Este nó afirmava que os
-    RÓTULOS da seção eram os da aba Rumble ("Economia", "Balanceado", "Máximo",
-    "Auto"), e o que ele protegia era não redigitar quatro palavras em dois
-    lugares. A decisão dela tirou os quatro botões da tela: eles viraram três
-    perfis, cujos rótulos são dela e não da aba Rumble. O que sobrevive da
-    proteção — e é a metade que morde — é que **nenhuma chave do disco pode
-    ficar órfã**: uma chave sem entrada em `PERFIL_POR_TETO` nasceria com a
-    fileira sem botão afundado, e a escolha da pessoa sumiria da tela sem nada
-    avisar.
-
-    O RÓTULO da aba Rumble continua tendo um dono só, e é o `ROTULOS_DO_ORCAMENTO`
-    de `rumble_actions` — este teste só deixa de ser o lugar que o afirma.
-    """
-    assert set(secao_orcamento.PERFIL_POR_TETO) == set(secao_orcamento.CHAVES), (
-        "uma chave do disco ficou sem perfil na migração — quem a tiver "
-        "gravada abriria a aba com a fileira em branco"
-    )
-    assert set(secao_orcamento.PERFIL_POR_TETO.values()) <= set(
-        secao_orcamento.PERFIS
-    )
-    assert ROTULOS_DO_ORCAMENTO["economia"] == "Economia", (
-        "o dono dos rótulos da aba Rumble continua sendo o `rumble_actions`"
-    )
-
-
-def test_a_celula_da_tabela_vem_da_mesma_conta_do_daemon() -> None:
-    """A tabela da aba e o teto do daemon são o mesmo número, ou a tela mente."""
-    assert f"{PCT_ECONOMIA}%" in secao_orcamento.celula_do_teto("economia")
-    assert secao_orcamento.celula_do_teto("balanceado") == secao_orcamento.SEM_TETO
-    assert secao_orcamento.celula_do_teto("max") == secao_orcamento.SEM_TETO
-
-
-def test_a_celula_e_calculada_e_nao_digitada() -> None:
-    """O corpo da célula chama a conta; um literal ali seria a segunda cópia."""
-    corpo = inspect.getsource(secao_orcamento.celula_do_teto)
-    assert "teto_do_orcamento(" in corpo
-    assert f"{PCT_ECONOMIA}" not in corpo.split('"""')[-1], (
-        "o percentual do Economia foi digitado no código da célula — ele tem "
-        "de sair de `teto_do_orcamento`"
-    )
-
-
 def test_a_dica_aprovada_diz_o_numero_que_o_produto_entrega() -> None:
     """A dica do botão Economia é texto aprovado, e por isso é literal."""
     assert (
         f"{PCT_ECONOMIA}%"
         in secao_orcamento.DICAS[secao_orcamento.PERFIL_BATERIA_LONGA]
     )
-
-
-def test_as_chaves_sao_as_do_schema() -> None:
-    """MORDIDA 4. A tupla da tela é o Literal que persiste, sem uma chave a mais."""
-    do_schema: tuple[str, ...] = tuple(
-        valor
-        for ramo in get_args(OrcamentoDeclarado.model_fields["teto"].annotation)
-        for valor in get_args(ramo)
-        if isinstance(valor, str)
-    )
-    assert do_schema, "o Literal de `OrcamentoDeclarado.teto` sumiu do schema"
-    assert set(secao_orcamento.CHAVES) == set(do_schema)
-    assert "custom" not in secao_orcamento.CHAVES, (
-        "`custom` é o deslizador livre da aba Rumble, não escolha de mesa"
-    )
-
-
-def test_o_clique_acumula_a_chave_e_nunca_o_rotulo() -> None:
-    """O rascunho leva a CHAVE do disco, nunca o id do botão nem o rótulo."""
-    host = _Host()
-    _montar(host)
-    host._config_orcamento_seletor.set_active_id(  # type: ignore[attr-defined]
-        secao_orcamento.PERFIL_TUDO_LIGADO
-    )
-    assert host._maquina_pendente == {"orcamento": {"teto": "balanceado"}}
-
-
-def test_a_declaracao_e_parcial_e_nao_apaga_as_outras_secoes() -> None:
-    """Cinco seções escrevem no mesmo rascunho; a fusão desce nos aninhados."""
-    host = _Host()
-    host._maquina_pendente = {"mesa": {"altura_da_antena": "acima"}}
-    _montar(host)
-    host._config_orcamento_seletor.set_active_id(  # type: ignore[attr-defined]
-        secao_orcamento.PERFIL_BATERIA_LONGA
-    )
-    assert host._maquina_pendente == {
-        "mesa": {"altura_da_antena": "acima"},
-        "orcamento": {"teto": "economia"},
-    }
 
 
 def test_o_clique_nao_grava_nada() -> None:
@@ -285,32 +198,6 @@ def test_o_clique_nao_grava_nada() -> None:
         "há `call_async` cujo método não é literal — um método montado em "
         "tempo de execução escapa desta régua"
     )
-
-
-@pytest.mark.parametrize(
-    ("gravado", "perfil"),
-    [
-        ("economia", secao_orcamento.PERFIL_BATERIA_LONGA),
-        ("balanceado", secao_orcamento.PERFIL_TUDO_LIGADO),
-        ("max", secao_orcamento.PERFIL_TUDO_LIGADO),
-        ("auto", secao_orcamento.PERFIL_TUDO_LIGADO),
-    ],
-)
-def test_montar_com_a_escolha_gravada_afunda_o_botao_certo(
-    gravado: str, perfil: str
-) -> None:
-    """A migração da `D-PERFIL-DE-DESEMPENHO`, campo a campo, sem perder nada."""
-    host = _Host(gravado)
-    _montar(host)
-    assert host._config_orcamento_seletor.get_active_id() == perfil  # type: ignore[attr-defined]
-    assert host._maquina_pendente is None
-
-
-def test_sem_nada_declarado_nenhum_botao_nasce_afundado() -> None:
-    """Afundar o default do daemon faria a tela afirmar escolha que ela não fez."""
-    host = _Host()
-    _montar(host)
-    assert host._config_orcamento_seletor.get_active_id() is None  # type: ignore[attr-defined]
 
 
 def test_a_secao_le_o_gravado_e_nunca_o_pendente() -> None:

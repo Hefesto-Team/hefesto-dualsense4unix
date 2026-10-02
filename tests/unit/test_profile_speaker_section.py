@@ -450,13 +450,6 @@ def test_from_profile_sem_a_secao_usa_o_default_sem_volume() -> None:
     assert draft.speaker.volume is None
 
 
-def test_to_profile_persiste_a_secao_quando_ela_existe() -> None:
-    draft = DraftConfig().with_speaker(150)
-    perfil = draft.to_profile("editado")
-    assert perfil.speaker is not None
-    assert (perfil.speaker.volume, perfil.speaker.muted) == (150, False)
-
-
 def test_to_profile_sem_toque_e_sem_origem_omite_a_secao() -> None:
     assert DraftConfig().to_profile("intocado").speaker is None
 

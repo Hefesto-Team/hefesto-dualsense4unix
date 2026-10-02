@@ -41,12 +41,10 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.app.actions import home_actions
 from hefesto_dualsense4unix.app.actions.home_actions import (
     TEXTO_DESKTOP_SEM_MOUSE,
     TEXTO_DESKTOP_SEM_MOUSE_NEM_TECLADO,
     TEXTO_DESKTOP_SEM_TECLADO,
-    HomeActionsMixin,
     texto_do_desktop_sem_emulacao,
 )
 from hefesto_dualsense4unix.app.actions.mode_transition import (
@@ -292,30 +290,6 @@ class _FakeWidget:
         pass
 
 
-class _HomeStub:
-    _render_home = HomeActionsMixin._render_home
-    _render_home_controllers = HomeActionsMixin._render_home_controllers
-
-    def __init__(self) -> None:
-        self._home_installed = True
-        self._home_guard = False
-        self._home_offline = False
-        self._home_controllers_box = _FakeWidget()
-        self._home_mode_selector = _FakeWidget()
-        self._home_players_hint = _FakeWidget()
-        self._home_flavor_selector = _FakeWidget()
-        self._home_mode_desc = _FakeWidget()
-        self._home_origin_label = _FakeWidget()
-        self._home_session_label = _FakeWidget()
-        self._home_gamepad_opts = _FakeWidget()
-        self._home_vpad_banner = _FakeWidget()
-        self._home_wrapper_banner = _FakeWidget()
-        self._home_shutdown_btn = _FakeWidget()
-        self._home_reconciliar_btn = _FakeWidget()
-        self._home_reconciliar_hint = _FakeWidget()
-        self._home_desktop_aviso = _FakeWidget()
-
-
 @pytest.fixture()
 def fake_gtk(monkeypatch: pytest.MonkeyPatch) -> None:
     repo = types.ModuleType("gi.repository")
@@ -327,86 +301,3 @@ def fake_gtk(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "gi.repository", repo)
 
 
-class TestAAbaEscreveAFrase:
-    def test_o_segundo_tique_no_desktop_acende_o_aviso(self, fake_gtk: None) -> None:
-        """Dois tiques de propósito: o primeiro é o da transição (o restore"""
-        host = _HomeStub()
-        estado = _estado(mouse=False, teclado=True)
-
-        host._render_home(estado)
-        host._render_home(estado)
-
-        assert host._home_desktop_aviso.visible is True
-        assert host._home_desktop_aviso.get_text() == TEXTO_DESKTOP_SEM_MOUSE
-
-    def test_o_tique_da_transicao_ainda_nao_fala(self, fake_gtk: None) -> None:
-        host = _HomeStub()
-
-        host._render_home(_estado(mouse=False, teclado=True, gamepad=True))
-        host._render_home(_estado(mouse=False, teclado=True))
-
-        assert host._home_desktop_aviso.visible is False
-
-    def test_mouse_ligado_apaga_o_aviso(self, fake_gtk: None) -> None:
-        host = _HomeStub()
-        estado_ruim = _estado(mouse=False, teclado=True)
-        host._render_home(estado_ruim)
-        host._render_home(estado_ruim)
-
-        bom = _estado(mouse=True, teclado=True)
-        host._render_home(bom)
-
-        assert host._home_desktop_aviso.visible is False
-
-    def test_offline_apaga_o_aviso(self, fake_gtk: None) -> None:
-        host = _HomeStub()
-        host._home_desktop_aviso.visible = True
-
-        host._render_home(None)
-
-        assert host._home_desktop_aviso.visible is False
-
-    def test_o_aviso_nasce_invisivel(self, fake_gtk: None) -> None:
-        """Sem estado nenhum não há o que avisar (o widget é montado no"""
-        host = _HomeStub()
-
-        host._render_home(_estado(mouse=True, teclado=True))
-
-        assert host._home_desktop_aviso.visible is False
-
-
-def test_a_descricao_do_desktop_aponta_para_uma_aba_que_existe() -> None:
-    """A linha VIZINHA do aviso, e ela mentia desde 28/07."""
-    import re
-    from pathlib import Path
-
-    from hefesto_dualsense4unix.app.actions.home_actions import _MODE_DESCRIPTIONS
-
-    raiz = Path(__file__).resolve().parents[2]
-    barra = (
-        raiz / "src" / "hefesto_dualsense4unix"
-        / "interface" / "paginas" / "01-jogar.html"  # noqa-acento (pasta)
-    ).read_text(encoding="utf-8")
-    descricao = _MODE_DESCRIPTIONS["desktop"]
-
-    assert "aba Navegação" in descricao
-    assert "abas Mouse e Teclado" not in descricao
-    achado = re.search(
-        r'<a[^>]*class="aba"[^>]*href="06-navegacao\.html"[^>]*>([^<]+)', barra
-    )
-    assert achado is not None, (
-        "a aba de Navegação sumiu da barra das dez — a régua ficou cega"
-    )
-    assert achado.group(1).strip() == "Navegação", (
-        "a aba mudou de nome e a descrição do modo desktop ficou apontando "
-        f"para um rótulo que não existe mais (a barra diz {achado.group(1)!r})"
-    )
-
-
-def test_a_frase_do_mouse_espelha_o_gate_da_aba_navegacao() -> None:
-    """As duas pontas do mesmo caminho, e elas têm de casar."""
-    from hefesto_dualsense4unix.app.actions.mouse_actions import MODE_GATE_HINT
-
-    assert "Controlar o PC" in MODE_GATE_HINT
-    assert "aba Início" in MODE_GATE_HINT
-    assert "aba Navegação" in home_actions.TEXTO_DESKTOP_SEM_MOUSE

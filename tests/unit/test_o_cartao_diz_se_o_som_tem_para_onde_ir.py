@@ -22,16 +22,9 @@ from hefesto_dualsense4unix.app.fala_do_mapa import (
     CAUSA_DE_FORA,
 )
 from hefesto_dualsense4unix.app.fatos_do_mapa import FATOS
-from hefesto_dualsense4unix.app.widgets.controller_card import (
+from hefesto_dualsense4unix.interface.cartao_do_controle import (
     DICA_AUDIO_SEM_ENDERECO,
-    DICA_CANAL_ACORDADO,
-    DICA_CANAL_DORMINDO,
-    DICA_CANAL_E_PADRAO,
-    dica_canal_sem_a_regra,
     DICA_TITULO_SEM_VPAD,
-    SUFIXO_CANAL_ACORDADO,
-    SUFIXO_CANAL_DORMINDO,
-    TEXTO_AUDIO_SEM_ENDERECO,
     TEXTO_SELO_SAIDA_MUDA,
 )
 from hefesto_dualsense4unix.interface import onde
@@ -145,11 +138,6 @@ class TestALeituraDoSono:
             {UNIQ: audio_saida.RotaDasDuasCamadas(byte=2, sink_do_controle=SINK)}
         ) == {}
 
-    def test_o_vocabulario_tem_um_dono_so(self) -> None:
-        """As duas pontas dizem a MESMA palavra, e isso é medido, não confiado."""
-        assert audio_saida.CANAL_ACORDADO == SUFIXO_CANAL_ACORDADO
-        assert audio_saida.CANAL_DORMINDO == SUFIXO_CANAL_DORMINDO
-
 
 class TestOsSelos:
     """O alarme do bloco é UM: a saída muda (a camada 1)."""
@@ -204,17 +192,6 @@ class TestADicaDoCanal:
         """MORDE: devolva `dica_do_canal` ao pacote e esta linha reprova."""
         assert not hasattr(mod, "dica_do_canal")
 
-    @pytest.mark.parametrize(
-        "sono", ["", audio_saida.CANAL_ACORDADO, audio_saida.CANAL_DORMINDO])
-    def test_a_dica_nao_narra_o_canal(self, sono_lido, sono: str) -> None:
-        """MORDE: devolva a frase do canal ao `alto-canal-porque`."""
-        sono_lido(sono)
-        dita = _card(_entrada())["alto-canal-porque"]
-        assert dita == ""
-        for frase in (DICA_CANAL_ACORDADO, DICA_CANAL_DORMINDO,
-                      DICA_CANAL_E_PADRAO, dica_canal_sem_a_regra()):
-            assert frase not in dita, f"a dica do canal voltou a narrar: {dita!r}"
-
 
 class TestAGuardaSemEndereco:
     """Sem MAC, todo comando de som deste card cai no controle PRIMÁRIO."""
@@ -237,11 +214,6 @@ class TestAGuardaSemEndereco:
         assert porques["alto-porque"] == mod.DICA_ALTO_SEM_POSSE
         assert DICA_AUDIO_SEM_ENDERECO not in porques.values()
 
-    def test_o_cartao_apaga_as_pecas_que_mandam_som(self) -> None:
-        """A metade VISÍVEL: o `data-apagado` da moldura do alto-falante."""
-        card = _card(_entrada(uniq=None))
-        assert card["alto-apagado"] == mod.MIC_SEM_ALVO
-        assert TEXTO_AUDIO_SEM_ENDERECO not in card.values()
 
     def test_com_endereco_o_campo_volta_vazio_e_a_guarda_solta(self) -> None:
         """Vazio faz o piloto REMOVER o `data-apagado`, e a folha devolve as peças."""

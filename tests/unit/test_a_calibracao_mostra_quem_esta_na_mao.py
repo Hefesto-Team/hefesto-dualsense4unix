@@ -117,7 +117,7 @@ def test_cada_cartao_recebe_a_leitura_do_seu_proprio_controle(pacotes_mod, calib
     """O número do P3 é o do P3 — e não o do P1, nem o de uma constante."""
     colunas = _carga(pacotes_mod, 4)["colunas"]
     assert sorted(colunas) == ["p1", "p2", "p3", "p4"]
-    from hefesto_dualsense4unix.app.widgets.sensor_widgets import (
+    from hefesto_dualsense4unix.interface.sensores import (
         texto_eixo, texto_eixo_g,
     )
     for i in range(4):

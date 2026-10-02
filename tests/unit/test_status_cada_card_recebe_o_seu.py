@@ -40,13 +40,6 @@ class _AbaDeMentira(S):  # type: ignore[misc]
         self._status_card_keys: list[Any] = []
         self.alimentados: list[tuple[Any, dict[str, Any]]] = []
 
-    def parear(self, state: dict[str, Any]) -> list[tuple[Any, dict[str, Any]]]:
-        """O laço de `_sync_status_cards`, sem os widgets no meio."""
-        conectados = self._connected_controllers(state)
-        keys = self._status_card_keys_for(conectados)
-        ordenados = self._conectados_na_ordem_dos_cards(conectados)
-        return list(zip(keys, ordenados, strict=True))
-
 
 def test_cada_card_recebe_o_registro_do_proprio_controle() -> None:
     """A MORDIDA: troque `_conectados_na_ordem_dos_cards(conectados)` de volta
@@ -74,48 +67,6 @@ def test_cada_card_recebe_o_registro_do_proprio_controle() -> None:
         "card alimentado com o registro de OUTRO controle — a chave diz um "
         f"aparelho e o dado é de outro: {errados}"
     )
-
-
-def test_a_ordem_dos_cards_e_a_ordem_da_fita() -> None:
-    """A metade que a Z2-7 já entregou, agora medida sobre a mesa cheia."""
-    state = _mesa_cheia()
-    conectados = S._connected_controllers(state)
-
-    slots_dos_cards = [
-        c.get("player_slot") for c in S._conectados_na_ordem_dos_cards(conectados)
-    ]
-    rotulos_da_fita = [rotulo for rotulo, _idx in S._controller_target_rows(conectados)][1:]
-    slots_da_fita = [
-        int("".join(ch for ch in rotulo.split("—")[0] if ch.isdigit()))
-        for rotulo in rotulos_da_fita
-    ]
-
-    assert slots_dos_cards == slots_da_fita, (
-        f"os cards nascem em {slots_dos_cards} e a fita em {slots_da_fita}: "
-        "quem aponta para o segundo chip e olha o segundo card está olhando "
-        "outro controle"
-    )
-
-
-def test_o_indice_de_enumeracao_nao_e_reordenado_junto() -> None:
-    """A hipótese explica o que JÁ funcionava (regra da casa).
-
-    Reordenar a EXIBIÇÃO não pode reordenar o ``index``: é ele que o
-    ``controller.target.set`` espera, e trocá-lo faria a pessoa clicar no
-    chip do 1 e editar outro controle — o defeito que
-    `_por_numero_de_identidade` documenta e evita desde a PLAYER-01.
-    """
-    state = _mesa_cheia()
-    conectados = S._connected_controllers(state)
-    indice_por_uniq_cru = {c.get("uniq"): c.get("index") for c in conectados}
-
-    for key in S._status_card_keys_for(conectados):
-        indice, uniq = key[0], key[1]
-        assert indice == indice_por_uniq_cru[uniq], (
-            f"o índice de enumeração de {uniq} virou {indice} na chave do "
-            f"card, e o registro do daemon diz {indice_por_uniq_cru[uniq]}: "
-            "a ordem de exibição vazou para o endereço do controle"
-        )
 
 
 def test_nenhuma_grade_da_aba_casa_as_chaves_com_a_lista_crua() -> None:

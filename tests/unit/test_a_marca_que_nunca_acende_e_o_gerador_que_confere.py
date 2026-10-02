@@ -70,23 +70,6 @@ def _folhas(doc: str) -> str:
     return re.sub(r"/\*.*?\*/", "", blocos, flags=re.S)
 
 
-# ===========================================================================
-# 1. A MARCA SAIU — do pacote e da página
-# ===========================================================================
-def test_o_controle_de_prova_degrada_de_verdade() -> None:
-    """Sem isto as duas réguas do pacote passariam por AUSÊNCIA.
-
-    O dono da frase continua sendo `controller_card.texto_degradacao`, e para
-    esta entrada ele ainda responde. Se deixar de responder, a régua de baixo
-    mediria um controle inteiro e ficaria verde sobre qualquer pacote.
-    """
-    from hefesto_dualsense4unix.app.widgets.controller_card import texto_degradacao
-
-    assert texto_degradacao(DEGRADADO), (
-        "o controle de prova deixou de degradar para o dono da frase — escolha "
-        "outra combinação de `vpad_backend` e `vpad_motivo`")
-
-
 def test_o_cartao_da_01_nao_emite_a_marca() -> None:
     """MORDE: devolva `"degradou-cartao": ...` ao `a01_jogar.pacote` e reprova."""
     estado = {"connected": True, "native_mode": False, "paused": False,

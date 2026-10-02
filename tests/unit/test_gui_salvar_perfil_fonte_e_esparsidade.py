@@ -107,37 +107,6 @@ class TestEsparsidadeDoOverridePorControle:
         assert "lightbar" not in leds.model_fields_set
 
 
-class TestFonteDoBuild:
-    """O build tem de ler o DRAFT quando edita o perfil que o draft representa."""
-
-    def test_o_codigo_consulta_o_draft(self) -> None:
-        """Guarda de arquitetura: o módulo não lia `self.draft` em linha alguma."""
-        fonte = (
-            Path(__file__).resolve().parents[2]
-            / "src/hefesto_dualsense4unix/app/actions/profiles_actions.py"
-        ).read_text(encoding="utf-8")
-        build = fonte.split("_build_profile_from_editor", 1)[1]
-        assert 'getattr(self, "draft", None)' in build, (
-            "salvar pela aba Perfis tem de partir do draft quando o perfil "
-            "editado é o do draft — senão descarta o que as outras abas fizeram"
-        )
-        assert 'base["controllers"] = ' in build, (
-            "sem reinjetar as instâncias validadas, o override parcial densifica"
-        )
-
-    def test_perfil_novo_nao_herda_o_selecionado(self) -> None:
-        fonte = (
-            Path(__file__).resolve().parents[2]
-            / "src/hefesto_dualsense4unix/app/actions/profiles_actions.py"
-        ).read_text(encoding="utf-8")
-        build = fonte.split("_build_profile_from_editor", 1)[1]
-        assert '_new_profile' in build, (
-            '"Novo perfil" não pode cair no selected_source (que existe para '
-            "rename e duplicação) — nasceria clonando overrides por-MAC"
-        )
-        assert fonte.count("self._new_profile = False") >= 3
-
-
 class TestR11SourceNameGateiaAsRegras:
     """R-11 — `to_profile` reemitia match/priority/mode para QUALQUER nome."""
 

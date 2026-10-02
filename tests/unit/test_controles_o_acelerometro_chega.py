@@ -28,7 +28,7 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.app.widgets.controller_card import (
+from hefesto_dualsense4unix.interface.cartao_do_controle import (
     accel_do_inputs,
     gyro_do_inputs,
 )

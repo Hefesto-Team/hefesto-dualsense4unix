@@ -54,13 +54,6 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("importa `app.actions.config`, que carrega o GTK")
 
-from hefesto_dualsense4unix.app.actions.config.secao_mesa import (
-    _avisos_de_vizinhanca,
-    _nome_do_adaptador,
-    _onde_esta_o_adaptador,
-    _onde_esta_o_radio,
-    _painel_em_portugues,
-)
 from hefesto_dualsense4unix.integrations.mesa_de_radio import (
     RadioUsb,
     adaptadores_bluetooth,
@@ -271,41 +264,6 @@ def test_uma_mesa_de_um_adaptador_lista_um() -> None:
     assert achados[0].devpath == "1"
 
 
-def test_uma_mesa_de_dois_lista_dois_com_nomes_distintos_e_sem_hci() -> None:
-    """Dois adaptadores, dois nomes diferentes, e `hciN` em nenhum deles."""
-    bancada = Bancada()
-    achados = adaptadores_bluetooth(
-        raiz_bt=RAIZ_BT,
-        listar=bancada.listar,
-        ler=bancada.ler,
-        existe=bancada.existe,
-        real=bancada.real,
-    )
-
-    nomes = [_nome_do_adaptador(a) for a in achados]
-    assert len(achados) == 2
-    assert len(set(nomes)) == 2, f"os dois adaptadores têm o mesmo nome: {nomes}"
-    assert not any("hci" in nome.lower() for nome in nomes), nomes
-    onde = [_onde_esta_o_adaptador(a)[0] for a in achados]
-    assert not any("hci" in texto.lower() for texto in onde), onde
-
-
-def test_o_hub_raiz_nao_conta_como_estar_em_hub() -> None:
-    """Todo aparelho pendura sob um hub-raiz — inclusive num PC sem hub nenhum."""
-    bancada = Bancada()
-    achados = adaptadores_bluetooth(
-        raiz_bt=RAIZ_BT,
-        listar=bancada.listar,
-        ler=bancada.ler,
-        existe=bancada.existe,
-        real=bancada.real,
-    )
-    direto = next(a for a in achados if a.devpath == "1")
-
-    assert direto.atras_de_hub is False
-    assert "hub" not in _onde_esta_o_adaptador(direto)[0].lower()
-
-
 def test_o_hub_nao_entra_na_lista_de_radios() -> None:
     """Hub não é aparelho de rádio: é o próprio barramento."""
     bancada = Bancada()
@@ -316,43 +274,6 @@ def test_o_hub_nao_entra_na_lista_de_radios() -> None:
     vistos = {f"{r.vid}:{r.pid}" for r in achados}
     assert "1d6b:0002" not in vistos and "1d6b:0003" not in vistos, vistos
     assert "05e3:0608" not in vistos, vistos
-
-
-def test_atras_de_hub_e_sem_painel_sai_como_nao_sei() -> None:
-    """O painel some atrás de um hub, e ausência não vira chute."""
-    bancada = Bancada()
-    achados = adaptadores_bluetooth(
-        raiz_bt=RAIZ_BT,
-        listar=bancada.listar,
-        ler=bancada.ler,
-        existe=bancada.existe,
-        real=bancada.real,
-    )
-    no_hub = next(a for a in achados if a.devpath == "2.1")
-
-    assert no_hub.atras_de_hub is True
-    assert no_hub.painel == ""
-    texto, dica = _onde_esta_o_adaptador(no_hub)
-    assert "Não sei" in texto
-    assert "Frente" not in texto and "Trás" not in texto
-    assert texto.endswith("Em hub")
-    assert dica is not None and "fonte" not in dica.lower()
-
-
-def test_o_painel_direita_nao_vira_frente_nem_tras() -> None:
-    """O kernel tem SETE palavras de painel, e esta bancada mede uma das cinco"""
-    bancada = Bancada()
-    achados = radios_do_barramento(
-        raiz_usb=RAIZ_USB, listar=bancada.listar, ler=bancada.ler, real=bancada.real
-    )
-    lateral = next(r for r in achados if r.painel == "right")
-
-    assert _onde_esta_o_radio(lateral, None) == "Direita"
-    assert _painel_em_portugues("left") == "Esquerda"
-    assert _painel_em_portugues("top") == "Cima"
-    assert _painel_em_portugues("bottom") == "Baixo"
-    assert _painel_em_portugues("unknown") == "Não sei"
-    assert _painel_em_portugues("") == "Não sei"
 
 
 def test_um_dualsense_no_cabo_nao_e_outro_radio_que_divide_a_faixa() -> None:
@@ -468,49 +389,3 @@ def test_nenhum_caminho_do_sys_real_e_tocado() -> None:
     assert bancada.tocados, "nenhum leitor foi chamado: a bancada não provou nada"
 
 
-def test_um_adaptador_sem_no_usb_ainda_aparece_e_nao_inventa_porta() -> None:
-    """Rádio Bluetooth embutido na placa não pendura em USB — e existe."""
-    bancada = Bancada(interfaces_bt={"hci0": "/mentira/devices/platform/serial0/hci0"})
-    achados = adaptadores_bluetooth(
-        raiz_bt=RAIZ_BT,
-        listar=bancada.listar,
-        ler=bancada.ler,
-        existe=bancada.existe,
-        real=bancada.real,
-    )
-
-    assert len(achados) == 1
-    assert achados[0].no == ""
-    assert _nome_do_adaptador(achados[0]) == "Adaptador embutido"
-    assert _onde_esta_o_adaptador(achados[0]) == ("Dentro da máquina", None)
-
-
-def test_o_radio_ao_lado_de_um_adaptador_ganha_o_aviso_do_adaptador() -> None:
-    """Os dois avisos saem do MESMO par de nós colados, e não são o mesmo aviso."""
-    bancada = Bancada()
-    mesa = ler_a_mesa(**bancada.fontes())
-    avisos = _avisos_de_vizinhanca(mesa)
-
-    vizinho = next(r for r in mesa.radios if os.path.basename(r.no) == "1-2.2")
-    sufixo, dica = avisos[vizinho.no]
-    assert sufixo == "vizinho do adaptador 2"
-    assert vizinho.usb3 is True
-    assert dica.startswith("USB 3.0")
-    assert _onde_esta_o_radio(vizinho, avisos[vizinho.no]) == (
-        "Não sei · vizinho do adaptador 2"
-    )
-
-    colados = [no for no, (texto, _d) in avisos.items() if texto == "colado no vizinho"]
-    assert [os.path.basename(no) for no in colados] == ["1-4"]
-
-
-def test_sem_o_segundo_adaptador_o_mesmo_par_vira_dois_radios_colados() -> None:
-    """A mesma porta muda de aviso quando muda o que está nela."""
-    bancada = _so_um_adaptador()
-    mesa = ler_a_mesa(**bancada.fontes())
-    avisos = _avisos_de_vizinhanca(mesa)
-
-    assert len(mesa.adaptadores) == 1
-    assert len(mesa.radios) == 5, [f"{r.vid}:{r.pid}" for r in mesa.radios]
-    textos = {os.path.basename(no): texto for no, (texto, _d) in avisos.items()}
-    assert textos == {"1-2.2": "colado no vizinho", "1-4": "colado no vizinho"}

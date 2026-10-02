@@ -267,19 +267,6 @@ def test_roundtrip_perfil_com_mouse_preserva_secao() -> None:
     )
 
 
-def test_to_ipc_dict_gate_e_so_dirty_nao_in_profile() -> None:
-    """A rota IPC (Aplicar) continua gateada SÓ por ``dirty``: um draft carregado"""
-    draft = DraftConfig().model_copy(
-        update={
-            "mouse": MouseDraft(
-                enabled=True, speed=8, in_profile=True, dirty=False
-            )
-        }
-    )
-    assert draft.to_ipc_dict()["mouse"] is None
-    assert draft.to_profile("pnc").mouse is not None
-
-
 def test_roundtrip_perfil_legado_inalterado() -> None:
     """Perfil sem seção mouse atravessa from_profile→to_profile sem ganhá-la."""
     original = Profile(

@@ -55,7 +55,6 @@ _install_gi_stubs()
 
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
 from hefesto_dualsense4unix.profiles.schema import (
-    MatchAny,
     MatchCriteria,
     MatchManual,
     Profile,
@@ -170,46 +169,6 @@ class _Editor(pa.ProfilesActionsMixin):
 
     def _selected_profile_name(self, selection: Any = None) -> str | None:
         return None
-
-
-class TestEditorAvancadoGravaOSentinel:
-    def test_tres_campos_vazios_viram_manual(self) -> None:
-        """Antes saía `MatchCriteria()` — a mesma inércia, sem dizer por quê."""
-        ed = _Editor()
-
-        perfil = ed._build_profile_from_editor()
-
-        assert isinstance(perfil.match, MatchManual)
-        assert perfil.matches({"wm_class": "steam_app_1599660"}) is False
-
-    def test_um_campo_preenchido_continua_criteria(self) -> None:
-        ed = _Editor()
-        ed._get("profile_title_regex_entry").set_text("Sackboy")
-
-        perfil = ed._build_profile_from_editor()
-
-        assert isinstance(perfil.match, MatchCriteria)
-        assert perfil.match.window_title_regex == "Sackboy"
-
-    def test_round_trip_do_perfil_manual(self) -> None:
-        """Abrir e salvar de novo não rebaixa a declaração para o acidente."""
-        ed = _Editor()
-        original = Profile(name="coop_local", match=MatchManual(), priority=45)
-
-        ed._populate_editor(original)
-
-        assert ed._mode_advanced is True, "manual não tem preset simples"
-        assert ed._get("profile_window_class_entry").get_text() == ""
-        assert isinstance(ed._build_profile_from_editor().match, MatchManual)
-
-    def test_perfil_sempre_nao_e_confundido_com_manual(self) -> None:
-        """`MatchAny` abre no editor SIMPLES — nada a ver com o sentinel."""
-        ed = _Editor()
-
-        ed._populate_editor(Profile(name="fallback", match=MatchAny()))
-
-        assert ed._mode_advanced is False
-        assert ed._get("profile_editor_stack").visible_child == "simples"
 
 
 class TestColunaQuandoUsar:

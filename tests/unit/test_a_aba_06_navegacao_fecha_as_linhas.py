@@ -149,64 +149,6 @@ def _sem_a_troca(doc: str) -> str:
     return antes + resto
 
 
-def test_a_marca_esta_nas_tres_regioes_do_touchpad_e_so_nelas():
-    """A marca acompanha as três linhas do touchpad, e nenhuma outra."""
-    from hefesto_dualsense4unix.app.actions.input_actions import REGIOES_DO_TOUCHPAD
-
-    doc = _sem_a_troca(_bancada())
-    from aba06 import TOUCH_REGIOES
-
-    celulas = re.findall(r'<td class="b">(.*?)</td>', doc, re.S)
-    de_regiao_na_celula = [
-        c for c in celulas
-        if any(f">{rot}</span>".lower() in c.lower() for rot in TOUCH_REGIOES)]
-    assert de_regiao_na_celula, (
-        "não achei UMA célula de região do touchpad — as três ficaram, com a "
-        "marca, por decisão do PO de 04/09/2026.")
-    sem_marca = [c for c in de_regiao_na_celula if "marca-nao-dispara" not in c]
-    assert not sem_marca, (
-        f"{len(sem_marca)} célula(s) de região do touchpad sem a marca — a tela "
-        "volta a PROMETER um clique que o produto não dispara. A primeira: "
-        f"{sem_marca[0][:160]}")
-    com_marca = [c for c in celulas if "marca-nao-dispara" in c]
-    assert len(com_marca) == len(de_regiao_na_celula), (
-        f"{len(com_marca) - len(de_regiao_na_celula)} célula(s) levam a marca "
-        "sem ser região do touchpad — marcar uma linha que dispara é a tela "
-        "mentindo pelo outro lado.")
-    distintas = set(com_marca)
-    assert len(distintas) == len(REGIOES_DO_TOUCHPAD), (
-        f"achei {len(distintas)} célula(s) distinta(s) com a marca e as regiões "
-        f"do touchpad são {len(REGIOES_DO_TOUCHPAD)} — ou uma perdeu a marca em "
-        "todas as telas, ou a marca foi parar numa linha que não é região.")
-    de_regiao = [tr for tr in re.findall(r"<tr>(.*?)</tr>", doc, re.S)
-                 if _botao_da_linha(tr) in REGIOES_DO_TOUCHPAD]
-    assert de_regiao, (
-        "não achei UMA linha de região do touchpad no desenho — as três "
-        "ficaram, com a marca, por decisão do PO de 04/09/2026.")
-    for tr in de_regiao:
-        assert "marca-nao-dispara" in tr, (
-            f"a linha de {_botao_da_linha(tr)} ficou sem a marca — a tela volta "
-            f"a PROMETER um clique que o produto não dispara.")
-    assert "não dispara" in doc
-
-
-def test_a_marca_nao_encosta_em_linha_que_dispara():
-    """Nenhuma das outras dezoito linhas leva a marca."""
-    from hefesto_dualsense4unix.app.actions.input_actions import REGIOES_DO_TOUCHPAD
-    from hefesto_dualsense4unix.core import acoes_de_botao as acoes
-
-    doc = _sem_a_troca(_bancada())
-    for linha in re.findall(r"<tr>(.*?)</tr>", doc, re.S):
-        alvo = re.search(r'data-linha="([^"]+)"', linha)
-        if alvo is None or alvo.group(1) not in acoes.BOTOES:
-            continue
-        marcada = "marca-nao-dispara" in linha
-        devia = alvo.group(1) in REGIOES_DO_TOUCHPAD
-        assert marcada == devia, (
-            f"a linha de {alvo.group(1)} {'tem' if marcada else 'não tem'} a "
-            f"marca, e devia ser o contrário.")
-
-
 def test_a_dica_da_tela_de_botoes_diz_por_que_o_ps_fica_fora():
     """O `?` da tela de Definições diz O QUE O PS FAZ — não por que ele falta.
 

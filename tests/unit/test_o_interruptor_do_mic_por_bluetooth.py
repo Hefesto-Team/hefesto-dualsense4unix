@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from hefesto_dualsense4unix.app.widgets import controller_card as cc
+from hefesto_dualsense4unix.interface import cartao_do_controle as cc
 
 MOTIVO = (
     "held_ms=17.6 na ponte do mic; a volta depende de arbitrar o hidraw"

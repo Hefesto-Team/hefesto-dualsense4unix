@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -34,18 +33,6 @@ class TestR17ApagarMandaOUniq:
 
 
 class TestR18SucessoHonesto:
-    @staticmethod
-    def _apply(monkeypatch: pytest.MonkeyPatch, resposta: Any) -> bool:
-        """A R-18 medida onde ela mora HOJE, e a regra não mudou uma vírgula."""
-        from hefesto_dualsense4unix.app import ipc_bridge
-
-        monkeypatch.setattr(
-            ipc_bridge, "_safe_call", lambda *a, **k: (True, resposta)
-        )
-        corpo = ipc_bridge.apply_draft_detalhado(
-            {"leds": {"lightbar_rgb": [1, 2, 3]}}
-        )
-        return ipc_bridge.aplicacao_confirmada(corpo)
 
     def test_nada_aplicado_nao_e_sucesso(self, monkeypatch: pytest.MonkeyPatch) -> None:
         assert self._apply(monkeypatch, {"status": "ok", "applied": []}) is False, (

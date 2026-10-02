@@ -568,88 +568,6 @@ def test_a_dica_da_luz_nao_diz_aceso_e_nomeia_quem_esta_conectado(colunas):
         "a dica nomeia o controle do desenho, e não o que está na mesa.")
 
 
-def test_a_dica_nao_afirma_o_desenho_das_cinco_luzes_que_o_pacote_nao_ve(
-    colunas,
-):
-    """A tela não afirma sobre uma camada do merge que este pacote não enxerga.
-
-    ESTE TESTE SUBSTITUI UM QUE CRAVAVA O DEFEITO. O antecessor —
-    `test_a_dica_manda_o_rascunho_vazio_porque_o_automatico_esta_acima` — exigia
-    `"automático, do número deste controle" in dica`, isto é, gravava a
-    afirmação como se fosse o certo. Um teste assim impede a próxima pessoa de
-    consertar.
-
-    A ACUSAÇÃO, REPRODUZIDA AQUI COM O MERGE REAL DO BACKEND (e nenhum
-    aparelho): a precedência de `_merged_desired_for_key` é
-
-        default global do perfil < camada AUTOMÁTICA < override por-uniq
-                                                     < co-op < jogo
-
-    e o override por-uniq é onde a janela GTK escreve quando ela aplica um
-    desenho (`lightbar_actions._enviar_player_leds` → `player_leds_set_
-    detalhado(…, uniq=…)` → `ipc_handlers._apply_por_uniq` → `apply_output_for`,
-    *"que registra o override por-uniq"*). Com ele preenchido, o produto manda
-    um desenho e a frase antiga anunciava outro.
-
-    E O PACOTE NÃO PODE SABER: `_enrich_controllers_per_controller` não publica
-    nenhum campo do desejado por controle — `interface/aba02.py:698` já dizia
-    *"publica o ``player_slot`` e NÃO publica ``player_leds``"*.
-
-    A REGRA DELA, 02/09/2026: *"se não tá mostrando agora, não tem info pra
-    mostrar no produto"*. Campo sem informação não mostra nada.
-    """
-    from hefesto_dualsense4unix.core.backend_pydualsense import (
-        PyDualSenseController,
-        _DesiredOutput,
-    )
-    from hefesto_dualsense4unix.core.led_control import player_led_pattern
-    import pacotes.a04_iluminacao as a04
-
-    uniq = "aabbcc000002"
-    escolha_dela = (True, False, False, False, True)
-
-    backend = object.__new__(PyDualSenseController)
-    backend._key_to_uniq = lambda k: k
-    backend._desired_default = _DesiredOutput(
-        player_leds=tuple(player_led_pattern(1)))
-    backend._assentar_mesa_locked = lambda: None
-    backend._auto_output_provider = lambda u: _DesiredOutput(
-        player_leds=tuple(player_led_pattern(2)))
-    backend._desired_coop_by_uniq = {}
-    backend._scaled_led = lambda u, resolvido: resolvido
-    backend._game_output_by_uniq = {}
-    backend._game_wins = lambda: False
-    backend._desired_by_uniq = {uniq: _DesiredOutput(player_leds=escolha_dela)}
-
-    em_vigor = backend._merged_desired_for_key(uniq).player_leds
-    assert em_vigor == escolha_dela, (
-        "o override por-uniq deixou de vencer a camada automática — se o merge "
-        "mudou, esta aba precisa saber antes de decidir o que pode afirmar.")
-    assert em_vigor != tuple(player_led_pattern(2)), (
-        "o dublê não separa as duas camadas: escolha um desenho diferente do "
-        "automático, senão o teste passa sem medir nada.")
-
-    from hefesto_dualsense4unix.app.actions.lightbar_actions import (
-        texto_do_desenho_aceso,
-    )
-    dica = a04.dica_da_luz("Cosmic Red", "BT", "")
-    proibidas = [
-        texto_do_desenho_aceso((False,) * 5, 1),
-        texto_do_desenho_aceso((False,) * 5, None),
-        texto_do_desenho_aceso(tuple(player_led_pattern(2)), 1),
-    ]
-    for afirmacao in proibidas:
-        assert afirmacao not in dica, (
-            f"a dica afirma {afirmacao!r} sobre o desenho em vigor, e o pacote "
-            f"não vê o override por-uniq que o decide: {dica!r}")
-
-    assert dica == "Cosmic Red (BT)", (
-        f"sobrou algo além do que o pacote mede: {dica!r}")
-
-    luz = colunas()[DO_RADIO["uniq"]]["luz"]
-    assert "automático" not in luz and "escolha sua" not in luz, luz
-
-
 def test_o_coop_so_manda_quando_ha_mais_de_um_jogador():
     """`coop.enabled` NÃO responde "há mais de um jogador", e isso está medido.
 
@@ -675,7 +593,7 @@ def test_o_coop_so_manda_quando_ha_mais_de_um_jogador():
 
 def test_o_hex_e_o_do_dono_e_nao_um_guarda_copiado(colunas):
     """`cor_do_swatch` é o dono da leitura crua do `lightbar_rgb`."""
-    from hefesto_dualsense4unix.app.widgets.controller_card import cor_do_swatch
+    from hefesto_dualsense4unix.interface.cartao_do_controle import cor_do_swatch
 
     quatro = dict(DO_RADIO, lightbar_rgb=[0, 0, 255, 7])
     assert cor_do_swatch(quatro) is None
@@ -696,7 +614,7 @@ def test_a_frase_da_disputa_e_a_do_motor(colunas):
     é constante (`ROTULO_LIGHTBAR_SEGURADA`) justamente para que o teste possa
     cobrar a propriedade em vez de decorar o texto.
     """
-    from hefesto_dualsense4unix.app.widgets.controller_card import (
+    from hefesto_dualsense4unix.interface.cartao_do_controle import (
         ROTULO_LIGHTBAR_SEGURADA,
     )
 

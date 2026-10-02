@@ -305,7 +305,7 @@ def test_com_a_mira_acesa_o_cartao_nao_diz_que_o_giroscopio_flui(
     """
     import pacotes.a02_controles as a02
 
-    from hefesto_dualsense4unix.app.widgets.controller_card import texto_motion
+    from hefesto_dualsense4unix.interface.cartao_do_controle import texto_motion
 
     estado: dict[str, Any] = {"rumble_ff": {"per_vpad": [
         {"player": jogador, "motion_streaming": True, "motion_hz": 250.0}]}}

@@ -45,7 +45,6 @@ exigir_gi_real("controle ligado que o sistema não adotou (importa app.actions.s
 
 from hefesto_dualsense4unix.app.actions.status_actions import (
     MINUTOS_ENTRE_TENTATIVAS,
-    POSICAO_DO_BANNER_NAO_ADOTADO,
     StatusActionsMixin,
     texto_de_controle_nao_adotado,
 )
@@ -325,28 +324,6 @@ class TestOBannerNaAbaStatus:
     def test_sem_widget_nao_explode(self) -> None:
         _stub(None)._refresh_banner_nao_adotado(_estado(1))
 
-    def test_o_aviso_nasce_acima_dos_cards(self) -> None:
-        caixa = _FakeCaixa()
-
-        class _Host:
-            _montar_banner_nao_adotado = (
-                StatusActionsMixin._montar_banner_nao_adotado
-            )
-
-            def _get(self, nome: str) -> Any:
-                from hefesto_dualsense4unix.app.actions.status_actions import (
-                    ABA_STATUS,
-                )
-
-                return caixa if nome == ABA_STATUS else None
-
-        host = _Host()
-        host._montar_banner_nao_adotado()
-        assert host._banner_nao_adotado is not None
-        assert (
-            caixa.filhos.index(host._banner_nao_adotado)
-            == POSICAO_DO_BANNER_NAO_ADOTADO
-        )
 
     def test_montagem_sem_caixa_nao_explode(self) -> None:
         class _Host:
@@ -361,15 +338,7 @@ class TestOBannerNaAbaStatus:
 
 
 class TestFiacao:
-    def test_o_tique_lento_acende_e_o_offline_apaga(self) -> None:
-        lento = inspect.getsource(StatusActionsMixin._render_slow_state)
-        assert "_refresh_banner_nao_adotado(state)" in lento
-        offline = inspect.getsource(StatusActionsMixin._render_offline)
-        assert "_refresh_banner_nao_adotado(None)" in offline
 
-    def test_a_montagem_entra_no_install(self) -> None:
-        fonte = inspect.getsource(StatusActionsMixin.install_status_polling)
-        assert "_montar_banner_nao_adotado()" in fonte
 
     def test_nao_reusa_o_caminho_de_dev_input(self) -> None:
         fonte = inspect.getsource(ipc_handlers.dualsense_sem_driver)

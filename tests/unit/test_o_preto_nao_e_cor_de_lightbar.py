@@ -143,15 +143,3 @@ def test_o_preto_que_ja_esta_no_disco_chega_a_tela_como_sem_cor() -> None:
     assert _leds_config_to_draft(LedsConfig(lightbar=AZUL)).lightbar_rgb == AZUL
 
 
-def test_sem_cor_lida_nao_nasce_peca_por_controle() -> None:
-    """O Salvar com um controle sem leitura não inventa peça para ele."""
-    from hefesto_dualsense4unix.app.draft_config import DraftConfig, LedsDraft
-
-    draft = DraftConfig()
-    draft = draft.model_copy(
-        update={"leds": draft.leds.model_copy(update={"lightbar_rgb": AZUL})}
-    )
-    depois = draft.with_controller_leds(UNIQ, LedsDraft(lightbar_rgb=None))
-    peca = depois.controller_override(UNIQ)
-    campos = set(peca.leds.model_fields_set if peca and peca.leds else set())
-    assert "lightbar" not in campos, campos

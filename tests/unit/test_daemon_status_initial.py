@@ -62,7 +62,6 @@ _install_gi_stubs()
 
 import pytest
 
-import hefesto_dualsense4unix.utils.single_instance as si_mod
 from hefesto_dualsense4unix.app.actions.daemon_actions import DaemonActionsMixin
 
 
@@ -187,102 +186,6 @@ def _patch_executor_immediate(monkeypatch: pytest.MonkeyPatch) -> None:
         return 0
 
     monkeypatch.setattr(daemon_actions.GLib, "idle_add", _eager_idle_add)
-
-
-def test_install_daemon_tab_com_daemon_ativo_pinta_online(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Cenário 1: daemon ativo (systemd + processo vivo)."""
-    _patch_installer_none(monkeypatch)
-    _patch_executor_immediate(monkeypatch)
-
-    host = _Host()
-
-    def _fake_oneline(args: list[str]) -> str:
-        if "is-active" in args:
-            return "active"
-        if "is-enabled" in args:
-            return "enabled"
-        return ""
-
-    monkeypatch.setattr(host, "_systemctl_oneline", _fake_oneline)
-    monkeypatch.setattr(host, "_read_daemon_pid", lambda: 99999)
-    monkeypatch.setattr(si_mod, "is_alive", lambda _pid: True)
-
-    host.install_daemon_tab()
-
-    assert "#50fa7b" in host._label.markup, (
-        f"esperava cor verde (#2d8) para online_systemd; markup={host._label.markup!r}"
-    )
-    assert "Funcionando" in host._label.markup
-    assert "Desligado" not in host._label.markup
-    assert "Verificando" not in host._label.markup
-    assert host._sw.active is True
-
-
-def test_install_daemon_tab_com_daemon_inativo_pinta_offline(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Cenário 2: daemon inativo (systemd inactive + sem processo)."""
-    _patch_installer_none(monkeypatch)
-    _patch_executor_immediate(monkeypatch)
-
-    host = _Host()
-
-    def _fake_oneline(args: list[str]) -> str:
-        if "is-active" in args:
-            return "inactive"
-        if "is-enabled" in args:
-            return "disabled"
-        return ""
-
-    monkeypatch.setattr(host, "_systemctl_oneline", _fake_oneline)
-    monkeypatch.setattr(host, "_read_daemon_pid", lambda: None)
-    monkeypatch.setattr(si_mod, "is_alive", lambda _pid: False)
-
-    host.install_daemon_tab()
-
-    assert "#ff5555" in host._label.markup, (
-        f"esperava cor vermelha (#d33) para offline; markup={host._label.markup!r}"
-    )
-    assert "Desligado" in host._label.markup
-    assert "Ligando" not in host._label.markup
-    assert "Verificando" not in host._label.markup
-    assert host._sw.active is False
-
-
-def test_consulting_placeholder_aparece_antes_do_worker(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Cenário 3: worker não responde — label permanece "Verificando…"."""
-    _patch_installer_none(monkeypatch)
-
-    host = _Host()
-
-    captured: dict[str, Any] = {}
-
-    class _LazyExecutor:
-        def submit(self, fn: Any, *args: Any, **kwargs: Any) -> None:
-            captured["fn"] = fn
-            captured["args"] = (args, kwargs)
-
-    from hefesto_dualsense4unix.app.actions import daemon_actions
-
-    monkeypatch.setattr(
-        daemon_actions, "_get_executor", lambda: _LazyExecutor()
-    )
-
-    host.install_daemon_tab()
-
-    assert "Verificando" in host._label.markup, (
-        f"esperava o placeholder 'Verificando…'; markup={host._label.markup!r}"
-    )
-    assert "#8b8fa8" in host._label.markup, (
-        f"esperava cor cinza (#888) no placeholder; markup={host._label.markup!r}"
-    )
-    assert "Desligado" not in host._label.markup
-    assert "Ligando" not in host._label.markup
-    assert "fn" in captured, "worker do _refresh_daemon_view_async não foi agendado"
 
 
 def test_find_repo_file_resolve_raiz_do_repo() -> None:

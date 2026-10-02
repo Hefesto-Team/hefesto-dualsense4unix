@@ -31,37 +31,3 @@ def test_importar_app_mesa_sozinho_em_processo_novo_nao_precisa_de_gtk() -> None
     assert resultado.stdout.strip() == "ok"
 
 
-def test_contagem_de_controles_deriva_do_state_e_dos_externos() -> None:
-    from hefesto_dualsense4unix.app import mesa
-
-    state = {
-        "controllers": [
-            {"connected": True, "is_primary": True, "transport": "usb"},
-            {"connected": True, "is_primary": False, "transport": "bt"},
-            {"connected": False, "is_primary": False, "transport": None},
-        ]
-    }
-    contagem = mesa.contagem_de_controles(state, externos=1)
-    assert contagem.adotados == 2
-    assert contagem.externos == 1
-    assert contagem.na_mesa == 3
-
-
-def test_texto_de_contagem_mesa_vazia_e_string_vazia() -> None:
-    from hefesto_dualsense4unix.app import mesa
-
-    vazio = mesa.contagem_de_controles({"controllers": []}, externos=0)
-    assert vazio.na_mesa == 0
-    assert mesa.texto_de_contagem(vazio) == ""
-
-
-def test_status_actions_reexporta_os_mesmos_objetos_de_mesa() -> None:
-    """O espelho (§ do docstring de `app/mesa.py`): mesma classe/função,"""
-    from tests.conftest import exigir_gi_real
-
-    exigir_gi_real()
-    from hefesto_dualsense4unix.app import mesa
-    from hefesto_dualsense4unix.app.actions import status_actions
-
-    assert status_actions.ContagemDeControles is mesa.ContagemDeControles
-    assert status_actions.texto_de_contagem is mesa.texto_de_contagem

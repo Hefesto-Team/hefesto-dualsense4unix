@@ -48,7 +48,6 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("importa `app.actions.perfis_web`, que carrega o GTK")
 
 from hefesto_dualsense4unix.app.actions import perfis_web
-from hefesto_dualsense4unix.app.actions.profiles_actions import _MODE_KIND_ITEMS
 from hefesto_dualsense4unix.interface import pacotes
 from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
 from hefesto_dualsense4unix.profiles import loader
@@ -241,14 +240,6 @@ def test_o_perfil_novo_nasce_sem_opiniao_de_modo(disco: dict[str, Any]) -> None:
     assert criado.mode is None, (
         f"o perfil novo nasceu com modo {criado.mode!r} — sem o quadro na tela, "
         f"ela não teria como ver nem desfazer isso")
-
-
-def test_o_perfil_sem_opiniao_e_o_primeiro_par_do_dono() -> None:
-    """`MODO_SEM_OPINIAO` é o id do perfil sem seção `mode`, e ele casa com o dono."""
-    primeiro = next(iter(dict(_MODE_KIND_ITEMS)))
-    assert primeiro == perfis_web.MODO_SEM_OPINIAO, (
-        "«Não mexer no modo» deixou de ser o primeiro par do dono — é o que a "
-        "MAIORIA dos perfis é, e é o id do perfil sem seção `mode`")
 
 
 def test_a_regra_do_modo_ficou_no_dono_compartilhado() -> None:

@@ -774,15 +774,6 @@ def test_a_caixa_de_quem_espera_o_gesto_abre_sozinha(
     assert _cena(a08, _estado({AZUL: 0}))["aberto"] is None
 
 
-def test_o_carimbo_de_um_minuto_e_singular_ate_os_dois_minutos() -> None:
-    """«Examinado há 1 minutos», na foto da prova de tela: o corte estava nos"""
-    from hefesto_dualsense4unix.app.actions.config import secao_exame
-
-    for segundos in (45.0, 60.0, 89.0, 90.0, 100.0, 119.9):
-        assert secao_exame.frase_de_quando(segundos) == "Há 1 minuto", segundos
-    assert secao_exame.frase_de_quando(120.0) == "Há 2 minutos"
-
-
 # O QUE O CONFERENTE ACHOU (25/09/2026) — a cura que só valia para o DualSense
 # O rádio de mentira respondia o `HID_PHYS` só pelo DualSense e dava movimento a
 # que o daemon (ele só mede o movimento do DualSense). Com ele fiel, três curas

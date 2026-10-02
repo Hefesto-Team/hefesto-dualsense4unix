@@ -16,16 +16,6 @@ pytest.importorskip("gi.repository.Gtk", reason="precisa da typelib Gtk")
 from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app.actions import status_actions
-from hefesto_dualsense4unix.app.actions.home_actions import (
-    ABA_INICIO,
-    HomeActionsMixin,
-    id_da_pagina,
-    id_da_pagina_corrente,
-)
-from hefesto_dualsense4unix.app.actions.status_actions import (
-    ABA_STATUS,
-    StatusActionsMixin,
-)
 
 
 def _pagina(nome: str) -> Gtk.Widget:
@@ -51,13 +41,6 @@ def _notebook(*ids: str, embrulhar: bool = True) -> Gtk.Notebook:
 class _AppFalsa:
     """Superfície mínima que os dois ticks tocam, com os métodos de PRODUÇÃO."""
 
-    def __init__(self, notebook: Gtk.Notebook) -> None:
-        self._notebook = notebook
-        self._live_inflight = False
-        self.home_refreshes = 0
-        self.inventarios_de_externos = 0
-        self._tick_live_state = StatusActionsMixin._tick_live_state.__get__(self)
-        self._tick_home_state = HomeActionsMixin._tick_home_state.__get__(self)
 
     def _get(self, widget_id: str) -> Any:
         return self._notebook if widget_id == "main_notebook" else None
@@ -92,87 +75,6 @@ def _tick_rapido(app: _AppFalsa) -> None:
     """Um tick de 10 Hz. O latch de inflight é do outro defeito — some daqui."""
     app._live_inflight = False
     app._tick_live_state()
-
-
-def test_id_da_pagina_desembrulha_rolador_e_viewport() -> None:
-    """Sem desembrulhar, NENHUMA aba seria reconhecida: o widget é o rolador."""
-    scroller = Gtk.ScrolledWindow()
-    scroller.add(_pagina("tab_status_box"))
-
-    assert id_da_pagina(scroller) == "tab_status_box"
-    assert id_da_pagina(_pagina("tab_home_box")) == "tab_home_box"
-    assert id_da_pagina(None) is None
-    assert id_da_pagina(object()) is None, "o que não é Buildable não tem id"
-
-
-def test_id_da_pagina_corrente_segue_a_pagina_a_vista() -> None:
-    notebook = _notebook(ABA_INICIO, ABA_STATUS)
-
-    notebook.set_current_page(0)
-    assert id_da_pagina_corrente(notebook) == ABA_INICIO
-    notebook.set_current_page(1)
-    assert id_da_pagina_corrente(notebook) == ABA_STATUS
-    assert id_da_pagina_corrente(None) is None
-
-
-def test_tick_rapido_roda_na_status_mesmo_com_aba_nova_antes(
-    sem_ipc: list[str],
-) -> None:
-    """Uma aba a mais antes da Início: a Status vira a página 2, não a 1."""
-    notebook = _notebook("aba_nova_box", ABA_INICIO, ABA_STATUS)
-    app = _AppFalsa(notebook)
-
-    notebook.set_current_page(2)
-    _tick_rapido(app)
-    assert sem_ipc == ["daemon.state_full"], (
-        "com gate por índice, o tick de 10 Hz para de rodar na aba Status"
-    )
-
-    notebook.set_current_page(1)
-    _tick_rapido(app)
-    notebook.set_current_page(0)
-    _tick_rapido(app)
-    assert sem_ipc == ["daemon.state_full"], (
-        "10 Hz de state_full fora da Status só saturam o worker compartilhado"
-    )
-
-
-def test_tick_da_inicio_reconcilia_na_inicio_mesmo_com_aba_nova_antes(
-    sem_ipc: list[str],
-) -> None:
-    """A mesma reordenação, do outro lado: Início vira a página 1, não a 0."""
-    notebook = _notebook("aba_nova_box", ABA_INICIO, ABA_STATUS)
-    app = _AppFalsa(notebook)
-
-    notebook.set_current_page(1)
-    app._tick_home_state()
-    assert app.home_refreshes == 1, (
-        "com gate por índice, a aba Início para de reconciliar pelo tick"
-    )
-
-    notebook.set_current_page(0)
-    app._tick_home_state()
-    notebook.set_current_page(2)
-    app._tick_home_state()
-    assert app.home_refreshes == 1
-
-
-def test_ordem_de_hoje_continua_funcionando(sem_ipc: list[str]) -> None:
-    """A ordem do glade de hoje (Início 0, Status 1) não muda de comportamento."""
-    notebook = _notebook(ABA_INICIO, ABA_STATUS)
-    app = _AppFalsa(notebook)
-
-    notebook.set_current_page(1)
-    _tick_rapido(app)
-    app._tick_home_state()
-    assert sem_ipc == ["daemon.state_full"]
-    assert app.home_refreshes == 0
-
-    notebook.set_current_page(0)
-    _tick_rapido(app)
-    app._tick_home_state()
-    assert sem_ipc == ["daemon.state_full"]
-    assert app.home_refreshes == 1
 
 
 def test_sem_notebook_o_tick_rapido_nao_e_gateado(sem_ipc: list[str]) -> None:

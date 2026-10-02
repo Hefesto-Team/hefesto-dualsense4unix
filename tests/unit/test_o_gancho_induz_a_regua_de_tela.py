@@ -35,7 +35,7 @@ portao = _carregar(PORTAO, "check_regua_de_tela")
 
 UMA_ABA = "src/hefesto_dualsense4unix/interface/aba06.py"
 UMA_PAGINA = "src/hefesto_dualsense4unix/interface/paginas/06-navegacao.html"
-O_WIDGET = "src/hefesto_dualsense4unix/app/widgets/controller_card.py"
+O_WIDGET = "src/hefesto_dualsense4unix/interface/cartao_do_controle.py"
 UMA_REGUA = "src/hefesto_dualsense4unix/interface/regua_popup.py"
 A_PONTE = "src/hefesto_dualsense4unix/interface/controles_vivos.py"
 UM_PYTEST = "tests/unit/test_o_gesto_chega.py"

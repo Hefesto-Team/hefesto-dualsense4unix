@@ -61,12 +61,6 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.app.widgets.controller_card import (
-    acao_speaker_devolucao,
-    acao_speaker_mudo,
-    audio_sem_endereco,
-    uniq_do_entry,
-)
 
 FIXTURE = (
     Path(__file__).resolve().parents[1]
@@ -104,118 +98,8 @@ def _com_posse_do_volume(
     return entry
 
 
-def test_os_quatro_controles_reais_tem_endereco() -> None:
-    """A guarda não pode disparar na mesa cheia — ali todos têm MAC."""
-    for entry in _controles():
-        assert uniq_do_entry(entry) is not None
-        assert audio_sem_endereco(entry) is False, (
-            "a guarda desligaria o som de um controle que TEM endereço"
-        )
-
-
-@pytest.mark.parametrize("valor", [None, "", "   "])
-def test_endereco_ausente_ou_em_branco_desliga_o_som(valor: Any) -> None:
-    """Endereço em branco viaja no IPC como "sem alvo" — é o mesmo defeito."""
-    entry = _controle_sem_endereco()
-    if valor is not None:
-        entry["uniq"] = valor
-    assert uniq_do_entry(entry) is None
-    assert audio_sem_endereco(entry) is True
-
-
-def test_a_posse_do_volume_abre_o_silenciar_e_o_soltar_sem_endereco() -> None:
-    """A proteção a montante do "Silenciar"/"Soltar" NÃO é garantia."""
-    cru = _controle_sem_endereco()
-    assert acao_speaker_mudo(cru).sensivel is False, (
-        "sem a chave `speaker` os dois botões já voltam ANTES da tranca — é "
-        "por isso que o payload cru não prova as seis"
-    )
-    assert acao_speaker_devolucao(cru).sensivel is False
-
-    com_posse = _com_posse_do_volume(_controle_sem_endereco())
-    assert audio_sem_endereco(com_posse) is True, (
-        "a posse do volume não dá endereço nenhum a este card"
-    )
-    assert acao_speaker_mudo(com_posse).sensivel is True
-    assert acao_speaker_mudo(com_posse).muted is True
-    assert acao_speaker_devolucao(com_posse).sensivel is True
-    assert acao_speaker_devolucao(com_posse).release is True
-
-
 class TestNaTela:
     """A metade que só o GTK real prova."""
-
-    @staticmethod
-    def _card(entry: dict[str, Any]) -> Any:
-        from tests.conftest import exigir_gi_real
-
-        exigir_gi_real("a guarda do card sem endereço")
-        import gi
-
-        gi.require_version("Gtk", "3.0")
-        from gi.repository import Gtk
-
-        from hefesto_dualsense4unix.app.widgets.controller_card import (
-            ControllerCard,
-        )
-
-        if not Gtk.init_check()[0]:
-            pytest.skip("sem GTK/display utilizável")
-        card = ControllerCard(compact=False)
-        janela = Gtk.OffscreenWindow()
-        janela.add(card)
-        janela.set_size_request(1180, 700)
-        janela.show_all()
-        card._janela_do_teste = janela
-        card.update(entry, {}, None)
-        return card
-
-    def test_sem_endereco_as_pecas_de_som_ficam_apagadas(self) -> None:
-        card = self._card(_controle_sem_endereco())
-
-        apagadas = [
-            peca.__class__.__name__
-            for peca in card._pecas_que_escrevem_som()
-            if peca.get_sensitive()
-        ]
-        assert apagadas == [], (
-            "estas peças escrevem som e continuaram clicáveis sem endereço: "
-            f"{apagadas} — cada uma cairia no controle PRIMÁRIO"
-        )
-
-    def test_sem_endereco_a_tela_diz_por_que(self) -> None:
-        """Bloco desligado calado é um defeito do mesmo tamanho."""
-        from hefesto_dualsense4unix.app.widgets import controller_card as cc
-
-        card = self._card(_controle_sem_endereco())
-
-        assert card._audio_aviso.get_visible() is True
-        assert card._audio_aviso.get_text() == cc.TEXTO_AUDIO_SEM_ENDERECO
-        for bloco in (card._mic_box, card._speaker_box):
-            assert bloco.get_tooltip_text() == cc.DICA_AUDIO_SEM_ENDERECO, (
-                "o porquê tem de estar na MOLDURA: peça insensível não recebe "
-                "evento no GTK3 e a dica dela nunca apareceria"
-            )
-
-    def test_com_endereco_o_som_continua_de_pe(self) -> None:
-        """A guarda é condicional — não pode virar um bloco morto para todos."""
-        card = self._card(_controles()[2])
-
-        assert card._audio_aviso.get_visible() is False
-        assert card._mic_botao.get_sensitive() is True
-        assert card._speaker_escala.get_sensitive() is True
-        assert card._mic_box.get_tooltip_text() is None
-
-    def test_o_endereco_que_volta_devolve_o_som(self) -> None:
-        """A volta é diffada e precisa acontecer UMA vez, sem card novo."""
-        card = self._card(_controle_sem_endereco())
-        assert card._mic_botao.get_sensitive() is False
-
-        card.update(_controles()[2], {}, None)
-
-        assert card._audio_aviso.get_visible() is False
-        assert card._mic_botao.get_sensitive() is True
-        assert card._speaker_escala.get_sensitive() is True
 
 
     @staticmethod
@@ -249,19 +133,6 @@ class TestNaTela:
         )
         return pedidos
 
-    @staticmethod
-    def _disparar_os_seis_gestos(card: Any) -> None:
-        """Os SEIS gestos que escrevem som, num lugar só."""
-        from hefesto_dualsense4unix.app.widgets import controller_card as cc
-
-        card._mic_botao.clicked()
-        card._mic_escala.set_value(70)
-        card._enviar_volume_do_mic()
-        card._speaker_escala.set_value(70)
-        card._enviar_volume_do_controle()
-        card._speaker_botao_mudo.clicked()
-        card._speaker_botao_devolver.clicked()
-        card._speaker_canal.set_active_id(cc.CANAL_TODO_O_PC)
 
     def test_nenhum_gesto_sem_endereco_vira_pedido_ao_daemon(
         self, monkeypatch: pytest.MonkeyPatch
@@ -277,48 +148,4 @@ class TestNaTela:
             f"cai no controle PRIMÁRIO, não neste card — {pedidos}"
         )
 
-    def test_com_posse_do_volume_os_dois_ultimos_gestos_tambem_morrem(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A MORDIDA que faltava: o "Silenciar" e o "Soltar" CHEGANDO na tranca."""
-        pedidos = self._espiar_o_ipc(monkeypatch)
 
-        card = self._card(_com_posse_do_volume(_controle_sem_endereco()))
-        assert card._speaker_acao_mudo.sensivel is True, (
-            "sem uma ação sensível este teste não exercita a tranca do mudo"
-        )
-        assert card._speaker_acao_devolucao.sensivel is True, (
-            "sem uma ação sensível este teste não exercita a tranca do soltar"
-        )
-
-        self._disparar_os_seis_gestos(card)
-
-        assert pedidos == [], (
-            "o card sem endereço mandou som ao daemon com a posse do volume "
-            f"aberta — cada pedido destes cai no PRIMÁRIO: {pedidos}"
-        )
-
-    def test_com_endereco_os_seis_gestos_chegam_e_miram_este_controle(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A outra metade da mordida: a guarda não pode matar o produto."""
-        entry = _com_posse_do_volume(_controles()[2])
-        pedidos = self._espiar_o_ipc(monkeypatch)
-
-        card = self._card(entry)
-        # (com mais de um DualSense o `escolher_sink` recusa de propósito).
-        assert card._speaker_sink == ""
-
-        self._disparar_os_seis_gestos(card)
-
-        assert [nome for nome, _ in pedidos] == [
-            "mic.set",
-            "mic.volume.set",
-            "speaker.set",
-            "speaker.set",
-            "speaker.set",
-            "speaker.set",
-        ], f"algum dos seis gestos não chegou ao daemon com endereço: {pedidos}"
-        assert {alvo for _, alvo in pedidos} == {entry["uniq"]}, (
-            "os gestos saíram sem mirar ESTE controle"
-        )

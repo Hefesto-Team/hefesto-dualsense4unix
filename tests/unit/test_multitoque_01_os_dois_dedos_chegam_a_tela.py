@@ -25,7 +25,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from hefesto_dualsense4unix.app.widgets.controller_card import dedos_do_inputs
+from hefesto_dualsense4unix.interface.cartao_do_controle import dedos_do_inputs
 from hefesto_dualsense4unix.core.evdev_reader import TouchpadReader
 
 

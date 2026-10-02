@@ -40,20 +40,6 @@ def _metodos(caminho: Path) -> set[str]:
 
 class TestOsDoisInterruptores:
 
-    def test_o_interruptor_do_teclado_esta_ligado_de_ponta_a_ponta(self) -> None:
-        """O mixin do teclado está inteiro: o handler e o refresher, no motor."""
-        metodos = _metodos(EMULACAO_PY)
-        assert "on_keyboard_toggle_set" in metodos
-        assert "_refresh_keyboard_switch" in metodos
-        fonte = EMULACAO_PY.read_text(encoding="utf-8")
-        assert '"_refresh_keyboard_switch",' in fonte, (
-            "a chave do teclado saiu do agregador `_refresh_emulation_tab`: ela "
-            "para de ser relida no botão Atualizar e mostra a posição do "
-            "bootstrap pelo resto da sessão"
-        )
-        assert "_refresh_keyboard_switch()" in fonte, (
-            "a chave do teclado não é mais populada no bootstrap da janela"
-        )
 
     def test_o_segundo_escritor_da_flag_obriga_o_gancho_da_aba(self) -> None:
         """SEGUNDO-ESCRITOR-01 (22/08/2026): o gesto PS + R3 virou o interruptor.

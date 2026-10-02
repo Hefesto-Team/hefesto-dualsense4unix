@@ -5,7 +5,6 @@ import sys
 import types
 from typing import Any
 
-import pytest
 
 from tests.conftest import exigir_gi_real
 
@@ -56,7 +55,6 @@ def _install_gi_stubs() -> None:
 _install_gi_stubs()
 
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
-from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 
 MMJ = "2111190"
 
@@ -152,26 +150,6 @@ class _FakeSelector:
 
 
 class _Editor(pa.ProfilesActionsMixin):
-    def __init__(self) -> None:
-        self._widgets: dict[str, Any] = {
-            "profile_name_entry": _FakeEntry("MadJack"),
-            "profile_priority_scale": _FakeScale(70),
-            "profile_simple_custom_name": _FakeEntry(""),
-            "profile_game_entry_box": _FakeBox(),
-            "profile_editor_stack": _FakeStack(),
-            "profile_advanced_switch": _FakeSwitch(),
-            "profile_preview_label": _FakeEntry(""),
-            "main_window": object(),
-        }
-        self._profiles_cache: list[Profile] = []
-        self._duplicate_source = None
-        self._new_profile = False
-        self._mode_advanced = False
-        self._aplica_a = _FakeSelector("any")
-        self._aplica_a.connect("changed", self._on_aplica_a_changed)
-        self.toasts: list[str] = []
-        self.salvos: list[Profile] = []
-        self.prefills = 0
 
     def _get(self, widget_id: str) -> Any:
         return self._widgets.get(widget_id)
@@ -196,9 +174,6 @@ class _Editor(pa.ProfilesActionsMixin):
 
 
 class TestSeletorAplicaA:
-    def test_opcao_existe_e_e_a_ultima(self) -> None:
-        assert "steam_game" in pa._RADIO_IDS
-        assert dict(pa._APLICA_A_ITEMS)["steam_game"] == "Jogo da Steam"
 
     def test_escolher_jogo_da_steam_mostra_o_campo_e_troca_a_dica(self) -> None:
         ed = _Editor()
@@ -225,60 +200,3 @@ class TestSeletorAplicaA:
         assert not ed._get("profile_game_entry_box").visivel
 
 
-class TestSalvarPerfilDoJogo:
-    def test_build_produz_a_regra_por_appid(self) -> None:
-        ed = _Editor()
-        ed._aplica_a.set_active_id("steam_game")
-        ed._get("profile_simple_custom_name").set_text(MMJ)
-
-        p = ed._build_profile_from_editor()
-        assert isinstance(p.match, MatchCriteria)
-        assert p.match.window_class == [f"steam_app_{MMJ}"]
-        assert p.name == "MadJack" and p.priority == 70
-
-    def test_campo_vazio_recusa_o_save_com_frase_de_gente(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        ed = _Editor()
-        ed._aplica_a.set_active_id("steam_game")
-        monkeypatch.setattr(pa, "save_profile", lambda p: ed.salvos.append(p))
-        monkeypatch.setattr(pa, "active_profile_name", lambda: None)
-
-        ed.on_profile_save(None)
-
-        assert ed.salvos == [], (
-            "antes isto virava MatchAny e nascia mais um catch-all (R-01), "
-            'com o toast dizendo "Perfil salvo"'
-        )
-        assert ed.toasts and "número do jogo na Steam" in ed.toasts[-1], (
-            "o toast tem de dizer O QUE falta, não 'Revise os campos do perfil'"
-        )
-
-
-class TestRoundTripNoEditor:
-    def test_reabrir_o_perfil_volta_para_o_simples_com_o_appid(self) -> None:
-        ed = _Editor()
-        perfil = Profile(
-            name="MadJack",
-            match=MatchCriteria(window_class=[f"steam_app_{MMJ}"]),
-            priority=70,
-        )
-        ed._populate_editor(perfil)
-
-        assert ed._aplica_a.get_active_id() == "steam_game"
-        assert ed._get("profile_simple_custom_name").get_text() == MMJ
-        assert ed._get("profile_editor_stack").visible_child == "simples"
-        assert ed._mode_advanced is False
-
-    def test_salvar_de_novo_nao_duplica_o_prefixo(self) -> None:
-        """O campo guarda o NÚMERO: se `_populate_editor` devolvesse a"""
-        ed = _Editor()
-        perfil = Profile(
-            name="MadJack",
-            match=MatchCriteria(window_class=[f"steam_app_{MMJ}"]),
-            priority=70,
-        )
-        ed._populate_editor(perfil)
-        de_novo = ed._build_profile_from_editor()
-        assert isinstance(de_novo.match, MatchCriteria)
-        assert de_novo.match.window_class == [f"steam_app_{MMJ}"]

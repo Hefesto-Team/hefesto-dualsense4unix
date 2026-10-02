@@ -48,30 +48,3 @@ def test_cores_do_python_da_gui_saem_da_paleta() -> None:
     )
 
 
-def test_css_usa_a_paleta() -> None:
-    """No CSS as cores viram tokens `@define-color`; só elas podem ser hex."""
-    css = (GUI / "theme.css").read_text(encoding="utf-8")
-    sem_comentarios = re.sub(r"/\*.*?\*/", "", css, flags=re.DOTALL)
-    sem_tokens = re.sub(
-        r"@define-color\s+\w+\s+#[0-9a-fA-F]{3,8}\s*;", "", sem_comentarios
-    )
-
-    assert not _fora_da_paleta(_cores_de(sem_tokens)), (
-        "cores fora da paleta no theme.css: "
-        f"{sorted(_fora_da_paleta(_cores_de(sem_tokens)))}"
-    )
-
-
-def test_a_paleta_do_teste_bate_com_os_tokens_do_css() -> None:
-    """Se o CSS ganhar um token novo, esta lista tem de saber — senão o teste"""
-    css = (GUI / "theme.css").read_text(encoding="utf-8")
-    tokens = {
-        m.group(1).lower()
-        for m in re.finditer(
-            r"@define-color\s+\w+\s+(#[0-9a-fA-F]{3,8})\s*;", css
-        )
-    }
-
-    assert tokens <= PALETA, (
-        f"tokens do CSS ausentes da paleta deste teste: {sorted(tokens - PALETA)}"
-    )

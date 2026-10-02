@@ -131,36 +131,6 @@ def test_a_marca_nao_casa_com_o_nome_de_um_aparelho_de_verdade() -> None:
         )
 
 
-def test_sem_uniq_o_vpad_de_hoje_continua_sendo_nosso() -> None:
-    """A MORDIDA que a sprint pede: arranque a regra do `uniq` e sobra o nome."""
-    nome = _nome_publicado_pelo_vpad(1)
-    nos = [
-        _no("/dev/input/js0", nome, "", f"{_HID_UHID}/input/input325/js0"),
-        _no(
-            "/dev/input/js1",
-            f"{nome} Motion Sensors",
-            "",
-            f"{_HID_UHID}/input/input326/js1",
-        ),
-    ]
-    assert ea.classificar_joysticks(nos) == (0, 1, 0), (
-        "sem `uniq` legível, o produto deixou de reconhecer o próprio vpad"
-    )
-
-
-def test_o_dualsense_fisico_por_radio_nao_vira_nosso_pelo_nome() -> None:
-    """BLUEZ-UHID-01: o físico de rádio mora no MESMO lugar do sysfs."""
-    nos = [
-        _no(
-            "/dev/input/js0",
-            "DualSense Wireless Controller",
-            "a1:b2:c3:00:00:d4",
-            f"{_HID_UHID}/input/input300/js0",
-        ),
-    ]
-    assert ea.classificar_joysticks(nos) == (1, 0, 0)
-
-
 def test_o_nome_antigo_nao_e_regua_de_constante_nenhuma_desta_aba() -> None:
     """Fato errado sai de todos os lugares onde AINDA É RÉGUA."""
     fonte = Path(ea.__file__).read_text(encoding="utf-8")

@@ -461,19 +461,6 @@ class TestCoopSaiuDaJanelaPorqueDeixouDeSerOpcao:
         ):
             assert not hasattr(home_actions, nome), f"{nome} sobreviveu ao botão"
 
-    def test_o_gesto_de_recuperacao_ganhou_dono_antes_de_o_botao_sair(self) -> None:
-        """A armadilha nomeada pela sprint (linhas 72-75 do roteiro)."""
-        import inspect
-
-        from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
-        from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
-
-        assert hasattr(home_actions.HomeActionsMixin, "_on_home_reconciliar_clicked")
-        assert home_actions.RECONCILIAR_LABEL == "Reconciliar jogadores"
-        assert hasattr(IpcHandlersMixin, "_handle_coop_sync")
-        registro = inspect.getsource(IpcServer.__post_init__)
-        assert '"coop.sync": self._handle_coop_sync' in registro
-
 
 class TestUmDonoSoParaAMascara:
     def test_a_janela_nao_escolhe_mascara_por_ela(self) -> None:

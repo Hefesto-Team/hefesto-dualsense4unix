@@ -46,7 +46,6 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("importa `app.actions.config`, que carrega o GTK")
 
-from hefesto_dualsense4unix.app.actions.config import secao_mesa
 from hefesto_dualsense4unix.integrations import mapa_das_portas
 from hefesto_dualsense4unix.integrations.mapa_das_portas import irmas_de
 from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
@@ -112,15 +111,3 @@ def test_o_gabinete_nao_desenhado_devolve_silencio() -> None:
     assert irmas_de(MapaDaMesa()) == {}
 
 
-def test_a_tela_diz_o_que_deixa_de_julgar_sem_o_desenho() -> None:
-    """A frase de quem nunca desenhou nomeia o juízo que o produto NÃO faz."""
-    frase = secao_mesa._SEM_MAPA
-    assert "coladas" in frase, (
-        "a frase de quem nunca desenhou não diz que o Hefesto ignora quais "
-        f"entradas ficam coladas — logo esconde o aviso que ele deixa de dar: {frase!r}"
-    )
-    assert "tudo bem" in frase, (
-        "a frase não recusa a leitura otimista: sem dizer que NÃO É QUE ESTEJA "
-        "TUDO BEM, o silêncio sobre a vizinhança é lido como aprovação — o "
-        f"juízo otimista que esta frente existe para fechar: {frase!r}"
-    )

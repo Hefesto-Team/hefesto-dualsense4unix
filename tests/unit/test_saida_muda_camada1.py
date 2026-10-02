@@ -42,7 +42,7 @@ from hefesto_dualsense4unix.app.mic_monitor import (
     escolher_sink,
     sinks_dualsense,
 )
-from hefesto_dualsense4unix.app.widgets.controller_card import saida_muda_do_entry
+from hefesto_dualsense4unix.interface.cartao_do_controle import saida_muda_do_entry
 
 #: `pactl list sinks short` desta máquina em 01/08/2026 (LC_ALL=C). O DualSense
 _SINKS = (

@@ -14,7 +14,6 @@ from typing import Any
 import pytest
 
 from hefesto_dualsense4unix.app import ipc_bridge
-from hefesto_dualsense4unix.app.actions.footer_actions import FooterActionsMixin
 from hefesto_dualsense4unix.core.controller import ControllerState
 from hefesto_dualsense4unix.core.events import EventBus
 from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
@@ -61,28 +60,6 @@ class _Servidor(IpcHandlersMixin):
 
     def __init__(self) -> None:
         self.daemon = SimpleNamespace(_maquina=MaquinaConfig())  # type: ignore[assignment]
-
-
-class _Rodape(FooterActionsMixin):
-    """O rodapé com o mínimo que ``on_apply_draft`` toca antes de aplicar."""
-
-    def __init__(self) -> None:
-        self.caronas: list[str] = []
-        self.aplicou_pendente: list[dict[str, str]] = []
-        self.aplicou_agora = 0
-        self.avisos: list[str] = []
-
-    def pegar_carona_no_gesto(self, gesto: str) -> None:
-        self.caronas.append(gesto)
-
-    def _aplicar_escolha_pendente(self, pendente: dict[str, str]) -> None:
-        self.aplicou_pendente.append(pendente)
-
-    def _apply_draft_agora(self) -> None:
-        self.aplicou_agora += 1
-
-    def _footer_toast(self, msg: str, context: str = "footer") -> None:
-        self.avisos.append(msg)
 
 
 def _estado() -> ControllerState:
@@ -390,56 +367,6 @@ def test_a_ponte_traduz_o_motivo_e_distingue_daemon_offline(
 
     respostas.append((False, None))
     assert ipc_bridge.machine_declare({"orcamento": {"teto": "auto"}}) == (False, None)
-
-
-def test_o_aplicar_grava_e_so_limpa_a_pendencia_quando_o_daemon_confirma(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """O botão verde é quem salva a aba diferida — e não perde o que ela marcou."""
-    pedidos: list[dict[str, Any]] = []
-    # nela. `machine_declare` segue viva como embrulho de duas pontas.
-    resposta: list[tuple[bool, str | None, tuple[str, ...]]] = [(True, None, ())]
-    monkeypatch.setattr(
-        ipc_bridge,
-        "machine_declare_detalhado",
-        lambda m: (pedidos.append(m), resposta[0])[1],
-    )
-
-    rodape = _Rodape()
-    assert rodape._gravar_declaracao_de_maquina() == (True, None)
-    assert pedidos == []
-
-    rodape._maquina_pendente = {"mesa": {"altura_da_antena": "acima"}}
-    rodape._gravar_declaracao_de_maquina()
-    assert pedidos == [{"mesa": {"altura_da_antena": "acima"}}]
-    assert rodape._maquina_pendente is None
-
-    resposta[0] = (False, "não deu", ())
-    rodape._maquina_pendente = {"orcamento": {"teto": "auto"}}
-    assert rodape._gravar_declaracao_de_maquina() == (False, "não deu")
-    assert rodape.avisos == []
-    assert rodape._maquina_pendente == {"orcamento": {"teto": "auto"}}
-
-
-def test_o_aplicar_com_modo_pendente_tambem_grava(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A armadilha da ordem: ``on_apply_draft`` retorna cedo com modo pendente."""
-    pedidos: list[dict[str, Any]] = []
-    monkeypatch.setattr(
-        ipc_bridge,
-        "machine_declare_detalhado",
-        lambda m: (pedidos.append(m), (True, None, ()))[1],
-    )
-
-    rodape = _Rodape()
-    rodape._maquina_pendente = {"orcamento": {"teto": "auto"}}
-    rodape._escolha_pendente = {"modo": "gamepad"}
-    rodape.on_apply_draft()
-
-    assert pedidos == [{"orcamento": {"teto": "auto"}}]
-    assert rodape.aplicou_pendente == [{"modo": "gamepad"}]
-    assert rodape.aplicou_agora == 0
 
 
 @pytest.mark.asyncio

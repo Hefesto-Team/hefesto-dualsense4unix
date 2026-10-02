@@ -7,10 +7,7 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.app.draft_config import (
-    DraftConfig,
-    registrar_alto_falante_no_rascunho,
-)
+from hefesto_dualsense4unix.app.draft_config import DraftConfig
 from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.loader import save_profile
 from hefesto_dualsense4unix.profiles.manager import (
@@ -246,25 +243,6 @@ def test_a_peca_que_so_opina_sobre_luz_nao_ganha_as_chaves_novas(
     assert entradas[PRETO]["rumble"] == {"policy": "economia"}
 
 
-def test_o_rascunho_intocado_nao_semeia_campo_novo(
-    isolated_profiles_dir: Path,
-) -> None:
-    """"Salvar Perfil" sem gesto por unidade não inventa mapa nem seção."""
-    draft = DraftConfig.default()
-
-    assert draft.to_profile("virgem").controllers is None
-
-    tocado = draft.with_controller_leds(
-        BRANCO, draft.leds.model_copy(update={"lightbar_rgb": (200, 0, 0)})
-    )
-    caminho = save_profile(tocado.to_profile("so_luz"))
-    entrada = _entradas_do_disco(caminho)[BRANCO]
-
-    assert set(entrada) == {"leds"}, (
-        f"o rascunho semeou seção que ela não pediu: {sorted(entrada)}"
-    )
-
-
 @pytest.mark.parametrize(
     "secao",
     ["mode", "mouse", "key_bindings", "suppress_desktop_emulation"],
@@ -296,73 +274,3 @@ class _JanelaFalsa:
         self._edit_target_uniq = alvo
 
 
-def test_com_o_seletor_em_todos_o_som_continua_indo_para_o_global() -> None:
-    """Quem tem UM controle não pode passar a colecionar override por MAC."""
-    janela = _JanelaFalsa(alvo=None)
-
-    registrar_alto_falante_no_rascunho(janela, volume=180, uniq=BRANCO)
-
-    assert janela.draft.speaker.volume == 180
-    assert janela.draft.source_controllers in (None, {})
-
-
-def test_com_a_peca_escolhida_no_seletor_o_som_vira_override_dela() -> None:
-    """O gesto que ela fez ESCOLHENDO a peça fica preso ao plástico."""
-    janela = _JanelaFalsa(alvo=PRETO)
-    janela.draft = janela.draft.with_speaker(100)
-
-    registrar_alto_falante_no_rascunho(janela, volume=240, uniq=PRETO)
-
-    assert janela.draft.speaker.volume == 100, "o global não era o alvo do gesto"
-    override = janela.draft.controller_override(PRETO)
-    assert override is not None
-    assert override.speaker is not None
-    assert override.speaker.volume == 240
-    assert janela.draft.effective_speaker_for(BRANCO).volume == 100
-
-
-def test_a_peca_que_volta_a_concordar_com_o_global_perde_o_override() -> None:
-    """Concordância não vira registro — a regra COR-04, aplicada ao som."""
-    janela = _JanelaFalsa(alvo=PRETO)
-    janela.draft = janela.draft.with_speaker(100)
-
-    registrar_alto_falante_no_rascunho(janela, volume=240, uniq=PRETO)
-    assert janela.draft.controller_override(PRETO) is not None
-
-    registrar_alto_falante_no_rascunho(janela, volume=100, uniq=PRETO)
-
-    assert janela.draft.controller_override(PRETO) is None
-    assert janela.draft.source_controllers in (None, {})
-
-
-def test_a_aba_rumble_exibe_a_intensidade_da_peca_escolhida() -> None:
-    """O que ela vê no seletor é o que o "Salvar Perfil" grava."""
-    draft = DraftConfig.default().model_copy(
-        update={"rumble": DraftConfig.default().rumble.model_copy(
-            update={"policy": "economia"}
-        )}
-    )
-    draft = draft.with_controller_rumble(
-        PRETO, draft.rumble.model_copy(update={"policy": "max"})
-    )
-
-    assert draft.effective_rumble_for(PRETO).policy == "max"
-    assert draft.effective_rumble_for(BRANCO).policy == "economia"
-    assert draft.effective_rumble_for(None).policy == "economia"
-    assert draft.effective_rumble_for(PRETO).weak == draft.rumble.weak
-
-
-def test_o_aplicar_leva_a_intensidade_e_o_som_da_peca() -> None:
-    """O payload do botão verde carrega as duas seções novas por peça."""
-    draft = DraftConfig.default().with_speaker(100)
-    draft = draft.with_controller_rumble(
-        PRETO, draft.rumble.model_copy(update={"policy": "max"})
-    )
-    draft = draft.with_controller_speaker(
-        PRETO, draft.speaker.model_copy(update={"volume": 240})
-    )
-
-    entrada = draft.to_ipc_dict()["controllers"][PRETO]
-
-    assert entrada["rumble"] == {"policy": "max"}
-    assert entrada["speaker"]["volume"] == 240

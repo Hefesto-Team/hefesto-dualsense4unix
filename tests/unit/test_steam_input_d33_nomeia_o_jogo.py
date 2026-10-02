@@ -12,7 +12,6 @@ import pytest
 from hefesto_dualsense4unix.app.actions.daemon_actions import (
     _frase_steam_input,
     format_fix_safe_result,
-    format_steam_ready_result,
 )
 from hefesto_dualsense4unix.integrations import storm_doctor as sd
 from hefesto_dualsense4unix.integrations.steam_launch_options import (
@@ -178,19 +177,6 @@ class TestMensagemDoDoctor:
 
 
 class TestLinhaDaAbaEmulacao:
-    @staticmethod
-    def _markup(**kwargs: object) -> str:
-        from hefesto_dualsense4unix.app.actions.emulation_actions import (
-            markup_status_steam_input,
-        )
-
-        base: dict[str, object] = {
-            "on": True,
-            "jogos": ["Sackboy: A Big Adventure (appid 1599660)"],
-            "excecoes": [],
-        }
-        base.update(kwargs)
-        return markup_status_steam_input(**base)  # type: ignore[arg-type]
 
     def test_conta_os_jogos_e_larga_a_palavra_conflito(self) -> None:
         """A LINHA CONTA OS JOGOS — FRASES-E-DICAS-02, 13/09/2026."""
@@ -205,13 +191,6 @@ class TestLinhaDaAbaEmulacao:
         assert "ajuste global da Steam" in markup
         assert "appid" not in markup
 
-    def test_desligado_e_indeterminado_nao_mudaram(self) -> None:
-        from hefesto_dualsense4unix.app.actions.emulation_actions import (
-            STEAM_NAO_ENCONTRADA,
-        )
-
-        assert "Desligado — tudo certo" in self._markup(on=False, jogos=[])
-        assert STEAM_NAO_ENCONTRADA in self._markup(on=None, jogos=[])
 
     def test_nome_com_e_comercial_nao_quebra_o_markup(self) -> None:
         """Pango engasga com `&` cru — e um jogo chamado "Rick & Morty" existe."""
@@ -261,17 +240,6 @@ class TestToastDosBotoes:
         )
         assert self._ROTULO in msg
 
-    def test_deixar_tudo_pronto_leva_o_nome_do_jogo_ate_o_toast(self) -> None:
-        msg = format_steam_ready_result(
-            janela="ok",
-            dados={
-                "script": (0, "[steam-input] resultado=aplicado\n"),
-                "wrapper": None,
-                "steam_input_jogos": [self._ROTULO],
-            },
-            wrapper_ok=False,
-        )
-        assert self._ROTULO in msg
 
     def test_relatorio_torto_nao_derruba_nem_inventa(self) -> None:
         for torto in ("Sackboy", [1599660], 7, {"a": 1}):

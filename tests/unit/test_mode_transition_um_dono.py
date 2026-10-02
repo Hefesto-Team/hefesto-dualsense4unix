@@ -56,7 +56,6 @@ _install_gi_stubs()
 
 from hefesto_dualsense4unix.app.actions import (
     emulation_actions,
-    footer_actions,
     home_actions,
     mode_transition,
 )
@@ -182,55 +181,6 @@ class _EmulStub(emulation_actions.EmulationActionsMixin):
         self.refreshed += 1
 
 
-def test_emulacao_xbox_sai_do_nativo_antes_de_ligar_o_vpad(ipc: list[Call]) -> None:
-    """Regressão do JOGO SEM CONTROLE NENHUM: era um `gamepad.emulation.set` cru."""
-    _EmulStub().on_emulation_gamepad_xbox(None)
-
-    assert _methods(ipc) == [
-        ("native.mode.set", {"enabled": False, "origin": "manual"}),
-        ("gamepad.emulation.set", {"enabled": True, "flavor": "xbox", "origin": "manual"}),
-    ]
-
-
-def test_emulacao_dualsense_sai_do_nativo_antes_de_ligar_o_vpad(
-    ipc: list[Call],
-) -> None:
-    _EmulStub().on_emulation_gamepad_dualsense(None)
-
-    assert _methods(ipc) == [
-        ("native.mode.set", {"enabled": False, "origin": "manual"}),
-        ("gamepad.emulation.set", {"enabled": True, "flavor": "dualsense", "origin": "manual"}),
-    ]
-
-
-def test_emulacao_desligado_tambem_sai_do_nativo(ipc: list[Call]) -> None:
-    """"Desligado" = "Controlar o PC": deixar o nativo de pé exibia o botão"""
-    _EmulStub().on_emulation_gamepad_off(None)
-
-    assert _methods(ipc) == [
-        ("native.mode.set", {"enabled": False, "origin": "manual"}),
-        ("gamepad.emulation.set", {"enabled": False, "origin": "manual"}),
-        ("desktop.arranjo.apply", {"origin": "manual"}),
-    ]
-
-
-def test_nenhum_caminho_da_emulacao_liga_o_vpad_sem_transicao(ipc: list[Call]) -> None:
-    """Aceite do HARM-01: todo `gamepad.emulation.set` vem depois de um"""
-    stub = _EmulStub()
-    for handler in (
-        stub.on_emulation_gamepad_off,
-        stub.on_emulation_gamepad_dualsense,
-        stub.on_emulation_gamepad_xbox,
-    ):
-        ipc.clear()
-        handler(None)
-        metodos = [m for m, _p, _t in ipc]
-        assert metodos.index("native.mode.set") < metodos.index(
-            "gamepad.emulation.set"
-        )
-        assert all(t == 2.0 for _m, _p, t in ipc)
-
-
 class _FakeSelector:
     def __init__(self, active_id: str | None = None) -> None:
         self._active_id = active_id
@@ -248,97 +198,6 @@ class _FakeLabel:
 
     def set_text(self, text: str) -> None:
         self.text = text
-
-
-class _HomeStub:
-    _on_home_mode_changed = home_actions.HomeActionsMixin._on_home_mode_changed
-    _on_home_flavor_changed = home_actions.HomeActionsMixin._on_home_flavor_changed
-
-    def _perguntar_antes_de_relancar(self, **_kw: object) -> bool:
-        return False
-
-    def __init__(self, flavor: str) -> None:
-        self._home_guard = False
-        self._home_mode_desc = _FakeLabel()
-        self._home_mode_selector = _FakeSelector()
-        self._home_flavor_selector = _FakeSelector(flavor)
-
-    def _status_toast(self, _origin: str, _msg: str) -> None:
-        pass
-
-    def _refresh_home_tab(self) -> None:
-        pass
-
-
-class _RodapeStub:
-    """O botão verde, com o método REAL que aplica a escolha da aba Início."""
-
-    _aplicar_escolha_pendente = (
-        footer_actions.FooterActionsMixin._aplicar_escolha_pendente
-    )
-
-    def __init__(self, pendente: dict[str, str]) -> None:
-        self._escolha_pendente: dict[str, str] | None = dict(pendente)
-        self._modo_vigente_do_daemon = "desktop"
-        self._mascara_vigente_do_daemon: str | None = None
-
-    def _perguntar_antes_de_relancar(self, **_kw: object) -> bool:
-        return False
-
-    def _ha_jogo_aberto_agora(self) -> bool:
-        return False
-
-    def _apply_draft_agora(self) -> None:
-        pass
-
-    def _footer_toast(self, _msg: str, _context: str = "footer") -> None:
-        pass
-
-    def aplicar(self) -> None:
-        self._aplicar_escolha_pendente(dict(self._escolha_pendente or {}))
-
-
-@pytest.mark.parametrize(
-    ("mode_id", "flavor", "emul_handler"),
-    [
-        ("gamepad", "xbox", "on_emulation_gamepad_xbox"),
-        ("gamepad", "dualsense", "on_emulation_gamepad_dualsense"),
-        ("desktop", "xbox", "on_emulation_gamepad_off"),
-    ],
-)
-def test_inicio_e_emulacao_emitem_a_mesma_sequencia(
-    ipc: list[Call], mode_id: str, flavor: str, emul_handler: str
-) -> None:
-    """Aceite do HARM-01: alternar Início<->Emulação nunca mostra estados"""
-    home = _HomeStub(flavor)
-    home._home_mode_selector.set_active_id(mode_id)
-    home._on_home_mode_changed(home._home_mode_selector)
-    if mode_id == "gamepad":
-        home._home_flavor_selector.set_active_id(flavor)
-        home._on_home_flavor_changed(home._home_flavor_selector)
-    _RodapeStub(home._escolha_pendente or {}).aplicar()
-    pela_inicio = list(ipc)
-
-    ipc.clear()
-    getattr(_EmulStub(), emul_handler)(None)
-
-    assert pela_inicio == list(ipc)
-
-
-def test_a_inicio_sem_mascara_escolhida_nao_impoe_mascara_nenhuma(
-    ipc: list[Call],
-) -> None:
-    """AUTO-01.3, no caminho novo: quem não escolheu não manda."""
-    home = _HomeStub("dualsense")
-    home._home_mode_selector.set_active_id("gamepad")
-    home._on_home_mode_changed(home._home_mode_selector)
-
-    _RodapeStub(home._escolha_pendente or {}).aplicar()
-
-    ligar = [p for m, p, _t in ipc if m == "gamepad.emulation.set"]
-    assert ligar and "flavor" not in ligar[0], (
-        "a Início mandou uma máscara que ninguém escolheu"
-    )
 
 
 class _FakeButton:

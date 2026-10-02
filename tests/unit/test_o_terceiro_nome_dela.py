@@ -13,7 +13,7 @@ from hefesto_dualsense4unix.app.audio_saida import (
     BYTE_TODO_O_SOM_DO_PC,
     botao_da_rota_aceso,
 )
-from hefesto_dualsense4unix.app.widgets.controller_card import (
+from hefesto_dualsense4unix.interface.cartao_do_controle import (
     CANAL_NADA_NO_CONTROLE,
     ROTA_DO_CANAL,
 )
@@ -138,7 +138,7 @@ class TestAPinturaAcendeOTerceiro:
 
 def test_a_capacidade_velha_nao_foi_apagada() -> None:
     """**§7 da sprint: não apague a `rota=3`.**"""
-    from hefesto_dualsense4unix.app.widgets.controller_card import (
+    from hefesto_dualsense4unix.interface.cartao_do_controle import (
         CANAL_TODO_O_PC,
     )
 

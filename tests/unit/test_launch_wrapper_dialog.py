@@ -21,7 +21,6 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("launch wrapper dialog")
 
 import contextlib
-import json
 from pathlib import Path
 from typing import Any
 
@@ -32,9 +31,6 @@ from hefesto_dualsense4unix.app.actions.launch_wrapper_dialog import (
     DECISION_PROMPT,
     DECISION_READ_VDF,
     DECISION_SKIP,
-    RESPONSE_COPY,
-    RESPONSE_DISMISS,
-    LaunchWrapperDialogMixin,
     extract_steam_appid,
     wrapper_dialog_decision,
 )
@@ -209,36 +205,6 @@ class TestPersistenciaDasDispensas:
     ) -> None:
         assert lwd.load_dismissed_appids() == set()
 
-    def test_roundtrip_de_uma_dispensa(self, config_dir_isolado: Path) -> None:
-        lwd.add_dismissed_appid(APPID)
-        assert lwd.load_dismissed_appids() == {APPID}
-        gravado = json.loads(
-            (config_dir_isolado / "launch_dialog_dismissed.json").read_text(
-                encoding="utf-8"
-            )
-        )
-        assert gravado == {"dismissed_appids": [APPID]}
-
-    def test_add_faz_merge_com_o_que_ja_existe(
-        self, config_dir_isolado: Path
-    ) -> None:
-        lwd.add_dismissed_appid("42")
-        lwd.add_dismissed_appid(APPID)
-        assert lwd.load_dismissed_appids() == {"42", APPID}
-
-    def test_add_e_idempotente(self, config_dir_isolado: Path) -> None:
-        lwd.add_dismissed_appid(APPID)
-        lwd.add_dismissed_appid(APPID)
-        assert lwd.load_dismissed_appids() == {APPID}
-
-    def test_arquivo_corrompido_vira_vazio_e_add_recupera(
-        self, config_dir_isolado: Path
-    ) -> None:
-        arquivo = config_dir_isolado / "launch_dialog_dismissed.json"
-        arquivo.write_text("{lixo sem json", encoding="utf-8")
-        assert lwd.load_dismissed_appids() == set()
-        lwd.add_dismissed_appid(APPID)
-        assert lwd.load_dismissed_appids() == {APPID}
 
     def test_formato_inesperado_e_tolerado(
         self, config_dir_isolado: Path
@@ -250,13 +216,6 @@ class TestPersistenciaDasDispensas:
             '{"dismissed_appids": [42, "77", "", null]}', encoding="utf-8"
         )
         assert lwd.load_dismissed_appids() == {"42", "77"}
-
-    def test_escrita_atomica_nao_deixa_temporario_para_tras(
-        self, config_dir_isolado: Path
-    ) -> None:
-        lwd.add_dismissed_appid(APPID)
-        sobras = list(config_dir_isolado.glob(".launch_dialog_*"))
-        assert sobras == []
 
 
 _TAB = "\t"
@@ -381,24 +340,6 @@ class TestAppidNeedsWrapper:
         assert slo.appid_needs_wrapper(APPID, home=home) is False
 
 
-class _AppStub(LaunchWrapperDialogMixin):
-    """Instância mínima (padrão `_HomeStub`) — grava toasts e exibições."""
-
-    def __init__(self) -> None:
-        self.toasts: list[str] = []
-        self.shows: list[str] = []
-
-    def _status_toast(self, _ctx: str, msg: str) -> None:
-        self.toasts.append(msg)
-
-    def _show_wrapper_dialog(self, appid: str) -> None:
-        self.shows.append(appid)
-
-    @staticmethod
-    def _popup_is_open() -> bool:
-        return False
-
-
 @pytest.fixture()
 def leitura_vdf(
     monkeypatch: pytest.MonkeyPatch,
@@ -426,224 +367,12 @@ def leitura_vdf(
     return contador
 
 
-class TestMixinCacheEAntiSpam:
-    def test_fluxo_completo_le_uma_vez_e_mostra_uma_vez(
-        self, leitura_vdf: dict[str, int], config_dir_isolado: Path
-    ) -> None:
-        stub = _AppStub()
-        estado = _state()
-
-        stub._maybe_prompt_wrapper_dialog(estado)
-        assert leitura_vdf["leituras"] == 1
-        assert stub.shows == []
-
-        stub._maybe_prompt_wrapper_dialog(estado)
-        assert stub.shows == [APPID]
-        assert stub._wrapper_dialog_open is True
-
-        stub._wrapper_dialog_open = False
-        for _ in range(5):
-            stub._maybe_prompt_wrapper_dialog(estado)
-        assert stub.shows == [APPID]
-        assert leitura_vdf["leituras"] == 1
-
-    def test_appid_novo_le_de_novo_mas_o_antigo_nao(
-        self, leitura_vdf: dict[str, int], config_dir_isolado: Path
-    ) -> None:
-        stub = _AppStub()
-        estado_a = _state()
-        estado_b = _state("steam_app_42")
-
-        stub._maybe_prompt_wrapper_dialog(estado_a)
-        stub._maybe_prompt_wrapper_dialog(estado_a)
-        stub._wrapper_dialog_open = False
-        assert leitura_vdf["leituras"] == 1
-
-        stub._maybe_prompt_wrapper_dialog(estado_b)
-        stub._maybe_prompt_wrapper_dialog(estado_b)
-        stub._wrapper_dialog_open = False
-        assert leitura_vdf["leituras"] == 2
-        assert stub.shows == [APPID, "42"]
-
-        stub._maybe_prompt_wrapper_dialog(estado_a)
-        assert leitura_vdf["leituras"] == 2
-        assert stub.shows == [APPID, "42"]
-
-    def test_dispensa_persistida_nem_le_o_vdf(
-        self, leitura_vdf: dict[str, int], config_dir_isolado: Path
-    ) -> None:
-        lwd.add_dismissed_appid(APPID)
-        stub = _AppStub()
-
-        for _ in range(3):
-            stub._maybe_prompt_wrapper_dialog(_state())
-
-        assert leitura_vdf["leituras"] == 0
-        assert stub.shows == []
-
-    def test_gamepad_desligado_nao_dispara_nada(
-        self, leitura_vdf: dict[str, int], config_dir_isolado: Path
-    ) -> None:
-        stub = _AppStub()
-        stub._maybe_prompt_wrapper_dialog(_state(gamepad_on=False))
-        assert leitura_vdf["leituras"] == 0
-        assert stub.shows == []
-
-    def test_popup_aberto_segura_o_tick(
-        self, leitura_vdf: dict[str, int], config_dir_isolado: Path
-    ) -> None:
-        stub = _AppStub()
-        stub._popup_is_open = lambda: True  # type: ignore[method-assign]
-        stub._wrapper_dialog_bootstrap()
-        stub._wrapper_dialog_vdf_cache[APPID] = True
-
-        stub._maybe_prompt_wrapper_dialog(_state())
-
-        assert stub.shows == []
-
-    def test_dialogo_ja_aberto_nao_empilha(
-        self, leitura_vdf: dict[str, int], config_dir_isolado: Path
-    ) -> None:
-        stub = _AppStub()
-        stub._wrapper_dialog_bootstrap()
-        stub._wrapper_dialog_vdf_cache[APPID] = True
-        stub._wrapper_dialog_open = True
-
-        stub._maybe_prompt_wrapper_dialog(_state())
-
-        assert stub.shows == []
-
-    def test_leitura_pendente_nao_acumula_submissoes(
-        self, monkeypatch: pytest.MonkeyPatch, config_dir_isolado: Path
-    ) -> None:
-        """Worker que nunca responde (IPC lento): o guard de inflight impede"""
-        submissoes: list[Any] = []
-        monkeypatch.setattr(
-            lwd,
-            "run_in_thread",
-            lambda fn, ok, fail=None: submissoes.append(fn),
-        )
-        stub = _AppStub()
-
-        stub._maybe_prompt_wrapper_dialog(_state())
-        stub._maybe_prompt_wrapper_dialog(_state())
-        stub._maybe_prompt_wrapper_dialog(_state())
-
-        assert len(submissoes) == 1
-
-    def test_falha_na_leitura_e_silenciosa_e_nao_insiste(
-        self, monkeypatch: pytest.MonkeyPatch, config_dir_isolado: Path
-    ) -> None:
-        """Erro no vdf memoiza False (fail-quiet): sem exceção no tick, sem"""
-        leituras = {"n": 0}
-
-        def explode(appid: str, home: Path | None = None) -> bool:
-            leituras["n"] += 1
-            raise OSError("disco sumiu")
-
-        def sync_run_in_thread(
-            fn: Any, on_success: Any, on_failure: Any = None
-        ) -> None:
-            try:
-                result = fn()
-            except Exception as exc:
-                if on_failure is not None:
-                    on_failure(exc)
-                return
-            on_success(result)
-
-        monkeypatch.setattr(lwd, "appid_needs_wrapper", explode)
-        monkeypatch.setattr(lwd, "run_in_thread", sync_run_in_thread)
-        stub = _AppStub()
-
-        stub._maybe_prompt_wrapper_dialog(_state())
-        stub._maybe_prompt_wrapper_dialog(_state())
-        stub._maybe_prompt_wrapper_dialog(_state())
-
-        assert leituras["n"] == 1
-        assert stub.shows == []
-
-    def test_estado_offline_e_no_op(
-        self, leitura_vdf: dict[str, int], config_dir_isolado: Path
-    ) -> None:
-        stub = _AppStub()
-        stub._maybe_prompt_wrapper_dialog(None)
-        assert leitura_vdf["leituras"] == 0
-        assert stub.shows == []
-
-
 class _FakeDialog:
     def __init__(self) -> None:
         self.destroyed = False
 
     def destroy(self) -> None:
         self.destroyed = True
-
-
-class TestRespostaDoDialogo:
-    def test_dispensa_persiste_fecha_e_libera_o_gate(
-        self, config_dir_isolado: Path
-    ) -> None:
-        stub = _AppStub()
-        stub._wrapper_dialog_open = True
-        dlg = _FakeDialog()
-
-        stub._on_wrapper_dialog_response(dlg, RESPONSE_DISMISS, "42")
-
-        assert lwd.load_dismissed_appids() == {"42"}
-        assert "42" in stub._wrapper_dialog_dismissed_set()
-        assert dlg.destroyed is True
-        assert stub._wrapper_dialog_open is False
-
-    def test_copiar_nao_fecha_e_nao_persiste(
-        self, config_dir_isolado: Path
-    ) -> None:
-        stub = _AppStub()
-        stub._wrapper_dialog_open = True
-        stub._copy_wrapper_launch_to_clipboard = lambda: True  # type: ignore[method-assign]
-        dlg = _FakeDialog()
-
-        stub._on_wrapper_dialog_response(dlg, RESPONSE_COPY, APPID)
-
-        assert dlg.destroyed is False
-        assert stub._wrapper_dialog_open is True
-        assert lwd.load_dismissed_appids() == set()
-        assert any("Copiado" in t for t in stub.toasts)
-
-    def test_falha_do_clipboard_orienta_a_copia_manual(
-        self, config_dir_isolado: Path
-    ) -> None:
-        stub = _AppStub()
-        stub._wrapper_dialog_open = True
-        stub._copy_wrapper_launch_to_clipboard = lambda: False  # type: ignore[method-assign]
-        dlg = _FakeDialog()
-
-        stub._on_wrapper_dialog_response(dlg, RESPONSE_COPY, APPID)
-
-        assert dlg.destroyed is False
-        assert any("selecione" in t.lower() for t in stub.toasts)
-
-    def test_fechar_nao_persiste_nada(self, config_dir_isolado: Path) -> None:
-        """Fechar/Esc/X (qualquer response que não seja copiar/dispensar)"""
-        stub = _AppStub()
-        stub._wrapper_dialog_open = True
-        dlg = _FakeDialog()
-
-        stub._on_wrapper_dialog_response(dlg, -4, APPID)
-
-        assert dlg.destroyed is True
-        assert stub._wrapper_dialog_open is False
-        assert lwd.load_dismissed_appids() == set()
-
-
-class TestTemaDoDialogo:
-    """GUI-05/P5 — espelho stub-level (roda headless, sem GTK real)."""
-
-    def test_build_aplica_a_classe_de_tema(self) -> None:
-        import inspect
-
-        src = inspect.getsource(LaunchWrapperDialogMixin._build_wrapper_dialog)
-        assert 'add_class("hefesto-dualsense4unix-window")' in src
 
 
 _DISPLAY_OK = False
@@ -654,50 +383,6 @@ with contextlib.suppress(Exception):
     from gi.repository import Gdk as _Gdk
 
     _DISPLAY_OK = _Gdk.Display.get_default() is not None
-
-
-@pytest.mark.skipif(
-    not _DISPLAY_OK, reason="sem display GTK — construção real do diálogo"
-)
-class TestDialogoGtkReal:
-    def test_message_dialog_nao_modal_com_texto_honesto_e_botoes(
-        self, config_dir_isolado: Path
-    ) -> None:
-        from gi.repository import Gtk
-
-        stub = _AppStub()
-        dlg = stub._build_wrapper_dialog("777")
-        try:
-            assert isinstance(dlg, Gtk.MessageDialog)
-            assert dlg.get_style_context().has_class(
-                "hefesto-dualsense4unix-window"
-            )
-            assert dlg.get_modal() is False
-            assert "777" in (dlg.get_property("text") or "")
-            corpo = dlg.get_property("secondary-text") or ""
-            assert "DUPLICADO" in corpo
-            assert "nunca zero controles" in corpo
-            assert slo.WRAPPER_LAUNCH in corpo
-            for response in (
-                RESPONSE_COPY,
-                RESPONSE_DISMISS,
-                Gtk.ResponseType.CLOSE,
-            ):
-                assert dlg.get_widget_for_response(response) is not None
-        finally:
-            dlg.destroy()
-
-    def test_sinal_response_real_dispensa_e_persiste(
-        self, config_dir_isolado: Path
-    ) -> None:
-        stub = _AppStub()
-        stub._wrapper_dialog_open = True
-        dlg = stub._build_wrapper_dialog("888")
-
-        dlg.emit("response", RESPONSE_DISMISS)
-
-        assert lwd.load_dismissed_appids() == {"888"}
-        assert stub._wrapper_dialog_open is False
 
 
 def _gdkpixbuf_ok() -> bool:

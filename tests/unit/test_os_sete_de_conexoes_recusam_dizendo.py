@@ -118,7 +118,7 @@ def a08():
 @pytest.fixture(autouse=True)
 def gabinete_de_bancada(a08, monkeypatch):
     """Um rascunho novo por caso, e NUNCA o `maquina.json` de quem roda."""
-    from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import LogicaDoMapa
+    from hefesto_dualsense4unix.interface.logica_do_mapa import LogicaDoMapa
     from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
 
     monkeypatch.setattr(a08, "_LOGICA",

@@ -56,7 +56,7 @@ from hefesto_dualsense4unix.app.mic_monitor import (
     escolher_sink,
     sinks_dualsense,
 )
-from hefesto_dualsense4unix.app.usb_pai import (
+from hefesto_dualsense4unix.integrations.usb_pai import (
     dispositivo_usb_pai,
     nos_e_sysfs,
     usb_pai_por_no,
@@ -321,17 +321,6 @@ def monitor_da_bancada(monkeypatch: pytest.MonkeyPatch) -> mm.MicMonitor:
     return monitor
 
 
-def test_o_monitor_publica_um_sink_por_controle_do_cabo(
-    monitor_da_bancada: mm.MicMonitor,
-) -> None:
-    """É esta a porta que o card (`definir_sink_de_saida`) consome."""
-    monitor_da_bancada.reconciliar()
-    assert monitor_da_bancada.sink_de(_CABO_A) == _SINK_A
-    assert monitor_da_bancada.sink_de(_CABO_B) == _SINK_B
-    assert monitor_da_bancada.sink_de(_RADIO_A) == ""
-    assert monitor_da_bancada.sink_de(_RADIO_B) == ""
-
-
 def test_o_selo_da_saida_muda_acende_no_card_certo(
     monitor_da_bancada: mm.MicMonitor,
 ) -> None:
@@ -345,18 +334,3 @@ def test_o_selo_da_saida_muda_acende_no_card_certo(
     assert monitor_da_bancada.leitura(_RADIO_A) is None
 
 
-def test_sem_pactl_o_monitor_nao_inventa_placa(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Degradar não pode virar chute: sem `pactl`, ninguém ganha sink."""
-    monkeypatch.setattr(mm, "usb_pai_por_uniq", lambda _uniqs: dict(_USB_POR_UNIQ))
-    monitor = mm.MicMonitor(
-        runner=lambda cmd: (_SINKS_CURTO if cmd[-1] == "short" else ""),
-        capturador=lambda *a, **k: None,
-        auto_supervisao=False,
-    )
-    monitor.set_ativo(True)
-    monitor.set_controles((_CABO_A, _CABO_B))
-    monitor.reconciliar()
-    assert monitor.sink_de(_CABO_A) == ""
-    assert monitor.sink_de(_CABO_B) == ""

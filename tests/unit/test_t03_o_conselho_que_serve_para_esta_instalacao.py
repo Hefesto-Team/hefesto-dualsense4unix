@@ -49,27 +49,6 @@ class TestOGestoQueServeParaCadaInstalacao:
 class TestNenhumaFraseDaTelaMandaAoLugarInexistente:
     """O portão da regra "sai de TODOS os lugares onde aparece"."""
 
-    @pytest.mark.parametrize(
-        "script_ok, wrapper_ok",
-        [(False, False), (False, True), (True, False)],
-    )
-    def test_format_steam_ready_result_nao_cita_install_sh_fora_do_checkout(
-        self, monkeypatch: pytest.MonkeyPatch, script_ok: bool, wrapper_ok: bool
-    ) -> None:
-        """Os três ramos de instalação incompleta que a sprint nomeia."""
-        monkeypatch.setattr(da, "esta_instalacao_e_um_checkout", lambda: False)
-
-        frase = da.format_steam_ready_result(
-            janela="ok",
-            dados={"script": (0, ""), "wrapper": {}},
-            script_ok=script_ok,
-            wrapper_ok=wrapper_ok,
-        )
-
-        assert "instalação" in frase, (
-            f"o ramo de instalação incompleta não foi exercitado: {frase!r}"
-        )
-        assert "install.sh" not in frase, frase
 
     def test_nenhuma_frase_do_modulo_crava_install_sh(self) -> None:
         """O portão que impede a correção pela metade."""

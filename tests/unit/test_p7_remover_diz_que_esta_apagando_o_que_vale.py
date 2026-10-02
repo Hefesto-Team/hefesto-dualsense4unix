@@ -5,12 +5,9 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("p7: o Remover diz o que apaga")
 
-import types
 from typing import Any
 
-import pytest
 
-from hefesto_dualsense4unix.app import gui_dialogs
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
 
 
@@ -100,123 +97,3 @@ class _Aba(pa.ProfilesActionsMixin):  # type: ignore[misc]
         self.toasts.append(msg)
 
 
-def _espiar_o_dialogo(monkeypatch: pytest.MonkeyPatch) -> list[str | None]:
-    """Troca o diálogo por um espião e devolve a lista de `aviso` recebidos."""
-    vistos: list[str | None] = []
-
-    def _falso(parent: Any, name: str, aviso: str | None = None) -> bool:
-        vistos.append(aviso)
-        return False
-
-    monkeypatch.setattr(gui_dialogs, "confirm_delete_profile", _falso)
-    return vistos
-
-
-class TestOBotaoCalculaAFrase:
-    def test_remover_o_ativo_manda_o_aviso_ao_dialogo(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """MORDE a costura: a frase certa e o diálogo mudo não curam nada."""
-        monkeypatch.setattr(pa, "perfil_que_ela_ativou", lambda: "Sackboy")
-        vistos = _espiar_o_dialogo(monkeypatch)
-
-        _Aba("Sackboy").on_profile_remove(None)
-
-        assert len(vistos) == 1
-        assert vistos[0] is not None
-        assert "está valendo agora" in vistos[0]
-
-    def test_remover_outro_manda_none_e_o_dialogo_fica_como_ontem(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setattr(pa, "perfil_que_ela_ativou", lambda: "Sackboy")
-        vistos = _espiar_o_dialogo(monkeypatch)
-
-        _Aba("Pragmata").on_profile_remove(None)
-
-        assert vistos == [None]
-
-    def test_o_disco_mudo_nao_derruba_a_thread_do_gtk(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Ler o marcador é I/O, e I/O falha. Falhar aqui custaria a janela."""
-
-        def _explode() -> str:
-            raise OSError("disco fora")
-
-        monkeypatch.setattr(pa, "perfil_que_ela_ativou", _explode)
-        vistos = _espiar_o_dialogo(monkeypatch)
-
-        _Aba("Sackboy").on_profile_remove(None)
-
-        assert vistos == [None]
-
-
-class TestADialogoCarregaAFrase:
-    """O `gui_dialogs` só ENCAIXA a frase — quem sabe o fato é quem a escreve."""
-
-    @staticmethod
-    def _gtk_de_mentira() -> tuple[Any, dict[str, Any]]:
-        registro: dict[str, Any] = {}
-
-        class _Dialogo:
-            def __init__(self, **kw: Any) -> None:
-                registro["titulo"] = kw.get("text")
-
-            def format_secondary_text(self, texto: str) -> None:
-                registro["secundário"] = texto
-
-            def add_button(self, *_a: Any) -> None:
-                return None
-
-            def set_default_response(self, *_a: Any) -> None:
-                return None
-
-            def destroy(self) -> None:
-                return None
-
-        resposta = types.SimpleNamespace(CANCEL="cancel", OK="ok")
-        falso = types.SimpleNamespace(
-            MessageDialog=_Dialogo,
-            MessageType=types.SimpleNamespace(WARNING="warn"),
-            ButtonsType=types.SimpleNamespace(NONE="none"),
-            ResponseType=resposta,
-            Window=object,
-        )
-        return falso, registro
-
-    def test_o_aviso_vem_antes_do_permanente(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A linha que ela já leu mil vezes não pode ficar na frente da nova."""
-        falso, registro = self._gtk_de_mentira()
-        monkeypatch.setattr(gui_dialogs, "Gtk", falso)
-        monkeypatch.setattr(gui_dialogs, "_apply_app_theme", lambda _d: None)
-        monkeypatch.setattr(
-            gui_dialogs, "executar_dialogo", lambda _d, nome="": "cancel"
-        )
-
-        gui_dialogs.confirm_delete_profile(
-            parent=None, name="Sackboy", aviso="ESTE É O AVISO"
-        )
-
-        texto = registro["secundário"]
-        assert "ESTE É O AVISO" in texto, "o diálogo jogou o aviso fora"
-        assert "permanente" in texto, "a linha de sempre não pode sumir"
-        assert texto.index("ESTE É O AVISO") < texto.index("permanente")
-
-    def test_sem_aviso_o_dialogo_e_byte_a_byte_o_de_ontem(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        falso, registro = self._gtk_de_mentira()
-        monkeypatch.setattr(gui_dialogs, "Gtk", falso)
-        monkeypatch.setattr(gui_dialogs, "_apply_app_theme", lambda _d: None)
-        monkeypatch.setattr(
-            gui_dialogs, "executar_dialogo", lambda _d, nome="": "cancel"
-        )
-
-        gui_dialogs.confirm_delete_profile(parent=None, name="Sackboy")
-
-        assert registro["secundário"] == (
-            "Esta ação é permanente e não pode ser desfeita."
-        )

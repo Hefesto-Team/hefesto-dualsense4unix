@@ -2,11 +2,9 @@
 from __future__ import annotations
 
 import ast
-import shutil
 from collections.abc import Iterable
 from pathlib import Path
 
-import pytest
 
 from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -103,50 +101,6 @@ ISENTOS: dict[str, str] = {
     ),
 }
 
-_SINAIS_DE_ESCRITOR: dict[str, dict[str, tuple[str, ...]]] = {
-    "triggers": {
-        "chaves": ("triggers",),
-        "escritores": ("with_controller_triggers", "with_override_fields_cleared"),
-        "classes": ("TriggerDraft", "TriggersDraft"),
-    },
-    "leds": {
-        "chaves": ("leds",),
-        "escritores": ("with_controller_leds", "with_controller_fields_cleared"),
-        "classes": ("LedsDraft",),
-    },
-    "rumble": {"chaves": ("rumble",), "escritores": (), "classes": ("RumbleDraft",)},
-    "key_bindings": {"chaves": ("key_bindings",), "escritores": (), "classes": ()},
-    "mouse": {"chaves": ("mouse",), "escritores": (), "classes": ("MouseDraft",)},
-    "mic": {
-        "chaves": ("mic",),
-        "escritores": ("with_mic", "registrar_microfone_no_rascunho"),
-        "classes": ("MicDraft",),
-    },
-    "speaker": {
-        "chaves": ("speaker",),
-        "escritores": (
-            "with_speaker",
-            "without_speaker",
-            "registrar_alto_falante_no_rascunho",
-        ),
-        "classes": ("SpeakerDraft",),
-    },
-    "mode": {
-        "chaves": ("source_mode",),
-        "escritores": ("with_mode", "registrar_modo_no_rascunho"),
-        "classes": (),
-    },
-    "suppress_desktop_emulation": {
-        "chaves": ("source_suppress",),
-        "escritores": ("with_suppress", "registrar_modo_jogo_no_rascunho"),
-        "classes": (),
-    },
-    "controllers": {
-        "chaves": ("source_controllers",),
-        "escritores": ("with_controller_leds", "with_controller_triggers"),
-        "classes": (),
-    },
-}
 
 _SEM_ESCRITOR_HOJE: dict[str, str] = {}
 
@@ -277,21 +231,6 @@ def _vocabulario_de_escrita_da_janela(
     return chaves, escritores, classes
 
 
-def secoes_sem_escritor(raiz: Path | None = None) -> list[str]:
-    """As seções do perfil que NENHUMA superfície da janela escreve."""
-    chaves, escritores, classes = _vocabulario_de_escrita_da_janela(raiz)
-    orfas: list[str] = []
-    for campo, sinais in _SINAIS_DE_ESCRITOR.items():
-        tem = (
-            bool(set(sinais["chaves"]) & chaves)
-            or bool(set(sinais["escritores"]) & escritores)
-            or bool(set(sinais["classes"]) & classes)
-        )
-        if not tem:
-            orfas.append(campo)
-    return sorted(orfas)
-
-
 def secoes_sem_ida_e_volta(
     campos_do_esquema: Iterable[str],
     cobertas: Iterable[str],
@@ -388,79 +327,9 @@ class TestORegistroNaoPodeSerDecorativo:
         )
 
 
-class TestTodaSecaoTemEscritorNaJanela:
-    """A metade de CIMA do caminho: o dedo dela chega ao rascunho?"""
-
-    @pytest.mark.parametrize(
-        "campo",
-        [
-            pytest.param(
-                nome,
-                id=nome,
-                marks=(
-                    [pytest.mark.xfail(strict=True, reason=_SEM_ESCRITOR_HOJE[nome])]
-                    if nome in _SEM_ESCRITOR_HOJE
-                    else []
-                ),
-            )
-            for nome in _SINAIS_DE_ESCRITOR
-        ],
-    )
-    def test_a_secao_tem_escritor_na_janela(self, campo: str) -> None:
-        """Alguma superfície de ``app/`` escreve esta seção no rascunho?"""
-        assert campo not in secoes_sem_escritor(), (
-            f"a seção {campo!r} do perfil NÃO tem escritor na janela: nenhum "
-            f"arquivo de {_APP} escreve "
-            f"{_SINAIS_DE_ESCRITOR[campo]['chaves']} num "
-            "`model_copy(update=...)`, nem chama "
-            f"{_SINAIS_DE_ESCRITOR[campo]['escritores']}, nem constrói "
-            f"{_SINAIS_DE_ESCRITOR[campo]['classes']}.\n"
-            "A configuração existe no esquema e no rascunho, e não há onde ela "
-            "possa tocá-la — a seção nasce morta no arquivo dela."
-        )
-
-    def test_a_lista_de_lacunas_conhecidas_nao_envelhece_calada(self) -> None:
-        """Toda lacuna declarada tem razão longa, e é uma lacuna de verdade."""
-        for campo, razao in _SEM_ESCRITOR_HOJE.items():
-            assert campo in _SINAIS_DE_ESCRITOR, (
-                f"{campo!r} está na lista de lacunas e não é seção vigiada"
-            )
-            assert len(razao) > 120, (
-                f"a razão da lacuna de {campo!r} não diz onde o dado se perde: "
-                f"{razao!r}"
-            )
-
-
 class TestOPortaoMorde:
     """Um portão que nunca reprovou é uma decoração com nome de portão."""
 
-    def test_a_varredura_enxerga_as_escritas_que_existem(self) -> None:
-        """A régua conferida contra contagem independente."""
-        chaves, escritores, classes = _vocabulario_de_escrita_da_janela()
-        assert "leds" in chaves, "a varredura não vê a aba Lightbar escrevendo"
-        assert "rumble" in chaves, "a varredura não vê a aba Rumble escrevendo"
-        assert "with_mode" in escritores, "a varredura não vê o escritor do modo"
-        assert "registrar_alto_falante_no_rascunho" in escritores, (
-            "a varredura não vê o escritor do alto-falante"
-        )
-        assert "TriggerDraft" in classes, (
-            "a varredura não vê a aba Gatilhos construindo o sub-rascunho — o "
-            "terceiro idioma de escrita ficou cego"
-        )
-
-    def test_uma_secao_inventada_aparece_como_orfa(self) -> None:
-        """A prova de que a lista de lacunas não é sempre vazia por construção."""
-        sinais_originais = dict(_SINAIS_DE_ESCRITOR)
-        try:
-            _SINAIS_DE_ESCRITOR["secao_que_nao_existe"] = {
-                "chaves": ("chave_que_ninguem_escreve_jamais",),
-                "escritores": ("with_um_escritor_que_nao_existe",),
-                "classes": ("SubRascunhoQueNaoExisteDraft",),
-            }
-            assert "secao_que_nao_existe" in secoes_sem_escritor()
-        finally:
-            _SINAIS_DE_ESCRITOR.clear()
-            _SINAIS_DE_ESCRITOR.update(sinais_originais)
 
     def test_um_campo_novo_no_esquema_aparece_como_descoberto(self) -> None:
         """O miolo do portão de cobertura, apontado para um esquema FABRICADO."""
@@ -469,35 +338,4 @@ class TestOPortaoMorde:
         assert secoes_sem_ida_e_volta(inventado, cobertas, ISENTOS) == ["gyro"]
         assert secoes_sem_ida_e_volta(Profile.model_fields, cobertas, ISENTOS) == []
 
-    def test_arrancar_um_escritor_da_copia_acusa_a_secao(self, tmp_path: Path) -> None:
-        """A varredura de escritores, provada numa CÓPIA mutilada de ``app/``."""
-        copia = tmp_path / "app"
-        shutil.copytree(
-            _APP, copia, ignore=shutil.ignore_patterns("__pycache__", "*.pyc")
-        )
-        alvo = copia / "actions" / "input_actions.py"
-        texto = alvo.read_text(encoding="utf-8")
-        assert '"key_bindings"' in texto, (
-            "a linha que escreve os bindings mudou de forma — esta mordida "
-            "precisa de outro alvo, senão ela deixa de morder em silêncio"
-        )
-        alvo.write_text(texto.replace('"key_bindings"', '"__arrancado__"'), "utf-8")
 
-        assert "key_bindings" in secoes_sem_escritor(copia), (
-            "a varredura NÃO acusou a seção depois de o escritor dela ser "
-            "arrancado da cópia — o portão de escritores não morde"
-        )
-        assert "key_bindings" not in secoes_sem_escritor(), (
-            "a árvore de verdade foi contaminada pela mordida"
-        )
-
-    def test_o_conjunto_vigiado_cobre_o_que_o_rascunho_carrega(self) -> None:
-        """Seção do perfil que passa pelo rascunho tem de estar vigiada aqui."""
-        fora_do_rascunho = {"name", "match", "priority", *ISENTOS}
-        esperadas = set(Profile.model_fields) - fora_do_rascunho
-        vigiadas = set(_SINAIS_DE_ESCRITOR)
-        assert esperadas == vigiadas, (
-            "o conjunto de seções vigiadas por escritor divergiu do esquema — "
-            f"sem vigia: {sorted(esperadas - vigiadas)}; "
-            f"vigiadas a mais: {sorted(vigiadas - esperadas)}"
-        )

@@ -343,48 +343,6 @@ class TestOsDoisChamadoresLevamODenominador:
             "a frase sem denominador voltou — um controle respondendo pelos quatro"
         )
 
-    def test_o_cartao_da_janela_leva_o_denominador_ate_a_tela(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """`app/actions/daemon_actions._refresh_storm_diag` — o mesmo fio, na GUI.
-
-        Arrancar `controles_no_cabo=no_cabo` daqui faz o cartão anti-storm
-        voltar a dizer "áudio do controle presente" com um só no cabo de quatro
-        — e este teste reprovar.
-        """
-        from hefesto_dualsense4unix.app import ipc_bridge
-        from hefesto_dualsense4unix.app.actions import daemon_actions as da
-
-        estado = _mesa_toda_no_cabo()
-        perguntas: list[str] = []
-
-        def _state_full() -> dict[str, Any]:
-            perguntas.append("daemon.state_full")
-            return estado
-
-        monkeypatch.setattr(ipc_bridge, "daemon_state_full", _state_full)
-        monkeypatch.setattr(da, "_get_executor", lambda: _ExecutorSincrono())
-        monkeypatch.setattr(
-            da.GLib, "idle_add", lambda fn, *a, **k: (fn(*a, **k), 0)[1]
-        )
-        _dublar_cards(monkeypatch, CARDS_UM_SO)
-
-        rotulo = _RotuloFalso()
-
-        class _HostDoCartao(da.DaemonActionsMixin):
-            def _get(self, widget_id: str) -> Any:
-                return rotulo if widget_id == "storm_diag_label" else None
-
-        _HostDoCartao()._refresh_storm_diag()
-
-        assert perguntas == ["daemon.state_full"], (
-            "a janela nem perguntou quantos estão no cabo"
-        )
-        assert "áudio presente em 1 de 4 controles no cabo" in rotulo.markup, (
-            "o denominador não atravessou até o cartão anti-storm:\n" + rotulo.markup
-        )
-        assert "áudio do controle presente" not in rotulo.markup
-
 
 SINGULAR_RE = re.compile(r"\b(?:o|do|ao|no)\s+controle\b(?!s)", re.IGNORECASE)
 

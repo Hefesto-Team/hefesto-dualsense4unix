@@ -235,32 +235,3 @@ def _girar_o_laco(ms: int) -> None:
     Gtk.main()
 
 
-def test_a_barra_tem_a_altura_do_vizinho_e_os_botoes_sem_pilula() -> None:
-    """*"altura da barra de navegação tá diferente do padrão e tem um circulo"""
-    from gi.repository import Gtk
-
-    barra, botoes = _barra_de_verdade()
-    janela = Gtk.Window(title="nunca mostrada")
-    janela.set_titlebar(barra)
-    barra.show_all()
-    altura = barra.get_preferred_height()[1]
-    janela.destroy()
-    assert altura <= ponte_da_tela.ALTURA_DA_BARRA + 1, (
-        f"a barra pede {altura} px; o combinado é {ponte_da_tela.ALTURA_DA_BARRA}")
-
-    barra, botoes = _barra_de_verdade()
-    oculta = Gtk.OffscreenWindow()
-    oculta.add(barra)
-    oculta.show_all()
-    _girar_o_laco(150)
-    for gesto, botao in botoes.items():
-        ctx = botao.get_style_context()
-        fundo = ctx.get_property("background-color", ctx.get_state())
-        assert fundo.alpha == 0, f"o botão {gesto!r} tem fundo em repouso: {fundo.to_string()}"
-    fechar = botoes["fechar"]
-    fechar.set_state_flags(Gtk.StateFlags.PRELIGHT, False)
-    _girar_o_laco(150)
-    ctx = fechar.get_style_context()
-    fundo = ctx.get_property("background-color", ctx.get_state())
-    oculta.destroy()
-    assert fundo.alpha > 0, "o botão não responde ao mouse por cima — o clique ficou mudo"

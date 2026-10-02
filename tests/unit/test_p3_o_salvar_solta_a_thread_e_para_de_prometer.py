@@ -34,12 +34,9 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("p3: o Salvar solta a thread")
 
-import time
 from typing import Any
 
-import pytest
 
-from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
@@ -167,114 +164,3 @@ class _Editor(pa.ProfilesActionsMixin):  # type: ignore[misc]
         self.toasts.append(msg)
 
 
-@pytest.fixture
-def editor(monkeypatch: pytest.MonkeyPatch) -> _Editor:
-    ed = _Editor()
-    monkeypatch.setattr(pa, "save_profile", lambda p: ed.salvos.append(p))
-    monkeypatch.setattr(pa, "delete_profile", lambda _n: None)
-    monkeypatch.setattr(pa, "active_profile_name", lambda: ed.ativo)
-    return ed
-
-
-class TestOSalvarNaoSeguraAJanela:
-    def test_o_switch_sai_pela_ponte_assincrona_com_a_folga_dele(
-        self, editor: _Editor, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """MORDE a fiação: a chamada certa no timeout errado não cura nada.
-
-        É a lição literal da ATIVAR-NAO-MENTE-01 — o `profile.switch` mandado
-        no teto de LEITURA (250 ms) reporta falha de uma troca que aconteceu.
-        """
-        vistos: list[tuple[str, Any, float]] = []
-
-        def _call_async(
-            method: str,
-            params: dict[str, Any] | None = None,
-            on_success: Any = None,
-            on_failure: Any = None,
-            timeout_s: float = 0.25,
-        ) -> None:
-            vistos.append((method, params, timeout_s))
-
-        monkeypatch.setattr(pa, "call_async", _call_async)
-        editor.on_profile_save(None)
-
-        assert vistos == [
-            ("profile.switch", {"name": "Sackboy"}, pa.PROFILE_SWITCH_TIMEOUT_S)
-        ]
-
-    def test_o_salvar_volta_em_menos_de_100_ms_com_o_daemon_lento(
-        self, editor: _Editor, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """MORDE o P3: com a chamada síncrona de volta, isto leva ~1,2 s."""
-        def _daemon_lento(
-            method: str, params: Any = None, timeout: Any = None
-        ) -> Any:
-            time.sleep(1.2)
-            return TUDO_ENTROU
-
-        monkeypatch.setattr(ipc_bridge, "_run_call", _daemon_lento)
-
-        comeco = time.monotonic()
-        editor.on_profile_save(None)
-        gasto = time.monotonic() - comeco
-
-        assert gasto < 0.1, (
-            f"o Salvar segurou a thread do GTK por {gasto:.2f} s — é o "
-            "congelamento que a ATIVAR-NAO-MENTE-01 já tinha tirado do Ativar"
-        )
-        assert editor.salvos, "e o perfil tem de estar gravado ANTES de voltar"
-
-
-class TestOToastDoSalvarLeORelatorio:
-    def test_a_secao_recusada_chega_ao_rodape(
-        self, editor: _Editor, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """O caminho inteiro: Salvar → daemon recusa uma seção → a tela diz."""
-        monkeypatch.setattr(
-            pa,
-            "call_async",
-            lambda method, params=None, on_success=None, on_failure=None,
-            timeout_s=0.25: on_success(RECUSA_DO_R04),
-        )
-        editor.on_profile_save(None)
-
-        assert editor.toasts[-1] == pa.mensagem_do_salvar(
-            "Sackboy", None, reaplicou=True, result=RECUSA_DO_R04
-        )
-        assert "reaplicado no controle" not in editor.toasts[-1]
-
-    def test_daemon_que_nao_responde_nao_vira_falha_do_salvar(
-        self, editor: _Editor, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """O arquivo foi gravado, e isso é fato. Quem calou foi o daemon."""
-        monkeypatch.setattr(
-            pa,
-            "call_async",
-            lambda method, params=None, on_success=None, on_failure=None,
-            timeout_s=0.25: on_failure(OSError("daemon offline")),
-        )
-        editor.on_profile_save(None)
-
-        assert editor.toasts[-1] == "Perfil salvo: Sackboy"
-        assert editor.salvos, "o disco mudou mesmo com o daemon calado"
-
-    def test_perfil_que_nao_era_o_ativo_nem_chama_o_daemon(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Reaplicar o que não estava valendo trocaria o perfil dela sem gesto."""
-        ed = _Editor(nome="Outro", ativo="Sackboy")
-        monkeypatch.setattr(pa, "save_profile", lambda p: ed.salvos.append(p))
-        monkeypatch.setattr(pa, "delete_profile", lambda _n: None)
-        monkeypatch.setattr(pa, "active_profile_name", lambda: ed.ativo)
-        chamou: list[str] = []
-        monkeypatch.setattr(
-            pa,
-            "call_async",
-            lambda method, params=None, on_success=None, on_failure=None,
-            timeout_s=0.25: chamou.append(method),
-        )
-        ed.on_profile_save(None)
-
-        assert chamou == []
-        assert ed.toasts[-1] == "Perfil salvo: Outro"

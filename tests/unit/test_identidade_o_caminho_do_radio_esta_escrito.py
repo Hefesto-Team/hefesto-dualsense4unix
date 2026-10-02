@@ -11,7 +11,6 @@ from tests.conftest import exigir_gi_real
 exigir_gi_real("importa `app.actions.config`, que carrega o GTK")
 
 from hefesto_dualsense4unix.app.actions.config import secao_controles
-from hefesto_dualsense4unix.app.fatos_do_mapa import FATOS
 from hefesto_dualsense4unix.daemon.subsystems import external_identity
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -90,9 +89,6 @@ class TestOEnableImuERecusadoPorNos:
         assert "joycon_enable_imu(ctlr)" in bloco
 
 
-ID_DA_COR = secao_controles.ID_DA_COR_NO_MAPA
-
-
 class _PainelFalso:
     """O mínimo de que `_perguntar_as_cores` precisa. Sem GTK, sem janela."""
 
@@ -104,70 +100,8 @@ class _PainelFalso:
         return False
 
 
-def _perguntados(
-    monkeypatch: pytest.MonkeyPatch, transportes: list[str]
-) -> list[str]:
-    """Quem o painel chegou a PERGUNTAR, com a mesa que se pedir."""
-    saiu: list[str] = []
-
-    def _run_in_thread(trabalho: Any, _quando_voltar: Any) -> None:
-        saiu.append(trabalho()[0])
-
-    monkeypatch.setattr(secao_controles, "run_in_thread", _run_in_thread)
-    monkeypatch.setattr(secao_controles, "ler_pelo_cabo", lambda uniq: None)
-    painel = _PainelFalso()
-    mesa = [
-        {"uniq": f"aa:bb:cc:00:00:{i:02d}", "transport": t}
-        for i, t in enumerate(transportes, start=1)
-    ]
-    secao_controles._PainelDosControles._perguntar_as_cores(painel, mesa)  # type: ignore[arg-type]
-    return saiu
-
-
 class TestACorNaAbaSegueOMapa:
-    def test_o_controle_de_radio_passou_a_ser_perguntado(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """O achado do dia, na forma mais curta: antes, esta lista vinha vazia."""
-        assert _perguntados(monkeypatch, ["bt"]) == ["aa:bb:cc:00:00:01"]
 
-    def test_o_do_cabo_continua_sendo_perguntado(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Nada do que já funcionava mudou — a regra da casa sobre hipóteses."""
-        assert _perguntados(monkeypatch, ["usb"]) == ["aa:bb:cc:00:00:01"]
-
-    def test_a_mesa_inteira_e_perguntada_seja_qual_for_o_transporte(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A MORDIDA da forma, e é a razão de esta classe existir."""
-        assert _perguntados(monkeypatch, ["usb", "bt", "bt", "usb"]) == [
-            "aa:bb:cc:00:00:01",
-            "aa:bb:cc:00:00:02",
-            "aa:bb:cc:00:00:03",
-            "aa:bb:cc:00:00:04",
-        ]
-
-    def test_ninguem_e_perguntado_duas_vezes_na_mesma_sessao(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """O cache é o que protege os controles dela: o pedido é um"""
-        saiu: list[str] = []
-        monkeypatch.setattr(
-            secao_controles, "run_in_thread", lambda t, _q: saiu.append(t()[0])
-        )
-        monkeypatch.setattr(secao_controles, "ler_pelo_cabo", lambda uniq: None)
-        painel = _PainelFalso()
-        mesa = [{"uniq": "aa:bb:cc:00:00:01", "transport": "bt"}]
-        for _ in range(3):
-            secao_controles._PainelDosControles._perguntar_as_cores(painel, mesa)  # type: ignore[arg-type]
-        assert saiu == ["aa:bb:cc:00:00:01"]
-
-    def test_o_mapa_publica_a_cor_pelos_dois_transportes(self) -> None:
-        """A metade de DADO do par, e o endereço dela está no produto."""
-        celula = FATOS[ID_DA_COR]
-        assert celula["cabo"]["aciona"] == "sim"  # type: ignore[index]
-        assert celula["radio"]["aciona"] == "sim"  # type: ignore[index]
 
     def test_o_produto_nao_importa_o_dicionario_gerado_do_mapa(self) -> None:
         """O custo medido em 03/09/2026, preso para não ser pago sem querer."""

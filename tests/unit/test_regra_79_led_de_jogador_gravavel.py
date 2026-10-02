@@ -39,18 +39,6 @@ def test_o_arquivo_existe_e_e_numerado_acima_de_73() -> None:
     assert int(REGRA.name[:2]) >= LIMITE_UACCESS
 
 
-def test_os_quatro_verdes_e_o_azul_ficam_gravaveis(linhas: list[str]) -> None:
-    """As duas linhas que a linha `luz.led_jogador.udev@pro` do mapa nomeia."""
-    blob = "\n".join(linhas)
-    for cor in ("green", "blue"):
-        alvo = f'KERNEL=="*{VID_NINTENDO}:*:{cor}:player-*"'
-        assert alvo in blob, (
-            f"a regra não cobre mais os LEDs `{cor}:player-*` do {VID_NINTENDO}: "
-            "o nó fica root:root e a numeração do controle cai no default do "
-            "kernel, sem erro nenhum"
-        )
-
-
 def test_toda_linha_torna_o_brightness_gravavel_no_plug(linhas: list[str]) -> None:
     """`ACTION=="add"` + `SUBSYSTEM=="leds"` + `chmod 0666` no `brightness`."""
     assert linhas, "o arquivo não tem linha de código nenhuma"

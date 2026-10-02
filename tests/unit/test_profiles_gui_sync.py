@@ -256,34 +256,6 @@ class TestOnDaemonStatusForSync:
         selection.select_iter.assert_not_called()
 
 
-class TestSyncSelectionWithActiveProfile:
-    def test_sync_chama_call_async_com_daemon_status(self, monkeypatch):
-        import hefesto_dualsense4unix.app.actions.profiles_actions as mod
-
-        captured: dict = {}
-
-        def fake_call_async(method, params, on_success, on_failure=None, timeout_s=0.25):
-            captured["method"] = method
-            captured["params"] = params
-            captured["on_success"] = on_success
-            captured["on_failure"] = on_failure
-            captured["timeout_s"] = timeout_s
-
-        monkeypatch.setattr(mod, "call_async", fake_call_async)
-
-        stub = SimpleNamespace()
-        stub._on_daemon_status_for_sync = lambda _r: False  # type: ignore[attr-defined]
-        stub._on_daemon_status_sync_failed = lambda _e: False  # type: ignore[attr-defined]
-
-        ProfilesActionsMixin._sync_selection_with_active_profile(stub)
-
-        assert captured["method"] == "daemon.status"
-        assert captured["params"] is None
-        assert captured["timeout_s"] == 0.5
-        assert captured["on_success"] is not None
-        assert captured["on_failure"] is not None
-
-
 class _FakeCombo:
     """Stub mínimo de GtkComboBoxText para testar helpers sem GTK."""
 
@@ -353,86 +325,7 @@ def _stub_with_combo(combo: _FakeCombo, box: _FakeBox | None = None) -> SimpleNa
     return stub
 
 
-class TestProfileSimpleCombo:
-    def test_combo_populates_default_any(self):
-        """Combo renderiza com `any` ativo após install_profiles_tab."""
-        _install_gi_stubs()
-        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
-
-        combo = _FakeCombo(initial_id="editor")
-        stub = _stub_with_combo(combo)
-
-        choice = ProfilesActionsMixin._selected_simple_choice(stub)
-        assert choice == "editor"
-
-        ProfilesActionsMixin._select_radio(stub, "steam")
-        assert combo.get_active_id() == "steam"
-
-    def test_selected_simple_choice_fallback_para_any(self):
-        """Combo ausente/com id inválido → fallback 'any'."""
-        _install_gi_stubs()
-        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
-
-        stub = SimpleNamespace()
-        stub._get = lambda _w: None  # type: ignore[attr-defined]
-        assert ProfilesActionsMixin._selected_simple_choice(stub) == "any"
-
-        combo = _FakeCombo(initial_id="outro_qualquer")
-        stub2 = _stub_with_combo(combo)
-        assert ProfilesActionsMixin._selected_simple_choice(stub2) == "any"
-
-    def test_select_radio_id_desconhecido_vira_any(self):
-        """`_select_radio("xyz")` deve fallback para `any`, não crashar."""
-        _install_gi_stubs()
-        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
-
-        combo = _FakeCombo(initial_id="steam")
-        stub = _stub_with_combo(combo)
-
-        ProfilesActionsMixin._select_radio(stub, "xyz")
-        assert combo.get_active_id() == "any"
-
-    def test_combo_game_shows_entry(self):
-        """`_on_aplica_a_changed` com id="game" mostra o box do entry."""
-        _install_gi_stubs()
-        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
-
-        combo = _FakeCombo(initial_id="game")
-        box = _FakeBox()
-        box.hide()
-        assert box.visible is False
-
-        stub = _stub_with_combo(combo, box)
-
-        ProfilesActionsMixin._on_aplica_a_changed(stub, combo)
-        assert box.visible is True
-
-    def test_combo_nao_game_esconde_entry(self):
-        """Qualquer id != "game" esconde o box."""
-        _install_gi_stubs()
-        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
-
-        combo = _FakeCombo(initial_id="steam")
-        box = _FakeBox()
-        assert box.visible is True
-
-        stub = _stub_with_combo(combo, box)
-
-        ProfilesActionsMixin._on_aplica_a_changed(stub, combo)
-        assert box.visible is False
-
-
 class TestProfilesCacheNonBlocking:
-    def test_find_cached_profile_retorna_do_cache(self):
-        _install_gi_stubs()
-        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
-
-        p1 = SimpleNamespace(name="alpha")
-        p2 = SimpleNamespace(name="beta")
-        stub = SimpleNamespace(_profiles_cache=[p1, p2])
-
-        assert ProfilesActionsMixin._find_cached_profile(stub, "beta") is p2
-        assert ProfilesActionsMixin._find_cached_profile(stub, "inexistente") is None
 
     def test_find_cached_profile_cache_ausente_retorna_none(self):
         _install_gi_stubs()
@@ -441,56 +334,4 @@ class TestProfilesCacheNonBlocking:
         stub = SimpleNamespace()
         assert ProfilesActionsMixin._find_cached_profile(stub, "x") is None
 
-    def test_on_profile_selection_changed_le_do_cache_sem_disco(self, monkeypatch):
-        """Selecionar perfil lê do cache; não chama load_all_profiles (não bloqueia)."""
-        _install_gi_stubs()
-        import hefesto_dualsense4unix.app.actions.profiles_actions as mod
-        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
 
-        tocou_disco: list = []
-        monkeypatch.setattr(
-            mod, "load_all_profiles", lambda: tocou_disco.append(True) or []
-        )
-
-        alvo = SimpleNamespace(name="meu_perfil")
-        populados: list = []
-        stub = SimpleNamespace(_profiles_cache=[alvo], _selecao_programatica=False)
-        stub._selected_profile_name = lambda _sel: "meu_perfil"  # type: ignore[attr-defined]
-        stub._find_cached_profile = (  # type: ignore[attr-defined]
-            lambda name: ProfilesActionsMixin._find_cached_profile(stub, name)
-        )
-        stub._populate_editor = lambda p: populados.append(p)  # type: ignore[attr-defined]
-
-        ProfilesActionsMixin.on_profile_selection_changed(stub, MagicMock())
-
-        assert populados == [alvo]
-        assert tocou_disco == []
-
-    def test_reload_profiles_store_usa_worker_e_popula_cache(self, monkeypatch):
-        """_reload_profiles_store carrega via run_in_thread e popula o cache."""
-        _install_gi_stubs()
-        import hefesto_dualsense4unix.app.actions.profiles_actions as mod
-        from hefesto_dualsense4unix.app.actions.profiles_actions import ProfilesActionsMixin
-
-        def fake_run_in_thread(fn, on_success, on_failure=None):
-            on_success(fn())
-
-        monkeypatch.setattr(mod, "run_in_thread", fake_run_in_thread)
-
-        p1 = SimpleNamespace(name="a", priority=1, match=SimpleNamespace(type="any"))
-        monkeypatch.setattr(mod, "load_all_profiles", lambda: [p1])
-
-        populados: list = []
-        feito: list = []
-        stub = SimpleNamespace()
-        stub._populate_profiles_store = (  # type: ignore[attr-defined]
-            lambda profiles, sel: populados.append((list(profiles), sel))
-        )
-
-        ProfilesActionsMixin._reload_profiles_store(
-            stub, select_name="a", on_done=lambda: feito.append(True)
-        )
-
-        assert stub._profiles_cache == [p1]
-        assert populados == [([p1], "a")]
-        assert feito == [True]

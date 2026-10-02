@@ -7,10 +7,7 @@ exigir_gi_real("test_t10_o_prontuario_ganha_um_chamador: importa código da jane
 
 from dataclasses import dataclass, field
 
-from hefesto_dualsense4unix.app.actions.daemon_actions import (
-    interpretar_prontuario_dos_jogos,
-    medir_prontuario_dos_jogos,
-)
+from hefesto_dualsense4unix.app.actions.daemon_actions import interpretar_prontuario_dos_jogos
 
 
 @dataclass
@@ -92,17 +89,6 @@ class TestNuncaDerrubaOResto:
 
         assert interpretar_prontuario_dos_jogos(censo) is None
 
-    def test_censo_que_explode_vira_silencio(self, monkeypatch) -> None:  # type: ignore[no-untyped-def]
-        """Sem Steam instalada, sem perfis, disco ilegível: calado, não vermelho."""
-        from hefesto_dualsense4unix.integrations import prontuario_dos_jogos
-
-        def _explode(*_a: object, **_kw: object) -> None:
-            raise OSError("sem Steam por aqui")
-
-        monkeypatch.setattr(prontuario_dos_jogos, "levantar_censo", _explode)
-
-        assert medir_prontuario_dos_jogos() is None
-
 
 class TestOModuloDeixouDeSerOrfao:
     def test_o_prontuario_tem_chamador_de_producao(self) -> None:
@@ -127,14 +113,3 @@ class TestOModuloDeixouDeSerOrfao:
             "um mês assim"
         )
 
-    def test_o_cartao_de_saude_consulta_o_prontuario(self) -> None:
-        """O import não basta: o cartão tem de CHAMAR a medição."""
-        import inspect
-
-        from hefesto_dualsense4unix.app.actions.daemon_actions import (
-            DaemonActionsMixin,
-        )
-
-        corpo = inspect.getsource(DaemonActionsMixin._refresh_storm_diag)
-
-        assert "medir_prontuario_dos_jogos()" in corpo

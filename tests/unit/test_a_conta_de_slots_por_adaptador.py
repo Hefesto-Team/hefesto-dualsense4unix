@@ -11,9 +11,7 @@ import pytest
 
 _gi = pytest.importorskip("gi", reason="precisa de PyGObject")
 _gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
 
-from hefesto_dualsense4unix.app.actions.config import secao_orcamento
 from hefesto_dualsense4unix.integrations import plano_de_radio
 from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     HZ_AUDIO_COM_MIC,
@@ -21,7 +19,6 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     HZ_INPUT_SEM_MIC,
     PALAVRA_APERTADA,
     PALAVRA_CHEIA,
-    PALAVRA_FOLGADA,
     PALAVRAS_DE_CULPA,
     SLOTS_POR_SEGUNDO,
     Ocupacao,
@@ -474,184 +471,8 @@ class _Dongle:
         self.nome = nome
 
 
-def _montar(host: _Host) -> Any:
-    host._caixa = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-    secao_orcamento.montar(host, host._caixa)
-    return host._config_conta_de_slots  # type: ignore[attr-defined]
-
-
-def test_sem_resposta_do_daemon_a_palavra_nao_e_folgada() -> None:
-    """MORDIDA 5. A cura da B1, medida em 23/08/2026."""
-    conta = _montar(_Host(None))
-    falas = " ".join(conta.falas())
-    assert PALAVRA_FOLGADA not in falas
-    assert f"0/{SLOTS_POR_SEGUNDO}" not in falas
-    assert "não respondeu" in falas
-
-
-def test_com_o_daemon_vivo_e_o_radio_vazio_a_tela_diz_isso_e_nao_nao_sei() -> None:
-    """"Não sei" e "não há ninguém" são coisas diferentes, e a tela separa."""
-    conta = _montar(_Host({"controllers": []}))
-    falas = " ".join(conta.falas())
-    assert secao_orcamento.NINGUEM_NO_RADIO in falas
-    assert "não respondeu" not in falas
-
-
-def test_a_secao_nomeia_o_adaptador_e_nunca_o_hci() -> None:
-    """O nome é o DELA. Trocar pelo índice mandaria mexer no aparelho errado."""
-    conta = _montar(
-        _Host(
-            {
-                "controllers": [_controle(P1, 1), _controle(P2, 2)],
-                "bt_mic": {"uniqs": [_sem_dois_pontos(P1)]},
-            },
-            sysfs=_bancada({P1: HUB_A, P2: HUB_A}),
-            dongles=(_Dongle(HUB_A.upper(), "Hub 9"),),
-        )
-    )
-    falas = conta.falas()
-    assert any("Hub 9" in linha for linha in falas)
-    assert not any("hci" in linha.lower() for linha in falas)
-    assert any("Jogadores 1 e 2" in linha for linha in falas)
-
-
-def test_a_secao_mostra_a_ordem_quando_ha_para_onde_mover() -> None:
-    """A ordem chega à tela com as três linhas do formato `D-ORDEM-DE-SERVICO`."""
-    conta = _montar(
-        _Host(
-            {
-                "controllers": [
-                    _controle(P1, 1, ponte_do_radio="som"),
-                    _controle(P2, 2, ponte_do_radio="som"),
-                    _controle(P3, 3, ponte_do_radio="som"),
-                    _controle(P4, 4),
-                    _controle(P5, 5),
-                    _controle(P6, 6),
-                ],
-                "bt_mic": {
-                    "uniqs": [_sem_dois_pontos(p) for p in (P1, P2, P3, P4, P5)]
-                },
-            },
-            sysfs=_bancada(
-                {P1: HUB_A, P2: HUB_A, P3: HUB_A, P4: HUB_A, P5: HUB_A, P6: HUB_B}
-            ),
-            dongles=(_Dongle(HUB_A, "Hub 9"), _Dongle(HUB_B, "Hub 15")),
-        )
-    )
-    falas = " ".join(conta.falas())
-    assert "mudança recomendada" in falas
-    assert "O que eu vi aqui:" in falas
-    assert "Por que importa:" in falas
-    assert "Ganho esperado:" in falas
-
-
-def test_a_secao_cala_a_ordem_e_diz_a_frase_do_adaptador_unico() -> None:
-    """Cinco num hub só: não há para onde mover, e a tela diz por quê."""
-    conta = _montar(
-        _Host(
-            {
-                "controllers": [
-                    _controle(P1, 1),
-                    _controle(P2, 2),
-                    _controle(P3, 3),
-                    _controle(P4, 4),
-                    _controle(P5, 5),
-                ],
-                "bt_mic": {
-                    "uniqs": [_sem_dois_pontos(p) for p in (P1, P2, P3, P4, P5)]
-                },
-            },
-            sysfs=_bancada(dict.fromkeys((P1, P2, P3, P4, P5), HUB_A)),
-        )
-    )
-    falas = " ".join(conta.falas())
-    assert "mudança recomendada" not in falas
-    assert plano_de_radio.FRASE_DO_ADAPTADOR_UNICO in falas
-
-
-def test_o_preco_do_microfone_esta_na_tela_em_todos_os_estados() -> None:
-    """O número que a decisão dela espera não some quando o daemon cala."""
-    for estado in (None, {"controllers": []}):
-        conta = _montar(_Host(estado))
-        falas = " ".join(conta.falas())
-        assert "260,4" in falas and "276,7" in falas
-
-
 HUB_C = "e8:47:3a:00:00:21"
 P7 = "aa:bb:cc:00:00:77"
 P8 = "aa:bb:cc:00:00:88"
 
 
-def _mesa_de_cinco_mais_dois_destinos(varrendo: Any) -> Any:
-    """A seção montada com cinco apertando o HUB_A e dois destinos que cabem."""
-    host = _Host(
-        {
-            "controllers": [
-                _controle(P1, 1, ponte_do_radio="som"),
-                _controle(P2, 2, ponte_do_radio="som"),
-                _controle(P3, 3, ponte_do_radio="som"),
-                _controle(P4, 4),
-                _controle(P5, 5),
-                _controle(P6, 6),
-                _controle(P7, 7),
-                _controle(P8, 8),
-            ],
-            "bt_mic": {"uniqs": [_sem_dois_pontos(p) for p in (P1, P2, P3, P4, P5)]},
-        },
-        sysfs=_bancada(
-            {
-                P1: HUB_A,
-                P2: HUB_A,
-                P3: HUB_A,
-                P4: HUB_A,
-                P5: HUB_A,
-                P6: HUB_B,
-                P7: HUB_C,
-                P8: HUB_C,
-            }
-        ),
-        dongles=(
-            _Dongle(HUB_A, "Hub 9"),
-            _Dongle(HUB_B, "Hub 15"),
-            _Dongle(HUB_C, "Hub 21"),
-        ),
-    )
-    host._desempenho_varredura = lambda: varrendo
-    return _montar(host)
-
-
-def test_a_secao_manda_o_destino_que_varre_para_o_fim_da_fila() -> None:
-    """MORDIDA 7. A leitura chega à FRASE que ela lê, não para no motor."""
-    sem = " ".join(_mesa_de_cinco_mais_dois_destinos(()).falas())
-    assert 'para o "Hub 15"' in sem, (
-        "o cenário só morde se, SEM a leitura, a seção mandasse para o "
-        "adaptador que varre"
-    )
-
-    com = " ".join(_mesa_de_cinco_mais_dois_destinos((HUB_B,)).falas())
-    assert 'para o "Hub 21"' in com, (
-        "a seção continua mandando o controle para dentro da busca — o leitor "
-        "está de pé e o último palmo não foi fiado"
-    )
-    assert 'para o "Hub 15"' not in com
-
-
-def test_quem_injeta_leitor_nao_faz_a_secao_falar_com_o_barramento(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """MORDIDA 8. A suíte e o retrato não abrem subprocesso contra o BlueZ dela."""
-    from hefesto_dualsense4unix.integrations import varredura_do_radio
-
-    chamadas: list[int] = []
-
-    def nao_pode(**_kwargs: Any) -> Any:
-        chamadas.append(1)
-        return varredura_do_radio.Varredura()
-
-    monkeypatch.setattr(varredura_do_radio, "varredura_recente", nao_pode)
-    _montar(_Host({"controllers": [_controle(P1, 1)]}, sysfs=_bancada({P1: HUB_A})))
-
-    assert not chamadas, (
-        "a seção perguntou ao barramento mesmo com `_desempenho_leitor` "
-        "injetado — a suíte inteira passaria a falar com o BlueZ dela"
-    )

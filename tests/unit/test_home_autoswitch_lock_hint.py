@@ -32,15 +32,10 @@ exigir_gi_real("test_home_autoswitch_lock_hint: importa código da janela GTK")
 import sys
 import types
 from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto_dualsense4unix.app.actions import home_actions
-from hefesto_dualsense4unix.app.actions.home_actions import (
-    HomeActionsMixin,
-    autoswitch_lock_text,
-)
+from hefesto_dualsense4unix.app.actions.home_actions import autoswitch_lock_text
 
 
 class TestDecisaoPura:
@@ -191,17 +186,6 @@ class _WidgetFalso:
             filho.show_all()
 
 
-class _JanelaFalsa(HomeActionsMixin):
-    """A janela real, com os handlers reais — só o toolkit é de mentira."""
-
-    def __init__(self) -> None:
-        self.tab_home_box = _WidgetFalso()
-        self.timeouts: list[tuple[int, Any]] = []
-
-    def _get(self, widget_id: str) -> Any:
-        return self.tab_home_box if widget_id == "tab_home_box" else None
-
-
 @pytest.fixture()
 def gtk_de_mentira(monkeypatch: pytest.MonkeyPatch) -> None:
     """Planta `gi.repository` e o seletor segmentado, os dois de mentira."""
@@ -228,67 +212,6 @@ def gtk_de_mentira(monkeypatch: pytest.MonkeyPatch) -> None:
         "hefesto_dualsense4unix.app.widgets.segmented_selector",
         seletor,
     )
-
-
-@pytest.fixture()
-def aba(gtk_de_mentira: None) -> _JanelaFalsa:
-    """A aba Início MONTADA — o mesmo `install_home_tab` que a janela roda."""
-    janela = _JanelaFalsa()
-    janela.install_home_tab()
-    return janela
-
-
-class TestFiacaoNaAbaInicio:
-    def test_render_home_consome_a_funcao_pura(
-        self, aba: _JanelaFalsa, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """O rótulo diz o que a FUNÇÃO PURA decidiu, não o que a aba inventou."""
-        estado = {"freestyle_ligado": True, "active_profile": "vitoria"}
-        espiao = MagicMock(return_value="FRASE-DO-CADEADO")
-        monkeypatch.setattr(home_actions, autoswitch_lock_text.__name__, espiao)
-
-        aba._render_home(estado)
-
-        assert estado in [chamada.args[0] for chamada in espiao.call_args_list]
-        assert aba._home_autoswitch_lock_hint.get_text() == "FRASE-DO-CADEADO"
-        assert aba._home_autoswitch_lock_hint.visible is True
-
-    def test_destravado_apaga_a_frase(self, aba: _JanelaFalsa) -> None:
-        """Sem cadeado não há causa a explicar — e sobra de texto é mentira."""
-        aba._render_home({"freestyle_ligado": True, "active_profile": "v"})
-        assert aba._home_autoswitch_lock_hint.visible is True
-
-        aba._render_home({"freestyle_ligado": False})
-
-        assert aba._home_autoswitch_lock_hint.get_text() == ""
-        assert aba._home_autoswitch_lock_hint.visible is False
-
-    def test_offline_apaga_a_frase(self, aba: _JanelaFalsa) -> None:
-        """Estado morto nunca deixa uma afirmação viva na tela."""
-        aba._render_home({"freestyle_ligado": True, "active_profile": "v"})
-        assert aba._home_autoswitch_lock_hint.visible is True
-
-        aba._render_home(None)
-
-        assert aba._home_autoswitch_lock_hint.get_text() == ""
-        assert aba._home_autoswitch_lock_hint.visible is False
-
-    def test_o_cadeado_reflete_o_estado_do_daemon(self, aba: _JanelaFalsa) -> None:
-        """O marcador continua sendo o EFEITO — a frase é a causa ao lado dele."""
-        aba._render_home({"freestyle_ligado": True})
-        assert aba._home_autoswitch_lock.active is True
-
-        aba._render_home({"freestyle_ligado": False})
-        assert aba._home_autoswitch_lock.active is False
-
-    def test_o_rotulo_nasce_invisivel_e_o_show_all_do_build_nao_o_acende(
-        self, aba: _JanelaFalsa
-    ) -> None:
-        """Mesmo desenho dos banners de vpad/wrapper."""
-        rotulo = aba._home_autoswitch_lock_hint
-
-        assert rotulo.visible is False
-        assert rotulo.get_text() == ""
 
 
 class TestEstadoDoDaemonCarregaOCampo:

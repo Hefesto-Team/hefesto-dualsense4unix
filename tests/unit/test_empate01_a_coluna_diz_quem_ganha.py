@@ -11,7 +11,6 @@ import pytest
 
 from hefesto_dualsense4unix.app.actions.profiles_actions import (
     LABEL_SO_MANUAL,
-    ProfilesActionsMixin,
     explicacao_da_disputa,
     rotulo_quando_usar,
 )
@@ -138,49 +137,3 @@ class TestOTooltip:
         assert motivo == "jogo_sem_perfil_proprio"
 
 
-class TestFiacaoDaColuna:
-    """O ListStore carrega a frase e o tooltip — a metade que precisa de GTK."""
-
-    @staticmethod
-    def _stub() -> Any:
-        from gi.repository import GObject, Gtk, Pango
-
-        class _Stub(ProfilesActionsMixin):
-            def __init__(self) -> None:
-                self._profiles_store = Gtk.ListStore(
-                    GObject.TYPE_STRING,
-                    GObject.TYPE_INT,
-                    GObject.TYPE_STRING,
-                    GObject.TYPE_INT,
-                    GObject.TYPE_STRING,
-                    Pango.AttrList,
-                )
-                self._profiles_cache: list[Profile] = []
-                self._active_profile_hint: str | None = None
-                self._tree = Gtk.TreeView()
-
-            def _get(self, nome: str) -> Any:
-                return self._tree
-
-        return _Stub()
-
-    def test_o_store_recebe_a_frase_e_o_tooltip(self) -> None:
-        stub = self._stub()
-        perfis = _mesa_dela()
-        stub._active_profile_hint = "Pragmata2"
-        stub._populate_profiles_store(perfis, None)
-        linhas = {linha[0]: (linha[2], linha[4]) for linha in stub._profiles_store}
-        assert linhas["Pragmata"] == ("Sempre", "")
-        assert linhas["vitoria"] == ("Sempre", "")
-        assert linhas["Pragmata2"] == ("Só neste programa", "")
-
-    def test_trocar_de_perfil_ativo_nao_inventa_vencedor(self) -> None:
-        """Trocar o ativo não faz nenhum «Sempre» virar o vencedor da coluna."""
-        stub = self._stub()
-        perfis = [_catch_all("aaa", 7), _catch_all("zzz", 7)]
-        stub._profiles_cache = list(perfis)
-        stub._active_profile_hint = "aaa"
-        stub._populate_profiles_store(perfis, None)
-        stub._mark_active_profile_row("zzz")
-        depois = {linha[0]: linha[2] for linha in stub._profiles_store}
-        assert depois == {"aaa": "Sempre", "zzz": "Sempre"}

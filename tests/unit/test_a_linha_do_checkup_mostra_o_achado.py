@@ -282,17 +282,6 @@ def test_a_dica_nao_repete_a_medicao_que_a_linha_ja_mostra():
     )
 
 
-def test_o_dono_da_dica_continua_inteiro_para_a_janela_gtk():
-    """Curar no dono apagaria a medição da janela estável, onde ela é única."""
-    from hefesto_dualsense4unix.app.actions.config.secao_exame import _dica_do_item
-
-    it = _item(estado="atencao", cura="Troque o cabo de entrada.")  # (noqa-acento) id
-    assert it.porque in _dica_do_item(it), (
-        "o dono da dica perdeu a medição — a janela GTK mostra o rótulo na "
-        "linha, e a dica era o único caminho do `porque` até a tela dela"
-    )
-
-
 def test_a_dica_quebra_linha_em_html_e_nao_em_texto():
     """O alvo é `html`: `\\n\\n` não quebra nada num `<span>`."""
     dica = a08._linha(_item(cura="Faça isto."))["dica"]

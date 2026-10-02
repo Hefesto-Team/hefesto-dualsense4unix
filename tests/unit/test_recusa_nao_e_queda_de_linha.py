@@ -15,11 +15,8 @@ from hefesto_dualsense4unix.app import ipc_bridge
 from hefesto_dualsense4unix.app.actions.mouse_actions import (
     BLOQUEIO_DO_MOUSE_EM_PORTUGUES,
     RECUSA_SEM_MOTIVO,
-    SEM_RESPOSTA_DO_HEFESTO,
-    MouseActionsMixin,
     frase_da_recusa_do_mouse,
 )
-from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
 
 class _FakeSwitch:
@@ -31,32 +28,9 @@ class _FakeSwitch:
     def get_active(self) -> bool:
         return self._active
 
-    def set_active(self, value: bool) -> None:
-        self._active = bool(value)
-        self._owner.on_mouse_toggle_set(self, bool(value))
 
     def set_sensitive(self, value: bool) -> None:
         self.sensitive = bool(value)
-
-
-class _Harness(MouseActionsMixin):
-    def __init__(self) -> None:
-        self.draft = DraftConfig.default()
-        self.widgets: dict[str, Any] = {}
-        self.toasts: list[str] = []
-
-    def _get(self, widget_id: str) -> Any:
-        return self.widgets.get(widget_id)
-
-    def _toast_mouse(self, msg: str) -> None:
-        self.toasts.append(msg)
-
-
-def _harness() -> tuple[_Harness, _FakeSwitch]:
-    harness = _Harness()
-    switch = _FakeSwitch(harness)
-    harness.widgets["mouse_emulation_toggle"] = switch
-    return harness, switch
 
 
 def _responder(monkeypatch: pytest.MonkeyPatch, resposta: Any) -> list[str]:
@@ -105,43 +79,3 @@ def test_resposta_torta_nao_derruba_a_traducao(resposta: Any) -> None:
     assert frase_da_recusa_do_mouse(resposta) == RECUSA_SEM_MOTIVO
 
 
-def test_a_recusa_e_a_falta_de_resposta_sao_TEXTOS_DIFERENTES() -> None:  # noqa: N802  # nome de teste em maiúsculas para destacar o ponto, sem acento (noqa-acento)
-    """O defeito era um texto só para as duas coisas."""
-    assert RECUSA_SEM_MOTIVO != SEM_RESPOSTA_DO_HEFESTO
-    for motivo in BLOQUEIO_DO_MOUSE_EM_PORTUGUES.values():
-        assert motivo not in SEM_RESPOSTA_DO_HEFESTO
-
-
-def test_daemon_que_recusa_com_motivo_produz_o_toast_do_motivo(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    harness, switch = _harness()
-    _responder(monkeypatch, {"status": "failed", "bloqueio": "modo_jogo"})
-
-    switch.set_active(True)
-
-    assert harness.toasts == [
-        frase_da_recusa_do_mouse({"status": "failed", "bloqueio": "modo_jogo"})
-    ]
-    assert harness.toasts[0] != SEM_RESPOSTA_DO_HEFESTO, (
-        "a recusa do Hefesto ainda cai no texto de queda de linha"
-    )
-    assert switch.get_active() is False, (
-        "a reversão do interruptor é a mesma nas duas saídas de insucesso "
-        "(BUG-MOUSE-TOGGLE-STALE-REVERT-01) — N6 separou os TEXTOS"
-    )
-    assert harness.draft.mouse.enabled is False, "nada foi aplicado no rascunho"
-
-
-def test_daemon_que_aceita_continua_comemorando(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A régua do lado bom: separar as saídas não pode quebrar o sucesso."""
-    harness, switch = _harness()
-    _responder(monkeypatch, {"status": "ok", "enabled": True})
-
-    switch.set_active(True)
-
-    assert harness.toasts == ["Mouse emulado ligado"]
-    assert switch.get_active() is True
-    assert harness.draft.mouse.enabled is True

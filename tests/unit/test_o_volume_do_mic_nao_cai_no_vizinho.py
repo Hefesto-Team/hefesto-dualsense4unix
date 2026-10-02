@@ -373,7 +373,7 @@ def test_a_frase_do_sem_fonte_fala_a_lingua_da_tela() -> None:
 def test_a_confissao_da_tela_continua_de_pe_para_o_daemon_velho() -> None:
     """`por_uniq: False` ainda faz a tela confessar."""
     from hefesto_dualsense4unix.app.ipc_bridge import alvo_honrado
-    from hefesto_dualsense4unix.app.widgets.controller_card import (
+    from hefesto_dualsense4unix.interface.cartao_do_controle import (
         TEXTO_MIC_ALVO_NAO_HONRADO,
         frase_do_alvo_do_mic,
     )

@@ -66,7 +66,7 @@ def monta_arvore(tmp_path: Path) -> Path:
     )
     (app / "fatos_do_mapa.py").write_text(FATOS_DE_MENTIRA, encoding="utf-8")
     (app / "widgets").mkdir(exist_ok=True)
-    (app / "widgets" / "external_card.py").write_text(
+    (app / "dados_do_controle.py").write_text(
         ARQUIVO_COM_FALA_ATRAS_DE_CONDICIONAL, encoding="utf-8"
     )
     return tmp_path

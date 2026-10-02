@@ -140,7 +140,7 @@ def test_o_rodape_do_mapa_nao_manda_apertar_o_aplicar() -> None:
 
 def test_o_rodape_do_mapa_diz_que_o_clique_ja_gravou() -> None:
     """E a frase nova é a do DONO desta aba, lida no ato."""
-    from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import GRAVA_NO_CLIQUE
+    from hefesto_dualsense4unix.interface.logica_do_mapa import GRAVA_NO_CLIQUE
     from hefesto_dualsense4unix.interface import onde
 
     html = onde.pagina("08-conexoes.html").read_text(encoding="utf-8")
@@ -151,7 +151,7 @@ def test_o_rodape_do_mapa_vem_do_dono() -> None:
     """A frase do rodapé tem UM dono, e o gerador não guarda uma segunda cópia."""
     import pathlib
 
-    from hefesto_dualsense4unix.app.widgets.mapa_da_mesa import GRAVA_NO_CLIQUE
+    from hefesto_dualsense4unix.interface.logica_do_mapa import GRAVA_NO_CLIQUE
     from hefesto_dualsense4unix.interface import aba08, onde
 
     for publicado in (False, True):
